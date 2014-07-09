@@ -3,10 +3,14 @@
 
 let contrib_name = "template-coq"
 
+let pp_constr fmt x = Pp.pp_with fmt (Printer.pr_constr x)
+
 module TermReify = struct
   exception NotSupported of Term.constr
 
   let not_supported trm =
+    Format.eprintf "\nNot Supported: %a\n" pp_constr trm ;
+    flush stdout ;
     raise (NotSupported trm)
   let bad_term trm =
     raise (NotSupported trm)
@@ -17,7 +21,7 @@ module TermReify = struct
 
   let pkg_bignums = ["Coq";"Numbers";"BinNums"]
   let pkg_datatypes = ["Coq";"Init";"Datatypes"]
-  let pkg_reify = ["TemplateCoq";"Ast"]
+  let pkg_reify = ["Template";"Ast"]
   let pkg_string = ["Coq";"Strings";"String"]
 
   let r_reify = resolve_symbol pkg_reify
@@ -40,8 +44,9 @@ module TermReify = struct
   let sProp = r_reify "sProp"
   let sSet = r_reify "sSet"
   let sType = r_reify "sType"
-  let [tTerm;tRel;tVar;tMeta;tEvar;tSort;tCast;tProd;tLambda;tLetIn;tApp;tCase;tFix]
-      = List.map r_reify ["term";"tRel";"tVar";"tMeta";"tEvar";"tSort";"tCast";"tProd";"tLambda";"tLetIn";"tApp";"tCase";"tFix"]
+  let tmkInd = r_reify "mkInd"
+  let [tTerm;tRel;tVar;tMeta;tEvar;tSort;tCast;tProd;tLambda;tLetIn;tApp;tCase;tFix;tConstructor;tConst;tInd;tUnknown]
+      = List.map r_reify ["term";"tRel";"tVar";"tMeta";"tEvar";"tSort";"tCast";"tProd";"tLambda";"tLetIn";"tApp";"tCase";"tFix";"tConstruct";"tConst";"tInd";"tUnknown"]
 
   let to_positive =
     let xH = resolve_symbol pkg_bignums "xH" in
@@ -89,9 +94,25 @@ module TermReify = struct
       assert (i >= 0) ;
       recurse i
 
+  let quote_bool b =
+    if b then ttrue else tfalse
+
+  let quote_char c =
+    let i = int_of_char c in
+    Term.mkApp (tAscii, Array.of_list (List.map (fun m -> quote_bool ((i land m) = m))
+					 (List.rev [128;64;32;16;8;4;2;1])))
+
+  let quote_string s =
+    let rec go from acc =
+      if from < 0 then acc
+      else
+	go (from - 1) (Term.mkApp (tString, [| quote_char (String.get s from) ; acc |]))
+    in
+    go (String.length s - 1) tEmptyString
+
   let quote_ident i =
     let s = Names.string_of_id i in
-    assert false
+    quote_string s
 
   let quote_name n =
     match n with
@@ -114,9 +135,14 @@ module TermReify = struct
     | Term.Prop Term.Null -> sSet
     | Term.Type u -> Term.mkApp (sType, [| quote_universe u |])
 
+  let quote_inductive (t : Names.inductive) =
+    let (_,i) = t in
+    Term.mkApp (tmkInd, [| quote_string (Format.asprintf "%a" pp_constr (Term.mkInd t))
+			 ; int_to_nat i |])
+
   let rec quote_term trm =
     match Term.kind_of_term trm with
-      Term.Rel i -> Term.mkApp (tRel, [| int_to_nat i |])
+      Term.Rel i -> Term.mkApp (tRel, [| int_to_nat (i - 1) |])
     | Term.Var v -> Term.mkApp (tVar, [| quote_ident v |])
     | Term.Sort s -> Term.mkApp (tSort, [| quote_sort s |])
     | Term.Cast (c,k,t) ->
@@ -129,9 +155,15 @@ module TermReify = struct
       Term.mkApp (tLetIn, [| quote_name n ; quote_term t ; quote_term e ; quote_term b |])
     | Term.App (f,xs) ->
       Term.mkApp (tApp, [| quote_term f ; to_coq_list tTerm (List.map quote_term (Array.to_list xs)) |])
-    | Term.Case (ci, e, t, args) ->
-      assert false
-    | _ -> raise (NotSupported trm)
+    | Term.Const c -> Term.mkApp (tConst, [| quote_string (Names.string_of_con c) |])
+    | Term.Construct (ind,c) -> Term.mkApp (tConstructor, [| quote_inductive ind ; int_to_nat (c - 1) |])
+    | Term.Ind i -> Term.mkApp (tInd, [| quote_inductive i |])
+(*
+    | Term.Case (ci,a,b,e) ->
+      Term.mkApp (tCase, [| quote_term a ; quote_term b
+			  ; to_coq_list _ (Array.to_list (fun x -> _) e) |])
+*)
+    | _ -> Term.mkApp (tUnknown, [| quote_string (Format.asprintf "%a" pp_constr trm) |])
 
   let rec app_full trm acc =
     match Term.kind_of_term trm with
@@ -278,6 +310,7 @@ end
 
 let _= Mltop.add_known_module "templateCoq"
 
+(*
 TACTIC EXTEND get_goal
     | [ "quote_goal" ] ->
       [ (** get the representation of the goal **)
@@ -288,12 +321,21 @@ TACTIC EXTEND get_goal
     | [ "get_inductive" constr(i) ] ->
       [ fun gl -> assert false ]
 END;;
+*)
 
 VERNAC COMMAND EXTEND Make
+(*
     | [ "Make" "Definition" ident(d) tactic(t) ] ->
       [ (** [t] returns a [term] **)
 	assert false ]
     | [ "Make" "Definitions" tactic(t) ] ->
       [ (** [t] returns a [list (string * term)] **)
-	assert false]
+	assert false ]
+*)
+    | [ "Test" "Quote" constr(c) ] ->
+      [ let (evm,env) = Lemmas.get_current_context () in
+	let c = Constrintern.interp_constr evm env c in
+	let result = TermReify.quote_term c in
+	Pp.msgnl (Printer.pr_constr result) ;
+	() ]
 END;;

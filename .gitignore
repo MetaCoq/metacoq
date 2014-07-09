@@ -1,0 +1,4 @@
+.coq_config
+src/myocamlbuild.ml
+src/*.cm*
+src/_build

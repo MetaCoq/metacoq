@@ -2,3 +2,10 @@
 src/myocamlbuild.ml
 src/*.cm*
 src/_build
+*.vo
+*.v.d
+*.glob
+Makefile.coq
+theories/*.cmxs
+\#*#
+*~

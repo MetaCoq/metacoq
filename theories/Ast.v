@@ -38,13 +38,16 @@ Inductive term : Type :=
 | tConst     : string -> term
 | tInd       : inductive -> term
 | tConstruct : inductive -> nat -> term
-| tCase      : term -> (** type info **) list (pattern * term) -> term
+| tCase      : term -> (** type info **) list term -> term
 | tFix       : name -> list name -> nat -> term -> term
 (*
 | CoFix     of ('constr, 'types) pcofixpoint
 *)
-| tUnknown : string -> term
+| tUnknown : string -> term.
+(*
 with pattern : Type :=
-| pBind    : name -> pattern
 | pHole    : pattern
-| pCtor    : name -> list pattern -> pattern.
+| pCtor    : name -> list pattern -> pattern
+*)
+
+(** Patterns do not actually exist in the core syntax **)

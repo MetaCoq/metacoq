@@ -158,11 +158,9 @@ module TermReify = struct
     | Term.Const c -> Term.mkApp (tConst, [| quote_string (Names.string_of_con c) |])
     | Term.Construct (ind,c) -> Term.mkApp (tConstructor, [| quote_inductive ind ; int_to_nat (c - 1) |])
     | Term.Ind i -> Term.mkApp (tInd, [| quote_inductive i |])
-(*
     | Term.Case (ci,a,b,e) ->
       Term.mkApp (tCase, [| quote_term a ; quote_term b
-			  ; to_coq_list _ (Array.to_list (fun x -> _) e) |])
-*)
+			  ; to_coq_list tTerm (List.map (fun x -> quote_term x) (Array.to_list e)) |])
     | _ -> Term.mkApp (tUnknown, [| quote_string (Format.asprintf "%a" pp_constr trm) |])
 
   let rec app_full trm acc =
@@ -367,7 +365,15 @@ VERNAC COMMAND EXTEND Make_vernac
 	  [] None result None (fun _ _ -> ()) ]
 (*
     | [ "Quote" "Definition" ident(name) ":=" "Eval" red_expr(rd) "in" constr(def) ] ->
-      [ assert false ]
+      [ let (evm,env) = Lemmas.get_current_context () in
+	let def = Constrintern.interp_constr evm env def in
+	let trm = TermReify.quote_term def in
+	let result = Constrextern.extern_constr true env trm in
+	declare_definition name
+	  (Decl_kinds.Global, false, Decl_kinds.Definition)
+	  [] None result None (fun _ _ -> ())
+
+ ]
 *)
 END;;
 (**

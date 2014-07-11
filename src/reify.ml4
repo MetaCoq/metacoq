@@ -363,10 +363,12 @@ VERNAC COMMAND EXTEND Make_vernac
 	declare_definition name
 	  (Decl_kinds.Global, false, Decl_kinds.Definition)
 	  [] None result None (fun _ _ -> ()) ]
-(*
     | [ "Quote" "Definition" ident(name) ":=" "Eval" red_expr(rd) "in" constr(def) ] ->
       [ let (evm,env) = Lemmas.get_current_context () in
 	let def = Constrintern.interp_constr evm env def in
+	let (evm2,red) = Tacinterp.interp_redexp env evm rd in
+	let red = fst (Redexpr.reduction_of_red_expr red) in
+	let def = red env evm2 def in
 	let trm = TermReify.quote_term def in
 	let result = Constrextern.extern_constr true env trm in
 	declare_definition name
@@ -374,7 +376,6 @@ VERNAC COMMAND EXTEND Make_vernac
 	  [] None result None (fun _ _ -> ())
 
  ]
-*)
 END;;
 (**
     | [ "Quote" "Definition" ident(d) ; d = def_body ]

@@ -1,5 +1,7 @@
 Require Import Template.Template.
 
+Local Open Scope string_scope.
+
 (** This is just printing **)
 Test Quote (fun x : nat => x).
 
@@ -27,3 +29,20 @@ Quote Definition d' := (fun x : nat => x).
 Definition id_nat : nat -> nat := fun x => x.
 
 Quote Definition d'' := Eval compute in id_nat.
+
+(** Fixpoints **)
+Fixpoint add (a b : nat) : nat :=
+  match a with
+    | 0 => b
+    | S a => S (add a b)
+  end.
+
+Fixpoint add' (a b : nat) : nat :=
+  match b with
+    | 0 => a
+    | S b => S (add' a b)
+  end.
+
+Quote Definition add_syntax := Eval compute in add.
+
+Quote Definition add'_syntax := Eval compute in add'.

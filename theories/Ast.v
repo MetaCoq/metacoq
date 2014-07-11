@@ -24,6 +24,16 @@ Inductive cast_kind : Type :=
 Inductive inductive : Type :=
 | mkInd : string -> nat -> inductive.
 
+Record def (term : Type) : Type := mkdef
+{ dname : name
+; dtype : term
+; dbody : term
+; rarg : nat
+}.
+
+Definition mfixpoint (term : Type) : Type :=
+  list (def term).
+
 Inductive term : Type :=
 | tRel       : nat -> term
 | tVar       : ident -> term
@@ -38,8 +48,8 @@ Inductive term : Type :=
 | tConst     : string -> term
 | tInd       : inductive -> term
 | tConstruct : inductive -> nat -> term
-| tCase      : term -> (** type info **) list term -> term
-| tFix       : name -> list name -> nat -> term -> term
+| tCase      : term (** type info **) -> term -> list term -> term
+| tFix       : mfixpoint term -> nat -> term
 (*
 | CoFix     of ('constr, 'types) pcofixpoint
 *)

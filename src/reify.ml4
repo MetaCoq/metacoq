@@ -47,6 +47,7 @@ module TermReify = struct
   let tmkInd = r_reify "mkInd"
   let [tTerm;tRel;tVar;tMeta;tEvar;tSort;tCast;tProd;tLambda;tLetIn;tApp;tCase;tFix;tConstructor;tConst;tInd;tUnknown]
       = List.map r_reify ["term";"tRel";"tVar";"tMeta";"tEvar";"tSort";"tCast";"tProd";"tLambda";"tLetIn";"tApp";"tCase";"tFix";"tConstruct";"tConst";"tInd";"tUnknown"]
+  let [tdef;tmkdef] = List.map r_reify ["def";"mkdef"]
 
   let to_positive =
     let xH = resolve_symbol pkg_bignums "xH" in
@@ -161,7 +162,29 @@ module TermReify = struct
     | Term.Case (ci,a,b,e) ->
       Term.mkApp (tCase, [| quote_term a ; quote_term b
 			  ; to_coq_list tTerm (List.map (fun x -> quote_term x) (Array.to_list e)) |])
+    | Term.Fix fp ->
+      let (t,n) = quote_fixpoint fp in
+      Term.mkApp (tFix, [| t ; int_to_nat n |])
     | _ -> Term.mkApp (tUnknown, [| quote_string (Format.asprintf "%a" pp_constr trm) |])
+  and quote_fixpoint t =
+    let ((a,b),(ns,ts,ds)) = t in
+    let rec seq f t =
+      if f < t then
+	f :: seq (f + 1) t
+      else
+	[]
+    in
+    let mk_fun i =
+      let n = int_to_nat (Array.get a i) in
+      let nm = quote_name (Array.get ns i) in
+      let ty = quote_term (Array.get ts i) in
+      let ds = quote_term (Array.get ds i) in
+      Term.mkApp (tmkdef, [| tTerm ; nm ; ty ; ds ; n |])
+    in
+    let defs = to_coq_list (Term.mkApp (tdef, [| tTerm |]))
+      (List.map mk_fun (seq 0 (Array.length a)))
+    in
+    (defs, b)
 
   let rec app_full trm acc =
     match Term.kind_of_term trm with
@@ -370,6 +393,7 @@ VERNAC COMMAND EXTEND Make_vernac
 	let red = fst (Redexpr.reduction_of_red_expr red) in
 	let def = red env evm2 def in
 	let trm = TermReify.quote_term def in
+	let _ = Format.printf "%a\n" pp_constr trm in
 	let result = Constrextern.extern_constr true env trm in
 	declare_definition name
 	  (Decl_kinds.Global, false, Decl_kinds.Definition)

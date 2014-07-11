@@ -31,13 +31,13 @@ Inductive term : Type :=
 | tEvar      : nat -> term
 | tSort      : sort -> term
 | tCast      : term -> cast_kind -> term -> term
-| tProd      : name -> term -> term
-| tLambda    : name -> term -> term
-| tLetIn     : name -> term -> term -> term -> term
+| tProd      : name -> term (** the type **) -> term -> term
+| tLambda    : name -> term (** the type **) -> term -> term
+| tLetIn     : name -> term (** the type **) -> term -> term -> term
 | tApp       : term -> list term -> term
 | tConst     : string -> term
-| tInd       : string -> nat -> term
-| tConstruct : string -> nat -> nat -> term
+| tInd       : inductive -> term
+| tConstruct : inductive -> nat -> term
 | tCase      : term -> (** type info **) list (pattern * term) -> term
 | tFix       : name -> list name -> nat -> term -> term
 (*

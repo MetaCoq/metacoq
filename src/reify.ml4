@@ -310,18 +310,40 @@ end
 
 let _= Mltop.add_known_module "templateCoq"
 
-(*
+(** Stolen from CoqPluginUtils **)
+(** Calling Ltac **)
+let ltac_call tac (args:Tacexpr.glob_tactic_arg list) =
+  Tacexpr.TacArg(Util.dummy_loc,Tacexpr.TacCall(Util.dummy_loc, Glob_term.ArgArg(Util.dummy_loc, Lazy.force tac),args))
+
+(* Calling a locally bound tactic *)
+let ltac_lcall tac args =
+  Tacexpr.TacArg(Util.dummy_loc,Tacexpr.TacCall(Util.dummy_loc, Glob_term.ArgVar(Util.dummy_loc, Names.id_of_string tac),args))
+
+let ltac_letin (x, e1) e2 =
+  Tacexpr.TacLetIn(false,[(Util.dummy_loc,Names.id_of_string x),e1],e2)
+
+let ltac_apply (f:Tacexpr.glob_tactic_expr) (args:Tacexpr.glob_tactic_arg list) =
+  Tacinterp.eval_tactic
+    (ltac_letin ("F", Tacexpr.Tacexp f) (ltac_lcall "F" args))
+
+let to_ltac_val c = Tacexpr.TacDynamic(Util.dummy_loc,Pretyping.constr_in c)
+
+
+
 TACTIC EXTEND get_goal
+    | [ "quote_term" constr(c) tactic(tac) ] ->
+      [ (** quote the given term, pass the result to t **)
+	fun gl ->
+	  let c = TermReify.quote_term c in
+	  ltac_apply tac (List.map to_ltac_val [c]) gl ]
+(*
     | [ "quote_goal" ] ->
       [ (** get the representation of the goal **)
 	fun gl -> assert false ]
-    | [ "quote_term" constr(c) ] ->
-      [ (** quote the given term **)
-	fun gl -> assert false ]
     | [ "get_inductive" constr(i) ] ->
       [ fun gl -> assert false ]
-END;;
 *)
+END;;
 
 VERNAC COMMAND EXTEND Make
 (*

@@ -328,6 +328,17 @@ let ltac_apply (f:Tacexpr.glob_tactic_expr) (args:Tacexpr.glob_tactic_arg list) 
 
 let to_ltac_val c = Tacexpr.TacDynamic(Util.dummy_loc,Pretyping.constr_in c)
 
+(** From Containers **)
+let declare_definition
+    id (loc, boxed_flag, def_obj_kind)
+    binder_list red_expr_opt constr_expr
+    constr_expr_opt decl_hook =
+  let (def_entry, man_impl) =
+    Command.interp_definition binder_list red_expr_opt constr_expr
+      constr_expr_opt
+  in
+    Command.declare_definition
+      id (loc, def_obj_kind) def_entry man_impl decl_hook
 
 
 TACTIC EXTEND get_goal
@@ -345,7 +356,28 @@ TACTIC EXTEND get_goal
 *)
 END;;
 
+VERNAC COMMAND EXTEND Make_vernac
+    | [ "Quote" "Definition" ident(name) ":=" constr(def) ] ->
+      [ let (evm,env) = Lemmas.get_current_context () in
+	let def = Constrintern.interp_constr evm env def in
+	let trm = TermReify.quote_term def in
+	let result = Constrextern.extern_constr true env trm in
+	declare_definition name
+	  (Decl_kinds.Global, false, Decl_kinds.Definition)
+	  [] None result None (fun _ _ -> ()) ]
+(*
+    | [ "Quote" "Definition" ident(name) ":=" "Eval" red_expr(rd) "in" constr(def) ] ->
+      [ assert false ]
+*)
+END;;
+(**
+    | [ "Quote" "Definition" ident(d) ; d = def_body ]
+      [ 
+**)
+
+
 VERNAC COMMAND EXTEND Make
+
 (*
     | [ "Make" "Definition" ident(d) tactic(t) ] ->
       [ (** [t] returns a [term] **)

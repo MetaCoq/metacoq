@@ -13,3 +13,6 @@ Definition d : Ast.term.
   let k x := refine x in
   quote_term t k.
 Defined.
+
+(** Another way **)
+Quote Definition d' := (fun x : nat => x).

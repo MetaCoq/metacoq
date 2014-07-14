@@ -10,7 +10,7 @@ module TermReify = struct
 
   let not_supported trm =
     Format.eprintf "\nNot Supported: %a\n" pp_constr trm ;
-    flush stdout ;
+    flush stderr ;
     raise (NotSupported trm)
   let bad_term trm =
     raise (NotSupported trm)
@@ -137,8 +137,8 @@ module TermReify = struct
     | Term.Type u -> Term.mkApp (sType, [| quote_universe u |])
 
   let quote_inductive (t : Names.inductive) =
-    let (_,i) = t in
-    Term.mkApp (tmkInd, [| quote_string (Format.asprintf "%a" pp_constr (Term.mkInd t))
+    let (m,i) = t in
+    Term.mkApp (tmkInd, [| quote_string (Names.string_of_kn (Names.canonical_mind m))
 			 ; int_to_nat i |])
 
   let rec quote_term trm =
@@ -213,15 +213,15 @@ module TermReify = struct
     let (h,args) = app_full trm [] in
     if Term.eq_constr h tAscii then
       match args with
-	a :: b :: c :: d :: e :: f :: g :: h :: i :: _ ->
-	  let bits = [a;b;c;d;e;f;g;h;i] in
-	  let v = List.fold_left (fun a n -> (a lsr 1) lor if from_bool n then 1 else 0) 0 bits in
+	a :: b :: c :: d :: e :: f :: g :: h :: _ ->
+	  let bits = List.rev [a;b;c;d;e;f;g;h] in
+	  let v = List.fold_left (fun a n -> (a lsl 1) lor if from_bool n then 1 else 0) 0 bits in
 	  char_of_int v
       | _ -> assert false
     else
       not_supported trm
 
-  let unquote_ident trm =
+  let unquote_string trm =
     let rec go n trm =
       let (h,args) = app_full trm [] in
       if Term.eq_constr h tEmptyString then
@@ -235,7 +235,11 @@ module TermReify = struct
 	| _ -> bad_term trm
       else
 	not_supported trm
-    in Names.id_of_string (go 0 trm)
+    in
+    go 0 trm
+
+  let unquote_ident trm =
+    Names.id_of_string (unquote_string trm)
 
   let unquote_cast_kind trm =
     if Term.eq_constr trm kVmCast then
@@ -272,6 +276,29 @@ module TermReify = struct
     else
       raise (Failure "ill-typed, expected sort")
 
+  let kn_of_canonical_string s =
+    let ss = List.rev (Str.split (Str.regexp (Str.quote ".")) s) in
+    match ss with
+      nm :: rst ->
+	let rec to_mp ls = Names.MPfile (Names.make_dirpath (List.map Names.id_of_string ls)) in
+	let mp = to_mp rst in
+	Names.make_kn mp Names.empty_dirpath (Names.mk_label nm)
+    | _ -> assert false
+
+  let denote_inductive trm =
+    let (h,args) = app_full trm [] in
+    if Term.eq_constr h tmkInd then
+      match args with
+	nm :: num :: _ ->
+	  let n = unquote_string nm in
+	  let kn = kn_of_canonical_string n in
+	  let mi = Names.mind_of_kn kn in
+	  let i = nat_to_int num in
+	  (mi, i)
+      | _ -> assert false
+    else
+      raise (Failure "non-constructor")
+
   let rec from_coq_list trm =
     let (h,args) = app_full trm [] in
     if Term.eq_constr h c_nil then []
@@ -283,16 +310,22 @@ module TermReify = struct
       not_supported trm
 
 
-  let rec denote trm =
+  (** NOTE: Because the representation is lossy, I should probably
+   ** come back through elaboration.
+   ** - This would also allow me to write terms with holes
+   **)
+  let rec denote_term trm =
+    Format.eprintf "%a\n" pp_constr trm ;
     let (h,args) = app_full trm [] in
     if Term.eq_constr h tRel then
       match args with
 	x :: _ ->
-	  Term.mkRel (nat_to_int x)
+	  Format.eprintf "Rel\n" ;
+	  Term.mkRel (nat_to_int x + 1)
       | _ -> raise (Failure "ill-typed")
     else if Term.eq_constr h tVar then
       match args with
-	x :: _ -> Term.mkVar (unquote_ident x)
+	x :: _ -> Format.eprintf "var\n"; Term.mkVar (unquote_ident x)
       | _ -> raise (Failure "ill-typed")
     else if Term.eq_constr h tSort then
       match args with
@@ -301,31 +334,51 @@ module TermReify = struct
     else if Term.eq_constr h tCast then
       match args with
 	t :: c :: ty :: _ ->
-	  Term.mkCast (denote t, unquote_cast_kind c, denote ty)
+	  Term.mkCast (denote_term t, unquote_cast_kind c, denote_term ty)
       | _ -> raise (Failure "ill-typed")
     else if Term.eq_constr h tProd then
       match args with
 	n :: t :: b :: _ ->
-	  Term.mkProd (unquote_name n, denote t, denote b)
+	  Term.mkProd (unquote_name n, denote_term t, denote_term b)
       | _ -> raise (Failure "ill-typed (product)")
     else if Term.eq_constr h tLambda then
       match args with
 	n :: t :: b :: _ ->
-	  Term.mkLambda (unquote_name n, denote t, denote b)
+      Format.eprintf "lambda\n";
+	  Term.mkLambda (unquote_name n, denote_term t, denote_term b)
       | _ -> raise (Failure "ill-typed (lambda)")
     else if Term.eq_constr h tLetIn then
       match args with
 	n :: t :: e :: b :: _ ->
-	  Term.mkLetIn (unquote_name n, denote t, denote e, denote b)
+	  Term.mkLetIn (unquote_name n, denote_term t, denote_term e, denote_term b)
       | _ -> raise (Failure "ill-typed (let-in)")
     else if Term.eq_constr h tApp then
       match args with
 	f :: xs :: _ ->
-	  Term.mkApp (denote f,
-		      Array.of_list (List.map denote (from_coq_list xs)))
+	  Term.mkApp (denote_term f,
+		      Array.of_list (List.map denote_term (from_coq_list xs)))
       | _ -> raise (Failure "ill-typed (app)")
+    else if Term.eq_constr h tConstructor then
+      match args with
+	i :: idx :: _ ->
+	  let i = denote_inductive i in
+	  Term.mkConstruct (i, nat_to_int idx + 1)
+      | _ -> raise (Failure "ill-typed (constructor)")
+    else if Term.eq_constr h tInd then
+      match args with
+	i :: _ ->
+	  let i = denote_inductive i in
+	  Term.mkInd i
+      | _ -> raise (Failure "ill-typed (inductive)")
+    else if Term.eq_constr h tCase then
+      match args with
+	ty :: d :: brs :: _ ->
+	  Term.mkCase (assert false (** I don't have any information to put here **)
+		      , denote_term ty, denote_term d ,
+			Array.of_list (List.map denote_term (from_coq_list brs)))
+      | _ -> raise (Failure "ill-typed (case)")
     else
-      raise (NotSupported trm)
+      not_supported trm
 
 end
 
@@ -393,26 +446,25 @@ VERNAC COMMAND EXTEND Make_vernac
 	let red = fst (Redexpr.reduction_of_red_expr red) in
 	let def = red env evm2 def in
 	let trm = TermReify.quote_term def in
-	let _ = Format.printf "%a\n" pp_constr trm in
 	let result = Constrextern.extern_constr true env trm in
 	declare_definition name
 	  (Decl_kinds.Global, false, Decl_kinds.Definition)
-	  [] None result None (fun _ _ -> ())
-
- ]
+	  [] None result None (fun _ _ -> ()) ]
 END;;
-(**
-    | [ "Quote" "Definition" ident(d) ; d = def_body ]
-      [ 
-**)
 
+VERNAC COMMAND EXTEND Unquote_vernac
+    | [ "Make" "Definition" ident(name) ":=" constr(def) ] ->
+      [ let (evm,env) = Lemmas.get_current_context () in
+	let def = Constrintern.interp_constr evm env def in
+	let trm = TermReify.denote_term def in
+	let result = Constrextern.extern_constr true env trm in
+	declare_definition name
+	  (Decl_kinds.Global, false, Decl_kinds.Definition)
+	  [] None result None (fun _ _ -> ()) ]
+END;;
 
-VERNAC COMMAND EXTEND Make
-
+VERNAC COMMAND EXTEND Make_tests
 (*
-    | [ "Make" "Definition" ident(d) tactic(t) ] ->
-      [ (** [t] returns a [term] **)
-	assert false ]
     | [ "Make" "Definitions" tactic(t) ] ->
       [ (** [t] returns a [list (string * term)] **)
 	assert false ]
@@ -421,6 +473,12 @@ VERNAC COMMAND EXTEND Make
       [ let (evm,env) = Lemmas.get_current_context () in
 	let c = Constrintern.interp_constr evm env c in
 	let result = TermReify.quote_term c in
+(* DEBUGGING
+	let back = TermReify.denote_term result in
+	Format.eprintf "%a\n" pp_constr result ;
+	Format.eprintf "%a\n" pp_constr back ;
+	assert (Term.eq_constr c back) ;
+*)
 	Pp.msgnl (Printer.pr_constr result) ;
 	() ]
 END;;

@@ -25,10 +25,10 @@ Inductive inductive : Type :=
 | mkInd : string -> nat -> inductive.
 
 Record def (term : Type) : Type := mkdef
-{ dname : name
+{ dname : name (** the name (note, this may mention other definitions **)
 ; dtype : term
-; dbody : term
-; rarg : nat
+; dbody : term (** the body (a lambda term) **)
+; rarg  : nat  (** the index of the recursive argument **)
 }.
 
 Definition mfixpoint (term : Type) : Type :=
@@ -54,10 +54,3 @@ Inductive term : Type :=
 | CoFix     of ('constr, 'types) pcofixpoint
 *)
 | tUnknown : string -> term.
-(*
-with pattern : Type :=
-| pHole    : pattern
-| pCtor    : name -> list pattern -> pattern
-*)
-
-(** Patterns do not actually exist in the core syntax **)

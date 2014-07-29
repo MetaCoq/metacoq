@@ -11,22 +11,24 @@ Check test-suite/demo.v for examples.
 
 You must add the theories directory to your Coq load path with the prefix
 Template. This can be done on the command line by adding:
-
-   coqc ... -R <path-to-theories> -as Template ...
-
+```
+coqc ... -R <path-to-theories> -as Template ...
+```
 or inside a running Coq session with:
 
-   Add LoadPath "<path-to-theories>" as Template.
+```
+Add LoadPath "<path-to-theories>" as Template.
+```
 
 Because paths are often not portable the later is not recommended.
 
 If you use Emacs and Proof General, you can set up a .dir-locals.el with the
 following code:
-
+```
 ((coq-mode . ((coq-load-path . (
  (nonrec "<absolute-path-to-theories>" "Template")
  )))))
-
+```
 As long as you don't check this file into a repository things should work out
 well.
 

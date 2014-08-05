@@ -132,8 +132,11 @@ module TermReify = struct
 
   let quote_sort s =
     match s with
-      Term.Prop Term.Pos -> sProp
-    | Term.Prop Term.Null -> sSet
+      Term.Prop _ ->
+	if s = Term.prop_sort then sProp
+	else
+	  let _ = assert (s = Term.set_sort) in
+	  sSet
     | Term.Type u -> Term.mkApp (sType, [| quote_universe u |])
 
   let quote_inductive (t : Names.inductive) =

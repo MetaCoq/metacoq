@@ -141,8 +141,8 @@ module TermReify = struct
     | Term.REVERTcast -> kRevertCast
 
   let quote_universe s =
-    (** Don't seem to be able to do this **)
-    assert false
+    (** TODO: This doesn't work yet **)
+    to_positive 1
 
   let quote_sort s =
     match s with

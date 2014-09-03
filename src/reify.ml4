@@ -8,6 +8,18 @@ let pp_constr fmt x = Pp.pp_with fmt (Printer.pr_constr x)
 module TermReify = struct
   exception NotSupported of Term.constr
 
+  module Cmap = Map.Make
+    (struct
+      type t = Term.constr
+      let compare = Term.constr_ord
+     end)
+  module Cset = Set.Make
+    (struct
+      type t = Term.constr
+      let compare = Term.constr_ord
+     end)
+
+
   let not_supported trm =
     Format.eprintf "\nNot Supported: %a\n" pp_constr trm ;
     flush stderr ;
@@ -48,6 +60,8 @@ module TermReify = struct
   let [tTerm;tRel;tVar;tMeta;tEvar;tSort;tCast;tProd;tLambda;tLetIn;tApp;tCase;tFix;tConstructor;tConst;tInd;tUnknown]
       = List.map r_reify ["term";"tRel";"tVar";"tMeta";"tEvar";"tSort";"tCast";"tProd";"tLambda";"tLetIn";"tApp";"tCase";"tFix";"tConstruct";"tConst";"tInd";"tUnknown"]
   let [tdef;tmkdef] = List.map r_reify ["def";"mkdef"]
+  let [pConstr;pType;pIn]
+      = List.map r_reify ["PConstr";"PType";"PIn"]
 
   let to_positive =
     let xH = resolve_symbol pkg_bignums "xH" in
@@ -144,50 +158,105 @@ module TermReify = struct
     Term.mkApp (tmkInd, [| quote_string (Names.string_of_kn (Names.canonical_mind m))
 			 ; int_to_nat i |])
 
-  let rec quote_term trm =
-    match Term.kind_of_term trm with
-      Term.Rel i -> Term.mkApp (tRel, [| int_to_nat (i - 1) |])
-    | Term.Var v -> Term.mkApp (tVar, [| quote_ident v |])
-    | Term.Sort s -> Term.mkApp (tSort, [| quote_sort s |])
-    | Term.Cast (c,k,t) ->
-      Term.mkApp (tCast, [| quote_term c ; quote_cast_kind k ; quote_term t |])
-    | Term.Prod (n,t,b) ->
-      Term.mkApp (tProd, [| quote_name n ; quote_term t ; quote_term b |])
-    | Term.Lambda (n,t,b) ->
-      Term.mkApp (tLambda, [| quote_name n ; quote_term t ; quote_term b |])
-    | Term.LetIn (n,t,e,b) ->
-      Term.mkApp (tLetIn, [| quote_name n ; quote_term t ; quote_term e ; quote_term b |])
-    | Term.App (f,xs) ->
-      Term.mkApp (tApp, [| quote_term f ; to_coq_list tTerm (List.map quote_term (Array.to_list xs)) |])
-    | Term.Const c -> Term.mkApp (tConst, [| quote_string (Names.string_of_con c) |])
-    | Term.Construct (ind,c) -> Term.mkApp (tConstructor, [| quote_inductive ind ; int_to_nat (c - 1) |])
-    | Term.Ind i -> Term.mkApp (tInd, [| quote_inductive i |])
-    | Term.Case (ci,a,b,e) ->
-      Term.mkApp (tCase, [| quote_term a ; quote_term b
-			  ; to_coq_list tTerm (List.map (fun x -> quote_term x) (Array.to_list e)) |])
-    | Term.Fix fp ->
-      let (t,n) = quote_fixpoint fp in
-      Term.mkApp (tFix, [| t ; int_to_nat n |])
-    | _ -> Term.mkApp (tUnknown, [| quote_string (Format.asprintf "%a" pp_constr trm) |])
-  and quote_fixpoint t =
-    let ((a,b),(ns,ts,ds)) = t in
-    let rec seq f t =
-      if f < t then
-	f :: seq (f + 1) t
-      else
-	[]
+  let quote_term_remember
+      (add_constant : Names.constant -> 'a -> 'a)
+      (add_inductive : Names.inductive -> 'a -> 'a) =
+    let rec quote_term (acc : 'a) env trm =
+      match Term.kind_of_term trm with
+	Term.Rel i -> (Term.mkApp (tRel, [| int_to_nat (i - 1) |]), acc)
+      | Term.Var v -> (Term.mkApp (tVar, [| quote_ident v |]), acc)
+      | Term.Sort s -> (Term.mkApp (tSort, [| quote_sort s |]), acc)
+      | Term.Cast (c,k,t) ->
+	let (c',acc) = quote_term acc env c in
+	let (t',acc) = quote_term acc env t in
+	(Term.mkApp (tCast, [| c' ; quote_cast_kind k ; t' |]), acc)
+      | Term.Prod (n,t,b) ->
+	let (t',acc) = quote_term acc env t in
+	let (b',acc) = quote_term acc env b in
+	(Term.mkApp (tProd, [| quote_name n ; t' ; b' |]), acc)
+      | Term.Lambda (n,t,b) ->
+	let (t',acc) = quote_term acc env t in
+	let (b',acc) = quote_term acc env b in
+	(Term.mkApp (tLambda, [| quote_name n ; t' ; b' |]), acc)
+      | Term.LetIn (n,t,e,b) ->
+	let (t',acc) = quote_term acc env t in
+	let (e',acc) = quote_term acc env e in
+	let (b',acc) = quote_term acc env b in
+	(Term.mkApp (tLetIn, [| quote_name n ; t' ; e' ; b' |]), acc)
+      | Term.App (f,xs) ->
+	let (f',acc) = quote_term acc env f in
+	let (xs',acc) =
+	  List.fold_left (fun (xs,acc) x ->
+	    let (x,acc) = quote_term acc env x in (x :: xs, acc))
+	    ([],acc) (Array.to_list xs) in
+	(Term.mkApp (tApp, [| f' ; to_coq_list tTerm (List.rev xs') |]), acc)
+      | Term.Const c ->
+	(Term.mkApp (tConst, [| quote_string (Names.string_of_con c) |]), add_constant c acc)
+      | Term.Construct (ind,c) ->
+	(Term.mkApp (tConstructor, [| quote_inductive ind ; int_to_nat (c - 1) |]), add_inductive ind acc)
+      | Term.Ind i -> (Term.mkApp (tInd, [| quote_inductive i |]), add_inductive i acc)
+      | Term.Case (ci,a,b,e) ->
+	let (a',acc) = quote_term acc env a in
+	let (b',acc) = quote_term acc env b in
+	let (branches,acc) =
+	  List.fold_left (fun (xs,acc) x ->
+	    let (x,acc) = quote_term acc env x in (x :: xs, acc))
+	    ([],acc) (Array.to_list e) in
+	(Term.mkApp (tCase, [| a' ; b' ; to_coq_list tTerm branches |]), acc)
+      | Term.Fix fp ->
+	let (t,n,acc) = quote_fixpoint acc env fp in
+	(Term.mkApp (tFix, [| t ; int_to_nat n |]), acc)
+      | _ -> (Term.mkApp (tUnknown, [| quote_string (Format.asprintf "%a" pp_constr trm) |]), acc)
+    and quote_fixpoint acc env t =
+      let ((a,b),(ns,ts,ds)) = t in
+      let rec seq f t =
+	if f < t then
+	  f :: seq (f + 1) t
+	else
+	  []
+      in
+      let mk_fun (xs,acc) i =
+	let n = int_to_nat (Array.get a i) in
+	let nm = quote_name (Array.get ns i) in
+	let (ty,acc) = quote_term acc env (Array.get ts i) in
+	let (ds,acc) = quote_term acc env (Array.get ds i) in
+	(Term.mkApp (tmkdef, [| tTerm ; nm ; ty ; ds ; n |]) :: xs, acc)
+      in
+      let (defs,acc) = List.fold_left mk_fun ([],acc) (seq 0 (Array.length a)) in
+      (to_coq_list (Term.mkApp (tdef, [| tTerm |])) (List.rev defs), b, acc)
+    in quote_term
+
+  let quote_term env trm =
+    fst (quote_term_remember (fun _ () -> ()) (fun _ () -> ()) () env trm)
+
+  type defType =
+    Ind of Names.inductive
+  | Const of Names.constant
+
+  let quote_term_rec env trm =
+    let visited = ref Cset.empty in
+    let constants = ref [] in
+    let rec add trm acc =
+      match trm with
+      | Ind i ->
+	let t = Term.mkInd i in
+	if Cset.mem t !visited then ()
+	else
+	  visited := Cset.add t !visited ;
+	  constants := (* Term.mkApp (pType, [| |]) :: *) !constants
+      | Const c ->
+	let t = Term.mkConst c in
+	if Cset.mem t !visited then ()
+	else
+	  visited := Cset.add t !visited ;
+	  let body = Environ.constant_value env c in
+	  let (result,acc) =
+	    quote_term_remember (fun x -> add (Const x)) (fun y -> add (Ind y)) acc Environ.empty_env body
+	  in
+	  constants := Term.mkApp (pConstr, [| quote_string (Names.string_of_con c) ; result |]) :: !constants
     in
-    let mk_fun i =
-      let n = int_to_nat (Array.get a i) in
-      let nm = quote_name (Array.get ns i) in
-      let ty = quote_term (Array.get ts i) in
-      let ds = quote_term (Array.get ds i) in
-      Term.mkApp (tmkdef, [| tTerm ; nm ; ty ; ds ; n |])
-    in
-    let defs = to_coq_list (Term.mkApp (tdef, [| tTerm |]))
-      (List.map mk_fun (seq 0 (Array.length a)))
-    in
-    (defs, b)
+    let (x,acc) = quote_term_remember (fun x -> add (Const x)) (fun y -> add (Ind y)) () env trm
+    in List.fold_left (fun acc x -> Term.mkApp (x, [| acc |])) (Term.mkApp (pIn, [| x |])) !constants
 
   let rec app_full trm acc =
     match Term.kind_of_term trm with
@@ -422,7 +491,8 @@ TACTIC EXTEND get_goal
     | [ "quote_term" constr(c) tactic(tac) ] ->
       [ (** quote the given term, pass the result to t **)
 	fun gl ->
-	  let c = TermReify.quote_term c in
+	  let env = Tacmach.pf_env gl in
+	  let c = TermReify.quote_term env c in
 	  ltac_apply tac (List.map to_ltac_val [c]) gl ]
 (*
     | [ "quote_goal" ] ->
@@ -437,7 +507,7 @@ VERNAC COMMAND EXTEND Make_vernac
     | [ "Quote" "Definition" ident(name) ":=" constr(def) ] ->
       [ let (evm,env) = Lemmas.get_current_context () in
 	let def = Constrintern.interp_constr evm env def in
-	let trm = TermReify.quote_term def in
+	let trm = TermReify.quote_term env def in
 	let result = Constrextern.extern_constr true env trm in
 	declare_definition name
 	  (Decl_kinds.Global, false, Decl_kinds.Definition)
@@ -448,7 +518,18 @@ VERNAC COMMAND EXTEND Make_vernac
 	let (evm2,red) = Tacinterp.interp_redexp env evm rd in
 	let red = fst (Redexpr.reduction_of_red_expr red) in
 	let def = red env evm2 def in
-	let trm = TermReify.quote_term def in
+	let trm = TermReify.quote_term env def in
+	let result = Constrextern.extern_constr true env trm in
+	declare_definition name
+	  (Decl_kinds.Global, false, Decl_kinds.Definition)
+	  [] None result None (fun _ _ -> ()) ]
+END;;
+
+VERNAC COMMAND EXTEND Make_recursive
+    | [ "Quote" "Recursively" "Definition" ident(name) ":=" constr(def) ] ->
+      [ let (evm,env) = Lemmas.get_current_context () in
+	let def = Constrintern.interp_constr evm env def in
+	let trm = TermReify.quote_term_rec env def in
 	let result = Constrextern.extern_constr true env trm in
 	declare_definition name
 	  (Decl_kinds.Global, false, Decl_kinds.Definition)
@@ -475,7 +556,7 @@ VERNAC COMMAND EXTEND Make_tests
     | [ "Test" "Quote" constr(c) ] ->
       [ let (evm,env) = Lemmas.get_current_context () in
 	let c = Constrintern.interp_constr evm env c in
-	let result = TermReify.quote_term c in
+	let result = TermReify.quote_term env c in
 (* DEBUGGING
 	let back = TermReify.denote_term result in
 	Format.eprintf "%a\n" pp_constr result ;

@@ -54,3 +54,5 @@ Make Definition zero_from_syntax := (Ast.tConstruct (Ast.mkInd "Coq.Init.Datatyp
 Make Definition two_from_syntax := (Ast.tApp (Ast.tConstruct (Ast.mkInd "Coq.Init.Datatypes.nat" 0) 1)
    (Ast.tApp (Ast.tConstruct (Ast.mkInd "Coq.Init.Datatypes.nat" 0) 1)
       (Ast.tConstruct (Ast.mkInd "Coq.Init.Datatypes.nat" 0) 0 :: nil) :: nil)).
+
+Quote Recursively Definition mult_syntax := mult.

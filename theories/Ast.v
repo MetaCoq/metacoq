@@ -36,8 +36,8 @@ Definition mfixpoint (term : Type) : Type :=
 
 Inductive term : Type :=
 | tRel       : nat -> term
-| tVar       : ident -> term
-| tMeta      : nat -> term
+| tVar       : ident -> term (** this can go away **)
+| tMeta      : nat -> term   (** NOTE: this can go away *)
 | tEvar      : nat -> term
 | tSort      : sort -> term
 | tCast      : term -> cast_kind -> term -> term
@@ -54,3 +54,8 @@ Inductive term : Type :=
 | CoFix     of ('constr, 'types) pcofixpoint
 *)
 | tUnknown : string -> term.
+
+Inductive program : Type :=
+| PConstr : string -> term -> program -> program
+| PType   : string -> inductive -> program -> program
+| PIn     : term -> program.

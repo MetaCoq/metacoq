@@ -242,18 +242,22 @@ module TermReify = struct
 	let t = Term.mkInd i in
 	if Cset.mem t !visited then ()
 	else
-	  visited := Cset.add t !visited ;
-	  constants := (* Term.mkApp (pType, [| |]) :: *) !constants
+	  begin
+	    visited := Cset.add t !visited ;
+	    constants := (* Term.mkApp (pType, [| |]) :: *) !constants
+	  end
       | Const c ->
 	let t = Term.mkConst c in
 	if Cset.mem t !visited then ()
 	else
-	  visited := Cset.add t !visited ;
-	  let body = Environ.constant_value env c in
-	  let (result,acc) =
-	    quote_term_remember (fun x -> add (Const x)) (fun y -> add (Ind y)) acc Environ.empty_env body
-	  in
-	  constants := Term.mkApp (pConstr, [| quote_string (Names.string_of_con c) ; result |]) :: !constants
+	  begin
+	    visited := Cset.add t !visited ;
+	    let body = Environ.constant_value env c in
+	    let (result,acc) =
+	      quote_term_remember (fun x -> add (Const x)) (fun y -> add (Ind y)) acc Environ.empty_env body
+	    in
+	    constants := Term.mkApp (pConstr, [| quote_string (Names.string_of_con c) ; result |]) :: !constants
+	  end
     in
     let (x,acc) = quote_term_remember (fun x -> add (Const x)) (fun y -> add (Ind y)) () env trm
     in List.fold_left (fun acc x -> Term.mkApp (x, [| acc |])) (Term.mkApp (pIn, [| x |])) !constants

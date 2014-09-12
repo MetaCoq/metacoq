@@ -490,6 +490,13 @@ let declare_definition
     Command.declare_definition
       id (loc, def_obj_kind) def_entry man_impl decl_hook
 
+let check_inside_section () =
+  if Lib.sections_are_opened () then
+    (** In trunk this seems to be moved to Errors **)
+    Util.errorlabstrm "Quote" (Pp.str "You can not quote within a section.")
+  else ()
+
+
 
 TACTIC EXTEND get_goal
     | [ "quote_term" constr(c) tactic(tac) ] ->
@@ -509,7 +516,8 @@ END;;
 
 VERNAC COMMAND EXTEND Make_vernac
     | [ "Quote" "Definition" ident(name) ":=" constr(def) ] ->
-      [ let (evm,env) = Lemmas.get_current_context () in
+      [ check_inside_section () ;
+	let (evm,env) = Lemmas.get_current_context () in
 	let def = Constrintern.interp_constr evm env def in
 	let trm = TermReify.quote_term env def in
 	let result = Constrextern.extern_constr true env trm in
@@ -517,7 +525,8 @@ VERNAC COMMAND EXTEND Make_vernac
 	  (Decl_kinds.Global, false, Decl_kinds.Definition)
 	  [] None result None (fun _ _ -> ()) ]
     | [ "Quote" "Definition" ident(name) ":=" "Eval" red_expr(rd) "in" constr(def) ] ->
-      [ let (evm,env) = Lemmas.get_current_context () in
+      [ check_inside_section () ;
+	let (evm,env) = Lemmas.get_current_context () in
 	let def = Constrintern.interp_constr evm env def in
 	let (evm2,red) = Tacinterp.interp_redexp env evm rd in
 	let red = fst (Redexpr.reduction_of_red_expr red) in
@@ -531,7 +540,8 @@ END;;
 
 VERNAC COMMAND EXTEND Make_recursive
     | [ "Quote" "Recursively" "Definition" ident(name) ":=" constr(def) ] ->
-      [ let (evm,env) = Lemmas.get_current_context () in
+      [ check_inside_section () ;
+	let (evm,env) = Lemmas.get_current_context () in
 	let def = Constrintern.interp_constr evm env def in
 	let trm = TermReify.quote_term_rec env def in
 	let result = Constrextern.extern_constr true env trm in
@@ -542,7 +552,8 @@ END;;
 
 VERNAC COMMAND EXTEND Unquote_vernac
     | [ "Make" "Definition" ident(name) ":=" constr(def) ] ->
-      [ let (evm,env) = Lemmas.get_current_context () in
+      [ check_inside_section () ;
+	let (evm,env) = Lemmas.get_current_context () in
 	let def = Constrintern.interp_constr evm env def in
 	let trm = TermReify.denote_term def in
 	let result = Constrextern.extern_constr true env trm in
@@ -558,7 +569,8 @@ VERNAC COMMAND EXTEND Make_tests
 	assert false ]
 *)
     | [ "Test" "Quote" constr(c) ] ->
-      [ let (evm,env) = Lemmas.get_current_context () in
+      [ check_inside_section () ;
+	let (evm,env) = Lemmas.get_current_context () in
 	let c = Constrintern.interp_constr evm env c in
 	let result = TermReify.quote_term env c in
 (* DEBUGGING

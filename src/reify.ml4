@@ -8,16 +8,9 @@ let pp_constr fmt x = Pp.pp_with fmt (Printer.pr_constr x)
 module TermReify = struct
   exception NotSupported of Term.constr
 
-  module Cmap = Map.Make
-    (struct
-      type t = Term.constr
-      let compare = Term.constr_ord
-     end)
-  module Cset = Set.Make
-    (struct
-      type t = Term.constr
-      let compare = Term.constr_ord
-     end)
+  module Cmap = Names.Cmap
+  module Cset = Names.Cset
+  module Mindset = Names.Mindset
 
 
   let not_supported trm =
@@ -47,6 +40,13 @@ module TermReify = struct
   let tAscii = resolve_symbol ["Coq";"Strings";"Ascii"] "Ascii"
   let c_nil = resolve_symbol pkg_datatypes "nil"
   let c_cons = resolve_symbol pkg_datatypes "cons"
+  let prod_type = resolve_symbol pkg_datatypes "prod"
+  let prod a b =
+    Term.mkApp (prod_type, [| a ; b |])
+  let c_pair = resolve_symbol pkg_datatypes "pair"
+  let pair a b f s =
+    Term.mkApp (c_pair, [| a ; b ; f ; s |])
+
   let nAnon = r_reify "nAnon"
   let nNamed = r_reify "nNamed"
   let kVmCast = r_reify "VmCast"
@@ -56,12 +56,15 @@ module TermReify = struct
   let sProp = r_reify "sProp"
   let sSet = r_reify "sSet"
   let sType = r_reify "sType"
+  let tident = r_reify "ident"
   let tmkInd = r_reify "mkInd"
   let [tTerm;tRel;tVar;tMeta;tEvar;tSort;tCast;tProd;tLambda;tLetIn;tApp;tCase;tFix;tConstructor;tConst;tInd;tUnknown]
       = List.map r_reify ["term";"tRel";"tVar";"tMeta";"tEvar";"tSort";"tCast";"tProd";"tLambda";"tLetIn";"tApp";"tCase";"tFix";"tConstruct";"tConst";"tInd";"tUnknown"]
   let [tdef;tmkdef] = List.map r_reify ["def";"mkdef"]
   let [pConstr;pType;pIn]
       = List.map r_reify ["PConstr";"PType";"PIn"]
+  let tinductive_body = r_reify "inductive_body"
+  let tmkinductive_body = r_reify "mkinductive_body"
 
   let to_positive =
     let xH = resolve_symbol pkg_bignums "xH" in
@@ -153,10 +156,25 @@ module TermReify = struct
 	  sSet
     | Term.Type u -> Term.mkApp (sType, [| quote_universe u |])
 
-  let quote_inductive (t : Names.inductive) =
+  let quote_inductive env (t : Names.inductive) =
     let (m,i) = t in
     Term.mkApp (tmkInd, [| quote_string (Names.string_of_kn (Names.canonical_mind m))
 			 ; int_to_nat i |])
+
+  let mk_ctor_list =
+    let ctor_list =
+      let ctor_info_typ = prod tident tTerm in
+      to_coq_list ctor_info_typ
+    in
+    fun ls ->
+      let ctors = List.map (fun (a,b) -> pair tident tTerm a b) ls in
+      Term.mkApp (tmkinductive_body, [| ctor_list ctors |])
+
+  let rec pair_with_number st ls =
+    match ls with
+      [] -> []
+    | l :: ls -> (st,l) :: pair_with_number (st + 1) ls
+
 
   let quote_term_remember
       (add_constant : Names.constant -> 'a -> 'a)
@@ -193,8 +211,8 @@ module TermReify = struct
       | Term.Const c ->
 	(Term.mkApp (tConst, [| quote_string (Names.string_of_con c) |]), add_constant c acc)
       | Term.Construct (ind,c) ->
-	(Term.mkApp (tConstructor, [| quote_inductive ind ; int_to_nat (c - 1) |]), add_inductive ind acc)
-      | Term.Ind i -> (Term.mkApp (tInd, [| quote_inductive i |]), add_inductive i acc)
+	(Term.mkApp (tConstructor, [| quote_inductive env ind ; int_to_nat (c - 1) |]), add_inductive ind acc)
+      | Term.Ind i -> (Term.mkApp (tInd, [| quote_inductive env i |]), add_inductive i acc)
       | Term.Case (ci,a,b,e) ->
 	let (a',acc) = quote_term acc env a in
 	let (b',acc) = quote_term acc env b in
@@ -224,43 +242,86 @@ module TermReify = struct
       in
       let (defs,acc) = List.fold_left mk_fun ([],acc) (seq 0 (Array.length a)) in
       (to_coq_list (Term.mkApp (tdef, [| tTerm |])) (List.rev defs), b, acc)
-    in quote_term
+    and quote_minductive_type (acc : 'a) env (t : Names.mutual_inductive) =
+      let mib = Environ.lookup_mind t env in
+      let (ls,acc) =
+	List.fold_left (fun (ls,acc) (n,oib) ->
+	  let named_ctors =
+	    List.combine
+	      Declarations.(Array.to_list oib.mind_consnames)
+	      Declarations.(Array.to_list oib.mind_user_lc)
+	  in
+	  let (reified_ctors,acc) =
+	    List.fold_left (fun (ls,acc) (nm,ty) ->
+	      let (ty,acc) = quote_term acc env ty in
+	      ((quote_ident nm, ty) :: ls, acc))
+	      ([],acc) named_ctors
+	  in
+	  ((quote_ident oib.mind_typename,
+	    mk_ctor_list (List.rev reified_ctors)) :: ls, acc))
+	  ([],acc) (pair_with_number 0
+		      (Array.to_list mib.mind_packets))
+      in
+      (to_coq_list (prod tident tinductive_body)
+	 (List.map (fun (a,b) ->
+	   pair tident tinductive_body a b) (List.rev ls)),
+       acc)
+    in (quote_term, quote_minductive_type)
 
   let quote_term env trm =
-    fst (quote_term_remember (fun _ () -> ()) (fun _ () -> ()) () env trm)
+    let (fn,_) = quote_term_remember (fun _ () -> ()) (fun _ () -> ()) in
+    fst (fn () env trm)
 
   type defType =
     Ind of Names.inductive
   | Const of Names.constant
 
   let quote_term_rec env trm =
-    let visited = ref Cset.empty in
+    let visited_terms = ref Cset.empty in
+    let visited_types = ref Mindset.empty in
     let constants = ref [] in
-    let rec add trm acc =
+    let add quote_term quote_type trm acc =
       match trm with
-      | Ind i ->
-	let t = Term.mkInd i in
-	if Cset.mem t !visited then ()
+      | Ind (mi,idx) ->
+	let t = mi in
+	if Mindset.mem t !visited_types then ()
 	else
 	  begin
-	    visited := Cset.add t !visited ;
-	    constants := (* Term.mkApp (pType, [| |]) :: *) !constants
+	    let (result,acc) = quote_type acc env mi in
+	    let ref_name =
+	      quote_string (Names.string_of_kn (Names.canonical_mind mi)) in
+	    visited_types := Mindset.add t !visited_types ;
+	    constants := Term.mkApp (pType, [| ref_name
+					     ; result |]) :: !constants
 	  end
       | Const c ->
-	let t = Term.mkConst c in
-	if Cset.mem t !visited then ()
+	if Cset.mem c !visited_terms then ()
 	else
 	  begin
-	    visited := Cset.add t !visited ;
+	    visited_terms := Cset.add c !visited_terms ;
 	    let body = Environ.constant_value env c in
 	    let (result,acc) =
-	      quote_term_remember (fun x -> add (Const x)) (fun y -> add (Ind y)) acc Environ.empty_env body
+	      quote_term acc Environ.empty_env body
 	    in
-	    constants := Term.mkApp (pConstr, [| quote_string (Names.string_of_con c) ; result |]) :: !constants
+	    constants := Term.mkApp (pConstr,
+				     [| quote_string (Names.string_of_con c)
+				      ; result |]) :: !constants
 	  end
     in
-    let (x,acc) = quote_term_remember (fun x -> add (Const x)) (fun y -> add (Ind y)) () env trm
-    in List.fold_left (fun acc x -> Term.mkApp (x, [| acc |])) (Term.mkApp (pIn, [| x |])) !constants
+    let (quote_rem,quote_typ) =
+      let a = ref (fun _ _ _ -> assert false) in
+      let b = ref (fun _ _ _ -> assert false) in
+      let (x,y) =
+	quote_term_remember (fun x () -> add !a !b (Const x) ())
+	                    (fun y () -> add !a !b (Ind y) ())
+      in
+      a := x ;
+      b := y ;
+      (x,y)
+    in
+    let (x,acc) = quote_rem () env trm
+    in List.fold_left (fun acc x -> Term.mkApp (x, [| acc |]))
+                      (Term.mkApp (pIn, [| x |])) !constants
 
   let rec app_full trm acc =
     match Term.kind_of_term trm with

@@ -55,7 +55,10 @@ Inductive term : Type :=
 *)
 | tUnknown : string -> term.
 
+Record inductive_body := mkinductive_body
+{ ctors : list (ident * term) }.
+
 Inductive program : Type :=
 | PConstr : string -> term -> program -> program
-| PType   : string -> inductive -> program -> program
+| PType   : ident -> list (ident * inductive_body) -> program -> program
 | PIn     : term -> program.

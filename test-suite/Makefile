@@ -1,4 +1,4 @@
-TESTS:=demo bug1 bug2 bug3
+TESTS:=demo bug1 bug2 bug3 opaque
 ARGS:=-I ../src -R ../theories Template
 
 all: Makefile.coq

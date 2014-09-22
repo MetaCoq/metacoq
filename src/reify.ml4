@@ -299,7 +299,13 @@ module TermReify = struct
 	else
 	  begin
 	    visited_terms := Cset.add c !visited_terms ;
-	    let body = Environ.constant_value env c in
+	    let body =
+	      let cd = Environ.lookup_constant c env in
+	      Declarations.(match cd.const_body with
+		Undef i -> assert false
+	      | Def cs -> force cs
+	      | OpaqueDef lc -> force_opaque lc)
+	    in
 	    let (result,acc) =
 	      quote_term acc Environ.empty_env body
 	    in

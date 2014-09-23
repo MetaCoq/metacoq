@@ -61,8 +61,8 @@ module TermReify = struct
   let [tTerm;tRel;tVar;tMeta;tEvar;tSort;tCast;tProd;tLambda;tLetIn;tApp;tCase;tFix;tConstructor;tConst;tInd;tUnknown]
       = List.map r_reify ["term";"tRel";"tVar";"tMeta";"tEvar";"tSort";"tCast";"tProd";"tLambda";"tLetIn";"tApp";"tCase";"tFix";"tConstruct";"tConst";"tInd";"tUnknown"]
   let [tdef;tmkdef] = List.map r_reify ["def";"mkdef"]
-  let [pConstr;pType;pIn]
-      = List.map r_reify ["PConstr";"PType";"PIn"]
+  let [pConstr;pType;pAxiom;pIn]
+      = List.map r_reify ["PConstr";"PType";"PAxiom";"PIn"]
   let tinductive_body = r_reify "inductive_body"
   let tmkinductive_body = r_reify "mkinductive_body"
 
@@ -299,19 +299,24 @@ module TermReify = struct
 	else
 	  begin
 	    visited_terms := Cset.add c !visited_terms ;
-	    let body =
-	      let cd = Environ.lookup_constant c env in
-	      Declarations.(match cd.const_body with
-		Undef i -> assert false
-	      | Def cs -> force cs
-	      | OpaqueDef lc -> force_opaque lc)
+	    let cd = Environ.lookup_constant c env in
+	    let do_body body =
+	      let (result,acc) =
+		quote_term acc Environ.empty_env body
+	      in
+	      constants := Term.mkApp (pConstr,
+				       [| quote_string (Names.string_of_con c)
+				       ; result |]) :: !constants
 	    in
-	    let (result,acc) =
-	      quote_term acc Environ.empty_env body
-	    in
-	    constants := Term.mkApp (pConstr,
-				     [| quote_string (Names.string_of_con c)
-				      ; result |]) :: !constants
+	    Declarations.(
+	      match cd.const_body with
+		Undef i ->
+		  constants := Term.mkApp (pAxiom,
+					   [| quote_string (Names.string_of_con c) |]) :: !constants
+	      | Def cs ->
+		do_body (force cs)
+	      | OpaqueDef lc ->
+		do_body (force_opaque lc))
 	  end
     in
     let (quote_rem,quote_typ) =

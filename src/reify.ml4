@@ -257,9 +257,9 @@ module TermReify = struct
 	      ((quote_ident nm, ty) :: ls, acc))
 	      ([],acc) named_ctors
 	  in
-	  ((quote_ident oib.mind_typename,
+	  Declarations.((quote_ident oib.mind_typename,
 	    mk_ctor_list (List.rev reified_ctors)) :: ls, acc))
-	  ([],acc) (pair_with_number 0
+	  ([],acc) Declarations.(pair_with_number 0
 		      (Array.to_list mib.mind_packets))
       in
       (to_coq_list (prod tident tinductive_body)

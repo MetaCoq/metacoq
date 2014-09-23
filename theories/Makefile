@@ -12,7 +12,6 @@ install: coq
 	$(MAKE) -f Makefile.coq install
 
 Makefile.coq: Makefile $(VS)
-	echo $(ARGS)
 	coq_makefile $(ARGS) $(VS) > Makefile.coq
 
 
@@ -20,8 +19,11 @@ clean:: Makefile.coq
 	$(MAKE) -f Makefile.coq clean
 	rm -f Makefile.coq Makefile.test.coq .depend
 
-template_plugin.cmxs:
+template_plugin.cmxs: ../src/template_plugin.cmxs
 	@ ln -s ../src/template_plugin.cmxs .
+
+../src/template_plugin.cmxs:
+	$(MAKE) -C ../src
 
 admit:
 	@ grep -n -e 'admit' -e 'Admitted' ${VS}

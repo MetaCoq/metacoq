@@ -4,6 +4,7 @@ plugin:
 
 clean:
 	$(MAKE) -C src clean
+	$(MAKE) -C theories clean
 
 install: plugin
 	install -d $(INSTALL_DIR)

@@ -220,7 +220,7 @@ module TermReify = struct
 	  List.fold_left (fun (xs,acc) x ->
 	    let (x,acc) = quote_term acc env x in (x :: xs, acc))
 	    ([],acc) (Array.to_list e) in
-	(Term.mkApp (tCase, [| a' ; b' ; to_coq_list tTerm branches |]), acc)
+	(Term.mkApp (tCase, [| a' ; b' ; to_coq_list tTerm (List.rev branches) |]), acc)
       | Term.Fix fp ->
 	let (t,n,acc) = quote_fixpoint acc env fp in
 	(Term.mkApp (tFix, [| t ; int_to_nat n |]), acc)

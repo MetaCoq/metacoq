@@ -214,13 +214,14 @@ module TermReify = struct
 	(Term.mkApp (tConstructor, [| quote_inductive env ind ; int_to_nat (c - 1) |]), add_inductive ind acc)
       | Term.Ind i -> (Term.mkApp (tInd, [| quote_inductive env i |]), add_inductive i acc)
       | Term.Case (ci,a,b,e) ->
+        let npar = int_to_nat ci.ci_npar in
 	let (a',acc) = quote_term acc env a in
 	let (b',acc) = quote_term acc env b in
 	let (branches,acc) =
 	  List.fold_left (fun (xs,acc) x ->
 	    let (x,acc) = quote_term acc env x in (x :: xs, acc))
 	    ([],acc) (Array.to_list e) in
-	(Term.mkApp (tCase, [| a' ; b' ; to_coq_list tTerm (List.rev branches) |]), acc)
+	(Term.mkApp (tCase, [| npar ; a' ; b' ; to_coq_list tTerm (List.rev branches) |]), acc)
       | Term.Fix fp ->
 	let (t,n,acc) = quote_fixpoint acc env fp in
 	(Term.mkApp (tFix, [| t ; int_to_nat n |]), acc)

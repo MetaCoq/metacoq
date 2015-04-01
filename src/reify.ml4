@@ -5,13 +5,25 @@ let contrib_name = "template-coq"
 
 let pp_constr fmt x = Pp.pp_with fmt (Printer.pr_constr x)
 
-module TermReify = struct
+module TermReify =
+struct
   exception NotSupported of Term.constr
 
   module Cmap = Names.Cmap
   module Cset = Names.Cset
   module Mindset = Names.Mindset
 
+  (* flags *)
+  let opt_hnf_ctor_types = ref false
+
+  let with_hnf_ctor_types f =
+    opt_hnf_ctor_types := true ;
+    try
+      let result = f () in
+      opt_hnf_ctor_types := false ;
+      result
+    with
+      e -> let _ = opt_hnf_ctor_types := false in raise e
 
   let not_supported trm =
     Format.eprintf "\nNot Supported: %a\n" pp_constr trm ;
@@ -175,6 +187,17 @@ module TermReify = struct
       [] -> []
     | l :: ls -> (st,l) :: pair_with_number (st + 1) ls
 
+  let hnf_type env ty =
+    let rec hnf_type continue ty =
+      match Term.kind_of_term ty with
+	Term.Prod (n,t,b) -> Term.mkProd (n,t,hnf_type true b)
+      | Term.LetIn _
+      | Term.Cast _
+      | Term.App _ when continue ->
+	 hnf_type false (Reduction.whd_betadeltaiota env ty)
+      | _ -> ty
+    in
+    hnf_type true ty
 
   let quote_term_remember
       (add_constant : Names.constant -> 'a -> 'a)
@@ -254,6 +277,8 @@ module TermReify = struct
 	  in
 	  let (reified_ctors,acc) =
 	    List.fold_left (fun (ls,acc) (nm,ty) ->
+			    Printf.eprintf "XXXX %b\n" !opt_hnf_ctor_types ;
+	      let ty = if !opt_hnf_ctor_types then hnf_type env ty else ty in
 	      let (ty,acc) = quote_term acc env ty in
 	      ((quote_ident nm, ty) :: ls, acc))
 	      ([],acc) named_ctors
@@ -622,6 +647,19 @@ VERNAC COMMAND EXTEND Make_recursive
 	  (Decl_kinds.Global, false, Decl_kinds.Definition)
 	  [] None result None (fun _ _ -> ()) ]
 END;;
+
+VERNAC COMMAND EXTEND Make_recursive_hnf
+    | [ "Quote" "Recursively" "[" "hnf" "ind" "typ" "]" "Definition" ident(name) ":=" constr(def) ] ->
+      [ check_inside_section () ;
+	let (evm,env) = Lemmas.get_current_context () in
+	let def = Constrintern.interp_constr evm env def in
+	let trm = TermReify.with_hnf_ctor_types (fun () -> TermReify.quote_term_rec env def) in
+	let result = Constrextern.extern_constr true env trm in
+	declare_definition name
+	  (Decl_kinds.Global, false, Decl_kinds.Definition)
+	  [] None result None (fun _ _ -> ()) ]
+END;;
+
 
 VERNAC COMMAND EXTEND Unquote_vernac
     | [ "Make" "Definition" ident(name) ":=" constr(def) ] ->

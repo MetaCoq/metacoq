@@ -33,8 +33,7 @@ struct
     raise (NotSupported trm)
 
   let resolve_symbol (path : string list) (tm : string) : Term.constr =
-    let re = Coqlib.find_reference contrib_name path tm in
-    Libnames.constr_of_global re
+    Coqlib.gen_constant_in_modules contrib_name [path] tm
 
   let pkg_bignums = ["Coq";"Numbers";"BinNums"]
   let pkg_datatypes = ["Coq";"Init";"Datatypes"]
@@ -231,11 +230,12 @@ struct
 	    let (x,acc) = quote_term acc env x in (x :: xs, acc))
 	    ([],acc) (Array.to_list xs) in
 	(Term.mkApp (tApp, [| f' ; to_coq_list tTerm (List.rev xs') |]), acc)
-      | Term.Const c ->
+      | Term.Const (c,pu) -> (* FIXME: take universe constraints into account *)
 	(Term.mkApp (tConst, [| quote_string (Names.string_of_con c) |]), add_constant c acc)
-      | Term.Construct (ind,c) ->
+      | Term.Construct ((ind,c),pu) -> (* FIXME: take universe constraints into account *)
 	(Term.mkApp (tConstructor, [| quote_inductive env ind ; int_to_nat (c - 1) |]), add_inductive ind acc)
-      | Term.Ind i -> (Term.mkApp (tInd, [| quote_inductive env i |]), add_inductive i acc)
+      | Term.Ind (i,pu) -> (* FIXME: take universe constraints into account *)
+         (Term.mkApp (tInd, [| quote_inductive env i |]), add_inductive i acc)
       | Term.Case (ci,a,b,e) ->
         let npar = int_to_nat ci.ci_npar in
 	let (a',acc) = quote_term acc env a in
@@ -340,9 +340,9 @@ struct
 		  constants := Term.mkApp (pAxiom,
 					   [| quote_string (Names.string_of_con c) |]) :: !constants
 	      | Def cs ->
-		do_body (force cs)
+		do_body (Mod_subst.force_constr cs)
 	      | OpaqueDef lc ->
-		do_body (force_opaque lc))
+		do_body (Opaqueproof.force_proof (Global.opaque_tables ()) lc))
 	  end
     in
     let (quote_rem,quote_typ) =
@@ -556,42 +556,40 @@ struct
 
 end
 
+DECLARE PLUGIN "templateCoq"
 let _= Mltop.add_known_module "templateCoq"
 
 (** Stolen from CoqPluginUtils **)
 (** Calling Ltac **)
 let ltac_call tac (args:Tacexpr.glob_tactic_arg list) =
-  Tacexpr.TacArg(Util.dummy_loc,Tacexpr.TacCall(Util.dummy_loc, Glob_term.ArgArg(Util.dummy_loc, Lazy.force tac),args))
+  Tacexpr.TacArg(Loc.ghost,Tacexpr.TacCall(Loc.ghost, Misctypes.ArgArg(Loc.ghost, Lazy.force tac),args))
 
 (* Calling a locally bound tactic *)
 let ltac_lcall tac args =
-  Tacexpr.TacArg(Util.dummy_loc,Tacexpr.TacCall(Util.dummy_loc, Glob_term.ArgVar(Util.dummy_loc, Names.id_of_string tac),args))
+  Tacexpr.TacArg(Loc.ghost,Tacexpr.TacCall(Loc.ghost, Misctypes.ArgVar(Loc.ghost, Names.id_of_string tac),args))
 
 let ltac_letin (x, e1) e2 =
-  Tacexpr.TacLetIn(false,[(Util.dummy_loc,Names.id_of_string x),e1],e2)
+  Tacexpr.TacLetIn(false,[(Loc.ghost,Names.id_of_string x),e1],e2)
 
 let ltac_apply (f:Tacexpr.glob_tactic_expr) (args:Tacexpr.glob_tactic_arg list) =
   Tacinterp.eval_tactic
     (ltac_letin ("F", Tacexpr.Tacexp f) (ltac_lcall "F" args))
 
-let to_ltac_val c = Tacexpr.TacDynamic(Util.dummy_loc,Pretyping.constr_in c)
+let to_ltac_val c = Tacexpr.TacDynamic(Loc.ghost,Pretyping.constr_in c)
 
 (** From Containers **)
 let declare_definition
     id (loc, boxed_flag, def_obj_kind)
     binder_list red_expr_opt constr_expr
     constr_expr_opt decl_hook =
-  let (def_entry, man_impl) =
-    Command.interp_definition binder_list red_expr_opt constr_expr
-      constr_expr_opt
-  in
-    Command.declare_definition
-      id (loc, def_obj_kind) def_entry man_impl decl_hook
+  Command.do_definition
+  id (loc, false, def_obj_kind) binder_list red_expr_opt constr_expr
+  constr_expr_opt decl_hook
 
 let check_inside_section () =
   if Lib.sections_are_opened () then
     (** In trunk this seems to be moved to Errors **)
-    Util.errorlabstrm "Quote" (Pp.str "You can not quote within a section.")
+    Errors.errorlabstrm "Quote" (Pp.str "You can not quote within a section.")
   else ()
 
 
@@ -599,10 +597,11 @@ let check_inside_section () =
 TACTIC EXTEND get_goal
     | [ "quote_term" constr(c) tactic(tac) ] ->
       [ (** quote the given term, pass the result to t **)
-	fun gl ->
-	  let env = Tacmach.pf_env gl in
+  Proofview.Goal.nf_enter begin fun gl ->
+          let env = Proofview.Goal.env gl in
 	  let c = TermReify.quote_term env c in
-	  ltac_apply tac (List.map to_ltac_val [c]) gl ]
+	  ltac_apply tac (List.map to_ltac_val [c])
+  end ]
 (*
     | [ "quote_goal" ] ->
       [ (** get the representation of the goal **)
@@ -612,68 +611,55 @@ TACTIC EXTEND get_goal
 *)
 END;;
 
-VERNAC COMMAND EXTEND Make_vernac
+VERNAC COMMAND EXTEND Make_vernac CLASSIFIED AS SIDEFF
     | [ "Quote" "Definition" ident(name) ":=" constr(def) ] ->
       [ check_inside_section () ;
 	let (evm,env) = Lemmas.get_current_context () in
-	let def = Constrintern.interp_constr evm env def in
-	let trm = TermReify.quote_term env def in
-	let result = Constrextern.extern_constr true env trm in
+	let def = Constrintern.interp_constr env evm def in
+	let trm = TermReify.quote_term env (fst def) in
+	let result = Constrextern.extern_constr true env evm trm in
 	declare_definition name
 	  (Decl_kinds.Global, false, Decl_kinds.Definition)
-	  [] None result None (fun _ _ -> ()) ]
+	  [] None result None (Lemmas.mk_hook (fun _ _ -> ())) ]
     | [ "Quote" "Definition" ident(name) ":=" "Eval" red_expr(rd) "in" constr(def) ] ->
       [ check_inside_section () ;
 	let (evm,env) = Lemmas.get_current_context () in
-	let def = Constrintern.interp_constr evm env def in
+	let def = Constrintern.interp_constr env evm def in
 	let (evm2,red) = Tacinterp.interp_redexp env evm rd in
-	let red = fst (Redexpr.reduction_of_red_expr red) in
-	let def = red env evm2 def in
-	let trm = TermReify.quote_term env def in
-	let result = Constrextern.extern_constr true env trm in
+	let red = fst (Redexpr.reduction_of_red_expr env red) in
+	let def = red env evm2 (fst def) in
+	let trm = TermReify.quote_term env (snd def) in
+	let result = Constrextern.extern_constr true env (fst def) trm in
 	declare_definition name
 	  (Decl_kinds.Global, false, Decl_kinds.Definition)
-	  [] None result None (fun _ _ -> ()) ]
+	  [] None result None (Lemmas.mk_hook (fun _ _ -> ())) ]
 END;;
 
-VERNAC COMMAND EXTEND Make_recursive
+VERNAC COMMAND EXTEND Make_recursive CLASSIFIED AS SIDEFF
     | [ "Quote" "Recursively" "Definition" ident(name) ":=" constr(def) ] ->
       [ check_inside_section () ;
 	let (evm,env) = Lemmas.get_current_context () in
-	let def = Constrintern.interp_constr evm env def in
-	let trm = TermReify.quote_term_rec env def in
-	let result = Constrextern.extern_constr true env trm in
+	let def = Constrintern.interp_constr env evm def in
+	let trm = TermReify.quote_term_rec env (fst def) in
+	let result = Constrextern.extern_constr true env evm trm in
 	declare_definition name
 	  (Decl_kinds.Global, false, Decl_kinds.Definition)
-	  [] None result None (fun _ _ -> ()) ]
+	  [] None result None (Lemmas.mk_hook (fun _ _ -> ())) ]
 END;;
 
-VERNAC COMMAND EXTEND Make_recursive_hnf
-    | [ "Quote" "Recursively" "[" "hnf" "ind" "typ" "]" "Definition" ident(name) ":=" constr(def) ] ->
-      [ check_inside_section () ;
-	let (evm,env) = Lemmas.get_current_context () in
-	let def = Constrintern.interp_constr evm env def in
-	let trm = TermReify.with_hnf_ctor_types (fun () -> TermReify.quote_term_rec env def) in
-	let result = Constrextern.extern_constr true env trm in
-	declare_definition name
-	  (Decl_kinds.Global, false, Decl_kinds.Definition)
-	  [] None result None (fun _ _ -> ()) ]
-END;;
-
-
-VERNAC COMMAND EXTEND Unquote_vernac
+VERNAC COMMAND EXTEND Unquote_vernac CLASSIFIED AS SIDEFF
     | [ "Make" "Definition" ident(name) ":=" constr(def) ] ->
       [ check_inside_section () ;
 	let (evm,env) = Lemmas.get_current_context () in
-	let def = Constrintern.interp_constr evm env def in
-	let trm = TermReify.denote_term def in
-	let result = Constrextern.extern_constr true env trm in
+	let def = Constrintern.interp_constr env evm def in
+	let trm = TermReify.denote_term (fst def) in
+	let result = Constrextern.extern_constr true env evm trm in
 	declare_definition name
 	  (Decl_kinds.Global, false, Decl_kinds.Definition)
-	  [] None result None (fun _ _ -> ()) ]
+	  [] None result None (Lemmas.mk_hook (fun _ _ -> ())) ]
 END;;
 
-VERNAC COMMAND EXTEND Make_tests
+VERNAC COMMAND EXTEND Make_tests CLASSIFIED AS QUERY
 (*
     | [ "Make" "Definitions" tactic(t) ] ->
       [ (** [t] returns a [list (string * term)] **)
@@ -682,8 +668,8 @@ VERNAC COMMAND EXTEND Make_tests
     | [ "Test" "Quote" constr(c) ] ->
       [ check_inside_section () ;
 	let (evm,env) = Lemmas.get_current_context () in
-	let c = Constrintern.interp_constr evm env c in
-	let result = TermReify.quote_term env c in
+	let c = Constrintern.interp_constr env evm c in
+	let result = TermReify.quote_term env (fst c) in
 (* DEBUGGING
 	let back = TermReify.denote_term result in
 	Format.eprintf "%a\n" pp_constr result ;

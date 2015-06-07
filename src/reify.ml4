@@ -556,8 +556,7 @@ struct
 
 end
 
-DECLARE PLUGIN "templateCoq"
-let _= Mltop.add_known_module "templateCoq"
+DECLARE PLUGIN "template_plugin"
 
 (** Stolen from CoqPluginUtils **)
 (** Calling Ltac **)

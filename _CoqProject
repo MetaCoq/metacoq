@@ -1,5 +1,5 @@
 -I src
--R theories Template
+-Q theories Template
 src/reify.ml4
 src/template_plugin.mllib
 theories/Ast.v

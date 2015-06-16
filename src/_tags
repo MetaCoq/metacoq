@@ -1,3 +1,0 @@
-<myocamlbuild.*>: coq_paths
-<reify.*>: coq, for-pack(Template_plugin)
-<template_plugin.*>: coq

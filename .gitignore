@@ -9,3 +9,9 @@ Makefile.coq
 theories/*.cmxs
 \#*#
 *~
+.coq-native
+.*.aux
+*.o
+*.ml4.d
+*.mlpack.d
+Makefile.plugin.coq

@@ -1,0 +1,4 @@
+-I src
+-R theories Template
+theories/Ast.v
+theories/Template.v

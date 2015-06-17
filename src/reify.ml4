@@ -339,9 +339,16 @@ struct
 	    in
 	    Declarations.(
 	      match cd.const_body with
-		Undef i ->
+		Undef _ ->
+		begin
+		  let (ty,acc) =
+		    match cd.const_type with
+		    | RegularArity ty -> quote_term acc Environ.empty_env ty
+		    | TemplateArity _ -> assert false
+		  in
 		  constants := Term.mkApp (pAxiom,
-					   [| quote_string (Names.string_of_con c) |]) :: !constants
+					   [| quote_string (Names.string_of_con c) ; ty |]) :: !constants
+		end
 	      | Def cs ->
 		do_body (Mod_subst.force_constr cs)
 	      | OpaqueDef lc ->

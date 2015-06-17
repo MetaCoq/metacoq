@@ -61,5 +61,5 @@ Record inductive_body := mkinductive_body
 Inductive program : Type :=
 | PConstr : string -> term -> program -> program
 | PType   : ident -> list (ident * inductive_body) -> program -> program
-| PAxiom  : ident -> program -> program
+| PAxiom  : ident -> term (* the type *) -> program -> program
 | PIn     : term -> program.

@@ -46,6 +46,7 @@ struct
   let tEmptyString = resolve_symbol pkg_string "EmptyString"
   let tO = resolve_symbol pkg_datatypes "O"
   let tS = resolve_symbol pkg_datatypes "S"
+  let tnat = resolve_symbol pkg_datatypes "nat"
   let ttrue = resolve_symbol pkg_datatypes "true"
   let tfalse = resolve_symbol pkg_datatypes "false"
   let tAscii = resolve_symbol ["Coq";"Strings";"Ascii"] "Ascii"
@@ -174,11 +175,12 @@ struct
 
   let mk_ctor_list =
     let ctor_list =
-      let ctor_info_typ = prod tident tTerm in
+      let ctor_info_typ = prod (prod tident tTerm) tnat in
       to_coq_list ctor_info_typ
     in
     fun ls ->
-      let ctors = List.map (fun (a,b) -> pair tident tTerm a b) ls in
+    let ctors = List.map (fun (a,b,c) -> pair (prod tident tTerm) tnat
+					 (pair tident tTerm a b) c) ls in
       Term.mkApp (tmkinductive_body, [| ctor_list ctors |])
 
   let rec pair_with_number st ls =
@@ -271,16 +273,17 @@ struct
       let (ls,acc) =
 	List.fold_left (fun (ls,acc) (n,oib) ->
 	  let named_ctors =
-	    List.combine
+	    CList.combine3
 	      Declarations.(Array.to_list oib.mind_consnames)
 	      Declarations.(Array.to_list oib.mind_user_lc)
+	      Declarations.(Array.to_list oib.mind_consnrealargs)
 	  in
 	  let (reified_ctors,acc) =
-	    List.fold_left (fun (ls,acc) (nm,ty) ->
+	    List.fold_left (fun (ls,acc) (nm,ty,ar) ->
 			    Printf.eprintf "XXXX %b\n" !opt_hnf_ctor_types ;
 	      let ty = if !opt_hnf_ctor_types then hnf_type env ty else ty in
 	      let (ty,acc) = quote_term acc env ty in
-	      ((quote_ident nm, ty) :: ls, acc))
+	      ((quote_ident nm, ty, int_to_nat ar) :: ls, acc))
 	      ([],acc) named_ctors
 	  in
 	  Declarations.((quote_ident oib.mind_typename,

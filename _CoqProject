@@ -1,4 +1,6 @@
 -I src
 -R theories Template
+src/reify.ml4
+src/template_plugin.mlpack
 theories/Ast.v
 theories/Template.v

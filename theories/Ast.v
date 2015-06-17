@@ -56,7 +56,7 @@ Inductive term : Type :=
 | tUnknown : string -> term.
 
 Record inductive_body := mkinductive_body
-{ ctors : list (ident * term) }.
+{ ctors : list (ident * term * nat (* arity, without lets *)) }.
 
 Inductive program : Type :=
 | PConstr : string -> term -> program -> program

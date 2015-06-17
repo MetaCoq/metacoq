@@ -623,6 +623,9 @@ VERNAC COMMAND EXTEND Make_vernac CLASSIFIED AS SIDEFF
 	declare_definition name
 	  (Decl_kinds.Global, false, Decl_kinds.Definition)
 	  [] None result None (Lemmas.mk_hook (fun _ _ -> ())) ]
+END;;
+
+VERNAC COMMAND EXTEND Make_vernac_reduce CLASSIFIED AS SIDEFF
     | [ "Quote" "Definition" ident(name) ":=" "Eval" red_expr(rd) "in" constr(def) ] ->
       [ check_inside_section () ;
 	let (evm,env) = Lemmas.get_current_context () in
@@ -636,6 +639,7 @@ VERNAC COMMAND EXTEND Make_vernac CLASSIFIED AS SIDEFF
 	  (Decl_kinds.Global, false, Decl_kinds.Definition)
 	  [] None result None (Lemmas.mk_hook (fun _ _ -> ())) ]
 END;;
+
 
 VERNAC COMMAND EXTEND Make_recursive CLASSIFIED AS SIDEFF
     | [ "Quote" "Recursively" "Definition" ident(name) ":=" constr(def) ] ->

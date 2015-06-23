@@ -621,7 +621,7 @@ TACTIC EXTEND get_goal
 END;;
 
 VERNAC COMMAND EXTEND Make_vernac CLASSIFIED AS SIDEFF
-    | [ "Quote" "Definition" ident(name) ":=" constr(def) ] ->
+    | [ "Quote" "Definition" ident(name) ":=" lconstr(def) ] ->
       [ check_inside_section () ;
 	let (evm,env) = Lemmas.get_current_context () in
 	let def = Constrintern.interp_constr env evm def in

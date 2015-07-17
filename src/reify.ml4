@@ -620,6 +620,17 @@ TACTIC EXTEND get_goal
 *)
 END;;
 
+TACTIC EXTEND denote_term
+    | [ "denote_term" constr(c) tactic(tac) ] ->
+      [ Proofview.Goal.nf_enter begin fun gl ->
+         let (evm,env) = Lemmas.get_current_context() in
+         let c = TermReify.denote_term c in
+         let def' = Constrextern.extern_constr true env evm c in
+         let def = Constrintern.interp_constr env evm def' in
+	 ltac_apply tac (List.map to_ltac_val [fst def])
+      end ]
+END;;
+
 VERNAC COMMAND EXTEND Make_vernac CLASSIFIED AS SIDEFF
     | [ "Quote" "Definition" ident(name) ":=" lconstr(def) ] ->
       [ check_inside_section () ;

@@ -1,0 +1,13 @@
+-I ../src
+-Q ../theories Template
+
+bug1.v
+bug2.v
+bug3.v
+bug4.v
+bug6.v
+bug7.v
+demo.v
+hnf_ctor.v
+mutind.v
+opaque.v

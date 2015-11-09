@@ -9,3 +9,6 @@ clean: Makefile.coq
 
 Makefile.coq: _CoqProject
 	$(COQBIN)coq_makefile -f _CoqProject -o Makefile.coq
+
+test-suite: coq
+	$(MAKE) -C test-suite

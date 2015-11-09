@@ -15,6 +15,22 @@ struct
 
   (* flags *)
   let opt_hnf_ctor_types = ref false
+  let opt_debug = ref false
+
+  let with_debug f =
+    opt_debug := true ;
+    try
+      let result = f () in
+      opt_debug := false ;
+      result
+    with
+      e -> let _ = opt_debug := false in raise e
+
+  let debug (m : unit -> Pp.std_ppcmds) =
+    if !opt_debug then
+      Pp.(msg_debug (m ()))
+    else
+      ()
 
   let with_hnf_ctor_types f =
     opt_hnf_ctor_types := true ;
@@ -26,8 +42,7 @@ struct
       e -> let _ = opt_hnf_ctor_types := false in raise e
 
   let not_supported trm =
-    Format.eprintf "\nNot Supported: %a\n" pp_constr trm ;
-    flush stderr ;
+    Pp.(msg_error (str "Not Supported:" ++ spc () ++ Printer.pr_constr trm)) ;
     raise (NotSupported trm)
   let bad_term trm =
     raise (NotSupported trm)
@@ -283,7 +298,8 @@ struct
 	  in
 	  let (reified_ctors,acc) =
 	    List.fold_left (fun (ls,acc) (nm,ty,ar) ->
-			    Printf.eprintf "XXXX %b\n" !opt_hnf_ctor_types ;
+	      debug (fun () -> Pp.(str "XXXX" ++ spc () ++
+                            bool !opt_hnf_ctor_types)) ;
 	      let ty = if !opt_hnf_ctor_types then hnf_type env ty else ty in
 	      let (ty,acc) = quote_term acc env ty in
 	      ((quote_ident nm, ty, int_to_nat ar) :: ls, acc))
@@ -499,20 +515,19 @@ struct
 
   (** NOTE: Because the representation is lossy, I should probably
    ** come back through elaboration.
-   ** - This would also allow me to write terms with holes
+   ** - This would also allow writing terms with holes
    **)
   let rec denote_term trm =
-    Format.eprintf "%a\n" pp_constr trm ;
+    debug (fun () -> Pp.(str "denote_term" ++ spc () ++ Printer.pr_constr trm)) ;
     let (h,args) = app_full trm [] in
     if Term.eq_constr h tRel then
       match args with
 	x :: _ ->
-	  Format.eprintf "Rel\n" ;
 	  Term.mkRel (nat_to_int x + 1)
       | _ -> raise (Failure "ill-typed")
     else if Term.eq_constr h tVar then
       match args with
-	x :: _ -> Format.eprintf "var\n"; Term.mkVar (unquote_ident x)
+	x :: _ -> Term.mkVar (unquote_ident x)
       | _ -> raise (Failure "ill-typed")
     else if Term.eq_constr h tSort then
       match args with
@@ -531,8 +546,7 @@ struct
     else if Term.eq_constr h tLambda then
       match args with
 	n :: t :: b :: _ ->
-      Format.eprintf "lambda\n";
-	  Term.mkLambda (unquote_name n, denote_term t, denote_term b)
+	Term.mkLambda (unquote_name n, denote_term t, denote_term b)
       | _ -> raise (Failure "ill-typed (lambda)")
     else if Term.eq_constr h tLetIn then
       match args with
@@ -592,10 +606,10 @@ let to_ltac_val c = Tacexpr.TacDynamic(Loc.ghost,Pretyping.constr_in c)
 (** From Containers **)
 let declare_definition
     id (loc, boxed_flag, def_obj_kind)
-    binder_list red_expr_opt constr_expr
+    (binder_list : Constrexpr.local_binder list) red_expr_opt constr_expr
     constr_expr_opt decl_hook =
   Command.do_definition
-  id (loc, false, def_obj_kind) binder_list red_expr_opt constr_expr
+  id (loc, false, def_obj_kind) None binder_list red_expr_opt constr_expr
   constr_expr_opt decl_hook
 
 let check_inside_section () =

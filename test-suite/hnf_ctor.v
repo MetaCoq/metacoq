@@ -4,5 +4,5 @@ Require Import Template.Template.
 Inductive U : Type :=
 | TT : id U.
 
-Quote Recursively [ hnf ind typ ] Definition qU := U.
+Quote Recursively Definition qU := U.
 Print qU.

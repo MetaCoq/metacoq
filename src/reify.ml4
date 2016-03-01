@@ -310,7 +310,8 @@ struct
 	  ([],acc) Declarations.(pair_with_number 0
 		      (Array.to_list mib.mind_packets))
       in
-      (to_coq_list (prod tident tinductive_body)
+      let params = int_to_nat mib.mind_nparams in
+      (params, to_coq_list (prod tident tinductive_body)
 	 (List.map (fun (a,b) ->
 	   pair tident tinductive_body a b) (List.rev ls)),
        acc)
@@ -335,11 +336,11 @@ struct
 	if Mindset.mem t !visited_types then ()
 	else
 	  begin
-	    let (result,acc) = quote_type acc env mi in
+	    let (params,result,acc) = quote_type acc env mi in
 	    let ref_name =
 	      quote_string (Names.string_of_kn (Names.canonical_mind mi)) in
 	    visited_types := Mindset.add t !visited_types ;
-	    constants := Term.mkApp (pType, [| ref_name
+	    constants := Term.mkApp (pType, [| ref_name; params
 					     ; result |]) :: !constants
 	  end
       | Const c ->

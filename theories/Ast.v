@@ -56,10 +56,11 @@ Inductive term : Set :=
 | tUnknown : string -> term.
 
 Record inductive_body := mkinductive_body
-{ ctors : list (ident * term * nat (* arity, without lets *)) }.
+{ ctors : list (ident * term * nat (* arity, w/o lets, w/o parameters *)) }.
 
 Inductive program : Set :=
 | PConstr : string -> term -> program -> program
-| PType   : ident -> list (ident * inductive_body) -> program -> program
+| PType   : ident -> nat (* # of parameters, w/o let-ins *) ->
+            list (ident * inductive_body) -> program -> program
 | PAxiom  : ident -> term (* the type *) -> program -> program
 | PIn     : term -> program.

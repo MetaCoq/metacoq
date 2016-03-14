@@ -7,6 +7,7 @@ bug3.v
 bug4.v
 bug6.v
 bug7.v
+bug8.v
 demo.v
 hnf_ctor.v
 mutind.v

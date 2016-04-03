@@ -232,16 +232,14 @@ struct
     in
     hnf_type true ty
 
+  let push_rel decl (in_prop, env) = (in_prop, Environ.push_rel decl env)
+  let push_rel_context ctx (in_prop, env) = (in_prop, Environ.push_rel_context ctx env)
+
   let quote_term_remember
       (add_constant : Names.constant -> 'a -> 'a)
       (add_inductive : Names.inductive -> 'a -> 'a) =
-    let in_prop = ref false in
-    let with_in_prop f a =
-      let inprop = !in_prop in 
-        in_prop := false; f a; in_prop := inprop
-    in
     let rec quote_term (acc : 'a) env trm =
-      let rec aux trm =
+      let rec aux acc env trm =
       match Term.kind_of_term trm with
 	Term.Rel i -> (Term.mkApp (tRel, [| int_to_nat (i - 1) |]), acc)
       | Term.Var v -> (Term.mkApp (tVar, [| quote_ident v |]), acc)
@@ -252,16 +250,16 @@ struct
 	(Term.mkApp (tCast, [| c' ; quote_cast_kind k ; t' |]), acc)
       | Term.Prod (n,t,b) ->
 	let (t',acc) = quote_term acc env t in
-	let (b',acc) = quote_term acc (Environ.push_rel (n, None, t) env) b in
+	let (b',acc) = quote_term acc (push_rel (n, None, t) env) b in
 	(Term.mkApp (tProd, [| quote_name n ; t' ; b' |]), acc)
       | Term.Lambda (n,t,b) ->
 	let (t',acc) = quote_term acc env t in
-	let (b',acc) = quote_term acc (Environ.push_rel (n, None, t) env) b in
+	let (b',acc) = quote_term acc (push_rel (n, None, t) env) b in
 	(Term.mkApp (tLambda, [| quote_name n ; t' ; b' |]), acc)
       | Term.LetIn (n,t,e,b) ->
 	let (t',acc) = quote_term acc env t in
 	let (e',acc) = quote_term acc env e in
-	let (b',acc) = quote_term acc (Environ.push_rel (n, Some e, t) env) b in
+	let (b',acc) = quote_term acc (push_rel (n, Some e, t) env) b in
 	(Term.mkApp (tLetIn, [| quote_name n ; t' ; e' ; b' |]), acc)
       | Term.App (f,xs) ->
 	let (f',acc) = quote_term acc env f in
@@ -272,12 +270,13 @@ struct
 	(Term.mkApp (tApp, [| f' ; to_coq_list tTerm (List.rev xs') |]), acc)
       | Term.Const (c,pu) -> (* FIXME: take universe constraints into account *)
 	 (Term.mkApp (tConst, [| quote_string (Names.string_of_con c) |]),
-          with_in_prop (add_constant c) acc)
-      | Term.Construct ((ind,c),pu) -> (* FIXME: take universe constraints into account *)
+          add_constant c acc)
+      | Term.Construct ((ind,c),pu) ->
+         (* FIXME: take universe constraints into account *)
 	(Term.mkApp (tConstructor, [| quote_inductive env ind ; int_to_nat (c - 1) |]), add_inductive ind acc)
       | Term.Ind (i,pu) -> (* FIXME: take universe constraints into account *)
          (Term.mkApp (tInd, [| quote_inductive env i |]),
-          with_in_prop (add_inductive i) acc)
+          add_inductive i acc)
       | Term.Case (ci,a,b,e) ->
         let npar = int_to_nat ci.Term.ci_npar in
 	let (a',acc) = quote_term acc env a in
@@ -295,16 +294,16 @@ struct
 	(Term.mkApp (tFix, [| t ; int_to_nat n |]), acc)
       | _ -> (Term.mkApp (tUnknown, [| quote_string (Format.asprintf "%a" pp_constr trm) |]), acc)
       in
-        if is_cast_prop () && not !in_prop then
-          let ty = Retyping.get_type_of env Evd.empty trm in
-          let sf = Retyping.get_sort_family_of env Evd.empty ty in
-          if sf == Term.InProp then
-            let () = in_prop := true in
-            let term = aux (Term.mkCast
-              (Term.mkCast (trm, Term.DEFAULTcast, ty), Term.DEFAULTcast, Term.mkProp)) in
-              in_prop := false; term
-          else aux trm
-        else aux trm
+      let in_prop, env' = env in 
+      if is_cast_prop () && not in_prop then
+        let ty = Retyping.get_type_of env' Evd.empty trm in
+        let sf = Retyping.get_sort_family_of env' Evd.empty ty in
+        if sf == Term.InProp then
+          aux acc (true, env')
+              (Term.mkCast (trm, Term.DEFAULTcast,
+                            Term.mkCast (ty, Term.DEFAULTcast, Term.mkProp)))
+        else aux acc env trm
+      else aux acc env trm
     and quote_fixpoint acc env t =
       let ((a,b),(ns,ts,ds)) = t in
       let rec seq f t =
@@ -314,7 +313,7 @@ struct
 	  []
       in
       let ctxt = CArray.map2_i (fun i na t -> (na, None, Vars.lift i t)) ns ts in
-      let envfix = Environ.push_rel_context (Array.to_list ctxt) env in
+      let envfix = push_rel_context (Array.to_list ctxt) env in
       let mk_fun (xs,acc) i =
 	let n = int_to_nat (Array.get a i) in
 	let nm = quote_name (Array.get ns i) in
@@ -325,14 +324,14 @@ struct
       let (defs,acc) = List.fold_left mk_fun ([],acc) (seq 0 (Array.length a)) in
       (to_coq_list (Term.mkApp (tdef, [| tTerm |])) (List.rev defs), b, acc)
     and quote_minductive_type (acc : 'a) env (t : Names.mutual_inductive) =
-      let mib = Environ.lookup_mind t env in
+      let mib = Environ.lookup_mind t (snd env) in
       let inst = Univ.UContext.instance mib.Declarations.mind_universes in
       let indtys =
         Array.to_list Declarations.(Array.map (fun oib ->
-                           let ty = Inductive.type_of_inductive env ((mib,oib),inst) in
-                           (Names.Name oib.mind_typename, None, ty)) mib.mind_packets)
+           let ty = Inductive.type_of_inductive (snd env) ((mib,oib),inst) in
+           (Names.Name oib.mind_typename, None, ty)) mib.mind_packets)
       in
-      let envind = Environ.push_rel_context indtys env in
+      let envind = push_rel_context indtys env in
       let (ls,acc) =
 	List.fold_left (fun (ls,acc) (n,oib) ->
 	  let named_ctors =
@@ -345,7 +344,7 @@ struct
 	    List.fold_left (fun (ls,acc) (nm,ty,ar) ->
 	      debug (fun () -> Pp.(str "XXXX" ++ spc () ++
                             bool !opt_hnf_ctor_types)) ;
-	      let ty = if !opt_hnf_ctor_types then hnf_type envind ty else ty in
+	      let ty = if !opt_hnf_ctor_types then hnf_type (snd envind) ty else ty in
 	      let (ty,acc) = quote_term acc envind ty in
 	      ((quote_ident nm, ty, int_to_nat ar) :: ls, acc))
 	      ([],acc) named_ctors
@@ -360,8 +359,8 @@ struct
 	 (List.map (fun (a,b) ->
 	   pair tident tinductive_body a b) (List.rev ls)),
        acc)
-    in ((fun trm -> quote_term trm),
-        (fun ind -> quote_minductive_type ind))
+    in ((fun acc env -> quote_term acc (false, env)),
+        (fun acc env -> quote_minductive_type acc (false, env)))
 
   let quote_term env trm =
     let (fn,_) = quote_term_remember (fun _ () -> ()) (fun _ () -> ()) in

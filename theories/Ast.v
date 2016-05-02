@@ -43,7 +43,7 @@ Inductive term : Set :=
 | tCast      : term -> cast_kind -> term -> term
 | tProd      : name -> term (** the type **) -> term -> term
 | tLambda    : name -> term (** the type **) -> term -> term
-| tLetIn     : name -> term (** the type **) -> term -> term -> term
+| tLetIn     : name -> term (** the term **) -> term (** the type **) -> term -> term
 | tApp       : term -> list term -> term
 | tConst     : string -> term
 | tInd       : inductive -> term

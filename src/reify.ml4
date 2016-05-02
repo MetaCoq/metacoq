@@ -256,11 +256,11 @@ struct
 	let (t',acc) = quote_term acc env t in
 	let (b',acc) = quote_term acc (push_rel (n, None, t) env) b in
 	(Term.mkApp (tLambda, [| quote_name n ; t' ; b' |]), acc)
-      | Term.LetIn (n,t,e,b) ->
-	let (t',acc) = quote_term acc env t in
+      | Term.LetIn (n,e,t,b) ->
 	let (e',acc) = quote_term acc env e in
+	let (t',acc) = quote_term acc env t in
 	let (b',acc) = quote_term acc (push_rel (n, Some e, t) env) b in
-	(Term.mkApp (tLetIn, [| quote_name n ; t' ; e' ; b' |]), acc)
+	(Term.mkApp (tLetIn, [| quote_name n ; e'; t' ; b' |]), acc)
       | Term.App (f,xs) ->
 	let (f',acc) = quote_term acc env f in
 	let (xs',acc) =
@@ -596,8 +596,8 @@ struct
       | _ -> raise (Failure "ill-typed (lambda)")
     else if Term.eq_constr h tLetIn then
       match args with
-	n :: t :: e :: b :: _ ->
-	  Term.mkLetIn (unquote_name n, denote_term t, denote_term e, denote_term b)
+	n :: e :: t :: b :: _ ->
+	  Term.mkLetIn (unquote_name n, denote_term e, denote_term t, denote_term b)
       | _ -> raise (Failure "ill-typed (let-in)")
     else if Term.eq_constr h tApp then
       match args with

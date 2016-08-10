@@ -9,8 +9,6 @@ Inductive sort : Set :=
 | sSet
 | sType (_ : universe).
 
-Record ind : Set := {} .
-
 Inductive name : Set :=
 | nAnon
 | nNamed (_ : ident).
@@ -48,7 +46,8 @@ Inductive term : Set :=
 | tConst     : string -> term
 | tInd       : inductive -> term
 | tConstruct : inductive -> nat -> term
-| tCase      : nat (* # of parameters *) -> term (** type info **) -> term -> list (nat * term) -> term
+| tCase      : (inductive * nat) (* # of parameters *) -> term (** type info **) -> term ->
+               list (nat * term) -> term
 | tFix       : mfixpoint term -> nat -> term
 (*
 | CoFix     of ('constr, 'types) pcofixpoint

@@ -95,6 +95,7 @@ struct
   let sSet = r_reify "sSet"
   let sType = r_reify "sType"
   let tident = r_reify "ident"
+  let tInd = r_reify "inductive"
   let tmkInd = r_reify "mkInd"
   let (tTerm,tRel,tVar,tMeta,tEvar,tSort,tCast,tProd,
        tLambda,tLetIn,tApp,tCase,tFix,tConstructor,tConst,tInd,tUnknown) =
@@ -278,7 +279,9 @@ struct
          (Term.mkApp (tInd, [| quote_inductive env i |]),
           add_inductive i acc)
       | Term.Case (ci,a,b,e) ->
+        let ind = quote_inductive env ci.Term.ci_ind in
         let npar = int_to_nat ci.Term.ci_npar in
+        let info = pair tInd tnat ind npar in
 	let (a',acc) = quote_term acc env a in
 	let (b',acc) = quote_term acc env b in
 	let (branches,acc) =
@@ -288,7 +291,8 @@ struct
               (t :: xs, acc))
           ([],acc) e ci.Term.ci_cstr_nargs in
         let tl = prod tnat tTerm in
-        (Term.mkApp (tCase, [| npar ; a' ; b' ; to_coq_list tl (List.rev branches) |]), acc)
+        (Term.mkApp (tCase, [| info ; a' ; b' ; to_coq_list tl (List.rev branches) |]),
+         acc)
       | Term.Fix fp ->
 	let (t,n,acc) = quote_fixpoint acc env fp in
 	(Term.mkApp (tFix, [| t ; int_to_nat n |]), acc)
@@ -558,6 +562,14 @@ struct
     else
       not_supported trm
 
+  let from_coq_pair trm =
+    let (h,args) = app_full trm [] in
+    if Term.eq_constr h c_pair then
+      match args with
+	_ :: _ :: x :: y :: [] -> (x, y)
+      | _ -> bad_term trm
+    else
+      not_supported trm
 
   (** NOTE: Because the representation is lossy, I should probably
    ** come back through elaboration.
@@ -619,10 +631,16 @@ struct
       | _ -> raise (Failure "ill-typed (inductive)")
     else if Term.eq_constr h tCase then
       match args with
-	ty :: d :: brs :: _ ->
-	  Term.mkCase (assert false (** I don't have any information to put here **)
-		      , denote_term ty, denote_term d ,
-			Array.of_list (List.map denote_term (from_coq_list brs)))
+	info :: ty :: d :: brs :: _ ->
+          let i, _ = from_coq_pair info in
+          let ind = denote_inductive i in
+          let ci = Inductiveops.make_case_info (Global.env ()) ind Term.RegularStyle in
+          let denote_branch br =
+            let _, br = from_coq_pair br in
+            denote_term br
+          in
+	  Term.mkCase (ci, denote_term ty, denote_term d,
+			Array.of_list (List.map denote_branch (from_coq_list brs)))
       | _ -> raise (Failure "ill-typed (case)")
     else
       not_supported trm

@@ -20,8 +20,8 @@ module TermReify =
 struct
   exception NotSupported of Term.constr
 
-  module Cmap = Names.Cmap
-  module Cset = Names.Cset
+  module Cmap = Names.KNmap
+  module Cset = Names.KNset
   module Mindset = Names.Mindset
 
   (* flags *)
@@ -205,7 +205,7 @@ struct
     let (m,i) = t in
     Term.mkApp (tmkInd, [| quote_string (Names.string_of_kn (Names.canonical_mind m))
 			 ; int_to_nat i |])
-
+               
   let mk_ctor_list =
     let ctor_list =
       let ctor_info_typ = prod (prod tident tTerm) tnat in
@@ -237,7 +237,7 @@ struct
   let push_rel_context ctx (in_prop, env) = (in_prop, Environ.push_rel_context ctx env)
 
   let quote_term_remember
-      (add_constant : Names.constant -> 'a -> 'a)
+      (add_constant : Names.kernel_name -> 'a -> 'a)
       (add_inductive : Names.inductive -> 'a -> 'a) =
     let rec quote_term (acc : 'a) env trm =
       let rec aux acc env trm =
@@ -270,8 +270,9 @@ struct
 	    ([],acc) (Array.to_list xs) in
 	(Term.mkApp (tApp, [| f' ; to_coq_list tTerm (List.rev xs') |]), acc)
       | Term.Const (c,pu) -> (* FIXME: take universe constraints into account *)
-	 (Term.mkApp (tConst, [| quote_string (Names.string_of_con c) |]),
-          add_constant c acc)
+         let kn = Names.Constant.canonical c in
+	 (Term.mkApp (tConst, [| quote_string (Names.string_of_kn kn) |]),
+          add_constant kn acc)
       | Term.Construct ((ind,c),pu) ->
          (* FIXME: take universe constraints into account *)
 	(Term.mkApp (tConstructor, [| quote_inductive env ind ; int_to_nat (c - 1) |]), add_inductive ind acc)
@@ -372,10 +373,10 @@ struct
 
   type defType =
     Ind of Names.inductive
-  | Const of Names.constant
+  | Const of Names.kernel_name
 
   let quote_term_rec env trm =
-    let visited_terms = ref Cset.empty in
+    let visited_terms = ref Names.KNset.empty in
     let visited_types = ref Mindset.empty in
     let constants = ref [] in
     let add quote_term quote_type trm acc =
@@ -392,18 +393,19 @@ struct
 	    constants := Term.mkApp (pType, [| ref_name; params
 					     ; result |]) :: !constants
 	  end
-      | Const c ->
-	if Cset.mem c !visited_terms then ()
+      | Const kn ->
+	if Names.KNset.mem kn !visited_terms then ()
 	else
 	  begin
-	    visited_terms := Cset.add c !visited_terms ;
+	    visited_terms := Names.KNset.add kn !visited_terms ;
+            let c = Names.Constant.make kn kn in
 	    let cd = Environ.lookup_constant c env in
 	    let do_body body =
 	      let (result,acc) =
 		quote_term acc (Global.env ()) body
 	      in
 	      constants := Term.mkApp (pConstr,
-				       [| quote_string (Names.string_of_con c)
+				       [| quote_string (Names.string_of_kn kn)
 				       ; result |]) :: !constants
 	    in
 	    Declarations.(
@@ -416,7 +418,7 @@ struct
 		    | TemplateArity _ -> assert false
 		  in
 		  constants := Term.mkApp (pAxiom,
-					   [| quote_string (Names.string_of_con c) ; ty |]) :: !constants
+					   [| quote_string (Names.string_of_kn kn) ; ty |]) :: !constants
 		end
 	      | Def cs ->
 		do_body (Mod_subst.force_constr cs)

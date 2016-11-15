@@ -63,3 +63,34 @@ Inductive program : Set :=
             list (ident * inductive_body) -> program -> program
 | PAxiom  : ident -> term (* the type *) -> program -> program
 | PIn     : term -> program.
+
+
+(* representation of mutual inductives. copied, more or less, from Coq/kernel/entries.mli
+*)
+
+Record one_inductive_entry : Set := {
+  mind_entry_typename : ident;
+  mind_entry_arity : term;
+  mind_entry_template : bool; (* Use template polymorphism *)
+  mind_entry_consnames : list ident;
+  mind_entry_lc : list term}.
+
+(*
+
+type local_entry =
+  | LocalDef of constr
+  | LocalAssum of constr
+
+*)
+Definition local_entry : Set := term.
+
+Record mutual_inductive_entry : Set := {
+  mind_entry_record : option (option ident); 
+(*  mind_entry_finite : Decl_kinds.recursivity_kind;  (* inductive/coinductive/record*)*)
+  mind_entry_params : list (name * local_entry);
+  mind_entry_inds : list one_inductive_entry;
+  mind_entry_polymorphic : bool; 
+(*  mind_entry_universes : Univ.universe_context; (*what is this?*) *)
+  mind_entry_private : option bool
+}.
+

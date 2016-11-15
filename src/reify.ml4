@@ -495,6 +495,9 @@ struct
     in
     go 0 trm
 
+
+
+
   let unquote_ident trm =
     Names.id_of_string (unquote_string trm)
 
@@ -651,6 +654,7 @@ struct
 
 end
 
+
 DECLARE PLUGIN "template_plugin"
 
 (** Stolen from CoqPluginUtils **)
@@ -671,9 +675,30 @@ let ltac_apply (f:Tacexpr.glob_tactic_expr) (args:Tacexpr.glob_tactic_arg list) 
 
 let to_ltac_val c = Tacexpr.TacDynamic(Loc.ghost,Pretyping.constr_in c)
 
+
+  let declare_inductive (name : Names.Id.t) (body: Constrexpr.constr_expr) : unit =
+  let one_ind : Entries.one_inductive_entry = {
+    mind_entry_typename = name;
+    mind_entry_arity = Term.mkSet;
+    mind_entry_template = false;
+    mind_entry_consnames = [];
+    mind_entry_lc = []
+    } in 
+  let mut_ind : Entries.mutual_inductive_entry =
+    {
+    mind_entry_record = None;
+    mind_entry_finite = Decl_kinds.Finite; (* inductive *)
+    mind_entry_params = [];
+    mind_entry_inds = [one_ind];
+    mind_entry_polymorphic = false;
+    mind_entry_universes = Univ.UContext.empty;
+    mind_entry_private = None
+    } in Command.declare_mutual_inductive_with_eliminations mut_ind [] [];()
+
+
 (** From Containers **)
 let declare_definition
-    id (loc, boxed_flag, def_obj_kind)
+    (id : Names.Id.t) (loc, boxed_flag, def_obj_kind)
     (binder_list : Constrexpr.local_binder list) red_expr_opt constr_expr
     constr_expr_opt decl_hook =
   Command.do_definition
@@ -771,7 +796,8 @@ END;;
 VERNAC COMMAND EXTEND Unquote_inductive CLASSIFIED AS SIDEFF
     | [ "Make" "Inductive" ident(name) ":=" constr(def) ] ->
       [ check_inside_section () ;
-	let (evm,env) = Lemmas.get_current_context () in () ]
+	let (evm,env) = Lemmas.get_current_context () in
+  declare_inductive name def ]
 END;;
 
 VERNAC COMMAND EXTEND Make_tests CLASSIFIED AS QUERY

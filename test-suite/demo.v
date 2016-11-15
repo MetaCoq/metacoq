@@ -55,7 +55,10 @@ Print plus_syntax.
 
 Make Definition addss := ltac:(let t:= eval compute in d'' in exact t).
 
-Make Inductive addss := ltac:(let t:= eval compute in d'' in exact t).
+Make Inductive Falsssss := ltac:(let t:= eval compute in d'' in exact t).
+
+Print Falsssss.
+
 
 Quote Definition add'_syntax := Eval compute in add'.
 

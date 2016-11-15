@@ -1,0 +1,20 @@
+FLG -rectypes
+
+B /home/abhishek/coq-8.5pl1/config
+B /home/abhishek/coq-8.5pl1/lib
+B /home/abhishek/coq-8.5pl1/intf
+B /home/abhishek/coq-8.5pl1/kernel
+B /home/abhishek/coq-8.5pl1/kernel/byterun
+B /home/abhishek/coq-8.5pl1/library
+B /home/abhishek/coq-8.5pl1/engine
+B /home/abhishek/coq-8.5pl1/pretyping
+B /home/abhishek/coq-8.5pl1/interp
+B /home/abhishek/coq-8.5pl1/proofs
+B /home/abhishek/coq-8.5pl1/tactics
+B /home/abhishek/coq-8.5pl1/printing
+B /home/abhishek/coq-8.5pl1/parsing
+B /home/abhishek/coq-8.5pl1/toplevel
+B /home/abhishek/coq-8.5pl1/tools
+B /home/abhishek/coq-8.5pl1/tools/coqdoc
+B /home/abhishek/coq-8.5pl1/dev
+

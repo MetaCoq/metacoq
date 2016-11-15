@@ -12,6 +12,7 @@ let _ = Goptions.declare_bool_option {
   Goptions.optwrite = (fun a -> cast_prop:=a);
 }
 
+(*whether Set Template Cast Propositions is on, as needed for erasure in Certticoq*)
 let is_cast_prop () = !cast_prop                     
                      
 let pp_constr fmt x = Pp.pp_with fmt (Printer.pr_constr x)
@@ -85,7 +86,8 @@ struct
   let pair a b f s =
     Term.mkApp (c_pair, [| a ; b ; f ; s |])
 
-  let nAnon = r_reify "nAnon"
+    (* reify the constructors in Template.Ast.v, which are the building blocks in reification *)
+  let nAnon = r_reify "nAnon" (* resolve_symbol pkg_reify *)
   let nNamed = r_reify "nNamed"
   let kVmCast = r_reify "VmCast"
   let kNative = r_reify "NativeCast"
@@ -764,6 +766,12 @@ VERNAC COMMAND EXTEND Unquote_vernac CLASSIFIED AS SIDEFF
 	declare_definition name
 	  (Decl_kinds.Global, false, Decl_kinds.Definition)
 	  [] None result None (Lemmas.mk_hook (fun _ _ -> ())) ]
+END;;
+
+VERNAC COMMAND EXTEND Unquote_inductive CLASSIFIED AS SIDEFF
+    | [ "Make" "Inductive" ident(name) ":=" constr(def) ] ->
+      [ check_inside_section () ;
+	let (evm,env) = Lemmas.get_current_context () in () ]
 END;;
 
 VERNAC COMMAND EXTEND Make_tests CLASSIFIED AS QUERY

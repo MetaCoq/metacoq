@@ -30,6 +30,8 @@ Definition id_nat : nat -> nat := fun x => x.
 
 Quote Definition d'' := Eval compute in id_nat.
 
+Print d''.
+
 (** Fixpoints **)
 Fixpoint add (a b : nat) : nat :=
   match a with
@@ -44,6 +46,16 @@ Fixpoint add' (a b : nat) : nat :=
   end.
 
 Quote Definition add_syntax := Eval compute in add.
+Quote Definition natq := nat.
+Print natq.
+Quote Recursively Definition plus_syntax := plus.
+
+Print plus_syntax.
+
+
+Make Definition addss := ltac:(let t:= eval compute in d'' in exact t).
+
+Make Inductive addss := ltac:(let t:= eval compute in d'' in exact t).
 
 Quote Definition add'_syntax := Eval compute in add'.
 
@@ -51,10 +63,11 @@ Quote Definition add'_syntax := Eval compute in add'.
 
 Make Definition zero_from_syntax := (Ast.tConstruct (Ast.mkInd "Coq.Init.Datatypes.nat" 0) 0).
 
+
+
 Make Definition two_from_syntax := (Ast.tApp (Ast.tConstruct (Ast.mkInd "Coq.Init.Datatypes.nat" 0) 1)
    (Ast.tApp (Ast.tConstruct (Ast.mkInd "Coq.Init.Datatypes.nat" 0) 1)
       (Ast.tConstruct (Ast.mkInd "Coq.Init.Datatypes.nat" 0) 0 :: nil) :: nil)).
 
-Quote Recursively Definition plus_syntax := plus.
 
 Quote Recursively Definition mult_syntax := mult.

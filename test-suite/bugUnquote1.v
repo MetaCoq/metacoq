@@ -43,16 +43,7 @@ end).
 Make Definition proj2_t := 
   ltac:(let t:= computeExtract (getFirstConstr pp) in exact t).
 
-(*
-Error:
-In environment
-A : Set
-B : Set
-The term "A" has type "Set"
-while it is expected to have type 
-"Prop" (universe inconsistency).
-*)
-
+Print proj2_t.
 
 
 (*

@@ -535,9 +535,9 @@ struct
     if Term.eq_constr h sType then
       raise (NotSupported h)
     else if Term.eq_constr h sProp then
-      Term.Prop Term.Pos
-    else if Term.eq_constr h sSet then
       Term.Prop Term.Null
+    else if Term.eq_constr h sSet then
+      Term.Prop Term.Pos
     else
       raise (Failure "ill-typed, expected sort")
 
@@ -663,13 +663,13 @@ struct
   let one_ind b1 : Entries.one_inductive_entry = 
     let (_,args) = app_full b1 [] in (* check that the first component is Build_one_ind .. *)
     match args with
-    | mt::ma::mtemp::mcn::mct ->
+    | mt::ma::mtemp::mcn::mct::[] ->
     {
     mind_entry_typename = unquote_ident mt;
     mind_entry_arity = denote_term ma;
     mind_entry_template = from_bool mtemp;
-    mind_entry_consnames = [];
-    mind_entry_lc = []
+    mind_entry_consnames = List.map unquote_ident (from_coq_list mcn);
+    mind_entry_lc = List.map denote_term (from_coq_list mct)
     } 
     | _ -> not_supported b1
      in 

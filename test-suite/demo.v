@@ -64,8 +64,8 @@ Definition one_i : one_inductive_entry :=
   mind_entry_typename := "demoInd";
   mind_entry_arity := tSort sSet;
   mind_entry_template := false;
-  mind_entry_consnames := [];
-  mind_entry_lc := [];
+  mind_entry_consnames := ["demoTrue"; "demoFalse"];
+  mind_entry_lc := [tVar "demoInd"; tVar "demoInd"];
 |}.
 
 Definition mut_i : mutual_inductive_entry :=
@@ -79,6 +79,10 @@ Definition mut_i : mutual_inductive_entry :=
 
 
 Make Inductive Falsssss := ltac:(let t:= eval compute in mut_i in exact t).
+(*
+Error: No such section variable or assumption: demoInd.
+*)
+
 
 (* the name Falsssss is ignored *)
 Print demoInd.

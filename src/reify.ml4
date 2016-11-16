@@ -497,6 +497,11 @@ struct
 
 
 
+    
+    
+    
+    
+
 
   let unquote_ident trm =
     Names.id_of_string (unquote_string trm)
@@ -652,6 +657,37 @@ struct
     else
       not_supported trm
 
+  let declare_inductive (env: Environ.env) (evm: Evd.evar_map) (body: Constrexpr.constr_expr) : unit =
+	let (body,_) = Constrintern.interp_constr env evm body in
+  let (_,args) = app_full body [] in (* check that the first component is Build_mut_ind .. *)
+  let one_ind b1 : Entries.one_inductive_entry = 
+    let (_,args) = app_full b1 [] in (* check that the first component is Build_one_ind .. *)
+    match args with
+    | mt::ma::mtemp::mcn::mct ->
+    {
+    mind_entry_typename = unquote_ident mt;
+    mind_entry_arity = denote_term ma;
+    mind_entry_template = from_bool mtemp;
+    mind_entry_consnames = [];
+    mind_entry_lc = []
+    } 
+    | _ -> not_supported b1
+     in 
+  let mut_ind mr mp mi mpol mpr : Entries.mutual_inductive_entry =
+    {
+    mind_entry_record = None;
+    mind_entry_finite = Decl_kinds.Finite; (* inductive *)
+    mind_entry_params = [];
+    mind_entry_inds = List.map one_ind (from_coq_list mi);
+    mind_entry_polymorphic = false;
+    mind_entry_universes = Univ.UContext.empty;
+    mind_entry_private = None
+    } in 
+    match args with
+    mr::mp::mi::mpol::mpr::[] -> 
+      Command.declare_mutual_inductive_with_eliminations (mut_ind mr mp mi mpol mpr) [] [];()
+    | _ -> ()
+
 end
 
 
@@ -676,24 +712,6 @@ let ltac_apply (f:Tacexpr.glob_tactic_expr) (args:Tacexpr.glob_tactic_arg list) 
 let to_ltac_val c = Tacexpr.TacDynamic(Loc.ghost,Pretyping.constr_in c)
 
 
-  let declare_inductive (name : Names.Id.t) (body: Constrexpr.constr_expr) : unit =
-  let one_ind : Entries.one_inductive_entry = {
-    mind_entry_typename = name;
-    mind_entry_arity = Term.mkSet;
-    mind_entry_template = false;
-    mind_entry_consnames = [];
-    mind_entry_lc = []
-    } in 
-  let mut_ind : Entries.mutual_inductive_entry =
-    {
-    mind_entry_record = None;
-    mind_entry_finite = Decl_kinds.Finite; (* inductive *)
-    mind_entry_params = [];
-    mind_entry_inds = [one_ind];
-    mind_entry_polymorphic = false;
-    mind_entry_universes = Univ.UContext.empty;
-    mind_entry_private = None
-    } in Command.declare_mutual_inductive_with_eliminations mut_ind [] [];()
 
 
 (** From Containers **)
@@ -793,11 +811,12 @@ VERNAC COMMAND EXTEND Unquote_vernac CLASSIFIED AS SIDEFF
 	  [] None result None (Lemmas.mk_hook (fun _ _ -> ())) ]
 END;;
 
+(* get rid of the unused ident(name)? *)
 VERNAC COMMAND EXTEND Unquote_inductive CLASSIFIED AS SIDEFF
     | [ "Make" "Inductive" ident(name) ":=" constr(def) ] ->
       [ check_inside_section () ;
 	let (evm,env) = Lemmas.get_current_context () in
-  declare_inductive name def ]
+  TermReify.declare_inductive env evm def ]
 END;;
 
 VERNAC COMMAND EXTEND Make_tests CLASSIFIED AS QUERY

@@ -55,9 +55,36 @@ Print plus_syntax.
 
 Make Definition addss := ltac:(let t:= eval compute in d'' in exact t).
 
-Make Inductive Falsssss := ltac:(let t:= eval compute in d'' in exact t).
+Require Import Template.Ast.
+Require Import List.
+Import ListNotations.
 
-Print Falsssss.
+Definition one_i : one_inductive_entry :=
+{|
+  mind_entry_typename := "demoInd";
+  mind_entry_arity := tSort sSet;
+  mind_entry_template := false;
+  mind_entry_consnames := [];
+  mind_entry_lc := [];
+|}.
+
+Definition mut_i : mutual_inductive_entry :=
+{|
+  mind_entry_record := None;
+  mind_entry_params := [];
+  mind_entry_inds := [one_i];
+  mind_entry_polymorphic := false;
+  mind_entry_private := None;
+|}.
+
+
+Make Inductive Falsssss := ltac:(let t:= eval compute in mut_i in exact t).
+
+(* the name Falsssss is ignored *)
+Print demoInd.
+(*
+Inductive demoInd : Prop :=  
+*)
 
 
 Quote Definition add'_syntax := Eval compute in add'.

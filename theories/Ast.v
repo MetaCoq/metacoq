@@ -76,12 +76,11 @@ Record one_inductive_entry : Set := {
   mind_entry_lc : list term}.
 
 (*
-
 type local_entry =
   | LocalDef of constr
   | LocalAssum of constr
-
 *)
+
 Definition local_entry : Set := term.
 
 Record mutual_inductive_entry : Set := {
@@ -94,3 +93,7 @@ Record mutual_inductive_entry : Set := {
   mind_entry_private : option bool
 }.
 
+(* define the monad with commands to add new declarations to Coq?
+Because LTac functions cannot invoke commands like "Make Definition", we
+will need to implement the run function for the monad in OCaml land?
+*)

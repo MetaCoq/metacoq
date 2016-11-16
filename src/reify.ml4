@@ -525,9 +525,9 @@ struct
     if Term.eq_constr h sType then
       raise (NotSupported h)
     else if Term.eq_constr h sProp then
-      Term.Prop Term.Pos
+      Term.prop_sort
     else if Term.eq_constr h sSet then
-      Term.Prop Term.Null
+      Term.set_sort
     else
       raise (Failure "ill-typed, expected sort")
 

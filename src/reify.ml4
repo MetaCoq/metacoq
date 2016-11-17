@@ -671,22 +671,22 @@ struct
     mind_entry_consnames = List.map unquote_ident (from_coq_list mcn);
     mind_entry_lc = List.map denote_term (from_coq_list mct)
     } 
-    | _ -> not_supported b1
+    | _ -> raise (Failure "ill-typed one_inductive_entry")
      in 
   let mut_ind mr mp mi mpol mpr : Entries.mutual_inductive_entry =
     {
-    mind_entry_record = None;
+    mind_entry_record = None; (* mr *)
     mind_entry_finite = Decl_kinds.Finite; (* inductive *)
-    mind_entry_params = [];
+    mind_entry_params = List.map (fun p -> let (l,r) = (from_coq_pair p) in (unquote_ident l, (Entries.LocalAssum (denote_term r)))) (from_coq_list mp);
     mind_entry_inds = List.map one_ind (from_coq_list mi);
-    mind_entry_polymorphic = false;
+    mind_entry_polymorphic = from_bool mpol;
     mind_entry_universes = Univ.UContext.empty;
-    mind_entry_private = None
+    mind_entry_private = None (*mpr*)
     } in 
     match args with
     mr::mp::mi::mpol::mpr::[] -> 
       Command.declare_mutual_inductive_with_eliminations (mut_ind mr mp mi mpol mpr) [] [];()
-    | _ -> ()
+    | _ -> raise (Failure "ill-typed mutual_inductive_entry")
 
 end
 

@@ -86,7 +86,7 @@ Definition local_entry : Set := term.
 Record mutual_inductive_entry : Set := {
   mind_entry_record : option (option ident); 
 (*  mind_entry_finite : Decl_kinds.recursivity_kind;  (* inductive/coinductive/record*)*)
-  mind_entry_params : list (name * local_entry);
+  mind_entry_params : list (ident * local_entry);
   mind_entry_inds : list one_inductive_entry;
   mind_entry_polymorphic : bool; 
 (*  mind_entry_universes : Univ.universe_context; (*what is this?*) *)

@@ -57,6 +57,15 @@ Definition one_i : one_inductive_entry :=
   mind_entry_arity := tSort sSet;
   mind_entry_template := false;
   mind_entry_consnames := ["demoTrue"; "demoFalse"];
+  mind_entry_lc := [tRel 1; tRel 1];
+|}.
+
+Definition one_i2 : one_inductive_entry :=
+{|
+  mind_entry_typename := "demoBool2";
+  mind_entry_arity := tSort sSet;
+  mind_entry_template := false;
+  mind_entry_consnames := ["demoTrue2"; "demoFalse2"];
   mind_entry_lc := [tRel 0; tRel 0];
 |}.
 
@@ -64,23 +73,49 @@ Definition mut_i : mutual_inductive_entry :=
 {|
   mind_entry_record := None;
   mind_entry_params := [];
-  mind_entry_inds := [one_i];
+  mind_entry_inds := [one_i; one_i2];
   mind_entry_polymorphic := false;
   mind_entry_private := None;
 |}.
-
-
-
 
 Make Inductive dummy := ltac:(let t:= eval compute in mut_i in exact t).
 
 Print demoBool.
 
+(* move to a theories *)
+
+Definition mkImpl (A B : term) : term :=
+tProd nAnon A B.
+
+
+Definition one_list_i : one_inductive_entry :=
+{|
+  mind_entry_typename := "demoList";
+  mind_entry_arity := tSort sSet;
+  mind_entry_template := false;
+  mind_entry_consnames := ["demoNil"; "demoCons"];
+  mind_entry_lc := [tApp (tRel 1) [tRel 0]; 
+    mkImpl (tRel 0) (mkImpl (tApp (tRel 2) [tRel 1]) (tApp (tRel 3) [tRel 2]))];
+|}.
+
+Definition mut_list_i : mutual_inductive_entry :=
+{|
+  mind_entry_record := None;
+  mind_entry_params := [("A", tSort sSet)];
+  mind_entry_inds := [one_list_i];
+  mind_entry_polymorphic := false;
+  mind_entry_private := None;
+|}.
+
+
+Make Inductive dummy := ltac:(let t:= eval compute in mut_list_i in exact t).
+
+Print demoList.
+
 (*
-Inductive demoBool : Set :=  demoTrue : demoBool | demoFalse : demoBool
+Inductive demoList (A : Set) : Set :=
+    demoNil : demoList A | demoCons : A -> demoList A -> demoList A
 *)
-
-
 
 
 (** Another way **)

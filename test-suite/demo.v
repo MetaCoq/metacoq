@@ -22,6 +22,67 @@ Definition d : Ast.term.
   quote_term t k.
 Defined.
 
+Require Import Template.Ast.
+Require Import List.
+Import ListNotations.
+
+
+(*
+
+Inductive nat_R : nat -> nat -> Set :=
+    nat_R_O_R : nat_R 0 0
+  | nat_R_S_R : forall H H0 : nat,
+                nat_R H H0 -> nat_R (S H) (S H0)
+
+By snooping on the paramcoq plugin (using coq/dev/top_printer.ml)
+when it created the above translation for nat,
+The two entries of mind_entry_lc were determined to be:
+
+
+App(Rel(1),[|MutConstruct((Coq.Init.Datatypes.nat,0),,1);MutConstruct((Coq.Init.Datatypes.nat,0),,1)|])
+
+Prod(Anonymous,MutInd(Coq.Init.Datatypes.nat,0,),Prod(Anonymous,MutInd(Coq.Init.Datatypes.nat,0,),Prod(Anonymous,App(Rel(3),[|Rel(2);Rel(1)|])
+,App(Rel(4),[|App(MutConstruct((Coq.Init.Datatypes.nat,0),,2),[|Rel(3)|])
+;App(MutConstruct((Coq.Init.Datatypes.nat,0),,2),[|Rel(2)|])
+|])
+)
+)
+)
+
+*)
+
+Definition one_i : one_inductive_entry :=
+{|
+  mind_entry_typename := "demoBool";
+  mind_entry_arity := tSort sSet;
+  mind_entry_template := false;
+  mind_entry_consnames := ["demoTrue"; "demoFalse"];
+  mind_entry_lc := [tRel 0; tRel 0];
+|}.
+
+Definition mut_i : mutual_inductive_entry :=
+{|
+  mind_entry_record := None;
+  mind_entry_params := [];
+  mind_entry_inds := [one_i];
+  mind_entry_polymorphic := false;
+  mind_entry_private := None;
+|}.
+
+
+
+
+Make Inductive dummy := ltac:(let t:= eval compute in mut_i in exact t).
+
+Print demoBool.
+
+(*
+Inductive demoBool : Set :=  demoTrue : demoBool | demoFalse : demoBool
+*)
+
+
+
+
 (** Another way **)
 Quote Definition d' := (fun x : nat => x).
 
@@ -55,33 +116,7 @@ Print plus_syntax.
 
 Make Definition addss := ltac:(let t:= eval compute in d'' in exact t).
 
-Require Import Template.Ast.
-Require Import List.
-Import ListNotations.
 
-Definition one_i : one_inductive_entry :=
-{|
-  mind_entry_typename := "demoInd";
-  mind_entry_arity := tSort sSet;
-  mind_entry_template := false;
-  mind_entry_consnames := ["demoTrue"; "demoFalse"];
-  mind_entry_lc := [tVar "demoInd"; tVar "demoInd"];
-|}.
-
-Definition mut_i : mutual_inductive_entry :=
-{|
-  mind_entry_record := None;
-  mind_entry_params := [];
-  mind_entry_inds := [one_i];
-  mind_entry_polymorphic := false;
-  mind_entry_private := None;
-|}.
-
-
-Make Inductive Falsssss := ltac:(let t:= eval compute in mut_i in exact t).
-(*
-Error: No such section variable or assumption: demoInd.
-*)
 
 
 (* the name Falsssss is ignored *)

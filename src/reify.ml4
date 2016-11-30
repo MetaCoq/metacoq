@@ -12,8 +12,8 @@ let _ = Goptions.declare_bool_option {
   Goptions.optwrite = (fun a -> cast_prop:=a);
 }
 
-let is_cast_prop () = !cast_prop                     
-                     
+let is_cast_prop () = !cast_prop
+
 let pp_constr fmt x = Pp.pp_with fmt (Printer.pr_constr x)
 
 module TermReify =
@@ -39,7 +39,7 @@ struct
 
   let debug (m : unit -> Pp.std_ppcmds) =
     if !opt_debug then
-      Pp.(msg_debug (m ()))
+      Feedback.(msg_debug (m ()))
     else
       ()
 
@@ -52,8 +52,10 @@ struct
     with
       e -> let _ = opt_hnf_ctor_types := false in raise e
 
+  open Pp (* this adds the ++ to the current scope *)
+
   let not_supported trm =
-    Pp.(msg_error (str "Not Supported:" ++ spc () ++ Printer.pr_constr trm)) ;
+    Feedback.msg_error (str "Not Supported:" ++ spc () ++ Printer.pr_constr trm) ;
     raise (NotSupported trm)
   let bad_term trm =
     raise (NotSupported trm)
@@ -103,7 +105,7 @@ struct
      r_reify "tSort", r_reify "tCast", r_reify "tProd", r_reify "tLambda",
      r_reify "tLetIn", r_reify "tApp", r_reify "tCase", r_reify "tFix",
      r_reify "tConstruct", r_reify "tConst", r_reify "tInd", r_reify "tUnknown")
-      
+
   let (tdef,tmkdef) = (r_reify "def", r_reify "mkdef")
   let (pConstr,pType,pAxiom,pIn) =
     (r_reify "PConstr", r_reify "PType", r_reify "PAxiom", r_reify "PIn")
@@ -205,7 +207,7 @@ struct
     let (m,i) = t in
     Term.mkApp (tmkInd, [| quote_string (Names.string_of_kn (Names.canonical_mind m))
 			 ; int_to_nat i |])
-               
+
   let mk_ctor_list =
     let ctor_list =
       let ctor_info_typ = prod (prod tident tTerm) tnat in
@@ -228,7 +230,7 @@ struct
       | Term.LetIn _
       | Term.Cast _
       | Term.App _ when continue ->
-	 hnf_type false (Reduction.whd_betadeltaiota env ty)
+	 hnf_type false (Reduction.whd_all env ty)
       | _ -> ty
     in
     hnf_type true ty
@@ -251,16 +253,16 @@ struct
 	(Term.mkApp (tCast, [| c' ; quote_cast_kind k ; t' |]), acc)
       | Term.Prod (n,t,b) ->
 	let (t',acc) = quote_term acc env t in
-	let (b',acc) = quote_term acc (push_rel (n, None, t) env) b in
+	let (b',acc) = quote_term acc (push_rel (Context.Rel.Declaration.LocalAssum (n, t)) env) b in
 	(Term.mkApp (tProd, [| quote_name n ; t' ; b' |]), acc)
       | Term.Lambda (n,t,b) ->
 	let (t',acc) = quote_term acc env t in
-	let (b',acc) = quote_term acc (push_rel (n, None, t) env) b in
+	let (b',acc) = quote_term acc (push_rel (Context.Rel.Declaration.LocalAssum (n, t)) env) b in
 	(Term.mkApp (tLambda, [| quote_name n ; t' ; b' |]), acc)
       | Term.LetIn (n,e,t,b) ->
 	let (e',acc) = quote_term acc env e in
 	let (t',acc) = quote_term acc env t in
-	let (b',acc) = quote_term acc (push_rel (n, Some e, t) env) b in
+	let (b',acc) = quote_term acc (push_rel (Context.Rel.Declaration.LocalDef (n, e, t)) env) b in
 	(Term.mkApp (tLetIn, [| quote_name n ; e'; t' ; b' |]), acc)
       | Term.App (f,xs) ->
 	let (f',acc) = quote_term acc env f in
@@ -299,7 +301,7 @@ struct
 	(Term.mkApp (tFix, [| t ; int_to_nat n |]), acc)
       | _ -> (Term.mkApp (tUnknown, [| quote_string (Format.asprintf "%a" pp_constr trm) |]), acc)
       in
-      let in_prop, env' = env in 
+      let in_prop, env' = env in
       if is_cast_prop () && not in_prop then
         let ty = Retyping.get_type_of env' Evd.empty trm in
         let sf = Retyping.get_sort_family_of env' Evd.empty ty in
@@ -317,7 +319,7 @@ struct
 	else
 	  []
       in
-      let ctxt = CArray.map2_i (fun i na t -> (na, None, Vars.lift i t)) ns ts in
+      let ctxt = CArray.map2_i (fun i na t -> (Context.Rel.Declaration.LocalAssum (na, Vars.lift i t))) ns ts in
       let envfix = push_rel_context (Array.to_list ctxt) env in
       let mk_fun (xs,acc) i =
 	let n = int_to_nat (Array.get a i) in
@@ -334,7 +336,7 @@ struct
       let indtys =
         Array.to_list Declarations.(Array.map (fun oib ->
            let ty = Inductive.type_of_inductive (snd env) ((mib,oib),inst) in
-           (Names.Name oib.mind_typename, None, ty)) mib.mind_packets)
+           (Context.Rel.Declaration.LocalAssum (Names.Name oib.mind_typename, ty))) mib.mind_packets)
       in
       let envind = push_rel_context indtys env in
       let (ls,acc) =
@@ -667,7 +669,7 @@ let ltac_apply (f:Tacexpr.glob_tactic_expr) (args:Tacexpr.glob_tactic_arg list) 
   Tacinterp.eval_tactic
     (ltac_letin ("F", Tacexpr.Tacexp f) (ltac_lcall "F" args))
 
-let to_ltac_val c = Tacexpr.TacDynamic(Loc.ghost,Pretyping.constr_in c)
+let to_ltac_val c = Tacinterp.Value.of_constr c
 
 (** From Containers **)
 let declare_definition
@@ -681,19 +683,21 @@ let declare_definition
 let check_inside_section () =
   if Lib.sections_are_opened () then
     (** In trunk this seems to be moved to Errors **)
-    Errors.errorlabstrm "Quote" (Pp.str "You can not quote within a section.")
+    (* For Coq 8.7: CErrors.user_err ~hdr:"Quote" (Pp.str "You can not quote within a section.") *)
+    CErrors.errorlabstrm "Quote" (Pp.str "You can not quote within a section.")
   else ()
 
-
+open Constrarg
+open Proofview.Notations
 
 TACTIC EXTEND get_goal
     | [ "quote_term" constr(c) tactic(tac) ] ->
       [ (** quote the given term, pass the result to t **)
-  Proofview.Goal.nf_enter begin fun gl ->
+  Proofview.Goal.nf_enter { enter = begin fun gl ->
           let env = Proofview.Goal.env gl in
 	  let c = TermReify.quote_term env c in
 	  ltac_apply tac (List.map to_ltac_val [c])
-  end ]
+  end } ]
 (*
     | [ "quote_goal" ] ->
       [ (** get the representation of the goal **)
@@ -705,13 +709,13 @@ END;;
 
 TACTIC EXTEND denote_term
     | [ "denote_term" constr(c) tactic(tac) ] ->
-      [ Proofview.Goal.nf_enter begin fun gl ->
+      [ Proofview.Goal.nf_enter { enter = begin fun gl ->
          let (evm,env) = Lemmas.get_current_context() in
          let c = TermReify.denote_term c in
          let def' = Constrextern.extern_constr true env evm c in
          let def = Constrintern.interp_constr env evm def' in
 	 ltac_apply tac (List.map to_ltac_val [fst def])
-      end ]
+      end } ]
 END;;
 
 VERNAC COMMAND EXTEND Make_vernac CLASSIFIED AS SIDEFF

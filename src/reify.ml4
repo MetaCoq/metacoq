@@ -665,9 +665,25 @@ let ltac_lcall tac args =
 let ltac_letin (x, e1) e2 =
   Tacexpr.TacLetIn(false,[(Loc.ghost,Names.id_of_string x),e1],e2)
 
-let ltac_apply (f:Tacexpr.glob_tactic_expr) (args:Tacexpr.glob_tactic_arg list) =
-  Tacinterp.eval_tactic
-    (ltac_letin ("F", Tacexpr.Tacexp f) (ltac_lcall "F" args))
+open Names
+open Tacexpr
+open Tacinterp
+open Misctypes
+
+let ltac_apply (f : Value.t) (args: Tacinterp.Value.t list) =
+  let fold arg (i, vars, lfun) =
+    let id = Id.of_string ("x" ^ string_of_int i) in
+    let x = Reference (ArgVar (Loc.ghost, id)) in
+    (succ i, x :: vars, Id.Map.add id arg lfun)
+  in
+  let (_, args, lfun) = List.fold_right fold args (0, [], Id.Map.empty) in
+  let lfun = Id.Map.add (Id.of_string "F") f lfun in
+  let ist = { (Tacinterp.default_ist ()) with Tacinterp.lfun = lfun; } in
+  Tacinterp.eval_tactic_ist ist (ltac_lcall "F" args)
+
+(* let ltac_apply (f:Tacexpr.glob_tactic_expr) (args:Tacexpr.glob_tactic_arg list) = *)
+(*   Tacinterp.eval_tactic *)
+(*     (ltac_letin ("F", Tacexpr.Tacexp f) (ltac_lcall "F" args)) *)
 
 let to_ltac_val c = Tacinterp.Value.of_constr c
 
@@ -718,75 +734,75 @@ TACTIC EXTEND denote_term
       end } ]
 END;;
 
-VERNAC COMMAND EXTEND Make_vernac CLASSIFIED AS SIDEFF
-    | [ "Quote" "Definition" ident(name) ":=" lconstr(def) ] ->
-      [ check_inside_section () ;
-	let (evm,env) = Lemmas.get_current_context () in
-	let def = Constrintern.interp_constr env evm def in
-	let trm = TermReify.quote_term env (fst def) in
-	let result = Constrextern.extern_constr true env evm trm in
-	declare_definition name
-	  (Decl_kinds.Global, false, Decl_kinds.Definition)
-	  [] None result None (Lemmas.mk_hook (fun _ _ -> ())) ]
-END;;
+(* VERNAC COMMAND EXTEND Make_vernac CLASSIFIED AS SIDEFF *)
+(*     | [ "Quote" "Definition" ident(name) ":=" lconstr(def) ] -> *)
+(*       [ check_inside_section () ; *)
+(* 	let (evm,env) = Lemmas.get_current_context () in *)
+(* 	let def = Constrintern.interp_constr env evm def in *)
+(* 	let trm = TermReify.quote_term env (fst def) in *)
+(* 	let result = Constrextern.extern_constr true env evm trm in *)
+(* 	declare_definition name *)
+(* 	  (Decl_kinds.Global, false, Decl_kinds.Definition) *)
+(* 	  [] None result None (Lemmas.mk_hook (fun _ _ -> ())) ] *)
+(* END;; *)
 
-VERNAC COMMAND EXTEND Make_vernac_reduce CLASSIFIED AS SIDEFF
-    | [ "Quote" "Definition" ident(name) ":=" "Eval" red_expr(rd) "in" constr(def) ] ->
-      [ check_inside_section () ;
-	let (evm,env) = Lemmas.get_current_context () in
-	let def = Constrintern.interp_constr env evm def in
-	let (evm2,red) = Tacinterp.interp_redexp env evm rd in
-	let red = fst (Redexpr.reduction_of_red_expr env red) in
-	let def = red env evm2 (fst def) in
-	let trm = TermReify.quote_term env (snd def) in
-	let result = Constrextern.extern_constr true env (fst def) trm in
-	declare_definition name
-	  (Decl_kinds.Global, false, Decl_kinds.Definition)
-	  [] None result None (Lemmas.mk_hook (fun _ _ -> ())) ]
-END;;
+(* VERNAC COMMAND EXTEND Make_vernac_reduce CLASSIFIED AS SIDEFF *)
+(*     | [ "Quote" "Definition" ident(name) ":=" "Eval" red_expr(rd) "in" constr(def) ] -> *)
+(*       [ check_inside_section () ; *)
+(* 	let (evm,env) = Lemmas.get_current_context () in *)
+(* 	let def = Constrintern.interp_constr env evm def in *)
+(* 	let (evm2,red) = Tacinterp.interp_redexp env evm rd in *)
+(* 	let red = fst (Redexpr.reduction_of_red_expr env red) in *)
+(* 	let def = red env evm2 (fst def) in *)
+(* 	let trm = TermReify.quote_term env (snd def) in *)
+(* 	let result = Constrextern.extern_constr true env (fst def) trm in *)
+(* 	declare_definition name *)
+(* 	  (Decl_kinds.Global, false, Decl_kinds.Definition) *)
+(* 	  [] None result None (Lemmas.mk_hook (fun _ _ -> ())) ] *)
+(* END;; *)
 
 
-VERNAC COMMAND EXTEND Make_recursive CLASSIFIED AS SIDEFF
-    | [ "Quote" "Recursively" "Definition" ident(name) ":=" constr(def) ] ->
-      [ check_inside_section () ;
-	let (evm,env) = Lemmas.get_current_context () in
-	let def = Constrintern.interp_constr env evm def in
-	let trm = TermReify.quote_term_rec env (fst def) in
-	let result = Constrextern.extern_constr true env evm trm in
-	declare_definition name
-	  (Decl_kinds.Global, false, Decl_kinds.Definition)
-	  [] None result None (Lemmas.mk_hook (fun _ _ -> ())) ]
-END;;
+(* VERNAC COMMAND EXTEND Make_recursive CLASSIFIED AS SIDEFF *)
+(*     | [ "Quote" "Recursively" "Definition" ident(name) ":=" constr(def) ] -> *)
+(*       [ check_inside_section () ; *)
+(* 	let (evm,env) = Lemmas.get_current_context () in *)
+(* 	let def = Constrintern.interp_constr env evm def in *)
+(* 	let trm = TermReify.quote_term_rec env (fst def) in *)
+(* 	let result = Constrextern.extern_constr true env evm trm in *)
+(* 	declare_definition name *)
+(* 	  (Decl_kinds.Global, false, Decl_kinds.Definition) *)
+(* 	  [] None result None (Lemmas.mk_hook (fun _ _ -> ())) ] *)
+(* END;; *)
 
-VERNAC COMMAND EXTEND Unquote_vernac CLASSIFIED AS SIDEFF
-    | [ "Make" "Definition" ident(name) ":=" constr(def) ] ->
-      [ check_inside_section () ;
-	let (evm,env) = Lemmas.get_current_context () in
-	let def = Constrintern.interp_constr env evm def in
-	let trm = TermReify.denote_term (fst def) in
-	let result = Constrextern.extern_constr true env evm trm in
-	declare_definition name
-	  (Decl_kinds.Global, false, Decl_kinds.Definition)
-	  [] None result None (Lemmas.mk_hook (fun _ _ -> ())) ]
-END;;
+(* VERNAC COMMAND EXTEND Unquote_vernac CLASSIFIED AS SIDEFF *)
+(*     | [ "Make" "Definition" ident(name) ":=" constr(def) ] -> *)
+(*       [ check_inside_section () ; *)
+(* 	let (evm,env) = Lemmas.get_current_context () in *)
+(* 	let def = Constrintern.interp_constr env evm def in *)
+(* 	let trm = TermReify.denote_term (fst def) in *)
+(* 	let result = Constrextern.extern_constr true env evm trm in *)
+(* 	declare_definition name *)
+(* 	  (Decl_kinds.Global, false, Decl_kinds.Definition) *)
+(* 	  [] None result None (Lemmas.mk_hook (fun _ _ -> ())) ] *)
+(* END;; *)
 
-VERNAC COMMAND EXTEND Make_tests CLASSIFIED AS QUERY
-(*
-    | [ "Make" "Definitions" tactic(t) ] ->
-      [ (** [t] returns a [list (string * term)] **)
-	assert false ]
-*)
-    | [ "Test" "Quote" constr(c) ] ->
-      [ check_inside_section () ;
-	let (evm,env) = Lemmas.get_current_context () in
-	let c = Constrintern.interp_constr env evm c in
-	let result = TermReify.quote_term env (fst c) in
-(* DEBUGGING
-	let back = TermReify.denote_term result in
-	Format.eprintf "%a\n" pp_constr result ;
-	Format.eprintf "%a\n" pp_constr back ;
-	assert (Term.eq_constr c back) ;
-*)
-	Pp.msgnl (Printer.pr_constr result) ;
-	() ]
-END;;
+(* VERNAC COMMAND EXTEND Make_tests CLASSIFIED AS QUERY *)
+(* (\* *)
+(*     | [ "Make" "Definitions" tactic(t) ] -> *)
+(*       [ (\** [t] returns a [list (string * term)] **\) *)
+(* 	assert false ] *)
+(* *\) *)
+(*     | [ "Test" "Quote" constr(c) ] -> *)
+(*       [ check_inside_section () ; *)
+(* 	let (evm,env) = Lemmas.get_current_context () in *)
+(* 	let c = Constrintern.interp_constr env evm c in *)
+(* 	let result = TermReify.quote_term env (fst c) in *)
+(* (\* DEBUGGING *)
+(* 	let back = TermReify.denote_term result in *)
+(* 	Format.eprintf "%a\n" pp_constr result ; *)
+(* 	Format.eprintf "%a\n" pp_constr back ; *)
+(* 	assert (Term.eq_constr c back) ; *)
+(* *\) *)
+(* 	Pp.msgnl (Printer.pr_constr result) ; *)
+(* 	() ] *)
+(* END;; *)

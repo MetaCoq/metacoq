@@ -71,17 +71,19 @@ Inductive program : Set :=
 Record one_inductive_entry : Set := {
   mind_entry_typename : ident;
   mind_entry_arity : term;
-  mind_entry_template : bool; (* Use template polymorphism *)
+  mind_entry_template : bool; (* template polymorphism ? *)
   mind_entry_consnames : list ident;
   mind_entry_lc : list term}.
 
+
+Definition local_entry : Set := term.
 (*
+Original definition in OCaml:
+
 type local_entry =
   | LocalDef of constr
   | LocalAssum of constr
 *)
-
-Definition local_entry : Set := term.
 
 Record mutual_inductive_entry : Set := {
   mind_entry_record : option (option ident); 
@@ -92,8 +94,3 @@ Record mutual_inductive_entry : Set := {
 (*  mind_entry_universes : Univ.universe_context; (*what is this?*) *)
   mind_entry_private : option bool
 }.
-
-(* define the monad with commands to add new declarations to Coq?
-Because LTac functions cannot invoke commands like "Make Definition", we
-will need to implement the run function for the monad in OCaml land?
-*)

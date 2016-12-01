@@ -25,5 +25,3 @@ End with_T.
 Local Open Scope string_scope.
 Local Open Scope positive_scope.
 Quote Recursively Definition count_tree_syntax := count_tree.
-
-Print count_tree_syntax.

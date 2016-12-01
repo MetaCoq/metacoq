@@ -12,7 +12,7 @@ let _ = Goptions.declare_bool_option {
   Goptions.optwrite = (fun a -> cast_prop:=a);
 }
 
-(*whether Set Template Cast Propositions is on, as needed for erasure in Certticoq*)
+(* whether Set Template Cast Propositions is on, as needed for erasure in Certicoq *)
 let is_cast_prop () = !cast_prop                     
                      
 let pp_constr fmt x = Pp.pp_with fmt (Printer.pr_constr x)
@@ -86,8 +86,8 @@ struct
   let pair a b f s =
     Term.mkApp (c_pair, [| a ; b ; f ; s |])
 
-    (* reify the constructors in Template.Ast.v, which are the building blocks in reification *)
-  let nAnon = r_reify "nAnon" (* resolve_symbol pkg_reify *)
+    (* reify the constructors in Template.Ast.v, which are the building blocks of reified terms *)
+  let nAnon = r_reify "nAnon"
   let nNamed = r_reify "nNamed"
   let kVmCast = r_reify "VmCast"
   let kNative = r_reify "NativeCast"
@@ -495,14 +495,6 @@ struct
     in
     go 0 trm
 
-
-
-    
-    
-    
-    
-
-
   let unquote_ident trm =
     Names.id_of_string (unquote_string trm)
 
@@ -690,7 +682,6 @@ struct
 
 end
 
-
 DECLARE PLUGIN "template_plugin"
 
 (** Stolen from CoqPluginUtils **)
@@ -710,9 +701,6 @@ let ltac_apply (f:Tacexpr.glob_tactic_expr) (args:Tacexpr.glob_tactic_arg list) 
     (ltac_letin ("F", Tacexpr.Tacexp f) (ltac_lcall "F" args))
 
 let to_ltac_val c = Tacexpr.TacDynamic(Loc.ghost,Pretyping.constr_in c)
-
-
-
 
 (** From Containers **)
 let declare_definition

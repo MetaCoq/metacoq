@@ -76,6 +76,7 @@ struct
   let tnat = resolve_symbol pkg_datatypes "nat"
   let ttrue = resolve_symbol pkg_datatypes "true"
   let tfalse = resolve_symbol pkg_datatypes "false"
+  let unit_tt = resolve_symbol pkg_datatypes "tt"
   let tAscii = resolve_symbol ["Coq";"Strings";"Ascii"] "Ascii"
   let c_nil = resolve_symbol pkg_datatypes "nil"
   let c_cons = resolve_symbol pkg_datatypes "cons"
@@ -111,6 +112,9 @@ struct
     (r_reify "PConstr", r_reify "PType", r_reify "PAxiom", r_reify "PIn")
   let tinductive_body = r_reify "inductive_body"
   let tmkinductive_body = r_reify "mkinductive_body"
+
+  let (tmReturn,tmBind,tmQuote,tmReduce,tmMkDefinition,tmMkInductive) =
+    (r_reify "tmReturn", r_reify "tmBind", r_reify "tmQuote", r_reify "tmReduce", r_reify "tmMkDefinition", r_reify "tmMkInductive")
 
   let to_positive =
     let xH = resolve_symbol pkg_bignums "xH" in
@@ -649,6 +653,64 @@ struct
     else
       not_supported trm
 
+
+  let declare_definition
+    (id : Names.Id.t) (loc, boxed_flag, def_obj_kind)
+    (binder_list : Constrexpr.local_binder list) red_expr_opt constr_expr
+    constr_expr_opt decl_hook =
+    Command.do_definition
+    id (loc, false, def_obj_kind) None binder_list red_expr_opt constr_expr
+    constr_expr_opt decl_hook
+
+
+
+  let add_definition name result =
+    declare_definition name
+	    (Decl_kinds.Global, false, Decl_kinds.Definition)
+	    [] None result None (Lemmas.mk_hook (fun _ _ -> ()))
+
+  let reduce_hnf env (evm,def) =
+  	let (evm2,red) = Tacinterp.interp_redexp env evm Genredexpr.Hnf in
+	  let red = fst (Redexpr.reduction_of_red_expr env red) in
+	  red env evm2 def
+
+  let reduce_all env (evm,def) =
+  	let (evm2,red) = Tacinterp.interp_redexp env evm (Genredexpr.Cbv Redops.all_flags) in
+	  let red = fst (Redexpr.reduction_of_red_expr env red) in
+	  red env evm2 def
+
+  let unquote_red_add_definition env evm name def =
+	  let (evm,def) = reduce_all env (evm,def) in
+  	let trm = denote_term (def) in
+	  let result = Constrextern.extern_constr true env evm trm in
+    add_definition name result
+
+  let rec run_template_program_rec  ((env,evm,pgm): Environ.env * Evd.evar_map * Term.constr) : Environ.env * Evd.evar_map * Term.constr =
+    let (evm,pgm) = reduce_hnf env (evm, pgm) in 
+    let (coConstr,args) = app_full pgm [] in
+    if Term.eq_constr coConstr tmReturn then
+      match args with
+      | _::h::[] -> (env,evm,h)
+      | _ -> raise (Failure "tmReturn must take 1 argument. Please file a bug with Template-Coq.")
+    else if Term.eq_constr coConstr tmBind then
+      match args with
+      | _::_::f::a::[] ->
+        let (env, evm, ar) = run_template_program_rec (env,evm,a) in
+        run_template_program_rec (env,evm,(Term.mkApp (f, Array.of_list [ar])))
+      | _ -> raise (Failure "tmBind must take 4 arguments. Please file a bug with Template-Coq.")
+    else if Term.eq_constr coConstr tmMkDefinition then
+      match args with
+      | name::body::[] -> let _ = unquote_red_add_definition env evm (unquote_ident name) body in (env, evm, unit_tt)
+      | _ -> raise (Failure "tmMkDefinition must take 4 arguments. Please file a bug with Template-Coq.")
+    else raise (Failure "Invalid argument or yot yet implemented. The argument must be a TemplateProgram")
+
+
+  let run_template_program (env: Environ.env) (evm: Evd.evar_map) (body: Constrexpr.constr_expr) : unit =
+  	let (body,_) = Constrintern.interp_constr env evm body in
+    let _ = run_template_program_rec (env,evm,body) in ()
+
+
+
   let declare_inductive (env: Environ.env) (evm: Evd.evar_map) (body: Constrexpr.constr_expr) : unit =
 	let (body,_) = Constrintern.interp_constr env evm body in
   let (_,args) = app_full body [] in (* check that the first component is Build_mut_ind .. *)
@@ -703,13 +765,7 @@ let ltac_apply (f:Tacexpr.glob_tactic_expr) (args:Tacexpr.glob_tactic_arg list) 
 let to_ltac_val c = Tacexpr.TacDynamic(Loc.ghost,Pretyping.constr_in c)
 
 (** From Containers **)
-let declare_definition
-    (id : Names.Id.t) (loc, boxed_flag, def_obj_kind)
-    (binder_list : Constrexpr.local_binder list) red_expr_opt constr_expr
-    constr_expr_opt decl_hook =
-  Command.do_definition
-  id (loc, false, def_obj_kind) None binder_list red_expr_opt constr_expr
-  constr_expr_opt decl_hook
+
 
 let check_inside_section () =
   if Lib.sections_are_opened () then
@@ -754,7 +810,7 @@ VERNAC COMMAND EXTEND Make_vernac CLASSIFIED AS SIDEFF
 	let def = Constrintern.interp_constr env evm def in
 	let trm = TermReify.quote_term env (fst def) in
 	let result = Constrextern.extern_constr true env evm trm in
-	declare_definition name
+	TermReify.declare_definition name
 	  (Decl_kinds.Global, false, Decl_kinds.Definition)
 	  [] None result None (Lemmas.mk_hook (fun _ _ -> ())) ]
 END;;
@@ -769,7 +825,7 @@ VERNAC COMMAND EXTEND Make_vernac_reduce CLASSIFIED AS SIDEFF
 	let def = red env evm2 (fst def) in
 	let trm = TermReify.quote_term env (snd def) in
 	let result = Constrextern.extern_constr true env (fst def) trm in
-	declare_definition name
+	TermReify.declare_definition name
 	  (Decl_kinds.Global, false, Decl_kinds.Definition)
 	  [] None result None (Lemmas.mk_hook (fun _ _ -> ())) ]
 END;;
@@ -782,7 +838,7 @@ VERNAC COMMAND EXTEND Make_recursive CLASSIFIED AS SIDEFF
 	let def = Constrintern.interp_constr env evm def in
 	let trm = TermReify.quote_term_rec env (fst def) in
 	let result = Constrextern.extern_constr true env evm trm in
-	declare_definition name
+	TermReify.declare_definition name
 	  (Decl_kinds.Global, false, Decl_kinds.Definition)
 	  [] None result None (Lemmas.mk_hook (fun _ _ -> ())) ]
 END;;
@@ -794,7 +850,7 @@ VERNAC COMMAND EXTEND Unquote_vernac CLASSIFIED AS SIDEFF
 	let def = Constrintern.interp_constr env evm def in
 	let trm = TermReify.denote_term (fst def) in
 	let result = Constrextern.extern_constr true env evm trm in
-	declare_definition name
+	TermReify.declare_definition name
 	  (Decl_kinds.Global, false, Decl_kinds.Definition)
 	  [] None result None (Lemmas.mk_hook (fun _ _ -> ())) ]
 END;;
@@ -806,6 +862,14 @@ VERNAC COMMAND EXTEND Unquote_inductive CLASSIFIED AS SIDEFF
 	let (evm,env) = Lemmas.get_current_context () in
   TermReify.declare_inductive env evm def ]
 END;;
+
+VERNAC COMMAND EXTEND Run_program CLASSIFIED AS SIDEFF
+    | [ "Run" "TemplateProgram" constr(def) ] ->
+      [ check_inside_section () ;
+	let (evm,env) = Lemmas.get_current_context () in
+  TermReify.run_template_program env evm def ]
+END;;
+
 
 VERNAC COMMAND EXTEND Make_tests CLASSIFIED AS QUERY
 (*

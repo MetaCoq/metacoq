@@ -133,3 +133,17 @@ Inductive demoList (A : Set) : Set :=
     demoNil : demoList A | demoCons : A -> demoList A -> demoList A
 *)
 
+
+
+(** Putting the above commands in monadic program *)
+
+Definition program : TemplateMonad unit :=
+tmBind _ _ (fun x => tmMkDefinition "id1" d'') 
+  (tmBind _ _ (fun x => tmMkDefinition "id2" d'') (tmReturn _ tt)).
+
+Run TemplateProgram program.
+(*
+id2 is defined
+id1 is defined
+*)
+

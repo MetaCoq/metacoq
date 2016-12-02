@@ -58,7 +58,7 @@ Record inductive_body := mkinductive_body
 { ctors : list (ident * term * nat (* arity, w/o lets, w/o parameters *)) }.
 
 Inductive program : Set :=
-| PConstr : string -> term -> program -> program
+| PConstr : string -> term (*-> bool denoting opacity?*) -> program -> program
 | PType   : ident -> nat (* # of parameters, w/o let-ins *) ->
             list (ident * inductive_body) -> program -> program
 | PAxiom  : ident -> term (* the type *) -> program -> program
@@ -94,3 +94,19 @@ Record mutual_inductive_entry : Set := {
 (*  mind_entry_universes : Univ.universe_context; (*what is this?*) *)
   mind_entry_private : option bool
 }.
+
+Inductive TemplateMonad : Type -> Type :=
+| tmReturn : forall T:Type, T -> TemplateMonad T
+| tmBind : forall (A B : Type), 
+    (A -> TemplateMonad B) 
+    -> (TemplateMonad A) 
+    -> (TemplateMonad B)
+| tmQuote : ident -> TemplateMonad term
+| tmReduce : term (* -> strategy? *)-> TemplateMonad term
+| tmMkDefinition : ident -> term -> TemplateMonad unit (* bool indicating success? *)
+| tmMkInductive : mutual_inductive_entry -> TemplateMonad unit (* bool indicating success? *)
+.
+
+
+
+

@@ -801,7 +801,7 @@ END;;
 
 (* get rid of the unused ident(name)? *)
 VERNAC COMMAND EXTEND Unquote_inductive CLASSIFIED AS SIDEFF
-    | [ "Make" "Inductive" ident(name) ":=" constr(def) ] ->
+    | [ "Make" "Inductive" constr(def) ] ->
       [ check_inside_section () ;
 	let (evm,env) = Lemmas.get_current_context () in
   TermReify.declare_inductive env evm def ]

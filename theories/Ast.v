@@ -95,6 +95,10 @@ Record mutual_inductive_entry : Set := {
   mind_entry_private : option bool
 }.
 
+
+(** A monad for programming with template-coq operations.
+Using this monad, it should be possible to write many plugins (e.g. paramcoq)
+in Gallina *)
 Inductive TemplateMonad : Type -> Type :=
 | tmReturn : forall T:Type, T -> TemplateMonad T
 | tmBind : forall (A B : Type), 
@@ -105,6 +109,8 @@ Inductive TemplateMonad : Type -> Type :=
 | tmReduce : term (* -> strategy? *)-> TemplateMonad term
 | tmMkDefinition : ident -> term -> TemplateMonad unit (* bool indicating success? *)
 | tmMkInductive : mutual_inductive_entry -> TemplateMonad unit (* bool indicating success? *)
+| tmFreshName : ident -> TemplateMonad ident 
+    (* Guarenteed to not cause "... already declared" error *)
 .
 
 

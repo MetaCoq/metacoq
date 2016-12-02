@@ -691,7 +691,7 @@ struct
     if Term.eq_constr coConstr tmReturn then
       match args with
       | _::h::[] -> (env,evm,h)
-      | _ -> raise (Failure "tmReturn must take 1 argument. Please file a bug with Template-Coq.")
+      | _ -> raise (Failure "tmReturn must take 2 arguments. Please file a bug with Template-Coq.")
     else if Term.eq_constr coConstr tmBind then
       match args with
       | _::_::f::a::[] ->
@@ -701,7 +701,11 @@ struct
     else if Term.eq_constr coConstr tmMkDefinition then
       match args with
       | name::body::[] -> let _ = unquote_red_add_definition env evm (unquote_ident name) body in (env, evm, unit_tt)
-      | _ -> raise (Failure "tmMkDefinition must take 4 arguments. Please file a bug with Template-Coq.")
+      | _ -> raise (Failure "tmMkDefinition must take 2 arguments. Please file a bug with Template-Coq.")
+(*    else if Term.eq_constr coConstr tmQuote then
+      match args with
+      | id::[] -> let _ = unquote_red_add_definition env evm (unquote_ident name) body in (env, evm, unit_tt)
+      | _ -> raise (Failure "tmQuot must take 1 argument. Please file a bug with Template-Coq.") *)
     else raise (Failure "Invalid argument or yot yet implemented. The argument must be a TemplateProgram")
 
 

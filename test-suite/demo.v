@@ -142,8 +142,38 @@ tmBind _ _ (fun x => tmMkDefinition "id1" d'')
   (tmBind _ _ (fun x => tmMkDefinition "id2" d'') (tmReturn _ tt)).
 
 Run TemplateProgram program.
+
 (*
 id2 is defined
 id1 is defined
 *)
 
+Fixpoint getFirstConstr (p:Ast.program) : option term :=
+match p with
+| PConstr _ t _ => Some t
+| PType _ _ _ p => getFirstConstr p
+| PAxiom _ t p => getFirstConstr p
+| PIn _ => None
+end.
+
+
+Definition duplicateDefn2 (name newName : ident): TemplateMonad unit :=
+  (tmBind _ _ (fun body => 
+    match getFirstConstr body with
+    | Some body => tmMkDefinition newName body
+    | None => tmReturn _ tt
+    end)) 
+    (tmQuoteRec name).
+
+Definition id := fun x:nat => x.
+
+(* Fix: Top may not work in interactive use *)
+Run TemplateProgram (duplicateDefn2 "Top.id" "id4"). 
+(*
+id4 is defined
+
+Print id4.
+
+id4 = fun x : nat => x
+     : nat -> nat
+*)

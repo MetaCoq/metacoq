@@ -105,7 +105,9 @@ Inductive TemplateMonad : Type -> Type :=
     (A -> TemplateMonad B) 
     -> (TemplateMonad A) 
     -> (TemplateMonad B)
+| tmPrint : forall A, A -> TemplateMonad unit
 | tmQuote : ident -> TemplateMonad term
+| tmQuoteRec : ident -> TemplateMonad program
 | tmReduce : term (* -> strategy? *)-> TemplateMonad term
 | tmMkDefinition : ident -> term -> TemplateMonad unit (* bool indicating success? *)
 | tmMkInductive : mutual_inductive_entry -> TemplateMonad unit (* bool indicating success? *)

@@ -113,8 +113,8 @@ struct
   let tinductive_body = r_reify "inductive_body"
   let tmkinductive_body = r_reify "mkinductive_body"
 
-  let (tmReturn,tmBind,tmQuote,tmReduce,tmMkDefinition,tmMkInductive) =
-    (r_reify "tmReturn", r_reify "tmBind", r_reify "tmQuote", r_reify "tmReduce", r_reify "tmMkDefinition", r_reify "tmMkInductive")
+  let (tmReturn,tmBind,tmQuote,tmQuoteRec,tmReduce,tmMkDefinition,tmMkInductive) =
+    (r_reify "tmReturn", r_reify "tmBind", r_reify "tmQuote", r_reify "tmQuoteRec", r_reify "tmReduce", r_reify "tmMkDefinition", r_reify "tmMkInductive")
 
   let to_positive =
     let xH = resolve_symbol pkg_bignums "xH" in
@@ -702,10 +702,16 @@ struct
       match args with
       | name::body::[] -> let _ = unquote_red_add_definition env evm (unquote_ident name) body in (env, evm, unit_tt)
       | _ -> raise (Failure "tmMkDefinition must take 2 arguments. Please file a bug with Template-Coq.")
-(*    else if Term.eq_constr coConstr tmQuote then
+    else if Term.eq_constr coConstr tmQuote then
       match args with
-      | id::[] -> let _ = unquote_red_add_definition env evm (unquote_ident name) body in (env, evm, unit_tt)
-      | _ -> raise (Failure "tmQuot must take 1 argument. Please file a bug with Template-Coq.") *)
+      | id::[] -> let qt = quote_term env (Term.mkConst (Names.constant_of_kn (kn_of_canonical_string (unquote_string id)))) in
+              let _= Pp.msg_debug ((Printer.pr_constr qt)) in (env, evm, qt)
+      | _ -> raise (Failure "tmQuote must take 1 argument. Please file a bug with Template-Coq.")
+    else if Term.eq_constr coConstr tmQuoteRec then
+      match args with
+      | id::[] -> let qt = quote_term_rec env (Term.mkConst (Names.constant_of_kn (kn_of_canonical_string (unquote_string id)))) in
+              let _= Pp.msg_debug ((Printer.pr_constr qt)) in (env, evm, qt)
+      | _ -> raise (Failure "tmQuote must take 1 argument. Please file a bug with Template-Coq.")
     else raise (Failure "Invalid argument or yot yet implemented. The argument must be a TemplateProgram")
 
 

@@ -160,9 +160,10 @@ end.
 Definition duplicateDefn2 (name newName : ident): TemplateMonad unit :=
   (tmBind _ _ (fun body => 
     match getFirstConstr body with
-    | Some body => tmMkDefinition newName body
+    | Some bd => 
+        (tmBind _ _ (fun _ => tmMkDefinition newName bd) (tmPrint _ body))
     | None => tmReturn _ tt
-    end)) 
+    end))
     (tmQuoteRec name).
 
 Definition id := fun x:nat => x.
@@ -170,10 +171,17 @@ Definition id := fun x:nat => x.
 (* Fix: Top may not work in interactive use *)
 Run TemplateProgram (duplicateDefn2 "Top.id" "id4"). 
 (*
+(PType "Coq.Init.Datatypes.nat" 0
+   [("nat", {| ctors := [("O", tRel 0, 0); ("S", tProd nAnon (tRel 0) (tRel 1), 1)] |})]
+   (PConstr "Top.id"
+      (tLambda (nNamed "x") (tInd (mkInd "Coq.Init.Datatypes.nat" 0)) (tRel 0))
+      (PIn (tConst "Top.id"))))
+
 id4 is defined
+*)
 
+(*
 Print id4.
-
 id4 = fun x : nat => x
      : nat -> nat
 *)

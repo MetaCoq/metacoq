@@ -113,8 +113,9 @@ struct
   let tinductive_body = r_reify "inductive_body"
   let tmkinductive_body = r_reify "mkinductive_body"
 
-  let (tmReturn,tmBind,tmQuote,tmQuoteRec,tmReduce,tmMkDefinition,tmMkInductive) =
-    (r_reify "tmReturn", r_reify "tmBind", r_reify "tmQuote", r_reify "tmQuoteRec", r_reify "tmReduce", r_reify "tmMkDefinition", r_reify "tmMkInductive")
+  let (tmReturn,tmBind,tmQuote,tmQuoteRec,tmReduce,tmMkDefinition,tmMkInductive, tmPrint) =
+    (r_reify "tmReturn", r_reify "tmBind", r_reify "tmQuote", r_reify "tmQuoteRec", r_reify "tmReduce",
+       r_reify "tmMkDefinition", r_reify "tmMkInductive", r_reify "tmPrint")
 
   let to_positive =
     let xH = resolve_symbol pkg_bignums "xH" in
@@ -705,15 +706,18 @@ struct
     else if Term.eq_constr coConstr tmQuote then
       match args with
       | id::[] -> let qt = quote_term env (Term.mkConst (Names.constant_of_kn (kn_of_canonical_string (unquote_string id)))) in
-              let _= Pp.msg_debug ((Printer.pr_constr qt)) in (env, evm, qt)
+              (env, evm, qt)
       | _ -> raise (Failure "tmQuote must take 1 argument. Please file a bug with Template-Coq.")
     else if Term.eq_constr coConstr tmQuoteRec then
       match args with
       | id::[] -> let qt = quote_term_rec env (Term.mkConst (Names.constant_of_kn (kn_of_canonical_string (unquote_string id)))) in
-              let _= Pp.msg_debug ((Printer.pr_constr qt)) in (env, evm, qt)
-      | _ -> raise (Failure "tmQuote must take 1 argument. Please file a bug with Template-Coq.")
+              (env, evm, qt)
+      | _ -> raise (Failure "tmQuoteRec must take 1 argument. Please file a bug with Template-Coq.")
+    else if Term.eq_constr coConstr tmPrint then
+      match args with
+      | _::trm::[] -> let _ = Pp.msg_debug ((Printer.pr_constr trm)) in (env, evm, unit_tt)
+      | _ -> raise (Failure "tmPrint must take 2 arguments. Please file a bug with Template-Coq.")
     else raise (Failure "Invalid argument or yot yet implemented. The argument must be a TemplateProgram")
-
 
   let run_template_program (env: Environ.env) (evm: Evd.evar_map) (body: Constrexpr.constr_expr) : unit =
   	let (body,_) = Constrintern.interp_constr env evm body in

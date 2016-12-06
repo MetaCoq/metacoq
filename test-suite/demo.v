@@ -91,13 +91,14 @@ Definition one_i2 : one_inductive_entry :=
 Definition mut_i : mutual_inductive_entry :=
 {|
   mind_entry_record := None;
+  mind_entry_finite := Finite;
   mind_entry_params := [];
   mind_entry_inds := [one_i; one_i2];
   mind_entry_polymorphic := false;
   mind_entry_private := None;
 |}.
 
-Make Inductive ltac:(let t:= eval compute in mut_i in exact t).
+(* Make Inductive ltac:(let t:= eval compute in mut_i in exact t). *)
 
 
 Definition mkImpl (A B : term) : term :=
@@ -117,7 +118,8 @@ Definition one_list_i : one_inductive_entry :=
 Definition mut_list_i : mutual_inductive_entry :=
 {|
   mind_entry_record := None;
-  mind_entry_params := [("A", tSort sSet)];
+  mind_entry_finite := Finite;
+  mind_entry_params := [("A", LocalAssum (tSort sSet))];
   mind_entry_inds := [one_list_i];
   mind_entry_polymorphic := false;
   mind_entry_private := None;

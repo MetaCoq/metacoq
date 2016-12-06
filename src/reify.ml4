@@ -107,6 +107,7 @@ struct
      r_reify "tConstruct", r_reify "tConst", r_reify "tInd", r_reify "tUnknown")
       
   let (tdef,tmkdef) = (r_reify "def", r_reify "mkdef")
+  let (tLocalDef,tLocalAssum) = (r_reify "LocalDef", r_reify "LocalAssum")
   let (pConstr,pType,pAxiom,pIn) =
     (r_reify "PConstr", r_reify "PType", r_reify "PAxiom", r_reify "PIn")
   let tinductive_body = r_reify "inductive_body"
@@ -566,6 +567,7 @@ struct
     else
       not_supported trm
 
+
   let from_coq_pair trm =
     let (h,args) = app_full trm [] in
     if Term.eq_constr h c_pair then
@@ -574,6 +576,14 @@ struct
       | _ -> bad_term trm
     else
       not_supported trm
+
+  let denote_local_entry unq trm =
+    let (h,args) = app_full trm [] in
+      match args with
+	    x :: [] -> 
+      if Term.eq_constr h tLocalDef then Entries.LocalDef (unq x) 
+      else (if  Term.eq_constr h tLocalAssum then Entries.LocalAssum (unq x) else bad_term trm)
+      | _ -> bad_term trm
 
   (** NOTE: Because the representation is lossy, I should probably
    ** come back through elaboration.
@@ -665,19 +675,19 @@ struct
     } 
     | _ -> raise (Failure "ill-typed one_inductive_entry")
      in 
-  let mut_ind mr mp mi mpol mpr : Entries.mutual_inductive_entry =
+  let mut_ind mr mf mp mi mpol mpr : Entries.mutual_inductive_entry =
     {
     mind_entry_record = None; (* mr *)
     mind_entry_finite = Decl_kinds.Finite; (* inductive *)
-    mind_entry_params = List.map (fun p -> let (l,r) = (from_coq_pair p) in (unquote_ident l, (Entries.LocalAssum (denote_term r)))) (from_coq_list mp);
+    mind_entry_params = List.map (fun p -> let (l,r) = (from_coq_pair p) in (unquote_ident l, (denote_local_entry denote_term r))) (from_coq_list mp);
     mind_entry_inds = List.map one_ind (from_coq_list mi);
     mind_entry_polymorphic = from_bool mpol;
     mind_entry_universes = Univ.UContext.empty;
     mind_entry_private = None (*mpr*)
     } in 
     match args with
-    mr::mp::mi::mpol::mpr::[] -> 
-      Command.declare_mutual_inductive_with_eliminations (mut_ind mr mp mi mpol mpr) [] [];()
+    mr::mf::mp::mi::mpol::mpr::[] -> 
+      Command.declare_mutual_inductive_with_eliminations (mut_ind mr mf mp mi mpol mpr) [] [];()
     | _ -> raise (Failure "ill-typed mutual_inductive_entry")
 
 end

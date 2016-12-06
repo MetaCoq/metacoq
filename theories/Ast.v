@@ -65,7 +65,7 @@ Inductive program : Set :=
 | PIn     : term -> program.
 
 
-(* representation of mutual inductives. copied, more or less, from Coq/kernel/entries.mli
+(** representation of mutual inductives. nearly copied from Coq/kernel/entries.mli
 *)
 
 Record one_inductive_entry : Set := {
@@ -76,21 +76,36 @@ Record one_inductive_entry : Set := {
   mind_entry_lc : list term}.
 
 
-Definition local_entry : Set := term.
-(*
-Original definition in OCaml:
+Inductive local_entry : Set := 
+| LocalDef : term -> local_entry (* local let binding *)
+| LocalAssum : term -> local_entry.
 
+(*
 type local_entry =
   | LocalDef of constr
   | LocalAssum of constr
 *)
 
+Inductive recursivity_kind :=
+  | Finite (** = inductive *)
+  | CoFinite (** = coinductive *)
+  | BiFinite (** = non-recursive, like in "Record" definitions *).
+
+
+(*
+type recursivity_kind =
+  | Finite
+  | CoFinite
+  | BiFinite
+*)
+
+(* kernel/entries.mli*)
 Record mutual_inductive_entry : Set := {
   mind_entry_record : option (option ident); 
-(*  mind_entry_finite : Decl_kinds.recursivity_kind;  (* inductive/coinductive/record*)*)
+  mind_entry_finite : recursivity_kind;
   mind_entry_params : list (ident * local_entry);
   mind_entry_inds : list one_inductive_entry;
   mind_entry_polymorphic : bool; 
-(*  mind_entry_universes : Univ.universe_context; (*what is this?*) *)
+(*  mind_entry_universes : Univ.universe_context; *)
   mind_entry_private : option bool
 }.

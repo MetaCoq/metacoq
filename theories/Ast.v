@@ -80,24 +80,12 @@ Inductive local_entry : Set :=
 | LocalDef : term -> local_entry (* local let binding *)
 | LocalAssum : term -> local_entry.
 
-(*
-type local_entry =
-  | LocalDef of constr
-  | LocalAssum of constr
-*)
 
 Inductive recursivity_kind :=
   | Finite (** = inductive *)
   | CoFinite (** = coinductive *)
   | BiFinite (** = non-recursive, like in "Record" definitions *).
 
-
-(*
-type recursivity_kind =
-  | Finite
-  | CoFinite
-  | BiFinite
-*)
 
 (* kernel/entries.mli*)
 Record mutual_inductive_entry : Set := {

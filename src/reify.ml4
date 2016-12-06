@@ -712,7 +712,7 @@ struct
     mind_entry_inds = List.map one_ind (from_coq_list mi);
     mind_entry_polymorphic = from_bool mpol;
     mind_entry_universes = Univ.UContext.empty;
-    mind_entry_private = None (*mpr*)
+    mind_entry_private = unquote_map_option from_bool mpr (*mpr*)
     } in 
     match args with
     mr::mf::mp::mi::mpol::mpr::[] -> 
@@ -838,7 +838,6 @@ VERNAC COMMAND EXTEND Unquote_vernac CLASSIFIED AS SIDEFF
 	  [] None result None (Lemmas.mk_hook (fun _ _ -> ())) ]
 END;;
 
-(* get rid of the unused ident(name)? *)
 VERNAC COMMAND EXTEND Unquote_inductive CLASSIFIED AS SIDEFF
     | [ "Make" "Inductive" constr(def) ] ->
       [ check_inside_section () ;

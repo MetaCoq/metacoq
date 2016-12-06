@@ -75,6 +75,8 @@ struct
   let tS = resolve_symbol pkg_datatypes "S"
   let tnat = resolve_symbol pkg_datatypes "nat"
   let ttrue = resolve_symbol pkg_datatypes "true"
+  let cSome = resolve_symbol pkg_datatypes "Some"
+  let cNone = resolve_symbol pkg_datatypes "None"
   let tfalse = resolve_symbol pkg_datatypes "false"
   let tAscii = resolve_symbol ["Coq";"Strings";"Ascii"] "Ascii"
   let c_nil = resolve_symbol pkg_datatypes "nil"
@@ -577,13 +579,6 @@ struct
     else
       not_supported trm
 
-  let denote_local_entry unq trm =
-    let (h,args) = app_full trm [] in
-      match args with
-	    x :: [] -> 
-      if Term.eq_constr h tLocalDef then Entries.LocalDef (unq x) 
-      else (if  Term.eq_constr h tLocalAssum then Entries.LocalAssum (unq x) else bad_term trm)
-      | _ -> bad_term trm
 
   (** NOTE: Because the representation is lossy, I should probably
    ** come back through elaboration.
@@ -659,6 +654,28 @@ struct
     else
       not_supported trm
 
+  let denote_local_entry trm =
+    let (h,args) = app_full trm [] in
+      match args with
+	    x :: [] -> 
+      if Term.eq_constr h tLocalDef then Entries.LocalDef (denote_term x) 
+      else (if  Term.eq_constr h tLocalAssum then Entries.LocalAssum (denote_term x) else bad_term trm)
+      | _ -> bad_term trm
+
+  let unquote_map_option f trm =
+    let (h,args) = app_full trm [] in
+    if Term.eq_constr h cSome then 
+    match args with
+	  _ :: x :: _ -> Some (f x)
+      | _ -> bad_term trm
+    else if Term.eq_constr h cNone then 
+    match args with
+	  _ :: [] -> None
+      | _ -> bad_term trm
+    else
+      not_supported trm
+
+
   let declare_inductive (env: Environ.env) (evm: Evd.evar_map) (body: Constrexpr.constr_expr) : unit =
 	let (body,_) = Constrintern.interp_constr env evm body in
   let (_,args) = app_full body [] in (* check that the first component is Build_mut_ind .. *)
@@ -677,9 +694,9 @@ struct
      in 
   let mut_ind mr mf mp mi mpol mpr : Entries.mutual_inductive_entry =
     {
-    mind_entry_record = None; (* mr *)
+    mind_entry_record = unquote_map_option (unquote_map_option unquote_ident) mr;
     mind_entry_finite = Decl_kinds.Finite; (* inductive *)
-    mind_entry_params = List.map (fun p -> let (l,r) = (from_coq_pair p) in (unquote_ident l, (denote_local_entry denote_term r))) (from_coq_list mp);
+    mind_entry_params = List.map (fun p -> let (l,r) = (from_coq_pair p) in (unquote_ident l, (denote_local_entry r))) (from_coq_list mp);
     mind_entry_inds = List.map one_ind (from_coq_list mi);
     mind_entry_polymorphic = from_bool mpol;
     mind_entry_universes = Univ.UContext.empty;

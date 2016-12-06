@@ -98,7 +98,7 @@ Definition mut_i : mutual_inductive_entry :=
   mind_entry_private := None;
 |}.
 
-(* Make Inductive ltac:(let t:= eval compute in mut_i in exact t). *)
+Make Inductive ltac:(let t:= eval compute in mut_i in exact t).
 
 
 Definition mkImpl (A B : term) : term :=
@@ -128,7 +128,30 @@ Definition mut_list_i : mutual_inductive_entry :=
 
 Make Inductive ltac:(let t:= eval compute in mut_list_i in exact t).
 
-Print demoList.
+(** Records *)
+
+Definition one_pt_i : one_inductive_entry :=
+{|
+  mind_entry_typename := "Point";
+  mind_entry_arity := tSort sSet;
+  mind_entry_template := false;
+  mind_entry_consnames := ["mkPoint"];
+  mind_entry_lc := [
+    mkImpl (tRel 0) (mkImpl (tRel 1) (tApp (tRel 3) [tRel 2]))];
+|}.
+
+Definition mut_pt_i : mutual_inductive_entry :=
+{|
+  mind_entry_record := Some (Some "pp");
+  mind_entry_finite := BiFinite;
+  mind_entry_params := [("A", LocalAssum (tSort sSet))];
+  mind_entry_inds := [one_pt_i];
+  mind_entry_polymorphic := false;
+  mind_entry_private := None;
+|}.
+
+Make Inductive ltac:(let t:= eval compute in mut_pt_i in exact t).
+
 
 (*
 Inductive demoList (A : Set) : Set :=

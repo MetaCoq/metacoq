@@ -98,7 +98,7 @@ Definition mut_i : mutual_inductive_entry :=
   mind_entry_private := None;
 |}.
 
-Make Inductive ltac:(let t:= eval compute in mut_i in exact t).
+Make Inductive mut_i.
 
 
 Definition mkImpl (A B : term) : term :=
@@ -126,7 +126,7 @@ Definition mut_list_i : mutual_inductive_entry :=
 |}.
 
 
-Make Inductive ltac:(let t:= eval compute in mut_list_i in exact t).
+Make Inductive mut_list_i.
 
 (** Records *)
 
@@ -150,7 +150,7 @@ Definition mut_pt_i : mutual_inductive_entry :=
   mind_entry_private := None;
 |}.
 
-Make Inductive ltac:(let t:= eval compute in mut_pt_i in exact t).
+Make Inductive mut_pt_i.
 
 
 (*

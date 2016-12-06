@@ -570,6 +570,10 @@ struct
     else
       not_supported trm
 
+  let reduce_all env (evm,def) =
+  	let (evm2,red) = Tacinterp.interp_redexp env evm (Genredexpr.Cbv Redops.all_flags) in
+	  let red = fst (Redexpr.reduction_of_red_expr env red) in
+	  red env evm2 def
 
   let from_coq_pair trm =
     let (h,args) = app_full trm [] in
@@ -690,6 +694,7 @@ struct
 
   let declare_inductive (env: Environ.env) (evm: Evd.evar_map) (body: Constrexpr.constr_expr) : unit =
 	let (body,_) = Constrintern.interp_constr env evm body in
+  let (evm,body) = reduce_all env (evm,body) in
   let (_,args) = app_full body [] in (* check that the first component is Build_mut_ind .. *)
   let one_ind b1 : Entries.one_inductive_entry = 
     let (_,args) = app_full b1 [] in (* check that the first component is Build_one_ind .. *)

@@ -110,6 +110,7 @@ struct
       
   let (tdef,tmkdef) = (r_reify "def", r_reify "mkdef")
   let (tLocalDef,tLocalAssum) = (r_reify "LocalDef", r_reify "LocalAssum")
+  let (cFinite,cCoFinite,cBiFinite) = (r_reify "Finite", r_reify "CoFinite", r_reify "BiFinite")
   let (pConstr,pType,pAxiom,pIn) =
     (r_reify "PConstr", r_reify "PType", r_reify "PAxiom", r_reify "PIn")
   let tinductive_body = r_reify "inductive_body"
@@ -662,6 +663,17 @@ struct
       else (if  Term.eq_constr h tLocalAssum then Entries.LocalAssum (denote_term x) else bad_term trm)
       | _ -> bad_term trm
 
+  let denote_mind_entry_finite trm =
+    let (h,args) = app_full trm [] in
+      match args with
+	    [] -> 
+      if Term.eq_constr h cFinite then Decl_kinds.Finite
+      else if  Term.eq_constr h cCoFinite then Decl_kinds.CoFinite
+      else if  Term.eq_constr h cBiFinite then Decl_kinds.BiFinite
+      else bad_term trm
+      | _ -> bad_term trm
+
+
   let unquote_map_option f trm =
     let (h,args) = app_full trm [] in
     if Term.eq_constr h cSome then 
@@ -695,7 +707,7 @@ struct
   let mut_ind mr mf mp mi mpol mpr : Entries.mutual_inductive_entry =
     {
     mind_entry_record = unquote_map_option (unquote_map_option unquote_ident) mr;
-    mind_entry_finite = Decl_kinds.Finite; (* inductive *)
+    mind_entry_finite = denote_mind_entry_finite mf; (* inductive *)
     mind_entry_params = List.map (fun p -> let (l,r) = (from_coq_pair p) in (unquote_ident l, (denote_local_entry r))) (from_coq_list mp);
     mind_entry_inds = List.map one_ind (from_coq_list mi);
     mind_entry_polymorphic = from_bool mpol;

@@ -75,6 +75,8 @@ struct
   let tS = resolve_symbol pkg_datatypes "S"
   let tnat = resolve_symbol pkg_datatypes "nat"
   let ttrue = resolve_symbol pkg_datatypes "true"
+  let cSome = resolve_symbol pkg_datatypes "Some"
+  let cNone = resolve_symbol pkg_datatypes "None"
   let tfalse = resolve_symbol pkg_datatypes "false"
   let unit_tt = resolve_symbol pkg_datatypes "tt"
   let tAscii = resolve_symbol ["Coq";"Strings";"Ascii"] "Ascii"
@@ -108,6 +110,8 @@ struct
      r_reify "tConstruct", r_reify "tConst", r_reify "tInd", r_reify "tUnknown")
       
   let (tdef,tmkdef) = (r_reify "def", r_reify "mkdef")
+  let (tLocalDef,tLocalAssum) = (r_reify "LocalDef", r_reify "LocalAssum")
+  let (cFinite,cCoFinite,cBiFinite) = (r_reify "Finite", r_reify "CoFinite", r_reify "BiFinite")
   let (pConstr,pType,pAxiom,pIn) =
     (r_reify "PConstr", r_reify "PType", r_reify "PAxiom", r_reify "PIn")
   let tinductive_body = r_reify "inductive_body"
@@ -571,6 +575,11 @@ struct
     else
       not_supported trm
 
+  let reduce_all env (evm,def) =
+  	let (evm2,red) = Tacinterp.interp_redexp env evm (Genredexpr.Cbv Redops.all_flags) in
+	  let red = fst (Redexpr.reduction_of_red_expr env red) in
+	  red env evm2 def
+
   let from_coq_pair trm =
     let (h,args) = app_full trm [] in
     if Term.eq_constr h c_pair then
@@ -579,6 +588,7 @@ struct
       | _ -> bad_term trm
     else
       not_supported trm
+
 
   (** NOTE: Because the representation is lossy, I should probably
    ** come back through elaboration.
@@ -723,10 +733,42 @@ struct
   	let (body,_) = Constrintern.interp_constr env evm body in
     let _ = run_template_program_rec (env,evm,body) in ()
 
+  let denote_local_entry trm =
+    let (h,args) = app_full trm [] in
+      match args with
+	    x :: [] -> 
+      if Term.eq_constr h tLocalDef then Entries.LocalDef (denote_term x) 
+      else (if  Term.eq_constr h tLocalAssum then Entries.LocalAssum (denote_term x) else bad_term trm)
+      | _ -> bad_term trm
+
+  let denote_mind_entry_finite trm =
+    let (h,args) = app_full trm [] in
+      match args with
+	    [] -> 
+      if Term.eq_constr h cFinite then Decl_kinds.Finite
+      else if  Term.eq_constr h cCoFinite then Decl_kinds.CoFinite
+      else if  Term.eq_constr h cBiFinite then Decl_kinds.BiFinite
+      else bad_term trm
+      | _ -> bad_term trm
+
+
+  let unquote_map_option f trm =
+    let (h,args) = app_full trm [] in
+    if Term.eq_constr h cSome then 
+    match args with
+	  _ :: x :: _ -> Some (f x)
+      | _ -> bad_term trm
+    else if Term.eq_constr h cNone then 
+    match args with
+	  _ :: [] -> None
+      | _ -> bad_term trm
+    else
+      not_supported trm
 
 
   let declare_inductive (env: Environ.env) (evm: Evd.evar_map) (body: Constrexpr.constr_expr) : unit =
 	let (body,_) = Constrintern.interp_constr env evm body in
+  let (evm,body) = reduce_all env (evm,body) in
   let (_,args) = app_full body [] in (* check that the first component is Build_mut_ind .. *)
   let one_ind b1 : Entries.one_inductive_entry = 
     let (_,args) = app_full b1 [] in (* check that the first component is Build_one_ind .. *)
@@ -741,19 +783,19 @@ struct
     } 
     | _ -> raise (Failure "ill-typed one_inductive_entry")
      in 
-  let mut_ind mr mp mi mpol mpr : Entries.mutual_inductive_entry =
+  let mut_ind mr mf mp mi mpol mpr : Entries.mutual_inductive_entry =
     {
-    mind_entry_record = None; (* mr *)
-    mind_entry_finite = Decl_kinds.Finite; (* inductive *)
-    mind_entry_params = List.map (fun p -> let (l,r) = (from_coq_pair p) in (unquote_ident l, (Entries.LocalAssum (denote_term r)))) (from_coq_list mp);
+    mind_entry_record = unquote_map_option (unquote_map_option unquote_ident) mr;
+    mind_entry_finite = denote_mind_entry_finite mf; (* inductive *)
+    mind_entry_params = List.map (fun p -> let (l,r) = (from_coq_pair p) in (unquote_ident l, (denote_local_entry r))) (from_coq_list mp);
     mind_entry_inds = List.map one_ind (from_coq_list mi);
     mind_entry_polymorphic = from_bool mpol;
     mind_entry_universes = Univ.UContext.empty;
-    mind_entry_private = None (*mpr*)
+    mind_entry_private = unquote_map_option from_bool mpr (*mpr*)
     } in 
     match args with
-    mr::mp::mi::mpol::mpr::[] -> 
-      Command.declare_mutual_inductive_with_eliminations (mut_ind mr mp mi mpol mpr) [] [];()
+    mr::mf::mp::mi::mpol::mpr::[] -> 
+      Command.declare_mutual_inductive_with_eliminations (mut_ind mr mf mp mi mpol mpr) [] [];()
     | _ -> raise (Failure "ill-typed mutual_inductive_entry")
 
 end
@@ -869,7 +911,6 @@ VERNAC COMMAND EXTEND Unquote_vernac CLASSIFIED AS SIDEFF
 	  [] None result None (Lemmas.mk_hook (fun _ _ -> ())) ]
 END;;
 
-(* get rid of the unused ident(name)? *)
 VERNAC COMMAND EXTEND Unquote_inductive CLASSIFIED AS SIDEFF
     | [ "Make" "Inductive" constr(def) ] ->
       [ check_inside_section () ;

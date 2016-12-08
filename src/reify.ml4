@@ -84,6 +84,8 @@ struct
   let c_cons = resolve_symbol pkg_datatypes "cons"
   let prod_type = resolve_symbol pkg_datatypes "prod"
   let sum_type = resolve_symbol pkg_datatypes "sum"
+  let option_type = resolve_symbol pkg_datatypes "option"
+  let bool_type = resolve_symbol pkg_datatypes "bool"
   let cInl = resolve_symbol pkg_datatypes "inl"
   let cInr = resolve_symbol pkg_datatypes "inr"
   let prod a b =
@@ -113,7 +115,7 @@ struct
      r_reify "tConstruct", r_reify "tConst", r_reify "tInd", r_reify "tUnknown")
       
   let (tdef,tmkdef) = (r_reify "def", r_reify "mkdef")
-  let (tLocalDef,tLocalAssum) = (r_reify "LocalDef", r_reify "LocalAssum")
+  let (tLocalDef,tLocalAssum,tlocal_entry) = (r_reify "LocalDef", r_reify "LocalAssum", r_reify "local_entry")
   let (cFinite,cCoFinite,cBiFinite) = (r_reify "Finite", r_reify "CoFinite", r_reify "BiFinite")
   let (pConstr,pType,pAxiom,pIn) =
     (r_reify "PConstr", r_reify "PType", r_reify "PAxiom", r_reify "PIn")
@@ -121,6 +123,10 @@ struct
   let tmkinductive_body = r_reify "mkinductive_body"
 
   let tMutual_inductive_entry = r_reify "mutual_inductive_entry"
+  let tOne_inductive_entry = r_reify "one_inductive_entry"
+  let tBuild_mutual_inductive_entry = r_reify "Build_mutual_inductive_entry"
+  let tBuild_one_inductive_entry = r_reify "Build_one_inductive_entry"
+  
   let (tmReturn,tmBind,tmQuote,tmQuoteTermRec,tmReduce,tmMkDefinition,tmMkInductive, tmPrint, tmQuoteTerm) =
     (r_reify "tmReturn", r_reify "tmBind", r_reify "tmQuote", r_reify "tmQuoteTermRec", r_reify "tmReduce",
        r_reify "tmMkDefinition", r_reify "tmMkInductive", r_reify "tmPrint", r_reify "tmQuoteTerm")
@@ -456,13 +462,28 @@ struct
     in List.fold_left (fun acc x -> Term.mkApp (x, [| acc |]))
                       (Term.mkApp (pIn, [| x |])) !constants
 
- let quote_mut_ind  (mi:Declarations.mutual_inductive_body) : Entries.mutual_inductive_entry =
-   let mr =
-   let mf =
-   let mp = 
-   let mi =
-   let mpol =
-   let mpr =
+ let quote_one_ind env (mi:Declarations.one_inductive_body) : Term.constr =
+   Declarations.(
+   let iname = quote_ident (mi.mind_typename)  in
+   let arity = Term.mkApp (tSort, [| sSet |]) (* Fix *)   in 
+   let templatePoly = tfalse (* Fix *) in
+   let consnames = to_coq_list tident (List.map quote_ident (Array.to_list mi.mind_consnames)) in
+   let cons_types = to_coq_list tTerm (List.map (quote_term env) (Array.to_list mi.mind_user_lc)) in
+   Term.mkApp (tBuild_one_inductive_entry, [| iname; arity; templatePoly; consnames; cons_types |]))
+
+ let quote_mut_ind  env (mi:Declarations.mutual_inductive_body) : Term.constr =
+   (* Fix. Declarations.mutual_inductive_body seems to have more info than Entries.mutual_inductive_entry.
+   In template-coq/Ast.v, should we use 1 datatype with the union of the quoting/unquoting info?*)
+   Declarations.(
+   let the_prod = Term.mkApp (prod_type,[|tident; tlocal_entry|]) in 
+   let mr = Term.mkApp (cNone, [|Term.mkApp (option_type, [|tident|])|])  in
+   let mf = cFinite (* Fix *) in 
+   let mp = Term.mkApp (c_nil, [|the_prod|]) (* Fix *) in
+   let is = to_coq_list tOne_inductive_entry (List.map (quote_one_ind env) (Array.to_list (mi.mind_packets))) in
+   let mpol = tfalse in
+   let mpr = Term.mkApp (cNone, [|bool_type|]) in
+   Term.mkApp (tBuild_mutual_inductive_entry, [| mr; mf; mp; is; mpol; mpr |]);
+  )
 
  let quote_decl bypass env evm name =
    let opType = Term.mkApp(sum_type, [|tTerm;tMutual_inductive_entry|]) in
@@ -484,12 +505,11 @@ struct
     Not_found -> 
       try 
         let c = Environ.lookup_mind (Names.mind_of_kn (Names.Constant.canonical name)) env in
-        let miq = quote_mut_ind c in
+        let miq = quote_mut_ind env c in
         mkSomeInd miq
     with 
     Not_found -> 
           Term.mkApp (cNone, [|opType|])   
-
 
   let rec app_full trm acc =
     match Term.kind_of_term trm with

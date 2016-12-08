@@ -200,20 +200,22 @@ Locate id.
 (* Fix: Top may not work in interactive use *)
 Run TemplateProgram (printTerm "Top.id"). 
 Run TemplateProgram (duplicateDefn2 "Top.id" "id4").
-Print id4.
+Run TemplateProgram (printTerm "Coq.Init.Datatypes.nat").
+(*
+(Some
+   (inr
+      {|
+      mind_entry_record := None;
+      mind_entry_finite := Finite;
+      mind_entry_params := [];
+      mind_entry_inds := [{|
+                          mind_entry_typename := "nat";
+                          mind_entry_arity := tSort sSet;
+                          mind_entry_template := false;
+                          mind_entry_consnames := ["O"; "S"];
+                          mind_entry_lc := [tRel 0; tProd nAnon (tRel 0) (tRel 1)] |}];
+      mind_entry_polymorphic := false;
+      mind_entry_private := None |}))
+*)
+
  
-(*
-(PType "Coq.Init.Datatypes.nat" 0
-   [("nat", {| ctors := [("O", tRel 0, 0); ("S", tProd nAnon (tRel 0) (tRel 1), 1)] |})]
-   (PConstr "Top.id"
-      (tLambda (nNamed "x") (tInd (mkInd "Coq.Init.Datatypes.nat" 0)) (tRel 0))
-      (PIn (tConst "Top.id"))))
-
-id4 is defined
-*)
-
-(*
-Print id4.
-id4 = fun x : nat => x
-     : nat -> nat
-*)

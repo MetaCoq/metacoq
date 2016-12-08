@@ -103,19 +103,20 @@ Record mutual_inductive_entry : Set := {
 Using this monad, it should be possible to write many plugins (e.g. paramcoq)
 in Gallina *)
 Inductive TemplateMonad : Type -> Type :=
-| tmReturn : forall T:Type, T -> TemplateMonad T
-| tmBind : forall (A B : Type), 
+| tmReturn : forall {A:Type}, A -> TemplateMonad A
+| tmBind : forall {A B : Type}, 
     (A -> TemplateMonad B) 
     -> (TemplateMonad A) 
     -> (TemplateMonad B)
-| tmPrint : forall A, A -> TemplateMonad unit
-| tmQuote : ident -> TemplateMonad term
-| tmQuoteRec : ident -> TemplateMonad program
+| tmPrint : forall {A:Type}, A -> TemplateMonad unit
+| tmQuote : ident -> bool (*bypass opacity*)-> TemplateMonad (option (term+mutual_inductive_entry))
+| tmQuoteTerm : forall {A:Type}, A  -> TemplateMonad term
+| tmQuoteTermRec : forall {A:Type}, A  -> TemplateMonad program
 | tmReduce : term (* -> strategy? *)-> TemplateMonad term
 | tmMkDefinition : ident -> term -> TemplateMonad unit (* bool indicating success? *)
 | tmMkInductive : mutual_inductive_entry -> TemplateMonad unit (* bool indicating success? *)
-| tmFreshName : ident -> TemplateMonad ident 
-    (* Guarenteed to not cause "... already declared" error *)
+| tmFreshName : ident -> TemplateMonad bool 
+    (* yes => Guarenteed to not cause "... already declared" error *)
 .
 
 

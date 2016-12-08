@@ -83,6 +83,9 @@ struct
   let c_nil = resolve_symbol pkg_datatypes "nil"
   let c_cons = resolve_symbol pkg_datatypes "cons"
   let prod_type = resolve_symbol pkg_datatypes "prod"
+  let sum_type = resolve_symbol pkg_datatypes "sum"
+  let cInl = resolve_symbol pkg_datatypes "inl"
+  let cInr = resolve_symbol pkg_datatypes "inr"
   let prod a b =
     Term.mkApp (prod_type, [| a ; b |])
   let c_pair = resolve_symbol pkg_datatypes "pair"
@@ -117,9 +120,10 @@ struct
   let tinductive_body = r_reify "inductive_body"
   let tmkinductive_body = r_reify "mkinductive_body"
 
-  let (tmReturn,tmBind,tmQuote,tmQuoteRec,tmReduce,tmMkDefinition,tmMkInductive, tmPrint) =
-    (r_reify "tmReturn", r_reify "tmBind", r_reify "tmQuote", r_reify "tmQuoteRec", r_reify "tmReduce",
-       r_reify "tmMkDefinition", r_reify "tmMkInductive", r_reify "tmPrint")
+  let tMutual_inductive_entry = r_reify "mutual_inductive_entry"
+  let (tmReturn,tmBind,tmQuote,tmQuoteTermRec,tmReduce,tmMkDefinition,tmMkInductive, tmPrint, tmQuoteTerm) =
+    (r_reify "tmReturn", r_reify "tmBind", r_reify "tmQuote", r_reify "tmQuoteTermRec", r_reify "tmReduce",
+       r_reify "tmMkDefinition", r_reify "tmMkInductive", r_reify "tmPrint", r_reify "tmQuoteTerm")
 
   let to_positive =
     let xH = resolve_symbol pkg_bignums "xH" in
@@ -452,6 +456,21 @@ struct
     in List.fold_left (fun acc x -> Term.mkApp (x, [| acc |]))
                       (Term.mkApp (pIn, [| x |])) !constants
 
+ let quote_decl bypass env evm name =
+   let opType = Term.mkApp(sum_type, [|tTerm;tMutual_inductive_entry|]) in
+   let cd = Environ.lookup_constant name env in
+   let mkSomeDef t = Term.mkApp (cSome, [|opType; Term.mkApp (cInl, [|tTerm;tMutual_inductive_entry; t|] )|]) in
+	 Declarations.(
+	      match cd.const_body with
+		  Undef _ -> Term.mkApp (cNone, [|opType|])
+	  | Def cs -> mkSomeDef (quote_term (Global.env ()) (Mod_subst.force_constr cs))   
+	  | OpaqueDef cs -> 
+      if bypass 
+      then mkSomeDef (quote_term (Global.env ()) (Opaqueproof.force_proof (Global.opaque_tables ()) cs))
+      else Term.mkApp (cNone, [|opType|])
+    )
+
+
   let rec app_full trm acc =
     match Term.kind_of_term trm with
       Term.App (f, xs) -> app_full f (Array.to_list xs @ acc)
@@ -664,7 +683,6 @@ struct
     else
       not_supported trm
 
-
   let declare_definition
     (id : Names.Id.t) (loc, boxed_flag, def_obj_kind)
     (binder_list : Constrexpr.local_binder list) red_expr_opt constr_expr
@@ -672,8 +690,6 @@ struct
     Command.do_definition
     id (loc, false, def_obj_kind) None binder_list red_expr_opt constr_expr
     constr_expr_opt decl_hook
-
-
 
   let add_definition name result =
     declare_definition name
@@ -696,44 +712,7 @@ struct
 	  let result = Constrextern.extern_constr true env evm trm in
     add_definition name result
 
-  let rec run_template_program_rec  ((env,evm,pgm): Environ.env * Evd.evar_map * Term.constr) : Environ.env * Evd.evar_map * Term.constr =
-    let (evm,pgm) = reduce_hnf env (evm, pgm) in 
-    let (coConstr,args) = app_full pgm [] in
-    if Term.eq_constr coConstr tmReturn then
-      match args with
-      | _::h::[] -> (env,evm,h)
-      | _ -> raise (Failure "tmReturn must take 2 arguments. Please file a bug with Template-Coq.")
-    else if Term.eq_constr coConstr tmBind then
-      match args with
-      | _::_::f::a::[] ->
-        let (env, evm, ar) = run_template_program_rec (env,evm,a) in
-        run_template_program_rec (env,evm,(Term.mkApp (f, Array.of_list [ar])))
-      | _ -> raise (Failure "tmBind must take 4 arguments. Please file a bug with Template-Coq.")
-    else if Term.eq_constr coConstr tmMkDefinition then
-      match args with
-      | name::body::[] -> let _ = unquote_red_add_definition env evm (unquote_ident name) body in (env, evm, unit_tt)
-      | _ -> raise (Failure "tmMkDefinition must take 2 arguments. Please file a bug with Template-Coq.")
-    else if Term.eq_constr coConstr tmQuote then
-      match args with
-      | id::[] -> let qt = quote_term env (Term.mkConst (Names.constant_of_kn (kn_of_canonical_string (unquote_string id)))) in
-              (env, evm, qt)
-      | _ -> raise (Failure "tmQuote must take 1 argument. Please file a bug with Template-Coq.")
-    else if Term.eq_constr coConstr tmQuoteRec then
-      match args with
-      | id::[] -> let qt = quote_term_rec env (Term.mkConst (Names.constant_of_kn (kn_of_canonical_string (unquote_string id)))) in
-              (env, evm, qt)
-      | _ -> raise (Failure "tmQuoteRec must take 1 argument. Please file a bug with Template-Coq.")
-    else if Term.eq_constr coConstr tmPrint then
-      match args with
-      | _::trm::[] -> let _ = Pp.msg_debug ((Printer.pr_constr trm)) in (env, evm, unit_tt)
-      | _ -> raise (Failure "tmPrint must take 2 arguments. Please file a bug with Template-Coq.")
-    else raise (Failure "Invalid argument or yot yet implemented. The argument must be a TemplateProgram")
-
-  let run_template_program (env: Environ.env) (evm: Evd.evar_map) (body: Constrexpr.constr_expr) : unit =
-  	let (body,_) = Constrintern.interp_constr env evm body in
-    let _ = run_template_program_rec (env,evm,body) in ()
-
-  let denote_local_entry trm =
+   let denote_local_entry trm =
     let (h,args) = app_full trm [] in
       match args with
 	    x :: [] -> 
@@ -764,7 +743,6 @@ struct
       | _ -> bad_term trm
     else
       not_supported trm
-
 
   let declare_inductive (env: Environ.env) (evm: Evd.evar_map) (body: Constrexpr.constr_expr) : unit =
 	let (body,_) = Constrintern.interp_constr env evm body in
@@ -797,6 +775,52 @@ struct
     mr::mf::mp::mi::mpol::mpr::[] -> 
       Command.declare_mutual_inductive_with_eliminations (mut_ind mr mf mp mi mpol mpr) [] [];()
     | _ -> raise (Failure "ill-typed mutual_inductive_entry")
+
+
+  let rec run_template_program_rec  ((env,evm,pgm): Environ.env * Evd.evar_map * Term.constr) : Environ.env * Evd.evar_map * Term.constr =
+    let (evm,pgm) = reduce_hnf env (evm, pgm) in 
+    let (coConstr,args) = app_full pgm [] in
+    if Term.eq_constr coConstr tmReturn then
+      match args with
+      | _::h::[] -> (env,evm,h)
+      | _ -> raise (Failure "tmReturn must take 2 arguments. Please file a bug with Template-Coq.")
+    else if Term.eq_constr coConstr tmBind then
+      match args with
+      | _::_::f::a::[] ->
+        let (env, evm, ar) = run_template_program_rec (env,evm,a) in
+        run_template_program_rec (env,evm,(Term.mkApp (f, Array.of_list [ar])))
+      | _ -> raise (Failure "tmBind must take 4 arguments. Please file a bug with Template-Coq.")
+    else if Term.eq_constr coConstr tmMkDefinition then
+      match args with
+      | name::body::[] -> let _ = unquote_red_add_definition env evm (unquote_ident name) body in (env, evm, unit_tt)
+      | _ -> raise (Failure "tmMkDefinition must take 2 arguments. Please file a bug with Template-Coq.")
+    else if Term.eq_constr coConstr tmQuote then
+      match args with
+      | id::b::[] -> 
+          let name = ((Names.constant_of_kn (kn_of_canonical_string (unquote_string id)))) in
+          let qt=quote_decl (from_bool b) env evm name in
+          (env, evm, qt)
+      | _ -> raise (Failure "tmQuote must take 1 argument. Please file a bug with Template-Coq.")
+    else if Term.eq_constr coConstr tmQuoteTerm then
+      match args with
+      | trm::[] -> let qt = quote_term env trm in
+              (env, evm, qt)
+      | _ -> raise (Failure "tmQuoteTerm must take 1 argument. Please file a bug with Template-Coq.")
+    else if Term.eq_constr coConstr tmQuoteTermRec then
+      match args with
+      | trm::[] -> let qt = quote_term_rec env trm in
+              (env, evm, qt)
+      | _ -> raise (Failure "tmQuoteTermRec must take 1 argument. Please file a bug with Template-Coq.")
+    else if Term.eq_constr coConstr tmPrint then
+      match args with
+      | _::trm::[] -> let _ = Pp.msg_debug ((Printer.pr_constr trm)) in (env, evm, unit_tt)
+      | _ -> raise (Failure "tmPrint must take 2 arguments. Please file a bug with Template-Coq.")
+    else raise (Failure "Invalid argument or yot yet implemented. The argument must be a TemplateProgram")
+
+  let run_template_program (env: Environ.env) (evm: Evd.evar_map) (body: Constrexpr.constr_expr) : unit =
+  	let (body,_) = Constrintern.interp_constr env evm body in
+    let _ = run_template_program_rec (env,evm,body) in ()
+
 
 end
 

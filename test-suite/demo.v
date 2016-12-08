@@ -163,8 +163,8 @@ Inductive demoList (A : Set) : Set :=
 (** Putting the above commands in monadic program *)
 
 Definition program : TemplateMonad unit :=
-tmBind _ _ (fun x => tmMkDefinition "id1" d'') 
-  (tmBind _ _ (fun x => tmMkDefinition "id2" d'') (tmReturn _ tt)).
+tmBind  (fun x => tmMkDefinition "id1" d'') 
+  (tmBind (fun x => tmMkDefinition "id2" d'') (tmReturn tt)).
 
 Run TemplateProgram program.
 
@@ -181,20 +181,27 @@ match p with
 | PIn _ => None
 end.
 
+Definition printTerm (name  : ident): TemplateMonad unit :=
+  (tmBind  tmPrint)
+    (tmQuote name false).
 
 Definition duplicateDefn2 (name newName : ident): TemplateMonad unit :=
-  (tmBind _ _ (fun body => 
-    match getFirstConstr body with
-    | Some bd => 
-        (tmBind _ _ (fun _ => tmMkDefinition newName bd) (tmPrint _ body))
-    | None => tmReturn _ tt
+  (tmBind  (fun body => 
+    match body with
+    | Some (inl bd) => 
+        (tmBind  (fun _ => tmMkDefinition newName bd) (tmPrint body))
+    | N_ => tmReturn tt
     end))
-    (tmQuoteRec name).
+    (tmQuote name false).
 
 Definition id := fun x:nat => x.
 
+Locate id.
 (* Fix: Top may not work in interactive use *)
-Run TemplateProgram (duplicateDefn2 "Top.id" "id4"). 
+Run TemplateProgram (printTerm "Top.id"). 
+Run TemplateProgram (duplicateDefn2 "Top.id" "id4").
+Print id4.
+ 
 (*
 (PType "Coq.Init.Datatypes.nat" 0
    [("nat", {| ctors := [("O", tRel 0, 0); ("S", tProd nAnon (tRel 0) (tRel 1), 1)] |})]

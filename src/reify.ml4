@@ -456,19 +456,39 @@ struct
     in List.fold_left (fun acc x -> Term.mkApp (x, [| acc |]))
                       (Term.mkApp (pIn, [| x |])) !constants
 
+ let quote_mut_ind  (mi:Declarations.mutual_inductive_body) : Entries.mutual_inductive_entry =
+   let mr =
+   let mf =
+   let mp = 
+   let mi =
+   let mpol =
+   let mpr =
+
  let quote_decl bypass env evm name =
    let opType = Term.mkApp(sum_type, [|tTerm;tMutual_inductive_entry|]) in
+   let mkSome c t = Term.mkApp (cSome, [|opType; Term.mkApp (c, [|tTerm;tMutual_inductive_entry; t|] )|]) in
+   let mkSomeDef = mkSome cInl in
+   let mkSomeInd  = mkSome cInr in
+   try 
    let cd = Environ.lookup_constant name env in
-   let mkSomeDef t = Term.mkApp (cSome, [|opType; Term.mkApp (cInl, [|tTerm;tMutual_inductive_entry; t|] )|]) in
 	 Declarations.(
 	      match cd.const_body with
 		  Undef _ -> Term.mkApp (cNone, [|opType|])
-	  | Def cs -> mkSomeDef (quote_term (Global.env ()) (Mod_subst.force_constr cs))   
+	  | Def cs -> mkSomeDef (quote_term (Global.env ()) (Mod_subst.force_constr cs))
 	  | OpaqueDef cs -> 
       if bypass 
       then mkSomeDef (quote_term (Global.env ()) (Opaqueproof.force_proof (Global.opaque_tables ()) cs))
       else Term.mkApp (cNone, [|opType|])
     )
+    with 
+    Not_found -> 
+      try 
+        let c = Environ.lookup_mind (Names.mind_of_kn (Names.Constant.canonical name)) env in
+        let miq = quote_mut_ind c in
+        mkSomeInd miq
+    with 
+    Not_found -> 
+          Term.mkApp (cNone, [|opType|])   
 
 
   let rec app_full trm acc =

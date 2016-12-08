@@ -183,7 +183,7 @@ end.
 
 Definition printTerm (name  : ident): TemplateMonad unit :=
   (tmBind  tmPrint)
-    (tmQuote name false).
+    (tmQuote name true).
 
 Definition duplicateDefn2 (name newName : ident): TemplateMonad unit :=
   (tmBind  (fun body => 
@@ -219,3 +219,28 @@ Run TemplateProgram (printTerm "Coq.Init.Datatypes.nat").
 *)
 
  
+Run TemplateProgram (printTerm "Coq.Arith.PeanoNat.Nat.add").
+(* None *)
+Run TemplateProgram (printTerm "Top.add").
+(*
+(Some
+   (inl
+      (tFix
+         [{|
+          dname := nNamed "add";
+          dtype := tProd (nNamed "a") (tInd (mkInd "Coq.Init.Datatypes.nat" 0))
+                     (tProd (nNamed "b") (tInd (mkInd "Coq.Init.Datatypes.nat" 0))
+                        (tInd (mkInd "Coq.Init.Datatypes.nat" 0)));
+          dbody := tLambda (nNamed "a") (tInd (mkInd "Coq.Init.Datatypes.nat" 0))
+                     (tLambda (nNamed "b") (tInd (mkInd "Coq.Init.Datatypes.nat" 0))
+                        (tCase (mkInd "Coq.Init.Datatypes.nat" 0, 0)
+                           (tLambda (nNamed "a") (tInd (mkInd "Coq.Init.Datatypes.nat" 0))
+                              (tInd (mkInd "Coq.Init.Datatypes.nat" 0))) 
+                           (tRel 1)
+                           [(0, tRel 0);
+                           (1,
+                           tLambda (nNamed "a") (tInd (mkInd "Coq.Init.Datatypes.nat" 0))
+                             (tApp (tConstruct (mkInd "Coq.Init.Datatypes.nat" 0) 1)
+                                [tApp (tRel 3) [tRel 0; tRel 1]]))]));
+          rarg := 0 |}] 0)))
+*)

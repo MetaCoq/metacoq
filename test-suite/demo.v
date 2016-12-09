@@ -198,9 +198,10 @@ Definition id := fun x:nat => x.
 
 Locate id.
 (* Fix: Top may not work in interactive use *)
-Run TemplateProgram (printTerm "Top.id"). 
+Run TemplateProgram (printTerm "id"). 
 Run TemplateProgram (duplicateDefn2 "Top.id" "id4").
 Run TemplateProgram (printTerm "Coq.Init.Datatypes.nat").
+Run TemplateProgram (printTerm "nat").
 (*
 (Some
    (inr
@@ -219,8 +220,7 @@ Run TemplateProgram (printTerm "Coq.Init.Datatypes.nat").
 *)
 
  
-Run TemplateProgram (printTerm "Coq.Arith.PeanoNat.Nat.add").
-(* None *)
+Run TemplateProgram (printTerm "Coq.Arith.PeanoNat.Nat.add"). (* works now *)
 Run TemplateProgram (printTerm "Top.add").
 (*
 (Some

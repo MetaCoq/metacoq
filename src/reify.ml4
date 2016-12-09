@@ -485,28 +485,47 @@ struct
    Term.mkApp (tBuild_mutual_inductive_entry, [| mr; mf; mp; is; mpol; mpr |]);
   )
 
- let quote_decl bypass env evm name =
+  let split_name s : (Names.DirPath.t * Names.Id.t)=
+    let ss = List.rev (Str.split (Str.regexp (Str.quote ".")) s) in
+    match ss with
+      nm :: rst ->
+    	let dp = (Names.make_dirpath (List.map Names.id_of_string rst)) in (dp, Names.Id.of_string nm)
+    | [] -> raise (Failure "Empty name cannot be quoted")
+
+  let kn_of_canonical_string s =
+    let ss = List.rev (Str.split (Str.regexp (Str.quote ".")) s) in
+    match ss with
+      nm :: rst ->
+	let rec to_mp ls = Names.MPfile (Names.make_dirpath (List.map Names.id_of_string ls)) in
+	let mp = to_mp rst in
+	Names.make_kn mp Names.empty_dirpath (Names.mk_label nm)
+    | _ -> assert false
+
+ let quote_decl bypass env evm (name:string) =
    let opType = Term.mkApp(sum_type, [|tTerm;tMutual_inductive_entry|]) in
    let mkSome c t = Term.mkApp (cSome, [|opType; Term.mkApp (c, [|tTerm;tMutual_inductive_entry; t|] )|]) in
    let mkSomeDef = mkSome cInl in
    let mkSomeInd  = mkSome cInr in
+   let (dp, nm) = split_name name in
    try 
-   let cd = Environ.lookup_constant name env in
-	 Declarations.(
+   match Nametab.locate (Libnames.make_qualid dp nm) with
+   |Globnames.ConstRef c ->
+      let cd = Environ.lookup_constant c env in
+	    Declarations.(
 	      match cd.const_body with
-		  Undef _ -> Term.mkApp (cNone, [|opType|])
-	  | Def cs -> mkSomeDef (quote_term (Global.env ()) (Mod_subst.force_constr cs))
-	  | OpaqueDef cs -> 
+		    | Undef _ -> Term.mkApp (cNone, [|opType|])
+	      | Def cs -> mkSomeDef (quote_term (Global.env ()) (Mod_subst.force_constr cs))
+	      | OpaqueDef cs -> 
       if bypass 
       then mkSomeDef (quote_term (Global.env ()) (Opaqueproof.force_proof (Global.opaque_tables ()) cs))
       else Term.mkApp (cNone, [|opType|])
-    )
-    with 
-    Not_found -> 
-      try 
-        let c = Environ.lookup_mind (Names.mind_of_kn (Names.Constant.canonical name)) env in
+      )
+    | Globnames.IndRef ni ->
+        let c = Environ.lookup_mind (fst ni) env in (* FIX: For efficienctly, we should also export (snd ni)*)
         let miq = quote_mut_ind env c in
         mkSomeInd miq
+    | Globnames.ConstructRef _ -> Term.mkApp (cNone, [|opType|]) (* FIX: return the enclusing mutual inductive *)
+    | Globnames.VarRef _ -> (* what is this *)Term.mkApp (cNone, [|opType|])
     with 
     Not_found -> 
           Term.mkApp (cNone, [|opType|])   
@@ -601,14 +620,7 @@ struct
     else
       raise (Failure "ill-typed, expected sort")
 
-  let kn_of_canonical_string s =
-    let ss = List.rev (Str.split (Str.regexp (Str.quote ".")) s) in
-    match ss with
-      nm :: rst ->
-	let rec to_mp ls = Names.MPfile (Names.make_dirpath (List.map Names.id_of_string ls)) in
-	let mp = to_mp rst in
-	Names.make_kn mp Names.empty_dirpath (Names.mk_label nm)
-    | _ -> assert false
+
 
   let denote_inductive trm =
     let (h,args) = app_full trm [] in
@@ -837,8 +849,7 @@ struct
     else if Term.eq_constr coConstr tmQuote then
       match args with
       | id::b::[] -> 
-          let name = ((Names.constant_of_kn (kn_of_canonical_string (unquote_string id)))) in
-          let qt=quote_decl (from_bool b) env evm name in
+          let qt=quote_decl (from_bool b) env evm (unquote_string id) in
           (env, evm, qt)
       | _ -> raise (Failure "tmQuote must take 1 argument. Please file a bug with Template-Coq.")
     else if Term.eq_constr coConstr tmQuoteTerm then

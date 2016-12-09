@@ -462,10 +462,17 @@ struct
     in List.fold_left (fun acc x -> Term.mkApp (x, [| acc |]))
                       (Term.mkApp (pIn, [| x |])) !constants
 
+ let quote_one_ind_arity env (mi:Declarations.inductive_arity) : Term.constr =
+   Declarations.(
+   match mi with
+   | Declarations.RegularArity ra -> quote_term env (ra.mind_user_arity)  
+   | _ -> raise (Failure "Irregular Arity of Inductives is not yet supported")
+  )
+
  let quote_one_ind env (mi:Declarations.one_inductive_body) : Term.constr =
    Declarations.(
-   let iname = quote_ident (mi.mind_typename)  in
-   let arity = Term.mkApp (tSort, [| sSet |]) (* Fix *)   in 
+   let iname = quote_ident mi.mind_typename  in
+   let arity = quote_one_ind_arity env mi.mind_arity in 
    let templatePoly = tfalse (* Fix *) in
    let consnames = to_coq_list tident (List.map quote_ident (Array.to_list mi.mind_consnames)) in
    let cons_types = to_coq_list tTerm (List.map (quote_term env) (Array.to_list mi.mind_user_lc)) in

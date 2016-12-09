@@ -219,7 +219,35 @@ Run TemplateProgram (printTerm "nat").
       mind_entry_private := None |}))
 *)
 
- 
+Inductive list (A : Set) : Set :=  nil : list A | cons : A -> list A -> list A.
+Run TemplateProgram (printTerm "list").
+(*
+(Some
+   (inr
+      {|
+      mind_entry_record := None;
+      mind_entry_finite := Finite;
+      mind_entry_params := [];
+      mind_entry_inds := [{|
+                          mind_entry_typename := "list";
+                          mind_entry_arity := tProd (nNamed "A") (tSort sSet) (tSort sSet);
+                          mind_entry_template := false;
+                          mind_entry_consnames := ["nil"; "cons"];
+                          mind_entry_lc := [tProd (nNamed "A") (tSort sSet)
+                                              (tApp (tRel 1) [tRel 0]);
+                                           tProd (nNamed "A") (tSort sSet)
+                                             (tProd nAnon (tRel 0)
+                                                (tProd nAnon (tApp (tRel 2) [tRel 1])
+                                                   (tApp (tRel 3) [tRel 2])))] |}];
+      mind_entry_polymorphic := false;
+      mind_entry_private := None |}))
+*)
+
+Print demoList. (* in the datatype for declaring demoList (exact same as Top.list),
+in one_inductive_entry, the arity did not include the parameters, which was
+included in mind_entry_params *)
+
+
 Run TemplateProgram (printTerm "Coq.Arith.PeanoNat.Nat.add"). (* works now *)
 Run TemplateProgram (printTerm "Top.add").
 (*

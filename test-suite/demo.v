@@ -163,8 +163,8 @@ Inductive demoList (A : Set) : Set :=
 (** Putting the above commands in monadic program *)
 
 Definition program : TemplateMonad unit :=
-tmBind  (fun x => tmMkDefinition "id1" d'') 
-  (tmBind (fun x => tmMkDefinition "id2" d'') (tmReturn tt)).
+tmBind  (fun x => tmMkDefinition true "id1" d'') 
+  (tmBind (fun x => tmMkDefinition true "id2" d'') (tmReturn tt)).
 
 Run TemplateProgram program.
 
@@ -189,7 +189,7 @@ Definition duplicateDefn2 (name newName : ident): TemplateMonad unit :=
   (tmBind  (fun body => 
     match body with
     | Some (inl bd) => 
-        (tmBind  (fun _ => tmMkDefinition newName bd) (tmPrint body))
+        (tmBind  (fun _ => tmMkDefinition true newName bd) (tmPrint body))
     | _ => tmReturn tt
     end))
     (tmQuote name false).
@@ -243,6 +243,21 @@ Run TemplateProgram (printTerm "demoList").
 Print demoList. (* exact same as above. So in this instance,
 quoting was indded the inverse of unquoting*)
 
+Run TemplateProgram
+  ((tmBind  (fun body =>
+    match body with
+    | Some (inl bd)
+    | Some (inr bd) =>
+        tmMkDefinition false "demoList_syntax" bd
+    | N_ => tmReturn tt
+    end))
+    (tmQuote "demoList" false)).
+Print demoList_syntax.
+
+Example unquote_quote_id1: demoList_syntax=mut_list_i 
+  (* demoList was obtained from this *).
+  reflexivity.
+Qed.
 
 Run TemplateProgram (printTerm "Coq.Arith.PeanoNat.Nat.add").
 (* Names need not be canonical *)

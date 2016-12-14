@@ -113,7 +113,8 @@ Inductive TemplateMonad : Type -> Type :=
 | tmQuoteTerm : forall {A:Type}, A  -> TemplateMonad term
 | tmQuoteTermRec : forall {A:Type}, A  -> TemplateMonad program
 | tmReduce : term (* -> strategy? *)-> TemplateMonad term
-| tmMkDefinition : ident -> term -> TemplateMonad unit (* bool indicating success? *)
+| tmUnquote : term  -> TemplateMonad {T:Type & T}
+| tmMkDefinition : bool (* unquote? *) -> ident -> forall {A:Type}, A -> TemplateMonad unit (* bool indicating success? *)
 | tmMkInductive : mutual_inductive_entry -> TemplateMonad unit (* bool indicating success? *)
 | tmFreshName : ident -> TemplateMonad bool 
     (* yes => Guarenteed to not cause "... already declared" error *)

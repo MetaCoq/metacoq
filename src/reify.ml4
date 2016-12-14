@@ -781,9 +781,9 @@ let quote_mind_local_entry env (l:Entries.local_entry) :  Term.constr =
 	  let red = fst (Redexpr.reduction_of_red_expr env red) in
 	  red env evm2 def
 
-  let unquote_red_add_definition env evm name def =
+  let unquote_red_add_definition b env evm name def =
 	  let (evm,def) = reduce_all env (evm,def) in
-  	let trm = denote_term (def) in
+  	let trm = if b then denote_term def else def in
 	  let result = Constrextern.extern_constr true env evm trm in
     add_definition name result
 
@@ -867,8 +867,8 @@ let quote_mind_local_entry env (l:Entries.local_entry) :  Term.constr =
       | _ -> raise (Failure "tmBind must take 4 arguments. Please file a bug with Template-Coq.")
     else if Term.eq_constr coConstr tmMkDefinition then
       match args with
-      | name::body::[] -> let _ = unquote_red_add_definition env evm (unquote_ident name) body in (env, evm, unit_tt)
-      | _ -> raise (Failure "tmMkDefinition must take 2 arguments. Please file a bug with Template-Coq.")
+      | b::name::_::body::[] -> let _ = unquote_red_add_definition (from_bool b) env evm (unquote_ident name) body in (env, evm, unit_tt)
+      | _ -> raise (Failure "tmMkDefinition must take 4 arguments. Please file a bug with Template-Coq.")
     else if Term.eq_constr coConstr tmQuote then
       match args with
       | id::b::[] -> 

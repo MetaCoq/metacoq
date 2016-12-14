@@ -227,7 +227,7 @@ Run TemplateProgram (printTerm "list").
       {|
       mind_entry_record := None;
       mind_entry_finite := Finite;
-      mind_entry_params := [];
+      mind_entry_params := [("A", LocalAssum (tSort sSet))];
       mind_entry_inds := [{|
                           mind_entry_typename := "list";
                           mind_entry_arity := tProd (nNamed "A") (tSort sSet) (tSort sSet);

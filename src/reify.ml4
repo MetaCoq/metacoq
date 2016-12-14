@@ -149,6 +149,7 @@ struct
       then raise (Invalid_argument ("to_positive: " ^ string_of_int n))
       else to_positive n
 
+
   let to_coq_list typ =
     let the_nil = Term.mkApp (c_nil, [| typ |]) in
     let rec to_list (ls : Term.constr list) : Term.constr =
@@ -472,25 +473,38 @@ struct
  let quote_one_ind env (mi:Declarations.one_inductive_body) : Term.constr =
    Declarations.(
    let iname = quote_ident mi.mind_typename  in
+   (* fix. move the first  *)
    let arity = quote_one_ind_arity env mi.mind_arity in 
    let templatePoly = tfalse (* Fix *) in
    let consnames = to_coq_list tident (List.map quote_ident (Array.to_list mi.mind_consnames)) in
    let cons_types = to_coq_list tTerm (List.map (quote_term env) (Array.to_list mi.mind_user_lc)) in
    Term.mkApp (tBuild_one_inductive_entry, [| iname; arity; templatePoly; consnames; cons_types |]))
 
+let quote_mind_local_entry env (l:Entries.local_entry) :  Term.constr =
+  match l with
+  | Entries.LocalAssum c -> Term.mkApp (tLocalAssum,[|(quote_term env c)|])
+  | Entries.LocalDef c -> Term.mkApp (tLocalDef,[|(quote_term env c)|])
+
  let quote_mut_ind  env (mi:Declarations.mutual_inductive_body) : Term.constr =
    (* Fix. Declarations.mutual_inductive_body seems to have more info than Entries.mutual_inductive_entry.
    In template-coq/Ast.v, should we use 1 datatype with the union of the quoting/unquoting info?*)
+   let t= Discharge.process_inductive ([],Univ.UContext.empty) (Names.Cmap.empty,Names.Mindmap.empty) mi in
+   (*Pp.msg_debug ((Entries.mutual_inductive_entry t)); *)
    Declarations.(
+     Entries.(
    let the_prod = Term.mkApp (prod_type,[|tident; tlocal_entry|]) in 
+   let pair i l = pair tident tlocal_entry i l in 
    let mr = Term.mkApp (cNone, [|Term.mkApp (option_type, [|tident|])|])  in
    let mf = cFinite (* Fix *) in 
-   let mp = Term.mkApp (c_nil, [|the_prod|]) (* Fix *) in
+   let mp =  (* Term.mkApp (c_nil, [|the_prod|]) (* Fix *)*) 
+      to_coq_list the_prod
+        (List.map (fun p -> let (n,l)=p in pair (quote_ident n) (quote_mind_local_entry env l)) (t.mind_entry_params))
+    in
    let is = to_coq_list tOne_inductive_entry (List.map (quote_one_ind env) (Array.to_list (mi.mind_packets))) in
    let mpol = tfalse in
    let mpr = Term.mkApp (cNone, [|bool_type|]) in
    Term.mkApp (tBuild_mutual_inductive_entry, [| mr; mf; mp; is; mpol; mpr |]);
-  )
+  ))
 
   let split_name s : (Names.DirPath.t * Names.Id.t)=
     let ss = List.rev (Str.split (Str.regexp (Str.quote ".")) s) in

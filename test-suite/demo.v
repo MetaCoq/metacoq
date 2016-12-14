@@ -190,7 +190,7 @@ Definition duplicateDefn2 (name newName : ident): TemplateMonad unit :=
     match body with
     | Some (inl bd) => 
         (tmBind  (fun _ => tmMkDefinition newName bd) (tmPrint body))
-    | N_ => tmReturn tt
+    | _ => tmReturn tt
     end))
     (tmQuote name false).
 
@@ -201,7 +201,7 @@ Locate id.
 Run TemplateProgram (printTerm "id"). 
 Run TemplateProgram (duplicateDefn2 "Top.id" "id4").
 Run TemplateProgram (printTerm "Coq.Init.Datatypes.nat").
-Run TemplateProgram (printTerm "nat").
+Run TemplateProgram (printTerm "nat"). 
 (*
 (Some
    (inr
@@ -219,8 +219,7 @@ Run TemplateProgram (printTerm "nat").
       mind_entry_private := None |}))
 *)
 
-Inductive list (A : Set) : Set :=  nil : list A | cons : A -> list A -> list A.
-Run TemplateProgram (printTerm "list").
+Run TemplateProgram (printTerm "demoList").
 (*
 (Some
    (inr
@@ -230,26 +229,26 @@ Run TemplateProgram (printTerm "list").
       mind_entry_params := [("A", LocalAssum (tSort sSet))];
       mind_entry_inds := [{|
                           mind_entry_typename := "list";
-                          mind_entry_arity := tProd (nNamed "A") (tSort sSet) (tSort sSet);
+                          mind_entry_arity := tSort sSet;
                           mind_entry_template := false;
                           mind_entry_consnames := ["nil"; "cons"];
-                          mind_entry_lc := [tProd (nNamed "A") (tSort sSet)
-                                              (tApp (tRel 1) [tRel 0]);
-                                           tProd (nNamed "A") (tSort sSet)
-                                             (tProd nAnon (tRel 0)
-                                                (tProd nAnon (tApp (tRel 2) [tRel 1])
-                                                   (tApp (tRel 3) [tRel 2])))] |}];
+                          mind_entry_lc := [tApp (tRel 1) [tRel 0];
+                                           tProd nAnon (tRel 0)
+                                             (tProd nAnon (tApp (tRel 2) [tRel 1])
+                                                (tApp (tRel 3) [tRel 2]))] |}];
       mind_entry_polymorphic := false;
       mind_entry_private := None |}))
 *)
 
-Print demoList. (* in the datatype for declaring demoList (exact same as Top.list),
-in one_inductive_entry, the arity did not include the parameters, which was
-included in mind_entry_params *)
+Print demoList. (* exact same as above. So in this instance,
+quoting was indded the inverse of unquoting*)
 
 
-Run TemplateProgram (printTerm "Coq.Arith.PeanoNat.Nat.add"). (* works now *)
-Run TemplateProgram (printTerm "Top.add").
+Run TemplateProgram (printTerm "Coq.Arith.PeanoNat.Nat.add").
+(* Names need not be canonical *)
+Run TemplateProgram (printTerm "PeanoNat.Nat.add").
+Run TemplateProgram (printTerm "add").
+
 (*
 (Some
    (inl

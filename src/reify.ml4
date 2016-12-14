@@ -463,6 +463,7 @@ struct
     in List.fold_left (fun acc x -> Term.mkApp (x, [| acc |]))
                       (Term.mkApp (pIn, [| x |])) !constants
 
+(* not needed anymore? *)
  let quote_one_ind_arity env (mi:Declarations.inductive_arity) : Term.constr =
    Declarations.(
    match mi with
@@ -470,15 +471,16 @@ struct
    | _ -> raise (Failure "Irregular Arity of Inductives is not yet supported")
   )
 
- let quote_one_ind env (mi:Declarations.one_inductive_body) : Term.constr =
+ let quote_one_ind env (mi:Entries.one_inductive_entry) : Term.constr =
    Declarations.(
-   let iname = quote_ident mi.mind_typename  in
+     Entries.(
+   let iname = quote_ident mi.mind_entry_typename  in
    (* fix. move the first  *)
-   let arity = quote_one_ind_arity env mi.mind_arity in 
+   let arity = quote_term env mi.mind_entry_arity in 
    let templatePoly = tfalse (* Fix *) in
-   let consnames = to_coq_list tident (List.map quote_ident (Array.to_list mi.mind_consnames)) in
-   let cons_types = to_coq_list tTerm (List.map (quote_term env) (Array.to_list mi.mind_user_lc)) in
-   Term.mkApp (tBuild_one_inductive_entry, [| iname; arity; templatePoly; consnames; cons_types |]))
+   let consnames = to_coq_list tident (List.map quote_ident (mi.mind_entry_consnames)) in
+   let cons_types = to_coq_list tTerm (List.map (quote_term env) (mi.mind_entry_lc)) in
+   Term.mkApp (tBuild_one_inductive_entry, [| iname; arity; templatePoly; consnames; cons_types |])))
 
 let quote_mind_local_entry env (l:Entries.local_entry) :  Term.constr =
   match l with
@@ -500,7 +502,7 @@ let quote_mind_local_entry env (l:Entries.local_entry) :  Term.constr =
       to_coq_list the_prod
         (List.map (fun p -> let (n,l)=p in pair (quote_ident n) (quote_mind_local_entry env l)) (t.mind_entry_params))
     in
-   let is = to_coq_list tOne_inductive_entry (List.map (quote_one_ind env) (Array.to_list (mi.mind_packets))) in
+   let is = to_coq_list tOne_inductive_entry (List.map (quote_one_ind env) (t.mind_entry_inds)) in
    let mpol = tfalse in
    let mpr = Term.mkApp (cNone, [|bool_type|]) in
    Term.mkApp (tBuild_mutual_inductive_entry, [| mr; mf; mp; is; mpol; mpr |]);

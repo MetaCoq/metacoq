@@ -877,7 +877,7 @@ let quote_mind_local_entry env (l:Entries.local_entry) :  Term.constr =
       | _ -> raise (Failure "tmQuote must take 1 argument. Please file a bug with Template-Coq.")
     else if Term.eq_constr coConstr tmQuoteTerm then
       match args with
-      | trm::[] -> let qt = quote_term env trm in
+      | _::trm::[] -> let qt = quote_term env trm in
               (env, evm, qt)
       | _ -> raise (Failure "tmQuoteTerm must take 1 argument. Please file a bug with Template-Coq.")
     else if Term.eq_constr coConstr tmQuoteTermRec then

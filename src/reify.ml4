@@ -861,7 +861,7 @@ let quote_mind_local_entry env (l:Entries.local_entry) :  Term.constr =
       | _ -> raise (Failure "tmReturn must take 2 arguments. Please file a bug with Template-Coq.")
     else if Term.eq_constr coConstr tmBind then
       match args with
-      | _::_::f::a::[] ->
+      | _::_::a::f::[] ->
         let (env, evm, ar) = run_template_program_rec (env,evm,a) in
         run_template_program_rec (env,evm,(Term.mkApp (f, Array.of_list [ar])))
       | _ -> raise (Failure "tmBind must take 4 arguments. Please file a bug with Template-Coq.")

@@ -105,8 +105,8 @@ in Gallina *)
 Inductive TemplateMonad : Type -> Type :=
 | tmReturn : forall {A:Type}, A -> TemplateMonad A
 | tmBind : forall {A B : Type}, 
-    (A -> TemplateMonad B) 
-    -> (TemplateMonad A) 
+    (TemplateMonad A) 
+    -> (A -> TemplateMonad B) 
     -> (TemplateMonad B)
 | tmPrint : forall {A:Type}, A -> TemplateMonad unit
 | tmQuote : ident -> bool (*bypass opacity*)-> TemplateMonad (option (term+mutual_inductive_entry))

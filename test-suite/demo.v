@@ -163,8 +163,9 @@ Inductive demoList (A : Set) : Set :=
 (** Putting the above commands in monadic program *)
 
 Definition program : TemplateMonad unit :=
-tmBind  (fun x => tmMkDefinition true "id1" d'') 
-  (tmBind (fun x => tmMkDefinition true "id2" d'') (tmReturn tt)).
+tmBind  
+  (tmBind (tmReturn tt) (fun x => tmMkDefinition true "id2" d''))
+  (fun x => tmMkDefinition true "id1" d'').
 
 Run TemplateProgram program.
 
@@ -182,17 +183,17 @@ match p with
 end.
 
 Definition printTerm (name  : ident): TemplateMonad unit :=
-  (tmBind  tmPrint)
-    (tmQuote name true).
+  (tmBind (tmQuote name true) tmPrint)
+    .
 
 Definition duplicateDefn2 (name newName : ident): TemplateMonad unit :=
-  (tmBind  (fun body => 
+  (tmBind (tmQuote name false) (fun body => 
     match body with
     | Some (inl bd) => 
-        (tmBind  (fun _ => tmMkDefinition true newName bd) (tmPrint body))
+        (tmBind (tmPrint body) (fun _ => tmMkDefinition true newName bd))
     | _ => tmReturn tt
     end))
-    (tmQuote name false).
+    .
 
 Definition id := fun x:nat => x.
 
@@ -244,14 +245,14 @@ Print demoList. (* exact same as above. So in this instance,
 quoting was indded the inverse of unquoting*)
 
 Run TemplateProgram
-  ((tmBind  (fun body =>
+  ((tmBind (tmQuote "demoList" false) (fun body =>
     match body with
     | Some (inl bd)
     | Some (inr bd) =>
         tmMkDefinition false "demoList_syntax" bd
     | N_ => tmReturn tt
     end))
-    (tmQuote "demoList" false)).
+    ).
 Print demoList_syntax.
 
 Example unquote_quote_id1: demoList_syntax=mut_list_i 

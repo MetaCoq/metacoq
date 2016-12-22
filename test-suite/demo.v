@@ -265,6 +265,11 @@ Run TemplateProgram (printTerm "Coq.Arith.PeanoNat.Nat.add").
 Run TemplateProgram (printTerm "PeanoNat.Nat.add").
 Run TemplateProgram (printTerm "add").
 
+Make Definition consts := 
+(tLambda (nNamed "A") (tSort sSet)
+               (tApp (tConst "Coq.Program.Basics.arrow") [tRel 0; tRel 0])).
+
+
 (*
 (Some
    (inl

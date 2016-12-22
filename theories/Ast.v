@@ -98,6 +98,8 @@ Record mutual_inductive_entry : Set := {
   mind_entry_private : option bool
 }.
 
+Inductive reductionStrategy : Set :=
+  cbv | cbn | hnf | all.
 
 (** A monad for programming with template-coq operations.
 Using this monad, it should be possible to write many plugins (e.g. paramcoq)
@@ -112,7 +114,8 @@ Inductive TemplateMonad : Type -> Type :=
 | tmQuote : ident -> bool (*bypass opacity*)-> TemplateMonad (option (term+mutual_inductive_entry))
 | tmQuoteTerm : forall {A:Type}, A  -> TemplateMonad term
 | tmQuoteTermRec : forall {A:Type}, A  -> TemplateMonad program
-| tmReduce : term (* -> strategy? *)-> TemplateMonad term
+| tmReduce : reductionStrategy -> forall {A:Type}, A -> (* -> strategy? *) TemplateMonad A
+| tmUnQReduceQ : reductionStrategy -> term (* -> strategy? *)-> TemplateMonad term
 | tmUnquote : term  -> TemplateMonad {T:Type & T}
 | tmMkDefinition : bool (* unquote? *) -> ident -> forall {A:Type}, A -> TemplateMonad unit (* bool indicating success? *)
 | tmMkInductive : mutual_inductive_entry -> TemplateMonad unit (* bool indicating success? *)

@@ -731,6 +731,11 @@ let reduce_all env (evm,def) =
 	  Term.mkApp (denote_term f,
 		      Array.of_list (List.map denote_term (from_coq_list xs)))
       | _ -> raise (Failure "ill-typed (app)")
+    else if Term.eq_constr h tConst then
+      match args with
+    	s :: [] ->
+        Term.mkConst (Names.Constant.make1 (kn_of_canonical_string (unquote_string s)))
+      | _ -> raise (Failure "ill-typed (tConst)")
     else if Term.eq_constr h tConstructor then
       match args with
 	i :: idx :: _ ->
@@ -761,7 +766,7 @@ let reduce_all env (evm,def) =
 
   let declare_definition
     (id : Names.Id.t) (loc, boxed_flag, def_obj_kind)
-    (binder_list : Constrexpr.local_binder list) red_expr_opt constr_expr
+    (binder_list : Constrexpr.local_binder list) red_expr_opt (constr_expr : Constrexpr.constr_expr)
     constr_expr_opt decl_hook =
     Command.do_definition
     id (loc, false, def_obj_kind) None binder_list red_expr_opt constr_expr
@@ -784,7 +789,6 @@ let reduce_all env (evm,def) =
 
   let unquote_red_add_definition b env evm name def =
 	  let (evm,def) = reduce_all env (evm,def) in
-    let _ = Pp.msg_debug ((Printer.pr_constr def)) in
   	let trm = if b then denote_term def else def in
 	  let result = Constrextern.extern_constr true env evm trm in
     add_definition name result
@@ -896,6 +900,11 @@ let reduce_all env (evm,def) =
       match args with
       | _::trm::[] -> let _ = Pp.msg_debug ((Printer.pr_constr trm)) in (env, evm, unit_tt)
       | _ -> raise (Failure "tmPrint must take 2 arguments. Please file a bug with Template-Coq.")
+    else if Term.eq_constr coConstr tmReduce then
+      match args with
+      | _(*reduction strategy*)::_(*type*)::trm::[] -> 
+          let (evm,trm) = reduce_all env (evm,trm) in (env, evm, trm)
+      | _ -> raise (Failure "tmReduce must take 3 arguments. Please file a bug with Template-Coq.")
     else raise (Failure "Invalid argument or yot yet implemented. The argument must be a TemplateProgram")
 
   let run_template_program (env: Environ.env) (evm: Evd.evar_map) (body: Constrexpr.constr_expr) : unit =

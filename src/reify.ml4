@@ -734,7 +734,17 @@ let reduce_all env (evm,def) =
     else if Term.eq_constr h tConst then
       match args with
     	s :: [] ->
-        Term.mkConst (Names.Constant.make1 (kn_of_canonical_string (unquote_string s)))
+        let s = (unquote_string s) in
+        let (dp, nm) = split_name s in
+        (try 
+          match Nametab.locate (Libnames.make_qualid dp nm) with
+          | Globnames.ConstRef c ->  Term.mkConst c
+          | Globnames.IndRef _ -> raise (Failure (String.concat "the constant is an inductive. use tInd : " [s]))
+          | Globnames.VarRef _ -> raise (Failure (String.concat "the constant is a variable. use tVar : " [s]))
+          | Globnames.ConstructRef _ -> raise (Failure (String.concat "the constant is a consructor. use tConstructor : " [s]))
+        with
+        Not_found ->   raise (Failure (String.concat "Constant not found : " [s])))
+
       | _ -> raise (Failure "ill-typed (tConst)")
     else if Term.eq_constr h tConstructor then
       match args with

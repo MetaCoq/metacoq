@@ -111,13 +111,23 @@ Inductive TemplateMonad : Type -> Type :=
     -> (A -> TemplateMonad B) 
     -> (TemplateMonad B)
 | tmPrint : forall {A:Type}, A -> TemplateMonad unit
-| tmQuote : ident -> bool (*bypass opacity*)-> TemplateMonad (option (term+mutual_inductive_entry))
+(** Quote the body of a definition or inductive. Its name need not be fully qualified --
+  the implementation uses Locate *)
+| tmQuote : ident -> bool (** bypass opacity?*)-> TemplateMonad (option (term+mutual_inductive_entry))
+(** similar to Quote Definition ... := ...
+  To actually make the definition, use (tmMkDefinition false) *)
 | tmQuoteTerm : forall {A:Type}, A  -> TemplateMonad term
+(** similar to Quote Recursively Definition ... := ...*)
 | tmQuoteTermRec : forall {A:Type}, A  -> TemplateMonad program
-| tmReduce : reductionStrategy -> forall {A:Type}, A -> (* -> strategy? *) TemplateMonad A
-| tmUnQReduceQ : reductionStrategy -> term (* -> strategy? *)-> TemplateMonad term
-| tmUnquote : term  -> TemplateMonad {T:Type & T}
+(** FIXME: strategy is currently ignored in the implementation -- it does all reductions.*)
+| tmReduce : reductionStrategy -> forall {A:Type}, A -> TemplateMonad A
 | tmMkDefinition : bool (* unquote? *) -> ident -> forall {A:Type}, A -> TemplateMonad unit (* bool indicating success? *)
 | tmMkInductive : mutual_inductive_entry -> TemplateMonad unit (* bool indicating success? *)
+
+(* Not yet implemented:*)
+
+(** unquote then reduce then quote *)
+| tmUnQReduceQ : reductionStrategy -> term (* -> strategy? *)-> TemplateMonad term
+| tmUnquote : term  -> TemplateMonad {T:Type & T}
 | tmFreshName : ident -> TemplateMonad bool 
     (* yes => Guarenteed to not cause "... already declared" error *).

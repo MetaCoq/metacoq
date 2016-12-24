@@ -161,31 +161,10 @@ Inductive demoList (A : Set) : Set :=
 
 (** Putting the above commands in monadic program *)
 
-Definition program : TemplateMonad unit :=
-tmBind  
-  (tmBind (tmReturn tt) (fun x => tmMkDefinition true "id2" d''))
-  (fun x => tmMkDefinition true "id1" d'').
-
-Run TemplateProgram program.
-
-(*
-id2 is defined
-id1 is defined
-*)
-
-Fixpoint getFirstConstr (p:Ast.program) : option term :=
-match p with
-| PConstr _ t _ => Some t
-| PType _ _ _ p => getFirstConstr p
-| PAxiom _ t p => getFirstConstr p
-| PIn _ => None
-end.
-
 Definition printTerm (name  : ident): TemplateMonad unit :=
-  (tmBind (tmQuote name true) tmPrint)
-    .
+  (tmBind (tmQuote name true) tmPrint).
 
-Definition duplicateDefn2 (name newName : ident): TemplateMonad unit :=
+Definition duplicateDefn (name newName : ident): TemplateMonad unit :=
   (tmBind (tmQuote name false) (fun body => 
     match body with
     | Some (inl bd) => 
@@ -196,52 +175,12 @@ Definition duplicateDefn2 (name newName : ident): TemplateMonad unit :=
 
 Definition id := fun x:nat => x.
 
-Locate id.
-(* Fix: Top may not work in interactive use *)
-Run TemplateProgram (printTerm "id"). 
-Run TemplateProgram (duplicateDefn2 "Top.id" "id4").
+Run TemplateProgram (duplicateDefn "Top.id" "id4").
 Run TemplateProgram (printTerm "Coq.Init.Datatypes.nat").
 Run TemplateProgram (printTerm "nat"). 
-(*
-(Some
-   (inr
-      {|
-      mind_entry_record := None;
-      mind_entry_finite := Finite;
-      mind_entry_params := [];
-      mind_entry_inds := [{|
-                          mind_entry_typename := "nat";
-                          mind_entry_arity := tSort sSet;
-                          mind_entry_template := false;
-                          mind_entry_consnames := ["O"; "S"];
-                          mind_entry_lc := [tRel 0; tProd nAnon (tRel 0) (tRel 1)] |}];
-      mind_entry_polymorphic := false;
-      mind_entry_private := None |}))
-*)
 
-Run TemplateProgram (printTerm "demoList").
-(*
-(Some
-   (inr
-      {|
-      mind_entry_record := None;
-      mind_entry_finite := Finite;
-      mind_entry_params := [("A", LocalAssum (tSort sSet))];
-      mind_entry_inds := [{|
-                          mind_entry_typename := "list";
-                          mind_entry_arity := tSort sSet;
-                          mind_entry_template := false;
-                          mind_entry_consnames := ["nil"; "cons"];
-                          mind_entry_lc := [tApp (tRel 1) [tRel 0];
-                                           tProd nAnon (tRel 0)
-                                             (tProd nAnon (tApp (tRel 2) [tRel 1])
-                                                (tApp (tRel 3) [tRel 2]))] |}];
-      mind_entry_polymorphic := false;
-      mind_entry_private := None |}))
-*)
-
-Print demoList. (* exact same as above. So in this instance,
-quoting was indded the inverse of unquoting*)
+CoInductive cnat : Set :=  O :cnat | S : cnat -> cnat.
+Run TemplateProgram (printTerm "cnat"). 
 
 Run TemplateProgram
   ((tmBind (tmQuote "demoList" false) (fun body =>
@@ -252,42 +191,9 @@ Run TemplateProgram
     | N_ => tmReturn tt
     end))
     ).
-Print demoList_syntax.
 
-Example unquote_quote_id1: demoList_syntax=mut_list_i 
-  (* demoList was obtained from this *).
+Example unquote_quote_id1: demoList_syntax=mut_list_i (* demoList was obtained from mut_list_i *).
   reflexivity.
 Qed.
 
 Run TemplateProgram (printTerm "Coq.Arith.PeanoNat.Nat.add").
-(* Names need not be canonical *)
-Run TemplateProgram (printTerm "PeanoNat.Nat.add").
-Run TemplateProgram (printTerm "add").
-
-Make Definition consts := 
-(tLambda (nNamed "A") (tSort sSet)
-               (tApp (tConst "Coq.Program.Basics.arrow") [tRel 0; tRel 0])).
-
-
-(*
-(Some
-   (inl
-      (tFix
-         [{|
-          dname := nNamed "add";
-          dtype := tProd (nNamed "a") (tInd (mkInd "Coq.Init.Datatypes.nat" 0))
-                     (tProd (nNamed "b") (tInd (mkInd "Coq.Init.Datatypes.nat" 0))
-                        (tInd (mkInd "Coq.Init.Datatypes.nat" 0)));
-          dbody := tLambda (nNamed "a") (tInd (mkInd "Coq.Init.Datatypes.nat" 0))
-                     (tLambda (nNamed "b") (tInd (mkInd "Coq.Init.Datatypes.nat" 0))
-                        (tCase (mkInd "Coq.Init.Datatypes.nat" 0, 0)
-                           (tLambda (nNamed "a") (tInd (mkInd "Coq.Init.Datatypes.nat" 0))
-                              (tInd (mkInd "Coq.Init.Datatypes.nat" 0))) 
-                           (tRel 1)
-                           [(0, tRel 0);
-                           (1,
-                           tLambda (nNamed "a") (tInd (mkInd "Coq.Init.Datatypes.nat" 0))
-                             (tApp (tConstruct (mkInd "Coq.Init.Datatypes.nat" 0) 1)
-                                [tApp (tRel 3) [tRel 0; tRel 1]]))]));
-          rarg := 0 |}] 0)))
-*)

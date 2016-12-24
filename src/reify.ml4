@@ -150,7 +150,6 @@ struct
       then raise (Invalid_argument ("to_positive: " ^ string_of_int n))
       else to_positive n
 
-
   let to_coq_list typ =
     let the_nil = Term.mkApp (c_nil, [| typ |]) in
     let rec to_list (ls : Term.constr list) : Term.constr =
@@ -464,21 +463,14 @@ struct
     in List.fold_left (fun acc x -> Term.mkApp (x, [| acc |]))
                       (Term.mkApp (pIn, [| x |])) !constants
 
-(* not needed anymore? *)
- let quote_one_ind_arity env (mi:Declarations.inductive_arity) : Term.constr =
-   Declarations.(
-   match mi with
-   | Declarations.RegularArity ra -> quote_term env (ra.mind_user_arity)  
-   | _ -> raise (Failure "Irregular Arity of Inductives is not yet supported")
-  )
+ let to_coq_bool b = if b then ttrue else tfalse
 
  let quote_one_ind env (mi:Entries.one_inductive_entry) : Term.constr =
    Declarations.(
      Entries.(
    let iname = quote_ident mi.mind_entry_typename  in
-   (* fix. move the first  *)
    let arity = quote_term env mi.mind_entry_arity in 
-   let templatePoly = tfalse (* Fix *) in
+   let templatePoly = to_coq_bool mi.mind_entry_template in
    let consnames = to_coq_list tident (List.map quote_ident (mi.mind_entry_consnames)) in
    let cons_types = to_coq_list tTerm (List.map (quote_term env) (mi.mind_entry_lc)) in
    Term.mkApp (tBuild_one_inductive_entry, [| iname; arity; templatePoly; consnames; cons_types |])))
@@ -488,18 +480,21 @@ let quote_mind_local_entry env (l:Entries.local_entry) :  Term.constr =
   | Entries.LocalAssum c -> Term.mkApp (tLocalAssum,[|(quote_term env c)|])
   | Entries.LocalDef c -> Term.mkApp (tLocalDef,[|(quote_term env c)|])
 
- let quote_mut_ind  env (mi:Declarations.mutual_inductive_body) : Term.constr =
-   (* Fix. Declarations.mutual_inductive_body seems to have more info than Entries.mutual_inductive_entry.
-   In template-coq/Ast.v, should we use 1 datatype with the union of the quoting/unquoting info?*)
+let quote_mind_finiteness (f: Decl_kinds.recursivity_kind) =
+  match f with
+  | Decl_kinds.Finite -> cFinite
+  | Decl_kinds.CoFinite -> cCoFinite
+  | Decl_kinds.BiFinite -> cBiFinite
+  
+  let quote_mut_ind  env (mi:Declarations.mutual_inductive_body) : Term.constr =
    let t= Discharge.process_inductive ([],Univ.UContext.empty) (Names.Cmap.empty,Names.Mindmap.empty) mi in
-   (*Pp.msg_debug ((Entries.mutual_inductive_entry t)); *)
    Declarations.(
      Entries.(
    let the_prod = Term.mkApp (prod_type,[|tident; tlocal_entry|]) in 
    let pair i l = pair tident tlocal_entry i l in 
    let mr = Term.mkApp (cNone, [|Term.mkApp (option_type, [|tident|])|])  in
-   let mf = cFinite (* Fix *) in 
-   let mp =  (* Term.mkApp (c_nil, [|the_prod|]) (* Fix *)*) 
+   let mf = quote_mind_finiteness t.mind_entry_finite in 
+   let mp =
       to_coq_list the_prod
         (List.map (fun p -> let (n,l)=p in pair (quote_ident n) (quote_mind_local_entry env l)) (t.mind_entry_params))
     in

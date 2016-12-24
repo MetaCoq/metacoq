@@ -159,7 +159,6 @@ Inductive demoList (A : Set) : Set :=
 *)
 
 
-
 (** Putting the above commands in monadic program *)
 
 Definition program : TemplateMonad unit :=

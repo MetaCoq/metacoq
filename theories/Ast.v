@@ -121,7 +121,3 @@ Inductive TemplateMonad : Type -> Type :=
 | tmMkInductive : mutual_inductive_entry -> TemplateMonad unit (* bool indicating success? *)
 | tmFreshName : ident -> TemplateMonad bool 
     (* yes => Guarenteed to not cause "... already declared" error *).
-
-
-
-

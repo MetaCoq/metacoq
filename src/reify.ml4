@@ -116,6 +116,7 @@ struct
       
   let (tdef,tmkdef) = (r_reify "def", r_reify "mkdef")
   let (tLocalDef,tLocalAssum,tlocal_entry) = (r_reify "LocalDef", r_reify "LocalAssum", r_reify "local_entry")
+
   let (cFinite,cCoFinite,cBiFinite) = (r_reify "Finite", r_reify "CoFinite", r_reify "BiFinite")
   let (pConstr,pType,pAxiom,pIn) =
     (r_reify "PConstr", r_reify "PType", r_reify "PAxiom", r_reify "PIn")
@@ -674,7 +675,11 @@ let reduce_all env (evm,def) =
     else
       not_supported trm
 
-  
+  let reduce_all env (evm,def) =
+  	let (evm2,red) = Tacinterp.interp_redexp env evm (Genredexpr.Cbv Redops.all_flags) in
+	  let red = fst (Redexpr.reduction_of_red_expr env red) in
+	  red env evm2 def
+
   let from_coq_pair trm =
     let (h,args) = app_full trm [] in
     if Term.eq_constr h c_pair then
@@ -803,7 +808,7 @@ let reduce_all env (evm,def) =
 	  let result = Constrextern.extern_constr true env evm trm in
     add_definition name result
 
-   let denote_local_entry trm =
+  let denote_local_entry trm =
     let (h,args) = app_full trm [] in
       match args with
 	    x :: [] -> 
@@ -867,7 +872,6 @@ let reduce_all env (evm,def) =
       Command.declare_mutual_inductive_with_eliminations (mut_ind mr mf mp mi mpol mpr) [] [];()
     | _ -> raise (Failure "ill-typed mutual_inductive_entry")
 
-
   let rec run_template_program_rec  ((env,evm,pgm): Environ.env * Evd.evar_map * Term.constr) : Environ.env * Evd.evar_map * Term.constr =
     let (evm,pgm) = reduce_hnf env (evm, pgm) in 
     let (coConstr,args) = app_full pgm [] in
@@ -920,8 +924,6 @@ let reduce_all env (evm,def) =
   let run_template_program (env: Environ.env) (evm: Evd.evar_map) (body: Constrexpr.constr_expr) : unit =
   	let (body,_) = Constrintern.interp_constr env evm body in
     let _ = run_template_program_rec (env,evm,body) in ()
-
-
 end
 
 DECLARE PLUGIN "template_plugin"
@@ -945,7 +947,6 @@ let ltac_apply (f:Tacexpr.glob_tactic_expr) (args:Tacexpr.glob_tactic_arg list) 
 let to_ltac_val c = Tacexpr.TacDynamic(Loc.ghost,Pretyping.constr_in c)
 
 (** From Containers **)
-
 
 let check_inside_section () =
   if Lib.sections_are_opened () then
@@ -1048,7 +1049,6 @@ VERNAC COMMAND EXTEND Run_program CLASSIFIED AS SIDEFF
 	let (evm,env) = Lemmas.get_current_context () in
   TermReify.run_template_program env evm def ]
 END;;
-
 
 VERNAC COMMAND EXTEND Make_tests CLASSIFIED AS QUERY
 (*

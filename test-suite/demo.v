@@ -202,7 +202,11 @@ Require Import Arith.
 
 
 Inductive lee (n : nat) : (le 0 n) -> Prop :=
-| n0 : @lee n (Peano.le_0_n n).
+| n0 : @lee n (Peano.le_0_n n)
+with
+(* params cannot mention the inductive typed being defined *)
+lte (n : nat) : (lee 0 n) -> Prop :=
+| nt0 : @lte n (Peano.le_0_n n).
 
 Run TemplateProgram (printTerm "lee").
 

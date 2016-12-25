@@ -258,6 +258,13 @@ struct
   let push_rel decl (in_prop, env) = (in_prop, Environ.push_rel decl env)
   let push_rel_context ctx (in_prop, env) = (in_prop, Environ.push_rel_context ctx env)
 
+let castSetProp sf t =
+  if sf == Term.InProp 
+  then Term.mkApp (tCast, [| t ; kCast ; Term.mkApp (tSort, [| sProp |]) |])
+  else if sf == Term.InSet 
+  then Term.mkApp (tCast, [| t ; kCast ; Term.mkApp (tSort, [| sSet |]) |])
+  else t
+
   let quote_term_remember
       (add_constant : Names.kernel_name -> 'a -> 'a)
       (add_inductive : Names.inductive -> 'a -> 'a) =
@@ -277,8 +284,9 @@ struct
 	(Term.mkApp (tProd, [| quote_name n ; t' ; b' |]), acc)
       | Term.Lambda (n,t,b) ->
 	let (t',acc) = quote_term acc env t in
+  let sf = Retyping.get_sort_family_of (snd env) Evd.empty t in
 	let (b',acc) = quote_term acc (push_rel (n, None, t) env) b in
-	(Term.mkApp (tLambda, [| quote_name n ; t' ; b' |]), acc)
+	(Term.mkApp (tLambda, [| quote_name n ; castSetProp sf t' ; b' |]), acc)
       | Term.LetIn (n,e,t,b) ->
 	let (e',acc) = quote_term acc env e in
 	let (t',acc) = quote_term acc env t in
@@ -684,6 +692,11 @@ let reduce_all env (evm,def) =
     else
       not_supported trm
 
+(*
+Stm.interp
+Vernacentries.interp
+Vernacexpr.Check
+*)
 
   (** NOTE: Because the representation is lossy, I should probably
    ** come back through elaboration.

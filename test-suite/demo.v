@@ -196,7 +196,23 @@ Print demoList.
 
 Definition demoConsType := ltac:(let T := type of demoCons in exact T).
 Run TemplateProgram (printTerm "nat"). 
+(*
+None
+*)
 
+Run TemplateProgram (printTerm "demoConsType"). 
+(*
+(Some
+   (inl
+      (tProd (nNamed "A") (tSort sSet)
+         (tCast
+            (tProd nAnon (tRel 0)
+               (tCast
+                  (tProd nAnon (tApp (tInd (mkInd "Top.demoList" 0)) [tRel 1])
+                     (tCast (tApp (tInd (mkInd "Top.demoList" 0)) [tRel 2]) Cast
+                        (tSort sSet))) Cast (tSort sSet))) Cast 
+            (tSort sSet)))))
+*)
 
 Example unquote_quote_id1: demoList_syntax=mut_list_i (* demoList was obtained from mut_list_i *).
   unfold demoList_syntax.

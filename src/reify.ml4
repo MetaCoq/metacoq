@@ -475,23 +475,30 @@ struct
    let cons_types = to_coq_list tTerm (List.map (quote_term env) (mi.mind_entry_lc)) in
    Term.mkApp (tBuild_one_inductive_entry, [| iname; arity; templatePoly; consnames; cons_types |])))
 
-let quote_mind_local_entry env ((n,le):(Names.Id.t * Entries.local_entry)) :  Environ.env*Term.constr =
+let process_local_entry 
+  (f: 'a -> Term.constr option (* body *) -> Term.constr (* type *) -> Names.Id.t -> Environ.env -> 'a) 
+  ((env,a):(Environ.env*'a)) 
+  ((n,le):(Names.Id.t * Entries.local_entry))
+  :  (Environ.env * 'a) =
+  match le with
+  | Entries.LocalAssum t -> (Environ.push_rel (Names.Name n,None,t) env, f a None t n env)
+  | Entries.LocalDef b -> 
+      let typ = Retyping.get_type_of env Evd.empty b in
+      (Environ.push_rel (Names.Name n, Some b, typ) env, f a (Some b) typ n env)
+
+
+let quote_mind_params env (params:(Names.Id.t * Entries.local_entry) list)
+  :  Environ.env*(Term.constr list)=
   let pair i l = pair tident tlocal_entry i l in 
-  match le with
-  | Entries.LocalAssum t -> (Environ.push_rel (Names.Name n,None,t) env, 
-        pair (quote_ident n) (Term.mkApp (tLocalAssum,[|(quote_term env t)|])))
-  | Entries.LocalDef b -> 
-      let typ = Retyping.get_type_of env Evd.empty b in
-      (Environ.push_rel (Names.Name n, Some b, typ) env, 
-      pair (quote_ident n) ( Term.mkApp (tLocalDef,[|(quote_term env b)|])))
-
-let mind_params_as_types ((env,t):Environ.env*Term.constr) ((n,le):(Names.Id.t * Entries.local_entry)) :  Environ.env*Term.constr =
-  match le with
-  | Entries.LocalAssum typ -> (Environ.push_rel (Names.Name n,None,t) env, Term.mkProd ((Names.Name n),typ,t))
-  | Entries.LocalDef b -> 
-      let typ = Retyping.get_type_of env Evd.empty b in
-      (Environ.push_rel (Names.Name n, Some b, typ) env, Term.mkLetIn (Names.Name n, b, typ,t))
-
+  let f lr ob t n env =
+    match ob with
+    | Some b ->  (pair (quote_ident n) (Term.mkApp (tLocalDef,[|(quote_term env b)|])))::lr
+    | None ->  (pair (quote_ident n) (Term.mkApp (tLocalAssum,[|(quote_term env t)|])))::lr in
+    List.fold_left (process_local_entry f) (env,[]) params
+    
+let mind_params_as_types ((env,t):Environ.env*Term.constr) (params:(Names.Id.t * Entries.local_entry) list) : 
+   Environ.env*Term.constr =
+    List.fold_left (process_local_entry (fun tr ob typ n env -> Term.mkProd_or_LetIn (Names.Name n,ob,typ) tr)) (env,t) params
 
 let quote_mind_finiteness (f: Decl_kinds.recursivity_kind) =
   match f with
@@ -507,18 +514,10 @@ let quote_mut_ind  env (mi:Declarations.mutual_inductive_body) : Term.constr =
    let mr = Term.mkApp (cNone, [|Term.mkApp (option_type, [|tident|])|])  in
    (* First prepend params as tProd to arities of inductives and push them. Alternatively use mi where there is no need to append.
      Then quote params and add them to env as below.*)
-   let one_arities = List.map 
-    (fun x -> snd (List.fold_left mind_params_as_types (env,x.mind_entry_arity) (t.mind_entry_params))) 
-    t.mind_entry_inds in
+   let one_arities =
+    List.map (fun x -> snd (mind_params_as_types (env,x.mind_entry_arity) (t.mind_entry_params))) t.mind_entry_inds in
    let mf = quote_mind_finiteness t.mind_entry_finite in 
-   let process_params env =
-      let (env,mpp) =
-        (List.fold_left 
-          (fun (env,lr) p -> let env,qe = (quote_mind_local_entry env p) in (env, qe::lr)) 
-          (env,[])
-        (t.mind_entry_params)) in (env, to_coq_list the_prod mpp) in
-   let mp = fst (process_params env) in
-   let env  = fst (process_params env) in
+   let mp = to_coq_list the_prod (snd (quote_mind_params env (t.mind_entry_params))) in
    let is = to_coq_list tOne_inductive_entry (List.map (quote_one_ind env) (t.mind_entry_inds)) in
    let mpol = tfalse in
    let mpr = Term.mkApp (cNone, [|bool_type|]) in

@@ -201,16 +201,15 @@ Run TemplateProgram (printTerm "Coq.Arith.PeanoNat.Nat.add").
 Require Import Arith.
 
 
-Inductive lee (n : nat) : (le 0 n) -> Prop :=
+Inductive lee (n : nat) (m:=n+n) : (le 0 n) -> Prop :=
 | n0 : @lee n (Peano.le_0_n n)
 with
 (* params cannot mention the inductive typed being defined *)
-lte (n : nat) : (lee 0 n) -> Prop :=
+lte (n : nat) (m:=n+n): (le 0 n) -> Prop :=
 | nt0 : @lte n (Peano.le_0_n n).
 
+Print lee.
 Run TemplateProgram (printTerm "lee").
-
-Quot
 
 
 Print le.

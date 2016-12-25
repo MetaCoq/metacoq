@@ -465,14 +465,14 @@ struct
 
  let to_coq_bool b = if b then ttrue else tfalse
 
- let quote_one_ind env (mi:Entries.one_inductive_entry) : Term.constr =
+ let quote_one_ind envA envC (mi:Entries.one_inductive_entry) : Term.constr =
    Declarations.(
      Entries.(
    let iname = quote_ident mi.mind_entry_typename  in
-   let arity = quote_term env mi.mind_entry_arity in 
+   let arity = quote_term envA mi.mind_entry_arity in 
    let templatePoly = to_coq_bool mi.mind_entry_template in
    let consnames = to_coq_list tident (List.map quote_ident (mi.mind_entry_consnames)) in
-   let cons_types = to_coq_list tTerm (List.map (quote_term env) (mi.mind_entry_lc)) in
+   let cons_types = to_coq_list tTerm (List.map (quote_term envC) (mi.mind_entry_lc)) in
    Term.mkApp (tBuild_one_inductive_entry, [| iname; arity; templatePoly; consnames; cons_types |])))
 
 let process_local_entry 
@@ -512,13 +512,20 @@ let quote_mut_ind  env (mi:Declarations.mutual_inductive_body) : Term.constr =
      Entries.(
    let the_prod = Term.mkApp (prod_type,[|tident; tlocal_entry|]) in 
    let mr = Term.mkApp (cNone, [|Term.mkApp (option_type, [|tident|])|])  in
-   (* First prepend params as tProd to arities of inductives and push them. Alternatively use mi where there is no need to append.
-     Then quote params and add them to env as below.*)
-   let one_arities =
-    List.map (fun x -> snd (mind_params_as_types (env,x.mind_entry_arity) (t.mind_entry_params))) t.mind_entry_inds in
    let mf = quote_mind_finiteness t.mind_entry_finite in 
    let mp = to_coq_list the_prod (snd (quote_mind_params env (t.mind_entry_params))) in
-   let is = to_coq_list tOne_inductive_entry (List.map (quote_one_ind env) (t.mind_entry_inds)) in
+   (* before quoting the types of constructors, we need to enrich the environment with the inductives *)
+   let one_arities =
+      List.map 
+        (fun x -> (x.mind_entry_typename,
+           snd (mind_params_as_types (env,x.mind_entry_arity) (t.mind_entry_params)))) 
+      t.mind_entry_inds in
+  (* env for quoting constructors of inductives. First push inductices, then params *)
+   let envC = List.fold_left (fun env p -> Environ.push_rel (Names.Name (fst p), None, snd p) env) env one_arities in
+   let (envC,_) = List.fold_left (process_local_entry (fun _ _ _ _ _ -> ())) (envC,()) (t.mind_entry_params) in
+  (* env for quoting arities of inductives -- just push the params *)
+   let (envA,_) = List.fold_left (process_local_entry (fun _ _ _ _ _ -> ())) (env,()) (t.mind_entry_params) in
+   let is = to_coq_list tOne_inductive_entry (List.map (quote_one_ind envA envC) (t.mind_entry_inds)) in
    let mpol = tfalse in
    let mpr = Term.mkApp (cNone, [|bool_type|]) in
    Term.mkApp (tBuild_mutual_inductive_entry, [| mr; mf; mp; is; mpol; mpr |]);

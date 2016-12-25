@@ -475,40 +475,67 @@ let castSetProp sf t =
 
  let to_coq_bool b = if b then ttrue else tfalse
 
- let quote_one_ind env (mi:Entries.one_inductive_entry) : Term.constr =
+ let quote_one_ind envA envC (mi:Entries.one_inductive_entry) : Term.constr =
    Declarations.(
      Entries.(
    let iname = quote_ident mi.mind_entry_typename  in
-   let arity = quote_term env mi.mind_entry_arity in 
+   let arity = quote_term envA mi.mind_entry_arity in 
    let templatePoly = to_coq_bool mi.mind_entry_template in
    let consnames = to_coq_list tident (List.map quote_ident (mi.mind_entry_consnames)) in
-   let cons_types = to_coq_list tTerm (List.map (quote_term env) (mi.mind_entry_lc)) in
+   let cons_types = to_coq_list tTerm (List.map (quote_term envC) (mi.mind_entry_lc)) in
    Term.mkApp (tBuild_one_inductive_entry, [| iname; arity; templatePoly; consnames; cons_types |])))
 
-let quote_mind_local_entry env (l:Entries.local_entry) :  Term.constr =
-  match l with
-  | Entries.LocalAssum c -> Term.mkApp (tLocalAssum,[|(quote_term env c)|])
-  | Entries.LocalDef c -> Term.mkApp (tLocalDef,[|(quote_term env c)|])
+let process_local_entry 
+  (f: 'a -> Term.constr option (* body *) -> Term.constr (* type *) -> Names.Id.t -> Environ.env -> 'a) 
+  ((env,a):(Environ.env*'a)) 
+  ((n,le):(Names.Id.t * Entries.local_entry))
+  :  (Environ.env * 'a) =
+  match le with
+  | Entries.LocalAssum t -> (Environ.push_rel (Names.Name n,None,t) env, f a None t n env)
+  | Entries.LocalDef b -> 
+      let typ = Retyping.get_type_of env Evd.empty b in
+      (Environ.push_rel (Names.Name n, Some b, typ) env, f a (Some b) typ n env)
+
+
+let quote_mind_params env (params:(Names.Id.t * Entries.local_entry) list)
+  :  Environ.env*(Term.constr list)=
+  let pair i l = pair tident tlocal_entry i l in 
+  let f lr ob t n env =
+    match ob with
+    | Some b ->  (pair (quote_ident n) (Term.mkApp (tLocalDef,[|(quote_term env b)|])))::lr
+    | None ->  (pair (quote_ident n) (Term.mkApp (tLocalAssum,[|(quote_term env t)|])))::lr in
+    List.fold_left (process_local_entry f) (env,[]) params
+    
+let mind_params_as_types ((env,t):Environ.env*Term.constr) (params:(Names.Id.t * Entries.local_entry) list) : 
+   Environ.env*Term.constr =
+    List.fold_left (process_local_entry (fun tr ob typ n env -> Term.mkProd_or_LetIn (Names.Name n,ob,typ) tr)) (env,t) params
 
 let quote_mind_finiteness (f: Decl_kinds.recursivity_kind) =
   match f with
   | Decl_kinds.Finite -> cFinite
   | Decl_kinds.CoFinite -> cCoFinite
   | Decl_kinds.BiFinite -> cBiFinite
-  
-  let quote_mut_ind  env (mi:Declarations.mutual_inductive_body) : Term.constr =
+     
+let quote_mut_ind  env (mi:Declarations.mutual_inductive_body) : Term.constr =
    let t= Discharge.process_inductive ([],Univ.UContext.empty) (Names.Cmap.empty,Names.Mindmap.empty) mi in
    Declarations.(
      Entries.(
    let the_prod = Term.mkApp (prod_type,[|tident; tlocal_entry|]) in 
-   let pair i l = pair tident tlocal_entry i l in 
    let mr = Term.mkApp (cNone, [|Term.mkApp (option_type, [|tident|])|])  in
    let mf = quote_mind_finiteness t.mind_entry_finite in 
-   let mp =
-      to_coq_list the_prod
-        (List.map (fun p -> let (n,l)=p in pair (quote_ident n) (quote_mind_local_entry env l)) (t.mind_entry_params))
-    in
-   let is = to_coq_list tOne_inductive_entry (List.map (quote_one_ind env) (t.mind_entry_inds)) in
+   let mp = to_coq_list the_prod (snd (quote_mind_params env (t.mind_entry_params))) in
+   (* before quoting the types of constructors, we need to enrich the environment with the inductives *)
+   let one_arities =
+      List.map 
+        (fun x -> (x.mind_entry_typename,
+           snd (mind_params_as_types (env,x.mind_entry_arity) (t.mind_entry_params)))) 
+      t.mind_entry_inds in
+  (* env for quoting constructors of inductives. First push inductices, then params *)
+   let envC = List.fold_left (fun env p -> Environ.push_rel (Names.Name (fst p), None, snd p) env) env one_arities in
+   let (envC,_) = List.fold_left (process_local_entry (fun _ _ _ _ _ -> ())) (envC,()) (t.mind_entry_params) in
+  (* env for quoting arities of inductives -- just push the params *)
+   let (envA,_) = List.fold_left (process_local_entry (fun _ _ _ _ _ -> ())) (env,()) (t.mind_entry_params) in
+   let is = to_coq_list tOne_inductive_entry (List.map (quote_one_ind envA envC) (t.mind_entry_inds)) in
    let mpol = tfalse in
    let mpr = Term.mkApp (cNone, [|bool_type|]) in
    Term.mkApp (tBuild_mutual_inductive_entry, [| mr; mf; mp; is; mpol; mpr |]);

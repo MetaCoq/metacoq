@@ -197,3 +197,17 @@ Example unquote_quote_id1: demoList_syntax=mut_list_i (* demoList was obtained f
 Qed.
 
 Run TemplateProgram (printTerm "Coq.Arith.PeanoNat.Nat.add").
+
+Require Import Arith.
+
+
+Inductive lee (n : nat) : (le 0 n) -> Prop :=
+| n0 : @lee n (Peano.le_0_n n).
+
+Run TemplateProgram (printTerm "lee").
+
+Quot
+
+
+Print le.
+Locate isEven.

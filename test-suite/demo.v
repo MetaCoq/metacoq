@@ -192,7 +192,14 @@ Run TemplateProgram
     end))
     ).
 
+Print demoList.
+
+Definition demoConsType := ltac:(let T := type of demoCons in exact T).
+Run TemplateProgram (printTerm "nat"). 
+
+
 Example unquote_quote_id1: demoList_syntax=mut_list_i (* demoList was obtained from mut_list_i *).
+  unfold demoList_syntax.
   reflexivity.
 Qed.
 

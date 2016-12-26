@@ -216,8 +216,16 @@ Run TemplateProgram (printTerm "demoConsType").
 
 Example unquote_quote_id1: demoList_syntax=mut_list_i (* demoList was obtained from mut_list_i *).
   unfold demoList_syntax.
-  reflexivity.
-Qed.
+  unfold mut_list_i.
+    f_equal.
+    f_equal.
+    unfold one_list_i.
+    f_equal.
+    f_equal.
+    f_equal.
+    unfold mkImpl.
+    f_equal.
+Abort. (* extra cast *)
 
 Run TemplateProgram (printTerm "Coq.Arith.PeanoNat.Nat.add").
 

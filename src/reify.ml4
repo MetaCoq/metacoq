@@ -280,10 +280,11 @@ let castSetProp sf t =
 	(Term.mkApp (tCast, [| c' ; quote_cast_kind k ; t' |]), acc)
       | Term.Prod (n,t,b) ->
 	let (t',acc) = quote_term acc env t in
+  let sf = Retyping.get_sort_family_of (snd env) Evd.empty t in
   let env = push_rel (n, None, t) env in
-  let sf = Retyping.get_sort_family_of (snd env) Evd.empty b in
+  let sfb = Retyping.get_sort_family_of (snd env) Evd.empty b in
 	let (b',acc) = quote_term acc env b in
-	(Term.mkApp (tProd, [| quote_name n ; t' ; castSetProp sf b' |]), acc)
+	(Term.mkApp (tProd, [| quote_name n ; castSetProp sf  t' ; castSetProp sfb b' |]), acc)
       | Term.Lambda (n,t,b) ->
 	let (t',acc) = quote_term acc env t in
   let sf = Retyping.get_sort_family_of (snd env) Evd.empty t  in 

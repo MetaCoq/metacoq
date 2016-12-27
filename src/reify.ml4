@@ -844,6 +844,7 @@ let reduce_all env (evm,def) =
   let unquote_red_add_definition b env evm name def =
 	  let (evm,def) = reduce_all env (evm,def) in
   	let trm = if b then denote_term def else def in
+    Pp.msg_debug ((Printer.pr_constr trm));
 	  let result = Constrextern.extern_constr true env evm trm in
     add_definition name result
 

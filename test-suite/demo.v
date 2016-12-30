@@ -173,9 +173,11 @@ Definition duplicateDefn (name newName : ident): TemplateMonad unit :=
     end))
     .
 
-Definition id := fun x:nat => x.
 
-Run TemplateProgram (duplicateDefn "Top.id" "id4").
+
+Run TemplateProgram (duplicateDefn "add" "addUnq").
+Check (eq_refl: add=addUnq).
+
 Run TemplateProgram (printTerm "Coq.Init.Datatypes.nat").
 Run TemplateProgram (printTerm "nat"). 
 
@@ -228,20 +230,3 @@ Example unquote_quote_id1: demoList_syntax=mut_list_i (* demoList was obtained f
 Abort. (* extra cast *)
 
 Run TemplateProgram (printTerm "Coq.Arith.PeanoNat.Nat.add").
-
-Require Import Arith.
-
-
-Inductive lee (n : nat) (m:=n+n) : (le 0 n) -> Prop :=
-| n0 : @lee n (Peano.le_0_n n)
-with
-(* params cannot mention the inductive typed being defined *)
-lte (n : nat) (m:=n+n): (le 0 n) -> Prop :=
-| nt0 : @lte n (Peano.le_0_n n).
-
-Print lee.
-Run TemplateProgram (printTerm "lee").
-
-
-Print le.
-Locate isEven.

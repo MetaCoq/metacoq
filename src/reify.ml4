@@ -814,6 +814,23 @@ Vernacexpr.Check
 	  Term.mkCase (ci, denote_term ty, denote_term d,
 			Array.of_list (List.map denote_branch (from_coq_list brs)))
       | _ -> raise (Failure "ill-typed (case)")
+    else if Term.eq_constr h tFix then
+      match args with
+	    bds :: i :: _ ->
+        let unquoteFbd  b : ((Term.constr * Term.constr) * (Term.constr * Term.constr)) =
+          let (_,args) = app_full b [] in
+          match args with
+          | _(*type*)::a::b::c::d::[] -> ((a,b),(c,d))
+          |_ -> raise (Failure " (mkdef must take exactly 5 arguments)")
+          in
+        let lbd = List.map unquoteFbd (from_coq_list bds) in
+        let (p1,p2) = (List.map fst lbd, List.map snd lbd) in
+        let (names,types,bodies,rargs) = (List.map fst p1, List.map snd p1, List.map fst p2, List.map snd p2) in
+        let (types,bodies) = (List.map denote_term types, List.map denote_term bodies) in
+        let (names,rargs) = (List.map unquote_name names, List.map nat_to_int rargs) in
+        let la = Array.of_list in
+        Term.mkFix ((la rargs,nat_to_int i), (la names, la types, la bodies))
+      | _ -> raise (Failure "tFix takes exactly 2 arguments")
     else
       not_supported trm
 

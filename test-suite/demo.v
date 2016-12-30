@@ -173,9 +173,11 @@ Definition duplicateDefn (name newName : ident): TemplateMonad unit :=
     end))
     .
 
-Definition id := fun x:nat => x.
 
-Run TemplateProgram (duplicateDefn "Top.id" "id4").
+
+Run TemplateProgram (duplicateDefn "add" "addUnq").
+Check (eq_refl: add=addUnq).
+
 Run TemplateProgram (printTerm "Coq.Init.Datatypes.nat").
 Run TemplateProgram (printTerm "nat"). 
 

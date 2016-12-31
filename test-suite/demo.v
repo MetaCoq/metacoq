@@ -43,13 +43,32 @@ Fixpoint add' (a b : nat) : nat :=
     | S b => S (add' a b)
   end.
 
+Fixpoint even (a : nat) : bool :=
+  match a with
+    | 0 => true
+    | S a => odd a
+  end
+with odd (a : nat) : bool :=
+  match a with
+    | 0 => false
+    | S a => even a
+  end.
+
+
 Quote Definition add_syntax := Eval compute in add.
+
+Quote Definition eo_syntax := Eval compute in even.
 
 Quote Definition add'_syntax := Eval compute in add'.
 
 (** Reflecting definitions **)
 
 Make Definition zero_from_syntax := (Ast.tConstruct (Ast.mkInd "Coq.Init.Datatypes.nat" 0) 0).
+
+Make Definition eo_from_syntax := 
+ltac:(let t:= eval compute in eo_syntax in exact t).
+Print eo_from_syntax.
+
 
 Make Definition two_from_syntax := (Ast.tApp (Ast.tConstruct (Ast.mkInd "Coq.Init.Datatypes.nat" 0) 1)
    (Ast.tApp (Ast.tConstruct (Ast.mkInd "Coq.Init.Datatypes.nat" 0) 1)

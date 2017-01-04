@@ -249,3 +249,13 @@ Example unquote_quote_id1: demoList_syntax=mut_list_i (* demoList was obtained f
 Abort. (* extra cast *)
 
 Run TemplateProgram (printTerm "Coq.Arith.PeanoNat.Nat.add").
+
+
+
+Inductive NonRec (A:Set) (C: A -> Set): Set := 
+| SS : forall (f:A), C f -> NonRec A C.
+
+Run TemplateProgram (printTerm "NonRec").
+
+
+

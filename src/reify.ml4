@@ -564,7 +564,8 @@ let quote_mut_ind  env (mi:Declarations.mutual_inductive_body) : Term.constr =
    let mkSomeDef = mkSome cInl in
    let mkSomeInd  = mkSome cInr in
    let (dp, nm) = split_name name in
-   try 
+(*   try *)
+         Pp.msg_debug (Pp.str("finding Inductive"));
    match Nametab.locate (Libnames.make_qualid dp nm) with
    |Globnames.ConstRef c ->
       let cd = Environ.lookup_constant c env in
@@ -579,13 +580,14 @@ let quote_mut_ind  env (mi:Declarations.mutual_inductive_body) : Term.constr =
       )
     | Globnames.IndRef ni ->
         let c = Environ.lookup_mind (fst ni) env in (* FIX: For efficienctly, we should also export (snd ni)*)
+         Pp.msg_debug (Pp.str("found Inductive"));
         let miq = quote_mut_ind env c in
         mkSomeInd miq
     | Globnames.ConstructRef _ -> Term.mkApp (cNone, [|opType|]) (* FIX: return the enclusing mutual inductive *)
     | Globnames.VarRef _ -> (* what is this *)Term.mkApp (cNone, [|opType|])
-    with 
+(*    with 
     Not_found -> 
-          Term.mkApp (cNone, [|opType|])   
+          Term.mkApp (cNone, [|opType|])   *)
 
   let rec app_full trm acc =
     match Term.kind_of_term trm with

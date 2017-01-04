@@ -522,7 +522,7 @@ let quote_mut_ind  env (mi:Declarations.mutual_inductive_body) : Term.constr =
            snd (mind_params_as_types (env,x.mind_entry_arity) (t.mind_entry_params)))) 
       t.mind_entry_inds in
   (* env for quoting constructors of inductives. First push inductices, then params *)
-   let envC = List.fold_left (fun env p -> Environ.push_rel (Names.Name (fst p), None, snd p) env) env (List.rev one_arities) in
+   let envC = List.fold_left (fun env p -> Environ.push_rel (Names.Name (fst p), None, snd p) env) env (one_arities) in
    let (envC,_) = List.fold_left (process_local_entry (fun _ _ _ _ _ -> ())) (envC,()) (List.rev (t.mind_entry_params)) in
   (* env for quoting arities of inductives -- just push the params *)
    let (envA,_) = List.fold_left (process_local_entry (fun _ _ _ _ _ -> ())) (env,()) (List.rev (t.mind_entry_params)) in

@@ -505,7 +505,7 @@ let quote_mind_params env (params:(Names.Id.t * Entries.local_entry) list)
     match ob with
     | Some b ->  (pair (quote_ident n) (Term.mkApp (tLocalDef,[|(quote_term env b)|])))::lr
     | None ->  (pair (quote_ident n) (Term.mkApp (tLocalAssum,[|(quote_term env t)|])))::lr in
-    List.fold_left (process_local_entry f) (env,[]) (List.rev params)
+    let (env, params) = List.fold_left (process_local_entry f) (env,[]) (List.rev params) in (env, List.rev params)
     
 let mind_params_as_types ((env,t):Environ.env*Term.constr) (params:(Names.Id.t * Entries.local_entry) list) : 
    Environ.env*Term.constr =

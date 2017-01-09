@@ -504,7 +504,9 @@ let quote_mind_params env (params:(Names.Id.t * Entries.local_entry) list)
   let f lr ob t n env =
     match ob with
     | Some b ->  (pair (quote_ident n) (Term.mkApp (tLocalDef,[|(quote_term env b)|])))::lr
-    | None ->  (pair (quote_ident n) (Term.mkApp (tLocalAssum,[|(quote_term env t)|])))::lr in
+    | None -> 
+      let sf = Retyping.get_sort_family_of env Evd.empty t  in 
+       (pair (quote_ident n) (Term.mkApp (tLocalAssum,[|castSetProp sf (quote_term env t)|])))::lr in
     let (env, params) = List.fold_left (process_local_entry f) (env,[]) (List.rev params) in (env, List.rev params)
     
 let mind_params_as_types ((env,t):Environ.env*Term.constr) (params:(Names.Id.t * Entries.local_entry) list) : 

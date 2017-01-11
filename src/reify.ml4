@@ -317,7 +317,7 @@ let castSetProp sf t =
         let npar = int_to_nat ci.Term.ci_npar in
         let info = pair tInd tnat ind npar in
 	let (a',acc) = quote_term acc env a in
-	let (b',acc) = quote_term acc env b in
+	let (discriminant,acc) = quote_term acc env b in
 	let (branches,acc) =
           CArray.fold_left2 (fun (xs,acc) x nargs ->
             let (x,acc) = quote_term acc env x in
@@ -325,7 +325,7 @@ let castSetProp sf t =
               (t :: xs, acc))
           ([],acc) e ci.Term.ci_cstr_nargs in
         let tl = prod tnat tTerm in
-        (Term.mkApp (tCase, [| info ; a' ; b' ; to_coq_list tl (List.rev branches) |]),
+        (Term.mkApp (tCase, [| info ; a' ; discriminant ; to_coq_list tl (List.rev branches) |]),
          acc)
       | Term.Fix fp ->
 	let (t,n,acc) = quote_fixpoint acc env fp in

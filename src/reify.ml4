@@ -265,6 +265,10 @@ let castSetProp sf t =
   then Term.mkApp (tCast, [| t ; kCast ; Term.mkApp (tSort, [| sSet |]) |])
   else t
 
+let noteTypeAsCast t typ =
+  Term.mkApp (tCast, [| t ; kCast ; typ |])
+
+
   let quote_term_remember
       (add_constant : Names.kernel_name -> 'a -> 'a)
       (add_inductive : Names.inductive -> 'a -> 'a) =
@@ -312,12 +316,15 @@ let castSetProp sf t =
       | Term.Ind (i,pu) -> (* FIXME: take universe constraints into account *)
          (Term.mkApp (tInd, [| quote_inductive env i |]),
           add_inductive i acc)
-      | Term.Case (ci,a,b,e) ->
+      | Term.Case (ci,a,discriminant,e) ->
         let ind = quote_inductive env ci.Term.ci_ind in
         let npar = int_to_nat ci.Term.ci_npar in
         let info = pair tInd tnat ind npar in
+  let discriminantType = Retyping.get_type_of (snd env) Evd.empty discriminant in
 	let (a',acc) = quote_term acc env a in
-	let (discriminant,acc) = quote_term acc env b in
+	let (discriminant,acc) = quote_term acc env discriminant in
+  let (discriminantType,acc) = (quote_term acc env discriminantType) in
+  let discriminant = noteTypeAsCast discriminant discriminantType in 
 	let (branches,acc) =
           CArray.fold_left2 (fun (xs,acc) x nargs ->
             let (x,acc) = quote_term acc env x in

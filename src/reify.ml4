@@ -931,7 +931,8 @@ Vernacexpr.Check
     {
     mind_entry_record = unquote_map_option (unquote_map_option unquote_ident) mr;
     mind_entry_finite = denote_mind_entry_finite mf; (* inductive *)
-    mind_entry_params = List.map (fun p -> let (l,r) = (from_coq_pair p) in (unquote_ident l, (denote_local_entry r))) (from_coq_list mp);
+    mind_entry_params = List.map (fun p -> let (l,r) = (from_coq_pair p) in (unquote_ident l, (denote_local_entry r))) 
+      (List.rev (from_coq_list mp));
     mind_entry_inds = List.map one_ind (from_coq_list mi);
     mind_entry_polymorphic = from_bool mpol;
     mind_entry_universes = Univ.UContext.empty;

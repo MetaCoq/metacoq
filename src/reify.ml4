@@ -910,8 +910,8 @@ Vernacexpr.Check
     else
       not_supported trm
 
-  let declare_inductive (env: Environ.env) (evm: Evd.evar_map) (body: Constrexpr.constr_expr) : unit =
-	let (body,_) = Constrintern.interp_constr env evm body in
+
+  let declare_inductive (env: Environ.env) (evm: Evd.evar_map) (body: Term.constr) : unit =
   let (evm,body) = reduce_all env (evm,body) in
   let (_,args) = app_full body [] in (* check that the first component is Build_mut_ind .. *)
   let one_ind b1 : Entries.one_inductive_entry = 
@@ -941,6 +941,10 @@ Vernacexpr.Check
     mr::mf::mp::mi::mpol::mpr::[] -> 
       Command.declare_mutual_inductive_with_eliminations (mut_ind mr mf mp mi mpol mpr) [] [];()
     | _ -> raise (Failure "ill-typed mutual_inductive_entry")
+
+  let declare_interpret_inductive (env: Environ.env) (evm: Evd.evar_map) (body: Constrexpr.constr_expr) : unit =
+	let (body,_) = Constrintern.interp_constr env evm body in
+  declare_inductive env evm body
 
   let rec run_template_program_rec  ((env,evm,pgm): Environ.env * Evd.evar_map * Term.constr) : Environ.env * Evd.evar_map * Term.constr =
     let (evm,pgm) = reduce_hnf env (evm, pgm) in 
@@ -988,6 +992,10 @@ Vernacexpr.Check
       match args with
       | _(*reduction strategy*)::_(*type*)::trm::[] -> 
           let (evm,trm) = reduce_all env (evm,trm) in (env, evm, trm)
+      | _ -> raise (Failure "tmReduce must take 3 arguments. Please file a bug with Template-Coq.")
+    else if Term.eq_constr coConstr tmMkInductive then
+      match args with
+      | mind::[] -> let _ = declare_inductive env evm mind in (env, evm, unit_tt)
       | _ -> raise (Failure "tmReduce must take 3 arguments. Please file a bug with Template-Coq.")
     else raise (Failure "Invalid argument or yot yet implemented. The argument must be a TemplateProgram")
 
@@ -1110,7 +1118,7 @@ VERNAC COMMAND EXTEND Unquote_inductive CLASSIFIED AS SIDEFF
     | [ "Make" "Inductive" constr(def) ] ->
       [ check_inside_section () ;
 	let (evm,env) = Lemmas.get_current_context () in
-  TermReify.declare_inductive env evm def ]
+  TermReify.declare_interpret_inductive env evm def ]
 END;;
 
 VERNAC COMMAND EXTEND Run_program CLASSIFIED AS SIDEFF

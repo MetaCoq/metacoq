@@ -46,8 +46,10 @@ Inductive term : Set :=
 | tConst     : string -> term
 | tInd       : inductive -> term
 | tConstruct : inductive -> nat -> term
-| tCase      : (inductive * nat) (* # of parameters *) -> term (** type info **) -> term ->
-               list (nat * term) -> term
+| tCase      : (inductive * nat) (* # of parameters *) -> term (** type info **)
+               -> term (* discriminee *)->
+               list (nat * term) (* branches *)
+               -> term
 | tFix       : mfixpoint term -> nat -> term
 (*
 | CoFix     of ('constr, 'types) pcofixpoint

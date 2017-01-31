@@ -268,6 +268,16 @@ let castSetProp sf t =
 let noteTypeAsCast t typ =
   Term.mkApp (tCast, [| t ; kCast ; typ |])
 
+(* given a term of shape \x1 x2 ..., T, it puts a cast around T if T is a Set or a Prop,
+lambdas like this arise in the case-return type in matches, i.e. the part between return and with in
+match _  as _ in  _ return __ with *)
+let rec putReturnTypeInfo (env : Environ.env) (t: Term.constr) : Term.constr =
+  match Term.kind_of_term t with
+      | Term.Lambda (n,t,b) ->
+          Term.mkLambda (n,t,putReturnTypeInfo (Environ.push_rel (n, None, t) env) b)
+      | _ ->
+          let sf = Retyping.get_sort_of env Evd.empty t  in 
+          Term.mkCast (t,Term.DEFAULTcast,Term.mkSort sf)
 
   let quote_term_remember
       (add_constant : Names.kernel_name -> 'a -> 'a)
@@ -321,6 +331,7 @@ let noteTypeAsCast t typ =
         let npar = int_to_nat ci.Term.ci_npar in
         let info = pair tInd tnat ind npar in
   let discriminantType = Retyping.get_type_of (snd env) Evd.empty discriminant in
+  let typeInfo = putReturnTypeInfo (snd env) typeInfo in
 	let (qtypeInfo,acc) = quote_term acc env typeInfo in
 	let (discriminant,acc) = quote_term acc env discriminant in
   let (discriminantType,acc) = (quote_term acc env discriminantType) in

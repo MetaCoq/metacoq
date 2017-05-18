@@ -2,6 +2,19 @@
 (*i camlp4use: "pa_extend.cmp" i*)
 
 let contrib_name = "template-coq"
+open Feedback
+
+
+let toDecl (old: Names.name * ((Constr.constr) option) * Constr.constr) : Context.Rel.Declaration.t =
+  let (name,value,typ) = old in 
+  match value with
+  | Some value -> Context.Rel.Declaration.LocalDef (name,value,typ)
+  | None -> Context.Rel.Declaration.LocalAssum (name,typ)
+
+let fromDecl (n: Context.Rel.Declaration.t) :  Names.name * ((Constr.constr) option) * Constr.constr =
+  match n with 
+  | Context.Rel.Declaration.LocalDef (name,value,typ) -> (name,Some value,typ)
+  | Context.Rel.Declaration.LocalAssum (name,typ) -> (name,None,typ)
 
 let cast_prop = ref (false)
 let _ = Goptions.declare_bool_option {
@@ -250,7 +263,7 @@ struct
       | Term.LetIn _
       | Term.Cast _
       | Term.App _ when continue ->
-	 hnf_type false (Reduction.whd_betadeltaiota env ty)
+	 hnf_type false (Reduction.whd_all env ty)
       | _ -> ty
     in
     hnf_type true ty
@@ -274,7 +287,7 @@ match _  as _ in  _ return __ with *)
 let rec putReturnTypeInfo (env : Environ.env) (t: Term.constr) : Term.constr =
   match Term.kind_of_term t with
       | Term.Lambda (n,t,b) ->
-          Term.mkLambda (n,t,putReturnTypeInfo (Environ.push_rel (n, None, t) env) b)
+          Term.mkLambda (n,t,putReturnTypeInfo (Environ.push_rel (toDecl (n, None, t)) env) b)
       | _ ->
           let sf = Retyping.get_sort_of env Evd.empty t  in 
           Term.mkCast (t,Term.DEFAULTcast,Term.mkSort sf)
@@ -295,19 +308,19 @@ let rec putReturnTypeInfo (env : Environ.env) (t: Term.constr) : Term.constr =
       | Term.Prod (n,t,b) ->
 	let (t',acc) = quote_term acc env t in
   let sf = Retyping.get_sort_family_of (snd env) Evd.empty t in
-  let env = push_rel (n, None, t) env in
+  let env = push_rel (toDecl (n, None, t)) env in
   let sfb = Retyping.get_sort_family_of (snd env) Evd.empty b in
 	let (b',acc) = quote_term acc env b in
 	(Term.mkApp (tProd, [| quote_name n ; castSetProp sf  t' ; castSetProp sfb b' |]), acc)
       | Term.Lambda (n,t,b) ->
 	let (t',acc) = quote_term acc env t in
   let sf = Retyping.get_sort_family_of (snd env) Evd.empty t  in 
-	let (b',acc) = quote_term acc (push_rel (n, None, t) env) b in
+	let (b',acc) = quote_term acc (push_rel (toDecl (n, None, t)) env) b in
        (Term.mkApp (tLambda, [| quote_name n ; castSetProp sf t' ; b' |]), acc)
       | Term.LetIn (n,e,t,b) ->
 	let (e',acc) = quote_term acc env e in
 	let (t',acc) = quote_term acc env t in
-	let (b',acc) = quote_term acc (push_rel (n, Some e, t) env) b in
+	let (b',acc) = quote_term acc (push_rel (toDecl (n, Some e, t)) env) b in
 	(Term.mkApp (tLetIn, [| quote_name n ; e'; t' ; b' |]), acc)
       | Term.App (f,xs) ->
 	let (f',acc) = quote_term acc env f in
@@ -369,7 +382,7 @@ let rec putReturnTypeInfo (env : Environ.env) (t: Term.constr) : Term.constr =
 	  []
       in
       let ctxt = CArray.map2_i (fun i na t -> (na, None, Vars.lift i t)) ns ts in
-      let envfix = push_rel_context (Array.to_list ctxt) env in
+      let envfix = push_rel_context (List.map toDecl (Array.to_list ctxt)) env in
       let mk_fun (xs,acc) i =
 	let n = int_to_nat (Array.get a i) in
 	let nm = quote_name (Array.get ns i) in
@@ -387,7 +400,7 @@ let rec putReturnTypeInfo (env : Environ.env) (t: Term.constr) : Term.constr =
            let ty = Inductive.type_of_inductive (snd env) ((mib,oib),inst) in
            (Names.Name oib.mind_typename, None, ty)) mib.mind_packets)
       in
-      let envind = push_rel_context indtys env in
+      let envind = push_rel_context (List.map toDecl indtys) env in
       let (ls,acc) =
 	List.fold_left (fun (ls,acc) (n,oib) ->
 	  let named_ctors =
@@ -510,10 +523,10 @@ let process_local_entry
   ((n,le):(Names.Id.t * Entries.local_entry))
   :  (Environ.env * 'a) =
   match le with
-  | Entries.LocalAssum t -> (Environ.push_rel (Names.Name n,None,t) env, f a None t n env)
-  | Entries.LocalDef b -> 
+  | Entries.LocalAssumEntry t -> (Environ.push_rel (toDecl (Names.Name n,None,t)) env, f a None t n env)
+  | Entries.LocalDefEntry b -> 
       let typ = Retyping.get_type_of env Evd.empty b in
-      (Environ.push_rel (Names.Name n, Some b, typ) env, f a (Some b) typ n env)
+      (Environ.push_rel (toDecl (Names.Name n, Some b, typ)) env, f a (Some b) typ n env)
 
 
 let quote_mind_params env (params:(Names.Id.t * Entries.local_entry) list)
@@ -529,7 +542,7 @@ let quote_mind_params env (params:(Names.Id.t * Entries.local_entry) list)
     
 let mind_params_as_types ((env,t):Environ.env*Term.constr) (params:(Names.Id.t * Entries.local_entry) list) : 
    Environ.env*Term.constr =
-    List.fold_left (process_local_entry (fun tr ob typ n env -> Term.mkProd_or_LetIn (Names.Name n,ob,typ) tr)) (env,t) 
+    List.fold_left (process_local_entry (fun tr ob typ n env -> Term.mkProd_or_LetIn (toDecl (Names.Name n,ob,typ)) tr)) (env,t) 
       (List.rev params)
 
 let quote_mind_finiteness (f: Decl_kinds.recursivity_kind) =
@@ -553,7 +566,7 @@ let quote_mut_ind  env (mi:Declarations.mutual_inductive_body) : Term.constr =
            snd (mind_params_as_types (env,x.mind_entry_arity) (t.mind_entry_params)))) 
       t.mind_entry_inds in
   (* env for quoting constructors of inductives. First push inductices, then params *)
-   let envC = List.fold_left (fun env p -> Environ.push_rel (Names.Name (fst p), None, snd p) env) env (one_arities) in
+   let envC = List.fold_left (fun env p -> Environ.push_rel (toDecl (Names.Name (fst p), None, snd p)) env) env (one_arities) in
    let (envC,_) = List.fold_left (process_local_entry (fun _ _ _ _ _ -> ())) (envC,()) (List.rev (t.mind_entry_params)) in
   (* env for quoting arities of inductives -- just push the params *)
    let (envA,_) = List.fold_left (process_local_entry (fun _ _ _ _ _ -> ())) (env,()) (List.rev (t.mind_entry_params)) in
@@ -586,7 +599,7 @@ let quote_mut_ind  env (mi:Declarations.mutual_inductive_body) : Term.constr =
    let mkSomeInd  = mkSome cInr in
    let (dp, nm) = split_name name in
 (*   try *)
-         Pp.msg_debug (Pp.str("finding Inductive"));
+         Feedback.msg_debug (Pp.str("finding Inductive"));
    match Nametab.locate (Libnames.make_qualid dp nm) with
    |Globnames.ConstRef c ->
       let cd = Environ.lookup_constant c env in
@@ -601,7 +614,7 @@ let quote_mut_ind  env (mi:Declarations.mutual_inductive_body) : Term.constr =
       )
     | Globnames.IndRef ni ->
         let c = Environ.lookup_mind (fst ni) env in (* FIX: For efficienctly, we should also export (snd ni)*)
-         Pp.msg_debug (Pp.str("found Inductive"));
+         Feedback.msg_debug (Pp.str("found Inductive"));
         let miq = quote_mut_ind env c in
         mkSomeInd miq
     | Globnames.ConstructRef _ -> Term.mkApp (cNone, [|opType|]) (* FIX: return the enclusing mutual inductive *)
@@ -644,11 +657,18 @@ let quote_mut_ind  env (mi:Declarations.mutual_inductive_body) : Term.constr =
       | _ -> assert false
     else
       not_supported trm
-
+(*
 let reduce_all env (evm,def) =
   	let (evm2,red) = Tacinterp.interp_redexp env evm (Genredexpr.Cbv Redops.all_flags) in
 	  let red = fst (Redexpr.reduction_of_red_expr env red) in
 	  red env evm2 def
+*)
+
+  let reduce_hnf env (evm,def) =
+    (evm,Tacred.hnf_constr env evm def) 
+
+  let reduce_all env (evm,def)  =
+    (evm,Redexpr.cbv_vm env evm def) 
 
   let unquote_string trm =
     let rec go n trm =
@@ -736,10 +756,7 @@ let reduce_all env (evm,def) =
     else
       not_supported trm
 
-  let reduce_all env (evm,def) =
-  	let (evm2,red) = Tacinterp.interp_redexp env evm (Genredexpr.Cbv Redops.all_flags) in
-	  let red = fst (Redexpr.reduction_of_red_expr env red) in
-	  red env evm2 def
+
 
   let from_coq_pair trm =
     let (h,args) = app_full trm [] in
@@ -875,18 +892,12 @@ Vernacexpr.Check
 	    (Decl_kinds.Global, false, Decl_kinds.Definition)
 	    [] None result None (Lemmas.mk_hook (fun _ _ -> ()))
 
-  let reduce_hnf env (evm,def) =
-  	let (evm2,red) = Tacinterp.interp_redexp env evm Genredexpr.Hnf in
-	  let red = fst (Redexpr.reduction_of_red_expr env red) in
-	  red env evm2 def
 
-  let reduce_all env (evm,def)  =
-    (evm,Redexpr.cbv_vm env evm def) 
 
   let unquote_red_add_definition b env evm name def =
 	  let (evm,def) = reduce_all env (evm,def) in
   	let trm = if b then denote_term def else def in
-    if b then Pp.msg_debug ((Printer.pr_constr trm)) else ();
+    if b then Feedback.msg_debug ((Printer.pr_constr trm)) else ();
     Declare.declare_definition 
 	  ~kind:Decl_kinds.Definition name
 	  (trm, (* No new universe constraints can be generated by typing the AST *)
@@ -896,8 +907,8 @@ Vernacexpr.Check
     let (h,args) = app_full trm [] in
       match args with
 	    x :: [] -> 
-      if Term.eq_constr h tLocalDef then Entries.LocalDef (denote_term x) 
-      else (if  Term.eq_constr h tLocalAssum then Entries.LocalAssum (denote_term x) else bad_term trm)
+      if Term.eq_constr h tLocalDef then Entries.LocalDefEntry (denote_term x) 
+      else (if  Term.eq_constr h tLocalAssum then Entries.LocalAssumEntry (denote_term x) else bad_term trm)
       | _ -> bad_term trm
 
   let denote_mind_entry_finite trm =
@@ -1001,7 +1012,7 @@ Vernacexpr.Check
       | _ -> raise (Failure "tmQuoteTermRec must take 1 argument. Please file a bug with Template-Coq.")
     else if Term.eq_constr coConstr tmPrint then
       match args with
-      | _::trm::[] -> let _ = Pp.msg_debug ((Printer.pr_constr trm)) in (env, evm, unit_tt)
+      | _::trm::[] -> let _ = Feedback.msg_debug ((Printer.pr_constr trm)) in (env, evm, unit_tt)
       | _ -> raise (Failure "tmPrint must take 2 arguments. Please file a bug with Template-Coq.")
     else if Term.eq_constr coConstr tmReduce then
       match args with
@@ -1033,30 +1044,52 @@ let ltac_lcall tac args =
 let ltac_letin (x, e1) e2 =
   Tacexpr.TacLetIn(false,[(Loc.ghost,Names.id_of_string x),e1],e2)
 
-let ltac_apply (f:Tacexpr.glob_tactic_expr) (args:Tacexpr.glob_tactic_arg list) =
-  Tacinterp.eval_tactic
-    (ltac_letin ("F", Tacexpr.Tacexp f) (ltac_lcall "F" args))
+open Names
+open Tacexpr
+open Tacinterp
+open Misctypes
 
-let to_ltac_val c = Tacexpr.TacDynamic(Loc.ghost,Pretyping.constr_in c)
+let ltac_apply (f : Value.t) (args: Tacinterp.Value.t list) =
+  let fold arg (i, vars, lfun) =
+    let id = Id.of_string ("x" ^ string_of_int i) in
+    let x = Reference (ArgVar (Loc.ghost, id)) in
+    (succ i, x :: vars, Id.Map.add id arg lfun)
+  in
+  let (_, args, lfun) = List.fold_right fold args (0, [], Id.Map.empty) in
+  let lfun = Id.Map.add (Id.of_string "F") f lfun in
+  let ist = { (Tacinterp.default_ist ()) with Tacinterp.lfun = lfun; } in
+  Tacinterp.eval_tactic_ist ist (ltac_lcall "F" args)
 
+let to_ltac_val c = Tacinterp.Value.of_constr c
 (** From Containers **)
 
 let check_inside_section () =
   if Lib.sections_are_opened () then
     (** In trunk this seems to be moved to Errors **)
-    Errors.errorlabstrm "Quote" (Pp.str "You can not quote within a section.")
+    (* For Coq 8.7: CErrors.user_err ~hdr:"Quote" (Pp.str "You can not quote within a section.") *)
+    CErrors.errorlabstrm "Quote" (Pp.str "You can not quote within a section.")
   else ()
 
+open Constrarg
+open Proofview.Notations
 
+(** From Containers **)
+let declare_definition
+    id (loc, boxed_flag, def_obj_kind)
+    (binder_list : Constrexpr.local_binder list) red_expr_opt constr_expr
+    constr_expr_opt decl_hook =
+  Command.do_definition
+  id (loc, false, def_obj_kind) None binder_list red_expr_opt constr_expr
+  constr_expr_opt decl_hook
 
 TACTIC EXTEND get_goal
     | [ "quote_term" constr(c) tactic(tac) ] ->
       [ (** quote the given term, pass the result to t **)
-  Proofview.Goal.nf_enter begin fun gl ->
+  Proofview.Goal.nf_enter { enter = begin fun gl ->
           let env = Proofview.Goal.env gl in
 	  let c = TermReify.quote_term env c in
 	  ltac_apply tac (List.map to_ltac_val [c])
-  end ]
+  end } ]
 (*
     | [ "quote_goal" ] ->
       [ (** get the representation of the goal **)
@@ -1068,27 +1101,29 @@ END;;
 
 TACTIC EXTEND denote_term
     | [ "denote_term" constr(c) tactic(tac) ] ->
-      [ Proofview.Goal.nf_enter begin fun gl ->
+      [ Proofview.Goal.nf_enter { enter = begin fun gl ->
          let (evm,env) = Lemmas.get_current_context() in
          let c = TermReify.denote_term c in
          let def' = Constrextern.extern_constr true env evm c in
          let def = Constrintern.interp_constr env evm def' in
 	 ltac_apply tac (List.map to_ltac_val [fst def])
-      end ]
+      end } ]
 END;;
 
+
 VERNAC COMMAND EXTEND Make_vernac CLASSIFIED AS SIDEFF
-    | [ "Quote" "Definition" ident(name) ":=" lconstr(def) ] ->
+    | [ "Quote" "Definition" ident(name) ":=" constr(def) ] ->
       [ check_inside_section () ;
 	let (evm,env) = Lemmas.get_current_context () in
 	let def = Constrintern.interp_constr env evm def in
 	let trm = TermReify.quote_term env (fst def) in
 	let result = Constrextern.extern_constr true env evm trm in
-	TermReify.declare_definition name
+	declare_definition name
 	  (Decl_kinds.Global, false, Decl_kinds.Definition)
 	  [] None result None (Lemmas.mk_hook (fun _ _ -> ())) ]
 END;;
 
+(*
 VERNAC COMMAND EXTEND Make_vernac_reduce CLASSIFIED AS SIDEFF
     | [ "Quote" "Definition" ident(name) ":=" "Eval" red_expr(rd) "in" constr(def) ] ->
       [ check_inside_section () ;
@@ -1103,7 +1138,7 @@ VERNAC COMMAND EXTEND Make_vernac_reduce CLASSIFIED AS SIDEFF
 	  (Decl_kinds.Global, false, Decl_kinds.Definition)
 	  [] None result None (Lemmas.mk_hook (fun _ _ -> ())) ]
 END;;
-
+*)
 
 VERNAC COMMAND EXTEND Make_recursive CLASSIFIED AS SIDEFF
     | [ "Quote" "Recursively" "Definition" ident(name) ":=" constr(def) ] ->
@@ -1112,7 +1147,7 @@ VERNAC COMMAND EXTEND Make_recursive CLASSIFIED AS SIDEFF
 	let def = Constrintern.interp_constr env evm def in
 	let trm = TermReify.quote_term_rec env (fst def) in
 	let result = Constrextern.extern_constr true env evm trm in
-	TermReify.declare_definition name
+	declare_definition name
 	  (Decl_kinds.Global, false, Decl_kinds.Definition)
 	  [] None result None (Lemmas.mk_hook (fun _ _ -> ())) ]
 END;;
@@ -1124,7 +1159,7 @@ VERNAC COMMAND EXTEND Unquote_vernac CLASSIFIED AS SIDEFF
 	let def = Constrintern.interp_constr env evm def in
 	let trm = TermReify.denote_term (fst def) in
 	let result = Constrextern.extern_constr true env evm trm in
-	TermReify.declare_definition name
+	declare_definition name
 	  (Decl_kinds.Global, false, Decl_kinds.Definition)
 	  [] None result None (Lemmas.mk_hook (fun _ _ -> ())) ]
 END;;
@@ -1160,6 +1195,6 @@ VERNAC COMMAND EXTEND Make_tests CLASSIFIED AS QUERY
 	Format.eprintf "%a\n" pp_constr back ;
 	assert (Term.eq_constr c back) ;
 *)
-	Pp.msgnl (Printer.pr_constr result) ;
+	Feedback.msg_debug (Printer.pr_constr result) ;
 	() ]
 END;;

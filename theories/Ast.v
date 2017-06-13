@@ -106,7 +106,7 @@ Inductive reductionStrategy : Set :=
 (** A monad for programming with template-coq operations.
 Using this monad, it should be possible to write many plugins (e.g. paramcoq)
 in Gallina *)
-Inductive TemplateMonad : Type -> Type :=
+Inductive TemplateMonad : Type -> Prop :=
 | tmReturn : forall {A:Type}, A -> TemplateMonad A
 | tmBind : forall {A B : Type}, 
     (TemplateMonad A) 

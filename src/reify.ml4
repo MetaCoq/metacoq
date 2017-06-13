@@ -1,11 +1,13 @@
 (*i camlp4deps: "parsing/grammar.cma" i*)
 (*i camlp4use: "pa_extend.cmp" i*)
 
+open Ltac_plugin
+
 let contrib_name = "template-coq"
 
 let cast_prop = ref (false)
 let _ = Goptions.declare_bool_option {
-  Goptions.optsync = true; Goptions.optdepr = false;
+  Goptions.optdepr = false;
   Goptions.optname = "Casting of propositions in template-coq";
   Goptions.optkey = ["Template";"Cast";"Propositions"];
   Goptions.optread = (fun () -> !cast_prop);
@@ -61,8 +63,12 @@ struct
   let bad_term trm =
     raise (NotSupported trm)
 
+    
+  let gen_constant_in_modules locstr dirs s =
+    Universes.constr_of_global (Coqlib.gen_reference_in_modules locstr dirs s)
+                                    
   let resolve_symbol (path : string list) (tm : string) : Term.constr =
-    Coqlib.gen_constant_in_modules contrib_name [path] tm
+    gen_constant_in_modules contrib_name [path] tm
 
   let pkg_bignums = ["Coq";"Numbers";"BinNums"]
   let pkg_datatypes = ["Coq";"Init";"Datatypes"]
@@ -322,12 +328,12 @@ struct
       in
       let in_prop, env' = env in
       if is_cast_prop () && not in_prop then
-        let ty = Retyping.get_type_of env' Evd.empty trm in
+        let ty = Retyping.get_type_of env' Evd.empty (EConstr.of_constr trm) in
         let sf = Retyping.get_sort_family_of env' Evd.empty ty in
         if sf == Term.InProp then
           aux acc (true, env')
               (Term.mkCast (trm, Term.DEFAULTcast,
-                            Term.mkCast (ty, Term.DEFAULTcast, Term.mkProp)))
+                            Term.mkCast (EConstr.to_constr Evd.empty ty, Term.DEFAULTcast, Term.mkProp))) 
         else aux acc env trm
       else aux acc env trm
     and quote_fixpoint acc env t =
@@ -585,11 +591,17 @@ struct
     else
       not_supported trm
 
-  let reduce_all env (evm,def) rd =
-    let (evm2,red) = Tacinterp.interp_redexp env evm rd in
-    let red = fst (Redexpr.reduction_of_red_expr env red) in
-    let Sigma.Sigma (c, evm, _) = red.Reductionops.e_redfun env (Sigma.Unsafe.of_evar_map evm2) def in
-    Sigma.to_evar_map evm, c
+    
+  let reduce_all env (evm,def) =
+  	let (evm2,red) = Tacinterp.interp_redexp env evm (Genredexpr.Cbv Redops.all_flags) in
+	  let red = fst (Redexpr.reduction_of_red_expr env red) in
+	  red env evm2 def
+
+  (* let reduce_all env (evm,def) rd = *)
+  (*   let (evm2,red) = Ltac_plugin.Tacinterp.interp_redexp env evm rd in *)
+  (*   let red = fst (Redexpr.reduction_of_red_expr env red) in *)
+  (*   let Sigma.Sigma (c, evm, _) = red.Reductionops.e_redfun env (Sigma.Unsafe.of_evar_map evm2) def in *)
+  (*   Sigma.to_evar_map evm, c *)
 
   let from_coq_pair trm =
     let (h,args) = app_full trm [] in
@@ -711,8 +723,8 @@ struct
   let declare_inductive (env: Environ.env) (evm: Evd.evar_map) (body: Constrexpr.constr_expr) : unit =
   let open Entries in
     let (body,_) = Constrintern.interp_constr env evm body in
-  let (evm,body) = reduce_all env (evm,body)  (Genredexpr.Cbv Redops.all_flags) in
-  let (_,args) = app_full body [] in (* check that the first component is Build_mut_ind .. *)
+  let (evm,body) = reduce_all env (evm, EConstr.of_constr body)  (* (Genredexpr.Cbv Redops.all_flags) *) in
+  let (_,args) = app_full (EConstr.to_constr evm body) [] in (* check that the first component is Build_mut_ind .. *) 
   let one_ind b1 : Entries.one_inductive_entry = 
     let (_,args) = app_full b1 [] in (* check that the first component is Build_one_ind .. *)
     match args with
@@ -746,26 +758,32 @@ end
 DECLARE PLUGIN "template_plugin"
 
 (** Stolen from CoqPluginUtils **)
-(** Calling Ltac **)
+(** Calling Ltac **) 
 let ltac_call tac (args:Tacexpr.glob_tactic_arg list) =
-  Tacexpr.TacArg(Loc.ghost,Tacexpr.TacCall(Loc.ghost, Misctypes.ArgArg(Loc.ghost, Lazy.force tac),args))
+  Tacexpr.TacArg(Loc.tag @@ Tacexpr.TacCall (Loc.tag (Misctypes.ArgArg(Loc.tag @@ Lazy.force tac),args)))
+
+(* let ltac_call tac (args:Tacexpr.glob_tactic_arg list) = *)
+(*   Tacexpr.TacArg(Loc.ghost,Tacexpr.TacCall(Loc.ghost, Misctypes.ArgArg(Loc.ghost, Lazy.force tac),args)) *)
 
 (* Calling a locally bound tactic *)
+(* let ltac_lcall tac args = *)
+(*   Tacexpr.TacArg(Loc.ghost,Tacexpr.TacCall(Loc.ghost, Misctypes.ArgVar(Loc.ghost, Names.id_of_string tac),args)) *)
 let ltac_lcall tac args =
-  Tacexpr.TacArg(Loc.ghost,Tacexpr.TacCall(Loc.ghost, Misctypes.ArgVar(Loc.ghost, Names.id_of_string tac),args))
-
-let ltac_letin (x, e1) e2 =
-  Tacexpr.TacLetIn(false,[(Loc.ghost,Names.id_of_string x),e1],e2)
+  Tacexpr.TacArg(Loc.tag @@ Tacexpr.TacCall (Loc.tag (Misctypes.ArgVar(Loc.tag @@ Names.Id.of_string tac),args)))
+  
+(* let ltac_letin (x, e1) e2 = *)
+(*   Tacexpr.TacLetIn(false,[(Loc.ghost,Names.id_of_string x),e1],e2) *)
 
 open Names
 open Tacexpr
 open Tacinterp
 open Misctypes
 
+   
 let ltac_apply (f : Value.t) (args: Tacinterp.Value.t list) =
   let fold arg (i, vars, lfun) =
     let id = Id.of_string ("x" ^ string_of_int i) in
-    let x = Reference (ArgVar (Loc.ghost, id)) in
+    let x = Reference (ArgVar (Loc.tag id)) in
     (succ i, x :: vars, Id.Map.add id arg lfun)
   in
   let (_, args, lfun) = List.fold_right fold args (0, [], Id.Map.empty) in
@@ -782,7 +800,7 @@ let to_ltac_val c = Tacinterp.Value.of_constr c
 (** From Containers **)
 let declare_definition
     (id : Names.Id.t) (loc, boxed_flag, def_obj_kind)
-    (binder_list : Constrexpr.local_binder list) red_expr_opt constr_expr
+    (binder_list) red_expr_opt constr_expr
     constr_expr_opt decl_hook =
   Command.do_definition
   id (loc, false, def_obj_kind) None binder_list red_expr_opt constr_expr
@@ -795,18 +813,19 @@ let check_inside_section () =
     CErrors.errorlabstrm "Quote" (Pp.str "You can not quote within a section.")
   else ()
 
-open Constrarg
+open Stdarg
+open Tacarg
 open Proofview.Notations
 open Pp
 
 TACTIC EXTEND get_goal
     | [ "quote_term" constr(c) tactic(tac) ] ->
       [ (** quote the given term, pass the result to t **)
-  Proofview.Goal.nf_enter { enter = begin fun gl ->
+  Proofview.Goal.nf_enter begin fun gl ->
           let env = Proofview.Goal.env gl in
-	  let c = TermReify.quote_term env c in
-	  ltac_apply tac (List.map to_ltac_val [c])
-  end } ]
+	  let c = TermReify.quote_term env (EConstr.to_constr (Proofview.Goal.sigma gl) c) in
+	  ltac_apply tac (List.map to_ltac_val [EConstr.of_constr c])
+  end ]
 (*
     | [ "quote_goal" ] ->
       [ (** get the representation of the goal **)
@@ -818,13 +837,13 @@ END;;
 
 TACTIC EXTEND denote_term
     | [ "denote_term" constr(c) tactic(tac) ] ->
-      [ Proofview.Goal.nf_enter { enter = begin fun gl ->
+      [ Proofview.Goal.nf_enter begin fun gl ->
          let (evm,env) = Lemmas.get_current_context() in
-         let c = TermReify.denote_term c in
+         let c = TermReify.denote_term (EConstr.to_constr (Proofview.Goal.sigma gl) c) in
          let def' = Constrextern.extern_constr true env evm c in
          let def = Constrintern.interp_constr env evm def' in
-	 ltac_apply tac (List.map to_ltac_val [fst def])
-      end } ]
+	 ltac_apply tac (List.map to_ltac_val [EConstr.of_constr (fst def)])
+      end ]
 END;;
 
 VERNAC COMMAND EXTEND Make_vernac CLASSIFIED AS SIDEFF
@@ -843,8 +862,8 @@ VERNAC COMMAND EXTEND Make_vernac_reduce CLASSIFIED AS SIDEFF
 	let (evm,env) = Lemmas.get_current_context () in
 	let def, uctx = Constrintern.interp_constr env evm def in
         let evm = Evd.from_ctx uctx in
-	let (evm2,def) = TermReify.reduce_all env (evm, def) rd in
-	let trm = TermReify.quote_term env def in
+	let (evm2,def) = TermReify.reduce_all env (evm, EConstr.of_constr def) in
+	let trm = TermReify.quote_term env (EConstr.to_constr evm2 def) in (* TODO: Check that this is evm2 *)
 	ignore(Declare.declare_definition ~kind:Decl_kinds.Definition
                                           name (trm, Univ.ContextSet.empty)) ]
 END;;

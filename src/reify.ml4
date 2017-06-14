@@ -984,9 +984,8 @@ Vernacexpr.Check
       not_supported_verb trm "unqote_map_option"
 
 
-  let declare_inductive (env: Environ.env) (evm: Evd.evar_map) (body: Constrexpr.constr_expr) : unit =
+  let declare_inductive (env: Environ.env) (evm: Evd.evar_map) (body: Term.constr) : unit =
   let open Entries in
-    let (body,_) = Constrintern.interp_constr env evm body in
   let (evm,body) = reduce_all env (evm, body)  (* (Genredexpr.Cbv Redops.all_flags) *) in
   let (_,args) = app_full body [] in (* check that the first component is Build_mut_ind .. *) 
   let one_ind b1 : Entries.one_inductive_entry = 

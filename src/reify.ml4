@@ -303,7 +303,8 @@ struct
   let push_rel decl (in_prop, env) = (in_prop, Environ.push_rel decl env)
   let push_rel_context ctx (in_prop, env) = (in_prop, Environ.push_rel_context ctx env)
 
-let castSetProp sf t =
+let castSetProp (sf:Term.sorts) t =
+  let sf = Term.family_of_sort sf in
   if sf == Term.InProp 
   then Term.mkApp (tCast, [| t ; kCast ; Term.mkApp (tSort, [| sProp |]) |])
   else if sf == Term.InSet 
@@ -313,6 +314,12 @@ let castSetProp sf t =
 let noteTypeAsCast t typ =
   Term.mkApp (tCast, [| t ; kCast ; typ |])
 
+let getSort env (t:Term.constr) =
+  Retyping.get_sort_of env Evd.empty (EConstr.of_constr t)
+
+let getType env (t:Term.constr) : Term.constr =
+  EConstr.to_constr Evd.empty (Retyping.get_type_of env Evd.empty (EConstr.of_constr t))
+
 (* given a term of shape \x1 x2 ..., T, it puts a cast around T if T is a Set or a Prop,
 lambdas like this arise in the case-return type in matches, i.e. the part between return and with in
 match _  as _ in  _ return __ with *)
@@ -321,7 +328,7 @@ let rec putReturnTypeInfo (env : Environ.env) (t: Term.constr) : Term.constr =
       | Term.Lambda (n,t,b) ->
           Term.mkLambda (n,t,putReturnTypeInfo (Environ.push_rel (toDecl (n, None, t)) env) b)
       | _ ->
-          let sf = Retyping.get_sort_of env Evd.empty t  in 
+          let sf =  (getSort env t)  in 
           Term.mkCast (t,Term.DEFAULTcast,Term.mkSort sf)
 
   let quote_term_remember
@@ -339,14 +346,14 @@ let rec putReturnTypeInfo (env : Environ.env) (t: Term.constr) : Term.constr =
 	(Term.mkApp (tCast, [| c' ; quote_cast_kind k ; t' |]), acc)
       | Term.Prod (n,t,b) ->
 	let (t',acc) = quote_term acc env t in
-  let sf = Retyping.get_sort_family_of (snd env) Evd.empty t in
+  let sf = getSort (snd env)  t in
   let env = push_rel (toDecl (n, None, t)) env in
-  let sfb = Retyping.get_sort_family_of (snd env) Evd.empty b in
+  let sfb = getSort (snd env) b in
 	let (b',acc) = quote_term acc env b in
 	(Term.mkApp (tProd, [| quote_name n ; castSetProp sf  t' ; castSetProp sfb b' |]), acc)
       | Term.Lambda (n,t,b) ->
 	let (t',acc) = quote_term acc env t in
-  let sf = Retyping.get_sort_family_of (snd env) Evd.empty t  in 
+  let sf = getSort (snd env) t  in 
 	let (b',acc) = quote_term acc (push_rel (toDecl (n, None, t)) env) b in
        (Term.mkApp (tLambda, [| quote_name n ; castSetProp sf t' ; b' |]), acc)
       | Term.LetIn (n,e,t,b) ->
@@ -375,7 +382,7 @@ let rec putReturnTypeInfo (env : Environ.env) (t: Term.constr) : Term.constr =
         let ind = quote_inductive env ci.Term.ci_ind in
         let npar = int_to_nat ci.Term.ci_npar in
         let info = pair tInd tnat ind npar in
-  let discriminantType = Retyping.get_type_of (snd env) Evd.empty discriminant in
+  let discriminantType = getType (snd env) discriminant in
   let typeInfo = putReturnTypeInfo (snd env) typeInfo in
 	let (qtypeInfo,acc) = quote_term acc env typeInfo in
 	let (discriminant,acc) = quote_term acc env discriminant in
@@ -432,7 +439,7 @@ let rec putReturnTypeInfo (env : Environ.env) (t: Term.constr) : Term.constr =
            let ty = Inductive.type_of_inductive (snd env) ((mib,oib),inst) in
            (Context.Rel.Declaration.LocalAssum (Names.Name oib.mind_typename, ty))) mib.mind_packets)
       in
-      let envind = push_rel_context (List.map toDecl indtys) env in
+      let envind = push_rel_context indtys env in
       let (ls,acc) =
 	List.fold_left (fun (ls,acc) (n,oib) ->
 	  let named_ctors =
@@ -557,7 +564,7 @@ let process_local_entry
   match le with
   | Entries.LocalAssumEntry t -> (Environ.push_rel (toDecl (Names.Name n,None,t)) env, f a None t n env)
   | Entries.LocalDefEntry b -> 
-      let typ = Retyping.get_type_of env Evd.empty b in
+      let typ = getType env b in
       (Environ.push_rel (toDecl (Names.Name n, Some b, typ)) env, f a (Some b) typ n env)
 
 
@@ -568,7 +575,7 @@ let quote_mind_params env (params:(Names.Id.t * Entries.local_entry) list)
     match ob with
     | Some b ->  (pair (quote_ident n) (Term.mkApp (tLocalDef,[|(quote_term env b)|])))::lr
     | None -> 
-      let sf = Retyping.get_sort_family_of env Evd.empty t  in 
+      let sf = getSort env t  in 
        (pair (quote_ident n) (Term.mkApp (tLocalAssum,[|castSetProp sf (quote_term env t)|])))::lr in
     let (env, params) = List.fold_left (process_local_entry f) (env,[]) (List.rev params) in (env, List.rev params)
     
@@ -655,7 +662,7 @@ let quote_mut_ind  env (mi:Declarations.mutual_inductive_body) : Term.constr =
     Not_found -> 
           Term.mkApp (cNone, [|opType|])   *)
 
-  let rec app_full trm acc =
+  let rec app_full (trm:Term.constr) acc =
     match Term.kind_of_term trm with
       Term.App (f, xs) -> app_full f (Array.to_list xs @ acc)
     | _ -> (trm, acc)
@@ -696,11 +703,11 @@ let reduce_all env (evm,def) =
 	  red env evm2 def
 *)
 
-  let reduce_hnf env (evm,def) =
-    (evm,Tacred.hnf_constr env evm def) 
+  let reduce_hnf env (evm,(def:Term.constr)) =
+    (evm,EConstr.to_constr Evd.empty (Tacred.hnf_constr env evm (EConstr.of_constr def))) 
 
-  let reduce_all env (evm,def)  =
-    (evm,Redexpr.cbv_vm env evm def) 
+  let reduce_all env (evm,(def:Term.constr))  =
+     (evm,EConstr.to_constr Evd.empty (Redexpr.cbv_vm env evm (EConstr.of_constr def)))
 
   let unquote_string trm =
     let rec go n trm =
@@ -918,6 +925,7 @@ Vernacexpr.Check
     else
       not_supported_verb trm "big_case"
 
+(*
   let declare_definition
     (id : Names.Id.t) (loc, boxed_flag, def_obj_kind)
     (binder_list : Constrexpr.local_binder list) red_expr_opt (constr_expr : Constrexpr.constr_expr)
@@ -930,6 +938,8 @@ Vernacexpr.Check
     declare_definition name
 	    (Decl_kinds.Global, false, Decl_kinds.Definition)
 	    [] None result None (Lemmas.mk_hook (fun _ _ -> ()))
+*)
+
 
 
 
@@ -960,7 +970,6 @@ Vernacexpr.Check
       else bad_term trm
       | _ -> bad_term trm
 
-
   let unquote_map_option f trm =
     let (h,args) = app_full trm [] in
     if Term.eq_constr h cSome then 
@@ -978,8 +987,8 @@ Vernacexpr.Check
   let declare_inductive (env: Environ.env) (evm: Evd.evar_map) (body: Constrexpr.constr_expr) : unit =
   let open Entries in
     let (body,_) = Constrintern.interp_constr env evm body in
-  let (evm,body) = reduce_all env (evm, EConstr.of_constr body)  (* (Genredexpr.Cbv Redops.all_flags) *) in
-  let (_,args) = app_full (EConstr.to_constr evm body) [] in (* check that the first component is Build_mut_ind .. *) 
+  let (evm,body) = reduce_all env (evm, body)  (* (Genredexpr.Cbv Redops.all_flags) *) in
+  let (_,args) = app_full body [] in (* check that the first component is Build_mut_ind .. *) 
   let one_ind b1 : Entries.one_inductive_entry = 
     let (_,args) = app_full b1 [] in (* check that the first component is Build_one_ind .. *)
     match args with

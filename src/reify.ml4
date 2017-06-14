@@ -183,7 +183,7 @@ struct
 
   let string_hash = Hashtbl.create 420
 
-  let quote_string s =
+  let to_string s =
     let len = String.length s in
     let rec go from acc =
       if from < 0 then acc
@@ -196,7 +196,7 @@ struct
   let quote_string s =
     try Hashtbl.find string_hash s
     with Not_found ->
-      let term = quote_string s in
+      let term = to_string s in
       Hashtbl.add string_hash s term; term
 
   let quote_ident i =
@@ -216,8 +216,11 @@ struct
     | Term.NATIVEcast -> kNative
 
   let quote_universe s =
-    (** TODO: This doesn't work yet **)
-    to_positive 1
+    match Univ.Universe.level s with
+      Some x -> to_string (Univ.Level.to_string x)
+    | None -> to_string ""
+    (* (\** TODO: This doesn't work yet **\) *)
+    (* to_positive 1 *)
 
   let quote_sort s =
     match s with
@@ -226,7 +229,7 @@ struct
 	else
 	  let _ = assert (s = Term.set_sort) in
 	  sSet
-    | Term.Type u -> Term.mkApp (sType, [| quote_universe u |])
+    | Term.Type u -> Term.mkApp (sType, [| quote_universe u |]) 
 
   let quote_inductive env (t : Names.inductive) =
     let (m,i) = t in
@@ -550,7 +553,7 @@ struct
   let unquote_sort trm =
     let (h,args) = app_full trm [] in
     if Term.eq_constr h sType then
-      raise (NotSupported h)
+      Term.type1_sort
     else if Term.eq_constr h sProp then
       Term.prop_sort
     else if Term.eq_constr h sSet then

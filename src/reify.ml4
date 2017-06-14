@@ -1146,7 +1146,7 @@ open Pp
 TACTIC EXTEND get_goal
     | [ "quote_term" constr(c) tactic(tac) ] ->
       [ (** quote the given term, pass the result to t **)
-  Proofview.Goal.nf_enter { enter = begin fun gl ->
+  Proofview.Goal.nf_enter begin fun gl ->
           let env = Proofview.Goal.env gl in
 	  let c = TermReify.quote_term env (EConstr.to_constr (Proofview.Goal.sigma gl) c) in
 	  ltac_apply tac (List.map to_ltac_val [EConstr.of_constr c])
@@ -1162,7 +1162,7 @@ END;;
 
 TACTIC EXTEND denote_term
     | [ "denote_term" constr(c) tactic(tac) ] ->
-      [ Proofview.Goal.nf_enter { enter = begin fun gl ->
+      [ Proofview.Goal.nf_enter begin fun gl ->
          let (evm,env) = Lemmas.get_current_context() in
          let c = TermReify.denote_term (EConstr.to_constr (Proofview.Goal.sigma gl) c) in
          let def' = Constrextern.extern_constr true env evm c in

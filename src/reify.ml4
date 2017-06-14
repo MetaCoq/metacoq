@@ -21,7 +21,7 @@ let pp_constr fmt x = Pp.pp_with fmt (Printer.pr_constr x)
 
 module TermReify =
 struct
-  exception NotSupported of Term.constr
+  exception NotSupported of Term.constr * string
 
   module Cmap = Names.KNmap
   module Cset = Names.KNset
@@ -58,10 +58,18 @@ struct
   open Pp (* this adds the ++ to the current scope *)
 
   let not_supported trm =
-    Feedback.msg_error (str "Not Supported:" ++ spc () ++ Printer.pr_constr trm) ;
-    raise (NotSupported trm)
+    (* Feedback.msg_error (str "Not Supported:" ++ spc () ++ Printer.pr_constr trm) ; *)
+    CErrors.user_err (str "Not Supported:" ++ spc () ++ Printer.pr_constr trm)
+    (* raise (NotSupported (trm, "no reason")) *)
+
+  let not_supported_verb trm rs =
+    CErrors.user_err (str "Not Supported raised at " ++ str rs ++ str ":" ++ spc () ++ Printer.pr_constr trm)
+    
   let bad_term trm =
-    raise (NotSupported trm)
+    raise (NotSupported (trm, "bad term"))
+
+  let bad_term_verb trm rs =
+    raise (NotSupported (trm, "bad term because of " ^ rs))
 
     
   let gen_constant_in_modules locstr dirs s =
@@ -483,16 +491,16 @@ struct
     else if Term.eq_constr h tS then
       match args with
 	n :: _ -> 1 + nat_to_int n
-      | _ -> not_supported trm
+      | _ -> not_supported_verb trm "nat_to_int nil"
     else
-      not_supported trm
+      not_supported_verb trm "nat_to_int"
 
   let from_bool trm =
     if Term.eq_constr trm ttrue then
       true
     else if Term.eq_constr trm tfalse then
       false
-    else not_supported trm
+    else not_supported_verb trm "from_bool"
 
   let unquote_char trm =
     let (h,args) = app_full trm [] in
@@ -504,7 +512,7 @@ struct
 	  char_of_int v
       | _ -> assert false
     else
-      not_supported trm
+      not_supported_verb trm "unquote_char"
 
   let unquote_string trm =
     let rec go n trm =
@@ -517,9 +525,9 @@ struct
 	    let res = go (n + 1) s in
 	    let _ = Bytes.set res n (unquote_char c) in
 	    res
-	| _ -> bad_term trm
+	| _ -> bad_term_verb trm "unquote_string"
       else
-	not_supported trm
+	not_supported_verb trm "unquote_string"
     in
     go 0 trm
 
@@ -592,7 +600,7 @@ struct
 	_ :: x :: xs :: _ -> x :: from_coq_list xs
       | _ -> bad_term trm
     else
-      not_supported trm
+      not_supported_verb trm "from_coq_list"
 
     
   let reduce_all env (evm,def) =
@@ -613,7 +621,7 @@ struct
 	_ :: _ :: x :: y :: [] -> (x, y)
       | _ -> bad_term trm
     else
-      not_supported trm
+      not_supported_verb trm "from_coq_pair"
 
 
   (** NOTE: Because the representation is lossy, I should probably
@@ -688,7 +696,7 @@ struct
 			Array.of_list (List.map denote_branch (from_coq_list brs)))
       | _ -> raise (Failure "ill-typed (case)")
     else
-      not_supported trm
+      not_supported_verb trm "big_case"
 
   let denote_local_entry trm =
     let (h,args) = app_full trm [] in
@@ -720,7 +728,7 @@ struct
 	  _ :: [] -> None
       | _ -> bad_term trm
     else
-      not_supported trm
+      not_supported_verb trm "unqote_map_option"
 
 
   let declare_inductive (env: Environ.env) (evm: Evd.evar_map) (body: Constrexpr.constr_expr) : unit =

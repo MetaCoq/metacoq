@@ -381,7 +381,7 @@ let rec putReturnTypeInfo (env : Environ.env) (t: Term.constr) : Term.constr =
       | Term.Case (ci,typeInfo,discriminant,e) ->
         let ind = quote_inductive env ci.Term.ci_ind in
         let npar = int_to_nat ci.Term.ci_npar in
-        let info = pair tInd tnat ind npar in
+        let info = pair tIndTy tnat ind npar in
   let discriminantType = getType (snd env) discriminant in
   let typeInfo = putReturnTypeInfo (snd env) typeInfo in
 	let (qtypeInfo,acc) = quote_term acc env typeInfo in
@@ -1182,19 +1182,17 @@ VERNAC COMMAND EXTEND Make_vernac CLASSIFIED AS SIDEFF
                                           (trm, Univ.ContextSet.empty)) ]
 END;;
 
-(*
 VERNAC COMMAND EXTEND Make_vernac_reduce CLASSIFIED AS SIDEFF
     | [ "Quote" "Definition" ident(name) ":=" "Eval" red_expr(rd) "in" constr(def) ] ->
       [ check_inside_section () ;
 	let (evm,env) = Lemmas.get_current_context () in
 	let def, uctx = Constrintern.interp_constr env evm def in
         let evm = Evd.from_ctx uctx in
-	let (evm2,def) = TermReify.reduce_all env (evm, EConstr.of_constr def) in
-	let trm = TermReify.quote_term env (EConstr.to_constr evm2 def) in (* TODO: Check that this is evm2 *)
+	let (evm2,def) = TermReify.reduce_all env (evm, def) in
+	let trm = TermReify.quote_term env (def) in (* TODO: Check that this is evm2 *)
 	ignore(Declare.declare_definition ~kind:Decl_kinds.Definition
                                           name (trm, Univ.ContextSet.empty)) ]
 END;;
-*)
 
 VERNAC COMMAND EXTEND Make_recursive CLASSIFIED AS SIDEFF
     | [ "Quote" "Recursively" "Definition" ident(name) ":=" constr(def) ] ->

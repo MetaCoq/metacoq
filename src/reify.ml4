@@ -227,8 +227,6 @@ struct
     match Univ.Universe.level s with
       Some x -> to_string (Univ.Level.to_string x)
     | None -> to_string ""
-    (* (\** TODO: This doesn't work yet **\) *)
-    (* to_positive 1 *)
 
   let quote_sort s =
     match s with
@@ -558,10 +556,47 @@ struct
     else
       raise (Failure "non-value")
 
+
+  (* This code is taken from Pretyping, because it is not exposed globally *)
+  let strict_universe_declarations = ref true
+  let is_strict_universe_declarations () = !strict_universe_declarations
+
+
+  let get_universe evd (loc, s) =
+        let names, _ = Global.global_universe_names () in
+        if CString.string_contains ~where:s ~what:"." then
+          match List.rev (CString.split '.' s) with
+          | [] -> CErrors.anomaly (str"Invalid universe name " ++ str s ++ str".")
+          | n :: dp ->
+	     let num = int_of_string n in
+	     let dp = Names.DirPath.make (List.map Names.Id.of_string dp) in
+	     let level = Univ.Level.make dp num in
+	     let evd =
+	       try Evd.add_global_univ evd level
+	       with UGraph.AlreadyDeclared -> evd
+	     in evd, level
+        else
+          try
+	    let level = Evd.universe_of_name evd s in
+	    evd, level
+          with Not_found ->
+	    try
+	      let id = try Names.Id.of_string s with _ -> raise Not_found in
+              evd, snd (Names.Idmap.find id names)
+	    with Not_found ->
+	      if not (is_strict_universe_declarations ()) then
+  	        Evd.new_univ_level_variable ?loc ~name:s Evd.univ_rigid evd
+	      else CErrors.user_err ?loc ~hdr:"interp_universe_level_name"
+		            (Pp.(str "Undeclared universe: " ++ str s))
+  (* end of code from Pretyping *)
+                 
   let unquote_sort trm =
     let (h,args) = app_full trm [] in
     if Term.eq_constr h sType then
-      Term.type1_sort
+      match args with
+        x :: _ -> let _, lvl = get_universe Evd.empty (None, unquote_string x) in
+                  Term.sort_of_univ (Univ.Universe.make lvl)
+      | _ -> bad_term_verb trm "no Type"
     else if Term.eq_constr h sProp then
       Term.prop_sort
     else if Term.eq_constr h sSet then
@@ -793,7 +828,7 @@ open Misctypes
    
 let ltac_apply (f : Value.t) (args: Tacinterp.Value.t list) =
   let fold arg (i, vars, lfun) =
-    let id = Id.of_string ("x" ^ string_of_int i) in
+    let id = Names.Id.of_string ("x" ^ string_of_int i) in
     let x = Reference (ArgVar (Loc.tag id)) in
     (succ i, x :: vars, Id.Map.add id arg lfun)
   in

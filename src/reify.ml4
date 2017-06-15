@@ -519,17 +519,18 @@ let rec putReturnTypeInfo (env : Environ.env) (t: Term.constr) : Term.constr =
 	    visited_terms := Names.KNset.add kn !visited_terms ;
             let c = Names.Constant.make kn kn in
 	    let cd = Environ.lookup_constant c env in
-	    let do_body body =
+	    let do_body body pu =
 	      let (result,acc) =
 		quote_term acc (Global.env ()) body
 	      in
 	      constants := Term.mkApp (pConstr,
 				       [| quote_string (Names.string_of_kn kn)
+                                        ; quote_univ_instance pu                        
 				       ; result |]) :: !constants
 	    in
-	    Declarations.(
-	      match cd.const_body with
-		Undef _ ->
+	    Declarations.( 
+	      match cd.const_body, cd.const_universes with
+		Undef _, _ ->
 		begin
 		  let (ty,acc) =
 		    match cd.const_type with
@@ -539,10 +540,10 @@ let rec putReturnTypeInfo (env : Environ.env) (t: Term.constr) : Term.constr =
 		  constants := Term.mkApp (pAxiom,
 					   [| quote_string (Names.string_of_kn kn) ; ty |]) :: !constants
 		end
-	      | Def cs ->
-		do_body (Mod_subst.force_constr cs)
-	      | OpaqueDef lc ->
-		do_body (Opaqueproof.force_proof (Global.opaque_tables ()) lc))
+	      | Def cs, pu ->
+		do_body (Mod_subst.force_constr cs) (Univ.UContext.instance pu)
+	      | OpaqueDef lc, pu ->
+		do_body (Opaqueproof.force_proof (Global.opaque_tables ()) lc) (Univ.UContext.instance pu))
 	  end
     in
     let (quote_rem,quote_typ) =

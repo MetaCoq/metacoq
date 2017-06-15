@@ -39,7 +39,7 @@ Fixpoint pocc_term (n:nat) (t:term): bool :=
         | tLambda _ ty t => pocc_term n t || pocc_term n ty
         | tLetIn _ dfn ty t => pocc_term n dfn || pocc_term n t || pocc_term n ty
         | tApp fn args => pocc_term n fn || fold_left orb (map (pocc_term n) args) false
-        | tConst nm => if string_dec str nm then true else false
+        | tConst nm _ => if string_dec str nm then true else false
         | tCase _ ty mch brs =>
           pocc_term n ty || pocc_term n mch ||
                     fold_left orb (map (fun x => pocc_term n (snd x)) brs) false
@@ -52,7 +52,7 @@ Fixpoint pocc_term (n:nat) (t:term): bool :=
   (** does [tConst str] occur anywhere in a program? **)
 Fixpoint pocc_program (p:program): bool :=
   match p with
-    | PConstr _ t q => pocc_term 2000 t || pocc_program q
+    | PConstr _ _ t q => pocc_term 2000 t || pocc_program q
     | PType _ _ _ q =>  pocc_program q
     | PAxiom _ t q => pocc_term 2000 t || pocc_program q
     | PIn t =>  pocc_term 2000 t
@@ -60,7 +60,7 @@ Fixpoint pocc_program (p:program): bool :=
   (** is [str] in a program's environment? **)
 Fixpoint bound_program (p:program): bool :=
   match p with
-    | PConstr nm _ q 
+    | PConstr nm _ _ q 
     | PType nm _ _ q
     | PAxiom nm _ q =>
       (if string_dec str nm then true else false) || bound_program q

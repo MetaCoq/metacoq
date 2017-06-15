@@ -249,13 +249,29 @@ Example unquote_quote_id1: demoList_syntax=mut_list_i (* demoList was obtained f
 Abort. (* extra cast *)
 
 Run TemplateProgram (printTerm "Coq.Arith.PeanoNat.Nat.add").
-
-
-
 Inductive NonRec (A:Set) (C: A -> Set): Set := 
 | SS : forall (f:A), C f -> NonRec A C.
 
 Run TemplateProgram (printTerm "NonRec").
+
+Monomorphic Definition Funtm (A B: Type) := A->B.
+Polymorphic Definition Funtp@{i} (A B: Type@{i}) := A->B.
+Run TemplateProgram (printTerm "Top.Funtp").
+Run TemplateProgram (printTerm "Top.Funtm").
+
+Polymorphic Definition Funtp2@{i j} 
+   (A: Type@{i}) (B: Type@{j}) := A->B.
+
+Run TemplateProgram (printTerm "Top.Funtp2").
+
+(*(Some
+   (inl
+      (tLambda (nNamed "A") (tSort (sType "Var(0)"))
+         (tLambda (nNamed "B") (tSort (sType "Var(1)"))
+            (tProd nAnon (tRel 1) (tRel 1))))))
+*)
+
+
 
 
 

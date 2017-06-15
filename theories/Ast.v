@@ -6,7 +6,7 @@ Definition ident := string.
 
 Inductive level : Set :=
   Level (_ : string)
-| LevelVar (_ : nat).
+| LevelVar (_ : nat) (* are these debruijn indices ? *).
 
 Inductive sort : Set :=
 | sProp
@@ -103,6 +103,8 @@ Record mutual_inductive_entry : Set := {
   mind_entry_inds : list one_inductive_entry;
   mind_entry_polymorphic : bool; 
 (*  mind_entry_universes : Univ.universe_context; *)
+  (* Should the above be used? At least we need one number indicating
+     the number of polymorphically bound definitions*)
   mind_entry_private : option bool
 }.
 
@@ -130,6 +132,8 @@ Inductive TemplateMonad : Type -> Prop :=
 (** FIXME: strategy is currently ignored in the implementation -- it does all reductions.*)
 | tmReduce : reductionStrategy -> forall {A:Type}, A -> TemplateMonad A
 | tmMkDefinition : bool (* unquote? *) -> ident -> forall {A:Type}, A -> TemplateMonad unit (* bool indicating success? *)
+    (* should it take the number of polymorphically bound universes? in case
+       unquoting has to be done? *)
 | tmMkInductive : mutual_inductive_entry -> TemplateMonad unit (* bool indicating success? *)
 
 (* Not yet implemented:*)

@@ -774,8 +774,6 @@ let reduce_all env (evm,def) =
   (* This code is taken from Pretyping, because it is not exposed globally *)
   let strict_universe_declarations = ref true
   let is_strict_universe_declarations () = !strict_universe_declarations
-
-
   let get_universe evd (loc, s) =
         let names, _ = Global.global_universe_names () in
         if CString.string_contains ~where:s ~what:"." then
@@ -798,9 +796,7 @@ let reduce_all env (evm,def) =
 	      let id = try Names.Id.of_string s with _ -> raise Not_found in
               evd, snd (Names.Idmap.find id names)
 	    with Not_found ->
-	      if not (is_strict_universe_declarations ()) then
-  	        Evd.new_univ_level_variable ?loc ~name:s Evd.univ_rigid evd
-	      else CErrors.user_err ?loc ~hdr:"interp_universe_level_name"
+	      CErrors.user_err ?loc ~hdr:"interp_universe_level_name"
 		            (Pp.(str "Undeclared universe: " ++ str s))
   (* end of code from Pretyping *)
                  
@@ -1189,7 +1185,7 @@ let check_inside_section () =
   if Lib.sections_are_opened () then
     (** In trunk this seems to be moved to Errors **)
     (* For Coq 8.7: CErrors.user_err ~hdr:"Quote" (Pp.str "You can not quote within a section.") *)
-    CErrors.errorlabstrm "Quote" (Pp.str "You can not quote within a section.")
+    CErrors.user_err ~hdr:"Quote" (Pp.str "You can not quote within a section.")
   else ()
 
 open Stdarg

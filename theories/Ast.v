@@ -4,6 +4,10 @@ Require Import Coq.PArith.BinPos.
 Definition universe := string.
 Definition ident := string.
 
+Inductive level : Set :=
+  Level (_ : string)
+| LevelVar (_ : nat).
+
 Inductive sort : Set :=
 | sProp
 | sSet
@@ -43,9 +47,9 @@ Inductive term : Set :=
 | tLambda    : name -> term (** the type **) -> term -> term
 | tLetIn     : name -> term (** the term **) -> term (** the type **) -> term -> term
 | tApp       : term -> list term -> term
-| tConst     : string -> term
-| tInd       : inductive -> term
-| tConstruct : inductive -> nat -> term
+| tConst     : string -> list level -> term
+| tInd       : inductive -> list level -> term
+| tConstruct : inductive -> nat -> list level -> term
 | tCase      : (inductive * nat) (* # of parameters *) -> term (** type info **)
                -> term (* discriminee *)->
                list (nat * term) (* branches *)

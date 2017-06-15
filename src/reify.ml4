@@ -98,6 +98,7 @@ struct
 
   let r_reify = resolve_symbol pkg_reify
 
+  let tstring = resolve_symbol pkg_string "string"
   let tString = resolve_symbol pkg_string "String"
   let tEmptyString = resolve_symbol pkg_string "EmptyString"
   let tO = resolve_symbol pkg_datatypes "O"
@@ -142,6 +143,10 @@ struct
      r_reify "tSort", r_reify "tCast", r_reify "tProd", r_reify "tLambda",
      r_reify "tLetIn", r_reify "tApp", r_reify "tCase", r_reify "tFix",
      r_reify "tConstruct", r_reify "tConst", r_reify "tInd", r_reify "tUnknown")
+
+  let tlevel = r_reify "level"
+  let tLevel = r_reify "Level"
+  let tLevelVar = r_reify "LevelVar"
       
   let (tdef,tmkdef) = (r_reify "def", r_reify "mkdef")
   let (tLocalDef,tLocalAssum,tlocal_entry) = (r_reify "LocalDef", r_reify "LocalAssum", r_reify "local_entry")
@@ -252,9 +257,17 @@ struct
     | Term.REVERTcast -> kRevertCast
     | Term.NATIVEcast -> kNative
 
+  let string_of_level s =
+    to_string (Univ.Level.to_string s)
+
+  let quote_level s =
+    match Univ.Level.var_index s
+    with Some x -> Term.mkApp (tLevelVar, [| int_to_nat x |])
+       | None -> Term.mkApp (tLevel, [| string_of_level s|])
+
   let quote_universe s =
     match Univ.Universe.level s with
-      Some x -> to_string (Univ.Level.to_string x)
+      Some x -> string_of_level x
     | None -> to_string ""
 
   let quote_sort s =
@@ -269,7 +282,7 @@ struct
   let quote_inductive env (t : Names.inductive) =
     let (m,i) = t in
     Term.mkApp (tmkInd, [| quote_string (Names.string_of_kn (Names.canonical_mind m))
-			 ; int_to_nat i |])
+                	 ; int_to_nat i |])
                
   let mk_ctor_list =
     let ctor_list =
@@ -329,6 +342,9 @@ let rec putReturnTypeInfo (env : Environ.env) (t: Term.constr) : Term.constr =
           let sf =  (getSort env t)  in 
           Term.mkCast (t,Term.DEFAULTcast,Term.mkSort sf)
 
+  let quote_univ_instance pu =
+    to_coq_list tlevel (Array.to_list (Array.map quote_level (Univ.Instance.to_array pu)))
+
   let quote_term_remember
       (add_constant : Names.kernel_name -> 'a -> 'a)
       (add_inductive : Names.inductive -> 'a -> 'a) =
@@ -367,14 +383,16 @@ let rec putReturnTypeInfo (env : Environ.env) (t: Term.constr) : Term.constr =
 	    ([],acc) (Array.to_list xs) in
 	(Term.mkApp (tApp, [| f' ; to_coq_list tTerm (List.rev xs') |]), acc)
       | Term.Const (c,pu) -> (* FIXME: take universe constraints into account *)
-         let kn = Names.Constant.canonical c in
-	 (Term.mkApp (tConst, [| quote_string (Names.string_of_kn kn) |]),
+         let kn = Names.Constant.canonical c in 
+	 (Term.mkApp (tConst, [| quote_string (Names.string_of_kn kn)
+                              ;  quote_univ_instance pu                               
+                              |]),
           add_constant kn acc)
       | Term.Construct ((ind,c),pu) ->
          (* FIXME: take universe constraints into account *)
-	(Term.mkApp (tConstructor, [| quote_inductive env ind ; int_to_nat (c - 1) |]), add_inductive ind acc)
+	(Term.mkApp (tConstructor, [| quote_inductive env ind ; int_to_nat (c - 1) ; quote_univ_instance pu |]), add_inductive ind acc)
       | Term.Ind (i,pu) -> (* FIXME: take universe constraints into account *)
-         (Term.mkApp (tInd, [| quote_inductive env i |]),
+         (Term.mkApp (tInd, [| quote_inductive env i ; quote_univ_instance pu |]),
           add_inductive i acc)
       | Term.Case (ci,typeInfo,discriminant,e) ->
         let ind = quote_inductive env ci.Term.ci_ind in

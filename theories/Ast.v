@@ -46,8 +46,10 @@ Inductive term : Set :=
 | tConst     : string -> term
 | tInd       : inductive -> term
 | tConstruct : inductive -> nat -> term
-| tCase      : (inductive * nat) (* # of parameters *) -> term (** type info **) -> term ->
-               list (nat * term) -> term
+| tCase      : (inductive * nat) (* # of parameters *) -> term (** type info **)
+               -> term (* discriminee *)->
+               list (nat * term) (* branches *)
+               -> term
 | tFix       : mfixpoint term -> nat -> term
 (*
 | CoFix     of ('constr, 'types) pcofixpoint
@@ -58,7 +60,7 @@ Record inductive_body := mkinductive_body
 { ctors : list (ident * term * nat (* arity, w/o lets, w/o parameters *)) }.
 
 Inductive program : Set :=
-| PConstr : string -> term -> program -> program
+| PConstr : string -> term (*-> bool denoting opacity?*) -> program -> program
 | PType   : ident -> nat (* # of parameters, w/o let-ins *) ->
             list (ident * inductive_body) -> program -> program
 | PAxiom  : ident -> term (* the type *) -> program -> program
@@ -97,3 +99,37 @@ Record mutual_inductive_entry : Set := {
 (*  mind_entry_universes : Univ.universe_context; *)
   mind_entry_private : option bool
 }.
+
+Inductive reductionStrategy : Set :=
+  cbv | cbn | hnf | all.
+
+(** A monad for programming with template-coq operations.
+Using this monad, it should be possible to write many plugins (e.g. paramcoq)
+in Gallina *)
+Inductive TemplateMonad : Type -> Prop :=
+| tmReturn : forall {A:Type}, A -> TemplateMonad A
+| tmBind : forall {A B : Type}, 
+    (TemplateMonad A) 
+    -> (A -> TemplateMonad B) 
+    -> (TemplateMonad B)
+| tmPrint : forall {A:Type}, A -> TemplateMonad unit
+(** Quote the body of a definition or inductive. Its name need not be fully qualified --
+  the implementation uses Locate *)
+| tmQuote : ident -> bool (** bypass opacity?*)-> TemplateMonad (option (term+mutual_inductive_entry))
+(** similar to Quote Definition ... := ...
+  To actually make the definition, use (tmMkDefinition false) *)
+| tmQuoteTerm : forall {A:Type}, A  -> TemplateMonad term
+(** similar to Quote Recursively Definition ... := ...*)
+| tmQuoteTermRec : forall {A:Type}, A  -> TemplateMonad program
+(** FIXME: strategy is currently ignored in the implementation -- it does all reductions.*)
+| tmReduce : reductionStrategy -> forall {A:Type}, A -> TemplateMonad A
+| tmMkDefinition : bool (* unquote? *) -> ident -> forall {A:Type}, A -> TemplateMonad unit (* bool indicating success? *)
+| tmMkInductive : mutual_inductive_entry -> TemplateMonad unit (* bool indicating success? *)
+
+(* Not yet implemented:*)
+
+(** unquote then reduce then quote *)
+| tmUnQReduceQ : reductionStrategy -> term (* -> strategy? *)-> TemplateMonad term
+| tmUnquote : term  -> TemplateMonad {T:Type & T}
+| tmFreshName : ident -> TemplateMonad bool 
+    (* yes => Guarenteed to not cause "... already declared" error *).

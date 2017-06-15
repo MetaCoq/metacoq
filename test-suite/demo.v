@@ -30,6 +30,7 @@ Definition id_nat : nat -> nat := fun x => x.
 
 Quote Definition d'' := Eval compute in id_nat.
 
+
 (** Fixpoints **)
 Fixpoint add (a b : nat) : nat :=
   match a with
@@ -43,13 +44,32 @@ Fixpoint add' (a b : nat) : nat :=
     | S b => S (add' a b)
   end.
 
+Fixpoint even (a : nat) : bool :=
+  match a with
+    | 0 => true
+    | S a => odd a
+  end
+with odd (a : nat) : bool :=
+  match a with
+    | 0 => false
+    | S a => even a
+  end.
+
+
 Quote Definition add_syntax := Eval compute in add.
+
+Quote Definition eo_syntax := Eval compute in even.
 
 Quote Definition add'_syntax := Eval compute in add'.
 
 (** Reflecting definitions **)
 
 Make Definition zero_from_syntax := (Ast.tConstruct (Ast.mkInd "Coq.Init.Datatypes.nat" 0) 0).
+
+Make Definition eo_from_syntax := 
+ltac:(let t:= eval compute in eo_syntax in exact t).
+Print eo_from_syntax.
+
 
 Make Definition two_from_syntax := (Ast.tApp (Ast.tConstruct (Ast.mkInd "Coq.Init.Datatypes.nat" 0) 1)
    (Ast.tApp (Ast.tConstruct (Ast.mkInd "Coq.Init.Datatypes.nat" 0) 1)
@@ -157,4 +177,86 @@ Make Inductive mut_pt_i.
 Inductive demoList (A : Set) : Set :=
     demoNil : demoList A | demoCons : A -> demoList A -> demoList A
 *)
+
+
+(** Putting the above commands in monadic program *)
+
+Definition printTerm (name  : ident): TemplateMonad unit :=
+  (tmBind (tmQuote name true) tmPrint).
+
+Definition duplicateDefn (name newName : ident): TemplateMonad unit :=
+  (tmBind (tmQuote name false) (fun body => 
+    match body with
+    | Some (inl bd) => 
+        (tmBind (tmPrint body) (fun _ => tmMkDefinition true newName bd))
+    | _ => tmReturn tt
+    end))
+    .
+
+
+
+Run TemplateProgram (duplicateDefn "add" "addUnq").
+Check (eq_refl: add=addUnq).
+
+Run TemplateProgram (printTerm "Coq.Init.Datatypes.nat").
+Run TemplateProgram (printTerm "nat"). 
+
+CoInductive cnat : Set :=  O :cnat | S : cnat -> cnat.
+Run TemplateProgram (printTerm "cnat"). 
+
+Run TemplateProgram
+  ((tmBind (tmQuote "demoList" false) (fun body =>
+    match body with
+    | Some (inl bd)
+    | Some (inr bd) =>
+        tmMkDefinition false "demoList_syntax" bd
+    | N_ => tmReturn tt
+    end))
+    ).
+
+Print demoList.
+
+Definition demoConsType := ltac:(let T := type of demoCons in exact T).
+Run TemplateProgram (printTerm "nat"). 
+(*
+None
+*)
+
+Run TemplateProgram (printTerm "demoConsType"). 
+(*
+(Some
+   (inl
+      (tProd (nNamed "A") (tSort sSet)
+         (tCast
+            (tProd nAnon (tRel 0)
+               (tCast
+                  (tProd nAnon (tApp (tInd (mkInd "Top.demoList" 0)) [tRel 1])
+                     (tCast (tApp (tInd (mkInd "Top.demoList" 0)) [tRel 2]) Cast
+                        (tSort sSet))) Cast (tSort sSet))) Cast 
+            (tSort sSet)))))
+*)
+
+Example unquote_quote_id1: demoList_syntax=mut_list_i (* demoList was obtained from mut_list_i *).
+  unfold demoList_syntax.
+  unfold mut_list_i.
+    f_equal.
+    f_equal.
+    unfold one_list_i.
+    f_equal.
+    f_equal.
+    f_equal.
+    unfold mkImpl.
+    f_equal.
+Abort. (* extra cast *)
+
+Run TemplateProgram (printTerm "Coq.Arith.PeanoNat.Nat.add").
+
+
+
+Inductive NonRec (A:Set) (C: A -> Set): Set := 
+| SS : forall (f:A), C f -> NonRec A C.
+
+Run TemplateProgram (printTerm "NonRec").
+
+
 

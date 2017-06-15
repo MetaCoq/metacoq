@@ -1,5 +1,5 @@
 Require Import Template.Template.
 
-Quote Definition qOne := 1.
-Quote Definition qOne_red := Eval compute in 1.
-Quote Definition qTwo := (1 + 1).
+Definition I (t:Type) (x:t) : t := x.
+Definition II := I (forall t:Type, t -> t) I.
+Quote Definition qII := Eval compute in II.

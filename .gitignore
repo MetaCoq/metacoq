@@ -15,3 +15,5 @@ theories/*.cmxs
 *.ml4.d
 *.mllib.d
 .coq-native
+Makefile.plugin.coq
+

@@ -13,6 +13,8 @@ Inductive sort : Set :=
 | sSet
 | sType (_ : universe).
 
+Record ind : Set := {} .
+
 Inductive name : Set :=
 | nAnon
 | nNamed (_ : ident).

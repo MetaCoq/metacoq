@@ -96,6 +96,19 @@ Inductive recursivity_kind :=
 
 
 (* kernel/entries.mli*)
+Record definition_entry : Set := {
+  definition_entry_type : term;
+  definition_entry_body : term }.
+  (* Missing universes, opaque, inline *)
+
+Record parameter_entry : Set := {
+  parameter_entry_type : term }.
+
+Inductive constant_entry : Set :=
+| ParameterEntry (p : parameter_entry)
+| DefinitionEntry (def : definition_entry).
+
+
 Record mutual_inductive_entry : Set := {
   mind_entry_record : option (option ident); 
   mind_entry_finite : recursivity_kind;
@@ -123,7 +136,7 @@ Inductive TemplateMonad : Type -> Prop :=
 | tmPrint : forall {A:Type}, A -> TemplateMonad unit
 (** Quote the body of a definition or inductive. Its name need not be fully qualified --
   the implementation uses Locate *)
-| tmQuote : ident -> bool (** bypass opacity?*)-> TemplateMonad (option (term+mutual_inductive_entry))
+| tmQuote : ident -> bool (** bypass opacity?*)-> TemplateMonad (option (constant_entry+mutual_inductive_entry))
 (** similar to Quote Definition ... := ...
   To actually make the definition, use (tmMkDefinition false) *)
 | tmQuoteTerm : forall {A:Type}, A  -> TemplateMonad term

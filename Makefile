@@ -1,12 +1,9 @@
-###############################################################################
-##  v      #                   The Coq Proof Assistant                       ##
-## <O___,, #                INRIA - CNRS - LIX - LRI - PPS                   ##
-##   \VV/  #                                                                 ##
-##    //   #                                                                 ##
-###############################################################################
-## GNUMakefile for Coq 8.7.1
+all: coq templatecoq
 
-install: Makefile.coq templatecoq
+coq: Makefile.coq
+	$(MAKE) -f Makefile.coq
+
+install: Makefile.coq
 	$(MAKE) -f Makefile.coq install
 	$(MAKE) -f Makefile.coqplugin install
 
@@ -19,9 +16,6 @@ Makefile.coq: _CoqProject
 
 Makefile.coqplugin: _CompilerProject
 	coq_makefile -f _CompilerProject -o Makefile.coqplugin
-
-coq:
-	$(MAKE) -f Makefile.coq
 
 .PHONY: coq
 

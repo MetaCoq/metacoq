@@ -1,6 +1,7 @@
 -I src
 -Q theories Template
 
+src/reify.mli
 src/reify.ml4
 src/template_plugin.mllib
 

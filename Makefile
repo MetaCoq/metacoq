@@ -1,7 +1,9 @@
+all: coq templatecoq
+
 coq: Makefile.coq
 	$(MAKE) -f Makefile.coq
-
-install: Makefile.coq templatecoq
+	
+install: Makefile.coq
 	$(MAKE) -f Makefile.coq install
 	$(MAKE) -f Makefile.coqplugin install
 

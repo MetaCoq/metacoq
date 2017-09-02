@@ -10,10 +10,10 @@ DECLARE PLUGIN "template_coq_plugin"
 let pp_constr fmt x = Pp.pp_with fmt (Printer.pr_constr x)
                     
 let quote_string s =
-  let rec aux i =
-    if i = String.length s then []
-    else s.[i] :: aux (i + 1)
-  in aux 0
+  let rec aux acc i =
+    if i < 0 then acc
+    else aux (s.[i] :: acc) (i - 1)
+  in aux [] (String.length s - 1)
 
 module TemplateASTQuoter =
 struct
@@ -36,8 +36,11 @@ struct
     | Anonymous -> Coq_nAnon
     | Name i -> Coq_nNamed (quote_ident i)
 
-  let rec quote_int i =
-    if i = 0 then Datatypes.O else (Datatypes.S (quote_int (i - 1)))
+  let quote_int i =
+    let rec aux acc i =
+      if i < 0 then acc
+      else aux (Datatypes.S acc) (i - 1)
+    in aux Datatypes.O (i - 1)
 
   let pos_of_universe i = BinNums.Coq_xH
                         

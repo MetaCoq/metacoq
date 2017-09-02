@@ -698,7 +698,7 @@ struct
     and quote_fixpoint (acc : 'a) env t =
       let ((a,b),(ns,ts,ds)) = t in
       let ctxt = CArray.map2_i (fun i na t -> (Context.Rel.Declaration.LocalAssum (na, Vars.lift i t))) ns ts in
-      let envfix = push_rel_context (Array.to_list ctxt) env in
+      let envfix = push_rel_context (CArray.rev_to_list ctxt) env in
       let ns' = Array.map Q.quote_name ns in
       let a' = Array.map Q.quote_int a in
       let b' = Q.quote_int b in
@@ -715,7 +715,7 @@ struct
            let ty = Inductive.type_of_inductive (snd env) ((mib,oib),inst) in
            (Context.Rel.Declaration.LocalAssum (Names.Name oib.mind_typename, ty))) mib.mind_packets)
       in
-      let envind = push_rel_context indtys env in
+      let envind = push_rel_context (List.rev indtys) env in
       let ref_name = Q.quote_kn (Names.canonical_mind t) in
       let (ls,acc) =
 	List.fold_left (fun (ls,acc) oib ->

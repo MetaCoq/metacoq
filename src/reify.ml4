@@ -456,8 +456,20 @@ struct
       in
       let in_prop, env' = env in
       if is_cast_prop () && not in_prop then
-        let ty = Retyping.get_type_of env' Evd.empty trm in
-        let sf = Retyping.get_sort_family_of env' Evd.empty ty in
+        let ty =
+          try Retyping.get_type_of env' Evd.empty trm
+          with e ->
+            Feedback.msg_debug (str"Anomaly trying to get the type of: " ++
+                                  Printer.pr_constr_env (snd env) Evd.empty trm);
+            raise e
+        in
+        let sf =
+          try Retyping.get_sort_family_of env' Evd.empty ty
+          with e ->
+            Feedback.msg_debug (str"Anomaly trying to get the sort of: " ++
+                                  Printer.pr_constr_env (snd env) Evd.empty ty);
+            raise e
+        in
         if sf == Term.InProp then
           aux acc (true, env')
               (Term.mkCast (trm, Term.DEFAULTcast,
@@ -530,7 +542,12 @@ struct
 	if Mindset.mem t !visited_types then ()
 	else
 	  begin
-	    let (result,acc) = quote_type acc env mi in
+	    let (result,acc) =
+              try quote_type acc env mi
+              with e ->
+                Feedback.msg_debug (str"Exception raised while checking " ++ Names.pr_mind mi);
+                raise e
+            in
 	    visited_types := Mindset.add t !visited_types ;
 	    constants := result :: !constants
 	  end
@@ -543,7 +560,10 @@ struct
 	    let cd = Environ.lookup_constant c env in
 	    let do_body body =
 	      let (result,acc) =
-		quote_term acc (Global.env ()) body
+		try quote_term acc (Global.env ()) body
+                with e ->
+                  Feedback.msg_debug (str"Exception raised while checking body of " ++ Names.pr_kn kn);
+                  raise e
 	      in
 	      constants := Q.mkConstant (Q.quote_kn kn) result :: !constants
 	    in
@@ -553,7 +573,11 @@ struct
 		begin
 		  let (ty,acc) =
 		    match cd.const_type with
-		    | RegularArity ty -> quote_term acc (Global.env ()) ty
+		    | RegularArity ty ->
+                       (try quote_term acc (Global.env ()) ty
+                        with e ->
+                           Feedback.msg_debug (str"Exception raised while checking type of " ++ Names.pr_kn kn);
+                           raise e)
 		    | TemplateArity _ -> assert false
 		  in
 		  constants := Q.mkAxiom (Q.quote_kn kn) ty :: !constants

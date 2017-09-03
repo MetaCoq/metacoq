@@ -150,6 +150,8 @@ module type Quoter = sig
 
   val mkRel : quoted_int -> t
   val mkVar : quoted_ident -> t
+  val mkMeta : quoted_int -> t
+  val mkEvar : quoted_int -> t array -> t
   val mkSort : quoted_sort -> t
   val mkCast : t -> quoted_cast_kind -> t -> t
   val mkProd : quoted_name -> t -> t -> t
@@ -161,8 +163,9 @@ module type Quoter = sig
   val mkConstruct : quoted_inductive * quoted_int -> quoted_univ_instance -> t
   val mkCase : (quoted_inductive * quoted_int) -> quoted_int list -> t -> t ->
                t list -> t
+  val mkProj : quoted_kernel_name -> t -> t
   val mkFix : (quoted_int array * quoted_int) * (quoted_name array * t array * t array) -> t
-  val mkUnknown : Constr.t -> t
+  val mkCoFix : quoted_int * (quoted_name array * t array * t array) -> t
 
   val mkMutualInductive : quoted_kernel_name -> quoted_int (* params *) ->
                           (quoted_ident * (quoted_ident * t * quoted_int) list) list ->
@@ -252,11 +255,11 @@ struct
   let tIndTy = r_reify "inductive"
   let tmkInd = r_reify "mkInd"
   let (tTerm,tRel,tVar,tMeta,tEvar,tSort,tCast,tProd,
-       tLambda,tLetIn,tApp,tCase,tFix,tConstructor,tConst,tInd,tUnknown) =
+       tLambda,tLetIn,tApp,tCase,tFix,tConstructor,tConst,tInd,tCoFix,tProj) =
     (r_reify "term", r_reify "tRel", r_reify "tVar", r_reify "tMeta", r_reify "tEvar",
      r_reify "tSort", r_reify "tCast", r_reify "tProd", r_reify "tLambda",
      r_reify "tLetIn", r_reify "tApp", r_reify "tCase", r_reify "tFix",
-     r_reify "tConstruct", r_reify "tConst", r_reify "tInd", r_reify "tUnknown")
+     r_reify "tConstruct", r_reify "tConst", r_reify "tInd", r_reify "tCoFix", r_reify "tProj")
 
   let tlevel = r_reify "level"
   let tLevel = r_reify "Level"
@@ -432,9 +435,10 @@ struct
   let quote_kn kn = quote_string (Names.string_of_kn kn)
   let mkRel i = Term.mkApp (tRel, [| i |])
   let mkVar id = Term.mkApp (tVar, [| id |])
+  let mkMeta i = Term.mkApp (tMeta, [| i |])
+  let mkEvar n args = Term.mkApp (tEvar, [| n; to_coq_list tTerm (Array.to_list args) |])
   let mkSort s = Term.mkApp (tSort, [| s |])
   let mkCast c k t = Term.mkApp (tCast, [| c ; k ; t |])
-  let mkUnknown trm = (Term.mkApp (tUnknown, [| quote_string (Format.asprintf "%a" pp_constr trm) |]))
   let mkConst kn u = Term.mkApp (tConst, [| kn ; u |])
   let mkProd na t b =
     Term.mkApp (tProd, [| na ; t ; b |])
@@ -446,13 +450,11 @@ struct
   let mkLetIn na t t' b =
     Term.mkApp (tLetIn, [| na ; t ; t' ; b |])
 
+  let rec seq f t =
+    if f < t then f :: seq (f + 1) t
+    else []
+
   let mkFix ((a,b),(ns,ts,ds)) =
-    let rec seq f t =
-      if f < t then
-	f :: seq (f + 1) t
-      else
-	[]
-    in
     let mk_fun xs i =
       Term.mkApp (tmkdef, [| tTerm ; Array.get ns i ;
                              Array.get ts i ; Array.get ds i ; Array.get a i |]) :: xs
@@ -464,6 +466,15 @@ struct
   let mkConstruct (ind, i) u =
     Term.mkApp (tConstructor, [| ind ; i ; u |])
 
+  let mkCoFix (a,(ns,ts,ds)) =
+    let mk_fun xs i =
+      Term.mkApp (tmkdef, [| tTerm ; Array.get ns i ;
+                             Array.get ts i ; Array.get ds i ; tO |]) :: xs
+    in
+    let defs = List.fold_left mk_fun [] (seq 0 (Array.length ns)) in
+    let block = to_coq_list (Term.mkApp (tdef, [| tTerm |])) (List.rev defs) in
+    Term.mkApp (tCoFix, [| block ; a |])
+
   let mkInd i u = Term.mkApp (tInd, [| i ; u |])
 
   let mkCase (ind, npar) nargs p c brs =
@@ -471,6 +482,9 @@ struct
     let branches = List.map2 (fun br nargs ->  pair tnat tTerm nargs br) brs nargs in
     let tl = prod tnat tTerm in
     Term.mkApp (tCase, [| info ; p ; c ; to_coq_list tl branches |])
+
+  let mkProj kn t =
+    Term.mkApp (tProj, [| kn; t |])
 
   let mkMutualInductive kn p ls =
     let result = to_coq_list (prod tident tinductive_body)
@@ -600,6 +614,13 @@ struct
       match Term.kind_of_term trm with
 	Term.Rel i -> (Q.mkRel (Q.quote_int (i - 1)), acc)
       | Term.Var v -> (Q.mkVar (Q.quote_ident v), acc)
+      | Term.Meta n -> (Q.mkMeta (Q.quote_int n), acc)
+      | Term.Evar (n,args) ->
+	let (acc,args') =
+	  CArray.fold_map (fun acc x ->
+	    let (x,acc) = quote_term acc env x in acc,x)
+	                  acc args in
+         (Q.mkEvar (Q.quote_int (Evar.repr n)) args', acc)
       | Term.Sort s -> (Q.mkSort (Q.quote_sort s), acc)
       | Term.Cast (c,k,t) ->
 	let (c',acc) = quote_term acc env c in
@@ -668,9 +689,12 @@ struct
          (Q.mkCase (ind, npar) (List.rev nargs) qtypeInfo discriminant (List.rev branches), acc)
 
       | Term.Fix fp -> quote_fixpoint acc env fp
-
-      | _ -> (Q.mkUnknown trm, acc)
-
+      | Term.CoFix fp -> quote_cofixpoint acc env fp
+      | Term.Proj (p,c) ->
+         let kn = Names.Constant.canonical (Names.Projection.constant p) in
+         let p' = Q.quote_kn kn in
+         let t', acc = quote_term acc env c in
+         (Q.mkProj p' t', add_constant kn acc)
       in
       let in_prop, env' = env in 
       if is_cast_prop () && not in_prop then
@@ -695,18 +719,25 @@ struct
                             Term.mkCast (EConstr.to_constr Evd.empty ty, Term.DEFAULTcast, Term.mkProp))) 
         else aux acc env trm
       else aux acc env trm
-    and quote_fixpoint (acc : 'a) env t =
-      let ((a,b),(ns,ts,ds)) = t in
+    and quote_recdecl (acc : 'a) env b (ns,ts,ds) =
       let ctxt = CArray.map2_i (fun i na t -> (Context.Rel.Declaration.LocalAssum (na, Vars.lift i t))) ns ts in
       let envfix = push_rel_context (CArray.rev_to_list ctxt) env in
       let ns' = Array.map Q.quote_name ns in
-      let a' = Array.map Q.quote_int a in
       let b' = Q.quote_int b in
       let acc, ts' =
         CArray.fold_map (fun acc t -> let x,acc = quote_term acc env t in acc, x) acc ts in
       let acc, ds' =
         CArray.fold_map (fun acc t -> let x,y = quote_term acc envfix t in y, x) acc ds in
-      (Q.mkFix ((a',b'),(ns',ts',ds')), acc)
+      ((b',(ns',ts',ds')), acc)
+    and quote_fixpoint acc env t =
+      let ((a,b),decl) = t in
+      let a' = Array.map Q.quote_int a in
+      let (b',decl'),acc = quote_recdecl acc env b decl in
+      (Q.mkFix ((a',b'),decl'), acc)
+    and quote_cofixpoint acc env t =
+      let (a,decl) = t in
+      let (a',decl'),acc = quote_recdecl acc env a decl in
+      (Q.mkCoFix (a',decl'), acc)
     and quote_minductive_type (acc : 'a) env (t : Names.mutual_inductive) =
       let mib = Environ.lookup_mind t (snd env) in
       let inst = abstract_inductive_instance mib.Declarations.mind_universes in

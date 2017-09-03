@@ -32,7 +32,7 @@ Record def (term : Set) : Set := mkdef
 { dname : name (** the name (note, this may mention other definitions **)
 ; dtype : term
 ; dbody : term (** the body (a lambda term) **)
-; rarg  : nat  (** the index of the recursive argument **)
+; rarg  : nat  (** the index of the recursive argument, 0 for cofixpoints **)
 }.
 
 Definition mfixpoint (term : Set) : Set :=
@@ -40,9 +40,9 @@ Definition mfixpoint (term : Set) : Set :=
 
 Inductive term : Set :=
 | tRel       : nat -> term
-| tVar       : ident -> term (** this can go away **)
+| tVar       : ident -> term (** For free variables (e.g. in a goal) *)
 | tMeta      : nat -> term   (** NOTE: this can go away *)
-| tEvar      : nat -> term
+| tEvar      : nat -> list term -> term
 | tSort      : sort -> term
 | tCast      : term -> cast_kind -> term -> term
 | tProd      : name -> term (** the type **) -> term -> term
@@ -56,11 +56,9 @@ Inductive term : Set :=
                -> term (* discriminee *)->
                list (nat * term) (* branches *)
                -> term
+| tProj      : string -> term -> term
 | tFix       : mfixpoint term -> nat -> term
-(*
-| CoFix     of ('constr, 'types) pcofixpoint
-*)
-| tUnknown : string -> term.
+| tCoFix     : mfixpoint term -> nat -> term.
 
 Record inductive_body := mkinductive_body
 { ctors : list (ident * term * nat (* arity, w/o lets, w/o parameters *)) }.

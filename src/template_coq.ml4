@@ -76,9 +76,10 @@ struct
                   
   let mkRel n = Coq_tRel n
   let mkVar id = Coq_tVar id
+  let mkMeta n = Coq_tMeta n
+  let mkEvar n args = Coq_tEvar (n,Array.to_list args)
   let mkSort s = Coq_tSort s
   let mkCast c k t = Coq_tCast (c,k,t)
-  let mkUnknown trm = Coq_tUnknown (quote_string (Format.asprintf "%a" pp_constr trm))
 
   let mkConst c u = Coq_tConst (c, u)
   let mkProd na t b = Coq_tProd (na, t, b)
@@ -87,13 +88,13 @@ struct
   let mkInd i u = Coq_tInd (i, u)
   let mkConstruct (ind, i) u = Coq_tConstruct (ind, i, u)
   let mkLetIn na b t t' = Coq_tLetIn (na,b,t,t')
+
+  let rec seq f t =
+    if f < t then
+      f :: seq (f + 1) t
+    else []
+
   let mkFix ((a,b),(ns,ts,ds)) =
-    let rec seq f t =
-      if f < t then
-	f :: seq (f + 1) t
-      else
-	[]
-    in
     let mk_fun xs i =
       { dname = Array.get ns i ;
         dtype = Array.get ts i ;
@@ -104,10 +105,22 @@ struct
     let block = List.rev defs in
     Coq_tFix (block, b)
 
+  let mkCoFix (a,(ns,ts,ds)) =
+    let mk_fun xs i =
+      { dname = Array.get ns i ;
+        dtype = Array.get ts i ;
+        dbody = Array.get ds i ;
+        rarg = Datatypes.O } :: xs
+    in
+    let defs = List.fold_left mk_fun [] (seq 0 (Array.length ns)) in
+    let block = List.rev defs in
+    Coq_tFix (block, a)
+
   let mkCase (ind, npar) nargs p c brs =
     let info = (ind, npar) in
     let branches = List.map2 (fun br nargs ->  (nargs, br)) brs nargs in
     Coq_tCase (info,p,c,branches)
+  let mkProj p c = Coq_tProj (p,c)
 
   let mkMutualInductive kn p r =
     (* FIXME: This is a quite dummy rearrangement *)

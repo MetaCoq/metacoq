@@ -168,12 +168,13 @@ module type Quoter = sig
   val mkCoFix : quoted_int * (quoted_name array * t array * t array) -> t
 
   val mkMutualInductive : quoted_kernel_name -> quoted_int (* params *) ->
-                          (quoted_ident * (quoted_ident * t * quoted_int) list) list ->
+                          (quoted_ident * t (* ind type *) *
+                             (quoted_ident * t (* constr type *) * quoted_int) list) list ->
                           quoted_decl
 
-
-  val mkConstant : quoted_kernel_name -> quoted_univ_instance -> t -> quoted_decl
-  val mkAxiom : quoted_kernel_name -> t -> quoted_decl
+  val mkConstant : quoted_kernel_name -> quoted_univ_instance ->
+                   t (* type *) -> t (* body *) -> quoted_decl
+  val mkAxiom : quoted_kernel_name -> quoted_univ_instance -> t -> quoted_decl
 
   val mkExt : quoted_decl -> quoted_program -> quoted_program
   val mkIn : t -> quoted_program 
@@ -487,17 +488,18 @@ struct
     Term.mkApp (tProj, [| kn; t |])
 
   let mkMutualInductive kn p ls =
-    let result = to_coq_list (prod tident tinductive_body)
-         (List.map (fun (a,b) ->
-                                let b = mk_ctor_list b in
-	                        pair tident tinductive_body a b) (List.rev ls)) in
+    let result = to_coq_list (prod (prod tident tTerm) tinductive_body)
+         (List.map (fun (a,b,c) ->
+                                let c = mk_ctor_list c in
+	                        pair (prod tident tTerm) tinductive_body (pair tident tTerm a b) c)
+                   (List.rev ls)) in
     Term.mkApp (pType, [| kn; p; result |])
 
-  let mkConstant kn u c =
-    Term.mkApp (pConstr, [| kn; u ; c |])
+  let mkConstant kn u ty c =
+    Term.mkApp (pConstr, [| kn; u ; ty; c |])
 
-  let mkAxiom kn t =
-    Term.mkApp (pAxiom, [| kn; t |])
+  let mkAxiom kn u t =
+    Term.mkApp (pAxiom, [| kn; u; t |])
 
   let mkExt x acc = Term.mkApp (x, [| acc |])
   let mkIn t = Term.mkApp (pIn, [| t |])
@@ -756,6 +758,8 @@ struct
 	      Declarations.(Array.to_list oib.mind_user_lc)
 	      Declarations.(Array.to_list oib.mind_consnrealargs)
 	  in
+          let indty = Inductive.type_of_inductive (snd env) ((mib,oib),inst) in
+          let indty, acc = quote_term acc env indty in
 	  let (reified_ctors,acc) =
 	    List.fold_left (fun (ls,acc) (nm,ty,ar) ->
 	      debug (fun () -> Pp.(str "XXXX" ++ spc () ++
@@ -765,7 +769,7 @@ struct
 	      ((Q.quote_ident nm, ty, Q.quote_int ar) :: ls, acc))
 	      ([],acc) named_ctors
 	  in
-	  Declarations.((Q.quote_ident oib.mind_typename, (List.rev reified_ctors)) :: ls, acc))
+	  Declarations.((Q.quote_ident oib.mind_typename, indty, (List.rev reified_ctors)) :: ls, acc))
 	  ([],acc) Declarations.((Array.to_list mib.mind_packets))
       in
       let params = Q.quote_int mib.Declarations.mind_nparams in
@@ -805,37 +809,39 @@ struct
 	if Names.KNset.mem kn !visited_terms then ()
 	else
 	  begin
+            let open Declarations in
 	    visited_terms := Names.KNset.add kn !visited_terms ;
             let c = Names.Constant.make kn kn in
 	    let cd = Environ.lookup_constant c env in
-	    let do_body body pu =
+	    let do_body pu ty body =
 	      let (result,acc) =
 		try quote_term acc (Global.env ()) body
                 with e ->
                   Feedback.msg_debug (str"Exception raised while checking body of " ++ Names.pr_kn kn);
                   raise e
 	      in
-	      constants := Q.mkConstant (Q.quote_kn kn) (Q.quote_univ_instance pu) result :: !constants
+	      constants := Q.mkConstant (Q.quote_kn kn) pu ty result :: !constants
 	    in
-	    Declarations.( 
-	      match cd.const_body, cd.const_universes with
-		Undef _, _ ->
-		begin
-		  let (ty,acc) =
-		    match cd.const_type with
-		    | RegularArity ty ->
-                       (try quote_term acc (Global.env ()) ty
-                        with e ->
-                           Feedback.msg_debug (str"Exception raised while checking type of " ++ Names.pr_kn kn);
-                           raise e)
-		    | TemplateArity _ -> assert false
-		  in
-		  constants := Q.mkAxiom (Q.quote_kn kn) ty :: !constants
-		end
-	      | Def cs, pu ->
-		do_body (Mod_subst.force_constr cs) (constant_instance pu)
-	      | OpaqueDef lc, pu ->
-		do_body (Opaqueproof.force_proof (Global.opaque_tables ()) lc) (constant_instance pu))
+            let open Declarations in
+            let inst = Q.quote_univ_instance (constant_instance cd.const_universes) in
+            let ty, acc =
+              let ty =
+                match cd.const_type with
+	        | RegularArity ty -> ty
+	        | TemplateArity (ctx,ar) ->
+                   Term.it_mkProd_or_LetIn (Constr.mkSort (Sorts.Type ar.template_level)) ctx
+              in
+              (try quote_term acc (Global.env ()) ty
+               with e ->
+                 Feedback.msg_debug (str"Exception raised while checking type of " ++ Names.pr_kn kn);
+                 raise e)
+            in
+	      match cd.const_body with
+		Undef _ -> constants := Q.mkAxiom (Q.quote_kn kn) inst ty :: !constants
+	      | Def cs ->
+		 do_body inst ty (Mod_subst.force_constr cs)
+	      | OpaqueDef lc ->
+		 do_body inst ty (Opaqueproof.force_proof (Global.opaque_tables ()) lc)
 	  end
     in
     let (quote_rem,quote_typ) =

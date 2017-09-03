@@ -64,10 +64,10 @@ Record inductive_body := mkinductive_body
 { ctors : list (ident * term * nat (* arity, w/o lets, w/o parameters *)) }.
 
 Inductive program : Set :=
-| PConstr : string -> list level -> term (*-> bool denoting opacity?*) -> program -> program
+| PConstr : string -> list level -> term (* type *) -> term (* body *) -> program -> program
 | PType   : ident -> nat (* # of parameters, w/o let-ins *) ->
-            list (ident * inductive_body) -> program -> program
-| PAxiom  : ident -> term (* the type *) -> program -> program
+            list (ident * term (* type *) * inductive_body) -> program -> program
+| PAxiom  : ident -> list level -> term (* the type *) -> program -> program
 | PIn     : term -> program.
 
 

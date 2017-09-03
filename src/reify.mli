@@ -45,10 +45,10 @@ module type Quoter = sig
     
 
   val mkMutualInductive : quoted_kernel_name -> quoted_int (* params *) ->
-                          (quoted_ident * (quoted_ident * t * quoted_int) list) list ->
+                          (quoted_ident * t (* ind type *) *
+                             (quoted_ident * t (* constr type *) * quoted_int) list) list ->
                           quoted_decl
-
-  val mkConstant : quoted_kernel_name -> t -> quoted_decl
+  val mkConstant : quoted_kernel_name -> t -> t -> quoted_decl
   val mkAxiom : quoted_kernel_name -> t -> quoted_decl
 
   val mkExt : quoted_decl -> quoted_program -> quoted_program

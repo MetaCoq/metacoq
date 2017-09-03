@@ -112,11 +112,11 @@ struct
 
   let mkMutualInductive kn p r =
     (* FIXME: This is a quite dummy rearrangement *)
-    let r = List.map (fun (i,r) ->
-                (i,List.map (fun (id,t,n) -> (id,t),n) r)) r in
+    let r = List.map (fun (i,t,r) ->
+                ((i,t),List.map (fun (id,t,n) -> (id,t),n) r)) r in
     fun pr ->
     PType (kn,p,r,pr)
-  let mkConstant kn t = fun pr -> PConstr (kn,t,pr)
+  let mkConstant kn ty body = fun pr -> PConstr (kn,ty,body,pr)
   let mkAxiom kn t = fun pr -> PAxiom (kn,t,pr)
   let mkExt e p = e p
   let mkIn c = PIn c

@@ -15,3 +15,6 @@ opaque.v
 letin.v
 case.v
 bugkncst.v
+evars.v
+proj.v
+cofix.v

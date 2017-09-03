@@ -25,6 +25,9 @@ module type Quoter = sig
 
   val mkRel : quoted_int -> t
   val mkVar : quoted_ident -> t
+  val mkMeta : quoted_int -> t
+  val mkEvar : quoted_int -> t array -> t
+
   val mkSort : quoted_sort -> t
   val mkCast : t -> quoted_cast_kind -> t -> t
   val mkProd : quoted_name -> t -> t -> t
@@ -36,9 +39,10 @@ module type Quoter = sig
   val mkConstruct : quoted_inductive * quoted_int -> t
   val mkCase : (quoted_inductive * quoted_int) -> quoted_int list -> t -> t ->
                t list -> t
+  val mkProj : quoted_kernel_name -> t -> t
   val mkFix : (quoted_int array * quoted_int) * (quoted_name array * t array * t array) -> t
-  val mkUnknown : Constr.t -> t
-
+  val mkCoFix : quoted_int * (quoted_name array * t array * t array) -> t
+    
 
   val mkMutualInductive : quoted_kernel_name -> quoted_int (* params *) ->
                           (quoted_ident * (quoted_ident * t * quoted_int) list) list ->

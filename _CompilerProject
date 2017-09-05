@@ -1,4 +1,4 @@
--R src Template
+-R theories Template
 -I src
 src/datatypes.mli
 src/datatypes.ml
@@ -24,4 +24,4 @@ src/template_coq.mli
 src/template_coq.ml4
 src/template_coq_mod.ml
 src/template_coq_plugin.mllib
-src/TemplateCoqCompiler.v
+theories/TemplateCoqCompiler.v

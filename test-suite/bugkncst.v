@@ -24,6 +24,11 @@ Unset Template Cast Propositions.
 (* Uase template-coq to make a [program] from function defined above *)
 Quote Recursively Definition p_Plus1 := Plus1.
 
+Require Import Template.Typing.
+
+Eval vm_compute in typecheck_program p_Plus1.
+
+
 (** The program p_Plus1 is too big to read, so we define some
 *** diagnostic software **)
 Section occ_term_Sec.

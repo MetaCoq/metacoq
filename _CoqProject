@@ -7,3 +7,4 @@ src/template_plugin.mllib
 
 theories/Ast.v
 theories/Template.v
+theories/Typing.v

@@ -1057,40 +1057,44 @@ let reduce_all env (evm,def) =
 
 
   (* This code is taken from Pretyping, because it is not exposed globally *)
-  let strict_universe_declarations = ref true
-  let is_strict_universe_declarations () = !strict_universe_declarations
   let get_universe evd (loc, s) =
-        let names, _ = Global.global_universe_names () in
-        if CString.string_contains ~where:s ~what:"." then
-          match List.rev (CString.split '.' s) with
-          | [] -> CErrors.anomaly (str"Invalid universe name " ++ str s ++ str".")
-          | n :: dp ->
-	     let num = int_of_string n in
-	     let dp = Names.DirPath.make (List.map Names.Id.of_string dp) in
-	     let level = Univ.Level.make dp num in
-	     let evd =
-	       try Evd.add_global_univ evd level
-	       with UGraph.AlreadyDeclared -> evd
-	     in evd, level
-        else
-          try
-	    let level = Evd.universe_of_name evd s in
-	    evd, level
-          with Not_found ->
-	    try
-	      let id = try Names.Id.of_string s with _ -> raise Not_found in
-              evd, snd (Names.Idmap.find id names)
-	    with Not_found ->
-	      CErrors.user_err ?loc ~hdr:"interp_universe_level_name"
-		            (Pp.(str "Undeclared universe: " ++ str s))
+    let get_level () =
+      let names, _ = Global.global_universe_names () in
+      if CString.string_contains ~where:s ~what:"." then
+        match List.rev (CString.split '.' s) with
+        | [] -> CErrors.anomaly (str"Invalid universe name " ++ str s ++ str".")
+        | n :: dp ->
+	   let num = int_of_string n in
+	   let dp = Names.DirPath.make (List.map Names.Id.of_string dp) in
+	   let level = Univ.Level.make dp num in
+	   let evd =
+	     try Evd.add_global_univ evd level
+	     with UGraph.AlreadyDeclared -> evd
+	   in evd, level
+      else
+        try
+	  let level = Evd.universe_of_name evd s in
+	  evd, level
+        with Not_found ->
+	  let id = try Names.Id.of_string s with _ -> raise Not_found in
+          evd, snd (Names.Idmap.find id names)
+    in
+    try
+      let evd, level = get_level () in
+      evd, Sorts.sort_of_univ (Univ.Universe.make level)
+    with Not_found ->
+      let evd, t = Evarutil.new_Type (Global.env ()) evd in
+      evd, EConstr.ESorts.kind evd (EConstr.destSort evd t)
+  (* CErrors.user_err ?loc ~hdr:"interp_universe_level_name"
+   *             (Pp.(str "Undeclared universe: " ++ str s)) *)
   (* end of code from Pretyping *)
                  
-  let unquote_sort trm =
+  let unquote_sort evdref trm =
     let (h,args) = app_full trm [] in
     if Term.eq_constr h sType then
       match args with
-        x :: _ -> let _, lvl = get_universe Evd.empty (None, unquote_string x) in
-                  Term.sort_of_univ (Univ.Universe.make lvl)
+        x :: _ -> let evd, lvl = get_universe !evdref (None, unquote_string x) in
+                  evdref := evd; lvl
       | _ -> bad_term_verb trm "no Type"
     else if Term.eq_constr h sProp then
       Term.prop_sort
@@ -1158,7 +1162,8 @@ Vernacexpr.Check
    ** come back through elaboration.
    ** - This would also allow writing terms with holes
    **)
-  let rec denote_term trm =
+  let denote_term evdref trm =
+    let rec aux trm =
     debug (fun () -> Pp.(str "denote_term" ++ spc () ++ Printer.pr_constr trm)) ;
     let (h,args) = app_full trm [] in
     if Term.eq_constr h tRel then
@@ -1172,48 +1177,49 @@ Vernacexpr.Check
       | _ -> raise (Failure "ill-typed")
     else if Term.eq_constr h tSort then
       match args with
-	x :: _ -> Term.mkSort (unquote_sort x)
+	x :: _ -> Term.mkSort (unquote_sort evdref x)
       | _ -> raise (Failure "ill-typed")
     else if Term.eq_constr h tCast then
       match args with
 	t :: c :: ty :: _ ->
-	  Term.mkCast (denote_term t, unquote_cast_kind c, denote_term ty)
+	  Term.mkCast (aux t, unquote_cast_kind c, aux ty)
       | _ -> raise (Failure "ill-typed")
     else if Term.eq_constr h tProd then
       match args with
 	n :: t :: b :: _ ->
-	  Term.mkProd (unquote_name n, denote_term t, denote_term b)
+	  Term.mkProd (unquote_name n, aux t, aux b)
       | _ -> raise (Failure "ill-typed (product)")
     else if Term.eq_constr h tLambda then
       match args with
 	n :: t :: b :: _ ->
-	Term.mkLambda (unquote_name n, denote_term t, denote_term b)
+	Term.mkLambda (unquote_name n, aux t, aux b)
       | _ -> raise (Failure "ill-typed (lambda)")
     else if Term.eq_constr h tLetIn then
       match args with
 	n :: e :: t :: b :: _ ->
-	  Term.mkLetIn (unquote_name n, denote_term e, denote_term t, denote_term b)
+	  Term.mkLetIn (unquote_name n, aux e, aux t, aux b)
       | _ -> raise (Failure "ill-typed (let-in)")
     else if Term.eq_constr h tApp then
       match args with
 	f :: xs :: _ ->
-	  Term.mkApp (denote_term f,
-		      Array.of_list (List.map denote_term (from_coq_list xs)))
+	  Term.mkApp (aux f,
+		      Array.of_list (List.map aux (from_coq_list xs)))
       | _ -> raise (Failure "ill-typed (app)")
     else if Term.eq_constr h tConst then
       match args with
-    	s :: [] ->
+    	s :: u :: [] ->
+         (* TODO: unquote universes *)
         let s = (unquote_string s) in
         let (dp, nm) = split_name s in
         (try 
           match Nametab.locate (Libnames.make_qualid dp nm) with
-          | Globnames.ConstRef c ->  Term.mkConst c
+          | Globnames.ConstRef c ->
+             EConstr.Unsafe.to_constr (Evarutil.e_new_global evdref (Globnames.ConstRef c))
           | Globnames.IndRef _ -> raise (Failure (String.concat "the constant is an inductive. use tInd : " [s]))
           | Globnames.VarRef _ -> raise (Failure (String.concat "the constant is a variable. use tVar : " [s]))
           | Globnames.ConstructRef _ -> raise (Failure (String.concat "the constant is a consructor. use tConstructor : " [s]))
         with
         Not_found ->   raise (Failure (String.concat "Constant not found : " [s])))
-
       | _ -> raise (Failure "ill-typed (tConst)")
     else if Term.eq_constr h tConstructor then
       match args with
@@ -1235,9 +1241,9 @@ Vernacexpr.Check
           let ci = Inductiveops.make_case_info (Global.env ()) ind Term.RegularStyle in
           let denote_branch br =
             let _, br = from_coq_pair br in
-            denote_term br
+            aux br
           in
-	  Term.mkCase (ci, denote_term ty, denote_term d,
+	  Term.mkCase (ci, aux ty, aux d,
 			Array.of_list (List.map denote_branch (from_coq_list brs)))
       | _ -> raise (Failure "ill-typed (case)")
     else if Term.eq_constr h tFix then
@@ -1252,13 +1258,14 @@ Vernacexpr.Check
         let lbd = List.map unquoteFbd (from_coq_list bds) in
         let (p1,p2) = (List.map fst lbd, List.map snd lbd) in
         let (names,types,bodies,rargs) = (List.map fst p1, List.map snd p1, List.map fst p2, List.map snd p2) in
-        let (types,bodies) = (List.map denote_term types, List.map denote_term bodies) in
+        let (types,bodies) = (List.map aux types, List.map aux bodies) in
         let (names,rargs) = (List.map unquote_name names, List.map nat_to_int rargs) in
         let la = Array.of_list in
         Term.mkFix ((la rargs,nat_to_int i), (la names, la types, la bodies))
       | _ -> raise (Failure "tFix takes exactly 2 arguments")
     else
       not_supported_verb trm "big_case"
+    in aux trm
 
 (*
   let declare_definition
@@ -1279,20 +1286,21 @@ Vernacexpr.Check
 
 
   let unquote_red_add_definition b env evm name def =
-	  let (evm,def) = reduce_all env (evm,def) in
-  	let trm = if b then denote_term def else def in
+    let (evm,def) = reduce_all env (evm,def) in
+    let evdref = ref evm in
+    let trm = if b then denote_term evdref def else def in
     if b then Feedback.msg_debug ((Printer.pr_constr trm)) else ();
     Declare.declare_definition 
 	  ~kind:Decl_kinds.Definition name
 	  (trm, (* No new universe constraints can be generated by typing the AST *)
            Univ.ContextSet.empty)
 	  
-  let denote_local_entry trm =
+  let denote_local_entry evdref trm =
     let (h,args) = app_full trm [] in
       match args with
 	    x :: [] -> 
-      if Term.eq_constr h tLocalDef then Entries.LocalDefEntry (denote_term x) 
-      else (if  Term.eq_constr h tLocalAssum then Entries.LocalAssumEntry (denote_term x) else bad_term trm)
+      if Term.eq_constr h tLocalDef then Entries.LocalDefEntry (denote_term evdref x)
+      else (if  Term.eq_constr h tLocalAssum then Entries.LocalAssumEntry (denote_term evdref x) else bad_term trm)
       | _ -> bad_term trm
 
   let denote_mind_entry_finite trm =
@@ -1321,18 +1329,19 @@ Vernacexpr.Check
 
   let declare_inductive (env: Environ.env) (evm: Evd.evar_map) (body: Term.constr) : unit =
   let open Entries in
-  let (evm,body) = reduce_all env (evm, body)  (* (Genredexpr.Cbv Redops.all_flags) *) in
-  let (_,args) = app_full body [] in (* check that the first component is Build_mut_ind .. *) 
-  let one_ind b1 : Entries.one_inductive_entry = 
+  let (evm,body) = reduce_all env (evm,body) (* (Genredexpr.Cbv Redops.all_flags) *) in
+  let (_,args) = app_full body [] in (* check that the first component is Build_mut_ind .. *)
+  let evdref = ref evm in
+  let one_ind b1 : Entries.one_inductive_entry =
     let (_,args) = app_full b1 [] in (* check that the first component is Build_one_ind .. *)
     match args with
     | mt::ma::mtemp::mcn::mct::[] ->
     {
     mind_entry_typename = unquote_ident mt;
-    mind_entry_arity = denote_term ma;
+    mind_entry_arity = denote_term evdref ma;
     mind_entry_template = from_bool mtemp;
     mind_entry_consnames = List.map unquote_ident (from_coq_list mcn);
-    mind_entry_lc = List.map denote_term (from_coq_list mct)
+    mind_entry_lc = List.map (denote_term evdref) (from_coq_list mct)
     } 
     | _ -> raise (Failure "ill-typed one_inductive_entry")
      in 
@@ -1340,7 +1349,7 @@ Vernacexpr.Check
     {
     mind_entry_record = unquote_map_option (unquote_map_option unquote_ident) mr;
     mind_entry_finite = denote_mind_entry_finite mf; (* inductive *)
-    mind_entry_params = List.map (fun p -> let (l,r) = (from_coq_pair p) in (unquote_ident l, (denote_local_entry r))) 
+    mind_entry_params = List.map (fun p -> let (l,r) = (from_coq_pair p) in (unquote_ident l, (denote_local_entry evdref r)))
       (List.rev (from_coq_list mp));
     mind_entry_inds = List.map one_ind (from_coq_list mi);
     (* mind_entry_polymorphic = from_bool mpol; *)
@@ -1500,13 +1509,16 @@ END;;
 
 TACTIC EXTEND denote_term
     | [ "denote_term" constr(c) tactic(tac) ] ->
-      [ Proofview.Goal.nf_enter begin fun gl ->
-         let (evm,env) = Lemmas.get_current_context() in
-         let c = Denote.denote_term (EConstr.to_constr (Proofview.Goal.sigma gl) c) in
-         let def' = Constrextern.extern_constr true env evm (EConstr.of_constr c) in
-         let def = Constrintern.interp_constr env evm def' in
-	 ltac_apply tac (List.map to_ltac_val [EConstr.of_constr (fst def)])
-      end ]
+      [ Proofview.Goal.enter (begin fun gl ->
+         let env = Proofview.Goal.env gl in
+         let evm = Proofview.Goal.sigma gl in
+         let evdref = ref evm in
+         let c = Denote.denote_term evdref (EConstr.to_constr evm c) in
+         let def' = Constrextern.extern_constr true env !evdref (EConstr.of_constr c) in
+         let def = Constrintern.interp_constr env !evdref def' in
+         Proofview.tclTHEN (Proofview.Unsafe.tclEVARS !evdref)
+	                   (ltac_apply tac (List.map to_ltac_val [EConstr.of_constr (fst def)]))
+      end) ]
 END;;
 
 
@@ -1549,8 +1561,9 @@ VERNAC COMMAND EXTEND Unquote_vernac CLASSIFIED AS SIDEFF
       [ check_inside_section () ;
 	let (evm,env) = Lemmas.get_current_context () in
 	let def = Constrintern.interp_constr env evm def in
-	let trm = Denote.denote_term (fst def) in
-	let result = Constrextern.extern_constr true env evm (EConstr.of_constr trm) in
+        let evdref = ref evm in
+	let trm = Denote.denote_term evdref (fst def) in
+	let result = Constrextern.extern_constr true env !evdref (EConstr.of_constr trm) in
 	declare_definition name
 	  (Decl_kinds.Global, false, Decl_kinds.Definition)
 	  [] None result None (Lemmas.mk_hook (fun _ _ -> ())) ]

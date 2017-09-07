@@ -2,7 +2,7 @@
 (*i camlp4use: "pa_extend.cmp" i*)
 
 open Term
-open Template_AST
+open Ast0
 open Reify
 
 DECLARE PLUGIN "template_coq_plugin"

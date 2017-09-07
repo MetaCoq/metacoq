@@ -107,11 +107,15 @@ Next Obligation.
   simpl in H. auto with arith.
 Qed.
 
+Require Import String.
+
+Open Scope string_scope.
+
 Definition succ_sort s :=
   match s with
-  | sProp => sType xH
-  | sSet => sType xH
-  | sType n => sType (Pos.succ n)
+  | sProp => sType "Set+1"
+  | sSet => sType "Set+1"
+  | sType n => sType "large"
   end.
 
 (** Typing derivations *)
@@ -305,17 +309,17 @@ Next Obligation.
   exists d; split; auto.
 Qed.
 
-Definition inds ind (l : list (ident * term * inductive_body)) :=
+Definition inds ind u (l : list (ident * term * inductive_body)) :=
   let fix aux n :=
       match n with
       | 0 => []
-      | S n => tInd (mkInd ind n) :: aux n
+      | S n => tInd (mkInd ind n) u :: aux n
       end
   in aux (List.length l).
 
 Program
 Fixpoint type_of_constructor (Σ : global_context)
-  (c : inductive * nat | declared_constructor Σ c) : term :=
+  (c : inductive * nat | declared_constructor Σ c) (u : list level) : term :=
   match Σ with
   | nil => !
   | hd :: tl =>
@@ -323,8 +327,8 @@ Fixpoint type_of_constructor (Σ : global_context)
       let types := types_of_minductive_decl hd in
       let '(_, _, cstrs) := safe_nth types (inductive_ind (fst c)) in
       let '(id, trm, args) := safe_nth cstrs.(ctors) (snd c) in
-      substl (inds (inductive_mind (fst c)) types) trm
-    else type_of_constructor tl c
+      substl (inds (inductive_mind (fst c)) u types) trm
+    else type_of_constructor tl c u
   end.
 Next Obligation.
   destruct H as (d&H&_). discriminate.
@@ -398,8 +402,8 @@ Definition is_constructor n ts :=
   match List.nth_error ts n with
   | Some a =>
     match a with
-    | tConstruct _ _ => true
-    | tApp (tConstruct _ _) _ => true
+    | tConstruct _ _ _ => true
+    | tApp (tConstruct _ _ _) _ => true
     | _ => false
     end
   | None => false
@@ -431,8 +435,8 @@ Inductive red1 (Σ : global_context) (Γ : context) : term -> term -> Prop :=
     red1 Σ Γ (tRel i) (lift0 (S i) body) 
          
 (** Case *)
-| red_iota ind pars c args p brs :
-    red1 Σ Γ (tCase (ind, pars) p (mktApp (tConstruct ind c) args) brs)
+| red_iota ind pars c u args p brs :
+    red1 Σ Γ (tCase (ind, pars) p (mktApp (tConstruct ind c u) args) brs)
          (iota_red pars c args brs)
 
 (** Fix unfolding, with guard *)
@@ -442,9 +446,9 @@ Inductive red1 (Σ : global_context) (Γ : context) : term -> term -> Prop :=
     red1 Σ Γ (mktApp (tFix mfix idx) args) (mktApp fn args)
 
 (** Constant unfolding *)
-| red_delta c (isdecl : declared_constant Σ c) body :
+| red_delta c (isdecl : declared_constant Σ c) u body :
     body_of_constant Σ (exist _ c isdecl) = Some body ->
-    red1 Σ Γ (tConst c) body
+    red1 Σ Γ (tConst c u) body
          
 (* TODO Proj CoFix *)
          
@@ -498,7 +502,7 @@ Definition eq_sort s s' :=
   match s, s' with
   | sSet, sSet => true
   | sProp, sProp => true
-  | sType p, sType q => Pos.eqb p q
+  | sType p, sType q => if string_dec p q then true else false
   | _, _ => false
   end.
 
@@ -535,9 +539,9 @@ Fixpoint eq_term (t u : term) {struct t} :=
   | tSort s, tSort s' => eq_sort s s'
   | tApp f args, tApp f' args' => eq_term f f' && forallb2 eq_term args args'
   | tCast t _ v, tCast u _ v' => eq_term t u && eq_term v v'
-  | tConst c, tConst c' => eq_constant c c'
-  | tInd i, tInd i' => eq_ind i i'
-  | tConstruct i k, tConstruct i' k' => eq_ind i i' && Nat.eqb k k'
+  | tConst c u, tConst c' u' => eq_constant c c' (* TODO Universes *)
+  | tInd i u, tInd i' u' => eq_ind i i'
+  | tConstruct i k u, tConstruct i' k' u' => eq_ind i i' && Nat.eqb k k'
   | tLambda _ b t, tLambda _ b' t' => eq_term b b' && eq_term t t'
   | tProd _ b t, tProd _ b' t' => eq_term b b' && eq_term t t'
   | tCase (ind, par) p c brs,
@@ -564,9 +568,9 @@ Fixpoint leq_term (t u : term) {struct t} :=
   | tSort s, tSort s' => leq_sort s s'
   | tApp f args, tApp f' args' => eq_term f f' && forallb2 eq_term args args'
   | tCast t _ v, tCast u _ v' => leq_term t u
-  | tConst c, tConst c' => eq_constant c c'
-  | tInd i, tInd i' => eq_ind i i'
-  | tConstruct i k, tConstruct i' k' => eq_ind i i' && Nat.eqb k k'
+  | tConst c u, tConst c' u' => eq_constant c c' (* TODO Universes *)
+  | tInd i u, tInd i' u' => eq_ind i i'
+  | tConstruct i k u, tConstruct i' k' u' => eq_ind i i' && Nat.eqb k k'
   | tLambda _ b t, tLambda _ b' t' => eq_term b b' && eq_term t t'
   | tProd _ b t, tProd _ b' t' => eq_term b b' && leq_term t t'
   | tCase (ind, par) p c brs,
@@ -620,20 +624,20 @@ Inductive typing (Σ : global_context) (Γ : context) : term -> term -> Prop :=
     typing_spine Σ Γ t_ty l t' ->
     Σ ;;; Γ |-- (tApp t l) : t'          
 
-| type_Const cst :
+| type_Const cst u : (* TODO Universes *)
     forall (isdecl : declared_constant Σ cst),
-    Σ ;;; Γ |-- (tConst cst) : type_of_constant Σ (exist _ cst isdecl)
+    Σ ;;; Γ |-- (tConst cst u) : type_of_constant Σ (exist _ cst isdecl)
 
-| type_Ind ind :
+| type_Ind ind u :
     forall (isdecl : declared_inductive Σ ind),
-    Σ ;;; Γ |-- (tInd ind) : type_of_inductive Σ (exist _ ind isdecl)
+    Σ ;;; Γ |-- (tInd ind u) : type_of_inductive Σ (exist _ ind isdecl)
 
-| type_Construct ind i :
+| type_Construct ind i u :
     forall (isdecl : declared_constructor Σ (ind, i)),
-    Σ ;;; Γ |-- (tConstruct ind i) : type_of_constructor Σ (exist _ (ind,i) isdecl)
+    Σ ;;; Γ |-- (tConstruct ind i u) : type_of_constructor Σ (exist _ (ind,i) isdecl) u
 
-| type_Case indpar p c brs args :
-    Σ ;;; Γ |-- c : mktApp (tInd (fst indpar)) args ->
+| type_Case indpar u p c brs args :
+    Σ ;;; Γ |-- c : mktApp (tInd (fst indpar) u) args ->
     (** TODO check brs *)                  
     Σ ;;; Γ |-- tCase indpar p c brs : tApp p (List.skipn (snd indpar) args ++ [c])
 
@@ -686,12 +690,12 @@ Conjecture congr_cumul_prod : forall Σ Γ na na' M1 M2 N1 N2,
     cumul Σ Γ (tProd na M1 M2) (tProd na' N1 N2).
 
 Fixpoint decompose_program (p : program) (env : global_context) : global_context * term :=
-  match p with
-  | PConstr s ty trm p =>
+  match p with (* TODO Universes *)
+  | PConstr s u ty trm p =>
     decompose_program p (ConstantDecl s ty trm :: env)
   | PType ind m inds p =>
     decompose_program p (InductiveDecl ind m inds :: env)
-  | PAxiom s ty p =>
+  | PAxiom s u ty p =>
     decompose_program p (AxiomDecl s ty :: env)
   | PIn t => (env, t)
   end.
@@ -763,11 +767,11 @@ Ltac setenv na :=
 
 Ltac construct :=
   match goal with
-    |- ?Σ ;;; ?Γ |-- tConstruct ?c ?i : _ =>
+    |- ?Σ ;;; ?Γ |-- tConstruct ?c ?i ?u : _ =>
     let H := fresh in let H' := fresh in
     unshelve assert(H:declared_constructor Σ (c,i)) by repeat econstructor;
-    try (simpl; omega); assert(H':=type_Construct Σ Γ c i H); simpl in H';
-    clear H; apply H'
+    try (simpl; omega); assert(H':=type_Construct Σ Γ c i u H); simpl in H';
+    try clear H; apply H'
   end.
 
 Quote Definition natr := nat.
@@ -888,7 +892,7 @@ Section Reduce.
       reduce_stack Γ n (subst0 b c) stack
     else ret (t, stack)
 
-  | tConst c =>
+  | tConst c u => (* TODO Universes *)
     if RedFlags.delta flags then
       match lookup_env Σ c with
       | Some (ConstantDecl _ _ body) => reduce_stack Γ n body stack
@@ -918,7 +922,7 @@ Section Reduce.
       | Some c =>
         c' <- reduce_stack Γ n c [] ;;
         match fst c' with
-        | tConstruct _ _ => reduce_stack Γ n fn stack
+        | tConstruct _ _ _ => reduce_stack Γ n fn stack
         | _ => ret (t, stack)
         end
       | _ => ret (t, stack)
@@ -936,7 +940,7 @@ Section Reduce.
     if RedFlags.iota flags then
       c' <- reduce_stack Γ n c [] ;;
       match c' with
-      | (tConstruct ind c, args) => reduce_stack Γ n (iota_red par c args brs) stack
+      | (tConstruct ind c _, args) => reduce_stack Γ n (iota_red par c args brs) stack
       | _ => ret (tCase (ind, par) p (zip c') brs, stack)
       end
     else ret (t, stack)
@@ -957,7 +961,7 @@ Section Reduce.
         | d :: ds => aux (vass d.(dname) d.(dtype) :: acc) ds
         end
     in aux [] l.
-
+  Close Scope string_scope.
   Definition map_constr_with_binders (f : context -> term -> term) Γ (t : term) : term :=
     match t with
     | tRel i => t
@@ -1001,6 +1005,179 @@ Section Reduce.
 
 End Reduce.
 
+Definition isConstruct c :=
+  match c with
+  | tConstruct _ _ _ => true
+  | _ => false
+  end.
+
+Inductive conv_pb :=
+| Conv
+| Cumul.
+
+Section Conversion.
+
+  Context (flags : RedFlags.t).
+  Context (Σ : global_context).
+
+  Definition nodelta_flags := RedFlags.mk true true true false true true.
+
+  Definition unfold_one_fix n Γ mfix idx l :=
+    unf <- unfold_fix mfix idx ;;
+    let '(arg, fn) := unf in
+    c <- nth_error l arg ;;
+    cred <- reduce_stack RedFlags.default Σ Γ n c [] ;;
+    let '(cred, _) := cred in
+    if eq_term cred c || negb (isConstruct cred) then None
+    else Some fn.
+
+  Definition unfold_one_case n Γ c :=
+    cred <- reduce_stack_term RedFlags.default Σ Γ n c ;;
+    if eq_term cred c then None
+    else Some cred.
+
+  Definition reducible_head n Γ c l :=
+    match c with
+    | tFix mfix idx => unfold_one_fix n Γ mfix idx l
+    | tCase ind' p' c' brs =>
+      match unfold_one_case n Γ c' with
+      | None => None
+      | Some c' => Some (tCase ind' p' c' brs)
+      end
+    | tConst c _ => (* TODO Universes *)
+      match lookup_env Σ c with
+      | Some (ConstantDecl _ _ body) => Some body
+      | _ => None
+      end
+    | _ => None
+    end.
+  
+  Fixpoint isconv (n : nat) (leq : conv_pb) (Γ : context)
+           (t1 : term) (l1 : list term) (t2 : term) (l2 : list term) {struct n} : option bool :=
+    match n with 0 => None | S n => 
+    red1 <- reduce_stack nodelta_flags Σ Γ n t1 l1 ;;
+    red2 <- reduce_stack nodelta_flags Σ Γ n t2 l2 ;;
+    let '(t1,l1) := red1 in
+    let '(t2,l2) := red1 in
+    isconv_prog n leq Γ t1 l1 t2 l2
+    end
+  with isconv_prog (n : nat) (leq : conv_pb)
+                   (Γ : context) (t1 : term) (l1 : list term) (t2 : term) (l2 : list term) {struct n} : option bool :=
+    match n with 0 => None | S n =>
+    let isconv_stacks l1 l2 :=
+        ret (forallb2 (fun x y => match isconv n Conv Γ x [] y [] with Some b => b | None => false end) l1 l2)
+    in
+    let on_cond (b : bool) := if b then isconv_stacks l1 l2 else ret false in
+    (** Test equality at each step ?? *)
+    (* if eq_term t1 t2 && (match isconv_stacks l1 l2 with Some true => true | _ => false) *)
+    (* then ret true else *)
+    let fallback (x : unit) :=
+      match reducible_head n Γ t1 l1 with
+      | Some t1 =>
+        redt <- reduce_stack nodelta_flags Σ Γ n t1 l1 ;;
+        let '(t1, l1) := redt in
+        isconv_prog n leq Γ t1 l1 t2 l2
+      | None =>
+        match reducible_head n Γ t2 l2 with
+        | Some t2 =>
+          redt <- reduce_stack nodelta_flags Σ Γ n t2 l2 ;;
+          let '(t2, l2) := redt in
+          isconv_prog n leq Γ t1 l1 t2 l2
+        | None => on_cond (match leq with Conv => eq_term t1 t2 | Cumul => leq_term t1 t2 end)
+        end
+      end
+    in
+    match t1, t2 with
+    | tApp f args, tApp f' args' =>
+      None (* Impossible *)
+
+    | tCast t _ v, tCast u _ v' => None (* Impossible *)
+
+    | tConst c u, tConst c' u' => (* TODO Universes *)
+      if eq_constant c c' then
+        b <- isconv_stacks l1 l2 ;;
+        if b then ret true (* FO optim *)
+        else
+          match lookup_env Σ c with (* Unfold both bodies at once *)
+          | Some (ConstantDecl _ _ body) =>
+            isconv n leq Γ body l1 body l2
+          | _ => ret false
+          end
+      else 
+        match lookup_env Σ c' with
+        | Some (ConstantDecl _ _ body) =>
+          isconv n leq Γ t1 l1 body l2
+        | _ => 
+          match lookup_env Σ c with
+          | Some (ConstantDecl _ _ body) =>
+            isconv n leq Γ body l1 t2 l2
+          | _ => ret false
+          end
+        end
+        
+    | tLambda na b t, tLambda _ b' t' =>
+      cnv <- isconv n Conv Γ b [] b' [] ;;
+      if (cnv : bool) then
+        isconv n Conv (Γ ,, vass na b) t [] t' []
+      else ret false
+        
+    | tProd na b t, tProd _ b' t' =>
+      cnv <- isconv n Conv Γ b [] b' [] ;;
+      if (cnv : bool) then
+        isconv n leq (Γ ,, vass na b) t [] t' []
+      else ret false 
+
+    | tCase (ind, par) p c brs,
+      tCase (ind',par') p' c' brs' => (* Hnf did not reduce, maybe delta needed in c *)
+      if eq_term p p' && eq_term c c' && forallb2 (fun '(a, b) '(a', b') => eq_term b b') brs brs' then
+        ret true
+      else
+        cred <- reduce_stack_term RedFlags.default Σ Γ n c ;;
+        c'red <- reduce_stack_term RedFlags.default Σ Γ n c' ;;
+        if eq_term cred c && eq_term c'red c' then ret false
+        else
+          isconv n leq Γ (tCase (ind, par) p cred brs) l1 (tCase (ind, par) p c'red brs') l2
+
+    | tProj p c, tProj p' c' => on_cond (eq_constant p p' && eq_term c c')
+
+    | tFix mfix idx, tFix mfix' idx' =>
+      (* Hnf did not reduce, maybe delta needed *)
+      if eq_term t1 t2 && match isconv_stacks l1 l2 with Some b => b | None => false end then ret true
+      else 
+        match unfold_one_fix n Γ mfix idx l1 with
+        | Some t1 =>
+          redt <- reduce_stack nodelta_flags Σ Γ n t1 l1 ;;
+          let '(t1, l1) := redt in
+          isconv_prog n leq Γ t1 l1 t2 l2
+        | None =>
+          match unfold_one_fix n Γ mfix' idx' l2 with
+          | Some t2 =>
+            redt <- reduce_stack nodelta_flags Σ Γ n t2 l2 ;;
+            let '(t2, l2) := redt in
+            isconv_prog n leq Γ t1 l1 t2 l2
+          | None => ret false
+          end
+        end
+            
+    | tCoFix mfix idx, tCoFix mfix' idx' =>
+      on_cond (eq_term t1 t2)
+
+    | _, _ => fallback ()
+    end
+    end.
+(*
+    | tRel n, tRel n' => on_cond (Nat.eqb n n')
+    | tMeta n, tMeta n' => on_cond (Nat.eqb n n')
+    | tEvar ev args, tEvar ev' args' =>
+      if Nat.eqb ev ev' then ret (forallb2 eq_term args args') (* FIXME *) else ret false
+    | tVar id, tVar id' => on_cond (eq_string id id')
+    | tSort s, tSort s' => ret (eq_sort s s')
+    | tInd i, tInd i' => on_cond (eq_ind i i')
+    | tConstruct i k, tConstruct i' k' => on_cond (eq_ind i i' && Nat.eqb k k')
+*)      
+End Conversion.
+
+  
 Axiom conv_refl : forall Σ Γ t, Σ ;;; Γ |-- t = t.
 Axiom cumul_refl' : forall Σ Γ t, Σ ;;; Γ |-- t <= t.
 Axiom cumul_trans : forall Σ Γ t u v, Σ ;;; Γ |-- t <= u -> Σ ;;; Γ |-- u <= v -> Σ ;;; Γ |-- t <= v.
@@ -1013,14 +1190,6 @@ Definition try_reduce Σ Γ n t :=
   end.
 
 Conjecture reduce_cumul : forall Σ Γ n t, Σ ;;; Γ |-- try_reduce Σ Γ n t <= t.
-
-Quote Recursively Definition matc' :=
-  (fun y => match y with
-  | 0 => 0
-  | S x => x
-  end).
-
-Definition timpl x y := tProd nAnon x (lift0 1 y).
 
 Class Fuel := { fuel : nat }.
 
@@ -1081,11 +1250,17 @@ Section Typecheck.
   
   Definition convert_leq Γ (t u : term) : typing_result unit :=
     if eq_term t u then ret ()
-    else 
-      t' <- reduce Σ Γ t ;;
-      u' <- reduce Σ Γ u ;;
-      if leq_term t' u' then ret ()
-      else raise (NotConvertible Γ t u t' u').
+    else
+      match isconv Σ fuel Cumul Γ t [] u [] with
+      | Some b =>
+        if b then ret ()
+        else raise (NotConvertible Γ t u t u)
+      | None => (* fallback *)
+        t' <- reduce Σ Γ t ;;
+        u' <- reduce Σ Γ u ;;
+        if leq_term t' u' then ret ()
+        else raise (NotConvertible Γ t u t' u')
+      end.
 
   Definition reduce_to_sort Γ (t : term) : typing_result sort :=
     t' <- hnf_stack Σ Γ t ;;
@@ -1101,10 +1276,10 @@ Section Typecheck.
     | _ => raise (NotAProduct t (zip t'))
     end.
 
-  Definition reduce_to_ind Γ (t : term) : typing_result (inductive * list term) :=
+  Definition reduce_to_ind Γ (t : term) : typing_result (inductive * list level * list term) :=
     t' <- hnf_stack Σ Γ t ;;
     match t' with
-    | (tInd i, l) => ret (i, l)
+    | (tInd i u, l) => ret (i, u, l)
     | _ => raise (NotAnInductive t)
     end.
 
@@ -1179,9 +1354,9 @@ Section Typecheck.
       t_ty <- infer Γ t ;;
       infer_spine infer Γ t_ty l
        
-    | tConst cst => lookup_constant_type cst
+    | tConst cst u => lookup_constant_type cst (* TODO Universes *)
 
-    | tInd (mkInd ind i) =>
+    | tInd (mkInd ind i) u =>
       match lookup_env Σ ind with
       | Some (InductiveDecl _ _ l) =>
         match nth_error l i with
@@ -1191,14 +1366,14 @@ Section Typecheck.
       |  _ => raise (UndeclaredInductive (mkInd ind i))
       end
 
-    | tConstruct (mkInd ind i) k =>
+    | tConstruct (mkInd ind i) k u =>
       match lookup_env Σ ind with
       | Some (InductiveDecl _ _ l) =>
         match nth_error l i with
         | Some (_, _, mkinductive_body cstrs) =>
           match nth_error cstrs k with
           | Some (_, ty, _) =>
-            ret (substl (inds ind l) ty)
+            ret (substl (inds ind u l) ty)
           | None => raise (UndeclaredConstructor (mkInd ind i) k)
           end
         | None => raise (UndeclaredInductive (mkInd ind i))
@@ -1210,12 +1385,12 @@ Section Typecheck.
       ty <- infer Γ c ;;
       indargs <- reduce_to_ind Γ ty ;;
       (** TODO check branches *)
-      let '(ind', args) := indargs in
+      let '(ind', u, args) := indargs in
       if eq_ind ind ind' then
         ret (tApp p (List.skipn par args ++ [c]))
       else
-        let ind1 := tInd ind in
-        let ind2 := tInd ind' in
+        let ind1 := tInd ind u in
+        let ind2 := tInd ind' u in
         raise (NotConvertible Γ ind1 ind2 ind1 ind2)
 
     | tProj p c =>
@@ -1279,11 +1454,11 @@ Section Typecheck.
         reduce_to_prod Γ t = OfType (a', b') /\
         cumul Σ Γ (tProd na a' b') (tProd na a b).
 
-  Conjecture cumul_reduce_to_ind : forall Γ t i args,
-      Σ ;;; Γ |-- t <= mktApp (tInd i) args <->
+  Conjecture cumul_reduce_to_ind : forall Γ t i u args,
+      Σ ;;; Γ |-- t <= mktApp (tInd i u) args <->
       exists args',
-        reduce_to_ind Γ t = OfType (i, args') /\
-        cumul Σ Γ (mktApp (tInd i) args') (mktApp (tInd i) args).
+        reduce_to_ind Γ t = OfType (i, u, args') /\
+        cumul Σ Γ (mktApp (tInd i u) args') (mktApp (tInd i u) args).
 
   Lemma lookup_constant_type_declared cst (isdecl : declared_constant Σ cst) :
     lookup_constant_type cst = OfType (type_of_constant Σ (exist _ _ isdecl)).
@@ -1467,7 +1642,7 @@ Section Typecheck.
       destruct p.
       infers.
       destruct reduce_to_ind eqn:?; try discriminate. simpl.
-      destruct a0 as [ind' args].
+      destruct a0 as [[ind' u] args].
       destruct eq_ind eqn:?; try discriminate.
       intros [= <-].
       eapply type_Case. simpl in *.
@@ -1491,29 +1666,7 @@ Section Typecheck.
 
 End Typecheck.
 
-Quote Recursively Definition four := (2 + 2).
-
-Ltac typecheck := start;
-  match goal with
-    |- ?Σ ;;; ?Γ |-- ?t : ?T =>
-    eapply (infer_correct Σ Γ t T); vm_compute; reflexivity
-  end.
-Ltac infer := start;
-  match goal with
-    |- ?Σ ;;; ?Γ |-- ?t : ?T => 
-    eapply (infer_correct Σ Γ t T);
-      let t' := eval vm_compute in (infer Σ Γ t) in
-          change (t' = OfType T); reflexivity
-  end.
-
 Instance default_fuel : Fuel := { fuel := 2 ^ 18 }.
-
-Example typecheck_four : type_program four natr := ltac:(typecheck).
-
-Goal exists ty, type_program four ty.
-Proof.
-  eexists. infer.
-Qed.
 
 Fixpoint fresh id env : bool :=
   match env with
@@ -1595,96 +1748,3 @@ Section Checker.
     check_wf_env Σ ;; infer_term Σ t.
 
 End Checker.
-
-Require Import Morphisms.
-Quote Recursively Definition idq := @Coq.Classes.Morphisms.Proper.
-
-Eval vm_compute in typecheck_program idq.
-
-Require Import Recdef.
-Require Import Coq.omega.Omega.
-Set Implicit Arguments.
-
-(** A function defined using measure or well-founded relation **)
-Function Plus1 (n: nat) {measure id n} : nat :=
-  match n with
-    | 0 => 1
-    | S p => S (Plus1 p)
-  end.
-- intros. unfold id. abstract omega.
-Defined.
-
-Require Import Coq.Lists.List.
-Require Import Coq.Strings.String.
-Require Import Coq.Strings.Ascii.
-Require Import Coq.Bool.Bool.
-Require Import Template.Template.
-Require Import Template.Ast.
-
-Unset Template Cast Propositions.
-
-(* Uase template-coq to make a [program] from function defined above *)
-(* Quote Recursively Definition p_Plus1 := Plus1. *)
-
-(* Eval native_compute in typecheck_program p_Plus1. *)
-
-Definition test_reduction (p : program) :=
-    let '(Σ, t) := decompose_program p [] in
-    reduce Σ [] t.
-
-Definition out_typing c :=
-  match c with
-  | OfType t => t
-  | TypeError e => tRel 0
-  end.
-
-Definition out_check c :=
-  match c with
-  | CorrectDecl t => t
-  | EnvError e => tRel 0
-  end.
-
-Ltac interp_red c :=
-  let t:= eval vm_compute in (out_typing (test_reduction c)) in exact t.
-
-Ltac interp_infer c :=
-  let t:= eval vm_compute in (out_check (typecheck_program c)) in exact t.
-
-Ltac term_type c :=
-  let X := type of c in exact X.
-
-Ltac quote_type c :=
-  let X := type of c in
-  quote_term X ltac:(fun Xast => exact Xast).
-
-Notation convertible x y := (@eq_refl _ x : x = y).
-
-Module Test1.
-  Definition term := (Nat.mul 2 62).
-  Load "test_term.v".
-End Test1.
-
-Module Test2.
-  Definition term := (fun (f : nat -> nat) (x : nat) => f (f x)).
-  Load "test_term.v".
-End Test2.
-
-Module Test3.
-  Definition term := (id 0).
-  Load "test_term.v".
-End Test3.
-
-Module Test4.
-  Definition term := @id.
-  Set Printing Universes.
-  Load "test_term.v".
-End Test4.
-
-(* Require Import ExtrOcamlBasic. *)
-(* Require Import ExtrOcamlString. *)
-
-(* Set Extraction Optimize. *)
-
-(* Recursive Extraction typecheck_program. *)
-(** Compile template_program using certicoq and bind to template, voilà: 
-    a certified typechecker of Coq vos! *)

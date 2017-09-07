@@ -25,6 +25,15 @@ let _ = Goptions.declare_bool_option {
   Goptions.optwrite = (fun a -> cast_prop:=a);
 }
 
+let cast_types = ref (false)
+let _ = Goptions.declare_bool_option {
+  Goptions.optdepr = false;
+  Goptions.optname = "Casting of all types in template-coq";
+  Goptions.optkey = ["Template";"Cast";"Types"];
+  Goptions.optread = (fun () -> !cast_types);
+  Goptions.optwrite = (fun a -> cast_types:=a);
+}
+
 (* whether Set Template Cast Propositions is on, as needed for erasure in Certicoq *)
 let is_cast_prop () = !cast_prop                     
                      
@@ -563,16 +572,20 @@ struct
   let push_rel_context ctx (in_prop, env) = (in_prop, Environ.push_rel_context ctx env)
 
   let castSetProp (sf:Term.sorts) t =
-    let sf = Term.family_of_sort sf in
-    let k = Q.quote_cast_kind Constr.DEFAULTcast in
-    if sf == Term.InProp
-    then Q.mkCast t k (Q.mkSort (Q.quote_sort Sorts.prop))
-    else if sf == Term.InSet
-    then Q.mkCast t k (Q.mkSort (Q.quote_sort Sorts.set))
+    if !cast_types then
+      let sf = Term.family_of_sort sf in
+      let k = Q.quote_cast_kind Constr.DEFAULTcast in
+      if sf == Term.InProp
+      then Q.mkCast t k (Q.mkSort (Q.quote_sort Sorts.prop))
+      else if sf == Term.InSet
+      then Q.mkCast t k (Q.mkSort (Q.quote_sort Sorts.set))
+      else t
     else t
 
   let noteTypeAsCast t typ =
-    Q.mkCast t (Q.quote_cast_kind Constr.DEFAULTcast) typ
+    if !cast_types then
+      Q.mkCast t (Q.quote_cast_kind Constr.DEFAULTcast) typ
+    else typ
 
   let getSort env (t:Term.constr) =
     Retyping.get_sort_of env Evd.empty (EConstr.of_constr t)

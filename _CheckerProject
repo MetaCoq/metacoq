@@ -1,0 +1,9 @@
+-R theories Template
+-I src
+src/typing0.ml
+src/typing0.mli
+src/template_coq_checker.mli
+src/template_coq_checker.ml4
+src/template_coq_checker_mod.ml
+src/template_coq_checker_plugin.mllib
+theories/TemplateCoqChecker.v

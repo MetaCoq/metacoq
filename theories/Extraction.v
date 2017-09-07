@@ -9,8 +9,9 @@ Require Import Template.Ast.
 Require Import ExtrOcamlBasic.
 Require Import ExtrOcamlString.
 
-Extraction Blacklist String List Nat.
+Extraction Blacklist Ast String List Nat.
 
+Extraction Library List.
 Extraction Library Datatypes.
 Extraction Library Bool.
 Extraction Library Nat.
@@ -20,4 +21,7 @@ Extraction Library BinPosDef.
 Extraction Library BinPos.
 Extraction Library String.
 Extraction Library Ascii.
+Extraction Library PeanoNat.
+Extraction Library Specif.
+Extraction Library Sumbool.
 Extraction Library Ast.

@@ -7,7 +7,11 @@ BinPos
 BinNat
 Ascii
 String0
+Specif
+Sumbool
+PeanoNat
+List0
 Reify
-Template_AST
+Ast0
 Template_coq
 Template_coq_mod

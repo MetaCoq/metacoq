@@ -37,3 +37,16 @@ src/nat0.ml
 src/nat0.mli
 src/string0.ml
 src/string0.mli
+/Makefile.coqchecker
+/src/ast0.ml
+/src/ast0.mli
+/src/list0.ml
+src/list0.mli
+src/peanoNat.ml
+src/peanoNat.mli
+src/specif.ml
+src/specif.mli
+src/sumbool.ml
+src/sumbool.mli
+src/typing0.ml
+src/typing0.mli

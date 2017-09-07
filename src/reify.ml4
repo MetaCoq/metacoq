@@ -727,10 +727,10 @@ struct
     else
       raise (Failure "non-value")
 
-  let unquote_sort trm =
+  let unquote_sort evdref trm =
     let (h,args) = app_full trm [] in
     if Term.eq_constr h sType then
-      raise (NotSupported h)
+      Term.destSort (Evarutil.e_new_Type (Global.env ()) evdref)
     else if Term.eq_constr h sProp then
       Term.prop_sort
     else if Term.eq_constr h sSet then
@@ -760,6 +760,11 @@ struct
       | _ -> assert false
     else
       raise (Failure "non-constructor")
+
+  let denote_constant nm =
+    let n = unquote_string nm in
+    let kn = kn_of_canonical_string n in
+    Names.constant_of_kn kn
 
   let rec from_coq_list trm =
     let (h,args) = app_full trm [] in
@@ -791,7 +796,8 @@ struct
    ** come back through elaboration.
    ** - This would also allow writing terms with holes
    **)
-  let rec denote_term trm =
+  let denote_term evdref trm =
+    let rec aux trm =
     debug (fun () -> Pp.(str "denote_term" ++ spc () ++ Printer.pr_constr trm)) ;
     let (h,args) = app_full trm [] in
     if Term.eq_constr h tRel then
@@ -805,33 +811,33 @@ struct
       | _ -> raise (Failure "ill-typed")
     else if Term.eq_constr h tSort then
       match args with
-	x :: _ -> Term.mkSort (unquote_sort x)
+	x :: _ -> Term.mkSort (unquote_sort evdref x)
       | _ -> raise (Failure "ill-typed")
     else if Term.eq_constr h tCast then
       match args with
 	t :: c :: ty :: _ ->
-	  Term.mkCast (denote_term t, unquote_cast_kind c, denote_term ty)
+	  Term.mkCast (aux t, unquote_cast_kind c, aux ty)
       | _ -> raise (Failure "ill-typed")
     else if Term.eq_constr h tProd then
       match args with
 	n :: t :: b :: _ ->
-	  Term.mkProd (unquote_name n, denote_term t, denote_term b)
+	  Term.mkProd (unquote_name n, aux t, aux b)
       | _ -> raise (Failure "ill-typed (product)")
     else if Term.eq_constr h tLambda then
       match args with
 	n :: t :: b :: _ ->
-	Term.mkLambda (unquote_name n, denote_term t, denote_term b)
+	Term.mkLambda (unquote_name n, aux t, aux b)
       | _ -> raise (Failure "ill-typed (lambda)")
     else if Term.eq_constr h tLetIn then
       match args with
 	n :: e :: t :: b :: _ ->
-	  Term.mkLetIn (unquote_name n, denote_term e, denote_term t, denote_term b)
+	  Term.mkLetIn (unquote_name n, aux e, aux t, aux b)
       | _ -> raise (Failure "ill-typed (let-in)")
     else if Term.eq_constr h tApp then
       match args with
 	f :: xs :: _ ->
-	  Term.mkApp (denote_term f,
-		      Array.of_list (List.map denote_term (from_coq_list xs)))
+	  Term.mkApp (aux f,
+		      Array.of_list (List.map aux (from_coq_list xs)))
       | _ -> raise (Failure "ill-typed (app)")
     else if Term.eq_constr h tConstructor then
       match args with
@@ -853,20 +859,26 @@ struct
           let ci = Inductiveops.make_case_info (Global.env ()) ind Term.RegularStyle in
           let denote_branch br =
             let _, br = from_coq_pair br in
-            denote_term br
+            aux br
           in
-	  Term.mkCase (ci, denote_term ty, denote_term d,
+	  Term.mkCase (ci, aux ty, aux d,
 			Array.of_list (List.map denote_branch (from_coq_list brs)))
       | _ -> raise (Failure "ill-typed (case)")
-    else
-      not_supported trm
+    else if Term.eq_constr h tConst then
+      match args with
+      | const :: _ ->
+          let c = denote_constant const in
+          Evarutil.e_new_global evdref (Globnames.ConstRef c)
+      | _ -> raise (Failure "ill-typed (const)")
+    else not_supported trm
+    in aux trm
 
-  let denote_local_entry trm =
+  let denote_local_entry evdref trm =
     let (h,args) = app_full trm [] in
       match args with
 	    x :: [] -> 
-      if Term.eq_constr h tLocalDef then Entries.LocalDefEntry (denote_term x)
-      else (if  Term.eq_constr h tLocalAssum then Entries.LocalAssumEntry (denote_term x) else bad_term trm)
+      if Term.eq_constr h tLocalDef then Entries.LocalDefEntry (denote_term evdref x)
+      else (if  Term.eq_constr h tLocalAssum then Entries.LocalAssumEntry (denote_term evdref x) else bad_term trm)
       | _ -> bad_term trm
 
   let denote_mind_entry_finite trm =
@@ -899,16 +911,17 @@ struct
     let (body,_) = Constrintern.interp_constr env evm body in
   let (evm,body) = reduce_all env (evm,body)  (Genredexpr.Cbv Redops.all_flags) in
   let (_,args) = app_full body [] in (* check that the first component is Build_mut_ind .. *)
+  let evdref = ref evm in
   let one_ind b1 : Entries.one_inductive_entry = 
     let (_,args) = app_full b1 [] in (* check that the first component is Build_one_ind .. *)
     match args with
     | mt::ma::mtemp::mcn::mct::[] ->
     {
     mind_entry_typename = unquote_ident mt;
-    mind_entry_arity = denote_term ma;
+    mind_entry_arity = denote_term evdref ma;
     mind_entry_template = from_bool mtemp;
     mind_entry_consnames = List.map unquote_ident (from_coq_list mcn);
-    mind_entry_lc = List.map denote_term (from_coq_list mct)
+    mind_entry_lc = List.map (denote_term evdref) (from_coq_list mct)
     } 
     | _ -> raise (Failure "ill-typed one_inductive_entry")
      in 
@@ -916,7 +929,7 @@ struct
     {
     mind_entry_record = unquote_map_option (unquote_map_option unquote_ident) mr;
     mind_entry_finite = denote_mind_entry_finite mf; (* inductive *)
-    mind_entry_params = List.map (fun p -> let (l,r) = (from_coq_pair p) in (unquote_ident l, (denote_local_entry r))) (from_coq_list mp);
+    mind_entry_params = List.map (fun p -> let (l,r) = (from_coq_pair p) in (unquote_ident l, (denote_local_entry evdref r))) (from_coq_list mp);
     mind_entry_inds = List.map one_ind (from_coq_list mi);
     mind_entry_polymorphic = from_bool mpol;
     mind_entry_universes = Univ.UContext.empty;
@@ -1007,11 +1020,14 @@ END;;
 TACTIC EXTEND denote_term
     | [ "denote_term" constr(c) tactic(tac) ] ->
       [ Proofview.Goal.nf_enter { enter = begin fun gl ->
-         let (evm,env) = Lemmas.get_current_context() in
-         let c = Denote.denote_term c in
-         let def' = Constrextern.extern_constr true env evm c in
-         let def = Constrintern.interp_constr env evm def' in
-	 ltac_apply tac (List.map to_ltac_val [fst def])
+         let env = Proofview.Goal.env gl in
+         let evm = Sigma.to_evar_map (Proofview.Goal.sigma gl) in
+         let evdref = ref evm in
+         let c = Denote.denote_term evdref c in
+         let def' = Constrextern.extern_constr true env !evdref c in
+         let def = Constrintern.interp_constr env !evdref def' in
+         Proofview.tclTHEN (Proofview.Unsafe.tclEVARS !evdref)
+	                   (ltac_apply tac (List.map to_ltac_val [fst def]))
       end } ]
 END;;
 
@@ -1055,7 +1071,8 @@ VERNAC COMMAND EXTEND Unquote_vernac CLASSIFIED AS SIDEFF
       [ check_inside_section () ;
 	let (evm,env) = Lemmas.get_current_context () in
 	let def = Constrintern.interp_constr env evm def in
-	let trm = Denote.denote_term (fst def) in
+        let evdref = ref evm in
+	let trm = Denote.denote_term evdref (fst def) in
 	let result = Constrextern.extern_constr true env evm trm in
 	declare_definition name
 	  (Decl_kinds.Global, false, Decl_kinds.Definition)

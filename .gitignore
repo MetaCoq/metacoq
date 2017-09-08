@@ -50,3 +50,9 @@ src/sumbool.ml
 src/sumbool.mli
 src/typing0.ml
 src/typing0.mli
+src/checker.ml
+src/checker.mli
+src/induction.ml
+src/induction.mli
+src/liftSubst.ml
+src/liftSubst.mli

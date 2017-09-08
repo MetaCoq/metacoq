@@ -6,7 +6,7 @@ open Ltac_plugin
 open Stdarg
 open Pp
 open PeanoNat.Nat
-open Typing0
+open Checker
 let pr_char c = str (Char.escaped c)
    
 let pr_char_list = prlist_with_sep mt pr_char
@@ -19,7 +19,7 @@ let check gr =
   let term = Template_coq.quote_term_rec env (EConstr.to_constr sigma c) in
   Feedback.msg_debug (str"Finished quoting.. checking.");
   let fuel = pow two (pow two (pow two two)) in
-  match Typing0.typecheck_program fuel term with
+  match Checker.typecheck_program fuel term with
   | CorrectDecl t ->
      Feedback.msg_debug (str"Finished checking successfully")
   | EnvError (AlreadyDeclared id) ->

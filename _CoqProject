@@ -7,4 +7,7 @@ src/template_plugin.mllib
 
 theories/Ast.v
 theories/Template.v
+theories/Induction.v
+theories/LiftSubst.v
 theories/Typing.v
+theories/Checker.v

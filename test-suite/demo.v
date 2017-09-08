@@ -83,10 +83,7 @@ Quote Recursively Definition mult_syntax := mult.
 Make Definition d''_from_syntax := ltac:(let t:= eval compute in d'' in exact t).
 
 
-Require Import Template.Typing.
-
 Require Import Arith.
-Eval vm_compute in typecheck_program (2 ^ 18) mult_syntax.
 
 (** Reflecting  Inductives *)
 

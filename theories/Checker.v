@@ -3,18 +3,6 @@ From Template Require Import Template Ast Induction LiftSubst Typing.
 
 Set Asymmetric Patterns.
 
-Lemma nth_error_safe_nth {A} n (l : list A) (isdecl : n < Datatypes.length l) :
-  nth_error l n = Some (safe_nth l (exist _ n isdecl)).
-Proof.
-  revert n isdecl; induction l; intros.
-  - inversion isdecl.
-  - destruct n as [| n']; simpl.
-    reflexivity.
-    simpl in IHl.
-    simpl in isdecl.
-    now rewrite <- IHl.
-Qed.
-
 Ltac start :=
   let Σ := fresh "Σ" in red; simpl; setenv Σ.
 

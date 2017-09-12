@@ -1,7 +1,7 @@
 Require Import List Program.
 Require Import Template.Template Template.Ast.
 Require Import BinPos.
-Require Import Coq.Arith.Compare_dec.
+Require Import Coq.Arith.Compare_dec Bool.
 Require Import Template.Induction.
 
 Set Asymmetric Patterns.
@@ -62,6 +62,31 @@ Fixpoint subst t k u :=
   end.
 
 Notation subst0 t u := (subst t 0 u).
+Notation "M { j := N }" := (subst N j M) (at level 10, right associativity).
+
+Fixpoint closedn k (t : term) : bool :=
+  match t with
+  | tRel i => Nat.ltb i k
+  | tEvar ev args => List.forallb (closedn k) args
+  | tLambda _ T M | tProd _ T M => closedn k T && closedn (S k) M
+  | tApp u v => closedn k u && List.forallb (closedn k) v
+  | tCast c kind t => closedn k c && closedn k t
+  | tLetIn na b t b' => closedn k b && closedn k t && closedn (S k) b'
+  | tCase ind p c brs =>
+    let brs' := List.forallb (test_snd (closedn k)) brs in
+    closedn k p && closedn k c && brs'
+  | tProj p c => closedn k c
+  | tFix mfix idx =>
+    let k' := List.length mfix + k in
+    List.forallb (test_def (closedn k')) mfix
+  | tCoFix mfix idx =>
+    let k' := List.length mfix + k in
+    List.forallb (test_def (closedn k')) mfix
+  | x => true
+  end.
+
+Notation closed t := (closedn 0 t).
+
 Create HintDb terms.
 
 Ltac easy0 :=
@@ -358,3 +383,33 @@ Proof.
   apply distr_subst_rec.
 Qed.
 
+
+Lemma lift_closed n k t : closedn k t = true -> lift n k t = t.
+Proof.
+  revert k.
+  elim t using term_forall_list_ind; intros; try easy;
+    rewrite ?map_map_compose, ?compose_on_snd, ?compose_map_def;
+    try (f_equal; apply_spec);  simpl closed in *;
+    try rewrite ?map_length; try easy.
+  - rewrite lift_rel_lt; auto.
+    revert H. elim (Nat.ltb_spec n0 k); intros; try easy.
+  - simpl lift; f_equal.
+    rewrite <- map_id. 
+    apply_spec; eauto.
+  - simpl lift. rewrite andb_true_iff in H1. f_equal; intuition eauto.
+  - simpl lift; rewrite andb_true_iff in H1. f_equal; intuition eauto.
+  - simpl lift; rewrite andb_true_iff in H1. f_equal; intuition eauto.
+  - simpl lift. rewrite !andb_true_iff in H2. f_equal; intuition eauto.
+  - simpl lift. rewrite !andb_true_iff in H1. f_equal; intuition eauto.
+    rewrite <- map_id; apply_spec; eauto.
+  - simpl lift. rewrite !andb_true_iff in H2. f_equal; intuition eauto.
+    transitivity (map (on_snd id) l). apply_spec; eauto.
+    rewrite <- map_id. f_equal. unfold on_snd. extensionality p. now destruct p.
+  - simpl lift. f_equal; eauto.
+  - simpl lift. f_equal.
+    transitivity (map (map_def id) m). apply_spec; eauto.
+    now autorewrite with core.
+  - simpl lift. f_equal.
+    transitivity (map (map_def id) m). apply_spec; eauto.
+    now autorewrite with core.
+Qed.

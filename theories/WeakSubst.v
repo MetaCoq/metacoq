@@ -3,11 +3,7 @@ From Template Require Import Template Ast Induction LiftSubst Typing.
 
 Set Asymmetric Patterns.
 Generalizable Variables Σ Γ t T.
-
-Definition app_context (Γ Γ' : context) : context := Γ' ++ Γ.
-Notation " Γ  ,,, Γ' " := (app_context Γ Γ') (at level 25, Γ' at next level, left associativity).
-Notation "#| Γ |" := (length Γ) (at level 0, format "#| Γ |").
-
+Print Scopes.
 Lemma length_app_context Γ Γ' : #|Γ ,,, Γ'| = #|Γ| + #|Γ'|.
 Proof.
   unfold app_context. rewrite app_length. omega.
@@ -35,7 +31,7 @@ Qed.
   
 Lemma lift_context_rec_fst n k Γ :
   fst (lift_context_rec n k Γ) = #|Γ| + k.
-Proof.
+Proof.n
   induction Γ; simpl; auto.
   destruct lift_context_rec; simpl in *.
   congruence.

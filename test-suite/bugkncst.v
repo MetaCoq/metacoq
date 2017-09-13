@@ -24,11 +24,6 @@ Unset Template Cast Propositions.
 (* Uase template-coq to make a [program] from function defined above *)
 Quote Recursively Definition p_Plus1 := Plus1.
 
-Require Import Template.Typing.
-
-Eval vm_compute in typecheck_program p_Plus1.
-
-
 (** The program p_Plus1 is too big to read, so we define some
 *** diagnostic software **)
 Section occ_term_Sec.
@@ -57,7 +52,7 @@ Fixpoint pocc_term (n:nat) (t:term): bool :=
   (** does [tConst str] occur anywhere in a program? **)
 Fixpoint pocc_program (p:program): bool :=
   match p with
-    | PConstr _ _ t q => pocc_term 2000 t || pocc_program q
+    | PConstr _ ty t q => pocc_term 2000 ty || pocc_term 2000 t || pocc_program q
     | PType _ _ _ q =>  pocc_program q
     | PAxiom _ t q => pocc_term 2000 t || pocc_program q
     | PIn t =>  pocc_term 2000 t

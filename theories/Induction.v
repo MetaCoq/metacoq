@@ -93,13 +93,13 @@ Lemma term_ind_list :
     (forall (n : name) (t : term),
         P t -> forall t0 : term, P t0 -> forall t1 : term, P t1 -> P (tLetIn n t t0 t1)) ->
     (forall t : term, P t -> forall l : list term, P0 l -> P (tApp t l)) ->
-    (forall s : String.string, P (tConst s)) ->
-    (forall i : inductive, P (tInd i)) ->
-    (forall (i : inductive) (n : nat), P (tConstruct i n)) ->
+    (forall (s : String.string) (u : list level), P (tConst s u)) ->
+    (forall (i : inductive) (u : list level), P (tInd i u)) ->
+    (forall (i : inductive) (n : nat) (u : list level), P (tConstruct i n u)) ->
     (forall (p : inductive * nat) (t : term),
         P t -> forall t0 : term, P t0 -> forall l : list (nat * term),
             tCaseBrsProp P P0 l -> P (tCase p t t0 l)) ->
-    (forall (s : String.string) (t : term), P t -> P (tProj s t)) ->
+    (forall (s : projection) (t : term), P t -> P (tProj s t)) ->
     (forall (m : mfixpoint term) (n : nat), tFixProp P P0 m -> P (tFix m n)) ->
     (forall (m : mfixpoint term) (n : nat), tFixProp P P0 m -> P (tCoFix m n)) -> forall t : term, P t.
 Proof.
@@ -144,13 +144,13 @@ Lemma term_forall_list_ind :
     (forall (n : name) (t : term),
         P t -> forall t0 : term, P t0 -> forall t1 : term, P t1 -> P (tLetIn n t t0 t1)) ->
     (forall t : term, P t -> forall l : list term, Forall P l -> P (tApp t l)) ->
-    (forall s : String.string, P (tConst s)) ->
-    (forall i : inductive, P (tInd i)) ->
-    (forall (i : inductive) (n : nat), P (tConstruct i n)) ->
+    (forall (s : String.string) (u : list level), P (tConst s u)) ->
+    (forall (i : inductive) (u : list level), P (tInd i u)) ->
+    (forall (i : inductive) (n : nat) (u : list level), P (tConstruct i n u)) ->
     (forall (p : inductive * nat) (t : term),
         P t -> forall t0 : term, P t0 -> forall l : list (nat * term),
             tCaseBrsProp P (Forall P) l -> P (tCase p t t0 l)) ->
-    (forall (s : String.string) (t : term), P t -> P (tProj s t)) ->
+    (forall (s : projection) (t : term), P t -> P (tProj s t)) ->
     (forall (m : mfixpoint term) (n : nat), tFixProp P (Forall P) m -> P (tFix m n)) ->
     (forall (m : mfixpoint term) (n : nat), tFixProp P (Forall P) m -> P (tCoFix m n)) -> forall t : term, P t.
 Proof.

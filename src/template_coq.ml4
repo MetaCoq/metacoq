@@ -28,6 +28,7 @@ struct
   type quoted_program = program
   type quoted_int = Datatypes.nat
   type quoted_bool = bool
+  type quoted_proj = projection
 
   type quoted_univ_instance = level list
   type quoted_mind_params = (ident * local_entry) list
@@ -71,6 +72,8 @@ struct
               
   let quote_kn kn = quote_string (Names.string_of_kn kn)
   let quote_inductive (kn, i) = Coq_mkInd (kn, i)
+  let quote_proj ind p a = ((ind,p),a)
+
   let mkAnon = Coq_nAnon
   let mkName i = Coq_nNamed i
                   
@@ -124,8 +127,12 @@ struct
 
   let mkMutualInductive kn p r =
     (* FIXME: This is a quite dummy rearrangement *)
-    let r = List.map (fun (i,t,r) ->
-                ((i,t),List.map (fun (id,t,n) -> (id,t),n) r)) r in
+    let r =
+      List.map (fun (i,t,r,p) ->
+          let ctors = List.map (fun (id,t,n) -> (id,t),n) r in
+          { ind_name = i;
+            ind_type = t;
+            ctors; projs = p }) r in
     fun pr ->
     PType (kn,p,r,pr)
 

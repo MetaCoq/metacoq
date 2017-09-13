@@ -22,6 +22,7 @@ module type Quoter = sig
   type quoted_mind_entry
   type quoted_mind_finiteness
   type quoted_entry
+  type quoted_proj
 
   open Names
 
@@ -41,6 +42,7 @@ module type Quoter = sig
     quoted_mind_finiteness * quoted_mind_params * quoted_ind_entry list * quoted_bool ->
     quoted_mind_entry
   val quote_entry : (quoted_definition_entry, quoted_mind_entry) sum option -> quoted_entry
+  val quote_proj : quoted_inductive -> quoted_int -> quoted_int -> quoted_proj
 
   val mkName : quoted_ident -> quoted_name
   val mkAnon : quoted_name
@@ -61,13 +63,14 @@ module type Quoter = sig
   val mkConstruct : quoted_inductive * quoted_int -> quoted_univ_instance -> t
   val mkCase : (quoted_inductive * quoted_int) -> quoted_int list -> t -> t ->
                t list -> t
-  val mkProj : quoted_kernel_name -> t -> t
+  val mkProj : quoted_proj -> t -> t
   val mkFix : (quoted_int array * quoted_int) * (quoted_name array * t array * t array) -> t
   val mkCoFix : quoted_int * (quoted_name array * t array * t array) -> t
 
   val mkMutualInductive : quoted_kernel_name -> quoted_int (* params *) ->
                           (quoted_ident * t (* ind type *) *
-                             (quoted_ident * t (* constr type *) * quoted_int) list) list ->
+                             (quoted_ident * t (* constr type *) * quoted_int) list *
+                               (quoted_ident * t) list (* projections *)) list ->
                           quoted_decl
 
   val mkConstant : quoted_kernel_name -> quoted_univ_instance -> t -> t -> quoted_decl

@@ -133,6 +133,7 @@ module type Quoter = sig
   type quoted_mind_entry
   type quoted_mind_finiteness
   type quoted_entry
+  type quoted_proj
 
   open Names
 
@@ -153,6 +154,7 @@ module type Quoter = sig
     quoted_mind_entry
 
   val quote_entry : (quoted_definition_entry, quoted_mind_entry) sum option -> quoted_entry
+  val quote_proj : quoted_inductive -> quoted_int -> quoted_int -> quoted_proj
 
   val mkName : quoted_ident -> quoted_name
   val mkAnon : quoted_name
@@ -172,14 +174,16 @@ module type Quoter = sig
   val mkConstruct : quoted_inductive * quoted_int -> quoted_univ_instance -> t
   val mkCase : (quoted_inductive * quoted_int) -> quoted_int list -> t -> t ->
                t list -> t
-  val mkProj : quoted_kernel_name -> t -> t
+  val mkProj : quoted_proj -> t -> t
   val mkFix : (quoted_int array * quoted_int) * (quoted_name array * t array * t array) -> t
   val mkCoFix : quoted_int * (quoted_name array * t array * t array) -> t
 
-  val mkMutualInductive : quoted_kernel_name -> quoted_int (* params *) ->
-                          (quoted_ident * t (* ind type *) *
-                             (quoted_ident * t (* constr type *) * quoted_int) list) list ->
-                          quoted_decl
+  val mkMutualInductive :
+    quoted_kernel_name -> quoted_int (* params *) ->
+    (quoted_ident * t (* ind type *) *
+       (quoted_ident * t (* constr type *) * quoted_int) list *
+         (quoted_ident * t (* projection type *)) list) list ->
+     quoted_decl
 
   val mkConstant : quoted_kernel_name -> quoted_univ_instance ->
                    t (* type *) -> t (* body *) -> quoted_decl
@@ -204,6 +208,8 @@ struct
   type quoted_recdecl = Term.constr
   type quoted_inductive = Term.constr
   type quoted_univ_instance = Term.constr
+  type quoted_proj = Term.constr
+
   type quoted_decl = Term.constr
   type quoted_mind_params = Term.constr
   type quoted_program = Term.constr
@@ -428,9 +434,13 @@ struct
     in
     fun ls ->
     let ctors = List.map (fun (a,b,c) -> pair (prod tident tTerm) tnat
-					 (pair tident tTerm a b) c) ls in
-      Term.mkApp (tmkinductive_body, [| ctor_list ctors |])
+				              (pair tident tTerm a b) c) ls in
+    ctor_list ctors
 
+  let mk_proj_list d =
+    to_coq_list (prod tident tTerm)
+                (List.map (fun (a, b) -> pair tident tTerm a b) d)
+    
   let rec pair_with_number st ls =
     match ls with
       [] -> []
@@ -493,14 +503,18 @@ struct
     let tl = prod tnat tTerm in
     Term.mkApp (tCase, [| info ; p ; c ; to_coq_list tl branches |])
 
+  let quote_proj ind pars args =
+    pair (prod tIndTy tnat) tnat (pair tIndTy tnat ind pars) args
+    
   let mkProj kn t =
     Term.mkApp (tProj, [| kn; t |])
 
   let mkMutualInductive kn p ls =
-    let result = to_coq_list (prod (prod tident tTerm) tinductive_body)
-         (List.map (fun (a,b,c) ->
-                                let c = mk_ctor_list c in
-	                        pair (prod tident tTerm) tinductive_body (pair tident tTerm a b) c)
+    let result = to_coq_list tinductive_body
+         (List.map (fun (a,b,c,d) ->
+              let c = mk_ctor_list c in
+              let d = mk_proj_list d in
+              Term.mkApp (tmkinductive_body, [| a; b; c; d |]))
                    ls) in
     Term.mkApp (pType, [| kn; p; result |])
 
@@ -706,8 +720,14 @@ struct
       | Term.Fix fp -> quote_fixpoint acc env fp
       | Term.CoFix fp -> quote_cofixpoint acc env fp
       | Term.Proj (p,c) ->
+         let proj = Environ.lookup_projection p (snd env) in
+         let ind = proj.Declarations.proj_ind in
+         let ind = Q.quote_inductive (Q.quote_kn (Names.MutInd.canonical ind),
+                                      Q.quote_int 0) in
+         let pars = Q.quote_int proj.Declarations.proj_npars in
+         let arg = Q.quote_int proj.Declarations.proj_arg in
+         let p' = Q.quote_proj ind pars arg in
          let kn = Names.Constant.canonical (Names.Projection.constant p) in
-         let p' = Q.quote_kn kn in
          let t', acc = quote_term acc env c in
          (Q.mkProj p' t', add_constant kn acc)
       in
@@ -782,7 +802,23 @@ struct
 	      ((Q.quote_ident nm, ty, Q.quote_int ar) :: ls, acc))
 	      ([],acc) named_ctors
 	  in
-	  Declarations.((Q.quote_ident oib.mind_typename, indty, (List.rev reified_ctors)) :: ls, acc))
+          let projs, acc =
+            match mib.Declarations.mind_record with
+            | Some (Some (id, csts, ps)) ->
+               let ctxwolet = Termops.smash_rel_context mib.Declarations.mind_params_ctxt in
+               let indty = Term.mkApp (Term.mkIndU ((t,0),inst),
+                                       Context.Rel.to_extended_vect Constr.mkRel 0 ctxwolet) in
+               let indbinder = Context.Rel.Declaration.LocalAssum (Names.Name id,indty) in
+               let envpars = push_rel_context (indbinder :: ctxwolet) env in
+               let ps, acc = CArray.fold_right2 (fun cst pb (ls,acc) ->
+                 let (ty, acc) = quote_term acc envpars pb.Declarations.proj_type in
+                 let kn = Names.KerName.label (Names.Constant.canonical cst) in
+                 let na = Q.quote_ident (Names.Label.to_id kn) in
+                 ((na, ty) :: ls, acc)) csts ps ([],acc)
+               in ps, acc
+            | _ -> [], acc
+          in
+	  Declarations.((Q.quote_ident oib.mind_typename, indty, (List.rev reified_ctors), projs) :: ls, acc))
 	  ([],acc) Declarations.((Array.to_list mib.mind_packets))
       in
       let params = Q.quote_int mib.Declarations.mind_nparams in

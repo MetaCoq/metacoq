@@ -38,6 +38,8 @@ Record def (term : Set) : Set := mkdef
 Definition mfixpoint (term : Set) : Set :=
   list (def term).
 
+Definition projection : Set := inductive * nat (* params *) * nat (* argument *).
+
 Inductive term : Set :=
 | tRel       : nat -> term
 | tVar       : ident -> term (** For free variables (e.g. in a goal) *)
@@ -56,17 +58,21 @@ Inductive term : Set :=
                -> term (* discriminee *)->
                list (nat * term) (* branches *)
                -> term
-| tProj      : string -> term -> term
+| tProj      : projection -> term -> term
 | tFix       : mfixpoint term -> nat -> term
 | tCoFix     : mfixpoint term -> nat -> term.
 
-Record inductive_body := mkinductive_body
-{ ctors : list (ident * term * nat (* arity, w/o lets, w/o parameters *)) }.
+Record inductive_body :=
+  mkinductive_body
+    { ind_name : ident;
+      ind_type : term;
+      ctors : list (ident * term * nat (* arity, w/o lets, w/o parameters *));
+      projs : list (ident * term) (* names and types of projections, if any *) }.
 
 Inductive program : Set :=
 | PConstr : string -> list level -> term (* type *) -> term (* body *) -> program -> program
 | PType   : ident -> nat (* # of parameters, w/o let-ins *) ->
-            list (ident * term (* type *) * inductive_body) -> program -> program
+            list inductive_body (* Non-empty *) -> program -> program
 | PAxiom  : ident -> list level -> term (* the type *) -> program -> program
 | PIn     : term -> program.
 

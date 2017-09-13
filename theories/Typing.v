@@ -44,7 +44,7 @@ Qed.
 
 Require Import String.
 
-Open Scope string_scope.
+Local Open Scope string_scope.
 
 Lemma nth_error_safe_nth {A} n (l : list A) (isdecl : n < Datatypes.length l) :
   nth_error l n = Some (safe_nth l (exist _ n isdecl)).
@@ -69,7 +69,7 @@ Definition succ_sort s :=
 
 Inductive global_decl :=
 | ConstantDecl : ident -> term (* type *) -> term (* body *) -> global_decl
-| InductiveDecl : ident -> nat -> list (ident * term (* type *) * inductive_body) -> global_decl
+| InductiveDecl : ident -> nat -> list inductive_body -> global_decl
 | AxiomDecl : ident -> term (* type *) -> global_decl.
 
 Definition global_decl_ident d :=
@@ -137,8 +137,19 @@ Definition declared_constructor Σ cstr : Prop :=
     | InductiveDecl _ _ inds =>
       { H : inductive_ind ind < Datatypes.length inds | 
         exists cstrs, safe_nth inds (exist _ (inductive_ind ind) H) = cstrs /\
-                      let '(_, _, cstrs) := cstrs in
                       k < List.length cstrs.(ctors) }
+    | _ => False
+    end.
+
+Definition declared_projection Σ proj : Prop :=
+  let '(ind, ppars, arg) := proj in
+  exists decl,
+    lookup_env Σ (inductive_mind ind) = Some decl /\
+    match decl with
+    | InductiveDecl _ pars inds =>
+      { H : inductive_ind ind < Datatypes.length inds | 
+        exists block, safe_nth inds (exist _ (inductive_ind ind) H) = block /\
+                      pars = ppars /\ arg < List.length block.(projs) }
     | _ => False
     end.
   
@@ -160,7 +171,7 @@ Definition body_of_constant_decl (d : global_decl | is_constant_decl d = true) :
 
 Program
 Definition types_of_minductive_decl (d : global_decl | is_minductive_decl d = true) :
-  list (ident * term * inductive_body) :=
+  list inductive_body :=
   match d with
   | InductiveDecl _ _ tys => tys
   | ConstantDecl _ _ _ => !
@@ -222,8 +233,8 @@ Fixpoint type_of_inductive (Σ : global_context) (id : inductive | declared_indu
   | hd :: tl =>
     if dec (ident_eq (inductive_mind id) (global_decl_ident hd)) then
       let types := types_of_minductive_decl hd in
-      let '(id, ty, _) := safe_nth types (inductive_ind id) in
-      ty
+      let ind := safe_nth types (inductive_ind id) in
+      ind.(ind_type)
     else type_of_inductive tl id
   end.
 Next Obligation.
@@ -252,7 +263,7 @@ Next Obligation.
   exists d; split; auto.
 Qed.
 
-Definition inds ind u (l : list (ident * term * inductive_body)) :=
+Definition inds ind u (l : list inductive_body) :=
   let fix aux n :=
       match n with
       | 0 => []
@@ -267,10 +278,10 @@ Fixpoint type_of_constructor (Σ : global_context)
   | nil => !
   | hd :: tl =>
     if dec (ident_eq (inductive_mind (fst c)) (global_decl_ident hd)) then
-      let types := types_of_minductive_decl hd in
-      let '(_, _, cstrs) := safe_nth types (inductive_ind (fst c)) in
-      let '(id, trm, args) := safe_nth cstrs.(ctors) (snd c) in
-      substl (inds (inductive_mind (fst c)) u types) trm
+      let block := types_of_minductive_decl hd in
+      let ind := safe_nth block (inductive_ind (fst c)) in
+      let '(id, trm, args) := safe_nth ind.(ctors) (snd c) in
+      substl (inds (inductive_mind (fst c)) u block) trm
     else type_of_constructor tl c u
   end.
 Next Obligation.
@@ -300,15 +311,13 @@ Next Obligation.
   injection H0; intros ->; clear H0.
   destruct Hd as [Hil [cstrs' [Hsafe Hlen]]].
   destruct cstrs'. 
-  simpl in *. destruct p.
-  simpl in *.
-  revert Heq_anonymous.
+  simpl in *. 
   unfold types_of_minductive_decl. simpl.
   match goal with
     |- context[safe_nth _ (exist _ _ ?p)] => replace p with Hil by pi
   end.
   rewrite Hsafe.
-  now intros [= -> -> ->].
+  now simpl.
 Qed.
 Next Obligation.
   destruct H0 as (d&Hl&Hd). 
@@ -318,8 +327,78 @@ Next Obligation.
   destruct_call ident_eq. discriminate.
   split; auto.
 Qed.
-  
-Definition max_sort (s1 s2 : sort) : sort := s2. (* FIXME *)
+
+Program
+Fixpoint type_of_projection (Σ : global_context)
+  (c : projection | declared_projection Σ c) : term :=
+  match Σ with
+  | nil => !
+  | hd :: tl =>
+    if dec (ident_eq (inductive_mind (fst (fst c))) (global_decl_ident hd)) then
+      let block := types_of_minductive_decl hd in
+      let ind := safe_nth block (inductive_ind (fst (fst c))) in
+      snd (safe_nth ind.(projs) (snd c))
+    else type_of_projection tl c
+  end.
+Next Obligation.
+  destruct c as [[ind par] arg].
+  destruct H as (d&H&_). discriminate.
+Defined.
+Next Obligation.
+  destruct c as [[ind par] arg].
+  destruct H0 as (d&Hl&Hd).
+  unfold lookup_env in Hl; simpl in *.
+  destruct_call ident_eq. destruct d; try contradiction.
+  now injection Hl; intros ->. 
+  discriminate.
+Defined.
+Next Obligation.
+  destruct c as [[ind par] arg].
+  destruct H0 as (d&Hl&Hd).
+  unfold lookup_env in Hl; simpl in *.
+  unfold types_of_minductive_decl. simpl. 
+  destruct hd; try bang.
+  destruct_call ident_eq.
+  injection Hl; intros <-. now destruct Hd.
+  discriminate.
+Defined.
+Next Obligation.
+  destruct c as [[ind par] arg].
+  destruct H0 as (d&Hl&Hd). simpl in *.
+  destruct d; try contradiction.
+  pose proof (Hl).
+  rewrite H in H0.
+  injection H0; intros ->; clear H0.
+  destruct Hd as [Hil [cstrs' [Hsafe Hlen]]].
+  destruct cstrs'. 
+  simpl in *. 
+  unfold types_of_minductive_decl. simpl.
+  match goal with
+    |- context[safe_nth _ (exist _ _ ?p)] => replace p with Hil by pi
+  end.
+  rewrite Hsafe.
+  now simpl.
+Qed.
+Next Obligation.
+  destruct c as [[ind par] arg].
+  destruct H0 as (d&Hl&Hd). 
+  exists d.
+  destruct d; try contradiction.
+  simpl in Hl, H.
+  destruct_call ident_eq. discriminate.
+  split; auto.
+Qed.
+
+Definition max_sort (s1 s2 : sort) : sort :=
+  match s1, s2 with
+  | _, sProp => sProp
+  | sProp, sSet => sSet
+  | sSet, sSet => sSet
+  | sType i, sSet => s1
+  | sType p, sType q => sType p (* FIXME: Universes *)
+  | sProp, sType _ => s2
+  | sSet, sType _ => s2
+  end.
 
 Fixpoint mktApp t l :=
   match l with
@@ -468,28 +547,35 @@ Definition eq_ind i i' :=
 
 Definition eq_constant := eq_string.
 
+Definition eq_nat := Nat.eqb.
+Definition eq_evar := eq_nat.
+Definition eq_projection p p' :=
+  let '(ind, pars, arg) := p in
+  let '(ind', pars', arg') := p' in
+  eq_ind ind ind' && eq_nat pars pars' && eq_nat arg arg'.
+
 Fixpoint eq_term (t u : term) {struct t} :=
   match t, u with
-  | tRel n, tRel n' => Nat.eqb n n'
-  | tMeta n, tMeta n' => Nat.eqb n n'
-  | tEvar ev args, tEvar ev' args' => Nat.eqb ev ev' && forallb2 eq_term args args'
+  | tRel n, tRel n' => eq_nat n n'
+  | tMeta n, tMeta n' => eq_nat n n'
+  | tEvar ev args, tEvar ev' args' => eq_evar ev ev' && forallb2 eq_term args args'
   | tVar id, tVar id' => eq_string id id'
   | tSort s, tSort s' => eq_sort s s'
   | tApp f args, tApp f' args' => eq_term f f' && forallb2 eq_term args args'
   | tCast t _ v, tCast u _ v' => eq_term t u && eq_term v v'
   | tConst c u, tConst c' u' => eq_constant c c' (* TODO Universes *)
   | tInd i u, tInd i' u' => eq_ind i i'
-  | tConstruct i k u, tConstruct i' k' u' => eq_ind i i' && Nat.eqb k k'
+  | tConstruct i k u, tConstruct i' k' u' => eq_ind i i' && eq_nat k k'
   | tLambda _ b t, tLambda _ b' t' => eq_term b b' && eq_term t t'
   | tProd _ b t, tProd _ b' t' => eq_term b b' && eq_term t t'
   | tCase (ind, par) p c brs,
     tCase (ind',par') p' c' brs' =>
     eq_term p p' && eq_term c c' && forallb2 (fun '(a, b) '(a', b') => eq_term b b') brs brs'
-  | tProj p c, tProj p' c' => eq_constant p p' && eq_term c c'
+  | tProj p c, tProj p' c' => eq_projection p p' && eq_term c c'
   | tFix mfix idx, tFix mfix' idx' =>
     forallb2 (fun x y =>
                 eq_term x.(dtype) y.(dtype) && eq_term x.(dbody) y.(dbody)) mfix mfix' &&
-    Nat.eqb idx idx'
+    eq_nat idx idx'
   | tCoFix mfix idx, tCoFix mfix' idx' =>
     forallb2 (fun x y =>
                 eq_term x.(dtype) y.(dtype) && eq_term x.(dbody) y.(dbody)) mfix mfix' &&
@@ -499,30 +585,30 @@ Fixpoint eq_term (t u : term) {struct t} :=
 
 Fixpoint leq_term (t u : term) {struct t} :=
   match t, u with
-  | tRel n, tRel n' => Nat.eqb n n'
-  | tMeta n, tMeta n' => Nat.eqb n n'
-  | tEvar ev args, tEvar ev' args' => Nat.eqb ev ev' && forallb2 eq_term args args'
+  | tRel n, tRel n' => eq_nat n n'
+  | tMeta n, tMeta n' => eq_nat n n'
+  | tEvar ev args, tEvar ev' args' => eq_nat ev ev' && forallb2 eq_term args args'
   | tVar id, tVar id' => eq_string id id'
   | tSort s, tSort s' => leq_sort s s'
   | tApp f args, tApp f' args' => eq_term f f' && forallb2 eq_term args args'
   | tCast t _ v, tCast u _ v' => leq_term t u
   | tConst c u, tConst c' u' => eq_constant c c' (* TODO Universes *)
   | tInd i u, tInd i' u' => eq_ind i i'
-  | tConstruct i k u, tConstruct i' k' u' => eq_ind i i' && Nat.eqb k k'
+  | tConstruct i k u, tConstruct i' k' u' => eq_ind i i' && eq_nat k k'
   | tLambda _ b t, tLambda _ b' t' => eq_term b b' && eq_term t t'
   | tProd _ b t, tProd _ b' t' => eq_term b b' && leq_term t t'
   | tCase (ind, par) p c brs,
     tCase (ind',par') p' c' brs' =>
     eq_term p p' && eq_term c c' && forallb2 (fun '(a, b) '(a', b') => eq_term b b') brs brs'
-  | tProj p c, tProj p' c' => eq_constant p p' && eq_term c c'
+  | tProj p c, tProj p' c' => eq_projection p p' && eq_term c c'
   | tFix mfix idx, tFix mfix' idx' =>
     forallb2 (fun x y =>
                 eq_term x.(dtype) y.(dtype) && eq_term x.(dbody) y.(dbody)) mfix mfix' &&
-    Nat.eqb idx idx'
+    eq_nat idx idx'
   | tCoFix mfix idx, tCoFix mfix' idx' =>
     forallb2 (fun x y =>
                 eq_term x.(dtype) y.(dtype) && eq_term x.(dbody) y.(dbody)) mfix mfix' &&
-    Nat.eqb idx idx'
+    eq_nat idx idx'
   | _, _ => false (* Case, Proj, Fix, CoFix *)
   end.
 
@@ -579,8 +665,11 @@ Inductive typing (Σ : global_context) (Γ : context) : term -> term -> Prop :=
     (** TODO check p, brs *)
     Σ ;;; Γ |-- tCase indpar p c brs : tApp p (List.skipn (snd indpar) args ++ [c])
 
-| type_Proj p c :
-    Σ ;;; Γ |-- tProj p c : tSort sSet (* FIXME *)
+| type_Proj p c u :
+    forall (isdecl : declared_projection Σ p) args,
+    Σ ;;; Γ |-- c : mktApp (tInd (fst (fst p)) u) args ->
+    let ty := type_of_projection Σ (exist _ p isdecl) in
+    Σ ;;; Γ |-- tProj p c : substl (c :: List.rev args) ty
 
 | type_Fix mfix n :
     forall (isdecl : n < List.length mfix),
@@ -643,35 +732,53 @@ Fixpoint decompose_program (p : program) (env : global_context) : global_context
   | PIn t => (env, t)
   end.
 
-Inductive type_constructors (Σ : global_context) (Γ : context) :
-  list (ident * term * nat) -> Prop :=
-| type_cnstrs_nil : type_constructors Σ Γ []
-| type_cnstrs_cons id t s n l :
-    Σ ;;; Γ |-- t : tSort s ->
-    type_constructors Σ Γ l ->
-    (** TODO: check it has n products ending in a tRel application *)              
-    type_constructors Σ Γ ((id, t, n) :: l).
-      
-Definition arities_context (l : list (ident * term * inductive_body)) :=
-  List.map (fun '(na, t, _) => vass (nNamed na) t) l.
-
 Definition isType (Σ : global_context) (Γ : context) (t : term) :=
   exists s, Σ ;;; Γ |-- t : tSort s.
 
-Inductive type_inddecls (Σ : global_context) (Γ : context) :
-  list (ident * term * inductive_body) -> Prop :=
-| type_ind_nil : type_inddecls Σ Γ []
-| type_ind_cons na ty cstrs l :
+Inductive type_constructors (Σ : global_context) (Γ : context) :
+  list (ident * term * nat) -> Prop :=
+| type_cnstrs_nil : type_constructors Σ Γ []
+| type_cnstrs_cons id t n l :
+    isType Σ Γ t ->
+    type_constructors Σ Γ l ->
+    (** TODO: check it has n products ending in a tRel application *)              
+    type_constructors Σ Γ ((id, t, n) :: l).
+
+Inductive type_projections (Σ : global_context) (Γ : context) :
+  list (ident * term) -> Prop :=
+| type_projs_nil : type_projections Σ Γ []
+| type_projs_cons id t l :
+    isType Σ Γ t ->
+    type_projections Σ Γ l ->
+    type_projections Σ Γ ((id, t) :: l).
+      
+Definition arities_context (l : list inductive_body) :=
+  List.map (fun ind => vass (nNamed ind.(ind_name)) ind.(ind_type)) l.
+
+Definition isArity Σ Γ T :=
+  isType Σ Γ T (* FIXME  /\ decompose_prod_n *).
+
+Definition app_context (Γ Γ' : context) : context := (Γ' ++ Γ)%list.
+Notation " Γ  ,,, Γ' " := (app_context Γ Γ') (at level 25, Γ' at next level, left associativity).
+Notation "#| Γ |" := (List.length Γ) (at level 0, format "#| Γ |").
+
+Inductive type_inddecls (Σ : global_context) (pars : context) (Γ : context) :
+  list inductive_body -> Prop :=
+| type_ind_nil : type_inddecls Σ pars Γ []
+| type_ind_cons na ty cstrs projs l :
+    (** Arity is well-formed *)
+    isArity Σ [] ty ->
     (** Constructors are well-typed *)
     type_constructors Σ Γ cstrs ->
+    (** Projections are well-typed *)
+    type_projections Σ (Γ ,,, pars ,, vass nAnon ty) projs ->
     (** The other inductives in the block are well-typed *)
-    type_inddecls Σ Γ l ->
-    type_inddecls Σ Γ ((na, ty, mkinductive_body cstrs) :: l).
+    type_inddecls Σ pars Γ l ->
+    type_inddecls Σ pars Γ (mkinductive_body na ty cstrs projs :: l).
 
 Definition type_inductive Σ inds :=
-  Forall (fun '(na, ty, _) => isType Σ [] ty) inds /\
   (** FIXME: should be pars ++ arities w/o params *)
-  type_inddecls Σ (arities_context inds) inds.
+  type_inddecls Σ [] (arities_context inds) inds.
                  
 Inductive fresh_global (s : string) : global_context -> Prop :=
 | fresh_global_nil : fresh_global s nil

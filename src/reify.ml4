@@ -391,7 +391,7 @@ struct
          (List.map (fun (a,b,c) ->
                                 let c = mk_ctor_list c in
 	                        pair (prod tident tTerm) tinductive_body (pair tident tTerm a b) c)
-                   (List.rev ls)) in
+                   ls) in
     Term.mkApp (pType, [| kn; p; result |])
 
     

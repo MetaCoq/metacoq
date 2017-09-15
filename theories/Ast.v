@@ -65,9 +65,11 @@ Inductive term : Set :=
 Record inductive_body :=
   mkinductive_body
     { ind_name : ident;
-      ind_type : term;
-      ctors : list (ident * term * nat (* arity, w/o lets, w/o parameters *));
-      projs : list (ident * term) (* names and types of projections, if any *) }.
+      ind_type : term; (* Closed arity *)
+      ctors : list (ident * term (* Under context of arities of the mutual inductive *)
+                    * nat (* arity, w/o lets, w/o parameters *));
+      projs : list (ident * term) (* names and types of projections, if any.
+                                     Type under context of params and inductive object *) }.
 
 Inductive program : Set :=
 | PConstr : string -> list level -> term (* type *) -> term (* body *) -> program -> program

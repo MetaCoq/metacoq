@@ -918,6 +918,20 @@ Definition env_prop (P : forall Σ Γ t T, Set) :=
     Forall_decls_typing (fun Σ t ty => P Σ [] t ty) Σ *
     P Σ Γ t T.
 
+Lemma env_prop_typing P : env_prop P ->
+  forall Σ (wf : wf Σ) (Γ : context) (t T : term),
+    Σ;;; Γ |-- t : T -> P Σ Γ t T.
+Proof. intros. now apply H. Qed.
+
+Lemma env_prop_sigma P : env_prop P ->
+  forall Σ (wf : wf Σ),
+    Forall_decls_typing (fun (Σ0 : global_context) (t0 ty : term) => P Σ0 [] t0 ty) Σ.
+Proof. intros. eapply H. apply wf. apply (type_Sort Σ [] sSet). Qed.
+
+(** An induction principle ensuring the Σ declarations enjoy the same properties.
+
+  TODO: thread the property on local contexts as well, avoiding to redo work at binding constructs.
+ *)
 Lemma typing_ind_env :
   forall (P : global_context -> context -> term -> term -> Set),
     (forall Σ (wfΣ : wf Σ) (Γ : context) (n : nat) (isdecl : n < #|Γ|),
@@ -1048,7 +1062,6 @@ Proof.
   forward IH.
   constructor 2. simpl. apply H15.
   apply IH. clear IH.
-
   destruct H14;
   match reverse goal with
     H : _ |- _ => eapply H
@@ -1062,27 +1075,3 @@ Proof.
   simpl in H15. specialize (H15 [] _ _ (type_Sort _ _ sProp)).
   simpl in H15. forward H15; auto. apply H15.
 Qed.
-(* Quote Recursively Definition foo'' := match 1 with 0 => 0 | S n => n end. *)
-(* Goal type_program foo'' natr. *)
-(* Proof. *)
-(*   red. *)
-(*   simpl. *)
-(*   setenv Σ. *)
-(*   econstructor. *)
-(*   eapply type_Case. *)
-(*   red. simpl. reflexivity. *)
-(*   red. simpl. eexists. split.  reflexivity. reflexivity. reflexivity. *)
-(*   reflexivity. constructor 2. constructor. simpl. reflexivity. *)
-(*   simpl. *)
-(*   eapply type_Lambda. *)
-  
-(*   eapply (type_Ind Σ [] (mkInd "Coq.Init.Datatypes.nat" 0)). *)
-(*   econstructor. *)
-  
-(*   simpl. *)
-
-(*   construct.  *)
-(*   econstructor. *)
-(*   construct. *)
-(*   econstructor. *)
-(* Qed. *)

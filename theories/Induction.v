@@ -71,65 +71,11 @@ Hint Rewrite @map_def_id @map_id.
 
 (** Custom induction principle on syntax, dealing with the various lists appearing in terms. *)
 
-Definition tCaseBrsProp (P : term -> Prop) (P0 : list term -> Prop) (l : list (nat * term)) :=
+Definition tCaseBrsProp (P : term -> Prop) (l : list (nat * term)) :=
   Forall (fun x => P (snd x)) l.
 
-Definition tFixProp (P : term -> Prop) (P0 : list term -> Prop) (m : mfixpoint term) :=
+Definition tFixProp (P : term -> Prop) (m : mfixpoint term) :=
   Forall (fun x : def term => P x.(dtype) /\ P x.(dbody)) m.
-
-Lemma term_ind_list :
-  forall P0 : list term -> Prop,
-  forall P : term -> Prop,
-    (P0 nil) ->
-    (forall (t : term) (l : list term), P t -> P0 l -> P0 (cons t l)) ->
-    (forall n : nat, P (tRel n)) ->
-    (forall i : ident, P (tVar i)) ->
-    (forall n : nat, P (tMeta n)) ->
-    (forall (n : nat) (l : list term), P0 l -> P (tEvar n l)) ->
-    (forall s : sort, P (tSort s)) ->
-    (forall t : term, P t -> forall (c : cast_kind) (t0 : term), P t0 -> P (tCast t c t0)) ->
-    (forall (n : name) (t : term), P t -> forall t0 : term, P t0 -> P (tProd n t t0)) ->
-    (forall (n : name) (t : term), P t -> forall t0 : term, P t0 -> P (tLambda n t t0)) ->
-    (forall (n : name) (t : term),
-        P t -> forall t0 : term, P t0 -> forall t1 : term, P t1 -> P (tLetIn n t t0 t1)) ->
-    (forall t : term, P t -> forall l : list term, P0 l -> P (tApp t l)) ->
-    (forall (s : String.string) (u : list level), P (tConst s u)) ->
-    (forall (i : inductive) (u : list level), P (tInd i u)) ->
-    (forall (i : inductive) (n : nat) (u : list level), P (tConstruct i n u)) ->
-    (forall (p : inductive * nat) (t : term),
-        P t -> forall t0 : term, P t0 -> forall l : list (nat * term),
-            tCaseBrsProp P P0 l -> P (tCase p t t0 l)) ->
-    (forall (s : projection) (t : term), P t -> P (tProj s t)) ->
-    (forall (m : mfixpoint term) (n : nat), tFixProp P P0 m -> P (tFix m n)) ->
-    (forall (m : mfixpoint term) (n : nat), tFixProp P P0 m -> P (tCoFix m n)) -> forall t : term, P t.
-Proof.
-  intros. revert t.
-  fix auxt 1.
-  set(auxl :=
-        (fix auxl (l : list term) : P0 l :=
-           (match l return P0 l with
-            | nil => H
-            | cons t ts => H0 t ts (auxt t) (auxl ts)
-            end))).
-  move auxt at top. move auxl at top.
-  destruct t; match goal with
-                 H : _ |- _ => apply H
-               end; auto.
-  revert l.
-  fix auxl' 1.
-  destruct l; constructor; [|apply auxl'].
-  apply auxt.
-
-  revert m.
-  fix auxm 1.
-  destruct m; constructor; [|apply auxm].
-  split; apply auxt.
-  revert m.
-  fix auxm 1.
-  destruct m; constructor; [|apply auxm].
-  split; apply auxt.
-Defined.
-
 
 Lemma term_forall_list_ind :
   forall P : term -> Prop,
@@ -149,15 +95,40 @@ Lemma term_forall_list_ind :
     (forall (i : inductive) (n : nat) (u : list level), P (tConstruct i n u)) ->
     (forall (p : inductive * nat) (t : term),
         P t -> forall t0 : term, P t0 -> forall l : list (nat * term),
-            tCaseBrsProp P (Forall P) l -> P (tCase p t t0 l)) ->
+            tCaseBrsProp P l -> P (tCase p t t0 l)) ->
     (forall (s : projection) (t : term), P t -> P (tProj s t)) ->
-    (forall (m : mfixpoint term) (n : nat), tFixProp P (Forall P) m -> P (tFix m n)) ->
-    (forall (m : mfixpoint term) (n : nat), tFixProp P (Forall P) m -> P (tCoFix m n)) -> forall t : term, P t.
+    (forall (m : mfixpoint term) (n : nat), tFixProp P m -> P (tFix m n)) ->
+    (forall (m : mfixpoint term) (n : nat), tFixProp P m -> P (tCoFix m n)) ->
+    forall t : term, P t.
 Proof.
-  intros P. apply (term_ind_list (Forall P)).
-  constructor.
-  constructor; auto.
-Qed.
+  intros until t. revert t.
+  fix auxt 1.
+  move auxt at top. 
+  destruct t; match goal with
+                 H : _ |- _ => apply H
+              end; auto.
+  revert l.
+  fix auxl' 1.
+  destruct l; constructor; [|apply auxl'].
+  apply auxt.
+  revert l.
+  fix auxl' 1.
+  destruct l; constructor; [|apply auxl'].
+  apply auxt.
+  revert l.
+  fix auxl' 1.
+  destruct l; constructor; [|apply auxl'].
+  apply auxt.
+
+  revert m.
+  fix auxm 1.
+  destruct m; constructor; [|apply auxm].
+  split; apply auxt.
+  revert m.
+  fix auxm 1.
+  destruct m; constructor; [|apply auxm].
+  split; apply auxt.
+Defined.
 
 Lemma forall_map_spec {A} {P : A -> Prop} {l} {f g : A -> A} :
   Forall P l -> (forall x, P x -> f x = g x) ->
@@ -184,7 +155,7 @@ Proof.
 Qed.
 
 Lemma case_brs_map_spec {P : term -> Prop} {l} {f g : term -> term} :
-  tCaseBrsProp P (Forall P) l -> (forall x, P x -> f x = g x) ->
+  tCaseBrsProp P l -> (forall x, P x -> f x = g x) ->
   map (on_snd f) l = map (on_snd g) l.
 Proof.
   intros.
@@ -194,7 +165,7 @@ Proof.
 Qed.
 
 Lemma tfix_map_spec {P : term -> Prop} {l} {f g : term -> term} :
-  tFixProp P (Forall P) l -> (forall x, P x -> f x = g x) ->
+  tFixProp P l -> (forall x, P x -> f x = g x) ->
   map (map_def f) l = map (map_def g) l.
 Proof.
   intros.
@@ -235,7 +206,7 @@ Qed.
 
 Lemma case_brs_forallb_map_spec {P : term -> Prop} {p : term -> bool}
       {l} {f g : term -> term} :
-  tCaseBrsProp P (Forall P) l -> 
+  tCaseBrsProp P l -> 
   forallb (test_snd p) l = true ->
   (forall x, P x -> p x = true -> f x = g x) ->
   map (on_snd f) l = map (on_snd g) l.
@@ -247,7 +218,7 @@ Proof.
 Qed.
 
 Lemma tfix_forallb_map_spec {P : term -> Prop} {p} {l} {f g : term -> term} :
-  tFixProp P (Forall P) l -> 
+  tFixProp P l -> 
   forallb (test_def p) l = true ->
   (forall x, P x -> p x = true -> f x = g x) ->
   map (map_def f) l = map (map_def g) l.
@@ -264,12 +235,12 @@ Ltac apply_spec :=
     eapply (forall_forallb_map_spec H H')
   | H : Forall _ _ |- map _ _ = map _ _ =>
     eapply (forall_map_spec H)
-  | H : tCaseBrsProp _ _ _, H' : forallb _ _ = _ |- map _ _ = map _ _ =>
+  | H : tCaseBrsProp _ _, H' : forallb _ _ = _ |- map _ _ = map _ _ =>
     eapply (case_brs_forallb_map_spec H H')
-  | H : tCaseBrsProp _ _ _ |- map _ _ = map _ _ =>
+  | H : tCaseBrsProp _ _ |- map _ _ = map _ _ =>
     eapply (case_brs_map_spec H)
-  | H : tFixProp _ _ _, H' : forallb _ _ = _ |- map _ _ = map _ _ =>
+  | H : tFixProp _ _, H' : forallb _ _ = _ |- map _ _ = map _ _ =>
     eapply (tfix_forallb_map_spec H H')
-  | H : tFixProp _ _ _ |- map _ _ = map _ _ =>
+  | H : tFixProp _ _ |- map _ _ = map _ _ =>
     eapply (tfix_map_spec H)
   end.

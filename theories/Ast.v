@@ -15,6 +15,9 @@ Inductive sort : Set :=
 
 Record ind : Set := {} .
 
+Inductive sort_family : Set :=
+| InProp | InSet | InType.
+
 Inductive name : Set :=
 | nAnon
 | nNamed (_ : ident).
@@ -66,9 +69,10 @@ Record inductive_body :=
   mkinductive_body
     { ind_name : ident;
       ind_type : term; (* Closed arity *)
-      ctors : list (ident * term (* Under context of arities of the mutual inductive *)
+      ind_kelim : list sort_family; (* Allowed elimination sorts *)
+      ind_ctors : list (ident * term (* Under context of arities of the mutual inductive *)
                     * nat (* arity, w/o lets, w/o parameters *));
-      projs : list (ident * term) (* names and types of projections, if any.
+      ind_projs : list (ident * term) (* names and types of projections, if any.
                                      Type under context of params and inductive object *) }.
 
 Inductive program : Set :=

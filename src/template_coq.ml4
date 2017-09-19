@@ -132,7 +132,9 @@ struct
           let ctors = List.map (fun (id,t,n) -> (id,t),n) r in
           { ind_name = i;
             ind_type = t;
-            ctors; projs = p }) r in
+            ind_kelim = [];
+            ind_ctors = ctors;
+            ind_projs = p }) r in
     fun pr ->
     PType (kn,p,r,pr)
 

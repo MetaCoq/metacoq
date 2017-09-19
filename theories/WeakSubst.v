@@ -3,7 +3,7 @@ From Template Require Import Template Ast Induction LiftSubst Typing.
 
 Set Asymmetric Patterns.
 Generalizable Variables Σ Γ t T.
-Print Scopes.
+
 Lemma length_app_context Γ Γ' : #|Γ ,,, Γ'| = #|Γ| + #|Γ'|.
 Proof.
   unfold app_context. rewrite app_length. omega.
@@ -31,7 +31,7 @@ Qed.
   
 Lemma lift_context_rec_fst n k Γ :
   fst (lift_context_rec n k Γ) = #|Γ| + k.
-Proof.n
+Proof.
   induction Γ; simpl; auto.
   destruct lift_context_rec; simpl in *.
   congruence.
@@ -78,9 +78,9 @@ Proof.
 Qed.
 
 Lemma weaken_safe_nth_ge Γ Γ' v (isdecl : v < #|Γ ,,, Γ'|) Γ'' : #|Γ'| <= v ->
-  exists isdecl',
+  { isdecl' : _ &
   safe_nth (Γ ,,, Γ') (exist (fun n0 : nat => n0 < #|Γ ,,, Γ'|) v isdecl) =
-  safe_nth (Γ ,,, Γ'' ,,, lift_context #|Γ''| 0 Γ') (exist _ (#|Γ''| + v) isdecl').
+  safe_nth (Γ ,,, Γ'' ,,, lift_context #|Γ''| 0 Γ') (exist _ (#|Γ''| + v) isdecl') }.
 Proof.
   simpl.
   assert(#|Γ''| + v < #|Γ ,,, Γ'' ,,, lift_context #|Γ''| 0 Γ'|).
@@ -93,10 +93,10 @@ Proof.
 Qed.
 
 Lemma weaken_safe_nth_lt Γ Γ' v (isdecl : v < #|Γ ,,, Γ'|) Γ'' : v < #|Γ'| ->
-  exists isdecl',
+  { isdecl' : _ &
   safe_nth (Γ ,,, Γ'' ,,, lift_context #|Γ''| 0 Γ') (exist _ v isdecl') =
   lift_decl #|Γ''| (#|Γ'| - S v)
-       (safe_nth (Γ ,,, Γ') (exist (fun n0 : nat => n0 < #|Γ ,,, Γ'|) v isdecl)).
+       (safe_nth (Γ ,,, Γ') (exist (fun n0 : nat => n0 < #|Γ ,,, Γ'|) v isdecl)) }.
 Proof.
   simpl. intros Hv.
   assert(v < #|Γ ,,, Γ'' ,,, lift_context #|Γ''| 0 Γ'|).
@@ -128,36 +128,40 @@ Proof.
       f_equal. unfold lift_context. rewrite Heq. reflexivity.
 Qed.  
 
-Lemma typecheck_closed Σ Γ t T :
-  type_global_env Σ -> type_local_env Σ Γ ->
-  Σ ;;; Γ |-- t : T -> closedn #|Γ| t && closedn #|Γ| T = true.
+Lemma typecheck_closed : env_prop (fun Σ Γ t T =>
+                                     type_local_env Σ Γ ->
+                                     closedn #|Γ| t && closedn #|Γ| T = true).
 Proof.
-  induction 3; simpl; rewrite ?andb_true_iff in *; try solve [intuition auto].
+  apply typing_ind_env; intros; simpl; rewrite ?andb_true_iff in *; try solve [intuition auto].
   - elim (Nat.ltb_spec n #|Γ|); intuition.
     admit (* Need induction with IHs for environments *).
   - intuition auto.
-    + eapply IHtyping2. constructor; auto.
-      now exists s1. exact I.
-  - intuition; eapply IHtyping2; constructor; auto.
-    now exists s1. exact I.
-    now exists s1. exact I.
-  - intuition; try eapply IHtyping3; try constructor; auto.
+    + eapply H2. constructor; auto.
+      red. now exists s1. 
+  - intuition; eapply H2; constructor; auto.
     now exists s1. now exists s1. 
+  - intuition; try eapply H4; try constructor; auto.
   - (* typing spine ind *) admit.
+  - admit. (* easy now *)
   - admit.
   - admit.
-  - admit.
-  - specialize (IHtyping H0).
-    intuition auto. admit. admit. admit. admit.
+  - specialize (H5 H9).
+    intuition auto. admit. admit. 
   - (* proj *) admit.
   - admit.
   - admit.
 Admitted.
 
-Ltac forward H :=
-  match type of H with
-  | ?X -> ?Y => assert(x : X) ; [ | specialize (H x); clear x ]
-  end.
+Inductive BoolSpecSet (P Q : Prop) : bool -> Set :=
+    BoolSpecT : P -> BoolSpecSet P Q true | BoolSpecF : Q -> BoolSpecSet P Q false.
+
+Lemma leb_spec_Set : forall x y : nat, BoolSpecSet (x <= y) (y < x) (x <=? y).
+Proof.
+  intros. 
+  destruct (Nat.leb_spec0 x y).
+  now constructor.
+  constructor. now auto with arith.
+Qed.
 
 Lemma weakening_rec Σ Γ Γ' Γ'' :
   type_global_env Σ -> type_local_env Σ (Γ ,,, Γ') ->
@@ -169,10 +173,10 @@ Proof.
   intros HΣ HΓΓ' HΓ'' * H. revert Γ'' HΓ''. 
   dependent induction H; intros Γ'' HΓ''; simpl in *; try solve [econstructor; eauto].
 
-  - elim (Nat.leb_spec); intros Hn.
+  - elim (leb_spec_Set); intros Hn.
     + destruct (weaken_safe_nth_ge _ _ _ isdecl Γ'' Hn) as [isdecl' ->].
       rewrite simpl_lift_rec; try omega. rewrite Nat.add_succ_r.
-      now constructor.
+      constructor. 
     + destruct (weaken_safe_nth_lt _ _ _ isdecl Γ'' Hn) as [isdecl' H'].
       apply (f_equal decl_type) in H'.
       unfold lift_decl in H'. simpl in H'.
@@ -180,42 +184,39 @@ Proof.
       intros. assert (#|Γ'| = S n + (#|Γ'| - S n)) by easy.
       rewrite H at 2.
       rewrite <- permute_lift_rec; try easy.
-      rewrite <- H. rewrite <- H'. constructor.
+      rewrite <- H. rewrite <- H'. do 2 constructor.
 
   - econstructor; auto.
     simpl.
     specialize (IHtyping2 Γ (Γ' ,, vass n t) HΣ).
-    forward IHtyping2. constructor; simpl; auto. now exists s1.
+    forward IHtyping2. constructor; simpl; auto. red. now exists s1.
     specialize (IHtyping2 eq_refl Γ'').
     forward IHtyping2. rewrite lift_context_snoc. constructor. simpl; auto.
-    exists s1. simpl. rewrite Nat.add_0_r. eapply IHtyping1; auto. exact I.
+    exists s1. simpl. rewrite Nat.add_0_r. eapply IHtyping1; auto. 
     rewrite lift_context_snoc, plus_0_r in IHtyping2.
     eapply IHtyping2.
 
   - econstructor; auto.
     simpl.
     specialize (IHtyping2 Γ (Γ' ,, vass n t) HΣ).
-    forward IHtyping2. constructor; simpl; auto. now exists s1.
+    forward IHtyping2. constructor; simpl; auto. red. now exists s1.
     specialize (IHtyping2 eq_refl Γ'').
     forward IHtyping2. rewrite lift_context_snoc. constructor. simpl; auto.
-    exists s1. simpl. rewrite Nat.add_0_r. eapply IHtyping1; auto. exact I.
+    exists s1. simpl. rewrite Nat.add_0_r. eapply IHtyping1; auto. 
     rewrite lift_context_snoc, plus_0_r in IHtyping2.
     eapply IHtyping2.
-
 
   - econstructor; auto.
     simpl.
     specialize (IHtyping3 Γ (Γ' ,, vdef n b b_ty) HΣ).
-    forward IHtyping3. constructor; simpl; auto. now exists s1.
+    forward IHtyping3. constructor; simpl; auto. 
     specialize (IHtyping3 eq_refl Γ'').
     forward IHtyping3. rewrite lift_context_snoc, Nat.add_0_r.
+    simpl.
     constructor. simpl; auto.
-    exists s1. simpl. eapply IHtyping1; auto. simpl.
-    specialize (IHtyping2 Γ Γ' HΣ HΓΓ' eq_refl Γ'').
-    now eapply IHtyping2.
+    red. simpl. eapply IHtyping2; auto. simpl.
     rewrite lift_context_snoc, plus_0_r in IHtyping3.
     eapply IHtyping3.
-    
 
   - econstructor; auto.
     simpl.

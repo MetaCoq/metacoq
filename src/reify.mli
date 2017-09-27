@@ -81,6 +81,7 @@ module type Quoter = sig
 end
 
 module Reify(Q : Quoter) : sig
+  val quote_mind_decl : Environ.env -> Names.mutual_inductive -> Q.quoted_decl
   val quote_term : Environ.env -> Constr.t -> Q.t
   val quote_term_rec : Environ.env -> Constr.t -> Q.quoted_program
 end

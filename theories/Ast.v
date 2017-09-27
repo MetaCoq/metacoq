@@ -43,6 +43,8 @@ Definition mfixpoint (term : Set) : Set :=
 
 Definition projection : Set := inductive * nat (* params *) * nat (* argument *).
 
+Definition universe_instance : Set := list level.
+
 Inductive term : Set :=
 | tRel       : nat -> term
 | tVar       : ident -> term (** For free variables (e.g. in a goal) *)
@@ -54,9 +56,9 @@ Inductive term : Set :=
 | tLambda    : name -> term (** the type **) -> term -> term
 | tLetIn     : name -> term (** the term **) -> term (** the type **) -> term -> term
 | tApp       : term -> list term -> term
-| tConst     : string -> list level -> term
-| tInd       : inductive -> list level -> term
-| tConstruct : inductive -> nat -> list level -> term
+| tConst     : string -> universe_instance -> term
+| tInd       : inductive -> universe_instance -> term
+| tConstruct : inductive -> nat -> universe_instance -> term
 | tCase      : (inductive * nat) (* # of parameters *) -> term (** type info **)
                -> term (* discriminee *)->
                list (nat * term) (* branches *)
@@ -76,12 +78,36 @@ Record inductive_body :=
                                      Type under context of params and inductive object *) }.
 
 Inductive program : Set :=
-| PConstr : string -> list level -> term (* type *) -> term (* body *) -> program -> program
+| PConstr : string -> universe_instance -> term (* type *) -> term (* body *) -> program -> program
 | PType   : ident -> nat (* # of parameters, w/o let-ins *) ->
             list inductive_body (* Non-empty *) -> program -> program
-| PAxiom  : ident -> list level -> term (* the type *) -> program -> program
+| PAxiom  : ident -> universe_instance -> term (* the type *) -> program -> program
 | PIn     : term -> program.
 
+
+Record constant_decl :=
+  { cst_name : ident; (* TODO Universes *)
+    cst_universes : universe_instance;
+    cst_type : term;
+    cst_body : option term }.
+
+Record minductive_decl :=
+  { ind_npars : nat;
+    ind_bodies : list inductive_body }.
+
+Inductive global_decl :=
+| ConstantDecl : ident -> constant_decl -> global_decl
+| InductiveDecl : ident -> minductive_decl -> global_decl.
+
+Definition extend_program (p : program) (d : global_decl) : program :=
+  match d with
+  | ConstantDecl i {| cst_name:=_; cst_universes := u; cst_type:=ty;  cst_body:=Some body |}
+    => PConstr i u (* TODO universes *) ty body p
+  | ConstantDecl i {| cst_name:=_; cst_universes := u; cst_type:=ty;  cst_body:=None |}
+    => PAxiom i u ty p
+  | InductiveDecl i {| ind_npars:=n; ind_bodies := l |}
+    => PType i n l p
+  end.
 
 (** representation of mutual inductives. nearly copied from Coq/kernel/entries.mli
 *)

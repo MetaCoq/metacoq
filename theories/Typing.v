@@ -67,18 +67,6 @@ Definition succ_sort s :=
 
 (** Typing derivations *)
 
-Record constant_decl :=
-  { cst_name : ident;
-    cst_type : term;
-    cst_body : option term }.
-
-Record minductive_decl :=
-  { ind_npars : nat;
-    ind_bodies : list inductive_body }.
-
-Inductive global_decl :=
-| ConstantDecl : ident -> constant_decl -> global_decl
-| InductiveDecl : ident -> minductive_decl -> global_decl.
 
 Definition global_decl_ident d :=
   match d with
@@ -585,10 +573,10 @@ Conjecture congr_cumul_prod : forall Σ Γ na na' M1 M2 N1 N2,
 Fixpoint decompose_program (p : program) (env : global_context) : global_context * term :=
   match p with (* TODO Universes *)
   | PConstr s u ty trm p =>
-    let decl :=  {| cst_name := s; cst_type := ty; cst_body := Some trm |} in
+    let decl :=  {| cst_name := s; cst_universes := u; cst_type := ty; cst_body := Some trm |} in
     decompose_program p (ConstantDecl s decl :: env)
   | PAxiom s u ty p =>
-    let decl := {| cst_name := s; cst_type := ty; cst_body := None |} in
+    let decl := {| cst_name := s; cst_universes := u; cst_type := ty; cst_body := None |} in
     decompose_program p (ConstantDecl s decl :: env)
   | PType ind m inds p =>
     let decl := {| ind_npars := m; ind_bodies := inds |} in

@@ -843,6 +843,10 @@ struct
     let (fn,_) = quote_term_remember (fun _ () -> ()) (fun _ () -> ()) in
     fst (fn () env trm)
 
+  let quote_mind_decl env trm =
+    let (_,fn) = quote_term_remember (fun _ () -> ()) (fun _ () -> ()) in
+    fst (fn () env trm)
+
   type defType =
     Ind of Names.inductive
   | Const of Names.kernel_name

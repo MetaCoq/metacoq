@@ -25,7 +25,7 @@ struct
   type quoted_cast_kind = cast_kind
   type quoted_kernel_name = char list
   type quoted_inductive = inductive
-  type quoted_decl = program -> program
+  type quoted_decl = global_decl
   type quoted_program = program
   type quoted_int = Datatypes.nat
   type quoted_bool = bool
@@ -141,12 +141,18 @@ struct
             ind_type = t;
             ind_kelim = kelim;
             ind_ctors = ctors; ind_projs = p }) r in
-    fun pr ->
-    PType (kn,p,r,pr)
+    InductiveDecl (kn, {ind_npars = p; ind_bodies = r})
 
-  let mkConstant kn u ty body = fun pr -> PConstr (kn,u,ty,body,pr)
-  let mkAxiom kn u t = fun pr -> PAxiom (kn,u,t,pr)
-  let mkExt e p = e p
+  let mkConstant kn u ty body =
+    ConstantDecl (kn, { cst_name = kn; cst_universes = u;
+                        cst_type = ty; cst_body = Some body })
+
+  let mkAxiom kn u ty =
+    ConstantDecl (kn, { cst_name = kn; cst_universes = u;
+                        cst_type = ty; cst_body = None })
+
+  let mkExt d p = extend_program p d
+
   let mkIn c = PIn c
 
   let quote_mind_finiteness = function

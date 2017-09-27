@@ -28,7 +28,7 @@ test-suite: coq
 	$(MAKE) -C test-suite
 
 templatecoq: coq Makefile.coqplugin
-	$(COQBIN)coqc -R theories Template theories/Extraction.v
+	$(COQBIN)coqc -I src -R theories Template theories/Extraction.v
 	sh movefiles.sh
 	$(MAKE) -f Makefile.coqplugin
 
@@ -36,6 +36,6 @@ templatecoq: coq Makefile.coqplugin
 	make -f Makefile.coq .merlin
 
 templatecoqchecker: coq Makefile.coqchecker
-	$(COQBIN)coqc -R theories Template theories/TypingPlugin.v
+	$(COQBIN)coqc -I src -R theories Template theories/TypingPlugin.v
 	sh movefiles.sh
 	$(MAKE) -f Makefile.coqchecker

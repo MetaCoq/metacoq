@@ -9,6 +9,7 @@ Import ListNotations.
 
 Require Import Template.TemplateCoqChecker.
 Require Import Template.Typing.
+Require Import Template.Checker.
 Require Import Template.Ast.
 Require Import Template.Template.
 
@@ -18,10 +19,14 @@ Eval vm_compute in typecheck_program idq.
 
 Unset Template Cast Propositions.
 
-
-Definition timpl x y := tProd nAnon x (lift0 1 y).
+Definition timpl x y := tProd nAnon x (LiftSubst.lift0 1 y).
 
 Quote Recursively Definition four := (2 + 2).
+
+Ltac start := unfold type_program; intros; simpl decompose_program;
+  match goal with
+    |- let '(_, _) := (?Σ, ?t) in squash _ => let sigma := fresh in set(sigma:=Σ); hnf; constructor
+  end.
 
 Ltac typecheck := start;
   match goal with
@@ -33,7 +38,7 @@ Ltac infer := start;
     |- ?Σ ;;; ?Γ |-- ?t : ?T => 
     eapply (infer_correct Σ Γ t T);
       let t' := eval vm_compute in (infer Σ Γ t) in
-          change (t' = OfType T); reflexivity
+          change (t' = Checked T); reflexivity
   end.
 
 Example typecheck_four : type_program four natr := ltac:(typecheck).
@@ -53,7 +58,7 @@ Definition test_reduction (p : program) :=
 
 Definition out_typing c :=
   match c with
-  | OfType t => t
+  | Checked t => t
   | TypeError e => tRel 0
   end.
 
@@ -111,7 +116,7 @@ Module Test5.
   Defined.
 
   Time Template Check Plus1.
-  
+  (* Too long
   Quote Recursively Definition p_Plus1 := Plus1.
   
   Definition term := Plus1.
@@ -120,9 +125,10 @@ Module Test5.
   (** Check typing *)
   
   (* Yay! Typechecking an actually non-trivial term. (173s) *)
+ 
   Make Definition inferred_type := ltac:(interp_infer ast).
   Definition inferred_type' := Eval cbv delta in inferred_type.
   Print inferred_type'.
-  Check convertible ltac:(term_type term) inferred_type.
+  Check convertible ltac:(term_type term) inferred_type. *)
 End Test5.
 

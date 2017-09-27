@@ -21,6 +21,7 @@ struct
   type quoted_ident = char list
   type quoted_name = name
   type quoted_sort = sort
+  type quoted_sort_family = sort_family
   type quoted_cast_kind = cast_kind
   type quoted_kernel_name = char list
   type quoted_inductive = inductive
@@ -63,7 +64,13 @@ struct
     | Prop Null -> Coq_sProp
     | Prop Pos -> Coq_sSet
     | Type i -> Coq_sType [] (* FIXME (pos_of_universe i) *)
-              
+
+  let quote_sort_family s =
+    match s with
+    | Sorts.InProp -> Ast0.InProp
+    | Sorts.InSet -> Ast0.InSet
+    | Sorts.InType -> Ast0.InType
+
   let quote_cast_kind = function
     | DEFAULTcast -> Cast
     | REVERTcast -> RevertCast
@@ -128,13 +135,12 @@ struct
   let mkMutualInductive kn p r =
     (* FIXME: This is a quite dummy rearrangement *)
     let r =
-      List.map (fun (i,t,r,p) ->
+      List.map (fun (i,t,kelim,r,p) ->
           let ctors = List.map (fun (id,t,n) -> (id,t),n) r in
           { ind_name = i;
             ind_type = t;
-            ind_kelim = [];
-            ind_ctors = ctors;
-            ind_projs = p }) r in
+            ind_kelim = kelim;
+            ind_ctors = ctors; ind_projs = p }) r in
     fun pr ->
     PType (kn,p,r,pr)
 

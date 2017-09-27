@@ -530,6 +530,31 @@ Section Typecheck.
       |  _ => raise (UndeclaredConstant cst)
     end.
 
+  Definition lookup_ind_type ind i (u : list level) (* TODO Universes *) :=
+    match lookup_env Σ ind with
+    | Some (InductiveDecl _ {| ind_bodies := l |}) =>
+      match nth_error l i with
+      | Some body => ret body.(ind_type)
+      | None => raise (UndeclaredInductive (mkInd ind i))
+      end
+    |  _ => raise (UndeclaredInductive (mkInd ind i))
+    end.
+
+  Definition lookup_constructor_type ind i k u :=
+    match lookup_env Σ ind with
+    | Some (InductiveDecl _ {| ind_bodies := l |}) =>
+      match nth_error l i with
+      | Some body =>
+        match nth_error body.(ind_ctors) k with
+        | Some (_, ty, _) =>
+          ret (substl (inds ind u l) ty)
+        | None => raise (UndeclaredConstructor (mkInd ind i) k)
+        end
+      | None => raise (UndeclaredInductive (mkInd ind i))
+      end
+    |  _ => raise (UndeclaredInductive (mkInd ind i))
+    end.
+  
   Fixpoint infer (Γ : context) (t : term) : typing_result term :=
     match t with
     | tRel n =>
@@ -570,32 +595,11 @@ Section Typecheck.
       infer_spine infer Γ t_ty l
 
     | tConst cst u => lookup_constant_type cst (* TODO Universes *)
-
-    | tInd (mkInd ind i) u =>
-      match lookup_env Σ ind with
-      | Some (InductiveDecl _ {| ind_bodies := l |}) =>
-        match nth_error l i with
-        | Some body => ret body.(ind_type)
-        | None => raise (UndeclaredInductive (mkInd ind i))
-        end
-      |  _ => raise (UndeclaredInductive (mkInd ind i))
-      end
+    | tInd (mkInd ind i) u => lookup_ind_type ind i u
 
     | tConstruct (mkInd ind i) k u =>
-      match lookup_env Σ ind with
-      | Some (InductiveDecl _ {| ind_bodies := l |}) =>
-        match nth_error l i with
-        | Some body =>
-          match nth_error body.(ind_ctors) k with
-          | Some (_, ty, _) =>
-            ret (substl (inds ind u l) ty)
-          | None => raise (UndeclaredConstructor (mkInd ind i) k)
-          end
-        | None => raise (UndeclaredInductive (mkInd ind i))
-        end
-      |  _ => raise (UndeclaredInductive (mkInd ind i))
-      end
-
+      lookup_constructor_type ind i k u
+        
     | tCase (ind, par) p c brs =>
       ty <- infer Γ c ;;
       indargs <- reduce_to_ind Γ ty ;;
@@ -662,35 +666,29 @@ Section Typecheck.
         reduce_to_ind Γ t = Checked (i, u, args') /\
         cumul Σ Γ (mktApp (tInd i u) args') (mktApp (tInd i u) args).
 
+  Lemma lookup_env_id {id decl} : lookup_env Σ id = Some decl -> id = global_decl_ident decl.
+  Proof.
+    induction Σ; simpl; intros; try discriminate; trivial.
+    revert H. destruct (ident_eq_spec id (global_decl_ident a)). now intros [= ->].
+    apply IHg.
+  Qed.
+
   Lemma lookup_constant_type_declared cst decl (isdecl : declared_constant Σ cst decl) :
     lookup_constant_type cst = Checked decl.(cst_type).
   Proof.
-    unfold lookup_constant_type.
-    destruct isdecl as [d [H H']].
-  Admitted.
-  (*   rewrite H at 1. *)
-    
-  (*   induction Σ. simpl. bang. simpl. destruct dec. simpl. *)
-  (*   unfold type_of_constant_decl. simpl. *)
-  (*   simpl in H. pose proof H. rewrite e in H0. *)
-  (*   injection H0 as ->. *)
-  (*   destruct d; auto. bang. *)
-
-  (*   simpl in H. pose proof H. rewrite e in H0. *)
-  (*   specialize (IHg H0). *)
-  (*   rewrite IHg at 1. f_equal. pi. *)
-  (* Qed. *)
-
-  (* Lemma lookup_constant_type_is_declared cst decl : *)
-  (*   lookup_constant_type cst = Checked decl.(cst_type) -> declared_constant Σ cst decl. *)
-  (* Proof. *)
-  (*   unfold lookup_constant_type, declared_constant. *)
-  (*   destruct lookup_env; try discriminate. *)
-  (*   destruct g; intros; try discriminate. destruct c. *)
-  (*   injection H as ->. *)
-  (*   eexists. split; eauto. *)
-  (*   eexists. split; eauto. *)
-  (* Qed. *)
+    unfold lookup_constant_type. red in isdecl. rewrite isdecl. destruct decl. reflexivity.
+  Qed.
+  
+  Lemma lookup_constant_type_is_declared cst T :
+    lookup_constant_type cst = Checked T ->
+    { decl | declared_constant Σ cst decl /\ decl.(cst_type) = T }.
+  Proof.
+    unfold lookup_constant_type, declared_constant.
+    destruct lookup_env eqn:Hlook; try discriminate.
+    destruct g eqn:Hg; intros; try discriminate. destruct c.
+    injection H as ->. rewrite (lookup_env_id Hlook). simpl.
+    eexists. split; eauto.
+  Qed.
   
   Lemma eq_ind_refl i i' : eq_ind i i' = true <-> i = i'.
   Admitted.
@@ -808,18 +806,18 @@ Section Typecheck.
   Qed.
 
   Lemma nth_error_Some_safe_nth A (l : list A) n c :
-    nth_error l n = Some c -> { isdecl : _ &
-      safe_nth l (exist _ n isdecl) = c }.
+    forall e : nth_error l n = Some c, safe_nth l (exist _ n (nth_error_isdecl e)) = c.
   Proof.
     intros H.
-    pose proof H.
-    pose proof (nth_error_safe_nth _ _ (nth_error_isdecl H0)).
-    rewrite H in H1.
-    eexists. injection H1 as <-. reflexivity.
+    pose proof (nth_error_safe_nth _ _ (nth_error_isdecl H)).
+    rewrite H in H0 at 1. now injection H0 as ->.
   Qed.
 
-
   Ltac infco := eauto using infer_cumul_correct, infer_type_correct.
+  
+  (* Axiom cheat : forall A, A. *)
+  (* Ltac admit := apply cheat. *)
+  
   Lemma infer_correct Γ t T :
     infer Γ t = Checked T -> Σ ;;; Γ |-- t : T.
   Proof.
@@ -827,18 +825,16 @@ Section Typecheck.
       revert H; infers; try solve [econstructor; infco].
 
     - destruct nth_error eqn:Heq; try discriminate.
-      destruct (nth_error_Some_safe_nth _ _ _ _ Heq) as [isdecl <-].
+      pose proof (nth_error_Some_safe_nth _ _ _ _ Heq).
+      destruct H.
       intros [= <-]. constructor.
 
     - admit.
 
     - intros.
-      (* pose proof (lookup_constant_type_declared _ (lookup_constant_type_is_declared _ _ H)). *)
-      (* rewrite H in H0 at 1. *)
-      (* injection H0 as ->. tc. *)
-      (* constructor. *)
-      admit.
-      
+      destruct (lookup_constant_type_is_declared _ _ H) as [decl [Hdecl <-]].
+      constructor. auto.
+
     - (* Ind *) admit.
 
     - (* Construct *) admit.
@@ -869,8 +865,10 @@ Section Typecheck.
       destruct (nth_error_Some_safe_nth _ _ _ _ Heqo) as [isdecl <-].
       constructor.
   Admitted.
-
+  
 End Typecheck.
+
+Extract Constant infer_correct => "(fun f sigma ctx t ty -> assert false)".
 
 Instance default_fuel : Fuel := { fuel := 2 ^ 18 }.
 

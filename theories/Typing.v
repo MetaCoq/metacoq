@@ -109,6 +109,11 @@ Definition global_context := list global_decl.
 Definition ident_eq (x y : ident) :=
   if string_dec x y then true else false.
 
+Lemma ident_eq_spec x y : reflect (x = y) (ident_eq x y).
+Proof.
+  unfold ident_eq. destruct string_dec; constructor; auto.
+Qed.
+
 Fixpoint lookup_env (Σ : global_context) (id : ident) : option global_decl :=
   match Σ with
   | nil => None
@@ -796,7 +801,7 @@ Proof.
   destruct m; constructor; [|apply auxm].
   split; apply auxt.
 Defined.
-Axiom cheat : forall A, A.
+
 Lemma term_env_ind' :
   forall P : global_context -> term -> Prop,
     (forall Σ n, P Σ (tRel n)) ->

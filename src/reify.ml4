@@ -1310,7 +1310,7 @@ Vernacexpr.Check
       | _ -> raise (Failure "ill-typed (case)")
     else if Term.eq_constr h tFix then
       match args with
-	    bds :: i :: _ ->
+      | bds :: i :: _ ->
         let unquoteFbd  b : ((Term.constr * Term.constr) * (Term.constr * Term.constr)) =
           let (_,args) = app_full b [] in
           match args with
@@ -1325,6 +1325,18 @@ Vernacexpr.Check
         let la = Array.of_list in
         Term.mkFix ((la rargs,nat_to_int i), (la names, la types, la bodies))
       | _ -> raise (Failure "tFix takes exactly 2 arguments")
+    else if Term.eq_constr h tProj then
+      match args with
+      | [ proj ; t ] ->
+         let (p, narg) = from_coq_pair proj in
+         let (ind, _) = from_coq_pair p in
+	 let ind' = denote_inductive ind in
+         let (mib,mip) = Global.lookup_inductive ind' in
+         let s = match mib.Declarations.mind_record with
+           | Some (Some (id, projs, pbs)) -> projs.(nat_to_int narg)
+	   | _ -> failwith "lkenr" in
+         Term.mkProj (Names.Projection.make s false, aux t)
+      | _ -> raise (Failure "ill-typed (proj)")
     else
       not_supported_verb trm "big_case"
     in aux trm

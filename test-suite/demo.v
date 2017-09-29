@@ -277,3 +277,22 @@ Run TemplateProgram (printTerm "TemplateTestSuite.demo.Funtp2").
 
 
 
+(** Primitive Projections. *)
+
+Set Primitive Projections.
+Record prod' A B : Type :=
+  pair' { fst' : A ; snd' : B }.
+Arguments fst' {A B} _.
+Arguments snd' {A B} _.
+
+Test Quote ((pair' _ _ true 4).(snd')).
+Make Definition x := (tProj (mkInd "Top.prod'" 0, 2, 1)
+   (tApp (tConstruct (mkInd "Top.prod'" 0) 0)
+      [tInd (mkInd "Coq.Init.Datatypes.bool" 0);
+      tInd (mkInd "Coq.Init.Datatypes.nat" 0);
+      tConstruct (mkInd "Coq.Init.Datatypes.bool" 0) 0;
+      tApp (tConstruct (mkInd "Coq.Init.Datatypes.nat" 0) 1)
+        [tApp (tConstruct (mkInd "Coq.Init.Datatypes.nat" 0) 1)
+           [tApp (tConstruct (mkInd "Coq.Init.Datatypes.nat" 0) 1)
+              [tApp (tConstruct (mkInd "Coq.Init.Datatypes.nat" 0) 1)
+                 [tConstruct (mkInd "Coq.Init.Datatypes.nat" 0) 0]]]]])).

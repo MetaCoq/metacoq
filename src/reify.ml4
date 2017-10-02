@@ -1331,11 +1331,10 @@ Vernacexpr.Check
          let (p, narg) = from_coq_pair proj in
          let (ind, _) = from_coq_pair p in
 	 let ind' = denote_inductive ind in
-         let (mib,mip) = Global.lookup_inductive ind' in
-         let s = match mib.Declarations.mind_record with
-           | Some (Some (id, projs, pbs)) -> projs.(nat_to_int narg)
-	   | _ -> failwith "lkenr" in
-         Term.mkProj (Names.Projection.make s false, aux t)
+         let projs = Recordops.lookup_projections ind' in
+         (match List.nth projs (nat_to_int narg) with
+          | Some p -> Term.mkProj (Names.Projection.make p false, aux t)
+          | None -> bad_term trm)
       | _ -> raise (Failure "ill-typed (proj)")
     else
       not_supported_verb trm "big_case"

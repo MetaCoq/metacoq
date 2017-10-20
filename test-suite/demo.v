@@ -51,6 +51,11 @@ Quote Definition add'_syntax := Eval compute in add'.
 
 Make Definition zero_from_syntax := (Ast.tConstruct (Ast.mkInd "Coq.Init.Datatypes.nat" 0) 0).
 
+Definition zero_from_syntax' : nat.
+  denote_term (Ast.tConstruct (Ast.mkInd "Coq.Init.Datatypes.nat" 0) 0)
+              (fun x => exact x).
+Defined.
+
 Make Definition two_from_syntax := (Ast.tApp (Ast.tConstruct (Ast.mkInd "Coq.Init.Datatypes.nat" 0) 1)
    (Ast.tApp (Ast.tConstruct (Ast.mkInd "Coq.Init.Datatypes.nat" 0) 1)
       (Ast.tConstruct (Ast.mkInd "Coq.Init.Datatypes.nat" 0) 0 :: nil) :: nil)).

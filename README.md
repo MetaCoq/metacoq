@@ -51,4 +51,4 @@ Bugs
 
 Please report any bugs (or feature requests) on the github issue tracker:
 
-   https://github.com/gmalecha/template-coq/issues
+   https://github.com/Template-Coq/template-coq/issues

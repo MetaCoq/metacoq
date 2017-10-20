@@ -1,7 +1,30 @@
-Template-Coq
+Template Coq
 ============
-Template Coq is a quoting library for Coq. It takes Coq terms and constructs a representation of their syntax tree as a Coq inductive data type.
-The representatino is based on the kernel's term representation. Reasoning about this data type can only be done informally, i.e. there is no Coq function that can take this syntax and produce its meaning.
+
+Template Coq is a quoting library for [Coq](http://coq.inria.fr). It
+takes Coq terms and constructs a representation of their syntax tree as
+a Coq inductive data type. The representation is based on the kernel's
+term representation.
+
+In addition to this representation of terms, Template Coq includes:
+
+- Reification of the environment structures, for constant and inductive
+  declarations.
+
+- Denotation of terms and global declarations
+
+There is work in progress to integrate a monad for manipulating
+global declarations, and inserting them in the global environment, in
+the stype of MetaCoq/MTac.
+
+Credits
+=======
+
+Template-Coq was originally developed by
+[Gregory Malecha](https://github.com/gmalecha), and is now developed by
+[Abhishek Anand](https://github.com/aa755), [Simon
+Boulier](https://github.com/simonboulier), [Yannick
+Forster](https://github.com/yforster) and [Matthieu Sozeau](https://github.com/mattam82).
 
 Install with OPAM
 -----------------
@@ -48,6 +71,6 @@ well.
 Bugs
 ----
 
-Please report any bugs (or feature requests) on the github issue tracker:
+Please report any bugs (or feature requests) on the [github issue
+tracker](https://github.com/Template-Coq/template-coq/issues).
 
-   https://github.com/Template-Coq/template-coq/issues

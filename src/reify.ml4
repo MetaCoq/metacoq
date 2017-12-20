@@ -345,11 +345,28 @@ let rec putReturnTypeInfo (env : Environ.env) (t: Term.constr) : Term.constr =
   let quote_univ_instance pu =
     to_coq_list tlevel (Array.to_list (Array.map quote_level (Univ.Instance.to_array pu)))
 
+  open Declarations
+  let abstract_inductive_instance iu =
+    match iu with
+    | Monomorphic_ind ctx -> Univ.Instance.empty
+    | Polymorphic_ind ctx ->
+       let ctx = Univ.instantiate_univ_context ctx in
+       Univ.UContext.instance ctx
+    | Cumulative_ind cumi ->
+       let cumi = Univ.instantiate_cumulativity_info cumi in
+       let ctx = Univ.CumulativityInfo.univ_context cumi in
+       Univ.UContext.instance ctx
+  let constant_instance = function
+    | Monomorphic_const _ -> Univ.Instance.empty
+    | Polymorphic_const ctx ->
+       let ctx = Univ.instantiate_univ_context ctx in
+       Univ.UContext.instance ctx
+
   let quote_term_remember
       (add_constant : Names.kernel_name -> 'a -> 'a)
       (add_inductive : Names.inductive -> 'a -> 'a) =
     let rec quote_term (acc : 'a) env trm =
-      let rec aux acc env trm =
+      let aux acc env trm =
       match Term.kind_of_term trm with
 	Term.Rel i -> (Term.mkApp (tRel, [| int_to_nat (i - 1) |]), acc)
       | Term.Var v -> (Term.mkApp (tVar, [| quote_ident v |]), acc)
@@ -449,7 +466,7 @@ let rec putReturnTypeInfo (env : Environ.env) (t: Term.constr) : Term.constr =
       (to_coq_list (Term.mkApp (tdef, [| tTerm |])) (List.rev defs), b, acc)
     and quote_minductive_type (acc : 'a) env (t : Names.mutual_inductive) =
       let mib = Environ.lookup_mind t (snd env) in
-      let inst = Univ.UContext.instance mib.Declarations.mind_universes in
+      let inst = abstract_inductive_instance mib.Declarations.mind_universes in
       let indtys =
         Array.to_list Declarations.(Array.map (fun oib ->
            let ty = Inductive.type_of_inductive (snd env) ((mib,oib),inst) in
@@ -541,9 +558,9 @@ let rec putReturnTypeInfo (env : Environ.env) (t: Term.constr) : Term.constr =
 					   [| quote_string (Names.string_of_kn kn) ; ty |]) :: !constants
 		end
 	      | Def cs, pu ->
-		do_body (Mod_subst.force_constr cs) (Univ.UContext.instance pu)
+		do_body (Mod_subst.force_constr cs) (constant_instance pu)
 	      | OpaqueDef lc, pu ->
-		do_body (Opaqueproof.force_proof (Global.opaque_tables ()) lc) (Univ.UContext.instance pu))
+		do_body (Opaqueproof.force_proof (Global.opaque_tables ()) lc) (constant_instance pu))
 	  end
     in
     let (quote_rem,quote_typ) =
@@ -608,7 +625,7 @@ let quote_mind_finiteness (f: Decl_kinds.recursivity_kind) =
   | Decl_kinds.BiFinite -> cBiFinite
      
 let quote_mut_ind  env (mi:Declarations.mutual_inductive_body) : Term.constr =
-   let t= Discharge.process_inductive ([],Univ.UContext.empty) (Names.Cmap.empty,Names.Mindmap.empty) mi in
+   let t= Discharge.process_inductive ([],Univ.AUContext.empty) (Names.Cmap.empty,Names.Mindmap.empty) mi in
    Declarations.(
      Entries.(
    let the_prod = Term.mkApp (prod_type,[|tident; tlocal_entry|]) in 
@@ -643,7 +660,7 @@ let quote_mut_ind  env (mi:Declarations.mutual_inductive_body) : Term.constr =
     let ss = List.rev (Str.split (Str.regexp (Str.quote ".")) s) in
     match ss with
       nm :: rst ->
-	let rec to_mp ls = Names.MPfile (Names.make_dirpath (List.map Names.id_of_string ls)) in
+	let to_mp ls = Names.MPfile (Names.make_dirpath (List.map Names.id_of_string ls)) in
 	let mp = to_mp rst in
 	Names.make_kn mp Names.empty_dirpath (Names.mk_label nm)
     | _ -> assert false
@@ -741,7 +758,7 @@ let reduce_all env (evm,def) =
       else
 	not_supported_verb trm "unquote_string"
     in
-    go 0 trm
+    Bytes.to_string (go 0 trm)
 
   let unquote_ident trm =
     Names.id_of_string (unquote_string trm)
@@ -1058,8 +1075,11 @@ Vernacexpr.Check
     mind_entry_params = List.map (fun p -> let (l,r) = (from_coq_pair p) in (unquote_ident l, (denote_local_entry r))) 
       (List.rev (from_coq_list mp));
     mind_entry_inds = List.map one_ind (from_coq_list mi);
-    mind_entry_polymorphic = from_bool mpol;
-    mind_entry_universes = Univ.UContext.empty;
+    (* mind_entry_polymorphic = from_bool mpol; *)
+    mind_entry_universes =
+      if from_bool mpol then
+        (Polymorphic_ind_entry (snd (Evd.universe_context evm)))
+      else Monomorphic_ind_entry (snd (Evd.universe_context evm));
     mind_entry_private = unquote_map_option from_bool mpr (*mpr*)
     } in 
     match args with
@@ -1215,7 +1235,7 @@ TACTIC EXTEND denote_term
       [ Proofview.Goal.nf_enter begin fun gl ->
          let (evm,env) = Lemmas.get_current_context() in
          let c = TermReify.denote_term (EConstr.to_constr (Proofview.Goal.sigma gl) c) in
-         let def' = Constrextern.extern_constr true env evm c in
+         let def' = Constrextern.extern_constr true env evm (EConstr.of_constr c) in
          let def = Constrintern.interp_constr env evm def' in
 	 ltac_apply tac (List.map to_ltac_val [EConstr.of_constr (fst def)])
       end ]
@@ -1262,7 +1282,7 @@ VERNAC COMMAND EXTEND Unquote_vernac CLASSIFIED AS SIDEFF
 	let (evm,env) = Lemmas.get_current_context () in
 	let def = Constrintern.interp_constr env evm def in
 	let trm = TermReify.denote_term (fst def) in
-	let result = Constrextern.extern_constr true env evm trm in
+	let result = Constrextern.extern_constr true env evm (EConstr.of_constr trm) in
 	declare_definition name
 	  (Decl_kinds.Global, false, Decl_kinds.Definition)
 	  [] None result None (Lemmas.mk_hook (fun _ _ -> ())) ]

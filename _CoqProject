@@ -1,6 +1,5 @@
 -I src
--Q theories Template
--bypass-API
+-R theories Template
 
 src/reify.ml4
 src/template_plugin.mllib

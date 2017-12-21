@@ -1,5 +1,6 @@
 -I ../src
 -Q ../theories Template
+-R . TemplateTestSuite
 
 bug1.v
 bug2.v

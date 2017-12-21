@@ -1621,10 +1621,10 @@ VERNAC COMMAND EXTEND Make_vernac CLASSIFIED AS SIDEFF
     | [ "Quote" "Definition" ident(name) ":=" constr(def) ] ->
       [ check_inside_section () ;
 	let (evm,env) = Lemmas.get_current_context () in
-	let def = Constrintern.interp_constr env evm def in
-	let trm = TermReify.quote_term env (fst def) in
+	let def,uctx = Constrintern.interp_constr env evm def in
+	let trm = TermReify.quote_term env def in
 	ignore(Declare.declare_definition ~kind:Decl_kinds.Definition name
-                                          (trm, Univ.ContextSet.empty)) ]
+                                          (trm, Evd.evar_universe_context_set uctx)) ]
 END;;
 
 VERNAC COMMAND EXTEND Make_vernac_reduce CLASSIFIED AS SIDEFF

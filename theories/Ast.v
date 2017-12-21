@@ -1,13 +1,15 @@
 Require Import Coq.Strings.String.
 Require Import Coq.PArith.BinPos.
 
-Definition universe := string.
 Definition ident := string. (* e.g. nat *)
 Definition kername := string. (* e.g. Coq.Init.Datatypes.nat *)
+
 
 Inductive level : Set :=
   Level (_ : string)
 | LevelVar (_ : nat) (* are these debruijn indices ? *).
+
+Definition universe := list (level * bool).
 
 Inductive sort : Set :=
 | sProp
@@ -221,4 +223,3 @@ Inductive TemplateMonad : Type -> Prop :=
 (*   := fun s t => tmBind (tmBind (tmUnquote t) *)
 (*                             (fun t => tmEval s (projT2 t))) *)
 (*                     tmQuoteTerm. *)
-

@@ -27,8 +27,35 @@ let _ = Goptions.declare_bool_option {
   Goptions.optwrite = (fun a -> cast_prop:=a);
 }
 
+
+(* deprecated. use the typechecker written in Gallina  *)
+let cast_setprop = ref (false)
+let _ = Goptions.declare_bool_option {
+  Goptions.optdepr = false;
+  Goptions.optname = "This option marks types in universe Set or Prop. This is deprecated. use the typechecker written in Gallina";
+  Goptions.optkey = ["Template";"Cast";"SetProp"];
+  Goptions.optread = (fun () -> !cast_setprop);
+  Goptions.optwrite = (fun a -> cast_setprop:=a);
+}
+
+(* deprecated. use the typechecker written in Gallina  *)
+let cast_discriminee = ref (false)
+let _ = Goptions.declare_bool_option {
+  Goptions.optdepr = false;
+  Goptions.optname = "This option marks the type of the discriminee. This is deprecated. use the typechecker written in Gallina";
+  Goptions.optkey = ["Template";"Cast";"Discriminee"];
+  Goptions.optread = (fun () -> !cast_discriminee);
+  Goptions.optwrite = (fun a -> cast_discriminee:=a);
+}
+
 (* whether Set Template Cast Propositions is on, as needed for erasure in Certicoq *)
 let is_cast_prop () = !cast_prop                     
+
+(* deprecated. use the typechecker written in Gallina  *)
+let is_cast_setprop () = !cast_setprop
+
+(* deprecated. use the typechecker written in Gallina  *)
+let is_cast_discriminee () = !cast_discriminee
                      
 let pp_constr fmt x = Pp.pp_with fmt (Printer.pr_constr x)
 
@@ -316,14 +343,17 @@ struct
 
 let castSetProp (sf:Term.sorts) t =
   let sf = Term.family_of_sort sf in
-  if sf == Term.InProp 
+  if sf == Term.InProp && is_cast_setprop ()
   then Term.mkApp (tCast, [| t ; kCast ; Term.mkApp (tSort, [| sProp |]) |])
-  else if sf == Term.InSet 
+  else if sf == Term.InSet && is_cast_setprop ()
   then Term.mkApp (tCast, [| t ; kCast ; Term.mkApp (tSort, [| sSet |]) |])
   else t
 
 let noteTypeAsCast t typ =
+  if is_cast_discriminee () then 
   Term.mkApp (tCast, [| t ; kCast ; typ |])
+  else t
+  
 
 let getSort env (t:Term.constr) =
   Retyping.get_sort_of env Evd.empty (EConstr.of_constr t)
@@ -534,7 +564,7 @@ let rec putReturnTypeInfo (env : Environ.env) (t: Term.constr) : Term.constr =
 	else
 	  begin
 	    visited_terms := Names.KNset.add kn !visited_terms ;
-            let c = Names.Constant.make kn kn in
+            let c = Names.Constant.make kn  kn in
 	    let cd = Environ.lookup_constant c env in
 	    let do_body body pu =
 	      let (result,acc) =

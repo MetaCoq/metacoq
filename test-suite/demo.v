@@ -81,8 +81,6 @@ Quote Recursively Definition mult_syntax := mult.
 Make Definition d''_from_syntax := ltac:(let t:= eval compute in d'' in exact t).
 
 
-
-
 (** Reflecting  Inductives *)
 
 Require Import List.
@@ -236,8 +234,12 @@ Run TemplateProgram (printTerm "demoConsType").
 *)
 
 Example unquote_quote_id1: demoList_syntax=mut_list_i (* demoList was obtained from mut_list_i *).
+reflexivity.
+Qed.
+(*
   unfold demoList_syntax.
   unfold mut_list_i.
+  reflexivity.
     f_equal.
     f_equal.
     unfold one_list_i.
@@ -247,6 +249,7 @@ Example unquote_quote_id1: demoList_syntax=mut_list_i (* demoList was obtained f
     unfold mkImpl.
     f_equal.
 Abort. (* extra cast *)
+ *)
 
 Run TemplateProgram (printTerm "Coq.Arith.PeanoNat.Nat.add").
 Inductive NonRec (A:Set) (C: A -> Set): Set := 
@@ -272,6 +275,21 @@ Run TemplateProgram (printTerm "Top.Funtp2").
 *)
 
 
+(** Casting options *)
 
 
+Definition castTest (n:cnat) : True * Set
+  :=
+  (I, match n with
+    | O => nat
+    | S _ => True
+    end).
+               
+Run TemplateProgram (printTerm "Top.castTest").
+Set Template Cast Propositions.
+Run TemplateProgram (printTerm "Top.castTest").
+Set Template Cast SetProp.
+Run TemplateProgram (printTerm "Top.castTest").
+Set Template Cast Discriminee.
+Run TemplateProgram (printTerm "Top.castTest"). (* cast after (tRel 0) (* n *) *)
 

@@ -478,7 +478,7 @@ Section Typecheck.
         else raise (NotConvertible Γ t u t' u')
       end.
 
-  Definition reduce_to_sort Γ (t : term) : typing_result sort :=
+  Definition reduce_to_sort Γ (t : term) : typing_result universe :=
     t' <- hnf_stack Σ Γ t ;;
     match t' with
     | (tSort s, []) => ret s
@@ -567,7 +567,7 @@ Section Typecheck.
     | tMeta n => raise (UnboundMeta n)
     | tEvar ev args => raise (UnboundEvar ev)
 
-    | tSort s => ret (tSort (succ_sort s))
+    | tSort s => ret (tSort (succ_universe s))
 
     | tCast c k t =>
       infer_type infer Γ t ;;
@@ -577,7 +577,7 @@ Section Typecheck.
     | tProd n t b =>
       s1 <- infer_type infer Γ t ;;
       s2 <- infer_type infer (Γ ,, vass n t) b ;;
-      ret (tSort (max_sort s1 s2))
+      ret (tSort (max_universe s1 s2))
 
     | tLambda n t b =>
       infer_type infer Γ t ;;
@@ -652,7 +652,7 @@ Section Typecheck.
 
   Conjecture cumul_reduce_to_sort : forall Γ t s',
       Σ ;;; Γ |-- t <= tSort s' <->
-      exists s'', reduce_to_sort Γ t = Checked s'' /\ leq_sort s'' s' = true.
+      exists s'', reduce_to_sort Γ t = Checked s'' /\ leq_universe s'' s' = true.
 
   Conjecture cumul_reduce_to_product : forall Γ t na a b,
       Σ ;;; Γ |-- t <= tProd na a b ->
@@ -770,9 +770,9 @@ Section Typecheck.
         destruct (convert_leq Γ t t2) eqn:?; [ simpl | simpl; intro; discriminate ]
       end; try intros [= <-].
 
-  Lemma leq_sort_refl x : leq_sort x x = true.
-  Proof. destruct x; reflexivity. Qed.
-  Hint Resolve leq_sort_refl : typecheck.
+  Lemma leq_universe_refl x : leq_universe x x = true.
+  Proof. induction x. reflexivity. simpl. Admitted.
+  Hint Resolve leq_universe_refl : typecheck.
   Lemma infer_type_correct Γ t x :
     (forall (Γ : context) (T : term), infer Γ t = Checked T -> Σ;;; Γ |-- t : T) ->
     infer_type infer Γ t = Checked x ->

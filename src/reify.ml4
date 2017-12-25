@@ -553,7 +553,9 @@ struct
     else t
 
   let getSort env (t:Term.constr) =
-    Retyping.get_sort_of env Evd.empty (EConstr.of_constr t)
+    if !cast_types then
+      Retyping.get_sort_of env Evd.empty (EConstr.of_constr t)
+    else Sorts.prop
 
   let getType env (t:Term.constr) : Term.constr =
     EConstr.to_constr Evd.empty (Retyping.get_type_of env Evd.empty (EConstr.of_constr t))
@@ -612,7 +614,7 @@ struct
 
       | Term.Prod (n,t,b) ->
 	let (t',acc) = quote_term acc env t in
-        let sf = getSort (snd env)  t in
+        let sf = getSort (snd env) t in
         let env = push_rel (toDecl (n, None, t)) env in
         let sfb = getSort (snd env) b in
 	let (b',acc) = quote_term acc env b in
@@ -656,19 +658,23 @@ struct
          let ind = Q.quote_inductive (Q.quote_kn (Names.MutInd.canonical (fst ci.Term.ci_ind)),
                                       Q.quote_int (snd ci.Term.ci_ind)) in
          let npar = Q.quote_int ci.Term.ci_npar in
-         let discriminantType = getType (snd env) discriminant in
          let typeInfo = putReturnTypeInfo (snd env) typeInfo in
 	 let (qtypeInfo,acc) = quote_term acc env typeInfo in
-	 let (discriminant,acc) = quote_term acc env discriminant in
-         let (discriminantType,acc) = (quote_term acc env discriminantType) in
-         let discriminant = noteTypeAsCast discriminant discriminantType in
+	 let (qdiscriminant,acc) = quote_term acc env discriminant in
+         let qdiscriminant,acc =
+           if !cast_types then
+             let discriminantType = getType (snd env) discriminant in
+             let (discriminantType,acc) = (quote_term acc env discriminantType) in
+             noteTypeAsCast qdiscriminant discriminantType, acc
+           else qdiscriminant, acc
+         in
 	 let (branches,nargs,acc) =
            CArray.fold_left2 (fun (xs,nargs,acc) x narg ->
                let (x,acc) = quote_term acc env x in
                let narg = Q.quote_int narg in
                (x :: xs, narg :: nargs, acc))
              ([],[],acc) e ci.Term.ci_cstr_nargs in
-         (Q.mkCase (ind, npar) (List.rev nargs) qtypeInfo discriminant (List.rev branches), acc)
+         (Q.mkCase (ind, npar) (List.rev nargs) qtypeInfo qdiscriminant (List.rev branches), acc)
 
       | Term.Fix fp -> quote_fixpoint acc env fp
       | Term.CoFix fp -> quote_cofixpoint acc env fp

@@ -69,7 +69,6 @@ Quote Definition add'_syntax := Eval compute in add'.
 
 (** Reflecting definitions **)
 Make Definition zero_from_syntax := (Ast.tConstruct (Ast.mkInd "Coq.Init.Datatypes.nat" 0) 0).
-Check ltac:(let t:= eval compute in eo_syntax in exact t).
 
 Make Definition add_from_syntax := ltac:(let t:= eval compute in add_syntax in exact t).
 
@@ -193,7 +192,7 @@ Definition printTerm (name  : ident): TemplateMonad unit :=
 Definition duplicateDefn (name newName : ident): TemplateMonad unit :=
   (tmBind (tmQuote name false) (fun body => 
     match body with
-    | Some (inl bd) => 
+    | Some (inl (DefinitionEntry {| definition_entry_body := bd |})) =>
         (tmBind (tmPrint body) (fun _ => tmMkDefinition true newName bd))
     | _ => tmReturn tt
     end))
@@ -220,7 +219,7 @@ Run TemplateProgram
     end))
     ).
 
-Print demoList.
+Print demoList_syntax.
 
 Definition demoConsType := ltac:(let T := type of demoCons in exact T).
 Run TemplateProgram (printTerm "nat"). 
@@ -246,14 +245,7 @@ Example unquote_quote_id1: demoList_syntax=mut_list_i (* demoList was obtained f
   unfold demoList_syntax.
   unfold mut_list_i.
     f_equal.
-    f_equal.
-    unfold one_list_i.
-    f_equal.
-    f_equal.
-    f_equal.
-    unfold mkImpl.
-    f_equal.
-Abort. (* extra cast *)
+Qed.
 
 Run TemplateProgram (printTerm "Coq.Arith.PeanoNat.Nat.add").
 Inductive NonRec (A:Set) (C: A -> Set): Set := 
@@ -291,13 +283,13 @@ Arguments fst' {A B} _.
 Arguments snd' {A B} _.
 
 Test Quote ((pair' _ _ true 4).(snd')).
-Make Definition x := (tProj (mkInd "Top.prod'" 0, 2, 1)
-   (tApp (tConstruct (mkInd "Top.prod'" 0) 0)
-      [tInd (mkInd "Coq.Init.Datatypes.bool" 0);
-      tInd (mkInd "Coq.Init.Datatypes.nat" 0);
-      tConstruct (mkInd "Coq.Init.Datatypes.bool" 0) 0;
-      tApp (tConstruct (mkInd "Coq.Init.Datatypes.nat" 0) 1)
-        [tApp (tConstruct (mkInd "Coq.Init.Datatypes.nat" 0) 1)
-           [tApp (tConstruct (mkInd "Coq.Init.Datatypes.nat" 0) 1)
-              [tApp (tConstruct (mkInd "Coq.Init.Datatypes.nat" 0) 1)
-                 [tConstruct (mkInd "Coq.Init.Datatypes.nat" 0) 0]]]]])).
+Make Definition x := (tProj (mkInd "prod'" 0, 2, 1)
+   (tApp (tConstruct (mkInd "prod'" 0) 0 nil)
+      [tInd (mkInd "Coq.Init.Datatypes.bool" 0) nil;
+      tInd (mkInd "Coq.Init.Datatypes.nat" 0) nil;
+      tConstruct (mkInd "Coq.Init.Datatypes.bool" 0) 0 nil;
+      tApp (tConstruct (mkInd "Coq.Init.Datatypes.nat" 0) 1 nil)
+        [tApp (tConstruct (mkInd "Coq.Init.Datatypes.nat" 0) 1 nil)
+           [tApp (tConstruct (mkInd "Coq.Init.Datatypes.nat" 0) 1 nil)
+              [tApp (tConstruct (mkInd "Coq.Init.Datatypes.nat" 0) 1 nil)
+                 [tConstruct (mkInd "Coq.Init.Datatypes.nat" 0) 0 nil]]]]])).

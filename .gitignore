@@ -56,3 +56,10 @@ src/induction.ml
 src/induction.mli
 src/liftSubst.ml
 src/liftSubst.mli
+/Makefile.conf
+/Makefile.coq.bak
+/Makefile.coq.conf
+/Makefile.coqchecker.conf
+/Makefile.coqplugin.conf
+/test-suite/Makefile.coq.conf
+/.merlin

@@ -858,11 +858,11 @@ Section Typecheck.
     - (* Proj *) admit.
 
     - destruct nth_error eqn:?; intros [= <-].
-      destruct (nth_error_Some_safe_nth _ _ _ _ Heqo) as [isdecl <-].
+      destruct (nth_error_Some_safe_nth _ _ _ _ Heqo).
       constructor.
 
     - destruct nth_error eqn:?; intros [= <-].
-      destruct (nth_error_Some_safe_nth _ _ _ _ Heqo) as [isdecl <-].
+      destruct (nth_error_Some_safe_nth _ _ _ _ Heqo).
       constructor.
   Admitted.
   

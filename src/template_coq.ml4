@@ -7,8 +7,6 @@ open Reify
 
 DECLARE PLUGIN "template_coq_plugin"
 
-let pp_constr fmt x = Pp.pp_with fmt (Printer.pr_constr x)
-                    
 let quote_string s =
   let rec aux acc i =
     if i < 0 then acc
@@ -56,8 +54,6 @@ struct
 
   let quote_bool x = x
 
-  let pos_of_universe i = BinNums.Coq_xH
-                        
   let quote_sort s =
     let open Sorts in
     match s with

@@ -11,6 +11,7 @@ Require Import ExtrOcamlString.
 
 Extraction Blacklist Ast String List Nat.
 
+Set Warnings "-extraction-opaque-accessed".
 Extraction Library List.
 Extraction Library Datatypes.
 Extraction Library Bool.

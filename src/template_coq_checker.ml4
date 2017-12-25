@@ -1,8 +1,8 @@
+(* -*- compile-command: "make -C .. -f Makefile.coqchecker" -*- *)
 (*i camlp4deps: "grammar/grammar.cma" i*)
 
 DECLARE PLUGIN "template_coq_checker_plugin"
 
-open Ltac_plugin
 open Stdarg
 open Pp
 open PeanoNat.Nat
@@ -23,9 +23,9 @@ let check gr =
   | CorrectDecl t ->
      Feedback.msg_debug (str"Finished checking successfully")
   | EnvError (AlreadyDeclared id) ->
-     CErrors.errorlabstrm "template-coq" (str "Already declared: " ++ pr_char_list id)
+     CErrors.user_err ~hdr:"template-coq" (str "Already declared: " ++ pr_char_list id)
   | EnvError (IllFormedDecl (id, e)) ->
-     CErrors.errorlabstrm "template-coq" (str "Type error while checking: " ++ pr_char_list id)
+     CErrors.user_err ~hdr:"template-coq" (str "Type error while checking: " ++ pr_char_list id)
     
 VERNAC COMMAND EXTEND TemplateCheck CLASSIFIED AS QUERY
 | [ "Template" "Check" global(gr) ] -> [

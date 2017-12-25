@@ -455,7 +455,7 @@ Definition allowed_elim (s : sort) (f : sort_family) :=
   | _, _ => false
   end.
 
-Record squash (A : Set) : Prop := { unsquash : A }.
+Record squash (A : Set) : Prop := { _ : A }.
 
 Inductive typing (Σ : global_context) (Γ : context) : term -> term -> Set :=
 | type_Rel n : forall (isdecl : n < List.length Γ),
@@ -903,7 +903,7 @@ Require Import Wf.
 
 Require Import Wellfounded Relation_Definitions.
 Require Import Relation_Operators Lexicographic_Product Wf_nat.
-Implicit Arguments lexprod [A B].
+Arguments lexprod [A B].
 Notation wf := type_global_env.
 
 Definition env_prop (P : forall Σ Γ t T, Set) :=

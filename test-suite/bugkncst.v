@@ -52,7 +52,7 @@ Fixpoint pocc_term (n:nat) (t:term): bool :=
   (** does [tConst str] occur anywhere in a program? **)
 Fixpoint pocc_program (p:program): bool :=
   match p with
-    | PConstr _ _ t q => pocc_term 2000 t || pocc_program q
+    | PConstr _ ty t q => pocc_term 2000 ty || pocc_term 2000 t || pocc_program q
     | PType _ _ _ q =>  pocc_program q
     | PAxiom _ t q => pocc_term 2000 t || pocc_program q
     | PIn t =>  pocc_term 2000 t

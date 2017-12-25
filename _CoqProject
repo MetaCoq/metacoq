@@ -1,8 +1,14 @@
 -I src
 -R theories Template
 
+src/reify.mli
 src/reify.ml4
 src/template_plugin.mllib
 
 theories/Ast.v
 theories/Template.v
+theories/Induction.v
+theories/LiftSubst.v
+theories/WeakSubst.v
+theories/Typing.v
+theories/Checker.v

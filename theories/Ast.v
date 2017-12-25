@@ -15,6 +15,9 @@ Inductive sort : Set :=
 
 Record ind : Set := {} .
 
+Inductive sort_family : Set :=
+| InProp | InSet | InType.
+
 Inductive name : Set :=
 | nAnon
 | nNamed (_ : ident).
@@ -32,46 +35,79 @@ Record def (term : Set) : Set := mkdef
 { dname : name (** the name (note, this may mention other definitions **)
 ; dtype : term
 ; dbody : term (** the body (a lambda term) **)
-; rarg  : nat  (** the index of the recursive argument **)
+; rarg  : nat  (** the index of the recursive argument, 0 for cofixpoints **)
 }.
 
 Definition mfixpoint (term : Set) : Set :=
   list (def term).
 
+Definition projection : Set := inductive * nat (* params *) * nat (* argument *).
+
+Definition universe_instance : Set := list level.
+
 Inductive term : Set :=
 | tRel       : nat -> term
-| tVar       : ident -> term (** this can go away **)
+| tVar       : ident -> term (** For free variables (e.g. in a goal) *)
 | tMeta      : nat -> term   (** NOTE: this can go away *)
-| tEvar      : nat -> term
+| tEvar      : nat -> list term -> term
 | tSort      : sort -> term
 | tCast      : term -> cast_kind -> term -> term
 | tProd      : name -> term (** the type **) -> term -> term
 | tLambda    : name -> term (** the type **) -> term -> term
 | tLetIn     : name -> term (** the term **) -> term (** the type **) -> term -> term
 | tApp       : term -> list term -> term
-| tConst     : string -> list level -> term
-| tInd       : inductive -> list level -> term
-| tConstruct : inductive -> nat -> list level -> term
+| tConst     : string -> universe_instance -> term
+| tInd       : inductive -> universe_instance -> term
+| tConstruct : inductive -> nat -> universe_instance -> term
 | tCase      : (inductive * nat) (* # of parameters *) -> term (** type info **)
                -> term (* discriminee *)->
                list (nat * term) (* branches *)
                -> term
+| tProj      : projection -> term -> term
 | tFix       : mfixpoint term -> nat -> term
-(*
-| CoFix     of ('constr, 'types) pcofixpoint
-*)
-| tUnknown : string -> term.
+| tCoFix     : mfixpoint term -> nat -> term.
 
-Record inductive_body := mkinductive_body
-{ ctors : list (ident * term * nat (* arity, w/o lets, w/o parameters *)) }.
+Record inductive_body :=
+  mkinductive_body
+    { ind_name : ident;
+      ind_type : term; (* Closed arity *)
+      ind_kelim : list sort_family; (* Allowed elimination sorts *)
+      ind_ctors : list (ident * term (* Under context of arities of the mutual inductive *)
+                    * nat (* arity, w/o lets, w/o parameters *));
+      ind_projs : list (ident * term) (* names and types of projections, if any.
+                                     Type under context of params and inductive object *) }.
 
 Inductive program : Set :=
-| PConstr : string -> list level -> term (*-> bool denoting opacity?*) -> program -> program
+| PConstr : string -> universe_instance -> term (* type *) -> term (* body *) -> program -> program
 | PType   : ident -> nat (* # of parameters, w/o let-ins *) ->
-            list (ident * inductive_body) -> program -> program
-| PAxiom  : ident -> term (* the type *) -> program -> program
+            list inductive_body (* Non-empty *) -> program -> program
+| PAxiom  : ident -> universe_instance -> term (* the type *) -> program -> program
 | PIn     : term -> program.
 
+
+Record constant_decl :=
+  { cst_name : ident; (* TODO Universes *)
+    cst_universes : universe_instance;
+    cst_type : term;
+    cst_body : option term }.
+
+Record minductive_decl :=
+  { ind_npars : nat;
+    ind_bodies : list inductive_body }.
+
+Inductive global_decl :=
+| ConstantDecl : ident -> constant_decl -> global_decl
+| InductiveDecl : ident -> minductive_decl -> global_decl.
+
+Definition extend_program (p : program) (d : global_decl) : program :=
+  match d with
+  | ConstantDecl i {| cst_name:=_; cst_universes := u; cst_type:=ty;  cst_body:=Some body |}
+    => PConstr i u (* TODO universes *) ty body p
+  | ConstantDecl i {| cst_name:=_; cst_universes := u; cst_type:=ty;  cst_body:=None |}
+    => PAxiom i u ty p
+  | InductiveDecl i {| ind_npars:=n; ind_bodies := l |}
+    => PType i n l p
+  end.
 
 (** representation of mutual inductives. nearly copied from Coq/kernel/entries.mli
 *)
@@ -96,6 +132,19 @@ Inductive recursivity_kind :=
 
 
 (* kernel/entries.mli*)
+Record definition_entry : Set := {
+  definition_entry_type : term;
+  definition_entry_body : term }.
+  (* Missing universes, opaque, inline *)
+
+Record parameter_entry : Set := {
+  parameter_entry_type : term }.
+
+Inductive constant_entry : Set :=
+| ParameterEntry (p : parameter_entry)
+| DefinitionEntry (def : definition_entry).
+
+
 Record mutual_inductive_entry : Set := {
   mind_entry_record : option (option ident); 
   mind_entry_finite : recursivity_kind;
@@ -123,7 +172,7 @@ Inductive TemplateMonad : Type -> Prop :=
 | tmPrint : forall {A:Type}, A -> TemplateMonad unit
 (** Quote the body of a definition or inductive. Its name need not be fully qualified --
   the implementation uses Locate *)
-| tmQuote : ident -> bool (** bypass opacity?*)-> TemplateMonad (option (term+mutual_inductive_entry))
+| tmQuote : ident -> bool (** bypass opacity?*)-> TemplateMonad (option (constant_entry+mutual_inductive_entry))
 (** similar to Quote Definition ... := ...
   To actually make the definition, use (tmMkDefinition false) *)
 | tmQuoteTerm : forall {A:Type}, A  -> TemplateMonad term

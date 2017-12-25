@@ -39,6 +39,7 @@ Fixpoint add (a b : nat) : nat :=
     | 0 => b
     | S a => S (add a b)
   end.
+Eval vm_compute in add.
 
 Fixpoint add' (a b : nat) : nat :=
   match b with
@@ -57,6 +58,8 @@ with odd (a : nat) : bool :=
     | S a => even a
   end.
 
+Unset Template Cast Types.
+Test Template Cast Types.
 
 Quote Definition add_syntax := Eval compute in add.
 
@@ -65,10 +68,12 @@ Quote Definition eo_syntax := Eval compute in even.
 Quote Definition add'_syntax := Eval compute in add'.
 
 (** Reflecting definitions **)
-
 Make Definition zero_from_syntax := (Ast.tConstruct (Ast.mkInd "Coq.Init.Datatypes.nat" 0) 0).
+Check ltac:(let t:= eval compute in eo_syntax in exact t).
 
-Make Definition eo_from_syntax := 
+Make Definition add_from_syntax := ltac:(let t:= eval compute in add_syntax in exact t).
+
+Make Definition eo_from_syntax :=
 ltac:(let t:= eval compute in eo_syntax in exact t).
 Print eo_from_syntax.
 

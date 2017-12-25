@@ -1,3 +1,5 @@
+(* -*- coq-prog-args: ("-top" "TemplateTestSuite.demo") -*-  *)
+
 Require Import Template.Template.
 
 Local Open Scope string_scope.
@@ -256,13 +258,13 @@ Run TemplateProgram (printTerm "NonRec").
 
 Monomorphic Definition Funtm (A B: Type) := A->B.
 Polymorphic Definition Funtp@{i} (A B: Type@{i}) := A->B.
-Run TemplateProgram (printTerm "Top.Funtp").
-Run TemplateProgram (printTerm "Top.Funtm").
+Run TemplateProgram (printTerm "TemplateTestSuite.demo.Funtp").
+Run TemplateProgram (printTerm "TemplateTestSuite.demo.Funtm").
 
 Polymorphic Definition Funtp2@{i j} 
    (A: Type@{i}) (B: Type@{j}) := A->B.
 
-Run TemplateProgram (printTerm "Top.Funtp2").
+Run TemplateProgram (printTerm "TemplateTestSuite.demo.Funtp2").
 
 (*(Some
    (inl

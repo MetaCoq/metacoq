@@ -3,3 +3,6 @@ all: Makefile.coq
 
 Makefile.coq: Makefile
 	coq_makefile -f _CoqProject -o Makefile.coq
+
+clean:
+	$(MAKE) -f Makefile.coq clean

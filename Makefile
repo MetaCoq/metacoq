@@ -8,11 +8,14 @@ install: Makefile.coq
 	$(MAKE) -f Makefile.coqplugin install
 	$(MAKE) -f Makefile.coqchecker install
 
-clean: Makefile.coq Makefile.coqplugin
+clean: Makefile.coq Makefile.coqplugin Makefile.coqchecker
 	$(MAKE) -f Makefile.coq clean
 	$(MAKE) -f Makefile.coqplugin clean
 	$(MAKE) -f Makefile.coqchecker clean
-
+	
+mrproper: clean
+	rm -f Makefile.coq Makefile.coqplugin Makefile.coqchecker
+ 
 Makefile.coq: _CoqProject
 	coq_makefile -f _CoqProject -o Makefile.coq
 
@@ -35,7 +38,7 @@ templatecoq: coq Makefile.coqplugin
 .merlin: Makefile.coq
 	make -f Makefile.coq .merlin
 
-templatecoqchecker: coq Makefile.coqchecker
+templatecoqchecker: coq templatecoq Makefile.coqchecker
 	$(COQBIN)coqc -I src -R theories Template theories/TypingPlugin.v
 	sh movefiles.sh
 	$(MAKE) -f Makefile.coqchecker

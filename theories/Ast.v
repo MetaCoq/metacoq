@@ -116,6 +116,19 @@ Definition extend_program (p : program) (d : global_decl) : program :=
 (** representation of mutual inductives. nearly copied from Coq/kernel/entries.mli
 *)
 
+(** Assume the following definition in concrete syntax:
+{v Inductive I1 (x1:X1) ... (xn:Xn) : A1 := c11 : T11 | ... | c1n1 : T1n1
+...
+with      Ip (x1:X1) ... (xn:Xn) : Ap := cp1 : Tp1 | ... | cpnp : Tpnp. v}
+
+then, in i{^ th} block, [mind_entry_params] is [xn:Xn;...;x1:X1];
+[mind_entry_arity] is [Ai], defined in context [x1:X1;...;xn:Xn];
+[mind_entry_lc] is [Ti1;...;Tini], defined in context [[A'1;...;A'p;x1:X1;...;xn:Xn]] where [A'i] is [Ai] generalized over [[x1:X1;...;xn:Xn]].
+*)
+
+
+
+
 Record one_inductive_entry : Set := {
   mind_entry_typename : ident;
   mind_entry_arity : term;

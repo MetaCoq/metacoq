@@ -1,0 +1,14 @@
+-R ../theories Template
+-R . Translations
+-I ../src
+-arg -type-in-type
+
+sigma.v
+translation_utils.v
+tsl_param.v
+tsl_fun.v
+tsl_param2.v
+#tsl_p.v
+
+#TestFun.v
+#TestParam.v

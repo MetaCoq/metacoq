@@ -160,6 +160,12 @@ Record mutual_inductive_entry : Set := {
 Inductive reductionStrategy : Set :=
   cbv | cbn | hnf | all.
 
+Definition typed_term := {T : Type & T}.
+Definition existT_typed_term a t : typed_term := @existT Type (fun T => T) a t.
+
+Definition my_projT1 (t : typed_term) : Type := @projT1 Type (fun T => T) t.
+Definition my_projT2 (t : typed_term) : my_projT1 t := @projT2 Type (fun T => T) t.
+
 (** A monad for programming with template-coq operations.
 Using this monad, it should be possible to write many plugins (e.g. paramcoq)
 in Gallina *)
@@ -173,22 +179,29 @@ Inductive TemplateMonad : Type -> Prop :=
 (** Quote the body of a definition or inductive. Its name need not be fully qualified --
   the implementation uses Locate *)
 | tmQuote : ident -> bool (** bypass opacity?*)-> TemplateMonad (option (constant_entry+mutual_inductive_entry))
-(** similar to Quote Definition ... := ...
-  To actually make the definition, use (tmMkDefinition false) *)
+(** similar to Quote Definition ... := ... *)
 | tmQuoteTerm : forall {A:Type}, A  -> TemplateMonad term
 (** similar to Quote Recursively Definition ... := ...*)
 | tmQuoteTermRec : forall {A:Type}, A  -> TemplateMonad program
 (** FIXME: strategy is currently ignored in the implementation -- it does all reductions.*)
 | tmReduce : reductionStrategy -> forall {A:Type}, A -> TemplateMonad A
-| tmMkDefinition : bool (* unquote? *) -> ident -> forall {A:Type}, A -> TemplateMonad unit (* bool indicating success? *)
+| tmDefinition : ident -> forall {A:Type}, A -> TemplateMonad unit (* bool indicating success? *)
+    (* todo: give a reduction strategy for the type (hnf for the moment) *)
+| tmMkDefinition : ident -> term -> TemplateMonad unit
+    (* unquote before making the definition *)
     (* should it take the number of polymorphically bound universes? in case
        unquoting has to be done? *)
 | tmMkInductive : mutual_inductive_entry -> TemplateMonad unit (* bool indicating success? *)
 
 (* Not yet implemented:*)
 
-(** unquote then reduce then quote *)
-| tmUnQReduceQ : reductionStrategy -> term (* -> strategy? *)-> TemplateMonad term
-| tmUnquote : term  -> TemplateMonad {T:Type & T}
+| tmUnquote : term  -> TemplateMonad typed_term
 | tmFreshName : ident -> TemplateMonad bool 
     (* yes => Guarenteed to not cause "... already declared" error *).
+
+(** unquote then reduce then quote *)
+(* Definition tmUnQReduceQ : reductionStrategy -> term -> TemplateMonad term *)
+(*   := fun s t => tmBind (tmBind (tmUnquote t) *)
+(*                             (fun t => tmReduce s (projT2 t))) *)
+(*                     tmQuoteTerm. *)
+

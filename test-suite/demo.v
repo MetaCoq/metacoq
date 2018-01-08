@@ -193,7 +193,7 @@ Definition duplicateDefn (name newName : ident): TemplateMonad unit :=
   (tmBind (tmQuote name false) (fun body => 
     match body with
     | Some (inl (DefinitionEntry {| definition_entry_body := bd |})) =>
-        (tmBind (tmPrint body) (fun _ => tmMkDefinition true newName bd))
+        (tmBind (tmPrint body) (fun _ => tmMkDefinition newName bd))
     | _ => tmReturn tt
     end))
     .
@@ -214,7 +214,7 @@ Run TemplateProgram
     match body with
     | Some (inl bd)
     | Some (inr bd) =>
-        tmMkDefinition false "demoList_syntax" bd
+        tmDefinition "demoList_syntax" bd
     | N_ => tmReturn tt
     end))
     ).
@@ -269,6 +269,15 @@ Run TemplateProgram (printTerm "TemplateTestSuite.demo.Funtp2").
          (tLambda (nNamed "B") (tSort (sType "Var(1)"))
             (tProd nAnon (tRel 1) (tRel 1))))))
 *)
+
+
+(** A bit less efficient, but does the same job as tmMkDefinition *)
+Definition tmMkDefinition' : ident -> term -> TemplateMonad unit
+  := fun id t => tmBind (tmUnquote t) (fun x => tmDefinition id (projT2 x)).
+
+Run TemplateProgram (tmMkDefinition' "foo" add_syntax).
+Run TemplateProgram (tmMkDefinition "foo2" add_syntax).
+
 
 
 

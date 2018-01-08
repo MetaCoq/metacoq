@@ -277,11 +277,11 @@ struct
   let cParameter_entry = r_reify "Build_parameter_entry"
   let cDefinition_entry = r_reify "Build_definition_entry"
 
-  let (tmReturn, tmBind, tmQuote, tmQuoteTermRec, tmReduce, tmDefinition, tmAxiom, tmLemma, tmFreshName,
-       tmMkDefinition, tmMkInductive, tmPrint, tmQuoteTerm, tmUnquote) =
-    (r_reify "tmReturn", r_reify "tmBind", r_reify "tmQuote", r_reify "tmQuoteTermRec", r_reify "tmReduce", r_reify "tmDefinition",
+  let (tmReturn, tmBind, tmQuote, tmQuoteRec, tmReduce, tmDefinition, tmAxiom, tmLemma, tmFreshName,
+       tmMkDefinition, tmMkInductive, tmPrint, tmQuoteInductive, tmQuoteConstant, tmUnquote) =
+    (r_reify "tmReturn", r_reify "tmBind", r_reify "tmQuote", r_reify "tmQuoteRec", r_reify "tmReduce", r_reify "tmDefinition",
      r_reify "tmAxiom", r_reify "tmLemma", r_reify "tmFreshName",
-     r_reify "tmMkDefinition", r_reify "tmMkInductive", r_reify "tmPrint", r_reify "tmQuoteTerm", r_reify "tmUnquote")
+     r_reify "tmMkDefinition", r_reify "tmMkInductive", r_reify "tmPrint", r_reify "tmQuoteInductive", r_reify "tmQuoteConstant", r_reify "tmUnquote")
 
   (* let pkg_specif = ["Coq";"Init";"Specif"] *)
   (* let texistT = resolve_symbol pkg_specif "existT" *)
@@ -1438,22 +1438,57 @@ Vernacexpr.Check
       | _ -> monad_failure "tmMkDefinition" 2
     else if Term.eq_constr coConstr tmQuote then
       match args with
-      | id::b::[] ->
-          let (evm,id) = reduce_all env evm id in
-          let (evm,b) = reduce_all env evm b in
-          let qt = TermReify.quote_entry (from_bool b) env evm (unquote_string id) in
-          (env, evm, qt)
-      | _ -> monad_failure "tmQuote" 2
-    else if Term.eq_constr coConstr tmQuoteTerm then
-      match args with
       | _::trm::[] -> let qt = TermReify.quote_term env trm (* user should do the reduction (using tmReduce) if they want *)
                       in (env, evm, qt)
-      | _ -> monad_failure "tmQuoteTerm" 2
-    else if Term.eq_constr coConstr tmQuoteTermRec then
+      | _ -> monad_failure "tmQuote" 2
+    else if Term.eq_constr coConstr tmQuoteRec then
       match args with
-      | trm::[] -> let qt = TermReify.quote_term_rec env trm in
+      | _::trm::[] -> let qt = TermReify.quote_term_rec env trm in
               (env, evm, qt)
-      | _ -> monad_failure "tmQuoteTermRec" 2
+      | _ -> monad_failure "tmQuoteRec" 2
+    else if Term.eq_constr coConstr tmQuoteInductive then
+      match args with
+      | name::[] ->
+         let (evm,name) = reduce_all env evm name in
+         let name = unquote_string name in
+         let (dp, nm) = split_name name in
+         let entry =
+           match Nametab.locate (Libnames.make_qualid dp nm) with
+           | Globnames.IndRef ni ->
+              let c = Environ.lookup_mind (fst ni) env in (* FIX: For efficienctly, we should also export (snd ni)*)
+              TermReify.quote_mut_ind env c
+           | _ -> CErrors.user_err (str name ++ str " does not seem to be an inductive.") in
+         (env, evm, entry)
+      | _ -> monad_failure "tmQuoteInductive" 1
+    else if Term.eq_constr coConstr tmQuoteConstant then
+      match args with
+      | name::b::[] ->
+         let (evm,name) = reduce_all env evm name in
+         let name = unquote_string name in
+         let (evm,b) = reduce_all env evm b in
+         let bypass = from_bool b in
+         let (dp, nm) = split_name name in
+         let entry =
+           (* todo: this should be defined in the quoter module *)
+           let open Declarations in
+           match Nametab.locate (Libnames.make_qualid dp nm) with
+           | Globnames.ConstRef c ->
+              let cd = Environ.lookup_constant c env in
+              let ty = match cd.const_type with
+                | RegularArity ty -> TermReify.quote_term env ty
+                | TemplateArity _ -> CErrors.user_err (Pp.str "Cannot reify deprecated template-polymorphic constant types")
+              in
+              let body = match cd.const_body with
+                | Def cs -> Some (TermReify.quote_term env (Mod_subst.force_constr cs))
+                | OpaqueDef cs when bypass -> Some (TermReify.quote_term env (Opaqueproof.force_proof (Global.opaque_tables ()) cs))
+                | _ -> None
+              in
+              (match body with
+               | Some body -> Term.mkApp (cDefinitionEntry, [| Term.mkApp (cDefinition_entry, [|ty;body|]) |])
+               | None -> Term.mkApp (cParameterEntry, [| Term.mkApp (cParameter_entry, [|ty|]) |]))
+           | _ -> CErrors.user_err (str name ++ str " does not seem to be a constant.") in
+         (env, evm, entry)
+      | _ -> monad_failure "tmQuoteConstant" 2
     else if Term.eq_constr coConstr tmPrint then
       match args with
       | _::trm::[] -> let _ = Feedback.msg_info (Printer.pr_constr trm)

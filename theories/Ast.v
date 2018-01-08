@@ -178,13 +178,16 @@ Inductive global_reference :=
 Using this monad, it should be possible to write many plugins (e.g. paramcoq)
 in Gallina *)
 Inductive TemplateMonad : Type -> Prop :=
+(* monadic operations *)
 | tmReturn : forall {A:Type}, A -> TemplateMonad A
 | tmBind : forall {A B : Type}, 
     (TemplateMonad A) 
     -> (A -> TemplateMonad B) 
     -> (TemplateMonad B)
 
+(* general operations *)
 | tmPrint : forall {A:Type}, A -> TemplateMonad unit
+(** FIXME: strategy is currently ignored in the implementation -- it does all reductions.*)
 | tmReduce : reductionStrategy -> forall {A:Type}, A -> TemplateMonad A
 | tmDefinition : ident -> forall {A:Type}, A -> TemplateMonad unit
 | tmAxiom : ident -> Type -> TemplateMonad unit
@@ -193,14 +196,14 @@ Inductive TemplateMonad : Type -> Prop :=
 | tmFreshName : ident -> TemplateMonad ident
     (* Guarenteed to not cause "... already declared" error *)
 
-(** Quote the body of a definition or inductive. Its name need not be fully qualified --
-  the implementation uses Locate *)
-| tmQuote : ident -> bool (** bypass opacity?*)-> TemplateMonad (option (constant_entry+mutual_inductive_entry))
-(** similar to Quote Definition ... := ... *)
-| tmQuoteTerm : forall {A:Type}, A  -> TemplateMonad term
-(** similar to Quote Recursively Definition ... := ...*)
-| tmQuoteTermRec : forall {A:Type}, A  -> TemplateMonad program
-(** FIXME: strategy is currently ignored in the implementation -- it does all reductions.*)
+(* quoting and unquoting operations *)
+(** Similar to Quote Definition ... := ... *)
+| tmQuote : forall {A:Type}, A  -> TemplateMonad term
+(** Similar to Quote Recursively Definition ... := ...*)
+| tmQuoteRec : forall {A:Type}, A  -> TemplateMonad program
+(** Quote the body of a definition or inductive. Its name need not be fully qualified *)
+| tmQuoteInductive : kername -> TemplateMonad mutual_inductive_entry
+| tmQuoteConstant : kername -> bool (** bypass opacity?*) -> TemplateMonad constant_entry
 | tmMkDefinition : ident -> term -> TemplateMonad unit
     (* unquote before making the definition *)
     (* should it take the number of polymorphically bound universes? in case

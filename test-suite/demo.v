@@ -186,28 +186,48 @@ Inductive demoList (A : Set) : Set :=
 
 (** Putting the above commands in monadic program *)
 
-Definition printTerm (name  : ident): TemplateMonad unit :=
-  (tmBind (tmQuote name true) tmPrint).
+Run TemplateProgram (tmBind (tmQuote (3 + 3)) tmPrint).
 
-Definition duplicateDefn (name newName : ident): TemplateMonad unit :=
-  (tmBind (tmQuote name false) (fun body => 
-    match body with
-    | Some (inl (DefinitionEntry {| definition_entry_body := bd |})) =>
-        (tmBind (tmPrint body) (fun _ => tmMkDefinition newName bd))
-    | _ => tmReturn tt
-    end))
-    .
+Run TemplateProgram (tmBind (tmQuoteRec add) tmPrint).
+
+Definition printInductive (name  : ident): TemplateMonad unit :=
+  (tmBind (tmQuoteInductive name) tmPrint).
+
+(* Definition printTerm (name  : ident): TemplateMonad unit := *)
+(*   (tmBind (tmQuote name true) tmPrint). *)
+
+(* Definition duplicateDefn (name newName : ident): TemplateMonad unit := *)
+(*   (tmBind (tmQuote name false) (fun body =>  *)
+(*     match body with *)
+(*     | Some (inl (DefinitionEntry {| definition_entry_body := bd |})) => *)
+(*         (tmBind (tmPrint body) (fun _ => tmMkDefinition newName bd)) *)
+(*     | _ => tmReturn tt *)
+(*     end)) *)
+(*     . *)
 
 
 
-Run TemplateProgram (duplicateDefn "add" "addUnq").
-Check (eq_refl: add=addUnq).
+(* Run TemplateProgram (duplicateDefn "add" "addUnq"). *)
+(* Check (eq_refl: add=addUnq). *)
 
-Run TemplateProgram (printTerm "Coq.Init.Datatypes.nat").
-Run TemplateProgram (printTerm "nat"). 
+Run TemplateProgram (printInductive "Coq.Init.Datatypes.nat").
+Run TemplateProgram (printInductive "nat").
 
 CoInductive cnat : Set :=  O :cnat | S : cnat -> cnat.
-Run TemplateProgram (printTerm "cnat"). 
+Run TemplateProgram (printInductive "cnat").
+
+Run TemplateProgram (tmBind (tmQuoteConstant "add" false) tmPrint).
+
+Definition six : nat.
+  exact (3 + 3).
+Qed.
+Run TemplateProgram (tmBind (tmQuoteConstant "six" true) tmPrint).
+Run TemplateProgram (tmBind (tmQuoteConstant "six" false) tmPrint).
+
+
+
+
+
 
 Run TemplateProgram
   ((tmBind (tmQuote "demoList" false) (fun body =>

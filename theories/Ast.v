@@ -185,8 +185,10 @@ Inductive TemplateMonad : Type -> Prop :=
 | tmQuoteTermRec : forall {A:Type}, A  -> TemplateMonad program
 (** FIXME: strategy is currently ignored in the implementation -- it does all reductions.*)
 | tmReduce : reductionStrategy -> forall {A:Type}, A -> TemplateMonad A
-| tmDefinition : ident -> forall {A:Type}, A -> TemplateMonad unit (* bool indicating success? *)
+| tmDefinition : ident -> forall {A:Type}, A -> TemplateMonad unit
+| tmAxiom : ident -> Type -> TemplateMonad unit
     (* todo: give a reduction strategy for the type (hnf for the moment) *)
+| tmLemma : ident -> Type -> TemplateMonad unit
 | tmMkDefinition : ident -> term -> TemplateMonad unit
     (* unquote before making the definition *)
     (* should it take the number of polymorphically bound universes? in case

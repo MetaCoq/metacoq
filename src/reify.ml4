@@ -272,14 +272,14 @@ struct
   let tBuild_mutual_inductive_entry = r_reify "Build_mutual_inductive_entry"
   let tBuild_one_inductive_entry = r_reify "Build_one_inductive_entry"
   let tConstant_entry = r_reify "constant_entry"
-  let cParameterEntry = r_reify "ParameterEntry"
+  let cParameterEntry = r_reify "ParameterEntry" 
   let cDefinitionEntry = r_reify "DefinitionEntry"
   let cParameter_entry = r_reify "Build_parameter_entry"
   let cDefinition_entry = r_reify "Build_definition_entry"
 
-  let (tmReturn, tmBind, tmQuote, tmQuoteTermRec, tmReduce, tmDefinition, tmMkDefinition, tmMkInductive, tmPrint, tmQuoteTerm, tmUnquote) =
-    (r_reify "tmReturn", r_reify "tmBind", r_reify "tmQuote", r_reify "tmQuoteTermRec", r_reify "tmReduce",
-     r_reify "tmDefinition", r_reify "tmMkDefinition", r_reify "tmMkInductive", r_reify "tmPrint", r_reify "tmQuoteTerm", r_reify "tmUnquote")
+  let (tmReturn, tmBind, tmQuote, tmQuoteTermRec, tmReduce, tmDefinition, tmAxiom, tmLemma, tmMkDefinition, tmMkInductive, tmPrint, tmQuoteTerm, tmUnquote) =
+    (r_reify "tmReturn", r_reify "tmBind", r_reify "tmQuote", r_reify "tmQuoteTermRec", r_reify "tmReduce", r_reify "tmDefinition",
+     r_reify "tmAxiom", r_reify "tmLemma", r_reify "tmMkDefinition", r_reify "tmMkInductive", r_reify "tmPrint", r_reify "tmQuoteTerm", r_reify "tmUnquote")
 
   (* let pkg_specif = ["Coq";"Init";"Specif"] *)
   (* let texistT = resolve_symbol pkg_specif "existT" *)
@@ -1401,9 +1401,28 @@ Vernacexpr.Check
       | name::typ::body::[] ->
          let (evm,name) = reduce_all env evm name in
          let (evm,typ) = reduce_hnf env (evm, typ) in
-         let _ = Declare.declare_definition ~kind:Decl_kinds.Definition (unquote_ident name) ~types:typ (body, Evd.universe_context_set evm)
-         in (env, evm, unit_tt)
+         let _ = Declare.declare_definition ~kind:Decl_kinds.Definition (unquote_ident name) ~types:typ (body, Evd.universe_context_set evm) in
+         (env, evm, unit_tt)
       | _ -> monad_failure "tmDefinition" 3
+    else if Term.eq_constr coConstr tmAxiom then
+      match args with
+      | name::typ::[] ->
+         let (evm,name) = reduce_all env evm name in
+         let (evm,typ) = reduce_hnf env (evm, typ) in
+         let param = Entries.ParameterEntry (None, false, (typ, UState.context (Evd.evar_universe_context evm)), None) in
+         let _ = Declare.declare_constant (unquote_ident name) (param, Decl_kinds.IsDefinition Decl_kinds.Definition) in
+         (env, evm, unit_tt)
+      | _ -> monad_failure "tmAxiom" 2
+    else if Term.eq_constr coConstr tmLemma then
+      match args with
+      | name::typ::[] ->
+         let (evm,name) = reduce_all env evm name in
+         let (evm,typ) = reduce_hnf env (evm, typ) in
+         (* todo: check opacity works *)
+         let kind = (Decl_kinds.Global, Flags.use_polymorphic_flag (), Decl_kinds.DefinitionBody Decl_kinds.Definition) in
+         Lemmas.start_proof (unquote_ident name) kind evm (EConstr.of_constr typ) (Lemmas.mk_hook (fun _ _ -> Feedback.msg_debug (str "tmLemma done")));
+         (env, evm, unit_tt)
+      | _ -> monad_failure "tmLemma" 2
     else if Term.eq_constr coConstr tmMkDefinition then
       match args with
       | name::body::[] ->
@@ -1412,8 +1431,8 @@ Vernacexpr.Check
          let evdref = ref evm in
          let trm = denote_term evdref def in
          let evm = !evdref in
-         let _ = Declare.declare_definition ~kind:Decl_kinds.Definition (unquote_ident name) (trm, Evd.universe_context_set evm)
-         in (env, evm, unit_tt)
+         let _ = Declare.declare_definition ~kind:Decl_kinds.Definition (unquote_ident name) (trm, Evd.universe_context_set evm) in
+         (env, evm, unit_tt)
       | _ -> monad_failure "tmMkDefinition" 2
     else if Term.eq_constr coConstr tmQuote then
       match args with

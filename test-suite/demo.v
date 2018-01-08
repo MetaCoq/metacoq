@@ -278,6 +278,14 @@ Definition tmMkDefinition' : ident -> term -> TemplateMonad unit
 Run TemplateProgram (tmMkDefinition' "foo" add_syntax).
 Run TemplateProgram (tmMkDefinition "foo2" add_syntax).
 
+Run TemplateProgram (tmAxiom "foo3" (nat -> nat)).
+
+(* (* This does not work: "No focused proof" *) *)
+(* Run TemplateProgram (tmLemma "foo4" (nat -> nat)). *)
+(* Proof. *)
+(*   exact (add 3). *)
+(* Qed. *)
+
 
 
 

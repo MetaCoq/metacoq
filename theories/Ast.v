@@ -2,7 +2,8 @@ Require Import Coq.Strings.String.
 Require Import Coq.PArith.BinPos.
 
 Definition universe := string.
-Definition ident := string.
+Definition ident := string. (* e.g. nat *)
+Definition kername := string. (* e.g. Coq.Init.Datatypes.nat *)
 
 Inductive level : Set :=
   Level (_ : string)
@@ -29,7 +30,7 @@ Inductive cast_kind : Set :=
 | RevertCast.
 
 Inductive inductive : Set :=
-| mkInd : string -> nat -> inductive.
+| mkInd : kername -> nat -> inductive.
 
 Record def (term : Set) : Set := mkdef
 { dname : name (** the name (note, this may mention other definitions **)
@@ -56,7 +57,7 @@ Inductive term : Set :=
 | tLambda    : name -> term (** the type **) -> term -> term
 | tLetIn     : name -> term (** the term **) -> term (** the type **) -> term -> term
 | tApp       : term -> list term -> term
-| tConst     : string -> universe_instance -> term
+| tConst     : kername -> universe_instance -> term
 | tInd       : inductive -> universe_instance -> term
 | tConstruct : inductive -> nat -> universe_instance -> term
 | tCase      : (inductive * nat) (* # of parameters *) -> term (** type info **)
@@ -166,6 +167,13 @@ Definition existT_typed_term a t : typed_term := @existT Type (fun T => T) a t.
 Definition my_projT1 (t : typed_term) : Type := @projT1 Type (fun T => T) t.
 Definition my_projT2 (t : typed_term) : my_projT1 t := @projT2 Type (fun T => T) t.
 
+
+Inductive global_reference :=
+(* VarRef of Names.variable *)
+| ConstRef : kername -> global_reference
+| IndRef : inductive -> global_reference
+| ConstructRef : inductive -> nat -> global_reference.
+
 (** A monad for programming with template-coq operations.
 Using this monad, it should be possible to write many plugins (e.g. paramcoq)
 in Gallina *)
@@ -175,7 +183,16 @@ Inductive TemplateMonad : Type -> Prop :=
     (TemplateMonad A) 
     -> (A -> TemplateMonad B) 
     -> (TemplateMonad B)
+
 | tmPrint : forall {A:Type}, A -> TemplateMonad unit
+| tmReduce : reductionStrategy -> forall {A:Type}, A -> TemplateMonad A
+| tmDefinition : ident -> forall {A:Type}, A -> TemplateMonad unit
+| tmAxiom : ident -> Type -> TemplateMonad unit
+    (* todo: give a reduction strategy for the type (hnf for the moment) *)
+| tmLemma : ident -> Type -> TemplateMonad unit
+| tmFreshName : ident -> TemplateMonad ident
+    (* Guarenteed to not cause "... already declared" error *)
+
 (** Quote the body of a definition or inductive. Its name need not be fully qualified --
   the implementation uses Locate *)
 | tmQuote : ident -> bool (** bypass opacity?*)-> TemplateMonad (option (constant_entry+mutual_inductive_entry))
@@ -184,22 +201,16 @@ Inductive TemplateMonad : Type -> Prop :=
 (** similar to Quote Recursively Definition ... := ...*)
 | tmQuoteTermRec : forall {A:Type}, A  -> TemplateMonad program
 (** FIXME: strategy is currently ignored in the implementation -- it does all reductions.*)
-| tmReduce : reductionStrategy -> forall {A:Type}, A -> TemplateMonad A
-| tmDefinition : ident -> forall {A:Type}, A -> TemplateMonad unit
-| tmAxiom : ident -> Type -> TemplateMonad unit
-    (* todo: give a reduction strategy for the type (hnf for the moment) *)
-| tmLemma : ident -> Type -> TemplateMonad unit
 | tmMkDefinition : ident -> term -> TemplateMonad unit
     (* unquote before making the definition *)
     (* should it take the number of polymorphically bound universes? in case
        unquoting has to be done? *)
 | tmMkInductive : mutual_inductive_entry -> TemplateMonad unit (* bool indicating success? *)
+| tmUnquote : term  -> TemplateMonad typed_term
 
 (* Not yet implemented:*)
-
-| tmUnquote : term  -> TemplateMonad typed_term
-| tmFreshName : ident -> TemplateMonad bool 
-    (* yes => Guarenteed to not cause "... already declared" error *).
+| tmAbout : ident -> TemplateMonad global_reference
+.
 
 (** unquote then reduce then quote *)
 (* Definition tmUnQReduceQ : reductionStrategy -> term -> TemplateMonad term *)

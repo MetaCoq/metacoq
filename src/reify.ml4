@@ -277,9 +277,11 @@ struct
   let cParameter_entry = r_reify "Build_parameter_entry"
   let cDefinition_entry = r_reify "Build_definition_entry"
 
-  let (tmReturn, tmBind, tmQuote, tmQuoteTermRec, tmReduce, tmDefinition, tmAxiom, tmLemma, tmMkDefinition, tmMkInductive, tmPrint, tmQuoteTerm, tmUnquote) =
+  let (tmReturn, tmBind, tmQuote, tmQuoteTermRec, tmReduce, tmDefinition, tmAxiom, tmLemma, tmFreshName,
+       tmMkDefinition, tmMkInductive, tmPrint, tmQuoteTerm, tmUnquote) =
     (r_reify "tmReturn", r_reify "tmBind", r_reify "tmQuote", r_reify "tmQuoteTermRec", r_reify "tmReduce", r_reify "tmDefinition",
-     r_reify "tmAxiom", r_reify "tmLemma", r_reify "tmMkDefinition", r_reify "tmMkInductive", r_reify "tmPrint", r_reify "tmQuoteTerm", r_reify "tmUnquote")
+     r_reify "tmAxiom", r_reify "tmLemma", r_reify "tmFreshName",
+     r_reify "tmMkDefinition", r_reify "tmMkInductive", r_reify "tmPrint", r_reify "tmQuoteTerm", r_reify "tmUnquote")
 
   (* let pkg_specif = ["Coq";"Init";"Specif"] *)
   (* let texistT = resolve_symbol pkg_specif "existT" *)
@@ -1465,8 +1467,8 @@ Vernacexpr.Check
       | _ -> monad_failure "tmReduce" 3
     else if Term.eq_constr coConstr tmMkInductive then
       match args with
-      | mind::[] -> let _ = declare_inductive env evm mind
-                    in (env, evm, unit_tt)
+      | mind::[] -> let _ = declare_inductive env evm mind in
+                    (env, evm, unit_tt)
       | _ -> monad_failure "tmMkInductive" 1
     else if Term.eq_constr coConstr tmUnquote then
       match args with
@@ -1483,6 +1485,11 @@ Vernacexpr.Check
         (*                                   typ; t'|])) *)
         (env, evm, Term.mkApp (texistT_typed_term, [|typ; t'|]))
       | _ -> monad_failure "tmUnquote" 1
+    else if Term.eq_constr coConstr tmFreshName then
+      match args with
+      | name::[] -> let name' = Namegen.next_ident_away_from (unquote_ident name) (fun id -> Nametab.exists_cci (Lib.make_path id)) in
+                    (env, evm, quote_ident name')
+      | _ -> monad_failure "tmFreshName" 1
     else CErrors.user_err (str "Invalid argument or yot yet implemented. The argument must be a TemplateProgram")
 
   let run_template_program (env: Environ.env) (evm: Evd.evar_map) (body: Constrexpr.constr_expr) : unit =

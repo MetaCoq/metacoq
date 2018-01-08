@@ -279,6 +279,7 @@ Run TemplateProgram (tmMkDefinition' "foo" add_syntax).
 Run TemplateProgram (tmMkDefinition "foo2" add_syntax).
 
 Run TemplateProgram (tmAxiom "foo3" (nat -> nat)).
+Run TemplateProgram (tmBind (tmFreshName "foo") tmPrint).
 
 (* (* This does not work: "No focused proof" *) *)
 (* Run TemplateProgram (tmLemma "foo4" (nat -> nat)). *)

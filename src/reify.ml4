@@ -1420,9 +1420,21 @@ Vernacexpr.Check
       | name::typ::[] ->
          let (evm,name) = reduce_all env evm name in
          let (evm,typ) = reduce_hnf env (evm, typ) in
-         (* todo: check opacity works *)
-         let kind = (Decl_kinds.Global, Flags.use_polymorphic_flag (), Decl_kinds.DefinitionBody Decl_kinds.Definition) in
-         Lemmas.start_proof (unquote_ident name) kind evm (EConstr.of_constr typ) (Lemmas.mk_hook (fun _ _ -> Feedback.msg_debug (str "tmLemma done")));
+         let kind = (Decl_kinds.Global, Flags.use_polymorphic_flag (), Decl_kinds.Definition) in
+
+         let hole = CAst.make (Constrexpr.CHole (None, Misctypes.IntroAnonymous, None)) in
+         let typ = Constrextern.extern_type true env evm (EConstr.of_constr typ) in
+         let original_program_flag = !Flags.program_mode in
+         Flags.program_mode := true;
+         Command.do_definition (unquote_ident name) kind None [] None hole (Some typ) (Lemmas.mk_hook (fun _ _ -> ()));
+         Flags.program_mode := original_program_flag;
+
+         (* we could also do something with continuations ... *)
+         (* Lemmas.start_proof (unquote_ident name) kind evm (EConstr.of_constr typ) (Lemmas.mk_hook (fun x y -> *)
+         (*                                                                               let t = Global.lookup y in *)
+         (*                                                                               k (env, evm, t) *)
+         (*                                                                               Feedback.msg_debug (str "tmLemma done"))); *)
+
          (env, evm, unit_tt)
       | _ -> monad_failure "tmLemma" 2
     else if Term.eq_constr coConstr tmMkDefinition then
@@ -1525,7 +1537,7 @@ Vernacexpr.Check
       | name::[] -> let name' = Namegen.next_ident_away_from (unquote_ident name) (fun id -> Nametab.exists_cci (Lib.make_path id)) in
                     (env, evm, quote_ident name')
       | _ -> monad_failure "tmFreshName" 1
-    else CErrors.user_err (str "Invalid argument or yot yet implemented. The argument must be a TemplateProgram")
+    else CErrors.user_err (str "Invalid argument or not yet implemented. The argument must be a TemplateProgram")
 
   let run_template_program (env: Environ.env) (evm: Evd.evar_map) (body: Constrexpr.constr_expr) : unit =
     let (body,_) = Constrintern.interp_constr env evm body in

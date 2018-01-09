@@ -225,7 +225,14 @@ Run TemplateProgram (tmBind (tmQuoteConstant "six" true) tmPrint).
 Run TemplateProgram (tmBind (tmQuoteConstant "six" false) tmPrint).
 
 
-
+Run TemplateProgram (tmBind (tmLemma "foo4" nat)
+                            (fun A =>  tmLemma "foo5" bool)).
+Next Obligation.
+  exact 3.
+Defined.
+Next Obligation.
+  exact true.
+Qed.
 
 
 
@@ -300,12 +307,6 @@ Run TemplateProgram (tmMkDefinition "foo2" add_syntax).
 
 Run TemplateProgram (tmAxiom "foo3" (nat -> nat)).
 Run TemplateProgram (tmBind (tmFreshName "foo") tmPrint).
-
-(* (* This does not work: "No focused proof" *) *)
-(* Run TemplateProgram (tmLemma "foo4" (nat -> nat)). *)
-(* Proof. *)
-(*   exact (add 3). *)
-(* Qed. *)
 
 
 

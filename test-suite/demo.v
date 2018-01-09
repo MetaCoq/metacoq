@@ -210,6 +210,7 @@ Run TemplateProgram (tmBind (tmQuoteConstant "six" false) tmPrint).
 
 Run TemplateProgram (tmBind (tmLemma "foo4" nat)
                             (fun A =>  tmLemma "foo5" bool)).
+exact 3. Defined.
 Next Obligation.
   exact 3.
 Defined.

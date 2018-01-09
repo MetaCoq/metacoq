@@ -1402,6 +1402,7 @@ Vernacexpr.Check
       match args with
       | name::typ::body::[] ->
          let (evm,name) = reduce_all env evm name in
+         (* todo: let the user choose the reduction used for the type *)
          let (evm,typ) = reduce_hnf env (evm, typ) in
          let _ = Declare.declare_definition ~kind:Decl_kinds.Definition (unquote_ident name) ~types:typ (body, Evd.universe_context_set evm) in
          (env, evm, unit_tt)
@@ -1428,14 +1429,11 @@ Vernacexpr.Check
          Flags.program_mode := true;
          Command.do_definition (unquote_ident name) kind None [] None hole (Some typ) (Lemmas.mk_hook (fun _ _ -> ()));
          Flags.program_mode := original_program_flag;
-
+         (env, evm, unit_tt)
          (* we could also do something with continuations ... *)
          (* Lemmas.start_proof (unquote_ident name) kind evm (EConstr.of_constr typ) (Lemmas.mk_hook (fun x y -> *)
          (*                                                                               let t = Global.lookup y in *)
-         (*                                                                               k (env, evm, t) *)
-         (*                                                                               Feedback.msg_debug (str "tmLemma done"))); *)
-
-         (env, evm, unit_tt)
+         (*                                                                               k (env, evm, t))); *)
       | _ -> monad_failure "tmLemma" 2
     else if Term.eq_constr coConstr tmMkDefinition then
       match args with

@@ -1423,22 +1423,27 @@ Vernacexpr.Check
       | name::typ::[] ->
          let (evm,name) = reduce_all env evm name in
          let (evm,typ) = reduce_hnf env (evm, typ) in
-         (* let kind = (Decl_kinds.Global, Flags.use_polymorphic_flag (), Decl_kinds.Definition) in *)
-         (* let hole = CAst.make (Constrexpr.CHole (None, Misctypes.IntroAnonymous, None)) in *)
-         (* let typ = Constrextern.extern_type true env evm (EConstr.of_constr typ) in *)
-         (* let original_program_flag = !Flags.program_mode in *)
-         (* Flags.program_mode := true; *)
-         (* Command.do_definition (unquote_ident name) kind None [] None hole (Some typ) (Lemmas.mk_hook (fun _ _ -> ())); *)
+         let kind = (Decl_kinds.Global, Flags.use_polymorphic_flag (), Decl_kinds.Definition) in
+         let hole = CAst.make (Constrexpr.CHole (None, Misctypes.IntroAnonymous, None)) in
+         let typ = Constrextern.extern_type true env evm (EConstr.of_constr typ) in
+         let original_program_flag = !Flags.program_mode in
+         Flags.program_mode := true;
+         Command.do_definition (unquote_ident name) kind None [] None hole (Some typ) (Lemmas.mk_hook (fun _ gr ->
+                                                                                           Flags.program_mode := original_program_flag;
+                                                                                           Feedback.msg_debug (str "toto");
+                                                                                           let env = Global.env () in
+                                                                                           let evm, t = Evd.fresh_global env evm gr in k (env, evm, t)
+));
          (* Flags.program_mode := original_program_flag; *)
          (* k (env, evm, unit_tt) *)
          (* we could also do something with continuations ... *)
-         let kind = Decl_kinds.(Global, Flags.use_polymorphic_flag (), DefinitionBody Definition) in
-         Lemmas.start_proof (unquote_ident name) kind evm (EConstr.of_constr typ)
-                            (Lemmas.mk_hook (fun _ gr ->
+         (* let kind = Decl_kinds.(Global, Flags.use_polymorphic_flag (), DefinitionBody Definition) in *)
+         (* Lemmas.start_proof (unquote_ident name) kind evm (EConstr.of_constr typ) *)
+                            (* (Lemmas.mk_hook (fun _ gr -> *)
                                  (* let evm, t = Evd.fresh_global env evm gr in k (env, evm, t) *)
-                                 Feedback.msg_debug (str "toto");
-                                 k (env, evm, unit_tt)
-                            ));
+                                 (* Feedback.msg_debug (str "toto"); *)
+                                 (* k (env, evm, unit_tt) *)
+                            (* )); *)
          Feedback.msg_debug (str "tata");
       | _ -> monad_failure "tmLemma" 2
     else if Term.eq_constr coConstr tmMkDefinition then

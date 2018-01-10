@@ -192,7 +192,7 @@ Inductive TemplateMonad : Type -> Prop :=
 | tmDefinition : ident -> forall {A:Type}, A -> TemplateMonad unit
 | tmAxiom : ident -> Type -> TemplateMonad unit
     (* todo: give a reduction strategy for the type (hnf for the moment) *)
-| tmLemma : ident -> Type -> TemplateMonad unit
+| tmLemma : ident -> forall A, TemplateMonad A
 | tmFreshName : ident -> TemplateMonad ident
     (* Guarenteed to not cause "... already declared" error *)
 

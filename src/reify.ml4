@@ -1435,9 +1435,11 @@ Vernacexpr.Check
          let kind = Decl_kinds.(Global, Flags.use_polymorphic_flag (), DefinitionBody Definition) in
          Lemmas.start_proof (unquote_ident name) kind evm (EConstr.of_constr typ)
                             (Lemmas.mk_hook (fun _ gr ->
-                            (* let evm, t = Evd.fresh_global env evm gr in k (env, evm, t) *)
+                                 (* let evm, t = Evd.fresh_global env evm gr in k (env, evm, t) *)
+                                 Feedback.msg_debug (str "toto");
                                  k (env, evm, unit_tt)
                             ));
+         Feedback.msg_debug (str "tata");
       | _ -> monad_failure "tmLemma" 2
     else if Term.eq_constr coConstr tmMkDefinition then
       match args with

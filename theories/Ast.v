@@ -1,6 +1,7 @@
 Require Import Coq.Strings.String.
 Require Import Coq.PArith.BinPos.
 Require Import List. Import ListNotations.
+Require Import Template.monad_utils.
 
 Definition ident := string. (* e.g. nat *)
 Definition kername := string. (* e.g. Coq.Init.Datatypes.nat *)
@@ -194,14 +195,12 @@ Inductive global_reference :=
 Using this monad, it should be possible to write many plugins (e.g. paramcoq)
 in Gallina *)
 Inductive TemplateMonad : Type -> Prop :=
-(* monadic operations *)
+(** ** Monadic operations *)
 | tmReturn : forall {A:Type}, A -> TemplateMonad A
-| tmBind : forall {A B : Type}, 
-    (TemplateMonad A) 
-    -> (A -> TemplateMonad B) 
-    -> (TemplateMonad B)
+| tmBind : forall {A B : Type}, TemplateMonad A -> (A -> TemplateMonad B)
+                           -> TemplateMonad B
 
-(* general operations *)
+(** ** General commands *)
 | tmPrint : forall {A:Type}, A -> TemplateMonad unit
 (** FIXME: strategy is currently ignored in the implementation -- it does all reductions.*)
 | tmEval : reductionStrategy -> forall {A:Type}, A -> TemplateMonad A
@@ -214,7 +213,7 @@ Inductive TemplateMonad : Type -> Prop :=
     (* Guarenteed to not cause "... already declared" error *)
 | tmAbout : ident -> TemplateMonad global_reference
 
-(* quoting and unquoting operations *)
+(** ** Quoting and unquoting commands *)
 (** Similar to Quote Definition ... := ... *)
 | tmQuote : forall {A:Type}, A  -> TemplateMonad term
 (** Similar to Quote Recursively Definition ... := ...*)
@@ -228,8 +227,9 @@ Inductive TemplateMonad : Type -> Prop :=
        unquoting has to be done? *)
 | tmMkInductive : mutual_inductive_entry -> TemplateMonad unit (* bool indicating success? *)
 | tmUnquote : term  -> TemplateMonad typed_term
+| tmUnquoteTyped : forall A, term -> TemplateMonad A
 
-(* Not yet implemented:*)
+(** ** Not yet implemented *)
 .
 
 (** unquote then reduce then quote *)
@@ -237,3 +237,8 @@ Inductive TemplateMonad : Type -> Prop :=
 (*   := fun s t => tmBind (tmBind (tmUnquote t) *)
 (*                             (fun t => tmEval s (projT2 t))) *)
 (*                     tmQuoteTerm. *)
+
+
+(* This allow to use notations of MonadNotation *)
+Instance TemplateMonad_Monad : Monad TemplateMonad
+  := {| ret := @tmReturn ; bind := @tmBind |}.

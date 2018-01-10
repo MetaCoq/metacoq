@@ -11,4 +11,5 @@ theories/Induction.v
 theories/LiftSubst.v
 theories/WeakSubst.v
 theories/Typing.v
+theories/monad_utils.v
 theories/Checker.v

@@ -26,6 +26,8 @@ src/sumbool.ml
 src/sumbool.mli
 src/peanoNat.ml
 src/peanoNat.mli
+src/monad_utils.mli
+src/monad_utils.ml
 src/ast0.mli
 src/ast0.ml
 src/template_coq.mli

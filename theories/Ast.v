@@ -189,8 +189,9 @@ Inductive TemplateMonad : Type -> Prop :=
 | tmPrint : forall {A:Type}, A -> TemplateMonad unit
 (** FIXME: strategy is currently ignored in the implementation -- it does all reductions.*)
 | tmReduce : reductionStrategy -> forall {A:Type}, A -> TemplateMonad A
-| tmDefinition : ident -> forall {A:Type}, A -> TemplateMonad unit
-| tmAxiom : ident -> Type -> TemplateMonad unit
+(** Return the defined constant *)
+| tmDefinition : ident -> forall {A:Type}, A -> TemplateMonad A
+| tmAxiom : ident -> forall A, TemplateMonad A
     (* todo: give a reduction strategy for the type (hnf for the moment) *)
 | tmLemma : ident -> forall A, TemplateMonad A
 | tmFreshName : ident -> TemplateMonad ident

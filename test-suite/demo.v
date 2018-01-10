@@ -213,6 +213,7 @@ Run TemplateProgram (tmBind (tmLemma "foo4" nat)
 Next Obligation.
   exact 3.
 Defined.
+Print foo5.
 
 
 Run TemplateProgram (tmBind (tmLemma "foo44" nat)
@@ -222,21 +223,31 @@ Next Obligation.
 Defined.
 
 
-Next Obligation.
-  exact true.
-Qed.
-
 
 Run TemplateProgram (tmBind (tmQuoteInductive "demoList")
                             (tmDefinition "demoList_syntax")).
-Print demoList_syntax.
-
-
 Example unquote_quote_id1: demoList_syntax=mut_list_i (* demoList was obtained from mut_list_i *).
   unfold demoList_syntax.
   unfold mut_list_i.
     f_equal.
 Qed.
+
+Run TemplateProgram (tmBind (tmDefinition "foo4'" nat) tmPrint).
+
+(* We can chain the definition. In the following,
+ foo5' = 12 and foo6' = foo5' *)
+Run TemplateProgram (tmBind (tmDefinition "foo5'" 12)
+                            (fun t =>  tmDefinition "foo6'" t)).
+
+Run TemplateProgram (tmBind (tmLemma "foo51" nat)
+                            (fun _ => tmLemma "foo61" bool)).
+Next Obligation.
+  exact 3.
+Defined.
+Next Obligation.
+  exact true.
+Qed.
+
 
 
 
@@ -265,15 +276,22 @@ Polymorphic Definition Funtp2@{i j}
 Run TemplateProgram (printConstant "TemplateTestSuite.demo.Funtp2").
 
 
+Definition tmDefinition' : ident -> forall {A}, A -> TemplateMonad unit
+  := fun id A t => tmBind (tmDefinition id t) (fun _ => tmReturn tt).
+
 (** A bit less efficient, but does the same job as tmMkDefinition *)
 Definition tmMkDefinition' : ident -> term -> TemplateMonad unit
-  := fun id t => tmBind (tmUnquote t) (fun x => tmDefinition id (projT2 x)).
+  := fun id t => tmBind (tmUnquote t)
+                     (fun x => tmBind (tmReduce all (projT2 x))
+                                   (tmDefinition' id)).
 
 Run TemplateProgram (tmMkDefinition' "foo" add_syntax).
 Run TemplateProgram (tmMkDefinition "foo1" add_syntax).
 
 Run TemplateProgram (tmBind (tmFreshName "foo") tmPrint).
-Run TemplateProgram (tmAxiom "foo0" (nat -> nat)).
+Run TemplateProgram (tmBind (tmAxiom "foo0" (nat -> nat)) tmPrint).
+Run TemplateProgram (tmBind (tmAxiom "foo0'" (nat -> nat))
+                            (fun t => tmDefinition' "foo0''" t)).
 Run TemplateProgram (tmBind (tmFreshName "foo") tmPrint).
 
 

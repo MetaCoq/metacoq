@@ -1385,92 +1385,83 @@ Vernacexpr.Check
     CErrors.user_err  (str (s ^ " must take " ^ (string_of_int k) ^ " argument" ^ (if k > 0 then "s" else "") ^ ".")
                        ++ str "Please file a bug with Template-Coq.")
 
-  type run_program_arg = Environ.env * Evd.evar_map * Term.constr
-
-  let rec run_template_program_rec (k : run_program_arg -> 'a)  ((env,evm,pgm): run_program_arg) : 'a =
-    let (evm,pgm) = reduce_hnf env (evm, pgm) in 
-    let (coConstr,args) = app_full pgm [] in
+  let rec run_template_program_rec (k : Evd.evar_map * Term.constr -> unit)  ((evm, pgm) : Evd.evar_map * Term.constr) : unit =
+    let env = Global.env () in
+    let (evm, pgm) = reduce_hnf env (evm, pgm) in 
+    let (coConstr, args) = app_full pgm [] in
     if Term.eq_constr coConstr tmReturn then
       match args with
-      | _::h::[] -> k (env,evm,h)
+      | _::h::[] -> k (evm, h)
       | _ -> monad_failure "tmReturn" 2
     else if Term.eq_constr coConstr tmBind then
       match args with
       | _::_::a::f::[] ->
-         run_template_program_rec (fun (env, evm, ar) -> run_template_program_rec k (env,evm,(Term.mkApp (f, [|ar|]))))
-                                  (env,evm,a)
+         run_template_program_rec (fun (evm, ar) -> run_template_program_rec k (evm, Term.mkApp (f, [|ar|]))) (evm, a)
       | _ -> monad_failure "tmBind" 4
     else if Term.eq_constr coConstr tmDefinition then
       match args with
       | name::typ::body::[] ->
-         let (evm,name) = reduce_all env evm name in
+         let (evm, name) = reduce_all env evm name in
          (* todo: let the user choose the reduction used for the type *)
-         let (evm,typ) = reduce_hnf env (evm, typ) in
-         let _ = Declare.declare_definition ~kind:Decl_kinds.Definition (unquote_ident name) ~types:typ (body, Evd.universe_context_set evm) in
-         k (env, evm, unit_tt)
+         let (evm, typ) = reduce_hnf env (evm, typ) in
+         let n = Declare.declare_definition ~kind:Decl_kinds.Definition (unquote_ident name) ~types:typ (body, Evd.universe_context_set evm) in
+         k (evm, Term.mkConst n)
       | _ -> monad_failure "tmDefinition" 3
     else if Term.eq_constr coConstr tmAxiom then
       match args with
       | name::typ::[] ->
-         let (evm,name) = reduce_all env evm name in
-         let (evm,typ) = reduce_hnf env (evm, typ) in
+         let (evm, name) = reduce_all env evm name in
+         let (evm, typ) = reduce_hnf env (evm, typ) in
          let param = Entries.ParameterEntry (None, false, (typ, UState.context (Evd.evar_universe_context evm)), None) in
-         let _ = Declare.declare_constant (unquote_ident name) (param, Decl_kinds.IsDefinition Decl_kinds.Definition) in
-         k (env, evm, unit_tt)
+         let n = Declare.declare_constant (unquote_ident name) (param, Decl_kinds.IsDefinition Decl_kinds.Definition) in
+         k (evm, Term.mkConst n)
       | _ -> monad_failure "tmAxiom" 2
     else if Term.eq_constr coConstr tmLemma then
       match args with
       | name::typ::[] ->
-         let (evm,name) = reduce_all env evm name in
-         let (evm,typ) = reduce_hnf env (evm, typ) in
+         let (evm, name) = reduce_all env evm name in
+         let (evm, typ) = reduce_hnf env (evm, typ) in
          let kind = (Decl_kinds.Global, Flags.use_polymorphic_flag (), Decl_kinds.Definition) in
          let hole = CAst.make (Constrexpr.CHole (None, Misctypes.IntroAnonymous, None)) in
          let typ = Constrextern.extern_type true env evm (EConstr.of_constr typ) in
          let original_program_flag = !Flags.program_mode in
          Flags.program_mode := true;
-         Command.do_definition (unquote_ident name) kind None [] None hole (Some typ) (Lemmas.mk_hook (fun _ gr ->
-                                                                                           Flags.program_mode := original_program_flag;
-                                                                                           Feedback.msg_debug (str "toto");
-                                                                                           let env = Global.env () in
-                                                                                           let evm, t = Evd.fresh_global env evm gr in k (env, evm, t)
-));
-         (* Flags.program_mode := original_program_flag; *)
-         (* k (env, evm, unit_tt) *)
-         (* we could also do something with continuations ... *)
+         Command.do_definition (unquote_ident name) kind None [] None hole (Some typ)
+                               (Lemmas.mk_hook (fun _ gr -> Flags.program_mode := original_program_flag;
+                                                            let env = Global.env () in
+                                                            let evm, t = Evd.fresh_global env evm gr in k (evm, t)));
          (* let kind = Decl_kinds.(Global, Flags.use_polymorphic_flag (), DefinitionBody Definition) in *)
          (* Lemmas.start_proof (unquote_ident name) kind evm (EConstr.of_constr typ) *)
                             (* (Lemmas.mk_hook (fun _ gr -> *)
                                  (* let evm, t = Evd.fresh_global env evm gr in k (env, evm, t) *)
-                                 (* Feedback.msg_debug (str "toto"); *)
                                  (* k (env, evm, unit_tt) *)
                             (* )); *)
-         Feedback.msg_debug (str "tata");
       | _ -> monad_failure "tmLemma" 2
     else if Term.eq_constr coConstr tmMkDefinition then
       match args with
       | name::body::[] ->
-         let (evm,name) = reduce_all env evm name in
-         let (evm,def) = reduce_all env evm body in
+         let (evm, name) = reduce_all env evm name in
+         let (evm, def) = reduce_all env evm body in
          let evdref = ref evm in
          let trm = denote_term evdref def in
          let evm = !evdref in
          let _ = Declare.declare_definition ~kind:Decl_kinds.Definition (unquote_ident name) (trm, Evd.universe_context_set evm) in
-         k (env, evm, unit_tt)
+         k (evm, unit_tt)
       | _ -> monad_failure "tmMkDefinition" 2
     else if Term.eq_constr coConstr tmQuote then
       match args with
       | _::trm::[] -> let qt = TermReify.quote_term env trm (* user should do the reduction (using tmReduce) if they want *)
-                      in k (env, evm, qt)
+                      in k (evm, qt)
       | _ -> monad_failure "tmQuote" 2
     else if Term.eq_constr coConstr tmQuoteRec then
       match args with
       | _::trm::[] -> let qt = TermReify.quote_term_rec env trm in
-                      k (env, evm, qt)
+                      k (evm, qt)
       | _ -> monad_failure "tmQuoteRec" 2
     else if Term.eq_constr coConstr tmQuoteInductive then
       match args with
       | name::[] ->
-         let (evm,name) = reduce_all env evm name in
+         let (evm, name) = reduce_all env evm name in
          let name = unquote_string name in
          let (dp, nm) = split_name name in
          let entry =
@@ -1479,18 +1470,17 @@ Vernacexpr.Check
               let c = Environ.lookup_mind (fst ni) env in (* FIX: For efficienctly, we should also export (snd ni)*)
               TermReify.quote_mut_ind env c
            | _ -> CErrors.user_err (str name ++ str " does not seem to be an inductive.") in
-         k (env, evm, entry)
+         k (evm, entry)
       | _ -> monad_failure "tmQuoteInductive" 1
     else if Term.eq_constr coConstr tmQuoteConstant then
       match args with
       | name::b::[] ->
-         let (evm,name) = reduce_all env evm name in
+         let (evm, name) = reduce_all env evm name in
          let name = unquote_string name in
-         let (evm,b) = reduce_all env evm b in
+         let (evm, b) = reduce_all env evm b in
          let bypass = from_bool b in
          let (dp, nm) = split_name name in
-         let entry =
-           (* todo: this should be defined in the quoter module *)
+         let entry = (* todo: this should be defined in the quoter module *)
            let open Declarations in
            match Nametab.locate (Libnames.make_qualid dp nm) with
            | Globnames.ConstRef c ->
@@ -1508,28 +1498,28 @@ Vernacexpr.Check
                | Some body -> Term.mkApp (cDefinitionEntry, [| Term.mkApp (cDefinition_entry, [|ty;body|]) |])
                | None -> Term.mkApp (cParameterEntry, [| Term.mkApp (cParameter_entry, [|ty|]) |]))
            | _ -> CErrors.user_err (str name ++ str " does not seem to be a constant.") in
-         k (env, evm, entry)
+         k (evm, entry)
       | _ -> monad_failure "tmQuoteConstant" 2
     else if Term.eq_constr coConstr tmPrint then
       match args with
-      | _::trm::[] -> let _ = Feedback.msg_info (Printer.pr_constr trm)
-                      in k (env, evm, unit_tt)
+      | _::trm::[] -> Feedback.msg_info (Printer.pr_constr trm);
+                      k (evm, unit_tt)
       | _ -> monad_failure "tmPrint" 2
     else if Term.eq_constr coConstr tmReduce then
       match args with
       | _(*reduction strategy*)::_(*type*)::trm::[] -> 
-         let (evm,trm) = reduce_all env evm trm
-         in k (env, evm, trm)
+         let (evm, trm) = reduce_all env evm trm
+         in k (evm, trm)
       | _ -> monad_failure "tmReduce" 3
     else if Term.eq_constr coConstr tmMkInductive then
       match args with
-      | mind::[] -> let _ = declare_inductive env evm mind in
-                    k (env, evm, unit_tt)
+      | mind::[] -> declare_inductive env evm mind;
+                    k (evm, unit_tt)
       | _ -> monad_failure "tmMkInductive" 1
     else if Term.eq_constr coConstr tmUnquote then
       match args with
       | t::[] ->
-        let (evm,t) = reduce_all env evm t in
+        let (evm, t) = reduce_all env evm t in
         let evdref = ref evm in
         let t' = denote_term evdref t in
         let evm = !evdref in
@@ -1539,19 +1529,14 @@ Vernacexpr.Check
         (* (env, evm, Term.mkApp (texistT, [|Term.mkSort u; *)
         (*                                   Term.mkLambda (Names.Name (Names.Id.of_string "T"), Term.mkSort u, Term.mkRel 1); *)
         (*                                   typ; t'|])) *)
-        k (env, evm, Term.mkApp (texistT_typed_term, [|typ; t'|]))
+        k (evm, Term.mkApp (texistT_typed_term, [|typ; t'|]))
       | _ -> monad_failure "tmUnquote" 1
     else if Term.eq_constr coConstr tmFreshName then
       match args with
       | name::[] -> let name' = Namegen.next_ident_away_from (unquote_ident name) (fun id -> Nametab.exists_cci (Lib.make_path id)) in
-                    k (env, evm, quote_ident name')
+                    k (evm, quote_ident name')
       | _ -> monad_failure "tmFreshName" 1
     else CErrors.user_err (str "Invalid argument or not yet implemented. The argument must be a TemplateProgram")
-
-  let run_template_program (env: Environ.env) (evm: Evd.evar_map) (body: Constrexpr.constr_expr) : unit =
-    let (body,_) = Constrintern.interp_constr env evm body in
-    (* todo : uctx ? *)
-    run_template_program_rec (fun _ -> ()) (env,evm,body)
 end
 
 DECLARE PLUGIN "template_plugin"
@@ -1686,8 +1671,10 @@ END;;
 VERNAC COMMAND EXTEND Run_program CLASSIFIED AS SIDEFF
     | [ "Run" "TemplateProgram" constr(def) ] ->
       [ check_inside_section () ;
-	let (evm,env) = Lemmas.get_current_context () in
-  Denote.run_template_program env evm def ]
+	let (evm, env) = Lemmas.get_current_context () in
+        let (def, _) = Constrintern.interp_constr env evm def in
+        (* todo : uctx ? *)
+        Denote.run_template_program_rec (fun _ -> ()) (evm, def) ]
 END;;
 
 VERNAC COMMAND EXTEND Make_tests CLASSIFIED AS QUERY

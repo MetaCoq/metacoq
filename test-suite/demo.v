@@ -257,6 +257,12 @@ Definition printConstant (name  : ident): TemplateMonad unit :=
 Fail Run TemplateProgram (printInductive "Coq.Arith.PeanoNat.Nat.add").
 Run TemplateProgram (printConstant "Coq.Arith.PeanoNat.Nat.add").
 
+Fail Run TemplateProgram (tmBind (tmUnquoteTyped (nat -> nat) add_syntax)
+                                 (tmPrint)).
+Run TemplateProgram (tmBind (tmUnquoteTyped (nat -> nat -> nat) add_syntax)
+                            (tmPrint)).
+
+
 
 
 Inductive NonRec (A:Set) (C: A -> Set): Set := 

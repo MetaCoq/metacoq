@@ -289,10 +289,11 @@ struct
   let (tglobal_reference, tConstRef, tIndRef, tConstructRef) = (r_reify "global_reference", r_reify "ConstRef", r_reify "IndRef", r_reify "ConstructRef")
 
   let (tmReturn, tmBind, tmQuote, tmQuoteRec, tmEval, tmDefinition, tmAxiom, tmLemma, tmFreshName, tmAbout,
-       tmMkDefinition, tmMkInductive, tmPrint, tmQuoteInductive, tmQuoteConstant, tmUnquote) =
+       tmMkDefinition, tmMkInductive, tmPrint, tmQuoteInductive, tmQuoteConstant, tmUnquote, tmUnquoteTyped) =
     (r_reify "tmReturn", r_reify "tmBind", r_reify "tmQuote", r_reify "tmQuoteRec", r_reify "tmEval", r_reify "tmDefinition",
      r_reify "tmAxiom", r_reify "tmLemma", r_reify "tmFreshName", r_reify "tmAbout",
-     r_reify "tmMkDefinition", r_reify "tmMkInductive", r_reify "tmPrint", r_reify "tmQuoteInductive", r_reify "tmQuoteConstant", r_reify "tmUnquote")
+     r_reify "tmMkDefinition", r_reify "tmMkInductive", r_reify "tmPrint", r_reify "tmQuoteInductive", r_reify "tmQuoteConstant",
+     r_reify "tmUnquote", r_reify "tmUnquoteTyped")
 
   (* let pkg_specif = ["Coq";"Init";"Specif"] *)
   (* let texistT = resolve_symbol pkg_specif "existT" *)
@@ -1582,6 +1583,15 @@ struct
         (*                                   typ; t'|])) *)
         k (evm, Term.mkApp (texistT_typed_term, [|typ; t'|]))
       | _ -> monad_failure "tmUnquote" 1
+    else if Term.eq_constr coConstr tmUnquoteTyped then
+      match args with
+      | typ::t::[] ->
+        let (evm, t) = reduce_all env evm t in
+        let evdref = ref evm in
+        let t' = denote_term evdref t in
+        Typing.e_check env evdref (EConstr.of_constr t') (EConstr.of_constr typ) ;
+        k (!evdref, t')
+      | _ -> monad_failure "tmUnquoteTyped" 2
     else if Term.eq_constr coConstr tmFreshName then
       match args with
       | name::[] -> let name' = Namegen.next_ident_away_from (unquote_ident name) (fun id -> Nametab.exists_cci (Lib.make_path id)) in

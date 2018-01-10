@@ -231,11 +231,13 @@ Next Obligation.
   exact 3.
 Defined.
 Print foo5.
+Fail Definition tttt : _ := _.
 
 
 Run TemplateProgram (t <- tmLemma "foo44" nat ;;
-                     t' <- tmQuote t ;;
-                     tmPrint t').
+                     qt <- tmQuote t ;;
+                     t <- tmEval all t ;;
+                     tmPrint qt ;; tmPrint t).
 Next Obligation.
   exact (3+2).
 Defined.

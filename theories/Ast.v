@@ -100,8 +100,8 @@ Record minductive_decl :=
     ind_bodies : list inductive_body }.
 
 Inductive global_decl :=
-| ConstantDecl : ident -> constant_decl -> global_decl
-| InductiveDecl : ident -> minductive_decl -> global_decl.
+| ConstantDecl : kername -> constant_decl -> global_decl
+| InductiveDecl : kername -> minductive_decl -> global_decl.
 
 Definition extend_program (p : program) (d : global_decl) : program :=
   match d with
@@ -229,6 +229,7 @@ Inductive TemplateMonad : Type -> Prop :=
 | tmUnquoteTyped : forall A, term -> TemplateMonad A
 
 (** ** Not yet implemented *)
+| tmExistingInstance : ident -> TemplateMonad unit
 .
 
 (** unquote then reduce then quote *)

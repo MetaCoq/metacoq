@@ -1473,9 +1473,9 @@ struct
          let original_program_flag = !Flags.program_mode in
          Flags.program_mode := true;
          Command.do_definition (unquote_ident name) kind None [] None hole (Some typ)
-                               (Lemmas.mk_hook (fun _ gr -> Flags.program_mode := original_program_flag;
-                                                            let env = Global.env () in
+                               (Lemmas.mk_hook (fun _ gr -> let env = Global.env () in
                                                             let evm, t = Evd.fresh_global env evm gr in k (evm, t)));
+         Flags.program_mode := original_program_flag
          (* let kind = Decl_kinds.(Global, Flags.use_polymorphic_flag (), DefinitionBody Definition) in *)
          (* Lemmas.start_proof (unquote_ident name) kind evm (EConstr.of_constr typ) *)
                             (* (Lemmas.mk_hook (fun _ gr -> *)

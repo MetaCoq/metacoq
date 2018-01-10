@@ -1,11 +1,11 @@
-Require Import Template.Template Template.Ast Translations.sigma.
+Require Import Template.Template Template.Ast Translations.sigma Template.monad_utils.
 Require Import Template.Induction Template.LiftSubst Template.Typing Template.Checker.
 Require Import  Translations.translation_utils.
 Import String Lists.List.ListNotations MonadNotation.
 Open Scope list_scope. Open Scope string_scope.
 
 
-Fixpoint tsl_rec (fuel : nat) (Σ : global_context) (E : tsl_context) (Γ : context) (t : term) {struct fuel}
+Fixpoint tsl_rec (fuel : nat) (Σ : global_context) (E : tsl_table) (Γ : context) (t : term) {struct fuel}
   : tsl_result term :=
   match fuel with
   | O => raise NotEnoughFuel
@@ -31,36 +31,36 @@ Fixpoint tsl_rec (fuel : nat) (Σ : global_context) (E : tsl_context) (Γ : cont
                      A' <- tsl_rec fuel Σ E Γ A ;;
                      u' <- tsl_rec fuel Σ E (Γ ,, vdef n t A) u ;;
                      ret (tLetIn n t' A' u')
-  | tApp (tInd i) u => u' <- monad_map (tsl_rec fuel Σ E Γ) u ;;
-                      ret (tApp (tInd i) u')
-  | tApp (tConstruct i n) u => u' <- monad_map (tsl_rec fuel Σ E Γ) u ;;
-                              ret (tApp (tConstruct i n) u')
+  | tApp (tInd i univs) u => u' <- monad_map (tsl_rec fuel Σ E Γ) u ;;
+                      ret (tApp (tInd i univs) u')
+  | tApp (tConstruct i n univs) u => u' <- monad_map (tsl_rec fuel Σ E Γ) u ;;
+                              ret (tApp (tConstruct i n univs) u')
   | tApp t u => t' <- tsl_rec fuel Σ E Γ t ;;
                u' <- monad_map (tsl_rec fuel Σ E Γ) u ;;
                ret (tApp (proj1 t') u')
-  | tConst s => match lookup_tsl_ctx E (ConstRef s) with
+  | tConst s univs => match lookup_tsl_table E (ConstRef s) with
                | Some t => ret t
                | None => raise (TranslationNotFound s)
                end
-  | tInd _ as t
-  | tConstruct _ _ as t => ret t
+  | tInd _ _ as t
+  | tConstruct _ _ _ as t => ret t
   | tProj p t => t' <- tsl_rec fuel Σ E Γ t ;;
                 ret (tProj p t)
   | _ => raise TranslationNotHandeled (* var evar meta case fix cofix *)
   end end.
 
-Instance tsl_fun_instance_term : Translation
-  := {| tsl_tm := fun Σ E => tsl_rec fuel Σ E [] |}.
-
-Instance tsl_fun_instance_type : TranslationType
-  := {| tsl_typ := fun Σ E => tsl_rec fuel Σ E [] |}.
+Instance tsl_fun : Translation
+  := {| tsl_id := tsl_ident ;
+        tsl_tm := fun ΣE => tsl_rec fuel (fst ΣE) (snd ΣE) [] ;
+        tsl_ty := fun ΣE => tsl_rec fuel (fst ΣE) (snd ΣE) [] ;
+        tsl_ind := todo |}.
 
 
 (* Definition tsl := fun Σ E => tsl_rec fuel Σ E []. *)
 (* Definition tsl_type := tsl. *)
 
 
-(* Fixpoint tsl_rec (fuel : nat) (Σ : global_context) (E : tsl_context) (Γ : context) (t : term) (cst : option ident) {struct fuel} *)
+(* Fixpoint tsl_rec (fuel : nat) (Σ : global_context) (E : tsl_table) (Γ : context) (t : term) (cst : option ident) {struct fuel} *)
 (*   : tsl_result term := *)
 (*   match fuel with *)
 (*   | O => raise NotEnoughFuel *)
@@ -91,7 +91,7 @@ Instance tsl_fun_instance_type : TranslationType
 (*                ret (tApp (proj1 t') u') *)
 (*   | tConst s as t *)
 (*   | tInd (mkInd s _) as t => if ... then ret t *)
-(*                             else match lookup_tsl_ctx E s with *)
+(*                             else match lookup_tsl_table E s with *)
 (*                                  | Some t => ret (tConst t) *)
 (*                                  | None => raise (TranslationNotFound s) *)
 (*                                  end *)
@@ -105,9 +105,9 @@ Instance tsl_fun_instance_type : TranslationType
 (* Definition tsl := fun Σ E => tsl_rec 1000 Σ E []. *)
 (* Definition tsl_type := fun Σ E => tsl_rec 1000 Σ E []. *)
 
-(* Definition tsl_inductive_decl (Σ : global_context) (E : tsl_context) *)
+(* Definition tsl_inductive_decl (Σ : global_context) (E : tsl_table) *)
 (*            (id : ident) (m : minductive_decl) *)
-(*   : tsl_result (global_context * tsl_context). *)
+(*   : tsl_result (global_context * tsl_table). *)
 (*   simple refine (let id' := id ++ "ᵗ" in *)
 (*                  let t := fun ΣE I => *)
 (*                             let typ := I.(ind_type) in *)
@@ -148,7 +148,7 @@ Instance tsl_fun_instance_type : TranslationType
 (*   := tProj (mkInd "Template.trad.prod'" 0, 2, 0) t. *)
 
 
-(* Fixpoint tsl_rec fuel (Σ : global_context) (E : tsl_context) (Γ : context) (t : term) {struct t} *)
+(* Fixpoint tsl_rec fuel (Σ : global_context) (E : tsl_table) (Γ : context) (t : term) {struct t} *)
 (*   : term := *)
 (*   match t with *)
 (*   (* | tRel       : nat -> term *) *)
@@ -182,7 +182,7 @@ Instance tsl_fun_instance_type : TranslationType
 (*   | tApp (tConstruct i n) u => tApp (tConstruct i n) (List.map (tsl_rec fuel Σ E Γ) u) *)
 (*   | tApp t u => tApp (fstProj (tsl_rec fuel Σ E Γ t)) (List.map (tsl_rec fuel Σ E Γ) u) *)
 (*   (* | tConst     : string -> term *) *)
-(*   | tConst s => match lookup_tsl_ctx E s with *)
+(*   | tConst s => match lookup_tsl_table E s with *)
 (*                | Some t => tConst t *)
 (*                | None => (* FIXME *) tBool *)
 (*                end *)

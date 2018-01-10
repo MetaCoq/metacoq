@@ -1,14 +1,17 @@
+
 (* -*- coq-prog-args : ("-debug" "-type-in-type") -*-  *)
 
-Require Import Template.Template Template.Ast Translations.sigma.
+Require Import Template.Template Template.Ast Template.monad_utils Translations.sigma.
 Require Import Template.Induction Template.LiftSubst Template.Typing Template.Checker.
 Require Import Arith.Compare_dec.
 Require Import  Translations.translation_utils.
 Import String Lists.List.ListNotations MonadNotation.
-Open Scope list_scope. Open Scope string_scope.
+Open Scope string_scope.
+Open Scope list_scope.
+Open Scope sigma_scope.
 
 
-Reserved Notation "'tsl_ty'".
+Reserved Notation "'tsl_ty_param'".
 
 
 Fixpoint tsl_rec1 (n : nat) (t : term) {struct t} : term :=
@@ -29,7 +32,7 @@ Fixpoint tsl_rec1 (n : nat) (t : term) {struct t} : term :=
   end.
     
 
-Fixpoint tsl_rec2 (fuel : nat) (Σ : global_context) (E : tsl_context) (Γ : context) (t : term) {struct fuel}
+Fixpoint tsl_rec2 (fuel : nat) (Σ : global_context) (E : tsl_table) (Γ : context) (t : term) {struct fuel}
   : tsl_result term :=
   match fuel with
   | O => raise NotEnoughFuel
@@ -44,30 +47,30 @@ Fixpoint tsl_rec2 (fuel : nat) (Σ : global_context) (E : tsl_context) (Γ : con
                   ret (tCast t2 c (tApp A2 [t1]))
   | tProd n A B => let ΠAB' := tsl_rec1 0 (tProd n A B) in
                   let B1 := tsl_rec1 0 B in
-                  A' <- tsl_ty fuel Σ E Γ A ;;
+                  A' <- tsl_ty_param fuel Σ E Γ A ;;
                   B2 <- tsl_rec2 fuel Σ E (Γ ,, vass n A) B ;;
                   ret (tLambda (nNamed "f") ΠAB'
                                (tProd n (lift 1 0 A')
                                       (tApp (lift 1 1 B2)
                                             [tApp (tRel 1) [proj1 (tRel 0)]])))
-  | tLambda n A t => A' <- tsl_ty fuel Σ E Γ A ;;
+  | tLambda n A t => A' <- tsl_ty_param fuel Σ E Γ A ;;
                     t' <- tsl_rec2 fuel Σ E (Γ ,, vass n A) t ;;
                     ret (tLambda n A' t')
   | tLetIn n t A u => t' <- tsl_term fuel Σ E Γ t ;;
-                     A' <- tsl_ty fuel Σ E Γ A ;;
+                     A' <- tsl_ty_param fuel Σ E Γ A ;;
                      u' <- tsl_rec2 fuel Σ E (Γ ,, vdef n t A) u ;;
                      ret (tLetIn n t' A' u')
   | tApp t u => t' <- tsl_rec2 fuel Σ E Γ t ;;
                u' <- monad_map (tsl_term fuel Σ E Γ) u ;;
                ret (tApp t' u')
-  | tConst _ as t
-  | tInd _ as t
-  | tConstruct _ _ as t => t' <- tsl_term fuel Σ E Γ t ;;
-                          ret (proj2 t')
+  | tConst _ _ as t
+  | tInd _ _ as t
+  | tConstruct _ _ _ as t => t' <- tsl_term fuel Σ E Γ t ;;
+                            ret (proj2 t')
   | _ => raise TranslationNotHandeled
   end
   end
-with tsl_term  (fuel : nat) (Σ : global_context) (E : tsl_context) (Γ : context) (t : term) {struct fuel}
+with tsl_term  (fuel : nat) (Σ : global_context) (E : tsl_table) (Γ : context) (t : term) {struct fuel}
   : tsl_result term :=
   match fuel with
   | O => raise NotEnoughFuel
@@ -75,19 +78,20 @@ with tsl_term  (fuel : nat) (Σ : global_context) (E : tsl_context) (Γ : contex
   match t with
   | tRel n => ret (tRel n)
   | tCast t c A => t' <- tsl_term fuel Σ E Γ t ;;
-                  A' <- tsl_ty fuel Σ E Γ A ;;
+                  A' <- tsl_ty_param fuel Σ E Γ A ;;
                   ret (tCast t' c A')
-  | tConst s => match lookup_tsl_ctx E (ConstRef s) with
-               | Some t => ret t
-               | None => raise (TranslationNotFound s)
-               end
-  | tInd i =>
-    match lookup_tsl_ctx E (IndRef i) with
+  | tConst s univs =>
+    match lookup_tsl_table E (ConstRef s) with
+    | Some t => ret t
+    | None => raise (TranslationNotFound s)
+    end
+  | tInd i univs =>
+    match lookup_tsl_table E (IndRef i) with
     | Some t => ret t
     | None => raise (TranslationNotFound (string_of_gref (IndRef i)))
     end
-  | tConstruct i n =>
-    match lookup_tsl_ctx E (ConstructRef i n) with
+  | tConstruct i n univs =>
+    match lookup_tsl_table E (ConstructRef i n) with
     | Some t => ret t
     | None => raise (TranslationNotFound (string_of_gref (ConstructRef i n)))
     end
@@ -101,42 +105,12 @@ with tsl_term  (fuel : nat) (Σ : global_context) (E : tsl_context) (Γ : contex
         end
   end
   end
-where "'tsl_ty'" := (fun fuel Σ E Γ t =>
+where "'tsl_ty_param'" := (fun fuel Σ E Γ t =>
                         let t1 := tsl_rec1 0 t in
                         t2 <- tsl_rec2 fuel Σ E Γ t ;;
                         ret (pack t1 t2)).
 
 
-Instance tsl_param_instance_term : Translation
-  := {| tsl_tm := fun Σ E => tsl_term fuel Σ E [] |}.
-
-Instance tsl_param_instance_type : TranslationType
-  := {| tsl_typ := fun Σ E => tsl_ty fuel Σ E [] |}.
-
-
-
-Open Scope list_scope.
-Open Scope sigma_scope.
-
-
-(* Definition t := Type -> Type. *)
-(* Translate t. *)
-
-Notation "'tΣ'" := (tInd (mkInd "Template.sigma.sigma" 0)).
-Notation "'tproj1'" := (tProj (mkInd "Template.sigma.sigma" 0, 2, 0)).
-Notation "'tImpl'" := (tProd nAnon).
-
-
-Notation "'TYPE'" := (exists A, A -> Type).
-Notation "'El' A" := (sigma (π1 A) (π2 A)) (at level 20).
-
-Definition tsl_ident (id : ident) : ident := (id ++ "ᵗ")%string.
-
-Definition tsl_inductive (ind : inductive) : inductive.
-  destruct ind. exact (mkInd (tsl_ident s) n).
-Defined.
-
-Axiom todo_coq : forall {X}, X.
 
 
 
@@ -150,83 +124,11 @@ Fixpoint fold_left_i_aux {A B} (f : A -> nat -> B -> A) (n0 : nat) (l : list B)
 Definition fold_left_i {A B} f := @fold_left_i_aux A B f 0.
 
 
-Fixpoint decompose_prod (t : term) : (list name) * (list term) * term :=
-  match t with
-  | tProd n A B => let (nAs, B) := decompose_prod B in
-                  let (ns, As) := nAs in
-                  (n :: ns, A :: As, B)
-  | _ => ([], [], t)
-  end.
-
 Fixpoint recompose_prod (ns : list name) (As : list term) (B : term) : term :=
   match (ns, As) with
   | (n :: ns, A :: As)  => tProd n A (recompose_prod ns As B)
   | _ => B
   end.
-
-
-Fixpoint remove_arity (n : nat) (t : term) : term :=
-  match n with
-  | O => t
-  | S n => match t with
-          | tProd _ _ B => remove_arity n B
-          | _ => t (* todo *)
-          end
-  end.
-
-Definition get_ident (n : name) :=
-  match n with
-  | nAnon => "XX"
-  | nNamed i => i
-  end.
-
-
-Definition mind_decl_to_entry (* (id : ident) *) (decl : minductive_decl)
-  : mutual_inductive_entry.
-Proof.
-  refine ({|
-             mind_entry_record := None; (* not a record *)
-             mind_entry_finite := Finite; (* inductive *)
-             mind_entry_params := _;
-             mind_entry_inds := _;
-             mind_entry_polymorphic := false;
-             mind_entry_private := None;
-           |}).
-  - refine (match List.hd_error decl.(ind_bodies) with
-            | Some i0 => _
-            | None => nil (* todo *)
-            end).
-    pose (typ := decompose_prod i0.(ind_type)).
-    destruct typ as [[names types] _].
-    apply (List.firstn decl.(ind_npars)) in names.
-    apply (List.firstn decl.(ind_npars)) in types.
-    refine (List.rev (List.combine _ _)).
-    exact (List.map get_ident names).
-    exact (List.map LocalAssum types).
-    (* pose (fold_left_i (fun acc i ty => let na := tVar (get_ident (List.nth i names nAnon)) *)
-    (*                                 in (na :: fst acc, substl (fst acc) ty :: snd acc)) types ([], [])). *)
-    (* exact (snd p). *)
-  - refine (List.map _ decl.(ind_bodies)).
-    intros [].
-    refine ({| mind_entry_typename := ind_name;
-               mind_entry_arity := remove_arity decl.(ind_npars) ind_type;
-               mind_entry_template := false;
-               mind_entry_consnames := _;
-               mind_entry_lc := _;
-            |}).
-    
-    refine (List.map (fun x => fst (fst x)) ind_ctors).
-    refine (List.map (fun x => remove_arity decl.(ind_npars)
-                                                (snd (fst x))) ind_ctors).
-Defined.
-
-
-Definition option_get {A} (default : A) (x : option A) : A
-  := match x with
-     | Some x => x
-     | None => default
-     end.
-
 
 (* Definition pair_map {A A' B B'} (f : A -> A') (g : B -> B') *)
 (*   : A * B -> A' * B' *)
@@ -238,6 +140,17 @@ Fixpoint from_n {A} (f : nat -> A) (n : nat) : list A :=
   | S n => f n :: (from_n f n)
   end.
 
+Fixpoint monad_map_i_aux {M} {H : Monad M} {A B} (f : nat -> A -> M B) (n0 : nat) (l : list A) : M (list B)
+  := match l with
+     | [] => ret []
+     | x :: l => x' <- (f n0 x) ;;
+                l' <- (monad_map_i_aux f (S n0) l) ;;
+                ret (x' :: l')
+     end.
+
+Definition monad_map_i {M H A B} f := @monad_map_i_aux M H A B f 0.
+
+(* could be defined with Id monad *)
 Fixpoint map_i_aux {A B} (f : nat -> A -> B) (n0 : nat) (l : list A) : list B
   := match l with
      | [] => []
@@ -250,11 +163,17 @@ Definition map_i {A B} f := @map_i_aux A B f 0.
 Definition mkImpl (A B : term) : term :=
   tProd nAnon A B.
 
+(* Definition local_entry_map (f : term -> term) (m : local_entry) : local_entry *)
+(*   := match m with *)
+(*      | LocalDef t => LocalDef (f t) *)
+(*      | LocalAssum t => LocalAssum (f t) *)
+(*      end. *)
 
-Definition local_entry_map (f : term -> term) (m : local_entry) : local_entry
+Definition local_entry_monad_map {M} {H : Monad M}
+           (f : term -> M term) (m : local_entry) : M local_entry
   := match m with
-     | LocalDef t => LocalDef (f t)
-     | LocalAssum t => LocalAssum (f t)
+     | LocalDef t => t' <- (f t);; ret (LocalDef t')
+     | LocalAssum t => t' <- (f t);; ret (LocalDef t')
      end.
 
 Definition mkApp t us :=
@@ -315,126 +234,131 @@ Fixpoint replace t k u {struct u} :=
   end.
 
 
-Definition tsl_mind_entry  (Σ : global_context) (E : tsl_context)
+Definition tsl_mind_entry (ΣE : tsl_context)
            (id : ident) (mind : mutual_inductive_entry)
-  : mutual_inductive_entry.
-  refine (let tsl_ty' := fun t => match tsl_typ Σ E t with
-                               | Success _ t => t
-                               | Error _ e => error (e, "tsl_ty'")
-                               end in _).
-  (* refine (let tsl_tm' := fun t => match tsl_tm Σ E t with *)
-  (*                              | Success _ t => t *)
-  (*                              | Error _ e => error e *)
-  (*                              end in _). *)
-  (* refine (let tsl2' := fun t : term => t in _). *)
-  refine (let tsl2' := fun t : term => match tsl_rec2 fuel Σ E [] t with
-                                    | Success _ t => t
-                                    | Error _ e => error (e, "tsl2'")
-                                    end in _).
-  refine {| mind_entry_record := mind.(mind_entry_record);
-            mind_entry_finite := mind.(mind_entry_finite);
-            mind_entry_params := _;
-            mind_entry_inds := _;
-            mind_entry_polymorphic := mind.(mind_entry_polymorphic);
-            mind_entry_private := mind.(mind_entry_private);
-         |}.
+  : tsl_result (tsl_table * list mutual_inductive_entry).
+  refine (let tsl_ty' := tsl_ty_param fuel (fst ΣE) (snd ΣE) [] in _).
+  refine (let tsl2' := tsl_rec2 fuel (fst ΣE) (snd ΣE) [] in _).
+  refine (X <- _ ;; Y <- _ ;;
+          ret (_, [{| mind_entry_record := mind.(mind_entry_record);
+                      mind_entry_finite := mind.(mind_entry_finite);
+                      mind_entry_params := X;
+                      mind_entry_inds := Y;
+                      mind_entry_polymorphic := mind.(mind_entry_polymorphic);
+                      mind_entry_private := mind.(mind_entry_private);
+                   |}])).
   - (* params *)
-    refine (List.map (fun x => (fst x, local_entry_map tsl_ty' (snd x)))
-                     mind.(mind_entry_params)).
+    refine (monad_map _ mind.(mind_entry_params)).
+    refine (fun x => y <- _ ;; ret (fst x, y)).
+    exact (local_entry_monad_map tsl_ty' (snd x)).
   - (* inds *)
-    simple refine (let L : list term := _ in map_i _ mind.(mind_entry_inds)).
+    simple refine (L <- _ ;; monad_map_i _ mind.(mind_entry_inds)).
+    exact (list term).
     + (* L *)
-      refine ((map_i (fun i _ => tRel i) mind.(mind_entry_params)) ++ _).
+      refine (let L0 := map_i (fun i _ => tRel i) mind.(mind_entry_params) in
+              L1 <- _ ;;
+              ret (L0 ++ L1)).
       pose (l := List.length mind.(mind_entry_params)).
       pose (p := List.length mind.(mind_entry_inds)-1).
-      simple refine (map_i (fun i _ => let arity_i := _ in
-                                    pair arity_i _ (tInd (mkInd id (p-i))) (tRel (l+i)))
-                           mind.(mind_entry_inds)).
-      refine (recompose_prod'
-                mind.(mind_entry_params)
-                       (List.nth (p-i) mind.(mind_entry_inds) (error "nth 1")).(mind_entry_arity)).
+      simple refine (monad_map_i _ mind.(mind_entry_inds)).
+      simple refine (fun i _ => let arity_i := _ in
+                             X <- _ ;;
+                             ret (pair arity_i X
+                                  (tInd (mkInd id (p-i)) []) (tRel (l+i)))).
+      refine (let l := (List.nth (p-i) mind.(mind_entry_inds)
+                                              (error "nth 1"))
+              in recompose_prod' mind.(mind_entry_params)
+                                        l.(mind_entry_arity)).
       refine (tsl2' arity_i).
     + (* one_inductive_entry -> one_inductive_entry *)
       intros i ind.
-      simple refine {| mind_entry_typename := tsl_ident (ind.(mind_entry_typename));
-                       mind_entry_arity := _;
-                       mind_entry_template := ind.(mind_entry_template);
-                       mind_entry_consnames := List.map tsl_ident ind.(mind_entry_consnames);
-                       mind_entry_lc := _;
-                    |}.
+      refine (X <- _ ;; Y <- _ ;;
+         ret {| mind_entry_typename := tsl_ident (ind.(mind_entry_typename));
+                mind_entry_arity := X;
+                mind_entry_template := ind.(mind_entry_template);
+                mind_entry_consnames := List.map tsl_ident
+                                                 ind.(mind_entry_consnames);
+                mind_entry_lc := Y;
+                    |}).
       * (* arity  *)
-        refine (mkApp _ [_]).
+        refine (t1 <- _ ;; ret (mkApp t1 [_])).
         exact (tsl2' ind.(mind_entry_arity)).
-        refine (mkApp (tInd (mkInd id i)) _).
+        refine (mkApp (tInd (mkInd id i) []) _).
         refine (from_n (fun n => proj1 (tRel n))
                        (List.length mind.(mind_entry_params))).
       * (* constructors *)
-        refine (map_i _ ind.(mind_entry_lc)).
+        refine (monad_map_i _ ind.(mind_entry_lc)).
         intros k t.
-        refine (mkApp _ [_]).
-        refine (fold_left_i (fun t i u => replace u i t) L (tsl2' t)).
-        refine (mkApp (tConstruct (mkInd id i) k) _).
+        refine (t1 <- _ ;; ret (mkApp t1 [_])).
+        refine (t' <- tsl2' t ;;
+                ret (fold_left_i (fun t i u => replace u i t) L t')).
+        refine (mkApp (tConstruct (mkInd id i) k []) _).
         refine (from_n (fun n => proj1 (tRel n))
                        (List.length mind.(mind_entry_params))).
+  - refine (let id' := tsl_ident id in (* should be kn ? *)
+            fold_left_i (fun E i ind => _ :: _ ++ E) mind.(mind_entry_inds) []).
+    + (* ind *)
+      refine (IndRef (mkInd id i), tInd (mkInd id' i) []). (* should be the pair *)
+    + (* ctors *)
+      refine (fold_left_i (fun E k ctor => _ :: E) ind.(mind_entry_consnames) []).
+      exact (ConstructRef (mkInd id i) k, tConstruct (mkInd id' i) k []).
 Defined.
 
 
 
-Quote Recursively Definition sigma_prog := @sigma.
-Quote Recursively Definition eq_prog := @eq.
-
-Fixpoint extract_mind_decl_from_program (id : ident) (p : program)
-  : option minductive_decl
-  := match p with
-     | PConstr _ _ _ p => extract_mind_decl_from_program id p
-     | PType id' n inds p => if string_dec id id' then
-                              Some (Build_minductive_decl n inds)
-                            else extract_mind_decl_from_program id p
-     | PAxiom _ _ p => extract_mind_decl_from_program id p
-     | PIn _ => None
-     end.
+Instance tsl_param : Translation
+  := {| tsl_id := tsl_ident ;
+        tsl_tm := fun ΣE => tsl_term fuel (fst ΣE) (snd ΣE) [] ;
+        tsl_ty := fun ΣE => tsl_ty_param fuel (fst ΣE) (snd ΣE) [] ;
+        tsl_ind := tsl_mind_entry |}.
 
 
-Inductive eq' (A : Set) (x : A) : A -> Prop :=  eq_refl' : eq' A x x.
-Quote Recursively Definition eq'_prog := eq'.
-
-Definition eq'_decl := Eval compute in
-      extract_mind_decl_from_program "Top.eq'" eq'_prog.
-Definition eq_decl := Eval compute in
-      extract_mind_decl_from_program "Coq.Init.Logic.eq" eq_prog.
-Definition sigma_decl := Eval compute in
-      extract_mind_decl_from_program "Template.sigma.sigma" sigma_prog.
-
-Definition eq_entry := Eval compute in
-      (mind_decl_to_entry (option_get todo_coq eq_decl)).
-Definition sigma_entry := Eval compute in
-      (mind_decl_to_entry (option_get todo_coq sigma_decl)).
-(* Make Inductive eq_entry. *)
-(* Make Inductive sigma_entry. *)
+Definition TslParam := tTranslate tsl_param.
+Definition ImplParam := tImplement tsl_param.
 
 
-Quote Recursively Definition nat_prog := nat.
-Definition nat_decl := Eval compute in
-      (option_get todo_coq (extract_mind_decl_from_program "Coq.Init.Datatypes.nat" nat_prog)).
-Definition nat_entry := Eval compute in 
-      (mind_decl_to_entry nat_decl).
-Definition nat_entryT := Eval vm_compute in tsl_mind_entry [] [] "Coq.Init.Datatypes.nat" nat_entry.
-(* Make Inductive nat_entryT. *)
-(* (* Check (natᵗ : nat -> Set). *) *)
-(* (* Check (Oᵗ : natᵗ O). *) *)
-(* (* Check (Sᵗ : forall (N : exists n, natᵗ n), natᵗ (S N.1)). *) *)
-(* Implement Existing nat as natT. exists nat. exact natᵗ. Defined. *)
-(* Quote Definition tnatT := Eval compute in natT. *)
-(* Implement Existing O as OT. exists O. exact Oᵗ. Defined. *)
-(* Quote Definition tOT := Eval compute in OT. *)
-(* Implement Existing S as ST. exists S. exact Sᵗ. Defined. *)
-(* Quote Definition tST := Eval compute in ST. *)
 
-(* Quote Recursively Definition bool_prog := bool. *)
-(* Definition bool_entry := Eval compute in  *)
-(*       (mind_decl_to_entry (option_get todo_coq (extract_mind_decl_from_program "Coq.Init.Datatypes.bool" bool_prog) )). *)
-(* Definition bool_entryT := Eval vm_compute in tsl_mind_entry [] [] "Coq.Init.Datatypes.bool" bool_entry. *)
-(* Make Inductive bool_entryT. *)
+
+
+
+Notation "'tΣ'" := (tInd (mkInd "Template.sigma.sigma" 0)).
+Notation "'tproj1'" := (tProj (mkInd "Template.sigma.sigma" 0, 2, 0)).
+Notation "'tImpl'" := (tProd nAnon).
+
+
+Notation "'TYPE'" := (exists A, A -> Type).
+Notation "'El' A" := (sigma (π1 A) (π2 A)) (at level 20).
+
+
+(* Definition tsl_inductive (ind : inductive) : inductive. *)
+  (* destruct ind. exact (mkInd (tsl_ident k) n). *)
+(* Defined. *)
+
+
+Definition tat := Type -> Type.
+
+Run TemplateProgram (tTranslate tsl_param ([],[]) "tat"
+                                        >>= tmPrint).
+About tatᵗ.
+
+Run TemplateProgram (tImplement tsl_param ([], []) "tu" (Type -> Type) >>= tmPrint).
+Next Obligation.
+  exists id. exact (fun _ _ => True).
+Defined.
+About tuᵗ.
+
+
+Definition nat_entryT := Eval vm_compute in match tsl_mind_entry ([], []) "Coq.Init.Datatypes.nat" nat_entry with | Success (_, [e]) => e | _ => todo end.
+Make Inductive nat_entryT.
+Check (natᵗ : nat -> Set).
+Check (Oᵗ : natᵗ O).
+Check (Sᵗ : forall (N : exists n, natᵗ n), natᵗ (S N.1)).
+
+Quote Recursively Definition bool_prog := bool.
+Definition bool_entry := Eval compute in
+      (mind_decl_to_entry (option_get todo (extract_mind_decl_from_program "Coq.Init.Datatypes.bool" bool_prog) )).
+Definition bool_entryT := Eval vm_compute in match tsl_mind_entry ([], []) "Coq.Init.Datatypes.bool" bool_entry with | Success (_, [e]) => e | _ => todo end.
+Make Inductive bool_entryT.
 
 
 (* Inductive t (A : Set) : nat -> Set := *)
@@ -443,8 +367,12 @@ Definition nat_entryT := Eval vm_compute in tsl_mind_entry [] [] "Coq.Init.Datat
 (* Definition vect_decl := Eval compute in *)
 (*       extract_mind_decl_from_program "Top.t" vect_prog. *)
 (* Definition vect_entry := Eval compute in *)
-(*       (mind_decl_to_entry (option_get todo_coq vect_decl)). *)
-(* Definition vect_entryT := Eval vm_compute in tsl_mind_entry [InductiveDecl "Coq.Init.Datatypes.nat" nat_decl] [(IndRef (mkInd "Coq.Init.Datatypes.nat" 0), tnatT); (ConstructRef (mkInd "Coq.Init.Datatypes.nat" 0) O, tOT); (ConstructRef (mkInd "Coq.Init.Datatypes.nat" 0) 1, tST)] "Top.t" vect_entry. *)
+(*       (mind_decl_to_entry (option_get todo vect_decl)). *)
+(* (* Quote Definition tnatT := (nat; natᵗ). *) *)
+(* (* Quote Definition tOT := Oᵗ. *) *)
+(* (* Quote Definition tST := Sᵗ. *) *)
+(* Definition vect_entryT := Eval vm_compute in match tsl_mind_entry ([InductiveDecl "Coq.Init.Datatypes.nat" nat_decl], [(IndRef (mkInd "Coq.Init.Datatypes.nat" 0), tnatT); (ConstructRef (mkInd "Coq.Init.Datatypes.nat" 0) O, tOT); (ConstructRef (mkInd "Coq.Init.Datatypes.nat" 0) 1, tST)]) "Top.t" vect_entry *)
+(*                                              with | Success (_, [e]) => e | _ => todo end. *)
 (* (* Definition vect_entryT' := . *) *)
 (* Make Inductive vect_entryT. *)
 
@@ -506,7 +434,7 @@ Definition nat_entryT := Eval vm_compute in tsl_mind_entry [] [] "Coq.Init.Datat
 
   
 (* Class TranslationInductive := *)
-(*   { tsl_ind : mutual_inductive_entry -> global_context * tsl_context }. *)
+(*   { tsl_ind : mutual_inductive_entry -> global_context * tsl_table }. *)
 
 
 

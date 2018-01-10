@@ -50,3 +50,24 @@ Section MapOpt.
                 ret (x' :: xs')
     end.
 End MapOpt.
+
+Section MonadOperations.
+  Context {T} {M : Monad T}.
+
+  Fixpoint monad_map {A B} (f : A -> T B) (l : list A)
+    : T (list B)
+    := match l with
+       | nil => ret nil
+       | x :: l => x' <- f x ;;
+                  l' <- monad_map f l ;;
+                  ret (x' :: l')
+       end.
+
+  Fixpoint monad_fold_left {A B} (f : A -> B -> T A) (l : list B) (x : A)
+    : T A
+    := match l with
+       | nil => ret x
+       | y :: l => x' <- f x y ;;
+                     monad_fold_left f l x'
+       end.
+End MonadOperations.

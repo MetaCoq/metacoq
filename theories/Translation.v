@@ -60,4 +60,13 @@ Inductive trel (E : list (nat * nat)) : sterm -> sterm -> Prop :=
 (* TODO *)
 .
 
+Notation " t1 ~ t2 " := (trel nil t1 t2) (at level 20).
+
+(*! Heterogenous equality *)
+Definition heq s A a B b :=
+  sSig nAnon (sEq (succ_sort s) (sSort s) A B)
+       (sEq s (lift0 1 B) (transport s A B (sRel 0) (lift0 1 a)) (lift0 1 b)).
+
+Notation " ( a : A ) ≅ ( b : B ) : s " := (heq s A a B b) (at level 80).
+
 End Translation.

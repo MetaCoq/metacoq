@@ -10,10 +10,10 @@ Fixpoint lift n k t : xterm :=
   match t with
   | xRel i => if Nat.leb k i then xRel (n + i) else xRel i
   | xLambda na T V M => xLambda na (lift n k T) (lift n (S k) V) (lift n (S k) M)
-  | xApp u A B v =>
-    xApp (lift n k u) (lift n k A) (lift n (S k) B) (lift n k v)
+  | xApp u na A B v =>
+    xApp (lift n k u) na (lift n k A) (lift n (S k) B) (lift n k v)
   | xProd na A B => xProd na (lift n k A) (lift n (S k) B)
-  | xEq A u v => xEq (lift n k A) (lift n k u) (lift n k v)
+  | xEq s A u v => xEq s (lift n k A) (lift n k u) (lift n k v)
   | xRefl A u => xRefl (lift n k A) (lift n k u)
   | x => x
   end.
@@ -30,10 +30,10 @@ Fixpoint subst t k u :=
     end
   | xLambda na T V M =>
     xLambda na (subst t k T) (subst t (S k) V) (subst t (S k) M)
-  | xApp u A B v =>
-    xApp (subst t k u) (subst t k A) (subst t (S k) B) (subst t k v)
+  | xApp u na A B v =>
+    xApp (subst t k u) na (subst t k A) (subst t (S k) B) (subst t k v)
   | xProd na A B => xProd na (subst t k A) (subst t (S k) B)
-  | xEq A u v => xEq (subst t k A) (subst t k u) (subst t k v)
+  | xEq s A u v => xEq s (subst t k A) (subst t k u) (subst t k v)
   | xRefl A u => xRefl (subst t k A) (subst t k u)
   | x => x
   end.

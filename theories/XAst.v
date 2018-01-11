@@ -11,7 +11,7 @@ Inductive xterm : Set :=
 | xLambda    : name -> xterm (** type **) -> xterm (** type **) -> xterm -> xterm
 (* | xLetIn     : name -> xterm (** the xterm **) -> xterm (** the type **) -> xterm -> xterm *)
 (* | xApp       : xterm -> list xterm -> xterm *)
-| xApp       : xterm -> xterm (** type **) -> xterm (** type **) -> xterm -> xterm
+| xApp       : xterm -> name -> xterm (** type **) -> xterm (** type **) -> xterm -> xterm
 (* | xConst     : string -> universe_instance -> xterm *)
 (* | xInd       : inductive -> universe_instance -> xterm *)
 (* | xConstruct : inductive -> nat -> universe_instance -> xterm *)
@@ -25,6 +25,6 @@ Inductive xterm : Set :=
 
 (* For now we use our own syntax for equality, we don't need an eliminator
    thanks to reflection. *)
-| xEq        : xterm -> xterm -> xterm -> xterm
+| xEq        : sort -> xterm -> xterm -> xterm -> xterm
 | xRefl      : xterm -> xterm -> xterm
 .

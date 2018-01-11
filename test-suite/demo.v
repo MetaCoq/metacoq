@@ -299,6 +299,9 @@ Run TemplateProgram (tmBind (tmAbout "eq") tmPrint).
 Run TemplateProgram (tmBind (tmAbout "Logic.eq") tmPrint).
 Run TemplateProgram (tmBind (tmAbout "eq_refl") tmPrint).
 
+Run TemplateProgram (tmBind (tmReduce all (3 + 3)) tmPrint).
+Run TemplateProgram (tmBind (tmReduce hnf (3 + 3)) tmPrint).
+
 
 (* Definition duplicateDefn (name newName : ident): TemplateMonad unit := *)
 (*   (tmBind (tmQuote name false) (fun body => *)

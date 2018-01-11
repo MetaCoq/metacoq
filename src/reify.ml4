@@ -196,6 +196,7 @@ struct
   type quoted_definition_entry = t * t option
   type quoted_entry = Term.constr (* of type option (constant_entry + mutual_inductive_entry) *)
   type quoted_global_reference = Term.constr (* of type Ast.global_reference *)
+  type quoted_reduction_strategy = Term.constr (* of type Ast.reductionStrategy *)
 
   let resolve_symbol (path : string list) (tm : string) : Term.constr =
     gen_constant_in_modules contrib_name [path] tm
@@ -277,6 +278,8 @@ struct
   let cDefinitionEntry = r_reify "DefinitionEntry"
   let cParameter_entry = r_reify "Build_parameter_entry"
   let cDefinition_entry = r_reify "Build_definition_entry"
+
+  let (tcbv, tcbn, thnf, tall) = (r_reify "cbv", r_reify "cbn", r_reify "hnf", r_reify "all")
 
   let (tglobal_reference, tConstRef, tIndRef, tConstructRef) = (r_reify "global_reference", r_reify "ConstRef", r_reify "IndRef", r_reify "ConstructRef")
 
@@ -1036,7 +1039,6 @@ let reduce_all env (evm,def) =
     (evm,EConstr.to_constr Evd.empty (Tacred.hnf_constr env evm (EConstr.of_constr def))) 
 
   let reduce_all env evm ?(red=Genredexpr.Cbv Redops.all_flags) def =
-    let (evm2,red) = Tacinterp.interp_redexp env evm red in
     let red, castk = Redexpr.reduction_of_red_expr env red in
     let evm', red = red env evm (EConstr.of_constr def) in
      (evm', EConstr.to_constr evm' red)
@@ -1324,6 +1326,17 @@ Vernacexpr.Check
 *)
 
 
+  let denote_reduction_strategy (trm : quoted_reduction_strategy) : Redexpr.red_expr =
+    let open Redops in
+    let open Genredexpr in
+    (* from g_tactic.ml4 *)
+    let default_flags = Redops.make_red_flag [FBeta;FMatch;FFix;FCofix;FZeta;FDeltaBut []] in
+    if Term.eq_constr trm tcbv then Cbv default_flags
+    else if Term.eq_constr trm tcbn then Cbn default_flags
+    else if Term.eq_constr trm thnf then Hnf
+    else if Term.eq_constr trm tall then Cbv all_flags
+    else not_supported_verb trm "denote_reduction_strategy"
+
 
 
   let denote_local_entry evdref trm =
@@ -1532,8 +1545,9 @@ Vernacexpr.Check
       | _ -> monad_failure "tmAbout" 1
     else if Term.eq_constr coConstr tmReduce then
       match args with
-      | _(*reduction strategy*)::_(*type*)::trm::[] -> 
-         let (evm, trm) = reduce_all env evm trm
+      | s(*reduction strategy*)::_(*type*)::trm::[] ->
+         let red = denote_reduction_strategy s in
+         let (evm, trm) = reduce_all ~red env evm trm
          in k (evm, trm)
       | _ -> monad_failure "tmReduce" 3
     else if Term.eq_constr coConstr tmMkInductive then
@@ -1655,6 +1669,7 @@ VERNAC COMMAND EXTEND Make_vernac_reduce CLASSIFIED AS SIDEFF
 	let (evm,env) = Lemmas.get_current_context () in
 	let def, uctx = Constrintern.interp_constr env evm def in
         let evm = Evd.from_ctx uctx in
+        let (evm,rd) = Tacinterp.interp_redexp env evm rd in
 	let (evm2,def) = Denote.reduce_all env evm ~red:rd def in
 	let trm = TermReify.quote_term env def in
 	ignore(Declare.declare_definition ~kind:Decl_kinds.Definition

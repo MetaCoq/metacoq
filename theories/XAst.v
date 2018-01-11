@@ -22,4 +22,9 @@ Inductive xterm : Set :=
 (* | xProj      : projection -> xterm -> xterm *)
 (* | xFix       : mfixpoint xterm -> nat -> xterm *)
 (* | xCoFix     : mfixpoint xterm -> nat -> xterm *)
+
+(* For now we use our own syntax for equality, we don't need an eliminator
+   thanks to reflection. *)
+| xEq        : xterm -> xterm -> xterm -> xterm
+| xRefl      : xterm -> xterm -> xterm
 .

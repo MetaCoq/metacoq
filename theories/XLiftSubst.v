@@ -13,6 +13,8 @@ Fixpoint lift n k t : xterm :=
   | xApp u A B v =>
     xApp (lift n k u) (lift n k A) (lift n (S k) B) (lift n k v)
   | xProd na A B => xProd na (lift n k A) (lift n (S k) B)
+  | xEq A u v => xEq (lift n k A) (lift n k u) (lift n k v)
+  | xRefl A u => xRefl (lift n k A) (lift n k u)
   | x => x
   end.
 
@@ -31,6 +33,8 @@ Fixpoint subst t k u :=
   | xApp u A B v =>
     xApp (subst t k u) (subst t k A) (subst t (S k) B) (subst t k v)
   | xProd na A B => xProd na (subst t k A) (subst t (S k) B)
+  | xEq A u v => xEq (subst t k A) (subst t k u) (subst t k v)
+  | xRefl A u => xRefl (subst t k A) (subst t k u)
   | x => x
   end.
 

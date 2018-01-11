@@ -40,7 +40,7 @@ Inductive typing (Σ : global_context) (Γ : context) : xterm -> xterm -> Set :=
 
 | type_App n s1 s2 t A B u :
     Σ ;;; Γ |-- A : xSort s1 ->
-    Σ ;;; Γ ,, vass n A |-- B : s2 ->
+    Σ ;;; Γ ,, vass n A |-- B : xSort s2 ->
     Σ ;;; Γ |-- t : xProd n A B ->
     Σ ;;; Γ |-- u : A ->
     Σ ;;; Γ |-- (xApp t n A B u) : B{ 0 := u }
@@ -103,7 +103,7 @@ with eq_term (Σ : global_context) (Γ : context) : xterm -> xterm -> xterm -> P
 
 | cong_App n1 n2 s1 s2 t1 t2 A1 A2 B1 B2 u1 u2 :
     Σ ;;; Γ |-- A1 = A2 : xSort s1 ->
-    Σ ;;; Γ ,, vass n1 A1 |-- B1 = B2 : s2 ->
+    Σ ;;; Γ ,, vass n1 A1 |-- B1 = B2 : xSort s2 ->
     Σ ;;; Γ |-- t1 = t2 : xProd n1 A1 B1 ->
     Σ ;;; Γ |-- u1 = u2 : A1 ->
     Σ ;;; Γ |-- (xApp t1 n1 A1 B1 u1) = (xApp t2 n2 A2 B2 u2) : B1{ 0 := u1 }

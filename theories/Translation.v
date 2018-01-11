@@ -7,7 +7,7 @@ From Template Require Import Ast SAst LiftSubst SLiftSubst Typing ITyping XTypin
 
 Section Translation.
 
-Open Scope x_scope.
+Open Scope i_scope.
 
 (* Transport in the target *)
 (* Maybe it should be added to the common syntax *)
@@ -67,6 +67,25 @@ Definition heq s A a B b :=
   sSig nAnon (sEq (succ_sort s) (sSort s) A B)
        (sEq s (lift0 1 B) (transport s A B (sRel 0) (lift0 1 a)) (lift0 1 b)).
 
-Notation " ( a : A ) ≅ ( b : B ) : s " := (heq s A a B b) (at level 80).
+Lemma heq_to_eq :
+  forall {Σ Γ s A u v e},
+    Σ ;;; Γ |-- e : heq s A u A v ->
+    { p : sterm & Σ ;;; Γ |-- p : sEq s A u v }.
+Proof.
+  intros Σ Γ s A u v e h.
+  (* This holds thanks to UIP, we'll see to it later. *)
+Admitted.
+
+Corollary type_heq :
+  forall {Σ Γ s A B e},
+    Σ ;;; Γ |-- e : heq (succ_sort s) (sSort s) A (sSort s) B ->
+    { p : sterm & Σ ;;; Γ |-- p : sEq (succ_sort s) (sSort s) A B }.
+Proof.
+  intros Σ Γ s A B e h.
+  now eapply heq_to_eq.
+Defined.
+
+
+
 
 End Translation.

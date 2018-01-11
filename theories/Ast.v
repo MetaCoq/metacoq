@@ -188,7 +188,7 @@ Inductive TemplateMonad : Type -> Prop :=
 (* general operations *)
 | tmPrint : forall {A:Type}, A -> TemplateMonad unit
 (** FIXME: strategy is currently ignored in the implementation -- it does all reductions.*)
-| tmReduce : reductionStrategy -> forall {A:Type}, A -> TemplateMonad A
+| tmEval : reductionStrategy -> forall {A:Type}, A -> TemplateMonad A
 (** Return the defined constant *)
 | tmDefinition : ident -> forall {A:Type}, A -> TemplateMonad A
 | tmAxiom : ident -> forall A, TemplateMonad A
@@ -196,6 +196,7 @@ Inductive TemplateMonad : Type -> Prop :=
 | tmLemma : ident -> forall A, TemplateMonad A
 | tmFreshName : ident -> TemplateMonad ident
     (* Guarenteed to not cause "... already declared" error *)
+| tmAbout : ident -> TemplateMonad global_reference
 
 (* quoting and unquoting operations *)
 (** Similar to Quote Definition ... := ... *)
@@ -213,12 +214,11 @@ Inductive TemplateMonad : Type -> Prop :=
 | tmUnquote : term  -> TemplateMonad typed_term
 
 (* Not yet implemented:*)
-| tmAbout : ident -> TemplateMonad global_reference
 .
 
 (** unquote then reduce then quote *)
 (* Definition tmUnQReduceQ : reductionStrategy -> term -> TemplateMonad term *)
 (*   := fun s t => tmBind (tmBind (tmUnquote t) *)
-(*                             (fun t => tmReduce s (projT2 t))) *)
+(*                             (fun t => tmEval s (projT2 t))) *)
 (*                     tmQuoteTerm. *)
 

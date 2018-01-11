@@ -283,9 +283,9 @@ struct
 
   let (tglobal_reference, tConstRef, tIndRef, tConstructRef) = (r_reify "global_reference", r_reify "ConstRef", r_reify "IndRef", r_reify "ConstructRef")
 
-  let (tmReturn, tmBind, tmQuote, tmQuoteRec, tmReduce, tmDefinition, tmAxiom, tmLemma, tmFreshName, tmAbout,
+  let (tmReturn, tmBind, tmQuote, tmQuoteRec, tmEval, tmDefinition, tmAxiom, tmLemma, tmFreshName, tmAbout,
        tmMkDefinition, tmMkInductive, tmPrint, tmQuoteInductive, tmQuoteConstant, tmUnquote) =
-    (r_reify "tmReturn", r_reify "tmBind", r_reify "tmQuote", r_reify "tmQuoteRec", r_reify "tmReduce", r_reify "tmDefinition",
+    (r_reify "tmReturn", r_reify "tmBind", r_reify "tmQuote", r_reify "tmQuoteRec", r_reify "tmEval", r_reify "tmDefinition",
      r_reify "tmAxiom", r_reify "tmLemma", r_reify "tmFreshName", r_reify "tmAbout",
      r_reify "tmMkDefinition", r_reify "tmMkInductive", r_reify "tmPrint", r_reify "tmQuoteInductive", r_reify "tmQuoteConstant", r_reify "tmUnquote")
 
@@ -1454,7 +1454,7 @@ struct
       | _ -> monad_failure "tmMkDefinition" 2
     else if Term.eq_constr coConstr tmQuote then
       match args with
-      | _::trm::[] -> let qt = TermReify.quote_term env trm (* user should do the reduction (using tmReduce) if they want *)
+      | _::trm::[] -> let qt = TermReify.quote_term env trm (* user should do the reduction (using tmEval) if they want *)
                       in k (evm, qt)
       | _ -> monad_failure "tmQuote" 2
     else if Term.eq_constr coConstr tmQuoteRec then
@@ -1515,13 +1515,13 @@ struct
                   let gr = Smartlocate.locate_global_with_alias (None, Libnames.qualid_of_string id) in
                   k (evm, quote_global_reference gr)
       | _ -> monad_failure "tmAbout" 1
-    else if Term.eq_constr coConstr tmReduce then
+    else if Term.eq_constr coConstr tmEval then
       match args with
       | s(*reduction strategy*)::_(*type*)::trm::[] ->
          let red = denote_reduction_strategy s in
          let (evm, trm) = reduce_all ~red env evm trm
          in k (evm, trm)
-      | _ -> monad_failure "tmReduce" 3
+      | _ -> monad_failure "tmEval" 3
     else if Term.eq_constr coConstr tmMkInductive then
       match args with
       | mind::[] -> declare_inductive env evm mind;

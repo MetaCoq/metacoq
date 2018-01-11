@@ -253,7 +253,7 @@ Qed.
 
 Definition printConstant (name  : ident): TemplateMonad unit :=
   tmBind (tmUnquote (tConst name []))
-         (fun X => tmBind (tmReduce all (projT2 X)) tmPrint).
+         (fun X => tmBind (tmEval all (projT2 X)) tmPrint).
 Fail Run TemplateProgram (printInductive "Coq.Arith.PeanoNat.Nat.add").
 Run TemplateProgram (printConstant "Coq.Arith.PeanoNat.Nat.add").
 
@@ -282,7 +282,7 @@ Definition tmDefinition' : ident -> forall {A}, A -> TemplateMonad unit
 (** A bit less efficient, but does the same job as tmMkDefinition *)
 Definition tmMkDefinition' : ident -> term -> TemplateMonad unit
   := fun id t => tmBind (tmUnquote t)
-                     (fun x => tmBind (tmReduce all (projT2 x))
+                     (fun x => tmBind (tmEval all (projT2 x))
                                    (tmDefinition' id)).
 
 Run TemplateProgram (tmMkDefinition' "foo" add_syntax).
@@ -299,8 +299,8 @@ Run TemplateProgram (tmBind (tmAbout "eq") tmPrint).
 Run TemplateProgram (tmBind (tmAbout "Logic.eq") tmPrint).
 Run TemplateProgram (tmBind (tmAbout "eq_refl") tmPrint).
 
-Run TemplateProgram (tmBind (tmReduce all (3 + 3)) tmPrint).
-Run TemplateProgram (tmBind (tmReduce hnf (3 + 3)) tmPrint).
+Run TemplateProgram (tmBind (tmEval all (3 + 3)) tmPrint).
+Run TemplateProgram (tmBind (tmEval hnf (3 + 3)) tmPrint).
 
 
 (* Definition duplicateDefn (name newName : ident): TemplateMonad unit := *)

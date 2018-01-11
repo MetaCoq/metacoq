@@ -604,10 +604,10 @@ Conjecture congr_cumul_prod : forall Σ Γ na na' M1 M2 N1 N2,
 Fixpoint decompose_program (p : program) (env : global_context) : global_context * term :=
   match p with (* TODO Universes *)
   | PConstr s u ty trm p =>
-    let decl :=  {| cst_name := s; cst_universes := u; cst_type := ty; cst_body := Some trm |} in
+    let decl :=  {| cst_universes := u; cst_type := ty; cst_body := Some trm |} in
     decompose_program p (ConstantDecl s decl :: env)
   | PAxiom s u ty p =>
-    let decl := {| cst_name := s; cst_universes := u; cst_type := ty; cst_body := None |} in
+    let decl := {| cst_universes := u; cst_type := ty; cst_body := None |} in
     decompose_program p (ConstantDecl s decl :: env)
   | PType ind m inds p =>
     let decl := {| ind_npars := m; ind_bodies := inds |} in

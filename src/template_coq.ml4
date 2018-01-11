@@ -158,11 +158,11 @@ struct
     InductiveDecl (kn, {ind_npars = p; ind_bodies = r})
 
   let mkConstant kn u ty body =
-    ConstantDecl (kn, { cst_name = kn; cst_universes = u;
+    ConstantDecl (kn, { cst_universes = u;
                         cst_type = ty; cst_body = Some body })
 
   let mkAxiom kn u ty =
-    ConstantDecl (kn, { cst_name = kn; cst_universes = u;
+    ConstantDecl (kn, { cst_universes = u;
                         cst_type = ty; cst_body = None })
 
   let mkExt d p = extend_program p d

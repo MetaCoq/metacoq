@@ -91,8 +91,7 @@ Inductive program : Set :=
 
 
 Record constant_decl :=
-  { cst_name : ident; (* TODO Universes *)
-    cst_universes : universe_instance;
+  { cst_universes : universe_instance;
     cst_type : term;
     cst_body : option term }.
 
@@ -106,9 +105,9 @@ Inductive global_decl :=
 
 Definition extend_program (p : program) (d : global_decl) : program :=
   match d with
-  | ConstantDecl i {| cst_name:=_; cst_universes := u; cst_type:=ty;  cst_body:=Some body |}
+  | ConstantDecl i {| cst_universes := u; cst_type:=ty;  cst_body:=Some body |}
     => PConstr i u (* TODO universes *) ty body p
-  | ConstantDecl i {| cst_name:=_; cst_universes := u; cst_type:=ty;  cst_body:=None |}
+  | ConstantDecl i {| cst_universes := u; cst_type:=ty;  cst_body:=None |}
     => PAxiom i u ty p
   | InductiveDecl i {| ind_npars:=n; ind_bodies := l |}
     => PType i n l p

@@ -13,7 +13,7 @@ Definition context := (list context_decl).
 
 Definition snoc (Γ : context) (d : context_decl) := d :: Γ.
 
-Notation " Γ ,, d " := (snoc Γ d) (at level 20, d at next level).
+Notation " Γ ,, d " := (snoc Γ d) (at level 20, d at next level) : x_scope.
 
 Reserved Notation " Σ ;;; Γ |-- t : T " (at level 50, Γ, t, T at next level).
 Reserved Notation " Σ ;;; Γ |-- t = u : T " (at level 50, Γ, t, u, T at next level).
@@ -62,7 +62,7 @@ Inductive typing (Σ : global_context) (Γ : context) : xterm -> xterm -> Set :=
     Σ ;;; Γ |-- A = B : xSort s ->
     Σ ;;; Γ |-- t : B
 
-where " Σ ;;; Γ |-- t : T " := (@typing Σ Γ t T) : type_scope
+where " Σ ;;; Γ |-- t : T " := (@typing Σ Γ t T) : x_scope
 
 with eq_term (Σ : global_context) (Γ : context) : xterm -> xterm -> xterm -> Prop :=
 | eq_reflexivity u A :
@@ -123,4 +123,4 @@ with eq_term (Σ : global_context) (Γ : context) : xterm -> xterm -> xterm -> P
     Σ ;;; Γ |-- e : xEq s A u v ->
     Σ ;;; Γ |-- u = v : A
 
-where " Σ ;;; Γ |-- t = u : T " := (@eq_term Σ Γ t u T) : type_scope.
+where " Σ ;;; Γ |-- t = u : T " := (@eq_term Σ Γ t u T) : x_scope.

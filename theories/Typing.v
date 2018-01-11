@@ -1,6 +1,8 @@
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
 From Template Require Import Template Ast Induction LiftSubst.
 
+Open Scope t_scope.
+
 Set Asymmetric Patterns.
 
 Definition mkApp t u :=
@@ -135,7 +137,7 @@ Definition declared_projection Σ (proj : projection) decl : Prop :=
   let '(ind, ppars, arg) := proj in
   exists decl', declared_inductive Σ ind decl' /\
                 List.nth_error decl'.(ind_projs) arg = Some decl.
-  
+
 Program
 Definition type_of_constant_decl (d : global_decl | is_constant_decl d = true) : term :=
   match d with
@@ -235,7 +237,7 @@ Definition tAppnil t l :=
 Definition iota_red npar c args brs :=
   (mktApp (snd (List.nth c brs (0, tRel 0))) (List.skipn npar args)).
 
-Notation " Γ ,, d " := (snoc Γ d) (at level 20, d at next level).
+Notation " Γ ,, d " := (snoc Γ d) (at level 20, d at next level) : t_scope.
 
 Inductive red1 (Σ : global_context) (Γ : context) : term -> term -> Prop :=
 (** Reductions *)
@@ -249,8 +251,8 @@ Inductive red1 (Σ : global_context) (Γ : context) : term -> term -> Prop :=
 
 | red_rel i (isdecl : i < List.length Γ) body :
     (safe_nth Γ (exist _ i isdecl)).(decl_body) = Some body ->
-    red1 Σ Γ (tRel i) (lift0 (S i) body) 
-         
+    red1 Σ Γ (tRel i) (lift0 (S i) body)
+
 (** Case *)
 | red_iota ind pars c u args p brs :
     red1 Σ Γ (tCase (ind, pars) p (mktApp (tConstruct ind c u) args) brs)
@@ -268,7 +270,7 @@ Inductive red1 (Σ : global_context) (Γ : context) : term -> term -> Prop :=
     red1 Σ Γ (tConst c u) body
 
 (* TODO Proj CoFix *)
-         
+
 | abs_red_l na M M' N : red1 Σ Γ M M' -> red1 Σ Γ (tLambda na M N) (tLambda na M' N)
 | abs_red_r na M M' N : red1 Σ (Γ ,, vass na N) M M' -> red1 Σ Γ (tLambda na N M) (tLambda na N M')
 
@@ -290,7 +292,7 @@ Inductive red1 (Σ : global_context) (Γ : context) : term -> term -> Prop :=
 
 | cast_red_l M1 k M2 N1 : red1 Σ Γ M1 N1 -> red1 Σ Γ (tCast M1 k M2) (tCast N1 k M2)
 | cast_red_r M2 k N2 M1 : red1 Σ Γ M2 N2 -> red1 Σ Γ (tCast M1 k M2) (tCast M1 k N2)
-                                       
+
 with reds1 (Σ : global_context) (Γ : context): list term -> list term -> Prop :=
 | reds1_hd hd hd' tl : red1 Σ Γ hd hd' -> reds1 Σ Γ (hd :: tl) (hd' :: tl)
 | reds1_tl hd tl tl' : reds1 Σ Γ tl tl' -> reds1 Σ Γ (hd :: tl) (hd :: tl')
@@ -408,7 +410,7 @@ Fixpoint leq_term (t u : term) {struct t} :=
   end.
 
 Reserved Notation " Σ ;;; Γ |-- t : T " (at level 50, Γ, t, T at next level).
-Reserved Notation " Σ ;;; Γ |-- t <= u " (at level 50, Γ, t, u at next level). 
+Reserved Notation " Σ ;;; Γ |-- t <= u " (at level 50, Γ, t, u at next level).
 
 Fixpoint destArity Γ (t : term) :=
   match t with
@@ -467,7 +469,7 @@ Inductive typing (Σ : global_context) (Γ : context) : term -> term -> Set :=
 | type_Cast c k t s :
     Σ ;;; Γ |-- t : tSort s ->
     Σ ;;; Γ |-- c : t ->
-    Σ ;;; Γ |-- (tCast c k t) : t 
+    Σ ;;; Γ |-- (tCast c k t) : t
 
 | type_Prod n t b s1 s2 :
     Σ ;;; Γ |-- t : tSort s1 ->
@@ -481,14 +483,14 @@ Inductive typing (Σ : global_context) (Γ : context) : term -> term -> Set :=
 
 | type_LetIn n b b_ty b' s1 b'_ty :
     Σ ;;; Γ |-- b_ty : tSort s1 ->
-    Σ ;;; Γ |-- b : b_ty -> 
+    Σ ;;; Γ |-- b : b_ty ->
     Σ ;;; Γ ,, vdef n b b_ty |-- b' : b'_ty ->
     Σ ;;; Γ |-- (tLetIn n b b_ty b') : tLetIn n b b_ty b'_ty
 
 | type_App t l t_ty t' :
     Σ ;;; Γ |-- t : t_ty ->
     typing_spine Σ Γ t_ty l t' ->
-    Σ ;;; Γ |-- (tApp t l) : t'          
+    Σ ;;; Γ |-- (tApp t l) : t'
 
 | type_Const cst u : (* TODO Universes *)
     forall decl (isdecl : declared_constant Σ cst decl),
@@ -536,9 +538,9 @@ Inductive typing (Σ : global_context) (Γ : context) : term -> term -> Set :=
     Σ ;;; Γ |-- t : A ->
     Σ ;;; Γ |-- B : tSort s ->
     Σ ;;; Γ |-- A <= B ->
-    Σ ;;; Γ |-- t : B          
+    Σ ;;; Γ |-- t : B
 
-where " Σ ;;; Γ |-- t : T " := (@typing Σ Γ t T) : type_scope
+where " Σ ;;; Γ |-- t : T " := (@typing Σ Γ t T) : t_scope
 
 with typing_spine (Σ : global_context) (Γ : context) : term -> list term -> term -> Prop :=
 | type_spine_nil ty : typing_spine Σ Γ ty [] ty
@@ -546,18 +548,18 @@ with typing_spine (Σ : global_context) (Γ : context) : term -> list term -> te
     Σ ;;; Γ |-- hd : A ->
     typing_spine Σ Γ (subst0 hd B) tl B' ->
     typing_spine Σ Γ (tProd na A B) (cons hd tl) B'
-                     
+
 with cumul (Σ : global_context) (Γ : context) : term -> term -> Prop :=
 | cumul_refl t u : leq_term t u = true -> cumul Σ Γ t u
 | cumul_red_l t u v : red1 Σ Γ t v -> cumul Σ Γ v u -> cumul Σ Γ t u
 | cumul_red_r t u v : cumul Σ Γ t v -> red1 Σ Γ u v -> cumul Σ Γ t u
 
-where " Σ ;;; Γ |-- t <= u " := (@cumul Σ Γ t u) : type_scope.
+where " Σ ;;; Γ |-- t <= u " := (@cumul Σ Γ t u) : t_scope.
 
 Definition conv Σ Γ T U :=
   Σ ;;; Γ |-- T <= U /\ Σ ;;; Γ |-- U <= T.
 
-Notation " Σ ;;; Γ |-- t = u " := (@conv Σ Γ t u) (at level 50, Γ, t, u at next level) : type_scope.
+Notation " Σ ;;; Γ |-- t = u " := (@conv Σ Γ t u) (at level 50, Γ, t, u at next level) : t_scope.
 
 Axiom conv_refl : forall Σ Γ t, Σ ;;; Γ |-- t = t.
 Axiom cumul_refl' : forall Σ Γ t, Σ ;;; Γ |-- t <= t. (* easy *)
@@ -593,7 +595,7 @@ Inductive type_constructors (Σ : global_context) (Γ : context) :
 | type_cnstrs_cons id t n l :
     isType Σ Γ t ->
     type_constructors Σ Γ l ->
-    (** TODO: check it has n products ending in a tRel application *)              
+    (** TODO: check it has n products ending in a tRel application *)
     type_constructors Σ Γ ((id, t, n) :: l).
 
 Inductive type_projections (Σ : global_context) (Γ : context) :
@@ -603,7 +605,7 @@ Inductive type_projections (Σ : global_context) (Γ : context) :
     isType Σ Γ t ->
     type_projections Σ Γ l ->
     type_projections Σ Γ ((id, t) :: l).
-      
+
 Definition arities_context (l : list inductive_body) :=
   List.map (fun ind => vass (nNamed ind.(ind_name)) ind.(ind_type)) l.
 
@@ -632,13 +634,13 @@ Inductive type_inddecls (Σ : global_context) (pars : context) (Γ : context) :
 Definition type_inductive Σ inds :=
   (** FIXME: should be pars ++ arities w/o params *)
   type_inddecls Σ [] (arities_context inds) inds.
-                 
+
 Inductive fresh_global (s : string) : global_context -> Prop :=
 | fresh_global_nil : fresh_global s nil
 | fresh_global_cons env g :
     fresh_global s env -> global_decl_ident g <> s ->
     fresh_global s (cons g env).
-  
+
 Definition type_constant_decl Σ d :=
   match d.(cst_body) with
   | Some trm => Σ ;;; [] |-- trm : d.(cst_type)
@@ -705,7 +707,7 @@ Proof.
   red.
   simpl. constructor.
   setenv Σ.
-  construct. 
+  construct.
 Qed.
 
 Quote Recursively Definition foo' := 1.
@@ -715,7 +717,7 @@ Proof.
   simpl. constructor.
   setenv Σ.
   econstructor.
-  construct. 
+  construct.
   econstructor.
   construct.
   econstructor.
@@ -763,7 +765,7 @@ Proof.
   intros until t.
   revert t.
   fix auxt 1.
-  move auxt at top. 
+  move auxt at top.
   destruct t; match goal with
                  H : _ |- _ => apply H
               end; auto.
@@ -864,7 +866,7 @@ Proof.
     | _ : declared_constructor _ _ _ |- _  => exact 2%nat
     | _ : declared_projection _ _ _ |- _  => exact 2%nat
     | _ => exact 1
-    end. 
+    end.
 Defined.
 
 (* Definition on_decl_typing f d := *)
@@ -885,7 +887,7 @@ Fixpoint globenv_size (Σ : global_context) : size :=
   end.
 
 (** To get a good induction principle for typing derivations,
-    we need: 
+    we need:
     - size of the global_context, including size of the global declarations in it
     - size of the derivation. *)
 
@@ -996,7 +998,7 @@ Lemma typing_ind_env :
 
        env_prop P.
 Proof.
-  unfold env_prop. intros. 
+  unfold env_prop. intros.
   pose (@Fix_F ({ Σ : _ & { wfΣ : wf Σ & { Γ : context & { t : term & { T : term & Σ ;;; Γ |-- t : T }} } }})
                (lexprod (MR lt (fun x => globenv_size x))
                             (fun Σ => MR lt (fun x => typing_size (projT2 (projT2 (projT2 (projT2 x)))))))).
@@ -1019,22 +1021,22 @@ Proof.
   constructor.
   inversion_clear wfΣ.
   constructor.
-  specialize (IH (existT _ Σ (existT _ H15 (existT _ Γ (existT _ (tSort sProp) (existT _ (tSort (succ_sort sProp)) (type_Sort _ _ sProp))))))). 
+  specialize (IH (existT _ Σ (existT _ H15 (existT _ Γ (existT _ (tSort sProp) (existT _ (tSort (succ_sort sProp)) (type_Sort _ _ sProp))))))).
   simpl in IH. forward IH. constructor 1. simpl. omega.
   apply IH.
   destruct g; simpl.
-  destruct cst_body. 
+  destruct cst_body.
   simpl.
   intros.
   specialize (IH (existT _ Σ (existT _ H15 (existT _ _ (existT _ _ (existT _ _ H18)))))).
   simpl in IH.
   forward IH. constructor 1. simpl; omega.
-  apply IH. 
+  apply IH.
   intros.
   specialize (IH (existT _ Σ (existT _ H15 (existT _ _ (existT _ _ (existT _ _ H18)))))).
   simpl in IH.
   forward IH. constructor 1. simpl; omega.
-  apply IH. 
+  apply IH.
   intros.
   induction (ind_bodies m). constructor.
   constructor; auto.

@@ -62,7 +62,7 @@ Fixpoint subst t k u :=
   end.
 
 Notation subst0 t u := (subst t 0 u).
-Notation "M { j := N }" := (subst N j M) (at level 10, right associativity).
+Notation "M { j := N }" := (subst N j M) (at level 10, right associativity) : t_scope.
 
 Fixpoint closedn k (t : term) : bool :=
   match t with
@@ -143,7 +143,7 @@ Lemma subst_rel_gt :
   forall u n k, n > k -> subst_rec u (tRel n) k = tRel (pred n).
 Proof.
   simpl in |- *; intros.
-  now elim (compare_spec k n). 
+  now elim (compare_spec k n).
 Qed.
 
 Lemma subst_rel_eq : forall u n, subst_rec u (tRel n) n = lift0 n u.
@@ -213,7 +213,7 @@ Proof.
         try (rewrite H, H0; f_equal; try easy; now f_equal);
         try (rewrite H, H0, H1; f_equal; try easy; now f_equal);
         try (rewrite H1; now f_equal).
-  
+
   - elim (leb_spec k n); intros;
     elim (leb_spec i n); intros; try easy.
     + rewrite 2!lift_rel_ge; try easy.
@@ -242,7 +242,7 @@ Proof.
       try (f_equal; try easy; apply_spec); intros;
         try rewrite ?map_length; try easy ||
       (try rewrite H, H0; f_equal; try easy; now f_equal).
-  
+
   - elim (leb_spec k n); intros; try easy.
     + rewrite subst_rel_gt; try easy.
     + rewrite subst_rel_lt; try easy.
@@ -269,7 +269,7 @@ Proof.
         try (rewrite H, H0; f_equal; try easy; now f_equal);
         try (rewrite H, H0, H1; f_equal; try easy; now f_equal);
         try (rewrite H1; now f_equal).
-  
+
   - elim (compare_spec p n); elim (leb_spec k n); intros; subst; try easy.
     + rewrite subst_rel_eq; try easy.
       now rewrite simpl_lift_rec.
@@ -306,12 +306,12 @@ Proof.
         try (erewrite H, <- H0; f_equal; try easy; now f_equal);
         try (erewrite H, <- H0, <- H1; f_equal; try easy; now f_equal);
         try (erewrite H1; now f_equal).
-  
+
   - unfold subst at 1. unfold lift at 4.
     elim (compare_spec p n); intros; try easy;
     elim (leb_spec (S (p + k)) n); intros; subst; try easy.
-    
-    + rewrite subst_rel_eq. now rewrite <- permute_lift_rec. 
+
+    + rewrite subst_rel_eq. now rewrite <- permute_lift_rec.
     + rewrite lift_rel_ge; try easy.
       now rewrite subst_rel_gt.
     + rewrite lift_rel_lt; try easy.
@@ -353,10 +353,10 @@ Proof.
         try (erewrite H, <- H0; f_equal; try easy; now f_equal);
         try (erewrite H, <- H0, <- H1; f_equal; try easy; now f_equal);
         try (erewrite H1; now f_equal).
-  
-  - unfold subst at 2. 
+
+  - unfold subst at 2.
     elim (compare_spec p n); intros; try easy.
-    
+
     + subst. rewrite subst_rel_lt; try easy.
       rewrite subst_rel_eq; try easy.
       now rewrite <- commut_lift_subst_rec.
@@ -394,7 +394,7 @@ Proof.
   - rewrite lift_rel_lt; auto.
     revert H. elim (Nat.ltb_spec n0 k); intros; try easy.
   - simpl lift; f_equal.
-    rewrite <- map_id. 
+    rewrite <- map_id.
     apply_spec; eauto.
   - simpl lift. rewrite andb_true_iff in H1. f_equal; intuition eauto.
   - simpl lift; rewrite andb_true_iff in H1. f_equal; intuition eauto.

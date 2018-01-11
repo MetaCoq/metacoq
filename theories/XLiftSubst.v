@@ -39,4 +39,4 @@ Fixpoint subst t k u :=
   end.
 
 Notation subst0 t u := (subst t 0 u).
-Notation "M { j := N }" := (subst N j M) (at level 10, right associativity).
+Notation "M { j := N }" := (subst N j M) (at level 10, right associativity) : x_scope.

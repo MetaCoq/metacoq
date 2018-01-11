@@ -14,4 +14,5 @@ theories/Typing.v
 theories/Checker.v
 
 theories/XAst.v
+theories/XLiftSubst.v
 theories/XTyping.v

@@ -195,6 +195,7 @@ struct
   type quoted_mind_finiteness = Term.constr (* of type Ast.mutual_inductive_entry *)
   type quoted_definition_entry = t * t option
   type quoted_entry = Term.constr (* of type option (constant_entry + mutual_inductive_entry) *)
+  type quoted_global_reference = Term.constr (* of type Ast.global_reference *)
 
   let resolve_symbol (path : string list) (tm : string) : Term.constr =
     gen_constant_in_modules contrib_name [path] tm
@@ -277,10 +278,12 @@ struct
   let cParameter_entry = r_reify "Build_parameter_entry"
   let cDefinition_entry = r_reify "Build_definition_entry"
 
-  let (tmReturn, tmBind, tmQuote, tmQuoteRec, tmReduce, tmDefinition, tmAxiom, tmLemma, tmFreshName,
+  let (tglobal_reference, tConstRef, tIndRef, tConstructRef) = (r_reify "global_reference", r_reify "ConstRef", r_reify "IndRef", r_reify "ConstructRef")
+
+  let (tmReturn, tmBind, tmQuote, tmQuoteRec, tmReduce, tmDefinition, tmAxiom, tmLemma, tmFreshName, tmAbout,
        tmMkDefinition, tmMkInductive, tmPrint, tmQuoteInductive, tmQuoteConstant, tmUnquote) =
     (r_reify "tmReturn", r_reify "tmBind", r_reify "tmQuote", r_reify "tmQuoteRec", r_reify "tmReduce", r_reify "tmDefinition",
-     r_reify "tmAxiom", r_reify "tmLemma", r_reify "tmFreshName",
+     r_reify "tmAxiom", r_reify "tmLemma", r_reify "tmFreshName", r_reify "tmAbout",
      r_reify "tmMkDefinition", r_reify "tmMkInductive", r_reify "tmPrint", r_reify "tmQuoteInductive", r_reify "tmQuoteConstant", r_reify "tmUnquote")
 
   (* let pkg_specif = ["Coq";"Init";"Specif"] *)
@@ -533,6 +536,22 @@ struct
     | Some (Right mind) ->
        mkSomeInd mind
     | None -> Constr.mkApp (cNone, [| opType |])
+
+
+  let quote_global_reference : Globnames.global_reference -> quoted_global_reference = function
+    | Globnames.VarRef _ -> CErrors.user_err (str "VarRef unsupported")
+    | Globnames.ConstRef c ->
+       let kn = quote_kn (Names.Constant.canonical c) in
+       Term.mkApp (tConstRef, [|kn|])
+    | Globnames.IndRef (i, n) ->
+       let kn = quote_kn (Names.MutInd.canonical i) in
+       let n = quote_int n in
+       Term.mkApp (tIndRef, [|quote_inductive (kn ,n)|])
+    | Globnames.ConstructRef ((i, n), k) ->
+       let kn = quote_kn (Names.MutInd.canonical i) in
+       let n = quote_int n in
+       let k = (quote_int (k - 1)) in
+       Term.mkApp (tConstructRef, [|quote_inductive (kn ,n); k|])
 
 end
                    
@@ -1505,6 +1524,12 @@ Vernacexpr.Check
       | _::trm::[] -> Feedback.msg_info (Printer.pr_constr trm);
                       k (evm, unit_tt)
       | _ -> monad_failure "tmPrint" 2
+    else if Term.eq_constr coConstr tmAbout then
+      match args with
+      | id::[] -> let id = unquote_string id in
+                  let gr = Smartlocate.locate_global_with_alias (None, Libnames.qualid_of_string id) in
+                  k (evm, quote_global_reference gr)
+      | _ -> monad_failure "tmAbout" 1
     else if Term.eq_constr coConstr tmReduce then
       match args with
       | _(*reduction strategy*)::_(*type*)::trm::[] -> 

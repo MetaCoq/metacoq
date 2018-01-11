@@ -294,6 +294,11 @@ Run TemplateProgram (tmBind (tmAxiom "foo0'" (nat -> nat))
                             (fun t => tmDefinition' "foo0''" t)).
 Run TemplateProgram (tmBind (tmFreshName "foo") tmPrint).
 
+Run TemplateProgram (tmBind (tmAbout "foo") tmPrint).
+Run TemplateProgram (tmBind (tmAbout "eq") tmPrint).
+Run TemplateProgram (tmBind (tmAbout "Logic.eq") tmPrint).
+Run TemplateProgram (tmBind (tmAbout "eq_refl") tmPrint).
+
 
 (* Definition duplicateDefn (name newName : ident): TemplateMonad unit := *)
 (*   (tmBind (tmQuote name false) (fun body => *)

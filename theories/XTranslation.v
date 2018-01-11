@@ -35,6 +35,8 @@ Inductive trel (E : list (nat * nat)) : term -> term -> Prop :=
 | trel_transportr t1 t2 s T1 T2 p :
     trel E t1 t2 ->
     trel E t1 (transport s T1 T2 p t2)
+
+(* It seems I was mistaken. The target does need annotations. *)
 .
 
 End Translation.

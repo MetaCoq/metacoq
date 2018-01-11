@@ -23,8 +23,14 @@ Inductive iterm : Set :=
 (* | iFix       : mfixpoint iterm -> nat -> iterm *)
 (* | iCoFix     : mfixpoint iterm -> nat -> iterm *)
 
-(* For now we use our own syntax for equality, we don't need an eliminator
-   thanks to reflection. *)
+(* For now we use our own syntax for equality and Σ-types *)
 | iEq        : sort -> iterm -> iterm -> iterm -> iterm
 | iRefl      : iterm -> iterm -> iterm
+| iJ         : iterm -> iterm -> iterm -> iterm -> iterm -> iterm -> iterm
+| iUip       : iterm -> iterm -> iterm -> iterm -> iterm -> iterm
+| iFunext    : iterm -> iterm -> iterm -> iterm -> iterm -> iterm
+
+| iSig       : name -> iterm -> iterm -> iterm
+| iPair      : iterm -> iterm -> iterm -> iterm -> iterm
+| iSigLet    : iterm -> iterm -> iterm -> iterm -> iterm -> iterm
 .

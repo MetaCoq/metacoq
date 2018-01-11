@@ -15,6 +15,26 @@ Fixpoint lift n k t : iterm :=
   | iProd na A B => iProd na (lift n k A) (lift n (S k) B)
   | iEq s A u v => iEq s (lift n k A) (lift n k u) (lift n k v)
   | iRefl A u => iRefl (lift n k A) (lift n k u)
+  | iJ A u P w v p =>
+    iJ (lift n k A)
+       (lift n k u)
+       (lift n (S (S k)) P)
+       (lift n k w)
+       (lift n k v)
+       (lift n k p)
+  | iUip A u v p q =>
+    iUip (lift n k A) (lift n k u) (lift n k v) (lift n k p) (lift n k q)
+  | iFunext A B f g e =>
+    iFunext (lift n k A) (lift n (S k) B) (lift n k f) (lift n k g) (lift n k e)
+  | iSig na A B => iSig na (lift n k A) (lift n (S k) B)
+  | iPair A B u v =>
+    iPair (lift n k A) (lift n (S k) B) (lift n k u) (lift n k v)
+  | iSigLet A B p P t =>
+    iSigLet (lift n k A)
+            (lift n (S k) B)
+            (lift n k p)
+            (lift n (S k) P)
+            (lift n (S (S k)) t)
   | x => x
   end.
 

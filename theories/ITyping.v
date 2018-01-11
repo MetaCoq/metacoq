@@ -56,6 +56,46 @@ Inductive typing (Σ : global_context) (Γ : context) : iterm -> iterm -> Set :=
     Σ ;;; Γ |-- u : A ->
     Σ ;;; Γ |-- iRefl A u : iEq s A u u
 
+(* Maybe it would be easier to go for inductives *)
+| type_J nx ne s1 s2 A u v P p w :
+    Σ ;;; Γ |-- A : iSort s1 ->
+    Σ ;;; Γ |-- u : A ->
+    Σ ;;; Γ |-- v : A ->
+    Σ ;;; Γ ,, vass nx A ,, vass ne (iEq s1 A u (iRel 0)) |-- P : s2 ->
+    Σ ;;; Γ |-- p : iEq s1 A u v ->
+    Σ ;;; Γ |-- w : P{ 1 := u }{ 0 := iRefl A u }
+
+| type_Uip s A u v p q :
+    Σ ;;; Γ |-- p : iEq s A u v ->
+    Σ ;;; Γ |-- q : iEq s A u v ->
+    Σ ;;; Γ |-- iUip A u v p q : iEq s (iEq s A u v) p q
+
+| type_Funext s n1 n2 n3 A B f g e :
+    Σ ;;; Γ |-- f : iProd n1 A B ->
+    Σ ;;; Γ |-- g : iProd n2 A B ->
+    Σ ;;; Γ |-- e : iProd n3 A (iEq s B (iApp (lift0 1 f) n1 (lift0 1 A) (lift 1 1 B) (iRel 0)) (iApp (lift0 1 g) n2 (lift0 1 A) (lift 1 1 B) (iRel 0))) ->
+    Σ ;;; Γ |-- iFunext A B f g e : iEq s (iProd n1 A B) f g
+
+| type_Sig n t b s1 s2 :
+    Σ ;;; Γ |-- t : iSort s1 ->
+    Σ ;;; Γ ,, vass n t |-- b : iSort s2 ->
+    Σ ;;; Γ |-- (iSig n t b) : iSort (max_sort s1 s2)
+
+| type_Pair s1 s2 n A B u v :
+    Σ ;;; Γ |-- A : iSort s1 ->
+    Σ ;;; Γ ,, vass n A |-- B : iSort s2 ->
+    Σ ;;; Γ |-- u : A ->
+    Σ ;;; Γ |-- v : B{ 0 := u } ->
+    Σ ;;; Γ |-- iPair A B u v : iSig n A B
+
+| type_SigLet s1 s2 s3 n np nx ny A B P p t :
+    Σ ;;; Γ |-- A : iSort s1 ->
+    Σ ;;; Γ ,, vass n A |-- B : s2 ->
+    Σ ;;; Γ |-- p : iSig n A B ->
+    Σ ;;; Γ ,, vass np (iSig n A B) |-- P : s3 ->
+    Σ ;;; Γ ,, vass nx A ,, vass ny B  |-- t : P{ 0 := iPair A B (iRel 1) (iRel 0) } ->
+    Σ ;;; Γ |-- iSigLet A B P p t : P{ 0 := p }
+
 | type_Conv t A B s :
     Σ ;;; Γ |-- t : A ->
     Σ ;;; Γ |-- B : iSort s ->
@@ -118,5 +158,46 @@ with eq_term (Σ : global_context) (Γ : context) : iterm -> iterm -> iterm -> P
     Σ ;;; Γ |-- A1 = A2 : iSort s ->
     Σ ;;; Γ |-- u1 = u2 : A1 ->
     Σ ;;; Γ |-- iRefl A1 u1 = iRefl A2 u2 : iEq s A1 u1 u1
+
+(* TODO *)
+(* | type_J nx ne s1 s2 A u v P p w : *)
+(*     Σ ;;; Γ |-- A : iSort s1 -> *)
+(*     Σ ;;; Γ |-- u : A -> *)
+(*     Σ ;;; Γ |-- v : A -> *)
+(*     Σ ;;; Γ ,, vass nx A ,, vass ne (iEq s1 A u (iRel 0)) |-- P : s2 -> *)
+(*     Σ ;;; Γ |-- p : iEq s1 A u v -> *)
+(*     Σ ;;; Γ |-- w : P{ 1 := u }{ 0 := iRefl A u } *)
+
+| cong_Uip s A1 A2 u1 u2 v1 v2 p1 p2 q1 q2 :
+    Σ ;;; Γ |-- p1 = p2 : iEq s A1 u1 v1 ->
+    Σ ;;; Γ |-- q1 = q2 : iEq s A1 u1 v1 ->
+    Σ ;;; Γ |-- iUip A1 u1 v1 p1 q1 = iUip A2 u2 v2 p2 q2 : iEq s (iEq s A1 u1 v1) p1 q1
+
+(* TODO *)
+(* | cong_Funext s n1 n2 n3 A1 A2 B1 B2 f1 f2 g1 g2 e1 e2 : *)
+(*     Σ ;;; Γ |-- f : iProd n1 A B -> *)
+(*     Σ ;;; Γ |-- g : iProd n2 A B -> *)
+(*     Σ ;;; Γ |-- e : iProd n3 A (iEq s B (iApp (lift0 1 f) n1 (lift0 1 A) (lift 1 1 B) (iRel 0)) (iApp (lift0 1 g) n2 (lift0 1 A) (lift 1 1 B) (iRel 0))) -> *)
+(*     Σ ;;; Γ |-- iFunext A B f g e : iEq s (iProd n1 A B) f g *)
+
+(* | type_Sig n t b s1 s2 : *)
+(*     Σ ;;; Γ |-- t : iSort s1 -> *)
+(*     Σ ;;; Γ ,, vass n t |-- b : iSort s2 -> *)
+(*     Σ ;;; Γ |-- (iSig n t b) : iSort (max_sort s1 s2) *)
+
+(* | type_Pair s1 s2 n A B u v : *)
+(*     Σ ;;; Γ |-- A : iSort s1 -> *)
+(*     Σ ;;; Γ ,, vass n A |-- B : iSort s2 -> *)
+(*     Σ ;;; Γ |-- u : A -> *)
+(*     Σ ;;; Γ |-- v : B{ 0 := u } -> *)
+(*     Σ ;;; Γ |-- iPair A B u v : iSig n A B *)
+
+(* | type_SigLet s1 s2 s3 n np nx ny A B P p t : *)
+(*     Σ ;;; Γ |-- A : iSort s1 -> *)
+(*     Σ ;;; Γ ,, vass n A |-- B : s2 -> *)
+(*     Σ ;;; Γ |-- p : iSig n A B -> *)
+(*     Σ ;;; Γ ,, vass np (iSig n A B) |-- P : s3 -> *)
+(*     Σ ;;; Γ ,, vass nx A ,, vass ny B  |-- t : P{ 0 := iPair A B (iRel 1) (iRel 0) } -> *)
+(*     Σ ;;; Γ |-- iSigLet A B P p t : P{ 0 := p } *)
 
 where " Σ ;;; Γ |-- t = u : T " := (@eq_term Σ Γ t u T) : i_scope.

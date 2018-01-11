@@ -13,11 +13,15 @@ theories/WeakSubst.v
 theories/Typing.v
 theories/Checker.v
 
-theories/IAst.v
-theories/ILiftSubst.v
+
+
+
+theories/SAst.v
+theories/SLiftSubst.v
+theories/SCommon.v
+
 theories/ITyping.v
 
-theories/XAst.v
-theories/XLiftSubst.v
 theories/XTyping.v
-theories/XTranslation.v
+
+theories/Translation.v

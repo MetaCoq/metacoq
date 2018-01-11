@@ -173,28 +173,28 @@ module TemplateCoqQuoter =
 struct 
   type t = Term.constr
 
-  type quoted_ident = Term.constr
-  type quoted_int = Term.constr
-  type quoted_bool = Term.constr
-  type quoted_name = Term.constr
-  type quoted_sort = Term.constr
-  type quoted_cast_kind = Term.constr
-  type quoted_kernel_name = Term.constr
-  type quoted_inductive = Term.constr
-  type quoted_univ_instance = Term.constr
-  type quoted_proj = Term.constr
-  type quoted_sort_family = Term.constr
+  type quoted_ident = Term.constr (* of type Ast.ident *)
+  type quoted_int = Term.constr (* of type nat *)
+  type quoted_bool = Term.constr (* of type bool *)
+  type quoted_name = Term.constr (* of type Ast.name *)
+  type quoted_sort = Term.constr (* of type Ast.sort *)
+  type quoted_cast_kind = Term.constr  (* of type Ast.cast_kind *)
+  type quoted_kernel_name = Term.constr (* of type Ast.kername *)
+  type quoted_inductive = Term.constr (* of type Ast.inductive *)
+  type quoted_univ_instance = Term.constr (* of type Ast.universe_instance *)
+  type quoted_proj = Term.constr (* of type Ast.projection *)
+  type quoted_sort_family = Term.constr (* of type Ast.sort_family *)
 
-  type quoted_decl = Term.constr
-  type quoted_mind_params = Term.constr
-  type quoted_program = Term.constr
+  type quoted_decl = Term.constr (* of type Ast.program ??? *)
+  type quoted_mind_params = Term.constr (* of type list (Ast.ident * list (ident * local_entry)local_entry) *)
+  type quoted_program = Term.constr (* of type Ast.program *)
   type quoted_ind_entry =
     quoted_ident * t * quoted_bool * quoted_ident list * t list
 
-  type quoted_mind_entry = Term.constr
-  type quoted_mind_finiteness = Term.constr
+  type quoted_mind_entry = Term.constr (* of type Ast.mutual_inductive_entry *)
+  type quoted_mind_finiteness = Term.constr (* of type Ast.mutual_inductive_entry *)
   type quoted_definition_entry = t * t option
-  type quoted_entry = Term.constr
+  type quoted_entry = Term.constr (* of type option (constant_entry + mutual_inductive_entry) *)
 
   let resolve_symbol (path : string list) (tm : string) : Term.constr =
     gen_constant_in_modules contrib_name [path] tm

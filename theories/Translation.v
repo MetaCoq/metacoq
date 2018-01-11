@@ -1,5 +1,5 @@
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
-From Template Require Import Ast XAst LiftSubst XLiftSubst Typing XTyping.
+From Template Require Import Ast SAst LiftSubst SLiftSubst Typing ITyping XTyping.
 
 (* We'll see later if we really need weakening, uniqueness and inversion of
    typing.

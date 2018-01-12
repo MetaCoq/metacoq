@@ -22,6 +22,22 @@ Definition transport s T1 T2 p t : sterm :=
     nAnon T1 (lift0 1 T2)
     t.
 
+Ltac fold_transport :=
+  match goal with
+  | |- context G[sApp
+    (sJ
+       (sSort ?s)
+       ?T1
+       (sProd nAnon (lift0 2 ?T1) (sRel 2))
+       (sLambda nAnon ?T1 (lift0 1 ?T1) (sRel 0))
+       ?T2
+       ?p)
+    nAnon ?T1 (lift0 1 ?T2)
+    ?t] =>
+    let G' := context G[transport s T1 T2 p t] in
+    change G'
+  end.
+
 (* Context (transport : sort -> sterm -> sterm -> sterm -> sterm -> sterm). *)
 (* Context (type_transport : *)
 (*   forall Σ Γ s T1 T2 p t , *)
@@ -182,9 +198,35 @@ Proof.
     + admit. (* We probably need another lemma here. *)
     + apply trel_Rel.
     + apply trel_Rel.
-  - unfold transport. cbn.
-    (* subst is not complete! *)
+  - unfold transport. cbn. Fail fold_transport.
+    (* We actually need the lemmata about lift and subst... *)
 Admitted.
+
+Lemma trel_refl : forall {t}, t ∼ t.
+Proof.
+  induction t ; try (now constructor).
+  (* The other cases are just not implemented yet. *)
+Admitted.
+
+Lemma trel_sym : forall {t1 t2}, t1 ∼ t2 -> t2 ∼ t1.
+Proof.
+  intros t1 t2. induction 1 ; (now constructor).
+Defined.
+
+Lemma trel_trans : forall {t1 t2 t3}, t1 ∼ t2 -> t2 ∼ t3 -> t1 ∼ t3.
+Proof.
+  intros t1 t2 t3. induction 1 ; intro h.
+  - easy.
+  - assumption.
+  - constructor. now apply IHtrel.
+  - inversion h.
+    + subst. easy.
+    + subst. apply IHtrel.
+      admit. (* Need refining. *)
+  -
+(* Transitivity is not straightforward. *)
+Admitted.
+
 
 
 End Translation.

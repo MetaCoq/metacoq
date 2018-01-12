@@ -53,7 +53,7 @@ Admitted.
  *)
 
 (*! Relation for translated expressions *)
-Inductive trel (E : list (nat * nat)) : sterm -> sterm -> Prop :=
+Inductive trel (E : list (nat * nat)) : sterm -> sterm -> Type :=
 | trel_assumption x y :
     In (x,y) E ->
     trel E (sRel x) (sRel y)
@@ -92,7 +92,7 @@ Inductive trel (E : list (nat * nat)) : sterm -> sterm -> Prop :=
 (* TODO *)
 .
 
-Notation " t1 ~ t2 " := (trel nil t1 t2) (at level 20).
+Notation " t1 ∼ t2 " := (trel nil t1 t2) (at level 20).
 
 (*! Heterogenous equality *)
 Definition heq s A a B b :=
@@ -130,7 +130,61 @@ Proof.
   now eapply heq_to_eq.
 Defined.
 
+Lemma trelE_to_heq :
+  forall {E Σ Γ},
+    (forall x y s T1 T2,
+        In (x,y) E ->
+        Σ ;;; Γ |-- T1 : sSort s ->
+        Σ ;;; Γ |-- T2 : sSort s ->
+        Σ ;;; Γ |-- sRel x : T1 ->
+        Σ ;;; Γ |-- sRel y : T2 ->
+        { p : sterm & Σ ;;; Γ |-- p : heq s T1 (sRel x) T2 (sRel y) }) ->
+    forall {t1 t2},
+      trel E t1 t2 ->
+      forall {s T1 T2},
+        Σ ;;; Γ |-- T1 : sSort s ->
+        Σ ;;; Γ |-- T2 : sSort s ->
+        Σ ;;; Γ |-- t1 : T1 ->
+        Σ ;;; Γ |-- t2 : T2 ->
+        { p : sterm & Σ ;;; Γ |-- p : heq s T1 t1 T2 t2 }.
+Proof.
+  intros E Σ Γ H t1 t2. induction 1 ; intros s' A B H1 H2 H3 H4.
+  - now apply H.
+  - admit. (* Need uniqueness of typing. *)
+  - admit. (* Need inversion on typing of transport *)
+  - admit. (* Need inversion on typing of transport *)
+  - admit. (* Need inversion on typing *)
+Admitted.
 
+Corollary trel_to_heq :
+  forall {Σ Γ s T1 T2} {t1 t2 : sterm},
+    t1 ∼ t2 ->
+    Σ ;;; Γ |-- T1 : sSort s ->
+    Σ ;;; Γ |-- T2 : sSort s ->
+    Σ ;;; Γ |-- t1 : T1 ->
+    Σ ;;; Γ |-- t2 : T2 ->
+    { p : sterm & Σ ;;; Γ |-- p : heq s T1 t1 T2 t2 }.
+Proof.
+  intros Σ Γ s T1 T2 t1 t2 H H0 H1 H2 H3.
+  now apply @trelE_to_heq with (E := nil).
+Defined.
+
+Lemma trel_subst :
+  forall {t1 t2},
+    t1 ∼ t2 ->
+    forall {u1 u2},
+      u1 ∼ u2 ->
+      forall n, t1{ n := u1 } ∼ t2{ n := u2 }.
+Proof.
+  intros t1 t2. induction 1 ; intros m1 m2 hu n.
+  - exfalso. easy.
+  - unfold subst. destruct (nat_compare n x).
+    + admit. (* We probably need another lemma here. *)
+    + apply trel_Rel.
+    + apply trel_Rel.
+  - unfold transport. cbn.
+    (* subst is not complete! *)
+Admitted.
 
 
 End Translation.

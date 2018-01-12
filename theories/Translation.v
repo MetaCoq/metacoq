@@ -302,5 +302,34 @@ Proof.
        strong hypothesis. *)
 Admitted.
 
+Lemma change_type :
+  forall {Σ Γ A t Γ' A' t' s A''},
+    Σ ;;;; Γ' |--- [ t' ] : A' # ⟦ Γ |--- [t] : A ⟧ ->
+    Σ ;;;; Γ' |--- [ A'' ] : sSort s # ⟦ Γ |--- [A] : sSort s ⟧ ->
+    { t'' : sterm & Σ ;;;; Γ' |--- [ t'' ] : A'' # ⟦ Γ |--- [t] : A ⟧ }.
+Proof.
+Admitted.
+
+
+(*! Translation *)
+Fixpoint type_translation {Σ Γ A t} (h : Σ ;;; Γ |-- t : A)
+                          {Γ'} (hΓ : Γ' ≈ Γ) {struct h} :
+  { A' : sterm & { t' : sterm & Σ ;;;; Γ' |--- [t'] : A' # ⟦ Γ |--- [t] : A ⟧ } }
+
+with eq_translation {Σ Γ s A u v} (h : Σ ;;; Γ |-- u = v : A)
+                    (hA : Σ ;;; Γ |-- A : sSort s)
+                    {Γ'} (hΓ : Γ' ≈ Γ) {struct h} :
+  { e : sterm & { e' : sterm & { A' : sterm & { A'' : sterm &
+  { u' : sterm & { v' : sterm &
+    Σ ;;;; Γ' |--- [ e' ] : heq s A' u' A'' v' # ⟦ Γ |--- [e] : heq s A u A v ⟧
+  } } } } } }.
+Proof.
+  (** type_translation **)
+  - admit.
+
+  (** eq_translation **)
+  - admit.
+Admitted.
+
 
 End Translation.

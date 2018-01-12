@@ -10,15 +10,47 @@ Section Translation.
 Open Scope i_scope.
 
 (* Transport in the target *)
-(* Maybe it should be added to the common syntax *)
-Context (transport : sort -> sterm -> sterm -> sterm -> sterm -> sterm).
-Context (tEq : sort -> sterm -> sterm -> sterm -> sterm).
-Context (type_transport :
+Definition transport s T1 T2 p t : sterm :=
+  sApp
+    (sJ
+       (sSort s)
+       T1
+       (sProd nAnon (lift0 2 T1) (sRel 2))
+       (sLambda nAnon T1 (lift0 1 T1) (sRel 0))
+       T2
+       p)
+    nAnon T1 (lift0 1 T2)
+    t.
+
+(* Context (transport : sort -> sterm -> sterm -> sterm -> sterm -> sterm). *)
+(* Context (type_transport : *)
+(*   forall Σ Γ s T1 T2 p t , *)
+(*     Σ ;;; Γ |-- p : sEq (succ_sort s) (sSort s) T1 T2 -> *)
+(*     Σ ;;; Γ |-- t : T1 -> *)
+(*     Σ ;;; Γ |-- transport s T1 T2 p t : T2 *)
+(* ). *)
+
+Lemma type_transport :
   forall Σ Γ s T1 T2 p t ,
     Σ ;;; Γ |-- p : sEq (succ_sort s) (sSort s) T1 T2 ->
     Σ ;;; Γ |-- t : T1 ->
-    Σ ;;; Γ |-- transport s T1 T2 p t : T2
-).
+    Σ ;;; Γ |-- transport s T1 T2 p t : T2.
+Proof.
+  intros Σ Γ s T1 T2 p t h1 h2.
+  unfold transport. replace T2 with ((lift0 1 T2){ 0 := t }) at 3.
+  - eapply ITyping.type_App.
+    + instantiate (1 := s). admit. (* From inversion of h1 *)
+    + instantiate (1 := s). admit. (* From inversion of h1 *)
+    + (* eapply ITyping.type_J. *)
+      admit.
+    + assumption.
+  - admit. (* Must be a lemma somewhere. *)
+Admitted.
+
+(* Note: If transport is symbolic during this phase, then maybe we can use
+   Template Coq to deduce the derivation automatically in the ultimate target.
+   This is worth considering.
+ *)
 
 (*! Relation for translated expressions *)
 Inductive trel (E : list (nat * nat)) : sterm -> sterm -> Prop :=

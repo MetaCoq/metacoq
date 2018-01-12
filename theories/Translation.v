@@ -1,5 +1,5 @@
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
-From Template Require Import Ast SAst LiftSubst SLiftSubst Typing ITyping XTyping.
+From Template Require Import Ast SAst LiftSubst SLiftSubst SCommon Typing ITyping XTyping.
 
 (* We'll see later if we really need weakening, uniqueness and inversion of
    typing.
@@ -227,6 +227,24 @@ Proof.
 (* Transitivity is not straightforward. *)
 Admitted.
 
+Reserved Notation " Γ ≈ Δ " (at level 19).
+
+Inductive crel : scontext -> scontext -> Type :=
+| crel_empty : nil ≈ nil
+| crel_snoc Γ Δ n t m u : Γ ≈ Δ -> t ∼ u -> (Γ ,, svass n t) ≈ (Δ ,, svass m u)
+
+where " Γ ≈ Δ " := (crel Γ Δ).
+
+
+(*! Notion of translation *)
+Definition trans Σ Γ A t Γ' A' t' :=
+  (* squash (Σ ;;; Γ |-- t : A) * *)
+  (
+    Γ' ≈ Γ *
+    A' ∼ A *
+    t' ∼ t *
+    (Σ ;;; Γ' |-- t' : A')
+  )%type.
 
 
 End Translation.

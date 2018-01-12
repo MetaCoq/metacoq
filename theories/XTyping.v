@@ -6,7 +6,7 @@ Reserved Notation " Σ ;;; Γ |-- t = u : T " (at level 50, Γ, t, u, T at next 
 
 Open Scope s_scope.
 
-Inductive typing (Σ : global_context) (Γ : context) : sterm -> sterm -> Set :=
+Inductive typing (Σ : global_context) (Γ : scontext) : sterm -> sterm -> Set :=
 | type_Rel n : forall (isdecl : n < List.length Γ),
     Σ ;;; Γ |-- (sRel n) : lift0 (S n) (safe_nth Γ (exist _ n isdecl)).(decl_type)
 
@@ -15,18 +15,18 @@ Inductive typing (Σ : global_context) (Γ : context) : sterm -> sterm -> Set :=
 
 | type_Prod n t b s1 s2 :
     Σ ;;; Γ |-- t : sSort s1 ->
-    Σ ;;; Γ ,, vass n t |-- b : sSort s2 ->
+    Σ ;;; Γ ,, svass n t |-- b : sSort s2 ->
     Σ ;;; Γ |-- (sProd n t b) : sSort (max_sort s1 s2)
 
 | type_Lambda n n' t b s1 s2 bty :
     Σ ;;; Γ |-- t : sSort s1 ->
-    Σ ;;; Γ ,, vass n t |-- bty : sSort s2 ->
-    Σ ;;; Γ ,, vass n t |-- b : bty ->
+    Σ ;;; Γ ,, svass n t |-- bty : sSort s2 ->
+    Σ ;;; Γ ,, svass n t |-- b : bty ->
     Σ ;;; Γ |-- (sLambda n t bty b) : sProd n' t bty
 
 | type_App n s1 s2 t A B u :
     Σ ;;; Γ |-- A : sSort s1 ->
-    Σ ;;; Γ ,, vass n A |-- B : sSort s2 ->
+    Σ ;;; Γ ,, svass n A |-- B : sSort s2 ->
     Σ ;;; Γ |-- t : sProd n A B ->
     Σ ;;; Γ |-- u : A ->
     Σ ;;; Γ |-- (sApp t n A B u) : B{ 0 := u }
@@ -50,7 +50,7 @@ Inductive typing (Σ : global_context) (Γ : context) : sterm -> sterm -> Set :=
 
 where " Σ ;;; Γ |-- t : T " := (@typing Σ Γ t T) : x_scope
 
-with eq_term (Σ : global_context) (Γ : context) : sterm -> sterm -> sterm -> Prop :=
+with eq_term (Σ : global_context) (Γ : scontext) : sterm -> sterm -> sterm -> Prop :=
 | eq_reflexivity u A :
     Σ ;;; Γ |-- u : A ->
     Σ ;;; Γ |-- u = u : A
@@ -66,8 +66,8 @@ with eq_term (Σ : global_context) (Γ : context) : sterm -> sterm -> sterm -> P
 
 | eq_beta s1 s2 n A B t u :
     Σ ;;; Γ |-- A : sSort s1 ->
-    Σ ;;; Γ ,, vass n A |-- B : sSort s2 ->
-    Σ ;;; Γ ,, vass n A |-- t : B ->
+    Σ ;;; Γ ,, svass n A |-- B : sSort s2 ->
+    Σ ;;; Γ ,, svass n A |-- t : B ->
     Σ ;;; Γ |-- u : A ->
     Σ ;;; Γ |-- sApp (sLambda n A B t) n A B u = t{ 0 := u } : B{ 0 := u }
 
@@ -78,18 +78,18 @@ with eq_term (Σ : global_context) (Γ : context) : sterm -> sterm -> sterm -> P
 
 | cong_Prod n1 n2 A1 A2 B1 B2 s1 s2 :
     Σ ;;; Γ |-- A1 = A2 : sSort s1 ->
-    Σ ;;; Γ ,, vass n1 A1 |-- B1 = B2 : sSort s2 ->
+    Σ ;;; Γ ,, svass n1 A1 |-- B1 = B2 : sSort s2 ->
     Σ ;;; Γ |-- (sProd n1 A1 B1) = (sProd n2 A2 B2) : sSort (max_sort s1 s2)
 
 | cong_Lambda n1 n2 n' A1 A2 B1 B2 t1 t2 s1 s2 :
     Σ ;;; Γ |-- A1 = A2 : sSort s1 ->
-    Σ ;;; Γ ,, vass n1 A1 |-- B1 = B2 : sSort s2 ->
-    Σ ;;; Γ ,, vass n1 A1 |-- t1 = t2 : B1 ->
+    Σ ;;; Γ ,, svass n1 A1 |-- B1 = B2 : sSort s2 ->
+    Σ ;;; Γ ,, svass n1 A1 |-- t1 = t2 : B1 ->
     Σ ;;; Γ |-- (sLambda n1 A1 B1 t1) = (sLambda n2 A2 B2 t2) : sProd n' A1 B1
 
 | cong_App n1 n2 s1 s2 t1 t2 A1 A2 B1 B2 u1 u2 :
     Σ ;;; Γ |-- A1 = A2 : sSort s1 ->
-    Σ ;;; Γ ,, vass n1 A1 |-- B1 = B2 : sSort s2 ->
+    Σ ;;; Γ ,, svass n1 A1 |-- B1 = B2 : sSort s2 ->
     Σ ;;; Γ |-- t1 = t2 : sProd n1 A1 B1 ->
     Σ ;;; Γ |-- u1 = u2 : A1 ->
     Σ ;;; Γ |-- (sApp t1 n1 A1 B1 u1) = (sApp t2 n2 A2 B2 u2) : B1{ 0 := u1 }

@@ -7,6 +7,7 @@ From Template Require Import Ast SAst LiftSubst SLiftSubst SCommon Typing ITypin
 
 Section Translation.
 
+Open Scope x_scope.
 Open Scope i_scope.
 
 (* Transport in the target *)
@@ -48,9 +49,9 @@ Ltac fold_transport :=
 
 Lemma type_transport :
   forall Σ Γ s T1 T2 p t ,
-    Σ ;;; Γ |-- p : sEq (succ_sort s) (sSort s) T1 T2 ->
-    Σ ;;; Γ |-- t : T1 ->
-    Σ ;;; Γ |-- transport s T1 T2 p t : T2.
+    Σ ;;; Γ |-i p : sEq (succ_sort s) (sSort s) T1 T2 ->
+    Σ ;;; Γ |-i t : T1 ->
+    Σ ;;; Γ |-i transport s T1 T2 p t : T2.
 Proof.
   intros Σ Γ s T1 T2 p t h1 h2.
   unfold transport. replace T2 with ((lift0 1 T2){ 0 := t }) at 3.
@@ -117,8 +118,8 @@ Definition heq s A a B b :=
 
 Lemma heq_to_eq :
   forall {Σ Γ s A u v e},
-    Σ ;;; Γ |-- e : heq s A u A v ->
-    { p : sterm & Σ ;;; Γ |-- p : sEq s A u v }.
+    Σ ;;; Γ |-i e : heq s A u A v ->
+    { p : sterm & Σ ;;; Γ |-i p : sEq s A u v }.
 Proof.
   intros Σ Γ s A u v e h.
   unfold heq in h.
@@ -139,8 +140,8 @@ Admitted.
 
 Corollary type_heq :
   forall {Σ Γ s A B e},
-    Σ ;;; Γ |-- e : heq (succ_sort s) (sSort s) A (sSort s) B ->
-    { p : sterm & Σ ;;; Γ |-- p : sEq (succ_sort s) (sSort s) A B }.
+    Σ ;;; Γ |-i e : heq (succ_sort s) (sSort s) A (sSort s) B ->
+    { p : sterm & Σ ;;; Γ |-i p : sEq (succ_sort s) (sSort s) A B }.
 Proof.
   intros Σ Γ s A B e h.
   now eapply heq_to_eq.
@@ -150,19 +151,19 @@ Lemma trelE_to_heq :
   forall {E Σ Γ},
     (forall x y s T1 T2,
         In (x,y) E ->
-        Σ ;;; Γ |-- T1 : sSort s ->
-        Σ ;;; Γ |-- T2 : sSort s ->
-        Σ ;;; Γ |-- sRel x : T1 ->
-        Σ ;;; Γ |-- sRel y : T2 ->
-        { p : sterm & Σ ;;; Γ |-- p : heq s T1 (sRel x) T2 (sRel y) }) ->
+        Σ ;;; Γ |-i T1 : sSort s ->
+        Σ ;;; Γ |-i T2 : sSort s ->
+        Σ ;;; Γ |-i sRel x : T1 ->
+        Σ ;;; Γ |-i sRel y : T2 ->
+        { p : sterm & Σ ;;; Γ |-i p : heq s T1 (sRel x) T2 (sRel y) }) ->
     forall {t1 t2},
       trel E t1 t2 ->
       forall {s T1 T2},
-        Σ ;;; Γ |-- T1 : sSort s ->
-        Σ ;;; Γ |-- T2 : sSort s ->
-        Σ ;;; Γ |-- t1 : T1 ->
-        Σ ;;; Γ |-- t2 : T2 ->
-        { p : sterm & Σ ;;; Γ |-- p : heq s T1 t1 T2 t2 }.
+        Σ ;;; Γ |-i T1 : sSort s ->
+        Σ ;;; Γ |-i T2 : sSort s ->
+        Σ ;;; Γ |-i t1 : T1 ->
+        Σ ;;; Γ |-i t2 : T2 ->
+        { p : sterm & Σ ;;; Γ |-i p : heq s T1 t1 T2 t2 }.
 Proof.
   intros E Σ Γ H t1 t2. induction 1 ; intros s' A B H1 H2 H3 H4.
   - now apply H.
@@ -175,11 +176,11 @@ Admitted.
 Corollary trel_to_heq :
   forall {Σ Γ s T1 T2} {t1 t2 : sterm},
     t1 ∼ t2 ->
-    Σ ;;; Γ |-- T1 : sSort s ->
-    Σ ;;; Γ |-- T2 : sSort s ->
-    Σ ;;; Γ |-- t1 : T1 ->
-    Σ ;;; Γ |-- t2 : T2 ->
-    { p : sterm & Σ ;;; Γ |-- p : heq s T1 t1 T2 t2 }.
+    Σ ;;; Γ |-i T1 : sSort s ->
+    Σ ;;; Γ |-i T2 : sSort s ->
+    Σ ;;; Γ |-i t1 : T1 ->
+    Σ ;;; Γ |-i t2 : T2 ->
+    { p : sterm & Σ ;;; Γ |-i p : heq s T1 t1 T2 t2 }.
 Proof.
   intros Σ Γ s T1 T2 t1 t2 H H0 H1 H2 H3.
   now apply @trelE_to_heq with (E := nil).
@@ -238,12 +239,12 @@ where " Γ ≈ Δ " := (crel Γ Δ).
 
 (*! Notion of translation *)
 Definition trans Σ Γ A t Γ' A' t' :=
-  (* squash (Σ ;;; Γ |-- t : A) * *)
+  (* squash (Σ ;;; Γ |-x t : A) * *)
   (
     Γ' ≈ Γ *
     A' ∼ A *
     t' ∼ t *
-    (Σ ;;; Γ' |-- t' : A')
+    (Σ ;;; Γ' |-i t' : A')
   )%type.
 
 Notation " Σ ;;;; Γ' |--- [ t' ] : A' # ⟦ Γ |--- [ t ] : A ⟧ " :=
@@ -312,12 +313,12 @@ Admitted.
 
 
 (*! Translation *)
-Fixpoint type_translation {Σ Γ A t} (h : Σ ;;; Γ |-- t : A)
+Fixpoint type_translation {Σ Γ A t} (h : Σ ;;; Γ |-x t : A)
                           {Γ'} (hΓ : Γ' ≈ Γ) {struct h} :
   { A' : sterm & { t' : sterm & Σ ;;;; Γ' |--- [t'] : A' # ⟦ Γ |--- [t] : A ⟧ } }
 
-with eq_translation {Σ Γ s A u v} (h : Σ ;;; Γ |-- u = v : A)
-                    (hA : Σ ;;; Γ |-- A : sSort s)
+with eq_translation {Σ Γ s A u v} (h : Σ ;;; Γ |-x u = v : A)
+                    (hA : Σ ;;; Γ |-x A : sSort s)
                     {Γ'} (hΓ : Γ' ≈ Γ) {struct h} :
   { e : sterm & { e' : sterm & { A' : sterm & { A'' : sterm &
   { u' : sterm & { v' : sterm &

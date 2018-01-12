@@ -65,7 +65,7 @@ Notation " t1 ~ t2 " := (trel nil t1 t2) (at level 20).
 (*! Heterogenous equality *)
 Definition heq s A a B b :=
   sSig nAnon (sEq (succ_sort s) (sSort s) A B)
-       (sEq s (lift0 1 B) (transport s A B (sRel 0) (lift0 1 a)) (lift0 1 b)).
+       (sEq s (lift0 1 B) (transport s (lift0 1 A) (lift0 1 B) (sRel 0) (lift0 1 a)) (lift0 1 b)).
 
 Lemma heq_to_eq :
   forall {Σ Γ s A u v e},
@@ -73,7 +73,20 @@ Lemma heq_to_eq :
     { p : sterm & Σ ;;; Γ |-- p : sEq s A u v }.
 Proof.
   intros Σ Γ s A u v e h.
-  (* This holds thanks to UIP, we'll see to it later. *)
+  unfold heq in h.
+  set (U := sEq (succ_sort s) (sSort s) A A) in h.
+  set (V := sEq s (lift0 1 A) (transport s (lift0 1 A) (lift0 1 A) (sRel 0) (lift0 1 u)) (lift0 1 v)) in h.
+  exists (sSigLet U V
+             (sEq s (lift0 1 A) (lift0 1 u) (lift0 1 v))
+             e
+             (sJ U
+                 (sRel 1)
+                 (sEq s (lift0 3 A) (transport s (lift0 3 A) (lift0 3 A) (sRel 1) (lift0 3 u)) (lift0 3 v))
+                 (sRel 0)
+                 (sRefl U A)
+                 (sUip (sSort s) A A (sRel 1) (sRefl U A))
+             )
+  ).
 Admitted.
 
 Corollary type_heq :

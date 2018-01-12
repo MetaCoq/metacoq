@@ -49,7 +49,8 @@ Inductive typing (Σ : global_context) (Γ : context) : sterm -> sterm -> Set :=
     Σ ;;; Γ |-- v : A ->
     Σ ;;; Γ ,, vass nx A ,, vass ne (sEq s1 A u (sRel 0)) |-- P : sSort s2 ->
     Σ ;;; Γ |-- p : sEq s1 A u v ->
-    Σ ;;; Γ |-- w : P{ 1 := u }{ 0 := sRefl A u }
+    Σ ;;; Γ |-- w : P{ 1 := u }{ 0 := sRefl A u } ->
+    Σ ;;; Γ |-- sJ A u P w v p : P{ 1 := v }{ 0 := p }
 
 | type_Uip s A u v p q :
     Σ ;;; Γ |-- p : sEq s A u v ->
@@ -111,6 +112,13 @@ with eq_term (Σ : global_context) (Γ : context) : sterm -> sterm -> sterm -> P
     Σ ;;; Γ |-- u : A ->
     Σ ;;; Γ |-- sApp (sLambda n A B t) n A B u = t{ 0 := u } : B{ 0 := u }
 
+| eq_JRefl nx ne s1 s2 A u v P p w :
+    Σ ;;; Γ |-- A : sSort s1 ->
+    Σ ;;; Γ |-- u : A ->
+    Σ ;;; Γ ,, vass nx A ,, vass ne (sEq s1 A u (sRel 0)) |-- P : sSort s2 ->
+    Σ ;;; Γ |-- w : P{ 1 := u }{ 0 := sRefl A u } ->
+    Σ ;;; Γ |-- sJ A u P w u (sRefl A u) = w : P{ 1 := u }{ 0 := sRefl A u }
+
 | eq_conv s T1 T2 t1 t2 :
     Σ ;;; Γ |-- t1 = t2 : T1 ->
     Σ ;;; Γ |-- T1 = T2 : sSort s ->
@@ -151,7 +159,8 @@ with eq_term (Σ : global_context) (Γ : context) : sterm -> sterm -> sterm -> P
     Σ ;;; Γ |-- v1 = v2 : A1 ->
     Σ ;;; Γ ,, vass nx A1 ,, vass ne (sEq s1 A1 u1 (sRel 0)) |-- P1 = P2 : sSort s2 ->
     Σ ;;; Γ |-- p1 = p2 : sEq s1 A1 u1 v1 ->
-    Σ ;;; Γ |-- w1 = w2 : P1{ 1 := u1 }{ 0 := sRefl A1 u1 }
+    Σ ;;; Γ |-- w1 = w2 : P1{ 1 := u1 }{ 0 := sRefl A1 u1 } ->
+    Σ ;;; Γ |-- sJ A1 u1 P1 w1 v1 p1 = sJ A2 u2 P2 w2 v2 p2 : P1{ 1 := v1 }{ 0 := p1 }
 
 | cong_Uip s A1 A2 u1 u2 v1 v2 p1 p2 q1 q2 :
     Σ ;;; Γ |-- p1 = p2 : sEq s A1 u1 v1 ->

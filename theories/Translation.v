@@ -246,5 +246,61 @@ Definition trans Σ Γ A t Γ' A' t' :=
     (Σ ;;; Γ' |-- t' : A')
   )%type.
 
+Notation " Σ ;;;; Γ' |--- [ t' ] : A' # ⟦ Γ |--- [ t ] : A ⟧ " :=
+  (trans Σ Γ A t Γ' A' t')
+    (at level 7) : i_scope.
+
+(* Notion of head *)
+Inductive head_kind :=
+| headRel
+| headSort
+| headProd
+| headLambda
+| headApp
+| headEq
+| headRefl
+| headJ
+| headUip
+| headFunext
+| headSig
+| headPair
+| headSigLet
+.
+
+Definition head (t : sterm) : head_kind :=
+  match t with
+  | sRel x => headRel
+  | sSort s => headSort
+  | sProd n A B => headProd
+  | sLambda n A B t => headLambda
+  | sApp u n A B v => headApp
+  | sEq s A u v => headEq
+  | sRefl A u => headRefl
+  | sJ A u P w v p => headJ
+  | sUip A u v p q => headUip
+  | sFunext A B f g e => headFunext
+  | sSig n A B => headSig
+  | sPair A B u v => headPair
+  | sSigLet A B P p t => headSigLet
+  end.
+
+Lemma choose_type :
+  forall {Σ Γ A t Γ' A' t'},
+    Σ ;;;; Γ' |--- [ t' ] : A' # ⟦ Γ |--- [t] : A ⟧ ->
+    { A'' : sterm &
+      { t'' : sterm & Σ ;;;; Γ' |--- [ t'' ] : A'' # ⟦ Γ |--- [t] : A ⟧ } *
+      (head A'' = head A)
+    }%type.
+Proof.
+  intros Σ Γ A t Γ' A' t' [[[hΓ hA] ht] h].
+  induction hA.
+  - easy.
+  - exists (sRel x). split.
+    + exists t'. repeat split ; try easy. apply trel_refl.
+    + reflexivity.
+  - (* We must introduce t' and maybe even Γ' after the induction to have a
+       strong hypothesis. *)
+Admitted.
+
 
 End Translation.

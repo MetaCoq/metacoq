@@ -112,7 +112,7 @@ with eq_term (Σ : global_context) (Γ : context) : sterm -> sterm -> sterm -> P
     Σ ;;; Γ |-- u : A ->
     Σ ;;; Γ |-- sApp (sLambda n A B t) n A B u = t{ 0 := u } : B{ 0 := u }
 
-| eq_JRefl nx ne s1 s2 A u v P p w :
+| eq_JRefl nx ne s1 s2 A u P w :
     Σ ;;; Γ |-- A : sSort s1 ->
     Σ ;;; Γ |-- u : A ->
     Σ ;;; Γ ,, vass nx A ,, vass ne (sEq s1 A u (sRel 0)) |-- P : sSort s2 ->

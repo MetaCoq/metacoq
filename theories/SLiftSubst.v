@@ -29,11 +29,11 @@ Fixpoint lift n k t : sterm :=
   | sSig na A B => sSig na (lift n k A) (lift n (S k) B)
   | sPair A B u v =>
     sPair (lift n k A) (lift n (S k) B) (lift n k u) (lift n k v)
-  | sSigLet A B p P t =>
+  | sSigLet A B P p t =>
     sSigLet (lift n k A)
             (lift n (S k) B)
-            (lift n k p)
             (lift n (S k) P)
+            (lift n k p)
             (lift n (S (S k)) t)
   | x => x
   end.
@@ -55,6 +55,30 @@ Fixpoint subst t k u :=
   | sProd na A B => sProd na (subst t k A) (subst t (S k) B)
   | sEq s A u v => sEq s (subst t k A) (subst t k u) (subst t k v)
   | sRefl A u => sRefl (subst t k A) (subst t k u)
+  | sJ A u P w v p =>
+    sJ (subst t k A)
+       (subst t k u)
+       (subst t (S (S k)) P)
+       (subst t k w)
+       (subst t k v)
+       (subst t k p)
+  | sUip A u v p q =>
+    sUip (subst t k A) (subst t k u) (subst t k v) (subst t k p) (subst t k q)
+  | sFunext A B f g e =>
+    sFunext (subst t k A)
+            (subst t (S k) B)
+            (subst t k f)
+            (subst t k g)
+            (subst t k e)
+  | sSig na A B => sSig na (subst t k A) (subst t (S k) B)
+  | sPair A B u v =>
+    sPair (subst t k A) (subst t (S k) B) (subst t k u) (subst t k v)
+  | sSigLet A B P p t =>
+    sSigLet (subst t k A)
+            (subst t (S k) B)
+            (subst t (S k) P)
+            (subst t k p)
+            (subst t (S (S k)) t)
   | x => x
   end.
 

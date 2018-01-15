@@ -384,7 +384,39 @@ Lemma trelE_to_heq :
 Proof.
   intros E Σ Γ H t1 t2. induction 1 ; intros s' A B H1 H2 H3 H4.
   - now apply H.
-  - admit. (* Need uniqueness of typing. *)
+  - destruct (uniqueness H3 H4) as [s eq].
+    unfold heq. cbn.
+    set (U := sEq (succ_sort s') (sSort s') A B).
+    set (V := sEq s' (lift0 1 B) (transport s' (lift0 1 A) (lift0 1 B) (sRel 0) (sRel (S x))) (sRel (S x))).
+    exists (sPair U V (sRefl (sSort s') A) (sRefl (lift0 1 B) (sRel (S x)))).
+    eapply type_Pair.
+    + eapply type_Eq.
+      * apply type_Sort.
+      * assumption.
+      * assumption.
+    + eapply type_Eq.
+      * (* Lemma for lift *)
+        admit.
+      * (* Lemma for lift *)
+        admit.
+      * (* Lemma for lift *)
+        admit.
+    + eapply type_Conv.
+      * apply type_Refl.
+        -- apply type_Sort.
+        -- assumption.
+      * eapply type_Eq.
+        -- apply type_Sort.
+        -- assumption.
+        -- assumption.
+      * apply cong_Eq.
+        -- apply eq_reflexivity. apply type_Sort.
+        -- apply eq_reflexivity. assumption.
+        -- (* We have the right assumption with the wrong sort... *)
+           (* We probably need a lemma that says that u = v : A implies u : A *)
+           admit.
+    + (* This is me being lazy? *)
+      admit.
   - admit. (* Need inversion on typing of transport *)
   - admit. (* Need inversion on typing of transport *)
   - admit. (* Need inversion on typing *)

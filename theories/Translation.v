@@ -523,13 +523,26 @@ Proof.
     + apply trel_Rel.
   - unfold transport. cbn. Fail fold_transport.
     (* We actually need the lemmata about lift and subst... *)
+    admit.
+  - admit.
+  - cbn. now apply trel_Prod.
+  - cbn. now apply trel_Eq.
+  - cbn. now apply trel_Sig.
+  - cbn. now apply trel_Sort.
+  - cbn. now apply trel_Lambda.
+  - cbn. now apply trel_App.
+  - cbn. now apply trel_Refl.
+  - cbn. now apply trel_Funext.
+  - cbn. now apply trel_Uip.
+  - cbn. now apply trel_J.
+  - cbn. now apply trel_Pair.
+  - cbn. now apply trel_SigLet.
 Admitted.
 
 Lemma trel_refl : forall {t}, t ∼ t.
 Proof.
   induction t ; try (now constructor).
-  (* The other cases are just not implemented yet. *)
-Admitted.
+Defined.
 
 Lemma trel_sym : forall {t1 t2}, t1 ∼ t2 -> t2 ∼ t1.
 Proof.

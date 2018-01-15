@@ -577,12 +577,10 @@ where " Γ ≈ Δ " := (crel Γ Δ).
 (*! Notion of translation *)
 Definition trans Σ Γ A t Γ' A' t' :=
   (* squash (Σ ;;; Γ |-x t : A) * *)
-  (
-    Γ' ≈ Γ *
-    A' ∼ A *
-    t' ∼ t *
-    (Σ ;;; Γ' |-i t' : A')
-  )%type.
+  Γ' ≈ Γ *
+  A' ∼ A *
+  t' ∼ t *
+  (Σ ;;; Γ' |-i t' : A').
 
 Notation " Σ ;;;; Γ' |--- [ t' ] : A' # ⟦ Γ |--- [ t ] : A ⟧ " :=
   (trans Σ Γ A t Γ' A' t')
@@ -622,6 +620,62 @@ Definition head (t : sterm) : head_kind :=
   | sSigLet A B P p t => headSigLet
   end.
 
+Lemma choose_type' :
+  forall {Σ A A'},
+    A' ∼ A ->
+    forall {Γ Γ' t t'},
+      Γ' ≈ Γ ->
+      t' ∼ t ->
+      (Σ ;;; Γ' |-i t' : A') ->
+      ∑ A'',
+        (∑ t'', Σ ;;;; Γ' |--- [ t'' ] : A'' # ⟦ Γ |--- [t] : A ⟧) *
+        (head A'' = head A).
+Proof.
+  intros Σ A A' hA. induction hA ; intros Γ Γ' t t' hΓ ht h.
+  - easy.
+  - exists (sRel x). split.
+    + exists t'. repeat split ; try easy. apply trel_refl.
+    + reflexivity.
+  - (* TODO *) admit.
+  - (* TODO *) admit.
+  - exists (sProd n1 A1 B1). split.
+    + exists t'. repeat split ; try easy. now apply trel_Prod.
+    + reflexivity.
+  - exists (sEq s A1 u1 v1). split.
+    + exists t'. repeat split ; try easy. now apply trel_Eq.
+    + reflexivity.
+  - exists (sSig n1 A1 B1). split.
+    + exists t'. repeat split ; try easy. now apply trel_Sig.
+    + reflexivity.
+  - exists (sSort s). split.
+    + exists t'. repeat split ; try easy. now apply trel_Sort.
+    + reflexivity.
+  - exists (sLambda n1 A1 B1 u1). split.
+    + exists t'. repeat split ; try easy. now apply trel_Lambda.
+    + reflexivity.
+  - exists (sApp u1 n1 A1 B1 v1). split.
+    + exists t'. repeat split ; try easy. now apply trel_App.
+    + reflexivity.
+  - exists (sRefl A1 u1). split.
+    + exists t'. repeat split ; try easy. now apply trel_Refl.
+    + reflexivity.
+  - exists (sFunext A1 B1 f1 g1 e1). split.
+    + exists t'. repeat split ; try easy. now apply trel_Funext.
+    + reflexivity.
+  - exists (sUip A1 u1 v1 p1 q1). split.
+    + exists t'. repeat split ; try easy. now apply trel_Uip.
+    + reflexivity.
+  - exists (sJ A1 u1 P1 w1 v1 p1). split.
+    + exists t'. repeat split ; try easy. now apply trel_J.
+    + reflexivity.
+  - exists (sPair A1 B1 u1 v1). split.
+    + exists t'. repeat split ; try easy. now apply trel_Pair.
+    + reflexivity.
+  - exists (sSigLet A1 B1 P1 p1 t1). split.
+    + exists t'. repeat split ; try easy. now apply trel_SigLet.
+    + reflexivity.
+Admitted.
+
 Lemma choose_type :
   forall {Σ Γ A t Γ' A' t'},
     Σ ;;;; Γ' |--- [ t' ] : A' # ⟦ Γ |--- [t] : A ⟧ ->
@@ -630,14 +684,8 @@ Lemma choose_type :
       (head A'' = head A).
 Proof.
   intros Σ Γ A t Γ' A' t' [[[hΓ hA] ht] h].
-  induction hA.
-  - easy.
-  - exists (sRel x). split.
-    + exists t'. repeat split ; try easy. apply trel_refl.
-    + reflexivity.
-  - (* We must introduce t' and maybe even Γ' after the induction to have a
-       strong hypothesis. *)
-Admitted.
+  now eapply choose_type'.
+Defined.
 
 Lemma change_type :
   forall {Σ Γ A t Γ' A' t' s A''},

@@ -1,13 +1,14 @@
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
 From Template Require Import Ast SAst Typing SLiftSubst.
 
-Record scontext_decl := { decl_name : name ;
-                         decl_body : option sterm ;
-                         decl_type : sterm }.
+Record scontext_decl := { sdecl_name : name ;
+                          sdecl_body : option sterm ;
+                          sdecl_type : sterm }.
 
-Definition svass x A := {| decl_name := x; decl_body := None; decl_type := A |}.
+Definition svass x A :=
+  {| sdecl_name := x; sdecl_body := None; sdecl_type := A |}.
 Definition svdef x t A :=
-  {| decl_name := x; decl_body := Some t; decl_type := A |}.
+  {| sdecl_name := x; sdecl_body := Some t; sdecl_type := A |}.
 
 Definition scontext := (list scontext_decl).
 

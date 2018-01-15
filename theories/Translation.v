@@ -1,5 +1,6 @@
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
-From Template Require Import Ast SAst LiftSubst SLiftSubst SCommon Typing ITyping XTyping.
+From Template Require Import Ast SAst LiftSubst SLiftSubst SCommon Typing
+                             XTyping ITyping.
 
 (* We'll see later if we really need weakening, uniqueness and inversion of
    typing.
@@ -10,7 +11,72 @@ Section Translation.
 Open Scope x_scope.
 Open Scope i_scope.
 
-(* Transport in the target *)
+(*! Preliminary lemmata *)
+
+Lemma uniqueness :
+  forall {Σ Γ A B u},
+    Σ ;;; Γ |-i u : A ->
+    Σ ;;; Γ |-i u : B ->
+   { s : sort & Σ ;;; Γ |-i A = B : sSort s }.
+Admitted.
+
+(* We state several inversion lemmata on a by need basis. *)
+
+Lemma inversionRel :
+  forall {Σ Γ n T},
+    Σ ;;; Γ |-i sRel n : T ->
+    { isdecl : n < List.length Γ &
+    { s : sort &
+      let A := lift0 (S n) (safe_nth Γ (exist _ n isdecl)).(sdecl_type) in
+      Σ ;;; Γ |-i A = T : sSort s
+    } }.
+Proof.
+  intros Σ Γ n T h. dependent induction h.
+  - exists isdecl. (* We need to have a well-typed context to conclude! *)
+    admit.
+  - destruct (IHh1 n (eq_refl _)) as [isdecl [s' h]].
+    exists isdecl, s'.
+    eapply eq_transitivity.
+    + exact h.
+    + (* Again a sorting problem... *)
+      admit.
+Admitted.
+
+(* Lemma inversionSort *)
+(* Lemma inversionProd *)
+(* Lemma inversionLambda *)
+(* Lemma inversionApp *)
+
+Lemma inversionEq :
+  forall {Σ Γ s A u v T},
+    Σ ;;; Γ |-i sEq s A u v : T ->
+    ((Σ ;;; Γ |-i A : sSort s) *
+     (Σ ;;; Γ |-i u : A) *
+     (Σ ;;; Γ |-i v : A) *
+     (Σ ;;; Γ |-i sSort s = T : sSort (succ_sort s)))%type.
+Proof.
+  intros Σ Γ s A u v T h.
+  dependent induction h.
+  - repeat split ; try easy.
+    eapply eq_reflexivity. apply type_Sort.
+  - destruct (IHh1 s A u v (eq_refl _)) as [[[hA hu] hv] heq].
+    repeat split ; try easy.
+    eapply eq_transitivity.
+    + exact heq.
+    + (* Once again, we have two sorts that are the same. *)
+      admit.
+Admitted.
+
+(* Lemma inversionRefl *)
+(* Lemma inversionJ *)
+(* Lemma inversionUip *)
+(* Lemma inversionFunext *)
+(* Lemma inversionSig *)
+(* Lemma inversionPair *)
+(* Lemma inversionSigLet *)
+
+
+(*! Transport in the target *)
 Definition transport s T1 T2 p t : sterm :=
   sApp
     (sJ

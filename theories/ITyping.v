@@ -8,7 +8,7 @@ Open Scope s_scope.
 
 Inductive typing (Σ : global_context) (Γ : scontext) : sterm -> sterm -> Set :=
 | type_Rel n : forall (isdecl : n < List.length Γ),
-    Σ ;;; Γ |-i (sRel n) : lift0 (S n) (safe_nth Γ (exist _ n isdecl)).(decl_type)
+    Σ ;;; Γ |-i (sRel n) : lift0 (S n) (safe_nth Γ (exist _ n isdecl)).(sdecl_type)
 
 | type_Sort s :
     Σ ;;; Γ |-i (sSort s) : sSort (succ_sort s)

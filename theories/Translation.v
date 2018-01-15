@@ -2,12 +2,13 @@ From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
 From Template Require Import Ast SAst LiftSubst SLiftSubst SCommon Typing
                              XTyping ITyping.
 
-(* We'll see later if we really need weakening, uniqueness and inversion of
-   typing.
- *)
+(* Preamble *)
+Notation "'∑'  x .. y , P" := (sigT (fun x => .. (sigT (fun y => P)) ..))
+  (at level 200, x binder, y binder, right associativity) : type_scope.
 
 Section Translation.
 
+Open Scope type_scope.
 Open Scope x_scope.
 Open Scope i_scope.
 
@@ -52,7 +53,7 @@ Lemma uniqueness :
   forall {Σ Γ A B u},
     Σ ;;; Γ |-i u : A ->
     Σ ;;; Γ |-i u : B ->
-   { s : sort & Σ ;;; Γ |-i A = B : sSort s }.
+    ∑ s, Σ ;;; Γ |-i A = B : sSort s.
 Admitted.
 
 (* We state several inversion lemmata on a by need basis. *)
@@ -60,11 +61,9 @@ Admitted.
 Lemma inversionRel :
   forall {Σ Γ n T},
     Σ ;;; Γ |-i sRel n : T ->
-    { isdecl : n < List.length Γ &
-    { s : sort &
+    ∑ isdecl s,
       let A := lift0 (S n) (safe_nth Γ (exist _ n isdecl)).(sdecl_type) in
-      Σ ;;; Γ |-i A = T : sSort s
-    } }.
+      Σ ;;; Γ |-i A = T : sSort s.
 Proof.
   intros Σ Γ n T h. dependent induction h.
   - exists isdecl. (* We need to have a well-typed context to conclude! *)
@@ -80,7 +79,33 @@ Admitted.
 (* Lemma inversionSort *)
 (* Lemma inversionProd *)
 (* Lemma inversionLambda *)
-(* Lemma inversionApp *)
+
+Lemma inversionApp :
+  forall {Σ Γ t n A B u T},
+    Σ ;;; Γ |-i sApp t n A B u : T ->
+    ∑ s1 s2,
+      (Σ ;;; Γ |-i A : sSort s1) *
+      (Σ ;;; Γ ,, svass n A |-i B : sSort s2) *
+      (Σ ;;; Γ |-i t : sProd n A B) *
+      (Σ ;;; Γ |-i u : A) *
+      (Σ ;;; Γ |-i B{ 0 := u } = T : sSort s2).
+Proof.
+  intros Σ Γ t n A B u T H.
+  dependent induction H.
+
+  - exists s1, s2.
+    repeat split ; try easy.
+    apply eq_reflexivity.
+    (* Substitution lemma *)
+    admit.
+
+  - destruct (IHtyping1 t n A B u (eq_refl _)) as [s1 [s2 [[[[? ?] ?] ?] ?]]].
+    exists s1, s2. repeat split ; try easy.
+    eapply eq_transitivity.
+    + eassumption.
+    + (* Wrong sort again! *)
+      admit.
+Admitted.
 
 Lemma inversionEq :
   forall {Σ Γ s A u v T},
@@ -103,7 +128,36 @@ Proof.
 Admitted.
 
 (* Lemma inversionRefl *)
-(* Lemma inversionJ *)
+
+Lemma inversionJ :
+  forall {Σ Γ A u P w v p T},
+    Σ ;;; Γ |-i sJ A u P w v p : T ->
+    ∑ s1 s2 nx ne,
+      (Σ ;;; Γ |-i A : sSort s1) *
+      (Σ ;;; Γ |-i u : A) *
+      (Σ ;;; Γ |-i v : A) *
+      (Σ ;;; Γ ,, svass nx A ,, svass ne (sEq s1 A u (sRel 0)) |-i P : sSort s2) *
+      (Σ ;;; Γ |-i p : sEq s1 A u v) *
+      (Σ ;;; Γ |-i w : (P {1 := u}){0 := sRefl A u}) *
+      (Σ ;;; Γ |-i P{1 := v}{0 := p} = T : sSort s2).
+Proof.
+  intros Σ Γ A u P w v p T H.
+  dependent induction H.
+
+  - exists s1, s2, nx, ne. repeat split ; try easy.
+    apply eq_reflexivity.
+    (* Substitution lemma *)
+    admit.
+
+  - destruct (IHtyping1 A u P w v p (eq_refl _))
+      as [s1 [s2 [nx [ne [[[[[[? ?] ?] ?] ?] ?] ?]]]]].
+    exists s1, s2, nx, ne. repeat split ; try easy.
+    eapply eq_transitivity.
+    + eassumption.
+    + (* Once again, we have two sorts that are the same. *)
+      admit.
+Admitted.
+
 (* Lemma inversionUip *)
 (* Lemma inversionFunext *)
 (* Lemma inversionSig *)
@@ -225,6 +279,26 @@ Proof.
     1,2,4: exact nAnon.
     all:cbn. all:easy.
 Admitted.
+
+Lemma inversionTransport :
+  forall {Σ Γ s T1 T2 p t T},
+    Σ ;;; Γ |-i transport s T1 T2 p t : T ->
+    (Σ ;;; Γ |-i p : sEq (succ_sort s) (sSort s) T1 T2) *
+    (Σ ;;; Γ |-i t : T1) *
+    (Σ ;;; Γ |-i T2 = T : sSort s).
+Proof.
+  intros Σ Γ s T1 T2 p t T h.
+  unfold transport in h.
+  destruct (inversionApp h) as [s1 [s2 [[[[? ?] hJ] ?] ?]]].
+  destruct (inversionJ hJ) as [s3 [s4 [nx [ne [[[[[[? ?] ?] ?] ?] ?] ?]]]]].
+  repeat split.
+  - (* We have the assumption with the wrong sort! *)
+    admit.
+  - assumption.
+  - (* We have the assumption but it needs lemma fot lift and subst *)
+    admit.
+Admitted.
+
 
 (* Note: If transport is symbolic during this phase, then maybe we can use
    Template Coq to deduce the derivation automatically in the ultimate target.

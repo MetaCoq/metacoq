@@ -3,6 +3,7 @@ Template Coq
 ============
 
 [![Build Status](https://travis-ci.org/Template-Coq/template-coq.svg?branch=coq-8.7)](https://travis-ci.org/Template-Coq/template-coq)
+[![Gitter](https://img.shields.io/gitter/room/nwjs/nw.js.svg)](https://gitter.im/coq/Template-Coq)
 
 Template Coq is a quoting library for [Coq](http://coq.inria.fr). It
 takes Coq terms and constructs a representation of their syntax tree as

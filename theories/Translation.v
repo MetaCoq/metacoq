@@ -259,6 +259,11 @@ Inductive trel (E : list (nat * nat)) : sterm -> sterm -> Type :=
     trel E v1 v2 ->
     trel E (sEq s A1 u1 v1) (sEq s A2 u2 v2)
 
+| trel_Sig n1 n2 A1 A2 B1 B2 :
+    trel E A1 A2 ->
+    trel E B1 B2 ->
+    trel E (sSig n1 A1 B1) (sSig n2 A2 B2)
+
 | trel_Sort s :
     trel E (sSort s) (sSort s)
 
@@ -268,7 +273,57 @@ Inductive trel (E : list (nat * nat)) : sterm -> sterm -> Type :=
     trel E u1 u2 ->
     trel E (sLambda n1 A1 B1 u1) (sLambda n2 A2 B2 u2)
 
-(* TODO *)
+| trel_App u1 u2 n1 n2 A1 A2 B1 B2 v1 v2 :
+    trel E u1 u2 ->
+    trel E A1 A2 ->
+    trel E B1 B2 ->
+    trel E v1 v2 ->
+    trel E (sApp u1 n1 A1 B1 v1) (sApp u2 n2 A2 B2 v2)
+
+| trel_Refl A1 A2 u1 u2 :
+    trel E A1 A2 ->
+    trel E u1 u2 ->
+    trel E (sRefl A1 u1) (sRefl A2 u2)
+
+| trel_Funext A1 A2 B1 B2 f1 f2 g1 g2 e1 e2 :
+    trel E A1 A2 ->
+    trel E B1 B2 ->
+    trel E f1 f2 ->
+    trel E g1 g2 ->
+    trel E e1 e2 ->
+    trel E (sFunext A1 B1 f1 g1 e1) (sFunext A2 B2 f2 g2 e2)
+
+| trel_Uip A1 A2 u1 u2 v1 v2 p1 p2 q1 q2 :
+    trel E A1 A2 ->
+    trel E u1 u2 ->
+    trel E v1 v2 ->
+    trel E p1 p2 ->
+    trel E q1 q2 ->
+    trel E (sUip A1 u1 v1 p1 q1) (sUip A2 u2 v2 p2 q2)
+
+| trel_J A1 A2 P1 P2 u1 u2 v1 v2 w1 w2 p1 p2 :
+    trel E A1 A2 ->
+    trel E P1 P2 ->
+    trel E u1 u2 ->
+    trel E v1 v2 ->
+    trel E w1 w2 ->
+    trel E p1 p2 ->
+    trel E (sJ A1 u1 P1 w1 v1 p1) (sJ A2 u2 P2 w2 v2 p2)
+
+| trel_Pair A1 A2 B1 B2 u1 u2 v1 v2 :
+    trel E A1 A2 ->
+    trel E B1 B2 ->
+    trel E u1 u2 ->
+    trel E v1 v2 ->
+    trel E (sPair A1 B1 u1 v1) (sPair A2 B2 u2 v2)
+
+| trel_SigLet A1 A2 B1 B2 P1 P2 p1 p2 t1 t2 :
+    trel E A1 A2 ->
+    trel E B1 B2 ->
+    trel E P1 P2 ->
+    trel E p1 p2 ->
+    trel E t1 t2 ->
+    trel E (sSigLet A1 B1 P1 p1 t1) (sSigLet A2 B2 P2 p2 t2)
 .
 
 Notation " t1 ∼ t2 " := (trel nil t1 t2) (at level 20).

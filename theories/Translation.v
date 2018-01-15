@@ -158,13 +158,72 @@ Proof.
   unfold transport. replace T2 with ((lift0 1 T2){ 0 := t }) at 3.
   - eapply ITyping.type_App.
     + instantiate (1 := s).
-      (* pose (inversionEq ) *)
-      admit. (* From inversion of h1 *)
-    + instantiate (1 := s). admit. (* From inversion of h1 *)
-    + (* eapply ITyping.type_J. *)
+      destruct (istype_type h1) as [s' h].
+      destruct (inversionEq h) as [[[? ?] ?] ?].
+      assumption.
+    + instantiate (1 := s).
+      (* From inversion of h1 *)
+      (* But also because of typing of lift or something like weakening. *)
       admit.
+    + eapply type_Conv.
+      * eapply ITyping.type_J.
+        -- eapply type_Sort.
+        -- destruct (istype_type h1) as [s' h].
+           destruct (inversionEq h) as [[[? ?] ?] ?].
+           assumption.
+        -- destruct (istype_type h1) as [s' h].
+           destruct (inversionEq h) as [[[? ?] ?] ?].
+           assumption.
+        -- eapply type_Prod.
+           ++ instantiate (1 := s).
+              (* Need lemma for lift *)
+              admit.
+           ++ eapply type_Conv.
+              ** eapply type_Rel.
+              ** apply type_Sort.
+              ** cbn. apply eq_reflexivity. apply type_Sort.
+        -- assumption.
+        -- eapply type_Conv.
+           ++ eapply type_Lambda.
+              ** instantiate (1 := s).
+                 destruct (istype_type h1) as [s' h].
+                 destruct (inversionEq h) as [[[? ?] ?] ?].
+                 assumption.
+              ** (* Same as above *)
+                 instantiate (1 := s).
+                 admit.
+              ** eapply type_Conv.
+                 --- eapply type_Rel.
+                 --- instantiate (1 := s).
+                     (* Lemma for lift *)
+                     admit.
+                 --- cbn. apply eq_reflexivity.
+                     (* Lemma for lift *)
+                     admit.
+           ++ cbn. apply type_Prod.
+              ** (* Lemma for lift and subst *)
+                 instantiate (1 := s).
+                 admit.
+              ** (* Lemma for lift and subst *)
+                 instantiate (1 := s).
+                 admit.
+           ++ cbn. (* Lemma for list and subst *)
+              admit.
+      * apply type_Prod.
+        -- instantiate (1 := s).
+           destruct (istype_type h1) as [s' h].
+           destruct (inversionEq h) as [[[? ?] ?] ?].
+           assumption.
+        -- (* Same as above *)
+          instantiate (1 := s).
+          admit.
+      * cbn. (* Lemma for list and subst *)
+        admit.
     + assumption.
   - admit. (* Must be a lemma somewhere. *)
+    Unshelve.
+    1,2,4: exact nAnon.
+    all:cbn. all:easy.
 Admitted.
 
 (* Note: If transport is symbolic during this phase, then maybe we can use

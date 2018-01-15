@@ -299,7 +299,6 @@ Proof.
     admit.
 Admitted.
 
-
 (* Note: If transport is symbolic during this phase, then maybe we can use
    Template Coq to deduce the derivation automatically in the ultimate target.
    This is worth considering.
@@ -410,7 +409,7 @@ Definition heq s A a B b :=
 Lemma heq_to_eq :
   forall {Σ Γ s A u v e},
     Σ ;;; Γ |-i e : heq s A u A v ->
-    { p : sterm & Σ ;;; Γ |-i p : sEq s A u v }.
+    ∑ p, Σ ;;; Γ |-i p : sEq s A u v.
 Proof.
   intros Σ Γ s A u v e h.
   unfold heq in h.
@@ -432,7 +431,7 @@ Admitted.
 Corollary type_heq :
   forall {Σ Γ s A B e},
     Σ ;;; Γ |-i e : heq (succ_sort s) (sSort s) A (sSort s) B ->
-    { p : sterm & Σ ;;; Γ |-i p : sEq (succ_sort s) (sSort s) A B }.
+    ∑ p, Σ ;;; Γ |-i p : sEq (succ_sort s) (sSort s) A B.
 Proof.
   intros Σ Γ s A B e h.
   now eapply heq_to_eq.
@@ -446,7 +445,7 @@ Lemma trelE_to_heq :
         Σ ;;; Γ |-i T2 : sSort s ->
         Σ ;;; Γ |-i sRel x : T1 ->
         Σ ;;; Γ |-i sRel y : T2 ->
-        { p : sterm & Σ ;;; Γ |-i p : heq s T1 (sRel x) T2 (sRel y) }) ->
+        ∑ p, Σ ;;; Γ |-i p : heq s T1 (sRel x) T2 (sRel y)) ->
     forall {t1 t2},
       trel E t1 t2 ->
       forall {s T1 T2},
@@ -454,7 +453,7 @@ Lemma trelE_to_heq :
         Σ ;;; Γ |-i T2 : sSort s ->
         Σ ;;; Γ |-i t1 : T1 ->
         Σ ;;; Γ |-i t2 : T2 ->
-        { p : sterm & Σ ;;; Γ |-i p : heq s T1 t1 T2 t2 }.
+        ∑ p, Σ ;;; Γ |-i p : heq s T1 t1 T2 t2.
 Proof.
   intros E Σ Γ H t1 t2. induction 1 ; intros s' A B H1 H2 H3 H4.
   - now apply H.
@@ -503,7 +502,7 @@ Corollary trel_to_heq :
     Σ ;;; Γ |-i T2 : sSort s ->
     Σ ;;; Γ |-i t1 : T1 ->
     Σ ;;; Γ |-i t2 : T2 ->
-    { p : sterm & Σ ;;; Γ |-i p : heq s T1 t1 T2 t2 }.
+    ∑ p, Σ ;;; Γ |-i p : heq s T1 t1 T2 t2.
 Proof.
   intros Σ Γ s T1 T2 t1 t2 H H0 H1 H2 H3.
   now apply @trelE_to_heq with (E := nil).
@@ -547,6 +546,8 @@ Proof.
     + subst. easy.
     + subst. apply IHtrel.
       admit. (* Need refining. *)
+    + (* TODO *)
+      admit.
   -
 (* Transitivity is not straightforward. *)
 Admitted.
@@ -611,10 +612,9 @@ Definition head (t : sterm) : head_kind :=
 Lemma choose_type :
   forall {Σ Γ A t Γ' A' t'},
     Σ ;;;; Γ' |--- [ t' ] : A' # ⟦ Γ |--- [t] : A ⟧ ->
-    { A'' : sterm &
-      { t'' : sterm & Σ ;;;; Γ' |--- [ t'' ] : A'' # ⟦ Γ |--- [t] : A ⟧ } *
-      (head A'' = head A)
-    }%type.
+    ∑ A'',
+      (∑ t'', Σ ;;;; Γ' |--- [ t'' ] : A'' # ⟦ Γ |--- [t] : A ⟧) *
+      (head A'' = head A).
 Proof.
   intros Σ Γ A t Γ' A' t' [[[hΓ hA] ht] h].
   induction hA.
@@ -630,7 +630,7 @@ Lemma change_type :
   forall {Σ Γ A t Γ' A' t' s A''},
     Σ ;;;; Γ' |--- [ t' ] : A' # ⟦ Γ |--- [t] : A ⟧ ->
     Σ ;;;; Γ' |--- [ A'' ] : sSort s # ⟦ Γ |--- [A] : sSort s ⟧ ->
-    { t'' : sterm & Σ ;;;; Γ' |--- [ t'' ] : A'' # ⟦ Γ |--- [t] : A ⟧ }.
+    ∑ t'', Σ ;;;; Γ' |--- [ t'' ] : A'' # ⟦ Γ |--- [t] : A ⟧.
 Proof.
 Admitted.
 
@@ -638,15 +638,13 @@ Admitted.
 (*! Translation *)
 Fixpoint type_translation {Σ Γ A t} (h : Σ ;;; Γ |-x t : A)
                           {Γ'} (hΓ : Γ' ≈ Γ) {struct h} :
-  { A' : sterm & { t' : sterm & Σ ;;;; Γ' |--- [t'] : A' # ⟦ Γ |--- [t] : A ⟧ } }
+  ∑ A' t', Σ ;;;; Γ' |--- [t'] : A' # ⟦ Γ |--- [t] : A ⟧
 
 with eq_translation {Σ Γ s A u v} (h : Σ ;;; Γ |-x u = v : A)
                     (hA : Σ ;;; Γ |-x A : sSort s)
                     {Γ'} (hΓ : Γ' ≈ Γ) {struct h} :
-  { e : sterm & { e' : sterm & { A' : sterm & { A'' : sterm &
-  { u' : sterm & { v' : sterm &
-    Σ ;;;; Γ' |--- [ e' ] : heq s A' u' A'' v' # ⟦ Γ |--- [e] : heq s A u A v ⟧
-  } } } } } }.
+  ∑ e e' A' A'' u' v',
+    Σ ;;;; Γ' |--- [ e' ] : heq s A' u' A'' v' # ⟦ Γ |--- [e] : heq s A u A v ⟧.
 Proof.
   (** type_translation **)
   - admit.

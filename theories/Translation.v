@@ -636,7 +636,10 @@ Proof.
   - exists (sRel x). split.
     + exists t'. repeat split ; try easy. apply trel_refl.
     + reflexivity.
-  - (* TODO *) admit.
+  - destruct (istype_type h) as [s' htr].
+    destruct (inversionTransport htr) as [[hp ht1] heq].
+    specialize (IHhA Γ Γ' t).
+    admit.
   - (* TODO *) admit.
   - exists (sProd n1 A1 B1). split.
     + exists t'. repeat split ; try easy. now apply trel_Prod.

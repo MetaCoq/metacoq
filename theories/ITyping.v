@@ -53,15 +53,20 @@ Inductive typing (Σ : global_context) (Γ : scontext) : sterm -> sterm -> Set :
     Σ ;;; Γ |-i sJ A u P w v p : P{ 1 := v }{ 0 := p }
 
 | type_Uip s A u v p q :
+    Σ ;;; Γ |-i A : sSort s ->
+    Σ ;;; Γ |-i u : A ->
+    Σ ;;; Γ |-i v : A ->
     Σ ;;; Γ |-i p : sEq s A u v ->
     Σ ;;; Γ |-i q : sEq s A u v ->
     Σ ;;; Γ |-i sUip A u v p q : sEq s (sEq s A u v) p q
 
-| type_Funext s n1 n2 n3 A B f g e :
+| type_Funext s1 s2 n1 n2 n3 A B f g e :
+    Σ ;;; Γ |-i A : sSort s1 ->
+    Σ ;;; Γ ,, svass n1 A |-i B : sSort s2 ->
     Σ ;;; Γ |-i f : sProd n1 A B ->
     Σ ;;; Γ |-i g : sProd n2 A B ->
-    Σ ;;; Γ |-i e : sProd n3 A (sEq s B (sApp (lift0 1 f) n1 (lift0 1 A) (lift 1 1 B) (sRel 0)) (sApp (lift0 1 g) n2 (lift0 1 A) (lift 1 1 B) (sRel 0))) ->
-    Σ ;;; Γ |-i sFunext A B f g e : sEq s (sProd n1 A B) f g
+    Σ ;;; Γ |-i e : sProd n3 A (sEq s2 B (sApp (lift0 1 f) n1 (lift0 1 A) (lift 1 1 B) (sRel 0)) (sApp (lift0 1 g) n2 (lift0 1 A) (lift 1 1 B) (sRel 0))) ->
+    Σ ;;; Γ |-i sFunext A B f g e : sEq (max_sort s1 s2) (sProd n1 A B) f g
 
 | type_Sig n t b s1 s2 :
     Σ ;;; Γ |-i t : sSort s1 ->

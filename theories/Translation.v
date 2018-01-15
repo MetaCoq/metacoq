@@ -13,6 +13,41 @@ Open Scope i_scope.
 
 (*! Preliminary lemmata *)
 
+Lemma istype_type :
+  forall {Σ Γ t T},
+    Σ ;;; Γ |-i t : T ->
+    { s : sort & Σ ;;; Γ |-i T : sSort s }.
+Proof.
+  intros Σ Γ t T H.
+  induction H.
+  - (* Without having a well-typed context, there is no way to conclude. *)
+    admit.
+  - exists (succ_sort (succ_sort s)). apply type_Sort.
+  - exists (succ_sort (max_sort s1 s2)). apply type_Sort.
+  - exists (max_sort s1 s2). apply type_Prod.
+    + assumption.
+    + (* Well, α-renaming should solve the trick. But we shouldn't have to
+         care! *)
+      admit.
+  - (* We need subsitution lemma *)
+    admit.
+  - exists (succ_sort s). apply type_Sort.
+  - exists s. now apply type_Eq.
+  - (* Substitution lemma *)
+    admit.
+  - exists s. apply type_Eq ; try easy. now apply type_Eq.
+  - exists (max_sort s1 s2). apply type_Eq.
+    + now apply type_Prod.
+    + assumption.
+    + (* Problem with naming again! *)
+      admit.
+  - exists (succ_sort (max_sort s1 s2)). apply type_Sort.
+  - exists (max_sort s1 s2). now apply type_Sig.
+  - (* Substitution lemma *)
+    admit.
+  - exists s. assumption.
+Admitted.
+
 Lemma uniqueness :
   forall {Σ Γ A B u},
     Σ ;;; Γ |-i u : A ->
@@ -122,7 +157,9 @@ Proof.
   intros Σ Γ s T1 T2 p t h1 h2.
   unfold transport. replace T2 with ((lift0 1 T2){ 0 := t }) at 3.
   - eapply ITyping.type_App.
-    + instantiate (1 := s). admit. (* From inversion of h1 *)
+    + instantiate (1 := s).
+      (* pose (inversionEq ) *)
+      admit. (* From inversion of h1 *)
     + instantiate (1 := s). admit. (* From inversion of h1 *)
     + (* eapply ITyping.type_J. *)
       admit.

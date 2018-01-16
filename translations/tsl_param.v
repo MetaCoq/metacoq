@@ -191,7 +191,7 @@ Notation "'TYPE'" := (exists A, A -> Type).
 Notation "'El' A" := (sigma (π1 A) (π2 A)) (at level 20).
 
 Definition Ty := Type.
-Run TemplateProgram (TslParam ([],[]) "Ty" >>= tmPrint).
+Run TemplateProgram (TslParam ([],[]) "Ty").
 Check Tyᵗ : El Tyᵗ.
 
 (* Definition Tyᵗ : El Tyᵗ := *)
@@ -339,19 +339,14 @@ Defined.
 Quote Definition equiv_ := Eval compute in equiv.
 
 
-Time Definition uu := Eval native_compute in (tsl_tm (match ΣE with Some ΣE => ΣE | None => todo end) equiv_).
-Time Definition uu' := Eval native_compute in (tsl_tm (match ΣE with Some ΣE => ΣE | None => todo end) equiv_).
-
-Time Eval native_compute in (tsl_tm (match ΣE with Some ΣE => ΣE | None => todo end) equiv_).
-
-Print "go".
+Check "go".
 
 Run TemplateProgram (
       match ΣE with
       | None => tmPrint "li" ;; tmReturn None
       | Some ΣE =>
         ΣE' <- TslParam ΣE "equiv" ;;
-            tmPrint ΣE' ;;
+            (* tmPrint ΣE' ;; *)
             match ΣE' with
             | None => tmReturn None
             | Some ΣE =>
@@ -362,7 +357,8 @@ Run TemplateProgram (
               tmPrint "la" ;; ret H
             end
       end).
-Next Obligation.
+Check "proof".
+Next Obligation. 
 simple refine (existᶠ · _ · _ · _ · _).
 exact (bool:Type; fun _=> unit:Type).
 simple refine (existᶠ · _ · _ · _ · _).
@@ -379,10 +375,11 @@ simple refine (existᶠ · _ · _ · _ · _).
   simple refine (existᶠ · _ · _ · _ · _).
   + cbn. refine (_; tt). exists true. exists false.
     discriminate 1.
-  + refine (λᶠ p, _). cbn in p.
-    destruct p as [p _].
-    destruct p as [[] [[] p]].
-    contradiction p. reflexivity.
+  + compute.
+    split; (intro p;
+            destruct p as [p _];
+            destruct p as [[] [[] p]];
+            contradiction p; reflexivity).
 Defined.
 
-Print "ok!".
+Check "ok!".

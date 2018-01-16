@@ -135,12 +135,14 @@ Definition tTranslate (tsl : Translation) (ΣE : tsl_context) (id : ident)
     | DefinitionEntry {| definition_entry_type := A;
                          definition_entry_body := t |} =>
       print_nf ("toto2 " ++ id) ;;
-      tmPrint t ;;
-      match tsl_tm ΣE t with
+      (* tmPrint t ;; *)
+      t' <- tmEval lazy (tsl_tm ΣE t) ;;
+      match t' with
       | Error e => tmPrint "tsl error in term: " ;; tmPrint e ;; ret None
       | Success t' =>
         print_nf ("toto3 " ++ id) ;;
-        match tsl_ty ΣE A with
+        A' <- tmEval lazy (tsl_ty ΣE A) ;;
+        match A' with
         | Error e => tmPrint "tsl error in type: " ;; tmPrint e ;; ret None
         | Success A' =>
           print_nf ("toto4 " ++ id) ;;
@@ -164,13 +166,18 @@ Definition tImplement (tsl : Translation) (ΣE : tsl_context)
            (id : ident) (A : Type)
   : TemplateMonad (option tsl_context) :=
   tA <- tmQuote A ;;
-  match tsl_ty ΣE tA with
+  tA' <- tmEval lazy (tsl_ty ΣE tA) ;;
+  match tA' with
   | Error e => tmPrint "tsl error in type" ;; tmPrint e ;;
                 tmReturn None
   | Success tA' =>
+    print_nf ("tata1 " ++ id) ;;
     id' <- tmEval all (tsl_id id) ;;
+    print_nf ("tata2 " ++ id) ;;
     A' <- tmUnquoteTyped Type tA' ;;
+    print_nf ("tata3 " ++ id) ;;
     tmLemma id' A' ;;
+    print_nf ("tata4 " ++ id) ;;
     tmAxiom id A ;;
     let decl := {| cst_universes := [];
                    cst_type := tA; cst_body := None |} in

@@ -284,7 +284,7 @@ struct
   let cParameter_entry = r_reify "Build_parameter_entry"
   let cDefinition_entry = r_reify "Build_definition_entry"
 
-  let (tcbv, tcbn, thnf, tall) = (r_reify "cbv", r_reify "cbn", r_reify "hnf", r_reify "all")
+  let (tcbv, tcbn, thnf, tall, tlazy) = (r_reify "cbv", r_reify "cbn", r_reify "hnf", r_reify "all", r_reify "lazy")
 
   let (tglobal_reference, tConstRef, tIndRef, tConstructRef) = (r_reify "global_reference", r_reify "ConstRef", r_reify "IndRef", r_reify "ConstructRef")
 
@@ -1350,6 +1350,7 @@ struct
     else if Term.eq_constr trm tcbn then Cbn default_flags
     else if Term.eq_constr trm thnf then Hnf
     else if Term.eq_constr trm tall then Cbv all_flags
+    else if Term.eq_constr trm tlazy then Lazy all_flags
     else not_supported_verb trm "denote_reduction_strategy"
 
 

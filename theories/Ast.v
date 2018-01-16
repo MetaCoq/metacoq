@@ -175,7 +175,7 @@ Record mutual_inductive_entry : Set := {
 }.
 
 Inductive reductionStrategy : Set :=
-  cbv | cbn | hnf | all.
+  cbv | cbn | hnf | all | lazy.
 
 Definition typed_term := {T : Type & T}.
 Definition existT_typed_term a t : typed_term := @existT Type (fun T => T) a t.

@@ -18,6 +18,51 @@ Proof.
   intros Σ Γ t T H. induction H ; easy.
 Defined.
 
+Lemma lift_lift :
+  forall t n m k,
+    lift n k (lift m k t) = lift (n+m) k t.
+Proof.
+  intros t.
+  induction t ; intros nn mm kk ; try (cbn ; f_equal ; easy).
+  cbn. set (kkln := Nat.leb kk n).
+  assert (eq : Nat.leb kk n = kkln) by reflexivity.
+  destruct kkln.
+  - cbn. set (kklmmn := kk <=? mm + n).
+    assert (eq' : (kk <=? mm + n) = kklmmn) by reflexivity.
+    destruct kklmmn.
+    + auto with arith.
+    + pose (h1 := leb_complete_conv _ _ eq').
+      pose (h2 := leb_complete _ _ eq).
+      omega.
+  - cbn. rewrite eq. reflexivity.
+Defined.
+
+Lemma typing_lift01 :
+  forall {Σ Γ t A x B s},
+    Σ ;;; Γ |-i t : A ->
+    Σ ;;; Γ |-i B : sSort s ->
+    Σ ;;; Γ ,, svass x B |-i lift0 1 t : lift0 1 A.
+Proof.
+  intros Σ Γ t A x B s ht hB.
+  induction ht.
+  - (* cbn. rewrite lift_lift. cbn. *)
+    (* eapply type_Conv. *)
+    (* + eapply type_Rel. *)
+    (*   apply wf_snoc. *)
+    (*   * assumption. *)
+    (*   * exists s. assumption. *)
+    (* + admit. *)
+    (* + cbn. admit. *)
+    admit.
+  - cbn. apply type_Sort.
+    apply wf_snoc.
+    + assumption.
+    + now exists s.
+  - cbn. apply type_Prod.
+    + apply IHht1. assumption.
+    + (* As expected, this lemma doesn't work by induction... *)
+Abort.
+
 Lemma istype_type :
   forall {Σ Γ t T},
     Σ ;;; Γ |-i t : T ->

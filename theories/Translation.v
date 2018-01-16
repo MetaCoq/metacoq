@@ -639,6 +639,12 @@ Proof.
   - destruct (istype_type h) as [s' htr].
     destruct (inversionTransport htr) as [[hp ht1] heq].
     specialize (IHhA Γ Γ' t).
+    (* This seems wrong... How can we fix this lemma?!
+       I am starting to doubt it on paper even. I am not sure it works if the
+       head is not a canonical type, an App for instance (because then,
+       inversion doesn't type the type in a universe).
+       We might have to state it explicitely for each type constructor.
+     *)
     admit.
   - (* TODO *) admit.
   - exists (sProd n1 A1 B1). split.

@@ -2,10 +2,6 @@ From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
 From Template Require Import Ast SAst LiftSubst SLiftSubst SCommon Typing
                              XTyping ITyping.
 
-(* Preamble *)
-Notation "'∑'  x .. y , P" := (sigT (fun x => .. (sigT (fun y => P)) ..))
-  (at level 200, x binder, y binder, right associativity) : type_scope.
-
 Section Translation.
 
 Open Scope type_scope.
@@ -234,6 +230,27 @@ Proof.
               admit.
            ++ eapply type_Conv.
               ** eapply type_Rel.
+                 eapply wf_snoc.
+                 --- eapply wf_snoc.
+                     +++ eapply wf_snoc.
+                         *** (* Need lemma that states wf from typing. *)
+                             admit.
+                         *** exists (succ_sort s). apply type_Sort.
+                     +++ exists (succ_sort s). apply type_Eq.
+                         *** apply type_Sort.
+                         *** (* THIS IS WRONG! *)
+                             admit.
+                         *** eapply type_Conv.
+                             ---- eapply type_Rel.
+                                  apply wf_snoc.
+                                  ++++ (* Same here, need lemma *)
+                                       admit.
+                                  ++++ exists (succ_sort s). apply type_Sort.
+                             ---- eapply type_Sort.
+                             ---- cbn. apply eq_reflexivity. apply type_Sort.
+                 --- destruct (istype_type h2) as [s' hh].
+                     exists s'. (* Need lemma for lift *)
+                     admit.
               ** apply type_Sort.
               ** cbn. apply eq_reflexivity. apply type_Sort.
         -- assumption.
@@ -247,7 +264,11 @@ Proof.
                  instantiate (1 := s).
                  admit.
               ** eapply type_Conv.
-                 --- eapply type_Rel.
+                 --- eapply type_Rel. eapply wf_snoc.
+                     +++ (* Need lemma *)
+                         admit.
+                     +++ destruct (istype_type h2) as [s' hh].
+                         exists s'. assumption.
                  --- instantiate (1 := s).
                      (* Lemma for lift *)
                      admit.
@@ -276,7 +297,7 @@ Proof.
     + assumption.
   - admit. (* Must be a lemma somewhere. *)
     Unshelve.
-    1,2,4: exact nAnon.
+    1,2,5: exact nAnon.
     all:cbn. all:easy.
 Admitted.
 

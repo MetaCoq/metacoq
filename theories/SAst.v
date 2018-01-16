@@ -1,5 +1,9 @@
 (*! Common syntax to ITT and ETT *)
 
+(* Preamble *)
+Notation "'∑'  x .. y , P" := (sigT (fun x => .. (sigT (fun y => P)) ..))
+  (at level 200, x binder, y binder, right associativity) : type_scope.
+
 Require Import Ast.
 
 Inductive sterm : Set :=

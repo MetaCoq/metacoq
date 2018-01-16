@@ -244,14 +244,14 @@ Defined.
 
 
 
-Run TemplateProgram (tmQuoteInductive "demoList"
-                       >>= tmDefinition "demoList_syntax").
-Example unquote_quote_id1: demoList_syntax=mut_list_i
-(* demoList was obtained from mut_list_i *).
-  unfold demoList_syntax.
-  unfold mut_list_i.
-    f_equal.
-Qed.
+(* Run TemplateProgram (tmQuoteInductive "demoList" *)
+(*                        >>= tmDefinition "demoList_syntax"). *)
+(* Example unquote_quote_id1: demoList_syntax=mut_list_i *)
+(* (* demoList was obtained from mut_list_i *). *)
+(*   unfold demoList_syntax. *)
+(*   unfold mut_list_i. *)
+(*     f_equal. *)
+(* Qed. *)
 
 Run TemplateProgram (tmDefinition "foo4'" nat >>= tmPrint).
 

@@ -218,7 +218,7 @@ Inductive TemplateMonad : Type -> Prop :=
 (** Similar to Quote Recursively Definition ... := ...*)
 | tmQuoteRec : forall {A:Type}, A  -> TemplateMonad program
 (** Quote the body of a definition or inductive. Its name need not be fully qualified *)
-| tmQuoteInductive : kername -> TemplateMonad mutual_inductive_entry
+| tmQuoteInductive : kername -> TemplateMonad minductive_decl
 | tmQuoteConstant : kername -> bool (** bypass opacity?*) -> TemplateMonad constant_entry
 | tmMkDefinition : ident -> term -> TemplateMonad unit
     (* unquote before making the definition *)

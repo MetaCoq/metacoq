@@ -273,6 +273,7 @@ struct
     (r_reify "PConstr", r_reify "PType", r_reify "PAxiom", r_reify "PIn")
   let tinductive_body = r_reify "inductive_body"
   let tmkinductive_body = r_reify "mkinductive_body"
+  let tBuild_minductive_decl = r_reify "Build_minductive_decl"
 
   let tMutual_inductive_entry = r_reify "mutual_inductive_entry"
   let tOne_inductive_entry = r_reify "one_inductive_entry"
@@ -1511,13 +1512,20 @@ struct
          let (evm, name) = reduce_all env evm name in
          let name = unquote_string name in
          let (dp, nm) = split_name name in
-         let entry =
-           match Nametab.locate (Libnames.make_qualid dp nm) with
-           | Globnames.IndRef ni ->
-              let c = Environ.lookup_mind (fst ni) env in (* FIX: For efficienctly, we should also export (snd ni)*)
-              TermReify.quote_mut_ind env c
-           | _ -> CErrors.user_err (str name ++ str " does not seem to be an inductive.") in
-         k (evm, entry)
+         (match Nametab.locate (Libnames.make_qualid dp nm) with
+          | Globnames.IndRef ni ->
+             let t = TermReify.quote_mind_decl env (fst ni) in
+             let _, args = Term.destApp t in
+             (match args with
+              | [|name; n; inds|] ->
+                 let decl = Term.mkApp (tBuild_minductive_decl, [|n ; inds|]) in
+                 k (evm, decl)
+              | _ -> bad_term_verb t "anomaly in quoting of inductive types")
+               (* quote_mut_ind produce an entry rather than a decl *)
+          (* let c = Environ.lookup_mind (fst ni) env in (\* FIX: For efficienctly, we should also export (snd ni)*\) *)
+          (* TermReify.quote_mut_ind env c *)
+          | _ -> CErrors.user_err (str name ++ str " does not seem to be an inductive."))
+      (* k (evm, entry) *)
       | _ -> monad_failure "tmQuoteInductive" 1
     else if Term.eq_constr coConstr tmQuoteConstant then
       match args with

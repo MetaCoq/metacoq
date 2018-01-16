@@ -319,3 +319,8 @@ Definition nat_entry := Eval compute in mind_decl_to_entry nat_decl.
 (* Make Inductive eq_entry. *)
 (* Make Inductive sigma_entry. *)
 
+Require Vector.
+Require Even.
+Run TemplateProgram (d <- tmQuoteInductive "Even.even" ;;
+                    let e := mind_decl_to_entry d in
+                    tmMkInductive e).

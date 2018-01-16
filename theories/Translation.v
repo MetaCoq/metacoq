@@ -10,6 +10,14 @@ Open Scope i_scope.
 
 (*! Preliminary lemmata *)
 
+Lemma typing_wf :
+  forall {Σ Γ t T},
+    Σ ;;; Γ |-i t : T ->
+    wf Σ Γ.
+Proof.
+  intros Σ Γ t T H. induction H ; easy.
+Defined.
+
 Lemma istype_type :
   forall {Σ Γ t T},
     Σ ;;; Γ |-i t : T ->

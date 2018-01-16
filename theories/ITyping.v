@@ -13,6 +13,7 @@ Inductive typing (Σ : global_context) : scontext -> sterm -> sterm -> Set :=
       Σ ;;; Γ |-i (sRel n) : lift0 (S n) (safe_nth Γ (exist _ n isdecl)).(sdecl_type)
 
 | type_Sort Γ s :
+    wf Σ Γ ->
     Σ ;;; Γ |-i (sSort s) : sSort (succ_sort s)
 
 | type_Prod Γ n t b s1 s2 :

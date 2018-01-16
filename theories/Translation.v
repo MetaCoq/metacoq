@@ -25,10 +25,19 @@ Lemma istype_type :
 Proof.
   intros Σ Γ t T H.
   induction H.
-  - (* Without having a well-typed context, there is no way to conclude. *)
-    admit.
-  - exists (succ_sort (succ_sort s)). apply type_Sort.
-  - exists (succ_sort (max_sort s1 s2)). apply type_Sort.
+  - revert n isdecl. induction w ; intros n isdecl.
+    + cbn in isdecl. easy.
+    + destruct n.
+      * cbn. destruct s as [s h].
+        exists s. (* Lemma for lift *)
+        admit.
+      * assert (isdecl' : n < #|Γ|).
+        -- auto with arith.
+        -- destruct (IHw n isdecl') as [s' hh].
+           exists s'. (* TODO *)
+           admit.
+  - exists (succ_sort (succ_sort s)). now apply type_Sort.
+  - exists (succ_sort (max_sort s1 s2)). apply type_Sort. apply (typing_wf H).
   - exists (max_sort s1 s2). apply type_Prod.
     + assumption.
     + (* Well, α-renaming should solve the trick. But we shouldn't have to
@@ -36,7 +45,7 @@ Proof.
       admit.
   - (* We need subsitution lemma *)
     admit.
-  - exists (succ_sort s). apply type_Sort.
+  - exists (succ_sort s). apply type_Sort. apply (typing_wf H).
   - exists s. now apply type_Eq.
   - (* Substitution lemma *)
     admit.
@@ -46,7 +55,7 @@ Proof.
     + assumption.
     + (* Problem with naming again! *)
       admit.
-  - exists (succ_sort (max_sort s1 s2)). apply type_Sort.
+  - exists (succ_sort (max_sort s1 s2)). apply type_Sort. apply (typing_wf H).
   - exists (max_sort s1 s2). now apply type_Sig.
   - (* Substitution lemma *)
     admit.
@@ -123,6 +132,7 @@ Proof.
   dependent induction h.
   - repeat split ; try easy.
     eapply eq_reflexivity. apply type_Sort.
+    apply (typing_wf h1).
   - destruct (IHh1 s A u v (eq_refl _)) as [[[hA hu] hv] heq].
     repeat split ; try easy.
     eapply eq_transitivity.
@@ -225,7 +235,7 @@ Proof.
       admit.
     + eapply type_Conv.
       * eapply ITyping.type_J.
-        -- eapply type_Sort.
+        -- eapply type_Sort. apply (typing_wf h1).
         -- destruct (istype_type h1) as [s' h].
            destruct (inversionEq h) as [[[? ?] ?] ?].
            assumption.
@@ -244,8 +254,12 @@ Proof.
                          *** (* Need lemma that states wf from typing. *)
                              admit.
                          *** exists (succ_sort s). apply type_Sort.
+                             apply (typing_wf h1).
                      +++ exists (succ_sort s). apply type_Eq.
-                         *** apply type_Sort.
+                         *** apply type_Sort. eapply wf_snoc.
+                             ---- apply (typing_wf h1).
+                             ---- exists (succ_sort s). apply type_Sort.
+                                  apply (typing_wf h1).
                          *** (* THIS IS WRONG! *)
                              admit.
                          *** eapply type_Conv.
@@ -254,13 +268,41 @@ Proof.
                                   ++++ (* Same here, need lemma *)
                                        admit.
                                   ++++ exists (succ_sort s). apply type_Sort.
-                             ---- eapply type_Sort.
+                                       apply (typing_wf h1).
+                             ---- eapply type_Sort. apply wf_snoc.
+                                  ++++ apply (typing_wf h1).
+                                  ++++ exists (succ_sort s). apply type_Sort.
+                                       apply (typing_wf h1).
                              ---- cbn. apply eq_reflexivity. apply type_Sort.
+                                  apply wf_snoc.
+                                  ++++ apply (typing_wf h1).
+                                  ++++ exists (succ_sort s). apply type_Sort.
+                                       apply (typing_wf h1).
                  --- destruct (istype_type h2) as [s' hh].
                      exists s'. (* Need lemma for lift *)
                      admit.
-              ** apply type_Sort.
+              ** apply type_Sort. apply wf_snoc.
+                 --- apply wf_snoc.
+                     +++ apply wf_snoc.
+                         *** apply (typing_wf h1).
+                         *** exists (succ_sort s). apply type_Sort.
+                             apply (typing_wf h1).
+                     +++ exists (succ_sort s). apply type_Eq.
+                         *** apply type_Sort. apply wf_snoc.
+                             ---- apply (typing_wf h1).
+                             ---- exists (succ_sort s). apply type_Sort.
+                                  apply (typing_wf h1).
+                         *** (* THIS IS WRONG AGAIN *)
+                             admit.
+                         *** (* Same proof as above, but we should sort the
+                                problem first. *)
+                             admit.
+                 --- destruct (istype_type h2) as [s' hh].
+                     exists s'. (* Lemma for lift *)
+                     admit.
               ** cbn. apply eq_reflexivity. apply type_Sort.
+                 (* Similar, we'll do it once it's fixed. *)
+                 admit.
         -- assumption.
         -- eapply type_Conv.
            ++ eapply type_Lambda.
@@ -493,7 +535,7 @@ Proof.
     exists (sPair U V (sRefl (sSort s') A) (sRefl (lift0 1 B) (sRel (S x)))).
     eapply type_Pair.
     + eapply type_Eq.
-      * apply type_Sort.
+      * apply type_Sort. apply (typing_wf H1).
       * assumption.
       * assumption.
     + eapply type_Eq.
@@ -505,14 +547,14 @@ Proof.
         admit.
     + eapply type_Conv.
       * apply type_Refl.
-        -- apply type_Sort.
+        -- apply type_Sort. apply (typing_wf H1).
         -- assumption.
       * eapply type_Eq.
-        -- apply type_Sort.
+        -- apply type_Sort. apply (typing_wf H1).
         -- assumption.
         -- assumption.
       * apply cong_Eq.
-        -- apply eq_reflexivity. apply type_Sort.
+        -- apply eq_reflexivity. apply type_Sort. apply (typing_wf H1).
         -- apply eq_reflexivity. assumption.
         -- (* We have the right assumption with the wrong sort... *)
            (* We probably need a lemma that says that u = v : A implies u : A *)

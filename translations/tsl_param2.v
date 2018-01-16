@@ -113,8 +113,6 @@ where "'tsl_ty_param'" := (fun fuel Σ E Γ t =>
 
 
 
-
-
 Fixpoint fold_left_i_aux {A B} (f : A -> nat -> B -> A) (n0 : nat) (l : list B)
          (a0 : A) {struct l} : A
   := match l with
@@ -122,6 +120,135 @@ Fixpoint fold_left_i_aux {A B} (f : A -> nat -> B -> A) (n0 : nat) (l : list B)
      | b :: l => fold_left_i_aux f (S n0) l (f a0 n0 b)
      end.
 Definition fold_left_i {A B} f := @fold_left_i_aux A B f 0.
+
+Fixpoint monad_map_i_aux {M} {H : Monad M} {A B} (f : nat -> A -> M B) (n0 : nat) (l : list A) : M (list B)
+  := match l with
+     | [] => ret []
+     | x :: l => x' <- (f n0 x) ;;
+                l' <- (monad_map_i_aux f (S n0) l) ;;
+                ret (x' :: l')
+     end.
+
+Definition monad_map_i {M H A B} f := @monad_map_i_aux M H A B f 0.
+
+(* replace tRel k by t in u without decreasing tRels of u nor lifting them of t *)
+Fixpoint replace t k u {struct u} :=
+  match u with
+  | tRel n =>
+    match nat_compare k n with
+    | Datatypes.Eq => t
+    | Gt => tRel n
+    | Lt => tRel n
+    end
+  | tEvar ev args => tEvar ev (List.map (replace t k) args)
+  | tLambda na T M => tLambda na (replace t k T) (replace (lift0 1 t) (S k) M)
+  | tApp u v => tApp (replace t k u) (List.map (replace t k) v)
+  | tProd na A B => tProd na (replace t k A) (replace (lift0 1 t) (S k) B)
+  | tCast c kind ty => tCast (replace t k c) kind (replace t k ty)
+  | tLetIn na b ty b' => tLetIn na (replace t k b) (replace t k ty) (replace (lift0 1 t) (S k) b')
+  | tCase ind p c brs =>
+    let brs' := List.map (on_snd (replace t k)) brs in
+    tCase ind (replace t k p) (replace t k c) brs'
+  | tProj p c => tProj p (replace t k c)
+  | tFix mfix idx =>
+    let k' := List.length mfix + k in
+    let mfix' := List.map (map_def (replace t k')) mfix in
+    tFix mfix' idx
+  | tCoFix mfix idx =>
+    let k' := List.length mfix + k in
+    let mfix' := List.map (map_def (replace t k')) mfix in
+    tCoFix mfix' idx
+  | x => x
+  end.
+
+(* could be defined with Id monad *)
+Fixpoint map_i_aux {A B} (f : nat -> A -> B) (n0 : nat) (l : list A) : list B
+  := match l with
+     | [] => []
+     | x :: l => (f n0 x) :: (map_i_aux f (S n0) l)
+     end.
+
+Definition map_i {A B} f := @map_i_aux A B f 0.
+
+
+
+Definition tsl_mind_decl (ΣE : tsl_context)
+           (id : ident) (mind : minductive_decl)
+  : tsl_result (tsl_table * list minductive_decl).
+  refine (let tsl_ty' := tsl_ty_param fuel (fst ΣE) (snd ΣE) [] in _).
+  refine (let tsl2' := tsl_rec2 fuel (fst ΣE) (snd ΣE) [] in _).
+  simple refine (let arities := List.map ind_type mind.(ind_bodies) in
+                 arities2 <- monad_map tsl2' arities ;;
+                 bodies <- _ ;;
+                 ret (_, [{| ind_npars := mind.(ind_npars);
+                                     ind_bodies := bodies |}])).
+  (* L is [(tInd n, tRel 0); ... ; (tInd 0, tRel n)] *)
+  simple refine (let L : list term := _ in _).
+
+  - refine (let n := List.length arities - 1 in
+            let L := List.combine arities arities2 in
+            List.rev (map_i (fun i '(a,a2) => pair a a2 (tInd (mkInd id i) []) (tRel (n-i))) L)).
+
+  - (* inductive_body -> tsl_result inductive_body *)
+    refine (monad_map_i _ mind.(ind_bodies)).
+    intros i ind.
+    refine (A <- _ ;; ctors <- _ ;;
+            ret {| ind_name := tsl_ident ind.(ind_name);
+                   ind_type := A;
+                   ind_kelim := ind.(ind_kelim);
+                   ind_ctors := ctors;
+                   ind_projs := [] |}).  (* TODO *)
+    + (* arity  *)
+      refine (t2 <- tsl2' ind.(ind_type) ;;
+              let i1 := tsl_rec1 0 (tInd (mkInd id i) []) in
+              ret (try_reduce (fst ΣE) [] fuel (mkApp t2 i1))).
+    + (* constructors *)
+      refine (monad_map_i _ ind.(ind_ctors)).
+      intros k ((name, typ), nargs).
+      refine (t2 <- tsl2' typ ;;
+              let t2 := fold_left_i (fun t i u => replace u i t) L t2 in
+              let c1 := tsl_rec1 0 (tConstruct (mkInd id i) k []) in
+              match reduce_opt RedFlags.default (fst ΣE) [] (* for debugging but we could use try_reduce *)
+                               fuel (mkApp t2 c1) with
+              | Some t' => ret (tsl_ident name, t', nargs)
+              | None => raise TranslationNotHandeled
+              end).
+
+  - refine (let id' := tsl_ident id in (* should be kn ? *)
+            let L := List.combine mind.(ind_bodies) arities2 in
+            fold_left_i (fun E i '(ind,a2) => _ :: _ ++ E) L []).
+    + (* ind *)
+      refine (IndRef (mkInd id i), pair ind.(ind_type) a2 (tInd (mkInd id i) []) (tInd (mkInd id' i) [])).
+    + (* ctors *)
+      (* refine (fold_left_i (fun E k _ => _ :: E) ind.(ind_ctors) []). *)
+      (* exact (ConstructRef (mkInd id i) k, tConstruct (mkInd id' i) k []). *)
+      refine [].
+Defined.
+
+
+Notation "'TYPE'" := (exists A, A -> Type).
+Notation "'El' A" := (sigma (π1 A) (π2 A)) (at level 20).
+
+Require Vector.
+Require Even.
+Run TemplateProgram (let id := "list" in
+                     d <- tmQuoteInductive  id ;;
+                     let d' := tsl_mind_decl ([],[]) id d in
+                     d' <- tmEval lazy d' ;;
+                     tmPrint d' ;;
+                     match d' with
+                     | Success (_, d' :: _) =>
+                       (* print_nf d' ;; *)
+                       let e := mind_decl_to_entry d' in
+                       (* print_nf e ;; *)
+                       tmMkInductive e
+                                     (* ret tt *)
+                     | _ => print_nf "error"
+                     end).
+Check (listᵗ : forall (A : TYPE), list A.1 -> Type).
+Check (nilᵗ : forall (A : TYPE), listᵗ A nil).
+Check (consᵗ : forall (A : TYPE) (x : El A) (lH : exists l, listᵗ A l),
+          listᵗ A (x.1 :: lH.1)).
 
 
 Fixpoint recompose_prod (ns : list name) (As : list term) (B : term) : term :=
@@ -140,24 +267,6 @@ Fixpoint from_n {A} (f : nat -> A) (n : nat) : list A :=
   | S n => f n :: (from_n f n)
   end.
 
-Fixpoint monad_map_i_aux {M} {H : Monad M} {A B} (f : nat -> A -> M B) (n0 : nat) (l : list A) : M (list B)
-  := match l with
-     | [] => ret []
-     | x :: l => x' <- (f n0 x) ;;
-                l' <- (monad_map_i_aux f (S n0) l) ;;
-                ret (x' :: l')
-     end.
-
-Definition monad_map_i {M H A B} f := @monad_map_i_aux M H A B f 0.
-
-(* could be defined with Id monad *)
-Fixpoint map_i_aux {A B} (f : nat -> A -> B) (n0 : nat) (l : list A) : list B
-  := match l with
-     | [] => []
-     | x :: l => (f n0 x) :: (map_i_aux f (S n0) l)
-     end.
-
-Definition map_i {A B} f := @map_i_aux A B f 0.
 
 
 Definition mkImpl (A B : term) : term :=
@@ -203,35 +312,6 @@ Defined.
 
 Axiom error : forall {A B}, A -> B.
 
-(* replace tRel k by t in u without decreasing tRels of u nor lifting them of t *)
-Fixpoint replace t k u {struct u} :=
-  match u with
-  | tRel n =>
-    match nat_compare k n with
-    | Datatypes.Eq => t
-    | Gt => tRel n
-    | Lt => tRel n
-    end
-  | tEvar ev args => tEvar ev (List.map (replace t k) args)
-  | tLambda na T M => tLambda na (replace t k T) (replace (lift0 1 t) (S k) M)
-  | tApp u v => tApp (replace t k u) (List.map (replace t k) v)
-  | tProd na A B => tProd na (replace t k A) (replace (lift0 1 t) (S k) B)
-  | tCast c kind ty => tCast (replace t k c) kind (replace t k ty)
-  | tLetIn na b ty b' => tLetIn na (replace t k b) (replace t k ty) (replace (lift0 1 t) (S k) b')
-  | tCase ind p c brs =>
-    let brs' := List.map (on_snd (replace t k)) brs in
-    tCase ind (replace t k p) (replace t k c) brs'
-  | tProj p c => tProj p (replace t k c)
-  | tFix mfix idx =>
-    let k' := List.length mfix + k in
-    let mfix' := List.map (map_def (replace t k')) mfix in
-    tFix mfix' idx
-  | tCoFix mfix idx =>
-    let k' := List.length mfix + k in
-    let mfix' := List.map (map_def (replace t k')) mfix in
-    tCoFix mfix' idx
-  | x => x
-  end.
 
 
 Definition tsl_mind_entry (ΣE : tsl_context)
@@ -325,9 +405,6 @@ Notation "'tΣ'" := (tInd (mkInd "Template.sigma.sigma" 0)).
 Notation "'tproj1'" := (tProj (mkInd "Template.sigma.sigma" 0, 2, 0)).
 Notation "'tImpl'" := (tProd nAnon).
 
-
-Notation "'TYPE'" := (exists A, A -> Type).
-Notation "'El' A" := (sigma (π1 A) (π2 A)) (at level 20).
 
 
 (* Definition tsl_inductive (ind : inductive) : inductive. *)
@@ -447,3 +524,27 @@ Make Inductive bool_entryT.
 (*   compute in f. *)
 
 
+
+(* Definition eval_in_minductive_decl (rs : reductionStrategy) *)
+(*            (mind : minductive_decl) *)
+(*   : TemplateMonad minductive_decl. *)
+(*   refine (X <- _ ;; *)
+(*          ret {| ind_npars := mind.(ind_npars); *)
+(*                 ind_bodies := X |}). *)
+(*   refine (monad_map _ mind.(ind_bodies)). *)
+(*   intro ind. *)
+(*   refine (typ <- tmEval rs ind.(ind_type) ;; *)
+(*           ctors <- _ ;; *)
+(*           projs <- _ ;; *)
+(*           ret {| ind_name := ind.(ind_name); *)
+(*                 ind_type := typ; *)
+(*                 ind_kelim := ind.(ind_kelim); *)
+(*                 ind_ctors := ctors ; *)
+(*                 ind_projs := projs |}). *)
+(*   - refine (monad_map _ ind.(ind_ctors)). *)
+(*     intros ((name,t),n). *)
+(*     exact (t' <- tmEval rs t ;; ret ((name,t'),n)). *)
+(*   - refine (monad_map _ ind.(ind_projs)). *)
+(*     intros (name,t). *)
+(*     exact (t' <- tmEval rs t ;; ret (name,t')). *)
+(* Defined. *)

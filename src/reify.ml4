@@ -1598,7 +1598,13 @@ struct
         let (evm, t) = reduce_all env evm t in
         let evdref = ref evm in
         let t' = denote_term evdref t in
-        Typing.e_check env evdref (EConstr.of_constr t') (EConstr.of_constr typ) ;
+        (* todo: investigate why the following bugs *)
+        (* Feedback.msg_debug (str "lllllllllll"); *)
+        (* let t' = Typing.e_solve_evars env evdref (EConstr.of_constr t') in *)
+        (* Feedback.msg_debug (str "lllllllllll1"); *)
+        (* Typing.e_check env evdref t' (EConstr.of_constr typ) ; *)
+        (* Feedback.msg_debug (str "lllllllllll2"); *)
+        (* let t' = EConstr.to_constr !evdref t' in *)
         k (!evdref, t')
       | _ -> monad_failure "tmUnquoteTyped" 2
     else if Term.eq_constr coConstr tmFreshName then

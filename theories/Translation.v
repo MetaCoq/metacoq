@@ -61,7 +61,7 @@ Proof.
   - cbn. apply type_Prod.
     + apply IHht1. assumption.
     + (* As expected, this lemma doesn't work by induction... *)
-Abort.
+Admitted.
 
 Lemma istype_type :
   forall {Σ Γ t T},
@@ -74,13 +74,23 @@ Proof.
     + cbn in isdecl. easy.
     + destruct n.
       * cbn. destruct s as [s h].
-        exists s. (* Lemma for lift *)
-        admit.
+        exists s. change (sSort s) with (lift0 1 (sSort s)).
+        eapply typing_lift01.
+        -- assumption.
+        -- eassumption.
       * assert (isdecl' : n < #|Γ|).
         -- auto with arith.
         -- destruct (IHw n isdecl') as [s' hh].
-           exists s'. (* TODO *)
-           admit.
+           destruct s as [s hs].
+           exists s'. change (sSort s') with (lift0 1 (sSort s')).
+           (* Take out as a lemma? *)
+           assert (eq : forall t, lift0 (S (S n)) t = lift0 1 (lift0 (S n) t)).
+           { intro t. rewrite lift_lift. reflexivity. }
+           rewrite eq. clear eq.
+           eapply typing_lift01.
+           ++ (* This also requires a lemma! *)
+              admit.
+           ++ eassumption.
   - exists (succ_sort (succ_sort s)). now apply type_Sort.
   - exists (succ_sort (max_sort s1 s2)). apply type_Sort. apply (typing_wf H).
   - exists (max_sort s1 s2). apply type_Prod.
@@ -124,8 +134,10 @@ Lemma inversionRel :
       Σ ;;; Γ |-i A = T : sSort s.
 Proof.
   intros Σ Γ n T h. dependent induction h.
-  - exists isdecl. (* We need to have a well-typed context to conclude! *)
-    admit.
+  - exists isdecl.
+    assert (Σ ;;; Γ |-i sRel n : lift0 (S n) (safe_nth Γ (exist _ n isdecl)).(sdecl_type)) by (now constructor).
+    destruct (istype_type H) as [s hs].
+    exists s. apply eq_reflexivity. eassumption.
   - destruct (IHh1 n (eq_refl _)) as [isdecl [s' h]].
     exists isdecl, s'.
     eapply eq_transitivity.
@@ -253,14 +265,6 @@ Ltac fold_transport :=
     change G'
   end.
 
-(* Context (transport : sort -> sterm -> sterm -> sterm -> sterm -> sterm). *)
-(* Context (type_transport : *)
-(*   forall Σ Γ s T1 T2 p t , *)
-(*     Σ ;;; Γ |-- p : sEq (succ_sort s) (sSort s) T1 T2 -> *)
-(*     Σ ;;; Γ |-- t : T1 -> *)
-(*     Σ ;;; Γ |-- transport s T1 T2 p t : T2 *)
-(* ). *)
-
 Lemma type_transport :
   forall Σ Γ s T1 T2 p t ,
     Σ ;;; Γ |-i p : sEq (succ_sort s) (sSort s) T1 T2 ->
@@ -274,10 +278,13 @@ Proof.
       destruct (istype_type h1) as [s' h].
       destruct (inversionEq h) as [[[? ?] ?] ?].
       assumption.
-    + instantiate (1 := s).
-      (* From inversion of h1 *)
-      (* But also because of typing of lift or something like weakening. *)
-      admit.
+    + destruct (istype_type h1) as [s' h].
+      destruct (inversionEq h) as [[[? ?] ?] ?].
+      instantiate (1 := s).
+      change (sSort s) with (lift0 1 (sSort s)).
+      eapply typing_lift01.
+      * assumption.
+      * eassumption.
     + eapply type_Conv.
       * eapply ITyping.type_J.
         -- eapply type_Sort. apply (typing_wf h1).
@@ -289,8 +296,23 @@ Proof.
            assumption.
         -- eapply type_Prod.
            ++ instantiate (1 := s).
-              (* Need lemma for lift *)
-              admit.
+              destruct (istype_type h1) as [s' h].
+              destruct (inversionEq h) as [[[? ?] ?] ?].
+              change (sSort s) with (lift0 1 (sSort s)) at 3.
+              replace (lift0 2 T1) with (lift0 1 (lift0 1 T1)) by (rewrite lift_lift ; reflexivity).
+              eapply typing_lift01.
+              ** change (sSort s) with (lift0 1 (sSort s)).
+                 eapply typing_lift01.
+                 --- assumption.
+                 --- eassumption.
+              ** apply type_Eq.
+                 --- apply type_Sort. apply wf_snoc.
+                     +++ apply (typing_wf h1).
+                     +++ exists (succ_sort s). apply type_Sort. apply (typing_wf h1).
+                 --- (* THIS IS WRONG! *)
+                     admit.
+                 --- (* NEED TO SORT ABOVE FIRST *)
+                     admit.
            ++ eapply type_Conv.
               ** eapply type_Rel.
                  eapply wf_snoc.
@@ -584,8 +606,12 @@ Proof.
       * assumption.
       * assumption.
     + eapply type_Eq.
-      * (* Lemma for lift *)
-        admit.
+      * change (sSort s') with (lift0 1 (sSort s')).
+        eapply typing_lift01.
+        -- (* Wrong sort? *)
+           admit.
+        -- (* TODO LATER *)
+           admit.
       * (* Lemma for lift *)
         admit.
       * (* Lemma for lift *)

@@ -10,6 +10,18 @@ Open Scope i_scope.
 
 (*! Preliminary lemmata *)
 
+Lemma eq_safe_nth :
+  forall {Γ n x A isdecl isdecl'},
+    safe_nth (Γ ,, svass x A) (exist _ (S n) isdecl') =
+    safe_nth Γ (exist _ n isdecl).
+Proof.
+  intros Γ. induction Γ ; intros n x A isdecl isdecl'.
+  - easy.
+  - destruct n.
+    + reflexivity.
+    + cbn. admit.
+Admitted.
+
 Lemma typing_wf :
   forall {Σ Γ t T},
     Σ ;;; Γ |-i t : T ->
@@ -63,10 +75,17 @@ Proof.
     + (* As expected, this lemma doesn't work by induction... *)
 Admitted.
 
+Lemma typing_subst :
+  forall {Σ Γ t A B u n},
+    Σ ;;; Γ ,, svass n A |-i t : B ->
+    Σ ;;; Γ |-i u : A ->
+    Σ ;;; Γ |-i t{ 0 := u } : B{ 0 := u }.
+Admitted.
+
 Lemma istype_type :
   forall {Σ Γ t T},
     Σ ;;; Γ |-i t : T ->
-    { s : sort & Σ ;;; Γ |-i T : sSort s }.
+    ∑ s, Σ ;;; Γ |-i T : sSort s.
 Proof.
   intros Σ Γ t T H.
   induction H.
@@ -88,8 +107,7 @@ Proof.
            { intro t. rewrite lift_lift. reflexivity. }
            rewrite eq. clear eq.
            eapply typing_lift01.
-           ++ (* This also requires a lemma! *)
-              admit.
+           ++ erewrite eq_safe_nth. eassumption.
            ++ eassumption.
   - exists (succ_sort (succ_sort s)). now apply type_Sort.
   - exists (succ_sort (max_sort s1 s2)). apply type_Sort. apply (typing_wf H).
@@ -98,11 +116,13 @@ Proof.
     + (* Well, α-renaming should solve the trick. But we shouldn't have to
          care! *)
       admit.
-  - (* We need subsitution lemma *)
-    admit.
+  - exists s2. change (sSort s2) with ((sSort s2){ 0 := u }).
+    eapply typing_subst.
+    + eassumption.
+    + assumption.
   - exists (succ_sort s). apply type_Sort. apply (typing_wf H).
   - exists s. now apply type_Eq.
-  - (* Substitution lemma *)
+  - (* Substitution lemma is not strong enough? *)
     admit.
   - exists s. apply type_Eq ; try easy. now apply type_Eq.
   - exists (max_sort s1 s2). apply type_Eq.
@@ -112,8 +132,10 @@ Proof.
       admit.
   - exists (succ_sort (max_sort s1 s2)). apply type_Sort. apply (typing_wf H).
   - exists (max_sort s1 s2). now apply type_Sig.
-  - (* Substitution lemma *)
-    admit.
+  - exists s3. change (sSort s3) with ((sSort s3){ 0 := p}).
+    eapply typing_subst.
+    + eassumption.
+    + assumption.
   - exists s. assumption.
 Admitted.
 

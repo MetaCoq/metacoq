@@ -996,6 +996,29 @@ Proof.
     now eapply IHtseq.
 Defined.
 
+Lemma choose_type' :
+  forall {Σ A A'},
+    type_head (head A) ->
+    A ⊏ A' ->
+    forall {Γ Γ' t t'},
+      Γ ⊂ Γ' ->
+      t ⊏ t' ->
+      (Σ ;;; Γ' |-i t' : A') ->
+      ∑ A'',
+        (∑ t'', Σ ;;;; Γ' |--- [ t'' ] : A'' # ⟦ Γ |--- [t] : A ⟧) *
+        (head A'' = head A).
+Proof.
+  intros Σ A A' hth hA Γ Γ' t t' hΓ ht h.
+  destruct (trel_transport_seq hA) as [A'' [tseq [hh heq]]].
+  subst.
+  destruct (istype_type h) as [s hs].
+  assert (hth' : type_head (head A'')) by (now rewrite hh).
+  destruct (inversion_transportType hth' hs) as [s' h'].
+  exists A''. split.
+  - admit.
+  - assumption.
+Admitted.
+
 Lemma choose_type_Prod :
   forall {Σ n A B T'},
     sProd n A B ⊏ T' ->

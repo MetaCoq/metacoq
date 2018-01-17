@@ -940,6 +940,11 @@ Definition head (t : sterm) : head_kind :=
 Inductive transport_data :=
 | trd (s : sort) (T1 T2 p : sterm).
 
+Definition trsort (td : transport_data) : sort :=
+  match td with
+  | trd s _ _ _ => s
+  end.
+
 Definition transport_data_app (td : transport_data) (t : sterm) : sterm :=
   match td with
   | trd s T1 T2 p => transport s T1 T2 p t
@@ -978,25 +983,42 @@ Lemma inversion_transportType :
   forall {Σ tseq Γ' A' T},
     type_head (head A') ->
     Σ ;;; Γ' |-i transport_seq_app tseq A' : T ->
-    ∑ s, Σ ;;; Γ' |-i A' : sSort s.
+    ∑ s,
+      (Σ ;;; Γ' |-i A' : sSort s) *
+      (forall td, In td tseq -> trsort td = succ_sort s).
 Proof.
   intros Σ tseq. induction tseq ; intros Γ' A' T hh ht.
 
   - cbn in *. destruct A' ; try (now inversion hh).
-    + exists (succ_sort s). apply type_Sort. apply (typing_wf ht).
+    + exists (succ_sort s). split.
+      * apply type_Sort. apply (typing_wf ht).
+      * easy.
     + destruct (inversionProd ht) as [s1 [s2 [[? ?] ?]]].
-      exists (max_sort s1 s2). now apply type_Prod.
+      exists (max_sort s1 s2). split.
+      *  now apply type_Prod.
+      * easy.
     + destruct (inversionEq ht) as [[[? ?] ?] ?].
-      exists s. now apply type_Eq.
+      exists s. split.
+      * now apply type_Eq.
+      * easy.
     + destruct (inversionSig ht) as [s1 [s2 [[? ?] ?]]].
-      exists (max_sort s1 s2). now apply type_Sig.
+      exists (max_sort s1 s2). split.
+      * now apply type_Sig.
+      * easy.
 
   - destruct a. cbn in ht.
     change (fold_right transport_data_app A' tseq)
       with (transport_seq_app tseq A') in ht.
-    destruct (inversionTransport ht) as [[? ?] ?].
-    now eapply IHtseq.
-Defined.
+    destruct (inversionTransport ht) as [[? hA'] ?].
+    destruct (IHtseq Γ' A' T1 hh hA') as [s' [hAs htd]].
+    exists s'. split.
+    + assumption.
+    + intros td intd. destruct intd.
+      * subst. cbn.
+        (* This holds on paper so we should be able to derive it somehow. *)
+        admit.
+      * now apply htd.
+Admitted.
 
 Lemma choose_type' :
   forall {Σ A A'},
@@ -1015,7 +1037,7 @@ Proof.
   rewrite heq in h.
   destruct (istype_type h) as [s hs].
   assert (hth' : type_head (head A'')) by (now rewrite hh).
-  destruct (inversion_transportType hth' hs) as [s' h'].
+  destruct (inversion_transportType hth' hs) as [s' [h' htd]].
   exists A''. split.
   - assert (simA : A'' ∼ A').
     { eapply trel_trans.
@@ -1024,8 +1046,14 @@ Proof.
     }
     pose (thm := @trel_to_heq Σ Γ' (succ_sort s') (sSort s') (sSort s') A'' A' simA).
     rewrite <- heq in hs.
-    (* Is there any reason to believe s and s' are one and the same? *)
-    admit.
+    destruct thm as [p hp].
+    + apply type_Sort. apply (typing_wf h').
+    + apply type_Sort. apply (typing_wf h').
+    + assumption.
+    + (* We should be able to deal with sorts here with htd *)
+      admit.
+    + (* We're not there yet, but closer, this should proceed like on paper. *)
+      admit.
   - assumption.
 Admitted.
 

@@ -955,14 +955,16 @@ Lemma trel_transport_seq :
     A ⊏ A' ->
     ∑ A'' (tseq : transport_seq),
       (head A'' = head A) *
-      (A' = transport_seq_app tseq A'').
+      (A' = transport_seq_app tseq A'') *
+      (A ⊏ A'').
 Proof.
   intros A A' h.
-  induction h ; try (eexists ; exists nil ; now split ; [ .. | reflexivity ]).
-  destruct IHh as [A'' [tseq [hh he]]].
-  exists A'', (trd s T1 T2 p :: tseq). split.
+  induction h ; try (eexists ; exists nil ; split ; [ split ; [ idtac | reflexivity ] | idtac ] ; [ reflexivity | now constructor ]).
+  destruct IHh as [A'' [tseq [[hh he] hsub]]].
+  exists A'', (trd s T1 T2 p :: tseq). split ; [ split | ].
   - assumption.
   - cbn. now f_equal.
+  - assumption.
 Defined.
 
 Inductive type_head : head_kind -> Type :=
@@ -1009,7 +1011,7 @@ Lemma choose_type' :
         (head A'' = head A).
 Proof.
   intros Σ A A' hth hA Γ Γ' t t' hΓ ht h.
-  destruct (trel_transport_seq hA) as [A'' [tseq [hh heq]]].
+  destruct (trel_transport_seq hA) as [A'' [tseq [[hh heq] hrel]]].
   subst.
   destruct (istype_type h) as [s hs].
   assert (hth' : type_head (head A'')) by (now rewrite hh).

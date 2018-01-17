@@ -561,6 +561,83 @@ Inductive trel (E : list (nat * nat)) : sterm -> sterm -> Type :=
 
 Notation " t1 ∼ t2 " := (trel nil t1 t2) (at level 20).
 
+(* We also define a biased relation that only allows transports on one side,
+   the idea being that the term on the other side belongs to the source.
+   This might be unnecessary as J isn't typable in the source but hopefully
+   this is more straightforward.
+ *)
+Reserved Notation " t ⊏ t' " (at level 20).
+
+(* The first is in the source, the second in the target. *)
+Inductive inrel : sterm -> sterm -> Type :=
+| inrel_Rel x :
+    sRel x ⊏ sRel x
+
+| inrel_transport t t' s T1 T2 p :
+    t ⊏ t' ->
+    t ⊏ transport s T1 T2 p t'
+
+| inrel_Prod n n' A A' B B' :
+    A ⊏ A' ->
+    B ⊏ B' ->
+    sProd n A B ⊏ sProd n' A' B'
+
+| inrel_Eq s A A' u u' v v' :
+    A ⊏ A' ->
+    u ⊏ u' ->
+    v ⊏ v' ->
+    sEq s A u v ⊏ sEq s A' u' v'
+
+| inrel_Sig n n' A A' B B' :
+    A ⊏ A' ->
+    B ⊏ B' ->
+    sSig n A B ⊏ sSig n' A' B'
+
+| inrel_Sort s :
+    sSort s ⊏ sSort s
+
+| inrel_Lambda n n' A A' B B' u u' :
+    A ⊏ A' ->
+    B ⊏ B' ->
+    u ⊏ u' ->
+    sLambda n A B u ⊏ sLambda n' A' B' u'
+
+| inrel_App u u' n n' A A' B B' v v' :
+    u ⊏ u' ->
+    A ⊏ A' ->
+    B ⊏ B' ->
+    v ⊏ v' ->
+    sApp u n A B v ⊏ sApp u' n' A' B' v'
+
+| inrel_Refl A A' u u' :
+    A ⊏ A' ->
+    u ⊏ u' ->
+    sRefl A u ⊏ sRefl A' u'
+
+| inrel_Pair A A' B B' u u' v v' :
+    A ⊏ A' ->
+    B ⊏ B' ->
+    u ⊏ u' ->
+    v ⊏ v' ->
+    sPair A B u v ⊏ sPair A' B' u' v'
+
+| inrel_SigLet A A' B B' P P' p p' t t' :
+    A ⊏ A' ->
+    B ⊏ B' ->
+    P ⊏ P' ->
+    p ⊏ p' ->
+    t ⊏ t' ->
+    sSigLet A B P p t ⊏ sSigLet A' B' P' p' t'
+
+where " t ⊏ t' " := (inrel t t').
+
+Lemma inrel_trel :
+  forall {t t'}, t ⊏ t' -> t ∼ t'.
+Proof.
+  intros t t' h.
+  induction h ; now constructor.
+Defined.
+
 (*! Heterogenous equality *)
 Definition heq s A a B b :=
   sSig nAnon (sEq (succ_sort s) (sSort s) A B)

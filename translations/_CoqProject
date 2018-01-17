@@ -8,6 +8,7 @@ translation_utils.v
 tsl_param.v
 tsl_fun.v
 tsl_param2.v
+param2_correctness.v
 #tsl_p.v
 
 #TestFun.v

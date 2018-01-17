@@ -168,8 +168,49 @@ Proof.
       admit.
 Admitted.
 
-(* Lemma inversionSort *)
-(* Lemma inversionProd *)
+Lemma inversionSort :
+  forall {Σ Γ s T},
+    Σ ;;; Γ |-i sSort s : T ->
+    Σ ;;; Γ |-i sSort (succ_sort s) = T : sSort (succ_sort (succ_sort s)).
+Proof.
+  intros Σ Γ s T h.
+  dependent induction h.
+
+  - apply eq_reflexivity. apply type_Sort. assumption.
+
+  - specialize (IHh1 s (eq_refl _)). eapply eq_transitivity.
+    + eassumption.
+    + (* Wrong sort! *)
+      admit.
+Admitted.
+
+Lemma inversionProd :
+  forall {Σ Γ n A B T},
+    Σ ;;; Γ |-i sProd n A B : T ->
+    ∑ s1 s2,
+      (Σ ;;; Γ |-i A : sSort s1) *
+      (Σ ;;; Γ ,, svass n A |-i B : sSort s2) *
+      (Σ ;;; Γ |-i sSort (max_sort s1 s2) = T : sSort (succ_sort (max_sort s1 s2))).
+Proof.
+  intros Σ Γ n A B T h.
+  dependent induction h.
+
+  - exists s1, s2. repeat split.
+    + assumption.
+    + assumption.
+    + apply eq_reflexivity. apply type_Sort. apply (typing_wf h1).
+
+  - destruct (IHh1 n A B (eq_refl _)) as [s1 [s2 [[? ?] ?]]].
+    exists s1, s2. repeat split.
+    + assumption.
+    + assumption.
+    + eapply eq_transitivity.
+      * eassumption.
+      * (* Sort problem, should be solved once A = B : s implies A : s or
+           something *)
+        admit.
+Admitted.
+
 (* Lemma inversionLambda *)
 
 Lemma inversionApp :
@@ -253,7 +294,34 @@ Admitted.
 
 (* Lemma inversionUip *)
 (* Lemma inversionFunext *)
-(* Lemma inversionSig *)
+
+Lemma inversionSig :
+  forall {Σ Γ n A B T},
+    Σ ;;; Γ |-i sSig n A B : T ->
+    ∑ s1 s2,
+      (Σ ;;; Γ |-i A : sSort s1) *
+      (Σ ;;; Γ ,, svass n A |-i B : sSort s2) *
+      (Σ ;;; Γ |-i sSort (max_sort s1 s2) = T : sSort (succ_sort (max_sort s1 s2))).
+Proof.
+  intros Σ Γ n A B T h.
+  dependent induction h.
+
+  - exists s1, s2. repeat split.
+    + assumption.
+    + assumption.
+    + apply eq_reflexivity. apply type_Sort. apply (typing_wf h1).
+
+  - destruct (IHh1 n A B (eq_refl _)) as [s1 [s2 [[? ?] ?]]].
+    exists s1, s2. repeat split.
+    + assumption.
+    + assumption.
+    + eapply eq_transitivity.
+      * eassumption.
+      * (* Sort problem, should be solved once A = B : s implies A : s or
+           something *)
+        admit.
+Admitted.
+
 (* Lemma inversionPair *)
 (* Lemma inversionSigLet *)
 
@@ -896,6 +964,53 @@ Proof.
   - assumption.
   - cbn. now f_equal.
 Defined.
+
+Inductive type_head : head_kind -> Type :=
+| type_headSort : type_head headSort
+| type_headProd : type_head headProd
+| type_headEq : type_head headEq
+| type_headSig : type_head headSig
+.
+
+Lemma inversion_transportType :
+  forall {Σ tseq Γ' A' T},
+    type_head (head A') ->
+    Σ ;;; Γ' |-i transport_seq_app tseq A' : T ->
+    ∑ s, Σ ;;; Γ' |-i A' : sSort s.
+Proof.
+  intros Σ tseq. induction tseq ; intros Γ' A' T hh ht.
+
+  - cbn in *. destruct A' ; try (now inversion hh).
+    + exists (succ_sort s). apply type_Sort. apply (typing_wf ht).
+    + destruct (inversionProd ht) as [s1 [s2 [[? ?] ?]]].
+      exists (max_sort s1 s2). now apply type_Prod.
+    + destruct (inversionEq ht) as [[[? ?] ?] ?].
+      exists s. now apply type_Eq.
+    + destruct (inversionSig ht) as [s1 [s2 [[? ?] ?]]].
+      exists (max_sort s1 s2). now apply type_Sig.
+
+  - destruct a. cbn in ht.
+    change (fold_right transport_data_app A' tseq)
+      with (transport_seq_app tseq A') in ht.
+    destruct (inversionTransport ht) as [[? ?] ?].
+    now eapply IHtseq.
+Defined.
+
+Lemma choose_type_Prod :
+  forall {Σ n A B T'},
+    sProd n A B ⊏ T' ->
+    forall {Γ Γ' t t'},
+      Γ ⊂ Γ' ->
+      t ⊏ t' ->
+      (Σ ;;; Γ' |-i t' : T') ->
+      ∑ n' A' B' t'',
+        Σ ;;;; Γ' |--- [t''] : sProd n' A' B' # ⟦ Γ |--- [t] : A ⟧.
+Proof.
+  intros Σ n A B T' hT.
+  (* dependent induction hT ; intros Γ Γ' f f' hΓ hf h. *)
+Abort.
+
+
 
 (* Lemma choose_type' : *)
 (*   forall {Σ A A'}, *)

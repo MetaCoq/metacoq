@@ -784,6 +784,44 @@ Definition head (t : sterm) : head_kind :=
   | sSigLet A B P p t => headSigLet
   end.
 
+Inductive transport_data :=
+| trd (s : sort) (T1 T2 p : sterm).
+
+Definition transport_data_app (td : transport_data) (t : sterm) : sterm :=
+  match td with
+  | trd s T1 T2 p => transport s T1 T2 p t
+  end.
+
+Definition transport_seq := list transport_data.
+
+Definition transport_seq_app (tr : transport_seq) (t : sterm) : sterm :=
+  List.fold_right transport_data_app t tr.
+
+Lemma trel_transport_seq :
+  forall {A A'},
+    A' ∼ A ->
+    ∑ A'' (tseq : transport_seq),
+      (head A'' = head A) *
+      (A' = transport_seq_app tseq A'').
+Proof.
+  intros A A' h.
+  induction h.
+  - easy.
+  - exists (sRel x), nil. now split.
+  - destruct IHh as [A'' [tseq [hh he]]].
+    exists A'', (trd s T1 T2 p :: tseq). split.
+    + assumption.
+    + cbn. now f_equal.
+  - (* destruct IHh as [A'' [tseq [hh he]]]. *)
+    (* exists A'', tseq. split. *)
+    (* +  *)
+    (* In this case we want it to be left-biased...
+       However, this isn't always the case.
+       Anyway, as is, the lemma is broken. Shall we have two version of ∼?
+     *)
+Abort.
+
+
 Lemma choose_type' :
   forall {Σ A A'},
     A' ∼ A ->

@@ -180,7 +180,42 @@ Lemma tsl_S_fuel {fuel Σ E Γ t t'}
   : tsl_term fuel Σ E Γ t = Success t' -> tsl_term (S fuel) Σ E Γ t = Success t'.
 Admitted.
 
+Run TemplateProgram (sd <- tmQuoteInductive "Translations.sigma.sigma" ;;
+                     tmDefinition "sigma_decl" sd).
 
+Definition declare_sigma Σ := declared_minductive Σ "Translations.sigma.sigma" sigma_decl.
+
+Require Import ssreflect ssrfun.
+
+Record hidden T := Hidden {show : T}.
+Arguments show : simpl never.
+Notation "'hidden" := (show _ (Hidden _ _)).
+Lemma hide T (t : T) : t = show T (Hidden T t).
+Proof. by []. Qed.
+
+Lemma typing_pair (Σ : global_context) (HΣ : declare_sigma Σ)
+      Γ a1 a2 t1 t2 :
+      Σ ;;; Γ |-- t1 : a1 ->
+      Σ ;;; Γ |-- t2 : tApp a2 [t1] ->
+      Σ ;;; Γ |-- pair a1 a2 t1 t2 : pack a1 a2.
+Proof.
+  intros H H0. unfold pair, pack, tPair, tSigma.
+  eapply type_App.
+    unshelve eapply type_Construct; first shelve.
+    eexists; split.
+      by exists sigma_decl.
+    reflexivity.
+  - simpl. unfold declare_sigma, declared_minductive in HΣ.
+    rewrite HΣ.
+    
+    symmetry in HΣ |-.
+    
+
+    set spine := (X in typing_spine _ _ X).
+
+
+
+    
 Lemma tsl_correct Σ Γ t T (H : Σ ;;; Γ |-- t : T)
   : forall E, tsl_table_correct Σ E ->
     forall fuel Γ' t' T',
@@ -197,11 +232,22 @@ Lemma tsl_correct Σ Γ t T (H : Σ ;;; Γ |-- t : T)
     assert (Success (lift0 (S n) (decl_type (safe_nth Γ' (n; p))))
             = Success T'). {
       etransitivity; [|eassumption].
-      clear -H3. rewrite tsl_ty_lift. now rewrite <- H3. assumption.
+      clear -H3. rewrite -> tsl_ty_lift. now rewrite <- H3. assumption.
     }
     now inversion H5.
-  - inversion H0. inversion H4. clear H0 H4.
-    inversion H1. econstructor.
+  - simpl in H0.
+    case t_def : tsl_rec2 => [t|//] in H0.
+    case t2_def : tsl_rec2 => [t2|//] in H0.
+    injection H0; clear H0; intro H0.
+    injection H1; clear H1; intro H1.
+    destruct H0, H1.
+
+
+    
+    cbn in H1.
+    inversion H1; clear H1.
+    clear H3 H4.
+    econstructor.
   - cbn in H2.
     remember (tsl_term fuel Σ E Γ c).
     destruct t0; [|discriminate].

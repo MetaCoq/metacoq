@@ -1012,12 +1012,20 @@ Lemma choose_type' :
 Proof.
   intros Σ A A' hth hA Γ Γ' t t' hΓ ht h.
   destruct (trel_transport_seq hA) as [A'' [tseq [[hh heq] hrel]]].
-  subst.
+  rewrite heq in h.
   destruct (istype_type h) as [s hs].
   assert (hth' : type_head (head A'')) by (now rewrite hh).
   destruct (inversion_transportType hth' hs) as [s' h'].
   exists A''. split.
-  - admit.
+  - assert (simA : A'' ∼ A').
+    { eapply trel_trans.
+      - apply trel_sym. apply inrel_trel. eassumption.
+      - apply inrel_trel. assumption.
+    }
+    pose (thm := @trel_to_heq Σ Γ' (succ_sort s') (sSort s') (sSort s') A'' A' simA).
+    rewrite <- heq in hs.
+    (* Is there any reason to believe s and s' are one and the same? *)
+    admit.
   - assumption.
 Admitted.
 

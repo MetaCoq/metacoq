@@ -1050,6 +1050,7 @@ Inductive type_head : head_kind -> Type :=
 | type_headSig : type_head headSig
 .
 
+(* Put earlier! *)
 Inductive InT {A} (x : A) : list A -> Type :=
 | InHd l : InT x (x :: l)
 | InTl a l : InT x l -> InT x (a :: l).
@@ -1129,6 +1130,7 @@ Proof.
       * assumption.
 Defined.
 
+(* Put earlier! *)
 Lemma sorts_in_sort :
   forall {Σ Γ s1 s2 s},
     Σ ;;; Γ |-i sSort s1 : sSort s ->
@@ -1161,14 +1163,16 @@ Proof.
   assert (hth' : type_head (head A'')) by (now rewrite hh).
   destruct (inversion_transportType hth' hs) as [s' [[h' htd] hss']].
   exists A''. split.
-  - assert (simA : A'' ∼ A').
-    { eapply trel_trans.
+  - assert (simA : A' ∼ A'').
+    { apply trel_sym.
+      eapply trel_trans.
       - apply trel_sym. apply inrel_trel. eassumption.
       - apply inrel_trel. assumption.
     }
-    pose (thm := @trel_to_heq Σ Γ' (succ_sort s') (sSort s) (sSort s) A'' A' simA).
+    pose (thm := @trel_to_heq Σ Γ' (succ_sort s') (sSort s) (sSort s) A' A'' simA).
     rewrite <- heq in hs.
     destruct thm as [p hp].
+    + assumption.
     + assumption.
     + assumption.
     + eapply type_Conv.
@@ -1177,9 +1181,28 @@ Proof.
       * eapply sorts_in_sort.
         -- apply type_Sort. apply (typing_wf h').
         -- assumption.
-    + assumption.
-    + (* Closer! *)
-      admit.
+    + (* Maybe we should change type_eq *)
+      destruct (heq_to_eq hp) as [q hq].
+      exists (transport s A' A'' q t').
+      repeat split.
+      * assumption.
+      * assumption.
+      * constructor. assumption.
+      * eapply type_transport.
+        -- eapply type_Conv.
+           ++ eassumption.
+           ++ econstructor.
+              ** apply type_Sort. apply (typing_wf h').
+              ** assumption.
+              ** eapply type_Conv.
+                 --- eassumption.
+                 --- eassumption.
+                 --- eapply sorts_in_sort.
+                     +++ apply type_Sort. apply (typing_wf h').
+                     +++ assumption.
+           ++ (* Seems we have to make the change earlier! *)
+              admit.
+        -- subst. assumption.
   - assumption.
 Admitted.
 

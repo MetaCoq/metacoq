@@ -30,6 +30,13 @@ Proof.
   intros Σ Γ t T H. induction H ; easy.
 Defined.
 
+(* I honestly don't know how to do that one. *)
+Lemma sort_in_sort :
+  forall {Σ Γ s s'},
+    Σ ;;; Γ |-i sSort s : sSort s' ->
+    s' = succ_sort s.
+Admitted.
+
 Lemma lift_lift :
   forall t n m k,
     lift n k (lift m k t) = lift (n+m) k t.
@@ -1056,6 +1063,7 @@ Lemma inversion_transportType :
     Σ ;;; Γ' |-i transport_seq_app tseq A' : T ->
     ∑ s,
       (Σ ;;; Γ' |-i A' : sSort s) *
+      (* Conversion should be enough and wouldn't need the awful lemma above. *)
       (forall td, In td tseq -> trsort td = succ_sort s) *
       (Σ ;;; Γ' |-i T : sSort (succ_sort s)).
 Proof.
@@ -1091,7 +1099,7 @@ Proof.
     + assumption.
     + intros td intd. destruct intd.
       * subst. cbn.
-        destruct tseq.
+        destruct tseq as [| [s1 U V q] tseq].
         -- cbn in *.
            destruct (uniqueness hA' hAs) as [s'' hs''].
            destruct (eq_typing hs'') as [hT1s'' hs's''].
@@ -1102,12 +1110,19 @@ Proof.
              - destruct (eq_typing hs3). eassumption.
              - apply eq_symmetry. assumption.
            }
-           (* Now it is only a question of saying s' : s implies s = s'+1 *)
+           eapply sort_in_sort ; eassumption.
+        -- cbn in *.
+           change (fold_right transport_data_app A' tseq)
+             with (transport_seq_app tseq A') in hA'.
+           destruct (inversionTransport hA') as [[[? ?] ?] ?].
            admit.
-        -- admit.
       * now apply htd.
-    + (* This seems wrong... *)
-      admit.
+    + destruct (eq_typing e) as [_ hT].
+      destruct (uniqueness hT1 hseq) as [s3 hs3].
+      eapply type_Conv.
+      * eassumption.
+      * apply (eq_typing hs3).
+      * assumption.
 Admitted.
 
 Lemma choose_type' :

@@ -1211,6 +1211,18 @@ Lemma change_type :
     Σ ;;;; Γ' |--- [ A'' ] : sSort s # ⟦ Γ |--- [A] : sSort s ⟧ ->
     ∑ t'', Σ ;;;; Γ' |--- [ t'' ] : A'' # ⟦ Γ |--- [t] : A ⟧.
 Proof.
+  intros Σ Γ A t Γ' A' t' s A'' [[[rΓ' rA'] rt'] ht'] [[[rΓ'' _] rA''] hA''].
+  assert (simA : A' ∼ A'').
+  { eapply trel_trans.
+    - eapply trel_sym. eapply inrel_trel. eassumption.
+    - eapply inrel_trel. eassumption.
+  }
+  (* Even before the detructtion of the translation hypotheses
+     I should use choose_type to place A' in a sort?
+     That doesn't seem necessary as istype_type should be enough here.
+     However, once again we'll have different sorts at play.
+   *)
+  admit.
 Admitted.
 
 

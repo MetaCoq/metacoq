@@ -1179,100 +1179,21 @@ Proof.
         -- assumption.
     + assumption.
     + (* Closer! *)
+      admit.
   - assumption.
 Admitted.
 
-Lemma choose_type_Prod :
-  forall {Σ n A B T'},
-    sProd n A B ⊏ T' ->
-    forall {Γ Γ' t t'},
-      Γ ⊂ Γ' ->
-      t ⊏ t' ->
-      (Σ ;;; Γ' |-i t' : T') ->
-      ∑ n' A' B' t'',
-        Σ ;;;; Γ' |--- [t''] : sProd n' A' B' # ⟦ Γ |--- [t] : A ⟧.
+Lemma choose_type :
+  forall {Σ Γ A t Γ' A' t'},
+    type_head (head A) ->
+    Σ ;;;; Γ' |--- [ t' ] : A' # ⟦ Γ |--- [t] : A ⟧ ->
+    ∑ A'',
+      (∑ t'', Σ ;;;; Γ' |--- [ t'' ] : A'' # ⟦ Γ |--- [t] : A ⟧) *
+      (head A'' = head A).
 Proof.
-  intros Σ n A B T' hT.
-  (* dependent induction hT ; intros Γ Γ' f f' hΓ hf h. *)
-Abort.
-
-
-
-(* Lemma choose_type' : *)
-(*   forall {Σ A A'}, *)
-(*     A' ∼ A -> *)
-(*     forall {Γ Γ' t t'}, *)
-(*       Γ' ≈ Γ -> *)
-(*       t' ∼ t -> *)
-(*       (Σ ;;; Γ' |-i t' : A') -> *)
-(*       ∑ A'', *)
-(*         (∑ t'', Σ ;;;; Γ' |--- [ t'' ] : A'' # ⟦ Γ |--- [t] : A ⟧) * *)
-(*         (head A'' = head A). *)
-(* Proof. *)
-(*   intros Σ A A' hA. induction hA ; intros Γ Γ' t t' hΓ ht h. *)
-(*   - easy. *)
-(*   - exists (sRel x). split. *)
-(*     + exists t'. repeat split ; try easy. apply trel_refl. *)
-(*     + reflexivity. *)
-(*   - destruct (istype_type h) as [s' htr]. *)
-(*     destruct (inversionTransport htr) as [[hp ht1] heq]. *)
-(*     specialize (IHhA Γ Γ' t). *)
-(*     (* This seems wrong... How can we fix this lemma?! *)
-(*        I am starting to doubt it on paper even. I am not sure it works if the *)
-(*        head is not a canonical type, an App for instance (because then, *)
-(*        inversion doesn't type the type in a universe). *)
-(*        We might have to state it explicitely for each type constructor. *)
-(*      *) *)
-(*     admit. *)
-(*   - (* TODO *) admit. *)
-(*   - exists (sProd n1 A1 B1). split. *)
-(*     + exists t'. repeat split ; try easy. now apply trel_Prod. *)
-(*     + reflexivity. *)
-(*   - exists (sEq s A1 u1 v1). split. *)
-(*     + exists t'. repeat split ; try easy. now apply trel_Eq. *)
-(*     + reflexivity. *)
-(*   - exists (sSig n1 A1 B1). split. *)
-(*     + exists t'. repeat split ; try easy. now apply trel_Sig. *)
-(*     + reflexivity. *)
-(*   - exists (sSort s). split. *)
-(*     + exists t'. repeat split ; try easy. now apply trel_Sort. *)
-(*     + reflexivity. *)
-(*   - exists (sLambda n1 A1 B1 u1). split. *)
-(*     + exists t'. repeat split ; try easy. now apply trel_Lambda. *)
-(*     + reflexivity. *)
-(*   - exists (sApp u1 n1 A1 B1 v1). split. *)
-(*     + exists t'. repeat split ; try easy. now apply trel_App. *)
-(*     + reflexivity. *)
-(*   - exists (sRefl A1 u1). split. *)
-(*     + exists t'. repeat split ; try easy. now apply trel_Refl. *)
-(*     + reflexivity. *)
-(*   - exists (sFunext A1 B1 f1 g1 e1). split. *)
-(*     + exists t'. repeat split ; try easy. now apply trel_Funext. *)
-(*     + reflexivity. *)
-(*   - exists (sUip A1 u1 v1 p1 q1). split. *)
-(*     + exists t'. repeat split ; try easy. now apply trel_Uip. *)
-(*     + reflexivity. *)
-(*   - exists (sJ A1 u1 P1 w1 v1 p1). split. *)
-(*     + exists t'. repeat split ; try easy. now apply trel_J. *)
-(*     + reflexivity. *)
-(*   - exists (sPair A1 B1 u1 v1). split. *)
-(*     + exists t'. repeat split ; try easy. now apply trel_Pair. *)
-(*     + reflexivity. *)
-(*   - exists (sSigLet A1 B1 P1 p1 t1). split. *)
-(*     + exists t'. repeat split ; try easy. now apply trel_SigLet. *)
-(*     + reflexivity. *)
-(* Admitted. *)
-
-(* Lemma choose_type : *)
-(*   forall {Σ Γ A t Γ' A' t'}, *)
-(*     Σ ;;;; Γ' |--- [ t' ] : A' # ⟦ Γ |--- [t] : A ⟧ -> *)
-(*     ∑ A'', *)
-(*       (∑ t'', Σ ;;;; Γ' |--- [ t'' ] : A'' # ⟦ Γ |--- [t] : A ⟧) * *)
-(*       (head A'' = head A). *)
-(* Proof. *)
-(*   intros Σ Γ A t Γ' A' t' [[[hΓ hA] ht] h]. *)
-(*   now eapply choose_type'. *)
-(* Defined. *)
+  intros Σ Γ A t Γ' A' t' htt [[[hΓ hA] ht] h].
+  now eapply choose_type'.
+Defined.
 
 Lemma change_type :
   forall {Σ Γ A t Γ' A' t' s A''},

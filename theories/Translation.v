@@ -30,13 +30,6 @@ Proof.
   intros Σ Γ t T H. induction H ; easy.
 Defined.
 
-(* I honestly don't know how to do that one. *)
-Lemma sort_in_sort :
-  forall {Σ Γ s s'},
-    Σ ;;; Γ |-i sSort s : sSort s' ->
-    s' = succ_sort s.
-Admitted.
-
 Lemma lift_lift :
   forall t n m k,
     lift n k (lift m k t) = lift (n+m) k t.
@@ -1057,14 +1050,17 @@ Inductive type_head : head_kind -> Type :=
 | type_headSig : type_head headSig
 .
 
+Inductive InT {A} (x : A) : list A -> Type :=
+| InHd l : InT x (x :: l)
+| InTl a l : InT x l -> InT x (a :: l).
+
 Lemma inversion_transportType :
   forall {Σ tseq Γ' A' T},
     type_head (head A') ->
     Σ ;;; Γ' |-i transport_seq_app tseq A' : T ->
     ∑ s,
       (Σ ;;; Γ' |-i A' : sSort s) *
-      (* Conversion should be enough and wouldn't need the awful lemma above. *)
-      (forall td, In td tseq -> trsort td = succ_sort s) *
+      (forall td, InT td tseq -> Σ ;;; Γ' |-i sSort (succ_sort s) = sSort (trsort td) : sSort (succ_sort (succ_sort s))) *
       (Σ ;;; Γ' |-i T : sSort (succ_sort s)).
 Proof.
   intros Σ tseq. induction tseq ; intros Γ' A' T hh ht.
@@ -1097,8 +1093,8 @@ Proof.
     destruct (IHtseq Γ' A' T1 hh hA') as [s' [[hAs htd] hseq]].
     exists s'. repeat split.
     + assumption.
-    + intros td intd. destruct intd.
-      * subst. cbn.
+    + intros td intd. dependent destruction intd.
+      * cbn.
         destruct tseq as [| [s1 U V q] tseq].
         -- cbn in *.
            destruct (uniqueness hA' hAs) as [s'' hs''].
@@ -1110,12 +1106,20 @@ Proof.
              - destruct (eq_typing hs3). eassumption.
              - apply eq_symmetry. assumption.
            }
-           eapply sort_in_sort ; eassumption.
+           apply (inversionSort hss).
         -- cbn in *.
            change (fold_right transport_data_app A' tseq)
              with (transport_seq_app tseq A') in hA'.
-           destruct (inversionTransport hA') as [[[? ?] ?] ?].
-           admit.
+           destruct (inversionTransport hA') as [[[? ?] ?] he].
+           specialize (htd (trd s1 U V q) (InHd _ _)). cbn in htd.
+           destruct (eq_typing he) as [_ hT1s1].
+           destruct (uniqueness hT1s1 hT1) as [s4 h4].
+           eapply eq_transitivity.
+           ++ apply htd.
+           ++ destruct (eq_typing htd) as [_ hs11].
+              destruct (eq_typing h4) as [hs12 _].
+              destruct (uniqueness hs12 hs11) as [s5 h5].
+              cbn. eapply eq_conv ; eassumption.
       * now apply htd.
     + destruct (eq_typing e) as [_ hT].
       destruct (uniqueness hT1 hseq) as [s3 hs3].
@@ -1123,7 +1127,7 @@ Proof.
       * eassumption.
       * apply (eq_typing hs3).
       * assumption.
-Admitted.
+Defined.
 
 Lemma choose_type' :
   forall {Σ A A'},

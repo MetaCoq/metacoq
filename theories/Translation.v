@@ -1140,7 +1140,7 @@ Proof.
   - dependent induction h2.
     + (* How am I supposed to do anything if I can't even show sorts are
          syntactically different?! *)
-Abort.
+Admitted.
 
 Lemma choose_type' :
   forall {Σ A A'},
@@ -1166,15 +1166,19 @@ Proof.
       - apply trel_sym. apply inrel_trel. eassumption.
       - apply inrel_trel. assumption.
     }
-    pose (thm := @trel_to_heq Σ Γ' (succ_sort s') (sSort s') (sSort s) A'' A' simA).
+    pose (thm := @trel_to_heq Σ Γ' (succ_sort s') (sSort s) (sSort s) A'' A' simA).
     rewrite <- heq in hs.
     destruct thm as [p hp].
-    + apply type_Sort. apply (typing_wf h').
     + assumption.
     + assumption.
+    + eapply type_Conv.
+      * eassumption.
+      * eassumption.
+      * eapply sorts_in_sort.
+        -- apply type_Sort. apply (typing_wf h').
+        -- assumption.
     + assumption.
-    + (* We're not there yet, but closer, this should proceed like on paper. *)
-      admit.
+    + (* Closer! *)
   - assumption.
 Admitted.
 

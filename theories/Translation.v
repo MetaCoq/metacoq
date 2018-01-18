@@ -1057,7 +1057,7 @@ Lemma inversion_transportType :
     ∑ s,
       (Σ ;;; Γ' |-i A' : sSort s) *
       (forall td, In td tseq -> trsort td = succ_sort s) *
-      (Σ ;;; Γ' |-i sSort s = T : sSort (succ_sort s)).
+      (Σ ;;; Γ' |-i T : sSort (succ_sort s)).
 Proof.
   intros Σ tseq. induction tseq ; intros Γ' A' T hh ht.
 
@@ -1065,22 +1065,22 @@ Proof.
     + exists (succ_sort s). repeat split.
       * apply type_Sort. apply (typing_wf ht).
       * easy.
-      * apply (inversionSort ht).
+      * eapply eq_typing, (inversionSort ht).
     + destruct (inversionProd ht) as [s1 [s2 [[? ?] ?]]].
       exists (max_sort s1 s2). repeat split.
       * now apply type_Prod.
       * easy.
-      * assumption.
+      * now eapply eq_typing.
     + destruct (inversionEq ht) as [[[? ?] ?] ?].
       exists s. repeat split.
       * now apply type_Eq.
       * easy.
-      * assumption.
+      * now eapply eq_typing.
     + destruct (inversionSig ht) as [s1 [s2 [[? ?] ?]]].
       exists (max_sort s1 s2). repeat split.
       * now apply type_Sig.
       * easy.
-      * assumption.
+      * now eapply eq_typing.
 
   - destruct a. cbn in ht.
     change (fold_right transport_data_app A' tseq)

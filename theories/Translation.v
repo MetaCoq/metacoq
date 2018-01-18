@@ -139,6 +139,75 @@ Proof.
   - exists s. assumption.
 Admitted.
 
+Lemma eq_typing :
+  forall {Σ Γ t u T},
+    Σ ;;; Γ |-i t = u : T ->
+    (Σ ;;; Γ |-i t : T) * (Σ ;;; Γ |-i u : T).
+Proof.
+  intros Σ Γ t u T h.
+  induction h ;
+    repeat match goal with
+           | H : ?A * ?B |- _ => destruct H
+           end ;
+    split ; try (now constructor + easy).
+  - eapply type_Conv.
+    + econstructor ; try eassumption.
+      eapply type_Conv.
+      * econstructor ; eassumption.
+      * econstructor ; eassumption.
+      * apply eq_reflexivity. constructor ; assumption.
+    + instantiate (1 := s2).
+      change (sSort s2) with ((sSort s2){ 0 := u }).
+      eapply typing_subst ; eassumption.
+    + apply eq_reflexivity.
+      change (sSort s2) with ((sSort s2){ 0 := u }).
+      eapply typing_subst ; eassumption.
+  - eapply typing_subst ; eassumption.
+  - econstructor ; try eassumption.
+    constructor ; assumption.
+  - eapply type_Conv ; eassumption.
+  - eapply type_Conv ; eassumption.
+  - constructor ; try eassumption.
+    (* Maybe we need a context conversion lemma *)
+    admit.
+  - econstructor ; eassumption.
+  - eapply type_Conv.
+    + econstructor.
+      * eassumption.
+      * (* Context conversion *)
+        admit.
+      * (* Context conversion *)
+        admit.
+    + econstructor.
+      * eassumption.
+      * (* Naming conversion *)
+        admit.
+    + apply eq_symmetry. apply cong_Prod.
+      * assumption.
+      * (* Name conversion. *)
+        admit.
+  - econstructor ; eassumption.
+  - econstructor.
+    + econstructor.
+      * eassumption.
+      * (* Context conversion *)
+        admit.
+      * econstructor.
+        -- eassumption.
+        -- econstructor.
+           ++ eassumption.
+           ++ (* Context conversion *)
+              admit.
+        -- eapply cong_Prod ; eassumption.
+      * econstructor ; eassumption.
+    + instantiate (1 := s2).
+      change (sSort s2) with ((sSort s2){ 0 := u1 }).
+      eapply typing_subst ; eassumption.
+    + (* We need a substitution lemma for conversion *)
+      admit.
+  -
+Admitted.
+
 Lemma uniqueness :
   forall {Σ Γ A B u},
     Σ ;;; Γ |-i u : A ->
@@ -513,6 +582,7 @@ Lemma inversionTransport :
     Σ ;;; Γ |-i transport s T1 T2 p t : T ->
     (Σ ;;; Γ |-i p : sEq (succ_sort s) (sSort s) T1 T2) *
     (Σ ;;; Γ |-i t : T1) *
+    (Σ ;;; Γ |-i T1 : sSort s) *
     (Σ ;;; Γ |-i T2 = T : sSort s).
 Proof.
   intros Σ Γ s T1 T2 p t T h.
@@ -522,6 +592,7 @@ Proof.
   repeat split.
   - (* We have the assumption with the wrong sort! *)
     admit.
+  - assumption.
   - assumption.
   - (* We have the assumption but it needs lemma fot lift and subst *)
     admit.
@@ -985,39 +1056,58 @@ Lemma inversion_transportType :
     Σ ;;; Γ' |-i transport_seq_app tseq A' : T ->
     ∑ s,
       (Σ ;;; Γ' |-i A' : sSort s) *
-      (forall td, In td tseq -> trsort td = succ_sort s).
+      (forall td, In td tseq -> trsort td = succ_sort s) *
+      (Σ ;;; Γ' |-i sSort s = T : sSort (succ_sort s)).
 Proof.
   intros Σ tseq. induction tseq ; intros Γ' A' T hh ht.
 
   - cbn in *. destruct A' ; try (now inversion hh).
-    + exists (succ_sort s). split.
+    + exists (succ_sort s). repeat split.
       * apply type_Sort. apply (typing_wf ht).
       * easy.
+      * apply (inversionSort ht).
     + destruct (inversionProd ht) as [s1 [s2 [[? ?] ?]]].
-      exists (max_sort s1 s2). split.
-      *  now apply type_Prod.
+      exists (max_sort s1 s2). repeat split.
+      * now apply type_Prod.
       * easy.
+      * assumption.
     + destruct (inversionEq ht) as [[[? ?] ?] ?].
-      exists s. split.
+      exists s. repeat split.
       * now apply type_Eq.
       * easy.
+      * assumption.
     + destruct (inversionSig ht) as [s1 [s2 [[? ?] ?]]].
-      exists (max_sort s1 s2). split.
+      exists (max_sort s1 s2). repeat split.
       * now apply type_Sig.
       * easy.
+      * assumption.
 
   - destruct a. cbn in ht.
     change (fold_right transport_data_app A' tseq)
       with (transport_seq_app tseq A') in ht.
-    destruct (inversionTransport ht) as [[? hA'] ?].
-    destruct (IHtseq Γ' A' T1 hh hA') as [s' [hAs htd]].
-    exists s'. split.
+    destruct (inversionTransport ht) as [[[? hA'] hT1] ?].
+    destruct (IHtseq Γ' A' T1 hh hA') as [s' [[hAs htd] hseq]].
+    exists s'. repeat split.
     + assumption.
     + intros td intd. destruct intd.
       * subst. cbn.
-        (* This holds on paper so we should be able to derive it somehow. *)
-        admit.
+        destruct tseq.
+        -- cbn in *.
+           destruct (uniqueness hA' hAs) as [s'' hs''].
+           destruct (eq_typing hs'') as [hT1s'' hs's''].
+           destruct (uniqueness hT1 hT1s'') as [s3 hs3].
+           assert (hss : Σ ;;; Γ' |-i sSort s' : sSort s).
+           { eapply type_Conv.
+             - exact hs's''.
+             - destruct (eq_typing hs3). eassumption.
+             - apply eq_symmetry. assumption.
+           }
+           (* Now it is only a question of saying s' : s implies s = s'+1 *)
+           admit.
+        -- admit.
       * now apply htd.
+    + (* This seems wrong... *)
+      admit.
 Admitted.
 
 Lemma choose_type' :

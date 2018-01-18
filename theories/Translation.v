@@ -1169,11 +1169,11 @@ Proof.
       - apply trel_sym. apply inrel_trel. eassumption.
       - apply inrel_trel. assumption.
     }
-    pose (thm := @trel_to_heq Σ Γ' (succ_sort s') (sSort s) (sSort s) A' A'' simA).
+    pose (thm := @trel_to_heq Σ Γ' (succ_sort s) (sSort s) (sSort s) A' A'' simA).
     rewrite <- heq in hs.
     destruct thm as [p hp].
-    + assumption.
-    + assumption.
+    + apply type_Sort. apply (typing_wf h').
+    + apply type_Sort. apply (typing_wf h').
     + assumption.
     + eapply type_Conv.
       * eassumption.
@@ -1181,30 +1181,17 @@ Proof.
       * eapply sorts_in_sort.
         -- apply type_Sort. apply (typing_wf h').
         -- assumption.
-    + (* Maybe we should change type_eq *)
-      destruct (heq_to_eq hp) as [q hq].
+    + destruct (type_heq hp) as [q hq].
       exists (transport s A' A'' q t').
       repeat split.
       * assumption.
       * assumption.
       * constructor. assumption.
       * eapply type_transport.
-        -- eapply type_Conv.
-           ++ eassumption.
-           ++ econstructor.
-              ** apply type_Sort. apply (typing_wf h').
-              ** assumption.
-              ** eapply type_Conv.
-                 --- eassumption.
-                 --- eassumption.
-                 --- eapply sorts_in_sort.
-                     +++ apply type_Sort. apply (typing_wf h').
-                     +++ assumption.
-           ++ (* Seems we have to make the change earlier! *)
-              admit.
+        -- assumption.
         -- subst. assumption.
   - assumption.
-Admitted.
+Defined.
 
 Lemma choose_type :
   forall {Σ Γ A t Γ' A' t'},

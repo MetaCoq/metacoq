@@ -1129,6 +1129,19 @@ Proof.
       * assumption.
 Defined.
 
+Lemma sorts_in_sort :
+  forall {Σ Γ s1 s2 s},
+    Σ ;;; Γ |-i sSort s1 : sSort s ->
+    Σ ;;; Γ |-i sSort s2 : sSort s ->
+    Σ ;;; Γ |-i sSort s1 = sSort s2 : sSort s.
+Proof.
+  intros Σ Γ s1 s2 s h1.
+  dependent induction h1 ; intro h2.
+  - dependent induction h2.
+    + (* How am I supposed to do anything if I can't even show sorts are
+         syntactically different?! *)
+Abort.
+
 Lemma choose_type' :
   forall {Σ A A'},
     type_head (head A) ->

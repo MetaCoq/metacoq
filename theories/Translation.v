@@ -1146,21 +1146,20 @@ Proof.
   rewrite heq in h.
   destruct (istype_type h) as [s hs].
   assert (hth' : type_head (head A'')) by (now rewrite hh).
-  destruct (inversion_transportType hth' hs) as [s' [h' htd]].
+  destruct (inversion_transportType hth' hs) as [s' [[h' htd] hss']].
   exists A''. split.
   - assert (simA : A'' ∼ A').
     { eapply trel_trans.
       - apply trel_sym. apply inrel_trel. eassumption.
       - apply inrel_trel. assumption.
     }
-    pose (thm := @trel_to_heq Σ Γ' (succ_sort s') (sSort s') (sSort s') A'' A' simA).
+    pose (thm := @trel_to_heq Σ Γ' (succ_sort s') (sSort s') (sSort s) A'' A' simA).
     rewrite <- heq in hs.
     destruct thm as [p hp].
     + apply type_Sort. apply (typing_wf h').
-    + apply type_Sort. apply (typing_wf h').
     + assumption.
-    + (* We should be able to deal with sorts here with htd *)
-      admit.
+    + assumption.
+    + assumption.
     + (* We're not there yet, but closer, this should proceed like on paper. *)
       admit.
   - assumption.

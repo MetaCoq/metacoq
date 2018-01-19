@@ -972,6 +972,22 @@ Proof.
   now apply @trelE_to_heq with (E := nil).
 Defined.
 
+Lemma trel_lift :
+  forall {t1 t2},
+    t1 ∼ t2 ->
+    forall n k, lift n k t1 ∼ lift n k t2.
+Proof.
+  intros t1 t2. induction 1 ; intros n k.
+  all: try (cbn ; now constructor).
+  - easy.
+  - cbn. destruct (k <=? x) ; now constructor.
+  - (* cbn. fold_transport. *)
+    (* We should fix transport, hopefully we'd get back the property
+       that a lift of transport is a transport of lift. *)
+    admit.
+  - admit.
+Admitted.
+
 Lemma trel_subst :
   forall {t1 t2},
     t1 ∼ t2 ->
@@ -982,7 +998,7 @@ Proof.
   intros t1 t2. induction 1 ; intros m1 m2 hu n.
   - exfalso. easy.
   - unfold subst. destruct (nat_compare n x).
-    + admit. (* We probably need another lemma here. *)
+    + now apply trel_lift.
     + apply trel_Rel.
     + apply trel_Rel.
   - unfold transport. cbn. Fail fold_transport.

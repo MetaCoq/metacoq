@@ -37,10 +37,10 @@ Program Fixpoint safe_nth {A} (l : list A) (n : nat | n < List.length l) : A :=
 
 Next Obligation.
   simpl in H. inversion H.
-Qed.
+Defined.
 Next Obligation.
   simpl in H. auto with arith.
-Qed.
+Defined.
 
 Require Import String.
 
@@ -210,7 +210,7 @@ Next Obligation.
   destruct H as [decl' [H'' H''']].
   eapply H0.
   simpl. rewrite H''. reflexivity.
-Qed.
+Defined.
 
 Definition max_universe (u1 u2 : universe) : universe :=
   (u1 ++ u2)%list.
@@ -643,7 +643,7 @@ Definition isArity Σ Γ T :=
 
 Definition app_context (Γ Γ' : context) : context := (Γ' ++ Γ)%list.
 Notation " Γ  ,,, Γ' " := (app_context Γ Γ') (at level 25, Γ' at next level, left associativity).
-Notation "#| Γ |" := (List.length Γ) (at level 0, format "#| Γ |").
+Notation "#| Γ |" := (List.length Γ) (at level 0, Γ at level 99, format "#| Γ |").
 
 Inductive type_inddecls (Σ : global_context) (pars : context) (Γ : context) :
   list inductive_body -> Set :=

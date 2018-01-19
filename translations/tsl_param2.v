@@ -226,25 +226,26 @@ Definition tsl_mind_decl (ΣE : tsl_context)
 Defined.
 
 
+
+Instance tsl_param : Translation
+  := {| tsl_id := tsl_ident ;
+        tsl_tm := fun ΣE => tsl_term fuel (fst ΣE) (snd ΣE) [] ;
+        tsl_ty := fun ΣE => tsl_ty_param fuel (fst ΣE) (snd ΣE) [] ;
+        tsl_ind := tsl_mind_decl |}.
+
+Definition TslParam := tTranslate tsl_param.
+Definition ImplParam := tImplement tsl_param.
+
 Notation "'TYPE'" := (exists A, A -> Type).
 Notation "'El' A" := (sigma (π1 A) (π2 A)) (at level 20).
 
+Definition ty := nat -> nat.
+
+Run TemplateProgram (TslParam ([],[]) "nat" >>= print_nf).
+
 Require Vector.
 Require Even.
-Run TemplateProgram (let id := "list" in
-                     d <- tmQuoteInductive  id ;;
-                     let d' := tsl_mind_decl ([],[]) id d in
-                     d' <- tmEval lazy d' ;;
-                     tmPrint d' ;;
-                     match d' with
-                     | Success (_, d' :: _) =>
-                       (* print_nf d' ;; *)
-                       let e := mind_decl_to_entry d' in
-                       (* print_nf e ;; *)
-                       tmMkInductive e
-                                     (* ret tt *)
-                     | _ => print_nf "error"
-                     end).
+Run TemplateProgram (TslParam ([],[]) "list" >>= tmPrint).
 Check (listᵗ : forall (A : TYPE), list A.1 -> Type).
 Check (nilᵗ : forall (A : TYPE), listᵗ A nil).
 Check (consᵗ : forall (A : TYPE) (x : El A) (lH : exists l, listᵗ A l),
@@ -385,16 +386,6 @@ Check (consᵗ : forall (A : TYPE) (x : El A) (lH : exists l, listᵗ A l),
 (* Defined. *)
 
 
-
-Instance tsl_param : Translation
-  := {| tsl_id := tsl_ident ;
-        tsl_tm := fun ΣE => tsl_term fuel (fst ΣE) (snd ΣE) [] ;
-        tsl_ty := fun ΣE => tsl_ty_param fuel (fst ΣE) (snd ΣE) [] ;
-        tsl_ind := tsl_mind_decl |}.
-
-
-(* Definition TslParam := tTranslate tsl_param. *)
-(* Definition ImplParam := tImplement tsl_param. *)
 
 
 

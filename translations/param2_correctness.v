@@ -206,13 +206,7 @@ Proof.
       by exists sigma_decl.
     reflexivity.
   - simpl. unfold declare_sigma, declared_minductive in HΣ.
-    rewrite HΣ.
-    
-    symmetry in HΣ |-.
-    
-
-    set spine := (X in typing_spine _ _ X).
-
+Abort.
 
 
     
@@ -244,40 +238,42 @@ Lemma tsl_correct Σ Γ t T (H : Σ ;;; Γ |-- t : T)
 
 
     
-    cbn in H1.
-    inversion H1; clear H1.
-    clear H3 H4.
-    econstructor.
-  - cbn in H2.
-    remember (tsl_term fuel Σ E Γ c).
-    destruct t0; [|discriminate].
-    remember (tsl_term fuel Σ E Γ t).
-    destruct t1; [|discriminate].
-    inversion H2; clear H2. clear t' H6.
-    myeapply type_Cast unifying T'.
-    + eapply IHtyping1 ; try eassumption.
-      2: reflexivity. now apply tsl_S_fuel.
-    + eapply IHtyping2; try eassumption;
-        now apply tsl_S_fuel.
-    + symmetry in Heqt1. apply tsl_S_fuel in Heqt1.
-      rewrite Heqt1 in H3. now inversion H3.
-  - cbn in H3. cbn in H2.
-    inversion H3. clear H3 H6.
-    remember (tsl_term fuel Σ E Γ t).
-    destruct t0; [|discriminate].
-    remember (tsl_term fuel Σ E (Γ,, vass n t) b).
-    destruct t1; [|discriminate].
-    inversion H2. clear H2 H5.
-    unfold timesBool.
-    symmetry in Heqt0, Heqt1.
-    specialize (IHtyping1 E H1 (S fuel) Γ' t0 (tSort s1) (tsl_S_fuel Heqt0) eq_refl H4).
-    specialize (IHtyping2 E H1 (S fuel) (Γ' ,,vass n t0) t1 (tSort s2) (tsl_S_fuel Heqt1) eq_refl).
-    simple refine (let IH2 := IHtyping2 _ in _);
-      [|clearbody IH2; clear IHtyping2].
-    { unfold snoc. rewrite tsl_ctx_cons.
-      rewrite H4. cbn -[tsl_term].
-      rewrite (tsl_S_fuel Heqt0). reflexivity. }
-    pose proof (type_Prod  _ _ _ _ _ _ _ IHtyping1 IH2).
-    clear -H2.
-    eapply type_App. unfold tSigma.
-eapply type_Ind. econstructor.
+(*     cbn in H1. *)
+(*     inversion H1; clear H1. *)
+(*     clear H3 H4. *)
+(*     econstructor. *)
+(*   - cbn in H2. *)
+(*     remember (tsl_term fuel Σ E Γ c). *)
+(*     destruct t0; [|discriminate]. *)
+(*     remember (tsl_term fuel Σ E Γ t). *)
+(*     destruct t1; [|discriminate]. *)
+(*     inversion H2; clear H2. clear t' H6. *)
+(*     myeapply type_Cast unifying T'. *)
+(*     + eapply IHtyping1 ; try eassumption. *)
+(*       2: reflexivity. now apply tsl_S_fuel. *)
+(*     + eapply IHtyping2; try eassumption; *)
+(*         now apply tsl_S_fuel. *)
+(*     + symmetry in Heqt1. apply tsl_S_fuel in Heqt1. *)
+(*       rewrite Heqt1 in H3. now inversion H3. *)
+(*   - cbn in H3. cbn in H2. *)
+(*     inversion H3. clear H3 H6. *)
+(*     remember (tsl_term fuel Σ E Γ t). *)
+(*     destruct t0; [|discriminate]. *)
+(*     remember (tsl_term fuel Σ E (Γ,, vass n t) b). *)
+(*     destruct t1; [|discriminate]. *)
+(*     inversion H2. clear H2 H5. *)
+(*     unfold timesBool. *)
+(*     symmetry in Heqt0, Heqt1. *)
+(*     specialize (IHtyping1 E H1 (S fuel) Γ' t0 (tSort s1) (tsl_S_fuel Heqt0) eq_refl H4). *)
+(*     specialize (IHtyping2 E H1 (S fuel) (Γ' ,,vass n t0) t1 (tSort s2) (tsl_S_fuel Heqt1) eq_refl). *)
+(*     simple refine (let IH2 := IHtyping2 _ in _); *)
+(*       [|clearbody IH2; clear IHtyping2]. *)
+(*     { unfold snoc. rewrite tsl_ctx_cons. *)
+(*       rewrite H4. cbn -[tsl_term]. *)
+(*       rewrite (tsl_S_fuel Heqt0). reflexivity. } *)
+(*     pose proof (type_Prod  _ _ _ _ _ _ _ IHtyping1 IH2). *)
+(*     clear -H2. *)
+(*     eapply type_App. unfold tSigma. *)
+(* eapply type_Ind. econstructor. *)
+
+Abort.

@@ -1217,12 +1217,19 @@ Proof.
     - eapply trel_sym. eapply inrel_trel. eassumption.
     - eapply inrel_trel. eassumption.
   }
-  (* Even before the detructtion of the translation hypotheses
-     I should use choose_type to place A' in a sort?
-     That doesn't seem necessary as istype_type should be enough here.
-     However, once again we'll have different sorts at play.
-   *)
-  admit.
+  destruct (@trel_to_heq Σ Γ' (succ_sort s) (sSort s) (sSort s) A' A'' simA) as [p hp].
+  - apply type_Sort. apply (typing_wf ht').
+  - apply type_Sort. apply (typing_wf ht').
+  - (* Sort problem, how do we put it there? *)
+    admit.
+  - assumption.
+  - destruct (type_heq hp) as [q hq].
+    exists (transport s A' A'' q t').
+    repeat split.
+    + assumption.
+    + assumption.
+    + constructor. assumption.
+    + eapply type_transport ; assumption.
 Admitted.
 
 

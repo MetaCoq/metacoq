@@ -54,25 +54,6 @@ Lemma typing_lift01 :
     Σ ;;; Γ |-i t : A ->
     Σ ;;; Γ |-i B : sSort s ->
     Σ ;;; Γ ,, svass x B |-i lift0 1 t : lift0 1 A.
-Proof.
-  intros Σ Γ t A x B s ht hB.
-  induction ht.
-  - (* cbn. rewrite lift_lift. cbn. *)
-    (* eapply type_Conv. *)
-    (* + eapply type_Rel. *)
-    (*   apply wf_snoc. *)
-    (*   * assumption. *)
-    (*   * exists s. assumption. *)
-    (* + admit. *)
-    (* + cbn. admit. *)
-    admit.
-  - cbn. apply type_Sort.
-    apply wf_snoc.
-    + assumption.
-    + now exists s.
-  - cbn. apply type_Prod.
-    + apply IHht1. assumption.
-    + (* As expected, this lemma doesn't work by induction... *)
 Admitted.
 
 Lemma typing_subst :
@@ -233,9 +214,11 @@ Proof.
     exists isdecl, s'.
     eapply eq_transitivity.
     + exact h.
-    + (* Again a sorting problem... *)
-      admit.
-Admitted.
+    + destruct (eq_typing e) as [hAs _].
+      destruct (eq_typing h) as [_ hAs'].
+      destruct (uniqueness hAs hAs') as [? ?].
+      eapply eq_conv ; eassumption.
+Defined.
 
 Lemma inversionSort :
   forall {Σ Γ s T},
@@ -249,9 +232,11 @@ Proof.
 
   - specialize (IHh1 s (eq_refl _)). eapply eq_transitivity.
     + eassumption.
-    + (* Wrong sort! *)
-      admit.
-Admitted.
+    + destruct (eq_typing e) as [hAs0 _].
+      destruct (eq_typing IHh1) as [_ hAss].
+      destruct (uniqueness hAs0 hAss) as [? ?].
+      eapply eq_conv ; eassumption.
+Defined.
 
 Lemma inversionProd :
   forall {Σ Γ n A B T},
@@ -275,10 +260,11 @@ Proof.
     + assumption.
     + eapply eq_transitivity.
       * eassumption.
-      * (* Sort problem, should be solved once A = B : s implies A : s or
-           something *)
-        admit.
-Admitted.
+      * destruct (eq_typing e) as [hAs _].
+        destruct (eq_typing e0) as [_ hAsm].
+        destruct (uniqueness hAs hAsm).
+        eapply eq_conv ; eassumption.
+Defined.
 
 (* Lemma inversionLambda *)
 
@@ -305,8 +291,10 @@ Proof.
     exists s1, s2. repeat split ; try easy.
     eapply eq_transitivity.
     + eassumption.
-    + (* Wrong sort again! *)
-      admit.
+    + destruct (eq_typing e) as [hAs _].
+      destruct (eq_typing e0) as [_ hAs2].
+      destruct (uniqueness hAs hAs2).
+      eapply eq_conv ; eassumption.
 Admitted.
 
 Lemma inversionEq :
@@ -360,8 +348,10 @@ Proof.
     exists s1, s2, nx, ne. repeat split ; try easy.
     eapply eq_transitivity.
     + eassumption.
-    + (* Once again, we have two sorts that are the same. *)
-      admit.
+    + destruct (eq_typing e) as [hAs _].
+      destruct (eq_typing e0) as [_ hAs2].
+      destruct (uniqueness hAs hAs2).
+      eapply eq_conv.
 Admitted.
 
 (* Lemma inversionUip *)
@@ -389,10 +379,11 @@ Proof.
     + assumption.
     + eapply eq_transitivity.
       * eassumption.
-      * (* Sort problem, should be solved once A = B : s implies A : s or
-           something *)
-        admit.
-Admitted.
+      * destruct (eq_typing e) as [hAs _].
+        destruct (eq_typing e0) as [_ hAsm].
+        destruct (uniqueness hAs hAsm).
+        eapply eq_conv ; eassumption.
+Defined.
 
 (* Lemma inversionPair *)
 (* Lemma inversionSigLet *)

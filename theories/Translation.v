@@ -1344,7 +1344,44 @@ Proof.
         -- now destruct hb'' as [[? ?] ?].
 
     (* type_Lambda *)
-    + cheat.
+    + (* Translation of the domain *)
+      destruct (type_translation _ _ _ _ h1 _ hΓ) as [S' [t' ht']].
+      assert (th : type_head (head (sSort s1))) by constructor.
+      destruct (choose_type th ht') as [T' [[t'' ht''] hh]].
+      clear ht' t' S'.
+      destruct T' ; inversion hh.
+      subst. clear hh th.
+      (* Translation of the codomain *)
+      destruct (type_translation _ _ _ _ h2 _ (trans_snoc hΓ ht'')) as [S' [bty' hbty']].
+      assert (th : type_head (head (sSort s2))) by constructor.
+      destruct (choose_type th hbty') as [T' [[bty'' hbty''] hh]].
+      clear hbty' bty' S'.
+      destruct T' ; inversion hh. subst. clear hh th.
+      (* Translation of the term *)
+      destruct (type_translation _ _ _ _ h3 _ (trans_snoc hΓ ht'')) as [S' [b' hb']].
+      assert (hS' : Σ ;;; Γ' ,, svass n t'' |-i S' : sSort s2).
+      { (* Maybe we need to relax change_type, otherwise it won't be usable.
+           Maybe this could be done by removing sort annotation to Eq (which we
+           don't feature in the article anyway).
+         *)
+        cheat.
+      }
+      destruct (change_type hS' hb' hbty'') as [b'' hb''].
+      clear hS' hb' S' b'.
+      exists (sProd n' t'' bty''), (sLambda n t'' bty'' b'').
+      repeat split.
+      * now destruct hΓ.
+      * constructor.
+        -- now destruct ht'' as [[[? ?] ?] ?].
+        -- now destruct hbty'' as [[[? ?] ?] ?].
+      * constructor.
+        -- now destruct ht'' as [[[? ?] ?] ?].
+        -- now destruct hbty'' as [[[? ?] ?] ?].
+        -- now destruct hb'' as [[[? ?] ?] ?].
+      * eapply type_Lambda.
+        -- now destruct ht'' as [[[? ?] ?] ?].
+        -- now destruct hbty'' as [[[? ?] ?] ?].
+        -- now destruct hb'' as [[[? ?] ?] ?].
 
     (* type_App *)
     + cheat.

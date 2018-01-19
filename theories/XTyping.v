@@ -38,12 +38,12 @@ Inductive typing (Σ : global_context) : scontext -> sterm -> sterm -> Set :=
     Σ ;;; Γ |-x A : sSort s ->
     Σ ;;; Γ |-x u : A ->
     Σ ;;; Γ |-x v : A ->
-    Σ ;;; Γ |-x sEq s A u v : sSort s
+    Σ ;;; Γ |-x sEq A u v : sSort s
 
 | type_Refl Γ s A u :
     Σ ;;; Γ |-x A : sSort s ->
     Σ ;;; Γ |-x u : A ->
-    Σ ;;; Γ |-x sRefl A u : sEq s A u u
+    Σ ;;; Γ |-x sRefl A u : sEq A u u
 
 | type_Conv Γ t A B s :
     Σ ;;; Γ |-x t : A ->
@@ -110,15 +110,15 @@ with eq_term (Σ : global_context) : scontext -> sterm -> sterm -> sterm -> Prop
     Σ ;;; Γ |-x A1 = A2 : sSort s ->
     Σ ;;; Γ |-x u1 = u2 : A1 ->
     Σ ;;; Γ |-x v1 = v2 : A1 ->
-    Σ ;;; Γ |-x sEq s A1 u1 v1 = sEq s A2 u2 v2 : sSort s
+    Σ ;;; Γ |-x sEq A1 u1 v1 = sEq A2 u2 v2 : sSort s
 
 | cong_Refl Γ s A1 A2 u1 u2 :
     Σ ;;; Γ |-x A1 = A2 : sSort s ->
     Σ ;;; Γ |-x u1 = u2 : A1 ->
-    Σ ;;; Γ |-x sRefl A1 u1 = sRefl A2 u2 : sEq s A1 u1 u1
+    Σ ;;; Γ |-x sRefl A1 u1 = sRefl A2 u2 : sEq A1 u1 u1
 
-| reflection Γ s A u v e :
-    Σ ;;; Γ |-x e : sEq s A u v ->
+| reflection Γ A u v e :
+    Σ ;;; Γ |-x e : sEq A u v ->
     Σ ;;; Γ |-x u = v : A
 
 where " Σ ;;; Γ '|-x' t = u : T " := (@eq_term Σ Γ t u T) : x_scope.

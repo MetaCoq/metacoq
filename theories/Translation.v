@@ -49,30 +49,37 @@ Proof.
   - cbn. rewrite eq. reflexivity.
 Defined.
 
+Lemma lift_subst :
+  forall {t n u},
+    (lift 1 n t) {n := u} = t.
+Proof.
+  intro t.
+  induction t ; intros m u.
+  all: try (cbn ; f_equal ; easy).
+  cbn. set (mln := m <=? n).
+  assert (eq : (m <=? n) = mln) by reflexivity.
+  destruct mln.
+  - cbn.
+    assert (eq' : (m ?= S n) = Lt).
+    { apply Nat.compare_lt_iff.
+      pose (h := leb_complete _ _ eq).
+      omega.
+    }
+    rewrite eq'. reflexivity.
+  - cbn.
+    assert (eq' : (m ?= n) = Gt).
+    { apply Nat.compare_gt_iff.
+      pose (h := leb_complete_conv _ _ eq).
+      omega.
+    }
+    rewrite eq'. reflexivity.
+Defined.
+
 Lemma typing_lift01 :
   forall {Σ Γ t A x B s},
     Σ ;;; Γ |-i t : A ->
     Σ ;;; Γ |-i B : sSort s ->
     Σ ;;; Γ ,, svass x B |-i lift0 1 t : lift0 1 A.
-Proof.
-  intros Σ Γ t A x B s ht hB.
-  induction ht.
-  - (* cbn. rewrite lift_lift. cbn. *)
-    (* eapply type_Conv. *)
-    (* + eapply type_Rel. *)
-    (*   apply wf_snoc. *)
-    (*   * assumption. *)
-    (*   * exists s. assumption. *)
-    (* + admit. *)
-    (* + cbn. admit. *)
-    admit.
-  - cbn. apply type_Sort.
-    apply wf_snoc.
-    + assumption.
-    + now exists s.
-  - cbn. apply type_Prod.
-    + apply IHht1. assumption.
-    + (* As expected, this lemma doesn't work by induction... *)
 Admitted.
 
 Lemma typing_subst :
@@ -164,7 +171,7 @@ Proof.
       eapply typing_subst ; eassumption.
   - eapply typing_subst ; eassumption.
   - econstructor ; try eassumption.
-    constructor ; assumption.
+    econstructor ; eassumption.
   - eapply type_Conv ; eassumption.
   - eapply type_Conv ; eassumption.
   - constructor ; try eassumption.
@@ -233,9 +240,11 @@ Proof.
     exists isdecl, s'.
     eapply eq_transitivity.
     + exact h.
-    + (* Again a sorting problem... *)
-      admit.
-Admitted.
+    + destruct (eq_typing e) as [hAs _].
+      destruct (eq_typing h) as [_ hAs'].
+      destruct (uniqueness hAs hAs') as [? ?].
+      eapply eq_conv ; eassumption.
+Defined.
 
 Lemma inversionSort :
   forall {Σ Γ s T},
@@ -249,9 +258,11 @@ Proof.
 
   - specialize (IHh1 s (eq_refl _)). eapply eq_transitivity.
     + eassumption.
-    + (* Wrong sort! *)
-      admit.
-Admitted.
+    + destruct (eq_typing e) as [hAs0 _].
+      destruct (eq_typing IHh1) as [_ hAss].
+      destruct (uniqueness hAs0 hAss) as [? ?].
+      eapply eq_conv ; eassumption.
+Defined.
 
 Lemma inversionProd :
   forall {Σ Γ n A B T},
@@ -275,10 +286,11 @@ Proof.
     + assumption.
     + eapply eq_transitivity.
       * eassumption.
-      * (* Sort problem, should be solved once A = B : s implies A : s or
-           something *)
-        admit.
-Admitted.
+      * destruct (eq_typing e) as [hAs _].
+        destruct (eq_typing e0) as [_ hAsm].
+        destruct (uniqueness hAs hAsm).
+        eapply eq_conv ; eassumption.
+Defined.
 
 (* Lemma inversionLambda *)
 
@@ -305,30 +317,35 @@ Proof.
     exists s1, s2. repeat split ; try easy.
     eapply eq_transitivity.
     + eassumption.
-    + (* Wrong sort again! *)
-      admit.
+    + destruct (eq_typing e) as [hAs _].
+      destruct (eq_typing e0) as [_ hAs2].
+      destruct (uniqueness hAs hAs2).
+      eapply eq_conv ; eassumption.
 Admitted.
 
 Lemma inversionEq :
-  forall {Σ Γ s A u v T},
-    Σ ;;; Γ |-i sEq s A u v : T ->
-    ((Σ ;;; Γ |-i A : sSort s) *
-     (Σ ;;; Γ |-i u : A) *
-     (Σ ;;; Γ |-i v : A) *
-     (Σ ;;; Γ |-i sSort s = T : sSort (succ_sort s)))%type.
+  forall {Σ Γ A u v T},
+    Σ ;;; Γ |-i sEq A u v : T ->
+    ∑ s,
+      (Σ ;;; Γ |-i A : sSort s) *
+      (Σ ;;; Γ |-i u : A) *
+      (Σ ;;; Γ |-i v : A) *
+      (Σ ;;; Γ |-i sSort s = T : sSort (succ_sort s)).
 Proof.
-  intros Σ Γ s A u v T h.
+  intros Σ Γ A u v T h.
   dependent induction h.
-  - repeat split ; try easy.
+  - exists s. repeat split ; try easy.
     eapply eq_reflexivity. apply type_Sort.
     apply (typing_wf h1).
-  - destruct (IHh1 s A u v (eq_refl _)) as [[[hA hu] hv] heq].
-    repeat split ; try easy.
+  - destruct (IHh1 A u v (eq_refl _)) as [s' [[[hA hu] hv] heq]].
+    exists s'. repeat split ; try easy.
     eapply eq_transitivity.
     + exact heq.
-    + (* Once again, we have two sorts that are the same. *)
-      admit.
-Admitted.
+    + destruct (eq_typing heq) as [_ hA01].
+      destruct (eq_typing e) as [hA02 _].
+      destruct (uniqueness hA02 hA01) as [s'' h''].
+      eapply eq_conv ; eassumption.
+Defined.
 
 (* Lemma inversionRefl *)
 
@@ -339,8 +356,8 @@ Lemma inversionJ :
       (Σ ;;; Γ |-i A : sSort s1) *
       (Σ ;;; Γ |-i u : A) *
       (Σ ;;; Γ |-i v : A) *
-      (Σ ;;; Γ ,, svass nx A ,, svass ne (sEq s1 A u (sRel 0)) |-i P : sSort s2) *
-      (Σ ;;; Γ |-i p : sEq s1 A u v) *
+      (Σ ;;; Γ ,, svass nx A ,, svass ne (sEq A u (sRel 0)) |-i P : sSort s2) *
+      (Σ ;;; Γ |-i p : sEq A u v) *
       (Σ ;;; Γ |-i w : (P {1 := u}){0 := sRefl A u}) *
       (Σ ;;; Γ |-i P{1 := v}{0 := p} = T : sSort s2).
 Proof.
@@ -357,8 +374,10 @@ Proof.
     exists s1, s2, nx, ne. repeat split ; try easy.
     eapply eq_transitivity.
     + eassumption.
-    + (* Once again, we have two sorts that are the same. *)
-      admit.
+    + destruct (eq_typing e) as [hAs _].
+      destruct (eq_typing e0) as [_ hAs2].
+      destruct (uniqueness hAs hAs2).
+      eapply eq_conv.
 Admitted.
 
 (* Lemma inversionUip *)
@@ -386,10 +405,11 @@ Proof.
     + assumption.
     + eapply eq_transitivity.
       * eassumption.
-      * (* Sort problem, should be solved once A = B : s implies A : s or
-           something *)
-        admit.
-Admitted.
+      * destruct (eq_typing e) as [hAs _].
+        destruct (eq_typing e0) as [_ hAsm].
+        destruct (uniqueness hAs hAsm).
+        eapply eq_conv ; eassumption.
+Defined.
 
 (* Lemma inversionPair *)
 (* Lemma inversionSigLet *)
@@ -426,7 +446,7 @@ Ltac fold_transport :=
 
 Lemma type_transport :
   forall Σ Γ s T1 T2 p t ,
-    Σ ;;; Γ |-i p : sEq (succ_sort s) (sSort s) T1 T2 ->
+    Σ ;;; Γ |-i p : sEq (sSort s) T1 T2 ->
     Σ ;;; Γ |-i t : T1 ->
     Σ ;;; Γ |-i transport s T1 T2 p t : T2.
 Proof.
@@ -435,10 +455,10 @@ Proof.
   - eapply ITyping.type_App.
     + instantiate (1 := s).
       destruct (istype_type h1) as [s' h].
-      destruct (inversionEq h) as [[[? ?] ?] ?].
+      destruct (inversionEq h) as [s'' [[[? ?] ?] ?]].
       assumption.
     + destruct (istype_type h1) as [s' h].
-      destruct (inversionEq h) as [[[? ?] ?] ?].
+      destruct (inversionEq h) as [s''' [[[? ?] ?] ?]].
       instantiate (1 := s).
       change (sSort s) with (lift0 1 (sSort s)).
       eapply typing_lift01.
@@ -448,15 +468,15 @@ Proof.
       * eapply ITyping.type_J.
         -- eapply type_Sort. apply (typing_wf h1).
         -- destruct (istype_type h1) as [s' h].
-           destruct (inversionEq h) as [[[? ?] ?] ?].
+           destruct (inversionEq h) as [? [[[? ?] ?] ?]].
            assumption.
         -- destruct (istype_type h1) as [s' h].
-           destruct (inversionEq h) as [[[? ?] ?] ?].
+           destruct (inversionEq h) as [? [[[? ?] ?] ?]].
            assumption.
         -- eapply type_Prod.
            ++ instantiate (1 := s).
               destruct (istype_type h1) as [s' h].
-              destruct (inversionEq h) as [[[? ?] ?] ?].
+              destruct (inversionEq h) as [? [[[? ?] ?] ?]].
               change (sSort s) with (lift0 1 (sSort s)) at 3.
               replace (lift0 2 T1) with (lift0 1 (lift0 1 T1)) by (rewrite lift_lift ; reflexivity).
               eapply typing_lift01.
@@ -534,7 +554,7 @@ Proof.
            ++ eapply type_Lambda.
               ** instantiate (1 := s).
                  destruct (istype_type h1) as [s' h].
-                 destruct (inversionEq h) as [[[? ?] ?] ?].
+                 destruct (inversionEq h) as [? [[[? ?] ?] ?]].
                  assumption.
               ** (* Same as above *)
                  instantiate (1 := s).
@@ -563,7 +583,7 @@ Proof.
       * apply type_Prod.
         -- instantiate (1 := s).
            destruct (istype_type h1) as [s' h].
-           destruct (inversionEq h) as [[[? ?] ?] ?].
+           destruct (inversionEq h) as [? [[[? ?] ?] ?]].
            assumption.
         -- (* Same as above *)
           instantiate (1 := s).
@@ -580,7 +600,7 @@ Admitted.
 Lemma inversionTransport :
   forall {Σ Γ s T1 T2 p t T},
     Σ ;;; Γ |-i transport s T1 T2 p t : T ->
-    (Σ ;;; Γ |-i p : sEq (succ_sort s) (sSort s) T1 T2) *
+    (Σ ;;; Γ |-i p : sEq (sSort s) T1 T2) *
     (Σ ;;; Γ |-i t : T1) *
     (Σ ;;; Γ |-i T1 : sSort s) *
     (Σ ;;; Γ |-i T2 = T : sSort s).
@@ -590,13 +610,14 @@ Proof.
   destruct (inversionApp h) as [s1 [s2 [[[[? ?] hJ] ?] ?]]].
   destruct (inversionJ hJ) as [s3 [s4 [nx [ne [[[[[[? ?] ?] ?] ?] ?] ?]]]]].
   repeat split.
-  - (* We have the assumption with the wrong sort! *)
-    admit.
   - assumption.
   - assumption.
-  - (* We have the assumption but it needs lemma fot lift and subst *)
-    admit.
-Admitted.
+  - assumption.
+  - rewrite lift_subst in e.
+    destruct (eq_typing e) as [hT2s2 _].
+    destruct (uniqueness hT2s2 t5).
+    eapply eq_conv ; eassumption.
+Defined.
 
 (* Note: If transport is symbolic during this phase, then maybe we can use
    Template Coq to deduce the derivation automatically in the ultimate target.
@@ -625,11 +646,11 @@ Inductive trel (E : list (nat * nat)) : sterm -> sterm -> Type :=
     trel E B1 B2 ->
     trel E (sProd n1 A1 B1) (sProd n2 A2 B2)
 
-| trel_Eq s A1 A2 u1 u2 v1 v2 :
+| trel_Eq A1 A2 u1 u2 v1 v2 :
     trel E A1 A2 ->
     trel E u1 u2 ->
     trel E v1 v2 ->
-    trel E (sEq s A1 u1 v1) (sEq s A2 u2 v2)
+    trel E (sEq A1 u1 v1) (sEq A2 u2 v2)
 
 | trel_Sig n1 n2 A1 A2 B1 B2 :
     trel E A1 A2 ->
@@ -721,11 +742,11 @@ Inductive inrel : sterm -> sterm -> Type :=
     B ⊏ B' ->
     sProd n A B ⊏ sProd n' A' B'
 
-| inrel_Eq s A A' u u' v v' :
+| inrel_Eq A A' u u' v v' :
     A ⊏ A' ->
     u ⊏ u' ->
     v ⊏ v' ->
-    sEq s A u v ⊏ sEq s A' u' v'
+    sEq A u v ⊏ sEq A' u' v'
 
 | inrel_Sig n n' A A' B B' :
     A ⊏ A' ->
@@ -779,24 +800,24 @@ Defined.
 
 (*! Heterogenous equality *)
 Definition heq s A a B b :=
-  sSig nAnon (sEq (succ_sort s) (sSort s) A B)
-       (sEq s (lift0 1 B) (transport s (lift0 1 A) (lift0 1 B) (sRel 0) (lift0 1 a)) (lift0 1 b)).
+  sSig nAnon (sEq (sSort s) A B)
+       (sEq (lift0 1 B) (transport s (lift0 1 A) (lift0 1 B) (sRel 0) (lift0 1 a)) (lift0 1 b)).
 
 Lemma heq_to_eq :
   forall {Σ Γ s A u v e},
     Σ ;;; Γ |-i e : heq s A u A v ->
-    ∑ p, Σ ;;; Γ |-i p : sEq s A u v.
+    ∑ p, Σ ;;; Γ |-i p : sEq A u v.
 Proof.
   intros Σ Γ s A u v e h.
   unfold heq in h.
-  set (U := sEq (succ_sort s) (sSort s) A A) in h.
-  set (V := sEq s (lift0 1 A) (transport s (lift0 1 A) (lift0 1 A) (sRel 0) (lift0 1 u)) (lift0 1 v)) in h.
+  set (U := sEq (sSort s) A A) in h.
+  set (V := sEq (lift0 1 A) (transport s (lift0 1 A) (lift0 1 A) (sRel 0) (lift0 1 u)) (lift0 1 v)) in h.
   exists (sSigLet U V
-             (sEq s (lift0 1 A) (lift0 1 u) (lift0 1 v))
+             (sEq (lift0 1 A) (lift0 1 u) (lift0 1 v))
              e
              (sJ U
                  (sRel 1)
-                 (sEq s (lift0 3 A) (transport s (lift0 3 A) (lift0 3 A) (sRel 1) (lift0 3 u)) (lift0 3 v))
+                 (sEq (lift0 3 A) (transport s (lift0 3 A) (lift0 3 A) (sRel 1) (lift0 3 u)) (lift0 3 v))
                  (sRel 0)
                  (sRefl U A)
                  (sUip (sSort s) A A (sRel 1) (sRefl U A))
@@ -807,7 +828,7 @@ Admitted.
 Corollary type_heq :
   forall {Σ Γ s A B e},
     Σ ;;; Γ |-i e : heq (succ_sort s) (sSort s) A (sSort s) B ->
-    ∑ p, Σ ;;; Γ |-i p : sEq (succ_sort s) (sSort s) A B.
+    ∑ p, Σ ;;; Γ |-i p : sEq (sSort s) A B.
 Proof.
   intros Σ Γ s A B e h.
   now eapply heq_to_eq.
@@ -835,8 +856,8 @@ Proof.
   - now apply H.
   - destruct (uniqueness H3 H4) as [s eq].
     unfold heq. cbn.
-    set (U := sEq (succ_sort s') (sSort s') A B).
-    set (V := sEq s' (lift0 1 B) (transport s' (lift0 1 A) (lift0 1 B) (sRel 0) (sRel (S x))) (sRel (S x))).
+    set (U := sEq (sSort s') A B).
+    set (V := sEq (lift0 1 B) (transport s' (lift0 1 A) (lift0 1 B) (sRel 0) (sRel (S x))) (sRel (S x))).
     exists (sPair U V (sRefl (sSort s') A) (sRefl (lift0 1 B) (sRel (S x)))).
     eapply type_Pair.
     + eapply type_Eq.
@@ -844,10 +865,10 @@ Proof.
       * assumption.
       * assumption.
     + eapply type_Eq.
-      * change (sSort s') with (lift0 1 (sSort s')).
+      * instantiate (1 := s').
+        change (sSort s') with (lift0 1 (sSort s')).
         eapply typing_lift01.
-        -- (* Wrong sort? *)
-           admit.
+        -- assumption.
         -- (* TODO LATER *)
            admit.
       * (* Lemma for lift *)
@@ -855,7 +876,7 @@ Proof.
       * (* Lemma for lift *)
         admit.
     + eapply type_Conv.
-      * apply type_Refl.
+      * eapply type_Refl.
         -- apply type_Sort. apply (typing_wf H1).
         -- assumption.
       * eapply type_Eq.
@@ -1003,7 +1024,7 @@ Definition head (t : sterm) : head_kind :=
   | sProd n A B => headProd
   | sLambda n A B t => headLambda
   | sApp u n A B v => headApp
-  | sEq s A u v => headEq
+  | sEq A u v => headEq
   | sRefl A u => headRefl
   | sJ A u P w v p => headJ
   | sUip A u v p q => headUip
@@ -1081,7 +1102,7 @@ Proof.
       * now apply type_Prod.
       * easy.
       * now eapply eq_typing.
-    + destruct (inversionEq ht) as [[[? ?] ?] ?].
+    + destruct (inversionEq ht) as [s [[[? ?] ?] ?]].
       exists s. repeat split.
       * now apply type_Eq.
       * easy.

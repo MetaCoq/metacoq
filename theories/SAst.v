@@ -13,7 +13,7 @@ Inductive sterm : Set :=
 | sLambda    : name -> sterm (** type **) -> sterm (** type **) -> sterm -> sterm
 | sApp       : sterm -> name -> sterm (** type **) -> sterm (** type **) -> sterm -> sterm
 (* For now we use our own syntax for equality and Σ-types *)
-| sEq        : sort -> sterm -> sterm -> sterm -> sterm
+| sEq        : sterm -> sterm -> sterm -> sterm
 | sRefl      : sterm -> sterm -> sterm
 | sJ         : sterm -> sterm -> sterm -> sterm -> sterm -> sterm -> sterm
 | sUip       : sterm -> sterm -> sterm -> sterm -> sterm -> sterm

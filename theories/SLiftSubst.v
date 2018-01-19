@@ -13,7 +13,7 @@ Fixpoint lift n k t : sterm :=
   | sApp u na A B v =>
     sApp (lift n k u) na (lift n k A) (lift n (S k) B) (lift n k v)
   | sProd na A B => sProd na (lift n k A) (lift n (S k) B)
-  | sEq s A u v => sEq s (lift n k A) (lift n k u) (lift n k v)
+  | sEq A u v => sEq (lift n k A) (lift n k u) (lift n k v)
   | sRefl A u => sRefl (lift n k A) (lift n k u)
   | sJ A u P w v p =>
     sJ (lift n k A)
@@ -53,7 +53,7 @@ Fixpoint subst t k u :=
   | sApp u na A B v =>
     sApp (subst t k u) na (subst t k A) (subst t (S k) B) (subst t k v)
   | sProd na A B => sProd na (subst t k A) (subst t (S k) B)
-  | sEq s A u v => sEq s (subst t k A) (subst t k u) (subst t k v)
+  | sEq A u v => sEq (subst t k A) (subst t k u) (subst t k v)
   | sRefl A u => sRefl (subst t k A) (subst t k u)
   | sJ A u P w v p =>
     sJ (subst t k A)

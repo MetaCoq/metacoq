@@ -37,12 +37,12 @@ Definition default_term := tVar "constant not found".
 
 Fixpoint tsl_rec0 (n : nat) (t : term) {struct t} : term :=
   match t with
-  | tRel k => if k >= n then tRel (2*k+1) else t
+  | tRel k => if k >= n then tRel (2*k-n+1) else t
   | tEvar k ts => tEvar k (map (tsl_rec0 n) ts)
   | tCast t c a => tCast (tsl_rec0 n t) c (tsl_rec0 n a)
   | tProd na A B => tProd na (tsl_rec0 n A) (tsl_rec0 (n+1) B)
   | tLambda na A t => tLambda na (tsl_rec0 n A) (tsl_rec0 (n+1) t)
-  | tLetIn na a t u => tLetIn na (tsl_rec0 n a) (tsl_rec0 n t) (tsl_rec0 (n+1) u)
+  | tLetIn na t A u => tLetIn na (tsl_rec0 n t) (tsl_rec0 n A) (tsl_rec0 (n+1) u)
   | tApp t lu => tApp (tsl_rec0 n t) (map (tsl_rec0 n) lu)
   | tCase ik t u br => tCase ik (tsl_rec0 n t) (tsl_rec0 n u)
                             (map (fun x => (fst x, tsl_rec0 n (snd x))) br)
@@ -208,12 +208,11 @@ Definition tTranslate (ΣE : tsl_context) (id : ident)
   let Σ := fst ΣE in
   let E := snd ΣE in
   match gr with
-  | ConstructRef ind _ => tmPrint "todo tTranslate" ;; ret ΣE
+  | ConstructRef (mkInd kn n) _
   | IndRef (mkInd kn n) =>
       d <- tmQuoteInductive id ;;
       let e' := mind_decl_to_entry (tsl_mind_decl E kn d) in
       e' <- tmEval lazy e' ;;
-      tmPrint e' ;;
       tmMkInductive e' ;;
       gr' <- tmAbout id' ;;
       match gr' with
@@ -221,25 +220,21 @@ Definition tTranslate (ΣE : tsl_context) (id : ident)
         let E' := tsl_ind_extend_table kn kn' d in
         print_nf  (id ++ " has been translated as " ++ id') ;;
         ret (InductiveDecl kn d :: Σ, E' ++ E)%list
-      | _ => tmPrint gr' ;; tmPrint "not found" ;; ret ΣE
+      | _ => tmPrint gr' ;; tmPrint "not found (or not an inductive)" ;; ret ΣE
       end
 
   | ConstRef kn =>
     e <- tmQuoteConstant kn true ;;
-    print_nf ("toto1" ++ id) ;;
     match e with
     | ParameterEntry _ => print_nf (id ++ "is an axiom, not a definition") ;;
                          ret ΣE
     | DefinitionEntry {| definition_entry_type := A;
                          definition_entry_body := t |} =>
-      print_nf ("toto2 " ++ id) ;;
       t0 <- tmEval lazy (tsl_rec0 0 t) ;;
       t1 <- tmEval lazy (tsl_rec1 E t) ;;
       A1 <- tmEval lazy (tsl_rec1 E A) ;;
-      print_nf ("toto4 " ++ id) ;;
-      print_nf t1 ;;
+      (* print_nf t1 ;; *)
       tmMkDefinition id' t1 ;;
-      print_nf ("toto5 " ++ id) ;;
       let decl := {| cst_universes := [];
                      cst_type := A; cst_body := Some t |} in
       print_nf  (id ++ " has been translated as " ++ id') ;;
@@ -248,14 +243,49 @@ Definition tTranslate (ΣE : tsl_context) (id : ident)
   end.
 
 
-(* Definition map_type := forall A B, (A -> B) -> list A -> list B. *)
-(* Definition rev_type := forall A, list A -> list A. *)
-(* Run TemplateProgram (TC <- tTranslate ([],[]) "list" ;; *)
-(*                      TC <- tTranslate TC "rev_type" ;; *)
-(*                      tmDefinition "TC" TC ). *)
+
+Run TemplateProgram (TC <- tTranslate ([],[]) "nat" ;;
+                     tmDefinition "nat_TC" TC ).
+
+(* Require Import Vector. *)
+(* Run TemplateProgram (ΣE <- tTranslate ([],[]) "nat" ;; *)
+(*                         (* print_nf ΣE). *) *)
+(*                      tTranslate ΣE "t"). *)
 
 
-Require Import Vector.
-Run TemplateProgram (ΣE <- tTranslate ([],[]) "nat" ;;
-                        (* print_nf ΣE). *)
-                     tTranslate ΣE "t" >>= tmPrint).
+Require Import Even.
+Run TemplateProgram (tTranslate nat_TC "even").
+
+Definition map_type := forall A B, (A -> B) -> list A -> list B.
+Definition rev_type := forall A, list A -> list A.
+Run TemplateProgram (TC <- tTranslate ([],[]) "list" ;;
+                     TC <- tTranslate TC "rev_type" ;;
+                     tmDefinition "TC" TC ).
+
+
+Run TemplateProgram (tTranslate ([],[]) "eq").
+
+
+Definition ID := forall A, A -> A.
+
+Run TemplateProgram (tTranslate ([],[]) "ID").
+
+Lemma param_ID_identity (f : ID)
+  : IDᵗ f -> forall A x, f A x = x.
+Proof.
+  compute. intros H A x. 
+  exact (H A (fun y => y = x) x (Logic.eq_refl x)).
+Qed.
+
+Definition toto := fun n : nat => (fun y => 0) (fun _ : Type =>  n).
+Run TemplateProgram (tTranslate nat_TC "toto").
+
+
+Definition my_id : ID :=
+  let n := 12 in (fun (_ : nat) y => y) 4 (fun A x => (fun _ : nat => x) n).
+
+Run TemplateProgram (tTranslate nat_TC "my_id").
+
+
+Definition free_thm_my_id : forall A x, my_id A x = x
+  := param_ID_identity my_id my_idᵗ.

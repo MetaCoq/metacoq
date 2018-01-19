@@ -748,10 +748,10 @@ Inductive inrel : sterm -> sterm -> Type :=
     v ⊏ v' ->
     sEq A u v ⊏ sEq A' u' v'
 
-| inrel_Sig n n' A A' B B' :
-    A ⊏ A' ->
-    B ⊏ B' ->
-    sSig n A B ⊏ sSig n' A' B'
+(* | inrel_Sig n n' A A' B B' : *)
+(*     A ⊏ A' -> *)
+(*     B ⊏ B' -> *)
+(*     sSig n A B ⊏ sSig n' A' B' *)
 
 | inrel_Sort s :
     sSort s ⊏ sSort s
@@ -774,20 +774,20 @@ Inductive inrel : sterm -> sterm -> Type :=
     u ⊏ u' ->
     sRefl A u ⊏ sRefl A' u'
 
-| inrel_Pair A A' B B' u u' v v' :
-    A ⊏ A' ->
-    B ⊏ B' ->
-    u ⊏ u' ->
-    v ⊏ v' ->
-    sPair A B u v ⊏ sPair A' B' u' v'
+(* | inrel_Pair A A' B B' u u' v v' : *)
+(*     A ⊏ A' -> *)
+(*     B ⊏ B' -> *)
+(*     u ⊏ u' -> *)
+(*     v ⊏ v' -> *)
+(*     sPair A B u v ⊏ sPair A' B' u' v' *)
 
-| inrel_SigLet A A' B B' P P' p p' t t' :
-    A ⊏ A' ->
-    B ⊏ B' ->
-    P ⊏ P' ->
-    p ⊏ p' ->
-    t ⊏ t' ->
-    sSigLet A B P p t ⊏ sSigLet A' B' P' p' t'
+(* | inrel_SigLet A A' B B' P P' p p' t t' : *)
+(*     A ⊏ A' -> *)
+(*     B ⊏ B' -> *)
+(*     P ⊏ P' -> *)
+(*     p ⊏ p' -> *)
+(*     t ⊏ t' -> *)
+(*     sSigLet A B P p t ⊏ sSigLet A' B' P' p' t' *)
 
 where " t ⊏ t' " := (inrel t t').
 

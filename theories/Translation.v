@@ -801,7 +801,9 @@ Defined.
 (*! Heterogenous equality *)
 Definition heq s A a B b :=
   sSig nAnon (sEq (sSort s) A B)
-       (sEq (lift0 1 B) (transport s (lift0 1 A) (lift0 1 B) (sRel 0) (lift0 1 a)) (lift0 1 b)).
+       (sEq (lift0 1 B)
+            (transport s (lift0 1 A) (lift0 1 B) (sRel 0) (lift0 1 a))
+            (lift0 1 b)).
 
 Lemma heq_to_eq :
   forall {Σ Γ s A u v e},
@@ -871,10 +873,71 @@ Proof.
         -- assumption.
         -- (* TODO LATER *)
            admit.
-      * (* Lemma for lift *)
-        admit.
-      * (* Lemma for lift *)
-        admit.
+      * eapply type_transport.
+        -- eapply type_Conv.
+           ++ eapply type_Rel. constructor.
+              ** apply (typing_wf H1).
+              ** exists (succ_sort s'). eapply type_Eq.
+                 --- apply type_Sort. apply (typing_wf H1).
+                 --- assumption.
+                 --- assumption.
+           ++ eapply type_Eq.
+              ** apply type_Sort. constructor.
+                 --- apply (typing_wf H1).
+                 --- exists (succ_sort s'). eapply type_Eq.
+                     +++ apply type_Sort. apply (typing_wf H1).
+                     +++ assumption.
+                     +++ assumption.
+              ** change (sSort s') with (lift0 1 (sSort s')).
+                 eapply typing_lift01.
+                 --- assumption.
+                 --- eapply type_Eq.
+                     +++ apply type_Sort. apply (typing_wf H1).
+                     +++ assumption.
+                     +++ assumption.
+              ** change (sSort s') with (lift0 1 (sSort s')).
+                 eapply typing_lift01.
+                 --- assumption.
+                 --- eapply type_Eq.
+                     +++ apply type_Sort. apply (typing_wf H1).
+                     +++ assumption.
+                     +++ assumption.
+           ++ cbn. apply eq_reflexivity.
+              eapply type_Eq.
+              ** apply type_Sort. constructor.
+                 --- apply (typing_wf H1).
+                 --- exists (succ_sort s'). eapply type_Eq.
+                     +++ apply type_Sort. apply (typing_wf H1).
+                     +++ assumption.
+                     +++ assumption.
+              ** change (sSort s') with (lift0 1 (sSort s')).
+                 eapply typing_lift01.
+                 --- assumption.
+                 --- eapply type_Eq.
+                     +++ apply type_Sort. apply (typing_wf H1).
+                     +++ assumption.
+                     +++ assumption.
+              ** change (sSort s') with (lift0 1 (sSort s')).
+                 eapply typing_lift01.
+                 --- assumption.
+                 --- eapply type_Eq.
+                     +++ apply type_Sort. apply (typing_wf H1).
+                     +++ assumption.
+                     +++ assumption.
+        -- change (sRel (S x)) with (lift0 1 (sRel x)).
+           eapply typing_lift01.
+           ++ assumption.
+           ++ eapply type_Eq.
+              ** apply type_Sort. apply (typing_wf H1).
+              ** assumption.
+              ** assumption.
+      * change (sRel (S x)) with (lift0 1 (sRel x)).
+        eapply typing_lift01.
+        -- assumption.
+        -- eapply type_Eq.
+           ++ apply type_Sort. apply (typing_wf H1).
+           ++ assumption.
+           ++ assumption.
     + eapply type_Conv.
       * eapply type_Refl.
         -- apply type_Sort. apply (typing_wf H1).
@@ -886,9 +949,9 @@ Proof.
       * apply cong_Eq.
         -- apply eq_reflexivity. apply type_Sort. apply (typing_wf H1).
         -- apply eq_reflexivity. assumption.
-        -- (* We have the right assumption with the wrong sort... *)
-           (* We probably need a lemma that says that u = v : A implies u : A *)
-           admit.
+        -- destruct (eq_typing eq) as [hs _].
+           destruct (uniqueness hs H1).
+           eapply eq_conv ; eassumption.
     + (* This is me being lazy? *)
       admit.
   - admit. (* Need inversion on typing of transport *)

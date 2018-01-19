@@ -1484,7 +1484,28 @@ Proof.
         -- now destruct hb'' as [[[? ?] ?] ?].
 
     (* type_App *)
-    + cheat.
+    + (* Translation of the domain *)
+      destruct (type_translation _ _ _ _ h1 _ hΓ) as [S' [A'' hA'']].
+      assert (th : type_head (head (sSort s1))) by constructor.
+      destruct (choose_type th hA'') as [T' [[A' hA'] hh]].
+      clear hA'' A'' S'.
+      destruct T' ; inversion hh.
+      subst. clear hh th.
+      (* Translation of the codomain *)
+      destruct (type_translation _ _ _ _ h2 _ (trans_snoc hΓ hA')) as [S' [B'' hB'']].
+      assert (th : type_head (head (sSort s2))) by constructor.
+      destruct (choose_type th hB'') as [T' [[B' hB'] hh]].
+      clear hB'' B'' S'.
+      destruct T' ; inversion hh. subst. clear hh th.
+      (* Translation of the function *)
+      destruct (type_translation _ _ _ _ h3 _ hΓ) as [T'' [t'' ht'']].
+      assert (th : type_head (head (sProd n A B))) by constructor.
+      destruct (choose_type th ht'') as [T' [[t' ht'] hh]].
+      clear ht'' t'' T''.
+      destruct T' ; inversion hh. subst. clear hh th.
+      rename n0 into x, T'1 into A'', T'2 into B''.
+      (* we need to change_type to get A' B' *)
+      cheat.
 
     (* type_Eq *)
     + cheat.

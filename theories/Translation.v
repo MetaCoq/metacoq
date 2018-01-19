@@ -1246,6 +1246,14 @@ Defined.
 Axiom cheating : forall {A}, A.
 Tactic Notation "cheat" := (apply cheating).
 
+Fact length_increl : forall {Γ Γ'}, Γ ⊂ Γ' -> #|Γ| = #|Γ'|.
+Proof.
+  intros Γ Γ' h.
+  dependent induction h.
+  - reflexivity.
+  - cbn. now f_equal.
+Defined.
+
 Fixpoint context_translation {Σ Γ} (h : XTyping.wf Σ Γ) :
   ∑ Γ', Σ |--i Γ' # ⟦ Γ ⟧
 
@@ -1279,7 +1287,44 @@ Proof.
         -- exists s0. now destruct hA'' as [[[? ?] ?] ?].
 
   (** type_translation **)
-  - cheat.
+  - dependent destruction h.
+
+    (* type_Rel *)
+    + assert (isdecl' : n < #|Γ'|).
+      { destruct hΓ as [iΓ _]. now rewrite <- (length_increl iΓ). }
+      exists (lift0 (S n) (sdecl_type (safe_nth Γ' (exist _ n isdecl')))), (sRel n).
+      repeat split.
+      * now destruct hΓ.
+      * (* Need lemma for ⊏ and lift, and one for Γ ⊂ Γ' -> ... *)
+        cheat.
+      * constructor.
+      * apply type_Rel. now destruct hΓ.
+
+    (* type_Sort *)
+    + exists (sSort (succ_sort s)), (sSort s).
+      repeat split.
+      * now destruct hΓ.
+      * constructor.
+      * constructor.
+      * apply type_Sort. now destruct hΓ.
+
+    (* type_Prod *)
+    + cheat.
+
+    (* type_Lambda *)
+    + cheat.
+
+    (* type_App *)
+    + cheat.
+
+    (* type_Eq *)
+    + cheat.
+
+    (* type_Refl *)
+    + cheat.
+
+    (* type_Conv *)
+    + cheat.
 
   (** eq_translation **)
   - cheat.

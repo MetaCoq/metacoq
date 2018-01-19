@@ -1254,6 +1254,19 @@ Proof.
   - cbn. now f_equal.
 Defined.
 
+Definition trans_snoc {Σ Γ x A s Γ' A' s'} :
+  Σ |--i Γ' # ⟦ Γ ⟧ ->
+  Σ ;;;; Γ' |--- [A'] : sSort s' # ⟦ Γ |--- [A] : sSort s ⟧ ->
+  Σ |--i Γ' ,, svass x A' # ⟦ Γ ,, svass x A ⟧.
+Proof.
+  intros hΓ hA.
+  split.
+  - constructor ; now destruct hA as [[[? ?] ?] ?].
+  - constructor.
+    + now destruct hΓ.
+    + exists s'. now destruct hA as [[[? ?] ?] ?].
+Defined.
+
 Fixpoint context_translation {Σ Γ} (h : XTyping.wf Σ Γ) :
   ∑ Γ', Σ |--i Γ' # ⟦ Γ ⟧
 
@@ -1280,11 +1293,7 @@ Proof.
       assert (th : type_head (head (sSort s))) by constructor.
       destruct (choose_type th hA') as [T' [[A'' hA''] hh]].
       destruct T' ; try (now inversion hh).
-      exists (Γ' ,, svass x A''). split.
-      * constructor ; destruct hA'' as [[[? ?] ?] ?] ; easy.
-      * constructor.
-        -- now destruct hΓ'.
-        -- exists s0. now destruct hA'' as [[[? ?] ?] ?].
+      exists (Γ' ,, svass x A''). now eapply trans_snoc.
 
   (** type_translation **)
   - dependent destruction h.
@@ -1309,7 +1318,12 @@ Proof.
       * apply type_Sort. now destruct hΓ.
 
     (* type_Prod *)
-    + cheat.
+    + destruct (type_translation _ _ _ _ h1 _ hΓ) as [S' [t' ht']].
+      assert (th : type_head (head (sSort s1))) by constructor.
+      destruct (choose_type th ht') as [T' [[t'' ht''] hh]].
+      clear ht'. clear t'. clear S'.
+      destruct T' ; try (now inversion hh). clear hh.
+      cheat.
 
     (* type_Lambda *)
     + cheat.

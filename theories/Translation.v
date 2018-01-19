@@ -1318,12 +1318,30 @@ Proof.
       * apply type_Sort. now destruct hΓ.
 
     (* type_Prod *)
-    + destruct (type_translation _ _ _ _ h1 _ hΓ) as [S' [t' ht']].
+    + (* Translation of the domain *)
+      destruct (type_translation _ _ _ _ h1 _ hΓ) as [S' [t' ht']].
       assert (th : type_head (head (sSort s1))) by constructor.
       destruct (choose_type th ht') as [T' [[t'' ht''] hh]].
       clear ht'. clear t'. clear S'.
-      destruct T' ; try (now inversion hh). clear hh.
-      cheat.
+      destruct T' ; try (now inversion hh). clear hh. clear th.
+      (* Translation of the codomain *)
+      destruct (type_translation _ _ _ _ h2 _ (trans_snoc hΓ ht'')) as [S' [b' hb']].
+      assert (th : type_head (head (sSort s2))) by constructor.
+      destruct (choose_type th hb') as [T' [[b'' hb''] hh]].
+      clear hb'. clear b'. clear S'.
+      destruct T' ; try (now inversion hh). clear hh. clear th.
+      (* Now we conclude *)
+      exists (sSort (max_sort s s0)), (sProd n t'' b'').
+      repeat split.
+      * now destruct hΓ.
+      * (* Things would be easier if the head of a sort were the whole sort. *)
+        cheat.
+      * constructor.
+        -- now destruct ht'' as [[? ?] ?].
+        -- now destruct hb'' as [[? ?] ?].
+      * eapply type_Prod.
+        -- now destruct ht'' as [[? ?] ?].
+        -- now destruct hb'' as [[? ?] ?].
 
     (* type_Lambda *)
     + cheat.

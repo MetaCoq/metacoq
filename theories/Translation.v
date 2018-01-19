@@ -974,6 +974,11 @@ Notation " Σ ;;;; Γ' |--- [ t' ] : A' # ⟦ Γ |--- [ t ] : A ⟧ " :=
   (trans Σ Γ A t Γ' A' t')
     (at level 7) : i_scope.
 
+Definition ctxtrans Σ Γ Γ' :=
+  Γ ⊂ Γ' * (wf Σ Γ').
+
+Notation " Σ |--i Γ' # ⟦ Γ ⟧ " := (ctxtrans Σ Γ Γ') (at level 7) : i_scope.
+
 (* Notion of head *)
 Inductive head_kind :=
 | headRel
@@ -1205,13 +1210,17 @@ Proof.
   now eapply choose_type'.
 Defined.
 
+(* This has an extra assumption when compared to the paper version.
+   Hopefully it will be enough to deal with translation.
+ *)
 Lemma change_type :
   forall {Σ Γ A t Γ' A' t' s A''},
+    Σ ;;; Γ' |-i A' : sSort s ->
     Σ ;;;; Γ' |--- [ t' ] : A' # ⟦ Γ |--- [t] : A ⟧ ->
     Σ ;;;; Γ' |--- [ A'' ] : sSort s # ⟦ Γ |--- [A] : sSort s ⟧ ->
     ∑ t'', Σ ;;;; Γ' |--- [ t'' ] : A'' # ⟦ Γ |--- [t] : A ⟧.
 Proof.
-  intros Σ Γ A t Γ' A' t' s A'' [[[rΓ' rA'] rt'] ht'] [[[rΓ'' _] rA''] hA''].
+  intros Σ Γ A t Γ' A' t' s A'' hAs [[[rΓ' rA'] rt'] ht'] [[[rΓ'' _] rA''] hA''].
   assert (simA : A' ∼ A'').
   { eapply trel_trans.
     - eapply trel_sym. eapply inrel_trel. eassumption.
@@ -1220,8 +1229,7 @@ Proof.
   destruct (@trel_to_heq Σ Γ' (succ_sort s) (sSort s) (sSort s) A' A'' simA) as [p hp].
   - apply type_Sort. apply (typing_wf ht').
   - apply type_Sort. apply (typing_wf ht').
-  - (* Sort problem, how do we put it there? *)
-    admit.
+  - assumption.
   - assumption.
   - destruct (type_heq hp) as [q hq].
     exists (transport s A' A'' q t').
@@ -1230,26 +1238,52 @@ Proof.
     + assumption.
     + constructor. assumption.
     + eapply type_transport ; assumption.
-Admitted.
+Defined.
 
 
 (*! Translation *)
-Fixpoint type_translation {Σ Γ A t} (h : Σ ;;; Γ |-x t : A)
-                          {Γ'} (hΓ : Γ' ≈ Γ) {struct h} :
+
+Axiom cheating : forall {A}, A.
+Tactic Notation "cheat" := (apply cheating).
+
+Fixpoint context_translation {Σ Γ} (h : XTyping.wf Σ Γ) :
+  ∑ Γ', Σ |--i Γ' # ⟦ Γ ⟧
+
+with type_translation {Σ Γ A t} (h : Σ ;;; Γ |-x t : A)
+                          {Γ'} (hΓ : Σ |--i Γ' # ⟦ Γ ⟧) {struct h} :
   ∑ A' t', Σ ;;;; Γ' |--- [t'] : A' # ⟦ Γ |--- [t] : A ⟧
 
 with eq_translation {Σ Γ s A u v} (h : Σ ;;; Γ |-x u = v : A)
                     (hA : Σ ;;; Γ |-x A : sSort s)
-                    {Γ'} (hΓ : Γ' ≈ Γ) {struct h} :
+                    {Γ'} (hΓ : Σ |--i Γ' # ⟦ Γ ⟧) {struct h} :
   ∑ e e' A' A'' u' v',
     Σ ;;;; Γ' |--- [ e' ] : heq s A' u' A'' v' # ⟦ Γ |--- [e] : heq s A u A v ⟧.
 Proof.
+  (** context_translation **)
+  - dependent destruction h.
+
+    (* wf_nil *)
+    + exists nil. split ; constructor.
+
+    (* wf_snoc *)
+    + destruct (context_translation _ _ h) as [Γ' hΓ'].
+      destruct s as [s hA].
+      destruct (type_translation _ _ _ _ hA _ hΓ') as [T [A' hA']].
+      assert (th : type_head (head (sSort s))) by constructor.
+      destruct (choose_type th hA') as [T' [[A'' hA''] hh]].
+      destruct T' ; try (now inversion hh).
+      exists (Γ' ,, svass x A''). split.
+      * constructor ; destruct hA'' as [[[? ?] ?] ?] ; easy.
+      * constructor.
+        -- now destruct hΓ'.
+        -- exists s0. now destruct hA'' as [[[? ?] ?] ?].
+
   (** type_translation **)
-  - admit.
+  - cheat.
 
   (** eq_translation **)
-  - admit.
-Admitted.
+  - cheat.
+Defined.
 
 
 End Translation.

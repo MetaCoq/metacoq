@@ -49,6 +49,32 @@ Proof.
   - cbn. rewrite eq. reflexivity.
 Defined.
 
+Lemma lift_subst :
+  forall {t n u},
+    (lift 1 n t) {n := u} = t.
+Proof.
+  intro t.
+  induction t ; intros m u.
+  all: try (cbn ; f_equal ; easy).
+  cbn. set (mln := m <=? n).
+  assert (eq : (m <=? n) = mln) by reflexivity.
+  destruct mln.
+  - cbn.
+    assert (eq' : (m ?= S n) = Lt).
+    { apply Nat.compare_lt_iff.
+      pose (h := leb_complete _ _ eq).
+      omega.
+    }
+    rewrite eq'. reflexivity.
+  - cbn.
+    assert (eq' : (m ?= n) = Gt).
+    { apply Nat.compare_gt_iff.
+      pose (h := leb_complete_conv _ _ eq).
+      omega.
+    }
+    rewrite eq'. reflexivity.
+Defined.
+
 Lemma typing_lift01 :
   forall {Σ Γ t A x B s},
     Σ ;;; Γ |-i t : A ->
@@ -584,13 +610,14 @@ Proof.
   destruct (inversionApp h) as [s1 [s2 [[[[? ?] hJ] ?] ?]]].
   destruct (inversionJ hJ) as [s3 [s4 [nx [ne [[[[[[? ?] ?] ?] ?] ?] ?]]]]].
   repeat split.
-  - (* We have the assumption with the wrong sort! *)
-    admit.
   - assumption.
   - assumption.
-  - (* We have the assumption but it needs lemma fot lift and subst *)
-    admit.
-Admitted.
+  - assumption.
+  - rewrite lift_subst in e.
+    destruct (eq_typing e) as [hT2s2 _].
+    destruct (uniqueness hT2s2 t5).
+    eapply eq_conv ; eassumption.
+Defined.
 
 (* Note: If transport is symbolic during this phase, then maybe we can use
    Template Coq to deduce the derivation automatically in the ultimate target.

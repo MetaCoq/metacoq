@@ -38,20 +38,20 @@ Inductive typing (Σ : global_context) : scontext -> sterm -> sterm -> Type :=
     Σ ;;; Γ |-i A : sSort s ->
     Σ ;;; Γ |-i u : A ->
     Σ ;;; Γ |-i v : A ->
-    Σ ;;; Γ |-i sEq s A u v : sSort s
+    Σ ;;; Γ |-i sEq A u v : sSort s
 
 | type_Refl Γ s A u :
     Σ ;;; Γ |-i A : sSort s ->
     Σ ;;; Γ |-i u : A ->
-    Σ ;;; Γ |-i sRefl A u : sEq s A u u
+    Σ ;;; Γ |-i sRefl A u : sEq A u u
 
 (* Maybe it would be easier to go for inductives *)
 | type_J Γ nx ne s1 s2 A u v P p w :
     Σ ;;; Γ |-i A : sSort s1 ->
     Σ ;;; Γ |-i u : A ->
     Σ ;;; Γ |-i v : A ->
-    Σ ;;; Γ ,, svass nx A ,, svass ne (sEq s1 A u (sRel 0)) |-i P : sSort s2 ->
-    Σ ;;; Γ |-i p : sEq s1 A u v ->
+    Σ ;;; Γ ,, svass nx A ,, svass ne (sEq A u (sRel 0)) |-i P : sSort s2 ->
+    Σ ;;; Γ |-i p : sEq A u v ->
     Σ ;;; Γ |-i w : P{ 1 := u }{ 0 := sRefl A u } ->
     Σ ;;; Γ |-i sJ A u P w v p : P{ 1 := v }{ 0 := p }
 
@@ -59,17 +59,17 @@ Inductive typing (Σ : global_context) : scontext -> sterm -> sterm -> Type :=
     Σ ;;; Γ |-i A : sSort s ->
     Σ ;;; Γ |-i u : A ->
     Σ ;;; Γ |-i v : A ->
-    Σ ;;; Γ |-i p : sEq s A u v ->
-    Σ ;;; Γ |-i q : sEq s A u v ->
-    Σ ;;; Γ |-i sUip A u v p q : sEq s (sEq s A u v) p q
+    Σ ;;; Γ |-i p : sEq A u v ->
+    Σ ;;; Γ |-i q : sEq A u v ->
+    Σ ;;; Γ |-i sUip A u v p q : sEq (sEq A u v) p q
 
 | type_Funext Γ s1 s2 n1 n2 n3 A B f g e :
     Σ ;;; Γ |-i A : sSort s1 ->
     Σ ;;; Γ ,, svass n1 A |-i B : sSort s2 ->
     Σ ;;; Γ |-i f : sProd n1 A B ->
     Σ ;;; Γ |-i g : sProd n2 A B ->
-    Σ ;;; Γ |-i e : sProd n3 A (sEq s2 B (sApp (lift0 1 f) n1 (lift0 1 A) (lift 1 1 B) (sRel 0)) (sApp (lift0 1 g) n2 (lift0 1 A) (lift 1 1 B) (sRel 0))) ->
-    Σ ;;; Γ |-i sFunext A B f g e : sEq (max_sort s1 s2) (sProd n1 A B) f g
+    Σ ;;; Γ |-i e : sProd n3 A (sEq B (sApp (lift0 1 f) n1 (lift0 1 A) (lift 1 1 B) (sRel 0)) (sApp (lift0 1 g) n2 (lift0 1 A) (lift 1 1 B) (sRel 0))) ->
+    Σ ;;; Γ |-i sFunext A B f g e : sEq (sProd n1 A B) f g
 
 | type_Sig Γ n t b s1 s2 :
     Σ ;;; Γ |-i t : sSort s1 ->
@@ -132,7 +132,7 @@ with eq_term (Σ : global_context) : scontext -> sterm -> sterm -> sterm -> Type
 | eq_JRefl Γ nx ne s1 s2 A u P w :
     Σ ;;; Γ |-i A : sSort s1 ->
     Σ ;;; Γ |-i u : A ->
-    Σ ;;; Γ ,, svass nx A ,, svass ne (sEq s1 A u (sRel 0)) |-i P : sSort s2 ->
+    Σ ;;; Γ ,, svass nx A ,, svass ne (sEq A u (sRel 0)) |-i P : sSort s2 ->
     Σ ;;; Γ |-i w : P{ 1 := u }{ 0 := sRefl A u } ->
     Σ ;;; Γ |-i sJ A u P w u (sRefl A u) = w : P{ 1 := u }{ 0 := sRefl A u }
 
@@ -163,32 +163,32 @@ with eq_term (Σ : global_context) : scontext -> sterm -> sterm -> sterm -> Type
     Σ ;;; Γ |-i A1 = A2 : sSort s ->
     Σ ;;; Γ |-i u1 = u2 : A1 ->
     Σ ;;; Γ |-i v1 = v2 : A1 ->
-    Σ ;;; Γ |-i sEq s A1 u1 v1 = sEq s A2 u2 v2 : sSort s
+    Σ ;;; Γ |-i sEq A1 u1 v1 = sEq A2 u2 v2 : sSort s
 
 | cong_Refl Γ s A1 A2 u1 u2 :
     Σ ;;; Γ |-i A1 = A2 : sSort s ->
     Σ ;;; Γ |-i u1 = u2 : A1 ->
-    Σ ;;; Γ |-i sRefl A1 u1 = sRefl A2 u2 : sEq s A1 u1 u1
+    Σ ;;; Γ |-i sRefl A1 u1 = sRefl A2 u2 : sEq A1 u1 u1
 
 | cong_J Γ nx ne s1 s2 A1 A2 u1 u2 v1 v2 P1 P2 p1 p2 w1 w2 :
     Σ ;;; Γ |-i A1 = A2 : sSort s1 ->
     Σ ;;; Γ |-i u1 = u2 : A1 ->
     Σ ;;; Γ |-i v1 = v2 : A1 ->
-    Σ ;;; Γ ,, svass nx A1 ,, svass ne (sEq s1 A1 u1 (sRel 0)) |-i P1 = P2 : sSort s2 ->
-    Σ ;;; Γ |-i p1 = p2 : sEq s1 A1 u1 v1 ->
+    Σ ;;; Γ ,, svass nx A1 ,, svass ne (sEq A1 u1 (sRel 0)) |-i P1 = P2 : sSort s2 ->
+    Σ ;;; Γ |-i p1 = p2 : sEq A1 u1 v1 ->
     Σ ;;; Γ |-i w1 = w2 : P1{ 1 := u1 }{ 0 := sRefl A1 u1 } ->
     Σ ;;; Γ |-i sJ A1 u1 P1 w1 v1 p1 = sJ A2 u2 P2 w2 v2 p2 : P1{ 1 := v1 }{ 0 := p1 }
 
-| cong_Uip Γ s A1 A2 u1 u2 v1 v2 p1 p2 q1 q2 :
-    Σ ;;; Γ |-i p1 = p2 : sEq s A1 u1 v1 ->
-    Σ ;;; Γ |-i q1 = q2 : sEq s A1 u1 v1 ->
-    Σ ;;; Γ |-i sUip A1 u1 v1 p1 q1 = sUip A2 u2 v2 p2 q2 : sEq s (sEq s A1 u1 v1) p1 q1
+| cong_Uip Γ A1 A2 u1 u2 v1 v2 p1 p2 q1 q2 :
+    Σ ;;; Γ |-i p1 = p2 : sEq A1 u1 v1 ->
+    Σ ;;; Γ |-i q1 = q2 : sEq A1 u1 v1 ->
+    Σ ;;; Γ |-i sUip A1 u1 v1 p1 q1 = sUip A2 u2 v2 p2 q2 : sEq (sEq A1 u1 v1) p1 q1
 
-| cong_Funext Γ s n1 n2 n3 A1 A2 B1 B2 f1 f2 g1 g2 e1 e2 :
+| cong_Funext Γ n1 n2 n3 A1 A2 B1 B2 f1 f2 g1 g2 e1 e2 :
     Σ ;;; Γ |-i f1 = f2 : sProd n1 A1 B1 ->
     Σ ;;; Γ |-i g1 = g2 : sProd n2 A1 B1 ->
-    Σ ;;; Γ |-i e1 = e2 : sProd n3 A1 (sEq s B1 (sApp (lift0 1 f1) n1 (lift0 1 A1) (lift 1 1 B1) (sRel 0)) (sApp (lift0 1 g1) n2 (lift0 1 A1) (lift 1 1 B1) (sRel 0))) ->
-    Σ ;;; Γ |-i sFunext A1 B1 f1 g1 e1 = sFunext A2 B2 f2 g2 e2 : sEq s (sProd n1 A1 B1) f1 g1
+    Σ ;;; Γ |-i e1 = e2 : sProd n3 A1 (sEq B1 (sApp (lift0 1 f1) n1 (lift0 1 A1) (lift 1 1 B1) (sRel 0)) (sApp (lift0 1 g1) n2 (lift0 1 A1) (lift 1 1 B1) (sRel 0))) ->
+    Σ ;;; Γ |-i sFunext A1 B1 f1 g1 e1 = sFunext A2 B2 f2 g2 e2 : sEq (sProd n1 A1 B1) f1 g1
 
 | cong_Sig Γ n n' A1 A2 B1 B2 s1 s2 :
     Σ ;;; Γ |-i A1 = A2 : sSort s1 ->

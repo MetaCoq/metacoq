@@ -982,7 +982,7 @@ Notation " Σ |--i Γ' # ⟦ Γ ⟧ " := (ctxtrans Σ Γ Γ') (at level 7) : i_s
 (* Notion of head *)
 Inductive head_kind :=
 | headRel
-| headSort
+| headSort (s : sort)
 | headProd
 | headLambda
 | headApp
@@ -999,7 +999,7 @@ Inductive head_kind :=
 Definition head (t : sterm) : head_kind :=
   match t with
   | sRel x => headRel
-  | sSort s => headSort
+  | sSort s => headSort s
   | sProd n A B => headProd
   | sLambda n A B t => headLambda
   | sApp u n A B v => headApp
@@ -1049,7 +1049,7 @@ Proof.
 Defined.
 
 Inductive type_head : head_kind -> Type :=
-| type_headSort : type_head headSort
+| type_headSort s : type_head (headSort s)
 | type_headProd : type_head headProd
 | type_headEq : type_head headEq
 | type_headSig : type_head headSig
@@ -1322,20 +1322,20 @@ Proof.
       destruct (type_translation _ _ _ _ h1 _ hΓ) as [S' [t' ht']].
       assert (th : type_head (head (sSort s1))) by constructor.
       destruct (choose_type th ht') as [T' [[t'' ht''] hh]].
-      clear ht'. clear t'. clear S'.
-      destruct T' ; try (now inversion hh). clear hh. clear th.
+      clear ht' t' S'.
+      destruct T' ; inversion hh.
+      subst. clear hh th.
       (* Translation of the codomain *)
       destruct (type_translation _ _ _ _ h2 _ (trans_snoc hΓ ht'')) as [S' [b' hb']].
       assert (th : type_head (head (sSort s2))) by constructor.
       destruct (choose_type th hb') as [T' [[b'' hb''] hh]].
-      clear hb'. clear b'. clear S'.
-      destruct T' ; try (now inversion hh). clear hh. clear th.
+      clear hb' b' S'.
+      destruct T' ; inversion hh. subst. clear hh th.
       (* Now we conclude *)
-      exists (sSort (max_sort s s0)), (sProd n t'' b'').
+      exists (sSort (max_sort s1 s2)), (sProd n t'' b'').
       repeat split.
       * now destruct hΓ.
-      * (* Things would be easier if the head of a sort were the whole sort. *)
-        cheat.
+      * constructor.
       * constructor.
         -- now destruct ht'' as [[? ?] ?].
         -- now destruct hb'' as [[? ?] ?].

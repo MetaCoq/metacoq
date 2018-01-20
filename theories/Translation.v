@@ -1548,7 +1548,33 @@ Proof.
       * eapply type_App ; eassumption.
 
     (* type_Eq *)
-    + cheat.
+    + (* The type *)
+      destruct (type_translation _ _ _ _ h1 _ hΓ) as [S [A'' hA'']].
+      assert (th : type_head (head (sSort s))) by constructor.
+      destruct (choose_type th hA'') as [T [[A' hA'] hh]].
+      clear hA'' A'' S.
+      destruct T ; inversion hh. subst. clear hh th.
+      (* The first term *)
+      destruct (type_translation _ _ _ _ h2 _ hΓ) as [A'' [u'' hu'']].
+      assert (hS : Σ ;;; Γ' |-i A'' : sSort s).
+      { cheat. }
+      destruct (change_type hS hu'' hA') as [u' hu'].
+      clear hS hu'' u'' A''.
+      (* The other term *)
+      destruct (type_translation _ _ _ _ h3 _ hΓ) as [A'' [v'' hv'']].
+      assert (hS : Σ ;;; Γ' |-i A'' : sSort s).
+      { cheat. }
+      destruct (change_type hS hv'' hA') as [v' hv'].
+      (* Now we conclude *)
+      exists (sSort s), (sEq A' u' v').
+      destruct hA' as [[[? ?] ?] ?].
+      destruct hu' as [[[? ?] ?] ?].
+      destruct hv' as [[[? ?] ?] ?].
+      repeat split.
+      * assumption.
+      * constructor.
+      * constructor ; assumption.
+      * apply type_Eq ; assumption.
 
     (* type_Refl *)
     + cheat.

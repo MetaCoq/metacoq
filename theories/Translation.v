@@ -1608,7 +1608,33 @@ Proof.
       * eapply type_Refl ; eassumption.
 
     (* type_Conv *)
-    + cheat.
+    + (* Translating the conversion *)
+      assert (hs : Σ ;;; Γ |-x sSort s : sSort (succ_sort s)).
+      { constructor.
+        (* TODO The corresponding lemma! *)
+        cheat.
+      }
+      destruct (eq_translation _ _ _ _ _ _ e hs _ hΓ)
+        as [p [p' [S1 [S2 [A' [B' h']]]]]].
+      destruct h' as [[[eΓ eheq] ep] hp'].
+      assert (Ss : S1 = sSort s) by (inversion eheq). subst.
+      assert (Ss : S2 = sSort s) by (inversion eheq). subst.
+      (* Can similar things be done to solve more sorts? *)
+      destruct (type_heq hp') as [q hq].
+      (* Translating the term *)
+      destruct (type_translation _ _ _ _ h1 _ hΓ) as [A'' [t' ht']].
+      (* Translating the other type *)
+      destruct (type_translation _ _ _ _ h2 _ hΓ) as [S [B''' hB''']].
+      assert (th : type_head (head (sSort s))) by constructor.
+      destruct (choose_type th hB''') as [T [[B'' hB''] hh]].
+      clear hB''' B''' S.
+      destruct T ; inversion hh. subst. clear hh th.
+      (* Problem! Nothing ever states that A' or A'' are translations.
+         This is going to prove hard if we ever want to apply change_type.
+         Maybe we should add an hypothesis to the conversion rule
+         and/or to the conclusion of eq_translation.
+       *)
+      cheat.
 
   (** eq_translation **)
   - cheat.

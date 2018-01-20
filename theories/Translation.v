@@ -1384,6 +1384,24 @@ Proof.
   - now eapply type_Prod.
 Defined.
 
+Definition trans_Eq {Σ Γ A u v s Γ' A' u' v'} :
+  Σ |--i Γ' # ⟦ Γ ⟧ ->
+  Σ ;;;; Γ' |--- [A'] : sSort s # ⟦ Γ |--- [A] : sSort s ⟧ ->
+  Σ ;;;; Γ' |--- [u'] : A' # ⟦ Γ |--- [u] : A ⟧ ->
+  Σ ;;;; Γ' |--- [v'] : A' # ⟦ Γ |--- [v] : A ⟧ ->
+  Σ ;;;; Γ' |--- [sEq A' u' v'] : sSort s # ⟦ Γ |--- [sEq A u v] : sSort s ⟧.
+Proof.
+  intros hΓ hA hu hv.
+  destruct hA as [[[? ?] ?] ?].
+  destruct hu as [[[? ?] ?] ?].
+  destruct hv as [[[? ?] ?] ?].
+  repeat split.
+  - assumption.
+  - constructor.
+  - constructor ; assumption.
+  - apply type_Eq ; assumption.
+Defined.
+
 Fixpoint context_translation {Σ Γ} (h : XTyping.wf Σ Γ) :
   ∑ Γ', Σ |--i Γ' # ⟦ Γ ⟧
 
@@ -1567,17 +1585,27 @@ Proof.
       destruct (change_type hS hv'' hA') as [v' hv'].
       (* Now we conclude *)
       exists (sSort s), (sEq A' u' v').
-      destruct hA' as [[[? ?] ?] ?].
-      destruct hu' as [[[? ?] ?] ?].
-      destruct hv' as [[[? ?] ?] ?].
-      repeat split.
-      * assumption.
-      * constructor.
-      * constructor ; assumption.
-      * apply type_Eq ; assumption.
+      apply trans_Eq ; assumption.
 
     (* type_Refl *)
-    + cheat.
+    + (* Here we have two choices, either to translate h1 or not.
+         If we do translate it we get hypotheses on the sort of A,
+         but we also need to say that the translation we get from h2
+         is also living in this sort...
+         So it would be worth it only in the event that we return information
+         about the sort in type_translation.
+       *)
+      destruct (type_translation _ _ _ _ h2 _ hΓ) as [A' [u' hu']].
+      exists (sEq A' u' u'), (sRefl A' u').
+      destruct hu' as [[[? ?] ?] hu'].
+      destruct hΓ.
+      (* This step might no longer be necesary later *)
+      destruct (istype_type hu').
+      repeat split.
+      * assumption.
+      * constructor ; assumption.
+      * constructor ; assumption.
+      * eapply type_Refl ; eassumption.
 
     (* type_Conv *)
     + cheat.

@@ -1524,7 +1524,28 @@ Proof.
       destruct (change_type hS' ht' (trans_Prod hΓ hA' hB')) as [t'' ht''].
       clear hS' ht' A'' B'' t'.
       (* Translation of the argument *)
-      cheat.
+      destruct (type_translation _ _ _ _ h4 _ hΓ) as [A'' [u'' hu'']].
+      assert (hS : Σ ;;; Γ' |-i A'' : sSort s1).
+      { (* Maybe we could add something to the theorem to state that the
+           translation of the type lives in the right sort.
+         *)
+        cheat.
+      }
+      destruct (change_type hS hu'' hA') as [u' hu'].
+      clear hS hu'' A'' u''.
+      (* We now conclude *)
+      exists (B'{ 0 := u' }), (sApp t'' n A' B' u').
+      destruct hΓ.
+      destruct hA' as [[[? ?] ?] ?].
+      destruct hB' as [[[? ?] ?] ?].
+      destruct ht'' as [[[? ?] ?] ?].
+      destruct hu' as [[[? ?] ?] ?].
+      repeat split.
+      * assumption.
+      * (* We need to prove a lemma about ⊏ extending to substitution *)
+        cheat.
+      * now constructor.
+      * eapply type_App ; eassumption.
 
     (* type_Eq *)
     + cheat.

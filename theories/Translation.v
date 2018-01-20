@@ -1367,6 +1367,23 @@ Proof.
     + exists s'. now destruct hA as [[[? ?] ?] ?].
 Defined.
 
+Definition trans_Prod {Σ Γ n A B s1 s2 Γ' A' B'} :
+  Σ |--i Γ' # ⟦ Γ ⟧ ->
+  Σ ;;;; Γ' |--- [A'] : sSort s1 # ⟦ Γ |--- [A] : sSort s1 ⟧ ->
+  Σ ;;;; Γ' ,, svass n A' |--- [B'] : sSort s2
+  # ⟦ Γ ,, svass n A |--- [B]: sSort s2 ⟧ ->
+  Σ ;;;; Γ' |--- [sProd n A' B']: sSort (max_sort s1 s2)
+  # ⟦ Γ |--- [ sProd n A B]: sSort (max_sort s1 s2) ⟧.
+Proof.
+  intros hΓ hA hB.
+  destruct hΓ. destruct hA as [[? ?] ?]. destruct hB as [[? ?] ?].
+  repeat split.
+  - assumption.
+  - constructor.
+  - now constructor.
+  - now eapply type_Prod.
+Defined.
+
 Fixpoint context_translation {Σ Γ} (h : XTyping.wf Σ Γ) :
   ∑ Γ', Σ |--i Γ' # ⟦ Γ ⟧
 
@@ -1434,15 +1451,7 @@ Proof.
       destruct T' ; inversion hh. subst. clear hh th.
       (* Now we conclude *)
       exists (sSort (max_sort s1 s2)), (sProd n t'' b'').
-      repeat split.
-      * now destruct hΓ.
-      * constructor.
-      * constructor.
-        -- now destruct ht'' as [[? ?] ?].
-        -- now destruct hb'' as [[? ?] ?].
-      * eapply type_Prod.
-        -- now destruct ht'' as [[? ?] ?].
-        -- now destruct hb'' as [[? ?] ?].
+      now apply trans_Prod.
 
     (* type_Lambda *)
     + (* Translation of the domain *)
@@ -1512,9 +1521,9 @@ Proof.
       { (* I see no way of proving this... *)
         cheat.
       }
-      (* I should extract the proof of Prod from hA', hB' *)
-      (* destruct (change_type hS' ht' hbty'') as [b'' hb'']. *)
-      (* clear hS' hb' S' b'. *)
+      destruct (change_type hS' ht' (trans_Prod hΓ hA' hB')) as [t'' ht''].
+      clear hS' ht' A'' B'' t'.
+      (* Translation of the argument *)
       cheat.
 
     (* type_Eq *)

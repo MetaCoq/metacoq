@@ -1402,11 +1402,15 @@ Proof.
   - apply type_Eq ; assumption.
 Defined.
 
-(* WARNING!
-   Σ isn't part of the source so heq isn't typable in the source.
-   It might be best to provide a clear and clean definition of conversion
-   translation!
- *)
+(* Maybe put this together with the other translation definitions *)
+Definition eqtrans Σ Γ s A u v Γ' A' A'' u' v' p' :=
+  Γ ⊂ Γ' *
+  A ⊏ A' *
+  A ⊏ A'' *
+  u ⊏ u' *
+  v ⊏ v' *
+  (Σ ;;; Γ' |-i p' : heq s A' u' A'' v').
+
 Fixpoint context_translation {Σ Γ} (h : XTyping.wf Σ Γ) :
   ∑ Γ', Σ |--i Γ' # ⟦ Γ ⟧
 
@@ -1417,8 +1421,9 @@ with type_translation {Σ Γ A t} (h : Σ ;;; Γ |-x t : A)
 with eq_translation {Σ Γ s A u v} (h : Σ ;;; Γ |-x u = v : A)
                     (hA : Σ ;;; Γ |-x A : sSort s)
                     {Γ'} (hΓ : Σ |--i Γ' # ⟦ Γ ⟧) {struct h} :
-  ∑ e e' A' A'' u' v',
-    Σ ;;;; Γ' |--- [ e' ] : heq s A' u' A'' v' # ⟦ Γ |--- [e] : heq s A u A v ⟧.
+  ∑ A' A'' u' v' p',
+    eqtrans Σ Γ s A u v Γ' A' A'' u' v' p'
+.
 Proof.
   (** context_translation **)
   - dependent destruction h.
@@ -1620,12 +1625,13 @@ Proof.
         cheat.
       }
       destruct (eq_translation _ _ _ _ _ _ e hs _ hΓ)
-        as [p [p' [S1 [S2 [A' [B' h']]]]]].
-      destruct h' as [[[eΓ eheq] ep] hp'].
-      assert (Ss : S1 = sSort s) by (inversion eheq). subst.
-      assert (Ss : S2 = sSort s) by (inversion eheq). subst.
+        as [S' [S'' [A' [B' [p' h']]]]].
+      destruct h' as [[[[[eΓ eS'] eS''] eA] eB] hp'].
+      (* With this new version I no longer know of the shape of the types. *)
+      (* assert (Ss : S' = sSort s) by (inversion eS'). subst. *)
+      (* assert (Ss : S'' = sSort s) by (inversion eS''). subst. *)
       (* Can similar things be done to solve more sorts? *)
-      destruct (type_heq hp') as [q hq].
+      (* destruct (type_heq hp') as [q hq]. *)
       (* Translating the term *)
       destruct (type_translation _ _ _ _ h1 _ hΓ) as [A'' [t' ht']].
       (* Translating the other type *)

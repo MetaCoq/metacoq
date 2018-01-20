@@ -1637,7 +1637,51 @@ Proof.
       cheat.
 
   (** eq_translation **)
-  - cheat.
+  - dependent destruction h.
+
+    (* eq_reflexivity *)
+    + destruct (type_translation _ _ _ _ t _ hΓ) as [A' [u' hu]].
+      (* First we should dea with the different properties of heq.
+         This should come with the quoting of terms (the likes of
+         convinceme.v).
+         By the way, the very same terms should come in handy when dealing
+         with trel_to_heq.
+         By the way, maybe we can add transitivity as a constructor to
+         trel. It would be translated as well wouldn't it?
+         But maybe if would mess with inversions, so it might be a better
+         idea to leave it as it is.
+       *)
+      cheat.
+
+    (* eq_symmetry *)
+    + cheat.
+
+    (* eq_transitivity *)
+    + cheat.
+
+    (* eq_beta *)
+    + cheat.
+
+    (* eq_conv *)
+    + cheat.
+
+    (* cong_Prod *)
+    + cheat.
+
+    (* cong_Lambda *)
+    + cheat.
+
+    (* cong_App *)
+    + cheat.
+
+    (* cong_Eq *)
+    + cheat.
+
+    (* cong_Refl *)
+    + cheat.
+
+    (* reflection *)
+    + cheat.
 Defined.
 
 

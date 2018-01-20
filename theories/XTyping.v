@@ -6,7 +6,7 @@ Reserved Notation " Σ ;;; Γ '|-x' t = u : T " (at level 50, Γ, t, u, T at nex
 
 Open Scope s_scope.
 
-Inductive typing (Σ : global_context) : scontext -> sterm -> sterm -> Set :=
+Inductive typing (Σ : global_context) : scontext -> sterm -> sterm -> Type :=
 | type_Rel Γ n :
     wf Σ Γ ->
     forall (isdecl : n < List.length Γ),
@@ -53,7 +53,7 @@ Inductive typing (Σ : global_context) : scontext -> sterm -> sterm -> Set :=
 
 where " Σ ;;; Γ '|-x' t : T " := (@typing Σ Γ t T) : x_scope
 
-with wf (Σ : global_context) : scontext -> Set :=
+with wf (Σ : global_context) : scontext -> Type :=
 | wf_nil :
     wf Σ nil
 
@@ -62,7 +62,7 @@ with wf (Σ : global_context) : scontext -> Set :=
     (∑ s, Σ ;;; Γ |-x A : sSort s) ->
     wf Σ (Γ ,, svass x A)
 
-with eq_term (Σ : global_context) : scontext -> sterm -> sterm -> sterm -> Prop :=
+with eq_term (Σ : global_context) : scontext -> sterm -> sterm -> sterm -> Type :=
 | eq_reflexivity Γ u A :
     Σ ;;; Γ |-x u : A ->
     Σ ;;; Γ |-x u = u : A

@@ -1402,6 +1402,11 @@ Proof.
   - apply type_Eq ; assumption.
 Defined.
 
+(* WARNING!
+   Σ isn't part of the source so heq isn't typable in the source.
+   It might be best to provide a clear and clean definition of conversion
+   translation!
+ *)
 Fixpoint context_translation {Σ Γ} (h : XTyping.wf Σ Γ) :
   ∑ Γ', Σ |--i Γ' # ⟦ Γ ⟧
 

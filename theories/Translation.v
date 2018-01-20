@@ -1426,7 +1426,8 @@ Proof.
       destruct T' ; inversion hh.
       subst. clear hh th.
       (* Translation of the codomain *)
-      destruct (type_translation _ _ _ _ h2 _ (trans_snoc hΓ ht'')) as [S' [b' hb']].
+      destruct (type_translation _ _ _ _ h2 _ (trans_snoc hΓ ht''))
+        as [S' [b' hb']].
       assert (th : type_head (head (sSort s2))) by constructor.
       destruct (choose_type th hb') as [T' [[b'' hb''] hh]].
       clear hb' b' S'.
@@ -1452,13 +1453,15 @@ Proof.
       destruct T' ; inversion hh.
       subst. clear hh th.
       (* Translation of the codomain *)
-      destruct (type_translation _ _ _ _ h2 _ (trans_snoc hΓ ht'')) as [S' [bty' hbty']].
+      destruct (type_translation _ _ _ _ h2 _ (trans_snoc hΓ ht''))
+        as [S' [bty' hbty']].
       assert (th : type_head (head (sSort s2))) by constructor.
       destruct (choose_type th hbty') as [T' [[bty'' hbty''] hh]].
       clear hbty' bty' S'.
       destruct T' ; inversion hh. subst. clear hh th.
       (* Translation of the term *)
-      destruct (type_translation _ _ _ _ h3 _ (trans_snoc hΓ ht'')) as [S' [b' hb']].
+      destruct (type_translation _ _ _ _ h3 _ (trans_snoc hΓ ht''))
+        as [S' [b' hb']].
       assert (hS' : Σ ;;; Γ' ,, svass n t'' |-i S' : sSort s2).
       { (* Maybe we need to relax change_type, otherwise it won't be usable.
            Maybe this could be done by removing sort annotation to Eq (which we
@@ -1492,7 +1495,8 @@ Proof.
       destruct T' ; inversion hh.
       subst. clear hh th.
       (* Translation of the codomain *)
-      destruct (type_translation _ _ _ _ h2 _ (trans_snoc hΓ hA')) as [S' [B'' hB'']].
+      destruct (type_translation _ _ _ _ h2 _ (trans_snoc hΓ hA'))
+        as [S' [B'' hB'']].
       assert (th : type_head (head (sSort s2))) by constructor.
       destruct (choose_type th hB'') as [T' [[B' hB'] hh]].
       clear hB'' B'' S'.
@@ -1504,7 +1508,13 @@ Proof.
       clear ht'' t'' T''.
       destruct T' ; inversion hh. subst. clear hh th.
       rename n0 into x, T'1 into A'', T'2 into B''.
-      (* we need to change_type to get A' B' *)
+      assert (hS' : Σ ;;; Γ' |-i sProd x A'' B'' : sSort (max_sort s1 s2)).
+      { (* I see no way of proving this... *)
+        cheat.
+      }
+      (* I should extract the proof of Prod from hA', hB' *)
+      (* destruct (change_type hS' ht' hbty'') as [b'' hb'']. *)
+      (* clear hS' hb' S' b'. *)
       cheat.
 
     (* type_Eq *)

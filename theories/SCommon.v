@@ -17,3 +17,17 @@ Definition ssnoc (Γ : scontext) (d : scontext_decl) := d :: Γ.
 Notation " Γ ,, d " := (ssnoc Γ d) (at level 20, d at next level) : s_scope.
 
 Record squash (A : Set) : Prop := { _ : A }.
+
+(* Common lemmata *)
+
+Lemma eq_safe_nth :
+  forall {Γ n x A isdecl isdecl'},
+    safe_nth (Γ ,, svass x A) (exist _ (S n) isdecl') =
+    safe_nth Γ (exist _ n isdecl).
+Proof.
+  intros Γ. induction Γ ; intros n x A isdecl isdecl'.
+  - easy.
+  - destruct n.
+    + reflexivity.
+    + cbn. admit.
+Admitted.

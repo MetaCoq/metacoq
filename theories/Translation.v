@@ -76,6 +76,65 @@ Proof.
     rewrite eq'. reflexivity.
 Defined.
 
+Lemma liftP2 :
+  forall t i j k n,
+    i <= n ->
+    lift k (j+n) (lift j i t) = lift j i (lift k n t).
+Proof.
+  intro t.
+  induction t ; intros i j k m H.
+  all: try (cbn ; f_equal ; easy).
+  all: try (cbn ; f_equal ;
+            try replace (S (S (j + m)))%nat with (j + (S (S m)))%nat by omega ;
+            try replace (S (j + m))%nat with (j + (S m))%nat by omega ; easy).
+  cbn. set (iln := i <=? n). assert (eq : (i <=? n) = iln) by reflexivity.
+  set (mln := m <=? n). assert (eq' : (m <=? n) = mln) by reflexivity.
+  destruct iln.
+  + pose proof (leb_complete _ _ eq).
+    destruct mln.
+    * pose proof (leb_complete _ _ eq').
+      cbn.
+      assert (eq1 : j + m <=? j + n = true).
+      { apply leb_correct.
+        omega.
+      }
+      assert (eq2 : i <=? k + n = true).
+      { apply leb_correct.
+        omega.
+      }
+      rewrite eq1, eq2. f_equal. omega.
+    * pose proof (leb_complete_conv _ _ eq').
+      cbn.
+      assert (eq1 : j + m <=? j + n = false).
+      { apply leb_correct_conv.
+        omega.
+      }
+      rewrite eq1, eq. reflexivity.
+  + pose proof (leb_complete_conv _ _ eq).
+    destruct mln.
+    * pose proof (leb_complete _ _ eq').
+      cbn.
+      set (jmln := (j + m <=? n)).
+      assert (eq0 : (j + m <=? n) = jmln) by reflexivity.
+      set (ilkn := (i <=? k + n)).
+      assert (eq1 : (i <=? k + n) = ilkn) by reflexivity.
+      destruct jmln.
+      -- pose proof (leb_complete _ _ eq0).
+         destruct ilkn.
+         ++ pose proof (leb_complete _ _ eq1).
+            omega.
+         ++ reflexivity.
+      -- pose proof (leb_complete_conv _ _ eq0).
+         omega.
+    * cbn. rewrite eq.
+      set (jmln := (j + m <=? n)).
+      assert (eq0 : (j + m <=? n) = jmln) by reflexivity.
+      destruct jmln.
+      -- pose proof (leb_complete _ _ eq0).
+         omega.
+      -- reflexivity.
+Defined.
+
 Lemma lift_subst :
   forall {t n u},
     (lift 1 n t) {n := u} = t.
@@ -1194,6 +1253,35 @@ Proof.
   now apply @trelE_to_heq with (E := nil).
 Defined.
 
+Lemma lift_transport :
+  forall {s T1 T2 p t' n k},
+    lift n k (transport s T1 T2 p t') =
+    transport s (lift n k T1) (lift n k T2)
+              (lift n k p) (lift n k t').
+Proof.
+  intros s T1 T2 p t' n k.
+  cbn. unfold transport. f_equal.
+  - f_equal.
+    + f_equal.
+      replace (S (S k)) with (2 + k)%nat by omega.
+      now rewrite liftP2 by omega.
+    + f_equal. replace (S k) with (1 + k)%nat by omega.
+      now rewrite liftP2 by omega.
+  - replace (S k) with (1 + k)%nat by omega.
+    now rewrite liftP2 by omega.
+Defined.
+
+Lemma inrel_lift :
+  forall {t t'},
+    t ⊏ t' ->
+    forall n k, lift n k t ⊏ lift n k t'.
+Proof.
+  intros  t t'. induction 1 ; intros m k.
+  all: try (cbn ; now constructor).
+  - cbn. destruct (k <=? x) ; now constructor.
+  - rewrite lift_transport. now constructor.
+Defined.
+
 Lemma trel_lift :
   forall {t1 t2},
     t1 ∼ t2 ->
@@ -1203,12 +1291,9 @@ Proof.
   all: try (cbn ; now constructor).
   - easy.
   - cbn. destruct (k <=? x) ; now constructor.
-  - (* cbn. fold_transport. *)
-    (* We should fix transport, hopefully we'd get back the property
-       that a lift of transport is a transport of lift. *)
-    admit.
-  - admit.
-Admitted.
+  - rewrite lift_transport. now constructor.
+  - rewrite lift_transport. now constructor.
+Defined.
 
 Lemma trel_subst :
   forall {t1 t2},

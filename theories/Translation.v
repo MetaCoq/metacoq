@@ -105,8 +105,8 @@ Proof.
   - exists s1, s2.
     repeat split ; try easy.
     apply eq_reflexivity.
-    (* Substitution lemma *)
-    admit.
+    change (sSort s2) with ((sSort s2){0 := u}).
+    eapply typing_subst ; eassumption.
 
   - destruct (IHtyping1 t n A B u (eq_refl _)) as [s1 [s2 [[[[? ?] ?] ?] ?]]].
     exists s1, s2. repeat split ; try easy.
@@ -116,7 +116,7 @@ Proof.
       destruct (eq_typing e0) as [_ hAs2].
       destruct (uniqueness hAs hAs2).
       eapply eq_conv ; eassumption.
-Admitted.
+Defined.
 
 Lemma inversionEq :
   forall {Σ Γ A u v T},
@@ -161,8 +161,12 @@ Proof.
 
   - exists s1, s2, nx, ne. repeat split ; try easy.
     apply eq_reflexivity.
-    (* Substitution lemma *)
-    admit.
+    change (sSort s2) with ((sSort s2){1 := v}{0 := p}).
+    eapply typing_subst2.
+    + eassumption.
+    + assumption.
+    + cbn. rewrite !lift_subst, lift00.
+      assumption.
 
   - destruct (IHtyping1 A u P w v p (eq_refl _))
       as [s1 [s2 [nx [ne [[[[[[? ?] ?] ?] ?] ?] ?]]]]].
@@ -173,7 +177,7 @@ Proof.
       destruct (eq_typing e0) as [_ hAs2].
       destruct (uniqueness hAs hAs2).
       eapply eq_conv ; eassumption.
-Admitted.
+Defined.
 
 (* Lemma inversionUip *)
 (* Lemma inversionFunext *)

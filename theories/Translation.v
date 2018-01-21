@@ -356,7 +356,7 @@ Lemma inversionJ :
       (Σ ;;; Γ |-i A : sSort s1) *
       (Σ ;;; Γ |-i u : A) *
       (Σ ;;; Γ |-i v : A) *
-      (Σ ;;; Γ ,, svass nx A ,, svass ne (sEq A u (sRel 0)) |-i P : sSort s2) *
+      (Σ ;;; Γ ,, svass nx A ,, svass ne (sEq (lift0 1 A) (lift0 1 u) (sRel 0)) |-i P : sSort s2) *
       (Σ ;;; Γ |-i p : sEq A u v) *
       (Σ ;;; Γ |-i w : (P {1 := u}){0 := sRefl A u}) *
       (Σ ;;; Γ |-i P{1 := v}{0 := p} = T : sSort s2).
@@ -377,7 +377,7 @@ Proof.
     + destruct (eq_typing e) as [hAs _].
       destruct (eq_typing e0) as [_ hAs2].
       destruct (uniqueness hAs hAs2).
-      eapply eq_conv.
+      eapply eq_conv ; eassumption.
 Admitted.
 
 (* Lemma inversionUip *)

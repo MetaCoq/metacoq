@@ -75,6 +75,18 @@ Proof.
     rewrite eq'. reflexivity.
 Defined.
 
+Lemma lift00 :
+  forall {t n}, lift 0 n t = t.
+Proof.
+  intros t. induction t ; intro m.
+  all: cbn.
+  all: repeat match goal with
+           | H : forall n, _ = _ |- _ => rewrite H
+           end.
+  all: try reflexivity.
+  destruct (m <=? n) ; reflexivity.
+Defined.
+
 Lemma typing_lift01 :
   forall {Σ Γ t A x B s},
     Σ ;;; Γ |-i t : A ->
@@ -87,6 +99,64 @@ Lemma typing_subst :
     Σ ;;; Γ ,, svass n A |-i t : B ->
     Σ ;;; Γ |-i u : A ->
     Σ ;;; Γ |-i t{ 0 := u } : B{ 0 := u }.
+Admitted.
+
+Lemma typing_subst2 :
+  forall {Σ Γ t A B C na nb u v},
+    Σ ;;; Γ ,, svass na A ,, svass nb B |-i t : C ->
+    Σ ;;; Γ |-i u : A ->
+    Σ ;;; Γ |-i v : B{ 0 := u } ->
+    Σ ;;; Γ |-i t{ 1 := u }{ 0 := v } : C{ 1 := u }{ 0 := v }.
+Admitted.
+
+Inductive eqctx Σ : scontext -> scontext -> Type :=
+| eqnil : eqctx Σ nil nil
+| eqsnoc Γ na A Δ nb B s :
+    eqctx Σ Γ Δ ->
+    Σ ;;; Γ |-i A = B : sSort s ->
+    eqctx Σ (Γ ,, svass na A) (Δ ,, svass nb B).
+
+Fact eqctx_refl :
+  forall {Σ Γ},
+    wf Σ Γ ->
+    eqctx Σ Γ Γ.
+Proof.
+  intros Σ Γ h.
+  dependent induction Γ.
+  - constructor.
+  - dependent destruction h.
+    destruct s.
+    econstructor.
+    + now apply IHΓ.
+    + now apply eq_reflexivity.
+Defined.
+
+(* Lemma ctx_conv : *)
+(*   forall {Σ Γ Δ}, *)
+(*     eqctx Σ Γ Δ -> *)
+(*     forall {t A}, *)
+(*       Σ ;;; Γ |-i t : A -> *)
+(*       Σ ;;; Δ |-i t : A. *)
+(* Proof. *)
+  (* intros Σ Γ Δ eq. *)
+  (* dependent induction eq ; intros t C h. *)
+  (* - assumption. *)
+  (* - dependent induction h. *)
+  (*   + eapply type_Rel. *)
+(* Admitted. *)
+
+Lemma ctx_conv :
+  forall {Σ Γ Δ t A},
+    Σ ;;; Γ |-i t : A ->
+    eqctx Σ Γ Δ ->
+    Σ ;;; Δ |-i t : A.
+Admitted.
+
+Lemma eqctx_conv :
+  forall {Σ Γ Δ t u A},
+    Σ ;;; Γ |-i t = u : A ->
+    eqctx Σ Γ Δ ->
+    Σ ;;; Δ |-i t = u : A.
 Admitted.
 
 Lemma istype_type :
@@ -120,23 +190,31 @@ Proof.
   - exists (succ_sort (max_sort s1 s2)). apply type_Sort. apply (typing_wf H).
   - exists (max_sort s1 s2). apply type_Prod.
     + assumption.
-    + (* Well, α-renaming should solve the trick. But we shouldn't have to
-         care! *)
-      admit.
+    + eapply ctx_conv ; [ eassumption |].
+      econstructor.
+      * apply eqctx_refl. now apply (typing_wf H).
+      * apply eq_reflexivity. eassumption.
   - exists s2. change (sSort s2) with ((sSort s2){ 0 := u }).
     eapply typing_subst.
     + eassumption.
     + assumption.
   - exists (succ_sort s). apply type_Sort. apply (typing_wf H).
   - exists s. now apply type_Eq.
-  - (* Substitution lemma is not strong enough? *)
-    admit.
+  - exists s2.
+    change (sSort s2) with ((sSort s2){1 := v}{0 := p}).
+    eapply typing_subst2.
+    + eassumption.
+    + assumption.
+    + cbn. rewrite !lift_subst, lift00.
+      assumption.
   - exists s. apply type_Eq ; try easy. now apply type_Eq.
   - exists (max_sort s1 s2). apply type_Eq.
     + now apply type_Prod.
     + assumption.
-    + (* Problem with naming again! *)
-      admit.
+    + eapply type_Conv.
+      * eassumption.
+      * eapply type_Prod ; eassumption.
+      * apply eq_symmetry. eapply cong_Prod ; apply eq_reflexivity ; assumption.
   - exists (succ_sort (max_sort s1 s2)). apply type_Sort. apply (typing_wf H).
   - exists (max_sort s1 s2). now apply type_Sig.
   - exists s3. change (sSort s3) with ((sSort s3){ 0 := p}).
@@ -144,7 +222,7 @@ Proof.
     + eassumption.
     + assumption.
   - exists s. assumption.
-Admitted.
+Defined.
 
 Lemma eq_typing :
   forall {Σ Γ t u T},
@@ -157,6 +235,7 @@ Proof.
            | H : ?A * ?B |- _ => destruct H
            end ;
     split ; try (now constructor + easy).
+  all: try (econstructor ; eassumption).
   - eapply type_Conv.
     + econstructor ; try eassumption.
       eapply type_Conv.
@@ -172,39 +251,51 @@ Proof.
   - eapply typing_subst ; eassumption.
   - econstructor ; try eassumption.
     econstructor ; eassumption.
-  - eapply type_Conv ; eassumption.
-  - eapply type_Conv ; eassumption.
   - constructor ; try eassumption.
-    (* Maybe we need a context conversion lemma *)
-    admit.
-  - econstructor ; eassumption.
+    eapply ctx_conv.
+    + eassumption.
+    + econstructor.
+      * apply eqctx_refl. now apply (typing_wf t1).
+      * eassumption.
   - eapply type_Conv.
     + econstructor.
       * eassumption.
-      * (* Context conversion *)
-        admit.
-      * (* Context conversion *)
-        admit.
+      * eapply ctx_conv ; [ eassumption |].
+        econstructor.
+        -- eapply eqctx_refl. now apply (typing_wf t5).
+        -- eassumption.
+      * eapply ctx_conv.
+        -- eapply type_Conv ; eassumption.
+        -- econstructor.
+           ++ apply eqctx_refl. now apply (typing_wf t5).
+           ++ eassumption.
     + econstructor.
       * eassumption.
-      * (* Naming conversion *)
-        admit.
+      * eapply ctx_conv ; [ eassumption |].
+        econstructor.
+        -- apply eqctx_refl. now apply (typing_wf t5).
+        -- apply eq_reflexivity. eassumption.
     + apply eq_symmetry. apply cong_Prod.
       * assumption.
-      * (* Name conversion. *)
-        admit.
-  - econstructor ; eassumption.
+      * eapply eqctx_conv ; [ eassumption |].
+        econstructor.
+        -- apply eqctx_refl. now apply (typing_wf t5).
+        -- apply eq_reflexivity. eassumption.
   - econstructor.
     + econstructor.
       * eassumption.
-      * (* Context conversion *)
-        admit.
+      * eapply ctx_conv ; [ eassumption |].
+        econstructor.
+        -- apply eqctx_refl. now apply (typing_wf t7).
+        -- eassumption.
       * econstructor.
         -- eassumption.
         -- econstructor.
            ++ eassumption.
-           ++ (* Context conversion *)
-              admit.
+           ++ eapply ctx_conv ; [ eassumption |].
+              econstructor.
+              ** apply eqctx_refl. now apply (typing_wf t7).
+              ** eassumption.
         -- eapply cong_Prod ; eassumption.
       * econstructor ; eassumption.
     + instantiate (1 := s2).
@@ -212,7 +303,59 @@ Proof.
       eapply typing_subst ; eassumption.
     + (* We need a substitution lemma for conversion *)
       admit.
-  -
+  - constructor.
+    + assumption.
+    + eapply type_Conv ; eassumption.
+    + eapply type_Conv ; eassumption.
+  - eapply type_Conv ; [ eapply type_Refl | .. ].
+    + eassumption.
+    + eapply type_Conv ; eassumption.
+    + constructor ; eassumption.
+    + apply eq_symmetry. apply cong_Eq ; assumption.
+  - eapply type_Conv ; [ econstructor | .. ].
+    1: eassumption.
+    all: try (econstructor ; eassumption).
+    + eapply ctx_conv ; [ eassumption |].
+      econstructor.
+      * econstructor.
+        -- apply eqctx_refl. now apply (typing_wf t7).
+        -- eassumption.
+      * eapply cong_Eq.
+        -- (* We need conversion of lifts! *)
+           admit.
+        -- (* We need conversion of lifts! *)
+           admit.
+        -- apply eq_reflexivity.
+           eapply type_Conv ; [ eapply type_Rel | .. ].
+           ++ econstructor.
+              ** now apply (typing_wf t7).
+              ** eexists ; eassumption.
+           ++ instantiate (1 := s1).
+              change (sSort s1) with (lift0 1 (sSort s1)).
+              eapply typing_lift01 ; eassumption.
+           ++ cbn. apply eq_reflexivity.
+              change (sSort s1) with (lift0 1 (sSort s1)).
+              eapply typing_lift01 ; eassumption.
+    + eapply type_Conv ; [ eassumption | .. ].
+      * econstructor.
+        -- eassumption.
+        -- eapply type_Conv ; eassumption.
+        -- eapply type_Conv ; eassumption.
+      * apply cong_Eq ; eassumption.
+    + eapply type_Conv ; [ eassumption | .. ].
+      * instantiate (1 := s2).
+        change (sSort s2) with ((sSort s2){ 1 := u2 }{ 0 := sRefl A2 u2 }).
+        eapply typing_subst2.
+        -- eassumption.
+        -- eassumption.
+        -- cbn. rewrite !lift_subst, lift00.
+           eapply type_Conv ; [ eapply type_Refl | .. ].
+           ++ eassumption.
+           ++ eapply type_Conv ; eassumption.
+           ++ eapply type_Eq ; eassumption.
+           ++ (* apply eq_symmetry. apply cong_Eq. ; eassumption. *)
+              (* Seems there was a typo involved! *)
+              admit.
 Admitted.
 
 Lemma uniqueness :

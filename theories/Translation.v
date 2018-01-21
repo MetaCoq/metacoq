@@ -49,6 +49,33 @@ Proof.
   - cbn. rewrite eq. reflexivity.
 Defined.
 
+Lemma lift_plus :
+  forall t i j k, lift k (j+i) (lift j i t) = lift (j+k) i t.
+Proof.
+  intro t.
+  induction t ; intros i j k.
+  all: try (cbn ; f_equal ; easy).
+  all: try (cbn ; f_equal ;
+            try replace (S (S (j+i)))%nat with (j + (S (S i)))%nat by omega ;
+            try replace (S (j+i))%nat with (j + (S i))%nat by omega ; easy).
+  cbn. set (iln := i <=? n). assert (eq : (i <=? n) = iln) by reflexivity.
+  destruct iln.
+  + cbn. set (iln := j + i <=? j + n).
+    assert (eq' : (j + i <=? j + n) = iln) by reflexivity.
+    destruct iln.
+    * f_equal. omega.
+    * pose (h1 := leb_complete_conv _ _ eq').
+      pose (h2 := leb_complete _ _ eq).
+      omega.
+  + cbn.
+    assert (eq' : j + i <=? n = false).
+    { apply leb_correct_conv.
+      pose (h1 := leb_complete_conv _ _ eq).
+      omega.
+    }
+    rewrite eq'. reflexivity.
+Defined.
+
 Lemma lift_subst :
   forall {t n u},
     (lift 1 n t) {n := u} = t.
@@ -818,11 +845,6 @@ Proof.
     destruct (uniqueness hT2s2 t5).
     eapply eq_conv ; eassumption.
 Defined.
-
-(* Note: If transport is symbolic during this phase, then maybe we can use
-   Template Coq to deduce the derivation automatically in the ultimate target.
-   This is worth considering.
- *)
 
 (*! Relation for translated expressions *)
 Inductive trel (E : list (nat * nat)) : sterm -> sterm -> Type :=

@@ -353,9 +353,11 @@ Proof.
            ++ eassumption.
            ++ eapply type_Conv ; eassumption.
            ++ eapply type_Eq ; eassumption.
-           ++ (* apply eq_symmetry. apply cong_Eq. ; eassumption. *)
-              (* Seems there was a typo involved! *)
-              admit.
+           ++ apply eq_symmetry. apply cong_Eq.
+              ** assumption.
+              ** assumption.
+              ** apply eq_reflexivity. assumption.
+      *
 Admitted.
 
 Lemma uniqueness :

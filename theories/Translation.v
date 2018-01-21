@@ -633,17 +633,32 @@ Proof.
                  --- apply type_Sort. apply wf_snoc.
                      +++ apply (typing_wf h1).
                      +++ exists (succ_sort s). apply type_Sort. apply (typing_wf h1).
-                 --- (* THIS IS WRONG! *)
-                     admit.
-                 --- (* NEED TO SORT ABOVE FIRST *)
-                     admit.
+                 --- eapply typing_lift01.
+                     +++ eassumption.
+                     +++ apply type_Sort. apply (typing_wf h1).
+                 --- eapply type_Conv ; [ eapply type_Rel | .. ].
+                     +++ econstructor.
+                         *** apply (typing_wf h1).
+                         *** exists (succ_sort s).
+                             apply type_Sort. apply (typing_wf h1).
+                     +++ instantiate (1 := succ_sort s).
+                         change (sSort (succ_sort s))
+                           with (lift0 1 (sSort (succ_sort s))).
+                         eapply typing_lift01.
+                         *** apply type_Sort. apply (typing_wf h1).
+                         *** apply type_Sort. apply (typing_wf h1).
+                     +++ cbn. apply eq_reflexivity.
+                         apply type_Sort.
+                         econstructor.
+                         *** apply (typing_wf h1).
+                         *** exists (succ_sort s).
+                             apply type_Sort. apply (typing_wf h1).
            ++ eapply type_Conv.
               ** eapply type_Rel.
                  eapply wf_snoc.
                  --- eapply wf_snoc.
                      +++ eapply wf_snoc.
-                         *** (* Need lemma that states wf from typing. *)
-                             admit.
+                         *** apply (typing_wf h1).
                          *** exists (succ_sort s). apply type_Sort.
                              apply (typing_wf h1).
                      +++ exists (succ_sort s). apply type_Eq.
@@ -651,13 +666,16 @@ Proof.
                              ---- apply (typing_wf h1).
                              ---- exists (succ_sort s). apply type_Sort.
                                   apply (typing_wf h1).
-                         *** (* THIS IS WRONG! *)
-                             admit.
+                         *** eapply typing_lift01.
+                             ---- destruct (istype_type h1) as [s' he].
+                                  destruct (inversionEq he)
+                                    as [? [[[? ?] ?] ?]].
+                                  assumption.
+                             ---- apply type_Sort. apply (typing_wf h1).
                          *** eapply type_Conv.
                              ---- eapply type_Rel.
                                   apply wf_snoc.
-                                  ++++ (* Same here, need lemma *)
-                                       admit.
+                                  ++++ apply (typing_wf h1).
                                   ++++ exists (succ_sort s). apply type_Sort.
                                        apply (typing_wf h1).
                              ---- eapply type_Sort. apply wf_snoc.
@@ -683,17 +701,55 @@ Proof.
                              ---- apply (typing_wf h1).
                              ---- exists (succ_sort s). apply type_Sort.
                                   apply (typing_wf h1).
-                         *** (* THIS IS WRONG AGAIN *)
-                             admit.
-                         *** (* Same proof as above, but we should sort the
-                                problem first. *)
-                             admit.
+                         *** eapply typing_lift01.
+                             ++++ destruct (istype_type h1) as [s' he].
+                                  destruct (inversionEq he)
+                                    as [? [[[? ?] ?] ?]].
+                                  assumption.
+                             ++++ apply type_Sort. apply (typing_wf h1).
+                         *** eapply type_Conv ; [ eapply type_Rel | .. ].
+                             ---- econstructor.
+                                  ++++ apply (typing_wf h1).
+                                  ++++ exists (succ_sort s).
+                                       apply type_Sort. apply (typing_wf h1).
+                             ---- instantiate (1 := succ_sort s).
+                                  change (sSort (succ_sort s))
+                                    with (lift0 1 (sSort (succ_sort s))).
+                                  eapply typing_lift01.
+                                  ++++ apply type_Sort. apply (typing_wf h1).
+                                  ++++ apply type_Sort. apply (typing_wf h1).
+                             ---- cbn. apply eq_reflexivity.
+                                  apply type_Sort.
+                                  econstructor.
+                                  ++++ apply (typing_wf h1).
+                                  ++++ exists (succ_sort s).
+                                       apply type_Sort. apply (typing_wf h1).
                  --- destruct (istype_type h2) as [s' hh].
-                     exists s'. (* Lemma for lift *)
+                     exists s'. cbn.
+                     (* Lemma for lift *)
                      admit.
               ** cbn. apply eq_reflexivity. apply type_Sort.
-                 (* Similar, we'll do it once it's fixed. *)
-                 admit.
+                 econstructor.
+                 --- econstructor.
+                     +++ econstructor.
+                         *** apply (typing_wf h1).
+                         *** eexists. apply type_Sort. apply (typing_wf h1).
+                     +++ exists (succ_sort s). apply type_Eq.
+                         *** apply type_Sort. econstructor.
+                             ---- apply (typing_wf h1).
+                             ---- eexists.
+                                  apply type_Sort. apply (typing_wf h1).
+                         *** change (sSort s) with (lift0 1 (sSort s)).
+                             eapply typing_lift01.
+                             ---- destruct (istype_type h1) as [s' he].
+                                  destruct (inversionEq he)
+                                    as [? [[[? ?] ?] ?]].
+                                  assumption.
+                             ---- cbn. apply type_Sort. apply (typing_wf h1).
+                         *** (* It's true and I'm tired *)
+                             admit.
+                 --- exists s. (* Missing lemma for lift2 *)
+                     admit.
         -- assumption.
         -- eapply type_Conv.
            ++ eapply type_Lambda.
@@ -706,24 +762,23 @@ Proof.
                  admit.
               ** eapply type_Conv.
                  --- eapply type_Rel. eapply wf_snoc.
-                     +++ (* Need lemma *)
-                         admit.
+                     +++ apply (typing_wf h1).
                      +++ destruct (istype_type h2) as [s' hh].
                          exists s'. assumption.
                  --- instantiate (1 := s).
-                     (* Lemma for lift *)
+                     (* Done many times *)
                      admit.
                  --- cbn. apply eq_reflexivity.
-                     (* Lemma for lift *)
+                     (* Same *)
                      admit.
            ++ cbn. apply type_Prod.
-              ** (* Lemma for lift and subst *)
+              ** (* Lemma for lift and subst at higher level *)
                  instantiate (1 := s).
                  admit.
-              ** (* Lemma for lift and subst *)
+              ** (* same *)
                  instantiate (1 := s).
                  admit.
-           ++ cbn. (* Lemma for list and subst *)
+           ++ cbn. (* same *)
               admit.
       * apply type_Prod.
         -- instantiate (1 := s).
@@ -736,9 +791,9 @@ Proof.
       * cbn. (* Lemma for list and subst *)
         admit.
     + assumption.
-  - admit. (* Must be a lemma somewhere. *)
+  - rewrite lift_subst. reflexivity.
     Unshelve.
-    1,2,5: exact nAnon.
+    1,2,7: exact nAnon.
     all:cbn. all:easy.
 Admitted.
 

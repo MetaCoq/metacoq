@@ -1271,6 +1271,95 @@ Proof.
     now rewrite liftP2 by omega.
 Defined.
 
+(* TODO Put above, or even in another file like SLiftSubst *)
+Lemma liftP3 :
+  forall t i k j n,
+    i <= k ->
+    k <= (i+n)%nat ->
+    lift j k (lift n i t) = lift (j+n) i t.
+Admitted.
+
+Lemma substP2 :
+  forall t u i j n,
+    i <= n ->
+    (lift j i t){ (j+n)%nat := u } = lift j i (t{ n := u }).
+Proof.
+  intros t.
+  induction t ; intros u i j m h.
+  all: try (cbn ; f_equal ;
+            try replace (S (S (j + m)))%nat with (j + (S (S m)))%nat by omega ;
+            try replace (S (j + m))%nat with (j + (S m))%nat by omega ; easy).
+  - cbn.
+    set (iln := i <=? n). assert (eq0 : (i <=? n) = iln) by reflexivity.
+    set (men := m ?= n). assert (eq1 : (m ?= n) = men) by reflexivity.
+    destruct iln.
+    + pose proof (leb_complete _ _ eq0).
+      destruct men.
+      * pose proof (Nat.compare_eq _ _ eq1).
+        subst. cbn.
+        rewrite Nat.compare_refl.
+        now rewrite liftP3 by omega.
+      * pose proof (nat_compare_Lt_lt _ _ eq1).
+        cbn.
+        assert (eq2 : i <=? Init.Nat.pred n = true).
+        { apply leb_correct. omega. }
+        rewrite eq2.
+        assert (eq3 : (j + m ?= j + n) = Lt).
+        { apply nat_compare_lt. omega. }
+        rewrite eq3.
+        f_equal. omega.
+      * pose proof (nat_compare_Gt_gt _ _ eq1).
+        cbn. rewrite eq0.
+        assert (eq3 : (j + m ?= j + n) = Gt).
+        { apply nat_compare_gt. omega. }
+        now rewrite eq3.
+    + pose proof (leb_complete_conv _ _ eq0).
+      destruct men.
+      * pose proof (Nat.compare_eq _ _ eq1).
+        subst. cbn.
+        set (jnen := (j + n ?= n)).
+        assert (eq2 : (j + n ?= n) = jnen) by reflexivity.
+        destruct jnen.
+        -- pose proof (Nat.compare_eq _ _ eq2).
+           now rewrite liftP3.
+        -- pose proof (nat_compare_Lt_lt _ _ eq2).
+           omega.
+        -- pose proof (nat_compare_Gt_gt _ _ eq2).
+           omega.
+      * pose proof (nat_compare_Lt_lt _ _ eq1).
+        omega.
+      * pose proof (nat_compare_Gt_gt _ _ eq1).
+        cbn. set (jmen := (j + m ?= n)).
+        assert (eq2 : (j + m ?= n) = jmen) by reflexivity.
+        destruct jmen.
+        -- pose proof (Nat.compare_eq _ _ eq2). omega.
+        -- pose proof (nat_compare_Lt_lt _ _ eq2). omega.
+        -- pose proof (nat_compare_Gt_gt _ _ eq2).
+           rewrite eq0. reflexivity.
+  - cbn. f_equal.
+    + rewrite IHt1.
+      * f_equal. f_equal.
+        (* This might simply be some error in substitution of SigLet *)
+Admitted.
+
+Lemma subst_transport :
+  forall {s T1 T2 p t n u},
+    (transport s T1 T2 p t) {n := u} =
+    transport s (T1{n := u}) (T2{n := u})
+              (p{n := u}) (t{n := u}).
+Proof.
+  intros s T1 T2 p t n u.
+  cbn. unfold transport. f_equal.
+  - f_equal.
+    + f_equal.
+      replace (S (S n)) with (2 + n)%nat by omega.
+      now rewrite substP2.
+    + f_equal. replace (S n) with (1 + n)%nat by omega.
+      now rewrite substP2.
+  - replace (S n) with (1 + n)%nat by omega.
+    now rewrite substP2.
+Defined.
+
 Lemma inrel_lift :
   forall {t t'},
     t ⊏ t' ->

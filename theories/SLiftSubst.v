@@ -73,12 +73,12 @@ Fixpoint subst t k u :=
   | sSig na A B => sSig na (subst t k A) (subst t (S k) B)
   | sPair A B u v =>
     sPair (subst t k A) (subst t (S k) B) (subst t k u) (subst t k v)
-  | sSigLet A B P p t =>
+  | sSigLet A B P p t' =>
     sSigLet (subst t k A)
             (subst t (S k) B)
             (subst t (S k) P)
             (subst t k p)
-            (subst t (S (S k)) t)
+            (subst t (S (S k)) t')
   | x => x
   end.
 

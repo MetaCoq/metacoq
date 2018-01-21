@@ -1393,10 +1393,10 @@ Proof.
     + now apply trel_lift.
     + apply trel_Rel.
     + apply trel_Rel.
-  - unfold transport. cbn. Fail fold_transport.
-    (* We actually need the lemmata about lift and subst... *)
-    admit.
-  - admit.
+  - rewrite subst_transport.
+    now constructor.
+  - rewrite subst_transport.
+    now constructor.
   - cbn. now apply trel_Prod.
   - cbn. now apply trel_Eq.
   - cbn. now apply trel_Sig.
@@ -1409,7 +1409,7 @@ Proof.
   - cbn. now apply trel_J.
   - cbn. now apply trel_Pair.
   - cbn. now apply trel_SigLet.
-Admitted.
+Defined.
 
 Lemma trel_refl : forall {t}, t ∼ t.
 Proof.
@@ -1421,9 +1421,31 @@ Proof.
   intros t1 t2. induction 1 ; (now constructor).
 Defined.
 
-Lemma trel_trans : forall {t1 t2 t3}, t1 ∼ t2 -> t2 ∼ t3 -> t1 ∼ t3.
+Lemma inversion_trel_transport :
+  forall {s T1 T2 p t1 t2},
+    transport s T1 T2 p t1 ∼ t2 ->
+    t1 ∼ t2.
 Proof.
-  intros t1 t2 t3. induction 1 ; intro h.
+  intros s T1 T2 p t1 t2 h.
+  dependent induction h.
+  - assumption.
+  - constructor. eapply IHh. reflexivity.
+  - (* The transport has been unfolded in this case.
+       This is a problem and would call for an abstract notion
+       of transport!
+       Another solution might be to forbid transport to be caught up
+       in the App case (is that possible?).
+     *)
+Abort.
+
+Lemma trel_trans :
+  forall {t1 t2},
+    t1 ∼ t2 ->
+    forall {t3},
+      t2 ∼ t3 ->
+      t1 ∼ t3.
+Proof.
+  intros t1 t2. induction 1 ; intros t3 h.
   - easy.
   - assumption.
   - constructor. now apply IHtrel.

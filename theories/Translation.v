@@ -179,6 +179,32 @@ Proof.
       eapply eq_conv ; eassumption.
 Defined.
 
+Lemma inversionTransport :
+  forall {Σ Γ A B p t T},
+    Σ ;;; Γ |-i sTransport A B p t : T ->
+    ∑ s,
+      (Σ ;;; Γ |-i p : sEq (sSort s) A B) *
+      (Σ ;;; Γ |-i t : A) *
+      (Σ ;;; Γ |-i A : sSort s) *
+      (Σ ;;; Γ |-i B : sSort s) *
+      (Σ ;;; Γ |-i B = T : sSort s).
+Proof.
+  intros Σ Γ A B p t T h.
+  dependent induction h.
+
+  - exists s. repeat split ; try easy.
+    apply eq_reflexivity. assumption.
+
+  - destruct (IHh1 _ _ _ _ eq_refl) as [s' [[[[? ?] ?] ?] ?]].
+    exists s'. repeat split ; try easy.
+    eapply eq_transitivity.
+    + eassumption.
+    + destruct (eq_typing e) as [hA1 _].
+      destruct (eq_typing e0) as [_ hA2].
+      destruct (uniqueness hA1 hA2).
+      eapply eq_conv ; eassumption.
+Defined.
+
 (* Lemma inversionUip *)
 (* Lemma inversionFunext *)
 
@@ -212,266 +238,6 @@ Defined.
 
 (* Lemma inversionPair *)
 (* Lemma inversionSigLet *)
-
-
-(*! Transport in the target *)
-Definition transport s T1 T2 p t : sterm :=
-  sApp
-    (sJ
-       (sSort s)
-       T1
-       (sProd nAnon (lift0 2 T1) (sRel 2))
-       (sLambda nAnon T1 (lift0 1 T1) (sRel 0))
-       T2
-       p)
-    nAnon T1 (lift0 1 T2)
-    t.
-
-Ltac fold_transport :=
-  match goal with
-  | |- context G[sApp
-    (sJ
-       (sSort ?s)
-       ?T1
-       (sProd nAnon (lift0 2 ?T1) (sRel 2))
-       (sLambda nAnon ?T1 (lift0 1 ?T1) (sRel 0))
-       ?T2
-       ?p)
-    nAnon ?T1 (lift0 1 ?T2)
-    ?t] =>
-    let G' := context G[transport s T1 T2 p t] in
-    change G'
-  end.
-
-Lemma type_transport :
-  forall Σ Γ s T1 T2 p t ,
-    Σ ;;; Γ |-i p : sEq (sSort s) T1 T2 ->
-    Σ ;;; Γ |-i t : T1 ->
-    Σ ;;; Γ |-i transport s T1 T2 p t : T2.
-Proof.
-  intros Σ Γ s T1 T2 p t h1 h2.
-  unfold transport. replace T2 with ((lift0 1 T2){ 0 := t }) at 3.
-  - eapply ITyping.type_App.
-    + instantiate (1 := s).
-      destruct (istype_type h1) as [s' h].
-      destruct (inversionEq h) as [s'' [[[? ?] ?] ?]].
-      assumption.
-    + destruct (istype_type h1) as [s' h].
-      destruct (inversionEq h) as [s''' [[[? ?] ?] ?]].
-      instantiate (1 := s).
-      change (sSort s) with (lift0 1 (sSort s)).
-      eapply typing_lift01.
-      * assumption.
-      * eassumption.
-    + eapply type_Conv.
-      * eapply ITyping.type_J.
-        -- eapply type_Sort. apply (typing_wf h1).
-        -- destruct (istype_type h1) as [s' h].
-           destruct (inversionEq h) as [? [[[? ?] ?] ?]].
-           assumption.
-        -- destruct (istype_type h1) as [s' h].
-           destruct (inversionEq h) as [? [[[? ?] ?] ?]].
-           assumption.
-        -- eapply type_Prod.
-           ++ instantiate (1 := s).
-              destruct (istype_type h1) as [s' h].
-              destruct (inversionEq h) as [? [[[? ?] ?] ?]].
-              change (sSort s) with (lift0 1 (sSort s)) at 3.
-              replace (lift0 2 T1) with (lift0 1 (lift0 1 T1)) by (rewrite lift_lift ; reflexivity).
-              eapply typing_lift01.
-              ** change (sSort s) with (lift0 1 (sSort s)).
-                 eapply typing_lift01.
-                 --- assumption.
-                 --- eassumption.
-              ** apply type_Eq.
-                 --- apply type_Sort. apply wf_snoc.
-                     +++ apply (typing_wf h1).
-                     +++ exists (succ_sort s). apply type_Sort. apply (typing_wf h1).
-                 --- eapply typing_lift01.
-                     +++ eassumption.
-                     +++ apply type_Sort. apply (typing_wf h1).
-                 --- eapply type_Conv ; [ eapply type_Rel | .. ].
-                     +++ econstructor.
-                         *** apply (typing_wf h1).
-                         *** exists (succ_sort s).
-                             apply type_Sort. apply (typing_wf h1).
-                     +++ instantiate (1 := succ_sort s).
-                         change (sSort (succ_sort s))
-                           with (lift0 1 (sSort (succ_sort s))).
-                         eapply typing_lift01.
-                         *** apply type_Sort. apply (typing_wf h1).
-                         *** apply type_Sort. apply (typing_wf h1).
-                     +++ cbn. apply eq_reflexivity.
-                         apply type_Sort.
-                         econstructor.
-                         *** apply (typing_wf h1).
-                         *** exists (succ_sort s).
-                             apply type_Sort. apply (typing_wf h1).
-           ++ eapply type_Conv.
-              ** eapply type_Rel.
-                 eapply wf_snoc.
-                 --- eapply wf_snoc.
-                     +++ eapply wf_snoc.
-                         *** apply (typing_wf h1).
-                         *** exists (succ_sort s). apply type_Sort.
-                             apply (typing_wf h1).
-                     +++ exists (succ_sort s). apply type_Eq.
-                         *** apply type_Sort. eapply wf_snoc.
-                             ---- apply (typing_wf h1).
-                             ---- exists (succ_sort s). apply type_Sort.
-                                  apply (typing_wf h1).
-                         *** eapply typing_lift01.
-                             ---- destruct (istype_type h1) as [s' he].
-                                  destruct (inversionEq he)
-                                    as [? [[[? ?] ?] ?]].
-                                  assumption.
-                             ---- apply type_Sort. apply (typing_wf h1).
-                         *** eapply type_Conv.
-                             ---- eapply type_Rel.
-                                  apply wf_snoc.
-                                  ++++ apply (typing_wf h1).
-                                  ++++ exists (succ_sort s). apply type_Sort.
-                                       apply (typing_wf h1).
-                             ---- eapply type_Sort. apply wf_snoc.
-                                  ++++ apply (typing_wf h1).
-                                  ++++ exists (succ_sort s). apply type_Sort.
-                                       apply (typing_wf h1).
-                             ---- cbn. apply eq_reflexivity. apply type_Sort.
-                                  apply wf_snoc.
-                                  ++++ apply (typing_wf h1).
-                                  ++++ exists (succ_sort s). apply type_Sort.
-                                       apply (typing_wf h1).
-                 --- destruct (istype_type h2) as [s' hh].
-                     exists s'. (* Need lemma for lift *)
-                     admit.
-              ** apply type_Sort. apply wf_snoc.
-                 --- apply wf_snoc.
-                     +++ apply wf_snoc.
-                         *** apply (typing_wf h1).
-                         *** exists (succ_sort s). apply type_Sort.
-                             apply (typing_wf h1).
-                     +++ exists (succ_sort s). apply type_Eq.
-                         *** apply type_Sort. apply wf_snoc.
-                             ---- apply (typing_wf h1).
-                             ---- exists (succ_sort s). apply type_Sort.
-                                  apply (typing_wf h1).
-                         *** eapply typing_lift01.
-                             ++++ destruct (istype_type h1) as [s' he].
-                                  destruct (inversionEq he)
-                                    as [? [[[? ?] ?] ?]].
-                                  assumption.
-                             ++++ apply type_Sort. apply (typing_wf h1).
-                         *** eapply type_Conv ; [ eapply type_Rel | .. ].
-                             ---- econstructor.
-                                  ++++ apply (typing_wf h1).
-                                  ++++ exists (succ_sort s).
-                                       apply type_Sort. apply (typing_wf h1).
-                             ---- instantiate (1 := succ_sort s).
-                                  change (sSort (succ_sort s))
-                                    with (lift0 1 (sSort (succ_sort s))).
-                                  eapply typing_lift01.
-                                  ++++ apply type_Sort. apply (typing_wf h1).
-                                  ++++ apply type_Sort. apply (typing_wf h1).
-                             ---- cbn. apply eq_reflexivity.
-                                  apply type_Sort.
-                                  econstructor.
-                                  ++++ apply (typing_wf h1).
-                                  ++++ exists (succ_sort s).
-                                       apply type_Sort. apply (typing_wf h1).
-                 --- destruct (istype_type h2) as [s' hh].
-                     exists s'. cbn.
-                     (* Lemma for lift *)
-                     admit.
-              ** cbn. apply eq_reflexivity. apply type_Sort.
-                 econstructor.
-                 --- econstructor.
-                     +++ econstructor.
-                         *** apply (typing_wf h1).
-                         *** eexists. apply type_Sort. apply (typing_wf h1).
-                     +++ exists (succ_sort s). apply type_Eq.
-                         *** apply type_Sort. econstructor.
-                             ---- apply (typing_wf h1).
-                             ---- eexists.
-                                  apply type_Sort. apply (typing_wf h1).
-                         *** change (sSort s) with (lift0 1 (sSort s)).
-                             eapply typing_lift01.
-                             ---- destruct (istype_type h1) as [s' he].
-                                  destruct (inversionEq he)
-                                    as [? [[[? ?] ?] ?]].
-                                  assumption.
-                             ---- cbn. apply type_Sort. apply (typing_wf h1).
-                         *** (* It's true and I'm tired *)
-                             admit.
-                 --- exists s. (* Missing lemma for lift2 *)
-                     admit.
-        -- assumption.
-        -- eapply type_Conv.
-           ++ eapply type_Lambda.
-              ** instantiate (1 := s).
-                 destruct (istype_type h1) as [s' h].
-                 destruct (inversionEq h) as [? [[[? ?] ?] ?]].
-                 assumption.
-              ** (* Same as above *)
-                 instantiate (1 := s).
-                 admit.
-              ** eapply type_Conv.
-                 --- eapply type_Rel. eapply wf_snoc.
-                     +++ apply (typing_wf h1).
-                     +++ destruct (istype_type h2) as [s' hh].
-                         exists s'. assumption.
-                 --- instantiate (1 := s).
-                     (* Done many times *)
-                     admit.
-                 --- cbn. apply eq_reflexivity.
-                     (* Same *)
-                     admit.
-           ++ cbn. apply type_Prod.
-              ** (* Lemma for lift and subst at higher level *)
-                 instantiate (1 := s).
-                 admit.
-              ** (* same *)
-                 instantiate (1 := s).
-                 admit.
-           ++ cbn. (* same *)
-              admit.
-      * apply type_Prod.
-        -- instantiate (1 := s).
-           destruct (istype_type h1) as [s' h].
-           destruct (inversionEq h) as [? [[[? ?] ?] ?]].
-           assumption.
-        -- (* Same as above *)
-          instantiate (1 := s).
-          admit.
-      * cbn. (* Lemma for list and subst *)
-        admit.
-    + assumption.
-  - rewrite lift_subst. reflexivity.
-    Unshelve.
-    1,2,7: exact nAnon.
-    all:cbn. all:easy.
-Admitted.
-
-Lemma inversionTransport :
-  forall {Σ Γ s T1 T2 p t T},
-    Σ ;;; Γ |-i transport s T1 T2 p t : T ->
-    (Σ ;;; Γ |-i p : sEq (sSort s) T1 T2) *
-    (Σ ;;; Γ |-i t : T1) *
-    (Σ ;;; Γ |-i T1 : sSort s) *
-    (Σ ;;; Γ |-i T2 = T : sSort s).
-Proof.
-  intros Σ Γ s T1 T2 p t T h.
-  unfold transport in h.
-  destruct (inversionApp h) as [s1 [s2 [[[[? ?] hJ] ?] ?]]].
-  destruct (inversionJ hJ) as [s3 [s4 [nx [ne [[[[[[? ?] ?] ?] ?] ?] ?]]]]].
-  repeat split.
-  - assumption.
-  - assumption.
-  - assumption.
-  - rewrite lift_subst in e.
-    destruct (eq_typing e) as [hT2s2 _].
-    destruct (uniqueness hT2s2 t5).
-    eapply eq_conv ; eassumption.
-Defined.
 
 (*! Relation for translated expressions *)
 Inductive trel (E : list (nat * nat)) : sterm -> sterm -> Type :=

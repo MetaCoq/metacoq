@@ -122,3 +122,13 @@ with eq_term (Σ : global_context) : scontext -> sterm -> sterm -> sterm -> Type
     Σ ;;; Γ |-x u = v : A
 
 where " Σ ;;; Γ '|-x' t = u : T " := (@eq_term Σ Γ t u T) : x_scope.
+
+Open Scope x_scope.
+
+Lemma typing_wf :
+  forall {Σ Γ t T},
+    Σ ;;; Γ |-x t : T ->
+    wf Σ Γ.
+Proof.
+  intros Σ Γ t T H. induction H ; easy.
+Defined.

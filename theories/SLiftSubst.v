@@ -21,6 +21,8 @@ Fixpoint lift n k t : sterm :=
        (lift n k w)
        (lift n k v)
        (lift n k p)
+  | sTransport A B p t =>
+    sTransport (lift n k A) (lift n k B) (lift n k p) (lift n k t)
   | sUip A u v p q =>
     sUip (lift n k A) (lift n k u) (lift n k v) (lift n k p) (lift n k q)
   | sFunext A B f g e =>
@@ -61,6 +63,8 @@ Fixpoint subst t k u :=
        (subst t k w)
        (subst t k v)
        (subst t k p)
+  | sTransport A B p u =>
+    sTransport (subst t k A) (subst t k B) (subst t k p) (subst t k u)
   | sUip A u v p q =>
     sUip (subst t k A) (subst t k u) (subst t k v) (subst t k p) (subst t k q)
   | sFunext A B f g e =>

@@ -16,6 +16,7 @@ Inductive sterm : Set :=
 | sEq        : sterm -> sterm -> sterm -> sterm
 | sRefl      : sterm -> sterm -> sterm
 | sJ         : sterm -> sterm -> sterm -> sterm -> sterm -> sterm -> sterm
+| sTransport : sterm -> sterm -> sterm -> sterm -> sterm
 | sUip       : sterm -> sterm -> sterm -> sterm -> sterm -> sterm
 | sFunext    : sterm -> sterm -> sterm -> sterm -> sterm -> sterm
 

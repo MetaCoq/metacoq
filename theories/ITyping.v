@@ -511,3 +511,240 @@ Proof.
               ** apply eq_reflexivity. assumption.
       *
 Admitted.
+
+Lemma sorts_in_sort :
+  forall {Σ Γ s1 s2 s},
+    Σ ;;; Γ |-i sSort s1 : sSort s ->
+    Σ ;;; Γ |-i sSort s2 : sSort s ->
+    Σ ;;; Γ |-i sSort s1 = sSort s2 : sSort s.
+Proof.
+Admitted.
+
+Lemma uniqueness :
+  forall {Σ Γ A B u},
+    Σ ;;; Γ |-i u : A ->
+    Σ ;;; Γ |-i u : B ->
+    ∑ s, Σ ;;; Γ |-i A = B : sSort s.
+Admitted.
+
+(* We state several inversion lemmata on a by need basis. *)
+
+Lemma inversionRel :
+  forall {Σ Γ n T},
+    Σ ;;; Γ |-i sRel n : T ->
+    ∑ isdecl s,
+      let A := lift0 (S n) (safe_nth Γ (exist _ n isdecl)).(sdecl_type) in
+      Σ ;;; Γ |-i A = T : sSort s.
+Proof.
+  intros Σ Γ n T h. dependent induction h.
+  - exists isdecl.
+    assert (Σ ;;; Γ |-i sRel n : lift0 (S n) (safe_nth Γ (exist _ n isdecl)).(sdecl_type)) by (now constructor).
+    destruct (istype_type H) as [s hs].
+    exists s. apply eq_reflexivity. eassumption.
+  - destruct (IHh1 n (eq_refl _)) as [isdecl [s' h]].
+    exists isdecl, s'.
+    eapply eq_transitivity.
+    + exact h.
+    + destruct (eq_typing e) as [hAs _].
+      destruct (eq_typing h) as [_ hAs'].
+      destruct (uniqueness hAs hAs') as [? ?].
+      eapply eq_conv ; eassumption.
+Defined.
+
+Lemma inversionSort :
+  forall {Σ Γ s T},
+    Σ ;;; Γ |-i sSort s : T ->
+    Σ ;;; Γ |-i sSort (succ_sort s) = T : sSort (succ_sort (succ_sort s)).
+Proof.
+  intros Σ Γ s T h.
+  dependent induction h.
+
+  - apply eq_reflexivity. apply type_Sort. assumption.
+
+  - specialize (IHh1 s (eq_refl _)). eapply eq_transitivity.
+    + eassumption.
+    + destruct (eq_typing e) as [hAs0 _].
+      destruct (eq_typing IHh1) as [_ hAss].
+      destruct (uniqueness hAs0 hAss) as [? ?].
+      eapply eq_conv ; eassumption.
+Defined.
+
+Lemma inversionProd :
+  forall {Σ Γ n A B T},
+    Σ ;;; Γ |-i sProd n A B : T ->
+    ∑ s1 s2,
+      (Σ ;;; Γ |-i A : sSort s1) *
+      (Σ ;;; Γ ,, svass n A |-i B : sSort s2) *
+      (Σ ;;; Γ |-i sSort (max_sort s1 s2) = T : sSort (succ_sort (max_sort s1 s2))).
+Proof.
+  intros Σ Γ n A B T h.
+  dependent induction h.
+
+  - exists s1, s2. repeat split.
+    + assumption.
+    + assumption.
+    + apply eq_reflexivity. apply type_Sort. apply (typing_wf h1).
+
+  - destruct (IHh1 n A B (eq_refl _)) as [s1 [s2 [[? ?] ?]]].
+    exists s1, s2. repeat split.
+    + assumption.
+    + assumption.
+    + eapply eq_transitivity.
+      * eassumption.
+      * destruct (eq_typing e) as [hAs _].
+        destruct (eq_typing e0) as [_ hAsm].
+        destruct (uniqueness hAs hAsm).
+        eapply eq_conv ; eassumption.
+Defined.
+
+(* Lemma inversionLambda *)
+
+Lemma inversionApp :
+  forall {Σ Γ t n A B u T},
+    Σ ;;; Γ |-i sApp t n A B u : T ->
+    ∑ s1 s2,
+      (Σ ;;; Γ |-i A : sSort s1) *
+      (Σ ;;; Γ ,, svass n A |-i B : sSort s2) *
+      (Σ ;;; Γ |-i t : sProd n A B) *
+      (Σ ;;; Γ |-i u : A) *
+      (Σ ;;; Γ |-i B{ 0 := u } = T : sSort s2).
+Proof.
+  intros Σ Γ t n A B u T H.
+  dependent induction H.
+
+  - exists s1, s2.
+    repeat split ; try easy.
+    apply eq_reflexivity.
+    change (sSort s2) with ((sSort s2){0 := u}).
+    eapply typing_subst ; eassumption.
+
+  - destruct (IHtyping1 t n A B u (eq_refl _)) as [s1 [s2 [[[[? ?] ?] ?] ?]]].
+    exists s1, s2. repeat split ; try easy.
+    eapply eq_transitivity.
+    + eassumption.
+    + destruct (eq_typing e) as [hAs _].
+      destruct (eq_typing e0) as [_ hAs2].
+      destruct (uniqueness hAs hAs2).
+      eapply eq_conv ; eassumption.
+Defined.
+
+Lemma inversionEq :
+  forall {Σ Γ A u v T},
+    Σ ;;; Γ |-i sEq A u v : T ->
+    ∑ s,
+      (Σ ;;; Γ |-i A : sSort s) *
+      (Σ ;;; Γ |-i u : A) *
+      (Σ ;;; Γ |-i v : A) *
+      (Σ ;;; Γ |-i sSort s = T : sSort (succ_sort s)).
+Proof.
+  intros Σ Γ A u v T h.
+  dependent induction h.
+  - exists s. repeat split ; try easy.
+    eapply eq_reflexivity. apply type_Sort.
+    apply (typing_wf h1).
+  - destruct (IHh1 A u v (eq_refl _)) as [s' [[[hA hu] hv] heq]].
+    exists s'. repeat split ; try easy.
+    eapply eq_transitivity.
+    + exact heq.
+    + destruct (eq_typing heq) as [_ hA01].
+      destruct (eq_typing e) as [hA02 _].
+      destruct (uniqueness hA02 hA01) as [s'' h''].
+      eapply eq_conv ; eassumption.
+Defined.
+
+(* Lemma inversionRefl *)
+
+Lemma inversionJ :
+  forall {Σ Γ A u P w v p T},
+    Σ ;;; Γ |-i sJ A u P w v p : T ->
+    ∑ s1 s2 nx ne,
+      (Σ ;;; Γ |-i A : sSort s1) *
+      (Σ ;;; Γ |-i u : A) *
+      (Σ ;;; Γ |-i v : A) *
+      (Σ ;;; Γ ,, svass nx A ,, svass ne (sEq (lift0 1 A) (lift0 1 u) (sRel 0)) |-i P : sSort s2) *
+      (Σ ;;; Γ |-i p : sEq A u v) *
+      (Σ ;;; Γ |-i w : (P {1 := u}){0 := sRefl A u}) *
+      (Σ ;;; Γ |-i P{1 := v}{0 := p} = T : sSort s2).
+Proof.
+  intros Σ Γ A u P w v p T H.
+  dependent induction H.
+
+  - exists s1, s2, nx, ne. repeat split ; try easy.
+    apply eq_reflexivity.
+    change (sSort s2) with ((sSort s2){1 := v}{0 := p}).
+    eapply typing_subst2.
+    + eassumption.
+    + assumption.
+    + cbn. rewrite !lift_subst, lift00.
+      assumption.
+
+  - destruct (IHtyping1 A u P w v p (eq_refl _))
+      as [s1 [s2 [nx [ne [[[[[[? ?] ?] ?] ?] ?] ?]]]]].
+    exists s1, s2, nx, ne. repeat split ; try easy.
+    eapply eq_transitivity.
+    + eassumption.
+    + destruct (eq_typing e) as [hAs _].
+      destruct (eq_typing e0) as [_ hAs2].
+      destruct (uniqueness hAs hAs2).
+      eapply eq_conv ; eassumption.
+Defined.
+
+Lemma inversionTransport :
+  forall {Σ Γ A B p t T},
+    Σ ;;; Γ |-i sTransport A B p t : T ->
+    ∑ s,
+      (Σ ;;; Γ |-i p : sEq (sSort s) A B) *
+      (Σ ;;; Γ |-i t : A) *
+      (Σ ;;; Γ |-i A : sSort s) *
+      (Σ ;;; Γ |-i B : sSort s) *
+      (Σ ;;; Γ |-i B = T : sSort s).
+Proof.
+  intros Σ Γ A B p t T h.
+  dependent induction h.
+
+  - exists s. repeat split ; try easy.
+    apply eq_reflexivity. assumption.
+
+  - destruct (IHh1 _ _ _ _ eq_refl) as [s' [[[[? ?] ?] ?] ?]].
+    exists s'. repeat split ; try easy.
+    eapply eq_transitivity.
+    + eassumption.
+    + destruct (eq_typing e) as [hA1 _].
+      destruct (eq_typing e0) as [_ hA2].
+      destruct (uniqueness hA1 hA2).
+      eapply eq_conv ; eassumption.
+Defined.
+
+(* Lemma inversionUip *)
+(* Lemma inversionFunext *)
+
+Lemma inversionSig :
+  forall {Σ Γ n A B T},
+    Σ ;;; Γ |-i sSig n A B : T ->
+    ∑ s1 s2,
+      (Σ ;;; Γ |-i A : sSort s1) *
+      (Σ ;;; Γ ,, svass n A |-i B : sSort s2) *
+      (Σ ;;; Γ |-i sSort (max_sort s1 s2) = T : sSort (succ_sort (max_sort s1 s2))).
+Proof.
+  intros Σ Γ n A B T h.
+  dependent induction h.
+
+  - exists s1, s2. repeat split.
+    + assumption.
+    + assumption.
+    + apply eq_reflexivity. apply type_Sort. apply (typing_wf h1).
+
+  - destruct (IHh1 n A B (eq_refl _)) as [s1 [s2 [[? ?] ?]]].
+    exists s1, s2. repeat split.
+    + assumption.
+    + assumption.
+    + eapply eq_transitivity.
+      * eassumption.
+      * destruct (eq_typing e) as [hAs _].
+        destruct (eq_typing e0) as [_ hAsm].
+        destruct (uniqueness hAs hAsm).
+        eapply eq_conv ; eassumption.
+Defined.
+
+(* Lemma inversionPair *)
+(* Lemma inversionSigLet *)

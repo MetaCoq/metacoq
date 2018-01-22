@@ -210,6 +210,46 @@ Proof.
       * apply type_Eq ; eassumption.
 Defined.
 
+Lemma cong_heq :
+  forall {Σ Γ s A1 A2 a1 a2 B1 B2 b1 b2},
+      Σ ;;; Γ |-i A1 = A2 : sSort s ->
+      Σ ;;; Γ |-i B1 = B2 : sSort s ->
+      Σ ;;; Γ |-i a1 = a2 : A1 ->
+      Σ ;;; Γ |-i b1 = b2 : B1 ->
+      Σ ;;; Γ |-i heq s A1 a1 B1 b1 = heq s A2 a2 B2 b2 : sSort (succ_sort s).
+Proof.
+  intros Σ Γ s A1 A2 a1 a2 B1 B2 b1 b2 hA hB ha hb.
+  destruct (eq_typing hA) as [hA1 hA2].
+  destruct (eq_typing hB) as [hB1 hB2].
+  destruct (eq_typing ha) as [ha1 ha2].
+  destruct (eq_typing hb) as [hb1 hb2].
+  assert (wfΓ : wf Σ Γ).
+  { apply (typing_wf hA1). }
+  assert (hs : Σ ;;; Γ |-i sSort s : sSort (succ_sort s)).
+  { apply type_Sort. assumption. }
+  assert (hss : Σ ;;; Γ |-i sSort s = sSort s : sSort (succ_sort s)).
+  { apply eq_reflexivity. assumption. }
+  eapply eq_conv.
+  - apply cong_Sig.
+    + apply cong_Eq ; eassumption.
+    + apply cong_Eq.
+      * (* Lemma cong lift *)
+        admit.
+      * apply cong_Transport with (s := s).
+        -- (* Same *) admit.
+        -- (* Same *) admit.
+        -- apply eq_reflexivity.
+           simple refine (type_Rel _ _ 0 _ _).
+           ++ econstructor.
+              ** assumption.
+              ** eexists. apply type_Eq ; eassumption.
+           ++ cbn. omega.
+        -- (* Same *) admit.
+      * (* Same *) admit.
+  - (* Depends on the sort evar, but should be handled by max_id *)
+    admit.
+Admitted.
+
 Lemma inversionHeq :
   forall {Σ Γ s A a B b T},
     Σ ;;; Γ |-i heq s A a B b : T ->
@@ -245,8 +285,8 @@ Proof.
     simple refine (sJ U (sRel 1) (sEq (lift0 4 A) _ (lift0 4 v)) _ _ _).
     + exact ((sTransport (lift0 4 A) (lift0 4 A) (sRel 1) (lift0 4 u))).
     + exact (sRel 0).
-    + exact (sRefl (lift0 2 U) (lift0 2 A)).
-    + exact (sUip (lift0 2 U) (lift0 2 A) (lift0 2 A) (sRel 1) (sRefl (lift0 2 U) (lift0 2 A))).
+    + exact (sRefl (sSort s) (lift0 2 A)).
+    + exact (sUip (sSort s) (lift0 2 A) (lift0 2 A) (sRel 1) (sRefl (sSort s) (lift0 2 A))).
 Defined.
 
 Lemma heq_to_eq :
@@ -289,130 +329,104 @@ Proof.
   eexists. now eapply sort_heq.
 Defined.
 
+Definition heq_refl (s : sort) (A a : sterm) : sterm.
+Proof.
+  pose (U := sEq (sSort s) A A).
+  pose (V := sEq (lift0 1 A) (sTransport (lift0 1 A) (lift0 1 A) (sRel 0) (lift0 1 a)) (lift0 1 a)).
+  simple refine (sPair U V _ _).
+  - exact (sRefl (sSort s) A).
+  - exact (sRefl A a).
+Defined.
+
+Lemma type_heq_refl :
+  forall {Σ Γ s A a},
+    Σ ;;; Γ |-i A : sSort s ->
+    Σ ;;; Γ |-i a : A ->
+    Σ ;;; Γ |-i heq_refl s A a : heq s A a A a.
+Proof.
+  intros Σ Γ s A a hA ha.
+  assert (wfΓ : wf Σ Γ).
+  { apply (typing_wf hA). }
+  assert (hs : Σ ;;; Γ |-i sSort s : sSort (succ_sort s)).
+  { apply type_Sort. assumption. }
+  assert (hEq : Σ ;;; Γ |-i sEq (sSort s) A A : sSort (succ_sort s)).
+  { apply type_Eq ; assumption. }
+  eapply type_Pair.
+  - eassumption.
+  - apply type_Eq with (s := s).
+    + change (sSort s) with (lift0 1 (sSort s)).
+      eapply typing_lift01 ; eassumption.
+    + apply type_Transport with (s := s).
+      * change (sSort s) with (lift0 1 (sSort s)).
+        eapply typing_lift01 ; eassumption.
+      * change (sSort s) with (lift0 1 (sSort s)).
+        eapply typing_lift01 ; eassumption.
+      * simple refine (type_Rel Σ _ 0 _ _).
+        -- econstructor.
+           ++ assumption.
+           ++ eexists. eassumption.
+        -- cbn. omega.
+      * eapply typing_lift01 ; eassumption.
+    + eapply typing_lift01 ; eassumption.
+  - eapply type_Refl ; eassumption.
+  - cbn. rewrite !lift_subst, lift00.
+    eapply type_Conv.
+    + eapply type_Refl ; eassumption.
+    + apply type_Eq.
+      * eassumption.
+      * eapply type_Transport ; try eassumption.
+        eapply type_Refl ; eassumption.
+      * assumption.
+    + apply cong_Eq.
+      * apply eq_reflexivity. assumption.
+      * apply eq_symmetry. apply eq_TransportRefl ; assumption.
+      * apply eq_reflexivity. assumption.
+Defined.
+
+(* Can we rephrase it so that the existence of s is proved instead? *)
 Lemma trelE_to_heq :
   forall {E Σ Γ},
-    (forall x y s T1 T2,
+    (forall x y (* s *) T1 T2,
         In (x,y) E ->
-        Σ ;;; Γ |-i T1 : sSort s ->
-        Σ ;;; Γ |-i T2 : sSort s ->
+        (* Σ ;;; Γ |-i T1 : sSort s -> *)
+        (* Σ ;;; Γ |-i T2 : sSort s -> *)
         Σ ;;; Γ |-i sRel x : T1 ->
         Σ ;;; Γ |-i sRel y : T2 ->
-        ∑ p, Σ ;;; Γ |-i p : heq s T1 (sRel x) T2 (sRel y)) ->
+        ∑ s p, Σ ;;; Γ |-i p : heq s T1 (sRel x) T2 (sRel y)) ->
     forall {t1 t2},
       trel E t1 t2 ->
-      forall {s T1 T2},
-        Σ ;;; Γ |-i T1 : sSort s ->
-        Σ ;;; Γ |-i T2 : sSort s ->
+      forall {(* s *) T1 T2},
+        (* Σ ;;; Γ |-i T1 : sSort s -> *)
+        (* Σ ;;; Γ |-i T2 : sSort s -> *)
         Σ ;;; Γ |-i t1 : T1 ->
         Σ ;;; Γ |-i t2 : T2 ->
-        ∑ p, Σ ;;; Γ |-i p : heq s T1 t1 T2 t2.
+        ∑ s p, Σ ;;; Γ |-i p : heq s T1 t1 T2 t2.
 Proof.
-  intros E Σ Γ H t1 t2. induction 1 ; intros s' A B H1 H2 H3 H4.
+  intros E Σ Γ H t1 t2. induction 1 ; intros (* s' *) A B h1 h2.
   - now apply H.
-  - destruct (uniqueness H3 H4) as [s eq].
-    unfold heq. cbn.
-    set (U := sEq (sSort s') A B).
-    set (V := sEq (lift0 1 B) (sTransport (lift0 1 A) (lift0 1 B) (sRel 0) (sRel (S x))) (sRel (S x))).
-    exists (sPair U V (sRefl (sSort s') A) (sRefl (lift0 1 B) (sRel (S x)))).
-    eapply type_Pair.
-    + eapply type_Eq.
-      * apply type_Sort. apply (typing_wf H1).
-      * assumption.
-      * assumption.
-    + eapply type_Eq.
-      * instantiate (1 := s').
-        change (sSort s') with (lift0 1 (sSort s')).
-        eapply typing_lift01.
-        -- assumption.
-        -- (* TODO LATER *)
-           admit.
-      * eapply type_Transport.
-        -- admit.
-        -- admit.
-        -- eapply type_Conv.
-           ++ eapply type_Rel. constructor.
-              ** apply (typing_wf H1).
-              ** exists (succ_sort s'). eapply type_Eq.
-                 --- apply type_Sort. apply (typing_wf H1).
-                 --- assumption.
-                 --- assumption.
-           ++ eapply type_Eq.
-              ** apply type_Sort. constructor.
-                 --- apply (typing_wf H1).
-                 --- exists (succ_sort s'). eapply type_Eq.
-                     +++ apply type_Sort. apply (typing_wf H1).
-                     +++ assumption.
-                     +++ assumption.
-              ** instantiate (1 := s') .
-                 change (sSort s') with (lift0 1 (sSort s')).
-                 eapply typing_lift01.
-                 --- assumption.
-                 --- eapply type_Eq.
-                     +++ apply type_Sort. apply (typing_wf H1).
-                     +++ assumption.
-                     +++ assumption.
-              ** change (sSort s') with (lift0 1 (sSort s')).
-                 eapply typing_lift01.
-                 --- assumption.
-                 --- eapply type_Eq.
-                     +++ apply type_Sort. apply (typing_wf H1).
-                     +++ assumption.
-                     +++ assumption.
-           ++ cbn. apply eq_reflexivity.
-              eapply type_Eq.
-              ** apply type_Sort. constructor.
-                 --- apply (typing_wf H1).
-                 --- exists (succ_sort s'). eapply type_Eq.
-                     +++ apply type_Sort. apply (typing_wf H1).
-                     +++ assumption.
-                     +++ assumption.
-              ** change (sSort s') with (lift0 1 (sSort s')).
-                 eapply typing_lift01.
-                 --- assumption.
-                 --- eapply type_Eq.
-                     +++ apply type_Sort. apply (typing_wf H1).
-                     +++ assumption.
-                     +++ assumption.
-              ** change (sSort s') with (lift0 1 (sSort s')).
-                 eapply typing_lift01.
-                 --- assumption.
-                 --- eapply type_Eq.
-                     +++ apply type_Sort. apply (typing_wf H1).
-                     +++ assumption.
-                     +++ assumption.
-        -- change (sRel (S x)) with (lift0 1 (sRel x)).
-           eapply typing_lift01.
-           ++ assumption.
-           ++ eapply type_Eq.
-              ** apply type_Sort. apply (typing_wf H1).
-              ** assumption.
-              ** assumption.
-      * change (sRel (S x)) with (lift0 1 (sRel x)).
-        eapply typing_lift01.
-        -- assumption.
-        -- eapply type_Eq.
-           ++ apply type_Sort. apply (typing_wf H1).
-           ++ assumption.
-           ++ assumption.
-    + eapply type_Conv.
-      * eapply type_Refl.
-        -- apply type_Sort. apply (typing_wf H1).
-        -- assumption.
-      * eapply type_Eq.
-        -- apply type_Sort. apply (typing_wf H1).
-        -- assumption.
-        -- assumption.
-      * apply cong_Eq.
-        -- apply eq_reflexivity. apply type_Sort. apply (typing_wf H1).
-        -- apply eq_reflexivity. assumption.
-        -- destruct (eq_typing eq) as [hs _].
-           destruct (uniqueness hs H1).
-           eapply eq_conv ; eassumption.
-    + (* This is me being lazy? *)
-      admit.
-  - admit. (* Need inversion on typing of transport *)
-  - admit. (* Need inversion on typing of transport *)
-  - admit. (* Need inversion on typing *)
+  - destruct (uniqueness h1 h2) as [s eq].
+    destruct (eq_typing eq) as [hA hB].
+    exists s, (heq_refl s A (sRel x)).
+    eapply type_Conv.
+    + apply type_heq_refl ; assumption.
+    + apply type_heq ; assumption.
+    + apply cong_heq ; try (apply eq_reflexivity ; assumption).
+      assumption.
+  - (* Similarly we need to construct the corresponding terms *)
+    admit.
+  - admit.
+  - admit.
+  - admit.
+  - admit.
+  - admit.
+  - admit.
+  - admit.
+  - admit.
+  - admit.
+  - admit.
+  - admit.
+  - admit.
+  - admit.
 Admitted.
 
 Corollary trel_to_heq :

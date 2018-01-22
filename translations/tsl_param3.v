@@ -190,22 +190,23 @@ Definition tTranslate (E : tsl_table) (id : ident)
   gr <- tmAbout id ;;
   id' <- tmEval all (tsl_ident id) ;;
   match gr with
-  | ConstructRef (mkInd kn n) _
-  | IndRef (mkInd kn n) =>
+  | None => tmPrint "not found" ;; ret E
+  | Some (ConstructRef (mkInd kn n) _)
+  | Some (IndRef (mkInd kn n)) =>
       d <- tmQuoteInductive id ;;
       let e' := mind_decl_to_entry (tsl_mind_decl E kn d) in
       e' <- tmEval lazy e' ;;
       tmMkInductive e' ;;
       gr' <- tmAbout id' ;;
       match gr' with
-      | IndRef (mkInd kn' _) =>
+      | Some (IndRef (mkInd kn' _)) =>
         let E' := tsl_ind_extend_table kn kn' d in
         print_nf  (id ++ " has been translated as " ++ id') ;;
         ret (E' ++ E)%list
       | _ => tmPrint gr' ;; tmPrint "not found (or not an inductive)" ;; ret E
       end
 
-  | ConstRef kn =>
+  | Some (ConstRef kn) =>
     e <- tmQuoteConstant kn true ;;
     match e with
     | ParameterEntry _ => print_nf (id ++ "is an axiom, not a definition") ;;

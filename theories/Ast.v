@@ -210,7 +210,7 @@ Inductive TemplateMonad : Type -> Prop :=
 | tmLemma : ident -> forall A, TemplateMonad A
 | tmFreshName : ident -> TemplateMonad ident
     (* Guarenteed to not cause "... already declared" error *)
-| tmAbout : ident -> TemplateMonad global_reference
+| tmAbout : ident -> TemplateMonad (option global_reference)
 
 (** ** Quoting and unquoting commands *)
 (** Similar to Quote Definition ... := ... *)

@@ -1562,8 +1562,12 @@ struct
     else if Term.eq_constr coConstr tmAbout then
       match args with
       | id::[] -> let id = unquote_string id in
-                  let gr = Smartlocate.locate_global_with_alias (None, Libnames.qualid_of_string id) in
-                  k (evm, quote_global_reference gr)
+                  (try
+                     let gr = Smartlocate.locate_global_with_alias (None, Libnames.qualid_of_string id) in
+                     let opt = Term.mkApp (cSome , [|tglobal_reference ; quote_global_reference gr|]) in
+                    k (evm, opt)
+                  with
+                  | Not_found -> k (evm, Term.mkApp (cNone, [|tglobal_reference|])))
       | _ -> monad_failure "tmAbout" 1
     else if Term.eq_constr coConstr tmEval then
       match args with

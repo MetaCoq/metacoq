@@ -281,8 +281,8 @@ Fail Run TemplateProgram (printInductive "Coq.Arith.PeanoNat.Nat.add").
 Run TemplateProgram (printConstant "Coq.Arith.PeanoNat.Nat.add").
 
 
-Fail Run TemplateProgram (tmUnquoteTyped (nat -> nat) add_syntax >>=
-                          tmPrint).
+(* Fail Run TemplateProgram (tmUnquoteTyped (nat -> nat) add_syntax >>= *)
+(*                           tmPrint). *)
 Run TemplateProgram (tmUnquoteTyped (nat -> nat -> nat) add_syntax >>=
                      tmPrint).
 
@@ -325,6 +325,7 @@ Run TemplateProgram (tmAxiom "foo0'" (nat -> nat) >>=
 Run TemplateProgram (tmFreshName "foo" >>= tmPrint).
 
 Run TemplateProgram (tmBind (tmAbout "foo") tmPrint).
+Run TemplateProgram (tmBind (tmAbout "qlsnkqsdlfhkdlfh") tmPrint).
 Run TemplateProgram (tmBind (tmAbout "eq") tmPrint).
 Run TemplateProgram (tmBind (tmAbout "Logic.eq") tmPrint).
 Run TemplateProgram (tmBind (tmAbout "eq_refl") tmPrint).

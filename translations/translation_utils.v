@@ -220,8 +220,9 @@ Definition tTranslate (tsl : Translation) (ΣE : tsl_context) (id : ident)
   gr <- tmAbout id ;;
   id' <- tmEval all (tsl_id id) ;;
   match gr with
-  | ConstructRef ind _ => tmPrint "todo tTranslate" ;; ret None
-  | IndRef (mkInd kn n) =>
+  | None => tmPrint "not found" ;; ret None
+  | Some (ConstructRef ind _) => tmPrint "todo tTranslate" ;; ret None
+  | Some (IndRef (mkInd kn n)) =>
       d <- tmQuoteInductive id ;;
       let d' := tsl_ind ΣE id d in
       d' <- tmEval lazy d' ;;
@@ -238,7 +239,7 @@ Definition tTranslate (tsl : Translation) (ΣE : tsl_context) (id : ident)
       | _ => print_nf "error" ;; ret None
       end
 
-  | ConstRef kn =>
+  | Some (ConstRef kn) =>
     e <- tmQuoteConstant kn true ;;
     print_nf ("toto1" ++ id) ;;
     match e with

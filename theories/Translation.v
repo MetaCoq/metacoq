@@ -414,6 +414,20 @@ Lemma type_transport_heq :
     Σ ;;; Γ |-i transport_heq s A B p t : heq s A t B (sTransport A B p t).
 Admitted.
 
+Definition heq_Prod (s1 s2 z1 z2 : sort) (n1 n2 : name) (A1 A2 B1 B2 p q : sterm) : sterm.
+Admitted.
+
+Lemma type_heq_Prod :
+  forall {Σ Γ s1 s2 z1 z2 n1 n2 nx ny ne A1 A2 B1 B2 p q},
+    Σ ;;; Γ |-i p : heq (succ_sort s1) (sSort s1) A1 (sSort z1) A2 ->
+    Σ ;;; Γ ,, svass nx A1 ,, svass ny (lift0 1 A2) ,, svass ne (heq s1 (lift0 2 A1) (sRel 1) (lift0 2 A2) (sRel 0)) |-i
+    q : heq (succ_sort s2) (sSort s2) (lift0 2 B1) (sSort z2) (lift0 1 (lift 1 1 B1)) ->
+    Σ ;;; Γ |-i heq_Prod s1 s2 z1 z2 n1 n2 A1 A2 B1 B2 p q :
+    heq (succ_sort (max_sort s1 s2))
+        (sSort (max_sort s1 s2)) (sProd n1 A1 B1)
+        (sSort (max_sort z1 z2)) (sProd n2 A2 B2).
+Admitted.
+
 (* Can we rephrase it so that the existence of s is proved instead? *)
 Lemma trelE_to_heq :
   forall {E Σ Γ},
@@ -510,7 +524,9 @@ Proof.
     + apply type_heq ; try assumption.
     + apply cong_heq ; try (apply eq_reflexivity) ; try assumption.
       apply type_Transport with (s := s) ; assumption.
-  - admit.
+  - destruct (inversionProd h1) as [s1 [s2 [[? ?] ?]]].
+    destruct (inversionProd h2) as [z1 [z2 [[? ?] ?]]].
+    admit.
   - admit.
   - admit.
   - admit.

@@ -248,13 +248,13 @@ Inductive trel (E : list (nat * nat)) : sterm -> sterm -> Type :=
 | trel_Rel x :
     trel E (sRel x) (sRel x)
 
-| trel_transportl t1 t2 s T1 T2 p :
+| trel_Transport_l t1 t2 T1 T2 p :
     trel E t1 t2 ->
-    trel E (transport s T1 T2 p t1) t2
+    trel E (sTransport T1 T2 p t1) t2
 
-| trel_transportr t1 t2 s T1 T2 p :
+| trel_Transport_r t1 t2 T1 T2 p :
     trel E t1 t2 ->
-    trel E t1 (transport s T1 T2 p t2)
+    trel E t1 (sTransport T1 T2 p t2)
 
 | trel_Prod n1 n2 A1 A2 B1 B2 :
     trel E A1 A2 ->
@@ -338,8 +338,8 @@ Notation " t1 ∼ t2 " := (trel nil t1 t2) (at level 20).
 
 (* We also define a biased relation that only allows transports on one side,
    the idea being that the term on the other side belongs to the source.
-   This might be unnecessary as J isn't typable in the source but hopefully
-   this is more straightforward.
+   This might be unnecessary as transport isn't typable in the source but
+   hopefully this is more straightforward.
  *)
 Reserved Notation " t ⊏ t' " (at level 20).
 
@@ -348,9 +348,9 @@ Inductive inrel : sterm -> sterm -> Type :=
 | inrel_Rel x :
     sRel x ⊏ sRel x
 
-| inrel_transport t t' s T1 T2 p :
+| inrel_Transport t t' T1 T2 p :
     t ⊏ t' ->
-    t ⊏ transport s T1 T2 p t'
+    t ⊏ sTransport T1 T2 p t'
 
 | inrel_Prod n n' A A' B B' :
     A ⊏ A' ->
@@ -417,7 +417,7 @@ Defined.
 Definition heq s A a B b :=
   sSig nAnon (sEq (sSort s) A B)
        (sEq (lift0 1 B)
-            (transport s (lift0 1 A) (lift0 1 B) (sRel 0) (lift0 1 a))
+            (sTransport (lift0 1 A) (lift0 1 B) (sRel 0) (lift0 1 a))
             (lift0 1 b)).
 
 Lemma heq_to_eq :
@@ -428,13 +428,13 @@ Proof.
   intros Σ Γ s A u v e h.
   unfold heq in h.
   set (U := sEq (sSort s) A A) in h.
-  set (V := sEq (lift0 1 A) (transport s (lift0 1 A) (lift0 1 A) (sRel 0) (lift0 1 u)) (lift0 1 v)) in h.
+  set (V := sEq (lift0 1 A) (sTransport (lift0 1 A) (lift0 1 A) (sRel 0) (lift0 1 u)) (lift0 1 v)) in h.
   exists (sSigLet U V
              (sEq (lift0 1 A) (lift0 1 u) (lift0 1 v))
              e
              (sJ U
                  (sRel 1)
-                 (sEq (lift0 3 A) (transport s (lift0 3 A) (lift0 3 A) (sRel 1) (lift0 3 u)) (lift0 3 v))
+                 (sEq (lift0 3 A) (sTransport (lift0 3 A) (lift0 3 A) (sRel 1) (lift0 3 u)) (lift0 3 v))
                  (sRel 0)
                  (sRefl U A)
                  (sUip (sSort s) A A (sRel 1) (sRefl U A))
@@ -442,7 +442,7 @@ Proof.
   ).
 Admitted.
 
-Corollary type_heq :
+Corollary sort_heq :
   forall {Σ Γ s A B e},
     Σ ;;; Γ |-i e : heq (succ_sort s) (sSort s) A (sSort s) B ->
     ∑ p, Σ ;;; Γ |-i p : sEq (sSort s) A B.
@@ -474,7 +474,7 @@ Proof.
   - destruct (uniqueness H3 H4) as [s eq].
     unfold heq. cbn.
     set (U := sEq (sSort s') A B).
-    set (V := sEq (lift0 1 B) (transport s' (lift0 1 A) (lift0 1 B) (sRel 0) (sRel (S x))) (sRel (S x))).
+    set (V := sEq (lift0 1 B) (sTransport (lift0 1 A) (lift0 1 B) (sRel 0) (sRel (S x))) (sRel (S x))).
     exists (sPair U V (sRefl (sSort s') A) (sRefl (lift0 1 B) (sRel (S x)))).
     eapply type_Pair.
     + eapply type_Eq.
@@ -488,7 +488,9 @@ Proof.
         -- assumption.
         -- (* TODO LATER *)
            admit.
-      * eapply type_transport.
+      * eapply type_Transport.
+        -- admit.
+        -- admit.
         -- eapply type_Conv.
            ++ eapply type_Rel. constructor.
               ** apply (typing_wf H1).
@@ -503,7 +505,8 @@ Proof.
                      +++ apply type_Sort. apply (typing_wf H1).
                      +++ assumption.
                      +++ assumption.
-              ** change (sSort s') with (lift0 1 (sSort s')).
+              ** instantiate (1 := s') .
+                 change (sSort s') with (lift0 1 (sSort s')).
                  eapply typing_lift01.
                  --- assumption.
                  --- eapply type_Eq.
@@ -587,42 +590,6 @@ Proof.
   now apply @trelE_to_heq with (E := nil).
 Defined.
 
-Lemma lift_transport :
-  forall {s T1 T2 p t' n k},
-    lift n k (transport s T1 T2 p t') =
-    transport s (lift n k T1) (lift n k T2)
-              (lift n k p) (lift n k t').
-Proof.
-  intros s T1 T2 p t' n k.
-  cbn. unfold transport. f_equal.
-  - f_equal.
-    + f_equal.
-      replace (S (S k)) with (2 + k)%nat by omega.
-      now rewrite liftP2 by omega.
-    + f_equal. replace (S k) with (1 + k)%nat by omega.
-      now rewrite liftP2 by omega.
-  - replace (S k) with (1 + k)%nat by omega.
-    now rewrite liftP2 by omega.
-Defined.
-
-Lemma subst_transport :
-  forall {s T1 T2 p t n u},
-    (transport s T1 T2 p t) {n := u} =
-    transport s (T1{n := u}) (T2{n := u})
-              (p{n := u}) (t{n := u}).
-Proof.
-  intros s T1 T2 p t n u.
-  cbn. unfold transport. f_equal.
-  - f_equal.
-    + f_equal.
-      replace (S (S n)) with (2 + n)%nat by omega.
-      now rewrite substP2.
-    + f_equal. replace (S n) with (1 + n)%nat by omega.
-      now rewrite substP2.
-  - replace (S n) with (1 + n)%nat by omega.
-    now rewrite substP2.
-Defined.
-
 Lemma inrel_lift :
   forall {t t'},
     t ⊏ t' ->
@@ -630,8 +597,7 @@ Lemma inrel_lift :
 Proof.
   intros  t t'. induction 1 ; intros m k.
   all: try (cbn ; now constructor).
-  - cbn. destruct (k <=? x) ; now constructor.
-  - rewrite lift_transport. now constructor.
+  cbn. destruct (k <=? x) ; now constructor.
 Defined.
 
 Lemma trel_lift :
@@ -643,8 +609,6 @@ Proof.
   all: try (cbn ; now constructor).
   - easy.
   - cbn. destruct (k <=? x) ; now constructor.
-  - rewrite lift_transport. now constructor.
-  - rewrite lift_transport. now constructor.
 Defined.
 
 Lemma trel_subst :
@@ -655,32 +619,18 @@ Lemma trel_subst :
       forall n, t1{ n := u1 } ∼ t2{ n := u2 }.
 Proof.
   intros t1 t2. induction 1 ; intros m1 m2 hu n.
+  all: try (cbn ; constructor ; easy).
   - exfalso. easy.
   - unfold subst. destruct (nat_compare n x).
     + now apply trel_lift.
     + apply trel_Rel.
     + apply trel_Rel.
-  - rewrite subst_transport.
-    now constructor.
-  - rewrite subst_transport.
-    now constructor.
-  - cbn. now apply trel_Prod.
-  - cbn. now apply trel_Eq.
-  - cbn. now apply trel_Sig.
-  - cbn. now apply trel_Sort.
-  - cbn. now apply trel_Lambda.
-  - cbn. now apply trel_App.
-  - cbn. now apply trel_Refl.
-  - cbn. now apply trel_Funext.
-  - cbn. now apply trel_Uip.
-  - cbn. now apply trel_J.
-  - cbn. now apply trel_Pair.
-  - cbn. now apply trel_SigLet.
 Defined.
 
 Lemma trel_refl : forall {t}, t ∼ t.
 Proof.
   induction t ; try (now constructor).
+  constructor. constructor. assumption.
 Defined.
 
 Lemma trel_sym : forall {t1 t2}, t1 ∼ t2 -> t2 ∼ t1.
@@ -689,21 +639,15 @@ Proof.
 Defined.
 
 Lemma inversion_trel_transport :
-  forall {s T1 T2 p t1 t2},
-    transport s T1 T2 p t1 ∼ t2 ->
+  forall {A B p t1 t2},
+    sTransport A B p t1 ∼ t2 ->
     t1 ∼ t2.
 Proof.
-  intros s T1 T2 p t1 t2 h.
+  intros A B p t1 t2 h.
   dependent induction h.
   - assumption.
   - constructor. eapply IHh. reflexivity.
-  - (* The transport has been unfolded in this case.
-       This is a problem and would call for an abstract notion
-       of transport!
-       Another solution might be to forbid transport to be caught up
-       in the App case (is that possible?).
-     *)
-Abort.
+Defined.
 
 Lemma trel_trans :
   forall {t1 t2},
@@ -713,18 +657,17 @@ Lemma trel_trans :
       t1 ∼ t3.
 Proof.
   intros t1 t2. induction 1 ; intros t3 h.
+  all: try (
+    dependent induction h ; [
+      constructor ; eapply IHh ; [ .. | reflexivity ] ; assumption
+    | now constructor
+    ]
+  ).
   - easy.
   - assumption.
   - constructor. now apply IHtrel.
-  - inversion h.
-    + subst. easy.
-    + subst. apply IHtrel.
-      admit. (* Need refining. *)
-    + (* TODO *)
-      admit.
-  -
-(* Transitivity is not straightforward. *)
-Admitted.
+  - apply IHtrel. eapply inversion_trel_transport. eassumption.
+Defined.
 
 Reserved Notation " Γ ≈ Δ " (at level 19).
 
@@ -967,7 +910,7 @@ Proof.
       * eapply sorts_in_sort.
         -- apply type_Sort. apply (typing_wf h').
         -- assumption.
-    + destruct (type_heq hp) as [q hq].
+    + destruct (sort_heq hp) as [q hq].
       exists (transport s A' A'' q t').
       repeat split.
       * assumption.
@@ -1012,7 +955,7 @@ Proof.
   - apply type_Sort. apply (typing_wf ht').
   - assumption.
   - assumption.
-  - destruct (type_heq hp) as [q hq].
+  - destruct (sort_heq hp) as [q hq].
     exists (transport s A' A'' q t').
     repeat split.
     + assumption.
@@ -1312,7 +1255,7 @@ Proof.
       (* assert (Ss : S' = sSort s) by (inversion eS'). subst. *)
       (* assert (Ss : S'' = sSort s) by (inversion eS''). subst. *)
       (* Can similar things be done to solve more sorts? *)
-      (* destruct (type_heq hp') as [q hq]. *)
+      (* destruct (sort_heq hp') as [q hq]. *)
       (* Translating the term *)
       destruct (type_translation _ _ _ _ h1 _ hΓ) as [A'' [t' ht']].
       (* Translating the other type *)

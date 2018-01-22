@@ -349,6 +349,21 @@ Proof.
   cbn. destruct (k <=? x) ; now constructor.
 Defined.
 
+Lemma inrel_subst :
+  forall {t t'},
+    t ⊏ t' ->
+    forall {u u'},
+      u ⊏ u' ->
+      forall n, t{ n := u } ⊏ t'{ n := u' }.
+Proof.
+  intros t t'. induction 1 ; intros v1 v2 hu m.
+  all: try (cbn ; constructor ; easy).
+  cbn. destruct (m ?= x).
+  - now apply inrel_lift.
+  - constructor.
+  - constructor.
+Defined.
+
 Lemma trel_lift :
   forall {t1 t2},
     t1 ∼ t2 ->
@@ -770,7 +785,8 @@ Proof.
       exists (lift0 (S n) (sdecl_type (safe_nth Γ' (exist _ n isdecl')))), (sRel n).
       repeat split.
       * now destruct hΓ.
-      * (* Need lemma for ⊏ and lift, and one for Γ ⊂ Γ' -> ... *)
+      * apply inrel_lift.
+        (* Need lemma for Γ ⊂ Γ' -> ... *)
         cheat.
       * constructor.
       * apply type_Rel. now destruct hΓ.
@@ -891,8 +907,7 @@ Proof.
       destruct hu' as [[[? ?] ?] ?].
       repeat split.
       * assumption.
-      * (* We need to prove a lemma about ⊏ extending to substitution *)
-        cheat.
+      * now apply inrel_subst.
       * now constructor.
       * eapply type_App ; eassumption.
 
@@ -941,10 +956,7 @@ Proof.
     (* type_Conv *)
     + (* Translating the conversion *)
       assert (hs : Σ ;;; Γ |-x sSort s : sSort (succ_sort s)).
-      { constructor.
-        (* TODO The corresponding lemma! *)
-        cheat.
-      }
+      { constructor. apply (XTyping.typing_wf h1). }
       destruct (eq_translation _ _ _ _ _ _ e hs _ hΓ)
         as [S' [S'' [A' [B' [p' h']]]]].
       destruct h' as [[[[[eΓ eS'] eS''] eA] eB] hp'].

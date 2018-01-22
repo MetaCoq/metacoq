@@ -83,7 +83,7 @@ Class Translation := { tsl_id : ident -> ident ;
 
 Definition tsl_ident (id : ident) : ident := (id ++ "ᵗ")%string.
 
-Definition tsl_name n :=
+Definition tsl_name tsl_ident n :=
   match n with
   | nAnon => nAnon
   | nNamed n => nNamed (tsl_ident n)
@@ -113,6 +113,9 @@ Definition pairTrue typ t := pair typ (tLambda nAnon typ tBool) t tTrue.
 
 Definition print_nf {A} (msg : A) : TemplateMonad unit
   := (tmEval all msg) >>= tmPrint.
+
+Definition fail_nf {A} (msg : string) : TemplateMonad A
+  := (tmEval all msg) >>= tmFail.
 
 
 Fixpoint extract_mind_decl_from_program (id : ident) (p : program)
@@ -216,57 +219,48 @@ Fixpoint subst_app (t : term) (us : list term) : term :=
 
 
 Definition tTranslate (tsl : Translation) (ΣE : tsl_context) (id : ident)
-  : TemplateMonad (option tsl_context) :=
+  : TemplateMonad tsl_context :=
   gr <- tmAbout id ;;
   id' <- tmEval all (tsl_id id) ;;
   match gr with
-  | None => tmPrint "not found" ;; ret None
-  | Some (ConstructRef ind _) => tmPrint "todo tTranslate" ;; ret None
+  | None => fail_nf (id ++ " not found")
+  | Some (ConstructRef (mkInd kn n) _)
   | Some (IndRef (mkInd kn n)) =>
       d <- tmQuoteInductive id ;;
       let d' := tsl_ind ΣE id d in
       d' <- tmEval lazy d' ;;
-      (* tmPrint d' ;; *)
       match d' with
+      | Error e => print_nf e ;; fail_nf ("Translation error during the translation of the inductive " ++ id)
       | Success (E, decls) =>
-        (* print_nf d' ;; *)
         let entries := List.map mind_decl_to_entry decls in
-        (* print_nf e ;; *)
         monad_fold_left (fun _ e => tmMkInductive e) entries tt ;;
         let decl := InductiveDecl kn d in
         print_nf  (id ++ " has been translated as " ++ id') ;;
-        ret (Some (decl :: fst ΣE, E ++ snd ΣE)%list)
-      | _ => print_nf "error" ;; ret None
+        ret (decl :: fst ΣE, E ++ snd ΣE)%list
       end
 
   | Some (ConstRef kn) =>
     e <- tmQuoteConstant kn true ;;
-    print_nf ("toto1" ++ id) ;;
     match e with
-    | ParameterEntry _ => print_nf (id ++ "is an axiom, not a definition") ;;
-                         ret None
+    | ParameterEntry _ => fail_nf (id ++ "is an axiom, not a definition")
+
     | DefinitionEntry {| definition_entry_type := A;
                          definition_entry_body := t |} =>
-      print_nf ("toto2 " ++ id) ;;
-      (* tmPrint t ;; *)
       t' <- tmEval lazy (tsl_tm ΣE t) ;;
       match t' with
-      | Error e => tmPrint "tsl error in term: " ;; tmPrint e ;; ret None
+      | Error e => print_nf e ;; fail_nf ("Translation error during the translation of the body of " ++ id)
       | Success t' =>
-        print_nf ("toto3 " ++ id) ;;
         A' <- tmEval lazy (tsl_ty ΣE A) ;;
         match A' with
-        | Error e => tmPrint "tsl error in type: " ;; tmPrint e ;; ret None
+        | Error e => print_nf e ;; fail_nf ("Translation error during the translation of the type of " ++ id)
         | Success A' =>
-          print_nf ("toto4 " ++ id) ;;
           tmMkDefinition id' t' ;;
-          print_nf ("toto5 " ++ id) ;;
           let decl := {| cst_universes := [];
                          cst_type := A; cst_body := Some t |} in
           let Σ' := ConstantDecl kn decl :: (fst ΣE) in
           let E' := (ConstRef kn, tConst id' []) :: (snd ΣE) in
           print_nf  (id ++ " has been translated as " ++ id') ;;
-          tmEval all (Some (Σ', E'))
+          ret (Σ', E')
         end
       end
     end
@@ -276,27 +270,27 @@ Definition tTranslate (tsl : Translation) (ΣE : tsl_context) (id : ident)
 
 Definition tImplement (tsl : Translation) (ΣE : tsl_context)
            (id : ident) (A : Type)
-  : TemplateMonad (option tsl_context) :=
+  : TemplateMonad (tsl_context) :=
   tA <- tmQuote A ;;
   tA' <- tmEval lazy (tsl_ty ΣE tA) ;;
   match tA' with
-  | Error e => tmPrint "tsl error in type" ;; tmPrint e ;;
-                tmReturn None
+  | Error e => print_nf e ;; fail_nf ("Translation error during the translation of the type of " ++ id)
   | Success tA' =>
-    print_nf ("tata1 " ++ id) ;;
-    id' <- tmEval all (tsl_id id) ;;
-    print_nf ("tata2 " ++ id) ;;
-    A' <- tmUnquoteTyped Type tA' ;;
-    print_nf ("tata3 " ++ id) ;;
-    tmLemma id' A' ;;
-    print_nf ("tata4 " ++ id) ;;
-    tmAxiom id A ;;
-    let decl := {| cst_universes := [];
-                   cst_type := tA; cst_body := None |} in
-    let Σ' := ConstantDecl id decl :: (fst ΣE) in (* should be kn *)
-    let E' := (ConstRef id, tConst id' []) :: (snd ΣE) in (* id or kn ?? *)
-    print_nf (id ++ " has been translated as " ++ id') ;;
-    tmEval all (Some (Σ', E'))
+      id' <- tmEval all (tsl_id id) ;;
+      A' <- tmUnquoteTyped Type tA' ;;
+      tmLemma id' A' ;;
+      tmAxiom id A ;;
+      gr <- tmAbout id ;;
+      match gr with
+      | Some (ConstRef kn) =>
+        let decl := {| cst_universes := [];
+                       cst_type := tA; cst_body := None |} in
+        let Σ' := ConstantDecl kn decl :: (fst ΣE) in
+        let E' := (ConstRef kn, tConst id' []) :: (snd ΣE) in
+        print_nf (id ++ " has been translated as " ++ id') ;;
+        ret (Σ', E')
+      | _ => fail_nf (id ++ " was not found or is not a constant, this is a bug")
+      end
   end.
 
 

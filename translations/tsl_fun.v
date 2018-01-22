@@ -60,4 +60,4 @@ Definition T := Type -> Type.
 Definition u : T := fun x => x.
 
 Run TemplateProgram (SE <- tTranslate _ ([],[]) "T" ;;
-                        let SE := option_get todo SE in tTranslate _ SE "u").
+                     tTranslate _ SE "u" >>= tmPrint).

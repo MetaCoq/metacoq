@@ -40,13 +40,13 @@ Fixpoint tsl_rec1 (E : tsl_table) (t : term) : term :=
                    let B1 := tsl_rec1 E B in
                    let ΠAB0 := tProd na A0 B0 in
                    tLambda (nNamed "f") ΠAB0
-                           (tProd na (lift0 1 A0) (tProd (tsl_name na) (subst_app (lift0 2 A1) [tRel 0])
+                           (tProd na (lift0 1 A0) (tProd (tsl_name tsl_ident na) (subst_app (lift0 2 A1) [tRel 0])
                                       (subst_app (lift 1 2 B1)
                                             [tApp (tRel 2) [tRel 1]])))
 
   | tLambda na A t => let A0 := tsl_rec0 0 A in
                      let A1 := tsl_rec1 E A in
-                     tLambda na A0 (tLambda (tsl_name na) (subst_app (lift0 1 A1) [tRel 0]) (tsl_rec1 E t))
+                     tLambda na A0 (tLambda (tsl_name tsl_ident na) (subst_app (lift0 1 A1) [tRel 0]) (tsl_rec1 E t))
 
   | tApp t us => let us' := flatten (map (fun v => [tsl_rec0 0 v; tsl_rec1 E v]) us) in
                 mkApps (tsl_rec1 E t) us'
@@ -57,7 +57,7 @@ Fixpoint tsl_rec1 (E : tsl_table) (t : term) : term :=
                       let A1 := tsl_rec1 E A in
                       let u0 := tsl_rec0 0 u in
                       let u1 := tsl_rec1 E u in
-                      tLetIn na t0 A0 (tLetIn (tsl_name na) (lift0 1 t1) (subst_app (lift0 1 A1) [tRel 0]) u1)
+                      tLetIn na t0 A0 (tLetIn (tsl_name tsl_ident na) (lift0 1 t1) (subst_app (lift0 1 A1) [tRel 0]) u1)
 
   | tCast t c A => let t0 := tsl_rec0 0 t in
                   let t1 := tsl_rec1 E t in

@@ -142,6 +142,11 @@ with eq_term (Σ : global_context) : scontext -> sterm -> sterm -> sterm -> Type
     Σ ;;; Γ |-i w : P{ 1 := u }{ 0 := sRefl A u } ->
     Σ ;;; Γ |-i sJ A u P w u (sRefl A u) = w : P{ 1 := u }{ 0 := sRefl A u }
 
+| eq_TransportRefl Γ s A t :
+    Σ ;;; Γ |-i A : sSort s ->
+    Σ ;;; Γ |-i t : A ->
+    Σ ;;; Γ |-i sTransport A A (sRefl (sSort s) A) t = t : A
+
 | eq_conv Γ s T1 T2 t1 t2 :
     Σ ;;; Γ |-i t1 = t2 : T1 ->
     Σ ;;; Γ |-i T1 = T2 : sSort s ->
@@ -403,6 +408,9 @@ Proof.
   - eapply typing_subst ; eassumption.
   - econstructor ; try eassumption.
     econstructor ; eassumption.
+  - econstructor ; try eassumption.
+    econstructor ; try eassumption.
+    econstructor. apply (typing_wf t1).
   - constructor ; try eassumption.
     eapply ctx_conv.
     + eassumption.

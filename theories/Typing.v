@@ -3,11 +3,14 @@ From Template Require Import Template Ast Induction LiftSubst.
 
 Set Asymmetric Patterns.
 
-Definition mkApp t u :=
+
+Definition mkApps t us :=
   match t with
-  | tApp f args => tApp f (args ++ [u])
-  | _ => tApp t [u]
+  | tApp f args => tApp f (args ++ us)
+  | _ => tApp t us
   end.
+
+Definition mkApp t u := mkApps t [u].
 
 (** Substitutes [t1 ; .. ; tn] in u for [Rel 0; .. Rel (n-1)]*)
 Definition substl l t :=

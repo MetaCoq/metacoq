@@ -1,4 +1,4 @@
-Require Import Template.Ast Template.Typing Template.Checker Template.monad_utils Template.Template.
+From Template Require Import Ast Typing Checker LiftSubst monad_utils Template.
 Require Import Translations.sigma.
 Require Import List.
 Import ListNotations MonadNotation String.
@@ -6,11 +6,6 @@ Open Scope string_scope.
 
 Axiom todo : forall {A}, A.
 
-(* Inductive global_reference := *)
-(* (* VarRef of Names.variable *) *)
-(*   | ConstRef : string (* kername *) -> global_reference *)
-(*   | IndRef : inductive -> global_reference *)
-(*   | ConstructRef : inductive -> nat -> global_reference. *)
 
 Hint Resolve String.string_dec Peano_dec.eq_nat_dec : eq_dec.
 
@@ -31,15 +26,6 @@ Definition gref_eq_dec
 Defined.
 
 Definition tsl_table := list (global_reference * term).
-
-Definition empty_global_ctx : global_context := [].
-Definition empty_tsl_table : tsl_table := [].
-
-Definition add_global_ctx : global_decl -> global_context -> global_context
-  := cons.
-Definition add_tsl_table : global_reference -> term -> tsl_table -> tsl_table
-  := fun kn t => cons (kn, t).
-
 
 Fixpoint lookup_tsl_table (E : tsl_table) (gr : global_reference)
   : option term :=
@@ -95,6 +81,14 @@ Class Translation := { tsl_id : ident -> ident ;
                      }.
 
 
+Definition tsl_ident (id : ident) : ident := (id ++ "ᵗ")%string.
+
+Definition tsl_name n :=
+  match n with
+  | nAnon => nAnon
+  | nNamed n => nNamed (tsl_ident n)
+  end.
+
 
 Quote Definition tSigma := sigma.
 Quote Definition tPair := @mk_sig.
@@ -115,7 +109,7 @@ Definition timesBool (t : term) :=
   tApp tSigma [t; tLambda nAnon t tBool].
 Definition pairTrue typ t := pair typ (tLambda nAnon typ tBool) t tTrue.
 
-Definition tsl_ident (id : ident) : ident := (id ++ "ᵗ")%string.
+
 
 Definition print_nf {A} (msg : A) : TemplateMonad unit
   := (tmEval all msg) >>= tmPrint.
@@ -161,20 +155,18 @@ Definition option_get {A} (default : A) (x : option A) : A
      | None => default
      end.
 
-Definition mind_decl_to_entry (* (id : ident) *) (decl : minductive_decl)
+Definition mind_decl_to_entry (decl : minductive_decl)
   : mutual_inductive_entry.
 Proof.
-  refine ({|
-             mind_entry_record := None; (* not a record *)
-             mind_entry_finite := Finite; (* inductive *)
-             mind_entry_params := _;
-             mind_entry_inds := _;
-             mind_entry_polymorphic := false;
-             mind_entry_private := None;
-           |}).
+  refine {| mind_entry_record := None; (* not a record *)
+            mind_entry_finite := Finite; (* inductive *)
+            mind_entry_params := _;
+            mind_entry_inds := _;
+            mind_entry_polymorphic := false;
+            mind_entry_private := None |}.
   - refine (match List.hd_error decl.(ind_bodies) with
             | Some i0 => _
-            | None => nil (* todo *)
+            | None => nil (* assert false: at least one inductive in a mutual block *)
             end).
     pose (typ := decompose_prod i0.(ind_type)).
     destruct typ as [[names types] _].
@@ -183,24 +175,44 @@ Proof.
     refine (List.combine _ _).
     exact (List.map get_ident names).
     exact (List.map LocalAssum types).
-    (* pose (fold_left_i (fun acc i ty => let na := tVar (get_ident (List.nth i names nAnon)) *)
-    (*                                 in (na :: fst acc, substl (fst acc) ty :: snd acc)) types ([], [])). *)
-    (* exact (snd p). *)
   - refine (List.map _ decl.(ind_bodies)).
     intros [].
-    refine ({| mind_entry_typename := ind_name;
-               mind_entry_arity := remove_arity decl.(ind_npars) ind_type;
-               mind_entry_template := false;
-               mind_entry_consnames := _;
-               mind_entry_lc := _;
-            |}).
-    
+    refine {| mind_entry_typename := ind_name;
+              mind_entry_arity := remove_arity decl.(ind_npars) ind_type;
+              mind_entry_template := false;
+              mind_entry_consnames := _;
+              mind_entry_lc := _;
+            |}.
     refine (List.map (fun x => fst (fst x)) ind_ctors).
     refine (List.map (fun x => remove_arity decl.(ind_npars)
                                                 (snd (fst x))) ind_ctors).
 Defined.
 
 
+
+Fixpoint fold_left_i_aux {A B} (f : A -> nat -> B -> A) (n0 : nat) (l : list B)
+         (a0 : A) {struct l} : A
+  := match l with
+     | [] => a0
+     | b :: l => fold_left_i_aux f (S n0) l (f a0 n0 b)
+     end.
+Definition fold_left_i {A B} f := @fold_left_i_aux A B f 0.
+
+
+Fixpoint map_i_aux {A B} (f : nat -> A -> B) (n0 : nat) (l : list A) : list B
+  := match l with
+     | [] => []
+     | x :: l => (f n0 x) :: (map_i_aux f (S n0) l)
+     end.
+Definition map_i {A B} f := @map_i_aux A B f 0.
+
+
+Fixpoint subst_app (t : term) (us : list term) : term :=
+  match t, us with
+  | tLambda _ A t, u :: us => subst_app (t {0 := u}) us
+  | _, [] => t
+  | _, _ => mkApps t us
+  end.
 
 
 Definition tTranslate (tsl : Translation) (ΣE : tsl_context) (id : ident)
@@ -287,33 +299,33 @@ Definition tImplement (tsl : Translation) (ΣE : tsl_context)
   end.
 
 
-Definition tImplementExisting (tsl_id : ident -> ident)
-           (tsl_tm tsl_ty : global_context -> tsl_table -> term
-                            -> tsl_result term)
-           (Σ : tsl_context) (id : ident)
-  : TemplateMonad (option tsl_context) :=
-  e <- tmQuoteConstant id true ;;
-  match e with
-  | ParameterEntry _ => tmPrint "Not a definition" ;;
-                       tmReturn None
-  | DefinitionEntry {| definition_entry_type := A;
-                       definition_entry_body := t |} =>
-    match tsl_ty (fst Σ) (snd Σ) A with
-    | Error _ => tmPrint "tsl error in type" ;;
-                  tmReturn None
-    | Success tA' =>
-      id' <- tmEval all (tsl_id id) ;;
-      A' <- tmUnquoteTyped Type tA' ;;
-      tmLemma id' A' ;;
-      let decl := {| cst_universes := [];
-                     cst_type := A; cst_body := Some t |} in
-      let Σ' := ConstantDecl id decl :: (fst Σ) in
-      let E' := (ConstRef id, tConst id' []) :: (snd Σ) in
-      msg <- tmEval all (id ++ " has been translated as " ++ id') ;;
-      tmPrint msg ;;
-      tmReturn (Some (Σ', E'))
-    end
-  end.
+(* Definition tImplementExisting (tsl_id : ident -> ident) *)
+(*            (tsl_tm tsl_ty : global_context -> tsl_table -> term *)
+(*                             -> tsl_result term) *)
+(*            (Σ : tsl_context) (id : ident) *)
+(*   : TemplateMonad (option tsl_context) := *)
+(*   e <- tmQuoteConstant id true ;; *)
+(*   match e with *)
+(*   | ParameterEntry _ => tmPrint "Not a definition" ;; *)
+(*                        tmReturn None *)
+(*   | DefinitionEntry {| definition_entry_type := A; *)
+(*                        definition_entry_body := t |} => *)
+(*     match tsl_ty (fst Σ) (snd Σ) A with *)
+(*     | Error _ => tmPrint "tsl error in type" ;; *)
+(*                   tmReturn None *)
+(*     | Success tA' => *)
+(*       id' <- tmEval all (tsl_id id) ;; *)
+(*       A' <- tmUnquoteTyped Type tA' ;; *)
+(*       tmLemma id' A' ;; *)
+(*       let decl := {| cst_universes := []; *)
+(*                      cst_type := A; cst_body := Some t |} in *)
+(*       let Σ' := ConstantDecl id decl :: (fst Σ) in *)
+(*       let E' := (ConstRef id, tConst id' []) :: (snd Σ) in *)
+(*       msg <- tmEval all (id ++ " has been translated as " ++ id') ;; *)
+(*       tmPrint msg ;; *)
+(*       tmReturn (Some (Σ', E')) *)
+(*     end *)
+(*   end. *)
 
 
 

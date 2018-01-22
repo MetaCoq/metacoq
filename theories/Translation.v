@@ -653,12 +653,12 @@ Proof.
   - assumption.
   - assumption.
   - destruct (sort_heq hp) as [q hq].
-    exists (transport s A' A'' q t').
+    exists (sTransport A' A'' q t').
     repeat split.
     + assumption.
     + assumption.
     + constructor. assumption.
-    + eapply type_transport ; assumption.
+    + eapply type_Transport ; eassumption.
 Defined.
 
 

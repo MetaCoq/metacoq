@@ -211,31 +211,33 @@ Proof.
 Defined.
 
 Lemma cong_heq :
-  forall {Σ Γ s A1 A2 a1 a2 B1 B2 b1 b2},
-      Σ ;;; Γ |-i A1 = A2 : sSort s ->
-      Σ ;;; Γ |-i B1 = B2 : sSort s ->
+  forall {Σ Γ s1 s2 s3 A1 A2 a1 a2 B1 B2 b1 b2},
+      Σ ;;; Γ |-i sSort s1 = sSort s2 : sSort s3 ->
+      Σ ;;; Γ |-i A1 = A2 : sSort s1 ->
+      Σ ;;; Γ |-i B1 = B2 : sSort s1 ->
       Σ ;;; Γ |-i a1 = a2 : A1 ->
       Σ ;;; Γ |-i b1 = b2 : B1 ->
-      Σ ;;; Γ |-i heq s A1 a1 B1 b1 = heq s A2 a2 B2 b2 : sSort (succ_sort s).
+      Σ ;;; Γ |-i heq s1 A1 a1 B1 b1 = heq s2 A2 a2 B2 b2 : sSort s3.
 Proof.
-  intros Σ Γ s A1 A2 a1 a2 B1 B2 b1 b2 hA hB ha hb.
+  intros Σ Γ s1 s2 s3 A1 A2 a1 a2 B1 B2 b1 b2 hs hA hB ha hb.
+  destruct (eq_typing hs) as [hs1 hs2].
   destruct (eq_typing hA) as [hA1 hA2].
   destruct (eq_typing hB) as [hB1 hB2].
   destruct (eq_typing ha) as [ha1 ha2].
   destruct (eq_typing hb) as [hb1 hb2].
   assert (wfΓ : wf Σ Γ).
   { apply (typing_wf hA1). }
-  assert (hs : Σ ;;; Γ |-i sSort s : sSort (succ_sort s)).
-  { apply type_Sort. assumption. }
-  assert (hss : Σ ;;; Γ |-i sSort s = sSort s : sSort (succ_sort s)).
-  { apply eq_reflexivity. assumption. }
+  (* assert (hs : Σ ;;; Γ |-i sSort s : sSort (succ_sort s)). *)
+  (* { apply type_Sort. assumption. } *)
+  (* assert (hss : Σ ;;; Γ |-i sSort s = sSort s : sSort (succ_sort s)). *)
+  (* { apply eq_reflexivity. assumption. } *)
   eapply eq_conv.
   - apply cong_Sig.
     + apply cong_Eq ; eassumption.
     + apply cong_Eq.
       * (* Lemma cong lift *)
         admit.
-      * apply cong_Transport with (s := s).
+      * apply cong_Transport with (s := s1).
         -- (* Same *) admit.
         -- (* Same *) admit.
         -- apply eq_reflexivity.
@@ -383,6 +385,35 @@ Proof.
       * apply eq_reflexivity. assumption.
 Defined.
 
+Definition heq_sym (s : sort) (A a B b p : sterm) : sterm.
+Admitted.
+
+Lemma type_heq_sym :
+  forall {Σ Γ s A a B b p},
+    Σ ;;; Γ |-i p : heq s A a B b ->
+    Σ ;;; Γ |-i heq_sym s A a B b p : heq s B b A a.
+Admitted.
+
+Definition heq_trans (s : sort) (A a B b C c p q : sterm) : sterm.
+Admitted.
+
+Lemma type_heq_trans :
+  forall {Σ Γ s A a B b C c p q},
+    Σ ;;; Γ |-i p : heq s A a B b ->
+    Σ ;;; Γ |-i q : heq s B b C c ->
+    Σ ;;; Γ |-i heq_trans s A a B b C c p q : heq s A a C c.
+Admitted.
+
+Definition transport_heq (s : sort) (A B p t : sterm) : sterm.
+Admitted.
+
+Lemma type_transport_heq :
+  forall {Σ Γ s A B p t},
+    Σ ;;; Γ |-i t : A ->
+    Σ ;;; Γ |-i p : sEq (sSort s) A B ->
+    Σ ;;; Γ |-i transport_heq s A B p t : heq s A t B (sTransport A B p t).
+Admitted.
+
 (* Can we rephrase it so that the existence of s is proved instead? *)
 Lemma trelE_to_heq :
   forall {E Σ Γ},
@@ -406,14 +437,46 @@ Proof.
   - now apply H.
   - destruct (uniqueness h1 h2) as [s eq].
     destruct (eq_typing eq) as [hA hB].
+    assert (hs : Σ ;;; Γ |-i sSort s : sSort (succ_sort s)).
+    { apply type_Sort. apply (typing_wf h1). }
     exists s, (heq_refl s A (sRel x)).
     eapply type_Conv.
     + apply type_heq_refl ; assumption.
     + apply type_heq ; assumption.
     + apply cong_heq ; try (apply eq_reflexivity ; assumption).
       assumption.
-  - (* Similarly we need to construct the corresponding terms *)
-    admit.
+  - destruct (inversionTransport h1) as [s [[[[? ht1] hT1] ?] ?]].
+    destruct (IHtrel _ _ ht1 h2) as [s1 [q hq]].
+    destruct (istype_type hq) as [s2 hheq].
+    destruct (inversionHeq hheq) as [[[[hT1' ?] ?] ?] ?].
+    destruct (uniqueness hT1 hT1') as [s3 hss1].
+    assert (hss : Σ ;;; Γ |-i sSort s : sSort (succ_sort s)).
+    { apply type_Sort. apply (typing_wf h1). }
+    destruct (eq_typing hss1) as [hss3 hs1s3].
+    destruct (uniqueness hss3 hss).
+    assert (hB : Σ ;;; Γ |-i B : sSort s).
+    { eapply type_Conv.
+      - eassumption.
+      - exact hss.
+      - apply eq_symmetry. eapply eq_conv ; eassumption.
+    }
+    assert (hA : Σ ;;; Γ |-i A : sSort s).
+    { apply (eq_typing e). }
+    exists s.
+    exists (heq_trans s T2 (sTransport T1 T2 p t1) T1 t1 B t2
+                 (heq_sym s T1 t1 T2 (sTransport T1 T2 p t1) (transport_heq s T1 T2 p t1))
+                 q).
+    eapply type_Conv.
+    + eapply type_heq_trans.
+      * apply type_heq_sym. apply type_transport_heq ; assumption.
+      * eapply type_Conv.
+        -- eassumption.
+        -- apply type_heq ; assumption.
+        -- apply cong_heq ; try (apply eq_reflexivity ; assumption).
+           apply eq_symmetry. eapply eq_conv ; eassumption.
+    + apply type_heq ; try assumption.
+    + apply cong_heq ; try (apply eq_reflexivity) ; try assumption.
+      apply type_Transport with (s := s) ; assumption.
   - admit.
   - admit.
   - admit.

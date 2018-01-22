@@ -477,7 +477,39 @@ Proof.
     + apply type_heq ; try assumption.
     + apply cong_heq ; try (apply eq_reflexivity) ; try assumption.
       apply type_Transport with (s := s) ; assumption.
-  - admit.
+  - destruct (inversionTransport h2) as [s [[[[? ht2] hT1] ?] ?]].
+    destruct (IHtrel _ _ h1 ht2) as [s1 [q hq]].
+    destruct (istype_type hq) as [s2 hheq].
+    destruct (inversionHeq hheq) as [[[[? hT1'] ?] ?] ?].
+    destruct (uniqueness hT1 hT1') as [s3 hss1].
+    assert (hss : Σ ;;; Γ |-i sSort s : sSort (succ_sort s)).
+    { apply type_Sort. apply (typing_wf h1). }
+    destruct (eq_typing hss1) as [hss3 hs1s3].
+    destruct (uniqueness hss3 hss).
+    assert (hB : Σ ;;; Γ |-i B : sSort s).
+    { apply (eq_typing e). }
+    assert (hA : Σ ;;; Γ |-i A : sSort s).
+    { eapply type_Conv.
+      - eassumption.
+      - exact hss.
+      - apply eq_symmetry. eapply eq_conv ; eassumption.
+    }
+    exists s.
+    exists (heq_trans s A t1 T1 t2 T2 (sTransport T1 T2 p t2)
+                 q
+                 (transport_heq s T1 T2 p t2)
+      ).
+    eapply type_Conv.
+    + eapply type_heq_trans.
+      * eapply type_Conv.
+        -- eassumption.
+        -- apply type_heq ; assumption.
+        -- apply cong_heq ; try (apply eq_reflexivity ; assumption).
+           apply eq_symmetry. eapply eq_conv ; eassumption.
+      * apply type_transport_heq ; assumption.
+    + apply type_heq ; try assumption.
+    + apply cong_heq ; try (apply eq_reflexivity) ; try assumption.
+      apply type_Transport with (s := s) ; assumption.
   - admit.
   - admit.
   - admit.

@@ -541,15 +541,15 @@ Proof.
 Admitted.
 
 Corollary trel_to_heq :
-  forall {Σ Γ s T1 T2} {t1 t2 : sterm},
+  forall {Σ Γ T1 T2} {t1 t2 : sterm},
     t1 ∼ t2 ->
-    Σ ;;; Γ |-i T1 : sSort s ->
-    Σ ;;; Γ |-i T2 : sSort s ->
+    (* Σ ;;; Γ |-i T1 : sSort s -> *)
+    (* Σ ;;; Γ |-i T2 : sSort s -> *)
     Σ ;;; Γ |-i t1 : T1 ->
     Σ ;;; Γ |-i t2 : T2 ->
-    ∑ p, Σ ;;; Γ |-i p : heq s T1 t1 T2 t2.
+    ∑ s p, Σ ;;; Γ |-i p : heq s T1 t1 T2 t2.
 Proof.
-  intros Σ Γ s T1 T2 t1 t2 H H0 H1 H2 H3.
+  intros Σ Γ T1 T2 t1 t2 h h1 h2.
   now apply @trelE_to_heq with (E := nil).
 Defined.
 
@@ -820,11 +820,9 @@ Proof.
       - apply trel_sym. apply inrel_trel. eassumption.
       - apply inrel_trel. assumption.
     }
-    pose (thm := @trel_to_heq Σ Γ' (succ_sort s) (sSort s) (sSort s) A' A'' simA).
+    pose (thm := @trel_to_heq Σ Γ' (sSort s) (sSort s) A' A'' simA).
     rewrite <- heq in hs.
-    destruct thm as [p hp].
-    + apply type_Sort. apply (typing_wf h').
-    + apply type_Sort. apply (typing_wf h').
+    destruct thm as [s'' [p hp]].
     + assumption.
     + eapply type_Conv.
       * eassumption.
@@ -832,7 +830,26 @@ Proof.
       * eapply sorts_in_sort.
         -- apply type_Sort. apply (typing_wf h').
         -- assumption.
-    + destruct (sort_heq_ex hp) as [q hq].
+    + assert (hp' : Σ ;;; Γ' |-i p : Translation.heq (succ_sort s) (sSort s) A' (sSort s) A'').
+      { eapply type_Conv.
+        - eassumption.
+        - apply type_heq.
+          + apply type_Sort. apply (typing_wf h').
+          + apply type_Sort. apply (typing_wf h').
+          + assumption.
+          + eapply type_Conv.
+            * eassumption.
+            * eassumption.
+            * eapply sorts_in_sort.
+              -- apply type_Sort. apply (typing_wf h').
+              -- assumption.
+        - destruct (istype_type hp) as [s5 hheq].
+          destruct (inversionHeq hheq) as [[[[hs'' ?] ?] ?] ?].
+          apply cong_heq ; try (apply eq_reflexivity ; assumption).
+          pose proof (inversionSort hs'') as hi.
+          apply eq_symmetry. assumption.
+      }
+      destruct (sort_heq_ex hp') as [q hq].
       exists (sTransport A' A'' q t').
       repeat split.
       * assumption.
@@ -876,12 +893,21 @@ Proof.
     - eapply trel_sym. eapply inrel_trel. eassumption.
     - eapply inrel_trel. eassumption.
   }
-  destruct (@trel_to_heq Σ Γ' (succ_sort s) (sSort s) (sSort s) A' A'' simA) as [p hp].
-  - apply type_Sort. apply (typing_wf ht').
-  - apply type_Sort. apply (typing_wf ht').
+  destruct (@trel_to_heq Σ Γ' (sSort s) (sSort s) A' A'' simA) as [s' [p hp]].
   - assumption.
   - assumption.
-  - destruct (sort_heq_ex hp) as [q hq].
+  - assert (hp' : Σ ;;; Γ' |-i p : heq (succ_sort s) (sSort s) A' (sSort s) A'').
+    { destruct (istype_type hp) as [s1 hheq].
+      assert (Σ ;;; Γ' |-i sSort s : sSort (succ_sort s)).
+      { apply type_Sort. apply (typing_wf hp). }
+      destruct (inversionHeq hheq) as [[[[hs _] ?] ?] ?].
+      eapply type_Conv.
+      - eassumption.
+      - apply type_heq ; assumption.
+      - apply cong_heq ; try (apply eq_reflexivity) ; try assumption.
+        apply eq_symmetry. now apply (inversionSort hs).
+    }
+    destruct (sort_heq_ex hp') as [q hq].
     exists (sTransport A' A'' q t').
     repeat split.
     + assumption.
@@ -1241,6 +1267,5 @@ Proof.
     (* reflection *)
     + cheat.
 Defined.
-
 
 End Translation.

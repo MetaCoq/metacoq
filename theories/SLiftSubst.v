@@ -14,13 +14,13 @@ Fixpoint lift n k t : sterm :=
   | sProd na A B => sProd na (lift n k A) (lift n (S k) B)
   | sEq A u v => sEq (lift n k A) (lift n k u) (lift n k v)
   | sRefl A u => sRefl (lift n k A) (lift n k u)
-  (* | sJ A u P w v p => *)
-  (*   sJ (lift n k A) *)
-  (*      (lift n k u) *)
-  (*      (lift n (S (S k)) P) *)
-  (*      (lift n k w) *)
-  (*      (lift n k v) *)
-  (*      (lift n k p) *)
+  | sJ A u P w v p =>
+    sJ (lift n k A)
+       (lift n k u)
+       (lift n (S (S k)) P)
+       (lift n k w)
+       (lift n k v)
+       (lift n k p)
   | sTransport A B p t =>
     sTransport (lift n k A) (lift n k B) (lift n k p) (lift n k t)
   | sUip A u v p q =>
@@ -56,13 +56,13 @@ Fixpoint subst t k u :=
   | sProd na A B => sProd na (subst t k A) (subst t (S k) B)
   | sEq A u v => sEq (subst t k A) (subst t k u) (subst t k v)
   | sRefl A u => sRefl (subst t k A) (subst t k u)
-  (* | sJ A u P w v p => *)
-  (*   sJ (subst t k A) *)
-  (*      (subst t k u) *)
-  (*      (subst t (S (S k)) P) *)
-  (*      (subst t k w) *)
-  (*      (subst t k v) *)
-  (*      (subst t k p) *)
+  | sJ A u P w v p =>
+    sJ (subst t k A)
+       (subst t k u)
+       (subst t (S (S k)) P)
+       (subst t k w)
+       (subst t k v)
+       (subst t k p)
   | sTransport A B p u =>
     sTransport (subst t k A) (subst t k B) (subst t k p) (subst t k u)
   | sUip A u v p q =>

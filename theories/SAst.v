@@ -15,7 +15,7 @@ Inductive sterm : Set :=
 (* For now we use our own syntax for equality and Σ-types *)
 | sEq        : sterm -> sterm -> sterm -> sterm
 | sRefl      : sterm -> sterm -> sterm
-(* | sJ         : sterm -> sterm -> sterm -> sterm -> sterm -> sterm -> sterm *)
+| sJ         : sterm -> sterm -> sterm -> sterm -> sterm -> sterm -> sterm
 | sTransport : sterm -> sterm -> sterm -> sterm -> sterm
 | sUip       : sterm -> sterm -> sterm -> sterm -> sterm -> sterm
 | sFunext    : sterm -> sterm -> sterm -> sterm -> sterm -> sterm

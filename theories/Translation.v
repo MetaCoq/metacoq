@@ -210,35 +210,83 @@ Proof.
       * apply type_Eq ; eassumption.
 Defined.
 
-Lemma heq_to_eq :
-  forall {Σ Γ s A u v e},
-    Σ ;;; Γ |-i e : heq s A u A v ->
-    ∑ p, Σ ;;; Γ |-i p : sEq A u v.
+Lemma inversionHeq :
+  forall {Σ Γ s A a B b T},
+    Σ ;;; Γ |-i heq s A a B b : T ->
+    (Σ ;;; Γ |-i A : sSort s) *
+    (Σ ;;; Γ |-i B : sSort s) *
+    (Σ ;;; Γ |-i a : A) *
+    (Σ ;;; Γ |-i b : B) *
+    (Σ ;;; Γ |-i sSort (succ_sort s) = T : sSort (succ_sort (succ_sort s))).
 Proof.
-  intros Σ Γ s A u v e h.
-  unfold heq in h.
-  set (U := sEq (sSort s) A A) in h.
-  set (V := sEq (lift0 1 A) (sTransport (lift0 1 A) (lift0 1 A) (sRel 0) (lift0 1 u)) (lift0 1 v)) in h.
-  exists (sSigLet U V
-             (sEq (lift0 1 A) (lift0 1 u) (lift0 1 v))
-             e
-             (sJ U
-                 (sRel 1)
-                 (sEq (lift0 3 A) (sTransport (lift0 3 A) (lift0 3 A) (sRel 1) (lift0 3 u)) (lift0 3 v))
-                 (sRel 0)
-                 (sRefl U A)
-                 (sUip (sSort s) A A (sRel 1) (sRefl U A))
-             )
-  ).
+  intros Σ Γ s A a B b T h.
+  destruct (inversionSig h) as [s1 [s2 [[hEq hEq'] ?]]].
+  destruct (inversionEq hEq) as [s3 [[[? ?] ?] ?]].
+  destruct (inversionEq hEq') as [s4 [[[? ht] ?] ?]].
+  destruct (inversionTransport ht) as [s5 [[[[? ?] ?] ?] ?]].
+  repeat split ; try assumption.
+  - admit. (* Need lemma for inversion of lift *)
+  - admit. (* Same. *)
+  - (* We also need the lemma for inversion of lift to equate a lot of sorts. *)
+    admit.
+Admitted.
+
+Definition heq_to_eq_term (s : sort) (A u v p : sterm) : sterm.
+Proof.
+  pose (U := sEq (sSort s) A A).
+  pose (V := sEq (lift0 1 A) (sTransport (lift0 1 A) (lift0 1 A) (sRel 0) (lift0 1 u)) (lift0 1 v)).
+  simple refine (sSigLet U V _ _ _).
+  - (* The proposition *)
+    exact (sEq (lift0 1 A) (lift0 1 u) (lift0 1 v)).
+  - (* The pair to destruct *)
+    exact p.
+  - (* The target term, with sRel 1 : U and sRel 2 : V *)
+    (* We actually need transport refl to compute don't we? *)
+    simple refine (sJ U (sRel 1) (sEq (lift0 4 A) _ (lift0 4 v)) _ _ _).
+    + exact ((sTransport (lift0 4 A) (lift0 4 A) (sRel 1) (lift0 4 u))).
+    + exact (sRel 0).
+    + exact (sRefl (lift0 2 U) (lift0 2 A)).
+    + exact (sUip (lift0 2 U) (lift0 2 A) (lift0 2 A) (sRel 1) (sRefl (lift0 2 U) (lift0 2 A))).
+Defined.
+
+Lemma heq_to_eq :
+  forall {Σ Γ s A u v p},
+    Σ ;;; Γ |-i p : heq s A u A v ->
+    Σ ;;; Γ |-i heq_to_eq_term s A u v p : sEq A u v.
+Proof.
+  intros Σ Γ s A u v p h.
+  destruct (istype_type h) as [s' h'].
+  destruct (inversionHeq h') as [[[[? ?] ?] ?] ?].
+  assert (wfΓ : wf Σ Γ).
+  { apply (typing_wf h). }
+  assert (hs : Σ ;;; Γ |-i sSort s : sSort (succ_sort s)).
+  { apply type_Sort. assumption. }
+  assert (hEq : Σ ;;; Γ |-i sEq (sSort s) A A : sSort (succ_sort s)).
+  { apply type_Eq ; assumption. }
+  eapply type_Conv.
+  - eapply type_SigLet.
+    + eassumption.
+    + apply type_Eq.
+      (* I decide not to waste time with typing derivations for the time
+         being. *)
 Admitted.
 
 Corollary sort_heq :
   forall {Σ Γ s A B e},
     Σ ;;; Γ |-i e : heq (succ_sort s) (sSort s) A (sSort s) B ->
-    ∑ p, Σ ;;; Γ |-i p : sEq (sSort s) A B.
+    Σ ;;; Γ |-i heq_to_eq_term (succ_sort s) (sSort s) A B e : sEq (sSort s) A B.
 Proof.
   intros Σ Γ s A B e h.
   now eapply heq_to_eq.
+Defined.
+
+Corollary sort_heq_ex :
+  forall {Σ Γ s A B e},
+    Σ ;;; Γ |-i e : heq (succ_sort s) (sSort s) A (sSort s) B ->
+    ∑ p, Σ ;;; Γ |-i p : sEq (sSort s) A B.
+Proof.
+  intros Σ Γ s A B e h.
+  eexists. now eapply sort_heq.
 Defined.
 
 Lemma trelE_to_heq :
@@ -659,7 +707,7 @@ Proof.
       * eapply sorts_in_sort.
         -- apply type_Sort. apply (typing_wf h').
         -- assumption.
-    + destruct (sort_heq hp) as [q hq].
+    + destruct (sort_heq_ex hp) as [q hq].
       exists (sTransport A' A'' q t').
       repeat split.
       * assumption.
@@ -708,7 +756,7 @@ Proof.
   - apply type_Sort. apply (typing_wf ht').
   - assumption.
   - assumption.
-  - destruct (sort_heq hp) as [q hq].
+  - destruct (sort_heq_ex hp) as [q hq].
     exists (sTransport A' A'' q t').
     repeat split.
     + assumption.

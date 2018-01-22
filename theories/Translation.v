@@ -132,11 +132,6 @@ Inductive inrel : sterm -> sterm -> Type :=
     v ⊏ v' ->
     sEq A u v ⊏ sEq A' u' v'
 
-(* | inrel_Sig n n' A A' B B' : *)
-(*     A ⊏ A' -> *)
-(*     B ⊏ B' -> *)
-(*     sSig n A B ⊏ sSig n' A' B' *)
-
 | inrel_Sort s :
     sSort s ⊏ sSort s
 
@@ -157,21 +152,6 @@ Inductive inrel : sterm -> sterm -> Type :=
     A ⊏ A' ->
     u ⊏ u' ->
     sRefl A u ⊏ sRefl A' u'
-
-(* | inrel_Pair A A' B B' u u' v v' : *)
-(*     A ⊏ A' -> *)
-(*     B ⊏ B' -> *)
-(*     u ⊏ u' -> *)
-(*     v ⊏ v' -> *)
-(*     sPair A B u v ⊏ sPair A' B' u' v' *)
-
-(* | inrel_SigLet A A' B B' P P' p p' t t' : *)
-(*     A ⊏ A' -> *)
-(*     B ⊏ B' -> *)
-(*     P ⊏ P' -> *)
-(*     p ⊏ p' -> *)
-(*     t ⊏ t' -> *)
-(*     sSigLet A B P p t ⊏ sSigLet A' B' P' p' t' *)
 
 where " t ⊏ t' " := (inrel t t').
 
@@ -649,7 +629,7 @@ Proof.
   rewrite heq in h.
   destruct (istype_type h) as [s hs].
   assert (hth' : type_head (head A'')) by (now rewrite hh).
-  destruct (inversion_transportType hth' hs) as [s' [[h' htd] hss']].
+  destruct (inversion_transportType hth' hs) as [s' [h' hss']].
   exists A''. split.
   - assert (simA : A' ∼ A'').
     { apply trel_sym.
@@ -670,12 +650,16 @@ Proof.
         -- apply type_Sort. apply (typing_wf h').
         -- assumption.
     + destruct (sort_heq hp) as [q hq].
-      exists (transport s A' A'' q t').
+      exists (sTransport A' A'' q t').
       repeat split.
       * assumption.
       * assumption.
       * constructor. assumption.
-      * eapply type_transport.
+      * destruct (istype_type hq) as [? hEq].
+        destruct (inversionEq hEq) as [? [[[? ?] ?] ?]].
+        eapply type_Transport.
+        -- eassumption.
+        -- eassumption.
         -- assumption.
         -- subst. assumption.
   - assumption.

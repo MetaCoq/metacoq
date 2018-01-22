@@ -45,7 +45,6 @@ Inductive typing (Σ : global_context) : scontext -> sterm -> sterm -> Type :=
     Σ ;;; Γ |-i u : A ->
     Σ ;;; Γ |-i sRefl A u : sEq A u u
 
-(* Maybe it would be easier to go for inductives *)
 | type_J Γ nx ne s1 s2 A u v P p w :
     Σ ;;; Γ |-i A : sSort s1 ->
     Σ ;;; Γ |-i u : A ->
@@ -54,6 +53,13 @@ Inductive typing (Σ : global_context) : scontext -> sterm -> sterm -> Type :=
     Σ ;;; Γ |-i p : sEq A u v ->
     Σ ;;; Γ |-i w : P{ 1 := u }{ 0 := sRefl A u } ->
     Σ ;;; Γ |-i sJ A u P w v p : P{ 1 := v }{ 0 := p }
+
+| type_Transport Γ s T1 T2 p t :
+    Σ ;;; Γ |-i T1 : sSort s ->
+    Σ ;;; Γ |-i T2 : sSort s ->
+    Σ ;;; Γ |-i p : sEq (sSort s) T1 T2 ->
+    Σ ;;; Γ |-i t : T1 ->
+    Σ ;;; Γ |-i sTransport T1 T2 p t : T2
 
 | type_Uip Γ s A u v p q :
     Σ ;;; Γ |-i A : sSort s ->
@@ -178,6 +184,13 @@ with eq_term (Σ : global_context) : scontext -> sterm -> sterm -> sterm -> Type
     Σ ;;; Γ |-i p1 = p2 : sEq A1 u1 v1 ->
     Σ ;;; Γ |-i w1 = w2 : P1{ 1 := u1 }{ 0 := sRefl A1 u1 } ->
     Σ ;;; Γ |-i sJ A1 u1 P1 w1 v1 p1 = sJ A2 u2 P2 w2 v2 p2 : P1{ 1 := v1 }{ 0 := p1 }
+
+| cong_Transport Γ s A1 A2 B1 B2 p1 p2 t1 t2 :
+    Σ ;;; Γ |-i A1 = A2 : sSort s ->
+    Σ ;;; Γ |-i B1 = B2 : sSort s ->
+    Σ ;;; Γ |-i p1 = p2 : sEq (sSort s) A1 B1 ->
+    Σ ;;; Γ |-i t1 = t2 : A1 ->
+    Σ ;;; Γ |-i sTransport A1 B1 p1 t1 = sTransport A2 B2 p2 t2 : B1
 
 | cong_Uip Γ A1 A2 u1 u2 v1 v2 p1 p2 q1 q2 :
     Σ ;;; Γ |-i p1 = p2 : sEq A1 u1 v1 ->
@@ -345,6 +358,7 @@ Proof.
     + assumption.
     + cbn. rewrite !lift_subst, lift00.
       assumption.
+  - eexists. eassumption.
   - exists s. apply type_Eq ; try easy. now apply type_Eq.
   - exists (max_sort s1 s2). apply type_Eq.
     + now apply type_Prod.

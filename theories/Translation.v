@@ -488,13 +488,7 @@ Definition head (t : sterm) : head_kind :=
   end.
 
 Inductive transport_data :=
-(* | trd (s : sort) (T1 T2 p : sterm). *)
 | trd (T1 T2 p : sterm).
-
-(* Definition trsort (td : transport_data) : sort := *)
-(*   match td with *)
-(*   | trd s _ _ _ => s *)
-(*   end. *)
 
 Definition transport_data_app (td : transport_data) (t : sterm) : sterm :=
   match td with
@@ -530,18 +524,12 @@ Inductive type_head : head_kind -> Type :=
 | type_headSig : type_head headSig
 .
 
-(* Put earlier! *)
-Inductive InT {A} (x : A) : list A -> Type :=
-| InHd l : InT x (x :: l)
-| InTl a l : InT x l -> InT x (a :: l).
-
 Lemma inversion_transportType :
   forall {Σ tseq Γ' A' T},
     type_head (head A') ->
     Σ ;;; Γ' |-i transport_seq_app tseq A' : T ->
     ∑ s,
       (Σ ;;; Γ' |-i A' : sSort s) *
-      (* (forall td, InT td tseq -> Σ ;;; Γ' |-i sSort (succ_sort s) = sSort (trsort td) : sSort (succ_sort (succ_sort s))) * *)
       (Σ ;;; Γ' |-i T : sSort (succ_sort s)).
 Proof.
   intros Σ tseq. induction tseq ; intros Γ' A' T hh ht.
@@ -549,61 +537,27 @@ Proof.
   - cbn in *. destruct A' ; try (now inversion hh).
     + exists (succ_sort s). repeat split.
       * apply type_Sort. apply (typing_wf ht).
-      (* * easy. *)
       * eapply eq_typing, (inversionSort ht).
     + destruct (inversionProd ht) as [s1 [s2 [[? ?] ?]]].
       exists (max_sort s1 s2). repeat split.
       * now apply type_Prod.
-      (* * easy. *)
       * now eapply eq_typing.
     + destruct (inversionEq ht) as [s [[[? ?] ?] ?]].
       exists s. repeat split.
       * now apply type_Eq.
-      (* * easy. *)
       * now eapply eq_typing.
     + destruct (inversionSig ht) as [s1 [s2 [[? ?] ?]]].
       exists (max_sort s1 s2). repeat split.
       * now apply type_Sig.
-      (* * easy. *)
       * now eapply eq_typing.
 
   - destruct a. cbn in ht.
     change (fold_right transport_data_app A' tseq)
       with (transport_seq_app tseq A') in ht.
-    (* destruct (inversionTransport ht) as [[[? hA'] hT1] ?]. *)
     destruct (inversionTransport ht) as [s [[[[? hA'] hT1] ?] ?]].
-    (* destruct (IHtseq Γ' A' T1 hh hA') as [s' [[hAs htd] hseq]]. *)
     destruct (IHtseq Γ' A' T1 hh hA') as [s' [hAs hT1s]].
     exists s'. repeat split.
     + assumption.
-    (* + intros td intd. dependent destruction intd. *)
-    (*   * cbn. *)
-    (*     destruct tseq as [| [s1 U V q] tseq]. *)
-    (*     -- cbn in *. *)
-    (*        destruct (uniqueness hA' hAs) as [s'' hs'']. *)
-    (*        destruct (eq_typing hs'') as [hT1s'' hs's'']. *)
-    (*        destruct (uniqueness hT1 hT1s'') as [s3 hs3]. *)
-    (*        assert (hss : Σ ;;; Γ' |-i sSort s' : sSort s). *)
-    (*        { eapply type_Conv. *)
-    (*          - exact hs's''. *)
-    (*          - destruct (eq_typing hs3). eassumption. *)
-    (*          - apply eq_symmetry. assumption. *)
-    (*        } *)
-    (*        apply (inversionSort hss). *)
-    (*     -- cbn in *. *)
-    (*        change (fold_right transport_data_app A' tseq) *)
-    (*          with (transport_seq_app tseq A') in hA'. *)
-    (*        destruct (inversionTransport hA') as [[[? ?] ?] he]. *)
-    (*        specialize (htd (trd s1 U V q) (InHd _ _)). cbn in htd. *)
-    (*        destruct (eq_typing he) as [_ hT1s1]. *)
-    (*        destruct (uniqueness hT1s1 hT1) as [s4 h4]. *)
-    (*        eapply eq_transitivity. *)
-    (*        ++ apply htd. *)
-    (*        ++ destruct (eq_typing htd) as [_ hs11]. *)
-    (*           destruct (eq_typing h4) as [hs12 _]. *)
-    (*           destruct (uniqueness hs12 hs11) as [s5 h5]. *)
-    (*           cbn. eapply eq_conv ; eassumption. *)
-    (*   * now apply htd. *)
     + destruct (eq_typing e) as [_ hT].
       destruct (uniqueness hT1 hT1s) as [s3 hs3].
       eapply type_Conv.

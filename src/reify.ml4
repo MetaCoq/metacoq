@@ -290,10 +290,10 @@ struct
   let (tglobal_reference, tConstRef, tIndRef, tConstructRef) = (r_reify "global_reference", r_reify "ConstRef", r_reify "IndRef", r_reify "ConstructRef")
 
   let (tmReturn, tmBind, tmQuote, tmQuoteRec, tmEval, tmDefinition, tmAxiom, tmLemma, tmFreshName, tmAbout,
-       tmMkDefinition, tmMkInductive, tmPrint, tmQuoteInductive, tmQuoteConstant, tmUnquote, tmUnquoteTyped) =
+       tmMkDefinition, tmMkInductive, tmPrint, tmFail, tmQuoteInductive, tmQuoteConstant, tmUnquote, tmUnquoteTyped) =
     (r_reify "tmReturn", r_reify "tmBind", r_reify "tmQuote", r_reify "tmQuoteRec", r_reify "tmEval", r_reify "tmDefinition",
      r_reify "tmAxiom", r_reify "tmLemma", r_reify "tmFreshName", r_reify "tmAbout",
-     r_reify "tmMkDefinition", r_reify "tmMkInductive", r_reify "tmPrint", r_reify "tmQuoteInductive", r_reify "tmQuoteConstant",
+     r_reify "tmMkDefinition", r_reify "tmMkInductive", r_reify "tmPrint", r_reify "tmFail", r_reify "tmQuoteInductive", r_reify "tmQuoteConstant",
      r_reify "tmUnquote", r_reify "tmUnquoteTyped")
 
   (* let pkg_specif = ["Coq";"Init";"Specif"] *)
@@ -1559,6 +1559,10 @@ struct
       | _::trm::[] -> Feedback.msg_info (Printer.pr_constr trm);
                       k (evm, unit_tt)
       | _ -> monad_failure "tmPrint" 2
+    else if Term.eq_constr coConstr tmFail then
+      match args with
+      | _::trm::[] -> CErrors.user_err (str (unquote_string trm))
+      | _ -> monad_failure "tmFail" 2
     else if Term.eq_constr coConstr tmAbout then
       match args with
       | id::[] -> let id = unquote_string id in

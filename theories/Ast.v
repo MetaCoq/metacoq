@@ -201,6 +201,7 @@ Inductive TemplateMonad : Type -> Prop :=
 
 (** ** General commands *)
 | tmPrint : forall {A:Type}, A -> TemplateMonad unit
+| tmFail : forall {A:Type}, string -> TemplateMonad A
 (** FIXME: strategy is currently ignored in the implementation -- it does all reductions.*)
 | tmEval : reductionStrategy -> forall {A:Type}, A -> TemplateMonad A
 (** Return the defined constant *)

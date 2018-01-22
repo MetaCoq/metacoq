@@ -333,6 +333,8 @@ Run TemplateProgram (tmBind (tmAbout "eq_refl") tmPrint).
 Run TemplateProgram (tmBind (tmEval all (3 + 3)) tmPrint).
 Run TemplateProgram (tmBind (tmEval hnf (3 + 3)) tmPrint).
 
+Fail Run TemplateProgram (tmFail "foo" >>= tmQuoteInductive).
+
 
 (* Definition duplicateDefn (name newName : ident): TemplateMonad unit := *)
 (*   (tmBind (tmQuote name false) (fun body => *)

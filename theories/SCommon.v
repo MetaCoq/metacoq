@@ -31,3 +31,11 @@ Proof.
     + reflexivity.
     + cbn. admit.
 Admitted.
+
+Lemma max_id :
+  forall s, max_sort s s = s.
+Admitted.
+
+Lemma max_succ_id :
+  forall s, max_sort (succ_sort s) s = succ_sort s.
+Admitted.

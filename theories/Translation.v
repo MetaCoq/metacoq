@@ -169,6 +169,47 @@ Definition heq s A a B b :=
             (sTransport (lift0 1 A) (lift0 1 B) (sRel 0) (lift0 1 a))
             (lift0 1 b)).
 
+Lemma type_heq :
+  forall {Σ Γ s A a B b},
+      Σ ;;; Γ |-i A : sSort s ->
+      Σ ;;; Γ |-i B : sSort s ->
+      Σ ;;; Γ |-i a : A ->
+      Σ ;;; Γ |-i b : B ->
+      Σ ;;; Γ |-i heq s A a B b : sSort (succ_sort s).
+Proof.
+  intros Σ Γ s A a B b hA hB ha hb.
+  assert (hs : Σ ;;; Γ |-i sSort s : sSort (succ_sort s)).
+  { apply type_Sort. apply (typing_wf hA). }
+  replace (sSort (succ_sort s)) with (sSort (max_sort (succ_sort s) s)) by (now rewrite max_succ_id).
+  eapply type_Sig.
+  - apply type_Eq ; eassumption.
+  - apply type_Eq.
+    + change (sSort s) with (lift0 1 (sSort s)).
+      eapply typing_lift01.
+      * assumption.
+      * apply type_Eq ; eassumption.
+    + apply type_Transport with (s := s).
+      * change (sSort s) with (lift0 1 (sSort s)).
+        eapply typing_lift01.
+        -- assumption.
+        -- apply type_Eq ; eassumption.
+      * change (sSort s) with (lift0 1 (sSort s)).
+        eapply typing_lift01.
+        -- assumption.
+        -- apply type_Eq ; eassumption.
+      * simple refine (type_Rel Σ _ 0 _ _).
+        -- econstructor.
+           ++ apply (typing_wf hA).
+           ++ exists (succ_sort s). apply type_Eq ; assumption.
+        -- simpl. omega.
+      * eapply typing_lift01.
+        -- assumption.
+        -- apply type_Eq ; eassumption.
+    + eapply typing_lift01.
+      * assumption.
+      * apply type_Eq ; eassumption.
+Defined.
+
 Lemma heq_to_eq :
   forall {Σ Γ s A u v e},
     Σ ;;; Γ |-i e : heq s A u A v ->

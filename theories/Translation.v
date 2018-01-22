@@ -877,35 +877,42 @@ Proof.
   now eapply choose_type'.
 Defined.
 
-(* This has an extra assumption when compared to the paper version.
-   Hopefully it will be enough to deal with translation.
- *)
 Lemma change_type :
   forall {Σ Γ A t Γ' A' t' s A''},
-    Σ ;;; Γ' |-i A' : sSort s ->
     Σ ;;;; Γ' |--- [ t' ] : A' # ⟦ Γ |--- [t] : A ⟧ ->
     Σ ;;;; Γ' |--- [ A'' ] : sSort s # ⟦ Γ |--- [A] : sSort s ⟧ ->
     ∑ t'', Σ ;;;; Γ' |--- [ t'' ] : A'' # ⟦ Γ |--- [t] : A ⟧.
 Proof.
-  intros Σ Γ A t Γ' A' t' s A'' hAs [[[rΓ' rA'] rt'] ht'] [[[rΓ'' _] rA''] hA''].
+  intros Σ Γ A t Γ' A' t' s A'' [[[rΓ' rA'] rt'] ht'] [[[rΓ'' _] rA''] hA''].
   assert (simA : A' ∼ A'').
   { eapply trel_trans.
     - eapply trel_sym. eapply inrel_trel. eassumption.
     - eapply inrel_trel. eassumption.
   }
-  destruct (@trel_to_heq Σ Γ' (sSort s) (sSort s) A' A'' simA) as [s' [p hp]].
+  destruct (istype_type ht') as [s2 hA'].
+  destruct (@trel_to_heq Σ Γ' (sSort s2) (sSort s) A' A'' simA) as [s' [p hp]].
   - assumption.
   - assumption.
-  - assert (hp' : Σ ;;; Γ' |-i p : heq (succ_sort s) (sSort s) A' (sSort s) A'').
-    { destruct (istype_type hp) as [s1 hheq].
-      assert (Σ ;;; Γ' |-i sSort s : sSort (succ_sort s)).
-      { apply type_Sort. apply (typing_wf hp). }
-      destruct (inversionHeq hheq) as [[[[hs _] ?] ?] ?].
-      eapply type_Conv.
+  - destruct (istype_type hp) as [s1 hheq].
+    assert (Σ ;;; Γ' |-i sSort s : sSort (succ_sort s)).
+    { apply type_Sort. apply (typing_wf hp). }
+    destruct (inversionHeq hheq) as [[[[hs2 hs] ?] ?] ?].
+    assert (hp' : Σ ;;; Γ' |-i p : heq (succ_sort s) (sSort s) A' (sSort s) A'').
+    { eapply type_Conv.
       - eassumption.
-      - apply type_heq ; assumption.
+      - apply type_heq ; try assumption.
+        eapply type_Conv.
+        + eassumption.
+        + apply type_Sort. apply (typing_wf hs).
+        + apply sorts_in_sort.
+          * eapply type_Conv.
+            -- eassumption.
+            -- apply type_Sort. apply (typing_wf hs).
+            -- apply eq_symmetry. apply (inversionSort hs).
+          * apply type_Sort. apply (typing_wf hs).
       - apply cong_heq ; try (apply eq_reflexivity) ; try assumption.
-        apply eq_symmetry. now apply (inversionSort hs).
+        + apply eq_symmetry. apply (inversionSort hs).
+        + apply sorts_in_sort ; assumption.
     }
     destruct (sort_heq_ex hp') as [q hq].
     exists (sTransport A' A'' q t').
@@ -913,7 +920,16 @@ Proof.
     + assumption.
     + assumption.
     + constructor. assumption.
-    + eapply type_Transport ; eassumption.
+    + apply type_Transport with (s := s) ; try assumption.
+      eapply type_Conv.
+      * eassumption.
+      * apply type_Sort. apply (typing_wf hs).
+      * apply sorts_in_sort.
+        -- eapply type_Conv.
+           ++ eassumption.
+           ++ apply type_Sort. apply (typing_wf hs).
+           ++ apply eq_symmetry. apply (inversionSort hs).
+        -- apply type_Sort. apply (typing_wf hs).
 Defined.
 
 
@@ -1076,15 +1092,8 @@ Proof.
       (* Translation of the term *)
       destruct (type_translation _ _ _ _ h3 _ (trans_snoc hΓ ht''))
         as [S' [b' hb']].
-      assert (hS' : Σ ;;; Γ' ,, svass n t'' |-i S' : sSort s2).
-      { (* Maybe we need to relax change_type, otherwise it won't be usable.
-           Maybe this could be done by removing sort annotation to Eq (which we
-           don't feature in the article anyway).
-         *)
-        cheat.
-      }
-      destruct (change_type hS' hb' hbty'') as [b'' hb''].
-      clear hS' hb' S' b'.
+      destruct (change_type hb' hbty'') as [b'' hb''].
+      clear hb' S' b'.
       exists (sProd n' t'' bty''), (sLambda n t'' bty'' b'').
       repeat split.
       * now destruct hΓ.
@@ -1122,22 +1131,12 @@ Proof.
       clear ht'' t'' T''.
       destruct T' ; inversion hh. subst. clear hh th.
       rename n0 into x, T'1 into A'', T'2 into B''.
-      assert (hS' : Σ ;;; Γ' |-i sProd x A'' B'' : sSort (max_sort s1 s2)).
-      { (* I see no way of proving this... *)
-        cheat.
-      }
-      destruct (change_type hS' ht' (trans_Prod hΓ hA' hB')) as [t'' ht''].
-      clear hS' ht' A'' B'' t'.
+      destruct (change_type ht' (trans_Prod hΓ hA' hB')) as [t'' ht''].
+      clear ht' A'' B'' t'.
       (* Translation of the argument *)
       destruct (type_translation _ _ _ _ h4 _ hΓ) as [A'' [u'' hu'']].
-      assert (hS : Σ ;;; Γ' |-i A'' : sSort s1).
-      { (* Maybe we could add something to the theorem to state that the
-           translation of the type lives in the right sort.
-         *)
-        cheat.
-      }
-      destruct (change_type hS hu'' hA') as [u' hu'].
-      clear hS hu'' A'' u''.
+      destruct (change_type hu'' hA') as [u' hu'].
+      clear hu'' A'' u''.
       (* We now conclude *)
       exists (B'{ 0 := u' }), (sApp t'' n A' B' u').
       destruct hΓ.
@@ -1160,15 +1159,11 @@ Proof.
       destruct T ; inversion hh. subst. clear hh th.
       (* The first term *)
       destruct (type_translation _ _ _ _ h2 _ hΓ) as [A'' [u'' hu'']].
-      assert (hS : Σ ;;; Γ' |-i A'' : sSort s).
-      { cheat. }
-      destruct (change_type hS hu'' hA') as [u' hu'].
-      clear hS hu'' u'' A''.
+      destruct (change_type hu'' hA') as [u' hu'].
+      clear hu'' u'' A''.
       (* The other term *)
       destruct (type_translation _ _ _ _ h3 _ hΓ) as [A'' [v'' hv'']].
-      assert (hS : Σ ;;; Γ' |-i A'' : sSort s).
-      { cheat. }
-      destruct (change_type hS hv'' hA') as [v' hv'].
+      destruct (change_type hv'' hA') as [v' hv'].
       (* Now we conclude *)
       exists (sSort s), (sEq A' u' v').
       apply trans_Eq ; assumption.

@@ -250,6 +250,21 @@ Lemma typing_lift01 :
     Σ ;;; Γ ,, svass x B |-i lift0 1 t : lift0 1 A.
 Admitted.
 
+Lemma typing_lift02 :
+  forall {Σ Γ t A x B s y C s'},
+    Σ ;;; Γ |-i t : A ->
+    Σ ;;; Γ |-i B : sSort s ->
+    Σ ;;; Γ ,, svass x B |-i C : sSort s' ->
+    Σ ;;; Γ ,, svass x B ,, svass y C |-i lift0 2 t : lift0 2 A.
+Proof.
+  intros Σ Γ t A x B s y C s' ht hB hC.
+  assert (eq : forall t, lift0 2 t = lift0 1 (lift0 1 t)).
+  { intro u. rewrite lift_lift. reflexivity. }
+  rewrite !eq. eapply typing_lift01.
+  - eapply typing_lift01  ; eassumption.
+  - eassumption.
+Defined.
+
 Lemma typing_subst :
   forall {Σ Γ t A B u n},
     Σ ;;; Γ ,, svass n A |-i t : B ->

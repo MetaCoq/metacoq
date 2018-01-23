@@ -428,26 +428,21 @@ Lemma type_heq_Prod :
         (sSort (max_sort z1 z2)) (sProd n2 A2 B2).
 Admitted.
 
-(* Can we rephrase it so that the existence of s is proved instead? *)
 Lemma trelE_to_heq :
-  forall {E Σ Γ},
-    (forall x y (* s *) T1 T2,
+  forall {E Σ},
+    (forall x y Γ T1 T2,
         In (x,y) E ->
-        (* Σ ;;; Γ |-i T1 : sSort s -> *)
-        (* Σ ;;; Γ |-i T2 : sSort s -> *)
         Σ ;;; Γ |-i sRel x : T1 ->
         Σ ;;; Γ |-i sRel y : T2 ->
         ∑ s p, Σ ;;; Γ |-i p : heq s T1 (sRel x) T2 (sRel y)) ->
     forall {t1 t2},
       trel E t1 t2 ->
-      forall {(* s *) T1 T2},
-        (* Σ ;;; Γ |-i T1 : sSort s -> *)
-        (* Σ ;;; Γ |-i T2 : sSort s -> *)
+      forall {Γ T1 T2},
         Σ ;;; Γ |-i t1 : T1 ->
         Σ ;;; Γ |-i t2 : T2 ->
         ∑ s p, Σ ;;; Γ |-i p : heq s T1 t1 T2 t2.
 Proof.
-  intros E Σ Γ H t1 t2. induction 1 ; intros (* s' *) A B h1 h2.
+  intros E Σ H t1 t2. induction 1 ; intros Γ A B h1 h2.
   - now apply H.
   - destruct (uniqueness h1 h2) as [s eq].
     destruct (eq_typing eq) as [hA hB].
@@ -460,7 +455,7 @@ Proof.
     + apply cong_heq ; try (apply eq_reflexivity ; assumption).
       assumption.
   - destruct (inversionTransport h1) as [s [[[[? ht1] hT1] ?] ?]].
-    destruct (IHtrel _ _ ht1 h2) as [s1 [q hq]].
+    destruct (IHtrel _ _ _ ht1 h2) as [s1 [q hq]].
     destruct (istype_type hq) as [s2 hheq].
     destruct (inversionHeq hheq) as [[[[hT1' ?] ?] ?] ?].
     destruct (uniqueness hT1 hT1') as [s3 hss1].
@@ -492,7 +487,7 @@ Proof.
     + apply cong_heq ; try (apply eq_reflexivity) ; try assumption.
       apply type_Transport with (s := s) ; assumption.
   - destruct (inversionTransport h2) as [s [[[[? ht2] hT1] ?] ?]].
-    destruct (IHtrel _ _ h1 ht2) as [s1 [q hq]].
+    destruct (IHtrel _ _ _ h1 ht2) as [s1 [q hq]].
     destruct (istype_type hq) as [s2 hheq].
     destruct (inversionHeq hheq) as [[[[? hT1'] ?] ?] ?].
     destruct (uniqueness hT1 hT1') as [s3 hss1].
@@ -524,8 +519,85 @@ Proof.
     + apply type_heq ; try assumption.
     + apply cong_heq ; try (apply eq_reflexivity) ; try assumption.
       apply type_Transport with (s := s) ; assumption.
-  - destruct (inversionProd h1) as [s1 [s2 [[? ?] ?]]].
-    destruct (inversionProd h2) as [z1 [z2 [[? ?] ?]]].
+  - destruct (inversionProd h1) as [s1 [z1 [[hA1 hB1] ?]]].
+    destruct (inversionProd h2) as [s2 [z2 [[hA2 hB2] ?]]].
+    destruct (IHtrel1 _ _ _ hA1 hA2) as [s [p hp]].
+    (* Here comes the trick to have a common context. *)
+    pose (Δ := Γ ,, svass n1 A1 ,, svass n2 (lift0 1 A2) ,, svass nAnon (heq s1 (lift0 2 A1) (sRel 1) (lift0 2 A2) (sRel 0))).
+    assert (hB1' : Σ ;;; Δ |-i lift0 2 B1 : lift0 2 (sSort z1)).
+    { eapply typing_lift02.
+      - assumption.
+      - instantiate (1 := s2). change (sSort s2) with (lift0 1 (sSort s2)).
+        eapply typing_lift01 ; eassumption.
+      - apply type_heq.
+        + change (sSort s1) with (lift0 2 (sSort s1)).
+          eapply typing_lift02.
+          * assumption.
+          * eassumption.
+          * instantiate (1 := s2). change (sSort s2) with (lift0 1 (sSort s2)).
+            eapply typing_lift01 ; eassumption.
+        + eapply type_Conv.
+          * instantiate (1 := sSort s2). change (sSort s2) with (lift0 2 (sSort s2)).
+            eapply typing_lift02.
+            -- assumption.
+            -- eassumption.
+            -- instantiate (1 := s2). change (sSort s2) with (lift0 1 (sSort s2)).
+               eapply typing_lift01 ; eassumption.
+          * apply type_Sort. econstructor.
+            -- econstructor.
+               ++ apply (typing_wf hA1).
+               ++ eexists ; eassumption.
+            -- exists s2. change (sSort s2) with (lift0 1 (sSort s2)).
+               eapply typing_lift01 ; eassumption.
+          * apply sorts_in_sort.
+            -- destruct (istype_type hp) as [? hheq].
+               destruct (inversionHeq hheq) as [[[[hs1 ?] ?] ?] ?].
+               pose proof (inversionSort hs1).
+               eapply type_Conv.
+               ++ change (sSort s2) with (lift0 2 (sSort s2)).
+                  eapply typing_lift02.
+                  ** eassumption.
+                  ** eassumption.
+                  ** instantiate (1 := s2).
+                     change (sSort s2) with (lift0 1 (sSort s2)).
+                     eapply typing_lift01 ; eassumption.
+               ++ apply type_Sort. econstructor.
+                  ** apply (typing_wf hB1).
+                  ** exists s2. change (sSort s2) with (lift0 1 (sSort s2)).
+                     eapply typing_lift01 ; eassumption.
+               ++ cbn. apply eq_symmetry. apply inversionSort.
+                  change (sSort s1) with (lift0 2 (sSort s1)).
+                  change (sSort s) with (lift0 2 (sSort s)).
+                  eapply typing_lift02.
+                  ** assumption.
+                  ** eassumption.
+                  ** instantiate (1 := s2).
+                     change (sSort s2) with (lift0 1 (sSort s2)).
+                     eapply typing_lift01 ; eassumption.
+            -- apply type_Sort. econstructor.
+               ++ apply (typing_wf hB1).
+               ++ exists s2. change (sSort s2) with (lift0 1 (sSort s2)).
+                  eapply typing_lift01 ; eassumption.
+        + simple refine (type_Rel _ _ _ _ _).
+          * econstructor.
+            -- apply (typing_wf hB1).
+            -- exists s2. change (sSort s2) with (lift0 1 (sSort s2)).
+               eapply typing_lift01 ; eassumption.
+          * cbn. omega.
+        + assert (eq : forall t, lift0 2 t = lift0 1 (lift0 1 t)).
+          { intro u. rewrite lift_lift. reflexivity. }
+          rewrite eq.
+          simple refine (type_Rel _ _ _ _ _).
+          * econstructor.
+            -- apply (typing_wf hB1).
+            -- exists s2. change (sSort s2) with (lift0 1 (sSort s2)).
+               eapply typing_lift01 ; eassumption.
+          * cbn. omega.
+    }
+    (* After this tedious proof, we remark that we cannot use the induction
+       hypothesis on B1 as we have lift0 2 B1 instead.
+       This could be solved by changing the corresponding trel case.
+     *)
     admit.
   - admit.
   - admit.

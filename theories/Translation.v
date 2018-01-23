@@ -1012,6 +1012,20 @@ Proof.
   - cbn. now f_equal.
 Defined.
 
+Fact nth_increl :
+  forall {Γ Γ'},
+    Γ ⊂ Γ' ->
+    forall {n} { isdecl : n < #|Γ| } { isdecl' : n < #|Γ'| },
+      sdecl_type (safe_nth Γ (exist (fun n0 : nat => n0 < #|Γ|) n isdecl))
+    ⊏ sdecl_type (safe_nth Γ' (exist (fun n0 : nat => n0 < #|Γ'|) n isdecl')).
+Proof.
+  intros Γ Γ' e. induction e ; intros m isdecl isdecl'.
+  - exfalso. easy.
+  - destruct m.
+    + cbn. assumption.
+    + cbn. apply IHe.
+Defined.
+
 Definition trans_snoc {Σ Γ x A s Γ' A' s'} :
   Σ |--i Γ' # ⟦ Γ ⟧ ->
   Σ ;;;; Γ' |--- [A'] : sSort s' # ⟦ Γ |--- [A] : sSort s ⟧ ->
@@ -1107,9 +1121,7 @@ Proof.
       exists (lift0 (S n) (sdecl_type (safe_nth Γ' (exist _ n isdecl')))), (sRel n).
       repeat split.
       * now destruct hΓ.
-      * apply inrel_lift.
-        (* Need lemma for Γ ⊂ Γ' -> ... *)
-        cheat.
+      * apply inrel_lift. apply nth_increl. now destruct hΓ.
       * constructor.
       * apply type_Rel. now destruct hΓ.
 

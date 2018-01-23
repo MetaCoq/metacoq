@@ -1399,10 +1399,83 @@ Proof.
       apply type_heq_refl ; assumption.
 
     (* eq_symmetry *)
-    + cheat.
+    + destruct (eq_translation _ _ _ _ _ h _ hΓ)
+        as [s' [A' [A'' [u' [v' [p' h']]]]]].
+      destruct h' as [[[[[? ?] ?] ?] ?] hp'].
+      exists s', A'', A', v', u', (heq_sym s' A' u' A'' v' p').
+      repeat split ; try assumption.
+      apply type_heq_sym. assumption.
 
     (* eq_transitivity *)
-    + cheat.
+    + destruct (eq_translation _ _ _ _ _ h1 _ hΓ)
+        as [s1 [A1 [A2 [u1 [v1 [p1 h1']]]]]].
+      destruct (eq_translation _ _ _ _ _ h2 _ hΓ)
+        as [s2 [A3 [A4 [v2 [w1 [p2 h2']]]]]].
+      destruct (eqtrans_trans h1') as [hu1 hv1].
+      destruct (eqtrans_trans h2') as [hv2 hw1].
+      destruct h1' as [[[[[? ?] ?] ?] ?] hp1].
+      destruct h2' as [[[[[? ?] ?] ?] ?] hp2].
+      (* We have a missing link between (v1 : A2) and (v2 : A3) *)
+      assert (sim : v1 ∼ v2).
+      { eapply trel_trans.
+        - eapply trel_sym. eapply inrel_trel. eassumption.
+        - apply inrel_trel. assumption.
+      }
+      destruct hv1 as [_ hv1].
+      destruct hv2 as [_ hv2].
+      destruct (trel_to_heq sim hv1 hv2) as [s3 [p3 hp3]].
+      (* We can conclude *)
+      exists s3, A1, A4, u1, w1.
+      exists (heq_trans s3 A1 u1 A2 v1 A4 w1
+                   p1
+                   (heq_trans s3 A2 v1  A3 v2 A4 w1
+                              p3
+                              p2)
+        ).
+      repeat split ; try assumption.
+      destruct (istype_type hp1) as [? hheq1].
+      destruct (inversionHeq hheq1) as [[[[? A2s1] ?] ?] ?].
+      destruct (istype_type hp2) as [? hheq2].
+      destruct (inversionHeq hheq2) as [[[[A3s2 ?] ?] ?] ?].
+      destruct (istype_type hp3) as [? hheq3].
+      destruct (inversionHeq hheq3) as [[[[A2s3 A3s3] ?] ?] ?].
+      destruct (uniqueness A2s1 A2s3) as [? eq].
+      assert (Σ;;; Γ' |-i A1 : sSort s3).
+      { eapply type_Conv ; [ eassumption | idtac | eassumption ].
+        apply (eq_typing eq).
+      }
+      assert (Σ;;; Γ' |-i sSort s1 = sSort s3 : sSort (succ_sort s3)).
+      { eapply eq_conv.
+        - eassumption.
+        - apply eq_symmetry. eapply inversionSort.
+          apply (eq_typing eq).
+      }
+      destruct (uniqueness A3s2 A3s3) as [? eq'].
+      assert (Σ;;; Γ' |-i A4 : sSort s3).
+      { eapply type_Conv ; [ eassumption | idtac | eassumption ].
+        apply (eq_typing eq').
+      }
+      assert (Σ;;; Γ' |-i sSort s2 = sSort s3 : sSort (succ_sort s3)).
+      { eapply eq_conv.
+        - eassumption.
+        - apply eq_symmetry. eapply inversionSort.
+          apply (eq_typing eq').
+      }
+      apply type_heq_trans.
+      * eapply type_Conv.
+        -- eassumption.
+        -- apply type_heq ; eassumption.
+        -- apply cong_heq.
+           all: try (apply eq_reflexivity).
+           all: easy.
+      * apply type_heq_trans.
+        -- assumption.
+        -- eapply type_Conv.
+           ++ eassumption.
+           ++ apply type_heq ; eassumption.
+           ++ apply cong_heq.
+              all: try (apply eq_reflexivity).
+              all: easy.
 
     (* eq_beta *)
     + cheat.

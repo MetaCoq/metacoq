@@ -1247,18 +1247,10 @@ Proof.
       apply trans_Eq ; assumption.
 
     (* type_Refl *)
-    + (* Here we have two choices, either to translate h1 or not.
-         If we do translate it we get hypotheses on the sort of A,
-         but we also need to say that the translation we get from h2
-         is also living in this sort...
-         So it would be worth it only in the event that we return information
-         about the sort in type_translation.
-       *)
-      destruct (type_translation _ _ _ _ h2 _ hΓ) as [A' [u' hu']].
+    + destruct (type_translation _ _ _ _ h2 _ hΓ) as [A' [u' hu']].
       exists (sEq A' u' u'), (sRefl A' u').
       destruct hu' as [[[? ?] ?] hu'].
       destruct hΓ.
-      (* This step might no longer be necesary later *)
       destruct (istype_type hu').
       repeat split.
       * assumption.
@@ -1297,18 +1289,21 @@ Proof.
   - dependent destruction h.
 
     (* eq_reflexivity *)
-    + destruct (type_translation _ _ _ _ t _ hΓ) as [A' [u' hu]].
-      (* First we should dea with the different properties of heq.
-         This should come with the quoting of terms (the likes of
-         convinceme.v).
-         By the way, the very same terms should come in handy when dealing
-         with trel_to_heq.
-         By the way, maybe we can add transitivity as a constructor to
-         trel. It would be translated as well wouldn't it?
-         But maybe if would mess with inversions, so it might be a better
-         idea to leave it as it is.
-       *)
-      cheat.
+    + (* We translate the type first *)
+      destruct (type_translation _ _ _ _ hA _ hΓ) as [S [A'' hA'']].
+      assert (th : type_head (head (sSort s))) by constructor.
+      destruct (choose_type th hA'') as [T [[A' hA'] hh]].
+      clear hA'' A'' S.
+      destruct T ; inversion hh. subst. clear hh th.
+      (* The term *)
+      destruct (type_translation _ _ _ _ t _ hΓ) as [A'' [u'' hu'']].
+      destruct (change_type hu'' hA') as [u' hu'].
+      clear hu'' u'' A''.
+      exists A', A', u', u', (heq_refl s A' u').
+      destruct hu' as [[[? ?] ?] ?].
+      destruct hA' as [[[? ?] ?] ?].
+      repeat split ; try assumption.
+      apply type_heq_refl ; assumption.
 
     (* eq_symmetry *)
     + cheat.

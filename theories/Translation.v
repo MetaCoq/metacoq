@@ -1090,11 +1090,10 @@ with type_translation {Σ Γ A t} (h : Σ ;;; Γ |-x t : A)
                           {Γ'} (hΓ : Σ |--i Γ' # ⟦ Γ ⟧) {struct h} :
   ∑ A' t', Σ ;;;; Γ' |--- [t'] : A' # ⟦ Γ |--- [t] : A ⟧
 
-with eq_translation {Σ Γ s A u v} (h : Σ ;;; Γ |-x u = v : A)
-                    (hA : Σ ;;; Γ |-x A : sSort s)
+with eq_translation {Σ Γ A u v} (h : Σ ;;; Γ |-x u = v : A)
                     {Γ'} (hΓ : Σ |--i Γ' # ⟦ Γ ⟧) {struct h} :
-  ∑ A' A'' u' v' p',
-    eqtrans Σ Γ s A u v Γ' A' A'' u' v' p'
+  ∑ s' A' A'' u' v' p',
+    eqtrans Σ Γ s' A u v Γ' A' A'' u' v' p'
 .
 Proof.
   (** context_translation **)
@@ -1262,8 +1261,8 @@ Proof.
     + (* Translating the conversion *)
       assert (hs : Σ ;;; Γ |-x sSort s : sSort (succ_sort s)).
       { constructor. apply (XTyping.typing_wf h1). }
-      destruct (eq_translation _ _ _ _ _ _ e hs _ hΓ)
-        as [S' [S'' [A' [B' [p' h']]]]].
+      destruct (eq_translation _ _ _ _ _ e _ hΓ)
+        as [s' [S' [S'' [A' [B' [p' h']]]]]].
       destruct h' as [[[[[eΓ eS'] eS''] eA] eB] hp'].
       (* With this new version I no longer know of the shape of the types. *)
       (* assert (Ss : S' = sSort s) by (inversion eS'). subst. *)
@@ -1289,19 +1288,10 @@ Proof.
   - dependent destruction h.
 
     (* eq_reflexivity *)
-    + (* We translate the type first *)
-      destruct (type_translation _ _ _ _ hA _ hΓ) as [S [A'' hA'']].
-      assert (th : type_head (head (sSort s))) by constructor.
-      destruct (choose_type th hA'') as [T [[A' hA'] hh]].
-      clear hA'' A'' S.
-      destruct T ; inversion hh. subst. clear hh th.
-      (* The term *)
-      destruct (type_translation _ _ _ _ t _ hΓ) as [A'' [u'' hu'']].
-      destruct (change_type hu'' hA') as [u' hu'].
-      clear hu'' u'' A''.
-      exists A', A', u', u', (heq_refl s A' u').
-      destruct hu' as [[[? ?] ?] ?].
-      destruct hA' as [[[? ?] ?] ?].
+    + destruct (type_translation _ _ _ _ t _ hΓ) as [A' [u' hu']].
+      destruct hu' as [[[? ?] ?] hu'].
+      destruct (istype_type hu') as [s' hA'].
+      exists s', A', A', u', u', (heq_refl s' A' u').
       repeat split ; try assumption.
       apply type_heq_refl ; assumption.
 

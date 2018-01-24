@@ -437,9 +437,9 @@ Lemma type_heq_Eq :
     Σ ;;; Γ |-i pu : heq s1 A1 u1 A2 u2 ->
     Σ ;;; Γ |-i pv : heq s1 A1 v1 A2 v2 ->
     Σ ;;; Γ |-i heq_Eq s1 s2 A1 A2 u1 u2 v1 v2 pA pu pv
-             : heq (succ_sort (succ_sort s1))
-                   (sSort (succ_sort s1)) (sEq A1 u1 v1)
-                   (sSort (succ_sort s2)) (sEq A2 u2 v2).
+             : heq (succ_sort s1)
+                   (sSort s1) (sEq A1 u1 v1)
+                   (sSort s2) (sEq A2 u2 v2).
 Admitted.
 
 Lemma trelE_to_heq :
@@ -613,14 +613,14 @@ Proof.
        This could be solved by changing the corresponding trel case.
      *)
     admit.
-  - destruct (inversionEq h1) as [s1 [[[hA1 hu1] hv1] ?]].
-    destruct (inversionEq h2) as [s2 [[[hA2 hu2] hv2] ?]].
+  - destruct (inversionEq h1) as [s1 [[[hA1 hu1] hv1] eqA]].
+    destruct (inversionEq h2) as [s2 [[[hA2 hu2] hv2] eqB]].
     destruct (IHtrel1 _ _ _ hA1 hA2) as [sA [pA hpA]].
     destruct (IHtrel2 _ _ _ hu1 hu2) as [su [pu hpu]].
     destruct (IHtrel3 _ _ _ hv1 hv2) as [sv [pv hpv]].
-    exists (succ_sort (succ_sort s1)).
+    exists (succ_sort s1).
     exists (heq_Eq s1 s2 A1 A2 u1 u2 v1 v2 pA pu pv).
-    assert (Σ;;; Γ |-i sSort s1 : sSort (succ_sort s1)).
+    assert (s1s1 : Σ;;; Γ |-i sSort s1 : sSort (succ_sort s1)).
     { apply type_Sort. apply (typing_wf hA1). }
     destruct (istype_type hpA) as [? heqA].
     destruct (istype_type hpu) as [? hequ].
@@ -642,7 +642,7 @@ Proof.
           * eassumption.
       - apply eq_symmetry. apply inversionSort. assumption.
     }
-    assert (Σ;;; Γ |-i sSort s2 : sSort (succ_sort s1)).
+    assert (s2s1 : Σ;;; Γ |-i sSort s2 : sSort (succ_sort s1)).
     { apply (eq_typing s1s2). }
     assert (Σ;;; Γ |-i sSort sA = sSort (succ_sort s1) : sSort (succ_sort (succ_sort s1))).
     { apply eq_symmetry. apply inversionSort. assumption. }
@@ -665,6 +665,19 @@ Proof.
       - eassumption.
       - apply eq_symmetry. apply inversionSort. assumption.
     }
+    assert (Σ;;; Γ |-i A : sSort (succ_sort s1)).
+    { apply (eq_typing eqA). }
+    assert (Σ;;; Γ |-i B : sSort (succ_sort s2)).
+    { apply (eq_typing eqB). }
+    assert (s2s2 : Σ;;; Γ |-i sSort s2 : sSort (succ_sort s2)).
+    { apply type_Sort. apply (typing_wf hA1). }
+    destruct (uniqueness s2s2 s2s1) as [? eq4].
+    assert (Σ;;; Γ |-i B : sSort (succ_sort s1)).
+    { eapply type_Conv.
+      - eassumption.
+      - apply (eq_typing eq4).
+      - assumption.
+    }
     eapply type_Conv.
     + apply type_heq_Eq.
       * eapply type_Conv.
@@ -685,9 +698,18 @@ Proof.
         -- apply cong_heq.
            all: try (apply eq_reflexivity).
            all: easy.
-    + (* Something's wrong! *)
-      apply type_heq ; try assumption. all: admit.
-    + admit.
+    + apply type_heq ; assumption.
+    + apply cong_heq.
+      all: try (apply eq_reflexivity).
+      all: try assumption.
+      * apply type_Sort. apply (typing_wf hA1).
+      * eapply eq_conv.
+        -- eassumption.
+        -- eassumption.
+      * eapply type_Conv ; [ eassumption | idtac | eapply eq_symmetry ; eassumption ].
+        assumption.
+      * eapply type_Conv ; [ eassumption | idtac | eapply eq_symmetry ; eassumption ].
+        assumption.
   - admit.
   - admit.
   - admit.

@@ -1,7 +1,13 @@
 (*i camlp4deps: "parsing/grammar.cma" i*)
 (*i camlp4use: "pa_extend.cmp" i*)
 
+open Declarations
 open Ltac_plugin
+open Univ
+open Entries
+open Names
+open Redops
+open Genredexpr
 
 let contrib_name = "template-coq"
 
@@ -177,7 +183,7 @@ struct
   type quoted_int = Term.constr (* of type nat *)
   type quoted_bool = Term.constr (* of type bool *)
   type quoted_name = Term.constr (* of type Ast.name *)
-  type quoted_sort = Term.constr (* of type Ast.sort *)
+  type quoted_sort = Term.constr (* of type Ast.universe *)
   type quoted_cast_kind = Term.constr  (* of type Ast.cast_kind *)
   type quoted_kernel_name = Term.constr (* of type Ast.kername *)
   type quoted_inductive = Term.constr (* of type Ast.inductive *)
@@ -239,9 +245,8 @@ struct
   let kNative = r_reify "NativeCast"
   let kCast = r_reify "Cast"
   let kRevertCast = r_reify "RevertCast"
-  let sProp = r_reify "sProp"
-  let sSet = r_reify "sSet"
-  let sType = r_reify "sType"
+  let lProp = r_reify "lProp"
+  let lSet = r_reify "lSet"
   let sfProp = r_reify "InProp"
   let sfSet = r_reify "InSet"
   let sfType = r_reify "InType"
@@ -369,27 +374,32 @@ struct
   let string_of_level s =
     to_string (Univ.Level.to_string s)
 
-  let quote_level s =
-    match Univ.Level.var_index s
-    with Some x -> Term.mkApp (tLevelVar, [| int_to_nat x |])
-       | None -> Term.mkApp (tLevel, [| string_of_level s|])
+  let quote_level l =
+    if Level.is_prop l then lProp
+    else if Level.is_set l then lSet
+    else match Level.var_index l with
+         | Some x -> Term.mkApp (tLevelVar, [| int_to_nat x |])
+         | None -> Term.mkApp (tLevel, [| string_of_level l|])
 
   let quote_universe s =
-    match Univ.Universe.level s with
-      Some x -> string_of_level x
-    | None -> to_string ""
+    (* hack because we can't recover the list of level*int *)
+    (* todo : map on LSet is now exposed in Coq trunk, we should use it to remove this hack *)
+    let levels = LSet.elements (Universe.levels s) in
+    let levels = List.map (fun l -> let l' = quote_level l in
+                                    (* is indeed i always 0 or 1 ? *)
+                                    let b' = quote_bool (Universe.exists (fun (l2,i) -> Level.equal l l2 && i = 1) s) in
+                                    pair tlevel bool_type l' b')
+                          levels in
+    to_coq_list (prod tlevel bool_type) levels
 
-  let quote_univ_instance pu =
-    to_coq_list tlevel (Array.to_list (Array.map quote_level (Univ.Instance.to_array pu)))
+  (* todo : can be deduced from quote_level, hence shoud be in the Reify module *)
+  let quote_univ_instance u =
+    let arr = Univ.Instance.to_array u in
+    to_coq_list tlevel (CArray.map_to_list quote_level arr)
+
 
   let quote_sort s =
-    match s with
-      Term.Prop _ ->
-	if s = Term.prop_sort then sProp
-	else
-	  let _ = assert (s = Term.set_sort) in
-	  sSet
-    | Term.Type u -> Term.mkApp (sType, [| quote_universe u |])
+    quote_universe (Sorts.univ_of_sort s)
 
   let quote_sort_family = function
     | Sorts.InProp -> sfProp
@@ -865,7 +875,6 @@ struct
 	      in
 	      constants := Q.mkConstant (Q.quote_kn kn) pu ty result :: !constants
 	    in
-            let open Declarations in
             let inst = Q.quote_univ_instance (constant_instance cd.const_universes) in
             let ty, acc =
               let ty =
@@ -903,7 +912,6 @@ struct
                       (Q.mkIn x) !constants
 
   let quote_one_ind envA envC (mi:Entries.one_inductive_entry) =
-    let open Entries in
     let iname = Q.quote_ident mi.mind_entry_typename  in
     let arity = quote_term envA mi.mind_entry_arity in
     let templatePoly = Q.quote_bool mi.mind_entry_template in
@@ -941,7 +949,6 @@ struct
 
   let quote_mut_ind env (mi:Declarations.mutual_inductive_body) =
    let t= Discharge.process_inductive ([],Univ.AUContext.empty) (Names.Cmap.empty,Names.Mindmap.empty) mi in
-    let open Entries in
     let mf = Q.quote_mind_finiteness t.mind_entry_finite in
     let mp = (snd (quote_mind_params env (t.mind_entry_params))) in
     (* before quoting the types of constructors, we need to enrich the environment with the inductives *)
@@ -1088,52 +1095,92 @@ struct
       raise (Failure "non-value")
 
 
+
+  let from_coq_pair trm =
+    let (h,args) = app_full trm [] in
+    if Term.eq_constr h c_pair then
+      match args with
+	_ :: _ :: x :: y :: [] -> (x, y)
+      | _ -> bad_term trm
+    else
+      not_supported_verb trm "from_coq_pair"
+
+
+  let rec from_coq_list trm =
+    let (h,args) = app_full trm [] in
+    if Term.eq_constr h c_nil then []
+    else if Term.eq_constr h c_cons then
+      match args with
+	_ :: x :: xs :: _ -> x :: from_coq_list xs
+      | _ -> bad_term trm
+    else
+      not_supported_verb trm "from_coq_list"
+
+
   (* This code is taken from Pretyping, because it is not exposed globally *)
-  let get_universe evd (loc, s) =
-    let get_level () =
-      let names, _ = Global.global_universe_names () in
-      if CString.string_contains ~where:s ~what:"." then
-        match List.rev (CString.split '.' s) with
-        | [] -> CErrors.anomaly (str"Invalid universe name " ++ str s ++ str".")
-        | n :: dp ->
-	   let num = int_of_string n in
-	   let dp = Names.DirPath.make (List.map Names.Id.of_string dp) in
-	   let level = Univ.Level.make dp num in
-	   let evd =
-	     try Evd.add_global_univ evd level
-	     with UGraph.AlreadyDeclared -> evd
-	   in evd, level
-      else
-        try
-	  let level = Evd.universe_of_name evd s in
-	  evd, level
-        with Not_found ->
-	  let id = try Names.Id.of_string s with _ -> raise Not_found in
-          evd, snd (Names.Idmap.find id names)
-    in
-    try
-      let evd, level = get_level () in
-      evd, Sorts.sort_of_univ (Univ.Universe.make level)
-    with Not_found ->
-      let evd, t = Evarutil.new_Type (Global.env ()) evd in
-      evd, EConstr.ESorts.kind evd (EConstr.destSort evd t)
-  (* CErrors.user_err ?loc ~hdr:"interp_universe_level_name"
-   *             (Pp.(str "Undeclared universe: " ++ str s)) *)
+  (* the case for strict universe declarations was removed *)
+  let get_level evd s =
+    let names, _ = Global.global_universe_names () in
+    if CString.string_contains ~where:s ~what:"." then
+      match List.rev (CString.split '.' s) with
+      | [] -> CErrors.anomaly (str"Invalid universe name " ++ str s ++ str".")
+      | n :: dp ->
+	 let num = int_of_string n in
+	 let dp = DirPath.make (List.map Id.of_string dp) in
+	 let level = Univ.Level.make dp num in
+	 let evd =
+	   try Evd.add_global_univ evd level
+	   with UGraph.AlreadyDeclared -> evd
+	 in evd, level
+    else
+      try
+	let level = Evd.universe_of_name evd s in
+	evd, level
+      with Not_found ->
+	try
+	  let id = try Id.of_string s with _ -> raise Not_found in    (* Names.Id.of_string can fail if the name is not valid (utf8 ...) *)
+          evd, snd (Idmap.find id names)
+	with Not_found ->
+  	  Evd.new_univ_level_variable ~name:s Evd.UnivRigid evd
   (* end of code from Pretyping *)
 
-  let unquote_sort evdref trm =
+
+
+  let unquote_level evd trm (* of type level *) : Evd.evar_map * Univ.Level.t =
     let (h,args) = app_full trm [] in
-    if Term.eq_constr h sType then
+    if Term.eq_constr h lProp then
       match args with
-        x :: _ -> let evd, lvl = get_universe !evdref (None, unquote_string x) in
-                  evdref := evd; lvl
-      | _ -> bad_term_verb trm "no Type"
-    else if Term.eq_constr h sProp then
-      Term.prop_sort
-    else if Term.eq_constr h sSet then
-      Term.set_sort
+      | [] -> evd, Univ.Level.prop
+      | _ -> bad_term_verb trm "unquote_level"
+    else if Term.eq_constr h lSet then
+      match args with
+      | [] -> evd, Univ.Level.set
+      | _ -> bad_term_verb trm "unquote_level"
+    else if Term.eq_constr h tLevel then
+      match args with
+      | s :: [] -> get_level evd (unquote_string s)
+      | _ -> bad_term_verb trm "unquote_level"
+    else if Term.eq_constr h tLevelVar then
+      match args with
+      | l :: [] -> failwith "todo, I don't know how to create var level"
+      | _ -> bad_term_verb trm "unquote_level"
     else
-      raise (Failure "ill-typed, expected sort")
+      not_supported_verb trm "unquote_level"
+
+  let unquote_level_expr evd trm (* of type level *) b (* of type bool *) : Evd.evar_map * Univ.Universe.t=
+    let evd, l = unquote_level evd trm in
+    let u = Univ.Universe.make l in
+    if from_bool b then evd, Univ.Universe.super u
+    else evd, u
+
+  let unquote_universe evd trm (* of type universe *) =
+    let levels = List.map from_coq_pair (from_coq_list trm) in
+    let evd, u = match levels with
+      | [] -> CErrors.anomaly (str "Empty level in unquote_sort. Please fill a bug in Template Coq.")
+      | (l,b)::q -> List.fold_left (fun (evd,u) (l,b) -> let evd, u' = unquote_level_expr evd l b
+                                                         in evd, Univ.Universe.sup u u')
+                                   (unquote_level_expr evd l b) q
+    in evd, u
 
 
 
@@ -1156,25 +1203,6 @@ struct
     else
       bad_term_verb trm "non-constructor"
 
-  let rec from_coq_list trm =
-    let (h,args) = app_full trm [] in
-    if Term.eq_constr h c_nil then []
-    else if Term.eq_constr h c_cons then
-      match args with
-	_ :: x :: xs :: _ -> x :: from_coq_list xs
-      | _ -> bad_term trm
-    else
-      not_supported_verb trm "from_coq_list"
-
-  let from_coq_pair trm =
-    let (h,args) = app_full trm [] in
-    if Term.eq_constr h c_pair then
-      match args with
-	_ :: _ :: x :: y :: [] -> (x, y)
-      | _ -> bad_term trm
-    else
-      not_supported_verb trm "from_coq_pair"
-
 
   (** NOTE: Because the representation is lossy, I should probably
    ** come back through elaboration.
@@ -1195,7 +1223,7 @@ struct
       | _ -> raise (Failure "ill-typed")
     else if Term.eq_constr h tSort then
       match args with
-	x :: _ -> Term.mkSort (unquote_sort evdref x)
+	x :: _ -> let evd, u = unquote_universe !evdref x in evdref := evd; Term.mkType u
       | _ -> raise (Failure "ill-typed")
     else if Term.eq_constr h tCast then
       match args with
@@ -1299,8 +1327,6 @@ struct
 
 
   let denote_reduction_strategy (trm : quoted_reduction_strategy) : Redexpr.red_expr =
-    let open Redops in
-    let open Genredexpr in
     (* from g_tactic.ml4 *)
     let default_flags = Redops.make_red_flag [FBeta;FMatch;FFix;FCofix;FZeta;FDeltaBut []] in
     if Term.eq_constr trm tcbv then Cbv default_flags
@@ -1344,7 +1370,6 @@ struct
 
 
   let declare_inductive (env: Environ.env) (evm: Evd.evar_map) (body: Term.constr) : unit =
-  let open Entries in
   let (evm,body) = reduce_all env evm body in
   let (_,args) = app_full body [] in (* check that the first component is Build_mut_ind .. *)
   let evdref = ref evm in
@@ -1485,7 +1510,6 @@ struct
          let bypass = from_bool b in
          let (dp, nm) = split_name name in
          let entry = (* todo: this should be defined in the quoter module *)
-           let open Declarations in
            match Nametab.locate (Libnames.make_qualid dp nm) with
            | Globnames.ConstRef c ->
               let cd = Environ.lookup_constant c env in
@@ -1576,7 +1600,6 @@ let ltac_apply (f : Value.t) (args: Tacinterp.Value.t list) =
 
 let to_ltac_val c = Tacinterp.Value.of_constr c
 
-
 let check_inside_section () =
   if Lib.sections_are_opened () then
     CErrors.user_err ~hdr:"Quote" (Pp.str "You can not quote within a section.")
@@ -1609,6 +1632,7 @@ TACTIC EXTEND denote_term
          let evm = Proofview.Goal.sigma gl in
          let evdref = ref evm in
          let c = Denote.denote_term evdref (EConstr.to_constr evm c) in
+         (* TODO : not the right way of retype things *)
          let def' = Constrextern.extern_constr true env !evdref (EConstr.of_constr c) in
          let def = Constrintern.interp_constr env !evdref def' in
          Proofview.tclTHEN (Proofview.Unsafe.tclEVARS !evdref)
@@ -1621,10 +1645,10 @@ VERNAC COMMAND EXTEND Make_vernac CLASSIFIED AS SIDEFF
     | [ "Quote" "Definition" ident(name) ":=" constr(def) ] ->
       [ check_inside_section () ;
 	let (evm,env) = Lemmas.get_current_context () in
-	let def = Constrintern.interp_constr env evm def in
-	let trm = TermReify.quote_term env (fst def) in
+	let def,uctx = Constrintern.interp_constr env evm def in
+	let trm = TermReify.quote_term env def in
 	ignore(Declare.declare_definition ~kind:Decl_kinds.Definition name
-                                          (trm, Univ.ContextSet.empty)) ]
+                                          (trm, Evd.evar_universe_context_set uctx)) ]
 END;;
 
 VERNAC COMMAND EXTEND Make_vernac_reduce CLASSIFIED AS SIDEFF
@@ -1634,22 +1658,21 @@ VERNAC COMMAND EXTEND Make_vernac_reduce CLASSIFIED AS SIDEFF
 	let def, uctx = Constrintern.interp_constr env evm def in
         let evm = Evd.from_ctx uctx in
         let (evm,rd) = Tacinterp.interp_redexp env evm rd in
-	let (evm2,def) = reduce_all env evm ~red:rd def in
+	let (evm,def) = reduce_all env evm ~red:rd def in
 	let trm = TermReify.quote_term env def in
 	ignore(Declare.declare_definition ~kind:Decl_kinds.Definition
-                                          name (trm, Univ.ContextSet.empty)) ]
+                                          name (trm, Evd.universe_context_set evm)) ]
 END;;
 
 VERNAC COMMAND EXTEND Make_recursive CLASSIFIED AS SIDEFF
     | [ "Quote" "Recursively" "Definition" ident(name) ":=" constr(def) ] ->
       [ check_inside_section () ;
 	let (evm,env) = Lemmas.get_current_context () in
-	let def = Constrintern.interp_constr env evm def in
-	let trm = TermReify.quote_term_rec env (fst def) in
+	let def, uctx = Constrintern.interp_constr env evm def in
+	let trm = TermReify.quote_term_rec env def in
 	ignore(Declare.declare_definition
 	  ~kind:Decl_kinds.Definition name
-	  (trm, (* No new universe constraints can be generated by typing the AST *)
-           Univ.ContextSet.empty)) ]
+	  (trm, Evd.evar_universe_context_set uctx)) ]
 END;;
 
 VERNAC COMMAND EXTEND Unquote_vernac CLASSIFIED AS SIDEFF
@@ -1680,22 +1703,11 @@ VERNAC COMMAND EXTEND Run_program CLASSIFIED AS SIDEFF
 END;;
 
 VERNAC COMMAND EXTEND Make_tests CLASSIFIED AS QUERY
-(*
-    | [ "Make" "Definitions" tactic(t) ] ->
-      [ (** [t] returns a [list (string * term)] **)
-	assert false ]
-*)
     | [ "Test" "Quote" constr(c) ] ->
       [ check_inside_section () ;
 	let (evm,env) = Lemmas.get_current_context () in
 	let c = Constrintern.interp_constr env evm c in
 	let result = TermReify.quote_term env (fst c) in
-(* DEBUGGING
-	let back = TermReify.denote_term result in
-	Format.eprintf "%a\n" pp_constr result ;
-	Format.eprintf "%a\n" pp_constr back ;
-	assert (Term.eq_constr c back) ;
-*)
         Feedback.msg_notice (Printer.pr_constr result) ;
 	() ]
 END;;

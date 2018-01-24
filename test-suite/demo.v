@@ -80,7 +80,7 @@ Make Definition two_from_syntax := (Ast.tApp (Ast.tConstruct (Ast.mkInd "Coq.Ini
    (Ast.tApp (Ast.tConstruct (Ast.mkInd "Coq.Init.Datatypes.nat" 0) 1 nil)
       (Ast.tConstruct (Ast.mkInd "Coq.Init.Datatypes.nat" 0) 0 nil :: nil) :: nil)).
 
-Quote Recursively Definition plus_syntax := plus.
+Quote Recursively Definition plus_synax := plus.
 
 Quote Recursively Definition mult_syntax := mult.
 
@@ -98,7 +98,7 @@ Require Import Template.Ast.
 Definition one_i : one_inductive_entry :=
 {|
   mind_entry_typename := "demoBool";
-  mind_entry_arity := tSort sSet;
+  mind_entry_arity := tSort uSet;
   mind_entry_template := false;
   mind_entry_consnames := ["demoTrue"; "demoFalse"];
   mind_entry_lc := [tRel 1; tRel 1];
@@ -107,7 +107,7 @@ Definition one_i : one_inductive_entry :=
 Definition one_i2 : one_inductive_entry :=
 {|
   mind_entry_typename := "demoBool2";
-  mind_entry_arity := tSort sSet;
+  mind_entry_arity := tSort uSet;
   mind_entry_template := false;
   mind_entry_consnames := ["demoTrue2"; "demoFalse2"];
   mind_entry_lc := [tRel 0; tRel 0];
@@ -133,7 +133,7 @@ tProd nAnon A B.
 Definition one_list_i : one_inductive_entry :=
 {|
   mind_entry_typename := "demoList";
-  mind_entry_arity := tSort sSet;
+  mind_entry_arity := tSort uSet;
   mind_entry_template := false;
   mind_entry_consnames := ["demoNil"; "demoCons"];
   mind_entry_lc := [tApp (tRel 1) [tRel 0]; 
@@ -144,7 +144,7 @@ Definition mut_list_i : mutual_inductive_entry :=
 {|
   mind_entry_record := None;
   mind_entry_finite := Finite;
-  mind_entry_params := [("A", LocalAssum (tSort sSet))];
+  mind_entry_params := [("A", LocalAssum (tSort uSet))];
   mind_entry_inds := [one_list_i];
   mind_entry_polymorphic := false;
   mind_entry_private := None;
@@ -158,7 +158,7 @@ Make Inductive mut_list_i.
 Definition one_pt_i : one_inductive_entry :=
 {|
   mind_entry_typename := "Point";
-  mind_entry_arity := tSort sSet;
+  mind_entry_arity := tSort uSet;
   mind_entry_template := false;
   mind_entry_consnames := ["mkPoint"];
   mind_entry_lc := [
@@ -169,7 +169,7 @@ Definition mut_pt_i : mutual_inductive_entry :=
 {|
   mind_entry_record := Some (Some "pp");
   mind_entry_finite := BiFinite;
-  mind_entry_params := [("A", LocalAssum (tSort sSet))];
+  mind_entry_params := [("A", LocalAssum (tSort uSet))];
   mind_entry_inds := [one_pt_i];
   mind_entry_polymorphic := false;
   mind_entry_private := None;
@@ -317,7 +317,6 @@ Run TemplateProgram (tmBind (tmEval hnf (3 + 3)) tmPrint).
 
 
 
-
 (** Primitive Projections. *)
 
 Set Primitive Projections.
@@ -337,3 +336,21 @@ Make Definition x := (tProj (mkInd "prod'" 0, 2, 1)
            [tApp (tConstruct (mkInd "Coq.Init.Datatypes.nat" 0) 1 nil)
               [tApp (tConstruct (mkInd "Coq.Init.Datatypes.nat" 0) 1 nil)
                  [tConstruct (mkInd "Coq.Init.Datatypes.nat" 0) 0 nil]]]]])).
+
+
+(** Universes *)
+
+Set Printing Universes.
+Test Quote Type.
+Test Quote Set.
+Test Quote Prop.
+
+Inductive T : Type :=
+  | toto : Type -> T.
+Quote Recursively Definition TT := T.
+Make Definition t := (tSort ([(Level "Top.20000", false)])).
+Make Definition t' := (tSort ([(Level "Top.20000", false); (Level "Top.20001", true)])).
+Make Definition myProp := (tSort [(lProp, false)]).
+Make Definition mySucProp := (tSort [(lProp, true)]).
+Make Definition mySet := (tSort [(lSet, false)]).
+Print Universes.

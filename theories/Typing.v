@@ -58,12 +58,40 @@ Proof.
     now rewrite <- IHl.
 Qed.
 
-Definition succ_sort s :=
-  match s with
-  | sProp => sType "Set+1"
-  | sSet => sType "Set+1"
-  | sType n => sType "large"
+Definition is_prop_level (l : level) : bool :=
+  match l with
+  | lProp => true
+  | _ => false
   end.
+
+Definition is_set_level (l : level) : bool :=
+  match l with
+  | lSet => true
+  | _ => false
+  end.
+
+Definition is_type_level (l : level) : bool :=
+  match l with
+  | Level _ | LevelVar _ => true
+  | _ => false
+  end.
+
+
+Definition is_prop : universe -> bool :=
+  List.forallb (fun '(l, b) => negb b && is_prop_level l).
+
+Definition is_set : universe -> bool :=
+  List.forallb (fun '(l, b) => negb b && is_set_level l).
+
+Definition is_type u : bool :=
+  existsb (fun '(l, b) => b || is_type_level l) u.
+
+Definition succ_universe (u : universe) :=
+  if is_prop u then [(lProp, true)]
+  else if is_set u then [(lSet, true)]
+  else if List.forallb (fun '(l, b) => negb b) u
+       then List.map (fun '(l, b) => (l, true)) u
+  else [(Level "large", false)].
 
 (** Typing derivations *)
 
@@ -184,16 +212,8 @@ Next Obligation.
   simpl. rewrite H''. reflexivity.
 Qed.
 
-Definition max_sort (s1 s2 : sort) : sort :=
-  match s1, s2 with
-  | _, sProp => sProp
-  | sProp, sSet => sSet
-  | sSet, sSet => sSet
-  | sType i, sSet => s1
-  | sType p, sType q => sType p (* FIXME: Universes *)
-  | sProp, sType _ => s2
-  | sSet, sType _ => s2
-  end.
+Definition max_universe (u1 u2 : universe) : universe :=
+  (u1 ++ u2)%list.
 
 Fixpoint mktApp t l :=
   match l with
@@ -315,22 +335,34 @@ Section Forallb2.
     end.
 End Forallb2.
 
-Definition eq_sort s s' :=
-  match s, s' with
-  | sSet, sSet => true
-  | sProp, sProp => true
-  | sType p, sType q => if string_dec p q then true else false
-  | _, _ => false
+Definition level_dec (l1 l2 : level) : {l1 = l2}+{l1 <> l2}.
+  decide equality. apply string_dec. apply eq_nat_dec.
+Defined.
+
+Definition eq_level (l1 l2 : level) : bool
+  := if level_dec l1 l2 then true else false.
+
+Definition eq_level_expression (e1 e2 : level * bool) : bool
+  := eq_level (fst e1) (fst e2) && eqb (snd e1) (snd e2).
+
+Definition eq_universe u1 u2 :=
+  (is_prop u1 && is_prop u2) ||
+  (is_set u1 && is_set u2) ||
+  (forallb (fun e => existsb (eq_level_expression e) u2) u1
+           && forallb (fun e => existsb (eq_level_expression e) u1) u2).
+
+Definition leq_level_expression (e1 e2 : level * bool) :=
+  (eq_level_expression e1 e2) ||
+  match e1, e2 with
+  | (lProp, false), _ => true
+  | (lSet, false), (l,_) => is_type_level l
+  (* | sType p, sType q => true (* Pos.leb p q  *)(* FIXME incorrect *) *)
+  | _, _ => true (* FIXME : complete *)
   end.
 
-Definition leq_sort s s' :=
-  match s, s' with
-  | sProp, _ => true
-  | sSet, sSet => true
-  | sSet, sType _ => true
-  | sType p, sType q => true (* Pos.leb p q  *)(* FIXME incorrect *)
-  | _, _ => false
-  end.
+
+Definition leq_universe u1 u2 :=
+  forallb (fun e => existsb (leq_level_expression e) u2) u1.
 
 Definition eq_string s s' :=
   if string_dec s s' then true else false.
@@ -355,7 +387,7 @@ Fixpoint eq_term (t u : term) {struct t} :=
   | tMeta n, tMeta n' => eq_nat n n'
   | tEvar ev args, tEvar ev' args' => eq_evar ev ev' && forallb2 eq_term args args'
   | tVar id, tVar id' => eq_string id id'
-  | tSort s, tSort s' => eq_sort s s'
+  | tSort s, tSort s' => eq_universe s s'
   | tApp f args, tApp f' args' => eq_term f f' && forallb2 eq_term args args'
   | tCast t _ v, tCast u _ v' => eq_term t u && eq_term v v'
   | tConst c u, tConst c' u' => eq_constant c c' (* TODO Universes *)
@@ -384,7 +416,7 @@ Fixpoint leq_term (t u : term) {struct t} :=
   | tMeta n, tMeta n' => eq_nat n n'
   | tEvar ev args, tEvar ev' args' => eq_nat ev ev' && forallb2 eq_term args args'
   | tVar id, tVar id' => eq_string id id'
-  | tSort s, tSort s' => leq_sort s s'
+  | tSort s, tSort s' => leq_universe s s'
   | tApp f args, tApp f' args' => eq_term f f' && forallb2 eq_term args args'
   | tCast t _ v, tCast u _ v' => leq_term t u
   | tConst c u, tConst c' u' => eq_constant c c' (* TODO Universes *)
@@ -439,7 +471,7 @@ Definition types_of_case ind u pars p decl :=
         it_mkLambda_or_LetIn args
           (tProd (nNamed decl.(ind_name))
                  (mktApp (tInd ind u) (pars ++ rels_of args 0))
-                 (tSort (sType "large")))
+                 (tSort [(Level "large", false)]))
     in
     let brs :=
       List.map (fun '(id, t, ar) => (ar, substl (p :: pars) t)) decl.(ind_ctors)
@@ -447,12 +479,11 @@ Definition types_of_case ind u pars p decl :=
   | None => None
   end.
 
-Definition allowed_elim (s : sort) (f : sort_family) :=
-  match s, f with
-  | sProp, InProp => true
-  | sSet, InSet => true
-  | sType _, InType => true
-  | _, _ => false
+Definition allowed_elim u (f : sort_family) :=
+  match f with
+  | InProp => is_prop u
+  | InSet => is_set u
+  | InType => is_type u
   end.
 
 Record squash (A : Set) : Prop := { _ : A }.
@@ -462,7 +493,7 @@ Inductive typing (Σ : global_context) (Γ : context) : term -> term -> Set :=
     Σ ;;; Γ |-- (tRel n) : lift0 (S n) (safe_nth Γ (exist _ n isdecl)).(decl_type)
 
 | type_Sort s :
-    Σ ;;; Γ |-- (tSort s) : tSort (succ_sort s)
+    Σ ;;; Γ |-- (tSort s) : tSort (succ_universe s)
 
 | type_Cast c k t s :
     Σ ;;; Γ |-- t : tSort s ->
@@ -472,7 +503,7 @@ Inductive typing (Σ : global_context) (Γ : context) : term -> term -> Set :=
 | type_Prod n t b s1 s2 :
     Σ ;;; Γ |-- t : tSort s1 ->
     Σ ;;; Γ ,, vass n t |-- b : tSort s2 ->
-    Σ ;;; Γ |-- (tProd n t b) : tSort (max_sort s1 s2)
+    Σ ;;; Γ |-- (tProd n t b) : tSort (max_universe s1 s2)
 
 | type_Lambda n n' t b s1 bty :
     Σ ;;; Γ |-- t : tSort s1 ->
@@ -919,7 +950,7 @@ Proof. intros. now apply H. Qed.
 Lemma env_prop_sigma P : env_prop P ->
   forall Σ (wf : wf Σ),
     Forall_decls_typing (fun (Σ0 : global_context) (t0 ty : term) => P Σ0 [] t0 ty) Σ.
-Proof. intros. eapply H. apply wf. apply (type_Sort Σ [] sSet). Qed.
+Proof. intros. eapply H. apply wf. apply (type_Sort Σ [] uSet). Qed.
 
 (** An induction principle ensuring the Σ declarations enjoy the same properties.
 
@@ -930,19 +961,19 @@ Lemma typing_ind_env :
     (forall Σ (wfΣ : wf Σ) (Γ : context) (n : nat) (isdecl : n < #|Γ|),
         P Σ Γ (tRel n)
           (lift0 (S n) (decl_type (safe_nth Γ (exist (fun n0 : nat => n0 < #|Γ|) n isdecl))))) ->
-    (forall Σ (wfΣ : wf Σ) (Γ : context) (s : sort), P Σ Γ (tSort s) (tSort (succ_sort s))) ->
-    (forall Σ (wfΣ : wf Σ) (Γ : context) (c : term) (k : cast_kind) (t : term) (s : sort),
+    (forall Σ (wfΣ : wf Σ) (Γ : context) (s : universe), P Σ Γ (tSort s) (tSort (succ_universe s))) ->
+    (forall Σ (wfΣ : wf Σ) (Γ : context) (c : term) (k : cast_kind) (t : term) (s : universe),
         Σ;;; Γ |-- t : tSort s -> P Σ Γ t (tSort s) -> Σ;;; Γ |-- c : t -> P Σ Γ c t -> P Σ Γ (tCast c k t) t) ->
-    (forall Σ (wfΣ : wf Σ) (Γ : context) (n : name) (t b : term) (s1 s2 : sort),
+    (forall Σ (wfΣ : wf Σ) (Γ : context) (n : name) (t b : term) (s1 s2 : universe),
         Σ;;; Γ |-- t : tSort s1 ->
         P Σ Γ t (tSort s1) ->
         Σ;;; Γ,, vass n t |-- b : tSort s2 ->
-        P Σ (Γ,, vass n t) b (tSort s2) -> P Σ Γ (tProd n t b) (tSort (max_sort s1 s2))) ->
-    (forall Σ (wfΣ : wf Σ) (Γ : context) (n n' : name) (t b : term) (s1 : sort) (bty : term),
+        P Σ (Γ,, vass n t) b (tSort s2) -> P Σ Γ (tProd n t b) (tSort (max_universe s1 s2))) ->
+    (forall Σ (wfΣ : wf Σ) (Γ : context) (n n' : name) (t b : term) (s1 : universe) (bty : term),
         Σ;;; Γ |-- t : tSort s1 ->
         P Σ Γ t (tSort s1) ->
         Σ;;; Γ,, vass n t |-- b : bty -> P Σ (Γ,, vass n t) b bty -> P Σ Γ (tLambda n t b) (tProd n' t bty)) ->
-    (forall Σ (wfΣ : wf Σ) (Γ : context) (n : name) (b b_ty b' : term) (s1 : sort) (b'_ty : term),
+    (forall Σ (wfΣ : wf Σ) (Γ : context) (n : name) (b b_ty b' : term) (s1 : universe) (b'_ty : term),
         Σ;;; Γ |-- b_ty : tSort s1 ->
         P Σ Γ b_ty (tSort s1) ->
         Σ;;; Γ |-- b : b_ty ->
@@ -969,7 +1000,7 @@ Lemma typing_ind_env :
         declared_inductive Σ ind decl' ->
         ind_npars decl = npar ->
         let pars := firstn npar args in
-        forall (pty : term) (s : sort) (btys : list (nat * term)),
+        forall (pty : term) (s : universe) (btys : list (nat * term)),
         types_of_case ind u pars p decl' = Some (pty, s, btys) ->
         Exists (fun sf : sort_family => allowed_elim s sf = true) (ind_kelim decl') ->
         Σ;;; Γ |-- p : pty ->
@@ -990,7 +1021,7 @@ Lemma typing_ind_env :
        (forall Σ (wfΣ : wf Σ) (Γ : context) (mfix : list (def term)) (n : nat) (isdecl : n < #|mfix|),
         let ty := dtype (safe_nth mfix (exist (fun n0 : nat => n0 < #|mfix|) n isdecl)) in
         P Σ Γ (tCoFix mfix n) ty) ->
-       (forall Σ (wfΣ : wf Σ) (Γ : context) (t A B : term) (s : sort),
+       (forall Σ (wfΣ : wf Σ) (Γ : context) (t A B : term) (s : universe),
         Σ;;; Γ |-- t : A ->
                        P Σ Γ t A -> Σ;;; Γ |-- B : tSort s -> P Σ Γ B (tSort s) -> Σ;;; Γ |-- A <= B -> P Σ Γ t B) ->
 
@@ -1019,7 +1050,7 @@ Proof.
   constructor.
   inversion_clear wfΣ.
   constructor.
-  specialize (IH (existT _ Σ (existT _ H15 (existT _ Γ (existT _ (tSort sProp) (existT _ (tSort (succ_sort sProp)) (type_Sort _ _ sProp))))))). 
+  specialize (IH (existT _ Σ (existT _ H15 (existT _ Γ (existT _ (tSort uProp) (existT _ (tSort (succ_universe uProp)) (type_Sort _ _ uProp))))))).
   simpl in IH. forward IH. constructor 1. simpl. omega.
   apply IH.
   destruct g; simpl.
@@ -1065,6 +1096,6 @@ Proof.
   unshelve eapply H15; simpl; auto with arith.
   setoid_rewrite Nat.max_comm at 2.
   rewrite Nat.max_comm, <- Nat.max_assoc. auto with arith.
-  simpl in H15. specialize (H15 [] _ _ (type_Sort _ _ sProp)).
+  simpl in H15. specialize (H15 [] _ _ (type_Sort _ _ uProp)).
   simpl in H15. forward H15; auto. apply H15.
 Qed.

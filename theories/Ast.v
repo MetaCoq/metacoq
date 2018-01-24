@@ -1,18 +1,20 @@
 Require Import Coq.Strings.String.
 Require Import Coq.PArith.BinPos.
+Require Import List. Import ListNotations.
 
-Definition universe := string.
 Definition ident := string. (* e.g. nat *)
 Definition kername := string. (* e.g. Coq.Init.Datatypes.nat *)
 
+
 Inductive level : Set :=
-  Level (_ : string)
+| lProp
+| lSet
+| Level (_ : string)
 | LevelVar (_ : nat) (* are these debruijn indices ? *).
 
-Inductive sort : Set :=
-| sProp
-| sSet
-| sType (_ : universe).
+Definition universe := list (level * bool). (* true if it is level+1 *)
+Definition uProp : universe := [(lProp, false)].
+Definition uSet : universe := [(lSet, false)].
 
 Record ind : Set := {} .
 
@@ -51,7 +53,7 @@ Inductive term : Set :=
 | tVar       : ident -> term (** For free variables (e.g. in a goal) *)
 | tMeta      : nat -> term   (** NOTE: this can go away *)
 | tEvar      : nat -> list term -> term
-| tSort      : sort -> term
+| tSort      : universe -> term
 | tCast      : term -> cast_kind -> term -> term
 | tProd      : name -> term (** the type **) -> term -> term
 | tLambda    : name -> term (** the type **) -> term -> term
@@ -221,4 +223,3 @@ Inductive TemplateMonad : Type -> Prop :=
 (*   := fun s t => tmBind (tmBind (tmUnquote t) *)
 (*                             (fun t => tmEval s (projT2 t))) *)
 (*                     tmQuoteTerm. *)
-

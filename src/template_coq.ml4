@@ -1,6 +1,7 @@
 (*i camlp4deps: "parsing/grammar.cma" i*)
 (*i camlp4use: "pa_extend.cmp" i*)
 
+open Univ
 open Term
 open Ast0
 open Reify
@@ -18,7 +19,7 @@ struct
   type t = term
   type quoted_ident = char list
   type quoted_name = name
-  type quoted_sort = sort
+  type quoted_sort = universe
   type quoted_sort_family = sort_family
   type quoted_cast_kind = cast_kind
   type quoted_kernel_name = char list
@@ -54,12 +55,29 @@ struct
 
   let quote_bool x = x
 
+  let quote_level l =
+    if Level.is_prop l then Coq_lProp
+    else if Level.is_set l then Coq_lSet
+    else match Level.var_index l with
+         | Some x -> LevelVar (quote_int x)
+         | None -> Level (quote_string (Level.to_string l))
+
+  let quote_universe s : universe =
+    (* hack because we can't recover the list of level*int *)
+    (* todo : map on LSet is now exposed in Coq trunk, we should use it to remove this hack *)
+    let levels = LSet.elements (Universe.levels s) in
+    List.map (fun l -> let l' = quote_level l in
+                       (* is indeed i always 0 or 1 ? *)
+                       let b' = quote_bool (Universe.exists (fun (l2,i) -> Level.equal l l2 && i = 1) s) in
+                       (l', b'))
+             levels
+
+  let quote_univ_instance u =
+    let arr = Univ.Instance.to_array u in
+    CArray.map_to_list quote_level arr
+
   let quote_sort s =
-    let open Sorts in
-    match s with
-    | Prop Null -> Coq_sProp
-    | Prop Pos -> Coq_sSet
-    | Type i -> Coq_sType [] (* FIXME (pos_of_universe i) *)
+    quote_universe (Sorts.univ_of_sort s)
 
   let quote_sort_family s =
     match s with
@@ -72,14 +90,14 @@ struct
     | REVERTcast -> RevertCast
     | NATIVEcast -> NativeCast
     | VMcast -> VmCast
-              
+
   let quote_kn kn = quote_string (Names.string_of_kn kn)
   let quote_inductive (kn, i) = Coq_mkInd (kn, i)
   let quote_proj ind p a = ((ind,p),a)
 
   let mkAnon = Coq_nAnon
   let mkName i = Coq_nNamed i
-                  
+
   let mkRel n = Coq_tRel n
   let mkVar id = Coq_tVar id
   let mkMeta n = Coq_tMeta n
@@ -162,17 +180,6 @@ struct
       | Left ty -> (id, LocalAssum ty)
       | Right trm -> (id, LocalDef trm)
     in List.map map l
-
-  let quote_univ_level l =
-    match Univ.Level.var_index l with
-    | Some var -> LevelVar (quote_int var)
-    | None ->
-       let str = Univ.Level.to_string l in
-       Level (quote_string str)
-
-  let quote_univ_instance u =
-    let arr = Univ.Instance.to_array u in
-    CArray.map_to_list quote_univ_level arr
 
   let quote_one_inductive_entry (id, ar, b, consnames, constypes) =
     { mind_entry_typename = id;

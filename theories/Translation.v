@@ -1586,7 +1586,65 @@ Proof.
               all: easy.
 
     (* eq_beta *)
-    + cheat.
+    + (* Translation of the domain *)
+      destruct (type_translation _ _ _ _ t0 _ hΓ) as [S [A'' hA'']].
+      assert (th : type_head (head (sSort s1))) by constructor.
+      destruct (choose_type th hA'') as [T' [[A' hA'] hh]].
+      clear hA'' A'' S.
+      destruct T' ; inversion hh. subst. clear hh th.
+      (* Translation of the codomain *)
+      destruct (type_translation _ _ _ _ t1 _ (trans_snoc hΓ hA'))
+        as [S' [B'' hB'']].
+      assert (th : type_head (head (sSort s2))) by constructor.
+      destruct (choose_type th hB'') as [T' [[B' hB'] hh]].
+      clear hB'' B'' S'.
+      destruct T' ; inversion hh. subst. clear hh th.
+      (* Translation of the in-term *)
+      destruct (type_translation _ _ _ _ t2 _ (trans_snoc hΓ hA'))
+        as [T' [t'' ht'']].
+      destruct (change_type ht'' hB') as [t' ht'].
+      clear ht'' T' t''.
+      (* Translation of the argument *)
+      destruct (type_translation _ _ _ _ t3 _ hΓ) as [A'' [u'' hu'']].
+      destruct (change_type hu'' hA') as [u' hu'].
+      clear hu'' A'' u''.
+      (* Now we conclude using reflexivity *)
+      exists s2, (B'{0 := u'}), (B'{0 := u'}).
+      exists (sApp (sLambda n A' B' t') n A' B' u'), (t'{0 := u'}).
+      exists (heq_refl s2 (B'{0 := u'}) (t'{0 := u'})).
+      destruct hA' as [[[? ?] ?] ?].
+      destruct hB' as [[[? ?] ?] ?].
+      destruct ht' as [[[? ?] ?] ?].
+      destruct hu' as [[[? ?] ?] ?].
+      repeat split.
+      * assumption.
+      * eapply inrel_subst ; assumption.
+      * eapply inrel_subst ; assumption.
+      * constructor ; try assumption.
+        constructor ; assumption.
+      * eapply inrel_subst ; assumption.
+      * eapply type_Conv.
+        -- apply type_heq_refl.
+           ++ change (sSort s2) with ((sSort s2){0 := u'}).
+              eapply typing_subst ; eassumption.
+           ++ eapply typing_subst ; eassumption.
+        -- apply type_heq.
+           ++ change (sSort s2) with ((sSort s2){0 := u'}).
+              eapply typing_subst ; eassumption.
+           ++ change (sSort s2) with ((sSort s2){0 := u'}).
+              eapply typing_subst ; eassumption.
+           ++ eapply type_App. all: try eassumption.
+              eapply type_Lambda. all: eassumption.
+           ++ eapply typing_subst ; eassumption.
+        -- apply cong_heq.
+           all: try (apply eq_reflexivity).
+           ++ apply type_Sort. eapply (typing_wf _).
+           ++ change (sSort s2) with ((sSort s2){0 := u'}).
+              eapply typing_subst ; eassumption.
+           ++ change (sSort s2) with ((sSort s2){0 := u'}).
+              eapply typing_subst ; eassumption.
+           ++ apply eq_symmetry. eapply eq_beta ; eassumption.
+           ++ eapply typing_subst ; eassumption.
 
     (* eq_conv *)
     + cheat.

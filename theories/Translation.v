@@ -739,7 +739,27 @@ Proof.
       * eapply eq_conv ; eassumption.
   - admit.
   - admit.
-  - admit.
+  - destruct (inversionRefl h1) as [s1 [[hA1 hu1] eqA]].
+    destruct (inversionRefl h2) as [s2 [[hA2 hu2] eqB]].
+    destruct (IHtrel1 _ _ _ hA1 hA2) as [sA [pA hpA]].
+    destruct (IHtrel2 _ _ _ hu1 hu2) as [su [pu hpu]].
+    exists s1, (heq_Refl s1 s2 A1 A2 u1 u2 pA pu).
+    assert (Σ;;; Γ |-i sSort s1 : sSort (succ_sort s1)).
+    { apply type_Sort. apply (typing_wf hA1). }
+    destruct (istype_type hpA) as [? heqA].
+    destruct (inversionHeq heqA) as [? ?].
+    assert (Σ;;; Γ |-i sSort s2 : sSort (succ_sort s1)).
+    { admit. }
+    eapply type_Conv.
+    + apply type_heq_Refl.
+      * eapply type_Conv.
+        -- eassumption.
+        -- apply type_heq. all: try assumption.
+        -- admit.
+      * admit.
+    + admit.
+    + admit.
+      Unshelve. admit.
 Admitted.
 
 Corollary trel_to_heq :

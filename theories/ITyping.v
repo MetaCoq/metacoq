@@ -675,7 +675,29 @@ Proof.
       eapply eq_conv ; eassumption.
 Defined.
 
-(* Lemma inversionRefl *)
+Lemma inversionRefl :
+  forall {Σ Γ A u T},
+    Σ ;;; Γ |-i sRefl A u : T ->
+    ∑ s,
+      (Σ ;;; Γ |-i A : sSort s) *
+      (Σ ;;; Γ |-i u : A) *
+      (Σ ;;; Γ |-i sEq A u u = T : sSort s).
+Proof.
+  intros Σ Γ A u T h.
+  dependent induction h.
+
+  - exists s. repeat split ; try easy.
+    apply eq_reflexivity. apply type_Eq ; assumption.
+
+  - destruct (IHh1 _ _ eq_refl) as [s' [[hA hu] eq]].
+    exists s'. repeat split ; try easy.
+    destruct (eq_typing e) as [i1 _].
+    destruct (eq_typing eq) as [_ i2].
+    destruct (uniqueness i1 i2).
+    eapply eq_transitivity.
+    + eassumption.
+    + eapply eq_conv ; eassumption.
+Defined.
 
 Lemma inversionJ :
   forall {Σ Γ A u P w v p T},

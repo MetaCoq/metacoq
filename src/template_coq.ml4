@@ -1,6 +1,7 @@
 (*i camlp4deps: "parsing/grammar.cma" i*)
 (*i camlp4use: "pa_extend.cmp" i*)
 
+open Univ
 open Term
 open Ast0
 open Reify
@@ -55,15 +56,13 @@ struct
   let quote_bool x = x
 
   let quote_level l =
-    let open Univ.Level in
-    if is_prop l then Coq_lProp
-    else if is_set l then Coq_lSet
-    else match var_index l with
+    if Level.is_prop l then Coq_lProp
+    else if Level.is_set l then Coq_lSet
+    else match Level.var_index l with
          | Some x -> LevelVar (quote_int x)
-         | None -> Level (quote_string (to_string l))
+         | None -> Level (quote_string (Level.to_string l))
 
   let quote_universe s : universe =
-    let open Univ in
     (* hack because we can't recover the list of level*int *)
     (* todo : map on LSet is now exposed in Coq trunk, we should use it to remove this hack *)
     let levels = LSet.elements (Universe.levels s) in
@@ -91,14 +90,14 @@ struct
     | REVERTcast -> RevertCast
     | NATIVEcast -> NativeCast
     | VMcast -> VmCast
-              
+
   let quote_kn kn = quote_string (Names.string_of_kn kn)
   let quote_inductive (kn, i) = Coq_mkInd (kn, i)
   let quote_proj ind p a = ((ind,p),a)
 
   let mkAnon = Coq_nAnon
   let mkName i = Coq_nNamed i
-                  
+
   let mkRel n = Coq_tRel n
   let mkVar id = Coq_tVar id
   let mkMeta n = Coq_tMeta n

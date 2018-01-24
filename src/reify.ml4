@@ -1,7 +1,13 @@
 (*i camlp4deps: "parsing/grammar.cma" i*)
 (*i camlp4use: "pa_extend.cmp" i*)
 
+open Declarations
 open Ltac_plugin
+open Univ
+open Entries
+open Names
+open Redops
+open Genredexpr
 
 let contrib_name = "template-coq"
 
@@ -369,15 +375,13 @@ struct
     to_string (Univ.Level.to_string s)
 
   let quote_level l =
-    let open Univ.Level in
-    if is_prop l then lProp
-    else if is_set l then lSet
-    else match var_index l with
+    if Level.is_prop l then lProp
+    else if Level.is_set l then lSet
+    else match Level.var_index l with
          | Some x -> Term.mkApp (tLevelVar, [| int_to_nat x |])
          | None -> Term.mkApp (tLevel, [| string_of_level l|])
 
   let quote_universe s =
-    let open Univ in
     (* hack because we can't recover the list of level*int *)
     (* todo : map on LSet is now exposed in Coq trunk, we should use it to remove this hack *)
     let levels = LSet.elements (Universe.levels s) in
@@ -385,7 +389,7 @@ struct
                                     (* is indeed i always 0 or 1 ? *)
                                     let b' = quote_bool (Universe.exists (fun (l2,i) -> Level.equal l l2 && i = 1) s) in
                                     pair tlevel bool_type l' b')
-                          levels in 
+                          levels in
     to_coq_list (prod tlevel bool_type) levels
 
   (* todo : can be deduced from quote_level, hence shoud be in the Reify module *)
@@ -871,7 +875,6 @@ struct
 	      in
 	      constants := Q.mkConstant (Q.quote_kn kn) pu ty result :: !constants
 	    in
-            let open Declarations in
             let inst = Q.quote_univ_instance (constant_instance cd.const_universes) in
             let ty, acc =
               let ty =
@@ -909,7 +912,6 @@ struct
                       (Q.mkIn x) !constants
 
   let quote_one_ind envA envC (mi:Entries.one_inductive_entry) =
-    let open Entries in
     let iname = Q.quote_ident mi.mind_entry_typename  in
     let arity = quote_term envA mi.mind_entry_arity in
     let templatePoly = Q.quote_bool mi.mind_entry_template in
@@ -947,7 +949,6 @@ struct
 
   let quote_mut_ind env (mi:Declarations.mutual_inductive_body) =
    let t= Discharge.process_inductive ([],Univ.AUContext.empty) (Names.Cmap.empty,Names.Mindmap.empty) mi in
-    let open Entries in
     let mf = Q.quote_mind_finiteness t.mind_entry_finite in
     let mp = (snd (quote_mind_params env (t.mind_entry_params))) in
     (* before quoting the types of constructors, we need to enrich the environment with the inductives *)
@@ -1119,7 +1120,6 @@ struct
   (* This code is taken from Pretyping, because it is not exposed globally *)
   (* the case for strict universe declarations was removed *)
   let get_level evd s =
-    let open Names in
     let names, _ = Global.global_universe_names () in
     if CString.string_contains ~where:s ~what:"." then
       match List.rev (CString.split '.' s) with
@@ -1145,7 +1145,7 @@ struct
   (* end of code from Pretyping *)
 
 
-                                      
+
   let unquote_level evd trm (* of type level *) : Evd.evar_map * Univ.Level.t =
     let (h,args) = app_full trm [] in
     if Term.eq_constr h lProp then
@@ -1327,8 +1327,6 @@ struct
 
 
   let denote_reduction_strategy (trm : quoted_reduction_strategy) : Redexpr.red_expr =
-    let open Redops in
-    let open Genredexpr in
     (* from g_tactic.ml4 *)
     let default_flags = Redops.make_red_flag [FBeta;FMatch;FFix;FCofix;FZeta;FDeltaBut []] in
     if Term.eq_constr trm tcbv then Cbv default_flags
@@ -1372,7 +1370,6 @@ struct
 
 
   let declare_inductive (env: Environ.env) (evm: Evd.evar_map) (body: Term.constr) : unit =
-  let open Entries in
   let (evm,body) = reduce_all env evm body in
   let (_,args) = app_full body [] in (* check that the first component is Build_mut_ind .. *)
   let evdref = ref evm in
@@ -1513,7 +1510,6 @@ struct
          let bypass = from_bool b in
          let (dp, nm) = split_name name in
          let entry = (* todo: this should be defined in the quoter module *)
-           let open Declarations in
            match Nametab.locate (Libnames.make_qualid dp nm) with
            | Globnames.ConstRef c ->
               let cd = Environ.lookup_constant c env in

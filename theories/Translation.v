@@ -442,6 +442,17 @@ Lemma type_heq_Eq :
                    (sSort s2) (sEq A2 u2 v2).
 Admitted.
 
+Definition heq_Refl (s1 s2 : sort) (A1 A2 u1 u2 pA pu : sterm) : sterm.
+Admitted.
+
+Lemma type_heq_Refl :
+  forall {Σ Γ s1 s2 A1 A2 u1 u2 pA pu},
+    Σ ;;; Γ |-i pA : heq (succ_sort s1) (sSort s1) A1 (sSort s2) A2 ->
+    Σ ;;; Γ |-i pu : heq s1 A1 u1 A2 u2 ->
+    Σ ;;; Γ |-i heq_Refl s1 s2 A1 A2 u1 u2 pA pu :
+               heq s1 (sEq A1 u1 u1) (sRefl A1 u1) (sEq A2 u2 u2) (sRefl A2 u2).
+Admitted.
+
 Lemma trelE_to_heq :
   forall {E Σ},
     (forall x y Γ T1 T2,
@@ -710,7 +721,22 @@ Proof.
         assumption.
       * eapply type_Conv ; [ eassumption | idtac | eapply eq_symmetry ; eassumption ].
         assumption.
-  - admit.
+  - destruct (uniqueness h1 h2) as [s' eq].
+    exists (succ_sort (succ_sort s)), (heq_refl (succ_sort (succ_sort s)) A (sSort s)).
+    pose proof (inversionSort h1) as eqA.
+    destruct (eq_typing eqA) as [hss hAs].
+    pose proof (inversionSort h2) as eqB.
+    destruct (eq_typing eqB) as [_ hBs].
+    destruct (eq_typing eq) as [_ Bs'].
+    destruct (uniqueness Bs' hBs).
+    eapply type_Conv.
+    + apply type_heq_refl ; assumption.
+    + apply type_heq ; assumption.
+    + apply cong_heq.
+      all: try (apply eq_reflexivity).
+      all: try assumption.
+      * apply type_Sort. eapply (typing_wf _).
+      * eapply eq_conv ; eassumption.
   - admit.
   - admit.
   - admit.

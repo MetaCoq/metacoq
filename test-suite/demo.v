@@ -186,90 +186,134 @@ Inductive demoList (A : Set) : Set :=
 
 (** Putting the above commands in monadic program *)
 
-Definition printTerm (name  : ident): TemplateMonad unit :=
-  (tmBind (tmQuote name true) tmPrint).
+Run TemplateProgram (tmBind (tmQuote (3 + 3)) tmPrint).
 
-Definition duplicateDefn (name newName : ident): TemplateMonad unit :=
-  (tmBind (tmQuote name false) (fun body => 
-    match body with
-    | Some (inl (DefinitionEntry {| definition_entry_body := bd |})) =>
-        (tmBind (tmPrint body) (fun _ => tmMkDefinition true newName bd))
-    | _ => tmReturn tt
-    end))
-    .
+Run TemplateProgram (tmBind (tmQuoteRec add) tmPrint).
 
+Definition printInductive (name  : ident): TemplateMonad unit :=
+  (tmBind (tmQuoteInductive name) tmPrint).
 
-
-Run TemplateProgram (duplicateDefn "add" "addUnq").
-Check (eq_refl: add=addUnq).
-
-Run TemplateProgram (printTerm "Coq.Init.Datatypes.nat").
-Run TemplateProgram (printTerm "nat"). 
+Run TemplateProgram (printInductive "Coq.Init.Datatypes.nat").
+Run TemplateProgram (printInductive "nat").
 
 CoInductive cnat : Set :=  O :cnat | S : cnat -> cnat.
-Run TemplateProgram (printTerm "cnat"). 
+Run TemplateProgram (printInductive "cnat").
 
-Run TemplateProgram
-  ((tmBind (tmQuote "demoList" false) (fun body =>
-    match body with
-    | Some (inl bd)
-    | Some (inr bd) =>
-        tmMkDefinition false "demoList_syntax" bd
-    | N_ => tmReturn tt
-    end))
-    ).
+Run TemplateProgram (tmBind (tmQuoteConstant "add" false) tmPrint).
 
-Print demoList_syntax.
+Definition six : nat.
+  exact (3 + 3).
+Qed.
+Run TemplateProgram (tmBind (tmQuoteConstant "six" true) tmPrint).
+Run TemplateProgram (tmBind (tmQuoteConstant "six" false) tmPrint).
 
-Definition demoConsType := ltac:(let T := type of demoCons in exact T).
-Run TemplateProgram (printTerm "nat"). 
-(*
-None
-*)
 
-Run TemplateProgram (printTerm "demoConsType"). 
-(*
-(Some
-   (inl
-      (tProd (nNamed "A") (tSort sSet)
-         (tCast
-            (tProd nAnon (tRel 0)
-               (tCast
-                  (tProd nAnon (tApp (tInd (mkInd "Top.demoList" 0)) [tRel 1])
-                     (tCast (tApp (tInd (mkInd "Top.demoList" 0)) [tRel 2]) Cast
-                        (tSort sSet))) Cast (tSort sSet))) Cast 
-            (tSort sSet)))))
-*)
+Run TemplateProgram (tmBind (tmLemma "foo4" nat)
+                            (fun t =>  tmDefinition "foo5" (t + t + 2))).
+Next Obligation.
+  exact 3.
+Defined.
+Print foo5.
 
+
+Run TemplateProgram (tmBind (tmLemma "foo44" nat)
+                            (fun t => tmBind (tmQuote t) tmPrint)).
+Next Obligation.
+  exact (3+2).
+Defined.
+
+
+
+Run TemplateProgram (tmBind (tmQuoteInductive "demoList")
+                            (tmDefinition "demoList_syntax")).
 Example unquote_quote_id1: demoList_syntax=mut_list_i (* demoList was obtained from mut_list_i *).
   unfold demoList_syntax.
   unfold mut_list_i.
     f_equal.
 Qed.
 
-Run TemplateProgram (printTerm "Coq.Arith.PeanoNat.Nat.add").
+Run TemplateProgram (tmBind (tmDefinition "foo4'" nat) tmPrint).
+
+(* We can chain the definition. In the following,
+ foo5' = 12 and foo6' = foo5' *)
+Run TemplateProgram (tmBind (tmDefinition "foo5'" 12)
+                            (fun t =>  tmDefinition "foo6'" t)).
+
+Run TemplateProgram (tmBind (tmLemma "foo51" nat)
+                            (fun _ => tmLemma "foo61" bool)).
+Next Obligation.
+  exact 3.
+Defined.
+Next Obligation.
+  exact true.
+Qed.
+
+
+
+
+Definition printConstant (name  : ident): TemplateMonad unit :=
+  tmBind (tmUnquote (tConst name []))
+         (fun X => tmBind (tmEval all (projT2 X)) tmPrint).
+Fail Run TemplateProgram (printInductive "Coq.Arith.PeanoNat.Nat.add").
+Run TemplateProgram (printConstant "Coq.Arith.PeanoNat.Nat.add").
+
+
+
 Inductive NonRec (A:Set) (C: A -> Set): Set := 
 | SS : forall (f:A), C f -> NonRec A C.
 
-Run TemplateProgram (printTerm "NonRec").
+Run TemplateProgram (printInductive "NonRec").
 
+
+Set Printing Universes.
 Monomorphic Definition Funtm (A B: Type) := A->B.
 Polymorphic Definition Funtp@{i} (A B: Type@{i}) := A->B.
-Run TemplateProgram (printTerm "TemplateTestSuite.demo.Funtp").
-Run TemplateProgram (printTerm "TemplateTestSuite.demo.Funtm").
+Run TemplateProgram (printConstant "TemplateTestSuite.demo.Funtp").
+Run TemplateProgram (printConstant "TemplateTestSuite.demo.Funtm").
 
 Polymorphic Definition Funtp2@{i j} 
    (A: Type@{i}) (B: Type@{j}) := A->B.
+Run TemplateProgram (printConstant "TemplateTestSuite.demo.Funtp2").
 
-Run TemplateProgram (printTerm "TemplateTestSuite.demo.Funtp2").
 
-(*(Some
-   (inl
-      (tLambda (nNamed "A") (tSort (sType "Var(0)"))
-         (tLambda (nNamed "B") (tSort (sType "Var(1)"))
-            (tProd nAnon (tRel 1) (tRel 1))))))
-*)
+Definition tmDefinition' : ident -> forall {A}, A -> TemplateMonad unit
+  := fun id A t => tmBind (tmDefinition id t) (fun _ => tmReturn tt).
 
+(** A bit less efficient, but does the same job as tmMkDefinition *)
+Definition tmMkDefinition' : ident -> term -> TemplateMonad unit
+  := fun id t => tmBind (tmUnquote t)
+                     (fun x => tmBind (tmEval all (projT2 x))
+                                   (tmDefinition' id)).
+
+Run TemplateProgram (tmMkDefinition' "foo" add_syntax).
+Run TemplateProgram (tmMkDefinition "foo1" add_syntax).
+
+Run TemplateProgram (tmBind (tmFreshName "foo") tmPrint).
+Run TemplateProgram (tmBind (tmAxiom "foo0" (nat -> nat)) tmPrint).
+Run TemplateProgram (tmBind (tmAxiom "foo0'" (nat -> nat))
+                            (fun t => tmDefinition' "foo0''" t)).
+Run TemplateProgram (tmBind (tmFreshName "foo") tmPrint).
+
+Run TemplateProgram (tmBind (tmAbout "foo") tmPrint).
+Run TemplateProgram (tmBind (tmAbout "eq") tmPrint).
+Run TemplateProgram (tmBind (tmAbout "Logic.eq") tmPrint).
+Run TemplateProgram (tmBind (tmAbout "eq_refl") tmPrint).
+
+Run TemplateProgram (tmBind (tmEval all (3 + 3)) tmPrint).
+Run TemplateProgram (tmBind (tmEval hnf (3 + 3)) tmPrint).
+
+
+(* Definition duplicateDefn (name newName : ident): TemplateMonad unit := *)
+(*   (tmBind (tmQuote name false) (fun body => *)
+(*     match body with *)
+(*     | Some (inl (DefinitionEntry {| definition_entry_body := bd |})) => *)
+(*         (tmBind (tmPrint body) (fun _ => tmMkDefinition newName bd)) *)
+(*     | _ => tmReturn tt *)
+(*     end)) *)
+(*     . *)
+
+(* Run TemplateProgram (duplicateDefn "add" "addUnq"). *)
+(* Check (eq_refl: add=addUnq). *)
 
 
 

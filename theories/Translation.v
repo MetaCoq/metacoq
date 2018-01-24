@@ -428,6 +428,20 @@ Lemma type_heq_Prod :
         (sSort (max_sort z1 z2)) (sProd n2 A2 B2).
 Admitted.
 
+Definition heq_Eq (s1 s2 : sort) (A1 A2 u1 u2 v1 v2 pA pu pv : sterm) : sterm.
+Admitted.
+
+Lemma type_heq_Eq :
+  forall {Σ Γ s1 s2 A1 A2 u1 u2 v1 v2 pA pu pv},
+    Σ ;;; Γ |-i pA : heq (succ_sort s1) (sSort s1) A1 (sSort s2) A2 ->
+    Σ ;;; Γ |-i pu : heq s1 A1 u1 A2 u2 ->
+    Σ ;;; Γ |-i pv : heq s1 A1 v1 A2 v2 ->
+    Σ ;;; Γ |-i heq_Eq s1 s2 A1 A2 u1 u2 v1 v2 pA pu pv
+             : heq (succ_sort (succ_sort s1))
+                   (sSort (succ_sort s1)) (sEq A1 u1 v1)
+                   (sSort (succ_sort s2)) (sEq A2 u2 v2).
+Admitted.
+
 Lemma trelE_to_heq :
   forall {E Σ},
     (forall x y Γ T1 T2,
@@ -599,7 +613,81 @@ Proof.
        This could be solved by changing the corresponding trel case.
      *)
     admit.
-  - admit.
+  - destruct (inversionEq h1) as [s1 [[[hA1 hu1] hv1] ?]].
+    destruct (inversionEq h2) as [s2 [[[hA2 hu2] hv2] ?]].
+    destruct (IHtrel1 _ _ _ hA1 hA2) as [sA [pA hpA]].
+    destruct (IHtrel2 _ _ _ hu1 hu2) as [su [pu hpu]].
+    destruct (IHtrel3 _ _ _ hv1 hv2) as [sv [pv hpv]].
+    exists (succ_sort (succ_sort s1)).
+    exists (heq_Eq s1 s2 A1 A2 u1 u2 v1 v2 pA pu pv).
+    assert (Σ;;; Γ |-i sSort s1 : sSort (succ_sort s1)).
+    { apply type_Sort. apply (typing_wf hA1). }
+    destruct (istype_type hpA) as [? heqA].
+    destruct (istype_type hpu) as [? hequ].
+    destruct (istype_type hpv) as [? heqv].
+    destruct (inversionHeq heqA) as [[[[? ?] ?] ?] ?].
+    destruct (inversionHeq hequ) as [[[[A1su A2su] ?] ?] ?].
+    destruct (inversionHeq heqv) as [[[[A1sv A2sv] ?] ?] ?].
+    destruct (uniqueness hA1 A1su) as [? eq].
+    destruct (uniqueness hA2 A2su) as [? eq'].
+    destruct (eq_typing eq') as [? su1].
+    destruct (eq_typing eq) as [? su2].
+    destruct (uniqueness su1 su2) as [? hh].
+    assert (s1s2 : Σ;;; Γ |-i sSort s1 = sSort s2 : sSort (succ_sort s1)).
+    { eapply eq_conv.
+      - eapply eq_transitivity.
+        + eassumption.
+        + eapply eq_symmetry. eapply eq_conv.
+          * eassumption.
+          * eassumption.
+      - apply eq_symmetry. apply inversionSort. assumption.
+    }
+    assert (Σ;;; Γ |-i sSort s2 : sSort (succ_sort s1)).
+    { apply (eq_typing s1s2). }
+    assert (Σ;;; Γ |-i sSort sA = sSort (succ_sort s1) : sSort (succ_sort (succ_sort s1))).
+    { apply eq_symmetry. apply inversionSort. assumption. }
+    assert (Σ;;; Γ |-i A2 : sSort s1).
+    { eapply type_Conv ; [ exact hA2 | idtac | eapply eq_symmetry ; eassumption ].
+      eassumption.
+    }
+    assert (Σ;;; Γ |-i sSort su = sSort s1 : sSort (succ_sort s1)).
+    { apply eq_symmetry. eapply eq_conv.
+      - eassumption.
+      - apply eq_symmetry. apply inversionSort. assumption.
+    }
+    destruct (uniqueness hA1 A1sv) as [? eq2].
+    destruct (uniqueness hA2 A2sv) as [? eq3].
+    destruct (eq_typing eq3) as [? sv1].
+    destruct (eq_typing eq2) as [? sv2].
+    destruct (uniqueness sv1 sv2) as [? hhh].
+    assert (Σ;;; Γ |-i sSort sv = sSort s1 : sSort (succ_sort s1)).
+    { apply eq_symmetry. eapply eq_conv.
+      - eassumption.
+      - apply eq_symmetry. apply inversionSort. assumption.
+    }
+    eapply type_Conv.
+    + apply type_heq_Eq.
+      * eapply type_Conv.
+        -- exact hpA.
+        -- apply type_heq ; assumption.
+        -- apply cong_heq.
+           all: try (apply eq_reflexivity).
+           all: easy.
+      * eapply type_Conv.
+        -- exact hpu.
+        -- apply type_heq ; assumption.
+        -- apply cong_heq.
+           all: try (apply eq_reflexivity).
+           all: easy.
+      * eapply type_Conv.
+        -- exact hpv.
+        -- apply type_heq ; assumption.
+        -- apply cong_heq.
+           all: try (apply eq_reflexivity).
+           all: easy.
+    + (* Something's wrong! *)
+      apply type_heq ; try assumption. all: admit.
+    + admit.
   - admit.
   - admit.
   - admit.
@@ -609,8 +697,6 @@ Admitted.
 Corollary trel_to_heq :
   forall {Σ Γ T1 T2} {t1 t2 : sterm},
     t1 ∼ t2 ->
-    (* Σ ;;; Γ |-i T1 : sSort s -> *)
-    (* Σ ;;; Γ |-i T2 : sSort s -> *)
     Σ ;;; Γ |-i t1 : T1 ->
     Σ ;;; Γ |-i t2 : T2 ->
     ∑ s p, Σ ;;; Γ |-i p : heq s T1 t1 T2 t2.

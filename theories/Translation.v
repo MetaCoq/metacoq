@@ -735,7 +735,7 @@ Proof.
     + apply cong_heq.
       all: try (apply eq_reflexivity).
       all: try assumption.
-      * apply type_Sort. eapply (typing_wf _).
+      * apply type_Sort. apply (typing_wf hAs).
       * eapply eq_conv ; eassumption.
   - admit.
   - admit.
@@ -1664,7 +1664,7 @@ Proof.
            ++ eapply typing_subst ; eassumption.
         -- apply cong_heq.
            all: try (apply eq_reflexivity).
-           ++ apply type_Sort. eapply (typing_wf _).
+           ++ apply type_Sort. apply (typing_wf t4).
            ++ change (sSort s2) with ((sSort s2){0 := u'}).
               eapply typing_subst ; eassumption.
            ++ change (sSort s2) with ((sSort s2){0 := u'}).

@@ -1601,7 +1601,111 @@ Proof.
     + cheat.
 
     (* cong_Eq *)
-    + cheat.
+    + destruct (eq_translation _ _ _ _ _ h1 _ hΓ)
+        as [s1 [T1 [T2 [A1' [A2' [pA h1']]]]]].
+      destruct (eq_translation _ _ _ _ _ h2 _ hΓ)
+        as [s2 [A1'' [A1''' [u1' [u2' [pu h2']]]]]].
+      destruct (eq_translation _ _ _ _ _ h3 _ hΓ)
+        as [s3 [A1'''' [A1''''' [v1' [v2' [pv h3']]]]]].
+      destruct (eqtrans_trans h1') as [hA1' hA2'].
+      destruct (eqtrans_trans h2') as [hu1' hu2'].
+      destruct (eqtrans_trans h3') as [hv1' hv2'].
+      destruct h1' as [[[[[? ?] ?] ?] ?] hpA].
+      destruct h2' as [[[[[? ?] ?] ?] ?] hpu].
+      destruct h3' as [[[[[? ?] ?] ?] ?] hpv].
+      (* We need to chain translations a lot to use heq_Eq *)
+      assert (th : type_head (head (sSort s))) by constructor.
+      destruct (choose_type th hA1') as [T' [[tA1 htA1] hh]].
+      destruct T' ; inversion hh. subst.
+      clear th hh.
+      assert (th : type_head (head (sSort s))) by constructor.
+      destruct (choose_type th hA2') as [T' [[tA2 htA2] hh]].
+      destruct T' ; inversion hh. subst.
+      clear th hh.
+      (* For the types we build the missing hequalities *)
+      assert (hp : ∑ p, Σ ;;; Γ' |-i p : heq (succ_sort s) (sSort s) tA1 (sSort s) tA2).
+      { destruct hA1' as [_ hA1'].
+        destruct htA1 as [[[? ?] ?] htA1].
+        assert (sim1 : tA1 ∼ A1').
+        { eapply trel_trans.
+          - eapply trel_sym. eapply inrel_trel. eassumption.
+          - eapply inrel_trel. eassumption.
+        }
+        destruct (trel_to_heq sim1 htA1 hA1') as [sA [p1 hp1]].
+        destruct hA2' as [_ hA2'].
+        destruct htA2 as [[[? ?] ?] htA2].
+        assert (sim2 : A2' ∼ tA2).
+        { eapply trel_trans.
+          - eapply trel_sym. eapply inrel_trel. eassumption.
+          - eapply inrel_trel. eassumption.
+        }
+        destruct (trel_to_heq sim2 hA2' htA2) as [sA' [p2 hp2]].
+        exists (heq_trans (succ_sort s) (sSort s) tA1 T1 A1' (sSort s) tA2
+                     p1
+                     (heq_trans (succ_sort s) T1 A1' T2 A2' (sSort s) tA2
+                                pA
+                                p2
+                     )
+          ).
+        assert (wf Σ Γ') by (apply (typing_wf hp1)).
+        assert (Σ;;; Γ' |-i sSort s : sSort (succ_sort s)).
+        { apply type_Sort. assumption. }
+        destruct (istype_type hp1) as [? hheq1].
+        destruct (inversionHeq hheq1) as [[[[ssA T1sA] ?] ?] ?].
+        destruct (istype_type hp2) as [? hheq2].
+        destruct (inversionHeq hheq2) as [[[[T2sA' ?] ?] ?] ?].
+        destruct (istype_type hpA) as [? hheqA].
+        destruct (inversionHeq hheqA) as [[[[T1s1 ?] ?] ?] ?].
+        assert (T1ss : Σ;;; Γ' |-i T1 : sSort (succ_sort s)).
+        { eapply type_Conv.
+          1: exact T1sA.
+          2: apply eq_symmetry ; eapply inversionSort ; eassumption.
+          apply type_Sort. assumption.
+        }
+        assert (Σ;;; Γ' |-i sSort sA = sSort (succ_sort s) : sSort (succ_sort (succ_sort s))).
+        { apply eq_symmetry ; eapply inversionSort ; eassumption. }
+        assert (Σ;;; Γ' |-i T2 : sSort (succ_sort s)).
+        { eapply type_Conv.
+          1: exact T2sA'.
+          2: apply eq_symmetry ; eapply inversionSort ; eassumption.
+          apply type_Sort. assumption.
+        }
+        destruct (uniqueness T1s1 T1ss) as [? eq].
+        assert (Σ;;; Γ' |-i sSort s1 = sSort (succ_sort s) : sSort (succ_sort (succ_sort s))).
+        { eapply eq_conv.
+          - eassumption.
+          - apply eq_symmetry. eapply inversionSort. apply (eq_typing eq).
+        }
+        assert (Σ;;; Γ' |-i sSort sA' = sSort (succ_sort s) : sSort (succ_sort (succ_sort s))).
+        { apply eq_symmetry. eapply inversionSort. assumption. }
+        apply type_heq_trans.
+        - eapply type_Conv.
+          + eassumption.
+          + apply type_heq ; eassumption.
+          + apply cong_heq.
+            all: try (apply eq_reflexivity).
+            all: easy.
+        - apply type_heq_trans.
+          + eapply type_Conv.
+            * eassumption.
+            * apply type_heq ; eassumption.
+            * apply cong_heq.
+              all: try (apply eq_reflexivity).
+              all: easy.
+          + eapply type_Conv.
+            * eassumption.
+            * apply type_heq ; eassumption.
+            * apply cong_heq.
+              all: try (apply eq_reflexivity).
+              all: easy.
+      }
+      destruct hp as [qA hqA].
+      (* Now we need to do the same for the terms *)
+      destruct (change_type hu1' htA1) as [tu1 htu1].
+      destruct (change_type hu2' htA1) as [tu2 htu2].
+      (* destruct (change_type hv1' htA2) as [tv1 htv1]. *)
+      (* destruct (change_type hv2' htA2) as [tv2 htv2]. *)
+      cheat.
 
     (* cong_Refl *)
     + cheat.

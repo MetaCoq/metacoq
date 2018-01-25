@@ -279,7 +279,6 @@ Proof.
   - (* The pair to destruct *)
     exact p.
   - (* The target term, with sRel 1 : U and sRel 2 : V *)
-    (* We actually need transport refl to compute don't we? *)
     simple refine (sJ U (sRel 1) (sEq (lift0 4 A) _ (lift0 4 v)) _ _ _).
     + exact ((sTransport (lift0 4 A) (lift0 4 A) (sRel 1) (lift0 4 u))).
     + exact (sRel 0).
@@ -448,6 +447,56 @@ Lemma type_heq_Refl :
     Σ ;;; Γ |-i heq_Refl s1 s2 A1 A2 u1 u2 pA pu :
                heq s1 (sEq A1 u1 u1) (sRefl A1 u1) (sEq A2 u2 u2) (sRefl A2 u2).
 Admitted.
+
+(* In order to do things properly we need to extend the context heterogenously,
+   this is done by extending the context with triples
+   (x : A, y : B, e : heq A x B y).
+   We also need to define correspond lifts.
+
+   If Γ, Γ1 |- t : T then combine Γ Γ1 Γ2 |- clift1 #|Γ1| t : clift1 #|Γ1| T
+   If Γ, Γ2 |- t : T then combine Γ Γ1 Γ2 |- clift2 #|Γ1| t : clift2 #|Γ1| T
+ *)
+
+(* Fixpoint clift1 l t : sterm := *)
+(*   match t with *)
+(*   | sRel i => if i <=? l then sRel (3 * i + 2) else sRel (i + 2 * l) *)
+(*   | sLambda na T V M => sLambda na (lift n k T) (lift n (S k) V) (lift n (S k) M) *)
+(*   | sApp u na A B v => *)
+(*     sApp (lift n k u) na (lift n k A) (lift n (S k) B) (lift n k v) *)
+(*   | sProd na A B => sProd na (lift n k A) (lift n (S k) B) *)
+(*   | sEq A u v => sEq (lift n k A) (lift n k u) (lift n k v) *)
+(*   | sRefl A u => sRefl (lift n k A) (lift n k u) *)
+(*   | sJ A u P w v p => *)
+(*     sJ (lift n k A) *)
+(*        (lift n k u) *)
+(*        (lift n (S (S k)) P) *)
+(*        (lift n k w) *)
+(*        (lift n k v) *)
+(*        (lift n k p) *)
+(*   | sTransport A B p t => *)
+(*     sTransport (lift n k A) (lift n k B) (lift n k p) (lift n k t) *)
+(*   | sUip A u v p q => *)
+(*     sUip (lift n k A) (lift n k u) (lift n k v) (lift n k p) (lift n k q) *)
+(*   | sFunext A B f g e => *)
+(*     sFunext (lift n k A) (lift n (S k) B) (lift n k f) (lift n k g) (lift n k e) *)
+(*   | sSig na A B => sSig na (lift n k A) (lift n (S k) B) *)
+(*   | sPair A B u v => *)
+(*     sPair (lift n k A) (lift n (S k) B) (lift n k u) (lift n k v) *)
+(*   | sSigLet A B P p t => *)
+(*     sSigLet (lift n k A) *)
+(*             (lift n (S k) B) *)
+(*             (lift n (S k) P) *)
+(*             (lift n k p) *)
+(*             (lift n (S (S k)) t) *)
+(*   | x => x *)
+(*   end. *)
+
+(* We also need a list of sorts because they appear in heaq unfortunately...
+   This could be solved if we were to aximatise heq as well!
+ *)
+(* Fixpoint combine (Γ Γ1 Γ2 : scontext) (Γs : list sort) : scontext := *)
+(*   match Γ1, Γ2, Γs with *)
+(*   | (Γ1 ,, svass nx A), (Γ2 ,, svass ny B), s :: Γs => (combine Γ Γ1 Γ2) ,, svass *)
 
 Lemma trelE_to_heq :
   forall {Σ t1 t2},

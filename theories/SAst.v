@@ -19,8 +19,5 @@ Inductive sterm : Set :=
 | sTransport : sterm -> sterm -> sterm -> sterm -> sterm
 | sUip       : sterm -> sterm -> sterm -> sterm -> sterm -> sterm
 | sFunext    : sterm -> sterm -> sterm -> sterm -> sterm -> sterm
-
-| sSig       : name -> sterm -> sterm -> sterm
-| sPair      : sterm -> sterm -> sterm -> sterm -> sterm
-| sSigLet    : sterm -> sterm -> sterm -> sterm -> sterm -> sterm
+| sHeq       : sterm -> sterm -> sterm -> sterm -> sterm
 .

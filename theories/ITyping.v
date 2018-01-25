@@ -77,27 +77,14 @@ Inductive typing (Σ : global_context) : scontext -> sterm -> sterm -> Type :=
     Σ ;;; Γ |-i e : sProd n3 A (sEq B (sApp (lift0 1 f) n1 (lift0 1 A) (lift 1 1 B) (sRel 0)) (sApp (lift0 1 g) n2 (lift0 1 A) (lift 1 1 B) (sRel 0))) ->
     Σ ;;; Γ |-i sFunext A B f g e : sEq (sProd n1 A B) f g
 
-| type_Sig Γ n t b s1 s2 :
-    Σ ;;; Γ |-i t : sSort s1 ->
-    Σ ;;; Γ ,, svass n t |-i b : sSort s2 ->
-    Σ ;;; Γ |-i (sSig n t b) : sSort (max_sort s1 s2)
+| type_Heq Γ A a B b s :
+    Σ ;;; Γ |-i A : sSort s ->
+    Σ ;;; Γ |-i B : sSort s ->
+    Σ ;;; Γ |-i a : A ->
+    Σ ;;; Γ |-i b : B ->
+    Σ ;;; Γ |-i sHeq A a B b : sSort (succ_sort s)
 
-| type_Pair Γ s1 s2 n A B u v :
-    Σ ;;; Γ |-i A : sSort s1 ->
-    Σ ;;; Γ ,, svass n A |-i B : sSort s2 ->
-    Σ ;;; Γ |-i u : A ->
-    Σ ;;; Γ |-i v : B{ 0 := u } ->
-    Σ ;;; Γ |-i sPair A B u v : sSig n A B
-
-| type_SigLet Γ s1 s2 s3 n np nx ny A B P p t :
-    Σ ;;; Γ |-i A : sSort s1 ->
-    Σ ;;; Γ ,, svass n A |-i B : sSort s2 ->
-    Σ ;;; Γ |-i p : sSig n A B ->
-    Σ ;;; Γ ,, svass np (sSig n A B) |-i P : sSort s3 ->
-    Σ ;;; Γ ,, svass nx A ,, svass ny B  |-i t : P{ 0 := sPair A B (sRel 1) (sRel 0) } ->
-    Σ ;;; Γ |-i sSigLet A B P p t : P{ 0 := p }
-
-| type_Conv Γ t A B s :
+| type_conv Γ t A B s :
     Σ ;;; Γ |-i t : A ->
     Σ ;;; Γ |-i B : sSort s ->
     Σ ;;; Γ |-i A = B : sSort s ->
@@ -208,25 +195,12 @@ with eq_term (Σ : global_context) : scontext -> sterm -> sterm -> sterm -> Type
     Σ ;;; Γ |-i e1 = e2 : sProd n3 A1 (sEq B1 (sApp (lift0 1 f1) n1 (lift0 1 A1) (lift 1 1 B1) (sRel 0)) (sApp (lift0 1 g1) n2 (lift0 1 A1) (lift 1 1 B1) (sRel 0))) ->
     Σ ;;; Γ |-i sFunext A1 B1 f1 g1 e1 = sFunext A2 B2 f2 g2 e2 : sEq (sProd n1 A1 B1) f1 g1
 
-| cong_Sig Γ n n' A1 A2 B1 B2 s1 s2 :
-    Σ ;;; Γ |-i A1 = A2 : sSort s1 ->
-    Σ ;;; Γ ,, svass n A1 |-i B1 = B2 : sSort s2 ->
-    Σ ;;; Γ |-i sSig n A1 B1 = sSig n' A2 B2 : sSort (max_sort s1 s2)
-
-| cong_Pair Γ s1 s2 n A1 A2 B1 B2 u1 u2 v1 v2 :
-    Σ ;;; Γ |-i A1 = A2 : sSort s1 ->
-    Σ ;;; Γ ,, svass n A1 |-i B1 = B2 : sSort s2 ->
-    Σ ;;; Γ |-i u1 = u2 : A1 ->
-    Σ ;;; Γ |-i v1 = v2 : B1{ 0 := u1 } ->
-    Σ ;;; Γ |-i sPair A1 B1 u1 v1 = sPair A2 B2 u2 v2 : sSig n A1 B1
-
-| cong_SigLet Γ s1 s2 s3 n np nx ny A1 A2 B1 B2 P1 P2 p1 p2 t1 t2 :
-    Σ ;;; Γ |-i A1 = A2 : sSort s1 ->
-    Σ ;;; Γ ,, svass n A1 |-i B1 = B2 : sSort s2 ->
-    Σ ;;; Γ |-i p1 = p2 : sSig n A1 B1 ->
-    Σ ;;; Γ ,, svass np (sSig n A1 B1) |-i P1 = P2 : sSort s3 ->
-    Σ ;;; Γ ,, svass nx A1 ,, svass ny B1  |-i t1 = t2 : P1{ 0 := sPair A1 B1 (sRel 1) (sRel 0) } ->
-    Σ ;;; Γ |-i sSigLet A1 B1 P1 p1 t1 = sSigLet A2 B2 P2 p2 t2 : P1{ 0 := p1 }
+| cong_Heq Γ A1 A2 a1 a2 B1 B2 b1 b2 s :
+    Σ ;;; Γ |-i A1 = A2 : sSort s ->
+    Σ ;;; Γ |-i B1 = B2 : sSort s ->
+    Σ ;;; Γ |-i a1 = a2 : A1 ->
+    Σ ;;; Γ |-i b1 = b2 : B1 ->
+    Σ ;;; Γ |-i sHeq A1 a1 B1 b1 = sHeq A2 a2 B2 b2 : sSort (succ_sort s)
 
 where " Σ ;;; Γ '|-i' t = u : T " := (@eq_term Σ Γ t u T) : i_scope.
 
@@ -383,16 +357,11 @@ Proof.
   - exists (max_sort s1 s2). apply type_Eq.
     + now apply type_Prod.
     + assumption.
-    + eapply type_Conv.
+    + eapply type_conv.
       * eassumption.
       * eapply type_Prod ; eassumption.
       * apply eq_symmetry. eapply cong_Prod ; apply eq_reflexivity ; assumption.
-  - exists (succ_sort (max_sort s1 s2)). apply type_Sort. apply (typing_wf H).
-  - exists (max_sort s1 s2). now apply type_Sig.
-  - exists s3. change (sSort s3) with ((sSort s3){ 0 := p}).
-    eapply typing_subst.
-    + eassumption.
-    + assumption.
+  - exists (succ_sort (succ_sort s)). apply type_Sort. apply (typing_wf H).
   - exists s. assumption.
 Defined.
 
@@ -408,9 +377,9 @@ Proof.
            end ;
     split ; try (now constructor + easy).
   all: try (econstructor ; eassumption).
-  - eapply type_Conv.
+  - eapply type_conv.
     + econstructor ; try eassumption.
-      eapply type_Conv.
+      eapply type_conv.
       * econstructor ; eassumption.
       * econstructor ; eassumption.
       * apply eq_reflexivity. constructor ; assumption.
@@ -432,7 +401,7 @@ Proof.
     + econstructor.
       * apply eqctx_refl. now apply (typing_wf t1).
       * eassumption.
-  - eapply type_Conv.
+  - eapply type_conv.
     + econstructor.
       * eassumption.
       * eapply ctx_conv ; [ eassumption |].
@@ -440,7 +409,7 @@ Proof.
         -- eapply eqctx_refl. now apply (typing_wf t5).
         -- eassumption.
       * eapply ctx_conv.
-        -- eapply type_Conv ; eassumption.
+        -- eapply type_conv ; eassumption.
         -- econstructor.
            ++ apply eqctx_refl. now apply (typing_wf t5).
            ++ eassumption.
@@ -480,14 +449,14 @@ Proof.
       admit.
   - constructor.
     + assumption.
-    + eapply type_Conv ; eassumption.
-    + eapply type_Conv ; eassumption.
-  - eapply type_Conv ; [ eapply type_Refl | .. ].
+    + eapply type_conv ; eassumption.
+    + eapply type_conv ; eassumption.
+  - eapply type_conv ; [ eapply type_Refl | .. ].
     + eassumption.
-    + eapply type_Conv ; eassumption.
+    + eapply type_conv ; eassumption.
     + constructor ; eassumption.
     + apply eq_symmetry. apply cong_Eq ; assumption.
-  - eapply type_Conv ; [ econstructor | .. ].
+  - eapply type_conv ; [ econstructor | .. ].
     1: eassumption.
     all: try (econstructor ; eassumption).
     + eapply ctx_conv ; [ eassumption |].
@@ -501,7 +470,7 @@ Proof.
         -- (* We need conversion of lifts! *)
            admit.
         -- apply eq_reflexivity.
-           eapply type_Conv ; [ eapply type_Rel | .. ].
+           eapply type_conv ; [ eapply type_Rel | .. ].
            ++ econstructor.
               ** now apply (typing_wf t7).
               ** eexists ; eassumption.
@@ -511,22 +480,22 @@ Proof.
            ++ cbn. apply eq_reflexivity.
               change (sSort s1) with (lift0 1 (sSort s1)).
               eapply typing_lift01 ; eassumption.
-    + eapply type_Conv ; [ eassumption | .. ].
+    + eapply type_conv ; [ eassumption | .. ].
       * econstructor.
         -- eassumption.
-        -- eapply type_Conv ; eassumption.
-        -- eapply type_Conv ; eassumption.
+        -- eapply type_conv ; eassumption.
+        -- eapply type_conv ; eassumption.
       * apply cong_Eq ; eassumption.
-    + eapply type_Conv ; [ eassumption | .. ].
+    + eapply type_conv ; [ eassumption | .. ].
       * instantiate (1 := s2).
         change (sSort s2) with ((sSort s2){ 1 := u2 }{ 0 := sRefl A2 u2 }).
         eapply typing_subst2.
         -- eassumption.
         -- eassumption.
         -- cbn. rewrite !lift_subst, lift00.
-           eapply type_Conv ; [ eapply type_Refl | .. ].
+           eapply type_conv ; [ eapply type_Refl | .. ].
            ++ eassumption.
-           ++ eapply type_Conv ; eassumption.
+           ++ eapply type_conv ; eassumption.
            ++ eapply type_Eq ; eassumption.
            ++ apply eq_symmetry. apply cong_Eq.
               ** assumption.
@@ -763,33 +732,28 @@ Defined.
 (* Lemma inversionUip *)
 (* Lemma inversionFunext *)
 
-Lemma inversionSig :
-  forall {Σ Γ n A B T},
-    Σ ;;; Γ |-i sSig n A B : T ->
-    ∑ s1 s2,
-      (Σ ;;; Γ |-i A : sSort s1) *
-      (Σ ;;; Γ ,, svass n A |-i B : sSort s2) *
-      (Σ ;;; Γ |-i sSort (max_sort s1 s2) = T : sSort (succ_sort (max_sort s1 s2))).
+Lemma inversionHeq :
+  forall {Σ Γ A B a b T},
+    Σ ;;; Γ |-i sHeq A a B b : T ->
+    ∑ s,
+      (Σ ;;; Γ |-i A : sSort s) *
+      (Σ ;;; Γ |-i B : sSort s) *
+      (Σ ;;; Γ |-i a : A) *
+      (Σ ;;; Γ |-i b : B) *
+      (Σ ;;; Γ |-i sSort (succ_sort s) = T : sSort (succ_sort (succ_sort s))).
 Proof.
-  intros Σ Γ n A B T h.
+  intros Σ Γ A B a b T h.
   dependent induction h.
 
-  - exists s1, s2. repeat split.
-    + assumption.
-    + assumption.
-    + apply eq_reflexivity. apply type_Sort. apply (typing_wf h1).
+  - exists s. repeat split ; try easy.
+    apply eq_reflexivity. apply type_Sort. apply (typing_wf h1).
 
-  - destruct (IHh1 n A B (eq_refl _)) as [s1 [s2 [[? ?] ?]]].
-    exists s1, s2. repeat split.
-    + assumption.
-    + assumption.
-    + eapply eq_transitivity.
-      * eassumption.
-      * destruct (eq_typing e) as [hAs _].
-        destruct (eq_typing e0) as [_ hAsm].
-        destruct (uniqueness hAs hAsm).
-        eapply eq_conv ; eassumption.
+  - destruct (IHh1 _ _ _ _ eq_refl) as [s' [[[[? ?] ?] ?] ?]].
+    exists s'. repeat split ; try easy.
+    eapply eq_transitivity.
+    + eassumption.
+    + destruct (eq_typing e) as [i1 _].
+      destruct (eq_typing e0) as [_ i2].
+      destruct (uniqueness i1 i2).
+      eapply eq_conv ; eassumption.
 Defined.
-
-(* Lemma inversionPair *)
-(* Lemma inversionSigLet *)

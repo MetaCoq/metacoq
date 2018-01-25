@@ -27,15 +27,8 @@ Fixpoint lift n k t : sterm :=
     sUip (lift n k A) (lift n k u) (lift n k v) (lift n k p) (lift n k q)
   | sFunext A B f g e =>
     sFunext (lift n k A) (lift n (S k) B) (lift n k f) (lift n k g) (lift n k e)
-  | sSig na A B => sSig na (lift n k A) (lift n (S k) B)
-  | sPair A B u v =>
-    sPair (lift n k A) (lift n (S k) B) (lift n k u) (lift n k v)
-  | sSigLet A B P p t =>
-    sSigLet (lift n k A)
-            (lift n (S k) B)
-            (lift n (S k) P)
-            (lift n k p)
-            (lift n (S (S k)) t)
+  | sHeq A a B b =>
+    sHeq (lift n k A) (lift n k a) (lift n k B) (lift n k b)
   | x => x
   end.
 
@@ -73,15 +66,8 @@ Fixpoint subst t k u :=
             (subst t k f)
             (subst t k g)
             (subst t k e)
-  | sSig na A B => sSig na (subst t k A) (subst t (S k) B)
-  | sPair A B u v =>
-    sPair (subst t k A) (subst t (S k) B) (subst t k u) (subst t k v)
-  | sSigLet A B P p t' =>
-    sSigLet (subst t k A)
-            (subst t (S k) B)
-            (subst t (S k) P)
-            (subst t k p)
-            (subst t (S (S k)) t')
+  | sHeq A a B b =>
+    sHeq (subst t k A) (subst t k a) (subst t k B) (subst t k b)
   | x => x
   end.
 

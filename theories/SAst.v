@@ -23,4 +23,6 @@ Inductive sterm : Type :=
 | sHeq (A a B b : sterm)
 | sHeqToEq (A u v p : sterm)
 | sHeqRefl (A a : sterm)
+| sHeqSym (A a B b p : sterm)
+| sHeqTrans (A a B b C c p q : sterm)
 .

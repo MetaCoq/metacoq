@@ -96,6 +96,24 @@ Inductive typing (Σ : global_context) : scontext -> sterm -> sterm -> Type :=
     Σ ;;; Γ |-i a : A ->
     Σ ;;; Γ |-i sHeqRefl A a : sHeq A a A a
 
+| type_HeqSym Γ A a B b p s :
+    Σ ;;; Γ |-i A : sSort s ->
+    Σ ;;; Γ |-i B : sSort s ->
+    Σ ;;; Γ |-i a : A ->
+    Σ ;;; Γ |-i b : B ->
+    Σ ;;; Γ |-i p : sHeq A a B b ->
+    Σ ;;; Γ |-i sHeqSym A a B b p : sHeq B b A a
+
+| type_HeqTrans Γ A a B b C c p q s :
+    Σ ;;; Γ |-i A : sSort s ->
+    Σ ;;; Γ |-i B : sSort s ->
+    Σ ;;; Γ |-i C : sSort s ->
+    Σ ;;; Γ |-i a : A ->
+    Σ ;;; Γ |-i b : B ->
+    Σ ;;; Γ |-i c : C ->
+    Σ ;;; Γ |-i p : sHeq A a B b ->
+    Σ ;;; Γ |-i sHeqTrans A a B b C c p q : sHeq A a C c
+
 | type_conv Γ t A B s :
     Σ ;;; Γ |-i t : A ->
     Σ ;;; Γ |-i B : sSort s ->
@@ -375,6 +393,8 @@ Proof.
       * apply eq_symmetry. eapply cong_Prod ; apply eq_reflexivity ; assumption.
   - exists (succ_sort (succ_sort s)). apply type_Sort. apply (typing_wf H).
   - exists s. apply type_Eq ; assumption.
+  - exists (succ_sort s). apply type_Heq ; assumption.
+  - exists (succ_sort s). apply type_Heq ; assumption.
   - exists (succ_sort s). apply type_Heq ; assumption.
   - exists s. assumption.
 Defined.

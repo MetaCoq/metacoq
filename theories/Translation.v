@@ -1152,7 +1152,7 @@ Proof.
       destruct (choose_type th ht'') as [T' [[t' ht'] hh]].
       clear ht'' t'' T''.
       destruct T' ; inversion hh. subst. clear hh th.
-      rename n0 into x, T'1 into A'', T'2 into B''.
+      rename T'1 into A'', T'2 into B''.
       destruct (change_type ht' (trans_Prod hΓ hA' hB')) as [t'' ht''].
       clear ht' A'' B'' t'.
       (* Translation of the argument *)

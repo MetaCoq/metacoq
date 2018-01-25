@@ -6,18 +6,19 @@ Notation "'∑'  x .. y , P" := (sigT (fun x => .. (sigT (fun y => P)) ..))
 
 Require Import Ast.
 
-Inductive sterm : Set :=
-| sRel       : nat -> sterm
-| sSort      : sort -> sterm
-| sProd      : name -> sterm (** the type **) -> sterm -> sterm
-| sLambda    : name -> sterm (** type **) -> sterm (** type **) -> sterm -> sterm
-| sApp       : sterm -> name -> sterm (** type **) -> sterm (** type **) -> sterm -> sterm
-(* For now we use our own syntax for equality and Σ-types *)
-| sEq        : sterm -> sterm -> sterm -> sterm
-| sRefl      : sterm -> sterm -> sterm
-| sJ         : sterm -> sterm -> sterm -> sterm -> sterm -> sterm -> sterm
-| sTransport : sterm -> sterm -> sterm -> sterm -> sterm
-| sUip       : sterm -> sterm -> sterm -> sterm -> sterm -> sterm
-| sFunext    : sterm -> sterm -> sterm -> sterm -> sterm -> sterm
-| sHeq       : sterm -> sterm -> sterm -> sterm -> sterm
+Inductive sterm : Type :=
+| sRel (n : nat)
+| sSort (s : sort)
+| sProd (nx : name) (A B : sterm)
+| sLambda (nx : name) (A B t : sterm)
+| sApp (u : sterm) (nx : name) (A B v : sterm)
+(* Monogenous equality *)
+| sEq (A u v : sterm)
+| sRefl (A u : sterm)
+| sJ (A u P w v p : sterm)
+| sTransport (T1 T2 p t : sterm)
+| sUip (A u v p q : sterm)
+| sFunext (A B f g e : sterm)
+(* Heterogenous equality *)
+| sHeq (A a B b : sterm)
 .

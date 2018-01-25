@@ -1,9 +1,11 @@
 (* Translation from our special ITT to TemplateCoq itself  *)
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
-From Template Require Import Ast SAst LiftSubst SLiftSubst SCommon Typing
-                             ITyping Checker Template.
+From Template Require Import Ast SAst LiftSubst SLiftSubst SCommon
+                             Typing ITyping Checker Template.
 Import MonadNotation.
+
+Module T := Typing.
 
 (* From Simon Boulier *)
 Inductive tsl_error :=
@@ -81,7 +83,15 @@ Definition mkUip (A u v p q : term) : term :=
 Definition mkFunext (A B f g e : term) : term :=
   tApp tFunext [ A ; B ; f ; g ; e ].
 
-Fixpoint tsl_rec (fuel : nat) (Σ : global_context) (Γ : context) (t : sterm) {struct fuel}
+Definition heq {A} (a : A) {B} (b : B) :=
+  { p : A = B & transport p a = b }.
+
+Quote Definition tHeq := @heq.
+
+Definition mkHeq (A a B b : term) : term :=
+  tApp tHeq [ A ; a ; B ; b ].
+
+Fixpoint tsl_rec (fuel : nat) (Σ : global_context) (Γ : context) (t : sterm)
   : tsl_result term :=
   match fuel with
   | 0 => raise NotEnoughFuel
@@ -147,3 +157,109 @@ Fixpoint tsl_rec (fuel : nat) (Σ : global_context) (Γ : context) (t : sterm) {
     | _ => raise TranslationNotHandled
     end
   end.
+
+(* Delimit Scope i_scope with i. *)
+
+Fixpoint tsl_ctx (fuel : nat) (Σ : global_context) (Γ : scontext)
+  : tsl_result context :=
+  match Γ with
+  | [] => ret []
+  | a :: Γ =>
+    Γ' <- tsl_ctx fuel Σ Γ ;;
+    A' <- tsl_rec fuel Σ Γ' (sdecl_type a) ;;
+    ret (Γ' ,, vass (sdecl_name a) A')
+  end.
+
+Fixpoint extract_mind_decl_from_program (id : ident) (p : program)
+  : option minductive_decl
+  := match p with
+     | PConstr _ _ _ _ p => extract_mind_decl_from_program id p
+     | PType id' n inds p => if string_dec id id' then
+                              Some (Build_minductive_decl n inds)
+                            else extract_mind_decl_from_program id p
+     | PAxiom _ _ _ p => extract_mind_decl_from_program id p
+     | PIn _ => None
+     end.
+
+Fixpoint extract_cst_decl_from_program (id : ident) (p : program)
+  : option constant_decl
+  := match p with
+     | PConstr id' uist t1 t2 p => if string_dec id id' then
+                                    Some (Build_constant_decl id uist t1 (Some t2))
+                                  else extract_cst_decl_from_program id p
+     | PType id' n inds p => extract_cst_decl_from_program id p
+     | PAxiom _ _ _ p => extract_cst_decl_from_program id p
+     | PIn _ => None
+     end.
+
+Definition option_get {A} (default : A) (x : option A) : A
+  := match x with
+     | Some x => x
+     | None => default
+     end.
+
+Open Scope string_scope.
+
+Definition get_idecl id prog := option_get (Build_minductive_decl 0 []) (extract_mind_decl_from_program id prog).
+Definition get_cdecl id prog := option_get (Build_constant_decl "XX" [] (tRel 0) None) (extract_cst_decl_from_program id prog).
+
+Quote Recursively Definition eq_prog := @eq.
+Definition eq_decl :=
+  Eval compute in (get_idecl "Coq.Init.Logic.eq" eq_prog).
+
+Quote Recursively Definition J_prog := J.
+Definition J_decl :=
+  Eval compute in (get_cdecl "Top.J" J_prog).
+
+Quote Recursively Definition Transport_prog := @transport.
+Definition Transport_decl :=
+  Eval compute in (get_cdecl "Top.transport" Transport_prog).
+
+Definition Σ : global_context :=
+  [ InductiveDecl "Coq.Init.Logic.eq" eq_decl ;
+    ConstantDecl "Top.J" J_decl ;
+    ConstantDecl "Top.transport" Transport_decl
+  ].
+
+(* Checking for the sake of checking *)
+Compute (infer Σ [] tEq).
+Compute (infer Σ [] tJ).
+Compute (infer Σ [] tTransport).
+
+Theorem soundness :
+  forall {Γ t A},
+    Σ ;;; Γ |-i t : A ->
+    forall {fuel Γ' t' A'},
+      tsl_ctx fuel Σ Γ = Success Γ' ->
+      tsl_rec fuel Σ Γ' t = Success t' ->
+      tsl_rec fuel Σ Γ' A = Success A' ->
+      Σ ;;; Γ' |-- t' : A'.
+Proof.
+  intros Γ t A h.
+  dependent induction h ; intros fuel Γ' t' A' hΓ ht hA.
+  all: destruct fuel ; try discriminate.
+
+  - cbn in ht. inversion_clear ht.
+    admit.
+
+  - cbn in ht, hA. inversion_clear ht. inversion_clear hA.
+    apply T.type_Sort.
+
+  - cbn in hA. inversion_clear hA.
+    simpl in ht. inversion ht.
+    admit.
+
+  - admit.
+
+  - admit.
+
+  - cbn in hA. inversion_clear hA.
+    cbn in ht.
+    destruct (tsl_rec fuel Σ Γ' A) ; destruct (tsl_rec fuel Σ Γ' u) ; try (now inversion ht).
+    destruct (tsl_rec fuel Σ Γ' v) ; inversion_clear ht.
+    eapply T.type_App.
+    + econstructor. econstructor. split.
+      * econstructor.
+      * cbn. f_equal.
+    + econstructor.
+Abort.

@@ -273,11 +273,31 @@ Fixpoint mix (Γ Γ1 Γ2 : scontext) : scontext :=
   | A :: Γ1, B :: Γ2 =>
     (mix Γ Γ1 Γ2) ,, svass (sdecl_name A) (llift0 #|Γ1| (sdecl_type A))
                   ,, svass (sdecl_name B) (rlift0 #|Γ1| (sdecl_type B))
+                  ,, svass nAnon (sHeq (llift0 #|Γ1| (sdecl_type A))
+                                       (sRel 1)
+                                       (rlift0 #|Γ1| (sdecl_type B))
+                                       (sRel 0)
+                                 )
   | _,_ => Γ
   end.
 
 Lemma llift00 :
   forall {t δ}, llift 0 δ t = t.
+Proof.
+  intro t.
+  dependent induction t ; intro δ.
+  all: try (cbn ; f_equal ; easy).
+  cbn. case_eq δ.
+    + intro h. cbn. f_equal. omega.
+    + intros m h. case_eq (n <=? m).
+      * intro. reflexivity.
+      * intro nlm. cbn.
+        replace (m+0)%nat with m by omega.
+        rewrite nlm. f_equal. omega.
+Defined.
+
+Lemma rlift00 :
+  forall {t δ}, rlift 0 δ t = t.
 Proof.
   intro t.
   dependent induction t ; intro δ.
@@ -316,6 +336,46 @@ Admitted.
 Lemma type_rlift {Σ Γ Γ1 Γ2 Δ t A} (h : Σ ;;; Γ ,,, Γ2 ,,, Δ |-i t : A)
          (e : #|Γ1| = #|Γ2|) :
   Σ ;;; mix Γ Γ1 Γ2 ,,, Δ |-i rlift #|Γ1| #|Δ| t : rlift #|Γ1| #|Δ| A.
+Admitted.
+
+Lemma trel_to_heq' :
+  forall {Σ t1 t2},
+    t1 ∼ t2 ->
+    forall {Γ Γ1 Γ2 T1 T2},
+      #|Γ1| = #|Γ2| ->
+      Σ ;;; Γ ,,, Γ1 |-i t1 : T1 ->
+      Σ ;;; Γ ,,, Γ2 |-i  t2 : T2 ->
+      ∑ p,
+        Σ ;;; mix Γ Γ1 Γ2 |-i p : sHeq (llift0 #|Γ1| T1)
+                                      (llift0 #|Γ1| t1)
+                                      (rlift0 #|Γ1| T2)
+                                      (rlift0 #|Γ1| t2).
+Proof.
+  intros Σ t1 t2 sim.
+  induction sim ; intros Γ Γ1 Γ2 U1 U2 eq h1 h2.
+
+  - cbn. case_eq #|Γ1|.
+    + intro e0. cbn. rewrite e0 in eq.
+      destruct Γ1 ; try (now inversion e0).
+      destruct Γ2 ; try (now inversion eq).
+      cbn in *. rewrite !llift00, !rlift00.
+      replace (x+0)%nat with x by omega.
+      destruct (uniqueness h1 h2) as [s e].
+      destruct (eq_typing e) as [hU1 hU2].
+      exists (sHeqRefl U1 (sRel x)).
+      eapply type_conv.
+      * eapply type_HeqRefl ; eassumption.
+      * apply type_Heq ; eassumption.
+      * apply cong_Heq.
+        all: try (apply eq_reflexivity).
+        all: easy.
+    + intros n eqγ. case_eq (x <=? n).
+      * intro xln. exists (sRel (3*x)).
+        induction x.
+        -- cbn. rewrite eqγ in eq.
+           destruct Γ1 ; try (now inversion eqγ).
+           destruct Γ2 ; try (now inversion eq).
+           cbn in *.
 Admitted.
 
 Lemma trelE_to_heq :
@@ -628,7 +688,9 @@ Corollary trel_to_heq :
     ∑ p, Σ ;;; Γ |-i p : sHeq T1 t1 T2 t2.
 Proof.
   intros Σ Γ T1 T2 t1 t2 h h1 h2.
-  now apply trelE_to_heq.
+  destruct (@trel_to_heq' _ _ _ h _ nil nil _ _ eq_refl h1 h2) as [p hp].
+  cbn in hp. rewrite !llift00, !rlift00 in hp.
+  exists p. apply hp.
 Defined.
 
 Lemma inrel_lift :

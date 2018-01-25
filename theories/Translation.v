@@ -135,16 +135,6 @@ Proof.
   eexists. now eapply sort_heq.
 Defined.
 
-Definition heq_refl (A a : sterm) : sterm.
-Admitted.
-
-Lemma type_heq_refl :
-  forall {Σ Γ s A a},
-    Σ ;;; Γ |-i A : sSort s ->
-    Σ ;;; Γ |-i a : A ->
-    Σ ;;; Γ |-i heq_refl A a : sHeq A a A a.
-Admitted.
-
 Definition heq_sym (A a B b p : sterm) : sterm.
 Admitted.
 
@@ -200,14 +190,14 @@ Lemma type_heq_Eq :
                     (sSort s2) (sEq A2 u2 v2).
 Admitted.
 
-Definition heq_Refl (s1 s2 : sort) (A1 A2 u1 u2 pA pu : sterm) : sterm.
+Definition sCongRefl (s1 s2 : sort) (A1 A2 u1 u2 pA pu : sterm) : sterm.
 Admitted.
 
-Lemma type_heq_Refl :
+Lemma type_CongRefl :
   forall {Σ Γ s1 s2 A1 A2 u1 u2 pA pu},
     Σ ;;; Γ |-i pA : sHeq (sSort s1) A1 (sSort s2) A2 ->
     Σ ;;; Γ |-i pu : sHeq A1 u1 A2 u2 ->
-    Σ ;;; Γ |-i heq_Refl s1 s2 A1 A2 u1 u2 pA pu :
+    Σ ;;; Γ |-i sCongRefl s1 s2 A1 A2 u1 u2 pA pu :
                sHeq (sEq A1 u1 u1) (sRefl A1 u1) (sEq A2 u2 u2) (sRefl A2 u2).
 Admitted.
 
@@ -274,9 +264,9 @@ Proof.
     destruct (eq_typing eq) as [hA hB].
     assert (hs : Σ ;;; Γ |-i sSort s : sSort (succ_sort s)).
     { apply type_Sort. apply (typing_wf h1). }
-    exists (heq_refl A (sRel x)).
+    exists (sHeqRefl A (sRel x)).
     eapply type_conv.
-    + eapply type_heq_refl ; eassumption.
+    + eapply type_HeqRefl ; eassumption.
     + apply type_Heq ; eassumption.
     + apply cong_Heq ; try (apply eq_reflexivity ; assumption).
       assumption.
@@ -523,7 +513,7 @@ Proof.
       * eapply type_conv ; [ eassumption | idtac | eapply eq_symmetry ; eassumption ].
         assumption.
   - destruct (uniqueness h1 h2) as [s' eq].
-    exists (succ_sort (succ_sort s)), (heq_refl (succ_sort (succ_sort s)) A (sSort s)).
+    exists (succ_sort (succ_sort s)), (sHeqRefl (succ_sort (succ_sort s)) A (sSort s)).
     pose proof (inversionSort h1) as eqA.
     destruct (eq_typing eqA) as [hss hAs].
     pose proof (inversionSort h2) as eqB.
@@ -531,7 +521,7 @@ Proof.
     destruct (eq_typing eq) as [_ Bs'].
     destruct (uniqueness Bs' hBs).
     eapply type_conv.
-    + apply type_heq_refl ; assumption.
+    + apply type_HeqRefl ; assumption.
     + apply type_heq ; assumption.
     + apply cong_heq.
       all: try (apply eq_reflexivity).
@@ -544,7 +534,7 @@ Proof.
     destruct (inversionRefl h2) as [s2 [[hA2 hu2] eqB]].
     destruct (IHtrel1 _ _ _ hA1 hA2) as [sA [pA hpA]].
     destruct (IHtrel2 _ _ _ hu1 hu2) as [su [pu hpu]].
-    exists s1, (heq_Refl s1 s2 A1 A2 u1 u2 pA pu).
+    exists s1, (sHeqRefl s1 s2 A1 A2 u1 u2 pA pu).
     assert (Σ;;; Γ |-i sSort s1 : sSort (succ_sort s1)).
     { apply type_Sort. apply (typing_wf hA1). }
     destruct (istype_type hpA) as [? heqA].
@@ -552,7 +542,7 @@ Proof.
     assert (Σ;;; Γ |-i sSort s2 : sSort (succ_sort s1)).
     { admit. }
     eapply type_conv.
-    + apply type_heq_Refl.
+    + apply type_HeqRefl.
       * eapply type_conv.
         -- eassumption.
         -- apply type_heq. all: try assumption.
@@ -1262,9 +1252,9 @@ Proof.
     + destruct (type_translation _ _ _ _ t _ hΓ) as [A' [u' hu']].
       destruct hu' as [[[? ?] ?] hu'].
       destruct (istype_type hu') as [s' hA'].
-      exists A', A', u', u', (heq_refl A' u').
+      exists A', A', u', u', (sHeqRefl A' u').
       repeat split ; try assumption.
-      eapply type_heq_refl ; eassumption.
+      eapply type_HeqRefl ; eassumption.
 
     (* eq_symmetry *)
     + destruct (eq_translation _ _ _ _ _ h _ hΓ)
@@ -1331,7 +1321,7 @@ Proof.
       (* Now we conclude using reflexivity *)
       exists (B'{0 := u'}), (B'{0 := u'}).
       exists (sApp (sLambda n A' B' t') n A' B' u'), (t'{0 := u'}).
-      exists (heq_refl (B'{0 := u'}) (t'{0 := u'})).
+      exists (sHeqRefl (B'{0 := u'}) (t'{0 := u'})).
       destruct hA' as [[[? ?] ?] ?].
       destruct hB' as [[[? ?] ?] ?].
       destruct ht' as [[[? ?] ?] ?].
@@ -1344,7 +1334,7 @@ Proof.
         constructor ; assumption.
       * eapply inrel_subst ; assumption.
       * eapply type_conv.
-        -- apply @type_heq_refl with (s := s2).
+        -- apply @type_HeqRefl with (s := s2).
            ++ change (sSort s2) with ((sSort s2){0 := u'}).
               eapply typing_subst ; eassumption.
            ++ eapply typing_subst ; eassumption.

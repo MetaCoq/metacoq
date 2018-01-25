@@ -91,6 +91,11 @@ Inductive typing (Σ : global_context) : scontext -> sterm -> sterm -> Type :=
     Σ ;;; Γ |-i p : sHeq A u A v ->
     Σ ;;; Γ |-i sHeqToEq A u v p : sEq A u v
 
+| type_HeqRefl Γ A a s :
+    Σ ;;; Γ |-i A : sSort s ->
+    Σ ;;; Γ |-i a : A ->
+    Σ ;;; Γ |-i sHeqRefl A a : sHeq A a A a
+
 | type_conv Γ t A B s :
     Σ ;;; Γ |-i t : A ->
     Σ ;;; Γ |-i B : sSort s ->
@@ -370,6 +375,7 @@ Proof.
       * apply eq_symmetry. eapply cong_Prod ; apply eq_reflexivity ; assumption.
   - exists (succ_sort (succ_sort s)). apply type_Sort. apply (typing_wf H).
   - exists s. apply type_Eq ; assumption.
+  - exists (succ_sort s). apply type_Heq ; assumption.
   - exists s. assumption.
 Defined.
 

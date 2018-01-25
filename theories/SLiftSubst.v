@@ -31,6 +31,7 @@ Fixpoint lift n k t : sterm :=
     sHeq (lift n k A) (lift n k a) (lift n k B) (lift n k b)
   | sHeqToEq A u v p =>
     sHeqToEq (lift n k A) (lift n k u) (lift n k v) (lift n k p)
+  | sHeqRefl A a => sHeqRefl (lift n k A) (lift n k a)
   | x => x
   end.
 
@@ -72,6 +73,7 @@ Fixpoint subst t k u :=
     sHeq (subst t k A) (subst t k a) (subst t k B) (subst t k b)
   | sHeqToEq A u v p =>
     sHeqToEq (subst t k A) (subst t k u) (subst t k v) (subst t k p)
+  | sHeqRefl A a => sHeqRefl (subst t k A) (subst t k a)
   | x => x
   end.
 

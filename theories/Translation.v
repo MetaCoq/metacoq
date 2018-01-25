@@ -167,50 +167,109 @@ Admitted.
    (x : A, y : B, e : heq A x B y).
    We also need to define correspond lifts.
 
-   If Γ, Γ1 |- t : T then combine Γ Γ1 Γ2 |- clift1 #|Γ1| t : clift1 #|Γ1| T
-   If Γ, Γ2 |- t : T then combine Γ Γ1 Γ2 |- clift2 #|Γ1| t : clift2 #|Γ1| T
+   If Γ, Γ1, Δ |- t : T then
+   mix Γ Γ1 Γ2, Δ |- llift #|Γ1| #|Δ| t : llift #|Γ1| #|Δ| T
+   If Γ, Γ2, Δ |- t : T then
+   mix Γ Γ1 Γ2, Δ |- rlift #|Γ1| #|Δ| t : rlift #|Γ1| #|Δ| T
  *)
 
-(* Fixpoint clift1 l t : sterm := *)
-(*   match t with *)
-(*   | sRel i => if i <=? l then sRel (3 * i + 2) else sRel (i + 2 * l) *)
-(*   | sLambda na T V M => sLambda na (lift n k T) (lift n (S k) V) (lift n (S k) M) *)
-(*   | sApp u na A B v => *)
-(*     sApp (lift n k u) na (lift n k A) (lift n (S k) B) (lift n k v) *)
-(*   | sProd na A B => sProd na (lift n k A) (lift n (S k) B) *)
-(*   | sEq A u v => sEq (lift n k A) (lift n k u) (lift n k v) *)
-(*   | sRefl A u => sRefl (lift n k A) (lift n k u) *)
-(*   | sJ A u P w v p => *)
-(*     sJ (lift n k A) *)
-(*        (lift n k u) *)
-(*        (lift n (S (S k)) P) *)
-(*        (lift n k w) *)
-(*        (lift n k v) *)
-(*        (lift n k p) *)
-(*   | sTransport A B p t => *)
-(*     sTransport (lift n k A) (lift n k B) (lift n k p) (lift n k t) *)
-(*   | sUip A u v p q => *)
-(*     sUip (lift n k A) (lift n k u) (lift n k v) (lift n k p) (lift n k q) *)
-(*   | sFunext A B f g e => *)
-(*     sFunext (lift n k A) (lift n (S k) B) (lift n k f) (lift n k g) (lift n k e) *)
-(*   | sSig na A B => sSig na (lift n k A) (lift n (S k) B) *)
-(*   | sPair A B u v => *)
-(*     sPair (lift n k A) (lift n (S k) B) (lift n k u) (lift n k v) *)
-(*   | sSigLet A B P p t => *)
-(*     sSigLet (lift n k A) *)
-(*             (lift n (S k) B) *)
-(*             (lift n (S k) P) *)
-(*             (lift n k p) *)
-(*             (lift n (S (S k)) t) *)
-(*   | x => x *)
-(*   end. *)
+Fixpoint llift γ δ t : sterm :=
+  match t with
+  | sRel i =>
+    if i <? δ
+    then sRel i
+    else if i <? δ + γ
+         then sRel (3 * (i - δ) + δ + 2)
+         else sRel (i + 3*γ + δ)
+  | sLambda na A B b =>
+    sLambda na (llift γ δ A) (llift γ (S δ) B) (llift γ (S δ) b)
+  | sApp u na A B v =>
+    sApp (llift γ δ u) na (llift γ δ A) (llift γ (S δ) B) (llift γ δ v)
+  | sProd na A B => sProd na (llift γ δ A) (llift γ (S δ) B)
+  | sEq A u v => sEq (llift γ δ A) (llift γ δ u) (llift γ δ v)
+  | sRefl A u => sRefl (llift γ δ A) (llift γ δ u)
+  | sJ A u P w v p =>
+    sJ (llift γ δ A)
+       (llift γ δ u)
+       (lift γ (S (S δ)) P)
+       (llift γ δ w)
+       (llift γ δ v)
+       (llift γ δ p)
+  | sTransport A B p t =>
+    sTransport (llift γ δ A) (llift γ δ B) (llift γ δ p) (llift γ δ t)
+  | sUip A u v p q =>
+    sUip (llift γ δ A) (llift γ δ u) (llift γ δ v) (llift γ δ p) (llift γ δ q)
+  | sFunext A B f g e =>
+    sFunext (llift γ δ A) (llift γ (S δ) B)
+            (llift γ δ f) (llift γ δ g) (llift γ δ e)
+  | sHeq A a B b =>
+    sHeq (llift γ δ A) (llift γ δ a) (llift γ δ B) (llift γ δ b)
+  | sHeqToEq A u v p =>
+    sHeqToEq (llift γ δ A) (llift γ δ u) (llift γ δ v) (llift γ δ p)
+  | sHeqRefl A a => sHeqRefl (llift γ δ A) (llift γ δ a)
+  | sHeqSym A a B b p =>
+    sHeqSym (llift γ δ A) (llift γ δ a)
+            (llift γ δ B) (llift γ δ b) (llift γ δ p)
+  | sHeqTrans A a B b C c p q =>
+    sHeqTrans (llift γ δ A) (llift γ δ a)
+              (llift γ δ B) (llift γ δ b)
+              (llift γ δ C) (llift γ δ c)
+              (llift γ δ p) (llift γ δ q)
+  | x => x
+  end.
 
-(* We also need a list of sorts because they appear in heaq unfortunately...
-   This could be solved if we were to aximatise heq as well!
- *)
-(* Fixpoint combine (Γ Γ1 Γ2 : scontext) (Γs : list sort) : scontext := *)
+Notation llift0 γ t := (llift γ 0 t).
+
+Fixpoint rlift γ δ t : sterm :=
+  match t with
+  | sRel i =>
+    if i <? δ
+    then sRel i
+    else if i <? δ + γ
+         then sRel (3 * (i - δ) + δ + 1)
+         else sRel (i + 3*γ + δ)
+  | sLambda na A B b =>
+    sLambda na (rlift γ δ A) (rlift γ (S δ) B) (rlift γ (S δ) b)
+  | sApp u na A B v =>
+    sApp (rlift γ δ u) na (rlift γ δ A) (rlift γ (S δ) B) (rlift γ δ v)
+  | sProd na A B => sProd na (rlift γ δ A) (rlift γ (S δ) B)
+  | sEq A u v => sEq (rlift γ δ A) (rlift γ δ u) (rlift γ δ v)
+  | sRefl A u => sRefl (rlift γ δ A) (rlift γ δ u)
+  | sJ A u P w v p =>
+    sJ (rlift γ δ A)
+       (rlift γ δ u)
+       (lift γ (S (S δ)) P)
+       (rlift γ δ w)
+       (rlift γ δ v)
+       (rlift γ δ p)
+  | sTransport A B p t =>
+    sTransport (rlift γ δ A) (rlift γ δ B) (rlift γ δ p) (rlift γ δ t)
+  | sUip A u v p q =>
+    sUip (rlift γ δ A) (rlift γ δ u) (rlift γ δ v) (rlift γ δ p) (rlift γ δ q)
+  | sFunext A B f g e =>
+    sFunext (rlift γ δ A) (rlift γ (S δ) B)
+            (rlift γ δ f) (rlift γ δ g) (rlift γ δ e)
+  | sHeq A a B b =>
+    sHeq (rlift γ δ A) (rlift γ δ a) (rlift γ δ B) (rlift γ δ b)
+  | sHeqToEq A u v p =>
+    sHeqToEq (rlift γ δ A) (rlift γ δ u) (rlift γ δ v) (rlift γ δ p)
+  | sHeqRefl A a => sHeqRefl (rlift γ δ A) (rlift γ δ a)
+  | sHeqSym A a B b p =>
+    sHeqSym (rlift γ δ A) (rlift γ δ a)
+            (rlift γ δ B) (rlift γ δ b) (rlift γ δ p)
+  | sHeqTrans A a B b C c p q =>
+    sHeqTrans (rlift γ δ A) (rlift γ δ a)
+              (rlift γ δ B) (rlift γ δ b)
+              (rlift γ δ C) (rlift γ δ c)
+              (rlift γ δ p) (rlift γ δ q)
+  | x => x
+  end.
+
+Notation rlift0 γ t := (rlift γ 0 t).
+
+(* Fixpoint mix (Γ Γ1 Γ2 : scontext) : scontext := *)
 (*   match Γ1, Γ2, Γs with *)
-(*   | (Γ1 ,, svass nx A), (Γ2 ,, svass ny B), s :: Γs => (combine Γ Γ1 Γ2) ,, svass *)
+(*   | (Γ1 ,, svass nx A), (Γ2 ,, svass ny B), s :: Γs => (mix Γ Γ1 Γ2) ,, svass *)
 
 Lemma trelE_to_heq :
   forall {Σ t1 t2},

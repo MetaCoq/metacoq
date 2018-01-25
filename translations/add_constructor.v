@@ -31,24 +31,21 @@ Instance prime_tsl_ident : TslIdent
  (that is a reified declaration of an inductive). *)
 
 Definition add_ctor (mind : minductive_decl) (ind0 : inductive) (idc : ident) (ctor : term)
-  : minductive_decl.
-  refine {| ind_npars := mind.(ind_npars); ind_bodies := _ |}.
-  refine (map_i _ mind.(ind_bodies)).
-  intros i ind.
-  refine {| ind_name := tsl_ident ind.(ind_name);
-            ind_type := ind.(ind_type);
-            ind_kelim := ind.(ind_kelim);
-            ind_ctors := _;
-            ind_projs := ind.(ind_projs) |}.
-  refine (let ctors := List.map (fun '((id,t),k) => (tsl_ident id,t,k))
-                                ind.(ind_ctors) in
-          let i0 := inductive_ind ind0 in _).
-  refine (if Nat.eqb i i0
-          then (ctors ++ [_])%list else ctors).
-  exact (let n := List.length mind.(ind_bodies) in
-         let typ := try_beta_reduce (tApp ctor [tRel (n - i0 - 1)]) in
-         (idc, typ, 0)).
-Defined.
+  : minductive_decl
+  := let i0 := inductive_ind ind0 in
+     {| ind_npars := mind.(ind_npars) ;
+        ind_bodies := map_i (fun (i : nat) (ind : inductive_body) =>
+                         {| ind_name := tsl_ident ind.(ind_name) ;
+                            ind_type  := ind.(ind_type) ;
+                            ind_kelim := ind.(ind_kelim) ;
+                            ind_ctors := let ctors := map (fun '(id, t, k) => (tsl_ident id, t, k)) ind.(ind_ctors) in
+                                         if Nat.eqb i i0 then
+                                           let n := #|ind_bodies mind| in
+                                           let typ := try_beta_reduce (tApp ctor [tRel (n - i0 - 1)]) in
+                                           ctors ++ [(idc, typ, 0)]
+                                         else ctors;
+                            ind_projs := ind.(ind_projs) |})
+                            mind.(ind_bodies) |}.
 
 (* [add_constructor] is a new command (in Template Coq style) *)
 (* which do what we want *)
@@ -71,13 +68,13 @@ Definition add_constructor {A} (ind : A) (idc : ident)
 (** * Examples *)
 
 (** Here we add a silly constructor to bool. *)
-Run TemplateProgram (add_constructor bool "P" (fun bool' => nat -> bool' -> bool -> bool')).
+Run TemplateProgram (add_constructor bool "foo" (fun bool' => nat -> bool' -> bool -> bool')).
 
 Print bool'.
 (* Inductive bool' : Set := *)
 (*     true' : bool' *)
 (*   | false' : bool' *)
-(*   | P : nat -> bool' -> bool -> bool' *)
+(*   | foo : nat -> bool' -> bool -> bool' *)
 
 
 (** Here is a useful usecase: add a case to a syntax. *)
@@ -95,3 +92,7 @@ Print tm'.
 (*   | lam' : tm' -> tm' *)
 (*   | app' : tm' -> tm' -> tm' *)
 (*   | letin : tm' -> tm' -> tm' *)
+
+
+Run TemplateProgram (add_constructor (@eq) "foo'"
+                    (fun eq' => forall A x y, nat -> eq' A x x -> bool -> eq' A x y)).

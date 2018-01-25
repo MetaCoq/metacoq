@@ -1,20 +1,21 @@
-Require Import ssreflect ssrfun ssrbool.
-From mathcomp Require Import all_ssreflect.
+(* Require Import ssreflect ssrfun ssrbool. *)
+(* From mathcomp Require Import all_ssreflect. *)
 Require Import Template.Template Template.Ast Template.monad_utils Translations.sigma.
 Require Import Template.Induction Template.LiftSubst Template.Typing Template.Checker.
 Require Import Arith.Compare_dec.
 Require Import  Translations.translation_utils.
-Import String Lists.List.ListNotations MonadNotation.
+Import String List Lists.List.ListNotations MonadNotation.
 Open Scope list_scope.
 Open Scope string_scope.
 Open Scope sigma_scope.
 
+Infix "<=" := Nat.leb.
 
 Definition default_term := tVar "constant not found".
 
 Fixpoint tsl_rec0 (n : nat) (t : term) {struct t} : term :=
   match t with
-  | tRel k => if k >= n then tRel (2*k-n+1) else t
+  | tRel k => if n <= k then tRel (2*k-n+1) else t
   | tEvar k ts => tEvar k (map (tsl_rec0 n) ts)
   | tCast t c a => tCast (tsl_rec0 n t) c (tsl_rec0 n a)
   | tProd na A B => tProd na (tsl_rec0 n A) (tsl_rec0 (n+1) B)
@@ -48,7 +49,7 @@ Fixpoint tsl_rec1 (E : tsl_table) (t : term) : term :=
                      let A1 := tsl_rec1 E A in
                      tLambda na A0 (tLambda (tsl_name tsl_ident na) (subst_app (lift0 1 A1) [tRel 0]) (tsl_rec1 E t))
 
-  | tApp t us => let us' := flatten (map (fun v => [tsl_rec0 0 v; tsl_rec1 E v]) us) in
+  | tApp t us => let us' := concat (map (fun v => [tsl_rec0 0 v; tsl_rec1 E v]) us) in
                 mkApps (tsl_rec1 E t) us'
 
   | tLetIn na t A u => let t0 := tsl_rec0 0 t in
@@ -81,6 +82,7 @@ Fixpoint tsl_rec1 (E : tsl_table) (t : term) : term :=
     | None => default_term
     end
 
+  | tCase _ _ _ _ => tVar "the case is not implemented"
   | _ => todo
   end.
 
@@ -106,7 +108,7 @@ Definition tsl_mind_decl (E : tsl_table)
       refine (subst_app _ [tConstruct (mkInd kn i) k []]).
       refine (fold_left_i (fun t0 i u  => t0 {S i := u}) _ (tsl_rec1 E typ)).
       (* [I_n-1; ... I_0] *)
-      refine (List.rev (map_i (fun i _ => tInd (mkInd kn i) [])
+      refine (rev (map_i (fun i _ => tInd (mkInd kn i) [])
                               mind.(ind_bodies))).
 Defined.
 
@@ -228,48 +230,126 @@ Definition tTranslate (E : tsl_table) (id : ident)
 Run TemplateProgram (TC <- tTranslate [] "nat" ;;
                      tmDefinition "nat_TC" TC ).
 
-(* Require Import Vector. *)
-(* Run TemplateProgram (ΣE <- tTranslate ([],[]) "nat" ;; *)
-(*                         (* print_nf ΣE). *) *)
-(*                      tTranslate ΣE "t"). *)
+Module Id1.
+  Definition ID := forall A, A -> A.
 
+  Run TemplateProgram (tTranslate [] "ID").
+
+  Lemma param_ID_identity (f : ID)
+    : IDᵗ f -> forall A x, f A x = x.
+  Proof.
+    compute. intros H A x.
+    exact (H A (fun y => y = x) x (eq_refl x)).
+  Qed.
+
+  Definition toto := fun n : nat => (fun y => 0) (fun _ : Type =>  n).
+  Run TemplateProgram (tTranslate nat_TC "toto").
+
+
+  Definition my_id : ID :=
+    let n := 12 in (fun (_ : nat) y => y) 4 (fun A x => (fun _ : nat => x) n).
+
+  Run TemplateProgram (tTranslate nat_TC "my_id").
+
+
+  Definition free_thm_my_id : forall A x, my_id A x = x
+    := param_ID_identity my_id my_idᵗ.
+End Id1.
+
+
+Module Id2.
+  Definition ID := forall A x y (p : x = y :> A), x = y.
+
+  Run TemplateProgram (TC <- tTranslate [] "eq" ;;
+                       TC <- tTranslate TC "ID" ;;
+                       tmDefinition "TC" TC).
+
+
+  Lemma param_ID_identity (f : ID)
+    : IDᵗ f -> forall A x y p, f A x y p = p.
+  Proof.
+    compute. intros H A x y p.
+    destruct p.
+    specialize (H A (fun y => x = y) x eq_refl x eq_refl eq_refl
+                  (eq_reflᵗ _ _ _ _)).
+    destruct H. reflexivity.
+  Qed.
+
+  Definition myf : ID
+    := fun A x y p => eq_trans (eq_trans p (eq_sym p)) p.
+
+  Fail Run TemplateProgram (TC <- tTranslate TC "eq_sym" ;;
+                            TC <- tTranslate TC "eq_trans" ;;
+                            tTranslate TC "myf").
+End Id2.
+
+
+
+
+
+Module Vectors.
+  Import Vector.
+  Run TemplateProgram (tTranslate nat_TC "t").
+End Vectors.
 
 Require Import Even.
 Run TemplateProgram (tTranslate nat_TC "even").
 
-Definition map_type := forall A B, (A -> B) -> list A -> list B.
 Definition rev_type := forall A, list A -> list A.
 Run TemplateProgram (TC <- tTranslate [] "list" ;;
                      TC <- tTranslate TC "rev_type" ;;
-                     tmDefinition "TC" TC ).
+                     tmDefinition "list_TC" TC ).
 
 
-Run TemplateProgram (tTranslate [] "eq").
 
+(* Definition isequiv (A B : Type) (f : A -> B) := *)
+(*   exists (g : B -> A), (forall x, g (f x) = x) × (forall y, f (g y) = y). *)
 
-Definition ID := forall A, A -> A.
+(* Definition equiv_id A : isequiv A A (fun x => x). *)
+(*   unshelve econstructor. exact (fun y => y). *)
+(*   split; reflexivity. *)
+(* Defined. *)
 
-Run TemplateProgram (tTranslate [] "ID").
+(* Run TemplateProgram (TC <- tTranslate [] "sigma" ;; *)
+(*                      TC <- tTranslate TC "eq" ;; *)
+(*                      TC <- tTranslate TC "isequiv" ;; *)
+(*                      TC <- tTranslate TC "equiv_id" ;; *)
+(*                      tmDefinition "TC" TC). *)
 
-Lemma param_ID_identity (f : ID)
-  : IDᵗ f -> forall A x, f A x = x.
-Proof.
-  compute. intros H A x. 
-  exact (H A (fun y => y = x) x (Logic.eq_refl x)).
-Qed.
+(* Quote Definition eq_rect_Type_ := (forall (A : Type) (x : A) (P : A -> Type), *)
+(* P x -> forall y : A, x = y -> P y). *)
+(* Make Definition eq_rect_Typeᵗ :=  ltac:(let t:= eval compute in (tsl_rec1 TC eq_rect_Type_) in exact t). *)
 
-Definition toto := fun n : nat => (fun y => 0) (fun _ : Type =>  n).
-Run TemplateProgram (tTranslate nat_TC "toto").
+(* Lemma eq_rectᵗ : eq_rect_Typeᵗ eq_rect. *)
+(*   compute. intros A Aᵗ x xᵗ P Pᵗ X X0 y yᵗ H H0.  *)
+(*     by destruct H0. *)
+(* Defined. *)
 
+(* Definition TC' := (ConstRef "Coq.Init.Logic.eq_rect", tConst "eq_rectᵗ" []) :: TC. *)
 
-Definition my_id : ID :=
-  let n := 12 in (fun (_ : nat) y => y) 4 (fun A x => (fun _ : nat => x) n).
+(* Definition eq_to_iso A B : A = B -> exists f, isequiv A B f. *)
+(*   refine (eq_rect _ (fun B => exists f : A -> B, isequiv A B f) _ _). *)
+(*   econstructor. *)
+(*   eapply equiv_id. *)
+(* Defined. *)
 
-Run TemplateProgram (tTranslate nat_TC "my_id").
+(* Definition UA := forall A B, isequiv _ _ (eq_to_iso A B). *)
 
+(* Run TemplateProgram (TC <- tTranslate TC' "eq_to_iso" ;; *)
+(*                      tTranslate TC "UA"). *)
 
-Definition free_thm_my_id : forall A x, my_id A x = x
-  := param_ID_identity my_id my_idᵗ.
+(* Arguments isequiv {A B} _. *)
+(* Arguments isequivᵗ {_ _ _ _} _ _. *)
+(* Arguments eqᵗ {A Aᵗ x xᵗ H} _ _.  *)
 
+(* Axiom ua : UA. *)
 
-Quote Definition p := Eval compute in Nat.pred.
+(* Goal UAᵗ ua. *)
+(*   intros A Aᵗ B Bᵗ.  *)
+(*   unshelve econstructor. *)
+(*   - intros [f e] []. clear f e. *)
+(*     assert (forall H, isequiv (π1ᵗ H)). { *)
+(*       destruct π2ᵗ. destruct π2ᵗ. *)
+(*       intro x. unshelve econstructor. *)
+(*       by refine (fun y => eq_rect _ Aᵗ (π1ᵗ0 _ y) _ _). *)
+(*       split. { intro. *)

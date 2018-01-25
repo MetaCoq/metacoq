@@ -180,7 +180,7 @@ Fixpoint llift γ δ t : sterm :=
     then sRel i
     else if i <? δ + γ
          then sRel (3 * (i - δ) + δ + 2)
-         else sRel (i + 3*γ + δ)
+         else sRel (i + 3*γ)
   | sLambda na A B b =>
     sLambda na (llift γ δ A) (llift γ (S δ) B) (llift γ (S δ) b)
   | sApp u na A B v =>
@@ -191,7 +191,7 @@ Fixpoint llift γ δ t : sterm :=
   | sJ A u P w v p =>
     sJ (llift γ δ A)
        (llift γ δ u)
-       (lift γ (S (S δ)) P)
+       (llift γ (S (S δ)) P)
        (llift γ δ w)
        (llift γ δ v)
        (llift γ δ p)
@@ -227,7 +227,7 @@ Fixpoint rlift γ δ t : sterm :=
     then sRel i
     else if i <? δ + γ
          then sRel (3 * (i - δ) + δ + 1)
-         else sRel (i + 3*γ + δ)
+         else sRel (i + 3*γ)
   | sLambda na A B b =>
     sLambda na (rlift γ δ A) (rlift γ (S δ) B) (rlift γ (S δ) b)
   | sApp u na A B v =>
@@ -238,7 +238,7 @@ Fixpoint rlift γ δ t : sterm :=
   | sJ A u P w v p =>
     sJ (rlift γ δ A)
        (rlift γ δ u)
-       (lift γ (S (S δ)) P)
+       (rlift γ (S (S δ)) P)
        (rlift γ δ w)
        (rlift γ δ v)
        (rlift γ δ p)
@@ -275,6 +275,48 @@ Fixpoint mix (Γ Γ1 Γ2 : scontext) : scontext :=
                   ,, svass (sdecl_name B) (rlift0 #|Γ1| (sdecl_type B))
   | _,_ => Γ
   end.
+
+Lemma llift00 :
+  forall {t δ}, llift 0 δ t = t.
+Proof.
+  intro t.
+  dependent induction t ; intro δ.
+  all: try (cbn ; f_equal ; easy).
+  cbn. case_eq δ.
+    + intro h. cbn. f_equal. omega.
+    + intros m h. case_eq (n <=? m).
+      * intro. reflexivity.
+      * intro nlm. cbn.
+        replace (m+0)%nat with m by omega.
+        rewrite nlm. f_equal. omega.
+Defined.
+
+Lemma type_llift {Σ Γ Γ1 Γ2 Δ t A} (h : Σ ;;; Γ ,,, Γ1 ,,, Δ |-i t : A)
+         (e : #|Γ1| = #|Γ2|) :
+  Σ ;;; mix Γ Γ1 Γ2 ,,, Δ |-i llift #|Γ1| #|Δ| t : llift #|Γ1| #|Δ| A.
+Proof.
+  dependent induction h.
+  - case_eq #|Δ|.
+    + intros eqδ.
+      destruct Δ ; try (now inversion eqδ). cbn in *.
+      case_eq #|Γ1|.
+      * intros eqγ. cbn. rewrite llift00.
+        replace (n+0)%nat with n by omega.
+        destruct Γ1 ; try (now inversion eqγ).
+        destruct Γ2 ; try (now inversion eqγ).
+        cbn.
+        eapply type_Rel.
+        cbn in w. assumption.
+      * intros m eqγ. cbn.
+        case_eq (n <=? m).
+        -- intro nlm. induction n.
+           ++ cbn.
+Admitted.
+
+Lemma type_rlift {Σ Γ Γ1 Γ2 Δ t A} (h : Σ ;;; Γ ,,, Γ2 ,,, Δ |-i t : A)
+         (e : #|Γ1| = #|Γ2|) :
+  Σ ;;; mix Γ Γ1 Γ2 ,,, Δ |-i rlift #|Γ1| #|Δ| t : rlift #|Γ1| #|Δ| A.
+Admitted.
 
 Lemma trelE_to_heq :
   forall {Σ t1 t2},

@@ -39,3 +39,6 @@ Admitted.
 Lemma max_succ_id :
   forall s, max_sort (succ_sort s) s = succ_sort s.
 Admitted.
+
+Definition sapp_context (Γ Γ' : scontext) : scontext := (Γ' ++ Γ)%list.
+Notation " Γ  ,,, Γ' " := (sapp_context Γ Γ') (at level 25, Γ' at next level, left associativity) : s_scope.

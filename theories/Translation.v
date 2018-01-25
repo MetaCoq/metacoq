@@ -9,101 +9,97 @@ Open Scope x_scope.
 Open Scope i_scope.
 
 (*! Relation for translated expressions *)
-Inductive trel (E : list (nat * nat)) : sterm -> sterm -> Type :=
-| trel_assumption x y :
-    In (x,y) E ->
-    trel E (sRel x) (sRel y)
-
+Inductive trel : sterm -> sterm -> Type :=
 | trel_Rel x :
-    trel E (sRel x) (sRel x)
+    trel (sRel x) (sRel x)
 
 | trel_Transport_l t1 t2 T1 T2 p :
-    trel E t1 t2 ->
-    trel E (sTransport T1 T2 p t1) t2
+    trel t1 t2 ->
+    trel (sTransport T1 T2 p t1) t2
 
 | trel_Transport_r t1 t2 T1 T2 p :
-    trel E t1 t2 ->
-    trel E t1 (sTransport T1 T2 p t2)
+    trel t1 t2 ->
+    trel t1 (sTransport T1 T2 p t2)
 
 | trel_Prod n1 n2 A1 A2 B1 B2 :
-    trel E A1 A2 ->
-    trel E B1 B2 ->
-    trel E (sProd n1 A1 B1) (sProd n2 A2 B2)
+    trel A1 A2 ->
+    trel B1 B2 ->
+    trel (sProd n1 A1 B1) (sProd n2 A2 B2)
 
 | trel_Eq A1 A2 u1 u2 v1 v2 :
-    trel E A1 A2 ->
-    trel E u1 u2 ->
-    trel E v1 v2 ->
-    trel E (sEq A1 u1 v1) (sEq A2 u2 v2)
+    trel A1 A2 ->
+    trel u1 u2 ->
+    trel v1 v2 ->
+    trel (sEq A1 u1 v1) (sEq A2 u2 v2)
 
 (* | trel_Sig n1 n2 A1 A2 B1 B2 : *)
-(*     trel E A1 A2 -> *)
-(*     trel E B1 B2 -> *)
-(*     trel E (sSig n1 A1 B1) (sSig n2 A2 B2) *)
+(*     trel A1 A2 -> *)
+(*     trel B1 B2 -> *)
+(*     trel (sSig n1 A1 B1) (sSig n2 A2 B2) *)
 
 | trel_Sort s :
-    trel E (sSort s) (sSort s)
+    trel (sSort s) (sSort s)
 
 | trel_Lambda n1 n2 A1 A2 B1 B2 u1 u2 :
-    trel E A1 A2 ->
-    trel E B1 B2 ->
-    trel E u1 u2 ->
-    trel E (sLambda n1 A1 B1 u1) (sLambda n2 A2 B2 u2)
+    trel A1 A2 ->
+    trel B1 B2 ->
+    trel u1 u2 ->
+    trel (sLambda n1 A1 B1 u1) (sLambda n2 A2 B2 u2)
 
 | trel_App u1 u2 n1 n2 A1 A2 B1 B2 v1 v2 :
-    trel E u1 u2 ->
-    trel E A1 A2 ->
-    trel E B1 B2 ->
-    trel E v1 v2 ->
-    trel E (sApp u1 n1 A1 B1 v1) (sApp u2 n2 A2 B2 v2)
+    trel u1 u2 ->
+    trel A1 A2 ->
+    trel B1 B2 ->
+    trel v1 v2 ->
+    trel (sApp u1 n1 A1 B1 v1) (sApp u2 n2 A2 B2 v2)
 
 | trel_Refl A1 A2 u1 u2 :
-    trel E A1 A2 ->
-    trel E u1 u2 ->
-    trel E (sRefl A1 u1) (sRefl A2 u2)
+    trel A1 A2 ->
+    trel u1 u2 ->
+    trel (sRefl A1 u1) (sRefl A2 u2)
 
 (* | trel_Funext A1 A2 B1 B2 f1 f2 g1 g2 e1 e2 : *)
-(*     trel E A1 A2 -> *)
-(*     trel E B1 B2 -> *)
-(*     trel E f1 f2 -> *)
-(*     trel E g1 g2 -> *)
-(*     trel E e1 e2 -> *)
-(*     trel E (sFunext A1 B1 f1 g1 e1) (sFunext A2 B2 f2 g2 e2) *)
+(*     trel A1 A2 -> *)
+(*     trel B1 B2 -> *)
+(*     trel f1 f2 -> *)
+(*     trel g1 g2 -> *)
+(*     trel e1 e2 -> *)
+(*     trel (sFunext A1 B1 f1 g1 e1) (sFunext A2 B2 f2 g2 e2) *)
 
 (* | trel_Uip A1 A2 u1 u2 v1 v2 p1 p2 q1 q2 : *)
-(*     trel E A1 A2 -> *)
-(*     trel E u1 u2 -> *)
-(*     trel E v1 v2 -> *)
-(*     trel E p1 p2 -> *)
-(*     trel E q1 q2 -> *)
-(*     trel E (sUip A1 u1 v1 p1 q1) (sUip A2 u2 v2 p2 q2) *)
+(*     trel A1 A2 -> *)
+(*     trel u1 u2 -> *)
+(*     trel v1 v2 -> *)
+(*     trel p1 p2 -> *)
+(*     trel q1 q2 -> *)
+(*     trel (sUip A1 u1 v1 p1 q1) (sUip A2 u2 v2 p2 q2) *)
 
 (* | trel_J A1 A2 P1 P2 u1 u2 v1 v2 w1 w2 p1 p2 : *)
-(*     trel E A1 A2 -> *)
-(*     trel E P1 P2 -> *)
-(*     trel E u1 u2 -> *)
-(*     trel E v1 v2 -> *)
-(*     trel E w1 w2 -> *)
-(*     trel E p1 p2 -> *)
-(*     trel E (sJ A1 u1 P1 w1 v1 p1) (sJ A2 u2 P2 w2 v2 p2) *)
+(*     trel A1 A2 -> *)
+(*     trel P1 P2 -> *)
+(*     trel u1 u2 -> *)
+(*     trel v1 v2 -> *)
+(*     trel w1 w2 -> *)
+(*     trel p1 p2 -> *)
+(*     trel (sJ A1 u1 P1 w1 v1 p1) (sJ A2 u2 P2 w2 v2 p2) *)
 
 (* | trel_Pair A1 A2 B1 B2 u1 u2 v1 v2 : *)
-(*     trel E A1 A2 -> *)
-(*     trel E B1 B2 -> *)
-(*     trel E u1 u2 -> *)
-(*     trel E v1 v2 -> *)
-(*     trel E (sPair A1 B1 u1 v1) (sPair A2 B2 u2 v2) *)
+(*     trel A1 A2 -> *)
+(*     trel B1 B2 -> *)
+(*     trel u1 u2 -> *)
+(*     trel v1 v2 -> *)
+(*     trel (sPair A1 B1 u1 v1) (sPair A2 B2 u2 v2) *)
 
 (* | trel_SigLet A1 A2 B1 B2 P1 P2 p1 p2 t1 t2 : *)
-(*     trel E A1 A2 -> *)
-(*     trel E B1 B2 -> *)
-(*     trel E P1 P2 -> *)
-(*     trel E p1 p2 -> *)
-(*     trel E t1 t2 -> *)
-(*     trel E (sSigLet A1 B1 P1 p1 t1) (sSigLet A2 B2 P2 p2 t2) *)
+(*     trel A1 A2 -> *)
+(*     trel B1 B2 -> *)
+(*     trel P1 P2 -> *)
+(*     trel p1 p2 -> *)
+(*     trel t1 t2 -> *)
+(*     trel (sSigLet A1 B1 P1 p1 t1) (sSigLet A2 B2 P2 p2 t2) *)
 .
 
-Notation " t1 ∼ t2 " := (trel nil t1 t2) (at level 20).
+Notation " t1 ∼ t2 " := (trel t1 t2) (at level 20).
 
 (* We also define a biased relation that only allows transports on one side,
    the idea being that the term on the other side belongs to the source.
@@ -454,21 +450,14 @@ Lemma type_heq_Refl :
 Admitted.
 
 Lemma trelE_to_heq :
-  forall {E Σ},
-    (forall x y Γ T1 T2,
-        In (x,y) E ->
-        Σ ;;; Γ |-i sRel x : T1 ->
-        Σ ;;; Γ |-i sRel y : T2 ->
-        ∑ s p, Σ ;;; Γ |-i p : heq s T1 (sRel x) T2 (sRel y)) ->
-    forall {t1 t2},
-      trel E t1 t2 ->
-      forall {Γ T1 T2},
-        Σ ;;; Γ |-i t1 : T1 ->
-        Σ ;;; Γ |-i t2 : T2 ->
-        ∑ s p, Σ ;;; Γ |-i p : heq s T1 t1 T2 t2.
+  forall {Σ t1 t2},
+    trel t1 t2 ->
+    forall {Γ T1 T2},
+      Σ ;;; Γ |-i t1 : T1 ->
+      Σ ;;; Γ |-i t2 : T2 ->
+      ∑ s p, Σ ;;; Γ |-i p : heq s T1 t1 T2 t2.
 Proof.
-  intros E Σ H t1 t2. induction 1 ; intros Γ A B h1 h2.
-  - now apply H.
+  intros Σ t1 t2. induction 1 ; intros Γ A B h1 h2.
   - destruct (uniqueness h1 h2) as [s eq].
     destruct (eq_typing eq) as [hA hB].
     assert (hs : Σ ;;; Γ |-i sSort s : sSort (succ_sort s)).
@@ -770,7 +759,7 @@ Corollary trel_to_heq :
     ∑ s p, Σ ;;; Γ |-i p : heq s T1 t1 T2 t2.
 Proof.
   intros Σ Γ T1 T2 t1 t2 h h1 h2.
-  now apply @trelE_to_heq with (E := nil).
+  now apply trelE_to_heq.
 Defined.
 
 Lemma inrel_lift :
@@ -805,8 +794,7 @@ Lemma trel_lift :
 Proof.
   intros t1 t2. induction 1 ; intros n k.
   all: try (cbn ; now constructor).
-  - easy.
-  - cbn. destruct (k <=? x) ; now constructor.
+  cbn. destruct (k <=? x) ; now constructor.
 Defined.
 
 Lemma trel_subst :
@@ -818,11 +806,10 @@ Lemma trel_subst :
 Proof.
   intros t1 t2. induction 1 ; intros m1 m2 hu n.
   all: try (cbn ; constructor ; easy).
-  - exfalso. easy.
-  - unfold subst. destruct (nat_compare n x).
-    + now apply trel_lift.
-    + apply trel_Rel.
-    + apply trel_Rel.
+  unfold subst. destruct (nat_compare n x).
+  - now apply trel_lift.
+  - apply trel_Rel.
+  - apply trel_Rel.
 Defined.
 
 (* Lemma trel_refl : forall {t}, t ∼ t. *)
@@ -861,7 +848,6 @@ Proof.
     | now constructor
     ]
   ).
-  - easy.
   - assumption.
   - constructor. now apply IHtrel.
   - apply IHtrel. eapply inversion_trel_transport. eassumption.

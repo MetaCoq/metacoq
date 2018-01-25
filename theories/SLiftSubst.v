@@ -29,6 +29,8 @@ Fixpoint lift n k t : sterm :=
     sFunext (lift n k A) (lift n (S k) B) (lift n k f) (lift n k g) (lift n k e)
   | sHeq A a B b =>
     sHeq (lift n k A) (lift n k a) (lift n k B) (lift n k b)
+  | sHeqToEq A u v p =>
+    sHeqToEq (lift n k A) (lift n k u) (lift n k v) (lift n k p)
   | x => x
   end.
 
@@ -68,6 +70,8 @@ Fixpoint subst t k u :=
             (subst t k e)
   | sHeq A a B b =>
     sHeq (subst t k A) (subst t k a) (subst t k B) (subst t k b)
+  | sHeqToEq A u v p =>
+    sHeqToEq (subst t k A) (subst t k u) (subst t k v) (subst t k p)
   | x => x
   end.
 

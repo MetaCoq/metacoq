@@ -21,4 +21,5 @@ Inductive sterm : Type :=
 | sFunext (A B f g e : sterm)
 (* Heterogenous equality *)
 | sHeq (A a B b : sterm)
+| sHeqToEq (A u v p : sterm)
 .

@@ -115,23 +115,15 @@ Proof.
   induction h ; now constructor.
 Defined.
 
-(* Soon to be part of the syntax *)
-Definition heq_to_eq_term (A u v p : sterm) : sterm.
-Admitted.
-
-Lemma heq_to_eq :
-  forall {Σ Γ A u v p},
-    Σ ;;; Γ |-i p : sHeq A u A v ->
-    Σ ;;; Γ |-i heq_to_eq_term A u v p : sEq A u v.
-Admitted.
-
-Corollary sort_heq :
+Fact sort_heq :
   forall {Σ Γ s A B e},
     Σ ;;; Γ |-i e : sHeq (sSort s) A (sSort s) B ->
-    Σ ;;; Γ |-i heq_to_eq_term (sSort s) A B e : sEq (sSort s) A B.
+    Σ ;;; Γ |-i sHeqToEq (sSort s) A B e : sEq (sSort s) A B.
 Proof.
   intros Σ Γ s A B e h.
-  now eapply heq_to_eq.
+  destruct (istype_type h) as [? hty].
+  destruct (inversionHeq hty) as [? [[[[? ?] ?] ?] ?]].
+  now eapply type_HeqToEq.
 Defined.
 
 Corollary sort_heq_ex :
@@ -720,6 +712,7 @@ Inductive head_kind :=
 | headUip
 | headFunext
 | headHeq
+| headOther
 .
 
 Definition head (t : sterm) : head_kind :=
@@ -736,6 +729,8 @@ Definition head (t : sterm) : head_kind :=
   | sUip A u v p q => headUip
   | sFunext A B f g e => headFunext
   | sHeq A a B b => headHeq
+  (* We actually only care about type heads in the source *)
+  | _ => headOther
   end.
 
 Inductive transport_data :=

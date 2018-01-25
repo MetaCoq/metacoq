@@ -791,3 +791,53 @@ Proof.
       destruct (uniqueness i1 i2).
       eapply eq_conv ; eassumption.
 Defined.
+
+(* We state some admissible typing rules *)
+
+Fact sort_heq :
+  forall {Σ Γ s A B e},
+    Σ ;;; Γ |-i e : sHeq (sSort s) A (sSort s) B ->
+    Σ ;;; Γ |-i sHeqToEq (sSort s) A B e : sEq (sSort s) A B.
+Proof.
+  intros Σ Γ s A B e h.
+  destruct (istype_type h) as [? hty].
+  destruct (inversionHeq hty) as [? [[[[? ?] ?] ?] ?]].
+  now eapply type_HeqToEq.
+Defined.
+
+Corollary sort_heq_ex :
+  forall {Σ Γ s A B e},
+    Σ ;;; Γ |-i e : sHeq (sSort s) A (sSort s) B ->
+    ∑ p, Σ ;;; Γ |-i p : sEq (sSort s) A B.
+Proof.
+  intros Σ Γ s A B e h.
+  eexists. now eapply sort_heq.
+Defined.
+
+Lemma type_HeqSym' :
+  forall {Σ Γ A a B b p},
+    Σ ;;; Γ |-i p : sHeq A a B b ->
+    Σ ;;; Γ |-i sHeqSym A a B b p : sHeq B b A a.
+Proof.
+  intros Σ Γ A a B b p h.
+  destruct (istype_type h) as [? hty].
+  destruct (inversionHeq hty) as [? [[[[? ?] ?] ?] ?]].
+  now eapply type_HeqSym.
+Defined.
+
+Lemma type_HeqTrans' :
+  forall {Σ Γ A a B b C c p q},
+    Σ ;;; Γ |-i p : sHeq A a B b ->
+    Σ ;;; Γ |-i q : sHeq B b C c ->
+    Σ ;;; Γ |-i sHeqTrans A a B b C c p q : sHeq A a C c.
+Proof.
+  intros Σ Γ A a B b C c p q h1 h2.
+  destruct (istype_type h1) as [? i1].
+  destruct (inversionHeq i1) as [? [[[[? iB1] ?] ?] ?]].
+  destruct (istype_type h2) as [? i2].
+  destruct (inversionHeq i2) as [? [[[[iB2 ?] ?] ?] ?]].
+  eapply type_HeqTrans. all: try eassumption.
+  destruct (uniqueness iB2 iB1) as [? eq].
+  eapply type_conv ; [ eassumption | idtac | eassumption ].
+  apply (eq_typing eq).
+Defined.

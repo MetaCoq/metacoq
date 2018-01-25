@@ -267,9 +267,14 @@ Fixpoint rlift γ δ t : sterm :=
 
 Notation rlift0 γ t := (rlift γ 0 t).
 
-(* Fixpoint mix (Γ Γ1 Γ2 : scontext) : scontext := *)
-(*   match Γ1, Γ2, Γs with *)
-(*   | (Γ1 ,, svass nx A), (Γ2 ,, svass ny B), s :: Γs => (mix Γ Γ1 Γ2) ,, svass *)
+(* Really we ask that the context have the same size *)
+Fixpoint mix (Γ Γ1 Γ2 : scontext) : scontext :=
+  match Γ1, Γ2 with
+  | A :: Γ1, B :: Γ2 =>
+    (mix Γ Γ1 Γ2) ,, svass (sdecl_name A) (llift0 #|Γ1| (sdecl_type A))
+                  ,, svass (sdecl_name B) (rlift0 #|Γ1| (sdecl_type B))
+  | _,_ => Γ
+  end.
 
 Lemma trelE_to_heq :
   forall {Σ t1 t2},

@@ -9,97 +9,54 @@ Open Scope x_scope.
 Open Scope i_scope.
 
 (*! Relation for translated expressions *)
+
+Reserved Notation " t1 ∼ t2 " (at level 20).
+
 Inductive trel : sterm -> sterm -> Type :=
 | trel_Rel x :
-    trel (sRel x) (sRel x)
+    sRel x ∼ sRel x
 
 | trel_Transport_l t1 t2 T1 T2 p :
-    trel t1 t2 ->
-    trel (sTransport T1 T2 p t1) t2
+    t1 ∼ t2 ->
+    sTransport T1 T2 p t1 ∼ t2
 
 | trel_Transport_r t1 t2 T1 T2 p :
-    trel t1 t2 ->
-    trel t1 (sTransport T1 T2 p t2)
+    t1 ∼ t2 ->
+    t1 ∼ sTransport T1 T2 p t2
 
 | trel_Prod n1 n2 A1 A2 B1 B2 :
-    trel A1 A2 ->
-    trel B1 B2 ->
-    trel (sProd n1 A1 B1) (sProd n2 A2 B2)
+    A1 ∼ A2 ->
+    B1 ∼ B2 ->
+    sProd n1 A1 B1 ∼ sProd n2 A2 B2
 
 | trel_Eq A1 A2 u1 u2 v1 v2 :
-    trel A1 A2 ->
-    trel u1 u2 ->
-    trel v1 v2 ->
-    trel (sEq A1 u1 v1) (sEq A2 u2 v2)
-
-(* | trel_Sig n1 n2 A1 A2 B1 B2 : *)
-(*     trel A1 A2 -> *)
-(*     trel B1 B2 -> *)
-(*     trel (sSig n1 A1 B1) (sSig n2 A2 B2) *)
+    A1 ∼ A2 ->
+    u1 ∼ u2 ->
+    v1 ∼ v2 ->
+    sEq A1 u1 v1 ∼ sEq A2 u2 v2
 
 | trel_Sort s :
-    trel (sSort s) (sSort s)
+    sSort s ∼ sSort s
 
 | trel_Lambda n1 n2 A1 A2 B1 B2 u1 u2 :
-    trel A1 A2 ->
-    trel B1 B2 ->
-    trel u1 u2 ->
-    trel (sLambda n1 A1 B1 u1) (sLambda n2 A2 B2 u2)
+    A1 ∼ A2 ->
+    B1 ∼ B2 ->
+    u1 ∼ u2 ->
+    sLambda n1 A1 B1 u1 ∼ sLambda n2 A2 B2 u2
 
 | trel_App u1 u2 n1 n2 A1 A2 B1 B2 v1 v2 :
-    trel u1 u2 ->
-    trel A1 A2 ->
-    trel B1 B2 ->
-    trel v1 v2 ->
-    trel (sApp u1 n1 A1 B1 v1) (sApp u2 n2 A2 B2 v2)
+    u1 ∼ u2 ->
+    A1 ∼ A2 ->
+    B1 ∼ B2 ->
+    v1 ∼ v2 ->
+    sApp u1 n1 A1 B1 v1 ∼ sApp u2 n2 A2 B2 v2
 
 | trel_Refl A1 A2 u1 u2 :
-    trel A1 A2 ->
-    trel u1 u2 ->
-    trel (sRefl A1 u1) (sRefl A2 u2)
+    A1 ∼ A2 ->
+    u1 ∼ u2 ->
+    sRefl A1 u1 ∼ sRefl A2 u2
 
-(* | trel_Funext A1 A2 B1 B2 f1 f2 g1 g2 e1 e2 : *)
-(*     trel A1 A2 -> *)
-(*     trel B1 B2 -> *)
-(*     trel f1 f2 -> *)
-(*     trel g1 g2 -> *)
-(*     trel e1 e2 -> *)
-(*     trel (sFunext A1 B1 f1 g1 e1) (sFunext A2 B2 f2 g2 e2) *)
-
-(* | trel_Uip A1 A2 u1 u2 v1 v2 p1 p2 q1 q2 : *)
-(*     trel A1 A2 -> *)
-(*     trel u1 u2 -> *)
-(*     trel v1 v2 -> *)
-(*     trel p1 p2 -> *)
-(*     trel q1 q2 -> *)
-(*     trel (sUip A1 u1 v1 p1 q1) (sUip A2 u2 v2 p2 q2) *)
-
-(* | trel_J A1 A2 P1 P2 u1 u2 v1 v2 w1 w2 p1 p2 : *)
-(*     trel A1 A2 -> *)
-(*     trel P1 P2 -> *)
-(*     trel u1 u2 -> *)
-(*     trel v1 v2 -> *)
-(*     trel w1 w2 -> *)
-(*     trel p1 p2 -> *)
-(*     trel (sJ A1 u1 P1 w1 v1 p1) (sJ A2 u2 P2 w2 v2 p2) *)
-
-(* | trel_Pair A1 A2 B1 B2 u1 u2 v1 v2 : *)
-(*     trel A1 A2 -> *)
-(*     trel B1 B2 -> *)
-(*     trel u1 u2 -> *)
-(*     trel v1 v2 -> *)
-(*     trel (sPair A1 B1 u1 v1) (sPair A2 B2 u2 v2) *)
-
-(* | trel_SigLet A1 A2 B1 B2 P1 P2 p1 p2 t1 t2 : *)
-(*     trel A1 A2 -> *)
-(*     trel B1 B2 -> *)
-(*     trel P1 P2 -> *)
-(*     trel p1 p2 -> *)
-(*     trel t1 t2 -> *)
-(*     trel (sSigLet A1 B1 P1 p1 t1) (sSigLet A2 B2 P2 p2 t2) *)
-.
-
-Notation " t1 ∼ t2 " := (trel t1 t2) (at level 20).
+where " t1 ∼ t2 " := (trel t1 t2).
 
 (* We also define a biased relation that only allows transports on one side,
    the idea being that the term on the other side belongs to the source.

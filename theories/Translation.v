@@ -174,11 +174,6 @@ Fixpoint llift γ δ (t:sterm)  : sterm :=
        (llift γ δ p)
   | sTransport A B p t =>
     sTransport (llift γ δ A) (llift γ δ B) (llift γ δ p) (llift γ δ t)
-  | sUip A u v p q =>
-    sUip (llift γ δ A) (llift γ δ u) (llift γ δ v) (llift γ δ p) (llift γ δ q)
-  | sFunext A B f g e =>
-    sFunext (llift γ δ A) (llift γ (S δ) B)
-            (llift γ δ f) (llift γ δ g) (llift γ δ e)
   | sHeq A a B b =>
     sHeq (llift γ δ A) (llift γ δ a) (llift γ δ B) (llift γ δ b)
   | sHeqToEq A u v p =>
@@ -231,11 +226,6 @@ Fixpoint rlift γ δ t : sterm :=
        (rlift γ δ p)
   | sTransport A B p t =>
     sTransport (rlift γ δ A) (rlift γ δ B) (rlift γ δ p) (rlift γ δ t)
-  | sUip A u v p q =>
-    sUip (rlift γ δ A) (rlift γ δ u) (rlift γ δ v) (rlift γ δ p) (rlift γ δ q)
-  | sFunext A B f g e =>
-    sFunext (rlift γ δ A) (rlift γ (S δ) B)
-            (rlift γ δ f) (rlift γ δ g) (rlift γ δ e)
   | sHeq A a B b =>
     sHeq (rlift γ δ A) (rlift γ δ a) (rlift γ δ B) (rlift γ δ b)
   | sHeqToEq A u v p =>
@@ -281,12 +271,12 @@ Proof.
   dependent induction t ; intro δ.
   all: try (cbn ; f_equal ; easy).
   cbn. case_eq δ.
-    + intro h. cbn. f_equal. 
+    + intro h. cbn. f_equal.
     + intros m h. case_eq (n <=? m).
       * intro. reflexivity.
       * intro nlm. cbn.
         replace (m+0)%nat with m by omega.
-        rewrite nlm. f_equal. 
+        rewrite nlm. f_equal.
 Defined.
 
 Lemma rlift00 :
@@ -296,7 +286,7 @@ Proof.
   dependent induction t ; intro δ.
   all: try (cbn ; f_equal ; easy).
   cbn. case_eq δ.
-    + intro h. cbn. f_equal. 
+    + intro h. cbn. f_equal.
     + intros m h. case_eq (n <=? m).
       * intro. reflexivity.
       * intro nlm. cbn.

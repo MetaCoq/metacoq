@@ -61,22 +61,6 @@ Inductive typing (Σ : global_context) : scontext -> sterm -> sterm -> Type :=
     Σ ;;; Γ |-i t : T1 ->
     Σ ;;; Γ |-i sTransport T1 T2 p t : T2
 
-| type_Uip Γ s A u v p q :
-    Σ ;;; Γ |-i A : sSort s ->
-    Σ ;;; Γ |-i u : A ->
-    Σ ;;; Γ |-i v : A ->
-    Σ ;;; Γ |-i p : sEq A u v ->
-    Σ ;;; Γ |-i q : sEq A u v ->
-    Σ ;;; Γ |-i sUip A u v p q : sEq (sEq A u v) p q
-
-| type_Funext Γ s1 s2 n1 n2 n3 A B f g e :
-    Σ ;;; Γ |-i A : sSort s1 ->
-    Σ ;;; Γ ,, svass n1 A |-i B : sSort s2 ->
-    Σ ;;; Γ |-i f : sProd n1 A B ->
-    Σ ;;; Γ |-i g : sProd n2 A B ->
-    Σ ;;; Γ |-i e : sProd n3 A (sEq B (sApp (lift0 1 f) n1 (lift0 1 A) (lift 1 1 B) (sRel 0)) (sApp (lift0 1 g) n2 (lift0 1 A) (lift 1 1 B) (sRel 0))) ->
-    Σ ;;; Γ |-i sFunext A B f g e : sEq (sProd n1 A B) f g
-
 | type_Heq Γ A a B b s :
     Σ ;;; Γ |-i A : sSort s ->
     Σ ;;; Γ |-i B : sSort s ->
@@ -258,17 +242,6 @@ with eq_term (Σ : global_context) : scontext -> sterm -> sterm -> sterm -> Type
     Σ ;;; Γ |-i t1 = t2 : A1 ->
     Σ ;;; Γ |-i sTransport A1 B1 p1 t1 = sTransport A2 B2 p2 t2 : B1
 
-| cong_Uip Γ A1 A2 u1 u2 v1 v2 p1 p2 q1 q2 :
-    Σ ;;; Γ |-i p1 = p2 : sEq A1 u1 v1 ->
-    Σ ;;; Γ |-i q1 = q2 : sEq A1 u1 v1 ->
-    Σ ;;; Γ |-i sUip A1 u1 v1 p1 q1 = sUip A2 u2 v2 p2 q2 : sEq (sEq A1 u1 v1) p1 q1
-
-| cong_Funext Γ n1 n2 n3 A1 A2 B1 B2 f1 f2 g1 g2 e1 e2 :
-    Σ ;;; Γ |-i f1 = f2 : sProd n1 A1 B1 ->
-    Σ ;;; Γ |-i g1 = g2 : sProd n2 A1 B1 ->
-    Σ ;;; Γ |-i e1 = e2 : sProd n3 A1 (sEq B1 (sApp (lift0 1 f1) n1 (lift0 1 A1) (lift 1 1 B1) (sRel 0)) (sApp (lift0 1 g1) n2 (lift0 1 A1) (lift 1 1 B1) (sRel 0))) ->
-    Σ ;;; Γ |-i sFunext A1 B1 f1 g1 e1 = sFunext A2 B2 f2 g2 e2 : sEq (sProd n1 A1 B1) f1 g1
-
 | cong_Heq Γ A1 A2 a1 a2 B1 B2 b1 b2 s :
     Σ ;;; Γ |-i A1 = A2 : sSort s ->
     Σ ;;; Γ |-i B1 = B2 : sSort s ->
@@ -432,14 +405,6 @@ Proof.
     + cbn. rewrite !lift_subst, lift00.
       assumption.
   - eexists. eassumption.
-  - exists s. apply type_Eq ; try easy. now apply type_Eq.
-  - exists (max_sort s1 s2). apply type_Eq.
-    + now apply type_Prod.
-    + assumption.
-    + eapply type_conv.
-      * eassumption.
-      * eapply type_Prod ; eassumption.
-      * apply eq_symmetry. eapply cong_Prod ; apply eq_reflexivity ; assumption.
   - exists (succ_sort (succ_sort s)). apply type_Sort. apply (typing_wf H).
   - exists s. apply type_Eq ; assumption.
   - exists (succ_sort s). apply type_Heq ; assumption.

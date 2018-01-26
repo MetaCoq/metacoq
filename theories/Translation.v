@@ -483,18 +483,19 @@ Proof.
     destruct (inversionHeq iA) as [? [[[[? ?] ?] ?] ?]].
     destruct (istype_type hpB) as [? iB].
     destruct (inversionHeq iB) as [? [[[[? ?] ?] ?] ?]].
-    eapply type_conv.
-    + eapply type_CongProd'.
-      * admit.
-      * admit.
-      * eassumption.
-      * admit.
-    + apply type_Heq.
-      all:admit.
-    + cbn.
-      (* There is something wrong with the indices! *)
-      admit.
-      Unshelve. all:admit.
+    (* eapply type_conv. *)
+    (* + eapply type_CongProd'. *)
+    (*   * admit. *)
+    (*   * admit. *)
+    (*   * eassumption. *)
+    (*   * admit. *)
+    (* + apply type_Heq. *)
+    (*   all:admit. *)
+    (* + cbn. *)
+    (*   (* There is something wrong with the indices! *) *)
+    (*   admit. *)
+    (*   Unshelve. all:admit. *)
+    admit.
 
   (* Eq *)
   - admit.

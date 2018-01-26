@@ -121,19 +121,19 @@ Inductive typing (Σ : global_context) : scontext -> sterm -> sterm -> Type :=
     Σ ;;; Γ |-i p : sEq (sSort s) A B ->
     Σ ;;; Γ |-i sHeqTransport A B p t : sHeq A t B (sTransport A B p t)
 
-| type_CongProd Γ s1 s2 z1 z2 nx ny ne A1 A2 B1 B2 p q :
-    Σ ;;; Γ |-i sSort (max_sort z1 z2) : sSort (succ_sort (max_sort s1 s2)) ->
+| type_CongProd Γ s1 s2 z1 z2 nx ny np A1 A2 B1 B2 p q :
+    Σ ;;; Γ |-i sSort (max_sort s2 z2) : sSort (succ_sort (max_sort s1 z1)) ->
     Σ ;;; Γ |-i A1 : sSort s1 ->
-    Σ ;;; Γ |-i A2 : sSort z1 ->
-    Σ ;;; Γ ,, svass nx A1 |-i B1 : sSort s2 ->
+    Σ ;;; Γ |-i A2 : sSort s2 ->
+    Σ ;;; Γ ,, svass nx A1 |-i B1 : sSort z1 ->
     Σ ;;; Γ ,, svass ny A2 |-i B2 : sSort z2 ->
-    Σ ;;; Γ |-i p : sHeq (sSort s1) A1 (sSort z1) A2 ->
-    Σ ;;; Γ ,, svass nx A1 ,, svass ny (lift0 1 A2) ,,
-      svass ne (sHeq (lift0 2 A1) (sRel 1) (lift0 2 A2) (sRel 0)) |-i
-    q : sHeq (sSort s2) (lift0 2 B1) (sSort z2) (lift0 1 (lift 1 1 B1)) ->
+    Σ ;;; Γ |-i p : sHeq (sSort s1) A1 (sSort s2) A2 ->
+    Σ ;;; Γ ,, svass np (sPack A1 A2)
+    |-i q : sHeq (sSort z1) (B1{ 0 := sProjT1 (sRel 0) })
+                (sSort z2) (B2{ 0 := sProjT2 (sRel 0) }) ->
     Σ ;;; Γ |-i sCongProd A1 A2 B1 B2 p q :
-    sHeq (sSort (max_sort s1 s2)) (sProd nx A1 B1)
-         (sSort (max_sort z1 z2)) (sProd ny A2 B2)
+    sHeq (sSort (max_sort s1 z1)) (sProd nx A1 B1)
+         (sSort (max_sort s2 z2)) (sProd ny A2 B2)
 
 | type_Pack Γ A1 A2 s :
     Σ ;;; Γ |-i A1 : sSort s ->
@@ -447,7 +447,7 @@ Proof.
   - exists (succ_sort s). apply type_Heq ; assumption.
   - exists (succ_sort s). apply type_Heq. all: try assumption.
     eapply type_Transport ; eassumption.
-  - exists (succ_sort (succ_sort (max_sort s1 s2))).
+  - exists (succ_sort (succ_sort (max_sort s1 z1))).
     apply type_Heq. all: try assumption.
     + eapply type_Sort. apply (typing_wf H).
     + apply type_Prod ; assumption.
@@ -939,31 +939,28 @@ Proof.
   eapply type_HeqTransport ; eassumption.
 Defined.
 
-Lemma type_CongProd' :
-  forall {Σ Γ s1 s2 z1 z2 nx ny ne A1 A2 B1 B2 p q},
-    Σ ;;; Γ,, svass nx A1 |-i B1 : sSort s2 ->
-    Σ ;;; Γ,, svass ny A2 |-i B2 : sSort z2 ->
-    Σ ;;; Γ |-i p : sHeq (sSort s1) A1 (sSort z1) A2 ->
-    Σ ;;; Γ ,, svass nx A1 ,, svass ny (lift0 1 A2) ,,
-      svass ne (sHeq (lift0 2 A1) (sRel 1) (lift0 2 A2) (sRel 0)) |-i
-    q : sHeq (sSort s2) (lift0 2 B1) (sSort z2) (lift0 1 (lift 1 1 B1)) ->
-    Σ ;;; Γ |-i sCongProd A1 A2 B1 B2 p q :
-    sHeq (sSort (max_sort s1 s2)) (sProd nx A1 B1)
-         (sSort (max_sort z1 z2)) (sProd ny A2 B2).
-Proof.
-  intros Σ Γ s1 s2 z1 z2 nx ny ne A1 A2 B1 B2 p q hB1 hB2 hp hq.
-  destruct (istype_type hp) as [? ip].
-  destruct (inversionHeq ip) as [? [[[[? ?] ?] ?] ?]].
-  destruct (istype_type hq) as [? iq].
-  destruct (inversionHeq iq) as [? [[[[? ?] ?] ?] ?]].
-  eapply type_CongProd.
-  all: try eassumption.
-  pose proof (sorts_in_sort t t0).
-  pose proof (sorts_in_sort t3 t4).
-  set (Δ := ((Γ,, svass nx A1),, svass ny (lift0 1 A2)),,
-       svass ne (sHeq (lift0 2 A1) (sRel 1) (lift0 2 A2) (sRel 0))) in H0.
-  admit.
-Admitted.
+(* Lemma type_CongProd' : *)
+(*   forall {Σ Γ s1 s2 z1 z2 nx ny np A1 A2 B1 B2 p q}, *)
+(*     Σ ;;; Γ |-i sSort (max_sort s2 z2) : sSort (succ_sort (max_sort s1 z1)) -> *)
+(*     Σ ;;; Γ |-i p : sHeq (sSort s1) A1 (sSort s2) A2 -> *)
+(*     Σ ;;; Γ ,, svass np (sPack A1 A2) *)
+(*     |-i q : sHeq (sSort z1) (B1{ 0 := sProjT1 (sRel 0) }) *)
+(*                 (sSort z2) (B2{ 0 := sProjT2 (sRel 0) }) -> *)
+(*     Σ ;;; Γ |-i sCongProd A1 A2 B1 B2 p q : *)
+(*     sHeq (sSort (max_sort s1 z1)) (sProd nx A1 B1) *)
+(*          (sSort (max_sort s2 z2)) (sProd ny A2 B2). *)
+(* Proof. *)
+(*   intros Σ Γ s1 s2 z1 z2 nx ny np A1 A2 B1 B2 p q hh hp hq. *)
+(*   destruct (istype_type hp) as [? ip]. *)
+(*   destruct (inversionHeq ip) as [? [[[[? ?] ?] ?] ?]]. *)
+(*   destruct (istype_type hq) as [? iq]. *)
+(*   destruct (inversionHeq iq) as [? [[[[? ?] ?] ?] ?]]. *)
+(*   pose proof (sorts_in_sort t t0). *)
+(*   pose proof (sorts_in_sort t3 t4). *)
+(*   eapply type_CongProd. *)
+(*   all: try eassumption. *)
+(*   - eapply type_conv. *)
+(*     + eassumption. *)
 
 Lemma type_ProjT1' :
   forall {Σ Γ A1 A2 p},

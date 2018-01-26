@@ -354,6 +354,7 @@ Proof.
   intros Σ t1 t2 sim.
   induction sim ; intros Γ Γ1 Γ2 U1 U2 eq h1 h2.
 
+  (* Variable case *)
   - cbn. case_eq #|Γ1|.
     + intro e0. cbn. rewrite e0 in eq.
       destruct Γ1 ; try (now inversion e0).
@@ -371,11 +372,65 @@ Proof.
         all: easy.
     + intros n eqγ. case_eq (x <=? n).
       * intro xln. exists (sRel (3*x)).
-        induction x.
-        -- cbn. rewrite eqγ in eq.
-           destruct Γ1 ; try (now inversion eqγ).
-           destruct Γ2 ; try (now inversion eq).
-           cbn in *.
+        (* induction x. *)
+        (* -- cbn. rewrite eqγ in eq. *)
+        (*    destruct Γ1 ; try (now inversion eqγ). *)
+        (*    destruct Γ2 ; try (now inversion eq). *)
+        (*    destruct s as [na ? A], s0 as [nb ? B]. *)
+        (*    cbn in *. *)
+        (*    eapply type_conv. *)
+        (*    ++ eapply type_Rel. admit. *)
+        (*    ++ admit. *)
+        (*    ++ cbn. *)
+        admit.
+      * intro nlx.
+        assert (h1' : Σ ;;; mix Γ Γ1 Γ2 |-i sRel (x + (S n + (S n + (S n + 0)))) : llift0 (S n) U1).
+        { replace (sRel (x + (S n + (S n + (S n + 0)))))
+            with (llift0 (S n) (sRel x))
+            by (cbn ; now rewrite nlx).
+          replace (S n) with #|Γ1| by (apply eqγ).
+          eapply @type_llift with (Δ := nil) ; assumption.
+        }
+        assert (h2' : Σ ;;; mix Γ Γ1 Γ2 |-i sRel (x + (S n + (S n + (S n + 0)))) : rlift0 (S n) U2).
+        { replace (sRel (x + (S n + (S n + (S n + 0)))))
+            with (rlift0 (S n) (sRel x))
+            by (cbn ; now rewrite nlx).
+          replace (S n) with #|Γ1| by (apply eqγ).
+          eapply @type_rlift with (Δ := nil) ; assumption.
+        }
+        destruct (uniqueness h1' h2') as [s e].
+        destruct (eq_typing e) as [hlU1 hrU2].
+        exists (sHeqRefl (llift0 (S n) U1) (sRel (x + (S n + (S n + (S n + 0)))))).
+        eapply type_conv.
+        -- eapply type_HeqRefl ; eassumption.
+        -- apply type_Heq ; eassumption.
+        -- apply cong_Heq.
+           all: try (apply eq_reflexivity).
+           all: easy.
+
+  (* Left transport *)
+  - admit.
+
+  (* Right transport *)
+  - admit.
+
+  (* Prod *)
+  - admit.
+
+  (* Eq *)
+  - admit.
+
+  (* Sort *)
+  - admit.
+
+  (* Lambda *)
+  - admit.
+
+  (* App *)
+  - admit.
+
+  (* Refl *)
+  - admit.
 Admitted.
 
 Lemma trelE_to_heq :

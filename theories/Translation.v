@@ -304,6 +304,79 @@ Proof.
         rewrite nlm. f_equal.
 Defined.
 
+Fixpoint llift_context n (Δ:scontext) : scontext :=
+  match Δ with nil => nil
+          | A :: Δ => svass (sdecl_name A) (llift n #|Δ| (sdecl_type A)) ::  llift_context n Δ
+  end. 
+
+
+Definition llift_subst :
+  forall (u t : sterm) (i j m : nat), llift j (i+m) (u {m := t}) = (llift j (S i+m) u) {m := llift j i t}. 
+Proof.
+  induction u ; intros t i j m.
+  all: try (cbn ; f_equal;
+            try replace (S (S (S (j + m))))%nat with (j + (S (S (S m))))%nat by omega ;
+            try replace (S (S (j + m)))%nat with (j + (S (S m)))%nat by omega ;
+            try replace (S (j + m))%nat with (j + (S m))%nat by omega ;
+            try replace (S (S (S (i + m))))%nat with (i + (S (S (S m))))%nat by omega ;
+            try replace (S (S (i + m)))%nat with (i + (S (S m)))%nat by omega ;
+            try replace (S (i + m))%nat with (i + (S m))%nat by omega;
+    try  (rewrite IHu; cbn; repeat f_equal; omega);
+    try  (rewrite IHu1; cbn; repeat f_equal; omega);
+   try  (rewrite IHu2; cbn; repeat f_equal; omega);
+  try  (rewrite IHu3; cbn; repeat f_equal; omega);
+   try  (rewrite IHu4; cbn; repeat f_equal; omega);
+  try  (rewrite IHu5; cbn; repeat f_equal; omega);
+  try  (rewrite IHu6; cbn; repeat f_equal; omega);
+  try  (rewrite IHu7; cbn; repeat f_equal; omega);
+  try  (rewrite IHu8; cbn; repeat f_equal; omega)).
+  (* missing the sRel case *)
+  admit.
+Admitted. 
+
+Fixpoint type_llift {Σ Γ Γ1 Γ2 Δ t A} (h : Σ ;;; Γ ,,, Γ1 ,,, Δ |-i t : A)
+         (e : #|Γ1| = #|Γ2|)  :
+  Σ ;;; mix Γ Γ1 Γ2 ,,, llift_context #|Γ1| Δ |-i llift #|Γ1| #|Δ| t : llift #|Γ1| #|Δ| A
+with wf_llift {Σ Γ Γ1 Γ2 Δ} (wf1: wf Σ (Γ ,,, Γ1 ,,, Δ))
+         (e : #|Γ1| = #|Γ2|) :
+   wf Σ (mix Γ Γ1 Γ2 ,,, llift_context #|Γ1| Δ).
+Proof.
+  generalize dependent Γ2. 
+  unshelve refine (typing_rect Σ (fun Γgen t A _ =>
+                           forall Γ Γ1 Δ, Γ ,,, Γ1 ,,, Δ = Γgen ->
+                                          forall Γ2 : list scontext_decl, #|Γ1| = #|Γ2| ->  Σ;;; mix Γ Γ1 Γ2 ,,, llift_context #|Γ1| Δ  |-i llift #|Γ1| #|Δ| t : llift #|Γ1| #|Δ| A) _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ (Γ ,,, Γ1 ,,, Δ ) t A h _ _ _ eq_refl); cbn in *; clear -type_llift wf_llift. 
+  (* dependent induction h; cbn in *.  *)
+  - intros. destruct H. generalize dependent Γ2. generalize dependent Γ1. induction Δ; cbn.
+    + induction Γ1; cbn in *.
+      * intros. rewrite llift00. refine (type_Rel _ _ _ _ _); auto.
+      * admit.
+    + admit. 
+  - intros. destruct H. apply type_Sort.
+    apply wf_llift; assumption. 
+  - intros. destruct H1. eapply type_Prod.
+    apply H; try reflexivity; try assumption. 
+    apply (H0 Γ0 Γ1 (Δ ,, svass n t) eq_refl Γ2 H2).
+  - intros. destruct H2. eapply type_Lambda.
+    apply H; try reflexivity; try assumption. 
+    apply (H0 Γ0 Γ1 (Δ ,, svass n t) eq_refl Γ2 H3).
+    apply (H1 Γ0 Γ1 (Δ ,, svass n t) eq_refl Γ2 H3).
+  - intros. destruct H3.
+    pose (llift_subst B u #|Δ| #|Γ1| 0).
+    rewrite <- plus_n_O in *. rewrite e.
+    cbn. clear e. rewrite <- plus_n_O in *. unshelve eapply type_App.
+    exact s1. exact s2. 
+    apply (H Γ0 Γ1 Δ eq_refl Γ2 H4).
+    apply (H0 Γ0 Γ1 (Δ ,, svass n A) eq_refl Γ2 H4).
+    apply (H1 Γ0 Γ1 Δ eq_refl Γ2 H4).
+    apply (H2 Γ0 Γ1 Δ eq_refl Γ2 H4).
+  - intros. destruct H2.
+    eapply type_Eq.
+    apply (H Γ0 Γ1 Δ eq_refl Γ2 H3).
+    apply (H0 Γ0 Γ1 Δ eq_refl Γ2 H3).
+    apply (H1 Γ0 Γ1 Δ eq_refl Γ2 H3).
+  - (* and so on **)
+Abort.     
+    
 Lemma type_llift {Σ Γ Γ1 Γ2 Δ t A} (h : Σ ;;; Γ ,,, Γ1 ,,, Δ |-i t : A)
          (e : #|Γ1| = #|Γ2|) :
   Σ ;;; mix Γ Γ1 Γ2 ,,, Δ |-i llift #|Γ1| #|Δ| t : llift #|Γ1| #|Δ| A.

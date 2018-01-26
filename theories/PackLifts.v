@@ -125,7 +125,7 @@ Fixpoint mix (Γ Γ1 Γ2 : scontext) : scontext :=
   | A :: Γ1, B :: Γ2 =>
     (mix Γ Γ1 Γ2) ,, svass (sdecl_name A)
                            (sPack (llift0 #|Γ1| (sdecl_type A))
-                                  (lift0 1 (rlift0 #|Γ1| (sdecl_type B))))
+                                  (rlift0 #|Γ1| (sdecl_type B)))
   | _,_ => Γ
   end.
 

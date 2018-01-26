@@ -45,6 +45,10 @@ Fixpoint lift n k t : sterm :=
     sCongProd (lift n k A1) (lift n k A2)
               (lift n (S k) B1) (lift n (S k) B2)
               (lift n k p) (lift n (S (S (S k))) q)
+  | sPack A1 A2 => sPack (lift n k A1) (lift n k A2)
+  | sProjT1 p => sProjT1 (lift n k p)
+  | sProjT2 p => sProjT2 (lift n k p)
+  | sProjTe p => sProjTe (lift n k p)
   | x => x
   end.
 
@@ -101,6 +105,10 @@ Fixpoint subst t k u :=
     sCongProd (subst t k A1) (subst t k A2)
               (subst t (S k) B1) (subst t (S k) B2)
               (subst t k p) (subst t (S (S (S k))) q)
+  | sPack A1 A2 => sPack (subst t k A1) (subst t k A2)
+  | sProjT1 p => sProjT1 (subst t k p)
+  | sProjT2 p => sProjT2 (subst t k p)
+  | sProjTe p => sProjTe (subst t k p)
   | x => x
   end.
 

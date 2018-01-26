@@ -27,4 +27,9 @@ Inductive sterm : Type :=
 | sHeqTrans (A a B b C c p q : sterm)
 | sHeqTransport (A B p t : sterm)
 | sCongProd (A1 A2 B1 B2 p q : sterm)
+(* Packing *)
+| sPack (A1 A2 : sterm)
+| sProjT1 (p : sterm)
+| sProjT2 (p : sterm)
+| sProjTe (p : sterm)
 .

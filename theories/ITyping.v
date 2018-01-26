@@ -135,6 +135,29 @@ Inductive typing (Σ : global_context) : scontext -> sterm -> sterm -> Type :=
     sHeq (sSort (max_sort s1 s2)) (sProd nx A1 B1)
          (sSort (max_sort z1 z2)) (sProd ny A2 B2)
 
+| type_Pack Γ A1 A2 s :
+    Σ ;;; Γ |-i A1 : sSort s ->
+    Σ ;;; Γ |-i A2 : sSort s ->
+    Σ ;;; Γ |-i sPack A1 A2 : sSort s
+
+| type_ProjT1 Γ A1 A2 p s :
+    Σ ;;; Γ |-i A1 : sSort s ->
+    Σ ;;; Γ |-i A2 : sSort s ->
+    Σ ;;; Γ |-i p : sPack A1 A2 ->
+    Σ ;;; Γ |-i sProjT1 p : A1
+
+| type_ProjT2 Γ A1 A2 p s :
+    Σ ;;; Γ |-i A1 : sSort s ->
+    Σ ;;; Γ |-i A2 : sSort s ->
+    Σ ;;; Γ |-i p : sPack A1 A2 ->
+    Σ ;;; Γ |-i sProjT2 p : A2
+
+| type_ProjTe Γ A1 A2 p s :
+    Σ ;;; Γ |-i A1 : sSort s ->
+    Σ ;;; Γ |-i A2 : sSort s ->
+    Σ ;;; Γ |-i p : sPack A1 A2 ->
+    Σ ;;; Γ |-i sProjTe p : sHeq A1 (sProjT1 p) A2 (sProjT2 p)
+
 | type_conv Γ t A B s :
     Σ ;;; Γ |-i t : A ->
     Σ ;;; Γ |-i B : sSort s ->
@@ -424,6 +447,12 @@ Proof.
     + eapply type_Sort. apply (typing_wf H).
     + apply type_Prod ; assumption.
     + apply type_Prod ; assumption.
+  - exists (succ_sort s). apply type_Sort. apply (typing_wf H).
+  - exists s. assumption.
+  - exists s. assumption.
+  - exists (succ_sort s). apply type_Heq ; try assumption.
+    + eapply type_ProjT1 ; eassumption.
+    + eapply @type_ProjT2 with (A1 := A1) ; eassumption.
   - exists s. assumption.
 Defined.
 

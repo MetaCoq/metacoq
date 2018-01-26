@@ -114,6 +114,13 @@ Inductive typing (Σ : global_context) : scontext -> sterm -> sterm -> Type :=
     Σ ;;; Γ |-i p : sHeq A a B b ->
     Σ ;;; Γ |-i sHeqTrans A a B b C c p q : sHeq A a C c
 
+| type_HeqTransport Γ A B p t s :
+    Σ ;;; Γ |-i A : sSort s ->
+    Σ ;;; Γ |-i B : sSort s ->
+    Σ ;;; Γ |-i t : A ->
+    Σ ;;; Γ |-i p : sEq (sSort s) A B ->
+    Σ ;;; Γ |-i sHeqTransport A B p t : sHeq A t B (sTransport A B p t)
+
 | type_conv Γ t A B s :
     Σ ;;; Γ |-i t : A ->
     Σ ;;; Γ |-i B : sSort s ->
@@ -396,6 +403,8 @@ Proof.
   - exists (succ_sort s). apply type_Heq ; assumption.
   - exists (succ_sort s). apply type_Heq ; assumption.
   - exists (succ_sort s). apply type_Heq ; assumption.
+  - exists (succ_sort s). apply type_Heq. all: try assumption.
+    eapply type_Transport ; eassumption.
   - exists s. assumption.
 Defined.
 
@@ -840,4 +849,16 @@ Proof.
   destruct (uniqueness iB2 iB1) as [? eq].
   eapply type_conv ; [ eassumption | idtac | eassumption ].
   apply (eq_typing eq).
+Defined.
+
+Lemma type_HeqTransport' :
+  forall {Σ Γ s A B p t},
+    Σ ;;; Γ |-i t : A ->
+    Σ ;;; Γ |-i p : sEq (sSort s) A B ->
+    Σ ;;; Γ |-i sHeqTransport A B p t : sHeq A t B (sTransport A B p t).
+Proof.
+  intros Σ Γ s A B p t ht hp.
+  destruct (istype_type hp) as [? i].
+  destruct (inversionEq i) as [? [[[? ?] ?] ?]].
+  eapply type_HeqTransport ; eassumption.
 Defined.

@@ -115,16 +115,6 @@ Proof.
   induction h ; now constructor.
 Defined.
 
-Definition transport_heq (A B p t : sterm) : sterm.
-Admitted.
-
-Lemma type_transport_heq :
-  forall {Σ Γ s A B p t},
-    Σ ;;; Γ |-i t : A ->
-    Σ ;;; Γ |-i p : sEq (sSort s) A B ->
-    Σ ;;; Γ |-i transport_heq A B p t : sHeq A t B (sTransport A B p t).
-Admitted.
-
 Definition heq_Prod (s1 s2 z1 z2 : sort) (n1 n2 : name) (A1 A2 B1 B2 p q : sterm) : sterm.
 Admitted.
 
@@ -215,6 +205,8 @@ Fixpoint llift γ δ t : sterm :=
               (llift γ δ B) (llift γ δ b)
               (llift γ δ C) (llift γ δ c)
               (llift γ δ p) (llift γ δ q)
+  | sHeqTransport A B p t =>
+    sHeqTransport (llift γ δ A) (llift γ δ B) (llift γ δ p) (llift γ δ t)
   | x => x
   end.
 
@@ -262,6 +254,8 @@ Fixpoint rlift γ δ t : sterm :=
               (rlift γ δ B) (rlift γ δ b)
               (rlift γ δ C) (rlift γ δ c)
               (rlift γ δ p) (rlift γ δ q)
+  | sHeqTransport A B p t =>
+    sHeqTransport (rlift γ δ A) (rlift γ δ B) (rlift γ δ p) (rlift γ δ t)
   | x => x
   end.
 
@@ -409,7 +403,9 @@ Proof.
            all: easy.
 
   (* Left transport *)
-  - admit.
+  - destruct (inversionTransport h1) as [s [[[[? ht1] hT1] ?] ?]].
+    destruct (IHsim _ _ _ _ _ eq ht1 h2) as [q hq].
+    admit.
 
   (* Right transport *)
   - admit.
@@ -471,11 +467,11 @@ Proof.
     { apply (eq_typing e). }
     exists s.
     exists (sHeqTrans s T2 (sTransport T1 T2 p t1) T1 t1 B t2
-                 (sHeqSym s T1 t1 T2 (sTransport T1 T2 p t1) (transport_heq s T1 T2 p t1))
+                 (sHeqSym s T1 t1 T2 (sTransport T1 T2 p t1) (sHeqTransport s T1 T2 p t1))
                  q).
     eapply type_conv.
     + eapply type_HeqTrans'.
-      * apply type_HeqSym'. apply type_transport_heq ; assumption.
+      * apply type_HeqSym'. apply type_HeqTransport' ; assumption.
       * eapply type_conv.
         -- eassumption.
         -- apply type_heq ; assumption.
@@ -504,7 +500,7 @@ Proof.
     exists s.
     exists (sHeqTrans s A t1 T1 t2 T2 (sTransport T1 T2 p t2)
                  q
-                 (transport_heq s T1 T2 p t2)
+                 (sHeqTransport s T1 T2 p t2)
       ).
     eapply type_conv.
     + eapply type_HeqTrans'.
@@ -513,7 +509,7 @@ Proof.
         -- apply type_heq ; assumption.
         -- apply cong_heq ; try (apply eq_reflexivity ; assumption).
            apply eq_symmetry. eapply eq_conv ; eassumption.
-      * apply type_transport_heq ; assumption.
+      * apply type_HeqTransport' ; assumption.
     + apply type_heq ; try assumption.
     + apply cong_heq ; try (apply eq_reflexivity) ; try assumption.
       apply type_Transport with (s := s) ; assumption.

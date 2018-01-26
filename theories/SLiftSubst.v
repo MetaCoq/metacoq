@@ -39,6 +39,8 @@ Fixpoint lift n k t : sterm :=
               (lift n k B) (lift n k b)
               (lift n k C) (lift n k c)
               (lift n k p) (lift n k q)
+  | sHeqTransport A B p t =>
+    sHeqTransport (lift n k A) (lift n k B) (lift n k p) (lift n k t)
   | x => x
   end.
 
@@ -89,6 +91,8 @@ Fixpoint subst t k u :=
               (subst t k B) (subst t k b)
               (subst t k C) (subst t k c)
               (subst t k p) (subst t k q)
+  | sHeqTransport A B p u =>
+    sHeqTransport (subst t k A) (subst t k B) (subst t k p) (subst t k u)
   | x => x
   end.
 

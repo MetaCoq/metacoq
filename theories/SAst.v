@@ -25,4 +25,5 @@ Inductive sterm : Type :=
 | sHeqRefl (A a : sterm)
 | sHeqSym (A a B b p : sterm)
 | sHeqTrans (A a B b C c p q : sterm)
+| sHeqTransport (A B p t : sterm)
 .

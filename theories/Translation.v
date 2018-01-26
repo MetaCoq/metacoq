@@ -150,14 +150,14 @@ Admitted.
    mix Γ Γ1 Γ2, Δ |- rlift #|Γ1| #|Δ| t : rlift #|Γ1| #|Δ| T
  *)
 
-Fixpoint llift γ δ t : sterm :=
+Fixpoint llift γ δ (t:sterm)  : sterm :=
   match t with
   | sRel i =>
     if i <? δ
     then sRel i
     else if i <? δ + γ
-         then sRel (3 * (i - δ) + δ + 2)
-         else sRel (i + 3*γ)
+         then sProjT1 (sRel i)
+         else sRel i
   | sLambda na A B b =>
     sLambda na (llift γ δ A) (llift γ (S δ) B) (llift γ (S δ) b)
   | sApp u na A B v =>
@@ -198,7 +198,11 @@ Fixpoint llift γ δ t : sterm :=
     sCongProd (llift γ δ A1) (llift γ δ A2)
               (llift γ (S δ) B1) (llift γ (S δ) B2)
               (llift γ δ p) (llift γ (S (S (S δ))) q)
-  | x => x
+  | sSort x => sSort x
+  | sPack A B => sPack (llift γ δ A) (llift γ δ B)
+  | sProjT1 x => sProjT1 (llift γ δ x)
+  | sProjT2 x => sProjT2 (llift γ δ x)
+  | sProjTe x => sProjTe (llift γ δ x)
   end.
 
 Notation llift0 γ t := (llift γ 0 t).
@@ -209,8 +213,8 @@ Fixpoint rlift γ δ t : sterm :=
     if i <? δ
     then sRel i
     else if i <? δ + γ
-         then sRel (3 * (i - δ) + δ + 1)
-         else sRel (i + 3*γ)
+         then sProjT2 (sRel i)
+         else sRel i
   | sLambda na A B b =>
     sLambda na (rlift γ δ A) (rlift γ (S δ) B) (rlift γ (S δ) b)
   | sApp u na A B v =>
@@ -251,7 +255,11 @@ Fixpoint rlift γ δ t : sterm :=
     sCongProd (rlift γ δ A1) (rlift γ δ A2)
               (rlift γ (S δ) B1) (rlift γ (S δ) B2)
               (rlift γ δ p) (rlift γ (S (S (S δ))) q)
-  | x => x
+  | sSort x => sSort x
+  | sPack A B => sPack (rlift γ δ A) (rlift γ δ B)
+  | sProjT1 x => sProjT1 (rlift γ δ x)
+  | sProjT2 x => sProjT2 (rlift γ δ x)
+  | sProjTe x => sProjTe (rlift γ δ x)
   end.
 
 Notation rlift0 γ t := (rlift γ 0 t).
@@ -260,13 +268,9 @@ Notation rlift0 γ t := (rlift γ 0 t).
 Fixpoint mix (Γ Γ1 Γ2 : scontext) : scontext :=
   match Γ1, Γ2 with
   | A :: Γ1, B :: Γ2 =>
-    (mix Γ Γ1 Γ2) ,, svass (sdecl_name A) (llift0 #|Γ1| (sdecl_type A))
-                  ,, svass (sdecl_name B) (lift0 1 (rlift0 #|Γ1| (sdecl_type B)))
-                  ,, svass nAnon (sHeq (lift0 2 (llift0 #|Γ1| (sdecl_type A)))
-                                       (sRel 1)
-                                       (lift0 2 (rlift0 #|Γ1| (sdecl_type B)))
-                                       (sRel 0)
-                                 )
+    (mix Γ Γ1 Γ2) ,, svass (sdecl_name A)
+                           (sPack (llift0 #|Γ1| (sdecl_type A))
+                                  (lift0 1 (rlift0 #|Γ1| (sdecl_type B))))
   | _,_ => Γ
   end.
 
@@ -277,12 +281,12 @@ Proof.
   dependent induction t ; intro δ.
   all: try (cbn ; f_equal ; easy).
   cbn. case_eq δ.
-    + intro h. cbn. f_equal. omega.
+    + intro h. cbn. f_equal. 
     + intros m h. case_eq (n <=? m).
       * intro. reflexivity.
       * intro nlm. cbn.
         replace (m+0)%nat with m by omega.
-        rewrite nlm. f_equal. omega.
+        rewrite nlm. f_equal. 
 Defined.
 
 Lemma rlift00 :
@@ -292,12 +296,12 @@ Proof.
   dependent induction t ; intro δ.
   all: try (cbn ; f_equal ; easy).
   cbn. case_eq δ.
-    + intro h. cbn. f_equal. omega.
+    + intro h. cbn. f_equal. 
     + intros m h. case_eq (n <=? m).
       * intro. reflexivity.
       * intro nlm. cbn.
         replace (m+0)%nat with m by omega.
-        rewrite nlm. f_equal. omega.
+        rewrite nlm. f_equal.
 Defined.
 
 Lemma type_llift {Σ Γ Γ1 Γ2 Δ t A} (h : Σ ;;; Γ ,,, Γ1 ,,, Δ |-i t : A)

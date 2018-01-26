@@ -261,10 +261,10 @@ Fixpoint mix (Γ Γ1 Γ2 : scontext) : scontext :=
   match Γ1, Γ2 with
   | A :: Γ1, B :: Γ2 =>
     (mix Γ Γ1 Γ2) ,, svass (sdecl_name A) (llift0 #|Γ1| (sdecl_type A))
-                  ,, svass (sdecl_name B) (rlift0 #|Γ1| (sdecl_type B))
-                  ,, svass nAnon (sHeq (llift0 #|Γ1| (sdecl_type A))
+                  ,, svass (sdecl_name B) (lift0 1 (rlift0 #|Γ1| (sdecl_type B)))
+                  ,, svass nAnon (sHeq (lift0 2 (llift0 #|Γ1| (sdecl_type A)))
                                        (sRel 1)
-                                       (rlift0 #|Γ1| (sdecl_type B))
+                                       (lift0 2 (rlift0 #|Γ1| (sdecl_type B)))
                                        (sRel 0)
                                  )
   | _,_ => Γ

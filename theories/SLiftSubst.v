@@ -41,6 +41,10 @@ Fixpoint lift n k t : sterm :=
               (lift n k p) (lift n k q)
   | sHeqTransport A B p t =>
     sHeqTransport (lift n k A) (lift n k B) (lift n k p) (lift n k t)
+  | sCongProd A1 A2 B1 B2 p q =>
+    sCongProd (lift n k A1) (lift n k A2)
+              (lift n (S k) B1) (lift n (S k) B2)
+              (lift n k p) (lift n (S (S (S k))) q)
   | x => x
   end.
 
@@ -93,6 +97,10 @@ Fixpoint subst t k u :=
               (subst t k p) (subst t k q)
   | sHeqTransport A B p u =>
     sHeqTransport (subst t k A) (subst t k B) (subst t k p) (subst t k u)
+  | sCongProd A1 A2 B1 B2 p q =>
+    sCongProd (subst t k A1) (subst t k A2)
+              (subst t (S k) B1) (subst t (S k) B2)
+              (subst t k p) (subst t (S (S (S k))) q)
   | x => x
   end.
 
@@ -129,6 +137,7 @@ Proof.
   induction t ; intros i j k.
   all: try (cbn ; f_equal ; easy).
   all: try (cbn ; f_equal ;
+            try replace (S (S (S (j+i))))%nat with (j + (S (S (S i))))%nat by omega ;
             try replace (S (S (j+i)))%nat with (j + (S (S i)))%nat by omega ;
             try replace (S (j+i))%nat with (j + (S i))%nat by omega ; easy).
   cbn. set (iln := i <=? n). assert (eq : (i <=? n) = iln) by reflexivity.
@@ -158,6 +167,7 @@ Proof.
   induction t ; intros i j k m H.
   all: try (cbn ; f_equal ; easy).
   all: try (cbn ; f_equal ;
+            try replace (S (S (S (j + m))))%nat with (j + (S (S (S m))))%nat by omega ;
             try replace (S (S (j + m)))%nat with (j + (S (S m)))%nat by omega ;
             try replace (S (j + m))%nat with (j + (S m))%nat by omega ; easy).
   cbn. set (iln := i <=? n). assert (eq : (i <=? n) = iln) by reflexivity.
@@ -261,6 +271,7 @@ Proof.
   intros t.
   induction t ; intros u i j m h.
   all: try (cbn ; f_equal ;
+            try replace (S (S (S (j + m))))%nat with (j + (S (S (S m))))%nat by omega ;
             try replace (S (S (j + m)))%nat with (j + (S (S m)))%nat by omega ;
             try replace (S (j + m))%nat with (j + (S m))%nat by omega ; easy).
   cbn.

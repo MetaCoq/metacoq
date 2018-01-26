@@ -115,19 +115,6 @@ Proof.
   induction h ; now constructor.
 Defined.
 
-Definition heq_Prod (s1 s2 z1 z2 : sort) (n1 n2 : name) (A1 A2 B1 B2 p q : sterm) : sterm.
-Admitted.
-
-Lemma type_heq_Prod :
-  forall {Σ Γ s1 s2 z1 z2 n1 n2 nx ny ne A1 A2 B1 B2 p q},
-    Σ ;;; Γ |-i p : sHeq (sSort s1) A1 (sSort z1) A2 ->
-    Σ ;;; Γ ,, svass nx A1 ,, svass ny (lift0 1 A2) ,, svass ne (sHeq (lift0 2 A1) (sRel 1) (lift0 2 A2) (sRel 0)) |-i
-    q : sHeq (sSort s2) (lift0 2 B1) (sSort z2) (lift0 1 (lift 1 1 B1)) ->
-    Σ ;;; Γ |-i heq_Prod s1 s2 z1 z2 n1 n2 A1 A2 B1 B2 p q :
-    sHeq (sSort (max_sort s1 s2)) (sProd n1 A1 B1)
-         (sSort (max_sort z1 z2)) (sProd n2 A2 B2).
-Admitted.
-
 Definition heq_Eq (s1 s2 : sort) (A1 A2 u1 u2 v1 v2 pA pu pv : sterm) : sterm.
 Admitted.
 
@@ -207,6 +194,10 @@ Fixpoint llift γ δ t : sterm :=
               (llift γ δ p) (llift γ δ q)
   | sHeqTransport A B p t =>
     sHeqTransport (llift γ δ A) (llift γ δ B) (llift γ δ p) (llift γ δ t)
+  | sCongProd A1 A2 B1 B2 p q =>
+    sCongProd (llift γ δ A1) (llift γ δ A2)
+              (llift γ (S δ) B1) (llift γ (S δ) B2)
+              (llift γ δ p) (llift γ (S (S (S δ))) q)
   | x => x
   end.
 
@@ -256,6 +247,10 @@ Fixpoint rlift γ δ t : sterm :=
               (rlift γ δ p) (rlift γ δ q)
   | sHeqTransport A B p t =>
     sHeqTransport (rlift γ δ A) (rlift γ δ B) (rlift γ δ p) (rlift γ δ t)
+  | sCongProd A1 A2 B1 B2 p q =>
+    sCongProd (rlift γ δ A1) (rlift γ δ A2)
+              (rlift γ (S δ) B1) (rlift γ (S δ) B2)
+              (rlift γ δ p) (rlift γ (S (S (S δ))) q)
   | x => x
   end.
 

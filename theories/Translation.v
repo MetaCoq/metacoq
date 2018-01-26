@@ -161,7 +161,6 @@ Proof.
       destruct Γ1 ; try (now inversion e0).
       destruct Γ2 ; try (now inversion eq).
       cbn in *. rewrite !llift00, !rlift00.
-      replace (x+0)%nat with x by omega.
       destruct (uniqueness h1 h2) as [s e].
       destruct (eq_typing e) as [hU1 hU2].
       exists (sHeqRefl U1 (sRel x)).
@@ -172,43 +171,31 @@ Proof.
         all: try (apply eq_reflexivity).
         all: easy.
     + intros n eqγ. case_eq (x <=? n).
-      * intro xln. exists (sRel (3*x)).
-        (* induction x. *)
-        (* -- cbn. rewrite eqγ in eq. *)
-        (*    destruct Γ1 ; try (now inversion eqγ). *)
-        (*    destruct Γ2 ; try (now inversion eq). *)
-        (*    destruct s as [na ? A], s0 as [nb ? B]. *)
-        (*    cbn in *. *)
-        (*    eapply type_conv. *)
-        (*    ++ eapply type_Rel. admit. *)
-        (*    ++ admit. *)
-        (*    ++ cbn. *)
+      * intro xln. exists (sProjTe (sRel x)).
+        apply type_ProjTe'.
         admit.
       * intro nlx.
-        (* assert (h1' : Σ ;;; mix Γ Γ1 Γ2 |-i sRel (x + (S n + (S n + (S n + 0)))) : llift0 (S n) U1). *)
-        (* { replace (sRel (x + (S n + (S n + (S n + 0))))) *)
-        (*     with (llift0 (S n) (sRel x)) *)
-        (*     by (cbn ; now rewrite nlx). *)
-        (*   replace (S n) with #|Γ1| by (apply eqγ). *)
-        (*   eapply type_llift0 ; assumption. *)
-        (* } *)
-        (* assert (h2' : Σ ;;; mix Γ Γ1 Γ2 |-i sRel (x + (S n + (S n + (S n + 0)))) : rlift0 (S n) U2). *)
-        (* { replace (sRel (x + (S n + (S n + (S n + 0))))) *)
-        (*     with (rlift0 (S n) (sRel x)) *)
-        (*     by (cbn ; now rewrite nlx). *)
-        (*   replace (S n) with #|Γ1| by (apply eqγ). *)
-        (*   eapply @type_rlift with (Δ := nil) ; assumption. *)
-        (* } *)
-        (* destruct (uniqueness h1' h2') as [s e]. *)
-        (* destruct (eq_typing e) as [hlU1 hrU2]. *)
-        (* exists (sHeqRefl (llift0 (S n) U1) (sRel (x + (S n + (S n + (S n + 0)))))). *)
-        (* eapply type_conv. *)
-        (* -- eapply type_HeqRefl ; eassumption. *)
-        (* -- apply type_Heq ; eassumption. *)
-        (* -- apply cong_Heq. *)
-        (*    all: try (apply eq_reflexivity). *)
-        (*    all: easy. *)
-        admit.
+        assert (h1' : Σ ;;; mix Γ Γ1 Γ2 |-i sRel x : llift0 (S n) U1).
+        { replace (sRel x) with (llift0 (S n) (sRel x))
+            by (cbn ; now rewrite nlx).
+          replace (S n) with #|Γ1| by (apply eqγ).
+          eapply type_llift0 ; assumption.
+        }
+        assert (h2' : Σ ;;; mix Γ Γ1 Γ2 |-i sRel x : rlift0 (S n) U2).
+        { replace (sRel x) with (rlift0 (S n) (sRel x))
+            by (cbn ; now rewrite nlx).
+          replace (S n) with #|Γ1| by (apply eqγ).
+          eapply @type_rlift with (Δ := nil) ; assumption.
+        }
+        destruct (uniqueness h1' h2') as [s e].
+        destruct (eq_typing e) as [hlU1 hrU2].
+        exists (sHeqRefl (llift0 (S n) U1) (sRel x)).
+        eapply type_conv.
+        -- eapply type_HeqRefl ; eassumption.
+        -- apply type_Heq ; eassumption.
+        -- apply cong_Heq.
+           all: try (apply eq_reflexivity).
+           all: easy.
 
   (* Left transport *)
   - destruct (inversionTransport h1) as [s [[[[? ht1] hT1] ?] ?]].

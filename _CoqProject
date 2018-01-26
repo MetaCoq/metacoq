@@ -21,5 +21,6 @@ theories/SLiftSubst.v
 theories/SCommon.v
 theories/ITyping.v
 theories/XTyping.v
+theories/PackLifts.v
 theories/Translation.v
 theories/FinalTranslation.v

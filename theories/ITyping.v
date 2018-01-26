@@ -276,6 +276,11 @@ with eq_term (Σ : global_context) : scontext -> sterm -> sterm -> sterm -> Type
     Σ ;;; Γ |-i b1 = b2 : B1 ->
     Σ ;;; Γ |-i sHeq A1 a1 B1 b1 = sHeq A2 a2 B2 b2 : sSort (succ_sort s)
 
+| cong_Pack Γ A1 B1 A2 B2 s :
+    Σ ;;; Γ |-i A1 = B1 : sSort s ->
+    Σ ;;; Γ |-i A2 = B2 : sSort s ->
+    Σ ;;; Γ |-i sPack A1 A2 = sPack B1 B2 : sSort s
+
 where " Σ ;;; Γ '|-i' t = u : T " := (@eq_term Σ Γ t u T) : i_scope.
 
 (* Lemmata about typing *)
@@ -849,8 +854,31 @@ Proof.
       eapply eq_conv ; eassumption.
 Defined.
 
-(* We state some admissible typing rules *)
+Lemma inversionPack :
+  forall {Σ Γ A1 A2 T},
+    Σ ;;; Γ |-i sPack A1 A2 : T ->
+    ∑ s,
+      (Σ ;;; Γ |-i A1 : sSort s) *
+      (Σ ;;; Γ |-i A2 : sSort s) *
+      (Σ ;;; Γ |-i sSort s = T : sSort (succ_sort s)).
+Proof.
+  intros Σ Γ A1 A2 T h.
+  dependent induction h.
 
+  - exists s. repeat split ; try easy.
+    apply eq_reflexivity. apply type_Sort. apply (typing_wf h1).
+
+  - destruct (IHh1 _ _ eq_refl) as [s' [[? ?] ?]].
+    exists s'. repeat split ; try easy.
+    eapply eq_transitivity.
+    + eassumption.
+    + destruct (eq_typing e) as [i1 _].
+      destruct (eq_typing e0) as [_ i2].
+      destruct (uniqueness i1 i2).
+      eapply eq_conv ; eassumption.
+Defined.
+
+(* We state some admissible typing rules *)
 Fact sort_heq :
   forall {Σ Γ s A B e},
     Σ ;;; Γ |-i e : sHeq (sSort s) A (sSort s) B ->
@@ -936,3 +964,36 @@ Proof.
        svass ne (sHeq (lift0 2 A1) (sRel 1) (lift0 2 A2) (sRel 0))) in H0.
   admit.
 Admitted.
+
+Lemma type_ProjT1' :
+  forall {Σ Γ A1 A2 p},
+    Σ ;;; Γ |-i p : sPack A1 A2 ->
+    Σ ;;; Γ |-i sProjT1 p : A1.
+Proof.
+  intros Σ Γ A1 A2 p hp.
+  destruct (istype_type hp) as [? i].
+  destruct (inversionPack i) as [s [[? ?] ?]].
+  eapply type_ProjT1 ; [.. | eassumption] ; eassumption.
+Defined.
+
+Lemma type_ProjT2' :
+  forall {Σ Γ A1 A2 p},
+    Σ ;;; Γ |-i p : sPack A1 A2 ->
+    Σ ;;; Γ |-i sProjT2 p : A2.
+Proof.
+  intros Σ Γ A1 A2 p hp.
+  destruct (istype_type hp) as [? i].
+  destruct (inversionPack i) as [s [[? ?] ?]].
+  eapply type_ProjT2 ; [.. | eassumption] ; eassumption.
+Defined.
+
+Lemma type_ProjTe' :
+  forall {Σ Γ A1 A2 p},
+    Σ ;;; Γ |-i p : sPack A1 A2 ->
+    Σ ;;; Γ |-i sProjTe p : sHeq A1 (sProjT1 p) A2 (sProjT2 p).
+Proof.
+  intros Σ Γ A1 A2 p hp.
+  destruct (istype_type hp) as [? i].
+  destruct (inversionPack i) as [s [[? ?] ?]].
+  eapply type_ProjTe ; [.. | eassumption] ; eassumption.
+Defined.

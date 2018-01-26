@@ -405,7 +405,46 @@ Proof.
   (* Left transport *)
   - destruct (inversionTransport h1) as [s [[[[? ht1] hT1] ?] ?]].
     destruct (IHsim _ _ _ _ _ eq ht1 h2) as [q hq].
-    admit.
+    cbn.
+    exists (sHeqTrans (llift0 #|Γ1| U1) (llift0 #|Γ1| (sTransport T1 T2 p t1))
+                 (llift0 #|Γ1| T1) (llift0 #|Γ1| t1)
+                 (rlift0 #|Γ1| U2) (rlift0 #|Γ1| t2)
+                 (sHeqSym (llift0 #|Γ1| T1)
+                          (llift0 #|Γ1| t1)
+                          (llift0 #|Γ1| U1)
+                          (llift0 #|Γ1| (sTransport T1 T2 p t1))
+                          (sHeqTransport (llift0 #|Γ1| T1)
+                                         (llift0 #|Γ1| T2)
+                                         (llift0 #|Γ1| p)
+                                         (llift0 #|Γ1| t1)))
+                 q
+      ).
+    eapply type_HeqTrans'.
+    + eapply type_HeqSym'.
+      eapply type_conv.
+      * eapply type_HeqTransport'.
+        -- eapply @type_llift with (Δ := nil) ; assumption.
+        -- instantiate (1 := s).
+           change (sEq (sSort s) (llift0 #|Γ1| T1) (llift0 #|Γ1| T2))
+             with (llift0 #|Γ1| (sEq (sSort s) T1 T2)).
+           eapply @type_llift with (Δ := nil) ; assumption.
+      * instantiate (1 := succ_sort s).
+        change (sSort (succ_sort s)) with (llift0 #|Γ1| (sSort (succ_sort s))).
+        match goal with
+        | |- ?Σ ;;; ?Γ |-i ?T : ?s =>
+          change T with (llift0 #|Γ1| (sHeq T1 t1 U1 (sTransport T1 T2 p t1)))
+        end.
+        eapply @type_llift with (Δ := nil) ; try assumption.
+        cbn. apply type_Heq ; try assumption.
+        apply (eq_typing e).
+      * apply cong_Heq.
+        all: try (apply eq_reflexivity).
+        1-3: change (sSort s) with (llift0 #|Γ1| (sSort s)).
+        1,3,4: eapply @type_llift with (Δ := nil) ; try assumption.
+        -- cbn. eapply type_Transport ; eassumption.
+        -- (* Need congruence for llifts *)
+           admit.
+    + assumption.
 
   (* Right transport *)
   - admit.

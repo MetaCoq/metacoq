@@ -30,7 +30,7 @@ Fixpoint lift n k t : term :=
   | x => x
   end.
 
-Notation lift0 n t := (lift n 0 t).
+Notation lift0 n := (lift n 0).
 
 Fixpoint subst t k u :=
   match u with

@@ -470,7 +470,31 @@ Proof.
   - admit.
 
   (* Prod *)
-  - admit.
+  - destruct (inversionProd h1) as [s1 [z1 [[hA1 hB1] ?]]].
+    destruct (inversionProd h2) as [s2 [z2 [[hA2 hB2] ?]]].
+    destruct (IHsim1 _ _ _ _ _ eq hA1 hA2) as [pA hpA].
+    destruct (IHsim2 _ (Γ1 ,, svass n1 A1) (Γ2 ,, svass n2 A2)
+                     _ _ ltac:(cbn ; omega) hB1 hB2) as [pB hpB].
+    exists (sCongProd (llift0 #|Γ1| A1) (rlift0 #|Γ1| A2)
+                 (llift0 #|Γ1,, svass n1 A1| B1)
+                 (rlift0 #|Γ1,, svass n1 A1| B2)
+                 pA pB).
+    destruct (istype_type hpA) as [? iA].
+    destruct (inversionHeq iA) as [? [[[[? ?] ?] ?] ?]].
+    destruct (istype_type hpB) as [? iB].
+    destruct (inversionHeq iB) as [? [[[[? ?] ?] ?] ?]].
+    eapply type_conv.
+    + eapply type_CongProd'.
+      * admit.
+      * admit.
+      * eassumption.
+      * admit.
+    + apply type_Heq.
+      all:admit.
+    + cbn.
+      (* There is something wrong with the indices! *)
+      admit.
+      Unshelve. all:admit.
 
   (* Eq *)
   - admit.

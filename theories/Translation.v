@@ -297,11 +297,11 @@ Defined.
 Fixpoint llift_context n (Δ:scontext) : scontext :=
   match Δ with nil => nil
           | A :: Δ => svass (sdecl_name A) (llift n #|Δ| (sdecl_type A)) ::  llift_context n Δ
-  end. 
+  end.
 
 
 Definition llift_subst :
-  forall (u t : sterm) (i j m : nat), llift j (i+m) (u {m := t}) = (llift j (S i+m) u) {m := llift j i t}. 
+  forall (u t : sterm) (i j m : nat), llift j (i+m) (u {m := t}) = (llift j (S i+m) u) {m := llift j i t}.
 Proof.
   induction u ; intros t i j m.
   all: try (cbn ; f_equal;
@@ -322,7 +322,7 @@ Proof.
   try  (rewrite IHu8; cbn; repeat f_equal; omega)).
   (* missing the sRel case *)
   admit.
-Admitted. 
+Admitted.
 
 Fixpoint type_llift {Σ Γ Γ1 Γ2 Δ t A} (h : Σ ;;; Γ ,,, Γ1 ,,, Δ |-i t : A)
          (e : #|Γ1| = #|Γ2|)  :
@@ -331,30 +331,30 @@ with wf_llift {Σ Γ Γ1 Γ2 Δ} (wf1: wf Σ (Γ ,,, Γ1 ,,, Δ))
          (e : #|Γ1| = #|Γ2|) :
    wf Σ (mix Γ Γ1 Γ2 ,,, llift_context #|Γ1| Δ).
 Proof.
-  generalize dependent Γ2. 
+  generalize dependent Γ2.
   unshelve refine (typing_rect Σ (fun Γgen t A _ =>
                            forall Γ Γ1 Δ, Γ ,,, Γ1 ,,, Δ = Γgen ->
-                                          forall Γ2 : list scontext_decl, #|Γ1| = #|Γ2| ->  Σ;;; mix Γ Γ1 Γ2 ,,, llift_context #|Γ1| Δ  |-i llift #|Γ1| #|Δ| t : llift #|Γ1| #|Δ| A) _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ (Γ ,,, Γ1 ,,, Δ ) t A h _ _ _ eq_refl); cbn in *; clear -type_llift wf_llift. 
+                                          forall Γ2 : list scontext_decl, #|Γ1| = #|Γ2| ->  Σ;;; mix Γ Γ1 Γ2 ,,, llift_context #|Γ1| Δ  |-i llift #|Γ1| #|Δ| t : llift #|Γ1| #|Δ| A) _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ (Γ ,,, Γ1 ,,, Δ ) t A h _ _ _ eq_refl); cbn in *; clear -type_llift wf_llift.
   (* dependent induction h; cbn in *.  *)
   - intros. destruct H. generalize dependent Γ2. generalize dependent Γ1. induction Δ; cbn.
     + induction Γ1; cbn in *.
       * intros. rewrite llift00. refine (type_Rel _ _ _ _ _); auto.
       * admit.
-    + admit. 
+    + admit.
   - intros. destruct H. apply type_Sort.
-    apply wf_llift; assumption. 
+    apply wf_llift; assumption.
   - intros. destruct H1. eapply type_Prod.
-    apply H; try reflexivity; try assumption. 
+    apply H; try reflexivity; try assumption.
     apply (H0 Γ0 Γ1 (Δ ,, svass n t) eq_refl Γ2 H2).
   - intros. destruct H2. eapply type_Lambda.
-    apply H; try reflexivity; try assumption. 
+    apply H; try reflexivity; try assumption.
     apply (H0 Γ0 Γ1 (Δ ,, svass n t) eq_refl Γ2 H3).
     apply (H1 Γ0 Γ1 (Δ ,, svass n t) eq_refl Γ2 H3).
   - intros. destruct H3.
     pose (llift_subst B u #|Δ| #|Γ1| 0).
     rewrite <- plus_n_O in *. rewrite e.
     cbn. clear e. rewrite <- plus_n_O in *. unshelve eapply type_App.
-    exact s1. exact s2. 
+    exact s1. exact s2.
     apply (H Γ0 Γ1 Δ eq_refl Γ2 H4).
     apply (H0 Γ0 Γ1 (Δ ,, svass n A) eq_refl Γ2 H4).
     apply (H1 Γ0 Γ1 Δ eq_refl Γ2 H4).
@@ -365,8 +365,8 @@ Proof.
     apply (H0 Γ0 Γ1 Δ eq_refl Γ2 H3).
     apply (H1 Γ0 Γ1 Δ eq_refl Γ2 H3).
   - (* and so on **)
-Abort.     
-    
+Abort.
+
 Lemma type_llift {Σ Γ Γ1 Γ2 Δ t A} (h : Σ ;;; Γ ,,, Γ1 ,,, Δ |-i t : A)
          (e : #|Γ1| = #|Γ2|) :
   Σ ;;; mix Γ Γ1 Γ2 ,,, Δ |-i llift #|Γ1| #|Δ| t : llift #|Γ1| #|Δ| A.
@@ -466,29 +466,30 @@ Proof.
         (*    ++ cbn. *)
         admit.
       * intro nlx.
-        assert (h1' : Σ ;;; mix Γ Γ1 Γ2 |-i sRel (x + (S n + (S n + (S n + 0)))) : llift0 (S n) U1).
-        { replace (sRel (x + (S n + (S n + (S n + 0)))))
-            with (llift0 (S n) (sRel x))
-            by (cbn ; now rewrite nlx).
-          replace (S n) with #|Γ1| by (apply eqγ).
-          eapply type_llift0 ; assumption.
-        }
-        assert (h2' : Σ ;;; mix Γ Γ1 Γ2 |-i sRel (x + (S n + (S n + (S n + 0)))) : rlift0 (S n) U2).
-        { replace (sRel (x + (S n + (S n + (S n + 0)))))
-            with (rlift0 (S n) (sRel x))
-            by (cbn ; now rewrite nlx).
-          replace (S n) with #|Γ1| by (apply eqγ).
-          eapply @type_rlift with (Δ := nil) ; assumption.
-        }
-        destruct (uniqueness h1' h2') as [s e].
-        destruct (eq_typing e) as [hlU1 hrU2].
-        exists (sHeqRefl (llift0 (S n) U1) (sRel (x + (S n + (S n + (S n + 0)))))).
-        eapply type_conv.
-        -- eapply type_HeqRefl ; eassumption.
-        -- apply type_Heq ; eassumption.
-        -- apply cong_Heq.
-           all: try (apply eq_reflexivity).
-           all: easy.
+        (* assert (h1' : Σ ;;; mix Γ Γ1 Γ2 |-i sRel (x + (S n + (S n + (S n + 0)))) : llift0 (S n) U1). *)
+        (* { replace (sRel (x + (S n + (S n + (S n + 0))))) *)
+        (*     with (llift0 (S n) (sRel x)) *)
+        (*     by (cbn ; now rewrite nlx). *)
+        (*   replace (S n) with #|Γ1| by (apply eqγ). *)
+        (*   eapply type_llift0 ; assumption. *)
+        (* } *)
+        (* assert (h2' : Σ ;;; mix Γ Γ1 Γ2 |-i sRel (x + (S n + (S n + (S n + 0)))) : rlift0 (S n) U2). *)
+        (* { replace (sRel (x + (S n + (S n + (S n + 0))))) *)
+        (*     with (rlift0 (S n) (sRel x)) *)
+        (*     by (cbn ; now rewrite nlx). *)
+        (*   replace (S n) with #|Γ1| by (apply eqγ). *)
+        (*   eapply @type_rlift with (Δ := nil) ; assumption. *)
+        (* } *)
+        (* destruct (uniqueness h1' h2') as [s e]. *)
+        (* destruct (eq_typing e) as [hlU1 hrU2]. *)
+        (* exists (sHeqRefl (llift0 (S n) U1) (sRel (x + (S n + (S n + (S n + 0)))))). *)
+        (* eapply type_conv. *)
+        (* -- eapply type_HeqRefl ; eassumption. *)
+        (* -- apply type_Heq ; eassumption. *)
+        (* -- apply cong_Heq. *)
+        (*    all: try (apply eq_reflexivity). *)
+        (*    all: easy. *)
+        admit.
 
   (* Left transport *)
   - destruct (inversionTransport h1) as [s [[[[? ht1] hT1] ?] ?]].
@@ -1030,8 +1031,6 @@ Inductive head_kind :=
 | headRefl
 | headJ
 | headTransport
-| headUip
-| headFunext
 | headHeq
 | headOther
 .
@@ -1047,8 +1046,6 @@ Definition head (t : sterm) : head_kind :=
   | sRefl A u => headRefl
   | sJ A u P w v p => headJ
   | sTransport A B p t => headTransport
-  | sUip A u v p q => headUip
-  | sFunext A B f g e => headFunext
   | sHeq A a B b => headHeq
   (* We actually only care about type heads in the source *)
   | _ => headOther

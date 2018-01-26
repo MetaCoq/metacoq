@@ -140,20 +140,6 @@ Fixpoint tsl_rec (fuel : nat) (Σ : global_context) (Γ : context) (t : sterm)
       p' <- tsl_rec fuel Σ Γ p ;;
       t' <- tsl_rec fuel Σ Γ t ;;
       ret (mkTransport T1' T2' p' t')
-    | sUip A u v p q =>
-      A' <- tsl_rec fuel Σ Γ A ;;
-      u' <- tsl_rec fuel Σ Γ u ;;
-      v' <- tsl_rec fuel Σ Γ v ;;
-      p' <- tsl_rec fuel Σ Γ p ;;
-      q' <- tsl_rec fuel Σ Γ q ;;
-      ret (mkUip A' u' v' p' q')
-    | sFunext A B f g e =>
-      A' <- tsl_rec fuel Σ Γ A ;;
-      B' <- tsl_rec fuel Σ (Γ ,, vass nAnon A') B ;;
-      f' <- tsl_rec fuel Σ Γ f ;;
-      g' <- tsl_rec fuel Σ Γ g ;;
-      e' <- tsl_rec fuel Σ Γ e ;;
-      ret (mkFunext A' B' f' g' e')
     | _ => raise TranslationNotHandled
     end
   end.

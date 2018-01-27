@@ -657,6 +657,20 @@ Lemma sorts_in_sort :
 Proof.
 Admitted.
 
+Lemma strengthen_sort :
+  forall {Σ Γ Δ s z},
+    Σ ;;; Γ |-i sSort s : sSort z ->
+    wf Σ Δ ->
+    Σ ;;; Δ |-i sSort s : sSort z.
+Admitted.
+
+Lemma strengthen_sort_eq :
+  forall {Σ Γ Δ s1 s2 z},
+    Σ ;;; Γ |-i sSort s1 = sSort s2 : sSort z ->
+    wf Σ Δ ->
+    Σ ;;; Δ |-i sSort s1 = sSort s2 : sSort z.
+Admitted.
+
 Lemma uniqueness :
   forall {Σ Γ A B u},
     Σ ;;; Γ |-i u : A ->
@@ -1062,7 +1076,40 @@ Lemma type_CongProd' :
     sHeq (sSort (max_sort s1 z1)) (sProd nx A1 B1)
          (sSort (max_sort s2 z2)) (sProd ny A2 B2).
 Proof.
-  intros Σ Γ s1 s2 z1 z2 nx ny np A1 A2 B1 B2 pA pB H H0 H1 H2.
+  intros Σ Γ s1 s2 z1 z2 nx ny np A1 A2 B1 B2 pA pB hpA hpB hB1 hB2.
+  assert (hs : ∑ ss, Σ ;;; Γ |-i sSort s1 = sSort s2 : sSort ss).
+  { destruct (istype_type hpA) as [? ipA].
+    destruct (inversionHeq ipA) as [? [[[[e1 e2] ?] ?] ?]].
+    pose proof (sorts_in_sort e1 e2).
+    eexists. eassumption.
+  }
+  destruct hs.
+  assert (hz : ∑ zz, Σ;;; Γ,, svass ny A2 |-i sSort z2 = sSort z1 : sSort zz).
+  { destruct (istype_type hpB) as [? ipB].
+    destruct (inversionHeq ipB) as [? [[[[f1 f2] ?] ?] ?]].
+    pose proof (sorts_in_sort f2 f1).
+    eexists. eapply strengthen_sort_eq.
+    - eassumption.
+    - eapply typing_wf. eassumption.
+  }
+  destruct hz.
+  assert (hP1 : Σ ;;; Γ |-i sProd nx A1 B1 : sSort (max_sort s1 z1)).
+  { destruct (istype_type hpA) as [? ipA].
+    destruct (inversionHeq ipA) as [? [[[[e1 e2] ?] ?] ?]].
+    apply type_Prod ; eassumption.
+  }
+  assert (hP2 : Σ ;;; Γ |-i sProd nx A1 B1 : sSort (max_sort s2 z2)).
+  { destruct (istype_type hpA) as [? ipA].
+    destruct (inversionHeq ipA) as [? [[[[e1 e2] ?] ?] ?]].
+    apply type_Prod.
+    - eapply type_conv' ; eassumption.
+    - eapply type_conv'.
+      + eassumption.
+      + apply eq_symmetry.
+        eapply strengthen_sort_eq.
+        * eassumption.
+        * eapply typing_wf. eassumption.
+  }
   eapply type_conv'.
   - eapply type_CongProd''.
     + eapply heq_sort. eassumption.
@@ -1070,9 +1117,24 @@ Proof.
     + eassumption.
     + eapply type_conv'.
       * eassumption.
-      *
-(* We should instead admit strengthening for conversion of sorts at least. *)
-Admitted.
+      * eassumption.
+  - apply cong_Heq.
+    all: try apply eq_reflexivity.
+    + apply type_Sort. eapply typing_wf. eassumption.
+    + destruct (uniqueness hP1 hP2).
+      eapply eq_conv.
+      * eassumption.
+      * eapply eq_symmetry. eapply inversionSort.
+        apply (eq_typing e1).
+    + assumption.
+    + destruct (istype_type hpA) as [? ipA].
+      destruct (inversionHeq ipA) as [? [[[[e1 e2] ?] ?] ?]].
+      apply type_Prod.
+      * eapply type_conv'.
+        -- eassumption.
+        -- eapply eq_symmetry. eassumption.
+      * eapply type_conv' ; eassumption.
+Defined.
 
 (* TODO later *)
 Lemma type_CongLambda'' :

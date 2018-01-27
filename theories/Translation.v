@@ -370,7 +370,50 @@ Proof.
   - cheat.
 
   (* Refl *)
-  - cheat.
+  - destruct (inversionRefl h1) as [s1 [[hA1 hu1] e1]].
+    destruct (inversionRefl h2) as [s2 [[hA2 hu2] e2]].
+    destruct (IHsim1 _ _ _ _ _ eq hA1 hA2) as [pA hpA].
+    destruct (IHsim2 _ _ _ _ _ eq hu1 hu2) as [pu hpu].
+    exists (sCongRefl pA pu).
+    eapply type_conv'.
+    + eapply type_CongRefl' ; eassumption.
+    + apply cong_Heq.
+      all: try apply eq_reflexivity.
+      * match goal with
+        | |- ?Σ ;;; ?Γ |-i ?u = ?v : ?A =>
+          change u with (llift0 #|Γ1| (sEq A1 u1 u1)) ;
+          change A with (llift0 #|Γ1| A)
+        end.
+        eapply cong_llift0 ; eassumption.
+      * match goal with
+        | |- ?Σ ;;; ?Γ |-i ?u = ?v : ?A =>
+          change u with (rlift0 #|Γ1| (sEq A2 u2 u2)) ;
+          change A with (rlift0 #|Γ1| A)
+        end.
+        eapply cong_rlift0.
+        -- destruct (istype_type hpA) as [? iA].
+           destruct (inversionHeq iA) as [? [[[[es1 es2] ?] ?] ?]].
+           cbn in es1, es2.
+           eapply eq_conv.
+           ++ eassumption.
+           ++ eapply strengthen_sort_eq.
+              ** eapply sorts_in_sort ; eassumption.
+              ** eapply typing_wf. eassumption.
+        -- assumption.
+      * match goal with
+        | |- ?Σ ;;; ?Γ |-i ?u : ?A =>
+          change A with (llift0 #|Γ1| (sEq A1 u1 u1))
+        end.
+        eapply type_llift0.
+        -- eapply type_Refl ; eassumption.
+        -- assumption.
+      * match goal with
+        | |- ?Σ ;;; ?Γ |-i ?u : ?A =>
+          change A with (rlift0 #|Γ1| (sEq A2 u2 u2))
+        end.
+        eapply type_rlift0.
+        -- eapply type_Refl ; eassumption.
+        -- assumption.
 Defined.
 
 Corollary trel_to_heq :

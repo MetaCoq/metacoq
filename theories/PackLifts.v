@@ -292,3 +292,47 @@ Lemma type_rlift {Σ Γ Γ1 Γ2 Δ t A} (h : Σ ;;; Γ ,,, Γ2 ,,, Δ |-i t : A)
          (e : #|Γ1| = #|Γ2|) :
   Σ ;;; mix Γ Γ1 Γ2 ,,, Δ |-i rlift #|Γ1| #|Δ| t : rlift #|Γ1| #|Δ| A.
 Admitted.
+
+Corollary type_rlift0 :
+  forall {Σ Γ Γ1 Γ2 t A},
+    Σ ;;; Γ ,,, Γ2 |-i t : A ->
+    #|Γ1| = #|Γ2| ->
+    Σ ;;; mix Γ Γ1 Γ2 |-i rlift0 #|Γ1| t : rlift0 #|Γ1| A.
+Proof.
+  intros Σ Γ Γ1 Γ2 t A ? ?.
+  eapply @type_rlift with (Δ := nil) ; assumption.
+Defined.
+
+Corollary type_rlift1 :
+  forall {Σ Γ Γ1 Γ2 t A nx B},
+    Σ ;;; (Γ ,,, Γ2) ,, svass nx B |-i t : A ->
+    #|Γ1| = #|Γ2| ->
+    Σ ;;; mix Γ Γ1 Γ2 ,, svass nx (rlift0 #|Γ1| B)
+    |-i rlift #|Γ1| 1 t : rlift #|Γ1| 1 A.
+Admitted.
+
+Lemma llift_substProj :
+  forall {t γ},
+    (lift 1 1 (llift γ 1 t)) {0 := sProjT1 (sRel 0)} = llift0 (S γ) t.
+Proof.
+  intro t. induction t ; intro γ.
+  - cbn. destruct n as [|n].
+    + cbn. reflexivity.
+    + cbn. destruct γ as [|γ].
+      * cbn. reflexivity.
+      * case_eq (n <=? γ).
+        -- intro nlγ. cbn. reflexivity.
+        -- intro γln. cbn. reflexivity.
+  - cbn. reflexivity.
+  - cbn. f_equal.
+    * easy.
+    * (* We would need to strengthen it!
+         I believe however that it is convincing enough that it holds
+         for variables.
+       *)
+Admitted.
+
+Lemma rlift_substProj :
+  forall {t γ},
+    (lift 1 1 (rlift γ 1 t)) {0 := sProjT2 (sRel 0)} = rlift0 (S γ) t.
+Admitted.

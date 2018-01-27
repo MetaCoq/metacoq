@@ -266,16 +266,39 @@ Proof.
         change (sSort z1) with (llift #|Γ1| 1 (sSort z1)).
         eapply type_llift1 ; eassumption.
       * instantiate (1 := z2).
-        admit.
+        change (sSort z2) with (rlift #|Γ1| 1 (sSort z2)).
+        eapply type_rlift1 ; eassumption.
       * eassumption.
-      * admit.
+      * rewrite llift_substProj, rlift_substProj.
+        apply hpB.
     + apply type_Heq.
-      all:admit.
-    + cbn.
-      (* There is something wrong with the indices! *)
-      admit.
-      Unshelve. all:admit.
-    admit.
+      * instantiate (1 := (succ_sort (max_sort s1 z1))).
+        change (sSort (succ_sort (max_sort s1 z1)))
+          with (llift0 #|Γ1| (sSort (succ_sort (max_sort s1 z1)))).
+        eapply type_llift0.
+        -- eapply eq_typing. eassumption.
+        -- assumption.
+      * change (sSort (succ_sort (max_sort s1 z1)))
+          with (rlift0 #|Γ1| (sSort (succ_sort (max_sort s1 z1)))).
+        eapply type_rlift0.
+        -- admit. (* We better start by showing the equality of sorts
+                     and have a lemma that only has s1,s2
+                   *)
+        -- assumption.
+      * eapply type_llift0 ; assumption.
+      * eapply type_rlift0 ; assumption.
+    + cbn. apply cong_Heq.
+      all: try (apply eq_reflexivity).
+      * admit. (* True from cong_llift *)
+      * admit. (* True from cong_rlift *)
+      * apply type_Prod.
+        -- assumption.
+        -- change (sSort z1) with (llift #|Γ1| 1 (sSort z1)).
+           eapply type_llift1 ; eassumption.
+      * apply type_Prod.
+        -- assumption.
+        -- change (sSort z2) with (rlift #|Γ1| 1 (sSort z2)).
+           eapply type_rlift1 ; eassumption.
 
   (* Eq *)
   - admit.

@@ -113,8 +113,8 @@ Inductive typing (Σ : global_context) : scontext -> sterm -> sterm -> Type :=
     Σ ;;; Γ ,, svass ny A2 |-i B2 : sSort z2 ->
     Σ ;;; Γ |-i p : sHeq (sSort s1) A1 (sSort s2) A2 ->
     Σ ;;; Γ ,, svass np (sPack A1 A2)
-    |-i q : sHeq (sSort z1) (B1{ 0 := sProjT1 (sRel 0) })
-                (sSort z2) (B2{ 0 := sProjT2 (sRel 0) }) ->
+    |-i q : sHeq (sSort z1) ((lift 1 1 B1){ 0 := sProjT1 (sRel 0) })
+                (sSort z2) ((lift 1 1 B2){ 0 := sProjT2 (sRel 0) }) ->
     Σ ;;; Γ |-i sCongProd A1 A2 B1 B2 p q :
     sHeq (sSort (max_sort s1 z1)) (sProd nx A1 B1)
          (sSort (max_sort s2 z2)) (sProd ny A2 B2)

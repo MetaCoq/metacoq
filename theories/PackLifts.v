@@ -189,7 +189,7 @@ Proof.
   generalize dependent Γ2.
   unshelve refine (typing_rect Σ (fun Γgen t A _ =>
                            forall Γ Γ1 Δ, Γ ,,, Γ1 ,,, Δ = Γgen ->
-                                          forall Γ2 : list scontext_decl, #|Γ1| = #|Γ2| ->  Σ;;; mix Γ Γ1 Γ2 ,,, llift_context #|Γ1| Δ  |-i llift #|Γ1| #|Δ| t : llift #|Γ1| #|Δ| A) _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ (Γ ,,, Γ1 ,,, Δ ) t A h _ _ _ eq_refl); cbn in *; clear -type_llift wf_llift.
+                                          forall Γ2 : list scontext_decl, #|Γ1| = #|Γ2| ->  Σ;;; mix Γ Γ1 Γ2 ,,, llift_context #|Γ1| Δ  |-i llift #|Γ1| #|Δ| t : llift #|Γ1| #|Δ| A) _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ (Γ ,,, Γ1 ,,, Δ ) t A h _ _ _ eq_refl); cbn in *; clear -type_llift wf_llift.
   (* dependent induction h; cbn in *.  *)
   - intros. destruct H. generalize dependent Γ2. generalize dependent Γ1. induction Δ; cbn.
     + induction Γ1; cbn in *.

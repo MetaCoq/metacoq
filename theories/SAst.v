@@ -19,7 +19,7 @@ Inductive sterm : Type :=
 | sTransport (T1 T2 p t : sterm)
 (* Heterogenous equality *)
 | sHeq (A a B b : sterm)
-| sHeqToEq (A u v p : sterm)
+| sHeqToEq (p : sterm)
 | sHeqRefl (A a : sterm)
 | sHeqSym (p : sterm)
 | sHeqTrans (p q : sterm)

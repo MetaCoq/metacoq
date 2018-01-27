@@ -41,8 +41,7 @@ Fixpoint llift γ δ (t:sterm)  : sterm :=
     sTransport (llift γ δ A) (llift γ δ B) (llift γ δ p) (llift γ δ t)
   | sHeq A a B b =>
     sHeq (llift γ δ A) (llift γ δ a) (llift γ δ B) (llift γ δ b)
-  | sHeqToEq A u v p =>
-    sHeqToEq (llift γ δ A) (llift γ δ u) (llift γ δ v) (llift γ δ p)
+  | sHeqToEq p => sHeqToEq (llift γ δ p)
   | sHeqRefl A a => sHeqRefl (llift γ δ A) (llift γ δ a)
   | sHeqSym p => sHeqSym (llift γ δ p)
   | sHeqTrans p q => sHeqTrans (llift γ δ p) (llift γ δ q)
@@ -89,8 +88,7 @@ Fixpoint rlift γ δ t : sterm :=
     sTransport (rlift γ δ A) (rlift γ δ B) (rlift γ δ p) (rlift γ δ t)
   | sHeq A a B b =>
     sHeq (rlift γ δ A) (rlift γ δ a) (rlift γ δ B) (rlift γ δ b)
-  | sHeqToEq A u v p =>
-    sHeqToEq (rlift γ δ A) (rlift γ δ u) (rlift γ δ v) (rlift γ δ p)
+  | sHeqToEq p => sHeqToEq (rlift γ δ p)
   | sHeqRefl A a => sHeqRefl (rlift γ δ A) (rlift γ δ a)
   | sHeqSym p => sHeqSym (rlift γ δ p)
   | sHeqTrans p q => sHeqTrans (rlift γ δ p) (rlift γ δ q)

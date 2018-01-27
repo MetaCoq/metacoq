@@ -118,6 +118,19 @@ Inductive typing (Σ : global_context) : scontext -> sterm -> sterm -> Type :=
     sHeq (sSort (max_sort s z)) (sProd nx A1 B1)
          (sSort (max_sort s z)) (sProd ny A2 B2)
 
+| type_CongEq Γ s A1 A2 u1 u2 v1 v2 pA pu pv :
+    Σ ;;; Γ |-i pA : sHeq (sSort s) A1 (sSort s) A2 ->
+    Σ ;;; Γ |-i pu : sHeq A1 u1 A2 u2 ->
+    Σ ;;; Γ |-i pv : sHeq A1 v1 A2 v2 ->
+    Σ ;;; Γ |-i A1 : sSort s ->
+    Σ ;;; Γ |-i A2 : sSort s ->
+    Σ ;;; Γ |-i u1 : A1 ->
+    Σ ;;; Γ |-i u2 : A2 ->
+    Σ ;;; Γ |-i v1 : A1 ->
+    Σ ;;; Γ |-i v2 : A2 ->
+    Σ ;;; Γ |-i sCongEq pA pu pv :
+               sHeq (sSort s) (sEq A1 u1 v1) (sSort s) (sEq A2 u2 v2)
+
 | type_CongRefl Γ s A1 A2 u1 u2 pA pu :
     Σ ;;; Γ |-i pA : sHeq (sSort s) A1 (sSort s) A2 ->
     Σ ;;; Γ |-i pu : sHeq A1 u1 A2 u2 ->
@@ -427,6 +440,11 @@ Proof.
     + eapply type_Sort. apply (typing_wf H).
     + apply type_Prod ; assumption.
     + apply type_Prod ; assumption.
+  - exists (succ_sort (succ_sort s)). apply type_Heq.
+    + apply type_Sort ; apply (typing_wf H).
+    + apply type_Sort ; apply (typing_wf H).
+    + apply type_Eq ; assumption.
+    + apply type_Eq ; assumption.
   - exists (succ_sort s). apply type_Heq.
     + apply type_Eq ; assumption.
     + apply type_Eq ; assumption.
@@ -1005,6 +1023,25 @@ Proof.
 (* We should instead admit strengthening for conversion of sorts at least. *)
 Admitted.
 
+Lemma type_CongEq'' :
+  forall {Σ Γ s A1 A2 u1 u2 v1 v2 pA pu pv},
+    Σ ;;; Γ |-i pA : sHeq (sSort s) A1 (sSort s) A2 ->
+    Σ ;;; Γ |-i pu : sHeq A1 u1 A2 u2 ->
+    Σ ;;; Γ |-i pv : sHeq A1 v1 A2 v2 ->
+    Σ ;;; Γ |-i sCongEq pA pu pv :
+               sHeq (sSort s) (sEq A1 u1 v1) (sSort s) (sEq A2 u2 v2).
+Proof.
+  intros Σ Γ s A1 A2 u1 u2 v1 v2 pA pu pv hpA hpu hpv.
+  destruct (istype_type hpA) as [? iA].
+  destruct (istype_type hpu) as [? iu].
+  destruct (istype_type hpv) as [? iv].
+  destruct (inversionHeq iA) as [? [[[[? ?] ?] ?] ?]].
+  destruct (inversionHeq iu) as [? [[[[? ?] ?] ?] ?]].
+  destruct (inversionHeq iv) as [? [[[[? ?] ?] ?] ?]].
+  eapply type_CongEq.
+  all: assumption.
+Defined.
+
 Lemma type_CongEq' :
   forall {Σ Γ s1 s2 A1 A2 u1 u2 v1 v2 pA pu pv},
     Σ ;;; Γ |-i pA : sHeq (sSort s1) A1 (sSort s2) A2 ->
@@ -1013,7 +1050,28 @@ Lemma type_CongEq' :
     Σ ;;; Γ |-i sCongEq pA pu pv
              : sHeq (sSort s1) (sEq A1 u1 v1)
                     (sSort s2) (sEq A2 u2 v2).
-Abort.
+Proof.
+  intros Σ Γ s1 s2 A1 A2 u1 u2 v1 v2 pA pu pv hpA hpu hpv.
+  destruct (istype_type hpA) as [? iA].
+  destruct (istype_type hpu) as [? iu].
+  destruct (istype_type hpv) as [? iv].
+  destruct (inversionHeq iA) as [? [[[[? hs2] ?] hA2] ?]].
+  destruct (inversionHeq iu) as [? [[[[? ?] ?] ?] ?]].
+  destruct (inversionHeq iv) as [? [[[[? ?] ?] ?] ?]].
+  eapply type_conv'.
+  - eapply type_CongEq''.
+    + eapply heq_sort. eassumption.
+    + eassumption.
+    + eassumption.
+  - apply cong_Heq.
+    all: try (apply eq_reflexivity).
+    + eassumption.
+    + apply sorts_in_sort ; assumption.
+    + apply type_Eq ; assumption.
+    + eapply type_conv'.
+      * apply type_Eq ; [ apply hA2 | assumption .. ].
+      * eapply sorts_in_sort ; [ apply hs2 | assumption ].
+Defined.
 
 Lemma type_CongRefl'' :
   forall {Σ Γ s A1 A2 u1 u2 pA pu},

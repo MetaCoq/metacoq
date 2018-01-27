@@ -364,7 +364,23 @@ Proof.
       * apply eq_reflexivity. apply type_Sort. cheat. (* Need wf_mix lemma *)
 
   (* Lambda *)
-  - cheat.
+  - destruct (inversionLambda h1) as [s1 [z1 [[[hA1 hB1] hu1] eq1]]].
+    destruct (inversionLambda h2) as [s2 [z2 [[[hA2 hB2] hu2] eq2]]].
+    destruct (IHsim1 _ _ _ _ _ eq hA1 hA2) as [pA hpA].
+    destruct (IHsim2 _ (Γ1 ,, svass n1 A1) (Γ2 ,, svass n2 A2) _ _ ltac:(cbn ; omega) hB1 hB2) as [pB hpB].
+    destruct (IHsim3 _ (Γ1 ,, svass n1 A1) (Γ2 ,, svass n2 A2) _ _ ltac:(cbn ; omega) hu1 hu2) as [pu hpu].
+    exists (sCongLambda pA pB pu).
+    eapply type_conv'.
+    + eapply type_CongLambda'.
+      * eassumption.
+      * cheat.
+      * cheat.
+      * cheat.
+      * cheat.
+      * cheat.
+      * cheat.
+    + cheat.
+      Unshelve. all: cheat.
 
   (* App *)
   - cheat.

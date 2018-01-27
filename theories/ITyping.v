@@ -756,7 +756,32 @@ Proof.
         eapply eq_conv ; eassumption.
 Defined.
 
-(* Lemma inversionLambda *)
+Lemma inversionLambda :
+  forall {Σ Γ na A B t T},
+      Σ ;;; Γ |-i sLambda na A B t : T ->
+      ∑ s1 s2,
+        (Σ ;;; Γ |-i A : sSort s1) *
+        (Σ ;;; Γ ,, svass na A |-i B : sSort s2) *
+        (Σ ;;; Γ ,, svass na A |-i t : B) *
+        (Σ ;;; Γ |-i sProd na A B = T : sSort (max_sort s1 s2)).
+Proof.
+  intros Σ Γ na A B t T h.
+  dependent induction h.
+
+  - exists s1, s2. repeat split ; try eassumption.
+    apply cong_Prod.
+    all: apply eq_reflexivity ; assumption.
+
+  - destruct (IHh1 _ _ _ _ eq_refl) as [s1 [s2 [[[? ?] ?] ?]]].
+    exists s1, s2. repeat split.
+    all: try assumption.
+    eapply eq_transitivity.
+    + eassumption.
+    + destruct (eq_typing e) as [i1 _].
+      destruct (eq_typing e0) as [_ i2].
+      destruct (uniqueness i1 i2).
+      eapply eq_conv ; eassumption.
+Defined.
 
 Lemma inversionApp :
   forall {Σ Γ t n A B u T},

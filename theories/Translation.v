@@ -284,8 +284,17 @@ Proof.
       * eapply type_rlift0 ; assumption.
     + cbn. apply cong_Heq.
       all: try (apply eq_reflexivity).
-      * admit. (* True from cong_llift *)
-      * admit. (* True from cong_rlift *)
+      * change (sSort (max_sort s1 z1))
+          with (llift0 #|Γ1| (sSort (max_sort s1 z1))).
+        change (sSort (succ_sort (max_sort s1 z1)))
+          with (llift0 #|Γ1| (sSort (succ_sort (max_sort s1 z1)))).
+        eapply cong_llift0 ; assumption.
+      * change (sSort (max_sort s2 z2))
+          with (rlift0 #|Γ1| (sSort (max_sort s2 z2))).
+        change (sSort (succ_sort (max_sort s1 z1)))
+          with (rlift0 #|Γ1| (sSort (succ_sort (max_sort s1 z1)))).
+        eapply cong_rlift0 ; try assumption.
+        admit. (* Again the same problem. *)
       * apply type_Prod.
         -- assumption.
         -- change (sSort z1) with (llift #|Γ1| 1 (sSort z1)).
@@ -296,7 +305,38 @@ Proof.
            eapply type_rlift1 ; eassumption.
 
   (* Eq *)
-  - admit.
+  - destruct (inversionEq h1) as [s1 [[[hA1 hu1] hv1] eqA]].
+    destruct (inversionEq h2) as [s2 [[[hA2 hu2] hv2] eqB]].
+    destruct (IHsim1 _ _ _ _ _ eq hA1 hA2) as [pA hpA].
+    destruct (IHsim2 _ _ _ _ _ eq hu1 hu2) as [pu hpu].
+    destruct (IHsim3 _ _ _ _ _ eq hv1 hv2) as [pv hpv].
+    exists (sCongEq pA pu pv).
+    eapply type_conv'.
+    + eapply type_CongEq' ; eassumption.
+    + apply cong_Heq.
+      * change (sSort s1) with (llift0 #|Γ1| (sSort s1)).
+        instantiate (1 := (succ_sort s1)).
+        change (sSort (succ_sort s1))
+          with (llift0 #|Γ1| (sSort (succ_sort s1))).
+        eapply cong_llift0 ; eassumption.
+      * change (sSort s2) with (rlift0 #|Γ1| (sSort s2)).
+        change (sSort (succ_sort s1))
+          with (rlift0 #|Γ1| (sSort (succ_sort s1))).
+        eapply cong_rlift0 ; try eassumption.
+        eapply eq_conv.
+        -- eassumption.
+        -- eapply inversionSort.
+           admit. (* Sort problems again! *)
+      * apply eq_reflexivity.
+        change (sSort s1) with (llift0 #|Γ1| (sSort s1)).
+        eapply type_llift0.
+        -- apply type_Eq ; eassumption.
+        -- assumption.
+      * apply eq_reflexivity.
+        change (sSort s2) with (rlift0 #|Γ1| (sSort s2)).
+        eapply type_rlift0.
+        -- apply type_Eq ; eassumption.
+        -- assumption.
 
   (* Sort *)
   - admit.

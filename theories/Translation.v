@@ -8,6 +8,9 @@ Open Scope type_scope.
 Open Scope x_scope.
 Open Scope i_scope.
 
+Axiom cheating : forall {A}, A.
+Tactic Notation "cheat" := (apply cheating).
+
 (*! Relation for translated expressions *)
 
 Reserved Notation " t1 ∼ t2 " (at level 20).
@@ -149,7 +152,7 @@ Proof.
     + intros n eqγ. case_eq (x <=? n).
       * intro xln. exists (sProjTe (sRel x)).
         apply type_ProjTe'.
-        admit.
+        cheat.
       * intro nlx.
         assert (h1' : Σ ;;; mix Γ Γ1 Γ2 |-i sRel x : llift0 (S n) U1).
         { replace (sRel x) with (llift0 (S n) (sRel x))
@@ -276,7 +279,7 @@ Proof.
       * change (sSort (succ_sort (max_sort s1 z1)))
           with (rlift0 #|Γ1| (sSort (succ_sort (max_sort s1 z1)))).
         eapply type_rlift0.
-        -- admit. (* We better start by showing the equality of sorts
+        -- cheat. (* We better start by showing the equality of sorts
                      and have a lemma that only has s1,s2
                    *)
         -- assumption.
@@ -294,7 +297,7 @@ Proof.
         change (sSort (succ_sort (max_sort s1 z1)))
           with (rlift0 #|Γ1| (sSort (succ_sort (max_sort s1 z1)))).
         eapply cong_rlift0 ; try assumption.
-        admit. (* Again the same problem. *)
+        cheat. (* Again the same problem. *)
       * apply type_Prod.
         -- assumption.
         -- change (sSort z1) with (llift #|Γ1| 1 (sSort z1)).
@@ -326,7 +329,7 @@ Proof.
         eapply eq_conv.
         -- eassumption.
         -- eapply inversionSort.
-           admit. (* Sort problems again! *)
+           cheat. (* Sort problems again! *)
       * apply eq_reflexivity.
         change (sSort s1) with (llift0 #|Γ1| (sSort s1)).
         eapply type_llift0.
@@ -344,7 +347,7 @@ Proof.
     exists (sHeqRefl (sSort (succ_sort s)) (sSort s)).
     eapply type_conv'.
     + eapply type_HeqRefl'.
-      apply type_Sort. admit. (* Need wf_mix lemma *)
+      apply type_Sort. cheat. (* Need wf_mix lemma *)
     + cbn. apply cong_Heq.
       * instantiate (1 := succ_sort (succ_sort s)).
         change (sSort (succ_sort s))
@@ -357,18 +360,18 @@ Proof.
         change (sSort (succ_sort (succ_sort s)))
           with (rlift0 #|Γ1| (sSort (succ_sort (succ_sort s)))).
         eapply cong_rlift0 ; assumption.
-      * apply eq_reflexivity. apply type_Sort. admit. (* Need wf_mix lemma *)
-      * apply eq_reflexivity. apply type_Sort. admit. (* Need wf_mix lemma *)
+      * apply eq_reflexivity. apply type_Sort. cheat. (* Need wf_mix lemma *)
+      * apply eq_reflexivity. apply type_Sort. cheat. (* Need wf_mix lemma *)
 
   (* Lambda *)
-  - admit.
+  - cheat.
 
   (* App *)
-  - admit.
+  - cheat.
 
   (* Refl *)
-  - admit.
-Admitted.
+  - cheat.
+Defined.
 
 Lemma trelE_to_heq :
   forall {Σ t1 t2},
@@ -1034,9 +1037,6 @@ Defined.
 
 
 (*! Translation *)
-
-Axiom cheating : forall {A}, A.
-Tactic Notation "cheat" := (apply cheating).
 
 Fact length_increl : forall {Γ Γ'}, Γ ⊂ Γ' -> #|Γ| = #|Γ'|.
 Proof.

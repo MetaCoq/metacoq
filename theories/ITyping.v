@@ -138,6 +138,25 @@ Inductive typing (Σ : global_context) : scontext -> sterm -> sterm -> Type :=
                sHeq (sProd nx A1 B1) (sLambda nx A1 B1 t1)
                     (sProd ny A2 B2) (sLambda ny A2 B2 t2)
 
+| type_CongApp Γ s z nx ny np A1 A2 B1 B2 u1 u2 v1 v2 pA pB pu pv :
+    Σ ;;; Γ |-i pA : sHeq (sSort s) A1 (sSort s) A2 ->
+    Σ ;;; Γ ,, svass np (sPack A1 A2)
+    |-i pB : sHeq (sSort z) ((lift 1 1 B1){ 0 := sProjT1 (sRel 0) })
+                 (sSort z) ((lift 1 1 B2){ 0 := sProjT2 (sRel 0) }) ->
+    Σ ;;; Γ |-i pu : sHeq (sProd nx A1 B1) u2 (sProd ny A2 B2) u2 ->
+    Σ ;;; Γ |-i pv : sHeq A1 v2 A2 v2 ->
+    Σ ;;; Γ |-i A1 : sSort s ->
+    Σ ;;; Γ |-i A2 : sSort s ->
+    Σ ;;; Γ ,, svass nx A1 |-i B1 : sSort z ->
+    Σ ;;; Γ ,, svass ny A2 |-i B2 : sSort z ->
+    Σ ;;; Γ |-i u1 : sProd nx A1 B1 ->
+    Σ ;;; Γ |-i u2 : sProd ny A2 B2 ->
+    Σ ;;; Γ |-i v1 : A1 ->
+    Σ ;;; Γ |-i v2 : A2 ->
+    Σ ;;; Γ |-i sCongApp pu pA pB pv :
+               sHeq (B1{0 := v1}) (sApp u1 nx A1 B1 v1)
+                    (B2{0 := v2}) (sApp u2 ny A2 B2 v2)
+
 | type_CongEq Γ s A1 A2 u1 u2 v1 v2 pA pu pv :
     Σ ;;; Γ |-i pA : sHeq (sSort s) A1 (sSort s) A2 ->
     Σ ;;; Γ |-i pu : sHeq A1 u1 A2 u2 ->
@@ -465,6 +484,13 @@ Proof.
     + apply type_Prod ; assumption.
     + eapply type_Lambda ; eassumption.
     + eapply type_Lambda ; eassumption.
+  - exists (succ_sort z). apply type_Heq.
+    + change (sSort z) with ((sSort z){ 0 := v1 }).
+      eapply typing_subst ; eassumption.
+    + change (sSort z) with ((sSort z){ 0 := v2 }).
+      eapply typing_subst ; eassumption.
+    + eapply type_App ; eassumption.
+    + eapply type_App ; eassumption.
   - exists (succ_sort (succ_sort s)). apply type_Heq.
     + apply type_Sort ; apply (typing_wf H).
     + apply type_Sort ; apply (typing_wf H).
@@ -1087,6 +1113,36 @@ Lemma type_CongLambda' :
     Σ ;;; Γ |-i sCongLambda pA pB pt :
                sHeq (sProd nx A1 B1) (sLambda nx A1 B1 t1)
                     (sProd ny A2 B2) (sLambda ny A2 B2 t2).
+Admitted.
+
+Lemma type_CongApp'' :
+  forall {Σ Γ s z nx ny np A1 A2 B1 B2 u1 u2 v1 v2 pA pB pu pv},
+    Σ ;;; Γ |-i pA : sHeq (sSort s) A1 (sSort s) A2 ->
+    Σ ;;; Γ ,, svass np (sPack A1 A2)
+    |-i pB : sHeq (sSort z) ((lift 1 1 B1){ 0 := sProjT1 (sRel 0) })
+                 (sSort z) ((lift 1 1 B2){ 0 := sProjT2 (sRel 0) }) ->
+    Σ ;;; Γ |-i pu : sHeq (sProd nx A1 B1) u2 (sProd ny A2 B2) u2 ->
+    Σ ;;; Γ |-i pv : sHeq A1 v2 A2 v2 ->
+    Σ ;;; Γ ,, svass nx A1 |-i B1 : sSort z ->
+    Σ ;;; Γ ,, svass ny A2 |-i B2 : sSort z ->
+    Σ ;;; Γ |-i sCongApp pu pA pB pv :
+               sHeq (B1{0 := v1}) (sApp u1 nx A1 B1 v1)
+                    (B2{0 := v2}) (sApp u2 ny A2 B2 v2).
+Admitted.
+
+Lemma type_CongApp' :
+  forall {Σ Γ s1 s2 z1 z2 nx ny np A1 A2 B1 B2 u1 u2 v1 v2 pA pB pu pv},
+    Σ ;;; Γ |-i pA : sHeq (sSort s1) A1 (sSort s2) A2 ->
+    Σ ;;; Γ ,, svass np (sPack A1 A2)
+    |-i pB : sHeq (sSort z1) ((lift 1 1 B1){ 0 := sProjT1 (sRel 0) })
+                 (sSort z2) ((lift 1 1 B2){ 0 := sProjT2 (sRel 0) }) ->
+    Σ ;;; Γ |-i pu : sHeq (sProd nx A1 B1) u2 (sProd ny A2 B2) u2 ->
+    Σ ;;; Γ |-i pv : sHeq A1 v2 A2 v2 ->
+    Σ ;;; Γ ,, svass nx A1 |-i B1 : sSort z1 ->
+    Σ ;;; Γ ,, svass ny A2 |-i B2 : sSort z2 ->
+    Σ ;;; Γ |-i sCongApp pu pA pB pv :
+               sHeq (B1{0 := v1}) (sApp u1 nx A1 B1 v1)
+                    (B2{0 := v2}) (sApp u2 ny A2 B2 v2).
 Admitted.
 
 Lemma type_CongEq'' :

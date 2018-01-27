@@ -86,7 +86,7 @@ Inductive typing (Σ : global_context) : scontext -> sterm -> sterm -> Type :=
     Σ ;;; Γ |-i a : A ->
     Σ ;;; Γ |-i b : B ->
     Σ ;;; Γ |-i p : sHeq A a B b ->
-    Σ ;;; Γ |-i sHeqSym A a B b p : sHeq B b A a
+    Σ ;;; Γ |-i sHeqSym p : sHeq B b A a
 
 | type_HeqTrans Γ A a B b C c p q s :
     Σ ;;; Γ |-i A : sSort s ->
@@ -96,28 +96,38 @@ Inductive typing (Σ : global_context) : scontext -> sterm -> sterm -> Type :=
     Σ ;;; Γ |-i b : B ->
     Σ ;;; Γ |-i c : C ->
     Σ ;;; Γ |-i p : sHeq A a B b ->
-    Σ ;;; Γ |-i sHeqTrans A a B b C c p q : sHeq A a C c
+    Σ ;;; Γ |-i sHeqTrans p q : sHeq A a C c
 
 | type_HeqTransport Γ A B p t s :
     Σ ;;; Γ |-i A : sSort s ->
     Σ ;;; Γ |-i B : sSort s ->
     Σ ;;; Γ |-i t : A ->
     Σ ;;; Γ |-i p : sEq (sSort s) A B ->
-    Σ ;;; Γ |-i sHeqTransport A B p t : sHeq A t B (sTransport A B p t)
+    Σ ;;; Γ |-i sHeqTransport p t : sHeq A t B (sTransport A B p t)
 
-| type_CongProd Γ s1 s2 z1 z2 nx ny np A1 A2 B1 B2 p q :
+| type_CongProd Γ s1 s2 z1 z2 nx ny np A1 A2 B1 B2 pA pB :
+    Σ ;;; Γ |-i pA : sHeq (sSort s1) A1 (sSort s2) A2 ->
+    Σ ;;; Γ ,, svass np (sPack A1 A2)
+    |-i pB : sHeq (sSort z1) ((lift 1 1 B1){ 0 := sProjT1 (sRel 0) })
+                (sSort z2) ((lift 1 1 B2){ 0 := sProjT2 (sRel 0) }) ->
     Σ ;;; Γ |-i sSort (max_sort s2 z2) : sSort (succ_sort (max_sort s1 z1)) ->
     Σ ;;; Γ |-i A1 : sSort s1 ->
     Σ ;;; Γ |-i A2 : sSort s2 ->
     Σ ;;; Γ ,, svass nx A1 |-i B1 : sSort z1 ->
     Σ ;;; Γ ,, svass ny A2 |-i B2 : sSort z2 ->
-    Σ ;;; Γ |-i p : sHeq (sSort s1) A1 (sSort s2) A2 ->
-    Σ ;;; Γ ,, svass np (sPack A1 A2)
-    |-i q : sHeq (sSort z1) ((lift 1 1 B1){ 0 := sProjT1 (sRel 0) })
-                (sSort z2) ((lift 1 1 B2){ 0 := sProjT2 (sRel 0) }) ->
-    Σ ;;; Γ |-i sCongProd A1 A2 B1 B2 p q :
+    Σ ;;; Γ |-i sCongProd pA pB :
     sHeq (sSort (max_sort s1 z1)) (sProd nx A1 B1)
          (sSort (max_sort s2 z2)) (sProd ny A2 B2)
+
+| type_CongRefl Γ s A1 A2 u1 u2 pA pu :
+    Σ ;;; Γ |-i A1 : sSort s ->
+    Σ ;;; Γ |-i A2 : sSort s ->
+    Σ ;;; Γ |-i u1 : A1 ->
+    Σ ;;; Γ |-i u2 : A2 ->
+    Σ ;;; Γ |-i pA : sHeq (sSort s) A1 (sSort s) A2 ->
+    Σ ;;; Γ |-i pu : sHeq A1 u1 A2 u2 ->
+    Σ ;;; Γ |-i sCongRefl pA pu :
+               sHeq (sEq A1 u1 u1) (sRefl A1 u1) (sEq A2 u2 u2) (sRefl A2 u2)
 
 | type_Pack Γ A1 A2 s :
     Σ ;;; Γ |-i A1 : sSort s ->
@@ -417,6 +427,11 @@ Proof.
     + eapply type_Sort. apply (typing_wf H).
     + apply type_Prod ; assumption.
     + apply type_Prod ; assumption.
+  - exists (succ_sort s). apply type_Heq.
+    + apply type_Eq ; assumption.
+    + apply type_Eq ; assumption.
+    + eapply type_Refl ; eassumption.
+    + eapply type_Refl ; eassumption.
   - exists (succ_sort s). apply type_Sort. apply (typing_wf H).
   - exists s. assumption.
   - exists s. assumption.
@@ -867,7 +882,7 @@ Defined.
 Lemma type_HeqSym' :
   forall {Σ Γ A a B b p},
     Σ ;;; Γ |-i p : sHeq A a B b ->
-    Σ ;;; Γ |-i sHeqSym A a B b p : sHeq B b A a.
+    Σ ;;; Γ |-i sHeqSym p : sHeq B b A a.
 Proof.
   intros Σ Γ A a B b p h.
   destruct (istype_type h) as [? hty].
@@ -879,7 +894,7 @@ Lemma type_HeqTrans' :
   forall {Σ Γ A a B b C c p q},
     Σ ;;; Γ |-i p : sHeq A a B b ->
     Σ ;;; Γ |-i q : sHeq B b C c ->
-    Σ ;;; Γ |-i sHeqTrans A a B b C c p q : sHeq A a C c.
+    Σ ;;; Γ |-i sHeqTrans p q : sHeq A a C c.
 Proof.
   intros Σ Γ A a B b C c p q h1 h2.
   destruct (istype_type h1) as [? i1].
@@ -896,7 +911,7 @@ Lemma type_HeqTransport' :
   forall {Σ Γ s A B p t},
     Σ ;;; Γ |-i t : A ->
     Σ ;;; Γ |-i p : sEq (sSort s) A B ->
-    Σ ;;; Γ |-i sHeqTransport A B p t : sHeq A t B (sTransport A B p t).
+    Σ ;;; Γ |-i sHeqTransport p t : sHeq A t B (sTransport A B p t).
 Proof.
   intros Σ Γ s A B p t ht hp.
   destruct (istype_type hp) as [? i].
@@ -926,6 +941,24 @@ Defined.
 (*   all: try eassumption. *)
 (*   - eapply type_conv. *)
 (*     + eassumption. *)
+
+Lemma type_CongRefl' :
+  forall {Σ Γ s1 s2 A1 A2 u1 u2 pA pu},
+    Σ ;;; Γ |-i pA : sHeq (sSort s1) A1 (sSort s2) A2 ->
+    Σ ;;; Γ |-i pu : sHeq A1 u1 A2 u2 ->
+    Σ ;;; Γ |-i sCongRefl pA pu :
+               sHeq (sEq A1 u1 u1) (sRefl A1 u1) (sEq A2 u2 u2) (sRefl A2 u2).
+Abort.
+
+Lemma type_CongEq' :
+  forall {Σ Γ s1 s2 A1 A2 u1 u2 v1 v2 pA pu pv},
+    Σ ;;; Γ |-i pA : sHeq (sSort s1) A1 (sSort s2) A2 ->
+    Σ ;;; Γ |-i pu : sHeq A1 u1 A2 u2 ->
+    Σ ;;; Γ |-i pv : sHeq A1 v1 A2 v2 ->
+    Σ ;;; Γ |-i sCongEq pA pu pv
+             : sHeq (sSort s1) (sEq A1 u1 v1)
+                    (sSort s2) (sEq A2 u2 v2).
+Abort.
 
 Lemma type_ProjT1' :
   forall {Σ Γ A1 A2 p},

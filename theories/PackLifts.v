@@ -44,20 +44,16 @@ Fixpoint llift γ δ (t:sterm)  : sterm :=
   | sHeqToEq A u v p =>
     sHeqToEq (llift γ δ A) (llift γ δ u) (llift γ δ v) (llift γ δ p)
   | sHeqRefl A a => sHeqRefl (llift γ δ A) (llift γ δ a)
-  | sHeqSym A a B b p =>
-    sHeqSym (llift γ δ A) (llift γ δ a)
-            (llift γ δ B) (llift γ δ b) (llift γ δ p)
-  | sHeqTrans A a B b C c p q =>
-    sHeqTrans (llift γ δ A) (llift γ δ a)
-              (llift γ δ B) (llift γ δ b)
-              (llift γ δ C) (llift γ δ c)
-              (llift γ δ p) (llift γ δ q)
-  | sHeqTransport A B p t =>
-    sHeqTransport (llift γ δ A) (llift γ δ B) (llift γ δ p) (llift γ δ t)
-  | sCongProd A1 A2 B1 B2 p q =>
-    sCongProd (llift γ δ A1) (llift γ δ A2)
-              (llift γ (S δ) B1) (llift γ (S δ) B2)
-              (llift γ δ p) (llift γ (S (S (S δ))) q)
+  | sHeqSym p => sHeqSym (llift γ δ p)
+  | sHeqTrans p q => sHeqTrans (llift γ δ p) (llift γ δ q)
+  | sHeqTransport p t => sHeqTransport (llift γ δ p) (llift γ δ t)
+  | sCongProd p q => sCongProd (llift γ δ p) (llift γ (S (S (S δ))) q)
+  | sCongLambda pA pB pt =>
+    sCongLambda (llift γ δ pA) (llift γ (S δ) pB) (llift γ (S δ) pt)
+  | sCongApp pu pA pB pv =>
+    sCongApp (llift γ δ pu) (llift γ δ pA) (llift γ (S δ) pB) (llift γ δ pv)
+  | sCongEq pA pu pv => sCongEq (llift γ δ pA) (llift γ δ pu) (llift γ δ pv)
+  | sCongRefl pA pu => sCongRefl (llift γ δ pA) (llift γ δ pu)
   | sSort x => sSort x
   | sPack A B => sPack (llift γ δ A) (llift γ δ B)
   | sProjT1 x => sProjT1 (llift γ δ x)
@@ -96,20 +92,16 @@ Fixpoint rlift γ δ t : sterm :=
   | sHeqToEq A u v p =>
     sHeqToEq (rlift γ δ A) (rlift γ δ u) (rlift γ δ v) (rlift γ δ p)
   | sHeqRefl A a => sHeqRefl (rlift γ δ A) (rlift γ δ a)
-  | sHeqSym A a B b p =>
-    sHeqSym (rlift γ δ A) (rlift γ δ a)
-            (rlift γ δ B) (rlift γ δ b) (rlift γ δ p)
-  | sHeqTrans A a B b C c p q =>
-    sHeqTrans (rlift γ δ A) (rlift γ δ a)
-              (rlift γ δ B) (rlift γ δ b)
-              (rlift γ δ C) (rlift γ δ c)
-              (rlift γ δ p) (rlift γ δ q)
-  | sHeqTransport A B p t =>
-    sHeqTransport (rlift γ δ A) (rlift γ δ B) (rlift γ δ p) (rlift γ δ t)
-  | sCongProd A1 A2 B1 B2 p q =>
-    sCongProd (rlift γ δ A1) (rlift γ δ A2)
-              (rlift γ (S δ) B1) (rlift γ (S δ) B2)
-              (rlift γ δ p) (rlift γ (S (S (S δ))) q)
+  | sHeqSym p => sHeqSym (rlift γ δ p)
+  | sHeqTrans p q => sHeqTrans (rlift γ δ p) (rlift γ δ q)
+  | sHeqTransport p t => sHeqTransport (rlift γ δ p) (rlift γ δ t)
+  | sCongProd pA pB => sCongProd (rlift γ δ pA) (rlift γ (S (S (S δ))) pB)
+  | sCongLambda pA pB pt =>
+    sCongLambda (rlift γ δ pA) (rlift γ (S δ) pB) (rlift γ (S δ) pt)
+  | sCongApp pu pA pB pv =>
+    sCongApp (rlift γ δ pu) (rlift γ δ pA) (rlift γ (S δ) pB) (rlift γ δ pv)
+  | sCongEq pA pu pv => sCongEq (rlift γ δ pA) (rlift γ δ pu) (rlift γ δ pv)
+  | sCongRefl pA pu => sCongRefl (rlift γ δ pA) (rlift γ δ pu)
   | sSort x => sSort x
   | sPack A B => sPack (rlift γ δ A) (rlift γ δ B)
   | sProjT1 x => sProjT1 (rlift γ δ x)
@@ -199,7 +191,7 @@ Proof.
   generalize dependent Γ2.
   unshelve refine (typing_rect Σ (fun Γgen t A _ =>
                            forall Γ Γ1 Δ, Γ ,,, Γ1 ,,, Δ = Γgen ->
-                                          forall Γ2 : list scontext_decl, #|Γ1| = #|Γ2| ->  Σ;;; mix Γ Γ1 Γ2 ,,, llift_context #|Γ1| Δ  |-i llift #|Γ1| #|Δ| t : llift #|Γ1| #|Δ| A) _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ (Γ ,,, Γ1 ,,, Δ ) t A h _ _ _ eq_refl); cbn in *; clear -type_llift wf_llift.
+                                          forall Γ2 : list scontext_decl, #|Γ1| = #|Γ2| ->  Σ;;; mix Γ Γ1 Γ2 ,,, llift_context #|Γ1| Δ  |-i llift #|Γ1| #|Δ| t : llift #|Γ1| #|Δ| A) _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ (Γ ,,, Γ1 ,,, Δ ) t A h _ _ _ eq_refl); cbn in *; clear -type_llift wf_llift.
   (* dependent induction h; cbn in *.  *)
   - intros. destruct H. generalize dependent Γ2. generalize dependent Γ1. induction Δ; cbn.
     + induction Γ1; cbn in *.
@@ -310,6 +302,23 @@ Corollary type_rlift1 :
     Σ ;;; mix Γ Γ1 Γ2 ,, svass nx (rlift0 #|Γ1| B)
     |-i rlift #|Γ1| 1 t : rlift #|Γ1| 1 A.
 Admitted.
+
+(* This is wrong actually *)
+Lemma cong_rlift {Σ Γ Γ1 Γ2 Δ t1 t2 A} (h : Σ ;;; Γ ,,, Γ2 ,,, Δ |-i t1 = t2 : A)
+      (e : #|Γ1| = #|Γ2|) :
+  Σ ;;; mix Γ Γ1 Γ2 ,,, Δ
+  |-i rlift #|Γ1| #|Δ| t1 = rlift #|Γ1| #|Δ| t2 : rlift #|Γ1| #|Δ| A.
+Admitted.
+
+Corollary cong_rlift0 :
+  forall {Σ Γ Γ1 Γ2 t1 t2 A},
+    Σ ;;; Γ ,,, Γ2 |-i t1 = t2 : A ->
+    #|Γ1| = #|Γ2| ->
+    Σ ;;; mix Γ Γ1 Γ2 |-i rlift0 #|Γ1| t1 = rlift0 #|Γ1| t2 : rlift0 #|Γ1| A.
+Proof.
+  intros Σ Γ Γ1 Γ2 t1 t2 A ? ?.
+  eapply @cong_rlift with (Δ := nil) ; assumption.
+Defined.
 
 Lemma llift_substProj :
   forall {t γ},

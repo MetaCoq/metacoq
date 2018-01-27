@@ -28,19 +28,16 @@ Fixpoint lift n k t : sterm :=
   | sHeqToEq A u v p =>
     sHeqToEq (lift n k A) (lift n k u) (lift n k v) (lift n k p)
   | sHeqRefl A a => sHeqRefl (lift n k A) (lift n k a)
-  | sHeqSym A a B b p =>
-    sHeqSym (lift n k A) (lift n k a) (lift n k B) (lift n k b) (lift n k p)
-  | sHeqTrans A a B b C c p q =>
-    sHeqTrans (lift n k A) (lift n k a)
-              (lift n k B) (lift n k b)
-              (lift n k C) (lift n k c)
-              (lift n k p) (lift n k q)
-  | sHeqTransport A B p t =>
-    sHeqTransport (lift n k A) (lift n k B) (lift n k p) (lift n k t)
-  | sCongProd A1 A2 B1 B2 p q =>
-    sCongProd (lift n k A1) (lift n k A2)
-              (lift n (S k) B1) (lift n (S k) B2)
-              (lift n k p) (lift n (S k) q)
+  | sHeqSym p => sHeqSym (lift n k p)
+  | sHeqTrans p q => sHeqTrans (lift n k p) (lift n k q)
+  | sHeqTransport p t => sHeqTransport (lift n k p) (lift n k t)
+  | sCongProd pA pB => sCongProd (lift n k pA) (lift n (S k) pB)
+  | sCongLambda pA pB pt =>
+    sCongLambda (lift n k pA) (lift n (S k) pB) (lift n (S k) pt)
+  | sCongApp pu pA pB pv =>
+    sCongApp (lift n k pu) (lift n k pA) (lift n (S k) pB) (lift n k pv)
+  | sCongEq pA pu pv => sCongEq (lift n k pA) (lift n k pu) (lift n k pv)
+  | sCongRefl pA pu => sCongRefl (lift n k pA) (lift n k pu)
   | sPack A1 A2 => sPack (lift n k A1) (lift n k A2)
   | sProjT1 p => sProjT1 (lift n k p)
   | sProjT2 p => sProjT2 (lift n k p)
@@ -79,20 +76,16 @@ Fixpoint subst t k u :=
   | sHeqToEq A u v p =>
     sHeqToEq (subst t k A) (subst t k u) (subst t k v) (subst t k p)
   | sHeqRefl A a => sHeqRefl (subst t k A) (subst t k a)
-  | sHeqSym A a B b p =>
-    sHeqSym (subst t k A) (subst t k a)
-            (subst t k B) (subst t k b) (subst t k p)
-  | sHeqTrans A a B b C c p q =>
-    sHeqTrans (subst t k A) (subst t k a)
-              (subst t k B) (subst t k b)
-              (subst t k C) (subst t k c)
-              (subst t k p) (subst t k q)
-  | sHeqTransport A B p u =>
-    sHeqTransport (subst t k A) (subst t k B) (subst t k p) (subst t k u)
-  | sCongProd A1 A2 B1 B2 p q =>
-    sCongProd (subst t k A1) (subst t k A2)
-              (subst t (S k) B1) (subst t (S k) B2)
-              (subst t k p) (subst t (S k) q)
+  | sHeqSym p => sHeqSym (subst t k p)
+  | sHeqTrans p q => sHeqTrans (subst t k p) (subst t k q)
+  | sHeqTransport p u => sHeqTransport (subst t k p) (subst t k u)
+  | sCongProd pA pB => sCongProd (subst t k pA) (subst t (S k) pB)
+  | sCongLambda pA pB pt =>
+    sCongLambda (subst t k pA) (subst t (S k) pB) (subst t (S k) pt)
+  | sCongApp pu pA pB pv =>
+    sCongApp (subst t k pu) (subst t k pA) (subst t (S k) pB) (subst t k pv)
+  | sCongEq pA pu pv => sCongEq (subst t k pA) (subst t k pu) (subst t k pv)
+  | sCongRefl pA pu => sCongRefl (subst t k pA) (subst t k pu)
   | sPack A1 A2 => sPack (subst t k A1) (subst t k A2)
   | sProjT1 p => sProjT1 (subst t k p)
   | sProjT2 p => sProjT2 (subst t k p)

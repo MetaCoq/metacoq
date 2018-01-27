@@ -29,6 +29,7 @@ Inductive sterm : Type :=
 | sCongApp (pu pA pB pv : sterm)
 | sCongEq (pA pu pv : sterm)
 | sCongRefl (pA pu : sterm)
+| sEqToHeq (p : sterm)
 (* Packing *)
 | sPack (A1 A2 : sterm)
 | sProjT1 (p : sterm)

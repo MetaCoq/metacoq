@@ -180,6 +180,13 @@ Inductive typing (Σ : global_context) : scontext -> sterm -> sterm -> Type :=
     Σ ;;; Γ |-i sCongRefl pA pu :
                sHeq (sEq A1 u1 u1) (sRefl A1 u1) (sEq A2 u2 u2) (sRefl A2 u2)
 
+| type_EqToHeq Γ A u v p s :
+    Σ ;;; Γ |-i p : sEq A u v ->
+    Σ ;;; Γ |-i A : sSort s ->
+    Σ ;;; Γ |-i u : A ->
+    Σ ;;; Γ |-i v : A ->
+    Σ ;;; Γ |-i sEqToHeq p : sHeq A u A v
+
 | type_Pack Γ A1 A2 s :
     Σ ;;; Γ |-i A1 : sSort s ->
     Σ ;;; Γ |-i A2 : sSort s ->
@@ -501,6 +508,7 @@ Proof.
     + apply type_Eq ; assumption.
     + eapply type_Refl ; eassumption.
     + eapply type_Refl ; eassumption.
+  - exists (succ_sort s). apply type_Heq ; assumption.
   - exists (succ_sort s). apply type_Sort. apply (typing_wf H).
   - exists s. assumption.
   - exists s. assumption.
@@ -1288,6 +1296,17 @@ Proof.
   eapply type_CongRefl''.
   - eapply heq_sort. eassumption.
   - assumption.
+Defined.
+
+Lemma type_EqToHeq' :
+  forall {Σ Γ A u v p},
+    Σ ;;; Γ |-i p : sEq A u v ->
+    Σ ;;; Γ |-i sEqToHeq p : sHeq A u A v.
+Proof.
+  intros Σ Γ A u v p h.
+  destruct (istype_type h) as [? i].
+  destruct (inversionEq i) as [? [[[? ?] ?] ?]].
+  eapply type_EqToHeq ; eassumption.
 Defined.
 
 Lemma type_ProjT1' :

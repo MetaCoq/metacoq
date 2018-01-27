@@ -53,6 +53,7 @@ Fixpoint llift γ δ (t:sterm)  : sterm :=
     sCongApp (llift γ δ pu) (llift γ δ pA) (llift γ (S δ) pB) (llift γ δ pv)
   | sCongEq pA pu pv => sCongEq (llift γ δ pA) (llift γ δ pu) (llift γ δ pv)
   | sCongRefl pA pu => sCongRefl (llift γ δ pA) (llift γ δ pu)
+  | sEqToHeq p => sEqToHeq (llift γ δ p)
   | sSort x => sSort x
   | sPack A B => sPack (llift γ δ A) (llift γ δ B)
   | sProjT1 x => sProjT1 (llift γ δ x)
@@ -100,6 +101,7 @@ Fixpoint rlift γ δ t : sterm :=
     sCongApp (rlift γ δ pu) (rlift γ δ pA) (rlift γ (S δ) pB) (rlift γ δ pv)
   | sCongEq pA pu pv => sCongEq (rlift γ δ pA) (rlift γ δ pu) (rlift γ δ pv)
   | sCongRefl pA pu => sCongRefl (rlift γ δ pA) (rlift γ δ pu)
+  | sEqToHeq p => sEqToHeq (rlift γ δ p)
   | sSort x => sSort x
   | sPack A B => sPack (rlift γ δ A) (rlift γ δ B)
   | sProjT1 x => sProjT1 (rlift γ δ x)
@@ -189,7 +191,7 @@ Proof.
   generalize dependent Γ2.
   unshelve refine (typing_rect Σ (fun Γgen t A _ =>
                            forall Γ Γ1 Δ, Γ ,,, Γ1 ,,, Δ = Γgen ->
-                                          forall Γ2 : list scontext_decl, #|Γ1| = #|Γ2| ->  Σ;;; mix Γ Γ1 Γ2 ,,, llift_context #|Γ1| Δ  |-i llift #|Γ1| #|Δ| t : llift #|Γ1| #|Δ| A) _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ (Γ ,,, Γ1 ,,, Δ ) t A h _ _ _ eq_refl); cbn in *; clear -type_llift wf_llift.
+                                          forall Γ2 : list scontext_decl, #|Γ1| = #|Γ2| ->  Σ;;; mix Γ Γ1 Γ2 ,,, llift_context #|Γ1| Δ  |-i llift #|Γ1| #|Δ| t : llift #|Γ1| #|Δ| A) _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ (Γ ,,, Γ1 ,,, Δ ) t A h _ _ _ eq_refl); cbn in *; clear -type_llift wf_llift.
   (* dependent induction h; cbn in *.  *)
   - intros. destruct H. generalize dependent Γ2. generalize dependent Γ1. induction Δ; cbn.
     + induction Γ1; cbn in *.

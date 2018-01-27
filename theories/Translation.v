@@ -250,25 +250,33 @@ Proof.
     destruct (IHsim2 _ (Γ1 ,, svass n1 A1) (Γ2 ,, svass n2 A2)
                      _ _ ltac:(cbn ; omega) hB1 hB2) as [pB hpB].
     exists (sCongProd (llift0 #|Γ1| A1) (rlift0 #|Γ1| A2)
-                 (llift0 #|Γ1,, svass n1 A1| B1)
-                 (rlift0 #|Γ1,, svass n1 A1| B2)
+                 (lift0 1 (llift0 #|Γ1| B1))
+                 (lift0 1 (rlift0 #|Γ1| B2))
                  pA pB).
     destruct (istype_type hpA) as [? iA].
     destruct (inversionHeq iA) as [? [[[[? ?] ?] ?] ?]].
     destruct (istype_type hpB) as [? iB].
     destruct (inversionHeq iB) as [? [[[[? ?] ?] ?] ?]].
-    (* eapply type_conv. *)
-    (* + eapply type_CongProd'. *)
-    (*   * admit. *)
-    (*   * admit. *)
-    (*   * eassumption. *)
-    (*   * admit. *)
-    (* + apply type_Heq. *)
-    (*   all:admit. *)
-    (* + cbn. *)
-    (*   (* There is something wrong with the indices! *) *)
-    (*   admit. *)
-    (*   Unshelve. all:admit. *)
+    eapply type_conv.
+    + eapply type_CongProd.
+      * admit. (* I should get rid of that somehow. *)
+      * eassumption.
+      * eassumption.
+      * instantiate (1 := z1). change (sSort z1) with (lift0 1 (sSort z1)).
+        eapply typing_lift01.
+        -- change (sSort z1) with (llift0 #|Γ1| (sSort z1)).
+           eapply type_llift0.
+           ++ (* I must have been wrong again when instantiating... *)
+        admit.
+      * admit.
+      * eassumption.
+      * admit.
+    + apply type_Heq.
+      all:admit.
+    + cbn.
+      (* There is something wrong with the indices! *)
+      admit.
+      Unshelve. all:admit.
     admit.
 
   (* Eq *)

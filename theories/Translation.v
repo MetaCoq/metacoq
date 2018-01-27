@@ -250,8 +250,8 @@ Proof.
     destruct (IHsim2 _ (Γ1 ,, svass n1 A1) (Γ2 ,, svass n2 A2)
                      _ _ ltac:(cbn ; omega) hB1 hB2) as [pB hpB].
     exists (sCongProd (llift0 #|Γ1| A1) (rlift0 #|Γ1| A2)
-                 (lift0 1 (llift0 #|Γ1| B1))
-                 (lift0 1 (rlift0 #|Γ1| B2))
+                 (llift #|Γ1| 1 B1)
+                 (rlift #|Γ1| 1 B2)
                  pA pB).
     destruct (istype_type hpA) as [? iA].
     destruct (inversionHeq iA) as [? [[[[? ?] ?] ?] ?]].
@@ -262,13 +262,11 @@ Proof.
       * admit. (* I should get rid of that somehow. *)
       * eassumption.
       * eassumption.
-      * instantiate (1 := z1). change (sSort z1) with (lift0 1 (sSort z1)).
-        eapply typing_lift01.
-        -- change (sSort z1) with (llift0 #|Γ1| (sSort z1)).
-           eapply type_llift0.
-           ++ (* I must have been wrong again when instantiating... *)
+      * instantiate (1 := z1).
+        change (sSort z1) with (llift #|Γ1| 1 (sSort z1)).
+        eapply type_llift1 ; eassumption.
+      * instantiate (1 := z2).
         admit.
-      * admit.
       * eassumption.
       * admit.
     + apply type_Heq.

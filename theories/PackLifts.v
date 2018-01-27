@@ -264,6 +264,14 @@ Proof.
   eapply @type_llift with (Δ := nil) ; assumption.
 Defined.
 
+Corollary type_llift1 :
+  forall {Σ Γ Γ1 Γ2 t A nx B},
+    Σ ;;; (Γ ,,, Γ1) ,, svass nx B |-i t : A ->
+    #|Γ1| = #|Γ2| ->
+    Σ ;;; mix Γ Γ1 Γ2 ,, svass nx (llift0 #|Γ1| B)
+    |-i llift #|Γ1| 1 t : llift #|Γ1| 1 A.
+Admitted.
+
 Lemma cong_llift {Σ Γ Γ1 Γ2 Δ t1 t2 A} (h : Σ ;;; Γ ,,, Γ1 ,,, Δ |-i t1 = t2 : A)
       (e : #|Γ1| = #|Γ2|) :
   Σ ;;; mix Γ Γ1 Γ2 ,,, Δ

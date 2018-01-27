@@ -105,19 +105,18 @@ Inductive typing (Σ : global_context) : scontext -> sterm -> sterm -> Type :=
     Σ ;;; Γ |-i p : sEq (sSort s) A B ->
     Σ ;;; Γ |-i sHeqTransport p t : sHeq A t B (sTransport A B p t)
 
-| type_CongProd Γ s1 s2 z1 z2 nx ny np A1 A2 B1 B2 pA pB :
-    Σ ;;; Γ |-i pA : sHeq (sSort s1) A1 (sSort s2) A2 ->
+| type_CongProd Γ s z nx ny np A1 A2 B1 B2 pA pB :
+    Σ ;;; Γ |-i pA : sHeq (sSort s) A1 (sSort s) A2 ->
     Σ ;;; Γ ,, svass np (sPack A1 A2)
-    |-i pB : sHeq (sSort z1) ((lift 1 1 B1){ 0 := sProjT1 (sRel 0) })
-                (sSort z2) ((lift 1 1 B2){ 0 := sProjT2 (sRel 0) }) ->
-    Σ ;;; Γ |-i sSort (max_sort s2 z2) : sSort (succ_sort (max_sort s1 z1)) ->
-    Σ ;;; Γ |-i A1 : sSort s1 ->
-    Σ ;;; Γ |-i A2 : sSort s2 ->
-    Σ ;;; Γ ,, svass nx A1 |-i B1 : sSort z1 ->
-    Σ ;;; Γ ,, svass ny A2 |-i B2 : sSort z2 ->
+    |-i pB : sHeq (sSort z) ((lift 1 1 B1){ 0 := sProjT1 (sRel 0) })
+                 (sSort z) ((lift 1 1 B2){ 0 := sProjT2 (sRel 0) }) ->
+    Σ ;;; Γ |-i A1 : sSort s ->
+    Σ ;;; Γ |-i A2 : sSort s ->
+    Σ ;;; Γ ,, svass nx A1 |-i B1 : sSort z ->
+    Σ ;;; Γ ,, svass ny A2 |-i B2 : sSort z ->
     Σ ;;; Γ |-i sCongProd pA pB :
-    sHeq (sSort (max_sort s1 z1)) (sProd nx A1 B1)
-         (sSort (max_sort s2 z2)) (sProd ny A2 B2)
+    sHeq (sSort (max_sort s z)) (sProd nx A1 B1)
+         (sSort (max_sort s z)) (sProd ny A2 B2)
 
 | type_CongRefl Γ s A1 A2 u1 u2 pA pu :
     Σ ;;; Γ |-i pA : sHeq (sSort s) A1 (sSort s) A2 ->
@@ -422,8 +421,9 @@ Proof.
   - exists (succ_sort s). apply type_Heq ; assumption.
   - exists (succ_sort s). apply type_Heq. all: try assumption.
     eapply type_Transport ; eassumption.
-  - exists (succ_sort (succ_sort (max_sort s1 z1))).
-    apply type_Heq. all: try assumption.
+  - exists (succ_sort (succ_sort (max_sort s z))).
+    apply type_Heq.
+    + eapply type_Sort. apply (typing_wf H).
     + eapply type_Sort. apply (typing_wf H).
     + apply type_Prod ; assumption.
     + apply type_Prod ; assumption.
@@ -960,32 +960,62 @@ Proof.
   eapply type_HeqTransport ; eassumption.
 Defined.
 
-(* Lemma type_CongProd' : *)
-(*   forall {Σ Γ s1 s2 z1 z2 nx ny np A1 A2 B1 B2 pA pB}, *)
-(*     Σ ;;; Γ |-i pA : sHeq (sSort s1) A1 (sSort s2) A2 -> *)
-(*     Σ ;;; Γ ,, svass np (sPack A1 A2) *)
-(*     |-i pB : sHeq (sSort z1) ((lift 1 1 B1){ 0 := sProjT1 (sRel 0) }) *)
-(*                 (sSort z2) ((lift 1 1 B2){ 0 := sProjT2 (sRel 0) }) -> *)
-(*     Σ ;;; Γ ,, svass nx A1 |-i B1 : sSort z1 -> *)
-(*     Σ ;;; Γ ,, svass ny A2 |-i B2 : sSort z2 -> *)
-(*     Σ ;;; Γ |-i sCongProd pA pB : *)
-(*     sHeq (sSort (max_sort s1 z1)) (sProd nx A1 B1) *)
-(*          (sSort (max_sort s2 z2)) (sProd ny A2 B2). *)
-(* Proof. *)
-(*   intros Σ Γ s1 s2 z1 z2 nx ny np A1 A2 B1 B2 pA pB hpA hpB hB1 hB2. *)
-(*   destruct (istype_type hpA) as [? ipA]. *)
-(*   destruct (inversionHeq ipA) as [? [[[[e1 e2] ?] ?] ?]]. *)
-(*   (* destruct (istype_type hpB) as [? ipB]. *) *)
-(*   (* destruct (inversionHeq ipB) as [? [[[[e3 e4] ?] ?] ?]]. *) *)
-(*   pose proof (sorts_in_sort e1 e2). *)
-(*   (* pose proof (sorts_in_sort e3 e4). *) *)
-(*   pose proof () *)
-(*   eapply type_CongProd. *)
-(*   all: try eassumption. *)
-(*   - eapply type_conv'. *)
-(*     + eassumption. *)
+Lemma type_CongProd'' :
+  forall {Σ Γ s z nx ny np A1 A2 B1 B2 pA pB},
+    Σ ;;; Γ |-i pA : sHeq (sSort s) A1 (sSort s) A2 ->
+    Σ ;;; Γ ,, svass np (sPack A1 A2)
+    |-i pB : sHeq (sSort z) ((lift 1 1 B1){ 0 := sProjT1 (sRel 0) })
+                (sSort z) ((lift 1 1 B2){ 0 := sProjT2 (sRel 0) }) ->
+    Σ ;;; Γ ,, svass nx A1 |-i B1 : sSort z ->
+    Σ ;;; Γ ,, svass ny A2 |-i B2 : sSort z ->
+    Σ ;;; Γ |-i sCongProd pA pB :
+    sHeq (sSort (max_sort s z)) (sProd nx A1 B1)
+         (sSort (max_sort s z)) (sProd ny A2 B2).
+Proof.
+  intros Σ Γ s z nx ny np A1 A2 B1 B2 pA pB hpA hpB hB1 hB2.
+  destruct (istype_type hpA) as [? ipA].
+  destruct (inversionHeq ipA) as [? [[[[? ?] ?] ?] ?]].
+  destruct (istype_type hpB) as [? ipB].
+  destruct (inversionHeq ipB) as [? [[[[? ?] ?] ?] ?]].
+  eapply type_CongProd.
+  all: eassumption.
+Defined.
 
-Lemma type_CongRefl' :
+Lemma type_CongProd' :
+  forall {Σ Γ s1 s2 z1 z2 nx ny np A1 A2 B1 B2 pA pB},
+    Σ ;;; Γ |-i pA : sHeq (sSort s1) A1 (sSort s2) A2 ->
+    Σ ;;; Γ ,, svass np (sPack A1 A2)
+    |-i pB : sHeq (sSort z1) ((lift 1 1 B1){ 0 := sProjT1 (sRel 0) })
+                (sSort z2) ((lift 1 1 B2){ 0 := sProjT2 (sRel 0) }) ->
+    Σ ;;; Γ ,, svass nx A1 |-i B1 : sSort z1 ->
+    Σ ;;; Γ ,, svass ny A2 |-i B2 : sSort z2 ->
+    Σ ;;; Γ |-i sCongProd pA pB :
+    sHeq (sSort (max_sort s1 z1)) (sProd nx A1 B1)
+         (sSort (max_sort s2 z2)) (sProd ny A2 B2).
+Proof.
+  intros Σ Γ s1 s2 z1 z2 nx ny np A1 A2 B1 B2 pA pB H H0 H1 H2.
+  eapply type_conv'.
+  - eapply type_CongProd''.
+    + eapply heq_sort. eassumption.
+    + eapply heq_sort. eassumption.
+    + eassumption.
+    + eapply type_conv'.
+      * eassumption.
+      *
+(* We should instead admit strengthening for conversion of sorts at least. *)
+Admitted.
+
+Lemma type_CongEq' :
+  forall {Σ Γ s1 s2 A1 A2 u1 u2 v1 v2 pA pu pv},
+    Σ ;;; Γ |-i pA : sHeq (sSort s1) A1 (sSort s2) A2 ->
+    Σ ;;; Γ |-i pu : sHeq A1 u1 A2 u2 ->
+    Σ ;;; Γ |-i pv : sHeq A1 v1 A2 v2 ->
+    Σ ;;; Γ |-i sCongEq pA pu pv
+             : sHeq (sSort s1) (sEq A1 u1 v1)
+                    (sSort s2) (sEq A2 u2 v2).
+Abort.
+
+Lemma type_CongRefl'' :
   forall {Σ Γ s A1 A2 u1 u2 pA pu},
     Σ ;;; Γ |-i pA : sHeq (sSort s) A1 (sSort s) A2 ->
     Σ ;;; Γ |-i pu : sHeq A1 u1 A2 u2 ->
@@ -1001,15 +1031,22 @@ Proof.
   all: eassumption.
 Defined.
 
-Lemma type_CongEq' :
-  forall {Σ Γ s1 s2 A1 A2 u1 u2 v1 v2 pA pu pv},
+Lemma type_CongRefl' :
+  forall {Σ Γ s1 s2 A1 A2 u1 u2 pA pu},
     Σ ;;; Γ |-i pA : sHeq (sSort s1) A1 (sSort s2) A2 ->
     Σ ;;; Γ |-i pu : sHeq A1 u1 A2 u2 ->
-    Σ ;;; Γ |-i pv : sHeq A1 v1 A2 v2 ->
-    Σ ;;; Γ |-i sCongEq pA pu pv
-             : sHeq (sSort s1) (sEq A1 u1 v1)
-                    (sSort s2) (sEq A2 u2 v2).
-Abort.
+    Σ ;;; Γ |-i sCongRefl pA pu :
+               sHeq (sEq A1 u1 u1) (sRefl A1 u1) (sEq A2 u2 u2) (sRefl A2 u2).
+Proof.
+  intros Σ Γ s1 s2 A1 A2 u1 u2 pA pu hpA hpu.
+  destruct (istype_type hpA) as [? iA].
+  destruct (istype_type hpu) as [? iu].
+  destruct (inversionHeq iA) as [? [[[[? ?] ?] ?] ?]].
+  destruct (inversionHeq iu) as [? [[[[? ?] ?] ?] ?]].
+  eapply type_CongRefl''.
+  - eapply heq_sort. eassumption.
+  - assumption.
+Defined.
 
 Lemma type_ProjT1' :
   forall {Σ Γ A1 A2 p},

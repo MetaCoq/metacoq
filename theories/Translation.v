@@ -258,13 +258,10 @@ Proof.
     destruct (istype_type hpB) as [? iB].
     destruct (inversionHeq iB) as [? [[[[? ?] ?] ?] ?]].
     eapply type_conv.
-    + eapply type_CongProd with (B1 := llift #|Γ1| 1 B1) (B2 := rlift #|Γ1| 1 B2).
+    + eapply @type_CongProd' with (B1 := llift #|Γ1| 1 B1) (B2 := rlift #|Γ1| 1 B2).
       * eassumption.
       * rewrite llift_substProj, rlift_substProj.
         apply hpB.
-      * admit. (* I should get rid of that somehow. *)
-      * eassumption.
-      * eassumption.
       * change (sSort z1) with (llift #|Γ1| 1 (sSort z1)).
         eapply type_llift1 ; eassumption.
       * change (sSort z2) with (rlift #|Γ1| 1 (sSort z2)).

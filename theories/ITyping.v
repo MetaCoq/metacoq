@@ -1011,6 +1011,16 @@ Proof.
   eexists. now eapply sort_heq.
 Defined.
 
+Lemma type_HeqRefl' :
+  forall {Σ Γ A a},
+    Σ ;;; Γ |-i a : A ->
+    Σ ;;; Γ |-i sHeqRefl A a : sHeq A a A a.
+Proof.
+  intros Σ Γ A a h.
+  destruct (istype_type h).
+  eapply type_HeqRefl ; eassumption.
+Defined.
+
 Lemma type_HeqSym' :
   forall {Σ Γ A a B b p},
     Σ ;;; Γ |-i p : sHeq A a B b ->

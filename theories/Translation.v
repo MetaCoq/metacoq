@@ -339,7 +339,26 @@ Proof.
         -- assumption.
 
   (* Sort *)
-  - admit.
+  - pose proof (inversionSort h1) as e1.
+    pose proof (inversionSort h2) as e2.
+    exists (sHeqRefl (sSort (succ_sort s)) (sSort s)).
+    eapply type_conv'.
+    + eapply type_HeqRefl'.
+      apply type_Sort. admit. (* Need wf_mix lemma *)
+    + cbn. apply cong_Heq.
+      * instantiate (1 := succ_sort (succ_sort s)).
+        change (sSort (succ_sort s))
+          with (llift0 #|Γ1| (sSort (succ_sort s))).
+        change (sSort (succ_sort (succ_sort s)))
+          with (llift0 #|Γ1| (sSort (succ_sort (succ_sort s)))).
+        eapply cong_llift0 ; assumption.
+      * change (sSort (succ_sort s))
+          with (rlift0 #|Γ1| (sSort (succ_sort s))).
+        change (sSort (succ_sort (succ_sort s)))
+          with (rlift0 #|Γ1| (sSort (succ_sort (succ_sort s)))).
+        eapply cong_rlift0 ; assumption.
+      * apply eq_reflexivity. apply type_Sort. admit. (* Need wf_mix lemma *)
+      * apply eq_reflexivity. apply type_Sort. admit. (* Need wf_mix lemma *)
 
   (* Lambda *)
   - admit.

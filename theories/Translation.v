@@ -371,16 +371,49 @@ Proof.
     destruct (IHsim3 _ (Γ1 ,, svass n1 A1) (Γ2 ,, svass n2 A2) _ _ ltac:(cbn ; omega) hu1 hu2) as [pu hpu].
     exists (sCongLambda pA pB pu).
     eapply type_conv'.
-    + eapply type_CongLambda'.
+    + eapply @type_CongLambda'
+        with (B1 := llift #|Γ1| 1 B1) (B2 := rlift #|Γ1| 1 B2)
+             (t1 := llift #|Γ1| 1 u1) (t2 := rlift #|Γ1| 1 u2).
       * eassumption.
-      * cheat.
-      * cheat.
-      * cheat.
-      * cheat.
-      * cheat.
-      * cheat.
-    + cheat.
-      Unshelve. all: cheat.
+      * rewrite llift_substProj, rlift_substProj. apply hpB.
+      * rewrite !llift_substProj, !rlift_substProj. apply hpu.
+      * change (sSort z1) with (llift #|Γ1| 1 (sSort z1)).
+        eapply type_llift1 ; eassumption.
+      * change (sSort z2) with (rlift #|Γ1| 1 (sSort z2)).
+        eapply type_rlift1 ; eassumption.
+      * eapply type_llift1 ; eassumption.
+      * eapply type_rlift1 ; eassumption.
+    + cbn. apply cong_Heq.
+      all: try (apply eq_reflexivity).
+      * match goal with
+        | |- _ ;;; _ |-i ?T = _ : ?S =>
+          change T with (llift0 #|Γ1| (sProd n1 A1 B1)) ;
+          change S with (llift0 #|Γ1| S)
+        end.
+        eapply cong_llift0 ; eassumption.
+      * match goal with
+        | |- _ ;;; _ |-i ?T = _ : ?S =>
+          change T with (rlift0 #|Γ1| (sProd n2 A2 B2)) ;
+          change S with (rlift0 #|Γ1| S)
+        end.
+        eapply cong_rlift0 ; try eassumption.
+        eapply eq_conv ; try eassumption.
+        cheat. (* Sort problem that can be solved with pain. *)
+        Unshelve. cheat.
+      * match goal with
+        | |- _ ;;; _ |-i ?t : ?T =>
+          change T with (llift0 #|Γ1| (sProd n1 A1 B1)) ;
+          change t with (llift0 #|Γ1| (sLambda n1 A1 B1 u1))
+        end.
+        apply type_llift0 ; [| assumption].
+        eapply type_Lambda ; eassumption.
+      * match goal with
+        | |- _ ;;; _ |-i ?t : ?T =>
+          change T with (rlift0 #|Γ1| (sProd n2 A2 B2)) ;
+          change t with (rlift0 #|Γ1| (sLambda n2 A2 B2 u2))
+        end.
+        apply type_rlift0 ; [| assumption].
+        eapply type_Lambda ; eassumption.
 
   (* App *)
   - cheat.

@@ -1666,7 +1666,74 @@ Proof.
       cheat.
 
     (* cong_Refl *)
-    + cheat.
+    + destruct (eq_translation _ _ _ _ _ h1 _ hΓ)
+        as [T1 [T2 [A1' [A2' [pA h1']]]]].
+      destruct (eq_translation _ _ _ _ _ h2 _ hΓ)
+        as [A1'' [A1''' [u1' [u2' [pu h2']]]]].
+      destruct (eqtrans_trans h1') as [hA1' hA2'].
+      destruct (eqtrans_trans h2') as [hu1' hu2'].
+      destruct h1' as [[[[[? ?] ?] ?] ?] hpA].
+      destruct h2' as [[[[[? ?] ?] ?] ?] hpu].
+      (* The types *)
+      assert (th : type_head (head (sSort s))) by constructor.
+      destruct (choose_type th hA1') as [T' [[tA1 htA1] hh]].
+      destruct T' ; inversion hh. subst.
+      clear th hh.
+      assert (th : type_head (head (sSort s))) by constructor.
+      destruct (choose_type th hA2') as [T' [[tA2 htA2] hh]].
+      destruct T' ; inversion hh. subst.
+      clear th hh.
+      assert (hp : ∑ p, Σ ;;; Γ' |-i p : sHeq (sSort s) tA1 (sSort s) tA2).
+      { destruct hA1' as [_ hA1'].
+        destruct htA1 as [[[? ?] ?] htA1].
+        assert (sim1 : tA1 ∼ A1').
+        { eapply trel_trans.
+          - eapply trel_sym. eapply inrel_trel. eassumption.
+          - eapply inrel_trel. eassumption.
+        }
+        destruct (trel_to_heq sim1 htA1 hA1') as [p1 hp1].
+        destruct hA2' as [_ hA2'].
+        destruct htA2 as [[[? ?] ?] htA2].
+        assert (sim2 : A2' ∼ tA2).
+        { eapply trel_trans.
+          - eapply trel_sym. eapply inrel_trel. eassumption.
+          - eapply inrel_trel. eassumption.
+        }
+        destruct (trel_to_heq sim2 hA2' htA2) as [p2 hp2].
+        exists (sHeqTrans p1 (sHeqTrans pA p2)).
+        eapply type_HeqTrans'.
+        - eassumption.
+        - eapply type_HeqTrans' ; eassumption.
+      }
+      destruct hp as [qA hqA].
+      (* The terms *)
+      destruct (change_type hu1' htA1) as [tu1 htu1].
+      destruct (change_type hu2' htA1) as [tu2 htu2].
+      assert (hqu : ∑ qu, Σ ;;; Γ' |-i qu : sHeq tA1 tu1 tA1 tu2).
+      { destruct hu1' as [_ hu1'].
+        destruct htu1 as [[[? ?] ?] htu1].
+        assert (sim1 : tu1 ∼ u1').
+        { eapply trel_trans.
+          - eapply trel_sym. eapply inrel_trel. eassumption.
+          - eapply inrel_trel. eassumption.
+        }
+        destruct (trel_to_heq sim1 htu1 hu1') as [pl hpl].
+        destruct hu2' as [_ hu2'].
+        destruct htu2 as [[[? ?] ?] htu2].
+        assert (sim2 : u2' ∼ tu2).
+        { eapply trel_trans.
+          - eapply trel_sym. eapply inrel_trel. eassumption.
+          - eapply inrel_trel. eassumption.
+        }
+        destruct (trel_to_heq sim2 hu2' htu2) as [pr hpr].
+        exists (sHeqTrans (sHeqTrans pl pu) pr).
+        eapply type_HeqTrans'.
+        - eapply type_HeqTrans' ; eassumption.
+        - eassumption.
+      }
+      destruct hqu as [qu hqu].
+      (* Again, we are not landing with tu2 at the right type! *)
+      cheat.
 
     (* reflection *)
     + destruct (type_translation _ _ _ _ t _ hΓ) as [T' [e'' he'']].

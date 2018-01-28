@@ -1679,60 +1679,10 @@ Proof.
       destruct (istype_type he') as [? heq].
       destruct (inversionEq heq) as [s [[[? ?] ?] ?]].
       exists A', A', u', v'.
-      (*exists (sPair (sEq (sSort s) A' A')
-               (sEq (lift0 1 A')
-                    (sTransport (lift0 1 A') (lift0 1 A') (sRel 0) (lift0 1 u'))
-                    (lift0 1 v'))
-               (sRefl (sSort s) A')
-               e'
-        ).
+      exists (sEqToHeq e').
       inversion ieq. subst.
-      assert (hs : Σ;;; Γ' |-i sSort s : sSort (succ_sort s)).
-      { apply type_Sort. apply (typing_wf he'). }
       repeat split ; try eassumption.
-      eapply type_Pair.
-      * apply type_Eq ; eassumption.
-      * apply type_Eq.
-        -- instantiate (1 := s).
-           change (sSort s) with (lift0 1 (sSort s)).
-           eapply typing_lift01.
-           ++ assumption.
-           ++ apply type_Eq ; eassumption.
-        -- eapply type_Transport.
-           ++ instantiate (1 := s).
-              change (sSort s) with (lift0 1 (sSort s)).
-              eapply typing_lift01.
-              ** assumption.
-              ** apply type_Eq ; eassumption.
-           ++ change (sSort s) with (lift0 1 (sSort s)).
-              eapply typing_lift01.
-              ** assumption.
-              ** apply type_Eq ; eassumption.
-           ++ simple refine (type_Rel _ _ _ _ _).
-              ** econstructor.
-                 --- apply (typing_wf he').
-                 --- eexists. apply type_Eq ; eassumption.
-              ** cbn. omega.
-           ++ eapply typing_lift01.
-              ** assumption.
-              ** apply type_Eq ; eassumption.
-        -- eapply typing_lift01.
-           ++ assumption.
-           ++ apply type_Eq ; eassumption.
-      * eapply type_Refl ; eassumption.
-      * cbn. rewrite !lift_subst, lift00.
-        eapply type_conv.
-        -- eassumption.
-        -- apply type_Eq ; try eassumption.
-           eapply type_Transport ; try eassumption.
-           eapply type_Refl ; eassumption.
-        -- apply cong_Eq.
-           all: try (apply eq_reflexivity).
-           all: try assumption.
-           apply eq_symmetry.
-           apply eq_TransportRefl ; assumption.*)
-      (* TODO We need to have eq => heq in the syntax now! *)
-      cheat.
+      eapply type_EqToHeq'. assumption.
 Defined.
 
 End Translation.

@@ -260,7 +260,7 @@ Proof.
     destruct (inversionHeq iA) as [? [[[[? ?] ?] ?] ?]].
     destruct (istype_type hpB) as [? iB].
     destruct (inversionHeq iB) as [? [[[[? ?] ?] ?] ?]].
-    eapply type_conv.
+    eapply type_conv'.
     + eapply @type_CongProd' with (B1 := llift #|Γ1| 1 B1) (B2 := rlift #|Γ1| 1 B2).
       * eassumption.
       * rewrite llift_substProj, rlift_substProj.
@@ -269,25 +269,10 @@ Proof.
         eapply type_llift1 ; eassumption.
       * change (sSort z2) with (rlift #|Γ1| 1 (sSort z2)).
         eapply type_rlift1 ; eassumption.
-    + apply type_Heq.
-      * instantiate (1 := (succ_sort (max_sort s1 z1))).
-        change (sSort (succ_sort (max_sort s1 z1)))
-          with (llift0 #|Γ1| (sSort (succ_sort (max_sort s1 z1)))).
-        eapply type_llift0.
-        -- eapply eq_typing. eassumption.
-        -- assumption.
-      * change (sSort (succ_sort (max_sort s1 z1)))
-          with (rlift0 #|Γ1| (sSort (succ_sort (max_sort s1 z1)))).
-        eapply type_rlift0.
-        -- cheat. (* We better start by showing the equality of sorts
-                     and have a lemma that only has s1,s2
-                   *)
-        -- assumption.
-      * eapply type_llift0 ; assumption.
-      * eapply type_rlift0 ; assumption.
     + cbn. apply cong_Heq.
       all: try (apply eq_reflexivity).
-      * change (sSort (max_sort s1 z1))
+      * instantiate (1 := succ_sort (max_sort s1 z1)).
+        change (sSort (max_sort s1 z1))
           with (llift0 #|Γ1| (sSort (max_sort s1 z1))).
         change (sSort (succ_sort (max_sort s1 z1)))
           with (llift0 #|Γ1| (sSort (succ_sort (max_sort s1 z1)))).
@@ -297,7 +282,23 @@ Proof.
         change (sSort (succ_sort (max_sort s1 z1)))
           with (rlift0 #|Γ1| (sSort (succ_sort (max_sort s1 z1)))).
         eapply cong_rlift0 ; try assumption.
-        cheat. (* Again the same problem. *)
+        cbn in hpB. rewrite <- llift_substProj, <- rlift_substProj in hpB.
+        assert (hB1' : Σ;;; mix Γ Γ1 Γ2,, svass n1 (llift0 #|Γ1| A1) |-i llift #|Γ1| 1 B1 : sSort z1).
+        { change (sSort z1) with (llift #|Γ1| 1 (sSort z1)).
+           eapply type_llift1 ; eassumption.
+        }
+        assert (hB2' : Σ;;; mix Γ Γ1 Γ2,, svass n2 (rlift0 #|Γ1| A2) |-i rlift #|Γ1| 1 B2 : sSort z2).
+        { change (sSort z2) with (rlift #|Γ1| 1 (sSort z2)).
+           eapply type_rlift1 ; eassumption.
+        }
+        destruct (prod_sorts hpA hpB hB1' hB2') as [ss [zz [mm [[? ?] eqm]]]].
+        eapply eq_conv.
+        -- eassumption.
+        -- eapply strengthen_sort_eq.
+           ++ eapply eq_symmetry.
+              eapply cong_succ_sort.
+              eassumption.
+           ++ eapply typing_wf. eassumption.
       * apply type_Prod.
         -- assumption.
         -- change (sSort z1) with (llift #|Γ1| 1 (sSort z1)).
@@ -326,10 +327,15 @@ Proof.
         change (sSort (succ_sort s1))
           with (rlift0 #|Γ1| (sSort (succ_sort s1))).
         eapply cong_rlift0 ; try eassumption.
+        destruct (istype_type hpA) as [? iA].
+        destruct (inversionHeq iA) as [? [[[[es1 es2] ?] ?] ?]].
+        cbn in es1, es2.
+        pose proof (sorts_in_sort es2 es1) as ess.
         eapply eq_conv.
         -- eassumption.
-        -- eapply inversionSort.
-           cheat. (* Sort problems again! *)
+        -- eapply cong_succ_sort. eapply strengthen_sort_eq.
+           ++ eassumption.
+           ++ eapply typing_wf. eassumption.
       * apply eq_reflexivity.
         change (sSort s1) with (llift0 #|Γ1| (sSort s1)).
         eapply type_llift0.
@@ -345,9 +351,15 @@ Proof.
   - pose proof (inversionSort h1) as e1.
     pose proof (inversionSort h2) as e2.
     exists (sHeqRefl (sSort (succ_sort s)) (sSort s)).
+    (* A wf_mix lemma would be more suitable. *)
+    assert (hwf : wf Σ (mix Γ Γ1 Γ2)).
+    { assert (hi : Σ;;; mix Γ Γ1 Γ2 |-i llift0 #|Γ1| (sSort s) : llift0 #|Γ1| U1).
+      { eapply type_llift0 ; eassumption. }
+      eapply typing_wf. eassumption.
+    }
     eapply type_conv'.
     + eapply type_HeqRefl'.
-      apply type_Sort. cheat. (* Need wf_mix lemma *)
+      apply type_Sort. eassumption.
     + cbn. apply cong_Heq.
       * instantiate (1 := succ_sort (succ_sort s)).
         change (sSort (succ_sort s))
@@ -360,8 +372,8 @@ Proof.
         change (sSort (succ_sort (succ_sort s)))
           with (rlift0 #|Γ1| (sSort (succ_sort (succ_sort s)))).
         eapply cong_rlift0 ; assumption.
-      * apply eq_reflexivity. apply type_Sort. cheat. (* Need wf_mix lemma *)
-      * apply eq_reflexivity. apply type_Sort. cheat. (* Need wf_mix lemma *)
+      * apply eq_reflexivity. apply type_Sort. eassumption.
+      * apply eq_reflexivity. apply type_Sort. eassumption.
 
   (* Lambda *)
   - destruct (inversionLambda h1) as [s1 [z1 [[[hA1 hB1] hu1] eq1]]].
@@ -397,9 +409,20 @@ Proof.
           change S with (rlift0 #|Γ1| S)
         end.
         eapply cong_rlift0 ; try eassumption.
+        assert (hB1' : Σ;;; mix Γ Γ1 Γ2,, svass n1 (llift0 #|Γ1| A1) |-i llift #|Γ1| 1 B1 : sSort z1).
+        { change (sSort z1) with (llift #|Γ1| 1 (sSort z1)).
+          eapply type_llift1 ; eassumption.
+        }
+        assert (hB2' : Σ;;; mix Γ Γ1 Γ2,, svass n2 (rlift0 #|Γ1| A2) |-i rlift #|Γ1| 1 B2 : sSort z2).
+        { change (sSort z2) with (rlift #|Γ1| 1 (sSort z2)).
+          eapply type_rlift1 ; eassumption.
+        }
+        cbn in hpB. rewrite <- llift_substProj, <- rlift_substProj in hpB.
+        destruct (prod_sorts hpA hpB hB1' hB2') as [ss [zz [mm [[? ?] eqm]]]].
         eapply eq_conv ; try eassumption.
-        cheat. (* Sort problem that can be solved with pain. *)
-        Unshelve. cheat.
+        eapply eq_symmetry. eapply strengthen_sort_eq.
+        -- eassumption.
+        -- eapply typing_wf. eassumption.
       * match goal with
         | |- _ ;;; _ |-i ?t : ?T =>
           change T with (llift0 #|Γ1| (sProd n1 A1 B1)) ;

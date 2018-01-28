@@ -679,6 +679,12 @@ Lemma strengthen_sort_eq :
     Σ ;;; Δ |-i sSort s1 = sSort s2 : sSort z.
 Admitted.
 
+Lemma cong_succ_sort :
+  forall {Σ Γ s1 s2 s3},
+    Σ ;;; Γ |-i sSort s1 = sSort s2 : sSort s3 ->
+    Σ ;;; Γ |-i sSort (succ_sort s1) = sSort (succ_sort s2) : sSort (succ_sort s3).
+Admitted.
+
 Lemma uniqueness :
   forall {Σ Γ A B u},
     Σ ;;; Γ |-i u : A ->

@@ -613,6 +613,10 @@ Proof.
   - apply trel_Rel.
 Defined.
 
+(* We decided not to have it for the sake of simplicity of the relation.
+   This property isn't needed in any case.
+   We only require ∼ to be a PER.
+ *)
 (* Lemma trel_refl : forall {t}, t ∼ t. *)
 (* Proof. *)
 (*   induction t ; try (now constructor). *)
@@ -740,7 +744,9 @@ Lemma trel_transport_seq :
       (A ⊏ A'').
 Proof.
   intros A A' h.
-  induction h ; try (eexists ; exists nil ; split ; [ split ; [ idtac | reflexivity ] | idtac ] ; [ reflexivity | now constructor ]).
+  induction h ;
+    try (eexists ; exists nil ; split ; [ split ; [ idtac | reflexivity ] | idtac ] ;
+         [ reflexivity | now constructor ]).
   destruct IHh as [A'' [tseq [[hh he] hsub]]].
   exists A'', (trd T1 T2 p :: tseq). split ; [ split | ].
   - assumption.

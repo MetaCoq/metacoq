@@ -1763,7 +1763,7 @@ Proof.
            ).
       exists (sEq tA1 tu1 tu1), (sEq tA1 tu1 tu1).
       exists (sRefl tA1 tu1), trefl2.
-      exists (sCongRefl qA (sHeqTrans q (sHeqTransport eE (sRefl tA2 ttu2)))).
+      exists (sHeqTrans (sCongRefl qA q) (sHeqTransport eE (sRefl tA2 ttu2))).
       destruct htu1 as [[[? ?] ?] ?].
       destruct htu2 as [[[? ?] ?] ?].
       destruct htA1 as [[[? ?] ?] ?].
@@ -1774,9 +1774,12 @@ Proof.
       * econstructor. econstructor.
         -- assumption.
         -- econstructor. assumption.
-      * (* eapply type_CongRefl'. *)
-        (* It's still wrong somehow... *)
-        cheat.
+      * eapply type_HeqTrans'.
+        -- eapply type_CongRefl' ; eassumption.
+        -- eapply type_HeqTransport'.
+           ++ eapply type_Refl'.
+              eapply type_Transport' ; eassumption.
+           ++ eassumption.
 
     (* reflection *)
     + destruct (type_translation _ _ _ _ t _ hΓ) as [T' [e'' he'']].

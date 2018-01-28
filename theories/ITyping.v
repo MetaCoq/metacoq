@@ -1445,3 +1445,25 @@ Proof.
   destruct (inversionPack i) as [s [[? ?] ?]].
   eapply type_ProjTe ; [.. | eassumption] ; eassumption.
 Defined.
+
+Lemma type_Refl' :
+  forall {Σ Γ A u},
+    Σ ;;; Γ |-i u : A ->
+    Σ ;;; Γ |-i sRefl A u : sEq A u u.
+Proof.
+  intros Σ Γ A u h.
+  destruct (istype_type h) as [? i].
+  eapply type_Refl ; eassumption.
+Defined.
+
+Lemma type_Transport' :
+  forall {Σ Γ s T1 T2 p t},
+    Σ ;;; Γ |-i p : sEq (sSort s) T1 T2 ->
+    Σ ;;; Γ |-i t : T1 ->
+    Σ ;;; Γ |-i sTransport T1 T2 p t : T2.
+Proof.
+  intros Σ Γ s T1 T2 p t hp ht.
+  destruct (istype_type hp) as [? i].
+  destruct (inversionEq i) as [? [[[? ?] ?] ?]].
+  eapply type_Transport ; eassumption.
+Defined.

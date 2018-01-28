@@ -1107,7 +1107,7 @@ Proof.
   all: eassumption.
 Defined.
 
-Lemma type_CongProd' :
+Lemma prod_sorts :
   forall {Σ Γ s1 s2 z1 z2 nx ny np A1 A2 B1 B2 pA pB},
     Σ ;;; Γ |-i pA : sHeq (sSort s1) A1 (sSort s2) A2 ->
     Σ ;;; Γ ,, svass np (sPack A1 A2)
@@ -1115,9 +1115,10 @@ Lemma type_CongProd' :
                 (sSort z2) ((lift 1 1 B2){ 0 := sProjT2 (sRel 0) }) ->
     Σ ;;; Γ ,, svass nx A1 |-i B1 : sSort z1 ->
     Σ ;;; Γ ,, svass ny A2 |-i B2 : sSort z2 ->
-    Σ ;;; Γ |-i sCongProd pA pB :
-    sHeq (sSort (max_sort s1 z1)) (sProd nx A1 B1)
-         (sSort (max_sort s2 z2)) (sProd ny A2 B2).
+    ∑ ss zz mm,
+      (Σ ;;; Γ |-i sSort s1 = sSort s2 : sSort ss) *
+      (Σ ;;; Γ ,, svass ny A2 |-i sSort z2 = sSort z1 : sSort zz) *
+      (Σ ;;; Γ |-i sSort (max_sort s1 z1) = sSort (max_sort s2 z2) : sSort mm).
 Proof.
   intros Σ Γ s1 s2 z1 z2 nx ny np A1 A2 B1 B2 pA pB hpA hpB hB1 hB2.
   assert (hs : ∑ ss, Σ ;;; Γ |-i sSort s1 = sSort s2 : sSort ss).
@@ -1126,7 +1127,7 @@ Proof.
     pose proof (sorts_in_sort e1 e2).
     eexists. eassumption.
   }
-  destruct hs.
+  destruct hs as [ss hss]. exists ss.
   assert (hz : ∑ zz, Σ;;; Γ,, svass ny A2 |-i sSort z2 = sSort z1 : sSort zz).
   { destruct (istype_type hpB) as [? ipB].
     destruct (inversionHeq ipB) as [? [[[[f1 f2] ?] ?] ?]].
@@ -1135,7 +1136,7 @@ Proof.
     - eassumption.
     - eapply typing_wf. eassumption.
   }
-  destruct hz.
+  destruct hz as [zz hzz]. exists zz.
   assert (hP1 : Σ ;;; Γ |-i sProd nx A1 B1 : sSort (max_sort s1 z1)).
   { destruct (istype_type hpA) as [? ipA].
     destruct (inversionHeq ipA) as [? [[[[e1 e2] ?] ?] ?]].
@@ -1153,6 +1154,27 @@ Proof.
         * eassumption.
         * eapply typing_wf. eassumption.
   }
+  destruct (uniqueness hP1 hP2) as [mm hmm]. exists mm.
+  repeat split.
+  - assumption.
+  - assumption.
+  - assumption.
+Defined.
+
+Lemma type_CongProd' :
+  forall {Σ Γ s1 s2 z1 z2 nx ny np A1 A2 B1 B2 pA pB},
+    Σ ;;; Γ |-i pA : sHeq (sSort s1) A1 (sSort s2) A2 ->
+    Σ ;;; Γ ,, svass np (sPack A1 A2)
+    |-i pB : sHeq (sSort z1) ((lift 1 1 B1){ 0 := sProjT1 (sRel 0) })
+                (sSort z2) ((lift 1 1 B2){ 0 := sProjT2 (sRel 0) }) ->
+    Σ ;;; Γ ,, svass nx A1 |-i B1 : sSort z1 ->
+    Σ ;;; Γ ,, svass ny A2 |-i B2 : sSort z2 ->
+    Σ ;;; Γ |-i sCongProd pA pB :
+    sHeq (sSort (max_sort s1 z1)) (sProd nx A1 B1)
+         (sSort (max_sort s2 z2)) (sProd ny A2 B2).
+Proof.
+  intros Σ Γ s1 s2 z1 z2 nx ny np A1 A2 B1 B2 pA pB hpA hpB hB1 hB2.
+  destruct (prod_sorts hpA hpB hB1 hB2) as [ss [zz [mm [[e e0] e1]]]].
   eapply type_conv'.
   - eapply type_CongProd''.
     + eapply heq_sort. eassumption.
@@ -1164,14 +1186,15 @@ Proof.
   - apply cong_Heq.
     all: try apply eq_reflexivity.
     + apply type_Sort. eapply typing_wf. eassumption.
-    + destruct (uniqueness hP1 hP2).
-      eapply eq_conv.
+    + eapply eq_conv.
       * eassumption.
       * eapply eq_symmetry. eapply inversionSort.
         apply (eq_typing e1).
-    + assumption.
     + destruct (istype_type hpA) as [? ipA].
-      destruct (inversionHeq ipA) as [? [[[[e1 e2] ?] ?] ?]].
+      destruct (inversionHeq ipA) as [? [[[[? ?] ?] ?] ?]].
+      apply type_Prod ; eassumption.
+    + destruct (istype_type hpA) as [? ipA].
+      destruct (inversionHeq ipA) as [? [[[[? ?] ?] ?] ?]].
       apply type_Prod.
       * eapply type_conv'.
         -- eassumption.

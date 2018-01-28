@@ -1588,7 +1588,7 @@ Proof.
       destruct T' ; inversion hh. subst.
       clear th hh.
       (* For the types we build the missing hequalities *)
-      (*assert (hp : ∑ p, Σ ;;; Γ' |-i p : heq (succ_sort s) (sSort s) tA1 (sSort s) tA2).
+      assert (hp : ∑ p, Σ ;;; Γ' |-i p : sHeq (sSort s) tA1 (sSort s) tA2).
       { destruct hA1' as [_ hA1'].
         destruct htA1 as [[[? ?] ?] htA1].
         assert (sim1 : tA1 ∼ A1').
@@ -1596,7 +1596,7 @@ Proof.
           - eapply trel_sym. eapply inrel_trel. eassumption.
           - eapply inrel_trel. eassumption.
         }
-        destruct (trel_to_heq sim1 htA1 hA1') as [sA [p1 hp1]].
+        destruct (trel_to_heq sim1 htA1 hA1') as [p1 hp1].
         destruct hA2' as [_ hA2'].
         destruct htA2 as [[[? ?] ?] htA2].
         assert (sim2 : A2' ∼ tA2).
@@ -1604,72 +1604,65 @@ Proof.
           - eapply trel_sym. eapply inrel_trel. eassumption.
           - eapply inrel_trel. eassumption.
         }
-        destruct (trel_to_heq sim2 hA2' htA2) as [sA' [p2 hp2]].
-        exists (sHeqTrans (succ_sort s) (sSort s) tA1 T1 A1' (sSort s) tA2
-                     p1
-                     (sHeqTrans (succ_sort s) T1 A1' T2 A2' (sSort s) tA2
-                                pA
-                                p2
-                     )
-          ).
-        assert (wf Σ Γ') by (apply (typing_wf hp1)).
-        assert (Σ;;; Γ' |-i sSort s : sSort (succ_sort s)).
-        { apply type_Sort. assumption. }
-        destruct (istype_type hp1) as [? hheq1].
-        destruct (inversionHeq hheq1) as [[[[ssA T1sA] ?] ?] ?].
-        destruct (istype_type hp2) as [? hheq2].
-        destruct (inversionHeq hheq2) as [[[[T2sA' ?] ?] ?] ?].
-        destruct (istype_type hpA) as [? hheqA].
-        destruct (inversionHeq hheqA) as [[[[T1s1 ?] ?] ?] ?].
-        assert (T1ss : Σ;;; Γ' |-i T1 : sSort (succ_sort s)).
-        { eapply type_conv.
-          1: exact T1sA.
-          2: apply eq_symmetry ; eapply inversionSort ; eassumption.
-          apply type_Sort. assumption.
-        }
-        assert (Σ;;; Γ' |-i sSort sA = sSort (succ_sort s) : sSort (succ_sort (succ_sort s))).
-        { apply eq_symmetry ; eapply inversionSort ; eassumption. }
-        assert (Σ;;; Γ' |-i T2 : sSort (succ_sort s)).
-        { eapply type_conv.
-          1: exact T2sA'.
-          2: apply eq_symmetry ; eapply inversionSort ; eassumption.
-          apply type_Sort. assumption.
-        }
-        destruct (uniqueness T1s1 T1ss) as [? eq].
-        assert (Σ;;; Γ' |-i sSort s1 = sSort (succ_sort s) : sSort (succ_sort (succ_sort s))).
-        { eapply eq_conv.
-          - eassumption.
-          - apply eq_symmetry. eapply inversionSort. apply (eq_typing eq).
-        }
-        assert (Σ;;; Γ' |-i sSort sA' = sSort (succ_sort s) : sSort (succ_sort (succ_sort s))).
-        { apply eq_symmetry. eapply inversionSort. assumption. }
-        apply type_HeqTrans'.
-        - eapply type_conv.
-          + eassumption.
-          + apply type_heq ; eassumption.
-          + apply cong_heq.
-            all: try (apply eq_reflexivity).
-            all: easy.
-        - apply type_HeqTrans'.
-          + eapply type_conv.
-            * eassumption.
-            * apply type_heq ; eassumption.
-            * apply cong_heq.
-              all: try (apply eq_reflexivity).
-              all: easy.
-          + eapply type_conv.
-            * eassumption.
-            * apply type_heq ; eassumption.
-            * apply cong_heq.
-              all: try (apply eq_reflexivity).
-              all: easy.
+        destruct (trel_to_heq sim2 hA2' htA2) as [p2 hp2].
+        exists (sHeqTrans p1 (sHeqTrans pA p2)).
+        eapply type_HeqTrans'.
+        - eassumption.
+        - eapply type_HeqTrans' ; eassumption.
       }
       destruct hp as [qA hqA].
       (* Now we need to do the same for the terms *)
       destruct (change_type hu1' htA1) as [tu1 htu1].
       destruct (change_type hu2' htA1) as [tu2 htu2].
-      (* destruct (change_type hv1' htA2) as [tv1 htv1]. *)
-      (* destruct (change_type hv2' htA2) as [tv2 htv2]. *)*)
+      destruct (change_type hv1' htA1) as [tv1 htv1].
+      destruct (change_type hv2' htA1) as [tv2 htv2].
+      assert (hqu : ∑ qu, Σ ;;; Γ' |-i qu : sHeq tA1 tu1 tA1 tu2).
+      { destruct hu1' as [_ hu1'].
+        destruct htu1 as [[[? ?] ?] htu1].
+        assert (sim1 : tu1 ∼ u1').
+        { eapply trel_trans.
+          - eapply trel_sym. eapply inrel_trel. eassumption.
+          - eapply inrel_trel. eassumption.
+        }
+        destruct (trel_to_heq sim1 htu1 hu1') as [pl hpl].
+        destruct hu2' as [_ hu2'].
+        destruct htu2 as [[[? ?] ?] htu2].
+        assert (sim2 : u2' ∼ tu2).
+        { eapply trel_trans.
+          - eapply trel_sym. eapply inrel_trel. eassumption.
+          - eapply inrel_trel. eassumption.
+        }
+        destruct (trel_to_heq sim2 hu2' htu2) as [pr hpr].
+        exists (sHeqTrans (sHeqTrans pl pu) pr).
+        eapply type_HeqTrans'.
+        - eapply type_HeqTrans' ; eassumption.
+        - eassumption.
+      }
+      destruct hqu as [qu hqu].
+      assert (hqv : ∑ qv, Σ ;;; Γ' |-i qv : sHeq tA1 tv1 tA1 tv2).
+      { destruct hv1' as [_ hv1'].
+        destruct htv1 as [[[? ?] ?] htv1].
+        assert (sim1 : tv1 ∼ v1').
+        { eapply trel_trans.
+          - eapply trel_sym. eapply inrel_trel. eassumption.
+          - eapply inrel_trel. eassumption.
+        }
+        destruct (trel_to_heq sim1 htv1 hv1') as [pl hpl].
+        destruct hv2' as [_ hv2'].
+        destruct htv2 as [[[? ?] ?] htv2].
+        assert (sim2 : v2' ∼ tv2).
+        { eapply trel_trans.
+          - eapply trel_sym. eapply inrel_trel. eassumption.
+          - eapply inrel_trel. eassumption.
+        }
+        destruct (trel_to_heq sim2 hv2' htv2) as [pr hpr].
+        exists (sHeqTrans (sHeqTrans pl pv) pr).
+        eapply type_HeqTrans'.
+        - eapply type_HeqTrans' ; eassumption.
+        - eassumption.
+      }
+      destruct hqv as [qv hqv].
+      (* Again we would need a left-biased CongEq *)
       cheat.
 
     (* cong_Refl *)

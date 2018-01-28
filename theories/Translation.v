@@ -1481,7 +1481,82 @@ Proof.
         as [S1 [S2 [B1'' [B2'' [pB h2']]]]].
       destruct (eqtrans_trans h2') as [hB1'' hB2''].
       assert (th : type_head (head (sSort s2))) by constructor.
-      (* TODO *)
+      destruct (choose_type th hB1'') as [T' [[B1' hB1'] hh]].
+      destruct T' ; inversion hh. subst.
+      clear hh.
+      destruct (choose_type th hB2'') as [T' [[B2' hB2'] hh]].
+      destruct T' ; inversion hh. subst.
+      clear hh th.
+      destruct h2' as [[[[[? ?] ?] ?] ?] hpB''].
+      (* Now we connect the paths for the domains *)
+      assert (hp1 : ∑ p1, Σ ;;; Γ' |-i p1 : sHeq (sSort s1) A1' (sSort s1) A2').
+      { destruct hA1' as [[_ eA1'] hA1'].
+        destruct hA1'' as [_ hA1''].
+        destruct hA2' as [[_ eA2'] hA2'].
+        destruct hA2'' as [_ hA2''].
+        assert (hr : A1' ∼ A1'').
+        { eapply trel_trans.
+          - eapply trel_sym. eapply inrel_trel. eassumption.
+          - eapply inrel_trel. eassumption.
+        }
+        destruct (trel_to_heq hr ltac:(eassumption) ltac:(eassumption))
+        as [pl hpl].
+        assert (hr' : A2'' ∼ A2').
+        { eapply trel_trans.
+          - eapply trel_sym. eapply inrel_trel. eassumption.
+          - eapply inrel_trel. eassumption.
+        }
+        destruct (trel_to_heq hr' ltac:(eassumption) ltac:(eassumption))
+          as [pr hpr].
+        exists (sHeqTrans (sHeqTrans pl pA) pr).
+        eapply type_HeqTrans'.
+        - eapply type_HeqTrans' ; eassumption.
+        - eassumption.
+      }
+      destruct hp1 as [p1 hp1].
+      (* And then the paths for the codomains *)
+      pose (Γ1 := nil ,, svass n1 A1').
+      pose (Γ2 := nil ,, svass n2 A2').
+      pose (Δ := mix Γ' Γ1 Γ2).
+      assert (hp2 : ∑ p2, Σ ;;; Γ' ,,, Γ1 |-i p2 : sHeq (sSort s2) B1'
+                                                       (sSort s2) B2').
+      { destruct hB1' as [[_ eB1'] hB1'].
+        destruct hB1'' as [_ hB1''].
+        destruct hB2' as [[_ eB2'] hB2'].
+        destruct hB2'' as [_ hB2''].
+        assert (hr : B1' ∼ B1'').
+        { eapply trel_trans.
+          - eapply trel_sym. eapply inrel_trel. eassumption.
+          - eapply inrel_trel. eassumption.
+        }
+        destruct (trel_to_heq hr ltac:(eassumption) ltac:(eassumption))
+        as [pl hpl].
+        assert (hr' : B2'' ∼ B2').
+        { eapply trel_trans.
+          - eapply trel_sym. eapply inrel_trel. eassumption.
+          - eapply inrel_trel. eassumption.
+        }
+        destruct (trel_to_heq hr' ltac:(eassumption) ltac:(eassumption))
+          as [pr hpr].
+        exists (sHeqTrans (sHeqTrans pl pB) pr).
+        eapply type_HeqTrans'.
+        - eapply type_HeqTrans' ; eassumption.
+        - eassumption.
+      }
+      destruct hp2 as [p2 hp2].
+      assert (hp3 : ∑ p3, Σ ;;; Δ |-i p3 : sHeq (sSort s2)
+                                               (llift0 #|Γ1| B1')
+                                               (sSort s2)
+                                               (llift0 #|Γ1| B2')
+             ).
+      { exists (llift0 #|Γ1| p2).
+        match goal with
+        | |- _ ;;; _ |-i _ : ?T =>
+          change T with (llift0 #|Γ1| (sHeq (sSort s2) B1' (sSort s2) B2'))
+        end.
+        eapply type_llift0 ; easy.
+      }
+      destruct hp3 as [p3 hp3].
       cheat.
 
     (* cong_Lambda *)

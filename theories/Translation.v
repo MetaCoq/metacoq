@@ -1745,9 +1745,25 @@ Proof.
         - eapply type_HeqTransport ; eassumption.
       }
       destruct hq as [q hq].
-      exists (sEq tA1 tu1 tu1), (* (sEq tA2 ttu2 ttu2) *) (sEq tA1 tu1 tu1).
-      exists (sRefl tA1 tu1), (sRefl tA2 ttu2).
-      exists (sCongRefl qA q).
+      (* We're still not there yet as we need to have two translations of the
+         same type. *)
+      assert (pE : ∑ pE, Σ ;;; Γ' |-i pE : sHeq (sSort s) (sEq tA2 ttu2 ttu2)
+                                               (sSort s) (sEq tA1 tu1 tu1)).
+      { exists (sHeqSym (sCongEq qA q q)).
+        eapply type_HeqSym'. eapply type_CongEq' ; eassumption.
+      }
+      destruct pE as [pE hpE].
+      assert (eE : ∑ eE, Σ ;;; Γ' |-i eE : sEq (sSort s) (sEq tA2 ttu2 ttu2)
+                                              (sEq tA1 tu1 tu1)).
+      { eapply (sort_heq_ex hpE). }
+      destruct eE as [eE hE].
+      pose (trefl2 := sTransport (sEq tA2 ttu2 ttu2)
+                                 (sEq tA1 tu1 tu1)
+                                 eE (sRefl tA2 ttu2)
+           ).
+      exists (sEq tA1 tu1 tu1), (sEq tA1 tu1 tu1).
+      exists (sRefl tA1 tu1), trefl2.
+      exists (sCongRefl qA (sHeqTrans q (sHeqTransport eE (sRefl tA2 ttu2)))).
       destruct htu1 as [[[? ?] ?] ?].
       destruct htu2 as [[[? ?] ?] ?].
       destruct htA1 as [[[? ?] ?] ?].
@@ -1755,15 +1771,11 @@ Proof.
       repeat split.
       all: try assumption.
       all: try (econstructor ; eassumption).
-      * econstructor.
+      * econstructor. econstructor.
         -- assumption.
         -- econstructor. assumption.
       * (* eapply type_CongRefl'. *)
-        (* Unfortunately, the transport won't solve it.
-           It would give an hequality between the wrong types.
-           We might have to forget the last bit and go to a left biased
-           constructor.
-         *)
+        (* It's still wrong somehow... *)
         cheat.
 
     (* reflection *)

@@ -280,6 +280,10 @@ Proof.
   eapply @cong_llift with (Δ := nil) ; assumption.
 Defined.
 
+Definition rlift_subst :
+  forall (u t : sterm) (i j m : nat), rlift j (i+m) (u {m := t}) = (rlift j (S i+m) u) {m := rlift j i t}.
+Admitted.
+
 Lemma type_rlift {Σ Γ Γ1 Γ2 Δ t A} (h : Σ ;;; Γ ,,, Γ2 ,,, Δ |-i t : A)
          (e : #|Γ1| = #|Γ2|) :
   Σ ;;; mix Γ Γ1 Γ2 ,,, Δ |-i rlift #|Γ1| #|Δ| t : rlift #|Γ1| #|Δ| A.

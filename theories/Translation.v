@@ -439,7 +439,69 @@ Proof.
         eapply type_Lambda ; eassumption.
 
   (* App *)
-  - cheat.
+  - destruct (inversionApp h1) as [s1 [z1 [[[[hA1 hB1] hu1] hv1] e1]]].
+    destruct (inversionApp h2) as [s2 [z2 [[[[hA2 hB2] hu2] hv2] e2]]].
+    destruct (IHsim1 _ _ _ _ _ eq hu1 hu2) as [pu hpu].
+    destruct (IHsim2 _ _ _ _ _ eq hA1 hA2) as [pA hpA].
+    destruct (IHsim3 _ (Γ1 ,, svass n1 A1) (Γ2 ,, svass n2 A2) _ _
+                     ltac:(cbn ; omega) hB1 hB2) as [pB hpB].
+    destruct (IHsim4 _ _ _ _ _ eq hv1 hv2) as [pv hpv].
+    exists (sCongApp pu pA pB pv).
+    eapply type_conv'.
+    + eapply @type_CongApp'
+        with (B1 := llift #|Γ1| 1 B1) (B2 := rlift #|Γ1| 1 B2).
+      * apply hpA.
+      * rewrite llift_substProj, rlift_substProj.
+        apply hpB.
+      * apply hpu.
+      * apply hpv.
+      * change (sSort z1) with (llift #|Γ1| 1 (sSort z1)).
+        eapply type_llift1 ; eassumption.
+      * change (sSort z2) with (rlift #|Γ1| 1 (sSort z2)).
+        eapply type_rlift1 ; eassumption.
+    + cbn. apply cong_Heq.
+      all: try (apply eq_reflexivity).
+      * rewrite <- llift_subst. cbn.
+        match goal with
+        | |- _ ;;; _ |-i _ = _ : ?S =>
+          change S with (llift0 #|Γ1| S)
+        end.
+        eapply cong_llift0 ; eassumption.
+      * rewrite <- rlift_subst. cbn.
+        match goal with
+        | |- _ ;;; _ |-i _ = _ : ?S =>
+          change S with (rlift0 #|Γ1| S)
+        end.
+        eapply cong_rlift0 ; try eassumption.
+        cbn in hpB. rewrite <- llift_substProj, <- rlift_substProj in hpB.
+        assert (hB1' : Σ;;; mix Γ Γ1 Γ2,, svass n1 (llift0 #|Γ1| A1) |-i llift #|Γ1| 1 B1 : sSort z1).
+        { change (sSort z1) with (llift #|Γ1| 1 (sSort z1)).
+           eapply type_llift1 ; eassumption.
+        }
+        assert (hB2' : Σ;;; mix Γ Γ1 Γ2,, svass n2 (rlift0 #|Γ1| A2) |-i rlift #|Γ1| 1 B2 : sSort z2).
+        { change (sSort z2) with (rlift #|Γ1| 1 (sSort z2)).
+           eapply type_rlift1 ; eassumption.
+        }
+        destruct (prod_sorts hpA hpB hB1' hB2') as [ss [zz [mm [[? ?] eqm]]]].
+        eapply eq_conv.
+        -- eassumption.
+        -- eapply strengthen_sort_eq.
+           ++ eassumption.
+           ++ eapply typing_wf. eassumption.
+      * rewrite <- llift_subst. cbn.
+        match goal with
+        | |- _ ;;; _ |-i ?t : _ =>
+          change t with (llift0 #|Γ1| (sApp u1 n1 A1 B1 v1))
+        end.
+        eapply type_llift0 ; [| eassumption].
+        eapply type_App ; eassumption.
+      * rewrite <- rlift_subst. cbn.
+        match goal with
+        | |- _ ;;; _ |-i ?t : _ =>
+          change t with (rlift0 #|Γ1| (sApp u2 n2 A2 B2 v2))
+        end.
+        eapply type_rlift0 ; [| eassumption].
+        eapply type_App ; eassumption.
 
   (* Refl *)
   - destruct (inversionRefl h1) as [s1 [[hA1 hu1] e1]].

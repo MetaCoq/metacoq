@@ -1464,7 +1464,25 @@ Proof.
       * econstructor. assumption.
 
     (* cong_Prod *)
-    + cheat.
+    + (* The domains *)
+      destruct (eq_translation _ _ _ _ _ h1 _ hΓ)
+        as [T1 [T2 [A1'' [A2'' [pA h1']]]]].
+      destruct (eqtrans_trans h1') as [hA1'' hA2''].
+      destruct h1' as [[[[[? ?] ?] ?] ?] hpA''].
+      assert (th : type_head (head (sSort s1))) by constructor.
+      destruct (choose_type th hA1'') as [T' [[A1' hA1'] hh]].
+      destruct T' ; inversion hh. subst.
+      clear hh.
+      destruct (choose_type th hA2'') as [T' [[A2' hA2'] hh]].
+      destruct T' ; inversion hh. subst.
+      clear hh th.
+      (* The codomains *)
+      destruct (eq_translation _ _ _ _ _ h2 _ (trans_snoc hΓ hA1'))
+        as [S1 [S2 [B1'' [B2'' [pB h2']]]]].
+      destruct (eqtrans_trans h2') as [hB1'' hB2''].
+      assert (th : type_head (head (sSort s2))) by constructor.
+      (* TODO *)
+      cheat.
 
     (* cong_Lambda *)
     + cheat.

@@ -143,8 +143,8 @@ Inductive typing (Σ : global_context) : scontext -> sterm -> sterm -> Type :=
     Σ ;;; Γ ,, svass np (sPack A1 A2)
     |-i pB : sHeq (sSort z) ((lift 1 1 B1){ 0 := sProjT1 (sRel 0) })
                  (sSort z) ((lift 1 1 B2){ 0 := sProjT2 (sRel 0) }) ->
-    Σ ;;; Γ |-i pu : sHeq (sProd nx A1 B1) u2 (sProd ny A2 B2) u2 ->
-    Σ ;;; Γ |-i pv : sHeq A1 v2 A2 v2 ->
+    Σ ;;; Γ |-i pu : sHeq (sProd nx A1 B1) u1 (sProd ny A2 B2) u2 ->
+    Σ ;;; Γ |-i pv : sHeq A1 v1 A2 v2 ->
     Σ ;;; Γ |-i A1 : sSort s ->
     Σ ;;; Γ |-i A2 : sSort s ->
     Σ ;;; Γ ,, svass nx A1 |-i B1 : sSort z ->
@@ -1202,7 +1202,6 @@ Proof.
       * eapply type_conv' ; eassumption.
 Defined.
 
-(* TODO later *)
 Lemma type_CongLambda'' :
   forall {Σ Γ s z nx ny np A1 A2 B1 B2 t1 t2 pA pB pt},
     Σ ;;; Γ |-i pA : sHeq (sSort s) A1 (sSort s) A2 ->
@@ -1221,7 +1220,16 @@ Lemma type_CongLambda'' :
     Σ ;;; Γ |-i sCongLambda pA pB pt :
                sHeq (sProd nx A1 B1) (sLambda nx A1 B1 t1)
                     (sProd ny A2 B2) (sLambda ny A2 B2 t2).
-Admitted.
+Proof.
+  intros Σ Γ s z nx ny np A1 A2 B1 B2 t1 t2 pA pB pt hpA hpB hpt hB1 hB2 ht1 ht2.
+  destruct (istype_type hpA) as [? ipA].
+  destruct (inversionHeq ipA) as [? [[[[? ?] ?] ?] ?]].
+  destruct (istype_type hpB) as [? ipB].
+  destruct (inversionHeq ipB) as [? [[[[? ?] ?] ?] ?]].
+  destruct (istype_type hpt) as [? ipt].
+  destruct (inversionHeq ipt) as [? [[[[? ?] ?] ?] ?]].
+  eapply type_CongLambda ; eassumption.
+Defined.
 
 Lemma type_CongLambda' :
   forall {Σ Γ s1 s2 z1 z2 nx ny np A1 A2 B1 B2 t1 t2 pA pB pt},
@@ -1241,7 +1249,19 @@ Lemma type_CongLambda' :
     Σ ;;; Γ |-i sCongLambda pA pB pt :
                sHeq (sProd nx A1 B1) (sLambda nx A1 B1 t1)
                     (sProd ny A2 B2) (sLambda ny A2 B2 t2).
-Admitted.
+Proof.
+  intros Σ Γ s1 s2 z1 z2 nx ny np A1 A2 B1 B2 t1 t2 pA pB pt hpA hpB hpt
+         hB1 hB2 ht1 ht2.
+  destruct (prod_sorts hpA hpB hB1 hB2) as [ss [zz [mm [[e e0] e1]]]].
+  eapply type_CongLambda''.
+  - eapply heq_sort. eassumption.
+  - eapply heq_sort. eassumption.
+  - eassumption.
+  - assumption.
+  - eapply type_conv' ; eassumption.
+  - assumption.
+  - assumption.
+Defined.
 
 Lemma type_CongApp'' :
   forall {Σ Γ s z nx ny np A1 A2 B1 B2 u1 u2 v1 v2 pA pB pu pv},
@@ -1249,14 +1269,26 @@ Lemma type_CongApp'' :
     Σ ;;; Γ ,, svass np (sPack A1 A2)
     |-i pB : sHeq (sSort z) ((lift 1 1 B1){ 0 := sProjT1 (sRel 0) })
                  (sSort z) ((lift 1 1 B2){ 0 := sProjT2 (sRel 0) }) ->
-    Σ ;;; Γ |-i pu : sHeq (sProd nx A1 B1) u2 (sProd ny A2 B2) u2 ->
-    Σ ;;; Γ |-i pv : sHeq A1 v2 A2 v2 ->
+    Σ ;;; Γ |-i pu : sHeq (sProd nx A1 B1) u1 (sProd ny A2 B2) u2 ->
+    Σ ;;; Γ |-i pv : sHeq A1 v1 A2 v2 ->
     Σ ;;; Γ ,, svass nx A1 |-i B1 : sSort z ->
     Σ ;;; Γ ,, svass ny A2 |-i B2 : sSort z ->
     Σ ;;; Γ |-i sCongApp pu pA pB pv :
                sHeq (B1{0 := v1}) (sApp u1 nx A1 B1 v1)
                     (B2{0 := v2}) (sApp u2 ny A2 B2 v2).
-Admitted.
+Proof.
+  intros Σ Γ s z nx ny np A1 A2 B1 B2 u1 u2 v1 v2 pA pB pu pv
+         hpA hpB hpu hpv hB1 hB2.
+  destruct (istype_type hpA) as [? ipA].
+  destruct (inversionHeq ipA) as [? [[[[? ?] ?] ?] ?]].
+  destruct (istype_type hpB) as [? ipB].
+  destruct (inversionHeq ipB) as [? [[[[? ?] ?] ?] ?]].
+  destruct (istype_type hpu) as [? ipu].
+  destruct (inversionHeq ipu) as [? [[[[? ?] ?] ?] ?]].
+  destruct (istype_type hpv) as [? ipv].
+  destruct (inversionHeq ipv) as [? [[[[? ?] ?] ?] ?]].
+  eapply type_CongApp ; eassumption.
+Defined.
 
 Lemma type_CongApp' :
   forall {Σ Γ s1 s2 z1 z2 nx ny np A1 A2 B1 B2 u1 u2 v1 v2 pA pB pu pv},
@@ -1264,14 +1296,22 @@ Lemma type_CongApp' :
     Σ ;;; Γ ,, svass np (sPack A1 A2)
     |-i pB : sHeq (sSort z1) ((lift 1 1 B1){ 0 := sProjT1 (sRel 0) })
                  (sSort z2) ((lift 1 1 B2){ 0 := sProjT2 (sRel 0) }) ->
-    Σ ;;; Γ |-i pu : sHeq (sProd nx A1 B1) u2 (sProd ny A2 B2) u2 ->
-    Σ ;;; Γ |-i pv : sHeq A1 v2 A2 v2 ->
+    Σ ;;; Γ |-i pu : sHeq (sProd nx A1 B1) u1 (sProd ny A2 B2) u2 ->
+    Σ ;;; Γ |-i pv : sHeq A1 v1 A2 v2 ->
     Σ ;;; Γ ,, svass nx A1 |-i B1 : sSort z1 ->
     Σ ;;; Γ ,, svass ny A2 |-i B2 : sSort z2 ->
     Σ ;;; Γ |-i sCongApp pu pA pB pv :
                sHeq (B1{0 := v1}) (sApp u1 nx A1 B1 v1)
                     (B2{0 := v2}) (sApp u2 ny A2 B2 v2).
-Admitted.
+Proof.
+  intros Σ Γ s1 s2 z1 z2 nx ny np A1 A2 B1 B2 u1 u2 v1 v2 pA pB pu pv
+         hpA hpB hpu hpv hB1 hB2.
+  destruct (prod_sorts hpA hpB hB1 hB2) as [ss [zz [mm [[e e0] e1]]]].
+  eapply type_CongApp'' ; try eassumption.
+  - eapply heq_sort. eassumption.
+  - eapply heq_sort. eassumption.
+  - eapply type_conv' ; eassumption.
+Defined.
 
 Lemma type_CongEq'' :
   forall {Σ Γ s A1 A2 u1 u2 v1 v2 pA pu pv},

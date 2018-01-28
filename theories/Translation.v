@@ -1732,8 +1732,39 @@ Proof.
         - eassumption.
       }
       destruct hqu as [qu hqu].
-      (* Again, we are not landing with tu2 at the right type! *)
-      cheat.
+      (* tu2 isn't in the right place, so we need to chain one last equality. *)
+      destruct (sort_heq_ex hqA) as [eA heA].
+      pose (ttu2 := sTransport tA1 tA2 eA tu2).
+      assert (hq : ∑ q, Σ ;;; Γ' |-i q : sHeq tA1 tu1 tA2 ttu2).
+      { exists (sHeqTrans qu (sHeqTransport eA tu2)).
+        destruct htu2 as [[[? ?] ?] ?].
+        destruct htA1 as [[[? ?] ?] ?].
+        destruct htA2 as [[[? ?] ?] ?].
+        eapply type_HeqTrans'.
+        - eassumption.
+        - eapply type_HeqTransport ; eassumption.
+      }
+      destruct hq as [q hq].
+      exists (sEq tA1 tu1 tu1), (* (sEq tA2 ttu2 ttu2) *) (sEq tA1 tu1 tu1).
+      exists (sRefl tA1 tu1), (sRefl tA2 ttu2).
+      exists (sCongRefl qA q).
+      destruct htu1 as [[[? ?] ?] ?].
+      destruct htu2 as [[[? ?] ?] ?].
+      destruct htA1 as [[[? ?] ?] ?].
+      destruct htA2 as [[[? ?] ?] ?].
+      repeat split.
+      all: try assumption.
+      all: try (econstructor ; eassumption).
+      * econstructor.
+        -- assumption.
+        -- econstructor. assumption.
+      * (* eapply type_CongRefl'. *)
+        (* Unfortunately, the transport won't solve it.
+           It would give an hequality between the wrong types.
+           We might have to forget the last bit and go to a left biased
+           constructor.
+         *)
+        cheat.
 
     (* reflection *)
     + destruct (type_translation _ _ _ _ t _ hΓ) as [T' [e'' he'']].

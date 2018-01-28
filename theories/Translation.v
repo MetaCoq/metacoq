@@ -1662,8 +1662,44 @@ Proof.
         - eassumption.
       }
       destruct hqv as [qv hqv].
-      (* Again we would need a left-biased CongEq *)
-      cheat.
+      (* We move terms back into tA2 *)
+      destruct (sort_heq_ex hqA) as [eA heA].
+      pose (ttu2 := sTransport tA1 tA2 eA tu2).
+      assert (hq : ∑ q, Σ ;;; Γ' |-i q : sHeq tA1 tu1 tA2 ttu2).
+      { exists (sHeqTrans qu (sHeqTransport eA tu2)).
+        destruct htu2 as [[[? ?] ?] ?].
+        destruct htA1 as [[[? ?] ?] ?].
+        destruct htA2 as [[[? ?] ?] ?].
+        eapply type_HeqTrans'.
+        - eassumption.
+        - eapply type_HeqTransport ; eassumption.
+      }
+      destruct hq as [qu' hqu'].
+      pose (ttv2 := sTransport tA1 tA2 eA tv2).
+      assert (hq : ∑ q, Σ ;;; Γ' |-i q : sHeq tA1 tv1 tA2 ttv2).
+      { exists (sHeqTrans qv (sHeqTransport eA tv2)).
+        destruct htv2 as [[[? ?] ?] ?].
+        destruct htA1 as [[[? ?] ?] ?].
+        destruct htA2 as [[[? ?] ?] ?].
+        eapply type_HeqTrans'.
+        - eassumption.
+        - eapply type_HeqTransport ; eassumption.
+      }
+      destruct hq as [qv' hqv'].
+      exists (sSort s), (sSort s), (sEq tA1 tu1 tv1), (sEq tA2 ttu2 ttv2).
+      exists (sCongEq qA qu' qv').
+      destruct htu1 as [[[? ?] ?] ?].
+      destruct htu2 as [[[? ?] ?] ?].
+      destruct htA1 as [[[? ?] ?] ?].
+      destruct htA2 as [[[? ?] ?] ?].
+      destruct htv1 as [[[? ?] ?] ?].
+      destruct htv2 as [[[? ?] ?] ?].
+      repeat split ; try eassumption.
+      * econstructor ; assumption.
+      * econstructor ; try assumption.
+        -- econstructor ; eassumption.
+        -- econstructor ; eassumption.
+      * eapply type_CongEq' ; assumption.
 
     (* cong_Refl *)
     + destruct (eq_translation _ _ _ _ _ h1 _ hΓ)

@@ -1348,7 +1348,120 @@ Proof.
            ++ eapply typing_subst ; eassumption.
 
     (* eq_conv *)
-    + cheat.
+    + (* Translating the conversion *)
+      destruct (eq_translation _ _ _ _ _ h2 _ hΓ)
+        as [S' [S'' [T1'' [T2'' [p' h']]]]].
+      destruct (eqtrans_trans h') as [hT1'' hT2''].
+      destruct h' as [[[[[eΓ eS'] eS''] eT1] eT2] hp'].
+      assert (th : type_head (head (sSort s))) by constructor.
+      destruct (choose_type th hT1'') as [T [[T1' hT1'] hh]].
+      destruct T ; inversion hh. subst. clear hh.
+      destruct (choose_type th hT2'') as [T [[T2' hT2'] hh]].
+      destruct T ; inversion hh. subst. clear hh th.
+      (* Translation the term conversion *)
+      destruct (eq_translation _ _ _ _ _ h1 _ hΓ)
+        as [T1''' [T2''' [t1'' [t2'' [q' hq']]]]].
+      destruct (eqtrans_trans hq') as [ht1'' ht2''].
+      destruct (change_type ht1'' hT1') as [t1' ht1'].
+      destruct (change_type ht2'' hT1') as [t2' ht2'].
+      (* clear ht1'' ht2'' hq' T1''' T2''' t1'' t2'' q'. *)
+      destruct hq' as [[[[[_ eT1'''] eT2'''] et1''] et2''] hq'].
+      (* Building the intermediary paths *)
+      assert (hpT1 : ∑ p1, Σ ;;; Γ' |-i p1 : sHeq (sSort s) T1' S' T1'').
+      { destruct hT1' as [[_ eT1'] hT1'].
+        destruct hT1'' as [_ hT1''].
+        assert (hr : T1' ∼ T1'').
+        { eapply trel_trans.
+          - eapply trel_sym. eapply inrel_trel. eassumption.
+          - eapply inrel_trel. eassumption.
+        }
+        apply (trel_to_heq hr) ; assumption.
+      }
+      destruct hpT1 as [p1 hp1].
+      assert (hp2 : ∑ p2, Σ ;;; Γ' |-i p2 : sHeq S'' T2'' (sSort s) T2').
+      { destruct hT2' as [[_ eT2'] hT2'].
+        destruct hT2'' as [_ hT2''].
+        assert (hr : T2'' ∼ T2').
+        { eapply trel_trans.
+          - eapply trel_sym. eapply inrel_trel. eassumption.
+          - eapply inrel_trel. eassumption.
+        }
+        apply (trel_to_heq hr) ; assumption.
+      }
+      destruct hp2 as [p2 hp2].
+      assert (he : ∑ e, Σ ;;; Γ' |-i e : sHeq (sSort s) T1' (sSort s) T2').
+      { exists (sHeqTrans p1 (sHeqTrans p' p2)).
+        eapply type_HeqTrans'.
+        - eassumption.
+        - eapply type_HeqTrans'.
+          + eassumption.
+          + assumption.
+      }
+      destruct he as [e' he'].
+      destruct (sort_heq_ex he') as [e he].
+      (* Likewise, we build paths for the terms *)
+      assert (hq1 : ∑ q1, Σ ;;; Γ' |-i q1 : sHeq T1' t1' T1''' t1'').
+      { destruct ht1' as [[_ et1'] ht1'].
+        destruct ht1'' as [_ ht1''].
+        assert (hr : t1' ∼ t1'').
+        { eapply trel_trans.
+          - eapply trel_sym. eapply inrel_trel. eassumption.
+          - eapply inrel_trel. eassumption.
+        }
+        apply (trel_to_heq hr) ; assumption.
+      }
+      destruct hq1 as [q1 hq1].
+      assert (hq2 : ∑ q2, Σ ;;; Γ' |-i q2 : sHeq T2''' t2'' T1' t2').
+      { destruct ht2' as [[_ et2'] ht2'].
+        destruct ht2'' as [_ ht2''].
+        assert (hr : t2'' ∼ t2').
+        { eapply trel_trans.
+          - eapply trel_sym. eapply inrel_trel. eassumption.
+          - eapply inrel_trel. eassumption.
+        }
+        apply (trel_to_heq hr) ; assumption.
+      }
+      destruct hq2 as [q2 hq2].
+      assert (hqq : ∑ qq, Σ ;;; Γ' |-i qq : sHeq T1' t1' T1' t2').
+      { exists (sHeqTrans q1 (sHeqTrans q' q2)).
+        eapply type_HeqTrans'.
+        - eassumption.
+        - eapply type_HeqTrans'.
+          + eassumption.
+          + assumption.
+      }
+      destruct hqq as [qq hqq].
+      assert (hql : ∑ ql, Σ ;;; Γ' |-i ql : sHeq T2' (sTransport T1' T2' e t1') T1' t1').
+      { exists (sHeqSym (sHeqTransport e t1')).
+        destruct ht1' as [_ ht1'].
+        eapply type_HeqSym'. eapply type_HeqTransport' ; eassumption.
+      }
+      destruct hql as [ql hql].
+      assert (hqr : ∑ qr, Σ ;;; Γ' |-i qr : sHeq T1' t2' T2' (sTransport T1' T2' e t2')).
+      { exists (sHeqTransport e t2').
+        destruct ht2' as [_ ht2'].
+        eapply type_HeqTransport' ; eassumption.
+      }
+      destruct hqr as [qr hqr].
+      assert (hqf : ∑ qf, Σ ;;; Γ' |-i qf
+                                    : sHeq T2' (sTransport T1' T2' e t1')
+                                           T2' (sTransport T1' T2' e t2')).
+      { exists (sHeqTrans (sHeqTrans ql qq) qr).
+        eapply type_HeqTrans'.
+        - eapply type_HeqTrans' ; eassumption.
+        - assumption.
+      }
+      destruct hqf as [qf hqf].
+      (* Now we conclude *)
+      exists T2', T2', (sTransport T1' T2' e t1'), (sTransport T1' T2' e t2').
+      exists qf.
+      destruct hT1' as [[[? ?] ?] ?].
+      destruct hT2' as [[[? ?] ?] ?].
+      destruct ht1' as [[[? ?] ?] ?].
+      destruct ht2' as [[[? ?] ?] ?].
+      repeat split ; try eassumption.
+      * econstructor. assumption.
+      * econstructor. assumption.
 
     (* cong_Prod *)
     + cheat.

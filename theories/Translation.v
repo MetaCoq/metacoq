@@ -1557,6 +1557,12 @@ Proof.
         eapply type_llift0 ; easy.
       }
       destruct hp3 as [p3 hp3].
+      (* Dummy equality to check we can at least conclude that way *)
+      exists (sSort (max_sort s1 s2)), (sSort (max_sort s1 s2)).
+      (* Problem: We need to transport B2' somehow so that it can live in
+         the right context for us to build the product!
+       *)
+      (* exists (sProd n1 A1' B1'), (sProd n2 A2' ?) *)
       cheat.
 
     (* cong_Lambda *)

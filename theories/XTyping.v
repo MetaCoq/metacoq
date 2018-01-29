@@ -110,6 +110,12 @@ with eq_term (Σ : global_context) : scontext -> sterm -> sterm -> sterm -> Type
     Σ ;;; Γ ,, svass n1 A1 |-x B1 = B2 : sSort s2 ->
     Σ ;;; Γ |-x t1 = t2 : sProd n1 A1 B1 ->
     Σ ;;; Γ |-x u1 = u2 : A1 ->
+    Σ ;;; Γ ,, svass n1 A1 |-x B1 : sSort s2 ->
+    Σ ;;; Γ ,, svass n2 A2 |-x B2 : sSort s2 ->
+    Σ ;;; Γ |-x t1 : sProd n1 A1 B1 ->
+    Σ ;;; Γ |-x t2 : sProd n2 A2 B2 ->
+    Σ ;;; Γ |-x u1 : A1 ->
+    Σ ;;; Γ |-x u2 : A2 ->
     Σ ;;; Γ |-x (sApp t1 n1 A1 B1 u1) = (sApp t2 n2 A2 B2 u2) : B1{ 0 := u1 }
 
 | cong_Eq Γ s A1 A2 u1 u2 v1 v2 :

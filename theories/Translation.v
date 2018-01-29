@@ -1476,8 +1476,26 @@ Proof.
       destruct (choose_type th hA2'') as [T' [[A2' hA2'] hh]].
       destruct T' ; inversion hh. subst.
       clear hh th.
+      (* We need to build a translation for the unpacked context. *)
+      assert (hlA2' : Σ;;;; Γ' ,, svass n1 A1' |--- [lift0 1 A2']: sSort s1
+                      # ⟦ Γ ,, svass n1 A1 |--- [lift0 1 A2]: sSort s1 ⟧).
+      { destruct hA1' as [[[? ?] ?] ?].
+        destruct hA2' as [[[? ?] ?] ?].
+        repeat split.
+        - econstructor ; assumption.
+        - constructor.
+        - eapply inrel_lift. assumption.
+        - change (sSort s1) with (lift0 1 (sSort s1)).
+          eapply typing_lift01 ; eassumption.
+      }
+      (* How will we do?
+         This context doesn't make sense in ITT.
+       *)
+      (* assert (hEq' : Σ ;;; Γ' ,, svass n1 A1' ,, svass n2 (lift0 1 A2') *)
+      (*                  |--- [sEq (sSort s1) ] *)
+      (*        ). *)
       (* The codomains *)
-      destruct (eq_translation _ _ _ _ _ h2 _ (trans_snoc hΓ hA1'))
+      destruct (eq_translation _ _ _ _ _ h2 _ (trans_snoc (trans_snoc hΓ hA1') hlA2'))
         as [S1 [S2 [B1'' [B2'' [pB h2']]]]].
       destruct (eqtrans_trans h2') as [hB1'' hB2''].
       assert (th : type_head (head (sSort s2))) by constructor.

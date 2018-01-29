@@ -1476,26 +1476,7 @@ Proof.
       destruct (choose_type th hA2'') as [T' [[A2' hA2'] hh]].
       destruct T' ; inversion hh. subst.
       clear hh th.
-      (* We need to build a translation for the unpacked context. *)
-      assert (hlA2' : Σ;;;; Γ' ,, svass n1 A1' |--- [lift0 1 A2']: sSort s1
-                      # ⟦ Γ ,, svass n1 A1 |--- [lift0 1 A2]: sSort s1 ⟧).
-      { destruct hA1' as [[[? ?] ?] ?].
-        destruct hA2' as [[[? ?] ?] ?].
-        repeat split.
-        - econstructor ; assumption.
-        - constructor.
-        - eapply inrel_lift. assumption.
-        - change (sSort s1) with (lift0 1 (sSort s1)).
-          eapply typing_lift01 ; eassumption.
-      }
-      (* How will we do?
-         This context doesn't make sense in ITT.
-       *)
-      (* assert (hEq' : Σ ;;; Γ' ,, svass n1 A1' ,, svass n2 (lift0 1 A2') *)
-      (*                  |--- [sEq (sSort s1) ] *)
-      (*        ). *)
-      (* The codomains *)
-      destruct (eq_translation _ _ _ _ _ h2 _ (trans_snoc (trans_snoc hΓ hA1') hlA2'))
+      destruct (eq_translation _ _ _ _ _ h2 _ (trans_snoc hΓ hA1'))
         as [S1 [S2 [B1'' [B2'' [pB h2']]]]].
       destruct (eqtrans_trans h2') as [hB1'' hB2''].
       assert (th : type_head (head (sSort s2))) by constructor.
@@ -1575,13 +1556,57 @@ Proof.
         eapply type_llift0 ; easy.
       }
       destruct hp3 as [p3 hp3].
-      (* Dummy equality to check we can at least conclude that way *)
-      exists (sSort (max_sort s1 s2)), (sSort (max_sort s1 s2)).
-      (* Problem: We need to transport B2' somehow so that it can live in
-         the right context for us to build the product!
+      (* Also translating the typing hypothesis for B2 *)
+      destruct (type_translation _ _ _ _ t0 _ (trans_snoc hΓ hA2'))
+        as [S' [B2''' hB2''']].
+      assert (th : type_head (head (sSort s2))) by constructor.
+      destruct (choose_type th hB2''') as [T' [[tB2 htB2] hh]].
+      clear hB2''' B2''' S'.
+      destruct T' ; inversion hh. subst. clear hh th.
+      (* Now we can use the strong version of the lemma to build a path between
+         B2' and tB2 !
        *)
-      (* exists (sProd n1 A1' B1'), (sProd n2 A2' ?) *)
-      cheat.
+      assert (hp4 : ∑ p4, Σ ;;; Δ |-i p4 : sHeq (sSort s2) (llift0 #|Γ1| B2')
+                                               (sSort s2) (rlift0 #|Γ1| tB2)
+             ).
+      { change (sSort s2) with (llift0 #|Γ1| (sSort s2)) at 1.
+        change (sSort s2) with (rlift0 #|Γ1| (sSort s2)) at 2.
+        eapply trel_to_heq'.
+        - destruct htB2 as [[? ?] ?].
+          destruct hB2' as [[? ?] ?].
+          eapply trel_trans.
+          + eapply trel_sym. eapply inrel_trel. eassumption.
+          + apply inrel_trel. assumption.
+        - reflexivity.
+        - destruct hB2' as [[? ?] ?]. assumption.
+        - destruct htB2 as [[? ?] ?]. assumption.
+      }
+      destruct hp4 as [p4 hp4].
+      (* This gives us a better path *)
+      assert (hp5 : ∑ p5, Σ ;;; Δ |-i p5 : sHeq (sSort s2) (llift0 #|Γ1| B1')
+                                               (sSort s2) (rlift0 #|Γ1| tB2)
+             ).
+      { exists (sHeqTrans p3 p4).
+        eapply type_HeqTrans' ; eassumption.
+      }
+      destruct hp5 as [p5 hp5].
+      (* We can finally conclude! *)
+      exists (sSort (max_sort s1 s2)), (sSort (max_sort s1 s2)).
+      exists (sProd n1 A1' B1'), (sProd n2 A2' tB2).
+      exists (sCongProd p1 p5).
+      destruct hA1' as [[[? ?] ?] ?].
+      destruct hB1' as [[[? ?] ?] ?].
+      destruct hA2' as [[[? ?] ?] ?].
+      destruct htB2 as [[[? ?] ?] ?].
+      repeat split.
+      all: try constructor. all: try assumption.
+      eapply type_CongProd'.
+      * assumption.
+      * cbn in hp5. rewrite <- llift_substProj, <- rlift_substProj in hp5.
+        rewrite !llift00, !rlift00 in hp5.
+        apply hp5.
+      * assumption.
+      * assumption.
 
     (* cong_Lambda *)
     + cheat.

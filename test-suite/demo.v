@@ -330,6 +330,8 @@ Run TemplateProgram (tmBind (tmAbout "eq") tmPrint).
 Run TemplateProgram (tmBind (tmAbout "Logic.eq") tmPrint).
 Run TemplateProgram (tmBind (tmAbout "eq_refl") tmPrint).
 
+Run TemplateProgram (tmCurrentDirPath tt >>= tmPrint).
+
 Run TemplateProgram (tmBind (tmEval all (3 + 3)) tmPrint).
 Run TemplateProgram (tmBind (tmEval hnf (3 + 3)) tmPrint).
 

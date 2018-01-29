@@ -212,6 +212,7 @@ Inductive TemplateMonad : Type -> Prop :=
 | tmFreshName : ident -> TemplateMonad ident
     (* Guarenteed to not cause "... already declared" error *)
 | tmAbout : ident -> TemplateMonad (option global_reference)
+| tmCurrentModPath : unit -> TemplateMonad string
 
 (** ** Quoting and unquoting commands *)
 (** Similar to Quote Definition ... := ... *)

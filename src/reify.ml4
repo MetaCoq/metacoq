@@ -289,10 +289,10 @@ struct
 
   let (tglobal_reference, tConstRef, tIndRef, tConstructRef) = (r_reify "global_reference", r_reify "ConstRef", r_reify "IndRef", r_reify "ConstructRef")
 
-  let (tmReturn, tmBind, tmQuote, tmQuoteRec, tmEval, tmDefinition, tmAxiom, tmLemma, tmFreshName, tmAbout,
+  let (tmReturn, tmBind, tmQuote, tmQuoteRec, tmEval, tmDefinition, tmAxiom, tmLemma, tmFreshName, tmAbout, tmCurrentModPath,
        tmMkDefinition, tmMkInductive, tmPrint, tmFail, tmQuoteInductive, tmQuoteConstant, tmUnquote, tmUnquoteTyped) =
     (r_reify "tmReturn", r_reify "tmBind", r_reify "tmQuote", r_reify "tmQuoteRec", r_reify "tmEval", r_reify "tmDefinition",
-     r_reify "tmAxiom", r_reify "tmLemma", r_reify "tmFreshName", r_reify "tmAbout",
+     r_reify "tmAxiom", r_reify "tmLemma", r_reify "tmFreshName", r_reify "tmAbout", r_reify "tmCurrentModPath",
      r_reify "tmMkDefinition", r_reify "tmMkInductive", r_reify "tmPrint", r_reify "tmFail", r_reify "tmQuoteInductive", r_reify "tmQuoteConstant",
      r_reify "tmUnquote", r_reify "tmUnquoteTyped")
 
@@ -1573,6 +1573,13 @@ struct
                   with
                   | Not_found -> k (evm, Term.mkApp (cNone, [|tglobal_reference|])))
       | _ -> monad_failure "tmAbout" 1
+    else if Term.eq_constr coConstr tmCurrentModPath then
+      match args with
+      | _::[] -> let mp = Lib.current_mp () in
+                 (* let dp' = Lib.cwd () in (* different on sections ? *) *)
+                 let s = quote_string (Names.ModPath.to_string mp) in
+                 k (evm, s)
+      | _ -> monad_failure "tmCurrentModPath" 1
     else if Term.eq_constr coConstr tmEval then
       match args with
       | s(*reduction strategy*)::_(*type*)::trm::[] ->

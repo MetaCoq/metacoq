@@ -339,6 +339,17 @@ Fixpoint extract_cst_decl_from_program (id : ident) (p : program)
      | PIn _ => None
      end.
 
+Fixpoint extract_axiom_decl_from_program (id : ident) (p : program)
+  : option constant_decl
+  := match p with
+     | PConstr _ _ _ _ p => extract_axiom_decl_from_program id p
+     | PType _ _ _ p => extract_axiom_decl_from_program id p
+     | PAxiom id' ui t p => if string_dec id id' then
+                             Some (Build_constant_decl id ui t None)
+                           else extract_axiom_decl_from_program id p
+     | PIn _ => None
+     end.
+
 Definition option_get {A} (default : A) (x : option A) : A
   := match x with
      | Some x => x
@@ -353,6 +364,9 @@ Definition get_idecl id prog :=
 Definition get_cdecl id prog :=
   option_get (Build_constant_decl "XX" [] (tRel 0) None)
              (extract_cst_decl_from_program id prog).
+Definition get_adecl id prog :=
+  option_get (Build_constant_decl "XX" [] (tRel 0) None)
+             (extract_axiom_decl_from_program id prog).
 
 Quote Recursively Definition eq_prog := @eq.
 Definition eq_decl :=
@@ -368,11 +382,11 @@ Definition Transport_decl :=
 
 Quote Recursively Definition UIP_prog := @UIP.
 Definition UIP_decl :=
-  Eval compute in (get_cdecl "Top.UIP" UIP_prog).
+  Eval compute in (get_adecl "Top.UIP" UIP_prog).
 
 Quote Recursively Definition funext_prog := @funext.
 Definition funext_decl :=
-  Eval compute in (get_cdecl "Top.funext" funext_prog).
+  Eval compute in (get_adecl "Top.funext" funext_prog).
 
 Quote Recursively Definition heq_prog := @heq.
 Definition heq_decl :=
@@ -421,7 +435,6 @@ Definition Σ : global_context :=
 Compute (infer Σ [] tEq).
 Compute (infer Σ [] tJ).
 Compute (infer Σ [] tTransport).
-(* Is this normal?? The two following have type Rel 0 *)
 Compute (infer Σ [] tUip).
 Compute (infer Σ [] tFunext).
 Compute (infer Σ [] tHeq).

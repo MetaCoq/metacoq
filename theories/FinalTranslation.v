@@ -199,8 +199,20 @@ Fixpoint tsl_rec (fuel : nat) (Σ : global_context) (Γ : context) (t : sterm)
     | sHeqToEq p =>
       p' <- tsl_rec fuel Σ Γ p ;;
       match @infer (Build_Fuel fuel) Σ Γ p' with
-      (* I'm not sure that's the correct way to check we're dealing with heq *)
-      | Checked (tApp (tInd (mkInd "Top.heq" 0) _) [ A' ; u' ; _ ; v' ]) =>
+      (* I would hope for a better way *)
+      (* | Checked (tApp (tInd (mkInd "Top.heq" 0) _) [ A' ; u' ; _ ; v' ]) => *)
+      | Checked (tApp (tInd (mkInd "Coq.Init.Specif.sigT" 0) [])
+              [tApp (tInd (mkInd "Coq.Init.Logic.eq" 0) []) [ _ ; A' ; B' ];
+              tLambda _ (tApp (tInd (mkInd "Coq.Init.Logic.eq" 0) []) [ tSort _ ; _ ; _ ])
+                (tApp (tInd (mkInd "Coq.Init.Logic.eq" 0) [])
+                   [ _ ;
+                     tApp
+                     (tCase (mkInd "Coq.Init.Logic.eq" 0, 2)
+                        (tLambda _ (tSort _)
+                           (tLambda _
+                              (tApp (tInd (mkInd "Coq.Init.Logic.eq" 0) []) [ tSort  _ ; _ ; _ ])
+                              (tProd _ _ _))) _ [(0, tLambda _ _ _)])
+                     [ u' ]; v' ])]) =>
         ret (mkHeqToHeq A' u' v' p')
       (* That's not really the correct error but well. *)
       | Checked T => raise (TypingError (NotAnInductive T))
@@ -214,7 +226,19 @@ Fixpoint tsl_rec (fuel : nat) (Σ : global_context) (Γ : context) (t : sterm)
       p' <- tsl_rec fuel Σ Γ p ;;
       match @infer (Build_Fuel fuel) Σ Γ p' with
       (* I'm not sure that's the correct way to check we're dealing with heq *)
-      | Checked (tApp (tInd (mkInd "Top.heq" 0) _) [ A' ; a' ; B' ; b' ]) =>
+      (* | Checked (tApp (tInd (mkInd "Top.heq" 0) _) [ A' ; a' ; B' ; b' ]) => *)
+      | Checked (tApp (tInd (mkInd "Coq.Init.Specif.sigT" 0) [])
+              [tApp (tInd (mkInd "Coq.Init.Logic.eq" 0) []) [ _ ; A' ; B' ];
+              tLambda _ (tApp (tInd (mkInd "Coq.Init.Logic.eq" 0) []) [ tSort _ ; _ ; _ ])
+                (tApp (tInd (mkInd "Coq.Init.Logic.eq" 0) [])
+                   [ _ ;
+                     tApp
+                     (tCase (mkInd "Coq.Init.Logic.eq" 0, 2)
+                        (tLambda _ (tSort _)
+                           (tLambda _
+                              (tApp (tInd (mkInd "Coq.Init.Logic.eq" 0) []) [ tSort  _ ; _ ; _ ])
+                              (tProd _ _ _))) _ [(0, tLambda _ _ _)])
+                     [ a' ]; b' ])]) =>
         ret (mkHeqSym A' a' B' b' p')
       (* That's not really the correct error but well. *)
       | Checked T => raise (TypingError (NotAnInductive T))
@@ -402,8 +426,11 @@ Make Definition heq_trans_t :=
       in exact t
   ).
 
-Eval compute in (tsl_rec (2 ^ 16) Σ []
+Eval lazy in (tsl_rec (2 ^ 18) Σ []
                          (sHeqSym ((sHeqRefl (sSort (succ_sort sSet)) (sSort sSet))))).
+
+Quote Definition heq_g := ltac:(let t := eval compute in (fun A (x : A) B (y : B) => @heq A x B y) in exact t).
+
 
 Theorem soundness :
   forall {Γ t A},

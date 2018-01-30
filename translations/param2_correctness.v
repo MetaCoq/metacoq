@@ -19,12 +19,6 @@ Tactic Notation "myeapply" constr(lemma) "unifying" open_constr(term) :=
 Definition tsl_ty := tsl_ty_param.
 
 
-Definition option_get {A} (default : A) (x : option A) : A
-  := match x with
-     | Some x => x
-     | None => default
-     end.
-
 Definition map_context_decl (f : term -> tsl_result term) (decl : context_decl): tsl_result context_decl
 
   := b' <- (match decl.(decl_body) with

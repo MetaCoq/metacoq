@@ -1,5 +1,4 @@
-From Template Require Import Ast Template Typing LiftSubst Checker monad_utils.
-Require Import  Translations.translation_utils.
+From Template Require Import Ast Template Typing LiftSubst Checker monad_utils utils.
 Require Import List String.
 Import ListNotations MonadNotation.
 
@@ -12,17 +11,18 @@ Import ListNotations MonadNotation.
 
 (** ** Auxiliary functions *)
 
-Definition try_beta_reduce t :=
-  let flags := RedFlags.mk true false false false false false in
-  match reduce_opt flags [] [] fuel t with
-  | Some t => t
-  | None => t
-  end.
 
 Class TslIdent := { tsl_ident : ident -> ident }.
 
 Instance prime_tsl_ident : TslIdent
   := {| tsl_ident := fun id => (id ++ "'")%string |}.
+
+Fixpoint try_remove_n_lambdas (n : nat) (t : term) {struct n} : term :=
+  match n, t with
+  | 0, _ => t
+  | S n, tLambda _ _ t => try_remove_n_lambdas n t
+  | S n, _ => t
+  end.
 
 
 (** * Plugin *)
@@ -41,7 +41,7 @@ Definition add_ctor (mind : minductive_decl) (ind0 : inductive) (idc : ident) (c
                             ind_ctors := let ctors := map (fun '(id, t, k) => (tsl_ident id, t, k)) ind.(ind_ctors) in
                                          if Nat.eqb i i0 then
                                            let n := #|ind_bodies mind| in
-                                           let typ := try_beta_reduce (tApp ctor [tRel (n - i0 - 1)]) in
+                                           let typ := try_remove_n_lambdas #|mind.(ind_bodies)| ctor in
                                            ctors ++ [(idc, typ, 0)]
                                          else ctors;
                             ind_projs := ind.(ind_projs) |})
@@ -50,16 +50,14 @@ Definition add_ctor (mind : minductive_decl) (ind0 : inductive) (idc : ident) (c
 (* [add_constructor] is a new command (in Template Coq style) *)
 (* which do what we want *)
 
-Definition add_constructor {A} (ind : A) (idc : ident)
-                           (ctor : A -> Type)
+Definition add_constructor {A} (ind : A) (idc : ident) {B} (ctor : B)
   : TemplateMonad unit
   := tm <- tmQuote ind ;;
      match tm with
      | tInd ind0 _ =>
        decl <- tmQuoteInductive (inductive_mind ind0) ;;
        ctor <- tmQuote ctor ;;
-       e <- tmEval lazy (mind_decl_to_entry
-                         (add_ctor decl ind0 idc ctor)) ;;
+       e <- tmEval lazy (mind_decl_to_entry (add_ctor decl ind0 idc ctor)) ;;
        tmMkInductive e
      | _ => tmPrint ind ;; tmFail " is not an inductive"
      end.
@@ -83,8 +81,7 @@ Inductive tm :=
 | lam : tm -> tm
 | app : tm -> tm -> tm.
 
-Run TemplateProgram
-    (add_constructor tm "letin" (fun tm' => tm' -> tm' -> tm')).
+Run TemplateProgram (add_constructor tm "letin" (fun tm' => tm' -> tm' -> tm')).
 
 Print tm'.
 (* Inductive tm' : Type := *)
@@ -95,4 +92,13 @@ Print tm'.
 
 
 Run TemplateProgram (add_constructor (@eq) "foo'"
-                    (fun eq' => forall A x y, nat -> eq' A x x -> bool -> eq' A x y)).
+                    (fun (eq':forall A, A -> A -> Type) => forall A x y, nat -> eq' A x x -> bool -> eq' A x y)).
+
+Require Import Even.
+Run TemplateProgram (add_constructor (@odd) "foo''"
+                    (fun (even' odd':nat -> Prop) => odd' 0)).
+
+Module A.
+Run TemplateProgram (add_constructor even "foo'"
+                    (fun (even' odd':nat -> Prop) => even' 0)).
+End A.

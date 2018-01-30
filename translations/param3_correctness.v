@@ -1,21 +1,13 @@
 Require Import ssreflect ssrfun ssrbool.
 From mathcomp Require Import all_ssreflect.
-Require Import Template.Template Template.Ast Template.monad_utils Translations.sigma.
-Require Import Template.Induction Template.LiftSubst Template.Typing Template.Checker.
+From Template Require Import Template Ast monad_utils Induction LiftSubst Typing Checker utils.
 Require Import Arith.Compare_dec.
-Require Import  Translations.translation_utils.
+From Translations Require Import translation_utils.
 Import String Lists.List.ListNotations MonadNotation.
 Open Scope list_scope.
 Open Scope string_scope.
-Open Scope sigma_scope.
 
 Require Import tsl_param3.
-
-Definition option_get {A} (default : A) (x : option A) : A
-  := match x with
-     | Some x => x
-     | None => default
-     end.
 
 Definition map_context_decl (f : term -> term) (decl : context_decl): context_decl
   := {| decl_name := decl.(decl_name);
@@ -33,7 +25,7 @@ Fixpoint tsl_ctx (E : tsl_table) (Γ : context) : context :=
                 let x := decl.(decl_body) in
                 let A := decl.(decl_type) in
     tsl_ctx E Γ ,, Build_context_decl n (omap (tsl_rec0 0) x) (tsl_rec0 0 A) 
-                ,, Build_context_decl (tsl_name n) (omap (lift 1 0 \o tsl_rec1 E 0) x) (mkApps (lift0 1 (tsl_rec1 E 0 A)) [tRel 0])
+                ,, Build_context_decl (tsl_name tsl_ident n) (omap (lift 1 0 \o tsl_rec1 E) x) (mkApps (lift0 1 (tsl_rec1 E A)) [tRel 0])
   end.
 
 Delimit Scope term_scope with term.
@@ -118,7 +110,7 @@ Lemma LmapE : @List.map = @seq.map.
 reflexivity.
 Qed.
 
-Lemma lebE (m n : nat) : (Nat.leb m n) = (m <= n).
+Lemma lebE (m n : nat) : (Nat.leb m n) = (leq m n).
 Admitted.
 
 Lemma term_eqP : Equality.axiom eq_term.
@@ -137,58 +129,10 @@ elim/term_forall_list_ind : t m n => //=; rewrite ?plusE.
   rewrite !ifT ?mulnDr ?addnA //.
     admit.
     admit.
-  by rewrite leqNgt mn.
-- admit.
-- by move=> t IHt c t0 IHt0 m n; rewrite IHt IHt0.
-- by move=> n0 t -IHt t0 IHt0 m n /=; rewrite IHt addn1 IHt0.
-- by move=> n t IHt t0 IHt0 m n0; rewrite IHt addn1 IHt0.
-- by move=> n t IHt t0 IHt0 t1 IHt1 m n0; rewrite !addn1 IHt IHt0 IHt1.
-- move=> t IHt l IHl m n; rewrite IHt.
-  rewrite LmapE.
-  rewrite -!map_comp.
-  congr (tApp _ _).
-  apply/eq_in_map => i /=.
-  admit.
-- move=> p t IHt t0 IHt0 l IHl m n.
-  rewrite IHt IHt0.
-  admit.
-- by move=> s t IHt m n; rewrite IHt.
-- admit.
-- admit.
-Admitted.
-
-
-Lemma lift_mkApps n k t us
-  : lift n k (mkApps t us) = mkApps (lift n k t) (map (lift n k) us).
-Proof.
-  (* destruct t; try reflexivity. *)
-  (* cbn. destruct (Nat.leb k n0); try reflexivity. *)
-  (* cbn. by rewrite -map_cat.  *)
-done.
-Qed.
-
-Arguments subst_app : simpl nomatch.
-
-Lemma tsl_rec1_lift E n t :
-  (* tsl_rec1 E 0 (lift n m t) = lift (2 * n) (2 * m) (tsl_rec1 E 0 t). *)
-  tsl_rec1 E 0 (lift0 n t) = lift0 (2 * n) (tsl_rec1 E 0 t).
-Proof.
-elim/term_forall_list_ind : t n => //; rewrite ?plusE.
-- move=> n k.
-  (* rewrite !lebE fun_if /= leq_mul2l /=. *)
-  (* by have [] := leqP m n => //=; *) by rewrite /= mulnDr.
-- admit.
-- admit.
-- admit.
-- move=> t IHt c t0 IHt0 n /=; rewrite IHt IHt0 ?lift_mkApps.
-  congr (tCast _ _ (mkApps _ _)).
-  by rewrite !tsl_rec0_lift.
-- move=> n t IHt t0 IHt0 n0.
-  rewrite /=.
-  rewrite !IHt.
-  rewrite !tsl_rec0_lift.
-(*   rewrite lift_simpl. *)
-(*   rewrite IHt addn1 IHt0. *)
+(*   by rewrite leqNgt mn. *)
+(* - admit. *)
+(* - by move=> t IHt c t0 IHt0 m n; rewrite IHt IHt0. *)
+(* - by move=> n0 t -IHt t0 IHt0 m n /=; rewrite IHt addn1 IHt0. *)
 (* - by move=> n t IHt t0 IHt0 m n0; rewrite IHt addn1 IHt0. *)
 (* - by move=> n t IHt t0 IHt0 t1 IHt1 m n0; rewrite !addn1 IHt IHt0 IHt1. *)
 (* - move=> t IHt l IHl m n; rewrite IHt. *)
@@ -203,6 +147,53 @@ elim/term_forall_list_ind : t n => //; rewrite ?plusE.
 (* - by move=> s t IHt m n; rewrite IHt. *)
 (* - admit. *)
 (* - admit. *)
+Admitted.
+
+
+Lemma lift_mkApps n k t us
+  : lift n k (mkApps t us) = mkApps (lift n k t) (List.map (lift n k) us).
+Proof.
+  destruct t; try reflexivity.
+  cbn. destruct (Nat.leb k n0); try reflexivity.
+  cbn. by rewrite List.map_app.
+Qed.
+
+Arguments subst_app : simpl nomatch.
+
+Lemma tsl_rec1_lift E n t :
+  (* tsl_rec1 E 0 (lift n m t) = lift (2 * n) (2 * m) (tsl_rec1 E 0 t). *)
+  tsl_rec1 E (lift0 n t) = lift0 (2 * n) (tsl_rec1 E t).
+Proof.
+elim/term_forall_list_ind : t n => //; rewrite ?plusE.
+- move=> n k.
+  (* rewrite !lebE fun_if /= leq_mul2l /=. *)
+  (* (* by have [] := leqP m n => //=; *) by rewrite /= mulnDr. *)
+(* - admit. *)
+(* - admit. *)
+(* - admit. *)
+(* - move=> t IHt c t0 IHt0 n /=; rewrite IHt IHt0 ?lift_mkApps. *)
+(*   congr (tCast _ _ (mkApps _ _)). *)
+(*   by rewrite !tsl_rec0_lift. *)
+(* - move=> n t IHt t0 IHt0 n0. *)
+(*   rewrite /=. *)
+(*   rewrite !IHt. *)
+(*   rewrite !tsl_rec0_lift. *)
+(* (*   rewrite lift_simpl. *) *)
+(* (*   rewrite IHt addn1 IHt0. *) *)
+(* (* - by move=> n t IHt t0 IHt0 m n0; rewrite IHt addn1 IHt0. *) *)
+(* (* - by move=> n t IHt t0 IHt0 t1 IHt1 m n0; rewrite !addn1 IHt IHt0 IHt1. *) *)
+(* (* - move=> t IHt l IHl m n; rewrite IHt. *) *)
+(* (*   rewrite LmapE. *) *)
+(* (*   rewrite -!map_comp. *) *)
+(* (*   congr (tApp _ _). *) *)
+(* (*   apply/eq_in_map => i /=. *) *)
+(* (*   admit. *) *)
+(* (* - move=> p t IHt t0 IHt0 l IHl m n. *) *)
+(* (*   rewrite IHt IHt0. *) *)
+(* (*   admit. *) *)
+(* (* - by move=> s t IHt m n; rewrite IHt. *) *)
+(* (* - admit. *) *)
+(* (* - admit. *) *)
 Admitted.
 
   
@@ -293,50 +284,51 @@ Lemma tsl_correct Σ Γ t T (H : Σ ;;; Γ |-- t : T)
   : forall E, tsl_table_correct Σ E ->
     let Γ' := tsl_ctx E Γ in
     let t0 := tsl_rec0 0 t in
-    let t1 := tsl_rec1 E 0 t in
+    let t1 := tsl_rec1 E t in
     let T0 := tsl_rec0 0 T in
-    let T1 := tsl_rec1 E 0 T in
+    let T1 := tsl_rec1 E T in
     Σ ;;; Γ' |-- t0 : T0 /\ Σ ;;; Γ' |-- t1 : mkApps T1 [t0].
 Proof.
-elim/typing_ind: H => {Γ t T} Γ.
-- move=> n isdecl E X Γ' /=.
-  rewrite tsl_rec0_lift mulnS add2n (tsl_rec0_decl_type _ _ _ E).
-  rewrite tsl_ctx_length.
-     apply/leP.
-       by rewrite addn1 mul2n -doubleS -mul2n leq_mul2l; apply/leP.
-  rewrite !addn1; move=> isdecl'.
-  split; first exact: type_Rel.
-  have := type_Rel Σ Γ' (2 * n) _.
+(* elim/typing_ind: H => {Γ t T} Γ. *)
+(* - move=> n isdecl E X Γ' /=. *)
+(*   rewrite tsl_rec0_lift mulnS add2n (tsl_rec0_decl_type _ _ _ E). *)
+(*   rewrite tsl_ctx_length. *)
+(*      apply/leP. *)
+(*        by rewrite addn1 mul2n -doubleS -mul2n leq_mul2l; apply/leP. *)
+(*   rewrite !addn1; move=> isdecl'. *)
+(*   split; first exact: type_Rel. *)
+(*   have := type_Rel Σ Γ' (2 * n) _. *)
 
-  evar (l : (2 * n < #|Γ'|%term)%coq_nat).
-  move=> /(_ l).
-  rewrite -tsl_rec1_decl_type /=.
-  admit.
-  (* rewrite simpl_lift_rec; do ?easy. *)
-  (* by rewrite plusE addn0 addn1. *)
+(*   evar (l : (2 * n < #|Γ'|%term)%coq_nat). *)
+(*   move=> /(_ l). *)
+(*   rewrite -tsl_rec1_decl_type /=. *)
+(*   admit. *)
+(*   (* rewrite simpl_lift_rec; do ?easy. *) *)
+(*   (* by rewrite plusE addn0 addn1. *) *)
 
 
   
 
-- admit.
-- admit.
-- admit.
-- admit.
-- admit.
-- rewrite /= => t l t' t'' tt' IHt' spine E ΣE_correct; rewrite /mkApps; split.
-    apply: type_App.
-      have [] := IHt' _ ΣE_correct.
-        by move=> t0_ty ?; exact: t0_ty.
-    admit.
-  apply: type_App.
-    have [] := IHt' _ ΣE_correct.
-    by move=> ? t1_ty; exact: t1_ty.
-  admit.
+(* - admit. *)
+(* - admit. *)
+(* - admit. *)
+(* - admit. *)
+(* - admit. *)
+(* - rewrite /= => t l t' t'' tt' IHt' spine E ΣE_correct; rewrite /mkApps; split. *)
+(*     apply: type_App. *)
+(*       have [] := IHt' _ ΣE_correct. *)
+(*         by move=> t0_ty ?; exact: t0_ty. *)
+(*     admit. *)
+(*   apply: type_App. *)
+(*     have [] := IHt' _ ΣE_correct. *)
+(*     by move=> ? t1_ty; exact: t1_ty. *)
+(*   admit. *)
    
 
     
   
 
 
-    rewrite /Γ' => isdecl'; clear.
-    case: Γ isdecl isdecl'.
+(*     rewrite /Γ' => isdecl'; clear. *)
+(*     case: Γ isdecl isdecl'. *)
+Abort.

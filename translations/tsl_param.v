@@ -1,7 +1,6 @@
 (* -*- coq-prog-args: ("-type-in-type" "-top" "Translations.tsl_param") -*-  *)
-Require Import Template.Template Template.Ast Template.monad_utils Translations.sigma.
-Require Import Template.Induction Template.LiftSubst Template.Typing Template.Checker.
-Require Import  Translations.translation_utils.
+From Template Require Import Template Ast monad_utils Induction LiftSubst Typing Checker utils.
+From Translations Require Import translation_utils sigma.
 Import String Lists.List.ListNotations MonadNotation.
 Open Scope list_scope. Open Scope string_scope. Open Scope sigma_scope.
 
@@ -98,83 +97,6 @@ where "'tsl_ty_param'" := (fun fuel Σ E Γ t =>
                         ret (pack t1 t2)).
 
 
-(* Fixpoint tsl_rec (Σ : global_context) (E : tsl_table) (Γ : context) (b : bool) (t : term) {struct t} *)
-(*   : tsl_result term := *)
-(*   match t with *)
-(*   | tRel n => ret (proj b (tRel n)) *)
-(*   | tSort s => if b then ret (tSort s) *)
-(*               else ret (tLambda (nNamed "A") (tSort s) (tProd nAnon (tRel 0) (tSort s))) *)
-(*   | tCast t c A => if b then *)
-(*                     t1 <- tsl_rec Σ E Γ true t ;; *)
-(*                     A1 <- tsl_rec Σ E Γ true A ;; *)
-(*                     ret (tCast t1 c A1) *)
-(*                   else *)
-(*                     t1 <- tsl_rec Σ E Γ true t ;; *)
-(*                     t2 <- tsl_rec Σ E Γ false t ;; *)
-(*                     A2 <- tsl_rec Σ E Γ false A ;; *)
-(*                     ret (tCast t2 c (tApp A2 [t1])) *)
-(*   | tProd n A B => if b then *)
-(*                     A' <- tsl_typ Σ E Γ A ;; *)
-(*                     B1 <- tsl_rec Σ E (Γ ,, vass n A') true B ;; *)
-(*                     ret (tProd n A' B1) *)
-(*                   else *)
-(*                     A' <- tsl_typ Σ E Γ A ;; *)
-(*                     B1 <- tsl_rec Σ E (Γ ,, vass n A') true B ;; *)
-(*                     B2 <- tsl_rec Σ E (Γ ,, vass n A') false B ;; *)
-(*                     ret (tLambda (nNamed "f") (tProd n A' B1) *)
-(*                                  (tProd n (lift 1 0 A') *)
-(*                                         (tApp (lift 1 1 B2) *)
-(*                                               [tApp (tRel 1) [tRel 0]]))) *)
-(*   | tLambda n A t => A' <- tsl_typ Σ E Γ A ;; *)
-(*                     t' <- tsl_rec Σ E (Γ ,, vass n A') b t ;; *)
-(*                     ret (tLambda n A' t') *)
-(*   | tLetIn n t A u => t' <- tsl_term Σ E Γ t ;; *)
-(*                      A' <- tsl_typ Σ E Γ A ;; *)
-(*                      u' <- tsl_rec Σ E (Γ ,, vdef n t' A') b u ;; *)
-(*                      ret (tLetIn n t' A' u') *)
-(*   | tApp t u => t' <- tsl_rec Σ E Γ b t ;; *)
-(*                u' <- monad_map (tsl_term Σ E Γ) u ;; *)
-(*                ret (tApp t' u') *)
-(*   | tConst _ as t *)
-(*   | tInd _ as t *)
-(*   | tConstruct _ _ as t => t' <- tsl_term Σ E Γ t ;; *)
-(*                           ret (proj b t') *)
-(*   | _ => raise TranslationNotHandeled *)
-(*   end *)
-(* with tsl_term (Σ : global_context) (E : tsl_table) (Γ : context) (t : term) {struct t} *)
-(*   : tsl_result term := *)
-(*   match t with *)
-(*   | tRel n => ret (tRel n) *)
-(*   | tCast t c A => t' <- tsl_term Σ E Γ t ;; *)
-(*                   A' <- tsl_typ Σ E Γ A ;; *)
-(*                   ret (tCast t' c A') *)
-(*   | tConst s *)
-(*   | tInd (mkInd s _) => match lookup_tsl_table E s with *)
-(*                        | Some t => ret (tConst t) *)
-(*                        | None => raise (TranslationNotFound s) *)
-(*                        end *)
-(*   | tConstruct (mkInd s _) n => match lookup_env Σ s with *)
-(*                                | Some decl => raise TranslationNotHandeled *)
-(*                                | None => raise (TranslationNotFound s) *)
-(*                                end *)
-(*   | t => t1 <- tsl_rec Σ E Γ true t ;; *)
-(*         t2 <- tsl_rec Σ E Γ false t ;; *)
-(*         typ1 <- match infer Σ Γ t1 with *)
-(*                | Checked typ => ret typ *)
-(*                | _ => raise TypingError *)
-(*                end ;; *)
-(*         typ2 <- match infer Σ Γ t2 with *)
-(*                | Checked typ => ret typ *)
-(*                | _ => raise TypingError *)
-(*                end ;; *)
-(*         ret (pair typ1 typ2 t1 t2) *)
-(*   end *)
-(* where "'tsl_typ'" := (fun Σ E Γ t => *)
-(*                         t1 <- tsl_rec Σ E Γ true t ;; *)
-(*                         t2 <- tsl_rec Σ E Γ false t ;; *)
-(*                         ret (pack t1 t2)). *)
-
-
 
 Instance tsl_param : Translation
   := {| tsl_id := tsl_ident ;
@@ -183,19 +105,17 @@ Instance tsl_param : Translation
         tsl_ind := todo |}.
 
 
-Definition TslParam := tTranslate tsl_param.
-Definition ImplParam := tImplement tsl_param.
-(* Definition ImplEParam := tImplementExisting tsl_ident tsl_tm tsl_ty_param. *)
+Definition TslParam := @tTranslate tsl_param.
+Definition ImplParam := @tImplement tsl_param.
+
 
 Notation "'TYPE'" := (exists A, A -> Type).
 Notation "'El' A" := (sigma (π1 A) (π2 A)) (at level 20).
 
 Definition Ty := Type.
-Run TemplateProgram (TslParam ([],[]) "Ty").
+Run TemplateProgram (TslParam emptyTC "Ty").
 Check Tyᵗ : El Tyᵗ.
 
-(* Definition Tyᵗ : El Tyᵗ := *)
-(*   @mk_sig Type (fun A => A -> Type) Type (fun A => A -> Type). *)
 
 Definition mkTYPE (A₀ : Type) (Aᴿ : A₀ -> Type) : El Tyᵗ :=
   @mk_sig Type (fun A₀ => A₀ -> Type) A₀ Aᴿ.
@@ -251,18 +171,6 @@ Proof.
 refine (λᶠ A P x y, _).
 refine (mk_sig (existᵀ A P x y) (existᴿ A P x y)).
 Defined.
-
-
-Fixpoint extract_mind_decl_from_program (id : ident) (p : program)
-  : option minductive_decl
-  := match p with
-     | PConstr _ _ _ _ p => extract_mind_decl_from_program id p
-     | PType id' n inds p => if string_dec id id' then
-                              Some (Build_minductive_decl n inds)
-                            else extract_mind_decl_from_program id p
-     | PAxiom _ _ _ p => extract_mind_decl_from_program id p
-     | PIn _ => None
-     end.
 
 Inductive eq@{i} {A : Type@{i}} (x : A) : A -> Type@{i} :=  eq_refl : eq x x.
 
@@ -339,47 +247,42 @@ Defined.
 Quote Definition equiv_ := Eval compute in equiv.
 
 
-(* Check "go". *)
+Check "go".
 
-(* Run TemplateProgram ( *)
-(*       match ΣE with *)
-(*       | None => tmPrint "li" ;; tmReturn None *)
-(*       | Some ΣE => *)
-(*         ΣE' <- TslParam ΣE "equiv" ;; *)
-(*             (* tmPrint ΣE' ;; *) *)
-(*             match ΣE' with *)
-(*             | None => tmReturn None *)
-(*             | Some ΣE => *)
-(*               tmPrint "lo" ;; *)
-(*               H <- ImplParam ΣE "notUnivalence" *)
-(*               (exists A B : Type, (equiv A B) × exists P, P A × ((P B) -> False)) ;; *)
-(*               (* (exists A : Type, (equiv A A)) ;; *) *)
-(*               tmPrint "la" ;; ret H *)
-(*             end *)
-(*       end). *)
-(* Check "proof". *)
-(* Next Obligation.  *)
-(* simple refine (existᶠ · _ · _ · _ · _). *)
-(* exact (bool:Type; fun _=> unit:Type). *)
-(* simple refine (existᶠ · _ · _ · _ · _). *)
-(* exact (unit:Type; fun _ => bool:Type). *)
-(* simple refine (existᶠ · _ · _ · _ · _). *)
-(* - simple refine (existᶠ · _ · _ · _ · _). *)
-(*   exists π2. exact π1. *)
-(*   simple refine (existᶠ · _ · _ · _ · _). *)
-(*   exists π2. exact π1. *)
-(*   simple refine (existᶠ · _ · _ · _ · _); *)
-(*     cbn; unshelve econstructor; reflexivity. *)
-(* - simple refine (existᶠ · _ · _ · _ · _). *)
-(*   exact HasTwoElFstComponentᵗ. *)
-(*   simple refine (existᶠ · _ · _ · _ · _). *)
-(*   + cbn. refine (_; tt). exists true. exists false. *)
-(*     discriminate 1. *)
-(*   + compute. *)
-(*     split; (intro p; *)
-(*             destruct p as [p _]; *)
-(*             destruct p as [[] [[] p]]; *)
-(*             contradiction p; reflexivity). *)
-(* Defined. *)
+Run TemplateProgram (match ΣE with
+                     | None => tmFail "bug: no tsl_ctx"
+                     | Some ΣE =>
+                       ΣE <- TslParam ΣE "equiv" ;;
+                       (* tmPrint ΣE' ;; *)
+                       tmPrint "lo" ;;
+                       H <- ImplParam ΣE "notUnivalence"
+                       (exists A B : Type, (equiv A B) × exists P, P A × ((P B) -> False)) ;;
+                       (* (exists A : Type, (equiv A A)) ;; *)
+                       tmPrint "done"
+                     end).
+Check "proof".
+Next Obligation.
+simple refine (existᶠ · _ · _ · _ · _).
+exact (bool:Type; fun _=> unit:Type).
+simple refine (existᶠ · _ · _ · _ · _).
+exact (unit:Type; fun _ => bool:Type).
+simple refine (existᶠ · _ · _ · _ · _).
+- simple refine (existᶠ · _ · _ · _ · _).
+  exists π2. exact π1.
+  simple refine (existᶠ · _ · _ · _ · _).
+  exists π2. exact π1.
+  simple refine (existᶠ · _ · _ · _ · _);
+    cbn; unshelve econstructor; reflexivity.
+- simple refine (existᶠ · _ · _ · _ · _).
+  exact HasTwoElFstComponentᵗ.
+  simple refine (existᶠ · _ · _ · _ · _).
+  + cbn. refine (_; tt). exists true. exists false.
+    discriminate 1.
+  + compute.
+    split; (intro p;
+            destruct p as [p _];
+            destruct p as [[] [[] p]];
+            contradiction p; reflexivity).
+Defined.
 
-(* Check "ok!". *)
+Check "ok!".

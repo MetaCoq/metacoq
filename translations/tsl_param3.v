@@ -1,13 +1,11 @@
 (* Require Import ssreflect ssrfun ssrbool. *)
 (* From mathcomp Require Import all_ssreflect. *)
-Require Import Template.Template Template.Ast Template.monad_utils Translations.sigma.
-Require Import Template.Induction Template.LiftSubst Template.Typing Template.Checker.
+From Template Require Import Template Ast monad_utils Induction LiftSubst Typing Checker utils.
 Require Import Arith.Compare_dec.
-Require Import  Translations.translation_utils.
+From Translations Require Import translation_utils.
 Import String List Lists.List.ListNotations MonadNotation.
 Open Scope list_scope.
 Open Scope string_scope.
-Open Scope sigma_scope.
 
 Infix "<=" := Nat.leb.
 
@@ -113,8 +111,14 @@ Fixpoint tsl_rec1_app (app : option term) (E : tsl_table) (t : term) : term :=
 Definition tsl_rec1 := tsl_rec1_app None.
 
 Definition tsl_mind_decl (E : tsl_table)
-           (kn : kername) (mind : minductive_decl) : minductive_decl.
-  refine {| ind_npars := 2 * mind.(ind_npars); ind_bodies := _ |}.
+           (kn kn' : kername) (mind : minductive_decl) : tsl_table * list minductive_decl.
+  refine (_, [{| ind_npars := 2 * mind.(ind_npars); ind_bodies := _ |}]).
+  - refine (fold_left_i (fun E i ind => _ :: _ ++ E)%list mind.(ind_bodies) []).
+    + (* ind *)
+      exact (IndRef (mkInd kn i), tInd (mkInd kn' i) []).
+    + (* ctors *)
+      refine (fold_left_i (fun E k _ => _ :: E) ind.(ind_ctors) []).
+      exact (ConstructRef (mkInd kn i) k, tConstruct (mkInd kn' i) k []).
   - refine (map_i _ mind.(ind_bodies)).
     intros i ind.
     refine {| ind_name := tsl_ident ind.(ind_name);
@@ -137,16 +141,6 @@ Definition tsl_mind_decl (E : tsl_table)
                               mind.(ind_bodies))).
 Defined.
 
-Definition tsl_ind_extend_table (kn kn' : kername) (mind : minductive_decl)
-  : tsl_table.
-  refine (fold_left_i (fun E i ind => _ :: _ ++ E)%list mind.(ind_bodies) []).
-  + (* ind *)
-    exact (IndRef (mkInd kn i), tInd (mkInd kn' i) []).
-  + (* ctors *)
-    refine (fold_left_i (fun E k _ => _ :: E) ind.(ind_ctors) []).
-    exact (ConstructRef (mkInd kn i) k, tConstruct (mkInd kn' i) k []).
-Defined.
-
 
 Run TemplateProgram (tm <- tmQuote (forall A, A -> A) ;;
                      let tm' := tsl_rec1 [] tm in
@@ -162,103 +156,31 @@ Goal ((fun f : forall A : Type, A -> A =>
 reflexivity.
 Defined.
 
-Quote Definition tm := ((fun A (x:A) => x) (Type -> Type) (fun x => x)).
 
-Run TemplateProgram (
-                     let tm' := tsl_rec1 [] tm in
-                     print_nf tm' ;;
-                     tmUnquote tm' >>= tmPrint).
+Instance param : Translation :=
+  {| tsl_id := tsl_ident ;
+     tsl_tm := fun ΣE t => ret (tsl_rec1 (snd ΣE) t) ;
+     tsl_ty := fun '(Σ, E) t => todo "not meaningful here" ;
+     tsl_ind := fun ΣE kn kn' mind => ret (tsl_mind_decl (snd ΣE) kn kn' mind) |}.
 
 
+Definition T := forall A, A -> A.
+Run TemplateProgram (tTranslate emptyTC "T").
 
-(* Definition tTranslate (ΣE : tsl_context) (id : ident) *)
-(*   : TemplateMonad (tsl_context) := *)
-(*   gr <- tmAbout id ;; *)
-(*   id' <- tmEval all (tsl_ident id) ;; *)
-(*   let Σ := fst ΣE in *)
-(*   let E := snd ΣE in *)
-(*   match gr with *)
-(*   | ConstructRef (mkInd kn n) _ *)
-(*   | IndRef (mkInd kn n) => *)
-(*       d <- tmQuoteInductive id ;; *)
-(*       let e' := mind_decl_to_entry (tsl_mind_decl E kn d) in *)
-(*       e' <- tmEval lazy e' ;; *)
-(*       tmMkInductive e' ;; *)
-(*       gr' <- tmAbout id' ;; *)
-(*       match gr' with *)
-(*       | IndRef (mkInd kn' _) => *)
-(*         let E' := tsl_ind_extend_table kn kn' d in *)
-(*         print_nf  (id ++ " has been translated as " ++ id') ;; *)
-(*         ret (InductiveDecl kn d :: Σ, E' ++ E)%list *)
-(*       | _ => tmPrint gr' ;; tmPrint "not found (or not an inductive)" ;; ret ΣE *)
-(*       end *)
 
-(*   | ConstRef kn => *)
-(*     e <- tmQuoteConstant kn true ;; *)
-(*     match e with *)
-(*     | ParameterEntry _ => print_nf (id ++ "is an axiom, not a definition") ;; *)
-(*                          ret ΣE *)
-(*     | DefinitionEntry {| definition_entry_type := A; *)
-(*                          definition_entry_body := t |} => *)
-(*       t0 <- tmEval lazy (tsl_rec0 0 t) ;; *)
-(*       t1 <- tmEval lazy (tsl_rec1 E t) ;; *)
-(*       A1 <- tmEval lazy (tsl_rec1 E A) ;; *)
-(*       (* print_nf t1 ;; *) *)
-(*       tmMkDefinition id' t1 ;; *)
-(*       let decl := {| cst_universes := []; *)
-(*                      cst_type := A; cst_body := Some t |} in *)
-(*       print_nf  (id ++ " has been translated as " ++ id') ;; *)
-(*       ret (ConstantDecl kn decl :: Σ, (ConstRef kn, tConst id' []) :: E) *)
-(*     end *)
-(*   end. *)
+Definition tm := ((fun A (x:A) => x) (Type -> Type) (fun x => x)).
+Run TemplateProgram (tTranslate emptyTC "tm").
 
-Definition tTranslate (E : tsl_table) (id : ident)
-  : TemplateMonad (tsl_table) :=
-  gr <- tmAbout id ;;
-  id' <- tmEval all (tsl_ident id) ;;
-  match gr with
-  | None => tmPrint "not found" ;; ret E
-  | Some (ConstructRef (mkInd kn n) _)
-  | Some (IndRef (mkInd kn n)) =>
-      d <- tmQuoteInductive id ;;
-      let e' := mind_decl_to_entry (tsl_mind_decl E kn d) in
-      e' <- tmEval lazy e' ;;
-      tmMkInductive e' ;;
-      gr' <- tmAbout id' ;;
-      match gr' with
-      | Some (IndRef (mkInd kn' _)) =>
-        let E' := tsl_ind_extend_table kn kn' d in
-        print_nf  (id ++ " has been translated as " ++ id') ;;
-        ret (E' ++ E)%list
-      | _ => tmPrint gr' ;; tmPrint "not found (or not an inductive)" ;; ret E
-      end
+Run TemplateProgram (TC <- tTranslate emptyTC "nat" ;;
+                     tmDefinition "nat_TC" TC ).
 
-  | Some (ConstRef kn) =>
-    e <- tmQuoteConstant kn true ;;
-    match e with
-    | ParameterEntry _ => print_nf (id ++ "is an axiom, not a definition") ;;
-                         ret E
-    | DefinitionEntry {| definition_entry_type := A;
-                         definition_entry_body := t |} =>
-      t0 <- tmEval lazy (tsl_rec0 0 t) ;;
-      t1 <- tmEval lazy (tsl_rec1 E t) ;;
-      A1 <- tmEval lazy (tsl_rec1 E A) ;;
-      (* print_nf t1 ;; *)
-      tmMkDefinition id' t1 ;;
-      print_nf  (id ++ " has been translated as " ++ id') ;;
-      ret ((ConstRef kn, tConst id' []) :: E)
-    end
-  end.
+Run TemplateProgram (tTranslate nat_TC "pred").
 
-Run TemplateProgram (
-     TC <- tTranslate [] "nat" ;;
-     TC <- tTranslate TC "pred" ;;
-     tmDefinition "nat_TC" TC ).
 
 Module Id1.
   Definition ID := forall A, A -> A.
 
-  Run TemplateProgram (tTranslate [] "ID").
+  Run TemplateProgram (tTranslate emptyTC "ID").
 
   Lemma param_ID_identity (f : ID)
     : IDᵗ f -> forall A x, f A x = x.
@@ -285,7 +207,7 @@ End Id1.
 Module Id2.
   Definition ID := forall A x y (p : x = y :> A), x = y.
 
-  Run TemplateProgram (TC <- tTranslate [] "eq" ;;
+  Run TemplateProgram (TC <- tTranslate emptyTC "eq" ;;
                        TC <- tTranslate TC "ID" ;;
                        tmDefinition "TC" TC).
 
@@ -306,6 +228,9 @@ Module Id2.
   Run TemplateProgram (TC <- tTranslate TC "eq_sym" ;;
                        TC <- tTranslate TC "eq_trans" ;;
                        tTranslate TC "myf").
+
+  Definition free_thm_myf : forall A x y p, myf A x y p = p
+    := param_ID_identity myf myfᵗ.
 End Id2.
 
 
@@ -321,7 +246,7 @@ Require Import Even.
 Run TemplateProgram (tTranslate nat_TC "even").
 
 Definition rev_type := forall A, list A -> list A.
-Run TemplateProgram (TC <- tTranslate [] "list" ;;
+Run TemplateProgram (TC <- tTranslate emptyTC "list" ;;
                      TC <- tTranslate TC "rev_type" ;;
                      tmDefinition "list_TC" TC ).
 

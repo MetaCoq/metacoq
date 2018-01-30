@@ -280,12 +280,6 @@ Fail Run TemplateProgram (tTranslate ([],[]) "nat").
 
 
 
-Definition option_get {A} (default : A) (x : option A) : A
-  := match x with
-     | Some x => x
-     | None => default
-     end.
-
 Definition map_context_decl (f : term -> term) (decl : context_decl): context_decl
   := {| decl_name := decl.(decl_name);
         decl_body := option_map f decl.(decl_body); decl_type := f decl.(decl_type) |}.

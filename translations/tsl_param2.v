@@ -1,10 +1,8 @@
+From Template Require Import Template Ast monad_utils Induction LiftSubst Typing Checker utils.
+Require Import Arith.Compare_dec.
+From Translations Require Import translation_utils sigma.
 
 (* -*- coq-prog-args : ("-debug" "-type-in-type") -*-  *)
-
-Require Import Template.Template Template.Ast Template.monad_utils Translations.sigma.
-Require Import Template.Induction Template.LiftSubst Template.Typing Template.Checker.
-Require Import Arith.Compare_dec.
-Require Import  Translations.translation_utils.
 Import String Lists.List.ListNotations MonadNotation.
 Open Scope string_scope.
 Open Scope list_scope.
@@ -113,24 +111,6 @@ where "'tsl_ty_param'" := (fun fuel Σ E Γ t =>
 
 
 
-Fixpoint fold_left_i_aux {A B} (f : A -> nat -> B -> A) (n0 : nat) (l : list B)
-         (a0 : A) {struct l} : A
-  := match l with
-     | [] => a0
-     | b :: l => fold_left_i_aux f (S n0) l (f a0 n0 b)
-     end.
-Definition fold_left_i {A B} f := @fold_left_i_aux A B f 0.
-
-Fixpoint monad_map_i_aux {M} {H : Monad M} {A B} (f : nat -> A -> M B) (n0 : nat) (l : list A) : M (list B)
-  := match l with
-     | [] => ret []
-     | x :: l => x' <- (f n0 x) ;;
-                l' <- (monad_map_i_aux f (S n0) l) ;;
-                ret (x' :: l')
-     end.
-
-Definition monad_map_i {M H A B} f := @monad_map_i_aux M H A B f 0.
-
 (* replace tRel k by t in u without decreasing tRels of u nor lifting them of t *)
 Fixpoint replace t k u {struct u} :=
   match u with
@@ -161,19 +141,10 @@ Fixpoint replace t k u {struct u} :=
   | x => x
   end.
 
-(* could be defined with Id monad *)
-Fixpoint map_i_aux {A B} (f : nat -> A -> B) (n0 : nat) (l : list A) : list B
-  := match l with
-     | [] => []
-     | x :: l => (f n0 x) :: (map_i_aux f (S n0) l)
-     end.
-
-Definition map_i {A B} f := @map_i_aux A B f 0.
-
 
 
 Definition tsl_mind_decl (ΣE : tsl_context)
-           (id : ident) (mind : minductive_decl)
+           (kn kn' : kername) (mind : minductive_decl)
   : tsl_result (tsl_table * list minductive_decl).
   refine (let tsl_ty' := tsl_ty_param fuel (fst ΣE) (snd ΣE) [] in _).
   refine (let tsl2' := tsl_rec2 fuel (fst ΣE) (snd ΣE) [] in _).
@@ -187,7 +158,7 @@ Definition tsl_mind_decl (ΣE : tsl_context)
 
   - refine (let n := List.length arities - 1 in
             let L := List.combine arities arities2 in
-            List.rev (map_i (fun i '(a,a2) => pair a a2 (tInd (mkInd id i) []) (tRel (n-i))) L)).
+            List.rev (map_i (fun i '(a,a2) => pair a a2 (tInd (mkInd kn i) []) (tRel (n-i))) L)).
 
   - (* inductive_body -> tsl_result inductive_body *)
     refine (monad_map_i _ mind.(ind_bodies)).
@@ -200,25 +171,24 @@ Definition tsl_mind_decl (ΣE : tsl_context)
                    ind_projs := [] |}).  (* TODO *)
     + (* arity  *)
       refine (t2 <- tsl2' ind.(ind_type) ;;
-              let i1 := tsl_rec1 0 (tInd (mkInd id i) []) in
+              let i1 := tsl_rec1 0 (tInd (mkInd kn i) []) in
               ret (try_reduce (fst ΣE) [] fuel (mkApp t2 i1))).
     + (* constructors *)
       refine (monad_map_i _ ind.(ind_ctors)).
       intros k ((name, typ), nargs).
       refine (t2 <- tsl2' typ ;;
               let t2 := fold_left_i (fun t i u => replace u i t) L t2 in
-              let c1 := tsl_rec1 0 (tConstruct (mkInd id i) k []) in
+              let c1 := tsl_rec1 0 (tConstruct (mkInd kn i) k []) in
               match reduce_opt RedFlags.default (fst ΣE) [] (* for debugging but we could use try_reduce *)
                                fuel (mkApp t2 c1) with
               | Some t' => ret (tsl_ident name, t', nargs)
               | None => raise TranslationNotHandeled
               end).
 
-  - refine (let id' := tsl_ident id in (* should be kn ? *)
-            let L := List.combine mind.(ind_bodies) arities2 in
+  - refine (let L := List.combine mind.(ind_bodies) arities2 in
             fold_left_i (fun E i '(ind,a2) => _ :: _ ++ E) L []).
     + (* ind *)
-      refine (IndRef (mkInd id i), pair ind.(ind_type) a2 (tInd (mkInd id i) []) (tInd (mkInd id' i) [])).
+      refine (IndRef (mkInd kn i), pair ind.(ind_type) a2 (tInd (mkInd kn i) []) (tInd (mkInd kn' i) [])).
     + (* ctors *)
       (* refine (fold_left_i (fun E k _ => _ :: E) ind.(ind_ctors) []). *)
       (* exact (ConstructRef (mkInd id i) k, tConstruct (mkInd id' i) k []). *)
@@ -233,8 +203,8 @@ Instance tsl_param : Translation
         tsl_ty := fun ΣE => tsl_ty_param fuel (fst ΣE) (snd ΣE) [] ;
         tsl_ind := tsl_mind_decl |}.
 
-Definition TslParam := tTranslate tsl_param.
-Definition ImplParam := tImplement tsl_param.
+Definition TslParam := @tTranslate tsl_param.
+Definition ImplParam := @tImplement tsl_param.
 
 Notation "'TYPE'" := (exists A, A -> Type).
 Notation "'El' A" := (sigma (π1 A) (π2 A)) (at level 20).

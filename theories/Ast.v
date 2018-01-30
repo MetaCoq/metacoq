@@ -11,7 +11,7 @@ Inductive level : Set :=
 | lProp
 | lSet
 | Level (_ : string)
-| LevelVar (_ : nat) (* are these debruijn indices ? *).
+| LevelVar (_ : nat) (* these are debruijn indices *).
 
 Definition universe := list (level * bool). (* true if it is level+1 *)
 Definition uProp : universe := [(lProp, false)].

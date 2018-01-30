@@ -1424,10 +1424,6 @@ struct
       ignore(Command.declare_mutual_inductive_with_eliminations (mut_ind mr mf mp mi mpol mpr) [] [])
     | _ -> raise (Failure "ill-typed mutual_inductive_entry")
 
-  let declare_interpret_inductive (env: Environ.env) (evm: Evd.evar_map) (body: Constrexpr.constr_expr) : unit =
-	let (body,_) = Constrintern.interp_constr env evm body in
-  declare_inductive env evm body
-
 
   let monad_failure s k =
     CErrors.user_err  (str (s ^ " must take " ^ (string_of_int k) ^ " argument" ^ (if k > 0 then "s" else "") ^ ".")
@@ -1746,7 +1742,8 @@ VERNAC COMMAND EXTEND Unquote_inductive CLASSIFIED AS SIDEFF
     | [ "Make" "Inductive" constr(def) ] ->
       [ check_inside_section () ;
 	let (evm,env) = Lemmas.get_current_context () in
-  Denote.declare_interpret_inductive env evm def ]
+	let (body,uctx) = Constrintern.interp_constr env evm def in
+        Denote.declare_inductive env evm body ]
 END;;
 
 VERNAC COMMAND EXTEND Run_program CLASSIFIED AS SIDEFF

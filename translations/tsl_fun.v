@@ -1,8 +1,41 @@
-Require Import Template.Template Template.Ast Translations.sigma Template.monad_utils.
-Require Import Template.Induction Template.LiftSubst Template.Typing Template.Checker.
-Require Import  Translations.translation_utils.
+From Template Require Import Template Ast monad_utils Induction LiftSubst Typing Checker utils.
+From Translations Require Import translation_utils.
 Import String Lists.List.ListNotations MonadNotation.
 Open Scope list_scope. Open Scope string_scope.
+
+
+Set Primitive Projections.
+Record prod A B := pair { fst : A ; snd : B }.
+
+Arguments fst {_ _} _.
+Arguments snd {_ _} _.
+Arguments pair {_ _} _ _.
+
+Notation "( x ; y )" := (pair x y) : prod_scope.
+Notation "x .1" := (fst x) (at level 2, left associativity, format "x '.1'") : prod_scope.
+Notation "x .2" := (snd x) (at level 2, left associativity, format "x '.2'") : prod_scope.
+Notation " A × B " := (prod A B) (at level 30) : type_scope.
+
+Quote Definition tprod := prod.
+Quote Definition tpair := @pair.
+Definition prod_ind := Eval compute in match tprod with tInd i _ => i | _ => mkInd "bug: prod not an inductive" 0 end.
+Definition proj1 (t : term) : term
+  := tProj (prod_ind, 2, 0) t.
+Definition proj2 (t : term) : term
+  := tProj (prod_ind, 2, 1) t.
+
+Quote Definition tbool := bool.
+Quote Definition ttrue := true.
+Definition timesBool (A : term) := tApp tprod [A; tbool].
+Definition pairTrue typ tm := tApp tpair [typ; tbool; tm; ttrue].
+
+
+
+Definition lookup_tsl_table' E gr :=
+  match lookup_tsl_table E gr with
+  | Some t => ret t
+  | None => raise (TranslationNotFound (string_of_gref gr))
+  end.
 
 
 Fixpoint tsl_rec (fuel : nat) (Σ : global_context) (E : tsl_table) (Γ : context) (t : term) {struct fuel}
@@ -31,32 +64,26 @@ Fixpoint tsl_rec (fuel : nat) (Σ : global_context) (E : tsl_table) (Γ : contex
                      A' <- tsl_rec fuel Σ E Γ A ;;
                      u' <- tsl_rec fuel Σ E (Γ ,, vdef n t A) u ;;
                      ret (tLetIn n t' A' u')
-  | tApp (tInd i univs) u => u' <- monad_map (tsl_rec fuel Σ E Γ) u ;;
-                      ret (tApp (tInd i univs) u')
-  | tApp (tConstruct i n univs) u => u' <- monad_map (tsl_rec fuel Σ E Γ) u ;;
-                              ret (tApp (tConstruct i n univs) u')
-  | tApp t u => t' <- tsl_rec fuel Σ E Γ t ;;
-               u' <- monad_map (tsl_rec fuel Σ E Γ) u ;;
-               ret (tApp (proj1 t') u')
-  | tConst s univs => match lookup_tsl_table E (ConstRef s) with
-               | Some t => ret t
-               | None => raise (TranslationNotFound s)
-               end
-  | tInd _ _ as t
-  | tConstruct _ _ _ as t => ret t
+  | tApp t us => t' <- tsl_rec fuel Σ E Γ t ;;
+                monad_fold_left (fun t u => u' <- tsl_rec fuel Σ E Γ u ;;
+                                         ret (tApp (proj1 t) [u'])) us t'
+  | tConst s univs => lookup_tsl_table' E (ConstRef s)
+  | tInd i univs => lookup_tsl_table' E (IndRef i)
+  | tConstruct i n univs => lookup_tsl_table' E (ConstructRef i n)
   | tProj p t => t' <- tsl_rec fuel Σ E Γ t ;;
                 ret (tProj p t)
   | _ => raise TranslationNotHandeled (* var evar meta case fix cofix *)
-  end end.
+  end
+ end.
 
-Definition recompose_prod (nas : list name) (ts : list term) (u : term)
-  : term
-  := let nats := List.combine nas ts in
-     List.fold_right (fun t u => tProd (fst t) (snd t) u) u nats.
 
-Definition combine' := fun {A B} l => @List.combine A B (fst l) (snd l).
+(* Definition recompose_prod (nas : list name) (ts : list term) (u : term) *)
+(*   : term *)
+(*   := let nats := List.combine nas ts in *)
+(*      List.fold_right (fun t u => tProd (Datatypes.fst t) (Datatypes.snd t) u) u nats. *)
 
-Definition up := lift 1 0.
+Definition combine' := fun {A B} l => @List.combine A B (Datatypes.fst l) (Datatypes.snd l).
+
 
 Fixpoint replace pat u t {struct t} :=
   if eq_term t pat then u else
@@ -71,93 +98,103 @@ Fixpoint replace pat u t {struct t} :=
     end.
 
 
-Definition tsl_mind_decl (E : tsl_table)
-           (kn : kername) (mind : minductive_decl) : minductive_decl.
-  refine (let tsl := fun Γ t => match tsl_rec fuel [] [] Γ t with
+(* If tm of type typ = Π [A0] [A1] ... . [B], returns *)
+(* a term of type [Π A0 A1 ... . B] *)
+Definition pouet (tm typ : term) : term.
+  refine (let L := decompose_prod typ in _).
+  simple refine (let L' := List.fold_left _ (combine' (Datatypes.fst L)) [] in _).
+  exact (fun Γ' A => Γ' ,, vass (Datatypes.fst A) (Datatypes.snd A)).
+  refine (let args := fold_left_i (fun l i _ => tRel i :: l) L' [] in _).
+  refine (Datatypes.fst (List.fold_left _ L' (subst_app tm args, Datatypes.snd L))).
+  refine (fun '(tm, typ) decl =>
+            let A := tProd decl.(decl_name) decl.(decl_type) typ in
+            (pairTrue A (tLambda decl.(decl_name) decl.(decl_type) tm),
+             timesBool A)).
+Defined.
+
+
+
+Definition tsl_mind_decl (ΣE : tsl_context) (kn kn' : kername)
+           (mind : minductive_decl)
+  : tsl_result (tsl_table * list minductive_decl).
+  refine (let tsl := fun Γ t => match tsl_rec fuel (Datatypes.fst ΣE) (Datatypes.snd ΣE) Γ t with
                              | Success x => x
                              | Error _ => todo
                              end in _).
-  refine {| ind_npars := mind.(ind_npars); ind_bodies := _ |}.
-  - refine (map_i _ mind.(ind_bodies)).
-    intros i ind.
-    refine {| ind_name := tsl_ident ind.(ind_name);
-              ind_type := _;
-              ind_kelim := ind.(ind_kelim);
-              ind_ctors := _;
-              ind_projs := [] |}. (* todo *)
-    + (* arity *)
-      refine (let L := decompose_prod ind.(ind_type) in _).
-      simple refine (let L' := List.fold_left _ (combine' (fst L)) [] in _).
-      exact (fun Γ' A => Γ' ,, vass (fst A) (tsl Γ' (snd A))).
-      refine (List.fold_left _ L' (snd L)).
-      exact (fun t decl => tProd decl.(decl_name) decl.(decl_type) t).
-    + (* constructors *)
-      refine (map_i _ ind.(ind_ctors)).
-      intros k ((name, typ), nargs).
-      refine (tsl_ident name, _, nargs).
-      refine (replace (proj1 (tRel 0)) (tRel 0) _). (* todo mutual *)
+  refine (let LI := List.split (map_i _ mind.(ind_bodies)) in
+          ret (List.concat (Datatypes.fst LI),
+               [{| ind_npars := mind.(ind_npars);
+                   ind_bodies := Datatypes.snd LI |}])).
+  intros i ind.
+  simple refine (let ind_type' := _ in
+                 let ctors' := List.split (map_i _ ind.(ind_ctors)) in
+                 (_ :: Datatypes.fst ctors',
+                  {| ind_name := tsl_ident ind.(ind_name);
+                     ind_type := ind_type';
+                     ind_kelim := ind.(ind_kelim);
+                     ind_ctors := Datatypes.snd ctors';
+                     ind_projs := [] |})).
+  + (* arity *)
+    refine (let L := decompose_prod ind.(ind_type) in _).
+    simple refine (let L' := List.fold_left _ (combine' (Datatypes.fst L)) [] in _).
+    exact (fun Γ' A => Γ' ,, vass (Datatypes.fst A) (tsl Γ' (Datatypes.snd A))).
+    refine (List.fold_left _ L' (Datatypes.snd L)).
+    exact (fun t decl => tProd decl.(decl_name) decl.(decl_type) t).
+  + (* constructors *)
+    intros k ((name, typ), nargs).
+    simple refine (let ctor_type' := _ in
+                   ((ConstructRef (mkInd kn i) k,
+                     pouet (tConstruct (mkInd kn' i) k []) _),
+                    (tsl_ident name, ctor_type', nargs))).
+    * refine (fold_left_i (fun t i _ => replace (proj1 (tRel i)) (tRel i) t)
+                          mind.(ind_bodies) _).
       refine (let L := decompose_prod typ in _).
-      simple refine (let L' := List.fold_left _ (combine' (fst L)) [] in _).
-      exact (fun Γ' A => Γ' ,, vass (fst A) (tsl Γ' (snd A))).
-      refine (List.fold_left _ L' (tsl L' (snd L))).
+      simple refine (let L' := List.fold_left _ (combine' (Datatypes.fst L)) [] in _).
+      exact (fun Γ' A => Γ' ,, vass (Datatypes.fst A) (tsl Γ' (Datatypes.snd A))).
+      refine (List.fold_left _ L' _).
       exact (fun t decl => tProd decl.(decl_name) decl.(decl_type) t).
-
-      (* refine (match snd L with *)
-      (*         | tApp t us => tApp t (List.map (tsl L') us) *)
-      (*         | t => t *)
-      (*         end). *)
-
+      exact (match Datatypes.snd L with
+             | tApp t us => tApp t (List.map (tsl L') us)
+             | _ as t => t
+             end).
+    * refine (fold_left_i (fun t l _ => replace (tRel l) (tInd (mkInd kn' i) []) t)
+                          mind.(ind_bodies) ctor_type').
+  + (* table *)
+    refine (IndRef (mkInd kn i), pouet (tInd (mkInd kn' i) []) ind_type').
 Defined.
 
-
-Require Import Vector.
-
-Run TemplateProgram (d <- tmQuoteInductive "eq" ;;
-                     d' <- tmEval lazy (tsl_mind_decl [] "nat" d) ;;
-                     tmPrint d' ;;
-                     e' <- tmEval lazy (mind_decl_to_entry d') ;;
-                     tmMkInductive e').
-
-
-(* Definition tsl_inductive (ΣE : tsl_context) (id : ident) *)
-(*            (mind : minductive_decl) *)
-(*   : tsl_result (tsl_table * list minductive_decl). *)
-(* Proof. *)
-
-
-
-(*   refine (if List.forallb () minductive_decl *)
-(*   refine (Success (_, [])). *)
-(*   refine (List.concat (map_i _ mind.(ind_bodies))). *)
-(*   intros i ind. exact [(IndRef (mkInd id i), tInd (mkInd id i) [])]. *)
-(* Defined. *)
+Open Scope prod_scope.
 
 Instance tsl_fun : Translation
   := {| tsl_id := tsl_ident ;
-        tsl_tm := fun ΣE => tsl_rec fuel (fst ΣE) (snd ΣE) [] ;
-        tsl_ty := fun ΣE => tsl_rec fuel (fst ΣE) (snd ΣE) [] ;
-        tsl_ind := todo |}.
-
-
-Definition T := forall A, A -> A.
-Definition u : T := fun A x => x.
-
-Open Scope sigma_scope.
-
-Run TemplateProgram (SE <- tTranslate _ ([],[]) "T" ;;
-                     tTranslate _ SE "u" >>= tmPrint).
+        tsl_tm := fun ΣE => tsl_rec fuel (Datatypes.fst ΣE) (Datatypes.snd ΣE) [] ;
+        tsl_ty := fun ΣE => tsl_rec fuel (Datatypes.fst ΣE) (Datatypes.snd ΣE) [] ;
+        tsl_ind := tsl_mind_decl |}.
 
 
 
-Run TemplateProgram (tImplement _ ([],[]) "notFunext"
-    ((forall (A B : Set) (f g : A -> B), (forall x:A, f x = g x) -> f = g) -> False)
-    >>= tmPrint).
+Run TemplateProgram (TC <- tTranslate ([],[]) "eq" ;;
+                     TC <- tTranslate TC "False" ;;
+                     tImplement TC "notFunext"
+                     ((forall (A B : Set) (f g : A -> B), (forall x:A, f x = g x) -> f = g) -> False)).
+
+Lemma eqᵗ_eq A (x y : A) (p : eqᵗ A x y) : x = y.
+  now destruct p.
+Qed.
+
 Next Obligation.
   refine (fun H => _; true).
-  apply π1 in H; specialize (H unit).
-  apply π1 in H; specialize (H unit).
-  apply π1 in H; specialize (H (fun x => x; true)).
-  apply π1 in H; specialize (H (fun x => x; false)).
-  apply π1 in H; specialize (H (fun x => eq_refl; true)).
-  discriminate.
+  apply fst in H; specialize (H unit).
+  apply fst in H; specialize (H unit).
+  apply fst in H; specialize (H (fun x => x; true)).
+  apply fst in H; specialize (H (fun x => x; false)).
+  apply fst in H; specialize (H (fun x => eq_reflᵗ _ _; true)).
+  apply eqᵗ_eq in H; discriminate.
 Defined.
+
+
+
+Require Import Vector Even.
+Fail Run TemplateProgram (TC <- tTranslate ([],[]) "nat" ;;
+                     TC <- tTranslate TC "t" ;; ret tt).
+                     (* TC <- tTranslate TC "even" ;; ret tt). *)

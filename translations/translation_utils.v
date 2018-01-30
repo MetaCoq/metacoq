@@ -1,4 +1,4 @@
-From Template Require Import Ast Typing Checker LiftSubst monad_utils utils Template.
+Require Import Template.All.
 Require Import List.
 Import ListNotations MonadNotation String.
 Open Scope string_scope.

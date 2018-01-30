@@ -1,6 +1,4 @@
-(* Require Import ssreflect ssrfun ssrbool. *)
-(* From mathcomp Require Import all_ssreflect. *)
-From Template Require Import Template Ast monad_utils Induction LiftSubst Typing Checker utils.
+Require Import Template.All.
 Require Import Arith.Compare_dec.
 From Translations Require Import translation_utils.
 Import String List Lists.List.ListNotations MonadNotation.

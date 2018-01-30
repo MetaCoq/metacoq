@@ -14,3 +14,4 @@ theories/Typing.v
 theories/monad_utils.v
 theories/Checker.v
 theories/utils.v
+theories/All.v

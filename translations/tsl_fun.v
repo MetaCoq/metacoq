@@ -1,4 +1,4 @@
-From Template Require Import Template Ast monad_utils Induction LiftSubst Typing Checker utils.
+Require Import Template.All.
 From Translations Require Import translation_utils.
 Import String Lists.List.ListNotations MonadNotation.
 Open Scope list_scope. Open Scope string_scope.

@@ -1,7 +1,6 @@
 Require Import ssreflect ssrfun ssrbool.
 From mathcomp Require Import all_ssreflect.
-Require Import Template.Template Template.Ast Template.monad_utils Translations.sigma.
-Require Import Template.Induction Template.LiftSubst Template.Typing Template.Checker.
+Require Import Template.All.
 Require Import Arith.Compare_dec.
 Require Import  Translations.translation_utils.
 Import String Lists.List.ListNotations MonadNotation.

@@ -200,19 +200,9 @@ Fixpoint tsl_rec (fuel : nat) (Σ : global_context) (Γ : context) (t : sterm)
       p' <- tsl_rec fuel Σ Γ p ;;
       match @infer (Build_Fuel fuel) Σ Γ p' with
       (* I would hope for a better way *)
+      (* This is probably buggy as it doesn't care for lifts and such *)
       (* | Checked (tApp (tInd (mkInd "Top.heq" 0) _) [ A' ; u' ; _ ; v' ]) => *)
-      | Checked (tApp (tInd (mkInd "Coq.Init.Specif.sigT" 0) [])
-              [tApp (tInd (mkInd "Coq.Init.Logic.eq" 0) []) [ _ ; A' ; B' ];
-              tLambda _ (tApp (tInd (mkInd "Coq.Init.Logic.eq" 0) []) [ tSort _ ; _ ; _ ])
-                (tApp (tInd (mkInd "Coq.Init.Logic.eq" 0) [])
-                   [ _ ;
-                     tApp
-                     (tCase (mkInd "Coq.Init.Logic.eq" 0, 2)
-                        (tLambda _ (tSort _)
-                           (tLambda _
-                              (tApp (tInd (mkInd "Coq.Init.Logic.eq" 0) []) [ tSort  _ ; _ ; _ ])
-                              (tProd _ _ _))) _ [(0, tLambda _ _ _)])
-                     [ u' ]; v' ])]) =>
+      | Checked (tApp _ [tApp _ [ _ ; A' ; _ ]; tLambda _ _ (tApp _ [ _ ; tApp _ [ _ ; _ ; _ ; u' ] ; v' ])]) =>
         ret (mkHeqToHeq A' u' v' p')
       (* That's not really the correct error but well. *)
       | Checked T => raise (TypingError (NotAnInductive T))
@@ -225,22 +215,9 @@ Fixpoint tsl_rec (fuel : nat) (Σ : global_context) (Γ : context) (t : sterm)
     | sHeqSym p =>
       p' <- tsl_rec fuel Σ Γ p ;;
       match @infer (Build_Fuel fuel) Σ Γ p' with
-      (* I'm not sure that's the correct way to check we're dealing with heq *)
       (* | Checked (tApp (tInd (mkInd "Top.heq" 0) _) [ A' ; a' ; B' ; b' ]) => *)
-      | Checked (tApp (tInd (mkInd "Coq.Init.Specif.sigT" 0) [])
-              [tApp (tInd (mkInd "Coq.Init.Logic.eq" 0) []) [ _ ; A' ; B' ];
-              tLambda _ (tApp (tInd (mkInd "Coq.Init.Logic.eq" 0) []) [ tSort _ ; _ ; _ ])
-                (tApp (tInd (mkInd "Coq.Init.Logic.eq" 0) [])
-                   [ _ ;
-                     tApp
-                     (tCase (mkInd "Coq.Init.Logic.eq" 0, 2)
-                        (tLambda _ (tSort _)
-                           (tLambda _
-                              (tApp (tInd (mkInd "Coq.Init.Logic.eq" 0) []) [ tSort  _ ; _ ; _ ])
-                              (tProd _ _ _))) _ [(0, tLambda _ _ _)])
-                     [ a' ]; b' ])]) =>
+      | Checked (tApp _ [tApp _ [ _ ; A' ; B' ]; tLambda _ _ (tApp _ [ _ ; tApp _ [ _ ; _ ; _ ; a' ] ; b' ])]) =>
         ret (mkHeqSym A' a' B' b' p')
-      (* That's not really the correct error but well. *)
       | Checked T => raise (TypingError (NotAnInductive T))
       | TypeError t => raise (TypingError t)
       end
@@ -248,11 +225,11 @@ Fixpoint tsl_rec (fuel : nat) (Σ : global_context) (Γ : context) (t : sterm)
       p' <- tsl_rec fuel Σ Γ p ;;
       q' <- tsl_rec fuel Σ Γ q ;;
       match @infer (Build_Fuel fuel) Σ Γ p' with
-      (* I'm not sure that's the correct way to check we're dealing with heq *)
-      | Checked (tApp (tInd (mkInd "Top.heq" 0) _) [ A' ; a' ; B' ; b' ]) =>
+      (* | Checked (tApp (tInd (mkInd "Top.heq" 0) _) [ A' ; a' ; B' ; b' ]) => *)
+      | Checked (tApp _ [tApp _ [ _ ; A' ; B' ]; tLambda _ _ (tApp _ [ _ ; tApp _ [ _ ; _ ; _ ; a' ] ; b' ])]) =>
         match @infer (Build_Fuel fuel) Σ Γ q' with
-        (* I'm not sure that's the correct way to check we're dealing with heq *)
-        | Checked (tApp (tInd (mkInd "Top.heq" 0) _) [ _ ; _ ; C' ; c' ]) =>
+        (* | Checked (tApp (tInd (mkInd "Top.heq" 0) _) [ _ ; _ ; C' ; c' ]) => *)
+        | Checked (tApp _ [tApp _ [ _ ; _ ; C' ]; tLambda _ _ (tApp _ [ _ ; tApp _ [ _ ; _ ; _ ; _ ] ; c' ])]) =>
           ret (mkHeqTrans A' a' B' b' C' c' p' q')
         (* That's not really the correct error but well. *)
         | Checked T => raise (TypingError (NotAnInductive T))

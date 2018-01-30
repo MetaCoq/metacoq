@@ -147,7 +147,6 @@ Definition mkHeqSym (A a B b p : term) : term :=
 Definition mkHeqTrans (A a B b C c p q : term) : term :=
   tApp tHeqTrans [ A ; a ; B ; b ; C ; c ; p ; q ].
 
-(* TODO Use fuel when needed *)
 Fixpoint tsl_rec (fuel : nat) (Σ : global_context) (Γ : context) (t : sterm)
   : tsl_result term :=
   match fuel with
@@ -199,7 +198,7 @@ Fixpoint tsl_rec (fuel : nat) (Σ : global_context) (Γ : context) (t : sterm)
       ret (mkHeq A' a' B' b')
     | sHeqToEq p =>
       p' <- tsl_rec fuel Σ Γ p ;;
-      match infer Σ Γ p' with
+      match @infer (Build_Fuel fuel) Σ Γ p' with
       (* I'm not sure that's the correct way to check we're dealing with heq *)
       | Checked (tApp (tInd (mkInd "Top.heq" 0) _) [ A' ; u' ; _ ; v' ]) =>
         ret (mkHeqToHeq A' u' v' p')
@@ -213,7 +212,7 @@ Fixpoint tsl_rec (fuel : nat) (Σ : global_context) (Γ : context) (t : sterm)
       ret (mkHeqRefl A' a')
     | sHeqSym p =>
       p' <- tsl_rec fuel Σ Γ p ;;
-      match infer Σ Γ p' with
+      match @infer (Build_Fuel fuel) Σ Γ p' with
       (* I'm not sure that's the correct way to check we're dealing with heq *)
       | Checked (tApp (tInd (mkInd "Top.heq" 0) _) [ A' ; a' ; B' ; b' ]) =>
         ret (mkHeqSym A' a' B' b' p')
@@ -224,10 +223,10 @@ Fixpoint tsl_rec (fuel : nat) (Σ : global_context) (Γ : context) (t : sterm)
     | sHeqTrans p q =>
       p' <- tsl_rec fuel Σ Γ p ;;
       q' <- tsl_rec fuel Σ Γ q ;;
-      match infer Σ Γ p' with
+      match @infer (Build_Fuel fuel) Σ Γ p' with
       (* I'm not sure that's the correct way to check we're dealing with heq *)
       | Checked (tApp (tInd (mkInd "Top.heq" 0) _) [ A' ; a' ; B' ; b' ]) =>
-        match infer Σ Γ q' with
+        match @infer (Build_Fuel fuel) Σ Γ q' with
         (* I'm not sure that's the correct way to check we're dealing with heq *)
         | Checked (tApp (tInd (mkInd "Top.heq" 0) _) [ _ ; _ ; C' ; c' ]) =>
           ret (mkHeqTrans A' a' B' b' C' c' p' q')
@@ -377,10 +376,10 @@ Make Definition heq_refl_t :=
              )
       in exact t
   ).
-Fail Make Definition heq_sym_t :=
+Make Definition heq_sym_t :=
   ltac:(
     let t := eval compute in
-             (match tsl_rec (2 ^ 2) Σ []
+             (match tsl_rec (2 ^ 16) Σ []
                            (sHeqSym ((sHeqRefl (sSort (succ_sort sSet)) (sSort sSet))))
               with
               | Success t => t
@@ -389,10 +388,10 @@ Fail Make Definition heq_sym_t :=
              )
       in exact t
   ).
-Fail Make Definition heq_sym_t :=
+Make Definition heq_trans_t :=
   ltac:(
     let t := eval compute in
-             (match tsl_rec (2 ^ 2) Σ []
+             (match tsl_rec (2 ^ 16) Σ []
                            (sHeqTrans ((sHeqRefl (sSort (succ_sort sSet)) (sSort sSet)))
                                       ((sHeqRefl (sSort (succ_sort sSet)) (sSort sSet))))
               with

@@ -86,11 +86,53 @@ Definition mkFunext (A B f g e : term) : term :=
 Definition heq {A} (a : A) {B} (b : B) :=
   { p : A = B & transport p a = b }.
 
+Notation "A ≅ B" := (heq A B) (at level 20).
+
+Lemma heq_to_eq :
+  forall {A} {u v : A},
+    u ≅ v -> u = v.
+Proof.
+  intros A u v h.
+  destruct h as [e p].
+  assert (e = eq_refl) by (apply UIP). subst.
+  reflexivity.
+Defined.
+
+Lemma heq_refl : forall {A} (a : A), a ≅ a.
+Proof.
+  intros A a.
+  exists eq_refl.
+  reflexivity.
+Defined.
+
+Lemma heq_sym :
+  forall {A} (a : A) {B} (b : B),
+    a ≅ b -> b ≅ a.
+Proof.
+  intros A a B b h.
+  destruct h as [p e].
+  destruct p. simpl in e.
+  exists eq_refl. now symmetry.
+Defined.
+
 Quote Definition tHeq := @heq.
+Quote Definition tHeqToHeq := @heq_to_eq.
+Quote Definition tHeqRefl := @heq_refl.
+Quote Definition tHeqSym := @heq_sym.
 
 Definition mkHeq (A a B b : term) : term :=
   tApp tHeq [ A ; a ; B ; b ].
 
+Definition mkHeqToHeq (A u v p : term) : term :=
+  tApp tHeqToHeq [ A ; u ; v ; p ].
+
+Definition mkHeqRefl (A a : term) : term :=
+  tApp tHeqRefl [ A ; a ].
+
+Definition mkHeqSym (A a B b p : term) : term :=
+  tApp tHeqSym [ A ; a ; B ; b ; p ].
+
+(* TODO Use fuel when needed *)
 Fixpoint tsl_rec (fuel : nat) (Σ : global_context) (Γ : context) (t : sterm)
   : tsl_result term :=
   match fuel with
@@ -113,12 +155,6 @@ Fixpoint tsl_rec (fuel : nat) (Σ : global_context) (Γ : context) (t : sterm)
       ret (tApp u' [v'])
     | sEq A u v =>
       A' <- tsl_rec fuel Σ Γ A ;;
-      (* match infer Σ Γ A' with *)
-      (* | Checked (tSort s) => *)
-
-      (* | Checked T => raise (TypingError (NotASort T)) *)
-      (* | TypeError t => raise (TypingError t) *)
-      (* end *)
       u' <- tsl_rec fuel Σ Γ u ;;
       v' <- tsl_rec fuel Σ Γ v ;;
       ret (mkEq A' u' v')
@@ -140,6 +176,36 @@ Fixpoint tsl_rec (fuel : nat) (Σ : global_context) (Γ : context) (t : sterm)
       p' <- tsl_rec fuel Σ Γ p ;;
       t' <- tsl_rec fuel Σ Γ t ;;
       ret (mkTransport T1' T2' p' t')
+    | sHeq A a B b =>
+      A' <- tsl_rec fuel Σ Γ A ;;
+      B' <- tsl_rec fuel Σ Γ B ;;
+      a' <- tsl_rec fuel Σ Γ a ;;
+      b' <- tsl_rec fuel Σ Γ b ;;
+      ret (mkHeq A' a' B' b')
+    | sHeqToEq p =>
+      p' <- tsl_rec fuel Σ Γ p ;;
+      match infer Σ Γ p' with
+      (* I'm not sure that's the correct way to check we're dealing with heq *)
+      | Checked (tApp (tInd (mkInd "Top.heq" 0) _) [ A' ; u' ; _ ; v' ]) =>
+        ret (mkHeqToHeq A' u' v' p')
+      (* That's not really the correct error but well. *)
+      | Checked T => raise (TypingError (NotAnInductive T))
+      | TypeError t => raise (TypingError t)
+      end
+    | sHeqRefl A a =>
+      A' <- tsl_rec fuel Σ Γ A ;;
+      a' <- tsl_rec fuel Σ Γ a ;;
+      ret (mkHeqRefl A' a')
+    | sHeqSym p =>
+      p' <- tsl_rec fuel Σ Γ p ;;
+      match infer Σ Γ p' with
+      (* I'm not sure that's the correct way to check we're dealing with heq *)
+      | Checked (tApp (tInd (mkInd "Top.heq" 0) _) [ A' ; a' ; B' ; b' ]) =>
+        ret (mkHeqSym A' a' B' b' p')
+      (* That's not really the correct error but well. *)
+      | Checked T => raise (TypingError (NotAnInductive T))
+      | TypeError t => raise (TypingError t)
+      end
     | _ => raise TranslationNotHandled
     end
   end.

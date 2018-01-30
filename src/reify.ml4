@@ -90,6 +90,25 @@ module Mindset = Names.Mindset
 type ('a,'b) sum =
   Left of 'a | Right of 'b
 
+type ('term, 'nat, 'ident, 'name, 'quoted_sort, 'cast_kind, 'kername, 'inductive, 'universe_instance) kind_of_term =
+  | Coq_tRel of 'nat
+  | Coq_tVar of 'ident
+  | Coq_tMeta of 'nat
+  | Coq_tEvar of 'nat * 'term list
+  | Coq_tSort of 'quoted_sort
+  | Coq_tCast of 'term * 'cast_kind * 'term
+  | Coq_tProd of 'name * 'term * 'term
+  | Coq_tLambda of 'name * 'term * 'term
+  | Coq_tLetIn of 'name * 'term * 'term * 'term
+  | Coq_tApp of 'term * 'term list
+  | Coq_tConst of 'kername * 'universe_instance
+  | Coq_tInd of 'inductive * 'universe_instance
+  | Coq_tConstruct of 'inductive * 'nat * 'universe_instance
+  | Coq_tCase of ('inductive * 'nat) * 'term * 'term * ('nat * 'term) list
+  | Coq_tProj of 'projection * 'term
+  | Coq_tFix of term mfixpoint * 'nat
+  | Coq_tCoFix of term mfixpoint * 'nat
+      
 module type Quoter = sig
   type t
 
@@ -119,6 +138,8 @@ module type Quoter = sig
   type quoted_sort_family
 
   open Names
+  
+  
 
   val quote_ident : Id.t -> quoted_ident
   val quote_name : Name.t -> quoted_name

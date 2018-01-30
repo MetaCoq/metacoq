@@ -92,7 +92,7 @@ struct
     | VMcast -> VmCast
 
   let quote_kn kn = quote_string (Names.string_of_kn kn)
-  let quote_inductive (kn, i) = Coq_mkInd (kn, i)
+  let quote_inductive (kn, i) = { inductive_mind = kn ; inductive_ind = i }
   let quote_proj ind p a = ((ind,p),a)
 
   let mkAnon = Coq_nAnon

@@ -17,7 +17,6 @@ Definition universe := list (level * bool). (* true if it is level+1 *)
 Definition uProp : universe := [(lProp, false)].
 Definition uSet : universe := [(lSet, false)].
 
-Record ind : Set := {} .
 
 Inductive sort_family : Set :=
 | InProp | InSet | InType.
@@ -32,10 +31,19 @@ Inductive cast_kind : Set :=
 | Cast
 | RevertCast.
 
-Inductive inductive : Set :=
-| mkInd : kername -> nat -> inductive.
+Record inductive : Set := mkInd { inductive_mind : kername ;
+                                  inductive_ind : nat }.
 Arguments mkInd _%string _%nat.
 
+Definition projection : Set := inductive * nat (* params *) * nat (* argument *).
+
+Inductive global_reference :=
+(* VarRef of Names.variable *)
+| ConstRef : kername -> global_reference
+| IndRef : inductive -> global_reference
+| ConstructRef : inductive -> nat -> global_reference.
+
+(* Parametrized by term because term is not yet defined *)
 Record def (term : Set) : Set := mkdef
 { dname : name (** the name (note, this may mention other definitions **)
 ; dtype : term
@@ -45,8 +53,6 @@ Record def (term : Set) : Set := mkdef
 
 Definition mfixpoint (term : Set) : Set :=
   list (def term).
-
-Definition projection : Set := inductive * nat (* params *) * nat (* argument *).
 
 Definition universe_instance : Set := list level.
 
@@ -82,36 +88,19 @@ Record inductive_body :=
       ind_projs : list (ident * term) (* names and types of projections, if any.
                                      Type under context of params and inductive object *) }.
 
-Inductive program : Set :=
-| PConstr : string -> universe_instance -> term (* type *) -> term (* body *) -> program -> program
-| PType   : ident -> nat (* # of parameters, w/o let-ins *) ->
-            list inductive_body (* Non-empty *) -> program -> program
-| PAxiom  : ident -> universe_instance -> term (* the type *) -> program -> program
-| PIn     : term -> program.
-
+Record minductive_decl :=
+  { ind_npars : nat;
+    ind_bodies : list inductive_body }.
 
 Record constant_decl :=
   { cst_universes : universe_instance;
     cst_type : term;
     cst_body : option term }.
 
-Record minductive_decl :=
-  { ind_npars : nat;
-    ind_bodies : list inductive_body }.
-
 Inductive global_decl :=
 | ConstantDecl : kername -> constant_decl -> global_decl
 | InductiveDecl : kername -> minductive_decl -> global_decl.
 
-Definition extend_program (p : program) (d : global_decl) : program :=
-  match d with
-  | ConstantDecl i {| cst_universes := u; cst_type:=ty;  cst_body:=Some body |}
-    => PConstr i u (* TODO universes *) ty body p
-  | ConstantDecl i {| cst_universes := u; cst_type:=ty;  cst_body:=None |}
-    => PAxiom i u ty p
-  | InductiveDecl i {| ind_npars:=n; ind_bodies := l |}
-    => PType i n l p
-  end.
 
 (** representation of mutual inductives. nearly copied from Coq/kernel/entries.mli
 *)
@@ -126,9 +115,6 @@ then, in i{^ th} block, [mind_entry_params] is [xn:Xn;...;x1:X1];
 [mind_entry_lc] is [Ti1;...;Tini], defined in context [[A'1;...;A'p;x1:X1;...;xn:Xn]] where [A'i] is [Ai] generalized over [[x1:X1;...;xn:Xn]].
 *)
 
-
-
-
 Record one_inductive_entry : Set := {
   mind_entry_typename : ident;
   mind_entry_arity : term;
@@ -136,17 +122,14 @@ Record one_inductive_entry : Set := {
   mind_entry_consnames : list ident;
   mind_entry_lc : list term}.
 
-
 Inductive local_entry : Set := 
 | LocalDef : term -> local_entry (* local let binding *)
 | LocalAssum : term -> local_entry.
-
 
 Inductive recursivity_kind :=
   | Finite (** = inductive *)
   | CoFinite (** = coinductive *)
   | BiFinite (** = non-recursive, like in "Record" definitions *).
-
 
 (* kernel/entries.mli*)
 Record definition_entry : Set := {
@@ -161,7 +144,6 @@ Inductive constant_entry : Set :=
 | ParameterEntry (p : parameter_entry)
 | DefinitionEntry (def : definition_entry).
 
-
 Record mutual_inductive_entry : Set := {
   mind_entry_record : option (option ident); 
   mind_entry_finite : recursivity_kind;
@@ -174,6 +156,27 @@ Record mutual_inductive_entry : Set := {
   mind_entry_private : option bool
 }.
 
+
+
+Inductive program : Set :=
+| PConstr : string -> universe_instance -> term (* type *) -> term (* body *) -> program -> program
+| PType   : ident -> nat (* # of parameters, w/o let-ins *) ->
+            list inductive_body (* Non-empty *) -> program -> program
+| PAxiom  : ident -> universe_instance -> term (* the type *) -> program -> program
+| PIn     : term -> program.
+
+Definition extend_program (p : program) (d : global_decl) : program :=
+  match d with
+  | ConstantDecl i {| cst_universes := u; cst_type:=ty;  cst_body:=Some body |}
+    => PConstr i u (* TODO universes *) ty body p
+  | ConstantDecl i {| cst_universes := u; cst_type:=ty;  cst_body:=None |}
+    => PAxiom i u ty p
+  | InductiveDecl i {| ind_npars:=n; ind_bodies := l |}
+    => PType i n l p
+  end.
+
+
+
 Inductive reductionStrategy : Set :=
   cbv | cbn | hnf | all | lazy.
 
@@ -183,12 +186,6 @@ Definition existT_typed_term a t : typed_term := @existT Type (fun T => T) a t.
 Definition my_projT1 (t : typed_term) : Type := @projT1 Type (fun T => T) t.
 Definition my_projT2 (t : typed_term) : my_projT1 t := @projT2 Type (fun T => T) t.
 
-
-Inductive global_reference :=
-(* VarRef of Names.variable *)
-| ConstRef : kername -> global_reference
-| IndRef : inductive -> global_reference
-| ConstructRef : inductive -> nat -> global_reference.
 
 (** A monad for programming with template-coq operations.
 Using this monad, it should be possible to write many plugins (e.g. paramcoq)
@@ -202,15 +199,16 @@ Inductive TemplateMonad : Type -> Prop :=
 (** ** General commands *)
 | tmPrint : forall {A:Type}, A -> TemplateMonad unit
 | tmFail : forall {A:Type}, string -> TemplateMonad A
-(** FIXME: strategy is currently ignored in the implementation -- it does all reductions.*)
 | tmEval : reductionStrategy -> forall {A:Type}, A -> TemplateMonad A
+
 (** Return the defined constant *)
 | tmDefinition : ident -> forall {A:Type}, A -> TemplateMonad A
 | tmAxiom : ident -> forall A, TemplateMonad A
-    (* todo: give a reduction strategy for the type (hnf for the moment) *)
 | tmLemma : ident -> forall A, TemplateMonad A
+
+(** Guarenteed to not cause "... already declared" error *)
 | tmFreshName : ident -> TemplateMonad ident
-    (* Guarenteed to not cause "... already declared" error *)
+
 | tmAbout : ident -> TemplateMonad (option global_reference)
 | tmCurrentModPath : unit -> TemplateMonad string
 
@@ -226,20 +224,13 @@ Inductive TemplateMonad : Type -> Prop :=
     (* unquote before making the definition *)
     (* should it take the number of polymorphically bound universes? in case
        unquoting has to be done? *)
-| tmMkInductive : mutual_inductive_entry -> TemplateMonad unit (* bool indicating success? *)
+| tmMkInductive : mutual_inductive_entry -> TemplateMonad unit
 | tmUnquote : term  -> TemplateMonad typed_term
 | tmUnquoteTyped : forall A, term -> TemplateMonad A
 
 (** ** Not yet implemented *)
 | tmExistingInstance : ident -> TemplateMonad unit
 .
-
-(** unquote then reduce then quote *)
-(* Definition tmUnQReduceQ : reductionStrategy -> term -> TemplateMonad term *)
-(*   := fun s t => tmBind (tmBind (tmUnquote t) *)
-(*                             (fun t => tmEval s (projT2 t))) *)
-(*                     tmQuoteTerm. *)
-
 
 (* This allow to use notations of MonadNotation *)
 Instance TemplateMonad_Monad : Monad TemplateMonad

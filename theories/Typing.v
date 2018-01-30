@@ -144,12 +144,6 @@ Fixpoint lookup_env (Σ : global_context) (id : ident) : option global_decl :=
 Definition declared_constant (Σ : global_context) (id : ident) decl : Prop :=
   lookup_env Σ id = Some (ConstantDecl id decl).
 
-Definition inductive_mind (i : inductive) :=
-  let 'mkInd s _ := i in s.
-
-Definition inductive_ind (i : inductive) :=
-  let 'mkInd _ n := i in n.
-
 Definition declared_minductive Σ mind decl :=
   lookup_env Σ mind = Some (InductiveDecl mind decl).
 

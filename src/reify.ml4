@@ -1309,6 +1309,22 @@ struct
         let la = Array.of_list in
         Term.mkFix ((la rargs,nat_to_int i), (la names, la types, la bodies))
       | _ -> raise (Failure "tFix takes exactly 2 arguments")
+    else if Term.eq_constr h tCoFix then
+      match args with
+      | bds :: i :: _ ->
+        let unquoteFbd  b : (Term.constr * Term.constr * Term.constr) =
+          let (_,args) = app_full b [] in
+          match args with
+          | _(*type*)::a::b::c::d::[] -> ((a,b,c))
+          |_ -> raise (Failure " (mkdef must take exactly 5 arguments)")
+          in
+        let lbd = List.map unquoteFbd (from_coq_list bds) in
+        let (names,types,bodies) = CList.split3 lbd in
+        let (types,bodies) = (List.map aux types, List.map aux bodies) in
+        let names = List.map unquote_name names in
+        let la = Array.of_list in
+        Term.mkCoFix (nat_to_int i, (la names, la types, la bodies))
+      | _ -> raise (Failure "tFix takes exactly 2 arguments")
     else if Term.eq_constr h tProj then
       match args with
       | [ proj ; t ] ->

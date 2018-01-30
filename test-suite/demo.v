@@ -337,7 +337,6 @@ Make Definition x := (tProj (mkInd "prod'" 0, 2, 1)
               [tApp (tConstruct (mkInd "Coq.Init.Datatypes.nat" 0) 1 nil)
                  [tConstruct (mkInd "Coq.Init.Datatypes.nat" 0) 0 nil]]]]])).
 
-
 (** Universes *)
 
 Set Printing Universes.
@@ -354,3 +353,15 @@ Make Definition myProp := (tSort [(lProp, false)]).
 Make Definition mySucProp := (tSort [(lProp, true)]).
 Make Definition mySet := (tSort [(lSet, false)]).
 Print Universes.
+
+(** Cofixpoints *)
+CoInductive streamn : Set :=
+  scons : nat -> streamn -> streamn.
+
+CoFixpoint ones : streamn := scons 1 ones.
+
+Quote Definition ones_syntax := Eval compute in ones.
+
+Make Definition ones' := ltac:(let t:= eval compute in ones_syntax in exact t).
+
+Check eq_refl : ones = ones'.

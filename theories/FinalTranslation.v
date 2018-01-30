@@ -126,11 +126,52 @@ Proof.
   now transitivity b.
 Defined.
 
+Lemma heq_transport :
+  forall {T T'} (p : T = T') (t : T),
+    t ≅ transport p t.
+Proof.
+  intros T T' p t.
+  exists p. reflexivity.
+Defined.
+
+Record Pack A1 A2 := pack {
+  ProjT1 : A1 ;
+  ProjT2 : A2 ;
+  ProjTe : ProjT1 ≅ ProjT2
+}.
+
+Arguments pack {_ _} _ _ _.
+Arguments ProjT1 {_ _} _.
+Arguments ProjT2 {_ _} _.
+Arguments ProjTe {_ _} _.
+
+Lemma cong_prod :
+  forall (A1 A2 : Type) (B1 : A1 -> Type) (B2 : A2 -> Type),
+    A1 ≅ A2 ->
+    (forall (p : Pack A1 A2), B1 (ProjT1 p) ≅ B2 (ProjT2 p)) ->
+    (forall x, B1 x) ≅ (forall y, B2 y).
+Proof.
+  intros A1 A2 B1 B2 hA hB.
+  exists eq_refl. simpl.
+  destruct hA as [pT pA]. rewrite (UIP pT eq_refl) in pA.
+  simpl in pA. clear pT. destruct pA. rename A1 into A.
+  assert (pB : B1 = B2).
+  { apply funext. intro x.
+    destruct (hB (pack x x (heq_refl x))) as [pT pB]. cbn in pB.
+    rewrite (UIP pT eq_refl) in pB. simpl in pB. clear pT.
+    exact pB.
+  }
+  now destruct pB.
+Defined.
+
 Quote Definition tHeq := @heq.
 Quote Definition tHeqToEq := @heq_to_eq.
 Quote Definition tHeqRefl := @heq_refl.
 Quote Definition tHeqSym := @heq_sym.
 Quote Definition tHeqTrans := @heq_trans.
+Quote Definition tHeqTransport := @heq_transport.
+Quote Definition tPack := @Pack.
+Quote Definition tCongProd := @cong_prod.
 
 Definition mkHeq (A a B b : term) : term :=
   tApp tHeq [ A ; a ; B ; b ].
@@ -146,6 +187,15 @@ Definition mkHeqSym (A a B b p : term) : term :=
 
 Definition mkHeqTrans (A a B b C c p q : term) : term :=
   tApp tHeqTrans [ A ; a ; B ; b ; C ; c ; p ; q ].
+
+Definition mkHeqTransport (A B p t : term) : term :=
+  tApp tHeqTransport [ A ; B ; p ; t ].
+
+Definition mkPack (A1 A2 : term) : term :=
+  tApp tPack [ A1 ; A2 ].
+
+(* TODO *)
+(* Definition mkCongProd (A1 A2 B1 B2 pA pB) *)
 
 Fixpoint tsl_rec (fuel : nat) (Σ : global_context) (Γ : context) (t : sterm)
   : tsl_result term :=
@@ -231,14 +281,22 @@ Fixpoint tsl_rec (fuel : nat) (Σ : global_context) (Γ : context) (t : sterm)
         (* | Checked (tApp (tConst "Top.heq" []) [ _ ; _ ; C' ; c' ]) => *)
         | Checked (tApp _ [tApp _ [ _ ; _ ; C' ]; tLambda _ _ (tApp _ [ _ ; tApp _ [ _ ; _ ; _ ; _ ] ; c' ])]) =>
           ret (mkHeqTrans A' a' B' b' C' c' p' q')
-        (* That's not really the correct error but well. *)
         | Checked T => raise (TypingError (NotAnInductive T))
         | TypeError t => raise (TypingError t)
         end
-      (* That's not really the correct error but well. *)
       | Checked T => raise (TypingError (NotAnInductive T))
       | TypeError t => raise (TypingError t)
       end
+    | sHeqTransport p t =>
+      p' <- tsl_rec fuel Σ Γ p ;;
+      t' <- tsl_rec fuel Σ Γ t ;;
+      match @infer (Build_Fuel fuel) Σ Γ p' with
+      | Checked (tApp (tInd (mkInd "Coq.Init.Logic.eq" 0) _) [ _ ; A' ; B' ]) =>
+        ret (mkHeqTransport A' B' p' t')
+      | Checked T => raise (TypingError (NotAnInductive T))
+      | TypeError t => raise (TypingError t)
+      end
+    (* | sCongProd pA pB => *)
     | _ => raise TranslationNotHandled
     end
   end.
@@ -332,6 +390,10 @@ Quote Recursively Definition heq_trans_prog := @heq_trans.
 Definition heq_trans_decl :=
   Eval compute in (get_cdecl "Top.heq_trans" heq_trans_prog).
 
+Quote Recursively Definition heq_transport_prog := @heq_transport.
+Definition heq_transport_decl :=
+  Eval compute in (get_cdecl "Top.heq_transport" heq_transport_prog).
+
 Definition Σ : global_context :=
   [ InductiveDecl "Coq.Init.Logic.eq" eq_decl ;
     ConstantDecl "Top.J" J_decl ;
@@ -342,7 +404,8 @@ Definition Σ : global_context :=
     ConstantDecl "Top.heq_to_eq" heq_to_eq_decl ;
     ConstantDecl "Top.heq_refl" heq_refl_decl ;
     ConstantDecl "Top.heq_sym" heq_sym_decl ;
-    ConstantDecl "Top.heq_trans" heq_trans_decl
+    ConstantDecl "Top.heq_trans" heq_trans_decl ;
+    ConstantDecl "Top.heq_transport" heq_transport_decl
   ].
 
 (* Checking for the sake of checking *)
@@ -357,6 +420,7 @@ Compute (infer Σ [] tHeqToEq).
 Compute (infer Σ [] tHeqRefl).
 Compute (infer Σ [] tHeqSym).
 Compute (infer Σ [] tHeqTrans).
+Compute (infer Σ [] tHeqTransport).
 
 Make Definition eq' := ltac:(let t := eval compute in tEq in exact t).
 Make Definition eq_refl' := ltac:(let t := eval compute in tRefl in exact t).

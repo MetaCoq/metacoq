@@ -402,6 +402,9 @@ Make Definition heq_trans_t :=
       in exact t
   ).
 
+Eval compute in (tsl_rec (2 ^ 16) Σ []
+                         (sHeqSym ((sHeqRefl (sSort (succ_sort sSet)) (sSort sSet))))).
+
 Theorem soundness :
   forall {Γ t A},
     Σ ;;; Γ |-i t : A ->

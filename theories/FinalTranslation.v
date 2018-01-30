@@ -116,7 +116,7 @@ Proof.
 Defined.
 
 Quote Definition tHeq := @heq.
-Quote Definition tHeqToHeq := @heq_to_eq.
+Quote Definition tHeqToEq := @heq_to_eq.
 Quote Definition tHeqRefl := @heq_refl.
 Quote Definition tHeqSym := @heq_sym.
 
@@ -124,7 +124,7 @@ Definition mkHeq (A a B b : term) : term :=
   tApp tHeq [ A ; a ; B ; b ].
 
 Definition mkHeqToHeq (A u v p : term) : term :=
-  tApp tHeqToHeq [ A ; u ; v ; p ].
+  tApp tHeqToEq [ A ; u ; v ; p ].
 
 Definition mkHeqRefl (A a : term) : term :=
   tApp tHeqRefl [ A ; a ].
@@ -271,16 +271,53 @@ Quote Recursively Definition Transport_prog := @transport.
 Definition Transport_decl :=
   Eval compute in (get_cdecl "Top.transport" Transport_prog).
 
+Quote Recursively Definition UIP_prog := @UIP.
+Definition UIP_decl :=
+  Eval compute in (get_cdecl "Top.UIP" UIP_prog).
+
+Quote Recursively Definition funext_prog := @funext.
+Definition funext_decl :=
+  Eval compute in (get_cdecl "Top.funext" funext_prog).
+
+Quote Recursively Definition heq_prog := @heq.
+Definition heq_decl :=
+  Eval compute in (get_cdecl "Top.heq" heq_prog).
+
+Quote Recursively Definition heq_to_eq_prog := @heq_to_eq.
+Definition heq_to_eq_decl :=
+  Eval compute in (get_cdecl "Top.heq_to_eq" heq_to_eq_prog).
+
+Quote Recursively Definition heq_refl_prog := @heq_refl.
+Definition heq_refl_decl :=
+  Eval compute in (get_cdecl "Top.heq_refl" heq_refl_prog).
+
+Quote Recursively Definition heq_sym_prog := @heq_sym.
+Definition heq_sym_decl :=
+  Eval compute in (get_cdecl "Top.heq_sym" heq_sym_prog).
+
 Definition Σ : global_context :=
   [ InductiveDecl "Coq.Init.Logic.eq" eq_decl ;
     ConstantDecl "Top.J" J_decl ;
-    ConstantDecl "Top.transport" Transport_decl
+    ConstantDecl "Top.transport" Transport_decl ;
+    ConstantDecl "Top.UIP" UIP_decl ;
+    ConstantDecl "Top.funext" funext_decl ;
+    ConstantDecl "Top.heq" heq_decl ;
+    ConstantDecl "Top.heq_to_eq" heq_to_eq_decl ;
+    ConstantDecl "Top.heq_refl" heq_refl_decl ;
+    ConstantDecl "Top.heq_sym" heq_sym_decl
   ].
 
 (* Checking for the sake of checking *)
 Compute (infer Σ [] tEq).
 Compute (infer Σ [] tJ).
 Compute (infer Σ [] tTransport).
+(* Is this normal?? The two following have type Rel 0 *)
+Compute (infer Σ [] tUip).
+Compute (infer Σ [] tFunext).
+Compute (infer Σ [] tHeq).
+Compute (infer Σ [] tHeqToEq).
+Compute (infer Σ [] tHeqRefl).
+Compute (infer Σ [] tHeqSym).
 
 Make Definition eq' := ltac:(let t := eval compute in tEq in exact t).
 Make Definition eq_refl' := ltac:(let t := eval compute in tRefl in exact t).
@@ -304,7 +341,7 @@ Make Definition heq_refl_t :=
 Fail Make Definition heq_sym_t :=
   ltac:(
     let t := eval compute in
-             (match tsl_rec (2 ^ 7) Σ []
+             (match tsl_rec (2 ^ 2) Σ []
                            (sHeqSym ((sHeqRefl (sSort (succ_sort sSet)) (sSort sSet))))
               with
               | Success t => t

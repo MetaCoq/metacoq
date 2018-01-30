@@ -93,7 +93,7 @@ with tsl_term  (fuel : nat) (Σ : global_context) (E : tsl_table) (Γ : context)
     | Some t => ret t
     | None => raise (TranslationNotFound (string_of_gref (ConstructRef i n)))
     end
-  | t => match infer Σ Γ t with
+  | t => match infer Σ init_graph Γ t with
         | Checked typ => let t1 := tsl_rec1 0 t in
                         t2 <- tsl_rec2 fuel Σ E Γ t ;;
                         let typ1 := tsl_rec1 0 typ in
@@ -117,8 +117,8 @@ Fixpoint replace t k u {struct u} :=
   | tRel n =>
     match nat_compare k n with
     | Datatypes.Eq => t
-    | Gt => tRel n
-    | Lt => tRel n
+    | Datatypes.Gt => tRel n
+    | Datatypes.Lt => tRel n
     end
   | tEvar ev args => tEvar ev (List.map (replace t k) args)
   | tLambda na T M => tLambda na (replace t k T) (replace (lift0 1 t) (S k) M)
@@ -152,7 +152,8 @@ Definition tsl_mind_decl (ΣE : tsl_context)
                  arities2 <- monad_map tsl2' arities ;;
                  bodies <- _ ;;
                  ret (_, [{| ind_npars := mind.(ind_npars);
-                                     ind_bodies := bodies |}])).
+                             ind_bodies := bodies ;
+                 ind_universes := mind.(ind_universes)|}])).  (* FIXME always ok? *)
   (* L is [(tInd n, tRel 0); ... ; (tInd 0, tRel n)] *)
   simple refine (let L : list term := _ in _).
 

@@ -1,7 +1,6 @@
 (*i camlp4deps: "parsing/grammar.cma" i*)
 (*i camlp4use: "pa_extend.cmp" i*)
 
-open Univ
 open Term
 open Ast0
 open Reify
@@ -18,19 +17,20 @@ module TemplateASTQuoter =
 struct
   type t = term
   type quoted_ident = char list
+  type quoted_int = Datatypes.nat
+  type quoted_bool = bool
   type quoted_name = name
-  type quoted_sort = universe
-  type quoted_sort_family = sort_family
+  type quoted_sort = Univ0.universe
   type quoted_cast_kind = cast_kind
   type quoted_kernel_name = char list
   type quoted_inductive = inductive
   type quoted_decl = global_decl
   type quoted_program = program
-  type quoted_int = Datatypes.nat
-  type quoted_bool = bool
-  type quoted_proj = projection
-
-  type quoted_univ_instance = level list
+  type quoted_constraint_type = Univ0.constraint_type
+  type quoted_univ_constraint = Univ0.univ_constraint
+  type quoted_univ_instance = Univ0.Instance.t
+  type quoted_univ_constraints = Univ0.constraints
+  type quoted_univ_context = Univ0.universe_context
   type quoted_mind_params = (ident * local_entry) list
   type quoted_ind_entry =
     quoted_ident * t * quoted_bool * quoted_ident list * t list
@@ -38,6 +38,8 @@ struct
   type quoted_mind_entry = mutual_inductive_entry
   type quoted_mind_finiteness = recursivity_kind
   type quoted_entry = (constant_entry, quoted_mind_entry) sum option
+  type quoted_proj = projection
+  type quoted_sort_family = sort_family
 
   open Names
 
@@ -56,19 +58,19 @@ struct
   let quote_bool x = x
 
   let quote_level l =
-    if Level.is_prop l then Coq_lProp
-    else if Level.is_set l then Coq_lSet
-    else match Level.var_index l with
-         | Some x -> LevelVar (quote_int x)
-         | None -> Level (quote_string (Level.to_string l))
+    if Univ.Level.is_prop l then Univ0.Level.prop
+    else if Univ.Level.is_set l then Univ0.Level.set
+    else match Univ.Level.var_index l with
+         | Some x -> Univ0.Level.Var (quote_int x)
+         | None -> Univ0.Level.Level (quote_string (Univ.Level.to_string l))
 
-  let quote_universe s : universe =
+  let quote_universe s : Univ0.universe =
     (* hack because we can't recover the list of level*int *)
     (* todo : map on LSet is now exposed in Coq trunk, we should use it to remove this hack *)
-    let levels = LSet.elements (Universe.levels s) in
+    let levels = Univ.LSet.elements (Univ.Universe.levels s) in
     List.map (fun l -> let l' = quote_level l in
                        (* is indeed i always 0 or 1 ? *)
-                       let b' = quote_bool (Universe.exists (fun (l2,i) -> Level.equal l l2 && i = 1) s) in
+                       let b' = quote_bool (Univ.Universe.exists (fun (l2,i) -> Univ.Level.equal l l2 && i = 1) s) in
                        (l', b'))
              levels
 
@@ -113,6 +115,25 @@ struct
   let mkConstruct (ind, i) u = Coq_tConstruct (ind, i, u)
   let mkLetIn na b t t' = Coq_tLetIn (na,b,t,t')
 
+  let quote_constraint_type = function
+    | Univ.Lt -> Univ0.Lt
+    | Univ.Le -> Univ0.Le
+    | Univ.Eq -> Univ0.Eq
+
+  let quote_univ_constraint ((l, ct, l') : Univ.univ_constraint) : quoted_univ_constraint =
+    ((quote_level l, quote_constraint_type ct), quote_level l')
+
+  let quote_univ_instance (i : Univ.Instance.t) : quoted_univ_instance =
+    CArray.map_to_list quote_level (Univ.Instance.to_array i)
+
+  let quote_univ_constraints (c : Univ.Constraint.t) : quoted_univ_constraints =
+    List.map quote_univ_constraint (Univ.Constraint.elements c)
+
+  let quote_univ_context (uctx : Univ.UContext.t) : quoted_univ_context =
+    let levels = Univ.UContext.instance uctx  in
+    let constraints = Univ.UContext.constraints uctx in
+    (quote_univ_instance levels, quote_univ_constraints constraints)
+
   let rec seq f t =
     if f < t then
       f :: seq (f + 1) t
@@ -146,7 +167,7 @@ struct
     Coq_tCase (info,p,c,branches)
   let mkProj p c = Coq_tProj (p,c)
 
-  let mkMutualInductive kn p r =
+  let mkMutualInductive kn uctx p r =
     (* FIXME: This is a quite dummy rearrangement *)
     let r =
       List.map (fun (i,t,kelim,r,p) ->
@@ -155,7 +176,7 @@ struct
             ind_type = t;
             ind_kelim = kelim;
             ind_ctors = ctors; ind_projs = p }) r in
-    InductiveDecl (kn, {ind_npars = p; ind_bodies = r})
+    InductiveDecl (kn, {ind_npars = p; ind_bodies = r; ind_universes = uctx})
 
   let mkConstant kn u ty body =
     ConstantDecl (kn, { cst_universes = u;
@@ -169,44 +190,45 @@ struct
 
   let mkIn c = PIn c
 
-  let quote_mind_finiteness = function
-    | Decl_kinds.Finite -> Finite
-    | Decl_kinds.CoFinite -> CoFinite
-    | Decl_kinds.BiFinite -> BiFinite
+  (* let quote_mind_finiteness = function *)
+  (*   | Decl_kinds.Finite -> Finite *)
+  (*   | Decl_kinds.CoFinite -> CoFinite *)
+  (*   | Decl_kinds.BiFinite -> BiFinite *)
 
-  let quote_mind_params l =
-    let map (id, body) =
-      match body with
-      | Left ty -> (id, LocalAssum ty)
-      | Right trm -> (id, LocalDef trm)
-    in List.map map l
+  (* let quote_mind_params l = *)
+  (*   let map (id, body) = *)
+  (*     match body with *)
+  (*     | Left ty -> (id, LocalAssum ty) *)
+  (*     | Right trm -> (id, LocalDef trm) *)
+  (*   in List.map map l *)
 
-  let quote_one_inductive_entry (id, ar, b, consnames, constypes) =
-    { mind_entry_typename = id;
-      mind_entry_arity = ar;
-      mind_entry_template = b;
-      mind_entry_consnames = consnames;
-      mind_entry_lc = constypes }
+  (* let quote_one_inductive_entry (id, ar, b, consnames, constypes) = *)
+  (*   { mind_entry_typename = id; *)
+  (*     mind_entry_arity = ar; *)
+  (*     mind_entry_template = b; *)
+  (*     mind_entry_consnames = consnames; *)
+  (*     mind_entry_lc = constypes } *)
 
-  let quote_mutual_inductive_entry (mf, mp, is, poly) =
-    { mind_entry_record = None;
-      mind_entry_finite = mf;
-      mind_entry_params = mp;
-      mind_entry_inds = List.map quote_one_inductive_entry is;
-      mind_entry_polymorphic = poly;
-      mind_entry_private = None }
+  (* let quote_mutual_inductive_entry (mf, mp, is, poly, univs) = *)
+  (*   { mind_entry_record = None; *)
+  (*     mind_entry_finite = mf; *)
+  (*     mind_entry_params = mp; *)
+  (*     mind_entry_inds = List.map quote_one_inductive_entry is; *)
+  (*     mind_entry_polymorphic = poly; *)
+  (*     mind_entry_universes = univs; *)
+  (*     mind_entry_private = None } *)
 
-  let quote_entry e =
-    match e with
-    | Some (Left (ty, body)) ->
-       let entry = match body with
-        | None -> ParameterEntry ty
-        | Some b -> DefinitionEntry { definition_entry_type = ty;
-                                      definition_entry_body = b }
-       in Some (Left entry)
-    | Some (Right mind_entry) ->
-       Some (Right mind_entry)
-    | None -> None
+  (* let quote_entry e = *)
+  (*   match e with *)
+  (*   | Some (Left (ty, body)) -> *)
+  (*      let entry = match body with *)
+  (*       | None -> ParameterEntry ty *)
+  (*       | Some b -> DefinitionEntry { definition_entry_type = ty; *)
+  (*                                     definition_entry_body = b } *)
+  (*      in Some (Left entry) *)
+  (*   | Some (Right mind_entry) -> *)
+  (*      Some (Right mind_entry) *)
+  (*   | None -> None *)
 end
 
 module TemplateASTReifier = Reify(TemplateASTQuoter)

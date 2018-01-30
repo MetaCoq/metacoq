@@ -5,6 +5,8 @@ src/reify.mli
 src/reify.ml4
 src/template_plugin.mllib
 
+theories/kernel/univ.v
+theories/kernel/uGraph.v
 theories/Ast.v
 theories/Template.v
 theories/Induction.v

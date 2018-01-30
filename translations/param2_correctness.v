@@ -157,7 +157,7 @@ Definition tsl_table_correct Σ E
     lookup_tsl_table E (ConstRef id) = Some t' ->
     lookup_constant_type Σ id = Checked T ->
     exists fuel T', ((tsl_ty fuel Σ E [] T = Success T')
-      * (Σ ;;; [] |--  t' : T'))%type.
+      * (Σ ;;; init_graph ;;; [] |-  t' : T'))%type.
 
 Lemma tsl_lift fuel Σ E Γ n (p : n <= #|Γ|) t
   : tsl_term fuel Σ E Γ (lift0 n t) =
@@ -188,9 +188,9 @@ Proof. by []. Qed.
 
 Lemma typing_pair (Σ : global_context) (HΣ : declare_sigma Σ)
       Γ a1 a2 t1 t2 :
-      Σ ;;; Γ |-- t1 : a1 ->
-      Σ ;;; Γ |-- t2 : tApp a2 [t1] ->
-      Σ ;;; Γ |-- pair a1 a2 t1 t2 : pack a1 a2.
+      Σ ;;; init_graph ;;; Γ |- t1 : a1 ->
+      Σ ;;; init_graph ;;; Γ |- t2 : tApp a2 [t1] ->
+      Σ ;;; init_graph ;;; Γ |- pair a1 a2 t1 t2 : pack a1 a2.
 Proof.
   intros H H0. unfold pair, pack, tPair, tSigma.
   eapply type_App.
@@ -203,31 +203,31 @@ Abort.
 
 
     
-Lemma tsl_correct Σ Γ t T (H : Σ ;;; Γ |-- t : T)
+Lemma tsl_correct Σ Γ t T (H : Σ ;;; init_graph ;;; Γ |- t : T)
   : forall E, tsl_table_correct Σ E ->
     forall fuel Γ' t' T',
     tsl_term fuel Σ E Γ t = Success t' ->
     tsl_ty fuel Σ E Γ T = Success T' ->
-    tsl_ctx fuel Σ E Γ = Success Γ' -> Σ ;;; Γ' |-- t' : T'.
+    tsl_ctx fuel Σ E Γ = Success Γ' -> Σ ;;; init_graph ;;; Γ' |- t' : T'.
   induction H; intros;
     (destruct fuel; [discriminate|]).
-  - inversion H0.
-    destruct (tsl_ctx_safe_nth _ Σ E Γ _ H2 n isdecl) as [p H3].
+  - inversion H.
+    destruct (tsl_ctx_safe_nth _ Σ E Γ Γ' H1 n isdecl) as [p H2].
     unshelve myeapply type_Rel unifying T'. assumption.
-    apply map_context_decl_success in H3.
-    destruct H3 as [_ [_ H3]].
+    apply map_context_decl_success in H2.
+    destruct H2 as [_ [_ H2]].
     assert (Success (lift0 (S n) (decl_type (safe_nth Γ' (n; p))))
             = Success T'). {
       etransitivity; [|eassumption].
-      clear -H3. rewrite -> tsl_ty_lift. now rewrite <- H3. assumption.
-    }
-    now inversion H5.
-  - simpl in H0.
-    case t_def : tsl_rec2 => [t|//] in H0.
-    case t2_def : tsl_rec2 => [t2|//] in H0.
-    injection H0; clear H0; intro H0.
-    injection H1; clear H1; intro H1.
-    destruct H0, H1.
+  (*     clear -H3. rewrite -> tsl_ty_lift. now rewrite <- H3. assumption. *)
+  (*   } *)
+  (*   now inversion H5. *)
+  (* - simpl in H0. *)
+  (*   case t_def : tsl_rec2 => [t|//] in H0. *)
+  (*   case t2_def : tsl_rec2 => [t2|//] in H0. *)
+  (*   injection H0; clear H0; intro H0. *)
+  (*   injection H1; clear H1; intro H1. *)
+  (*   destruct H0, H1. *)
 
 
     

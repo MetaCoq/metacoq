@@ -1,5 +1,5 @@
 From Template Require Import Ast Typing Checker LiftSubst monad_utils Template.
-Require Import List.
+Require Import Bool Program List.
 Import ListNotations MonadNotation String.
 Open Scope string_scope.
 
@@ -51,8 +51,8 @@ Fixpoint extract_mind_decl_from_program (id : ident) (p : program)
   : option minductive_decl
   := match p with
      | PConstr _ _ _ _ p => extract_mind_decl_from_program id p
-     | PType id' n inds p => if string_dec id id' then
-                              Some (Build_minductive_decl n inds)
+     | PType id' uctx n inds p => if string_dec id id' then
+                              Some (Build_minductive_decl n inds uctx)
                             else extract_mind_decl_from_program id p
      | PAxiom _ _ _ p => extract_mind_decl_from_program id p
      | PIn _ => None
@@ -95,7 +95,8 @@ Proof.
             mind_entry_finite := Finite; (* inductive *)
             mind_entry_params := _;
             mind_entry_inds := _;
-            mind_entry_polymorphic := false;
+            mind_entry_polymorphic := _;
+            mind_entry_universes := decl.(ind_universes);
             mind_entry_private := None |}.
   - refine (match List.hd_error decl.(ind_bodies) with
             | Some i0 => _
@@ -119,6 +120,14 @@ Proof.
     refine (List.map (fun x => fst (fst x)) ind_ctors).
     refine (List.map (fun x => remove_arity decl.(ind_npars)
                                                 (snd (fst x))) ind_ctors).
+  - refine (let '(levels, constraints) := decl.(ind_universes) in
+            let not_var := fun l => match l with
+                                 | Level.Var _  => false
+                                 | _ => true
+                                 end in
+            forallb not_var levels
+           && Constraint.for_all (fun '((l, _), l') => not_var l && not_var l')
+           constraints).
 Defined.
 
 
@@ -149,3 +158,34 @@ Fixpoint subst_app (t : term) (us : list term) : term :=
 
 Definition tmMkInductive' (mind : minductive_decl) : TemplateMonad unit
   := tmMkInductive (mind_decl_to_entry mind).
+
+
+
+Program Fixpoint safe_nth {A} (l : list A) (n : nat | n < List.length l) : A :=
+  match l with
+  | nil => !
+  | hd :: tl =>
+    match n with
+    | 0 => hd
+    | S n => safe_nth tl n
+    end
+  end.
+Next Obligation.
+  simpl in H. inversion H.
+Defined.
+Next Obligation.
+  simpl in H. auto with arith.
+Defined.
+
+
+Lemma nth_error_safe_nth {A} n (l : list A) (isdecl : n < Datatypes.length l) :
+  nth_error l n = Some (safe_nth l (exist _ n isdecl)).
+Proof.
+  revert n isdecl; induction l; intros.
+  - inversion isdecl.
+  - destruct n as [| n']; simpl.
+    reflexivity.
+    simpl in IHl.
+    simpl in isdecl.
+    now rewrite <- IHl.
+Qed.

@@ -153,6 +153,7 @@ Admitted.
 Lemma lift_mkApps n k t us
   : lift n k (mkApps t us) = mkApps (lift n k t) (List.map (lift n k) us).
 Proof.
+  destruct us;
   destruct t; try reflexivity.
   cbn. destruct (Nat.leb k n0); try reflexivity.
   cbn. by rewrite List.map_app.
@@ -280,14 +281,14 @@ Admitted.
     (*   : tsl_rec1 E (decl_type (safe_nth Γ (n; isdecl))) = *)
     (*     decl_type (safe_nth (tsl_ctx E Γ) (2 * n + 1; isdecl')). *)
    
-Lemma tsl_correct Σ Γ t T (H : Σ ;;; Γ |-- t : T)
+Lemma tsl_correct Σ φ Γ t T (H : Σ ;;; φ ;;; Γ |- t : T)
   : forall E, tsl_table_correct Σ E ->
     let Γ' := tsl_ctx E Γ in
     let t0 := tsl_rec0 0 t in
     let t1 := tsl_rec1 E t in
     let T0 := tsl_rec0 0 T in
     let T1 := tsl_rec1 E T in
-    Σ ;;; Γ' |-- t0 : T0 /\ Σ ;;; Γ' |-- t1 : mkApps T1 [t0].
+    Σ ;;; φ ;;; Γ' |- t0 : T0 /\ Σ ;;; φ ;;; Γ' |- t1 : mkApps T1 [t0].
 Proof.
 (* elim/typing_ind: H => {Γ t T} Γ. *)
 (* - move=> n isdecl E X Γ' /=. *)

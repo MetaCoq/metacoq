@@ -136,16 +136,16 @@ Proof.
   - elim (Nat.ltb_spec n #|Γ|); intuition.
     admit (* Need induction with IHs for environments *).
   - intuition auto.
-    + eapply H2. constructor; auto.
+    + eapply H0. constructor; auto.
       red. now exists s1. 
-  - intuition; eapply H2; constructor; auto.
+  - intuition; eapply H0; constructor; auto.
     now exists s1. now exists s1. 
-  - intuition; try eapply H4; try constructor; auto.
+  - intuition; try eapply H1; try constructor; auto.
   - (* typing spine ind *) admit.
   - admit. (* easy now *)
   - admit.
   - admit.
-  - specialize (H5 H9).
+  - specialize (H4 H7).
     intuition auto. admit. admit. 
   - (* proj *) admit.
   - admit.
@@ -163,11 +163,11 @@ Proof.
   constructor. now auto with arith.
 Qed.
 
-Lemma weakening_rec Σ Γ Γ' Γ'' :
-  type_global_env Σ -> type_local_env Σ (Γ ,,, Γ') ->
+Lemma weakening_rec Σ Γ Γ' Γ'' (t : term) :
+  type_global_env (snd Σ) (fst Σ) -> type_local_env Σ (Γ ,,, Γ') ->
   type_local_env Σ (Γ ,,, Γ'' ,,, lift_context #|Γ''| 0 Γ') ->
-  `(Σ ;;; Γ ,,, Γ' |-- t : T ->
-    Σ ;;; Γ ,,, Γ'' ,,, lift_context #|Γ''| 0 Γ' |--
+  `(Σ ;;; Γ ,,, Γ' |- t : T ->
+    Σ ;;; Γ ,,, Γ'' ,,, lift_context #|Γ''| 0 Γ' |-
     lift #|Γ''| #|Γ'| t : lift #|Γ''| #|Γ'| T).
 Proof.
   intros HΣ HΓΓ' HΓ'' * H. revert Γ'' HΓ''. 
@@ -236,21 +236,21 @@ Admitted.
 Lemma type_local_env_app Σ (Γ Γ' : context) : type_local_env Σ (Γ ,,, Γ') -> type_local_env Σ Γ.
 Admitted.
 
-Lemma weakening Σ Γ Γ' :
-  type_global_env Σ -> type_local_env Σ (Γ ,,, Γ') ->
-  `(Σ ;;; Γ |-- t : T ->
-    Σ ;;; Γ ,,, Γ' |-- lift0 #|Γ'| t : lift0 #|Γ'| T).
+Lemma weakening Σ Γ Γ' (t : term) :
+  type_global_env (snd Σ) (fst Σ) -> type_local_env Σ (Γ ,,, Γ') ->
+  `(Σ ;;; Γ |- t : T ->
+    Σ ;;; Γ ,,, Γ' |- lift0 #|Γ'| t : lift0 #|Γ'| T).
 Proof.
   intros HΣ HΓΓ' * H.
-  pose (weakening_rec Σ Γ [] Γ').
+  pose (weakening_rec Σ Γ [] Γ' t).
   forward t0; eauto.
   forward t0; eauto. now eapply type_local_env_app in HΓΓ'. 
 Qed.
 
-Lemma substitution Σ Γ n u U :
-  type_global_env Σ -> type_local_env Σ Γ ->
-  `(Σ ;;; Γ ,, vass n U |-- t : T -> Σ ;;; Γ |-- u : U ->
-    Σ ;;; Γ |-- t {0 := u} : T {0 := u}).
+Lemma substitution Σ Γ n u U (t : term) :
+  type_global_env (snd Σ) (fst Σ) -> type_local_env Σ Γ ->
+  `(Σ ;;; Γ ,, vass n U |- t : T -> Σ ;;; Γ |- u : U ->
+    Σ ;;; Γ |- t {0 := u} : T {0 := u}).
 Proof.
   intros HΣ HΓ * Ht Hu.
 Admitted.

@@ -54,7 +54,7 @@ Fixpoint pocc_term (n:nat) (t:term): bool :=
 Fixpoint pocc_program (p:program): bool :=
   match p with
     | PConstr _ _ ty t q => pocc_term 2000 ty || pocc_term 2000 t || pocc_program q
-    | PType _ _ _ q =>  pocc_program q
+    | PType _ _ _ _ q =>  pocc_program q
     | PAxiom _ _ t q => pocc_term 2000 t || pocc_program q
     | PIn t =>  pocc_term 2000 t
   end.
@@ -62,7 +62,7 @@ Fixpoint pocc_program (p:program): bool :=
 Fixpoint bound_program (p:program): bool :=
   match p with
     | PConstr nm _ _ _ q
-    | PType nm _ _ q
+    | PType nm _ _ _ q
     | PAxiom nm _ _ q =>
       (if string_dec str nm then true else false) || bound_program q
     | PIn _ =>  false

@@ -22,20 +22,16 @@ Unset Template Cast Propositions.
 Definition timpl x y := tProd nAnon x (LiftSubst.lift0 1 y).
 
 Quote Recursively Definition four := (2 + 2).
+Unset Printing Matching.
 
-Ltac start := unfold type_program; intros; simpl decompose_program;
+Ltac typecheck := cbn; intros; constructor;
   match goal with
-    |- let '(_, _) := (?Σ, ?t) in squash _ => let sigma := fresh in set(sigma:=Σ); hnf; constructor
-  end.
-
-Ltac typecheck := start;
-  match goal with
-    |- ?Σ ;;; ?Γ |-- ?t : ?T =>
+    |- ?Σ ;;; ?Γ |- ?t : ?T =>
     eapply (infer_correct Σ Γ t T); vm_compute; reflexivity
   end.
-Ltac infer := start;
+Ltac infer := cbn; intros; constructor;
   match goal with
-    |- ?Σ ;;; ?Γ |-- ?t : ?T => 
+    |- ?Σ ;;; ?Γ |- ?t : ?T =>
     eapply (infer_correct Σ Γ t T);
       let t' := eval vm_compute in (infer Σ Γ t) in
           change (t' = Checked T); reflexivity
@@ -53,19 +49,25 @@ Qed.
 (* Eval native_compute in typecheck_program p_Plus1. *)
 
 Definition test_reduction (p : program) :=
-    let '(Σ, t) := decompose_program p [] in
-    reduce Σ [] t.
+    let '(Σ, t) := decompose_program p ([], init_graph) in
+    reduce (fst Σ) [] t.
+
+Definition string_of_env_error e :=
+  match e with
+  | IllFormedDecl s _ => ("IllFormedDecl " ++ s)%string
+  | AlreadyDeclared s => ("Alreadydeclared " ++ s)%string
+  end.
 
 Definition out_typing c :=
   match c with
   | Checked t => t
-  | TypeError e => tRel 0
+  | TypeError e => tVar ("Typing error")%string
   end.
 
 Definition out_check c :=
   match c with
   | CorrectDecl t => t
-  | EnvError e => tRel 0
+  | EnvError e => tVar ("Check error: " ++ string_of_env_error e)%string
   end.
 
 Ltac interp_red c :=
@@ -116,7 +118,7 @@ Module Test5.
   Defined.
 
   Time Template Check Plus1.
-  (* Too long
+  (* Too long  *)
   Quote Recursively Definition p_Plus1 := Plus1.
   
   Definition term := Plus1.
@@ -129,6 +131,6 @@ Module Test5.
   Make Definition inferred_type := ltac:(interp_infer ast).
   Definition inferred_type' := Eval cbv delta in inferred_type.
   Print inferred_type'.
-  Check convertible ltac:(term_type term) inferred_type. *)
+  Check convertible ltac:(term_type term) inferred_type.
 End Test5.
 

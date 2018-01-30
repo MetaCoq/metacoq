@@ -104,7 +104,7 @@ Definition tTranslate {tsl : Translation} (ΣE : tsl_context) (id : ident)
       | Error e => print_nf e ;; fail_nf ("Translation error during the translation of the body of " ++ id)
       | Success t' =>
         tmMkDefinition id' t' ;;
-        let decl := {| cst_universes := [];
+        let decl := {| cst_universes := UContext.empty;
                        cst_type := A; cst_body := Some t |} in
         let Σ' := ConstantDecl kn decl :: (fst ΣE) in
         let E' := (ConstRef kn, tConst kn' []) :: (snd ΣE) in
@@ -131,7 +131,7 @@ Definition tImplement {tsl : Translation} (ΣE : tsl_context)
       gr <- tmAbout id ;;
       match gr with
       | Some (ConstRef kn) =>
-        let decl := {| cst_universes := [];
+        let decl := {| cst_universes := UContext.empty;
                        cst_type := tA; cst_body := None |} in
         let Σ' := ConstantDecl kn decl :: (fst ΣE) in
         let E' := (ConstRef kn, tConst id' []) :: (snd ΣE) in

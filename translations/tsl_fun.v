@@ -53,7 +53,7 @@ Fixpoint tsl_rec (fuel : nat) (Σ : global_context) (E : tsl_table) (Γ : contex
                   ret (timesBool (tProd n A' B'))
   | tLambda n A t => A' <- tsl_rec fuel Σ E Γ A ;;
                     t' <- tsl_rec fuel Σ E (Γ ,, vass n A) t ;;
-                    match infer Σ (Γ ,, vass n A) t with
+                    match infer Σ init_graph (Γ ,, vass n A) t with
                     | Checked B =>
                       B' <- tsl_rec fuel Σ E (Γ ,, vass n A) B ;;
                       ret (pairTrue (tProd n A' B') (tLambda n A' t'))
@@ -123,7 +123,8 @@ Definition tsl_mind_decl (ΣE : tsl_context) (kn kn' : kername)
   refine (let LI := List.split (map_i _ mind.(ind_bodies)) in
           ret (List.concat (Datatypes.fst LI),
                [{| ind_npars := mind.(ind_npars);
-                   ind_bodies := Datatypes.snd LI |}])).
+                   ind_bodies := Datatypes.snd LI;
+                   ind_universes := mind.(ind_universes)|}])). (* FIXME always ok? *)
   intros i ind.
   simple refine (let ind_type' := _ in
                  let ctors' := List.split (map_i _ ind.(ind_ctors)) in

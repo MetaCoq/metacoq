@@ -41,8 +41,8 @@ Definition add_ctor (mind : minductive_decl) (ind0 : inductive) (idc : ident) (c
                             ind_ctors := let ctors := map (fun '(id, t, k) => (tsl_ident id, t, k)) ind.(ind_ctors) in
                                          if Nat.eqb i i0 then
                                            let n := #|ind_bodies mind| in
-                                           let typ := try_remove_n_lambdas #|mind.(ind_bodies)| ctor in
-                                           ctors ++ [(idc, typ, 0)]
+                                           let typ := try_remove_n_lambdas n ctor in
+                                           ctors ++ [(idc, typ, 0)]  (* fixme 0 *)
                                          else ctors;
                             ind_projs := ind.(ind_projs) |})
                             mind.(ind_bodies) |}.

@@ -1,5 +1,5 @@
+From Template Require Import Template Ast univ.
 Require Import List Program.
-Require Import Template.Template Template.Ast.
 Require Import BinPos.
 Require Import Coq.Arith.Compare_dec Bool.
 Set Asymmetric Patterns.
@@ -90,9 +90,9 @@ Lemma term_forall_list_ind :
     (forall (n : name) (t : term),
         P t -> forall t0 : term, P t0 -> forall t1 : term, P t1 -> P (tLetIn n t t0 t1)) ->
     (forall t : term, P t -> forall l : list term, Forall P l -> P (tApp t l)) ->
-    (forall (s : String.string) (u : list level), P (tConst s u)) ->
-    (forall (i : inductive) (u : list level), P (tInd i u)) ->
-    (forall (i : inductive) (n : nat) (u : list level), P (tConstruct i n u)) ->
+    (forall (s : String.string) (u : list Level.t), P (tConst s u)) ->
+    (forall (i : inductive) (u : list Level.t), P (tInd i u)) ->
+    (forall (i : inductive) (n : nat) (u : list Level.t), P (tConstruct i n u)) ->
     (forall (p : inductive * nat) (t : term),
         P t -> forall t0 : term, P t0 -> forall l : list (nat * term),
             tCaseBrsProp P l -> P (tCase p t t0 l)) ->

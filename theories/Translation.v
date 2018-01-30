@@ -2015,18 +2015,94 @@ Proof.
       destruct (eq_translation _ _ _ _ _ h3 _ hΓ)
         as [P1 [P1' [t1'' [t2'' [pt h3']]]]].
       destruct (eqtrans_trans h3') as [ht1'' ht2''].
-      (* We need to type the products for that.
-         Note: We don't have to build it, it's already made above.
-       *)
-      (* destruct (change_type ht1'' hB1') as [t1' ht1']. *)
-      (* destruct (change_type ht2'' hB1') as [t2' ht2']. *)
-      (* Here we need to translate the right function again to put it
-         into the right product. Once again we need to type the Prod.
-       *)
-      (* destruct (type_translation _ _ _ _ t4 _ (trans_snoc hΓ hA2')) *)
-      (*   as [B2'' [t2''' ht2''']]. *)
-      (* destruct (change_type ht2''' hB2') as [tt2 htt2]. *)
+      destruct (change_type ht1'' (trans_Prod hΓ hA1' hB1')) as [t1' ht1'].
+      destruct (change_type ht2'' (trans_Prod hΓ hA1' hB1')) as [t2' ht2'].
+      destruct h3' as [[[[[? ?] ?] ?] ?] hpt].
+      destruct (type_translation _ _ _ _ t4 _ hΓ)
+        as [P2 [t2''' ht2''']].
+      destruct (change_type ht2''' (trans_Prod hΓ hA2' hB2')) as [tt2 htt2].
+      clear ht2''' t2''' P2.
+      assert (hqt : ∑ qt,
+        Σ ;;; Γ' |-i qt : sHeq (sProd n1 A1' B1') t1' (sProd n2 A2' B2') tt2
+      ).
+      { destruct ht1'' as [[[? ?] ?] ?].
+        destruct ht2'' as [[[? ?] ?] ?].
+        destruct ht1' as [[[? ?] ?] ?].
+        destruct ht2' as [[[? ?] ?] ?].
+        destruct htt2 as [[[? ?] ?] ?].
+        assert (r1 : t1' ∼ t1'').
+        { eapply trel_trans.
+          - eapply trel_sym. eapply inrel_trel. eassumption.
+          - apply inrel_trel. assumption.
+        }
+        destruct (trel_to_heq r1 ltac:(eassumption) ltac:(eassumption))
+          as [pl hpl].
+        assert (r2 : t2'' ∼ tt2).
+        { eapply trel_trans.
+          - eapply trel_sym. eapply inrel_trel. eassumption.
+          - apply inrel_trel. assumption.
+        }
+        destruct (trel_to_heq r2 ltac:(eassumption) ltac:(eassumption))
+          as [pr hpr].
+        exists (sHeqTrans pl (sHeqTrans pt pr)).
+        eapply type_HeqTrans'.
+        - eassumption.
+        - eapply type_HeqTrans' ; eassumption.
+      }
+      destruct hqt as [qt hqt].
       (* We then translate the arguments. *)
+      destruct (eq_translation _ _ _ _ _ h4 _ hΓ)
+        as [A1'' [A1''' [u1'' [u2'' [pu h4']]]]].
+      destruct (eqtrans_trans h4') as [hu1'' hu2''].
+      destruct (change_type hu1'' hA1') as [u1' hu1'].
+      destruct h4' as [[[[[? ?] ?] ?] ?] hpu].
+      destruct (type_translation _ _ _ _ t6 _ hΓ) as [A2'' [u2''' hu2''']].
+      destruct (change_type hu2''' hA2') as [tu2 htu2].
+      clear hu2''' u2''' A2''.
+      assert (hqu : ∑ qu, Σ ;;; Γ' |-i qu : sHeq A1' u1' A2' tu2).
+      { destruct hu1'' as [[[? ?] ?] ?].
+        destruct hu2'' as [[[? ?] ?] ?].
+        destruct hu1' as [[[? ?] ?] ?].
+        destruct htu2 as [[[? ?] ?] ?].
+        assert (r1 : u1' ∼ u1'').
+        { eapply trel_trans.
+          - eapply trel_sym. eapply inrel_trel. eassumption.
+          - apply inrel_trel. assumption.
+        }
+        destruct (trel_to_heq r1 ltac:(eassumption) ltac:(eassumption))
+          as [pl hpl].
+        assert (r2 : u2'' ∼ tu2).
+        { eapply trel_trans.
+          - eapply trel_sym. eapply inrel_trel. eassumption.
+          - apply inrel_trel. assumption.
+        }
+        destruct (trel_to_heq r2 ltac:(eassumption) ltac:(eassumption))
+          as [pr hpr].
+        exists (sHeqTrans pl (sHeqTrans pu pr)).
+        eapply type_HeqTrans'.
+        - eassumption.
+        - eapply type_HeqTrans' ; eassumption.
+      }
+      destruct hqu as [qu hqu].
+      (* We have an equality between Apps now *)
+      assert (happ : ∑ qapp,
+        Σ ;;; Γ' |-i qapp : sHeq (B1'{0 := u1'}) (sApp t1' n1 A1' B1' u1')
+                                (B2'{0 := tu2}) (sApp tt2 n2 A2' B2' tu2)
+      ).
+      { exists (sCongApp qt pA pB qu).
+        destruct hB1' as [[[? ?] ?] ?].
+        destruct hB2' as [[[? ?] ?] ?].
+        eapply type_CongApp'.
+        - eassumption.
+        - cbn in hpB. rewrite <- llift_substProj, <- rlift_substProj in hpB.
+          rewrite !llift00, !rlift00 in hpB.
+          apply hpB.
+        - assumption.
+        - assumption.
+        - assumption.
+        - assumption.
+      }
+      (* Finally we translate the right App to put it in the left Prod *)
       (* We conclude *)
       cheat.
 

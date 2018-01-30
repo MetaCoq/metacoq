@@ -297,6 +297,10 @@ Fixpoint tsl_rec (fuel : nat) (Σ : global_context) (Γ : context) (t : sterm)
       | TypeError t => raise (TypingError t)
       end
     (* | sCongProd pA pB => *)
+    | sPack A1 A2 =>
+      A1' <- tsl_rec fuel Σ Γ A1 ;;
+      A2' <- tsl_rec fuel Σ Γ A2 ;;
+      ret (mkPack A1' A2')
     | _ => raise TranslationNotHandled
     end
   end.
@@ -394,6 +398,10 @@ Quote Recursively Definition heq_transport_prog := @heq_transport.
 Definition heq_transport_decl :=
   Eval compute in (get_cdecl "Top.heq_transport" heq_transport_prog).
 
+Quote Recursively Definition Pack_prog := @Pack.
+Definition Pack_decl :=
+  Eval compute in (get_idecl "Top.Pack" Pack_prog).
+
 Definition Σ : global_context :=
   [ InductiveDecl "Coq.Init.Logic.eq" eq_decl ;
     ConstantDecl "Top.J" J_decl ;
@@ -405,7 +413,8 @@ Definition Σ : global_context :=
     ConstantDecl "Top.heq_refl" heq_refl_decl ;
     ConstantDecl "Top.heq_sym" heq_sym_decl ;
     ConstantDecl "Top.heq_trans" heq_trans_decl ;
-    ConstantDecl "Top.heq_transport" heq_transport_decl
+    ConstantDecl "Top.heq_transport" heq_transport_decl ;
+    InductiveDecl "Top.Pack" Pack_decl
   ].
 
 (* Checking for the sake of checking *)
@@ -421,6 +430,7 @@ Compute (infer Σ [] tHeqRefl).
 Compute (infer Σ [] tHeqSym).
 Compute (infer Σ [] tHeqTrans).
 Compute (infer Σ [] tHeqTransport).
+Compute (infer Σ [] tPack).
 
 Make Definition eq' := ltac:(let t := eval compute in tEq in exact t).
 Make Definition eq_refl' := ltac:(let t := eval compute in tRefl in exact t).

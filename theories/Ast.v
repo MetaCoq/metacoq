@@ -33,6 +33,7 @@ Inductive cast_kind : Set :=
 
 Inductive inductive : Set :=
 | mkInd : kername -> nat -> inductive.
+Arguments mkInd _%string _%nat.
 
 Record def (term : Set) : Set := mkdef
 { dname : name (** the name (note, this may mention other definitions **)

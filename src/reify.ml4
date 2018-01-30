@@ -90,7 +90,7 @@ module Mindset = Names.Mindset
 type ('a,'b) sum =
   Left of 'a | Right of 'b
 
-type ('term, 'nat, 'ident, 'name, 'quoted_sort, 'cast_kind, 'kername, 'inductive, 'universe_instance) kind_of_term =
+type ('term, 'nat, 'ident, 'name, 'quoted_sort, 'cast_kind, 'kername, 'inductive, 'universe_instance, 'projection) kind_of_term =
   | Coq_tRel of 'nat
   | Coq_tVar of 'ident
   | Coq_tMeta of 'nat
@@ -106,8 +106,8 @@ type ('term, 'nat, 'ident, 'name, 'quoted_sort, 'cast_kind, 'kername, 'inductive
   | Coq_tConstruct of 'inductive * 'nat * 'universe_instance
   | Coq_tCase of ('inductive * 'nat) * 'term * 'term * ('nat * 'term) list
   | Coq_tProj of 'projection * 'term
-  | Coq_tFix of term mfixpoint * 'nat
-  | Coq_tCoFix of term mfixpoint * 'nat
+  | Coq_tFix of (*term mfixpoint *) 'nat
+  | Coq_tCoFix of (*term mfixpoint *) 'nat
       
 module type Quoter = sig
   type t

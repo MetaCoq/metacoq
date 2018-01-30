@@ -2102,9 +2102,39 @@ Proof.
         - assumption.
         - assumption.
       }
+      destruct happ as [qapp happ].
       (* Finally we translate the right App to put it in the left Prod *)
+      pose (e := sHeqTypeEq (sHeqSym qapp)).
+      pose (tapp := sTransport (B2' {0 := tu2}) (B1'{0 := u1'}) e (sApp tt2 n2 A2' B2' tu2)).
       (* We conclude *)
-      cheat.
+      exists (B1'{0 := u1'}), (B1'{0 := u1'}).
+      exists (sApp t1' n1 A1' B1' u1'), tapp.
+      exists (sHeqTrans qapp (sHeqTransport e (sApp tt2 n2 A2' B2' tu2))).
+      destruct ht1' as [[[? ?] ?] ?].
+      destruct htt2 as [[[? ?] ?] ?].
+      destruct hu1' as [[[? ?] ?] ?].
+      destruct htu2 as [[[? ?] ?] ?].
+      destruct hA1' as [[[? ?] ?] ?].
+      destruct hA2' as [[[? ?] ?] ?].
+      destruct hB1' as [[[? ?] ?] ?].
+      destruct hB2' as [[[? ?] ?] ?].
+      repeat split.
+      * assumption.
+      * eapply inrel_subst ; assumption.
+      * eapply inrel_subst ; assumption.
+      * constructor ; assumption.
+      * constructor. constructor ; assumption.
+      * eapply type_HeqTrans'.
+        -- eassumption.
+        -- eapply type_HeqTransport'.
+           ++ eapply type_App ; eassumption.
+           ++ eapply type_HeqTypeEq'.
+              ** eapply type_HeqSym'. eassumption.
+              ** match goal with
+                 | |- _ ;;; _ |-i _ : ?S =>
+                   change S with (S {0 := tu2})
+                 end.
+                 eapply typing_subst ; eassumption.
 
     (* cong_Eq *)
     + destruct (eq_translation _ _ _ _ _ h1 _ hΓ)

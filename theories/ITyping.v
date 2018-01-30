@@ -187,6 +187,14 @@ Inductive typing (Σ : global_context) : scontext -> sterm -> sterm -> Type :=
     Σ ;;; Γ |-i v : A ->
     Σ ;;; Γ |-i sEqToHeq p : sHeq A u A v
 
+| type_HeqTypeEq Γ A u B v p s :
+    Σ ;;; Γ |-i p : sHeq A u B v ->
+    Σ ;;; Γ |-i A : sSort s ->
+    Σ ;;; Γ |-i B : sSort s ->
+    Σ ;;; Γ |-i u : A ->
+    Σ ;;; Γ |-i v : B ->
+    Σ ;;; Γ |-i sHeqTypeEq p : sEq (sSort s) A B
+
 | type_Pack Γ A1 A2 s :
     Σ ;;; Γ |-i A1 : sSort s ->
     Σ ;;; Γ |-i A2 : sSort s ->
@@ -509,6 +517,8 @@ Proof.
     + eapply type_Refl ; eassumption.
     + eapply type_Refl ; eassumption.
   - exists (succ_sort s). apply type_Heq ; assumption.
+  - exists (succ_sort s). eapply type_Eq ; try assumption.
+    apply type_Sort. apply (typing_wf H).
   - exists (succ_sort s). apply type_Sort. apply (typing_wf H).
   - exists s. assumption.
   - exists s. assumption.
@@ -1466,4 +1476,18 @@ Proof.
   destruct (istype_type hp) as [? i].
   destruct (inversionEq i) as [? [[[? ?] ?] ?]].
   eapply type_Transport ; eassumption.
+Defined.
+
+Lemma type_HeqTypeEq' :
+  forall {Σ Γ A u B v p s},
+    Σ ;;; Γ |-i p : sHeq A u B v ->
+    Σ ;;; Γ |-i A : sSort s ->
+    Σ ;;; Γ |-i sHeqTypeEq p : sEq (sSort s) A B.
+Proof.
+  intros Σ Γ A u B v p s hp hA.
+  destruct (istype_type hp) as [? i].
+  destruct (inversionHeq i) as [? [[[[? ?] ?] ?] ?]].
+  eapply type_HeqTypeEq ; try eassumption.
+  destruct (uniqueness t hA).
+  eapply type_conv' ; eassumption.
 Defined.

@@ -115,10 +115,22 @@ Proof.
   exists eq_refl. now symmetry.
 Defined.
 
+Lemma heq_trans :
+  forall {A} (a : A) {B} (b : B) {C} (c : C),
+    a ≅ b -> b ≅ c -> a ≅ c.
+Proof.
+  intros A a B b C c e1 e2.
+  destruct e1 as [p1 e1]. destruct e2 as [p2 e2].
+  destruct p1. destruct p2.
+  exists eq_refl. simpl in *.
+  now transitivity b.
+Defined.
+
 Quote Definition tHeq := @heq.
 Quote Definition tHeqToEq := @heq_to_eq.
 Quote Definition tHeqRefl := @heq_refl.
 Quote Definition tHeqSym := @heq_sym.
+Quote Definition tHeqTrans := @heq_trans.
 
 Definition mkHeq (A a B b : term) : term :=
   tApp tHeq [ A ; a ; B ; b ].
@@ -131,6 +143,9 @@ Definition mkHeqRefl (A a : term) : term :=
 
 Definition mkHeqSym (A a B b p : term) : term :=
   tApp tHeqSym [ A ; a ; B ; b ; p ].
+
+Definition mkHeqTrans (A a B b C c p q : term) : term :=
+  tApp tHeqTrans [ A ; a ; B ; b ; C ; c ; p ; q ].
 
 (* TODO Use fuel when needed *)
 Fixpoint tsl_rec (fuel : nat) (Σ : global_context) (Γ : context) (t : sterm)
@@ -202,6 +217,24 @@ Fixpoint tsl_rec (fuel : nat) (Σ : global_context) (Γ : context) (t : sterm)
       (* I'm not sure that's the correct way to check we're dealing with heq *)
       | Checked (tApp (tInd (mkInd "Top.heq" 0) _) [ A' ; a' ; B' ; b' ]) =>
         ret (mkHeqSym A' a' B' b' p')
+      (* That's not really the correct error but well. *)
+      | Checked T => raise (TypingError (NotAnInductive T))
+      | TypeError t => raise (TypingError t)
+      end
+    | sHeqTrans p q =>
+      p' <- tsl_rec fuel Σ Γ p ;;
+      q' <- tsl_rec fuel Σ Γ q ;;
+      match infer Σ Γ p' with
+      (* I'm not sure that's the correct way to check we're dealing with heq *)
+      | Checked (tApp (tInd (mkInd "Top.heq" 0) _) [ A' ; a' ; B' ; b' ]) =>
+        match infer Σ Γ q' with
+        (* I'm not sure that's the correct way to check we're dealing with heq *)
+        | Checked (tApp (tInd (mkInd "Top.heq" 0) _) [ _ ; _ ; C' ; c' ]) =>
+          ret (mkHeqTrans A' a' B' b' C' c' p' q')
+        (* That's not really the correct error but well. *)
+        | Checked T => raise (TypingError (NotAnInductive T))
+        | TypeError t => raise (TypingError t)
+        end
       (* That's not really the correct error but well. *)
       | Checked T => raise (TypingError (NotAnInductive T))
       | TypeError t => raise (TypingError t)
@@ -295,6 +328,10 @@ Quote Recursively Definition heq_sym_prog := @heq_sym.
 Definition heq_sym_decl :=
   Eval compute in (get_cdecl "Top.heq_sym" heq_sym_prog).
 
+Quote Recursively Definition heq_trans_prog := @heq_trans.
+Definition heq_trans_decl :=
+  Eval compute in (get_cdecl "Top.heq_trans" heq_trans_prog).
+
 Definition Σ : global_context :=
   [ InductiveDecl "Coq.Init.Logic.eq" eq_decl ;
     ConstantDecl "Top.J" J_decl ;
@@ -304,7 +341,8 @@ Definition Σ : global_context :=
     ConstantDecl "Top.heq" heq_decl ;
     ConstantDecl "Top.heq_to_eq" heq_to_eq_decl ;
     ConstantDecl "Top.heq_refl" heq_refl_decl ;
-    ConstantDecl "Top.heq_sym" heq_sym_decl
+    ConstantDecl "Top.heq_sym" heq_sym_decl ;
+    ConstantDecl "Top.heq_trans" heq_trans_decl
   ].
 
 (* Checking for the sake of checking *)
@@ -318,6 +356,7 @@ Compute (infer Σ [] tHeq).
 Compute (infer Σ [] tHeqToEq).
 Compute (infer Σ [] tHeqRefl).
 Compute (infer Σ [] tHeqSym).
+Compute (infer Σ [] tHeqTrans).
 
 Make Definition eq' := ltac:(let t := eval compute in tEq in exact t).
 Make Definition eq_refl' := ltac:(let t := eval compute in tRefl in exact t).
@@ -343,6 +382,19 @@ Fail Make Definition heq_sym_t :=
     let t := eval compute in
              (match tsl_rec (2 ^ 2) Σ []
                            (sHeqSym ((sHeqRefl (sSort (succ_sort sSet)) (sSort sSet))))
+              with
+              | Success t => t
+              | _ => tSort (sType "Error")
+              end
+             )
+      in exact t
+  ).
+Fail Make Definition heq_sym_t :=
+  ltac:(
+    let t := eval compute in
+             (match tsl_rec (2 ^ 2) Σ []
+                           (sHeqTrans ((sHeqRefl (sSort (succ_sort sSet)) (sSort sSet)))
+                                      ((sHeqRefl (sSort (succ_sort sSet)) (sSort sSet))))
               with
               | Success t => t
               | _ => tSort (sType "Error")

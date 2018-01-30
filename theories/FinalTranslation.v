@@ -252,8 +252,12 @@ Definition option_get {A} (default : A) (x : option A) : A
 
 Open Scope string_scope.
 
-Definition get_idecl id prog := option_get (Build_minductive_decl 0 []) (extract_mind_decl_from_program id prog).
-Definition get_cdecl id prog := option_get (Build_constant_decl "XX" [] (tRel 0) None) (extract_cst_decl_from_program id prog).
+Definition get_idecl id prog :=
+  option_get (Build_minductive_decl 0 [])
+             (extract_mind_decl_from_program id prog).
+Definition get_cdecl id prog :=
+  option_get (Build_constant_decl "XX" [] (tRel 0) None)
+             (extract_cst_decl_from_program id prog).
 
 Quote Recursively Definition eq_prog := @eq.
 Definition eq_decl :=
@@ -277,6 +281,38 @@ Definition Σ : global_context :=
 Compute (infer Σ [] tEq).
 Compute (infer Σ [] tJ).
 Compute (infer Σ [] tTransport).
+
+Make Definition eq' := ltac:(let t := eval compute in tEq in exact t).
+Make Definition eq_refl' := ltac:(let t := eval compute in tRefl in exact t).
+Make Definition heq_refl' :=
+  ltac:(
+    let t := eval compute in (mkHeqRefl (tSort (succ_sort sSet)) (tSort sSet))
+      in exact t
+  ).
+Make Definition heq_refl_t :=
+  ltac:(
+    let t := eval compute in
+             (match tsl_rec (2 ^ 10) Σ []
+                           (sHeqRefl (sSort (succ_sort sSet)) (sSort sSet))
+              with
+              | Success t => t
+              | _ => tSort (sType "Error")
+              end
+             )
+      in exact t
+  ).
+Fail Make Definition heq_sym_t :=
+  ltac:(
+    let t := eval compute in
+             (match tsl_rec (2 ^ 7) Σ []
+                           (sHeqSym ((sHeqRefl (sSort (succ_sort sSet)) (sSort sSet))))
+              with
+              | Success t => t
+              | _ => tSort (sType "Error")
+              end
+             )
+      in exact t
+  ).
 
 Theorem soundness :
   forall {Γ t A},

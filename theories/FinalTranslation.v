@@ -201,7 +201,7 @@ Fixpoint tsl_rec (fuel : nat) (Σ : global_context) (Γ : context) (t : sterm)
       match @infer (Build_Fuel fuel) Σ Γ p' with
       (* I would hope for a better way *)
       (* This is probably buggy as it doesn't care for lifts and such *)
-      (* | Checked (tApp (tInd (mkInd "Top.heq" 0) _) [ A' ; u' ; _ ; v' ]) => *)
+      (* | Checked (tApp (tConst "Top.heq" []) [ A' ; u' ; _ ; v' ]) => *)
       | Checked (tApp _ [tApp _ [ _ ; A' ; _ ]; tLambda _ _ (tApp _ [ _ ; tApp _ [ _ ; _ ; _ ; u' ] ; v' ])]) =>
         ret (mkHeqToHeq A' u' v' p')
       (* That's not really the correct error but well. *)
@@ -215,7 +215,7 @@ Fixpoint tsl_rec (fuel : nat) (Σ : global_context) (Γ : context) (t : sterm)
     | sHeqSym p =>
       p' <- tsl_rec fuel Σ Γ p ;;
       match @infer (Build_Fuel fuel) Σ Γ p' with
-      (* | Checked (tApp (tInd (mkInd "Top.heq" 0) _) [ A' ; a' ; B' ; b' ]) => *)
+      (* | Checked (tApp (tConst "Top.heq" []) [ A' ; a' ; B' ; b' ]) => *)
       | Checked (tApp _ [tApp _ [ _ ; A' ; B' ]; tLambda _ _ (tApp _ [ _ ; tApp _ [ _ ; _ ; _ ; a' ] ; b' ])]) =>
         ret (mkHeqSym A' a' B' b' p')
       | Checked T => raise (TypingError (NotAnInductive T))
@@ -225,10 +225,10 @@ Fixpoint tsl_rec (fuel : nat) (Σ : global_context) (Γ : context) (t : sterm)
       p' <- tsl_rec fuel Σ Γ p ;;
       q' <- tsl_rec fuel Σ Γ q ;;
       match @infer (Build_Fuel fuel) Σ Γ p' with
-      (* | Checked (tApp (tInd (mkInd "Top.heq" 0) _) [ A' ; a' ; B' ; b' ]) => *)
+      (* | Checked (tApp (tConst "Top.heq" []) [ A' ; a' ; B' ; b' ]) => *)
       | Checked (tApp _ [tApp _ [ _ ; A' ; B' ]; tLambda _ _ (tApp _ [ _ ; tApp _ [ _ ; _ ; _ ; a' ] ; b' ])]) =>
         match @infer (Build_Fuel fuel) Σ Γ q' with
-        (* | Checked (tApp (tInd (mkInd "Top.heq" 0) _) [ _ ; _ ; C' ; c' ]) => *)
+        (* | Checked (tApp (tConst "Top.heq" []) [ _ ; _ ; C' ; c' ]) => *)
         | Checked (tApp _ [tApp _ [ _ ; _ ; C' ]; tLambda _ _ (tApp _ [ _ ; tApp _ [ _ ; _ ; _ ; _ ] ; c' ])]) =>
           ret (mkHeqTrans A' a' B' b' C' c' p' q')
         (* That's not really the correct error but well. *)

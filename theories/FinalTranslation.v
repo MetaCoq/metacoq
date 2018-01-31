@@ -326,8 +326,21 @@ Definition mkCongProd (A1 A2 B1 B2 pA pB : term) :=
     (tLambda nAnon (mkPack A1 A2) pB)
   ].
 
+Definition mkCongLambda (A1 A2 B1 B2 t1 t2 pA pB pt : term) :=
+  tApp tCongProd [
+    A1 ;
+    A2 ;
+    (tLambda nAnon A1 B1) ;
+    (tLambda nAnon A2 B2) ;
+    (tLambda nAnon A1 t1) ;
+    (tLambda nAnon A2 t2) ;
+    pA ;
+    (tLambda nAnon (mkPack A1 A2) pB) ;
+    (tLambda nAnon (mkPack A1 A2) pt)
+  ].
+
 (* TODO *)
-(* CongLambda and CongApp too *)
+(* CongApp too *)
 
 Definition mkCongEq (A1 A2 u1 v1 u2 v2 pA pu pv : term) : term :=
   tApp tCongEq [ A1 ; A2 ; u1 ; v1 ; u2 ; v2 ; pA ; pu ; pv ].
@@ -436,16 +449,29 @@ Fixpoint tsl_rec (fuel : nat) (Σ : global_context) (Γ : context) (t : sterm) {
       end
     | sCongProd B1 B2 pA pB =>
       pA' <- tsl_rec fuel Σ Γ pA ;;
-      pB' <- tsl_rec fuel Σ Γ pB ;;
-      B1' <- tsl_rec fuel Σ Γ B1 ;;
-      B2' <- tsl_rec fuel Σ Γ B2 ;;
       match @infer (Build_Fuel fuel) Σ Γ pA' with
       | Checked (tApp (tInd (mkInd "Top.heq" 0) _) [ _ ; A1' ; _ ; A2' ]) =>
+        pB' <- tsl_rec fuel Σ (Γ ,, vass nAnon (mkPack A1' A2')) pB ;;
+        B1' <- tsl_rec fuel Σ (Γ ,, vass nAnon A1') B1 ;;
+        B2' <- tsl_rec fuel Σ (Γ ,, vass nAnon A2') B2 ;;
         ret (mkCongProd A1' A2' B1' B2' pA' pB')
       | Checked T => raise (TypingError (NotAnInductive T))
       | TypeError t => raise (TypingError t)
       end
-    (* | sCongLambda pA pB pt => *)
+    | sCongLambda B1 B2 t1 t2 pA pB pt =>
+      pA' <- tsl_rec fuel Σ Γ pA ;;
+      match @infer (Build_Fuel fuel) Σ Γ pA' with
+      | Checked (tApp (tInd (mkInd "Top.heq" 0) _) [ _ ; A1' ; _ ; A2' ]) =>
+        pB' <- tsl_rec fuel Σ (Γ ,, vass nAnon (mkPack A1' A2')) pB ;;
+        pt' <- tsl_rec fuel Σ (Γ ,, vass nAnon (mkPack A1' A2')) pt ;;
+        B1' <- tsl_rec fuel Σ (Γ ,, vass nAnon A1') B1 ;;
+        B2' <- tsl_rec fuel Σ (Γ ,, vass nAnon A2') B2 ;;
+        t1' <- tsl_rec fuel Σ (Γ ,, vass nAnon A1') t1 ;;
+        t2' <- tsl_rec fuel Σ (Γ ,, vass nAnon A2') t2 ;;
+        ret (mkCongLambda A1' A2' B1' B2' t1' t2' pA' pB' pt')
+      | Checked T => raise (TypingError (NotAnInductive T))
+      | TypeError t => raise (TypingError t)
+      end
     (* | sCongApp pu pA pB pv => *)
     | sCongEq pA pu pv =>
       pA' <- tsl_rec fuel Σ Γ pA ;;

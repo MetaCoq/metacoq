@@ -33,8 +33,10 @@ Fixpoint lift n k t : sterm :=
   | sCongProd B1 B2 pA pB =>
     sCongProd (lift n (S k) B1) (lift n (S k) B2)
               (lift n k pA) (lift n (S k) pB)
-  | sCongLambda pA pB pt =>
-    sCongLambda (lift n k pA) (lift n (S k) pB) (lift n (S k) pt)
+  | sCongLambda B1 B2 t1 t2 pA pB pt =>
+    sCongLambda (lift n (S k) B1) (lift n (S k) B2)
+                (lift n (S k) t1) (lift n (S k) t2)
+                (lift n k pA) (lift n (S k) pB) (lift n (S k) pt)
   | sCongApp pu pA pB pv =>
     sCongApp (lift n k pu) (lift n k pA) (lift n (S k) pB) (lift n k pv)
   | sCongEq pA pu pv => sCongEq (lift n k pA) (lift n k pu) (lift n k pv)
@@ -84,8 +86,10 @@ Fixpoint subst t k u :=
   | sCongProd B1 B2 pA pB =>
     sCongProd (subst t (S k) B1) (subst t (S k) B2)
               (subst t k pA) (subst t (S k) pB)
-  | sCongLambda pA pB pt =>
-    sCongLambda (subst t k pA) (subst t (S k) pB) (subst t (S k) pt)
+  | sCongLambda B1 B2 t1 t2 pA pB pt =>
+    sCongLambda (subst t (S k) B1) (subst t (S k) B2)
+                (subst t (S k) t1) (subst t (S k) t2)
+                (subst t k pA) (subst t (S k) pB) (subst t (S k) pt)
   | sCongApp pu pA pB pv =>
     sCongApp (subst t k pu) (subst t k pA) (subst t (S k) pB) (subst t k pv)
   | sCongEq pA pu pv => sCongEq (subst t k pA) (subst t k pu) (subst t k pv)

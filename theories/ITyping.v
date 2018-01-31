@@ -134,7 +134,7 @@ Inductive typing (Σ : global_context) : scontext -> sterm -> sterm -> Type :=
     Σ ;;; Γ ,, svass ny A2 |-i B2 : sSort z ->
     Σ ;;; Γ ,, svass nx A1 |-i t1 : B1 ->
     Σ ;;; Γ ,, svass ny A2 |-i t2 : B2 ->
-    Σ ;;; Γ |-i sCongLambda pA pB pt :
+    Σ ;;; Γ |-i sCongLambda B1 B2 t1 t2 pA pB pt :
                sHeq (sProd nx A1 B1) (sLambda nx A1 B1 t1)
                     (sProd ny A2 B2) (sLambda ny A2 B2 t2)
 
@@ -1233,7 +1233,7 @@ Lemma type_CongLambda'' :
     Σ ;;; Γ ,, svass ny A2 |-i B2 : sSort z ->
     Σ ;;; Γ ,, svass nx A1 |-i t1 : B1 ->
     Σ ;;; Γ ,, svass ny A2 |-i t2 : B2 ->
-    Σ ;;; Γ |-i sCongLambda pA pB pt :
+    Σ ;;; Γ |-i sCongLambda B1 B2 t1 t2 pA pB pt :
                sHeq (sProd nx A1 B1) (sLambda nx A1 B1 t1)
                     (sProd ny A2 B2) (sLambda ny A2 B2 t2).
 Proof.
@@ -1262,7 +1262,7 @@ Lemma type_CongLambda' :
     Σ ;;; Γ ,, svass ny A2 |-i B2 : sSort z2 ->
     Σ ;;; Γ ,, svass nx A1 |-i t1 : B1 ->
     Σ ;;; Γ ,, svass ny A2 |-i t2 : B2 ->
-    Σ ;;; Γ |-i sCongLambda pA pB pt :
+    Σ ;;; Γ |-i sCongLambda B1 B2 t1 t2 pA pB pt :
                sHeq (sProd nx A1 B1) (sLambda nx A1 B1 t1)
                     (sProd ny A2 B2) (sLambda ny A2 B2 t2).
 Proof.

@@ -381,11 +381,10 @@ Proof.
     destruct (IHsim1 _ _ _ _ _ eq hA1 hA2) as [pA hpA].
     destruct (IHsim2 _ (Γ1 ,, svass n1 A1) (Γ2 ,, svass n2 A2) _ _ ltac:(cbn ; omega) hB1 hB2) as [pB hpB].
     destruct (IHsim3 _ (Γ1 ,, svass n1 A1) (Γ2 ,, svass n2 A2) _ _ ltac:(cbn ; omega) hu1 hu2) as [pu hpu].
-    exists (sCongLambda pA pB pu).
+    exists (sCongLambda (llift #|Γ1| 1 B1) (rlift #|Γ1| 1 B2)
+                   (llift #|Γ1| 1 u1) (rlift #|Γ1| 1 u2) pA pB pu).
     eapply type_conv'.
-    + eapply @type_CongLambda'
-        with (B1 := llift #|Γ1| 1 B1) (B2 := rlift #|Γ1| 1 B2)
-             (t1 := llift #|Γ1| 1 u1) (t2 := rlift #|Γ1| 1 u2).
+    + eapply type_CongLambda'.
       * eassumption.
       * rewrite llift_substProj, rlift_substProj. apply hpB.
       * rewrite !llift_substProj, !rlift_substProj. apply hpu.
@@ -1845,7 +1844,7 @@ Proof.
       (* Now we conclude *)
       exists (sProd n1 A1' B1'), (sProd n1 A1' B1').
       exists (sLambda n1 A1' B1' t1'), tλ.
-      exists (sHeqTrans (sCongLambda pA pB qt)
+      exists (sHeqTrans (sCongLambda B1' B2' t1' tt2 pA pB qt)
                    (sHeqTransport eT (sLambda n2 A2' B2' tt2))).
       destruct ht1' as [[[? ?] ?] ?].
       destruct htt2 as [[[? ?] ?] ?].

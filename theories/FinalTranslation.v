@@ -339,8 +339,21 @@ Definition mkCongLambda (A1 A2 B1 B2 t1 t2 pA pB pt : term) :=
     (tLambda nAnon (mkPack A1 A2) pt)
   ].
 
-(* TODO *)
-(* CongApp too *)
+Definition mkCongApp (A1 A2 B1 B2 t1 t2 u1 u2 pA pB pt pu : term) :=
+  tApp tCongProd [
+    A1 ;
+    A2 ;
+    (tLambda nAnon A1 B1) ;
+    (tLambda nAnon A2 B2) ;
+    t1 ;
+    t2 ;
+    u1 ;
+    u2 ;
+    pA ;
+    (tLambda nAnon (mkPack A1 A2) pB) ;
+    pt ;
+    pu
+  ].
 
 Definition mkCongEq (A1 A2 u1 v1 u2 v2 pA pu pv : term) : term :=
   tApp tCongEq [ A1 ; A2 ; u1 ; v1 ; u2 ; v2 ; pA ; pu ; pv ].
@@ -472,7 +485,29 @@ Fixpoint tsl_rec (fuel : nat) (Σ : global_context) (Γ : context) (t : sterm) {
       | Checked T => raise (TypingError (NotAnInductive T))
       | TypeError t => raise (TypingError t)
       end
-    (* | sCongApp pu pA pB pv => *)
+    | sCongApp B1 B2 pt pA pB pu =>
+      pA' <- tsl_rec fuel Σ Γ pA ;;
+      match @infer (Build_Fuel fuel) Σ Γ pA' with
+      | Checked (tApp (tInd (mkInd "Top.heq" 0) _) [ _ ; A1' ; _ ; A2' ]) =>
+        pB' <- tsl_rec fuel Σ (Γ ,, vass nAnon (mkPack A1' A2')) pB ;;
+        pt' <- tsl_rec fuel Σ Γ pt ;;
+        pu' <- tsl_rec fuel Σ Γ pu ;;
+        B1' <- tsl_rec fuel Σ (Γ ,, vass nAnon A1') B1 ;;
+        B2' <- tsl_rec fuel Σ (Γ ,, vass nAnon A2') B2 ;;
+        match @infer (Build_Fuel fuel) Σ Γ pt' with
+        | Checked (tApp (tInd (mkInd "Top.heq" 0) _) [ _ ; t1' ; _ ; t2' ]) =>
+          match @infer (Build_Fuel fuel) Σ Γ pt' with
+          | Checked (tApp (tInd (mkInd "Top.heq" 0) _) [ _ ; u1' ; _ ; u2' ]) =>
+            ret (mkCongApp A1' A2' B1' B2' t1' t2' u1' u2' pA' pB' pt' pu')
+          | Checked T => raise (TypingError (NotAnInductive T))
+          | TypeError t => raise (TypingError t)
+          end
+        | Checked T => raise (TypingError (NotAnInductive T))
+        | TypeError t => raise (TypingError t)
+        end
+      | Checked T => raise (TypingError (NotAnInductive T))
+      | TypeError t => raise (TypingError t)
+      end
     | sCongEq pA pu pv =>
       pA' <- tsl_rec fuel Σ Γ pA ;;
       pu' <- tsl_rec fuel Σ Γ pu ;;
@@ -541,7 +576,6 @@ Fixpoint tsl_rec (fuel : nat) (Σ : global_context) (Γ : context) (t : sterm) {
       | Checked T => raise (TypingError (NotAnInductive T))
       | TypeError t => raise (TypingError t)
       end
-    | _ => raise TranslationNotHandled
     end
   end.
 

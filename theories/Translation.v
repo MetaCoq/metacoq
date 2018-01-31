@@ -445,10 +445,9 @@ Proof.
     destruct (IHsim3 _ (Γ1 ,, svass n1 A1) (Γ2 ,, svass n2 A2) _ _
                      ltac:(cbn ; omega) hB1 hB2) as [pB hpB].
     destruct (IHsim4 _ _ _ _ _ eq hv1 hv2) as [pv hpv].
-    exists (sCongApp pu pA pB pv).
+    exists (sCongApp (llift #|Γ1| 1 B1) (rlift #|Γ1| 1 B2) pu pA pB pv).
     eapply type_conv'.
-    + eapply @type_CongApp'
-        with (B1 := llift #|Γ1| 1 B1) (B2 := rlift #|Γ1| 1 B2).
+    + eapply type_CongApp'.
       * apply hpA.
       * rewrite llift_substProj, rlift_substProj.
         apply hpB.
@@ -2088,7 +2087,7 @@ Proof.
         Σ ;;; Γ' |-i qapp : sHeq (B1'{0 := u1'}) (sApp t1' n1 A1' B1' u1')
                                 (B2'{0 := tu2}) (sApp tt2 n2 A2' B2' tu2)
       ).
-      { exists (sCongApp qt pA pB qu).
+      { exists (sCongApp B1' B2' qt pA pB qu).
         destruct hB1' as [[[? ?] ?] ?].
         destruct hB2' as [[[? ?] ?] ?].
         eapply type_CongApp'.

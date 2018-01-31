@@ -153,7 +153,7 @@ Inductive typing (Σ : global_context) : scontext -> sterm -> sterm -> Type :=
     Σ ;;; Γ |-i u2 : sProd ny A2 B2 ->
     Σ ;;; Γ |-i v1 : A1 ->
     Σ ;;; Γ |-i v2 : A2 ->
-    Σ ;;; Γ |-i sCongApp pu pA pB pv :
+    Σ ;;; Γ |-i sCongApp B1 B2 pu pA pB pv :
                sHeq (B1{0 := v1}) (sApp u1 nx A1 B1 v1)
                     (B2{0 := v2}) (sApp u2 ny A2 B2 v2)
 
@@ -1289,7 +1289,7 @@ Lemma type_CongApp'' :
     Σ ;;; Γ |-i pv : sHeq A1 v1 A2 v2 ->
     Σ ;;; Γ ,, svass nx A1 |-i B1 : sSort z ->
     Σ ;;; Γ ,, svass ny A2 |-i B2 : sSort z ->
-    Σ ;;; Γ |-i sCongApp pu pA pB pv :
+    Σ ;;; Γ |-i sCongApp B1 B2 pu pA pB pv :
                sHeq (B1{0 := v1}) (sApp u1 nx A1 B1 v1)
                     (B2{0 := v2}) (sApp u2 ny A2 B2 v2).
 Proof.
@@ -1316,7 +1316,7 @@ Lemma type_CongApp' :
     Σ ;;; Γ |-i pv : sHeq A1 v1 A2 v2 ->
     Σ ;;; Γ ,, svass nx A1 |-i B1 : sSort z1 ->
     Σ ;;; Γ ,, svass ny A2 |-i B2 : sSort z2 ->
-    Σ ;;; Γ |-i sCongApp pu pA pB pv :
+    Σ ;;; Γ |-i sCongApp B1 B2 pu pA pB pv :
                sHeq (B1{0 := v1}) (sApp u1 nx A1 B1 v1)
                     (B2{0 := v2}) (sApp u2 ny A2 B2 v2).
 Proof.

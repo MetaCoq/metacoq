@@ -26,7 +26,7 @@ Inductive sterm : Type :=
 | sHeqTransport (p t : sterm)
 | sCongProd (B1 B2 pA pB : sterm)
 | sCongLambda (B1 B2 t1 t2 pA pB pt : sterm)
-| sCongApp (pu pA pB pv : sterm)
+| sCongApp (B1 B2 pu pA pB pv : sterm)
 | sCongEq (pA pu pv : sterm)
 | sCongRefl (pA pu : sterm)
 | sEqToHeq (p : sterm)

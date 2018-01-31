@@ -206,8 +206,19 @@ module type Quoter = sig
   val mkExt : quoted_decl -> quoted_program -> quoted_program
   val mkIn : t -> quoted_program
 
+  val representsIndConstuctor : quoted_inductive -> Term.constr -> bool
   val inspectTerm : t -> (t, quoted_int, quoted_ident, quoted_name, quoted_sort, quoted_cast_kind, quoted_kernel_name, quoted_inductive, quoted_univ_instance, quoted_proj) structure_of_term
 end
+
+let reduce_hnf env evm (trm : Term.constr) =
+  let trm = Tacred.hnf_constr env evm (EConstr.of_constr trm) in
+  (evm, EConstr.to_constr evm trm)
+
+let reduce_all env evm ?(red=Genredexpr.Cbv Redops.all_flags) trm =
+  let red, _ = Redexpr.reduction_of_red_expr env red in
+  let evm, red = red env evm (EConstr.of_constr trm) in
+  (evm, EConstr.to_constr evm red)
+
 
 (** The reifier to Coq values *)
 module TemplateCoqQuoter =
@@ -664,8 +675,18 @@ struct
        let k = (quote_int (k - 1)) in
        Term.mkApp (tConstructRef, [|quote_inductive (kn ,n); k|])
 
+       let rec app_full trm acc =
+        match Term.kind_of_term trm with
+          Term.App (f, xs) -> app_full f (Array.to_list xs @ acc)
+        | _ -> (trm, acc)
+           
 let inspectTerm (t:Term.constr) :  (Term.constr, quoted_int, quoted_ident, quoted_name, quoted_sort, quoted_cast_kind, quoted_kernel_name, quoted_inductive, quoted_univ_instance, quoted_proj) structure_of_term =
-  failwith "not yet implemented"
+    let (h,args) = app_full t [] in
+    if Term.eq_constr h tRel then
+      match args with
+	    x :: _ -> ACoq_tRel x
+      | _ -> raise (Failure "ill-typed")
+    else raise (Failure "not yet implemented")
 end
 
 
@@ -1023,108 +1044,126 @@ struct
     in List.fold_left (fun acc x -> Q.mkExt x acc)
                       (Q.mkIn x) !constants
 
-  (* let quote_one_ind envA envC (mi:Entries.one_inductive_entry) = *)
-  (*   let iname = Q.quote_ident mi.mind_entry_typename  in *)
-  (*   let arity = quote_term envA mi.mind_entry_arity in *)
-  (*   let templatePoly = Q.quote_bool mi.mind_entry_template in *)
-  (*   let consnames = List.map Q.quote_ident (mi.mind_entry_consnames) in *)
-  (*   let constypes = List.map (quote_term envC) (mi.mind_entry_lc) in *)
-  (*   (iname, arity, templatePoly, consnames, constypes) *)
+  let quote_one_ind envA envC (mi:Entries.one_inductive_entry) =
+    let iname = Q.quote_ident mi.mind_entry_typename  in
+    let arity = quote_term envA mi.mind_entry_arity in
+    let templatePoly = Q.quote_bool mi.mind_entry_template in
+    let consnames = List.map Q.quote_ident (mi.mind_entry_consnames) in
+    let constypes = List.map (quote_term envC) (mi.mind_entry_lc) in
+    (iname, arity, templatePoly, consnames, constypes)
 
-  (* let process_local_entry *)
-  (*       (f: 'a -> Term.constr option (\* body *\) -> Term.constr (\* type *\) -> Names.Id.t -> Environ.env -> 'a) *)
-  (*       ((env,a):(Environ.env*'a)) *)
-  (*       ((n,le):(Names.Id.t * Entries.local_entry)) *)
-  (*     :  (Environ.env * 'a) = *)
-  (*   match le with *)
-  (*   | Entries.LocalAssumEntry t -> (Environ.push_rel (toDecl (Names.Name n,None,t)) env, f a None t n env) *)
-  (*   | Entries.LocalDefEntry b -> *)
-  (*      let typ = getType env b in *)
-  (*      (Environ.push_rel (toDecl (Names.Name n, Some b, typ)) env, f a (Some b) typ n env) *)
+  let process_local_entry
+        (f: 'a -> Term.constr option (* body *) -> Term.constr (* type *) -> Names.Id.t -> Environ.env -> 'a)
+        ((env,a):(Environ.env*'a))
+        ((n,le):(Names.Id.t * Entries.local_entry))
+      :  (Environ.env * 'a) =
+    match le with
+    | Entries.LocalAssumEntry t -> (Environ.push_rel (toDecl (Names.Name n,None,t)) env, f a None t n env)
+    | Entries.LocalDefEntry b ->
+       let typ = getType env b in
+       (Environ.push_rel (toDecl (Names.Name n, Some b, typ)) env, f a (Some b) typ n env)
 
 
-  (* let quote_mind_params env (params:(Names.Id.t * Entries.local_entry) list) = *)
-  (*   let f lr ob t n env = *)
-  (*     match ob with *)
-  (*     | Some b -> (Q.quote_ident n, Left (quote_term env b))::lr *)
-  (*     | None -> *)
-  (*        let sf = getSort env t in *)
-  (*        let t' = castSetProp sf (quote_term env t) in *)
-  (*        (Q.quote_ident n, Right t')::lr in *)
-  (*   let (env, params) = List.fold_left (process_local_entry f) (env,[]) (List.rev params) in *)
-  (*   (env, Q.quote_mind_params (List.rev params)) *)
+  let quote_mind_params env (params:(Names.Id.t * Entries.local_entry) list) =
+    let f lr ob t n env =
+      match ob with
+      | Some b -> (Q.quote_ident n, Left (quote_term env b))::lr
+      | None ->
+         let sf = getSort env t in
+         let t' = castSetProp sf (quote_term env t) in
+         (Q.quote_ident n, Right t')::lr in
+    let (env, params) = List.fold_left (process_local_entry f) (env,[]) (List.rev params) in
+    (env, Q.quote_mind_params (List.rev params))
 
-  (* let mind_params_as_types ((env,t):Environ.env*Term.constr) (params:(Names.Id.t * Entries.local_entry) list) : *)
-  (*       Environ.env*Term.constr = *)
-  (*   List.fold_left (process_local_entry (fun tr ob typ n env -> Term.mkProd_or_LetIn (toDecl (Names.Name n,ob,typ)) tr)) (env,t) *)
-  (*     (List.rev params) *)
+  let mind_params_as_types ((env,t):Environ.env*Term.constr) (params:(Names.Id.t * Entries.local_entry) list) :
+        Environ.env*Term.constr =
+    List.fold_left (process_local_entry (fun tr ob typ n env -> Term.mkProd_or_LetIn (toDecl (Names.Name n,ob,typ)) tr)) (env,t)
+      (List.rev params)
 
-  (* let quote_mut_ind env (mi:Declarations.mutual_inductive_body) = *)
-  (*  let t= Discharge.process_inductive ([],Univ.AUContext.empty) (Names.Cmap.empty,Names.Mindmap.empty) mi in *)
-  (*   let mf = Q.quote_mind_finiteness t.mind_entry_finite in *)
-  (*   let mp = (snd (quote_mind_params env (t.mind_entry_params))) in *)
-  (*   (\* before quoting the types of constructors, we need to enrich the environment with the inductives *\) *)
-  (*   let one_arities = *)
-  (*     List.map *)
-  (*       (fun x -> (x.mind_entry_typename, *)
-  (*                  snd (mind_params_as_types (env,x.mind_entry_arity) (t.mind_entry_params)))) *)
-  (*       t.mind_entry_inds in *)
-  (*   (\* env for quoting constructors of inductives. First push inductices, then params *\) *)
-  (*   let envC = List.fold_left (fun env p -> Environ.push_rel (toDecl (Names.Name (fst p), None, snd p)) env) env (one_arities) in *)
-  (*   let (envC,_) = List.fold_left (process_local_entry (fun _ _ _ _ _ -> ())) (envC,()) (List.rev (t.mind_entry_params)) in *)
-  (*   (\* env for quoting arities of inductives -- just push the params *\) *)
-  (*   let (envA,_) = List.fold_left (process_local_entry (fun _ _ _ _ _ -> ())) (env,()) (List.rev (t.mind_entry_params)) in *)
-  (*   let is = List.map (quote_one_ind envA envC) t.mind_entry_inds in *)
-  (*   let mpol = Q.quote_bool false in *)
-  (*   Q.quote_mutual_inductive_entry (mf, mp, is, mpol) *)
+  let quote_mut_ind env (mi:Declarations.mutual_inductive_body) =
+   let t= Discharge.process_inductive ([],Univ.AUContext.empty) (Names.Cmap.empty,Names.Mindmap.empty) mi in
+    let mf = Q.quote_mind_finiteness t.mind_entry_finite in
+    let mp = (snd (quote_mind_params env (t.mind_entry_params))) in
+    (* before quoting the types of constructors, we need to enrich the environment with the inductives *)
+    let one_arities =
+      List.map
+        (fun x -> (x.mind_entry_typename,
+                   snd (mind_params_as_types (env,x.mind_entry_arity) (t.mind_entry_params))))
+        t.mind_entry_inds in
+    (* env for quoting constructors of inductives. First push inductices, then params *)
+    let envC = List.fold_left (fun env p -> Environ.push_rel (toDecl (Names.Name (fst p), None, snd p)) env) env (one_arities) in
+    let (envC,_) = List.fold_left (process_local_entry (fun _ _ _ _ _ -> ())) (envC,()) (List.rev (t.mind_entry_params)) in
+    (* env for quoting arities of inductives -- just push the params *)
+    let (envA,_) = List.fold_left (process_local_entry (fun _ _ _ _ _ -> ())) (env,()) (List.rev (t.mind_entry_params)) in
+    let is = List.map (quote_one_ind envA envC) t.mind_entry_inds in
+    let mpol = Q.quote_bool false in
+    Q.quote_mutual_inductive_entry (mf, mp, is, mpol)
 
-  (* let quote_entry bypass env evm (name:string) = *)
-  (*   let (dp, nm) = split_name name in *)
-  (*   let entry = *)
-  (*     match Nametab.locate (Libnames.make_qualid dp nm) with *)
-  (*     | Globnames.ConstRef c -> *)
-  (*        let cd = Environ.lookup_constant c env in *)
-  (*        let ty = *)
-  (*          match cd.const_type with *)
-  (*          | RegularArity ty -> quote_term env ty *)
-  (*          | TemplateArity _ -> *)
-  (*             CErrors.user_err (Pp.str "Cannot reify deprecated template-polymorphic constant types") *)
-  (*        in *)
-  (*        let body = match cd.const_body with *)
-  (*          | Undef _ -> None *)
-  (*          | Def cs -> Some (quote_term env (Mod_subst.force_constr cs)) *)
-  (*          | OpaqueDef cs -> *)
-  (*             if bypass *)
-  (*             then Some (quote_term env (Opaqueproof.force_proof (Global.opaque_tables ()) cs)) *)
-  (*             else None *)
-  (*        in Some (Left (ty, body)) *)
+  let quote_entry bypass env evm (name:string) =
+    let (dp, nm) = split_name name in
+    let entry =
+      match Nametab.locate (Libnames.make_qualid dp nm) with
+      | Globnames.ConstRef c ->
+         let cd = Environ.lookup_constant c env in
+         let ty =
+           match cd.const_type with
+           | RegularArity ty -> quote_term env ty
+           | TemplateArity _ ->
+              CErrors.user_err (Pp.str "Cannot reify deprecated template-polymorphic constant types")
+         in
+         let body = match cd.const_body with
+           | Undef _ -> None
+           | Def cs -> Some (quote_term env (Mod_subst.force_constr cs))
+           | OpaqueDef cs ->
+              if bypass
+              then Some (quote_term env (Opaqueproof.force_proof (Global.opaque_tables ()) cs))
+              else None
+         in Some (Left (ty, body))
 
-  (*     | Globnames.IndRef ni -> *)
-  (*        let c = Environ.lookup_mind (fst ni) env in (\* FIX: For efficienctly, we should also export (snd ni)*\) *)
-  (*        let miq = quote_mut_ind env c in *)
-  (*        Some (Right miq) *)
-  (*     | Globnames.ConstructRef _ -> None (\* FIX?: return the enclusing mutual inductive *\) *)
-  (*     | Globnames.VarRef _ -> None *)
-  (*   in Q.quote_entry entry *)
+      | Globnames.IndRef ni ->
+         let c = Environ.lookup_mind (fst ni) env in (* FIX: For efficienctly, we should also export (snd ni)*)
+         let miq = quote_mut_ind env c in
+         Some (Right miq)
+      | Globnames.ConstructRef _ -> None (* FIX?: return the enclusing mutual inductive *)
+      | Globnames.VarRef _ -> None
+    in Q.quote_entry entry
+
+    (* TODO: replace app_full by this abstract version?*)
+    let rec app_full_abs (trm: Q.t) (acc: Q.t list) =
+      match Q.inspectTerm trm with
+        ACoq_tApp (f, xs) -> app_full_abs f (xs @ acc)
+      | _ -> (trm, acc)
+    
+    let not_supported_verb (t: Q.t) s = failwith s
+    let bad_term (t: Q.t) = not_supported_verb t "bad_term is not yet implemented" 
+
+    let from_coq_pair (t :Q.t) =
+      let (h,args) = app_full_abs t [] in
+      match Q.inspectTerm h, args with
+      | ACoq_tConstruct (i,n,u), _ :: _ :: x :: y :: [] -> 
+        if Q.representsIndConstuctor i TemplateCoqQuoter.c_pair
+        then (x,y) 
+        else bad_term t
+     | _ -> bad_term t
+
+    let rec from_coq_list (t :Q.t) =
+      let (h,args) = app_full_abs t [] in
+      match Q.inspectTerm h with
+      | ACoq_tConstruct (h,n,u) -> 
+        if Q.representsIndConstuctor h TemplateCoqQuoter.c_nil then []
+        else if Q.representsIndConstuctor h TemplateCoqQuoter.c_cons then
+          match args with
+          _ :: x :: xs :: _ -> x :: from_coq_list xs
+          | _ -> bad_term t
+        else
+          not_supported_verb t "from_coq_list"
+      | _ -> not_supported_verb t "from_coq_list"  
 end
 
 module TermReify = Reify(TemplateCoqQuoter)
 
 
 
-let reduce_hnf env evm (trm : Term.constr) =
-  let trm = Tacred.hnf_constr env evm (EConstr.of_constr trm) in
-  (evm, EConstr.to_constr evm trm)
-
-let reduce_all env evm ?(red=Genredexpr.Cbv Redops.all_flags) trm =
-  let red, _ = Redexpr.reduction_of_red_expr env red in
-  let evm, red = red env evm (EConstr.of_constr trm) in
-  (evm, EConstr.to_constr evm red)
-
-let rec app_full trm acc =
-  match Term.kind_of_term trm with
-    Term.App (f, xs) -> app_full f (Array.to_list xs @ acc)
-  | _ -> (trm, acc)
 
 
 module Denote =
@@ -1138,11 +1177,11 @@ struct
       0
     else if Term.eq_constr h tS then
       match args with
-	n :: _ -> 1 + nat_to_int n
+      n :: _ -> 1 + nat_to_int n
       | _ -> not_supported_verb trm "nat_to_int nil"
     else
       not_supported_verb trm "nat_to_int"
-
+  
   let from_bool trm =
     if Term.eq_constr trm ttrue then
       true
@@ -1208,25 +1247,6 @@ struct
 
 
 
-  let from_coq_pair trm =
-    let (h,args) = app_full trm [] in
-    if Term.eq_constr h c_pair then
-      match args with
-	_ :: _ :: x :: y :: [] -> (x, y)
-      | _ -> bad_term trm
-    else
-      not_supported_verb trm "from_coq_pair"
-
-
-  let rec from_coq_list trm =
-    let (h,args) = app_full trm [] in
-    if Term.eq_constr h c_nil then []
-    else if Term.eq_constr h c_cons then
-      match args with
-	_ :: x :: xs :: _ -> x :: from_coq_list xs
-      | _ -> bad_term trm
-    else
-      not_supported_verb trm "from_coq_list"
 
 
   (* This code is taken from Pretyping, because it is not exposed globally *)

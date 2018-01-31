@@ -425,7 +425,25 @@ Fixpoint tsl_rec (fuel : nat) (Σ : global_context) (Γ : context) (t : sterm) {
       | Checked T => raise (TypingError (NotAnInductive T))
       | TypeError t => raise (TypingError t)
       end
-    (* | sCongProd pA pB => *)
+    | sCongProd pA pB =>
+      pA' <- tsl_rec fuel Σ Γ pA ;;
+      pB' <- tsl_rec fuel Σ Γ pB ;;
+      match @infer (Build_Fuel fuel) Σ Γ pA' with
+      | Checked (tApp (tInd (mkInd "Top.heq" 0) _) [ _ ; A1' ; _ ; A2' ]) =>
+        match @infer (Build_Fuel fuel) Σ (Γ ,, vass nAnon (mkPack A1' A2')) pB' with
+        | Checked (tApp (tInd (mkInd "Top.heq" 0) _) [ _ ; B1' ; _ ; B2' ]) =>
+          (* Problem: They are not the right B1' and B2', they have been subject
+             to a lift and a substitution.
+             I should probably fix that in ETT to ITT as well.
+             Unfortunately.
+           *)
+          raise TranslationNotHandled
+        | Checked T => raise (TypingError (NotAnInductive T))
+        | TypeError t => raise (TypingError t)
+        end
+      | Checked T => raise (TypingError (NotAnInductive T))
+      | TypeError t => raise (TypingError t)
+      end
     (* | sCongLambda pA pB pt => *)
     (* | sCongApp pu pA pB pv => *)
     | sCongEq pA pu pv =>

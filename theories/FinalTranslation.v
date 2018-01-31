@@ -83,8 +83,8 @@ Definition mkUip (A u v p q : term) : term :=
 Definition mkFunext (A B f g e : term) : term :=
   tApp tFunext [ A ; B ; f ; g ; e ].
 
-Definition heq {A} (a : A) {B} (b : B) :=
-  { p : A = B & transport p a = b }.
+Inductive heq {A} (a : A) {B} (b : B) :=
+  heqPair (p : A = B) (e : transport p a = b).
 
 Notation "A ≅ B" := (heq A B) (at level 20).
 
@@ -249,10 +249,7 @@ Fixpoint tsl_rec (fuel : nat) (Σ : global_context) (Γ : context) (t : sterm)
     | sHeqToEq p =>
       p' <- tsl_rec fuel Σ Γ p ;;
       match @infer (Build_Fuel fuel) Σ Γ p' with
-      (* I would hope for a better way *)
-      (* This is probably buggy as it doesn't care for lifts and such *)
-      (* | Checked (tApp (tConst "Top.heq" []) [ A' ; u' ; _ ; v' ]) => *)
-      | Checked (tApp _ [tApp _ [ _ ; A' ; _ ]; tLambda _ _ (tApp _ [ _ ; tApp _ [ _ ; _ ; _ ; u' ] ; v' ])]) =>
+      | Checked (tApp (tInd (mkInd "Top.heq" 0) _) [ A' ; u' ; _ ; v' ]) =>
         ret (mkHeqToHeq A' u' v' p')
       (* That's not really the correct error but well. *)
       | Checked T => raise (TypingError (NotAnInductive T))
@@ -265,8 +262,7 @@ Fixpoint tsl_rec (fuel : nat) (Σ : global_context) (Γ : context) (t : sterm)
     | sHeqSym p =>
       p' <- tsl_rec fuel Σ Γ p ;;
       match @infer (Build_Fuel fuel) Σ Γ p' with
-      (* | Checked (tApp (tConst "Top.heq" []) [ A' ; a' ; B' ; b' ]) => *)
-      | Checked (tApp _ [tApp _ [ _ ; A' ; B' ]; tLambda _ _ (tApp _ [ _ ; tApp _ [ _ ; _ ; _ ; a' ] ; b' ])]) =>
+      | Checked (tApp (tInd (mkInd "Top.heq" 0) _) [ A' ; a' ; B' ; b' ]) =>
         ret (mkHeqSym A' a' B' b' p')
       | Checked T => raise (TypingError (NotAnInductive T))
       | TypeError t => raise (TypingError t)
@@ -275,11 +271,9 @@ Fixpoint tsl_rec (fuel : nat) (Σ : global_context) (Γ : context) (t : sterm)
       p' <- tsl_rec fuel Σ Γ p ;;
       q' <- tsl_rec fuel Σ Γ q ;;
       match @infer (Build_Fuel fuel) Σ Γ p' with
-      (* | Checked (tApp (tConst "Top.heq" []) [ A' ; a' ; B' ; b' ]) => *)
-      | Checked (tApp _ [tApp _ [ _ ; A' ; B' ]; tLambda _ _ (tApp _ [ _ ; tApp _ [ _ ; _ ; _ ; a' ] ; b' ])]) =>
+      | Checked (tApp (tInd (mkInd "Top.heq" 0) _) [ A' ; a' ; B' ; b' ]) =>
         match @infer (Build_Fuel fuel) Σ Γ q' with
-        (* | Checked (tApp (tConst "Top.heq" []) [ _ ; _ ; C' ; c' ]) => *)
-        | Checked (tApp _ [tApp _ [ _ ; _ ; C' ]; tLambda _ _ (tApp _ [ _ ; tApp _ [ _ ; _ ; _ ; _ ] ; c' ])]) =>
+        | Checked (tApp (tInd (mkInd "Top.heq" 0) _) [ _ ; _ ; C' ; c' ]) =>
           ret (mkHeqTrans A' a' B' b' C' c' p' q')
         | Checked T => raise (TypingError (NotAnInductive T))
         | TypeError t => raise (TypingError t)
@@ -390,7 +384,7 @@ Definition funext_decl :=
 
 Quote Recursively Definition heq_prog := @heq.
 Definition heq_decl :=
-  Eval compute in (get_cdecl "Top.heq" heq_prog).
+  Eval compute in (get_idecl "Top.heq" heq_prog).
 
 Quote Recursively Definition heq_to_eq_prog := @heq_to_eq.
 Definition heq_to_eq_decl :=
@@ -422,7 +416,7 @@ Definition Σ : global_context :=
     ConstantDecl "Top.transport" Transport_decl ;
     ConstantDecl "Top.UIP" UIP_decl ;
     ConstantDecl "Top.funext" funext_decl ;
-    ConstantDecl "Top.heq" heq_decl ;
+    InductiveDecl "Top.heq" heq_decl ;
     ConstantDecl "Top.heq_to_eq" heq_to_eq_decl ;
     ConstantDecl "Top.heq_refl" heq_refl_decl ;
     ConstantDecl "Top.heq_sym" heq_sym_decl ;

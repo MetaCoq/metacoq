@@ -316,8 +316,17 @@ Definition mkProjT2 (A1 A2 p : term) : term :=
 Definition mkProjTe (A1 A2 p : term) : term :=
   tApp tProjTe [ A1 ; A2 ; p ].
 
+Definition mkCongProd (A1 A2 B1 B2 pA pB : term) :=
+  tApp tCongProd [
+    A1 ;
+    A2 ;
+    (tLambda nAnon A1 B1) ;
+    (tLambda nAnon A2 B2) ;
+    pA ;
+    (tLambda nAnon (mkPack A1 A2) pB)
+  ].
+
 (* TODO *)
-(* Definition mkCongProd (A1 A2 B1 B2 pA pB) *)
 (* CongLambda and CongApp too *)
 
 Definition mkCongEq (A1 A2 u1 v1 u2 v2 pA pu pv : term) : term :=
@@ -425,22 +434,14 @@ Fixpoint tsl_rec (fuel : nat) (Σ : global_context) (Γ : context) (t : sterm) {
       | Checked T => raise (TypingError (NotAnInductive T))
       | TypeError t => raise (TypingError t)
       end
-    | sCongProd pA pB =>
+    | sCongProd B1 B2 pA pB =>
       pA' <- tsl_rec fuel Σ Γ pA ;;
       pB' <- tsl_rec fuel Σ Γ pB ;;
+      B1' <- tsl_rec fuel Σ Γ B1 ;;
+      B2' <- tsl_rec fuel Σ Γ B2 ;;
       match @infer (Build_Fuel fuel) Σ Γ pA' with
       | Checked (tApp (tInd (mkInd "Top.heq" 0) _) [ _ ; A1' ; _ ; A2' ]) =>
-        match @infer (Build_Fuel fuel) Σ (Γ ,, vass nAnon (mkPack A1' A2')) pB' with
-        | Checked (tApp (tInd (mkInd "Top.heq" 0) _) [ _ ; B1' ; _ ; B2' ]) =>
-          (* Problem: They are not the right B1' and B2', they have been subject
-             to a lift and a substitution.
-             I should probably fix that in ETT to ITT as well.
-             Unfortunately.
-           *)
-          raise TranslationNotHandled
-        | Checked T => raise (TypingError (NotAnInductive T))
-        | TypeError t => raise (TypingError t)
-        end
+        ret (mkCongProd A1' A2' B1' B2' pA' pB')
       | Checked T => raise (TypingError (NotAnInductive T))
       | TypeError t => raise (TypingError t)
       end

@@ -46,7 +46,9 @@ Fixpoint llift γ δ (t:sterm)  : sterm :=
   | sHeqSym p => sHeqSym (llift γ δ p)
   | sHeqTrans p q => sHeqTrans (llift γ δ p) (llift γ δ q)
   | sHeqTransport p t => sHeqTransport (llift γ δ p) (llift γ δ t)
-  | sCongProd p q => sCongProd (llift γ δ p) (llift γ (S (S (S δ))) q)
+  | sCongProd B1 B2 p q =>
+    sCongProd (llift γ (S δ) B1) (llift γ (S δ) B2)
+              (llift γ δ p) (llift γ (S δ) q)
   | sCongLambda pA pB pt =>
     sCongLambda (llift γ δ pA) (llift γ (S δ) pB) (llift γ (S δ) pt)
   | sCongApp pu pA pB pv =>
@@ -95,7 +97,9 @@ Fixpoint rlift γ δ t : sterm :=
   | sHeqSym p => sHeqSym (rlift γ δ p)
   | sHeqTrans p q => sHeqTrans (rlift γ δ p) (rlift γ δ q)
   | sHeqTransport p t => sHeqTransport (rlift γ δ p) (rlift γ δ t)
-  | sCongProd pA pB => sCongProd (rlift γ δ pA) (rlift γ (S (S (S δ))) pB)
+  | sCongProd B1 B2 p q =>
+    sCongProd (rlift γ (S δ) B1) (rlift γ (S δ) B2)
+              (rlift γ δ p) (rlift γ (S δ) q)
   | sCongLambda pA pB pt =>
     sCongLambda (rlift γ δ pA) (rlift γ (S δ) pB) (rlift γ (S δ) pt)
   | sCongApp pu pA pB pv =>

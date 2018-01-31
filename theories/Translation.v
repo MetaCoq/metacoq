@@ -255,13 +255,13 @@ Proof.
     destruct (IHsim1 _ _ _ _ _ eq hA1 hA2) as [pA hpA].
     destruct (IHsim2 _ (Γ1 ,, svass n1 A1) (Γ2 ,, svass n2 A2)
                      _ _ ltac:(cbn ; omega) hB1 hB2) as [pB hpB].
-    exists (sCongProd pA pB).
+    exists (sCongProd (llift #|Γ1| 1 B1) (rlift #|Γ1| 1 B2) pA pB).
     destruct (istype_type hpA) as [? iA].
     destruct (inversionHeq iA) as [? [[[[? ?] ?] ?] ?]].
     destruct (istype_type hpB) as [? iB].
     destruct (inversionHeq iB) as [? [[[[? ?] ?] ?] ?]].
     eapply type_conv'.
-    + eapply @type_CongProd' with (B1 := llift #|Γ1| 1 B1) (B2 := rlift #|Γ1| 1 B2).
+    + eapply type_CongProd'.
       * eassumption.
       * rewrite llift_substProj, rlift_substProj.
         apply hpB.
@@ -1594,7 +1594,7 @@ Proof.
       (* We can finally conclude! *)
       exists (sSort (max_sort s1 s2)), (sSort (max_sort s1 s2)).
       exists (sProd n1 A1' B1'), (sProd n2 A2' tB2).
-      exists (sCongProd p1 p5).
+      exists (sCongProd B1' tB2 p1 p5).
       destruct hA1' as [[[? ?] ?] ?].
       destruct hB1' as [[[? ?] ?] ?].
       destruct hA2' as [[[? ?] ?] ?].
@@ -1824,7 +1824,7 @@ Proof.
                                (sSort (max_sort s1 s2)) (sProd n1 A1' B1')
 
       ).
-      { exists (sHeqSym (sCongProd pA pB)).
+      { exists (sHeqSym (sCongProd B1' B2' pA pB)).
         destruct hB1' as [[[? ?] ?] ?].
         destruct hB2' as [[[? ?] ?] ?].
         eapply type_HeqSym'. eapply type_CongProd'.

@@ -114,7 +114,7 @@ Inductive typing (Σ : global_context) : scontext -> sterm -> sterm -> Type :=
     Σ ;;; Γ |-i A2 : sSort s ->
     Σ ;;; Γ ,, svass nx A1 |-i B1 : sSort z ->
     Σ ;;; Γ ,, svass ny A2 |-i B2 : sSort z ->
-    Σ ;;; Γ |-i sCongProd pA pB :
+    Σ ;;; Γ |-i sCongProd B1 B2 pA pB :
     sHeq (sSort (max_sort s z)) (sProd nx A1 B1)
          (sSort (max_sort s z)) (sProd ny A2 B2)
 
@@ -1110,7 +1110,7 @@ Lemma type_CongProd'' :
                 (sSort z) ((lift 1 1 B2){ 0 := sProjT2 (sRel 0) }) ->
     Σ ;;; Γ ,, svass nx A1 |-i B1 : sSort z ->
     Σ ;;; Γ ,, svass ny A2 |-i B2 : sSort z ->
-    Σ ;;; Γ |-i sCongProd pA pB :
+    Σ ;;; Γ |-i sCongProd B1 B2 pA pB :
     sHeq (sSort (max_sort s z)) (sProd nx A1 B1)
          (sSort (max_sort s z)) (sProd ny A2 B2).
 Proof.
@@ -1185,7 +1185,7 @@ Lemma type_CongProd' :
                 (sSort z2) ((lift 1 1 B2){ 0 := sProjT2 (sRel 0) }) ->
     Σ ;;; Γ ,, svass nx A1 |-i B1 : sSort z1 ->
     Σ ;;; Γ ,, svass ny A2 |-i B2 : sSort z2 ->
-    Σ ;;; Γ |-i sCongProd pA pB :
+    Σ ;;; Γ |-i sCongProd B1 B2 pA pB :
     sHeq (sSort (max_sort s1 z1)) (sProd nx A1 B1)
          (sSort (max_sort s2 z2)) (sProd ny A2 B2).
 Proof.

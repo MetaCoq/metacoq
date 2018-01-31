@@ -30,7 +30,9 @@ Fixpoint lift n k t : sterm :=
   | sHeqSym p => sHeqSym (lift n k p)
   | sHeqTrans p q => sHeqTrans (lift n k p) (lift n k q)
   | sHeqTransport p t => sHeqTransport (lift n k p) (lift n k t)
-  | sCongProd pA pB => sCongProd (lift n k pA) (lift n (S k) pB)
+  | sCongProd B1 B2 pA pB =>
+    sCongProd (lift n (S k) B1) (lift n (S k) B2)
+              (lift n k pA) (lift n (S k) pB)
   | sCongLambda pA pB pt =>
     sCongLambda (lift n k pA) (lift n (S k) pB) (lift n (S k) pt)
   | sCongApp pu pA pB pv =>
@@ -79,7 +81,9 @@ Fixpoint subst t k u :=
   | sHeqSym p => sHeqSym (subst t k p)
   | sHeqTrans p q => sHeqTrans (subst t k p) (subst t k q)
   | sHeqTransport p u => sHeqTransport (subst t k p) (subst t k u)
-  | sCongProd pA pB => sCongProd (subst t k pA) (subst t (S k) pB)
+  | sCongProd B1 B2 pA pB =>
+    sCongProd (subst t (S k) B1) (subst t (S k) B2)
+              (subst t k pA) (subst t (S k) pB)
   | sCongLambda pA pB pt =>
     sCongLambda (subst t k pA) (subst t (S k) pB) (subst t (S k) pt)
   | sCongApp pu pA pB pv =>

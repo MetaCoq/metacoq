@@ -1,5 +1,6 @@
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
-From Template Require Import Template Ast Induction LiftSubst Typing.
+From Template Require Import Template Ast Induction LiftSubst Typing monad_utils.
+Import MonadNotation.
 
 Set Asymmetric Patterns.
 
@@ -11,53 +12,6 @@ Ltac fill_tApp :=
     |- context[mktApp _ ?x] => unify x (@nil term)
   end.
 
-Class Monad@{d c} (m : Type@{d} -> Type@{c}) : Type :=
-{ ret : forall {t : Type@{d}}, t -> m t
-; bind : forall {t u : Type@{d}}, m t -> (t -> m u) -> m u
-}.
-
-Class MonadExc E (m : Type -> Type) : Type :=
-{ raise : forall {T}, E -> m T
-; catch : forall {T}, m T -> (E -> m T) -> m T
-}.
-
-Module MonadNotation.
-
-  Delimit Scope monad_scope with monad.
-
-  Notation "c >>= f" := (@bind _ _ _ _ c f) (at level 50, left associativity) : monad_scope.
-  Notation "f =<< c" := (@bind _ _ _ _ c f) (at level 51, right associativity) : monad_scope.
-
-  Notation "x <- c1 ;; c2" := (@bind _ _ _ _ c1 (fun x => c2))
-    (at level 100, c1 at next level, right associativity) : monad_scope.
-
-  Notation "e1 ;; e2" := (_ <- e1%monad ;; e2%monad)%monad
-    (at level 100, right associativity) : monad_scope.
-
-End MonadNotation.
-Import MonadNotation.
-Instance option_monad : Monad option :=
-  {| ret A a := Some a ;
-     bind A B m f :=
-       match m with
-       | Some a => f a
-       | None => None
-       end
-  |}.
-
-Open Scope monad.
-
-Section MapOpt.
-  Context {A} (f : A -> option A).
-
-  Fixpoint mapopt (l : list A) : option (list A) :=
-    match l with
-    | nil => ret nil
-    | x :: xs => x' <- f x ;;
-                 xs' <- mapopt xs ;;
-                 ret (x' :: xs')
-    end.
-End MapOpt.
 
 Module RedFlags.
 

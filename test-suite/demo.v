@@ -1,6 +1,8 @@
 (* -*- coq-prog-args: ("-top" "TemplateTestSuite.demo") -*-  *)
 
-Require Import Template.Template.
+Require Import List Arith.
+Require Import Template.monad_utils Template.Ast Template.Template.
+Import ListNotations MonadNotation.
 
 Local Open Scope string_scope.
 
@@ -87,13 +89,28 @@ Quote Recursively Definition mult_syntax := mult.
 Make Definition d''_from_syntax := ltac:(let t:= eval compute in d'' in exact t).
 
 
-Require Import Arith.
+(** Primitive Projections. *)
+
+Set Primitive Projections.
+Record prod' A B : Type :=
+  pair' { fst' : A ; snd' : B }.
+Arguments fst' {A B} _.
+Arguments snd' {A B} _.
+
+Test Quote ((pair' _ _ true 4).(snd')).
+Make Definition x := (tProj (mkInd "prod'" 0, 2, 1)
+   (tApp (tConstruct (mkInd "prod'" 0) 0 nil)
+      [tInd (mkInd "Coq.Init.Datatypes.bool" 0) nil;
+      tInd (mkInd "Coq.Init.Datatypes.nat" 0) nil;
+      tConstruct (mkInd "Coq.Init.Datatypes.bool" 0) 0 nil;
+      tApp (tConstruct (mkInd "Coq.Init.Datatypes.nat" 0) 1 nil)
+        [tApp (tConstruct (mkInd "Coq.Init.Datatypes.nat" 0) 1 nil)
+           [tApp (tConstruct (mkInd "Coq.Init.Datatypes.nat" 0) 1 nil)
+              [tApp (tConstruct (mkInd "Coq.Init.Datatypes.nat" 0) 1 nil)
+                 [tConstruct (mkInd "Coq.Init.Datatypes.nat" 0) 0 nil]]]]])).
+
 
 (** Reflecting  Inductives *)
-
-Require Import List.
-Import ListNotations.
-Require Import Template.Ast.
 
 Definition one_i : one_inductive_entry :=
 {|
@@ -204,43 +221,47 @@ Run TemplateProgram (tmBind (tmQuoteConstant "add" false) tmPrint).
 Definition six : nat.
   exact (3 + 3).
 Qed.
-Run TemplateProgram (tmBind (tmQuoteConstant "six" true) tmPrint).
-Run TemplateProgram (tmBind (tmQuoteConstant "six" false) tmPrint).
+Run TemplateProgram ((tmQuoteConstant "six" true) >>= tmPrint).
+Run TemplateProgram ((tmQuoteConstant "six" false) >>= tmPrint).
 
 
-Run TemplateProgram (tmBind (tmLemma "foo4" nat)
-                            (fun t =>  tmDefinition "foo5" (t + t + 2))).
+Run TemplateProgram (t <- tmLemma "foo4" nat ;;
+                     tmDefinition "foo5" (t + t + 2)).
 Next Obligation.
   exact 3.
 Defined.
 Print foo5.
+Fail Definition tttt : _ := _.
 
 
-Run TemplateProgram (tmBind (tmLemma "foo44" nat)
-                            (fun t => tmBind (tmQuote t) tmPrint)).
+Run TemplateProgram (t <- tmLemma "foo44" nat ;;
+                     qt <- tmQuote t ;;
+                     t <- tmEval all t ;;
+                     tmPrint qt ;; tmPrint t).
 Next Obligation.
   exact (3+2).
 Defined.
 
 
 
-Run TemplateProgram (tmBind (tmQuoteInductive "demoList")
-                            (tmDefinition "demoList_syntax")).
-Example unquote_quote_id1: demoList_syntax=mut_list_i (* demoList was obtained from mut_list_i *).
-  unfold demoList_syntax.
-  unfold mut_list_i.
-    f_equal.
-Qed.
+(* Run TemplateProgram (tmQuoteInductive "demoList" *)
+(*                        >>= tmDefinition "demoList_syntax"). *)
+(* Example unquote_quote_id1: demoList_syntax=mut_list_i *)
+(* (* demoList was obtained from mut_list_i *). *)
+(*   unfold demoList_syntax. *)
+(*   unfold mut_list_i. *)
+(*     f_equal. *)
+(* Qed. *)
 
-Run TemplateProgram (tmBind (tmDefinition "foo4'" nat) tmPrint).
+Run TemplateProgram (tmDefinition "foo4'" nat >>= tmPrint).
 
 (* We can chain the definition. In the following,
  foo5' = 12 and foo6' = foo5' *)
-Run TemplateProgram (tmBind (tmDefinition "foo5'" 12)
-                            (fun t =>  tmDefinition "foo6'" t)).
+Run TemplateProgram (t <- tmDefinition "foo5'" 12 ;;
+                     tmDefinition "foo6'" t).
 
-Run TemplateProgram (tmBind (tmLemma "foo51" nat)
-                            (fun _ => tmLemma "foo61" bool)).
+Run TemplateProgram (tmLemma "foo51" nat ;;
+                     tmLemma "foo61" bool).
 Next Obligation.
   exact 3.
 Defined.
@@ -252,10 +273,19 @@ Qed.
 
 
 Definition printConstant (name  : ident): TemplateMonad unit :=
-  tmBind (tmUnquote (tConst name []))
-         (fun X => tmBind (tmEval all (projT2 X)) tmPrint).
+  X <- tmUnquote (tConst name []) ;;
+  X' <- tmEval all (projT2 X) ;;
+ tmPrint X'.
+
 Fail Run TemplateProgram (printInductive "Coq.Arith.PeanoNat.Nat.add").
 Run TemplateProgram (printConstant "Coq.Arith.PeanoNat.Nat.add").
+
+
+(* Fail Run TemplateProgram (tmUnquoteTyped (nat -> nat) add_syntax >>= *)
+(*                           tmPrint). *)
+Run TemplateProgram (tmUnquoteTyped (nat -> nat -> nat) add_syntax >>=
+                     tmPrint).
+
 
 
 
@@ -277,30 +307,35 @@ Run TemplateProgram (printConstant "TemplateTestSuite.demo.Funtp2").
 
 
 Definition tmDefinition' : ident -> forall {A}, A -> TemplateMonad unit
-  := fun id A t => tmBind (tmDefinition id t) (fun _ => tmReturn tt).
+  := fun id A t => tmDefinition id t ;; tmReturn tt.
 
 (** A bit less efficient, but does the same job as tmMkDefinition *)
 Definition tmMkDefinition' : ident -> term -> TemplateMonad unit
-  := fun id t => tmBind (tmUnquote t)
-                     (fun x => tmBind (tmEval all (projT2 x))
-                                   (tmDefinition' id)).
+  := fun id t => x <- tmUnquote t ;;
+              x' <- tmEval all (projT2 x) ;;
+              tmDefinition' id x'.
 
 Run TemplateProgram (tmMkDefinition' "foo" add_syntax).
 Run TemplateProgram (tmMkDefinition "foo1" add_syntax).
 
-Run TemplateProgram (tmBind (tmFreshName "foo") tmPrint).
-Run TemplateProgram (tmBind (tmAxiom "foo0" (nat -> nat)) tmPrint).
-Run TemplateProgram (tmBind (tmAxiom "foo0'" (nat -> nat))
-                            (fun t => tmDefinition' "foo0''" t)).
-Run TemplateProgram (tmBind (tmFreshName "foo") tmPrint).
+Run TemplateProgram ((tmFreshName "foo") >>= tmPrint).
+Run TemplateProgram (tmAxiom "foo0" (nat -> nat) >>= tmPrint).
+Run TemplateProgram (tmAxiom "foo0'" (nat -> nat) >>=
+                     fun t => tmDefinition' "foo0''" t).
+Run TemplateProgram (tmFreshName "foo" >>= tmPrint).
 
 Run TemplateProgram (tmBind (tmAbout "foo") tmPrint).
+Run TemplateProgram (tmBind (tmAbout "qlsnkqsdlfhkdlfh") tmPrint).
 Run TemplateProgram (tmBind (tmAbout "eq") tmPrint).
 Run TemplateProgram (tmBind (tmAbout "Logic.eq") tmPrint).
 Run TemplateProgram (tmBind (tmAbout "eq_refl") tmPrint).
 
+Run TemplateProgram (tmCurrentModPath tt >>= tmPrint).
+
 Run TemplateProgram (tmBind (tmEval all (3 + 3)) tmPrint).
 Run TemplateProgram (tmBind (tmEval hnf (3 + 3)) tmPrint).
+
+Fail Run TemplateProgram (tmFail "foo" >>= tmQuoteInductive).
 
 
 (* Definition duplicateDefn (name newName : ident): TemplateMonad unit := *)
@@ -316,26 +351,6 @@ Run TemplateProgram (tmBind (tmEval hnf (3 + 3)) tmPrint).
 (* Check (eq_refl: add=addUnq). *)
 
 
-
-(** Primitive Projections. *)
-
-Set Primitive Projections.
-Record prod' A B : Type :=
-  pair' { fst' : A ; snd' : B }.
-Arguments fst' {A B} _.
-Arguments snd' {A B} _.
-
-Test Quote ((pair' _ _ true 4).(snd')).
-Make Definition x := (tProj (mkInd "prod'" 0, 2, 1)
-   (tApp (tConstruct (mkInd "prod'" 0) 0 nil)
-      [tInd (mkInd "Coq.Init.Datatypes.bool" 0) nil;
-      tInd (mkInd "Coq.Init.Datatypes.nat" 0) nil;
-      tConstruct (mkInd "Coq.Init.Datatypes.bool" 0) 0 nil;
-      tApp (tConstruct (mkInd "Coq.Init.Datatypes.nat" 0) 1 nil)
-        [tApp (tConstruct (mkInd "Coq.Init.Datatypes.nat" 0) 1 nil)
-           [tApp (tConstruct (mkInd "Coq.Init.Datatypes.nat" 0) 1 nil)
-              [tApp (tConstruct (mkInd "Coq.Init.Datatypes.nat" 0) 1 nil)
-                 [tConstruct (mkInd "Coq.Init.Datatypes.nat" 0) 0 nil]]]]])).
 
 (** Universes *)
 

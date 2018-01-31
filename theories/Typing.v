@@ -3,11 +3,14 @@ From Template Require Import Template Ast Induction LiftSubst.
 
 Set Asymmetric Patterns.
 
-Definition mkApp t u :=
+
+Definition mkApps t us :=
   match t with
-  | tApp f args => tApp f (args ++ [u])
-  | _ => tApp t [u]
+  | tApp f args => tApp f (args ++ us)
+  | _ => tApp t us
   end.
+
+Definition mkApp t u := mkApps t [u].
 
 (** Substitutes [t1 ; .. ; tn] in u for [Rel 0; .. Rel (n-1)]*)
 Definition substl l t :=
@@ -37,10 +40,10 @@ Program Fixpoint safe_nth {A} (l : list A) (n : nat | n < List.length l) : A :=
 
 Next Obligation.
   simpl in H. inversion H.
-Qed.
+Defined.
 Next Obligation.
   simpl in H. auto with arith.
-Qed.
+Defined.
 
 Require Import String.
 
@@ -141,12 +144,6 @@ Fixpoint lookup_env (Σ : global_context) (id : ident) : option global_decl :=
 Definition declared_constant (Σ : global_context) (id : ident) decl : Prop :=
   lookup_env Σ id = Some (ConstantDecl id decl).
 
-Definition inductive_mind (i : inductive) :=
-  let 'mkInd s _ := i in s.
-
-Definition inductive_ind (i : inductive) :=
-  let 'mkInd _ n := i in n.
-
 Definition declared_minductive Σ mind decl :=
   lookup_env Σ mind = Some (InductiveDecl mind decl).
 
@@ -210,7 +207,7 @@ Next Obligation.
   destruct H as [decl' [H'' H''']].
   eapply H0.
   simpl. rewrite H''. reflexivity.
-Qed.
+Defined.
 
 Definition max_universe (u1 u2 : universe) : universe :=
   (u1 ++ u2)%list.
@@ -604,10 +601,10 @@ Conjecture congr_cumul_prod : forall Σ Γ na na' M1 M2 N1 N2,
 Fixpoint decompose_program (p : program) (env : global_context) : global_context * term :=
   match p with (* TODO Universes *)
   | PConstr s u ty trm p =>
-    let decl :=  {| cst_name := s; cst_universes := u; cst_type := ty; cst_body := Some trm |} in
+    let decl :=  {| cst_universes := u; cst_type := ty; cst_body := Some trm |} in
     decompose_program p (ConstantDecl s decl :: env)
   | PAxiom s u ty p =>
-    let decl := {| cst_name := s; cst_universes := u; cst_type := ty; cst_body := None |} in
+    let decl := {| cst_universes := u; cst_type := ty; cst_body := None |} in
     decompose_program p (ConstantDecl s decl :: env)
   | PType ind m inds p =>
     let decl := {| ind_npars := m; ind_bodies := inds |} in
@@ -643,7 +640,7 @@ Definition isArity Σ Γ T :=
 
 Definition app_context (Γ Γ' : context) : context := (Γ' ++ Γ)%list.
 Notation " Γ  ,,, Γ' " := (app_context Γ Γ') (at level 25, Γ' at next level, left associativity).
-Notation "#| Γ |" := (List.length Γ) (at level 0, format "#| Γ |").
+Notation "#| Γ |" := (List.length Γ) (at level 0, Γ at level 99, format "#| Γ |").
 
 Inductive type_inddecls (Σ : global_context) (pars : context) (Γ : context) :
   list inductive_body -> Set :=

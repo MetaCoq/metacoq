@@ -273,6 +273,7 @@ struct
     (r_reify "PConstr", r_reify "PType", r_reify "PAxiom", r_reify "PIn")
   let tinductive_body = r_reify "inductive_body"
   let tmkinductive_body = r_reify "mkinductive_body"
+  let tBuild_minductive_decl = r_reify "Build_minductive_decl"
 
   let tMutual_inductive_entry = r_reify "mutual_inductive_entry"
   let tOne_inductive_entry = r_reify "one_inductive_entry"
@@ -284,15 +285,16 @@ struct
   let cParameter_entry = r_reify "Build_parameter_entry"
   let cDefinition_entry = r_reify "Build_definition_entry"
 
-  let (tcbv, tcbn, thnf, tall) = (r_reify "cbv", r_reify "cbn", r_reify "hnf", r_reify "all")
+  let (tcbv, tcbn, thnf, tall, tlazy) = (r_reify "cbv", r_reify "cbn", r_reify "hnf", r_reify "all", r_reify "lazy")
 
   let (tglobal_reference, tConstRef, tIndRef, tConstructRef) = (r_reify "global_reference", r_reify "ConstRef", r_reify "IndRef", r_reify "ConstructRef")
 
-  let (tmReturn, tmBind, tmQuote, tmQuoteRec, tmEval, tmDefinition, tmAxiom, tmLemma, tmFreshName, tmAbout,
-       tmMkDefinition, tmMkInductive, tmPrint, tmQuoteInductive, tmQuoteConstant, tmUnquote) =
+  let (tmReturn, tmBind, tmQuote, tmQuoteRec, tmEval, tmDefinition, tmAxiom, tmLemma, tmFreshName, tmAbout, tmCurrentModPath,
+       tmMkDefinition, tmMkInductive, tmPrint, tmFail, tmQuoteInductive, tmQuoteConstant, tmUnquote, tmUnquoteTyped) =
     (r_reify "tmReturn", r_reify "tmBind", r_reify "tmQuote", r_reify "tmQuoteRec", r_reify "tmEval", r_reify "tmDefinition",
-     r_reify "tmAxiom", r_reify "tmLemma", r_reify "tmFreshName", r_reify "tmAbout",
-     r_reify "tmMkDefinition", r_reify "tmMkInductive", r_reify "tmPrint", r_reify "tmQuoteInductive", r_reify "tmQuoteConstant", r_reify "tmUnquote")
+     r_reify "tmAxiom", r_reify "tmLemma", r_reify "tmFreshName", r_reify "tmAbout", r_reify "tmCurrentModPath",
+     r_reify "tmMkDefinition", r_reify "tmMkInductive", r_reify "tmPrint", r_reify "tmFail", r_reify "tmQuoteInductive", r_reify "tmQuoteConstant",
+     r_reify "tmUnquote", r_reify "tmUnquoteTyped")
 
   (* let pkg_specif = ["Coq";"Init";"Specif"] *)
   (* let texistT = resolve_symbol pkg_specif "existT" *)
@@ -1349,6 +1351,7 @@ struct
     else if Term.eq_constr trm tcbn then Cbn default_flags
     else if Term.eq_constr trm thnf then Hnf
     else if Term.eq_constr trm tall then Cbv all_flags
+    else if Term.eq_constr trm tlazy then Lazy all_flags
     else not_supported_verb trm "denote_reduction_strategy"
 
 
@@ -1421,10 +1424,6 @@ struct
       ignore(Command.declare_mutual_inductive_with_eliminations (mut_ind mr mf mp mi mpol mpr) [] [])
     | _ -> raise (Failure "ill-typed mutual_inductive_entry")
 
-  let declare_interpret_inductive (env: Environ.env) (evm: Evd.evar_map) (body: Constrexpr.constr_expr) : unit =
-	let (body,_) = Constrintern.interp_constr env evm body in
-  declare_inductive env evm body
-
 
   let monad_failure s k =
     CErrors.user_err  (str (s ^ " must take " ^ (string_of_int k) ^ " argument" ^ (if k > 0 then "s" else "") ^ ".")
@@ -1472,9 +1471,9 @@ struct
          let original_program_flag = !Flags.program_mode in
          Flags.program_mode := true;
          Command.do_definition (unquote_ident name) kind None [] None hole (Some typ)
-                               (Lemmas.mk_hook (fun _ gr -> Flags.program_mode := original_program_flag;
-                                                            let env = Global.env () in
+                               (Lemmas.mk_hook (fun _ gr -> let env = Global.env () in
                                                             let evm, t = Evd.fresh_global env evm gr in k (evm, t)));
+         Flags.program_mode := original_program_flag
          (* let kind = Decl_kinds.(Global, Flags.use_polymorphic_flag (), DefinitionBody Definition) in *)
          (* Lemmas.start_proof (unquote_ident name) kind evm (EConstr.of_constr typ) *)
                             (* (Lemmas.mk_hook (fun _ gr -> *)
@@ -1509,13 +1508,20 @@ struct
          let (evm, name) = reduce_all env evm name in
          let name = unquote_string name in
          let (dp, nm) = split_name name in
-         let entry =
-           match Nametab.locate (Libnames.make_qualid dp nm) with
-           | Globnames.IndRef ni ->
-              let c = Environ.lookup_mind (fst ni) env in (* FIX: For efficienctly, we should also export (snd ni)*)
-              TermReify.quote_mut_ind env c
-           | _ -> CErrors.user_err (str name ++ str " does not seem to be an inductive.") in
-         k (evm, entry)
+         (match Nametab.locate (Libnames.make_qualid dp nm) with
+          | Globnames.IndRef ni ->
+             let t = TermReify.quote_mind_decl env (fst ni) in
+             let _, args = Term.destApp t in
+             (match args with
+              | [|name; n; inds|] ->
+                 let decl = Term.mkApp (tBuild_minductive_decl, [|n ; inds|]) in
+                 k (evm, decl)
+              | _ -> bad_term_verb t "anomaly in quoting of inductive types")
+               (* quote_mut_ind produce an entry rather than a decl *)
+          (* let c = Environ.lookup_mind (fst ni) env in (\* FIX: For efficienctly, we should also export (snd ni)*\) *)
+          (* TermReify.quote_mut_ind env c *)
+          | _ -> CErrors.user_err (str name ++ str " does not seem to be an inductive."))
+      (* k (evm, entry) *)
       | _ -> monad_failure "tmQuoteInductive" 1
     else if Term.eq_constr coConstr tmQuoteConstant then
       match args with
@@ -1549,12 +1555,27 @@ struct
       | _::trm::[] -> Feedback.msg_info (Printer.pr_constr trm);
                       k (evm, unit_tt)
       | _ -> monad_failure "tmPrint" 2
+    else if Term.eq_constr coConstr tmFail then
+      match args with
+      | _::trm::[] -> CErrors.user_err (str (unquote_string trm))
+      | _ -> monad_failure "tmFail" 2
     else if Term.eq_constr coConstr tmAbout then
       match args with
       | id::[] -> let id = unquote_string id in
-                  let gr = Smartlocate.locate_global_with_alias (None, Libnames.qualid_of_string id) in
-                  k (evm, quote_global_reference gr)
+                  (try
+                     let gr = Smartlocate.locate_global_with_alias (None, Libnames.qualid_of_string id) in
+                     let opt = Term.mkApp (cSome , [|tglobal_reference ; quote_global_reference gr|]) in
+                    k (evm, opt)
+                  with
+                  | Not_found -> k (evm, Term.mkApp (cNone, [|tglobal_reference|])))
       | _ -> monad_failure "tmAbout" 1
+    else if Term.eq_constr coConstr tmCurrentModPath then
+      match args with
+      | _::[] -> let mp = Lib.current_mp () in
+                 (* let dp' = Lib.cwd () in (* different on sections ? *) *)
+                 let s = quote_string (Names.ModPath.to_string mp) in
+                 k (evm, s)
+      | _ -> monad_failure "tmCurrentModPath" 1
     else if Term.eq_constr coConstr tmEval then
       match args with
       | s(*reduction strategy*)::_(*type*)::trm::[] ->
@@ -1582,6 +1603,21 @@ struct
         (*                                   typ; t'|])) *)
         k (evm, Term.mkApp (texistT_typed_term, [|typ; t'|]))
       | _ -> monad_failure "tmUnquote" 1
+    else if Term.eq_constr coConstr tmUnquoteTyped then
+      match args with
+      | typ::t::[] ->
+        let (evm, t) = reduce_all env evm t in
+        let evdref = ref evm in
+        let t' = denote_term evdref t in
+        (* todo: investigate why the following bugs *)
+        (* Feedback.msg_debug (str "lllllllllll"); *)
+        (* let t' = Typing.e_solve_evars env evdref (EConstr.of_constr t') in *)
+        (* Feedback.msg_debug (str "lllllllllll1"); *)
+        (* Typing.e_check env evdref t' (EConstr.of_constr typ) ; *)
+        (* Feedback.msg_debug (str "lllllllllll2"); *)
+        (* let t' = EConstr.to_constr !evdref t' in *)
+        k (!evdref, t')
+      | _ -> monad_failure "tmUnquoteTyped" 2
     else if Term.eq_constr coConstr tmFreshName then
       match args with
       | name::[] -> let name' = Namegen.next_ident_away_from (unquote_ident name) (fun id -> Nametab.exists_cci (Lib.make_path id)) in
@@ -1706,7 +1742,8 @@ VERNAC COMMAND EXTEND Unquote_inductive CLASSIFIED AS SIDEFF
     | [ "Make" "Inductive" constr(def) ] ->
       [ check_inside_section () ;
 	let (evm,env) = Lemmas.get_current_context () in
-  Denote.declare_interpret_inductive env evm def ]
+	let (body,uctx) = Constrintern.interp_constr env evm def in
+        Denote.declare_inductive env evm body ]
 END;;
 
 VERNAC COMMAND EXTEND Run_program CLASSIFIED AS SIDEFF

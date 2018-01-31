@@ -92,7 +92,7 @@ struct
     | VMcast -> VmCast
 
   let quote_kn kn = quote_string (Names.string_of_kn kn)
-  let quote_inductive (kn, i) = Coq_mkInd (kn, i)
+  let quote_inductive (kn, i) = { inductive_mind = kn ; inductive_ind = i }
   let quote_proj ind p a = ((ind,p),a)
 
   let mkAnon = Coq_nAnon
@@ -158,11 +158,11 @@ struct
     InductiveDecl (kn, {ind_npars = p; ind_bodies = r})
 
   let mkConstant kn u ty body =
-    ConstantDecl (kn, { cst_name = kn; cst_universes = u;
+    ConstantDecl (kn, { cst_universes = u;
                         cst_type = ty; cst_body = Some body })
 
   let mkAxiom kn u ty =
-    ConstantDecl (kn, { cst_name = kn; cst_universes = u;
+    ConstantDecl (kn, { cst_universes = u;
                         cst_type = ty; cst_body = None })
 
   let mkExt d p = extend_program p d

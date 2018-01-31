@@ -90,24 +90,28 @@ module Mindset = Names.Mindset
 type ('a,'b) sum =
   Left of 'a | Right of 'b
 
-type ('term, 'nat, 'ident, 'name, 'quoted_sort, 'cast_kind, 'kername, 'inductive, 'universe_instance, 'projection) kind_of_term =
-  | Coq_tRel of 'nat
-  | Coq_tVar of 'ident
-  | Coq_tMeta of 'nat
-  | Coq_tEvar of 'nat * 'term list
-  | Coq_tSort of 'quoted_sort
-  | Coq_tCast of 'term * 'cast_kind * 'term
-  | Coq_tProd of 'name * 'term * 'term
-  | Coq_tLambda of 'name * 'term * 'term
-  | Coq_tLetIn of 'name * 'term * 'term * 'term
-  | Coq_tApp of 'term * 'term list
-  | Coq_tConst of 'kername * 'universe_instance
-  | Coq_tInd of 'inductive * 'universe_instance
-  | Coq_tConstruct of 'inductive * 'nat * 'universe_instance
-  | Coq_tCase of ('inductive * 'nat) * 'term * 'term * ('nat * 'term) list
-  | Coq_tProj of 'projection * 'term
-  | Coq_tFix of (*term mfixpoint *) 'nat
-  | Coq_tCoFix of (*term mfixpoint *) 'nat
+type ('term, 'name, 'nat) adef = { adname : 'name; adtype : 'term; adbody : 'term; rarg : 'nat }
+  
+type ('term, 'name, 'nat) amfixpoint = ('term, 'name, 'nat) adef list
+    
+type ('term, 'nat, 'ident, 'name, 'quoted_sort, 'cast_kind, 'kername, 'inductive, 'universe_instance, 'projection) structure_of_term =
+  | ACoq_tRel of 'nat
+  | ACoq_tVar of 'ident
+  | ACoq_tMeta of 'nat
+  | ACoq_tEvar of 'nat * 'term list
+  | ACoq_tSort of 'quoted_sort
+  | ACoq_tCast of 'term * 'cast_kind * 'term
+  | ACoq_tProd of 'name * 'term * 'term
+  | ACoq_tLambda of 'name * 'term * 'term
+  | ACoq_tLetIn of 'name * 'term * 'term * 'term
+  | ACoq_tApp of 'term * 'term list
+  | ACoq_tConst of 'kername * 'universe_instance
+  | ACoq_tInd of 'inductive * 'universe_instance
+  | ACoq_tConstruct of 'inductive * 'nat * 'universe_instance
+  | ACoq_tCase of ('inductive * 'nat) * 'term * 'term * ('nat * 'term) list
+  | ACoq_tProj of 'projection * 'term
+  | ACoq_tFix of ('term, 'name, 'nat) amfixpoint * 'nat
+  | ACoq_tCoFix of ('term, 'name, 'nat) amfixpoint * 'nat
       
 module type Quoter = sig
   type t
@@ -201,6 +205,8 @@ module type Quoter = sig
 
   val mkExt : quoted_decl -> quoted_program -> quoted_program
   val mkIn : t -> quoted_program
+
+  val inspectTerm : t -> (t, quoted_int, quoted_ident, quoted_name, quoted_sort, quoted_cast_kind, quoted_kernel_name, quoted_inductive, quoted_univ_instance, quoted_proj) structure_of_term
 end
 
 (** The reifier to Coq values *)
@@ -658,6 +664,8 @@ struct
        let k = (quote_int (k - 1)) in
        Term.mkApp (tConstructRef, [|quote_inductive (kn ,n); k|])
 
+let inspectTerm (t:Term.constr) :  (Term.constr, quoted_int, quoted_ident, quoted_name, quoted_sort, quoted_cast_kind, quoted_kernel_name, quoted_inductive, quoted_univ_instance, quoted_proj) structure_of_term =
+  failwith "not yet implemented"
 end
 
 

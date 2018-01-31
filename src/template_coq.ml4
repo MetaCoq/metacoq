@@ -196,46 +196,53 @@ struct
 
   let mkIn c = PIn c
 
-  (* let quote_mind_finiteness = function *)
-  (*   | Decl_kinds.Finite -> Finite *)
-  (*   | Decl_kinds.CoFinite -> CoFinite *)
-  (*   | Decl_kinds.BiFinite -> BiFinite *)
+  let quote_mind_finiteness = function
+    | Decl_kinds.Finite -> Finite
+    | Decl_kinds.CoFinite -> CoFinite
+    | Decl_kinds.BiFinite -> BiFinite
 
-  (* let quote_mind_params l = *)
-  (*   let map (id, body) = *)
-  (*     match body with *)
-  (*     | Left ty -> (id, LocalAssum ty) *)
-  (*     | Right trm -> (id, LocalDef trm) *)
-  (*   in List.map map l *)
+  let quote_mind_params l =
+    let map (id, body) =
+      match body with
+      | Left ty -> (id, LocalAssum ty)
+      | Right trm -> (id, LocalDef trm)
+    in List.map map l
 
-  (* let quote_one_inductive_entry (id, ar, b, consnames, constypes) = *)
-  (*   { mind_entry_typename = id; *)
-  (*     mind_entry_arity = ar; *)
-  (*     mind_entry_template = b; *)
-  (*     mind_entry_consnames = consnames; *)
-  (*     mind_entry_lc = constypes } *)
+  let quote_one_inductive_entry (id, ar, b, consnames, constypes) =
+    { mind_entry_typename = id;
+      mind_entry_arity = ar;
+      mind_entry_template = b;
+      mind_entry_consnames = consnames;
+      mind_entry_lc = constypes }
 
-  (* let quote_mutual_inductive_entry (mf, mp, is, poly, univs) = *)
-  (*   { mind_entry_record = None; *)
-  (*     mind_entry_finite = mf; *)
-  (*     mind_entry_params = mp; *)
-  (*     mind_entry_inds = List.map quote_one_inductive_entry is; *)
-  (*     mind_entry_polymorphic = poly; *)
-  (*     mind_entry_universes = univs; *)
-  (*     mind_entry_private = None } *)
+  let quote_mutual_inductive_entry (mf, mp, is, poly, univs) =
+    { mind_entry_record = None;
+      mind_entry_finite = mf;
+      mind_entry_params = mp;
+      mind_entry_inds = List.map quote_one_inductive_entry is;
+      mind_entry_polymorphic = poly;
+      mind_entry_universes = univs;
+      mind_entry_private = None }
 
-  (* let quote_entry e = *)
-  (*   match e with *)
-  (*   | Some (Left (ty, body)) -> *)
-  (*      let entry = match body with *)
-  (*       | None -> ParameterEntry ty *)
-  (*       | Some b -> DefinitionEntry { definition_entry_type = ty; *)
-  (*                                     definition_entry_body = b } *)
-  (*      in Some (Left entry) *)
-  (*   | Some (Right mind_entry) -> *)
-  (*      Some (Right mind_entry) *)
-  (*   | None -> None *)
+  let quote_entry e =
+    match e with
+    | Some (Left (ty, body)) ->
+       let entry = match body with
+        | None -> ParameterEntry ty
+        | Some b -> DefinitionEntry { definition_entry_type = ty;
+                                      definition_entry_body = b }
+       in Some (Left entry)
+    | Some (Right mind_entry) ->
+       Some (Right mind_entry)
+    | None -> None
+
+  let inspectTerm (t : term) :  (term, quoted_int, quoted_ident, quoted_name, quoted_sort, quoted_cast_kind, quoted_kernel_name, quoted_inductive, quoted_univ_instance, quoted_proj) structure_of_term =
+    (* match t with
+    | Coq_tRel n -> Coq_tRel n
+    | _ -> *) failwith "not yet implemented"
 end
+
+
 
 module TemplateASTReifier = Reify(TemplateASTQuoter)
 

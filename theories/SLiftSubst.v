@@ -391,3 +391,23 @@ Proof.
       -- pose proof (nat_compare_Gt_gt _ _ eq2).
          rewrite eq0. reflexivity.
 Defined.
+
+Lemma substP3 :
+  forall t u i k n,
+    i <= k ->
+    k <= i + n ->
+    (lift (S n) i t){ k := u } = lift n i t.
+Proof.
+  intro t. induction t ; intros u i k m ilk kls.
+  all: try (cbn ; f_equal ;
+            try replace (S (S (S (j + m))))%nat with (j + (S (S (S m))))%nat by omega ;
+            try replace (S (S (j + m)))%nat with (j + (S (S m)))%nat by omega ;
+            try replace (S (j + m))%nat with (j + (S m))%nat by omega ; easy).
+  cbn. case_eq (i <=? n) ; intro e0 ; bprop e0.
+  - cbn. case_eq (k ?= S (m+n)) ; intro e2 ; bprop e2.
+    + omega.
+    + reflexivity.
+    + omega.
+  - cbn. assert (e2 : k ?= n = Gt) by (propb ; omega).
+    rewrite e2. reflexivity.
+Defined.

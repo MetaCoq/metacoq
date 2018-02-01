@@ -378,24 +378,73 @@ Proof.
   - cbn. rewrite lift_decl0. rewrite IHΓ. reflexivity.
 Defined.
 
-Lemma type_lift {Σ Γ Δ Ξ t A} (h : Σ ;;; Γ ,,, Ξ |-i t : A) :
-  wf Σ (Γ ,,, Δ) ->
-  Σ ;;; Γ ,,, Δ ,,, lift_context #|Δ| Ξ |-i lift #|Δ| #|Ξ| t : lift #|Δ| #|Ξ| A.
-Proof.
-  dependent induction h ; intro hwf.
-  - induction Δ.
-    + change (#|[]|) with 0. rewrite !lift00.
-      rewrite lift_context0. cbn. eapply type_Rel. assumption.
-    + admit.
-  - cbn. apply type_Sort. admit.
-Admitted.
+Axiom cheating : forall {A}, A.
+Tactic Notation "cheat" := apply cheating.
 
-Lemma typing_lift01 :
+Fixpoint type_lift {Σ Γ Δ Ξ t A} (h : Σ ;;; Γ ,,, Ξ |-i t : A) :
+  wf Σ (Γ ,,, Δ) ->
+  Σ ;;; Γ ,,, Δ ,,, lift_context #|Δ| Ξ |-i lift #|Δ| #|Ξ| t : lift #|Δ| #|Ξ| A
+
+with wf_lift {Σ Γ Δ Ξ} (h : wf Σ (Γ ,,, Ξ)) :
+  wf Σ (Γ ,,, Δ) ->
+  wf Σ (Γ ,,, Δ ,,, lift_context #|Δ| Ξ)
+.
+Proof.
+  - { dependent induction h ; intro hwf.
+      - induction Δ.
+        + change (#|[]|) with 0. rewrite !lift00.
+          rewrite lift_context0. cbn. eapply type_Rel. assumption.
+        + cheat.
+      - cbn. apply type_Sort. now apply wf_lift.
+      - cbn. eapply type_Prod.
+        + now apply IHh1.
+        + specialize (IHh2 Γ (Ξ,, svass n t) eq_refl hwf). apply IHh2.
+      - cbn. eapply type_Lambda.
+        + now apply IHh1.
+        + specialize (IHh2 Γ (Ξ,, svass n t) eq_refl hwf). apply IHh2.
+        + specialize (IHh3 Γ (Ξ,, svass n t) eq_refl hwf). apply IHh3.
+      - cbn.
+        (* We need a better lift_subst! Or is it really substP2? *)
+        cheat.
+      - cheat.
+      - cheat.
+      - cheat.
+      - cheat.
+      - cheat.
+      - cheat.
+      - cheat.
+      - cheat.
+      - cheat.
+      - cheat.
+      - cheat.
+      - cheat.
+      - cheat.
+      - cheat.
+      - cheat.
+      - cheat.
+      - cheat.
+      - cheat.
+      - cheat.
+      - cheat.
+      - cheat.
+      - cheat.
+    }
+
+  - cheat.
+Defined.
+
+Corollary typing_lift01 :
   forall {Σ Γ t A x B s},
     Σ ;;; Γ |-i t : A ->
     Σ ;;; Γ |-i B : sSort s ->
     Σ ;;; Γ ,, svass x B |-i lift0 1 t : lift0 1 A.
-Admitted.
+Proof.
+  intros Σ Γ t A x B s ht hB.
+  apply (@type_lift _ _ [ svass x B ] nil _ _ ht).
+  econstructor.
+  - eapply typing_wf. eassumption.
+  - eexists. eassumption.
+Defined.
 
 Lemma typing_lift02 :
   forall {Σ Γ t A x B s y C s'},

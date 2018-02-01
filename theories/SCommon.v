@@ -20,17 +20,43 @@ Record squash (A : Set) : Prop := { _ : A }.
 
 (* Common lemmata *)
 
+Fact safe_nth_S :
+  forall {A n} {a : A} {l isdecl},
+    ∑ isdecl',
+      safe_nth (a :: l) (exist _ (S n) isdecl) =
+      safe_nth l (exist _ n isdecl').
+Proof.
+  intros A n. induction n ; intros a l isdecl.
+  - cbn. eexists. reflexivity.
+  - eexists. cbn. reflexivity.
+Defined.
+
+Lemma eq_safe_nth' :
+  forall {Γ : scontext} {n a isdecl isdecl'},
+    safe_nth (a :: Γ) (exist _ (S n) isdecl') =
+    safe_nth Γ (exist _ n isdecl).
+Proof.
+  intros Γ. induction Γ ; intros n A isdecl isdecl'.
+  - easy.
+  - destruct n.
+    + reflexivity.
+    + destruct (@safe_nth_S _ (S n) A (a :: Γ) isdecl')
+        as [isecl0 eq].
+      rewrite eq.
+      destruct (@safe_nth_S _ n a Γ isdecl)
+        as [isecl1 eq1].
+      rewrite eq1.
+      apply IHΓ.
+Defined.
+
 Lemma eq_safe_nth :
   forall {Γ n x A isdecl isdecl'},
     safe_nth (Γ ,, svass x A) (exist _ (S n) isdecl') =
     safe_nth Γ (exist _ n isdecl).
 Proof.
-  intros Γ. induction Γ ; intros n x A isdecl isdecl'.
-  - easy.
-  - destruct n.
-    + reflexivity.
-    + cbn. admit.
-Admitted.
+  intros Γ n x A isdecl isdecl'.
+  apply eq_safe_nth'.
+Defined.
 
 Lemma max_id :
   forall s, max_sort s s = s.

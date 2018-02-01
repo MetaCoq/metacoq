@@ -257,12 +257,40 @@ Proof.
   destruct (m <=? n) ; reflexivity.
 Defined.
 
+Ltac bprop' H H' :=
+  match type of H with
+  | (?n <=? ?m) = true => pose proof (leb_complete _ _ H) as H'
+  | (?n <=? ?m) = false => pose proof (leb_complete_conv _ _ H) as H'
+  | (?x ?= ?y) = Gt => pose proof (Nat.compare_gt_iff _ _ H) as H'
+  end.
+
+(* Doesn't work. :( *)
+Tactic Notation "brop" constr(H) "as" constr(H') := bprop' H H'.
+
+Tactic Notation "bprop" constr(H) := let H' := fresh H in bprop' H  H'.
+
+Ltac propb :=
+  match goal with
+  | |- (_ <=? _) = true => apply leb_correct
+  | |- (_ <=? _) = false => apply leb_correct_conv
+  end.
+
 Lemma liftP3 :
   forall t i k j n,
     i <= k ->
     k <= (i+n)%nat ->
     lift j k (lift n i t) = lift (j+n) i t.
-Admitted.
+Proof.
+  intro t. induction t ; intros i k j m ilk kl.
+  all: try (cbn ; f_equal ; easy).
+  cbn. case_eq (i <=? n).
+  - intro iln. cbn. bprop iln.
+    assert (eq : (k <=? m + n) = true) by (propb ; omega).
+    rewrite eq. f_equal. omega.
+  - intro nli. bprop nli. cbn.
+    assert (eq : (k <=? n) = false) by (propb ; omega).
+    rewrite eq. reflexivity.
+Defined.
 
 Lemma substP2 :
   forall t u i j n,

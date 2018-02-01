@@ -261,7 +261,9 @@ Ltac bprop' H H' :=
   match type of H with
   | (?n <=? ?m) = true => pose proof (leb_complete _ _ H) as H'
   | (?n <=? ?m) = false => pose proof (leb_complete_conv _ _ H) as H'
-  | (?x ?= ?y) = Gt => pose proof (Nat.compare_gt_iff _ _ H) as H'
+  | (?x ?= ?y) = Gt => pose proof (nat_compare_Gt_gt _ _ H) as H'
+  | (?x ?= ?y) = Eq => pose proof (Nat.compare_eq _ _ H) as H'
+  | (?x ?= ?y) = Lt => pose proof (nat_compare_Lt_lt _ _ H) as H'
   end.
 
 (* Doesn't work. :( *)
@@ -273,6 +275,9 @@ Ltac propb :=
   match goal with
   | |- (_ <=? _) = true => apply leb_correct
   | |- (_ <=? _) = false => apply leb_correct_conv
+  | |- (_ ?= _) = Lt => apply Nat.compare_lt_iff
+  | |- (_ ?= _) = Eq => apply Nat.compare_eq_iff
+  | |- (_ ?= _) = Gt => apply Nat.compare_gt_iff
   end.
 
 Lemma liftP3 :
@@ -291,6 +296,42 @@ Proof.
     assert (eq : (k <=? n) = false) by (propb ; omega).
     rewrite eq. reflexivity.
 Defined.
+
+Lemma substP1 :
+  forall t u i j k,
+    lift k (j+i) (t{j := u}) = (lift k (S (j+i)) t){ j := lift k i u }.
+Proof.
+  intro t. induction t ; intros u i j k.
+  all: try (cbn ; f_equal ; easy).
+  - cbn. case_eq (j ?= n) ; intro e ; bprop e.
+    + subst. destruct n.
+      * cbn. rewrite !lift00. reflexivity.
+      * assert (e' : (S n + i) <=? n = false) by (propb ; omega).
+        rewrite e'. cbn.
+        assert (e2 : (n ?= n) = Eq) by (propb ; omega).
+        rewrite e2. replace (S (n + i)) with ((S n) + i)%nat by omega.
+        rewrite liftP2 by omega. reflexivity.
+    + destruct n.
+      * omega.
+      * case_eq (j + i <=? n) ; intro e1 ; bprop e1.
+        -- cbn. rewrite e1.
+           assert (e3 : j ?= k + S n = Lt) by (propb ; omega).
+           rewrite e3. replace (k + S n)%nat with (S (k + n)) by omega.
+           reflexivity.
+        -- cbn. rewrite e1. rewrite e. reflexivity.
+    + destruct n.
+      * cbn. assert (e1 : j + i <=? 0 = false) by (propb ; omega).
+        rewrite e1. rewrite e. reflexivity.
+      * assert (e1 : j + i <=? n = false) by (propb ; omega).
+        rewrite e1. cbn.
+        assert (e2 : j + i <=? S n = false) by (propb ; omega).
+        rewrite e2. rewrite e. reflexivity.
+  - cbn. f_equal.
+    * easy.
+    * replace (S (S (j + i))) with (S ((S j) + i)) by omega.
+      replace (S (j + i)) with ((S j) + i)%nat by omega.
+      easy.
+Admitted.
 
 Lemma substP2 :
   forall t u i j n,

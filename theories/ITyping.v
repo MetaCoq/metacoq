@@ -345,6 +345,51 @@ Proof.
   intros Σ Γ t T H. induction H ; easy.
 Defined.
 
+(* Lifting of context *)
+
+Definition lift_decl n k d : scontext_decl :=
+  {| sdecl_name := sdecl_name d ;
+     sdecl_body := option_map (lift n k) (sdecl_body d) ;
+     sdecl_type := lift n k (sdecl_type d)
+  |}.
+
+Fixpoint lift_context n Γ : scontext :=
+  match Γ with
+  | nil => nil
+  | A :: Γ => (lift_decl n #|Γ| A) :: (lift_context n Γ)
+  end.
+
+Fact lift_decl0 :
+  forall {d k}, lift_decl 0 k d = d.
+Proof.
+  intros d k.
+  destruct d as [x b A].
+  unfold lift_decl. cbn. rewrite lift00. f_equal.
+  destruct b.
+  - cbn. rewrite lift00. reflexivity.
+  - reflexivity.
+Defined.
+
+Fact lift_context0 :
+  forall {Γ}, lift_context 0 Γ = Γ.
+Proof.
+  intro Γ. induction Γ.
+  - reflexivity.
+  - cbn. rewrite lift_decl0. rewrite IHΓ. reflexivity.
+Defined.
+
+Lemma type_lift {Σ Γ Δ Ξ t A} (h : Σ ;;; Γ ,,, Ξ |-i t : A) :
+  wf Σ (Γ ,,, Δ) ->
+  Σ ;;; Γ ,,, Δ ,,, lift_context #|Δ| Ξ |-i lift #|Δ| #|Ξ| t : lift #|Δ| #|Ξ| A.
+Proof.
+  dependent induction h ; intro hwf.
+  - induction Δ.
+    + change (#|[]|) with 0. rewrite !lift00.
+      rewrite lift_context0. cbn. eapply type_Rel. assumption.
+    + admit.
+  - cbn. apply type_Sort. admit.
+Admitted.
+
 Lemma typing_lift01 :
   forall {Σ Γ t A x B s},
     Σ ;;; Γ |-i t : A ->

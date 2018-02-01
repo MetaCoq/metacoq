@@ -60,10 +60,17 @@ Defined.
 
 Lemma max_id :
   forall s, max_sort s s = s.
-Admitted.
+Proof.
+  intro s. induction s.
+  all: cbn ; reflexivity.
+Defined.
 
 Lemma max_succ_id :
   forall s, max_sort (succ_sort s) s = succ_sort s.
+Proof.
+  (* This lemma is only true when s is not Prop which I ignored. *)
+  intro s. induction s.
+  all: cbn.
 Admitted.
 
 Definition sapp_context (Γ Γ' : scontext) : scontext := (Γ' ++ Γ)%list.

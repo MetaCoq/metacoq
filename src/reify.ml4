@@ -206,6 +206,17 @@ module type Quoter = sig
   val mkExt : quoted_decl -> quoted_program -> quoted_program
   val mkIn : t -> quoted_program
 
+  val unquote_ident : quoted_ident -> Id.t
+  val unquote_name : quoted_name -> Name.t
+  val unquote_int :  quoted_int -> int
+  val unquote_bool : quoted_bool -> bool
+  val unquote_sort : quoted_sort -> Sorts.t 
+  val unquote_sort_family : quoted_sort_family -> Sorts.family
+  val unquote_cast_kind : quoted_cast_kind -> Constr.cast_kind
+  val unquote_kn :  quoted_kernel_name -> kernel_name
+  val unquote_inductive :  quoted_inductive -> quoted_kernel_name * quoted_int
+  val unquote_univ_instance :  quoted_univ_instance -> Univ.Instance.t
+  
   val representsIndConstuctor : quoted_inductive -> Term.constr -> bool
   val inspectTerm : t -> (t, quoted_int, quoted_ident, quoted_name, quoted_sort, quoted_cast_kind, quoted_kernel_name, quoted_inductive, quoted_univ_instance, quoted_proj) structure_of_term
 end
@@ -1134,7 +1145,8 @@ struct
         ACoq_tApp (f, xs) -> app_full_abs f (xs @ acc)
       | _ -> (trm, acc)
     
-    let not_supported_verb (t: Q.t) s = failwith s
+    let str_abs (t: Q.t) : Pp.std_ppcmds = failwith "not yet implemented: str_abs"
+    let not_supported_verb (t: Q.t) s = CErrors.user_err (Pp.(str_abs t ++ Pp.str s))
     let bad_term (t: Q.t) = not_supported_verb t "bad_term is not yet implemented" 
 
     let from_coq_pair (t :Q.t) =
@@ -1146,6 +1158,7 @@ struct
         else bad_term t
      | _ -> bad_term t
 
+     (*this abstract version is not needed anymore?*)
     let rec from_coq_list (t :Q.t) =
       let (h,args) = app_full_abs t [] in
       match Q.inspectTerm h with
@@ -1158,6 +1171,129 @@ struct
         else
           not_supported_verb t "from_coq_list"
       | _ -> not_supported_verb t "from_coq_list"  
+
+   (* let rec nat_to_int (trm: Q.t) : int =
+      let (h,args) = app_full_abs trm [] in
+      match Q.inspectTerm h with
+      | ACoq_tConstruct (h,n,u) -> 
+        if Q.representsIndConstuctor h  TemplateCoqQuoter.tO then 0
+        else if Q.representsIndConstuctor h TemplateCoqQuoter. tS then
+        match args with
+          n :: _ -> 1 + nat_to_int n
+        | _ -> not_supported_verb trm "nat_to_int nil"
+        else not_supported_verb trm "nat_to_int"
+      | _ -> not_supported_verb trm "nat_to_int" *)
+
+let denote_term evdref (trm: Q.t) : Term.constr =
+  let rec aux (trm: Q.t) : Term.constr =
+  (*debug (fun () -> Pp.(str "denote_term" ++ spc () ++ Printer.pr_constr trm)) ; *)
+  match (Q.inspectTerm trm) with
+  | ACoq_tRel x -> Term.mkRel (Q.unquote_int x + 1)
+  | ACoq_tVar x -> Term.mkVar (Q.unquote_ident x)
+  | ACoq_tSort x ->
+      let evd, u = unquote_universe !evdref x in evdref := evd; Term.mkType u
+  | ACoq_tCast (t,c,ty) -> Term.mkCast (aux t, Q.unquote_cast_kind c, aux ty)
+  | ACoq_tProd (n,t,b) -> Term.mkProd (Q.unquote_name n, aux t, aux b)
+  | ACoq_tLambda (n,t,b) -> Term.mkLambda (Q.unquote_name n, aux t, aux b)
+  | ACoq_tLetIn (n,e,t,b) -> Term.mkLetIn (Q.unquote_name n, aux e, aux t, aux b)
+  | ACoq_tApp (f,xs) ->   
+      Term.mkApp (aux f, Array.of_list (List.map aux  xs))
+  | ACoq_tConst (s,u) ->   
+       (* TODO: unquote universes *)
+       let s = (Q.unquote_kn s) in
+       let dp = Names.dirpath s in
+       let nm = Names.name s in
+       (try
+         match Nametab.locate (Libnames.make_qualid dp nm) with
+         | Globnames.ConstRef c ->
+            EConstr.Unsafe.to_constr (Evarutil.e_new_global evdref (Globnames.ConstRef c))
+         | Globnames.IndRef _ -> CErrors.user_err (str "the constant is an inductive. use tInd : " 
+              ++  Pp.str (Names.KerName.to_string s))
+         | Globnames.VarRef _ -> CErrors.user_err (str "the constant is a variable. use tVar : " ++ Pp.str (Names.KerName.to_string s))
+         | Globnames.ConstructRef _ -> CErrors.user_err (str "the constant is a consructor. use tConstructor : "++ Pp.str (Names.KerName.to_string s))
+       with
+       Not_found -> CErrors.user_err (str "Constant not found : " ++ Pp.str (Names.KerName.to_string s)))
+ 
+  | _ ->  not_supported_verb trm "big_case"
+
+  (*
+  else if Term.eq_constr h tConst then
+    match args with
+    s :: u :: [] ->
+    | _ -> raise (Failure "ill-typed (tConst)")
+  else if Term.eq_constr h tConstructor then
+    match args with
+i :: idx :: _ ->
+  let i = denote_inductive i in
+  Term.mkConstruct (i, nat_to_int idx + 1)
+    | _ -> raise (Failure "ill-typed (constructor)")
+  else if Term.eq_constr h tInd then
+    match args with
+i :: _ ->
+  let i = denote_inductive i in
+  Term.mkInd i
+    | _ -> raise (Failure "ill-typed (inductive)")
+  else if Term.eq_constr h tCase then
+    match args with
+info :: ty :: d :: brs :: _ ->
+        let i, _ = from_coq_pair info in
+        let ind = denote_inductive i in
+        let ci = Inductiveops.make_case_info (Global.env ()) ind Term.RegularStyle in
+        let denote_branch br =
+          let _, br = from_coq_pair br in
+          aux br
+        in
+  Term.mkCase (ci, aux ty, aux d,
+    Array.of_list (List.map denote_branch (from_coq_list brs)))
+    | _ -> raise (Failure "ill-typed (case)")
+  else if Term.eq_constr h tFix then
+    match args with
+    | bds :: i :: _ ->
+      let unquoteFbd  b : ((Term.constr * Term.constr) * (Term.constr * Term.constr)) =
+        let (_,args) = app_full b [] in
+        match args with
+        | _(*type*)::a::b::c::d::[] -> ((a,b),(c,d))
+        |_ -> raise (Failure " (mkdef must take exactly 5 arguments)")
+        in
+      let lbd = List.map unquoteFbd (from_coq_list bds) in
+      let (p1,p2) = (List.map fst lbd, List.map snd lbd) in
+      let (names,types,bodies,rargs) = (List.map fst p1, List.map snd p1, List.map fst p2, List.map snd p2) in
+      let (types,bodies) = (List.map aux types, List.map aux bodies) in
+      let (names,rargs) = (List.map unquote_name names, List.map nat_to_int rargs) in
+      let la = Array.of_list in
+      Term.mkFix ((la rargs,nat_to_int i), (la names, la types, la bodies))
+    | _ -> raise (Failure "tFix takes exactly 2 arguments")
+  else if Term.eq_constr h tCoFix then
+    match args with
+    | bds :: i :: _ ->
+      let unquoteFbd  b : (Term.constr * Term.constr * Term.constr) =
+        let (_,args) = app_full b [] in
+        match args with
+        | _(*type*)::a::b::c::d::[] -> ((a,b,c))
+        |_ -> raise (Failure " (mkdef must take exactly 5 arguments)")
+        in
+      let lbd = List.map unquoteFbd (from_coq_list bds) in
+      let (names,types,bodies) = CList.split3 lbd in
+      let (types,bodies) = (List.map aux types, List.map aux bodies) in
+      let names = List.map unquote_name names in
+      let la = Array.of_list in
+      Term.mkCoFix (nat_to_int i, (la names, la types, la bodies))
+    | _ -> raise (Failure "tFix takes exactly 2 arguments")
+  else if Term.eq_constr h tProj then
+    match args with
+    | [ proj ; t ] ->
+       let (p, narg) = from_coq_pair proj in
+       let (ind, _) = from_coq_pair p in
+ let ind' = denote_inductive ind in
+       let projs = Recordops.lookup_projections ind' in
+       (match List.nth projs (nat_to_int narg) with
+        | Some p -> Term.mkProj (Names.Projection.make p false, aux t)
+        | None -> bad_term trm)
+    | _ -> raise (Failure "ill-typed (proj)")
+  else
+    not_supported_verb trm "big_case" *)
+  in aux trm
+  
 end
 
 module TermReify = Reify(TemplateCoqQuoter)
@@ -1175,13 +1311,13 @@ struct
     let (h,args) = app_full trm [] in
     if Term.eq_constr h tO then
       0
-    else if Term.eq_constr h tS then
-      match args with
-      n :: _ -> 1 + nat_to_int n
-      | _ -> not_supported_verb trm "nat_to_int nil"
-    else
-      not_supported_verb trm "nat_to_int"
-  
+     else if Term.eq_constr h tS then
+       match args with
+       n :: _ -> 1 + nat_to_int n
+       | _ -> not_supported_verb trm "nat_to_int nil"
+     else
+       not_supported_verb trm "nat_to_int"
+    
   let from_bool trm =
     if Term.eq_constr trm ttrue then
       true
@@ -1340,137 +1476,6 @@ struct
    ** come back through elaboration.
    ** - This would also allow writing terms with holes
    **)
-  let denote_term evdref trm =
-    let rec aux trm =
-    debug (fun () -> Pp.(str "denote_term" ++ spc () ++ Printer.pr_constr trm)) ;
-    let (h,args) = app_full trm [] in
-    if Term.eq_constr h tRel then
-      match args with
-	x :: _ ->
-	  Term.mkRel (nat_to_int x + 1)
-      | _ -> raise (Failure "ill-typed")
-    else if Term.eq_constr h tVar then
-      match args with
-	x :: _ -> Term.mkVar (unquote_ident x)
-      | _ -> raise (Failure "ill-typed")
-    else if Term.eq_constr h tSort then
-      match args with
-	x :: _ -> let evd, u = unquote_universe !evdref x in evdref := evd; Term.mkType u
-      | _ -> raise (Failure "ill-typed")
-    else if Term.eq_constr h tCast then
-      match args with
-	t :: c :: ty :: _ ->
-	  Term.mkCast (aux t, unquote_cast_kind c, aux ty)
-      | _ -> raise (Failure "ill-typed")
-    else if Term.eq_constr h tProd then
-      match args with
-	n :: t :: b :: _ ->
-	  Term.mkProd (unquote_name n, aux t, aux b)
-      | _ -> raise (Failure "ill-typed (product)")
-    else if Term.eq_constr h tLambda then
-      match args with
-	n :: t :: b :: _ ->
-	Term.mkLambda (unquote_name n, aux t, aux b)
-      | _ -> raise (Failure "ill-typed (lambda)")
-    else if Term.eq_constr h tLetIn then
-      match args with
-	n :: e :: t :: b :: _ ->
-	  Term.mkLetIn (unquote_name n, aux e, aux t, aux b)
-      | _ -> raise (Failure "ill-typed (let-in)")
-    else if Term.eq_constr h tApp then
-      match args with
-	f :: xs :: _ ->
-	  Term.mkApp (aux f,
-		      Array.of_list (List.map aux (from_coq_list xs)))
-      | _ -> raise (Failure "ill-typed (app)")
-    else if Term.eq_constr h tConst then
-      match args with
-    	s :: u :: [] ->
-         (* TODO: unquote universes *)
-        let s = (unquote_string s) in
-        let (dp, nm) = split_name s in
-        (try
-          match Nametab.locate (Libnames.make_qualid dp nm) with
-          | Globnames.ConstRef c ->
-             EConstr.Unsafe.to_constr (Evarutil.e_new_global evdref (Globnames.ConstRef c))
-          | Globnames.IndRef _ -> CErrors.user_err (str "the constant is an inductive. use tInd : " ++ str s)
-          | Globnames.VarRef _ -> CErrors.user_err (str "the constant is a variable. use tVar : " ++ str s)
-          | Globnames.ConstructRef _ -> CErrors.user_err (str "the constant is a consructor. use tConstructor : " ++ str s)
-        with
-        Not_found -> CErrors.user_err (str "Constant not found : " ++ str s))
-      | _ -> raise (Failure "ill-typed (tConst)")
-    else if Term.eq_constr h tConstructor then
-      match args with
-	i :: idx :: _ ->
-	  let i = denote_inductive i in
-	  Term.mkConstruct (i, nat_to_int idx + 1)
-      | _ -> raise (Failure "ill-typed (constructor)")
-    else if Term.eq_constr h tInd then
-      match args with
-	i :: _ ->
-	  let i = denote_inductive i in
-	  Term.mkInd i
-      | _ -> raise (Failure "ill-typed (inductive)")
-    else if Term.eq_constr h tCase then
-      match args with
-	info :: ty :: d :: brs :: _ ->
-          let i, _ = from_coq_pair info in
-          let ind = denote_inductive i in
-          let ci = Inductiveops.make_case_info (Global.env ()) ind Term.RegularStyle in
-          let denote_branch br =
-            let _, br = from_coq_pair br in
-            aux br
-          in
-	  Term.mkCase (ci, aux ty, aux d,
-			Array.of_list (List.map denote_branch (from_coq_list brs)))
-      | _ -> raise (Failure "ill-typed (case)")
-    else if Term.eq_constr h tFix then
-      match args with
-      | bds :: i :: _ ->
-        let unquoteFbd  b : ((Term.constr * Term.constr) * (Term.constr * Term.constr)) =
-          let (_,args) = app_full b [] in
-          match args with
-          | _(*type*)::a::b::c::d::[] -> ((a,b),(c,d))
-          |_ -> raise (Failure " (mkdef must take exactly 5 arguments)")
-          in
-        let lbd = List.map unquoteFbd (from_coq_list bds) in
-        let (p1,p2) = (List.map fst lbd, List.map snd lbd) in
-        let (names,types,bodies,rargs) = (List.map fst p1, List.map snd p1, List.map fst p2, List.map snd p2) in
-        let (types,bodies) = (List.map aux types, List.map aux bodies) in
-        let (names,rargs) = (List.map unquote_name names, List.map nat_to_int rargs) in
-        let la = Array.of_list in
-        Term.mkFix ((la rargs,nat_to_int i), (la names, la types, la bodies))
-      | _ -> raise (Failure "tFix takes exactly 2 arguments")
-    else if Term.eq_constr h tCoFix then
-      match args with
-      | bds :: i :: _ ->
-        let unquoteFbd  b : (Term.constr * Term.constr * Term.constr) =
-          let (_,args) = app_full b [] in
-          match args with
-          | _(*type*)::a::b::c::d::[] -> ((a,b,c))
-          |_ -> raise (Failure " (mkdef must take exactly 5 arguments)")
-          in
-        let lbd = List.map unquoteFbd (from_coq_list bds) in
-        let (names,types,bodies) = CList.split3 lbd in
-        let (types,bodies) = (List.map aux types, List.map aux bodies) in
-        let names = List.map unquote_name names in
-        let la = Array.of_list in
-        Term.mkCoFix (nat_to_int i, (la names, la types, la bodies))
-      | _ -> raise (Failure "tFix takes exactly 2 arguments")
-    else if Term.eq_constr h tProj then
-      match args with
-      | [ proj ; t ] ->
-         let (p, narg) = from_coq_pair proj in
-         let (ind, _) = from_coq_pair p in
-	 let ind' = denote_inductive ind in
-         let projs = Recordops.lookup_projections ind' in
-         (match List.nth projs (nat_to_int narg) with
-          | Some p -> Term.mkProj (Names.Projection.make p false, aux t)
-          | None -> bad_term trm)
-      | _ -> raise (Failure "ill-typed (proj)")
-    else
-      not_supported_verb trm "big_case"
-    in aux trm
 
 
 

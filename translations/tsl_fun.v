@@ -3,7 +3,6 @@ From Translations Require Import translation_utils.
 Import String Lists.List.ListNotations MonadNotation.
 Open Scope list_scope. Open Scope string_scope.
 
-
 Set Primitive Projections.
 Record prod A B := pair { fst : A ; snd : B }.
 
@@ -172,27 +171,22 @@ Instance tsl_fun : Translation
         tsl_ind := tsl_mind_decl |}.
 
 
+Tactic Notation "tSpecialize" ident(H) uconstr(t) := apply fst in H; specialize (H t).
+
+Tactic Notation "tIntro" ident(H) := refine (fun H => _; true).
 
 Run TemplateProgram (TC <- tTranslate ([],[]) "eq" ;;
                      TC <- tTranslate TC "False" ;;
                      tImplement TC "notFunext"
                      ((forall (A B : Set) (f g : A -> B), (forall x:A, f x = g x) -> f = g) -> False)).
 
-Lemma eqᵗ_eq A (x y : A) (p : eqᵗ A x y) : x = y.
-  now destruct p.
-Qed.
-
 Next Obligation.
-  refine (fun H => _; true).
-  apply fst in H; specialize (H unit).
-  apply fst in H; specialize (H unit).
-  apply fst in H; specialize (H (fun x => x; true)).
-  apply fst in H; specialize (H (fun x => x; false)).
-  apply fst in H; specialize (H (fun x => eq_reflᵗ _ _; true)).
-  apply eqᵗ_eq in H; discriminate.
+  tIntro H. 
+  tSpecialize H unit. tSpecialize H unit. 
+  tSpecialize H (fun x => x; true). tSpecialize H (fun x => x; false). 
+  tSpecialize H (fun x => eq_reflᵗ _ _; true).
+  inversion H. 
 Defined.
-
-
 
 Require Import Vector Even.
 Fail Run TemplateProgram (TC <- tTranslate ([],[]) "nat" ;;

@@ -210,15 +210,16 @@ module type Quoter = sig
   val unquote_name : quoted_name -> Name.t
   val unquote_int :  quoted_int -> int
   val unquote_bool : quoted_bool -> bool
-  val unquote_sort : quoted_sort -> Sorts.t 
-  val unquote_sort_family : quoted_sort_family -> Sorts.family
+  (* val unquote_sort : quoted_sort -> Sorts.t 
+     val unquote_sort_family : quoted_sort_family -> Sorts.family *)
   val unquote_cast_kind : quoted_cast_kind -> Constr.cast_kind
-  val unquote_kn :  quoted_kernel_name -> kernel_name
+  val unquote_kn :  quoted_kernel_name -> Libnames.qualid
   val unquote_inductive :  quoted_inductive -> Names.inductive
-  val unquote_univ_instance :  quoted_univ_instance -> Univ.Instance.t
+  (* val unquote_univ_instance :  quoted_univ_instance -> Univ.Instance.t *)
   val unquote_proj : quoted_proj -> (quoted_inductive * quoted_int * quoted_int)
+  val unquote_universe : Evd.evar_map -> quoted_sort -> Evd.evar_map * Univ.Universe.t
   
-  val representsIndConstuctor : quoted_inductive -> Term.constr -> bool
+  (* val representsIndConstuctor : quoted_inductive -> Term.constr -> bool *)
   val inspectTerm : t -> (t, quoted_int, quoted_ident, quoted_name, quoted_sort, quoted_cast_kind, quoted_kernel_name, quoted_inductive, quoted_univ_instance, quoted_proj) structure_of_term
 end
 
@@ -699,7 +700,197 @@ let inspectTerm (t:Term.constr) :  (Term.constr, quoted_int, quoted_ident, quote
 	    x :: _ -> ACoq_tRel x
       | _ -> raise (Failure "ill-typed")
     else raise (Failure "not yet implemented")
-end
+
+
+    let rec unquote_int trm =
+      let (h,args) = app_full trm [] in
+      if Term.eq_constr h tO then
+        0
+       else if Term.eq_constr h tS then
+         match args with
+         n :: _ -> 1 + unquote_int n
+         | _ -> not_supported_verb trm "nat_to_int nil"
+       else
+         not_supported_verb trm "nat_to_int"
+      
+    let unquote_bool trm =
+      if Term.eq_constr trm ttrue then
+        true
+      else if Term.eq_constr trm tfalse then
+        false
+      else not_supported_verb trm "from_bool"
+  
+    let unquote_char trm =
+      let (h,args) = app_full trm [] in
+      if Term.eq_constr h tAscii then
+        match args with
+    a :: b :: c :: d :: e :: f :: g :: h :: _ ->
+      let bits = List.rev [a;b;c;d;e;f;g;h] in
+      let v = List.fold_left (fun a n -> (a lsl 1) lor if unquote_bool n then 1 else 0) 0 bits in
+      char_of_int v
+        | _ -> assert false
+      else
+        not_supported trm
+  
+    let unquote_string trm =
+      let rec go n trm =
+        let (h,args) = app_full trm [] in
+        if Term.eq_constr h tEmptyString then
+          Bytes.create n
+        else if Term.eq_constr h tString then
+    match args with
+      c :: s :: _ ->
+        let res = go (n + 1) s in
+        let _ = Bytes.set res n (unquote_char c) in
+        res
+    | _ -> bad_term_verb trm "unquote_string"
+        else
+    not_supported_verb trm "unquote_string"
+      in
+      Bytes.to_string (go 0 trm)
+  
+    let unquote_ident trm =
+      Names.id_of_string (unquote_string trm)
+  
+    let unquote_cast_kind trm =
+      if Term.eq_constr trm kVmCast then
+        Term.VMcast
+      else if Term.eq_constr trm kCast then
+        Term.DEFAULTcast
+      else if Term.eq_constr trm kRevertCast then
+        Term.REVERTcast
+      else if Term.eq_constr trm kNative then
+        Term.VMcast
+      else
+        bad_term trm
+  
+  
+    let unquote_name trm =
+      let (h,args) = app_full trm [] in
+      if Term.eq_constr h nAnon then
+        Names.Anonymous
+      else if Term.eq_constr h nNamed then
+        match args with
+    n :: _ -> Names.Name (unquote_ident n)
+        | _ -> raise (Failure "ill-typed, expected name")
+      else
+        raise (Failure "non-value")
+
+  (* This code is taken from Pretyping, because it is not exposed globally *)
+  (* the case for strict universe declarations was removed *)
+  let get_level evd s =
+    let names, _ = Global.global_universe_names () in
+    if CString.string_contains ~where:s ~what:"." then
+      match List.rev (CString.split '.' s) with
+      | [] -> CErrors.anomaly (str"Invalid universe name " ++ str s ++ str".")
+      | n :: dp ->
+	 let num = int_of_string n in
+	 let dp = DirPath.make (List.map Id.of_string dp) in
+	 let level = Univ.Level.make dp num in
+	 let evd =
+	   try Evd.add_global_univ evd level
+	   with UGraph.AlreadyDeclared -> evd
+	 in evd, level
+    else
+      try
+	let level = Evd.universe_of_name evd s in
+	evd, level
+      with Not_found ->
+	try
+	  let id = try Id.of_string s with _ -> raise Not_found in    (* Names.Id.of_string can fail if the name is not valid (utf8 ...) *)
+          evd, snd (Idmap.find id names)
+	with Not_found ->
+  	  Evd.new_univ_level_variable ~name:s Evd.UnivRigid evd
+  (* end of code from Pretyping *)
+
+
+
+  let unquote_level evd trm (* of type level *) : Evd.evar_map * Univ.Level.t =
+    let (h,args) = app_full trm [] in
+    if Term.eq_constr h lProp then
+      match args with
+      | [] -> evd, Univ.Level.prop
+      | _ -> bad_term_verb trm "unquote_level"
+    else if Term.eq_constr h lSet then
+      match args with
+      | [] -> evd, Univ.Level.set
+      | _ -> bad_term_verb trm "unquote_level"
+    else if Term.eq_constr h tLevel then
+      match args with
+      | s :: [] -> get_level evd (unquote_string s)
+      | _ -> bad_term_verb trm "unquote_level"
+    else if Term.eq_constr h tLevelVar then
+      match args with
+      | l :: [] -> failwith "todo, I don't know how to create var level"
+      | _ -> bad_term_verb trm "unquote_level"
+    else
+      not_supported_verb trm "unquote_level"
+
+  let unquote_level_expr evd trm (* of type level *) b (* of type bool *) : Evd.evar_map * Univ.Universe.t=
+    let evd, l = unquote_level evd trm in
+    let u = Univ.Universe.make l in
+    if unquote_bool b then evd, Univ.Universe.super u
+    else evd, u
+
+  let from_coq_pair trm =
+    let (h,args) = app_full trm [] in
+    if Term.eq_constr h c_pair then
+      match args with
+	_ :: _ :: x :: y :: [] -> (x, y)
+      | _ -> bad_term trm
+    else
+      not_supported_verb trm "from_coq_pair"
+
+
+  let rec from_coq_list trm =
+    let (h,args) = app_full trm [] in
+    if Term.eq_constr h c_nil then []
+    else if Term.eq_constr h c_cons then
+      match args with
+	_ :: x :: xs :: _ -> x :: from_coq_list xs
+      | _ -> bad_term trm
+    else
+      not_supported_verb trm "from_coq_list"
+
+  let unquote_universe evd trm (* of type universe *) =
+    let levels = List.map from_coq_pair (from_coq_list trm) in
+    let evd, u = match levels with
+      | [] -> CErrors.anomaly (str "Empty level in unquote_sort. Please fill a bug in Template Coq.")
+      | (l,b)::q -> List.fold_left (fun (evd,u) (l,b) -> let evd, u' = unquote_level_expr evd l b
+                                                         in evd, Univ.Universe.sup u u')
+                                   (unquote_level_expr evd l b) q
+    in evd, u
+
+
+  let unquote_kn  (k : quoted_kernel_name) : Libnames.qualid =
+    failwith "not yet implemented" 
+    (*earlier implementation used Libnames.make_qualid*)
+
+  let unquote_proj (qp : quoted_proj) : (quoted_inductive * quoted_int * quoted_int) =
+    failwith "not yet implemented" 
+
+
+  let unquote_inductive trm =
+    let (h,args) = app_full trm [] in
+    if Term.eq_constr h tmkInd then
+      match args with
+	nm :: num :: _ ->
+        let s = (unquote_string nm) in
+        let (dp, nm) = split_name s in
+        (try
+          match Nametab.locate (Libnames.make_qualid dp nm) with
+          | Globnames.ConstRef c ->  CErrors.user_err (str "this not an inductive constant. use tConst instead of tInd : " ++ str s)
+          | Globnames.IndRef i -> (fst i, unquote_int  num)
+          | Globnames.VarRef _ -> CErrors.user_err (str "the constant is a variable. use tVar : " ++ str s)
+          | Globnames.ConstructRef _ -> CErrors.user_err (str "the constant is a consructor. use tConstructor : " ++ str s)
+        with
+        Not_found ->   CErrors.user_err (str "Constant not found : " ++ str s))
+      | _ -> assert false
+    else
+      bad_term_verb trm "non-constructor"
+
+        
+  end
 
 
 
@@ -1149,41 +1340,11 @@ struct
     let str_abs (t: Q.t) : Pp.std_ppcmds = failwith "not yet implemented: str_abs"
     let not_supported_verb (t: Q.t) s = CErrors.user_err (Pp.(str_abs t ++ Pp.str s))
     let bad_term (t: Q.t) = not_supported_verb t "bad_term is not yet implemented" 
-
-    let from_coq_pair (t :Q.t) =
-      let (h,args) = app_full_abs t [] in
-      match Q.inspectTerm h, args with
-      | ACoq_tConstruct (i,n,u), _ :: _ :: x :: y :: [] -> 
-        if Q.representsIndConstuctor i TemplateCoqQuoter.c_pair
-        then (x,y) 
-        else bad_term t
-     | _ -> bad_term t
-
-     (*this abstract version is not needed anymore?*)
-    let rec from_coq_list (t :Q.t) =
-      let (h,args) = app_full_abs t [] in
-      match Q.inspectTerm h with
-      | ACoq_tConstruct (h,n,u) -> 
-        if Q.representsIndConstuctor h TemplateCoqQuoter.c_nil then []
-        else if Q.representsIndConstuctor h TemplateCoqQuoter.c_cons then
-          match args with
-          _ :: x :: xs :: _ -> x :: from_coq_list xs
-          | _ -> bad_term t
-        else
-          not_supported_verb t "from_coq_list"
-      | _ -> not_supported_verb t "from_coq_list"  
-
-   (* let rec nat_to_int (trm: Q.t) : int =
-      let (h,args) = app_full_abs trm [] in
-      match Q.inspectTerm h with
-      | ACoq_tConstruct (h,n,u) -> 
-        if Q.representsIndConstuctor h  TemplateCoqQuoter.tO then 0
-        else if Q.representsIndConstuctor h TemplateCoqQuoter. tS then
-        match args with
-          n :: _ -> 1 + nat_to_int n
-        | _ -> not_supported_verb trm "nat_to_int nil"
-        else not_supported_verb trm "nat_to_int"
-      | _ -> not_supported_verb trm "nat_to_int" *)
+          
+  (** NOTE: Because the representation is lossy, I should probably
+   ** come back through elaboration.
+   ** - This would also allow writing terms with holes
+   **)
 
 let denote_term evdref (trm: Q.t) : Term.constr =
   let rec aux (trm: Q.t) : Term.constr =
@@ -1192,28 +1353,26 @@ let denote_term evdref (trm: Q.t) : Term.constr =
   | ACoq_tRel x -> Term.mkRel (Q.unquote_int x + 1)
   | ACoq_tVar x -> Term.mkVar (Q.unquote_ident x)
   | ACoq_tSort x ->
-      let evd, u = unquote_universe !evdref x in evdref := evd; Term.mkType u
+      let evd, u = Q.unquote_universe !evdref x in evdref := evd; Term.mkType u
   | ACoq_tCast (t,c,ty) -> Term.mkCast (aux t, Q.unquote_cast_kind c, aux ty)
   | ACoq_tProd (n,t,b) -> Term.mkProd (Q.unquote_name n, aux t, aux b)
   | ACoq_tLambda (n,t,b) -> Term.mkLambda (Q.unquote_name n, aux t, aux b)
   | ACoq_tLetIn (n,e,t,b) -> Term.mkLetIn (Q.unquote_name n, aux e, aux t, aux b)
   | ACoq_tApp (f,xs) ->   
       Term.mkApp (aux f, Array.of_list (List.map aux  xs))
-  | ACoq_tConst (s,u) ->   
+  | ACoq_tConst (s,_) ->   
        (* TODO: unquote universes *)
-       let s = (Q.unquote_kn s) in
-       let dp = Names.dirpath s in
-       let nm = Names.name s in
+       let s = (Q.unquote_kn s) in 
        (try
-         match Nametab.locate (Libnames.make_qualid dp nm) with
+         match Nametab.locate s with
          | Globnames.ConstRef c ->
             EConstr.Unsafe.to_constr (Evarutil.e_new_global evdref (Globnames.ConstRef c))
          | Globnames.IndRef _ -> CErrors.user_err (str "the constant is an inductive. use tInd : " 
-              ++  Pp.str (Names.KerName.to_string s))
-         | Globnames.VarRef _ -> CErrors.user_err (str "the constant is a variable. use tVar : " ++ Pp.str (Names.KerName.to_string s))
-         | Globnames.ConstructRef _ -> CErrors.user_err (str "the constant is a consructor. use tConstructor : "++ Pp.str (Names.KerName.to_string s))
+              ++  Pp.str (Libnames.string_of_qualid s))
+         | Globnames.VarRef _ -> CErrors.user_err (str "the constant is a variable. use tVar : " ++ Pp.str (Libnames.string_of_qualid s))
+         | Globnames.ConstructRef _ -> CErrors.user_err (str "the constant is a consructor. use tConstructor : "++ Pp.str (Libnames.string_of_qualid s))
        with
-       Not_found -> CErrors.user_err (str "Constant not found : " ++ Pp.str (Names.KerName.to_string s)))
+       Not_found -> CErrors.user_err (str "Constant not found : " ++ Pp.str (Libnames.string_of_qualid s)))
   | ACoq_tConstruct (i,idx,_) ->
       let ind = Q.unquote_inductive i in
       Term.mkConstruct (ind, Q.unquote_int idx + 1)
@@ -1246,31 +1405,13 @@ let denote_term evdref (trm: Q.t) : Term.constr =
   | ACoq_tProj (proj,t) -> 
       let (ind, _, narg) = Q.unquote_proj proj in (* is narg the correct projection? *)
       let ind' = Q.unquote_inductive ind in
-    let projs = Recordops.lookup_projections ind' in
-    (match List.nth projs (Q.unquote_int narg) with
+      let projs = Recordops.lookup_projections ind' in
+      (match List.nth projs (Q.unquote_int narg) with
       | Some p -> Term.mkProj (Names.Projection.make p false, aux t)
       | None -> bad_term trm)
-
   | _ ->  not_supported_verb trm "big_case"
 
   (*
-  else if Term.eq_constr h tFix then
-  else if Term.eq_constr h tCoFix then
-    match args with
-    | bds :: i :: _ ->
-      let unquoteFbd  b : (Term.constr * Term.constr * Term.constr) =
-        let (_,args) = app_full b [] in
-        match args with
-        | _(*type*)::a::b::c::d::[] -> ((a,b,c))
-        |_ -> raise (Failure " (mkdef must take exactly 5 arguments)")
-        in
-      let lbd = List.map unquoteFbd (from_coq_list bds) in
-      let (names,types,bodies) = CList.split3 lbd in
-      let (types,bodies) = (List.map aux types, List.map aux bodies) in
-      let names = List.map unquote_name names in
-      let la = Array.of_list in
-      Term.mkCoFix (nat_to_int i, (la names, la types, la bodies))
-    | _ -> raise (Failure "tFix takes exactly 2 arguments")
   else if Term.eq_constr h tProj then
     match args with
     | [ proj ; t ] ->
@@ -1298,84 +1439,6 @@ module Denote =
 struct
 
   open TemplateCoqQuoter
-
-  let rec nat_to_int trm =
-    let (h,args) = app_full trm [] in
-    if Term.eq_constr h tO then
-      0
-     else if Term.eq_constr h tS then
-       match args with
-       n :: _ -> 1 + nat_to_int n
-       | _ -> not_supported_verb trm "nat_to_int nil"
-     else
-       not_supported_verb trm "nat_to_int"
-    
-  let from_bool trm =
-    if Term.eq_constr trm ttrue then
-      true
-    else if Term.eq_constr trm tfalse then
-      false
-    else not_supported_verb trm "from_bool"
-
-  let unquote_char trm =
-    let (h,args) = app_full trm [] in
-    if Term.eq_constr h tAscii then
-      match args with
-	a :: b :: c :: d :: e :: f :: g :: h :: _ ->
-	  let bits = List.rev [a;b;c;d;e;f;g;h] in
-	  let v = List.fold_left (fun a n -> (a lsl 1) lor if from_bool n then 1 else 0) 0 bits in
-	  char_of_int v
-      | _ -> assert false
-    else
-      not_supported trm
-
-  let unquote_string trm =
-    let rec go n trm =
-      let (h,args) = app_full trm [] in
-      if Term.eq_constr h tEmptyString then
-        Bytes.create n
-      else if Term.eq_constr h tString then
-	match args with
-	  c :: s :: _ ->
-	    let res = go (n + 1) s in
-	    let _ = Bytes.set res n (unquote_char c) in
-	    res
-	| _ -> bad_term_verb trm "unquote_string"
-      else
-	not_supported_verb trm "unquote_string"
-    in
-    Bytes.to_string (go 0 trm)
-
-  let unquote_ident trm =
-    Names.id_of_string (unquote_string trm)
-
-  let unquote_cast_kind trm =
-    if Term.eq_constr trm kVmCast then
-      Term.VMcast
-    else if Term.eq_constr trm kCast then
-      Term.DEFAULTcast
-    else if Term.eq_constr trm kRevertCast then
-      Term.REVERTcast
-    else if Term.eq_constr trm kNative then
-      Term.VMcast
-    else
-      bad_term trm
-
-
-  let unquote_name trm =
-    let (h,args) = app_full trm [] in
-    if Term.eq_constr h nAnon then
-      Names.Anonymous
-    else if Term.eq_constr h nNamed then
-      match args with
-	n :: _ -> Names.Name (unquote_ident n)
-      | _ -> raise (Failure "ill-typed, expected name")
-    else
-      raise (Failure "non-value")
-
-
-
-
 
   (* This code is taken from Pretyping, because it is not exposed globally *)
   (* the case for strict universe declarations was removed *)
@@ -1443,27 +1506,6 @@ struct
     in evd, u
 
 
-
-  let denote_inductive trm =
-    let (h,args) = app_full trm [] in
-    if Term.eq_constr h tmkInd then
-      match args with
-	nm :: num :: _ ->
-        let s = (unquote_string nm) in
-        let (dp, nm) = split_name s in
-        (try
-          match Nametab.locate (Libnames.make_qualid dp nm) with
-          | Globnames.ConstRef c ->  CErrors.user_err (str "this not an inductive constant. use tConst instead of tInd : " ++ str s)
-          | Globnames.IndRef i -> (fst i, nat_to_int  num)
-          | Globnames.VarRef _ -> CErrors.user_err (str "the constant is a variable. use tVar : " ++ str s)
-          | Globnames.ConstructRef _ -> CErrors.user_err (str "the constant is a consructor. use tConstructor : " ++ str s)
-        with
-        Not_found ->   CErrors.user_err (str "Constant not found : " ++ str s))
-      | _ -> assert false
-    else
-      bad_term_verb trm "non-constructor"
-
-
   (** NOTE: Because the representation is lossy, I should probably
    ** come back through elaboration.
    ** - This would also allow writing terms with holes
@@ -1487,8 +1529,8 @@ struct
     let (h,args) = app_full trm [] in
       match args with
 	    x :: [] ->
-      if Term.eq_constr h tLocalDef then Entries.LocalDefEntry (denote_term evdref x)
-      else (if  Term.eq_constr h tLocalAssum then Entries.LocalAssumEntry (denote_term evdref x) else bad_term trm)
+      if Term.eq_constr h tLocalDef then Entries.LocalDefEntry (TermReify.denote_term evdref x)
+      else (if  Term.eq_constr h tLocalAssum then Entries.LocalAssumEntry (TermReify.denote_term evdref x) else bad_term trm)
       | _ -> bad_term trm
 
   let denote_mind_entry_finite trm =
@@ -1518,6 +1560,24 @@ struct
   let denote_universe_context (trm : Term.constr) : Univ.universe_context =
     Univ.UContext.empty (* FIXME !!! *)
 
+  let denote_inductive_first trm =
+    let (h,args) = app_full trm [] in
+    if Term.eq_constr h tmkInd then
+      match args with
+        nm :: num :: _ ->
+        let s = (unquote_string nm) in
+        let (dp, nm) = split_name s in
+        (try
+          match Nametab.locate (Libnames.make_qualid dp nm) with
+          | Globnames.ConstRef c ->  CErrors.user_err (str "this not an inductive constant. use tConst instead of tInd : " ++ str s)
+          | Globnames.IndRef i -> (fst i, nat_to_int  num)
+          | Globnames.VarRef _ -> CErrors.user_err (str "the constant is a variable. use tVar : " ++ str s)
+          | Globnames.ConstructRef _ -> CErrors.user_err (str "the constant is a consructor. use tConstructor : " ++ str s)
+        with
+        Not_found ->   CErrors.user_err (str "Constant not found : " ++ str s))
+      | _ -> assert false
+    else
+      bad_term_verb trm "non-constructor"
 
   let declare_inductive (env: Environ.env) (evm: Evd.evar_map) (body: Term.constr) : unit =
   let (evm,body) = reduce_all env evm body in
@@ -1529,10 +1589,10 @@ struct
     | mt::ma::mtemp::mcn::mct::[] ->
     {
     mind_entry_typename = unquote_ident mt;
-    mind_entry_arity = denote_term evdref ma;
-    mind_entry_template = from_bool mtemp;
+    mind_entry_arity = TermReify.denote_term evdref ma;
+    mind_entry_template = TemplateCoqQuoter.unquote_bool mtemp;
     mind_entry_consnames = List.map unquote_ident (from_coq_list mcn);
-    mind_entry_lc = List.map (denote_term evdref) (from_coq_list mct)
+    mind_entry_lc = List.map (TermReify.denote_term evdref) (from_coq_list mct)
     }
     | _ -> raise (Failure "ill-typed one_inductive_entry")
      in
@@ -1546,9 +1606,9 @@ struct
     (* mind_entry_polymorphic = from_bool mpol; *)
     mind_entry_universes =
       (let uctx = denote_universe_context uctx in
-      if from_bool mpol then Polymorphic_ind_entry uctx
+      if TemplateCoqQuoter.unquote_bool mpol then Polymorphic_ind_entry uctx
       else Monomorphic_ind_entry uctx);
-    mind_entry_private = unquote_map_option from_bool mpr (*mpr*)
+    mind_entry_private = unquote_map_option TemplateCoqQuoter.unquote_bool mpr (*mpr*)
     } in
     match args with
     mr::mf::mp::mi::mpol::univs::mpr::[] ->
@@ -1618,7 +1678,7 @@ struct
          let (evm, name) = reduce_all env evm name in
          let (evm, def) = reduce_all env evm body in
          let evdref = ref evm in
-         let trm = denote_term evdref def in
+         let trm = TermReify.denote_term evdref def in
          let ty = Typing.e_type_of env evdref (EConstr.of_constr trm) in
          let evm = !evdref in
          let _ = Declare.declare_definition ~kind:Decl_kinds.Definition (unquote_ident name) (trm, Evd.universe_context_set evm) in
@@ -1661,7 +1721,7 @@ struct
          let (evm, name) = reduce_all env evm name in
          let name = unquote_string name in
          let (evm, b) = reduce_all env evm b in
-         let bypass = from_bool b in
+         let bypass = TemplateCoqQuoter.unquote_bool b in
          let (dp, nm) = split_name name in
          let entry = (* todo: this should be defined in the quoter module *)
            match Nametab.locate (Libnames.make_qualid dp nm) with
@@ -1733,7 +1793,7 @@ struct
       | t::[] ->
         let (evm, t) = reduce_all env evm t in
         let evdref = ref evm in
-        let t' = denote_term evdref t in
+        let t' = TermReify.denote_term evdref t in
         let evm = !evdref in
         let typ = EConstr.to_constr evm (Retyping.get_type_of env evm (EConstr.of_constr t')) in
         (* todo: we could declare a new universe <= Coq.Init.Specif.7 or 8 instead of using [texistT_typed_term] *)
@@ -1748,6 +1808,7 @@ struct
       | typ::t::[] ->
         let (evm, t) = reduce_all env evm t in
         let evdref = ref evm in
+        let t' = TermReify.denote_term evdref t in
         let t' = denote_term evdref t in
         let t' = Typing.e_solve_evars env evdref (EConstr.of_constr t') in
         Typing.e_check env evdref t' (EConstr.of_constr typ) ;

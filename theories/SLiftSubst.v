@@ -411,3 +411,9 @@ Proof.
   - cbn. assert (e2 : k ?= n = Gt) by (propb ; omega).
     rewrite e2. reflexivity.
 Defined.
+
+(* I will only prove it if it becomes necessary. *)
+Lemma substP4 :
+  forall t u v i j,
+    t{ i := u }{ i+j := v } = t{ S (i+j) := v}{ i := u{ j := v } }.
+Abort.

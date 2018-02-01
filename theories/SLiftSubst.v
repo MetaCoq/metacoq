@@ -302,36 +302,35 @@ Lemma substP1 :
     lift k (j+i) (t{j := u}) = (lift k (S (j+i)) t){ j := lift k i u }.
 Proof.
   intro t. induction t ; intros u i j k.
-  all: try (cbn ; f_equal ; easy).
-  - cbn. case_eq (j ?= n) ; intro e ; bprop e.
-    + subst. destruct n.
-      * cbn. rewrite !lift00. reflexivity.
-      * assert (e' : (S n + i) <=? n = false) by (propb ; omega).
-        rewrite e'. cbn.
-        assert (e2 : (n ?= n) = Eq) by (propb ; omega).
-        rewrite e2. replace (S (n + i)) with ((S n) + i)%nat by omega.
-        rewrite liftP2 by omega. reflexivity.
-    + destruct n.
-      * omega.
-      * case_eq (j + i <=? n) ; intro e1 ; bprop e1.
-        -- cbn. rewrite e1.
-           assert (e3 : j ?= k + S n = Lt) by (propb ; omega).
-           rewrite e3. replace (k + S n)%nat with (S (k + n)) by omega.
-           reflexivity.
-        -- cbn. rewrite e1. rewrite e. reflexivity.
-    + destruct n.
-      * cbn. assert (e1 : j + i <=? 0 = false) by (propb ; omega).
-        rewrite e1. rewrite e. reflexivity.
-      * assert (e1 : j + i <=? n = false) by (propb ; omega).
-        rewrite e1. cbn.
-        assert (e2 : j + i <=? S n = false) by (propb ; omega).
-        rewrite e2. rewrite e. reflexivity.
-  - cbn. f_equal.
-    * easy.
-    * replace (S (S (j + i))) with (S ((S j) + i)) by omega.
-      replace (S (j + i)) with ((S j) + i)%nat by omega.
-      easy.
-Admitted.
+  all: try (cbn ; f_equal ;
+            try replace (S (S (S (j + i)))) with ((S (S (S j))) + i)%nat by omega ;
+            try replace (S (S (j + i))) with ((S (S j)) + i)%nat by omega ;
+            try replace (S (j + i)) with ((S j) + i)%nat by omega ;
+            easy).
+  cbn. case_eq (j ?= n) ; intro e ; bprop e.
+  - subst. destruct n.
+    + cbn. rewrite !lift00. reflexivity.
+    + assert (e' : (S n + i) <=? n = false) by (propb ; omega).
+      rewrite e'. cbn.
+      assert (e2 : (n ?= n) = Eq) by (propb ; omega).
+      rewrite e2. replace (S (n + i)) with ((S n) + i)%nat by omega.
+      rewrite liftP2 by omega. reflexivity.
+  - destruct n.
+    + omega.
+    + case_eq (j + i <=? n) ; intro e1 ; bprop e1.
+      * cbn. rewrite e1.
+        assert (e3 : j ?= k + S n = Lt) by (propb ; omega).
+        rewrite e3. replace (k + S n)%nat with (S (k + n)) by omega.
+        reflexivity.
+      * cbn. rewrite e1. rewrite e. reflexivity.
+  - destruct n.
+    + cbn. assert (e1 : j + i <=? 0 = false) by (propb ; omega).
+      rewrite e1. rewrite e. reflexivity.
+    + assert (e1 : j + i <=? n = false) by (propb ; omega).
+      rewrite e1. cbn.
+      assert (e2 : j + i <=? S n = false) by (propb ; omega).
+      rewrite e2. rewrite e. reflexivity.
+Defined.
 
 Lemma substP2 :
   forall t u i j n,

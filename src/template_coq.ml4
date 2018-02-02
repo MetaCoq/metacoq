@@ -256,6 +256,8 @@ struct
     = failwith "not yet implemented"
   let unquote_universe (q: Evd.evar_map) (qs: quoted_sort) : Evd.evar_map * Univ.Universe.t
   = failwith "not yet implemented"
+  let print_term  (u: t) : Pp.std_ppcmds = failwith "not yet implemented"
+
 end
 
 

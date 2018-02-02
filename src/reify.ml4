@@ -218,7 +218,7 @@ module type Quoter = sig
   (* val unquote_univ_instance :  quoted_univ_instance -> Univ.Instance.t *)
   val unquote_proj : quoted_proj -> (quoted_inductive * quoted_int * quoted_int)
   val unquote_universe : Evd.evar_map -> quoted_sort -> Evd.evar_map * Univ.Universe.t
-  
+  val print_term : t -> Pp.std_ppcmds
   (* val representsIndConstuctor : quoted_inductive -> Term.constr -> bool *)
   val inspectTerm : t -> (t, quoted_int, quoted_ident, quoted_name, quoted_sort, quoted_cast_kind, quoted_kernel_name, quoted_inductive, quoted_univ_instance, quoted_proj) structure_of_term
 end
@@ -699,8 +699,9 @@ let inspectTerm (t:Term.constr) :  (Term.constr, quoted_int, quoted_ident, quote
       match args with
 	    x :: _ -> ACoq_tRel x
       | _ -> raise (Failure "ill-typed")
-    else raise (Failure "not yet implemented")
+    else failwith "not yet implemented"
 
+    let print_term (u: t) : Pp.std_ppcmds = Printer.pr_constr u
 
     let rec unquote_int trm =
       let (h,args) = app_full trm [] in
@@ -1337,9 +1338,9 @@ struct
         ACoq_tApp (f, xs) -> app_full_abs f (xs @ acc)
       | _ -> (trm, acc)
     
-    let str_abs (t: Q.t) : Pp.std_ppcmds = failwith "not yet implemented: str_abs"
+    let str_abs (t: Q.t) : Pp.std_ppcmds = Q.print_term t (* unfold this defn everywhere and delete*)
     let not_supported_verb (t: Q.t) s = CErrors.user_err (Pp.(str_abs t ++ Pp.str s))
-    let bad_term (t: Q.t) = not_supported_verb t "bad_term is not yet implemented" 
+    let bad_term (t: Q.t) = not_supported_verb t "bad_term" 
           
   (** NOTE: Because the representation is lossy, I should probably
    ** come back through elaboration.

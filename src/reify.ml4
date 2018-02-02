@@ -693,15 +693,119 @@ struct
           Term.App (f, xs) -> app_full f (Array.to_list xs @ acc)
         | _ -> (trm, acc)
            
-let inspectTerm (t:Term.constr) :  (Term.constr, quoted_int, quoted_ident, quoted_name, quoted_sort, quoted_cast_kind, quoted_kernel_name, quoted_inductive, quoted_univ_instance, quoted_proj) structure_of_term =
-    let (h,args) = app_full t [] in
-    if Term.eq_constr h tRel then
+  let print_term (u: t) : Pp.std_ppcmds = Printer.pr_constr u
+  
+  let from_coq_pair trm =
+    let (h,args) = app_full trm [] in
+    if Term.eq_constr h c_pair then
       match args with
-	    x :: _ -> ACoq_tRel x
-      | _ -> raise (Failure "ill-typed")
-    else failwith "not yet implemented"
+	_ :: _ :: x :: y :: [] -> (x, y)
+      | _ -> bad_term trm
+    else
+      not_supported_verb trm "from_coq_pair"
 
-    let print_term (u: t) : Pp.std_ppcmds = Printer.pr_constr u
+
+  let rec from_coq_list trm =
+    let (h,args) = app_full trm [] in
+    if Term.eq_constr h c_nil then []
+    else if Term.eq_constr h c_cons then
+      match args with
+	_ :: x :: xs :: _ -> x :: from_coq_list xs
+      | _ -> bad_term trm
+    else
+      not_supported_verb trm "from_coq_list"
+        
+  let inspectTerm (t:Term.constr) :  (Term.constr, quoted_int, quoted_ident, quoted_name, quoted_sort, quoted_cast_kind, quoted_kernel_name, quoted_inductive, quoted_univ_instance, quoted_proj) structure_of_term =
+  let (h,args) = app_full t [] in
+  if Term.eq_constr h tRel then
+    match args with
+      x :: _ -> ACoq_tRel x
+      | _ -> CErrors.user_err (print_term t ++ Pp.str ("has bad structure"))
+  else if Term.eq_constr h tVar then
+    match args with
+      x :: _ -> ACoq_tVar x
+      | _ -> CErrors.user_err (print_term t ++ Pp.str ("has bad structure"))
+  else if Term.eq_constr h tMeta then
+    match args with
+      x :: _ -> ACoq_tMeta x
+      | _ -> CErrors.user_err (print_term t ++ Pp.str ("has bad structure"))
+  else if Term.eq_constr h tSort then
+    match args with
+      x :: _ -> ACoq_tSort x
+      | _ -> CErrors.user_err (print_term t ++ Pp.str ("has bad structure"))
+  else if Term.eq_constr h tProd then
+    match args with
+      n :: t :: b :: _ -> ACoq_tProd (n,t,b)
+      | _ -> CErrors.user_err (print_term t ++ Pp.str ("has bad structure"))
+  else if Term.eq_constr h tLambda then
+    match args with
+      n  :: t :: b :: _ -> ACoq_tLambda (n,t,b)
+      | _ -> CErrors.user_err (print_term t ++ Pp.str ("has bad structure"))
+  else if Term.eq_constr h tLetIn then
+    match args with
+      n :: e :: t :: b :: _ -> ACoq_tLetIn (n,e,t,b)
+      | _ -> CErrors.user_err (print_term t ++ Pp.str ("has bad structure"))
+  else if Term.eq_constr h tApp then
+    match args with
+      f::xs::_ -> ACoq_tApp (f, from_coq_list xs)
+      | _ -> CErrors.user_err (print_term t ++ Pp.str ("has bad structure"))
+  else if Term.eq_constr h tConst then
+    match args with
+      s::u::_ -> ACoq_tConst (s, u)
+      | _ -> CErrors.user_err (print_term t ++ Pp.str ("has bad structure"))
+  else if Term.eq_constr h tInd then
+    match args with
+      i::u::_ -> ACoq_tInd (i,u)
+      | _ -> CErrors.user_err (print_term t ++ Pp.str ("has bad structure"))
+  else if Term.eq_constr h tConstructor then
+    match args with
+      i::idx::u::_ -> ACoq_tConstruct (i,idx,u)
+      | _ -> CErrors.user_err (print_term t ++ Pp.str ("has bad structure"))
+  else if Term.eq_constr h tCase then
+    match args with
+      info::ty::d::brs::_ -> ACoq_tCase (from_coq_pair info, ty, d, List.map from_coq_pair (from_coq_list brs))
+      | _ -> CErrors.user_err (print_term t ++ Pp.str ("has bad structure"))
+  else if Term.eq_constr h tFix then
+    match args with
+      bds::i::_ -> 
+        let unquoteFbd  b  =
+                let (_,args) = app_full b [] in
+                match args with
+                | _(*type*)::a::b::c::d::[] -> 
+                  { adtype =a;
+                    adname=b;
+                    adbody= c;
+                    rarg=d
+                  }
+                |_ -> raise (Failure " (mkdef must take exactly 5 arguments)")
+                in
+        let lbd = List.map unquoteFbd (from_coq_list bds) in
+        ACoq_tFix (lbd, i)
+      | _ -> CErrors.user_err (print_term t ++ Pp.str ("has bad structure"))
+  else if Term.eq_constr h tCoFix then
+    match args with
+      bds::i::_ -> 
+        let unquoteFbd  b  =
+                let (_,args) = app_full b [] in
+                match args with
+                | _(*type*)::a::b::c::d::[] -> 
+                  { adtype =a;
+                    adname=b;
+                    adbody= c;
+                    rarg=d
+                  }
+                |_ -> raise (Failure " (mkdef must take exactly 5 arguments)")
+                in
+        let lbd = List.map unquoteFbd (from_coq_list bds) in
+        ACoq_tCoFix (lbd, i)
+      | _ -> CErrors.user_err (print_term t ++ Pp.str ("has bad structure"))
+  else if Term.eq_constr h tProj then
+    match args with
+      proj::t::_ -> ACoq_tProj (proj, t)
+      | _ -> CErrors.user_err (print_term t ++ Pp.str ("has bad structure"))
+      
+  else failwith "not yet implemented"
+
 
     let rec unquote_int trm =
       let (h,args) = app_full trm [] in
@@ -833,25 +937,6 @@ let inspectTerm (t:Term.constr) :  (Term.constr, quoted_int, quoted_ident, quote
     if unquote_bool b then evd, Univ.Universe.super u
     else evd, u
 
-  let from_coq_pair trm =
-    let (h,args) = app_full trm [] in
-    if Term.eq_constr h c_pair then
-      match args with
-	_ :: _ :: x :: y :: [] -> (x, y)
-      | _ -> bad_term trm
-    else
-      not_supported_verb trm "from_coq_pair"
-
-
-  let rec from_coq_list trm =
-    let (h,args) = app_full trm [] in
-    if Term.eq_constr h c_nil then []
-    else if Term.eq_constr h c_cons then
-      match args with
-	_ :: x :: xs :: _ -> x :: from_coq_list xs
-      | _ -> bad_term trm
-    else
-      not_supported_verb trm "from_coq_list"
 
   let unquote_universe evd trm (* of type universe *) =
     let levels = List.map from_coq_pair (from_coq_list trm) in

@@ -403,9 +403,21 @@ Proof.
         + now apply IHh1.
         + specialize (IHh2 Γ (Ξ,, svass n t) eq_refl hwf). apply IHh2.
         + specialize (IHh3 Γ (Ξ,, svass n t) eq_refl hwf). apply IHh3.
-      - cbn.
-        (* We need a better lift_subst! Or is it really substP2? *)
-        cheat.
+      - cbn. eapply type_conv.
+        + eapply type_App.
+          * now apply IHh1.
+          * now apply IHh2 with (Ξ0 := Ξ,, svass n A).
+          * now apply IHh3.
+          * now apply IHh4.
+        + match goal with
+          | |- _ ;;; _ |-i _ : ?S =>
+            change S with (lift #|Δ| #|Ξ| S)
+          end.
+          (* If we figure a direct path without type_conv, this won't be
+             necessary. *)
+          cheat.
+        + (* This should tell us what equality we need. *)
+          cheat.
       - cheat.
       - cheat.
       - cheat.
@@ -431,6 +443,7 @@ Proof.
     }
 
   - cheat.
+    Unshelve. cheat.
 Defined.
 
 Corollary typing_lift01 :

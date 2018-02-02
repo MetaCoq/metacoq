@@ -46,6 +46,13 @@ following code:
 As long as you don't check this file into a repository things should work out
 well.
 
+Compile
+-------
+Use:
+- `make` to compile the plugin
+- `make translations` to compile the translation plugins
+- `make test-suite` to compile the test suite
+
 Bugs
 ----
 

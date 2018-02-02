@@ -760,7 +760,7 @@ struct
   else if Term.eq_constr h tConstructor then
     match args with
       i::idx::u::_ -> ACoq_tConstruct (i,idx,u)
-      | _ -> CErrors.user_err (print_term t ++ Pp.str ("has bad structure"))
+      | _ -> CErrors.user_err (print_term t ++ Pp.str ("has bad structure: constructor case"))
   else if Term.eq_constr h tCase then
     match args with
       info::ty::d::brs::_ -> ACoq_tCase (from_coq_pair info, ty, d, List.map from_coq_pair (from_coq_list brs))

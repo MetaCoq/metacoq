@@ -403,24 +403,35 @@ Proof.
         + now apply IHh1.
         + specialize (IHh2 Γ (Ξ,, svass n t) eq_refl hwf). apply IHh2.
         + specialize (IHh3 Γ (Ξ,, svass n t) eq_refl hwf). apply IHh3.
-      - cbn. eapply type_conv.
-        + eapply type_App.
-          * now apply IHh1.
-          * now apply IHh2 with (Ξ0 := Ξ,, svass n A).
-          * now apply IHh3.
-          * now apply IHh4.
-        + match goal with
-          | |- _ ;;; _ |-i _ : ?S =>
-            change S with (lift #|Δ| #|Ξ| S)
-          end.
-          (* If we figure a direct path without type_conv, this won't be
-             necessary. *)
+      - cbn.
+        change (lift #|Δ| #|Ξ| (B {0 := u}))
+          with (lift #|Δ| (0 + #|Ξ|) (B { 0 := u })).
+        rewrite substP1.
+        eapply type_App.
+        + now apply IHh1.
+        + now apply IHh2 with (Ξ0 := Ξ,, svass n A).
+        + now apply IHh3.
+        + now apply IHh4.
+      - cbn. apply type_Eq.
+        + now apply IHh1.
+        + now apply IHh2.
+        + now apply IHh3.
+      - cbn. eapply type_Refl.
+        + now apply IHh1.
+        + now apply IHh2.
+      - change (#|Ξ|) with (0 + #|Ξ|)%nat.
+        rewrite substP1.
+        replace (S (0 + #|Ξ|)) with (1 + #|Ξ|)%nat by omega.
+        rewrite substP1.
+        cbn. eapply type_J.
+        + now apply IHh1.
+        + now apply IHh2.
+        + now apply IHh3.
+        + (* now apply IHh4 with (Ξ0 := (Ξ,, svass nx A),, svass ne (sEq (lift0 1 A) (lift0 1 u) (sRel 0))). *)
           cheat.
-        + (* This should tell us what equality we need. *)
+        + now apply IHh5.
+        + (* now apply IHh6. *)
           cheat.
-      - cheat.
-      - cheat.
-      - cheat.
       - cheat.
       - cheat.
       - cheat.
@@ -443,7 +454,7 @@ Proof.
     }
 
   - cheat.
-    Unshelve. cheat.
+    Unshelve. all:cheat.
 Defined.
 
 Corollary typing_lift01 :

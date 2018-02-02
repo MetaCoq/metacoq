@@ -48,9 +48,16 @@ Definition add_constraint (uc : univ_constraint) (G : t) : t
      let constraints := Constraint.add uc (snd G) in
      (fst G, constraints).
 
+Definition repr (uctx : universe_context) : UContext.t :=
+  match uctx with
+  | Monomorphic_ctx c => c
+  | Polymorphic_ctx c => c
+  end.
+
 Definition add_constraints (uctx : universe_context) (G : t) : t
-  := let G := List.fold_left (fun s l => add_node l s) (fst uctx) G in
-     Constraint.fold add_constraint (snd uctx) G.
+  := let '(inst, cstrs) := repr uctx in
+     let G := List.fold_left (fun s l => add_node l s) inst G in
+     Constraint.fold add_constraint cstrs G.
 
 
 Section UGraph.

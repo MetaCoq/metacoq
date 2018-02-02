@@ -120,7 +120,7 @@ Proof.
     refine (List.map (fun x => fst (fst x)) ind_ctors).
     refine (List.map (fun x => remove_arity decl.(ind_npars)
                                                 (snd (fst x))) ind_ctors).
-  - refine (let '(levels, constraints) := decl.(ind_universes) in
+  - refine (let '(levels, constraints) := uGraph.repr decl.(ind_universes) in
             let not_var := fun l => match l with
                                  | Level.Var _  => false
                                  | _ => true

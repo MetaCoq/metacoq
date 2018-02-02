@@ -48,8 +48,6 @@ let debug (m : unit -> Pp.std_ppcmds) =
   else
     ()
 
-exception NotSupported of Term.constr * string
-
 let not_supported trm =
   CErrors.user_err (str "Not Supported:" ++ spc () ++ Printer.pr_constr trm)
 
@@ -136,6 +134,7 @@ module type Quoter = sig
   val quote_univ_instance : Univ.Instance.t -> quoted_univ_instance
   val quote_univ_constraints : Univ.Constraint.t -> quoted_univ_constraints
   val quote_univ_context : Univ.UContext.t -> quoted_univ_context
+  val quote_abstract_univ_context : Univ.AUContext.t -> quoted_univ_context
 
   (* val quote_mind_params : (quoted_ident * (t,t) sum) list -> quoted_mind_params *)
   (* val quote_mind_finiteness : Decl_kinds.recursivity_kind -> quoted_mind_finiteness *)
@@ -244,11 +243,11 @@ struct
   let c_nil = resolve_symbol pkg_datatypes "nil"
   let c_cons = resolve_symbol pkg_datatypes "cons"
   let prod_type = resolve_symbol pkg_datatypes "prod"
-  let sum_type = resolve_symbol pkg_datatypes "sum"
-  let option_type = resolve_symbol pkg_datatypes "option"
+  (* let sum_type = resolve_symbol pkg_datatypes "sum"
+   * let option_type = resolve_symbol pkg_datatypes "option" *)
   let bool_type = resolve_symbol pkg_datatypes "bool"
-  let cInl = resolve_symbol pkg_datatypes "inl"
-  let cInr = resolve_symbol pkg_datatypes "inr"
+  (* let cInl = resolve_symbol pkg_datatypes "inl"
+   * let cInr = resolve_symbol pkg_datatypes "inr" *)
   let prod a b =
     Term.mkApp (prod_type, [| a ; b |])
   let c_pair = resolve_symbol pkg_datatypes "pair"
@@ -284,6 +283,9 @@ struct
   let tunivLe = resolve_symbol pkg_univ "Le"
   let tunivLt = resolve_symbol pkg_univ "Lt"
   let tunivEq = resolve_symbol pkg_univ "Eq"
+  (* let tunivcontext = resolve_symbol pkg_univ "universe_context" *)
+  let tMonomorphic_ctx = resolve_symbol pkg_univ "Monomorphic_ctx"
+  let tPolymorphic_ctx = resolve_symbol pkg_univ "Polymorphic_ctx"
   let tUContextmake = resolve_symbol (ext_pkg_univ "UContext") "make"
   (* let tConstraintempty = resolve_symbol (ext_pkg_univ "Constraint") "empty" *)
   let tConstraintempty = Universes.constr_of_global (Coqlib.find_reference "template coq bug" (ext_pkg_univ "Constraint") "empty")
@@ -293,7 +295,7 @@ struct
   let tadd_constraints = resolve_symbol pkg_ugraph  "add_constraints"
 
   let (tdef,tmkdef) = (r_reify "def", r_reify "mkdef")
-  let (tLocalDef,tLocalAssum,tlocal_entry) = (r_reify "LocalDef", r_reify "LocalAssum", r_reify "local_entry")
+  let (tLocalDef,tLocalAssum,_tlocal_entry) = (r_reify "LocalDef", r_reify "LocalAssum", r_reify "local_entry")
 
   let (cFinite,cCoFinite,cBiFinite) = (r_reify "Finite", r_reify "CoFinite", r_reify "BiFinite")
   let (pConstr,pType,pAxiom,pIn) =
@@ -302,11 +304,11 @@ struct
   let tmkinductive_body = r_reify "mkinductive_body"
   let tBuild_minductive_decl = r_reify "Build_minductive_decl"
 
-  let tMutual_inductive_entry = r_reify "mutual_inductive_entry"
-  let tOne_inductive_entry = r_reify "one_inductive_entry"
-  let tBuild_mutual_inductive_entry = r_reify "Build_mutual_inductive_entry"
-  let tBuild_one_inductive_entry = r_reify "Build_one_inductive_entry"
-  let tConstant_entry = r_reify "constant_entry"
+  let _tMutual_inductive_entry = r_reify "mutual_inductive_entry"
+  let _tOne_inductive_entry = r_reify "one_inductive_entry"
+  let _tBuild_mutual_inductive_entry = r_reify "Build_mutual_inductive_entry"
+  let _tBuild_one_inductive_entry = r_reify "Build_one_inductive_entry"
+  let _tConstant_entry = r_reify "constant_entry"
   let cParameterEntry = r_reify "ParameterEntry"
   let cDefinitionEntry = r_reify "DefinitionEntry"
   let cParameter_entry = r_reify "Build_parameter_entry"
@@ -445,13 +447,21 @@ struct
         Term.mkApp (tConstraintadd, [| c; tm|])
       ) tConstraintempty const
 
-  let quote_univ_context uctx =
-    let inst = Univ.UContext.instance uctx in
-    let const = Univ.UContext.constraints uctx in
+  let quote_ucontext inst const =
     let inst' = quote_univ_instance inst in
     let const' = quote_univ_constraints const in
     Term.mkApp (tUContextmake, [|inst'; const'|])
 
+  let quote_univ_context uctx =
+    let inst = Univ.UContext.instance uctx in
+    let const = Univ.UContext.constraints uctx in
+    Term.mkApp (tMonomorphic_ctx, [| quote_ucontext inst const |])
+
+  let quote_abstract_univ_context uctx =
+    let uctx = Univ.AUContext.repr uctx in
+    let inst = Univ.UContext.instance uctx in
+    let const = Univ.UContext.constraints uctx in
+    Term.mkApp (tPolymorphic_ctx, [| quote_ucontext inst const |])
 
   let quote_ugraph (g : UGraph.t) =
     let inst' = quote_univ_instance Univ.Instance.empty in
@@ -677,15 +687,23 @@ struct
   open Declarations
   let get_abstract_inductive_universes iu =
     match iu with
-    | Monomorphic_ind ctx -> ctx (* FIXME is it ok ??? *)
+    | Monomorphic_ind ctx -> ctx
     | Polymorphic_ind ctx -> Univ.AUContext.repr ctx
     | Cumulative_ind cumi ->
        let cumi = Univ.instantiate_cumulativity_info cumi in
        Univ.CumulativityInfo.univ_context cumi  (* FIXME check also *)
 
-  let get_constant_uctx = function
-    | Monomorphic_const ctx -> ctx
-    | Polymorphic_const ctx -> Univ.AUContext.repr ctx
+  let quote_constant_uctx = function
+    | Monomorphic_const ctx -> Q.quote_univ_context ctx
+    | Polymorphic_const ctx -> Q.quote_abstract_univ_context ctx
+
+  let quote_abstract_inductive_universes iu =
+    match iu with
+    | Monomorphic_ind ctx -> Q.quote_univ_context ctx
+    | Polymorphic_ind ctx -> Q.quote_abstract_univ_context ctx
+    | Cumulative_ind cumi ->
+       let cumi = Univ.instantiate_cumulativity_info cumi in
+       Q.quote_univ_context (Univ.CumulativityInfo.univ_context cumi)  (* FIXME check also *)
 
   let quote_term_remember
       (add_constant : Names.kernel_name -> 'a -> 'a)
@@ -881,7 +899,7 @@ struct
 	  ([],acc) Declarations.((Array.to_list mib.mind_packets))
       in
       let params = Q.quote_int mib.Declarations.mind_nparams in
-      let uctx = Q.quote_univ_context (get_abstract_inductive_universes mib.Declarations.mind_universes) in
+      let uctx = quote_abstract_inductive_universes mib.Declarations.mind_universes in
       Q.mkMutualInductive ref_name uctx params (List.rev ls), acc
     in ((fun acc env -> quote_term acc (false, env)),
         (fun acc env -> quote_minductive_type acc (false, env)))
@@ -940,7 +958,7 @@ struct
 	      in
 	      constants := Q.mkConstant (Q.quote_kn kn) pu ty result :: !constants
 	    in
-            let uctx = Q.quote_univ_context (get_constant_uctx cd.const_universes) in
+            let uctx = quote_constant_uctx cd.const_universes in
             let ty, acc =
               let ty =
                 match cd.const_type with

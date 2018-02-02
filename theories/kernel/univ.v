@@ -386,7 +386,9 @@ Module UContext.
   (* val size : t -> int *)
 End UContext.
 
-Definition universe_context := UContext.t.
+Inductive universe_context : Type :=
+| Monomorphic_ctx (ctx : UContext.t)
+| Polymorphic_ctx (cst : UContext.t).
 
 (* (** Universe info for inductive types: A context of universe levels *)
 (*     with universe constraints, representing local universe variables *)

@@ -132,7 +132,13 @@ struct
   let quote_univ_context (uctx : Univ.UContext.t) : quoted_univ_context =
     let levels = Univ.UContext.instance uctx  in
     let constraints = Univ.UContext.constraints uctx in
-    (quote_univ_instance levels, quote_univ_constraints constraints)
+    Univ0.Monomorphic_ctx (quote_univ_instance levels, quote_univ_constraints constraints)
+
+  let quote_abstract_univ_context (uctx : Univ.AUContext.t) : quoted_univ_context =
+    let uctx = Univ.AUContext.repr uctx in
+    let levels = Univ.UContext.instance uctx in
+    let constraints = Univ.UContext.constraints uctx in
+    Univ0.Polymorphic_ctx (quote_univ_instance levels, quote_univ_constraints constraints)
 
   let rec seq f t =
     if f < t then

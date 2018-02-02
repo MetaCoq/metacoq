@@ -45,6 +45,7 @@ module type Quoter = sig
   val quote_univ_instance : Univ.Instance.t -> quoted_univ_instance
   val quote_univ_constraints : Univ.Constraint.t -> quoted_univ_constraints
   val quote_univ_context : Univ.UContext.t -> quoted_univ_context
+  val quote_abstract_univ_context : Univ.AUContext.t -> quoted_univ_context
 
   (* val quote_mind_params : (quoted_ident * (t,t) sum) list -> quoted_mind_params *)
   (* val quote_mind_finiteness : Decl_kinds.recursivity_kind -> quoted_mind_finiteness *)

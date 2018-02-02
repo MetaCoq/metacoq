@@ -131,7 +131,7 @@ Record mutual_inductive_entry := {
   mind_entry_params : list (ident * local_entry);
   mind_entry_inds : list one_inductive_entry;
   mind_entry_polymorphic : bool; 
-  mind_entry_universes : univ.universe_context;
+  mind_entry_universes : universe_context;
   mind_entry_private : option bool
 }.
 

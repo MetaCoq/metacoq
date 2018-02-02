@@ -570,10 +570,11 @@ where " Σ ;;; Γ |-- t : T " := (@typing Σ Γ t T) : type_scope
 
 with typing_spine (Σ : global_context) (Γ : context) : term -> list term -> term -> Prop :=
 | type_spine_nil ty : typing_spine Σ Γ ty [] ty
-| type_spine_const hd tl na A B B' :
+| type_spine_const hd tl na A B T B' :
+    Σ ;;; Γ |-- tProd na A B <= T ->
     Σ ;;; Γ |-- hd : A ->
     typing_spine Σ Γ (subst0 hd B) tl B' ->
-    typing_spine Σ Γ (tProd na A B) (cons hd tl) B'
+    typing_spine Σ Γ T (cons hd tl) B'
                      
 with cumul (Σ : global_context) (Γ : context) : term -> term -> Prop :=
 | cumul_refl t u : leq_term t u = true -> cumul Σ Γ t u
@@ -744,7 +745,7 @@ Proof.
   setenv Σ.
   econstructor.
   construct. 
-  econstructor.
+  econstructor. apply cumul_refl'.
   construct.
   econstructor.
 Qed.
@@ -1001,7 +1002,8 @@ Lemma typing_ind_env :
         types_of_case ind u pars p decl' = Some (pty, s, btys) ->
         Exists (fun sf : sort_family => allowed_elim s sf = true) (ind_kelim decl') ->
         Σ;;; Γ |-- p : pty ->
-        P Σ Γ p pty ->
+
+                       P Σ Γ p pty ->
         Σ;;; Γ |-- c : mktApp (tInd ind u) args ->
         P Σ Γ c (mktApp (tInd ind u) args) ->
         Forall2 (fun x y : nat * term => fst x = fst y /\ squash (Σ;;; Γ |-- snd x : snd y)) brs btys ->

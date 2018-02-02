@@ -378,6 +378,14 @@ Proof.
   - cbn. rewrite lift_decl0. rewrite IHΓ. reflexivity.
 Defined.
 
+Fact lift_decl_svass :
+  forall na A n k,
+    lift_decl n k (svass na A) = svass na (lift n k A).
+Proof.
+  intros na A n k.
+  reflexivity.
+Defined.
+
 Axiom cheating : forall {A}, A.
 Tactic Notation "cheat" := apply cheating.
 
@@ -427,7 +435,9 @@ Proof.
         + now apply IHh1.
         + now apply IHh2.
         + now apply IHh3.
-        + (* now apply IHh4 with (Ξ0 := (Ξ,, svass nx A),, svass ne (sEq (lift0 1 A) (lift0 1 u) (sRel 0))). *)
+        + specialize (IHh4 _ ((Ξ,, svass nx A),, svass ne (sEq (lift0 1 A) (lift0 1 u) (sRel 0))) eq_refl hwf).
+          cbn in IHh4. rewrite !lift_decl_svass in IHh4.
+          (* eapply IHh4. *)
           cheat.
         + now apply IHh5.
         + (* now apply IHh6. *)

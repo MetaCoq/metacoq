@@ -337,6 +337,17 @@ where " Σ ;;; Γ '|-i' t = u : T " := (@eq_term Σ Γ t u T) : i_scope.
 Open Scope type_scope.
 Open Scope i_scope.
 
+(* Typing up to equality *)
+Lemma meta_ctx_conv :
+  forall {Σ Γ Δ t A},
+    Σ ;;; Γ |-i t : A ->
+    Γ = Δ ->
+    Σ ;;; Δ |-i t : A.
+Proof.
+  intros Σ Γ Δ t A h e.
+  rewrite <- e. exact h.
+Defined.
+
 Lemma typing_wf :
   forall {Σ Γ t T},
     Σ ;;; Γ |-i t : T ->
@@ -398,7 +409,8 @@ with wf_lift {Σ Γ Δ Ξ} (h : wf Σ (Γ ,,, Ξ)) :
   wf Σ (Γ ,,, Δ ,,, lift_context #|Δ| Ξ)
 .
 Proof.
-  - { dependent induction h ; intro hwf.
+  - { (* This is a mistake (probably) and should be replaced by destruction. *)
+      dependent induction h ; intro hwf.
       - induction Δ.
         + change (#|[]|) with 0. rewrite !lift00.
           rewrite lift_context0. cbn. eapply type_Rel. assumption.
@@ -437,11 +449,21 @@ Proof.
         + now apply IHh3.
         + specialize (IHh4 _ ((Ξ,, svass nx A),, svass ne (sEq (lift0 1 A) (lift0 1 u) (sRel 0))) eq_refl hwf).
           cbn in IHh4. rewrite !lift_decl_svass in IHh4.
-          (* eapply IHh4. *)
-          cheat.
+          eapply meta_ctx_conv.
+          * eapply IHh4.
+          * unfold ssnoc. f_equal. cbn. f_equal. f_equal.
+            -- replace (S #|Ξ|) with (1 + #|Ξ|)%nat by omega.
+               apply liftP2. omega.
+            -- replace (S #|Ξ|) with (1 + #|Ξ|)%nat by omega.
+               apply liftP2. omega.
         + now apply IHh5.
-        + (* now apply IHh6. *)
-          cheat.
+        + replace (S (S #|Ξ|)) with (1 + (S (0 + #|Ξ|)))%nat by omega.
+          rewrite <- substP1.
+          replace (1 + (0 + #|Ξ|))%nat with (S (0 + #|Ξ|))%nat by omega.
+          change (sRefl (lift #|Δ| #|Ξ| A) (lift #|Δ| #|Ξ| u))
+            with (lift #|Δ| #|Ξ| (sRefl A u)).
+          rewrite <- substP1.
+          now apply IHh6.
       - cheat.
       - cheat.
       - cheat.

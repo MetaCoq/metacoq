@@ -602,6 +602,13 @@ Proof.
   - eassumption.
 Defined.
 
+Lemma cong_lift01 :
+  forall {Σ Γ t1 t2 A x B s},
+    Σ ;;; Γ |-i t1 = t2 : A ->
+    Σ ;;; Γ |-i B : sSort s ->
+    Σ ;;; Γ ,, svass x B |-i lift0 1 t1 = lift0 1 t2 : lift0 1 A.
+Admitted.
+
 Lemma typing_subst :
   forall {Σ Γ t A B u n},
     Σ ;;; Γ ,, svass n A |-i t : B ->
@@ -615,6 +622,21 @@ Lemma typing_subst2 :
     Σ ;;; Γ |-i u : A ->
     Σ ;;; Γ |-i v : B{ 0 := u } ->
     Σ ;;; Γ |-i t{ 1 := u }{ 0 := v } : C{ 1 := u }{ 0 := v }.
+Admitted.
+
+Lemma cong_subst :
+  forall {Σ Γ t1 t2 A B u1 u2 n},
+    Σ ;;; Γ ,, svass n A |-i t1 = t2 : B ->
+    Σ ;;; Γ |-i u1 = u2 : A ->
+    Σ ;;; Γ |-i t1{ 0 := u1 } = t2{ 0 := u2 } : B{ 0 := u1 }.
+Admitted.
+
+Lemma cong_subst2 :
+  forall {Σ Γ t1 t2 A B C na nb u1 u2 v1 v2},
+    Σ ;;; Γ ,, svass na A ,, svass nb B |-i t1 = t2 : C ->
+    Σ ;;; Γ |-i u1 = u2 : A ->
+    Σ ;;; Γ |-i v1 = v2 : B{ 0 := u1 } ->
+    Σ ;;; Γ |-i t1{ 1 := u1 }{ 0 := v1 } = t2{ 1 := u2 }{ 0 := v2 } : C{ 1 := u1 }{ 0 := v1 }.
 Admitted.
 
 Inductive eqctx Σ : scontext -> scontext -> Type :=
@@ -843,8 +865,10 @@ Proof.
     + instantiate (1 := s2).
       change (sSort s2) with ((sSort s2){ 0 := u1 }).
       eapply typing_subst ; eassumption.
-    + (* We need a substitution lemma for conversion *)
-      admit.
+    + change (sSort s2) with ((sSort s2){0 := u2}).
+      eapply cong_subst.
+      * eapply eq_symmetry. eassumption.
+      * eapply eq_symmetry. assumption.
   - constructor.
     + assumption.
     + eapply type_conv ; eassumption.
@@ -863,10 +887,12 @@ Proof.
         -- apply eqctx_refl. now apply (typing_wf t7).
         -- eassumption.
       * eapply cong_Eq.
-        -- (* We need conversion of lifts! *)
-           admit.
-        -- (* We need conversion of lifts! *)
-           admit.
+        -- match goal with
+           | |- _ ;;; _ |-i _ = _ : ?S =>
+             change S with (lift0 1 S)
+           end.
+           eapply cong_lift01 ; eassumption.
+        -- eapply cong_lift01 ; eassumption.
         -- apply eq_reflexivity.
            eapply type_conv ; [ eapply type_Rel | .. ].
            ++ econstructor.
@@ -899,8 +925,53 @@ Proof.
               ** assumption.
               ** assumption.
               ** apply eq_reflexivity. assumption.
-      *
-Admitted.
+      * match goal with
+        | |- _ ;;; _ |-i _ = _ : ?S =>
+          change S with (S{1 := u1}{0 := sRefl A1 u1})
+        end.
+        eapply cong_subst2.
+        -- eassumption.
+        -- assumption.
+        -- cbn. rewrite !lift_subst, lift00.
+           eapply cong_Refl ; eassumption.
+    + match goal with
+      | |- _ ;;; _ |-i _ : ?S =>
+        change S with (S{1 := v1}{0 := p1})
+      end.
+      eapply typing_subst2.
+      * eassumption.
+      * assumption.
+      * cbn. rewrite !lift_subst, lift00. assumption.
+    + eapply eq_symmetry.
+      match goal with
+      | |- _ ;;; _ |-i _ = _ : ?S =>
+        change S with (S{1 := v1}{0 := p1})
+      end.
+      eapply cong_subst2.
+      * eassumption.
+      * assumption.
+      * cbn. rewrite !lift_subst, lift00. assumption.
+  - eapply type_conv.
+    + eapply type_Transport ; try eassumption.
+      * eapply type_conv.
+        -- eassumption.
+        -- apply type_Eq.
+           ++ apply type_Sort. eapply typing_wf. eassumption.
+           ++ assumption.
+           ++ assumption.
+        -- eapply cong_Eq.
+           ++ eapply eq_reflexivity.
+              apply type_Sort. eapply typing_wf. eassumption.
+           ++ assumption.
+           ++ assumption.
+      * eapply type_conv ; eassumption.
+    + eassumption.
+    + eapply eq_symmetry. assumption.
+  - eapply type_Heq ; try assumption.
+    + eapply type_conv ; eassumption.
+    + eapply type_conv ; eassumption.
+      Unshelve. 1-3: exact nAnon. cbn. omega.
+Defined.
 
 Lemma sorts_in_sort :
   forall {Σ Γ s1 s2 s},

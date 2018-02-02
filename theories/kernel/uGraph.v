@@ -112,17 +112,40 @@ Section UGraph.
     | None => None
     end.
 
+  Definition check_eq_level (l1 l2 : Level.t) : bool :=
+    match enforce l1 l2 with
+    | Some k => Z.eqb k 0
+    | None => false
+    end.
+
+  Definition check_le_level (l1 l2 : Level.t) : bool :=
+    match enforce l1 l2 with
+    | Some k => Z.geb k 0
+    | None => false
+    end.
+
+  Definition check_lt_level (l1 l2 : Level.t) : bool :=
+    match enforce l1 l2 with
+    | Some k => Z.geb k 1
+    | None => false
+    end.
+
+  Definition check_constraint (cstr : univ_constraint) :=
+    let '(l, d, r) := cstr in
+    match d with
+    | Eq => check_eq_level l r
+    | Lt => check_lt_level l r
+    | Le => check_le_level l r
+    end.
+
+  Definition check_constraints (cstrs : Constraint.t) :=
+    Constraint.for_all check_constraint cstrs.
+
   Definition check_le_level_expr (e1 e2 : Universe.Expr.t) : bool :=
     match e1, e2 with
     | (l1, false), (l2, false)
-    | (l1, true), (l2, true) => match enforce l1 l2 with
-                               | Some k => Z.geb k 0
-                               | _ => false
-                               end
-    | (l1, true), (l2, false) => match enforce l1 l2 with
-                               | Some k => Z.geb k 1
-                               | _ => false
-                               end
+    | (l1, true), (l2, true) => check_le_level l1 l2
+    | (l1, true), (l2, false) => check_lt_level l1 l2
     | (l1, false), (l2, true) => match enforce l1 l2 with
                                | Some k => Z.geb k (-1)
                                | _ => false
@@ -132,16 +155,13 @@ Section UGraph.
   Definition check_lt_level_expr (e1 e2 : Universe.Expr.t) : bool :=
     match e1, e2 with
     | (l1, false), (l2, false)
-    | (l1, true), (l2, true) => match enforce l1 l2 with
-                               | Some k => Z.geb k 1
-                               | _ => false
-                               end
+    | (l1, true), (l2, true) => check_lt_level l1 l2
     | (l1, true), (l2, false) => match enforce l1 l2 with
-                               | Some k => Z.geb k 1
+                               | Some k => Z.geb k 1 (* Approximation? *)
                                | _ => false
                                end
     | (l1, false), (l2, true) => match enforce l1 l2 with
-                               | Some k => Z.geb k 0
+                               | Some k => Z.geb k 0 (* Approximation ? *)
                                | _ => false
                                end
     end.

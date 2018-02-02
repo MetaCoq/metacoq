@@ -357,6 +357,7 @@ Inductive type_error :=
 | NotAProduct (t t' : term)
 | NotAnInductive (t : term)
 | IllFormedFix (m : mfixpoint term) (i : nat)
+| UnsatisfiedConstraints (c : Constraint.t)
 | NotEnoughFuel (n : nat).
 
 Inductive typing_result (A : Type) :=
@@ -484,17 +485,27 @@ Section Typecheck2.
 
   End InferAux.
 
-  Definition lookup_constant_type cst :=
+  Definition polymorphic_constraints (u : universe_context) :=
+    match u with
+    | Monomorphic_ctx _ => Constraint.empty
+    | Polymorphic_ctx ctx => UContext.constraints ctx
+    end.
+
+  Definition lookup_constant_type cst u :=
     match lookup_env (fst Σ) cst with
-      | Some (ConstantDecl _ {| cst_type := ty |}) => ret ty
+    | Some (ConstantDecl _ {| cst_type := ty; cst_universes := uctx |}) =>
+      let cstrs := polymorphic_constraints uctx in
+      ret (subst_instance_constr u ty, subst_instance_cstrs u cstrs)
       |  _ => raise (UndeclaredConstant cst)
     end.
 
   Definition lookup_ind_type ind i (u : list Level.t) (* TODO Universes *) :=
     match lookup_env (fst Σ) ind with
-    | Some (InductiveDecl _ {| ind_bodies := l |}) =>
+    | Some (InductiveDecl _ {| ind_bodies := l; ind_universes := uctx |}) =>
       match nth_error l i with
-      | Some body => ret body.(ind_type)
+      | Some body =>
+        let cstrs := polymorphic_constraints uctx in
+        ret (subst_instance_constr u body.(ind_type), subst_instance_cstrs u cstrs)
       | None => raise (UndeclaredInductive (mkInd ind i))
       end
     |  _ => raise (UndeclaredInductive (mkInd ind i))
@@ -502,18 +513,23 @@ Section Typecheck2.
 
   Definition lookup_constructor_type ind i k u :=
     match lookup_env (fst Σ) ind with
-    | Some (InductiveDecl _ {| ind_bodies := l |}) =>
+    | Some (InductiveDecl _ {| ind_bodies := l ; ind_universes := uctx |}) =>
       match nth_error l i with
       | Some body =>
         match nth_error body.(ind_ctors) k with
         | Some (_, ty, _) =>
-          ret (substl (inds ind u l) ty)
+          let cstrs := polymorphic_constraints uctx in
+          ret (substl (inds ind u l) ty, subst_instance_cstrs u cstrs)
         | None => raise (UndeclaredConstructor (mkInd ind i) k)
         end
       | None => raise (UndeclaredInductive (mkInd ind i))
       end
     |  _ => raise (UndeclaredInductive (mkInd ind i))
     end.
+
+  Definition check_consistent_constraints cstrs :=
+    if check_constraints (snd Σ) cstrs then ret tt
+    else raise (UnsatisfiedConstraints cstrs).
 
   Definition try_suc (u : Universe.t) : Universe.t :=   (* FIXME suc s *)
     map (fun '(l, b) =>  (l, true)) u.
@@ -558,12 +574,24 @@ Section Typecheck2.
       t_ty <- infer Γ t ;;
       infer_spine infer Γ t_ty l
 
-    | tConst cst u => lookup_constant_type cst (* TODO Universes *)
-    | tInd (mkInd ind i) u => lookup_ind_type ind i u
+    | tConst cst u =>
+      tycstrs <- lookup_constant_type cst u ;;
+      let '(ty, cstrs) := tycstrs in
+      check_consistent_constraints cstrs;;
+      ret ty
+
+    | tInd (mkInd ind i) u =>
+      tycstrs <- lookup_ind_type ind i u;;
+      let '(ty, cstrs) := tycstrs in
+      check_consistent_constraints cstrs;;
+      ret ty
 
     | tConstruct (mkInd ind i) k u =>
-      lookup_constructor_type ind i k u
-        
+      tycstrs <- lookup_constructor_type ind i k u ;;
+      let '(ty, cstrs) := tycstrs in
+      check_consistent_constraints cstrs;;
+      ret ty
+
     | tCase (ind, par) p c brs =>
       ty <- infer Γ c ;;
       indargs <- reduce_to_ind (fst Σ) Γ ty ;;
@@ -639,20 +667,22 @@ Section Typecheck2.
     apply IHg.
   Qed.
 
-  Lemma lookup_constant_type_declared cst decl (isdecl : declared_constant (fst Σ) cst decl) :
-    lookup_constant_type cst = Checked decl.(cst_type).
+  Lemma lookup_constant_type_declared cst u decl (isdecl : declared_constant (fst Σ) cst decl) :
+    lookup_constant_type cst u =
+    Checked (subst_instance_constr u decl.(cst_type), subst_instance_cstrs u (polymorphic_constraints decl.(cst_universes))).
   Proof.
     unfold lookup_constant_type. red in isdecl. rewrite isdecl. destruct decl. reflexivity.
   Qed.
   
-  Lemma lookup_constant_type_is_declared cst T :
-    lookup_constant_type cst = Checked T ->
-    { decl | declared_constant (fst Σ) cst decl /\ decl.(cst_type) = T }.
+  Lemma lookup_constant_type_is_declared cst u T :
+    lookup_constant_type cst u = Checked T ->
+    { decl | declared_constant (fst Σ) cst decl /\
+             subst_instance_constr u decl.(cst_type) = fst T }.
   Proof.
     unfold lookup_constant_type, declared_constant.
     destruct lookup_env eqn:Hlook; try discriminate.
     destruct g eqn:Hg; intros; try discriminate. destruct c.
-    injection H as ->. rewrite (lookup_env_id Hlook). simpl.
+    injection H as eq. subst T. rewrite (lookup_env_id Hlook). simpl.
     eexists. split; eauto.
   Qed.
   
@@ -693,7 +723,11 @@ Section Typecheck2.
     - admit.
 
     - erewrite lookup_constant_type_declared; eauto.
-      eexists ; split; [ reflexivity | tc ].
+      eexists ; split; [ try reflexivity | tc ].
+      simpl. unfold consistent_universe_context_instance in c.
+      destruct cst_universes. simpl. reflexivity.
+      simpl in *. destruct cst0. simpl in *.
+      destruct c. unfold check_consistent_constraints. rewrite H0. reflexivity.
 
     - admit.
     - admit.
@@ -801,9 +835,27 @@ Section Typecheck2.
     - admit.
     - admit.
 
-    - intros.
-      destruct (lookup_constant_type_is_declared _ _ H) as [decl [Hdecl <-]].
-      constructor. auto.
+    - admit.
+    (*  intros. *)
+      (* destruct (lookup_constant_type) eqn:?. simpl in *. *)
+      (* apply (lookup_constant_type_is_declared k u) in Heqt. *)
+      (* destruct Heqt as [decl [Hdecl Heq]]. *)
+      (* destruct a eqn:eqa. simpl in *. *)
+      (* destruct check_consistent_constraints eqn:cons. *)
+
+      (* simpl in *. injection H as ->. rewrite <- Heq. constructor. auto. *)
+      (* red in Hdecl. *)
+      (* unfold consistent_universe_context_instance. *)
+      (* unfold check_consistent_constraints in cons. *)
+      (* unfold check_constraints in cons. *)
+      (* destruct decl. simpl in *. *)
+
+      (* destruct decl; simpl in *. destruct cst_universes; simpl in *. auto. *)
+      (* destruct cst. simpl. unfold check_consistent_constraints in cons. split; auto. *)
+      (* unfold lookup_constant_type in Heqt. *)
+
+      (* pose (lookup_constant_type_is_declared k u). _ _ _ H) as [decl [Hdecl <-]]. *)
+      (* constructor. auto. *)
 
     - (* Ind *) admit.
 

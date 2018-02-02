@@ -6,6 +6,52 @@ Local Open Scope string_scope.
 Set Asymmetric Patterns.
 
 
+Definition subst_instance_level u l :=
+  match l with
+  | univ.Level.lProp | univ.Level.lSet | univ.Level.Level _ => l
+  | univ.Level.Var n => List.nth n u univ.Level.lProp
+  end.
+
+Definition subst_instance_cstrs u cstrs :=
+  Constraint.fold (fun '(l,d,r) =>
+                     Constraint.add (subst_instance_level u l, d, subst_instance_level u r))
+                  cstrs Constraint.empty.
+
+Definition subst_instance_level_expr (u : universe_instance) (s : Universe.Expr.t) :=
+  let '(l, b) := s in (subst_instance_level u l, b).
+
+Definition subst_instance_univ (u : universe_instance) (s : universe) :=
+  List.map (subst_instance_level_expr u) s.
+
+Definition subst_instance_instance (u u' : universe_instance) :=
+  List.map (subst_instance_level u) u'.
+
+Fixpoint subst_instance_constr (u : universe_instance) (c : term) :=
+  match c with
+  | tRel _ | tVar _ | tMeta _ => c
+  | tSort s => tSort (subst_instance_univ u s)
+  | tConst c u' => tConst c (subst_instance_instance u u')
+  | tInd i u' => tInd i (subst_instance_instance u u')
+  | tConstruct ind k u' => tConstruct ind k (subst_instance_instance u u')
+  | tEvar ev args => tEvar ev (List.map (subst_instance_constr u) args)
+  | tLambda na T M => tLambda na (subst_instance_constr u T) (subst_instance_constr u M)
+  | tApp f v => tApp (subst_instance_constr u f) (List.map (subst_instance_constr u) v)
+  | tProd na A B => tProd na (subst_instance_constr u A) (subst_instance_constr u B)
+  | tCast c kind ty => tCast (subst_instance_constr u c) kind (subst_instance_constr u ty)
+  | tLetIn na b ty b' => tLetIn na (subst_instance_constr u b) (subst_instance_constr u ty)
+                                (subst_instance_constr u b')
+  | tCase ind p c brs =>
+    let brs' := List.map (on_snd (subst_instance_constr u)) brs in
+    tCase ind (subst_instance_constr u p) (subst_instance_constr u c) brs'
+  | tProj p c => tProj p (subst_instance_constr u c)
+  | tFix mfix idx =>
+    let mfix' := List.map (map_def (subst_instance_constr u)) mfix in
+    tFix mfix' idx
+  | tCoFix mfix idx =>
+    let mfix' := List.map (map_def (subst_instance_constr u)) mfix in
+    tCoFix mfix' idx
+  end.
+
 Program Fixpoint safe_nth {A} (l : list A) (n : nat | n < List.length l) : A :=
   match l with
   | nil => !
@@ -84,18 +130,19 @@ Definition declared_constant (Σ : global_declarations) (id : ident) decl : Prop
 Definition declared_minductive Σ mind decl :=
   lookup_env Σ mind = Some (InductiveDecl mind decl).
 
-Definition declared_inductive Σ ind decl :=
+Definition declared_inductive Σ ind univs decl :=
   exists decl', declared_minductive Σ (inductive_mind ind) decl' /\
+                univs = decl'.(ind_universes) /\
                 List.nth_error decl'.(ind_bodies) (inductive_ind ind) = Some decl.
 
-Definition declared_constructor Σ cstr decl : Prop :=
+Definition declared_constructor Σ cstr univs decl : Prop :=
   let '(ind, k) := cstr in
-  exists decl', declared_inductive Σ ind decl' /\
+  exists decl', declared_inductive Σ ind univs decl' /\
                 List.nth_error decl'.(ind_ctors) k = Some decl.
 
 Definition declared_projection Σ (proj : projection) decl : Prop :=
   let '(ind, ppars, arg) := proj in
-  exists decl', declared_inductive Σ ind decl' /\
+  exists univs decl', declared_inductive Σ ind univs decl' /\
                 List.nth_error decl'.(ind_projs) arg = Some decl.
   
 Program
@@ -129,13 +176,13 @@ Definition inds ind u (l : list inductive_body) :=
   in aux (List.length l).
 
 Program
-Definition type_of_constructor (Σ : global_declarations) (c : inductive * nat) (u : list Level.t) (decl : ident * term * nat)
-           (H : declared_constructor Σ c decl) :=
+Definition type_of_constructor (Σ : global_declarations) (c : inductive * nat) (univs : universe_context) (u : list Level.t) (decl : ident * term * nat)
+           (H : declared_constructor Σ c univs decl) :=
   let mind := inductive_mind (fst c) in
   let '(id, trm, args) := decl in
   match lookup_env Σ mind with
   | Some (InductiveDecl _ decl') =>
-    substl (inds mind u decl'.(ind_bodies)) trm
+    substl (inds mind u decl'.(ind_bodies)) (subst_instance_constr u trm)
   | _ => !
   end.
 
@@ -375,6 +422,15 @@ Definition universe_family u :=
   | _ => InType
   end.
 
+Definition consistent_universe_context_instance (Σ : global_context) uctx u :=
+  match uctx with
+  | Monomorphic_ctx c => True
+  | Polymorphic_ctx c =>
+    let '(inst, cstrs) := UContext.dest c in
+    List.length inst = List.length u /\
+    check_constraints (snd Σ) (subst_instance_cstrs u cstrs) = true
+  end.
+
 (* Definition allowed_elim u (f : sort_family) := *)
 (*   match f with *)
 (*   | InProp => Universe.equal Universe.type0m u *)
@@ -448,19 +504,22 @@ Inductive typing (Σ : global_context) (Γ : context) : term -> term -> Type :=
 
 | type_Const cst u : (* TODO Universes *)
     forall decl (isdecl : declared_constant (fst Σ) cst decl),
-    Σ ;;; Γ |- (tConst cst u) : decl.(cst_type)
+    consistent_universe_context_instance Σ decl.(cst_universes) u ->
+    Σ ;;; Γ |- (tConst cst u) : subst_instance_constr u decl.(cst_type)
 
 | type_Ind ind u :
-    forall decl (isdecl : declared_inductive (fst Σ) ind decl),
-    Σ ;;; Γ |- (tInd ind u) : decl.(ind_type)
+    forall univs decl (isdecl : declared_inductive (fst Σ) ind univs decl),
+    consistent_universe_context_instance Σ univs u ->
+    Σ ;;; Γ |- (tInd ind u) : subst_instance_constr u decl.(ind_type)
 
 | type_Construct ind i u :
-    forall decl (isdecl : declared_constructor (fst Σ) (ind, i) decl),
-    Σ ;;; Γ |- (tConstruct ind i u) : type_of_constructor (fst Σ) (ind, i) u decl isdecl
+    forall univs decl (isdecl : declared_constructor (fst Σ) (ind, i) univs decl),
+    consistent_universe_context_instance Σ univs u ->
+    Σ ;;; Γ |- (tConstruct ind i u) : type_of_constructor (fst Σ) (ind, i) univs u decl isdecl
 
 | type_Case ind u npar p c brs args :
     forall decl (isdecl : declared_minductive (fst Σ) (inductive_mind ind) decl),
-    forall decl' (isdecl' : declared_inductive (fst Σ) ind decl'),
+    forall univs decl' (isdecl' : declared_inductive (fst Σ) ind univs decl'),
     decl.(ind_npars) = npar ->
     let pars := List.firstn npar args in
     forall pty s btys, types_of_case ind u pars p decl' = Some (pty,s,btys) ->
@@ -639,9 +698,10 @@ Ltac construct :=
   match goal with
     |- ?Σ ;;; ?Γ |- tConstruct ?c ?i ?u : _ =>
     let H := fresh in let H' := fresh in evar(decl:(ident * term * nat)%type);
-    unshelve assert(H:declared_constructor (fst Σ) (c,i) ?decl) by repeat econstructor;
-    try (simpl; omega); assert(H':=type_Construct Σ Γ c i u _ H); simpl in H';
-    clear H; apply H'
+                                         evar(univs:universe_context);
+    unshelve assert(H:declared_constructor (fst Σ) (c,i) ?univs ?decl) by repeat econstructor;
+    try (simpl; omega); assert(H':=type_Construct Σ Γ c i u _ _ H); simpl in H';
+    clear H; apply H'; try trivial
   end.
 
 Quote Definition natr := nat.
@@ -651,7 +711,7 @@ Proof.
   red.
   simpl. constructor.
   setenv Σ.
-  construct.
+  now construct.
 Qed.
 
 Quote Recursively Definition foo' := 1.
@@ -907,18 +967,18 @@ Lemma typing_ind_env :
     (forall Σ (wfΣ : wf Σ) (Γ : context) (cst : ident) u (decl : constant_decl),
         declared_constant (fst Σ) cst decl ->
         Forall_decls_typing (snd Σ) (fun Σ' t ty => P (Σ', snd Σ) [] t ty) (fst Σ) ->
-        P Σ Γ (tConst cst u) (cst_type decl)) ->
+        P Σ Γ (tConst cst u) (subst_instance_constr u (cst_type decl))) ->
 
-        (forall Σ (wfΣ : wf Σ) (Γ : context) (ind : inductive) u (decl : inductive_body),
-        declared_inductive (fst Σ) ind decl -> P Σ Γ (tInd ind u) (ind_type decl)) ->
-       (forall Σ (wfΣ : wf Σ) (Γ : context) (ind : inductive) (i : nat) u (decl : ident * term * nat)
-          (isdecl : declared_constructor (fst Σ) (ind, i) decl),
-        P Σ Γ (tConstruct ind i u) (type_of_constructor (fst Σ) (ind, i) u decl isdecl)) ->
+        (forall Σ (wfΣ : wf Σ) (Γ : context) (ind : inductive) u univs (decl : inductive_body),
+        declared_inductive (fst Σ) ind univs decl -> P Σ Γ (tInd ind u) (subst_instance_constr u (ind_type decl))) ->
+       (forall Σ (wfΣ : wf Σ) (Γ : context) (ind : inductive) (i : nat) u univs (decl : ident * term * nat)
+          (isdecl : declared_constructor (fst Σ) (ind, i) univs decl),
+        P Σ Γ (tConstruct ind i u) (type_of_constructor (fst Σ) (ind, i) univs u decl isdecl)) ->
        (forall Σ (wfΣ : wf Σ) (Γ : context) (ind : inductive) u (npar : nat) (p c : term) (brs : list (nat * term))
           (args : list term) (decl : minductive_decl),
         declared_minductive (fst Σ) (inductive_mind ind) decl ->
-        forall decl' : inductive_body,
-        declared_inductive (fst Σ) ind decl' ->
+        forall univs ( decl' : inductive_body ),
+        declared_inductive (fst Σ) ind univs decl' ->
         ind_npars decl = npar ->
         let pars := firstn npar args in
         forall (pty : term) (s : universe) (btys : list (nat * term)),
@@ -1009,15 +1069,16 @@ Proof.
   constructor 2. simpl. apply H0.
   apply IH. clear IH.
   destruct H;
+try solve [  match reverse goal with
+    H : _ |- _ => eapply H
+  end; eauto;
+             unshelve eapply X14; simpl; auto with arith].
   match reverse goal with
     H : _ |- _ => eapply H
   end; eauto;
-    try solve [unshelve eapply X14; simpl; auto with arith].
-  unshelve eapply X14; simpl; auto with arith.
-  rewrite Nat.max_comm, <- Nat.max_assoc. auto with arith.
-  unshelve eapply X14; simpl; auto with arith.
-  setoid_rewrite Nat.max_comm at 2.
-  rewrite Nat.max_comm, <- Nat.max_assoc. auto with arith.
+  unshelve eapply X14; simpl; auto with arith;
+    repeat (rewrite Nat.max_comm, <- Nat.max_assoc; auto with arith).
+  apply X6; eauto.
   specialize (X14 [] _ _ (type_Sort _ _ Level.prop)).
   simpl in X14. forward X14; auto. apply X14.
 Qed.

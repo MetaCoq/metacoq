@@ -1880,7 +1880,7 @@ TACTIC EXTEND denote_term
          let env = Proofview.Goal.env gl in
          let evm = Proofview.Goal.sigma gl in
          let evdref = ref evm in
-         let c = Denote.denote_term evdref (EConstr.to_constr evm c) in
+         let c = TermReify.denote_term evdref (EConstr.to_constr evm c) in
          (* TODO : not the right way of retype things *)
          let def' = Constrextern.extern_constr true env !evdref (EConstr.of_constr c) in
          let def = Constrintern.interp_constr env !evdref def' in
@@ -1930,7 +1930,7 @@ VERNAC COMMAND EXTEND Unquote_vernac CLASSIFIED AS SIDEFF
 	let (evm, env) = Lemmas.get_current_context () in
 	let (trm, uctx) = Constrintern.interp_constr env evm def in
         let evdref = ref (Evd.from_ctx uctx) in
-	let trm = Denote.denote_term evdref trm in
+	let trm = TermReify.denote_term evdref trm in
 	let _ = Declare.declare_definition ~kind:Decl_kinds.Definition name (trm, Evd.universe_context_set !evdref) in
         () ]
 END;;

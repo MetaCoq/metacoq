@@ -236,11 +236,26 @@ struct
        Some (Right mind_entry)
     | None -> None
 
-    let inspectTerm (t : term) :  (term, quoted_int, quoted_ident, quoted_name, quoted_sort, quoted_cast_kind, quoted_kernel_name, quoted_inductive, quoted_univ_instance, quoted_proj) structure_of_term =
-     match t with
-    | Coq_tRel n -> ACoq_tRel n
+  let inspectTerm (t : term) :  (term, quoted_int, quoted_ident, quoted_name, quoted_sort, quoted_cast_kind, quoted_kernel_name, quoted_inductive, quoted_univ_instance, quoted_proj) structure_of_term =
+   match t with
+  | Coq_tRel n -> ACoq_tRel n
     (* so on *)
-    | _ ->  failwith "not yet implemented"
+  | _ ->  failwith "not yet implemented"
+
+  let unquote_ident (qi: quoted_ident) : Id.t = failwith "not yet implemented"
+  let unquote_name (q: quoted_name) : Name.t = failwith "not yet implemented"
+  let unquote_int (q: quoted_int) : int = failwith "not yet implemented"
+  let unquote_bool (q : quoted_bool) : bool = failwith "not yet implemented"
+  (* val unquote_sort : quoted_sort -> Sorts.t *)
+  (* val unquote_sort_family : quoted_sort_family -> Sorts.family *)
+  let unquote_cast_kind (q : quoted_cast_kind) : Constr.cast_kind = failwith "not yet implemented"
+  let unquote_kn (q: quoted_kernel_name) : Libnames.qualid = failwith "not yet implemented"
+  let unquote_inductive (q: quoted_inductive) : Names.inductive = failwith "not yet implemented"
+  (*val unquote_univ_instance :  quoted_univ_instance -> Univ.Instance.t *)
+  let unquote_proj (q : quoted_proj) : (quoted_inductive * quoted_int * quoted_int)
+    = failwith "not yet implemented"
+  let unquote_universe (q: Evd.evar_map) (qs: quoted_sort) : Evd.evar_map * Univ.Universe.t
+  = failwith "not yet implemented"
 end
 
 

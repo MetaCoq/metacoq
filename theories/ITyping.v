@@ -464,25 +464,110 @@ Proof.
             with (lift #|Δ| #|Ξ| (sRefl A u)).
           rewrite <- substP1.
           now apply IHh6.
-      - cheat.
-      - cheat.
-      - cheat.
-      - cheat.
-      - cheat.
-      - cheat.
-      - cheat.
-      - cheat.
-      - cheat.
-      - cheat.
-      - cheat.
-      - cheat.
-      - cheat.
-      - cheat.
-      - cheat.
-      - cheat.
-      - cheat.
-      - cheat.
-      - cheat.
+      - cbn. eapply type_Transport.
+        + now apply IHh1.
+        + now apply IHh2.
+        + now apply IHh3.
+        + now apply IHh4.
+      - cbn. eapply type_Heq.
+        + now apply IHh1.
+        + now apply IHh2.
+        + now apply IHh3.
+        + now apply IHh4.
+      - cbn. eapply type_HeqToEq.
+        + now apply IHh1.
+        + now apply IHh2.
+        + now apply IHh3.
+        + now apply IHh4.
+      - cbn. eapply type_HeqRefl.
+        + now apply IHh1.
+        + now apply IHh2.
+      - cbn. eapply type_HeqSym.
+        + now apply IHh1.
+        + now apply IHh2.
+        + now apply IHh3.
+        + now apply IHh4.
+        + now apply IHh5.
+      - cbn. eapply type_HeqTrans.
+        + now apply IHh1.
+        + now apply IHh2.
+        + now apply IHh3.
+        + now apply IHh4.
+        + now apply IHh5.
+        + now apply IHh6.
+        + now apply IHh7.
+      - cbn. eapply type_HeqTransport.
+        + now apply IHh1.
+        + now apply IHh2.
+        + now apply IHh3.
+        + now apply IHh4.
+      - cbn. eapply type_CongProd.
+        + now apply IHh1.
+        + cheat.
+        + now apply IHh3.
+        + now apply IHh4.
+        + cheat.
+        + cheat.
+      - cbn. eapply type_CongLambda.
+        + now apply IHh1.
+        + cheat.
+        + cheat.
+        + now apply IHh4.
+        + now apply IHh5.
+        + cheat.
+        + cheat.
+        + cheat.
+        + cheat.
+      - cbn. (* eapply type_CongApp. *)
+        cheat.
+      - cbn. eapply type_CongEq.
+        + now apply IHh1.
+        + now apply IHh2.
+        + now apply IHh3.
+        + now apply IHh4.
+        + now apply IHh5.
+        + now apply IHh6.
+        + now apply IHh7.
+        + now apply IHh8.
+        + now apply IHh9.
+      - cbn. eapply type_CongRefl.
+        + now apply IHh1.
+        + now apply IHh2.
+        + now apply IHh3.
+        + now apply IHh4.
+        + now apply IHh5.
+        + now apply IHh6.
+      - cbn. eapply type_EqToHeq.
+        + now apply IHh1.
+        + now apply IHh2.
+        + now apply IHh3.
+        + now apply IHh4.
+      - cbn. eapply type_HeqTypeEq.
+        + now apply IHh1.
+        + now apply IHh2.
+        + now apply IHh3.
+        + now apply IHh4.
+        + now apply IHh5.
+      - cbn. eapply type_Pack.
+        + now apply IHh1.
+        + now apply IHh2.
+      - cbn. eapply type_ProjT1.
+        + now apply IHh1.
+        + now apply IHh2.
+        + now apply IHh3.
+      - cbn. eapply type_ProjT2.
+        + now apply IHh1.
+        + now apply IHh2.
+        + now apply IHh3.
+      - cbn. eapply type_ProjTe.
+        + now apply IHh1.
+        + now apply IHh2.
+        + now apply IHh3.
+      - eapply type_conv.
+        + now apply IHh1.
+        + now apply IHh2.
+        + (* Do we seriously need to prove cong_lift as well? *)
+          cheat.
     }
 
   - cheat.

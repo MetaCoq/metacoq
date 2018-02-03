@@ -19,7 +19,7 @@ In addition to this representation of terms, Template Coq includes:
 The branch `master` is stable and works with Coq 8.6, an opam package is
 available.
 
-The [`coq-8.7`](https://github.com/Template-Coq/template-coq/tree/coq-8.7),
+The [coq-8.7](https://github.com/Template-Coq/template-coq/tree/coq-8.7),
 branch is in development and contains additional features:
 
 - Complete reification and denotation of CIC terms, including universes
@@ -105,7 +105,7 @@ To compile the library, you need:
 Requirements through opam
 -------------------------
 
-The easiest way to get both is through [`opam`](http://opam.ocaml.org):
+The easiest way to get both is through [opam](http://opam.ocaml.org):
 
 You might want to create a "switch" (an environment of `opam` packages) for `Coq` if
 you don't have one yet:

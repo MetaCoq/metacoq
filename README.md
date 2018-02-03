@@ -38,8 +38,13 @@ Credits
 Template-Coq was originally developed by
 [Gregory Malecha](https://github.com/gmalecha), and is now developed by
 [Abhishek Anand](https://github.com/aa755), [Simon
-Boulier](https://github.com/simonboulier), [Yannick
-Forster](https://github.com/yforster) and [Matthieu Sozeau](https://github.com/mattam82).
+Boulier](https://github.com/simonboulier) and [Matthieu
+Sozeau](https://github.com/mattam82).
+
+Contributors include [Yannick Forster](https://github.com/yforster),
+[Cyril Cohen](https://github.com/CohenCyril) and [Nicolas
+Tabareau](https://github.com/Tabareau).
+
 
 Branches
 ========

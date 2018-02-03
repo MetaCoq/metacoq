@@ -119,19 +119,19 @@ Module Test5.
   Defined.
 
   (* Time Template Check Plus1. *)
-  (* Too long  *)
-  Quote Recursively Definition p_Plus1 := Plus1.
+  (* Too long with universes on  *)
+  (* Quote Recursively Definition p_Plus1 := Plus1. *)
   
-  Definition term := Plus1.
-  Definition ast := p_Plus1.
-  Set Printing Universes.
-  (** Check typing *)
+  (* Definition term := Plus1. *)
+  (* Definition ast := p_Plus1. *)
+  (* Set Printing Universes. *)
+  (* (** Check typing *) *)
   
-  (* Yay! Typechecking an actually non-trivial term. (173s) *)
+  (* (* Yay! Typechecking an actually non-trivial term. (173s) *) *)
  
-  Make Definition inferred_type := ltac:(interp_infer ast).
-  Definition inferred_type' := Eval cbv delta in inferred_type.
-  Print inferred_type'.
-  Check convertible ltac:(term_type term) inferred_type.
+  (* Make Definition inferred_type := ltac:(interp_infer ast). *)
+  (* Definition inferred_type' := Eval cbv delta in inferred_type. *)
+  (* Print inferred_type'. *)
+  (* Check convertible ltac:(term_type term) inferred_type. *)
 End Test5.
 

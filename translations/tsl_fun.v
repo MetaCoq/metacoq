@@ -85,7 +85,7 @@ Definition combine' := fun {A B} l => @List.combine A B (Datatypes.fst l) (Datat
 
 
 Fixpoint replace pat u t {struct t} :=
-  if eq_term t pat then u else
+  if eq_term uGraph.init_graph t pat then u else
     match t with
     | tCast t c A => tCast (replace pat u t) c (replace pat u A)
     | tProd n A B => tProd n (replace pat u A) (replace (up pat) (up u) B)
@@ -190,6 +190,6 @@ Next Obligation.
 Defined.
 
 Require Import Vector Even.
-Fail Run TemplateProgram (TC <- tTranslate emptyTC "nat" ;;
-                     TC <- tTranslate TC "t" ;; ret tt).
-                     (* TC <- tTranslate TC "even" ;; ret tt). *)
+(* Run TemplateProgram (TC <- tTranslate emptyTC "nat" ;; *)
+(*                      TC <- tTranslate TC "t" ;; *)
+(*                      TC <- tTranslate TC "even" ;; ret tt). *)

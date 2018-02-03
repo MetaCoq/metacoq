@@ -7,7 +7,7 @@ Set Printing Universes.
 Definition T := Type.
 Definition T' := T.
 (* Definition foo' := (T : T'). *)
-Definition foo' := let T := Type in (T : T).
+Fail Definition foo' := let T := Type in (T : T).
 
 Quote Recursively Definition p := foo'.
 (* Template Check foo'. *)
@@ -17,4 +17,4 @@ let t := (tSort (Universe.super (Level.Level "Top.10"))) in
 let u := (tSort (Universe.make (Level.Level "Top.10"))) in
 let Γ := [] in
 (* leq_term (snd Σ) t u). *)
-isconv (fst Σ) fuel (Cumul (snd Σ)) Γ t [] u []).
+isconv Σ fuel Cumul Γ t [] u []).

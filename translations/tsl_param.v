@@ -113,6 +113,7 @@ Notation "'TYPE'" := (exists A, A -> Type).
 Notation "'El' A" := (sigma (π1 A) (π2 A)) (at level 20).
 
 Definition Ty := Type.
+Set Printing Universes.
 Run TemplateProgram (TslParam emptyTC "Ty").
 Check Tyᵗ : El Tyᵗ.
 

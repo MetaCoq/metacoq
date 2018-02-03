@@ -318,32 +318,32 @@ Definition eq_projection p p' :=
   eq_ind ind ind' && eq_nat pars pars' && eq_nat arg arg'.
 
 (* Don't look at printing annotations *)
-Fixpoint eq_term (t u : term) {struct t} :=
+Fixpoint eq_term (φ : uGraph.t) (t u : term) {struct t} :=
   match t, u with
   | tRel n, tRel n' => eq_nat n n'
   | tMeta n, tMeta n' => eq_nat n n'
-  | tEvar ev args, tEvar ev' args' => eq_evar ev ev' && forallb2 eq_term args args'
+  | tEvar ev args, tEvar ev' args' => eq_evar ev ev' && forallb2 (eq_term φ) args args'
   | tVar id, tVar id' => eq_string id id'
-  | tSort s, tSort s' => Universe.equal s s'
-  | tApp f args, tApp f' args' => eq_term f f' && forallb2 eq_term args args'
-  | tCast t _ v, tCast u _ v' => eq_term t u && eq_term v v'
+  | tSort s, tSort s' => uGraph.check_leq φ s s' && uGraph.check_leq φ s' s
+  | tApp f args, tApp f' args' => eq_term φ f f' && forallb2 (eq_term φ) args args'
+  | tCast t _ v, tCast u _ v' => eq_term φ t u && eq_term φ v v'
   | tConst c u, tConst c' u' => eq_constant c c' (* TODO Universes *)
   | tInd i u, tInd i' u' => eq_ind i i'
   | tConstruct i k u, tConstruct i' k' u' => eq_ind i i' && eq_nat k k'
-  | tLambda _ b t, tLambda _ b' t' => eq_term b b' && eq_term t t'
-  | tProd _ b t, tProd _ b' t' => eq_term b b' && eq_term t t'
+  | tLambda _ b t, tLambda _ b' t' => eq_term φ b b' && eq_term φ t t'
+  | tProd _ b t, tProd _ b' t' => eq_term φ b b' && eq_term φ t t'
   | tCase (ind, par) p c brs,
     tCase (ind',par') p' c' brs' =>
     eq_ind ind ind' && eq_nat par par' &&
-    eq_term p p' && eq_term c c' && forallb2 (fun '(a, b) '(a', b') => eq_term b b') brs brs'
-  | tProj p c, tProj p' c' => eq_projection p p' && eq_term c c'
+    eq_term φ p p' && eq_term φ c c' && forallb2 (fun '(a, b) '(a', b') => eq_term φ b b') brs brs'
+  | tProj p c, tProj p' c' => eq_projection p p' && eq_term φ c c'
   | tFix mfix idx, tFix mfix' idx' =>
     forallb2 (fun x y =>
-                eq_term x.(dtype) y.(dtype) && eq_term x.(dbody) y.(dbody)) mfix mfix' &&
+                eq_term φ x.(dtype) y.(dtype) && eq_term φ x.(dbody) y.(dbody)) mfix mfix' &&
     eq_nat idx idx'
   | tCoFix mfix idx, tCoFix mfix' idx' =>
     forallb2 (fun x y =>
-                eq_term x.(dtype) y.(dtype) && eq_term x.(dbody) y.(dbody)) mfix mfix' &&
+                eq_term φ x.(dtype) y.(dtype) && eq_term φ x.(dbody) y.(dbody)) mfix mfix' &&
     Nat.eqb idx idx'
   | _, _ => false
   end.
@@ -352,28 +352,28 @@ Fixpoint leq_term (φ : uGraph.t) (t u : term) {struct t} :=
   match t, u with
   | tRel n, tRel n' => eq_nat n n'
   | tMeta n, tMeta n' => eq_nat n n'
-  | tEvar ev args, tEvar ev' args' => eq_nat ev ev' && forallb2 eq_term args args'
+  | tEvar ev args, tEvar ev' args' => eq_nat ev ev' && forallb2 (eq_term φ) args args'
   | tVar id, tVar id' => eq_string id id'
   | tSort s, tSort s' => check_leq φ s s'
-  | tApp f args, tApp f' args' => eq_term f f' && forallb2 eq_term args args'
+  | tApp f args, tApp f' args' => eq_term φ f f' && forallb2 (eq_term φ) args args'
   | tCast t _ v, tCast u _ v' => leq_term φ t u
   | tConst c u, tConst c' u' => eq_constant c c' (* TODO Universes *)
   | tInd i u, tInd i' u' => eq_ind i i'
   | tConstruct i k u, tConstruct i' k' u' => eq_ind i i' && eq_nat k k'
-  | tLambda _ b t, tLambda _ b' t' => eq_term b b' && eq_term t t'
-  | tProd _ b t, tProd _ b' t' => eq_term b b' && leq_term φ t t'
+  | tLambda _ b t, tLambda _ b' t' => eq_term φ b b' && eq_term φ t t'
+  | tProd _ b t, tProd _ b' t' => eq_term φ b b' && leq_term φ t t'
   | tCase (ind, par) p c brs,
     tCase (ind',par') p' c' brs' =>
     eq_ind ind ind' && eq_nat par par' &&
-    eq_term p p' && eq_term c c' && forallb2 (fun '(a, b) '(a', b') => eq_term b b') brs brs'
-  | tProj p c, tProj p' c' => eq_projection p p' && eq_term c c'
+    eq_term φ p p' && eq_term φ c c' && forallb2 (fun '(a, b) '(a', b') => eq_term φ b b') brs brs'
+  | tProj p c, tProj p' c' => eq_projection p p' && eq_term φ c c'
   | tFix mfix idx, tFix mfix' idx' =>
     forallb2 (fun x y =>
-                eq_term x.(dtype) y.(dtype) && eq_term x.(dbody) y.(dbody)) mfix mfix' &&
+                eq_term φ x.(dtype) y.(dtype) && eq_term φ x.(dbody) y.(dbody)) mfix mfix' &&
     eq_nat idx idx'
   | tCoFix mfix idx, tCoFix mfix' idx' =>
     forallb2 (fun x y =>
-                eq_term x.(dtype) y.(dtype) && eq_term x.(dbody) y.(dbody)) mfix mfix' &&
+                eq_term φ x.(dtype) y.(dtype) && eq_term φ x.(dbody) y.(dbody)) mfix mfix' &&
     eq_nat idx idx'
   | _, _ => false
   end.

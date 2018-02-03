@@ -98,23 +98,6 @@ End Test2.
 
 Module Test3.
   Definition term := (id 0).
-(** Check reduction *)
-Quote Recursively Definition ast := term.
-Make Definition normal_form := ltac:(interp_red ast).
-
-Definition normal_form' := Eval vm_compute in normal_form.
-Print normal_form'.
-Check convertible term normal_form.
-
-(** Check typing *)
-Eval vm_compute in (out_check (typecheck_program ast)).
-
-
-Make Definition inferred_type := ltac:(interp_infer ast).
-Definition inferred_type' := Eval cbv delta in inferred_type.
-Print inferred_type'.
-Check convertible ltac:(term_type term) inferred_type.
-
   Load "test_term.v".
 End Test3.
 
@@ -135,7 +118,7 @@ Module Test5.
   - intros. unfold id. abstract omega.
   Defined.
 
-  Time Template Check Plus1.
+  (* Time Template Check Plus1. *)
   (* Too long  *)
   Quote Recursively Definition p_Plus1 := Plus1.
   

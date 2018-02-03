@@ -315,11 +315,13 @@ Fixpoint subst_app (t : term) (us : list term) : term :=
 Definition tmMkInductive' (mind : minductive_decl) : TemplateMonad unit
   := tmMkInductive (AstUtils.mind_decl_to_entry mind).
 
-
-
 Definition eq_universe φ s s' :=
   if univ.Universe.equal s s' then true
   else uGraph.check_leq φ s s' && uGraph.check_leq φ s' s.
+
+Definition leq_universe φ s s' :=
+  if univ.Universe.equal s s' then true
+  else uGraph.check_leq φ s s'.
 
 (* Don't look at printing annotations *)
 Fixpoint eq_term (φ : uGraph.t) (t u : term) {struct t} :=
@@ -358,7 +360,7 @@ Fixpoint leq_term (φ : uGraph.t) (t u : term) {struct t} :=
   | tMeta n, tMeta n' => eq_nat n n'
   | tEvar ev args, tEvar ev' args' => eq_nat ev ev' && forallb2 (eq_term φ) args args'
   | tVar id, tVar id' => eq_string id id'
-  | tSort s, tSort s' => check_leq φ s s'
+  | tSort s, tSort s' => leq_universe φ s s'
   | tApp f args, tApp f' args' => eq_term φ f f' && forallb2 (eq_term φ) args args'
   | tCast t _ v, tCast u _ v' => leq_term φ t u
   | tConst c u, tConst c' u' => eq_constant c c' (* TODO Universes *)

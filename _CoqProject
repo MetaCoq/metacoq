@@ -5,13 +5,16 @@ src/reify.mli
 src/reify.ml4
 src/template_plugin.mllib
 
+theories/utils.v
+theories/monad_utils.v
+theories/kernel/univ.v
+theories/kernel/uGraph.v
 theories/Ast.v
+theories/AstUtils.v
 theories/Template.v
 theories/Induction.v
 theories/LiftSubst.v
 theories/WeakSubst.v
 theories/Typing.v
-theories/monad_utils.v
 theories/Checker.v
-theories/utils.v
 theories/All.v

@@ -1,4 +1,3 @@
-
 (** Check reduction *)
 Quote Recursively Definition ast := term.
 Make Definition normal_form := ltac:(interp_red ast).

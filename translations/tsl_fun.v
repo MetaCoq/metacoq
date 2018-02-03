@@ -85,7 +85,7 @@ Definition combine' := fun {A B} l => @List.combine A B (Datatypes.fst l) (Datat
 
 
 Fixpoint replace pat u t {struct t} :=
-  if eq_term t pat then u else
+  if eq_term uGraph.init_graph t pat then u else
     match t with
     | tCast t c A => tCast (replace pat u t) c (replace pat u A)
     | tProd n A B => tProd n (replace pat u A) (replace (up pat) (up u) B)
@@ -123,7 +123,8 @@ Definition tsl_mind_decl (ΣE : tsl_context) (kn kn' : kername)
   refine (let LI := List.split (map_i _ mind.(ind_bodies)) in
           ret (List.concat (Datatypes.fst LI),
                [{| ind_npars := mind.(ind_npars);
-                   ind_bodies := Datatypes.snd LI |}])).
+                   ind_bodies := Datatypes.snd LI;
+                   ind_universes := mind.(ind_universes)|}])). (* FIXME always ok? *)
   intros i ind.
   simple refine (let ind_type' := _ in
                  let ctors' := List.split (map_i _ ind.(ind_ctors)) in
@@ -175,7 +176,7 @@ Tactic Notation "tSpecialize" ident(H) uconstr(t) := apply fst in H; specialize 
 
 Tactic Notation "tIntro" ident(H) := refine (fun H => _; true).
 
-Run TemplateProgram (TC <- tTranslate ([],[]) "eq" ;;
+Run TemplateProgram (TC <- tTranslate emptyTC "eq" ;;
                      TC <- tTranslate TC "False" ;;
                      tImplement TC "notFunext"
                      ((forall (A B : Set) (f g : A -> B), (forall x:A, f x = g x) -> f = g) -> False)).
@@ -189,6 +190,6 @@ Next Obligation.
 Defined.
 
 Require Import Vector Even.
-Fail Run TemplateProgram (TC <- tTranslate ([],[]) "nat" ;;
-                     TC <- tTranslate TC "t" ;; ret tt).
-                     (* TC <- tTranslate TC "even" ;; ret tt). *)
+(* Run TemplateProgram (TC <- tTranslate emptyTC "nat" ;; *)
+(*                      TC <- tTranslate TC "t" ;; *)
+(*                      TC <- tTranslate TC "even" ;; ret tt). *)

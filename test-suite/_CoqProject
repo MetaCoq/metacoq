@@ -21,3 +21,4 @@ proj.v
 cofix.v
 CheckerTest.v
 TypingTests.v
+add_constructor.v

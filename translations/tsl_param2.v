@@ -117,8 +117,8 @@ Fixpoint replace t k u {struct u} :=
   | tRel n =>
     match nat_compare k n with
     | Datatypes.Eq => t
-    | Gt => tRel n
-    | Lt => tRel n
+    | Datatypes.Gt => tRel n
+    | Datatypes.Lt => tRel n
     end
   | tEvar ev args => tEvar ev (List.map (replace t k) args)
   | tLambda na T M => tLambda na (replace t k T) (replace (lift0 1 t) (S k) M)
@@ -152,7 +152,8 @@ Definition tsl_mind_decl (ΣE : tsl_context)
                  arities2 <- monad_map tsl2' arities ;;
                  bodies <- _ ;;
                  ret (_, [{| ind_npars := mind.(ind_npars);
-                                     ind_bodies := bodies |}])).
+                             ind_bodies := bodies ;
+                 ind_universes := mind.(ind_universes)|}])).  (* FIXME always ok? *)
   (* L is [(tInd n, tRel 0); ... ; (tInd 0, tRel n)] *)
   simple refine (let L : list term := _ in _).
 
@@ -172,14 +173,14 @@ Definition tsl_mind_decl (ΣE : tsl_context)
     + (* arity  *)
       refine (t2 <- tsl2' ind.(ind_type) ;;
               let i1 := tsl_rec1 0 (tInd (mkInd kn i) []) in
-              ret (try_reduce (fst ΣE) [] fuel (mkApp t2 i1))).
+              ret (try_reduce (fst (fst ΣE)) [] fuel (mkApp t2 i1))).
     + (* constructors *)
       refine (monad_map_i _ ind.(ind_ctors)).
       intros k ((name, typ), nargs).
       refine (t2 <- tsl2' typ ;;
               let t2 := fold_left_i (fun t i u => replace u i t) L t2 in
               let c1 := tsl_rec1 0 (tConstruct (mkInd kn i) k []) in
-              match reduce_opt RedFlags.default (fst ΣE) [] (* for debugging but we could use try_reduce *)
+              match reduce_opt RedFlags.default (fst (fst ΣE)) [] (* for debugging but we could use try_reduce *)
                                fuel (mkApp t2 c1) with
               | Some t' => ret (tsl_ident name, t', nargs)
               | None => raise TranslationNotHandeled
@@ -211,11 +212,11 @@ Notation "'El' A" := (sigma (π1 A) (π2 A)) (at level 20).
 
 Definition ty := nat -> nat.
 
-Run TemplateProgram (TslParam ([],[]) "nat" >>= print_nf).
+Run TemplateProgram (TslParam emptyTC "nat" >>= print_nf).
 
 Require Vector.
 Require Even.
-Run TemplateProgram (TslParam ([],[]) "list" >>= tmPrint).
+Run TemplateProgram (TslParam emptyTC "list" >>= tmPrint).
 Check (listᵗ : forall (A : TYPE), list A.1 -> Type).
 Check (nilᵗ : forall (A : TYPE), listᵗ A nil).
 Check (consᵗ : forall (A : TYPE) (x : El A) (lH : exists l, listᵗ A l),

@@ -42,10 +42,11 @@ module type Quoter = sig
   type quoted_univ_instance
   type quoted_univ_constraints
   type quoted_univ_context
+  type quoted_inductive_universes
   type quoted_mind_params
   type quoted_ind_entry =
     quoted_ident * t * quoted_bool * quoted_ident list * t list
-  type quoted_definition_entry = t * t option
+  type quoted_definition_entry = t * t option * quoted_univ_context
   type quoted_mind_entry
   type quoted_mind_finiteness
   type quoted_entry
@@ -69,14 +70,15 @@ module type Quoter = sig
   val quote_univ_constraints : Univ.Constraint.t -> quoted_univ_constraints
   val quote_univ_context : Univ.UContext.t -> quoted_univ_context
   val quote_abstract_univ_context : Univ.AUContext.t -> quoted_univ_context
+  val quote_inductive_universes : Entries.inductive_universes -> quoted_inductive_universes
+  val quote_mind_params : (quoted_ident * (t,t) sum) list -> quoted_mind_params
+  val quote_mind_finiteness : Decl_kinds.recursivity_kind -> quoted_mind_finiteness
+  val quote_mutual_inductive_entry :
+    quoted_mind_finiteness * quoted_mind_params * quoted_ind_entry list *
+    quoted_inductive_universes ->
+    quoted_mind_entry
 
-  (* val quote_mind_params : (quoted_ident * (t,t) sum) list -> quoted_mind_params *)
-  (* val quote_mind_finiteness : Decl_kinds.recursivity_kind -> quoted_mind_finiteness *)
-  (* val quote_mutual_inductive_entry : *)
-  (*   quoted_mind_finiteness * quoted_mind_params * quoted_ind_entry list * quoted_bool -> *)
-  (*   quoted_mind_entry *)
-
-  (* val quote_entry : (quoted_definition_entry, quoted_mind_entry) sum option -> quoted_entry *)
+  val quote_entry : (quoted_definition_entry, quoted_mind_entry) sum option -> quoted_entry
   val quote_proj : quoted_inductive -> quoted_int -> quoted_int -> quoted_proj
 
   val mkName : quoted_ident -> quoted_name

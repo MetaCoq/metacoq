@@ -131,10 +131,11 @@ module type Quoter = sig
   type quoted_univ_instance
   type quoted_univ_constraints
   type quoted_univ_context
+  type quoted_inductive_universes
   type quoted_mind_params
   type quoted_ind_entry =
     quoted_ident * t * quoted_bool * quoted_ident list * t list
-  type quoted_definition_entry = t * t option
+  type quoted_definition_entry = t * t option * quoted_univ_context
   type quoted_mind_entry
   type quoted_mind_finiteness
   type quoted_entry
@@ -160,14 +161,16 @@ module type Quoter = sig
   val quote_univ_constraints : Univ.Constraint.t -> quoted_univ_constraints
   val quote_univ_context : Univ.UContext.t -> quoted_univ_context
   val quote_abstract_univ_context : Univ.AUContext.t -> quoted_univ_context
+  val quote_inductive_universes : inductive_universes -> quoted_inductive_universes
 
-  (* val quote_mind_params : (quoted_ident * (t,t) sum) list -> quoted_mind_params *)
-  (* val quote_mind_finiteness : Decl_kinds.recursivity_kind -> quoted_mind_finiteness *)
-  (* val quote_mutual_inductive_entry : *)
-  (*   quoted_mind_finiteness * quoted_mind_params * quoted_ind_entry list * quoted_bool -> *)
-  (*   quoted_mind_entry *)
+  val quote_mind_params : (quoted_ident * (t,t) sum) list -> quoted_mind_params
+  val quote_mind_finiteness : Decl_kinds.recursivity_kind -> quoted_mind_finiteness
+  val quote_mutual_inductive_entry :
+    quoted_mind_finiteness * quoted_mind_params * quoted_ind_entry list *
+    quoted_inductive_universes ->
+    quoted_mind_entry
 
-  (* val quote_entry : (quoted_definition_entry, quoted_mind_entry) sum option -> quoted_entry *)
+  val quote_entry : (quoted_definition_entry, quoted_mind_entry) sum option -> quoted_entry
   val quote_proj : quoted_inductive -> quoted_int -> quoted_int -> quoted_proj
 
   val mkName : quoted_ident -> quoted_name
@@ -251,6 +254,7 @@ struct
   type quoted_univ_constraints = Term.constr (* of type univ.constraints *)
   type quoted_univ_instance = Term.constr (* of type univ.universe_instance *)
   type quoted_univ_context = Term.constr (* of type univ.universe_context *)
+  type quoted_inductive_universes = Term.constr (* of type univ.universe_context *)
   type quoted_proj = Term.constr (* of type Ast.projection *)
   type quoted_sort_family = Term.constr (* of type Ast.sort_family *)
 
@@ -262,7 +266,7 @@ struct
 
   type quoted_mind_entry = Term.constr (* of type Ast.mutual_inductive_entry *)
   type quoted_mind_finiteness = Term.constr (* of type Ast.mutual_inductive_entry *)
-  type quoted_definition_entry = t * t option
+  type quoted_definition_entry = t * t option * quoted_univ_context
   type quoted_entry = Term.constr (* of type option (constant_entry + mutual_inductive_entry) *)
   type quoted_global_reference = Term.constr (* of type Ast.global_reference *)
   type quoted_reduction_strategy = Term.constr (* of type Ast.reductionStrategy *)
@@ -294,11 +298,11 @@ struct
   let c_nil = resolve_symbol pkg_datatypes "nil"
   let c_cons = resolve_symbol pkg_datatypes "cons"
   let prod_type = resolve_symbol pkg_datatypes "prod"
-  (* let sum_type = resolve_symbol pkg_datatypes "sum"
-   * let option_type = resolve_symbol pkg_datatypes "option" *)
+  let sum_type = resolve_symbol pkg_datatypes "sum"
+  let option_type = resolve_symbol pkg_datatypes "option"
   let bool_type = resolve_symbol pkg_datatypes "bool"
-  (* let cInl = resolve_symbol pkg_datatypes "inl"
-   * let cInr = resolve_symbol pkg_datatypes "inr" *)
+  let cInl = resolve_symbol pkg_datatypes "inl"
+  let cInr = resolve_symbol pkg_datatypes "inr"
   let prod a b =
     Term.mkApp (prod_type, [| a ; b |])
   let c_pair = resolve_symbol pkg_datatypes "pair"
@@ -335,8 +339,8 @@ struct
   let tunivLt = resolve_symbol pkg_univ "Lt"
   let tunivEq = resolve_symbol pkg_univ "Eq"
   (* let tunivcontext = resolve_symbol pkg_univ "universe_context" *)
-  let tMonomorphic_ctx = resolve_symbol pkg_univ "Monomorphic_ctx"
-  let tPolymorphic_ctx = resolve_symbol pkg_univ "Polymorphic_ctx"
+  let cMonomorphic_ctx = resolve_symbol pkg_univ "Monomorphic_ctx"
+  let cPolymorphic_ctx = resolve_symbol pkg_univ "Polymorphic_ctx"
   let tUContextmake = resolve_symbol (ext_pkg_univ "UContext") "make"
   (* let tConstraintempty = resolve_symbol (ext_pkg_univ "Constraint") "empty" *)
   let tConstraintempty = Universes.constr_of_global (Coqlib.find_reference "template coq bug" (ext_pkg_univ "Constraint") "empty")
@@ -346,7 +350,7 @@ struct
   let tadd_global_constraints = resolve_symbol pkg_ugraph  "add_global_constraints"
 
   let (tdef,tmkdef) = (r_reify "def", r_reify "mkdef")
-  let (tLocalDef,tLocalAssum,_tlocal_entry) = (r_reify "LocalDef", r_reify "LocalAssum", r_reify "local_entry")
+  let (tLocalDef,tLocalAssum,tlocal_entry) = (r_reify "LocalDef", r_reify "LocalAssum", r_reify "local_entry")
 
   let (cFinite,cCoFinite,cBiFinite) = (r_reify "Finite", r_reify "CoFinite", r_reify "BiFinite")
   let (pConstr,pType,pAxiom,pIn) =
@@ -355,11 +359,11 @@ struct
   let tmkinductive_body = r_reify "mkinductive_body"
   let tBuild_minductive_decl = r_reify "Build_minductive_decl"
 
-  let _tMutual_inductive_entry = r_reify "mutual_inductive_entry"
-  let _tOne_inductive_entry = r_reify "one_inductive_entry"
-  let _tBuild_mutual_inductive_entry = r_reify "Build_mutual_inductive_entry"
-  let _tBuild_one_inductive_entry = r_reify "Build_one_inductive_entry"
-  let _tConstant_entry = r_reify "constant_entry"
+  let tMutual_inductive_entry = r_reify "mutual_inductive_entry"
+  let tOne_inductive_entry = r_reify "one_inductive_entry"
+  let tBuild_mutual_inductive_entry = r_reify "Build_mutual_inductive_entry"
+  let tBuild_one_inductive_entry = r_reify "Build_one_inductive_entry"
+  let tConstant_entry = r_reify "constant_entry"
   let cParameterEntry = r_reify "ParameterEntry"
   let cDefinitionEntry = r_reify "DefinitionEntry"
   let cParameter_entry = r_reify "Build_parameter_entry"
@@ -506,19 +510,29 @@ struct
   let quote_univ_context uctx =
     let inst = Univ.UContext.instance uctx in
     let const = Univ.UContext.constraints uctx in
-    Term.mkApp (tMonomorphic_ctx, [| quote_ucontext inst const |])
+    Term.mkApp (cMonomorphic_ctx, [| quote_ucontext inst const |])
+
+  let quote_abstract_univ_context_aux uctx =
+    let inst = Univ.UContext.instance uctx in
+    let const = Univ.UContext.constraints uctx in
+    Term.mkApp (cPolymorphic_ctx, [| quote_ucontext inst const |])
 
   let quote_abstract_univ_context uctx =
     let uctx = Univ.AUContext.repr uctx in
-    let inst = Univ.UContext.instance uctx in
-    let const = Univ.UContext.constraints uctx in
-    Term.mkApp (tPolymorphic_ctx, [| quote_ucontext inst const |])
+    quote_abstract_univ_context_aux uctx
+
+  let quote_inductive_universes uctx =
+    match uctx with
+    | Monomorphic_ind_entry uctx -> quote_univ_context uctx
+    | Polymorphic_ind_entry uctx -> quote_abstract_univ_context_aux uctx
+    | Cumulative_ind_entry info ->
+      quote_abstract_univ_context_aux (CumulativityInfo.univ_context info) (* FIXME lossy *)
 
   let quote_ugraph (g : UGraph.t) =
     let inst' = quote_univ_instance Univ.Instance.empty in
     let const' = quote_univ_constraints (UGraph.constraints_of_universes g) in
     let uctx = Term.mkApp (tUContextmake, [|inst' ; const'|]) in
-    Term.mkApp (tadd_global_constraints, [|Term.mkApp (tMonomorphic_ctx, [| uctx |]); tinit_graph|])
+    Term.mkApp (tadd_global_constraints, [|Term.mkApp (cMonomorphic_ctx, [| uctx |]); tinit_graph|])
 
   let quote_sort s =
     quote_universe (Sorts.univ_of_sort s)
@@ -623,54 +637,51 @@ struct
   let mkExt x acc = Term.mkApp (x, [| acc |])
   let mkIn t = Term.mkApp (pIn, [| t |])
 
-  (* let quote_mind_finiteness (f: Decl_kinds.recursivity_kind) = *)
-  (*   match f with *)
-  (*   | Decl_kinds.Finite -> cFinite *)
-  (*   | Decl_kinds.CoFinite -> cCoFinite *)
-  (*   | Decl_kinds.BiFinite -> cBiFinite *)
+  let quote_mind_finiteness (f: Decl_kinds.recursivity_kind) =
+    match f with
+    | Decl_kinds.Finite -> cFinite
+    | Decl_kinds.CoFinite -> cCoFinite
+    | Decl_kinds.BiFinite -> cBiFinite
 
-  (* let make_one_inductive_entry (iname, arity, templatePoly, consnames, constypes) = *)
-  (*   let consnames = to_coq_list tident consnames in *)
-  (*   let constypes = to_coq_list tTerm constypes in *)
-  (*   Term.mkApp (tBuild_one_inductive_entry, [| iname; arity; templatePoly; consnames; constypes |]) *)
+  let make_one_inductive_entry (iname, arity, templatePoly, consnames, constypes) =
+    let consnames = to_coq_list tident consnames in
+    let constypes = to_coq_list tTerm constypes in
+    Term.mkApp (tBuild_one_inductive_entry, [| iname; arity; templatePoly; consnames; constypes |])
 
-  (* let quote_mind_params l = *)
-  (*   let pair i l = pair tident tlocal_entry i l in *)
-  (*   let map (id, ob) = *)
-  (*     match ob with *)
-  (*     | Left b -> pair id (Term.mkApp (tLocalDef,[|b|])) *)
-  (*     | Right t -> pair id (Term.mkApp (tLocalAssum,[|t|])) *)
-  (*   in *)
-  (*   let the_prod = Term.mkApp (prod_type,[|tident; tlocal_entry|]) in *)
-  (*   to_coq_list the_prod (List.map map l) *)
+  let quote_mind_params l =
+    let pair i l = pair tident tlocal_entry i l in
+    let map (id, ob) =
+      match ob with
+      | Left b -> pair id (Term.mkApp (tLocalDef,[|b|]))
+      | Right t -> pair id (Term.mkApp (tLocalAssum,[|t|]))
+    in
+    let the_prod = Term.mkApp (prod_type,[|tident; tlocal_entry|]) in
+    to_coq_list the_prod (List.map map l)
 
-  (* let quote_mutual_inductive_entry (mf, mp, is, mpol) = *)
-  (*   let is = to_coq_list tOne_inductive_entry (List.map make_one_inductive_entry is) in *)
-  (*   let mpr = Term.mkApp (cNone, [|bool_type|]) in *)
-  (*   let mr = Term.mkApp (cNone, [|Term.mkApp (option_type, [|tident|])|])  in *)
-  (*   Term.mkApp (tBuild_mutual_inductive_entry, [| mr; mf; mp; is; mpol; mpr |]) *)
+  let quote_mutual_inductive_entry (mf, mp, is, mpol) =
+    let is = to_coq_list tOne_inductive_entry (List.map make_one_inductive_entry is) in
+    let mpr = Term.mkApp (cNone, [|bool_type|]) in
+    let mr = Term.mkApp (cNone, [|Term.mkApp (option_type, [|tident|])|])  in
+    Term.mkApp (tBuild_mutual_inductive_entry, [| mr; mf; mp; is; mpol; mpr |])
 
 
-  (* let quote_entry decl = *)
-  (*   let opType = Term.mkApp(sum_type, [|tConstant_entry;tMutual_inductive_entry|]) in *)
-  (*   let mkSome c t = Term.mkApp (cSome, [|opType; Term.mkApp (c, [|tConstant_entry;tMutual_inductive_entry; t|] )|]) in *)
-  (*   let mkSomeDef = mkSome cInl in *)
-  (*   let mkSomeInd  = mkSome cInr in *)
-  (*   let mkParameterEntry ty = *)
-  (*     mkSomeDef (Term.mkApp (cParameterEntry, [| Term.mkApp (cParameter_entry, [|ty|]) |])) *)
-  (*   in *)
-  (*   let mkDefinitionEntry ty body = *)
-  (*     let b = Term.mkApp (cDefinitionEntry, [| Term.mkApp (cDefinition_entry, [|ty;body|]) |]) in *)
-  (*     mkSomeDef b *)
-  (*   in *)
-  (*   match decl with *)
-  (*   | Some (Left (ty, body)) -> *)
-  (*      (match body with *)
-  (*       | None -> mkParameterEntry ty *)
-  (*       | Some b -> mkDefinitionEntry ty b) *)
-  (*   | Some (Right mind) -> *)
-  (*      mkSomeInd mind *)
-  (*   | None -> Constr.mkApp (cNone, [| opType |]) *)
+  let quote_constant_entry (ty, body, ctx) =
+    match body with
+    | None ->
+      Term.mkApp (cParameterEntry, [| Term.mkApp (cParameter_entry, [|ty; ctx|]) |])
+    | Some body ->
+      Term.mkApp (cDefinitionEntry,
+                  [| Term.mkApp (cDefinition_entry, [|ty;body;ctx;tfalse (*FIXME*)|]) |])
+
+  let quote_entry decl =
+    let opType = Term.mkApp(sum_type, [|tConstant_entry;tMutual_inductive_entry|]) in
+    let mkSome c t = Term.mkApp (cSome, [|opType; Term.mkApp (c, [|tConstant_entry;tMutual_inductive_entry; t|] )|]) in
+    let mkSomeDef = mkSome cInl in
+    let mkSomeInd  = mkSome cInr in
+    match decl with
+    | Some (Left centry) -> mkSomeDef (quote_constant_entry centry)
+    | Some (Right mind) -> mkSomeInd mind
+    | None -> Constr.mkApp (cNone, [| opType |])
 
 
   let quote_global_reference : Globnames.global_reference -> quoted_global_reference = function
@@ -716,96 +727,96 @@ struct
       not_supported_verb trm "from_coq_list"
         
   let inspectTerm (t:Term.constr) :  (Term.constr, quoted_int, quoted_ident, quoted_name, quoted_sort, quoted_cast_kind, quoted_kernel_name, quoted_inductive, quoted_univ_instance, quoted_proj) structure_of_term =
-  let (h,args) = app_full t [] in
-  if Term.eq_constr h tRel then
-    match args with
-      x :: _ -> ACoq_tRel x
+    let (h,args) = app_full t [] in
+    if Term.eq_constr h tRel then
+      match args with
+        x :: _ -> ACoq_tRel x
       | _ -> CErrors.user_err (print_term t ++ Pp.str ("has bad structure"))
-  else if Term.eq_constr h tVar then
-    match args with
-      x :: _ -> ACoq_tVar x
+    else if Term.eq_constr h tVar then
+      match args with
+        x :: _ -> ACoq_tVar x
       | _ -> CErrors.user_err (print_term t ++ Pp.str ("has bad structure"))
-  else if Term.eq_constr h tMeta then
-    match args with
-      x :: _ -> ACoq_tMeta x
+    else if Term.eq_constr h tMeta then
+      match args with
+        x :: _ -> ACoq_tMeta x
       | _ -> CErrors.user_err (print_term t ++ Pp.str ("has bad structure"))
-  else if Term.eq_constr h tSort then
-    match args with
-      x :: _ -> ACoq_tSort x
+    else if Term.eq_constr h tSort then
+      match args with
+        x :: _ -> ACoq_tSort x
       | _ -> CErrors.user_err (print_term t ++ Pp.str ("has bad structure"))
-  else if Term.eq_constr h tProd then
-    match args with
-      n :: t :: b :: _ -> ACoq_tProd (n,t,b)
+    else if Term.eq_constr h tProd then
+      match args with
+        n :: t :: b :: _ -> ACoq_tProd (n,t,b)
       | _ -> CErrors.user_err (print_term t ++ Pp.str ("has bad structure"))
-  else if Term.eq_constr h tLambda then
-    match args with
-      n  :: t :: b :: _ -> ACoq_tLambda (n,t,b)
+    else if Term.eq_constr h tLambda then
+      match args with
+        n  :: t :: b :: _ -> ACoq_tLambda (n,t,b)
       | _ -> CErrors.user_err (print_term t ++ Pp.str ("has bad structure"))
-  else if Term.eq_constr h tLetIn then
-    match args with
-      n :: e :: t :: b :: _ -> ACoq_tLetIn (n,e,t,b)
+    else if Term.eq_constr h tLetIn then
+      match args with
+        n :: e :: t :: b :: _ -> ACoq_tLetIn (n,e,t,b)
       | _ -> CErrors.user_err (print_term t ++ Pp.str ("has bad structure"))
-  else if Term.eq_constr h tApp then
-    match args with
-      f::xs::_ -> ACoq_tApp (f, from_coq_list xs)
+    else if Term.eq_constr h tApp then
+      match args with
+        f::xs::_ -> ACoq_tApp (f, from_coq_list xs)
       | _ -> CErrors.user_err (print_term t ++ Pp.str ("has bad structure"))
-  else if Term.eq_constr h tConst then
-    match args with
-      s::u::_ -> ACoq_tConst (s, u)
+    else if Term.eq_constr h tConst then
+      match args with
+        s::u::_ -> ACoq_tConst (s, u)
       | _ -> CErrors.user_err (print_term t ++ Pp.str ("has bad structure"))
-  else if Term.eq_constr h tInd then
-    match args with
-      i::u::_ -> ACoq_tInd (i,u)
+    else if Term.eq_constr h tInd then
+      match args with
+        i::u::_ -> ACoq_tInd (i,u)
       | _ -> CErrors.user_err (print_term t ++ Pp.str ("has bad structure"))
-  else if Term.eq_constr h tConstructor then
-    match args with
-      i::idx::u::_ -> ACoq_tConstruct (i,idx,u)
+    else if Term.eq_constr h tConstructor then
+      match args with
+        i::idx::u::_ -> ACoq_tConstruct (i,idx,u)
       | _ -> CErrors.user_err (print_term t ++ Pp.str ("has bad structure: constructor case"))
-  else if Term.eq_constr h tCase then
-    match args with
-      info::ty::d::brs::_ -> ACoq_tCase (from_coq_pair info, ty, d, List.map from_coq_pair (from_coq_list brs))
+    else if Term.eq_constr h tCase then
+      match args with
+        info::ty::d::brs::_ -> ACoq_tCase (from_coq_pair info, ty, d, List.map from_coq_pair (from_coq_list brs))
       | _ -> CErrors.user_err (print_term t ++ Pp.str ("has bad structure"))
-  else if Term.eq_constr h tFix then
-    match args with
-      bds::i::_ -> 
+    else if Term.eq_constr h tFix then
+      match args with
+        bds::i::_ ->
         let unquoteFbd  b  =
-                let (_,args) = app_full b [] in
-                match args with
-                | _(*type*)::a::b::c::d::[] -> 
-                  { adtype =a;
-                    adname=b;
-                    adbody= c;
-                    rarg=d
-                  }
-                |_ -> raise (Failure " (mkdef must take exactly 5 arguments)")
-                in
+          let (_,args) = app_full b [] in
+          match args with
+          | _(*type*) :: na :: ty :: body :: rarg :: [] ->
+            { adtype = ty;
+              adname = na;
+              adbody = body;
+              rarg
+            }
+          |_ -> raise (Failure " (mkdef must take exactly 5 arguments)")
+        in
         let lbd = List.map unquoteFbd (from_coq_list bds) in
         ACoq_tFix (lbd, i)
       | _ -> CErrors.user_err (print_term t ++ Pp.str ("has bad structure"))
-  else if Term.eq_constr h tCoFix then
-    match args with
-      bds::i::_ -> 
+    else if Term.eq_constr h tCoFix then
+      match args with
+        bds::i::_ ->
         let unquoteFbd  b  =
-                let (_,args) = app_full b [] in
-                match args with
-                | _(*type*)::a::b::c::d::[] -> 
-                  { adtype =a;
-                    adname=b;
-                    adbody= c;
-                    rarg=d
-                  }
-                |_ -> raise (Failure " (mkdef must take exactly 5 arguments)")
-                in
+          let (_,args) = app_full b [] in
+          match args with
+          | _(*type*) :: na :: ty :: body :: rarg :: [] ->
+            { adtype = ty;
+              adname = na;
+              adbody = body;
+              rarg
+            }
+          |_ -> raise (Failure " (mkdef must take exactly 5 arguments)")
+        in
         let lbd = List.map unquoteFbd (from_coq_list bds) in
         ACoq_tCoFix (lbd, i)
       | _ -> CErrors.user_err (print_term t ++ Pp.str ("has bad structure"))
-  else if Term.eq_constr h tProj then
-    match args with
-      proj::t::_ -> ACoq_tProj (proj, t)
+    else if Term.eq_constr h tProj then
+      match args with
+        proj::t::_ -> ACoq_tProj (proj, t)
       | _ -> CErrors.user_err (print_term t ++ Pp.str ("has bad structure"))
-      
-  else failwith "not yet implemented"
 
+    else
+      CErrors.user_err (str"inspect_term: cannot recognize " ++ print_term t)
 
     let rec unquote_int trm =
       let (h,args) = app_full trm [] in
@@ -881,6 +892,7 @@ struct
       else
         raise (Failure "non-value")
 
+
   (* This code is taken from Pretyping, because it is not exposed globally *)
   (* the case for strict universe declarations was removed *)
   let get_level evd s =
@@ -889,26 +901,31 @@ struct
       match List.rev (CString.split '.' s) with
       | [] -> CErrors.anomaly (str"Invalid universe name " ++ str s ++ str".")
       | n :: dp ->
-	 let num = int_of_string n in
-	 let dp = DirPath.make (List.map Id.of_string dp) in
-	 let level = Univ.Level.make dp num in
-	 let evd =
-	   try Evd.add_global_univ evd level
-	   with UGraph.AlreadyDeclared -> evd
-	 in evd, level
+         let num = int_of_string n in
+         let dp = DirPath.make (List.map Id.of_string dp) in
+         let level = Univ.Level.make dp num in
+         let evd =
+           try Evd.add_global_univ evd level
+           with UGraph.AlreadyDeclared -> evd
+         in evd, level
     else
       try
-	let level = Evd.universe_of_name evd s in
-	evd, level
+        let level = Evd.universe_of_name evd s in
+        evd, level
       with Not_found ->
-	try
-	  let id = try Id.of_string s with _ -> raise Not_found in    (* Names.Id.of_string can fail if the name is not valid (utf8 ...) *)
+        try
+          let id = try Id.of_string s with _ -> raise Not_found in    (* Names.Id.of_string can fail if the name is not valid (utf8 ...) *)
           evd, snd (Idmap.find id names)
-	with Not_found ->
-  	  Evd.new_univ_level_variable ~name:s Evd.UnivRigid evd
+        with Not_found ->
+          Evd.new_univ_level_variable ~name:s Evd.UnivRigid evd
   (* end of code from Pretyping *)
 
 
+  let rec nat_to_int c =
+    match Term.kind_of_term c with
+    | Term.Construct _ -> 0
+    | Term.App (s, [| c |]) -> 1 + nat_to_int c
+    | _ -> bad_term_verb c "unquote_nat"
 
   let unquote_level evd trm (* of type level *) : Evd.evar_map * Univ.Level.t =
     let (h,args) = app_full trm [] in
@@ -926,7 +943,7 @@ struct
       | _ -> bad_term_verb trm "unquote_level"
     else if Term.eq_constr h tLevelVar then
       match args with
-      | l :: [] -> failwith "todo, I don't know how to create var level"
+      | l :: [] -> evd, Univ.Level.var (nat_to_int l)
       | _ -> bad_term_verb trm "unquote_level"
     else
       not_supported_verb trm "unquote_level"
@@ -937,24 +954,28 @@ struct
     if unquote_bool b then evd, Univ.Universe.super u
     else evd, u
 
-
   let unquote_universe evd trm (* of type universe *) =
     let levels = List.map from_coq_pair (from_coq_list trm) in
     let evd, u = match levels with
-      | [] -> CErrors.anomaly (str "Empty level in unquote_sort. Please fill a bug in Template Coq.")
+      | [] -> Evd.new_univ_variable (Evd.UnivFlexible false) evd
       | (l,b)::q -> List.fold_left (fun (evd,u) (l,b) -> let evd, u' = unquote_level_expr evd l b
                                                          in evd, Univ.Universe.sup u u')
                                    (unquote_level_expr evd l b) q
     in evd, u
 
-
-  let unquote_kn  (k : quoted_kernel_name) : Libnames.qualid =
-    failwith "not yet implemented" 
-    (*earlier implementation used Libnames.make_qualid*)
+  let unquote_kn (k : quoted_kernel_name) : Libnames.qualid =
+    let s = unquote_string k in
+    Libnames.qualid_of_string s
 
   let unquote_proj (qp : quoted_proj) : (quoted_inductive * quoted_int * quoted_int) =
-    failwith "not yet implemented" 
-
+    let (h,args) = app_full qp [] in
+    match args with
+    | tyin::tynat::indpars::idx::[] ->
+      let (h',args') = app_full indpars [] in
+      (match args' with
+       | tyind :: tynat :: ind :: n :: [] -> (ind, n, idx)
+       | _ -> bad_term_verb qp "not a projection")
+    | _ -> bad_term_verb qp "not a projection"
 
   let unquote_inductive trm =
     let (h,args) = app_full trm [] in
@@ -1352,7 +1373,6 @@ struct
        let typ = getType env b in
        (Environ.push_rel (toDecl (Names.Name n, Some b, typ)) env, f a (Some b) typ n env)
 
-
   let quote_mind_params env (params:(Names.Id.t * Entries.local_entry) list) =
     let f lr ob t n env =
       match ob with
@@ -1385,10 +1405,10 @@ struct
     (* env for quoting arities of inductives -- just push the params *)
     let (envA,_) = List.fold_left (process_local_entry (fun _ _ _ _ _ -> ())) (env,()) (List.rev (t.mind_entry_params)) in
     let is = List.map (quote_one_ind envA envC) t.mind_entry_inds in
-    let mpol = Q.quote_bool false in
-    Q.quote_mutual_inductive_entry (mf, mp, is, mpol)
+   let uctx = Q.quote_inductive_universes t.mind_entry_universes in
+    Q.quote_mutual_inductive_entry (mf, mp, is, uctx)
 
-  let quote_entry bypass env evm (name:string) =
+  let quote_entry_aux bypass env evm (name:string) =
     let (dp, nm) = split_name name in
     let entry =
       match Nametab.locate (Libnames.make_qualid dp nm) with
@@ -1407,7 +1427,9 @@ struct
               if bypass
               then Some (quote_term env (Opaqueproof.force_proof (Global.opaque_tables ()) cs))
               else None
-         in Some (Left (ty, body))
+         in
+         let uctx = quote_constant_uctx cd.const_universes in
+         Some (Left (ty, body, uctx))
 
       | Globnames.IndRef ni ->
          let c = Environ.lookup_mind (fst ni) env in (* FIX: For efficienctly, we should also export (snd ni)*)
@@ -1415,7 +1437,11 @@ struct
          Some (Right miq)
       | Globnames.ConstructRef _ -> None (* FIX?: return the enclusing mutual inductive *)
       | Globnames.VarRef _ -> None
-    in Q.quote_entry entry
+    in entry
+
+  let quote_entry bypass env evm t =
+    let entry = quote_entry_aux bypass env evm t in
+    Q.quote_entry entry
 
     (* TODO: replace app_full by this abstract version?*)
     let rec app_full_abs (trm: Q.t) (acc: Q.t list) =
@@ -1489,12 +1515,18 @@ let denote_term evdref (trm: Q.t) : Term.constr =
       let la = Array.of_list in
       Term.mkCoFix (Q.unquote_int i, (la names, la types, la bodies))
   | ACoq_tProj (proj,t) -> 
-      let (ind, _, narg) = Q.unquote_proj proj in (* is narg the correct projection? *)
-      let ind' = Q.unquote_inductive ind in
-      let projs = Recordops.lookup_projections ind' in
-      (match List.nth projs (Q.unquote_int narg) with
-      | Some p -> Term.mkProj (Names.Projection.make p false, aux t)
-      | None -> bad_term trm)
+    let (ind, _, narg) = Q.unquote_proj proj in (* is narg the correct projection? *)
+    let ind' = Q.unquote_inductive ind in
+    let idx = Q.unquote_int narg in
+    let (mib,_) = Inductive.lookup_mind_specif (Global.env ()) ind' in
+    let cst =
+      match mib.mind_record with
+      | Some (Some (_id, csts, _projs)) ->
+        assert (Array.length csts > idx);
+        csts.(idx)
+      | _ -> not_supported_verb trm "not a primitive record"
+    in
+    Term.mkProj (Names.Projection.make cst false, aux t)
   | _ ->  not_supported_verb trm "big_case"
 
   (*
@@ -1525,72 +1557,6 @@ module Denote =
 struct
 
   open TemplateCoqQuoter
-
-  (* This code is taken from Pretyping, because it is not exposed globally *)
-  (* the case for strict universe declarations was removed *)
-  let get_level evd s =
-    let names, _ = Global.global_universe_names () in
-    if CString.string_contains ~where:s ~what:"." then
-      match List.rev (CString.split '.' s) with
-      | [] -> CErrors.anomaly (str"Invalid universe name " ++ str s ++ str".")
-      | n :: dp ->
-	 let num = int_of_string n in
-	 let dp = DirPath.make (List.map Id.of_string dp) in
-	 let level = Univ.Level.make dp num in
-	 let evd =
-	   try Evd.add_global_univ evd level
-	   with UGraph.AlreadyDeclared -> evd
-	 in evd, level
-    else
-      try
-	let level = Evd.universe_of_name evd s in
-	evd, level
-      with Not_found ->
-	try
-	  let id = try Id.of_string s with _ -> raise Not_found in    (* Names.Id.of_string can fail if the name is not valid (utf8 ...) *)
-          evd, snd (Idmap.find id names)
-	with Not_found ->
-  	  Evd.new_univ_level_variable ~name:s Evd.UnivRigid evd
-  (* end of code from Pretyping *)
-
-
-
-  let unquote_level evd trm (* of type level *) : Evd.evar_map * Univ.Level.t =
-    let (h,args) = app_full trm [] in
-    if Term.eq_constr h lProp then
-      match args with
-      | [] -> evd, Univ.Level.prop
-      | _ -> bad_term_verb trm "unquote_level"
-    else if Term.eq_constr h lSet then
-      match args with
-      | [] -> evd, Univ.Level.set
-      | _ -> bad_term_verb trm "unquote_level"
-    else if Term.eq_constr h tLevel then
-      match args with
-      | s :: [] -> get_level evd (unquote_string s)
-      | _ -> bad_term_verb trm "unquote_level"
-    else if Term.eq_constr h tLevelVar then
-      match args with
-      | l :: [] -> evd, Univ.Level.var (nat_to_int l)
-      | _ -> bad_term_verb trm "unquote_level"
-    else
-      not_supported_verb trm "unquote_level"
-
-  let unquote_level_expr evd trm (* of type level *) b (* of type bool *) : Evd.evar_map * Univ.Universe.t=
-    let evd, l = unquote_level evd trm in
-    let u = Univ.Universe.make l in
-    if from_bool b then evd, Univ.Universe.super u
-    else evd, u
-
-  let unquote_universe evd trm (* of type universe *) =
-    let levels = List.map from_coq_pair (from_coq_list trm) in
-    let evd, u = match levels with
-      | [] -> Evd.new_univ_variable (Evd.UnivFlexible false) evd
-      | (l,b)::q -> List.fold_left (fun (evd,u) (l,b) -> let evd, u' = unquote_level_expr evd l b
-                                                         in evd, Univ.Universe.sup u u')
-                                   (unquote_level_expr evd l b) q
-    in evd, u
-
 
   (** NOTE: Because the representation is lossy, I should probably
    ** come back through elaboration.
@@ -1642,69 +1608,88 @@ struct
     else
       not_supported_verb trm "unqote_map_option"
 
+  let denote_ucontext (trm : Term.constr) : Univ.universe_context =
+    Univ.UContext.empty (* FIXME *)
 
-  let denote_universe_context (trm : Term.constr) : Univ.universe_context =
-    Univ.UContext.empty (* FIXME !!! *)
+  let denote_universe_context (trm : Term.constr) : bool * Univ.universe_context =
+    let (h, args) = app_full trm [] in
+    let b =
+      if Term.eq_constr h cMonomorphic_ctx then Some false
+      else if Term.eq_constr h cPolymorphic_ctx then Some true
+      else None
+    in
+    match b, args with
+    | Some poly, ctx :: [] ->
+      poly, denote_ucontext ctx
+    | _, _ -> bad_term trm
 
-  let denote_inductive_first trm =
-    let (h,args) = app_full trm [] in
-    if Term.eq_constr h tmkInd then
-      match args with
-        nm :: num :: _ ->
-        let s = (unquote_string nm) in
-        let (dp, nm) = split_name s in
-        (try
-          match Nametab.locate (Libnames.make_qualid dp nm) with
-          | Globnames.ConstRef c ->  CErrors.user_err (str "this not an inductive constant. use tConst instead of tInd : " ++ str s)
-          | Globnames.IndRef i -> (fst i, nat_to_int  num)
-          | Globnames.VarRef _ -> CErrors.user_err (str "the constant is a variable. use tVar : " ++ str s)
-          | Globnames.ConstructRef _ -> CErrors.user_err (str "the constant is a consructor. use tConstructor : " ++ str s)
-        with
-        Not_found ->   CErrors.user_err (str "Constant not found : " ++ str s))
-      | _ -> assert false
-    else
-      bad_term_verb trm "non-constructor"
+  let denote_mind_entry_universes trm =
+    match denote_universe_context trm with
+    | false, ctx -> Monomorphic_ind_entry ctx
+    | true, ctx -> Polymorphic_ind_entry ctx
+
+  (* let denote_inductive_first trm =
+   *   let (h,args) = app_full trm [] in
+   *   if Term.eq_constr h tmkInd then
+   *     match args with
+   *       nm :: num :: _ ->
+   *       let s = (unquote_string nm) in
+   *       let (dp, nm) = split_name s in
+   *       (try
+   *         match Nametab.locate (Libnames.make_qualid dp nm) with
+   *         | Globnames.ConstRef c ->  CErrors.user_err (str "this not an inductive constant. use tConst instead of tInd : " ++ str s)
+   *         | Globnames.IndRef i -> (fst i, nat_to_int  num)
+   *         | Globnames.VarRef _ -> CErrors.user_err (str "the constant is a variable. use tVar : " ++ str s)
+   *         | Globnames.ConstructRef _ -> CErrors.user_err (str "the constant is a consructor. use tConstructor : " ++ str s)
+   *       with
+   *       Not_found ->   CErrors.user_err (str "Constant not found : " ++ str s))
+   *     | _ -> assert false
+   *   else
+   *     bad_term_verb trm "non-constructor" *)
 
   let declare_inductive (env: Environ.env) (evm: Evd.evar_map) (body: Term.constr) : unit =
-  let (evm,body) = reduce_all env evm body in
-  let (_,args) = app_full body [] in (* check that the first component is Build_mut_ind .. *)
-  let evdref = ref evm in
-  let one_ind b1 : Entries.one_inductive_entry =
-    let (_,args) = app_full b1 [] in (* check that the first component is Build_one_ind .. *)
+    let (evm,body) = reduce_all env evm body in
+    let (_,args) = app_full body [] in (* check that the first component is Build_mut_ind .. *)
+    let evdref = ref evm in
+    let one_ind b1 : Entries.one_inductive_entry =
+      let (_,args) = app_full b1 [] in (* check that the first component is Build_one_ind .. *)
+      match args with
+      | mt::ma::mtemp::mcn::mct::[] ->
+        {
+          mind_entry_typename = unquote_ident mt;
+          mind_entry_arity = TermReify.denote_term evdref ma;
+          mind_entry_template = TemplateCoqQuoter.unquote_bool mtemp;
+          mind_entry_consnames = List.map unquote_ident (from_coq_list mcn);
+          mind_entry_lc = List.map (TermReify.denote_term evdref) (from_coq_list mct)
+        }
+      | _ -> raise (Failure "ill-typed one_inductive_entry")
+    in
+    let mut_ind mr mf mp mi uctx mpr : Entries.mutual_inductive_entry =
+      {
+        mind_entry_record = unquote_map_option (unquote_map_option unquote_ident) mr;
+        mind_entry_finite = denote_mind_entry_finite mf; (* inductive *)
+        mind_entry_params = List.map (fun p -> let (l,r) = (from_coq_pair p) in (unquote_ident l, (denote_local_entry evdref r)))
+            (List.rev (from_coq_list mp));
+        mind_entry_inds = List.map one_ind (from_coq_list mi);
+        mind_entry_universes = denote_mind_entry_universes uctx;
+        mind_entry_private = unquote_map_option TemplateCoqQuoter.unquote_bool mpr (*mpr*)
+      } in
     match args with
-    | mt::ma::mtemp::mcn::mct::[] ->
-    {
-    mind_entry_typename = unquote_ident mt;
-    mind_entry_arity = TermReify.denote_term evdref ma;
-    mind_entry_template = TemplateCoqQuoter.unquote_bool mtemp;
-    mind_entry_consnames = List.map unquote_ident (from_coq_list mcn);
-    mind_entry_lc = List.map (TermReify.denote_term evdref) (from_coq_list mct)
-    }
-    | _ -> raise (Failure "ill-typed one_inductive_entry")
-     in
-  let mut_ind mr mf mp mi mpol uctx mpr : Entries.mutual_inductive_entry =
-    {
-    mind_entry_record = unquote_map_option (unquote_map_option unquote_ident) mr;
-    mind_entry_finite = denote_mind_entry_finite mf; (* inductive *)
-    mind_entry_params = List.map (fun p -> let (l,r) = (from_coq_pair p) in (unquote_ident l, (denote_local_entry evdref r)))
-      (List.rev (from_coq_list mp));
-    mind_entry_inds = List.map one_ind (from_coq_list mi);
-    (* mind_entry_polymorphic = from_bool mpol; *)
-    mind_entry_universes =
-      (let uctx = denote_universe_context uctx in
-      if TemplateCoqQuoter.unquote_bool mpol then Polymorphic_ind_entry uctx
-      else Monomorphic_ind_entry uctx);
-    mind_entry_private = unquote_map_option TemplateCoqQuoter.unquote_bool mpr (*mpr*)
-    } in
-    match args with
-    mr::mf::mp::mi::mpol::univs::mpr::[] ->
-      ignore(Command.declare_mutual_inductive_with_eliminations (mut_ind mr mf mp mi mpol univs mpr) [] [])
+      mr::mf::mp::mi::univs::mpr::[] ->
+      ignore(Command.declare_mutual_inductive_with_eliminations (mut_ind mr mf mp mi univs mpr) [] [])
     | _ -> raise (Failure "ill-typed mutual_inductive_entry")
 
 
   let monad_failure s k =
     CErrors.user_err  (str (s ^ " must take " ^ (string_of_int k) ^ " argument" ^ (if k > 0 then "s" else "") ^ ".")
                        ++ str "Please file a bug with Template-Coq.")
+
+
+  let monad_failure_full s k prg =
+    CErrors.user_err
+      (str (s ^ " must take " ^ (string_of_int k) ^ " argument" ^ (if k > 0 then "s" else "") ^ ".") ++
+       str "While trying to run: " ++ fnl () ++ print_term prg ++ fnl () ++
+       str "Please file a bug with Template-Coq.")
 
   let rec run_template_program_rec (k : Evd.evar_map * Term.constr -> unit)  ((evm, pgm) : Evd.evar_map * Term.constr) : unit =
     let env = Global.env () in
@@ -1718,7 +1703,7 @@ struct
       match args with
       | _::_::a::f::[] ->
          run_template_program_rec (fun (evm, ar) -> run_template_program_rec k (evm, Term.mkApp (f, [|ar|]))) (evm, a)
-      | _ -> monad_failure "tmBind" 4
+      | _ -> monad_failure_full "tmBind" 4 pgm
     else if Term.eq_constr coConstr tmDefinition then
       match args with
       | name::typ::body::[] ->
@@ -1808,27 +1793,13 @@ struct
          let name = unquote_string name in
          let (evm, b) = reduce_all env evm b in
          let bypass = TemplateCoqQuoter.unquote_bool b in
-         let (dp, nm) = split_name name in
-         let entry = (* todo: this should be defined in the quoter module *)
-           match Nametab.locate (Libnames.make_qualid dp nm) with
-           | Globnames.ConstRef c ->
-              let cd = Environ.lookup_constant c env in
-              let (polym, univs) = match cd.const_universes with
-                | Monomorphic_const ctx -> (false, quote_univ_context ctx)
-                | Polymorphic_const ctx -> (true, quote_abstract_univ_context ctx) in
-              let ty = match cd.const_type with
-                | RegularArity ty -> TermReify.quote_term env ty
-                | TemplateArity _ -> CErrors.user_err (Pp.str "Cannot reify deprecated template-polymorphic constant types")
-              in
-              let body = match cd.const_body with
-                | Def cs -> Some (TermReify.quote_term env (Mod_subst.force_constr cs))
-                | OpaqueDef cs when bypass -> Some (TermReify.quote_term env (Opaqueproof.force_proof (Global.opaque_tables ()) cs))
-                | _ -> None
-              in
-              (match body with
-               | Some body -> Term.mkApp (cDefinitionEntry, [| Term.mkApp (cDefinition_entry, [|ty;body; quote_bool polym; univs; tfalse|]) |])
-               | None -> Term.mkApp (cParameterEntry, [| Term.mkApp (cParameter_entry, [|ty; quote_bool polym; univs; tfalse|]) |]))
-           | _ -> CErrors.user_err (str name ++ str " does not seem to be a constant.") in
+         let entry = TermReify.quote_entry_aux bypass env evm name in
+         let entry =
+           match entry with
+           | Some (Left cstentry) -> TemplateCoqQuoter.quote_constant_entry cstentry
+           | Some (Right _) -> CErrors.user_err (str name ++ str " refers to an inductive")
+           | None -> bad_term_verb coConstr "anomaly in QuoteConstant"
+         in
          k (evm, entry)
       | _ -> monad_failure "tmQuoteConstant" 2
     else if Term.eq_constr coConstr tmQuoteUniverses then
@@ -1895,7 +1866,6 @@ struct
         let (evm, t) = reduce_all env evm t in
         let evdref = ref evm in
         let t' = TermReify.denote_term evdref t in
-        let t' = denote_term evdref t in
         let t' = Typing.e_solve_evars env evdref (EConstr.of_constr t') in
         Typing.e_check env evdref t' (EConstr.of_constr typ) ;
         let t' = EConstr.to_constr !evdref t' in
@@ -2030,7 +2000,7 @@ VERNAC COMMAND EXTEND Unquote_vernac_red CLASSIFIED AS SIDEFF
         let (evm,rd) = Tacinterp.interp_redexp env evm rd in
 	let (evm,trm) = reduce_all env evm ~red:rd trm in
         let evdref = ref evm in
-	let trm = Denote.denote_term evdref trm in
+        let trm = TermReify.denote_term evdref trm in
 	let _ = Declare.declare_definition ~kind:Decl_kinds.Definition name (trm, Evd.universe_context_set !evdref) in
         () ]
 END;;

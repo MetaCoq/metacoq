@@ -1620,6 +1620,9 @@ struct
            match Nametab.locate (Libnames.make_qualid dp nm) with
            | Globnames.ConstRef c ->
               let cd = Environ.lookup_constant c env in
+              let (polym, univs) = match cd.const_universes with
+                | Monomorphic_const ctx -> (false, quote_univ_context ctx)
+                | Polymorphic_const ctx -> (true, quote_abstract_univ_context ctx) in
               let ty = match cd.const_type with
                 | RegularArity ty -> TermReify.quote_term env ty
                 | TemplateArity _ -> CErrors.user_err (Pp.str "Cannot reify deprecated template-polymorphic constant types")
@@ -1630,8 +1633,8 @@ struct
                 | _ -> None
               in
               (match body with
-               | Some body -> Term.mkApp (cDefinitionEntry, [| Term.mkApp (cDefinition_entry, [|ty;body|]) |])
-               | None -> Term.mkApp (cParameterEntry, [| Term.mkApp (cParameter_entry, [|ty|]) |]))
+               | Some body -> Term.mkApp (cDefinitionEntry, [| Term.mkApp (cDefinition_entry, [|ty;body; quote_bool polym; univs; tfalse|]) |])
+               | None -> Term.mkApp (cParameterEntry, [| Term.mkApp (cParameter_entry, [|ty; quote_bool polym; univs; tfalse|]) |]))
            | _ -> CErrors.user_err (str name ++ str " does not seem to be a constant.") in
          k (evm, entry)
       | _ -> monad_failure "tmQuoteConstant" 2
@@ -1699,12 +1702,8 @@ struct
         let (evm, t) = reduce_all env evm t in
         let evdref = ref evm in
         let t' = denote_term evdref t in
-        (* todo: investigate why the following bugs *)
-        Feedback.msg_debug (str "lllllllllll");
         let t' = Typing.e_solve_evars env evdref (EConstr.of_constr t') in
-        Feedback.msg_debug (str "lllllllllll1");
         Typing.e_check env evdref t' (EConstr.of_constr typ) ;
-        Feedback.msg_debug (str "lllllllllll2");
         let t' = EConstr.to_constr !evdref t' in
         k (!evdref, t')
       | _ -> monad_failure "tmUnquoteTyped" 2
@@ -1713,7 +1712,7 @@ struct
       | name::[] -> let name' = Namegen.next_ident_away_from (unquote_ident name) (fun id -> Nametab.exists_cci (Lib.make_path id)) in
                     k (evm, quote_ident name')
       | _ -> monad_failure "tmFreshName" 1
-    else CErrors.user_err (str "Invalid argument or not yet implemented. The argument must be a TemplateProgram")
+    else CErrors.user_err (str "Invalid argument or not yet implemented. The argument must be a TemplateProgram: " ++ Printer.pr_constr coConstr)
 end
 
 DECLARE PLUGIN "template_plugin"

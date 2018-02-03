@@ -53,7 +53,7 @@ Fixpoint tsl_rec (fuel : nat) (Σ : global_context) (E : tsl_table) (Γ : contex
                   ret (timesBool (tProd n A' B'))
   | tLambda n A t => A' <- tsl_rec fuel Σ E Γ A ;;
                     t' <- tsl_rec fuel Σ E (Γ ,, vass n A) t ;;
-                    match infer Σ init_graph (Γ ,, vass n A) t with
+                    match infer Σ (Γ ,, vass n A) t with
                     | Checked B =>
                       B' <- tsl_rec fuel Σ E (Γ ,, vass n A) B ;;
                       ret (pairTrue (tProd n A' B') (tLambda n A' t'))
@@ -176,7 +176,7 @@ Tactic Notation "tSpecialize" ident(H) uconstr(t) := apply fst in H; specialize 
 
 Tactic Notation "tIntro" ident(H) := refine (fun H => _; true).
 
-Run TemplateProgram (TC <- tTranslate ([],[]) "eq" ;;
+Run TemplateProgram (TC <- tTranslate emptyTC "eq" ;;
                      TC <- tTranslate TC "False" ;;
                      tImplement TC "notFunext"
                      ((forall (A B : Set) (f g : A -> B), (forall x:A, f x = g x) -> f = g) -> False)).
@@ -190,6 +190,6 @@ Next Obligation.
 Defined.
 
 Require Import Vector Even.
-Fail Run TemplateProgram (TC <- tTranslate ([],[]) "nat" ;;
+Fail Run TemplateProgram (TC <- tTranslate emptyTC "nat" ;;
                      TC <- tTranslate TC "t" ;; ret tt).
                      (* TC <- tTranslate TC "even" ;; ret tt). *)

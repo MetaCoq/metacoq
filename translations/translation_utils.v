@@ -20,7 +20,7 @@ Fixpoint lookup_tsl_table (E : tsl_table) (gr : global_reference)
 
 Definition tsl_context := (global_context * tsl_table)%type.
 
-Definition emptyTC : tsl_context := ([], []).
+Definition emptyTC : tsl_context := (([], uGraph.init_graph), []).
 
 Inductive tsl_error :=
 | NotEnoughFuel
@@ -90,7 +90,7 @@ Definition tTranslate {tsl : Translation} (ΣE : tsl_context) (id : ident)
       | Success (E, decls) =>
         monad_fold_left (fun _ e => tmMkInductive' e) decls tt ;;
         print_nf  (id ++ " has been translated as " ++ id') ;;
-        ret (InductiveDecl kn d :: fst ΣE, E ++ snd ΣE)%list
+        ret (add_global_decl (InductiveDecl kn d) (fst ΣE), E ++ snd ΣE)%list
       end
 
   | Some (ConstRef kn) =>
@@ -98,15 +98,16 @@ Definition tTranslate {tsl : Translation} (ΣE : tsl_context) (id : ident)
     match e with
     | ParameterEntry _ => fail_nf (id ++ "is an axiom, not a definition")
     | DefinitionEntry {| definition_entry_type := A;
+                         definition_entry_universes := univs;
                          definition_entry_body := t |} =>
       t' <- tmEval lazy (tsl_tm ΣE t) ;;
       match t' with
       | Error e => print_nf e ;; fail_nf ("Translation error during the translation of the body of " ++ id)
       | Success t' =>
         tmMkDefinition id' t' ;;
-        let decl := {| cst_universes := UContext.empty;
+        let decl := {| cst_universes := univs;
                        cst_type := A; cst_body := Some t |} in
-        let Σ' := ConstantDecl kn decl :: (fst ΣE) in
+        let Σ' := add_global_decl (ConstantDecl kn decl) (fst ΣE) in
         let E' := (ConstRef kn, tConst kn' []) :: (snd ΣE) in
         print_nf  (id ++ " has been translated as " ++ id') ;;
         ret (Σ', E')
@@ -131,9 +132,9 @@ Definition tImplement {tsl : Translation} (ΣE : tsl_context)
       gr <- tmAbout id ;;
       match gr with
       | Some (ConstRef kn) =>
-        let decl := {| cst_universes := UContext.empty;
+        let decl := {| cst_universes := Monomorphic_ctx UContext.empty;
                        cst_type := tA; cst_body := None |} in
-        let Σ' := ConstantDecl kn decl :: (fst ΣE) in
+        let Σ' := add_global_decl (ConstantDecl kn decl) (fst ΣE) in
         let E' := (ConstRef kn, tConst id' []) :: (snd ΣE) in
         print_nf (id ++ " has been translated as " ++ id') ;;
         ret (Σ', E')

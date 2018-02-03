@@ -81,7 +81,7 @@ with tsl_term  (fuel : nat) (Σ : global_context) (E : tsl_table) (Γ : context)
     | Some t => ret t
     | None => raise (TranslationNotFound (string_of_gref (ConstructRef i n)))
     end
-  | t => match infer Σ init_graph Γ t with
+  | t => match infer Σ Γ t with
         | Checked typ => t1 <- tsl_rec fuel Σ E Γ true t ;;
                         t2 <- tsl_rec fuel Σ E Γ false t ;;
                         typ1 <- tsl_rec fuel Σ E Γ true typ ;;
@@ -213,9 +213,10 @@ Definition ΣE : option tsl_context :=
   sd <- sigma_decl ;;
   ed <- eq_decl ;;
   fd <- false_decl ;;
-  let Σ' := [InductiveDecl "Coq.Init.Logic.False" fd;
-             InductiveDecl "Translations.tsl_param.eq" ed;
-             InductiveDecl "Translations.sigma.sigma" sd] in
+  let Σ' := add_global_decl (InductiveDecl "Coq.Init.Logic.False" fd) (
+            add_global_decl (InductiveDecl "Translations.tsl_param.eq" ed) (
+            add_global_decl (InductiveDecl "Translations.sigma.sigma" sd)
+            ([], init_graph))) in
   let E' := [(IndRef (mkInd "Translations.sigma.sigma" 0),
               tConst "sigmaᶠ" []);
              (ConstructRef (mkInd "Translations.sigma.sigma" 0) 0,
@@ -236,7 +237,7 @@ Definition equiv (A B : Type) :=
     (forall x, eq (g (f x)) x) × (forall x, eq (f (g x)) x).
 
 Definition FALSE := forall X, X.
-Run TemplateProgram (TslParam ([],[]) "FALSE").
+Run TemplateProgram (TslParam emptyTC "FALSE").
 
 Proposition consistency_preservation : El FALSEᵗ -> FALSE.
   compute.

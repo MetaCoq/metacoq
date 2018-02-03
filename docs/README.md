@@ -102,29 +102,43 @@ To compile the library, you need:
 - `OCaml` (tested with `4.04.1`, beware that `OCaml 4.06.0` can 
   produce linking errors on some platforms).
 
+Requirements through opam
+-------------------------
+
 The easiest way to get both is through [`opam`](http://opam.ocaml.org):
 
 You might want to create a "switch" (an environment of `opam` packages) for `Coq` if
 you don't have one yet:
     
     # opam switch -A 4.04.1 coq.8.7.1
+    # eval `opam config env`
     
 This creates the `coq.8.7.1` switch which initially contains only the
-basic `OCaml` `4.04.1` compiler. 
+basic `OCaml` `4.04.1` compiler, and puts you in the right environment
+(check with `ocamlc -v`).
 
 Once in the right switch, you can install `Coq` using:
     
     # opam pin add coq 8.7.1 
     
 Pinning `coq` prevents opam from trying to upgrade it afterwards, in
-this switch.
+this switch. If the command is successful you should have `coq`
+available (check with `coqc -v`).
 
 Compile
 -------
-Use:
+
+Once in the right environment, Use:
+
 - `make` to compile the template-coq plugin (and the checker in `coq-8.7`)
+
 - `make translations` to compile the translation plugins (in `coq-8.7`)
+
 - `make test-suite` to compile the test suite
+
+- `make install` to install the plugin in `coq`'s user-contrib local
+  library. Then the `Template` namespace can be used for `Require
+  Import` statements, e.g. `From Template Require Import All.`.
 
 Install with OPAM (for 8.6 version only)
 ----------------------------------------
@@ -136,7 +150,7 @@ and run:
 
     opam install coq-template-coq
 
-To get the beta versions of Coq, activate the repository:
+To get beta versions of Coq, you might want to activate the repository:
 
     opam repo add coq-core-dev https://coq.inria.fr/opam/core-dev
 

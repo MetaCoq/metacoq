@@ -39,7 +39,7 @@ Papers
 - The system was presented at 
   [Coq'PL 2018](https://popl18.sigplan.org/event/coqpl-2018-typed-template-coq)
 
-- ["Towards Certified Metaprogramming with Typed Template Coq"](https://github.com/Template-Coq/template-coq/raw/master/docs/submission.pdf)
+- ["Towards Certified Metaprogramming with Typed Template-Coq"](https://github.com/Template-Coq/template-coq/raw/master/docs/submission.pdf)
   A. Anand, S. Boulier, C. Cohen, M. Sozeau and N. Tabareau.
   Submitted.
 

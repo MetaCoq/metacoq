@@ -19,7 +19,8 @@ In addition to this representation of terms, Template Coq includes:
 The branch `master` is stable and works with Coq 8.6, an opam package is
 available.
 
-The `coq-8.7` branch is in development and contains additional features:
+The [`coq-8.7`](https://github.com/Template-Coq/template-coq/tree/coq-8.7),
+branch is in development and contains additional features:
 
 - Complete reification and denotation of CIC terms, including universes
 

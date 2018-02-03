@@ -33,6 +33,16 @@ branch is in development and contains additional features:
   
 - Example plugins built on top of this.
 
+Papers
+======
+
+- The system was presented at 
+  [Coq'PL 2018](https://popl18.sigplan.org/event/coqpl-2018-typed-template-coq)
+
+- ["Towards Certified Metaprogramming with Typed Template Coq"](https://github.com/Template-Coq/template-coq/blob/coq-8.7/docs/submission.pdf)
+  A. Anand, S. Boulier, C. Cohen, M. Sozeau and N. Tabareau.
+  Submitted.
+
 Credits
 =======
 
@@ -45,7 +55,6 @@ Sozeau](https://github.com/mattam82).
 Contributors include [Yannick Forster](https://github.com/yforster),
 [Cyril Cohen](https://github.com/CohenCyril) and [Nicolas
 Tabareau](https://github.com/Tabareau).
-
 
 Branches
 ========
@@ -60,7 +69,7 @@ Branches
   which includes:
 
   - The full syntax of CIC:
-    [Typing](https://github.com/Template-Coq/template-coq/blob/coq-8.7/theories/Ast.v)
+    [Ast](https://github.com/Template-Coq/template-coq/blob/coq-8.7/theories/Ast.v)
 
   - The typing judgment of CIC: 
     [Typing](https://github.com/Template-Coq/template-coq/blob/coq-8.7/theories/Typing.v#L488)

@@ -113,13 +113,6 @@ Section UGraph.
     | Some (_, vd) => Some (Z.opp vd)
     | None => None
     end.
-
-  Definition check_eq_level (l1 l2 : Level.t) : bool :=
-    match enforce l1 l2 with
-    | Some k => Z.eqb k 0
-    | None => false
-    end.
-
   Definition check_le_level (l1 l2 : Level.t) : bool :=
     match enforce l1 l2 with
     | Some k => Z.geb k 0
@@ -131,6 +124,10 @@ Section UGraph.
     | Some k => Z.geb k 1
     | None => false
     end.
+
+  Definition check_eq_level (l1 l2 : Level.t) : bool :=
+    check_le_level l1 l2 && check_le_level l2 l1.
+
 
   Definition check_constraint (cstr : univ_constraint) :=
     let '(l, d, r) := cstr in

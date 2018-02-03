@@ -58,11 +58,14 @@ Branches
 - The development branch is
   [coq-8.7](https://github.com/Template-Coq/template-coq/tree/coq-8.7),
   which includes:
-  
+
+  - The full syntax of CIC:
+    [Typing](https://github.com/Template-Coq/template-coq/blob/coq-8.7/theories/Ast.v)
+
   - The typing judgment of CIC: 
-    [Typing](https://github.com/Template-Coq/template-coq/blob/coq-8.7/theories/Typing.v)
+    [Typing](https://github.com/Template-Coq/template-coq/blob/coq-8.7/theories/Typing.v#L488)
     
-  - The partial type-checker implemntation:
+  - A partial type-checker implementation:
     [Checker](https://github.com/Template-Coq/template-coq/blob/coq-8.7/theories/Checker.v)
 
   - The `TemplateMonad` datatype and the `Run TemplateProgram` command

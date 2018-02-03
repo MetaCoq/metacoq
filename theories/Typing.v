@@ -1,5 +1,6 @@
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
-From Template Require Import Template Ast univ Induction LiftSubst.
+From Template Require Import Template utils Ast univ Induction LiftSubst.
+From Template Require AstUtils.
 Require Import String.
 Local Open Scope string_scope.
 
@@ -287,19 +288,6 @@ Inductive red Σ Γ M : term -> Prop :=
 | refl_red : red Σ Γ M M
 | trans_red : forall (P : term) N, red Σ Γ M P -> red1 Σ Γ P N -> red Σ Γ M N.
 
-
-Section Forallb2.
-  Context {A} (f : A -> A -> bool).
-
-  Fixpoint forallb2 l l' :=
-    match l, l' with
-    | hd :: tl, hd' :: tl' => f hd hd' && forallb2 tl tl'
-    | [], [] => true
-    | _, _ => false
-    end.
-End Forallb2.
-
-
 Definition eq_string s s' :=
   if string_dec s s' then true else false.
 
@@ -317,6 +305,22 @@ Definition eq_projection p p' :=
   let '(ind', pars', arg') := p' in
   eq_ind ind ind' && eq_nat pars pars' && eq_nat arg arg'.
 
+Fixpoint subst_app (t : term) (us : list term) : term :=
+  match t, us with
+  | tLambda _ A t, u :: us => subst_app (t {0 := u}) us
+  | _, [] => t
+  | _, _ => mkApps t us
+  end.
+
+Definition tmMkInductive' (mind : minductive_decl) : TemplateMonad unit
+  := tmMkInductive (AstUtils.mind_decl_to_entry mind).
+
+
+
+Definition eq_universe φ s s' :=
+  if univ.Universe.equal s s' then true
+  else uGraph.check_leq φ s s' && uGraph.check_leq φ s' s.
+
 (* Don't look at printing annotations *)
 Fixpoint eq_term (φ : uGraph.t) (t u : term) {struct t} :=
   match t, u with
@@ -324,7 +328,7 @@ Fixpoint eq_term (φ : uGraph.t) (t u : term) {struct t} :=
   | tMeta n, tMeta n' => eq_nat n n'
   | tEvar ev args, tEvar ev' args' => eq_evar ev ev' && forallb2 (eq_term φ) args args'
   | tVar id, tVar id' => eq_string id id'
-  | tSort s, tSort s' => uGraph.check_leq φ s s' && uGraph.check_leq φ s' s
+  | tSort s, tSort s' => eq_universe φ s s'
   | tApp f args, tApp f' args' => eq_term φ f f' && forallb2 (eq_term φ) args args'
   | tCast t _ v, tCast u _ v' => eq_term φ t u && eq_term φ v v'
   | tConst c u, tConst c' u' => eq_constant c c' (* TODO Universes *)

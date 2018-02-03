@@ -42,6 +42,8 @@ src/fSetWeakList.ml
 src/fSetWeakList.mli
 src/mSetWeakList.ml
 src/mSetWeakList.mli
+src/utils.mli
+src/utils.ml
 src/monad_utils.mli
 src/monad_utils.ml
 src/univ0.mli

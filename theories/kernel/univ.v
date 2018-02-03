@@ -1,4 +1,4 @@
-Require Import String List.
+Require Import String List utils.
 Import ListNotations.
 
 (* Sorted lists without duplicates *)
@@ -179,7 +179,7 @@ Module Universe.
   (* (** Comparison function *) *)
 
   Definition equal (u1 u2 : t) : bool :=
-    false. (* FIXME *)
+    forallb2 Expr.equal u1 u2.
   (* Equality function on formal universes *)
   (* val hash : t -> int *)
   (* (** Hash function *) *)

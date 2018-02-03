@@ -1259,7 +1259,7 @@ struct
   let unquote_universe evd trm (* of type universe *) =
     let levels = List.map from_coq_pair (from_coq_list trm) in
     let evd, u = match levels with
-      | [] -> CErrors.anomaly (str "Empty level in unquote_sort. Please fill a bug in Template Coq.")
+      | [] -> Evd.new_univ_variable (Evd.UnivFlexible false) evd
       | (l,b)::q -> List.fold_left (fun (evd,u) (l,b) -> let evd, u' = unquote_level_expr evd l b
                                                          in evd, Univ.Universe.sup u u')
                                    (unquote_level_expr evd l b) q
@@ -1573,6 +1573,7 @@ struct
          let (evm, def) = reduce_all env evm body in
          let evdref = ref evm in
          let trm = denote_term evdref def in
+         let ty = Typing.e_type_of env evdref (EConstr.of_constr trm) in
          let evm = !evdref in
          let _ = Declare.declare_definition ~kind:Decl_kinds.Definition (unquote_ident name) (trm, Evd.universe_context_set evm) in
          k (evm, unit_tt)

@@ -7,6 +7,13 @@ Open Scope list_scope. Open Scope string_scope. Open Scope sigma_scope.
 
 Reserved Notation "'tsl_ty_param'".
 
+Fixpoint refresh_universes (t : term) {struct t} :=
+  match t with
+  | tSort s => tSort []
+  | tProd na b t => tProd na b (refresh_universes t)
+  | tLetIn na b t' t => tLetIn na b t' (refresh_universes t)
+  | _ => t
+  end.
 
 (* if b it is the first translation, else the second *)
 Fixpoint tsl_rec (fuel : nat) (Σ : global_context) (E : tsl_table) (Γ : context) (b : bool) (t : term) {struct fuel}
@@ -82,7 +89,8 @@ with tsl_term  (fuel : nat) (Σ : global_context) (E : tsl_table) (Γ : context)
     | None => raise (TranslationNotFound (string_of_gref (ConstructRef i n)))
     end
   | t => match infer Σ Γ t with
-        | Checked typ => t1 <- tsl_rec fuel Σ E Γ true t ;;
+         | Checked typ => let typ := refresh_universes typ in
+                          t1 <- tsl_rec fuel Σ E Γ true t ;;
                         t2 <- tsl_rec fuel Σ E Γ false t ;;
                         typ1 <- tsl_rec fuel Σ E Γ true typ ;;
                         typ2 <- tsl_rec fuel Σ E Γ false typ ;;
@@ -227,7 +235,6 @@ Definition ΣE : option tsl_context :=
             ] in
   ret (Σ', E').
 
-
 Definition HasTwoElFstComponentᵗ : El (Tyᵗ →ᶠ Tyᵗ)
   := λᶠ (T : El Tyᵗ), mkTYPE (exists (x y : T.1), x = y -> False) (fun _ => unit).
 
@@ -249,42 +256,42 @@ Defined.
 Quote Definition equiv_ := Eval compute in equiv.
 
 
-(* Check "go". *)
+Check "go".
 
-(* Run TemplateProgram (match ΣE with *)
-(*                      | None => tmFail "bug: no tsl_ctx" *)
-(*                      | Some ΣE => *)
-(*                        ΣE <- TslParam ΣE "equiv" ;; *)
-(*                        (* tmPrint ΣE' ;; *) *)
-(*                        tmPrint "lo" ;; *)
-(*                        H <- ImplParam ΣE "notUnivalence" *)
-(*                        (exists A B : Type, (equiv A B) × exists P, P A × ((P B) -> False)) ;; *)
-(*                        (* (exists A : Type, (equiv A A)) ;; *) *)
-(*                        tmPrint "done" *)
-(*                      end). *)
-(* Check "proof". *)
-(* Next Obligation. *)
-(* simple refine (existᶠ · _ · _ · _ · _). *)
-(* exact (bool:Type; fun _=> unit:Type). *)
-(* simple refine (existᶠ · _ · _ · _ · _). *)
-(* exact (unit:Type; fun _ => bool:Type). *)
-(* simple refine (existᶠ · _ · _ · _ · _). *)
-(* - simple refine (existᶠ · _ · _ · _ · _). *)
-(*   exists π2. exact π1. *)
-(*   simple refine (existᶠ · _ · _ · _ · _). *)
-(*   exists π2. exact π1. *)
-(*   simple refine (existᶠ · _ · _ · _ · _); *)
-(*     cbn; unshelve econstructor; reflexivity. *)
-(* - simple refine (existᶠ · _ · _ · _ · _). *)
-(*   exact HasTwoElFstComponentᵗ. *)
-(*   simple refine (existᶠ · _ · _ · _ · _). *)
-(*   + cbn. refine (_; tt). exists true. exists false. *)
-(*     discriminate 1. *)
-(*   + compute. *)
-(*     split; (intro p; *)
-(*             destruct p as [p _]; *)
-(*             destruct p as [[] [[] p]]; *)
-(*             contradiction p; reflexivity). *)
-(* Defined. *)
+Run TemplateProgram (match ΣE with
+                     | None => tmFail "bug: no tsl_ctx"
+                     | Some ΣE =>
+                       ΣE <- TslParam ΣE "equiv" ;;
+                       (* tmPrint ΣE' ;; *)
+                       tmPrint "lo" ;;
+                       H <- ImplParam ΣE "notUnivalence"
+                       (exists A B : Type, (equiv A B) × exists P, P A × ((P B) -> False)) ;;
+                       (* (exists A : Type, (equiv A A)) ;; *)
+                       tmPrint "done"
+                     end).
+Check "proof".
+Next Obligation.
+simple refine (existᶠ · _ · _ · _ · _).
+exact (bool:Type; fun _=> unit:Type).
+simple refine (existᶠ · _ · _ · _ · _).
+exact (unit:Type; fun _ => bool:Type).
+simple refine (existᶠ · _ · _ · _ · _).
+- simple refine (existᶠ · _ · _ · _ · _).
+  exists π2. exact π1.
+  simple refine (existᶠ · _ · _ · _ · _).
+  exists π2. exact π1.
+  simple refine (existᶠ · _ · _ · _ · _);
+    cbn; unshelve econstructor; reflexivity.
+- simple refine (existᶠ · _ · _ · _ · _).
+  exact HasTwoElFstComponentᵗ.
+  simple refine (existᶠ · _ · _ · _ · _).
+  + cbn. refine (_; tt). exists true. exists false.
+    discriminate 1.
+  + compute.
+    split; (intro p;
+            destruct p as [p _];
+            destruct p as [[] [[] p]];
+            contradiction p; reflexivity).
+Defined.
 
-(* Check "ok!". *)
+Check "ok!".

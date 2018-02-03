@@ -196,6 +196,4 @@ well.
 Bugs
 ====
 
-Please report any bugs (or feature requests) on the github issue tracker:
-
-   https://github.com/Template-Coq/template-coq/issues
+Please report any bugs (or feature requests) on the github [issue tracker](https://github.com/Template-Coq/template-coq/issues)

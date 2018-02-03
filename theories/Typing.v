@@ -565,14 +565,14 @@ with typing_spine (Σ : global_context) (Γ : context) : term -> list term -> te
 
 
 Definition add_constraints_env u (Σ : global_context)
-  := (fst Σ, add_constraints u (snd Σ)).
+  := (fst Σ, add_global_constraints u (snd Σ)).
 
 Definition add_global_decl (decl : global_decl) (Σ : global_context) :=
   let univs := match decl with
                | ConstantDecl _ d => d.(cst_universes)
                | InductiveDecl _ d => d.(ind_universes)
                end
-  in (decl :: fst Σ, add_constraints univs (snd Σ)).
+  in (decl :: fst Σ, add_global_constraints univs (snd Σ)).
 
 Fixpoint decompose_program (p : program) (Σ : global_context) : global_context * term :=
   match p with

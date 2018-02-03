@@ -36,7 +36,7 @@ Definition add_node (l : Level.t) (G : t) : t
          match l with
          | Level.lProp | Level.lSet => snd G (* supposed to be yet here *)
          | Level.Var _ => Constraint.add (Level.set, Le, l) (snd G)
-         | Level.Level _ => Constraint.add (Level.set, Le, l) (snd G)
+         | Level.Level _ => Constraint.add (Level.set, Lt, l) (snd G)
          end in
      (levels, constraints).
 
@@ -54,11 +54,13 @@ Definition repr (uctx : universe_context) : UContext.t :=
   | Polymorphic_ctx c => c
   end.
 
-Definition add_constraints (uctx : universe_context) (G : t) : t
-  := let '(inst, cstrs) := repr uctx in
-     let G := List.fold_left (fun s l => add_node l s) inst G in
-     Constraint.fold add_constraint cstrs G.
-
+Definition add_global_constraints (uctx : universe_context) (G : t) : t
+  := match uctx with
+     | Monomorphic_ctx (inst, cstrs) =>
+       let G := List.fold_left (fun s l => add_node l s) inst G in
+       Constraint.fold add_constraint cstrs G
+     | Polymorphic_ctx _ => G
+     end.
 
 Section UGraph.
   Variable (φ : t).

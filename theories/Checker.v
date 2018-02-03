@@ -1,5 +1,5 @@
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
-From Template Require Import Template univ Ast Induction LiftSubst Typing monad_utils.
+From Template Require Import Template univ Ast Induction LiftSubst Typing monad_utils utils.
 Import MonadNotation.
 
 Set Asymmetric Patterns.
@@ -359,6 +359,26 @@ Inductive type_error :=
 | IllFormedFix (m : mfixpoint term) (i : nat)
 | UnsatisfiedConstraints (c : Constraint.t)
 | NotEnoughFuel (n : nat).
+
+Definition string_of_nat (n : nat) := Template.utils.string_of_int n.
+
+Definition string_of_type_error (e : type_error) : string :=
+  match e with
+  | UnboundRel n => "Unboound rel " ++ string_of_nat n
+  | UnboundVar id => "Unbound var " ++ id
+  | UnboundMeta m => "Unbound meta " ++ string_of_nat m
+  | UnboundEvar ev => "Unbound evar " ++ string_of_nat ev
+  | UndeclaredConstant c => "Undeclared constant " ++ c
+  | UndeclaredInductive c => "Undeclared inductive " ++ (inductive_mind c)
+  | UndeclaredConstructor c i => "Undeclared inductive " ++ (inductive_mind c)
+  | NotConvertible Γ t u t' u' => "Terms are not convertible"
+  | NotASort t => "Not a sort"
+  | NotAProduct t t' => "Not a product"
+  | NotAnInductive t => "Not an inductive"
+  | IllFormedFix m i => "Ill-formed recursive definition"
+  | UnsatisfiedConstraints c => "Unsatisfied constraints"
+  | NotEnoughFuel n => "Not enough fuel"
+  end.
 
 Inductive typing_result (A : Type) :=
 | Checked (a : A)

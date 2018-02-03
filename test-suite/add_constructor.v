@@ -34,6 +34,7 @@ Definition add_ctor (mind : minductive_decl) (ind0 : inductive) (idc : ident) (c
   : minductive_decl
   := let i0 := inductive_ind ind0 in
      {| ind_npars := mind.(ind_npars) ;
+        ind_universes := mind.(ind_universes) ;
         ind_bodies := map_i (fun (i : nat) (ind : inductive_body) =>
                          {| ind_name := tsl_ident ind.(ind_name) ;
                             ind_type  := ind.(ind_type) ;

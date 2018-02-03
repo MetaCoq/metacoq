@@ -292,7 +292,7 @@ struct
   let tConstraintadd = Universes.constr_of_global (Coqlib.find_reference "template coq bug" (ext_pkg_univ "Constraint") "add")
   let tmake_univ_constraint = resolve_symbol pkg_univ "make_univ_constraint"
   let tinit_graph = resolve_symbol pkg_ugraph "init_graph"
-  let tadd_constraints = resolve_symbol pkg_ugraph  "add_constraints"
+  let tadd_global_constraints = resolve_symbol pkg_ugraph  "add_global_constraints"
 
   let (tdef,tmkdef) = (r_reify "def", r_reify "mkdef")
   let (tLocalDef,tLocalAssum,_tlocal_entry) = (r_reify "LocalDef", r_reify "LocalAssum", r_reify "local_entry")
@@ -467,7 +467,7 @@ struct
     let inst' = quote_univ_instance Univ.Instance.empty in
     let const' = quote_univ_constraints (UGraph.constraints_of_universes g) in
     let uctx = Term.mkApp (tUContextmake, [|inst' ; const'|]) in
-    Term.mkApp (tadd_constraints, [|uctx; tinit_graph|])
+    Term.mkApp (tadd_global_constraints, [|Term.mkApp (tMonomorphic_ctx, [| uctx |]); tinit_graph|])
 
   let quote_sort s =
     quote_universe (Sorts.univ_of_sort s)

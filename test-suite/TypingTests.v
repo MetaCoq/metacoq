@@ -12,6 +12,7 @@ Require Import Template.Typing.
 Require Import Template.Checker.
 Require Import Template.Ast.
 Require Import Template.Template.
+Require Import Template.utils.
 
 Quote Recursively Definition idq := @Coq.Classes.Morphisms.Proper.
 
@@ -54,7 +55,7 @@ Definition test_reduction (p : program) :=
 
 Definition string_of_env_error e :=
   match e with
-  | IllFormedDecl s _ => ("IllFormedDecl " ++ s)%string
+  | IllFormedDecl s e => ("IllFormedDecl " ++ s ++ "\nType error: " ++ string_of_type_error e)%string
   | AlreadyDeclared s => ("Alreadydeclared " ++ s)%string
   end.
 
@@ -97,6 +98,23 @@ End Test2.
 
 Module Test3.
   Definition term := (id 0).
+(** Check reduction *)
+Quote Recursively Definition ast := term.
+Make Definition normal_form := ltac:(interp_red ast).
+
+Definition normal_form' := Eval vm_compute in normal_form.
+Print normal_form'.
+Check convertible term normal_form.
+
+(** Check typing *)
+Eval vm_compute in (out_check (typecheck_program ast)).
+
+
+Make Definition inferred_type := ltac:(interp_infer ast).
+Definition inferred_type' := Eval cbv delta in inferred_type.
+Print inferred_type'.
+Check convertible ltac:(term_type term) inferred_type.
+
   Load "test_term.v".
 End Test3.
 

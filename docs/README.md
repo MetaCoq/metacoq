@@ -159,8 +159,10 @@ How to Use
 
 Check `test-suite/demo.v` for examples.
 
-You must add the theories directory to your Coq load path with the prefix
-Template. This can be done on the command line by adding:
+Unless you installed the library, you must add the theories directory to
+your Coq load path with the prefix Template. This can be done on the
+command line by adding:
+
 ```
 coqc ... -R <path-to-theories> -as Template ...
 ```

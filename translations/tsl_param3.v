@@ -1,4 +1,4 @@
-(* -*- coq-prog-args: ("-type-in-type" "-top" "Translations.tsl_param") -*-  *)
+(* -*- coq-prog-args: ("-type-in-type" "-top" "Translations.tsl_param3") -*-  *)
 Require Import Template.All.
 From Translations Require Import translation_utils sigma.
 Import String Lists.List.ListNotations MonadNotation.
@@ -213,7 +213,7 @@ Quote Recursively Definition false_prog := @False.
 Definition sigma_decl := Eval compute in
       extract_mind_decl_from_program "Translations.sigma.sigma" sigma_prog.
 Definition eq_decl := Eval compute in
-      extract_mind_decl_from_program "Translations.tsl_param.eq" eq_prog.
+      extract_mind_decl_from_program "Translations.tsl_param3.eq" eq_prog.
 Definition false_decl := Eval compute in
       extract_mind_decl_from_program "Coq.Init.Logic.False" false_prog.
 
@@ -223,14 +223,14 @@ Definition ΣE : option tsl_context :=
   ed <- eq_decl ;;
   fd <- false_decl ;;
   let Σ' := add_global_decl (InductiveDecl "Coq.Init.Logic.False" fd) (
-            add_global_decl (InductiveDecl "Translations.tsl_param.eq" ed) (
+            add_global_decl (InductiveDecl "Translations.tsl_param3.eq" ed) (
             add_global_decl (InductiveDecl "Translations.sigma.sigma" sd)
             ([], init_graph))) in
   let E' := [(IndRef (mkInd "Translations.sigma.sigma" 0),
               tConst "sigmaᶠ" []);
              (ConstructRef (mkInd "Translations.sigma.sigma" 0) 0,
               tConst "existᶠ" []);
-             (IndRef (mkInd "Translations.tsl_param.eq" 0), tConst "eqᶠ" []);
+             (IndRef (mkInd "Translations.tsl_param3.eq" 0), tConst "eqᶠ" []);
              (IndRef (mkInd "Coq.Init.Logic.False" 0), tConst "Falseᶠ" [])
             ] in
   ret (Σ', E').

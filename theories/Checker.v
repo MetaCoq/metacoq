@@ -220,7 +220,7 @@ Section Conversion.
     red1 <- reduce_stack nodelta_flags (fst Σ) Γ n t1 l1 ;;
     red2 <- reduce_stack nodelta_flags (fst Σ) Γ n t2 l2 ;;
     let '(t1,l1) := red1 in
-    let '(t2,l2) := red1 in
+    let '(t2,l2) := red2 in
     isconv_prog n leq Γ t1 l1 t2 l2
     end
   with isconv_prog (n : nat) (leq : conv_pb)

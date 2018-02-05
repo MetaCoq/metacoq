@@ -348,6 +348,16 @@ Proof.
   rewrite <- e. exact h.
 Defined.
 
+Lemma meta_eqctx_conv :
+  forall {Σ Γ Δ t1 t2 A},
+    Σ ;;; Γ |-i t1 = t2 : A ->
+    Γ = Δ ->
+    Σ ;;; Δ |-i t1 = t2 : A.
+Proof.
+  intros Σ Γ Δ t1 t2 A h e.
+  rewrite <- e. exact h.
+Defined.
+
 Lemma typing_wf :
   forall {Σ Γ t T},
     Σ ;;; Γ |-i t : T ->
@@ -403,6 +413,10 @@ Tactic Notation "cheat" := apply cheating.
 Fixpoint type_lift {Σ Γ Δ Ξ t A} (h : Σ ;;; Γ ,,, Ξ |-i t : A) :
   wf Σ (Γ ,,, Δ) ->
   Σ ;;; Γ ,,, Δ ,,, lift_context #|Δ| Ξ |-i lift #|Δ| #|Ξ| t : lift #|Δ| #|Ξ| A
+
+with cong_lift {Σ Γ Δ Ξ t1 t2 A} (h : Σ ;;; Γ ,,, Ξ |-i t1 = t2 : A) :
+  wf Σ (Γ ,,, Δ) ->
+  Σ ;;; Γ ,,, Δ ,,, lift_context #|Δ| Ξ |-i lift #|Δ| #|Ξ| t1 = lift #|Δ| #|Ξ| t2 : lift #|Δ| #|Ξ| A
 
 with wf_lift {Σ Γ Δ Ξ} (h : wf Σ (Γ ,,, Ξ)) :
   wf Σ (Γ ,,, Δ) ->
@@ -566,11 +580,56 @@ Proof.
       - eapply type_conv.
         + now apply IHh1.
         + now apply IHh2.
-        + (* Do we seriously need to prove cong_lift as well? *)
-          cheat.
+        + change (sSort s) with (lift #|Δ| #|Ξ| (sSort s)).
+          eapply cong_lift ; eassumption.
     }
 
-  - cheat.
+  (* cong_lift *)
+  - { intro hwf. dependent destruction h.
+      - apply eq_reflexivity. apply type_lift ; assumption.
+      - apply eq_symmetry. eapply cong_lift ; assumption.
+      - eapply eq_transitivity.
+        + eapply cong_lift ; eassumption.
+        + apply cong_lift ; assumption.
+      - (* Need to deal with substitutions. *)
+        cheat.
+      - cheat.
+      - cbn. eapply eq_TransportRefl.
+        + change (sSort s) with (lift #|Δ| #|Ξ| (sSort s)).
+          apply type_lift ; assumption.
+        + apply type_lift ; assumption.
+      - eapply eq_conv.
+        + eapply cong_lift ; eassumption.
+        + match goal with
+          | |- _ ;;; _ |-i _ = _ : ?S =>
+            change S with (lift #|Δ| #|Ξ| S)
+          end.
+          eapply cong_lift ; eassumption.
+      - cbn. eapply cong_Prod.
+        + match goal with
+          | |- _ ;;; _ |-i _ = _ : ?S =>
+            change S with (lift #|Δ| #|Ξ| S)
+          end.
+          eapply cong_lift ; eassumption.
+        + match goal with
+          | |- _ ;;; _ |-i _ = _ : ?T =>
+            change T with (lift #|Δ| (S #|Ξ|) T)
+          end.
+          refine (cong_lift Σ Γ Δ (Ξ ,, svass n1 A1) _ _ _ _ _).
+          all: assumption.
+      - cheat.
+      - cheat.
+      - cheat.
+      - cheat.
+      - cheat.
+      - cheat.
+      - cheat.
+      - cheat.
+    }
+
+  (* wf_lift *)
+  - { cheat. }
+
     Unshelve. all:cheat.
 Defined.
 

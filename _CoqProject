@@ -24,3 +24,4 @@ theories/XTyping.v
 theories/PackLifts.v
 theories/Translation.v
 theories/FinalTranslation.v
+theories/Example.v

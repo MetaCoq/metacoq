@@ -410,15 +410,15 @@ Defined.
 Axiom cheating : forall {A}, A.
 Tactic Notation "cheat" := apply cheating.
 
-Fixpoint type_lift {Σ Γ Δ Ξ t A} (h : Σ ;;; Γ ,,, Ξ |-i t : A) :
+Fixpoint type_lift {Σ Γ Δ Ξ t A} (h : Σ ;;; Γ ,,, Ξ |-i t : A) {struct h} :
   wf Σ (Γ ,,, Δ) ->
   Σ ;;; Γ ,,, Δ ,,, lift_context #|Δ| Ξ |-i lift #|Δ| #|Ξ| t : lift #|Δ| #|Ξ| A
 
-with cong_lift {Σ Γ Δ Ξ t1 t2 A} (h : Σ ;;; Γ ,,, Ξ |-i t1 = t2 : A) :
+with cong_lift {Σ Γ Δ Ξ t1 t2 A} (h : Σ ;;; Γ ,,, Ξ |-i t1 = t2 : A) {struct h} :
   wf Σ (Γ ,,, Δ) ->
   Σ ;;; Γ ,,, Δ ,,, lift_context #|Δ| Ξ |-i lift #|Δ| #|Ξ| t1 = lift #|Δ| #|Ξ| t2 : lift #|Δ| #|Ξ| A
 
-with wf_lift {Σ Γ Δ Ξ} (h : wf Σ (Γ ,,, Ξ)) :
+with wf_lift {Σ Γ Δ Ξ} (h : wf Σ (Γ ,,, Ξ)) {struct h} :
   wf Σ (Γ ,,, Δ) ->
   wf Σ (Γ ,,, Δ ,,, lift_context #|Δ| Ξ)
 .
@@ -617,20 +617,101 @@ Proof.
           end.
           refine (cong_lift Σ Γ Δ (Ξ ,, svass n1 A1) _ _ _ _ _).
           all: assumption.
+      - cbn. eapply cong_Lambda.
+        + match goal with
+          | |- _ ;;; _ |-i _ = _ : ?S =>
+            change S with (lift #|Δ| #|Ξ| S)
+          end.
+          eapply cong_lift ; eassumption.
+        + match goal with
+          | |- _ ;;; _ |-i _ = _ : ?T =>
+            change T with (lift #|Δ| (S #|Ξ|) T)
+          end.
+          refine (cong_lift Σ Γ Δ (Ξ ,, svass n1 A1) _ _ _ _ _).
+          all: eassumption.
+        + refine (cong_lift Σ Γ Δ (Ξ ,, svass n1 A1) _ _ _ _ _).
+          all: eassumption.
       - cheat.
+      - cbn. eapply cong_Eq.
+        + match goal with
+          | |- _ ;;; _ |-i _ = _ : ?S =>
+            change S with (lift #|Δ| #|Ξ| S)
+          end.
+          eapply cong_lift ; eassumption.
+        + eapply cong_lift ; eassumption.
+        + eapply cong_lift ; eassumption.
+      - cbn. eapply cong_Refl.
+        + match goal with
+          | |- _ ;;; _ |-i _ = _ : ?S =>
+            change S with (lift #|Δ| #|Ξ| S)
+          end.
+          eapply cong_lift ; eassumption.
+        + eapply cong_lift ; eassumption.
       - cheat.
-      - cheat.
-      - cheat.
-      - cheat.
-      - cheat.
-      - cheat.
-      - cheat.
+      - cbn. eapply cong_Transport.
+        + match goal with
+          | |- _ ;;; _ |-i _ = _ : ?S =>
+            change S with (lift #|Δ| #|Ξ| S)
+          end.
+          eapply cong_lift ; eassumption.
+        + match goal with
+          | |- _ ;;; _ |-i _ = _ : ?S =>
+            change S with (lift #|Δ| #|Ξ| S)
+          end.
+          eapply cong_lift ; eassumption.
+        + match goal with
+          | |- _ ;;; _ |-i _ = _ : ?S =>
+            change S with (lift #|Δ| #|Ξ| (sEq (sSort s) A1 B1))
+          end.
+          eapply cong_lift ; eassumption.
+        + eapply cong_lift ; eassumption.
+      - cbn. eapply cong_Heq.
+        + match goal with
+          | |- _ ;;; _ |-i _ = _ : ?S =>
+            change S with (lift #|Δ| #|Ξ| S)
+          end.
+          eapply cong_lift ; eassumption.
+        + match goal with
+          | |- _ ;;; _ |-i _ = _ : ?S =>
+            change S with (lift #|Δ| #|Ξ| S)
+          end.
+          eapply cong_lift ; eassumption.
+        + eapply cong_lift ; eassumption.
+        + eapply cong_lift ; eassumption.
+      - cbn. eapply cong_Pack.
+        + match goal with
+          | |- _ ;;; _ |-i _ = _ : ?S =>
+            change S with (lift #|Δ| #|Ξ| S)
+          end.
+          eapply cong_lift ; eassumption.
+        + match goal with
+          | |- _ ;;; _ |-i _ = _ : ?S =>
+            change S with (lift #|Δ| #|Ξ| S)
+          end.
+          eapply cong_lift ; eassumption.
     }
 
   (* wf_lift *)
-  - { cheat. }
+  - { intro hwf.
+      destruct Ξ.
+      - cbn. assumption.
+      - dependent destruction h.
+        cbn. econstructor.
+        + (* apply wf_lift ; assumption. *)
+          (* Apparently I can't apply the induction hypothesis here. *)
+          cheat.
+        + destruct s0 as [s hs].
+          exists s. cbn. change (sSort s) with (lift #|Δ| #|Ξ| (sSort s)).
+          (* apply type_lift ; assumption. *)
+          (* Problem: For it to work, we need to have s as an assumption,
+             not as a sigma.
+           *)
+          cheat.
+    }
 
-    Unshelve. all:cheat.
+    Unshelve.
+    all: try exact nAnon.
+    all:cheat.
 Defined.
 
 Corollary typing_lift01 :

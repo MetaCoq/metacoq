@@ -947,9 +947,9 @@ Proof.
   intros hΓ hA.
   split.
   - constructor ; now destruct hA as [[[? ?] ?] ?].
-  - constructor.
+  - econstructor.
     + now destruct hΓ.
-    + exists s'. now destruct hA as [[[? ?] ?] ?].
+    + now destruct hA as [[[? ?] ?] ?].
 Defined.
 
 Definition trans_Prod {Σ Γ n A B s1 s2 Γ' A' B'} :

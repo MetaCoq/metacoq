@@ -230,9 +230,9 @@ with wf (Σ : global_context) : scontext -> Type :=
 | wf_nil :
     wf Σ nil
 
-| wf_snoc Γ x A :
+| wf_snoc s Γ x A :
     wf Σ Γ ->
-    (∑ s, Σ ;;; Γ |-i A : sSort s) ->
+    Σ ;;; Γ |-i A : sSort s ->
     wf Σ (Γ ,, svass x A)
 
 with eq_term (Σ : global_context) : scontext -> sterm -> sterm -> sterm -> Type :=
@@ -700,12 +700,9 @@ Proof.
         + (* apply wf_lift ; assumption. *)
           (* Apparently I can't apply the induction hypothesis here. *)
           cheat.
-        + destruct s0 as [s hs].
-          exists s. cbn. change (sSort s) with (lift #|Δ| #|Ξ| (sSort s)).
+        + instantiate (1 := s0). cbn. change (sSort s0) with (lift #|Δ| #|Ξ| (sSort s0)).
           (* apply type_lift ; assumption. *)
-          (* Problem: For it to work, we need to have s as an assumption,
-             not as a sigma.
-           *)
+          (* Still a problem it seems. *)
           cheat.
     }
 
@@ -724,7 +721,7 @@ Proof.
   apply (@type_lift _ _ [ svass x B ] nil _ _ ht).
   econstructor.
   - eapply typing_wf. eassumption.
-  - eexists. eassumption.
+  - eassumption.
 Defined.
 
 Lemma typing_lift02 :
@@ -795,7 +792,6 @@ Proof.
   dependent induction Γ.
   - constructor.
   - dependent destruction h.
-    destruct s.
     econstructor.
     + now apply IHΓ.
     + now apply eq_reflexivity.
@@ -839,7 +835,7 @@ Proof.
   - revert n isdecl. induction w ; intros n isdecl.
     + cbn in isdecl. easy.
     + destruct n.
-      * cbn. destruct s as [s h].
+      * cbn.
         exists s. change (sSort s) with (lift0 1 (sSort s)).
         eapply typing_lift01.
         -- assumption.
@@ -847,11 +843,10 @@ Proof.
       * assert (isdecl' : n < #|Γ|).
         -- auto with arith.
         -- destruct (IHw n isdecl') as [s' hh].
-           destruct s as [s hs].
            exists s'. change (sSort s') with (lift0 1 (sSort s')).
            (* Take out as a lemma? *)
            assert (eq : forall t, lift0 (S (S n)) t = lift0 1 (lift0 (S n) t)).
-           { intro t. rewrite lift_lift. reflexivity. }
+           { intro t'. rewrite lift_lift. reflexivity. }
            rewrite eq. clear eq.
            eapply typing_lift01.
            ++ erewrite eq_safe_nth. eassumption.
@@ -1037,7 +1032,7 @@ Proof.
            eapply type_conv ; [ eapply type_Rel | .. ].
            ++ econstructor.
               ** now apply (typing_wf t7).
-              ** eexists ; eassumption.
+              ** eassumption.
            ++ instantiate (1 := s1).
               change (sSort s1) with (lift0 1 (sSort s1)).
               eapply typing_lift01 ; eassumption.

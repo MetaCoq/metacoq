@@ -69,9 +69,11 @@ Quote Definition eo_syntax := Eval compute in even.
 
 Quote Definition add'_syntax := Eval compute in add'.
 
-(** Reflecting definitions **)
-Make Definition zero_from_syntax := (Ast.tConstruct (Ast.mkInd "Coq.Init.Datatypes.nat" 0) 0).
 
+(** Reflecting definitions **)
+Make Definition zero_from_syntax := (Ast.tConstruct (Ast.mkInd "Coq.Init.Datatypes.nat" 0) 0 []).
+
+(* the function unquote_kn in reify.ml4 is not yet implemented *)
 Make Definition add_from_syntax := ltac:(let t:= eval compute in add_syntax in exact t).
 
 Make Definition eo_from_syntax :=
@@ -136,7 +138,6 @@ Definition mut_i : mutual_inductive_entry :=
   mind_entry_finite := Finite;
   mind_entry_params := [];
   mind_entry_inds := [one_i; one_i2];
-  mind_entry_polymorphic := false;
   mind_entry_universes := Monomorphic_ctx ([], Constraint.empty);
   mind_entry_private := None;
 |}.
@@ -164,7 +165,6 @@ Definition mut_list_i : mutual_inductive_entry :=
   mind_entry_finite := Finite;
   mind_entry_params := [("A", LocalAssum (tSort Universe.type0))];
   mind_entry_inds := [one_list_i];
-  mind_entry_polymorphic := false;
   mind_entry_universes := Monomorphic_ctx ([], Constraint.empty);
   mind_entry_private := None;
 |}.
@@ -190,7 +190,6 @@ Definition mut_pt_i : mutual_inductive_entry :=
   mind_entry_finite := BiFinite;
   mind_entry_params := [("A", LocalAssum (tSort Universe.type0))];
   mind_entry_inds := [one_pt_i];
-  mind_entry_polymorphic := false;
   mind_entry_universes := Monomorphic_ctx ([], Constraint.empty);
   mind_entry_private := None;
 |}.
@@ -371,7 +370,6 @@ Make Definition myProp := (tSort [(Level.lProp, false)]).
 Make Definition myProp' := Eval compute in (tSort Universe.type0m).
 Make Definition mySucProp := (tSort [(Level.lProp, true)]).
 Make Definition mySet := (tSort [(Level.lSet, false)]).
-Print Universes.
 
 (** Cofixpoints *)
 CoInductive streamn : Set :=

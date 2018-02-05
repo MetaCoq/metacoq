@@ -101,7 +101,7 @@ End Level.
 Require FSets.FSetWeakList.
 Require FSets.FMapWeakList.
 Module LevelDecidableType.
-   Definition t : Type := Level.t.
+   Definition t : Set := Level.t.
    Definition eq : t -> t -> Prop := eq.
    Definition eq_refl : forall x : t, eq x x := @eq_refl _.
    Definition eq_sym : forall x y : t, eq x y -> eq y x := @eq_sym _.
@@ -276,7 +276,7 @@ Definition make_univ_constraint : universe_level -> constraint_type -> universe_
 
 Require MSets.MSetWeakList.
 Module ConstraintTypeDec.
-  Definition t := univ_constraint.
+  Definition t : Set := univ_constraint.
   Definition eq : t -> t -> Prop := eq.
   Definition eq_equiv : RelationClasses.Equivalence eq := _.
   Definition eq_dec : forall x y : t, {eq x y} + {~ eq x y}.
@@ -285,7 +285,9 @@ Module ConstraintTypeDec.
 End ConstraintTypeDec.
 Module Constraint := MSets.MSetWeakList.Make ConstraintTypeDec.
 
-Definition constraints := Constraint.t.  (* list univ_constraint *)
+(** Needs to be in Type because template polymorphism of MSets does not allow setting
+    the lowest universe *)
+Definition constraints : Type := Constraint.t.  (* list univ_constraint *)
 
 (* val empty_constraint : constraints *)
 (* val union_constraint : constraints -> constraints -> constraints *)
@@ -322,7 +324,7 @@ Definition constraint_function A : Type := A -> A -> constraints -> constraints.
 
 Module Instance.
 
-  Definition t := list Level.t.
+  Definition t : Set := list Level.t.
   (** A universe instance represents a vector of argument universes
       to a polymorphic definition (constant, inductive or constructor). *)
 

@@ -13,6 +13,16 @@ let quote_string s =
     else aux (s.[i] :: acc) (i - 1)
   in aux [] (String.length s - 1)
 
+let unquote_string l =
+  let buf = Bytes.create (List.length l) in
+  let rec aux i = function
+    | [] -> ()
+    | c :: cs ->
+      Bytes.set buf i c; aux (succ i) cs
+  in
+  aux 0 l;
+  Bytes.to_string buf
+
 module TemplateASTQuoter =
 struct
   type t = term
@@ -31,10 +41,11 @@ struct
   type quoted_univ_instance = Univ0.Instance.t
   type quoted_univ_constraints = Univ0.constraints
   type quoted_univ_context = Univ0.universe_context
+  type quoted_inductive_universes = quoted_univ_context
   type quoted_mind_params = (ident * local_entry) list
   type quoted_ind_entry =
     quoted_ident * t * quoted_bool * quoted_ident list * t list
-  type quoted_definition_entry = t * t option
+  type quoted_definition_entry = t * t option * quoted_univ_context
   type quoted_mind_entry = mutual_inductive_entry
   type quoted_mind_finiteness = recursivity_kind
   type quoted_entry = (constant_entry, quoted_mind_entry) sum option
@@ -73,10 +84,6 @@ struct
                        let b' = quote_bool (Univ.Universe.exists (fun (l2,i) -> Univ.Level.equal l l2 && i = 1) s) in
                        (l', b'))
              levels
-
-  let quote_univ_instance u =
-    let arr = Univ.Instance.to_array u in
-    CArray.map_to_list quote_level arr
 
   let quote_sort s =
     quote_universe (Sorts.univ_of_sort s)
@@ -124,7 +131,8 @@ struct
     ((quote_level l, quote_constraint_type ct), quote_level l')
 
   let quote_univ_instance (i : Univ.Instance.t) : quoted_univ_instance =
-    CArray.map_to_list quote_level (Univ.Instance.to_array i)
+    let arr = Univ.Instance.to_array i in
+    CArray.map_to_list quote_level arr
 
   let quote_univ_constraints (c : Univ.Constraint.t) : quoted_univ_constraints =
     List.map quote_univ_constraint (Univ.Constraint.elements c)
@@ -134,11 +142,20 @@ struct
     let constraints = Univ.UContext.constraints uctx in
     Univ0.Monomorphic_ctx (quote_univ_instance levels, quote_univ_constraints constraints)
 
-  let quote_abstract_univ_context (uctx : Univ.AUContext.t) : quoted_univ_context =
-    let uctx = Univ.AUContext.repr uctx in
+  let quote_abstract_univ_context_aux uctx : quoted_univ_context =
     let levels = Univ.UContext.instance uctx in
     let constraints = Univ.UContext.constraints uctx in
     Univ0.Polymorphic_ctx (quote_univ_instance levels, quote_univ_constraints constraints)
+
+  let quote_abstract_univ_context (uctx : Univ.AUContext.t) =
+    let uctx = Univ.AUContext.repr uctx in
+    quote_abstract_univ_context_aux uctx
+
+  let quote_inductive_universes = function
+    | Entries.Monomorphic_ind_entry ctx -> quote_univ_context ctx
+    | Entries.Polymorphic_ind_entry ctx -> quote_abstract_univ_context_aux ctx
+    | Entries.Cumulative_ind_entry ctx ->
+      quote_abstract_univ_context_aux (Univ.CumulativityInfo.univ_context ctx)
 
   let rec seq f t =
     if f < t then
@@ -196,46 +213,132 @@ struct
 
   let mkIn c = PIn c
 
-  (* let quote_mind_finiteness = function *)
-  (*   | Decl_kinds.Finite -> Finite *)
-  (*   | Decl_kinds.CoFinite -> CoFinite *)
-  (*   | Decl_kinds.BiFinite -> BiFinite *)
+  let quote_mind_finiteness = function
+    | Decl_kinds.Finite -> Finite
+    | Decl_kinds.CoFinite -> CoFinite
+    | Decl_kinds.BiFinite -> BiFinite
 
-  (* let quote_mind_params l = *)
-  (*   let map (id, body) = *)
-  (*     match body with *)
-  (*     | Left ty -> (id, LocalAssum ty) *)
-  (*     | Right trm -> (id, LocalDef trm) *)
-  (*   in List.map map l *)
+  let quote_mind_params l =
+    let map (id, body) =
+      match body with
+      | Left ty -> (id, LocalAssum ty)
+      | Right trm -> (id, LocalDef trm)
+    in List.map map l
 
-  (* let quote_one_inductive_entry (id, ar, b, consnames, constypes) = *)
-  (*   { mind_entry_typename = id; *)
-  (*     mind_entry_arity = ar; *)
-  (*     mind_entry_template = b; *)
-  (*     mind_entry_consnames = consnames; *)
-  (*     mind_entry_lc = constypes } *)
+  let quote_one_inductive_entry (id, ar, b, consnames, constypes) =
+    { mind_entry_typename = id;
+      mind_entry_arity = ar;
+      mind_entry_template = b;
+      mind_entry_consnames = consnames;
+      mind_entry_lc = constypes }
 
-  (* let quote_mutual_inductive_entry (mf, mp, is, poly, univs) = *)
-  (*   { mind_entry_record = None; *)
-  (*     mind_entry_finite = mf; *)
-  (*     mind_entry_params = mp; *)
-  (*     mind_entry_inds = List.map quote_one_inductive_entry is; *)
-  (*     mind_entry_polymorphic = poly; *)
-  (*     mind_entry_universes = univs; *)
-  (*     mind_entry_private = None } *)
+  let quote_mutual_inductive_entry (mf, mp, is, univs) =
+    { mind_entry_record = None;
+      mind_entry_finite = mf;
+      mind_entry_params = mp;
+      mind_entry_inds = List.map quote_one_inductive_entry is;
+      mind_entry_universes = univs;
+      mind_entry_private = None }
 
-  (* let quote_entry e = *)
-  (*   match e with *)
-  (*   | Some (Left (ty, body)) -> *)
-  (*      let entry = match body with *)
-  (*       | None -> ParameterEntry ty *)
-  (*       | Some b -> DefinitionEntry { definition_entry_type = ty; *)
-  (*                                     definition_entry_body = b } *)
-  (*      in Some (Left entry) *)
-  (*   | Some (Right mind_entry) -> *)
-  (*      Some (Right mind_entry) *)
-  (*   | None -> None *)
+  let quote_entry e =
+    match e with
+    | Some (Left (ty, body, ctx)) ->
+       let entry = match body with
+         | None -> ParameterEntry { parameter_entry_type = ty;
+                                    parameter_entry_universes = ctx }
+        | Some b -> DefinitionEntry { definition_entry_type = ty;
+                                      definition_entry_body = b;
+                                      definition_entry_universes = ctx;
+                                      definition_entry_opaque = false }
+       in Some (Left entry)
+    | Some (Right mind_entry) ->
+       Some (Right mind_entry)
+    | None -> None
+
+  let inspectTerm (t : term) :  (term, quoted_int, quoted_ident, quoted_name, quoted_sort, quoted_cast_kind, quoted_kernel_name, quoted_inductive, quoted_univ_instance, quoted_proj) structure_of_term =
+   match t with
+  | Coq_tRel n -> ACoq_tRel n
+    (* so on *)
+  | _ ->  failwith "not yet implemented"
+
+
+
+
+  let unquote_ident (qi: quoted_ident) : Id.t =
+    let s = unquote_string qi in
+    Id.of_string s
+
+  let unquote_name (q: quoted_name) : Name.t =
+    match q with
+    | Coq_nAnon -> Anonymous
+    | Coq_nNamed n -> Name (unquote_ident n)
+
+  let rec unquote_int (q: quoted_int) : int =
+    match q with
+    | Datatypes.O -> 0
+    | Datatypes.S x -> succ (unquote_int x)
+
+  let unquote_bool (q : quoted_bool) : bool = q
+
+  (* val unquote_sort : quoted_sort -> Sorts.t *)
+  (* val unquote_sort_family : quoted_sort_family -> Sorts.family *)
+  let unquote_cast_kind (q : quoted_cast_kind) : Constr.cast_kind =
+    match q with
+    | VmCast -> VMcast
+    | NativeCast -> NATIVEcast
+    | Cast -> DEFAULTcast
+    | RevertCast -> REVERTcast
+
+  let unquote_kn (q: quoted_kernel_name) : Libnames.qualid =
+    let s = unquote_string q in
+    Libnames.qualid_of_string s
+
+  let unquote_inductive (q: quoted_inductive) : Names.inductive =
+    let { inductive_mind = na; inductive_ind = i } = q in
+    let comps = CString.split '.' (unquote_string na) in
+    let comps = List.map Id.of_string comps in
+    let id, dp = CList.sep_last comps in
+    let dp = DirPath.make dp in
+    let mind = Globnames.encode_mind dp id in
+    (mind, unquote_int i)
+
+  (*val unquote_univ_instance :  quoted_univ_instance -> Univ.Instance.t *)
+  let unquote_proj (q : quoted_proj) : (quoted_inductive * quoted_int * quoted_int) =
+    let (ind, ps), idx = q in
+    (ind, ps, idx)
+
+  let unquote_level (trm : Univ0.Level.t) : Univ.Level.t =
+    match trm with
+    | Univ0.Level.Coq_lProp -> Univ.Level.prop
+    | Univ0.Level.Coq_lSet -> Univ.Level.set
+    | Univ0.Level.Level s ->
+      let s = unquote_string s in
+      let comps = CString.split '.' s in
+      let last, dp = CList.sep_last comps in
+      let dp = DirPath.make (List.map Id.of_string comps) in
+      let idx = int_of_string last in
+      Univ.Level.make dp idx
+    | Univ0.Level.Var n -> Univ.Level.var (unquote_int n)
+
+  let unquote_level_expr (trm : Univ0.Level.t) (b : quoted_bool) : Univ.Universe.t =
+    let l = unquote_level trm in
+    let u = Univ.Universe.make l in
+    if b then Univ.Universe.super u
+    else u
+
+  let unquote_universe evd (trm : Univ0.Universe.t) =
+    match trm with
+    | [] -> Evd.new_univ_variable (Evd.UnivFlexible false) evd
+    | (l,b)::q ->
+      evd, List.fold_left (fun u (l,b) ->
+          let u' = unquote_level_expr l b in Univ.Universe.sup u u')
+        (unquote_level_expr l b) q
+
+  let print_term  (u: t) : Pp.std_ppcmds = failwith "not yet implemented"
+
 end
+
+
 
 module TemplateASTReifier = Reify(TemplateASTQuoter)
 

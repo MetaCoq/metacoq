@@ -71,7 +71,6 @@ Proof.
             mind_entry_finite := Finite; (* inductive *)
             mind_entry_params := _;
             mind_entry_inds := _;
-            mind_entry_polymorphic := _;
             mind_entry_universes := decl.(ind_universes);
             mind_entry_private := None |}.
   - refine (match List.hd_error decl.(ind_bodies) with
@@ -96,12 +95,4 @@ Proof.
     refine (List.map (fun x => fst (fst x)) ind_ctors).
     refine (List.map (fun x => remove_arity decl.(ind_npars)
                                                 (snd (fst x))) ind_ctors).
-  - refine (let '(levels, constraints) := uGraph.repr decl.(ind_universes) in
-            let not_var := fun l => match l with
-                                 | Level.Var _  => false
-                                 | _ => true
-                                 end in
-            List.forallb not_var levels
-           && Constraint.for_all (fun '((l, _), l') => not_var l && not_var l')
-           constraints).
 Defined.

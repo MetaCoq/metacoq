@@ -112,14 +112,14 @@ Inductive recursivity_kind :=
 Record definition_entry := {
   definition_entry_type : term;
   definition_entry_body : term;
-  definition_entry_polymorphic : bool;
   definition_entry_universes   : universe_context;
   definition_entry_opaque      : bool;
  }.
 
 
-Record parameter_entry : Set := {
-  parameter_entry_type : term }.
+Record parameter_entry := {
+  parameter_entry_type : term;
+  parameter_entry_universes : universe_context }.
 
 Inductive constant_entry :=
 | ParameterEntry (p : parameter_entry)
@@ -130,7 +130,6 @@ Record mutual_inductive_entry := {
   mind_entry_finite : recursivity_kind;
   mind_entry_params : list (ident * local_entry);
   mind_entry_inds : list one_inductive_entry;
-  mind_entry_polymorphic : bool; 
   mind_entry_universes : universe_context;
   mind_entry_private : option bool
 }.

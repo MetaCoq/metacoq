@@ -308,18 +308,17 @@ struct
     (ind, ps, idx)
 
   let unquote_level (trm : Univ0.Level.t) : Univ.Level.t =
-    let open Univ0.Level in
     match trm with
-    | Coq_lProp -> Univ.Level.prop
-    | Coq_lSet -> Univ.Level.set
-    | Level s ->
+    | Univ0.Level.Coq_lProp -> Univ.Level.prop
+    | Univ0.Level.Coq_lSet -> Univ.Level.set
+    | Univ0.Level.Level s ->
       let s = unquote_string s in
       let comps = String.split_on_char '.' s in
       let last, dp = CList.sep_last comps in
       let dp = DirPath.make (List.map Id.of_string comps) in
       let idx = int_of_string last in
       Univ.Level.make dp idx
-    | Var n -> Univ.Level.var (unquote_int n)
+    | Univ0.Level.Var n -> Univ.Level.var (unquote_int n)
 
   let unquote_level_expr (trm : Univ0.Level.t) (b : quoted_bool) : Univ.Universe.t =
     let l = unquote_level trm in

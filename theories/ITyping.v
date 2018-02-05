@@ -693,17 +693,27 @@ Proof.
 
   (* wf_lift *)
   - { intro hwf.
-      destruct Ξ.
-      - cbn. assumption.
-      - dependent destruction h.
-        cbn. econstructor.
-        + (* apply wf_lift ; assumption. *)
-          (* Apparently I can't apply the induction hypothesis here. *)
-          cheat.
-        + instantiate (1 := s0). cbn. change (sSort s0) with (lift #|Δ| #|Ξ| (sSort s0)).
-          (* apply type_lift ; assumption. *)
-          (* Still a problem it seems. *)
-          cheat.
+      dependent destruction h.
+      - destruct Ξ ; try discriminate.
+        cbn. assumption.
+      - destruct Ξ.
+        + cbn. assumption.
+        + cbn. inversion x.
+          econstructor.
+          * apply wf_lift.
+            -- rewrite <- H1. assumption.
+            -- assumption.
+          * instantiate (1 := s). cbn. change (sSort s) with (lift #|Δ| #|Ξ| (sSort s)).
+            apply type_lift.
+            -- rewrite <- H1. assumption.
+            -- assumption.
+      (* destruct Ξ. *)
+      (* - cbn. assumption. *)
+      (* - dependent destruction h. *)
+      (*   cbn. econstructor. *)
+      (*   + apply wf_lift ; assumption. *)
+      (*   + instantiate (1 := s0). cbn. change (sSort s0) with (lift #|Δ| #|Ξ| (sSort s0)). *)
+      (*     apply type_lift ; assumption. *)
     }
 
     Unshelve.

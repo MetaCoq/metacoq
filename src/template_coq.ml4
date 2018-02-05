@@ -295,7 +295,7 @@ struct
 
   let unquote_inductive (q: quoted_inductive) : Names.inductive =
     let { inductive_mind = na; inductive_ind = i } = q in
-    let comps = String.split_on_char '.' (unquote_string na) in
+    let comps = CString.split '.' (unquote_string na) in
     let comps = List.map Id.of_string comps in
     let id, dp = CList.sep_last comps in
     let dp = DirPath.make dp in
@@ -313,7 +313,7 @@ struct
     | Univ0.Level.Coq_lSet -> Univ.Level.set
     | Univ0.Level.Level s ->
       let s = unquote_string s in
-      let comps = String.split_on_char '.' s in
+      let comps = CString.split '.' s in
       let last, dp = CList.sep_last comps in
       let dp = DirPath.make (List.map Id.of_string comps) in
       let idx = int_of_string last in

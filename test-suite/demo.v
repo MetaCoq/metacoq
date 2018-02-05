@@ -370,7 +370,6 @@ Make Definition myProp := (tSort [(Level.lProp, false)]).
 Make Definition myProp' := Eval compute in (tSort Universe.type0m).
 Make Definition mySucProp := (tSort [(Level.lProp, true)]).
 Make Definition mySet := (tSort [(Level.lSet, false)]).
-Print Universes.
 
 (** Cofixpoints *)
 CoInductive streamn : Set :=

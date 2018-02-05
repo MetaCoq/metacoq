@@ -8,7 +8,7 @@ Set Printing Universes.
 
 Inductive foo (A : Type) : Type :=
 | fooc : list A -> foo A.
-Print Universes.
+(* Print Universes.*)
 (* Top.1 <= Coq.Init.Datatypes.44 *)
 
 Quote Recursively Definition qfoo := foo.
@@ -17,10 +17,10 @@ Compute qfoo.
 Polymorphic Inductive foo2 (A : Type) : Type :=
 | fooc2 : list A -> foo2 A.
 (* Top.4 |= Top.4 <= Coq.Init.Datatypes.44 *)
-Print Universes.
+(* Print Universes.*)
 
 Definition foo2_instance := foo2.
-Print Universes.
+(* Print Universes.*)
 (* Top.9 <= Coq.Init.Datatypes.44 *)
 
 Quote Recursively Definition qfoo2 := foo2.
@@ -75,7 +75,7 @@ Monomorphic Universe i j.
 Definition test := (fun (T : Type@{i}) (T2 : Type@{j}) => T -> T2).
 Set Printing Universes.
 Print test.
-Print Universes.
+(* Print Universes. *)
 Unset Printing Universes. 
 
 Quote Definition qtest := Eval compute in (fun (T : Type@{i}) (T2 : Type@{j}) => T -> T2).
@@ -87,7 +87,7 @@ Make Definition bla' := (tLambda (nNamed "T") (tSort ((Level.Level "Top.2", fals
 Set Printing Universes.
 Print bla.
 Print bla'.
-Print Universes.
+(* Print Universes. *)
 Unset Printing Universes.
 
 Set Universe Polymorphism.
@@ -131,4 +131,4 @@ Make Definition t2 := (Ast.tLambda (Ast.nNamed "T") (Ast.tSort [(Level.Level "To
                                    (Ast.tLambda (Ast.nNamed "T2") (Ast.tSort [(Level.Level "Top.10002", false)]) (Ast.tProd Ast.nAnon (Ast.tRel 1) (Ast.tRel 1)))).
 Set Printing Universes.
 Print t2.
-Print Universes.
+(* Print Universes. *)

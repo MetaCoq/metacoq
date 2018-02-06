@@ -495,3 +495,44 @@ Make Definition coq_tm1 :=
               end)
       in exact t
   ).
+
+
+
+(* One more *)
+
+Definition ty2 : sterm :=
+  sEq (sSort (succ_sort sSet)) (sSort sSet) (sSort sSet).
+
+Definition tm2 : sterm :=
+  sRefl (sSort (succ_sort sSet)) (sSort sSet).
+
+Lemma tmty2 : Σ ;;; [] |-x tm2 : ty2.
+Proof.
+  econstructor.
+  - repeat constructor.
+  - repeat constructor.
+Defined.
+
+Definition itt_tm2 : sterm.
+  destruct (type_translation tmty2 istrans_nil) as [A [t h]].
+  exact t.
+Defined.
+
+Eval lazy in itt_tm2.
+
+Definition tc_tm2 : tsl_result term :=
+  tsl_rec (2 ^ 4) Σ [] itt_tm2.
+
+Eval lazy in tc_tm2.
+
+(* For some reason this doesn't work. Is it beacause eq_refl is used instead of
+   @eq_refl? *)
+Fail Make Definition coq_tm2 :=
+  ltac:(
+    let t := eval lazy in
+             (match tc_tm2 with
+              | Success t => t
+              | _ => tSort (sType "Error")
+              end)
+      in exact t
+  ).

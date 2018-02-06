@@ -411,3 +411,54 @@ Definition tc_tm : tsl_result term :=
 (*               end) *)
 (*       in exact t *)
 (*   ). *)
+
+
+(* We start again with a much more minimal example without reflection. *)
+
+Definition tyl0 :=
+  [ sSort sSet ;
+    sRel 0 ;
+    sRel 1
+  ].
+
+Definition ty0 : sterm := multiProd tyl0.
+
+Definition tm0 : sterm := multiLam tyl0 (sRel 0).
+
+Lemma tmty0 : Σ ;;; [] |-x tm0 : ty0.
+Proof.
+  eapply type_multiLam.
+  - constructor.
+  - econstructor.
+    + repeat constructor.
+    + econstructor.
+      * refine (type_Rel _ _ _ _ _).
+        -- repeat constructor.
+           eexists. repeat constructor.
+        -- cbn. omega.
+      * econstructor.
+        -- refine (type_Rel _ _ _ _ _).
+           ++ repeat constructor.
+              ** eexists. repeat constructor.
+              ** eexists. refine (type_Rel _ _ _ _ _).
+                 --- repeat constructor.
+                     eexists. repeat constructor.
+                 --- cbn. omega.
+           ++ cbn. omega.
+        -- refine (type_Rel _ _ _ _ _).
+           ++ repeat constructor.
+              ** eexists. repeat constructor.
+              ** eexists. refine (type_Rel _ _ _ _ _).
+                 --- repeat constructor.
+                     eexists. repeat constructor.
+                 --- cbn. omega.
+           ++ cbn. omega.
+Defined.
+
+Definition itt_tm0 : sterm.
+  destruct (type_translation tmty0 istrans_nil) as [A [t h]].
+  exact t.
+Defined.
+
+(* Same problem with such a small example! *)
+(* Eval lazy in itt_tm0. *)

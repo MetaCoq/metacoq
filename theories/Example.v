@@ -126,6 +126,17 @@ Definition ty : sterm := multiProd tyl.
 
 Definition tm : sterm := multiLam tyl (sRel 0).
 
+Lemma type_conv'' :
+  forall {Γ t A B s},
+    Σ ;;; Γ |-x t : A ->
+    Σ ;;; Γ |-x A = B : sSort s ->
+    Σ ;;; Γ |-x B : sSort s ->
+    Σ ;;; Γ |-x t : B.
+Proof.
+  intros Γ t A B s H H0 H1.
+  eapply type_conv ; eassumption.
+Defined.
+
 Fact tmty : Σ ;;; [] |-x tm : ty.
 Proof.
   eapply type_multiLam.
@@ -225,7 +236,7 @@ Proof.
                                        **** cbn. omega.
                          *** cbn. omega.
                  --- cbn. omega.
-              ** eapply type_conv.
+              ** eapply type_conv''.
                  --- refine (type_Rel _ _ _ _ _).
                      +++ repeat constructor.
                          *** eexists. repeat constructor.
@@ -270,7 +281,6 @@ Proof.
                                             ----- cbn. omega.
                              ---- cbn. omega.
                      +++ cbn. omega.
-                 --- admit.
                  --- cbn. eapply reflection.
                      instantiate (2 := sRel 1).
                      refine (type_Rel _ _ _ _ _).
@@ -317,4 +327,48 @@ Proof.
                                             ----- cbn. omega.
                              ---- cbn. omega.
                      +++ cbn. omega.
-Admitted.
+                 --- refine (type_Rel _ _ _ _ _).
+                     +++ repeat constructor.
+                         *** eexists. repeat constructor.
+                         *** eexists. repeat constructor.
+                             eexists. repeat constructor.
+                         *** eexists. repeat constructor.
+                             ---- eexists. repeat constructor.
+                             ---- eexists. repeat constructor.
+                                  eexists. repeat constructor.
+                             ---- refine (type_Rel _ _ _ _ _).
+                                  ++++ repeat constructor.
+                                       **** eexists. repeat constructor.
+                                       **** eexists. repeat constructor.
+                                            eexists. repeat constructor.
+                                  ++++ cbn. omega.
+                             ---- refine (type_Rel _ _ _ _ _).
+                                  ++++ repeat constructor.
+                                       **** eexists. repeat constructor.
+                                       **** eexists. repeat constructor.
+                                            eexists. repeat constructor.
+                                  ++++ cbn. omega.
+                         *** eexists. refine (type_Rel _ _ _ _ _).
+                             ---- repeat constructor.
+                                  ++++ eexists. repeat constructor.
+                                  ++++ eexists. repeat constructor.
+                                       eexists. repeat constructor.
+                                  ++++ eexists. repeat constructor.
+                                       **** eexists. repeat constructor.
+                                       **** eexists. repeat constructor.
+                                            eexists. repeat constructor.
+                                       **** refine (type_Rel _ _ _ _ _).
+                                            ----- repeat constructor.
+                                            +++++ eexists. repeat constructor.
+                                            +++++ eexists. repeat constructor.
+                                                  eexists. repeat constructor.
+                                            ----- cbn. omega.
+                                       **** refine (type_Rel _ _ _ _ _).
+                                            ----- repeat constructor.
+                                            +++++ eexists. repeat constructor.
+                                            +++++ eexists. repeat constructor.
+                                                  eexists. repeat constructor.
+                                            ----- cbn. omega.
+                             ---- cbn. omega.
+                     +++ cbn. omega.
+Defined.

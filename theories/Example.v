@@ -462,3 +462,36 @@ Defined.
 
 (* Same problem with such a small example! *)
 (* Eval lazy in itt_tm0. *)
+
+
+
+(* One more *)
+
+Definition ty1 : sterm := sSort (succ_sort sSet).
+
+Definition tm1 : sterm := sSort sSet.
+
+Lemma tmty1 : Σ ;;; [] |-x tm1 : ty1.
+Proof.
+  constructor. constructor.
+Defined.
+
+Definition itt_tm1 : sterm.
+  destruct (type_translation tmty1 istrans_nil) as [A [t h]].
+  exact t.
+Defined.
+
+Eval lazy in itt_tm1.
+
+Definition tc_tm1 : tsl_result term :=
+  tsl_rec (2 ^ 4) Σ [] itt_tm1.
+
+Make Definition coq_tm1 :=
+  ltac:(
+    let t := eval lazy in
+             (match tc_tm1 with
+              | Success t => t
+              | _ => tSort (sType "Error")
+              end)
+      in exact t
+  ).

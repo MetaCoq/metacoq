@@ -45,7 +45,7 @@ Inductive typing (Σ : global_context) : scontext -> sterm -> sterm -> Type :=
     Σ ;;; Γ |-x u : A ->
     Σ ;;; Γ |-x sRefl A u : sEq A u u
 
-| type_Conv Γ t A B s :
+| type_conv Γ t A B s :
     Σ ;;; Γ |-x t : A ->
     Σ ;;; Γ |-x B : sSort s ->
     Σ ;;; Γ |-x A = B : sSort s ->

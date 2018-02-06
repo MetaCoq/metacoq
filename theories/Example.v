@@ -225,6 +225,96 @@ Proof.
                                        **** cbn. omega.
                          *** cbn. omega.
                  --- cbn. omega.
-              ** (* refine (type_Rel _ _ _ _ _). *)
-                 admit.
+              ** eapply type_conv.
+                 --- refine (type_Rel _ _ _ _ _).
+                     +++ repeat constructor.
+                         *** eexists. repeat constructor.
+                         *** eexists. repeat constructor.
+                             eexists. repeat constructor.
+                         *** eexists. repeat constructor.
+                             ---- eexists. repeat constructor.
+                             ---- eexists. repeat constructor.
+                                  eexists. repeat constructor.
+                             ---- refine (type_Rel _ _ _ _ _).
+                                  ++++ repeat constructor.
+                                       **** eexists. repeat constructor.
+                                       **** eexists. repeat constructor.
+                                            eexists. repeat constructor.
+                                  ++++ cbn. omega.
+                             ---- refine (type_Rel _ _ _ _ _).
+                                  ++++ repeat constructor.
+                                       **** eexists. repeat constructor.
+                                       **** eexists. repeat constructor.
+                                            eexists. repeat constructor.
+                                  ++++ cbn. omega.
+                         *** eexists. refine (type_Rel _ _ _ _ _).
+                             ---- repeat constructor.
+                                  ++++ eexists. repeat constructor.
+                                  ++++ eexists. repeat constructor.
+                                       eexists. repeat constructor.
+                                  ++++ eexists. repeat constructor.
+                                       **** eexists. repeat constructor.
+                                       **** eexists. repeat constructor.
+                                            eexists. repeat constructor.
+                                       **** refine (type_Rel _ _ _ _ _).
+                                            ----- repeat constructor.
+                                            +++++ eexists. repeat constructor.
+                                            +++++ eexists. repeat constructor.
+                                                  eexists. repeat constructor.
+                                            ----- cbn. omega.
+                                       **** refine (type_Rel _ _ _ _ _).
+                                            ----- repeat constructor.
+                                            +++++ eexists. repeat constructor.
+                                            +++++ eexists. repeat constructor.
+                                                  eexists. repeat constructor.
+                                            ----- cbn. omega.
+                             ---- cbn. omega.
+                     +++ cbn. omega.
+                 --- admit.
+                 --- cbn. eapply reflection.
+                     instantiate (2 := sRel 1).
+                     refine (type_Rel _ _ _ _ _).
+                     +++ repeat constructor.
+                         *** eexists. repeat constructor.
+                         *** eexists. repeat constructor.
+                             eexists. repeat constructor.
+                         *** eexists. repeat constructor.
+                             ---- eexists. repeat constructor.
+                             ---- eexists. repeat constructor.
+                                  eexists. repeat constructor.
+                             ---- refine (type_Rel _ _ _ _ _).
+                                  ++++ repeat constructor.
+                                       **** eexists. repeat constructor.
+                                       **** eexists. repeat constructor.
+                                            eexists. repeat constructor.
+                                  ++++ cbn. omega.
+                             ---- refine (type_Rel _ _ _ _ _).
+                                  ++++ repeat constructor.
+                                       **** eexists. repeat constructor.
+                                       **** eexists. repeat constructor.
+                                            eexists. repeat constructor.
+                                  ++++ cbn. omega.
+                         *** eexists. refine (type_Rel _ _ _ _ _).
+                             ---- repeat constructor.
+                                  ++++ eexists. repeat constructor.
+                                  ++++ eexists. repeat constructor.
+                                       eexists. repeat constructor.
+                                  ++++ eexists. repeat constructor.
+                                       **** eexists. repeat constructor.
+                                       **** eexists. repeat constructor.
+                                            eexists. repeat constructor.
+                                       **** refine (type_Rel _ _ _ _ _).
+                                            ----- repeat constructor.
+                                            +++++ eexists. repeat constructor.
+                                            +++++ eexists. repeat constructor.
+                                                  eexists. repeat constructor.
+                                            ----- cbn. omega.
+                                       **** refine (type_Rel _ _ _ _ _).
+                                            ----- repeat constructor.
+                                            +++++ eexists. repeat constructor.
+                                            +++++ eexists. repeat constructor.
+                                                  eexists. repeat constructor.
+                                            ----- cbn. omega.
+                             ---- cbn. omega.
+                     +++ cbn. omega.
 Admitted.

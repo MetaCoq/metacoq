@@ -20,6 +20,64 @@ Fixpoint multiLam (bl : list sterm) (t : sterm) :=
   | A :: bl => sLambda nAnon A (multiProd bl) (multiLam bl t)
   end.
 
+Fixpoint multiCtx' (bl : list sterm) (Γ : scontext) : scontext :=
+  match bl with
+  | [] => Γ
+  | A :: bl => multiCtx' bl (svass nAnon A :: Γ)
+  end.
+
+Definition multiCtx bl := multiCtx' bl [].
+
+Fact multiNil' : forall bl Γ, [] = multiCtx' bl Γ -> ([] = bl) * ([] = Γ).
+Proof.
+  intro bl. induction bl ; intros Γ eq.
+  - cbn in eq. split ; easy.
+  - cbn in eq. specialize (IHbl _ eq). destruct IHbl. discriminate.
+Defined.
+
+Fact multiNil : forall {bl}, [] = multiCtx bl -> [] = bl.
+Proof.
+  intros bl H.
+  eapply multiNil'. eassumption.
+Defined.
+
+(* Fact multiCtxInv' : *)
+(*   forall {bl Γ Δ na A a s}, *)
+(*     ssnoc Γ (svass na A) = multiCtx' (a :: s :: bl) Δ -> *)
+(*     (na = nAnon) * (A = s). *)
+(* Proof. *)
+(*   intro bl. induction bl ; intros Γ Δ na A B s h. *)
+(*   - cbn in h. inversion h. now split. *)
+(*   - cbn in h. *)
+
+(* Fact multiCtxInv : *)
+(*   forall {bl Γ na A s}, *)
+(*     ssnoc Γ (svass na A) = multiCtx (a :: s :: bl) -> *)
+(*     (na = nAnon) * () *)
+
+Lemma type_multiProd :
+  forall {bl},
+    wf Σ (multiCtx bl) ->
+    ∑ s,
+      Σ ;;; [] |-x multiProd bl : sSort s.
+Proof.
+  intro bl. induction bl ; intro hwf.
+  - cbn. exists (succ_sort sSet). apply type_Sort. constructor.
+  - destruct bl.
+    + cbn. dependent destruction hwf.
+      assumption.
+    + change (multiProd (a :: s :: bl))
+        with (sProd nAnon a (multiProd (s :: bl))).
+      dependent destruction hwf.
+      * pose proof (multiNil x). discriminate.
+      * cbn in x.
+        eexists. eapply type_Prod.
+        -- admit.
+        -- (* We need to generalise *)
+           admit.
+Admitted.
+
+
 Definition tyl :=
   [ sSort sSet ;
     sSort sSet ;

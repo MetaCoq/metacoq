@@ -15,6 +15,7 @@ Definition scontext := (list scontext_decl).
 Definition ssnoc (Γ : scontext) (d : scontext_decl) := d :: Γ.
 
 Notation " Γ ,, d " := (ssnoc Γ d) (at level 20, d at next level) : s_scope.
+Delimit Scope s_scope with s.
 
 Record squash (A : Set) : Prop := { _ : A }.
 

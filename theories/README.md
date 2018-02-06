@@ -15,3 +15,5 @@ If you're only interested in the translation from ETT to ITT, you should only lo
 - `Translation.v` contains the translation itself and the necessary lemmata.
 - `FinalTranslation.v` containes the transaltion from ITT to
   TemplateCoq (meaning we can reify terms of ITT).
+- `Example.v` contains an example of the two translations chained to
+  build a Coq term from an ETT derivation.

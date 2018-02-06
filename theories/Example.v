@@ -2,7 +2,8 @@
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
 From Template Require Import Ast SAst LiftSubst SLiftSubst SCommon
-                             Typing ITyping XTyping Checker Template FinalTranslation.
+                             Typing ITyping XTyping Checker Template
+                             Translation FinalTranslation.
 
 (* We begin withh an ETT derivation *)
 
@@ -372,3 +373,38 @@ Proof.
                              ---- cbn. omega.
                      +++ cbn. omega.
 Defined.
+
+(* Then we translate this ETT derivation to get an ITT term *)
+
+Fact istrans_nil :
+  ctxtrans Σ nil nil.
+Proof.
+  split.
+  - constructor.
+  - constructor.
+Defined.
+
+Definition itt_tm : sterm.
+  destruct (type_translation tmty istrans_nil) as [A [t h]].
+  exact t.
+Defined.
+
+(* We translate it to TemplateCoq *)
+
+Definition tc_tm : tsl_result term :=
+  tsl_rec (2 ^ 4) Σ [] itt_tm.
+
+(* Doesn't sound good. *)
+(* Eval lazy in tc_tm. *)
+
+(* Finally we build a Coq term out of it. *)
+(* But it takes too long! *)
+(* Make Definition coq_tm := *)
+(*   ltac:( *)
+(*     let t := eval lazy in *)
+(*              (match tc_tm with *)
+(*               | Success t => t *)
+(*               | _ => tSort (sType "Error") *)
+(*               end) *)
+(*       in exact t *)
+(*   ). *)

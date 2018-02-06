@@ -332,6 +332,8 @@ with eq_term (Σ : global_context) : scontext -> sterm -> sterm -> sterm -> Type
 
 where " Σ ;;; Γ '|-i' t = u : T " := (@eq_term Σ Γ t u T) : i_scope.
 
+Delimit Scope i_scope with i.
+
 (* Lemmata about typing *)
 
 Open Scope type_scope.

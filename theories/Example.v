@@ -8,14 +8,14 @@ From Template Require Import Ast SAst LiftSubst SLiftSubst SCommon
 
 Fixpoint multiProd (bl : list sterm) :=
   match bl with
-  | [] => sSort sSet
+  | [] => sSort (succ_sort sSet)
   | [ A ] => A
   | A :: bl => sProd nAnon A (multiProd bl)
   end.
 
 Fixpoint multiLam (bl : list sterm) (t : sterm) :=
   match bl with
-  | [] => t
+  | [] => sSort sSet
   | [ A ] => t
   | A :: bl => sLambda nAnon A (multiProd bl) (multiLam bl t)
   end.
@@ -35,7 +35,7 @@ Lemma type_multiProd :
       Σ ;;; Γ |-x multiProd bl : sSort s.
 Proof.
   intro bl. induction bl ; intros Γ hwf h.
-  - cbn. exists (succ_sort sSet). apply type_Sort. assumption.
+  - cbn. exists (succ_sort (succ_sort sSet)). apply type_Sort. assumption.
   - destruct bl.
     + cbn. dependent destruction h.
       eexists. eassumption.
@@ -55,6 +55,65 @@ Proof.
         -- exact hz.
 Defined.
 
+Inductive wbtm : scontext -> list sterm -> sterm -> Type :=
+| wbtm_nil Γ t : wbtm Γ [] t
+| wbtm_one Γ A s t :
+    Σ ;;; Γ |-x A : sSort s ->
+    Σ ;;; Γ |-x t : A ->
+    wbtm Γ [ A ] t
+| wbtm_cons Γ A B s bl t :
+    Σ ;;; Γ |-x A : sSort s ->
+    wbtm (svass nAnon A :: Γ) (B :: bl) t ->
+    wbtm Γ (A :: B :: bl) t.
+
+Lemma wbtm_wfb :
+  forall {bl Γ t},
+    wbtm Γ bl t ->
+    wfb Γ bl.
+Proof.
+  intro bl. induction bl ; intros Γ t h.
+  - constructor.
+  - destruct bl.
+    + dependent destruction h.
+      econstructor.
+      * eassumption.
+      * constructor.
+    + dependent destruction h.
+      econstructor.
+      * eassumption.
+      * eapply IHbl. eassumption.
+Defined.
+
+Lemma type_multiLam :
+  forall {bl Γ t},
+    wf Σ Γ ->
+    wbtm Γ bl t ->
+    Σ ;;; Γ |-x multiLam bl t : multiProd bl.
+Proof.
+  intro bl. induction bl ; intros Γ t hwf hwb.
+  - cbn. apply type_Sort. assumption.
+  - destruct bl.
+    + cbn. dependent destruction hwb. assumption.
+    + change (multiProd (a :: s :: bl))
+        with (sProd nAnon a (multiProd (s :: bl))).
+      change (multiLam (a :: s :: bl) t)
+        with (sLambda nAnon a (multiProd (s :: bl)) (multiLam (s :: bl) t)).
+      dependent destruction hwb.
+      destruct (@type_multiProd (s :: bl) (ssnoc Γ (svass nAnon a))) as [z hz].
+      * econstructor.
+        -- assumption.
+        -- eexists. eassumption.
+      * eapply wbtm_wfb. eassumption.
+      * eapply type_Lambda.
+        -- eassumption.
+        -- eassumption.
+        -- eapply IHbl.
+           ++ econstructor.
+              ** assumption.
+              ** eexists. eassumption.
+           ++ assumption.
+Defined.
+
 Definition tyl :=
   [ sSort sSet ;
     sSort sSet ;
@@ -62,18 +121,6 @@ Definition tyl :=
     sRel 2 ;
     sRel 2
   ].
-
-(* Definition ty : sterm := *)
-(*   sProd nAnon *)
-(*         (sSort sSet) *)
-(*         (sProd nAnon *)
-(*                (sSort sSet) *)
-(*                (sProd nAnon *)
-(*                       (sEq (sSort sSet) (sRel 1) (sRel 0)) *)
-(*                       (sProd *)
-(*                          nAnon (sRel 2) *)
-(*                          (sRel 2) *)
-(*         ))). *)
 
 Definition ty : sterm := multiProd tyl.
 

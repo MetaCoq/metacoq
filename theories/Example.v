@@ -20,63 +20,40 @@ Fixpoint multiLam (bl : list sterm) (t : sterm) :=
   | A :: bl => sLambda nAnon A (multiProd bl) (multiLam bl t)
   end.
 
-Fixpoint multiCtx' (bl : list sterm) (Γ : scontext) : scontext :=
-  match bl with
-  | [] => Γ
-  | A :: bl => multiCtx' bl (svass nAnon A :: Γ)
-  end.
-
-Definition multiCtx bl := multiCtx' bl [].
-
-Fact multiNil' : forall bl Γ, [] = multiCtx' bl Γ -> ([] = bl) * ([] = Γ).
-Proof.
-  intro bl. induction bl ; intros Γ eq.
-  - cbn in eq. split ; easy.
-  - cbn in eq. specialize (IHbl _ eq). destruct IHbl. discriminate.
-Defined.
-
-Fact multiNil : forall {bl}, [] = multiCtx bl -> [] = bl.
-Proof.
-  intros bl H.
-  eapply multiNil'. eassumption.
-Defined.
-
-(* Fact multiCtxInv' : *)
-(*   forall {bl Γ Δ na A a s}, *)
-(*     ssnoc Γ (svass na A) = multiCtx' (a :: s :: bl) Δ -> *)
-(*     (na = nAnon) * (A = s). *)
-(* Proof. *)
-(*   intro bl. induction bl ; intros Γ Δ na A B s h. *)
-(*   - cbn in h. inversion h. now split. *)
-(*   - cbn in h. *)
-
-(* Fact multiCtxInv : *)
-(*   forall {bl Γ na A s}, *)
-(*     ssnoc Γ (svass na A) = multiCtx (a :: s :: bl) -> *)
-(*     (na = nAnon) * () *)
+Inductive wfb : scontext -> list sterm -> Type :=
+| wfb_nil Γ : wfb Γ []
+| wfb_cons Γ A s bl :
+    Σ ;;; Γ |-x A : sSort s ->
+    wfb (svass nAnon A :: Γ) bl ->
+    wfb Γ (A :: bl).
 
 Lemma type_multiProd :
-  forall {bl},
-    wf Σ (multiCtx bl) ->
+  forall {bl Γ},
+    wf Σ Γ ->
+    wfb Γ bl ->
     ∑ s,
-      Σ ;;; [] |-x multiProd bl : sSort s.
+      Σ ;;; Γ |-x multiProd bl : sSort s.
 Proof.
-  intro bl. induction bl ; intro hwf.
-  - cbn. exists (succ_sort sSet). apply type_Sort. constructor.
+  intro bl. induction bl ; intros Γ hwf h.
+  - cbn. exists (succ_sort sSet). apply type_Sort. assumption.
   - destruct bl.
-    + cbn. dependent destruction hwf.
-      assumption.
+    + cbn. dependent destruction h.
+      eexists. eassumption.
     + change (multiProd (a :: s :: bl))
         with (sProd nAnon a (multiProd (s :: bl))).
-      dependent destruction hwf.
-      * pose proof (multiNil x). discriminate.
-      * cbn in x.
-        eexists. eapply type_Prod.
-        -- admit.
-        -- (* We need to generalise *)
-           admit.
-Admitted.
-
+      dependent destruction h.
+      dependent destruction h.
+      destruct (IHbl (ssnoc Γ (svass nAnon a))) as [z hz].
+      * econstructor.
+        -- assumption.
+        -- eexists. eassumption.
+      * econstructor.
+        -- eassumption.
+        -- assumption.
+      * eexists. eapply type_Prod.
+        -- eassumption.
+        -- exact hz.
+Defined.
 
 Definition tyl :=
   [ sSort sSet ;

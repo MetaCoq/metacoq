@@ -389,6 +389,9 @@ Definition itt_tm : sterm.
   exact t.
 Defined.
 
+(* The first translation is already taling too long. *)
+(* Eval compute in itt_tm. *)
+
 (* We translate it to TemplateCoq *)
 
 Definition tc_tm : tsl_result term :=

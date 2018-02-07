@@ -1,4 +1,5 @@
-From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
+From Coq Require Import Bool String List BinPos Compare_dec Omega.
+From Equations Require Import Equations DepElimDec.
 From Template Require Import Ast SAst Typing SLiftSubst SCommon.
 
 Reserved Notation " Σ ;;; Γ '|-i' t : T " (at level 50, Γ, t, T at next level).
@@ -444,10 +445,11 @@ Proof.
       - cbn. apply type_Sort. now apply wf_lift.
       - cbn. eapply type_Prod.
         + now apply IHh1.
-        + specialize (IHh2 Γ (Ξ,, svass n t) eq_refl hwf). apply IHh2.
+        + specialize (IHh2 Γ0 Δ (Ξ,, svass n t) b (sSort s2) eq_refl hwf).
+          apply IHh2.
       - cbn. eapply type_Lambda.
         + now apply IHh1.
-        + specialize (IHh2 Γ (Ξ,, svass n t) eq_refl hwf). apply IHh2.
+        + (* specialize (IHh2 Γ (Ξ,, svass n t) eq_refl hwf). apply IHh2.
         + specialize (IHh3 Γ (Ξ,, svass n t) eq_refl hwf). apply IHh3.
       - cbn.
         change (lift #|Δ| #|Ξ| (B {0 := u}))
@@ -738,7 +740,8 @@ Proof.
     Unshelve.
     all: try exact nAnon.
     all:cheat.
-Defined.
+Defined.*)
+Admitted.
 
 Corollary typing_lift01 :
   forall {Σ Γ t A x B s},
@@ -1186,7 +1189,7 @@ Proof.
     assert (Σ ;;; Γ |-i sRel n : lift0 (S n) (safe_nth Γ (exist _ n isdecl)).(sdecl_type)) by (now constructor).
     destruct (istype_type H) as [s hs].
     exists s. apply eq_reflexivity. eassumption.
-  - destruct (IHh1 n (eq_refl _)) as [isdecl [s' h]].
+  - destruct IHh1 as [isdecl [s' h]].
     exists isdecl, s'.
     eapply eq_transitivity.
     + exact h.
@@ -1206,7 +1209,7 @@ Proof.
 
   - apply eq_reflexivity. apply type_Sort. assumption.
 
-  - specialize (IHh1 s (eq_refl _)). eapply eq_transitivity.
+  - eapply eq_transitivity.
     + eassumption.
     + destruct (eq_typing e) as [hAs0 _].
       destruct (eq_typing IHh1) as [_ hAss].
@@ -1230,7 +1233,7 @@ Proof.
     + assumption.
     + apply eq_reflexivity. apply type_Sort. apply (typing_wf h1).
 
-  - destruct (IHh1 n A B (eq_refl _)) as [s1 [s2 [[? ?] ?]]].
+  - destruct IHh1 as [s1 [s2 [[? ?] ?]]].
     exists s1, s2. repeat split.
     + assumption.
     + assumption.
@@ -1258,7 +1261,7 @@ Proof.
     apply cong_Prod.
     all: apply eq_reflexivity ; assumption.
 
-  - destruct (IHh1 _ _ _ _ eq_refl) as [s1 [s2 [[[? ?] ?] ?]]].
+  - destruct IHh1 as [s1 [s2 [[[? ?] ?] ?]]].
     exists s1, s2. repeat split.
     all: try assumption.
     eapply eq_transitivity.
@@ -1288,7 +1291,7 @@ Proof.
     change (sSort s2) with ((sSort s2){0 := u}).
     eapply typing_subst ; eassumption.
 
-  - destruct (IHtyping1 t n A B u (eq_refl _)) as [s1 [s2 [[[[? ?] ?] ?] ?]]].
+  - destruct IHtyping1 as [s1 [s2 [[[[? ?] ?] ?] ?]]].
     exists s1, s2. repeat split ; try easy.
     eapply eq_transitivity.
     + eassumption.
@@ -1312,7 +1315,7 @@ Proof.
   - exists s. repeat split ; try easy.
     eapply eq_reflexivity. apply type_Sort.
     apply (typing_wf h1).
-  - destruct (IHh1 A u v (eq_refl _)) as [s' [[[hA hu] hv] heq]].
+  - destruct IHh1 as [s' [[[hA hu] hv] heq]].
     exists s'. repeat split ; try easy.
     eapply eq_transitivity.
     + exact heq.
@@ -1336,7 +1339,7 @@ Proof.
   - exists s. repeat split ; try easy.
     apply eq_reflexivity. apply type_Eq ; assumption.
 
-  - destruct (IHh1 _ _ eq_refl) as [s' [[hA hu] eq]].
+  - destruct IHh1 as [s' [[hA hu] eq]].
     exists s'. repeat split ; try easy.
     destruct (eq_typing e) as [i1 _].
     destruct (eq_typing eq) as [_ i2].
@@ -1370,7 +1373,7 @@ Proof.
     + cbn. rewrite !lift_subst, lift00.
       assumption.
 
-  - destruct (IHtyping1 A u P w v p (eq_refl _))
+  - destruct IHtyping1
       as [s1 [s2 [nx [ne [[[[[[? ?] ?] ?] ?] ?] ?]]]]].
     exists s1, s2, nx, ne. repeat split ; try easy.
     eapply eq_transitivity.
@@ -1397,7 +1400,7 @@ Proof.
   - exists s. repeat split ; try easy.
     apply eq_reflexivity. assumption.
 
-  - destruct (IHh1 _ _ _ _ eq_refl) as [s' [[[[? ?] ?] ?] ?]].
+  - destruct IHh1 as [s' [[[[? ?] ?] ?] ?]].
     exists s'. repeat split ; try easy.
     eapply eq_transitivity.
     + eassumption.
@@ -1426,7 +1429,7 @@ Proof.
   - exists s. repeat split ; try easy.
     apply eq_reflexivity. apply type_Sort. apply (typing_wf h1).
 
-  - destruct (IHh1 _ _ _ _ eq_refl) as [s' [[[[? ?] ?] ?] ?]].
+  - destruct IHh1 as [s' [[[[? ?] ?] ?] ?]].
     exists s'. repeat split ; try easy.
     eapply eq_transitivity.
     + eassumption.
@@ -1450,7 +1453,7 @@ Proof.
   - exists s. repeat split ; try easy.
     apply eq_reflexivity. apply type_Sort. apply (typing_wf h1).
 
-  - destruct (IHh1 _ _ eq_refl) as [s' [[? ?] ?]].
+  - destruct IHh1 as [s' [[? ?] ?]].
     exists s'. repeat split ; try easy.
     eapply eq_transitivity.
     + eassumption.

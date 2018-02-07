@@ -1,6 +1,7 @@
 (* Translation from our special ITT to TemplateCoq itself  *)
 
-From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
+From Coq Require Import Bool String List BinPos Compare_dec Omega.
+From Equations Require Import Equations DepElimDec.
 From Template Require Import Ast SAst LiftSubst SLiftSubst SCommon
                              Typing ITyping Checker Template.
 Import MonadNotation.
@@ -47,7 +48,7 @@ Open Scope t_scope.
  *)
 
 Definition J (A : Type) (u : A) (P : forall (x : A), u = x -> Type)
-           (w : P u (eq_refl u)) (v : A) (p : u = v) : P v p :=
+           (w : P u (@eq_refl A u)) (v : A) (p : u = v) : P v p :=
   match p with
   | eq_refl => w
   end.
@@ -830,40 +831,40 @@ Eval lazy in (tsl_rec (2 ^ 18) Σ []
 Quote Definition heq_g := ltac:(let t := eval compute in (fun A (x : A) B (y : B) => @heq A x B y) in exact t).
 
 
-Theorem soundness :
-  forall {Γ t A},
-    Σ ;;; Γ |-i t : A ->
-    forall {fuel Γ' t' A'},
-      tsl_ctx fuel Σ Γ = Success Γ' ->
-      tsl_rec fuel Σ Γ' t = Success t' ->
-      tsl_rec fuel Σ Γ' A = Success A' ->
-      Σ ;;; Γ' |-- t' : A'.
-Proof.
-  intros Γ t A h.
-  dependent induction h ; intros fuel Γ' t' A' hΓ ht hA.
-  all: destruct fuel ; try discriminate.
+(* Theorem soundness : *)
+(*   forall {Γ t A}, *)
+(*     Σ ;;; Γ |-i t : A -> *)
+(*     forall {fuel Γ' t' A'}, *)
+(*       tsl_ctx fuel Σ Γ = Success Γ' -> *)
+(*       tsl_rec fuel Σ Γ' t = Success t' -> *)
+(*       tsl_rec fuel Σ Γ' A = Success A' -> *)
+(*       Σ ;;; Γ' |-- t' : A'. *)
+(* Proof. *)
+(*   intros Γ t A h. *)
+(*   dependent induction h ; intros fuel Γ' t' A' hΓ ht hA. *)
+(*   all: destruct fuel ; try discriminate. *)
 
-  - cbn in ht. inversion_clear ht.
-    admit.
+(*   - cbn in ht. inversion_clear ht. *)
+(*     admit. *)
 
-  - cbn in ht, hA. inversion_clear ht. inversion_clear hA.
-    apply T.type_Sort.
+(*   - cbn in ht, hA. inversion_clear ht. inversion_clear hA. *)
+(*     apply T.type_Sort. *)
 
-  - cbn in hA. inversion_clear hA.
-    simpl in ht. inversion ht.
-    admit.
+(*   - cbn in hA. inversion_clear hA. *)
+(*     simpl in ht. inversion ht. *)
+(*     admit. *)
 
-  - admit.
+(*   - admit. *)
 
-  - admit.
+(*   - admit. *)
 
-  - cbn in hA. inversion_clear hA.
-    cbn in ht.
-    destruct (tsl_rec fuel Σ Γ' A) ; destruct (tsl_rec fuel Σ Γ' u) ; try (now inversion ht).
-    destruct (tsl_rec fuel Σ Γ' v) ; inversion_clear ht.
-    eapply T.type_App.
-    + econstructor. econstructor. split.
-      * econstructor.
-      * cbn. f_equal.
-    + econstructor.
-Abort.
+(*   - cbn in hA. inversion_clear hA. *)
+(*     cbn in ht. *)
+(*     destruct (tsl_rec fuel Σ Γ' A) ; destruct (tsl_rec fuel Σ Γ' u) ; try (now inversion ht). *)
+(*     destruct (tsl_rec fuel Σ Γ' v) ; inversion_clear ht. *)
+(*     eapply T.type_App. *)
+(*     + econstructor. econstructor. split. *)
+(*       * econstructor. *)
+(*       * cbn. f_equal. *)
+(*     + econstructor. *)
+(* Abort. *)

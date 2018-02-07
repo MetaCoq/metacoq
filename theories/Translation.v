@@ -1,4 +1,5 @@
-From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
+From Coq Require Import Bool String List BinPos Compare_dec Omega.
+From Equations Require Import Equations DepElimDec.
 From Template Require Import Ast SAst LiftSubst SLiftSubst SCommon Typing
                              XTyping ITyping PackLifts.
 
@@ -634,7 +635,7 @@ Proof.
   intros A B p t1 t2 h.
   dependent induction h.
   - assumption.
-  - constructor. eapply IHh. reflexivity.
+  - constructor. eapply IHh.
 Defined.
 
 Lemma trel_trans :
@@ -647,11 +648,10 @@ Proof.
   intros t1 t2. induction 1 ; intros t3 h.
   all: try (
     dependent induction h ; [
-      constructor ; eapply IHh ; [ .. | reflexivity ] ; assumption
+      constructor ; eapply IHh ; assumption
     | now constructor
     ]
   ).
-  - assumption.
   - constructor. now apply IHtrel.
   - apply IHtrel. eapply inversion_trel_transport. eassumption.
 Defined.

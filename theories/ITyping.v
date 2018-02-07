@@ -360,6 +360,16 @@ Proof.
   rewrite <- e. exact h.
 Defined.
 
+Lemma meta_conv :
+  forall {Σ Γ t A B},
+    Σ ;;; Γ |-i t : A ->
+    A = B ->
+    Σ ;;; Γ |-i t : B.
+Proof.
+  intros Σ Γ t A B h e.
+  rewrite <- e. exact h.
+Defined.
+
 Lemma typing_wf :
   forall {Σ Γ t T},
     Σ ;;; Γ |-i t : T ->
@@ -519,7 +529,14 @@ Proof.
         + now apply IHh4.
       - cbn. eapply type_CongProd.
         + now apply IHh1.
-        + cheat.
+        + specialize (IHh2 Γ (Ξ,, svass np (sPack A1 A2)) eq_refl hwf).
+          cbn in IHh2. eapply meta_conv.
+          * apply IHh2.
+          * f_equal.
+            -- rewrite <- liftP2 by omega.
+               cheat.
+            -- rewrite <- liftP2 by omega.
+               cheat.
         + now apply IHh3.
         + now apply IHh4.
         + cheat.

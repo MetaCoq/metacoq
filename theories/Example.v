@@ -461,7 +461,8 @@ Definition itt_tm0 : sterm.
 Defined.
 
 (* Same problem with such a small example! *)
-(* Eval lazy in itt_tm0. *)
+(* Eval native_compute in itt_tm0. *)
+Print Assumptions itt_tm0.
 
 
 
@@ -480,6 +481,8 @@ Definition itt_tm1 : sterm.
   destruct (type_translation tmty1 istrans_nil) as [A [t h]].
   exact t.
 Defined.
+
+Print Assumptions itt_tm1.
 
 Eval lazy in itt_tm1.
 
@@ -519,6 +522,7 @@ Definition itt_tm2 : sterm.
 Defined.
 
 Eval lazy in itt_tm2.
+Print Assumptions itt_tm2.
 
 Definition tc_tm2 : tsl_result term :=
   tsl_rec (2 ^ 4) Σ [] itt_tm2.

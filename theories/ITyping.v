@@ -437,18 +437,19 @@ with wf_lift {Σ Γ Δ Ξ} (h : wf Σ (Γ ,,, Ξ)) {struct h} :
 .
 Proof.
   - { (* This is a mistake (probably) and should be replaced by destruction. *)
-      dependent induction h ; intro hwf.
-      - induction Δ.
+      dependent destruction h ; intro hwf.
+      - dependent induction Δ.
         + change (#|[]|) with 0. rewrite !lift00.
           rewrite lift_context0. cbn. eapply type_Rel. assumption.
-        + cheat.
+        + dependent destruction hwf.
+          specialize (IHΔ Ξ n isdecl w hwf).
+          cheat.
       - cbn. apply type_Sort. now apply wf_lift.
       - cbn. eapply type_Prod.
-        + now apply IHh1.
-        + specialize (IHh2 Γ0 Δ (Ξ,, svass n t) b (sSort s2) eq_refl hwf).
-          apply IHh2.
+        + now apply type_lift with (A := sSort s1).
+        + now apply type_lift with (Ξ := (Ξ,, svass n t0)) (A := sSort s2).
       - cbn. eapply type_Lambda.
-        + now apply IHh1.
+        + now apply type_lift with (A := sSort s1).
         + (* specialize (IHh2 Γ (Ξ,, svass n t) eq_refl hwf). apply IHh2.
         + specialize (IHh3 Γ (Ξ,, svass n t) eq_refl hwf). apply IHh3.
       - cbn.

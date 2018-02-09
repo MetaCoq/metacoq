@@ -1,6 +1,7 @@
 From Coq Require Import Bool String List BinPos Compare_dec Omega.
 From Equations Require Import Equations DepElimDec.
-From Template Require Import Ast SAst LiftSubst.
+From Template Require Import Ast LiftSubst.
+From Translation Require Import SAst.
 
 (* Set Asymmetric Patterns. *)
 

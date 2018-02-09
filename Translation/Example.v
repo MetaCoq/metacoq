@@ -1,9 +1,9 @@
 (* Example of the whole translation *)
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
-From Template Require Import Ast SAst LiftSubst SLiftSubst SCommon
-                             Typing ITyping XTyping Checker Template
-                             Translation FinalTranslation.
+From Template Require Import Ast LiftSubst Typing Checker Template.
+From Translation Require Import SAst SLiftSubst SCommon ITyping XTyping
+                                Translation FinalTranslation.
 
 (* We begin withh an ETT derivation *)
 

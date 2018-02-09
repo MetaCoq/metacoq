@@ -1,7 +1,8 @@
 From Coq Require Import Bool String List BinPos Compare_dec Omega.
 From Equations Require Import Equations DepElimDec.
-From Template Require Import Ast SAst LiftSubst SLiftSubst SCommon Typing
-                             XTyping ITyping PackLifts.
+From Template Require Import Ast LiftSubst Typing.
+From Translation
+     Require Import SAst SLiftSubst SCommon XTyping ITyping PackLifts.
 
 Section Translation.
 

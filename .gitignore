@@ -63,3 +63,7 @@ src/liftSubst.mli
 /Makefile.coqplugin.conf
 /test-suite/Makefile.coq.conf
 /.merlin
+
+/Translation/Makefile.conf
+/Translation/Makefile.coq.bak
+/Translation/Makefile.coq.conf

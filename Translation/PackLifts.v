@@ -1,8 +1,8 @@
 (* Lifts for packing *)
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
-From Template Require Import Ast SAst LiftSubst SLiftSubst SCommon Typing
-                             XTyping ITyping.
+From Template Require Import Ast LiftSubst Typing.
+From Translation Require Import SAst SLiftSubst SCommon XTyping ITyping.
 
 (* In order to do things properly we need to extend the context heterogenously,
    this is done by extending the context with triples

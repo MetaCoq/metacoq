@@ -1,5 +1,6 @@
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
-From Template Require Import Ast SAst Typing SLiftSubst.
+From Template Require Import Ast Typing.
+From Translation Require Import SAst SLiftSubst.
 
 Record scontext_decl := { sdecl_name : name ;
                           sdecl_body : option sterm ;

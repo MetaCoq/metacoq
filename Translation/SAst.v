@@ -4,7 +4,7 @@
 Notation "'∑'  x .. y , P" := (sigT (fun x => .. (sigT (fun y => P)) ..))
   (at level 200, x binder, y binder, right associativity) : type_scope.
 
-Require Import Ast.
+From Template Require Import Ast.
 
 Inductive sterm : Type :=
 | sRel (n : nat)

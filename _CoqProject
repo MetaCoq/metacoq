@@ -12,16 +12,3 @@ theories/LiftSubst.v
 theories/WeakSubst.v
 theories/Typing.v
 theories/Checker.v
-
-
-
-
-theories/SAst.v
-theories/SLiftSubst.v
-theories/SCommon.v
-theories/ITyping.v
-theories/XTyping.v
-theories/PackLifts.v
-theories/Translation.v
-theories/FinalTranslation.v
-theories/Example.v

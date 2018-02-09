@@ -1,6 +1,7 @@
 From Coq Require Import Bool String List BinPos Compare_dec Omega.
 From Equations Require Import Equations DepElimDec.
-From Template Require Import Ast SAst Typing SLiftSubst SCommon.
+From Template Require Import Ast Typing.
+From Translation Require Import SAst SLiftSubst SCommon.
 
 Reserved Notation " Σ ;;; Γ '|-x' t : T " (at level 50, Γ, t, T at next level).
 Reserved Notation " Σ ;;; Γ '|-x' t = u : T " (at level 50, Γ, t, u, T at next level).

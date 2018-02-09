@@ -1,9 +1,9 @@
-# About ETT to ITT
+# Translation from ETT to ITT and then to TemplateCoq
 
-If you're only interested in the translation from ETT to ITT, you should only look at the following files
-(which are the only ones brought by this fork).
+### Detail of the files
 
-- `SAst.v` describes common syntax (in a similar fashion to `Ast.v`) of both ETT and ITT.
+- `SAst.v` describes common syntax (in a similar fashion to `Ast.v` of
+   `theories`) to both ETT and ITT.
 - `SLiftSubst.v` describes meta-operations on the syntax (namely lifting and substitution).
 - `SCommon.v` states common definitions like context.
 

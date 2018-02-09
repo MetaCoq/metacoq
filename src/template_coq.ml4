@@ -1,3 +1,4 @@
+(* -*- compile-command: "make -C .. -f Makefile.coqplugin" -*- *)
 (*i camlp4deps: "parsing/grammar.cma" i*)
 (*i camlp4use: "pa_extend.cmp" i*)
 
@@ -123,9 +124,9 @@ struct
   let mkLetIn na b t t' = Coq_tLetIn (na,b,t,t')
 
   let quote_constraint_type = function
-    | Univ.Lt -> Univ0.Lt
-    | Univ.Le -> Univ0.Le
-    | Univ.Eq -> Univ0.Eq
+    | Univ.Lt -> Univ0.ConstraintType.Lt
+    | Univ.Le -> Univ0.ConstraintType.Le
+    | Univ.Eq -> Univ0.ConstraintType.Eq
 
   let quote_univ_constraint ((l, ct, l') : Univ.univ_constraint) : quoted_univ_constraint =
     ((quote_level l, quote_constraint_type ct), quote_level l')

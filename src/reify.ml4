@@ -335,9 +335,9 @@ struct
   let tlevel = resolve_symbol pkg_level "t"
   let tLevel = resolve_symbol pkg_level "Level"
   let tLevelVar = resolve_symbol pkg_level "Var"
-  let tunivLe = resolve_symbol pkg_univ "Le"
-  let tunivLt = resolve_symbol pkg_univ "Lt"
-  let tunivEq = resolve_symbol pkg_univ "Eq"
+  let tunivLe = resolve_symbol (ext_pkg_univ "ConstraintType") "Le"
+  let tunivLt = resolve_symbol (ext_pkg_univ "ConstraintType") "Lt"
+  let tunivEq = resolve_symbol (ext_pkg_univ "ConstraintType") "Eq"
   (* let tunivcontext = resolve_symbol pkg_univ "universe_context" *)
   let cMonomorphic_ctx = resolve_symbol pkg_univ "Monomorphic_ctx"
   let cPolymorphic_ctx = resolve_symbol pkg_univ "Polymorphic_ctx"

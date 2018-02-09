@@ -19,14 +19,14 @@ Definition edge : Set := Level.t * Z * Level.t.
 Definition edges_of_constraint (uc : univ_constraint) : list edge
   := let '((l, ct),l') := uc in
      match ct with
-     | Lt => [(l,-1,l')]
-     | Le => [(l,0,l')]
-     | Eq => [(l,0,l'); (l',0,l)]
+     | ConstraintType.Lt => [(l,-1,l')]
+     | ConstraintType.Le => [(l,0,l')]
+     | ConstraintType.Eq => [(l,0,l'); (l',0,l)]
      end.
 
 Definition init_graph : t :=
   let levels := LevelSet.add Level.prop (LevelSet.add Level.set LevelSet.empty) in
-  let constraints := Constraint.add (Level.prop, Lt, Level.set) Constraint.empty in
+  let constraints := Constraint.add (Level.prop, ConstraintType.Lt, Level.set) Constraint.empty in
   (levels, constraints).
 
 (* The monomorphic levels are > Set while polymorphic ones are >= Set. *)
@@ -35,8 +35,8 @@ Definition add_node (l : Level.t) (G : t) : t
      let constraints :=
          match l with
          | Level.lProp | Level.lSet => snd G (* supposed to be yet here *)
-         | Level.Var _ => Constraint.add (Level.set, Le, l) (snd G)
-         | Level.Level _ => Constraint.add (Level.set, Lt, l) (snd G)
+         | Level.Var _ => Constraint.add (Level.set, ConstraintType.Le, l) (snd G)
+         | Level.Level _ => Constraint.add (Level.set, ConstraintType.Lt, l) (snd G)
          end in
      (levels, constraints).
 
@@ -132,9 +132,9 @@ Section UGraph.
   Definition check_constraint (cstr : univ_constraint) :=
     let '(l, d, r) := cstr in
     match d with
-    | Eq => check_eq_level l r
-    | Lt => check_lt_level l r
-    | Le => check_le_level l r
+    | ConstraintType.Eq => check_eq_level l r
+    | ConstraintType.Lt => check_lt_level l r
+    | ConstraintType.Le => check_le_level l r
     end.
 
   Definition check_constraints (cstrs : Constraint.t) :=

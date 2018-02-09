@@ -267,23 +267,26 @@ End Universe.
 
 Definition universe := Universe.t.
 
-Inductive constraint_type : Set := Lt | Le | Eq.
-Definition univ_constraint : Set := universe_level * constraint_type * universe_level.
+Module ConstraintType.
+  Inductive t : Set := Lt | Le | Eq.
+End ConstraintType.
 
-Definition make_univ_constraint : universe_level -> constraint_type -> universe_level -> univ_constraint
-  := fun x y z => (x, y, z).
-
+Definition constraint_type := ConstraintType.t.
+Definition univ_constraint : Set := universe_level * ConstraintType.t * universe_level.
 
 Require MSets.MSetWeakList.
-Module ConstraintTypeDec.
+Module UnivConstraintDec.
   Definition t : Set := univ_constraint.
   Definition eq : t -> t -> Prop := eq.
   Definition eq_equiv : RelationClasses.Equivalence eq := _.
   Definition eq_dec : forall x y : t, {eq x y} + {~ eq x y}.
     unfold eq. repeat decide equality.
   Defined.
-End ConstraintTypeDec.
-Module Constraint := MSets.MSetWeakList.Make ConstraintTypeDec.
+End UnivConstraintDec.
+Module Constraint := MSets.MSetWeakList.Make UnivConstraintDec.
+
+Definition make_univ_constraint : universe_level -> constraint_type -> universe_level -> univ_constraint
+  := fun x y z => (x, y, z).
 
 (** Needs to be in Type because template polymorphism of MSets does not allow setting
     the lowest universe *)

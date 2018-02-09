@@ -85,3 +85,8 @@ src/uGraph0.mli
 /Makefile.coqplugin.conf
 /test-suite/Makefile.coq.conf
 /.merlin
+/html/Template.*.html
+/src/univSubst.ml
+/src/univSubst.mli
+/src/utils.ml
+/src/utils.mli

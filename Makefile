@@ -38,7 +38,7 @@ Makefile.coqplugin: _CompilerProject
 Makefile.coqchecker: _CheckerProject
 	coq_makefile -f _CheckerProject -o Makefile.coqchecker
 
-test-suite: coq
+test-suite: coq theories/TemplateCoqChecker.vo
 	$(MAKE) -C test-suite
 
 theories/TemplateCoqCompiler.vo: Makefile.coqplugin theories/Extraction.v theories/TemplateCoqCompiler.v | coq

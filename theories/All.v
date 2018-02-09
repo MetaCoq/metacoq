@@ -6,7 +6,7 @@ From Template Require Export
      Ast          (* The term AST *)
      AstUtils     (* Utilities on the AST *)
      Template     (* Declaration of the Template Coq plugin *)
-     Induction    (* Inductivon *)
+     Induction    (* Induction *)
      LiftSubst    (* Lifting and substitution for terms *)
      WeakSubst    (* Weakening and substitution lemmas *)
      UnivSubst    (* Substitution of universe instances *)

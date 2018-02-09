@@ -36,7 +36,7 @@ branch is in development and contains additional features:
 Documentation
 =============
 
-The 8.7 branch [documentation (coqdoc files)](https://github.com/Template-Coq/template-coq/blob/master/docs/html/Template.All.html) is available.
+The 8.7 branch [documentation (coqdoc files)](html/Template.All.html) is available.
 
 Papers
 ======

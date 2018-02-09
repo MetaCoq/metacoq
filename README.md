@@ -33,6 +33,11 @@ branch is in development and contains additional features:
   
 - Example plugins built on top of this.
 
+Documentation
+=============
+
+The 8.7 branch [documentation (coqdoc files)](https://github.com/Template-Coq/template-coq/tree/master/docs/html/Template.All.html) is available.
+
 Papers
 ======
 

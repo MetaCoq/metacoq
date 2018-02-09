@@ -24,6 +24,7 @@
 <span class="id" title="var">From</span> <span class="id" title="var">Translations</span> <span class="id" title="keyword">Require</span> <span class="id" title="keyword">Import</span> <a class="idref" href="Translations.translation_utils.html#"><span class="id" title="library">translation_utils</span></a> <a class="idref" href="Translations.sigma.html#"><span class="id" title="library">sigma</span></a>.<br/>
 
 <br/>
+<span class="comment">(*&nbsp;-*-&nbsp;coq-prog-args&nbsp;:&nbsp;("-debug"&nbsp;"-type-in-type")&nbsp;-*-&nbsp;&nbsp;*)</span><br/>
 <span class="id" title="keyword">Import</span> <span class="id" title="var">String</span> <span class="id" title="var">Lists.List.ListNotations</span> <span class="id" title="var">MonadNotation</span>.<br/>
 <span class="id" title="keyword">Open</span> <span class="id" title="keyword">Scope</span> <span class="id" title="var">string_scope</span>.<br/>
 <span class="id" title="keyword">Open</span> <span class="id" title="keyword">Scope</span> <span class="id" title="var">list_scope</span>.<br/>
@@ -45,8 +46,8 @@
 &nbsp;&nbsp;| <span class="id" title="constructor">tCase</span> <span class="id" title="var">ik</span> <span class="id" title="var">t</span> <span class="id" title="var">u</span> <span class="id" title="var">br</span> ⇒ <span class="id" title="constructor">tCase</span> <span class="id" title="var">ik</span> (<a class="idref" href="Translations.tsl_param2.html#tsl_rec1"><span class="id" title="definition">tsl_rec1</span></a> <a class="idref" href="Translations.tsl_param2.html#n"><span class="id" title="variable">n</span></a> <a class="idref" href="Translations.tsl_param2.html#t"><span class="id" title="variable">t</span></a>) (<a class="idref" href="Translations.tsl_param2.html#tsl_rec1"><span class="id" title="definition">tsl_rec1</span></a> <a class="idref" href="Translations.tsl_param2.html#n"><span class="id" title="variable">n</span></a> <span class="id" title="var">u</span>)<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<a class="idref" href="http://coq.inria.fr/distrib/8.7.1/stdlib//Coq.Lists.List.html#map"><span class="id" title="definition">List.map</span></a> (<span class="id" title="keyword">fun</span> <span class="id" title="var">x</span> ⇒ <a class="idref" href="http://coq.inria.fr/distrib/8.7.1/stdlib//Coq.Init.Datatypes.html#44400027531d4bc3f586a1997dc874c0"><span class="id" title="notation">(</span></a><a class="idref" href="http://coq.inria.fr/distrib/8.7.1/stdlib//Coq.Init.Datatypes.html#fst"><span class="id" title="definition">fst</span></a> <a class="idref" href="Translations.tsl_param2.html#x"><span class="id" title="variable">x</span></a><a class="idref" href="http://coq.inria.fr/distrib/8.7.1/stdlib//Coq.Init.Datatypes.html#44400027531d4bc3f586a1997dc874c0"><span class="id" title="notation">,</span></a> <a class="idref" href="Translations.tsl_param2.html#tsl_rec1"><span class="id" title="definition">tsl_rec1</span></a> <a class="idref" href="Translations.tsl_param2.html#n"><span class="id" title="variable">n</span></a> (<a class="idref" href="http://coq.inria.fr/distrib/8.7.1/stdlib//Coq.Init.Datatypes.html#snd"><span class="id" title="definition">snd</span></a> <a class="idref" href="Translations.tsl_param2.html#x"><span class="id" title="variable">x</span></a>)<a class="idref" href="http://coq.inria.fr/distrib/8.7.1/stdlib//Coq.Init.Datatypes.html#44400027531d4bc3f586a1997dc874c0"><span class="id" title="notation">)</span></a>) <span class="id" title="var">br</span>)<br/>
 &nbsp;&nbsp;| <span class="id" title="constructor">tProj</span> <span class="id" title="var">p</span> <span class="id" title="var">t</span> ⇒ <span class="id" title="constructor">tProj</span> <span class="id" title="var">p</span> (<a class="idref" href="Translations.tsl_param2.html#tsl_rec1"><span class="id" title="definition">tsl_rec1</span></a> <a class="idref" href="Translations.tsl_param2.html#n"><span class="id" title="variable">n</span></a> <a class="idref" href="Translations.tsl_param2.html#t"><span class="id" title="variable">t</span></a>)<br/>
-&nbsp;&nbsp;<br/>
-&nbsp;&nbsp;<br/>
+&nbsp;&nbsp;<span class="comment">(*&nbsp;|&nbsp;tFix&nbsp;:&nbsp;mfixpoint&nbsp;term&nbsp;-&gt;&nbsp;nat&nbsp;-&gt;&nbsp;term&nbsp;*)</span><br/>
+&nbsp;&nbsp;<span class="comment">(*&nbsp;|&nbsp;tCoFix&nbsp;:&nbsp;mfixpoint&nbsp;term&nbsp;-&gt;&nbsp;nat&nbsp;-&gt;&nbsp;term&nbsp;*)</span><br/>
 &nbsp;&nbsp;| <span class="id" title="var">_</span> ⇒ <a class="idref" href="Translations.tsl_param2.html#t"><span class="id" title="variable">t</span></a><br/>
 &nbsp;&nbsp;<span class="id" title="keyword">end</span>.<br/>
 
@@ -130,6 +131,7 @@
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="method">ret</span> (<a class="idref" href="Translations.sigma.html#pack"><span class="id" title="definition">pack</span></a> <a class="idref" href="Translations.tsl_param2.html#t1"><span class="id" title="variable">t1</span></a> <span class="id" title="var">t2</span>)).<br/>
 
 <br/>
+<span class="comment">(*&nbsp;replace&nbsp;tRel&nbsp;k&nbsp;by&nbsp;t&nbsp;in&nbsp;u&nbsp;without&nbsp;decreasing&nbsp;tRels&nbsp;of&nbsp;u&nbsp;nor&nbsp;lifting&nbsp;them&nbsp;of&nbsp;t&nbsp;*)</span><br/>
 <span class="id" title="keyword">Fixpoint</span> <a name="replace"><span class="id" title="definition">replace</span></a> <span class="id" title="var">t</span> <span class="id" title="var">k</span> <span class="id" title="var">u</span> {<span class="id" title="keyword">struct</span> <span class="id" title="var">u</span>} :=<br/>
 &nbsp;&nbsp;<span class="id" title="keyword">match</span> <a class="idref" href="Translations.tsl_param2.html#u"><span class="id" title="variable">u</span></a> <span class="id" title="keyword">with</span><br/>
 &nbsp;&nbsp;| <span class="id" title="constructor">tRel</span> <span class="id" title="var">n</span> ⇒<br/>
@@ -170,7 +172,9 @@
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">bodies</span> <span class="id" title="notation">&lt;-</span> <span class="id" title="var">_</span> <span class="id" title="notation">;;</span><br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="method">ret</span> <a class="idref" href="http://coq.inria.fr/distrib/8.7.1/stdlib//Coq.Init.Datatypes.html#44400027531d4bc3f586a1997dc874c0"><span class="id" title="notation">(</span></a><span class="id" title="var">_</span><a class="idref" href="http://coq.inria.fr/distrib/8.7.1/stdlib//Coq.Init.Datatypes.html#44400027531d4bc3f586a1997dc874c0"><span class="id" title="notation">,</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.7.1/stdlib//Coq.Lists.List.html#64ee52ab9627fca8d637e2f1207a2990"><span class="id" title="notation">[{|</span></a> <span class="id" title="constructor">ind_npars</span> <span class="id" title="constructor">:=</span> <span class="id" title="constructor">mind</span><span class="id" title="constructor">.(</span><span class="id" title="constructor">ind_npars</span><span class="id" title="constructor">);</span><br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="constructor">ind_bodies</span> <span class="id" title="constructor">:=</span> <span class="id" title="constructor">bodies</span> <span class="id" title="constructor">;</span><br/>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="constructor">ind_universes</span> <span class="id" title="constructor">:=</span> <span class="id" title="constructor">mind</span><span class="id" title="constructor">.(</span><span class="id" title="constructor">ind_universes</span><span class="id" title="constructor">)</span><a class="idref" href="http://coq.inria.fr/distrib/8.7.1/stdlib//Coq.Lists.List.html#64ee52ab9627fca8d637e2f1207a2990"><span class="id" title="notation">|}]</span></a><a class="idref" href="http://coq.inria.fr/distrib/8.7.1/stdlib//Coq.Init.Datatypes.html#44400027531d4bc3f586a1997dc874c0"><span class="id" title="notation">)</span></a>). &nbsp;&nbsp;<span class="id" title="tactic">simple</span> <span class="id" title="tactic">refine</span> (<span class="id" title="keyword">let</span> <span class="id" title="var">L</span> : <a class="idref" href="http://coq.inria.fr/distrib/8.7.1/stdlib//Coq.Init.Datatypes.html#list"><span class="id" title="inductive">list</span></a> <span class="id" title="inductive">term</span> := <span class="id" title="var">_</span> <span class="id" title="tactic">in</span> <span class="id" title="var">_</span>).<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="constructor">ind_universes</span> <span class="id" title="constructor">:=</span> <span class="id" title="constructor">mind</span><span class="id" title="constructor">.(</span><span class="id" title="constructor">ind_universes</span><span class="id" title="constructor">)</span><a class="idref" href="http://coq.inria.fr/distrib/8.7.1/stdlib//Coq.Lists.List.html#64ee52ab9627fca8d637e2f1207a2990"><span class="id" title="notation">|}]</span></a><a class="idref" href="http://coq.inria.fr/distrib/8.7.1/stdlib//Coq.Init.Datatypes.html#44400027531d4bc3f586a1997dc874c0"><span class="id" title="notation">)</span></a>). <span class="comment">(*&nbsp;FIXME&nbsp;always&nbsp;ok?&nbsp;*)</span><br/>
+&nbsp;&nbsp;<span class="comment">(*&nbsp;L&nbsp;is&nbsp;<span class="inlinecode">(<span class="id" title="var">tInd</span></span> <span class="inlinecode"><span class="id" title="var">n</span>,</span> <span class="inlinecode"><span class="id" title="var">tRel</span></span> <span class="inlinecode">0);</span> <span class="inlinecode">...</span> <span class="inlinecode">;</span> <span class="inlinecode">(<span class="id" title="var">tInd</span></span> <span class="inlinecode">0,</span> <span class="inlinecode"><span class="id" title="var">tRel</span></span> <span class="inlinecode"><span class="id" title="var">n</span>)</span>&nbsp;*)</span><br/>
+&nbsp;&nbsp;<span class="id" title="tactic">simple</span> <span class="id" title="tactic">refine</span> (<span class="id" title="keyword">let</span> <span class="id" title="var">L</span> : <a class="idref" href="http://coq.inria.fr/distrib/8.7.1/stdlib//Coq.Init.Datatypes.html#list"><span class="id" title="inductive">list</span></a> <span class="id" title="inductive">term</span> := <span class="id" title="var">_</span> <span class="id" title="tactic">in</span> <span class="id" title="var">_</span>).<br/>
 
 <br/>
 &nbsp;&nbsp;- <span class="id" title="tactic">refine</span> (<span class="id" title="keyword">let</span> <span class="id" title="var">n</span> := <a class="idref" href="http://coq.inria.fr/distrib/8.7.1/stdlib//Coq.Lists.List.html#length"><span class="id" title="abbreviation">List.length</span></a> <span class="id" title="var">arities</span> <a class="idref" href="http://coq.inria.fr/distrib/8.7.1/stdlib//Coq.Init.Peano.html#9482aae3d3b06e249765c1225dbb8cbb"><span class="id" title="notation">-</span></a> 1 <span class="id" title="tactic">in</span><br/>
@@ -178,7 +182,7 @@
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a class="idref" href="http://coq.inria.fr/distrib/8.7.1/stdlib//Coq.Lists.List.html#rev"><span class="id" title="definition">List.rev</span></a> (<span class="id" title="definition">map_i</span> (<span class="id" title="keyword">fun</span> <span class="id" title="var">i</span> <a class="idref" href="Translations.tsl_param2.html#pat"><span class="id" title="variable">'(</span></a><a class="idref" href="Translations.tsl_param2.html#pat"><span class="id" title="variable">a</span></a><a class="idref" href="Translations.tsl_param2.html#pat"><span class="id" title="variable">,</span></a><a class="idref" href="Translations.tsl_param2.html#pat"><span class="id" title="variable">a2</span></a><a class="idref" href="Translations.tsl_param2.html#pat"><span class="id" title="variable">)</span></a> ⇒ <a class="idref" href="Translations.sigma.html#pair"><span class="id" title="definition">pair</span></a> <span class="id" title="var">a</span> <span class="id" title="var">a2</span> (<span class="id" title="constructor">tInd</span> (<span class="id" title="constructor">mkInd</span> <span class="id" title="var">kn</span> <a class="idref" href="Translations.tsl_param2.html#i"><span class="id" title="variable">i</span></a>) <a class="idref" href="http://coq.inria.fr/distrib/8.7.1/stdlib//Coq.Lists.List.html#145bedf8a5d4a541831f3f70db03085c"><span class="id" title="notation">[]</span></a>) (<span class="id" title="constructor">tRel</span> (<a class="idref" href="Translations.tsl_param2.html#n"><span class="id" title="variable">n</span></a><a class="idref" href="http://coq.inria.fr/distrib/8.7.1/stdlib//Coq.Init.Peano.html#9482aae3d3b06e249765c1225dbb8cbb"><span class="id" title="notation">-</span></a><a class="idref" href="Translations.tsl_param2.html#i"><span class="id" title="variable">i</span></a>))) <a class="idref" href="Translations.tsl_param2.html#L"><span class="id" title="variable">L</span></a>)).<br/>
 
 <br/>
-&nbsp;&nbsp;- <br/>
+&nbsp;&nbsp;- <span class="comment">(*&nbsp;inductive_body&nbsp;-&gt;&nbsp;tsl_result&nbsp;inductive_body&nbsp;*)</span><br/>
 &nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">refine</span> (<span class="id" title="definition">monad_map_i</span> <span class="id" title="var">_</span> <span class="id" title="var">mind</span>.(<span class="id" title="projection">ind_bodies</span>)).<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">intros</span> <span class="id" title="var">i</span> <span class="id" title="var">ind</span>.<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">refine</span> (<span class="id" title="var">A</span> <span class="id" title="notation">&lt;-</span> <span class="id" title="var">_</span> <span class="id" title="notation">;;</span> <span class="id" title="var">ctors</span> <span class="id" title="notation">&lt;-</span> <span class="id" title="var">_</span> <span class="id" title="notation">;;</span><br/>
@@ -186,17 +190,18 @@
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="constructor">ind_type</span> <span class="id" title="constructor">:=</span> <span class="id" title="constructor">A</span><span class="id" title="constructor">;</span><br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="constructor">ind_kelim</span> <span class="id" title="constructor">:=</span> <span class="id" title="constructor">ind</span><span class="id" title="constructor">.(</span><span class="id" title="constructor">ind_kelim</span><span class="id" title="constructor">);</span><br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="constructor">ind_ctors</span> <span class="id" title="constructor">:=</span> <span class="id" title="constructor">ctors</span><span class="id" title="constructor">;</span><br/>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="constructor">ind_projs</span> <span class="id" title="constructor">:=</span> <span class="id" title="constructor">[]</span> |}). &nbsp;&nbsp;&nbsp;&nbsp;+ <br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="constructor">ind_projs</span> <span class="id" title="constructor">:=</span> <span class="id" title="constructor">[]</span> |}). <span class="comment">(*&nbsp;TODO&nbsp;*)</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;+ <span class="comment">(*&nbsp;arity&nbsp;&nbsp;*)</span><br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">refine</span> (<span class="id" title="var">t2</span> <span class="id" title="notation">&lt;-</span> <span class="id" title="var">tsl2'</span> <span class="id" title="var">ind</span>.(<span class="id" title="projection">ind_type</span>) <span class="id" title="notation">;;</span><br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">let</span> <span class="id" title="var">i1</span> := <a class="idref" href="Translations.tsl_param2.html#tsl_rec1"><span class="id" title="definition">tsl_rec1</span></a> 0 (<span class="id" title="constructor">tInd</span> (<span class="id" title="constructor">mkInd</span> <span class="id" title="var">kn</span> <span class="id" title="var">i</span>) <a class="idref" href="http://coq.inria.fr/distrib/8.7.1/stdlib//Coq.Lists.List.html#145bedf8a5d4a541831f3f70db03085c"><span class="id" title="notation">[]</span></a>) <span class="id" title="tactic">in</span><br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="method">ret</span> (<span class="id" title="definition">try_reduce</span> (<a class="idref" href="http://coq.inria.fr/distrib/8.7.1/stdlib//Coq.Init.Datatypes.html#fst"><span class="id" title="definition">fst</span></a> (<a class="idref" href="http://coq.inria.fr/distrib/8.7.1/stdlib//Coq.Init.Datatypes.html#fst"><span class="id" title="definition">fst</span></a> <span class="id" title="var">ΣE</span>)) <a class="idref" href="http://coq.inria.fr/distrib/8.7.1/stdlib//Coq.Lists.List.html#145bedf8a5d4a541831f3f70db03085c"><span class="id" title="notation">[]</span></a> <span class="id" title="method">fuel</span> (<span class="id" title="definition">mkApp</span> <span class="id" title="var">t2</span> <a class="idref" href="Translations.tsl_param2.html#i1"><span class="id" title="variable">i1</span></a>))).<br/>
-&nbsp;&nbsp;&nbsp;&nbsp;+ <br/>
+&nbsp;&nbsp;&nbsp;&nbsp;+ <span class="comment">(*&nbsp;constructors&nbsp;*)</span><br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">refine</span> (<span class="id" title="definition">monad_map_i</span> <span class="id" title="var">_</span> <span class="id" title="var">ind</span>.(<span class="id" title="projection">ind_ctors</span>)).<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">intros</span> <span class="id" title="var">k</span> ((<span class="id" title="var">name</span>, <span class="id" title="var">typ</span>), <span class="id" title="var">nargs</span>).<br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">refine</span> (<span class="id" title="var">t2</span> <span class="id" title="notation">&lt;-</span> <span class="id" title="var">tsl2'</span> <span class="id" title="var">typ</span> <span class="id" title="notation">;;</span><br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">let</span> <span class="id" title="var">t2</span> := <span class="id" title="definition">fold_left_i</span> (<span class="id" title="keyword">fun</span> <span class="id" title="var">t</span> <span class="id" title="var">i</span> <span class="id" title="var">u</span> ⇒ <a class="idref" href="Translations.tsl_param2.html#replace"><span class="id" title="definition">replace</span></a> <a class="idref" href="Translations.tsl_param2.html#u"><span class="id" title="variable">u</span></a> <a class="idref" href="Translations.tsl_param2.html#i"><span class="id" title="variable">i</span></a> <a class="idref" href="Translations.tsl_param2.html#t"><span class="id" title="variable">t</span></a>) <span class="id" title="var">L</span> <span class="id" title="var">t2</span> <span class="id" title="tactic">in</span><br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">let</span> <span class="id" title="var">c1</span> := <a class="idref" href="Translations.tsl_param2.html#tsl_rec1"><span class="id" title="definition">tsl_rec1</span></a> 0 (<span class="id" title="constructor">tConstruct</span> (<span class="id" title="constructor">mkInd</span> <span class="id" title="var">kn</span> <span class="id" title="var">i</span>) <span class="id" title="var">k</span> <a class="idref" href="http://coq.inria.fr/distrib/8.7.1/stdlib//Coq.Lists.List.html#145bedf8a5d4a541831f3f70db03085c"><span class="id" title="notation">[]</span></a>) <span class="id" title="tactic">in</span><br/>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">match</span> <span class="id" title="definition">reduce_opt</span> <span class="id" title="definition">RedFlags.default</span> (<a class="idref" href="http://coq.inria.fr/distrib/8.7.1/stdlib//Coq.Init.Datatypes.html#fst"><span class="id" title="definition">fst</span></a> (<a class="idref" href="http://coq.inria.fr/distrib/8.7.1/stdlib//Coq.Init.Datatypes.html#fst"><span class="id" title="definition">fst</span></a> <span class="id" title="var">ΣE</span>)) <a class="idref" href="http://coq.inria.fr/distrib/8.7.1/stdlib//Coq.Lists.List.html#145bedf8a5d4a541831f3f70db03085c"><span class="id" title="notation">[]</span></a> <br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">match</span> <span class="id" title="definition">reduce_opt</span> <span class="id" title="definition">RedFlags.default</span> (<a class="idref" href="http://coq.inria.fr/distrib/8.7.1/stdlib//Coq.Init.Datatypes.html#fst"><span class="id" title="definition">fst</span></a> (<a class="idref" href="http://coq.inria.fr/distrib/8.7.1/stdlib//Coq.Init.Datatypes.html#fst"><span class="id" title="definition">fst</span></a> <span class="id" title="var">ΣE</span>)) <a class="idref" href="http://coq.inria.fr/distrib/8.7.1/stdlib//Coq.Lists.List.html#145bedf8a5d4a541831f3f70db03085c"><span class="id" title="notation">[]</span></a> <span class="comment">(*&nbsp;for&nbsp;debugging&nbsp;but&nbsp;we&nbsp;could&nbsp;use&nbsp;try_reduce&nbsp;*)</span><br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="method">fuel</span> (<span class="id" title="definition">mkApp</span> <a class="idref" href="Translations.tsl_param2.html#t2"><span class="id" title="variable">t2</span></a> <a class="idref" href="Translations.tsl_param2.html#c1"><span class="id" title="variable">c1</span></a>) <span class="id" title="keyword">with</span><br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| <a class="idref" href="http://coq.inria.fr/distrib/8.7.1/stdlib//Coq.Init.Datatypes.html#Some"><span class="id" title="constructor">Some</span></a> <span class="id" title="var">t'</span> ⇒ <span class="id" title="method">ret</span> <a class="idref" href="http://coq.inria.fr/distrib/8.7.1/stdlib//Coq.Init.Datatypes.html#44400027531d4bc3f586a1997dc874c0"><span class="id" title="notation">(</span></a><a class="idref" href="Translations.translation_utils.html#tsl_ident"><span class="id" title="definition">tsl_ident</span></a> <span class="id" title="var">name</span><a class="idref" href="http://coq.inria.fr/distrib/8.7.1/stdlib//Coq.Init.Datatypes.html#44400027531d4bc3f586a1997dc874c0"><span class="id" title="notation">,</span></a> <span class="id" title="var">t'</span><a class="idref" href="http://coq.inria.fr/distrib/8.7.1/stdlib//Coq.Init.Datatypes.html#44400027531d4bc3f586a1997dc874c0"><span class="id" title="notation">,</span></a> <span class="id" title="var">nargs</span><a class="idref" href="http://coq.inria.fr/distrib/8.7.1/stdlib//Coq.Init.Datatypes.html#44400027531d4bc3f586a1997dc874c0"><span class="id" title="notation">)</span></a><br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;| <a class="idref" href="http://coq.inria.fr/distrib/8.7.1/stdlib//Coq.Init.Datatypes.html#None"><span class="id" title="constructor">None</span></a> ⇒ <span class="id" title="method">raise</span> <a class="idref" href="Translations.translation_utils.html#TranslationNotHandeled"><span class="id" title="constructor">TranslationNotHandeled</span></a><br/>
@@ -205,11 +210,11 @@
 <br/>
 &nbsp;&nbsp;- <span class="id" title="tactic">refine</span> (<span class="id" title="keyword">let</span> <span class="id" title="var">L</span> := <a class="idref" href="http://coq.inria.fr/distrib/8.7.1/stdlib//Coq.Lists.List.html#combine"><span class="id" title="definition">List.combine</span></a> <span class="id" title="var">mind</span>.(<span class="id" title="projection">ind_bodies</span>) <span class="id" title="var">arities2</span> <span class="id" title="tactic">in</span><br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="definition">fold_left_i</span> (<span class="id" title="keyword">fun</span> <span class="id" title="var">E</span> <span class="id" title="var">i</span> <a class="idref" href="Translations.tsl_param2.html#pat"><span class="id" title="variable">'(</span></a><a class="idref" href="Translations.tsl_param2.html#pat"><span class="id" title="variable">ind</span></a><a class="idref" href="Translations.tsl_param2.html#pat"><span class="id" title="variable">,</span></a><a class="idref" href="Translations.tsl_param2.html#pat"><span class="id" title="variable">a2</span></a><a class="idref" href="Translations.tsl_param2.html#pat"><span class="id" title="variable">)</span></a> ⇒ <span class="id" title="var">_</span> <a class="idref" href="http://coq.inria.fr/distrib/8.7.1/stdlib//Coq.Init.Datatypes.html#0a8150c3c4df34d205c5ed9a427e2ed5"><span class="id" title="notation">::</span></a> <span class="id" title="var">_</span> <a class="idref" href="http://coq.inria.fr/distrib/8.7.1/stdlib//Coq.Init.Datatypes.html#5d35a99a6abff1d64bf70538feb70e36"><span class="id" title="notation">++</span></a> <a class="idref" href="Translations.tsl_param2.html#E"><span class="id" title="variable">E</span></a>) <a class="idref" href="Translations.tsl_param2.html#L"><span class="id" title="variable">L</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.7.1/stdlib//Coq.Lists.List.html#145bedf8a5d4a541831f3f70db03085c"><span class="id" title="notation">[]</span></a>).<br/>
-&nbsp;&nbsp;&nbsp;&nbsp;+ <br/>
+&nbsp;&nbsp;&nbsp;&nbsp;+ <span class="comment">(*&nbsp;ind&nbsp;*)</span><br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">refine</span> <a class="idref" href="http://coq.inria.fr/distrib/8.7.1/stdlib//Coq.Init.Datatypes.html#44400027531d4bc3f586a1997dc874c0"><span class="id" title="notation">(</span></a><span class="id" title="constructor">IndRef</span> (<span class="id" title="constructor">mkInd</span> <span class="id" title="var">kn</span> <span class="id" title="var">i</span>)<a class="idref" href="http://coq.inria.fr/distrib/8.7.1/stdlib//Coq.Init.Datatypes.html#44400027531d4bc3f586a1997dc874c0"><span class="id" title="notation">,</span></a> <a class="idref" href="Translations.sigma.html#pair"><span class="id" title="definition">pair</span></a> <span class="id" title="var">ind</span>.(<span class="id" title="projection">ind_type</span>) <span class="id" title="var">a2</span> (<span class="id" title="constructor">tInd</span> (<span class="id" title="constructor">mkInd</span> <span class="id" title="var">kn</span> <span class="id" title="var">i</span>) <a class="idref" href="http://coq.inria.fr/distrib/8.7.1/stdlib//Coq.Lists.List.html#145bedf8a5d4a541831f3f70db03085c"><span class="id" title="notation">[]</span></a>) (<span class="id" title="constructor">tInd</span> (<span class="id" title="constructor">mkInd</span> <span class="id" title="var">kn'</span> <span class="id" title="var">i</span>) <a class="idref" href="http://coq.inria.fr/distrib/8.7.1/stdlib//Coq.Lists.List.html#145bedf8a5d4a541831f3f70db03085c"><span class="id" title="notation">[]</span></a>)<a class="idref" href="http://coq.inria.fr/distrib/8.7.1/stdlib//Coq.Init.Datatypes.html#44400027531d4bc3f586a1997dc874c0"><span class="id" title="notation">)</span></a>.<br/>
-&nbsp;&nbsp;&nbsp;&nbsp;+ <br/>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<br/>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;+ <span class="comment">(*&nbsp;ctors&nbsp;*)</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">(*&nbsp;refine&nbsp;(fold_left_i&nbsp;(fun&nbsp;E&nbsp;k&nbsp;_&nbsp;=&gt;&nbsp;_&nbsp;::&nbsp;E)&nbsp;ind.(ind_ctors)&nbsp;<span class="inlinecode"></span>).&nbsp;*)</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">(*&nbsp;exact&nbsp;(ConstructRef&nbsp;(mkInd&nbsp;id&nbsp;i)&nbsp;k,&nbsp;tConstruct&nbsp;(mkInd&nbsp;id'&nbsp;i)&nbsp;k&nbsp;<span class="inlinecode"></span>).&nbsp;*)</span><br/>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="tactic">refine</span> <a class="idref" href="http://coq.inria.fr/distrib/8.7.1/stdlib//Coq.Lists.List.html#145bedf8a5d4a541831f3f70db03085c"><span class="id" title="notation">[]</span></a>.<br/>
 <span class="id" title="keyword">Defined</span>.<br/>
 
@@ -244,60 +249,297 @@
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a class="idref" href="Translations.tsl_param2.html#d82f7a096a68ce52d5a76df899d9a4cd"><span class="id" title="inductive">list</span></a><a class="idref" href="Translations.tsl_param2.html#d82f7a096a68ce52d5a76df899d9a4cd"><span class="id" title="inductive">ᵗ</span></a> <a class="idref" href="Translations.tsl_param2.html#A"><span class="id" title="variable">A</span></a> (<a class="idref" href="Translations.tsl_param2.html#x"><span class="id" title="variable">x</span></a><a class="idref" href="Translations.sigma.html#91770bc4363d474eea6f54a3f90e6da9"><span class="id" title="notation">.1</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.7.1/stdlib//Coq.Init.Datatypes.html#0a8150c3c4df34d205c5ed9a427e2ed5"><span class="id" title="notation">::</span></a> <a class="idref" href="Translations.tsl_param2.html#lH"><span class="id" title="variable">lH</span></a><a class="idref" href="Translations.sigma.html#91770bc4363d474eea6f54a3f90e6da9"><span class="id" title="notation">.1</span></a>)).<br/>
 
 <br/>
+<span class="comment">(*&nbsp;Fixpoint&nbsp;recompose_prod&nbsp;(ns&nbsp;:&nbsp;list&nbsp;name)&nbsp;(As&nbsp;:&nbsp;list&nbsp;term)&nbsp;(B&nbsp;:&nbsp;term)&nbsp;:&nbsp;term&nbsp;:=&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;match&nbsp;(ns,&nbsp;As)&nbsp;with&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;|&nbsp;(n&nbsp;::&nbsp;ns,&nbsp;A&nbsp;::&nbsp;As)&nbsp;&nbsp;=&gt;&nbsp;tProd&nbsp;n&nbsp;A&nbsp;(recompose_prod&nbsp;ns&nbsp;As&nbsp;B)&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;|&nbsp;_&nbsp;=&gt;&nbsp;B&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;end.&nbsp;*)</span><br/>
+
+<br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;Definition&nbsp;pair_map&nbsp;{A&nbsp;A'&nbsp;B&nbsp;B'}&nbsp;(f&nbsp;:&nbsp;A&nbsp;-&gt;&nbsp;A')&nbsp;(g&nbsp;:&nbsp;B&nbsp;-&gt;&nbsp;B')&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;:&nbsp;A&nbsp;*&nbsp;B&nbsp;-&gt;&nbsp;A'&nbsp;*&nbsp;B'&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;:=&nbsp;fun&nbsp;w&nbsp;=&gt;&nbsp;(f&nbsp;(fst&nbsp;w),&nbsp;g&nbsp;(snd&nbsp;w)).&nbsp;*)</span>&nbsp;*)</span><br/>
+
+<br/>
+<span class="comment">(*&nbsp;Fixpoint&nbsp;from_n&nbsp;{A}&nbsp;(f&nbsp;:&nbsp;nat&nbsp;-&gt;&nbsp;A)&nbsp;(n&nbsp;:&nbsp;nat)&nbsp;:&nbsp;list&nbsp;A&nbsp;:=&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;match&nbsp;n&nbsp;with&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;|&nbsp;O&nbsp;=&gt;&nbsp;<span class="inlinecode"></span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;|&nbsp;S&nbsp;n&nbsp;=&gt;&nbsp;f&nbsp;n&nbsp;::&nbsp;(from_n&nbsp;f&nbsp;n)&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;end.&nbsp;*)</span><br/>
+
+<br/>
+<span class="comment">(*&nbsp;Definition&nbsp;mkImpl&nbsp;(A&nbsp;B&nbsp;:&nbsp;term)&nbsp;:&nbsp;term&nbsp;:=&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;tProd&nbsp;nAnon&nbsp;A&nbsp;B.&nbsp;*)</span><br/>
+
+<br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;Definition&nbsp;local_entry_map&nbsp;(f&nbsp;:&nbsp;term&nbsp;-&gt;&nbsp;term)&nbsp;(m&nbsp;:&nbsp;local_entry)&nbsp;:&nbsp;local_entry&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;:=&nbsp;match&nbsp;m&nbsp;with&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|&nbsp;LocalDef&nbsp;t&nbsp;=&gt;&nbsp;LocalDef&nbsp;(f&nbsp;t)&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|&nbsp;LocalAssum&nbsp;t&nbsp;=&gt;&nbsp;LocalAssum&nbsp;(f&nbsp;t)&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;end.&nbsp;*)</span>&nbsp;*)</span><br/>
+
+<br/>
+<span class="comment">(*&nbsp;Definition&nbsp;local_entry_monad_map&nbsp;{M}&nbsp;{H&nbsp;:&nbsp;Monad&nbsp;M}&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(f&nbsp;:&nbsp;term&nbsp;-&gt;&nbsp;M&nbsp;term)&nbsp;(m&nbsp;:&nbsp;local_entry)&nbsp;:&nbsp;M&nbsp;local_entry&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;:=&nbsp;match&nbsp;m&nbsp;with&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|&nbsp;LocalDef&nbsp;t&nbsp;=&gt;&nbsp;t'&nbsp;&lt;-&nbsp;(f&nbsp;t);;&nbsp;ret&nbsp;(LocalDef&nbsp;t')&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|&nbsp;LocalAssum&nbsp;t&nbsp;=&gt;&nbsp;t'&nbsp;&lt;-&nbsp;(f&nbsp;t);;&nbsp;ret&nbsp;(LocalDef&nbsp;t')&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;end.&nbsp;*)</span><br/>
+
+<br/>
+<span class="comment">(*&nbsp;Definition&nbsp;mkApp&nbsp;t&nbsp;us&nbsp;:=&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;match&nbsp;t&nbsp;with&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;|&nbsp;tApp&nbsp;t1&nbsp;us1&nbsp;=&gt;&nbsp;tApp&nbsp;t1&nbsp;(us1&nbsp;++&nbsp;us)&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;|&nbsp;_&nbsp;=&gt;&nbsp;match&nbsp;us&nbsp;with&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|&nbsp;nil&nbsp;=&gt;&nbsp;t&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|&nbsp;_&nbsp;=&gt;&nbsp;tApp&nbsp;t&nbsp;us&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;end&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;end.&nbsp;*)</span><br/>
+
+<br/>
+<span class="comment">(*&nbsp;Definition&nbsp;get_local_entry&nbsp;(l&nbsp;:&nbsp;local_entry)&nbsp;:&nbsp;term&nbsp;:=&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;match&nbsp;l&nbsp;with&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;|&nbsp;LocalDef&nbsp;t&nbsp;=&gt;&nbsp;t&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;|&nbsp;LocalAssum&nbsp;t&nbsp;=&gt;&nbsp;t&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;end.&nbsp;*)</span><br/>
+
+<br/>
+<span class="comment">(*&nbsp;Definition&nbsp;recompose_prod'&nbsp;(l&nbsp;:&nbsp;list&nbsp;(ident&nbsp;*&nbsp;local_entry)&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">(*&nbsp;Xn&nbsp;at&nbsp;the&nbsp;head&nbsp;of&nbsp;the&nbsp;list&nbsp;*)</span>)&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(b&nbsp;:&nbsp;term)&nbsp;:&nbsp;term.&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;apply&nbsp;List.rev&nbsp;in&nbsp;l.&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;eapply&nbsp;List.split&nbsp;in&nbsp;l.&nbsp;eapply&nbsp;recompose_prod.&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;exact&nbsp;(List.map&nbsp;nNamed&nbsp;(fst&nbsp;l)).&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;exact&nbsp;(List.map&nbsp;get_local_entry&nbsp;(snd&nbsp;l)).&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;exact&nbsp;b.&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;Defined.&nbsp;*)</span><br/>
+
+<br/>
+<span class="comment">(*&nbsp;Axiom&nbsp;error&nbsp;:&nbsp;forall&nbsp;{A&nbsp;B},&nbsp;A&nbsp;-&gt;&nbsp;B.&nbsp;*)</span><br/>
+
+<br/>
+<span class="comment">(*&nbsp;Definition&nbsp;tsl_mind_entry&nbsp;(ΣE&nbsp;:&nbsp;tsl_context)&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(id&nbsp;:&nbsp;ident)&nbsp;(mind&nbsp;:&nbsp;mutual_inductive_entry)&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;:&nbsp;tsl_result&nbsp;(tsl_table&nbsp;*&nbsp;list&nbsp;mutual_inductive_entry).&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;refine&nbsp;(let&nbsp;tsl_ty'&nbsp;:=&nbsp;tsl_ty_param&nbsp;fuel&nbsp;(fst&nbsp;ΣE)&nbsp;(snd&nbsp;ΣE)&nbsp;<span class="inlinecode"></span>&nbsp;in&nbsp;_).&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;refine&nbsp;(let&nbsp;tsl2'&nbsp;:=&nbsp;tsl_rec2&nbsp;fuel&nbsp;(fst&nbsp;ΣE)&nbsp;(snd&nbsp;ΣE)&nbsp;<span class="inlinecode"></span>&nbsp;in&nbsp;_).&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;refine&nbsp;(X&nbsp;&lt;-&nbsp;_&nbsp;;;&nbsp;Y&nbsp;&lt;-&nbsp;_&nbsp;;;&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ret&nbsp;(_,&nbsp;<span class="inlinecode">{|</span> <span class="inlinecode"><span class="id" title="var">mind_entry_record</span></span> <span class="inlinecode">:=</span> <span class="inlinecode"><span class="id" title="var">mind</span>.(<span class="id" title="var">mind_entry_record</span>);</span> <span class="inlinecode"></span>*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;mind_entry_finite&nbsp;:=&nbsp;mind.(mind_entry_finite);&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;mind_entry_params&nbsp;:=&nbsp;X;&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;mind_entry_inds&nbsp;:=&nbsp;Y;&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;mind_entry_polymorphic&nbsp;:=&nbsp;mind.(mind_entry_polymorphic);&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;mind_entry_private&nbsp;:=&nbsp;mind.(mind_entry_private);&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|}])).&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;-&nbsp;<span class="comment">(*&nbsp;params&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;refine&nbsp;(monad_map&nbsp;_&nbsp;mind.(mind_entry_params)).&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;refine&nbsp;(fun&nbsp;x&nbsp;=&gt;&nbsp;y&nbsp;&lt;-&nbsp;_&nbsp;;;&nbsp;ret&nbsp;(fst&nbsp;x,&nbsp;y)).&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;exact&nbsp;(local_entry_monad_map&nbsp;tsl_ty'&nbsp;(snd&nbsp;x)).&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;-&nbsp;<span class="comment">(*&nbsp;inds&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;simple&nbsp;refine&nbsp;(L&nbsp;&lt;-&nbsp;_&nbsp;;;&nbsp;monad_map_i&nbsp;_&nbsp;mind.(mind_entry_inds)).&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;exact&nbsp;(list&nbsp;term).&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;+&nbsp;<span class="comment">(*&nbsp;L&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;refine&nbsp;(let&nbsp;L0&nbsp;:=&nbsp;map_i&nbsp;(fun&nbsp;i&nbsp;_&nbsp;=&gt;&nbsp;tRel&nbsp;i)&nbsp;mind.(mind_entry_params)&nbsp;in&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;L1&nbsp;&lt;-&nbsp;_&nbsp;;;&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ret&nbsp;(L0&nbsp;++&nbsp;L1)).&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;pose&nbsp;(l&nbsp;:=&nbsp;List.length&nbsp;mind.(mind_entry_params)).&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;pose&nbsp;(p&nbsp;:=&nbsp;List.length&nbsp;mind.(mind_entry_inds)-1).&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;simple&nbsp;refine&nbsp;(monad_map_i&nbsp;_&nbsp;mind.(mind_entry_inds)).&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;simple&nbsp;refine&nbsp;(fun&nbsp;i&nbsp;_&nbsp;=&gt;&nbsp;let&nbsp;arity_i&nbsp;:=&nbsp;_&nbsp;in&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;X&nbsp;&lt;-&nbsp;_&nbsp;;;&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ret&nbsp;(pair&nbsp;arity_i&nbsp;X&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(tInd&nbsp;(mkInd&nbsp;id&nbsp;(p-i))&nbsp;<span class="inlinecode"></span>)&nbsp;(tRel&nbsp;(l+i)))).&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;refine&nbsp;(let&nbsp;l&nbsp;:=&nbsp;(List.nth&nbsp;(p-i)&nbsp;mind.(mind_entry_inds)&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(error&nbsp;"nth&nbsp;1"))&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;in&nbsp;recompose_prod'&nbsp;mind.(mind_entry_params)&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;l.(mind_entry_arity)).&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;refine&nbsp;(tsl2'&nbsp;arity_i).&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;+&nbsp;<span class="comment">(*&nbsp;one_inductive_entry&nbsp;-&gt;&nbsp;one_inductive_entry&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;intros&nbsp;i&nbsp;ind.&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;refine&nbsp;(X&nbsp;&lt;-&nbsp;_&nbsp;;;&nbsp;Y&nbsp;&lt;-&nbsp;_&nbsp;;;&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ret&nbsp;{|&nbsp;mind_entry_typename&nbsp;:=&nbsp;tsl_ident&nbsp;(ind.(mind_entry_typename));&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;mind_entry_arity&nbsp;:=&nbsp;X;&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;mind_entry_template&nbsp;:=&nbsp;ind.(mind_entry_template);&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;mind_entry_consnames&nbsp;:=&nbsp;List.map&nbsp;tsl_ident&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ind.(mind_entry_consnames);&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;mind_entry_lc&nbsp;:=&nbsp;Y;&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|}).&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*&nbsp;<span class="comment">(*&nbsp;arity&nbsp;&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;refine&nbsp;(t1&nbsp;&lt;-&nbsp;_&nbsp;;;&nbsp;ret&nbsp;(mkApp&nbsp;t1&nbsp;<span class="inlinecode"><span class="id" title="var">_</span></span>)).&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;exact&nbsp;(tsl2'&nbsp;ind.(mind_entry_arity)).&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;refine&nbsp;(mkApp&nbsp;(tInd&nbsp;(mkInd&nbsp;id&nbsp;i)&nbsp;<span class="inlinecode"></span>)&nbsp;_).&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;refine&nbsp;(from_n&nbsp;(fun&nbsp;n&nbsp;=&gt;&nbsp;proj1&nbsp;(tRel&nbsp;n))&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(List.length&nbsp;mind.(mind_entry_params))).&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*&nbsp;<span class="comment">(*&nbsp;constructors&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;refine&nbsp;(monad_map_i&nbsp;_&nbsp;ind.(mind_entry_lc)).&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;intros&nbsp;k&nbsp;t.&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;refine&nbsp;(t1&nbsp;&lt;-&nbsp;_&nbsp;;;&nbsp;ret&nbsp;(mkApp&nbsp;t1&nbsp;<span class="inlinecode"><span class="id" title="var">_</span></span>)).&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;refine&nbsp;(t'&nbsp;&lt;-&nbsp;tsl2'&nbsp;t&nbsp;;;&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ret&nbsp;(fold_left_i&nbsp;(fun&nbsp;t&nbsp;i&nbsp;u&nbsp;=&gt;&nbsp;replace&nbsp;u&nbsp;i&nbsp;t)&nbsp;L&nbsp;t')).&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;refine&nbsp;(mkApp&nbsp;(tConstruct&nbsp;(mkInd&nbsp;id&nbsp;i)&nbsp;k&nbsp;<span class="inlinecode"></span>)&nbsp;_).&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;refine&nbsp;(from_n&nbsp;(fun&nbsp;n&nbsp;=&gt;&nbsp;proj1&nbsp;(tRel&nbsp;n))&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(List.length&nbsp;mind.(mind_entry_params))).&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;-&nbsp;refine&nbsp;(let&nbsp;id'&nbsp;:=&nbsp;tsl_ident&nbsp;id&nbsp;in&nbsp;<span class="comment">(*&nbsp;should&nbsp;be&nbsp;kn&nbsp;?&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;fold_left_i&nbsp;(fun&nbsp;E&nbsp;i&nbsp;ind&nbsp;=&gt;&nbsp;_&nbsp;::&nbsp;_&nbsp;++&nbsp;E)&nbsp;mind.(mind_entry_inds)&nbsp;<span class="inlinecode"></span>).&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;+&nbsp;<span class="comment">(*&nbsp;ind&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;refine&nbsp;(IndRef&nbsp;(mkInd&nbsp;id&nbsp;i),&nbsp;tInd&nbsp;(mkInd&nbsp;id'&nbsp;i)&nbsp;<span class="inlinecode"></span>).&nbsp;<span class="comment">(*&nbsp;should&nbsp;be&nbsp;the&nbsp;pair&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;+&nbsp;<span class="comment">(*&nbsp;ctors&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;refine&nbsp;(fold_left_i&nbsp;(fun&nbsp;E&nbsp;k&nbsp;ctor&nbsp;=&gt;&nbsp;_&nbsp;::&nbsp;E)&nbsp;ind.(mind_entry_consnames)&nbsp;<span class="inlinecode"></span>).&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;exact&nbsp;(ConstructRef&nbsp;(mkInd&nbsp;id&nbsp;i)&nbsp;k,&nbsp;tConstruct&nbsp;(mkInd&nbsp;id'&nbsp;i)&nbsp;k&nbsp;<span class="inlinecode"></span>).&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;Defined.&nbsp;*)</span><br/>
+
+<br/>
+<span class="comment">(*&nbsp;Notation&nbsp;"'tΣ'"&nbsp;:=&nbsp;(tInd&nbsp;(mkInd&nbsp;"Template.sigma.sigma"&nbsp;0)).&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;Notation&nbsp;"'tproj1'"&nbsp;:=&nbsp;(tProj&nbsp;(mkInd&nbsp;"Template.sigma.sigma"&nbsp;0,&nbsp;2,&nbsp;0)).&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;Notation&nbsp;"'tImpl'"&nbsp;:=&nbsp;(tProd&nbsp;nAnon).&nbsp;*)</span><br/>
+
+<br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;Definition&nbsp;tsl_inductive&nbsp;(ind&nbsp;:&nbsp;inductive)&nbsp;:&nbsp;inductive.&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;<span class="comment">(*&nbsp;destruct&nbsp;ind.&nbsp;exact&nbsp;(mkInd&nbsp;(tsl_ident&nbsp;k)&nbsp;n).&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;Defined.&nbsp;*)</span>&nbsp;*)</span><br/>
+
+<br/>
+<span class="comment">(*&nbsp;Definition&nbsp;tat&nbsp;:=&nbsp;Type&nbsp;-&gt;&nbsp;Type.&nbsp;*)</span><br/>
+
+<br/>
+<span class="comment">(*&nbsp;Run&nbsp;TemplateProgram&nbsp;(tTranslate&nbsp;tsl_param&nbsp;(<span class="inlinecode"></span>,<span class="inlinecode"></span>)&nbsp;"tat"&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&gt;&gt;=&nbsp;tmPrint).&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;About&nbsp;tatᵗ.&nbsp;*)</span><br/>
+
+<br/>
+<span class="comment">(*&nbsp;Run&nbsp;TemplateProgram&nbsp;(tImplement&nbsp;tsl_param&nbsp;(<span class="inlinecode"></span>,&nbsp;<span class="inlinecode"></span>)&nbsp;"tu"&nbsp;(Type&nbsp;-&gt;&nbsp;Type)&nbsp;&gt;&gt;=&nbsp;tmPrint).&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;Next&nbsp;Obligation.&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;exists&nbsp;id.&nbsp;exact&nbsp;(fun&nbsp;_&nbsp;_&nbsp;=&gt;&nbsp;True).&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;Defined.&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;About&nbsp;tuᵗ.&nbsp;*)</span><br/>
+
+<br/>
+<span class="comment">(*&nbsp;Definition&nbsp;nat_entryT&nbsp;:=&nbsp;Eval&nbsp;vm_compute&nbsp;in&nbsp;match&nbsp;tsl_mind_entry&nbsp;(<span class="inlinecode"></span>,&nbsp;<span class="inlinecode"></span>)&nbsp;"Coq.Init.Datatypes.nat"&nbsp;nat_entry&nbsp;with&nbsp;|&nbsp;Success&nbsp;(_,&nbsp;<span class="inlinecode"><span class="id" title="var">e</span></span>)&nbsp;=&gt;&nbsp;e&nbsp;|&nbsp;_&nbsp;=&gt;&nbsp;todo&nbsp;end.&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;Make&nbsp;Inductive&nbsp;nat_entryT.&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;Check&nbsp;(natᵗ&nbsp;:&nbsp;nat&nbsp;-&gt;&nbsp;Set).&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;Check&nbsp;(Oᵗ&nbsp;:&nbsp;natᵗ&nbsp;O).&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;Check&nbsp;(Sᵗ&nbsp;:&nbsp;forall&nbsp;(N&nbsp;:&nbsp;exists&nbsp;n,&nbsp;natᵗ&nbsp;n),&nbsp;natᵗ&nbsp;(S&nbsp;N.1)).&nbsp;*)</span><br/>
+
+<br/>
+<span class="comment">(*&nbsp;Quote&nbsp;Recursively&nbsp;Definition&nbsp;bool_prog&nbsp;:=&nbsp;bool.&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;Definition&nbsp;bool_entry&nbsp;:=&nbsp;Eval&nbsp;compute&nbsp;in&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(mind_decl_to_entry&nbsp;(option_get&nbsp;todo&nbsp;(extract_mind_decl_from_program&nbsp;"Coq.Init.Datatypes.bool"&nbsp;bool_prog)&nbsp;)).&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;Definition&nbsp;bool_entryT&nbsp;:=&nbsp;Eval&nbsp;vm_compute&nbsp;in&nbsp;match&nbsp;tsl_mind_entry&nbsp;(<span class="inlinecode"></span>,&nbsp;<span class="inlinecode"></span>)&nbsp;"Coq.Init.Datatypes.bool"&nbsp;bool_entry&nbsp;with&nbsp;|&nbsp;Success&nbsp;(_,&nbsp;<span class="inlinecode"><span class="id" title="var">e</span></span>)&nbsp;=&gt;&nbsp;e&nbsp;|&nbsp;_&nbsp;=&gt;&nbsp;todo&nbsp;end.&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;Make&nbsp;Inductive&nbsp;bool_entryT.&nbsp;*)</span><br/>
+
+<br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;Inductive&nbsp;t&nbsp;(A&nbsp;:&nbsp;Set)&nbsp;:&nbsp;nat&nbsp;-&gt;&nbsp;Set&nbsp;:=&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;vnil&nbsp;:&nbsp;t&nbsp;A&nbsp;0&nbsp;|&nbsp;vcons&nbsp;:&nbsp;A&nbsp;-&gt;&nbsp;forall&nbsp;n&nbsp;:&nbsp;nat,&nbsp;t&nbsp;A&nbsp;n&nbsp;-&gt;&nbsp;t&nbsp;A&nbsp;(S&nbsp;n).&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;Quote&nbsp;Recursively&nbsp;Definition&nbsp;vect_prog&nbsp;:=&nbsp;t.&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;Definition&nbsp;vect_decl&nbsp;:=&nbsp;Eval&nbsp;compute&nbsp;in&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;extract_mind_decl_from_program&nbsp;"Top.t"&nbsp;vect_prog.&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;Definition&nbsp;vect_entry&nbsp;:=&nbsp;Eval&nbsp;compute&nbsp;in&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(mind_decl_to_entry&nbsp;(option_get&nbsp;todo&nbsp;vect_decl)).&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;Quote&nbsp;Definition&nbsp;tnatT&nbsp;:=&nbsp;(nat;&nbsp;natᵗ).&nbsp;*)</span>&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;Quote&nbsp;Definition&nbsp;tOT&nbsp;:=&nbsp;Oᵗ.&nbsp;*)</span>&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;Quote&nbsp;Definition&nbsp;tST&nbsp;:=&nbsp;Sᵗ.&nbsp;*)</span>&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;Definition&nbsp;vect_entryT&nbsp;:=&nbsp;Eval&nbsp;vm_compute&nbsp;in&nbsp;match&nbsp;tsl_mind_entry&nbsp;(<span class="inlinecode"><span class="id" title="var">InductiveDecl</span></span> <span class="inlinecode">&quot;<span class="id" title="var">Coq.Init.Datatypes.nat</span>&quot;</span> <span class="inlinecode"><span class="id" title="var">nat_decl</span></span>,&nbsp;<span class="inlinecode">(<span class="id" title="var">IndRef</span></span> <span class="inlinecode">(<span class="id" title="var">mkInd</span></span> <span class="inlinecode">&quot;<span class="id" title="var">Coq.Init.Datatypes.nat</span>&quot;</span> <span class="inlinecode">0),</span> <span class="inlinecode"><span class="id" title="var">tnatT</span>);</span> <span class="inlinecode">(<span class="id" title="var">ConstructRef</span></span> <span class="inlinecode">(<span class="id" title="var">mkInd</span></span> <span class="inlinecode">&quot;<span class="id" title="var">Coq.Init.Datatypes.nat</span>&quot;</span> <span class="inlinecode">0)</span> <span class="inlinecode"><span class="id" title="var">O</span>,</span> <span class="inlinecode"><span class="id" title="var">tOT</span>);</span> <span class="inlinecode">(<span class="id" title="var">ConstructRef</span></span> <span class="inlinecode">(<span class="id" title="var">mkInd</span></span> <span class="inlinecode">&quot;<span class="id" title="var">Coq.Init.Datatypes.nat</span>&quot;</span> <span class="inlinecode">0)</span> <span class="inlinecode">1,</span> <span class="inlinecode"><span class="id" title="var">tST</span>)</span>)&nbsp;"Top.t"&nbsp;vect_entry&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;with&nbsp;|&nbsp;Success&nbsp;(_,&nbsp;<span class="inlinecode"><span class="id" title="var">e</span></span>)&nbsp;=&gt;&nbsp;e&nbsp;|&nbsp;_&nbsp;=&gt;&nbsp;todo&nbsp;end.&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;Definition&nbsp;vect_entryT'&nbsp;:=&nbsp;.&nbsp;*)</span>&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;Make&nbsp;Inductive&nbsp;vect_entryT.&nbsp;*)</span>&nbsp;*)</span><br/>
+
+<br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;Require&nbsp;Vectors.VectorDef.&nbsp;*)</span>&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;Quote&nbsp;Recursively&nbsp;Definition&nbsp;vect_prog&nbsp;:=&nbsp;Vectors.VectorDef.t.&nbsp;*)</span>&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;Definition&nbsp;vect_decl&nbsp;:=&nbsp;Eval&nbsp;compute&nbsp;in&nbsp;*)</span>&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;extract_mind_decl_from_program&nbsp;"Coq.Vectors.VectorDef.t"&nbsp;vect_prog.&nbsp;*)</span>&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;Definition&nbsp;vect_entry&nbsp;:=&nbsp;Eval&nbsp;compute&nbsp;in&nbsp;*)</span>&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(mind_decl_to_entry&nbsp;(option_get&nbsp;todo_coq&nbsp;vect_decl)).&nbsp;*)</span>&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;Make&nbsp;Inductive&nbsp;vect_entry.&nbsp;*)</span>&nbsp;*)</span>&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;Definition&nbsp;vect_entryT&nbsp;:=&nbsp;Eval&nbsp;vm_compute&nbsp;in&nbsp;tsl_mind_entry&nbsp;<span class="inlinecode"><span class="id" title="var">InductiveDecl</span></span> <span class="inlinecode">&quot;<span class="id" title="var">Coq.Init.Datatypes.nat</span>&quot;</span> <span class="inlinecode"><span class="id" title="var">nat_decl</span></span>&nbsp;<span class="inlinecode">(<span class="id" title="var">IndRef</span></span> <span class="inlinecode">(<span class="id" title="var">mkInd</span></span> <span class="inlinecode">&quot;<span class="id" title="var">Coq.Init.Datatypes.nat</span>&quot;</span> <span class="inlinecode">0),</span> <span class="inlinecode"><span class="id" title="var">tnatT</span>);</span> <span class="inlinecode">(<span class="id" title="var">ConstructRef</span></span> <span class="inlinecode">(<span class="id" title="var">mkInd</span></span> <span class="inlinecode">&quot;<span class="id" title="var">Coq.Init.Datatypes.nat</span>&quot;</span> <span class="inlinecode">0)</span> <span class="inlinecode"><span class="id" title="var">O</span>,</span> <span class="inlinecode"><span class="id" title="var">tOT</span>);</span> <span class="inlinecode">(<span class="id" title="var">ConstructRef</span></span> <span class="inlinecode">(<span class="id" title="var">mkInd</span></span> <span class="inlinecode">&quot;<span class="id" title="var">Coq.Init.Datatypes.nat</span>&quot;</span> <span class="inlinecode">0)</span> <span class="inlinecode">1,</span> <span class="inlinecode"><span class="id" title="var">tST</span>)</span>&nbsp;"Coq.Vectors.VectorDef.t"&nbsp;vect_entry.&nbsp;*)</span>&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;Definition&nbsp;vect_entryT'&nbsp;:=&nbsp;.&nbsp;*)</span>&nbsp;*)</span>&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;Make&nbsp;Inductive&nbsp;vect_entryT.&nbsp;*)</span>&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;Check&nbsp;tᵗ&nbsp;:&nbsp;forall&nbsp;(A&nbsp;:&nbsp;exists&nbsp;A&nbsp;:&nbsp;Set,&nbsp;A&nbsp;-&gt;&nbsp;Set)&nbsp;(N&nbsp;:&nbsp;exists&nbsp;n,&nbsp;natᵗ&nbsp;n),&nbsp;t&nbsp;A.1&nbsp;N.1&nbsp;-&gt;&nbsp;Set.&nbsp;*)</span>&nbsp;*)</span><br/>
+
+<br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;Definition&nbsp;eq_entryT&nbsp;:=&nbsp;Eval&nbsp;vm_compute&nbsp;in&nbsp;tsl_mind_entry&nbsp;<span class="inlinecode"></span>&nbsp;<span class="inlinecode"></span>&nbsp;"Coq.Init.Datatypes.eq"&nbsp;eq_entry.&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;Definition&nbsp;eq'_entry&nbsp;:=&nbsp;Eval&nbsp;compute&nbsp;in&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(mind_decl_to_entry&nbsp;(option_get&nbsp;todo_coq&nbsp;eq'_decl)).&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;Definition&nbsp;eq'_entryT&nbsp;:=&nbsp;Eval&nbsp;vm_compute&nbsp;in&nbsp;tsl_mind_entry&nbsp;<span class="inlinecode"></span>&nbsp;<span class="inlinecode"></span>&nbsp;"Top.eq'"&nbsp;eq'_entry.&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;Make&nbsp;Inductive&nbsp;eq'_entryT.&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;Check&nbsp;eq'ᵗ&nbsp;:&nbsp;forall&nbsp;(A&nbsp;:&nbsp;exists&nbsp;A&nbsp;:&nbsp;Set,&nbsp;A&nbsp;-&gt;&nbsp;Set)&nbsp;(x&nbsp;y&nbsp;:&nbsp;El&nbsp;A),&nbsp;eq'&nbsp;A.1&nbsp;x.1&nbsp;y.1&nbsp;-&gt;&nbsp;Prop.&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;Check&nbsp;eq_refl'ᵗ&nbsp;:&nbsp;forall&nbsp;(A&nbsp;:&nbsp;exists&nbsp;A&nbsp;:&nbsp;Set,&nbsp;A&nbsp;-&gt;&nbsp;Set)&nbsp;(x&nbsp;:&nbsp;El&nbsp;A),&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;eq'ᵗ&nbsp;A&nbsp;x&nbsp;x&nbsp;(eq_refl'&nbsp;A.1&nbsp;x.1).&nbsp;*)</span>&nbsp;*)</span><br/>
+
+<br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;Inductive&nbsp;list&nbsp;(A&nbsp;:&nbsp;Set)&nbsp;:&nbsp;Set&nbsp;:=&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;nil&nbsp;:&nbsp;list&nbsp;A&nbsp;|&nbsp;cons&nbsp;:&nbsp;A&nbsp;-&gt;&nbsp;list&nbsp;A&nbsp;-&gt;&nbsp;list&nbsp;A.&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;Quote&nbsp;Recursively&nbsp;Definition&nbsp;list_prog&nbsp;:=&nbsp;@list.&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;Definition&nbsp;list_entry&nbsp;:=&nbsp;Eval&nbsp;compute&nbsp;in&nbsp;&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(mind_decl_to_entry&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(option_get&nbsp;todo_coq&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(extract_mind_decl_from_program&nbsp;"Top.list"&nbsp;list_prog))).&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;Definition&nbsp;list_entryT&nbsp;:=&nbsp;Eval&nbsp;vm_compute&nbsp;in&nbsp;tsl_mind_entry&nbsp;<span class="inlinecode"></span>&nbsp;<span class="inlinecode"></span>&nbsp;"Top.list"&nbsp;list_entry.&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;Make&nbsp;Inductive&nbsp;list_entryT.&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;Check&nbsp;listᵗ&nbsp;:&nbsp;forall&nbsp;(A&nbsp;:&nbsp;exists&nbsp;A&nbsp;:&nbsp;Set,&nbsp;A&nbsp;-&gt;&nbsp;Set),&nbsp;list&nbsp;A.1&nbsp;-&gt;&nbsp;Type.&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;Check&nbsp;nilᵗ&nbsp;:&nbsp;forall&nbsp;(A&nbsp;:&nbsp;exists&nbsp;A&nbsp;:&nbsp;Set,&nbsp;A&nbsp;-&gt;&nbsp;Set),&nbsp;listᵗ&nbsp;A&nbsp;(nil&nbsp;A.1).&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;Check&nbsp;consᵗ&nbsp;:&nbsp;forall&nbsp;(A&nbsp;:&nbsp;exists&nbsp;A&nbsp;:&nbsp;Set,&nbsp;A&nbsp;-&gt;&nbsp;Set)&nbsp;(X&nbsp;:&nbsp;El&nbsp;A)&nbsp;(L&nbsp;:&nbsp;exists&nbsp;l&nbsp;:&nbsp;list&nbsp;A.1,&nbsp;listᵗ&nbsp;A&nbsp;l),&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;listᵗ&nbsp;A&nbsp;(cons&nbsp;A.1&nbsp;X.1&nbsp;L.1).&nbsp;*)</span>&nbsp;*)</span><br/>
+
+<br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;Require&nbsp;Import&nbsp;Even.&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;Quote&nbsp;Recursively&nbsp;Definition&nbsp;even_prog&nbsp;:=&nbsp;even.&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;Definition&nbsp;even_entry&nbsp;:=&nbsp;Eval&nbsp;compute&nbsp;in&nbsp;&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(mind_decl_to_entry&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(option_get&nbsp;todo_coq&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(extract_mind_decl_from_program&nbsp;"Coq.Arith.Even.even"&nbsp;even_prog)&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;)).&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;Make&nbsp;Inductive&nbsp;even_entry.&nbsp;*)</span>&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;Inductive&nbsp;even&nbsp;:&nbsp;nat&nbsp;-&gt;&nbsp;Prop&nbsp;:=&nbsp;*)</span>&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;even_O&nbsp;:&nbsp;even&nbsp;0&nbsp;|&nbsp;even_S&nbsp;:&nbsp;forall&nbsp;n&nbsp;:&nbsp;nat,&nbsp;odd&nbsp;n&nbsp;-&gt;&nbsp;even&nbsp;(S&nbsp;n)&nbsp;*)</span>&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;with&nbsp;odd&nbsp;:&nbsp;nat&nbsp;-&gt;&nbsp;Prop&nbsp;:=&nbsp;&nbsp;odd_S&nbsp;:&nbsp;forall&nbsp;n&nbsp;:&nbsp;nat,&nbsp;even&nbsp;n&nbsp;-&gt;&nbsp;odd&nbsp;(S&nbsp;n)&nbsp;*)</span>&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;Definition&nbsp;even_entryT&nbsp;:=&nbsp;Eval&nbsp;vm_compute&nbsp;in&nbsp;tsl_mind_entry&nbsp;<span class="inlinecode"><span class="id" title="var">InductiveDecl</span></span> <span class="inlinecode">&quot;<span class="id" title="var">Coq.Init.Datatypes.nat</span>&quot;</span> <span class="inlinecode"><span class="id" title="var">nat_decl</span></span>&nbsp;<span class="inlinecode">(<span class="id" title="var">IndRef</span></span> <span class="inlinecode">(<span class="id" title="var">mkInd</span></span> <span class="inlinecode">&quot;<span class="id" title="var">Coq.Init.Datatypes.nat</span>&quot;</span> <span class="inlinecode">0),</span> <span class="inlinecode"><span class="id" title="var">tnatT</span>);</span> <span class="inlinecode">(<span class="id" title="var">ConstructRef</span></span> <span class="inlinecode">(<span class="id" title="var">mkInd</span></span> <span class="inlinecode">&quot;<span class="id" title="var">Coq.Init.Datatypes.nat</span>&quot;</span> <span class="inlinecode">0)</span> <span class="inlinecode"><span class="id" title="var">O</span>,</span> <span class="inlinecode"><span class="id" title="var">tOT</span>);</span> <span class="inlinecode">(<span class="id" title="var">ConstructRef</span></span> <span class="inlinecode">(<span class="id" title="var">mkInd</span></span> <span class="inlinecode">&quot;<span class="id" title="var">Coq.Init.Datatypes.nat</span>&quot;</span> <span class="inlinecode">0)</span> <span class="inlinecode">1,</span> <span class="inlinecode"><span class="id" title="var">tST</span>)</span>&nbsp;"Coq.Arith.Even.even"&nbsp;even_entry.&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;Make&nbsp;Inductive&nbsp;even_entryT.&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;Check&nbsp;evenᵗ&nbsp;:&nbsp;forall&nbsp;(N&nbsp;:&nbsp;exists&nbsp;n,&nbsp;natᵗ&nbsp;n),&nbsp;even&nbsp;N.1&nbsp;-&gt;&nbsp;Prop.&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;Check&nbsp;oddᵗ&nbsp;:&nbsp;forall&nbsp;(N&nbsp;:&nbsp;exists&nbsp;n,&nbsp;natᵗ&nbsp;n),&nbsp;odd&nbsp;N.1&nbsp;-&gt;&nbsp;Prop.&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;Check&nbsp;even_Sᵗ&nbsp;:&nbsp;forall&nbsp;(N&nbsp;:&nbsp;exists&nbsp;n,&nbsp;natᵗ&nbsp;n)&nbsp;(P&nbsp;:&nbsp;exists&nbsp;p,&nbsp;oddᵗ&nbsp;N&nbsp;p),&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;evenᵗ&nbsp;(S&nbsp;N.1;&nbsp;Sᵗ&nbsp;N)&nbsp;(even_S&nbsp;N.1&nbsp;P.1).&nbsp;*)</span>&nbsp;*)</span><br/>
 
 <br/>
 
 <br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;Class&nbsp;TranslationInductive&nbsp;:=&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;{&nbsp;tsl_ind&nbsp;:&nbsp;mutual_inductive_entry&nbsp;-&gt;&nbsp;global_context&nbsp;*&nbsp;tsl_table&nbsp;}.&nbsp;*)</span>&nbsp;*)</span><br/>
 
 <br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;Definition&nbsp;T&nbsp;:=&nbsp;forall&nbsp;A&nbsp;B,&nbsp;list&nbsp;A&nbsp;-&gt;&nbsp;list&nbsp;B.&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;Translate&nbsp;T.&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;Compute&nbsp;(El&nbsp;Tᵗ).&nbsp;*)</span>&nbsp;*)</span><br/>
 
 <br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;Lemma&nbsp;parametric_map_preserve_length&nbsp;(f&nbsp;:&nbsp;El&nbsp;Tᵗ)&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;:&nbsp;forall&nbsp;A&nbsp;B&nbsp;(l&nbsp;:&nbsp;list&nbsp;A),&nbsp;length&nbsp;(f.1&nbsp;A&nbsp;B&nbsp;l)&nbsp;=&nbsp;length&nbsp;l.&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;compute&nbsp;in&nbsp;f.&nbsp;*)</span>&nbsp;*)</span><br/>
 
 <br/>
-
-<br/>
-
-<br/>
-
-<br/>
-
-<br/>
-
-<br/>
-
-<br/>
-
-<br/>
-
-<br/>
-
-<br/>
-
-<br/>
-
-<br/>
-
-<br/>
-
-<br/>
-
-<br/>
-
-<br/>
-
-<br/>
-
-<br/>
-
-<br/>
-
-<br/>
-
-<br/>
-
-<br/>
-
-<br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;Definition&nbsp;eval_in_minductive_decl&nbsp;(rs&nbsp;:&nbsp;reductionStrategy)&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(mind&nbsp;:&nbsp;minductive_decl)&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;:&nbsp;TemplateMonad&nbsp;minductive_decl.&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;refine&nbsp;(X&nbsp;&lt;-&nbsp;_&nbsp;;;&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ret&nbsp;{|&nbsp;ind_npars&nbsp;:=&nbsp;mind.(ind_npars);&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ind_bodies&nbsp;:=&nbsp;X&nbsp;|}).&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;refine&nbsp;(monad_map&nbsp;_&nbsp;mind.(ind_bodies)).&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;intro&nbsp;ind.&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;refine&nbsp;(typ&nbsp;&lt;-&nbsp;tmEval&nbsp;rs&nbsp;ind.(ind_type)&nbsp;;;&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ctors&nbsp;&lt;-&nbsp;_&nbsp;;;&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;projs&nbsp;&lt;-&nbsp;_&nbsp;;;&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ret&nbsp;{|&nbsp;ind_name&nbsp;:=&nbsp;ind.(ind_name);&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ind_type&nbsp;:=&nbsp;typ;&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ind_kelim&nbsp;:=&nbsp;ind.(ind_kelim);&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ind_ctors&nbsp;:=&nbsp;ctors&nbsp;;&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ind_projs&nbsp;:=&nbsp;projs&nbsp;|}).&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;-&nbsp;refine&nbsp;(monad_map&nbsp;_&nbsp;ind.(ind_ctors)).&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;intros&nbsp;((name,t),n).&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;exact&nbsp;(t'&nbsp;&lt;-&nbsp;tmEval&nbsp;rs&nbsp;t&nbsp;;;&nbsp;ret&nbsp;((name,t'),n)).&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;-&nbsp;refine&nbsp;(monad_map&nbsp;_&nbsp;ind.(ind_projs)).&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;intros&nbsp;(name,t).&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;exact&nbsp;(t'&nbsp;&lt;-&nbsp;tmEval&nbsp;rs&nbsp;t&nbsp;;;&nbsp;ret&nbsp;(name,t')).&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;Defined.&nbsp;*)</span>&nbsp;*)</span><br/>
 </div>
 </div>
 

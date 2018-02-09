@@ -170,6 +170,33 @@
 &nbsp;&nbsp;<span class="id" title="keyword">end</span>.<br/>
 
 <br/>
+<span class="comment">(*&nbsp;Definition&nbsp;tImplementExisting&nbsp;(tsl_id&nbsp;:&nbsp;ident&nbsp;-&gt;&nbsp;ident)&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(tsl_tm&nbsp;tsl_ty&nbsp;:&nbsp;global_context&nbsp;-&gt;&nbsp;tsl_table&nbsp;-&gt;&nbsp;term&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;-&gt;&nbsp;tsl_result&nbsp;term)&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(Σ&nbsp;:&nbsp;tsl_context)&nbsp;(id&nbsp;:&nbsp;ident)&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;:&nbsp;TemplateMonad&nbsp;(option&nbsp;tsl_context)&nbsp;:=&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;e&nbsp;&lt;-&nbsp;tmQuoteConstant&nbsp;id&nbsp;true&nbsp;;;&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;match&nbsp;e&nbsp;with&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;|&nbsp;ParameterEntry&nbsp;_&nbsp;=&gt;&nbsp;tmPrint&nbsp;"Not&nbsp;a&nbsp;definition"&nbsp;;;&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;tmReturn&nbsp;None&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;|&nbsp;DefinitionEntry&nbsp;{|&nbsp;definition_entry_type&nbsp;:=&nbsp;A;&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;definition_entry_body&nbsp;:=&nbsp;t&nbsp;|}&nbsp;=&gt;&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;match&nbsp;tsl_ty&nbsp;(fst&nbsp;Σ)&nbsp;(snd&nbsp;Σ)&nbsp;A&nbsp;with&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|&nbsp;Error&nbsp;_&nbsp;=&gt;&nbsp;tmPrint&nbsp;"tsl&nbsp;error&nbsp;in&nbsp;type"&nbsp;;;&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;tmReturn&nbsp;None&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|&nbsp;Success&nbsp;tA'&nbsp;=&gt;&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;id'&nbsp;&lt;-&nbsp;tmEval&nbsp;all&nbsp;(tsl_id&nbsp;id)&nbsp;;;&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;A'&nbsp;&lt;-&nbsp;tmUnquoteTyped&nbsp;Type&nbsp;tA'&nbsp;;;&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;tmLemma&nbsp;id'&nbsp;A'&nbsp;;;&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;let&nbsp;decl&nbsp;:=&nbsp;{|&nbsp;cst_universes&nbsp;:=&nbsp;<span class="inlinecode"></span>;&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;cst_type&nbsp;:=&nbsp;A;&nbsp;cst_body&nbsp;:=&nbsp;Some&nbsp;t&nbsp;|}&nbsp;in&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;let&nbsp;Σ'&nbsp;:=&nbsp;ConstantDecl&nbsp;id&nbsp;decl&nbsp;::&nbsp;(fst&nbsp;Σ)&nbsp;in&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;let&nbsp;E'&nbsp;:=&nbsp;(ConstRef&nbsp;id,&nbsp;tConst&nbsp;id'&nbsp;<span class="inlinecode"></span>)&nbsp;::&nbsp;(snd&nbsp;Σ)&nbsp;in&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;msg&nbsp;&lt;-&nbsp;tmEval&nbsp;all&nbsp;(id&nbsp;++&nbsp;"&nbsp;has&nbsp;been&nbsp;translated&nbsp;as&nbsp;"&nbsp;++&nbsp;id')&nbsp;;;&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;tmPrint&nbsp;msg&nbsp;;;&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;tmReturn&nbsp;(Some&nbsp;(Σ',&nbsp;E'))&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;end&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;end.&nbsp;*)</span><br/>
 </div>
 </div>
 

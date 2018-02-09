@@ -19,6 +19,7 @@
 <h1 class="libtitle">Library Translations.tsl_param3</h1>
 
 <div class="code">
+<span class="comment">(*&nbsp;-*-&nbsp;coq-prog-args:&nbsp;("-type-in-type"&nbsp;"-top"&nbsp;"Translations.tsl_param3")&nbsp;-*-&nbsp;&nbsp;*)</span><br/>
 <span class="id" title="keyword">Require</span> <span class="id" title="keyword">Import</span> <span class="id" title="library">Template.All</span>.<br/>
 <span class="id" title="var">From</span> <span class="id" title="var">Translations</span> <span class="id" title="keyword">Require</span> <span class="id" title="keyword">Import</span> <a class="idref" href="Translations.translation_utils.html#"><span class="id" title="library">translation_utils</span></a> <a class="idref" href="Translations.sigma.html#"><span class="id" title="library">sigma</span></a>.<br/>
 <span class="id" title="keyword">Import</span> <span class="id" title="var">String</span> <span class="id" title="var">Lists.List.ListNotations</span> <span class="id" title="var">MonadNotation</span>.<br/>
@@ -37,6 +38,7 @@
 &nbsp;&nbsp;<span class="id" title="keyword">end</span>.<br/>
 
 <br/>
+<span class="comment">(*&nbsp;if&nbsp;b&nbsp;it&nbsp;is&nbsp;the&nbsp;first&nbsp;translation,&nbsp;else&nbsp;the&nbsp;second&nbsp;*)</span><br/>
 <span class="id" title="keyword">Fixpoint</span> <a name="tsl_rec"><span class="id" title="definition">tsl_rec</span></a> (<span class="id" title="var">fuel</span> : <a class="idref" href="http://coq.inria.fr/distrib/8.7.1/stdlib//Coq.Init.Datatypes.html#nat"><span class="id" title="inductive">nat</span></a>) (<span class="id" title="var">Σ</span> : <span class="id" title="definition">global_context</span>) (<span class="id" title="var">E</span> : <a class="idref" href="Translations.translation_utils.html#tsl_table"><span class="id" title="definition">tsl_table</span></a>) (<span class="id" title="var">Γ</span> : <span class="id" title="definition">context</span>) (<span class="id" title="var">b</span> : <a class="idref" href="http://coq.inria.fr/distrib/8.7.1/stdlib//Coq.Init.Datatypes.html#bool"><span class="id" title="inductive">bool</span></a>) (<span class="id" title="var">t</span> : <span class="id" title="inductive">term</span>) {<span class="id" title="keyword">struct</span> <span class="id" title="var">fuel</span>}<br/>
 &nbsp;&nbsp;: <a class="idref" href="Translations.translation_utils.html#tsl_result"><span class="id" title="inductive">tsl_result</span></a> <span class="id" title="inductive">term</span> :=<br/>
 &nbsp;&nbsp;<span class="id" title="keyword">match</span> <a class="idref" href="Translations.tsl_param3.html#fuel"><span class="id" title="variable">fuel</span></a> <span class="id" title="keyword">with</span><br/>
@@ -276,7 +278,7 @@
 
 <br/>
 <span class="id" title="keyword">Definition</span> <a name="equiv"><span class="id" title="definition">equiv</span></a> (<span class="id" title="var">A</span> <span class="id" title="var">B</span> : <span class="id" title="keyword">Type</span>) :=<br/>
-&nbsp;&nbsp;<br/>
+&nbsp;&nbsp;<span class="comment">(*&nbsp;Type.&nbsp;*)</span><br/>
 &nbsp;&nbsp;<a class="idref" href="Translations.sigma.html#84eb6d2849dbf3581b1c0c05add5f2d8"><span class="id" title="notation">∃</span></a> <a class="idref" href="Translations.sigma.html#84eb6d2849dbf3581b1c0c05add5f2d8"><span class="id" title="notation">(</span></a><span class="id" title="var">f</span> : <a class="idref" href="Translations.tsl_param3.html#A"><span class="id" title="variable">A</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.7.1/stdlib//Coq.Init.Logic.html#d43e996736952df71ebeeae74d10a287"><span class="id" title="notation">→</span></a> <a class="idref" href="Translations.tsl_param3.html#B"><span class="id" title="variable">B</span></a>) (<span class="id" title="var">g</span> : <a class="idref" href="Translations.tsl_param3.html#B"><span class="id" title="variable">B</span></a> <a class="idref" href="http://coq.inria.fr/distrib/8.7.1/stdlib//Coq.Init.Logic.html#d43e996736952df71ebeeae74d10a287"><span class="id" title="notation">→</span></a> <a class="idref" href="Translations.tsl_param3.html#A"><span class="id" title="variable">A</span></a><a class="idref" href="Translations.sigma.html#84eb6d2849dbf3581b1c0c05add5f2d8"><span class="id" title="notation">),</span></a><br/>
 &nbsp;&nbsp;&nbsp;&nbsp;<a class="idref" href="Translations.sigma.html#3c95d747e965984bdabf05c6b0e23759"><span class="id" title="notation">(</span></a><span class="id" title="keyword">∀</span> <span class="id" title="var">x</span>, <a class="idref" href="Translations.tsl_param3.html#eq"><span class="id" title="inductive">eq</span></a> (<a class="idref" href="Translations.tsl_param3.html#g"><span class="id" title="variable">g</span></a> (<a class="idref" href="Translations.tsl_param3.html#f"><span class="id" title="variable">f</span></a> <a class="idref" href="Translations.tsl_param3.html#x"><span class="id" title="variable">x</span></a>)) <a class="idref" href="Translations.tsl_param3.html#x"><span class="id" title="variable">x</span></a><a class="idref" href="Translations.sigma.html#3c95d747e965984bdabf05c6b0e23759"><span class="id" title="notation">)</span></a> <a class="idref" href="Translations.sigma.html#3c95d747e965984bdabf05c6b0e23759"><span class="id" title="notation">×</span></a> <a class="idref" href="Translations.sigma.html#3c95d747e965984bdabf05c6b0e23759"><span class="id" title="notation">(</span></a><span class="id" title="keyword">∀</span> <span class="id" title="var">x</span>, <a class="idref" href="Translations.tsl_param3.html#eq"><span class="id" title="inductive">eq</span></a> (<a class="idref" href="Translations.tsl_param3.html#f"><span class="id" title="variable">f</span></a> (<a class="idref" href="Translations.tsl_param3.html#g"><span class="id" title="variable">g</span></a> <a class="idref" href="Translations.tsl_param3.html#x"><span class="id" title="variable">x</span></a>)) <a class="idref" href="Translations.tsl_param3.html#x"><span class="id" title="variable">x</span></a><a class="idref" href="Translations.sigma.html#3c95d747e965984bdabf05c6b0e23759"><span class="id" title="notation">)</span></a>.<br/>
 
@@ -295,10 +297,47 @@
 <span class="id" title="var">Quote</span> <span class="id" title="keyword">Definition</span> <span class="id" title="var">equiv_</span> := <span class="id" title="keyword">Eval</span> <span class="id" title="tactic">compute</span> <span class="id" title="tactic">in</span> <a class="idref" href="Translations.tsl_param3.html#equiv"><span class="id" title="definition">equiv</span></a>.<br/>
 
 <br/>
+<span class="comment">(*&nbsp;Check&nbsp;"go".&nbsp;*)</span><br/>
 
 <br/>
+<span class="comment">(*&nbsp;Run&nbsp;TemplateProgram&nbsp;(match&nbsp;ΣE&nbsp;with&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|&nbsp;None&nbsp;=&gt;&nbsp;tmFail&nbsp;"bug:&nbsp;no&nbsp;tsl_ctx"&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|&nbsp;Some&nbsp;ΣE&nbsp;=&gt;&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ΣE&nbsp;&lt;-&nbsp;TslParam&nbsp;ΣE&nbsp;"equiv"&nbsp;;;&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">(*&nbsp;tmPrint&nbsp;ΣE'&nbsp;;;&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;tmPrint&nbsp;"lo"&nbsp;;;&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;H&nbsp;&lt;-&nbsp;ImplParam&nbsp;ΣE&nbsp;"notUnivalence"&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(exists&nbsp;A&nbsp;B&nbsp;:&nbsp;Type,&nbsp;(equiv&nbsp;A&nbsp;B)&nbsp;×&nbsp;exists&nbsp;P,&nbsp;P&nbsp;A&nbsp;×&nbsp;((P&nbsp;B)&nbsp;-&gt;&nbsp;False))&nbsp;;;&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">(*&nbsp;(exists&nbsp;A&nbsp;:&nbsp;Type,&nbsp;(equiv&nbsp;A&nbsp;A))&nbsp;;;&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;tmPrint&nbsp;"done"&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;end).&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;Check&nbsp;"proof".&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;Next&nbsp;Obligation.&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;simple&nbsp;refine&nbsp;(existᶠ&nbsp;·&nbsp;_&nbsp;·&nbsp;_&nbsp;·&nbsp;_&nbsp;·&nbsp;_).&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;exact&nbsp;(bool:Type;&nbsp;fun&nbsp;_=&gt;&nbsp;unit:Type).&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;simple&nbsp;refine&nbsp;(existᶠ&nbsp;·&nbsp;_&nbsp;·&nbsp;_&nbsp;·&nbsp;_&nbsp;·&nbsp;_).&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;exact&nbsp;(unit:Type;&nbsp;fun&nbsp;_&nbsp;=&gt;&nbsp;bool:Type).&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;simple&nbsp;refine&nbsp;(existᶠ&nbsp;·&nbsp;_&nbsp;·&nbsp;_&nbsp;·&nbsp;_&nbsp;·&nbsp;_).&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;-&nbsp;simple&nbsp;refine&nbsp;(existᶠ&nbsp;·&nbsp;_&nbsp;·&nbsp;_&nbsp;·&nbsp;_&nbsp;·&nbsp;_).&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;exists&nbsp;π2.&nbsp;exact&nbsp;π1.&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;simple&nbsp;refine&nbsp;(existᶠ&nbsp;·&nbsp;_&nbsp;·&nbsp;_&nbsp;·&nbsp;_&nbsp;·&nbsp;_).&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;exists&nbsp;π2.&nbsp;exact&nbsp;π1.&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;simple&nbsp;refine&nbsp;(existᶠ&nbsp;·&nbsp;_&nbsp;·&nbsp;_&nbsp;·&nbsp;_&nbsp;·&nbsp;_);&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;cbn;&nbsp;unshelve&nbsp;econstructor;&nbsp;reflexivity.&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;-&nbsp;simple&nbsp;refine&nbsp;(existᶠ&nbsp;·&nbsp;_&nbsp;·&nbsp;_&nbsp;·&nbsp;_&nbsp;·&nbsp;_).&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;exact&nbsp;HasTwoElFstComponentᵗ.&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;simple&nbsp;refine&nbsp;(existᶠ&nbsp;·&nbsp;_&nbsp;·&nbsp;_&nbsp;·&nbsp;_&nbsp;·&nbsp;_).&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;+&nbsp;cbn.&nbsp;refine&nbsp;(_;&nbsp;tt).&nbsp;exists&nbsp;true.&nbsp;exists&nbsp;false.&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;discriminate&nbsp;1.&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;+&nbsp;compute.&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;split;&nbsp;(intro&nbsp;p;&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;destruct&nbsp;p&nbsp;as&nbsp;<span class="inlinecode"><span class="id" title="var">p</span></span> <span class="inlinecode"><span class="id" title="var">_</span></span>;&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;destruct&nbsp;p&nbsp;as&nbsp;<span class="inlinecode">[]</span> <span class="inlinecode">[[]</span> <span class="inlinecode"><span class="id" title="var">p</span>]</span>;&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;contradiction&nbsp;p;&nbsp;reflexivity).&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;Defined.&nbsp;*)</span><br/>
 
 <br/>
+<span class="comment">(*&nbsp;Check&nbsp;"ok!".&nbsp;*)</span><br/>
 </div>
 </div>
 

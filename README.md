@@ -56,6 +56,10 @@ Contributors include [Yannick Forster](https://github.com/yforster),
 [Cyril Cohen](https://github.com/CohenCyril) and [Nicolas
 Tabareau](https://github.com/Tabareau).
 
+(c) Copyright 2014-2018 Gregory Malecha
+(c) Copyright 2015-2018 Abhishek Anand, Matthieu Sozeau
+(c) Copyright 2017-2018 Simon Boulier, Nicolas Tabareau, Cyril Cohen
+
 Branches
 ========
 

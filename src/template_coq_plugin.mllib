@@ -5,6 +5,7 @@ BinNums
 BinPosDef
 BinPos
 BinNat
+BinIntDef
 BinInt
 Ascii
 String0

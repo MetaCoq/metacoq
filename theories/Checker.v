@@ -1,7 +1,23 @@
+(* Distributed under the terms of the MIT license.   *)
+
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
-From Template Require Import Template univ Ast Induction LiftSubst Typing monad_utils utils.
+From Template Require Import Template univ Ast Induction LiftSubst UnivSubst Typing
+     monad_utils utils.
 Import MonadNotation.
 
+(** * Coq type-checker for kernel terms
+
+  *WIP*
+
+  Implemets [typecheck_program] which returns an error and
+  on success should guarantee that the term has the given type.
+  Currently uses fuel to implement reduction.
+
+  Correctness and completeness proofs are a work-in-progress.
+
+  This file implements reduction with a stack machine [reduce_stack],
+  conversion/cumulativity with the first-order fast-path heuristic [isconv]
+  that are used to type-check terms in reasonable time. *)
 Set Asymmetric Patterns.
 
 Ltac start :=
@@ -158,7 +174,9 @@ Section Reduce.
       match reduce_stack_term Γ n c with
       | Some c' =>
         Some (map_constr_with_binders
-                (fun Γ t => match reduce_opt Γ n t with Some t => t | None => t end) Γ c')
+                (fun Γ t => match reduce_opt Γ n t with
+                            | Some t => t
+                            | None => t end) Γ c')
       | None => None
       end
     end.
@@ -214,6 +232,12 @@ Section Conversion.
 
   Definition lookup_env c := lookup_env (fst Σ) c.
 
+  Definition opt_bool_to_bool (x : option bool) : bool :=
+    match x with
+    | Some b => b
+    | None => false
+    end.
+
   Fixpoint isconv (n : nat) (leq : conv_pb) (Γ : context)
            (t1 : term) (l1 : list term) (t2 : term) (l2 : list term) {struct n} : option bool :=
     match n with 0 => None | S n =>
@@ -223,11 +247,12 @@ Section Conversion.
     let '(t2,l2) := red2 in
     isconv_prog n leq Γ t1 l1 t2 l2
     end
-  with isconv_prog (n : nat) (leq : conv_pb)
-                   (Γ : context) (t1 : term) (l1 : list term) (t2 : term) (l2 : list term) {struct n} : option bool :=
+  with isconv_prog (n : nat) (leq : conv_pb) (Γ : context)
+                   (t1 : term) (l1 : list term) (t2 : term) (l2 : list term)
+                   {struct n} : option bool :=
     match n with 0 => None | S n =>
     let isconv_stacks l1 l2 :=
-        ret (forallb2 (fun x y => match isconv n Conv Γ x [] y [] with Some b => b | None => false end) l1 l2)
+        ret (forallb2 (fun x y => opt_bool_to_bool (isconv n Conv Γ x [] y [])) l1 l2)
     in
     let on_cond (b : bool) := if b then isconv_stacks l1 l2 else ret false in
     (** Test equality at each step ?? *)
@@ -245,7 +270,10 @@ Section Conversion.
           redt <- reduce_stack nodelta_flags (fst Σ) Γ n t2 l2 ;;
           let '(t2, l2) := redt in
           isconv_prog n leq Γ t1 l1 t2 l2
-        | None => on_cond (match leq with Conv => eq_term (snd Σ) t1 t2 | Cumul => leq_term (snd Σ) t1 t2 end)
+        | None =>
+          on_cond (match leq with
+                   | Conv => eq_term (snd Σ) t1 t2
+                   | Cumul => leq_term (snd Σ) t1 t2 end)
         end
       end
     in
@@ -291,7 +319,8 @@ Section Conversion.
 
     | tCase (ind, par) p c brs,
       tCase (ind',par') p' c' brs' => (* Hnf did not reduce, maybe delta needed in c *)
-      if eq_term (snd Σ) p p' && eq_term (snd Σ) c c' && forallb2 (fun '(a, b) '(a', b') => eq_term (snd Σ) b b') brs brs' then
+      if eq_term (snd Σ) p p' && eq_term (snd Σ) c c'
+      && forallb2 (fun '(a, b) '(a', b') => eq_term (snd Σ) b b') brs brs' then
         ret true
       else
         cred <- reduce_stack_term RedFlags.default (fst Σ) Γ n c ;;
@@ -304,7 +333,7 @@ Section Conversion.
 
     | tFix mfix idx, tFix mfix' idx' =>
       (* Hnf did not reduce, maybe delta needed *)
-      if eq_term (snd Σ) t1 t2 && match isconv_stacks l1 l2 with Some b => b | None => false end then ret true
+      if eq_term (snd Σ) t1 t2 && opt_bool_to_bool (isconv_stacks l1 l2) then ret true
       else
         match unfold_one_fix n Γ mfix idx l1 with
         | Some t1 =>
@@ -327,16 +356,6 @@ Section Conversion.
     | _, _ => fallback ()
     end
     end.
-(*
-    | tRel n, tRel n' => on_cond (Nat.eqb n n')
-    | tMeta n, tMeta n' => on_cond (Nat.eqb n n')
-    | tEvar ev args, tEvar ev' args' =>
-      if Nat.eqb ev ev' then ret (forallb2 eq_term args args') (* FIXME *) else ret false
-    | tVar id, tVar id' => on_cond (eq_string id id')
-    | tSort s, tSort s' => ret (eq_sort s s')
-    | tInd i, tInd i' => on_cond (eq_ind i i')
-    | tConstruct i k, tConstruct i' k' => on_cond (eq_ind i i' && Nat.eqb k k')
-*)      
 End Conversion.
 
 Definition try_reduce Σ Γ n t :=
@@ -405,13 +424,18 @@ Fixpoint string_of_term (t : term) :=
   | tMeta n => "Meta(" ++ string_of_nat n ++ ")"
   | tEvar ev args => "Evar(" ++ string_of_nat ev ++ "[]" (* TODO *)  ++ ")"
   | tSort s => "Sort(" ++ string_of_sort s ++ ")"
-  | tCast c k t => "Cast(" ++ string_of_term c ++ (* TODO *) "," ++ string_of_term t ++ ")"
-  | tProd na b t => "Prod(" ++ string_of_name na ++ "," ++ string_of_term b ++ "," ++ string_of_term t ++ ")"
-  | tLambda na b t => "Lambda(" ++ string_of_name na ++ "," ++ string_of_term b ++ "," ++ string_of_term t ++ ")"
-  | tLetIn na b t' t => "LetIn(" ++ string_of_name na ++ "," ++ string_of_term b ++ "," ++ string_of_term t' ++ "," ++ string_of_term t ++ ")"
+  | tCast c k t => "Cast(" ++ string_of_term c ++ (* TODO *) ","
+                           ++ string_of_term t ++ ")"
+  | tProd na b t => "Prod(" ++ string_of_name na ++ "," ++
+                            string_of_term b ++ "," ++ string_of_term t ++ ")"
+  | tLambda na b t => "Lambda(" ++ string_of_name na ++ "," ++ string_of_term b
+                                ++ "," ++ string_of_term t ++ ")"
+  | tLetIn na b t' t => "LetIn(" ++ string_of_name na ++ "," ++ string_of_term b
+                                 ++ "," ++ string_of_term t' ++ "," ++ string_of_term t ++ ")"
   | tApp f l => "App(" ++ string_of_term f ++ "," ++ string_of_list string_of_term l ++ ")"
   | tConst c u => "Const(" ++ c ++ "," ++ string_of_universe_instance u ++ ")"
-  | tInd (mkInd c i) u => "Ind(" ++ c ++ "," ++ string_of_int i ++ "," ++ string_of_universe_instance u ++ ")"
+  | tInd (mkInd c i) u => "Ind(" ++ c ++ "," ++ string_of_int i ++ ","
+                                 ++ string_of_universe_instance u ++ ")"
   | tConstruct (mkInd c i) n u => "Construct(" ++ c ++ "," ++ string_of_int i ++ "," ++
                                                string_of_int n ++ "," ++
                                                string_of_universe_instance u ++ ")"
@@ -517,7 +541,8 @@ Section Typecheck.
     | _ => raise (NotAProduct t (zip t'))
     end.
 
-  Definition reduce_to_ind Γ (t : term) : typing_result (inductive * list Level.t * list term) :=
+  Definition reduce_to_ind Γ (t : term) :
+    typing_result (inductive * list Level.t * list term) :=
     t' <- hnf_stack Γ t ;;
     match t' with
     | (tInd i u, l) => ret (i, u, l)
@@ -546,8 +571,8 @@ Section Typecheck2.
   Section InferAux.
     Variable (infer : context -> term -> typing_result term).
 
-    Fixpoint infer_spine
-             (Γ : context) (ty : term) (l : list term) {struct l} : typing_result term :=
+    Fixpoint infer_spine (Γ : context) (ty : term) (l : list term)
+             {struct l} : typing_result term :=
     match l with
     | nil => ret ty
     | cons x xs =>
@@ -753,7 +778,8 @@ Section Typecheck2.
 
   Lemma lookup_constant_type_declared cst u decl (isdecl : declared_constant (fst Σ) cst decl) :
     lookup_constant_type cst u =
-    Checked (subst_instance_constr u decl.(cst_type), subst_instance_cstrs u (polymorphic_constraints decl.(cst_universes))).
+    Checked (subst_instance_constr u decl.(cst_type),
+             subst_instance_cstrs u (polymorphic_constraints decl.(cst_universes))).
   Proof.
     unfold lookup_constant_type, lookup_env.
     red in isdecl. rewrite isdecl. destruct decl. reflexivity.
@@ -1033,7 +1059,8 @@ Section Checker.
       end
     | InductiveDecl id inds =>
       List.fold_left (fun acc body =>
-                        acc ;; check_wf_type body.(ind_name) Σ body.(ind_type)) inds.(ind_bodies) (ret ())
+                        acc ;; check_wf_type body.(ind_name) Σ body.(ind_type))
+                     inds.(ind_bodies) (ret ())
     end.
 
   Fixpoint check_fresh id env : EnvCheck () :=

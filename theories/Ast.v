@@ -10,37 +10,35 @@ From Template Require Export univ uGraph.
 
     ** Basic data-types:
 
-    identifiers [ident], sort families [sort_family], names [name],
-    cast kinds [cast_kind], inductives [inductive] and primitive projections
-    [projection] and (co)-fixpoint blocks [mfixpoint] and [def].
+      We reflect identifiers [ident], sort families [sort_family], names
+    [name], cast kinds [cast_kind], inductives [inductive] and primitive
+    projections [projection] and (co)-fixpoint blocks [mfixpoint] and
+    [def].
 
     ** Terms:
 
-    The AST is [term : Set]
+      The AST is [term : Set]
 
-    [mkApp], [mkApps], smart constructors for maintaining the invariant of
-    no nested or empty n-ary applications.
-
-    List in fixpoints and cofixpoint should be non-empty.
+      Smart constructors [mkApp], [mkApps] maintain the invariant
+    of no nested or empty n-ary applications.
+      List in fixpoints and cofixpoint should be non-empty.
 
     ** Kernel interface: entries and declarations
 
-    Kernel input declarations for constants [constant_entry] and mutual inductives
-    [mutual_inductive_entry]. Kernel safe declarations for constants [constand_decl]
-    and inductives [minductive_decl].
+      Kernel input declarations for constants [constant_entry] and mutual
+    inductives [mutual_inductive_entry]. Kernel safe declarations for
+    constants [constand_decl] and inductives [minductive_decl].
 
     ** Environments of declarations
 
-    The global environment [global_context]: a list of [global_decl] and a universe
-    graph [uGraph.t].
+      The global environment [global_context]: a list of [global_decl] and
+    a universe graph [uGraph.t].
 
     ** The Template Monad
 
-    A monad for programming with template-coq operations. Use [Run TemplateProgram]
-    on a monad action to produce its side-effects.
-
-    Uses a reduction strategy specifier [reductionStrategy].
-*)
+      A monad for programming with template-coq operations. Use [Run
+    TemplateProgram] on a monad action to produce its side-effects.
+    Uses a reduction strategy specifier [reductionStrategy].  *)
 
 Definition ident := string. (* e.g. nat *)
 Definition kername := string. (* e.g. Coq.Init.Datatypes.nat *)

@@ -41,7 +41,7 @@ Makefile.coqchecker: _CheckerProject
 test-suite: coq
 	$(MAKE) -C test-suite
 
-theories/TemplateCoqCompiler.vo: Makefile.coqplugin theories/Extraction.v theories/TemplateCoqCompiler.v
+theories/TemplateCoqCompiler.vo: Makefile.coqplugin theories/Extraction.v theories/TemplateCoqCompiler.v | coq
 	$(COQBIN)coqc -I src -R theories Template theories/Extraction.v
 	sh movefiles.sh
 	$(MAKE) -f Makefile.coqplugin
@@ -49,7 +49,7 @@ theories/TemplateCoqCompiler.vo: Makefile.coqplugin theories/Extraction.v theori
 .merlin: Makefile.coq
 	make -f Makefile.coq .merlin
 
-theories/TemplateCoqChecker.vo: Makefile.coqchecker $(COMPILER) theories/TypingPlugin.v
+theories/TemplateCoqChecker.vo: Makefile.coqchecker $(COMPILER) theories/TypingPlugin.v | theories/TemplateCoqCompiler.vo
 	$(COQBIN)coqc -I src -R theories Template theories/TypingPlugin.v
 	sh movefiles.sh
 	$(MAKE) -f Makefile.coqchecker

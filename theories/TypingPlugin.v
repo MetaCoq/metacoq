@@ -15,6 +15,7 @@ Extraction Library PeanoNat.
 Extraction Library Sumbool.
 Extraction Library Induction.
 Extraction Library LiftSubst.
+Extraction Library UnivSubst.
 Extraction Library Typing.
 Extraction Library utils.
 Extraction Library Checker.

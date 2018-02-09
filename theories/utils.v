@@ -2,6 +2,7 @@ From Coq Require Import Bool Program List String.
 Import ListNotations.
 Open Scope string_scope.
 
+Record squash (A : Type) : Prop := { _ : A }.
 
 Definition string_of_int n :=
   match n with

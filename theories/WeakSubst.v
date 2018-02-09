@@ -1,5 +1,15 @@
+(* Distributed under the terms of the MIT license.   *)
+
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
-From Template Require Import Template Ast Induction LiftSubst Typing.
+From Template Require Import Template Ast Induction utils LiftSubst Typing.
+
+(** * Weakening and substitution lemmas for typing derivations.
+
+  *WIP*
+
+  Standard structural lemmas on typing derivations. *)
+
+Set Asymmetric Patterns.
 
 Set Asymmetric Patterns.
 Generalizable Variables Σ Γ t T.

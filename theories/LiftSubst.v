@@ -1,8 +1,16 @@
+(* Distributed under the terms of the MIT license.   *)
+
 Require Import List Program.
 Require Import Template.Template Template.Ast.
 Require Import BinPos.
 Require Import Coq.Arith.Compare_dec Bool.
 Require Import Template.Induction.
+
+(** * Lifting and substitution for the AST
+
+  Along with standard commutation lemmas.
+  Definition of [closedn] (boolean) predicate for checking if
+  a term is closed. *)
 
 Set Asymmetric Patterns.
 

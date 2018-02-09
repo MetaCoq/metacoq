@@ -1,89 +1,22 @@
+(* Distributed under the terms of the MIT license.   *)
+
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
-From Template Require Import Template utils Ast univ Induction LiftSubst.
+From Template Require Import Template utils Ast univ Induction LiftSubst UnivSubst.
 From Template Require AstUtils.
 Require Import String.
 Local Open Scope string_scope.
-
 Set Asymmetric Patterns.
 
 
-Definition subst_instance_level u l :=
-  match l with
-  | univ.Level.lProp | univ.Level.lSet | univ.Level.Level _ => l
-  | univ.Level.Var n => List.nth n u univ.Level.lProp
-  end.
+(** * Typing derivations
 
-Definition subst_instance_cstrs u cstrs :=
-  Constraint.fold (fun '(l,d,r) =>
-                     Constraint.add (subst_instance_level u l, d, subst_instance_level u r))
-                  cstrs Constraint.empty.
+  *WIP*
 
-Definition subst_instance_level_expr (u : universe_instance) (s : Universe.Expr.t) :=
-  let '(l, b) := s in (subst_instance_level u l, b).
+  Inductive relations for reduction, conversion and typing of CIC terms.
 
-Definition subst_instance_univ (u : universe_instance) (s : universe) :=
-  List.map (subst_instance_level_expr u) s.
+ *)
 
-Definition subst_instance_instance (u u' : universe_instance) :=
-  List.map (subst_instance_level u) u'.
-
-Fixpoint subst_instance_constr (u : universe_instance) (c : term) :=
-  match c with
-  | tRel _ | tVar _ | tMeta _ => c
-  | tSort s => tSort (subst_instance_univ u s)
-  | tConst c u' => tConst c (subst_instance_instance u u')
-  | tInd i u' => tInd i (subst_instance_instance u u')
-  | tConstruct ind k u' => tConstruct ind k (subst_instance_instance u u')
-  | tEvar ev args => tEvar ev (List.map (subst_instance_constr u) args)
-  | tLambda na T M => tLambda na (subst_instance_constr u T) (subst_instance_constr u M)
-  | tApp f v => tApp (subst_instance_constr u f) (List.map (subst_instance_constr u) v)
-  | tProd na A B => tProd na (subst_instance_constr u A) (subst_instance_constr u B)
-  | tCast c kind ty => tCast (subst_instance_constr u c) kind (subst_instance_constr u ty)
-  | tLetIn na b ty b' => tLetIn na (subst_instance_constr u b) (subst_instance_constr u ty)
-                                (subst_instance_constr u b')
-  | tCase ind p c brs =>
-    let brs' := List.map (on_snd (subst_instance_constr u)) brs in
-    tCase ind (subst_instance_constr u p) (subst_instance_constr u c) brs'
-  | tProj p c => tProj p (subst_instance_constr u c)
-  | tFix mfix idx =>
-    let mfix' := List.map (map_def (subst_instance_constr u)) mfix in
-    tFix mfix' idx
-  | tCoFix mfix idx =>
-    let mfix' := List.map (map_def (subst_instance_constr u)) mfix in
-    tCoFix mfix' idx
-  end.
-
-Program Fixpoint safe_nth {A} (l : list A) (n : nat | n < List.length l) : A :=
-  match l with
-  | nil => !
-  | hd :: tl =>
-    match n with
-    | 0 => hd
-    | S n => safe_nth tl n
-    end
-  end.
-Next Obligation.
-  simpl in H. inversion H.
-Defined.
-Next Obligation.
-  simpl in H. auto with arith.
-Defined.
-
-
-Lemma nth_error_safe_nth {A} n (l : list A) (isdecl : n < Datatypes.length l) :
-  nth_error l n = Some (safe_nth l (exist _ n isdecl)).
-Proof.
-  revert n isdecl; induction l; intros.
-  - inversion isdecl.
-  - destruct n as [| n']; simpl.
-    reflexivity.
-    simpl in IHl.
-    simpl in isdecl.
-    now rewrite <- IHl.
-Qed.
-
-(** Typing derivations *)
-
+(** ** Environment lookup *)
 
 Definition global_decl_ident d :=
   match d with
@@ -194,6 +127,10 @@ Next Obligation.
   simpl. rewrite H''. reflexivity.
 Defined.
 
+(** ** Reduction *)
+
+(** *** Helper functions for reduction *)
+
 Definition fix_subst (l : mfixpoint term) :=
   let fix aux n :=
       match n with
@@ -221,6 +158,12 @@ Definition is_constructor n ts :=
 
 Definition iota_red npar c args brs :=
   (mkApps (snd (List.nth c brs (0, tRel 0))) (List.skipn npar args)).
+
+(** *** One step beta-zeta-iota-fix-delta reduction
+
+  Inspired by the reduction relation from Coq in Coq [Barras'99].
+  TODO: Projections and CoFixpoints
+*)
 
 Inductive red1 (Σ : global_declarations) (Γ : context) : term -> term -> Prop :=
 (** Reductions *)
@@ -284,9 +227,15 @@ with redbrs1 (Σ : global_declarations) (Γ : context) : list (nat * term) -> li
 | redbrs1_hd n hd hd' tl : red1 Σ Γ hd hd' -> redbrs1 Σ Γ ((n, hd) :: tl) ((n, hd') :: tl)
 | redbrs1_tl hd tl tl' : redbrs1 Σ Γ tl tl' -> redbrs1 Σ Γ (hd :: tl) (hd :: tl').
 
+(** *** Reduction
+
+  The reflexive-transitive closure of 1-step reduction. *)
+
 Inductive red Σ Γ M : term -> Prop :=
 | refl_red : red Σ Γ M M
 | trans_red : forall (P : term) N, red Σ Γ M P -> red1 Σ Γ P N -> red Σ Γ M N.
+
+(** ** Term equality and cumulativity *)
 
 Definition eq_string s s' :=
   if string_dec s s' then true else false.
@@ -315,6 +264,10 @@ Fixpoint subst_app (t : term) (us : list term) : term :=
 Definition tmMkInductive' (mind : minductive_decl) : TemplateMonad unit
   := tmMkInductive (AstUtils.mind_decl_to_entry mind).
 
+(** *** Universe comparisons *)
+
+(** We try syntactic equality before checking the graph. *)
+
 Definition eq_universe φ s s' :=
   if univ.Universe.equal s s' then true
   else uGraph.check_leq φ s s' && uGraph.check_leq φ s' s.
@@ -323,7 +276,10 @@ Definition leq_universe φ s s' :=
   if univ.Universe.equal s s' then true
   else uGraph.check_leq φ s s'.
 
-(* Don't look at printing annotations *)
+(* ** Syntactic equality up-to universes
+
+  We shouldn't look at printing annotations *)
+
 Fixpoint eq_term (φ : uGraph.t) (t u : term) {struct t} :=
   match t, u with
   | tRel n, tRel n' => eq_nat n n'
@@ -353,6 +309,10 @@ Fixpoint eq_term (φ : uGraph.t) (t u : term) {struct t} :=
     Nat.eqb idx idx'
   | _, _ => false
   end.
+
+(* ** Syntactic cumulativity up-to universes
+
+  We shouldn't look at printing annotations *)
 
 Fixpoint leq_term (φ : uGraph.t) (t u : term) {struct t} :=
   match t, u with
@@ -384,6 +344,10 @@ Fixpoint leq_term (φ : uGraph.t) (t u : term) {struct t} :=
   | _, _ => false
   end.
 
+(** ** Utilities for typing *)
+
+(** Decompose an arity into a context and a sort *)
+
 Fixpoint destArity Γ (t : term) :=
   match t with
   | tProd na t b => destArity (Γ ,, vass na t) b
@@ -391,6 +355,8 @@ Fixpoint destArity Γ (t : term) :=
   | tSort s => Some (Γ, s)
   | _ => None
   end.
+
+(** Make a lambda/let-in string of abstractions from a context [Γ], ending with term [t]. *)
 
 Fixpoint it_mkLambda_or_LetIn (l : context) (t : term) :=
   List.fold_left
@@ -400,11 +366,16 @@ Fixpoint it_mkLambda_or_LetIn (l : context) (t : term) :=
        | Some b => tLetIn d.(decl_name) b d.(decl_type) acc
        end) l t.
 
+(** Make a list of variables of length [#|Γ|], starting at [acc]. *)
+
 Fixpoint rels_of {A} (Γ : list A) acc : list term :=
   match Γ with
   | _ :: Γ' => tRel acc :: rels_of Γ' (S acc)
   | [] => []
   end.
+
+(** Compute the type of a case from the predicate [p], actual parameters [pars] and
+    an inductive declaration. *)
 
 Definition types_of_case ind u pars p decl :=
   match destArity [] decl.(ind_type) with
@@ -421,12 +392,16 @@ Definition types_of_case ind u pars p decl :=
   | None => None
   end.
 
+(** Family of a universe [u]. *)
+
 Definition universe_family u :=
   match u with
   | [(Level.lProp, false)] => InProp
   | [(Level.lSet, false)] => InSet
   | _ => InType
   end.
+
+(** Check that [uctx] instantiated at [u] is consistent with the current universe graph. *)
 
 Definition consistent_universe_context_instance (Σ : global_context) uctx u :=
   match uctx with
@@ -444,10 +419,10 @@ Definition consistent_universe_context_instance (Σ : global_context) uctx u :=
 (*   | InType => true *)
 (*   end. *)
 
-
 Reserved Notation " Σ ;;; Γ |- t : T " (at level 50, Γ, t, T at next level).
 Reserved Notation " Σ ;;; Γ |- t <= u " (at level 50, Γ, t, u at next level).
 
+(** ** Cumulativity *)
 
 Inductive cumul (Σ : global_context) (Γ : context) : term -> term -> Prop :=
 | cumul_refl t u : leq_term (snd Σ) t u = true -> Σ ;;; Γ |- t <= u
@@ -455,6 +430,11 @@ Inductive cumul (Σ : global_context) (Γ : context) : term -> term -> Prop :=
 | cumul_red_r t u v : Σ ;;; Γ |- t <= v -> red1 (fst Σ) Γ u v -> Σ ;;; Γ |- t <= u
 
 where " Σ ;;; Γ |- t <= u " := (@cumul Σ Γ t u) : type_scope.
+
+(** *** Conversion
+
+   Defined as cumulativity in both directions.
+ *)
 
 Definition conv Σ Γ T U :=
   Σ ;;; Γ |- T <= U /\ Σ ;;; Γ |- U <= T.
@@ -472,8 +452,7 @@ Conjecture congr_cumul_prod : forall Σ Γ na na' M1 M2 N1 N2,
     cumul Σ (Γ ,, vass na M1) M2 N2 ->
     cumul Σ Γ (tProd na M1 M2) (tProd na' N1 N2).
 
-
-Record squash (A : Type) : Prop := { _ : A }.
+(** ** Typing relation *)
 
 Inductive typing (Σ : global_context) (Γ : context) : term -> term -> Type :=
 | type_Rel n : forall (isdecl : n < List.length Γ),
@@ -561,6 +540,8 @@ Inductive typing (Σ : global_context) (Γ : context) : term -> term -> Type :=
 
 where " Σ ;;; Γ |- t : T " := (@typing Σ Γ t T) : type_scope
 
+(* Typing of "spines", currently just the arguments of applications *)
+
 with typing_spine (Σ : global_context) (Γ : context) : term -> list term -> term -> Prop :=
 | type_spine_nil ty : typing_spine Σ Γ ty [] ty
 | type_spine_const hd tl na A B T B' :
@@ -569,6 +550,7 @@ with typing_spine (Σ : global_context) (Γ : context) : term -> list term -> te
     typing_spine Σ Γ (subst0 hd B) tl B' ->
     typing_spine Σ Γ T (cons hd tl) B'.
 
+(** ** Typechecking of global environments *)
 
 Definition add_constraints_env u (Σ : global_context)
   := (fst Σ, add_global_constraints u (snd Σ)).
@@ -597,6 +579,8 @@ Fixpoint decompose_program (p : program) (Σ : global_context) : global_context 
 
 Definition isType (Σ : global_context) (Γ : context) (t : term) :=
   { s : _ & Σ ;;; Γ |- t : tSort s }.
+
+(** *** Typing of inductive declarations *)
 
 Inductive type_constructors (Σ : global_context) (Γ : context) :
   list (ident * term * nat) -> Type :=
@@ -643,13 +627,9 @@ Inductive type_inddecls (Σ : global_context) (pars : context) (Γ : context) :
 Definition type_inductive Σ inds :=
   (** FIXME: should be pars ++ arities w/o params *)
   type_inddecls Σ [] (arities_context inds) inds.
-                 
-Inductive fresh_global (s : string) : global_declarations -> Prop :=
-| fresh_global_nil : fresh_global s nil
-| fresh_global_cons env g :
-    fresh_global s env -> global_decl_ident g <> s ->
-    fresh_global s (cons g env).
-  
+
+(** *** Typing of constant declarations *)
+
 Definition type_constant_decl Σ d :=
   match d.(cst_body) with
   | Some trm => Σ ;;; [] |- trm : d.(cst_type)
@@ -662,6 +642,10 @@ Definition type_global_decl Σ decl :=
   | InductiveDecl ind inds => type_inductive Σ inds.(ind_bodies)
   end.
 
+(** *** Typing of global environment
+
+    All declarations should be typeable and the global
+    set of universe constraints should be consistent. *)
 
 Definition contains_init_graph φ :=
   LevelSet.In Level.prop (fst φ) /\ LevelSet.In Level.set (fst φ) /\
@@ -669,6 +653,14 @@ Definition contains_init_graph φ :=
 
 Definition wf_graph φ :=
   contains_init_graph φ /\ (no_universe_inconsistency φ = true).
+
+(** Well-formed global environments have no name clash. *)
+
+Inductive fresh_global (s : string) : global_declarations -> Prop :=
+| fresh_global_nil : fresh_global s nil
+| fresh_global_cons env g :
+    fresh_global s env -> global_decl_ident g <> s ->
+    fresh_global s (cons g env).
 
 Inductive type_global_env φ : global_declarations -> Type :=
 | globenv_nil : wf_graph φ -> type_global_env φ []
@@ -678,18 +670,14 @@ Inductive type_global_env φ : global_declarations -> Type :=
     type_global_decl (Σ, φ) d ->
     type_global_env φ (d :: Σ).
 
+(** *** Typing of local environments *)
+
 Definition type_local_decl Σ Γ d :=
   match d.(decl_body) with
   | None => isType Σ Γ d.(decl_type)
   | Some body => Σ ;;; Γ |- body : d.(decl_type)
   end.
 
-(* Fixpoint type_global_env (G : global_context) := *)
-(*   match G with *)
-(*   | [] => True *)
-(*   | d :: Σ => *)
-(*     match d with *)
-(*     | ConstantDecl id d => fresh_global id Σ /\ type_global_env  *)
 Inductive type_local_env (Σ : global_context) : context -> Prop :=
 | localenv_nil : type_local_env Σ []
 | localenv_cons Γ d :
@@ -697,10 +685,12 @@ Inductive type_local_env (Σ : global_context) : context -> Prop :=
     type_local_decl Σ Γ d ->
     type_local_env Σ (Γ ,, d).
 
-
+(** *** Typing of programs *)
 Definition type_program (p : program) (ty : term) : Prop :=
   let '(Σ, t) := decompose_program p ([], uGraph.init_graph) in
   squash (Σ ;;; [] |- t : ty).
+
+(** ** Tests *)
 
 Quote Recursively Definition foo := 0.
 
@@ -741,6 +731,9 @@ Proof.
   construct.
   econstructor.
 Qed.
+
+
+(** ** Induction principle for terms up-to a global environment *)
 
 Definition on_decl P d :=
   match d with
@@ -847,6 +840,9 @@ Proof.
   constructor. apply term_env_ind; auto. apply IHl.
 Qed.
 
+(** ** Induction principle for typing up-to a global environment *)
+
+
 Inductive Forall (A : Set) (P : A -> Type) : list A -> Type :=
     Forall_nil : Forall A P []
   | Forall_cons : forall (x : A) (l : list A),
@@ -888,27 +884,16 @@ Proof.
     end.
 Defined.
 
-(* Definition on_decl_typing f d := *)
-(*   match d with *)
-(*   | ConstantDecl id cst => *)
-(*     match cst.(cst_body) with *)
-(*     | Some b =>  b cst.(cst_type) *)
-(*     | None => exists s, P cst.(cst_type) s *)
-(*     end *)
-(*   | InductiveDecl id ind => *)
-(*     Forall (fun ind => exists s, P ind.(ind_type) s) ind.(ind_bodies) *)
-(*   end. *)
-
 Fixpoint globenv_size (Σ : global_declarations) : size :=
   match Σ with
   | [] => 1
   | d :: Σ => S (globenv_size Σ)
   end.
 
-(** To get a good induction principle for typing derivations, *)
-(*     we need:  *)
-(*     - size of the global_context, including size of the global declarations in it *)
-(*     - size of the derivation. *)
+(** To get a good induction principle for typing derivations,
+     we need:
+    - size of the global_context, including size of the global declarations in it
+    - size of the derivation. *)
 
 (** Such a useful tactic it should be part of the stdlib. *)
 Ltac forward_gen H tac :=
@@ -948,10 +933,10 @@ Lemma env_prop_sigma P : env_prop P ->
 Proof. intros. eapply X. apply wf. apply (type_Sort Σ [] Level.prop).
 Defined.
 
-(** An induction principle ensuring the Σ declarations enjoy the same properties. *)
+(** *** An induction principle ensuring the Σ declarations enjoy the same properties.
 
-(*   TODO: thread the property on local contexts as well, avoiding to redo work at binding constructs. *)
-(*  *)
+ TODO: thread the property on local contexts as well, avoiding to redo work at binding constructs. *)
+
 Lemma typing_ind_env :
   forall (P : global_context -> context -> term -> term -> Set),
     (forall Σ (wfΣ : wf Σ) (Γ : context) (n : nat) (isdecl : n < #|Γ|),

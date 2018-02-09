@@ -1,8 +1,17 @@
+(* Distributed under the terms of the MIT license.   *)
+
 From Template Require Import Template Ast univ.
 Require Import List Program.
 Require Import BinPos.
 Require Import Coq.Arith.Compare_dec Bool.
 Set Asymmetric Patterns.
+
+(** * Deriving a compact induction principle for terms
+
+  *WIP*
+
+  Allows to get the right induction principle on lists of terms appearing
+  in the term syntax (in evar, applications, branches of cases and (co-)fixpoints. *)
 
 Arguments dname {term} _.
 Arguments dtype {term} _.

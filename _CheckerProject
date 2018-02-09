@@ -4,6 +4,8 @@ src/induction.ml
 src/induction.mli
 src/liftSubst.ml
 src/liftSubst.mli
+src/univSubst.ml
+src/univSubst.mli
 src/typing0.ml
 src/typing0.mli
 src/utils.mli

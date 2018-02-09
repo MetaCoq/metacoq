@@ -15,6 +15,7 @@ theories/Template.v
 theories/Induction.v
 theories/LiftSubst.v
 theories/WeakSubst.v
+theories/UnivSubst.v
 theories/Typing.v
 theories/Checker.v
 theories/All.v

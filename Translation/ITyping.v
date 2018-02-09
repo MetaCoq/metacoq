@@ -466,6 +466,11 @@ Ltac ih h :=
   | _ => fail "Cannot retrieve type_lift"
   end.
 
+Ltac eih :=
+  match goal with
+  | h : _ ;;; _ |-i ?t : _ |- _ ;;; _ |-i lift _ _ ?t : _ => ih h
+  end.
+
 Fixpoint type_lift {Σ Γ Δ Ξ t A} (h : Σ ;;; Γ ,,, Ξ |-i t : A) {struct h} :
   wf Σ (Γ ,,, Δ) ->
   Σ ;;; Γ ,,, Δ ,,, lift_context #|Δ| Ξ |-i lift #|Δ| #|Ξ| t : lift #|Δ| #|Ξ| A
@@ -496,37 +501,37 @@ Proof.
           cheat.
       - cbn. apply type_Sort. now apply wf_lift.
       - cbn. eapply type_Prod.
-        + ih h1.
-        + ih h2.
+        + eih.
+        + eih.
       - cbn. eapply type_Lambda.
-        + ih h1.
-        + ih h2.
-        + ih h3.
+        + eih.
+        + eih.
+        + eih.
       - cbn.
         change (lift #|Δ| #|Ξ| (B {0 := u}))
           with (lift #|Δ| (0 + #|Ξ|) (B { 0 := u })).
         rewrite substP1.
         eapply type_App.
-        + ih h1.
-        + ih h2.
-        + ih h3.
-        + ih h4.
+        + eih.
+        + eih.
+        + eih.
+        + eih.
       - cbn. apply type_Eq.
-        + ih h1.
-        + ih h2.
-        + ih h3.
+        + eih.
+        + eih.
+        + eih.
       - cbn. eapply type_Refl.
-        + ih h1.
-        + ih h2.
+        + eih.
+        + eih.
       - change (#|Ξ|) with (0 + #|Ξ|)%nat.
         rewrite substP1.
         replace (S (0 + #|Ξ|)) with (1 + #|Ξ|)%nat by omega.
         rewrite substP1.
         cbn. eapply type_J.
-        + ih h1.
-        + ih h2.
-        + ih h3.
-        + ih h4.
+        + eih.
+        + eih.
+        + eih.
+        + eih.
           instantiate (1 := ne). instantiate (1 := nx). cbn. unfold ssnoc.
           rewrite !lift_decl_svass. cbn.
           f_equal. f_equal. f_equal.
@@ -534,17 +539,17 @@ Proof.
             apply liftP2. omega.
           * replace (S #|Ξ|) with (1 + #|Ξ|)%nat by omega.
             apply liftP2. omega.
-        + ih h5.
+        + eih.
         + replace (S (S #|Ξ|)) with (1 + (S (0 + #|Ξ|)))%nat by omega.
           rewrite <- substP1.
           replace (1 + (0 + #|Ξ|))%nat with (S (0 + #|Ξ|))%nat by omega.
           change (sRefl (lift #|Δ| #|Ξ| A0) (lift #|Δ| #|Ξ| u))
             with (lift #|Δ| #|Ξ| (sRefl A0 u)).
           rewrite <- substP1.
-          ih h6.
+          eih.
       - cbn. eapply type_Transport.
-        + ih h1.
-        + ih h2.
+        + eih.
+        + eih.
         + eapply meta_conv ; [ eapply type_lift | .. ] ; easy.
         + eapply meta_conv ; [ eapply type_lift | .. ] ; easy.
       - cbn. eapply type_Heq.

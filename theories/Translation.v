@@ -62,6 +62,8 @@ Inductive trel : sterm -> sterm -> Type :=
 
 where " t1 ∼ t2 " := (trel t1 t2).
 
+Derive Signature for trel.
+
 (* We also define a biased relation that only allows transports on one side,
    the idea being that the term on the other side belongs to the source.
    This might be unnecessary as transport isn't typable in the source but

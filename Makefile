@@ -1,7 +1,4 @@
-COMPILER := theories/TemplateCoqCompiler.vo
-CHECKER := theories/TemplateCoqChecker.vo
-
-all: makefiles coq $(COMPILER) $(CHEKER)
+all: makefiles coq theories/TemplateCoqCompiler.vo theories/TemplateCoqChecker.vo
 
 .PHONY: all makefiles coq translations install test-suite html clean
 
@@ -49,7 +46,7 @@ theories/TemplateCoqCompiler.vo: Makefile.coqplugin theories/Extraction.v theori
 .merlin: Makefile.coq
 	make -f Makefile.coq .merlin
 
-theories/TemplateCoqChecker.vo: Makefile.coqchecker $(COMPILER) theories/TypingPlugin.v | theories/TemplateCoqCompiler.vo
+theories/TemplateCoqChecker.vo: Makefile.coqchecker theories/TypingPlugin.v | theories/TemplateCoqCompiler.vo
 	$(COQBIN)coqc -I src -R theories Template theories/TypingPlugin.v
 	sh movefiles.sh
 	$(MAKE) -f Makefile.coqchecker

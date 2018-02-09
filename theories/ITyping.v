@@ -442,7 +442,14 @@ Proof.
         + change (#|[]|) with 0. rewrite !lift00.
           rewrite lift_context0. cbn. eapply type_Rel. assumption.
         + dependent destruction hwf.
-          specialize (IHΔ Ξ n isdecl w hwf).
+          dependent induction Ξ.
+          * cbn. eapply meta_conv.
+            -- eapply type_Rel. econstructor.
+               ++ assumption.
+               ++ eassumption.
+            -- cheat.
+          *
+          (* specialize (IHΔ Ξ n isdecl w hwf). *)
           cheat.
       - cbn. apply type_Sort. now apply wf_lift.
       - cbn. eapply type_Prod.
@@ -450,105 +457,119 @@ Proof.
         + now apply type_lift with (Ξ := (Ξ,, svass n t0)) (A := sSort s2).
       - cbn. eapply type_Lambda.
         + now apply type_lift with (A := sSort s1).
-        + (* specialize (IHh2 Γ (Ξ,, svass n t) eq_refl hwf). apply IHh2.
-        + specialize (IHh3 Γ (Ξ,, svass n t) eq_refl hwf). apply IHh3.
+        + now apply type_lift with (Ξ := Ξ,, svass n t0) (A := sSort s2).
+        + now apply type_lift with (Ξ := Ξ,, svass n t0).
       - cbn.
         change (lift #|Δ| #|Ξ| (B {0 := u}))
           with (lift #|Δ| (0 + #|Ξ|) (B { 0 := u })).
         rewrite substP1.
         eapply type_App.
-        + now apply IHh1.
-        + now apply IHh2 with (Ξ0 := Ξ,, svass n A).
-        + now apply IHh3.
-        + now apply IHh4.
+        + now apply type_lift with (A := sSort s1).
+        + now apply type_lift with (Ξ := Ξ,, svass n A0) (A := sSort s2).
+        + now apply type_lift with (A := sProd n A0 B).
+        + now apply type_lift.
       - cbn. apply type_Eq.
-        + now apply IHh1.
-        + now apply IHh2.
-        + now apply IHh3.
+        + now apply type_lift with (A := sSort s).
+        + now apply type_lift.
+        + now apply type_lift.
       - cbn. eapply type_Refl.
-        + now apply IHh1.
-        + now apply IHh2.
+        + now apply type_lift with (A := sSort s).
+        + now apply type_lift.
       - change (#|Ξ|) with (0 + #|Ξ|)%nat.
         rewrite substP1.
         replace (S (0 + #|Ξ|)) with (1 + #|Ξ|)%nat by omega.
         rewrite substP1.
         cbn. eapply type_J.
-        + now apply IHh1.
-        + now apply IHh2.
-        + now apply IHh3.
-        + specialize (IHh4 _ ((Ξ,, svass nx A),, svass ne (sEq (lift0 1 A) (lift0 1 u) (sRel 0))) eq_refl hwf).
-          cbn in IHh4. rewrite !lift_decl_svass in IHh4.
-          eapply meta_ctx_conv.
-          * eapply IHh4.
-          * unfold ssnoc. f_equal. cbn. f_equal. f_equal.
+        + now apply type_lift with (A := sSort s1).
+        + now apply type_lift.
+        + now apply type_lift.
+        + eapply meta_ctx_conv.
+          * apply type_lift
+              with (Ξ := (Ξ,, svass nx A0),, svass ne (sEq (lift0 1 A0) (lift0 1 u) (sRel 0)))
+                   (A := sSort s2)
+            .
+            -- exact h4.
+            -- assumption.
+          * instantiate (1 := ne). instantiate (1 := nx). cbn. unfold ssnoc.
+            rewrite !lift_decl_svass. cbn.
+            f_equal. f_equal. f_equal.
             -- replace (S #|Ξ|) with (1 + #|Ξ|)%nat by omega.
                apply liftP2. omega.
             -- replace (S #|Ξ|) with (1 + #|Ξ|)%nat by omega.
                apply liftP2. omega.
-        + now apply IHh5.
+        + now apply type_lift with (A := sEq A0 u v).
         + replace (S (S #|Ξ|)) with (1 + (S (0 + #|Ξ|)))%nat by omega.
           rewrite <- substP1.
           replace (1 + (0 + #|Ξ|))%nat with (S (0 + #|Ξ|))%nat by omega.
-          change (sRefl (lift #|Δ| #|Ξ| A) (lift #|Δ| #|Ξ| u))
-            with (lift #|Δ| #|Ξ| (sRefl A u)).
+          change (sRefl (lift #|Δ| #|Ξ| A0) (lift #|Δ| #|Ξ| u))
+            with (lift #|Δ| #|Ξ| (sRefl A0 u)).
           rewrite <- substP1.
-          now apply IHh6.
+          now apply type_lift.
       - cbn. eapply type_Transport.
-        + now apply IHh1.
-        + now apply IHh2.
-        + now apply IHh3.
-        + now apply IHh4.
+        + now apply type_lift with (A := sSort s).
+        + now apply type_lift with (A := sSort s).
+        + eapply meta_conv ; [ eapply type_lift | .. ] ; easy.
+        + eapply meta_conv ; [ eapply type_lift | .. ] ; easy.
       - cbn. eapply type_Heq.
-        + now apply IHh1.
-        + now apply IHh2.
-        + now apply IHh3.
-        + now apply IHh4.
+        + eapply meta_conv ; [ eapply type_lift | .. ] ; easy.
+        + eapply meta_conv ; [ eapply type_lift | .. ] ; easy.
+        + eapply meta_conv ; [ eapply type_lift | .. ] ; easy.
+        + eapply meta_conv ; [ eapply type_lift | .. ] ; easy.
       - cbn. eapply type_HeqToEq.
-        + now apply IHh1.
-        + now apply IHh2.
-        + now apply IHh3.
-        + now apply IHh4.
+        + eapply meta_conv ; [ eapply type_lift | .. ] ; easy.
+        + eapply meta_conv ; [ eapply type_lift | .. ] ; easy.
+        + eapply meta_conv ; [ eapply type_lift | .. ] ; easy.
+        + eapply meta_conv ; [ eapply type_lift | .. ] ; easy.
       - cbn. eapply type_HeqRefl.
-        + now apply IHh1.
-        + now apply IHh2.
+        + eapply meta_conv ; [ eapply type_lift | .. ] ; easy.
+        + eapply meta_conv ; [ eapply type_lift | .. ] ; easy.
       - cbn. eapply type_HeqSym.
-        + now apply IHh1.
-        + now apply IHh2.
-        + now apply IHh3.
-        + now apply IHh4.
-        + now apply IHh5.
-      - cbn. eapply type_HeqTrans.
-        + now apply IHh1.
-        + now apply IHh2.
-        + now apply IHh3.
-        + now apply IHh4.
-        + now apply IHh5.
-        + now apply IHh6.
-        + now apply IHh7.
+        + eapply meta_conv ; [ eapply type_lift | .. ] ; easy.
+        + eapply meta_conv ; [ eapply type_lift | .. ] ; easy.
+        + eapply meta_conv ; [ eapply type_lift | .. ] ; easy.
+        + eapply meta_conv ; [ eapply type_lift | .. ] ; easy.
+        + eapply meta_conv ; [ eapply type_lift | .. ] ; easy.
+      - cbn. eapply @type_HeqTrans with (B := lift #|Δ| #|Ξ| B) (b := lift #|Δ| #|Ξ| b).
+        + eapply meta_conv ; [ eapply type_lift | .. ] ; easy.
+        + eapply meta_conv ; [ eapply type_lift | .. ] ; easy.
+        + eapply meta_conv ; [ eapply type_lift | .. ] ; easy.
+        + eapply meta_conv ; [ eapply type_lift | .. ] ; easy.
+        + eapply meta_conv ; [ eapply type_lift | .. ] ; easy.
+        + eapply meta_conv ; [ eapply type_lift | .. ] ; easy.
+        + eapply meta_conv ; [ eapply type_lift | .. ] ; easy.
       - cbn. eapply type_HeqTransport.
-        + now apply IHh1.
-        + now apply IHh2.
-        + now apply IHh3.
-        + now apply IHh4.
+        + eapply meta_conv ; [ eapply type_lift | .. ] ; easy.
+        + eapply meta_conv ; [ eapply type_lift | .. ] ; easy.
+        + eapply meta_conv ; [ eapply type_lift | .. ] ; easy.
+        + eapply meta_conv ; [ eapply type_lift | .. ] ; easy.
       - cbn. eapply type_CongProd.
-        + now apply IHh1.
-        + specialize (IHh2 Γ (Ξ,, svass np (sPack A1 A2)) eq_refl hwf).
-          cbn in IHh2. eapply meta_conv.
-          * apply IHh2.
-          * f_equal.
+        + eapply meta_conv ; [ eapply type_lift | .. ] ; easy.
+        + match type of h2 with
+          | _ ;;; (?Γ' ,,, ?Ξ'),, ?d' |-i _ : ?T' =>
+            eapply meta_conv ; [
+              eapply meta_ctx_conv ; [
+                eapply type_lift with (Γ := Γ') (Ξ := Ξ',, d') (A := T') ; [
+                  exact h2
+                | assumption
+                ]
+              | .. ]
+            | .. ]
+          end.
+          * cbn. rewrite lift_decl_svass. reflexivity.
+          * cbn. f_equal.
             -- rewrite <- liftP2 by omega.
                cheat.
             -- rewrite <- liftP2 by omega.
                cheat.
-        + now apply IHh3.
-        + now apply IHh4.
+        (* + now apply type_lift.
+        + now apply type_lift.
         + cheat.
         + cheat.
       - cbn. eapply type_CongLambda.
-        + now apply IHh1.
+        + now apply type_lift.
         + cheat.
         + cheat.
-        + now apply IHh4.
+        + now apply type_lift.
         + now apply IHh5.
         + cheat.
         + cheat.
@@ -557,51 +578,51 @@ Proof.
       - cbn. (* eapply type_CongApp. *)
         cheat.
       - cbn. eapply type_CongEq.
-        + now apply IHh1.
-        + now apply IHh2.
-        + now apply IHh3.
-        + now apply IHh4.
+        + now apply type_lift.
+        + now apply type_lift.
+        + now apply type_lift.
+        + now apply type_lift.
         + now apply IHh5.
         + now apply IHh6.
         + now apply IHh7.
         + now apply IHh8.
         + now apply IHh9.
       - cbn. eapply type_CongRefl.
-        + now apply IHh1.
-        + now apply IHh2.
-        + now apply IHh3.
-        + now apply IHh4.
+        + now apply type_lift.
+        + now apply type_lift.
+        + now apply type_lift.
+        + now apply type_lift.
         + now apply IHh5.
         + now apply IHh6.
       - cbn. eapply type_EqToHeq.
-        + now apply IHh1.
-        + now apply IHh2.
-        + now apply IHh3.
-        + now apply IHh4.
+        + now apply type_lift.
+        + now apply type_lift.
+        + now apply type_lift.
+        + now apply type_lift.
       - cbn. eapply type_HeqTypeEq.
-        + now apply IHh1.
-        + now apply IHh2.
-        + now apply IHh3.
-        + now apply IHh4.
+        + now apply type_lift.
+        + now apply type_lift.
+        + now apply type_lift.
+        + now apply type_lift.
         + now apply IHh5.
       - cbn. eapply type_Pack.
-        + now apply IHh1.
-        + now apply IHh2.
+        + now apply type_lift.
+        + now apply type_lift.
       - cbn. eapply type_ProjT1.
-        + now apply IHh1.
-        + now apply IHh2.
-        + now apply IHh3.
+        + now apply type_lift.
+        + now apply type_lift.
+        + now apply type_lift.
       - cbn. eapply type_ProjT2.
-        + now apply IHh1.
-        + now apply IHh2.
-        + now apply IHh3.
+        + now apply type_lift.
+        + now apply type_lift.
+        + now apply type_lift.
       - cbn. eapply type_ProjTe.
-        + now apply IHh1.
-        + now apply IHh2.
-        + now apply IHh3.
+        + now apply type_lift.
+        + now apply type_lift.
+        + now apply type_lift.
       - eapply type_conv.
-        + now apply IHh1.
-        + now apply IHh2.
+        + now apply type_lift.
+        + now apply type_lift.
         + change (sSort s) with (lift #|Δ| #|Ξ| (sSort s)).
           eapply cong_lift ; eassumption.
     }

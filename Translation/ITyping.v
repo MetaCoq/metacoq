@@ -428,6 +428,44 @@ Defined.
 Axiom cheating : forall {A}, A.
 Tactic Notation "cheat" := apply cheating.
 
+Ltac ih h :=
+  lazymatch goal with
+  | [ type_lift : forall (Σ : global_context) (Γ Δ Ξ : scontext) (t A : sterm),
+              Σ;;; Γ ,,, Ξ |-i t : A ->
+              wf Σ (Γ ,,, Δ) -> Σ;;; Γ ,,, Δ ,,, lift_context #|Δ| Ξ |-i lift #|Δ| #|Ξ| t : lift #|Δ| #|Ξ| A
+    |- _ ] =>
+    lazymatch type of h with
+    | _ ;;; ?Γ' ,,, ?Ξ' |-i _ : ?T' =>
+      eapply meta_conv ; [
+        eapply meta_ctx_conv ; [
+          eapply type_lift with (Γ := Γ') (Ξ := Ξ') (A := T') ; [
+            exact h
+          | assumption
+          ]
+        | .. ]
+      | .. ]
+    | _ ;;; (?Γ' ,,, ?Ξ'),, ?d' |-i _ : ?T' =>
+      eapply meta_conv ; [
+        eapply meta_ctx_conv ; [
+          eapply type_lift with (Γ := Γ') (Ξ := Ξ',, d') (A := T') ; [
+            exact h
+          | assumption
+          ]
+        | .. ]
+      | .. ]
+    | _ ;;; (?Γ' ,,, ?Ξ'),, ?d',, ?d'' |-i _ : ?T' =>
+      eapply meta_conv ; [
+        eapply meta_ctx_conv ; [
+          eapply type_lift with (Γ := Γ') (Ξ := (Ξ',, d'),, d'') (A := T') ; [
+            exact h
+          | assumption
+          ]
+        | .. ]
+      | .. ]
+    end ; try (cbn ; reflexivity)
+  | _ => fail "Cannot retrieve type_lift"
+  end.
+
 Fixpoint type_lift {Σ Γ Δ Ξ t A} (h : Σ ;;; Γ ,,, Ξ |-i t : A) {struct h} :
   wf Σ (Γ ,,, Δ) ->
   Σ ;;; Γ ,,, Δ ,,, lift_context #|Δ| Ξ |-i lift #|Δ| #|Ξ| t : lift #|Δ| #|Ξ| A
@@ -458,61 +496,55 @@ Proof.
           cheat.
       - cbn. apply type_Sort. now apply wf_lift.
       - cbn. eapply type_Prod.
-        + now apply type_lift with (A := sSort s1).
-        + now apply type_lift with (Ξ := (Ξ,, svass n t0)) (A := sSort s2).
+        + ih h1.
+        + ih h2.
       - cbn. eapply type_Lambda.
-        + now apply type_lift with (A := sSort s1).
-        + now apply type_lift with (Ξ := Ξ,, svass n t0) (A := sSort s2).
-        + now apply type_lift with (Ξ := Ξ,, svass n t0).
+        + ih h1.
+        + ih h2.
+        + ih h3.
       - cbn.
         change (lift #|Δ| #|Ξ| (B {0 := u}))
           with (lift #|Δ| (0 + #|Ξ|) (B { 0 := u })).
         rewrite substP1.
         eapply type_App.
-        + now apply type_lift with (A := sSort s1).
-        + now apply type_lift with (Ξ := Ξ,, svass n A0) (A := sSort s2).
-        + now apply type_lift with (A := sProd n A0 B).
-        + now apply type_lift.
+        + ih h1.
+        + ih h2.
+        + ih h3.
+        + ih h4.
       - cbn. apply type_Eq.
-        + now apply type_lift with (A := sSort s).
-        + now apply type_lift.
-        + now apply type_lift.
+        + ih h1.
+        + ih h2.
+        + ih h3.
       - cbn. eapply type_Refl.
-        + now apply type_lift with (A := sSort s).
-        + now apply type_lift.
+        + ih h1.
+        + ih h2.
       - change (#|Ξ|) with (0 + #|Ξ|)%nat.
         rewrite substP1.
         replace (S (0 + #|Ξ|)) with (1 + #|Ξ|)%nat by omega.
         rewrite substP1.
         cbn. eapply type_J.
-        + now apply type_lift with (A := sSort s1).
-        + now apply type_lift.
-        + now apply type_lift.
-        + eapply meta_ctx_conv.
-          * apply type_lift
-              with (Ξ := (Ξ,, svass nx A0),, svass ne (sEq (lift0 1 A0) (lift0 1 u) (sRel 0)))
-                   (A := sSort s2)
-            .
-            -- exact h4.
-            -- assumption.
-          * instantiate (1 := ne). instantiate (1 := nx). cbn. unfold ssnoc.
-            rewrite !lift_decl_svass. cbn.
-            f_equal. f_equal. f_equal.
-            -- replace (S #|Ξ|) with (1 + #|Ξ|)%nat by omega.
-               apply liftP2. omega.
-            -- replace (S #|Ξ|) with (1 + #|Ξ|)%nat by omega.
-               apply liftP2. omega.
-        + now apply type_lift with (A := sEq A0 u v).
+        + ih h1.
+        + ih h2.
+        + ih h3.
+        + ih h4.
+          instantiate (1 := ne). instantiate (1 := nx). cbn. unfold ssnoc.
+          rewrite !lift_decl_svass. cbn.
+          f_equal. f_equal. f_equal.
+          * replace (S #|Ξ|) with (1 + #|Ξ|)%nat by omega.
+            apply liftP2. omega.
+          * replace (S #|Ξ|) with (1 + #|Ξ|)%nat by omega.
+            apply liftP2. omega.
+        + ih h5.
         + replace (S (S #|Ξ|)) with (1 + (S (0 + #|Ξ|)))%nat by omega.
           rewrite <- substP1.
           replace (1 + (0 + #|Ξ|))%nat with (S (0 + #|Ξ|))%nat by omega.
           change (sRefl (lift #|Δ| #|Ξ| A0) (lift #|Δ| #|Ξ| u))
             with (lift #|Δ| #|Ξ| (sRefl A0 u)).
           rewrite <- substP1.
-          now apply type_lift.
+          ih h6.
       - cbn. eapply type_Transport.
-        + now apply type_lift with (A := sSort s).
-        + now apply type_lift with (A := sSort s).
+        + ih h1.
+        + ih h2.
         + eapply meta_conv ; [ eapply type_lift | .. ] ; easy.
         + eapply meta_conv ; [ eapply type_lift | .. ] ; easy.
       - cbn. eapply type_Heq.

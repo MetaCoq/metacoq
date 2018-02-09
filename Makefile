@@ -19,6 +19,7 @@ html: all
 	$(MAKE) -f Makefile.coq html
 	$(MAKE) -f Makefile.coqplugin html
 	$(MAKE) -f Makefile.coqchecker html
+	git checkout html/coqdoc.css # Preserve custom coqdoc
 
 clean: Makefile.coq Makefile.coqplugin Makefile.coqchecker
 	$(MAKE) -f Makefile.coq clean

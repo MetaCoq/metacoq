@@ -36,7 +36,8 @@ branch is in development and contains additional features:
 Documentation
 =============
 
-The 8.7 branch [documentation (coqdoc files)](html/Template.All.html) is available.
+The 8.7 branch [documentation (coqdoc files)](html/Template.All.html)
+and pretty-printed HTML versions of the [translations](html/translations) are available.
 
 Papers
 ======

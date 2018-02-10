@@ -35,28 +35,36 @@ struct
   type quoted_cast_kind = cast_kind
   type quoted_kernel_name = char list
   type quoted_inductive = inductive
-  type quoted_decl = global_decl
-  type quoted_program = program
+  type quoted_proj = projection
+  type quoted_global_reference = global_reference
+
+  type quoted_sort_family = sort_family
   type quoted_constraint_type = Univ0.constraint_type
   type quoted_univ_constraint = Univ0.univ_constraint
   type quoted_univ_instance = Univ0.Instance.t
   type quoted_univ_constraints = Univ0.constraints
   type quoted_univ_context = Univ0.universe_context
   type quoted_inductive_universes = quoted_univ_context
+
   type quoted_mind_params = (ident * local_entry) list
-  type quoted_ind_entry =
-    quoted_ident * t * quoted_bool * quoted_ident list * t list
+  type quoted_ind_entry = quoted_ident * t * quoted_bool * quoted_ident list * t list
   type quoted_definition_entry = t * t option * quoted_univ_context
   type quoted_mind_entry = mutual_inductive_entry
   type quoted_mind_finiteness = recursivity_kind
   type quoted_entry = (constant_entry, quoted_mind_entry) sum option
-  type quoted_proj = projection
-  type quoted_sort_family = sort_family
+
+  type quoted_one_inductive_body = inductive_body
+  type quoted_mutual_inductive_body = minductive_decl
+  type quoted_constant_body = constant_decl
+  type quoted_global_decl = global_decl
+  type quoted_global_declarations = global_declarations
+  type quoted_program = program
 
   open Names
 
   let quote_ident id =
     quote_string (Id.to_string id)
+
   let quote_name = function
     | Anonymous -> Coq_nAnon
     | Name i -> Coq_nNamed (quote_ident i)
@@ -105,24 +113,6 @@ struct
   let quote_inductive (kn, i) = { inductive_mind = kn ; inductive_ind = i }
   let quote_proj ind p a = ((ind,p),a)
 
-  let mkAnon = Coq_nAnon
-  let mkName i = Coq_nNamed i
-
-  let mkRel n = Coq_tRel n
-  let mkVar id = Coq_tVar id
-  let mkMeta n = Coq_tMeta n
-  let mkEvar n args = Coq_tEvar (n,Array.to_list args)
-  let mkSort s = Coq_tSort s
-  let mkCast c k t = Coq_tCast (c,k,t)
-
-  let mkConst c u = Coq_tConst (c, u)
-  let mkProd na t b = Coq_tProd (na, t, b)
-  let mkLambda na t b = Coq_tLambda (na, t, b)
-  let mkApp f xs = Coq_tApp (f, Array.to_list xs)
-  let mkInd i u = Coq_tInd (i, u)
-  let mkConstruct (ind, i) u = Coq_tConstruct (ind, i, u)
-  let mkLetIn na b t t' = Coq_tLetIn (na,b,t,t')
-
   let quote_constraint_type = function
     | Univ.Lt -> Univ0.ConstraintType.Lt
     | Univ.Le -> Univ0.ConstraintType.Le
@@ -158,6 +148,24 @@ struct
     | Entries.Cumulative_ind_entry ctx ->
       quote_abstract_univ_context_aux (Univ.CumulativityInfo.univ_context ctx)
 
+  let mkAnon = Coq_nAnon
+  let mkName i = Coq_nNamed i
+
+  let mkRel n = Coq_tRel n
+  let mkVar id = Coq_tVar id
+  let mkMeta n = Coq_tMeta n
+  let mkEvar n args = Coq_tEvar (n,Array.to_list args)
+  let mkSort s = Coq_tSort s
+  let mkCast c k t = Coq_tCast (c,k,t)
+
+  let mkConst c u = Coq_tConst (c, u)
+  let mkProd na t b = Coq_tProd (na, t, b)
+  let mkLambda na t b = Coq_tLambda (na, t, b)
+  let mkApp f xs = Coq_tApp (f, Array.to_list xs)
+  let mkInd i u = Coq_tInd (i, u)
+  let mkConstruct (ind, i) u = Coq_tConstruct (ind, i, u)
+  let mkLetIn na b t t' = Coq_tLetIn (na,b,t,t')
+
   let rec seq f t =
     if f < t then
       f :: seq (f + 1) t
@@ -191,28 +199,26 @@ struct
     Coq_tCase (info,p,c,branches)
   let mkProj p c = Coq_tProj (p,c)
 
-  let mkMutualInductive kn uctx p r =
-    (* FIXME: This is a quite dummy rearrangement *)
-    let r =
-      List.map (fun (i,t,kelim,r,p) ->
-          let ctors = List.map (fun (id,t,n) -> (id,t),n) r in
-          { ind_name = i;
-            ind_type = t;
-            ind_kelim = kelim;
-            ind_ctors = ctors; ind_projs = p }) r in
-    InductiveDecl (kn, {ind_npars = p; ind_bodies = r; ind_universes = uctx})
+  let mk_one_inductive_body (id, ty, kel, ctr, proj) =
+    let ctr = List.map (fun (a, b, c) -> ((a, b), c)) ctr in
+    { ind_name = id; ind_type = ty;
+      ind_kelim = kel; ind_ctors = ctr; ind_projs = proj }
 
-  let mkConstant kn u ty body =
-    ConstantDecl (kn, { cst_universes = u;
-                        cst_type = ty; cst_body = Some body })
+  let mk_mutual_inductive_body parms inds uctx =
+    {ind_npars = parms; ind_bodies = inds; ind_universes = uctx}
 
-  let mkAxiom kn u ty =
-    ConstantDecl (kn, { cst_universes = u;
-                        cst_type = ty; cst_body = None })
+  let mk_constant_body ty tm uctx =
+    {cst_type = ty; cst_body = tm; cst_universes = uctx}
 
-  let mkExt d p = extend_program p d
+  let mk_inductive_decl kn bdy = InductiveDecl (kn, bdy)
 
-  let mkIn c = PIn c
+  let mk_constant_decl kn bdy = ConstantDecl (kn, bdy)
+
+  let empty_global_declartions = []
+
+  let add_global_decl a b = a :: b
+
+  let mk_program decls tm = (decls, tm)
 
   let quote_mind_finiteness = function
     | Decl_kinds.Finite -> Finite

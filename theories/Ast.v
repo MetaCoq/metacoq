@@ -244,22 +244,7 @@ Definition global_context : Type := global_declarations * uGraph.t.
 
   A set of declarations and a term, as produced by [Quote Recursively]. *)
 
-Inductive program :=
-| PConstr : string -> universe_context -> term (* type *) -> term (* body *) -> program -> program
-| PType   : ident -> universe_context -> nat (* # of parameters, w/o let-ins *) ->
-            list inductive_body (* Non-empty *) -> program -> program
-| PAxiom  : ident -> universe_context -> term (* the type *) -> program -> program
-| PIn     : term -> program.
-
-Definition extend_program (p : program) (d : global_decl) : program :=
-  match d with
-  | ConstantDecl i {| cst_universes := u; cst_type:=ty;  cst_body:=Some body |}
-    => PConstr i u ty body p
-  | ConstantDecl i {| cst_universes := u; cst_type:=ty;  cst_body:=None |}
-    => PAxiom i u ty p
-  | InductiveDecl i {| ind_npars:=n; ind_bodies := l ; ind_universes := u |}
-    => PType i u n l p
-  end.
+Definition program : Type := global_declarations * term.
 
 (** ** The Template Monad
 

@@ -219,6 +219,7 @@ CoInductive cnat : Set :=  O :cnat | S : cnat -> cnat.
 Run TemplateProgram (printInductive "cnat").
 
 Run TemplateProgram (tmBind (tmQuoteConstant "add" false) tmPrint).
+Fail Run TemplateProgram (tmBind (tmQuoteConstant "nat" false) tmPrint).
 
 Definition six : nat.
   exact (3 + 3).

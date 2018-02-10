@@ -562,19 +562,11 @@ Definition add_global_decl (decl : global_decl) (Σ : global_context) :=
                end
   in (decl :: fst Σ, add_global_constraints univs (snd Σ)).
 
-Fixpoint decompose_program (p : program) (Σ : global_context) : global_context * term :=
-  match p with
-  | PConstr s u ty trm p =>
-    let decl :=  {| cst_universes := u; cst_type := ty; cst_body := Some trm |} in
-    decompose_program p (add_global_decl (ConstantDecl s decl) Σ)
-  | PAxiom s u ty p =>
-    let decl := {| cst_universes := u; cst_type := ty; cst_body := None |} in
-    decompose_program p (add_global_decl (ConstantDecl s decl) Σ)
-  | PType ind u m inds p =>
-    let decl := {| ind_npars := m; ind_bodies := inds; ind_universes := u |} in
-    decompose_program p (add_global_decl (InductiveDecl ind decl) Σ)
-  | PIn t => (Σ, t)
-  end.
+Definition add_global_declarations (Σ : global_declarations) init : global_context
+  := List.fold_left (fun Σ d => add_global_decl d Σ) Σ init.
+
+Definition reconstruct_global_context Σ
+ := add_global_declarations Σ ([], init_graph).
 
 
 Definition isType (Σ : global_context) (Γ : context) (t : term) :=
@@ -687,8 +679,8 @@ Inductive type_local_env (Σ : global_context) : context -> Prop :=
 
 (** *** Typing of programs *)
 Definition type_program (p : program) (ty : term) : Prop :=
-  let '(Σ, t) := decompose_program p ([], uGraph.init_graph) in
-  squash (Σ ;;; [] |- t : ty).
+  let Σ := reconstruct_global_context (fst p) in
+  squash (Σ ;;; [] |- (snd p) : ty).
 
 (** ** Tests *)
 

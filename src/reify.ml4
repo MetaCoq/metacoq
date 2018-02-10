@@ -1259,12 +1259,6 @@ struct
         (fun acc env -> quote_minductive_type acc (false, env)))
 
   let quote_term env trm =
-    (try
-      let u = Sorts.univ_of_sort (Term.destSort trm) in
-      Feedback.msg_debug (Printer.pr_constr trm);
-      Feedback.msg_debug (Univ.Universe.pr u);
-    with
-    | _ -> ());
     let (fn,_) = quote_term_remember (fun _ () -> ()) (fun _ () -> ()) in
     fst (fn () env trm)
 

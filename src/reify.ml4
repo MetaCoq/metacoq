@@ -1,13 +1,15 @@
 (*i camlp4deps: "parsing/grammar.cma" i*)
 (*i camlp4use: "pa_extend.cmp" i*)
 
-open Declarations
 open Ltac_plugin
+open Declarations
 open Univ
 open Entries
 open Names
 open Redops
 open Genredexpr
+open Pp (* this adds the ++ to the current scope *)
+
 
 let contrib_name = "template-coq"
 
@@ -38,7 +40,6 @@ let _ = Goptions.declare_bool_option {
 (* whether Set Template Cast Propositions is on, as needed for erasure in Certicoq *)
 let is_cast_prop () = !cast_prop
 
-open Pp (* this adds the ++ to the current scope *)
 
 let opt_debug = ref false
 
@@ -79,13 +80,12 @@ let hnf_type env ty =
   hnf_type true ty
 
 let split_name s : (Names.DirPath.t * Names.Id.t) =
-  let ss = List.rev (Str.split (Str.regexp (Str.quote ".")) s) in
+  let ss = List.rev (CString.split '.' s) in
   match ss with
     nm :: rst ->
      let dp = (Names.make_dirpath (List.map Names.id_of_string rst)) in (dp, Names.Id.of_string nm)
   | [] -> raise (Failure "Empty name cannot be quoted")
 
-module Mindset = Names.Mindset
 
 type ('a,'b) sum =
   Left of 'a | Right of 'b
@@ -142,9 +142,6 @@ module type Quoter = sig
   type quoted_proj
   type quoted_sort_family
 
-  open Names
-  
-  
 
   val quote_ident : Id.t -> quoted_ident
   val quote_name : Name.t -> quoted_name
@@ -303,11 +300,9 @@ struct
   let bool_type = resolve_symbol pkg_datatypes "bool"
   let cInl = resolve_symbol pkg_datatypes "inl"
   let cInr = resolve_symbol pkg_datatypes "inr"
-  let prod a b =
-    Term.mkApp (prod_type, [| a ; b |])
+  let prod a b = Term.mkApp (prod_type, [| a ; b |])
   let c_pair = resolve_symbol pkg_datatypes "pair"
-  let pair a b f s =
-    Term.mkApp (c_pair, [| a ; b ; f ; s |])
+  let pair a b f s = Term.mkApp (c_pair, [| a ; b ; f ; s |])
 
     (* reify the constructors in Template.Ast.v, which are the building blocks of reified terms *)
   let nAnon = r_reify "nAnon"
@@ -699,10 +694,10 @@ struct
        let k = (quote_int (k - 1)) in
        Term.mkApp (tConstructRef, [|quote_inductive (kn ,n); k|])
 
-       let rec app_full trm acc =
-        match Term.kind_of_term trm with
-          Term.App (f, xs) -> app_full f (Array.to_list xs @ acc)
-        | _ -> (trm, acc)
+  let rec app_full trm acc =
+    match Term.kind_of_term trm with
+      Term.App (f, xs) -> app_full f (Array.to_list xs @ acc)
+    | _ -> (trm, acc)
            
   let print_term (u: t) : Pp.std_ppcmds = Printer.pr_constr u
   
@@ -1044,7 +1039,6 @@ struct
          Term.mkCast (t,Term.DEFAULTcast,ty)
     else t
 
-  open Declarations
   let get_abstract_inductive_universes iu =
     match iu with
     | Monomorphic_ind ctx -> ctx
@@ -1213,7 +1207,7 @@ struct
       let uctx = get_abstract_inductive_universes mib.Declarations.mind_universes in
       let inst = Univ.UContext.instance uctx in
       let indtys =
-        Declarations.(CArray.map_to_list (fun oib ->
+        (CArray.map_to_list (fun oib ->
            let ty = Inductive.type_of_inductive (snd env) ((mib,oib),inst) in
            (Context.Rel.Declaration.LocalAssum (Names.Name oib.mind_typename, ty))) mib.mind_packets)
       in
@@ -1223,9 +1217,9 @@ struct
 	List.fold_left (fun (ls,acc) oib ->
 	  let named_ctors =
 	    CList.combine3
-	      Declarations.(Array.to_list oib.mind_consnames)
-	      Declarations.(Array.to_list oib.mind_user_lc)
-	      Declarations.(Array.to_list oib.mind_consnrealargs)
+	      (Array.to_list oib.mind_consnames)
+	      (Array.to_list oib.mind_user_lc)
+	      (Array.to_list oib.mind_consnrealargs)
 	  in
           let indty = Inductive.type_of_inductive (snd env) ((mib,oib),inst) in
           let indty, acc = quote_term acc env indty in
@@ -1241,7 +1235,7 @@ struct
           let projs, acc =
             match mib.Declarations.mind_record with
             | Some (Some (id, csts, ps)) ->
-               let ctxwolet = Termops.smash_rel_context mib.Declarations.mind_params_ctxt in
+               let ctxwolet = Termops.smash_rel_context mib.mind_params_ctxt in
                let indty = Term.mkApp (Term.mkIndU ((t,0),inst),
                                        Context.Rel.to_extended_vect Constr.mkRel 0 ctxwolet) in
                let indbinder = Context.Rel.Declaration.LocalAssum (Names.Name id,indty) in
@@ -1750,7 +1744,7 @@ struct
          let (evm, def) = reduce_all env evm body in
          let evdref = ref evm in
          let trm = TermReify.denote_term evdref def in
-         let ty = Typing.e_type_of env evdref (EConstr.of_constr trm) in
+         let _ = Typing.e_type_of env evdref (EConstr.of_constr trm) in
          let evm = !evdref in
          let _ = Declare.declare_definition ~kind:Decl_kinds.Definition (unquote_ident name) (trm, Evd.universe_context_set evm) in
          k (evm, unit_tt)
@@ -1879,6 +1873,8 @@ struct
     else CErrors.user_err (str "Invalid argument or not yet implemented. The argument must be a TemplateProgram: " ++ Printer.pr_constr coConstr)
 end
 
+
+
 DECLARE PLUGIN "template_plugin"
 
 (** Calling Ltac **)
@@ -1886,10 +1882,11 @@ DECLARE PLUGIN "template_plugin"
 let ltac_lcall tac args =
   Tacexpr.TacArg(Loc.tag @@ Tacexpr.TacCall (Loc.tag (Misctypes.ArgVar(Loc.tag @@ Names.Id.of_string tac),args)))
 
-open Names
 open Tacexpr
 open Tacinterp
 open Misctypes
+open Stdarg
+open Tacarg
 
 
 let ltac_apply (f : Value.t) (args: Tacinterp.Value.t list) =
@@ -1910,8 +1907,6 @@ let check_inside_section () =
     CErrors.user_err ~hdr:"Quote" (Pp.str "You can not quote within a section.")
 
 
-open Stdarg
-open Tacarg
 
 TACTIC EXTEND get_goal
     | [ "quote_term" constr(c) tactic(tac) ] ->

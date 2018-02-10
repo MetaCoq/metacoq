@@ -225,9 +225,9 @@ Record minductive_decl := {
 
 (* See [constant_body] from [declarations.ml] *)
 Record constant_decl := {
-  cst_universes : universe_context;
-  cst_type : term;
-  cst_body : option term }.
+    cst_type : term;
+    cst_body : option term;
+    cst_universes : universe_context }.
 
 Inductive global_decl :=
 | ConstantDecl : kername -> constant_decl -> global_decl

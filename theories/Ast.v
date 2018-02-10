@@ -208,7 +208,7 @@ Notation " Γ ,, d " := (snoc Γ d) (at level 20, d at next level).
 (** *** Environments *)
 
 (** See [one_inductive_body] from [declarations.ml]. *)
-Record inductive_body := mkinductive_body {
+Record one_inductive_body := {
   ind_name : ident;
   ind_type : term; (* Closed arity *)
   ind_kelim : list sort_family; (* Allowed elimination sorts *)
@@ -217,21 +217,21 @@ Record inductive_body := mkinductive_body {
   ind_projs : list (ident * term) (* names and types of projections, if any.
                                      Type under context of params and inductive object *) }.
 
-(* See [mutual_inductive_body] from [declarations.ml]. *)
-Record minductive_decl := {
+(** See [mutual_inductive_body] from [declarations.ml]. *)
+Record mutual_inductive_body := {
   ind_npars : nat;
-  ind_bodies : list inductive_body ;
+  ind_bodies : list one_inductive_body ;
   ind_universes : universe_context }.
 
-(* See [constant_body] from [declarations.ml] *)
-Record constant_decl := {
+(** See [constant_body] from [declarations.ml] *)
+Record constant_body := {
     cst_type : term;
     cst_body : option term;
     cst_universes : universe_context }.
 
 Inductive global_decl :=
-| ConstantDecl : kername -> constant_decl -> global_decl
-| InductiveDecl : kername -> minductive_decl -> global_decl.
+| ConstantDecl : kername -> constant_body -> global_decl
+| InductiveDecl : kername -> mutual_inductive_body -> global_decl.
 
 Definition global_declarations := list global_decl.
 
@@ -299,7 +299,7 @@ Inductive TemplateMonad : Type -> Prop :=
 (* Similar to Quote Recursively Definition ... := ...*)
 | tmQuoteRec : forall {A:Type}, A  -> TemplateMonad program
 (* Quote the body of a definition or inductive. Its name need not be fully qualified *)
-| tmQuoteInductive : kername -> TemplateMonad minductive_decl
+| tmQuoteInductive : kername -> TemplateMonad mutual_inductive_body
 | tmQuoteUniverses : unit -> TemplateMonad uGraph.t
 | tmQuoteConstant : kername -> bool (* bypass opacity? *) -> TemplateMonad constant_entry
 | tmMkDefinition : ident -> term -> TemplateMonad unit

@@ -53,9 +53,9 @@ struct
   type quoted_mind_finiteness = recursivity_kind
   type quoted_entry = (constant_entry, quoted_mind_entry) sum option
 
-  type quoted_one_inductive_body = inductive_body
-  type quoted_mutual_inductive_body = minductive_decl
-  type quoted_constant_body = constant_decl
+  type quoted_one_inductive_body = one_inductive_body
+  type quoted_mutual_inductive_body = mutual_inductive_body
+  type quoted_constant_body = constant_body
   type quoted_global_decl = global_decl
   type quoted_global_declarations = global_declarations
   type quoted_program = program

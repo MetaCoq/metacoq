@@ -58,8 +58,8 @@ Definition add_constructor {A} (ind : A) (idc : ident) {B} (ctor : B)
      | tInd ind0 _ =>
        decl <- tmQuoteInductive (inductive_mind ind0) ;;
        ctor <- tmQuote ctor ;;
-       e <- tmEval lazy (mind_decl_to_entry (add_ctor decl ind0 idc ctor)) ;;
-       tmMkInductive e
+       ind' <- tmEval lazy (add_ctor decl ind0 idc ctor) ;;
+       tmMkInductive' ind'
      | _ => tmPrint ind ;; tmFail " is not an inductive"
      end.
 

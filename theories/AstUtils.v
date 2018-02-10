@@ -60,8 +60,8 @@ Fixpoint lookup_mind_decl (id : ident) (decls : global_declarations)
     | _ :: tl => lookup_mind_decl id tl
     end.
 
-
-Definition mind_decl_to_entry (decl : minductive_decl)
+(* was mind_decl_to_entry *)
+Definition mind_body_to_entry (decl : mutual_inductive_body)
   : mutual_inductive_entry.
 Proof.
   refine {| mind_entry_record := None; (* not a record *)
@@ -93,3 +93,6 @@ Proof.
     refine (List.map (fun x => remove_arity decl.(ind_npars)
                                                 (snd (fst x))) ind_ctors).
 Defined.
+
+Definition tmMkInductive' (mind : mutual_inductive_body) : TemplateMonad unit
+  := tmMkInductive (mind_body_to_entry mind).

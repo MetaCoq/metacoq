@@ -53,7 +53,7 @@ Require Import List. Import ListNotations.
 
 Module toto.
 
-  (* Run TemplateProgram (en <- tmEval all (mind_decl_to_entry (Build_minductive_decl 0 [{| *)
+  (* Run TemplateProgram (en <- tmEval all (mind_body_to_entry (Build_minductive_decl 0 [{| *)
   (*  ind_name := "TT2"; *)
   (*  ind_type := tSort ((Level.Var 1, false) :: nil)%list; *)
   (*  ind_kelim := InProp :: (InSet :: InType :: nil)%list; *)

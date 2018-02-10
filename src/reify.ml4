@@ -367,10 +367,10 @@ struct
   let (tLocalDef,tLocalAssum,tlocal_entry) = (r_reify "LocalDef", r_reify "LocalAssum", r_reify "local_entry")
 
   let (cFinite,cCoFinite,cBiFinite) = (r_reify "Finite", r_reify "CoFinite", r_reify "BiFinite")
-  let tinductive_body = r_reify "inductive_body"
-  let tmkinductive_body = r_reify "mkinductive_body"
-  let tBuild_minductive_decl = r_reify "Build_minductive_decl"
-  let tBuild_constant_decl = r_reify "Build_constant_decl"
+  let tone_inductive_body = r_reify "one_inductive_body"
+  let tBuild_one_inductive_body = r_reify "Build_one_inductive_body"
+  let tBuild_mutual_inductive_body = r_reify "Build_mutual_inductive_body"
+  let tBuild_constant_body = r_reify "Build_constant_body"
   let tglobal_decl = r_reify "global_decl"
   let tConstantDecl = r_reify "ConstantDecl"
   let tInductiveDecl = r_reify "InductiveDecl"
@@ -644,15 +644,15 @@ struct
     let c = to_coq_list tsort_family c in
     let d = mk_ctor_list d in
     let e = mk_proj_list e in
-    Term.mkApp (tmkinductive_body, [| a; b; c; d; e |])
+    Term.mkApp (tBuild_one_inductive_body, [| a; b; c; d; e |])
 
   let mk_mutual_inductive_body p inds uctx =
-    let inds = to_coq_list tinductive_body inds in
-    Term.mkApp (tBuild_minductive_decl, [|p; inds; uctx|])
+    let inds = to_coq_list tone_inductive_body inds in
+    Term.mkApp (tBuild_mutual_inductive_body, [|p; inds; uctx|])
 
   let mk_constant_body ty tm uctx =
     let tm = quote_option tTerm tm in
-    Term.mkApp (tBuild_constant_decl, [|ty; tm; uctx|])
+    Term.mkApp (tBuild_constant_body, [|ty; tm; uctx|])
 
   let mk_inductive_decl kn mind =
     Term.mkApp (tInductiveDecl, [|kn; mind|])

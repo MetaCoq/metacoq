@@ -95,13 +95,13 @@ Definition body_of_constant_decl (d : global_decl | is_constant_decl d = true) :
 
 Program
 Definition types_of_minductive_decl (d : global_decl | is_minductive_decl d = true) :
-  list inductive_body :=
+  list one_inductive_body :=
   match d with
   | InductiveDecl _ tys => tys.(ind_bodies)
   | ConstantDecl _ _ => !
   end.
 
-Definition inds ind u (l : list inductive_body) :=
+Definition inds ind u (l : list one_inductive_body) :=
   let fix aux n :=
       match n with
       | 0 => []
@@ -260,9 +260,6 @@ Fixpoint subst_app (t : term) (us : list term) : term :=
   | _, [] => t
   | _, _ => mkApps t us
   end.
-
-Definition tmMkInductive' (mind : minductive_decl) : TemplateMonad unit
-  := tmMkInductive (AstUtils.mind_decl_to_entry mind).
 
 (** *** Universe comparisons *)
 
@@ -591,7 +588,7 @@ Inductive type_projections (Σ : global_context) (Γ : context) :
     type_projections Σ Γ l ->
     type_projections Σ Γ ((id, t) :: l).
       
-Definition arities_context (l : list inductive_body) :=
+Definition arities_context (l : list one_inductive_body) :=
   List.map (fun ind => vass (nNamed ind.(ind_name)) ind.(ind_type)) l.
 
 Definition isArity Σ Γ T :=
@@ -602,7 +599,7 @@ Notation " Γ  ,,, Γ' " := (app_context Γ Γ') (at level 25, Γ' at next level
 Notation "#| Γ |" := (List.length Γ) (at level 0, Γ at level 99, format "#| Γ |").
 
 Inductive type_inddecls (Σ : global_context) (pars : context) (Γ : context) :
-  list inductive_body -> Type :=
+  list one_inductive_body -> Type :=
 | type_ind_nil : type_inddecls Σ pars Γ []
 | type_ind_cons na ty cstrs projs kelim l :
     (** Arity is well-formed *)
@@ -614,7 +611,7 @@ Inductive type_inddecls (Σ : global_context) (pars : context) (Γ : context) :
     (** The other inductives in the block are well-typed *)
     type_inddecls Σ pars Γ l ->
     (** TODO: check kelim*)
-    type_inddecls Σ pars Γ (mkinductive_body na ty kelim cstrs projs :: l).
+    type_inddecls Σ pars Γ (Build_one_inductive_body na ty kelim cstrs projs :: l).
 
 Definition type_inductive Σ inds :=
   (** FIXME: should be pars ++ arities w/o params *)
@@ -956,20 +953,20 @@ Lemma typing_ind_env :
     (forall Σ (wfΣ : wf Σ) (Γ : context) (t : term) (l : list term) (t_ty t' : term),
         Σ ;;; Γ |- t : t_ty -> P Σ Γ t t_ty -> typing_spine Σ Γ t_ty l t' -> P Σ Γ (tApp t l) t') ->
 
-    (forall Σ (wfΣ : wf Σ) (Γ : context) (cst : ident) u (decl : constant_decl),
+    (forall Σ (wfΣ : wf Σ) (Γ : context) (cst : ident) u (decl : constant_body),
         declared_constant (fst Σ) cst decl ->
         Forall_decls_typing (snd Σ) (fun Σ' t ty => P (Σ', snd Σ) [] t ty) (fst Σ) ->
         P Σ Γ (tConst cst u) (subst_instance_constr u (cst_type decl))) ->
 
-        (forall Σ (wfΣ : wf Σ) (Γ : context) (ind : inductive) u univs (decl : inductive_body),
+        (forall Σ (wfΣ : wf Σ) (Γ : context) (ind : inductive) u univs (decl : one_inductive_body),
         declared_inductive (fst Σ) ind univs decl -> P Σ Γ (tInd ind u) (subst_instance_constr u (ind_type decl))) ->
        (forall Σ (wfΣ : wf Σ) (Γ : context) (ind : inductive) (i : nat) u univs (decl : ident * term * nat)
           (isdecl : declared_constructor (fst Σ) (ind, i) univs decl),
         P Σ Γ (tConstruct ind i u) (type_of_constructor (fst Σ) (ind, i) univs u decl isdecl)) ->
        (forall Σ (wfΣ : wf Σ) (Γ : context) (ind : inductive) u (npar : nat) (p c : term) (brs : list (nat * term))
-          (args : list term) (decl : minductive_decl),
+          (args : list term) (decl : mutual_inductive_body),
         declared_minductive (fst Σ) (inductive_mind ind) decl ->
-        forall univs ( decl' : inductive_body ),
+        forall univs ( decl' : one_inductive_body ),
         declared_inductive (fst Σ) ind univs decl' ->
         ind_npars decl = npar ->
         let pars := firstn npar args in

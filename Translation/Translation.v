@@ -156,6 +156,17 @@ Proof.
     + intros n eqγ. case_eq (x <=? n).
       * intro xln. exists (sProjTe (sRel x)).
         apply type_ProjTe'.
+        (* generalize dependent Γ2. *)
+        (* dependent induction Γ1 ; [ cbn in eqγ ; discriminate | .. ]. *)
+        (* intros Γ2 eq h2. *)
+        (* dependent destruction Γ2. *)
+        (* eapply type_conv'. *)
+        (* -- eapply type_Rel. cheat. *)
+        (* -- generalize dependent Γ2. *)
+        (*    dependent induction Γ1 ; [ cbn in eqγ ; discriminate | .. ]. *)
+        (*    intros Γ2 eq h2. *)
+        (*    dependent destruction Γ2. *)
+
         cheat.
       * intro nlx.
         assert (h1' : Σ ;;; mix Γ Γ1 Γ2 |-i sRel x : llift0 (S n) U1).

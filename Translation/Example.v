@@ -1,6 +1,7 @@
 (* Example of the whole translation *)
 
-From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
+From Coq Require Import Bool String List BinPos Compare_dec Omega.
+From Equations Require Import Equations DepElimDec.
 From Template Require Import Ast LiftSubst Typing Checker Template.
 From Translation Require Import SAst SLiftSubst SCommon ITyping XTyping
                                 Translation FinalTranslation.
@@ -28,6 +29,8 @@ Inductive wfb : scontext -> list sterm -> Type :=
     wfb (svass nAnon A :: Γ) bl ->
     wfb Γ (A :: bl).
 
+Derive Signature for wfb.
+
 Lemma type_multiProd :
   forall {bl Γ},
     wf Σ Γ ->
@@ -44,7 +47,7 @@ Proof.
         with (sProd nAnon a (multiProd (s :: bl))).
       dependent destruction h.
       dependent destruction h.
-      destruct (IHbl (ssnoc Γ (svass nAnon a))) as [z hz].
+      destruct (IHbl (ssnoc Γ0 (svass nAnon A))) as [z hz].
       * econstructor.
         -- assumption.
         -- eexists. eassumption.
@@ -66,6 +69,8 @@ Inductive wbtm : scontext -> list sterm -> sterm -> Type :=
     Σ ;;; Γ |-x A : sSort s ->
     wbtm (svass nAnon A :: Γ) (B :: bl) t ->
     wbtm Γ (A :: B :: bl) t.
+
+Derive Signature for wbtm.
 
 Lemma wbtm_wfb :
   forall {bl Γ t},
@@ -100,7 +105,7 @@ Proof.
       change (multiLam (a :: s :: bl) t)
         with (sLambda nAnon a (multiProd (s :: bl)) (multiLam (s :: bl) t)).
       dependent destruction hwb.
-      destruct (@type_multiProd (s :: bl) (ssnoc Γ (svass nAnon a))) as [z hz].
+      destruct (@type_multiProd (B :: bl0) (ssnoc Γ0 (svass nAnon A))) as [z hz].
       * econstructor.
         -- assumption.
         -- eexists. eassumption.
@@ -463,8 +468,14 @@ Defined.
 (* Same problem with such a small example! *)
 (* Eval native_compute in itt_tm0. *)
 Print Assumptions itt_tm0.
+Print Assumptions tmty0.
 
-
+Goal itt_tm0 = cheating.
+unfold itt_tm0.
+Opaque type_translation.
+cbn. Transparent type_translation.
+unfold type_translation.
+Abort.
 
 (* One more *)
 

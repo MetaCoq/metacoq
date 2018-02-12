@@ -477,15 +477,15 @@ Fixpoint type_lift {Σ Γ Δ Ξ t A} (h : Σ ;;; Γ ,,, Ξ |-i t : A) {struct h}
 
 with cong_lift {Σ Γ Δ Ξ t1 t2 A} (h : Σ ;;; Γ ,,, Ξ |-i t1 = t2 : A) {struct h} :
   wf Σ (Γ ,,, Δ) ->
-  Σ ;;; Γ ,,, Δ ,,, lift_context #|Δ| Ξ |-i lift #|Δ| #|Ξ| t1 = lift #|Δ| #|Ξ| t2 : lift #|Δ| #|Ξ| A
+  Σ ;;; Γ ,,, Δ ,,, lift_context #|Δ| Ξ |-i lift #|Δ| #|Ξ| t1
+  = lift #|Δ| #|Ξ| t2 : lift #|Δ| #|Ξ| A
 
 with wf_lift {Σ Γ Δ Ξ} (h : wf Σ (Γ ,,, Ξ)) {struct h} :
   wf Σ (Γ ,,, Δ) ->
   wf Σ (Γ ,,, Δ ,,, lift_context #|Δ| Ξ)
 .
 Proof.
-  - { (* This is a mistake (probably) and should be replaced by destruction. *)
-      dependent destruction h ; intro hwf.
+  - { dependent destruction h ; intro hwf.
       - dependent induction Δ.
         + change (#|[]|) with 0. rewrite !lift00.
           rewrite lift_context0. cbn. eapply type_Rel. assumption.
@@ -551,20 +551,46 @@ Proof.
       - cbn. eapply type_CongProd ; try eih.
         cbn. f_equal.
         + rewrite <- liftP2 by omega.
-          cheat.
+          change (S #|Ξ|) with (0 + (S #|Ξ|))%nat at 1.
+          rewrite substP1. cbn. reflexivity.
         + rewrite <- liftP2 by omega.
-          cheat.
+          change (S #|Ξ|) with (0 + (S #|Ξ|))%nat at 1.
+          rewrite substP1. cbn. reflexivity.
       - cbn. eapply type_CongLambda ; try eih.
         + cbn. f_equal.
-          * rewrite <- liftP2 by omega. cheat.
-          * rewrite <- liftP2 by omega. cheat.
+          * rewrite <- liftP2 by omega.
+            change (S #|Ξ|) with (0 + (S #|Ξ|))%nat at 1.
+            rewrite substP1. cbn. reflexivity.
+          * rewrite <- liftP2 by omega.
+            change (S #|Ξ|) with (0 + (S #|Ξ|))%nat at 1.
+            rewrite substP1. cbn. reflexivity.
         + cbn. f_equal.
-          * rewrite <- liftP2 by omega. cheat.
-          * rewrite <- liftP2 by omega. cheat.
-          * rewrite <- liftP2 by omega. cheat.
-          * rewrite <- liftP2 by omega. cheat.
-      - cbn. (* eapply type_CongApp. *)
-        cheat.
+          * rewrite <- liftP2 by omega.
+            change (S #|Ξ|) with (0 + (S #|Ξ|))%nat at 1.
+            rewrite substP1. cbn. reflexivity.
+          * rewrite <- liftP2 by omega.
+            change (S #|Ξ|) with (0 + (S #|Ξ|))%nat at 1.
+            rewrite substP1. cbn. reflexivity.
+          * rewrite <- liftP2 by omega.
+            change (S #|Ξ|) with (0 + (S #|Ξ|))%nat at 1.
+            rewrite substP1. cbn. reflexivity.
+          * rewrite <- liftP2 by omega.
+            change (S #|Ξ|) with (0 + (S #|Ξ|))%nat at 1.
+            rewrite substP1. cbn. reflexivity.
+      - cbn.
+        change (lift #|Δ| #|Ξ| (B1 {0 := v1}))
+          with (lift #|Δ| (0 + #|Ξ|) (B1 { 0 := v1 })).
+        change (lift #|Δ| #|Ξ| (B2 {0 := v2}))
+          with (lift #|Δ| (0 + #|Ξ|) (B2 { 0 := v2 })).
+        rewrite 2!substP1.
+        eapply type_CongApp ; eih.
+        cbn. f_equal.
+        + rewrite <- liftP2 by omega.
+          change (S #|Ξ|) with (0 + (S #|Ξ|))%nat at 1.
+          rewrite substP1. cbn. reflexivity.
+        + rewrite <- liftP2 by omega.
+          change (S #|Ξ|) with (0 + (S #|Ξ|))%nat at 1.
+          rewrite substP1. cbn. reflexivity.
       - cbn. eapply type_CongEq ; eih.
       - cbn. eapply type_CongRefl ; eih.
       - cbn. eapply type_EqToHeq ; eih.

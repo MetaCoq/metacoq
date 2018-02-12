@@ -425,6 +425,14 @@ Proof.
   reflexivity.
 Defined.
 
+Fact length_cat :
+  forall {A} {Γ Δ : list A}, #|Γ ++ Δ| = (#|Γ| + #|Δ|)%nat.
+Proof.
+  intros A Γ. induction Γ ; intro Δ.
+  - cbn. reflexivity.
+  - cbn. f_equal. apply IHΓ.
+Defined.
+
 Axiom cheating : forall {A}, A.
 Tactic Notation "cheat" := apply cheating.
 
@@ -723,7 +731,7 @@ Proof.
     }
 
     Unshelve.
-    cbn in *. cheat.
+    cbn in *. rewrite length_cat. omega.
 Defined.
 
 Corollary typing_lift01 :

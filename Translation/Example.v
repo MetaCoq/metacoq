@@ -471,57 +471,57 @@ Defined.
 Print Assumptions itt_tm0.
 Print Assumptions tmty0.
 
-Goal itt_tm0 = cheating.
-unfold itt_tm0.
-Opaque type_translation.
-cbn. Transparent type_translation.
-unfold type_translation.
-set (choose_type (A:= sSort (sType "Set+1")) (type_headSort (sType "Set+1"))
-         (let (i, _) := istrans_nil in i, inrel_Sort (succ_sort sSet),
-         inrel_Sort sSet,
-         ITyping.type_Sort Σ [] sSet (let (_, w0) := istrans_nil in w0))).
-Opaque choose_type. cbn in s. Transparent choose_type. unfold choose_type in s.
-unfold choose_type' in s.
-match goal with | s := let (_,_) := ?X in _ : _ |- _ => set X in * end.
-cbn in s0. unfold s0 in s. clear s0.
-match goal with | s := let (_,_) := ?X in _ : _ |- _ => set X in * end.
-cbn in s0. unfold s0 in s; clear s0.
-match goal with | s := let (_,_) := ?X in _ : _ |- _ => set X in * end.
-Opaque Σ.
-lazy in s0. unfold s0 in s; clear s0.
+(* Goal itt_tm0 = cheating. *)
+(* unfold itt_tm0. *)
+(* Opaque type_translation. *)
+(* cbn. Transparent type_translation. *)
+(* unfold type_translation. *)
+(* set (choose_type (A:= sSort (sType "Set+1")) (type_headSort (sType "Set+1")) *)
+(*          (let (i, _) := istrans_nil in i, inrel_Sort (succ_sort sSet), *)
+(*          inrel_Sort sSet, *)
+(*          ITyping.type_Sort Σ [] sSet (let (_, w0) := istrans_nil in w0))). *)
+(* Opaque choose_type. cbn in s. Transparent choose_type. unfold choose_type in s. *)
+(* unfold choose_type' in s. *)
+(* match goal with | s := let (_,_) := ?X in _ : _ |- _ => set X in * end. *)
+(* cbn in s0. unfold s0 in s. clear s0. *)
+(* match goal with | s := let (_,_) := ?X in _ : _ |- _ => set X in * end. *)
+(* cbn in s0. unfold s0 in s; clear s0. *)
+(* match goal with | s := let (_,_) := ?X in _ : _ |- _ => set X in * end. *)
+(* Opaque Σ. *)
+(* lazy in s0. unfold s0 in s; clear s0. *)
 
-unfold s; clear s.
-match goal with
-| |- context [ let (p,hp) := ?X in let (q, hq) := sort_heq_ex hp in _ ] => set X
-end.
-Opaque trel_to_heq. lazy in s. Transparent trel_to_heq.
-unfold trel_to_heq, trel_to_heq' in s.
-unfold trel_rec, trel_rect in s. unfold s; clear s.
-match goal with
-| |- context [ sort_heq_ex ?X  ] => set (sort_heq_ex X)
-end.
-Opaque sort_heq_ex. unfold type_conv'  in s.
-Opaque eq_typing. lazy in s.
-Transparent sort_heq_ex. unfold sort_heq_ex  in s.
-unfold s; clear s.
-match goal with
-| |-  context [f_equal ?X ?Y]  => set (f_equal X Y)
-end.
-lazy in e. unfold e; clear e. unfold eq_rec_r, eq_rec, eq_rect.
-Opaque choose_type. unfold eq_sym.
-match goal with
-| |-  context [let (A, s) :=
-     let (S', s) :=
-       let (T', p) := ?X in _ in _ in _]  => set X
-end.
+(* unfold s; clear s. *)
+(* match goal with *)
+(* | |- context [ let (p,hp) := ?X in let (q, hq) := sort_heq_ex hp in _ ] => set X *)
+(* end. *)
+(* Opaque trel_to_heq. lazy in s. Transparent trel_to_heq. *)
+(* unfold trel_to_heq, trel_to_heq' in s. *)
+(* unfold trel_rec, trel_rect in s. unfold s; clear s. *)
+(* match goal with *)
+(* | |- context [ sort_heq_ex ?X  ] => set (sort_heq_ex X) *)
+(* end. *)
+(* Opaque sort_heq_ex. unfold type_conv'  in s. *)
+(* Opaque eq_typing. lazy in s. *)
+(* Transparent sort_heq_ex. unfold sort_heq_ex  in s. *)
+(* unfold s; clear s. *)
+(* match goal with *)
+(* | |-  context [f_equal ?X ?Y]  => set (f_equal X Y) *)
+(* end. *)
+(* lazy in e. unfold e; clear e. unfold eq_rec_r, eq_rec, eq_rect. *)
+(* Opaque choose_type. unfold eq_sym. *)
+(* match goal with *)
+(* | |-  context [let (A, s) := *)
+(*      let (S', s) := *)
+(*        let (T', p) := ?X in _ in _ in _]  => set X *)
+(* end. *)
 
- unfold eq_sym.
-unfold trel_trans, trel_sym. unfold trel_rec, trel_rect.
-lazy.
-unfold s; clear s.
-assert (H = H). clear s. Focus 1. lazy in H.
-lazy in s.
-Abort.
+(*  unfold eq_sym. *)
+(* unfold trel_trans, trel_sym. unfold trel_rec, trel_rect. *)
+(* lazy. *)
+(* unfold s; clear s. *)
+(* assert (H = H). clear s. Focus 1. lazy in H. *)
+(* lazy in s. *)
+(* Abort. *)
 
 (* One more *)
 

@@ -786,6 +786,43 @@ Proof.
   reflexivity.
 Defined.
 
+Ltac sh h :=
+  lazymatch goal with
+  | [ type_subst :
+        forall (Σ : global_context) (Γ Δ : scontext) (t A : sterm) (nx : name)
+          (B u : sterm),
+          Σ;;; Γ,, svass nx B ,,, Δ |-i t : A ->
+          Σ;;; Γ |-i u : B -> Σ;;; Γ ,,, subst_context 0 u Δ |-i
+          t {#|Δ| := u} : A {#|Δ| := u}
+    |- _ ] =>
+    lazymatch type of h with
+    | _ ;;; ?Γ' ,, svass ?nx' ?B' ,,, ?Δ' |-i _ : ?T' =>
+      eapply meta_conv ; [
+        eapply meta_ctx_conv ; [
+          eapply type_subst with (Γ := Γ') (Δ := Δ') (A := T') ; [
+            exact h
+          | assumption
+          ]
+        | .. ]
+      | .. ]
+    | _ ;;; (?Γ' ,, svass ?nx' ?B' ,,, ?Δ') ,, ?d' |-i _ : ?T' =>
+      eapply meta_conv ; [
+        eapply meta_ctx_conv ; [
+          eapply type_subst with (Γ := Γ') (Δ := Δ' ,, d') (A := T') ; [
+            exact h
+          | assumption
+          ]
+        | .. ]
+      | .. ]
+    end ; try (cbn ; reflexivity)
+  | _ => fail "cannot find type_subst"
+  end.
+
+Ltac esh :=
+  match goal with
+  | h : _ ;;; _ |-i ?t : _ |- _ ;;; _ |-i ?t{ _ := _ } : _ => sh h
+  end.
+
 Fixpoint type_subst {Σ Γ Δ t A nx B u}
   (h : Σ ;;; Γ ,, svass nx B ,,, Δ |-i t : A) {struct h} :
   Σ ;;; Γ |-i u : B ->
@@ -816,7 +853,12 @@ Proof.
                cheat.
         + cheat.
       - cbn. apply type_Sort. eapply wf_subst ; eassumption.
-      - cheat.
+      - cbn. eapply type_Prod.
+        + esh.
+        + esh.
+          cbn. rewrite subst_decl_svass.
+          (* The statement is probably wrong. *)
+          cheat.
       - cheat.
       - cheat.
       - cheat.
@@ -876,7 +918,7 @@ Lemma typing_subst2 :
     Σ ;;; Γ |-i t{ 1 := u }{ 0 := v } : C{ 1 := u }{ 0 := v }.
 Admitted.
 
-Lemma cong_subst :
+Lemma cong_subst1 :
   forall {Σ Γ t1 t2 A B u1 u2 n},
     Σ ;;; Γ ,, svass n A |-i t1 = t2 : B ->
     Σ ;;; Γ |-i u1 = u2 : A ->
@@ -1116,7 +1158,7 @@ Proof.
       change (sSort s2) with ((sSort s2){ 0 := u1 }).
       eapply typing_subst ; eassumption.
     + change (sSort s2) with ((sSort s2){0 := u2}).
-      eapply cong_subst.
+      eapply cong_subst1.
       * eapply eq_symmetry. eassumption.
       * eapply eq_symmetry. assumption.
   - constructor.

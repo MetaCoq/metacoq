@@ -778,26 +778,87 @@ Fixpoint subst_context i u Δ :=
   | A :: Δ => (subst_decl i u A) :: (subst_context (S i) u Δ)
   end.
 
+Fact subst_decl_svass :
+  forall na A n u,
+    subst_decl n u (svass na A) = svass na (A{ n := u }).
+Proof.
+  intros na A n u.
+  reflexivity.
+Defined.
+
 Fixpoint type_subst {Σ Γ Δ t A nx B u}
   (h : Σ ;;; Γ ,, svass nx B ,,, Δ |-i t : A) {struct h} :
   Σ ;;; Γ |-i u : B ->
   Σ ;;; Γ ,,, subst_context 0 u Δ |-i t{ #|Δ| := u } : A{ #|Δ| := u }
 
-(* with cong_lift {Σ Γ Δ Ξ t1 t2 A} (h : Σ ;;; Γ ,,, Ξ |-i t1 = t2 : A) {struct h} : *)
-(*   wf Σ (Γ ,,, Δ) -> *)
-(*   Σ ;;; Γ ,,, Δ ,,, lift_context #|Δ| Ξ |-i lift #|Δ| #|Ξ| t1 *)
-(*   = lift #|Δ| #|Ξ| t2 : lift #|Δ| #|Ξ| A *)
+with cong_subst {Σ Γ Δ t1 t2 A nx B u1 u2}
+  (h : Σ ;;; Γ ,, svass nx B ,,, Δ |-i t1 = t2 : A) {struct h} :
+  Σ ;;; Γ |-i u1 = u2 : B ->
+  Σ ;;; Γ ,,, subst_context 0 u1 Δ |-i t1{ #|Δ| := u1 }
+  = t2{ #|Δ| := u2 } : A{ #|Δ| := u1 }
 
-(* with wf_lift {Σ Γ Δ Ξ} (h : wf Σ (Γ ,,, Ξ)) {struct h} : *)
-(*   wf Σ (Γ ,,, Δ) -> *)
-(*   wf Σ (Γ ,,, Δ ,,, lift_context #|Δ| Ξ) *)
+with wf_subst {Σ Γ Δ nx B u}
+  (h : wf Σ (Γ ,, svass nx B ,,, Δ)) {struct h} :
+  Σ ;;; Γ |-i u : B ->
+  wf Σ (Γ ,,, subst_context 0 u Δ)
 .
 Proof.
   (* type_subst *)
   - { intro hu.
-      (* dependent destruction h. *)
-      cheat.
+      dependent destruction h.
+      - dependent induction Δ.
+        + cbn. destruct n.
+          * rewrite lift00, lift_subst. cbn. assumption.
+          * cbn. eapply meta_conv.
+            -- eapply type_Rel. dependent destruction w. assumption.
+            -- (* replace (S (S n)) with ((S n) + 1)%nat by omega. *)
+               (* rewrite <- liftP1. *)
+               cheat.
+        + cheat.
+      - cbn. apply type_Sort. eapply wf_subst ; eassumption.
+      - cheat.
+      - cheat.
+      - cheat.
+      - cheat.
+      - cheat.
+      - cheat.
+      - cheat.
+      - cheat.
+      - cheat.
+      - cheat.
+      - cheat.
+      - cheat.
+      - cheat.
+      - cheat.
+      - cheat.
+      - cheat.
+      - cheat.
+      - cheat.
+      - cheat.
+      - cheat.
+      - cheat.
+      - cheat.
+      - cheat.
+      - cheat.
+      - cheat.
     }
+
+  (* cong_subst *)
+  - { cheat.
+    }
+
+  (* wf_subst *)
+  - { intro hu.
+      destruct Δ.
+      - cbn. dependent destruction h. assumption.
+      - dependent destruction h. cbn. rewrite subst_decl_svass. econstructor.
+        + cheat.
+        + cheat.
+    }
+
+    Unshelve.
+  * cbn in *. omega.
+  * assumption.
 Defined.
 
 Lemma typing_subst :

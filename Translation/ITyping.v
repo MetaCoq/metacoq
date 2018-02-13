@@ -793,7 +793,13 @@ Ltac sh h :=
           (B u : sterm),
           Σ;;; Γ,, svass nx B ,,, Δ |-i t : A ->
           Σ;;; Γ |-i u : B -> Σ;;; Γ ,,, subst_context u Δ |-i
-          t {#|Δ| := u} : A {#|Δ| := u}
+          t {#|Δ| := u} : A {#|Δ| := u},
+     cong_subst :
+       forall (Σ : global_context) (Γ Δ : scontext) (t1 t2 A : sterm) (nx : name)
+         (B u1 u2 : sterm),
+         Σ;;; Γ,, svass nx B ,,, Δ |-i t1 = t2 : A ->
+         Σ;;; Γ |-i u1 = u2 : B -> Σ;;; Γ ,,, subst_context u1 Δ |-i
+         t1 {#|Δ| := u1} = t2 {#|Δ| := u2} : A {#|Δ| := u1}
     |- _ ] =>
     lazymatch type of h with
     | _ ;;; ?Γ' ,, svass ?nx' ?B' ,,, ?Δ' |-i _ : ?T' =>
@@ -814,13 +820,51 @@ Ltac sh h :=
           ]
         | .. ]
       | .. ]
+    | _ ;;; (?Γ' ,, svass ?nx' ?B' ,,, ?Δ') ,, ?d',, ?d'' |-i _ : ?T' =>
+      eapply meta_conv ; [
+        eapply meta_ctx_conv ; [
+          eapply type_subst with (Γ := Γ') (Δ := (Δ' ,, d') ,, d'') (A := T') ; [
+            exact h
+          | assumption
+          ]
+        | .. ]
+      | .. ]
+    | _ ;;; ?Γ' ,, svass ?nx' ?B' ,,, ?Δ' |-i _ = _ : ?T' =>
+      eapply meta_eqconv ; [
+        eapply meta_eqctx_conv ; [
+          eapply cong_subst with (Γ := Γ') (Δ := Δ') (A := T') ; [
+            exact h
+          | first [ assumption | eapply eq_reflexivity ; assumption ]
+          ]
+        | .. ]
+      | .. ]
+    | _ ;;; (?Γ' ,, svass ?nx' ?B' ,,, ?Δ') ,, ?d' |-i _ = _ : ?T' =>
+      eapply meta_eqconv ; [
+        eapply meta_eqctx_conv ; [
+          eapply cong_subst with (Γ := Γ') (Δ := Δ' ,, d') (A := T') ; [
+            exact h
+          | first [ assumption | eapply eq_reflexivity ; assumption ]
+          ]
+        | .. ]
+      | .. ]
+    | _ ;;; (?Γ' ,, svass ?nx' ?B' ,,, ?Δ') ,, ?d',, ?d'' |-i _ = _ : ?T' =>
+      eapply meta_eqconv ; [
+        eapply meta_eqctx_conv ; [
+          eapply cong_subst with (Γ := Γ') (Δ := (Δ' ,, d') ,, d'') (A := T') ; [
+            exact h
+          | first [ assumption | eapply eq_reflexivity ; assumption ]
+          ]
+        | .. ]
+      | .. ]
     end ; try (cbn ; reflexivity)
-  | _ => fail "cannot find type_subst"
+  | _ => fail "cannot find type_subst, cong_subst"
   end.
 
 Ltac esh :=
   match goal with
   | h : _ ;;; _ |-i ?t : _ |- _ ;;; _ |-i ?t{ _ := _ } : _ => sh h
+  | h : _ ;;; _ |-i ?t = _ : _ |- _ ;;; _ |-i ?t{ _ := _ } = _ : _ =>
+    sh h
   end.
 
 Fixpoint type_subst {Σ Γ Δ t A nx B u}
@@ -882,11 +926,15 @@ Proof.
       - cbn. eapply @type_ProjT1 with (A2 := A2{#|Δ| := u}) ; esh.
       - cbn. eapply @type_ProjT2 with (A1 := A1{#|Δ| := u}) ; esh.
       - cbn. eapply type_ProjTe ; esh.
-      - cheat.
+      - cbn. eapply type_conv ; esh.
     }
 
   (* cong_subst *)
-  - { cheat.
+  - { intro hu.
+      (* dependent destruction h. *)
+      (* - *)
+      (* Should it have two different substitutions? *)
+      cheat.
     }
 
   (* wf_subst *)

@@ -772,10 +772,10 @@ Definition subst_decl n u d : scontext_decl :=
      sdecl_type := (sdecl_type d){ n := u }
   |}.
 
-Fixpoint subst_context i u Δ :=
+Fixpoint subst_context u Δ :=
   match Δ with
   | nil => nil
-  | A :: Δ => (subst_decl i u A) :: (subst_context (S i) u Δ)
+  | A :: Δ => (subst_decl #|Δ| u A) :: (subst_context u Δ)
   end.
 
 Fact subst_decl_svass :
@@ -792,7 +792,7 @@ Ltac sh h :=
         forall (Σ : global_context) (Γ Δ : scontext) (t A : sterm) (nx : name)
           (B u : sterm),
           Σ;;; Γ,, svass nx B ,,, Δ |-i t : A ->
-          Σ;;; Γ |-i u : B -> Σ;;; Γ ,,, subst_context 0 u Δ |-i
+          Σ;;; Γ |-i u : B -> Σ;;; Γ ,,, subst_context u Δ |-i
           t {#|Δ| := u} : A {#|Δ| := u}
     |- _ ] =>
     lazymatch type of h with
@@ -826,18 +826,18 @@ Ltac esh :=
 Fixpoint type_subst {Σ Γ Δ t A nx B u}
   (h : Σ ;;; Γ ,, svass nx B ,,, Δ |-i t : A) {struct h} :
   Σ ;;; Γ |-i u : B ->
-  Σ ;;; Γ ,,, subst_context 0 u Δ |-i t{ #|Δ| := u } : A{ #|Δ| := u }
+  Σ ;;; Γ ,,, subst_context u Δ |-i t{ #|Δ| := u } : A{ #|Δ| := u }
 
 with cong_subst {Σ Γ Δ t1 t2 A nx B u1 u2}
   (h : Σ ;;; Γ ,, svass nx B ,,, Δ |-i t1 = t2 : A) {struct h} :
   Σ ;;; Γ |-i u1 = u2 : B ->
-  Σ ;;; Γ ,,, subst_context 0 u1 Δ |-i t1{ #|Δ| := u1 }
+  Σ ;;; Γ ,,, subst_context u1 Δ |-i t1{ #|Δ| := u1 }
   = t2{ #|Δ| := u2 } : A{ #|Δ| := u1 }
 
 with wf_subst {Σ Γ Δ nx B u}
   (h : wf Σ (Γ ,, svass nx B ,,, Δ)) {struct h} :
   Σ ;;; Γ |-i u : B ->
-  wf Σ (Γ ,,, subst_context 0 u Δ)
+  wf Σ (Γ ,,, subst_context u Δ)
 .
 Proof.
   (* type_subst *)
@@ -848,40 +848,40 @@ Proof.
           * rewrite lift00, lift_subst. cbn. assumption.
           * cbn. eapply meta_conv.
             -- eapply type_Rel. dependent destruction w. assumption.
-            -- (* replace (S (S n)) with ((S n) + 1)%nat by omega. *)
-               (* rewrite <- liftP1. *)
+            -- rewrite substP3 by omega.
+               (* Maybe we should switch it to Equations as well. *)
                cheat.
         + cheat.
       - cbn. apply type_Sort. eapply wf_subst ; eassumption.
-      - cbn. eapply type_Prod.
-        + esh.
-        + esh.
-          cbn. rewrite subst_decl_svass.
-          (* The statement is probably wrong. *)
-          cheat.
-      - cheat.
-      - cheat.
-      - cheat.
-      - cheat.
-      - cheat.
-      - cheat.
-      - cheat.
-      - cheat.
-      - cheat.
-      - cheat.
-      - cheat.
-      - cheat.
-      - cheat.
-      - cheat.
-      - cheat.
-      - cheat.
-      - cheat.
-      - cheat.
-      - cheat.
-      - cheat.
-      - cheat.
-      - cheat.
-      - cheat.
+      - cbn. eapply type_Prod ; esh.
+      - cbn. eapply type_Lambda ; esh.
+      - cbn. cheat.
+      - cbn. eapply type_Eq ; esh.
+      - cbn. eapply type_Refl ; esh.
+      - cbn. cheat.
+      - cbn. eapply type_Transport ; esh.
+      - cbn. eapply type_Heq ; esh.
+      - cbn. eapply type_HeqToEq ; esh.
+      - cbn. eapply type_HeqRefl ; esh.
+      - cbn. eapply type_HeqSym ; esh.
+      - cbn. eapply type_HeqTrans. all: try esh.
+        + cheat.
+        + cheat.
+      - cbn. eapply type_HeqTransport ; esh.
+      - cbn. eapply type_CongProd ; esh.
+        cheat.
+      - cbn. eapply type_CongLambda ; esh.
+        + cheat.
+        + cheat.
+      - cbn. (* eapply type_CongApp ; esh. *) cheat.
+      - cbn. eapply type_CongEq ; esh.
+      - cbn. eapply type_CongRefl ; esh.
+      - cbn. eapply type_EqToHeq ; esh.
+      - cbn. eapply type_HeqTypeEq ; esh.
+      - cbn. eapply type_Pack ; esh.
+      - cbn. eapply @type_ProjT1 with (A2 := A2{#|Δ| := u}) ; esh.
+      - cbn. eapply @type_ProjT2 with (A1 := A1{#|Δ| := u}) ; esh.
+      - cbn. eapply type_ProjTe ; esh.
       - cheat.
     }
 

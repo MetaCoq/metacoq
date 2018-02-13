@@ -684,7 +684,24 @@ Proof.
         eapply cong_App ; eih.
       - cbn. eapply cong_Eq ; eih.
       - cbn. eapply cong_Refl ; eih.
-      - cheat.
+      - change (#|Ξ|) with (0 + #|Ξ|)%nat.
+        rewrite substP1.
+        replace (S (0 + #|Ξ|)) with (1 + #|Ξ|)%nat by omega.
+        rewrite substP1. cbn.
+        eapply cong_J ; eih.
+        + cbn. rewrite lift_decl_svass. unfold ssnoc.
+          instantiate (1 := nx). instantiate (1 := ne). cbn.
+          f_equal. f_equal. f_equal.
+          * replace (S #|Ξ|) with (1 + #|Ξ|)%nat by omega.
+            apply liftP2. omega.
+          * replace (S #|Ξ|) with (1 + #|Ξ|)%nat by omega.
+            apply liftP2. omega.
+        + replace (S (S #|Ξ|)) with (1 + (S (0 + #|Ξ|)))%nat by omega.
+          rewrite <- substP1.
+          replace (1 + (0 + #|Ξ|))%nat with (S (0 + #|Ξ|))%nat by omega.
+          change (sRefl (lift #|Δ| #|Ξ| A1) (lift #|Δ| #|Ξ| u1))
+            with (lift #|Δ| #|Ξ| (sRefl A1 u1)).
+          rewrite <- substP1. reflexivity.
       - cbn. eapply cong_Transport ; eih.
       - cbn. eapply cong_Heq ; eih.
       - cbn. eapply cong_Pack ; eih.

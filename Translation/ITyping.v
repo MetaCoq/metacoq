@@ -899,7 +899,9 @@ Proof.
       - cbn. apply type_Sort. eapply wf_subst ; eassumption.
       - cbn. eapply type_Prod ; esh.
       - cbn. eapply type_Lambda ; esh.
-      - cbn. cheat.
+      - cbn.
+        (* We need substP4 *)
+        cheat.
       - cbn. eapply type_Eq ; esh.
       - cbn. eapply type_Refl ; esh.
       - cbn. cheat.

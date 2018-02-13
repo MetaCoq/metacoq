@@ -414,8 +414,37 @@ Proof.
     rewrite e2. reflexivity.
 Defined.
 
-(* I will only prove it if it becomes necessary. *)
 Lemma substP4 :
   forall t u v i j,
     t{ i := u }{ i+j := v } = t{ S (i+j) := v}{ i := u{ j := v } }.
-Abort.
+Proof.
+  intro t ; induction t ; intros u v i j.
+  all: try (cbn ; f_equal ;
+            try replace (S (S (S (i + j))))%nat with ((S (S (S i))) + j)%nat by omega ;
+            try replace (S (S (i + j)))%nat with ((S (S i)) + j)%nat by omega ;
+            try replace (S (i + j))%nat with ((S i) + j)%nat by omega ;
+            easy
+           ).
+  cbn. case_eq (i ?= n) ; intro e0 ; bprop e0.
+  - subst. destruct n.
+    + cbn. rewrite 2!lift00. reflexivity.
+    + assert (e1 : (S n + j ?= n) = Gt) by (propb ; omega).
+      rewrite e1. cbn.
+      assert (e2 : (n ?= n) = Eq) by (propb ; omega).
+      rewrite e2. rewrite <- substP2 by omega. reflexivity.
+  - destruct n.
+    + omega.
+    + case_eq (i + j ?= n) ; intro e2 ; bprop e2.
+      * cbn. rewrite e2. rewrite substP3 by omega. reflexivity.
+      * cbn. rewrite e2.
+        assert (e4 : (i ?= n) = Lt) by (propb ; omega).
+        rewrite e4. reflexivity.
+      * cbn. rewrite e2. rewrite e0. reflexivity.
+  - destruct n.
+    + cbn. assert (e2 : (i + j ?= 0) = Gt) by (propb ; omega).
+      rewrite e2. rewrite e0. reflexivity.
+    + assert (e2 : (i + j ?= n) = Gt) by (propb ; omega).
+      rewrite e2. cbn.
+      assert (e3 : (i + j ?= S n) = Gt) by (propb ; omega).
+      rewrite e3. rewrite e0. reflexivity.
+Defined.

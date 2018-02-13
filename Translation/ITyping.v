@@ -619,9 +619,30 @@ Proof.
       - eapply eq_transitivity.
         + eapply cong_lift ; eassumption.
         + apply cong_lift ; assumption.
-      - (* Need to deal with substitutions. *)
-        cheat.
-      - cheat.
+      - change (lift #|Δ| #|Ξ| (t {0 := u}))
+          with (lift #|Δ| (0 + #|Ξ|) (t { 0 := u })).
+        change (lift #|Δ| #|Ξ| (B {0 := u}))
+          with (lift #|Δ| (0 + #|Ξ|) (B { 0 := u })).
+        rewrite 2!substP1. cbn.
+        eapply eq_beta ; eih.
+      - change (#|Ξ|) with (0 + #|Ξ|)%nat.
+        rewrite substP1.
+        replace (S (0 + #|Ξ|)) with (1 + #|Ξ|)%nat by omega.
+        rewrite substP1. cbn.
+        eapply eq_JRefl ; eih.
+        + cbn. rewrite lift_decl_svass. unfold ssnoc.
+          instantiate (1 := nx). instantiate (1 := ne). cbn.
+          f_equal. f_equal. f_equal.
+          * replace (S #|Ξ|) with (1 + #|Ξ|)%nat by omega.
+            apply liftP2. omega.
+          * replace (S #|Ξ|) with (1 + #|Ξ|)%nat by omega.
+            apply liftP2. omega.
+        + replace (S (S #|Ξ|)) with (1 + (S (0 + #|Ξ|)))%nat by omega.
+          rewrite <- substP1.
+          replace (1 + (0 + #|Ξ|))%nat with (S (0 + #|Ξ|))%nat by omega.
+          change (sRefl (lift #|Δ| #|Ξ| A0) (lift #|Δ| #|Ξ| u))
+            with (lift #|Δ| #|Ξ| (sRefl A0 u)).
+          rewrite <- substP1. reflexivity.
       - cbn. eapply eq_TransportRefl.
         + change (sSort s) with (lift #|Δ| #|Ξ| (sSort s)).
           apply type_lift ; assumption.
@@ -659,7 +680,12 @@ Proof.
           all: eassumption.
         + refine (cong_lift Σ Γ Δ (Ξ ,, svass n1 A1) _ _ _ _ _).
           all: eassumption.
-      - cheat.
+      - cbn.
+        change (lift #|Δ| #|Ξ| (B1 {0 := u1}))
+          with (lift #|Δ| (0 + #|Ξ|) (B1 { 0 := u1 })).
+        rewrite substP1.
+        (* eapply cong_App. *)
+        cheat.
       - cbn. eapply cong_Eq.
         + match goal with
           | |- _ ;;; _ |-i _ = _ : ?S =>

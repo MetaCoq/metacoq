@@ -376,6 +376,16 @@ Proof.
   rewrite <- e. exact h.
 Defined.
 
+Lemma meta_eqconv :
+  forall {Σ Γ t t' A B},
+    Σ ;;; Γ |-i t = t' : A ->
+    A = B ->
+    Σ ;;; Γ |-i t = t' : B.
+Proof.
+  intros Σ Γ t t' A B h e.
+  rewrite <- e. exact h.
+Defined.
+
 Lemma typing_wf :
   forall {Σ Γ t T},
     Σ ;;; Γ |-i t : T ->
@@ -438,9 +448,18 @@ Tactic Notation "cheat" := apply cheating.
 
 Ltac ih h :=
   lazymatch goal with
-  | [ type_lift : forall (Σ : global_context) (Γ Δ Ξ : scontext) (t A : sterm),
-              Σ;;; Γ ,,, Ξ |-i t : A ->
-              wf Σ (Γ ,,, Δ) -> Σ;;; Γ ,,, Δ ,,, lift_context #|Δ| Ξ |-i lift #|Δ| #|Ξ| t : lift #|Δ| #|Ξ| A
+  | [ type_lift :
+        forall (Σ : global_context) (Γ Δ Ξ : scontext) (t A : sterm),
+          Σ;;; Γ ,,, Ξ |-i t : A ->
+          wf Σ (Γ ,,, Δ) ->
+          Σ;;; Γ ,,, Δ ,,, lift_context #|Δ| Ξ
+          |-i lift #|Δ| #|Ξ| t : lift #|Δ| #|Ξ| A,
+      cong_lift :
+        forall (Σ : global_context) (Γ Δ Ξ : scontext) (t1 t2 A : sterm),
+          Σ;;; Γ ,,, Ξ |-i t1 = t2 : A ->
+          wf Σ (Γ ,,, Δ) ->
+          Σ;;; Γ ,,, Δ ,,, lift_context #|Δ| Ξ
+          |-i lift #|Δ| #|Ξ| t1 = lift #|Δ| #|Ξ| t2 : lift #|Δ| #|Ξ| A
     |- _ ] =>
     lazymatch type of h with
     | _ ;;; ?Γ' ,,, ?Ξ' |-i _ : ?T' =>
@@ -470,13 +489,42 @@ Ltac ih h :=
           ]
         | .. ]
       | .. ]
+    | _ ;;; ?Γ' ,,, ?Ξ' |-i _ = _ : ?T' =>
+      eapply meta_eqconv ; [
+        eapply meta_eqctx_conv ; [
+          eapply cong_lift with (Γ := Γ') (Ξ := Ξ') (A := T') ; [
+            exact h
+          | assumption
+          ]
+        | .. ]
+      | .. ]
+    | _ ;;; (?Γ' ,,, ?Ξ'),, ?d' |-i _ = _ : ?T' =>
+      eapply meta_eqconv ; [
+        eapply meta_eqctx_conv ; [
+          eapply cong_lift with (Γ := Γ') (Ξ := Ξ',, d') (A := T') ; [
+            exact h
+          | assumption
+          ]
+        | .. ]
+      | .. ]
+    | _ ;;; (?Γ' ,,, ?Ξ'),, ?d',, ?d'' |-i _ = _ : ?T' =>
+      eapply meta_eqconv ; [
+        eapply meta_eqctx_conv ; [
+          eapply cong_lift with (Γ := Γ') (Ξ := (Ξ',, d'),, d'') (A := T') ; [
+            exact h
+          | assumption
+          ]
+        | .. ]
+      | .. ]
     end ; try (cbn ; reflexivity)
-  | _ => fail "Cannot retrieve type_lift"
+  | _ => fail "Cannot retrieve type_lift or cong_lift"
   end.
 
 Ltac eih :=
   match goal with
   | h : _ ;;; _ |-i ?t : _ |- _ ;;; _ |-i lift _ _ ?t : _ => ih h
+  | h : _ ;;; _ |-i ?t = _ : _ |- _ ;;; _ |-i lift _ _ ?t = _ : _ =>
+    ih h
   end.
 
 Fixpoint type_lift {Σ Γ Δ Ξ t A} (h : Σ ;;; Γ ,,, Ξ |-i t : A) {struct h} :
@@ -508,29 +556,15 @@ Proof.
           (* specialize (IHΔ Ξ n isdecl w hwf). *)
           cheat.
       - cbn. apply type_Sort. now apply wf_lift.
-      - cbn. eapply type_Prod.
-        + eih.
-        + eih.
-      - cbn. eapply type_Lambda.
-        + eih.
-        + eih.
-        + eih.
+      - cbn. eapply type_Prod ; eih.
+      - cbn. eapply type_Lambda ; eih.
       - cbn.
         change (lift #|Δ| #|Ξ| (B {0 := u}))
           with (lift #|Δ| (0 + #|Ξ|) (B { 0 := u })).
         rewrite substP1.
-        eapply type_App.
-        + eih.
-        + eih.
-        + eih.
-        + eih.
-      - cbn. apply type_Eq.
-        + eih.
-        + eih.
-        + eih.
-      - cbn. eapply type_Refl.
-        + eih.
-        + eih.
+        eapply type_App ; eih.
+      - cbn. apply type_Eq ; eih.
+      - cbn. eapply type_Refl ; eih.
       - change (#|Ξ|) with (0 + #|Ξ|)%nat.
         rewrite substP1.
         replace (S (0 + #|Ξ|)) with (1 + #|Ξ|)%nat by omega.
@@ -607,18 +641,14 @@ Proof.
       - cbn. eapply @type_ProjT1 with (A2 := lift #|Δ| #|Ξ| A2) ; eih.
       - cbn. eapply @type_ProjT2 with (A1 := lift #|Δ| #|Ξ| A1) ; eih.
       - cbn. eapply type_ProjTe ; eih.
-      - eapply type_conv ; try eih.
-        change (sSort s) with (lift #|Δ| #|Ξ| (sSort s)).
-        eapply cong_lift ; eassumption.
+      - eapply type_conv ; eih.
     }
 
   (* cong_lift *)
   - { intro hwf. dependent destruction h.
       - apply eq_reflexivity. apply type_lift ; assumption.
       - apply eq_symmetry. eapply cong_lift ; assumption.
-      - eapply eq_transitivity.
-        + eapply cong_lift ; eassumption.
-        + apply cong_lift ; assumption.
+      - eapply eq_transitivity ; eih.
       - change (lift #|Δ| #|Ξ| (t {0 := u}))
           with (lift #|Δ| (0 + #|Ξ|) (t { 0 := u })).
         change (lift #|Δ| #|Ξ| (B {0 := u}))
@@ -643,106 +673,21 @@ Proof.
           change (sRefl (lift #|Δ| #|Ξ| A0) (lift #|Δ| #|Ξ| u))
             with (lift #|Δ| #|Ξ| (sRefl A0 u)).
           rewrite <- substP1. reflexivity.
-      - cbn. eapply eq_TransportRefl.
-        + change (sSort s) with (lift #|Δ| #|Ξ| (sSort s)).
-          apply type_lift ; assumption.
-        + apply type_lift ; assumption.
-      - eapply eq_conv.
-        + eapply cong_lift ; eassumption.
-        + match goal with
-          | |- _ ;;; _ |-i _ = _ : ?S =>
-            change S with (lift #|Δ| #|Ξ| S)
-          end.
-          eapply cong_lift ; eassumption.
-      - cbn. eapply cong_Prod.
-        + match goal with
-          | |- _ ;;; _ |-i _ = _ : ?S =>
-            change S with (lift #|Δ| #|Ξ| S)
-          end.
-          eapply cong_lift ; eassumption.
-        + match goal with
-          | |- _ ;;; _ |-i _ = _ : ?T =>
-            change T with (lift #|Δ| (S #|Ξ|) T)
-          end.
-          refine (cong_lift Σ Γ Δ (Ξ ,, svass n1 A1) _ _ _ _ _).
-          all: assumption.
-      - cbn. eapply cong_Lambda.
-        + match goal with
-          | |- _ ;;; _ |-i _ = _ : ?S =>
-            change S with (lift #|Δ| #|Ξ| S)
-          end.
-          eapply cong_lift ; eassumption.
-        + match goal with
-          | |- _ ;;; _ |-i _ = _ : ?T =>
-            change T with (lift #|Δ| (S #|Ξ|) T)
-          end.
-          refine (cong_lift Σ Γ Δ (Ξ ,, svass n1 A1) _ _ _ _ _).
-          all: eassumption.
-        + refine (cong_lift Σ Γ Δ (Ξ ,, svass n1 A1) _ _ _ _ _).
-          all: eassumption.
+      - cbn. eapply eq_TransportRefl ; eih.
+      - eapply eq_conv ; eih.
+      - cbn. eapply cong_Prod ; eih.
+      - cbn. eapply cong_Lambda ; eih.
       - cbn.
         change (lift #|Δ| #|Ξ| (B1 {0 := u1}))
           with (lift #|Δ| (0 + #|Ξ|) (B1 { 0 := u1 })).
         rewrite substP1.
-        (* eapply cong_App. *)
-        cheat.
-      - cbn. eapply cong_Eq.
-        + match goal with
-          | |- _ ;;; _ |-i _ = _ : ?S =>
-            change S with (lift #|Δ| #|Ξ| S)
-          end.
-          eapply cong_lift ; eassumption.
-        + eapply cong_lift ; eassumption.
-        + eapply cong_lift ; eassumption.
-      - cbn. eapply cong_Refl.
-        + match goal with
-          | |- _ ;;; _ |-i _ = _ : ?S =>
-            change S with (lift #|Δ| #|Ξ| S)
-          end.
-          eapply cong_lift ; eassumption.
-        + eapply cong_lift ; eassumption.
+        eapply cong_App ; eih.
+      - cbn. eapply cong_Eq ; eih.
+      - cbn. eapply cong_Refl ; eih.
       - cheat.
-      - cbn. eapply cong_Transport.
-        + match goal with
-          | |- _ ;;; _ |-i _ = _ : ?S =>
-            change S with (lift #|Δ| #|Ξ| S)
-          end.
-          eapply cong_lift ; eassumption.
-        + match goal with
-          | |- _ ;;; _ |-i _ = _ : ?S =>
-            change S with (lift #|Δ| #|Ξ| S)
-          end.
-          eapply cong_lift ; eassumption.
-        + match goal with
-          | |- _ ;;; _ |-i _ = _ : ?S =>
-            change S with (lift #|Δ| #|Ξ| (sEq (sSort s) A1 B1))
-          end.
-          eapply cong_lift ; eassumption.
-        + eapply cong_lift ; eassumption.
-      - cbn. eapply cong_Heq.
-        + match goal with
-          | |- _ ;;; _ |-i _ = _ : ?S =>
-            change S with (lift #|Δ| #|Ξ| S)
-          end.
-          eapply cong_lift ; eassumption.
-        + match goal with
-          | |- _ ;;; _ |-i _ = _ : ?S =>
-            change S with (lift #|Δ| #|Ξ| S)
-          end.
-          eapply cong_lift ; eassumption.
-        + eapply cong_lift ; eassumption.
-        + eapply cong_lift ; eassumption.
-      - cbn. eapply cong_Pack.
-        + match goal with
-          | |- _ ;;; _ |-i _ = _ : ?S =>
-            change S with (lift #|Δ| #|Ξ| S)
-          end.
-          eapply cong_lift ; eassumption.
-        + match goal with
-          | |- _ ;;; _ |-i _ = _ : ?S =>
-            change S with (lift #|Δ| #|Ξ| S)
-          end.
-          eapply cong_lift ; eassumption.
+      - cbn. eapply cong_Transport ; eih.
+      - cbn. eapply cong_Heq ; eih.
+      - cbn. eapply cong_Pack ; eih.
     }
 
   (* wf_lift *)

@@ -764,6 +764,42 @@ Proof.
     + eassumption.
 Defined.
 
+(* Substitutionin context *)
+
+Definition subst_decl n u d : scontext_decl :=
+  {| sdecl_name := sdecl_name d ;
+     sdecl_body := option_map (subst u n) (sdecl_body d) ;
+     sdecl_type := (sdecl_type d){ n := u }
+  |}.
+
+Fixpoint subst_context i u Δ :=
+  match Δ with
+  | nil => nil
+  | A :: Δ => (subst_decl i u A) :: (subst_context (S i) u Δ)
+  end.
+
+Fixpoint type_subst {Σ Γ Δ t A nx B u}
+  (h : Σ ;;; Γ ,, svass nx B ,,, Δ |-i t : A) {struct h} :
+  Σ ;;; Γ |-i u : B ->
+  Σ ;;; Γ ,,, subst_context 0 u Δ |-i t{ #|Δ| := u } : A{ #|Δ| := u }
+
+(* with cong_lift {Σ Γ Δ Ξ t1 t2 A} (h : Σ ;;; Γ ,,, Ξ |-i t1 = t2 : A) {struct h} : *)
+(*   wf Σ (Γ ,,, Δ) -> *)
+(*   Σ ;;; Γ ,,, Δ ,,, lift_context #|Δ| Ξ |-i lift #|Δ| #|Ξ| t1 *)
+(*   = lift #|Δ| #|Ξ| t2 : lift #|Δ| #|Ξ| A *)
+
+(* with wf_lift {Σ Γ Δ Ξ} (h : wf Σ (Γ ,,, Ξ)) {struct h} : *)
+(*   wf Σ (Γ ,,, Δ) -> *)
+(*   wf Σ (Γ ,,, Δ ,,, lift_context #|Δ| Ξ) *)
+.
+Proof.
+  (* type_subst *)
+  - { intro hu.
+      (* dependent destruction h. *)
+      cheat.
+    }
+Defined.
+
 Lemma typing_subst :
   forall {Σ Γ t A B u n},
     Σ ;;; Γ ,, svass n A |-i t : B ->

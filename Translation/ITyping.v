@@ -900,26 +900,78 @@ Proof.
       - cbn. eapply type_Prod ; esh.
       - cbn. eapply type_Lambda ; esh.
       - cbn.
-        (* We need substP4 *)
-        cheat.
+        change ((B0 {0 := u0}) {#|Δ| := u})
+          with ((B0 {0 := u0}) {0 + #|Δ| := u}).
+        rewrite substP4. cbn.
+        eapply type_App ; esh.
       - cbn. eapply type_Eq ; esh.
       - cbn. eapply type_Refl ; esh.
-      - cbn. cheat.
+      - cbn.
+        change (#|Δ|) with (0 + #|Δ|)%nat.
+        rewrite substP4.
+        replace (S (0 + #|Δ|)) with (1 + #|Δ|)%nat by omega.
+        rewrite substP4.
+        eapply type_J ; esh.
+        + instantiate (1 := ne). instantiate (1 := nx0). cbn. unfold ssnoc.
+          rewrite !subst_decl_svass. cbn.
+          f_equal. f_equal. f_equal.
+          * replace (S #|Δ|) with (1 + #|Δ|)%nat by omega.
+            apply substP2. omega.
+          * replace (S #|Δ|) with (1 + #|Δ|)%nat by omega.
+            apply substP2. omega.
+        + replace (S (S #|Δ|)) with (1 + (S (0 + #|Δ|)))%nat by omega.
+          rewrite <- substP4.
+          replace (1 + (0 + #|Δ|))%nat with (S (0 + #|Δ|))%nat by omega.
+          change (sRefl (A0 {0 + #|Δ| := u}) (u0 {0 + #|Δ| := u}))
+            with ((sRefl A0 u0){ 0 + #|Δ| := u}).
+          rewrite <- substP4. reflexivity.
       - cbn. eapply type_Transport ; esh.
       - cbn. eapply type_Heq ; esh.
       - cbn. eapply type_HeqToEq ; esh.
       - cbn. eapply type_HeqRefl ; esh.
       - cbn. eapply type_HeqSym ; esh.
-      - cbn. eapply type_HeqTrans. all: try esh.
-        + cheat.
-        + cheat.
+      - cbn. eapply type_HeqTrans with (B := B0{ #|Δ| := u }) (b := b{ #|Δ| := u }) ; esh.
       - cbn. eapply type_HeqTransport ; esh.
       - cbn. eapply type_CongProd ; esh.
-        cheat.
+        cbn. f_equal.
+        + rewrite <- substP2 by omega.
+          change (S #|Δ|) with (0 + (S #|Δ|))%nat at 1.
+          rewrite substP4. cbn. reflexivity.
+        + rewrite <- substP2 by omega.
+          change (S #|Δ|) with (0 + (S #|Δ|))%nat at 1.
+          rewrite substP4. cbn. reflexivity.
       - cbn. eapply type_CongLambda ; esh.
-        + cheat.
-        + cheat.
-      - cbn. (* eapply type_CongApp ; esh. *) cheat.
+        + cbn. f_equal.
+          * rewrite <- substP2 by omega.
+            change (S #|Δ|) with (0 + (S #|Δ|))%nat at 1.
+            rewrite substP4. cbn. reflexivity.
+          * rewrite <- substP2 by omega.
+            change (S #|Δ|) with (0 + (S #|Δ|))%nat at 1.
+            rewrite substP4. cbn. reflexivity.
+        + cbn. f_equal.
+          * rewrite <- substP2 by omega.
+            change (S #|Δ|) with (0 + (S #|Δ|))%nat at 1.
+            rewrite substP4. cbn. reflexivity.
+          * rewrite <- substP2 by omega.
+            change (S #|Δ|) with (0 + (S #|Δ|))%nat at 1.
+            rewrite substP4. cbn. reflexivity.
+          * rewrite <- substP2 by omega.
+            change (S #|Δ|) with (0 + (S #|Δ|))%nat at 1.
+            rewrite substP4. cbn. reflexivity.
+          * rewrite <- substP2 by omega.
+            change (S #|Δ|) with (0 + (S #|Δ|))%nat at 1.
+            rewrite substP4. cbn. reflexivity.
+      - cbn.
+        change #|Δ| with (0 + #|Δ|)%nat.
+        rewrite 2!substP4. cbn.
+        eapply type_CongApp ; esh.
+        cbn. f_equal.
+        + rewrite <- substP2 by omega.
+          change (S #|Δ|) with (0 + (S #|Δ|))%nat at 1.
+          rewrite substP4. cbn. reflexivity.
+        + rewrite <- substP2 by omega.
+          change (S #|Δ|) with (0 + (S #|Δ|))%nat at 1.
+          rewrite substP4. cbn. reflexivity.
       - cbn. eapply type_CongEq ; esh.
       - cbn. eapply type_CongRefl ; esh.
       - cbn. eapply type_EqToHeq ; esh.

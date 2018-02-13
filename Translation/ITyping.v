@@ -735,7 +735,7 @@ Proof.
   - eassumption.
 Defined.
 
-Lemma typing_lift02 :
+Corollary typing_lift02 :
   forall {Σ Γ t A x B s y C s'},
     Σ ;;; Γ |-i t : A ->
     Σ ;;; Γ |-i B : sSort s ->
@@ -750,12 +750,19 @@ Proof.
   - eassumption.
 Defined.
 
-Lemma cong_lift01 :
+Corollary cong_lift01 :
   forall {Σ Γ t1 t2 A x B s},
     Σ ;;; Γ |-i t1 = t2 : A ->
     Σ ;;; Γ |-i B : sSort s ->
     Σ ;;; Γ ,, svass x B |-i lift0 1 t1 = lift0 1 t2 : lift0 1 A.
-Admitted.
+Proof.
+  intros Σ Γ t1 t2 A x B s H H0.
+  apply @cong_lift with (Δ := [ svass x B ]) (Ξ := nil).
+  - cbn. assumption.
+  - econstructor.
+    + eapply typing_wf. eassumption.
+    + eassumption.
+Defined.
 
 Lemma typing_subst :
   forall {Σ Γ t A B u n},

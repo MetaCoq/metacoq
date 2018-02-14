@@ -1345,38 +1345,38 @@ Proof.
     eapply ctx_conv.
     + eassumption.
     + econstructor.
-      * apply eqctx_refl. now apply (typing_wf t1).
+      * apply eqctx_refl. now apply (typing_wf pi1_0).
       * eassumption.
   - eapply type_conv.
     + econstructor.
       * eassumption.
       * eapply ctx_conv ; [ eassumption |].
         econstructor.
-        -- eapply eqctx_refl. now apply (typing_wf t5).
+        -- eapply eqctx_refl. now apply (typing_wf pi1_1).
         -- eassumption.
       * eapply ctx_conv.
         -- eapply type_conv ; eassumption.
         -- econstructor.
-           ++ apply eqctx_refl. now apply (typing_wf t5).
+           ++ apply eqctx_refl. now apply (typing_wf pi1_1).
            ++ eassumption.
     + econstructor.
       * eassumption.
       * eapply ctx_conv ; [ eassumption |].
         econstructor.
-        -- apply eqctx_refl. now apply (typing_wf t5).
+        -- apply eqctx_refl. now apply (typing_wf pi1_1).
         -- apply eq_reflexivity. eassumption.
     + apply eq_symmetry. apply cong_Prod.
       * assumption.
       * eapply eqctx_conv ; [ eassumption |].
         econstructor.
-        -- apply eqctx_refl. now apply (typing_wf t5).
+        -- apply eqctx_refl. now apply (typing_wf pi1_1).
         -- apply eq_reflexivity. eassumption.
   - econstructor.
     + econstructor.
       * eassumption.
       * eapply ctx_conv ; [ eassumption |].
         econstructor.
-        -- apply eqctx_refl. now apply (typing_wf t7).
+        -- apply eqctx_refl. now apply (typing_wf pi1_2).
         -- eassumption.
       * econstructor.
         -- eassumption.
@@ -1384,7 +1384,7 @@ Proof.
            ++ eassumption.
            ++ eapply ctx_conv ; [ eassumption |].
               econstructor.
-              ** apply eqctx_refl. now apply (typing_wf t7).
+              ** apply eqctx_refl. now apply (typing_wf pi1_2).
               ** eassumption.
         -- eapply cong_Prod ; eassumption.
       * econstructor ; eassumption.
@@ -1410,7 +1410,7 @@ Proof.
     + eapply ctx_conv ; [ eassumption |].
       econstructor.
       * econstructor.
-        -- apply eqctx_refl. now apply (typing_wf t7).
+        -- apply eqctx_refl. now apply (typing_wf pi1_2).
         -- eassumption.
       * eapply cong_Eq.
         -- match goal with
@@ -1422,7 +1422,7 @@ Proof.
         -- apply eq_reflexivity.
            eapply type_conv ; [ eapply type_Rel | .. ].
            ++ econstructor.
-              ** now apply (typing_wf t7).
+              ** now apply (typing_wf pi1_2).
               ** eassumption.
            ++ instantiate (1 := s1).
               change (sSort s1) with (lift0 1 (sSort s1)).
@@ -1599,7 +1599,7 @@ Proof.
     + eapply eq_transitivity.
       * eassumption.
       * destruct (eq_typing e) as [hAs _].
-        destruct (eq_typing e0) as [_ hAsm].
+        destruct (eq_typing pi2_0) as [_ hAsm].
         destruct (uniqueness hAs hAsm).
         eapply eq_conv ; eassumption.
 Defined.
@@ -1626,7 +1626,7 @@ Proof.
     eapply eq_transitivity.
     + eassumption.
     + destruct (eq_typing e) as [i1 _].
-      destruct (eq_typing e0) as [_ i2].
+      destruct (eq_typing pi2_1) as [_ i2].
       destruct (uniqueness i1 i2).
       eapply eq_conv ; eassumption.
 Defined.
@@ -1655,7 +1655,7 @@ Proof.
     eapply eq_transitivity.
     + eassumption.
     + destruct (eq_typing e) as [hAs _].
-      destruct (eq_typing e0) as [_ hAs2].
+      destruct (eq_typing pi2_2) as [_ hAs2].
       destruct (uniqueness hAs hAs2).
       eapply eq_conv ; eassumption.
 Defined.
@@ -1738,7 +1738,7 @@ Proof.
     eapply eq_transitivity.
     + eassumption.
     + destruct (eq_typing e) as [hAs _].
-      destruct (eq_typing e0) as [_ hAs2].
+      destruct (eq_typing pi2_4) as [_ hAs2].
       destruct (uniqueness hAs hAs2).
       eapply eq_conv ; eassumption.
 Defined.
@@ -1764,7 +1764,7 @@ Proof.
     eapply eq_transitivity.
     + eassumption.
     + destruct (eq_typing e) as [hA1 _].
-      destruct (eq_typing e0) as [_ hA2].
+      destruct (eq_typing pi2_2) as [_ hA2].
       destruct (uniqueness hA1 hA2).
       eapply eq_conv ; eassumption.
 Defined.
@@ -1793,7 +1793,7 @@ Proof.
     eapply eq_transitivity.
     + eassumption.
     + destruct (eq_typing e) as [i1 _].
-      destruct (eq_typing e0) as [_ i2].
+      destruct (eq_typing pi2_2) as [_ i2].
       destruct (uniqueness i1 i2).
       eapply eq_conv ; eassumption.
 Defined.
@@ -1817,7 +1817,7 @@ Proof.
     eapply eq_transitivity.
     + eassumption.
     + destruct (eq_typing e) as [i1 _].
-      destruct (eq_typing e0) as [_ i2].
+      destruct (eq_typing pi2_0) as [_ i2].
       destruct (uniqueness i1 i2).
       eapply eq_conv ; eassumption.
 Defined.
@@ -2320,6 +2320,6 @@ Proof.
   destruct (istype_type hp) as [? i].
   destruct (inversionHeq i) as [? [[[[? ?] ?] ?] ?]].
   eapply type_HeqTypeEq ; try eassumption.
-  destruct (uniqueness t hA).
+  destruct (uniqueness pi1_ hA).
   eapply type_conv' ; eassumption.
 Defined.

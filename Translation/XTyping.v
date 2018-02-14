@@ -59,9 +59,9 @@ with wf (Σ : global_context) : scontext -> Type :=
 | wf_nil :
     wf Σ nil
 
-| wf_snoc Γ x A :
+| wf_snoc Γ x A s :
     wf Σ Γ ->
-    (∑ s, Σ ;;; Γ |-x A : sSort s) ->
+    Σ ;;; Γ |-x A : sSort s ->
     wf Σ (Γ ,, svass x A)
 
 with eq_term (Σ : global_context) : scontext -> sterm -> sterm -> sterm -> Type :=

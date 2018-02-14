@@ -1,8 +1,25 @@
 (*! Common syntax to ITT and ETT *)
 
+Set Primitive Projections.
+
+Record pp_sigT {A : Type} (P : A -> Type) : Type :=
+  {
+    pi1 : A;
+    pi2 : P pi1
+  }.
+
 (* Preamble *)
-Notation "'∑'  x .. y , P" := (sigT (fun x => .. (sigT (fun y => P)) ..))
+Notation "'∑'  x .. y , P" := (pp_sigT (fun x => .. (pp_sigT (fun y => P)) ..))
   (at level 200, x binder, y binder, right associativity) : type_scope.
+
+Record pp_prod (A B : Type) : Type :=
+  {
+    pi1_ : A;
+    pi2_ : B
+  }.
+
+
+Notation "x * y" := (pp_prod x y) : type_scope.
 
 From Template Require Import Ast.
 

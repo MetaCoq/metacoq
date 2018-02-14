@@ -1058,20 +1058,30 @@ Proof.
     cbn in *. omega.
 Defined.
 
-Lemma typing_subst :
+Corollary typing_subst :
   forall {Σ Γ t A B u n},
     Σ ;;; Γ ,, svass n A |-i t : B ->
     Σ ;;; Γ |-i u : A ->
     Σ ;;; Γ |-i t{ 0 := u } : B{ 0 := u }.
-Admitted.
+Proof.
+  intros Σ Γ t A B u n ht hu.
+  eapply @type_subst with (Δ := []) ; eassumption.
+Defined.
 
-Lemma typing_subst2 :
+Corollary typing_subst2 :
   forall {Σ Γ t A B C na nb u v},
     Σ ;;; Γ ,, svass na A ,, svass nb B |-i t : C ->
     Σ ;;; Γ |-i u : A ->
     Σ ;;; Γ |-i v : B{ 0 := u } ->
     Σ ;;; Γ |-i t{ 1 := u }{ 0 := v } : C{ 1 := u }{ 0 := v }.
-Admitted.
+Proof.
+  intros Σ Γ t A B C na nb u v ht hu hv.
+  eapply @type_subst with (Δ := []).
+  - eapply @type_subst with (Δ := [ svass nb B ]).
+    + exact ht.
+    + assumption.
+  - cbn. assumption.
+Defined.
 
 Lemma cong_subst1 :
   forall {Σ Γ t1 t2 A B u1 u2 n},

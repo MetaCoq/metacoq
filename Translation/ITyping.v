@@ -1083,6 +1083,55 @@ Proof.
   - cbn. assumption.
 Defined.
 
+Lemma cong_substs :
+  forall {Σ Γ Δ t A nx B},
+  Σ ;;; Γ ,, svass nx B ,,, Δ |-i t : A ->
+  forall {u1 u2},
+    Σ ;;; Γ |-i u1 = u2 : B ->
+    Σ ;;; Γ |-i u1 : B ->
+    Σ ;;; Γ ,,, subst_context u1 Δ
+    |-i t{ #|Δ| := u1 }
+     = t{ #|Δ| := u2 } : A{ #|Δ| := u1 }.
+Proof.
+  intros Σ Γ Δ t A nx B ht.
+  dependent induction ht ; intros uu1 uu2 huu huu1.
+  - cbn. destruct Δ.
+    + cbn. destruct n.
+      * cbn. rewrite lift_subst, !lift00. assumption.
+      * cbn. apply eq_reflexivity. cheat.
+    + cheat.
+  - cbn. apply eq_reflexivity. apply type_Sort.
+    eapply wf_subst ; eassumption.
+  - cbn. eapply cong_Prod.
+    + now apply IHht1.
+    + specialize (IHht2 Γ0 (Δ ,, svass n t) b (sSort s2) nx B eq_refl).
+      apply IHht2 ; assumption.
+  - cheat.
+  - cheat.
+  - cheat.
+  - cheat.
+  - cheat.
+  - cheat.
+  - cheat.
+  - cheat.
+  - cheat.
+  - cheat.
+  - cheat.
+  - cheat.
+  - cheat.
+  - cheat.
+  - cheat.
+  - cheat.
+  - cheat.
+  - cheat.
+  - cheat.
+  - cheat.
+  - cheat.
+  - cheat.
+  - cheat.
+  - cheat.
+Defined.
+
 Lemma cong_subst1 :
   forall {Σ Γ t1 t2 A B u1 u2 n},
     Σ ;;; Γ ,, svass n A |-i t1 = t2 : B ->

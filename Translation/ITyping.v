@@ -1050,13 +1050,12 @@ Proof.
       destruct Δ.
       - cbn. dependent destruction h. assumption.
       - dependent destruction h. cbn. rewrite subst_decl_svass. econstructor.
-        + cheat.
-        + cheat.
+        + eapply wf_subst ; eassumption.
+        + esh.
     }
 
     Unshelve.
-  * cbn in *. omega.
-  * assumption.
+    cbn in *. omega.
 Defined.
 
 Lemma typing_subst :

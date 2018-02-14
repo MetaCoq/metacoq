@@ -796,10 +796,10 @@ Ltac sh h :=
           t {#|Δ| := u} : A {#|Δ| := u},
      cong_subst :
        forall (Σ : global_context) (Γ Δ : scontext) (t1 t2 A : sterm) (nx : name)
-         (B u1 u2 : sterm),
+         (B u : sterm),
          Σ;;; Γ,, svass nx B ,,, Δ |-i t1 = t2 : A ->
-         Σ;;; Γ |-i u1 = u2 : B -> Σ;;; Γ ,,, subst_context u1 Δ |-i
-         t1 {#|Δ| := u1} = t2 {#|Δ| := u2} : A {#|Δ| := u1}
+         Σ;;; Γ |-i u : B -> Σ;;; Γ ,,, subst_context u Δ |-i
+         t1 {#|Δ| := u} = t2 {#|Δ| := u} : A {#|Δ| := u}
     |- _ ] =>
     lazymatch type of h with
     | _ ;;; ?Γ' ,, svass ?nx' ?B' ,,, ?Δ' |-i _ : ?T' =>
@@ -834,7 +834,7 @@ Ltac sh h :=
         eapply meta_eqctx_conv ; [
           eapply cong_subst with (Γ := Γ') (Δ := Δ') (A := T') ; [
             exact h
-          | first [ assumption | eapply eq_reflexivity ; assumption ]
+          | assumption
           ]
         | .. ]
       | .. ]
@@ -843,7 +843,7 @@ Ltac sh h :=
         eapply meta_eqctx_conv ; [
           eapply cong_subst with (Γ := Γ') (Δ := Δ' ,, d') (A := T') ; [
             exact h
-          | first [ assumption | eapply eq_reflexivity ; assumption ]
+          | assumption
           ]
         | .. ]
       | .. ]
@@ -852,7 +852,7 @@ Ltac sh h :=
         eapply meta_eqctx_conv ; [
           eapply cong_subst with (Γ := Γ') (Δ := (Δ' ,, d') ,, d'') (A := T') ; [
             exact h
-          | first [ assumption | eapply eq_reflexivity ; assumption ]
+          | assumption
           ]
         | .. ]
       | .. ]
@@ -872,11 +872,11 @@ Fixpoint type_subst {Σ Γ Δ t A nx B u}
   Σ ;;; Γ |-i u : B ->
   Σ ;;; Γ ,,, subst_context u Δ |-i t{ #|Δ| := u } : A{ #|Δ| := u }
 
-with cong_subst {Σ Γ Δ t1 t2 A nx B u1 u2}
+with cong_subst {Σ Γ Δ t1 t2 A nx B u}
   (h : Σ ;;; Γ ,, svass nx B ,,, Δ |-i t1 = t2 : A) {struct h} :
-  Σ ;;; Γ |-i u1 = u2 : B ->
-  Σ ;;; Γ ,,, subst_context u1 Δ |-i t1{ #|Δ| := u1 }
-  = t2{ #|Δ| := u2 } : A{ #|Δ| := u1 }
+  Σ ;;; Γ |-i u : B ->
+  Σ ;;; Γ ,,, subst_context u Δ |-i t1{ #|Δ| := u }
+  = t2{ #|Δ| := u } : A{ #|Δ| := u }
 
 with wf_subst {Σ Γ Δ nx B u}
   (h : wf Σ (Γ ,, svass nx B ,,, Δ)) {struct h} :
@@ -985,10 +985,64 @@ Proof.
 
   (* cong_subst *)
   - { intro hu.
-      (* dependent destruction h. *)
-      (* - *)
-      (* Should it have two different substitutions? *)
-      cheat.
+      dependent destruction h.
+      - constructor. esh.
+      - constructor. esh.
+      - eapply eq_transitivity ; esh.
+      - cbn.
+        change #|Δ| with (0 + #|Δ|)%nat.
+        rewrite 2!substP4. cbn.
+        eapply eq_beta ; esh.
+      - cbn.
+        change #|Δ| with (0 + #|Δ|)%nat.
+        rewrite substP4.
+        replace (S (0 + #|Δ|)) with (1 + #|Δ|)%nat by omega.
+        rewrite substP4.
+        eapply eq_JRefl ; esh.
+        + instantiate (1 := ne). instantiate (1 := nx0). cbn. unfold ssnoc.
+          rewrite !subst_decl_svass. cbn.
+          f_equal. f_equal. f_equal.
+          * replace (S #|Δ|) with (1 + #|Δ|)%nat by omega.
+            apply substP2. omega.
+          * replace (S #|Δ|) with (1 + #|Δ|)%nat by omega.
+            apply substP2. omega.
+        + replace (S (S #|Δ|)) with (1 + (S (0 + #|Δ|)))%nat by omega.
+          rewrite <- substP4.
+          replace (1 + (0 + #|Δ|))%nat with (S (0 + #|Δ|))%nat by omega.
+          change (sRefl (A0 {0 + #|Δ| := u}) (u0 {#|Δ| := u}))
+            with ((sRefl A0 u0){ 0 + #|Δ| := u}).
+          rewrite <- substP4. reflexivity.
+      - cbn. eapply eq_TransportRefl ; esh.
+      - eapply eq_conv ; esh.
+      - cbn. eapply cong_Prod ; esh.
+      - cbn. eapply cong_Lambda ; esh.
+      - cbn. change #|Δ| with (0 + #|Δ|)%nat.
+        rewrite substP4. cbn.
+        eapply cong_App ; esh.
+      - cbn. eapply cong_Eq ; esh.
+      - cbn. eapply cong_Refl ; esh.
+      - cbn.
+        change #|Δ| with (0 + #|Δ|)%nat.
+        rewrite substP4.
+        replace (S (0 + #|Δ|)) with (1 + #|Δ|)%nat by omega.
+        rewrite substP4.
+        eapply cong_J ; esh.
+        + instantiate (1 := ne). instantiate (1 := nx0). cbn. unfold ssnoc.
+          rewrite !subst_decl_svass. cbn.
+          f_equal. f_equal. f_equal.
+          * replace (S #|Δ|) with (1 + #|Δ|)%nat by omega.
+            apply substP2. omega.
+          * replace (S #|Δ|) with (1 + #|Δ|)%nat by omega.
+            apply substP2. omega.
+        + replace (S (S #|Δ|)) with (1 + (S (0 + #|Δ|)))%nat by omega.
+          rewrite <- substP4.
+          replace (1 + (0 + #|Δ|))%nat with (S (0 + #|Δ|))%nat by omega.
+          change (sRefl (A1 {0 + #|Δ| := u}) (u1 {0 + #|Δ| := u}))
+            with ((sRefl A1 u1){ 0 + #|Δ| := u}).
+          rewrite <- substP4. reflexivity.
+      - cbn. eapply cong_Transport ; esh.
+      - cbn. eapply cong_Heq ; esh.
+      - cbn. eapply cong_Pack ; esh.
     }
 
   (* wf_subst *)

@@ -1106,6 +1106,27 @@ Proof.
     + now apply IHht1.
     + specialize (IHht2 Γ0 (Δ ,, svass n t) b (sSort s2) nx B eq_refl).
       apply IHht2 ; assumption.
+  - cbn. eapply cong_Lambda.
+    + apply IHht1 ; eassumption.
+    + eapply IHht2 with (Δ0 := Δ ,, svass n t) (A := sSort s2)
+      ; [ reflexivity | eassumption .. ].
+    + eapply IHht3 with (Δ0 := Δ ,, svass n t)
+      ; [ reflexivity | eassumption .. ].
+  - cbn. change #|Δ| with (0 + #|Δ|)%nat.
+    rewrite substP4. cbn.
+    eapply cong_App.
+    + apply IHht1 ; eassumption.
+    + eapply IHht2 with (Δ0 := Δ ,, svass n A) (A0 := sSort s2)
+      ; [ reflexivity | eassumption .. ].
+    + apply IHht3 ; eassumption.
+    + apply IHht4 ; eassumption.
+  - cbn. eapply cong_Eq.
+    + apply IHht1 ; eassumption.
+    + apply IHht2 ; eassumption.
+    + apply IHht3 ; eassumption.
+  - cbn. eapply cong_Refl.
+    + apply IHht1 ; eassumption.
+    + apply IHht2 ; eassumption.
   - cheat.
   - cheat.
   - cheat.
@@ -1126,11 +1147,10 @@ Proof.
   - cheat.
   - cheat.
   - cheat.
-  - cheat.
-  - cheat.
-  - cheat.
-  - cheat.
-Defined.
+(* PROBLEM: This lemma won't be true if we don't have all the congruence
+   rules! Is it that necessary?
+ *)
+Abort.
 
 Lemma cong_subst1 :
   forall {Σ Γ t1 t2 A B u1 u2 n},

@@ -150,8 +150,8 @@ Proof.
   - econstructor.
     + eapply type_Sort. constructor.
     + econstructor.
-      * eapply type_Sort. 
-        repeat econstructor. 
+      * eapply type_Sort.
+        repeat econstructor.
       * econstructor.
         -- eapply type_Eq.
            ++ repeat constructor.
@@ -165,211 +165,25 @@ Proof.
         -- econstructor.
            ++ refine (type_Rel _ _ _ _ _).
               ** repeat econstructor.
-                 (* --- eexists. repeat constructor. *)
-                 (* --- eexists. repeat constructor. *)
-                 (*     eexists. repeat constructor. *)
-                 (* --- eexists. eapply type_Eq. *)
-                 (*     +++ repeat constructor. *)
-                 (*         *** eexists. repeat constructor. *)
-                 (*         *** eexists. repeat constructor. *)
-                 (*             eexists. repeat constructor. *)
-                 (*     +++ refine (type_Rel _ _ _ _ _). *)
-                 (*         *** repeat constructor. *)
-                 (*             ---- eexists. repeat constructor. *)
-                 (*             ---- eexists. repeat constructor. *)
-                 (*                  eexists. repeat constructor. *)
-                 (*         *** cbn. omega. *)
-                 (*     +++ refine (type_Rel _ _ _ _ _). *)
-                 (*         *** repeat constructor. *)
-                 (*             ---- eexists. repeat constructor. *)
-                 (*             ---- eexists. repeat constructor. *)
-                 (*                  eexists. repeat constructor. *)
-                 (*         *** cbn. omega. *)
               ** cbn. omega.
            ++ econstructor.
               ** refine (type_Rel _ _ _ _ _).
                  --- repeat econstructor.
-                     (* +++ eexists. repeat constructor. *)
-                     (* +++ eexists. repeat constructor. *)
-                     (*     eexists. repeat constructor. *)
-                     (* +++ eexists. repeat constructor. *)
-                     (*     *** eexists. repeat constructor. *)
-                     (*     *** eexists. repeat constructor. *)
-                     (*         eexists. repeat constructor. *)
-                     (*     *** refine (type_Rel _ _ _ _ _). *)
-                     (*         ---- repeat constructor. *)
-                     (*              ++++ eexists. repeat constructor. *)
-                     (*              ++++ eexists. repeat constructor. *)
-                     (*                   eexists. repeat constructor. *)
-                     (*         ---- cbn. omega. *)
-                     (*     *** refine (type_Rel _ _ _ _ _). *)
-                     (*         ---- repeat constructor. *)
-                     (*              ++++ eexists. repeat constructor. *)
-                     (*              ++++ eexists. repeat constructor. *)
-                     (*                   eexists. repeat constructor. *)
-                     (*         ---- cbn. omega. *)
-                     (* +++ eexists. refine (type_Rel _ _ _ _ _). *)
-                     (*     *** econstructor. *)
-                     (*         ---- repeat constructor. *)
-                     (*              ++++ eexists. repeat constructor. *)
-                     (*              ++++ eexists. repeat constructor. *)
-                     (*                   eexists. repeat constructor. *)
-                     (*         ---- eexists. eapply type_Eq. *)
-                     (*              ++++ repeat constructor. *)
-                     (*                   **** eexists. repeat constructor. *)
-                     (*                   **** eexists. repeat constructor. *)
-                     (*                        eexists. repeat constructor. *)
-                     (*              ++++ refine (type_Rel _ _ _ _ _). *)
-                     (*                   **** repeat constructor. *)
-                     (*                        ----- eexists. repeat constructor. *)
-                     (*                        ----- eexists. repeat constructor. *)
-                     (*                              eexists. repeat constructor. *)
-                     (*                   **** cbn. omega. *)
-                     (*              ++++ refine (type_Rel _ _ _ _ _). *)
-                     (*                   **** repeat constructor. *)
-                     (*                        ----- eexists. repeat constructor. *)
-                     (*                        ----- eexists. repeat constructor. *)
-                     (*                              eexists. repeat constructor. *)
-                     (*                   **** cbn. omega. *)
-                     (*     *** cbn. omega. *)
                  --- cbn. omega.
               ** eapply type_conv''.
                  --- refine (type_Rel _ _ _ _ _).
                      +++ repeat econstructor.
-                         (* *** eexists. repeat constructor. *)
-                         (* *** eexists. repeat constructor. *)
-                         (*     eexists. repeat constructor. *)
-                         (* *** eexists. repeat constructor. *)
-                         (*     ---- eexists. repeat constructor. *)
-                         (*     ---- eexists. repeat constructor. *)
-                         (*          eexists. repeat constructor. *)
-                         (*     ---- refine (type_Rel _ _ _ _ _). *)
-                         (*          ++++ repeat constructor. *)
-                         (*               **** eexists. repeat constructor. *)
-                         (*               **** eexists. repeat constructor. *)
-                         (*                    eexists. repeat constructor. *)
-                         (*          ++++ cbn. omega. *)
-                         (*     ---- refine (type_Rel _ _ _ _ _). *)
-                         (*          ++++ repeat constructor. *)
-                         (*               **** eexists. repeat constructor. *)
-                         (*               **** eexists. repeat constructor. *)
-                         (*                    eexists. repeat constructor. *)
-                         (*          ++++ cbn. omega. *)
-                         (* *** eexists. refine (type_Rel _ _ _ _ _). *)
-                         (*     ---- repeat constructor. *)
-                         (*          ++++ eexists. repeat constructor. *)
-                         (*          ++++ eexists. repeat constructor. *)
-                         (*               eexists. repeat constructor. *)
-                         (*          ++++ eexists. repeat constructor. *)
-                         (*               **** eexists. repeat constructor. *)
-                         (*               **** eexists. repeat constructor. *)
-                         (*                    eexists. repeat constructor. *)
-                         (*               **** refine (type_Rel _ _ _ _ _). *)
-                         (*                    ----- repeat constructor. *)
-                         (*                    +++++ eexists. repeat constructor. *)
-                         (*                    +++++ eexists. repeat constructor. *)
-                         (*                          eexists. repeat constructor. *)
-                         (*                    ----- cbn. omega. *)
-                         (*               **** refine (type_Rel _ _ _ _ _). *)
-                         (*                    ----- repeat constructor. *)
-                         (*                    +++++ eexists. repeat constructor. *)
-                         (*                    +++++ eexists. repeat constructor. *)
-                         (*                          eexists. repeat constructor. *)
-                         (*                    ----- cbn. omega. *)
-                         (*     ---- cbn. omega. *)
                      +++ cbn. omega.
                  --- cbn. eapply reflection.
                      instantiate (2 := sRel 1).
                      refine (type_Rel _ _ _ _ _).
                      +++ repeat econstructor.
-                         (* *** eexists. repeat constructor. *)
-                         (* *** eexists. repeat constructor. *)
-                         (*     eexists. repeat constructor. *)
-                         (* *** eexists. repeat constructor. *)
-                         (*     ---- eexists. repeat constructor. *)
-                         (*     ---- eexists. repeat constructor. *)
-                         (*          eexists. repeat constructor. *)
-                         (*     ---- refine (type_Rel _ _ _ _ _). *)
-                         (*          ++++ repeat constructor. *)
-                         (*               **** eexists. repeat constructor. *)
-                         (*               **** eexists. repeat constructor. *)
-                         (*                    eexists. repeat constructor. *)
-                         (*          ++++ cbn. omega. *)
-                         (*     ---- refine (type_Rel _ _ _ _ _). *)
-                         (*          ++++ repeat constructor. *)
-                         (*               **** eexists. repeat constructor. *)
-                         (*               **** eexists. repeat constructor. *)
-                         (*                    eexists. repeat constructor. *)
-                         (*          ++++ cbn. omega. *)
-                         (* *** eexists. refine (type_Rel _ _ _ _ _). *)
-                         (*     ---- repeat constructor. *)
-                         (*          ++++ eexists. repeat constructor. *)
-                         (*          ++++ eexists. repeat constructor. *)
-                         (*               eexists. repeat constructor. *)
-                         (*          ++++ eexists. repeat constructor. *)
-                         (*               **** eexists. repeat constructor. *)
-                         (*               **** eexists. repeat constructor. *)
-                         (*                    eexists. repeat constructor. *)
-                         (*               **** refine (type_Rel _ _ _ _ _). *)
-                         (*                    ----- repeat constructor. *)
-                         (*                    +++++ eexists. repeat constructor. *)
-                         (*                    +++++ eexists. repeat constructor. *)
-                         (*                          eexists. repeat constructor. *)
-                         (*                    ----- cbn. omega. *)
-                         (*               **** refine (type_Rel _ _ _ _ _). *)
-                         (*                    ----- repeat constructor. *)
-                         (*                    +++++ eexists. repeat constructor. *)
-                         (*                    +++++ eexists. repeat constructor. *)
-                         (*                          eexists. repeat constructor. *)
-                         (*                    ----- cbn. omega. *)
-                         (*     ---- cbn. omega. *)
                      +++ cbn. omega.
                  --- refine (type_Rel _ _ _ _ _).
                      +++ repeat econstructor.
-                         (* *** eexists. repeat constructor. *)
-                         (* *** eexists. repeat constructor. *)
-                         (*     eexists. repeat constructor. *)
-                         (* *** eexists. repeat constructor. *)
-                         (*     ---- eexists. repeat constructor. *)
-                         (*     ---- eexists. repeat constructor. *)
-                         (*          eexists. repeat constructor. *)
-                         (*     ---- refine (type_Rel _ _ _ _ _). *)
-                         (*          ++++ repeat constructor. *)
-                         (*               **** eexists. repeat constructor. *)
-                         (*               **** eexists. repeat constructor. *)
-                         (*                    eexists. repeat constructor. *)
-                         (*          ++++ cbn. omega. *)
-                         (*     ---- refine (type_Rel _ _ _ _ _). *)
-                         (*          ++++ repeat constructor. *)
-                         (*               **** eexists. repeat constructor. *)
-                         (*               **** eexists. repeat constructor. *)
-                         (*                    eexists. repeat constructor. *)
-                         (*          ++++ cbn. omega. *)
-                         (* *** eexists. refine (type_Rel _ _ _ _ _). *)
-                         (*     ---- repeat constructor. *)
-                         (*          ++++ eexists. repeat constructor. *)
-                         (*          ++++ eexists. repeat constructor. *)
-                         (*               eexists. repeat constructor. *)
-                         (*          ++++ eexists. repeat constructor. *)
-                         (*               **** eexists. repeat constructor. *)
-                         (*               **** eexists. repeat constructor. *)
-                         (*                    eexists. repeat constructor. *)
-                         (*               **** refine (type_Rel _ _ _ _ _). *)
-                         (*                    ----- repeat constructor. *)
-                         (*                    +++++ eexists. repeat constructor. *)
-                         (*                    +++++ eexists. repeat constructor. *)
-                         (*                          eexists. repeat constructor. *)
-                         (*                    ----- cbn. omega. *)
-                         (*               **** refine (type_Rel _ _ _ _ _). *)
-                         (*                    ----- repeat constructor. *)
-                         (*                    +++++ eexists. repeat constructor. *)
-                         (*                    +++++ eexists. repeat constructor. *)
-                         (*                          eexists. repeat constructor. *)
-                         (*                    ----- cbn. omega. *)
-                         (*     ---- cbn. omega. *)
                      +++ cbn. omega.
                          Unshelve.
-                         all: cbn; omega. 
+                         all: cbn; omega.
 Defined.
 
 (* Then we translate this ETT derivation to get an ITT term *)
@@ -390,28 +204,25 @@ Definition itt_tm : sterm.
   exact t.
 Defined.
 
-(* The first translation is already taling too long. *)
-(* Eval compute in itt_tm. *)
+Eval lazy in itt_tm.
 
 (* We translate it to TemplateCoq *)
 
 Definition tc_tm : tsl_result term :=
-  tsl_rec (2 ^ 4) Σ [] itt_tm.
+  tsl_rec (2 ^ 18) Σ [] itt_tm.
 
-(* Doesn't sound good. *)
-(* Eval lazy in tc_tm. *)
+Eval lazy in tc_tm.
 
 (* Finally we build a Coq term out of it. *)
-(* But it takes too long! *)
-(* Make Definition coq_tm := *)
-(*   ltac:( *)
-(*     let t := eval lazy in *)
-(*              (match tc_tm with *)
-(*               | Success t => t *)
-(*               | _ => tSort (sType "Error") *)
-(*               end) *)
-(*       in exact t *)
-(*   ). *)
+Make Definition coq_tm :=
+  ltac:(
+    let t := eval lazy in
+             (match tc_tm with
+              | Success t => t
+              | _ => tSort (sType "Error")
+              end)
+      in exact t
+  ).
 
 
 (* We start again with a much more minimal example without reflection. *)
@@ -443,7 +254,7 @@ Proof.
         -- refine (type_Rel _ _ _ _ _).
            ++ repeat econstructor.
            ++ cbn. omega.
-  Unshelve. all: cbn; omega. 
+  Unshelve. all: cbn; omega.
 Defined.
 
 Definition itt_tm0 : sterm.
@@ -451,11 +262,22 @@ Definition itt_tm0 : sterm.
   exact t.
 Defined.
 
-(* Same problem with such a small example! *)
 Eval lazy in itt_tm0.
 
-Print Assumptions itt_tm0.
-Print Assumptions tmty0.
+Definition tc_tm0 : tsl_result term :=
+  tsl_rec (2 ^ 18) Σ [] itt_tm0.
+
+Eval lazy in tc_tm0.
+
+Make Definition coq_tm0 :=
+  ltac:(
+    let t := eval lazy in
+             (match tc_tm0 with
+              | Success t => t
+              | _ => tSort (sType "Error")
+              end)
+      in exact t
+  ).
 
 (* One more *)
 
@@ -472,8 +294,6 @@ Definition itt_tm1 : sterm.
   destruct (type_translation tmty1 istrans_nil) as [A [t h]].
   exact t.
 Defined.
-
-Print Assumptions itt_tm1.
 
 Eval lazy in itt_tm1.
 
@@ -513,7 +333,6 @@ Definition itt_tm2 : sterm.
 Defined.
 
 Eval lazy in itt_tm2.
-Print Assumptions itt_tm2.
 
 Definition tc_tm2 : tsl_result term :=
   tsl_rec (2 ^ 4) Σ [] itt_tm2.

@@ -12,7 +12,9 @@
 
 - `PackLifts.v` contains the necessary lifts to deal with packing.
 
-- `Translation.v` contains the translation itself and the necessary lemmata.
+- `Translation.v` contains the translation itself and the necessary
+  lemmata.
+- `Quotes.v` contains quotations of terms for the final translation.
 - `FinalTranslation.v` containes the transaltion from ITT to
   TemplateCoq (meaning we can reify terms of ITT).
 - `Example.v` contains an example of the two translations chained to

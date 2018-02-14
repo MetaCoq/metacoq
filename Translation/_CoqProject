@@ -9,5 +9,6 @@ ITyping.v
 XTyping.v
 PackLifts.v
 Translation.v
+Quotes.v
 FinalTranslation.v
 Example.v

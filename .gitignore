@@ -40,6 +40,8 @@ src/string0.mli
 /Makefile.coqchecker
 /src/ast0.ml
 /src/ast0.mli
+src/monad_utils.mli
+src/monad_utils.ml
 /src/list0.ml
 src/list0.mli
 src/peanoNat.ml
@@ -56,6 +58,26 @@ src/induction.ml
 src/induction.mli
 src/liftSubst.ml
 src/liftSubst.mli
+src/basics.ml
+src/basics.mli
+src/binInt.ml
+src/binInt.mli
+src/binIntDef.ml
+src/binIntDef.mli
+src/decidableType.ml
+src/decidableType.mli
+src/equalities.ml
+src/equalities.mli
+src/fMapWeakList.ml
+src/fMapWeakList.mli
+src/fSetWeakList.ml
+src/fSetWeakList.mli
+src/mSetWeakList.ml
+src/mSetWeakList.mli
+src/univ0.ml
+src/univ0.mli
+src/uGraph0.ml
+src/uGraph0.mli
 /Makefile.conf
 /Makefile.coq.bak
 /Makefile.coq.conf
@@ -63,6 +85,11 @@ src/liftSubst.mli
 /Makefile.coqplugin.conf
 /test-suite/Makefile.coq.conf
 /.merlin
+/html/Template.*.html
+/src/univSubst.ml
+/src/univSubst.mli
+/src/utils.ml
+/src/utils.mli
 
 /Translation/Makefile.conf
 /Translation/Makefile.coq.bak

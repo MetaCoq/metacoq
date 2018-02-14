@@ -1,22 +1,49 @@
+(* Distributed under the terms of the MIT license.   *)
+
 Require Import Coq.Strings.String.
 Require Import Coq.PArith.BinPos.
+Require Import List. Import ListNotations.
+From Template Require Import monad_utils.
+From Template Require Export univ uGraph.
 
-Definition universe := string.
-Definition ident := string.
+(** * AST of Coq kernel terms and kernel data structures
 
-Inductive level : Set :=
-  Level (_ : string)
-| LevelVar (_ : nat) (* are these debruijn indices ? *).
+    ** Basic data-types:
 
-Inductive sort : Set :=
-| sProp
-| sSet
-| sType (_ : universe).
+      We reflect identifiers [ident], sort families [sort_family], names
+    [name], cast kinds [cast_kind], inductives [inductive] and primitive
+    projections [projection] and (co)-fixpoint blocks [mfixpoint] and
+    [def].
 
-Record ind : Set := {} .
+    ** Terms:
 
-Inductive sort_family : Set :=
-| InProp | InSet | InType.
+      The AST is [term : Set]
+
+      Smart constructors [mkApp], [mkApps] maintain the invariant
+    of no nested or empty n-ary applications.
+      List in fixpoints and cofixpoint should be non-empty.
+
+    ** Kernel interface: entries and declarations
+
+      Kernel input declarations for constants [constant_entry] and mutual
+    inductives [mutual_inductive_entry]. Kernel safe declarations for
+    constants [constand_decl] and inductives [minductive_decl].
+
+    ** Environments of declarations
+
+      The global environment [global_context]: a list of [global_decl] and
+    a universe graph [uGraph.t].
+
+    ** The Template Monad
+
+      A monad for programming with template-coq operations. Use [Run
+    TemplateProgram] on a monad action to produce its side-effects.
+    Uses a reduction strategy specifier [reductionStrategy].  *)
+
+Definition ident := string. (* e.g. nat *)
+Definition kername := string. (* e.g. Coq.Init.Datatypes.nat *)
+
+Inductive sort_family : Set := InProp | InSet | InType.
 
 Inductive name : Set :=
 | nAnon
@@ -28,167 +55,280 @@ Inductive cast_kind : Set :=
 | Cast
 | RevertCast.
 
-Inductive inductive : Set :=
-| mkInd : string -> nat -> inductive.
+Record inductive : Set := mkInd { inductive_mind : kername ;
+                                  inductive_ind : nat }.
+Arguments mkInd _%string _%nat.
 
-Record def (term : Set) : Set := mkdef
-{ dname : name (** the name (note, this may mention other definitions **)
-; dtype : term
-; dbody : term (** the body (a lambda term) **)
-; rarg  : nat  (** the index of the recursive argument, 0 for cofixpoints **)
-}.
+Definition projection : Set := inductive * nat (* params *) * nat (* argument *).
+
+(** Parametrized by term because term is not yet defined *)
+Record def (term : Set) : Set := mkdef {
+  dname : name; (* the name (note, this may mention other definitions **)
+  dtype : term;
+  dbody : term; (* the body (a lambda term) **)
+  rarg  : nat  (* the index of the recursive argument, 0 for cofixpoints **) }.
 
 Definition mfixpoint (term : Set) : Set :=
   list (def term).
 
-Definition projection : Set := inductive * nat (* params *) * nat (* argument *).
-
-Definition universe_instance : Set := list level.
-
 Inductive term : Set :=
 | tRel       : nat -> term
-| tVar       : ident -> term (** For free variables (e.g. in a goal) *)
-| tMeta      : nat -> term   (** NOTE: this can go away *)
+| tVar       : ident -> term (* For free variables (e.g. in a goal) *)
+| tMeta      : nat -> term   (* NOTE: this will go away *)
 | tEvar      : nat -> list term -> term
-| tSort      : sort -> term
+| tSort      : universe -> term
 | tCast      : term -> cast_kind -> term -> term
-| tProd      : name -> term (** the type **) -> term -> term
-| tLambda    : name -> term (** the type **) -> term -> term
-| tLetIn     : name -> term (** the term **) -> term (** the type **) -> term -> term
+| tProd      : name -> term (* the type *) -> term -> term
+| tLambda    : name -> term (* the type *) -> term -> term
+| tLetIn     : name -> term (* the term *) -> term (* the type *) -> term -> term
 | tApp       : term -> list term -> term
-| tConst     : string -> universe_instance -> term
+| tConst     : kername -> universe_instance -> term
 | tInd       : inductive -> universe_instance -> term
 | tConstruct : inductive -> nat -> universe_instance -> term
-| tCase      : (inductive * nat) (* # of parameters *) -> term (** type info **)
-               -> term (* discriminee *)->
-               list (nat * term) (* branches *)
-               -> term
+| tCase      : (inductive * nat) (* # of parameters *) -> term (* type info *)
+               -> term (* discriminee *) -> list (nat * term) (* branches *) -> term
 | tProj      : projection -> term -> term
 | tFix       : mfixpoint term -> nat -> term
 | tCoFix     : mfixpoint term -> nat -> term.
 
-Record inductive_body :=
-  mkinductive_body
-    { ind_name : ident;
-      ind_type : term; (* Closed arity *)
-      ind_kelim : list sort_family; (* Allowed elimination sorts *)
-      ind_ctors : list (ident * term (* Under context of arities of the mutual inductive *)
-                    * nat (* arity, w/o lets, w/o parameters *));
-      ind_projs : list (ident * term) (* names and types of projections, if any.
-                                     Type under context of params and inductive object *) }.
 
-Inductive program : Set :=
-| PConstr : string -> universe_instance -> term (* type *) -> term (* body *) -> program -> program
-| PType   : ident -> nat (* # of parameters, w/o let-ins *) ->
-            list inductive_body (* Non-empty *) -> program -> program
-| PAxiom  : ident -> universe_instance -> term (* the type *) -> program -> program
-| PIn     : term -> program.
-
-
-Record constant_decl :=
-  { cst_name : ident; (* TODO Universes *)
-    cst_universes : universe_instance;
-    cst_type : term;
-    cst_body : option term }.
-
-Record minductive_decl :=
-  { ind_npars : nat;
-    ind_bodies : list inductive_body }.
-
-Inductive global_decl :=
-| ConstantDecl : ident -> constant_decl -> global_decl
-| InductiveDecl : ident -> minductive_decl -> global_decl.
-
-Definition extend_program (p : program) (d : global_decl) : program :=
-  match d with
-  | ConstantDecl i {| cst_name:=_; cst_universes := u; cst_type:=ty;  cst_body:=Some body |}
-    => PConstr i u (* TODO universes *) ty body p
-  | ConstantDecl i {| cst_name:=_; cst_universes := u; cst_type:=ty;  cst_body:=None |}
-    => PAxiom i u ty p
-  | InductiveDecl i {| ind_npars:=n; ind_bodies := l |}
-    => PType i n l p
+Definition mkApps t us :=
+  match us with
+  | nil => t
+  | _ => match t with
+        | tApp f args => tApp f (args ++ us)
+        | _ => tApp t us
+        end
   end.
 
-(** representation of mutual inductives. nearly copied from Coq/kernel/entries.mli
+Definition mkApp t u := Eval cbn in mkApps t [u].
+
+
+(** ** Entries
+
+  The kernel accepts these inputs and typechecks them to produce
+  declarations. Reflects [kernel/entries.mli].
 *)
+
+(** *** Constant and axiom entries *)
+
+Record parameter_entry := {
+  parameter_entry_type      : term;
+  parameter_entry_universes : universe_context }.
+
+Record definition_entry := {
+  definition_entry_type      : term;
+  definition_entry_body      : term;
+  definition_entry_universes : universe_context;
+  definition_entry_opaque    : bool }.
+
+
+Inductive constant_entry :=
+| ParameterEntry  (p : parameter_entry)
+| DefinitionEntry (def : definition_entry).
+
+(** *** Inductive entries *)
+
+(** This is the epresentation of mutual inductives.
+    nearly copied from [kernel/entries.mli]
+
+  Assume the following definition in concrete syntax:
+
+[[
+  Inductive I1 (x1:X1) ... (xn:Xn) : A1 := c11 : T11 | ... | c1n1 : T1n1
+  ...
+  with      Ip (x1:X1) ... (xn:Xn) : Ap := cp1 : Tp1  ... | cpnp : Tpnp.
+]]
+
+  then, in [i]th block, [mind_entry_params] is [xn:Xn;...;x1:X1];
+  [mind_entry_arity] is [Ai], defined in context [x1:X1;...;xn:Xn];
+  [mind_entry_lc] is [Ti1;...;Tini], defined in context
+  [A'1;...;A'p;x1:X1;...;xn:Xn] where [A'i] is [Ai] generalized over
+  [x1:X1;...;xn:Xn].
+*)
+
+Inductive recursivity_kind :=
+  | Finite (* = inductive *)
+  | CoFinite (* = coinductive *)
+  | BiFinite (* = non-recursive, like in "Record" definitions *).
+
+Inductive local_entry : Set :=
+| LocalDef : term -> local_entry (* local let binding *)
+| LocalAssum : term -> local_entry.
 
 Record one_inductive_entry : Set := {
   mind_entry_typename : ident;
   mind_entry_arity : term;
-  mind_entry_template : bool; (* template polymorphism ? *)
+  mind_entry_template : bool; (* template polymorphism *)
   mind_entry_consnames : list ident;
-  mind_entry_lc : list term}.
+  mind_entry_lc : list term (* constructor list *) }.
+
+Record mutual_inductive_entry := {
+  mind_entry_record    : option (option ident);
+  (* Is this mutual inductive defined as a record?
+     If so, is it primitive, using binder name [ident]
+     for the record in primitive projections ? *)
+  mind_entry_finite    : recursivity_kind;
+  mind_entry_params    : list (ident * local_entry);
+  mind_entry_inds      : list one_inductive_entry;
+  mind_entry_universes : universe_context;
+  mind_entry_private   : option bool
+  (* Private flag for sealing an inductive definition in an enclosing
+     module. Not handled by Template Coq yet. *) }.
 
 
-Inductive local_entry : Set := 
-| LocalDef : term -> local_entry (* local let binding *)
-| LocalAssum : term -> local_entry.
 
+(** ** Declarations *)
 
-Inductive recursivity_kind :=
-  | Finite (** = inductive *)
-  | CoFinite (** = coinductive *)
-  | BiFinite (** = non-recursive, like in "Record" definitions *).
+(** *** The context of De Bruijn indices *)
 
+Record context_decl := {
+  decl_name : name ;
+  decl_body : option term ;
+  decl_type : term }.
 
-(* kernel/entries.mli*)
-Record definition_entry : Set := {
-  definition_entry_type : term;
-  definition_entry_body : term }.
-  (* Missing universes, opaque, inline *)
+(** Local (de Bruijn) variable binding *)
 
-Record parameter_entry : Set := {
-  parameter_entry_type : term }.
+Definition vass x A := {| decl_name := x; decl_body := None; decl_type := A |}.
 
-Inductive constant_entry : Set :=
-| ParameterEntry (p : parameter_entry)
-| DefinitionEntry (def : definition_entry).
+(** Local (de Bruijn) let-binding *)
 
+Definition vdef x t A := {| decl_name := x; decl_body := Some t; decl_type := A |}.
 
-Record mutual_inductive_entry : Set := {
-  mind_entry_record : option (option ident); 
-  mind_entry_finite : recursivity_kind;
-  mind_entry_params : list (ident * local_entry);
-  mind_entry_inds : list one_inductive_entry;
-  mind_entry_polymorphic : bool; 
-(*  mind_entry_universes : Univ.universe_context; *)
-  (* Should the above be used? At least we need one number indicating
-     the number of polymorphically bound definitions*)
-  mind_entry_private : option bool
-}.
+(** Local (de Bruijn) context *)
+
+Definition context := list context_decl.
+
+(** Last declaration first *)
+
+Definition snoc {A} (Γ : list A) (d : A) := d :: Γ.
+
+Notation " Γ ,, d " := (snoc Γ d) (at level 20, d at next level).
+
+(** *** Environments *)
+
+(** See [one_inductive_body] from [declarations.ml]. *)
+Record inductive_body := mkinductive_body {
+  ind_name : ident;
+  ind_type : term; (* Closed arity *)
+  ind_kelim : list sort_family; (* Allowed elimination sorts *)
+  ind_ctors : list (ident * term (* Under context of arities of the mutual inductive *)
+                    * nat (* arity, w/o lets, w/o parameters *));
+  ind_projs : list (ident * term) (* names and types of projections, if any.
+                                     Type under context of params and inductive object *) }.
+
+(* See [mutual_inductive_body] from [declarations.ml]. *)
+Record minductive_decl := {
+  ind_npars : nat;
+  ind_bodies : list inductive_body ;
+  ind_universes : universe_context }.
+
+(* See [constant_body] from [declarations.ml] *)
+Record constant_decl := {
+  cst_universes : universe_context;
+  cst_type : term;
+  cst_body : option term }.
+
+Inductive global_decl :=
+| ConstantDecl : kername -> constant_decl -> global_decl
+| InductiveDecl : kername -> minductive_decl -> global_decl.
+
+Definition global_declarations := list global_decl.
+
+(** A context of global declarations + global universe constraints,
+    i.e. a global environment *)
+
+Definition global_context : Type := global_declarations * uGraph.t.
+
+(** *** Programs
+
+  A set of declarations and a term, as produced by [Quote Recursively]. *)
+
+Inductive program :=
+| PConstr : string -> universe_context -> term (* type *) -> term (* body *) -> program -> program
+| PType   : ident -> universe_context -> nat (* # of parameters, w/o let-ins *) ->
+            list inductive_body (* Non-empty *) -> program -> program
+| PAxiom  : ident -> universe_context -> term (* the type *) -> program -> program
+| PIn     : term -> program.
+
+Definition extend_program (p : program) (d : global_decl) : program :=
+  match d with
+  | ConstantDecl i {| cst_universes := u; cst_type:=ty;  cst_body:=Some body |}
+    => PConstr i u ty body p
+  | ConstantDecl i {| cst_universes := u; cst_type:=ty;  cst_body:=None |}
+    => PAxiom i u ty p
+  | InductiveDecl i {| ind_npars:=n; ind_bodies := l ; ind_universes := u |}
+    => PType i u n l p
+  end.
+
+(** ** The Template Monad
+
+  A monad for programming with Template Coq structures. *)
+
+(** Reduction strategy to apply, beware [cbv], [cbn] and [lazy] are _strong_. *)
 
 Inductive reductionStrategy : Set :=
-  cbv | cbn | hnf | all.
+  cbv | cbn | hnf | all | lazy.
 
-(** A monad for programming with template-coq operations.
-Using this monad, it should be possible to write many plugins (e.g. paramcoq)
-in Gallina *)
+Definition typed_term := {T : Type & T}.
+Definition existT_typed_term a t : typed_term := @existT Type (fun T => T) a t.
+
+Definition my_projT1 (t : typed_term) : Type := @projT1 Type (fun T => T) t.
+Definition my_projT2 (t : typed_term) : my_projT1 t := @projT2 Type (fun T => T) t.
+
+(** Kernel declaration references [global_reference] *)
+
+Inductive global_reference :=
+(* VarRef of Names.variable *)
+| ConstRef : kername -> global_reference
+| IndRef : inductive -> global_reference
+| ConstructRef : inductive -> nat -> global_reference.
+
+(** *** The TemplateMonad type *)
+
 Inductive TemplateMonad : Type -> Prop :=
+(* Monadic operations *)
 | tmReturn : forall {A:Type}, A -> TemplateMonad A
-| tmBind : forall {A B : Type}, 
-    (TemplateMonad A) 
-    -> (A -> TemplateMonad B) 
-    -> (TemplateMonad B)
+| tmBind : forall {A B : Type}, TemplateMonad A -> (A -> TemplateMonad B)
+                           -> TemplateMonad B
+
+(* General commands *)
 | tmPrint : forall {A:Type}, A -> TemplateMonad unit
-(** Quote the body of a definition or inductive. Its name need not be fully qualified --
-  the implementation uses Locate *)
-| tmQuote : ident -> bool (** bypass opacity?*)-> TemplateMonad (option (constant_entry+mutual_inductive_entry))
-(** similar to Quote Definition ... := ...
-  To actually make the definition, use (tmMkDefinition false) *)
-| tmQuoteTerm : forall {A:Type}, A  -> TemplateMonad term
-(** similar to Quote Recursively Definition ... := ...*)
-| tmQuoteTermRec : forall {A:Type}, A  -> TemplateMonad program
-(** FIXME: strategy is currently ignored in the implementation -- it does all reductions.*)
-| tmReduce : reductionStrategy -> forall {A:Type}, A -> TemplateMonad A
-| tmMkDefinition : bool (* unquote? *) -> ident -> forall {A:Type}, A -> TemplateMonad unit (* bool indicating success? *)
-    (* should it take the number of polymorphically bound universes? in case
-       unquoting has to be done? *)
-| tmMkInductive : mutual_inductive_entry -> TemplateMonad unit (* bool indicating success? *)
+| tmFail : forall {A:Type}, string -> TemplateMonad A
+| tmEval : reductionStrategy -> forall {A:Type}, A -> TemplateMonad A
 
-(* Not yet implemented:*)
+(* Return the defined constant *)
+| tmDefinition : ident -> forall {A:Type}, A -> TemplateMonad A
+| tmAxiom : ident -> forall A, TemplateMonad A
+| tmLemma : ident -> forall A, TemplateMonad A
 
-(** unquote then reduce then quote *)
-| tmUnQReduceQ : reductionStrategy -> term (* -> strategy? *)-> TemplateMonad term
-| tmUnquote : term  -> TemplateMonad {T:Type & T}
-| tmFreshName : ident -> TemplateMonad bool 
-    (* yes => Guarenteed to not cause "... already declared" error *).
+(* Guarenteed to not cause "... already declared" error *)
+| tmFreshName : ident -> TemplateMonad ident
+
+| tmAbout : ident -> TemplateMonad (option global_reference)
+| tmCurrentModPath : unit -> TemplateMonad string
+
+(* Quoting and unquoting commands *)
+(* Similar to Quote Definition ... := ... *)
+| tmQuote : forall {A:Type}, A  -> TemplateMonad term
+(* Similar to Quote Recursively Definition ... := ...*)
+| tmQuoteRec : forall {A:Type}, A  -> TemplateMonad program
+(* Quote the body of a definition or inductive. Its name need not be fully qualified *)
+| tmQuoteInductive : kername -> TemplateMonad minductive_decl
+| tmQuoteUniverses : unit -> TemplateMonad uGraph.t
+| tmQuoteConstant : kername -> bool (* bypass opacity? *) -> TemplateMonad constant_entry
+| tmMkDefinition : ident -> term -> TemplateMonad unit
+    (* unquote before making the definition *)
+    (* FIXME take an optional universe context as well *)
+| tmMkInductive : mutual_inductive_entry -> TemplateMonad unit
+| tmUnquote : term  -> TemplateMonad typed_term
+| tmUnquoteTyped : forall A, term -> TemplateMonad A
+
+(* Not yet implemented *)
+| tmExistingInstance : ident -> TemplateMonad unit
+.
+
+(** This allow to use notations of MonadNotation *)
+
+Instance TemplateMonad_Monad : Monad TemplateMonad :=
+  {| ret := @tmReturn ; bind := @tmBind |}.

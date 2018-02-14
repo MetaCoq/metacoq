@@ -1,8 +1,16 @@
+(* Distributed under the terms of the MIT license.   *)
+
 Require Import List Program.
 Require Import Template.Template Template.Ast.
 Require Import BinPos.
 Require Import Coq.Arith.Compare_dec Bool.
 Require Import Template.Induction.
+
+(** * Lifting and substitution for the AST
+
+  Along with standard commutation lemmas.
+  Definition of [closedn] (boolean) predicate for checking if
+  a term is closed. *)
 
 Set Asymmetric Patterns.
 
@@ -30,15 +38,17 @@ Fixpoint lift n k t : term :=
   | x => x
   end.
 
-Notation lift0 n t := (lift n 0 t).
+
+Notation lift0 n := (lift n 0).
+Definition up := lift 1 0.
 
 Fixpoint subst t k u :=
   match u with
   | tRel n =>
     match nat_compare k n with
     | Datatypes.Eq => lift0 k t
-    | Gt => tRel n
-    | Lt => tRel (pred n)
+    | Datatypes.Gt => tRel n
+    | Datatypes.Lt => tRel (pred n)
     end
   | tEvar ev args => tEvar ev (List.map (subst t k) args)
   | tLambda na T M => tLambda na (subst t k T) (subst t (S k) M)
@@ -61,8 +71,12 @@ Fixpoint subst t k u :=
   | x => x
   end.
 
-Notation subst0 t u := (subst t 0 u).
+Notation subst0 t := (subst t 0).
 Notation "M { j := N }" := (subst N j M) (at level 10, right associativity) : t_scope.
+
+(** Substitutes [t1 ; .. ; tn] in u for [Rel 0; .. Rel (n-1)]*)
+Definition substl l t :=
+  List.fold_left (fun t u => subst0 u t) l t.
 
 Fixpoint closedn k (t : term) : bool :=
   match t with

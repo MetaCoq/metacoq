@@ -5,6 +5,8 @@ BinNums
 BinPosDef
 BinPos
 BinNat
+BinIntDef
+BinInt
 Ascii
 String0
 Specif
@@ -12,6 +14,16 @@ Sumbool
 PeanoNat
 List0
 Reify
+Utils
+Monad_utils
+Basics
+Equalities
+DecidableType
+MSetWeakList
+FSetWeakList
+FMapWeakList
+Univ0
+UGraph0
 Ast0
 Template_coq
 Template_coq_mod

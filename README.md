@@ -62,6 +62,13 @@ Contributors include [Yannick Forster](https://github.com/yforster),
 [Cyril Cohen](https://github.com/CohenCyril) and [Nicolas
 Tabareau](https://github.com/Tabareau).
 
+Copyright (c) 2014-2018 Gregory Malecha\
+Copyright (c) 2015-2018 Abhishek Anand, Matthieu Sozeau\
+Copyright (c) 2017-2018 Simon Boulier, Nicolas Tabareau, Cyril Cohen
+
+This software is distributed under the terms of the MIT license.
+See [LICENSE](LICENSE) for details.
+
 Branches
 ========
 

@@ -13,12 +13,6 @@ open Pp (* this adds the ++ to the current scope *)
 
 let contrib_name = "template-coq"
 
-let toDecl (old: Names.name * ((Constr.constr) option) * Constr.constr) : Context.Rel.Declaration.t =
-  let (name,value,typ) = old in
-  match value with
-  | Some value -> Context.Rel.Declaration.LocalDef (name,value,typ)
-  | None -> Context.Rel.Declaration.LocalAssum (name,typ)
-
 let cast_prop = ref (false)
 let _ = Goptions.declare_bool_option {
   Goptions.optdepr = false;
@@ -28,18 +22,8 @@ let _ = Goptions.declare_bool_option {
   Goptions.optwrite = (fun a -> cast_prop:=a);
 }
 
-let cast_types = ref (false)
-let _ = Goptions.declare_bool_option {
-  Goptions.optdepr = false;
-  Goptions.optname = "Casting of all types in template-coq";
-  Goptions.optkey = ["Template";"Cast";"Types"];
-  Goptions.optread = (fun () -> !cast_types);
-  Goptions.optwrite = (fun a -> cast_types:=a);
-}
-
 (* whether Set Template Cast Propositions is on, as needed for erasure in Certicoq *)
 let is_cast_prop () = !cast_prop
-
 
 let opt_debug = ref false
 
@@ -48,6 +32,15 @@ let debug (m : unit -> Pp.std_ppcmds) =
     Feedback.(msg_debug (m ()))
   else
     ()
+
+let toDecl (old: Names.name * ((Constr.constr) option) * Constr.constr) : Context.Rel.Declaration.t =
+  let (name,value,typ) = old in
+  match value with
+  | Some value -> Context.Rel.Declaration.LocalDef (name,value,typ)
+  | None -> Context.Rel.Declaration.LocalAssum (name,typ)
+
+let getType env (t:Term.constr) : Term.constr =
+    EConstr.to_constr Evd.empty (Retyping.get_type_of env Evd.empty (EConstr.of_constr t))
 
 let not_supported trm =
   CErrors.user_err (str "Not Supported:" ++ spc () ++ Printer.pr_constr trm)
@@ -1038,43 +1031,6 @@ struct
   let push_rel decl (in_prop, env) = (in_prop, Environ.push_rel decl env)
   let push_rel_context ctx (in_prop, env) = (in_prop, Environ.push_rel_context ctx env)
 
-  let castSetProp (sf:Term.sorts) t =
-    if !cast_types then
-      let sf = Term.family_of_sort sf in
-      let k = Q.quote_cast_kind Constr.DEFAULTcast in
-      if sf == Term.InProp
-      then Q.mkCast t k (Q.mkSort (Q.quote_sort Sorts.prop))
-      else if sf == Term.InSet
-      then Q.mkCast t k (Q.mkSort (Q.quote_sort Sorts.set))
-      else t
-    else t
-
-  let noteTypeAsCast t typ =
-    if !cast_types then
-      Q.mkCast t (Q.quote_cast_kind Constr.DEFAULTcast) typ
-    else t
-
-  let getSort env (t:Term.constr) =
-    if !cast_types then
-      Retyping.get_sort_of env Evd.empty (EConstr.of_constr t)
-    else Sorts.prop
-
-  let getType env (t:Term.constr) : Term.constr =
-    EConstr.to_constr Evd.empty (Retyping.get_type_of env Evd.empty (EConstr.of_constr t))
-
-  (* given a term of shape \x1 x2 ..., T, it puts a cast around T if T is a Set or a Prop,
-     lambdas like this arise in the case-return type in matches, i.e. the part between return and with in
-     match _  as   _ in  _ return __ with *)
-  let rec putReturnTypeInfo (env : Environ.env) (t: Term.constr) : Term.constr =
-    if !cast_types then
-      match Term.kind_of_term t with
-      | Term.Lambda (n,t,b) ->
-         Term.mkLambda (n,t,putReturnTypeInfo (Environ.push_rel (toDecl (n, None, t)) env) b)
-      | _ ->
-         let ty = getType env t in
-         Term.mkCast (t,Term.DEFAULTcast,ty)
-    else t
-
   let get_abstract_inductive_universes iu =
     match iu with
     | Monomorphic_ind ctx -> ctx
@@ -1119,17 +1075,14 @@ struct
 
       | Term.Prod (n,t,b) ->
 	let (t',acc) = quote_term acc env t in
-        let sf = getSort (snd env) t in
         let env = push_rel (toDecl (n, None, t)) env in
-        let sfb = getSort (snd env) b in
-	let (b',acc) = quote_term acc env b in
-        (Q.mkProd (Q.quote_name n) (castSetProp sf t') (castSetProp sfb b'), acc)
+        let (b',acc) = quote_term acc env b in
+        (Q.mkProd (Q.quote_name n) t' b', acc)
 
       | Term.Lambda (n,t,b) ->
 	let (t',acc) = quote_term acc env t in
-        let sf = getSort (snd env) t  in
-	let (b',acc) = quote_term acc (push_rel (toDecl (n, None, t)) env) b in
-	(Q.mkLambda (Q.quote_name n) (castSetProp sf t') b', acc)
+        let (b',acc) = quote_term acc (push_rel (toDecl (n, None, t)) env) b in
+        (Q.mkLambda (Q.quote_name n) t' b', acc)
 
       | Term.LetIn (n,e,t,b) ->
 	let (e',acc) = quote_term acc env e in
@@ -1163,17 +1116,9 @@ struct
          let ind = Q.quote_inductive (Q.quote_kn (Names.MutInd.canonical (fst ci.Term.ci_ind)),
                                       Q.quote_int (snd ci.Term.ci_ind)) in
          let npar = Q.quote_int ci.Term.ci_npar in
-         let typeInfo = putReturnTypeInfo (snd env) typeInfo in
-	 let (qtypeInfo,acc) = quote_term acc env typeInfo in
+         let (qtypeInfo,acc) = quote_term acc env typeInfo in
 	 let (qdiscriminant,acc) = quote_term acc env discriminant in
-         let qdiscriminant,acc =
-           if !cast_types then
-             let discriminantType = getType (snd env) discriminant in
-             let (discriminantType,acc) = (quote_term acc env discriminantType) in
-             noteTypeAsCast qdiscriminant discriminantType, acc
-           else qdiscriminant, acc
-         in
-	 let (branches,nargs,acc) =
+         let (branches,nargs,acc) =
            CArray.fold_left2 (fun (xs,nargs,acc) x narg ->
                let (x,acc) = quote_term acc env x in
                let narg = Q.quote_int narg in
@@ -1406,8 +1351,7 @@ struct
       match ob with
       | Some b -> (Q.quote_ident n, Left (quote_term env b))::lr
       | None ->
-         let sf = getSort env t in
-         let t' = castSetProp sf (quote_term env t) in
+         let t' = quote_term env t in
          (Q.quote_ident n, Right t')::lr in
     let (env, params) = List.fold_left (process_local_entry f) (env,[]) (List.rev params) in
     (env, Q.quote_mind_params (List.rev params))

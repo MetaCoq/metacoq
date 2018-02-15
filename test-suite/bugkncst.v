@@ -20,7 +20,6 @@ Require Import Template.Template.
 Require Import Template.Ast.
 
 Unset Template Cast Propositions.
-Unset Template Cast Types.
 
 (* Use template-coq to make a [program] from function defined above *)
 Time Quote Recursively Definition p_Plus1 := Plus1.

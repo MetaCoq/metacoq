@@ -60,9 +60,6 @@ with odd (a : nat) : bool :=
     | S a => even a
   end.
 
-Unset Template Cast Types.
-Test Template Cast Types.
-
 Quote Definition add_syntax := Eval compute in add.
 
 Quote Definition eo_syntax := Eval compute in even.

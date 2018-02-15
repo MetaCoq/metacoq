@@ -58,8 +58,8 @@ Instance monad_exc : MonadExc tsl_error tsl_result :=
 Class Translation := { tsl_id : ident -> ident ;
                        tsl_tm : tsl_context -> term -> tsl_result term ;
                        tsl_ty : tsl_context -> term -> tsl_result term ;
-                       tsl_ind : tsl_context -> kername -> kername -> minductive_decl
-                            -> tsl_result (tsl_table * list minductive_decl)
+                       tsl_ind : tsl_context -> kername -> kername -> mutual_inductive_body
+                            -> tsl_result (tsl_table * list mutual_inductive_body)
                      }.
 
 

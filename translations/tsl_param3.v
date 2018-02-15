@@ -211,26 +211,26 @@ Quote Recursively Definition sigma_prog := @sigma.
 Quote Recursively Definition eq_prog := @eq.
 Quote Recursively Definition false_prog := @False.
 Definition sigma_decl := Eval compute in
-      extract_mind_decl_from_program "Translations.sigma.sigma" sigma_prog.
+      lookup_mind_decl "Translations.sigma.sigma" (fst sigma_prog).
 Definition eq_decl := Eval compute in
-      extract_mind_decl_from_program "Translations.tsl_param3.eq" eq_prog.
+      lookup_mind_decl "Translations.tsl_param.eq" (fst eq_prog).
 Definition false_decl := Eval compute in
-      extract_mind_decl_from_program "Coq.Init.Logic.False" false_prog.
+      lookup_mind_decl "Coq.Init.Logic.False" (fst false_prog).
 
 
 Definition ΣE : option tsl_context :=
   sd <- sigma_decl ;;
   ed <- eq_decl ;;
   fd <- false_decl ;;
-  let Σ' := add_global_decl (InductiveDecl "Coq.Init.Logic.False" fd) (
-            add_global_decl (InductiveDecl "Translations.tsl_param3.eq" ed) (
-            add_global_decl (InductiveDecl "Translations.sigma.sigma" sd)
-            ([], init_graph))) in
+  let Σ' := [InductiveDecl "Coq.Init.Logic.False" fd;
+            InductiveDecl "Translations.tsl_param.eq" ed;
+            InductiveDecl "Translations.sigma.sigma" sd] in
+  let Σ' := reconstruct_global_context Σ' in
   let E' := [(IndRef (mkInd "Translations.sigma.sigma" 0),
               tConst "sigmaᶠ" []);
              (ConstructRef (mkInd "Translations.sigma.sigma" 0) 0,
               tConst "existᶠ" []);
-             (IndRef (mkInd "Translations.tsl_param3.eq" 0), tConst "eqᶠ" []);
+             (IndRef (mkInd "Translations.tsl_param.eq" 0), tConst "eqᶠ" []);
              (IndRef (mkInd "Coq.Init.Logic.False" 0), tConst "Falseᶠ" [])
             ] in
   ret (Σ', E').

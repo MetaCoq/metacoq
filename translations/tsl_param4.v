@@ -174,9 +174,9 @@ Fixpoint map_i_aux {A B} (f : nat -> A -> B) (n0 : nat) (l : list A) : list B
 Definition map_i {A B} f := @map_i_aux A B f 0.
 
 
-Definition tsl_mind_decl (E : tsl_table)
-           (id : ident) (mind : minductive_decl)
-  : tsl_table * list minductive_decl.
+Definition tsl_mind_body (E : tsl_table)
+           (id : ident) (mind : mutual_inductive_body)
+  : tsl_table * list mutual_inductive_body.
   refine (_, [{| ind_npars := 2 * mind.(ind_npars);
                  ind_bodies := _ |}]).
   - refine (let id' := tsl_ident id in (* should be kn ? *)
@@ -227,10 +227,10 @@ Definition tTranslate (ΣE : tsl_context) (id : ident)
   | ConstructRef ind _ => tmPrint "todo tTranslate" ;; ret None
   | IndRef (mkInd kn n) =>
       d <- tmQuoteInductive id ;;
-      let d' := tsl_mind_decl E id d in
+      let d' := tsl_mind_body E id d in
       d' <- tmEval lazy d' ;;
       tmPrint d' ;;
-      let entries := map mind_decl_to_entry (snd d') in
+      let entries := map mind_body_to_entry (snd d') in
       (* print_nf entries ;; *)
       monad_fold_left (fun _ e => tmMkInductive e) entries tt ;;
       let decl := InductiveDecl kn d in

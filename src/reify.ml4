@@ -1,13 +1,15 @@
 (*i camlp4deps: "parsing/grammar.cma" i*)
 (*i camlp4use: "pa_extend.cmp" i*)
 
-open Declarations
 open Ltac_plugin
+open Declarations
 open Univ
 open Entries
 open Names
 open Redops
 open Genredexpr
+open Pp (* this adds the ++ to the current scope *)
+
 
 let contrib_name = "template-coq"
 
@@ -38,7 +40,6 @@ let _ = Goptions.declare_bool_option {
 (* whether Set Template Cast Propositions is on, as needed for erasure in Certicoq *)
 let is_cast_prop () = !cast_prop
 
-open Pp (* this adds the ++ to the current scope *)
 
 let opt_debug = ref false
 
@@ -79,13 +80,12 @@ let hnf_type env ty =
   hnf_type true ty
 
 let split_name s : (Names.DirPath.t * Names.Id.t) =
-  let ss = List.rev (Str.split (Str.regexp (Str.quote ".")) s) in
+  let ss = List.rev (CString.split '.' s) in
   match ss with
     nm :: rst ->
      let dp = (Names.make_dirpath (List.map Names.id_of_string rst)) in (dp, Names.Id.of_string nm)
   | [] -> raise (Failure "Empty name cannot be quoted")
 
-module Mindset = Names.Mindset
 
 type ('a,'b) sum =
   Left of 'a | Right of 'b
@@ -124,27 +124,30 @@ module type Quoter = sig
   type quoted_cast_kind
   type quoted_kernel_name
   type quoted_inductive
-  type quoted_decl
-  type quoted_program
+  type quoted_proj
+  type quoted_global_reference
+
+  type quoted_sort_family
   type quoted_constraint_type
   type quoted_univ_constraint
   type quoted_univ_instance
   type quoted_univ_constraints
   type quoted_univ_context
   type quoted_inductive_universes
+
   type quoted_mind_params
-  type quoted_ind_entry =
-    quoted_ident * t * quoted_bool * quoted_ident list * t list
+  type quoted_ind_entry = quoted_ident * t * quoted_bool * quoted_ident list * t list
   type quoted_definition_entry = t * t option * quoted_univ_context
   type quoted_mind_entry
   type quoted_mind_finiteness
   type quoted_entry
-  type quoted_proj
-  type quoted_sort_family
 
-  open Names
-  
-  
+  type quoted_one_inductive_body
+  type quoted_mutual_inductive_body
+  type quoted_constant_body
+  type quoted_global_decl
+  type quoted_global_declarations
+  type quoted_program  (* the return type of quote_recursively *)
 
   val quote_ident : Id.t -> quoted_ident
   val quote_name : Name.t -> quoted_name
@@ -155,13 +158,15 @@ module type Quoter = sig
   val quote_cast_kind : Constr.cast_kind -> quoted_cast_kind
   val quote_kn : kernel_name -> quoted_kernel_name
   val quote_inductive : quoted_kernel_name * quoted_int -> quoted_inductive
+  val quote_proj : quoted_inductive -> quoted_int -> quoted_int -> quoted_proj
+
   val quote_constraint_type : Univ.constraint_type -> quoted_constraint_type
   val quote_univ_constraint : Univ.univ_constraint -> quoted_univ_constraint
   val quote_univ_instance : Univ.Instance.t -> quoted_univ_instance
   val quote_univ_constraints : Univ.Constraint.t -> quoted_univ_constraints
   val quote_univ_context : Univ.UContext.t -> quoted_univ_context
   val quote_abstract_univ_context : Univ.AUContext.t -> quoted_univ_context
-  val quote_inductive_universes : inductive_universes -> quoted_inductive_universes
+  val quote_inductive_universes : Entries.inductive_universes -> quoted_inductive_universes
 
   val quote_mind_params : (quoted_ident * (t,t) sum) list -> quoted_mind_params
   val quote_mind_finiteness : Decl_kinds.recursivity_kind -> quoted_mind_finiteness
@@ -171,7 +176,6 @@ module type Quoter = sig
     quoted_mind_entry
 
   val quote_entry : (quoted_definition_entry, quoted_mind_entry) sum option -> quoted_entry
-  val quote_proj : quoted_inductive -> quoted_int -> quoted_int -> quoted_proj
 
   val mkName : quoted_ident -> quoted_name
   val mkAnon : quoted_name
@@ -195,19 +199,26 @@ module type Quoter = sig
   val mkFix : (quoted_int array * quoted_int) * (quoted_name array * t array * t array) -> t
   val mkCoFix : quoted_int * (quoted_name array * t array * t array) -> t
 
-  val mkMutualInductive :
-    quoted_kernel_name -> quoted_univ_context -> quoted_int (* params *) ->
-    (quoted_ident * t (* ind type *) * quoted_sort_family list *
-       (quoted_ident * t (* constr type *) * quoted_int) list *
-         (quoted_ident * t (* projection type *)) list) list ->
-     quoted_decl
+  val mk_one_inductive_body : quoted_ident * t (* ind type *) * quoted_sort_family list
+                                 * (quoted_ident * t (* constr type *) * quoted_int) list
+                                 * (quoted_ident * t (* projection type *)) list
+                                 -> quoted_one_inductive_body
 
-  val mkConstant : quoted_kernel_name -> quoted_univ_context ->
-                   t (* type *) -> t (* body *) -> quoted_decl
-  val mkAxiom : quoted_kernel_name -> quoted_univ_context -> t -> quoted_decl
+  val mk_mutual_inductive_body : quoted_int (* params *)
+                                    -> quoted_one_inductive_body list
+                                    -> quoted_univ_context
+                                    -> quoted_mutual_inductive_body
 
-  val mkExt : quoted_decl -> quoted_program -> quoted_program
-  val mkIn : t -> quoted_program
+  val mk_constant_body : t (* type *) -> t option (* body *) -> quoted_univ_context -> quoted_constant_body
+
+  val mk_inductive_decl : quoted_kernel_name -> quoted_mutual_inductive_body -> quoted_global_decl
+
+  val mk_constant_decl : quoted_kernel_name -> quoted_constant_body -> quoted_global_decl
+
+  val empty_global_declartions : quoted_global_declarations
+  val add_global_decl : quoted_global_decl -> quoted_global_declarations -> quoted_global_declarations
+
+  val mk_program : quoted_global_declarations -> t -> quoted_program
 
   val unquote_ident : quoted_ident -> Id.t
   val unquote_name : quoted_name -> Name.t
@@ -249,26 +260,31 @@ struct
   type quoted_cast_kind = Term.constr  (* of type Ast.cast_kind *)
   type quoted_kernel_name = Term.constr (* of type Ast.kername *)
   type quoted_inductive = Term.constr (* of type Ast.inductive *)
+  type quoted_proj = Term.constr (* of type Ast.projection *)
+  type quoted_global_reference = Term.constr (* of type Ast.global_reference *)
+
+  type quoted_sort_family = Term.constr (* of type Ast.sort_family *)
   type quoted_constraint_type = Term.constr (* of type univ.constraint_type *)
   type quoted_univ_constraint = Term.constr (* of type univ.univ_constraint *)
   type quoted_univ_constraints = Term.constr (* of type univ.constraints *)
   type quoted_univ_instance = Term.constr (* of type univ.universe_instance *)
   type quoted_univ_context = Term.constr (* of type univ.universe_context *)
   type quoted_inductive_universes = Term.constr (* of type univ.universe_context *)
-  type quoted_proj = Term.constr (* of type Ast.projection *)
-  type quoted_sort_family = Term.constr (* of type Ast.sort_family *)
 
-  type quoted_decl = Term.constr (* of type Ast.program ??? *)
   type quoted_mind_params = Term.constr (* of type list (Ast.ident * list (ident * local_entry)local_entry) *)
-  type quoted_program = Term.constr (* of type Ast.program *)
-  type quoted_ind_entry =
-    quoted_ident * t * quoted_bool * quoted_ident list * t list
-
-  type quoted_mind_entry = Term.constr (* of type Ast.mutual_inductive_entry *)
-  type quoted_mind_finiteness = Term.constr (* of type Ast.mutual_inductive_entry *)
+  type quoted_ind_entry = quoted_ident * t * quoted_bool * quoted_ident list * t list
   type quoted_definition_entry = t * t option * quoted_univ_context
+  type quoted_mind_entry = Term.constr (* of type Ast.mutual_inductive_entry *)
+  type quoted_mind_finiteness = Term.constr (* of type Ast.mutual_inductive_entry ?? *)
   type quoted_entry = Term.constr (* of type option (constant_entry + mutual_inductive_entry) *)
-  type quoted_global_reference = Term.constr (* of type Ast.global_reference *)
+
+  type quoted_one_inductive_body = Term.constr (* of type Ast.one_inductive_body *)
+  type quoted_mutual_inductive_body = Term.constr (* of type Ast.mutual_inductive_body *)
+  type quoted_constant_body = Term.constr (* of type Ast.constant_body *)
+  type quoted_global_decl = Term.constr (* of type Ast.global_decl *)
+  type quoted_global_declarations = Term.constr (* of type Ast.global_declarations *)
+  type quoted_program = Term.constr (* of type Ast.program *)
+
   type quoted_reduction_strategy = Term.constr (* of type Ast.reductionStrategy *)
 
   let resolve_symbol (path : string list) (tm : string) : Term.constr =
@@ -303,11 +319,9 @@ struct
   let bool_type = resolve_symbol pkg_datatypes "bool"
   let cInl = resolve_symbol pkg_datatypes "inl"
   let cInr = resolve_symbol pkg_datatypes "inr"
-  let prod a b =
-    Term.mkApp (prod_type, [| a ; b |])
+  let prod a b = Term.mkApp (prod_type, [| a ; b |])
   let c_pair = resolve_symbol pkg_datatypes "pair"
-  let pair a b f s =
-    Term.mkApp (c_pair, [| a ; b ; f ; s |])
+  let pair a b f s = Term.mkApp (c_pair, [| a ; b ; f ; s |])
 
     (* reify the constructors in Template.Ast.v, which are the building blocks of reified terms *)
   let nAnon = r_reify "nAnon"
@@ -353,11 +367,14 @@ struct
   let (tLocalDef,tLocalAssum,tlocal_entry) = (r_reify "LocalDef", r_reify "LocalAssum", r_reify "local_entry")
 
   let (cFinite,cCoFinite,cBiFinite) = (r_reify "Finite", r_reify "CoFinite", r_reify "BiFinite")
-  let (pConstr,pType,pAxiom,pIn) =
-    (r_reify "PConstr", r_reify "PType", r_reify "PAxiom", r_reify "PIn")
-  let tinductive_body = r_reify "inductive_body"
-  let tmkinductive_body = r_reify "mkinductive_body"
-  let tBuild_minductive_decl = r_reify "Build_minductive_decl"
+  let tone_inductive_body = r_reify "one_inductive_body"
+  let tBuild_one_inductive_body = r_reify "Build_one_inductive_body"
+  let tBuild_mutual_inductive_body = r_reify "Build_mutual_inductive_body"
+  let tBuild_constant_body = r_reify "Build_constant_body"
+  let tglobal_decl = r_reify "global_decl"
+  let tConstantDecl = r_reify "ConstantDecl"
+  let tInductiveDecl = r_reify "InductiveDecl"
+  let tglobal_declarations = r_reify "global_declarations"
 
   let tMutual_inductive_entry = r_reify "mutual_inductive_entry"
   let tOne_inductive_entry = r_reify "one_inductive_entry"
@@ -392,6 +409,10 @@ struct
       | l :: ls ->
 	Term.mkApp (c_cons, [| typ ; l ; to_list ls |])
     in to_list
+
+  let quote_option ty = function
+    | Some tm -> Term.mkApp (cSome, [|ty; tm|])
+    | None -> Term.mkApp (cNone, [|ty|])
 
   let int_to_nat =
     let cache = Hashtbl.create 10 in
@@ -619,23 +640,33 @@ struct
   let mkProj kn t =
     Term.mkApp (tProj, [| kn; t |])
 
-  let mkMutualInductive kn uctx p ls =
-    let result = to_coq_list tinductive_body
-         (List.map (fun (a,b,c,d,e) ->
-              let c = to_coq_list tsort_family c in
-              let d = mk_ctor_list d in
-              let e = mk_proj_list e in
-              Term.mkApp (tmkinductive_body, [| a; b; c; d; e |])) ls) in
-    Term.mkApp (pType, [| kn; uctx; p; result |])
+  let mk_one_inductive_body (a, b, c, d, e) =
+    let c = to_coq_list tsort_family c in
+    let d = mk_ctor_list d in
+    let e = mk_proj_list e in
+    Term.mkApp (tBuild_one_inductive_body, [| a; b; c; d; e |])
 
-  let mkConstant kn uctx ty c =
-    Term.mkApp (pConstr, [| kn; uctx ; ty; c |])
+  let mk_mutual_inductive_body p inds uctx =
+    let inds = to_coq_list tone_inductive_body inds in
+    Term.mkApp (tBuild_mutual_inductive_body, [|p; inds; uctx|])
 
-  let mkAxiom kn uctx t =
-    Term.mkApp (pAxiom, [| kn; uctx; t |])
+  let mk_constant_body ty tm uctx =
+    let tm = quote_option tTerm tm in
+    Term.mkApp (tBuild_constant_body, [|ty; tm; uctx|])
 
-  let mkExt x acc = Term.mkApp (x, [| acc |])
-  let mkIn t = Term.mkApp (pIn, [| t |])
+  let mk_inductive_decl kn mind =
+    Term.mkApp (tInductiveDecl, [|kn; mind|])
+
+  let mk_constant_decl kn bdy =
+    Term.mkApp (tConstantDecl, [|kn; bdy|])
+
+  let empty_global_declartions =
+    Term.mkApp (c_nil, [| tglobal_decl |])
+
+  let add_global_decl d l =
+    Term.mkApp (c_cons, [|tglobal_decl; d; l|])
+
+  let mk_program = pair tglobal_declarations tTerm
 
   let quote_mind_finiteness (f: Decl_kinds.recursivity_kind) =
     match f with
@@ -699,10 +730,10 @@ struct
        let k = (quote_int (k - 1)) in
        Term.mkApp (tConstructRef, [|quote_inductive (kn ,n); k|])
 
-       let rec app_full trm acc =
-        match Term.kind_of_term trm with
-          Term.App (f, xs) -> app_full f (Array.to_list xs @ acc)
-        | _ -> (trm, acc)
+  let rec app_full trm acc =
+    match Term.kind_of_term trm with
+      Term.App (f, xs) -> app_full f (Array.to_list xs @ acc)
+    | _ -> (trm, acc)
            
   let print_term (u: t) : Pp.std_ppcmds = Printer.pr_constr u
   
@@ -1044,7 +1075,6 @@ struct
          Term.mkCast (t,Term.DEFAULTcast,ty)
     else t
 
-  open Declarations
   let get_abstract_inductive_universes iu =
     match iu with
     | Monomorphic_ind ctx -> ctx
@@ -1213,7 +1243,7 @@ struct
       let uctx = get_abstract_inductive_universes mib.Declarations.mind_universes in
       let inst = Univ.UContext.instance uctx in
       let indtys =
-        Declarations.(CArray.map_to_list (fun oib ->
+        (CArray.map_to_list (fun oib ->
            let ty = Inductive.type_of_inductive (snd env) ((mib,oib),inst) in
            (Context.Rel.Declaration.LocalAssum (Names.Name oib.mind_typename, ty))) mib.mind_packets)
       in
@@ -1223,9 +1253,9 @@ struct
 	List.fold_left (fun (ls,acc) oib ->
 	  let named_ctors =
 	    CList.combine3
-	      Declarations.(Array.to_list oib.mind_consnames)
-	      Declarations.(Array.to_list oib.mind_user_lc)
-	      Declarations.(Array.to_list oib.mind_consnrealargs)
+	      (Array.to_list oib.mind_consnames)
+	      (Array.to_list oib.mind_user_lc)
+	      (Array.to_list oib.mind_consnrealargs)
 	  in
           let indty = Inductive.type_of_inductive (snd env) ((mib,oib),inst) in
           let indty, acc = quote_term acc env indty in
@@ -1241,7 +1271,7 @@ struct
           let projs, acc =
             match mib.Declarations.mind_record with
             | Some (Some (id, csts, ps)) ->
-               let ctxwolet = Termops.smash_rel_context mib.Declarations.mind_params_ctxt in
+               let ctxwolet = Termops.smash_rel_context mib.mind_params_ctxt in
                let indty = Term.mkApp (Term.mkIndU ((t,0),inst),
                                        Context.Rel.to_extended_vect Constr.mkRel 0 ctxwolet) in
                let indbinder = Context.Rel.Declaration.LocalAssum (Names.Name id,indty) in
@@ -1255,22 +1285,18 @@ struct
             | _ -> [], acc
           in
           let sf = List.map Q.quote_sort_family oib.Declarations.mind_kelim in
-	  Declarations.((Q.quote_ident oib.mind_typename, indty, sf, (List.rev reified_ctors), projs) :: ls, acc))
-	  ([],acc) Declarations.((Array.to_list mib.mind_packets))
+	  (Q.quote_ident oib.mind_typename, indty, sf, (List.rev reified_ctors), projs) :: ls, acc)
+	  ([],acc) (Array.to_list mib.mind_packets)
       in
       let params = Q.quote_int mib.Declarations.mind_nparams in
       let uctx = quote_abstract_inductive_universes mib.Declarations.mind_universes in
-      Q.mkMutualInductive ref_name uctx params (List.rev ls), acc
+      let bodies = List.map Q.mk_one_inductive_body (List.rev ls) in
+      let mind = Q.mk_mutual_inductive_body params bodies uctx in
+      Q.mk_inductive_decl ref_name mind, acc
     in ((fun acc env -> quote_term acc (false, env)),
         (fun acc env -> quote_minductive_type acc (false, env)))
 
   let quote_term env trm =
-    (try
-      let u = Sorts.univ_of_sort (Term.destSort trm) in
-      Feedback.msg_debug (Printer.pr_constr trm);
-      Feedback.msg_debug (Univ.Universe.pr u);
-    with
-    | _ -> ());
     let (fn,_) = quote_term_remember (fun _ () -> ()) (fun _ () -> ()) in
     fst (fn () env trm)
 
@@ -1309,15 +1335,20 @@ struct
 	    visited_terms := Names.KNset.add kn !visited_terms ;
             let c = Names.Constant.make kn kn in
 	    let cd = Environ.lookup_constant c env in
-	    let do_body pu ty body =
-	      let (result,acc) =
-		try quote_term acc (Global.env ()) body
-                with e ->
-                  Feedback.msg_debug (str"Exception raised while checking body of " ++ Names.pr_kn kn);
-                  raise e
-	      in
-	      constants := Q.mkConstant (Q.quote_kn kn) pu ty result :: !constants
-	    in
+            let body = match cd.const_body with
+	      | Undef _ -> None
+	      | Def cs -> Some (Mod_subst.force_constr cs)
+	      | OpaqueDef lc -> Some (Opaqueproof.force_proof (Global.opaque_tables ()) lc)
+            in
+            let tm, acc =
+              match body with
+              | None -> None, acc
+              | Some tm -> try let (tm, acc) = quote_term acc (Global.env ()) tm in
+                               (Some tm, acc)
+                           with e ->
+                             Feedback.msg_debug (str"Exception raised while checking body of " ++ Names.pr_kn kn);
+                 raise e
+            in
             let uctx = quote_constant_uctx cd.const_universes in
             let ty, acc =
               let ty =
@@ -1331,12 +1362,9 @@ struct
                  Feedback.msg_debug (str"Exception raised while checking type of " ++ Names.pr_kn kn);
                  raise e)
             in
-	      match cd.const_body with
-		Undef _ -> constants := Q.mkAxiom (Q.quote_kn kn) uctx ty :: !constants
-	      | Def cs ->
-		 do_body uctx ty (Mod_subst.force_constr cs)
-	      | OpaqueDef lc ->
-		 do_body uctx ty (Opaqueproof.force_proof (Global.opaque_tables ()) lc)
+            let cst_bdy = Q.mk_constant_body ty tm uctx in
+            let decl = Q.mk_constant_decl (Q.quote_kn kn) cst_bdy in
+            constants := decl :: !constants
 	  end
     in
     let (quote_rem,quote_typ) =
@@ -1350,9 +1378,9 @@ struct
       b := y ;
       (x,y)
     in
-    let (x,acc) = quote_rem () env trm
-    in List.fold_left (fun acc x -> Q.mkExt x acc)
-                      (Q.mkIn x) !constants
+    let (tm, _) = quote_rem () env trm in
+    let decls =  List.fold_left (fun acc d -> Q.add_global_decl d acc) Q.empty_global_declartions !constants in
+    Q.mk_program decls tm
 
   let quote_one_ind envA envC (mi:Entries.one_inductive_entry) =
     let iname = Q.quote_ident mi.mind_entry_typename  in
@@ -1750,7 +1778,7 @@ struct
          let (evm, def) = reduce_all env evm body in
          let evdref = ref evm in
          let trm = TermReify.denote_term evdref def in
-         let ty = Typing.e_type_of env evdref (EConstr.of_constr trm) in
+         let _ = Typing.e_type_of env evdref (EConstr.of_constr trm) in
          let evm = !evdref in
          let _ = Declare.declare_definition ~kind:Decl_kinds.Definition (unquote_ident name) (trm, Evd.universe_context_set evm) in
          k (evm, unit_tt)
@@ -1776,8 +1804,7 @@ struct
              let t = TermReify.quote_mind_decl env (fst ni) in
              let _, args = Term.destApp t in
              (match args with
-              | [|name; uctx ; n; inds|] ->
-                 let decl = Term.mkApp (tBuild_minductive_decl, [|n ; inds ; uctx|]) in
+              | [|kn; decl|] ->
                  k (evm, decl)
               | _ -> bad_term_verb t "anomaly in quoting of inductive types")
                (* quote_mut_ind produce an entry rather than a decl *)
@@ -1879,6 +1906,8 @@ struct
     else CErrors.user_err (str "Invalid argument or not yet implemented. The argument must be a TemplateProgram: " ++ Printer.pr_constr coConstr)
 end
 
+
+
 DECLARE PLUGIN "template_plugin"
 
 (** Calling Ltac **)
@@ -1886,10 +1915,11 @@ DECLARE PLUGIN "template_plugin"
 let ltac_lcall tac args =
   Tacexpr.TacArg(Loc.tag @@ Tacexpr.TacCall (Loc.tag (Misctypes.ArgVar(Loc.tag @@ Names.Id.of_string tac),args)))
 
-open Names
 open Tacexpr
 open Tacinterp
 open Misctypes
+open Stdarg
+open Tacarg
 
 
 let ltac_apply (f : Value.t) (args: Tacinterp.Value.t list) =
@@ -1910,8 +1940,6 @@ let check_inside_section () =
     CErrors.user_err ~hdr:"Quote" (Pp.str "You can not quote within a section.")
 
 
-open Stdarg
-open Tacarg
 
 TACTIC EXTEND get_goal
     | [ "quote_term" constr(c) tactic(tac) ] ->

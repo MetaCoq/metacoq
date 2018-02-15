@@ -108,8 +108,8 @@ Fixpoint tsl_rec1_app (app : option term) (E : tsl_table) (t : term) : term :=
   end.
 Definition tsl_rec1 := tsl_rec1_app None.
 
-Definition tsl_mind_decl (E : tsl_table)
-           (kn kn' : kername) (mind : minductive_decl) : tsl_table * list minductive_decl.
+Definition tsl_mind_body (E : tsl_table)
+           (kn kn' : kername) (mind : mutual_inductive_body) : tsl_table * list mutual_inductive_body.
   refine (_, [{| ind_npars := 2 * mind.(ind_npars);
                  ind_bodies := _;
                  ind_universes := mind.(ind_universes)|}]).  (* FIXME always ok? *)
@@ -161,7 +161,7 @@ Instance param : Translation :=
   {| tsl_id := tsl_ident ;
      tsl_tm := fun ΣE t => ret (tsl_rec1 (snd ΣE) t) ;
      tsl_ty := fun '(Σ, E) t => todo "not meaningful here" ;
-     tsl_ind := fun ΣE kn kn' mind => ret (tsl_mind_decl (snd ΣE) kn kn' mind) |}.
+     tsl_ind := fun ΣE kn kn' mind => ret (tsl_mind_body (snd ΣE) kn kn' mind) |}.
 
 
 Definition T := forall A, A -> A.

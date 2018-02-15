@@ -113,9 +113,9 @@ Defined.
 
 
 
-Definition tsl_mind_decl (ΣE : tsl_context) (kn kn' : kername)
-           (mind : minductive_decl)
-  : tsl_result (tsl_table * list minductive_decl).
+Definition tsl_mind_body (ΣE : tsl_context) (kn kn' : kername)
+           (mind : mutual_inductive_body)
+  : tsl_result (tsl_table * list mutual_inductive_body).
   refine (let tsl := fun Γ t => match tsl_rec fuel (Datatypes.fst ΣE) (Datatypes.snd ΣE) Γ t with
                              | Success x => x
                              | Error _ => todo
@@ -169,7 +169,7 @@ Instance tsl_fun : Translation
   := {| tsl_id := tsl_ident ;
         tsl_tm := fun ΣE => tsl_rec fuel (Datatypes.fst ΣE) (Datatypes.snd ΣE) [] ;
         tsl_ty := fun ΣE => tsl_rec fuel (Datatypes.fst ΣE) (Datatypes.snd ΣE) [] ;
-        tsl_ind := tsl_mind_decl |}.
+        tsl_ind := tsl_mind_body |}.
 
 
 Tactic Notation "tSpecialize" ident(H) uconstr(t) := apply fst in H; specialize (H t).

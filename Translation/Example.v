@@ -10,14 +10,14 @@ From Translation Require Import SAst SLiftSubst SCommon ITyping XTyping
 
 Fixpoint multiProd (bl : list sterm) :=
   match bl with
-  | [] => sSort (succ_sort sSet)
+  | [] => sSort (succ_sort 0)
   | [ A ] => A
   | A :: bl => sProd nAnon A (multiProd bl)
   end.
 
 Fixpoint multiLam (bl : list sterm) (t : sterm) :=
   match bl with
-  | [] => sSort sSet
+  | [] => sSort 0
   | [ A ] => t
   | A :: bl => sLambda nAnon A (multiProd bl) (multiLam bl t)
   end.
@@ -39,7 +39,7 @@ Lemma type_multiProd :
       Σ ;;; Γ |-x multiProd bl : sSort s.
 Proof.
   intro bl. induction bl ; intros Γ hwf h.
-  - cbn. exists (succ_sort (succ_sort sSet)). apply type_Sort. assumption.
+  - cbn. exists (succ_sort (succ_sort 0)). apply type_Sort. assumption.
   - destruct bl.
     + cbn. dependent destruction h.
       eexists. eassumption.
@@ -121,9 +121,9 @@ Proof.
 Defined.
 
 Definition tyl :=
-  [ sSort sSet ;
-    sSort sSet ;
-    sEq (sSort sSet) (sRel 1) (sRel 0) ;
+  [ sSort 0 ;
+    sSort 0 ;
+    sEq (sSort 0) (sRel 1) (sRel 0) ;
     sRel 2 ;
     sRel 2
   ].
@@ -219,7 +219,7 @@ Make Definition coq_tm :=
     let t := eval lazy in
              (match tc_tm with
               | Success t => t
-              | _ => tSort (sType "Error")
+              | _ => tSort (Universe.type0)
               end)
       in exact t
   ).
@@ -228,7 +228,7 @@ Make Definition coq_tm :=
 (* We start again with a much more minimal example without reflection. *)
 
 Definition tyl0 :=
-  [ sSort sSet ;
+  [ sSort 0 ;
     sRel 0 ;
     sRel 1
   ].
@@ -274,16 +274,16 @@ Make Definition coq_tm0 :=
     let t := eval lazy in
              (match tc_tm0 with
               | Success t => t
-              | _ => tSort (sType "Error")
+              | _ => tSort Universe.type0
               end)
       in exact t
   ).
 
 (* One more *)
 
-Definition ty1 : sterm := sSort (succ_sort sSet).
+Definition ty1 : sterm := sSort (succ_sort 0).
 
-Definition tm1 : sterm := sSort sSet.
+Definition tm1 : sterm := sSort 0.
 
 Lemma tmty1 : Σ ;;; [] |-x tm1 : ty1.
 Proof.
@@ -307,7 +307,7 @@ Make Definition coq_tm1 :=
     let t := eval lazy in
              (match tc_tm1 with
               | Success t => t
-              | _ => tSort (sType "Error")
+              | _ => tSort Universe.type0
               end)
       in exact t
   ).
@@ -317,10 +317,10 @@ Make Definition coq_tm1 :=
 (* One more *)
 
 Definition ty2 : sterm :=
-  sEq (sSort (succ_sort sSet)) (sSort sSet) (sSort sSet).
+  sEq (sSort (succ_sort 0)) (sSort 0) (sSort 0).
 
 Definition tm2 : sterm :=
-  sRefl (sSort (succ_sort sSet)) (sSort sSet).
+  sRefl (sSort (succ_sort 0)) (sSort 0).
 
 Lemma tmty2 : Σ ;;; [] |-x tm2 : ty2.
 Proof.
@@ -348,7 +348,7 @@ Fail Make Definition coq_tm2 :=
     let t := eval lazy in
              (match tc_tm2 with
               | Success t => t
-              | _ => tSort (sType "Error")
+              | _ => tSort Universe.type0
               end)
       in exact t
   ).

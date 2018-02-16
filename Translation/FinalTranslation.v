@@ -274,169 +274,34 @@ Fixpoint tsl_ctx (fuel : nat) (Σ : global_context) (Γ : scontext)
     ret (Γ' ,, vass (sdecl_name a) A')
   end.
 
-Fixpoint extract_mind_decl_from_program (id : ident) (p : program)
-  : option minductive_decl
-  := match p with
-     | PConstr _ _ _ _ p => extract_mind_decl_from_program id p
-     | PType id' n inds p => if string_dec id id' then
-                              Some (Build_minductive_decl n inds)
-                            else extract_mind_decl_from_program id p
-     | PAxiom _ _ _ p => extract_mind_decl_from_program id p
-     | PIn _ => None
-     end.
+(* We define a term that mentions everything that the global context should
+   have. *)
+Definition glob_term :=
+  let _ := @eq in
+  let _ := @transport in
+  let _ := @UIP in
+  let _ := @funext in
+  let _ := @heq in
+  let _ := @heq_to_eq in
+  let _ := @heq_refl in
+  let _ := @heq_sym in
+  let _ := @heq_trans in
+  let _ := @heq_transport in
+  let _ := @Pack in
+  let _ := @ProjT1 in
+  let _ := @ProjT2 in
+  let _ := @ProjTe in
+  let _ := @cong_prod in
+  let _ := @cong_app in
+  let _ := @cong_lambda in
+  let _ := @cong_eq in
+  let _ := @cong_refl in
+  let _ := @eq_to_heq in
+  let _ := @heq_type_eq in
+  Type.
 
-Fixpoint extract_cst_decl_from_program (id : ident) (p : program)
-  : option constant_decl
-  := match p with
-     | PConstr id' uist t1 t2 p => if string_dec id id' then
-                                    Some (Build_constant_decl id uist t1 (Some t2))
-                                  else extract_cst_decl_from_program id p
-     | PType id' n inds p => extract_cst_decl_from_program id p
-     | PAxiom _ _ _ p => extract_cst_decl_from_program id p
-     | PIn _ => None
-     end.
-
-Fixpoint extract_axiom_decl_from_program (id : ident) (p : program)
-  : option constant_decl
-  := match p with
-     | PConstr _ _ _ _ p => extract_axiom_decl_from_program id p
-     | PType _ _ _ p => extract_axiom_decl_from_program id p
-     | PAxiom id' ui t p => if string_dec id id' then
-                             Some (Build_constant_decl id ui t None)
-                           else extract_axiom_decl_from_program id p
-     | PIn _ => None
-     end.
-
-Definition option_get {A} (default : A) (x : option A) : A
-  := match x with
-     | Some x => x
-     | None => default
-     end.
-
-Open Scope string_scope.
-
-Definition get_idecl id prog :=
-  option_get (Build_minductive_decl 0 [])
-             (extract_mind_decl_from_program id prog).
-Definition get_cdecl id prog :=
-  option_get (Build_constant_decl "XX" [] (tRel 0) None)
-             (extract_cst_decl_from_program id prog).
-Definition get_adecl id prog :=
-  option_get (Build_constant_decl "XX" [] (tRel 0) None)
-             (extract_axiom_decl_from_program id prog).
-
-Quote Recursively Definition eq_prog := @eq.
-Definition eq_decl :=
-  Eval compute in (get_idecl "Coq.Init.Logic.eq" eq_prog).
-
-Quote Recursively Definition J_prog := J.
-Definition J_decl :=
-  Eval compute in (get_cdecl "Translation.Quotes.J" J_prog).
-
-Quote Recursively Definition Transport_prog := @transport.
-Definition Transport_decl :=
-  Eval compute in (get_cdecl "Translation.Quotes.transport" Transport_prog).
-
-Quote Recursively Definition UIP_prog := @UIP.
-Definition UIP_decl :=
-  Eval compute in (get_adecl "Translation.Quotes.UIP" UIP_prog).
-
-Quote Recursively Definition funext_prog := @funext.
-Definition funext_decl :=
-  Eval compute in (get_adecl "Translation.Quotes.funext" funext_prog).
-
-Quote Recursively Definition heq_prog := @heq.
-Definition heq_decl :=
-  Eval compute in (get_idecl "Translation.Quotes.heq" heq_prog).
-
-Quote Recursively Definition heq_to_eq_prog := @heq_to_eq.
-Definition heq_to_eq_decl :=
-  Eval compute in (get_cdecl "Translation.Quotes.heq_to_eq" heq_to_eq_prog).
-
-Quote Recursively Definition heq_refl_prog := @heq_refl.
-Definition heq_refl_decl :=
-  Eval compute in (get_cdecl "Translation.Quotes.heq_refl" heq_refl_prog).
-
-Quote Recursively Definition heq_sym_prog := @heq_sym.
-Definition heq_sym_decl :=
-  Eval compute in (get_cdecl "Translation.Quotes.heq_sym" heq_sym_prog).
-
-Quote Recursively Definition heq_trans_prog := @heq_trans.
-Definition heq_trans_decl :=
-  Eval compute in (get_cdecl "Translation.Quotes.heq_trans" heq_trans_prog).
-
-Quote Recursively Definition heq_transport_prog := @heq_transport.
-Definition heq_transport_decl :=
-  Eval compute in (get_cdecl "Translation.Quotes.heq_transport" heq_transport_prog).
-
-Quote Recursively Definition Pack_prog := @Pack.
-Definition Pack_decl :=
-  Eval compute in (get_idecl "Translation.Quotes.Pack" Pack_prog).
-
-Quote Recursively Definition ProjT1_prog := @ProjT1.
-Definition ProjT1_decl :=
-  Eval compute in (get_cdecl "Translation.Quotes.ProjT1" ProjT1_prog).
-
-Quote Recursively Definition ProjT2_prog := @ProjT2.
-Definition ProjT2_decl :=
-  Eval compute in (get_cdecl "Translation.Quotes.ProjT2" ProjT2_prog).
-
-Quote Recursively Definition ProjTe_prog := @ProjTe.
-Definition ProjTe_decl :=
-  Eval compute in (get_cdecl "Translation.Quotes.ProjTe" ProjTe_prog).
-
-Quote Recursively Definition cong_prod_prog := @cong_prod.
-Definition cong_prod_decl :=
-  Eval compute in (get_cdecl "Translation.Quotes.cong_prod" cong_prod_prog).
-
-Quote Recursively Definition cong_lambda_prog := @cong_lambda.
-Definition cong_lambda_decl :=
-  Eval compute in (get_cdecl "Translation.Quotes.cong_lambda" cong_lambda_prog).
-
-Quote Recursively Definition cong_app_prog := @cong_app.
-Definition cong_app_decl :=
-  Eval compute in (get_cdecl "Translation.Quotes.cong_app" cong_app_prog).
-
-Quote Recursively Definition cong_eq_prog := @cong_eq.
-Definition cong_eq_decl :=
-  Eval compute in (get_cdecl "Translation.Quotes.cong_eq" cong_eq_prog).
-
-Quote Recursively Definition cong_refl_prog := @cong_refl.
-Definition cong_refl_decl :=
-  Eval compute in (get_cdecl "Translation.Quotes.cong_refl" cong_refl_prog).
-
-Quote Recursively Definition eq_to_heq_prog := @eq_to_heq.
-Definition eq_to_heq_decl :=
-  Eval compute in (get_cdecl "Translation.Quotes.eq_to_heq" eq_to_heq_prog).
-
-Quote Recursively Definition heq_type_eq_prog := @heq_type_eq.
-Definition heq_type_eq_decl :=
-  Eval compute in (get_cdecl "Translation.Quotes.heq_type_eq" heq_type_eq_prog).
-
-Definition Σ : global_context :=
-  [ InductiveDecl "Coq.Init.Logic.eq" eq_decl ;
-    ConstantDecl "Translation.Quotes.J" J_decl ;
-    ConstantDecl "Translation.Quotes.transport" Transport_decl ;
-    ConstantDecl "Translation.Quotes.UIP" UIP_decl ;
-    ConstantDecl "Translation.Quotes.funext" funext_decl ;
-    InductiveDecl "Translation.Quotes.heq" heq_decl ;
-    ConstantDecl "Translation.Quotes.heq_to_eq" heq_to_eq_decl ;
-    ConstantDecl "Translation.Quotes.heq_refl" heq_refl_decl ;
-    ConstantDecl "Translation.Quotes.heq_sym" heq_sym_decl ;
-    ConstantDecl "Translation.Quotes.heq_trans" heq_trans_decl ;
-    ConstantDecl "Translation.Quotes.heq_transport" heq_transport_decl ;
-    InductiveDecl "Translation.Quotes.Pack" Pack_decl ;
-    ConstantDecl "Translation.Quotes.ProjT1" ProjT1_decl ;
-    ConstantDecl "Translation.Quotes.ProjT2" ProjT2_decl ;
-    ConstantDecl "Translation.Quotes.ProjTe" ProjTe_decl ;
-    ConstantDecl "Translation.Quotes.cong_prod" cong_prod_decl ;
-    ConstantDecl "Translation.Quotes.cong_lambda" cong_lambda_decl ;
-    ConstantDecl "Translation.Quotes.cong_app" cong_app_decl ;
-    ConstantDecl "Translation.Quotes.cong_eq" cong_eq_decl ;
-    ConstantDecl "Translation.Quotes.cong_refl" cong_refl_decl ;
-    ConstantDecl "Translation.Quotes.eq_to_heq" eq_to_heq_decl ;
-    ConstantDecl "Translation.Quotes.heq_type_eq" heq_type_eq_decl
-  ].
+Quote Recursively Definition glob_prog := @glob_term.
+Definition Σ : global_context := (fst glob_prog, init_graph).
 
 (* Checking for the sake of checking *)
 Compute (infer Σ [] tEq).
@@ -461,57 +326,6 @@ Compute (infer Σ [] tCongEq).
 Compute (infer Σ [] tCongRefl).
 Compute (infer Σ [] tEqToHeq).
 Compute (infer Σ [] tHeqTypeEq).
-
-Make Definition eq' := ltac:(let t := eval compute in tEq in exact t).
-Make Definition eq_refl' := ltac:(let t := eval compute in tRefl in exact t).
-Make Definition heq_refl' :=
-  ltac:(
-    let t := eval compute in (mkHeqRefl (tSort (succ_sort sSet)) (tSort sSet))
-      in exact t
-  ).
-Make Definition heq_refl_t :=
-  ltac:(
-    let t := eval compute in
-             (match tsl_rec (2 ^ 10) Σ []
-                           (sHeqRefl (sSort (succ_sort sSet)) (sSort sSet))
-              with
-              | Success t => t
-              | _ => tSort (sType "Error")
-              end
-             )
-      in exact t
-  ).
-Make Definition heq_sym_t :=
-  ltac:(
-    let t := eval compute in
-             (match tsl_rec (2 ^ 16) Σ []
-                           (sHeqSym ((sHeqRefl (sSort (succ_sort sSet)) (sSort sSet))))
-              with
-              | Success t => t
-              | _ => tSort (sType "Error")
-              end
-             )
-      in exact t
-  ).
-Make Definition heq_trans_t :=
-  ltac:(
-    let t := eval compute in
-             (match tsl_rec (2 ^ 16) Σ []
-                           (sHeqTrans ((sHeqRefl (sSort (succ_sort sSet)) (sSort sSet)))
-                                      ((sHeqRefl (sSort (succ_sort sSet)) (sSort sSet))))
-              with
-              | Success t => t
-              | _ => tSort (sType "Error")
-              end
-             )
-      in exact t
-  ).
-
-Eval lazy in (tsl_rec (2 ^ 18) Σ []
-                         (sHeqSym ((sHeqRefl (sSort (succ_sort sSet)) (sSort sSet))))).
-
-Quote Definition heq_g := ltac:(let t := eval compute in (fun A (x : A) B (y : B) => @heq A x B y) in exact t).
-
 
 (* Theorem soundness : *)
 (*   forall {Γ t A}, *)

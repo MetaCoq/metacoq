@@ -50,6 +50,11 @@ Fixpoint sort_to_universe (s : sort) : Universe.t :=
   | S n => Universe.type1
   end.
 
+Definition myret (Σ : global_context) (Γ : context) (t : term) : tsl_result term :=
+  match hnf_stack (fst Σ) Γ t with
+    Checked (t', _) => Success t'
+  | _ => Error TranslationNotHandled end.
+
 Fixpoint tsl_rec (fuel : nat) (Σ : global_context) (Γ : context) (t : sterm) {struct fuel}
   : tsl_result term :=
   match fuel with
@@ -69,7 +74,7 @@ Fixpoint tsl_rec (fuel : nat) (Σ : global_context) (Γ : context) (t : sterm) {
     | sApp u n A B v =>
       u' <- tsl_rec fuel Σ Γ u ;;
       v' <- tsl_rec fuel Σ Γ v ;;
-      ret (tApp u' [v'])
+      myret Σ Γ (tApp u' [v'])
     | sEq A u v =>
       A' <- tsl_rec fuel Σ Γ A ;;
       u' <- tsl_rec fuel Σ Γ u ;;
@@ -86,13 +91,13 @@ Fixpoint tsl_rec (fuel : nat) (Σ : global_context) (Γ : context) (t : sterm) {
       w' <- tsl_rec fuel Σ Γ w ;;
       v' <- tsl_rec fuel Σ Γ v ;;
       p' <- tsl_rec fuel Σ Γ p ;;
-      ret (mkJ A' u' P' w' v' p')
+      myret Σ Γ (mkJ A' u' P' w' v' p')
     | sTransport T1 T2 p t =>
       T1' <- tsl_rec fuel Σ Γ T1 ;;
-      T2' <- tsl_rec fuel Σ Γ T1 ;;
+      T2' <- tsl_rec fuel Σ Γ T2 ;;
       p' <- tsl_rec fuel Σ Γ p ;;
       t' <- tsl_rec fuel Σ Γ t ;;
-      ret (mkTransport T1' T2' p' t')
+      myret Σ Γ (mkTransport T1' T2' p' t')
     | sHeq A a B b =>
       A' <- tsl_rec fuel Σ Γ A ;;
       B' <- tsl_rec fuel Σ Γ B ;;
@@ -103,7 +108,7 @@ Fixpoint tsl_rec (fuel : nat) (Σ : global_context) (Γ : context) (t : sterm) {
       p' <- tsl_rec fuel Σ Γ p ;;
       match @infer (Build_Fuel fuel) Σ Γ p' with
       | Checked (tApp (tInd (mkInd "Translation.Quotes.heq" 0) _) [ A' ; u' ; _ ; v' ]) =>
-        ret (mkHeqToHeq A' u' v' p')
+        myret Σ Γ (mkHeqToHeq A' u' v' p')
       (* That's not really the correct error but well. *)
       | Checked T => raise (TypingError (NotAnInductive T))
       | TypeError t => raise (TypingError t)
@@ -111,12 +116,12 @@ Fixpoint tsl_rec (fuel : nat) (Σ : global_context) (Γ : context) (t : sterm) {
     | sHeqRefl A a =>
       A' <- tsl_rec fuel Σ Γ A ;;
       a' <- tsl_rec fuel Σ Γ a ;;
-      ret (mkHeqRefl A' a')
+      myret Σ Γ (mkHeqRefl A' a')
     | sHeqSym p =>
       p' <- tsl_rec fuel Σ Γ p ;;
       match @infer (Build_Fuel fuel) Σ Γ p' with
       | Checked (tApp (tInd (mkInd "Translation.Quotes.heq" 0) _) [ A' ; a' ; B' ; b' ]) =>
-        ret (mkHeqSym A' a' B' b' p')
+        myret Σ Γ (mkHeqSym A' a' B' b' p')
       | Checked T => raise (TypingError (NotAnInductive T))
       | TypeError t => raise (TypingError t)
       end
@@ -127,7 +132,7 @@ Fixpoint tsl_rec (fuel : nat) (Σ : global_context) (Γ : context) (t : sterm) {
       | Checked (tApp (tInd (mkInd "Translation.Quotes.heq" 0) _) [ A' ; a' ; B' ; b' ]) =>
         match @infer (Build_Fuel fuel) Σ Γ q' with
         | Checked (tApp (tInd (mkInd "Translation.Quotes.heq" 0) _) [ _ ; _ ; C' ; c' ]) =>
-          ret (mkHeqTrans A' a' B' b' C' c' p' q')
+          myret Σ Γ (mkHeqTrans A' a' B' b' C' c' p' q')
         | Checked T => raise (TypingError (NotAnInductive T))
         | TypeError t => raise (TypingError t)
         end
@@ -139,7 +144,7 @@ Fixpoint tsl_rec (fuel : nat) (Σ : global_context) (Γ : context) (t : sterm) {
       t' <- tsl_rec fuel Σ Γ t ;;
       match @infer (Build_Fuel fuel) Σ Γ p' with
       | Checked (tApp (tInd (mkInd "Coq.Init.Logic.eq" 0) _) [ _ ; A' ; B' ]) =>
-        ret (mkHeqTransport A' B' p' t')
+        myret Σ Γ (mkHeqTransport A' B' p' t')
       | Checked T => raise (TypingError (NotAnInductive T))
       | TypeError t => raise (TypingError t)
       end
@@ -150,7 +155,7 @@ Fixpoint tsl_rec (fuel : nat) (Σ : global_context) (Γ : context) (t : sterm) {
         pB' <- tsl_rec fuel Σ (Γ ,, vass nAnon (mkPack A1' A2')) pB ;;
         B1' <- tsl_rec fuel Σ (Γ ,, vass nAnon A1') B1 ;;
         B2' <- tsl_rec fuel Σ (Γ ,, vass nAnon A2') B2 ;;
-        ret (mkCongProd A1' A2' B1' B2' pA' pB')
+        myret Σ Γ (mkCongProd A1' A2' B1' B2' pA' pB')
       | Checked T => raise (TypingError (NotAnInductive T))
       | TypeError t => raise (TypingError t)
       end
@@ -164,7 +169,7 @@ Fixpoint tsl_rec (fuel : nat) (Σ : global_context) (Γ : context) (t : sterm) {
         B2' <- tsl_rec fuel Σ (Γ ,, vass nAnon A2') B2 ;;
         t1' <- tsl_rec fuel Σ (Γ ,, vass nAnon A1') t1 ;;
         t2' <- tsl_rec fuel Σ (Γ ,, vass nAnon A2') t2 ;;
-        ret (mkCongLambda A1' A2' B1' B2' t1' t2' pA' pB' pt')
+        myret Σ Γ (mkCongLambda A1' A2' B1' B2' t1' t2' pA' pB' pt')
       | Checked T => raise (TypingError (NotAnInductive T))
       | TypeError t => raise (TypingError t)
       end
@@ -181,7 +186,7 @@ Fixpoint tsl_rec (fuel : nat) (Σ : global_context) (Γ : context) (t : sterm) {
         | Checked (tApp (tInd (mkInd "Translation.Quotes.heq" 0) _) [ _ ; t1' ; _ ; t2' ]) =>
           match @infer (Build_Fuel fuel) Σ Γ pt' with
           | Checked (tApp (tInd (mkInd "Translation.Quotes.heq" 0) _) [ _ ; u1' ; _ ; u2' ]) =>
-            ret (mkCongApp A1' A2' B1' B2' t1' t2' u1' u2' pA' pB' pt' pu')
+            myret Σ Γ (mkCongApp A1' A2' B1' B2' t1' t2' u1' u2' pA' pB' pt' pu')
           | Checked T => raise (TypingError (NotAnInductive T))
           | TypeError t => raise (TypingError t)
           end
@@ -199,7 +204,7 @@ Fixpoint tsl_rec (fuel : nat) (Σ : global_context) (Γ : context) (t : sterm) {
       | Checked (tApp (tInd (mkInd "Translation.Quotes.heq" 0) _) [ A1' ; u1' ; A2' ; u2' ]) =>
         match @infer (Build_Fuel fuel) Σ Γ pv' with
         | Checked (tApp (tInd (mkInd "Translation.Quotes.heq" 0) _) [ _ ; v1' ; _ ; v2' ]) =>
-          ret (mkCongEq A1' A2' u1' v1' u2' v2' pA' pu' pv')
+          myret Σ Γ (mkCongEq A1' A2' u1' v1' u2' v2' pA' pu' pv')
         | Checked T => raise (TypingError (NotAnInductive T))
         | TypeError t => raise (TypingError t)
         end
@@ -211,7 +216,7 @@ Fixpoint tsl_rec (fuel : nat) (Σ : global_context) (Γ : context) (t : sterm) {
       pu' <- tsl_rec fuel Σ Γ pu ;;
       match @infer (Build_Fuel fuel) Σ Γ pu' with
       | Checked (tApp (tInd (mkInd "Translation.Quotes.heq" 0) _) [ A1' ; u1' ; A2' ; u2' ]) =>
-        ret (mkCongRefl A1' A2' u1' u2' pA' pu')
+        myret Σ Γ (mkCongRefl A1' A2' u1' u2' pA' pu')
       | Checked T => raise (TypingError (NotAnInductive T))
       | TypeError t => raise (TypingError t)
       end
@@ -219,7 +224,7 @@ Fixpoint tsl_rec (fuel : nat) (Σ : global_context) (Γ : context) (t : sterm) {
       p' <- tsl_rec fuel Σ Γ p ;;
       match @infer (Build_Fuel fuel) Σ Γ p' with
       | Checked (tApp (tInd (mkInd "Coq.Init.Logic.eq" 0) _) [ A' ; u' ; v' ]) =>
-        ret (mkEqToHeq A' u' v' p')
+        myret Σ Γ (mkEqToHeq A' u' v' p')
       | Checked T => raise (TypingError (NotAnInductive T))
       | TypeError t => raise (TypingError t)
       end
@@ -227,7 +232,7 @@ Fixpoint tsl_rec (fuel : nat) (Σ : global_context) (Γ : context) (t : sterm) {
       p' <- tsl_rec fuel Σ Γ p ;;
       match @infer (Build_Fuel fuel) Σ Γ p' with
       | Checked (tApp (tInd (mkInd "Translation.Quotes.heq" 0) _) [ A' ; u' ; B' ; v' ]) =>
-        ret (mkHeqTypeEq A' u' B' v' p')
+        myret Σ Γ (mkHeqTypeEq A' u' B' v' p')
       | Checked T => raise (TypingError (NotAnInductive T))
       | TypeError t => raise (TypingError t)
       end
@@ -239,7 +244,7 @@ Fixpoint tsl_rec (fuel : nat) (Σ : global_context) (Γ : context) (t : sterm) {
       p' <- tsl_rec fuel Σ Γ p ;;
       match @infer (Build_Fuel fuel) Σ Γ p' with
       | Checked (tApp (tInd (mkInd "Translation.Quotes.Pack" 0) _) [ A1' ; A2' ]) =>
-        ret (mkProjT1 A1' A2' p')
+        myret Σ Γ (mkProjT1 A1' A2' p')
       | Checked T => raise (TypingError (NotAnInductive T))
       | TypeError t => raise (TypingError t)
       end
@@ -247,7 +252,7 @@ Fixpoint tsl_rec (fuel : nat) (Σ : global_context) (Γ : context) (t : sterm) {
       p' <- tsl_rec fuel Σ Γ p ;;
       match @infer (Build_Fuel fuel) Σ Γ p' with
       | Checked (tApp (tInd (mkInd "Translation.Quotes.Pack" 0) _) [ A1' ; A2' ]) =>
-        ret (mkProjT2 A1' A2' p')
+        myret Σ Γ (mkProjT2 A1' A2' p')
       | Checked T => raise (TypingError (NotAnInductive T))
       | TypeError t => raise (TypingError t)
       end
@@ -255,7 +260,7 @@ Fixpoint tsl_rec (fuel : nat) (Σ : global_context) (Γ : context) (t : sterm) {
       p' <- tsl_rec fuel Σ Γ p ;;
       match @infer (Build_Fuel fuel) Σ Γ p' with
       | Checked (tApp (tInd (mkInd "Translation.Quotes.Pack" 0) _) [ A1' ; A2' ]) =>
-        ret (mkProjTe A1' A2' p')
+        myret Σ Γ (mkProjTe A1' A2' p')
       | Checked T => raise (TypingError (NotAnInductive T))
       | TypeError t => raise (TypingError t)
       end

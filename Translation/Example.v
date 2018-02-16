@@ -211,18 +211,18 @@ Eval lazy in itt_tm.
 Definition tc_tm : tsl_result term :=
   tsl_rec (2 ^ 18) Σ [] itt_tm.
 
-Eval lazy in tc_tm.
+(* Eval lazy in tc_tm. *)
 
-(* Finally we build a Coq term out of it. *)
-Make Definition coq_tm :=
-  ltac:(
-    let t := eval lazy in
-             (match tc_tm with
-              | Success t => t
-              | _ => tSort (Universe.type0)
-              end)
-      in exact t
-  ).
+(* (* Finally we build a Coq term out of it. *) *)
+(* Make Definition coq_tm := *)
+(*   ltac:( *)
+(*     let t := eval lazy in *)
+(*              (match tc_tm with *)
+(*               | Success t => t *)
+(*               | _ => tSort (Universe.type0) *)
+(*               end) *)
+(*       in exact t *)
+(*   ). *)
 
 
 (* We start again with a much more minimal example without reflection. *)
@@ -258,7 +258,7 @@ Proof.
 Defined.
 
 Definition itt_tm0 : sterm.
-  destruct (type_translation tmty0 istrans_nil) as [A [t h]].
+  destruct (type_translation tmty0 istrans_nil) as [A [t [_ h]]].
   exact t.
 Defined.
 

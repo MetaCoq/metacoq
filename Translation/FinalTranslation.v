@@ -279,7 +279,7 @@ Fixpoint tsl_ctx (fuel : nat) (Σ : global_context) (Γ : scontext)
 Definition glob_term :=
   let _ := @eq in
   let _ := @transport in
-  let _ := @UIP in
+  let _ := @K in
   let _ := @funext in
   let _ := @heq in
   let _ := @heq_to_eq in
@@ -307,7 +307,7 @@ Definition Σ : global_context := (fst glob_prog, init_graph).
 Compute (infer Σ [] tEq).
 Compute (infer Σ [] tJ).
 Compute (infer Σ [] tTransport).
-Compute (infer Σ [] tUip).
+Compute (infer Σ [] tK).
 Compute (infer Σ [] tFunext).
 Compute (infer Σ [] tHeq).
 Compute (infer Σ [] tHeqToEq).

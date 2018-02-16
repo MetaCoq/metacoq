@@ -14,14 +14,14 @@ Definition J (A : Type) (u : A) (P : forall (x : A), u = x -> Type)
 Definition transport {T1 T2 : Type} (p : T1 = T2) (t : T1) : T2 :=
   J Type T1 (fun X e => T1 -> X) (fun x => x) T2 p t.
 
-Axiom UIP : forall {A} {x y : A} (p q : x = y), p = q.
+Axiom K : forall {A} {x : A} (p : x = x), p = eq_refl.
 Axiom funext : forall {A B} {f g : forall (x : A), B x}, (forall x, f x = g x) -> f = g.
 
 Quote Definition tEq := @eq.
 Quote Definition tRefl := @eq_refl.
 Quote Definition tJ := J.
 Quote Definition tTransport := @transport.
-Quote Definition tUip := @UIP.
+Quote Definition tK := @K.
 Quote Definition tFunext := @funext.
 
 Definition mkEq (A u v : term) : term :=
@@ -36,8 +36,8 @@ Definition mkJ (A u P w v p : term) : term :=
 Definition mkTransport (T1 T2 p t : term) : term :=
   tApp tTransport [ T1 ; T2 ; p ; t ].
 
-Definition mkUip (A u v p q : term) : term :=
-  tApp tUip [ A ; u ; v ; p ; q ].
+Definition mkK (A u p : term) : term :=
+  tApp tK [ A ; u ; p ].
 
 Definition mkFunext (A B f g e : term) : term :=
   tApp tFunext [ A ; B ; f ; g ; e ].
@@ -53,7 +53,7 @@ Lemma heq_to_eq :
 Proof.
   intros A u v h.
   destruct h as [e p].
-  assert (e = eq_refl) by (apply UIP). subst.
+  assert (e = eq_refl) by (apply K). subst.
   reflexivity.
 Defined.
 
@@ -112,12 +112,12 @@ Lemma cong_prod :
 Proof.
   intros A1 A2 B1 B2 hA hB.
   exists eq_refl. simpl.
-  destruct hA as [pT pA]. rewrite (UIP pT eq_refl) in pA.
+  destruct hA as [pT pA]. rewrite (K pT) in pA.
   simpl in pA. clear pT. destruct pA. rename A1 into A.
   assert (pB : B1 = B2).
   { apply funext. intro x.
     destruct (hB (pack x x (heq_refl x))) as [pT pB]. cbn in pB.
-    rewrite (UIP pT eq_refl) in pB. simpl in pB. clear pT.
+    rewrite (K pT) in pB. simpl in pB. clear pT.
     exact pB.
   }
   now destruct pB.
@@ -133,19 +133,19 @@ Lemma cong_lambda :
 Proof.
   intros A1 A2 B1 B2 f1 f2 pA hB hf.
   destruct pA as [pT pA].
-  rewrite (UIP pT eq_refl) in pA. simpl in pA. clear pT.
+  rewrite (K pT) in pA. simpl in pA. clear pT.
   destruct pA. rename A1 into A.
   assert (pB : B1 = B2).
   { apply funext. intro x.
     destruct (hB (pack x x (heq_refl x))) as [pT pB].
-    rewrite (UIP pT eq_refl) in pB. simpl in pB. clear pT.
+    rewrite (K pT) in pB. simpl in pB. clear pT.
     exact pB.
   }
   destruct pB. rename B1 into B. clear hB.
   exists eq_refl. simpl.
   apply funext. intro x.
   destruct (hf (pack x x (heq_refl x))) as [p pf].
-  now rewrite (UIP p eq_refl) in pf.
+  now rewrite (K p) in pf.
 Defined.
 
 Lemma cong_app :
@@ -160,20 +160,20 @@ Lemma cong_app :
 Proof.
   intros A1 A2 B1 B2 f1 f2 u1 u2 pA hB pf pu.
   destruct pA as [pT pA].
-  rewrite (UIP pT eq_refl) in pA. simpl in pA. clear pT.
+  rewrite (K pT) in pA. simpl in pA. clear pT.
   destruct pA. rename A1 into A.
   assert (pB : B1 = B2).
   { apply funext. intro x.
     destruct (hB (pack x x (heq_refl x))) as [pT pB].
-    rewrite (UIP pT eq_refl) in pB. simpl in pB. clear pT.
+    rewrite (K pT) in pB. simpl in pB. clear pT.
     exact pB.
   }
   destruct pB. rename B1 into B. clear hB.
   destruct pf as [p pf].
-  rewrite (UIP p eq_refl) in pf. simpl in pf. clear p.
+  rewrite (K p) in pf. simpl in pf. clear p.
   destruct pf. rename f1 into f.
   destruct pu as [p pu].
-  rewrite (UIP p eq_refl) in pu. simpl in pu. clear p.
+  rewrite (K p) in pu. simpl in pu. clear p.
   destruct pu. rename u1 into u.
   now apply heq_refl.
 Defined.
@@ -184,13 +184,13 @@ Lemma cong_eq :
 Proof.
   intros A1 A2 u1 v1 u2 v2 pA pu pv.
   destruct pA as [pT pA].
-  rewrite (UIP pT eq_refl) in pA. simpl in pA. clear pT.
+  rewrite (K pT) in pA. simpl in pA. clear pT.
   destruct pA. rename A1 into A.
   destruct pu as [pA pu].
-  rewrite (UIP pA eq_refl) in pu. simpl in pu. clear pA.
+  rewrite (K pA) in pu. simpl in pu. clear pA.
   destruct pu. rename u1 into u.
   destruct pv as [pA pv].
-  rewrite (UIP pA eq_refl) in pv. simpl in pv. clear pA.
+  rewrite (K pA) in pv. simpl in pv. clear pA.
   destruct pv. rename v1 into v.
   apply heq_refl.
 Defined.
@@ -203,10 +203,10 @@ Lemma cong_refl :
 Proof.
   intros A1 A2 u1 u2 pA pu.
   destruct pA as [pT pA].
-  rewrite (UIP pT eq_refl) in pA. simpl in pA. clear pT.
+  rewrite (K pT) in pA. simpl in pA. clear pT.
   destruct pA. rename A1 into A.
   destruct pu as [pA pu].
-  rewrite (UIP pA eq_refl) in pu. simpl in pu. clear pA.
+  rewrite (K pA) in pu. simpl in pu. clear pA.
   destruct pu.
   now apply heq_refl.
 Defined.

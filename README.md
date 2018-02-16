@@ -33,6 +33,12 @@ branch is in development and contains additional features:
   
 - Example plugins built on top of this.
 
+Documentation
+=============
+
+The 8.7 branch [documentation (coqdoc files)](html/Template.All.html)
+and pretty-printed HTML versions of the [translations](html/translations) are available.
+
 Papers
 ======
 
@@ -56,9 +62,12 @@ Contributors include [Yannick Forster](https://github.com/yforster),
 [Cyril Cohen](https://github.com/CohenCyril) and [Nicolas
 Tabareau](https://github.com/Tabareau).
 
-(c) Copyright 2014-2018 Gregory Malecha
-(c) Copyright 2015-2018 Abhishek Anand, Matthieu Sozeau
-(c) Copyright 2017-2018 Simon Boulier, Nicolas Tabareau, Cyril Cohen
+Copyright (c) 2014-2018 Gregory Malecha\
+Copyright (c) 2015-2018 Abhishek Anand, Matthieu Sozeau\
+Copyright (c) 2017-2018 Simon Boulier, Nicolas Tabareau, Cyril Cohen
+
+This software is distributed under the terms of the MIT license.
+See [LICENSE](LICENSE) for details.
 
 Branches
 ========
@@ -196,19 +205,6 @@ following code:
 ```
 As long as you don't check this file into a repository things should work out
 well.
-
-Examples of plugins
--------------------
-- a plugin to add a constructor in [test-suite/add_constructor.v](https://github.com/Template-Coq/template-coq/tree/coq-8.7/test-suite/add_constructor.v)
-- a parametricity plugin in [translations/tsl_param.v](https://github.com/Template-Coq/template-coq/tree/coq-8.7/translations/tsl_param.v)
-- a plugin to negate funext in [translations/fun.v](https://github.com/Template-Coq/template-coq/tree/coq-8.7/translations/tsl_fun.v)
-
-Compile
--------
-Use:
-- `make` to compile the plugin
-- `make translations` to compile the translation plugins
-- `make test-suite` to compile the test suite
 
 Bugs
 ====

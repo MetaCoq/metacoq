@@ -50,8 +50,8 @@ Qed.
 (* Eval native_compute in typecheck_program p_Plus1. *)
 
 Definition test_reduction (p : program) :=
-    let '(Σ, t) := decompose_program p ([], init_graph) in
-    reduce (fst Σ) [] t.
+    let Σ := reconstruct_global_context (fst p) in
+    reduce (fst Σ) [] (snd p).
 
 Definition string_of_env_error e :=
   match e with

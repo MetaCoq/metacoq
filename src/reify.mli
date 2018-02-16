@@ -1,3 +1,5 @@
+open Names
+
 type ('a,'b) sum =
   Left of 'a | Right of 'b
 
@@ -35,25 +37,30 @@ module type Quoter = sig
   type quoted_cast_kind
   type quoted_kernel_name
   type quoted_inductive
-  type quoted_decl
-  type quoted_program
+  type quoted_proj
+  type quoted_global_reference
+
+  type quoted_sort_family
   type quoted_constraint_type
   type quoted_univ_constraint
   type quoted_univ_instance
   type quoted_univ_constraints
   type quoted_univ_context
   type quoted_inductive_universes
+
   type quoted_mind_params
-  type quoted_ind_entry =
-    quoted_ident * t * quoted_bool * quoted_ident list * t list
+  type quoted_ind_entry = quoted_ident * t * quoted_bool * quoted_ident list * t list
   type quoted_definition_entry = t * t option * quoted_univ_context
   type quoted_mind_entry
   type quoted_mind_finiteness
   type quoted_entry
-  type quoted_proj
-  type quoted_sort_family
 
-  open Names
+  type quoted_one_inductive_body
+  type quoted_mutual_inductive_body
+  type quoted_constant_body
+  type quoted_global_decl
+  type quoted_global_declarations
+  type quoted_program  (* the return type of quote_recursively *)
 
   val quote_ident : Id.t -> quoted_ident
   val quote_name : Name.t -> quoted_name
@@ -64,6 +71,8 @@ module type Quoter = sig
   val quote_cast_kind : Constr.cast_kind -> quoted_cast_kind
   val quote_kn : kernel_name -> quoted_kernel_name
   val quote_inductive : quoted_kernel_name * quoted_int -> quoted_inductive
+  val quote_proj : quoted_inductive -> quoted_int -> quoted_int -> quoted_proj
+
   val quote_constraint_type : Univ.constraint_type -> quoted_constraint_type
   val quote_univ_constraint : Univ.univ_constraint -> quoted_univ_constraint
   val quote_univ_instance : Univ.Instance.t -> quoted_univ_instance
@@ -71,6 +80,7 @@ module type Quoter = sig
   val quote_univ_context : Univ.UContext.t -> quoted_univ_context
   val quote_abstract_univ_context : Univ.AUContext.t -> quoted_univ_context
   val quote_inductive_universes : Entries.inductive_universes -> quoted_inductive_universes
+
   val quote_mind_params : (quoted_ident * (t,t) sum) list -> quoted_mind_params
   val quote_mind_finiteness : Decl_kinds.recursivity_kind -> quoted_mind_finiteness
   val quote_mutual_inductive_entry :
@@ -79,7 +89,6 @@ module type Quoter = sig
     quoted_mind_entry
 
   val quote_entry : (quoted_definition_entry, quoted_mind_entry) sum option -> quoted_entry
-  val quote_proj : quoted_inductive -> quoted_int -> quoted_int -> quoted_proj
 
   val mkName : quoted_ident -> quoted_name
   val mkAnon : quoted_name
@@ -103,19 +112,27 @@ module type Quoter = sig
   val mkFix : (quoted_int array * quoted_int) * (quoted_name array * t array * t array) -> t
   val mkCoFix : quoted_int * (quoted_name array * t array * t array) -> t
 
-  val mkMutualInductive :
-    quoted_kernel_name -> quoted_univ_context -> quoted_int (* params *) ->
-    (quoted_ident * t (* ind type *) * quoted_sort_family list *
-       (quoted_ident * t (* constr type *) * quoted_int) list *
-         (quoted_ident * t (* projection type *)) list) list ->
-     quoted_decl
+  val mk_one_inductive_body : quoted_ident * t (* ind type *) * quoted_sort_family list
+                                 * (quoted_ident * t (* constr type *) * quoted_int) list
+                                 * (quoted_ident * t (* projection type *)) list
+                                 -> quoted_one_inductive_body
 
-  val mkConstant : quoted_kernel_name -> quoted_univ_context ->
-                   t (* type *) -> t (* body *) -> quoted_decl
-  val mkAxiom : quoted_kernel_name -> quoted_univ_context -> t -> quoted_decl
+  val mk_mutual_inductive_body : quoted_int (* params *)
+                                    -> quoted_one_inductive_body list
+                                    -> quoted_univ_context
+                                    -> quoted_mutual_inductive_body
 
-  val mkExt : quoted_decl -> quoted_program -> quoted_program
-  val mkIn : t -> quoted_program
+  val mk_constant_body : t (* type *) -> t option (* body *) -> quoted_univ_context -> quoted_constant_body
+
+  val mk_inductive_decl : quoted_kernel_name -> quoted_mutual_inductive_body -> quoted_global_decl
+
+  val mk_constant_decl : quoted_kernel_name -> quoted_constant_body -> quoted_global_decl
+
+  val empty_global_declartions : quoted_global_declarations
+  val add_global_decl : quoted_global_decl -> quoted_global_declarations -> quoted_global_declarations
+
+  val mk_program : quoted_global_declarations -> t -> quoted_program
+
   val unquote_ident : quoted_ident -> Id.t
   val unquote_name : quoted_name -> Name.t
   val unquote_int :  quoted_int -> int
@@ -135,7 +152,7 @@ module type Quoter = sig
 end
 
 module Reify(Q : Quoter) : sig
-  val quote_mind_decl : Environ.env -> Names.mutual_inductive -> Q.quoted_decl
+  val quote_mind_decl : Environ.env -> Names.mutual_inductive -> Q.quoted_global_decl
   val quote_term : Environ.env -> Constr.t -> Q.t
   val quote_term_rec : Environ.env -> Constr.t -> Q.quoted_program
 end

@@ -208,7 +208,7 @@ Notation " Γ ,, d " := (snoc Γ d) (at level 20, d at next level).
 (** *** Environments *)
 
 (** See [one_inductive_body] from [declarations.ml]. *)
-Record inductive_body := mkinductive_body {
+Record one_inductive_body := {
   ind_name : ident;
   ind_type : term; (* Closed arity *)
   ind_kelim : list sort_family; (* Allowed elimination sorts *)
@@ -217,21 +217,21 @@ Record inductive_body := mkinductive_body {
   ind_projs : list (ident * term) (* names and types of projections, if any.
                                      Type under context of params and inductive object *) }.
 
-(* See [mutual_inductive_body] from [declarations.ml]. *)
-Record minductive_decl := {
+(** See [mutual_inductive_body] from [declarations.ml]. *)
+Record mutual_inductive_body := {
   ind_npars : nat;
-  ind_bodies : list inductive_body ;
+  ind_bodies : list one_inductive_body ;
   ind_universes : universe_context }.
 
-(* See [constant_body] from [declarations.ml] *)
-Record constant_decl := {
-  cst_universes : universe_context;
-  cst_type : term;
-  cst_body : option term }.
+(** See [constant_body] from [declarations.ml] *)
+Record constant_body := {
+    cst_type : term;
+    cst_body : option term;
+    cst_universes : universe_context }.
 
 Inductive global_decl :=
-| ConstantDecl : kername -> constant_decl -> global_decl
-| InductiveDecl : kername -> minductive_decl -> global_decl.
+| ConstantDecl : kername -> constant_body -> global_decl
+| InductiveDecl : kername -> mutual_inductive_body -> global_decl.
 
 Definition global_declarations := list global_decl.
 
@@ -244,22 +244,7 @@ Definition global_context : Type := global_declarations * uGraph.t.
 
   A set of declarations and a term, as produced by [Quote Recursively]. *)
 
-Inductive program :=
-| PConstr : string -> universe_context -> term (* type *) -> term (* body *) -> program -> program
-| PType   : ident -> universe_context -> nat (* # of parameters, w/o let-ins *) ->
-            list inductive_body (* Non-empty *) -> program -> program
-| PAxiom  : ident -> universe_context -> term (* the type *) -> program -> program
-| PIn     : term -> program.
-
-Definition extend_program (p : program) (d : global_decl) : program :=
-  match d with
-  | ConstantDecl i {| cst_universes := u; cst_type:=ty;  cst_body:=Some body |}
-    => PConstr i u ty body p
-  | ConstantDecl i {| cst_universes := u; cst_type:=ty;  cst_body:=None |}
-    => PAxiom i u ty p
-  | InductiveDecl i {| ind_npars:=n; ind_bodies := l ; ind_universes := u |}
-    => PType i u n l p
-  end.
+Definition program : Type := global_declarations * term.
 
 (** ** The Template Monad
 
@@ -314,7 +299,7 @@ Inductive TemplateMonad : Type -> Prop :=
 (* Similar to Quote Recursively Definition ... := ...*)
 | tmQuoteRec : forall {A:Type}, A  -> TemplateMonad program
 (* Quote the body of a definition or inductive. Its name need not be fully qualified *)
-| tmQuoteInductive : kername -> TemplateMonad minductive_decl
+| tmQuoteInductive : kername -> TemplateMonad mutual_inductive_body
 | tmQuoteUniverses : unit -> TemplateMonad uGraph.t
 | tmQuoteConstant : kername -> bool (* bypass opacity? *) -> TemplateMonad constant_entry
 | tmMkDefinition : ident -> term -> TemplateMonad unit

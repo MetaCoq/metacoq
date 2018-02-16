@@ -27,15 +27,15 @@ Fixpoint try_remove_n_lambdas (n : nat) (t : term) {struct n} : term :=
 
 (** * Plugin *)
 
-(* [add_ctor] add a constructor to a [minductive_decl]
+(* [add_ctor] add a constructor to a [mutual_inductive_body]
  (that is a reified declaration of an inductive). *)
 
-Definition add_ctor (mind : minductive_decl) (ind0 : inductive) (idc : ident) (ctor : term)
-  : minductive_decl
+Definition add_ctor (mind : mutual_inductive_body) (ind0 : inductive) (idc : ident) (ctor : term)
+  : mutual_inductive_body
   := let i0 := inductive_ind ind0 in
      {| ind_npars := mind.(ind_npars) ;
         ind_universes := mind.(ind_universes) ;
-        ind_bodies := map_i (fun (i : nat) (ind : inductive_body) =>
+        ind_bodies := map_i (fun (i : nat) (ind : one_inductive_body) =>
                          {| ind_name := tsl_ident ind.(ind_name) ;
                             ind_type  := ind.(ind_type) ;
                             ind_kelim := ind.(ind_kelim) ;
@@ -58,8 +58,8 @@ Definition add_constructor {A} (ind : A) (idc : ident) {B} (ctor : B)
      | tInd ind0 _ =>
        decl <- tmQuoteInductive (inductive_mind ind0) ;;
        ctor <- tmQuote ctor ;;
-       e <- tmEval lazy (mind_decl_to_entry (add_ctor decl ind0 idc ctor)) ;;
-       tmMkInductive e
+       ind' <- tmEval lazy (add_ctor decl ind0 idc ctor) ;;
+       tmMkInductive' ind'
      | _ => tmPrint ind ;; tmFail " is not an inductive"
      end.
 

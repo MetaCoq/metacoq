@@ -52,19 +52,16 @@ Definition fail_nf {A} (msg : string) : TemplateMonad A
   := (tmEval all msg) >>= tmFail.
 
 
-Fixpoint extract_mind_decl_from_program (id : ident) (p : program)
-  : option minductive_decl
-  := match p with
-     | PConstr _ _ _ _ p => extract_mind_decl_from_program id p
-     | PType id' uctx n inds p => if string_dec id id' then
-                              Some (Build_minductive_decl n inds uctx)
-                            else extract_mind_decl_from_program id p
-     | PAxiom _ _ _ p => extract_mind_decl_from_program id p
-     | PIn _ => None
-     end.
+Fixpoint lookup_mind_decl (id : ident) (decls : global_declarations)
+ := match decls with
+    | nil => None
+    | InductiveDecl kn d :: tl =>
+      if string_dec kn id then Some d else lookup_mind_decl id tl
+    | _ :: tl => lookup_mind_decl id tl
+    end.
 
-
-Definition mind_decl_to_entry (decl : minductive_decl)
+(* was mind_decl_to_entry *)
+Definition mind_body_to_entry (decl : mutual_inductive_body)
   : mutual_inductive_entry.
 Proof.
   refine {| mind_entry_record := None; (* not a record *)
@@ -96,3 +93,6 @@ Proof.
     refine (List.map (fun x => remove_arity decl.(ind_npars)
                                                 (snd (fst x))) ind_ctors).
 Defined.
+
+Definition tmMkInductive' (mind : mutual_inductive_body) : TemplateMonad unit
+  := tmMkInductive (mind_body_to_entry mind).

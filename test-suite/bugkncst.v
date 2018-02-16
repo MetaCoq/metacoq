@@ -20,7 +20,6 @@ Require Import Template.Template.
 Require Import Template.Ast.
 
 Unset Template Cast Propositions.
-Unset Template Cast Types.
 
 (* Use template-coq to make a [program] from function defined above *)
 Time Quote Recursively Definition p_Plus1 := Plus1.
@@ -51,26 +50,28 @@ Fixpoint pocc_term (n:nat) (t:term): bool :=
       end
   end.
   (** does [tConst str] occur anywhere in a program? **)
-Fixpoint pocc_program (p:program): bool :=
-  match p with
-    | PConstr _ _ ty t q => pocc_term 2000 ty || pocc_term 2000 t || pocc_program q
-    | PType _ _ _ _ q =>  pocc_program q
-    | PAxiom _ _ t q => pocc_term 2000 t || pocc_program q
-    | PIn t =>  pocc_term 2000 t
+
+Definition bound_global_decl (d : global_decl) : bool :=
+  match d with
+  | ConstantDecl kn _
+  | InductiveDecl kn _ => if string_dec str kn then true else false
   end.
-  (** is [str] in a program's environment? **)
-Fixpoint bound_program (p:program): bool :=
-  match p with
-    | PConstr nm _ _ _ q
-    | PType nm _ _ _ q
-    | PAxiom nm _ _ q =>
-      (if string_dec str nm then true else false) || bound_program q
-    | PIn _ =>  false
-  end.
+
+Definition bound_program (p : program) := List.existsb bound_global_decl (fst p).
+
+Definition pocc_global_decl (d : global_decl) : bool :=
+match d with
+| ConstantDecl kn {| cst_type := ty;  cst_body := Some t |} => pocc_term 2000 ty || pocc_term 2000 t
+| ConstantDecl kn {| cst_type := ty;  cst_body := None |} => pocc_term 2000 ty
+| InductiveDecl kn _ => false
+end.
+
+Definition pocc_program p := pocc_term 2000 (snd p) || List.existsb pocc_global_decl (fst p).
+
 End occ_term_Sec.
 
-Eval vm_compute in pocc_program "Coq.Arith.PeanoNat.Nat.pred" p_Plus1.
-Eval vm_compute in bound_program "Coq.Arith.PeanoNat.Nat.pred" p_Plus1.
+Eval vm_compute in (eq_refl : pocc_program "Coq.Arith.PeanoNat.Nat.pred" p_Plus1 = false).
+Eval vm_compute in (eq_refl : bound_program "Coq.Arith.PeanoNat.Nat.pred" p_Plus1 = false).
 
-Eval vm_compute in pocc_program "Coq.Init.Nat.pred" p_Plus1.
-Eval vm_compute in bound_program "Coq.Init.Nat.pred" p_Plus1.
+Eval vm_compute in (eq_refl : pocc_program "Coq.Init.Nat.pred" p_Plus1 = true).
+Eval vm_compute in (eq_refl : bound_program "Coq.Init.Nat.pred" p_Plus1 = true).

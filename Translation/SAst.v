@@ -23,6 +23,8 @@ Notation "x * y" := (pp_prod x y) : type_scope.
 
 From Template Require Import Ast.
 
+Definition sort := nat.
+
 Inductive sterm : Type :=
 | sRel (n : nat)
 | sSort (s : sort)

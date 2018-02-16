@@ -2,7 +2,7 @@
 
 From Coq Require Import Bool String List BinPos Compare_dec Omega.
 From Equations Require Import Equations DepElimDec.
-From Template Require Import Ast LiftSubst Typing Checker Template.
+From Template Require Import Ast utils monad_utils LiftSubst Typing Checker Template.
 From Translation Require Import SAst SLiftSubst SCommon ITyping Quotes.
 
 Import MonadNotation.
@@ -43,6 +43,13 @@ Instance monad_exc : MonadExc tsl_error tsl_result :=
 
 Open Scope t_scope.
 
+(* Translation close to the old TemplateCoq, meaning it's buggy of course. *)
+Fixpoint sort_to_universe (s : sort) : Universe.t :=
+  match s with
+  | 0 => Universe.type0
+  | S n => Universe.type1
+  end.
+
 Fixpoint tsl_rec (fuel : nat) (Σ : global_context) (Γ : context) (t : sterm) {struct fuel}
   : tsl_result term :=
   match fuel with
@@ -50,7 +57,7 @@ Fixpoint tsl_rec (fuel : nat) (Σ : global_context) (Γ : context) (t : sterm) {
   | S fuel =>
     match t with
     | sRel n => ret (tRel n)
-    | sSort s => ret (tSort s)
+    | sSort s => ret (tSort (sort_to_universe s))
     | sProd n A B =>
       A' <- tsl_rec fuel Σ Γ A ;;
       B' <- tsl_rec fuel Σ (Γ ,, vass n A') B ;;

@@ -1,5 +1,5 @@
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
-From Template Require Import Ast Typing.
+From Template Require Import Ast utils Typing.
 From Translation Require Import SAst SLiftSubst.
 
 Record scontext_decl := { sdecl_name : name ;
@@ -60,20 +60,22 @@ Proof.
   apply eq_safe_nth'.
 Defined.
 
+Definition max_sort := max.
+
 Lemma max_id :
   forall s, max_sort s s = s.
 Proof.
-  intro s. induction s.
-  all: cbn ; reflexivity.
+  intro s. unfold max_sort. auto with arith.
 Defined.
+
+Definition succ_sort := S.
 
 Lemma max_succ_id :
   forall s, max_sort (succ_sort s) s = succ_sort s.
 Proof.
-  (* This lemma is only true when s is not Prop which I ignored. *)
-  intro s. induction s.
-  all: cbn.
-Admitted.
+  intro s. unfold max_sort, succ_sort.
+  auto with arith.
+Defined.
 
 Definition sapp_context (Γ Γ' : scontext) : scontext := (Γ' ++ Γ)%list.
 Notation " Γ  ,,, Γ' " := (sapp_context Γ Γ') (at level 25, Γ' at next level, left associativity) : s_scope.

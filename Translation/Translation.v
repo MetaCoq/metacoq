@@ -1,6 +1,6 @@
 From Coq Require Import Bool String List BinPos Compare_dec Omega.
 From Equations Require Import Equations DepElimDec.
-From Template Require Import Ast LiftSubst Typing.
+From Template Require Import Ast utils LiftSubst Typing.
 From Translation
      Require Import SAst SLiftSubst SCommon XTyping ITyping PackLifts.
 
@@ -757,7 +757,7 @@ Lemma trel_transport_seq :
 Proof.
   intros A A' h.
   induction h.
- all : try (eexists ; exists nil ; split;  [split ; [idtac | reflexivity]| idtac]; [reflexivity | now constructor ]). 
+ all : try (eexists ; exists nil ; split;  [split ; [idtac | reflexivity]| idtac]; [reflexivity | now constructor ]).
 
   destruct IHh as [A'' [tseq [[hh he] hsub]]].
   exists A'', (trd T1 T2 p :: tseq). split ; [split | idtac].
@@ -786,7 +786,7 @@ Proof.
   - cbn in *. destruct A' ; try (now inversion hh).
     + exists (succ_sort s). repeat split.
       * apply type_Sort. apply (typing_wf ht).
-      * eapply (eq_typing (inversionSort ht)). 
+      * eapply (eq_typing (inversionSort ht)).
     + destruct (inversionProd ht) as [s1 [s2 [[? ?] ?]]].
       exists (max_sort s1 s2). repeat split.
       * now apply type_Prod.
@@ -1036,7 +1036,7 @@ Definition typing_all : forall (Σ : global_context)
          (P1 : forall (s : scontext) (s0 s1 s2 : sterm),
                Σ;;; s |-x s0 = s1 : s2 -> Type),
        P0 [] (XTyping.wf_nil Σ) ->
-       (forall (Γ : scontext) (x : name) (A : sterm) 
+       (forall (Γ : scontext) (x : name) (A : sterm)
           (s : sort) (w : XTyping.wf Σ Γ),
         P0 Γ w ->
         forall t : Σ;;; Γ |-x A : sSort s,
@@ -1053,14 +1053,14 @@ Definition typing_all : forall (Σ : global_context)
        (forall (Γ : scontext) (s : sort) (w : XTyping.wf Σ Γ),
         P0 Γ w ->
         P Γ (sSort s) (sSort (succ_sort s)) (XTyping.type_Sort Σ Γ s w)) ->
-       (forall (Γ : scontext) (n : name) (t b : sterm) 
+       (forall (Γ : scontext) (n : name) (t b : sterm)
           (s1 s2 : sort) (t0 : Σ;;; Γ |-x t : sSort s1),
         P Γ t (sSort s1) t0 ->
         forall t1 : Σ;;; Γ,, svass n t |-x b : sSort s2,
         P (Γ,, svass n t) b (sSort s2) t1 ->
         P Γ (sProd n t b) (sSort (max_sort s1 s2))
           (XTyping.type_Prod Σ Γ n t b s1 s2 t0 t1)) ->
-       (forall (Γ : scontext) (n n' : name) (t b : sterm) 
+       (forall (Γ : scontext) (n n' : name) (t b : sterm)
           (s1 s2 : sort) (bty : sterm) (t0 : Σ;;; Γ |-x t : sSort s1),
         P Γ t (sSort s1) t0 ->
         forall t1 : Σ;;; Γ,, svass n t |-x bty : sSort s2,
@@ -1069,7 +1069,7 @@ Definition typing_all : forall (Σ : global_context)
         P (Γ,, svass n t) b bty t2 ->
         P Γ (sLambda n t bty b) (sProd n' t bty)
           (XTyping.type_Lambda Σ Γ n n' t b s1 s2 bty t0 t1 t2)) ->
-       (forall (Γ : scontext) (n : name) (s1 s2 : sort) 
+       (forall (Γ : scontext) (n : name) (s1 s2 : sort)
           (t A B u : sterm) (t0 : Σ;;; Γ |-x A : sSort s1),
         P Γ A (sSort s1) t0 ->
         forall t1 : Σ;;; Γ,, svass n A |-x B : sSort s2,
@@ -1110,7 +1110,7 @@ Definition typing_all : forall (Σ : global_context)
         P1 Γ u v A e ->
         forall e0 : Σ;;; Γ |-x v = w : A,
         P1 Γ v w A e0 -> P1 Γ u w A (XTyping.eq_transitivity Σ Γ u v w A e e0)) ->
-       (forall (Γ : scontext) (s1 s2 : sort) (n : name) 
+       (forall (Γ : scontext) (s1 s2 : sort) (n : name)
           (A B t u : sterm) (t0 : Σ;;; Γ |-x A : sSort s1),
         P Γ A (sSort s1) t0 ->
         forall t1 : Σ;;; Γ,, svass n A |-x B : sSort s2,
@@ -1119,7 +1119,7 @@ Definition typing_all : forall (Σ : global_context)
         P (Γ,, svass n A) t B t2 ->
         forall t3 : Σ;;; Γ |-x u : A,
         P Γ u A t3 ->
-        P1 Γ (sApp (sLambda n A B t) n A B u) (t {0 := u}) 
+        P1 Γ (sApp (sLambda n A B t) n A B u) (t {0 := u})
           (B {0 := u}) (XTyping.eq_beta Σ Γ s1 s2 n A B t u t0 t1 t2 t3)) ->
        (forall (Γ : scontext) (s : sort) (T1 T2 t1 t2 : sterm)
           (e : Σ;;; Γ |-x t1 = t2 : T1),
@@ -1153,7 +1153,7 @@ Definition typing_all : forall (Σ : global_context)
         P (Γ,, svass n1 A1) t1 B1 t3 ->
         forall t4 : Σ;;; Γ,, svass n2 A2 |-x t2 : B2,
         P (Γ,, svass n2 A2) t2 B2 t4 ->
-        P1 Γ (sLambda n1 A1 B1 t1) (sLambda n2 A2 B2 t2) 
+        P1 Γ (sLambda n1 A1 B1 t1) (sLambda n2 A2 B2 t2)
           (sProd n' A1 B1)
           (XTyping.cong_Lambda Σ Γ n1 n2 n' A1 A2 B1 B2 t1 t2 s1 s2 e e0 e1 t
              t0 t3 t4)) ->
@@ -1179,7 +1179,7 @@ Definition typing_all : forall (Σ : global_context)
         P Γ u1 A1 t5 ->
         forall t6 : Σ;;; Γ |-x u2 : A2,
         P Γ u2 A2 t6 ->
-        P1 Γ (sApp t1 n1 A1 B1 u1) (sApp t2 n2 A2 B2 u2) 
+        P1 Γ (sApp t1 n1 A1 B1 u1) (sApp t2 n2 A2 B2 u2)
           (B1 {0 := u1})
           (XTyping.cong_App Σ Γ n1 n2 s1 s2 t1 t2 A1 A2 B1 B2 u1 u2 e e0 e1 e2
              t t0 t3 t4 t5 t6)) ->
@@ -1206,16 +1206,16 @@ Definition typing_all : forall (Σ : global_context)
            P s s0 s1 t) *
        (forall (s : scontext) (s0 s1 s2 : sterm) (e : Σ;;; s |-x s0 = s1 : s2),
            P1 s s0 s1 s2 e).
-Proof. 
+Proof.
   intros; repeat split ; [
   eapply wf_ind | eapply typing_ind | eapply eq_term_ind]; eauto.
-Defined. 
+Defined.
 
 Definition complete_translation {Σ} :
            (forall Γ (h : XTyping.wf Σ Γ),
                ∑ Γ', Σ |--i Γ' # ⟦ Γ ⟧ )
            * (forall { Γ t A} (h : Σ ;;; Γ |-x t : A)
-     {Γ'} (hΓ : Σ |--i Γ' # ⟦ Γ ⟧),                        
+     {Γ'} (hΓ : Σ |--i Γ' # ⟦ Γ ⟧),
        ∑ A' t', Σ ;;;; Γ' |--- [t'] : A' # ⟦ Γ |--- [t] : A ⟧)
  * (forall { Γ u v A} (h : Σ ;;; Γ |-x u = v : A)
                     {Γ'} (hΓ : Σ |--i Γ' # ⟦ Γ ⟧),
@@ -1226,7 +1226,7 @@ Proof.
                      (fun Γ (h : XTyping.wf Σ Γ) =>
                         ∑ Γ', Σ |--i Γ' # ⟦ Γ ⟧ )
                      (fun { Γ t A} (h : Σ ;;; Γ |-x t : A) => forall
-                          {Γ'} (hΓ : Σ |--i Γ' # ⟦ Γ ⟧),                        
+                          {Γ'} (hΓ : Σ |--i Γ' # ⟦ Γ ⟧),
                           ∑ A' t', Σ ;;;; Γ' |--- [t'] : A' # ⟦ Γ |--- [t] : A ⟧)
                      (fun { Γ u v A} (h : Σ ;;; Γ |-x u = v : A) => forall
                     {Γ'} (hΓ : Σ |--i Γ' # ⟦ Γ ⟧),
@@ -1234,7 +1234,7 @@ Proof.
     eqtrans Σ Γ A u v Γ' A' A'' u' v' p')
                      _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _); intros.
   (** context_translation **)
-  
+
     (* wf_nil *)
     + exists nil. split ; constructor.
 
@@ -1248,7 +1248,7 @@ Proof.
       exists (Γ' ,, svass x A''). now eapply trans_snoc.
 
   (** type_translation **)
-  
+
     (* type_Rel *)
     + assert (isdecl' : n < #|Γ'|).
       { destruct hΓ as [iΓ _]. now rewrite <- (length_increl iΓ). }
@@ -1449,7 +1449,7 @@ Proof.
       * eapply type_Transport ; eassumption.
 
   (** eq_translation **)
-  
+
     (* eq_reflexivity *)
     + destruct (H _ hΓ) as [A' [u' hu']].
       destruct hu' as [[[? ?] ?] hu'].
@@ -1465,7 +1465,7 @@ Proof.
       exists A'', A', v', u', (sHeqSym p').
       repeat split ; try assumption.
       eapply type_HeqSym'. eassumption.
-      
+
     (* eq_transitivity *)
     + destruct (H _ hΓ)
         as [A1 [A2 [u1 [v1 [p1 h1']]]]].
@@ -1492,7 +1492,7 @@ Proof.
       * eassumption.
       * eapply type_HeqTrans' ; eassumption.
 
-        
+
     (* eq_beta *)
     + (* Translation of the domain *)
       destruct (H _ hΓ) as [S [A'' hA'']].
@@ -1817,7 +1817,7 @@ Proof.
       * assumption.
 
 
-        
+
     (* cong_Lambda *)
     + (* The domains *)
       destruct (H _ hΓ)

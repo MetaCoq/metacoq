@@ -68,6 +68,15 @@ Section Reduce.
       reduce_stack Γ n (subst0 b c) stack
     else ret (t, stack)
 
+  (* | tConst "Translation.Quotes.K" u => *)
+  (*  match stack with *)
+  (*    A::x::tApp (tConstruct (mkInd "Coq.Init.Logic.eq" 0) 0 []) X :: args => *)
+  (*    ret (tApp (tConstruct (mkInd "Coq.Init.Logic.eq" 0) 0 []) *)
+  (*              [tApp (tInd (mkInd "Coq.Init.Logic.eq" 0) []) *)
+  (*                    [A;x;x];tApp (tConstruct (mkInd "Coq.Init.Logic.eq" 0) 0 []) [A;x]], args) *)
+  (*  | _ => ret (t, stack) *)
+  (*  end *)
+
   | tConst c u => (* TODO Universes *)
     if RedFlags.delta flags then
       match lookup_env Σ c with
@@ -364,7 +373,7 @@ Definition try_reduce Σ Γ n t :=
   | None => t
   end.
 
-  
+
 Inductive type_error :=
 | UnboundRel (n : nat)
 | UnboundVar (id : string)
@@ -642,7 +651,7 @@ Section Typecheck2.
   Definition try_suc (u : Universe.t) : Universe.t :=   (* FIXME suc s *)
     map (fun '(l, b) =>  (l, true)) u.
 
-  
+
   Fixpoint infer (Γ : context) (t : term) : typing_result term :=
     match t with
     | tRel n =>
@@ -784,7 +793,7 @@ Section Typecheck2.
     unfold lookup_constant_type, lookup_env.
     red in isdecl. rewrite isdecl. destruct decl. reflexivity.
   Qed.
-  
+
   Lemma lookup_constant_type_is_declared cst u T :
     lookup_constant_type cst u = Checked T ->
     { decl | declared_constant (fst Σ) cst decl /\
@@ -796,7 +805,7 @@ Section Typecheck2.
     injection H as eq. subst T. rewrite (lookup_env_id Hlook). simpl.
     eexists. split; eauto.
   Qed.
-  
+
   Lemma eq_ind_refl i i' : eq_ind i i' = true <-> i = i'.
   Admitted.
 
@@ -845,7 +854,7 @@ Section Typecheck2.
 
     - (* destruct indpar. *)
       apply cumul_reduce_to_ind in IHX2 as [args' [-> Hcumul]].
-      simpl in *. rewrite (proj2 (eq_ind_refl ind ind) eq_refl). 
+      simpl in *. rewrite (proj2 (eq_ind_refl ind ind) eq_refl).
       eexists ; split; [ reflexivity | tc ].
       admit.
 
@@ -928,10 +937,10 @@ Section Typecheck2.
   Qed.
 
   Ltac infco := eauto using infer_cumul_correct, infer_type_correct.
-  
+
   (* Axiom cheat : forall A, A. *)
   (* Ltac admit := apply cheat. *)
-  
+
   Lemma infer_correct Γ t T :
     infer Γ t = Checked T -> Σ ;;; Γ |- t : T.
   Proof.
@@ -998,7 +1007,7 @@ Section Typecheck2.
       destruct (nth_error_Some_safe_nth _ _ _ _ Heqo).
       constructor.
   Admitted.
-  
+
 End Typecheck2.
 
 Extract Constant infer_type_correct => "(fun f sigma ctx t x -> assert false)".

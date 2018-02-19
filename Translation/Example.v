@@ -414,3 +414,21 @@ Make Definition coq_tm3 :=
               end)
       in exact t
   ).
+
+Let t := Quotes.mkHeqRefl (tSort []) (tSort []).
+
+Fail Make Definition coq_t := ltac:(let t := eval lazy in t in exact t).
+
+Let t' := hnf_stack (fst Σ) [] t.
+
+Eval lazy in t'.
+
+Make Definition coq_t' :=
+  ltac:(
+    let t := eval lazy in
+             (match t' with
+              | Checked (t',_) => t'
+              | _ => tSort Universe.type0
+              end)
+      in exact t
+  ).

@@ -14,7 +14,9 @@ Inductive tsl_error :=
 | NotEnoughFuel
 | TranslationNotFound (id : ident)
 | TranslationNotHandled
-| TypingError (t : type_error).
+| TypingError (t : type_error)
+| UnexpectedTranslation (msg : string) (p : sterm) (p' ty : term)
+.
 
 Inductive tsl_result A :=
 | Success : A -> tsl_result A
@@ -109,10 +111,7 @@ Fixpoint tsl_rec (fuel : nat) (Σ : global_context) (Γ : context) (t : sterm) {
       match @infer (Build_Fuel fuel) Σ Γ p' with
       | Checked (tApp (tInd (mkInd "Translation.Quotes.heq" 0) _) [ A' ; u' ; _ ; v' ]) =>
         myret Σ Γ (mkHeqToHeq A' u' v' p')
-      (* That's not really the correct error but well. *)
-      (* | Checked T => raise (TypingError (NotAnInductive T)) *)
-      | Checked T => raise (TypingError (NotAnInductive p'))
-      (* | Checked T => raise (TranslationNotFound "HeqToEq") *)
+      | Checked T => raise (UnexpectedTranslation "HeqToEq" p p' T)
       | TypeError t => raise (TypingError t)
       end
     | sHeqRefl A a =>
@@ -124,8 +123,7 @@ Fixpoint tsl_rec (fuel : nat) (Σ : global_context) (Γ : context) (t : sterm) {
       match @infer (Build_Fuel fuel) Σ Γ p' with
       | Checked (tApp (tInd (mkInd "Translation.Quotes.heq" 0) _) [ A' ; a' ; B' ; b' ]) =>
         myret Σ Γ (mkHeqSym A' a' B' b' p')
-      (* | Checked T => raise (TypingError (NotAnInductive T)) *)
-      | Checked T => raise (TranslationNotFound "HeqSym")
+      | Checked T => raise (UnexpectedTranslation "HeqSym" p p' T)
       | TypeError t => raise (TypingError t)
       end
     | sHeqTrans p q =>
@@ -136,12 +134,10 @@ Fixpoint tsl_rec (fuel : nat) (Σ : global_context) (Γ : context) (t : sterm) {
         match @infer (Build_Fuel fuel) Σ Γ q' with
         | Checked (tApp (tInd (mkInd "Translation.Quotes.heq" 0) _) [ _ ; _ ; C' ; c' ]) =>
           myret Σ Γ (mkHeqTrans A' a' B' b' C' c' p' q')
-        (* | Checked T => raise (TypingError (NotAnInductive T)) *)
-        | Checked T => raise (TranslationNotFound "HeqTrans 1")
+        | Checked T => raise (UnexpectedTranslation "HeqTrans 1" q q' T)
         | TypeError t => raise (TypingError t)
         end
-      (* | Checked T => raise (TypingError (NotAnInductive T)) *)
-      | Checked T => raise (TranslationNotFound "HeqTrans 2")
+      | Checked T => raise (UnexpectedTranslation "HeqTrans 2" p p' T)
       | TypeError t => raise (TypingError t)
       end
     | sHeqTransport p t =>
@@ -150,8 +146,7 @@ Fixpoint tsl_rec (fuel : nat) (Σ : global_context) (Γ : context) (t : sterm) {
       match @infer (Build_Fuel fuel) Σ Γ p' with
       | Checked (tApp (tInd (mkInd "Coq.Init.Logic.eq" 0) _) [ _ ; A' ; B' ]) =>
         myret Σ Γ (mkHeqTransport A' B' p' t')
-      (* | Checked T => raise (TypingError (NotAnInductive T)) *)
-      | Checked T => raise (TranslationNotFound "HeqTransport")
+      | Checked T => raise (UnexpectedTranslation "HeqTransport" p p' T)
       | TypeError t => raise (TypingError t)
       end
     | sCongProd B1 B2 pA pB =>
@@ -162,8 +157,7 @@ Fixpoint tsl_rec (fuel : nat) (Σ : global_context) (Γ : context) (t : sterm) {
         B1' <- tsl_rec fuel Σ (Γ ,, vass nAnon A1') B1 ;;
         B2' <- tsl_rec fuel Σ (Γ ,, vass nAnon A2') B2 ;;
         myret Σ Γ (mkCongProd A1' A2' B1' B2' pA' pB')
-      (* | Checked T => raise (TypingError (NotAnInductive T)) *)
-      | Checked T => raise (TranslationNotFound "CongProd")
+      | Checked T => raise (UnexpectedTranslation "CongProd" pA pA' T)
       | TypeError t => raise (TypingError t)
       end
     | sCongLambda B1 B2 t1 t2 pA pB pt =>
@@ -177,8 +171,7 @@ Fixpoint tsl_rec (fuel : nat) (Σ : global_context) (Γ : context) (t : sterm) {
         t1' <- tsl_rec fuel Σ (Γ ,, vass nAnon A1') t1 ;;
         t2' <- tsl_rec fuel Σ (Γ ,, vass nAnon A2') t2 ;;
         myret Σ Γ (mkCongLambda A1' A2' B1' B2' t1' t2' pA' pB' pt')
-      (* | Checked T => raise (TypingError (NotAnInductive T)) *)
-      | Checked T => raise (TranslationNotFound "CongLambda")
+      | Checked T => raise (UnexpectedTranslation "CongLambda" pA pA' T)
       | TypeError t => raise (TypingError t)
       end
     | sCongApp B1 B2 pt pA pB pu =>
@@ -192,19 +185,16 @@ Fixpoint tsl_rec (fuel : nat) (Σ : global_context) (Γ : context) (t : sterm) {
         B2' <- tsl_rec fuel Σ (Γ ,, vass nAnon A2') B2 ;;
         match @infer (Build_Fuel fuel) Σ Γ pt' with
         | Checked (tApp (tInd (mkInd "Translation.Quotes.heq" 0) _) [ _ ; t1' ; _ ; t2' ]) =>
-          match @infer (Build_Fuel fuel) Σ Γ pt' with
+          match @infer (Build_Fuel fuel) Σ Γ pu' with
           | Checked (tApp (tInd (mkInd "Translation.Quotes.heq" 0) _) [ _ ; u1' ; _ ; u2' ]) =>
             myret Σ Γ (mkCongApp A1' A2' B1' B2' t1' t2' u1' u2' pA' pB' pt' pu')
-          (* | Checked T => raise (TypingError (NotAnInductive T)) *)
-          | Checked T => raise (TranslationNotFound "CongApp 1")
+          | Checked T => raise (UnexpectedTranslation "CongApp 1" pu pu' T)
           | TypeError t => raise (TypingError t)
           end
-        (* | Checked T => raise (TypingError (NotAnInductive T)) *)
-        | Checked T => raise (TranslationNotFound "CongApp 2")
+        | Checked T => raise (UnexpectedTranslation "CongApp 2" pt pt' T)
         | TypeError t => raise (TypingError t)
         end
-      (* | Checked T => raise (TypingError (NotAnInductive T)) *)
-      | Checked T => raise (TranslationNotFound "CongApp 3")
+      | Checked T => raise (UnexpectedTranslation "CongApp 3" pA pA' T)
       | TypeError t => raise (TypingError t)
       end
     | sCongEq pA pu pv =>
@@ -216,12 +206,10 @@ Fixpoint tsl_rec (fuel : nat) (Σ : global_context) (Γ : context) (t : sterm) {
         match @infer (Build_Fuel fuel) Σ Γ pv' with
         | Checked (tApp (tInd (mkInd "Translation.Quotes.heq" 0) _) [ _ ; v1' ; _ ; v2' ]) =>
           myret Σ Γ (mkCongEq A1' A2' u1' v1' u2' v2' pA' pu' pv')
-        (* | Checked T => raise (TypingError (NotAnInductive T)) *)
-        | Checked T => raise (TranslationNotFound "CongEq 1")
+        | Checked T => raise (UnexpectedTranslation "CongEq 1" pv pv' T)
         | TypeError t => raise (TypingError t)
         end
-      (* | Checked T => raise (TypingError (NotAnInductive T)) *)
-      | Checked T => raise (TranslationNotFound "CongEq 2")
+      | Checked T => raise (UnexpectedTranslation "CongEq 2" pu pu' T)
       | TypeError t => raise (TypingError t)
       end
     | sCongRefl pA pu =>
@@ -230,8 +218,7 @@ Fixpoint tsl_rec (fuel : nat) (Σ : global_context) (Γ : context) (t : sterm) {
       match @infer (Build_Fuel fuel) Σ Γ pu' with
       | Checked (tApp (tInd (mkInd "Translation.Quotes.heq" 0) _) [ A1' ; u1' ; A2' ; u2' ]) =>
         myret Σ Γ (mkCongRefl A1' A2' u1' u2' pA' pu')
-      (* | Checked T => raise (TypingError (NotAnInductive T)) *)
-      | Checked T => raise (TranslationNotFound "CongRefl")
+      | Checked T => raise (UnexpectedTranslation "CongRefl" pu pu' T)
       | TypeError t => raise (TypingError t)
       end
     | sEqToHeq p =>
@@ -239,8 +226,7 @@ Fixpoint tsl_rec (fuel : nat) (Σ : global_context) (Γ : context) (t : sterm) {
       match @infer (Build_Fuel fuel) Σ Γ p' with
       | Checked (tApp (tInd (mkInd "Coq.Init.Logic.eq" 0) _) [ A' ; u' ; v' ]) =>
         myret Σ Γ (mkEqToHeq A' u' v' p')
-      (* | Checked T => raise (TypingError (NotAnInductive T)) *)
-      | Checked T => raise (TranslationNotFound "EqToHeq")
+      | Checked T => raise (UnexpectedTranslation "EqToHeq" p p' T)
       | TypeError t => raise (TypingError t)
       end
     | sHeqTypeEq p =>
@@ -248,8 +234,7 @@ Fixpoint tsl_rec (fuel : nat) (Σ : global_context) (Γ : context) (t : sterm) {
       match @infer (Build_Fuel fuel) Σ Γ p' with
       | Checked (tApp (tInd (mkInd "Translation.Quotes.heq" 0) _) [ A' ; u' ; B' ; v' ]) =>
         myret Σ Γ (mkHeqTypeEq A' u' B' v' p')
-      (* | Checked T => raise (TypingError (NotAnInductive T)) *)
-      | Checked T => raise (TranslationNotFound "HeqTypeEq")
+      | Checked T => raise (UnexpectedTranslation "HeqTypeEq" p p' T)
       | TypeError t => raise (TypingError t)
       end
     | sPack A1 A2 =>
@@ -261,8 +246,7 @@ Fixpoint tsl_rec (fuel : nat) (Σ : global_context) (Γ : context) (t : sterm) {
       match @infer (Build_Fuel fuel) Σ Γ p' with
       | Checked (tApp (tInd (mkInd "Translation.Quotes.Pack" 0) _) [ A1' ; A2' ]) =>
         myret Σ Γ (mkProjT1 A1' A2' p')
-      (* | Checked T => raise (TypingError (NotAnInductive T)) *)
-      | Checked T => raise (TranslationNotFound "ProjT1")
+      | Checked T => raise (UnexpectedTranslation "ProjT1" p p' T)
       | TypeError t => raise (TypingError t)
       end
     | sProjT2 p =>
@@ -270,8 +254,7 @@ Fixpoint tsl_rec (fuel : nat) (Σ : global_context) (Γ : context) (t : sterm) {
       match @infer (Build_Fuel fuel) Σ Γ p' with
       | Checked (tApp (tInd (mkInd "Translation.Quotes.Pack" 0) _) [ A1' ; A2' ]) =>
         myret Σ Γ (mkProjT2 A1' A2' p')
-      (* | Checked T => raise (TypingError (NotAnInductive T)) *)
-      | Checked T => raise (TranslationNotFound "ProjT2")
+      | Checked T => raise (UnexpectedTranslation "ProjT2" p p' T)
       | TypeError t => raise (TypingError t)
       end
     | sProjTe p =>
@@ -279,8 +262,7 @@ Fixpoint tsl_rec (fuel : nat) (Σ : global_context) (Γ : context) (t : sterm) {
       match @infer (Build_Fuel fuel) Σ Γ p' with
       | Checked (tApp (tInd (mkInd "Translation.Quotes.Pack" 0) _) [ A1' ; A2' ]) =>
         myret Σ Γ (mkProjTe A1' A2' p')
-      (* | Checked T => raise (TypingError (NotAnInductive T)) *)
-      | Checked T => raise (TranslationNotFound "ProjTe")
+      | Checked T => raise (UnexpectedTranslation "ProjTe" p p' T)
       | TypeError t => raise (TypingError t)
       end
     end

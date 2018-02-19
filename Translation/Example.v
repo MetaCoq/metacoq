@@ -352,8 +352,9 @@ Definition tc_tm2 : tsl_result term :=
 
 Eval lazy in tc_tm2.
 
-(* For some reason this doesn't work. Is it beacause eq_refl is used instead of
-   @eq_refl? *)
+(* For some reason this doesn't work.
+   Maybe this has to do with the fact that I'm using the wrong graph.
+ *)
 Fail Make Definition coq_tm2 :=
   ltac:(
     let t := eval lazy in

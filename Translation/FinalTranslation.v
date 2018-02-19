@@ -43,11 +43,11 @@ Instance monad_exc : MonadExc tsl_error tsl_result :=
 
 Open Scope t_scope.
 
-(* Translation close to the old TemplateCoq, meaning it's buggy of course. *)
+(* For now, we'll let TemplateCoq deal with universes on its own. *)
 Fixpoint sort_to_universe (s : sort) : Universe.t :=
   match s with
-  | 0 => Universe.type0
-  | S n => Universe.type1
+  | 0 => (* Universe.type0 *) []
+  | S n => []
   end.
 
 Definition myret (Σ : global_context) (Γ : context) (t : term) : tsl_result term :=

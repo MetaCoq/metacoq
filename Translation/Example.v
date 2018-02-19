@@ -224,6 +224,27 @@ Definition tc_tm : tsl_result term :=
 (*       in exact t *)
 (*   ). *)
 
+(* Same thing but reducing first *)
+
+Definition red_itt_tm := reduce itt_tm.
+
+Eval lazy in red_itt_tm.
+
+Definition tc_red_tm : tsl_result term :=
+  tsl_rec (2 ^ 18) Σ [] red_itt_tm.
+
+Eval lazy in tc_red_tm.
+
+Make Definition coq_red_tm :=
+  ltac:(
+    let t := eval lazy in
+             (match tc_red_tm with
+              | Success t => t
+              | _ => tSort Universe.type0
+              end)
+      in exact t
+  ).
+
 
 (* We start again with a much more minimal example without reflection. *)
 

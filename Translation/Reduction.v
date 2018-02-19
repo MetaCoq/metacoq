@@ -62,10 +62,10 @@ Fixpoint reduce (t : sterm) : sterm :=
     sHeq A' a' B' b'
   | sHeqToEq p =>
     let p' := reduce p in
-    (* This simplification cannot be done as we don't know the type of A *)
-    (* match p' with *)
-    (* | sHeqRefl A a => sRefl  *)
-    sHeqToEq p'
+    match p' with
+    | sHeqRefl A a => sRefl A a
+    | _ => sHeqToEq p'
+    end
   | sHeqRefl A a =>
     let A' := reduce A in
     let a' := reduce a in
@@ -94,7 +94,7 @@ Fixpoint reduce (t : sterm) : sterm :=
   | sHeqTransport p t =>
     let p' := reduce p in
     match p' with
-    | sHeqRefl A a => sHeqRefl A a
+    | sRefl A a => sHeqRefl A a
     | _ =>
       let t' := reduce t in
       sHeqTransport p' t'

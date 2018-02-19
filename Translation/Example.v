@@ -269,21 +269,30 @@ Definition tc_tm0 : tsl_result term :=
 
 Eval lazy in tc_tm0.
 
-(* Trying the reduce thing *)
+Make Definition coq_tm0 :=
+  ltac:(
+    let t := eval lazy in
+             (match tc_tm0 with
+              | Success t => t
+              | _ => tSort Universe.type0
+              end)
+      in exact t
+  ).
+
+(* When we reduce beforehand, we get results. *)
 Definition red_itt_tm0 := reduce itt_tm0.
 
 Eval lazy in red_itt_tm0.
-(* Unfortunately, HeqToEq HeqRefl doesn't reduce... *)
 
 Definition tc_red_tm0 : tsl_result term :=
   tsl_rec (2 ^ 18) Σ [] red_itt_tm0.
 
 Eval lazy in tc_red_tm0.
 
-Make Definition coq_tm0 :=
+Make Definition coq_red_tm0 :=
   ltac:(
     let t := eval lazy in
-             (match tc_tm0 with
+             (match tc_red_tm0 with
               | Success t => t
               | _ => tSort Universe.type0
               end)

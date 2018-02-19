@@ -111,7 +111,8 @@ Fixpoint tsl_rec (fuel : nat) (Σ : global_context) (Γ : context) (t : sterm) {
         myret Σ Γ (mkHeqToHeq A' u' v' p')
       (* That's not really the correct error but well. *)
       (* | Checked T => raise (TypingError (NotAnInductive T)) *)
-      | Checked T => raise (TranslationNotFound "HeqToEq")
+      | Checked T => raise (TypingError (NotAnInductive p'))
+      (* | Checked T => raise (TranslationNotFound "HeqToEq") *)
       | TypeError t => raise (TypingError t)
       end
     | sHeqRefl A a =>

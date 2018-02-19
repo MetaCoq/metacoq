@@ -394,3 +394,23 @@ Fail Make Definition coq_tm2 :=
               end)
       in exact t
   ).
+
+(* Translating the faulty HeqRefl *)
+
+Definition itt_tm3 : sterm :=
+  sHeqRefl (sSort 2) (sSort 1).
+
+Definition tc_tm3 : tsl_result term :=
+  tsl_rec (2 ^ 4) Σ [] itt_tm3.
+
+Eval lazy in tc_tm3.
+
+Make Definition coq_tm3 :=
+  ltac:(
+    let t := eval lazy in
+             (match tc_tm3 with
+              | Success t => t
+              | _ => tSort Universe.type0
+              end)
+      in exact t
+  ).

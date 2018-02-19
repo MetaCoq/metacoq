@@ -55,7 +55,8 @@ Fixpoint sort_to_universe (s : sort) : Universe.t :=
 Definition myret (Σ : global_context) (Γ : context) (t : term) : tsl_result term :=
   (* Success t. *)
   match hnf_stack (fst Σ) Γ t with
-  | Checked (t', _) => Success t'
+  | Checked (t', []) => Success t'
+  | Checked (t', stack) => Success (tApp t' stack)
   | _ => Error TranslationNotHandled
   end.
 

@@ -4,7 +4,7 @@ From Coq Require Import Bool String List BinPos Compare_dec Omega.
 From Equations Require Import Equations DepElimDec.
 From Template Require Import Ast LiftSubst Typing Checker Template.
 From Translation Require Import SAst SLiftSubst SCommon ITyping XTyping
-                                Translation FinalTranslation.
+                                Translation Reduction FinalTranslation.
 
 (* We begin withh an ETT derivation *)
 
@@ -268,6 +268,17 @@ Definition tc_tm0 : tsl_result term :=
   tsl_rec (2 ^ 18) Σ [] itt_tm0.
 
 Eval lazy in tc_tm0.
+
+(* Trying the reduce thing *)
+Definition red_itt_tm0 := reduce itt_tm0.
+
+Eval lazy in red_itt_tm0.
+(* Unfortunately, HeqToEq HeqRefl doesn't reduce... *)
+
+Definition tc_red_tm0 : tsl_result term :=
+  tsl_rec (2 ^ 18) Σ [] red_itt_tm0.
+
+Eval lazy in tc_red_tm0.
 
 Make Definition coq_tm0 :=
   ltac:(

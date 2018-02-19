@@ -1,7 +1,7 @@
 Template Coq
 ============
 
-<img src="https://github.com/Template-Coq/template-coq/raw/master/docs/assets/LOGO_TYPO.png" alt="Template Coq" width="50px"/>
+<img src="https://github.com/Template-Coq/template-coq/raw/master/docs/assets/LOGO.png" alt="Template Coq" width="50px"/>
 
 [![Build Status](https://travis-ci.org/Template-Coq/template-coq.svg?branch=coq-8.7)](https://travis-ci.org/Template-Coq/template-coq)
 [![Gitter](https://img.shields.io/gitter/room/nwjs/nw.js.svg)](https://gitter.im/coq/Template-Coq)

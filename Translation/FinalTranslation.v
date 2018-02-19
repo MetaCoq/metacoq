@@ -53,9 +53,11 @@ Fixpoint sort_to_universe (s : sort) : Universe.t :=
   end.
 
 Definition myret (Σ : global_context) (Γ : context) (t : term) : tsl_result term :=
+  (* Success t. *)
   match hnf_stack (fst Σ) Γ t with
-    Checked (t', _) => Success t'
-  | _ => Error TranslationNotHandled end.
+  | Checked (t', _) => Success t'
+  | _ => Error TranslationNotHandled
+  end.
 
 Fixpoint tsl_rec (fuel : nat) (Σ : global_context) (Γ : context) (t : sterm) {struct fuel}
   : tsl_result term :=

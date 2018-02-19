@@ -31,7 +31,7 @@ Inductive sterm : Type :=
 | sProd (nx : name) (A B : sterm)
 | sLambda (nx : name) (A B t : sterm)
 | sApp (u : sterm) (nx : name) (A B v : sterm)
-(* Monogenous equality *)
+(* Homogenous equality *)
 | sEq (A u v : sterm)
 | sRefl (A u : sterm)
 | sJ (A u P w v p : sterm)

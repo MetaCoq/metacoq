@@ -14,6 +14,9 @@
 
 - `Translation.v` contains the translation itself and the necessary
   lemmata.
+- `Reduction/v` is about a notion of reduction to simplify the output
+  of the translation (thus reducing the use of axioms when they aren't
+  needed).
 - `Quotes.v` contains quotations of terms for the final translation.
 - `FinalTranslation.v` containes the transaltion from ITT to
   TemplateCoq (meaning we can reify terms of ITT).

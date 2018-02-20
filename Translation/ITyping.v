@@ -332,6 +332,11 @@ with eq_term (Σ : global_context) : scontext -> sterm -> sterm -> sterm -> Type
     Σ ;;; Γ |-i A2 = B2 : sSort s ->
     Σ ;;; Γ |-i sPack A1 A2 = sPack B1 B2 : sSort s
 
+| eq_HeqToEqRefl Γ s A u :
+    Σ ;;; Γ |-i A : sSort s ->
+    Σ ;;; Γ |-i u : A ->
+    Σ ;;; Γ |-i sHeqToEq (sHeqRefl A u) = sRefl A u : sEq A u u
+
 where " Σ ;;; Γ '|-i' t = u : T " := (@eq_term Σ Γ t u T) : i_scope.
 
 Derive Signature for typing.
@@ -705,6 +710,7 @@ Proof.
       - cbn. eapply cong_Transport ; eih.
       - cbn. eapply cong_Heq ; eih.
       - cbn. eapply cong_Pack ; eih.
+      - cbn. eapply eq_HeqToEqRefl ; eih.
     }
 
   (* wf_lift *)
@@ -1043,6 +1049,7 @@ Proof.
       - cbn. eapply cong_Transport ; esh.
       - cbn. eapply cong_Heq ; esh.
       - cbn. eapply cong_Pack ; esh.
+      - cbn. eapply eq_HeqToEqRefl ; esh.
     }
 
   (* wf_subst *)
@@ -1497,6 +1504,8 @@ Proof.
     + eapply type_conv ; eassumption.
     + eapply type_conv ; eassumption.
       Unshelve. 1-3: exact nAnon. cbn. omega.
+  - eapply type_HeqToEq ; try eassumption.
+    eapply type_HeqRefl ; eassumption.
 Defined.
 
 Lemma sorts_in_sort :

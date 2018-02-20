@@ -233,12 +233,14 @@ Eval lazy in red_itt_tm.
 Definition tc_red_tm : tsl_result term :=
   tsl_rec (2 ^ 18) Σ [] red_itt_tm.
 
-Eval lazy in tc_red_tm.
+Let tc_red_tm' := ltac:(let t := eval lazy in tc_red_tm in exact t).
 
-Make Definition coq_red_tm :=
+Print tc_red_tm'.
+
+Fail Make Definition coq_red_tm :=
   ltac:(
     let t := eval lazy in
-             (match tc_red_tm with
+             (match tc_red_tm' with
               | Success t => t
               | _ => tSort Universe.type0
               end)
@@ -288,17 +290,17 @@ Eval lazy in itt_tm0.
 Definition tc_tm0 : tsl_result term :=
   tsl_rec (2 ^ 18) Σ [] itt_tm0.
 
-Eval lazy in tc_tm0.
+(* Eval lazy in tc_tm0. *)
 
-Make Definition coq_tm0 :=
-  ltac:(
-    let t := eval lazy in
-             (match tc_tm0 with
-              | Success t => t
-              | _ => tSort Universe.type0
-              end)
-      in exact t
-  ).
+(* Make Definition coq_tm0 := *)
+(*   ltac:( *)
+(*     let t := eval lazy in *)
+(*              (match tc_tm0 with *)
+(*               | Success t => t *)
+(*               | _ => tSort Universe.type0 *)
+(*               end) *)
+(*       in exact t *)
+(*   ). *)
 
 (* When we reduce beforehand, we get results. *)
 Definition red_itt_tm0 := reduce itt_tm0.
@@ -390,44 +392,6 @@ Fail Make Definition coq_tm2 :=
     let t := eval lazy in
              (match tc_tm2 with
               | Success t => t
-              | _ => tSort Universe.type0
-              end)
-      in exact t
-  ).
-
-(* Translating the faulty HeqRefl *)
-
-Definition itt_tm3 : sterm :=
-  sHeqRefl (sSort 2) (sSort 1).
-
-Definition tc_tm3 : tsl_result term :=
-  tsl_rec (2 ^ 4) Σ [] itt_tm3.
-
-Eval lazy in tc_tm3.
-
-Make Definition coq_tm3 :=
-  ltac:(
-    let t := eval lazy in
-             (match tc_tm3 with
-              | Success t => t
-              | _ => tSort Universe.type0
-              end)
-      in exact t
-  ).
-
-Let t := Quotes.mkHeqRefl (tSort []) (tSort []).
-
-Fail Make Definition coq_t := ltac:(let t := eval lazy in t in exact t).
-
-Let t' := hnf_stack (fst Σ) [] t.
-
-Eval lazy in t'.
-
-Make Definition coq_t' :=
-  ltac:(
-    let t := eval lazy in
-             (match t' with
-              | Checked (t',_) => t'
               | _ => tSort Universe.type0
               end)
       in exact t

@@ -52,13 +52,23 @@ Fixpoint sort_to_universe (s : sort) : Universe.t :=
   | S n => []
   end.
 
+Definition hnf (Σ : global_context) (Γ : context) (t : term) : typing_result term :=
+  r <- hnf_stack (fst Σ) Γ t ;;
+  match r with
+  | (t', []) => ret t'
+  | (t', stack) => ret (tApp t' stack)
+  end.
+
 Definition myret (Σ : global_context) (Γ : context) (t : term) : tsl_result term :=
   (* Success t. *)
-  match hnf_stack (fst Σ) Γ t with
-  | Checked (t', []) => Success t'
-  | Checked (t', stack) => Success (tApp t' stack)
+  match hnf Σ Γ t with
+  | Checked t' => Success t'
   | _ => Error TranslationNotHandled
   end.
+
+Definition infer_hnf fuel Σ Γ t :=
+  t' <- @infer (Build_Fuel fuel) Σ Γ t ;;
+  hnf Σ Γ t'.
 
 Fixpoint tsl_rec (fuel : nat) (Σ : global_context) (Γ : context) (t : sterm) {struct fuel}
   : tsl_result term :=
@@ -111,7 +121,7 @@ Fixpoint tsl_rec (fuel : nat) (Σ : global_context) (Γ : context) (t : sterm) {
       ret (mkHeq A' a' B' b')
     | sHeqToEq p =>
       p' <- tsl_rec fuel Σ Γ p ;;
-      match @infer (Build_Fuel fuel) Σ Γ p' with
+      match infer_hnf fuel Σ Γ p' with
       | Checked (tApp (tInd (mkInd "Translation.Quotes.heq" 0) _) [ A' ; u' ; _ ; v' ]) =>
         myret Σ Γ (mkHeqToHeq A' u' v' p')
       | Checked T => raise (UnexpectedTranslation "HeqToEq" p p' T)
@@ -123,7 +133,7 @@ Fixpoint tsl_rec (fuel : nat) (Σ : global_context) (Γ : context) (t : sterm) {
       myret Σ Γ (mkHeqRefl A' a')
     | sHeqSym p =>
       p' <- tsl_rec fuel Σ Γ p ;;
-      match @infer (Build_Fuel fuel) Σ Γ p' with
+      match infer_hnf fuel Σ Γ p' with
       | Checked (tApp (tInd (mkInd "Translation.Quotes.heq" 0) _) [ A' ; a' ; B' ; b' ]) =>
         myret Σ Γ (mkHeqSym A' a' B' b' p')
       | Checked T => raise (UnexpectedTranslation "HeqSym" p p' T)
@@ -132,9 +142,9 @@ Fixpoint tsl_rec (fuel : nat) (Σ : global_context) (Γ : context) (t : sterm) {
     | sHeqTrans p q =>
       p' <- tsl_rec fuel Σ Γ p ;;
       q' <- tsl_rec fuel Σ Γ q ;;
-      match @infer (Build_Fuel fuel) Σ Γ p' with
+      match infer_hnf fuel Σ Γ p' with
       | Checked (tApp (tInd (mkInd "Translation.Quotes.heq" 0) _) [ A' ; a' ; B' ; b' ]) =>
-        match @infer (Build_Fuel fuel) Σ Γ q' with
+        match infer_hnf fuel Σ Γ q' with
         | Checked (tApp (tInd (mkInd "Translation.Quotes.heq" 0) _) [ _ ; _ ; C' ; c' ]) =>
           myret Σ Γ (mkHeqTrans A' a' B' b' C' c' p' q')
         | Checked T => raise (UnexpectedTranslation "HeqTrans 1" q q' T)
@@ -146,7 +156,7 @@ Fixpoint tsl_rec (fuel : nat) (Σ : global_context) (Γ : context) (t : sterm) {
     | sHeqTransport p t =>
       p' <- tsl_rec fuel Σ Γ p ;;
       t' <- tsl_rec fuel Σ Γ t ;;
-      match @infer (Build_Fuel fuel) Σ Γ p' with
+      match infer_hnf fuel Σ Γ p' with
       | Checked (tApp (tInd (mkInd "Coq.Init.Logic.eq" 0) _) [ _ ; A' ; B' ]) =>
         myret Σ Γ (mkHeqTransport A' B' p' t')
       | Checked T => raise (UnexpectedTranslation "HeqTransport" p p' T)
@@ -154,7 +164,7 @@ Fixpoint tsl_rec (fuel : nat) (Σ : global_context) (Γ : context) (t : sterm) {
       end
     | sCongProd B1 B2 pA pB =>
       pA' <- tsl_rec fuel Σ Γ pA ;;
-      match @infer (Build_Fuel fuel) Σ Γ pA' with
+      match infer_hnf fuel Σ Γ pA' with
       | Checked (tApp (tInd (mkInd "Translation.Quotes.heq" 0) _) [ _ ; A1' ; _ ; A2' ]) =>
         pB' <- tsl_rec fuel Σ (Γ ,, vass nAnon (mkPack A1' A2')) pB ;;
         B1' <- tsl_rec fuel Σ (Γ ,, vass nAnon A1') B1 ;;
@@ -165,7 +175,7 @@ Fixpoint tsl_rec (fuel : nat) (Σ : global_context) (Γ : context) (t : sterm) {
       end
     | sCongLambda B1 B2 t1 t2 pA pB pt =>
       pA' <- tsl_rec fuel Σ Γ pA ;;
-      match @infer (Build_Fuel fuel) Σ Γ pA' with
+      match infer_hnf fuel Σ Γ pA' with
       | Checked (tApp (tInd (mkInd "Translation.Quotes.heq" 0) _) [ _ ; A1' ; _ ; A2' ]) =>
         pB' <- tsl_rec fuel Σ (Γ ,, vass nAnon (mkPack A1' A2')) pB ;;
         pt' <- tsl_rec fuel Σ (Γ ,, vass nAnon (mkPack A1' A2')) pt ;;
@@ -179,16 +189,16 @@ Fixpoint tsl_rec (fuel : nat) (Σ : global_context) (Γ : context) (t : sterm) {
       end
     | sCongApp B1 B2 pt pA pB pu =>
       pA' <- tsl_rec fuel Σ Γ pA ;;
-      match @infer (Build_Fuel fuel) Σ Γ pA' with
+      match infer_hnf fuel Σ Γ pA' with
       | Checked (tApp (tInd (mkInd "Translation.Quotes.heq" 0) _) [ _ ; A1' ; _ ; A2' ]) =>
         pB' <- tsl_rec fuel Σ (Γ ,, vass nAnon (mkPack A1' A2')) pB ;;
         pt' <- tsl_rec fuel Σ Γ pt ;;
         pu' <- tsl_rec fuel Σ Γ pu ;;
         B1' <- tsl_rec fuel Σ (Γ ,, vass nAnon A1') B1 ;;
         B2' <- tsl_rec fuel Σ (Γ ,, vass nAnon A2') B2 ;;
-        match @infer (Build_Fuel fuel) Σ Γ pt' with
+        match infer_hnf fuel Σ Γ pt' with
         | Checked (tApp (tInd (mkInd "Translation.Quotes.heq" 0) _) [ _ ; t1' ; _ ; t2' ]) =>
-          match @infer (Build_Fuel fuel) Σ Γ pu' with
+          match infer_hnf fuel Σ Γ pu' with
           | Checked (tApp (tInd (mkInd "Translation.Quotes.heq" 0) _) [ _ ; u1' ; _ ; u2' ]) =>
             myret Σ Γ (mkCongApp A1' A2' B1' B2' t1' t2' u1' u2' pA' pB' pt' pu')
           | Checked T => raise (UnexpectedTranslation "CongApp 1" pu pu' T)
@@ -204,9 +214,9 @@ Fixpoint tsl_rec (fuel : nat) (Σ : global_context) (Γ : context) (t : sterm) {
       pA' <- tsl_rec fuel Σ Γ pA ;;
       pu' <- tsl_rec fuel Σ Γ pu ;;
       pv' <- tsl_rec fuel Σ Γ pv ;;
-      match @infer (Build_Fuel fuel) Σ Γ pu' with
+      match infer_hnf fuel Σ Γ pu' with
       | Checked (tApp (tInd (mkInd "Translation.Quotes.heq" 0) _) [ A1' ; u1' ; A2' ; u2' ]) =>
-        match @infer (Build_Fuel fuel) Σ Γ pv' with
+        match infer_hnf fuel Σ Γ pv' with
         | Checked (tApp (tInd (mkInd "Translation.Quotes.heq" 0) _) [ _ ; v1' ; _ ; v2' ]) =>
           myret Σ Γ (mkCongEq A1' A2' u1' v1' u2' v2' pA' pu' pv')
         | Checked T => raise (UnexpectedTranslation "CongEq 1" pv pv' T)
@@ -218,7 +228,7 @@ Fixpoint tsl_rec (fuel : nat) (Σ : global_context) (Γ : context) (t : sterm) {
     | sCongRefl pA pu =>
       pA' <- tsl_rec fuel Σ Γ pA ;;
       pu' <- tsl_rec fuel Σ Γ pu ;;
-      match @infer (Build_Fuel fuel) Σ Γ pu' with
+      match infer_hnf fuel Σ Γ pu' with
       | Checked (tApp (tInd (mkInd "Translation.Quotes.heq" 0) _) [ A1' ; u1' ; A2' ; u2' ]) =>
         myret Σ Γ (mkCongRefl A1' A2' u1' u2' pA' pu')
       | Checked T => raise (UnexpectedTranslation "CongRefl" pu pu' T)
@@ -226,7 +236,7 @@ Fixpoint tsl_rec (fuel : nat) (Σ : global_context) (Γ : context) (t : sterm) {
       end
     | sEqToHeq p =>
       p' <- tsl_rec fuel Σ Γ p ;;
-      match @infer (Build_Fuel fuel) Σ Γ p' with
+      match infer_hnf fuel Σ Γ p' with
       | Checked (tApp (tInd (mkInd "Coq.Init.Logic.eq" 0) _) [ A' ; u' ; v' ]) =>
         myret Σ Γ (mkEqToHeq A' u' v' p')
       | Checked T => raise (UnexpectedTranslation "EqToHeq" p p' T)
@@ -234,7 +244,7 @@ Fixpoint tsl_rec (fuel : nat) (Σ : global_context) (Γ : context) (t : sterm) {
       end
     | sHeqTypeEq p =>
       p' <- tsl_rec fuel Σ Γ p ;;
-      match @infer (Build_Fuel fuel) Σ Γ p' with
+      match infer_hnf fuel Σ Γ p' with
       | Checked (tApp (tInd (mkInd "Translation.Quotes.heq" 0) _) [ A' ; u' ; B' ; v' ]) =>
         myret Σ Γ (mkHeqTypeEq A' u' B' v' p')
       | Checked T => raise (UnexpectedTranslation "HeqTypeEq" p p' T)
@@ -246,7 +256,7 @@ Fixpoint tsl_rec (fuel : nat) (Σ : global_context) (Γ : context) (t : sterm) {
       ret (mkPack A1' A2')
     | sProjT1 p =>
       p' <- tsl_rec fuel Σ Γ p ;;
-      match @infer (Build_Fuel fuel) Σ Γ p' with
+      match infer_hnf fuel Σ Γ p' with
       | Checked (tApp (tInd (mkInd "Translation.Quotes.Pack" 0) _) [ A1' ; A2' ]) =>
         myret Σ Γ (mkProjT1 A1' A2' p')
       | Checked T => raise (UnexpectedTranslation "ProjT1" p p' T)
@@ -254,7 +264,7 @@ Fixpoint tsl_rec (fuel : nat) (Σ : global_context) (Γ : context) (t : sterm) {
       end
     | sProjT2 p =>
       p' <- tsl_rec fuel Σ Γ p ;;
-      match @infer (Build_Fuel fuel) Σ Γ p' with
+      match infer_hnf fuel Σ Γ p' with
       | Checked (tApp (tInd (mkInd "Translation.Quotes.Pack" 0) _) [ A1' ; A2' ]) =>
         myret Σ Γ (mkProjT2 A1' A2' p')
       | Checked T => raise (UnexpectedTranslation "ProjT2" p p' T)
@@ -262,7 +272,7 @@ Fixpoint tsl_rec (fuel : nat) (Σ : global_context) (Γ : context) (t : sterm) {
       end
     | sProjTe p =>
       p' <- tsl_rec fuel Σ Γ p ;;
-      match @infer (Build_Fuel fuel) Σ Γ p' with
+      match infer_hnf fuel Σ Γ p' with
       | Checked (tApp (tInd (mkInd "Translation.Quotes.Pack" 0) _) [ A1' ; A2' ]) =>
         myret Σ Γ (mkProjTe A1' A2' p')
       | Checked T => raise (UnexpectedTranslation "ProjTe" p p' T)

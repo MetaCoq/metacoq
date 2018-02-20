@@ -6,7 +6,7 @@
 From Coq Require Import Bool String List BinPos Compare_dec Omega.
 From Equations Require Import Equations DepElimDec.
 From Template Require Import Ast utils LiftSubst Typing.
-From Translation Require Import SAst SLiftSubst SCommon.
+From Translation Require Import SAst SLiftSubst SCommon ITyping.
 
 Fixpoint reduce (t : sterm) : sterm :=
   match t with
@@ -190,3 +190,58 @@ Fixpoint reduce (t : sterm) : sterm :=
    t = red t. The wanted result will be derived from eq_typing.
 
  *)
+
+Definition red_decl (d : scontext_decl) :=
+  {| sdecl_name := sdecl_name d ;
+     sdecl_body := option_map reduce (sdecl_body d) ;
+     sdecl_type := reduce (sdecl_type d)
+  |}.
+
+Fixpoint red (Γ : scontext) : scontext :=
+  match Γ with
+  | [] => []
+  | a :: Γ => red_decl a :: red Γ
+  end.
+
+(* It seems this presentation is the wrong one. I believe now that these rules
+   should be added to the conversion.
+ *)
+Lemma validity :
+  forall {Σ t Γ A},
+    Σ ;;; Γ |-i t : A ->
+    Σ ;;; red Γ |-i reduce t : reduce A.
+Proof.
+  intros Σ t Γ A ht.
+  induction ht.
+  - cbn. admit.
+  - cbn. eapply type_Sort. admit.
+  - cbn. eapply type_Prod.
+    + apply IHht1.
+    + apply IHht2.
+  - cbn. eapply type_Lambda.
+    + apply IHht1.
+    + apply IHht2.
+    + apply IHht3.
+  - cbn. admit.
+  - cbn. eapply type_Eq ; assumption.
+  - cbn. eapply type_Refl ; eassumption.
+  - cbn. admit.
+  - cbn. destruct (reduce p).
+    all: try (eapply type_Transport ; eassumption).
+    destruct (inversionRefl IHht3) as [s' [[? ?] h]].
+    cbn in h.
+    (* This probably requires injectivity of Eq. *)
+    admit.
+  - cbn. eapply type_Heq ; eassumption.
+  - cbn. destruct (reduce p).
+    all: try (eapply type_HeqToEq ; eassumption).
+    (* pose (inversionHeqRefl IHht1). *)
+    (* I would also need inversion of HeqRefl, and then some injectivity... *)
+    admit.
+  - cbn. eapply type_HeqRefl ; eassumption.
+  - cbn. destruct (reduce p).
+    all: try (eapply type_HeqSym ; eassumption).
+    cbn in IHht5.
+    (* Same kind of troubles *)
+    admit.
+Abort.

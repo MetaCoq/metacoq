@@ -1,3 +1,5 @@
+(* -*- coq-prog-args: ("-emacs" "-type-in-type") -*- *)
+
 (* Example of the whole translation *)
 
 From Coq Require Import Bool String List BinPos Compare_dec Omega.
@@ -237,14 +239,30 @@ Let tc_red_tm' := ltac:(let t := eval lazy in tc_red_tm in exact t).
 
 Print tc_red_tm'.
 
-(* The problem is that tCast isn't handled by inspectTerm in reify.ml4 *)
-Fail Make Definition coq_red_tm :=
+Program Fixpoint erase_universes (t : term) {struct t} :=
+  match t return term with
+  | tSort s => tSort []
+  | tProd na b t => tProd na b (erase_universes t)
+  | tLetIn na b t' t => tLetIn na b t' (erase_universes t)
+  | u => map_constr_with_binders (fun _ t => erase_universes t) [] u
+  end.
+
+Let tc_red_tm'' :=
   ltac:(
     let t := eval lazy in
              (match tc_red_tm' with
-              | Success t => t
+              | Success t => erase_universes t
               | _ => tSort Universe.type0
               end)
+      in exact t
+  ).
+Print Options.
+Set Printing Depth 5000.
+
+
+Make Definition coq_red_tm :=
+  ltac:(
+    let t := eval lazy in tc_red_tm''
       in exact t
   ).
 

@@ -320,7 +320,11 @@ Definition glob_term :=
   Type.
 
 Quote Recursively Definition glob_prog := @glob_term.
-Definition Σ : global_context := (fst glob_prog, init_graph).
+Definition Σ : global_context :=
+  (* reconstruct_global_context (fst glob_prog). *)
+  (fst glob_prog, init_graph).
+
+Arguments Σ : simpl never.
 
 (* Checking for the sake of checking *)
 Compute (infer Σ [] tEq).

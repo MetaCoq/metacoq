@@ -237,6 +237,7 @@ Let tc_red_tm' := ltac:(let t := eval lazy in tc_red_tm in exact t).
 
 Print tc_red_tm'.
 
+(* The problem is that tCast isn't handled by inspectTerm in reify.ml4 *)
 Fail Make Definition coq_red_tm :=
   ltac:(
     let t := eval lazy in

@@ -259,8 +259,7 @@ Let tc_red_tm'' :=
 Print Options.
 Set Printing Depth 5000.
 
-
-Make Definition coq_red_tm :=
+Fail Make Definition coq_red_tm :=
   ltac:(
     let t := eval lazy in tc_red_tm''
       in exact t
@@ -435,13 +434,54 @@ Definition tc_tm2 : tsl_result term :=
 
 Eval lazy in tc_tm2.
 
-(* For some reason this doesn't work.
-   Maybe this has to do with the fact that I'm using the wrong graph.
- *)
-Fail Make Definition coq_tm2 :=
+Make Definition coq_tm2 :=
   ltac:(
     let t := eval lazy in
              (match tc_tm2 with
+              | Success t => t
+              | _ => tSort Universe.type0
+              end)
+      in exact t
+  ).
+
+(* Translating CongProd to understand it better. *)
+
+Open Scope string_scope.
+
+Definition ty3 : sterm :=
+  sHeq (sSort 1) (sProd (nNamed "x") (sSort 0) (sSort 0))
+       (sSort 1) (sProd (nNamed "x") (sSort 0) (sSort 0)).
+
+Definition tm3 : sterm :=
+  sCongProd (sSort 0) (sSort 0)
+            (sHeqRefl (sSort 1) (sSort 0))
+            (sHeqRefl (sSort 1) (sSort 0)).
+
+(* Mere sanity check *)
+Lemma tmty3 : Σ ;;; [] |-i tm3 : ty3.
+Proof.
+  unfold ty3.
+  change 1 with (max_sort 1 1).
+  eapply type_CongProd.
+  - eapply type_HeqRefl ; repeat econstructor.
+  - cbn. eapply type_HeqRefl ; repeat econstructor.
+  - repeat econstructor.
+  - repeat econstructor.
+  - repeat econstructor.
+  - repeat econstructor.
+    Unshelve. exact nAnon.
+Defined.
+
+Definition tc_tm3 : tsl_result term :=
+  tsl_rec (2 ^ 4) Σ [] tm3.
+
+Let tm3' := ltac:(let t := eval lazy in tc_tm3 in exact t).
+Print tm3'.
+
+Make Definition coq_tm3 :=
+  ltac:(
+    let t := eval lazy in
+             (match tm3' with
               | Success t => t
               | _ => tSort Universe.type0
               end)

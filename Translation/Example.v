@@ -8,27 +8,31 @@ From Template Require Import Ast LiftSubst Typing Checker Template.
 From Translation Require Import SAst SLiftSubst SCommon ITyping XTyping
                                 Translation Reduction FinalTranslation.
 
+Open Scope string_scope.
+
 (* We begin withh an ETT derivation *)
+
+Definition pn := nNamed "pppp".
 
 Fixpoint multiProd (bl : list sterm) :=
   match bl with
   | [] => sSort (succ_sort 0)
   | [ A ] => A
-  | A :: bl => sProd nAnon A (multiProd bl)
+  | A :: bl => sProd pn A (multiProd bl)
   end.
 
 Fixpoint multiLam (bl : list sterm) (t : sterm) :=
   match bl with
   | [] => sSort 0
   | [ A ] => t
-  | A :: bl => sLambda nAnon A (multiProd bl) (multiLam bl t)
+  | A :: bl => sLambda pn A (multiProd bl) (multiLam bl t)
   end.
 
 Inductive wfb : scontext -> list sterm -> Type :=
 | wfb_nil Γ : wfb Γ []
 | wfb_cons Γ A s bl :
     Σ ;;; Γ |-x A : sSort s ->
-    wfb (svass nAnon A :: Γ) bl ->
+    wfb (svass pn A :: Γ) bl ->
     wfb Γ (A :: bl).
 
 Derive Signature for wfb.
@@ -46,10 +50,10 @@ Proof.
     + cbn. dependent destruction h.
       eexists. eassumption.
     + change (multiProd (a :: s :: bl))
-        with (sProd nAnon a (multiProd (s :: bl))).
+        with (sProd pn a (multiProd (s :: bl))).
       dependent destruction h.
       dependent destruction h.
-      destruct (IHbl (ssnoc Γ0 (svass nAnon A))) as [z hz].
+      destruct (IHbl (ssnoc Γ0 (svass pn A))) as [z hz].
       * econstructor.
         -- assumption.
         -- eassumption.
@@ -69,7 +73,7 @@ Inductive wbtm : scontext -> list sterm -> sterm -> Type :=
     wbtm Γ [ A ] t
 | wbtm_cons Γ A B s bl t :
     Σ ;;; Γ |-x A : sSort s ->
-    wbtm (svass nAnon A :: Γ) (B :: bl) t ->
+    wbtm (svass pn A :: Γ) (B :: bl) t ->
     wbtm Γ (A :: B :: bl) t.
 
 Derive Signature for wbtm.
@@ -103,11 +107,11 @@ Proof.
   - destruct bl.
     + cbn. dependent destruction hwb. assumption.
     + change (multiProd (a :: s :: bl))
-        with (sProd nAnon a (multiProd (s :: bl))).
+        with (sProd pn a (multiProd (s :: bl))).
       change (multiLam (a :: s :: bl) t)
-        with (sLambda nAnon a (multiProd (s :: bl)) (multiLam (s :: bl) t)).
+        with (sLambda pn a (multiProd (s :: bl)) (multiLam (s :: bl) t)).
       dependent destruction hwb.
-      destruct (@type_multiProd (B :: bl0) (ssnoc Γ0 (svass nAnon A))) as [z hz].
+      destruct (@type_multiProd (B :: bl0) (ssnoc Γ0 (svass pn A))) as [z hz].
       * econstructor.
         -- assumption.
         -- eassumption.
@@ -184,8 +188,8 @@ Proof.
                  --- refine (type_Rel _ _ _ _ _).
                      +++ repeat econstructor.
                      +++ cbn. omega.
-                         Unshelve.
-                         all: cbn; omega.
+  Unshelve.
+  all: cbn; omega.
 Defined.
 
 (* Then we translate this ETT derivation to get an ITT term *)
@@ -446,8 +450,6 @@ Make Definition coq_tm2 :=
   ).
 
 (* Translating CongProd to understand it better. *)
-
-Open Scope string_scope.
 
 Definition ty3 : sterm :=
   sProd (nNamed "B") (sSort 1)

@@ -644,3 +644,115 @@ Make Definition coq_tm5 :=
               end)
       in exact t
   ).
+
+(* Maybe another one... *)
+
+Definition tyl6 :=
+  [ sSort 1 ;
+    sEq (sSort 1) (sRel 0) (sRel 0) ;
+    sRel 1 ;
+    sRel 2
+  ].
+
+Definition ty6 : sterm := multiProd tyl6.
+
+Definition tm6 : sterm := multiLam tyl6 (sRel 0).
+
+Fact tmty6 : Σ ;;; [] |-x tm6 : ty6.
+Proof.
+  eapply type_multiLam.
+  - repeat constructor.
+  - econstructor.
+    + repeat econstructor.
+    + econstructor.
+      * repeat econstructor.
+      * econstructor.
+        -- refine (type_Rel _ _ 1 _ _).
+           ++ repeat econstructor.
+           ++ cbn. omega.
+        -- econstructor.
+           ++ repeat econstructor.
+           ++ eapply type_conv''.
+              ** eapply type_Rel. repeat econstructor.
+              ** cbn. eapply reflection.
+                 refine (type_Rel _ _ 1 _ _).
+                 --- repeat econstructor.
+                 --- cbn. omega.
+              ** refine (type_Rel _ _ 2 _ _).
+                 --- repeat econstructor.
+                 --- cbn. omega.
+  Unshelve. all: cbn ; omega.
+Defined.
+
+Definition itt_tm6 : sterm.
+  destruct (type_translation tmty6 istrans_nil) as [A [t [_ h]]].
+  exact t.
+Defined.
+
+Let itt_tm6' := ltac:(let t := eval lazy in itt_tm6 in exact t).
+
+Definition tc_tm6 : tsl_result term :=
+  tsl_rec (2 ^ 18) Σ [] itt_tm6'.
+
+Definition red_itt_tm6 := reduce itt_tm6'.
+
+Let red_itt_tm6' := ltac:(let t := eval lazy in red_itt_tm6 in exact t).
+Print red_itt_tm6'.
+
+Definition tc_red_tm6 : tsl_result term :=
+  tsl_rec (2 ^ 18) Σ [] red_itt_tm6'.
+
+Let tc_red_tm6' := ltac:(let t := eval lazy in tc_red_tm6 in exact t).
+
+Make Definition coq_tm6 :=
+  ltac:(
+    let t := eval lazy in
+             (match tc_red_tm6' with
+              | Success t => t
+              | _ => tSort Universe.type0
+              end)
+      in exact t
+  ).
+
+(* Translating CongEq. *)
+
+Definition ty7 : sterm :=
+  sHeq (sSort 2) (sEq (sSort 1) (sSort 0) (sSort 0))
+       (sSort 2) (sEq (sSort 1) (sSort 0) (sSort 0)).
+
+Definition tm7 : sterm :=
+  sCongEq (sHeqRefl (sSort 2) (sSort 1))
+          (sHeqRefl (sSort 1) (sSort 0))
+          (sHeqRefl (sSort 1) (sSort 0)).
+
+(* Mere sanity check *)
+Lemma tmty7 : Σ ;;; [] |-i tm7 : ty7.
+Proof.
+  unfold ty7.
+  eapply type_CongEq.
+  - eapply type_HeqRefl ; repeat econstructor.
+  - eapply type_HeqRefl ; repeat econstructor.
+  - eapply type_HeqRefl ; repeat econstructor.
+  - repeat econstructor.
+  - repeat econstructor.
+  - repeat econstructor.
+  - repeat econstructor.
+  - repeat econstructor.
+  - repeat econstructor.
+Defined.
+
+Definition tc_tm7 : tsl_result term :=
+  tsl_rec (2 ^ 4) Σ [] tm7.
+
+Let tm7' := ltac:(let t := eval lazy in tc_tm7 in exact t).
+Print tm7'.
+
+Make Definition coq_tm7 :=
+  ltac:(
+    let t := eval lazy in
+             (match tm7' with
+              | Success t => t
+              | _ => tSort Universe.type0
+              end)
+      in exact t
+  ).

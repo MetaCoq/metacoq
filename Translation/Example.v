@@ -449,27 +449,36 @@ Make Definition coq_tm2 :=
 Open Scope string_scope.
 
 Definition ty3 : sterm :=
-  sHeq (sSort 1) (sProd (nNamed "x") (sSort 0) (sSort 0))
-       (sSort 1) (sProd (nNamed "x") (sSort 0) (sSort 0)).
+  sProd (nNamed "B") (sSort 1)
+  (sHeq (sSort 1) (sProd (nNamed "x") (sSort 0) (sRel 1))
+       (sSort 1) (sProd (nNamed "x") (sSort 0) (sRel 1))).
 
 Definition tm3 : sterm :=
-  sCongProd (sSort 0) (sSort 0)
-            (sHeqRefl (sSort 1) (sSort 0))
-            (sHeqRefl (sSort 1) (sSort 0)).
+  sLambda (nNamed "B")
+          (sSort 1)
+          (sHeq (sSort 1) (sProd (nNamed "x") (sSort 0) (sRel 1))
+                (sSort 1) (sProd (nNamed "x") (sSort 0) (sRel 1)))
+          (sCongProd (sRel 1) (sRel 1)
+                     (sHeqRefl (sSort 1) (sSort 0))
+                     (sHeqRefl (sSort 1) (sRel 1))).
 
 (* Mere sanity check *)
 Lemma tmty3 : Σ ;;; [] |-i tm3 : ty3.
 Proof.
   unfold ty3.
-  change 1 with (max_sort 1 1).
-  eapply type_CongProd.
-  - eapply type_HeqRefl ; repeat econstructor.
-  - cbn. eapply type_HeqRefl ; repeat econstructor.
+  eapply ITyping.type_Lambda.
   - repeat econstructor.
   - repeat econstructor.
-  - repeat econstructor.
-  - repeat econstructor.
-    Unshelve. exact nAnon.
+  - change 1 with (max_sort 1 1).
+    eapply type_CongProd.
+    + eapply type_HeqRefl ; repeat econstructor.
+    + cbn. eapply type_HeqRefl ; repeat econstructor.
+    + repeat econstructor.
+    + repeat econstructor.
+    + repeat econstructor.
+    + repeat econstructor.
+      Unshelve. all: cbn. all: auto with arith.
+      exact nAnon.
 Defined.
 
 Definition tc_tm3 : tsl_result term :=

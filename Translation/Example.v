@@ -230,10 +230,11 @@ Definition tc_tm : tsl_result term :=
 
 Definition red_itt_tm := reduce itt_tm.
 
-Eval lazy in red_itt_tm.
+Let red_itt_tm' := ltac:(let t := eval lazy in red_itt_tm in exact t).
+Print red_itt_tm'.
 
 Definition tc_red_tm : tsl_result term :=
-  tsl_rec (2 ^ 18) Σ [] red_itt_tm.
+  tsl_rec (2 ^ 18) Σ [] red_itt_tm'.
 
 Let tc_red_tm' := ltac:(let t := eval lazy in tc_red_tm in exact t).
 
@@ -491,6 +492,68 @@ Make Definition coq_tm3 :=
   ltac:(
     let t := eval lazy in
              (match tm3' with
+              | Success t => t
+              | _ => tSort Universe.type0
+              end)
+      in exact t
+  ).
+
+(* Maybe another one... *)
+
+Definition tyl4 :=
+  [ sEq (sSort 1) (sSort 0) (sSort 0) ;
+    sSort 0 ;
+    sSort 0
+  ].
+
+Definition ty4 : sterm := multiProd tyl4.
+
+Definition tm4 : sterm := multiLam tyl4 (sRel 0).
+
+Fact tmty4 : Σ ;;; [] |-x tm4 : ty4.
+Proof.
+  eapply type_multiLam.
+  - repeat constructor.
+  - econstructor.
+    + repeat econstructor.
+    + econstructor.
+      * repeat econstructor.
+      * econstructor.
+        -- repeat econstructor.
+        -- eapply type_conv''.
+           ++ eapply type_Rel. repeat econstructor.
+           ++ cbn. eapply reflection.
+              refine (type_Rel _ _ 1 _ _).
+              ** repeat econstructor.
+              ** cbn. omega.
+           ++ repeat econstructor.
+              Unshelve. cbn. omega.
+Defined.
+
+Definition itt_tm4 : sterm.
+  destruct (type_translation tmty4 istrans_nil) as [A [t [_ h]]].
+  exact t.
+Defined.
+
+Let itt_tm4' := ltac:(let t := eval lazy in itt_tm4 in exact t).
+
+Definition tc_tm4 : tsl_result term :=
+  tsl_rec (2 ^ 18) Σ [] itt_tm4'.
+
+Definition red_itt_tm4 := reduce itt_tm4'.
+
+Let red_itt_tm4' := ltac:(let t := eval lazy in red_itt_tm4 in exact t).
+Print red_itt_tm4'.
+
+Definition tc_red_tm4 : tsl_result term :=
+  tsl_rec (2 ^ 18) Σ [] red_itt_tm4'.
+
+Let tc_red_tm4' := ltac:(let t := eval lazy in tc_red_tm4 in exact t).
+
+Make Definition coq_tm4 :=
+  ltac:(
+    let t := eval lazy in
+             (match tc_red_tm4' with
               | Success t => t
               | _ => tSort Universe.type0
               end)

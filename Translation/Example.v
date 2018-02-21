@@ -559,3 +559,70 @@ Make Definition coq_tm4 :=
               end)
       in exact t
   ).
+
+(* Maybe another one... *)
+
+Definition tyl5 :=
+  [ sSort 1 ;
+    sEq (sSort 1) (sSort 0) (sRel 0) ;
+    sSort 0 ;
+    sRel 2
+  ].
+
+Definition ty5 : sterm := multiProd tyl5.
+
+Definition tm5 : sterm := multiLam tyl5 (sRel 0).
+
+Fact tmty5 : Σ ;;; [] |-x tm5 : ty5.
+Proof.
+  eapply type_multiLam.
+  - repeat constructor.
+  - econstructor.
+    + repeat econstructor.
+    + econstructor.
+      * repeat econstructor.
+      * econstructor.
+        -- repeat econstructor.
+        -- econstructor.
+           ++ repeat econstructor.
+           ++ eapply type_conv''.
+              ** eapply type_Rel. repeat econstructor.
+              ** cbn. eapply reflection.
+                 refine (type_Rel _ _ 1 _ _).
+                 --- repeat econstructor.
+                 --- cbn. omega.
+              ** refine (type_Rel _ _ 2 _ _).
+                 --- repeat econstructor.
+                 --- cbn. omega.
+  Unshelve. all: cbn ; omega.
+Defined.
+
+Definition itt_tm5 : sterm.
+  destruct (type_translation tmty5 istrans_nil) as [A [t [_ h]]].
+  exact t.
+Defined.
+
+Let itt_tm5' := ltac:(let t := eval lazy in itt_tm5 in exact t).
+
+Definition tc_tm5 : tsl_result term :=
+  tsl_rec (2 ^ 18) Σ [] itt_tm5'.
+
+Definition red_itt_tm5 := reduce itt_tm5'.
+
+Let red_itt_tm5' := ltac:(let t := eval lazy in red_itt_tm5 in exact t).
+Print red_itt_tm5'.
+
+Definition tc_red_tm5 : tsl_result term :=
+  tsl_rec (2 ^ 18) Σ [] red_itt_tm5'.
+
+Let tc_red_tm5' := ltac:(let t := eval lazy in tc_red_tm5 in exact t).
+
+Make Definition coq_tm5 :=
+  ltac:(
+    let t := eval lazy in
+             (match tc_red_tm5' with
+              | Success t => t
+              | _ => tSort Universe.type0
+              end)
+      in exact t
+  ).

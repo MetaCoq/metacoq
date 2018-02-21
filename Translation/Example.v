@@ -10,6 +10,22 @@ From Translation Require Import SAst SLiftSubst SCommon ITyping XTyping
 
 Open Scope string_scope.
 
+(* Investigating tCongProd *)
+
+Definition hnf_tCongProd := hnf Σ [] Quotes.tCongProd.
+Let hnf_tCongProd' := ltac:(let t := eval lazy in hnf_tCongProd in exact t).
+
+Let tCongProd_ty := ltac:(let t := eval lazy in (infer_hnf (2 ^ 18) Σ [] Quotes.tCongProd) in exact t).
+
+Let tCongProd_ty' := ltac:(let t := eval lazy in (infer_hnf (2 ^ 18) Σ [ vass (nNamed "BB") (tSort []) ; vass (nNamed "AA") (tSort []) ] (tApp Quotes.tCongProd [ tRel 1 ; tRel 1 ])) in exact t).
+
+Let tCongProd_ty'' := ltac:(let t := eval lazy in (infer_hnf (2 ^ 18) Σ [ vass (nNamed "BB") (tSort []) ; vass (nNamed "AA") (tSort []) ] (tApp Quotes.tCongProd [ tRel 1 ; tRel 1 ; tLambda (nNamed "xx") (tRel 1) (tRel 1) ; tLambda (nNamed "yy") (tRel 1) (tRel 1) ])) in exact t).
+
+Let reduced_term := ltac:(let t := eval lazy in (hnf Σ [ vass (nNamed "p") (tApp (tInd {| inductive_mind := "Translation.Quotes.Pack"; inductive_ind := 0 |} []) [tRel 2; tRel 2]) ; vass (nNamed "pA") (tApp (tInd {| inductive_mind := "Translation.Quotes.heq"; inductive_ind := 0 |} [])
+        [tSort [(Level.Level "Translation.Quotes.49", false)]; tRel 1; tSort [(Level.Level "Translation.Quotes.50", false)];
+        tRel 1]) ; vass (nNamed "BB") (tSort []) ; vass (nNamed "AA") (tSort []) ] (tApp (tLambda (nNamed "xx") (tRel 3) (tRel 3))
+                [tApp (tConst "Translation.Quotes.ProjT1" []) [tRel 3; tRel 3; tRel 0]])) in exact t).
+
 (* We begin withh an ETT derivation *)
 
 Definition pn := nNamed "pppp".

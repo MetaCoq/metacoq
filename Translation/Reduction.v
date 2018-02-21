@@ -191,6 +191,38 @@ Fixpoint reduce (t : sterm) : sterm :=
 
  *)
 
+Lemma eq_red :
+  forall {Σ t Γ A},
+    Σ ;;; Γ |-i t : A ->
+    Σ ;;; Γ |-i t = reduce t : A.
+Proof.
+  intros Σ t Γ A ht.
+  induction ht.
+  all: try (eapply eq_reflexivity ; econstructor ; eassumption).
+  - cbn. eapply cong_Prod ; assumption.
+  - cbn. eapply cong_Lambda ; eassumption.
+  - cbn. eapply cong_App ; eassumption.
+  - cbn. eapply cong_Eq ; eassumption.
+  - cbn. eapply cong_Refl ; eassumption.
+  - cbn. eapply cong_J ; eassumption.
+  - cbn. destruct (reduce p).
+    all: try (eapply cong_Transport ; eassumption).
+    rename s0_1 into A, s0_2 into x.
+    eapply eq_transitivity.
+    + eapply cong_Transport with (A2 := x) (B2 := x) (p2 := sRefl (sSort s) x).
+      * (* Seems I still need injectivity of Eq... *)
+        admit.
+      * admit.
+      * eapply eq_transitivity ; [ eassumption | .. ].
+        admit.
+      * eapply eq_reflexivity ; eassumption.
+    + eapply eq_transitivity.
+      * eapply eq_conv.
+        -- eapply eq_TransportRefl ; admit.
+        -- admit.
+      * admit.
+Abort.
+
 Definition red_decl (d : scontext_decl) :=
   {| sdecl_name := sdecl_name d ;
      sdecl_body := option_map reduce (sdecl_body d) ;

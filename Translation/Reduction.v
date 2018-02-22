@@ -191,6 +191,65 @@ Fixpoint reduce (t : sterm) : sterm :=
 
  *)
 
+
+
+Fixpoint injectiveEq {Σ Γ A u v A' u' v' T} (h : Σ ;;; Γ |-i sEq A u v = sEq A' u' v' : T) {struct h} :
+  (Σ ;;; Γ |-i A = A' : T) *
+  (Σ ;;; Γ |-i u = u' : A) *
+  (Σ ;;; Γ |-i v = v' : A)
+
+with injectiveEqL {Σ Γ A u v E T} (h : Σ ;;; Γ |-i sEq A u v = E : T) {struct h} :
+  forall {A' u' v'},
+    Σ ;;; Γ |-i E = sEq A' u' v' : T ->
+    (Σ ;;; Γ |-i A = A' : T) *
+    (Σ ;;; Γ |-i u = u' : A) *
+    (Σ ;;; Γ |-i v = v' : A)
+
+with injectiveEqR {Σ Γ A u v E T} (h : Σ ;;; Γ |-i E = sEq A u v : T) {struct h} :
+  forall {A' u' v'},
+    Σ ;;; Γ |-i sEq A' u' v' = E : T ->
+    (Σ ;;; Γ |-i A = A' : T) *
+    (Σ ;;; Γ |-i u = u' : A) *
+    (Σ ;;; Γ |-i v = v' : A)
+.
+Proof.
+  (* injectiveEq *)
+  - { dependent destruction h.
+      - destruct (inversionEq t) as [s [[[? ?] ?] ?]].
+        split ; [ split | .. ] ; eapply eq_reflexivity ; try assumption.
+        eapply type_conv' ; eassumption.
+      - destruct (injectiveEq _ _ _ _ _ _ _ _ _ h) as [[? ?] ?].
+        destruct (eq_typing h) as [_ hE].
+        destruct (inversionEq hE) as [s [[[? ?] ?] ?]].
+        split ; [ split | .. ] ; eapply eq_symmetry.
+        + assumption.
+        + eapply eq_conv ; try eassumption.
+          eapply eq_conv ; try eassumption.
+          eapply eq_symmetry. eassumption.
+        + eapply eq_conv ; try eassumption.
+          eapply eq_conv ; try eassumption.
+          eapply eq_symmetry. eassumption.
+      - destruct (injectiveEqL _ _ _ _ _ _ _ h1 _ _ _ h2) as [[? ?] ?].
+        split ; [ split | .. ] ; assumption.
+      - destruct (injectiveEq _ _ _ _ _ _ _ _ _ h1) as [[? ?] ?].
+        split ; [ split | .. ] ; try assumption.
+        eapply eq_conv ; eassumption.
+      - split ; [ split | .. ] ; assumption.
+    }
+
+  (* injectiveEqL *)
+  - { dependent destruction h ; intros A' u' v' h'.
+      - cheat.
+      - cheat.
+      - cheat.
+      - cheat.
+      - cheat.
+    }
+
+  (* injectiveEqR *)
+  - cheat.
+Abort.
+
 Lemma eq_red :
   forall {Σ t Γ A},
     Σ ;;; Γ |-i t : A ->

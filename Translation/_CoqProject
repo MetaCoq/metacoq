@@ -1,6 +1,7 @@
 -I ../src
 -R ../theories Template
 -R . Translation
+-arg "-w default,-notation-overridden"
 
 SAst.v
 SLiftSubst.v

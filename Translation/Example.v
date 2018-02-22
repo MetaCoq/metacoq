@@ -286,28 +286,6 @@ Fail Make Definition coq_red_tm :=
       in exact t
   ).
 
-Definition tc_red2_tm : typing_result term :=
-  match tc_red_tm' with
-  | Success t => hnf Σ [] t
-  | _ => TypeError (UnboundVar "!!!")
-  end.
-
-Let tc_red2_tm' := ltac:(let t := eval lazy in tc_red2_tm in exact t).
-
-Print tc_red2_tm'.
-
-(* Fail Make Definition coq_red2_tm := *)
-(*   ltac:( *)
-(*     let t := eval lazy in *)
-(*              (match tc_red2_tm' with *)
-(*               | Checked t => t *)
-(*               | _ => tSort Universe.type0 *)
-(*               end) *)
-(*       in exact t *)
-(*   ). *)
-
-(* Even after reduction we get an error. *)
-
 Let inty_tm :=
   match tc_red_tm' with
   | Success t => infer Σ [] t

@@ -1134,10 +1134,47 @@ Proof.
   - cbn. eapply cong_Refl.
     + apply IHht1 ; eassumption.
     + apply IHht2 ; eassumption.
-  - cheat.
-  - cheat.
-  - cheat.
-  - cheat.
+  - cbn. change #|Δ| with (0 + #|Δ|)%nat.
+    rewrite substP4.
+    replace (S (0 + #|Δ|)) with (1 + #|Δ|)%nat by omega.
+    rewrite substP4.
+    eapply cong_J.
+    + apply IHht1 ; eassumption.
+    + apply IHht2 ; eassumption.
+    + apply IHht3 ; eassumption.
+    + eapply meta_eqctx_conv.
+      * eapply IHht4
+          with (Δ0 := (Δ ,, svass nx A),, svass ne (sEq (lift0 1 A) (lift0 1 u) (sRel 0)))
+               (A0 := sSort s2)
+        ; [ reflexivity | eassumption .. ].
+      * instantiate (1 := ne). instantiate (1 := nx). cbn. unfold ssnoc.
+        rewrite !subst_decl_svass. cbn. f_equal.
+        f_equal. f_equal.
+        -- replace (S #|Δ|) with (1 + #|Δ|)%nat by omega.
+           apply substP2. omega.
+        -- replace (S #|Δ|) with (1 + #|Δ|)%nat by omega.
+           apply substP2. omega.
+    + apply IHht5 ; eassumption.
+    + eapply meta_eqconv.
+      * apply IHht6 ; eassumption.
+      * replace (S (S #|Δ|)) with (1 + (S (0 + #|Δ|)))%nat by omega.
+        rewrite <- substP4.
+        replace (1 + (0 + #|Δ|))%nat with (S (0 + #|Δ|))%nat by omega.
+        change (sRefl (A {0 + #|Δ| := uu1}) (u {0 + #|Δ| := uu1}))
+          with ((sRefl A u){ 0 + #|Δ| := uu1}).
+        rewrite <- substP4. reflexivity.
+  - cbn. eapply cong_Transport.
+    + apply IHht1 ; eassumption.
+    + apply IHht2 ; eassumption.
+    + apply IHht3 ; eassumption.
+    + apply IHht4 ; eassumption.
+  - cbn. eapply cong_Heq.
+    + apply IHht1 ; eassumption.
+    + apply IHht2 ; eassumption.
+    + apply IHht3 ; eassumption.
+    + apply IHht4 ; eassumption.
+  - cbn. (* eapply cong_HeqToEq. *)
+    cheat.
   - cheat.
   - cheat.
   - cheat.

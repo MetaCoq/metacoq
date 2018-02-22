@@ -332,6 +332,13 @@ with eq_term (Σ : global_context) : scontext -> sterm -> sterm -> sterm -> Type
     Σ ;;; Γ |-i A2 = B2 : sSort s ->
     Σ ;;; Γ |-i sPack A1 A2 = sPack B1 B2 : sSort s
 
+| cong_HeqToEq Γ A u v p1 p2 s :
+    Σ ;;; Γ |-i p1 = p2 : sHeq A u A v ->
+    Σ ;;; Γ |-i A : sSort s ->
+    Σ ;;; Γ |-i u : A ->
+    Σ ;;; Γ |-i v : A ->
+    Σ ;;; Γ |-i sHeqToEq p1 = sHeqToEq p2 : sEq A u v
+
 | eq_HeqToEqRefl Γ s A u :
     Σ ;;; Γ |-i A : sSort s ->
     Σ ;;; Γ |-i u : A ->
@@ -710,6 +717,7 @@ Proof.
       - cbn. eapply cong_Transport ; eih.
       - cbn. eapply cong_Heq ; eih.
       - cbn. eapply cong_Pack ; eih.
+      - cbn. eapply cong_HeqToEq ; eih.
       - cbn. eapply eq_HeqToEqRefl ; eih.
     }
 
@@ -1049,6 +1057,7 @@ Proof.
       - cbn. eapply cong_Transport ; esh.
       - cbn. eapply cong_Heq ; esh.
       - cbn. eapply cong_Pack ; esh.
+      - cbn. eapply cong_HeqToEq ; esh.
       - cbn. eapply eq_HeqToEqRefl ; esh.
     }
 
@@ -1173,8 +1182,11 @@ Proof.
     + apply IHht2 ; eassumption.
     + apply IHht3 ; eassumption.
     + apply IHht4 ; eassumption.
-  - cbn. (* eapply cong_HeqToEq. *)
-    cheat.
+  - cbn. eapply cong_HeqToEq.
+    + apply IHht1 ; eassumption.
+    + eapply @type_subst with (A := sSort s) ; eassumption.
+    + eapply type_subst ; eassumption.
+    + eapply type_subst ; eassumption.
   - cheat.
   - cheat.
   - cheat.

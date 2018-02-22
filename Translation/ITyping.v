@@ -385,6 +385,27 @@ with eq_term (Σ : global_context) : scontext -> sterm -> sterm -> sterm -> Type
     sHeq (sSort (max_sort s z)) (sProd nx A1 B1)
          (sSort (max_sort s z)) (sProd ny A2 B2)
 
+| cong_CongLambda Γ s z nx ny np A1 A2 B1 B2 t1 t2 pA pB pt B1' B2' t1' t2' pA' pB' pt' :
+    Σ ;;; Γ |-i pA = pA' : sHeq (sSort s) A1 (sSort s) A2 ->
+    Σ ;;; Γ ,, svass np (sPack A1 A2)
+    |-i pB = pB' : sHeq (sSort z) ((lift 1 1 B1){ 0 := sProjT1 (sRel 0) })
+                       (sSort z) ((lift 1 1 B2){ 0 := sProjT2 (sRel 0) }) ->
+    Σ ;;; Γ ,, svass np (sPack A1 A2)
+    |-i pt = pt' : sHeq ((lift 1 1 B1){ 0 := sProjT1 (sRel 0) })
+                       ((lift 1 1 t1){ 0 := sProjT1 (sRel 0) })
+                       ((lift 1 1 B2){ 0 := sProjT2 (sRel 0) })
+                       ((lift 1 1 t2){ 0 := sProjT2 (sRel 0) }) ->
+    Σ ;;; Γ |-i A1 : sSort s ->
+    Σ ;;; Γ |-i A2 : sSort s ->
+    Σ ;;; Γ ,, svass nx A1 |-i B1 = B1' : sSort z ->
+    Σ ;;; Γ ,, svass ny A2 |-i B2 = B2' : sSort z ->
+    Σ ;;; Γ ,, svass nx A1 |-i t1 = t1' : B1 ->
+    Σ ;;; Γ ,, svass ny A2 |-i t2 = t2' : B2 ->
+    Σ ;;; Γ |-i sCongLambda B1 B2 t1 t2 pA pB pt
+             = sCongLambda B1' B2' t1' t2' pA' pB' pt' :
+               sHeq (sProd nx A1 B1) (sLambda nx A1 B1 t1)
+                    (sProd ny A2 B2) (sLambda ny A2 B2 t2)
+
 | cong_ProjT1 Γ A1 A2 p1 p2 s :
     Σ ;;; Γ |-i A1 : sSort s ->
     Σ ;;; Γ |-i A2 : sSort s ->
@@ -794,6 +815,27 @@ Proof.
         + rewrite <- liftP2 by omega.
           replace (S #|Ξ|) with (0 + (S #|Ξ|))%nat by omega.
           rewrite substP1. cbn. reflexivity.
+      - cbn. eapply cong_CongLambda ; eih.
+        + cbn. f_equal.
+          * rewrite <- liftP2 by omega.
+            replace (S #|Ξ|) with (0 + (S #|Ξ|))%nat by omega.
+            rewrite substP1. cbn. reflexivity.
+          * rewrite <- liftP2 by omega.
+            replace (S #|Ξ|) with (0 + (S #|Ξ|))%nat by omega.
+            rewrite substP1. cbn. reflexivity.
+        + cbn. f_equal.
+          * rewrite <- liftP2 by omega.
+            replace (S #|Ξ|) with (0 + (S #|Ξ|))%nat by omega.
+            rewrite substP1. cbn. reflexivity.
+          * rewrite <- liftP2 by omega.
+            replace (S #|Ξ|) with (0 + (S #|Ξ|))%nat by omega.
+            rewrite substP1. cbn. reflexivity.
+          * rewrite <- liftP2 by omega.
+            replace (S #|Ξ|) with (0 + (S #|Ξ|))%nat by omega.
+            rewrite substP1. cbn. reflexivity.
+          * rewrite <- liftP2 by omega.
+            replace (S #|Ξ|) with (0 + (S #|Ξ|))%nat by omega.
+            rewrite substP1. cbn. reflexivity.
       - cbn. eapply cong_ProjT1 with (A2 := lift #|Δ| #|Ξ| A2) ; eih.
       - cbn. eapply cong_ProjT2 with (A1 := lift #|Δ| #|Ξ| A1) ; eih.
       - cbn. eapply cong_ProjTe ; eih.
@@ -1149,6 +1191,27 @@ Proof.
         + rewrite <- substP2 by omega.
           replace (S #|Δ|) with (0 + (S #|Δ|))%nat by omega.
           rewrite substP4. cbn. reflexivity.
+      - cbn. eapply cong_CongLambda ; esh.
+        + cbn. f_equal.
+          * rewrite <- substP2 by omega.
+            replace (S #|Δ|) with (0 + (S #|Δ|))%nat by omega.
+            rewrite substP4. cbn. reflexivity.
+          * rewrite <- substP2 by omega.
+            replace (S #|Δ|) with (0 + (S #|Δ|))%nat by omega.
+            rewrite substP4. cbn. reflexivity.
+        + cbn. f_equal.
+          * rewrite <- substP2 by omega.
+            replace (S #|Δ|) with (0 + (S #|Δ|))%nat by omega.
+            rewrite substP4. cbn. reflexivity.
+          * rewrite <- substP2 by omega.
+            replace (S #|Δ|) with (0 + (S #|Δ|))%nat by omega.
+            rewrite substP4. cbn. reflexivity.
+          * rewrite <- substP2 by omega.
+            replace (S #|Δ|) with (0 + (S #|Δ|))%nat by omega.
+            rewrite substP4. cbn. reflexivity.
+          * rewrite <- substP2 by omega.
+            replace (S #|Δ|) with (0 + (S #|Δ|))%nat by omega.
+            rewrite substP4. cbn. reflexivity.
       - cbn. eapply cong_ProjT1 with (A2 := A2{ #|Δ| := u }) ; esh.
       - cbn. eapply cong_ProjT2 with (A1 := A1{ #|Δ| := u }) ; esh.
       - cbn. eapply cong_ProjTe ; esh.
@@ -1810,6 +1873,264 @@ Proof.
         eapply eq_reflexivity. assumption.
       * eapply cong_Prod ; try eassumption.
         eapply eq_reflexivity. assumption.
+  - eapply type_conv.
+    + eapply type_CongLambda ; try eassumption.
+      * eapply type_conv ; try eassumption.
+        -- eapply type_Heq.
+           ++ eapply type_Sort. eapply typing_wf. eassumption.
+           ++ eapply type_Sort. eapply typing_wf. eassumption.
+           ++ eapply @typing_subst with (B := sSort z).
+              ** eapply @type_lift
+                   with (A := sSort z)
+                        (Δ := [ svass np (sPack A1 A2) ])
+                        (Ξ := [ svass nx A1 ]).
+                 --- assumption.
+                 --- econstructor.
+                     +++ eapply typing_wf. eassumption.
+                     +++ eapply type_Pack ; eassumption.
+              ** cbn. eapply @type_ProjT1 with (A2 := lift0 1 A2).
+                 --- eapply @typing_lift01 with (A := sSort s) ; try eassumption.
+                     eapply type_Pack ; eassumption.
+                 --- eapply @typing_lift01 with (A := sSort s) ; try eassumption.
+                     eapply type_Pack ; eassumption.
+                 --- refine (type_Rel _ _ _ _ _).
+                     +++ econstructor.
+                         *** eapply typing_wf. eassumption.
+                         *** eapply type_Pack ; eassumption.
+                     +++ cbn. omega.
+           ++ eapply @typing_subst with (B := sSort z).
+              ** eapply @type_lift
+                   with (A := sSort z)
+                        (Δ := [ svass np (sPack A1 A2) ])
+                        (Ξ := [ svass ny A2 ]).
+                 --- assumption.
+                 --- econstructor.
+                     +++ eapply typing_wf. eassumption.
+                     +++ eapply type_Pack ; eassumption.
+              ** cbn. eapply @type_ProjT2 with (A1 := lift0 1 A1).
+                 --- eapply @typing_lift01 with (A := sSort s) ; try eassumption.
+                     eapply type_Pack ; eassumption.
+                 --- eapply @typing_lift01 with (A := sSort s) ; try eassumption.
+                     eapply type_Pack ; eassumption.
+                 --- refine (type_Rel _ _ _ _ _).
+                     +++ econstructor.
+                         *** eapply typing_wf. eassumption.
+                         *** eapply type_Pack ; eassumption.
+                     +++ cbn. omega.
+        -- eapply cong_Heq. all: try eapply eq_reflexivity.
+           ** eapply type_Sort. eapply typing_wf. eassumption.
+           ** eapply type_Sort. eapply typing_wf. eassumption.
+           ** eapply @cong_subst1 with (B := sSort z).
+              --- eapply @cong_lift
+                    with (A := sSort z)
+                         (Δ := [ svass np (sPack A1 A2) ])
+                         (Ξ := [ svass nx A1 ]).
+                  +++ assumption.
+                  +++ econstructor.
+                      *** eapply typing_wf. eassumption.
+                      *** eapply type_Pack ; eassumption.
+              --- cbn. eapply @cong_ProjT1 with (A2 := lift0 1 A2).
+                  +++ eapply @typing_lift01 with (A := sSort s) ; try eassumption.
+                      eapply type_Pack ; eassumption.
+                  +++ eapply @typing_lift01 with (A := sSort s) ; try eassumption.
+                      eapply type_Pack ; eassumption.
+                  +++ eapply eq_reflexivity.
+                      refine (type_Rel _ _ _ _ _).
+                      *** econstructor.
+                          ---- eapply typing_wf. eassumption.
+                          ---- eapply type_Pack ; eassumption.
+                      *** cbn. omega.
+           ** eapply @cong_subst1 with (B := sSort z).
+              --- eapply @cong_lift
+                    with (A := sSort z)
+                         (Δ := [ svass np (sPack A1 A2) ])
+                         (Ξ := [ svass ny A2 ]).
+                  +++ assumption.
+                  +++ econstructor.
+                      *** eapply typing_wf. eassumption.
+                      *** eapply type_Pack ; eassumption.
+              --- cbn. eapply @cong_ProjT2 with (A1 := lift0 1 A1).
+                  +++ eapply @typing_lift01 with (A := sSort s) ; try eassumption.
+                      eapply type_Pack ; eassumption.
+                  +++ eapply @typing_lift01 with (A := sSort s) ; try eassumption.
+                      eapply type_Pack ; eassumption.
+                  +++ eapply eq_reflexivity.
+                      refine (type_Rel _ _ _ _ _).
+                      *** econstructor.
+                          ---- eapply typing_wf. eassumption.
+                          ---- eapply type_Pack ; eassumption.
+                      *** cbn. omega.
+      * eapply type_conv ; try eassumption.
+        -- eapply type_Heq.
+           ++ eapply @typing_subst with (B := sSort z).
+              ** eapply @type_lift
+                   with (A := sSort z)
+                        (Δ := [ svass np (sPack A1 A2) ])
+                        (Ξ := [ svass nx A1 ]).
+                 --- assumption.
+                 --- econstructor.
+                     +++ eapply typing_wf. eassumption.
+                     +++ eapply type_Pack ; eassumption.
+              ** cbn. eapply @type_ProjT1 with (A2 := lift0 1 A2).
+                 --- eapply @typing_lift01 with (A := sSort s) ; try eassumption.
+                     eapply type_Pack ; eassumption.
+                 --- eapply @typing_lift01 with (A := sSort s) ; try eassumption.
+                     eapply type_Pack ; eassumption.
+                 --- refine (type_Rel _ _ _ _ _).
+                     +++ econstructor.
+                         *** eapply typing_wf. eassumption.
+                         *** eapply type_Pack ; eassumption.
+                     +++ cbn. omega.
+           ++ eapply @typing_subst with (B := sSort z).
+              ** eapply @type_lift
+                   with (A := sSort z)
+                        (Δ := [ svass np (sPack A1 A2) ])
+                        (Ξ := [ svass ny A2 ]).
+                 --- assumption.
+                 --- econstructor.
+                     +++ eapply typing_wf. eassumption.
+                     +++ eapply type_Pack ; eassumption.
+              ** cbn. eapply @type_ProjT2 with (A1 := lift0 1 A1).
+                 --- eapply @typing_lift01 with (A := sSort s) ; try eassumption.
+                     eapply type_Pack ; eassumption.
+                 --- eapply @typing_lift01 with (A := sSort s) ; try eassumption.
+                     eapply type_Pack ; eassumption.
+                 --- refine (type_Rel _ _ _ _ _).
+                     +++ econstructor.
+                         *** eapply typing_wf. eassumption.
+                         *** eapply type_Pack ; eassumption.
+                     +++ cbn. omega.
+           ++ eapply typing_subst.
+              ** eapply @type_lift
+                   with (Δ := [ svass np (sPack A1 A2) ])
+                        (Ξ := [ svass nx A1 ]).
+                 --- eapply type_conv ; eassumption.
+                 --- econstructor.
+                     +++ eapply typing_wf. eassumption.
+                     +++ eapply type_Pack ; eassumption.
+              ** cbn. eapply @type_ProjT1 with (A2 := lift0 1 A2).
+                 --- eapply @typing_lift01 with (A := sSort s) ; try eassumption.
+                     eapply type_Pack ; eassumption.
+                 --- eapply @typing_lift01 with (A := sSort s) ; try eassumption.
+                     eapply type_Pack ; eassumption.
+                 --- refine (type_Rel _ _ _ _ _).
+                     +++ econstructor.
+                         *** eapply typing_wf. eassumption.
+                         *** eapply type_Pack ; eassumption.
+                     +++ cbn. omega.
+           ++ eapply typing_subst.
+              ** eapply @type_lift
+                   with (Δ := [ svass np (sPack A1 A2) ])
+                        (Ξ := [ svass ny A2 ]).
+                 --- eapply type_conv ; eassumption.
+                 --- econstructor.
+                     +++ eapply typing_wf. eassumption.
+                     +++ eapply type_Pack ; eassumption.
+              ** cbn. eapply @type_ProjT2 with (A1 := lift0 1 A1).
+                 --- eapply @typing_lift01 with (A := sSort s) ; try eassumption.
+                     eapply type_Pack ; eassumption.
+                 --- eapply @typing_lift01 with (A := sSort s) ; try eassumption.
+                     eapply type_Pack ; eassumption.
+                 --- refine (type_Rel _ _ _ _ _).
+                     +++ econstructor.
+                         *** eapply typing_wf. eassumption.
+                         *** eapply type_Pack ; eassumption.
+                     +++ cbn. omega.
+        -- eapply cong_Heq. all: try eapply eq_reflexivity.
+           ** eapply @cong_subst1 with (B := sSort z).
+              --- eapply @cong_lift
+                    with (A := sSort z)
+                         (Δ := [ svass np (sPack A1 A2) ])
+                         (Ξ := [ svass nx A1 ]).
+                  +++ assumption.
+                  +++ econstructor.
+                      *** eapply typing_wf. eassumption.
+                      *** eapply type_Pack ; eassumption.
+              --- cbn. eapply @cong_ProjT1 with (A2 := lift0 1 A2).
+                  +++ eapply @typing_lift01 with (A := sSort s) ; try eassumption.
+                      eapply type_Pack ; eassumption.
+                  +++ eapply @typing_lift01 with (A := sSort s) ; try eassumption.
+                      eapply type_Pack ; eassumption.
+                  +++ eapply eq_reflexivity.
+                      refine (type_Rel _ _ _ _ _).
+                      *** econstructor.
+                          ---- eapply typing_wf. eassumption.
+                          ---- eapply type_Pack ; eassumption.
+                      *** cbn. omega.
+           ** eapply @cong_subst1 with (B := sSort z).
+              --- eapply @cong_lift
+                    with (A := sSort z)
+                         (Δ := [ svass np (sPack A1 A2) ])
+                         (Ξ := [ svass ny A2 ]).
+                  +++ assumption.
+                  +++ econstructor.
+                      *** eapply typing_wf. eassumption.
+                      *** eapply type_Pack ; eassumption.
+              --- cbn. eapply @cong_ProjT2 with (A1 := lift0 1 A1).
+                  +++ eapply @typing_lift01 with (A := sSort s) ; try eassumption.
+                      eapply type_Pack ; eassumption.
+                  +++ eapply @typing_lift01 with (A := sSort s) ; try eassumption.
+                      eapply type_Pack ; eassumption.
+                  +++ eapply eq_reflexivity.
+                      refine (type_Rel _ _ _ _ _).
+                      *** econstructor.
+                          ---- eapply typing_wf. eassumption.
+                          ---- eapply type_Pack ; eassumption.
+                      *** cbn. omega.
+           ** eapply cong_subst1.
+              --- eapply @cong_lift
+                    with (Δ := [ svass np (sPack A1 A2) ])
+                         (Ξ := [ svass nx A1 ]).
+                  +++ assumption.
+                  +++ econstructor.
+                      *** eapply typing_wf. eassumption.
+                      *** eapply type_Pack ; eassumption.
+              --- cbn. eapply @cong_ProjT1 with (A2 := lift0 1 A2).
+                  +++ eapply @typing_lift01 with (A := sSort s) ; try eassumption.
+                      eapply type_Pack ; eassumption.
+                  +++ eapply @typing_lift01 with (A := sSort s) ; try eassumption.
+                      eapply type_Pack ; eassumption.
+                  +++ eapply eq_reflexivity.
+                      refine (type_Rel _ _ _ _ _).
+                      *** econstructor.
+                          ---- eapply typing_wf. eassumption.
+                          ---- eapply type_Pack ; eassumption.
+                      *** cbn. omega.
+           ** eapply cong_subst1.
+              --- eapply @cong_lift
+                    with (Δ := [ svass np (sPack A1 A2) ])
+                         (Ξ := [ svass ny A2 ]).
+                  +++ assumption.
+                  +++ econstructor.
+                      *** eapply typing_wf. eassumption.
+                      *** eapply type_Pack ; eassumption.
+              --- cbn. eapply @cong_ProjT2 with (A1 := lift0 1 A1).
+                  +++ eapply @typing_lift01 with (A := sSort s) ; try eassumption.
+                      eapply type_Pack ; eassumption.
+                  +++ eapply @typing_lift01 with (A := sSort s) ; try eassumption.
+                      eapply type_Pack ; eassumption.
+                  +++ eapply eq_reflexivity.
+                      refine (type_Rel _ _ _ _ _).
+                      *** econstructor.
+                          ---- eapply typing_wf. eassumption.
+                          ---- eapply type_Pack ; eassumption.
+                      *** cbn. omega.
+      * eapply type_conv ; eassumption.
+      * eapply type_conv ; eassumption.
+    + eapply type_Heq.
+      * eapply type_Prod ; eassumption.
+      * eapply type_Prod ; eassumption.
+      * eapply type_Lambda ; eassumption.
+      * eapply type_Lambda ; eassumption.
+    + eapply eq_symmetry. eapply cong_Heq.
+      * eapply cong_Prod ; try eassumption.
+        eapply eq_reflexivity. assumption.
+      * eapply cong_Prod ; try eassumption.
+        eapply eq_reflexivity. assumption.
+      * eapply cong_Lambda ; try eassumption.
+        eapply eq_reflexivity. eassumption.
+      * eapply cong_Lambda ; try eassumption.
+        eapply eq_reflexivity. eassumption.
   - eapply type_ProjT2 with (A1 := A1) ; eassumption.
   - eapply type_ProjT2 with (A1 := A1) ; eassumption.
   - eapply type_conv.

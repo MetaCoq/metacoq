@@ -364,6 +364,14 @@ with eq_term (Σ : global_context) : scontext -> sterm -> sterm -> sterm -> Type
     Σ ;;; Γ |-i q1 = q2 : sHeq B b C c ->
     Σ ;;; Γ |-i sHeqTrans p1 q1 = sHeqTrans p2 q2 : sHeq A a C c
 
+| cong_HeqTransport Γ A B p1 p2 t1 t2 s :
+    Σ ;;; Γ |-i A : sSort s ->
+    Σ ;;; Γ |-i B : sSort s ->
+    Σ ;;; Γ |-i t1 = t2 : A ->
+    Σ ;;; Γ |-i p1 = p2 : sEq (sSort s) A B ->
+    Σ ;;; Γ |-i sHeqTransport p1 t1 = sHeqTransport p2 t2
+             : sHeq A t1 B (sTransport A B p1 t1)
+
 | eq_HeqToEqRefl Γ s A u :
     Σ ;;; Γ |-i A : sSort s ->
     Σ ;;; Γ |-i u : A ->
@@ -746,6 +754,7 @@ Proof.
       - cbn. eapply cong_HeqRefl ; eih.
       - cbn. eapply cong_HeqSym ; eih.
       - cbn. eapply cong_HeqTrans with (B := lift #|Δ| #|Ξ| B) (b := lift #|Δ| #|Ξ| b) ; eih.
+      - cbn. eapply cong_HeqTransport ; eih.
       - cbn. eapply eq_HeqToEqRefl ; eih.
     }
 
@@ -1089,6 +1098,7 @@ Proof.
       - cbn. eapply cong_HeqRefl ; esh.
       - cbn. eapply cong_HeqSym ; esh.
       - cbn. eapply cong_HeqTrans with (B := B0{ #|Δ| := u }) (b := b{ #|Δ| := u }) ; esh.
+      - cbn. eapply cong_HeqTransport ; esh.
       - cbn. eapply eq_HeqToEqRefl ; esh.
     }
 
@@ -1236,7 +1246,11 @@ Proof.
     + eapply type_subst ; eassumption.
     + apply IHht7 ; eassumption.
     + apply IHht8 ; eassumption.
-  - cheat.
+  - cbn. eapply cong_HeqTransport.
+    + eapply @type_subst with (A := sSort s) ; eassumption.
+    + eapply @type_subst with (A := sSort s) ; eassumption.
+    + apply IHht3 ; eassumption.
+    + apply IHht4 ; eassumption.
   - cheat.
   - cheat.
   - cheat.
@@ -1606,6 +1620,13 @@ Proof.
     + eapply eq_symmetry. eapply cong_Heq ; assumption.
   - eapply type_HeqTrans with (B := B) (b := b) ; eassumption.
   - eapply type_HeqTrans with (B := B) (b := b) ; eassumption.
+  - eapply type_conv.
+    + eapply type_HeqTransport ; [ .. | eassumption ] ; eassumption.
+    + eapply type_Heq ; try eassumption.
+      eapply type_Transport ; eassumption.
+    + eapply eq_symmetry.
+      eapply cong_Heq ; try eapply eq_reflexivity ; try eassumption.
+      eapply cong_Transport ; try eapply eq_reflexivity ; eassumption.
   - eapply type_HeqToEq ; try eassumption.
     eapply type_HeqRefl ; eassumption.
 Defined.

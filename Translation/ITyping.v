@@ -1599,6 +1599,13 @@ Proof.
     + eapply type_conv ; eassumption.
     + eapply type_conv ; eassumption.
       Unshelve. 1-3: exact nAnon. cbn. omega.
+  - eapply type_conv.
+    + eapply type_HeqRefl ; try eassumption.
+      eapply type_conv ; eassumption.
+    + eapply type_Heq ; try assumption ; eassumption.
+    + eapply eq_symmetry. eapply cong_Heq ; assumption.
+  - eapply type_HeqTrans with (B := B) (b := b) ; eassumption.
+  - eapply type_HeqTrans with (B := B) (b := b) ; eassumption.
   - eapply type_HeqToEq ; try eassumption.
     eapply type_HeqRefl ; eassumption.
 Defined.

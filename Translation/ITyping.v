@@ -98,6 +98,7 @@ Inductive typing (Σ : global_context) : scontext -> sterm -> sterm -> Type :=
     Σ ;;; Γ |-i b : B ->
     Σ ;;; Γ |-i c : C ->
     Σ ;;; Γ |-i p : sHeq A a B b ->
+    Σ ;;; Γ |-i q : sHeq B b C c ->
     Σ ;;; Γ |-i sHeqTrans p q : sHeq A a C c
 
 | type_HeqTransport Γ A B p t s :
@@ -338,6 +339,30 @@ with eq_term (Σ : global_context) : scontext -> sterm -> sterm -> sterm -> Type
     Σ ;;; Γ |-i u : A ->
     Σ ;;; Γ |-i v : A ->
     Σ ;;; Γ |-i sHeqToEq p1 = sHeqToEq p2 : sEq A u v
+
+| cong_HeqRefl Γ A1 A2 a1 a2 s :
+    Σ ;;; Γ |-i A1 = A2 : sSort s ->
+    Σ ;;; Γ |-i a1 = a2 : A1 ->
+    Σ ;;; Γ |-i sHeqRefl A1 a1 = sHeqRefl A2 a2 : sHeq A1 a1 A1 a1
+
+| cong_HeqSym Γ A a B b p1 p2 s :
+    Σ ;;; Γ |-i A : sSort s ->
+    Σ ;;; Γ |-i B : sSort s ->
+    Σ ;;; Γ |-i a : A ->
+    Σ ;;; Γ |-i b : B ->
+    Σ ;;; Γ |-i p1 = p2 : sHeq A a B b ->
+    Σ ;;; Γ |-i sHeqSym p1 = sHeqSym p2 : sHeq B b A a
+
+| cong_HeqTrans Γ A a B b C c p1 p2 q1 q2 s :
+    Σ ;;; Γ |-i A : sSort s ->
+    Σ ;;; Γ |-i B : sSort s ->
+    Σ ;;; Γ |-i C : sSort s ->
+    Σ ;;; Γ |-i a : A ->
+    Σ ;;; Γ |-i b : B ->
+    Σ ;;; Γ |-i c : C ->
+    Σ ;;; Γ |-i p1 = p2 : sHeq A a B b ->
+    Σ ;;; Γ |-i q1 = q2 : sHeq B b C c ->
+    Σ ;;; Γ |-i sHeqTrans p1 q1 = sHeqTrans p2 q2 : sHeq A a C c
 
 | eq_HeqToEqRefl Γ s A u :
     Σ ;;; Γ |-i A : sSort s ->
@@ -718,6 +743,9 @@ Proof.
       - cbn. eapply cong_Heq ; eih.
       - cbn. eapply cong_Pack ; eih.
       - cbn. eapply cong_HeqToEq ; eih.
+      - cbn. eapply cong_HeqRefl ; eih.
+      - cbn. eapply cong_HeqSym ; eih.
+      - cbn. eapply cong_HeqTrans with (B := lift #|Δ| #|Ξ| B) (b := lift #|Δ| #|Ξ| b) ; eih.
       - cbn. eapply eq_HeqToEqRefl ; eih.
     }
 
@@ -1058,6 +1086,9 @@ Proof.
       - cbn. eapply cong_Heq ; esh.
       - cbn. eapply cong_Pack ; esh.
       - cbn. eapply cong_HeqToEq ; esh.
+      - cbn. eapply cong_HeqRefl ; esh.
+      - cbn. eapply cong_HeqSym ; esh.
+      - cbn. eapply cong_HeqTrans with (B := B0{ #|Δ| := u }) (b := b{ #|Δ| := u }) ; esh.
       - cbn. eapply eq_HeqToEqRefl ; esh.
     }
 
@@ -1187,9 +1218,24 @@ Proof.
     + eapply @type_subst with (A := sSort s) ; eassumption.
     + eapply type_subst ; eassumption.
     + eapply type_subst ; eassumption.
-  - cheat.
-  - cheat.
-  - cheat.
+  - cbn. eapply cong_HeqRefl.
+    + apply IHht1 ; eassumption.
+    + apply IHht2 ; eassumption.
+  - cbn. eapply cong_HeqSym.
+    + eapply @type_subst with (A := sSort s) ; eassumption.
+    + eapply @type_subst with (A := sSort s) ; eassumption.
+    + eapply type_subst ; eassumption.
+    + eapply type_subst ; eassumption.
+    + apply IHht5 ; eassumption.
+  - cbn. eapply cong_HeqTrans with (B := B{#|Δ| := uu1}).
+    + eapply @type_subst with (A := sSort s) ; eassumption.
+    + eapply @type_subst with (A := sSort s) ; eassumption.
+    + eapply @type_subst with (A := sSort s) ; eassumption.
+    + eapply type_subst ; eassumption.
+    + eapply type_subst ; eassumption.
+    + eapply type_subst ; eassumption.
+    + apply IHht7 ; eassumption.
+    + apply IHht8 ; eassumption.
   - cheat.
   - cheat.
   - cheat.

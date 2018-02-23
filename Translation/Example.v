@@ -253,6 +253,25 @@ Definition red_itt_tm := reduce itt_tm.
 Let red_itt_tm' := ltac:(let t := eval lazy in red_itt_tm in exact t).
 Print red_itt_tm'.
 
+Let ttt := (sLambda (nNamed "pppp") (sSort 0)
+  (sProd (nNamed "pppp") (sSort 0)
+     (sProd (nNamed "pppp") (sEq (sSort 0) (sRel 1) (sRel 0)) (sProd (nNamed "pppp") (sRel 2) (sRel 2))))
+  ((sLambda (nNamed "pppp") (sSort 0)
+        (sProd (nNamed "pppp") (sEq (sSort 0) (sRel 1) (sRel 0)) (sProd (nNamed "pppp") (sRel 2) (sRel 2)))
+        (sLambda (nNamed "pppp") (sEq (sSort 0) (sRel 1) (sRel 0)) (sProd (nNamed "pppp") (sRel 2) (sRel 2))
+           (sLambda (nNamed "pppp") (sRel 2) (sRel 2) (sTransport (sRel 3) (sRel 2) ((sRel 1)) (sRel 0))))))).
+
+Definition ts : tsl_result term :=
+  tsl_rec (2 ^ 18) Σ [] ttt.
+
+Let ttt' := ltac:(let t := eval lazy in ts in exact t).
+
+Make Definition coq_ttt :=
+  ltac:(
+    let t := eval lazy in match ttt' with Success t => t | _ => tSort Universe.type0 end
+      in exact t
+  ).
+
 Definition tc_red_tm : tsl_result term :=
   tsl_rec (2 ^ 18) Σ [] red_itt_tm'.
 

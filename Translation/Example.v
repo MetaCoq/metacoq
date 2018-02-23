@@ -305,6 +305,13 @@ Fail Make Definition coq_red_tm :=
       in exact t
   ).
 
+Let foo pppp p := Quotes.Pack (Type = Quotes.ProjT1 p) (Type = Quotes.ProjT2 p) ->
+                  Quotes.heq
+                    (pppp -> Quotes.ProjT1 p)
+                    (pppp -> Quotes.ProjT2 p).
+
+Eval lazy in foo.
+
 Let inty_tm :=
   match tc_red_tm' with
   | Success t => infer Σ [] t
@@ -465,18 +472,21 @@ Make Definition coq_tm2 :=
 (* Translating CongProd to understand it better. *)
 
 Definition ty3 : sterm :=
-  sProd (nNamed "B") (sSort 1)
-  (sHeq (sSort 1) (sProd (nNamed "x") (sSort 0) (sRel 1))
-       (sSort 1) (sProd (nNamed "x") (sSort 0) (sRel 1))).
+  sProd (nNamed "B") (sSort 0)
+  (sHeq (sSort 1) (sProd (nNamed "x") (sSort 0) (sEq (sSort 0) (sRel 1) (sRel 0)))
+        (sSort 1) (sProd (nNamed "x") (sSort 0) (sEq (sSort 0) (sRel 1) (sRel 0)))).
 
 Definition tm3 : sterm :=
   sLambda (nNamed "B")
-          (sSort 1)
-          (sHeq (sSort 1) (sProd (nNamed "x") (sSort 0) (sRel 1))
-                (sSort 1) (sProd (nNamed "x") (sSort 0) (sRel 1)))
-          (sCongProd (sRel 1) (sRel 1)
+          (sSort 0)
+          (sHeq (sSort 1) (sProd (nNamed "x") (sSort 0) (sEq (sSort 0) (sRel 1) (sRel 0)))
+                (sSort 1) (sProd (nNamed "x") (sSort 0) (sEq (sSort 0) (sRel 1) (sRel 0))))
+          (sCongProd (sEq (sSort 0) (sRel 1) (sRel 0))
+                     (sEq (sSort 0) (sRel 1) (sRel 0))
                      (sHeqRefl (sSort 1) (sSort 0))
-                     (sHeqRefl (sSort 1) (sRel 1))).
+                     (sCongEq (sHeqRefl (sSort 1) (sSort 0))
+                              (sHeqRefl (sSort 0) (sRel 1))
+                              (sProjTe (sRel 0)))).
 
 (* Mere sanity check *)
 Lemma tmty3 : Σ ;;; [] |-i tm3 : ty3.
@@ -488,7 +498,16 @@ Proof.
   - change 1 with (max_sort 1 1).
     eapply type_CongProd.
     + eapply type_HeqRefl ; repeat econstructor.
-    + cbn. eapply type_HeqRefl ; repeat econstructor.
+    + cbn. eapply type_CongEq.
+      * eapply type_HeqRefl ; repeat econstructor.
+      * eapply type_HeqRefl ; repeat econstructor.
+      * eapply type_ProjTe ; repeat econstructor.
+      * repeat econstructor.
+      * repeat econstructor.
+      * repeat econstructor.
+      * repeat econstructor.
+      * repeat econstructor.
+      * repeat econstructor.
     + repeat econstructor.
     + repeat econstructor.
     + repeat econstructor.
@@ -498,10 +517,31 @@ Proof.
 Defined.
 
 Definition tc_tm3 : tsl_result term :=
-  tsl_rec (2 ^ 4) Σ [] tm3.
+  tsl_rec (2 ^ 18) Σ [] tm3.
 
 Let tm3' := ltac:(let t := eval lazy in tc_tm3 in exact t).
 Print tm3'.
+
+Let tt := ((tApp (tConst "Translation.Quotes.transport" [])
+             [tSort []; tSort [];
+             tApp (tConstruct {| inductive_mind := "Coq.Init.Logic.eq"; inductive_ind := 0 |} 0 [])
+               [tSort [(Level.Level "Translation.Quotes.17", false)]; tSort []]; tRel 1])).
+
+Let Γ := [{|
+         decl_name := nAnon;
+         decl_body := None;
+         decl_type := tApp (tInd {| inductive_mind := "Translation.Quotes.Pack"; inductive_ind := 0 |} []) [tSort []; tSort []] |};
+        {| decl_name := nNamed "B"; decl_body := None; decl_type := tSort [] |}].
+
+Eval lazy in (hnf Σ Γ tt).
+
+Eval lazy in (check_conv Σ Γ (tApp (tInd {| inductive_mind := "Coq.Init.Logic.eq"; inductive_ind := 0 |} []) [tSort []; tRel 1; tRel 1])
+        (tApp (tInd {| inductive_mind := "Coq.Init.Logic.eq"; inductive_ind := 0 |} [])
+           [tSort [];
+           tApp (tConst "Translation.Quotes.transport" [])
+             [tSort []; tSort [];
+             tApp (tConstruct {| inductive_mind := "Coq.Init.Logic.eq"; inductive_ind := 0 |} 0 [])
+               [tSort [(Level.Level "Translation.Quotes.17", false)]; tSort []]; tRel 1]; tRel 1])).
 
 Make Definition coq_tm3 :=
   ltac:(

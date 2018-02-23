@@ -1602,20 +1602,56 @@ Proof.
     + eapply @cong_subst with (A := sSort s) ; eassumption.
 Defined.
 
-Lemma cong_subst1 :
+Corollary full_cong_subst :
+  forall {Σ Γ nx B Δ t1 t2 u1 u2 A},
+    Σ ;;; Γ ,, svass nx B ,,, Δ |-i t1 = t2 : A ->
+    Σ ;;; Γ |-i u1 = u2 : B ->
+    Σ ;;; Γ ,, svass nx B ,,, Δ |-i t2 : A ->
+    Σ ;;; Γ |-i u1 : B ->
+    Σ ;;; Γ ,,, subst_context u1 Δ |-i
+    t1{ #|Δ| := u1 } = t2{ #|Δ| := u2 } : A{ #|Δ| := u1 }.
+Proof.
+  intros Σ Γ nx B Δ t1 t2 u1 u2 A ht hu ht2 hu1.
+  eapply eq_transitivity.
+  - exact (cong_subst ht hu1).
+  - exact (cong_substs ht2 hu hu1).
+Defined.
+
+Lemma pre_cong_subst1 :
   forall {Σ Γ t1 t2 A B u1 u2 n},
     Σ ;;; Γ ,, svass n A |-i t1 = t2 : B ->
     Σ ;;; Γ |-i u1 = u2 : A ->
+    Σ ;;; Γ ,, svass n A |-i t2 : B ->
+    Σ ;;; Γ |-i u1 : A ->
     Σ ;;; Γ |-i t1{ 0 := u1 } = t2{ 0 := u2 } : B{ 0 := u1 }.
-Admitted.
+Proof.
+  intros Σ Γ t1 t2 A B u1 u2 n ht hu ht2 hu1.
+  eapply @full_cong_subst with (Δ := []) ; eassumption.
+Defined.
 
-Lemma cong_subst2 :
+Lemma pre_cong_subst2 :
   forall {Σ Γ t1 t2 A B C na nb u1 u2 v1 v2},
     Σ ;;; Γ ,, svass na A ,, svass nb B |-i t1 = t2 : C ->
     Σ ;;; Γ |-i u1 = u2 : A ->
     Σ ;;; Γ |-i v1 = v2 : B{ 0 := u1 } ->
-    Σ ;;; Γ |-i t1{ 1 := u1 }{ 0 := v1 } = t2{ 1 := u2 }{ 0 := v2 } : C{ 1 := u1 }{ 0 := v1 }.
-Admitted.
+    Σ ;;; Γ ,, svass na A ,, svass nb B |-i t2 : C ->
+    Σ ;;; Γ |-i u1 : A ->
+    Σ;;; Γ,, svass nb (B {0 := u1}) |-i t2 {1 := u2} : C {1 := u1} ->
+    Σ ;;; Γ |-i v1 : B{ 0 := u1 } ->
+    Σ ;;; Γ |-i t1{ 1 := u1 }{ 0 := v1 }
+             = t2{ 1 := u2 }{ 0 := v2 } : C{ 1 := u1 }{ 0 := v1 }.
+Proof.
+  intros Σ Γ t1 t2 A B C na nb u1 u2 v1 v2 ht hu hv ht2 hu1 hst2 hv1.
+  eapply @full_cong_subst with (Δ := []).
+  - eapply @full_cong_subst with (Δ := [ svass nb B ]).
+    + exact ht.
+    + assumption.
+    + assumption.
+    + assumption.
+  - cbn. assumption.
+  - cbn. assumption.
+  - cbn. assumption.
+Defined.
 
 Inductive eqctx Σ : scontext -> scontext -> Type :=
 | eqnil : eqctx Σ nil nil
@@ -1842,9 +1878,11 @@ Proof.
       change (sSort s2) with ((sSort s2){ 0 := u1 }).
       eapply typing_subst ; eassumption.
     + change (sSort s2) with ((sSort s2){0 := u2}).
-      eapply cong_subst1.
+      eapply pre_cong_subst1.
       * eapply eq_symmetry. eassumption.
       * eapply eq_symmetry. assumption.
+      * assumption.
+      * assumption.
   - constructor.
     + assumption.
     + eapply type_conv ; eassumption.
@@ -1905,11 +1943,26 @@ Proof.
         | |- _ ;;; _ |-i _ = _ : ?S =>
           change S with (S{1 := u1}{0 := sRefl A1 u1})
         end.
-        eapply cong_subst2.
+        eapply pre_cong_subst2.
         -- eassumption.
         -- assumption.
         -- cbn. rewrite !lift_subst, lift00.
            eapply cong_Refl ; eassumption.
+        -- assumption.
+        -- assumption.
+        -- cbn. rewrite !lift_subst, lift00.
+           eapply ctx_conv.
+           ++ eapply @type_subst with (A := sSort s2) (Δ := [ svass ne (sEq (lift0 1 A1) (lift0 1 u1) (sRel 0)) ]).
+              ** exact pi2_1.
+              ** assumption.
+           ++ cbn. rewrite subst_decl_svass. cbn. rewrite !lift_subst, lift00.
+              econstructor.
+              ** eapply eqctx_refl. eapply typing_wf. eassumption.
+              ** eapply eq_symmetry. eapply cong_Eq.
+                 all: try eapply eq_reflexivity.
+                 all: eassumption.
+        -- cbn. rewrite !lift_subst, lift00.
+           eapply type_Refl ; eassumption.
     + match goal with
       | |- _ ;;; _ |-i _ : ?S =>
         change S with (S{1 := v1}{0 := p1})
@@ -1923,10 +1976,25 @@ Proof.
       | |- _ ;;; _ |-i _ = _ : ?S =>
         change S with (S{1 := v1}{0 := p1})
       end.
-      eapply cong_subst2.
+      eapply pre_cong_subst2.
       * eassumption.
       * assumption.
       * cbn. rewrite !lift_subst, lift00. assumption.
+      * assumption.
+      * assumption.
+      * cbn. rewrite !lift_subst, lift00.
+        eapply ctx_conv.
+        -- eapply @type_subst with (A := sSort s2) (Δ := [ svass ne (sEq (lift0 1 A1) (lift0 1 u1) (sRel 0)) ]).
+           ++ exact pi2_1.
+           ++ assumption.
+        -- cbn. rewrite subst_decl_svass. cbn. rewrite !lift_subst, lift00.
+           econstructor.
+           ++ eapply eqctx_refl. eapply typing_wf. eassumption.
+           ++ eapply eq_symmetry. eapply cong_Eq.
+              all: try eapply eq_reflexivity.
+              all: eassumption.
+      * cbn. rewrite !lift_subst, lift00.
+        assumption.
   - eapply type_conv.
     + eapply type_Transport ; try eassumption.
       * eapply type_conv.
@@ -2008,7 +2076,7 @@ Proof.
       * eapply cong_Heq. all: try eapply eq_reflexivity.
         -- eapply type_Sort. eapply typing_wf. eassumption.
         -- eapply type_Sort. eapply typing_wf. eassumption.
-        -- eapply @cong_subst1 with (B := sSort z).
+        -- eapply @pre_cong_subst1 with (B := sSort z).
            ++ eapply @cong_lift
                 with (A := sSort z)
                      (Δ := [ svass np (sPack A1 A2) ])
@@ -2028,7 +2096,25 @@ Proof.
                      +++ eapply typing_wf. eassumption.
                      +++ eapply type_Pack ; eassumption.
                  --- cbn. omega.
-        -- eapply @cong_subst1 with (B := sSort z).
+           ++ cbn. eapply @type_lift
+                     with (A := sSort z)
+                          (Δ := [ svass np (sPack A1 A2) ])
+                          (Ξ := [ svass nx A1 ]).
+              ** assumption.
+              ** econstructor.
+                 --- eapply typing_wf. eassumption.
+                 --- eapply type_Pack ; eassumption.
+           ++ cbn. eapply @type_ProjT1 with (A2 := lift0 1 A2).
+              ** eapply @typing_lift01 with (A := sSort s) ; try eassumption.
+                 eapply type_Pack ; eassumption.
+              ** eapply @typing_lift01 with (A := sSort s) ; try eassumption.
+                 eapply type_Pack ; eassumption.
+              ** refine (type_Rel _ _ _ _ _).
+                 --- econstructor.
+                     +++ eapply typing_wf. eassumption.
+                     +++ eapply type_Pack ; eassumption.
+                 --- cbn. omega.
+        -- eapply @pre_cong_subst1 with (B := sSort z).
            ++ eapply @cong_lift
                 with (A := sSort z)
                      (Δ := [ svass np (sPack A1 A2) ])
@@ -2044,6 +2130,24 @@ Proof.
                  eapply type_Pack ; eassumption.
               ** eapply eq_reflexivity.
                  refine (type_Rel _ _ _ _ _).
+                 --- econstructor.
+                     +++ eapply typing_wf. eassumption.
+                     +++ eapply type_Pack ; eassumption.
+                 --- cbn. omega.
+           ++ cbn. eapply @type_lift
+                     with (A := sSort z)
+                          (Δ := [ svass np (sPack A1 A2) ])
+                          (Ξ := [ svass ny A2 ]).
+              ** assumption.
+              ** econstructor.
+                 --- eapply typing_wf. eassumption.
+                 --- eapply type_Pack ; eassumption.
+           ++ cbn. eapply @type_ProjT2 with (A1 := lift0 1 A1).
+              ** eapply @typing_lift01 with (A := sSort s) ; try eassumption.
+                 eapply type_Pack ; eassumption.
+              ** eapply @typing_lift01 with (A := sSort s) ; try eassumption.
+                 eapply type_Pack ; eassumption.
+              ** refine (type_Rel _ _ _ _ _).
                  --- econstructor.
                      +++ eapply typing_wf. eassumption.
                      +++ eapply type_Pack ; eassumption.
@@ -2107,7 +2211,7 @@ Proof.
         -- eapply cong_Heq. all: try eapply eq_reflexivity.
            ** eapply type_Sort. eapply typing_wf. eassumption.
            ** eapply type_Sort. eapply typing_wf. eassumption.
-           ** eapply @cong_subst1 with (B := sSort z).
+           ** eapply @pre_cong_subst1 with (B := sSort z).
               --- eapply @cong_lift
                     with (A := sSort z)
                          (Δ := [ svass np (sPack A1 A2) ])
@@ -2127,7 +2231,25 @@ Proof.
                           ---- eapply typing_wf. eassumption.
                           ---- eapply type_Pack ; eassumption.
                       *** cbn. omega.
-           ** eapply @cong_subst1 with (B := sSort z).
+              --- eapply @type_lift
+                    with (A := sSort z)
+                         (Δ := [ svass np (sPack A1 A2) ])
+                         (Ξ := [ svass nx A1 ]).
+                  +++ assumption.
+                  +++ econstructor.
+                      *** eapply typing_wf. eassumption.
+                      *** eapply type_Pack ; eassumption.
+              --- cbn. eapply @type_ProjT1 with (A2 := lift0 1 A2).
+                  +++ eapply @typing_lift01 with (A := sSort s) ; try eassumption.
+                      eapply type_Pack ; eassumption.
+                  +++ eapply @typing_lift01 with (A := sSort s) ; try eassumption.
+                      eapply type_Pack ; eassumption.
+                  +++ refine (type_Rel _ _ _ _ _).
+                      *** econstructor.
+                          ---- eapply typing_wf. eassumption.
+                          ---- eapply type_Pack ; eassumption.
+                      *** cbn. omega.
+           ** eapply @pre_cong_subst1 with (B := sSort z).
               --- eapply @cong_lift
                     with (A := sSort z)
                          (Δ := [ svass np (sPack A1 A2) ])
@@ -2143,6 +2265,24 @@ Proof.
                       eapply type_Pack ; eassumption.
                   +++ eapply eq_reflexivity.
                       refine (type_Rel _ _ _ _ _).
+                      *** econstructor.
+                          ---- eapply typing_wf. eassumption.
+                          ---- eapply type_Pack ; eassumption.
+                      *** cbn. omega.
+              --- eapply @type_lift
+                    with (A := sSort z)
+                         (Δ := [ svass np (sPack A1 A2) ])
+                         (Ξ := [ svass ny A2 ]).
+                  +++ assumption.
+                  +++ econstructor.
+                      *** eapply typing_wf. eassumption.
+                      *** eapply type_Pack ; eassumption.
+              --- cbn. eapply @type_ProjT2 with (A1 := lift0 1 A1).
+                  +++ eapply @typing_lift01 with (A := sSort s) ; try eassumption.
+                      eapply type_Pack ; eassumption.
+                  +++ eapply @typing_lift01 with (A := sSort s) ; try eassumption.
+                      eapply type_Pack ; eassumption.
+                  +++ refine (type_Rel _ _ _ _ _).
                       *** econstructor.
                           ---- eapply typing_wf. eassumption.
                           ---- eapply type_Pack ; eassumption.
@@ -2224,7 +2364,7 @@ Proof.
                          *** eapply type_Pack ; eassumption.
                      +++ cbn. omega.
         -- eapply cong_Heq. all: try eapply eq_reflexivity.
-           ** eapply @cong_subst1 with (B := sSort z).
+           ** eapply @pre_cong_subst1 with (B := sSort z).
               --- eapply @cong_lift
                     with (A := sSort z)
                          (Δ := [ svass np (sPack A1 A2) ])
@@ -2244,7 +2384,25 @@ Proof.
                           ---- eapply typing_wf. eassumption.
                           ---- eapply type_Pack ; eassumption.
                       *** cbn. omega.
-           ** eapply @cong_subst1 with (B := sSort z).
+              --- eapply @type_lift
+                    with (A := sSort z)
+                         (Δ := [ svass np (sPack A1 A2) ])
+                         (Ξ := [ svass nx A1 ]).
+                  +++ assumption.
+                  +++ econstructor.
+                      *** eapply typing_wf. eassumption.
+                      *** eapply type_Pack ; eassumption.
+              --- cbn. eapply @type_ProjT1 with (A2 := lift0 1 A2).
+                  +++ eapply @typing_lift01 with (A := sSort s) ; try eassumption.
+                      eapply type_Pack ; eassumption.
+                  +++ eapply @typing_lift01 with (A := sSort s) ; try eassumption.
+                      eapply type_Pack ; eassumption.
+                  +++ refine (type_Rel _ _ _ _ _).
+                      *** econstructor.
+                          ---- eapply typing_wf. eassumption.
+                          ---- eapply type_Pack ; eassumption.
+                      *** cbn. omega.
+           ** eapply @pre_cong_subst1 with (B := sSort z).
               --- eapply @cong_lift
                     with (A := sSort z)
                          (Δ := [ svass np (sPack A1 A2) ])
@@ -2264,7 +2422,25 @@ Proof.
                           ---- eapply typing_wf. eassumption.
                           ---- eapply type_Pack ; eassumption.
                       *** cbn. omega.
-           ** eapply cong_subst1.
+              --- eapply @type_lift
+                    with (A := sSort z)
+                         (Δ := [ svass np (sPack A1 A2) ])
+                         (Ξ := [ svass ny A2 ]).
+                  +++ assumption.
+                  +++ econstructor.
+                      *** eapply typing_wf. eassumption.
+                      *** eapply type_Pack ; eassumption.
+              --- cbn. eapply @type_ProjT2 with (A1 := lift0 1 A1).
+                  +++ eapply @typing_lift01 with (A := sSort s) ; try eassumption.
+                      eapply type_Pack ; eassumption.
+                  +++ eapply @typing_lift01 with (A := sSort s) ; try eassumption.
+                      eapply type_Pack ; eassumption.
+                  +++ refine (type_Rel _ _ _ _ _).
+                      *** econstructor.
+                          ---- eapply typing_wf. eassumption.
+                          ---- eapply type_Pack ; eassumption.
+                      *** cbn. omega.
+           ** eapply @cong_subst with (Δ := []).
               --- eapply @cong_lift
                     with (Δ := [ svass np (sPack A1 A2) ])
                          (Ξ := [ svass nx A1 ]).
@@ -2272,18 +2448,17 @@ Proof.
                   +++ econstructor.
                       *** eapply typing_wf. eassumption.
                       *** eapply type_Pack ; eassumption.
-              --- cbn. eapply @cong_ProjT1 with (A2 := lift0 1 A2).
+              --- cbn. eapply @type_ProjT1 with (A2 := lift0 1 A2).
                   +++ eapply @typing_lift01 with (A := sSort s) ; try eassumption.
                       eapply type_Pack ; eassumption.
                   +++ eapply @typing_lift01 with (A := sSort s) ; try eassumption.
                       eapply type_Pack ; eassumption.
-                  +++ eapply eq_reflexivity.
-                      refine (type_Rel _ _ _ _ _).
+                  +++ refine (type_Rel _ _ _ _ _).
                       *** econstructor.
                           ---- eapply typing_wf. eassumption.
                           ---- eapply type_Pack ; eassumption.
                       *** cbn. omega.
-           ** eapply cong_subst1.
+           ** eapply @cong_subst with (Δ := []).
               --- eapply @cong_lift
                     with (Δ := [ svass np (sPack A1 A2) ])
                          (Ξ := [ svass ny A2 ]).
@@ -2291,13 +2466,12 @@ Proof.
                   +++ econstructor.
                       *** eapply typing_wf. eassumption.
                       *** eapply type_Pack ; eassumption.
-              --- cbn. eapply @cong_ProjT2 with (A1 := lift0 1 A1).
+              --- cbn. eapply @type_ProjT2 with (A1 := lift0 1 A1).
                   +++ eapply @typing_lift01 with (A := sSort s) ; try eassumption.
                       eapply type_Pack ; eassumption.
                   +++ eapply @typing_lift01 with (A := sSort s) ; try eassumption.
                       eapply type_Pack ; eassumption.
-                  +++ eapply eq_reflexivity.
-                      refine (type_Rel _ _ _ _ _).
+                  +++ refine (type_Rel _ _ _ _ _).
                       *** econstructor.
                           ---- eapply typing_wf. eassumption.
                           ---- eapply type_Pack ; eassumption.
@@ -2365,7 +2539,7 @@ Proof.
         -- eapply cong_Heq. all: try eapply eq_reflexivity.
            ** eapply type_Sort. eapply typing_wf. eassumption.
            ** eapply type_Sort. eapply typing_wf. eassumption.
-           ** eapply @cong_subst1 with (B := sSort z).
+           ** eapply @cong_subst with (A := sSort z) (Δ := []).
               --- eapply @cong_lift
                     with (A := sSort z)
                          (Δ := [ svass np (sPack A1 A2) ])
@@ -2374,18 +2548,17 @@ Proof.
                   +++ econstructor.
                       *** eapply typing_wf. eassumption.
                       *** eapply type_Pack ; eassumption.
-              --- cbn. eapply @cong_ProjT1 with (A2 := lift0 1 A2).
+              --- cbn. eapply @type_ProjT1 with (A2 := lift0 1 A2).
                   +++ eapply @typing_lift01 with (A := sSort s) ; try eassumption.
                       eapply type_Pack ; eassumption.
                   +++ eapply @typing_lift01 with (A := sSort s) ; try eassumption.
                       eapply type_Pack ; eassumption.
-                  +++ eapply eq_reflexivity.
-                      refine (type_Rel _ _ _ _ _).
+                  +++ refine (type_Rel _ _ _ _ _).
                       *** econstructor.
                           ---- eapply typing_wf. eassumption.
                           ---- eapply type_Pack ; eassumption.
                       *** cbn. omega.
-           ** eapply @cong_subst1 with (B := sSort z).
+           ** eapply @cong_subst with (A := sSort z) (Δ := []).
               --- eapply @cong_lift
                     with (A := sSort z)
                          (Δ := [ svass np (sPack A1 A2) ])
@@ -2394,13 +2567,12 @@ Proof.
                   +++ econstructor.
                       *** eapply typing_wf. eassumption.
                       *** eapply type_Pack ; eassumption.
-              --- cbn. eapply @cong_ProjT2 with (A1 := lift0 1 A1).
+              --- cbn. eapply @type_ProjT2 with (A1 := lift0 1 A1).
                   +++ eapply @typing_lift01 with (A := sSort s) ; try eassumption.
                       eapply type_Pack ; eassumption.
                   +++ eapply @typing_lift01 with (A := sSort s) ; try eassumption.
                       eapply type_Pack ; eassumption.
-                  +++ eapply eq_reflexivity.
-                      refine (type_Rel _ _ _ _ _).
+                  +++ refine (type_Rel _ _ _ _ _).
                       *** econstructor.
                           ---- eapply typing_wf. eassumption.
                           ---- eapply type_Pack ; eassumption.
@@ -2439,12 +2611,12 @@ Proof.
       * eapply type_App ; eassumption.
       * eapply type_App ; eassumption.
     + eapply eq_symmetry. eapply cong_Heq.
-      * eapply @cong_subst1 with (B := sSort z).
+      * eapply @cong_subst with (A := sSort z) (Δ := []).
         -- eassumption.
-        -- eapply eq_reflexivity. assumption.
-      * eapply @cong_subst1 with (B := sSort z).
+        -- assumption.
+      * eapply @cong_subst with (A := sSort z) (Δ := []).
         -- eassumption.
-        -- eapply eq_reflexivity. assumption.
+        -- assumption.
       * eapply cong_App.
         all: try eapply eq_reflexivity.
         all: eassumption.
@@ -2463,6 +2635,47 @@ Proof.
       * eapply cong_ProjT2 with (A1 := A1) ; eassumption.
   - eapply type_HeqToEq ; try eassumption.
     eapply type_HeqRefl ; eassumption.
+Defined.
+
+Corollary full_cong_subst' :
+  forall {Σ Γ nx B Δ t1 t2 u1 u2 A},
+    Σ ;;; Γ ,, svass nx B ,,, Δ |-i t1 = t2 : A ->
+    Σ ;;; Γ |-i u1 = u2 : B ->
+    Σ ;;; Γ ,,, subst_context u1 Δ |-i
+    t1{ #|Δ| := u1 } = t2{ #|Δ| := u2 } : A{ #|Δ| := u1 }.
+Proof.
+  intros Σ Γ nx B Δ t1 t2 u1 u2 A ht hu.
+  destruct (eq_typing ht) as [_ ht2].
+  destruct (eq_typing hu) as [hu1 _].
+  eapply eq_transitivity.
+  - exact (cong_subst ht hu1).
+  - exact (cong_substs ht2 hu hu1).
+Defined.
+
+Lemma cong_subst1 :
+  forall {Σ Γ t1 t2 A B u1 u2 n},
+    Σ ;;; Γ ,, svass n A |-i t1 = t2 : B ->
+    Σ ;;; Γ |-i u1 = u2 : A ->
+    Σ ;;; Γ |-i t1{ 0 := u1 } = t2{ 0 := u2 } : B{ 0 := u1 }.
+Proof.
+  intros Σ Γ t1 t2 A B u1 u2 n ht hu.
+  eapply @full_cong_subst' with (Δ := []) ; eassumption.
+Defined.
+
+Lemma cong_subst2 :
+  forall {Σ Γ t1 t2 A B C na nb u1 u2 v1 v2},
+    Σ ;;; Γ ,, svass na A ,, svass nb B |-i t1 = t2 : C ->
+    Σ ;;; Γ |-i u1 = u2 : A ->
+    Σ ;;; Γ |-i v1 = v2 : B{ 0 := u1 } ->
+    Σ ;;; Γ |-i t1{ 1 := u1 }{ 0 := v1 }
+             = t2{ 1 := u2 }{ 0 := v2 } : C{ 1 := u1 }{ 0 := v1 }.
+Proof.
+  intros Σ Γ t1 t2 A B C na nb u1 u2 v1 v2 ht hu hv.
+  eapply @full_cong_subst' with (Δ := []).
+  - eapply @full_cong_subst' with (Δ := [ svass nb B ]).
+    + exact ht.
+    + assumption.
+  - cbn. assumption.
 Defined.
 
 Lemma sorts_in_sort :

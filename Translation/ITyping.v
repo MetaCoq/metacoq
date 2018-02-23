@@ -451,6 +451,21 @@ with eq_term (Σ : global_context) : scontext -> sterm -> sterm -> sterm -> Type
     Σ ;;; Γ |-i sCongRefl pA pu = sCongRefl pA' pu' :
                sHeq (sEq A1 u1 u1) (sRefl A1 u1) (sEq A2 u2 u2) (sRefl A2 u2)
 
+| cong_EqToHeq Γ A u v p1 p2 s :
+    Σ ;;; Γ |-i p1 = p2 : sEq A u v ->
+    Σ ;;; Γ |-i A : sSort s ->
+    Σ ;;; Γ |-i u : A ->
+    Σ ;;; Γ |-i v : A ->
+    Σ ;;; Γ |-i sEqToHeq p1 = sEqToHeq p2 : sHeq A u A v
+
+| cong_HeqTypeEq Γ A u B v p1 p2 s :
+    Σ ;;; Γ |-i p1 = p2 : sHeq A u B v ->
+    Σ ;;; Γ |-i A : sSort s ->
+    Σ ;;; Γ |-i B : sSort s ->
+    Σ ;;; Γ |-i u : A ->
+    Σ ;;; Γ |-i v : B ->
+    Σ ;;; Γ |-i sHeqTypeEq p1 = sHeqTypeEq p2 : sEq (sSort s) A B
+
 | cong_ProjT1 Γ A1 A2 p1 p2 s :
     Σ ;;; Γ |-i A1 : sSort s ->
     Σ ;;; Γ |-i A2 : sSort s ->
@@ -898,6 +913,8 @@ Proof.
           rewrite substP1. cbn. reflexivity.
       - cbn. eapply cong_CongEq ; eih.
       - cbn. eapply cong_CongRefl ; eih.
+      - cbn. eapply cong_EqToHeq ; eih.
+      - cbn. eapply cong_HeqTypeEq ; eih.
       - cbn. eapply cong_ProjT1 with (A2 := lift #|Δ| #|Ξ| A2) ; eih.
       - cbn. eapply cong_ProjT2 with (A1 := lift #|Δ| #|Ξ| A1) ; eih.
       - cbn. eapply cong_ProjTe ; eih.
@@ -1286,6 +1303,8 @@ Proof.
           rewrite substP4. cbn. reflexivity.
       - cbn. eapply cong_CongEq ; esh.
       - cbn. eapply cong_CongRefl ; esh.
+      - cbn. eapply cong_EqToHeq ; esh.
+      - cbn. eapply cong_HeqTypeEq ; esh.
       - cbn. eapply cong_ProjT1 with (A2 := A2{ #|Δ| := u }) ; esh.
       - cbn. eapply cong_ProjT2 with (A1 := A1{ #|Δ| := u }) ; esh.
       - cbn. eapply cong_ProjTe ; esh.
@@ -1552,8 +1571,17 @@ Proof.
     + eapply @type_subst with (A := sSort s) ; eassumption.
     + eapply type_subst ; eassumption.
     + eapply type_subst ; eassumption.
-  - cheat.
-  - cheat.
+  - cbn. eapply cong_EqToHeq.
+    + apply IHht1 ; eassumption.
+    + eapply @type_subst with (A := sSort s) ; eassumption.
+    + eapply type_subst ; eassumption.
+    + eapply type_subst ; eassumption.
+  - cbn. eapply cong_HeqTypeEq.
+    + apply IHht1 ; eassumption.
+    + eapply @type_subst with (A := sSort s) ; eassumption.
+    + eapply @type_subst with (A := sSort s) ; eassumption.
+    + eapply type_subst ; eassumption.
+    + eapply type_subst ; eassumption.
   - cbn. eapply cong_Pack.
     + apply IHht1 ; eassumption.
     + apply IHht2 ; eassumption.

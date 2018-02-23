@@ -428,6 +428,29 @@ with eq_term (Σ : global_context) : scontext -> sterm -> sterm -> sterm -> Type
                sHeq (B1{0 := v1}) (sApp u1 nx A1 B1 v1)
                     (B2{0 := v2}) (sApp u2 ny A2 B2 v2)
 
+| cong_CongEq Γ s A1 A2 u1 u2 v1 v2 pA pu pv pA' pu' pv' :
+    Σ ;;; Γ |-i pA = pA' : sHeq (sSort s) A1 (sSort s) A2 ->
+    Σ ;;; Γ |-i pu = pu' : sHeq A1 u1 A2 u2 ->
+    Σ ;;; Γ |-i pv = pv' : sHeq A1 v1 A2 v2 ->
+    Σ ;;; Γ |-i A1 : sSort s ->
+    Σ ;;; Γ |-i A2 : sSort s ->
+    Σ ;;; Γ |-i u1 : A1 ->
+    Σ ;;; Γ |-i u2 : A2 ->
+    Σ ;;; Γ |-i v1 : A1 ->
+    Σ ;;; Γ |-i v2 : A2 ->
+    Σ ;;; Γ |-i sCongEq pA pu pv = sCongEq pA' pu' pv' :
+               sHeq (sSort s) (sEq A1 u1 v1) (sSort s) (sEq A2 u2 v2)
+
+| cong_CongRefl Γ s A1 A2 u1 u2 pA pu pA' pu' :
+    Σ ;;; Γ |-i pA = pA' : sHeq (sSort s) A1 (sSort s) A2 ->
+    Σ ;;; Γ |-i pu = pu' : sHeq A1 u1 A2 u2 ->
+    Σ ;;; Γ |-i A1 : sSort s ->
+    Σ ;;; Γ |-i A2 : sSort s ->
+    Σ ;;; Γ |-i u1 : A1 ->
+    Σ ;;; Γ |-i u2 : A2 ->
+    Σ ;;; Γ |-i sCongRefl pA pu = sCongRefl pA' pu' :
+               sHeq (sEq A1 u1 u1) (sRefl A1 u1) (sEq A2 u2 u2) (sRefl A2 u2)
+
 | cong_ProjT1 Γ A1 A2 p1 p2 s :
     Σ ;;; Γ |-i A1 : sSort s ->
     Σ ;;; Γ |-i A2 : sSort s ->
@@ -873,6 +896,8 @@ Proof.
         + rewrite <- liftP2 by omega.
           replace (S #|Ξ|) with (0 + (S #|Ξ|))%nat by omega.
           rewrite substP1. cbn. reflexivity.
+      - cbn. eapply cong_CongEq ; eih.
+      - cbn. eapply cong_CongRefl ; eih.
       - cbn. eapply cong_ProjT1 with (A2 := lift #|Δ| #|Ξ| A2) ; eih.
       - cbn. eapply cong_ProjT2 with (A1 := lift #|Δ| #|Ξ| A1) ; eih.
       - cbn. eapply cong_ProjTe ; eih.
@@ -1259,6 +1284,8 @@ Proof.
         + rewrite <- substP2 by omega.
           replace (S #|Δ|) with (0 + (S #|Δ|))%nat by omega.
           rewrite substP4. cbn. reflexivity.
+      - cbn. eapply cong_CongEq ; esh.
+      - cbn. eapply cong_CongRefl ; esh.
       - cbn. eapply cong_ProjT1 with (A2 := A2{ #|Δ| := u }) ; esh.
       - cbn. eapply cong_ProjT2 with (A1 := A1{ #|Δ| := u }) ; esh.
       - cbn. eapply cong_ProjTe ; esh.
@@ -1436,10 +1463,95 @@ Proof.
       * eapply IHht6 with (Δ0 := Δ,, svass ny A2) (A := sSort z)
         ; [ reflexivity | eassumption .. ].
       * cbn. rewrite subst_decl_svass. reflexivity.
-  - cheat.
-  - cheat.
-  - cheat.
-  - cheat.
+  - cbn. eapply cong_CongLambda.
+    + apply IHht1 ; eassumption.
+    + eapply meta_eqconv.
+      * eapply IHht2 with (Δ0 := Δ,, svass np (sPack A1 A2))
+        ; [ reflexivity | eassumption .. ].
+      * cbn. f_equal.
+        -- rewrite <- substP2 by omega.
+           replace (S #|Δ|) with (0 + (S #|Δ|))%nat by omega.
+           rewrite substP4. cbn. reflexivity.
+        -- rewrite <- substP2 by omega.
+           replace (S #|Δ|) with (0 + (S #|Δ|))%nat by omega.
+           rewrite substP4. cbn. reflexivity.
+    + eapply meta_eqconv.
+      * eapply IHht3 with (Δ0 := Δ,, svass np (sPack A1 A2))
+        ; [ reflexivity | eassumption .. ].
+      * cbn. f_equal.
+        -- rewrite <- substP2 by omega.
+           replace (S #|Δ|) with (0 + (S #|Δ|))%nat by omega.
+           rewrite substP4. cbn. reflexivity.
+        -- rewrite <- substP2 by omega.
+           replace (S #|Δ|) with (0 + (S #|Δ|))%nat by omega.
+           rewrite substP4. cbn. reflexivity.
+        -- rewrite <- substP2 by omega.
+           replace (S #|Δ|) with (0 + (S #|Δ|))%nat by omega.
+           rewrite substP4. cbn. reflexivity.
+        -- rewrite <- substP2 by omega.
+           replace (S #|Δ|) with (0 + (S #|Δ|))%nat by omega.
+           rewrite substP4. cbn. reflexivity.
+    + eapply @type_subst with (A := sSort s) ; eassumption.
+    + eapply @type_subst with (A := sSort s) ; eassumption.
+    + eapply meta_eqconv.
+      * eapply IHht6 with (Δ0 := Δ,, svass nx A1)
+        ; [ reflexivity | eassumption .. ].
+      * cbn. reflexivity.
+    + eapply meta_eqconv.
+      * eapply IHht7 with (Δ0 := Δ,, svass ny A2)
+        ; [ reflexivity | eassumption .. ].
+      * reflexivity.
+    + eapply IHht8 with (Δ0 := Δ,, svass nx A1)
+      ; [ reflexivity | eassumption .. ].
+    + eapply IHht9 with (Δ0 := Δ,, svass ny A2)
+      ; [ reflexivity | eassumption .. ].
+  - cbn. change #|Δ| with (0 + #|Δ|)%nat.
+    rewrite 2!substP4. cbn.
+    eapply cong_CongApp.
+    + eapply IHht1 ; eassumption.
+    + eapply meta_eqconv.
+      * eapply IHht2 with (Δ0 := Δ,, svass np (sPack A1 A2))
+        ; [ reflexivity | eassumption .. ].
+      * cbn. f_equal.
+        -- rewrite <- substP2 by omega.
+           replace (S #|Δ|) with (0 + (S #|Δ|))%nat by omega.
+           rewrite substP4. cbn. reflexivity.
+        -- rewrite <- substP2 by omega.
+           replace (S #|Δ|) with (0 + (S #|Δ|))%nat by omega.
+           rewrite substP4. cbn. reflexivity.
+    + apply IHht3 ; eassumption.
+    + apply IHht4 ; eassumption.
+    + eapply @type_subst with (A := sSort s) ; eassumption.
+    + eapply @type_subst with (A := sSort s) ; eassumption.
+    + eapply meta_eqconv.
+      * eapply IHht7 with (Δ0 := Δ,, svass nx A1)
+        ; [ reflexivity | eassumption .. ].
+      * cbn. reflexivity.
+    + eapply meta_eqconv.
+      * eapply IHht8 with (Δ0 := Δ,, svass ny A2)
+        ; [ reflexivity | eassumption .. ].
+      * reflexivity.
+    + eapply @type_subst with (A := sProd nx A1 B1) ; eassumption.
+    + eapply @type_subst with (A := sProd ny A2 B2) ; eassumption.
+    + eapply type_subst ; eassumption.
+    + eapply type_subst ; eassumption.
+  - cbn. eapply cong_CongEq.
+    + apply IHht1 ; eassumption.
+    + apply IHht2 ; eassumption.
+    + apply IHht3 ; eassumption.
+    + eapply @type_subst with (A := sSort s) ; eassumption.
+    + eapply @type_subst with (A := sSort s) ; eassumption.
+    + eapply type_subst ; eassumption.
+    + eapply type_subst ; eassumption.
+    + eapply type_subst ; eassumption.
+    + eapply type_subst ; eassumption.
+  - cbn. eapply cong_CongRefl.
+    + apply IHht1 ; eassumption.
+    + apply IHht2 ; eassumption.
+    + eapply @type_subst with (A := sSort s) ; eassumption.
+    + eapply @type_subst with (A := sSort s) ; eassumption.
+    + eapply type_subst ; eassumption.
+    + eapply type_subst ; eassumption.
   - cheat.
   - cheat.
   - cbn. eapply cong_Pack.

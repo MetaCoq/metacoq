@@ -2706,11 +2706,30 @@ Lemma cong_succ_sort :
     Σ ;;; Γ |-i sSort (succ_sort s1) = sSort (succ_sort s2) : sSort (succ_sort s3).
 Admitted.
 
+(* Lemma uniqueness_ctx : *)
+(*   forall {Σ Γ u A}, *)
+(*     Σ ;;; Γ |-i u : A -> *)
+(*     forall {Δ} *)
+
 Lemma uniqueness :
   forall {Σ Γ A B u},
     Σ ;;; Γ |-i u : A ->
     Σ ;;; Γ |-i u : B ->
     ∑ s, Σ ;;; Γ |-i A = B : sSort s.
+Proof.
+  (* intros Σ Γ A B u hu1. *)
+  (* dependent induction hu1 ; intros hu2 ; dependent induction hu2. *)
+  (* - eexists. cheat. *)
+  (* - destruct (IHhu2_1 w isdecl) as [s' h']. *)
+  (*   eexists. eapply eq_transitivity. *)
+  (*   + exact h'. *)
+  (*   + eapply eq_conv. *)
+  (*     * exact e. *)
+  (*     * (* This bit I usually use uniqueness to conclude... *)
+  (*          This means we might need a stronger induction hypothesis to go. *)
+  (*        *) *)
+  (*       cheat. *)
+  (* - *)
 Admitted.
 
 (* We state several inversion lemmata on a by need basis. *)

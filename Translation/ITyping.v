@@ -2683,8 +2683,42 @@ Lemma sorts_in_sort :
     Σ ;;; Γ |-i sSort s1 : sSort s ->
     Σ ;;; Γ |-i sSort s2 : sSort s ->
     Σ ;;; Γ |-i sSort s1 = sSort s2 : sSort s.
-Proof.
 Admitted.
+
+(* Fixpoint strengthen_sort' {Σ Γ s A} (h : Σ ;;; Γ |-i sSort s : A) {struct h} : *)
+(*   forall {z B}, *)
+(*     Σ ;;; Γ |-i A = B : sSort z -> *)
+(*     Σ ;;; [] |-i B : sSort z -> *)
+(*     Σ ;;; [] |-i sSort s : B *)
+
+(* with strengthen_eqsort {Σ Γ s z A} *)
+(*   (h : Σ ;;; Γ |-i sSort s = A : sSort z) {struct h} : *)
+(*   Σ ;;; [] |-i A : sSort z -> *)
+(*   Σ ;;; [] |-i sSort s = A : sSort z. *)
+(* Proof. *)
+(*   - dependent destruction h ; intros z C he hC. *)
+(*     + pose proof (strengthen_eqsort _ _ _ _ _ he hC). *)
+(*       eapply type_conv. *)
+(*       * eapply type_Sort. constructor. *)
+(*       * eassumption. *)
+(*       * assumption. *)
+(*     + cheat. *)
+(*   - cheat. *)
+(* Defined. *)
+
+(* Lemma strengthen_sort' : *)
+(*   forall {Σ Γ s A}, *)
+(*     Σ ;;; Γ |-i sSort s : A -> *)
+(*     forall {z B}, *)
+(*       Σ ;;; Γ |-i A = B : sSort z -> *)
+(*       Σ ;;; [] |-i B : sSort z -> *)
+(*       Σ ;;; [] |-i sSort s : B. *)
+(* Proof. *)
+(*   intros Σ Γ s A hs. *)
+(*   dependent induction hs ; intros z C he hA. *)
+(*   - eapply type_Sort. constructor. *)
+(*   - *)
+
 
 Lemma strengthen_sort :
   forall {Σ Γ Δ s z},

@@ -789,8 +789,12 @@ Proof.
             rewrite lift_context_length. omega.
         + eapply meta_conv.
           * eapply type_Rel. eapply wf_lift ; assumption.
-          * (* Probably true? *)
-            cheat.
+          * erewrite 2!safe_nth_lt.
+            induction Ξ.
+            -- cbn. easy.
+            -- destruct n.
+               ++ cbn. rewrite <- liftP2 by omega. cbn. reflexivity.
+               ++ cbn. cheat.
       - cbn. apply type_Sort. now apply wf_lift.
       - cbn. eapply type_Prod ; eih.
       - cbn. eapply type_Lambda ; eih.

@@ -609,6 +609,32 @@ Proof.
   - cbn. f_equal. assumption.
 Defined.
 
+(* Should be in SCommon *)
+Fact safe_nth_irr :
+  forall {A n} {l : list A} {isdecl isdecl'},
+    safe_nth l (exist _ n isdecl) =
+    safe_nth l (exist _ n isdecl').
+Proof.
+  intros A n. induction n ; intro l ; destruct l ; try easy ; intros isdecl isdecl'.
+  cbn. eapply IHn.
+Defined.
+
+Fact safe_nth_ge :
+  forall {Γ Δ n} { isdecl : n < #|Γ ,,, Δ| } { isdecl' : n - #|Δ| < #|Γ| },
+    n >= #|Δ| ->
+    safe_nth (Γ ,,, Δ) (exist _ n isdecl) =
+    safe_nth Γ (exist _ (n - #|Δ|) isdecl').
+Proof.
+  intros Γ Δ.
+  induction Δ ; intros n isdecl isdecl' h.
+  - cbn in *. revert isdecl'.
+    replace (n - 0) with n by omega.
+    intros isdecl'. apply safe_nth_irr.
+  - destruct n.
+    + cbn in *. inversion h.
+    + cbn. apply IHΔ. cbn in *. omega.
+Defined.
+
 Axiom cheating : forall {A}, A.
 Tactic Notation "cheat" := apply cheating.
 

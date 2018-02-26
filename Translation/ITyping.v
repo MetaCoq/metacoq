@@ -1122,6 +1122,18 @@ Proof.
   - cbn. f_equal. assumption.
 Defined.
 
+Fact safe_nth_subst_context :
+  forall {Δ : scontext} {n u isdecl isdecl'},
+    sdecl_type (safe_nth (subst_context u Δ) (exist _ n isdecl)) =
+    (sdecl_type (safe_nth Δ (exist _ n isdecl'))) { #|Δ| - S n := u }.
+Proof.
+  intro Δ. induction Δ.
+  - cbn. easy.
+  - intro n. destruct n ; intros u isdecl isdecl'.
+    + cbn. replace (#|Δ| - 0) with #|Δ| by omega. reflexivity.
+    + cbn. erewrite IHΔ. reflexivity.
+Defined.
+
 Ltac sh h :=
   lazymatch goal with
   | [ type_subst :
@@ -1250,7 +1262,20 @@ Proof.
           * erewrite safe_nth_ge'.
             f_equal. f_equal. eapply safe_nth_cong_irr.
             rewrite subst_context_length. reflexivity.
-        + cheat.
+        + assert (h : n < #|Δ|) by omega.
+          rewrite @safe_nth_lt with (isdecl' := h).
+          match goal with
+          | |- _ ;;; _ |-i _ : ?t{?d := ?u} =>
+            replace (subst u d t) with (t{((S n) + (#|Δ| - (S n)))%nat := u})
+              by (f_equal ; omega)
+          end.
+          rewrite substP2 by omega.
+          eapply meta_conv.
+          * eapply type_Rel.
+            eapply wf_subst ; eassumption.
+          * f_equal.
+            erewrite safe_nth_lt.
+            eapply safe_nth_subst_context.
       - cbn. apply type_Sort. eapply wf_subst ; eassumption.
       - cbn. eapply type_Prod ; esh.
       - cbn. eapply type_Lambda ; esh.

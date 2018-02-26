@@ -677,6 +677,39 @@ Proof.
     + cbn. eapply IHn.
 Defined.
 
+Fact safe_nth_lift_context :
+  forall {Γ Δ : scontext} {n isdecl isdecl'},
+    sdecl_type (safe_nth (lift_context #|Γ| Δ) (exist _ n isdecl)) =
+    lift #|Γ| (#|Δ| - n - 1) (sdecl_type (safe_nth Δ (exist _ n isdecl'))).
+Proof.
+  intros Γ Δ. induction Δ.
+  - cbn. easy.
+  - intro n. destruct n ; intros isdecl isdecl'.
+    + cbn. replace (#|Δ| - 0) with #|Δ| by omega. reflexivity.
+    + cbn. erewrite IHΔ. reflexivity.
+Defined.
+
+Fact lift_context_ex :
+  forall {Δ Ξ : scontext} {n isdecl isdecl'},
+    lift0 (S n) (sdecl_type (safe_nth (lift_context #|Δ| Ξ) (exist _ n isdecl))) =
+    lift #|Δ| #|Ξ| (lift0 (S n) (sdecl_type (safe_nth Ξ (exist _ n isdecl')))).
+Proof.
+  intros Δ Ξ n isdecl isdecl'.
+  erewrite safe_nth_lift_context.
+  rewrite <- liftP2 by omega.
+  cbn.
+  replace (S (n + (#|Ξ| - n - 1)))%nat with #|Ξ|.
+  - reflexivity.
+  - revert n isdecl isdecl'. induction Ξ ; intros n isdecl isdecl'.
+    + cbn. easy.
+    + cbn. f_equal.
+      destruct n.
+      * cbn. omega.
+      * cbn. apply IHΞ.
+        -- cbn in *. omega.
+        -- cbn in *. omega.
+Defined.
+
 Axiom cheating : forall {A}, A.
 Tactic Notation "cheat" := apply cheating.
 
@@ -790,11 +823,7 @@ Proof.
         + eapply meta_conv.
           * eapply type_Rel. eapply wf_lift ; assumption.
           * erewrite 2!safe_nth_lt.
-            induction Ξ.
-            -- cbn. easy.
-            -- destruct n.
-               ++ cbn. rewrite <- liftP2 by omega. cbn. reflexivity.
-               ++ cbn. cheat.
+            eapply lift_context_ex.
       - cbn. apply type_Sort. now apply wf_lift.
       - cbn. eapply type_Prod ; eih.
       - cbn. eapply type_Lambda ; eih.
@@ -1016,10 +1045,8 @@ Proof.
     }
 
     Unshelve.
-    * rewrite !length_cat. rewrite length_cat in isdecl.
-      rewrite lift_context_length. omega.
-    * rewrite !length_cat. rewrite length_cat in isdecl.
-      rewrite lift_context_length. omega.
+    all: try rewrite !length_cat ; try rewrite length_cat in isdecl ;
+      try rewrite lift_context_length ; omega.
 Defined.
 
 Corollary typing_lift01 :

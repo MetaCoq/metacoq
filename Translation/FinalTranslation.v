@@ -54,10 +54,7 @@ Fixpoint sort_to_universe (s : sort) : Universe.t :=
 
 Definition hnf (Σ : global_context) (Γ : context) (t : term) : typing_result term :=
   r <- hnf_stack (fst Σ) Γ t ;;
-  match r with
-  | (t', []) => ret t'
-  | (t', stack) => ret (tApp t' stack)
-  end.
+  ret (zip r).
 
 Definition myret (Σ : global_context) (Γ : context) (t : term) : tsl_result term :=
   (* Success t. *)

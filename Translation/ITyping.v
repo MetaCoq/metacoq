@@ -619,6 +619,18 @@ Proof.
   cbn. eapply IHn.
 Defined.
 
+Fact safe_nth_cong_irr :
+  forall {A n m} {l : list A} {isdecl isdecl'},
+    n = m ->
+    safe_nth l (exist _ n isdecl) =
+    safe_nth l (exist _ m isdecl').
+Proof.
+  intros A n m l isdecl isdecl' e.
+  revert isdecl isdecl'.
+  rewrite e. intros isdecl isdecl'.
+  apply safe_nth_irr.
+Defined.
+
 Fact safe_nth_ge :
   forall {Γ Δ n} { isdecl : n < #|Γ ,,, Δ| } { isdecl' : n - #|Δ| < #|Γ| },
     n >= #|Δ| ->
@@ -633,6 +645,36 @@ Proof.
   - destruct n.
     + cbn in *. inversion h.
     + cbn. apply IHΔ. cbn in *. omega.
+Defined.
+
+Definition ge_sub {Γ Δ n} (isdecl : n < #|Γ ,,, Δ|) :
+  n >= #|Δ| ->  n - #|Δ| < #|Γ|.
+Proof.
+  intro h.
+  rewrite length_cat in isdecl. omega.
+Defined.
+
+Fact safe_nth_ge' :
+  forall {Γ Δ n} { isdecl : n < #|Γ ,,, Δ| } (h : n >= #|Δ|),
+    safe_nth (Γ ,,, Δ) (exist _ n isdecl) =
+    safe_nth Γ (exist _ (n - #|Δ|) (ge_sub isdecl h)).
+Proof.
+  intros Γ Δ n isdecl h.
+  eapply safe_nth_ge. assumption.
+Defined.
+
+Fact safe_nth_lt :
+  forall {n Γ Δ} { isdecl : n < #|Γ ,,, Δ| } { isdecl' : n < #|Δ| },
+    safe_nth (Γ ,,, Δ) (exist _ n isdecl) =
+    safe_nth Δ (exist _ n isdecl').
+Proof.
+  intros n. induction n ; intros Γ Δ isdecl isdecl'.
+  - destruct Δ.
+    + cbn in *. inversion isdecl'.
+    + cbn. reflexivity.
+  - destruct Δ.
+    + cbn in *. inversion isdecl'.
+    + cbn. eapply IHn.
 Defined.
 
 Axiom cheating : forall {A}, A.
@@ -738,10 +780,13 @@ Proof.
         + rewrite liftP3 by omega.
           replace (#|Δ| + S n)%nat with (S (#|Δ| + n)) by omega.
           eapply meta_conv.
-          * eapply type_Rel. eapply wf_lift ; assumption.
+          * eapply type_Rel.
+            eapply wf_lift ; assumption.
           * f_equal. f_equal.
-            (* We need to prove this... *)
-            cheat.
+            erewrite 3!safe_nth_ge'
+              by (try rewrite lift_context_length ; omega).
+            eapply safe_nth_cong_irr.
+            rewrite lift_context_length. omega.
         + eapply meta_conv.
           * eapply type_Rel. eapply wf_lift ; assumption.
           * (* Probably true? *)

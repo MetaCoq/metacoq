@@ -600,6 +600,15 @@ Proof.
   - cbn. f_equal. apply IHΓ.
 Defined.
 
+Fact lift_context_length :
+  forall {k Ξ}, #|lift_context k Ξ| = #|Ξ|.
+Proof.
+  intros k Ξ.
+  induction Ξ.
+  - cbn. reflexivity.
+  - cbn. f_equal. assumption.
+Defined.
+
 Axiom cheating : forall {A}, A.
 Tactic Notation "cheat" := apply cheating.
 
@@ -699,19 +708,18 @@ with wf_lift {Σ Γ Δ Ξ} (h : wf Σ (Γ ,,, Ξ)) {struct h} :
 .
 Proof.
   - { dependent destruction h ; intro hwf.
-      - dependent induction Δ.
-        + change (#|[]|) with 0. rewrite !lift00.
-          rewrite lift_context0. cbn. eapply type_Rel. assumption.
-        + dependent destruction hwf.
-          dependent induction Ξ.
-          * cbn. eapply meta_conv.
-            -- eapply type_Rel. econstructor.
-               ++ assumption.
-               ++ eassumption.
-            -- cheat.
-          *
-          (* specialize (IHΔ Ξ n isdecl w hwf). *)
-          cheat.
+      - cbn. case_eq (#|Ξ| <=? n) ; intro e ; bprop e.
+        + rewrite liftP3 by omega.
+          replace (#|Δ| + S n)%nat with (S (#|Δ| + n)) by omega.
+          eapply meta_conv.
+          * eapply type_Rel. eapply wf_lift ; assumption.
+          * f_equal. f_equal.
+            (* We need to prove this... *)
+            cheat.
+        + eapply meta_conv.
+          * eapply type_Rel. eapply wf_lift ; assumption.
+          * (* Probably true? *)
+            cheat.
       - cbn. apply type_Sort. now apply wf_lift.
       - cbn. eapply type_Prod ; eih.
       - cbn. eapply type_Lambda ; eih.
@@ -933,7 +941,10 @@ Proof.
     }
 
     Unshelve.
-    cbn in *. rewrite length_cat. omega.
+    * rewrite !length_cat. rewrite length_cat in isdecl.
+      rewrite lift_context_length. omega.
+    * rewrite !length_cat. rewrite length_cat in isdecl.
+      rewrite lift_context_length. omega.
 Defined.
 
 Corollary typing_lift01 :

@@ -1527,11 +1527,47 @@ Lemma cong_substs :
 Proof.
   intros Σ Γ Δ t A nx B ht.
   dependent induction ht ; intros uu1 uu2 huu huu1.
-  - cbn. destruct Δ.
-    + cbn. destruct n.
-      * cbn. rewrite lift_subst, !lift00. assumption.
-      * cbn. apply eq_reflexivity. cheat.
-    + cheat.
+  - cbn. case_eq (#|Δ| ?= n) ; intro e ; bprop e.
+    + assert (h : n >= #|Δ|) by omega.
+      rewrite safe_nth_ge' with (h0 := h).
+      set (ge := ge_sub isdecl h).
+      rewrite substP3 by omega.
+      generalize ge.
+      replace (n - #|Δ|) with 0 by omega.
+      intro ge'. cbn.
+      subst.
+      replace #|Δ| with #|subst_context uu1 Δ|
+        by (now rewrite subst_context_length).
+      eapply @cong_lift with (Ξ := []) (Δ := subst_context uu1 Δ).
+      * cbn. assumption.
+      * eapply wf_subst ; eassumption.
+    + assert (h : n >= #|Δ|) by omega.
+      rewrite safe_nth_ge' with (h0 := h).
+      set (ge := ge_sub isdecl h).
+      destruct n ; try easy.
+      rewrite substP3 by omega.
+      generalize ge.
+      replace (S n - #|Δ|) with (S (n - #|Δ|)) by omega.
+      cbn. intro ge'.
+      eapply meta_eqconv.
+      * eapply eq_reflexivity. eapply type_Rel. eapply wf_subst ; eassumption.
+      * erewrite safe_nth_ge'.
+        f_equal. f_equal. eapply safe_nth_cong_irr.
+        rewrite subst_context_length. reflexivity.
+    + assert (h : n < #|Δ|) by omega.
+      rewrite @safe_nth_lt with (isdecl' := h).
+      match goal with
+      | |- _ ;;; _ |-i _ = _ : ?t{?d := ?u} =>
+        replace (subst u d t) with (t{((S n) + (#|Δ| - (S n)))%nat := u})
+          by (f_equal ; omega)
+      end.
+      rewrite substP2 by omega.
+      eapply meta_eqconv.
+      * eapply eq_reflexivity. eapply type_Rel.
+        eapply wf_subst ; eassumption.
+      * f_equal.
+        erewrite safe_nth_lt.
+        eapply safe_nth_subst_context.
   - cbn. apply eq_reflexivity. apply type_Sort.
     eapply wf_subst ; eassumption.
   - cbn. eapply cong_Prod.
@@ -1766,6 +1802,8 @@ Proof.
   - eapply eq_conv.
     + eapply IHht1 ; assumption.
     + eapply @cong_subst with (A := sSort s) ; eassumption.
+  Unshelve.
+  all: try rewrite !length_cat ; try rewrite !subst_context_length ; omega.
 Defined.
 
 Corollary full_cong_subst :

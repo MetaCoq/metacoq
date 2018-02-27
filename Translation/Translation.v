@@ -10,9 +10,6 @@ Open Scope type_scope.
 Open Scope x_scope.
 Open Scope i_scope.
 
-Axiom cheating : forall {A}, A.
-Tactic Notation "cheat" := (apply cheating).
-
 (*! Relation for translated expressions *)
 
 Reserved Notation " t1 ∼ t2 " (at level 20).
@@ -122,6 +119,9 @@ Proof.
   induction h ; now constructor.
 Defined.
 
+Axiom cheating : forall {A}, A.
+Tactic Notation "cheat" := (apply cheating).
+
 Lemma trel_to_heq' :
   forall {Σ t1 t2},
     t1 ∼ t2 ->
@@ -156,18 +156,21 @@ Proof.
     + intros n eqγ. case_eq (x <=? n).
       * intro xln. exists (sProjTe (sRel x)).
         apply type_ProjTe'.
-        (* generalize dependent Γ2. *)
-        (* dependent induction Γ1 ; [ cbn in eqγ ; discriminate | .. ]. *)
-        (* intros Γ2 eq h2. *)
-        (* dependent destruction Γ2. *)
-        (* eapply type_conv'. *)
-        (* -- eapply type_Rel. cheat. *)
-        (* -- generalize dependent Γ2. *)
-        (*    dependent induction Γ1 ; [ cbn in eqγ ; discriminate | .. ]. *)
-        (*    intros Γ2 eq h2. *)
-        (*    dependent destruction Γ2. *)
-
-        cheat.
+        bprop xln.
+        rewrite mix_mix'.
+        eapply type_conv'.
+        -- eapply type_Rel. rewrite <- mix_mix'.
+           (* We need some wf_mix or wf_mix' *)
+           cheat.
+        -- destruct (inversionRel h1) as [is1 [s1 hx1]].
+           destruct (inversionRel h2) as [is2 [s2 hx2]].
+           erewrite safe_nth_lt.
+           erewrite safe_nth_mix' by assumption.
+           cbn. eapply cong_Pack.
+           ++ (* Now we need some exchange law for lift and llift before we can
+                 apply cong_llift. *)
+              cheat.
+           ++ cheat.
       * intro nlx.
         assert (h1' : Σ ;;; mix Γ Γ1 Γ2 |-i sRel x : llift0 (S n) U1).
         { replace (sRel x) with (llift0 (S n) (sRel x))
@@ -561,6 +564,9 @@ Proof.
         eapply type_rlift0.
         -- eapply type_Refl ; eassumption.
         -- assumption.
+  Unshelve.
+  all: cbn ; try rewrite !length_cat ; try rewrite !mix'_length ; try omega.
+  all: exact 0.
 Defined.
 
 Corollary trel_to_heq :

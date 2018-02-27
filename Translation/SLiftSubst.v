@@ -263,6 +263,8 @@ Ltac bprop' H H' :=
   match type of H with
   | (?n <=? ?m) = true => pose proof (leb_complete _ _ H) as H'
   | (?n <=? ?m) = false => pose proof (leb_complete_conv _ _ H) as H'
+  | (?n <? ?m) = true => pose proof (proj1 (Nat.ltb_lt n m) H) as H'
+  | (?n <? ?m) = false => pose proof (proj1 (Nat.ltb_ge n m) H) as H'
   | (?x ?= ?y) = Gt => pose proof (nat_compare_Gt_gt _ _ H) as H'
   | (?x ?= ?y) = Eq => pose proof (Nat.compare_eq _ _ H) as H'
   | (?x ?= ?y) = Lt => pose proof (nat_compare_Lt_lt _ _ H) as H'
@@ -277,6 +279,8 @@ Ltac propb :=
   match goal with
   | |- (_ <=? _) = true => apply leb_correct
   | |- (_ <=? _) = false => apply leb_correct_conv
+  | |- (_ <? _) = true => apply Nat.ltb_lt
+  | |- (_ <? _) = false => apply Nat.ltb_ge
   | |- (_ ?= _) = Lt => apply Nat.compare_lt_iff
   | |- (_ ?= _) = Eq => apply Nat.compare_eq_iff
   | |- (_ ?= _) = Gt => apply Nat.compare_gt_iff

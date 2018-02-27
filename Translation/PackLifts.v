@@ -215,28 +215,6 @@ Proof.
         rewrite nlm. f_equal.
 Defined.
 
-(* From this we can see this holds for variables but we need to generalise. *)
-Lemma lift_llift :
-  forall {t i j},
-    lift0 i (llift0 j t) = llift0 (i+j) (lift0 i t).
-Proof.
-  intro t ; induction t ; intros i j.
-  - change (lift0 i (sRel n)) with (sRel (i + n)).
-    unfold llift. case_eq (n <? 0) ; intro e ; bprop e ; try omega.
-    replace (0+j)%nat with j by omega.
-    replace (0+(i+j))%nat with (i+j)%nat by omega.
-    case_eq (i + n <? 0) ; intro e1 ; bprop e1 ; try omega.
-    case_eq (i + n <? i + j) ; intro e3 ; bprop e3.
-    + case_eq (n <? j) ; intro e5 ; bprop e5 ; try omega.
-      cbn. reflexivity.
-    + case_eq (n <? j) ; intro e5 ; bprop e5 ; try omega.
-      cbn. reflexivity.
-  - cbn. reflexivity.
-  - cbn. f_equal.
-    + easy.
-    +
-Abort.
-
 Lemma lift_llift :
   forall {t i j k},
     lift i k (llift j k t) = llift (i+j) k (lift i k t).
@@ -277,6 +255,26 @@ Proof.
     + unfold lift. case_eq (k <=? n) ; intro e3 ; bprop e3 ; try omega.
       unfold llift. case_eq (i + n <? k + i) ; intro e5 ; bprop e5 ; try omega.
       case_eq (i + n <? k + i + j) ; intro e7 ; bprop e7 ; try omega.
+      reflexivity.
+Defined.
+
+Lemma lift_rlift :
+  forall {t i j k},
+    lift i k (rlift j k t) = rlift (i+j) k (lift i k t).
+Proof.
+  intro t. induction t ; intros i j k.
+  all: try (cbn ; f_equal ; easy).
+  unfold rlift at 1. case_eq (n <? k) ; intro e ; bprop e.
+  - unfold lift. case_eq (k <=? n) ; intro e1 ; bprop e1 ; try omega.
+    unfold rlift. rewrite e. reflexivity.
+  - case_eq (n <? k + j) ; intro e1 ; bprop e1.
+    + unfold lift. case_eq (k <=? n) ; intro e3 ; bprop e3 ; try omega.
+      unfold rlift. case_eq (i + n <? k) ; intro e5 ; bprop e5 ; try omega.
+      case_eq (i + n <? k + (i+j)) ; intro e7 ; bprop e7 ; try omega.
+      reflexivity.
+    + unfold lift. case_eq (k <=? n) ; intro e3 ; bprop e3 ; try omega.
+      unfold rlift. case_eq (i + n <? k) ; intro e5 ; bprop e5 ; try omega.
+      case_eq (i + n <? k + (i + j)) ; intro e7 ; bprop e7 ; try omega.
       reflexivity.
 Defined.
 

@@ -158,19 +158,38 @@ Proof.
         apply type_ProjTe'.
         bprop xln.
         rewrite mix_mix'.
+        destruct (inversionRel h1) as [is1 [s1 hx1]].
+        destruct (inversionRel h2) as [is2 [s2 hx2]].
+        cbn in hx1. erewrite safe_nth_lt in hx1.
+        cbn in hx2. erewrite safe_nth_lt in hx2.
         eapply type_conv'.
         -- eapply type_Rel. rewrite <- mix_mix'.
            (* We need some wf_mix or wf_mix' *)
            cheat.
-        -- destruct (inversionRel h1) as [is1 [s1 hx1]].
-           destruct (inversionRel h2) as [is2 [s2 hx2]].
-           erewrite safe_nth_lt.
+        -- erewrite safe_nth_lt.
            erewrite safe_nth_mix' by assumption.
            cbn. eapply cong_Pack.
-           ++ (* Now we need some exchange law for lift and llift before we can
-                 apply cong_llift. *)
+           ++ rewrite lift_llift.
+              replace (S x + (#|Γ1| - S x))%nat with #|Γ1| by omega.
+              rewrite <- eqγ.
+              rewrite <- mix_mix'.
+              match goal with
+              | |- _ ;;; _ |-i _ = _ : ?S => change S with (llift0 #|Γ1| S)
+              end.
+              eapply cong_llift0 ; eassumption.
+           ++ rewrite lift_rlift.
+              replace (S x + (#|Γ1| - S x))%nat with #|Γ1| by omega.
+              rewrite <- eqγ.
+              rewrite <- mix_mix'.
+              match goal with
+              | |- _ ;;; _ |-i _ = _ : ?S => change S with (rlift0 #|Γ1| S)
+              end.
+              eapply cong_rlift0 ; try eassumption.
+              (* hx2 is the right hyp modulo the sort.
+                 And I can see no way of showing s1 = s2.
+                 Maybe Pack should take types of different sorts.
+               *)
               cheat.
-           ++ cheat.
       * intro nlx.
         assert (h1' : Σ ;;; mix Γ Γ1 Γ2 |-i sRel x : llift0 (S n) U1).
         { replace (sRel x) with (llift0 (S n) (sRel x))

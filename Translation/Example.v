@@ -253,13 +253,50 @@ Definition red_itt_tm := reduce itt_tm.
 Let red_itt_tm' := ltac:(let t := eval lazy in red_itt_tm in exact t).
 Print red_itt_tm'.
 
-Let ttt := (sLambda (nNamed "pppp") (sSort 0)
-  (sProd (nNamed "pppp") (sSort 0)
-     (sProd (nNamed "pppp") (sEq (sSort 0) (sRel 1) (sRel 0)) (sProd (nNamed "pppp") (sRel 2) (sRel 2))))
-  ((sLambda (nNamed "pppp") (sSort 0)
-        (sProd (nNamed "pppp") (sEq (sSort 0) (sRel 1) (sRel 0)) (sProd (nNamed "pppp") (sRel 2) (sRel 2)))
-        (sLambda (nNamed "pppp") (sEq (sSort 0) (sRel 1) (sRel 0)) (sProd (nNamed "pppp") (sRel 2) (sRel 2))
-           (sLambda (nNamed "pppp") (sRel 2) (sRel 2) (sTransport (sRel 3) (sRel 2) ((sRel 1)) (sRel 0))))))).
+(* Let ttt := (sLambda (nNamed "pppp") (sSort 0) *)
+(*   (sProd (nNamed "pppp") (sSort 0) *)
+(*      (sProd (nNamed "pppp") (sEq (sSort 0) (sRel 1) (sRel 0)) (sProd (nNamed "pppp") (sRel 2) (sRel 2)))) *)
+(*   ((sLambda (nNamed "pppp") (sSort 0) *)
+(*         (sProd (nNamed "pppp") (sEq (sSort 0) (sRel 1) (sRel 0)) (sProd (nNamed "pppp") (sRel 2) (sRel 2))) *)
+(*         (sLambda (nNamed "pppp") (sEq (sSort 0) (sRel 1) (sRel 0)) (sProd (nNamed "pppp") (sRel 2) (sRel 2)) *)
+(*            (sLambda (nNamed "pppp") (sRel 2) (sRel 2) (sTransport (sRel 3) (sRel 2) ((sRel 1)) (sRel 0))))))). *)
+
+(* Nicolas' fix *)
+Let ttt :=
+  sLambda (nNamed "pppp") (sSort 0)
+          (sSort 100)
+          (sTransport
+             (sProd (nNamed "pppp") (sSort 0)
+                    (sProd (nNamed "pppp") (sEq (sSort 0) (sRel 1) (sRel 0))
+                           (sProd (nNamed "pppp") (sRel 2) (sRel 2))))
+             (sProd (nNamed "pppp") (sSort 0)
+                    (sProd (nNamed "pppp") (sEq (sSort 0) (sRel 1) (sRel 0))
+                           (sProd (nNamed "pppp") (sRel 2) (sRel 2))))
+             (sHeqToEq
+                (sCongProd
+                   (sProd (nNamed "pppp") (sEq (sSort 0) (sRel 1) (sRel 0))
+                          (sProd (nNamed "pppp") (sRel 2) (sRel 2)))
+                   (sProd (nNamed "pppp") (sEq (sSort 0) (sRel 1) (sRel 0))
+                          (sProd (nNamed "pppp") (sRel 2) (sRel 2)))
+                   (sHeqRefl (sSort 2) (sSort 1))
+                   (sCongProd (sProd (nNamed "pppp") (sRel 2) (sProjT1 (sRel 2)))
+                              (sProd (nNamed "pppp") (sRel 2) (sProjT2 (sRel 2)))
+                              (* (sCongEq (sHeqRefl (sSort 2) (sSort 1)) (sHeqRefl (sSort 2) (sSor(* t 1)) *) *)
+                              (*          (sProjTe (sRel 0))) *)
+                              (* (sCongProd (sProjT1 (sRel 2)) (sProjT2 (sRel 2)) *)
+                              (*            (sHeqRefl (sSort 2) (sSort 1)) (sProjTe (sRel 2)))))) *)
+
+                              (sCongEq (sHeqRefl (sSort 2) (sSort 1)) (sHeqRefl (sSort 1) (sRel 1))
+                                       (sProjTe (sRel 0)))
+                              (sCongProd (sProjT1 (sRel 2)) (sProjT2 (sRel 2))
+                                         (sHeqRefl (sSort 0) (sRel 2)) (sProjTe (sRel 2))))))
+             (sLambda (nNamed "pppp") (sSort 0)
+                      (sProd (nNamed "pppp") (sEq (sSort 0) (sRel 1) (sRel 0))
+                             (sProd (nNamed "pppp") (sRel 2) (sRel 2)))
+                      (sLambda (nNamed "pppp") (sEq (sSort 0) (sRel 1) (sRel 0))
+                               (sProd (nNamed "pppp") (sRel 2) (sRel 2))
+                               (sLambda (nNamed "pppp") (sRel 2) (sRel 2)
+                                        (sTransport (sRel 3) (sRel 2) (sHeqToEq (sEqToHeq (sRel 1))) (sRel 0)))))).
 
 Definition ts : tsl_result term :=
   tsl_rec (2 ^ 18) Σ [] ttt.

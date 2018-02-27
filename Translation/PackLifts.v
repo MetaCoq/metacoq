@@ -1,7 +1,7 @@
 (* Lifts for packing *)
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
-From Template Require Import Ast LiftSubst Typing.
+From Template Require Import Ast utils LiftSubst Typing.
 From Translation Require Import SAst SLiftSubst SCommon XTyping ITyping.
 
 (* In order to do things properly we need to extend the context heterogenously,
@@ -132,6 +132,58 @@ Fixpoint mix (Γ Γ1 Γ2 : scontext) : scontext :=
                                   (rlift0 #|Γ1| (sdecl_type B)))
   | _,_ => Γ
   end.
+
+(* We define an alternate version of mix that is probably the one we should have
+   used from the start. This one will make easier use of safe_nth lemmata.
+ *)
+Fixpoint mix' (Γ1 Γ2 : scontext) : scontext :=
+  match Γ1, Γ2 with
+  | A :: Γ1, B :: Γ2 =>
+    (mix' Γ1 Γ2) ,, svass (sdecl_name A)
+                          (sPack (llift0 #|Γ1| (sdecl_type A))
+                                 (rlift0 #|Γ1| (sdecl_type B)))
+  | _,_ => []
+  end.
+
+Fact mix_mix' :
+  forall {Γ Γ1 Γ2},
+    mix Γ Γ1 Γ2 = Γ ,,, mix' Γ1 Γ2.
+Proof.
+  intros Γ Γ1.
+  induction Γ1 ; intro Γ2.
+  - cbn. reflexivity.
+  - destruct Γ2.
+    + cbn. reflexivity.
+    + cbn. rewrite IHΓ1. reflexivity.
+Defined.
+
+Fact mix'_length :
+  forall {Γ1 Γ2},
+    #|Γ1| = #|Γ2| ->
+    #|mix' Γ1 Γ2| = #|Γ1|.
+Proof.
+  intro Γ1. induction Γ1 ; intros Γ2 e.
+  - cbn. reflexivity.
+  - destruct Γ2.
+    + cbn in *. easy.
+    + cbn. f_equal. easy.
+Defined.
+
+Fact safe_nth_mix' :
+  forall {Γ1 Γ2 : scontext} {n isdecl isdecl1 isdecl2},
+    #|Γ1| = #|Γ2| ->
+    sdecl_type (safe_nth (mix' Γ1 Γ2) (exist _ n isdecl)) =
+    sPack (llift0 (#|Γ1| - S n) (sdecl_type (safe_nth Γ1 (exist _ n isdecl1))))
+          (rlift0 (#|Γ1| - S n) (sdecl_type (safe_nth Γ2 (exist _ n isdecl2)))).
+Proof.
+  intro Γ1. induction Γ1.
+  - cbn. easy.
+  - intro Γ2. destruct Γ2.
+    + cbn. easy.
+    + intro n. destruct n ; intros isdecl isdecl1 isdecl2 e.
+      * cbn. replace (#|Γ1| - 0) with #|Γ1| by omega. reflexivity.
+      * cbn. cbn in e. erewrite IHΓ1 by omega. reflexivity.
+Defined.
 
 Lemma llift00 :
   forall {t δ}, llift 0 δ t = t.

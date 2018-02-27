@@ -710,9 +710,6 @@ Proof.
         -- cbn in *. omega.
 Defined.
 
-Axiom cheating : forall {A}, A.
-Tactic Notation "cheat" := apply cheating.
-
 Ltac ih h :=
   lazymatch goal with
   | [ type_lift :

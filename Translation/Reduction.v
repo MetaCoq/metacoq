@@ -191,7 +191,8 @@ Fixpoint reduce (t : sterm) : sterm :=
 
  *)
 
-
+Axiom cheating : forall {A}, A.
+Tactic Notation "cheat" := apply cheating.
 
 Fixpoint injectiveEq {Σ Γ A u v A' u' v' T} (h : Σ ;;; Γ |-i sEq A u v = sEq A' u' v' : T) {struct h} :
   (Σ ;;; Γ |-i A = A' : T) *

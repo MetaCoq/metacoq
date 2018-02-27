@@ -215,46 +215,70 @@ Proof.
         rewrite nlm. f_equal.
 Defined.
 
+(* From this we can see this holds for variables but we need to generalise. *)
 Lemma lift_llift :
-  forall {t i j k l},
-    k <= l ->
-    lift i k (llift j l t) = llift (i+j) (i+l) (lift i k t).
+  forall {t i j},
+    lift0 i (llift0 j t) = llift0 (i+j) (lift0 i t).
 Proof.
-  intro t. induction t ; intros i j k l h.
-  - unfold llift at 1. case_eq (n <? l) ; intro e ; bprop e.
-    + unfold lift. case_eq (k <=? n) ; intro e' ; bprop e'.
-      * unfold llift. case_eq (i + n <? i + l) ; intro e'' ; bprop e''.
-        -- reflexivity.
-        -- case_eq (i + n <? i + l + (i + j)) ; intro e1 ; bprop e1.
-           ++ omega.
-           ++ reflexivity.
-      * unfold llift. case_eq (n <? i + l) ; intro e1 ; bprop e1.
-        -- reflexivity.
-        -- omega.
-    + case_eq (n <? l + j) ; intro e1 ; bprop e1.
-      * unfold lift. case_eq (k <=? n) ; intro e3 ; bprop e3.
-        -- unfold llift. case_eq (i + n <? i + l) ; intro e5 ; bprop e5.
-           ++ omega.
-           ++ case_eq (i + n <? i + l + (i + j)) ; intro e7 ; bprop e7.
-              ** reflexivity.
-              ** omega.
-        -- unfold llift. case_eq (n <? i + l) ; intro e5 ; bprop e5.
-           ++ omega.
-           ++ case_eq (n <? i + l + (i + j)) ; intro e7 ; bprop e7.
-              ** reflexivity.
-              ** omega.
-      * unfold lift. case_eq (k <=? n) ; intro e3 ; bprop e3.
-        -- unfold llift. case_eq (i + n <? i + l) ; intro e5 ; bprop e5.
-           ++ reflexivity.
-           ++ case_eq (i + n <? i + l + (i + j)) ; intro e7 ; bprop e7.
-              ** admit.
-              ** reflexivity.
-        -- admit.
+  intro t ; induction t ; intros i j.
+  - change (lift0 i (sRel n)) with (sRel (i + n)).
+    unfold llift. case_eq (n <? 0) ; intro e ; bprop e ; try omega.
+    replace (0+j)%nat with j by omega.
+    replace (0+(i+j))%nat with (i+j)%nat by omega.
+    case_eq (i + n <? 0) ; intro e1 ; bprop e1 ; try omega.
+    case_eq (i + n <? i + j) ; intro e3 ; bprop e3.
+    + case_eq (n <? j) ; intro e5 ; bprop e5 ; try omega.
+      cbn. reflexivity.
+    + case_eq (n <? j) ; intro e5 ; bprop e5 ; try omega.
+      cbn. reflexivity.
   - cbn. reflexivity.
   - cbn. f_equal.
     + easy.
-    + replace (S (i + l)) with (i + S l)%nat by omega. easy.
+    +
 Abort.
+
+Lemma lift_llift :
+  forall {t i j k},
+    lift i k (llift j k t) = llift (i+j) k (lift i k t).
+Proof.
+  intro t. induction t ; intros i j k.
+  all: try (cbn ; f_equal ; easy).
+  unfold llift at 1. case_eq (n <? k) ; intro e ; bprop e.
+  - unfold lift. case_eq (k <=? n) ; intro e1 ; bprop e1 ; try omega.
+    unfold llift. rewrite e. reflexivity.
+  - case_eq (n <? k + j) ; intro e1 ; bprop e1.
+    + unfold lift. case_eq (k <=? n) ; intro e3 ; bprop e3 ; try omega.
+      unfold llift. case_eq (i + n <? k) ; intro e5 ; bprop e5 ; try omega.
+      case_eq (i + n <? k + (i+j)) ; intro e7 ; bprop e7 ; try omega.
+      reflexivity.
+    + unfold lift. case_eq (k <=? n) ; intro e3 ; bprop e3 ; try omega.
+      unfold llift. case_eq (i + n <? k) ; intro e5 ; bprop e5 ; try omega.
+      case_eq (i + n <? k + (i + j)) ; intro e7 ; bprop e7 ; try omega.
+      reflexivity.
+Defined.
+
+Lemma lift_llift' :
+  forall {t i j k},
+    lift i k (llift j k t) = llift j (k+i) (lift i k t).
+Proof.
+  intro t. induction t ; intros i j k.
+  all: try (cbn ; f_equal ;
+            try replace (S (S (k + i))) with ((S (S k)) + i)%nat by omega ;
+            try replace (S (k + i)) with ((S k) + i)%nat by omega ;
+            easy).
+  unfold llift at 1. case_eq (n <? k) ; intro e ; bprop e.
+  - unfold lift. case_eq (k <=? n) ; intro e1 ; bprop e1 ; try omega.
+    unfold llift. case_eq (n <? k + i) ; intro e3 ; bprop e3 ; try omega. reflexivity.
+  - case_eq (n <? k + j) ; intro e1 ; bprop e1.
+    + unfold lift. case_eq (k <=? n) ; intro e3 ; bprop e3 ; try omega.
+      unfold llift. case_eq (i + n <? k + i) ; intro e5 ; bprop e5 ; try omega.
+      case_eq (i + n <? k + i + j) ; intro e7 ; bprop e7 ; try omega.
+      reflexivity.
+    + unfold lift. case_eq (k <=? n) ; intro e3 ; bprop e3 ; try omega.
+      unfold llift. case_eq (i + n <? k + i) ; intro e5 ; bprop e5 ; try omega.
+      case_eq (i + n <? k + i + j) ; intro e7 ; bprop e7 ; try omega.
+      reflexivity.
+Defined.
 
 Fixpoint llift_context n (Δ:scontext) : scontext :=
   match Δ with nil => nil

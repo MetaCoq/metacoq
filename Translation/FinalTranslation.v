@@ -57,15 +57,16 @@ Definition hnf (Σ : global_context) (Γ : context) (t : term) : typing_result t
   ret (zip r).
 
 Definition myret (Σ : global_context) (Γ : context) (t : term) : tsl_result term :=
-  (* Success t. *)
-  match hnf Σ Γ t with
-  | Checked t' => Success t'
-  | _ => Error TranslationNotHandled
-  end.
+  Success t.
+  (* match hnf Σ Γ t with *)
+  (* | Checked t' => Success t' *)
+  (* | _ => Error TranslationNotHandled *)
+  (* end. *)
 
 Definition infer_hnf fuel Σ Γ t :=
-  t' <- @infer (Build_Fuel fuel) Σ Γ t ;;
-  hnf Σ Γ t'.
+  @infer (Build_Fuel fuel) Σ Γ t.
+  (* t' <- @infer (Build_Fuel fuel) Σ Γ t ;; *)
+  (* hnf Σ Γ t'. *)
 
 Fixpoint tsl_rec (fuel : nat) (Σ : global_context) (Γ : context) (t : sterm) {struct fuel}
   : tsl_result term :=

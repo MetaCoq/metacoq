@@ -292,15 +292,55 @@ Proof.
       reflexivity.
 Defined.
 
+Definition llift_decl n k d : scontext_decl :=
+  {| sdecl_name := sdecl_name d ;
+     sdecl_body := option_map (llift n k) (sdecl_body d) ;
+     sdecl_type := llift n k (sdecl_type d)
+  |}.
+
 Fixpoint llift_context n (Δ : scontext) : scontext :=
   match Δ with
   | nil => nil
-  | A :: Δ =>
-    svass (sdecl_name A) (llift n #|Δ| (sdecl_type A)) :: llift_context n Δ
+  | A :: Δ => (llift_decl n #|Δ| A) :: (llift_context n Δ)
   end.
 
 Fact llift_context_length :
   forall {n Δ}, #|llift_context n Δ| = #|Δ|.
+Proof.
+  intros n Δ.
+  induction Δ.
+  - cbn. reflexivity.
+  - cbn. f_equal. assumption.
+Defined.
+
+Fact llift_decl0 :
+  forall {d k}, llift_decl 0 k d = d.
+Proof.
+  intros d k.
+  destruct d as [x b A].
+  unfold llift_decl. cbn. rewrite llift00. f_equal.
+  destruct b.
+  - cbn. rewrite llift00. reflexivity.
+  - reflexivity.
+Defined.
+
+Fact llift_context0 :
+  forall {Γ}, llift_context 0 Γ = Γ.
+Proof.
+  intro Γ. induction Γ.
+  - reflexivity.
+  - cbn. rewrite llift_decl0. rewrite IHΓ. reflexivity.
+Defined.
+
+Fixpoint rlift_context n (Δ : scontext) : scontext :=
+  match Δ with
+  | nil => nil
+  | A :: Δ =>
+    svass (sdecl_name A) (rlift n #|Δ| (sdecl_type A)) :: rlift_context n Δ
+  end.
+
+Fact rlift_context_length :
+  forall {n Δ}, #|rlift_context n Δ| = #|Δ|.
 Proof.
   intros n Δ.
   induction Δ.
@@ -349,45 +389,41 @@ Defined.
 Axiom cheating : forall {A}, A.
 Tactic Notation "cheat" := apply cheating.
 
-(* Now this is the version that should be proven alongside the rest. *)
-Lemma wf_mix :
-  forall {Σ Γ Γ1 Γ2 Γm},
-     ismix Σ Γ Γ1 Γ2 Γm ->
-     wf Σ Γ ->
-     wf Σ (Γ ,,, Γm).
-Proof.
-  intros Σ Γ Γ1 Γ2 Γm hm hw.
-  induction hm.
-  - cbn. assumption.
-  - cbn. econstructor.
-    + assumption.
-    + eapply type_Pack with (s := s).
-      * cheat.
-      * cheat.
-Abort.
-
-Fixpoint type_llift {Σ Γ Γ1 Γ2 Δ t A}
+Fixpoint type_llift {Σ Γ Γ1 Γ2 Γm Δ t A}
   (h : Σ ;;; Γ ,,, Γ1 ,,, Δ |-i t : A) {struct h} :
-  wf Σ (Γ ,,, Γ2) ->
-  #|Γ1| = #|Γ2| ->
-  Σ ;;; mix Γ Γ1 Γ2 ,,, llift_context #|Γ1| Δ
+  ismix Σ Γ Γ1 Γ2 Γm ->
+  Σ ;;; Γ ,,, Γm ,,, llift_context #|Γ1| Δ
   |-i llift #|Γ1| #|Δ| t : llift #|Γ1| #|Δ| A
 
-with cong_llift {Σ Γ Γ1 Γ2 Δ t1 t2 A}
+with cong_llift {Σ Γ Γ1 Γ2 Γm Δ t1 t2 A}
   (h : Σ ;;; Γ ,,, Γ1 ,,, Δ |-i t1 = t2 : A) {struct h} :
-  wf Σ (Γ ,,, Γ2) ->
-  #|Γ1| = #|Γ2| ->
-  Σ ;;; mix Γ Γ1 Γ2 ,,, llift_context #|Γ1| Δ
+  ismix Σ Γ Γ1 Γ2 Γm ->
+  Σ ;;; Γ ,,, Γm ,,, llift_context #|Γ1| Δ
   |-i llift #|Γ1| #|Δ| t1 = llift #|Γ1| #|Δ| t2 : llift #|Γ1| #|Δ| A
 
-with wf_llift {Σ Γ Γ1 Γ2 Δ} (h : wf Σ (Γ ,,, Γ1 ,,, Δ)) {struct h} :
-  wf Σ (Γ ,,, Γ2) ->
-  #|Γ1| = #|Γ2| ->
-  wf Σ (mix Γ Γ1 Γ2 ,,, llift_context #|Γ1| Δ)
+with type_rlift {Σ Γ Γ1 Γ2 Γm Δ t A}
+  (h : Σ ;;; Γ ,,, Γ2 ,,, Δ |-i t : A) {struct h} :
+  ismix Σ Γ Γ1 Γ2 Γm ->
+  Σ ;;; Γ ,,, Γm ,,, rlift_context #|Γ1| Δ
+  |-i rlift #|Γ1| #|Δ| t : rlift #|Γ1| #|Δ| A
+
+with cong_rlift {Σ Γ Γ1 Γ2 Γm Δ t1 t2 A}
+  (h : Σ ;;; Γ ,,, Γ2 ,,, Δ |-i t1 = t2 : A) {struct h} :
+  ismix Σ Γ Γ1 Γ2 Γm ->
+  Σ ;;; Γ ,,, Γm ,,, rlift_context #|Γ1| Δ
+  |-i rlift #|Γ1| #|Δ| t1 = rlift #|Γ1| #|Δ| t2 : rlift #|Γ1| #|Δ| A
+
+with wf_llift {Σ Γ Γ1 Γ2 Γm Δ} (h : wf Σ (Γ ,,, Γ1 ,,, Δ)) {struct h} :
+  ismix Σ Γ Γ1 Γ2 Γm ->
+  wf Σ (Γ ,,, Γm ,,, llift_context #|Γ1| Δ)
+
+with wf_rlift {Σ Γ Γ1 Γ2 Γm Δ} (h : wf Σ (Γ ,,, Γ1 ,,, Δ)) {struct h} :
+  ismix Σ Γ Γ1 Γ2 Γm ->
+  wf Σ (Γ ,,, Γm ,,, rlift_context #|Γ1| Δ)
 .
 Proof.
   (* type_llift *)
-  - { dependent destruction h ; intros w2 eq.
+  - { dependent destruction h ; intros hm.
       - unfold llift at 1. case_eq (n <? #|Δ|) ; intro e ; bprop e.
         + erewrite @safe_nth_lt with (isdecl' := e0).
           eapply meta_conv.
@@ -395,27 +431,28 @@ Proof.
           * erewrite safe_nth_lt. erewrite safe_nth_llift.
             (* We need the right lemma. *)
             cheat.
-        + case_eq (n <? #|Δ| + #|Γ1|) ; intro e1 ; bprop e1.
-          * rewrite mix_mix'.
-            erewrite safe_nth_ge'. erewrite safe_nth_lt.
-            eapply type_ProjT1'.
-            eapply meta_conv.
-            -- eapply type_Rel. rewrite <- mix_mix'.
-               eapply wf_llift ; eassumption.
-            -- erewrite safe_nth_ge'. erewrite safe_nth_lt.
-               erewrite safe_nth_mix' by assumption.
-               cbn. f_equal.
-               (* rewrite lift_llift'. f_equal. *)
-               (* We probably need another lemma again... *)
-               cheat.
-          * rewrite mix_mix'.
-            erewrite safe_nth_ge'. erewrite safe_nth_ge'.
-            eapply meta_conv.
-            -- eapply type_Rel. rewrite <- mix_mix'.
-               eapply wf_llift ; eassumption.
-            -- erewrite safe_nth_ge'. erewrite safe_nth_ge'.
-               (* Another one perhaps? *)
-               cheat.
+        + (* case_eq (n <? #|Δ| + #|Γ1|) ; intro e1 ; bprop e1. *)
+          (* * rewrite mix_mix'. *)
+          (*   erewrite safe_nth_ge'. erewrite safe_nth_lt. *)
+          (*   eapply type_ProjT1'. *)
+          (*   eapply meta_conv. *)
+          (*   -- eapply type_Rel. rewrite <- mix_mix'. *)
+          (*      eapply wf_llift ; eassumption. *)
+          (*   -- erewrite safe_nth_ge'. erewrite safe_nth_lt. *)
+          (*      erewrite safe_nth_mix' by assumption. *)
+          (*      cbn. f_equal. *)
+          (*      (* rewrite lift_llift'. f_equal. *) *)
+          (*      (* We probably need another lemma again... *) *)
+          (*      cheat. *)
+          (* * rewrite mix_mix'. *)
+          (*   erewrite safe_nth_ge'. erewrite safe_nth_ge'. *)
+          (*   eapply meta_conv. *)
+          (*   -- eapply type_Rel. rewrite <- mix_mix'. *)
+          (*      eapply wf_llift ; eassumption. *)
+          (*   -- erewrite safe_nth_ge'. erewrite safe_nth_ge'. *)
+          (*      (* Another one perhaps? *) *)
+          (*      cheat. *)
+          cheat.
       - cheat.
       - cheat.
       - cheat.
@@ -447,27 +484,32 @@ Proof.
   (* cong_llift *)
   - cheat.
 
+  (* type_rlift *)
+  - cheat.
+
+  (* cong_rlift *)
+  - cheat.
+
   (* wf_llift *)
-  - { (* destruct Δ. *)
-      (* - cbn. cheat. *)
-      (* - dependent destruction h. *)
-      (*   cbn. econstructor. *)
-      (*   + apply wf_llift ; assumption. *)
-      (*   + instantiate (1 := s0). *)
-      (*     change (sSort s0) with (llift #|Γ1| #|Δ| (sSort s0)). *)
-      (*     apply type_llift ; assumption. *)
-      dependent destruction h ; intros w2 e.
-      - destruct Δ.
-        + cbn in *. cheat.
-        + cbn in *. inversion x.
-      - destruct Δ.
-        + cbn in *. cheat.
-        + cbn in *. inversion x. subst. econstructor.
-          * apply wf_llift ; assumption.
-          * instantiate (1 := s).
-            change (sSort s) with (llift #|Γ1| #|Δ| (sSort s)).
-            apply type_llift ; assumption.
-    }
+  - (* { intro hm. induction hm. *)
+    (*   - cbn. rewrite llift_context0. assumption. *)
+    (*   - cbn. destruct Δ. *)
+    (*     + cbn. econstructor. *)
+    (*       * apply IHhm. dependent destruction h. assumption. *)
+    (*       * eapply type_Pack with (s := s). *)
+    (*         -- eapply type_llift with (A := sSort s) (Δ := []) ; eassumption. *)
+    (*         -- eapply type_rlift with (A := sSort s) (Δ := []) ; eassumption. *)
+    (*     + dependent destruction h. cbn. econstructor. *)
+    (*       * (* eapply wf_llift. *) cheat. *)
+    (*       * instantiate (1 := s). *)
+    (*         change (sSort s) with (llift (S #|Γ1|) #|Δ| (sSort s)). *)
+    (*         (* apply type_llift ; assumption. *) *)
+    (*         cheat. *)
+    (* } *)
+    cheat.
+
+  (* wf_rlift *)
+  - cheat.
 
   Unshelve.
   all: cbn ; try rewrite !mix_mix' ; try rewrite !length_cat ;

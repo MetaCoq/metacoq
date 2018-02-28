@@ -93,10 +93,12 @@ Fixpoint reduce (t : sterm) : sterm :=
     end
   | sHeqTransport p t =>
     let p' := reduce p in
+    let t' := reduce t in
     match p' with
-    | sRefl A a => sHeqRefl A a
+    (* bad version of Théo !! *)
+    (* | sRefl A a => sHeqRefl A a *)
+    | sRefl s A => sHeqRefl A t
     | _ =>
-      let t' := reduce t in
       sHeqTransport p' t'
     end
   | sCongProd B1 B2 pA pB =>
@@ -105,9 +107,9 @@ Fixpoint reduce (t : sterm) : sterm :=
     let B1' := reduce B1 in
     let B2' := reduce B2 in
     match pA', pB' with
-    | sHeqRefl (sSort s) A', sHeqRefl (sSort z) _ =>
+    | sHeqRefl (sSort s) A', sHeqRefl (sSort z) B' =>
       (* We use nAnon here because we don't care! *)
-      sHeqRefl (sSort (max_sort s z)) (sProd nAnon A' B1')
+      sHeqRefl (sSort (max_sort s z)) (sProd nAnon A' B')
     | _,_ => sCongProd B1' B2' pA' pB'
     end
   | sCongLambda B1 B2 t1 t2 pA pB pt =>
@@ -266,21 +268,21 @@ Proof.
   - cbn. eapply cong_Refl ; eassumption.
   - cbn. eapply cong_J ; eassumption.
   - cbn. destruct (reduce p).
-    all: try (eapply cong_Transport ; eassumption).
-    rename s0_1 into A, s0_2 into x.
-    eapply eq_transitivity.
-    + eapply cong_Transport with (A2 := x) (B2 := x) (p2 := sRefl (sSort s) x).
-      * (* Seems I still need injectivity of Eq... *)
-        admit.
-      * admit.
-      * eapply eq_transitivity ; [ eassumption | .. ].
-        admit.
-      * eapply eq_reflexivity ; eassumption.
-    + eapply eq_transitivity.
-      * eapply eq_conv.
-        -- eapply eq_TransportRefl ; admit.
-        -- admit.
-      * admit.
+    (* all: try (eapply cong_Transport ; eassumption). *)
+    (* rename s0_1 into A, s0_2 into x. *)
+    (* eapply eq_transitivity. *)
+    (* + eapply cong_Transport with (A2 := x) (B2 := x) (p2 := sRefl (sSort s) x). *)
+    (*   * (* Seems I still need injectivity of Eq... *) *)
+    (*     admit. *)
+    (*   * admit. *)
+    (*   * eapply eq_transitivity ; [ eassumption | .. ]. *)
+    (*     admit. *)
+    (*   * eapply eq_reflexivity ; eassumption. *)
+    (* + eapply eq_transitivity. *)
+    (*   * eapply eq_conv. *)
+    (*     -- eapply eq_TransportRefl ; admit. *)
+    (*     -- admit. *)
+    (*   * admit. *)
 Abort.
 
 Definition red_decl (d : scontext_decl) :=
@@ -320,20 +322,20 @@ Proof.
   - cbn. admit.
   - cbn. destruct (reduce p).
     all: try (eapply type_Transport ; eassumption).
-    destruct (inversionRefl IHht3) as [s' [[? ?] h]].
-    cbn in h.
-    (* This probably requires injectivity of Eq. *)
-    admit.
-  - cbn. eapply type_Heq ; eassumption.
-  - cbn. destruct (reduce p).
-    all: try (eapply type_HeqToEq ; eassumption).
-    (* pose (inversionHeqRefl IHht1). *)
-    (* I would also need inversion of HeqRefl, and then some injectivity... *)
-    admit.
-  - cbn. eapply type_HeqRefl ; eassumption.
-  - cbn. destruct (reduce p).
-    all: try (eapply type_HeqSym ; eassumption).
-    cbn in IHht5.
-    (* Same kind of troubles *)
-    admit.
+  (*   destruct (inversionRefl IHht3) as [s' [[? ?] h]]. *)
+  (*   cbn in h. *)
+  (*   (* This probably requires injectivity of Eq. *) *)
+  (*   admit. *)
+  (* - cbn. eapply type_Heq ; eassumption. *)
+  (* - cbn. destruct (reduce p). *)
+  (*   all: try (eapply type_HeqToEq ; eassumption). *)
+  (*   (* pose (inversionHeqRefl IHht1). *) *)
+  (*   (* I would also need inversion of HeqRefl, and then some injectivity... *) *)
+  (*   admit. *)
+  (* - cbn. eapply type_HeqRefl ; eassumption. *)
+  (* - cbn. destruct (reduce p). *)
+  (*   all: try (eapply type_HeqSym ; eassumption). *)
+  (*   cbn in IHht5. *)
+  (*   (* Same kind of troubles *) *)
+  (*   admit. *)
 Abort.

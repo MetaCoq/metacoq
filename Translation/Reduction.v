@@ -64,6 +64,7 @@ Fixpoint reduce (t : sterm) : sterm :=
     let p' := reduce p in
     match p' with
     | sHeqRefl A a => sRefl A a
+    | sEqToHeq a => a                            
     | _ => sHeqToEq p'
     end
   | sHeqRefl A a =>
@@ -97,7 +98,7 @@ Fixpoint reduce (t : sterm) : sterm :=
     match p' with
     (* bad version of Théo !! *)
     (* | sRefl A a => sHeqRefl A a *)
-    | sRefl s A => sHeqRefl A t
+    | sRefl s A => sHeqRefl A t'
     | _ =>
       sHeqTransport p' t'
     end

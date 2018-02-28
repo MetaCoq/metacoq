@@ -335,6 +335,29 @@ Defined.
 Axiom cheating : forall {A}, A.
 Tactic Notation "cheat" := apply cheating.
 
+Lemma wf_mix :
+  forall {Σ Γ Γ1},
+    wf Σ (Γ ,,, Γ1) ->
+    forall {Γ2},
+      #|Γ1| = #|Γ2| ->
+      wf Σ (Γ ,,, Γ2) ->
+      wf Σ (mix Γ Γ1 Γ2).
+Proof.
+  intros Σ Γ Γ1.
+  dependent induction Γ1 ; intro w1.
+  - intros Γ2 eq w2. destruct Γ2 ; try inversion eq.
+    assumption.
+  - intro Γ2. destruct Γ2 ; intros eq w2 ; try inversion eq.
+    dependent destruction w1.
+    dependent destruction w2.
+    cbn. econstructor.
+    + apply IHΓ1 ; assumption.
+    + eapply type_Pack.
+      * (* Aside from the fact that it should be proven along with type_llift,
+           there is the problem that A and A0 aren't living in the same sort!
+         *)
+Abort.
+
 Fixpoint type_llift {Σ Γ Γ1 Γ2 Δ t A}
   (h : Σ ;;; Γ ,,, Γ1 ,,, Δ |-i t : A) {struct h} :
   wf Σ (Γ ,,, Γ2) ->

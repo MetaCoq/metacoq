@@ -123,6 +123,19 @@ Fixpoint rlift γ δ t : sterm :=
 
 Notation rlift0 γ t := (rlift γ 0 t).
 
+Inductive ismix Σ Γ : forall (Γ1 Γ2 Γm : scontext), Type :=
+| mixnil : ismix Σ Γ [] [] []
+| mixsnoc Γ1 Γ2 Γm s A1 A2 n1 n2 nm :
+    ismix Σ Γ Γ1 Γ2 Γm ->
+    Σ ;;; Γ ,,, Γ1 |-i A1 : sSort s ->
+    Σ ;;; Γ ,,, Γ2 |-i A2 : sSort s ->
+    ismix Σ Γ
+          (Γ1 ,, svass n1 A1)
+          (Γ2 ,, svass n2 A2)
+          (Γm ,, svass nm (sPack (llift0 #|Γ1| A1)
+                                 (rlift0 #|Γ1| A2)))
+.
+
 (* Really we ask that the context have the same size *)
 Fixpoint mix (Γ Γ1 Γ2 : scontext) : scontext :=
   match Γ1, Γ2 with
@@ -246,7 +259,8 @@ Proof.
             easy).
   unfold llift at 1. case_eq (n <? k) ; intro e ; bprop e.
   - unfold lift. case_eq (k <=? n) ; intro e1 ; bprop e1 ; try omega.
-    unfold llift. case_eq (n <? k + i) ; intro e3 ; bprop e3 ; try omega. reflexivity.
+    unfold llift. case_eq (n <? k + i) ; intro e3 ; bprop e3 ; try omega.
+    reflexivity.
   - case_eq (n <? k + j) ; intro e1 ; bprop e1.
     + unfold lift. case_eq (k <=? n) ; intro e3 ; bprop e3 ; try omega.
       unfold llift. case_eq (i + n <? k + i) ; intro e5 ; bprop e5 ; try omega.
@@ -335,27 +349,21 @@ Defined.
 Axiom cheating : forall {A}, A.
 Tactic Notation "cheat" := apply cheating.
 
+(* Now this is the version that should be proven alongside the rest. *)
 Lemma wf_mix :
-  forall {Σ Γ Γ1},
-    wf Σ (Γ ,,, Γ1) ->
-    forall {Γ2},
-      #|Γ1| = #|Γ2| ->
-      wf Σ (Γ ,,, Γ2) ->
-      wf Σ (mix Γ Γ1 Γ2).
+  forall {Σ Γ Γ1 Γ2 Γm},
+     ismix Σ Γ Γ1 Γ2 Γm ->
+     wf Σ Γ ->
+     wf Σ (Γ ,,, Γm).
 Proof.
-  intros Σ Γ Γ1.
-  dependent induction Γ1 ; intro w1.
-  - intros Γ2 eq w2. destruct Γ2 ; try inversion eq.
-    assumption.
-  - intro Γ2. destruct Γ2 ; intros eq w2 ; try inversion eq.
-    dependent destruction w1.
-    dependent destruction w2.
-    cbn. econstructor.
-    + apply IHΓ1 ; assumption.
-    + eapply type_Pack.
-      * (* Aside from the fact that it should be proven along with type_llift,
-           there is the problem that A and A0 aren't living in the same sort!
-         *)
+  intros Σ Γ Γ1 Γ2 Γm hm hw.
+  induction hm.
+  - cbn. assumption.
+  - cbn. econstructor.
+    + assumption.
+    + eapply type_Pack with (s := s).
+      * cheat.
+      * cheat.
 Abort.
 
 Fixpoint type_llift {Σ Γ Γ1 Γ2 Δ t A}

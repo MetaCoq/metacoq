@@ -285,6 +285,14 @@ Fixpoint llift_context n (Δ : scontext) : scontext :=
     svass (sdecl_name A) (llift n #|Δ| (sdecl_type A)) :: llift_context n Δ
   end.
 
+Fact llift_context_length :
+  forall {n Δ}, #|llift_context n Δ| = #|Δ|.
+Proof.
+  intros n Δ.
+  induction Δ.
+  - cbn. reflexivity.
+  - cbn. f_equal. assumption.
+Defined.
 
 Definition llift_subst :
   forall (u t : sterm) (i j m : nat),
@@ -312,6 +320,18 @@ Proof.
     cbn. rewrite e.
 Abort.
 
+Fact safe_nth_llift :
+  forall {Δ Γ1 : scontext} {n is1 is2},
+    sdecl_type (safe_nth (llift_context #|Γ1| Δ) (exist _ n is1)) =
+    llift #|Γ1| (#|Δ| - S n) (sdecl_type (safe_nth Δ (exist _ n is2))).
+Proof.
+  intro Δ. induction Δ.
+  - cbn. easy.
+  - intro Γ1. destruct n ; intros is1 is2.
+    + cbn. replace (#|Δ| - 0) with #|Δ| by omega. reflexivity.
+    + cbn. erewrite IHΔ. reflexivity.
+Defined.
+
 Axiom cheating : forall {A}, A.
 Tactic Notation "cheat" := apply cheating.
 
@@ -336,7 +356,62 @@ with wf_llift {Σ Γ Γ1 Γ2 Δ} (h : wf Σ (Γ ,,, Γ1 ,,, Δ)) {struct h} :
 .
 Proof.
   (* type_llift *)
-  - cheat.
+  - { dependent destruction h ; intros w2 eq.
+      - unfold llift at 1. case_eq (n <? #|Δ|) ; intro e ; bprop e.
+        + erewrite @safe_nth_lt with (isdecl' := e0).
+          eapply meta_conv.
+          * eapply type_Rel. eapply wf_llift ; eassumption.
+          * erewrite safe_nth_lt. erewrite safe_nth_llift.
+            (* We need the right lemma. *)
+            cheat.
+        + case_eq (n <? #|Δ| + #|Γ1|) ; intro e1 ; bprop e1.
+          * rewrite mix_mix'.
+            erewrite safe_nth_ge'. erewrite safe_nth_lt.
+            eapply type_ProjT1'.
+            eapply meta_conv.
+            -- eapply type_Rel. rewrite <- mix_mix'.
+               eapply wf_llift ; eassumption.
+            -- erewrite safe_nth_ge'. erewrite safe_nth_lt.
+               erewrite safe_nth_mix' by assumption.
+               cbn. f_equal.
+               (* rewrite lift_llift'. f_equal. *)
+               (* We probably need another lemma again... *)
+               cheat.
+          * rewrite mix_mix'.
+            erewrite safe_nth_ge'. erewrite safe_nth_ge'.
+            eapply meta_conv.
+            -- eapply type_Rel. rewrite <- mix_mix'.
+               eapply wf_llift ; eassumption.
+            -- erewrite safe_nth_ge'. erewrite safe_nth_ge'.
+               (* Another one perhaps? *)
+               cheat.
+      - cheat.
+      - cheat.
+      - cheat.
+      - cheat.
+      - cheat.
+      - cheat.
+      - cheat.
+      - cheat.
+      - cheat.
+      - cheat.
+      - cheat.
+      - cheat.
+      - cheat.
+      - cheat.
+      - cheat.
+      - cheat.
+      - cheat.
+      - cheat.
+      - cheat.
+      - cheat.
+      - cheat.
+      - cheat.
+      - cheat.
+      - cheat.
+      - cheat.
+      - cheat.
+    }
 
   (* cong_llift *)
   - cheat.
@@ -362,6 +437,12 @@ Proof.
             change (sSort s) with (llift #|Γ1| #|Δ| (sSort s)).
             apply type_llift ; assumption.
     }
+
+  Unshelve.
+  all: cbn ; try rewrite !mix_mix' ; try rewrite !length_cat ;
+       try rewrite !llift_context_length ; try rewrite !mix'_length ;
+       try rewrite !length_cat in isdecl ;
+       try omega.
 Defined.
 
 Corollary type_llift0 :

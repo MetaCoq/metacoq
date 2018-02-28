@@ -160,8 +160,10 @@ Proof.
         rewrite mix_mix'.
         destruct (inversionRel h1) as [is1 [s1 hx1]].
         destruct (inversionRel h2) as [is2 [s2 hx2]].
-        cbn in hx1. erewrite safe_nth_lt in hx1.
-        cbn in hx2. erewrite safe_nth_lt in hx2.
+        assert (is1' : x < #|Γ1|) by (subst ; omega).
+        assert (is2' : x < #|Γ2|) by (subst ; omega).
+        cbn in hx1. erewrite @safe_nth_lt with (isdecl' := is1') in hx1.
+        cbn in hx2. erewrite @safe_nth_lt with (isdecl' := is2') in hx2.
         eapply type_conv'.
         -- eapply type_Rel. rewrite <- mix_mix'.
            (* We need some wf_mix or wf_mix' *)

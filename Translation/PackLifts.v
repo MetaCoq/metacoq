@@ -318,7 +318,7 @@ Proof.
   case_eq (m ?= n) ; intro e ; bprop e.
   - subst. case_eq (n <=? i + n) ; intro e1 ; bprop e1 ; try omega.
     cbn. rewrite e.
-Abort.
+Admitted.
 
 Fact safe_nth_llift :
   forall {Δ Γ1 : scontext} {n is1 is2},
@@ -472,9 +472,10 @@ Corollary type_llift0 :
   forall {Σ Γ Γ1 Γ2 t A},
     Σ ;;; Γ ,,, Γ1 |-i t : A ->
     #|Γ1| = #|Γ2| ->
+    wf Σ (Γ ,,, Γ2) ->
     Σ ;;; mix Γ Γ1 Γ2 |-i llift0 #|Γ1| t : llift0 #|Γ1| A.
 Proof.
-  intros Σ Γ Γ1 Γ2 t A ? ?.
+  intros Σ Γ Γ1 Γ2 t A ? ? ?.
   eapply @type_llift with (Δ := nil) ; assumption.
 Defined.
 
@@ -486,19 +487,14 @@ Corollary type_llift1 :
     |-i llift #|Γ1| 1 t : llift #|Γ1| 1 A.
 Admitted.
 
-Lemma cong_llift {Σ Γ Γ1 Γ2 Δ t1 t2 A} (h : Σ ;;; Γ ,,, Γ1 ,,, Δ |-i t1 = t2 : A)
-      (e : #|Γ1| = #|Γ2|) :
-  Σ ;;; mix Γ Γ1 Γ2 ,,, Δ
-  |-i llift #|Γ1| #|Δ| t1 = llift #|Γ1| #|Δ| t2 : llift #|Γ1| #|Δ| A.
-Admitted.
-
 Corollary cong_llift0 :
   forall {Σ Γ Γ1 Γ2 t1 t2 A},
     Σ ;;; Γ ,,, Γ1 |-i t1 = t2 : A ->
     #|Γ1| = #|Γ2| ->
+    wf Σ (Γ ,,, Γ2) ->
     Σ ;;; mix Γ Γ1 Γ2 |-i llift0 #|Γ1| t1 = llift0 #|Γ1| t2 : llift0 #|Γ1| A.
 Proof.
-  intros Σ Γ Γ1 Γ2 t1 t2 A ? ?.
+  intros Σ Γ Γ1 Γ2 t1 t2 A ? ? ?.
   eapply @cong_llift with (Δ := nil) ; assumption.
 Defined.
 

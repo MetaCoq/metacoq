@@ -278,14 +278,17 @@ Proof.
       reflexivity.
 Defined.
 
-Fixpoint llift_context n (Δ:scontext) : scontext :=
-  match Δ with nil => nil
-          | A :: Δ => svass (sdecl_name A) (llift n #|Δ| (sdecl_type A)) :: llift_context n Δ
+Fixpoint llift_context n (Δ : scontext) : scontext :=
+  match Δ with
+  | nil => nil
+  | A :: Δ =>
+    svass (sdecl_name A) (llift n #|Δ| (sdecl_type A)) :: llift_context n Δ
   end.
 
 
 Definition llift_subst :
-  forall (u t : sterm) (i j m : nat), llift j (i+m) (u {m := t}) = (llift j (S i+m) u) {m := llift j i t}.
+  forall (u t : sterm) (i j m : nat),
+    llift j (i+m) (u {m := t}) = (llift j (S i+m) u) {m := llift j i t}.
 Proof.
   induction u ; intros t i j m.
   all: try (cbn ; f_equal;
@@ -295,83 +298,71 @@ Proof.
             try replace (S (S (S (i + m))))%nat with (i + (S (S (S m))))%nat by omega ;
             try replace (S (S (i + m)))%nat with (i + (S (S m)))%nat by omega ;
             try replace (S (i + m))%nat with (i + (S m))%nat by omega;
-    try  (rewrite IHu; cbn; repeat f_equal; omega);
-    try  (rewrite IHu1; cbn; repeat f_equal; omega);
-   try  (rewrite IHu2; cbn; repeat f_equal; omega);
-  try  (rewrite IHu3; cbn; repeat f_equal; omega);
-   try  (rewrite IHu4; cbn; repeat f_equal; omega);
-  try  (rewrite IHu5; cbn; repeat f_equal; omega);
-  try  (rewrite IHu6; cbn; repeat f_equal; omega);
-  try  (rewrite IHu7; cbn; repeat f_equal; omega);
-  try  (rewrite IHu8; cbn; repeat f_equal; omega)).
-  (* missing the sRel case *)
-  admit.
-Admitted.
-
-Fixpoint type_llift {Σ Γ Γ1 Γ2 Δ t A} (h : Σ ;;; Γ ,,, Γ1 ,,, Δ |-i t : A)
-         (e : #|Γ1| = #|Γ2|)  :
-  Σ ;;; mix Γ Γ1 Γ2 ,,, llift_context #|Γ1| Δ |-i llift #|Γ1| #|Δ| t : llift #|Γ1| #|Δ| A
-with wf_llift {Σ Γ Γ1 Γ2 Δ} (wf1: wf Σ (Γ ,,, Γ1 ,,, Δ))
-         (e : #|Γ1| = #|Γ2|) :
-   wf Σ (mix Γ Γ1 Γ2 ,,, llift_context #|Γ1| Δ).
-Proof.
-  generalize dependent Γ2.
-  unshelve refine (typing_rect Σ (fun Γgen t A _ =>
-                           forall Γ Γ1 Δ, Γ ,,, Γ1 ,,, Δ = Γgen ->
-                                          forall Γ2 : list scontext_decl, #|Γ1| = #|Γ2| ->  Σ;;; mix Γ Γ1 Γ2 ,,, llift_context #|Γ1| Δ  |-i llift #|Γ1| #|Δ| t : llift #|Γ1| #|Δ| A) _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ (Γ ,,, Γ1 ,,, Δ ) t A h _ _ _ eq_refl); cbn in *; clear -type_llift wf_llift.
-  (* dependent induction h; cbn in *.  *)
-  - intros. destruct H. generalize dependent Γ2. generalize dependent Γ1. induction Δ; cbn.
-    + induction Γ1; cbn in *.
-      * intros. rewrite llift00. refine (type_Rel _ _ _ _ _); auto.
-      * admit.
-    + admit.
-  - intros. destruct H. apply type_Sort.
-    apply wf_llift; assumption.
-  - intros. destruct H1. eapply type_Prod.
-    apply H; try reflexivity; try assumption.
-    apply (H0 Γ0 Γ1 (Δ ,, svass n t) eq_refl Γ2 H2).
-  - intros. destruct H2. eapply type_Lambda.
-    apply H; try reflexivity; try assumption.
-    apply (H0 Γ0 Γ1 (Δ ,, svass n t) eq_refl Γ2 H3).
-    apply (H1 Γ0 Γ1 (Δ ,, svass n t) eq_refl Γ2 H3).
-  - intros. destruct H3.
-    pose (llift_subst B u #|Δ| #|Γ1| 0).
-    rewrite <- plus_n_O in *. rewrite e.
-    cbn. clear e. rewrite <- plus_n_O in *. unshelve eapply type_App.
-    exact s1. exact s2.
-    apply (H Γ0 Γ1 Δ eq_refl Γ2 H4).
-    apply (H0 Γ0 Γ1 (Δ ,, svass n A) eq_refl Γ2 H4).
-    apply (H1 Γ0 Γ1 Δ eq_refl Γ2 H4).
-    apply (H2 Γ0 Γ1 Δ eq_refl Γ2 H4).
-  - intros. destruct H2.
-    eapply type_Eq.
-    apply (H Γ0 Γ1 Δ eq_refl Γ2 H3).
-    apply (H0 Γ0 Γ1 Δ eq_refl Γ2 H3).
-    apply (H1 Γ0 Γ1 Δ eq_refl Γ2 H3).
-  - (* and so on **)
+            try  (rewrite IHu; cbn; repeat f_equal; omega);
+            try  (rewrite IHu1; cbn; repeat f_equal; omega);
+            try  (rewrite IHu2; cbn; repeat f_equal; omega);
+            try  (rewrite IHu3; cbn; repeat f_equal; omega);
+            try  (rewrite IHu4; cbn; repeat f_equal; omega);
+            try  (rewrite IHu5; cbn; repeat f_equal; omega);
+            try  (rewrite IHu6; cbn; repeat f_equal; omega);
+            try  (rewrite IHu7; cbn; repeat f_equal; omega);
+            try  (rewrite IHu8; cbn; repeat f_equal; omega)).
+  case_eq (m ?= n) ; intro e ; bprop e.
+  - subst. case_eq (n <=? i + n) ; intro e1 ; bprop e1 ; try omega.
+    cbn. rewrite e.
 Abort.
 
-Lemma type_llift {Σ Γ Γ1 Γ2 Δ t A} (h : Σ ;;; Γ ,,, Γ1 ,,, Δ |-i t : A)
-         (e : #|Γ1| = #|Γ2|) :
-  Σ ;;; mix Γ Γ1 Γ2 ,,, Δ |-i llift #|Γ1| #|Δ| t : llift #|Γ1| #|Δ| A.
+Axiom cheating : forall {A}, A.
+Tactic Notation "cheat" := apply cheating.
+
+Fixpoint type_llift {Σ Γ Γ1 Γ2 Δ t A}
+  (h : Σ ;;; Γ ,,, Γ1 ,,, Δ |-i t : A) {struct h} :
+  wf Σ (Γ ,,, Γ2) ->
+  #|Γ1| = #|Γ2| ->
+  Σ ;;; mix Γ Γ1 Γ2 ,,, llift_context #|Γ1| Δ
+  |-i llift #|Γ1| #|Δ| t : llift #|Γ1| #|Δ| A
+
+with cong_llift {Σ Γ Γ1 Γ2 Δ t1 t2 A}
+  (h : Σ ;;; Γ ,,, Γ1 ,,, Δ |-i t1 = t2 : A) {struct h} :
+  wf Σ (Γ ,,, Γ2) ->
+  #|Γ1| = #|Γ2| ->
+  Σ ;;; mix Γ Γ1 Γ2 ,,, llift_context #|Γ1| Δ
+  |-i llift #|Γ1| #|Δ| t1 = llift #|Γ1| #|Δ| t2 : llift #|Γ1| #|Δ| A
+
+with wf_llift {Σ Γ Γ1 Γ2 Δ} (h : wf Σ (Γ ,,, Γ1 ,,, Δ)) {struct h} :
+  wf Σ (Γ ,,, Γ2) ->
+  #|Γ1| = #|Γ2| ->
+  wf Σ (mix Γ Γ1 Γ2 ,,, llift_context #|Γ1| Δ)
+.
 Proof.
-  dependent induction h.
-  - case_eq #|Δ|.
-    + intros eqδ.
-      destruct Δ ; try (now inversion eqδ). cbn in *.
-      case_eq #|Γ1|.
-      * intros eqγ. cbn. rewrite llift00.
-        replace (n+0)%nat with n by omega.
-        destruct Γ1 ; try (now inversion eqγ).
-        destruct Γ2 ; try (now inversion eqγ).
-        cbn.
-        eapply type_Rel.
-        cbn in w. assumption.
-      * intros m eqγ. cbn.
-        case_eq (n <=? m).
-        -- intro nlm. induction n.
-           ++ cbn.
-Admitted.
+  (* type_llift *)
+  - cheat.
+
+  (* cong_llift *)
+  - cheat.
+
+  (* wf_llift *)
+  - { (* destruct Δ. *)
+      (* - cbn. cheat. *)
+      (* - dependent destruction h. *)
+      (*   cbn. econstructor. *)
+      (*   + apply wf_llift ; assumption. *)
+      (*   + instantiate (1 := s0). *)
+      (*     change (sSort s0) with (llift #|Γ1| #|Δ| (sSort s0)). *)
+      (*     apply type_llift ; assumption. *)
+      dependent destruction h ; intros w2 e.
+      - destruct Δ.
+        + cbn in *. cheat.
+        + cbn in *. inversion x.
+      - destruct Δ.
+        + cbn in *. cheat.
+        + cbn in *. inversion x. subst. econstructor.
+          * apply wf_llift ; assumption.
+          * instantiate (1 := s).
+            change (sSort s) with (llift #|Γ1| #|Δ| (sSort s)).
+            apply type_llift ; assumption.
+    }
+Defined.
 
 Corollary type_llift0 :
   forall {Σ Γ Γ1 Γ2 t A},

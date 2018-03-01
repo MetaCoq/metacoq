@@ -348,6 +348,33 @@ Proof.
   - cbn. f_equal. assumption.
 Defined.
 
+(* We introduce an alternate version of ismix that will be implied by ismix but
+   will be used as an intermediary for the proof.
+ *)
+Inductive ismix' Σ Γ : forall (Γ1 Γ2 Γm : scontext), Type :=
+| mixnil' : ismix' Σ Γ [] [] []
+| mixsnoc' Γ1 Γ2 Γm s A1 A2 n1 n2 nm :
+    ismix' Σ Γ Γ1 Γ2 Γm ->
+    Σ ;;; Γ ,,, Γm |-i llift0 #|Γ1| A1 : sSort s ->
+    Σ ;;; Γ ,,, Γm |-i rlift0 #|Γ1|A2 : sSort s ->
+    ismix' Σ Γ
+          (Γ1 ,, svass n1 A1)
+          (Γ2 ,, svass n2 A2)
+          (Γm ,, svass nm (sPack (llift0 #|Γ1| A1)
+                                 (rlift0 #|Γ1| A2)))
+.
+
+Lemma wf_mix' {Σ Γ Γ1 Γ2 Γm} (h : wf Σ Γ) :
+  ismix' Σ Γ Γ1 Γ2 Γm ->
+  wf Σ (Γ ,,, Γm).
+Proof.
+  intro hm. induction hm.
+  - cbn. assumption.
+  - cbn. econstructor.
+    + assumption.
+    + eapply type_Pack with (s := s) ; assumption.
+Defined.
+
 Definition llift_subst :
   forall (u t : sterm) (i j m : nat),
     llift j (i+m) (u {m := t}) = (llift j (S i+m) u) {m := llift j i t}.
@@ -386,8 +413,101 @@ Proof.
     + cbn. erewrite IHΔ. reflexivity.
 Defined.
 
+(* For SCommon *)
+Fact cat_nil :
+  forall {Γ}, Γ ,,, [] = Γ.
+Proof.
+  induction Γ ; easy.
+Defined.
+
+Fact nil_cat :
+  forall {Γ}, [] ,,, Γ = Γ.
+Proof.
+  induction Γ ; try easy.
+  cbn. f_equal. assumption.
+Defined.
+
+(* Should be somewhere else. *)
+Lemma inversion_wf_cat :
+  forall {Σ Δ Γ},
+    wf Σ (Γ ,,, Δ) ->
+    wf Σ Γ.
+Proof.
+  intros Σ Δ. induction Δ ; intros Γ h.
+  - assumption.
+  - dependent destruction h.
+    apply IHΔ. assumption.
+Defined.
+
 Axiom cheating : forall {A}, A.
 Tactic Notation "cheat" := apply cheating.
+
+Fixpoint type_llift' {Σ Γ Γ1 Γ2 Γm Δ t A}
+  (h : Σ ;;; Γ ,,, Γ1 ,,, Δ |-i t : A) {struct h} :
+  ismix' Σ Γ Γ1 Γ2 Γm ->
+  Σ ;;; Γ ,,, Γm ,,, llift_context #|Γ1| Δ
+  |-i llift #|Γ1| #|Δ| t : llift #|Γ1| #|Δ| A
+
+with cong_llift' {Σ Γ Γ1 Γ2 Γm Δ t1 t2 A}
+  (h : Σ ;;; Γ ,,, Γ1 ,,, Δ |-i t1 = t2 : A) {struct h} :
+  ismix' Σ Γ Γ1 Γ2 Γm ->
+  Σ ;;; Γ ,,, Γm ,,, llift_context #|Γ1| Δ
+  |-i llift #|Γ1| #|Δ| t1 = llift #|Γ1| #|Δ| t2 : llift #|Γ1| #|Δ| A
+
+with type_rlift' {Σ Γ Γ1 Γ2 Γm Δ t A}
+  (h : Σ ;;; Γ ,,, Γ2 ,,, Δ |-i t : A) {struct h} :
+  ismix' Σ Γ Γ1 Γ2 Γm ->
+  Σ ;;; Γ ,,, Γm ,,, rlift_context #|Γ1| Δ
+  |-i rlift #|Γ1| #|Δ| t : rlift #|Γ1| #|Δ| A
+
+with cong_rlift' {Σ Γ Γ1 Γ2 Γm Δ t1 t2 A}
+  (h : Σ ;;; Γ ,,, Γ2 ,,, Δ |-i t1 = t2 : A) {struct h} :
+  ismix' Σ Γ Γ1 Γ2 Γm ->
+  Σ ;;; Γ ,,, Γm ,,, rlift_context #|Γ1| Δ
+  |-i rlift #|Γ1| #|Δ| t1 = rlift #|Γ1| #|Δ| t2 : rlift #|Γ1| #|Δ| A
+
+with wf_llift' {Σ Γ Γ1 Γ2 Γm Δ} (h : wf Σ (Γ ,,, Γ1 ,,, Δ)) {struct h} :
+  ismix' Σ Γ Γ1 Γ2 Γm ->
+  wf Σ (Γ ,,, Γm ,,, llift_context #|Γ1| Δ)
+
+with wf_rlift' {Σ Γ Γ1 Γ2 Γm Δ} (h : wf Σ (Γ ,,, Γ1 ,,, Δ)) {struct h} :
+  ismix' Σ Γ Γ1 Γ2 Γm ->
+  wf Σ (Γ ,,, Γm ,,, rlift_context #|Γ1| Δ)
+.
+Proof.
+  (* type_llift' *)
+  - cheat.
+
+  (* cong_llift' *)
+  - cheat.
+
+  (* type_rlift' *)
+  - cheat.
+
+  (* cong_rlift' *)
+  - cheat.
+
+  (* wf_llift' *)
+  - { destruct Δ.
+      - cbn. rewrite cat_nil in h.
+        intro hm. eapply wf_mix'.
+        + eapply inversion_wf_cat. eassumption.
+        + eassumption.
+      - cbn. intro hm. dependent destruction h.
+        econstructor.
+        + (* eapply wf_llift' ; eassumption. *)
+          (* It's really annoying because it is indeed smaller *)
+          cheat.
+        + (* eapply type_llift' with (A := sSort s0) ; eassumption. *)
+          (* Same here. *)
+          cheat.
+      Unshelve. auto.
+    }
+
+  (* wf_rlift' *)
+  - cheat.
+Defined.
+
 
 Fixpoint type_llift {Σ Γ Γ1 Γ2 Γm Δ t A}
   (h : Σ ;;; Γ ,,, Γ1 ,,, Δ |-i t : A) {struct h} :
@@ -412,10 +532,6 @@ with cong_rlift {Σ Γ Γ1 Γ2 Γm Δ t1 t2 A}
   ismix Σ Γ Γ1 Γ2 Γm ->
   Σ ;;; Γ ,,, Γm ,,, rlift_context #|Γ1| Δ
   |-i rlift #|Γ1| #|Δ| t1 = rlift #|Γ1| #|Δ| t2 : rlift #|Γ1| #|Δ| A
-
-with wf_mix {Σ Γ Γ1 Γ2 Γm} (h : wf Σ Γ) {struct h} :
-  ismix Σ Γ Γ1 Γ2 Γm ->
-  wf Σ (Γ ,,, Γm)
 
 with wf_llift {Σ Γ Γ1 Γ2 Γm Δ} (h : wf Σ (Γ ,,, Γ1 ,,, Δ)) {struct h} :
   ismix Σ Γ Γ1 Γ2 Γm ->

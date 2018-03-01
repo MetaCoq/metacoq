@@ -449,6 +449,165 @@ Proof.
   - cbn in e. inversion e.
 Defined.
 
+Ltac lh h :=
+  lazymatch goal with
+  | [ type_llift' :
+        forall (Σ : global_context) (Γ Γ1 Γ2 Γm Δ : scontext) (t A : sterm),
+          Σ;;; Γ ,,, Γ1 ,,, Δ |-i t : A ->
+          ismix' Σ Γ Γ1 Γ2 Γm ->
+          Σ;;; Γ ,,, Γm ,,, llift_context #|Γ1| Δ
+          |-i llift #|Γ1| #|Δ| t : llift #|Γ1| #|Δ| A,
+      cong_llift' :
+        forall (Σ : global_context) (Γ Γ1 Γ2 Γm Δ : scontext) (t1 t2 A : sterm),
+          Σ;;; Γ ,,, Γ1 ,,, Δ |-i t1 = t2 : A ->
+          ismix' Σ Γ Γ1 Γ2 Γm ->
+          Σ;;; Γ ,,, Γm ,,, llift_context #|Γ1| Δ |-i llift #|Γ1| #|Δ| t1
+          = llift #|Γ1| #|Δ| t2 : llift #|Γ1| #|Δ| A
+    |- _ ] =>
+    lazymatch type of h with
+    | _ ;;; ?Γ' ,,, ?Γ1' ,,, ?Δ' |-i _ : ?T' =>
+      eapply meta_conv ; [
+        eapply meta_ctx_conv ; [
+          eapply type_llift' with (Γ := Γ') (Γ1 := Γ1') (Δ := Δ') (A := T') ; [
+            exact h
+          | eassumption
+          ]
+        | .. ]
+      | .. ]
+    | _ ;;; (?Γ' ,,, ?Γ1' ,,, ?Δ'),, ?d' |-i _ : ?T' =>
+      eapply meta_conv ; [
+        eapply meta_ctx_conv ; [
+          eapply type_llift' with (Γ := Γ') (Γ1 := Γ1') (Δ := Δ',, d') (A := T') ; [
+            exact h
+          | eassumption
+          ]
+        | .. ]
+      | .. ]
+    | _ ;;; (?Γ' ,,, ?Γ1' ,,, ?Δ'),, ?d',, ?d'' |-i _ : ?T' =>
+      eapply meta_conv ; [
+        eapply meta_ctx_conv ; [
+          eapply type_llift' with (Γ := Γ') (Γ1 := Γ1') (Δ := (Δ',, d'),, d'') (A := T') ; [
+            exact h
+          | eassumption
+          ]
+        | .. ]
+      | .. ]
+    | _ ;;; ?Γ' ,,, ?Γ1' ,,, ?Δ' |-i _ = _ : ?T' =>
+      eapply meta_eqconv ; [
+        eapply meta_eqctx_conv ; [
+          eapply cong_llift' with (Γ := Γ') (Γ1 := Γ1') (Δ := Δ') (A := T') ; [
+            exact h
+          | eassumption
+          ]
+        | .. ]
+      | .. ]
+    | _ ;;; (?Γ' ,,, ?Γ1' ,,, ?Δ'),, ?d' |-i _ = _ : ?T' =>
+      eapply meta_eqconv ; [
+        eapply meta_eqctx_conv ; [
+          eapply cong_llift' with (Γ := Γ') (Γ1 := Γ1') (Δ := Δ',, d') (A := T') ; [
+            exact h
+          | eassumption
+          ]
+        | .. ]
+      | .. ]
+    | _ ;;; (?Γ' ,,, ?Γ1' ,,, ?Δ'),, ?d',, ?d'' |-i _ = _ : ?T' =>
+      eapply meta_eqconv ; [
+        eapply meta_eqctx_conv ; [
+          eapply cong_llift' with (Γ := Γ') (Γ1 := Γ1') (Δ := (Δ',, d'),, d'') (A := T') ; [
+            exact h
+          | eassumption
+          ]
+        | .. ]
+      | .. ]
+    end ; try (cbn ; reflexivity)
+  | _ => fail "Cannot retrieve type_llift' or cong_llift'"
+  end.
+
+Ltac rh h :=
+  lazymatch goal with
+  | [ type_rlift' :
+        forall (Σ : global_context) (Γ Γ1 Γ2 Γm Δ : scontext) (t A : sterm),
+          Σ;;; Γ ,,, Γ2 ,,, Δ |-i t : A ->
+          ismix' Σ Γ Γ1 Γ2 Γm ->
+          Σ;;; Γ ,,, Γm ,,, rlift_context #|Γ1| Δ
+          |-i rlift #|Γ1| #|Δ| t : rlift #|Γ1| #|Δ| A,
+      cong_rlift' :
+        forall (Σ : global_context) (Γ Γ1 Γ2 Γm Δ : scontext) (t1 t2 A : sterm),
+          Σ;;; Γ ,,, Γ2 ,,, Δ |-i t1 = t2 : A ->
+          ismix' Σ Γ Γ1 Γ2 Γm ->
+          Σ;;; Γ ,,, Γm ,,, rlift_context #|Γ1| Δ |-i rlift #|Γ1| #|Δ| t1
+          = rlift #|Γ1| #|Δ| t2 : rlift #|Γ1| #|Δ| A
+    |- _ ] =>
+    lazymatch type of h with
+    | _ ;;; ?Γ' ,,, ?Γ2' ,,, ?Δ' |-i _ : ?T' =>
+      eapply meta_conv ; [
+        eapply meta_ctx_conv ; [
+          eapply type_rlift' with (Γ := Γ') (Γ2 := Γ2') (Δ := Δ') (A := T') ; [
+            exact h
+          | eassumption
+          ]
+        | .. ]
+      | .. ]
+    | _ ;;; (?Γ' ,,, ?Γ2' ,,, ?Δ'),, ?d' |-i _ : ?T' =>
+      eapply meta_conv ; [
+        eapply meta_ctx_conv ; [
+          eapply type_rlift' with (Γ := Γ') (Γ2 := Γ2') (Δ := Δ',, d') (A := T') ; [
+            exact h
+          | eassumption
+          ]
+        | .. ]
+      | .. ]
+    | _ ;;; (?Γ' ,,, ?Γ2' ,,, ?Δ'),, ?d',, ?d'' |-i _ : ?T' =>
+      eapply meta_conv ; [
+        eapply meta_ctx_conv ; [
+          eapply type_rlift' with (Γ := Γ') (Γ2 := Γ2') (Δ := (Δ',, d'),, d'') (A := T') ; [
+            exact h
+          | eassumption
+          ]
+        | .. ]
+      | .. ]
+    | _ ;;; ?Γ' ,,, ?Γ2' ,,, ?Δ' |-i _ = _ : ?T' =>
+      eapply meta_eqconv ; [
+        eapply meta_eqctx_conv ; [
+          eapply cong_rlift' with (Γ := Γ') (Γ2 := Γ2') (Δ := Δ') (A := T') ; [
+            exact h
+          | eassumption
+          ]
+        | .. ]
+      | .. ]
+    | _ ;;; (?Γ' ,,, ?Γ2' ,,, ?Δ'),, ?d' |-i _ = _ : ?T' =>
+      eapply meta_eqconv ; [
+        eapply meta_eqctx_conv ; [
+          eapply cong_rlift' with (Γ := Γ') (Γ2 := Γ2') (Δ := Δ',, d') (A := T') ; [
+            exact h
+          | eassumption
+          ]
+        | .. ]
+      | .. ]
+    | _ ;;; (?Γ' ,,, ?Γ2' ,,, ?Δ'),, ?d',, ?d'' |-i _ = _ : ?T' =>
+      eapply meta_eqconv ; [
+        eapply meta_eqctx_conv ; [
+          eapply cong_rlift' with (Γ := Γ') (Γ2 := Γ2') (Δ := (Δ',, d'),, d'') (A := T') ; [
+            exact h
+          | eassumption
+          ]
+        | .. ]
+      | .. ]
+    end ; try (cbn ; reflexivity)
+  | _ => fail "Cannot retrieve type_rlift' or cong_rlift'"
+  end.
+
+Ltac emh :=
+  lazymatch goal with
+  | h : _ ;;; _ |-i ?t : _ |- _ ;;; _ |-i llift _ _ ?t : _ => lh h
+  | h : _ ;;; _ |-i ?t = _ : _ |- _ ;;; _ |-i llift _ _ ?t = _ : _ =>
+    lh h
+  | h : _ ;;; _ |-i ?t : _ |- _ ;;; _ |-i rlift _ _ ?t : _ => rh h
+  | h : _ ;;; _ |-i ?t = _ : _ |- _ ;;; _ |-i rlift _ _ ?t = _ : _ =>
+    rh h
+  | _ => fail "Not a case for emh"
+  end.
+
 Axiom cheating : forall {A}, A.
 Tactic Notation "cheat" := apply cheating.
 
@@ -486,10 +645,85 @@ with wf_rlift' {Σ Γ Γ1 Γ2 Γm Δ} (h : wf Σ (Γ ,,, Γ2 ,,, Δ)) {struct h}
 .
 Proof.
   (* type_llift' *)
-  - cheat.
+  - { dependent destruction h ; intro hm.
+      - cheat.
+      - cbn. eapply type_Sort. eapply wf_llift' ; eassumption.
+      - cbn. eapply type_Prod ; emh.
+      - cbn. eapply type_Lambda ; emh.
+      - cbn. cheat.
+      - cbn. eapply type_Eq ; emh.
+      - cbn. eapply type_Refl ; emh.
+      - cbn. cheat.
+      - cbn. eapply type_Transport ; emh.
+      - cbn. eapply type_Heq ; emh.
+      - cbn. eapply type_HeqToEq ; emh.
+      - cbn. eapply type_HeqRefl ; emh.
+      - cbn. eapply type_HeqSym ; emh.
+      - cbn.
+        eapply @type_HeqTrans
+          with (B := llift #|Γ1| #|Δ| B) (b := llift #|Γ1| #|Δ| b) ; emh.
+      - cbn. eapply type_HeqTransport ; emh.
+      - cbn. eapply type_CongProd ; emh.
+        cbn. f_equal.
+        + cheat.
+        + cheat.
+      - cbn. eapply type_CongLambda ; emh.
+        + cheat.
+        + cheat.
+      - cbn. cheat.
+      - cbn. eapply type_CongEq ; emh.
+      - cbn. eapply type_CongRefl ; emh.
+      - cbn. eapply type_EqToHeq ; emh.
+      - cbn. eapply type_HeqTypeEq ; emh.
+      - cbn. eapply type_Pack ; emh.
+      - cbn. eapply @type_ProjT1 with (A2 := llift #|Γ1| #|Δ| A2) ; emh.
+      - cbn. eapply @type_ProjT2 with (A1 := llift #|Γ1| #|Δ| A1) ; emh.
+      - cbn. eapply type_ProjTe ; emh.
+      - eapply type_conv ; emh.
+    }
 
   (* cong_llift' *)
-  - cheat.
+  - { dependent destruction h ; intro hm.
+      - apply eq_reflexivity. emh.
+      - apply eq_symmetry ; emh.
+      - eapply eq_transitivity ; emh.
+      - cheat.
+      - cheat.
+      - cbn. eapply eq_TransportRefl ; emh.
+      - eapply eq_conv ; emh.
+      - cbn. eapply cong_Prod ; emh.
+      - cbn. eapply cong_Lambda ; emh.
+      - cheat.
+      - cbn. eapply cong_Eq ; emh.
+      - cbn. eapply cong_Refl ; emh.
+      - cbn. cheat.
+      - cbn. eapply cong_Transport ; emh.
+      - cbn. eapply cong_Heq ; emh.
+      - cbn. eapply cong_Pack ; emh.
+      - cbn. eapply cong_HeqToEq ; emh.
+      - cbn. eapply cong_HeqRefl ; emh.
+      - cbn. eapply cong_HeqSym ; emh.
+      - cbn.
+        eapply cong_HeqTrans
+          with (B := llift #|Γ1| #|Δ| B) (b := llift #|Γ1| #|Δ| b) ; emh.
+      - cbn. eapply cong_HeqTransport ; emh.
+      - cbn. eapply cong_CongProd ; emh.
+        cbn. f_equal.
+        + cheat.
+        + cheat.
+      - cbn. eapply cong_CongLambda ; emh.
+        + cheat.
+        + cheat.
+      - cheat.
+      - cbn. eapply cong_CongEq ; emh.
+      - cbn. eapply cong_CongRefl ; emh.
+      - cbn. eapply cong_EqToHeq ; emh.
+      - cbn. eapply cong_HeqTypeEq ; emh.
+      - cbn. eapply cong_ProjT1 with (A2 := llift #|Γ1| #|Δ| A2) ; emh.
+      - cbn. eapply cong_ProjT2 with (A1 := llift #|Γ1| #|Δ| A1) ; emh.
+      - cbn. eapply cong_ProjTe ; emh.
+      - cbn. eapply eq_HeqToEqRefl ; emh.
+    }
 
   (* type_rlift' *)
   - cheat.

@@ -611,6 +611,10 @@ Ltac emh :=
 Axiom cheating : forall {A}, A.
 Tactic Notation "cheat" := apply cheating.
 
+(* TODO Replace #|Γ1| by #|Γm| for enhanced symmetry.
+   Furthermore, mix and mix' should go away.
+ *)
+
 Fixpoint type_llift' {Σ Γ Γ1 Γ2 Γm Δ t A}
   (h : Σ ;;; Γ ,,, Γ1 ,,, Δ |-i t : A) {struct h} :
   ismix' Σ Γ Γ1 Γ2 Γm ->
@@ -726,10 +730,85 @@ Proof.
     }
 
   (* type_rlift' *)
-  - cheat.
+  - { dependent destruction h ; intro hm.
+      - cheat.
+      - cbn. eapply type_Sort. eapply wf_rlift' ; eassumption.
+      - cbn. eapply type_Prod ; emh.
+      - cbn. eapply type_Lambda ; emh.
+      - cbn. cheat.
+      - cbn. eapply type_Eq ; emh.
+      - cbn. eapply type_Refl ; emh.
+      - cbn. cheat.
+      - cbn. eapply type_Transport ; emh.
+      - cbn. eapply type_Heq ; emh.
+      - cbn. eapply type_HeqToEq ; emh.
+      - cbn. eapply type_HeqRefl ; emh.
+      - cbn. eapply type_HeqSym ; emh.
+      - cbn.
+        eapply @type_HeqTrans
+          with (B := rlift #|Γ1| #|Δ| B) (b := rlift #|Γ1| #|Δ| b) ; emh.
+      - cbn. eapply type_HeqTransport ; emh.
+      - cbn. eapply type_CongProd ; emh.
+        cbn. f_equal.
+        + cheat.
+        + cheat.
+      - cbn. eapply type_CongLambda ; emh.
+        + cheat.
+        + cheat.
+      - cbn. cheat.
+      - cbn. eapply type_CongEq ; emh.
+      - cbn. eapply type_CongRefl ; emh.
+      - cbn. eapply type_EqToHeq ; emh.
+      - cbn. eapply type_HeqTypeEq ; emh.
+      - cbn. eapply type_Pack ; emh.
+      - cbn. eapply @type_ProjT1 with (A2 := rlift #|Γ1| #|Δ| A2) ; emh.
+      - cbn. eapply @type_ProjT2 with (A1 := rlift #|Γ1| #|Δ| A1) ; emh.
+      - cbn. eapply type_ProjTe ; emh.
+      - eapply type_conv ; emh.
+    }
 
   (* cong_rlift' *)
-  - cheat.
+  - { dependent destruction h ; intro hm.
+      - apply eq_reflexivity. emh.
+      - apply eq_symmetry ; emh.
+      - eapply eq_transitivity ; emh.
+      - cheat.
+      - cheat.
+      - cbn. eapply eq_TransportRefl ; emh.
+      - eapply eq_conv ; emh.
+      - cbn. eapply cong_Prod ; emh.
+      - cbn. eapply cong_Lambda ; emh.
+      - cheat.
+      - cbn. eapply cong_Eq ; emh.
+      - cbn. eapply cong_Refl ; emh.
+      - cbn. cheat.
+      - cbn. eapply cong_Transport ; emh.
+      - cbn. eapply cong_Heq ; emh.
+      - cbn. eapply cong_Pack ; emh.
+      - cbn. eapply cong_HeqToEq ; emh.
+      - cbn. eapply cong_HeqRefl ; emh.
+      - cbn. eapply cong_HeqSym ; emh.
+      - cbn.
+        eapply cong_HeqTrans
+          with (B := rlift #|Γ1| #|Δ| B) (b := rlift #|Γ1| #|Δ| b) ; emh.
+      - cbn. eapply cong_HeqTransport ; emh.
+      - cbn. eapply cong_CongProd ; emh.
+        cbn. f_equal.
+        + cheat.
+        + cheat.
+      - cbn. eapply cong_CongLambda ; emh.
+        + cheat.
+        + cheat.
+      - cheat.
+      - cbn. eapply cong_CongEq ; emh.
+      - cbn. eapply cong_CongRefl ; emh.
+      - cbn. eapply cong_EqToHeq ; emh.
+      - cbn. eapply cong_HeqTypeEq ; emh.
+      - cbn. eapply cong_ProjT1 with (A2 := rlift #|Γ1| #|Δ| A2) ; emh.
+      - cbn. eapply cong_ProjT2 with (A1 := rlift #|Γ1| #|Δ| A1) ; emh.
+      - cbn. eapply cong_ProjTe ; emh.
+      - cbn. eapply eq_HeqToEqRefl ; emh.
+    }
 
   (* wf_llift' *)
   - { dependent destruction h.
@@ -763,7 +842,24 @@ Proof.
     }
 
   (* wf_rlift' *)
-  - cheat.
+  - { dependent destruction h.
+      - destruct Δ.
+        + cbn. rewrite cat_nil in x. destruct (nil_eq_cat x) as [e e1].
+          subst. intro hm.
+          dependent destruction hm. constructor.
+        + cbn in x. inversion x.
+      - destruct Δ.
+        + cbn. rewrite cat_nil in x.
+          intro hm. eapply wf_mix' ; [| eassumption ].
+          destruct Γ2.
+          * rewrite cat_nil in x. subst. econstructor ; eassumption.
+          * cbn in x. inversion x. subst.
+            eapply inversion_wf_cat. eassumption.
+        + cbn. cbn in x. inversion x. subst.
+          intro hm. econstructor.
+          * eapply wf_rlift' ; eassumption.
+          * eapply type_rlift' with (A := sSort s) ; eassumption.
+    }
 Defined.
 
 Lemma ismix_ismix' :

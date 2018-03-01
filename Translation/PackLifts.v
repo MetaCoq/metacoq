@@ -413,6 +413,10 @@ with cong_rlift {Σ Γ Γ1 Γ2 Γm Δ t1 t2 A}
   Σ ;;; Γ ,,, Γm ,,, rlift_context #|Γ1| Δ
   |-i rlift #|Γ1| #|Δ| t1 = rlift #|Γ1| #|Δ| t2 : rlift #|Γ1| #|Δ| A
 
+with wf_mix {Σ Γ Γ1 Γ2 Γm} (h : wf Σ Γ) {struct h} :
+  ismix Σ Γ Γ1 Γ2 Γm ->
+  wf Σ (Γ ,,, Γm)
+
 with wf_llift {Σ Γ Γ1 Γ2 Γm Δ} (h : wf Σ (Γ ,,, Γ1 ,,, Δ)) {struct h} :
   ismix Σ Γ Γ1 Γ2 Γm ->
   wf Σ (Γ ,,, Γm ,,, llift_context #|Γ1| Δ)
@@ -489,6 +493,20 @@ Proof.
 
   (* cong_rlift *)
   - cheat.
+
+  (* wf_mix *)
+  - { intro hm. induction hm.
+      - cbn. assumption.
+      - cbn. econstructor.
+        + assumption.
+        + eapply type_Pack with (s := s).
+          * (* Problem: We can't use type_llift because t isn't structurally
+               smaller.
+               How should we proceed?
+             *)
+            cheat.
+          * cheat.
+    }
 
   (* wf_llift *)
   - (* { intro hm. induction hm. *)

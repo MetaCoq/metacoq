@@ -439,6 +439,16 @@ Proof.
     apply IHΔ. assumption.
 Defined.
 
+Fact nil_eq_cat :
+  forall {Δ Γ},
+    [] = Γ ,,, Δ ->
+    ([] = Γ) * ([] = Δ).
+Proof.
+  intro Δ ; destruct Δ ; intros Γ e.
+  - rewrite cat_nil in e. split ; easy.
+  - cbn in e. inversion e.
+Defined.
+
 Axiom cheating : forall {A}, A.
 Tactic Notation "cheat" := apply cheating.
 
@@ -488,20 +498,34 @@ Proof.
   - cheat.
 
   (* wf_llift' *)
-  - { destruct Δ.
-      - cbn. rewrite cat_nil in h.
-        intro hm. eapply wf_mix'.
-        + eapply inversion_wf_cat. eassumption.
-        + eassumption.
-      - cbn. intro hm. dependent destruction h.
-        econstructor.
-        + (* eapply wf_llift' ; eassumption. *)
-          (* It's really annoying because it is indeed smaller *)
-          cheat.
-        + (* eapply type_llift' with (A := sSort s0) ; eassumption. *)
-          (* Same here. *)
-          cheat.
-      Unshelve. auto.
+  - { dependent destruction h.
+      - destruct Δ.
+        + cbn. rewrite cat_nil in x. destruct (nil_eq_cat x) as [e e1].
+          subst. intro hm.
+          dependent destruction hm. constructor.
+        + cbn in x. inversion x.
+      - destruct Δ.
+        + cbn. rewrite cat_nil in x.
+          intro hm. eapply wf_mix' ; [| eassumption ].
+          destruct Γ1.
+          * rewrite cat_nil in x. subst. econstructor ; eassumption.
+          * cbn in x. inversion x. subst.
+            eapply inversion_wf_cat. eassumption.
+        + cbn. cbn in x. inversion x. subst.
+          intro hm. econstructor.
+          * eapply wf_llift' ; eassumption.
+          * eapply type_llift' with (A := sSort s) ; eassumption.
+
+      (* BELOW is how it should have looked! *)
+      (* destruct Δ. *)
+      (* - cbn. rewrite cat_nil in h. *)
+      (*   intro hm. eapply wf_mix'. *)
+      (*   + eapply inversion_wf_cat. eassumption. *)
+      (*   + eassumption. *)
+      (* - cbn. intro hm. dependent destruction h. *)
+      (*   econstructor. *)
+      (*   + eapply wf_llift' ; eassumption. *)
+      (*   + eapply type_llift' with (A := sSort s0) ; eassumption. *)
     }
 
   (* wf_rlift' *)

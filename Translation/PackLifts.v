@@ -509,7 +509,22 @@ Proof.
     }
 
   (* wf_llift *)
-  - (* { intro hm. induction hm. *)
+  - { dependent destruction h.
+      - intro hm. destruct Γ ; destruct Γ1 ; destruct Δ ; try inversion x.
+        dependent destruction hm. cbn. constructor.
+      - intro hm. destruct Δ.
+        + cbn. generalize dependent x. induction hm ; intro x.
+          * cbn. destruct Γ ; inversion x. subst. econstructor ; eassumption.
+          * cbn. econstructor.
+            -- apply IHhm. cheat.
+            -- eapply type_Pack with (s := s).
+               ++ (* This time I might have enoguh to conclude on A1, but not on
+                     A2 *)
+                  cheat.
+               ++ cheat.
+        + cheat.
+    }
+    (* { intro hm. induction hm. *)
     (*   - cbn. rewrite llift_context0. assumption. *)
     (*   - cbn. destruct Δ. *)
     (*     + cbn. econstructor. *)

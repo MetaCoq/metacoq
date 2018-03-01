@@ -5,14 +5,15 @@ From Template Require Import Ast utils LiftSubst Typing.
 From Translation Require Import SAst SLiftSubst SCommon XTyping ITyping.
 
 (* In order to do things properly we need to extend the context heterogenously,
-   this is done by extending the context with triples
+   this is done by extending the context with packed triples
    (x : A, y : B, e : heq A x B y).
+   We call Γm the mix of Γ1 and Γ2.
    We also need to define correspond lifts.
 
    If Γ, Γ1, Δ |- t : T then
-   mix Γ Γ1 Γ2, Δ |- llift #|Γ1| #|Δ| t : llift #|Γ1| #|Δ| T
+   Γ, Γm, Δ↑ |- llift #|Γm| #|Δ| t : llift #|Γm| #|Δ| T
    If Γ, Γ2, Δ |- t : T then
-   mix Γ Γ1 Γ2, Δ |- rlift #|Γ1| #|Δ| t : rlift #|Γ1| #|Δ| T
+   Γ, Γm, Δ↑ |- rlift #|Γm| #|Δ| t : rlift #|Γm| #|Δ| T
  *)
 
 Fixpoint llift γ δ (t:sterm)  : sterm :=
@@ -132,70 +133,48 @@ Inductive ismix Σ Γ : forall (Γ1 Γ2 Γm : scontext), Type :=
     ismix Σ Γ
           (Γ1 ,, svass n1 A1)
           (Γ2 ,, svass n2 A2)
-          (Γm ,, svass nm (sPack (llift0 #|Γ1| A1)
-                                 (rlift0 #|Γ1| A2)))
+          (Γm ,, svass nm (sPack (llift0 #|Γm| A1)
+                                 (rlift0 #|Γm| A2)))
 .
 
-(* Really we ask that the context have the same size *)
-Fixpoint mix (Γ Γ1 Γ2 : scontext) : scontext :=
-  match Γ1, Γ2 with
-  | A :: Γ1, B :: Γ2 =>
-    (mix Γ Γ1 Γ2) ,, svass (sdecl_name A)
-                           (sPack (llift0 #|Γ1| (sdecl_type A))
-                                  (rlift0 #|Γ1| (sdecl_type B)))
-  | _,_ => Γ
-  end.
-
-(* We define an alternate version of mix that is probably the one we should have
-   used from the start. This one will make easier use of safe_nth lemmata.
- *)
-Fixpoint mix' (Γ1 Γ2 : scontext) : scontext :=
-  match Γ1, Γ2 with
-  | A :: Γ1, B :: Γ2 =>
-    (mix' Γ1 Γ2) ,, svass (sdecl_name A)
-                          (sPack (llift0 #|Γ1| (sdecl_type A))
-                                 (rlift0 #|Γ1| (sdecl_type B)))
-  | _,_ => []
-  end.
-
-Fact mix_mix' :
-  forall {Γ Γ1 Γ2},
-    mix Γ Γ1 Γ2 = Γ ,,, mix' Γ1 Γ2.
+Fact mix_length1 :
+  forall {Σ Γ Γ1 Γ2 Γm},
+    ismix Σ Γ Γ1 Γ2 Γm ->
+    #|Γm| = #|Γ1|.
 Proof.
-  intros Γ Γ1.
-  induction Γ1 ; intro Γ2.
+  intros Σ Γ Γ1 Γ2 Γm hm.
+  dependent induction hm.
   - cbn. reflexivity.
-  - destruct Γ2.
-    + cbn. reflexivity.
-    + cbn. rewrite IHΓ1. reflexivity.
+  - cbn. f_equal. assumption.
 Defined.
 
-Fact mix'_length :
-  forall {Γ1 Γ2},
-    #|Γ1| = #|Γ2| ->
-    #|mix' Γ1 Γ2| = #|Γ1|.
+Fact mix_length2 :
+  forall {Σ Γ Γ1 Γ2 Γm},
+    ismix Σ Γ Γ1 Γ2 Γm ->
+    #|Γm| = #|Γ2|.
 Proof.
-  intro Γ1. induction Γ1 ; intros Γ2 e.
+  intros Σ Γ Γ1 Γ2 Γm hm.
+  dependent induction hm.
   - cbn. reflexivity.
-  - destruct Γ2.
-    + cbn in *. easy.
-    + cbn. f_equal. easy.
+  - cbn. f_equal. assumption.
 Defined.
 
-Fact safe_nth_mix' :
-  forall {Γ1 Γ2 : scontext} {n isdecl isdecl1 isdecl2},
-    #|Γ1| = #|Γ2| ->
-    sdecl_type (safe_nth (mix' Γ1 Γ2) (exist _ n isdecl)) =
-    sPack (llift0 (#|Γ1| - S n) (sdecl_type (safe_nth Γ1 (exist _ n isdecl1))))
-          (rlift0 (#|Γ1| - S n) (sdecl_type (safe_nth Γ2 (exist _ n isdecl2)))).
+Fact safe_nth_mix :
+  forall {Σ} {Γ Γ1 Γ2 Γm : scontext},
+    ismix Σ Γ Γ1 Γ2 Γm ->
+    forall {n isdecl isdecl1 isdecl2},
+      sdecl_type (safe_nth Γm (exist _ n isdecl)) =
+      sPack (llift0 (#|Γm| - S n)
+                    (sdecl_type (safe_nth Γ1 (exist _ n isdecl1))))
+            (rlift0 (#|Γm| - S n)
+                    (sdecl_type (safe_nth Γ2 (exist _ n isdecl2)))).
 Proof.
-  intro Γ1. induction Γ1.
+  intros Σ Γ Γ1 Γ2 Γm hm.
+  dependent induction hm.
   - cbn. easy.
-  - intro Γ2. destruct Γ2.
-    + cbn. easy.
-    + intro n. destruct n ; intros isdecl isdecl1 isdecl2 e.
-      * cbn. replace (#|Γ1| - 0) with #|Γ1| by omega. reflexivity.
-      * cbn. cbn in e. erewrite IHΓ1 by omega. reflexivity.
+  - intro n. destruct n ; intros isdecl isdecl1 isdecl2.
+    + cbn. replace (#|Γm| - 0) with #|Γm| by omega. reflexivity.
+    + cbn. erewrite IHhm. reflexivity.
 Defined.
 
 Lemma llift00 :
@@ -355,16 +334,16 @@ Inductive ismix' Σ Γ : forall (Γ1 Γ2 Γm : scontext), Type :=
 | mixnil' : ismix' Σ Γ [] [] []
 | mixsnoc' Γ1 Γ2 Γm s A1 A2 n1 n2 nm :
     ismix' Σ Γ Γ1 Γ2 Γm ->
-    Σ ;;; Γ ,,, Γm |-i llift0 #|Γ1| A1 : sSort s ->
-    Σ ;;; Γ ,,, Γm |-i rlift0 #|Γ1|A2 : sSort s ->
+    Σ ;;; Γ ,,, Γm |-i llift0 #|Γm| A1 : sSort s ->
+    Σ ;;; Γ ,,, Γm |-i rlift0 #|Γm|A2 : sSort s ->
     ismix' Σ Γ
           (Γ1 ,, svass n1 A1)
           (Γ2 ,, svass n2 A2)
-          (Γm ,, svass nm (sPack (llift0 #|Γ1| A1)
-                                 (rlift0 #|Γ1| A2)))
+          (Γm ,, svass nm (sPack (llift0 #|Γm| A1)
+                                 (rlift0 #|Γm| A2)))
 .
 
-Lemma wf_mix' {Σ Γ Γ1 Γ2 Γm} (h : wf Σ Γ) :
+Lemma wf_mix {Σ Γ Γ1 Γ2 Γm} (h : wf Σ Γ) :
   ismix' Σ Γ Γ1 Γ2 Γm ->
   wf Σ (Γ ,,, Γm).
 Proof.
@@ -402,13 +381,13 @@ Proof.
 Admitted.
 
 Fact safe_nth_llift :
-  forall {Δ Γ1 : scontext} {n is1 is2},
-    sdecl_type (safe_nth (llift_context #|Γ1| Δ) (exist _ n is1)) =
-    llift #|Γ1| (#|Δ| - S n) (sdecl_type (safe_nth Δ (exist _ n is2))).
+  forall {Δ Γm : scontext} {n is1 is2},
+    sdecl_type (safe_nth (llift_context #|Γm| Δ) (exist _ n is1)) =
+    llift #|Γm| (#|Δ| - S n) (sdecl_type (safe_nth Δ (exist _ n is2))).
 Proof.
   intro Δ. induction Δ.
   - cbn. easy.
-  - intro Γ1. destruct n ; intros is1 is2.
+  - intro Γm. destruct n ; intros is1 is2.
     + cbn. replace (#|Δ| - 0) with #|Δ| by omega. reflexivity.
     + cbn. erewrite IHΔ. reflexivity.
 Defined.
@@ -455,14 +434,14 @@ Ltac lh h :=
         forall (Σ : global_context) (Γ Γ1 Γ2 Γm Δ : scontext) (t A : sterm),
           Σ;;; Γ ,,, Γ1 ,,, Δ |-i t : A ->
           ismix' Σ Γ Γ1 Γ2 Γm ->
-          Σ;;; Γ ,,, Γm ,,, llift_context #|Γ1| Δ
-          |-i llift #|Γ1| #|Δ| t : llift #|Γ1| #|Δ| A,
+          Σ;;; Γ ,,, Γm ,,, llift_context #|Γm| Δ
+          |-i llift #|Γm| #|Δ| t : llift #|Γm| #|Δ| A,
       cong_llift' :
         forall (Σ : global_context) (Γ Γ1 Γ2 Γm Δ : scontext) (t1 t2 A : sterm),
           Σ;;; Γ ,,, Γ1 ,,, Δ |-i t1 = t2 : A ->
           ismix' Σ Γ Γ1 Γ2 Γm ->
-          Σ;;; Γ ,,, Γm ,,, llift_context #|Γ1| Δ |-i llift #|Γ1| #|Δ| t1
-          = llift #|Γ1| #|Δ| t2 : llift #|Γ1| #|Δ| A
+          Σ;;; Γ ,,, Γm ,,, llift_context #|Γm| Δ |-i llift #|Γm| #|Δ| t1
+          = llift #|Γm| #|Δ| t2 : llift #|Γm| #|Δ| A
     |- _ ] =>
     lazymatch type of h with
     | _ ;;; ?Γ' ,,, ?Γ1' ,,, ?Δ' |-i _ : ?T' =>
@@ -529,14 +508,14 @@ Ltac rh h :=
         forall (Σ : global_context) (Γ Γ1 Γ2 Γm Δ : scontext) (t A : sterm),
           Σ;;; Γ ,,, Γ2 ,,, Δ |-i t : A ->
           ismix' Σ Γ Γ1 Γ2 Γm ->
-          Σ;;; Γ ,,, Γm ,,, rlift_context #|Γ1| Δ
-          |-i rlift #|Γ1| #|Δ| t : rlift #|Γ1| #|Δ| A,
+          Σ;;; Γ ,,, Γm ,,, rlift_context #|Γm| Δ
+          |-i rlift #|Γm| #|Δ| t : rlift #|Γm| #|Δ| A,
       cong_rlift' :
         forall (Σ : global_context) (Γ Γ1 Γ2 Γm Δ : scontext) (t1 t2 A : sterm),
           Σ;;; Γ ,,, Γ2 ,,, Δ |-i t1 = t2 : A ->
           ismix' Σ Γ Γ1 Γ2 Γm ->
-          Σ;;; Γ ,,, Γm ,,, rlift_context #|Γ1| Δ |-i rlift #|Γ1| #|Δ| t1
-          = rlift #|Γ1| #|Δ| t2 : rlift #|Γ1| #|Δ| A
+          Σ;;; Γ ,,, Γm ,,, rlift_context #|Γm| Δ |-i rlift #|Γm| #|Δ| t1
+          = rlift #|Γm| #|Δ| t2 : rlift #|Γm| #|Δ| A
     |- _ ] =>
     lazymatch type of h with
     | _ ;;; ?Γ' ,,, ?Γ2' ,,, ?Δ' |-i _ : ?T' =>
@@ -611,41 +590,37 @@ Ltac emh :=
 Axiom cheating : forall {A}, A.
 Tactic Notation "cheat" := apply cheating.
 
-(* TODO Replace #|Γ1| by #|Γm| for enhanced symmetry.
-   Furthermore, mix and mix' should go away.
- *)
-
 Fixpoint type_llift' {Σ Γ Γ1 Γ2 Γm Δ t A}
   (h : Σ ;;; Γ ,,, Γ1 ,,, Δ |-i t : A) {struct h} :
   ismix' Σ Γ Γ1 Γ2 Γm ->
-  Σ ;;; Γ ,,, Γm ,,, llift_context #|Γ1| Δ
-  |-i llift #|Γ1| #|Δ| t : llift #|Γ1| #|Δ| A
+  Σ ;;; Γ ,,, Γm ,,, llift_context #|Γm| Δ
+  |-i llift #|Γm| #|Δ| t : llift #|Γm| #|Δ| A
 
 with cong_llift' {Σ Γ Γ1 Γ2 Γm Δ t1 t2 A}
   (h : Σ ;;; Γ ,,, Γ1 ,,, Δ |-i t1 = t2 : A) {struct h} :
   ismix' Σ Γ Γ1 Γ2 Γm ->
-  Σ ;;; Γ ,,, Γm ,,, llift_context #|Γ1| Δ
-  |-i llift #|Γ1| #|Δ| t1 = llift #|Γ1| #|Δ| t2 : llift #|Γ1| #|Δ| A
+  Σ ;;; Γ ,,, Γm ,,, llift_context #|Γm| Δ
+  |-i llift #|Γm| #|Δ| t1 = llift #|Γm| #|Δ| t2 : llift #|Γm| #|Δ| A
 
 with type_rlift' {Σ Γ Γ1 Γ2 Γm Δ t A}
   (h : Σ ;;; Γ ,,, Γ2 ,,, Δ |-i t : A) {struct h} :
   ismix' Σ Γ Γ1 Γ2 Γm ->
-  Σ ;;; Γ ,,, Γm ,,, rlift_context #|Γ1| Δ
-  |-i rlift #|Γ1| #|Δ| t : rlift #|Γ1| #|Δ| A
+  Σ ;;; Γ ,,, Γm ,,, rlift_context #|Γm| Δ
+  |-i rlift #|Γm| #|Δ| t : rlift #|Γm| #|Δ| A
 
 with cong_rlift' {Σ Γ Γ1 Γ2 Γm Δ t1 t2 A}
   (h : Σ ;;; Γ ,,, Γ2 ,,, Δ |-i t1 = t2 : A) {struct h} :
   ismix' Σ Γ Γ1 Γ2 Γm ->
-  Σ ;;; Γ ,,, Γm ,,, rlift_context #|Γ1| Δ
-  |-i rlift #|Γ1| #|Δ| t1 = rlift #|Γ1| #|Δ| t2 : rlift #|Γ1| #|Δ| A
+  Σ ;;; Γ ,,, Γm ,,, rlift_context #|Γm| Δ
+  |-i rlift #|Γm| #|Δ| t1 = rlift #|Γm| #|Δ| t2 : rlift #|Γm| #|Δ| A
 
 with wf_llift' {Σ Γ Γ1 Γ2 Γm Δ} (h : wf Σ (Γ ,,, Γ1 ,,, Δ)) {struct h} :
   ismix' Σ Γ Γ1 Γ2 Γm ->
-  wf Σ (Γ ,,, Γm ,,, llift_context #|Γ1| Δ)
+  wf Σ (Γ ,,, Γm ,,, llift_context #|Γm| Δ)
 
 with wf_rlift' {Σ Γ Γ1 Γ2 Γm Δ} (h : wf Σ (Γ ,,, Γ2 ,,, Δ)) {struct h} :
   ismix' Σ Γ Γ1 Γ2 Γm ->
-  wf Σ (Γ ,,, Γm ,,, rlift_context #|Γ1| Δ)
+  wf Σ (Γ ,,, Γm ,,, rlift_context #|Γm| Δ)
 .
 Proof.
   (* type_llift' *)
@@ -694,7 +669,7 @@ Proof.
       - cbn. eapply type_HeqSym ; emh.
       - cbn.
         eapply @type_HeqTrans
-          with (B := llift #|Γ1| #|Δ| B) (b := llift #|Γ1| #|Δ| b) ; emh.
+          with (B := llift #|Γm| #|Δ| B) (b := llift #|Γm| #|Δ| b) ; emh.
       - cbn. eapply type_HeqTransport ; emh.
       - cbn. eapply type_CongProd ; emh.
         cbn. f_equal.
@@ -709,8 +684,8 @@ Proof.
       - cbn. eapply type_EqToHeq ; emh.
       - cbn. eapply type_HeqTypeEq ; emh.
       - cbn. eapply type_Pack ; emh.
-      - cbn. eapply @type_ProjT1 with (A2 := llift #|Γ1| #|Δ| A2) ; emh.
-      - cbn. eapply @type_ProjT2 with (A1 := llift #|Γ1| #|Δ| A1) ; emh.
+      - cbn. eapply @type_ProjT1 with (A2 := llift #|Γm| #|Δ| A2) ; emh.
+      - cbn. eapply @type_ProjT2 with (A1 := llift #|Γm| #|Δ| A1) ; emh.
       - cbn. eapply type_ProjTe ; emh.
       - eapply type_conv ; emh.
     }
@@ -738,7 +713,7 @@ Proof.
       - cbn. eapply cong_HeqSym ; emh.
       - cbn.
         eapply cong_HeqTrans
-          with (B := llift #|Γ1| #|Δ| B) (b := llift #|Γ1| #|Δ| b) ; emh.
+          with (B := llift #|Γm| #|Δ| B) (b := llift #|Γm| #|Δ| b) ; emh.
       - cbn. eapply cong_HeqTransport ; emh.
       - cbn. eapply cong_CongProd ; emh.
         cbn. f_equal.
@@ -752,8 +727,8 @@ Proof.
       - cbn. eapply cong_CongRefl ; emh.
       - cbn. eapply cong_EqToHeq ; emh.
       - cbn. eapply cong_HeqTypeEq ; emh.
-      - cbn. eapply cong_ProjT1 with (A2 := llift #|Γ1| #|Δ| A2) ; emh.
-      - cbn. eapply cong_ProjT2 with (A1 := llift #|Γ1| #|Δ| A1) ; emh.
+      - cbn. eapply cong_ProjT1 with (A2 := llift #|Γm| #|Δ| A2) ; emh.
+      - cbn. eapply cong_ProjT2 with (A1 := llift #|Γm| #|Δ| A1) ; emh.
       - cbn. eapply cong_ProjTe ; emh.
       - cbn. eapply eq_HeqToEqRefl ; emh.
     }
@@ -775,7 +750,7 @@ Proof.
       - cbn. eapply type_HeqSym ; emh.
       - cbn.
         eapply @type_HeqTrans
-          with (B := rlift #|Γ1| #|Δ| B) (b := rlift #|Γ1| #|Δ| b) ; emh.
+          with (B := rlift #|Γm| #|Δ| B) (b := rlift #|Γm| #|Δ| b) ; emh.
       - cbn. eapply type_HeqTransport ; emh.
       - cbn. eapply type_CongProd ; emh.
         cbn. f_equal.
@@ -790,8 +765,8 @@ Proof.
       - cbn. eapply type_EqToHeq ; emh.
       - cbn. eapply type_HeqTypeEq ; emh.
       - cbn. eapply type_Pack ; emh.
-      - cbn. eapply @type_ProjT1 with (A2 := rlift #|Γ1| #|Δ| A2) ; emh.
-      - cbn. eapply @type_ProjT2 with (A1 := rlift #|Γ1| #|Δ| A1) ; emh.
+      - cbn. eapply @type_ProjT1 with (A2 := rlift #|Γm| #|Δ| A2) ; emh.
+      - cbn. eapply @type_ProjT2 with (A1 := rlift #|Γm| #|Δ| A1) ; emh.
       - cbn. eapply type_ProjTe ; emh.
       - eapply type_conv ; emh.
     }
@@ -819,7 +794,7 @@ Proof.
       - cbn. eapply cong_HeqSym ; emh.
       - cbn.
         eapply cong_HeqTrans
-          with (B := rlift #|Γ1| #|Δ| B) (b := rlift #|Γ1| #|Δ| b) ; emh.
+          with (B := rlift #|Γm| #|Δ| B) (b := rlift #|Γm| #|Δ| b) ; emh.
       - cbn. eapply cong_HeqTransport ; emh.
       - cbn. eapply cong_CongProd ; emh.
         cbn. f_equal.
@@ -833,8 +808,8 @@ Proof.
       - cbn. eapply cong_CongRefl ; emh.
       - cbn. eapply cong_EqToHeq ; emh.
       - cbn. eapply cong_HeqTypeEq ; emh.
-      - cbn. eapply cong_ProjT1 with (A2 := rlift #|Γ1| #|Δ| A2) ; emh.
-      - cbn. eapply cong_ProjT2 with (A1 := rlift #|Γ1| #|Δ| A1) ; emh.
+      - cbn. eapply cong_ProjT1 with (A2 := rlift #|Γm| #|Δ| A2) ; emh.
+      - cbn. eapply cong_ProjT2 with (A1 := rlift #|Γm| #|Δ| A1) ; emh.
       - cbn. eapply cong_ProjTe ; emh.
       - cbn. eapply eq_HeqToEqRefl ; emh.
     }
@@ -848,7 +823,7 @@ Proof.
         + cbn in x. inversion x.
       - destruct Δ.
         + cbn. rewrite cat_nil in x.
-          intro hm. eapply wf_mix' ; [| eassumption ].
+          intro hm. eapply wf_mix ; [| eassumption ].
           destruct Γ1.
           * rewrite cat_nil in x. subst. econstructor ; eassumption.
           * cbn in x. inversion x. subst.
@@ -861,7 +836,7 @@ Proof.
       (* BELOW is how it should have looked! *)
       (* destruct Δ. *)
       (* - cbn. rewrite cat_nil in h. *)
-      (*   intro hm. eapply wf_mix'. *)
+      (*   intro hm. eapply wf_mix. *)
       (*   + eapply inversion_wf_cat. eassumption. *)
       (*   + eassumption. *)
       (* - cbn. intro hm. dependent destruction h. *)
@@ -879,7 +854,7 @@ Proof.
         + cbn in x. inversion x.
       - destruct Δ.
         + cbn. rewrite cat_nil in x.
-          intro hm. eapply wf_mix' ; [| eassumption ].
+          intro hm. eapply wf_mix ; [| eassumption ].
           destruct Γ2.
           * rewrite cat_nil in x. subst. econstructor ; eassumption.
           * cbn in x. inversion x. subst.
@@ -891,8 +866,8 @@ Proof.
     }
 
   Unshelve.
-  all: cbn ; try rewrite !mix_mix' ; try rewrite !length_cat ;
-       try rewrite !llift_context_length ; try rewrite !mix'_length ;
+  all: cbn ; try rewrite !length_cat ;
+       try rewrite !llift_context_length ;
        try rewrite !length_cat in isdecl ;
        try omega.
 Defined.
@@ -911,51 +886,50 @@ Proof.
     + eapply @type_rlift' with (A := sSort s) (Δ := []) ; eassumption.
 Defined.
 
-(* TODO When they are ready, the "future_" prefixes should go away. *)
-Corollary future_type_llift :
+Corollary type_llift :
   forall {Σ Γ Γ1 Γ2 Γm Δ t A},
     Σ ;;; Γ ,,, Γ1 ,,, Δ |-i t : A ->
     ismix Σ Γ Γ1 Γ2 Γm ->
-    Σ ;;; Γ ,,, Γm ,,, llift_context #|Γ1| Δ
-    |-i llift #|Γ1| #|Δ| t : llift #|Γ1| #|Δ| A.
+    Σ ;;; Γ ,,, Γm ,,, llift_context #|Γm| Δ
+    |-i llift #|Γm| #|Δ| t : llift #|Γm| #|Δ| A.
 Proof.
   intros Σ Γ Γ1 Γ2 Γm Δ t A ht hm.
   eapply type_llift'.
-  - assumption.
+  - eassumption.
   - eapply ismix_ismix'. eassumption.
 Defined.
 
-Corollary future_cong_llift' :
+Corollary cong_llift :
   forall {Σ Γ Γ1 Γ2 Γm Δ t1 t2 A},
     Σ ;;; Γ ,,, Γ1 ,,, Δ |-i t1 = t2 : A ->
     ismix Σ Γ Γ1 Γ2 Γm ->
-    Σ ;;; Γ ,,, Γm ,,, llift_context #|Γ1| Δ
-    |-i llift #|Γ1| #|Δ| t1 = llift #|Γ1| #|Δ| t2 : llift #|Γ1| #|Δ| A.
+    Σ ;;; Γ ,,, Γm ,,, llift_context #|Γm| Δ
+    |-i llift #|Γm| #|Δ| t1 = llift #|Γm| #|Δ| t2 : llift #|Γm| #|Δ| A.
 Proof.
   intros Σ Γ Γ1 Γ2 Γm Δ t1 t2 A ht hm.
   eapply cong_llift'.
-  - assumption.
+  - eassumption.
   - eapply ismix_ismix'. eassumption.
 Defined.
 
-Corollary future_wf_llift' :
+Corollary wf_llift :
   forall {Σ Γ Γ1 Γ2 Γm Δ},
     wf Σ (Γ ,,, Γ1 ,,, Δ) ->
     ismix Σ Γ Γ1 Γ2 Γm ->
-    wf Σ (Γ ,,, Γm ,,, llift_context #|Γ1| Δ).
+    wf Σ (Γ ,,, Γm ,,, llift_context #|Γm| Δ).
 Proof.
   intros Σ Γ Γ1 Γ2 Γm Δ hw hm.
   eapply wf_llift'.
-  - assumption.
+  - eassumption.
   - eapply ismix_ismix'. eassumption.
 Defined.
 
-Corollary future_type_rlift :
+Corollary type_rlift :
   forall {Σ Γ Γ1 Γ2 Γm Δ t A},
     Σ ;;; Γ ,,, Γ2 ,,, Δ |-i t : A ->
     ismix Σ Γ Γ1 Γ2 Γm ->
-    Σ ;;; Γ ,,, Γm ,,, rlift_context #|Γ1| Δ
-    |-i rlift #|Γ1| #|Δ| t : rlift #|Γ1| #|Δ| A.
+    Σ ;;; Γ ,,, Γm ,,, rlift_context #|Γm| Δ
+    |-i rlift #|Γm| #|Δ| t : rlift #|Γm| #|Δ| A.
 Proof.
   intros Σ Γ Γ1 Γ2 Γm Δ t A ht hm.
   eapply type_rlift'.
@@ -963,12 +937,12 @@ Proof.
   - eapply ismix_ismix'. eassumption.
 Defined.
 
-Corollary future_cong_rlift' :
+Corollary cong_rlift :
   forall {Σ Γ Γ1 Γ2 Γm Δ t1 t2 A},
     Σ ;;; Γ ,,, Γ2 ,,, Δ |-i t1 = t2 : A ->
     ismix Σ Γ Γ1 Γ2 Γm ->
-    Σ ;;; Γ ,,, Γm ,,, rlift_context #|Γ1| Δ
-    |-i rlift #|Γ1| #|Δ| t1 = rlift #|Γ1| #|Δ| t2 : rlift #|Γ1| #|Δ| A.
+    Σ ;;; Γ ,,, Γm ,,, rlift_context #|Γm| Δ
+    |-i rlift #|Γm| #|Δ| t1 = rlift #|Γm| #|Δ| t2 : rlift #|Γm| #|Δ| A.
 Proof.
   intros Σ Γ Γ1 Γ2 Γm Δ t1 t2 A ht hm.
   eapply cong_rlift'.
@@ -976,11 +950,11 @@ Proof.
   - eapply ismix_ismix'. eassumption.
 Defined.
 
-Corollary future_wf_rlift' :
+Corollary wf_rlift :
   forall {Σ Γ Γ1 Γ2 Γm Δ},
     wf Σ (Γ ,,, Γ2 ,,, Δ) ->
     ismix Σ Γ Γ1 Γ2 Γm ->
-    wf Σ (Γ ,,, Γm ,,, rlift_context #|Γ1| Δ).
+    wf Σ (Γ ,,, Γm ,,, rlift_context #|Γm| Δ).
 Proof.
   intros Σ Γ Γ1 Γ2 Γm Δ hw hm.
   eapply wf_rlift'.
@@ -988,87 +962,80 @@ Proof.
   - eapply ismix_ismix'. eassumption.
 Defined.
 
-Lemma type_llift {Σ Γ Γ1 Γ2 Δ t A} (h : Σ ;;; Γ ,,, Γ1 ,,, Δ |-i t : A)
-         (e : #|Γ1| = #|Γ2|) :
-  Σ ;;; mix Γ Γ1 Γ2 ,,, Δ |-i llift #|Γ1| #|Δ| t : llift #|Γ1| #|Δ| A.
-Admitted.
+(* Simpler to use corollaries *)
 
 Corollary type_llift0 :
-  forall {Σ Γ Γ1 Γ2 t A},
+  forall {Σ Γ Γ1 Γ2 Γm t A},
     Σ ;;; Γ ,,, Γ1 |-i t : A ->
-    #|Γ1| = #|Γ2| ->
-    wf Σ (Γ ,,, Γ2) ->
-    Σ ;;; mix Γ Γ1 Γ2 |-i llift0 #|Γ1| t : llift0 #|Γ1| A.
-(* Proof. *)
-(*   intros Σ Γ Γ1 Γ2 t A ? ? ?. *)
-(*   eapply @type_llift with (Δ := nil) ; assumption. *)
-(* Defined. *)
-Admitted.
+    ismix Σ Γ Γ1 Γ2 Γm ->
+    Σ ;;; Γ ,,, Γm |-i llift0 #|Γm| t : llift0 #|Γm| A.
+Proof.
+  intros Σ Γ Γ1 Γ2 Γm t A ? ?.
+  eapply @type_llift with (Δ := nil) ; eassumption.
+Defined.
 
 Corollary type_llift1 :
-  forall {Σ Γ Γ1 Γ2 t A nx B},
+  forall {Σ Γ Γ1 Γ2 Γm t A nx B},
     Σ ;;; (Γ ,,, Γ1) ,, svass nx B |-i t : A ->
-    #|Γ1| = #|Γ2| ->
-    Σ ;;; mix Γ Γ1 Γ2 ,, svass nx (llift0 #|Γ1| B)
-    |-i llift #|Γ1| 1 t : llift #|Γ1| 1 A.
-Admitted.
+    ismix Σ Γ Γ1 Γ2 Γm ->
+    Σ ;;; Γ ,,, Γm ,, svass nx (llift0 #|Γm| B)
+    |-i llift #|Γm| 1 t : llift #|Γm| 1 A.
+Proof.
+  intros Σ Γ Γ1 Γ2 Γm t A nx B ht hm.
+  eapply @type_llift with (Δ := [ svass nx B ]).
+  - exact ht.
+  - eassumption.
+Defined.
 
 Corollary cong_llift0 :
-  forall {Σ Γ Γ1 Γ2 t1 t2 A},
+  forall {Σ Γ Γ1 Γ2 Γm t1 t2 A},
     Σ ;;; Γ ,,, Γ1 |-i t1 = t2 : A ->
-    #|Γ1| = #|Γ2| ->
-    wf Σ (Γ ,,, Γ2) ->
-    Σ ;;; mix Γ Γ1 Γ2 |-i llift0 #|Γ1| t1 = llift0 #|Γ1| t2 : llift0 #|Γ1| A.
-(* Proof. *)
-(*   intros Σ Γ Γ1 Γ2 t1 t2 A ? ? ?. *)
-(*   eapply @cong_llift with (Δ := nil) ; assumption. *)
-(* Defined. *)
-Admitted.
+    ismix Σ Γ Γ1 Γ2 Γm ->
+    Σ ;;; Γ ,,, Γm |-i llift0 #|Γm| t1 = llift0 #|Γm| t2 : llift0 #|Γm| A.
+Proof.
+  intros Σ Γ Γ1 Γ2 Γm t1 t2 A ht hm.
+  eapply @cong_llift with (Δ := nil) ; eassumption.
+Defined.
+
+Corollary type_rlift0 :
+  forall {Σ Γ Γ1 Γ2 Γm t A},
+    Σ ;;; Γ ,,, Γ2 |-i t : A ->
+    ismix Σ Γ Γ1 Γ2 Γm ->
+    Σ ;;; Γ ,,, Γm |-i rlift0 #|Γm| t : rlift0 #|Γm| A.
+Proof.
+  intros Σ Γ Γ1 Γ2 Γm t A ? ?.
+  eapply @type_rlift with (Δ := nil) ; eassumption.
+Defined.
+
+Corollary type_rlift1 :
+  forall {Σ Γ Γ1 Γ2 Γm t A nx B},
+    Σ ;;; (Γ ,,, Γ2) ,, svass nx B |-i t : A ->
+    ismix Σ Γ Γ1 Γ2 Γm ->
+    Σ ;;; Γ ,,, Γm ,, svass nx (rlift0 #|Γm| B)
+    |-i rlift #|Γm| 1 t : rlift #|Γm| 1 A.
+Proof.
+  intros Σ Γ Γ1 Γ2 Γm t A nx B ht hm.
+  eapply @type_rlift with (Δ := [ svass nx B ]).
+  - exact ht.
+  - eassumption.
+Defined.
+
+Corollary cong_rlift0 :
+  forall {Σ Γ Γ1 Γ2 Γm t1 t2 A},
+    Σ ;;; Γ ,,, Γ2 |-i t1 = t2 : A ->
+    ismix Σ Γ Γ1 Γ2 Γm ->
+    Σ ;;; Γ ,,, Γm |-i rlift0 #|Γm| t1 = rlift0 #|Γm| t2 : rlift0 #|Γm| A.
+Proof.
+  intros Σ Γ Γ1 Γ2 Γm t1 t2 A ht hm.
+  eapply @cong_rlift with (Δ := nil) ; eassumption.
+Defined.
+
+(* More lemmata about exchange.
+   They should go above with the others.
+ *)
 
 Definition rlift_subst :
   forall (u t : sterm) (i j m : nat), rlift j (i+m) (u {m := t}) = (rlift j (S i+m) u) {m := rlift j i t}.
-Admitted.
-
-Lemma type_rlift {Σ Γ Γ1 Γ2 Δ t A} (h : Σ ;;; Γ ,,, Γ2 ,,, Δ |-i t : A)
-         (e : #|Γ1| = #|Γ2|) :
-  Σ ;;; mix Γ Γ1 Γ2 ,,, Δ |-i rlift #|Γ1| #|Δ| t : rlift #|Γ1| #|Δ| A.
-Admitted.
-
-Corollary type_rlift0 :
-  forall {Σ Γ Γ1 Γ2 t A},
-    Σ ;;; Γ ,,, Γ2 |-i t : A ->
-    #|Γ1| = #|Γ2| ->
-    Σ ;;; mix Γ Γ1 Γ2 |-i rlift0 #|Γ1| t : rlift0 #|Γ1| A.
-(* Proof. *)
-(*   intros Σ Γ Γ1 Γ2 t A ? ?. *)
-(*   eapply @type_rlift with (Δ := nil) ; assumption. *)
-(* Defined. *)
-Admitted.
-
-Corollary type_rlift1 :
-  forall {Σ Γ Γ1 Γ2 t A nx B},
-    Σ ;;; (Γ ,,, Γ2) ,, svass nx B |-i t : A ->
-    #|Γ1| = #|Γ2| ->
-    Σ ;;; mix Γ Γ1 Γ2 ,, svass nx (rlift0 #|Γ1| B)
-    |-i rlift #|Γ1| 1 t : rlift #|Γ1| 1 A.
-Admitted.
-
-(* This is wrong actually *)
-Lemma cong_rlift {Σ Γ Γ1 Γ2 Δ t1 t2 A} (h : Σ ;;; Γ ,,, Γ2 ,,, Δ |-i t1 = t2 : A)
-      (e : #|Γ1| = #|Γ2|) :
-  Σ ;;; mix Γ Γ1 Γ2 ,,, Δ
-  |-i rlift #|Γ1| #|Δ| t1 = rlift #|Γ1| #|Δ| t2 : rlift #|Γ1| #|Δ| A.
-Admitted.
-
-Corollary cong_rlift0 :
-  forall {Σ Γ Γ1 Γ2 t1 t2 A},
-    Σ ;;; Γ ,,, Γ2 |-i t1 = t2 : A ->
-    #|Γ1| = #|Γ2| ->
-    Σ ;;; mix Γ Γ1 Γ2 |-i rlift0 #|Γ1| t1 = rlift0 #|Γ1| t2 : rlift0 #|Γ1| A.
-(* Proof. *)
-(*   intros Σ Γ Γ1 Γ2 t1 t2 A ? ?. *)
-(*   eapply @cong_rlift with (Δ := nil) ; assumption. *)
-(* Defined. *)
 Admitted.
 
 Lemma llift_substProj :

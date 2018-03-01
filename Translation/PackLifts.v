@@ -480,7 +480,7 @@ with wf_llift' {Σ Γ Γ1 Γ2 Γm Δ} (h : wf Σ (Γ ,,, Γ1 ,,, Δ)) {struct h}
   ismix' Σ Γ Γ1 Γ2 Γm ->
   wf Σ (Γ ,,, Γm ,,, llift_context #|Γ1| Δ)
 
-with wf_rlift' {Σ Γ Γ1 Γ2 Γm Δ} (h : wf Σ (Γ ,,, Γ1 ,,, Δ)) {struct h} :
+with wf_rlift' {Σ Γ Γ1 Γ2 Γm Δ} (h : wf Σ (Γ ,,, Γ2 ,,, Δ)) {struct h} :
   ismix' Σ Γ Γ1 Γ2 Γm ->
   wf Σ (Γ ,,, Γm ,,, rlift_context #|Γ1| Δ)
 .
@@ -532,6 +532,96 @@ Proof.
   - cheat.
 Defined.
 
+Lemma ismix_ismix' :
+  forall {Σ Γ Γ1 Γ2 Γm},
+    ismix Σ Γ Γ1 Γ2 Γm ->
+    ismix' Σ Γ Γ1 Γ2 Γm.
+Proof.
+  intros Σ Γ Γ1 Γ2 Γm h.
+  dependent induction h.
+  - constructor.
+  - econstructor.
+    + assumption.
+    + eapply @type_llift' with (A := sSort s) (Δ := []) ; eassumption.
+    + eapply @type_rlift' with (A := sSort s) (Δ := []) ; eassumption.
+Defined.
+
+(* TODO When they are ready, the "future_" prefixes should go away. *)
+Corollary future_type_llift :
+  forall {Σ Γ Γ1 Γ2 Γm Δ t A},
+    Σ ;;; Γ ,,, Γ1 ,,, Δ |-i t : A ->
+    ismix Σ Γ Γ1 Γ2 Γm ->
+    Σ ;;; Γ ,,, Γm ,,, llift_context #|Γ1| Δ
+    |-i llift #|Γ1| #|Δ| t : llift #|Γ1| #|Δ| A.
+Proof.
+  intros Σ Γ Γ1 Γ2 Γm Δ t A ht hm.
+  eapply type_llift'.
+  - assumption.
+  - eapply ismix_ismix'. eassumption.
+Defined.
+
+Corollary future_cong_llift' :
+  forall {Σ Γ Γ1 Γ2 Γm Δ t1 t2 A},
+    Σ ;;; Γ ,,, Γ1 ,,, Δ |-i t1 = t2 : A ->
+    ismix Σ Γ Γ1 Γ2 Γm ->
+    Σ ;;; Γ ,,, Γm ,,, llift_context #|Γ1| Δ
+    |-i llift #|Γ1| #|Δ| t1 = llift #|Γ1| #|Δ| t2 : llift #|Γ1| #|Δ| A.
+Proof.
+  intros Σ Γ Γ1 Γ2 Γm Δ t1 t2 A ht hm.
+  eapply cong_llift'.
+  - assumption.
+  - eapply ismix_ismix'. eassumption.
+Defined.
+
+Corollary future_wf_llift' :
+  forall {Σ Γ Γ1 Γ2 Γm Δ},
+    wf Σ (Γ ,,, Γ1 ,,, Δ) ->
+    ismix Σ Γ Γ1 Γ2 Γm ->
+    wf Σ (Γ ,,, Γm ,,, llift_context #|Γ1| Δ).
+Proof.
+  intros Σ Γ Γ1 Γ2 Γm Δ hw hm.
+  eapply wf_llift'.
+  - assumption.
+  - eapply ismix_ismix'. eassumption.
+Defined.
+
+Corollary future_type_rlift :
+  forall {Σ Γ Γ1 Γ2 Γm Δ t A},
+    Σ ;;; Γ ,,, Γ2 ,,, Δ |-i t : A ->
+    ismix Σ Γ Γ1 Γ2 Γm ->
+    Σ ;;; Γ ,,, Γm ,,, rlift_context #|Γ1| Δ
+    |-i rlift #|Γ1| #|Δ| t : rlift #|Γ1| #|Δ| A.
+Proof.
+  intros Σ Γ Γ1 Γ2 Γm Δ t A ht hm.
+  eapply type_rlift'.
+  - eassumption.
+  - eapply ismix_ismix'. eassumption.
+Defined.
+
+Corollary future_cong_rlift' :
+  forall {Σ Γ Γ1 Γ2 Γm Δ t1 t2 A},
+    Σ ;;; Γ ,,, Γ2 ,,, Δ |-i t1 = t2 : A ->
+    ismix Σ Γ Γ1 Γ2 Γm ->
+    Σ ;;; Γ ,,, Γm ,,, rlift_context #|Γ1| Δ
+    |-i rlift #|Γ1| #|Δ| t1 = rlift #|Γ1| #|Δ| t2 : rlift #|Γ1| #|Δ| A.
+Proof.
+  intros Σ Γ Γ1 Γ2 Γm Δ t1 t2 A ht hm.
+  eapply cong_rlift'.
+  - eassumption.
+  - eapply ismix_ismix'. eassumption.
+Defined.
+
+Corollary future_wf_rlift' :
+  forall {Σ Γ Γ1 Γ2 Γm Δ},
+    wf Σ (Γ ,,, Γ2 ,,, Δ) ->
+    ismix Σ Γ Γ1 Γ2 Γm ->
+    wf Σ (Γ ,,, Γm ,,, rlift_context #|Γ1| Δ).
+Proof.
+  intros Σ Γ Γ1 Γ2 Γm Δ hw hm.
+  eapply wf_rlift'.
+  - eassumption.
+  - eapply ismix_ismix'. eassumption.
+Defined.
 
 (* Fixpoint type_llift {Σ Γ Γ1 Γ2 Γm Δ t A} *)
 (*   (h : Σ ;;; Γ ,,, Γ1 ,,, Δ |-i t : A) {struct h} : *)

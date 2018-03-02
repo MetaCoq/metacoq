@@ -412,6 +412,46 @@ Proof.
     + eapply type_Pack with (s := s) ; assumption.
 Defined.
 
+Fact mix'_length1 :
+  forall {Σ Γ Γ1 Γ2 Γm},
+    ismix' Σ Γ Γ1 Γ2 Γm ->
+    #|Γm| = #|Γ1|.
+Proof.
+  intros Σ Γ Γ1 Γ2 Γm hm.
+  dependent induction hm.
+  - cbn. reflexivity.
+  - cbn. f_equal. assumption.
+Defined.
+
+Fact mix'_length2 :
+  forall {Σ Γ Γ1 Γ2 Γm},
+    ismix' Σ Γ Γ1 Γ2 Γm ->
+    #|Γm| = #|Γ2|.
+Proof.
+  intros Σ Γ Γ1 Γ2 Γm hm.
+  dependent induction hm.
+  - cbn. reflexivity.
+  - cbn. f_equal. assumption.
+Defined.
+
+Fact safe_nth_mix' :
+  forall {Σ} {Γ Γ1 Γ2 Γm : scontext},
+    ismix' Σ Γ Γ1 Γ2 Γm ->
+    forall {n isdecl isdecl1 isdecl2},
+      sdecl_type (safe_nth Γm (exist _ n isdecl)) =
+      sPack (llift0 (#|Γm| - S n)
+                    (sdecl_type (safe_nth Γ1 (exist _ n isdecl1))))
+            (rlift0 (#|Γm| - S n)
+                    (sdecl_type (safe_nth Γ2 (exist _ n isdecl2)))).
+Proof.
+  intros Σ Γ Γ1 Γ2 Γm hm.
+  dependent induction hm.
+  - cbn. easy.
+  - intro n. destruct n ; intros isdecl isdecl1 isdecl2.
+    + cbn. replace (#|Γm| - 0) with #|Γm| by omega. reflexivity.
+    + cbn. erewrite IHhm. reflexivity.
+Defined.
+
 Definition llift_subst :
   forall (u t : sterm) (i j m : nat),
     llift j (i+m) (u {m := t}) = (llift j (S i+m) u) {m := llift j i t}.
@@ -751,30 +791,26 @@ Proof.
           eapply meta_conv.
           * eapply type_Rel. eapply wf_llift' ; eassumption.
           * erewrite safe_nth_lt. erewrite safe_nth_llift.
-            (* We need the right lemma. *)
-            cheat.
-        + (* case_eq (n <? #|Δ| + #|Γ1|) ; intro e1 ; bprop e1. *)
-          (* * rewrite mix_mix'. *)
-          (*   erewrite safe_nth_ge'. erewrite safe_nth_lt. *)
-          (*   eapply type_ProjT1'. *)
-          (*   eapply meta_conv. *)
-          (*   -- eapply type_Rel. rewrite <- mix_mix'. *)
-          (*      eapply wf_llift ; eassumption. *)
-          (*   -- erewrite safe_nth_ge'. erewrite safe_nth_lt. *)
-          (*      erewrite safe_nth_mix' by assumption. *)
-          (*      cbn. f_equal. *)
-          (*      (* rewrite lift_llift'. f_equal. *) *)
-          (*      (* We probably need another lemma again... *) *)
-          (*      cheat. *)
-          (* * rewrite mix_mix'. *)
-          (*   erewrite safe_nth_ge'. erewrite safe_nth_ge'. *)
-          (*   eapply meta_conv. *)
-          (*   -- eapply type_Rel. rewrite <- mix_mix'. *)
-          (*      eapply wf_llift ; eassumption. *)
-          (*   -- erewrite safe_nth_ge'. erewrite safe_nth_ge'. *)
-          (*      (* Another one perhaps? *) *)
-          (*      cheat. *)
-          cheat.
+            rewrite lift_llift3 by omega.
+            f_equal. omega.
+        + case_eq (n <? #|Δ| + #|Γm|) ; intro e1 ; bprop e1.
+          * erewrite safe_nth_ge'. erewrite safe_nth_lt.
+            eapply type_ProjT1'.
+            eapply meta_conv.
+            -- eapply type_Rel.
+               eapply wf_llift' ; eassumption.
+            -- erewrite safe_nth_ge'. erewrite safe_nth_lt.
+               erewrite safe_nth_mix' by eassumption.
+               cbn. f_equal.
+               (* We need another lemma *)
+               cheat.
+          * erewrite safe_nth_ge'. erewrite safe_nth_ge'.
+            eapply meta_conv.
+            -- eapply type_Rel.
+               eapply wf_llift' ; eassumption.
+            -- erewrite safe_nth_ge'. erewrite safe_nth_ge'.
+               (* Maybe a trickier one here. *)
+               cheat.
       - cbn. eapply type_Sort. eapply wf_llift' ; eassumption.
       - cbn. eapply type_Prod ; emh.
       - cbn. eapply type_Lambda ; emh.
@@ -986,7 +1022,9 @@ Proof.
     }
 
   Unshelve.
-  all: cbn ; try rewrite !length_cat ;
+  all: pose (mix'_length1 hm) ;
+       pose (mix'_length2 hm) ;
+       cbn ; try rewrite !length_cat ;
        try rewrite !llift_context_length ;
        try rewrite !length_cat in isdecl ;
        try omega.

@@ -435,8 +435,70 @@ Proof.
             try  (rewrite IHu8; cbn; repeat f_equal; omega)).
   case_eq (m ?= n) ; intro e ; bprop e.
   - subst. case_eq (n <=? i + n) ; intro e1 ; bprop e1 ; try omega.
-    cbn. rewrite e.
-Admitted.
+    cbn. rewrite e. rewrite lift_llift3 by omega.
+    f_equal. omega.
+  - case_eq (n <=? i + m) ; intro e1 ; bprop e1.
+    + unfold llift at 1.
+      case_eq (Init.Nat.pred n <? i + m) ; intro e3 ; bprop e3 ; try omega.
+      cbn. rewrite e. reflexivity.
+    + case_eq (n <=? i+m+j) ; intro e3 ; bprop e3.
+      * unfold llift at 1.
+        case_eq (Init.Nat.pred n <? i + m) ; intro e5 ; bprop e5 ; try omega.
+        case_eq (Init.Nat.pred n <? i+m+j) ; intro e7 ; bprop e7 ; try omega.
+        cbn. rewrite e. reflexivity.
+      * unfold llift at 1.
+        case_eq (Init.Nat.pred n <? i + m) ; intro e5 ; bprop e5 ; try omega.
+        case_eq (Init.Nat.pred n <? i+m+j) ; intro e7 ; bprop e7 ; try omega.
+        cbn. rewrite e. reflexivity.
+  - case_eq (n <=? i+m) ; intro e1 ; bprop e1 ; try omega.
+    unfold llift at 1.
+    case_eq (n <? i+m) ; intro e3 ; bprop e3 ; try omega.
+    cbn. rewrite e. reflexivity.
+Defined.
+
+Definition rlift_subst :
+  forall (u t : sterm) (i j m : nat),
+    rlift j (i+m) (u {m := t}) = (rlift j (S i+m) u) {m := rlift j i t}.
+Proof.
+  induction u ; intros t i j m.
+  all: try (cbn ; f_equal;
+            try replace (S (S (S (j + m))))%nat with (j + (S (S (S m))))%nat by omega ;
+            try replace (S (S (j + m)))%nat with (j + (S (S m)))%nat by omega ;
+            try replace (S (j + m))%nat with (j + (S m))%nat by omega ;
+            try replace (S (S (S (i + m))))%nat with (i + (S (S (S m))))%nat by omega ;
+            try replace (S (S (i + m)))%nat with (i + (S (S m)))%nat by omega ;
+            try replace (S (i + m))%nat with (i + (S m))%nat by omega;
+            try  (rewrite IHu; cbn; repeat f_equal; omega);
+            try  (rewrite IHu1; cbn; repeat f_equal; omega);
+            try  (rewrite IHu2; cbn; repeat f_equal; omega);
+            try  (rewrite IHu3; cbn; repeat f_equal; omega);
+            try  (rewrite IHu4; cbn; repeat f_equal; omega);
+            try  (rewrite IHu5; cbn; repeat f_equal; omega);
+            try  (rewrite IHu6; cbn; repeat f_equal; omega);
+            try  (rewrite IHu7; cbn; repeat f_equal; omega);
+            try  (rewrite IHu8; cbn; repeat f_equal; omega)).
+  case_eq (m ?= n) ; intro e ; bprop e.
+  - subst. case_eq (n <=? i + n) ; intro e1 ; bprop e1 ; try omega.
+    cbn. rewrite e. rewrite lift_rlift3 by omega.
+    f_equal. omega.
+  - case_eq (n <=? i + m) ; intro e1 ; bprop e1.
+    + unfold rlift at 1.
+      case_eq (Init.Nat.pred n <? i + m) ; intro e3 ; bprop e3 ; try omega.
+      cbn. rewrite e. reflexivity.
+    + case_eq (n <=? i+m+j) ; intro e3 ; bprop e3.
+      * unfold rlift at 1.
+        case_eq (Init.Nat.pred n <? i + m) ; intro e5 ; bprop e5 ; try omega.
+        case_eq (Init.Nat.pred n <? i+m+j) ; intro e7 ; bprop e7 ; try omega.
+        cbn. rewrite e. reflexivity.
+      * unfold rlift at 1.
+        case_eq (Init.Nat.pred n <? i + m) ; intro e5 ; bprop e5 ; try omega.
+        case_eq (Init.Nat.pred n <? i+m+j) ; intro e7 ; bprop e7 ; try omega.
+        cbn. rewrite e. reflexivity.
+  - case_eq (n <=? i+m) ; intro e1 ; bprop e1 ; try omega.
+    unfold rlift at 1.
+    case_eq (n <? i+m) ; intro e3 ; bprop e3 ; try omega.
+    cbn. rewrite e. reflexivity.
+Defined.
 
 Fact safe_nth_llift :
   forall {Δ Γm : scontext} {n is1 is2},

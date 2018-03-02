@@ -280,6 +280,34 @@ Proof.
       reflexivity.
 Defined.
 
+Lemma lift_llift4 :
+  forall {t i j k},
+    lift i 0 (llift j 0 t) = llift (i+j+k) k (lift i 0 t).
+Proof.
+  intro t ; induction t ; intros i j k.
+  all: try (cbn ; f_equal ;
+            try replace (S (S (i + k))) with (i + (S (S k)))%nat by omega ;
+            try replace (S (i + k)) with (i + (S k))%nat by omega ;
+            easy).
+  Focus 2. cbn. f_equal. easy.
+Abort.
+
+Lemma lift_llift5 :
+  forall {t i j k l},
+    j + k <= i + l ->
+    l <= k ->
+    llift j k (lift i l t) = lift i l t.
+Proof.
+  intro t. induction t ; intros i j k l h1 h2.
+  all: try (cbn ; f_equal ; easy).
+  unfold lift. case_eq (l <=? n) ; intro e ; bprop e.
+  - unfold llift. case_eq (i+n <? k) ; intro e1 ; bprop e1 ; try omega.
+    case_eq (i+n <? k+j) ; intro e3 ; bprop e3 ; try omega.
+    reflexivity.
+  - unfold llift. case_eq (n <? k) ; intro e1 ; bprop e1 ; try omega.
+    reflexivity.
+Defined.
+
 Lemma lift_rlift :
   forall {t i j k},
     lift i k (rlift j k t) = rlift (i+j) k (lift i k t).
@@ -327,6 +355,22 @@ Proof.
       unfold rlift. case_eq (i+n <? i+k) ; intro e5 ; bprop e5 ; try omega.
       case_eq (i+n <? i+k+j) ; intro e7 ; bprop e7 ; try omega.
       reflexivity.
+Defined.
+
+Lemma lift_rlift5 :
+  forall {t i j k l},
+    j + k <= i + l ->
+    l <= k ->
+    rlift j k (lift i l t) = lift i l t.
+Proof.
+  intro t. induction t ; intros i j k l h1 h2.
+  all: try (cbn ; f_equal ; easy).
+  unfold lift. case_eq (l <=? n) ; intro e ; bprop e.
+  - unfold rlift. case_eq (i+n <? k) ; intro e1 ; bprop e1 ; try omega.
+    case_eq (i+n <? k+j) ; intro e3 ; bprop e3 ; try omega.
+    reflexivity.
+  - unfold rlift. case_eq (n <? k) ; intro e1 ; bprop e1 ; try omega.
+    reflexivity.
 Defined.
 
 Definition llift_decl n k d : scontext_decl :=
@@ -809,8 +853,9 @@ Proof.
             -- eapply type_Rel.
                eapply wf_llift' ; eassumption.
             -- erewrite safe_nth_ge'. erewrite safe_nth_ge'.
-               (* Maybe a trickier one here. *)
-               cheat.
+               rewrite lift_llift5 by omega.
+               f_equal. f_equal. eapply safe_nth_cong_irr.
+               rewrite llift_context_length. rewrite (mix'_length1 hm). omega.
       - cbn. eapply type_Sort. eapply wf_llift' ; eassumption.
       - cbn. eapply type_Prod ; emh.
       - cbn. eapply type_Lambda ; emh.
@@ -1026,6 +1071,7 @@ Proof.
        pose (mix'_length2 hm) ;
        cbn ; try rewrite !length_cat ;
        try rewrite !llift_context_length ;
+       try rewrite !rlift_context_length ;
        try rewrite !length_cat in isdecl ;
        try omega.
 Defined.

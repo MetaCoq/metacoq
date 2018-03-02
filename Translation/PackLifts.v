@@ -281,30 +281,31 @@ Proof.
 Defined.
 
 Lemma lift_llift4 :
-  forall {t i j k l},
+  forall {t i j k l m},
     k < i ->
-    lift i l (llift j l t) = llift (i+j+k) (k+l) (lift i l t).
+    m <= l ->
+    lift i l (llift j m t) = llift (i+j+k) (k+l) (lift i l t).
 Proof.
-  intro t ; induction t ; intros i j k l h1.
+  intro t ; induction t ; intros i j k l m h1 h2.
   all: try (cbn ; f_equal ;
             try replace (S (S (k + l))) with (k + (S (S l)))%nat by omega ;
             try replace (S (k + l)) with (k + (S l))%nat by omega ;
             easy).
   unfold llift at 1.
-  case_eq (n <? l) ; intro e ; bprop e ; try omega.
+  case_eq (n <? m) ; intro e ; bprop e ; try omega.
   - cbn. case_eq (l <=? n) ; intro e1 ; bprop e1 ; try omega.
-    unfold llift. case_eq (n <? k+l) ; intro e3 ; bprop e3 ; try omega.
-    reflexivity.
-  - case_eq (n <? l+j) ; intro e1 ; bprop e1 ; try omega.
+    + unfold llift. case_eq (i+n <? k+l) ; intro e3 ; bprop e3 ; try omega.
+      case_eq (i+n <? k+l+(i+j+k)) ; intro e5 ; bprop e5 ; try omega.
+      * case_eq (n <? k+l) ; intro e7 ; bprop e7 ; try omega.
+        reflexivity.
+      * case_eq (n <? k+l) ; intro e7 ; bprop e7 ; try omega.
+        reflexivity.
+  - case_eq (n <? m+j) ; intro e1 ; bprop e1 ; try omega.
     + cbn. case_eq (l <=? n) ; intro e3 ; bprop e3 ; try omega.
-      unfold llift. case_eq (i+n <? k+l) ; intro e5 ; bprop e5 ; try omega.
-      case_eq (i+n <? k+l + (i+j+k)) ; intro e7 ; bprop e7 ; try omega.
-      reflexivity.
-    + cbn. case_eq (l <=? n) ; intro e3 ; bprop e3 ; try omega.
-      unfold llift. case_eq (i+n <? k+l) ; intro e5 ; bprop e5 ; try omega.
-      case_eq (i+n <? k+l+(i+j+k)) ; intro e7 ; bprop e7 ; try omega.
-      * admit.
-      * reflexivity.
+      * unfold llift. case_eq (i+n <? k+l) ; intro e5 ; bprop e5 ; try omega.
+        case_eq (i+n <? k+l+(i+j+k)) ; intro e7 ; bprop e7 ; try omega.
+        reflexivity.
+      * unfold llift. case_eq (n <? k+l) ; intro e5 ; bprop e5 ; try omega.
 Abort.
 
 Lemma lift_llift5 :

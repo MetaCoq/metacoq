@@ -281,15 +281,30 @@ Proof.
 Defined.
 
 Lemma lift_llift4 :
-  forall {t i j k},
-    lift i 0 (llift j 0 t) = llift (i+j+k) k (lift i 0 t).
+  forall {t i j k l},
+    k < i ->
+    lift i l (llift j l t) = llift (i+j+k) (k+l) (lift i l t).
 Proof.
-  intro t ; induction t ; intros i j k.
+  intro t ; induction t ; intros i j k l h1.
   all: try (cbn ; f_equal ;
-            try replace (S (S (i + k))) with (i + (S (S k)))%nat by omega ;
-            try replace (S (i + k)) with (i + (S k))%nat by omega ;
+            try replace (S (S (k + l))) with (k + (S (S l)))%nat by omega ;
+            try replace (S (k + l)) with (k + (S l))%nat by omega ;
             easy).
-  Focus 2. cbn. f_equal. easy.
+  unfold llift at 1.
+  case_eq (n <? l) ; intro e ; bprop e ; try omega.
+  - cbn. case_eq (l <=? n) ; intro e1 ; bprop e1 ; try omega.
+    unfold llift. case_eq (n <? k+l) ; intro e3 ; bprop e3 ; try omega.
+    reflexivity.
+  - case_eq (n <? l+j) ; intro e1 ; bprop e1 ; try omega.
+    + cbn. case_eq (l <=? n) ; intro e3 ; bprop e3 ; try omega.
+      unfold llift. case_eq (i+n <? k+l) ; intro e5 ; bprop e5 ; try omega.
+      case_eq (i+n <? k+l + (i+j+k)) ; intro e7 ; bprop e7 ; try omega.
+      reflexivity.
+    + cbn. case_eq (l <=? n) ; intro e3 ; bprop e3 ; try omega.
+      unfold llift. case_eq (i+n <? k+l) ; intro e5 ; bprop e5 ; try omega.
+      case_eq (i+n <? k+l+(i+j+k)) ; intro e7 ; bprop e7 ; try omega.
+      * admit.
+      * reflexivity.
 Abort.
 
 Lemma lift_llift5 :

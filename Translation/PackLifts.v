@@ -962,6 +962,35 @@ Proof.
   - eapply ismix_ismix'. eassumption.
 Defined.
 
+(* Lemma to use ismix knowledge about sorting. *)
+Lemma ismix_nth_sort :
+  forall {Σ Γ Γ1 Γ2 Γm},
+    ismix Σ Γ Γ1 Γ2 Γm ->
+    forall x is1 is2,
+      ∑ s,
+        (Σ;;; Γ ,,, Γ1
+         |-i lift0 (S x) (sdecl_type (safe_nth Γ1 (exist _ x is1))) : sSort s) *
+        (Σ;;; Γ ,,, Γ2
+         |-i lift0 (S x) (sdecl_type (safe_nth Γ2 (exist _ x is2))) : sSort s).
+Proof.
+  intros Σ Γ Γ1 Γ2 Γm hm.
+  dependent induction hm.
+  - intros x is1. cbn in is1. easy.
+  - intro x. destruct x ; intros is1 is2.
+    + cbn. exists s. split ; eapply @typing_lift01 with (A := sSort s) ; eassumption.
+    + cbn. cbn in is1, is2.
+      set (is1' := gt_le_S x #|Γ1| (gt_S_le (S x) #|Γ1| is1)).
+      set (is2' := gt_le_S x #|Γ2| (gt_S_le (S x) #|Γ2| is2)).
+      destruct (IHhm x is1' is2') as [s' [h1 h2]].
+      exists s'. split.
+      * replace (S (S x)) with (1 + (S x))%nat by omega.
+        rewrite <- liftP3 with (k := 0) by omega.
+        eapply @typing_lift01 with (A := sSort s') ; eassumption.
+      * replace (S (S x)) with (1 + (S x))%nat by omega.
+        rewrite <- liftP3 with (k := 0) by omega.
+        eapply @typing_lift01 with (A := sSort s') ; eassumption.
+Defined.
+
 (* Simpler to use corollaries *)
 
 Corollary type_llift0 :

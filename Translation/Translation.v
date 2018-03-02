@@ -119,9 +119,6 @@ Proof.
   induction h ; now constructor.
 Defined.
 
-Axiom cheating : forall {A}, A.
-Tactic Notation "cheat" := (apply cheating).
-
 Lemma trel_to_heq' :
   forall {Σ t1 t2},
     t1 ∼ t2 ->
@@ -168,13 +165,24 @@ Proof.
            | |- _ ;;; _ |-i _ = _ : ?S => change S with (rlift0 #|Γm| S)
            end.
            eapply cong_rlift0 ; try eassumption.
-           (* Same sort problem.
-              This time we should be able to solve it properly by having a lemma
-              stating that the types at the same rank in a mix get the same sort
-              (by induction on hm).
-              TODO
-            *)
-           cheat.
+           destruct (eq_typing hx1) as [ht1 _].
+           destruct (eq_typing hx2) as [ht2 _].
+           destruct (ismix_nth_sort hm x is1' is2') as [s [ht1' ht2']].
+           instantiate (1 := is2').
+           destruct (uniqueness ht1' ht1) as [? eq1].
+           destruct (uniqueness ht2 ht2') as [z eq2].
+           destruct (eq_typing eq1) as [hs1 _].
+           destruct (eq_typing eq2) as [_ hs2].
+           assert (hs2' : Σ;;; Γ ,,, Γ1 |-i sSort s : sSort z).
+           { eapply strengthen_sort ; [ eassumption |].
+             eapply typing_wf ; eassumption.
+           }
+           destruct (uniqueness hs1 hs2') as [? ?].
+           eapply eq_conv ; [ eassumption |].
+           eapply eq_transitivity ; [ eassumption |].
+           eapply strengthen_sort_eq.
+           ++ eapply eq_conv ; eassumption.
+           ++ eapply typing_wf ; eassumption.
     + assert (h1' : Σ ;;; Γ ,,, Γm |-i sRel x : llift0 #|Γm| U1).
       { replace (sRel x) with (llift0 #|Γm| (sRel x))
           by (unfold llift ; rewrite e ; rewrite e0 ; reflexivity).

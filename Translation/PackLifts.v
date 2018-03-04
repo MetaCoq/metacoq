@@ -281,6 +281,31 @@ Proof.
 Defined.
 
 Lemma lift_llift4 :
+  forall {t i j k},
+    k < i ->
+    i <= k + i + j + k ->
+    lift i 0 (llift j 0 t) = llift (i+j+k) k (lift i 0 t).
+Proof.
+  intro t. induction t ; intros i j k h1 h2.
+  { unfold llift at 1.
+    case_eq (n <? 0) ; intro e ; bprop e ; try omega.
+    case_eq (n <? 0+j) ; intro e1 ; bprop e1 ; try omega.
+    - unfold lift. case_eq (0 <=? n) ; intro e3 ; bprop e3 ; try omega.
+      unfold llift. case_eq (i+n <? k) ; intro e5 ; bprop e5 ; try omega.
+      case_eq (i+n <? k+(i+j+k)) ; intro e7 ; bprop e7 ; try omega.
+      reflexivity.
+    - unfold lift. case_eq (0 <=? n) ; intro e3 ; bprop e3 ; try omega.
+      unfold llift. case_eq (i+n <? k) ; intro e5 ; bprop e5 ; try omega.
+      case_eq (i+n <? k+(i+j+k)) ; intro e7 ; bprop e7 ; try omega.
+      +
+(* Problem: This doesn't even seem to hold for 0!
+   I will certainly have a hard time generalising it.
+   We first need to figure out a true version.
+ *)
+Abort.
+
+
+Lemma lift_llift4 :
   forall {t i j k l m},
     k < i ->
     m <= l ->

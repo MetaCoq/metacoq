@@ -638,6 +638,18 @@ Proof.
     + cbn. erewrite IHΔ. reflexivity.
 Defined.
 
+Fact safe_nth_rlift :
+  forall {Δ Γm : scontext} {n is1 is2},
+    sdecl_type (safe_nth (rlift_context #|Γm| Δ) (exist _ n is1)) =
+    rlift #|Γm| (#|Δ| - S n) (sdecl_type (safe_nth Δ (exist _ n is2))).
+Proof.
+  intro Δ. induction Δ.
+  - cbn. easy.
+  - intro Γm. destruct n ; intros is1 is2.
+    + cbn. replace (#|Δ| - 0) with #|Δ| by omega. reflexivity.
+    + cbn. erewrite IHΔ. reflexivity.
+Defined.
+
 (* For SCommon *)
 Fact cat_nil :
   forall {Γ}, Γ ,,, [] = Γ.
@@ -888,8 +900,13 @@ Proof.
             -- erewrite safe_nth_ge'. erewrite safe_nth_lt.
                erewrite safe_nth_mix' by eassumption.
                cbn. f_equal.
-               (* We need another lemma *)
-               cheat.
+               replace (S (n - #|llift_context #|Γm| Δ|))
+                 with ((S n) - #|Δ|)
+                 by (rewrite llift_context_length ; omega).
+               rewrite lift_llift4 by omega. f_equal.
+               ++ omega.
+               ++ f_equal. f_equal. eapply safe_nth_cong_irr.
+                  rewrite llift_context_length. reflexivity.
           * erewrite safe_nth_ge'. erewrite safe_nth_ge'.
             eapply meta_conv.
             -- eapply type_Rel.
@@ -978,7 +995,38 @@ Proof.
 
   (* type_rlift' *)
   - { dependent destruction h ; intro hm.
-      - cheat.
+      - unfold rlift at 1.
+        case_eq (n <? #|Δ|) ; intro e ; bprop e.
+        + erewrite @safe_nth_lt with (isdecl' := e0).
+          eapply meta_conv.
+          * eapply type_Rel. eapply wf_rlift' ; eassumption.
+          * erewrite safe_nth_lt. erewrite safe_nth_rlift.
+            rewrite lift_rlift3 by omega.
+            f_equal. omega.
+        + case_eq (n <? #|Δ| + #|Γm|) ; intro e1 ; bprop e1.
+          * erewrite safe_nth_ge'. erewrite safe_nth_lt.
+            eapply type_ProjT2'.
+            eapply meta_conv.
+            -- eapply type_Rel.
+               eapply wf_rlift' ; eassumption.
+            -- erewrite safe_nth_ge'. erewrite safe_nth_lt.
+               erewrite safe_nth_mix' by eassumption.
+               cbn. f_equal.
+               replace (S (n - #|rlift_context #|Γm| Δ|))
+                 with ((S n) - #|Δ|)
+                 by (rewrite rlift_context_length ; omega).
+               rewrite lift_rlift4 by omega. f_equal.
+               ++ omega.
+               ++ f_equal. f_equal. eapply safe_nth_cong_irr.
+                  rewrite rlift_context_length. reflexivity.
+          * erewrite safe_nth_ge'. erewrite safe_nth_ge'.
+            eapply meta_conv.
+            -- eapply type_Rel.
+               eapply wf_rlift' ; eassumption.
+            -- erewrite safe_nth_ge'. erewrite safe_nth_ge'.
+               rewrite lift_rlift5 by omega.
+               f_equal. f_equal. eapply safe_nth_cong_irr.
+               rewrite rlift_context_length. rewrite (mix'_length2 hm). omega.
       - cbn. eapply type_Sort. eapply wf_rlift' ; eassumption.
       - cbn. eapply type_Prod ; emh.
       - cbn. eapply type_Lambda ; emh.

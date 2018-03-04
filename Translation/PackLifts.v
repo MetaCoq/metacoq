@@ -280,6 +280,44 @@ Proof.
       reflexivity.
 Defined.
 
+(*
+lift0 (S n)
+    (llift0 (#|Γm| - S (n - #|llift_context #|Γm| Δ|)) t) =
+  llift #|Γm| #|Δ|
+    (lift0 (S n) t)
+
+i = S n
+j = #|Γm| - S (n - #|llift_context #|Γm| Δ|)
+  = #|Γm| - S n + #|Δ|
+l = #|Γm|
+k = #|Δ|
+
+i + j = #|Γm| + #|Δ|
+      = k + l
+
+#|Δ| <= n
+n < #|Δ| + #|Γm|
+*)
+Lemma lift_llift4 :
+  forall {t i j k},
+    k < i ->
+    i <= k + j ->
+    lift i 0 (llift (j - i + k) 0 t) = llift j k (lift i 0 t).
+Proof.
+  intro t. induction t ; intros i j k h1 h2.
+  { unfold llift at 1.
+    case_eq (n <? 0) ; intro e ; bprop e ; try omega.
+    case_eq (n <? 0 + (j - i + k)) ; intro e1 ; bprop e1 ; try omega.
+    - unfold lift. case_eq (0 <=? n) ; intro e3 ; bprop e3 ; try omega.
+      unfold llift. case_eq (i + n <? k) ; intro e5 ; bprop e5 ; try omega.
+      case_eq (i+n <? k + j) ; intro e7 ; bprop e7 ; try omega.
+      + reflexivity.
+      + (* Isn't there a contradiction ?
+           n < 0 + (j - i + k)
+           k + j <= i + n
+         *)
+Abort.
+
 Lemma lift_llift4 :
   forall {t i j k},
     k < i ->

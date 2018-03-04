@@ -281,25 +281,31 @@ Proof.
 Defined.
 
 Lemma lift_llift4 :
-  forall {t i j k},
+  forall {t i j k l},
     k < i ->
     i <= k + j ->
-    lift i 0 (llift (j - (i - k)) 0 t) = llift j k (lift i 0 t).
+    lift i l (llift (j - (i - k)) l t) = llift j (k+l) (lift i l t).
 Proof.
-  intro t. induction t ; intros i j k h1 h2.
-  { unfold llift at 1.
-    case_eq (n <? 0) ; intro e ; bprop e ; try omega.
-    case_eq (n <? 0 + (j - (i - k))) ; intro e1 ; bprop e1 ; try omega.
-    - unfold lift. case_eq (0 <=? n) ; intro e3 ; bprop e3 ; try omega.
-      unfold llift. case_eq (i + n <? k) ; intro e5 ; bprop e5 ; try omega.
-      case_eq (i+n <? k + j) ; intro e7 ; bprop e7 ; try omega.
+  intro t. induction t ; intros i j k l h1 h2.
+  all: try (cbn ; f_equal ;
+            try replace (S (S (k + l))) with (k + (S (S l)))%nat by omega ;
+            try replace (S (k + l)) with (k + (S l))%nat by omega ;
+            easy).
+  unfold llift at 1.
+  case_eq (n <? l) ; intro e ; bprop e ; try omega.
+  - unfold lift. case_eq (l <=? n) ; intro e1 ; bprop e1 ; try omega.
+    unfold llift. case_eq (n <? k + l) ; intro e3 ; bprop e3 ; try omega.
+    reflexivity.
+  - case_eq (n <? l + (j - (i - k))) ; intro e1 ; bprop e1 ; try omega.
+    + unfold lift. case_eq (l <=? n) ; intro e3 ; bprop e3 ; try omega.
+      unfold llift. case_eq (i+n <? k+l) ; intro e5 ; bprop e5 ; try omega.
+      case_eq (i+n <? k+l+j) ; intro e7 ; bprop e7 ; try omega.
       reflexivity.
-    - unfold lift. case_eq (0 <=? n) ; intro e3 ; bprop e3 ; try omega.
-      unfold llift. case_eq (i+n <? k) ; intro e5 ; bprop e5 ; try omega.
-      case_eq (i+n <? k+j) ; intro e7 ; bprop e7 ; try omega.
+    + unfold lift. case_eq (l <=? n) ; intro e3 ; bprop e3 ; try omega.
+      unfold llift. case_eq (i+n <? k+l) ; intro e5 ; bprop e5 ; try omega.
+      case_eq (i+n <? k+l+j) ; intro e7 ; bprop e7 ; try omega.
       reflexivity.
-  }
-Abort.
+Defined.
 
 Lemma lift_llift5 :
   forall {t i j k l},
@@ -363,6 +369,33 @@ Proof.
     + cbn. case_eq (l <=? n) ; intro e3 ; bprop e3 ; try omega.
       unfold rlift. case_eq (i+n <? i+k) ; intro e5 ; bprop e5 ; try omega.
       case_eq (i+n <? i+k+j) ; intro e7 ; bprop e7 ; try omega.
+      reflexivity.
+Defined.
+
+Lemma lift_rlift4 :
+  forall {t i j k l},
+    k < i ->
+    i <= k + j ->
+    lift i l (rlift (j - (i - k)) l t) = rlift j (k+l) (lift i l t).
+Proof.
+  intro t. induction t ; intros i j k l h1 h2.
+  all: try (cbn ; f_equal ;
+            try replace (S (S (k + l))) with (k + (S (S l)))%nat by omega ;
+            try replace (S (k + l)) with (k + (S l))%nat by omega ;
+            easy).
+  unfold rlift at 1.
+  case_eq (n <? l) ; intro e ; bprop e ; try omega.
+  - unfold lift. case_eq (l <=? n) ; intro e1 ; bprop e1 ; try omega.
+    unfold rlift. case_eq (n <? k + l) ; intro e3 ; bprop e3 ; try omega.
+    reflexivity.
+  - case_eq (n <? l + (j - (i - k))) ; intro e1 ; bprop e1 ; try omega.
+    + unfold lift. case_eq (l <=? n) ; intro e3 ; bprop e3 ; try omega.
+      unfold rlift. case_eq (i+n <? k+l) ; intro e5 ; bprop e5 ; try omega.
+      case_eq (i+n <? k+l+j) ; intro e7 ; bprop e7 ; try omega.
+      reflexivity.
+    + unfold lift. case_eq (l <=? n) ; intro e3 ; bprop e3 ; try omega.
+      unfold rlift. case_eq (i+n <? k+l) ; intro e5 ; bprop e5 ; try omega.
+      case_eq (i+n <? k+l+j) ; intro e7 ; bprop e7 ; try omega.
       reflexivity.
 Defined.
 

@@ -455,11 +455,23 @@ Proof.
   - cbn. rewrite llift_decl0. rewrite IHΓ. reflexivity.
 Defined.
 
+Fact llift_decl_svass :
+  forall {na A n k}, llift_decl n k (svass na A) = svass na (llift n k A).
+Proof.
+  intros na A n k.
+  reflexivity.
+Defined.
+
+Definition rlift_decl n k d : scontext_decl :=
+  {| sdecl_name := sdecl_name d ;
+     sdecl_body := option_map (rlift n k) (sdecl_body d) ;
+     sdecl_type := rlift n k (sdecl_type d)
+  |}.
+
 Fixpoint rlift_context n (Δ : scontext) : scontext :=
   match Δ with
   | nil => nil
-  | A :: Δ =>
-    svass (sdecl_name A) (rlift n #|Δ| (sdecl_type A)) :: rlift_context n Δ
+  | A :: Δ => (rlift_decl n #|Δ| A) :: (rlift_context n Δ)
   end.
 
 Fact rlift_context_length :
@@ -469,6 +481,32 @@ Proof.
   induction Δ.
   - cbn. reflexivity.
   - cbn. f_equal. assumption.
+Defined.
+
+Fact rlift_decl0 :
+  forall {d k}, rlift_decl 0 k d = d.
+Proof.
+  intros d k.
+  destruct d as [x b A].
+  unfold rlift_decl. cbn. rewrite rlift00. f_equal.
+  destruct b.
+  - cbn. rewrite rlift00. reflexivity.
+  - reflexivity.
+Defined.
+
+Fact rlift_context0 :
+  forall {Γ}, rlift_context 0 Γ = Γ.
+Proof.
+  intro Γ. induction Γ.
+  - reflexivity.
+  - cbn. rewrite rlift_decl0. rewrite IHΓ. reflexivity.
+Defined.
+
+Fact rlift_decl_svass :
+  forall {na A n k}, rlift_decl n k (svass na A) = svass na (rlift n k A).
+Proof.
+  intros na A n k.
+  reflexivity.
 Defined.
 
 (* We introduce an alternate version of ismix that will be implied by ismix but
@@ -918,10 +956,31 @@ Proof.
       - cbn. eapply type_Sort. eapply wf_llift' ; eassumption.
       - cbn. eapply type_Prod ; emh.
       - cbn. eapply type_Lambda ; emh.
-      - cbn. cheat.
+      - cbn. replace #|Δ| with (#|Δ| + 0)%nat by omega.
+        rewrite llift_subst. cbn.
+        replace (#|Δ| + 0)%nat with #|Δ| by omega.
+        eapply type_App ; emh.
       - cbn. eapply type_Eq ; emh.
       - cbn. eapply type_Refl ; emh.
-      - cbn. cheat.
+      - cbn. replace #|Δ| with (#|Δ| + 0)%nat by omega.
+        rewrite llift_subst.
+        replace (S #|Δ| + 0)%nat with (#|Δ| + 1)%nat by omega.
+        rewrite llift_subst.
+        cbn. replace (#|Δ| + 0)%nat with #|Δ| by omega.
+        replace (S (#|Δ| + 1))%nat with (S (S #|Δ|)) by omega.
+        eapply type_J ; emh.
+        + instantiate (1 := ne). instantiate (1 := nx). cbn. unfold ssnoc.
+          rewrite !llift_decl_svass. cbn. f_equal. f_equal. f_equal.
+          * replace (S #|Δ|) with (1 + #|Δ|)%nat by omega.
+            rewrite lift_llift3 by omega. reflexivity.
+          * replace (S #|Δ|) with (1 + #|Δ|)%nat by omega.
+            rewrite lift_llift3 by omega. reflexivity.
+        + replace (S (S #|Δ|)) with ((S #|Δ|) + 1)%nat by omega.
+          rewrite <- llift_subst.
+          change (sRefl (llift #|Γm| #|Δ| A) (llift #|Γm| #|Δ| u))
+            with (llift #|Γm| #|Δ| (sRefl A u)).
+          replace (#|Δ| + 1)%nat with (S #|Δ| + 0)%nat by omega.
+          rewrite <- llift_subst. f_equal. omega.
       - cbn. eapply type_Transport ; emh.
       - cbn. eapply type_Heq ; emh.
       - cbn. eapply type_HeqToEq ; emh.
@@ -933,12 +992,44 @@ Proof.
       - cbn. eapply type_HeqTransport ; emh.
       - cbn. eapply type_CongProd ; emh.
         cbn. f_equal.
-        + cheat.
-        + cheat.
+        + rewrite lift_llift3 by omega.
+          replace (S #|Δ|) with ((S #|Δ|) + 0)%nat by omega.
+          rewrite llift_subst. cbn. reflexivity.
+        + rewrite lift_llift3 by omega.
+          replace (S #|Δ|) with ((S #|Δ|) + 0)%nat by omega.
+          rewrite llift_subst. cbn. reflexivity.
       - cbn. eapply type_CongLambda ; emh.
-        + cheat.
-        + cheat.
-      - cbn. cheat.
+        + cbn. f_equal.
+          * rewrite lift_llift3 by omega.
+            replace (S #|Δ|) with ((S #|Δ|) + 0)%nat by omega.
+            rewrite llift_subst. cbn. reflexivity.
+          * rewrite lift_llift3 by omega.
+            replace (S #|Δ|) with ((S #|Δ|) + 0)%nat by omega.
+            rewrite llift_subst. cbn. reflexivity.
+        + cbn. f_equal.
+          * rewrite lift_llift3 by omega.
+            replace (S #|Δ|) with ((S #|Δ|) + 0)%nat by omega.
+            rewrite llift_subst. cbn. reflexivity.
+          * rewrite lift_llift3 by omega.
+            replace (S #|Δ|) with ((S #|Δ|) + 0)%nat by omega.
+            rewrite llift_subst. cbn. reflexivity.
+          * rewrite lift_llift3 by omega.
+            replace (S #|Δ|) with ((S #|Δ|) + 0)%nat by omega.
+            rewrite llift_subst. cbn. reflexivity.
+          * rewrite lift_llift3 by omega.
+            replace (S #|Δ|) with ((S #|Δ|) + 0)%nat by omega.
+            rewrite llift_subst. cbn. reflexivity.
+      - cbn. replace #|Δ| with (#|Δ| + 0)%nat by omega.
+        rewrite 2!llift_subst. cbn.
+        replace (#|Δ| + 0)%nat with #|Δ| by omega.
+        eapply type_CongApp ; emh.
+        cbn. f_equal.
+        + rewrite lift_llift3 by omega.
+          replace (S #|Δ|) with ((S #|Δ|) + 0)%nat by omega.
+          rewrite llift_subst. cbn. reflexivity.
+        + rewrite lift_llift3 by omega.
+          replace (S #|Δ|) with ((S #|Δ|) + 0)%nat by omega.
+          rewrite llift_subst. cbn. reflexivity.
       - cbn. eapply type_CongEq ; emh.
       - cbn. eapply type_CongRefl ; emh.
       - cbn. eapply type_EqToHeq ; emh.
@@ -1030,10 +1121,31 @@ Proof.
       - cbn. eapply type_Sort. eapply wf_rlift' ; eassumption.
       - cbn. eapply type_Prod ; emh.
       - cbn. eapply type_Lambda ; emh.
-      - cbn. cheat.
+      - cbn. replace #|Δ| with (#|Δ| + 0)%nat by omega.
+        rewrite rlift_subst. cbn.
+        replace (#|Δ| + 0)%nat with #|Δ| by omega.
+        eapply type_App ; emh.
       - cbn. eapply type_Eq ; emh.
       - cbn. eapply type_Refl ; emh.
-      - cbn. cheat.
+      - cbn. replace #|Δ| with (#|Δ| + 0)%nat by omega.
+        rewrite rlift_subst.
+        replace (S #|Δ| + 0)%nat with (#|Δ| + 1)%nat by omega.
+        rewrite rlift_subst.
+        cbn. replace (#|Δ| + 0)%nat with #|Δ| by omega.
+        replace (S (#|Δ| + 1))%nat with (S (S #|Δ|)) by omega.
+        eapply type_J ; emh.
+        + instantiate (1 := ne). instantiate (1 := nx). cbn. unfold ssnoc.
+          rewrite !rlift_decl_svass. cbn. f_equal. f_equal. f_equal.
+          * replace (S #|Δ|) with (1 + #|Δ|)%nat by omega.
+            rewrite lift_rlift3 by omega. reflexivity.
+          * replace (S #|Δ|) with (1 + #|Δ|)%nat by omega.
+            rewrite lift_rlift3 by omega. reflexivity.
+        + replace (S (S #|Δ|)) with ((S #|Δ|) + 1)%nat by omega.
+          rewrite <- rlift_subst.
+          change (sRefl (rlift #|Γm| #|Δ| A) (rlift #|Γm| #|Δ| u))
+            with (rlift #|Γm| #|Δ| (sRefl A u)).
+          replace (#|Δ| + 1)%nat with (S #|Δ| + 0)%nat by omega.
+          rewrite <- rlift_subst. f_equal. omega.
       - cbn. eapply type_Transport ; emh.
       - cbn. eapply type_Heq ; emh.
       - cbn. eapply type_HeqToEq ; emh.
@@ -1045,12 +1157,44 @@ Proof.
       - cbn. eapply type_HeqTransport ; emh.
       - cbn. eapply type_CongProd ; emh.
         cbn. f_equal.
-        + cheat.
-        + cheat.
+        + rewrite lift_rlift3 by omega.
+          replace (S #|Δ|) with ((S #|Δ|) + 0)%nat by omega.
+          rewrite rlift_subst. cbn. reflexivity.
+        + rewrite lift_rlift3 by omega.
+          replace (S #|Δ|) with ((S #|Δ|) + 0)%nat by omega.
+          rewrite rlift_subst. cbn. reflexivity.
       - cbn. eapply type_CongLambda ; emh.
-        + cheat.
-        + cheat.
-      - cbn. cheat.
+        + cbn. f_equal.
+          * rewrite lift_rlift3 by omega.
+            replace (S #|Δ|) with ((S #|Δ|) + 0)%nat by omega.
+            rewrite rlift_subst. cbn. reflexivity.
+          * rewrite lift_rlift3 by omega.
+            replace (S #|Δ|) with ((S #|Δ|) + 0)%nat by omega.
+            rewrite rlift_subst. cbn. reflexivity.
+        + cbn. f_equal.
+          * rewrite lift_rlift3 by omega.
+            replace (S #|Δ|) with ((S #|Δ|) + 0)%nat by omega.
+            rewrite rlift_subst. cbn. reflexivity.
+          * rewrite lift_rlift3 by omega.
+            replace (S #|Δ|) with ((S #|Δ|) + 0)%nat by omega.
+            rewrite rlift_subst. cbn. reflexivity.
+          * rewrite lift_rlift3 by omega.
+            replace (S #|Δ|) with ((S #|Δ|) + 0)%nat by omega.
+            rewrite rlift_subst. cbn. reflexivity.
+          * rewrite lift_rlift3 by omega.
+            replace (S #|Δ|) with ((S #|Δ|) + 0)%nat by omega.
+            rewrite rlift_subst. cbn. reflexivity.
+      - cbn. replace #|Δ| with (#|Δ| + 0)%nat by omega.
+        rewrite 2!rlift_subst. cbn.
+        replace (#|Δ| + 0)%nat with #|Δ| by omega.
+        eapply type_CongApp ; emh.
+        cbn. f_equal.
+        + rewrite lift_rlift3 by omega.
+          replace (S #|Δ|) with ((S #|Δ|) + 0)%nat by omega.
+          rewrite rlift_subst. cbn. reflexivity.
+        + rewrite lift_rlift3 by omega.
+          replace (S #|Δ|) with ((S #|Δ|) + 0)%nat by omega.
+          rewrite rlift_subst. cbn. reflexivity.
       - cbn. eapply type_CongEq ; emh.
       - cbn. eapply type_CongRefl ; emh.
       - cbn. eapply type_EqToHeq ; emh.

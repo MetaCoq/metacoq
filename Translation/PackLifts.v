@@ -883,9 +883,6 @@ Ltac emh :=
   | _ => fail "Not a case for emh"
   end.
 
-Axiom cheating : forall {A}, A.
-Tactic Notation "cheat" := apply cheating.
-
 Fixpoint type_llift' {Σ Γ Γ1 Γ2 Γm Δ t A}
   (h : Σ ;;; Γ ,,, Γ1 ,,, Δ |-i t : A) {struct h} :
   ismix' Σ Γ Γ1 Γ2 Γm ->
@@ -1046,16 +1043,58 @@ Proof.
       - apply eq_reflexivity. emh.
       - apply eq_symmetry ; emh.
       - eapply eq_transitivity ; emh.
-      - cheat.
-      - cheat.
+      - cbn. replace #|Δ| with (#|Δ| + 0)%nat by omega.
+        rewrite 2!llift_subst. cbn.
+        replace (#|Δ| + 0)%nat with #|Δ| by omega.
+        eapply eq_beta ; emh.
+      - cbn. replace #|Δ| with (#|Δ| + 0)%nat by omega.
+        rewrite llift_subst.
+        replace (S #|Δ| + 0)%nat with (#|Δ| + 1)%nat by omega.
+        rewrite llift_subst.
+        cbn. replace (#|Δ| + 0)%nat with #|Δ| by omega.
+        replace (S (#|Δ| + 1))%nat with (S (S #|Δ|)) by omega.
+        eapply eq_JRefl ; emh.
+        + instantiate (1 := ne). instantiate (1 := nx). cbn. unfold ssnoc.
+          rewrite !llift_decl_svass. cbn. f_equal. f_equal. f_equal.
+          * replace (S #|Δ|) with (1 + #|Δ|)%nat by omega.
+            rewrite lift_llift3 by omega. reflexivity.
+          * replace (S #|Δ|) with (1 + #|Δ|)%nat by omega.
+            rewrite lift_llift3 by omega. reflexivity.
+        + replace (S (S #|Δ|)) with ((S #|Δ|) + 1)%nat by omega.
+          rewrite <- llift_subst.
+          change (sRefl (llift #|Γm| #|Δ| A) (llift #|Γm| #|Δ| u))
+            with (llift #|Γm| #|Δ| (sRefl A u)).
+          replace (#|Δ| + 1)%nat with (S #|Δ| + 0)%nat by omega.
+          rewrite <- llift_subst. f_equal. omega.
       - cbn. eapply eq_TransportRefl ; emh.
       - eapply eq_conv ; emh.
       - cbn. eapply cong_Prod ; emh.
       - cbn. eapply cong_Lambda ; emh.
-      - cheat.
+      - cbn. replace #|Δ| with (#|Δ| + 0)%nat by omega.
+        rewrite llift_subst. cbn.
+        replace (#|Δ| + 0)%nat with #|Δ| by omega.
+        eapply cong_App ; emh.
       - cbn. eapply cong_Eq ; emh.
       - cbn. eapply cong_Refl ; emh.
-      - cbn. cheat.
+      - cbn. replace #|Δ| with (#|Δ| + 0)%nat by omega.
+        rewrite llift_subst.
+        replace (S #|Δ| + 0)%nat with (#|Δ| + 1)%nat by omega.
+        rewrite llift_subst.
+        cbn. replace (#|Δ| + 0)%nat with #|Δ| by omega.
+        replace (S (#|Δ| + 1))%nat with (S (S #|Δ|)) by omega.
+        eapply cong_J ; emh.
+        + instantiate (1 := ne). instantiate (1 := nx). cbn. unfold ssnoc.
+          rewrite !llift_decl_svass. cbn. f_equal. f_equal. f_equal.
+          * replace (S #|Δ|) with (1 + #|Δ|)%nat by omega.
+            rewrite lift_llift3 by omega. reflexivity.
+          * replace (S #|Δ|) with (1 + #|Δ|)%nat by omega.
+            rewrite lift_llift3 by omega. reflexivity.
+        + replace (S (S #|Δ|)) with ((S #|Δ|) + 1)%nat by omega.
+          rewrite <- llift_subst.
+          change (sRefl (llift #|Γm| #|Δ| A1) (llift #|Γm| #|Δ| u1))
+            with (llift #|Γm| #|Δ| (sRefl A1 u1)).
+          replace (#|Δ| + 1)%nat with (S #|Δ| + 0)%nat by omega.
+          rewrite <- llift_subst. f_equal. omega.
       - cbn. eapply cong_Transport ; emh.
       - cbn. eapply cong_Heq ; emh.
       - cbn. eapply cong_Pack ; emh.
@@ -1068,12 +1107,44 @@ Proof.
       - cbn. eapply cong_HeqTransport ; emh.
       - cbn. eapply cong_CongProd ; emh.
         cbn. f_equal.
-        + cheat.
-        + cheat.
+        + rewrite lift_llift3 by omega.
+          replace (S #|Δ|) with ((S #|Δ|) + 0)%nat by omega.
+          rewrite llift_subst. cbn. reflexivity.
+        + rewrite lift_llift3 by omega.
+          replace (S #|Δ|) with ((S #|Δ|) + 0)%nat by omega.
+          rewrite llift_subst. cbn. reflexivity.
       - cbn. eapply cong_CongLambda ; emh.
-        + cheat.
-        + cheat.
-      - cheat.
+        + cbn. f_equal.
+          * rewrite lift_llift3 by omega.
+            replace (S #|Δ|) with ((S #|Δ|) + 0)%nat by omega.
+            rewrite llift_subst. cbn. reflexivity.
+          * rewrite lift_llift3 by omega.
+            replace (S #|Δ|) with ((S #|Δ|) + 0)%nat by omega.
+            rewrite llift_subst. cbn. reflexivity.
+        + cbn. f_equal.
+          * rewrite lift_llift3 by omega.
+            replace (S #|Δ|) with ((S #|Δ|) + 0)%nat by omega.
+            rewrite llift_subst. cbn. reflexivity.
+          * rewrite lift_llift3 by omega.
+            replace (S #|Δ|) with ((S #|Δ|) + 0)%nat by omega.
+            rewrite llift_subst. cbn. reflexivity.
+          * rewrite lift_llift3 by omega.
+            replace (S #|Δ|) with ((S #|Δ|) + 0)%nat by omega.
+            rewrite llift_subst. cbn. reflexivity.
+          * rewrite lift_llift3 by omega.
+            replace (S #|Δ|) with ((S #|Δ|) + 0)%nat by omega.
+            rewrite llift_subst. cbn. reflexivity.
+      - cbn. replace #|Δ| with (#|Δ| + 0)%nat by omega.
+        rewrite 2!llift_subst. cbn.
+        replace (#|Δ| + 0)%nat with #|Δ| by omega.
+        eapply cong_CongApp ; emh.
+        cbn. f_equal.
+        + rewrite lift_llift3 by omega.
+          replace (S #|Δ|) with ((S #|Δ|) + 0)%nat by omega.
+          rewrite llift_subst. cbn. reflexivity.
+        + rewrite lift_llift3 by omega.
+          replace (S #|Δ|) with ((S #|Δ|) + 0)%nat by omega.
+          rewrite llift_subst. cbn. reflexivity.
       - cbn. eapply cong_CongEq ; emh.
       - cbn. eapply cong_CongRefl ; emh.
       - cbn. eapply cong_EqToHeq ; emh.
@@ -1211,16 +1282,58 @@ Proof.
       - apply eq_reflexivity. emh.
       - apply eq_symmetry ; emh.
       - eapply eq_transitivity ; emh.
-      - cheat.
-      - cheat.
+      - cbn. replace #|Δ| with (#|Δ| + 0)%nat by omega.
+        rewrite 2!rlift_subst. cbn.
+        replace (#|Δ| + 0)%nat with #|Δ| by omega.
+        eapply eq_beta ; emh.
+      - cbn. replace #|Δ| with (#|Δ| + 0)%nat by omega.
+        rewrite rlift_subst.
+        replace (S #|Δ| + 0)%nat with (#|Δ| + 1)%nat by omega.
+        rewrite rlift_subst.
+        cbn. replace (#|Δ| + 0)%nat with #|Δ| by omega.
+        replace (S (#|Δ| + 1))%nat with (S (S #|Δ|)) by omega.
+        eapply eq_JRefl ; emh.
+        + instantiate (1 := ne). instantiate (1 := nx). cbn. unfold ssnoc.
+          rewrite !rlift_decl_svass. cbn. f_equal. f_equal. f_equal.
+          * replace (S #|Δ|) with (1 + #|Δ|)%nat by omega.
+            rewrite lift_rlift3 by omega. reflexivity.
+          * replace (S #|Δ|) with (1 + #|Δ|)%nat by omega.
+            rewrite lift_rlift3 by omega. reflexivity.
+        + replace (S (S #|Δ|)) with ((S #|Δ|) + 1)%nat by omega.
+          rewrite <- rlift_subst.
+          change (sRefl (rlift #|Γm| #|Δ| A) (rlift #|Γm| #|Δ| u))
+            with (rlift #|Γm| #|Δ| (sRefl A u)).
+          replace (#|Δ| + 1)%nat with (S #|Δ| + 0)%nat by omega.
+          rewrite <- rlift_subst. f_equal. omega.
       - cbn. eapply eq_TransportRefl ; emh.
       - eapply eq_conv ; emh.
       - cbn. eapply cong_Prod ; emh.
       - cbn. eapply cong_Lambda ; emh.
-      - cheat.
+      - cbn. replace #|Δ| with (#|Δ| + 0)%nat by omega.
+        rewrite rlift_subst. cbn.
+        replace (#|Δ| + 0)%nat with #|Δ| by omega.
+        eapply cong_App ; emh.
       - cbn. eapply cong_Eq ; emh.
       - cbn. eapply cong_Refl ; emh.
-      - cbn. cheat.
+      - cbn. replace #|Δ| with (#|Δ| + 0)%nat by omega.
+        rewrite rlift_subst.
+        replace (S #|Δ| + 0)%nat with (#|Δ| + 1)%nat by omega.
+        rewrite rlift_subst.
+        cbn. replace (#|Δ| + 0)%nat with #|Δ| by omega.
+        replace (S (#|Δ| + 1))%nat with (S (S #|Δ|)) by omega.
+        eapply cong_J ; emh.
+        + instantiate (1 := ne). instantiate (1 := nx). cbn. unfold ssnoc.
+          rewrite !rlift_decl_svass. cbn. f_equal. f_equal. f_equal.
+          * replace (S #|Δ|) with (1 + #|Δ|)%nat by omega.
+            rewrite lift_rlift3 by omega. reflexivity.
+          * replace (S #|Δ|) with (1 + #|Δ|)%nat by omega.
+            rewrite lift_rlift3 by omega. reflexivity.
+        + replace (S (S #|Δ|)) with ((S #|Δ|) + 1)%nat by omega.
+          rewrite <- rlift_subst.
+          change (sRefl (rlift #|Γm| #|Δ| A1) (rlift #|Γm| #|Δ| u1))
+            with (rlift #|Γm| #|Δ| (sRefl A1 u1)).
+          replace (#|Δ| + 1)%nat with (S #|Δ| + 0)%nat by omega.
+          rewrite <- rlift_subst. f_equal. omega.
       - cbn. eapply cong_Transport ; emh.
       - cbn. eapply cong_Heq ; emh.
       - cbn. eapply cong_Pack ; emh.
@@ -1233,12 +1346,44 @@ Proof.
       - cbn. eapply cong_HeqTransport ; emh.
       - cbn. eapply cong_CongProd ; emh.
         cbn. f_equal.
-        + cheat.
-        + cheat.
+        + rewrite lift_rlift3 by omega.
+          replace (S #|Δ|) with ((S #|Δ|) + 0)%nat by omega.
+          rewrite rlift_subst. cbn. reflexivity.
+        + rewrite lift_rlift3 by omega.
+          replace (S #|Δ|) with ((S #|Δ|) + 0)%nat by omega.
+          rewrite rlift_subst. cbn. reflexivity.
       - cbn. eapply cong_CongLambda ; emh.
-        + cheat.
-        + cheat.
-      - cheat.
+        + cbn. f_equal.
+          * rewrite lift_rlift3 by omega.
+            replace (S #|Δ|) with ((S #|Δ|) + 0)%nat by omega.
+            rewrite rlift_subst. cbn. reflexivity.
+          * rewrite lift_rlift3 by omega.
+            replace (S #|Δ|) with ((S #|Δ|) + 0)%nat by omega.
+            rewrite rlift_subst. cbn. reflexivity.
+        + cbn. f_equal.
+          * rewrite lift_rlift3 by omega.
+            replace (S #|Δ|) with ((S #|Δ|) + 0)%nat by omega.
+            rewrite rlift_subst. cbn. reflexivity.
+          * rewrite lift_rlift3 by omega.
+            replace (S #|Δ|) with ((S #|Δ|) + 0)%nat by omega.
+            rewrite rlift_subst. cbn. reflexivity.
+          * rewrite lift_rlift3 by omega.
+            replace (S #|Δ|) with ((S #|Δ|) + 0)%nat by omega.
+            rewrite rlift_subst. cbn. reflexivity.
+          * rewrite lift_rlift3 by omega.
+            replace (S #|Δ|) with ((S #|Δ|) + 0)%nat by omega.
+            rewrite rlift_subst. cbn. reflexivity.
+      - cbn. replace #|Δ| with (#|Δ| + 0)%nat by omega.
+        rewrite 2!rlift_subst. cbn.
+        replace (#|Δ| + 0)%nat with #|Δ| by omega.
+        eapply cong_CongApp ; emh.
+        cbn. f_equal.
+        + rewrite lift_rlift3 by omega.
+          replace (S #|Δ|) with ((S #|Δ|) + 0)%nat by omega.
+          rewrite rlift_subst. cbn. reflexivity.
+        + rewrite lift_rlift3 by omega.
+          replace (S #|Δ|) with ((S #|Δ|) + 0)%nat by omega.
+          rewrite rlift_subst. cbn. reflexivity.
       - cbn. eapply cong_CongEq ; emh.
       - cbn. eapply cong_CongRefl ; emh.
       - cbn. eapply cong_EqToHeq ; emh.
@@ -1500,10 +1645,6 @@ Defined.
 (* More lemmata about exchange.
    They should go above with the others.
  *)
-
-Definition rlift_subst :
-  forall (u t : sterm) (i j m : nat), rlift j (i+m) (u {m := t}) = (rlift j (S i+m) u) {m := rlift j i t}.
-Admitted.
 
 Lemma llift_substProj :
   forall {t γ},

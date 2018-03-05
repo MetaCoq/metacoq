@@ -1647,27 +1647,57 @@ Defined.
  *)
 
 Lemma llift_substProj :
-  forall {t γ},
-    (lift 1 1 (llift γ 1 t)) {0 := sProjT1 (sRel 0)} = llift0 (S γ) t.
+  forall {t γ l},
+    (lift 1 (S l) (llift γ (S l) t)) {l := sProjT1 (sRel 0)} = llift (S γ) l t.
 Proof.
-  intro t. induction t ; intro γ.
-  - cbn. destruct n as [|n].
-    + cbn. reflexivity.
-    + cbn. destruct γ as [|γ].
-      * cbn. reflexivity.
-      * case_eq (n <=? γ).
-        -- intro nlγ. cbn. reflexivity.
-        -- intro γln. cbn. reflexivity.
-  - cbn. reflexivity.
-  - cbn. f_equal.
-    * easy.
-    * (* We would need to strengthen it!
-         I believe however that it is convincing enough that it holds
-         for variables.
-       *)
-Admitted.
+  intro t. induction t ; intros γ l.
+  all: try (cbn ; f_equal ; easy).
+  unfold llift.
+  case_eq (n <? S l) ; intro e ; bprop e ; try omega.
+  - case_eq (n <? l) ; intro e1 ; bprop e1 ; try omega.
+    + unfold lift. case_eq (S l <=? n) ; intro e3 ; bprop e3 ; try omega.
+      cbn. case_eq (l ?= n) ; intro e5 ; bprop e5 ; try omega.
+      reflexivity.
+    + case_eq (n <? l + S γ) ; intro e3 ; bprop e3 ; try omega.
+      unfold lift. case_eq (S l <=? n) ; intro e5 ; bprop e5 ; try omega.
+      cbn. case_eq (l ?= n) ; intro e7 ; bprop e7 ; try omega.
+      f_equal. f_equal. omega.
+  - case_eq (n <? l) ; intro e1 ; bprop e1 ; try omega.
+    case_eq (n <? S l + γ) ; intro e3 ; bprop e3 ; try omega.
+    + case_eq (n <? l + S γ) ; intro e5 ; bprop e5 ; try omega.
+      unfold lift. case_eq (S l <=? n) ; intro e7 ; bprop e7 ; try omega.
+      cbn. case_eq (l ?= S n) ; intro e9 ; bprop e9 ; try omega.
+      reflexivity.
+    + case_eq (n <? l + S γ) ; intro e5 ; bprop e5 ; try omega.
+      unfold lift. case_eq (S l <=? n) ; intro e7 ; bprop e7 ; try omega.
+      cbn. case_eq (l ?= S n) ; intro e9 ; bprop e9 ; try omega.
+      reflexivity.
+Defined.
 
 Lemma rlift_substProj :
-  forall {t γ},
-    (lift 1 1 (rlift γ 1 t)) {0 := sProjT2 (sRel 0)} = rlift0 (S γ) t.
-Admitted.
+  forall {t γ l},
+    (lift 1 (S l) (rlift γ (S l) t)) {l := sProjT2 (sRel 0)} = rlift (S γ) l t.
+Proof.
+  intro t. induction t ; intros γ l.
+  all: try (cbn ; f_equal ; easy).
+  unfold rlift.
+  case_eq (n <? S l) ; intro e ; bprop e ; try omega.
+  - case_eq (n <? l) ; intro e1 ; bprop e1 ; try omega.
+    + unfold lift. case_eq (S l <=? n) ; intro e3 ; bprop e3 ; try omega.
+      cbn. case_eq (l ?= n) ; intro e5 ; bprop e5 ; try omega.
+      reflexivity.
+    + case_eq (n <? l + S γ) ; intro e3 ; bprop e3 ; try omega.
+      unfold lift. case_eq (S l <=? n) ; intro e5 ; bprop e5 ; try omega.
+      cbn. case_eq (l ?= n) ; intro e7 ; bprop e7 ; try omega.
+      f_equal. f_equal. omega.
+  - case_eq (n <? l) ; intro e1 ; bprop e1 ; try omega.
+    case_eq (n <? S l + γ) ; intro e3 ; bprop e3 ; try omega.
+    + case_eq (n <? l + S γ) ; intro e5 ; bprop e5 ; try omega.
+      unfold lift. case_eq (S l <=? n) ; intro e7 ; bprop e7 ; try omega.
+      cbn. case_eq (l ?= S n) ; intro e9 ; bprop e9 ; try omega.
+      reflexivity.
+    + case_eq (n <? l + S γ) ; intro e5 ; bprop e5 ; try omega.
+      unfold lift. case_eq (S l <=? n) ; intro e7 ; bprop e7 ; try omega.
+      cbn. case_eq (l ?= S n) ; intro e9 ; bprop e9 ; try omega.
+      reflexivity.
+Defined.

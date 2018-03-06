@@ -1,5 +1,16 @@
 # Translation from ETT to ITT and then to TemplateCoq
 
+### Prerequisites
+
+**TemplateCoq**
+In order to build this project you need to build TemplateCoq. In order to do so, just `make` in the parent repository.
+
+**Equations**
+You also need the Equations plugin to build it. See [here](http://mattam82.github.io/Coq-Equations/) for how to install it.
+
+
+To build the project, you only need to `make`.
+
 ### Detail of the files
 
 - `SAst.v` describes common syntax (in a similar fashion to `Ast.v` of

@@ -320,6 +320,7 @@ Definition glob_term :=
   (* More for the sake of examples *)
   let _ := @nat in
   let _ := @bool in
+  let _ := @vec in
   Type.
 
 Quote Recursively Definition glob_prog := @glob_term.

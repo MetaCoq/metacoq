@@ -343,3 +343,8 @@ Make Definition coq_nat :=
               end)
       in exact t
   ).
+
+(*! EXAMPLE 4:
+    vec nat 1
+    We cannot even write it!
+*)

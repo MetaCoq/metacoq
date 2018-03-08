@@ -325,3 +325,13 @@ Definition mkEqToHeq (A u v p : term) : term :=
 
 Definition mkHeqTypeEq (A u B v p : term) : term :=
   tApp tHeqTypeEq [ A ; u ; B ; v ; p ].
+
+
+(* For examples *)
+
+Inductive vec A : nat -> Type :=
+| vnil : vec A 0
+| vcons : A -> forall n, vec A n -> vec A (S n).
+
+Arguments vnil {_}.
+Arguments vcons {_} _ _ _.

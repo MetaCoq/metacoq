@@ -21,6 +21,9 @@ Record pp_prod (A B : Type) : Type :=
 
 Notation "x * y" := (pp_prod x y) : type_scope.
 
+Definition fst {A B} (p : A * B) := pi1_ A B p.
+Definition snd {A B} (p : A * B) := pi2_ A B p.
+
 From Template Require Import Ast.
 
 Definition sort := nat.
@@ -56,5 +59,5 @@ Inductive sterm : Type :=
 | sProjT2 (p : sterm)
 | sProjTe (p : sterm)
 (* Inductives *)
-| sInd (ind : inductive) (s : sort)
+| sInd (ind : inductive)
 .

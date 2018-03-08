@@ -8,7 +8,7 @@ Reserved Notation " Σ ;;; Γ '|-i' t = u : T " (at level 50, Γ, t, u, T at nex
 
 Open Scope s_scope.
 
-Inductive typing (Σ : global_context) : scontext -> sterm -> sterm -> Type :=
+Inductive typing (Σ : sglobal_context) : scontext -> sterm -> sterm -> Type :=
 | type_Rel Γ n :
     wf Σ Γ ->
     forall (isdecl : n < List.length Γ),
@@ -221,10 +221,10 @@ Inductive typing (Σ : global_context) : scontext -> sterm -> sterm -> Type :=
     Σ ;;; Γ |-i p : sPack A1 A2 ->
     Σ ;;; Γ |-i sProjTe p : sHeq A1 (sProjT1 p) A2 (sProjT2 p)
 
-| type_Ind Γ ind s :
+| type_Ind Γ ind :
     wf Σ Γ ->
-    forall univs decl (isdecl : declared_inductive (fst Σ) ind univs decl),
-      Σ ;;; Γ |-i sInd ind s : sSort s
+    forall univs decl (isdecl : sdeclared_inductive (fst Σ) ind univs decl),
+      Σ ;;; Γ |-i sInd ind : decl.(sind_type)
 
 | type_conv Γ t A B s :
     Σ ;;; Γ |-i t : A ->
@@ -234,7 +234,7 @@ Inductive typing (Σ : global_context) : scontext -> sterm -> sterm -> Type :=
 
 where " Σ ;;; Γ '|-i' t : T " := (@typing Σ Γ t T) : i_scope
 
-with wf (Σ : global_context) : scontext -> Type :=
+with wf (Σ : sglobal_context) : scontext -> Type :=
 | wf_nil :
     wf Σ nil
 
@@ -243,7 +243,7 @@ with wf (Σ : global_context) : scontext -> Type :=
     Σ ;;; Γ |-i A : sSort s ->
     wf Σ (Γ ,, svass x A)
 
-with eq_term (Σ : global_context) : scontext -> sterm -> sterm -> sterm -> Type :=
+with eq_term (Σ : sglobal_context) : scontext -> sterm -> sterm -> sterm -> Type :=
 | eq_reflexivity Γ u A :
     Σ ;;; Γ |-i u : A ->
     Σ ;;; Γ |-i u = u : A
@@ -718,13 +718,13 @@ Defined.
 Ltac ih h :=
   lazymatch goal with
   | [ type_lift :
-        forall (Σ : global_context) (Γ Δ Ξ : scontext) (t A : sterm),
+        forall (Σ : sglobal_context) (Γ Δ Ξ : scontext) (t A : sterm),
           Σ;;; Γ ,,, Ξ |-i t : A ->
           wf Σ (Γ ,,, Δ) ->
           Σ;;; Γ ,,, Δ ,,, lift_context #|Δ| Ξ
           |-i lift #|Δ| #|Ξ| t : lift #|Δ| #|Ξ| A,
       cong_lift :
-        forall (Σ : global_context) (Γ Δ Ξ : scontext) (t1 t2 A : sterm),
+        forall (Σ : sglobal_context) (Γ Δ Ξ : scontext) (t1 t2 A : sterm),
           Σ;;; Γ ,,, Ξ |-i t1 = t2 : A ->
           wf Σ (Γ ,,, Δ) ->
           Σ;;; Γ ,,, Δ ,,, lift_context #|Δ| Ξ
@@ -912,7 +912,8 @@ Proof.
       - cbn. eapply @type_ProjT1 with (A2 := lift #|Δ| #|Ξ| A2) ; eih.
       - cbn. eapply @type_ProjT2 with (A1 := lift #|Δ| #|Ξ| A1) ; eih.
       - cbn. eapply type_ProjTe ; eih.
-      - cbn. eapply type_Ind.
+      - cbn. (* I need exchange rule *)
+        eapply type_Ind.
         + now apply wf_lift.
         + eassumption.
       - eapply type_conv ; eih.
@@ -1142,13 +1143,13 @@ Defined.
 Ltac sh h :=
   lazymatch goal with
   | [ type_subst :
-        forall (Σ : global_context) (Γ Δ : scontext) (t A : sterm) (nx : name)
+        forall (Σ : sglobal_context) (Γ Δ : scontext) (t A : sterm) (nx : name)
           (B u : sterm),
           Σ;;; Γ,, svass nx B ,,, Δ |-i t : A ->
           Σ;;; Γ |-i u : B -> Σ;;; Γ ,,, subst_context u Δ |-i
           t {#|Δ| := u} : A {#|Δ| := u},
      cong_subst :
-       forall (Σ : global_context) (Γ Δ : scontext) (t1 t2 A : sterm) (nx : name)
+       forall (Σ : sglobal_context) (Γ Δ : scontext) (t1 t2 A : sterm) (nx : name)
          (B u : sterm),
          Σ;;; Γ,, svass nx B ,,, Δ |-i t1 = t2 : A ->
          Σ;;; Γ |-i u : B -> Σ;;; Γ ,,, subst_context u Δ |-i

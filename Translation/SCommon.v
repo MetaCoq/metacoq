@@ -104,4 +104,32 @@ Inductive sglobal_decl :=
 
 Definition sglobal_declarations := list sglobal_decl.
 
-Definition sglobal_context : Type := sglobal_declarations (* * uGraph.t *).
+(* We leave the graph for compatibility.
+   Hopefully it isn't too heavy.
+ *)
+Definition sglobal_context : Type := sglobal_declarations * uGraph.t.
+
+(* Operations for inductives *)
+
+Definition sglobal_decl_ident d :=
+  match d with
+  | SConstantDecl id _ => id
+  | SInductiveDecl id _ => id
+  end.
+
+Fixpoint slookup_env (Σ : sglobal_declarations) (id : ident) : option sglobal_decl :=
+  match Σ with
+  | nil => None
+  | hd :: tl =>
+    if ident_eq id (sglobal_decl_ident hd) then Some hd
+    else slookup_env tl id
+  end.
+
+
+Definition sdeclared_minductive Σ mind decl :=
+  slookup_env Σ mind = Some (SInductiveDecl mind decl).
+
+Definition sdeclared_inductive Σ ind univs decl :=
+  exists decl', sdeclared_minductive Σ (inductive_mind ind) decl' /\
+           univs = decl'.(sind_universes) /\
+           List.nth_error decl'.(sind_bodies) (inductive_ind ind) = Some decl.

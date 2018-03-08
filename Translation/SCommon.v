@@ -79,3 +79,29 @@ Defined.
 
 Definition sapp_context (Γ Γ' : scontext) : scontext := (Γ' ++ Γ)%list.
 Notation " Γ  ,,, Γ' " := (sapp_context Γ Γ') (at level 25, Γ' at next level, left associativity) : s_scope.
+
+(* Copy of global_contexts
+
+   In some cases we just keep the TemplateCoq version (TC).
+*)
+
+Record sone_inductive_body := {
+  sind_name : ident;
+  sind_type : sterm;
+  sind_kelim : list sort_family; (* TC *)
+  sind_ctors : list (ident * sterm * nat);
+  sind_projs : list (ident * term) (* TC *)
+}.
+
+Record smutual_inductive_body := {
+  sind_npars : nat;
+  sind_bodies : list sone_inductive_body ;
+  sind_universes : universe_context }.
+
+Inductive sglobal_decl :=
+| SConstantDecl : kername -> constant_body -> sglobal_decl (* TC *)
+| SInductiveDecl : kername -> smutual_inductive_body -> sglobal_decl.
+
+Definition sglobal_declarations := list sglobal_decl.
+
+Definition sglobal_context : Type := sglobal_declarations (* * uGraph.t *).

@@ -55,4 +55,6 @@ Inductive sterm : Type :=
 | sProjT1 (p : sterm)
 | sProjT2 (p : sterm)
 | sProjTe (p : sterm)
+(* Inductives *)
+| sInd (ind : inductive) (s : sort)
 .

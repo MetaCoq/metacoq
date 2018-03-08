@@ -58,6 +58,9 @@ Inductive trel : sterm -> sterm -> Type :=
     u1 ∼ u2 ->
     sRefl A1 u1 ∼ sRefl A2 u2
 
+| trel_Ind ind s :
+    sInd ind s ∼ sInd ind s
+
 where " t1 ∼ t2 " := (trel t1 t2).
 
 Derive Signature for trel.
@@ -109,6 +112,9 @@ Inductive inrel : sterm -> sterm -> Type :=
     A ⊏ A' ->
     u ⊏ u' ->
     sRefl A u ⊏ sRefl A' u'
+
+| inrel_Ind ind s :
+    sInd ind s ⊏ sInd ind s
 
 where " t ⊏ t' " := (inrel t t').
 
@@ -617,6 +623,33 @@ Proof.
         eapply type_rlift0.
         -- eapply type_Refl ; eassumption.
         -- eassumption.
+
+  (* Ind *)
+  - destruct (inversionInd h1) as [univs1 [decl1 [isdecl1 e1]]].
+    destruct (inversionInd h2) as [univs2 [decl2 [isdecl2 e2]]].
+    exists (sHeqRefl (sSort s) (sInd ind s)).
+    assert (hwf : wf Σ (Γ ,,, Γm)).
+    { eapply @wf_llift with (Δ := []) ; try eassumption.
+      eapply typing_wf ; eassumption.
+    }
+    eapply type_conv'.
+    + eapply type_HeqRefl'.
+      eapply type_Ind ; eassumption.
+    + cbn. eapply cong_Heq.
+      * instantiate (1 := succ_sort s).
+        change (sSort s)
+          with (llift0 #|Γm| (sSort s)).
+        change (sSort (succ_sort s))
+          with (llift0 #|Γm| (sSort (succ_sort s))).
+        eapply cong_llift0 ; eassumption.
+      * change (sSort s)
+          with (rlift0 #|Γm| (sSort s)).
+        change (sSort (succ_sort s))
+          with (rlift0 #|Γm| (sSort (succ_sort s))).
+        eapply cong_rlift0 ; eassumption.
+      * apply eq_reflexivity. eapply type_Ind ; eassumption.
+      * apply eq_reflexivity. eapply type_Ind ; eassumption.
+
   Unshelve.
   all: cbn ; try rewrite !length_cat ; omega.
 Defined.
@@ -1152,6 +1185,10 @@ Definition typing_all : forall (Σ : global_context)
         forall t0 : Σ;;; Γ |-x u : A,
         P Γ u A t0 ->
         P Γ (sRefl A u) (sEq A u u) (XTyping.type_Refl Σ Γ s A u t t0)) ->
+       (forall (Γ : scontext) (ind : inductive) (s : sort) (w : XTyping.wf Σ Γ),
+        P0 Γ w ->
+        forall univs decl (isdecl : declared_inductive (fst Σ) ind univs decl),
+        P Γ (sInd ind s) (sSort s) (XTyping.type_Ind Σ Γ ind s w univs decl isdecl)) ->
        (forall (Γ : scontext) (t A B : sterm) (s : sort)
           (t0 : Σ;;; Γ |-x t : A),
         P Γ t A t0 ->
@@ -1290,16 +1327,16 @@ Proof.
                     {Γ'} (hΓ : Σ |--i Γ' # ⟦ Γ ⟧),
   ∑ A' A'' u' v' p',
     eqtrans Σ Γ A u v Γ' A' A'' u' v' p')
-                     _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _); intros.
+                     _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _); intros.
   (** context_translation **)
 
     (* wf_nil *)
     + exists nil. split ; constructor.
 
     (* wf_snoc *)
-    + destruct H as [Γ' hΓ'].
+    + destruct X as [Γ' hΓ'].
       rename t into hA.
-      destruct (H0 _ hΓ') as [T [A' hA']].
+      destruct (X0 _ hΓ') as [T [A' hA']].
       assert (th : type_head (head (sSort s))) by constructor.
       destruct (choose_type th hA') as [T' [[A'' hA''] hh]].
       destruct T' ; try (now inversion hh).
@@ -1327,14 +1364,14 @@ Proof.
 
     (* type_Prod *)
     + (* Translation of the domain *)
-      destruct (H _ hΓ) as [S' [t' ht']].
+      destruct (X _ hΓ) as [S' [t' ht']].
       assert (th : type_head (head (sSort s1))) by constructor.
       destruct (choose_type th ht') as [T' [[t'' ht''] hh]].
       clear ht' t' S'.
       destruct T' ; inversion hh.
       subst. clear hh th.
       (* Translation of the codomain *)
-      destruct (H0 _ (trans_snoc hΓ ht''))
+      destruct (X0 _ (trans_snoc hΓ ht''))
         as [S' [b' hb']].
       assert (th : type_head (head (sSort s2))) by constructor.
       destruct (choose_type th hb') as [T' [[b'' hb''] hh]].
@@ -1346,21 +1383,21 @@ Proof.
 
     (* type_Lambda *)
     + (* Translation of the domain *)
-      destruct (H _ hΓ) as [S' [t' ht']].
+      destruct (X _ hΓ) as [S' [t' ht']].
       assert (th : type_head (head (sSort s1))) by constructor.
       destruct (choose_type th ht') as [T' [[t'' ht''] hh]].
       clear ht' t' S'.
       destruct T' ; inversion hh.
       subst. clear hh th.
       (* Translation of the codomain *)
-      destruct (H0 _ (trans_snoc hΓ ht''))
+      destruct (X0 _ (trans_snoc hΓ ht''))
         as [S' [bty' hbty']].
       assert (th : type_head (head (sSort s2))) by constructor.
       destruct (choose_type th hbty') as [T' [[bty'' hbty''] hh]].
       clear hbty' bty' S'.
       destruct T' ; inversion hh. subst. clear hh th.
       (* Translation of the term *)
-      destruct (H1 _ (trans_snoc hΓ ht''))
+      destruct (X1 _ (trans_snoc hΓ ht''))
         as [S' [b' hb']].
       destruct (change_type hb' hbty'') as [b'' hb''].
       clear hb' S' b'.
@@ -1378,23 +1415,24 @@ Proof.
         -- now destruct ht'' as [[[? ?] ?] ?].
         -- now destruct hbty'' as [[[? ?] ?] ?].
         -- now destruct hb'' as [[[? ?] ?] ?].
+
     (* type_App *)
     + (* Translation of the domain *)
-      destruct (H _ hΓ) as [S' [A'' hA'']].
+      destruct (X _ hΓ) as [S' [A'' hA'']].
       assert (th : type_head (head (sSort s1))) by constructor.
       destruct (choose_type th hA'') as [T' [[A' hA'] hh]].
       clear hA'' A'' S'.
       destruct T' ; inversion hh.
       subst. clear hh th.
       (* Translation of the codomain *)
-      destruct (H0 _ (trans_snoc hΓ hA'))
+      destruct (X0 _ (trans_snoc hΓ hA'))
         as [S' [B'' hB'']].
       assert (th : type_head (head (sSort s2))) by constructor.
       destruct (choose_type th hB'') as [T' [[B' hB'] hh]].
       clear hB'' B'' S'.
       destruct T' ; inversion hh. subst. clear hh th.
       (* Translation of the function *)
-      destruct (H1 _ hΓ) as [T'' [t'' ht'']].
+      destruct (X1 _ hΓ) as [T'' [t'' ht'']].
       assert (th : type_head (head (sProd n A B))) by constructor.
       destruct (choose_type th ht'') as [T' [[t' ht'] hh]].
       clear ht'' t'' T''.
@@ -1403,7 +1441,7 @@ Proof.
       destruct (change_type ht' (trans_Prod hΓ hA' hB')) as [t'' ht''].
       clear ht' A'' B'' t'.
       (* Translation of the argument *)
-      destruct (H2 _ hΓ) as [A'' [u'' hu'']].
+      destruct (X2 _ hΓ) as [A'' [u'' hu'']].
       destruct (change_type hu'' hA') as [u' hu'].
       clear hu'' A'' u''.
       (* We now conclude *)
@@ -1421,24 +1459,24 @@ Proof.
 
     (* type_Eq *)
     + (* The type *)
-      destruct (H _ hΓ) as [S [A'' hA'']].
+      destruct (X _ hΓ) as [S [A'' hA'']].
       assert (th : type_head (head (sSort s))) by constructor.
       destruct (choose_type th hA'') as [T [[A' hA'] hh]].
       clear hA'' A'' S.
       destruct T ; inversion hh. subst. clear hh th.
       (* The first term *)
-      destruct (H0 _ hΓ) as [A'' [u'' hu'']].
+      destruct (X0 _ hΓ) as [A'' [u'' hu'']].
       destruct (change_type hu'' hA') as [u' hu'].
       clear hu'' u'' A''.
       (* The other term *)
-      destruct (H1 _ hΓ) as [A'' [v'' hv'']].
+      destruct (X1 _ hΓ) as [A'' [v'' hv'']].
       destruct (change_type hv'' hA') as [v' hv'].
       (* Now we conclude *)
       exists (sSort s), (sEq A' u' v').
       apply trans_Eq ; assumption.
 
     (* type_Refl *)
-    + destruct (H0 _ hΓ) as [A' [u' hu']].
+    + destruct (X0 _ hΓ) as [A' [u' hu']].
       exists (sEq A' u' u'), (sRefl A' u').
       destruct hu' as [[[? ?] ?] hu'].
       destruct hΓ.
@@ -1449,9 +1487,18 @@ Proof.
       * constructor ; assumption.
       * eapply type_Refl ; eassumption.
 
+    (* type_Ind *)
+    + exists (sSort s), (sInd ind s).
+      repeat split.
+      * now destruct hΓ.
+      * constructor.
+      * constructor.
+      * eapply type_Ind ; try eassumption.
+        now destruct hΓ.
+
     (* type_conv *)
     + (* Translating the conversion *)
-      destruct (H1 _ hΓ)
+      destruct (X1 _ hΓ)
         as [S' [S'' [A'' [B'' [p' h']]]]].
       destruct (eqtrans_trans h') as [hA'' hB''].
       destruct h' as [[[[[eΓ eS'] eS''] eA] eB] hp'].
@@ -1463,7 +1510,7 @@ Proof.
       (* clear hB'' eS'' eB B'' S''. *)
       destruct T ; inversion hh. subst. clear hh th.
       (* Translating the term *)
-      destruct (H _ hΓ) as [A''' [t'' ht'']].
+      destruct (X _ hΓ) as [A''' [t'' ht'']].
       destruct (change_type ht'' hA') as [t' ht'].
       assert (hpA : ∑ pA, Σ ;;; Γ' |-i pA : sHeq (sSort s) A' S' A'').
       { destruct hA' as [[_ eA'] hA'].
@@ -1509,7 +1556,7 @@ Proof.
   (** eq_translation **)
 
     (* eq_reflexivity *)
-    + destruct (H _ hΓ) as [A' [u' hu']].
+    + destruct (X _ hΓ) as [A' [u' hu']].
       destruct hu' as [[[? ?] ?] hu'].
       destruct (istype_type hu') as [s' hA'].
       exists A', A', u', u', (sHeqRefl A' u').
@@ -1517,7 +1564,7 @@ Proof.
       eapply type_HeqRefl ; eassumption.
 
     (* eq_symmetry *)
-    + destruct (H _ hΓ)
+    + destruct (X _ hΓ)
         as [A' [A'' [u' [v' [p' h']]]]].
       destruct h' as [[[[[? ?] ?] ?] ?] hp'].
       exists A'', A', v', u', (sHeqSym p').
@@ -1525,9 +1572,9 @@ Proof.
       eapply type_HeqSym'. eassumption.
 
     (* eq_transitivity *)
-    + destruct (H _ hΓ)
+    + destruct (X _ hΓ)
         as [A1 [A2 [u1 [v1 [p1 h1']]]]].
-      destruct (H0 _ hΓ)
+      destruct (X0 _ hΓ)
         as [A3 [A4 [v2 [w1 [p2 h2']]]]].
       destruct (eqtrans_trans h1') as [hu1 hv1].
       destruct (eqtrans_trans h2') as [hv2 hw1].
@@ -1553,25 +1600,25 @@ Proof.
 
     (* eq_beta *)
     + (* Translation of the domain *)
-      destruct (H _ hΓ) as [S [A'' hA'']].
+      destruct (X _ hΓ) as [S [A'' hA'']].
       assert (th : type_head (head (sSort s1))) by constructor.
       destruct (choose_type th hA'') as [T' [[A' hA'] hh]].
       clear hA'' A'' S.
       destruct T' ; inversion hh. subst. clear hh th.
       (* Translation of the codomain *)
-      destruct (H0 _ (trans_snoc hΓ hA'))
+      destruct (X0 _ (trans_snoc hΓ hA'))
         as [S' [B'' hB'']].
       assert (th : type_head (head (sSort s2))) by constructor.
       destruct (choose_type th hB'') as [T' [[B' hB'] hh]].
       clear hB'' B'' S'.
       destruct T' ; inversion hh. subst. clear hh th.
       (* Translation of the in-term *)
-      destruct (H1 _ (trans_snoc hΓ hA'))
+      destruct (X1 _ (trans_snoc hΓ hA'))
         as [T' [t'' ht'']].
       destruct (change_type ht'' hB') as [t' ht'].
       clear ht'' T' t''.
       (* Translation of the argument *)
-      destruct (H2 _ hΓ) as [A'' [u'' hu'']].
+      destruct (X2 _ hΓ) as [A'' [u'' hu'']].
       destruct (change_type hu'' hA') as [u' hu'].
       clear hu'' A'' u''.
       (* Now we conclude using reflexivity *)
@@ -1612,7 +1659,7 @@ Proof.
            ++ eapply typing_subst ; eassumption.
     (* eq_conv *)
     + (* Translating the conversion *)
-      destruct (H0 _ hΓ)
+      destruct (X0 _ hΓ)
         as [S' [S'' [T1'' [T2'' [p' h']]]]].
       destruct (eqtrans_trans h') as [hT1'' hT2''].
       destruct h' as [[[[[eΓ eS'] eS''] eT1] eT2] hp'].
@@ -1622,7 +1669,7 @@ Proof.
       destruct (choose_type th hT2'') as [T [[T2' hT2'] hh]].
       destruct T ; inversion hh. subst. clear hh th.
       (* Translation the term conversion *)
-      destruct (H _ hΓ)
+      destruct (X _ hΓ)
         as [T1''' [T2''' [t1'' [t2'' [q' hq']]]]].
       destruct (eqtrans_trans hq') as [ht1'' ht2''].
       destruct (change_type ht1'' hT1') as [t1' ht1'].
@@ -1730,7 +1777,7 @@ Proof.
 
 (* cong_Prod *)
     + (* The domains *)
-      destruct (H _ hΓ)
+      destruct (X _ hΓ)
         as [T1 [T2 [A1'' [A2'' [pA h1']]]]].
       destruct (eqtrans_trans h1') as [hA1'' hA2''].
       destruct h1' as [[[[[? ?] ?] ?] ?] hpA''].
@@ -1742,7 +1789,7 @@ Proof.
       destruct T' ; inversion hh. subst.
       clear hh th.
       (* Now the codomains *)
-      destruct (H0 _ (trans_snoc hΓ hA1'))
+      destruct (X0 _ (trans_snoc hΓ hA1'))
         as [S1 [S2 [B1'' [B2'' [pB h2']]]]].
       destruct (eqtrans_trans h2') as [hB1'' hB2''].
       assert (th : type_head (head (sSort s2))) by constructor.
@@ -1838,7 +1885,7 @@ Proof.
       }
       destruct hp3 as [p3 hp3].
       (* Also translating the typing hypothesis for B2 *)
-      destruct (H2 _ (trans_snoc hΓ hA2'))
+      destruct (X2 _ (trans_snoc hΓ hA2'))
         as [S' [B2''' hB2''']].
       assert (th : type_head (head (sSort s2))) by constructor.
       destruct (choose_type th hB2''') as [T' [[tB2 htB2] hh]].
@@ -1893,7 +1940,7 @@ Proof.
 
     (* cong_Lambda *)
     + (* The domains *)
-      destruct (H _ hΓ)
+      destruct (X _ hΓ)
         as [T1 [T2 [A1'' [A2'' [pA h1']]]]].
       destruct (eqtrans_trans h1') as [hA1'' hA2''].
       destruct h1' as [[[[[? ?] ?] ?] ?] hpA''].
@@ -1905,7 +1952,7 @@ Proof.
       destruct T' ; inversion hh. subst.
       clear hh th.
       (* Now the codomains *)
-      destruct (H0 _ (trans_snoc hΓ hA1'))
+      destruct (X0 _ (trans_snoc hΓ hA1'))
         as [S1 [S2 [B1'' [B2'' [pB h2']]]]].
       destruct (eqtrans_trans h2') as [hB1'' hB2''].
       assert (th : type_head (head (sSort s2))) by constructor.
@@ -2001,7 +2048,7 @@ Proof.
       }
       destruct hp3 as [p3 hp3].
       (* Also translating the typing hypothesis for B2 *)
-      destruct (H3 _ (trans_snoc hΓ hA2'))
+      destruct (X3 _ (trans_snoc hΓ hA2'))
         as [S' [B2''' hB2''']].
       assert (th : type_head (head (sSort s2))) by constructor.
       destruct (choose_type th hB2''') as [T' [[tB2 htB2] hh]].
@@ -2043,12 +2090,12 @@ Proof.
       rename p1 into pA, p5 into pB, hp1 into hpA, hp5 into hpB.
       rename tB2 into B2', htB2 into hB2'.
       (* We can now focus on the function terms *)
-      destruct (H1 _ (trans_snoc hΓ hA1'))
+      destruct (X1 _ (trans_snoc hΓ hA1'))
         as [B1'' [B1''' [t1'' [t2'' [pt h3']]]]].
       destruct (eqtrans_trans h3') as [ht1'' ht2''].
       destruct (change_type ht1'' hB1') as [t1' ht1'].
       destruct (change_type ht2'' hB1') as [t2' ht2'].
-      destruct (H5 _ (trans_snoc hΓ hA2'))
+      destruct (X5 _ (trans_snoc hΓ hA2'))
         as [B2'' [t2''' ht2''']].
       destruct (change_type ht2''' hB2') as [tt2 htt2].
       assert (hq1 : ∑ q1, Σ ;;; Γ' ,, svass n1 A1' |-i q1 : sHeq B1' t1' B1' t2').
@@ -2177,7 +2224,7 @@ Proof.
 
     (* cong_App *)
     + (* The domains *)
-      destruct (H _ hΓ)
+      destruct (X _ hΓ)
         as [T1 [T2 [A1'' [A2'' [pA h1']]]]].
       destruct (eqtrans_trans h1') as [hA1'' hA2''].
       destruct h1' as [[[[[? ?] ?] ?] ?] hpA''].
@@ -2189,7 +2236,7 @@ Proof.
       destruct T' ; inversion hh. subst.
       clear hh th.
       (* Now the codomains *)
-      destruct (H0 _ (trans_snoc hΓ hA1'))
+      destruct (X0 _ (trans_snoc hΓ hA1'))
         as [S1 [S2 [B1'' [B2'' [pB h2']]]]].
       destruct (eqtrans_trans h2') as [hB1'' hB2''].
       assert (th : type_head (head (sSort s2))) by constructor.
@@ -2285,7 +2332,7 @@ Proof.
       }
       destruct hp3 as [p3 hp3].
       (* Also translating the typing hypothesis for B2 *)
-      destruct (H4 _ (trans_snoc hΓ hA2'))
+      destruct (X4 _ (trans_snoc hΓ hA2'))
         as [S' [B2''' hB2''']].
       assert (th : type_head (head (sSort s2))) by constructor.
       destruct (choose_type th hB2''') as [T' [[tB2 htB2] hh]].
@@ -2327,13 +2374,13 @@ Proof.
       rename p1 into pA, p5 into pB, hp1 into hpA, hp5 into hpB.
       rename tB2 into B2', htB2 into hB2'.
       (* We can now translate the functions. *)
-      destruct (H1 _ hΓ)
+      destruct (X1 _ hΓ)
         as [P1 [P1' [t1'' [t2'' [pt h3']]]]].
       destruct (eqtrans_trans h3') as [ht1'' ht2''].
       destruct (change_type ht1'' (trans_Prod hΓ hA1' hB1')) as [t1' ht1'].
       destruct (change_type ht2'' (trans_Prod hΓ hA1' hB1')) as [t2' ht2'].
       destruct h3' as [[[[[? ?] ?] ?] ?] hpt].
-      destruct (H6 _ hΓ)
+      destruct (X6 _ hΓ)
         as [P2 [t2''' ht2''']].
       destruct (change_type ht2''' (trans_Prod hΓ hA2' hB2')) as [tt2 htt2].
       clear ht2''' t2''' P2.
@@ -2366,12 +2413,12 @@ Proof.
       }
       destruct hqt as [qt hqt].
       (* We then translate the arguments. *)
-      destruct (H2 _ hΓ)
+      destruct (X2 _ hΓ)
         as [A1'' [A1''' [u1'' [u2'' [pu h4']]]]].
       destruct (eqtrans_trans h4') as [hu1'' hu2''].
       destruct (change_type hu1'' hA1') as [u1' hu1'].
       destruct h4' as [[[[[? ?] ?] ?] ?] hpu].
-      destruct (H8 _ hΓ) as [A2'' [u2''' hu2''']].
+      destruct (X8 _ hΓ) as [A2'' [u2''' hu2''']].
       destruct (change_type hu2''' hA2') as [tu2 htu2].
       clear hu2''' u2''' A2''.
       assert (hqu : ∑ qu, Σ ;;; Γ' |-i qu : sHeq A1' u1' A2' tu2).
@@ -2453,11 +2500,11 @@ Proof.
                  eapply typing_subst ; eassumption.
 
     (* cong_Eq *)
-    + destruct (H _ hΓ)
+    + destruct (X _ hΓ)
         as [T1 [T2 [A1' [A2' [pA h1']]]]].
-      destruct (H0 _ hΓ)
+      destruct (X0 _ hΓ)
         as [A1'' [A1''' [u1' [u2' [pu h2']]]]].
-      destruct (H1 _ hΓ)
+      destruct (X1 _ hΓ)
         as [A1'''' [A1''''' [v1' [v2' [pv h3']]]]].
       destruct (eqtrans_trans h1') as [hA1' hA2'].
       destruct (eqtrans_trans h2') as [hu1' hu2'].
@@ -2589,9 +2636,9 @@ Proof.
       * eapply type_CongEq' ; assumption.
 
     (* cong_Refl *)
-    + destruct (H _ hΓ)
+    + destruct (X _ hΓ)
         as [T1 [T2 [A1' [A2' [pA h1']]]]].
-      destruct (H0 _ hΓ)
+      destruct (X0 _ hΓ)
         as [A1'' [A1''' [u1' [u2' [pu h2']]]]].
       destruct (eqtrans_trans h1') as [hA1' hA2'].
       destruct (eqtrans_trans h2') as [hu1' hu2'].
@@ -2705,7 +2752,7 @@ Proof.
            ++ eassumption.
 
     (* reflection *)
-    + destruct (H _ hΓ) as [T' [e'' he'']].
+    + destruct (X _ hΓ) as [T' [e'' he'']].
       assert (th : type_head (head (sEq A u v))) by constructor.
       destruct (choose_type th he'') as [T'' [[e' he'] hh]].
       destruct T'' ; try (now inversion hh).

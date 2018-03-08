@@ -221,6 +221,11 @@ Inductive typing (Σ : global_context) : scontext -> sterm -> sterm -> Type :=
     Σ ;;; Γ |-i p : sPack A1 A2 ->
     Σ ;;; Γ |-i sProjTe p : sHeq A1 (sProjT1 p) A2 (sProjT2 p)
 
+| type_Ind Γ ind s :
+    wf Σ Γ ->
+    forall univs decl (isdecl : declared_inductive (fst Σ) ind univs decl),
+      Σ ;;; Γ |-i sInd ind s : sSort s
+
 | type_conv Γ t A B s :
     Σ ;;; Γ |-i t : A ->
     Σ ;;; Γ |-i B : sSort s ->
@@ -907,6 +912,9 @@ Proof.
       - cbn. eapply @type_ProjT1 with (A2 := lift #|Δ| #|Ξ| A2) ; eih.
       - cbn. eapply @type_ProjT2 with (A1 := lift #|Δ| #|Ξ| A1) ; eih.
       - cbn. eapply type_ProjTe ; eih.
+      - cbn. eapply type_Ind.
+        + now apply wf_lift.
+        + eassumption.
       - eapply type_conv ; eih.
     }
 
@@ -1357,6 +1365,9 @@ Proof.
       - cbn. eapply @type_ProjT1 with (A2 := A2{#|Δ| := u}) ; esh.
       - cbn. eapply @type_ProjT2 with (A1 := A1{#|Δ| := u}) ; esh.
       - cbn. eapply type_ProjTe ; esh.
+      - cbn. eapply type_Ind.
+        + now eapply wf_subst.
+        + eassumption.
       - cbn. eapply type_conv ; esh.
     }
 
@@ -1796,6 +1807,9 @@ Proof.
     + eapply @type_subst with (A := sSort s) ; eassumption.
     + eapply @type_subst with (A := sSort s) ; eassumption.
     + apply IHht3 ; eassumption.
+  - cbn. eapply eq_reflexivity. eapply type_Ind.
+    + eapply wf_subst ; eassumption.
+    + eassumption.
   - eapply eq_conv.
     + eapply IHht1 ; assumption.
     + eapply @cong_subst with (A := sSort s) ; eassumption.
@@ -1995,6 +2009,7 @@ Proof.
   - exists (succ_sort s). apply type_Heq ; try assumption.
     + eapply type_ProjT1 ; eassumption.
     + eapply @type_ProjT2 with (A1 := A1) ; eassumption.
+  - eexists. eapply type_Sort. assumption.
   - exists s. assumption.
 Defined.
 
@@ -2979,7 +2994,7 @@ Proof.
   intros Σ Γ n T h. dependent induction h.
   - exists isdecl.
     assert (Σ ;;; Γ |-i sRel n : lift0 (S n) (safe_nth Γ (exist _ n isdecl)).(sdecl_type)) by (now constructor).
-    destruct (istype_type H) as [s hs].
+    destruct (istype_type X) as [s hs].
     exists s. apply eq_reflexivity. eassumption.
   - destruct IHh1 as [isdecl [s' h]].
     exists isdecl, s'.
@@ -3006,6 +3021,28 @@ Proof.
     + destruct (eq_typing e) as [hAs0 _].
       destruct (eq_typing IHh1) as [_ hAss].
       destruct (uniqueness hAs0 hAss) as [? ?].
+      eapply eq_conv ; eassumption.
+Defined.
+
+Lemma inversionInd :
+  forall {Σ Γ ind s T},
+    Σ ;;; Γ |-i sInd ind s : T ->
+    ∑ univs decl (isdecl : declared_inductive (fst Σ) ind univs decl),
+      Σ ;;; Γ |-i sSort s = T : sSort (succ_sort s).
+Proof.
+  intros Σ Γ ind s T h.
+  dependent induction h.
+
+  - exists univs, decl, isdecl.
+    apply eq_reflexivity. apply type_Sort. assumption.
+
+  - destruct IHh1 as [univs [decl [isdecl eq]]].
+    exists univs, decl, isdecl.
+    eapply eq_transitivity.
+    + eassumption.
+    + destruct (eq_typing e) as [hAs _].
+      destruct (eq_typing eq) as [_ hAss0].
+      destruct (uniqueness hAs hAss0) as [? ?].
       eapply eq_conv ; eassumption.
 Defined.
 

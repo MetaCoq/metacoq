@@ -66,6 +66,7 @@ Fixpoint llift γ δ (t:sterm)  : sterm :=
   | sProjT1 x => sProjT1 (llift γ δ x)
   | sProjT2 x => sProjT2 (llift γ δ x)
   | sProjTe x => sProjTe (llift γ δ x)
+  | sInd ind s => sInd ind s
   end.
 
 Notation llift0 γ t := (llift γ 0 t).
@@ -120,6 +121,7 @@ Fixpoint rlift γ δ t : sterm :=
   | sProjT1 x => sProjT1 (rlift γ δ x)
   | sProjT2 x => sProjT2 (rlift γ δ x)
   | sProjTe x => sProjTe (rlift γ δ x)
+  | sInd ind s => sInd ind s
   end.
 
 Notation rlift0 γ t := (rlift γ 0 t).
@@ -1035,6 +1037,9 @@ Proof.
       - cbn. eapply @type_ProjT1 with (A2 := llift #|Γm| #|Δ| A2) ; emh.
       - cbn. eapply @type_ProjT2 with (A1 := llift #|Γm| #|Δ| A1) ; emh.
       - cbn. eapply type_ProjTe ; emh.
+      - cbn. eapply type_Ind.
+        + eapply wf_llift' ; eassumption.
+        + eassumption.
       - eapply type_conv ; emh.
     }
 
@@ -1274,6 +1279,9 @@ Proof.
       - cbn. eapply @type_ProjT1 with (A2 := rlift #|Γm| #|Δ| A2) ; emh.
       - cbn. eapply @type_ProjT2 with (A1 := rlift #|Γm| #|Δ| A1) ; emh.
       - cbn. eapply type_ProjTe ; emh.
+      - cbn. eapply type_Ind.
+        + eapply wf_rlift' ; eassumption.
+        + eassumption.
       - eapply type_conv ; emh.
     }
 

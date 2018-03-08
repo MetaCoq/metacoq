@@ -302,3 +302,44 @@ Make Definition coq_red_tm0 :=
               end)
       in exact t
   ).
+
+(*! EXAMPLE 3: (trivial for now)
+    nat
+    It gets translated to itself.
+*)
+
+Definition iNat :=
+  {| inductive_mind := "Coq.Init.Datatypes.nat"; inductive_ind := 0 |}.
+
+Lemma natty :
+  Σ ;;; [] |-x sInd iNat 0 : sSort 0.
+Proof.
+  eapply type_Ind.
+  - constructor.
+  - Unshelve.
+    repeat econstructor;
+    try (simpl; omega); assert(H':=type_Construct Σ Γ c i u _ _ H); simpl in H';
+    clear H; apply H'; try trivial.
+Defined.
+
+Definition itt_nat : sterm.
+  destruct (type_translation natty istrans_nil) as [A [t [_ h]]].
+  exact t.
+Defined.
+
+Definition itt_nat' := ltac:(let t := eval lazy in itt_nat in exact t).
+
+Definition tc_nat : tsl_result term :=
+  tsl_rec (2 ^ 18) Σ [] itt_nat'.
+
+Definition tc_nat' := ltac:(let t := eval lazy in tc_nat in exact t).
+
+Make Definition coq_nat :=
+  ltac:(
+    let t := eval lazy in
+             (match tc_nat' with
+              | Success t => t
+              | _ => tSort Universe.type0
+              end)
+      in exact t
+  ).

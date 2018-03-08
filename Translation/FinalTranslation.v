@@ -276,6 +276,8 @@ Fixpoint tsl_rec (fuel : nat) (Σ : global_context) (Γ : context) (t : sterm) {
       | Checked T => raise (UnexpectedTranslation "ProjTe" p p' T)
       | TypeError t => raise (TypingError t)
       end
+    | sInd ind s =>
+      ret (tInd ind [])
     end
   end.
 
@@ -315,6 +317,9 @@ Definition glob_term :=
   let _ := @cong_refl in
   let _ := @eq_to_heq in
   let _ := @heq_type_eq in
+  (* More for the sake of examples *)
+  let _ := @nat in
+  let _ := @bool in
   Type.
 
 Quote Recursively Definition glob_prog := @glob_term.

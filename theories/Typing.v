@@ -222,7 +222,7 @@ Inductive red1 (Σ : global_declarations) (Γ : context) : term -> term -> Prop 
 
 | cast_red_l M1 k M2 N1 : red1 Σ Γ M1 N1 -> red1 Σ Γ (tCast M1 k M2) (tCast N1 k M2)
 | cast_red_r M2 k N2 M1 : red1 Σ Γ M2 N2 -> red1 Σ Γ (tCast M1 k M2) (tCast M1 k N2)
-                                       
+
 with reds1 (Σ : global_declarations) (Γ : context): list term -> list term -> Prop :=
 | reds1_hd hd hd' tl : red1 Σ Γ hd hd' -> reds1 Σ Γ (hd :: tl) (hd' :: tl)
 | reds1_tl hd tl tl' : reds1 Σ Γ tl tl' -> reds1 Σ Γ (hd :: tl) (hd :: tl')
@@ -591,7 +591,7 @@ Inductive type_projections (Σ : global_context) (Γ : context) :
     isType Σ Γ t ->
     type_projections Σ Γ l ->
     type_projections Σ Γ ((id, t) :: l).
-      
+
 Definition arities_context (l : list one_inductive_body) :=
   List.map (fun ind => vass (nNamed ind.(ind_name)) ind.(ind_type)) l.
 
@@ -719,7 +719,7 @@ Proof.
   simpl. constructor.
   setenv Σ.
   econstructor.
-  construct. 
+  construct.
   econstructor. apply cumul_refl'.
   construct.
   econstructor.

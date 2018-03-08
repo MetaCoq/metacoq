@@ -9,7 +9,7 @@ From Template Require Import Ast utils LiftSubst Typing.
 From Translation Require Import SAst SLiftSubst SCommon ITyping.
 
 Definition proj_1 {A} {P : A -> Prop} : {a:A | P a} -> A :=
-  fun X => match X with exist _ a _ => a end. 
+  fun X => match X with exist _ a _ => a end.
 
 Fixpoint sterm_eq (t u : sterm) : bool :=
   match t, u with
@@ -51,10 +51,10 @@ Fixpoint sterm_eq (t u : sterm) : bool :=
       sterm_eq pA pA' && sterm_eq pB pB && sterm_eq pt pt'
   | sCongApp B1 B2 pu pA pB pv , sCongApp B1' B2' pu' pA' pB' pv'=>
       sterm_eq B1 B1' && sterm_eq B2 B2' && sterm_eq pA pA' && sterm_eq pB pB &&
-      sterm_eq pu pu' && sterm_eq pv pv'    
+      sterm_eq pu pu' && sterm_eq pv pv'
   | sCongEq pA pu pv, sCongEq pA' pu' pv' =>
-      sterm_eq pA pA' && sterm_eq pu pu' && sterm_eq pv pv'    
-  | sCongRefl pA pu, sCongRefl pA' pu' => 
+      sterm_eq pA pA' && sterm_eq pu pu' && sterm_eq pv pv'
+  | sCongRefl pA pu, sCongRefl pA' pu' =>
       sterm_eq pA pA' && sterm_eq pu pu'
   | sEqToHeq p, sEqToHeq p' =>
       sterm_eq p p'
@@ -131,7 +131,7 @@ Fixpoint reduce (t : sterm) : sterm :=
     let p' := reduce p in
     match p' with
     | sHeqRefl A a => sRefl A a
-    | sEqToHeq a => a                            
+    | sEqToHeq a => a
     | _ => sHeqToEq p'
     end
   | sHeqRefl A a =>
@@ -249,6 +249,7 @@ Fixpoint reduce (t : sterm) : sterm :=
   | sProjTe p =>
     let p' := reduce p in
     sProjTe p'
+  | sInd ind s => sInd ind s
   end.
 
 

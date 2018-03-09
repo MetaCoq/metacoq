@@ -785,38 +785,6 @@ Proof.
         -- cbn in *. omega.
 Defined.
 
-Fixpoint closed_above k t :=
-  match t with
-  | sRel n => n <? k
-  | sSort _ => true
-  | sProd _ A B => closed_above k A && closed_above (S k) B
-  | sLambda _ A B t =>
-    closed_above k A && closed_above (S k) B && closed_above (S k) t
-  | sApp u _ A B v =>
-    closed_above k u &&
-    closed_above k A &&
-    closed_above (S k) B &&
-    closed_above k v
-  | sEq A u v =>
-    closed_above k A && closed_above k u && closed_above k v
-  | _ => false
-  end.
-
-Definition closed t := closed_above 0 t = true.
-
-Fact type_ctxempty_closed :
-  forall {Σ t T},
-    Σ ;;; [] |-i t : T ->
-    closed t * closed T.
-Proof.
-  intros Σ t T h.
-  dependent induction h.
-  - cbn in isdecl. omega.
-  - split ; reflexivity.
-  - split.
-    + unfold closed. cbn.
-Abort.
-
 Fact type_ctx_closed_above :
   forall {Σ Γ t T},
     Σ ;;; Γ |-i t : T ->
@@ -844,17 +812,6 @@ Proof.
   intros Σ t T h.
   unfold closed. eapply @type_ctx_closed_above with (Γ := []). eassumption.
 Defined.
-
-Fact closed_lift :
-  forall t n k,
-    closed t ->
-    lift n k t = t.
-Proof.
-  intro t. induction t ; intros m k h.
-  - unfold closed in h. cbn in h. discriminate.
-  - cbn. reflexivity.
-  - cbn.
-Abort.
 
 Fact close_above_lift :
   forall t n k l,

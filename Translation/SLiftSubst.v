@@ -112,6 +112,70 @@ Fixpoint subst t k u :=
 Notation subst0 t u := (subst t 0 u).
 Notation "M { j := N }" := (subst N j M) (at level 10, right associativity) : s_scope.
 
+(* Notion of closedness *)
+Fixpoint closed_above k t :=
+  match t with
+  | sRel n => n <? k
+  | sSort _ => true
+  | sProd _ A B => closed_above k A && closed_above (S k) B
+  | sLambda _ A B t =>
+    closed_above k A && closed_above (S k) B && closed_above (S k) t
+  | sApp u _ A B v =>
+    closed_above k u &&
+    closed_above k A &&
+    closed_above (S k) B &&
+    closed_above k v
+  | sEq A u v =>
+    closed_above k A && closed_above k u && closed_above k v
+  | sRefl A u =>
+    closed_above k A && closed_above k u
+  | sJ A u P w v p =>
+    closed_above k A &&
+    closed_above k u &&
+    closed_above (S (S k)) P &&
+    closed_above k w &&
+    closed_above k v &&
+    closed_above k p
+  | sTransport A B p u =>
+    closed_above k A &&
+    closed_above k B &&
+    closed_above k p &&
+    closed_above k u
+  | sHeq A a B b =>
+    closed_above k A &&
+    closed_above k a &&
+    closed_above k B &&
+    closed_above k b
+  | sHeqToEq p => closed_above k p
+  | sHeqRefl A a => closed_above k A && closed_above k a
+  | sHeqSym p => closed_above k p
+  | sHeqTrans p q => closed_above k p && closed_above k q
+  | sHeqTransport p u => closed_above k p && closed_above k u
+  | sCongProd B1 B2 pA pB =>
+    closed_above (S k) B1 && closed_above (S k) B2 &&
+    closed_above k pA && closed_above (S k) pB
+  | sCongLambda B1 B2 t1 t2 pA pB pt =>
+    closed_above (S k) B1 && closed_above (S k) B2 &&
+    closed_above (S k) t1 && closed_above (S k) t2 &&
+    closed_above k pA && closed_above (S k) pB && closed_above (S k) pt
+  | sCongApp B1 B2 pu pA pB pv =>
+    closed_above (S k) B1 && closed_above (S k) B2 &&
+    closed_above k pu && closed_above k pA &&
+    closed_above (S k) pB && closed_above k pv
+  | sCongEq pA pu pv =>
+    closed_above k pA && closed_above k pu && closed_above k pv
+  | sCongRefl pA pu => closed_above k pA && closed_above k pu
+  | sEqToHeq p => closed_above k p
+  | sHeqTypeEq p => closed_above k p
+  | sPack A1 A2 => closed_above k A1 && closed_above k A2
+  | sProjT1 p => closed_above k p
+  | sProjT2 p => closed_above k p
+  | sProjTe p => closed_above k p
+  | sInd ind => true
+  end.
+
+Definition closed t := closed_above 0 t = true.
+
 Open Scope s_scope.
 
 (* Lemmata regarding lifts and subst *)
@@ -454,3 +518,13 @@ Proof.
       assert (e3 : (i + j ?= S n) = Gt) by (propb ; omega).
       rewrite e3. rewrite e0. reflexivity.
 Defined.
+
+Lemma closed_above_lift :
+  forall {t n k},
+    n <= k ->
+    closed_above k (lift0 n t) = true.
+Proof.
+  intro t. induction t ; intros m k h.
+  - unfold lift. case_eq (0 <=? n) ; intro e ; bprop e ; try omega.
+    unfold closed_above. case_eq (m + n <? k) ; intro e1 ; bprop e1 ; try omega.
+Abort.

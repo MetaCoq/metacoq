@@ -90,7 +90,7 @@ Record sone_inductive_body := {
   sind_type : sterm;
   sind_kelim : list sort_family; (* TC *)
   sind_ctors : list (ident * sterm * nat);
-  sind_projs : list (ident * term) (* TC *)
+  sind_projs : list (ident * sterm)
 }.
 
 Record smutual_inductive_body := {
@@ -133,17 +133,3 @@ Definition sdeclared_inductive Σ ind univs decl :=
   exists decl', sdeclared_minductive Σ (inductive_mind ind) decl' /\
            univs = decl'.(sind_universes) /\
            List.nth_error decl'.(sind_bodies) (inductive_ind ind) = Some decl.
-
-(* It seems somethings is missing before we can conclude that the type of an
-   inductive is indeed closed.
-   Actually, in a similar way, we would need the Σ to be well-typed in order to
-   know that the type of the inductive is well-formed.
- *)
-Fact lift_sind_type_sone_inductive_body :
-  forall {Σ : sglobal_context} {ind univs decl n k},
-    sdeclared_inductive (fst Σ) ind univs decl ->
-    lift n k (sind_type decl) = sind_type decl.
-Proof.
-  intros Σ ind univs decl n k isdecl.
-  destruct decl. cbn.
-Abort.

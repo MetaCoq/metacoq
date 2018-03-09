@@ -1,7 +1,7 @@
 From Coq Require Import Bool String List BinPos Compare_dec Omega.
 From Equations Require Import Equations DepElimDec.
 From Template Require Import Ast utils Typing.
-From Translation Require Import SAst SLiftSubst  SCommon.
+From Translation Require Import SAst SLiftSubst SCommon.
 
 Reserved Notation " Σ ;;; Γ '|-i' t : T " (at level 50, Γ, t, T at next level).
 Reserved Notation " Σ ;;; Γ '|-i' t = u : T " (at level 50, Γ, t, u, T at next level).
@@ -502,6 +502,76 @@ Derive Signature for eq_term.
 
 Delimit Scope i_scope with i.
 
+Open Scope i_scope.
+
+Definition isType (Σ : sglobal_context) (Γ : scontext) (t : sterm) :=
+  ∑ s, Σ ;;; Γ |-i t : sSort s.
+
+Inductive type_constructors (Σ : sglobal_context) (Γ : scontext) :
+  list (ident * sterm * nat) -> Type :=
+| type_cnstrs_nil : type_constructors Σ Γ []
+| type_cnstrs_cons id t n l :
+    isType Σ Γ t ->
+    type_constructors Σ Γ l ->
+    (** TODO: check it has n products ending in a tRel application *)
+    type_constructors Σ Γ ((id, t, n) :: l).
+
+Inductive type_projections (Σ : sglobal_context) (Γ : scontext) :
+  list (ident * sterm) -> Type :=
+| type_projs_nil : type_projections Σ Γ []
+| type_projs_cons id t l :
+    isType Σ Γ t ->
+    type_projections Σ Γ l ->
+    type_projections Σ Γ ((id, t) :: l).
+
+Definition arities_context (l : list sone_inductive_body) :=
+  List.map (fun ind => svass (nNamed ind.(sind_name)) ind.(sind_type)) l.
+
+Definition isArity Σ Γ T :=
+  isType Σ Γ T (* FIXME  /\ decompose_prod_n *).
+
+Inductive type_inddecls (Σ : sglobal_context) (pars : scontext) (Γ : scontext) :
+  list sone_inductive_body -> Type :=
+| type_ind_nil : type_inddecls Σ pars Γ []
+| type_ind_cons na ty cstrs projs kelim l :
+    (** Arity is well-formed *)
+    isArity Σ [] ty ->
+    (** Constructors are well-typed *)
+    type_constructors Σ Γ cstrs ->
+    (** Projections are well-typed *)
+    type_projections Σ (Γ ,,, pars ,, svass nAnon ty) projs ->
+    (** The other inductives in the block are well-typed *)
+    type_inddecls Σ pars Γ l ->
+    (** TODO: check kelim*)
+    type_inddecls Σ pars Γ (Build_sone_inductive_body na ty kelim cstrs projs :: l).
+
+Definition type_inductive Σ inds :=
+  (** FIXME: should be pars ++ arities w/o params *)
+  type_inddecls Σ [] (arities_context inds) inds.
+
+Definition type_global_decl Σ decl : Type :=
+  match decl with  (* TODO universes *)
+  | SConstantDecl id d => (* type_constant_decl Σ d *) ()
+  | SInductiveDecl ind inds => type_inductive Σ inds.(sind_bodies)
+  end.
+
+Inductive fresh_global (s : string) : sglobal_declarations -> Prop :=
+| fresh_global_nil : fresh_global s nil
+| fresh_global_cons env g :
+    fresh_global s env -> sglobal_decl_ident g <> s ->
+    fresh_global s (cons g env).
+
+Inductive type_global_env φ : sglobal_declarations -> Type :=
+| globenv_nil : type_global_env φ []
+| globenv_decl Σ id d :
+    type_global_env φ Σ ->
+    fresh_global id Σ ->
+    type_global_decl (Σ, φ) d ->
+    type_global_env φ (d :: Σ).
+
+Definition type_glob (Σ : sglobal_context) : Type :=
+  type_global_env (snd Σ) (fst Σ).
+
 (* Lemmata about typing *)
 
 Open Scope type_scope.
@@ -715,17 +785,169 @@ Proof.
         -- cbn in *. omega.
 Defined.
 
+Fixpoint closed_above k t :=
+  match t with
+  | sRel n => n <? k
+  | sSort _ => true
+  | sProd _ A B => closed_above k A && closed_above (S k) B
+  | sLambda _ A B t =>
+    closed_above k A && closed_above (S k) B && closed_above (S k) t
+  | sApp u _ A B v =>
+    closed_above k u &&
+    closed_above k A &&
+    closed_above (S k) B &&
+    closed_above k v
+  | sEq A u v =>
+    closed_above k A && closed_above k u && closed_above k v
+  | _ => false
+  end.
+
+Definition closed t := closed_above 0 t = true.
+
+Fact type_ctxempty_closed :
+  forall {Σ t T},
+    Σ ;;; [] |-i t : T ->
+    closed t * closed T.
+Proof.
+  intros Σ t T h.
+  dependent induction h.
+  - cbn in isdecl. omega.
+  - split ; reflexivity.
+  - split.
+    + unfold closed. cbn.
+Abort.
+
+Fact type_ctx_closed_above :
+  forall {Σ Γ t T},
+    Σ ;;; Γ |-i t : T ->
+    (closed_above #|Γ| t = true) * (closed_above #|Γ| T = true).
+Proof.
+  intros Σ Γ t T h.
+  dependent induction h.
+  - split.
+    + unfold closed_above. case_eq (n <? #|Γ|) ; intro e ; bprop e ; try omega.
+      reflexivity.
+    + admit.
+  - cbn. split ; reflexivity.
+  - cbn. split.
+    + destruct IHh1 as [e1 _].
+      destruct IHh2 as [e2 _].
+      cbn in e2. rewrite e1, e2. cbn. reflexivity.
+    + reflexivity.
+Admitted.
+
+Fact type_ctxempty_closed :
+  forall {Σ t T},
+    Σ ;;; [] |-i t : T ->
+    closed t * closed T.
+Proof.
+  intros Σ t T h.
+  unfold closed. eapply @type_ctx_closed_above with (Γ := []). eassumption.
+Defined.
+
+Fact closed_lift :
+  forall t n k,
+    closed t ->
+    lift n k t = t.
+Proof.
+  intro t. induction t ; intros m k h.
+  - unfold closed in h. cbn in h. discriminate.
+  - cbn. reflexivity.
+  - cbn.
+Abort.
+
+Fact close_above_lift :
+  forall t n k l,
+    closed_above l t = true ->
+    k >= l ->
+    lift n k t = t.
+Proof.
+  intro t. induction t ; intros m k l clo h.
+  - unfold closed in clo. unfold closed_above in clo.
+    bprop clo. cbn.
+    case_eq (k <=? n) ; intro e ; bprop e ; try omega.
+    reflexivity.
+  - cbn. reflexivity.
+  - cbn. cbn in clo. destruct (andb_prop _ _ clo) as [e1 e2].
+    erewrite IHt1 by eassumption.
+    erewrite IHt2 by (first [ eassumption | omega ]).
+    reflexivity.
+  -
+Admitted.
+
+Fact closed_lift :
+  forall t n k,
+    closed t ->
+    lift n k t = t.
+Proof.
+  intros t n k h.
+  unfold closed in h.
+  eapply close_above_lift.
+  - eassumption.
+  - omega.
+Defined.
+
+(* Fact declared_type_glob : *)
+(*   forall {Σ : sglobal_context} {ind decl univs}, *)
+(*     sdeclared_inductive (fst Σ) ind univs decl -> *)
+(*     type_glob Σ -> *)
+(*     ∑ Σ', *)
+(*       type_global_decl Σ' decl * *)
+(*       type_glob Σ'. *)
+
+Fact lift_ind_type :
+  forall {Σ : sglobal_context},
+    type_glob Σ ->
+    forall {ind decl univs},
+      sdeclared_inductive (fst Σ) ind univs decl ->
+      forall n k,
+        lift n k (sind_type decl) = sind_type decl.
+Proof.
+  intros Σ hg. destruct Σ as [Σ ϕ].
+  dependent induction hg.
+  - intros ind decl univs isdecl n k.
+    cbn in *. destruct isdecl as [decl' [h1 [h2 h3]]].
+    dependent destruction h1.
+  - intros ind decl univs isdecl n k.
+    cbn in *. destruct isdecl as [decl' [h1 [h2 h3]]].
+    dependent destruction h1.
+    case_eq (ident_eq (inductive_mind ind) (sglobal_decl_ident d)) ; intro e.
+    + rewrite e in H. inversion H. subst. cbn in *.
+      unfold type_inductive in t.
+      dependent induction t generalizing decl h3 n k.
+      * destruct decl'. subst. cbn in h3.
+        case_eq (inductive_ind ind).
+        -- intro eq. rewrite eq in h3. cbn in h3. discriminate.
+        -- intros ? eq. rewrite eq in h3. cbn in h3. discriminate.
+      * cbn in *.
+        change (let (_, sind_bodies, _) := decl' in sind_bodies)
+          with (sind_bodies decl')
+          in H0.
+        rewrite H0 in h3.
+        induction (inductive_ind ind).
+        -- cbn in h3. inversion h3.
+           cbn. destruct i as [s hty].
+           (* We need to show that if a type is well-formed in the empty context
+              then it doesn't have any variables.
+            *)
+           admit.
+        -- cbn in h3. apply IHt.
+           (* I'm a bit lost, this is definitely not the right way to go. *)
+Abort.
+
 Ltac ih h :=
   lazymatch goal with
   | [ type_lift :
         forall (Σ : sglobal_context) (Γ Δ Ξ : scontext) (t A : sterm),
           Σ;;; Γ ,,, Ξ |-i t : A ->
+          type_glob Σ ->
           wf Σ (Γ ,,, Δ) ->
           Σ;;; Γ ,,, Δ ,,, lift_context #|Δ| Ξ
           |-i lift #|Δ| #|Ξ| t : lift #|Δ| #|Ξ| A,
       cong_lift :
         forall (Σ : sglobal_context) (Γ Δ Ξ : scontext) (t1 t2 A : sterm),
           Σ;;; Γ ,,, Ξ |-i t1 = t2 : A ->
+          type_glob Σ ->
           wf Σ (Γ ,,, Δ) ->
           Σ;;; Γ ,,, Δ ,,, lift_context #|Δ| Ξ
           |-i lift #|Δ| #|Ξ| t1 = lift #|Δ| #|Ξ| t2 : lift #|Δ| #|Ξ| A
@@ -737,6 +959,7 @@ Ltac ih h :=
           eapply type_lift with (Γ := Γ') (Ξ := Ξ') (A := T') ; [
             exact h
           | assumption
+          | assumption
           ]
         | .. ]
       | .. ]
@@ -745,6 +968,7 @@ Ltac ih h :=
         eapply meta_ctx_conv ; [
           eapply type_lift with (Γ := Γ') (Ξ := Ξ',, d') (A := T') ; [
             exact h
+          | assumption
           | assumption
           ]
         | .. ]
@@ -755,6 +979,7 @@ Ltac ih h :=
           eapply type_lift with (Γ := Γ') (Ξ := (Ξ',, d'),, d'') (A := T') ; [
             exact h
           | assumption
+          | assumption
           ]
         | .. ]
       | .. ]
@@ -763,6 +988,7 @@ Ltac ih h :=
         eapply meta_eqctx_conv ; [
           eapply cong_lift with (Γ := Γ') (Ξ := Ξ') (A := T') ; [
             exact h
+          | assumption
           | assumption
           ]
         | .. ]
@@ -773,6 +999,7 @@ Ltac ih h :=
           eapply cong_lift with (Γ := Γ') (Ξ := Ξ',, d') (A := T') ; [
             exact h
           | assumption
+          | assumption
           ]
         | .. ]
       | .. ]
@@ -782,6 +1009,7 @@ Ltac ih h :=
           eapply cong_lift with (Γ := Γ') (Ξ := (Ξ',, d'),, d'') (A := T') ; [
             exact h
           | assumption
+          | assumption
           ]
         | .. ]
       | .. ]
@@ -790,27 +1018,31 @@ Ltac ih h :=
   end.
 
 Ltac eih :=
-  match goal with
+  lazymatch goal with
   | h : _ ;;; _ |-i ?t : _ |- _ ;;; _ |-i lift _ _ ?t : _ => ih h
   | h : _ ;;; _ |-i ?t = _ : _ |- _ ;;; _ |-i lift _ _ ?t = _ : _ =>
     ih h
+  | _ => fail "Not handled by eih"
   end.
 
 Fixpoint type_lift {Σ Γ Δ Ξ t A} (h : Σ ;;; Γ ,,, Ξ |-i t : A) {struct h} :
+  type_glob Σ ->
   wf Σ (Γ ,,, Δ) ->
   Σ ;;; Γ ,,, Δ ,,, lift_context #|Δ| Ξ |-i lift #|Δ| #|Ξ| t : lift #|Δ| #|Ξ| A
 
 with cong_lift {Σ Γ Δ Ξ t1 t2 A} (h : Σ ;;; Γ ,,, Ξ |-i t1 = t2 : A) {struct h} :
+  type_glob Σ ->
   wf Σ (Γ ,,, Δ) ->
   Σ ;;; Γ ,,, Δ ,,, lift_context #|Δ| Ξ |-i lift #|Δ| #|Ξ| t1
   = lift #|Δ| #|Ξ| t2 : lift #|Δ| #|Ξ| A
 
 with wf_lift {Σ Γ Δ Ξ} (h : wf Σ (Γ ,,, Ξ)) {struct h} :
+  type_glob Σ ->
   wf Σ (Γ ,,, Δ) ->
   wf Σ (Γ ,,, Δ ,,, lift_context #|Δ| Ξ)
 .
 Proof.
-  - { dependent destruction h ; intro hwf.
+  - { dependent destruction h ; intros hΣ hwf.
       - cbn. case_eq (#|Ξ| <=? n) ; intro e ; bprop e.
         + rewrite liftP3 by omega.
           replace (#|Δ| + S n)%nat with (S (#|Δ| + n)) by omega.

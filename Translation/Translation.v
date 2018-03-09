@@ -1307,15 +1307,14 @@ Proof.
 Defined.
 
 Definition complete_translation {Σ} :
-           (forall Γ (h : XTyping.wf Σ Γ),
-               ∑ Γ', Σ |--i Γ' # ⟦ Γ ⟧ )
-           * (forall { Γ t A} (h : Σ ;;; Γ |-x t : A)
+  (forall Γ (h : XTyping.wf Σ Γ), ∑ Γ', Σ |--i Γ' # ⟦ Γ ⟧ ) *
+  (forall { Γ t A} (h : Σ ;;; Γ |-x t : A)
      {Γ'} (hΓ : Σ |--i Γ' # ⟦ Γ ⟧),
-       ∑ A' t', Σ ;;;; Γ' |--- [t'] : A' # ⟦ Γ |--- [t] : A ⟧)
- * (forall { Γ u v A} (h : Σ ;;; Γ |-x u = v : A)
-                    {Γ'} (hΓ : Σ |--i Γ' # ⟦ Γ ⟧),
-  ∑ A' A'' u' v' p',
-    eqtrans Σ Γ A u v Γ' A' A'' u' v' p').
+      ∑ A' t', Σ ;;;; Γ' |--- [t'] : A' # ⟦ Γ |--- [t] : A ⟧) *
+  (forall { Γ u v A} (h : Σ ;;; Γ |-x u = v : A)
+     {Γ'} (hΓ : Σ |--i Γ' # ⟦ Γ ⟧),
+      ∑ A' A'' u' v' p',
+        eqtrans Σ Γ A u v Γ' A' A'' u' v' p').
 Proof.
   unshelve refine (typing_all Σ
                      (fun Γ (h : XTyping.wf Σ Γ) =>
@@ -1597,7 +1596,6 @@ Proof.
       * eassumption.
       * eapply type_HeqTrans' ; eassumption.
 
-
     (* eq_beta *)
     + (* Translation of the domain *)
       destruct (X _ hΓ) as [S [A'' hA'']].
@@ -1657,6 +1655,7 @@ Proof.
               eapply typing_subst ; eassumption.
            ++ apply eq_symmetry. eapply eq_beta ; eassumption.
            ++ eapply typing_subst ; eassumption.
+
     (* eq_conv *)
     + (* Translating the conversion *)
       destruct (X0 _ hΓ)
@@ -1774,8 +1773,7 @@ Proof.
       * econstructor. assumption.
       * econstructor. assumption.
 
-
-(* cong_Prod *)
+    (* cong_Prod *)
     + (* The domains *)
       destruct (X _ hΓ)
         as [T1 [T2 [A1'' [A2'' [pA h1']]]]].

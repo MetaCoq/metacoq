@@ -133,3 +133,52 @@ Definition sdeclared_inductive Σ ind univs decl :=
   exists decl', sdeclared_minductive Σ (inductive_mind ind) decl' /\
            univs = decl'.(sind_universes) /\
            List.nth_error decl'.(sind_bodies) (inductive_ind ind) = Some decl.
+
+(* Associated lifts *)
+
+Definition lift_sone_inductive_body n k decl := {|
+  sind_name := sind_name decl ;
+  sind_type := lift n k (sind_type decl) ;
+  sind_kelim := sind_kelim decl ;
+  sind_ctors := map (fun '(na, t, i) => (na, lift n k t, i)) (sind_ctors decl) ;
+  sind_projs := sind_projs decl
+|}.
+
+Definition lift_smutal_inductive_body n k decl := {|
+  sind_npars := sind_npars decl ;
+  sind_bodies := map (lift_sone_inductive_body n k) (sind_bodies decl) ;
+  sind_universes := sind_universes decl
+|}.
+
+Fact lift_sind_type_sone_inductive_body :
+  forall {decl n k},
+    lift n k (sind_type decl) =
+    sind_type (lift_sone_inductive_body n k decl).
+Proof.
+  intros decl n k.
+  reflexivity.
+Defined.
+
+Fact sdeclared_minductive_lift :
+  forall {Σ ind n k decl'},
+    sdeclared_minductive Σ (inductive_mind ind) decl' ->
+    sdeclared_minductive Σ (inductive_mind ind)
+                         (lift_smutal_inductive_body n k decl').
+Proof.
+  intros Σ ind n k decl' isedcl'.
+  unfold sdeclared_minductive in *.
+
+Abort.
+
+Fact sdeclared_inductive_lift :
+  forall {Σ ind univs decl n k},
+    sdeclared_inductive Σ ind univs decl ->
+    sdeclared_inductive Σ ind univs (lift_sone_inductive_body n k decl).
+Proof.
+  intros Σ ind univs decl n k isdecl.
+  destruct isdecl as [decl' [h1 [h2 h3]]].
+  exists (lift_smutal_inductive_body n k decl'). repeat split.
+  - apply h1.
+  - assumption.
+  -
+Abort.

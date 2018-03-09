@@ -912,7 +912,7 @@ Proof.
       - cbn. eapply @type_ProjT1 with (A2 := lift #|Δ| #|Ξ| A2) ; eih.
       - cbn. eapply @type_ProjT2 with (A1 := lift #|Δ| #|Ξ| A1) ; eih.
       - cbn. eapply type_ProjTe ; eih.
-      - cbn. rewrite lift_sind_type_sone_inductive_body.
+      - cbn.
         eapply type_Ind.
         + now apply wf_lift.
         + eassumption.

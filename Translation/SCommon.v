@@ -130,6 +130,6 @@ Definition sdeclared_minductive Σ mind decl :=
   slookup_env Σ mind = Some (SInductiveDecl mind decl).
 
 Definition sdeclared_inductive Σ ind univs decl :=
-  exists decl', sdeclared_minductive Σ (inductive_mind ind) decl' /\
+  ∑ decl', sdeclared_minductive Σ (inductive_mind ind) decl' /\
            univs = decl'.(sind_universes) /\
            List.nth_error decl'.(sind_bodies) (inductive_ind ind) = Some decl.

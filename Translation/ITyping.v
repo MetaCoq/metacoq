@@ -852,13 +852,52 @@ Proof.
   - omega.
 Defined.
 
-(* Fact declared_type_glob : *)
-(*   forall {Σ : sglobal_context} {ind decl univs}, *)
-(*     sdeclared_inductive (fst Σ) ind univs decl -> *)
-(*     type_glob Σ -> *)
-(*     ∑ Σ', *)
-(*       type_global_decl Σ' decl * *)
-(*       type_glob Σ'. *)
+Fact typed_ind_type' :
+  forall {Σ : sglobal_context} {decl'},
+    type_inductive Σ (sind_bodies decl') ->
+    forall {n decl},
+      nth_error (sind_bodies decl') n = Some decl ->
+      isType Σ [] (sind_type decl).
+Proof.
+  intros Σ decl' hind. unfold type_inductive in hind.
+  induction hind.
+  - intros n decl h.
+    destruct n ; cbn in h ; inversion h.
+  - intros n decl h.
+    destruct n.
+    + cbn in h. inversion h as [ e ]. subst. clear h.
+      cbn. unfold isArity in i.
+      assumption.
+    + cbn in h. eapply IHhind.
+      eassumption.
+Defined.
+
+Fact typed_ind_type :
+  forall {Σ : sglobal_context},
+    type_glob Σ ->
+    forall {ind decl univs},
+      sdeclared_inductive (fst Σ) ind univs decl ->
+      ∑ Σ', isType Σ' [] (sind_type decl).
+Proof.
+  intros Σ hg. destruct Σ as [Σ ϕ].
+  dependent induction hg.
+  - intros ind decl univs isdecl.
+    cbn in *. destruct isdecl as [decl' [h1 [h2 h3]]].
+    dependent destruction h1.
+  - intros ind decl univs isdecl.
+    destruct isdecl as [decl' [h1 [h2 h3]]].
+    cbn in h1. unfold sdeclared_minductive in h1.
+    cbn in h1.
+    case_eq (ident_eq (inductive_mind ind) (sglobal_decl_ident d)).
+    + intro e. rewrite e in h1.
+      inversion h1 as [ h1' ]. subst.
+      cbn in t. clear e.
+      exists (Σ, ϕ). eapply typed_ind_type' ; eassumption.
+    + intro e. rewrite e in h1.
+      eapply IHhg. exists decl'. repeat split.
+      * eassumption.
+      * eassumption.
+Defined.
 
 Fact lift_ind_type :
   forall {Σ : sglobal_context},
@@ -868,38 +907,12 @@ Fact lift_ind_type :
       forall n k,
         lift n k (sind_type decl) = sind_type decl.
 Proof.
-  intros Σ hg. destruct Σ as [Σ ϕ].
-  dependent induction hg.
-  - intros ind decl univs isdecl n k.
-    cbn in *. destruct isdecl as [decl' [h1 [h2 h3]]].
-    dependent destruction h1.
-  - intros ind decl univs isdecl n k.
-    cbn in *. destruct isdecl as [decl' [h1 [h2 h3]]].
-    dependent destruction h1.
-    case_eq (ident_eq (inductive_mind ind) (sglobal_decl_ident d)) ; intro e.
-    + rewrite e in H. inversion H. subst. cbn in *.
-      unfold type_inductive in t.
-      dependent induction t generalizing decl h3 n k.
-      * destruct decl'. subst. cbn in h3.
-        case_eq (inductive_ind ind).
-        -- intro eq. rewrite eq in h3. cbn in h3. discriminate.
-        -- intros ? eq. rewrite eq in h3. cbn in h3. discriminate.
-      * cbn in *.
-        change (let (_, sind_bodies, _) := decl' in sind_bodies)
-          with (sind_bodies decl')
-          in H0.
-        rewrite H0 in h3.
-        induction (inductive_ind ind).
-        -- cbn in h3. inversion h3.
-           cbn. destruct i as [s hty].
-           eapply closed_lift.
-           eapply type_ctxempty_closed. eassumption.
-        -- cbn in h3. apply IHt.
-           (* I'm a bit lost.
-              Now I believe in this lemma but it needs to be separated in
-              bits.
-            *)
-Abort.
+  intros Σ hg ind decl univs h n k.
+  destruct (typed_ind_type hg h) as [Σ' [s hty]].
+  eapply closed_lift.
+  eapply type_ctxempty_closed.
+  eassumption.
+Defined.
 
 Ltac ih h :=
   lazymatch goal with

@@ -872,6 +872,9 @@ Proof.
       eassumption.
 Defined.
 
+(* TODO: Prove weakening of global_context in order to drop
+   the existential quantifier.
+ *)
 Fact typed_ind_type :
   forall {Σ : sglobal_context},
     type_glob Σ ->
@@ -1123,7 +1126,7 @@ Proof.
       - cbn. eapply @type_ProjT1 with (A2 := lift #|Δ| #|Ξ| A2) ; eih.
       - cbn. eapply @type_ProjT2 with (A1 := lift #|Δ| #|Ξ| A1) ; eih.
       - cbn. eapply type_ProjTe ; eih.
-      - cbn.
+      - cbn. erewrite lift_ind_type by eassumption.
         eapply type_Ind.
         + now apply wf_lift.
         + eassumption.
@@ -1131,7 +1134,7 @@ Proof.
     }
 
   (* cong_lift *)
-  - { intro hwf. dependent destruction h.
+  - { intros hg hwf. dependent destruction h.
       - apply eq_reflexivity. apply type_lift ; assumption.
       - apply eq_symmetry. eapply cong_lift ; assumption.
       - eapply eq_transitivity ; eih.
@@ -1251,7 +1254,7 @@ Proof.
     }
 
   (* wf_lift *)
-  - { intro hwf.
+  - { intros hg hwf.
       destruct Ξ.
       - cbn. assumption.
       - dependent destruction h.
@@ -1268,12 +1271,13 @@ Defined.
 
 Corollary typing_lift01 :
   forall {Σ Γ t A x B s},
+    type_glob Σ ->
     Σ ;;; Γ |-i t : A ->
     Σ ;;; Γ |-i B : sSort s ->
     Σ ;;; Γ ,, svass x B |-i lift0 1 t : lift0 1 A.
 Proof.
-  intros Σ Γ t A x B s ht hB.
-  apply (@type_lift _ _ [ svass x B ] nil _ _ ht).
+  intros Σ Γ t A x B s hg ht hB.
+  apply (@type_lift _ _ [ svass x B ] nil _ _ ht hg).
   econstructor.
   - eapply typing_wf. eassumption.
   - eassumption.
@@ -1281,34 +1285,38 @@ Defined.
 
 Corollary typing_lift02 :
   forall {Σ Γ t A x B s y C s'},
+    type_glob Σ ->
     Σ ;;; Γ |-i t : A ->
     Σ ;;; Γ |-i B : sSort s ->
     Σ ;;; Γ ,, svass x B |-i C : sSort s' ->
     Σ ;;; Γ ,, svass x B ,, svass y C |-i lift0 2 t : lift0 2 A.
 Proof.
-  intros Σ Γ t A x B s y C s' ht hB hC.
+  intros Σ Γ t A x B s y C s' hg ht hB hC.
   assert (eq : forall t, lift0 2 t = lift0 1 (lift0 1 t)).
   { intro u. rewrite lift_lift. reflexivity. }
   rewrite !eq. eapply typing_lift01.
+  - assumption.
   - eapply typing_lift01  ; eassumption.
   - eassumption.
 Defined.
 
 Corollary cong_lift01 :
   forall {Σ Γ t1 t2 A x B s},
+    type_glob Σ ->
     Σ ;;; Γ |-i t1 = t2 : A ->
     Σ ;;; Γ |-i B : sSort s ->
     Σ ;;; Γ ,, svass x B |-i lift0 1 t1 = lift0 1 t2 : lift0 1 A.
 Proof.
-  intros Σ Γ t1 t2 A x B s H H0.
+  intros Σ Γ t1 t2 A x B s hg H H0.
   apply @cong_lift with (Δ := [ svass x B ]) (Ξ := nil).
   - cbn. assumption.
+  - assumption.
   - econstructor.
     + eapply typing_wf. eassumption.
     + eassumption.
 Defined.
 
-(* Substitutionin context *)
+(* Substitution in context *)
 
 Definition subst_decl n u d : scontext_decl :=
   {| sdecl_name := sdecl_name d ;
@@ -1351,18 +1359,70 @@ Proof.
     + cbn. erewrite IHΔ. reflexivity.
 Defined.
 
+(* Maybe have them somewhere else? *)
+Ltac erewrite_close_above_subst_id :=
+  match goal with
+  | H : forall n l u, _ -> _ -> _ = _ |- _ =>
+    erewrite H by (first [ eassumption | omega ])
+  end.
+
+Fact closed_above_subst_id :
+  forall t n l u,
+    closed_above l t = true ->
+    n >= l ->
+    t{ n := u } = t.
+Proof.
+  intro t. induction t ; intros m l u clo h.
+  all: try (cbn ; cbn in clo ; repeat destruct_andb ;
+            repeat erewrite_close_above_subst_id ;
+            reflexivity).
+  unfold closed in clo. unfold closed_above in clo.
+  bprop clo. cbn.
+  case_eq (m ?= n) ; intro e ; bprop e ; try omega.
+  reflexivity.
+Defined.
+
+Fact closed_subst :
+  forall t n u,
+    closed t ->
+    t{ n := u } = t.
+Proof.
+  intros t n u h.
+  unfold closed in h.
+  eapply closed_above_subst_id.
+  - eassumption.
+  - omega.
+Defined.
+
+Fact subst_ind_type :
+  forall {Σ : sglobal_context},
+    type_glob Σ ->
+    forall {ind decl univs},
+      sdeclared_inductive (fst Σ) ind univs decl ->
+      forall n u,
+        (sind_type decl){ n := u } = sind_type decl.
+Proof.
+  intros Σ hg ind decl univs h n u.
+  destruct (typed_ind_type hg h) as [Σ' [s hty]].
+  eapply closed_subst.
+  eapply type_ctxempty_closed.
+  eassumption.
+Defined.
+
 Ltac sh h :=
   lazymatch goal with
   | [ type_subst :
         forall (Σ : sglobal_context) (Γ Δ : scontext) (t A : sterm) (nx : name)
           (B u : sterm),
           Σ;;; Γ,, svass nx B ,,, Δ |-i t : A ->
+          type_glob Σ ->
           Σ;;; Γ |-i u : B -> Σ;;; Γ ,,, subst_context u Δ |-i
           t {#|Δ| := u} : A {#|Δ| := u},
      cong_subst :
        forall (Σ : sglobal_context) (Γ Δ : scontext) (t1 t2 A : sterm) (nx : name)
          (B u : sterm),
          Σ;;; Γ,, svass nx B ,,, Δ |-i t1 = t2 : A ->
+         type_glob Σ ->
          Σ;;; Γ |-i u : B -> Σ;;; Γ ,,, subst_context u Δ |-i
          t1 {#|Δ| := u} = t2 {#|Δ| := u} : A {#|Δ| := u}
     |- _ ] =>
@@ -1373,6 +1433,7 @@ Ltac sh h :=
           eapply type_subst with (Γ := Γ') (Δ := Δ') (A := T') ; [
             exact h
           | assumption
+          | assumption
           ]
         | .. ]
       | .. ]
@@ -1381,6 +1442,7 @@ Ltac sh h :=
         eapply meta_ctx_conv ; [
           eapply type_subst with (Γ := Γ') (Δ := Δ' ,, d') (A := T') ; [
             exact h
+          | assumption
           | assumption
           ]
         | .. ]
@@ -1391,6 +1453,7 @@ Ltac sh h :=
           eapply type_subst with (Γ := Γ') (Δ := (Δ' ,, d') ,, d'') (A := T') ; [
             exact h
           | assumption
+          | assumption
           ]
         | .. ]
       | .. ]
@@ -1399,6 +1462,7 @@ Ltac sh h :=
         eapply meta_eqctx_conv ; [
           eapply cong_subst with (Γ := Γ') (Δ := Δ') (A := T') ; [
             exact h
+          | assumption
           | assumption
           ]
         | .. ]
@@ -1409,6 +1473,7 @@ Ltac sh h :=
           eapply cong_subst with (Γ := Γ') (Δ := Δ' ,, d') (A := T') ; [
             exact h
           | assumption
+          | assumption
           ]
         | .. ]
       | .. ]
@@ -1418,6 +1483,7 @@ Ltac sh h :=
           eapply cong_subst with (Γ := Γ') (Δ := (Δ' ,, d') ,, d'') (A := T') ; [
             exact h
           | assumption
+          | assumption
           ]
         | .. ]
       | .. ]
@@ -1426,31 +1492,35 @@ Ltac sh h :=
   end.
 
 Ltac esh :=
-  match goal with
+  lazymatch goal with
   | h : _ ;;; _ |-i ?t : _ |- _ ;;; _ |-i ?t{ _ := _ } : _ => sh h
   | h : _ ;;; _ |-i ?t = _ : _ |- _ ;;; _ |-i ?t{ _ := _ } = _ : _ =>
     sh h
+  | _ => fail "not handled by esh"
   end.
 
 Fixpoint type_subst {Σ Γ Δ t A nx B u}
   (h : Σ ;;; Γ ,, svass nx B ,,, Δ |-i t : A) {struct h} :
+  type_glob Σ ->
   Σ ;;; Γ |-i u : B ->
   Σ ;;; Γ ,,, subst_context u Δ |-i t{ #|Δ| := u } : A{ #|Δ| := u }
 
 with cong_subst {Σ Γ Δ t1 t2 A nx B u}
   (h : Σ ;;; Γ ,, svass nx B ,,, Δ |-i t1 = t2 : A) {struct h} :
+  type_glob Σ ->
   Σ ;;; Γ |-i u : B ->
   Σ ;;; Γ ,,, subst_context u Δ |-i t1{ #|Δ| := u }
   = t2{ #|Δ| := u } : A{ #|Δ| := u }
 
 with wf_subst {Σ Γ Δ nx B u}
   (h : wf Σ (Γ ,, svass nx B ,,, Δ)) {struct h} :
+  type_glob Σ ->
   Σ ;;; Γ |-i u : B ->
   wf Σ (Γ ,,, subst_context u Δ)
 .
 Proof.
   (* type_subst *)
-  - { intro hu.
+  - { intros hg hu.
       dependent destruction h.
       - cbn. case_eq (#|Δ| ?= n) ; intro e ; bprop e.
         + assert (h : n >= #|Δ|) by omega.
@@ -1465,6 +1535,7 @@ Proof.
             by (now rewrite subst_context_length).
           eapply @type_lift with (Ξ := []) (Δ := subst_context u Δ).
           * cbn. assumption.
+          * assumption.
           * eapply wf_subst ; eassumption.
         + assert (h : n >= #|Δ|) by omega.
           rewrite safe_nth_ge' with (h0 := h).
@@ -1577,14 +1648,15 @@ Proof.
       - cbn. eapply @type_ProjT1 with (A2 := A2{#|Δ| := u}) ; esh.
       - cbn. eapply @type_ProjT2 with (A1 := A1{#|Δ| := u}) ; esh.
       - cbn. eapply type_ProjTe ; esh.
-      - cbn. eapply type_Ind.
+      - cbn. erewrite subst_ind_type by eassumption.
+        eapply type_Ind.
         + now eapply wf_subst.
         + eassumption.
       - cbn. eapply type_conv ; esh.
     }
 
   (* cong_subst *)
-  - { intro hu.
+  - { intros hg hu.
       dependent destruction h.
       - constructor. esh.
       - constructor. esh.
@@ -1698,7 +1770,7 @@ Proof.
     }
 
   (* wf_subst *)
-  - { intro hu.
+  - { intros hg hu.
       destruct Δ.
       - cbn. dependent destruction h. assumption.
       - dependent destruction h. cbn. rewrite subst_decl_svass. econstructor.
@@ -1712,32 +1784,37 @@ Defined.
 
 Corollary typing_subst :
   forall {Σ Γ t A B u n},
+    type_glob Σ ->
     Σ ;;; Γ ,, svass n A |-i t : B ->
     Σ ;;; Γ |-i u : A ->
     Σ ;;; Γ |-i t{ 0 := u } : B{ 0 := u }.
 Proof.
-  intros Σ Γ t A B u n ht hu.
+  intros Σ Γ t A B u n hg ht hu.
   eapply @type_subst with (Δ := []) ; eassumption.
 Defined.
 
 Corollary typing_subst2 :
   forall {Σ Γ t A B C na nb u v},
+    type_glob Σ ->
     Σ ;;; Γ ,, svass na A ,, svass nb B |-i t : C ->
     Σ ;;; Γ |-i u : A ->
     Σ ;;; Γ |-i v : B{ 0 := u } ->
     Σ ;;; Γ |-i t{ 1 := u }{ 0 := v } : C{ 1 := u }{ 0 := v }.
 Proof.
-  intros Σ Γ t A B C na nb u v ht hu hv.
+  intros Σ Γ t A B C na nb u v hg ht hu hv.
   eapply @type_subst with (Δ := []).
   - eapply @type_subst with (Δ := [ svass nb B ]).
     + exact ht.
     + assumption.
+    + assumption.
+  - assumption.
   - cbn. assumption.
 Defined.
 
 Lemma cong_substs :
   forall {Σ Γ Δ t A nx B},
   Σ ;;; Γ ,, svass nx B ,,, Δ |-i t : A ->
+  type_glob Σ ->
   forall {u1 u2},
     Σ ;;; Γ |-i u1 = u2 : B ->
     Σ ;;; Γ |-i u1 : B ->
@@ -1745,7 +1822,7 @@ Lemma cong_substs :
     |-i t{ #|Δ| := u1 }
      = t{ #|Δ| := u2 } : A{ #|Δ| := u1 }.
 Proof.
-  intros Σ Γ Δ t A nx B ht.
+  intros Σ Γ Δ t A nx B ht hg.
   dependent induction ht ; intros uu1 uu2 huu huu1.
   - cbn. case_eq (#|Δ| ?= n) ; intro e ; bprop e.
     + assert (h : n >= #|Δ|) by omega.
@@ -1760,6 +1837,7 @@ Proof.
         by (now rewrite subst_context_length).
       eapply @cong_lift with (Ξ := []) (Δ := subst_context uu1 Δ).
       * cbn. assumption.
+      * assumption.
       * eapply wf_subst ; eassumption.
     + assert (h : n >= #|Δ|) by omega.
       rewrite safe_nth_ge' with (h0 := h).
@@ -2019,7 +2097,9 @@ Proof.
     + eapply @type_subst with (A := sSort s) ; eassumption.
     + eapply @type_subst with (A := sSort s) ; eassumption.
     + apply IHht3 ; eassumption.
-  - cbn. eapply eq_reflexivity. eapply type_Ind.
+  - cbn. eapply eq_reflexivity.
+    erewrite subst_ind_type by eassumption.
+    eapply type_Ind.
     + eapply wf_subst ; eassumption.
     + eassumption.
   - eapply eq_conv.
@@ -2031,6 +2111,7 @@ Defined.
 
 Corollary full_cong_subst :
   forall {Σ Γ nx B Δ t1 t2 u1 u2 A},
+    type_glob Σ ->
     Σ ;;; Γ ,, svass nx B ,,, Δ |-i t1 = t2 : A ->
     Σ ;;; Γ |-i u1 = u2 : B ->
     Σ ;;; Γ ,, svass nx B ,,, Δ |-i t2 : A ->
@@ -2038,26 +2119,28 @@ Corollary full_cong_subst :
     Σ ;;; Γ ,,, subst_context u1 Δ |-i
     t1{ #|Δ| := u1 } = t2{ #|Δ| := u2 } : A{ #|Δ| := u1 }.
 Proof.
-  intros Σ Γ nx B Δ t1 t2 u1 u2 A ht hu ht2 hu1.
+  intros Σ Γ nx B Δ t1 t2 u1 u2 A hg ht hu ht2 hu1.
   eapply eq_transitivity.
-  - exact (cong_subst ht hu1).
-  - exact (cong_substs ht2 hu hu1).
+  - exact (cong_subst ht hg hu1).
+  - exact (cong_substs ht2 hg hu hu1).
 Defined.
 
 Lemma pre_cong_subst1 :
   forall {Σ Γ t1 t2 A B u1 u2 n},
+    type_glob Σ ->
     Σ ;;; Γ ,, svass n A |-i t1 = t2 : B ->
     Σ ;;; Γ |-i u1 = u2 : A ->
     Σ ;;; Γ ,, svass n A |-i t2 : B ->
     Σ ;;; Γ |-i u1 : A ->
     Σ ;;; Γ |-i t1{ 0 := u1 } = t2{ 0 := u2 } : B{ 0 := u1 }.
 Proof.
-  intros Σ Γ t1 t2 A B u1 u2 n ht hu ht2 hu1.
+  intros Σ Γ t1 t2 A B u1 u2 n hg ht hu ht2 hu1.
   eapply @full_cong_subst with (Δ := []) ; eassumption.
 Defined.
 
 Lemma pre_cong_subst2 :
   forall {Σ Γ t1 t2 A B C na nb u1 u2 v1 v2},
+    type_glob Σ ->
     Σ ;;; Γ ,, svass na A ,, svass nb B |-i t1 = t2 : C ->
     Σ ;;; Γ |-i u1 = u2 : A ->
     Σ ;;; Γ |-i v1 = v2 : B{ 0 := u1 } ->
@@ -2068,9 +2151,11 @@ Lemma pre_cong_subst2 :
     Σ ;;; Γ |-i t1{ 1 := u1 }{ 0 := v1 }
              = t2{ 1 := u2 }{ 0 := v2 } : C{ 1 := u1 }{ 0 := v1 }.
 Proof.
-  intros Σ Γ t1 t2 A B C na nb u1 u2 v1 v2 ht hu hv ht2 hu1 hst2 hv1.
+  intros Σ Γ t1 t2 A B C na nb u1 u2 v1 v2 hg ht hu hv ht2 hu1 hst2 hv1.
   eapply @full_cong_subst with (Δ := []).
+  - assumption.
   - eapply @full_cong_subst with (Δ := [ svass nb B ]).
+    + assumption.
     + exact ht.
     + assumption.
     + assumption.
@@ -2131,19 +2216,18 @@ Admitted.
 
 Lemma istype_type :
   forall {Σ Γ t T},
+    type_glob Σ ->
     Σ ;;; Γ |-i t : T ->
     ∑ s, Σ ;;; Γ |-i T : sSort s.
 Proof.
-  intros Σ Γ t T H.
+  intros Σ Γ t T hg H.
   induction H.
   - revert n isdecl. induction w ; intros n isdecl.
     + cbn in isdecl. easy.
     + destruct n.
       * cbn.
         exists s. change (sSort s) with (lift0 1 (sSort s)).
-        eapply typing_lift01.
-        -- assumption.
-        -- eassumption.
+        eapply typing_lift01 ; eassumption.
       * assert (isdecl' : n < #|Γ|).
         -- auto with arith.
         -- destruct (IHw n isdecl') as [s' hh].
@@ -2153,6 +2237,7 @@ Proof.
            { intro t'. rewrite lift_lift. reflexivity. }
            rewrite eq. clear eq.
            eapply typing_lift01.
+           ++ assumption.
            ++ erewrite eq_safe_nth. eassumption.
            ++ eassumption.
   - exists (succ_sort (succ_sort s)). now apply type_Sort.
@@ -2164,14 +2249,13 @@ Proof.
       * apply eqctx_refl. now apply (typing_wf H).
       * apply eq_reflexivity. eassumption.
   - exists s2. change (sSort s2) with ((sSort s2){ 0 := u }).
-    eapply typing_subst.
-    + eassumption.
-    + assumption.
+    eapply typing_subst ; eassumption.
   - exists (succ_sort s). apply type_Sort. apply (typing_wf H).
   - exists s. now apply type_Eq.
   - exists s2.
     change (sSort s2) with ((sSort s2){1 := v}{0 := p}).
     eapply typing_subst2.
+    + assumption.
     + eassumption.
     + assumption.
     + cbn. rewrite !lift_subst, lift00.
@@ -2221,6 +2305,7 @@ Proof.
   - exists (succ_sort s). apply type_Heq ; try assumption.
     + eapply type_ProjT1 ; eassumption.
     + eapply @type_ProjT2 with (A1 := A1) ; eassumption.
+  - eexists. (* Now we need the weakening for global_context *)
   - eexists. eapply type_Sort. assumption.
   - exists s. assumption.
 Defined.

@@ -785,92 +785,60 @@ Proof.
         -- cbn in *. omega.
 Defined.
 
-Fact safe_nth_closed_above :
-  forall {Γ n isdecl},
-    closed_above #|Γ| (lift0 (S n) (sdecl_type (safe_nth Γ (exist _ n isdecl))))
-    = true.
-Proof.
-  intro Γ. induction Γ.
-  - easy.
-  - intro n. induction n ; intro isdecl.
-    + cbn.
-      replace (S #|Γ|) with (1 + #|Γ|)%nat by omega.
-      rewrite closed_above_lift by omega.
-      (* What to do? Missing hypthesis? *)
-      admit.
-    + cbn in isdecl.
-      assert (isdecl' : n < #|Γ|) by omega.
-      specialize (IHΓ n isdecl'). cbn.
-      replace (S #|Γ|) with ((S (S n)) + (#|Γ| - S n))%nat by omega.
-      rewrite closed_above_lift by omega.
-      rewrite <- IHΓ. (* clear IHΓ. generalize isdecl' isdecl. *)
-      replace #|Γ| with ((S n) + (#|Γ| - S n))%nat by omega.
-Abort.
-
-Fact safe_nth_closed_above :
-  forall {Σ Γ},
-    wf Σ Γ ->
-    forall {n isdecl},
-      closed_above #|Γ|
-                   (lift0 (S n) (sdecl_type (safe_nth Γ (exist _ n isdecl))))
-      = true.
-Proof.
-  intros Σ Γ hΓ. dependent induction hΓ.
-  - easy.
-  - intro n ; destruct n as [|n] ; intro isdecl.
-    + cbn. replace (S #|Γ|) with (1 + #|Γ|)%nat by omega.
-      rewrite closed_above_lift by omega.
-      (* This would need to be mutual with type_ctx_closed_above wouldn't it? *)
-      give_up.
-    + cbn.
-Abort.
+Ltac erewrite_assumption :=
+  match goal with
+  | H : _ = _ |- _ =>
+    erewrite H by omega
+  end.
 
 Fact type_ctx_closed_above :
   forall {Σ Γ t T},
     Σ ;;; Γ |-i t : T ->
-    (closed_above #|Γ| t = true) * (closed_above #|Γ| T = true).
+    closed_above #|Γ| t = true.
 Proof.
   intros Σ Γ t T h.
   dependent induction h.
-  - split.
-    + unfold closed_above. case_eq (n <? #|Γ|) ; intro e ; bprop e ; try omega.
-      reflexivity.
-    + admit.
-  - cbn. split ; reflexivity.
-  - cbn. split.
-    + destruct IHh1 as [e1 _].
-      destruct IHh2 as [e2 _].
-      cbn in e2. rewrite e1, e2. cbn. reflexivity.
-    + reflexivity.
-Admitted.
+  all: try (cbn in * ; repeat erewrite_assumption ; reflexivity).
+  unfold closed_above. case_eq (n <? #|Γ|) ; intro e ; bprop e ; try omega.
+  reflexivity.
+Defined.
 
 Fact type_ctxempty_closed :
   forall {Σ t T},
     Σ ;;; [] |-i t : T ->
-    closed t * closed T.
+    closed t.
 Proof.
   intros Σ t T h.
   unfold closed. eapply @type_ctx_closed_above with (Γ := []). eassumption.
 Defined.
 
-Fact close_above_lift :
+Ltac erewrite_close_above_lift_id :=
+  match goal with
+  | H : forall n k l, _ -> k >= l -> _ = _ |- _ =>
+    erewrite H by (first [ eassumption | omega ])
+  end.
+
+Ltac destruct_andb :=
+  match goal with
+  | H : _ && _ = true |- _ =>
+    destruct (andb_prop _ _ H) ; clear H
+  end.
+
+Fact closed_above_lift_id :
   forall t n k l,
     closed_above l t = true ->
     k >= l ->
     lift n k t = t.
 Proof.
   intro t. induction t ; intros m k l clo h.
-  - unfold closed in clo. unfold closed_above in clo.
-    bprop clo. cbn.
-    case_eq (k <=? n) ; intro e ; bprop e ; try omega.
-    reflexivity.
-  - cbn. reflexivity.
-  - cbn. cbn in clo. destruct (andb_prop _ _ clo) as [e1 e2].
-    erewrite IHt1 by eassumption.
-    erewrite IHt2 by (first [ eassumption | omega ]).
-    reflexivity.
-  -
-Admitted.
+  all: try (cbn ; cbn in clo ; repeat destruct_andb ;
+            repeat erewrite_close_above_lift_id ;
+            reflexivity).
+  unfold closed in clo. unfold closed_above in clo.
+  bprop clo. cbn.
+  case_eq (k <=? n) ; intro e ; bprop e ; try omega.
+  reflexivity.
+Defined.
 
 Fact closed_lift :
   forall t n k,
@@ -879,7 +847,7 @@ Fact closed_lift :
 Proof.
   intros t n k h.
   unfold closed in h.
-  eapply close_above_lift.
+  eapply closed_above_lift_id.
   - eassumption.
   - omega.
 Defined.

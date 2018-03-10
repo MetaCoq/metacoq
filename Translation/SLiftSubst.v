@@ -519,12 +519,33 @@ Proof.
       rewrite e3. rewrite e0. reflexivity.
 Defined.
 
+Ltac erewrite_close_above_lift :=
+  match goal with
+  | H : forall n k l, k <= l -> _ = _ |- _ =>
+    erewrite H by omega
+  end.
+
 Lemma closed_above_lift :
-  forall {t n k},
-    n <= k ->
-    closed_above k (lift0 n t) = true.
+  forall {t n k l},
+    k <= l ->
+    closed_above (n+l) (lift n k t) =
+    closed_above l t.
 Proof.
-  intro t. induction t ; intros m k h.
-  - unfold lift. case_eq (0 <=? n) ; intro e ; bprop e ; try omega.
-    unfold closed_above. case_eq (m + n <? k) ; intro e1 ; bprop e1 ; try omega.
-Abort.
+  intro t. induction t ; intros m k l h.
+  all: try (cbn ;
+            try replace (S (S (m+l)))%nat with (m + S (S l))%nat by omega ;
+            try replace (S (m+l))%nat with (m + S l)%nat by omega ;
+            repeat erewrite_close_above_lift ;
+            reflexivity).
+  unfold lift. case_eq (k <=? n) ; intro e ; bprop e ; try omega.
+  - unfold closed_above.
+    case_eq (m+n <? m+l) ; intro e1 ; bprop e1 ; try omega.
+    + case_eq (n <? l) ; intro e3 ; bprop e3 ; try omega.
+      reflexivity.
+    + case_eq (n <? l) ; intro e3 ; bprop e3 ; try omega.
+      reflexivity.
+  - unfold closed_above.
+    case_eq (n <? m+l) ; intro e1 ; bprop e1 ; try omega.
+    case_eq (n <? l) ; intro e3 ; bprop e3 ; try omega.
+    reflexivity.
+Defined.

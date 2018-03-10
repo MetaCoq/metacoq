@@ -892,12 +892,13 @@ Proof.
         induction (inductive_ind ind).
         -- cbn in h3. inversion h3.
            cbn. destruct i as [s hty].
-           (* We need to show that if a type is well-formed in the empty context
-              then it doesn't have any variables.
-            *)
-           admit.
+           eapply closed_lift.
+           eapply type_ctxempty_closed. eassumption.
         -- cbn in h3. apply IHt.
-           (* I'm a bit lost, this is definitely not the right way to go. *)
+           (* I'm a bit lost.
+              Now I believe in this lemma but it needs to be separated in
+              bits.
+            *)
 Abort.
 
 Ltac ih h :=

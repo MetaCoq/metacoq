@@ -785,6 +785,46 @@ Proof.
         -- cbn in *. omega.
 Defined.
 
+Fact safe_nth_closed_above :
+  forall {Γ n isdecl},
+    closed_above #|Γ| (lift0 (S n) (sdecl_type (safe_nth Γ (exist _ n isdecl))))
+    = true.
+Proof.
+  intro Γ. induction Γ.
+  - easy.
+  - intro n. induction n ; intro isdecl.
+    + cbn.
+      replace (S #|Γ|) with (1 + #|Γ|)%nat by omega.
+      rewrite closed_above_lift by omega.
+      (* What to do? Missing hypthesis? *)
+      admit.
+    + cbn in isdecl.
+      assert (isdecl' : n < #|Γ|) by omega.
+      specialize (IHΓ n isdecl'). cbn.
+      replace (S #|Γ|) with ((S (S n)) + (#|Γ| - S n))%nat by omega.
+      rewrite closed_above_lift by omega.
+      rewrite <- IHΓ. (* clear IHΓ. generalize isdecl' isdecl. *)
+      replace #|Γ| with ((S n) + (#|Γ| - S n))%nat by omega.
+Abort.
+
+Fact safe_nth_closed_above :
+  forall {Σ Γ},
+    wf Σ Γ ->
+    forall {n isdecl},
+      closed_above #|Γ|
+                   (lift0 (S n) (sdecl_type (safe_nth Γ (exist _ n isdecl))))
+      = true.
+Proof.
+  intros Σ Γ hΓ. dependent induction hΓ.
+  - easy.
+  - intro n ; destruct n as [|n] ; intro isdecl.
+    + cbn. replace (S #|Γ|) with (1 + #|Γ|)%nat by omega.
+      rewrite closed_above_lift by omega.
+      (* This would need to be mutual with type_ctx_closed_above wouldn't it? *)
+      give_up.
+    + cbn.
+Abort.
+
 Fact type_ctx_closed_above :
   forall {Σ Γ t T},
     Σ ;;; Γ |-i t : T ->

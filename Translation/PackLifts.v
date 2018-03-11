@@ -690,20 +690,6 @@ Proof.
     + cbn. erewrite IHΔ. reflexivity.
 Defined.
 
-(* For SCommon *)
-Fact cat_nil :
-  forall {Γ}, Γ ,,, [] = Γ.
-Proof.
-  induction Γ ; easy.
-Defined.
-
-Fact nil_cat :
-  forall {Γ}, [] ,,, Γ = Γ.
-Proof.
-  induction Γ ; try easy.
-  cbn. f_equal. assumption.
-Defined.
-
 (* Should be somewhere else. *)
 Lemma inversion_wf_cat :
   forall {Σ Δ Γ},

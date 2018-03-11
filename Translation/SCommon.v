@@ -80,6 +80,19 @@ Defined.
 Definition sapp_context (Γ Γ' : scontext) : scontext := (Γ' ++ Γ)%list.
 Notation " Γ  ,,, Γ' " := (sapp_context Γ Γ') (at level 25, Γ' at next level, left associativity) : s_scope.
 
+Fact cat_nil :
+  forall {Γ}, Γ ,,, [] = Γ.
+Proof.
+  induction Γ ; easy.
+Defined.
+
+Fact nil_cat :
+  forall {Γ}, [] ,,, Γ = Γ.
+Proof.
+  induction Γ ; try easy.
+  cbn. f_equal. assumption.
+Defined.
+
 (* Copy of global_contexts
 
    In some cases we just keep the TemplateCoq version (TC).

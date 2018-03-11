@@ -992,7 +992,7 @@ Fact lift_ind_type :
         lift n k (sind_type decl) = sind_type decl.
 Proof.
   intros Σ hg ind decl univs h n k.
-  destruct (typed_ind_type hg h) as [Σ' [s hty]].
+  destruct (typed_ind_type hg h).
   eapply closed_lift.
   eapply type_ctxempty_closed.
   eassumption.
@@ -1484,7 +1484,7 @@ Fact subst_ind_type :
         (sind_type decl){ n := u } = sind_type decl.
 Proof.
   intros Σ hg ind decl univs h n u.
-  destruct (typed_ind_type hg h) as [Σ' [s hty]].
+  destruct (typed_ind_type hg h).
   eapply closed_subst.
   eapply type_ctxempty_closed.
   eassumption.
@@ -2386,8 +2386,18 @@ Proof.
   - exists (succ_sort s). apply type_Heq ; try assumption.
     + eapply type_ProjT1 ; eassumption.
     + eapply @type_ProjT2 with (A1 := A1) ; eassumption.
-  - eexists. (* Now we need the weakening for global_context *)
-  - eexists. eapply type_Sort. assumption.
+  - destruct (typed_ind_type hg isdecl) as [s h].
+    exists s.
+    change (sSort s) with (lift #|Γ| #|@nil scontext_decl| (sSort s)).
+    replace (sind_type decl)
+      with (lift #|Γ| #|@nil scontext_decl| (sind_type decl))
+      by (erewrite lift_ind_type by eassumption ; reflexivity).
+    eapply meta_ctx_conv.
+    + eapply @type_lift with (Γ := []) (Ξ := []) (Δ := Γ).
+      * assumption.
+      * assumption.
+      * rewrite nil_cat. assumption.
+    + cbn. apply nil_cat.
   - exists s. assumption.
 Defined.
 

@@ -563,9 +563,9 @@ Inductive fresh_global (s : string) : sglobal_declarations -> Prop :=
 
 Inductive type_global_env φ : sglobal_declarations -> Type :=
 | globenv_nil : type_global_env φ []
-| globenv_decl Σ id d :
+| globenv_decl Σ d :
     type_global_env φ Σ ->
-    fresh_global id Σ ->
+    fresh_global (sglobal_decl_ident d) Σ ->
     type_global_decl (Σ, φ) d ->
     type_global_env φ (d :: Σ).
 
@@ -976,16 +976,12 @@ Proof.
       inversion h1 as [ h1' ]. subst.
       cbn in t. clear e.
       destruct (typed_ind_type' t h3) as [s h].
-      exists s. eapply weak_glob_type.
-      * assumption.
-      * cbn. admit.
+      exists s. eapply weak_glob_type ; assumption.
     + intro e. rewrite e in h1.
       destruct (IHhg ind decl univs) as [s h].
       * exists decl'. repeat split ; eassumption.
-      * exists s. eapply weak_glob_type.
-        -- assumption.
-        -- admit.
-Admitted.
+      * exists s. eapply weak_glob_type ; assumption.
+Defined.
 
 Fact lift_ind_type :
   forall {Σ : sglobal_context},

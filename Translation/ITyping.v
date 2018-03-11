@@ -955,15 +955,12 @@ Proof.
     }
 Defined.
 
-(* TODO: Prove weakening of global_context in order to drop
-   the existential quantifier.
- *)
 Fact typed_ind_type :
   forall {Σ : sglobal_context},
     type_glob Σ ->
     forall {ind decl univs},
       sdeclared_inductive (fst Σ) ind univs decl ->
-      ∑ Σ', isType Σ' [] (sind_type decl).
+      isType Σ [] (sind_type decl).
 Proof.
   intros Σ hg. destruct Σ as [Σ ϕ].
   dependent induction hg.
@@ -978,12 +975,17 @@ Proof.
     + intro e. rewrite e in h1.
       inversion h1 as [ h1' ]. subst.
       cbn in t. clear e.
-      exists (Σ, ϕ). eapply typed_ind_type' ; eassumption.
+      destruct (typed_ind_type' t h3) as [s h].
+      exists s. eapply weak_glob_type.
+      * assumption.
+      * cbn. admit.
     + intro e. rewrite e in h1.
-      eapply IHhg. exists decl'. repeat split.
-      * eassumption.
-      * eassumption.
-Defined.
+      destruct (IHhg ind decl univs) as [s h].
+      * exists decl'. repeat split ; eassumption.
+      * exists s. eapply weak_glob_type.
+        -- assumption.
+        -- admit.
+Admitted.
 
 Fact lift_ind_type :
   forall {Σ : sglobal_context},

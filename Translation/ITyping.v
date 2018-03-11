@@ -872,20 +872,47 @@ Proof.
       eassumption.
 Defined.
 
-Axiom cheating : forall {A}, A.
-Tactic Notation "cheat" := apply cheating.
+Fact ident_neq_fresh :
+  forall {Σ ind decl' d},
+    slookup_env Σ (inductive_mind ind) =
+    Some (SInductiveDecl (inductive_mind ind) decl') ->
+    fresh_global (sglobal_decl_ident d) Σ ->
+    ident_eq (inductive_mind ind) (sglobal_decl_ident d) = false.
+Proof.
+  intro Σ. induction Σ.
+  - intros ind decl' d h1 h2.
+    cbn in h1. inversion h1.
+  - intros ind decl' d h1 h2.
+    cbn in h1.
+    set (id1 := inductive_mind ind) in *.
+    set (id2 := sglobal_decl_ident d) in *.
+    set (id3 := sglobal_decl_ident a) in *.
+    dependent destruction h2.
+    case_eq (ident_eq id1 id3) ;
+      intro e ; rewrite e in h1.
+    + inversion h1 as [ h1' ]. subst. clear h1 e.
+      cbn in *.
+      destruct (ident_eq_spec id1 id2) ; easy.
+    + eapply IHΣ ; eassumption.
+Defined.
 
 Fixpoint weak_glob_type {Σ ϕ Γ t A} (h : (Σ,ϕ) ;;; Γ |-i t : A) :
-  forall d, (d::Σ, ϕ) ;;; Γ |-i t : A
+  forall {d},
+    fresh_global (sglobal_decl_ident d) Σ ->
+    (d::Σ, ϕ) ;;; Γ |-i t : A
 
 with weak_glob_eq {Σ ϕ Γ t1 t2 A} (h : (Σ,ϕ) ;;; Γ |-i t1 = t2 : A) :
-  forall d, (d::Σ, ϕ) ;;; Γ |-i t1 = t2 : A
+  forall {d},
+    fresh_global (sglobal_decl_ident d) Σ ->
+    (d::Σ, ϕ) ;;; Γ |-i t1 = t2 : A
 
 with weak_glob_wf {Σ ϕ Γ} (h : wf (Σ,ϕ) Γ) :
-  forall d, wf (d::Σ, ϕ) Γ.
+  forall {d},
+    fresh_global (sglobal_decl_ident d) Σ ->
+    wf (d::Σ, ϕ) Γ.
 Proof.
   (* weak_glob_type *)
-  - { dependent destruction h ; intro d.
+  - { dependent destruction h ; intros d fd.
       all: try (econstructor ; try apply weak_glob_wf ;
                 try apply weak_glob_type ;
                 try apply weak_glob_eq ;
@@ -896,18 +923,18 @@ Proof.
       - eapply type_ProjT2 with (A1 := A1).
         all: apply weak_glob_type ; eassumption.
       - eapply type_Ind with (univs := univs).
-        + apply weak_glob_wf. assumption.
+        + apply weak_glob_wf ; assumption.
         + destruct isdecl as [decl' [h1 [h2 h3]]].
           exists decl'. repeat split.
           * cbn in *. unfold sdeclared_minductive in *.
-            unfold slookup_env.
-            cheat.
+            cbn. erewrite ident_neq_fresh by eassumption.
+            assumption.
           * assumption.
           * assumption.
     }
 
   (* weak_glob_eq *)
-  - { dependent destruction h ; intro d.
+  - { dependent destruction h ; intros d fd.
       all: try (econstructor ; try apply weak_glob_wf ;
                 try apply weak_glob_type ;
                 try apply weak_glob_eq ;
@@ -920,11 +947,11 @@ Proof.
     }
 
   (* weak_glob_wf *)
-  - { dependent destruction h ; intro d.
+  - { dependent destruction h ; intros fd.
       - constructor.
       - econstructor.
-        + apply weak_glob_wf. assumption.
-        + apply weak_glob_type. eassumption.
+        + apply weak_glob_wf ; assumption.
+        + apply weak_glob_type ; eassumption.
     }
 Defined.
 

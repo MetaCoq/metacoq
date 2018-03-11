@@ -872,6 +872,62 @@ Proof.
       eassumption.
 Defined.
 
+Axiom cheating : forall {A}, A.
+Tactic Notation "cheat" := apply cheating.
+
+Fixpoint weak_glob_type {Σ ϕ Γ t A} (h : (Σ,ϕ) ;;; Γ |-i t : A) :
+  forall d, (d::Σ, ϕ) ;;; Γ |-i t : A
+
+with weak_glob_eq {Σ ϕ Γ t1 t2 A} (h : (Σ,ϕ) ;;; Γ |-i t1 = t2 : A) :
+  forall d, (d::Σ, ϕ) ;;; Γ |-i t1 = t2 : A
+
+with weak_glob_wf {Σ ϕ Γ} (h : wf (Σ,ϕ) Γ) :
+  forall d, wf (d::Σ, ϕ) Γ.
+Proof.
+  (* weak_glob_type *)
+  - { dependent destruction h ; intro d.
+      all: try (econstructor ; try apply weak_glob_wf ;
+                try apply weak_glob_type ;
+                try apply weak_glob_eq ;
+                eassumption
+               ).
+      - eapply type_HeqTrans with (B := B) (b := b).
+        all: apply weak_glob_type ; eassumption.
+      - eapply type_ProjT2 with (A1 := A1).
+        all: apply weak_glob_type ; eassumption.
+      - eapply type_Ind with (univs := univs).
+        + apply weak_glob_wf. assumption.
+        + destruct isdecl as [decl' [h1 [h2 h3]]].
+          exists decl'. repeat split.
+          * cbn in *. unfold sdeclared_minductive in *.
+            unfold slookup_env.
+            cheat.
+          * assumption.
+          * assumption.
+    }
+
+  (* weak_glob_eq *)
+  - { dependent destruction h ; intro d.
+      all: try (econstructor ; try apply weak_glob_wf ;
+                try apply weak_glob_type ;
+                try apply weak_glob_eq ;
+                eassumption
+               ).
+      - eapply cong_HeqTrans with (B := B) (b := b).
+        all: try apply weak_glob_eq ; try apply weak_glob_type ; eassumption.
+      - eapply cong_ProjT2 with (A1 := A1).
+        all: try apply weak_glob_eq ; try apply weak_glob_type ; eassumption.
+    }
+
+  (* weak_glob_wf *)
+  - { dependent destruction h ; intro d.
+      - constructor.
+      - econstructor.
+        + apply weak_glob_wf. assumption.
+        + apply weak_glob_type. eassumption.
+    }
+Defined.
+
 (* TODO: Prove weakening of global_context in order to drop
    the existential quantifier.
  *)

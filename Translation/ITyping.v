@@ -2403,10 +2403,11 @@ Defined.
 
 Lemma eq_typing :
   forall {Σ Γ t u T},
+    type_glob Σ ->
     Σ ;;; Γ |-i t = u : T ->
     (Σ ;;; Γ |-i t : T) * (Σ ;;; Γ |-i u : T).
 Proof.
-  intros Σ Γ t u T h.
+  intros Σ Γ t u T hg h.
   induction h ;
     repeat match goal with
            | H : ?A * ?B |- _ => destruct H
@@ -2483,6 +2484,7 @@ Proof.
       eapply typing_subst ; eassumption.
     + change (sSort s2) with ((sSort s2){0 := u2}).
       eapply pre_cong_subst1.
+      * assumption.
       * eapply eq_symmetry. eassumption.
       * eapply eq_symmetry. assumption.
       * assumption.
@@ -2532,6 +2534,7 @@ Proof.
       * instantiate (1 := s2).
         change (sSort s2) with ((sSort s2){ 1 := u2 }{ 0 := sRefl A2 u2 }).
         eapply typing_subst2.
+        -- assumption.
         -- eassumption.
         -- eassumption.
         -- cbn. rewrite !lift_subst, lift00.
@@ -2548,6 +2551,7 @@ Proof.
           change S with (S{1 := u1}{0 := sRefl A1 u1})
         end.
         eapply pre_cong_subst2.
+        -- assumption.
         -- eassumption.
         -- assumption.
         -- cbn. rewrite !lift_subst, lift00.
@@ -2558,6 +2562,7 @@ Proof.
            eapply ctx_conv.
            ++ eapply @type_subst with (A := sSort s2) (Δ := [ svass ne (sEq (lift0 1 A1) (lift0 1 u1) (sRel 0)) ]).
               ** exact pi2_1.
+              ** assumption.
               ** assumption.
            ++ cbn. rewrite subst_decl_svass. cbn. rewrite !lift_subst, lift00.
               econstructor.
@@ -2572,6 +2577,7 @@ Proof.
         change S with (S{1 := v1}{0 := p1})
       end.
       eapply typing_subst2.
+      * assumption.
       * eassumption.
       * assumption.
       * cbn. rewrite !lift_subst, lift00. assumption.
@@ -2581,6 +2587,7 @@ Proof.
         change S with (S{1 := v1}{0 := p1})
       end.
       eapply pre_cong_subst2.
+      * assumption.
       * eassumption.
       * assumption.
       * cbn. rewrite !lift_subst, lift00. assumption.
@@ -2590,6 +2597,7 @@ Proof.
         eapply ctx_conv.
         -- eapply @type_subst with (A := sSort s2) (Δ := [ svass ne (sEq (lift0 1 A1) (lift0 1 u1) (sRel 0)) ]).
            ++ exact pi2_1.
+           ++ assumption.
            ++ assumption.
         -- cbn. rewrite subst_decl_svass. cbn. rewrite !lift_subst, lift00.
            econstructor.
@@ -2640,10 +2648,12 @@ Proof.
         -- eapply type_Sort. eapply typing_wf. eassumption.
         -- eapply type_Sort. eapply typing_wf. eassumption.
         -- eapply @typing_subst with (B := sSort z).
+           ++ assumption.
            ++ eapply @type_lift
                 with (A := sSort z)
                      (Δ := [ svass np (sPack A1 A2) ])
                      (Ξ := [ svass nx A1 ]).
+              ** assumption.
               ** assumption.
               ** econstructor.
                  --- eapply typing_wf. eassumption.
@@ -2659,10 +2669,12 @@ Proof.
                      +++ eapply type_Pack ; eassumption.
                  --- cbn. omega.
         -- eapply @typing_subst with (B := sSort z).
+           ++ assumption.
            ++ eapply @type_lift
                 with (A := sSort z)
                      (Δ := [ svass np (sPack A1 A2) ])
                      (Ξ := [ svass ny A2 ]).
+              ** assumption.
               ** assumption.
               ** econstructor.
                  --- eapply typing_wf. eassumption.
@@ -2681,10 +2693,12 @@ Proof.
         -- eapply type_Sort. eapply typing_wf. eassumption.
         -- eapply type_Sort. eapply typing_wf. eassumption.
         -- eapply @pre_cong_subst1 with (B := sSort z).
+           ++ assumption.
            ++ eapply @cong_lift
                 with (A := sSort z)
                      (Δ := [ svass np (sPack A1 A2) ])
                      (Ξ := [ svass nx A1 ]).
+              ** assumption.
               ** assumption.
               ** econstructor.
                  --- eapply typing_wf. eassumption.
@@ -2705,6 +2719,7 @@ Proof.
                           (Δ := [ svass np (sPack A1 A2) ])
                           (Ξ := [ svass nx A1 ]).
               ** assumption.
+              ** assumption.
               ** econstructor.
                  --- eapply typing_wf. eassumption.
                  --- eapply type_Pack ; eassumption.
@@ -2719,10 +2734,12 @@ Proof.
                      +++ eapply type_Pack ; eassumption.
                  --- cbn. omega.
         -- eapply @pre_cong_subst1 with (B := sSort z).
+           ++ assumption.
            ++ eapply @cong_lift
                 with (A := sSort z)
                      (Δ := [ svass np (sPack A1 A2) ])
                      (Ξ := [ svass ny A2 ]).
+              ** assumption.
               ** assumption.
               ** econstructor.
                  --- eapply typing_wf. eassumption.
@@ -2742,6 +2759,7 @@ Proof.
                      with (A := sSort z)
                           (Δ := [ svass np (sPack A1 A2) ])
                           (Ξ := [ svass ny A2 ]).
+              ** assumption.
               ** assumption.
               ** econstructor.
                  --- eapply typing_wf. eassumption.
@@ -2775,10 +2793,12 @@ Proof.
            ++ eapply type_Sort. eapply typing_wf. eassumption.
            ++ eapply type_Sort. eapply typing_wf. eassumption.
            ++ eapply @typing_subst with (B := sSort z).
+              ** assumption.
               ** eapply @type_lift
                    with (A := sSort z)
                         (Δ := [ svass np (sPack A1 A2) ])
                         (Ξ := [ svass nx A1 ]).
+                 --- assumption.
                  --- assumption.
                  --- econstructor.
                      +++ eapply typing_wf. eassumption.
@@ -2794,10 +2814,12 @@ Proof.
                          *** eapply type_Pack ; eassumption.
                      +++ cbn. omega.
            ++ eapply @typing_subst with (B := sSort z).
+              ** assumption.
               ** eapply @type_lift
                    with (A := sSort z)
                         (Δ := [ svass np (sPack A1 A2) ])
                         (Ξ := [ svass ny A2 ]).
+                 --- assumption.
                  --- assumption.
                  --- econstructor.
                      +++ eapply typing_wf. eassumption.
@@ -2816,10 +2838,12 @@ Proof.
            ** eapply type_Sort. eapply typing_wf. eassumption.
            ** eapply type_Sort. eapply typing_wf. eassumption.
            ** eapply @pre_cong_subst1 with (B := sSort z).
+              --- assumption.
               --- eapply @cong_lift
                     with (A := sSort z)
                          (Δ := [ svass np (sPack A1 A2) ])
                          (Ξ := [ svass nx A1 ]).
+                  +++ assumption.
                   +++ assumption.
                   +++ econstructor.
                       *** eapply typing_wf. eassumption.
@@ -2840,6 +2864,7 @@ Proof.
                          (Δ := [ svass np (sPack A1 A2) ])
                          (Ξ := [ svass nx A1 ]).
                   +++ assumption.
+                  +++ assumption.
                   +++ econstructor.
                       *** eapply typing_wf. eassumption.
                       *** eapply type_Pack ; eassumption.
@@ -2854,10 +2879,12 @@ Proof.
                           ---- eapply type_Pack ; eassumption.
                       *** cbn. omega.
            ** eapply @pre_cong_subst1 with (B := sSort z).
+              --- assumption.
               --- eapply @cong_lift
                     with (A := sSort z)
                          (Δ := [ svass np (sPack A1 A2) ])
                          (Ξ := [ svass ny A2 ]).
+                  +++ assumption.
                   +++ assumption.
                   +++ econstructor.
                       *** eapply typing_wf. eassumption.
@@ -2877,6 +2904,7 @@ Proof.
                     with (A := sSort z)
                          (Δ := [ svass np (sPack A1 A2) ])
                          (Ξ := [ svass ny A2 ]).
+                  +++ assumption.
                   +++ assumption.
                   +++ econstructor.
                       *** eapply typing_wf. eassumption.
@@ -2894,10 +2922,12 @@ Proof.
       * eapply type_conv ; try eassumption.
         -- eapply type_Heq.
            ++ eapply @typing_subst with (B := sSort z).
+              ** assumption.
               ** eapply @type_lift
                    with (A := sSort z)
                         (Δ := [ svass np (sPack A1 A2) ])
                         (Ξ := [ svass nx A1 ]).
+                 --- assumption.
                  --- assumption.
                  --- econstructor.
                      +++ eapply typing_wf. eassumption.
@@ -2913,10 +2943,12 @@ Proof.
                          *** eapply type_Pack ; eassumption.
                      +++ cbn. omega.
            ++ eapply @typing_subst with (B := sSort z).
+              ** assumption.
               ** eapply @type_lift
                    with (A := sSort z)
                         (Δ := [ svass np (sPack A1 A2) ])
                         (Ξ := [ svass ny A2 ]).
+                 --- assumption.
                  --- assumption.
                  --- econstructor.
                      +++ eapply typing_wf. eassumption.
@@ -2932,10 +2964,12 @@ Proof.
                          *** eapply type_Pack ; eassumption.
                      +++ cbn. omega.
            ++ eapply typing_subst.
+              ** assumption.
               ** eapply @type_lift
                    with (Δ := [ svass np (sPack A1 A2) ])
                         (Ξ := [ svass nx A1 ]).
                  --- eapply type_conv ; eassumption.
+                 --- assumption.
                  --- econstructor.
                      +++ eapply typing_wf. eassumption.
                      +++ eapply type_Pack ; eassumption.
@@ -2950,10 +2984,12 @@ Proof.
                          *** eapply type_Pack ; eassumption.
                      +++ cbn. omega.
            ++ eapply typing_subst.
+              ** assumption.
               ** eapply @type_lift
                    with (Δ := [ svass np (sPack A1 A2) ])
                         (Ξ := [ svass ny A2 ]).
                  --- eapply type_conv ; eassumption.
+                 --- assumption.
                  --- econstructor.
                      +++ eapply typing_wf. eassumption.
                      +++ eapply type_Pack ; eassumption.
@@ -2969,10 +3005,12 @@ Proof.
                      +++ cbn. omega.
         -- eapply cong_Heq. all: try eapply eq_reflexivity.
            ** eapply @pre_cong_subst1 with (B := sSort z).
+              --- assumption.
               --- eapply @cong_lift
                     with (A := sSort z)
                          (Δ := [ svass np (sPack A1 A2) ])
                          (Ξ := [ svass nx A1 ]).
+                  +++ assumption.
                   +++ assumption.
                   +++ econstructor.
                       *** eapply typing_wf. eassumption.
@@ -2993,6 +3031,7 @@ Proof.
                          (Δ := [ svass np (sPack A1 A2) ])
                          (Ξ := [ svass nx A1 ]).
                   +++ assumption.
+                  +++ assumption.
                   +++ econstructor.
                       *** eapply typing_wf. eassumption.
                       *** eapply type_Pack ; eassumption.
@@ -3007,10 +3046,12 @@ Proof.
                           ---- eapply type_Pack ; eassumption.
                       *** cbn. omega.
            ** eapply @pre_cong_subst1 with (B := sSort z).
+              --- assumption.
               --- eapply @cong_lift
                     with (A := sSort z)
                          (Δ := [ svass np (sPack A1 A2) ])
                          (Ξ := [ svass ny A2 ]).
+                  +++ assumption.
                   +++ assumption.
                   +++ econstructor.
                       *** eapply typing_wf. eassumption.
@@ -3031,6 +3072,7 @@ Proof.
                          (Δ := [ svass np (sPack A1 A2) ])
                          (Ξ := [ svass ny A2 ]).
                   +++ assumption.
+                  +++ assumption.
                   +++ econstructor.
                       *** eapply typing_wf. eassumption.
                       *** eapply type_Pack ; eassumption.
@@ -3049,9 +3091,11 @@ Proof.
                     with (Δ := [ svass np (sPack A1 A2) ])
                          (Ξ := [ svass nx A1 ]).
                   +++ assumption.
+                  +++ assumption.
                   +++ econstructor.
                       *** eapply typing_wf. eassumption.
                       *** eapply type_Pack ; eassumption.
+              --- assumption.
               --- cbn. eapply @type_ProjT1 with (A2 := lift0 1 A2).
                   +++ eapply @typing_lift01 with (A := sSort s) ; try eassumption.
                       eapply type_Pack ; eassumption.
@@ -3067,9 +3111,11 @@ Proof.
                     with (Δ := [ svass np (sPack A1 A2) ])
                          (Ξ := [ svass ny A2 ]).
                   +++ assumption.
+                  +++ assumption.
                   +++ econstructor.
                       *** eapply typing_wf. eassumption.
                       *** eapply type_Pack ; eassumption.
+              --- assumption.
               --- cbn. eapply @type_ProjT2 with (A1 := lift0 1 A1).
                   +++ eapply @typing_lift01 with (A := sSort s) ; try eassumption.
                       eapply type_Pack ; eassumption.
@@ -3103,10 +3149,12 @@ Proof.
            ++ eapply type_Sort. eapply typing_wf. eassumption.
            ++ eapply type_Sort. eapply typing_wf. eassumption.
            ++ eapply @typing_subst with (B := sSort z).
+              ** assumption.
               ** eapply @type_lift
                    with (A := sSort z)
                         (Δ := [ svass np (sPack A1 A2) ])
                         (Ξ := [ svass nx A1 ]).
+                 --- assumption.
                  --- assumption.
                  --- econstructor.
                      +++ eapply typing_wf. eassumption.
@@ -3122,10 +3170,12 @@ Proof.
                          *** eapply type_Pack ; eassumption.
                      +++ cbn. omega.
            ++ eapply @typing_subst with (B := sSort z).
+              ** assumption.
               ** eapply @type_lift
                    with (A := sSort z)
                         (Δ := [ svass np (sPack A1 A2) ])
                         (Ξ := [ svass ny A2 ]).
+                 --- assumption.
                  --- assumption.
                  --- econstructor.
                      +++ eapply typing_wf. eassumption.
@@ -3149,9 +3199,11 @@ Proof.
                          (Δ := [ svass np (sPack A1 A2) ])
                          (Ξ := [ svass nx A1 ]).
                   +++ assumption.
+                  +++ assumption.
                   +++ econstructor.
                       *** eapply typing_wf. eassumption.
                       *** eapply type_Pack ; eassumption.
+              --- assumption.
               --- cbn. eapply @type_ProjT1 with (A2 := lift0 1 A2).
                   +++ eapply @typing_lift01 with (A := sSort s) ; try eassumption.
                       eapply type_Pack ; eassumption.
@@ -3168,9 +3220,11 @@ Proof.
                          (Δ := [ svass np (sPack A1 A2) ])
                          (Ξ := [ svass ny A2 ]).
                   +++ assumption.
+                  +++ assumption.
                   +++ econstructor.
                       *** eapply typing_wf. eassumption.
                       *** eapply type_Pack ; eassumption.
+              --- assumption.
               --- cbn. eapply @type_ProjT2 with (A1 := lift0 1 A1).
                   +++ eapply @typing_lift01 with (A := sSort s) ; try eassumption.
                       eapply type_Pack ; eassumption.
@@ -3218,8 +3272,10 @@ Proof.
       * eapply @cong_subst with (A := sSort z) (Δ := []).
         -- eassumption.
         -- assumption.
+        -- assumption.
       * eapply @cong_subst with (A := sSort z) (Δ := []).
         -- eassumption.
+        -- assumption.
         -- assumption.
       * eapply cong_App.
         all: try eapply eq_reflexivity.
@@ -3243,17 +3299,18 @@ Defined.
 
 Corollary full_cong_subst' :
   forall {Σ Γ nx B Δ t1 t2 u1 u2 A},
+    type_glob Σ ->
     Σ ;;; Γ ,, svass nx B ,,, Δ |-i t1 = t2 : A ->
     Σ ;;; Γ |-i u1 = u2 : B ->
     Σ ;;; Γ ,,, subst_context u1 Δ |-i
     t1{ #|Δ| := u1 } = t2{ #|Δ| := u2 } : A{ #|Δ| := u1 }.
 Proof.
-  intros Σ Γ nx B Δ t1 t2 u1 u2 A ht hu.
-  destruct (eq_typing ht) as [_ ht2].
-  destruct (eq_typing hu) as [hu1 _].
+  intros Σ Γ nx B Δ t1 t2 u1 u2 A hg ht hu.
+  destruct (eq_typing hg ht) as [_ ht2].
+  destruct (eq_typing hg hu) as [hu1 _].
   eapply eq_transitivity.
-  - exact (cong_subst ht hu1).
-  - exact (cong_substs ht2 hu hu1).
+  - exact (cong_subst ht hg hu1).
+  - exact (cong_substs ht2 hg hu hu1).
 Defined.
 
 Lemma cong_subst1 :

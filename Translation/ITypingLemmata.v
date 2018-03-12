@@ -230,6 +230,51 @@ Proof.
   eassumption.
 Defined.
 
+Fact xcomp_ind_type' :
+  forall {Σ : sglobal_context} {decl'},
+    type_inductive Σ (sind_bodies decl') ->
+    forall {n decl},
+      nth_error (sind_bodies decl') n = Some decl ->
+      Xcomp (sind_type decl).
+Proof.
+  intros Σ decl' hind. unfold type_inductive in hind.
+  induction hind.
+  - intros n decl h.
+    destruct n ; cbn in h ; inversion h.
+  - intros n decl h.
+    destruct n.
+    + cbn in h. inversion h as [ e ]. subst. clear h.
+      cbn. assumption.
+    + cbn in h. eapply IHhind.
+      eassumption.
+Defined.
+
+Fact xcomp_ind_type :
+  forall {Σ : sglobal_context},
+    type_glob Σ ->
+    forall {ind decl univs},
+      sdeclared_inductive (fst Σ) ind univs decl ->
+      Xcomp (sind_type decl).
+Proof.
+  intros Σ hg. destruct Σ as [Σ ϕ].
+  dependent induction hg.
+  - intros ind decl univs isdecl.
+    cbn in *. destruct isdecl as [decl' [h1 [h2 h3]]].
+    inversion h1.
+  - intros ind decl univs isdecl.
+    destruct isdecl as [decl' [h1 [h2 h3]]].
+    cbn in h1. unfold sdeclared_minductive in h1.
+    cbn in h1.
+    case_eq (ident_eq (inductive_mind ind) (sglobal_decl_ident d)).
+    + intro e. rewrite e in h1.
+      inversion h1 as [ h1' ]. subst.
+      cbn in t. clear e.
+      apply (xcomp_ind_type' t h3).
+    + intro e. rewrite e in h1.
+      apply (IHhg ind decl univs).
+      exists decl'. repeat split ; eassumption.
+Defined.
+
 Ltac ih h :=
   lazymatch goal with
   | [ type_lift :

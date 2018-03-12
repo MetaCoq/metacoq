@@ -719,15 +719,24 @@ Proof.
   - apply trel_Rel.
 Defined.
 
-(* We decided not to have it for the sake of simplicity of the relation.
-   This property isn't needed in any case.
-   We only require ∼ to be a PER.
- *)
-(* Lemma trel_refl : forall {t}, t ∼ t. *)
-(* Proof. *)
-(*   induction t ; try (now constructor). *)
-(*   constructor. constructor. assumption. *)
-(* Defined. *)
+(* Reflexivity is restricted to the syntax that makes sense in ETT. *)
+Lemma trel_refl :
+  forall {t},
+    Xcomp t ->
+    t ∼ t.
+Proof.
+  intros t h. dependent induction h.
+  all: constructor. all: assumption.
+Defined.
+
+Lemma inrel_refl :
+  forall {t},
+    Xcomp t ->
+    t ⊏ t.
+Proof.
+  intros t h. dependent induction h.
+  all: constructor. all: assumption.
+Defined.
 
 Lemma trel_sym : forall {t1 t2}, t1 ∼ t2 -> t2 ∼ t1.
 Proof.
@@ -1492,13 +1501,8 @@ Proof.
     + exists (sind_type decl), (sInd ind).
       repeat split.
       * now destruct hΓ.
-      * (* We have a problem here!
-           Indeed the hope that we could just assume the global context to make
-           sense in ITT is fading away.
-           Rather we would like it to be common to the both of them (should we
-           ask well-typedness in both ETT and ITT?).
-         *)
-        give_up.
+      * apply inrel_refl.
+        eapply xcomp_ind_type ; eassumption.
       * constructor.
       * eapply type_Ind ; try eassumption.
         now destruct hΓ.

@@ -504,6 +504,41 @@ Delimit Scope i_scope with i.
 
 Open Scope i_scope.
 
+(* Temporary:
+   We define the notion of ETT compatibility to restrict the syntax
+   to the one that is allowed in ETT.
+ *)
+Inductive Xcomp : sterm -> Type :=
+| xcomp_Rel n : Xcomp (sRel n)
+| xcomp_Sort s : Xcomp (sSort s)
+| xcomp_Prod na A B :
+    Xcomp A ->
+    Xcomp B ->
+    Xcomp (sProd na A B)
+| xcomp_Lambda na A B t :
+    Xcomp A ->
+    Xcomp B ->
+    Xcomp t ->
+    Xcomp (sLambda na A B t)
+| xcomp_App u na A B v :
+    Xcomp u ->
+    Xcomp A ->
+    Xcomp B ->
+    Xcomp v ->
+    Xcomp (sApp u na A B v)
+| xcomp_Eq A u v :
+    Xcomp A ->
+    Xcomp u ->
+    Xcomp v ->
+    Xcomp (sEq A u v)
+| xcomp_Refl A u :
+    Xcomp A ->
+    Xcomp u ->
+    Xcomp (sRefl A u)
+| xcomp_Ind ind : Xcomp (sInd ind).
+
+Derive Signature for Xcomp.
+
 Definition isType (Σ : sglobal_context) (Γ : scontext) (t : sterm) :=
   ∑ s, Σ ;;; Γ |-i t : sSort s.
 
@@ -536,6 +571,8 @@ Inductive type_inddecls (Σ : sglobal_context) (pars : scontext) (Γ : scontext)
 | type_ind_cons na ty cstrs projs kelim l :
     (** Arity is well-formed *)
     isArity Σ [] ty ->
+    (** TMP: The type can be written in ETT *)
+    Xcomp ty ->
     (** Constructors are well-typed *)
     type_constructors Σ Γ cstrs ->
     (** Projections are well-typed *)

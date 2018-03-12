@@ -549,3 +549,77 @@ Proof.
     case_eq (n <? l) ; intro e3 ; bprop e3 ; try omega.
     reflexivity.
 Defined.
+
+Ltac erewrite_close_above_lift_id :=
+  match goal with
+  | H : forall n k l, _ -> k >= l -> _ = _ |- _ =>
+    erewrite H by (first [ eassumption | omega ])
+  end.
+
+Ltac destruct_andb :=
+  match goal with
+  | H : _ && _ = true |- _ =>
+    destruct (andb_prop _ _ H) ; clear H
+  end.
+
+Fact closed_above_lift_id :
+  forall t n k l,
+    closed_above l t = true ->
+    k >= l ->
+    lift n k t = t.
+Proof.
+  intro t. induction t ; intros m k l clo h.
+  all: try (cbn ; cbn in clo ; repeat destruct_andb ;
+            repeat erewrite_close_above_lift_id ;
+            reflexivity).
+  unfold closed in clo. unfold closed_above in clo.
+  bprop clo. cbn.
+  case_eq (k <=? n) ; intro e ; bprop e ; try omega.
+  reflexivity.
+Defined.
+
+Fact closed_lift :
+  forall t n k,
+    closed t ->
+    lift n k t = t.
+Proof.
+  intros t n k h.
+  unfold closed in h.
+  eapply closed_above_lift_id.
+  - eassumption.
+  - omega.
+Defined.
+
+Ltac erewrite_close_above_subst_id :=
+  match goal with
+  | H : forall n l u, _ -> _ -> _ = _ |- _ =>
+    erewrite H by (first [ eassumption | omega ])
+  end.
+
+Fact closed_above_subst_id :
+  forall t n l u,
+    closed_above l t = true ->
+    n >= l ->
+    t{ n := u } = t.
+Proof.
+  intro t. induction t ; intros m l u clo h.
+  all: try (cbn ; cbn in clo ; repeat destruct_andb ;
+            repeat erewrite_close_above_subst_id ;
+            reflexivity).
+  unfold closed in clo. unfold closed_above in clo.
+  bprop clo. cbn.
+  case_eq (m ?= n) ; intro e ; bprop e ; try omega.
+  reflexivity.
+Defined.
+
+Fact closed_subst :
+  forall t n u,
+    closed t ->
+    t{ n := u } = t.
+Proof.
+  intros t n u h.
+  unfold closed in h.
+  eapply closed_above_subst_id.
+  - eassumption.
+  - omega.
+Defined.

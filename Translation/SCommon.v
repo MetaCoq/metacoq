@@ -22,6 +22,47 @@ Record squash (A : Set) : Prop := { _ : A }.
 
 (* Common lemmata *)
 
+Definition max_sort := max.
+
+Lemma max_id :
+  forall s, max_sort s s = s.
+Proof.
+  intro s. unfold max_sort. auto with arith.
+Defined.
+
+Definition succ_sort := S.
+
+Lemma max_succ_id :
+  forall s, max_sort (succ_sort s) s = succ_sort s.
+Proof.
+  intro s. unfold max_sort, succ_sort.
+  auto with arith.
+Defined.
+
+Definition sapp_context (Γ Γ' : scontext) : scontext := (Γ' ++ Γ)%list.
+Notation " Γ  ,,, Γ' " := (sapp_context Γ Γ') (at level 25, Γ' at next level, left associativity) : s_scope.
+
+Fact cat_nil :
+  forall {Γ}, Γ ,,, [] = Γ.
+Proof.
+  induction Γ ; easy.
+Defined.
+
+Fact nil_cat :
+  forall {Γ}, [] ,,, Γ = Γ.
+Proof.
+  induction Γ ; try easy.
+  cbn. f_equal. assumption.
+Defined.
+
+Fact length_cat :
+  forall {A} {Γ Δ : list A}, #|Γ ++ Δ| = (#|Γ| + #|Δ|)%nat.
+Proof.
+  intros A Γ. induction Γ ; intro Δ.
+  - cbn. reflexivity.
+  - cbn. f_equal. apply IHΓ.
+Defined.
+
 Fact safe_nth_S :
   forall {A n} {a : A} {l isdecl},
     ∑ isdecl',
@@ -60,37 +101,71 @@ Proof.
   apply eq_safe_nth'.
 Defined.
 
-Definition max_sort := max.
-
-Lemma max_id :
-  forall s, max_sort s s = s.
+Fact safe_nth_irr :
+  forall {A n} {l : list A} {isdecl isdecl'},
+    safe_nth l (exist _ n isdecl) =
+    safe_nth l (exist _ n isdecl').
 Proof.
-  intro s. unfold max_sort. auto with arith.
+  intros A n. induction n ; intro l ; destruct l ; try easy ; intros isdecl isdecl'.
+  cbn. eapply IHn.
 Defined.
 
-Definition succ_sort := S.
-
-Lemma max_succ_id :
-  forall s, max_sort (succ_sort s) s = succ_sort s.
+Fact safe_nth_cong_irr :
+  forall {A n m} {l : list A} {isdecl isdecl'},
+    n = m ->
+    safe_nth l (exist _ n isdecl) =
+    safe_nth l (exist _ m isdecl').
 Proof.
-  intro s. unfold max_sort, succ_sort.
-  auto with arith.
+  intros A n m l isdecl isdecl' e.
+  revert isdecl isdecl'.
+  rewrite e. intros isdecl isdecl'.
+  apply safe_nth_irr.
 Defined.
 
-Definition sapp_context (Γ Γ' : scontext) : scontext := (Γ' ++ Γ)%list.
-Notation " Γ  ,,, Γ' " := (sapp_context Γ Γ') (at level 25, Γ' at next level, left associativity) : s_scope.
-
-Fact cat_nil :
-  forall {Γ}, Γ ,,, [] = Γ.
+Fact safe_nth_ge :
+  forall {Γ Δ n} { isdecl : n < #|Γ ,,, Δ| } { isdecl' : n - #|Δ| < #|Γ| },
+    n >= #|Δ| ->
+    safe_nth (Γ ,,, Δ) (exist _ n isdecl) =
+    safe_nth Γ (exist _ (n - #|Δ|) isdecl').
 Proof.
-  induction Γ ; easy.
+  intros Γ Δ.
+  induction Δ ; intros n isdecl isdecl' h.
+  - cbn in *. revert isdecl'.
+    replace (n - 0) with n by omega.
+    intros isdecl'. apply safe_nth_irr.
+  - destruct n.
+    + cbn in *. inversion h.
+    + cbn. apply IHΔ. cbn in *. omega.
 Defined.
 
-Fact nil_cat :
-  forall {Γ}, [] ,,, Γ = Γ.
+Definition ge_sub {Γ Δ n} (isdecl : n < #|Γ ,,, Δ|) :
+  n >= #|Δ| ->  n - #|Δ| < #|Γ|.
 Proof.
-  induction Γ ; try easy.
-  cbn. f_equal. assumption.
+  intro h.
+  rewrite length_cat in isdecl. omega.
+Defined.
+
+Fact safe_nth_ge' :
+  forall {Γ Δ n} { isdecl : n < #|Γ ,,, Δ| } (h : n >= #|Δ|),
+    safe_nth (Γ ,,, Δ) (exist _ n isdecl) =
+    safe_nth Γ (exist _ (n - #|Δ|) (ge_sub isdecl h)).
+Proof.
+  intros Γ Δ n isdecl h.
+  eapply safe_nth_ge. assumption.
+Defined.
+
+Fact safe_nth_lt :
+  forall {n Γ Δ} { isdecl : n < #|Γ ,,, Δ| } { isdecl' : n < #|Δ| },
+    safe_nth (Γ ,,, Δ) (exist _ n isdecl) =
+    safe_nth Δ (exist _ n isdecl').
+Proof.
+  intros n. induction n ; intros Γ Δ isdecl isdecl'.
+  - destruct Δ.
+    + cbn in *. inversion isdecl'.
+    + cbn. reflexivity.
+  - destruct Δ.
+    + cbn in *. inversion isdecl'.
+    + cbn. eapply IHn.
 Defined.
 
 (* Copy of global_contexts
@@ -146,3 +221,129 @@ Definition sdeclared_inductive Σ ind univs decl :=
   ∑ decl', sdeclared_minductive Σ (inductive_mind ind) decl' /\
            univs = decl'.(sind_universes) /\
            List.nth_error decl'.(sind_bodies) (inductive_ind ind) = Some decl.
+
+(* Lifting of context *)
+
+Definition lift_decl n k d : scontext_decl :=
+  {| sdecl_name := sdecl_name d ;
+     sdecl_body := option_map (lift n k) (sdecl_body d) ;
+     sdecl_type := lift n k (sdecl_type d)
+  |}.
+
+Fixpoint lift_context n Γ : scontext :=
+  match Γ with
+  | nil => nil
+  | A :: Γ => (lift_decl n #|Γ| A) :: (lift_context n Γ)
+  end.
+
+Fact lift_decl0 :
+  forall {d k}, lift_decl 0 k d = d.
+Proof.
+  intros d k.
+  destruct d as [x b A].
+  unfold lift_decl. cbn. rewrite lift00. f_equal.
+  destruct b.
+  - cbn. rewrite lift00. reflexivity.
+  - reflexivity.
+Defined.
+
+Fact lift_context0 :
+  forall {Γ}, lift_context 0 Γ = Γ.
+Proof.
+  intro Γ. induction Γ.
+  - reflexivity.
+  - cbn. rewrite lift_decl0. rewrite IHΓ. reflexivity.
+Defined.
+
+Fact lift_decl_svass :
+  forall na A n k,
+    lift_decl n k (svass na A) = svass na (lift n k A).
+Proof.
+  intros na A n k.
+  reflexivity.
+Defined.
+
+Fact lift_context_length :
+  forall {k Ξ}, #|lift_context k Ξ| = #|Ξ|.
+Proof.
+  intros k Ξ.
+  induction Ξ.
+  - cbn. reflexivity.
+  - cbn. f_equal. assumption.
+Defined.
+
+Fact safe_nth_lift_context :
+  forall {Γ Δ : scontext} {n isdecl isdecl'},
+    sdecl_type (safe_nth (lift_context #|Γ| Δ) (exist _ n isdecl)) =
+    lift #|Γ| (#|Δ| - n - 1) (sdecl_type (safe_nth Δ (exist _ n isdecl'))).
+Proof.
+  intros Γ Δ. induction Δ.
+  - cbn. easy.
+  - intro n. destruct n ; intros isdecl isdecl'.
+    + cbn. replace (#|Δ| - 0) with #|Δ| by omega. reflexivity.
+    + cbn. erewrite IHΔ. reflexivity.
+Defined.
+
+Fact lift_context_ex :
+  forall {Δ Ξ : scontext} {n isdecl isdecl'},
+    lift0 (S n) (sdecl_type (safe_nth (lift_context #|Δ| Ξ) (exist _ n isdecl))) =
+    lift #|Δ| #|Ξ| (lift0 (S n) (sdecl_type (safe_nth Ξ (exist _ n isdecl')))).
+Proof.
+  intros Δ Ξ n isdecl isdecl'.
+  erewrite safe_nth_lift_context.
+  rewrite <- liftP2 by omega.
+  cbn.
+  replace (S (n + (#|Ξ| - n - 1)))%nat with #|Ξ|.
+  - reflexivity.
+  - revert n isdecl isdecl'. induction Ξ ; intros n isdecl isdecl'.
+    + cbn. easy.
+    + cbn. f_equal.
+      destruct n.
+      * cbn. omega.
+      * cbn. apply IHΞ.
+        -- cbn in *. omega.
+        -- cbn in *. omega.
+Defined.
+
+(* Substitution in context *)
+
+Definition subst_decl n u d : scontext_decl :=
+  {| sdecl_name := sdecl_name d ;
+     sdecl_body := option_map (subst u n) (sdecl_body d) ;
+     sdecl_type := (sdecl_type d){ n := u }
+  |}.
+
+Fixpoint subst_context u Δ :=
+  match Δ with
+  | nil => nil
+  | A :: Δ => (subst_decl #|Δ| u A) :: (subst_context u Δ)
+  end.
+
+Fact subst_decl_svass :
+  forall na A n u,
+    subst_decl n u (svass na A) = svass na (A{ n := u }).
+Proof.
+  intros na A n u.
+  reflexivity.
+Defined.
+
+Fact subst_context_length :
+  forall {u Ξ}, #|subst_context u Ξ| = #|Ξ|.
+Proof.
+  intros u Ξ.
+  induction Ξ.
+  - cbn. reflexivity.
+  - cbn. f_equal. assumption.
+Defined.
+
+Fact safe_nth_subst_context :
+  forall {Δ : scontext} {n u isdecl isdecl'},
+    sdecl_type (safe_nth (subst_context u Δ) (exist _ n isdecl)) =
+    (sdecl_type (safe_nth Δ (exist _ n isdecl'))) { #|Δ| - S n := u }.
+Proof.
+  intro Δ. induction Δ.
+  - cbn. easy.
+  - intro n. destruct n ; intros u isdecl isdecl'.
+    + cbn. replace (#|Δ| - 0) with #|Δ| by omega. reflexivity.
+    + cbn. erewrite IHΔ. reflexivity.
+Defined.

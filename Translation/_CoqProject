@@ -8,6 +8,8 @@ SLiftSubst.v
 SCommon.v
 ITyping.v
 XTyping.v
+ITypingLemmata.v
+ITypingMore.v
 PackLifts.v
 Translation.v
 Reduction.v

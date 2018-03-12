@@ -21,6 +21,8 @@ To build the project, you only need to `make`.
 - `ITyping.v` contains the typing rules of ITT.
 - `XTyping.v` contains the typing rules of ETT.
 
+- `ITypingLemmata.v` contains lemmata regarding typing in ITT.
+- `ITypingLemmata.v` contains inversion and admissibility lemmata in ITT.
 - `PackLifts.v` contains the necessary lifts to deal with packing.
 
 - `Translation.v` contains the translation itself and the necessary

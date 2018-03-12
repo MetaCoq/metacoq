@@ -126,21 +126,6 @@ Proof.
   induction h ; now constructor.
 Defined.
 
-(* Maybe it should be somewhere else. *)
-Fact declared_inductive_eq :
-  forall {Σ : sglobal_context} {ind univs1 decl1 univs2 decl2},
-    sdeclared_inductive (fst Σ) ind univs1 decl1 ->
-    sdeclared_inductive (fst Σ) ind univs2 decl2 ->
-    decl1 = decl2.
-Proof.
-  intros Σ ind univs1 decl1 univs2 decl2 is1 is2.
-  destruct is1 as [d1 [h1 [i1 j1]]].
-  destruct is2 as [d2 [h2 [i2 j2]]].
-  unfold sdeclared_minductive in h1, h2.
-  rewrite h1 in h2. inversion h2. subst.
-  rewrite j1 in j2. now inversion j2.
-Defined.
-
 Lemma trel_to_heq' :
   forall {Σ t1 t2},
     type_glob Σ ->

@@ -222,6 +222,20 @@ Definition sdeclared_inductive Σ ind univs decl :=
            univs = decl'.(sind_universes) /\
            List.nth_error decl'.(sind_bodies) (inductive_ind ind) = Some decl.
 
+Fact declared_inductive_eq :
+  forall {Σ : sglobal_context} {ind univs1 decl1 univs2 decl2},
+    sdeclared_inductive (fst Σ) ind univs1 decl1 ->
+    sdeclared_inductive (fst Σ) ind univs2 decl2 ->
+    decl1 = decl2.
+Proof.
+  intros Σ ind univs1 decl1 univs2 decl2 is1 is2.
+  destruct is1 as [d1 [h1 [i1 j1]]].
+  destruct is2 as [d2 [h2 [i2 j2]]].
+  unfold sdeclared_minductive in h1, h2.
+  rewrite h1 in h2. inversion h2. subst.
+  rewrite j1 in j2. now inversion j2.
+Defined.
+
 (* Lifting of context *)
 
 Definition lift_decl n k d : scontext_decl :=

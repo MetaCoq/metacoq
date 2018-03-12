@@ -64,4 +64,5 @@ Inductive sterm : Type :=
 | sProjTe (p : sterm)
 (* Inductives *)
 | sInd (ind : inductive)
+| sConstruct (ind : inductive) (n : nat)
 .

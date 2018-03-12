@@ -226,6 +226,12 @@ Inductive typing (Σ : sglobal_context) : scontext -> sterm -> sterm -> Type :=
     forall univs decl (isdecl : sdeclared_inductive (fst Σ) ind univs decl),
       Σ ;;; Γ |-i sInd ind : decl.(sind_type)
 
+| type_Construct Γ ind i :
+    wf Σ Γ ->
+    forall univs decl (isdecl : sdeclared_constructor (fst Σ) (ind, i) univs decl),
+    Σ ;;; Γ |-i (sConstruct ind i)
+             : stype_of_constructor (fst Σ) (ind, i) univs decl isdecl
+
 | type_conv Γ t A B s :
     Σ ;;; Γ |-i t : A ->
     Σ ;;; Γ |-i B : sSort s ->
@@ -535,7 +541,9 @@ Inductive Xcomp : sterm -> Type :=
     Xcomp A ->
     Xcomp u ->
     Xcomp (sRefl A u)
-| xcomp_Ind ind : Xcomp (sInd ind).
+| xcomp_Ind ind : Xcomp (sInd ind)
+| xcomp_Construct ind i : Xcomp (sConstruct ind i)
+.
 
 Derive Signature for Xcomp.
 

@@ -52,6 +52,12 @@ Inductive typing (Σ : sglobal_context) : scontext -> sterm -> sterm -> Type :=
     forall univs decl (isdecl : sdeclared_inductive (fst Σ) ind univs decl),
       Σ ;;; Γ |-x sInd ind : decl.(sind_type)
 
+| type_Construct Γ ind i :
+    wf Σ Γ ->
+    forall univs decl (isdecl : sdeclared_constructor (fst Σ) (ind, i) univs decl),
+    Σ ;;; Γ |-x (sConstruct ind i)
+             : stype_of_constructor (fst Σ) (ind, i) univs decl isdecl
+
 | type_conv Γ t A B s :
     Σ ;;; Γ |-x t : A ->
     Σ ;;; Γ |-x B : sSort s ->

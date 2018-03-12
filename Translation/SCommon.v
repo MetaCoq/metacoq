@@ -222,6 +222,38 @@ Definition sdeclared_inductive Σ ind univs decl :=
            univs = decl'.(sind_universes) /\
            List.nth_error decl'.(sind_bodies) (inductive_ind ind) = Some decl.
 
+Definition sdeclared_constructor Σ cstr univs decl :=
+  let '(ind, k) := cstr in
+  ∑ decl', sdeclared_inductive Σ ind univs decl' *
+           (List.nth_error decl'.(sind_ctors) k = Some decl).
+
+Definition sinds ind (l : list sone_inductive_body) :=
+  let fix aux n :=
+      match n with
+      | 0 => []
+      | S n => sInd (mkInd ind n) :: aux n
+      end
+  in aux (List.length l).
+
+Program
+Definition stype_of_constructor (Σ : sglobal_declarations)
+  (c : inductive * nat) (univs : universe_context)
+  (decl : ident * sterm * nat)
+  (H : sdeclared_constructor Σ c univs decl) :=
+  let mind := inductive_mind (fst c) in
+  let '(id, trm, args) := decl in
+  match slookup_env Σ mind with
+  | Some (SInductiveDecl _ decl') =>
+    substl (sinds mind decl'.(sind_bodies)) trm
+  | _ => !
+  end.
+Next Obligation.
+  destruct H as [decl [H H']].
+  destruct H as [decl' [H'' H''']].
+  eapply H0.
+  simpl. unfold filtered_var. rewrite H''. reflexivity.
+Defined.
+
 Fact declared_inductive_eq :
   forall {Σ : sglobal_context} {ind univs1 decl1 univs2 decl2},
     sdeclared_inductive (fst Σ) ind univs1 decl1 ->

@@ -52,6 +52,7 @@ Fixpoint lift n k t : sterm :=
   | sProjTe p => sProjTe (lift n k p)
   | sSort s => sSort s
   | sInd ind => sInd ind
+  | sConstruct ind i => sConstruct ind i
   end.
 
 Notation lift0 n t := (lift n 0 t).
@@ -107,10 +108,15 @@ Fixpoint subst t k u :=
   | sProjTe p => sProjTe (subst t k p)
   | sSort s => sSort s
   | sInd ind => sInd ind
+  | sConstruct ind i => sConstruct ind i
   end.
 
 Notation subst0 t u := (subst t 0 u).
 Notation "M { j := N }" := (subst N j M) (at level 10, right associativity) : s_scope.
+
+(** Substitutes [t1 ; .. ; tn] in u for [Rel 0; .. Rel (n-1)]*)
+Definition substl l t :=
+  List.fold_left (fun t u => subst0 u t) l t.
 
 (* Notion of closedness *)
 Fixpoint closed_above k t :=
@@ -172,6 +178,7 @@ Fixpoint closed_above k t :=
   | sProjT2 p => closed_above k p
   | sProjTe p => closed_above k p
   | sInd ind => true
+  | sConstruct ind i => true
   end.
 
 Definition closed t := closed_above 0 t = true.

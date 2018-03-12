@@ -68,6 +68,7 @@ Fixpoint llift γ δ (t:sterm)  : sterm :=
   | sProjT2 x => sProjT2 (llift γ δ x)
   | sProjTe x => sProjTe (llift γ δ x)
   | sInd ind => sInd ind
+  | sConstruct ind i => sConstruct ind i
   end.
 
 Notation llift0 γ t := (llift γ 0 t).
@@ -123,6 +124,7 @@ Fixpoint rlift γ δ t : sterm :=
   | sProjT2 x => sProjT2 (rlift γ δ x)
   | sProjTe x => sProjTe (rlift γ δ x)
   | sInd ind => sInd ind
+  | sConstruct ind i => sConstruct ind i
   end.
 
 Notation rlift0 γ t := (rlift γ 0 t).

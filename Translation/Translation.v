@@ -647,35 +647,22 @@ Proof.
   (* Ind *)
   - destruct (inversionInd hg h1) as [univs1 [decl1 [isdecl1 [s1 e1]]]].
     destruct (inversionInd hg h2) as [univs2 [decl2 [isdecl2 [s2 e2]]]].
-    exists (sHeqRefl (sind_type decl1) (sInd ind)).
-    assert (hwf : wf Σ (Γ ,,, Γm)).
-    { eapply @wf_llift with (Δ := []) ; try eassumption.
-      eapply typing_wf ; eassumption.
+    assert (h1' : Σ ;;; Γ ,,, Γm |-i sInd ind : llift0 #|Γm| U1).
+    { change (sInd ind) with (llift0 #|Γm| (sInd ind)).
+      eapply type_llift0 ; eassumption.
     }
+    assert (h2' : Σ ;;; Γ ,,, Γm |-i sInd ind : rlift0 #|Γm| U2).
+    { change (sInd ind) with (rlift0 #|Γm| (sInd ind)).
+      eapply type_rlift0 ; eassumption.
+    }
+    destruct (uniqueness h1' h2') as [s ee].
+    destruct (eq_typing hg ee) as [hlU1 hrU2].
+    exists (sHeqRefl (llift0 #|Γm| U1) (sInd ind)).
     eapply type_conv' ; try assumption.
-    + eapply type_HeqRefl' ; try assumption.
-      eapply type_Ind ; eassumption.
-    + cbn. eapply cong_Heq.
-      * instantiate (1 := s1).
-        change (sSort s1)
-          with (llift0 #|Γm| (sSort s1)).
-        replace (sind_type decl1)
-          with (llift0 #|Γm| (sind_type decl1))
-          by (erewrite llift_ind_type by eassumption ; reflexivity).
-        eapply cong_llift0 ; eassumption.
-      * change (sSort s1)
-          with (rlift0 #|Γm| (sSort s1)).
-        replace (sind_type decl1)
-          with (rlift0 #|Γm| (sind_type decl1))
-          by (erewrite rlift_ind_type by eassumption ; reflexivity).
-        eapply cong_rlift0 ; try eassumption.
-        destruct (declared_inductive_eq isdecl1 isdecl2).
-        destruct (eq_typing hg e1) as [i1 _].
-        destruct (eq_typing hg e2) as [i2 _].
-        (* More work to do, there may be a better path. *)
-        admit.
-      * apply eq_reflexivity. eapply type_Ind ; eassumption.
-      * apply eq_reflexivity. eapply type_Ind ; eassumption.
+    + eapply type_HeqRefl ; eassumption.
+    + eapply cong_Heq.
+      all: try (apply eq_reflexivity).
+      all: easy.
 
   Unshelve.
   all: cbn ; try rewrite !length_cat ; omega.

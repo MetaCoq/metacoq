@@ -53,7 +53,7 @@ Fixpoint sort_to_universe (s : sort) : Universe.t :=
   end.
 
 Definition hnf (Σ : global_context) (Γ : context) (t : term) : typing_result term :=
-  r <- hnf_stack (fst Σ) Γ t ;;
+  r <- hnf_stack (Datatypes.fst Σ) Γ t ;;
   ret (zip r).
 
 Definition myret (Σ : global_context) (Γ : context) (t : term) : tsl_result term :=
@@ -276,7 +276,7 @@ Fixpoint tsl_rec (fuel : nat) (Σ : global_context) (Γ : context) (t : sterm) {
       | Checked T => raise (UnexpectedTranslation "ProjTe" p p' T)
       | TypeError t => raise (TypingError t)
       end
-    | sInd ind s =>
+    | sInd ind =>
       ret (tInd ind [])
     end
   end.
@@ -326,7 +326,7 @@ Definition glob_term :=
 Quote Recursively Definition glob_prog := @glob_term.
 Definition Σ : global_context :=
   (* reconstruct_global_context (fst glob_prog). *)
-  (fst glob_prog, init_graph).
+  pair (Datatypes.fst glob_prog) init_graph.
 
 Arguments Σ : simpl never.
 

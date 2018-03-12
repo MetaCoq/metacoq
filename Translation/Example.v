@@ -38,6 +38,12 @@ Definition iVec :=
 Definition sVec :=
   sInd iVec.
 
+Definition iBool :=
+  {| inductive_mind := "Coq.Init.Datatypes.bool"; inductive_ind := 0 |}.
+
+Definition sBool :=
+  sInd iBool.
+
 Definition vec_cod :=
   sProd nAnon sNat (sSort 0).
 
@@ -505,8 +511,8 @@ Make Definition coq_nat :=
   ).
 
 (*! EXAMPLE 4:
-    vec nat 1
-    We cannot even write it!
+    vec
+    It gets translated to itself.
 *)
 
 Lemma vecty :
@@ -543,3 +549,67 @@ Make Definition coq_vec :=
               end)
       in exact t
   ).
+
+(*! EXAMPLE 4':
+    vec bool
+    It gets translated to itself.
+*)
+
+Lemma vecbty :
+  Σi ;;; [] |-x sApp sVec (nNamed "A") (sSort 0) vec_cod sBool : vec_cod.
+Proof.
+  eapply type_App with (s1 := 1) (s2 := max 0 1).
+  - repeat constructor.
+  - unfold vec_cod. eapply type_Prod.
+    + eapply xmeta_conv.
+      * eapply type_Ind.
+        -- econstructor.
+           ++ constructor.
+           ++ repeat constructor.
+        -- Unshelve.
+           repeat econstructor;
+           try (simpl; omega); assert(H':=type_Construct Σ Γ c i u _ _ H); simpl in H';
+           clear H; apply H'; try trivial.
+      * cbn. reflexivity.
+    + repeat econstructor.
+  - eapply xmeta_conv.
+    + eapply type_Ind.
+      * constructor.
+      * Unshelve.
+        repeat econstructor;
+        try (simpl; omega); assert(H':=type_Construct Σ Γ c i u _ _ H); simpl in H';
+        clear H; apply H'; try trivial.
+    + cbn. reflexivity.
+  - eapply xmeta_conv.
+    + eapply type_Ind.
+      * constructor.
+      * Unshelve.
+        repeat econstructor;
+        try (simpl; omega); assert(H':=type_Construct Σ Γ c i u _ _ H); simpl in H';
+        clear H; apply H'; try trivial.
+    + cbn. reflexivity.
+Defined.
+
+Definition itt_vecb : sterm.
+  destruct (type_translation vecbty istrans_nil) as [A [t [_ h]]].
+  exact t.
+Defined.
+
+(* For some reason we have efficiency issues again. *)
+
+(* Definition itt_vecb' := ltac:(let t := eval lazy in itt_vecb in exact t). *)
+
+(* Definition tc_vecb : tsl_result term := *)
+(*   tsl_rec (2 ^ 18) Σ [] itt_vecb'. *)
+
+(* Definition tc_vecb' := ltac:(let t := eval lazy in tc_vecb in exact t). *)
+
+(* Make Definition coq_vecb := *)
+(*   ltac:( *)
+(*     let t := eval lazy in *)
+(*              (match tc_vecb' with *)
+(*               | Success t => t *)
+(*               | _ => tSort Universe.type0 *)
+(*               end) *)
+(*       in exact t *)
+(*   ). *)

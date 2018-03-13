@@ -375,6 +375,14 @@ Proof.
   eapply type_inddecls_constr ; eassumption.
 Defined.
 
+Fact typed_type_of_constructor :
+  forall {Σ : sglobal_context},
+    type_glob Σ ->
+    forall {ind i decl univs}
+      (isdecl : sdeclared_constructor (fst Σ) (ind, i) univs decl),
+      isType Σ [] (stype_of_constructor (fst Σ) (ind, i) univs decl isdecl).
+Admitted.
+
 Fact lift_type_of_constructor :
   forall {Σ : sglobal_context},
     type_glob Σ ->
@@ -385,9 +393,11 @@ Fact lift_type_of_constructor :
         stype_of_constructor (fst Σ) (ind, i) univs decl isdecl.
 Proof.
   intros Σ hg ind i decl univs isdecl n k.
+  destruct (typed_type_of_constructor hg isdecl).
   eapply closed_lift.
   eapply type_ctxempty_closed.
-Admitted.
+  eassumption.
+Defined.
 
 Ltac ih h :=
   lazymatch goal with
@@ -815,9 +825,11 @@ Fact subst_type_of_constructor :
         stype_of_constructor (fst Σ) (ind, i) univs decl isdecl.
 Proof.
   intros Σ hg ind i decl univs isdecl n u.
+  destruct (typed_type_of_constructor hg isdecl).
   eapply closed_subst.
   eapply type_ctxempty_closed.
-Admitted.
+  eassumption.
+Defined.
 
 Ltac sh h :=
   lazymatch goal with
@@ -1733,7 +1745,17 @@ Proof.
       * assumption.
       * rewrite nil_cat. assumption.
     + cbn. apply nil_cat.
-  - give_up.
+  - destruct (typed_type_of_constructor hg isdecl) as [s h].
+    exists s. change (sSort s) with (lift #|Γ| #|@nil scontext_decl| (sSort s)).
+    set (ty := stype_of_constructor (fst Σ) (ind, i) univs decl isdecl) in *.
+    replace ty with (lift #|Γ| #|@nil scontext_decl| ty)
+      by (erewrite lift_type_of_constructor by eassumption ; reflexivity).
+    eapply meta_ctx_conv.
+    + eapply @type_lift with (Γ := []) (Ξ := []) (Δ := Γ).
+      * assumption.
+      * assumption.
+      * rewrite nil_cat. assumption.
+    + cbn. apply nil_cat.
   - exists s. assumption.
 Defined.
 

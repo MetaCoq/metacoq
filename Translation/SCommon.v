@@ -218,13 +218,13 @@ Definition sdeclared_minductive Σ mind decl :=
   slookup_env Σ mind = Some (SInductiveDecl mind decl).
 
 Definition sdeclared_inductive Σ ind univs decl :=
-  ∑ decl', sdeclared_minductive Σ (inductive_mind ind) decl' /\
-           univs = decl'.(sind_universes) /\
-           List.nth_error decl'.(sind_bodies) (inductive_ind ind) = Some decl.
+  ∑ decl', (sdeclared_minductive Σ (inductive_mind ind) decl') *
+           (univs = decl'.(sind_universes)) *
+           (List.nth_error decl'.(sind_bodies) (inductive_ind ind) = Some decl).
 
 Definition sdeclared_constructor Σ cstr univs decl :=
   let '(ind, k) := cstr in
-  ∑ decl', sdeclared_inductive Σ ind univs decl' *
+  ∑ decl', (sdeclared_inductive Σ ind univs decl') *
            (List.nth_error decl'.(sind_ctors) k = Some decl).
 
 Definition sinds ind (l : list sone_inductive_body) :=
@@ -249,9 +249,9 @@ Definition stype_of_constructor (Σ : sglobal_declarations)
   end.
 Next Obligation.
   destruct H as [decl [H H']].
-  destruct H as [decl' [H'' H''']].
+  destruct H as [decl' [[H'' H''''] H''']].
   eapply H0.
-  simpl. unfold filtered_var. rewrite H''. reflexivity.
+  simpl. unfold filtered_var. unfold mind. rewrite H''. reflexivity.
 Defined.
 
 Fact declared_inductive_eq :
@@ -261,8 +261,8 @@ Fact declared_inductive_eq :
     decl1 = decl2.
 Proof.
   intros Σ ind univs1 decl1 univs2 decl2 is1 is2.
-  destruct is1 as [d1 [h1 [i1 j1]]].
-  destruct is2 as [d2 [h2 [i2 j2]]].
+  destruct is1 as [d1 [[h1 i1] j1]].
+  destruct is2 as [d2 [[h2 i2] j2]].
   unfold sdeclared_minductive in h1, h2.
   rewrite h1 in h2. inversion h2. subst.
   rewrite j1 in j2. now inversion j2.

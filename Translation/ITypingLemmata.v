@@ -383,6 +383,14 @@ Fact typed_type_of_constructor :
       isType Σ [] (stype_of_constructor (fst Σ) (ind, i) univs decl isdecl).
 Admitted.
 
+Fact xcomp_type_of_constructor :
+  forall {Σ : sglobal_context},
+    type_glob Σ ->
+    forall {ind i decl univs}
+      (isdecl : sdeclared_constructor (fst Σ) (ind, i) univs decl),
+      Xcomp (stype_of_constructor (fst Σ) (ind, i) univs decl isdecl).
+Admitted.
+
 Fact lift_type_of_constructor :
   forall {Σ : sglobal_context},
     type_glob Σ ->

@@ -1545,8 +1545,7 @@ Proof.
       repeat split.
       * now destruct hΓ.
       * apply inrel_refl.
-        (* Similarly we need to add some Xcomp requirement! *)
-        give_up.
+        eapply xcomp_type_of_constructor ; eassumption.
       * constructor.
       * eapply type_Construct ; try eassumption.
         now destruct hΓ.

@@ -564,6 +564,7 @@ Inductive type_projections (Σ : sglobal_context) (Γ : scontext) :
 | type_projs_nil : type_projections Σ Γ []
 | type_projs_cons id t l :
     isType Σ Γ t ->
+    Xcomp t ->
     type_projections Σ Γ l ->
     type_projections Σ Γ ((id, t) :: l).
 

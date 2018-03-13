@@ -128,29 +128,65 @@ Proof.
     + eapply IHΣ ; eassumption.
 Defined.
 
-Program Lemma stype_of_constructor_cons :
+Lemma stype_of_constructor_eq :
+  forall {Σ ind i univs decl isdecl decl'},
+    let mind := inductive_mind ind in
+    let '(id, trm, args) := decl in
+    slookup_env Σ mind = Some (SInductiveDecl id decl') ->
+    stype_of_constructor Σ (ind, i) univs decl isdecl =
+    substl (sinds mind decl'.(sind_bodies)) trm.
+Proof.
+  intro Σ. induction Σ.
+  - intros ind i univs decl isdecl decl' mind h.
+    cbn in h. inversion h.
+  - intros ind i univs [[id t] j] isdecl decl' mind h.
+    unfold stype_of_constructor. cbn in *. revert h.
+    case_eq (ident_eq mind (sglobal_decl_ident a)).
+    + intros e h. inversion h. subst. cbn. cbn in e.
+      destruct (ident_eq_spec mind id) ; try discriminate.
+      rewrite e0.
+Abort.
+
+Lemma stype_of_constructor_cons :
   forall {Σ d ind i univs decl}
     {isdecl : sdeclared_constructor Σ (ind, i) univs decl}
     {isdecl' : sdeclared_constructor (d :: Σ) (ind, i) univs decl},
     fresh_global (sglobal_decl_ident d) Σ ->
     stype_of_constructor (d :: Σ) (ind, i) univs decl isdecl' =
     stype_of_constructor Σ (ind, i) univs decl isdecl.
-Proof.
-  intros Σ d ind i univs decl isdecl isdecl' fresh.
-  destruct isdecl as [decl' [[d' [[h1 h2] h3]] h4]] eqn:eq.
-  unfold sdeclared_minductive in h1.
-  pose proof (ident_neq_fresh h1 fresh) as neq.
-  unfold stype_of_constructor at 1. cbn.
-  rewrite h1.
+(* Proof. *)
+(*   intros Σ d ind i univs decl isdecl isdecl' fresh. *)
+(*   unfold stype_of_constructor. cbn. *)
+(*     destruct ind. cbn. *)
+(*     destruct isdecl as [decl' [[d' [[h1 h2] h3]] h4]] eqn:eq. *)
+(*     pose proof (ident_neq_fresh h1 fresh) as neq. cbn in neq. *)
 
- cbn.
-  set (id1 := inductive_mind ind) in *.
-  set (id2 := sglobal_decl_ident d) in *.
-  rewrite !neq.
-  destruct (ident_eq_spec id1 id2).
-  - discriminate.
-  - (* I don't know how to rewrite properly! *)
-Abort.
+
+
+
+
+
+
+
+
+
+
+(*  i univs decl isdecl isdecl' fresh. *)
+(*   destruct isdecl as [decl' [[d' [[h1 h2] h3]] h4]] eqn:eq. *)
+(*   unfold sdeclared_minductive in h1. *)
+(*   pose proof (ident_neq_fresh h1 fresh) as neq. *)
+(*   unfold stype_of_constructor at 1. cbn. *)
+(*   rewrite h1. *)
+
+(*  cbn. *)
+(*   set (id1 := inductive_mind ind) in *. *)
+(*   set (id2 := sglobal_decl_ident d) in *. *)
+(*   rewrite !neq. *)
+(*   destruct (ident_eq_spec id1 id2). *)
+(*   - discriminate. *)
+(*   - (* I don't know how to rewrite properly! *) *)
+(* Abort. *)
+Admitted.
 
 Fixpoint weak_glob_type {Σ ϕ Γ t A} (h : (Σ,ϕ) ;;; Γ |-i t : A) :
   forall {d},
@@ -180,7 +216,7 @@ Proof.
         all: apply weak_glob_type ; eassumption.
       - eapply type_Ind with (univs := univs).
         + apply weak_glob_wf ; assumption.
-        + destruct isdecl as [decl' [h1 [h2 h3]]].
+        + destruct isdecl as [decl' [[h1 h2] h3]].
           exists decl'. repeat split.
           * cbn in *. unfold sdeclared_minductive in *.
             cbn. erewrite ident_neq_fresh by eassumption.
@@ -188,7 +224,7 @@ Proof.
           * assumption.
           * assumption.
       - cbn in *.
-        destruct isdecl as [decl' [[d' [h1 [h2 h3]]] h4]] eqn:eq.
+        destruct isdecl as [decl' [[d' [[h1 h2] h3]] h4]] eqn:eq.
         rewrite <- eq.
         assert (isdecl' : sdeclared_constructor (d :: Σ) (ind, i) univs decl).
         { exists decl'. split.
@@ -207,11 +243,7 @@ Proof.
           instantiate (2 := decl).
           instantiate (1 := isdecl').
           cbn in *.
-          unfold stype_of_constructor at 1. cbn.
-          case_eq (ident_eq (inductive_mind ind) (sglobal_decl_ident d)).
-
-          erewrite ident_neq_fresh by eassumption.
-          pose (ident_neq_fresh ).
+          eapply stype_of_constructor_cons. assumption.
     }
 
   (* weak_glob_eq *)

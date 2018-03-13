@@ -760,6 +760,22 @@ Proof.
   eassumption.
 Defined.
 
+Fact llift_type_of_constructor :
+  forall {Σ : sglobal_context},
+    type_glob Σ ->
+    forall {ind i decl univs}
+      {isdecl : sdeclared_constructor (fst Σ) (ind, i) univs decl},
+      forall n k,
+        llift n k (stype_of_constructor (fst Σ) (ind, i) univs decl isdecl) =
+        stype_of_constructor (fst Σ) (ind, i) univs decl isdecl.
+Proof.
+  intros Σ hg ind i decl univs isdecl n k.
+  destruct (typed_type_of_constructor hg isdecl).
+  eapply closed_llift.
+  eapply type_ctxempty_closed.
+  eassumption.
+Defined.
+
 Fact closed_above_rlift_id :
   forall t n k l,
     closed_above l t = true ->
@@ -798,6 +814,22 @@ Fact rlift_ind_type :
 Proof.
   intros Σ hg ind decl univs h n k.
   destruct (typed_ind_type hg h).
+  eapply closed_rlift.
+  eapply type_ctxempty_closed.
+  eassumption.
+Defined.
+
+Fact rlift_type_of_constructor :
+  forall {Σ : sglobal_context},
+    type_glob Σ ->
+    forall {ind i decl univs}
+      {isdecl : sdeclared_constructor (fst Σ) (ind, i) univs decl},
+      forall n k,
+        rlift n k (stype_of_constructor (fst Σ) (ind, i) univs decl isdecl) =
+        stype_of_constructor (fst Σ) (ind, i) univs decl isdecl.
+Proof.
+  intros Σ hg ind i decl univs isdecl n k.
+  destruct (typed_type_of_constructor hg isdecl).
   eapply closed_rlift.
   eapply type_ctxempty_closed.
   eassumption.
@@ -1140,6 +1172,8 @@ Proof.
         eapply type_Ind.
         + eapply wf_llift' ; eassumption.
         + eassumption.
+      - cbn. erewrite llift_type_of_constructor by eassumption.
+        eapply type_Construct. eapply wf_llift' ; eassumption.
       - eapply type_conv ; emh.
     }
 
@@ -1383,6 +1417,8 @@ Proof.
         eapply type_Ind.
         + eapply wf_rlift' ; eassumption.
         + eassumption.
+      - cbn. erewrite rlift_type_of_constructor by eassumption.
+        eapply type_Construct. eapply wf_rlift' ; eassumption.
       - eapply type_conv ; emh.
     }
 

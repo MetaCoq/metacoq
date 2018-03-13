@@ -62,6 +62,9 @@ Inductive trel : sterm -> sterm -> Type :=
 | trel_Ind ind :
     sInd ind ∼ sInd ind
 
+| trel_Construct ind i :
+    sConstruct ind i ∼ sConstruct ind i
+
 where " t1 ∼ t2 " := (trel t1 t2).
 
 Derive Signature for trel.
@@ -116,6 +119,9 @@ Inductive inrel : sterm -> sterm -> Type :=
 
 | inrel_Ind ind :
     sInd ind ⊏ sInd ind
+
+| inrel_Construct ind i :
+    sConstruct ind i ⊏ sConstruct ind i
 
 where " t ⊏ t' " := (inrel t t').
 
@@ -644,6 +650,26 @@ Proof.
     destruct (uniqueness h1' h2') as [s ee].
     destruct (eq_typing hg ee) as [hlU1 hrU2].
     exists (sHeqRefl (llift0 #|Γm| U1) (sInd ind)).
+    eapply type_conv' ; try assumption.
+    + eapply type_HeqRefl ; eassumption.
+    + eapply cong_Heq.
+      all: try (apply eq_reflexivity).
+      all: easy.
+
+  (* Construct *)
+  - destruct (inversionConstruct hg h1) as [univs1 [decl1 [isdecl1 [s1 e1]]]].
+    destruct (inversionConstruct hg h2) as [univs2 [decl2 [isdecl2 [s2 e2]]]].
+    assert (h1' : Σ ;;; Γ ,,, Γm |-i sConstruct ind i : llift0 #|Γm| U1).
+    { change (sConstruct ind i) with (llift0 #|Γm| (sConstruct ind i)).
+      eapply type_llift0 ; eassumption.
+    }
+    assert (h2' : Σ ;;; Γ ,,, Γm |-i sConstruct ind i : rlift0 #|Γm| U2).
+    { change (sConstruct ind i) with (rlift0 #|Γm| (sConstruct ind i)).
+      eapply type_rlift0 ; eassumption.
+    }
+    destruct (uniqueness h1' h2') as [s ee].
+    destruct (eq_typing hg ee) as [hlU1 hrU2].
+    exists (sHeqRefl (llift0 #|Γm| U1) (sConstruct ind i)).
     eapply type_conv' ; try assumption.
     + eapply type_HeqRefl ; eassumption.
     + eapply cong_Heq.
@@ -1198,6 +1224,12 @@ Definition typing_all : forall (Σ : sglobal_context)
         P0 Γ w ->
         forall univs decl (isdecl : sdeclared_inductive (fst Σ) ind univs decl),
         P Γ (sInd ind) (decl.(sind_type)) (XTyping.type_Ind Σ Γ ind w univs decl isdecl)) ->
+       (forall (Γ : scontext) (ind : inductive) (i : nat) (w : XTyping.wf Σ Γ),
+        P0 Γ w ->
+        forall univs decl (isdecl : sdeclared_constructor (fst Σ) (ind, i) univs decl),
+        P Γ (sConstruct ind i)
+          (stype_of_constructor (fst Σ) (ind, i) univs decl isdecl)
+          (XTyping.type_Construct Σ Γ ind i w univs decl isdecl)) ->
        (forall (Γ : scontext) (t A B : sterm) (s : sort)
           (t0 : Σ;;; Γ |-x t : A),
         P Γ t A t0 ->
@@ -1337,7 +1369,7 @@ Proof.
                     {Γ'} (hΓ : Σ |--i Γ' # ⟦ Γ ⟧),
   ∑ A' A'' u' v' p',
     eqtrans Σ Γ A u v Γ' A' A'' u' v' p')
-                     _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _); intros.
+                     _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _); intros.
   (** context_translation **)
 
     (* wf_nil *)
@@ -1505,6 +1537,18 @@ Proof.
         eapply xcomp_ind_type ; eassumption.
       * constructor.
       * eapply type_Ind ; try eassumption.
+        now destruct hΓ.
+
+    (* type_Construct *)
+    + exists (stype_of_constructor (fst Σ) (ind, i) univs decl isdecl).
+      exists (sConstruct ind i).
+      repeat split.
+      * now destruct hΓ.
+      * apply inrel_refl.
+        (* Similarly we need to add some Xcomp requirement! *)
+        give_up.
+      * constructor.
+      * eapply type_Construct ; try eassumption.
         now destruct hΓ.
 
     (* type_conv *)

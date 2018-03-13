@@ -82,6 +82,41 @@ Proof.
       eapply eq_conv ; eassumption.
 Defined.
 
+Lemma inversionConstruct :
+  forall {Σ Γ ind i T},
+    type_glob Σ ->
+    Σ ;;; Γ |-i sConstruct ind i : T ->
+    ∑ univs decl (isdecl : sdeclared_constructor (fst Σ) (ind, i) univs decl) s,
+      Σ ;;; Γ |-i stype_of_constructor (fst Σ) (ind, i) univs decl isdecl
+               = T : sSort s.
+Proof.
+  intros Σ Γ ind i T hg h.
+  dependent induction h.
+
+  - exists univs, decl, isdecl.
+    destruct (typed_type_of_constructor hg isdecl) as [s h]. exists s.
+    apply eq_reflexivity.
+    change (sSort s) with (lift #|Γ| #|@nil scontext_decl| (sSort s)).
+    set (ty := stype_of_constructor (fst Σ) (ind, i) univs decl isdecl) in *.
+    replace ty with (lift #|Γ| #|@nil scontext_decl| ty)
+      by (erewrite lift_type_of_constructor by eassumption ; reflexivity).
+    eapply meta_ctx_conv.
+    + eapply @type_lift with (Γ := []) (Ξ := []) (Δ := Γ).
+      * assumption.
+      * assumption.
+      * rewrite nil_cat. assumption.
+    + cbn. apply nil_cat.
+
+  - destruct (IHh1 hg) as [univs [decl [isdecl [s' eq]]]].
+    exists univs, decl, isdecl, s'.
+    eapply eq_transitivity.
+    + eassumption.
+    + destruct (eq_typing hg e) as [hAs _].
+      destruct (eq_typing hg eq) as [_ hAss0].
+      destruct (uniqueness hAs hAss0) as [? ?].
+      eapply eq_conv ; eassumption.
+Defined.
+
 Lemma inversionProd :
   forall {Σ Γ n A B T},
     type_glob Σ ->

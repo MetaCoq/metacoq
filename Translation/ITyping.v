@@ -590,8 +590,6 @@ Inductive type_inddecls (Σ : sglobal_context) (pars : scontext) (Γ : scontext)
     (** TODO: check kelim*)
     type_inddecls Σ pars Γ (Build_sone_inductive_body na ty kelim cstrs projs :: l).
 
-Derive Signature for type_inddecls.
-
 Definition type_inductive Σ inds :=
   (** FIXME: should be pars ++ arities w/o params *)
   type_inddecls Σ [] (arities_context inds) inds.

@@ -375,6 +375,20 @@ Proof.
   eapply type_inddecls_constr ; eassumption.
 Defined.
 
+Fact lift_type_of_constructor :
+  forall {Σ : sglobal_context},
+    type_glob Σ ->
+    forall {ind i decl univs}
+      {isdecl : sdeclared_constructor (fst Σ) (ind, i) univs decl},
+      forall n k,
+        lift n k (stype_of_constructor (fst Σ) (ind, i) univs decl isdecl) =
+        stype_of_constructor (fst Σ) (ind, i) univs decl isdecl.
+Proof.
+  intros Σ hg ind i decl univs isdecl n k.
+  eapply closed_lift.
+  eapply type_ctxempty_closed.
+Admitted.
+
 Ltac ih h :=
   lazymatch goal with
   | [ type_lift :
@@ -588,7 +602,8 @@ Proof.
         eapply type_Ind.
         + now apply wf_lift.
         + eassumption.
-      - cbn.
+      - cbn. erewrite lift_type_of_constructor by eassumption.
+        eapply type_Construct. now apply wf_lift.
       - eapply type_conv ; eih.
     }
 
@@ -789,6 +804,20 @@ Proof.
   eapply type_ctxempty_closed.
   eassumption.
 Defined.
+
+Fact subst_type_of_constructor :
+  forall {Σ : sglobal_context},
+    type_glob Σ ->
+    forall {ind i decl univs}
+      {isdecl : sdeclared_constructor (fst Σ) (ind, i) univs decl},
+      forall n u,
+        (stype_of_constructor (fst Σ) (ind, i) univs decl isdecl){ n := u } =
+        stype_of_constructor (fst Σ) (ind, i) univs decl isdecl.
+Proof.
+  intros Σ hg ind i decl univs isdecl n u.
+  eapply closed_subst.
+  eapply type_ctxempty_closed.
+Admitted.
 
 Ltac sh h :=
   lazymatch goal with
@@ -1033,6 +1062,8 @@ Proof.
         eapply type_Ind.
         + now eapply wf_subst.
         + eassumption.
+      - cbn. erewrite subst_type_of_constructor by eassumption.
+        eapply type_Construct. now eapply wf_subst.
       - cbn. eapply type_conv ; esh.
     }
 
@@ -1483,6 +1514,10 @@ Proof.
     eapply type_Ind.
     + eapply wf_subst ; eassumption.
     + eassumption.
+  - cbn. eapply eq_reflexivity.
+    erewrite subst_type_of_constructor by eassumption.
+    eapply type_Construct.
+    eapply wf_subst ; eassumption.
   - eapply eq_conv.
     + eapply IHht1 ; assumption.
     + eapply @cong_subst with (A := sSort s) ; eassumption.
@@ -1698,6 +1733,7 @@ Proof.
       * assumption.
       * rewrite nil_cat. assumption.
     + cbn. apply nil_cat.
+  - give_up.
   - exists s. assumption.
 Defined.
 

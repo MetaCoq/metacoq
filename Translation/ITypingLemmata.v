@@ -128,6 +128,26 @@ Proof.
     + eapply IHΣ ; eassumption.
 Defined.
 
+Fact stype_of_constructor_cons :
+  forall {Σ d ind i univs decl}
+    {isdecl : sdeclared_constructor Σ (ind, i) univs decl}
+    {isdecl' : sdeclared_constructor (d :: Σ) (ind, i) univs decl},
+    fresh_global (sglobal_decl_ident d) Σ ->
+    stype_of_constructor (d :: Σ) (ind, i) univs decl isdecl' =
+    stype_of_constructor Σ (ind, i) univs decl isdecl.
+Proof.
+  intros Σ d ind i univs decl isdecl isdecl' fresh.
+  destruct isdecl as [decl' [[d' [h1 [h2 h3]]] h4]] eqn:eq.
+  unfold sdeclared_minductive in h1.
+  pose proof (ident_neq_fresh h1 fresh) as neq.
+  unfold stype_of_constructor at 1. cbn.
+  set (id1 := inductive_mind ind) in *.
+  set (id2 := sglobal_decl_ident d) in *.
+  destruct (ident_eq_spec id1 id2).
+  - discriminate.
+  - (* I don't know how to rewrite properly! *)
+Abort.
+
 Fixpoint weak_glob_type {Σ ϕ Γ t A} (h : (Σ,ϕ) ;;; Γ |-i t : A) :
   forall {d},
     fresh_global (sglobal_decl_ident d) Σ ->

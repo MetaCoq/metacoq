@@ -161,16 +161,6 @@ Lemma stype_of_constructor_cons :
 (*     destruct isdecl as [decl' [[d' [[h1 h2] h3]] h4]] eqn:eq. *)
 (*     pose proof (ident_neq_fresh h1 fresh) as neq. cbn in neq. *)
 
-
-
-
-
-
-
-
-
-
-
 (*  i univs decl isdecl isdecl' fresh. *)
 (*   destruct isdecl as [decl' [[d' [[h1 h2] h3]] h4]] eqn:eq. *)
 (*   unfold sdeclared_minductive in h1. *)
@@ -278,10 +268,10 @@ Proof.
   intros Σ hg. destruct Σ as [Σ ϕ].
   dependent induction hg.
   - intros ind decl univs isdecl.
-    cbn in *. destruct isdecl as [decl' [h1 [h2 h3]]].
+    cbn in *. destruct isdecl as [decl' [[h1 h2] h3]].
     inversion h1.
   - intros ind decl univs isdecl.
-    destruct isdecl as [decl' [h1 [h2 h3]]].
+    destruct isdecl as [decl' [[h1 h2] h3]].
     cbn in h1. unfold sdeclared_minductive in h1.
     cbn in h1.
     case_eq (ident_eq (inductive_mind ind) (sglobal_decl_ident d)).
@@ -340,10 +330,10 @@ Proof.
   intros Σ hg. destruct Σ as [Σ ϕ].
   dependent induction hg.
   - intros ind decl univs isdecl.
-    cbn in *. destruct isdecl as [decl' [h1 [h2 h3]]].
+    cbn in *. destruct isdecl as [decl' [[h1 h2] h3]].
     inversion h1.
   - intros ind decl univs isdecl.
-    destruct isdecl as [decl' [h1 [h2 h3]]].
+    destruct isdecl as [decl' [[h1 h2] h3]].
     cbn in h1. unfold sdeclared_minductive in h1.
     cbn in h1.
     case_eq (ident_eq (inductive_mind ind) (sglobal_decl_ident d)).
@@ -354,6 +344,27 @@ Proof.
     + intro e. rewrite e in h1.
       apply (IHhg ind decl univs).
       exists decl'. repeat split ; eassumption.
+Defined.
+
+Fact type_ind_type_constr :
+  forall {Σ : sglobal_context} {inds},
+    type_inductive Σ inds ->
+    forall {n decl},
+      nth_error inds n = Some decl ->
+      type_constructors Σ (arities_context (skipn (S n) inds)) (sind_ctors decl).
+Proof.
+  intros Σ inds hind. unfold type_inductive in hind.
+  set (l := arities_context inds).
+  assert (eq : l = arities_context inds) by reflexivity.
+  dependent induction hind.
+  - intros n decl h.
+    destruct n ; cbn in h ; inversion h.
+  - intros n decl h.
+    destruct n.
+    + cbn in h. inversion h as [ e ]. subst. clear h.
+      simpl. simpl in eq.
+    + cbn in h. eapply IHhind.
+      eassumption.
 Defined.
 
 Ltac ih h :=
@@ -569,6 +580,7 @@ Proof.
         eapply type_Ind.
         + now apply wf_lift.
         + eassumption.
+      - cbn.
       - eapply type_conv ; eih.
     }
 

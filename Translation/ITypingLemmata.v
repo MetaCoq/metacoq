@@ -346,25 +346,34 @@ Proof.
       exists decl'. repeat split ; eassumption.
 Defined.
 
+Fact type_inddecls_constr :
+  forall {Σ : sglobal_context} {inds Γ},
+    type_inddecls Σ [] Γ inds ->
+    forall {n decl},
+      nth_error inds n = Some decl ->
+      type_constructors Σ Γ (sind_ctors decl).
+Proof.
+  intros Σ inds Γ hind. induction hind.
+  - intros n decl h.
+    destruct n ; cbn in h ; inversion h.
+  - intros n decl h.
+    destruct n.
+    + cbn in h. inversion h as [ e ]. subst. clear h.
+      simpl. assumption.
+    + cbn in h. eapply IHhind. eassumption.
+Defined.
+
 Fact type_ind_type_constr :
   forall {Σ : sglobal_context} {inds},
     type_inductive Σ inds ->
     forall {n decl},
       nth_error inds n = Some decl ->
-      type_constructors Σ (arities_context (skipn n inds)) (sind_ctors decl).
+      type_constructors Σ (arities_context inds) (sind_ctors decl).
 Proof.
-  intros Σ inds hind. unfold type_inductive in hind.
-  induction inds.
-  - intros n decl h.
-    destruct n ; cbn in h ; inversion h.
-  - dependent destruction hind.
-    intros n decl h.
-    destruct n.
-    + cbn in h. inversion h as [ e ]. subst. clear h.
-      simpl. simpl in t. assumption.
-    + cbn in h. simpl. eapply IHinds.
-      * simpl in hind.
-Abort.
+  intros Σ inds hind n decl h.
+  unfold type_inductive in hind.
+  eapply type_inddecls_constr ; eassumption.
+Defined.
 
 Ltac ih h :=
   lazymatch goal with

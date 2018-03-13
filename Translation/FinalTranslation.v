@@ -278,6 +278,8 @@ Fixpoint tsl_rec (fuel : nat) (Σ : global_context) (Γ : context) (t : sterm) {
       end
     | sInd ind =>
       ret (tInd ind [])
+    | sConstruct ind i =>
+      ret (tConstruct ind i [])
     end
   end.
 
@@ -331,28 +333,28 @@ Definition Σ : global_context :=
 Arguments Σ : simpl never.
 
 (* Checking for the sake of checking *)
-Compute (infer Σ [] tEq).
-Compute (infer Σ [] tJ).
-Compute (infer Σ [] tTransport).
-Compute (infer Σ [] tK).
-Compute (infer Σ [] tFunext).
-Compute (infer Σ [] tHeq).
-Compute (infer Σ [] tHeqToEq).
-Compute (infer Σ [] tHeqRefl).
-Compute (infer Σ [] tHeqSym).
-Compute (infer Σ [] tHeqTrans).
-Compute (infer Σ [] tHeqTransport).
-Compute (infer Σ [] tPack).
-Compute (infer Σ [] tProjT1).
-Compute (infer Σ [] tProjT2).
-Compute (infer Σ [] tProjTe).
-Compute (infer Σ [] tCongProd).
-Compute (infer Σ [] tCongLambda).
-Compute (infer Σ [] tCongApp).
-Compute (infer Σ [] tCongEq).
-Compute (infer Σ [] tCongRefl).
-Compute (infer Σ [] tEqToHeq).
-Compute (infer Σ [] tHeqTypeEq).
+(* Compute (infer Σ [] tEq). *)
+(* Compute (infer Σ [] tJ). *)
+(* Compute (infer Σ [] tTransport). *)
+(* Compute (infer Σ [] tK). *)
+(* Compute (infer Σ [] tFunext). *)
+(* Compute (infer Σ [] tHeq). *)
+(* Compute (infer Σ [] tHeqToEq). *)
+(* Compute (infer Σ [] tHeqRefl). *)
+(* Compute (infer Σ [] tHeqSym). *)
+(* Compute (infer Σ [] tHeqTrans). *)
+(* Compute (infer Σ [] tHeqTransport). *)
+(* Compute (infer Σ [] tPack). *)
+(* Compute (infer Σ [] tProjT1). *)
+(* Compute (infer Σ [] tProjT2). *)
+(* Compute (infer Σ [] tProjTe). *)
+(* Compute (infer Σ [] tCongProd). *)
+(* Compute (infer Σ [] tCongLambda). *)
+(* Compute (infer Σ [] tCongApp). *)
+(* Compute (infer Σ [] tCongEq). *)
+(* Compute (infer Σ [] tCongRefl). *)
+(* Compute (infer Σ [] tEqToHeq). *)
+(* Compute (infer Σ [] tHeqTypeEq). *)
 
 (* Theorem soundness : *)
 (*   forall {Γ t A}, *)

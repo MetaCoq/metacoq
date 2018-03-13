@@ -69,6 +69,10 @@ Fixpoint sterm_eq (t u : sterm) : bool :=
       sterm_eq p p'
   | sProjTe p, sProjTe p' =>
       sterm_eq p p'
+  | sInd i, sInd i' =>
+      eq_ind i i'
+  | sConstruct i k, sConstruct i' k' =>
+      eq_ind i i' && eq_nat k k'
   | _ , _ => false
   end.
 
@@ -251,4 +255,5 @@ Fixpoint reduce (t : sterm) : sterm :=
     let p' := reduce p in
     sProjTe p'
   | sInd ind => sInd ind
+  | sConstruct ind i => sConstruct ind i
   end.

@@ -24,13 +24,10 @@ Definition sNat :=
   sInd iNat.
 
 Definition sZero :=
-  (* For now we can't use this definition as it isn't part of our syntax. *)
-  (* sConstruct iNat 0. *)
-  sRel 0.
+  sConstruct iNat 0.
 
 Definition sSuc :=
-  (* sConstruct iNat 1. *)
-  sRel 0.
+  sConstruct iNat 1.
 
 Definition iVec :=
   {| inductive_mind := "Translation.Quotes.vec"; inductive_ind := 0 |}.
@@ -598,6 +595,56 @@ Defined.
 (* For some reason we have efficiency issues again. *)
 
 (* Definition itt_vecb' := ltac:(let t := eval lazy in itt_vecb in exact t). *)
+
+(* Definition tc_vecb : tsl_result term := *)
+(*   tsl_rec (2 ^ 18) Σ [] itt_vecb'. *)
+
+(* Definition tc_vecb' := ltac:(let t := eval lazy in tc_vecb in exact t). *)
+
+(* Make Definition coq_vecb := *)
+(*   ltac:( *)
+(*     let t := eval lazy in *)
+(*              (match tc_vecb' with *)
+(*               | Success t => t *)
+(*               | _ => tSort Universe.type0 *)
+(*               end) *)
+(*       in exact t *)
+(*   ). *)
+
+(*! EXAMPLE 4'':
+    vec bool zero
+    It gets translated to itself.
+*)
+
+Lemma vecbzty :
+  Σi ;;; [] |-x sApp (sApp sVec (nNamed "A") (sSort 0) vec_cod sBool)
+               nAnon sNat (sSort 0)
+               sZero
+             : sSort 0.
+Proof.
+  eapply type_App with (s1 := 0) (s2 := max 0 1).
+  - apply natty.
+  - repeat constructor.
+    econstructor.
+    + constructor.
+    + apply natty.
+  - apply vecbty.
+  - unfold sZero. unfold sNat.
+    eapply xmeta_conv.
+    + eapply type_Construct. constructor.
+    + Unshelve.
+      (* repeat econstructor; *)
+      (* try (simpl; omega); assert(H':=type_Construct Σi [] iNat 0 _ _ _ _ _); simpl in H'; *)
+      (* clear H; apply H'; try trivial. *)
+      all:admit.
+Admitted.
+
+Definition itt_vecbz : sterm.
+  destruct (type_translation vecbzty istrans_nil) as [A [t [_ h]]].
+  exact t.
+Defined.
+
+(* Definition itt_vecbz' := ltac:(let t := eval lazy in itt_vecbz in exact t). *)
 
 (* Definition tc_vecb : tsl_result term := *)
 (*   tsl_rec (2 ^ 18) Σ [] itt_vecb'. *)

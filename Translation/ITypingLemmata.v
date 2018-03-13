@@ -163,6 +163,31 @@ Proof.
             assumption.
           * assumption.
           * assumption.
+      - cbn in *.
+        destruct isdecl as [decl' [[d' [h1 [h2 h3]]] h4]] eqn:eq.
+        rewrite <- eq.
+        assert (isdecl' : sdeclared_constructor (d :: Σ) (ind, i) univs decl).
+        { exists decl'. split.
+          - exists d'. repeat split.
+            + unfold sdeclared_minductive in *.
+              cbn. erewrite ident_neq_fresh by eassumption.
+              assumption.
+            + assumption.
+            + assumption.
+          - assumption.
+        }
+        eapply meta_conv.
+        + eapply type_Construct.
+          apply weak_glob_wf ; assumption.
+        + instantiate (3 := univs).
+          instantiate (2 := decl).
+          instantiate (1 := isdecl').
+          cbn in *.
+          unfold stype_of_constructor at 1. cbn.
+          case_eq (ident_eq (inductive_mind ind) (sglobal_decl_ident d)).
+
+          erewrite ident_neq_fresh by eassumption.
+          pose (ident_neq_fresh ).
     }
 
   (* weak_glob_eq *)

@@ -351,21 +351,20 @@ Fact type_ind_type_constr :
     type_inductive Σ inds ->
     forall {n decl},
       nth_error inds n = Some decl ->
-      type_constructors Σ (arities_context (skipn (S n) inds)) (sind_ctors decl).
+      type_constructors Σ (arities_context (skipn n inds)) (sind_ctors decl).
 Proof.
   intros Σ inds hind. unfold type_inductive in hind.
-  set (l := arities_context inds).
-  assert (eq : l = arities_context inds) by reflexivity.
-  dependent induction hind.
+  induction inds.
   - intros n decl h.
     destruct n ; cbn in h ; inversion h.
-  - intros n decl h.
+  - dependent destruction hind.
+    intros n decl h.
     destruct n.
     + cbn in h. inversion h as [ e ]. subst. clear h.
-      simpl. simpl in eq.
-    + cbn in h. eapply IHhind.
-      eassumption.
-Defined.
+      simpl. simpl in t. assumption.
+    + cbn in h. simpl. eapply IHinds.
+      * simpl in hind.
+Abort.
 
 Ltac ih h :=
   lazymatch goal with

@@ -28,6 +28,12 @@ Definition snd {A B} (p : A * B) := pi2_ A B p.
 
 Notation "( x , y , .. , z )" := (mk_pp_prod .. (mk_pp_prod x y) .. z) : type_scope.
 
+Definition on_fst {A B A'} (f : A -> A') (x : A * B) : A' * B :=
+  let '(u,v) := x in (f u, v).
+
+Definition on_snd {A B B'} (f : B -> B') (x : A * B) : A * B' :=
+  let '(u,v) := x in (u, f v).
+
 From Template Require Import Ast.
 
 Definition sort := nat.
@@ -65,4 +71,5 @@ Inductive sterm : Type :=
 (* Inductives *)
 | sInd (ind : inductive)
 | sConstruct (ind : inductive) (n : nat)
+| sCase (indn : inductive * nat) (p c : sterm) (brs : list (nat * sterm))
 .

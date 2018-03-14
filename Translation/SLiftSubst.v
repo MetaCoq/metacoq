@@ -53,6 +53,9 @@ Fixpoint lift n k t : sterm :=
   | sSort s => sSort s
   | sInd ind => sInd ind
   | sConstruct ind i => sConstruct ind i
+  | sCase indn p c brs =>
+    let brs' := List.map (on_snd (lift n k)) brs in
+    sCase indn (lift n k p) (lift n k c) brs'
   end.
 
 Notation lift0 n t := (lift n 0 t).
@@ -109,6 +112,9 @@ Fixpoint subst t k u :=
   | sSort s => sSort s
   | sInd ind => sInd ind
   | sConstruct ind i => sConstruct ind i
+  | sCase indn p c brs =>
+    let brs' := List.map (on_snd (subst t k)) brs in
+    sCase indn (subst t k p) (subst t k c) brs'
   end.
 
 Notation subst0 t u := (subst t 0 u).
@@ -179,6 +185,10 @@ Fixpoint closed_above k t :=
   | sProjTe p => closed_above k p
   | sInd ind => true
   | sConstruct ind i => true
+  | sCase indn p c brs =>
+    closed_above k p &&
+    closed_above k c &&
+    forallb (fun '(_,t) => closed_above k t) brs
   end.
 
 Definition closed t := closed_above 0 t = true.
@@ -193,7 +203,7 @@ Lemma lift_lift :
 Proof.
   intros t.
   induction t ; intros nn mm kk ; try (cbn ; f_equal ; easy).
-  cbn. set (kkln := Nat.leb kk n).
+  { cbn. set (kkln := Nat.leb kk n).
   assert (eq : Nat.leb kk n = kkln) by reflexivity.
   destruct kkln.
   - cbn. set (kklmmn := kk <=? mm + n).
@@ -203,7 +213,13 @@ Proof.
     + pose (h1 := leb_complete_conv _ _ eq').
       pose (h2 := leb_complete _ _ eq).
       omega.
-  - cbn. rewrite eq. reflexivity.
+  - cbn. rewrite eq. reflexivity. }
+  { cbn. f_equal ; try easy.
+    (* We don't have any induction hypothesis to conclude now...
+       This is a problem that we'll keep having throughout the development!
+     *)
+    give_up.
+  }
 Defined.
 
 Lemma liftP1 :

@@ -188,49 +188,12 @@ Fixpoint closed_above k t :=
   | sCase indn p c brs =>
     closed_above k p &&
     closed_above k c &&
-    forallb (fun '(_,t) => closed_above k t) brs
+    forallb (test_snd (closed_above k)) brs
   end.
 
 Definition closed t := closed_above 0 t = true.
 
 Open Scope s_scope.
-Lemma on_snd_on_snd {A B} (f g : B -> B) (d : A * B) :
-  on_snd f (on_snd g d) = on_snd (fun x => f (g x)) d.
-Proof.
-  destruct d; reflexivity.
-Qed.
-
-Lemma forallt_map_spec {A} {P : A -> Type} {l} {f g : A -> A} :
-  ForallT P l -> (forall x, P x -> f x = g x) ->
-  map f l = map g l.
-Proof.
-  induction 1; simpl; trivial.
-  intros Heq. rewrite Heq. f_equal. apply IHX. apply Heq. apply p.
-Qed.
-
-Lemma on_snd_spec {A B} (P : B -> Type) (f g : B -> B) (x : A * B) :
-  P (snd x) -> (forall x, P x -> f x = g x) ->
-  on_snd f x = on_snd g x.
-Proof.
-  intros. destruct x. unfold on_snd. simpl.
-  now rewrite H; auto.
-Qed.
-
-Lemma case_brs_map_spec {P : sterm -> Type} {l} {f g : sterm -> sterm} :
-  sCaseBrsT P l -> (forall x, P x -> f x = g x) ->
-  map (on_snd f) l = map (on_snd g) l.
-Proof.
-  intros.
-  eapply (forallt_map_spec X).
-  intros.
-  eapply on_snd_spec; eauto.
-Qed.
-
-Lemma compose_on_snd {A B} (f g : B -> B) :
-  compose (A:=A * B) (on_snd f) (on_snd g) = on_snd (compose f g).
-Proof.
-  reflexivity.
-Qed.
 
 (* Lemmata regarding lifts and subst *)
 
@@ -263,28 +226,32 @@ Lemma liftP1 :
   forall t i j k, lift k (j+i) (lift j i t) = lift (j+k) i t.
 Proof.
   intro t.
-  induction t ; intros i j k.
+  induction t using sterm_rect_list ; intros i j k.
   all: try (cbn ; f_equal ; easy).
   all: try (cbn ; f_equal ;
             try replace (S (S (S (j+i))))%nat with (j + (S (S (S i))))%nat by omega ;
             try replace (S (S (j+i)))%nat with (j + (S (S i)))%nat by omega ;
             try replace (S (j+i))%nat with (j + (S i))%nat by omega ; easy).
-  cbn. set (iln := i <=? n). assert (eq : (i <=? n) = iln) by reflexivity.
-  destruct iln.
-  + cbn. set (iln := j + i <=? j + n).
-    assert (eq' : (j + i <=? j + n) = iln) by reflexivity.
+  - cbn. set (iln := i <=? n). assert (eq : (i <=? n) = iln) by reflexivity.
     destruct iln.
-    * f_equal. omega.
-    * pose (h1 := leb_complete_conv _ _ eq').
-      pose (h2 := leb_complete _ _ eq).
-      omega.
-  + cbn.
-    assert (eq' : j + i <=? n = false).
-    { apply leb_correct_conv.
-      pose (h1 := leb_complete_conv _ _ eq).
-      omega.
-    }
-    rewrite eq'. reflexivity.
+    + cbn. set (iln := j + i <=? j + n).
+      assert (eq' : (j + i <=? j + n) = iln) by reflexivity.
+      destruct iln.
+      * f_equal. omega.
+      * pose (h1 := leb_complete_conv _ _ eq').
+        pose (h2 := leb_complete _ _ eq).
+        omega.
+    + cbn.
+      assert (eq' : j + i <=? n = false).
+      { apply leb_correct_conv.
+        pose (h1 := leb_complete_conv _ _ eq).
+        omega.
+      }
+      rewrite eq'. reflexivity.
+  - cbn. f_equal ; try easy.
+    rewrite map_map_compose, compose_on_snd.
+    eapply (case_brs_map_spec X).
+    intros x h. apply h.
 Defined.
 
 Lemma liftP2 :
@@ -293,58 +260,62 @@ Lemma liftP2 :
     lift k (j+n) (lift j i t) = lift j i (lift k n t).
 Proof.
   intro t.
-  induction t ; intros i j k m H.
+  induction t using sterm_rect_list ; intros i j k m H.
   all: try (cbn ; f_equal ; easy).
   all: try (cbn ; f_equal ;
             try replace (S (S (S (j + m))))%nat with (j + (S (S (S m))))%nat by omega ;
             try replace (S (S (j + m)))%nat with (j + (S (S m)))%nat by omega ;
             try replace (S (j + m))%nat with (j + (S m))%nat by omega ; easy).
-  cbn. set (iln := i <=? n). assert (eq : (i <=? n) = iln) by reflexivity.
-  set (mln := m <=? n). assert (eq' : (m <=? n) = mln) by reflexivity.
-  destruct iln.
-  + pose proof (leb_complete _ _ eq).
-    destruct mln.
-    * pose proof (leb_complete _ _ eq').
-      cbn.
-      assert (eq1 : j + m <=? j + n = true).
-      { apply leb_correct.
-        omega.
-      }
-      assert (eq2 : i <=? k + n = true).
-      { apply leb_correct.
-        omega.
-      }
-      rewrite eq1, eq2. f_equal. omega.
-    * pose proof (leb_complete_conv _ _ eq').
-      cbn.
-      assert (eq1 : j + m <=? j + n = false).
-      { apply leb_correct_conv.
-        omega.
-      }
-      rewrite eq1, eq. reflexivity.
-  + pose proof (leb_complete_conv _ _ eq).
-    destruct mln.
-    * pose proof (leb_complete _ _ eq').
-      cbn.
-      set (jmln := (j + m <=? n)).
-      assert (eq0 : (j + m <=? n) = jmln) by reflexivity.
-      set (ilkn := (i <=? k + n)).
-      assert (eq1 : (i <=? k + n) = ilkn) by reflexivity.
-      destruct jmln.
-      -- pose proof (leb_complete _ _ eq0).
-         destruct ilkn.
-         ++ pose proof (leb_complete _ _ eq1).
-            omega.
-         ++ reflexivity.
-      -- pose proof (leb_complete_conv _ _ eq0).
-         omega.
-    * cbn. rewrite eq.
-      set (jmln := (j + m <=? n)).
-      assert (eq0 : (j + m <=? n) = jmln) by reflexivity.
-      destruct jmln.
-      -- pose proof (leb_complete _ _ eq0).
-         omega.
-      -- reflexivity.
+  - cbn. set (iln := i <=? n). assert (eq : (i <=? n) = iln) by reflexivity.
+    set (mln := m <=? n). assert (eq' : (m <=? n) = mln) by reflexivity.
+    destruct iln.
+    + pose proof (leb_complete _ _ eq).
+      destruct mln.
+      * pose proof (leb_complete _ _ eq').
+        cbn.
+        assert (eq1 : j + m <=? j + n = true).
+        { apply leb_correct.
+          omega.
+        }
+        assert (eq2 : i <=? k + n = true).
+        { apply leb_correct.
+          omega.
+        }
+        rewrite eq1, eq2. f_equal. omega.
+      * pose proof (leb_complete_conv _ _ eq').
+        cbn.
+        assert (eq1 : j + m <=? j + n = false).
+        { apply leb_correct_conv.
+          omega.
+        }
+        rewrite eq1, eq. reflexivity.
+    + pose proof (leb_complete_conv _ _ eq).
+      destruct mln.
+      * pose proof (leb_complete _ _ eq').
+        cbn.
+        set (jmln := (j + m <=? n)).
+        assert (eq0 : (j + m <=? n) = jmln) by reflexivity.
+        set (ilkn := (i <=? k + n)).
+        assert (eq1 : (i <=? k + n) = ilkn) by reflexivity.
+        destruct jmln.
+        -- pose proof (leb_complete _ _ eq0).
+           destruct ilkn.
+           ++ pose proof (leb_complete _ _ eq1).
+              omega.
+           ++ reflexivity.
+        -- pose proof (leb_complete_conv _ _ eq0).
+           omega.
+      * cbn. rewrite eq.
+        set (jmln := (j + m <=? n)).
+        assert (eq0 : (j + m <=? n) = jmln) by reflexivity.
+        destruct jmln.
+        -- pose proof (leb_complete _ _ eq0).
+           omega.
+        -- reflexivity.
+  - cbn. f_equal ; try easy.
+    rewrite !map_map_compose, !compose_on_snd.
+    eapply (case_brs_map_spec X).
+    intros x h. apply h. assumption.
 Defined.
 
 Lemma lift_subst :
@@ -352,37 +323,44 @@ Lemma lift_subst :
     (lift 1 n t) {n := u} = t.
 Proof.
   intro t.
-  induction t ; intros m u.
+  induction t using sterm_rect_list ; intros m u.
   all: try (cbn ; f_equal ; easy).
-  cbn. set (mln := m <=? n).
-  assert (eq : (m <=? n) = mln) by reflexivity.
-  destruct mln.
-  - cbn.
-    assert (eq' : (m ?= S n) = Lt).
-    { apply Nat.compare_lt_iff.
-      pose (h := leb_complete _ _ eq).
-      omega.
-    }
-    rewrite eq'. reflexivity.
-  - cbn.
-    assert (eq' : (m ?= n) = Gt).
-    { apply Nat.compare_gt_iff.
-      pose (h := leb_complete_conv _ _ eq).
-      omega.
-    }
-    rewrite eq'. reflexivity.
+  - cbn. set (mln := m <=? n).
+    assert (eq : (m <=? n) = mln) by reflexivity.
+    destruct mln.
+    + cbn.
+      assert (eq' : (m ?= S n) = Lt).
+      { apply Nat.compare_lt_iff.
+        pose (h := leb_complete _ _ eq).
+        omega.
+      }
+      rewrite eq'. reflexivity.
+    + cbn.
+      assert (eq' : (m ?= n) = Gt).
+      { apply Nat.compare_gt_iff.
+        pose (h := leb_complete_conv _ _ eq).
+        omega.
+      }
+      rewrite eq'. reflexivity.
+  - cbn. f_equal ; try easy.
+    rewrite map_map_compose, <- map_on_snd_id, compose_on_snd.
+    eapply (case_brs_map_spec X).
+    intros x h. apply h.
 Defined.
 
 Lemma lift00 :
   forall {t n}, lift 0 n t = t.
 Proof.
-  intros t. induction t ; intro m.
+  intros t. induction t using sterm_rect_list ; intro m.
   all: cbn.
   all: repeat match goal with
            | H : forall n, _ = _ |- _ => rewrite H
            end.
   all: try reflexivity.
-  destruct (m <=? n) ; reflexivity.
+  - destruct (m <=? n) ; reflexivity.
+  - f_equal. rewrite <- map_on_snd_id.
+    eapply (case_brs_map_spec X).
+    intros x h. apply h.
 Defined.
 
 Ltac bprop' H H' :=
@@ -418,50 +396,60 @@ Lemma liftP3 :
     k <= (i+n)%nat ->
     lift j k (lift n i t) = lift (j+n) i t.
 Proof.
-  intro t. induction t ; intros i k j m ilk kl.
+  intro t. induction t using sterm_rect_list ; intros i k j m ilk kl.
   all: try (cbn ; f_equal ; easy).
-  cbn. case_eq (i <=? n).
-  - intro iln. cbn. bprop iln.
-    assert (eq : (k <=? m + n) = true) by (propb ; omega).
-    rewrite eq. f_equal. omega.
-  - intro nli. bprop nli. cbn.
-    assert (eq : (k <=? n) = false) by (propb ; omega).
-    rewrite eq. reflexivity.
+  - cbn. case_eq (i <=? n).
+    + intro iln. cbn. bprop iln.
+      assert (eq : (k <=? m + n) = true) by (propb ; omega).
+      rewrite eq. f_equal. omega.
+    + intro nli. bprop nli. cbn.
+      assert (eq : (k <=? n) = false) by (propb ; omega).
+      rewrite eq. reflexivity.
+  - cbn. f_equal ; try easy.
+    rewrite map_map_compose, compose_on_snd.
+    eapply (case_brs_map_spec X).
+    intros x h. apply h ; assumption.
 Defined.
 
 Lemma substP1 :
   forall t u i j k,
     lift k (j+i) (t{j := u}) = (lift k (S (j+i)) t){ j := lift k i u }.
 Proof.
-  intro t. induction t ; intros u i j k.
+  intro t. induction t using sterm_rect_list ; intros u i j k.
   all: try (cbn ; f_equal ;
             try replace (S (S (S (j + i)))) with ((S (S (S j))) + i)%nat by omega ;
             try replace (S (S (j + i))) with ((S (S j)) + i)%nat by omega ;
             try replace (S (j + i)) with ((S j) + i)%nat by omega ;
             easy).
-  cbn. case_eq (j ?= n) ; intro e ; bprop e.
-  - subst. destruct n.
-    + cbn. rewrite !lift00. reflexivity.
-    + assert (e' : (S n + i) <=? n = false) by (propb ; omega).
-      rewrite e'. cbn.
-      assert (e2 : (n ?= n) = Eq) by (propb ; omega).
-      rewrite e2. replace (S (n + i)) with ((S n) + i)%nat by omega.
-      rewrite liftP2 by omega. reflexivity.
-  - destruct n.
-    + omega.
-    + case_eq (j + i <=? n) ; intro e1 ; bprop e1.
-      * cbn. rewrite e1.
-        assert (e3 : j ?= k + S n = Lt) by (propb ; omega).
-        rewrite e3. replace (k + S n)%nat with (S (k + n)) by omega.
-        reflexivity.
-      * cbn. rewrite e1. rewrite e. reflexivity.
-  - destruct n.
-    + cbn. assert (e1 : j + i <=? 0 = false) by (propb ; omega).
-      rewrite e1. rewrite e. reflexivity.
-    + assert (e1 : j + i <=? n = false) by (propb ; omega).
-      rewrite e1. cbn.
-      assert (e2 : j + i <=? S n = false) by (propb ; omega).
-      rewrite e2. rewrite e. reflexivity.
+  { cbn. case_eq (j ?= n) ; intro e ; bprop e.
+    - subst. destruct n.
+      + cbn. rewrite !lift00. reflexivity.
+      + assert (e' : (S n + i) <=? n = false) by (propb ; omega).
+        rewrite e'. cbn.
+        assert (e2 : (n ?= n) = Eq) by (propb ; omega).
+        rewrite e2. replace (S (n + i)) with ((S n) + i)%nat by omega.
+        rewrite liftP2 by omega. reflexivity.
+    - destruct n.
+      + omega.
+      + case_eq (j + i <=? n) ; intro e1 ; bprop e1.
+        * cbn. rewrite e1.
+          assert (e3 : j ?= k + S n = Lt) by (propb ; omega).
+          rewrite e3. replace (k + S n)%nat with (S (k + n)) by omega.
+          reflexivity.
+        * cbn. rewrite e1. rewrite e. reflexivity.
+    - destruct n.
+      + cbn. assert (e1 : j + i <=? 0 = false) by (propb ; omega).
+        rewrite e1. rewrite e. reflexivity.
+      + assert (e1 : j + i <=? n = false) by (propb ; omega).
+        rewrite e1. cbn.
+        assert (e2 : j + i <=? S n = false) by (propb ; omega).
+        rewrite e2. rewrite e. reflexivity.
+  }
+  { cbn. f_equal ; try easy.
+    rewrite !map_map_compose, !compose_on_snd.
+    eapply (case_brs_map_spec X).
+    intros x h. apply h.
+  }
 Defined.
 
 Lemma substP2 :
@@ -470,58 +458,62 @@ Lemma substP2 :
     (lift j i t){ (j+n)%nat := u } = lift j i (t{ n := u }).
 Proof.
   intros t.
-  induction t ; intros u i j m h.
+  induction t using sterm_rect_list ; intros u i j m h.
   all: try (cbn ; f_equal ;
             try replace (S (S (S (j + m))))%nat with (j + (S (S (S m))))%nat by omega ;
             try replace (S (S (j + m)))%nat with (j + (S (S m)))%nat by omega ;
             try replace (S (j + m))%nat with (j + (S m))%nat by omega ; easy).
-  cbn.
-  set (iln := i <=? n). assert (eq0 : (i <=? n) = iln) by reflexivity.
-  set (men := m ?= n). assert (eq1 : (m ?= n) = men) by reflexivity.
-  destruct iln.
-  + pose proof (leb_complete _ _ eq0).
-    destruct men.
-    * pose proof (Nat.compare_eq _ _ eq1).
-      subst. cbn.
-      rewrite Nat.compare_refl.
-      now rewrite liftP3 by omega.
-    * pose proof (nat_compare_Lt_lt _ _ eq1).
-      cbn.
-      assert (eq2 : i <=? Init.Nat.pred n = true).
-      { apply leb_correct. omega. }
-      rewrite eq2.
-      assert (eq3 : (j + m ?= j + n) = Lt).
-      { apply nat_compare_lt. omega. }
-      rewrite eq3.
-      f_equal. omega.
-    * pose proof (nat_compare_Gt_gt _ _ eq1).
-      cbn. rewrite eq0.
-      assert (eq3 : (j + m ?= j + n) = Gt).
-      { apply nat_compare_gt. omega. }
-      now rewrite eq3.
-  + pose proof (leb_complete_conv _ _ eq0).
-    destruct men.
-    * pose proof (Nat.compare_eq _ _ eq1).
-      subst. cbn.
-      set (jnen := (j + n ?= n)).
-      assert (eq2 : (j + n ?= n) = jnen) by reflexivity.
-      destruct jnen.
-      -- pose proof (Nat.compare_eq _ _ eq2).
-         now rewrite liftP3.
-      -- pose proof (nat_compare_Lt_lt _ _ eq2).
-         omega.
-      -- pose proof (nat_compare_Gt_gt _ _ eq2).
-         omega.
-    * pose proof (nat_compare_Lt_lt _ _ eq1).
-      omega.
-    * pose proof (nat_compare_Gt_gt _ _ eq1).
-      cbn. set (jmen := (j + m ?= n)).
-      assert (eq2 : (j + m ?= n) = jmen) by reflexivity.
-      destruct jmen.
-      -- pose proof (Nat.compare_eq _ _ eq2). omega.
-      -- pose proof (nat_compare_Lt_lt _ _ eq2). omega.
-      -- pose proof (nat_compare_Gt_gt _ _ eq2).
-         rewrite eq0. reflexivity.
+  - cbn.
+    set (iln := i <=? n). assert (eq0 : (i <=? n) = iln) by reflexivity.
+    set (men := m ?= n). assert (eq1 : (m ?= n) = men) by reflexivity.
+    destruct iln.
+    + pose proof (leb_complete _ _ eq0).
+      destruct men.
+      * pose proof (Nat.compare_eq _ _ eq1).
+        subst. cbn.
+        rewrite Nat.compare_refl.
+        now rewrite liftP3 by omega.
+      * pose proof (nat_compare_Lt_lt _ _ eq1).
+        cbn.
+        assert (eq2 : i <=? Init.Nat.pred n = true).
+        { apply leb_correct. omega. }
+        rewrite eq2.
+        assert (eq3 : (j + m ?= j + n) = Lt).
+        { apply nat_compare_lt. omega. }
+        rewrite eq3.
+        f_equal. omega.
+      * pose proof (nat_compare_Gt_gt _ _ eq1).
+        cbn. rewrite eq0.
+        assert (eq3 : (j + m ?= j + n) = Gt).
+        { apply nat_compare_gt. omega. }
+        now rewrite eq3.
+    + pose proof (leb_complete_conv _ _ eq0).
+      destruct men.
+      * pose proof (Nat.compare_eq _ _ eq1).
+        subst. cbn.
+        set (jnen := (j + n ?= n)).
+        assert (eq2 : (j + n ?= n) = jnen) by reflexivity.
+        destruct jnen.
+        -- pose proof (Nat.compare_eq _ _ eq2).
+           now rewrite liftP3.
+        -- pose proof (nat_compare_Lt_lt _ _ eq2).
+           omega.
+        -- pose proof (nat_compare_Gt_gt _ _ eq2).
+           omega.
+      * pose proof (nat_compare_Lt_lt _ _ eq1).
+        omega.
+      * pose proof (nat_compare_Gt_gt _ _ eq1).
+        cbn. set (jmen := (j + m ?= n)).
+        assert (eq2 : (j + m ?= n) = jmen) by reflexivity.
+        destruct jmen.
+        -- pose proof (Nat.compare_eq _ _ eq2). omega.
+        -- pose proof (nat_compare_Lt_lt _ _ eq2). omega.
+        -- pose proof (nat_compare_Gt_gt _ _ eq2).
+           rewrite eq0. reflexivity.
+  - cbn. f_equal ; try easy.
+    rewrite !map_map_compose, !compose_on_snd.
+    eapply (case_brs_map_spec X).
+    intros x hh. apply hh ; assumption.
 Defined.
 
 Lemma substP3 :
@@ -530,53 +522,65 @@ Lemma substP3 :
     k <= i + n ->
     (lift (S n) i t){ k := u } = lift n i t.
 Proof.
-  intro t. induction t ; intros u i k m ilk kls.
+  intro t. induction t using sterm_rect_list ; intros u i k m ilk kls.
   all: try (cbn ; f_equal ;
             try replace (S (S (S (j + m))))%nat with (j + (S (S (S m))))%nat by omega ;
             try replace (S (S (j + m)))%nat with (j + (S (S m)))%nat by omega ;
             try replace (S (j + m))%nat with (j + (S m))%nat by omega ; easy).
-  cbn. case_eq (i <=? n) ; intro e0 ; bprop e0.
-  - cbn. case_eq (k ?= S (m+n)) ; intro e2 ; bprop e2.
-    + omega.
-    + reflexivity.
-    + omega.
-  - cbn. assert (e2 : k ?= n = Gt) by (propb ; omega).
-    rewrite e2. reflexivity.
+  { cbn. case_eq (i <=? n) ; intro e0 ; bprop e0.
+    - cbn. case_eq (k ?= S (m+n)) ; intro e2 ; bprop e2.
+      + omega.
+      + reflexivity.
+      + omega.
+    - cbn. assert (e2 : k ?= n = Gt) by (propb ; omega).
+      rewrite e2. reflexivity.
+  }
+  { cbn. f_equal ; try easy.
+    rewrite !map_map_compose, !compose_on_snd.
+    eapply (case_brs_map_spec X).
+    intros x h. apply h ; assumption.
+  }
 Defined.
 
 Lemma substP4 :
   forall t u v i j,
     t{ i := u }{ i+j := v } = t{ S (i+j) := v}{ i := u{ j := v } }.
 Proof.
-  intro t ; induction t ; intros u v i j.
+  intro t ; induction t using sterm_rect_list ; intros u v i j.
   all: try (cbn ; f_equal ;
             try replace (S (S (S (i + j))))%nat with ((S (S (S i))) + j)%nat by omega ;
             try replace (S (S (i + j)))%nat with ((S (S i)) + j)%nat by omega ;
             try replace (S (i + j))%nat with ((S i) + j)%nat by omega ;
             easy
            ).
-  cbn. case_eq (i ?= n) ; intro e0 ; bprop e0.
-  - subst. destruct n.
-    + cbn. rewrite 2!lift00. reflexivity.
-    + assert (e1 : (S n + j ?= n) = Gt) by (propb ; omega).
-      rewrite e1. cbn.
-      assert (e2 : (n ?= n) = Eq) by (propb ; omega).
-      rewrite e2. rewrite <- substP2 by omega. reflexivity.
-  - destruct n.
-    + omega.
-    + case_eq (i + j ?= n) ; intro e2 ; bprop e2.
-      * cbn. rewrite e2. rewrite substP3 by omega. reflexivity.
-      * cbn. rewrite e2.
-        assert (e4 : (i ?= n) = Lt) by (propb ; omega).
-        rewrite e4. reflexivity.
-      * cbn. rewrite e2. rewrite e0. reflexivity.
-  - destruct n.
-    + cbn. assert (e2 : (i + j ?= 0) = Gt) by (propb ; omega).
-      rewrite e2. rewrite e0. reflexivity.
-    + assert (e2 : (i + j ?= n) = Gt) by (propb ; omega).
-      rewrite e2. cbn.
-      assert (e3 : (i + j ?= S n) = Gt) by (propb ; omega).
-      rewrite e3. rewrite e0. reflexivity.
+  { cbn. case_eq (i ?= n) ; intro e0 ; bprop e0.
+    - subst. destruct n.
+      + cbn. rewrite 2!lift00. reflexivity.
+      + assert (e1 : (S n + j ?= n) = Gt) by (propb ; omega).
+        rewrite e1. cbn.
+        assert (e2 : (n ?= n) = Eq) by (propb ; omega).
+        rewrite e2. rewrite <- substP2 by omega. reflexivity.
+    - destruct n.
+      + omega.
+      + case_eq (i + j ?= n) ; intro e2 ; bprop e2.
+        * cbn. rewrite e2. rewrite substP3 by omega. reflexivity.
+        * cbn. rewrite e2.
+          assert (e4 : (i ?= n) = Lt) by (propb ; omega).
+          rewrite e4. reflexivity.
+        * cbn. rewrite e2. rewrite e0. reflexivity.
+    - destruct n.
+      + cbn. assert (e2 : (i + j ?= 0) = Gt) by (propb ; omega).
+        rewrite e2. rewrite e0. reflexivity.
+      + assert (e2 : (i + j ?= n) = Gt) by (propb ; omega).
+        rewrite e2. cbn.
+        assert (e3 : (i + j ?= S n) = Gt) by (propb ; omega).
+        rewrite e3. rewrite e0. reflexivity.
+  }
+  { cbn. f_equal ; try easy.
+    rewrite !map_map_compose, !compose_on_snd.
+    eapply (case_brs_map_spec X).
+    intros x h. apply h.
+  }
 Defined.
 
 Ltac erewrite_close_above_lift :=
@@ -597,17 +601,22 @@ Proof.
             try replace (S (m+l))%nat with (m + S l)%nat by omega ;
             repeat erewrite_close_above_lift ;
             reflexivity).
-  unfold lift. case_eq (k <=? n) ; intro e ; bprop e ; try omega.
-  - unfold closed_above.
-    case_eq (m+n <? m+l) ; intro e1 ; bprop e1 ; try omega.
-    + case_eq (n <? l) ; intro e3 ; bprop e3 ; try omega.
+  { unfold lift. case_eq (k <=? n) ; intro e ; bprop e ; try omega.
+    - unfold closed_above.
+      case_eq (m+n <? m+l) ; intro e1 ; bprop e1 ; try omega.
+      + case_eq (n <? l) ; intro e3 ; bprop e3 ; try omega.
+        reflexivity.
+      + case_eq (n <? l) ; intro e3 ; bprop e3 ; try omega.
+        reflexivity.
+    - unfold closed_above.
+      case_eq (n <? m+l) ; intro e1 ; bprop e1 ; try omega.
+      case_eq (n <? l) ; intro e3 ; bprop e3 ; try omega.
       reflexivity.
-    + case_eq (n <? l) ; intro e3 ; bprop e3 ; try omega.
-      reflexivity.
-  - unfold closed_above.
-    case_eq (n <? m+l) ; intro e1 ; bprop e1 ; try omega.
-    case_eq (n <? l) ; intro e3 ; bprop e3 ; try omega.
-    reflexivity.
+  }
+  { cbn. f_equal.
+    - repeat erewrite_close_above_lift ; reflexivity.
+    - give_up.
+  }
 Defined.
 
 Ltac erewrite_close_above_lift_id :=

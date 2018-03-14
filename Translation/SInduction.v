@@ -7,6 +7,18 @@ From Translation Require Import SAst.
 
 Open Scope type_scope.
 
+Definition on_snd {A B B'} (f : B -> B') (x : A * B) : A * B' :=
+  let '(u,v) := x in (u, f v).
+
+Definition test_snd {A B} (f : B -> bool) (p : A * B) :=
+  f (snd p).
+
+Lemma on_snd_on_snd {A B} (f g : B -> B) (d : A * B) :
+  on_snd f (on_snd g d) = on_snd (fun x => f (g x)) d.
+Proof.
+  destruct d; reflexivity.
+Qed.
+
 Lemma compose_on_snd {A B} (f g : B -> B) :
   compose (A:=A * B) (on_snd f) (on_snd g) = on_snd (compose f g).
 Proof.
@@ -18,6 +30,21 @@ Lemma map_map_compose :
     map g (map f l) = map (compose g f) l.
 Proof. apply map_map. Defined.
 Hint Unfold compose : terms.
+
+Lemma map_id_f {A} (l : list A) (f : A -> A) :
+  (forall x, f x = x) ->
+  map f l = l.
+Proof.
+  induction l; intros; simpl; try easy.
+  rewrite H. f_equal. eauto.
+Defined.
+
+Lemma map_on_snd_id {A B} (l : list (A * B)) :
+  map (on_snd id) l = l.
+Proof.
+  eapply map_id_f. intros [x y].
+  reflexivity.
+Defined.
 
 Inductive ForallT {A : Type} (P : A -> Type) : list A -> Type :=
 | ForallT_nil : ForallT P []

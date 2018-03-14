@@ -26,13 +26,8 @@ Notation "x * y" := (pp_prod x y) : type_scope.
 Definition fst {A B} (p : A * B) := pi1_ A B p.
 Definition snd {A B} (p : A * B) := pi2_ A B p.
 
-Notation "( x , y , .. , z )" := (mk_pp_prod .. (mk_pp_prod x y) .. z) : type_scope.
-
-Definition on_fst {A B A'} (f : A -> A') (x : A * B) : A' * B :=
-  let '(u,v) := x in (f u, v).
-
-Definition on_snd {A B B'} (f : B -> B') (x : A * B) : A * B' :=
-  let '(u,v) := x in (u, f v).
+Notation "( x , y , .. , z )" :=
+  (mk_pp_prod .. (mk_pp_prod x y) .. z) : type_scope.
 
 From Template Require Import Ast.
 

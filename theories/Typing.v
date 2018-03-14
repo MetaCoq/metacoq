@@ -378,19 +378,13 @@ Fixpoint rels_of {A} (Γ : list A) acc : list term :=
 (** Compute the type of a case from the predicate [p], actual parameters [pars] and
     an inductive declaration. *)
 
-Definition types_of_case ind u pars p decl :=
-  match destArity [] decl.(ind_type) with
-  | Some (args, s) =>
-    let pred :=
-        it_mkLambda_or_LetIn args
-          (tProd (nNamed decl.(ind_name))
-                 (mkApps (tInd ind u) (pars ++ rels_of args 0))
-                 (tSort [(Level.Level "large", false)]))    (* FIXME *)
-    in
+Definition types_of_case pars p pty decl :=
+  match destArity [] decl.(ind_type), destArity [] pty with
+  | Some (args, s), Some (args', s') =>
     let brs :=
       List.map (fun '(id, t, ar) => (ar, substl (p :: pars) t)) decl.(ind_ctors)
-    in Some (pred, s, brs)
-  | None => None
+    in Some (args, args', s', brs)
+  | _, _ => None
   end.
 
 (** Family of a universe [u]. *)
@@ -453,6 +447,26 @@ Conjecture congr_cumul_prod : forall Σ Γ na na' M1 M2 N1 N2,
     cumul Σ (Γ ,, vass na M1) M2 N2 ->
     cumul Σ Γ (tProd na M1 M2) (tProd na' N1 N2).
 
+Definition eq_opt_term φ (t u : option term) :=
+  match t, u with
+  | Some t, Some u => eq_term φ t u
+  | None, None => true
+  | _, _ => false
+  end.
+
+Definition eq_decl φ (d d' : context_decl) :=
+  eq_opt_term φ d.(decl_body) d'.(decl_body) && eq_term φ d.(decl_type) d'.(decl_type).
+
+Definition eq_context φ (Γ Δ : context) :=
+  forallb2 (eq_decl φ) Γ Δ.
+
+Definition check_correct_arity φ decl ind u ctx pars pctx :=
+  let inddecl :=
+   {| decl_name := nNamed decl.(ind_name);
+      decl_body := None;
+      decl_type := mkApps (tInd ind u) (pars ++ rels_of ctx 0) |}
+  in eq_context φ (inddecl :: ctx) pctx.
+
 (** ** Typing relation *)
 
 Inductive typing (Σ : global_context) (Γ : context) : term -> term -> Type :=
@@ -508,9 +522,10 @@ Inductive typing (Σ : global_context) (Γ : context) : term -> term -> Type :=
     forall univs decl' (isdecl' : declared_inductive (fst Σ) ind univs decl'),
     decl.(ind_npars) = npar ->
     let pars := List.firstn npar args in
-    forall pty s btys, types_of_case ind u pars p decl' = Some (pty,s,btys) ->
-    List.Exists (fun sf => universe_family s = sf) decl'.(ind_kelim) ->
-    Σ ;;; Γ |- p : pty ->
+    forall pty, Σ ;;; Γ |- p : pty ->
+    forall indctx pctx ps btys, types_of_case pars p pty decl' = Some (indctx, pctx, ps, btys) ->
+    check_correct_arity (snd Σ) decl' ind u indctx pars pctx = true ->
+    List.Exists (fun sf => universe_family ps = sf) decl'.(ind_kelim) ->
     Σ ;;; Γ |- c : mkApps (tInd ind u) args ->
     Forall2 (fun x y => fst x = fst y /\ squash (Σ ;;; Γ |- snd x : snd y)) brs btys ->
     Σ ;;; Γ |- tCase (ind, npar) p c brs : tApp p (List.skipn npar args ++ [c])
@@ -974,11 +989,11 @@ Lemma typing_ind_env :
         declared_inductive (fst Σ) ind univs decl' ->
         ind_npars decl = npar ->
         let pars := firstn npar args in
-        forall (pty : term) (s : universe) (btys : list (nat * term)),
-        types_of_case ind u pars p decl' = Some (pty, s, btys) ->
-        Exists (fun sf : sort_family => universe_family s = sf) (ind_kelim decl') ->
-        Σ;;; Γ |- p : pty ->
-        P Σ Γ p pty ->
+        forall (pty : term), Σ ;;; Γ |- p : pty -> P Σ Γ p pty ->
+        forall indctx pctx ps btys,
+        types_of_case pars p pty decl' = Some (indctx, pctx, ps, btys) ->
+        check_correct_arity (snd Σ) decl' ind u indctx pars pctx = true ->
+        Exists (fun sf : sort_family => universe_family ps = sf) (ind_kelim decl') ->
         Σ;;; Γ |- c : mkApps (tInd ind u) args ->
         P Σ Γ c (mkApps (tInd ind u) args) ->
         Forall2 (fun x y : nat * term => fst x = fst y /\ squash (Σ;;; Γ |- snd x : snd y)) brs btys ->

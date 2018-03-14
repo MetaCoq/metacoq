@@ -4,6 +4,7 @@
 -arg "-w default,-notation-overridden"
 
 SAst.v
+Induction.v
 SLiftSubst.v
 SCommon.v
 ITyping.v

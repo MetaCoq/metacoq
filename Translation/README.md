@@ -15,6 +15,8 @@ To build the project, you only need to `make`.
 
 - `SAst.v` describes common syntax (in a similar fashion to `Ast.v` of
    `theories`) to both ETT and ITT.
+- `Induction.v` is about an induction principle on the AST that gives
+  properties to the lists of terms.
 - `SLiftSubst.v` describes meta-operations on the syntax (namely lifting and substitution).
 - `SCommon.v` states common definitions like context.
 

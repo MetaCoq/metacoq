@@ -1,7 +1,7 @@
 From Coq Require Import Bool String List BinPos Compare_dec Omega.
 From Equations Require Import Equations DepElimDec.
 From Template Require Import Ast LiftSubst.
-From Translation Require Import SAst.
+From Translation Require Import SAst SInduction.
 
 (* Set Asymmetric Patterns. *)
 
@@ -202,7 +202,8 @@ Lemma lift_lift :
     lift n k (lift m k t) = lift (n+m) k t.
 Proof.
   intros t.
-  induction t ; intros nn mm kk ; try (cbn ; f_equal ; easy).
+  induction t using sterm_rect_list ;
+  intros nn mm kk ; try (cbn ; f_equal ; easy).
   { cbn. set (kkln := Nat.leb kk n).
   assert (eq : Nat.leb kk n = kkln) by reflexivity.
   destruct kkln.
@@ -215,10 +216,9 @@ Proof.
       omega.
   - cbn. rewrite eq. reflexivity. }
   { cbn. f_equal ; try easy.
-    (* We don't have any induction hypothesis to conclude now...
-       This is a problem that we'll keep having throughout the development!
-     *)
-    give_up.
+    rewrite map_map_compose, compose_on_snd.
+    eapply (case_brs_map_spec X).
+    intros x h. apply h.
   }
 Defined.
 

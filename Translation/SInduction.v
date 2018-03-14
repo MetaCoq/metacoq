@@ -7,6 +7,18 @@ From Translation Require Import SAst.
 
 Open Scope type_scope.
 
+Lemma compose_on_snd {A B} (f g : B -> B) :
+  compose (A:=A * B) (on_snd f) (on_snd g) = on_snd (compose f g).
+Proof.
+  reflexivity.
+Defined.
+
+Lemma map_map_compose :
+  forall (A B C : Type) (f : A -> B) (g : B -> C) (l : list A),
+    map g (map f l) = map (compose g f) l.
+Proof. apply map_map. Defined.
+Hint Unfold compose : terms.
+
 Inductive ForallT {A : Type} (P : A -> Type) : list A -> Type :=
 | ForallT_nil : ForallT P []
 | ForallT_cons x l : P x -> ForallT P l -> ForallT P (x :: l).
@@ -98,4 +110,33 @@ Proof.
   fix auxbrs' 1.
   destruct brs ; constructor ; [| apply auxbrs' ].
   apply auxt.
+Defined.
+
+Lemma forall_map_spec {A} {P : A -> Type} {l} {f g : A -> A} :
+  ForallT P l ->
+  (forall x, P x -> f x = g x) ->
+  map f l = map g l.
+Proof.
+  induction 1; simpl; trivial.
+  intros Heq. rewrite Heq by assumption.
+  f_equal. apply IHX. apply Heq.
+Defined.
+
+Lemma on_snd_spec {A B} (P : B -> Type) (f g : B -> B) (x : A * B) :
+  P (snd x) -> (forall x, P x -> f x = g x) ->
+  on_snd f x = on_snd g x.
+Proof.
+  intros. destruct x. unfold on_snd. simpl.
+  now rewrite H; auto.
+Defined.
+
+Lemma case_brs_map_spec {P : sterm -> Type} {l} {f g : sterm -> sterm} :
+  sCaseBrsT P l ->
+  (forall x, P x -> f x = g x) ->
+  map (on_snd f) l = map (on_snd g) l.
+Proof.
+  intros.
+  eapply (forall_map_spec X).
+  intros.
+  eapply on_snd_spec; eauto.
 Defined.

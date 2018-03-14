@@ -1,7 +1,7 @@
 From Coq Require Import Bool String List BinPos Compare_dec Omega.
 From Equations Require Import Equations DepElimDec.
 From Template Require Import Ast LiftSubst.
-From Translation Require Import SAst.
+From Translation Require Import SAst Induction.
 
 (* Set Asymmetric Patterns. *)
 
@@ -194,6 +194,43 @@ Fixpoint closed_above k t :=
 Definition closed t := closed_above 0 t = true.
 
 Open Scope s_scope.
+Lemma on_snd_on_snd {A B} (f g : B -> B) (d : A * B) :
+  on_snd f (on_snd g d) = on_snd (fun x => f (g x)) d.
+Proof.
+  destruct d; reflexivity.
+Qed.
+
+Lemma forallt_map_spec {A} {P : A -> Type} {l} {f g : A -> A} :
+  ForallT P l -> (forall x, P x -> f x = g x) ->
+  map f l = map g l.
+Proof.
+  induction 1; simpl; trivial.
+  intros Heq. rewrite Heq. f_equal. apply IHX. apply Heq. apply p.
+Qed.
+
+Lemma on_snd_spec {A B} (P : B -> Type) (f g : B -> B) (x : A * B) :
+  P (snd x) -> (forall x, P x -> f x = g x) ->
+  on_snd f x = on_snd g x.
+Proof.
+  intros. destruct x. unfold on_snd. simpl.
+  now rewrite H; auto.
+Qed.
+
+Lemma case_brs_map_spec {P : sterm -> Type} {l} {f g : sterm -> sterm} :
+  sCaseBrsT P l -> (forall x, P x -> f x = g x) ->
+  map (on_snd f) l = map (on_snd g) l.
+Proof.
+  intros.
+  eapply (forallt_map_spec X).
+  intros.
+  eapply on_snd_spec; eauto.
+Qed.
+
+Lemma compose_on_snd {A B} (f g : B -> B) :
+  compose (A:=A * B) (on_snd f) (on_snd g) = on_snd (compose f g).
+Proof.
+  reflexivity.
+Qed.
 
 (* Lemmata regarding lifts and subst *)
 
@@ -202,7 +239,7 @@ Lemma lift_lift :
     lift n k (lift m k t) = lift (n+m) k t.
 Proof.
   intros t.
-  induction t ; intros nn mm kk ; try (cbn ; f_equal ; easy).
+  induction t using sterm_rect_list ; intros nn mm kk ; try (cbn ; f_equal ; easy).
   { cbn. set (kkln := Nat.leb kk n).
   assert (eq : Nat.leb kk n = kkln) by reflexivity.
   destruct kkln.
@@ -218,7 +255,9 @@ Proof.
     (* We don't have any induction hypothesis to conclude now...
        This is a problem that we'll keep having throughout the development!
      *)
-    give_up.
+    rewrite Induction.map_map_compose, compose_on_snd.
+    eapply case_brs_map_spec in X. eapply X. intros.
+    apply H.
   }
 Defined.
 

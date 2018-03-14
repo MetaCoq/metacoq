@@ -3,7 +3,7 @@
 From Coq Require Import Bool String List BinPos Compare_dec Omega.
 From Equations Require Import Equations DepElimDec.
 From Template Require Import Ast utils monad_utils LiftSubst Typing Checker Template.
-From Translation Require Import SAst SLiftSubst SCommon ITyping Quotes.
+From Translation Require Import SAst SInduction SLiftSubst SCommon ITyping Quotes.
 
 Import MonadNotation.
 
@@ -67,6 +67,18 @@ Definition infer_hnf fuel Σ Γ t :=
   @infer (Build_Fuel fuel) Σ Γ t.
   (* t' <- @infer (Build_Fuel fuel) Σ Γ t ;; *)
   (* hnf Σ Γ t'. *)
+
+Fixpoint brs_repack (l : list (nat * tsl_result term)) :
+  tsl_result (list (prod nat term)) :=
+  match l with
+  | [] => Success []
+  | (n, Success t) :: tl =>
+    match brs_repack tl with
+    | Success tl' => Success ((pair n t) :: tl')
+    | Error e => Error e
+    end
+  | (_, Error e) :: _ => Error e
+  end.
 
 Fixpoint tsl_rec (fuel : nat) (Σ : global_context) (Γ : context) (t : sterm) {struct fuel}
   : tsl_result term :=
@@ -280,6 +292,12 @@ Fixpoint tsl_rec (fuel : nat) (Σ : global_context) (Γ : context) (t : sterm) {
       ret (tInd ind [])
     | sConstruct ind i =>
       ret (tConstruct ind i [])
+    | sCase (ind, n) p c brs =>
+      (* TODO Check the contexts here! *)
+      p' <- tsl_rec fuel Σ Γ p ;;
+      c' <- tsl_rec fuel Σ Γ c ;;
+      brs' <- brs_repack (map (on_snd (tsl_rec fuel Σ Γ)) brs) ;;
+      ret (tCase (pair ind n) p' c' brs')
     end
   end.
 

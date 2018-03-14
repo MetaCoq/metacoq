@@ -6,7 +6,7 @@
 From Coq Require Import Bool String List BinPos Compare_dec Omega Bool_nat.
 From Equations Require Import Equations DepElimDec.
 From Template Require Import Ast utils LiftSubst Typing.
-From Translation Require Import SAst SLiftSubst SCommon ITyping
+From Translation Require Import SAst SInduction SLiftSubst SCommon ITyping
                                 ITypingLemmata ITypingMore.
 
 Definition proj_1 {A} {P : A -> Prop} : {a:A | P a} -> A :=
@@ -256,4 +256,9 @@ Fixpoint reduce (t : sterm) : sterm :=
     sProjTe p'
   | sInd ind => sInd ind
   | sConstruct ind i => sConstruct ind i
+  | sCase indn p c brs =>
+    let p' := reduce p in
+    let c' := reduce c in
+    let brs' := map (on_snd reduce) brs in
+    sCase indn p' c' brs'
   end.

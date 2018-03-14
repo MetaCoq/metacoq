@@ -595,7 +595,7 @@ Lemma closed_above_lift :
     closed_above (n+l) (lift n k t) =
     closed_above l t.
 Proof.
-  intro t. induction t ; intros m k l h.
+  intro t. induction t using sterm_rect_list ; intros m k l h.
   all: try (cbn ;
             try replace (S (S (m+l)))%nat with (m + S (S l))%nat by omega ;
             try replace (S (m+l))%nat with (m + S l)%nat by omega ;
@@ -615,7 +615,9 @@ Proof.
   }
   { cbn. f_equal.
     - repeat erewrite_close_above_lift ; reflexivity.
-    - give_up.
+    - rewrite forallb_map, compose_test_snd_on_snd.
+      eapply (case_brs_forallb_spec X).
+      intros x hh. apply hh. assumption.
   }
 Defined.
 
@@ -637,14 +639,21 @@ Fact closed_above_lift_id :
     k >= l ->
     lift n k t = t.
 Proof.
-  intro t. induction t ; intros m k l clo h.
+  intro t. induction t using sterm_rect_list ; intros m k l clo h.
   all: try (cbn ; cbn in clo ; repeat destruct_andb ;
             repeat erewrite_close_above_lift_id ;
             reflexivity).
-  unfold closed in clo. unfold closed_above in clo.
-  bprop clo. cbn.
-  case_eq (k <=? n) ; intro e ; bprop e ; try omega.
-  reflexivity.
+  - unfold closed in clo. unfold closed_above in clo.
+    bprop clo. cbn.
+    case_eq (k <=? n) ; intro e ; bprop e ; try omega.
+    reflexivity.
+  - cbn. cbn in clo. repeat destruct_andb.
+    repeat erewrite_close_above_lift_id.
+    f_equal.
+    rewrite <- map_on_snd_id.
+    eapply (case_brs_map_spec X).
+    intros x hh.
+    (* We need another one. *)
 Defined.
 
 Fact closed_lift :

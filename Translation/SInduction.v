@@ -46,6 +46,24 @@ Proof.
   reflexivity.
 Defined.
 
+Lemma forallb_map :
+  forall {A} {f : A -> A} {p : A -> bool} {l : list A},
+    forallb p (map f l) = forallb (compose p f) l.
+Proof.
+  intros A f p l.
+  induction l.
+  - cbn. reflexivity.
+  - cbn. f_equal. assumption.
+Defined.
+
+Lemma compose_test_snd_on_snd :
+  forall {A B} {f : B -> bool} {g : B -> B},
+    @test_snd A B f ∘ on_snd g = test_snd (f ∘ g).
+Proof.
+  intros A B f g.
+  reflexivity.
+Defined.
+
 Inductive ForallT {A : Type} (P : A -> Type) : list A -> Type :=
 | ForallT_nil : ForallT P []
 | ForallT_cons x l : P x -> ForallT P l -> ForallT P (x :: l).
@@ -166,4 +184,35 @@ Proof.
   eapply (forall_map_spec X).
   intros.
   eapply on_snd_spec; eauto.
+Defined.
+
+Lemma forall_forallb_spec :
+  forall {A} {P : A -> Type} {l} {f g : A -> bool},
+    ForallT P l ->
+    (forall x, P x -> f x = g x) ->
+    forallb f l = forallb g l.
+Proof.
+  intros A P l f g. induction 1.
+  - simpl. trivial.
+  - intro eq. cbn. rewrite eq by assumption.
+    f_equal. apply IHX. assumption.
+Defined.
+
+Lemma test_snd_spec {A B} (P : B -> Type) (f g : B -> bool) (x : A * B) :
+  P (snd x) -> (forall x, P x -> f x = g x) ->
+  test_snd f x = test_snd g x.
+Proof.
+  intros. destruct x. unfold test_snd. simpl.
+  now rewrite H; auto.
+Defined.
+
+Lemma case_brs_forallb_spec {P : sterm -> Type} {l} {f g : sterm -> bool} :
+  sCaseBrsT P l ->
+  (forall x, P x -> f x = g x) ->
+  forallb (test_snd f) l = forallb (test_snd g) l.
+Proof.
+  intros.
+  eapply (forall_forallb_spec X).
+  intros x h.
+  eapply test_snd_spec; eauto.
 Defined.

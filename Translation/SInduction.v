@@ -216,3 +216,38 @@ Proof.
   intros x h.
   eapply test_snd_spec; eauto.
 Defined.
+
+Lemma forall_forallb_map_spec {A : Type} {P : A -> Type} {p : A -> bool}
+      {l : list A} {f g : A -> A} :
+    ForallT P l ->
+    forallb p l = true ->
+    (forall x : A, P x -> p x = true -> f x = g x) ->
+    map f l = map g l.
+Proof.
+  induction 1; simpl; trivial.
+  rewrite andb_true_iff. intros [px pl] Hx.
+  f_equal. now apply Hx. now apply IHX.
+Defined.
+
+Lemma on_snd_test_spec {A B} (P : B -> Type) (p : B -> bool) (f g : B -> B) (x : A * B) :
+  P (snd x) ->
+  (forall x, P x -> p x = true -> f x = g x) ->
+  test_snd p x = true ->
+  on_snd f x = on_snd g x.
+Proof.
+  intros. destruct x. unfold on_snd. simpl.
+  now rewrite H; auto.
+Defined.
+
+Lemma case_brs_forallb_map_spec {P : sterm -> Type} {p : sterm -> bool}
+      {l} {f g : sterm -> sterm} :
+  sCaseBrsT P l ->
+  forallb (test_snd p) l = true ->
+  (forall x, P x -> p x = true -> f x = g x) ->
+  map (on_snd f) l = map (on_snd g) l.
+Proof.
+  intros.
+  eapply (forall_forallb_map_spec X H).
+  intros.
+  eapply on_snd_test_spec; eauto.
+Defined.

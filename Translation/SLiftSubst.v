@@ -651,9 +651,8 @@ Proof.
     repeat erewrite_close_above_lift_id.
     f_equal.
     rewrite <- map_on_snd_id.
-    eapply (case_brs_map_spec X).
-    intros x hh.
-    (* We need another one. *)
+    eapply (case_brs_forallb_map_spec X H0).
+    intros x h1 h2. eapply h1 ; eassumption.
 Defined.
 
 Fact closed_lift :
@@ -680,14 +679,20 @@ Fact closed_above_subst_id :
     n >= l ->
     t{ n := u } = t.
 Proof.
-  intro t. induction t ; intros m l u clo h.
+  intro t. induction t using sterm_rect_list ; intros m l u clo h.
   all: try (cbn ; cbn in clo ; repeat destruct_andb ;
             repeat erewrite_close_above_subst_id ;
             reflexivity).
-  unfold closed in clo. unfold closed_above in clo.
-  bprop clo. cbn.
-  case_eq (m ?= n) ; intro e ; bprop e ; try omega.
-  reflexivity.
+  - unfold closed in clo. unfold closed_above in clo.
+    bprop clo. cbn.
+    case_eq (m ?= n) ; intro e ; bprop e ; try omega.
+    reflexivity.
+  - cbn. cbn in clo. repeat destruct_andb.
+    repeat erewrite_close_above_subst_id.
+    f_equal.
+    rewrite <- map_on_snd_id.
+    eapply (case_brs_forallb_map_spec X H0).
+    intros x h1 h2. eapply h1 ; eassumption.
 Defined.
 
 Fact closed_subst :

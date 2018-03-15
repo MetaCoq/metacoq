@@ -15,6 +15,16 @@ Module IT := ITyping.
 
 (*! General utilities to build ETT derivations and terms *)
 
+Lemma xmeta_conv :
+  forall (Σ : sglobal_context) (Γ : scontext) (t A B : sterm),
+    Σ;;; Γ |-x t : A ->
+    A = B ->
+    Σ;;; Γ |-x t : B.
+Proof.
+  intros Σ Γ t A B h e.
+  destruct e. assumption.
+Defined.
+
 (** We first create a global context for ITT. *)
 
 Definition iNat :=
@@ -48,42 +58,6 @@ Definition vec_type :=
   sProd (nNamed "A") (sSort 0) vec_cod.
 
 Definition lΣi := [
-  SInductiveDecl "Coq.Init.Datatypes.nat" {|
-    sind_npars := 0;
-    sind_bodies := [
-      {| sind_name := "nat";
-         sind_type := sSort 0 ;
-         sind_kelim := [InProp; InSet; InType];
-         sind_ctors := [
-           ("O", sRel 0, 0) ;
-           ("S", sProd nAnon (sRel 0) (sRel 1), 1)
-         ] ;
-         sind_projs := [] |}
-    ];
-    sind_universes :=
-      Monomorphic_ctx (pair [] {|
-        Constraint.this := [] ;
-        Constraint.is_ok := Constraint.Raw.empty_ok
-      |})
-  |} ;
-  SInductiveDecl "Coq.Init.Datatypes.bool" {|
-    sind_npars := 0;
-    sind_bodies := [
-      {| sind_name := "bool";
-         sind_type := sSort 0 ;
-         sind_kelim := [InProp; InSet; InType];
-         sind_ctors := [
-           ("true", sRel 0, 0) ;
-           ("false", sRel 0, 0)
-         ] ;
-         sind_projs := [] |}
-    ];
-    sind_universes :=
-      Monomorphic_ctx (pair [] {|
-        Constraint.this := [] ;
-        Constraint.is_ok := Constraint.Raw.empty_ok
-      |})
-  |} ;
   SInductiveDecl "Translation.Quotes.vec" {|
     sind_npars := 1;
     sind_bodies := [
@@ -128,6 +102,42 @@ Definition lΣi := [
         Constraint.this := [] ;
         Constraint.is_ok := Constraint.Raw.empty_ok
       |})
+  |} ;
+  SInductiveDecl "Coq.Init.Datatypes.nat" {|
+    sind_npars := 0;
+    sind_bodies := [
+      {| sind_name := "nat";
+         sind_type := sSort 0 ;
+         sind_kelim := [InProp; InSet; InType];
+         sind_ctors := [
+           ("O", sRel 0, 0) ;
+           ("S", sProd nAnon (sRel 0) (sRel 1), 1)
+         ] ;
+         sind_projs := [] |}
+    ];
+    sind_universes :=
+      Monomorphic_ctx (pair [] {|
+        Constraint.this := [] ;
+        Constraint.is_ok := Constraint.Raw.empty_ok
+      |})
+  |} ;
+  SInductiveDecl "Coq.Init.Datatypes.bool" {|
+    sind_npars := 0;
+    sind_bodies := [
+      {| sind_name := "bool";
+         sind_type := sSort 0 ;
+         sind_kelim := [InProp; InSet; InType];
+         sind_ctors := [
+           ("true", sRel 0, 0) ;
+           ("false", sRel 0, 0)
+         ] ;
+         sind_projs := [] |}
+    ];
+    sind_universes :=
+      Monomorphic_ctx (pair [] {|
+        Constraint.this := [] ;
+        Constraint.is_ok := Constraint.Raw.empty_ok
+      |})
   |}
 ].
 
@@ -142,26 +152,106 @@ Proof.
       * constructor.
       * cbn. constructor.
       * cbn. constructor.
-        -- exists (max_sort 1 1). unfold vec_type.
-           eapply IT.type_Prod.
-           ++ constructor. constructor.
-           ++ unfold vec_cod. change 1 with (max 0 1).
-              eapply IT.type_Prod.
-              ** (* Problem, are the inductives in the wrong order?? I copied from Σ though... *)
+        -- exists 1. repeat constructor.
+        -- constructor.
+        -- cbn. constructor.
+           ++ exists 0. refine (IT.type_Rel _ _ _ _ _).
+              ** repeat econstructor.
+              ** cbn. omega.
+           ++ constructor.
+              ** exists 0. refine (IT.type_Rel _ _ _ _ _).
+                 --- repeat econstructor.
+                 --- cbn. omega.
+              ** constructor.
+        -- cbn. constructor.
+        -- cbn. constructor.
+    + cbn. repeat constructor.
+      cbn. easy.
+    + cbn. constructor.
+      * exists 1. constructor. constructor.
+      * constructor.
+      * cbn. constructor.
+        -- exists 0. refine (IT.type_Rel _ _ _ _ _).
+           ++ repeat econstructor.
+           ++ cbn. omega.
+        -- constructor.
+           ++ exists (max 0 0). eapply IT.type_Prod.
+              ** refine (IT.type_Rel _ _ _ _ _).
+                 --- repeat econstructor.
+                 --- cbn. omega.
+              ** refine (IT.type_Rel _ _ _ _ _).
+                 --- unshelve (repeat econstructor). cbn. omega.
+                 --- cbn. omega.
+           ++ constructor.
+      * constructor.
+      * cbn. constructor.
+  - cbn. repeat constructor.
+    + cbn. discriminate.
+    + cbn. discriminate.
+  - cbn. constructor.
+    + exists (max_sort 1 1). unfold vec_type.
+      eapply IT.type_Prod.
+      * repeat constructor.
+      * unfold vec_cod. change 1 with (max 0 1).
+        eapply IT.type_Prod.
+        -- { eapply meta_conv.
+             - eapply IT.type_Ind.
+               + repeat econstructor.
+               + Unshelve.
+                 repeat econstructor;
+                   try (simpl; omega); assert(H':=type_Construct Σ Γ c i u _ _ H); simpl in H';
+                     clear H; apply H'; try trivial.
+             - cbn. reflexivity.
+           }
+        -- repeat econstructor.
+    + repeat constructor.
+    + cbn. constructor.
+      * exists (max 1 0).
+        eapply IT.type_Prod.
+        -- repeat econstructor.
+        -- eapply IT.type_App with (s1 := 0) (s2 := 1).
+           ++ { eapply meta_conv.
+                - eapply IT.type_Ind.
+                  + repeat econstructor.
+                  + Unshelve.
+                    repeat econstructor;
+                      try (simpl; omega); assert(H':=type_Construct Σ Γ c i u _ _ H); simpl in H';
+                        clear H; apply H'; try trivial.
+                - cbn. reflexivity.
+              }
+           ++ repeat econstructor.
+           ++ eapply IT.type_App with (s1 := 1) (s2 := max 0 1).
+              ** repeat econstructor.
+              ** unfold vec_cod. eapply IT.type_Prod.
+                 --- { eapply meta_conv.
+                       - eapply IT.type_Ind.
+                         + repeat econstructor.
+                         + Unshelve.
+                           repeat econstructor;
+                             try (simpl; omega); assert(H':=type_Construct Σ Γ c i u _ _ H); simpl in H';
+                               clear H; apply H'; try trivial.
+                       - cbn. reflexivity.
+                     }
+                 --- repeat econstructor.
+              ** refine (IT.type_Rel _ _ _ _ _).
+                 --- repeat econstructor.
+                 --- cbn. omega.
+              ** refine (IT.type_Rel _ _ _ _ _).
+                 --- repeat econstructor.
+                 --- cbn. omega.
+           ++ unfold sZero. unfold sNat.
+              eapply meta_conv.
+              ** Unshelve.
+                 repeat econstructor;
+                 try (simpl; omega); assert(H':=type_Construct Σ Γ c i u _ _ H); simpl in H';
+                 clear H; apply H'; try trivial.
+              ** cbn. (* The previous case probably didn't really work... *)
                  admit.
-              ** constructor. econstructor.
-                 --- econstructor.
-                     +++ constructor.
-                     +++ econstructor. constructor.
-                 --- admit.
-        -- repeat constructor.
-        -- cbn. admit.
-        -- cbn. constructor.
-        -- cbn. constructor.
-    + cbn. repeat constructor. cbn. easy.
-    + admit.
-  - admit.
-  - admit.
+      * constructor.
+        -- admit.
+        -- constructor.
+    + cbn. constructor.
+    + cbn. constructor.
 Admitted.
 
 (* Now some useful lemmata *)
@@ -461,16 +551,6 @@ Make Definition coq_red_tm0 :=
     nat
     It gets translated to itself.
 *)
-
-Lemma xmeta_conv :
-  forall (Σ : sglobal_context) (Γ : scontext) (t A B : sterm),
-    Σ;;; Γ |-x t : A ->
-    A = B ->
-    Σ;;; Γ |-x t : B.
-Proof.
-  intros Σ Γ t A B h e.
-  destruct e. assumption.
-Defined.
 
 Lemma natty :
   Σi ;;; [] |-x sNat : sSort 0.

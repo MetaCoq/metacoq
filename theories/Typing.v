@@ -465,7 +465,7 @@ Definition check_correct_arity φ decl ind u ctx pars pctx :=
    {| decl_name := nNamed decl.(ind_name);
       decl_body := None;
       decl_type := mkApps (tInd ind u) (pars ++ rels_of ctx 0) |}
-  in eq_context φ (inddecl :: ctx) pctx.
+  in eq_context φ (inddecl :: subst_instance_context u ctx) pctx.
 
 (** ** Typing relation *)
 

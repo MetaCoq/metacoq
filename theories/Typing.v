@@ -467,6 +467,11 @@ Definition check_correct_arity φ decl ind u ctx pars pctx :=
       decl_type := mkApps (tInd ind u) (pars ++ rels_of ctx 0) |}
   in eq_context φ (inddecl :: subst_instance_context u ctx) pctx.
 
+Inductive Forall2 {A B : Type} (R : A -> B -> Type) : list A -> list B -> Type :=
+    Forall2_nil : Forall2 R [] []
+  | Forall2_cons : forall (x : A) (y : B) (l : list A) (l' : list B),
+                   R x y -> Forall2 R l l' -> Forall2 R (x :: l) (y :: l').
+
 (** ** Typing relation *)
 
 Inductive typing (Σ : global_context) (Γ : context) : term -> term -> Type :=
@@ -527,7 +532,7 @@ Inductive typing (Σ : global_context) (Γ : context) : term -> term -> Type :=
     check_correct_arity (snd Σ) decl' ind u indctx pars pctx = true ->
     List.Exists (fun sf => universe_family ps = sf) decl'.(ind_kelim) ->
     Σ ;;; Γ |- c : mkApps (tInd ind u) args ->
-    Forall2 (fun x y => fst x = fst y /\ squash (Σ ;;; Γ |- snd x : snd y)) brs btys ->
+    Forall2 (fun x y => (fst x = fst y) * (Σ ;;; Γ |- snd x : snd y)) brs btys ->
     Σ ;;; Γ |- tCase (ind, npar) p c brs : tApp p (List.skipn npar args ++ [c])
 
 | type_Proj p c u :
@@ -877,10 +882,23 @@ Inductive Forall_decls_typing φ (P : global_declarations -> term -> term -> Typ
 
 Definition size := nat.
 
+Section Forall2_size.
+  Context {A} (P : A -> A -> Type) (fn : forall x1 x2, P x1 x2 -> size).
+  Fixpoint forall2_size {l1 l2 : list A} (f : Forall2 P l1 l2) : size :=
+  match f with
+  | Forall2_nil => 0
+  | Forall2_cons x y l l' rxy rll' => fn _ _ rxy + forall2_size rll'
+  end.
+End Forall2_size.
+
 Definition typing_size {Σ Γ t T} (d : Σ ;;; Γ |- t : T) : size.
-Proof.
-  induction d;
-    match goal with
+Proof. revert Σ Γ t T d.
+  fix 5. destruct 1;
+  repeat match goal with
+  | H : typing _ _ _ _ |- _ => apply typing_size in H
+         end;
+  match goal with
+    | H : Forall2 _ _ _ |- _ => idtac
     | H1 : size, H2 : size, H3 : size |- _ => exact (S (Nat.max H1 (Nat.max H2 H3)))
     | H1 : size, H2 : size |- _ => exact (S (Nat.max H1 H2))
     | H1 : size |- _  => exact (S H1)
@@ -890,6 +908,8 @@ Proof.
     | _ : declared_projection _ _ _ |- _  => exact 2%nat
     | _ => exact 1
     end.
+  exact (S (Nat.max d1 (Nat.max d2
+    (forall2_size _ (fun x y p => typing_size Σ Γ (snd x) (snd y) (snd p)) f)))).
 Defined.
 
 Fixpoint globenv_size (Σ : global_declarations) : size :=
@@ -944,6 +964,7 @@ Defined.
 (** *** An induction principle ensuring the Σ declarations enjoy the same properties.
 
  TODO: thread the property on local contexts as well, avoiding to redo work at binding constructs. *)
+Require Import Lia.
 
 Lemma typing_ind_env :
   forall (P : global_context -> context -> term -> term -> Set),
@@ -996,7 +1017,8 @@ Lemma typing_ind_env :
         Exists (fun sf : sort_family => universe_family ps = sf) (ind_kelim decl') ->
         Σ;;; Γ |- c : mkApps (tInd ind u) args ->
         P Σ Γ c (mkApps (tInd ind u) args) ->
-        Forall2 (fun x y : nat * term => fst x = fst y /\ squash (Σ;;; Γ |- snd x : snd y)) brs btys ->
+        Forall2 (fun x y : nat * term => (fst x = fst y) * (Σ;;; Γ |- snd x : snd y)
+                                         * P Σ Γ (snd x) (snd y))%type brs btys ->
         P Σ Γ (tCase (ind, npar) p c brs) (tApp p (skipn npar args ++ [c]))) ->
        (forall Σ (wfΣ : wf Σ) (Γ : context) (p : projection) (c : term) u (decl : ident * term),
         declared_projection (fst Σ) p decl ->
@@ -1089,4 +1111,17 @@ try solve [  match reverse goal with
   apply X6; eauto.
   specialize (X14 [] _ _ (type_Sort _ _ Level.prop)).
   simpl in X14. forward X14; auto. apply X14.
+
+  eapply X9; eauto.
+  eapply (X14 _ _ _ H); eauto. simpl; auto with arith.
+  eapply (X14 _ _ _ H0); eauto. simpl; auto with arith. simpl in *.
+  induction f; simpl; lia.
+  simpl in *.
+  revert f X14. clear. intros.
+  induction f; simpl in *. constructor.
+  destruct r. constructor. split; auto.
+  eapply (X14 _ _ _ t); eauto. simpl; auto with arith.
+  lia.
+  apply IHf. auto. intros.
+  eapply (X14 _ _ _ Hty). lia.
 Qed.

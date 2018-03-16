@@ -3,10 +3,13 @@
 
 open Ltac_plugin
 open Declarations
+open CErrors
+open Evd
 open Univ
 open Entries
 open Names
 open Redops
+open Printmod
 open Genredexpr
 open Pp (* this adds the ++ to the current scope *)
 
@@ -162,7 +165,7 @@ module type Quoter = sig
   val quote_inductive_universes : Entries.inductive_universes -> quoted_inductive_universes
 
   val quote_mind_params : (quoted_ident * (t,t) sum) list -> quoted_mind_params
-  val quote_mind_finiteness : Decl_kinds.recursivity_kind -> quoted_mind_finiteness
+  val quote_mind_finiteness : Declarations.recursivity_kind -> quoted_mind_finiteness
   val quote_mutual_inductive_entry :
     quoted_mind_finiteness * quoted_mind_params * quoted_ind_entry list *
     quoted_inductive_universes ->
@@ -537,7 +540,7 @@ struct
 
   let quote_inductive_universes uctx =
     match uctx with
-    | Monomorphic_ind_entry uctx -> quote_univ_context uctx
+    | Monomorphic_ind_entry uctx -> quote_univ_context (Univ.ContextSet.to_context uctx)
     | Polymorphic_ind_entry uctx -> quote_abstract_univ_context_aux uctx
     | Cumulative_ind_entry info ->
       quote_abstract_univ_context_aux (CumulativityInfo.univ_context info) (* FIXME lossy *)
@@ -661,11 +664,11 @@ struct
 
   let mk_program = pair tglobal_declarations tTerm
 
-  let quote_mind_finiteness (f: Decl_kinds.recursivity_kind) =
+  let quote_mind_finiteness (f: Declarations.recursivity_kind) =
     match f with
-    | Decl_kinds.Finite -> cFinite
-    | Decl_kinds.CoFinite -> cCoFinite
-    | Decl_kinds.BiFinite -> cBiFinite
+    | Declarations.Finite -> cFinite
+    | Declarations.CoFinite -> cCoFinite
+    | Declarations.BiFinite -> cBiFinite
 
   let make_one_inductive_entry (iname, arity, templatePoly, consnames, constypes) =
     let consnames = to_coq_list tident consnames in
@@ -918,30 +921,78 @@ struct
 
 
   (* This code is taken from Pretyping, because it is not exposed globally *)
-  (* the case for strict universe declarations was removed *)
-  let get_level evd s =
-    let names, _ = Global.global_universe_names () in
-    if CString.string_contains ~where:s ~what:"." then
-      match List.rev (CString.split '.' s) with
-      | [] -> CErrors.anomaly (str"Invalid universe name " ++ str s ++ str".")
-      | n :: dp ->
-         let num = int_of_string n in
-         let dp = DirPath.make (List.map Id.of_string dp) in
-         let level = Univ.Level.make dp num in
-         let evd =
-           try Evd.add_global_univ evd level
-           with UGraph.AlreadyDeclared -> evd
-         in evd, level
-    else
+    (* the case for strict universe declarations was removed *)
+
+    let strict_universe_declarations = ref true
+    let is_strict_universe_declarations () = !strict_universe_declarations
+
+    let interp_known_universe_level evd r =
+      let qid = Libnames.qualid_of_reference r in
       try
-        let level = Evd.universe_of_name evd s in
-        evd, level
+        match r.CAst.v with
+        | Libnames.Ident id -> Evd.universe_of_name evd id
+        | Libnames.Qualid _ -> raise Not_found
       with Not_found ->
-        try
-          let id = try Id.of_string s with _ -> raise Not_found in    (* Names.Id.of_string can fail if the name is not valid (utf8 ...) *)
-          evd, snd (Idmap.find id names)
-        with Not_found ->
-          Evd.new_univ_level_variable ~name:s Evd.UnivRigid evd
+        let univ, k = Nametab.locate_universe qid.CAst.v in
+        Univ.Level.make univ k
+
+    let reference_of_string s =
+      CAst.make (
+      if CString.string_contains ~where:s ~what:"." then
+        Libnames.Qualid (Libnames.qualid_of_string s)
+      else
+        Libnames.Ident (Id.of_string s))
+
+let interp_universe_level_name  evd r =
+  try evd, interp_known_universe_level evd r
+  with Not_found ->
+    match r with (* Qualified generated name *)
+    | {CAst.loc = loc; v=Libnames.Qualid qid} ->
+       let dp, i = Libnames.repr_qualid qid in
+       let num =
+         try int_of_string (Id.to_string i)
+         with Failure _ ->
+           user_err ?loc ~hdr:"interp_universe_level_name"
+                    (Pp.(str "Undeclared global universe: " ++ Libnames.pr_reference r))
+       in
+       let level = Univ.Level.make dp num in
+       let evd =
+         try Evd.add_global_univ evd level
+         with UGraph.AlreadyDeclared -> evd
+       in evd, level
+    | {CAst.loc = loc; v=Libnames.Ident id} -> (* Undeclared *)
+        if not (is_strict_universe_declarations ()) then
+          new_univ_level_variable ?loc ~name:id univ_rigid evd
+        else user_err ?loc ~hdr:"interp_universe_level_name"
+                      (Pp.(str "Undeclared universe: " ++ Id.print id))
+
+(* CHANGES: This should be cheked, because the way one works with indetifieds has changed in the new version of Coq.
+   So, probably, this is a hack to convert the names to string (in the unquote_level) and back. *)
+let get_level evd s = interp_universe_level_name evd (reference_of_string s)
+      
+  (* let get_level_old evd s =
+   *   let names, _ = Global.global_universe_names () in
+   *   if CString.string_contains ~where:s ~what:"." then
+   *     match List.rev (CString.split '.' s) with
+   *     | [] -> CErrors.anomaly (str"Invalid universe name " ++ str s ++ str".")
+   *     | n :: dp ->
+   *        let num = int_of_string n in
+   *        let dp = DirPath.make (List.map Id.of_string dp) in
+   *        let level = Univ.Level.make dp num in
+   *        let evd =
+   *          try Evd.add_global_univ evd level
+   *          with UGraph.AlreadyDeclared -> evd
+   *        in evd, level
+   *   else
+   *     try
+   *       let level = Evd.universe_of_name evd s in
+   *       evd, level
+   *     with Not_found ->
+   *       try
+   *         let id = try Id.of_string s with _ -> raise Not_found in    (\* Names.Id.of_string can fail if the name is not valid (utf8 ...) *\)
+   *         evd, snd (Idmap.find id names)
+   *       with Not_found ->
+   *         Evd.new_univ_level_variable ~name:s Evd.UnivRigid evd *)
   (* end of code from Pretyping *)
 
 
@@ -1031,24 +1082,35 @@ struct
   let push_rel decl (in_prop, env) = (in_prop, Environ.push_rel decl env)
   let push_rel_context ctx (in_prop, env) = (in_prop, Environ.push_rel_context ctx env)
 
+
+  (* From printmod.ml *)
+  let instantiate_cumulativity_info cumi =
+  let open Univ in
+  let univs = ACumulativityInfo.univ_context cumi in
+  let expose ctx =
+    let inst = AUContext.instance ctx in
+    let cst = AUContext.instantiate inst ctx in
+    UContext.make (inst, cst)
+  in
+CumulativityInfo.make (expose univs, ACumulativityInfo.variance cumi)
   let get_abstract_inductive_universes iu =
     match iu with
-    | Monomorphic_ind ctx -> ctx
+    | Monomorphic_ind ctx -> Univ.ContextSet.to_context ctx
     | Polymorphic_ind ctx -> Univ.AUContext.repr ctx
     | Cumulative_ind cumi ->
-       let cumi = Univ.instantiate_cumulativity_info cumi in
+       let cumi = instantiate_cumulativity_info cumi in
        Univ.CumulativityInfo.univ_context cumi  (* FIXME check also *)
 
   let quote_constant_uctx = function
-    | Monomorphic_const ctx -> Q.quote_univ_context ctx
+    | Monomorphic_const ctx -> Q.quote_univ_context (Univ.ContextSet.to_context ctx)
     | Polymorphic_const ctx -> Q.quote_abstract_univ_context ctx
 
   let quote_abstract_inductive_universes iu =
     match iu with
-    | Monomorphic_ind ctx -> Q.quote_univ_context ctx
+    | Monomorphic_ind ctx -> Q.quote_univ_context (Univ.ContextSet.to_context ctx)
     | Polymorphic_ind ctx -> Q.quote_abstract_univ_context ctx
     | Cumulative_ind cumi ->
-       let cumi = Univ.instantiate_cumulativity_info cumi in
+       let cumi = instantiate_cumulativity_info cumi in
        Q.quote_univ_context (Univ.CumulativityInfo.univ_context cumi)  (* FIXME check also *)
 
   let quote_term_remember
@@ -1296,11 +1358,13 @@ struct
             in
             let uctx = quote_constant_uctx cd.const_universes in
             let ty, acc =
-              let ty =
-                match cd.const_type with
-	        | RegularArity ty -> ty
-	        | TemplateArity (ctx,ar) ->
-                   Term.it_mkProd_or_LetIn (Constr.mkSort (Sorts.Type ar.template_level)) ctx
+              let ty = cd.const_type
+                         (*CHANGE :  template polymorphism for definitions was removed.
+                          See: https://github.com/coq/coq/commit/d9530632321c0b470ece6337cda2cf54d02d61eb *)
+                (* match cd.const_type with
+	         * | RegularArity ty -> ty
+	         * | TemplateArity (ctx,ar) ->
+                 *    Term.it_mkProd_or_LetIn (Constr.mkSort (Sorts.Type ar.template_level)) ctx *)
               in
               (try quote_term acc (Global.env ()) ty
                with e ->
@@ -1361,8 +1425,12 @@ struct
     List.fold_left (process_local_entry (fun tr ob typ n env -> Term.mkProd_or_LetIn (toDecl (Names.Name n,ob,typ)) tr)) (env,t)
       (List.rev params)
 
+  (* CHANGE: this is the only way (ugly) I found to construct [absrt_info] with empty fields,
+since  [absrt_info] is a private type *)
+  let empty_segment = Lib.section_segment_of_reference (Names.VarRef (Names.Id.of_string "blah"))
+      
   let quote_mut_ind env (mi:Declarations.mutual_inductive_body) =
-   let t= Discharge.process_inductive ([],Univ.AUContext.empty) (Names.Cmap.empty,Names.Mindmap.empty) mi in
+   let t= Discharge.process_inductive empty_segment (Names.Cmap.empty,Names.Mindmap.empty) mi in
     let mf = Q.quote_mind_finiteness t.mind_entry_finite in
     let mp = (snd (quote_mind_params env (t.mind_entry_params))) in
     (* before quoting the types of constructors, we need to enrich the environment with the inductives *)
@@ -1386,12 +1454,9 @@ struct
       match Nametab.locate (Libnames.make_qualid dp nm) with
       | Globnames.ConstRef c ->
          let cd = Environ.lookup_constant c env in
-         let ty =
-           match cd.const_type with
-           | RegularArity ty -> quote_term env ty
-           | TemplateArity _ ->
-              CErrors.user_err (Pp.str "Cannot reify deprecated template-polymorphic constant types")
-         in
+         (*CHANGE :  template polymorphism for definitions was removed.
+                     See: https://github.com/coq/coq/commit/d9530632321c0b470ece6337cda2cf54d02d61eb *)
+         let ty = quote_term env cd.const_type in
          let body = match cd.const_body with
            | Undef _ -> None
            | Def cs -> Some (quote_term env (Mod_subst.force_constr cs))
@@ -1561,9 +1626,9 @@ struct
     let (h,args) = app_full trm [] in
       match args with
 	    [] ->
-      if Term.eq_constr h cFinite then Decl_kinds.Finite
-      else if  Term.eq_constr h cCoFinite then Decl_kinds.CoFinite
-      else if  Term.eq_constr h cBiFinite then Decl_kinds.BiFinite
+      if Term.eq_constr h cFinite then Declarations.Finite
+      else if  Term.eq_constr h cCoFinite then Declarations.CoFinite
+      else if  Term.eq_constr h cBiFinite then Declarations.BiFinite
       else bad_term trm
       | _ -> bad_term trm
 
@@ -1597,7 +1662,7 @@ struct
 
   let denote_mind_entry_universes trm =
     match denote_universe_context trm with
-    | false, ctx -> Monomorphic_ind_entry ctx
+    | false, ctx -> Monomorphic_ind_entry (Univ.ContextSet.of_context ctx)
     | true, ctx -> Polymorphic_ind_entry ctx
 
   (* let denote_inductive_first trm =
@@ -1648,7 +1713,7 @@ struct
       } in
     match args with
       mr::mf::mp::mi::univs::mpr::[] ->
-      ignore(Command.declare_mutual_inductive_with_eliminations (mut_ind mr mf mp mi univs mpr) [] [])
+      ignore(ComInductive.declare_mutual_inductive_with_eliminations (mut_ind mr mf mp mi univs mpr) Names.Id.Map.empty [])
     | _ -> raise (Failure "ill-typed mutual_inductive_entry")
 
 
@@ -1682,7 +1747,7 @@ struct
          let (evm, name) = reduce_all env evm name in
          (* todo: let the user choose the reduction used for the type *)
          let (evm, typ) = reduce_hnf env evm typ in
-         let n = Declare.declare_definition ~kind:Decl_kinds.Definition (unquote_ident name) ~types:typ (body, Evd.universe_context_set evm) in
+         let n = Declare.declare_definition ~kind:Decl_kinds.Definition (unquote_ident name) ~types:typ (body, Monomorphic_const_entry (Evd.universe_context_set evm)) in
          k (evm, Term.mkConst n)
       | _ -> monad_failure "tmDefinition" 3
     else if Term.eq_constr coConstr tmAxiom then
@@ -1690,7 +1755,7 @@ struct
       | name::typ::[] ->
          let (evm, name) = reduce_all env evm name in
          let (evm, typ) = reduce_hnf env evm typ in
-         let param = Entries.ParameterEntry (None, false, (typ, UState.context (Evd.evar_universe_context evm)), None) in
+         let param = Entries.ParameterEntry (None, (typ, Monomorphic_const_entry (Evd.universe_context_set evm)), None) in
          let n = Declare.declare_constant (unquote_ident name) (param, Decl_kinds.IsDefinition Decl_kinds.Definition) in
          k (evm, Term.mkConst n)
       | _ -> monad_failure "tmAxiom" 2
@@ -1699,12 +1764,14 @@ struct
       | name::typ::[] ->
          let (evm, name) = reduce_all env evm name in
          let (evm, typ) = reduce_hnf env evm typ in
-         let kind = (Decl_kinds.Global, Flags.use_polymorphic_flag (), Decl_kinds.Definition) in
+         (* CHANGE:  Flags.use_polymorphic_flag was removed. See https://github.com/coq/coq/commit/05fc0542f6c7a15b9187a2a91beb0aa7a42bb2fa *)
+         (* What should we pass here then? For now I pass polymorphic = true  *)
+         let kind = (Decl_kinds.Global, true, Decl_kinds.Definition) in
          let hole = CAst.make (Constrexpr.CHole (None, Misctypes.IntroAnonymous, None)) in
          let typ = Constrextern.extern_type true env evm (EConstr.of_constr typ) in
          let original_program_flag = !Flags.program_mode in
          Flags.program_mode := true;
-         Command.do_definition (unquote_ident name) kind None [] None hole (Some typ)
+         ComDefinition.do_definition (unquote_ident name) kind None [] None hole (Some typ)
                                (Lemmas.mk_hook (fun _ gr -> let env = Global.env () in
                                                             let evm, t = Evd.fresh_global env evm gr in k (evm, t)));
          Flags.program_mode := original_program_flag
@@ -1724,7 +1791,7 @@ struct
          let trm = TermReify.denote_term evdref def in
          let _ = Typing.e_type_of env evdref (EConstr.of_constr trm) in
          let evm = !evdref in
-         let _ = Declare.declare_definition ~kind:Decl_kinds.Definition (unquote_ident name) (trm, Evd.universe_context_set evm) in
+         let _ = Declare.declare_definition ~kind:Decl_kinds.Definition (unquote_ident name) (trm, Monomorphic_const_entry (Evd.universe_context_set evm)) in
          k (evm, unit_tt)
       | _ -> monad_failure "tmMkDefinition" 2
     else if Term.eq_constr coConstr tmQuote then
@@ -1791,7 +1858,7 @@ struct
       match args with
       | id::[] -> let id = unquote_string id in
                   (try
-                     let gr = Smartlocate.locate_global_with_alias (None, Libnames.qualid_of_string id) in
+                     let gr = Smartlocate.locate_global_with_alias (CAst.make (Libnames.qualid_of_string id)) in
                      let opt = Term.mkApp (cSome , [|tglobal_reference ; quote_global_reference gr|]) in
                     k (evm, opt)
                   with
@@ -1857,7 +1924,11 @@ DECLARE PLUGIN "template_plugin"
 (** Calling Ltac **)
 
 let ltac_lcall tac args =
-  Tacexpr.TacArg(Loc.tag @@ Tacexpr.TacCall (Loc.tag (Misctypes.ArgVar(Loc.tag @@ Names.Id.of_string tac),args)))
+  let (location, name) = Loc.tag (Names.Id.of_string tac)
+    (* Loc.tag @@ Names.Id.of_string tac *)
+  in
+  Tacexpr.TacArg(Loc.tag @@ Tacexpr.TacCall
+                              (Loc.tag (Misctypes.ArgVar (CAst.make ?loc:location name),args)))
 
 open Tacexpr
 open Tacinterp
@@ -1869,7 +1940,8 @@ open Tacarg
 let ltac_apply (f : Value.t) (args: Tacinterp.Value.t list) =
   let fold arg (i, vars, lfun) =
     let id = Names.Id.of_string ("x" ^ string_of_int i) in
-    let x = Reference (ArgVar (Loc.tag id)) in
+    let (l,n) = (Loc.tag id) in
+    let x = Reference (ArgVar (CAst.make ?loc:l n)) in
     (succ i, x :: vars, Id.Map.add id arg lfun)
   in
   let (_, args, lfun) = List.fold_right fold args (0, [], Id.Map.empty) in
@@ -1913,7 +1985,7 @@ TACTIC EXTEND denote_term
          let def' = Constrextern.extern_constr true env !evdref (EConstr.of_constr c) in
          let def = Constrintern.interp_constr env !evdref def' in
          Proofview.tclTHEN (Proofview.Unsafe.tclEVARS !evdref)
-	                   (ltac_apply tac (List.map to_ltac_val [EConstr.of_constr (fst def)]))
+	   (ltac_apply tac (List.map to_ltac_val [fst def]))
       end) ]
 END;;
 
@@ -1923,9 +1995,10 @@ VERNAC COMMAND EXTEND Make_vernac CLASSIFIED AS SIDEFF
       [ check_inside_section () ;
 	let (evm,env) = Lemmas.get_current_context () in
 	let def,uctx = Constrintern.interp_constr env evm def in
-	let trm = TermReify.quote_term env def in
-	ignore(Declare.declare_definition ~kind:Decl_kinds.Definition name
-                                          (trm, Evd.evar_universe_context_set uctx)) ]
+	let trm = TermReify.quote_term env (EConstr.to_constr evm def) in
+	ignore(Declare.declare_definition
+                 ~kind:Decl_kinds.Definition name
+                 (trm, Monomorphic_const_entry (Evd.evar_universe_context_set uctx))) ]
 END;;
 
 VERNAC COMMAND EXTEND Make_vernac_reduce CLASSIFIED AS SIDEFF
@@ -1935,10 +2008,12 @@ VERNAC COMMAND EXTEND Make_vernac_reduce CLASSIFIED AS SIDEFF
 	let def, uctx = Constrintern.interp_constr env evm def in
         let evm = Evd.from_ctx uctx in
         let (evm,rd) = Tacinterp.interp_redexp env evm rd in
-	let (evm,def) = reduce_all env evm ~red:rd def in
+	let (evm,def) = reduce_all env evm ~red:rd (EConstr.to_constr evm def) in
 	let trm = TermReify.quote_term env def in
-	ignore(Declare.declare_definition ~kind:Decl_kinds.Definition
-                                          name (trm, Evd.universe_context_set evm)) ]
+	ignore(Declare.declare_definition
+                 ~kind:Decl_kinds.Definition
+                 name
+                 (trm, Monomorphic_const_entry (Evd.universe_context_set evm))) ]
 END;;
 
 VERNAC COMMAND EXTEND Make_recursive CLASSIFIED AS SIDEFF
@@ -1946,10 +2021,10 @@ VERNAC COMMAND EXTEND Make_recursive CLASSIFIED AS SIDEFF
       [ check_inside_section () ;
 	let (evm,env) = Lemmas.get_current_context () in
 	let def, uctx = Constrintern.interp_constr env evm def in
-	let trm = TermReify.quote_term_rec env def in
+	let trm = TermReify.quote_term_rec env (EConstr.to_constr evm def) in
 	ignore(Declare.declare_definition
 	  ~kind:Decl_kinds.Definition name
-	  (trm, Evd.evar_universe_context_set uctx)) ]
+	  (trm, Monomorphic_const_entry (Evd.evar_universe_context_set uctx))) ]
 END;;
 
 VERNAC COMMAND EXTEND Unquote_vernac CLASSIFIED AS SIDEFF
@@ -1958,8 +2033,11 @@ VERNAC COMMAND EXTEND Unquote_vernac CLASSIFIED AS SIDEFF
 	let (evm, env) = Lemmas.get_current_context () in
 	let (trm, uctx) = Constrintern.interp_constr env evm def in
         let evdref = ref (Evd.from_ctx uctx) in
-	let trm = TermReify.denote_term evdref trm in
-	let _ = Declare.declare_definition ~kind:Decl_kinds.Definition name (trm, Evd.universe_context_set !evdref) in
+	let trm = TermReify.denote_term evdref (EConstr.to_constr evm trm) in
+	let _ = Declare.declare_definition
+                  ~kind:Decl_kinds.Definition
+                  name
+                  (trm, Monomorphic_const_entry (Evd.universe_context_set !evdref)) in
         () ]
 END;;
 
@@ -1970,10 +2048,11 @@ VERNAC COMMAND EXTEND Unquote_vernac_red CLASSIFIED AS SIDEFF
 	let (trm, uctx) = Constrintern.interp_constr env evm def in
         let evm = Evd.from_ctx uctx in
         let (evm,rd) = Tacinterp.interp_redexp env evm rd in
-	let (evm,trm) = reduce_all env evm ~red:rd trm in
+	let (evm,trm) = reduce_all env evm ~red:rd (EConstr.to_constr evm trm) in
         let evdref = ref evm in
         let trm = TermReify.denote_term evdref trm in
-	let _ = Declare.declare_definition ~kind:Decl_kinds.Definition name (trm, Evd.universe_context_set !evdref) in
+	let _ = Declare.declare_definition ~kind:Decl_kinds.Definition name
+                  (trm, Monomorphic_const_entry (Evd.universe_context_set !evdref)) in
         () ]
 END;;
 
@@ -1982,7 +2061,7 @@ VERNAC COMMAND EXTEND Unquote_inductive CLASSIFIED AS SIDEFF
       [ check_inside_section () ;
 	let (evm,env) = Lemmas.get_current_context () in
 	let (body,uctx) = Constrintern.interp_constr env evm def in
-        Denote.declare_inductive env evm body ]
+        Denote.declare_inductive env evm (EConstr.to_constr evm body) ]
 END;;
 
 VERNAC COMMAND EXTEND Run_program CLASSIFIED AS SIDEFF
@@ -1991,7 +2070,7 @@ VERNAC COMMAND EXTEND Run_program CLASSIFIED AS SIDEFF
 	let (evm, env) = Lemmas.get_current_context () in
         let (def, _) = Constrintern.interp_constr env evm def in
         (* todo : uctx ? *)
-        Denote.run_template_program_rec (fun _ -> ()) (evm, def) ]
+        Denote.run_template_program_rec (fun _ -> ()) (evm, (EConstr.to_constr evm def)) ]
 END;;
 
 VERNAC COMMAND EXTEND Make_tests CLASSIFIED AS QUERY
@@ -1999,7 +2078,7 @@ VERNAC COMMAND EXTEND Make_tests CLASSIFIED AS QUERY
       [ check_inside_section () ;
 	let (evm,env) = Lemmas.get_current_context () in
 	let c = Constrintern.interp_constr env evm c in
-	let result = TermReify.quote_term env (fst c) in
+	let result = TermReify.quote_term env (EConstr.to_constr evm (fst c)) in
         Feedback.msg_notice (Printer.pr_constr result) ;
 	() ]
 END;;

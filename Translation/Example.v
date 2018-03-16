@@ -681,16 +681,316 @@ Proof.
                                                             clear H; apply H'; try trivial.
                                                     - cbn. reflexivity.
                                                   }
-                                        ++ admit.
-                                        ++ admit.
-                                     -- admit.
+                                        ++ refine (IT.type_Rel _ _ _ _ _).
+                                           ** repeat eapply IT.wf_snoc.
+                                              --- constructor.
+                                              --- repeat econstructor.
+                                              --- repeat econstructor.
+                                              --- unshelve (repeat econstructor).
+                                                  cbn. omega.
+                                              --- { eapply meta_conv.
+                                                    - eapply IT.type_Ind.
+                                                      + unshelve (repeat econstructor).
+                                                        all: cbn ; omega.
+                                                      + repeat econstructor;
+                                                          try (simpl; omega); assert(H':=type_Construct Σ Γ c i u _ _ H); simpl in H';
+                                                            clear H; apply H'; try trivial.
+                                                    - cbn. reflexivity.
+                                                  }
+                                           ** cbn. omega.
+                                        ++ refine (IT.type_Rel _ _ _ _ _).
+                                           ** repeat eapply IT.wf_snoc.
+                                              --- constructor.
+                                              --- repeat econstructor.
+                                              --- repeat econstructor.
+                                              --- unshelve (repeat econstructor).
+                                                  cbn. omega.
+                                              --- { eapply meta_conv.
+                                                    - eapply IT.type_Ind.
+                                                      + unshelve (repeat econstructor).
+                                                        all: cbn ; omega.
+                                                      + repeat econstructor;
+                                                          try (simpl; omega); assert(H':=type_Construct Σ Γ c i u _ _ H); simpl in H';
+                                                            clear H; apply H'; try trivial.
+                                                    - cbn. reflexivity.
+                                                  }
+                                           ** cbn. omega.
+                                     -- refine (IT.type_Rel _ _ _ _ _).
+                                        ++ repeat eapply IT.wf_snoc.
+                                           ** constructor.
+                                           ** repeat econstructor.
+                                           ** repeat econstructor.
+                                           ** unshelve (repeat econstructor).
+                                              cbn. omega.
+                                           ** { eapply meta_conv.
+                                                - eapply IT.type_Ind.
+                                                  + unshelve (repeat econstructor).
+                                                    all: cbn ; omega.
+                                                  + repeat econstructor;
+                                                      try (simpl; omega); assert(H':=type_Construct Σ Γ c i u _ _ H); simpl in H';
+                                                        clear H; apply H'; try trivial.
+                                                - cbn. reflexivity.
+                                              }
+                                        ++ cbn. omega.
                                  + Unshelve.
                                    repeat econstructor;
                                    try (simpl; omega); assert(H':=type_Construct Σ Γ c i u _ _ H); simpl in H';
                                    clear H; apply H'; try trivial.
                                - cbn. reflexivity.
                              }
-                         *** admit.
+                         *** econstructor. repeat eapply IT.wf_snoc.
+                             ---- constructor.
+                             ---- repeat econstructor.
+                             ---- repeat econstructor.
+                             ---- unshelve (repeat econstructor).
+                                  cbn. omega.
+                             ---- { eapply meta_conv.
+                                    - eapply IT.type_Ind.
+                                      + unshelve (repeat econstructor).
+                                        all: cbn ; omega.
+                                      + repeat econstructor;
+                                          try (simpl; omega); assert(H':=type_Construct Σ Γ c i u _ _ H); simpl in H';
+                                            clear H; apply H'; try trivial.
+                                    - cbn. reflexivity.
+                                  }
+                             ---- instantiate (1 := 0).
+                                  econstructor.
+                                  ++++ { eapply meta_conv.
+                                         - eapply IT.type_Ind.
+                                           + unshelve (repeat econstructor).
+                                             all: cbn ; omega.
+                                           + repeat econstructor;
+                                               try (simpl; omega); assert(H':=type_Construct Σ Γ c i u _ _ H); simpl in H';
+                                                 clear H; apply H'; try trivial.
+                                         - cbn. reflexivity.
+                                       }
+                                  ++++ econstructor.
+                                       repeat eapply IT.wf_snoc.
+                                       **** constructor.
+                                       **** repeat econstructor.
+                                       **** repeat econstructor.
+                                       **** unshelve (repeat econstructor).
+                                            cbn. omega.
+                                       **** { eapply meta_conv.
+                                              - eapply IT.type_Ind.
+                                                + unshelve (repeat econstructor).
+                                                  all: cbn ; omega.
+                                                + repeat econstructor;
+                                                    try (simpl; omega); assert(H':=type_Construct Σ Γ c i u _ _ H); simpl in H';
+                                                      clear H; apply H'; try trivial.
+                                              - cbn. reflexivity.
+                                            }
+                                       **** { eapply meta_conv.
+                                              - eapply IT.type_Ind.
+                                                + unshelve (repeat econstructor).
+                                                  all: cbn ; omega.
+                                                + repeat econstructor;
+                                                    try (simpl; omega); assert(H':=type_Construct Σ Γ c i u _ _ H); simpl in H';
+                                                      clear H; apply H'; try trivial.
+                                              - cbn. reflexivity.
+                                            }
+                                  ++++ eapply IT.type_App.
+                                       **** econstructor.
+                                            repeat eapply IT.wf_snoc.
+                                            ----- constructor.
+                                            ----- repeat econstructor.
+                                            ----- repeat econstructor.
+                                            ----- unshelve (repeat econstructor).
+                                                  cbn. omega.
+                                            ----- { eapply meta_conv.
+                                                    - eapply IT.type_Ind.
+                                                      + unshelve (repeat econstructor).
+                                                        all: cbn ; omega.
+                                                      + repeat econstructor;
+                                                          try (simpl; omega); assert(H':=type_Construct Σ Γ c i u _ _ H); simpl in H';
+                                                            clear H; apply H'; try trivial.
+                                                    - cbn. reflexivity.
+                                                  }
+                                       **** econstructor.
+                                            ----- { eapply meta_conv.
+                                                    - eapply IT.type_Ind.
+                                                      + unshelve (repeat econstructor).
+                                                        all: cbn ; omega.
+                                                      + repeat econstructor;
+                                                          try (simpl; omega); assert(H':=type_Construct Σ Γ c i u _ _ H); simpl in H';
+                                                            clear H; apply H'; try trivial.
+                                                    - cbn. reflexivity.
+                                                  }
+                                            ----- econstructor.
+                                                  repeat eapply IT.wf_snoc.
+                                                  +++++ constructor.
+                                                  +++++ repeat econstructor.
+                                                  +++++ repeat econstructor.
+                                                  +++++ unshelve (repeat econstructor).
+                                                  cbn. omega.
+                                                  +++++ { eapply meta_conv.
+                                                          - eapply IT.type_Ind.
+                                                            + unshelve (repeat econstructor).
+                                                              all: cbn ; omega.
+                                                            + repeat econstructor;
+                                                                try (simpl; omega); assert(H':=type_Construct Σ Γ c i u _ _ H); simpl in H';
+                                                                  clear H; apply H'; try trivial.
+                                                          - cbn. reflexivity.
+                                                        }
+                                                  +++++ econstructor.
+                                                  repeat eapply IT.wf_snoc.
+                                                  ***** constructor.
+                                                  ***** repeat econstructor.
+                                                  ***** repeat econstructor.
+                                                  ***** unshelve (repeat econstructor).
+                                                  cbn. omega.
+                                                  ***** { eapply meta_conv.
+                                                          - eapply IT.type_Ind.
+                                                            + unshelve (repeat econstructor).
+                                                              all: cbn ; omega.
+                                                            + repeat econstructor;
+                                                                try (simpl; omega); assert(H':=type_Construct Σ Γ c i u _ _ H); simpl in H';
+                                                                  clear H; apply H'; try trivial.
+                                                          - cbn. reflexivity.
+                                                        }
+                                                  +++++ { eapply meta_conv.
+                                                          - eapply IT.type_Ind.
+                                                            + unshelve (repeat econstructor).
+                                                              all: cbn ; omega.
+                                                            + repeat econstructor;
+                                                                try (simpl; omega); assert(H':=type_Construct Σ Γ c i u _ _ H); simpl in H';
+                                                                  clear H; apply H'; try trivial.
+                                                          - cbn. reflexivity.
+                                                        }
+                                       **** refine (IT.type_Rel _ _ _ _ _).
+                                            repeat eapply IT.wf_snoc.
+                                            ----- constructor.
+                                            ----- repeat econstructor.
+                                            ----- repeat econstructor.
+                                            ----- unshelve (repeat econstructor).
+                                            cbn. omega.
+                                            ----- { eapply meta_conv.
+                                                    - eapply IT.type_Ind.
+                                                      + unshelve (repeat econstructor).
+                                                        all: cbn ; omega.
+                                                      + repeat econstructor;
+                                                          try (simpl; omega); assert(H':=type_Construct Σ Γ c i u _ _ H); simpl in H';
+                                                            clear H; apply H'; try trivial.
+                                                    - cbn. reflexivity.
+                                                  }
+                                                  ----- cbn. omega.
+                                       **** refine (IT.type_Rel _ _ _ _ _).
+                                            repeat eapply IT.wf_snoc.
+                                            ----- constructor.
+                                            ----- repeat econstructor.
+                                            ----- repeat econstructor.
+                                            ----- unshelve (repeat econstructor).
+                                            cbn. omega.
+                                            ----- { eapply meta_conv.
+                                                    - eapply IT.type_Ind.
+                                                      + unshelve (repeat econstructor).
+                                                        all: cbn ; omega.
+                                                      + repeat econstructor;
+                                                          try (simpl; omega); assert(H':=type_Construct Σ Γ c i u _ _ H); simpl in H';
+                                                            clear H; apply H'; try trivial.
+                                                    - cbn. reflexivity.
+                                                  }
+                                                  ----- cbn. omega.
+                                  ++++ refine (IT.type_Rel _ _ _ _ _).
+                                       repeat eapply IT.wf_snoc.
+                                       **** constructor.
+                                       **** repeat econstructor.
+                                       **** repeat econstructor.
+                                       **** unshelve (repeat econstructor).
+                                            cbn. omega.
+                                       **** { eapply meta_conv.
+                                              - eapply IT.type_Ind.
+                                                + unshelve (repeat econstructor).
+                                                  all: cbn ; omega.
+                                                + repeat econstructor;
+                                                    try (simpl; omega); assert(H':=type_Construct Σ Γ c i u _ _ H); simpl in H';
+                                                      clear H; apply H'; try trivial.
+                                              - cbn. reflexivity.
+                                            }
+                                       **** cbn. omega.
+                             ---- { eapply meta_conv.
+                                    - eapply IT.type_Ind.
+                                      + repeat eapply IT.wf_snoc.
+                                        * constructor.
+                                        * repeat econstructor.
+                                        * repeat econstructor.
+                                        * unshelve (repeat econstructor).
+                                          cbn. omega.
+                                        * { eapply meta_conv.
+                                            - eapply IT.type_Ind.
+                                              + unshelve (repeat econstructor).
+                                                all: cbn ; omega.
+                                              + repeat econstructor;
+                                                  try (simpl; omega); assert(H':=type_Construct Σ Γ c i u _ _ H); simpl in H';
+                                                    clear H; apply H'; try trivial.
+                                            - cbn. reflexivity.
+                                          }
+                                        * instantiate (1 := 0).
+                                          econstructor.
+                                          -- { eapply meta_conv.
+                                              - eapply IT.type_Ind.
+                                                + unshelve (repeat econstructor).
+                                                  all: cbn ; omega.
+                                                + repeat econstructor;
+                                                    try (simpl; omega); assert(H':=type_Construct Σ Γ c i u _ _ H); simpl in H';
+                                                      clear H; apply H'; try trivial.
+                                              - cbn. reflexivity.
+                                            }
+                                          -- unshelve (repeat econstructor).
+                                             all: cbn ; omega.
+                                          -- econstructor.
+                                             ++ econstructor.
+                                                repeat eapply IT.wf_snoc.
+                                                ** constructor.
+                                                ** repeat econstructor.
+                                                ** repeat econstructor.
+                                                ** unshelve (repeat econstructor).
+                                                   cbn. omega.
+                                                ** { eapply meta_conv.
+                                                     - eapply IT.type_Ind.
+                                                       + unshelve (repeat econstructor).
+                                                         all: cbn ; omega.
+                                                       + repeat econstructor;
+                                                           try (simpl; omega); assert(H':=type_Construct Σ Γ c i u _ _ H); simpl in H';
+                                                             clear H; apply H'; try trivial.
+                                                     - cbn. reflexivity.
+                                                   }
+                                             ++ econstructor.
+                                                ** { eapply meta_conv.
+                                                     - eapply IT.type_Ind.
+                                                       + unshelve (repeat econstructor).
+                                                         all: cbn ; omega.
+                                                       + repeat econstructor;
+                                                           try (simpl; omega); assert(H':=type_Construct Σ Γ c i u _ _ H); simpl in H';
+                                                             clear H; apply H'; try trivial.
+                                                     - cbn. reflexivity.
+                                                   }
+                                                ** econstructor.
+                                                   repeat eapply IT.wf_snoc.
+                                                   --- constructor.
+                                                   --- repeat econstructor.
+                                                   --- repeat econstructor.
+                                                   --- unshelve (repeat econstructor).
+                                                       cbn. omega.
+                                                   --- { eapply meta_conv.
+                                                         - eapply IT.type_Ind.
+                                                           + unshelve (repeat econstructor).
+                                                             all: cbn ; omega.
+                                                           + repeat econstructor;
+                                                               try (simpl; omega); assert(H':=type_Construct Σ Γ c i u _ _ H); simpl in H';
+                                                                 clear H; apply H'; try trivial.
+                                                         - cbn. reflexivity.
+                                                       }
+                                                   --- admit.
+                                                   --- admit.
+                                             ++ admit.
+                                             ++ admit.
+                                          -- admit.
+                                      + repeat econstructor;
+                                          try (simpl; omega); assert(H':=type_Construct Σ Γ c i u _ _ H); simpl in H';
+                                            clear H; apply H'; try trivial.
+                                    - cbn. reflexivity.
+                                  }
                          *** admit.
                          *** admit.
         -- constructor.

@@ -235,6 +235,23 @@ Definition sinds ind (l : list sone_inductive_body) :=
       end
   in aux (List.length l).
 
+Equations stype_of_constructor (Σ : sglobal_declarations)
+  (c : inductive * nat) (univs : universe_context)
+  (decl : ident * sterm * nat)
+  (H : sdeclared_constructor Σ c univs decl) : sterm :=
+  stype_of_constructor Σ c univs decl H <= slookup_env Σ (inductive_mind (fst c)) => {
+    stype_of_constructor Σ c univs decl H (Some (SInductiveDecl _ decl')) :=
+      let '(id, trm, args) := decl in
+      substl (sinds (inductive_mind (fst c)) decl'.(sind_bodies)) trm ;
+    stype_of_constructor Σ c univs decl H _ := !
+  }.
+Next Obligation.
+  destruct H as [d [H H']].
+  destruct H as [decl' [[H'' H''''] H''']].
+  (* eapply H0. *)
+  (* simpl. unfold filtered_var. unfold mind. rewrite H''. reflexivity. *)
+Abort.
+
 Program
 Definition stype_of_constructor (Σ : sglobal_declarations)
   (c : inductive * nat) (univs : universe_context)

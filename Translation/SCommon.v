@@ -240,10 +240,10 @@ Equations stype_of_constructor (Σ : sglobal_declarations)
   (decl : ident * sterm * nat)
   (H : sdeclared_constructor Σ c univs decl) : sterm :=
   stype_of_constructor Σ c univs decl H <= slookup_env Σ (inductive_mind (fst c)) => {
-    stype_of_constructor Σ c univs decl H (Some (SInductiveDecl _ decl')) :=
+    | (Some (SInductiveDecl _ decl')) :=
       let '(id, trm, args) := decl in
       substl (sinds (inductive_mind (fst c)) decl'.(sind_bodies)) trm ;
-    stype_of_constructor Σ c univs decl H _ := !
+    | _ := !
   }.
 Next Obligation.
   destruct H as [d [H H']].

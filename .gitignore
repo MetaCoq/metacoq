@@ -6,6 +6,7 @@ src/_build
 *.v.d
 *.glob
 Makefile.coq
+Makefile.coq.conf
 theories/*.cmxs
 \#*#
 *~

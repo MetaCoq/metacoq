@@ -920,79 +920,34 @@ struct
         raise (Failure "non-value")
 
 
-  (* This code is taken from Pretyping, because it is not exposed globally *)
-    (* the case for strict universe declarations was removed *)
+  (* CHANGES: This code was taken from (old version of) Pretyping, because it is not exposed globally *)
+  (* the case for strict universe declarations was removed *)
 
-    let strict_universe_declarations = ref true
-    let is_strict_universe_declarations () = !strict_universe_declarations
-
-    let interp_known_universe_level evd r =
-      let qid = Libnames.qualid_of_reference r in
-      try
-        match r.CAst.v with
-        | Libnames.Ident id -> Evd.universe_of_name evd id
-        | Libnames.Qualid _ -> raise Not_found
-      with Not_found ->
-        let univ, k = Nametab.locate_universe qid.CAst.v in
-        Univ.Level.make univ k
-
-    let reference_of_string s =
-      CAst.make (
-      if CString.string_contains ~where:s ~what:"." then
-        Libnames.Qualid (Libnames.qualid_of_string s)
-      else
-        Libnames.Ident (Id.of_string s))
-
-let interp_universe_level_name  evd r =
-  try evd, interp_known_universe_level evd r
-  with Not_found ->
-    match r with (* Qualified generated name *)
-    | {CAst.loc = loc; v=Libnames.Qualid qid} ->
-       let dp, i = Libnames.repr_qualid qid in
-       let num =
-         try int_of_string (Id.to_string i)
-         with Failure _ ->
-           user_err ?loc ~hdr:"interp_universe_level_name"
-                    (Pp.(str "Undeclared global universe: " ++ Libnames.pr_reference r))
-       in
-       let level = Univ.Level.make dp num in
-       let evd =
-         try Evd.add_global_univ evd level
-         with UGraph.AlreadyDeclared -> evd
-       in evd, level
-    | {CAst.loc = loc; v=Libnames.Ident id} -> (* Undeclared *)
-        if not (is_strict_universe_declarations ()) then
-          new_univ_level_variable ?loc ~name:id univ_rigid evd
-        else user_err ?loc ~hdr:"interp_universe_level_name"
-                      (Pp.(str "Undeclared universe: " ++ Id.print id))
-
-(* CHANGES: This should be cheked, because the way one works with indetifieds has changed in the new version of Coq.
-   So, probably, this is a hack to convert the names to string (in the unquote_level) and back. *)
-let get_level evd s = interp_universe_level_name evd (reference_of_string s)
+ (* It seems that the way to work with global universe declarations has changed.
+    See: https://github.com/coq/coq/commit/20c98eab851210702b39e1c66e005acfc351d8dd
+    Also, instead of strings, new level manupulation functions
+    use [qualid]. Maybe it's worth considering to make corresponding changes to template-coq representations as well.
+  *)
       
-  (* let get_level_old evd s =
-   *   let names, _ = Global.global_universe_names () in
-   *   if CString.string_contains ~where:s ~what:"." then
-   *     match List.rev (CString.split '.' s) with
-   *     | [] -> CErrors.anomaly (str"Invalid universe name " ++ str s ++ str".")
-   *     | n :: dp ->
-   *        let num = int_of_string n in
-   *        let dp = DirPath.make (List.map Id.of_string dp) in
-   *        let level = Univ.Level.make dp num in
-   *        let evd =
-   *          try Evd.add_global_univ evd level
-   *          with UGraph.AlreadyDeclared -> evd
-   *        in evd, level
-   *   else
-   *     try
-   *       let level = Evd.universe_of_name evd s in
-   *       evd, level
-   *     with Not_found ->
-   *       try
-   *         let id = try Id.of_string s with _ -> raise Not_found in    (\* Names.Id.of_string can fail if the name is not valid (utf8 ...) *\)
-   *         evd, snd (Idmap.find id names)
-   *       with Not_found ->
-   *         Evd.new_univ_level_variable ~name:s Evd.UnivRigid evd *)
+  let get_level evd s =
+    if CString.string_contains ~where:s ~what:"." then
+      match List.rev (CString.split '.' s) with
+      | [] -> CErrors.anomaly (str"Invalid universe name " ++ str s ++ str".")
+      | n :: dp ->
+         let num = int_of_string n in
+         let dp = DirPath.make (List.map Id.of_string dp) in
+         let level = Univ.Level.make dp num in
+         let evd =
+           try Evd.add_global_univ evd level
+           with UGraph.AlreadyDeclared -> evd
+         in evd, level
+    else
+      try
+        let level = Evd.universe_of_name evd (Id.of_string s) in
+        evd, level
+      with Not_found ->
+        user_err  ~hdr:"interp_universe_level_name"
+          (Pp.(str "Undeclared universe: " ++ Id.print (Id.of_string s)))
   (* end of code from Pretyping *)
 
 

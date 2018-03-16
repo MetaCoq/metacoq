@@ -235,41 +235,50 @@ Definition sinds ind (l : list sone_inductive_body) :=
       end
   in aux (List.length l).
 
+Definition inspect {A} (x : A) : { y : A | y = x } := exist _ x eq_refl.
+Require Import Equations.NoConfusion.
 Equations stype_of_constructor (Σ : sglobal_declarations)
   (c : inductive * nat) (univs : universe_context)
   (decl : ident * sterm * nat)
   (H : sdeclared_constructor Σ c univs decl) : sterm :=
-  stype_of_constructor Σ c univs decl H <= slookup_env Σ (inductive_mind (fst c)) => {
-    | (Some (SInductiveDecl _ decl')) :=
+  stype_of_constructor Σ c univs decl H <= inspect (slookup_env Σ (inductive_mind (fst c))) => {
+    | exist (Some (SInductiveDecl _ decl')) _ :=
       let '(id, trm, args) := decl in
       substl (sinds (inductive_mind (fst c)) decl'.(sind_bodies)) trm ;
-    | _ := !
+    | exist decl H := !
   }.
 Next Obligation.
+  subst decl.
   destruct H as [d [H H']].
   destruct H as [decl' [[H'' H''''] H''']].
-  (* eapply H0. *)
-  (* simpl. unfold filtered_var. unfold mind. rewrite H''. reflexivity. *)
-Abort.
-
-Program
-Definition stype_of_constructor (Σ : sglobal_declarations)
-  (c : inductive * nat) (univs : universe_context)
-  (decl : ident * sterm * nat)
-  (H : sdeclared_constructor Σ c univs decl) :=
-  let mind := inductive_mind (fst c) in
-  let '(id, trm, args) := decl in
-  match slookup_env Σ mind with
-  | Some (SInductiveDecl _ decl') =>
-    substl (sinds mind decl'.(sind_bodies)) trm
-  | _ => !
-  end.
+  unfold sdeclared_minductive in H''. rewrite <- H0 in H''.
+  noconf H''.
+Qed.
 Next Obligation.
-  destruct H as [decl [H H']].
+  subst decl.
+  destruct H as [d [H H']].
   destruct H as [decl' [[H'' H''''] H''']].
-  eapply H0.
-  simpl. unfold filtered_var. unfold mind. rewrite H''. reflexivity.
-Defined.
+  unfold sdeclared_minductive in H''. rewrite <- H0 in H''. discriminate.
+Qed.
+
+(* Program *)
+(* Definition stype_of_constructor (Σ : sglobal_declarations) *)
+(*   (c : inductive * nat) (univs : universe_context) *)
+(*   (decl : ident * sterm * nat) *)
+(*   (H : sdeclared_constructor Σ c univs decl) := *)
+(*   let mind := inductive_mind (fst c) in *)
+(*   let '(id, trm, args) := decl in *)
+(*   match slookup_env Σ mind with *)
+(*   | Some (SInductiveDecl _ decl') => *)
+(*     substl (sinds mind decl'.(sind_bodies)) trm *)
+(*   | _ => ! *)
+(*   end. *)
+(* Next Obligation. *)
+(*   destruct H as [decl [H H']]. *)
+(*   destruct H as [decl' [[H'' H''''] H''']]. *)
+(*   eapply H0. *)
+(*   simpl. unfold filtered_var. unfold mind. rewrite H''. reflexivity. *)
+(* Defined. *)
 
 Fact declared_inductive_eq :
   forall {Σ : sglobal_context} {ind univs1 decl1 univs2 decl2},

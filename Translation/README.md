@@ -35,5 +35,6 @@ To build the project, you only need to `make`.
 - `Quotes.v` contains quotations of terms for the final translation.
 - `FinalTranslation.v` containes the transaltion from ITT to
   TemplateCoq (meaning we can reify terms of ITT).
+- `ExamplesUtil.v` contains utils for the examples.
 - `Example.v` contains an example of the two translations chained to
   build a Coq term from an ETT derivation.

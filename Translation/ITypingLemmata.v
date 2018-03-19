@@ -248,6 +248,16 @@ Proof.
     }
 Defined.
 
+Corollary weak_glob_isType :
+  forall {Σ ϕ Γ A} (h : isType (Σ,ϕ) Γ A) {d},
+    fresh_global (sglobal_decl_ident d) Σ ->
+    isType (d::Σ, ϕ) Γ A.
+Proof.
+  intros Σ ϕ Γ A h d hf.
+  destruct h as [s h].
+  exists s. eapply weak_glob_type ; eassumption.
+Defined.
+
 Fact typed_ind_type :
   forall {Σ : sglobal_context},
     type_glob Σ ->
@@ -409,6 +419,7 @@ Proof.
        *)
       admit.
     + intro e. erewrite stype_of_constructor_cons by assumption.
+      eapply weak_glob_isType ; [| eassumption ].
       apply IHhg.
       Unshelve.
       destruct isdecl as [ib [[mb [[d' ?] ?]] ?]].

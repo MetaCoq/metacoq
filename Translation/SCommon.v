@@ -261,25 +261,6 @@ Next Obligation.
   unfold sdeclared_minductive in H''. rewrite <- H0 in H''. discriminate.
 Qed.
 
-(* Program *)
-(* Definition stype_of_constructor (Σ : sglobal_declarations) *)
-(*   (c : inductive * nat) (univs : universe_context) *)
-(*   (decl : ident * sterm * nat) *)
-(*   (H : sdeclared_constructor Σ c univs decl) := *)
-(*   let mind := inductive_mind (fst c) in *)
-(*   let '(id, trm, args) := decl in *)
-(*   match slookup_env Σ mind with *)
-(*   | Some (SInductiveDecl _ decl') => *)
-(*     substl (sinds mind decl'.(sind_bodies)) trm *)
-(*   | _ => ! *)
-(*   end. *)
-(* Next Obligation. *)
-(*   destruct H as [decl [H H']]. *)
-(*   destruct H as [decl' [[H'' H''''] H''']]. *)
-(*   eapply H0. *)
-(*   simpl. unfold filtered_var. unfold mind. rewrite H''. reflexivity. *)
-(* Defined. *)
-
 Fact declared_inductive_eq :
   forall {Σ : sglobal_context} {ind univs1 decl1 univs2 decl2},
     sdeclared_inductive (fst Σ) ind univs1 decl1 ->

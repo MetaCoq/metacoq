@@ -133,6 +133,20 @@ Ltac contrad :=
   | |- context [False_rect _ ?p] => exfalso ; apply p
   end.
 
+Lemma stype_of_constructor_eq :
+  forall {Σ id' decl' ind i univs decl}
+    {isdecl : sdeclared_constructor ((SInductiveDecl id' decl') :: Σ) (ind, i) univs decl},
+    ident_eq (inductive_mind ind) id' = true ->
+    let '(id, trm, args) := decl in
+    stype_of_constructor ((SInductiveDecl id' decl') :: Σ) (ind, i) univs decl isdecl =
+    substl (sinds (inductive_mind ind) decl'.(sind_bodies)) trm.
+Proof.
+  intros Σ id' decl' ind i univs decl isdecl h.
+  funelim (stype_of_constructor (SInductiveDecl id' decl' :: Σ) (ind, i) univs decl isdecl)
+  ; try contrad.
+  cbn. cbn in H. rewrite h in H. inversion H. subst. reflexivity.
+Defined.
+
 Lemma stype_of_constructor_cons :
   forall {Σ d ind i univs decl}
     {isdecl : sdeclared_constructor Σ (ind, i) univs decl}
@@ -357,6 +371,24 @@ Fact typed_type_of_constructor :
     forall {ind i decl univs}
       (isdecl : sdeclared_constructor (fst Σ) (ind, i) univs decl),
       isType Σ [] (stype_of_constructor (fst Σ) (ind, i) univs decl isdecl).
+Proof.
+  intros Σ hg.
+  induction hg ; intros ind i decl univs isdecl.
+  - cbn. contrad.
+  (* - erewrite stype_of_constructor_cons by assumption. *)
+  (*   apply IHhg. *)
+  (*   Unshelve. *)
+  (*   destruct isdecl as [ib [[mb [[d' ?] ?]] ?]]. *)
+  (*   exists ib. split. *)
+  (*   + exists mb. repeat split. *)
+  (*     * unfold sdeclared_minductive in d'. cbn in d'. *)
+  (*       case_eq (ident_eq (inductive_mind ind) (sglobal_decl_ident d)). *)
+  (*       -- intro e. rewrite e in d'. *)
+
+
+  (* - destruct isdecl as [ib [[mb [[d' ?] ?]] ?]] eqn:eq. rewrite <- eq. *)
+  (*   case_eq (ident_eq (inductive_mind ind) (sglobal_decl_ident d)). *)
+  (*   + intro e. unfold sdeclared_minductive in d'. cbn in d'. cbn. *)
 Admitted.
 
 Fact xcomp_type_of_constructor :

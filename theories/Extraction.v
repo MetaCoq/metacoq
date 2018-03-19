@@ -8,34 +8,9 @@ From Template Require univ uGraph Ast.
 
 Require Import FSets.
 Require Import ExtrOcamlBasic.
-Require Import ExtrOcamlString ExtrOcamlZInt.
+Require Import ExtrOcamlString (* ExtrOcamlZInt *).
 
 Extraction Blacklist uGraph univ Ast String List Nat.
-
+Print Extraction Blacklist.
 Set Warnings "-extraction-opaque-accessed".
-Extraction Library List.
-Extraction Library Datatypes.
-Extraction Library Bool.
-Extraction Library Nat.
-Extraction Library BinNums.
-Extraction Library BinNat.
-Extraction Library BinIntDef.
-Extraction Library BinInt.
-Extraction Library BinPosDef.
-Extraction Library BinPos.
-Extraction Library String.
-Extraction Library Ascii.
-Extraction Library PeanoNat.
-Extraction Library Specif.
-Extraction Library Sumbool.
-Extraction Library Basics.
-Extraction Library DecidableType.
-Extraction Library Equalities.
-Extraction Library MSetWeakList.
-Extraction Library FSetWeakList.
-Extraction Library FMapWeakList.
-Extraction Library utils.
-Extraction Library monad_utils.
-Extraction Library univ.
-Extraction Library uGraph.
-Extraction Library Ast.
+Recursive Extraction Library Ast.

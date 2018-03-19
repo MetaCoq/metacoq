@@ -91,3 +91,7 @@ src/uGraph0.mli
 /src/univSubst.mli
 /src/utils.ml
 /src/utils.mli
+src/decimal.ml
+src/decimal.mli
+src/logic.ml
+src/logic.mli

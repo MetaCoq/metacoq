@@ -143,7 +143,7 @@ struct
     quote_abstract_univ_context_aux uctx
 
   let quote_inductive_universes = function
-    | Entries.Monomorphic_ind_entry ctx -> quote_univ_context ctx
+    | Entries.Monomorphic_ind_entry ctx -> quote_univ_context (Univ.ContextSet.to_context ctx)
     | Entries.Polymorphic_ind_entry ctx -> quote_abstract_univ_context_aux ctx
     | Entries.Cumulative_ind_entry ctx ->
       quote_abstract_univ_context_aux (Univ.CumulativityInfo.univ_context ctx)

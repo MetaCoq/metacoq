@@ -365,6 +365,22 @@ Proof.
   eapply type_inddecls_constr ; eassumption.
 Defined.
 
+Fact typed_type_constructors :
+  forall {Σ : sglobal_context} {Γ l},
+    type_constructors Σ Γ l ->
+    forall {i decl},
+      nth_error l i = Some decl ->
+      let '(_, t, _) := decl in
+      isType Σ Γ t.
+Proof.
+  intros Σ Γ l htc. induction htc ; intros m decl hm.
+  - destruct m ; cbn in hm ; inversion hm.
+  - destruct m.
+    + cbn in hm. inversion hm. subst. clear hm.
+      assumption.
+    + cbn in hm. eapply IHhtc. eassumption.
+Defined.
+
 Fact typed_type_of_constructor :
   forall {Σ : sglobal_context},
     type_glob Σ ->

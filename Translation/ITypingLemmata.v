@@ -375,20 +375,31 @@ Proof.
   intros Σ hg.
   induction hg ; intros ind i decl univs isdecl.
   - cbn. contrad.
-  (* - erewrite stype_of_constructor_cons by assumption. *)
-  (*   apply IHhg. *)
-  (*   Unshelve. *)
-  (*   destruct isdecl as [ib [[mb [[d' ?] ?]] ?]]. *)
-  (*   exists ib. split. *)
-  (*   + exists mb. repeat split. *)
-  (*     * unfold sdeclared_minductive in d'. cbn in d'. *)
-  (*       case_eq (ident_eq (inductive_mind ind) (sglobal_decl_ident d)). *)
-  (*       -- intro e. rewrite e in d'. *)
-
-
-  (* - destruct isdecl as [ib [[mb [[d' ?] ?]] ?]] eqn:eq. rewrite <- eq. *)
-  (*   case_eq (ident_eq (inductive_mind ind) (sglobal_decl_ident d)). *)
-  (*   + intro e. unfold sdeclared_minductive in d'. cbn in d'. cbn. *)
+  - case_eq (ident_eq (inductive_mind ind) (sglobal_decl_ident d)).
+    + intro e.
+      destruct isdecl as [ib [[mb [[d' ?] ?]] ?]] (* eqn:eq. rewrite <- eq *).
+      assert (eqd : d = SInductiveDecl (inductive_mind ind) mb).
+      { unfold sdeclared_minductive in d'. cbn in d'. rewrite e in d'.
+        now inversion d'.
+      }
+      subst.
+      rewrite stype_of_constructor_eq by assumption.
+      cbn in t.
+      (* Now we need to extract the information from type_constructors
+         and apply type_ind_type_constr.
+       *)
+      admit.
+    + intro e. erewrite stype_of_constructor_cons by assumption.
+      apply IHhg.
+      Unshelve.
+      destruct isdecl as [ib [[mb [[d' ?] ?]] ?]].
+      exists ib. split.
+      * exists mb. repeat split.
+        -- unfold sdeclared_minductive in *. cbn in d'.
+           rewrite e in d'. exact d'.
+        -- assumption.
+        -- assumption.
+      * assumption.
 Admitted.
 
 Fact xcomp_type_of_constructor :

@@ -43,6 +43,7 @@ test-suite: coq theories/TemplateCoqChecker.vo
 theories/TemplateCoqCompiler.vo: Makefile.coqplugin theories/Extraction.v theories/TemplateCoqCompiler.v | coq
 	$(COQBIN)coqc -I src -R theories Template theories/Extraction.v
 	sh movefiles.sh
+	rm .coqdeps.d
 	$(MAKE) -f Makefile.coqplugin
 
 .merlin: Makefile.coq

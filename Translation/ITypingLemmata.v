@@ -388,7 +388,8 @@ Fact typed_type_of_constructor :
       (isdecl : sdeclared_constructor (fst Σ) (ind, i) univs decl),
       isType Σ [] (stype_of_constructor (fst Σ) (ind, i) univs decl isdecl).
 Proof.
-  intros Σ hg.
+  intros Σ hg. unfold type_glob in hg. destruct Σ as [Σ ϕ].
+  cbn in hg.
   induction hg ; intros ind i decl univs isdecl.
   - cbn. contrad.
   - case_eq (ident_eq (inductive_mind ind) (sglobal_decl_ident d)).

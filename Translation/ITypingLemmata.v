@@ -401,8 +401,10 @@ Proof.
       subst.
       rewrite stype_of_constructor_eq by assumption.
       cbn in t.
-      (* Now we need to extract the information from type_constructors
-         and apply type_ind_type_constr.
+      (* We can apply typed_type_constructors and then type_ind_type_constr.
+         However, we have the substl that is bothering us here.
+         The problem is that we don't have the property that substitution
+         preserves typing yet (and we want to use this very lemma to prove it!).
        *)
       admit.
     + intro e. erewrite stype_of_constructor_cons by assumption.

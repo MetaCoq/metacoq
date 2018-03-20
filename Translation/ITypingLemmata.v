@@ -1437,30 +1437,72 @@ Proof.
   - cbn. assumption.
 Defined.
 
+Fact nth_error_error :
+  forall {A} {l : list A} {n},
+    nth_error l n = None ->
+    n >= #|l|.
+Proof.
+  intros A l. induction l.
+  - intros. cbn. omega.
+  - intros n h. cbn.
+    destruct n.
+    + cbn in h. inversion h.
+    + inversion h as [e].
+      specialize (IHl n e).
+      omega.
+Defined.
+
+Fact skipn_length :
+  forall {A} {l : list A} {n},
+    #|skipn n l| = #|l| - n.
+Proof.
+  intros A. induction l ; intro n.
+  - cbn. destruct n ; reflexivity.
+  - destruct n.
+    + cbn. reflexivity.
+    + cbn. apply IHl.
+Defined.
+
 Fact type_arities :
   forall {Σ ind mb},
     type_glob Σ ->
     let id := inductive_mind ind in
-    let bodies := sind_bodies mb in
+    let bs := sind_bodies mb in
     forall n,
-      let l := skipn (#|bodies| - n) bodies in
+      let l := skipn (#|bs| - n) bs in
       (typed_list Σ [] (sinds id l) (arities_context l)) *
       (wf Σ (arities_context l)).
 Proof.
-  intros Σ ind mb hg id bodies n.
+  intros Σ ind mb hg id bs n.
   induction n.
-  - replace (#|bodies| - 0) with #|bodies| by omega.
+  - replace (#|bs| - 0) with #|bs| by omega.
     rewrite skipn_all. cbn.
     split ; constructor.
-  - destruct bodies as [|b bs].
-    + cbn. split ; constructor.
-    + intro l. cbn in l.
-      case_eq (#|bs| <=? n) ; intro e ; bprop e ; clear e.
-      * revert l.
-        replace (#|bs| - n) with 0 by omega.
-        intro l. cbn in l.
-        admit.
-      * revert l.
+  - case_eq (#|bs| <=? n) ; intro e ; bprop e ; clear e.
+    + replace (#|bs| - S n) with 0 by omega.
+      replace (#|bs| - n) with 0 in IHn by omega.
+      assumption.
+    + (* destruct bs as [|b bs] ; cbn in e0 ; try omega. *)
+      intro l.
+      case_eq (nth_error l (#|bs| - S n)).
+      * admit.
+      * intro hn.
+        pose proof (nth_error_error hn) as h.
+        exfalso. unfold l in h.
+        rewrite skipn_length in h.
+
+
+
+
+
+    (* + cbn. split ; constructor. *)
+    (* + intro l. cbn in l. *)
+    (*   case_eq (#|bs| <=? n) ; intro e ; bprop e ; clear e. *)
+    (*   * revert l. *)
+    (*     replace (#|bs| - n) with 0 by omega. *)
+    (*     intro l. cbn in l. *)
+    (*     admit. *)
+    (*   * revert l. *)
 Abort.
 
 Fact typed_arities :

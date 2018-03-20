@@ -215,7 +215,7 @@ Fact hΣi : type_glob Σi.
            ++ magic.
            ++ magic.
            ++ cbn. magic.
-    + (* exists (max 1 (max 0 (max 0 (max 0 0)))). *)
+    + exists (max 1 (max 0 (max 0 (max 0 0)))).
       (* econstr. *)
       (* * magic. *)
       (* * econstr. *)

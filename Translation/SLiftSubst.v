@@ -667,6 +667,37 @@ Proof.
   - omega.
 Defined.
 
+Ltac erewrite_close_above_subst :=
+  match goal with
+  | H : forall u l n, _ -> _ -> _ -> _ = _ |- _ =>
+    erewrite H by (try omega ; try easy)
+  end.
+
+Lemma closed_above_subst :
+  forall {t u l n},
+    n <= l ->
+    closed_above (S l) t = true ->
+    closed_above (l - n) u = true ->
+    closed_above l (t{ n := u }) = true.
+Proof.
+  intro t. induction t using sterm_rect_list ; intros u l m h0 h1 h2.
+  all: try (cbn ; cbn in h1 ; repeat destruct_andb ;
+            repeat erewrite_close_above_subst ; reflexivity).
+  - unfold closed_above in h1. bprop h1.
+    cbn. case_eq (m ?= n) ; intro e ; bprop e ; try omega.
+    + subst. replace l with (n + (l - n))%nat by omega.
+      rewrite closed_above_lift by omega. assumption.
+    + unfold closed_above. propb. omega.
+    + unfold closed_above. propb. omega.
+  - cbn. cbn in h1. repeat destruct_andb.
+    repeat erewrite_close_above_subst. cbn.
+    erewrite <- forallb_test_snd_true.
+    rewrite forallb_map, compose_test_snd_on_snd.
+    eapply (case_brs_forallb_forallb_spec X H0).
+    intros x h3 h4.
+    unfold compose, ftrue. apply h3 ; assumption.
+Defined.
+
 Ltac erewrite_close_above_subst_id :=
   match goal with
   | H : forall n l u, _ -> _ -> _ = _ |- _ =>

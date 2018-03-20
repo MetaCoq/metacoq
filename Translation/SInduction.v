@@ -64,6 +64,25 @@ Proof.
   reflexivity.
 Defined.
 
+Definition ftrue {A} (x : A) : bool := true.
+
+Lemma forallb_true :
+  forall {A} (l : list A),
+    forallb ftrue l = true.
+Proof.
+  intros A l. induction l.
+  - reflexivity.
+  - cbn. assumption.
+Defined.
+
+Lemma forallb_test_snd_true :
+  forall {A B} (l : list (A * B)),
+    forallb (test_snd ftrue) l = true.
+Proof.
+  intros A B l.
+  apply forallb_true.
+Defined.
+
 Inductive ForallT {A : Type} (P : A -> Type) : list A -> Type :=
 | ForallT_nil : ForallT P []
 | ForallT_cons x l : P x -> ForallT P l -> ForallT P (x :: l).
@@ -215,6 +234,30 @@ Proof.
   eapply (forall_forallb_spec X).
   intros x h.
   eapply test_snd_spec; eauto.
+Defined.
+
+Lemma forall_forallb_forallb_spec {A : Type} {P : A -> Type} {p : A -> bool}
+      {l : list A} {f g : A -> bool} :
+    ForallT P l ->
+    forallb p l = true ->
+    (forall x : A, P x -> p x = true -> f x = g x) ->
+    forallb f l = forallb g l.
+Proof.
+  induction 1; simpl; trivial.
+  rewrite andb_true_iff. intros [px pl] Hx.
+  f_equal. now apply Hx. now apply IHX.
+Defined.
+
+Lemma case_brs_forallb_forallb_spec {P : sterm -> Type} {p : sterm -> bool}
+  {f g : sterm -> bool} {l} :
+  sCaseBrsT P l ->
+  forallb (test_snd p) l = true ->
+  (forall x, P x -> p x = true -> f x = g x) ->
+  forallb (test_snd f) l = forallb (test_snd g) l.
+Proof.
+  intros.
+  eapply (forall_forallb_forallb_spec X H).
+  intros x h1 h2. eapply H0 ; eauto.
 Defined.
 
 Lemma forall_forallb_map_spec {A : Type} {P : A -> Type} {p : A -> bool}

@@ -447,6 +447,19 @@ Proof.
     f_equal. assumption.
 Defined.
 
+Fact closed_sinds :
+  forall {Σ id l},
+      type_inductive Σ l ->
+      closed_list (sinds id l).
+Proof.
+  intros Σ id l ti.
+  unfold type_inductive in ti. induction ti.
+  - cbn. constructor.
+  - rewrite sinds_cons. econstructor.
+    + reflexivity.
+    + assumption.
+Defined.
+
 Fact closed_type_of_constructor :
   forall {Σ : sglobal_context},
     type_glob Σ ->
@@ -469,8 +482,7 @@ Proof.
       rewrite stype_of_constructor_eq by assumption.
       cbn in t.
       eapply closed_substl.
-      * (* This information also needs to be extracted. *)
-        admit.
+      * eapply closed_sinds. eassumption.
       * destruct decl as [[id trm] ci].
         pose proof (type_ind_type_constr t hn) as tc.
         destruct (typed_type_constructors tc hn') as [s ?].
@@ -488,7 +500,7 @@ Proof.
         -- assumption.
         -- assumption.
       * assumption.
-Admitted.
+Defined.
 
 (* We'll prove this one later! *)
 Fact typed_type_of_constructor :

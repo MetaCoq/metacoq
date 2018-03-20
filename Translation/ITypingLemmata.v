@@ -391,6 +391,107 @@ Proof.
     + cbn in hm. eapply IHhtc. eassumption.
 Defined.
 
+(* TODO: Move the 6 next constructions away. *)
+Fact substl_cons :
+  forall {a l t}, substl (a :: l) t = (substl l (t{ 0 := a })).
+Proof.
+  reflexivity.
+Defined.
+
+Inductive closed_list : list sterm -> Type :=
+| closed_list_nil : closed_list nil
+| closed_list_cons a l :
+    closed_above #|l| a = true ->
+    closed_list l ->
+    closed_list (a :: l).
+
+Derive Signature for closed_list.
+
+Fact closed_substl :
+  forall {l},
+    closed_list l ->
+    forall {t},
+      closed_above #|l| t = true ->
+      closed (substl l t).
+Proof.
+  intros l cl. induction cl ; intros t h.
+  - cbn in *. assumption.
+  - rewrite substl_cons. apply IHcl.
+    apply closed_above_subst.
+    + omega.
+    + assumption.
+    + replace (#|l| - 0) with #|l| by omega. assumption.
+Defined.
+
+Fact sinds_cons :
+  forall {ind a l}, sinds ind (a :: l) = sInd (mkInd ind #|l|) :: sinds ind l.
+Proof.
+  intros ind a l. reflexivity.
+Defined.
+
+Fact arities_context_cons :
+  forall {a l},
+    arities_context (a :: l) =
+    svass (nNamed (sind_name a)) (sind_type a) :: arities_context l.
+Proof.
+  reflexivity.
+Defined.
+
+Fact length_sinds_arities :
+  forall {ind l},
+    #|sinds ind l| = #|arities_context l|.
+Proof.
+  intros ind l. induction l.
+  - cbn. reflexivity.
+  - rewrite sinds_cons, arities_context_cons. cbn.
+    f_equal. assumption.
+Defined.
+
+Fact closed_type_of_constructor :
+  forall {Σ : sglobal_context},
+    type_glob Σ ->
+    forall {ind i decl univs}
+      (isdecl : sdeclared_constructor (fst Σ) (ind, i) univs decl),
+      closed (stype_of_constructor (fst Σ) (ind, i) univs decl isdecl).
+Proof.
+  intros Σ hg. unfold type_glob in hg. destruct Σ as [Σ ϕ].
+  cbn in hg.
+  induction hg ; intros ind i decl univs isdecl.
+  - cbn. contrad.
+  - case_eq (ident_eq (inductive_mind ind) (sglobal_decl_ident d)).
+    + intro e.
+      destruct isdecl as [ib [[mb [[d' ?] ?]] ?]] (* eqn:eq. rewrite <- eq *).
+      assert (eqd : d = SInductiveDecl (inductive_mind ind) mb).
+      { unfold sdeclared_minductive in d'. cbn in d'. rewrite e in d'.
+        now inversion d'.
+      }
+      subst.
+      rewrite stype_of_constructor_eq by assumption.
+      cbn in t.
+      eapply closed_substl.
+      * (* This information also needs to be extracted. *)
+        admit.
+      * destruct decl as [[id trm] ci].
+        rewrite length_sinds_arities.
+        eapply type_ctx_closed_above.
+        (* We now need to switch to forward mode.
+           We need to apply typed_type_constructors after
+           type_ind_type_constr.
+         *)
+    + intro e. erewrite stype_of_constructor_cons by assumption.
+      apply IHhg.
+      Unshelve.
+      destruct isdecl as [ib [[mb [[d' ?] ?]] ?]].
+      exists ib. split.
+      * exists mb. repeat split.
+        -- unfold sdeclared_minductive in *. cbn in d'.
+           rewrite e in d'. exact d'.
+        -- assumption.
+        -- assumption.
+      * assumption.
+Admitted.
+
+(* We'll prove this one later! *)
 Fact typed_type_of_constructor :
   forall {Σ : sglobal_context},
     type_glob Σ ->
@@ -430,7 +531,7 @@ Proof.
         -- assumption.
         -- assumption.
       * assumption.
-Admitted.
+Abort.
 
 Fact xcomp_type_of_constructor :
   forall {Σ : sglobal_context},

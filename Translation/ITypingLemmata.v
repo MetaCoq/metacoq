@@ -1428,12 +1428,47 @@ Proof.
   - cbn. assumption.
 Defined.
 
+Fact skipn_all :
+  forall {A} {l : list A},
+    skipn #|l| l = [].
+Proof.
+  intros A l. induction l.
+  - cbn. reflexivity.
+  - cbn. assumption.
+Defined.
+
+Fact type_arities :
+  forall {Σ ind mb},
+    type_glob Σ ->
+    let id := inductive_mind ind in
+    let bodies := sind_bodies mb in
+    forall n,
+      let l := skipn (#|bodies| - n) bodies in
+      (typed_list Σ [] (sinds id l) (arities_context l)) *
+      (wf Σ (arities_context l)).
+Proof.
+  intros Σ ind mb hg id bodies n.
+  induction n.
+  - replace (#|bodies| - 0) with #|bodies| by omega.
+    rewrite skipn_all. cbn.
+    split ; constructor.
+  - destruct bodies as [|b bs].
+    + cbn. split ; constructor.
+    + intro l. cbn in l.
+      case_eq (#|bs| <=? n) ; intro e ; bprop e ; clear e.
+      * revert l.
+        replace (#|bs| - n) with 0 by omega.
+        intro l. cbn in l.
+        admit.
+      * revert l.
+Abort.
+
 Fact typed_arities :
   forall {Σ id l u},
     type_glob Σ ->
     (forall n d,
         nth_error l n = Some d ->
-        ∑ m, sdeclared_inductive (fst Σ) (mkInd id m) u d) ->
+        sdeclared_inductive (fst Σ) (mkInd id (#|l| - n)) u d) ->
     (typed_list Σ [] (sinds id l) (arities_context l)) *
     (wf Σ (arities_context l)).
 Proof.
@@ -1441,18 +1476,18 @@ Proof.
   induction l ; intro h.
   - cbn. split ; constructor.
   - destruct IHl as [? ?].
-    + intros n d hn. edestruct (h (S n)) as [m hm].
-      * cbn. eassumption.
-      * exists m. apply hm.
+    + intros n d hn.
+      pose proof (h (S n) d hn) as hh.
+      cbn in hh. apply hh.
     + split.
       * rewrite sinds_cons, arities_context_cons.
         econstructor.
         -- assumption.
-        -- destruct (h 0 a) as [m hm].
-           { cbn. reflexivity. }
-           rewrite nil_cat. eapply type_Ind.
+        -- rewrite nil_cat. eapply type_Ind.
            ++ assumption.
-           ++ (* eapply h. *)
+           ++ pose proof (h 0 a eq_refl) as hh. cbn in hh.
+
+(* eapply h. *)
               (* We have some m instead of #|l|... *)
               give_up.
       * (* destruct (typed_ind_type hg isdecl) as [s h]. *)

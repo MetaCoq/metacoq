@@ -1393,28 +1393,72 @@ Proof.
   - rewrite substl_cons. cbn. apply IHl.
 Defined.
 
+Inductive dind_list Σ id : list sone_inductive_body -> Type :=
+| dind_nil : dind_list Σ id []
+| dind_cons a l univs :
+    dind_list Σ id l ->
+    sdeclared_inductive Σ (mkInd id #|l|) univs a ->
+    dind_list Σ id (a :: l).
+
+Fact dind_sinds :
+  forall {Σ ind mb},
+    sdeclared_minductive Σ (inductive_mind ind) mb ->
+    dind_list Σ (inductive_mind ind) (sind_bodies mb).
+Proof.
+  intros Σ ind mb hd.
+  destruct mb as [p b u]. cbn. induction b.
+  - constructor.
+  - econstructor.
+    + give_up.
+    + eexists. repeat split.
+      * eassumption.
+      * cbn.
+Abort.
+
+Fact ind_bodies_declared :
+  forall {Σ ind mb},
+    sdeclared_minductive Σ (inductive_mind ind) mb ->
+    forall {n d},
+      nth_error (sind_bodies mb) n = Some d ->
+      sdeclared_inductive Σ (mkInd (inductive_mind ind) n) (sind_universes mb) d.
+Proof.
+  intros Σ ind mb hd n d hn.
+  exists mb. repeat split.
+  - cbn. assumption.
+  - cbn. assumption.
+Defined.
+
 Fact typed_arities :
-  forall {Σ id l},
+  forall {Σ id l u},
     type_glob Σ ->
+    (forall n d,
+        nth_error l n = Some d ->
+        ∑ m, sdeclared_inductive (fst Σ) (mkInd id m) u d) ->
     (typed_list Σ [] (sinds id l) (arities_context l)) *
     (wf Σ (arities_context l)).
 Proof.
-  intros Σ id l hg.
-  induction l.
+  intros Σ id l u hg.
+  induction l ; intro h.
   - cbn. split ; constructor.
-  - destruct IHl as [? ?]. split.
-    + rewrite sinds_cons, arities_context_cons.
-      econstructor.
-      * assumption.
-      * rewrite nil_cat. eapply type_Ind.
+  - destruct IHl as [? ?].
+    + intros n d hn. edestruct (h (S n)) as [m hm].
+      * cbn. eassumption.
+      * exists m. apply hm.
+    + split.
+      * rewrite sinds_cons, arities_context_cons.
+        econstructor.
         -- assumption.
-        -- admit.
-    + (* destruct (typed_ind_type hg isdecl) as [s h]. *)
-(*       rewrite arities_context_cons. econstructor. *)
-(*       * assumption. *)
-(*       * *)
-
-
+        -- destruct (h 0 a) as [m hm].
+           { cbn. reflexivity. }
+           rewrite nil_cat. eapply type_Ind.
+           ++ assumption.
+           ++ (* eapply h. *)
+              (* We have some m instead of #|l|... *)
+              give_up.
+      * (* destruct (typed_ind_type hg isdecl) as [s h]. *)
+        (* rewrite arities_context_cons. econstructor. *)
+        (* -- assumption. *)
+        (* -- *)
 
 (* exists s. *)
 (*     change (sSort s) with (lift #|Γ| #|@nil scontext_decl| (sSort s)). *)

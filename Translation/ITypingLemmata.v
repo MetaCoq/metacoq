@@ -1463,9 +1463,23 @@ Proof.
     + cbn. apply IHl.
 Defined.
 
+Fact skipn_reconstruct :
+  forall {A} {l : list A} {n a},
+    nth_error l n = Some a ->
+    skipn n l = a :: skipn (S n) l.
+Proof.
+  intros A l.
+  induction l ; intros n x hn.
+  - destruct n ; cbn in hn ; inversion hn.
+  - cbn. destruct n.
+    + cbn. cbn in hn. inversion hn. reflexivity.
+    + apply IHl. now inversion hn.
+Defined.
+
 Fact type_arities :
   forall {Σ ind mb},
     type_glob Σ ->
+    sdeclared_minductive (fst Σ) (inductive_mind ind) mb ->
     let id := inductive_mind ind in
     let bs := sind_bodies mb in
     forall n,
@@ -1473,7 +1487,7 @@ Fact type_arities :
       (typed_list Σ [] (sinds id l) (arities_context l)) *
       (wf Σ (arities_context l)).
 Proof.
-  intros Σ ind mb hg id bs n.
+  intros Σ ind mb hg hd id bs n.
   induction n.
   - replace (#|bs| - 0) with #|bs| by omega.
     rewrite skipn_all. cbn.
@@ -1482,27 +1496,33 @@ Proof.
     + replace (#|bs| - S n) with 0 by omega.
       replace (#|bs| - n) with 0 in IHn by omega.
       assumption.
-    + (* destruct bs as [|b bs] ; cbn in e0 ; try omega. *)
-      intro l.
-      case_eq (nth_error l (#|bs| - S n)).
-      * admit.
+    + intro l.
+      case_eq (nth_error bs (#|bs| - S n)).
+      * intros a hn.
+        pose proof (skipn_reconstruct hn) as hl.
+        change (skipn (#|bs| - S n) bs) with l in hl.
+        replace (S (#|bs| - S n)) with (#|bs| - n) in hl by omega.
+        set (l' := skipn (#|bs| - n) bs) in *.
+        unfold l in IHn.
+        destruct IHn.
+        rewrite !hl.
+        split.
+        -- rewrite sinds_cons, arities_context_cons.
+           econstructor.
+           ++ assumption.
+           ++ rewrite nil_cat. eapply type_Ind.
+              ** assumption.
+              ** eapply ind_bodies_declared ; try eassumption.
+                 unfold l'. rewrite skipn_length.
+                 replace (#|bs| - (#|bs| - n)) with n by omega.
+                 unfold bs in hn.
+                 (* I still end up with the wrong goal it seems! *)
+                 give_up.
+        -- rewrite arities_context_cons. econstructor.
+           ++ assumption.
+           ++ give_up.
       * intro hn.
-        pose proof (nth_error_error hn) as h.
-        exfalso. unfold l in h.
-        rewrite skipn_length in h.
-
-
-
-
-
-    (* + cbn. split ; constructor. *)
-    (* + intro l. cbn in l. *)
-    (*   case_eq (#|bs| <=? n) ; intro e ; bprop e ; clear e. *)
-    (*   * revert l. *)
-    (*     replace (#|bs| - n) with 0 by omega. *)
-    (*     intro l. cbn in l. *)
-    (*     admit. *)
-    (*   * revert l. *)
+        pose proof (nth_error_error hn) as h. omega.
 Abort.
 
 Fact typed_arities :

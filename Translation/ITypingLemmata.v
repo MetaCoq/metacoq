@@ -502,48 +502,6 @@ Proof.
       * assumption.
 Defined.
 
-(* We'll prove this one later! *)
-Fact typed_type_of_constructor :
-  forall {Σ : sglobal_context},
-    type_glob Σ ->
-    forall {ind i decl univs}
-      (isdecl : sdeclared_constructor (fst Σ) (ind, i) univs decl),
-      isType Σ [] (stype_of_constructor (fst Σ) (ind, i) univs decl isdecl).
-Proof.
-  intros Σ hg. unfold type_glob in hg. destruct Σ as [Σ ϕ].
-  cbn in hg.
-  induction hg ; intros ind i decl univs isdecl.
-  - cbn. contrad.
-  - case_eq (ident_eq (inductive_mind ind) (sglobal_decl_ident d)).
-    + intro e.
-      destruct isdecl as [ib [[mb [[d' ?] ?]] ?]] (* eqn:eq. rewrite <- eq *).
-      assert (eqd : d = SInductiveDecl (inductive_mind ind) mb).
-      { unfold sdeclared_minductive in d'. cbn in d'. rewrite e in d'.
-        now inversion d'.
-      }
-      subst.
-      rewrite stype_of_constructor_eq by assumption.
-      cbn in t.
-      (* We can apply typed_type_constructors and then type_ind_type_constr.
-         However, we have the substl that is bothering us here.
-         The problem is that we don't have the property that substitution
-         preserves typing yet (and we want to use this very lemma to prove it!).
-       *)
-      admit.
-    + intro e. erewrite stype_of_constructor_cons by assumption.
-      eapply weak_glob_isType ; [| eassumption ].
-      apply IHhg.
-      Unshelve.
-      destruct isdecl as [ib [[mb [[d' ?] ?]] ?]].
-      exists ib. split.
-      * exists mb. repeat split.
-        -- unfold sdeclared_minductive in *. cbn in d'.
-           rewrite e in d'. exact d'.
-        -- assumption.
-        -- assumption.
-      * assumption.
-Abort.
-
 Fact xcomp_type_of_constructor :
   forall {Σ : sglobal_context},
     type_glob Σ ->
@@ -562,10 +520,9 @@ Fact lift_type_of_constructor :
         stype_of_constructor (fst Σ) (ind, i) univs decl isdecl.
 Proof.
   intros Σ hg ind i decl univs isdecl n k.
-  destruct (typed_type_of_constructor hg isdecl).
   eapply closed_lift.
-  eapply type_ctxempty_closed.
-  eassumption.
+  eapply closed_type_of_constructor.
+  assumption.
 Defined.
 
 Ltac ih h :=
@@ -994,10 +951,9 @@ Fact subst_type_of_constructor :
         stype_of_constructor (fst Σ) (ind, i) univs decl isdecl.
 Proof.
   intros Σ hg ind i decl univs isdecl n u.
-  destruct (typed_type_of_constructor hg isdecl).
   eapply closed_subst.
-  eapply type_ctxempty_closed.
-  eassumption.
+  eapply closed_type_of_constructor.
+  assumption.
 Defined.
 
 Ltac sh h :=
@@ -1402,6 +1358,95 @@ Proof.
     + assumption.
   - assumption.
   - cbn. assumption.
+Defined.
+
+Inductive typed_list Σ Γ : list sterm -> scontext -> Type :=
+| typed_list_nil : typed_list Σ Γ [] []
+| typed_list_cons A l Δ na s :
+    typed_list Σ Γ l Δ ->
+    Σ ;;; Γ ,,, Δ |-i A : sSort s ->
+    typed_list Σ Γ (A :: l) (Δ ,, svass na (sSort s)).
+
+Corollary type_substl :
+  forall {Σ l Γ Δ},
+    type_glob Σ ->
+    typed_list Σ Γ l Δ ->
+    forall {t T},
+      Σ ;;; Γ ,,, Δ |-i t : T ->
+      Σ ;;; Γ |-i substl l t : substl l T.
+Proof.
+  intros Σ l Γ Δ hg tl.
+  induction tl ; intros u T h.
+  - cbn. assumption.
+  - rewrite !substl_cons. apply IHtl.
+    eapply typing_subst.
+    + assumption.
+    + exact h.
+    + assumption.
+Defined.
+
+Fact substl_sort :
+  forall {l s}, substl l (sSort s) = sSort s.
+Proof.
+  intro l. induction l ; intro s.
+  - cbn. reflexivity.
+  - rewrite substl_cons. cbn. apply IHl.
+Defined.
+
+Fact typed_arities :
+  forall {Σ id l},
+    type_glob Σ ->
+    typed_list Σ [] (sinds id l) (arities_context l).
+Proof.
+  intros Σ id l hg.
+  induction l.
+  - cbn. constructor.
+  - rewrite sinds_cons, arities_context_cons.
+    (* eapply typed_list_cons. *)
+Abort.
+
+Fact typed_type_of_constructor :
+  forall {Σ : sglobal_context},
+    type_glob Σ ->
+    forall {ind i decl univs}
+      (isdecl : sdeclared_constructor (fst Σ) (ind, i) univs decl),
+      isType Σ [] (stype_of_constructor (fst Σ) (ind, i) univs decl isdecl).
+Proof.
+  intros Σ hg. unfold type_glob in hg. destruct Σ as [Σ ϕ].
+  cbn in hg.
+  induction hg ; intros ind i decl univs isdecl.
+  - cbn. contrad.
+  - case_eq (ident_eq (inductive_mind ind) (sglobal_decl_ident d)).
+    + intro e.
+      destruct isdecl as [ib [[mb [[d' ?] hn]] hn']].
+      assert (eqd : d = SInductiveDecl (inductive_mind ind) mb).
+      { unfold sdeclared_minductive in d'. cbn in d'. rewrite e in d'.
+        now inversion d'.
+      }
+      subst.
+      rewrite stype_of_constructor_eq by assumption.
+      cbn in t.
+      pose proof (type_ind_type_constr t hn) as tc.
+      destruct (typed_type_constructors tc hn') as [s hh].
+      eapply weak_glob_isType ; [| eassumption ].
+      exists s. erewrite <- substl_sort.
+      eapply type_substl.
+      * assumption.
+      * (* typed_list (Σ, ϕ) [] (sinds (inductive_mind ind) (sind_bodies mb)) (arities_context (sind_bodies mb)) *)
+        admit.
+      * rewrite nil_cat. exact hh.
+    + intro e. erewrite stype_of_constructor_cons by assumption.
+      eapply weak_glob_isType ; [| eassumption ].
+      apply IHhg.
+      Unshelve.
+      destruct isdecl as [ib [[mb [[d' ?] ?]] ?]].
+      exists ib. split.
+      * exists mb. repeat split.
+        -- unfold sdeclared_minductive in *. cbn in d'.
+           rewrite e in d'. exact d'.
+        -- assumption.
+        -- assumption.
+      * assumption.
 Defined.
 
 Lemma cong_substs :

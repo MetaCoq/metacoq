@@ -460,7 +460,7 @@ Proof.
   - cbn. contrad.
   - case_eq (ident_eq (inductive_mind ind) (sglobal_decl_ident d)).
     + intro e.
-      destruct isdecl as [ib [[mb [[d' ?] ?]] ?]] (* eqn:eq. rewrite <- eq *).
+      destruct isdecl as [ib [[mb [[d' ?] hn]] hn']].
       assert (eqd : d = SInductiveDecl (inductive_mind ind) mb).
       { unfold sdeclared_minductive in d'. cbn in d'. rewrite e in d'.
         now inversion d'.
@@ -472,12 +472,11 @@ Proof.
       * (* This information also needs to be extracted. *)
         admit.
       * destruct decl as [[id trm] ci].
+        pose proof (type_ind_type_constr t hn) as tc.
+        destruct (typed_type_constructors tc hn') as [s ?].
         rewrite length_sinds_arities.
         eapply type_ctx_closed_above.
-        (* We now need to switch to forward mode.
-           We need to apply typed_type_constructors after
-           type_ind_type_constr.
-         *)
+        eassumption.
     + intro e. erewrite stype_of_constructor_cons by assumption.
       apply IHhg.
       Unshelve.

@@ -1362,10 +1362,10 @@ Defined.
 
 Inductive typed_list Σ Γ : list sterm -> scontext -> Type :=
 | typed_list_nil : typed_list Σ Γ [] []
-| typed_list_cons A l Δ na s :
+| typed_list_cons A l Δ nA T :
     typed_list Σ Γ l Δ ->
-    Σ ;;; Γ ,,, Δ |-i A : sSort s ->
-    typed_list Σ Γ (A :: l) (Δ ,, svass na (sSort s)).
+    Σ ;;; Γ ,,, Δ |-i A : T ->
+    typed_list Σ Γ (A :: l) (Δ ,, svass nA T).
 
 Corollary type_substl :
   forall {Σ l Γ Δ},
@@ -1376,7 +1376,7 @@ Corollary type_substl :
       Σ ;;; Γ |-i substl l t : substl l T.
 Proof.
   intros Σ l Γ Δ hg tl.
-  induction tl ; intros u T h.
+  induction tl ; intros u C h.
   - cbn. assumption.
   - rewrite !substl_cons. apply IHtl.
     eapply typing_subst.
@@ -1396,13 +1396,37 @@ Defined.
 Fact typed_arities :
   forall {Σ id l},
     type_glob Σ ->
-    typed_list Σ [] (sinds id l) (arities_context l).
+    (typed_list Σ [] (sinds id l) (arities_context l)) *
+    (wf Σ (arities_context l)).
 Proof.
   intros Σ id l hg.
   induction l.
-  - cbn. constructor.
-  - rewrite sinds_cons, arities_context_cons.
-    (* eapply typed_list_cons. *)
+  - cbn. split ; constructor.
+  - destruct IHl as [? ?]. split.
+    + rewrite sinds_cons, arities_context_cons.
+      econstructor.
+      * assumption.
+      * rewrite nil_cat. eapply type_Ind.
+        -- assumption.
+        -- admit.
+    + (* destruct (typed_ind_type hg isdecl) as [s h]. *)
+(*       rewrite arities_context_cons. econstructor. *)
+(*       * assumption. *)
+(*       * *)
+
+
+
+(* exists s. *)
+(*     change (sSort s) with (lift #|Γ| #|@nil scontext_decl| (sSort s)). *)
+(*     replace (sind_type decl) *)
+(*       with (lift #|Γ| #|@nil scontext_decl| (sind_type decl)) *)
+(*       by (erewrite lift_ind_type by eassumption ; reflexivity). *)
+(*     eapply meta_ctx_conv. *)
+(*     + eapply @type_lift with (Γ := []) (Ξ := []) (Δ := Γ). *)
+(*       * assumption. *)
+(*       * assumption. *)
+(*       * rewrite nil_cat. assumption. *)
+(*     + cbn. apply nil_cat. *)
 Abort.
 
 Fact typed_type_of_constructor :

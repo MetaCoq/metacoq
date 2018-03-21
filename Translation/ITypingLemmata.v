@@ -429,12 +429,54 @@ Proof.
   intros ind a l. reflexivity.
 Defined.
 
+Fact rev_cons :
+  forall {A} {l} {a : A},
+    rev (a :: l) = (rev l ++ [a])%list.
+Proof.
+  intro A.
+  unfold rev.
+  match goal with
+  | |- forall l a, ?faux _ _ = _ => set (aux := faux)
+  end.
+  assert (h : forall l acc, aux l acc = (aux l [] ++ acc)%list).
+  { intro l. induction l ; intro acc.
+    - cbn. reflexivity.
+    - cbn. rewrite (IHl [a]). rewrite IHl.
+      change (a :: acc) with ([a] ++ acc)%list.
+      auto with datatypes.
+  }
+  intros l a.
+  apply h.
+Defined.
+
+Fact rev_map_cons :
+  forall {A B} {f : A -> B} {l} {a : A},
+    rev_map f (a :: l) = (rev_map f l ++ [f a])%list.
+Proof.
+  intros A B f.
+  unfold rev_map.
+  match goal with
+  | |- forall l a, ?faux _ _ = _ => set (aux := faux)
+  end.
+  assert (h : forall l acc, aux l acc = (aux l [] ++ acc)%list).
+  { intro l. induction l ; intro acc.
+    - cbn. reflexivity.
+    - cbn. rewrite (IHl [f a]). rewrite IHl.
+      change (f a :: acc) with ([f a] ++ acc)%list.
+      auto with datatypes.
+  }
+  intros l a.
+  apply h.
+Defined.
+
 Fact arities_context_cons :
   forall {a l},
     arities_context (a :: l) =
-    svass (nNamed (sind_name a)) (sind_type a) :: arities_context l.
+    [ svass (nNamed (sind_name a)) (sind_type a) ] ,,, arities_context l.
 Proof.
-  reflexivity.
+  intros a l.
+  unfold arities_context.
+  rewrite rev_map_cons. reflexivity.
 Defined.
 
 Fact length_sinds_arities :

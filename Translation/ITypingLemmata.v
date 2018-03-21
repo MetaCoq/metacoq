@@ -1469,28 +1469,6 @@ Proof.
   - rewrite substl_cons. cbn. apply IHl.
 Defined.
 
-Inductive dind_list Σ id : list sone_inductive_body -> Type :=
-| dind_nil : dind_list Σ id []
-| dind_cons a l univs :
-    dind_list Σ id l ->
-    sdeclared_inductive Σ (mkInd id #|l|) univs a ->
-    dind_list Σ id (a :: l).
-
-Fact dind_sinds :
-  forall {Σ ind mb},
-    sdeclared_minductive Σ (inductive_mind ind) mb ->
-    dind_list Σ (inductive_mind ind) (sind_bodies mb).
-Proof.
-  intros Σ ind mb hd.
-  destruct mb as [p b u]. cbn. induction b.
-  - constructor.
-  - econstructor.
-    + give_up.
-    + eexists. repeat split.
-      * eassumption.
-      * cbn.
-Abort.
-
 Fact ind_bodies_declared :
   forall {Σ ind mb},
     sdeclared_minductive Σ (inductive_mind ind) mb ->
@@ -1552,51 +1530,111 @@ Proof.
     + apply IHl. now inversion hn.
 Defined.
 
+Fact firstn_reconstruct :
+  forall {A} {l : list A} {n a},
+    nth_error l n = Some a ->
+    firstn (S n) l = (firstn n l ++ [a])%list.
+Proof.
+  intros A l.
+  induction l ; intros n x hn.
+  - destruct n ; cbn in hn ; inversion hn.
+  - cbn. destruct n.
+    + cbn. cbn in hn. inversion hn. reflexivity.
+    + inversion hn as [e].
+      erewrite IHl by exact e. cbn. reflexivity.
+Defined.
+
+Fact rev_map_nth_error :
+  forall {A B} {f : A -> B} {l n a},
+    nth_error l n = Some a ->
+    nth_error (rev_map f l) (#|l| - S n) = Some (f a).
+Proof.
+  intros A B f l. induction l ; intros n x hn.
+  - destruct n ; inversion hn.
+  - destruct n.
+    + cbn in hn. inversion hn.
+      rewrite rev_map_cons.
+      rewrite nth_error_app2.
+      * cbn. rewrite rev_map_length.
+        replace (#|l| - 0 - #|l|) with 0 by omega.
+        cbn. reflexivity.
+      * rewrite rev_map_length. cbn. omega.
+    + cbn in hn.
+      rewrite rev_map_cons.
+      rewrite nth_error_app1.
+      * erewrite IHl by eassumption. reflexivity.
+      * rewrite rev_map_length. cbn.
+        assert (n < #|l|).
+        { apply nth_error_Some. rewrite hn. discriminate. }
+        omega.
+Defined.
+
 Fact type_arities :
   forall {Σ ind mb},
     type_glob Σ ->
     sdeclared_minductive (fst Σ) (inductive_mind ind) mb ->
     let id := inductive_mind ind in
     let bs := sind_bodies mb in
+    let ac := arities_context bs in
     forall n,
-      let l := skipn (#|bs| - n) bs in
-      (typed_list Σ [] (sinds id l) (arities_context l)) *
-      (wf Σ (arities_context l)).
+      let l1 := skipn (#|bs| - n) bs in
+      let l2 := firstn n ac in
+      (typed_list Σ [] (sinds id l1) l2) * (wf Σ l2).
 Proof.
-  intros Σ ind mb hg hd id bs n.
+  intros Σ ind mb hg hd id bs ac n.
   induction n.
   - replace (#|bs| - 0) with #|bs| by omega.
-    rewrite skipn_all. cbn.
+    rewrite skipn_all. rewrite firstn_O. cbn.
     split ; constructor.
-  - case_eq (#|bs| <=? n) ; intro e ; bprop e ; clear e.
+  - assert (lq : #|ac| = #|bs|) by (apply rev_map_length).
+    case_eq (#|bs| <=? n) ; intro e ; bprop e ; clear e.
     + replace (#|bs| - S n) with 0 by omega.
       replace (#|bs| - n) with 0 in IHn by omega.
+      rewrite firstn_all2 by omega.
+      rewrite firstn_all2 in IHn by omega.
       assumption.
-    + intro l.
+    + intros l1 l2.
       case_eq (nth_error bs (#|bs| - S n)).
-      * intros a hn.
-        pose proof (skipn_reconstruct hn) as hl.
-        change (skipn (#|bs| - S n) bs) with l in hl.
-        replace (S (#|bs| - S n)) with (#|bs| - n) in hl by omega.
-        set (l' := skipn (#|bs| - n) bs) in *.
-        unfold l in IHn.
-        destruct IHn.
-        rewrite !hl.
+      * intros a hn1.
+        (* Reconstructing l1 *)
+        pose proof (skipn_reconstruct hn1) as hl1.
+        change (skipn (#|bs| - S n) bs) with l1 in hl1.
+        replace (S (#|bs| - S n)) with (#|bs| - n) in hl1 by omega.
+        set (l1' := skipn (#|bs| - n) bs) in *.
+        (* Same with l2 *)
+        assert (hn2 : nth_error ac (#|bs| - S (#|bs| - S n)) =
+                      Some (svass (nNamed (sind_name a)) (sind_type a))).
+        { unfold ac, arities_context.
+          erewrite rev_map_nth_error.
+          - reflexivity.
+          - assumption.
+        }
+        pose proof (firstn_reconstruct hn2) as hl2.
+        replace (S (#|bs| - S (#|bs| - S n)))
+          with (S n) in hl2
+          by omega.
+        change (firstn (S n) ac) with l2 in hl2.
+        replace (#|bs| - S (#|bs| - S n))
+          with n in hl2
+          by omega.
+        set (l2' := firstn n ac) in *.
+        unfold l1 in IHn.
+        destruct IHn as [ih1 ih2].
+        rewrite !hl1, !hl2.
         split.
-        -- rewrite sinds_cons, arities_context_cons.
-           econstructor.
-           ++ assumption.
-           ++ rewrite nil_cat. eapply type_Ind.
-              ** assumption.
-              ** eapply ind_bodies_declared ; try eassumption.
-                 unfold l'. rewrite skipn_length.
-                 replace (#|bs| - (#|bs| - n)) with n by omega.
-                 unfold bs in hn.
-                 (* I still end up with the wrong goal it seems! *)
-                 give_up.
-        -- rewrite arities_context_cons. econstructor.
-           ++ assumption.
-           ++ give_up.
+        -- rewrite sinds_cons.
+           (* econstructor. *)
+           (* ++ assumption. *)
+           (* ++ rewrite nil_cat. eapply type_Ind. *)
+           (*    ** assumption. *)
+           (*    ** eapply ind_bodies_declared ; try eassumption. *)
+           (*       unfold l'. rewrite skipn_length. *)
+           (*       replace (#|bs| - (#|bs| - n)) with n by omega. *)
+           (*       unfold bs in hn. *)
+           give_up.
+        -- (* rewrite arities_context_cons. econstructor. *)
+           (* ++ assumption. *)
+           (* ++ *) give_up.
       * intro hn.
         pose proof (nth_error_error hn) as h. omega.
 Admitted.
@@ -1614,6 +1652,9 @@ Proof.
   pose proof (type_arities hg hd #|bs|) as h.
   unfold bs in h.
   replace (#|sind_bodies mb| - #|sind_bodies mb|) with 0 in h by omega.
+  replace #|sind_bodies mb| with #|arities_context (sind_bodies mb)| in h
+    by (now rewrite rev_map_length).
+  rewrite !firstn_all in h.
   apply h.
 Defined.
 

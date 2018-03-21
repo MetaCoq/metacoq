@@ -469,6 +469,40 @@ Proof.
   apply h.
 Defined.
 
+Fact rev_length :
+  forall {A} {l : list A},
+    #|rev l| = #|l|.
+Proof.
+  intro A.
+  unfold rev.
+  match goal with
+  | |- context [ #|?faux _ _| ] => set (aux := faux)
+  end.
+  assert (h : forall l acc, #|aux l acc| = (#|acc| + #|l|)%nat).
+  { intro l. induction l ; intro acc.
+    - cbn. omega.
+    - cbn. rewrite IHl. cbn. omega.
+  }
+  intro l. apply h.
+Defined.
+
+Fact rev_map_length :
+  forall {A B} {f : A -> B} {l : list A},
+    #|rev_map f l| = #|l|.
+Proof.
+  intros A B f.
+  unfold rev_map.
+  match goal with
+  | |- context [ #|?faux _ _| ] => set (aux := faux)
+  end.
+  assert (h : forall l acc, #|aux l acc| = (#|acc| + #|l|)%nat).
+  { intro l. induction l ; intro acc.
+    - cbn. omega.
+    - cbn. rewrite IHl. cbn. omega.
+  }
+  intro l. apply h.
+Defined.
+
 Fact arities_context_cons :
   forall {a l},
     arities_context (a :: l) =
@@ -483,10 +517,10 @@ Fact length_sinds_arities :
   forall {ind l},
     #|sinds ind l| = #|arities_context l|.
 Proof.
-  intros ind l. induction l.
-  - cbn. reflexivity.
-  - rewrite sinds_cons, arities_context_cons. cbn.
-    f_equal. assumption.
+  intros ind l.
+  rewrite rev_map_length. induction l.
+  - reflexivity.
+  - rewrite sinds_cons. cbn. omega.
 Defined.
 
 Fact closed_sinds :

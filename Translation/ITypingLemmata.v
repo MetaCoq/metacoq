@@ -513,14 +513,23 @@ Proof.
   rewrite rev_map_cons. reflexivity.
 Defined.
 
+Fact sinds_length :
+  forall {ind l},
+    #|sinds ind l| = #|l|.
+Proof.
+  intros ind l.
+  induction l.
+  - reflexivity.
+  - rewrite sinds_cons. cbn. omega.
+Defined.
+
 Fact length_sinds_arities :
   forall {ind l},
     #|sinds ind l| = #|arities_context l|.
 Proof.
   intros ind l.
-  rewrite rev_map_length. induction l.
-  - reflexivity.
-  - rewrite sinds_cons. cbn. omega.
+  rewrite rev_map_length, sinds_length.
+  reflexivity.
 Defined.
 
 Fact closed_sinds :
@@ -1569,139 +1578,162 @@ Proof.
         omega.
 Defined.
 
-Fact type_arities :
+Fact sinds_nth_error :
+  forall ind {l n},
+    n < #|l| ->
+    nth_error (sinds ind l) n = Some (sInd (mkInd ind (#|l| - S n))).
+Proof.
+  intros ind l.
+  unfold sinds.
+  match goal with
+  | |- context [ nth_error (?faux _) ] => set (aux := faux)
+  end.
+  induction l ; intros n h.
+  - inversion h.
+  - destruct n.
+    + cbn. f_equal. f_equal. f_equal. omega.
+    + cbn. apply IHl. cbn in h. omega.
+Defined.
+
+Definition lastn n {A} (l : list A) :=
+  skipn (#|l| - n) l.
+
+Fact lastn_O :
+  forall {A} {l : list A}, lastn 0 l = [].
+Proof.
+  intros A l. unfold lastn.
+  replace (#|l| - 0) with #|l| by omega.
+  apply skipn_all.
+Defined.
+
+Fact lastn_all :
+  forall {A} {l : list A},
+    lastn #|l| l = l.
+Proof.
+  intros A l. unfold lastn.
+  replace (#|l| - #|l|) with 0 by omega.
+  reflexivity.
+Defined.
+
+Fact lastn_all2 :
+  forall {A} {n} {l : list A},
+    #|l| <= n ->
+    lastn n l = l.
+Proof.
+  intros A n l h.
+  unfold lastn.
+  replace (#|l| - n) with 0 by omega.
+  reflexivity.
+Defined.
+
+Fact lastn_reconstruct :
+  forall {A} {l : list A} {n a},
+    nth_error l (#|l| - S n) = Some a ->
+    n < #|l| ->
+    lastn (S n) l = a :: lastn n l.
+Proof.
+  intros A l n a hn h.
+  unfold lastn.
+  erewrite skipn_reconstruct.
+  - f_equal. f_equal. omega.
+  - assumption.
+Defined.
+
+Fact type_arities' :
   forall {Σ ind mb},
     type_glob Σ ->
     sdeclared_minductive (fst Σ) (inductive_mind ind) mb ->
     let id := inductive_mind ind in
     let bs := sind_bodies mb in
+    let inds := sinds id bs in
     let ac := arities_context bs in
     forall n,
-      let l1 := skipn (#|bs| - n) bs in
-      let l2 := firstn n ac in
-      (typed_list Σ [] (sinds id l1) l2) * (wf Σ l2).
+      let l1 := lastn n inds in
+      let l2 := lastn n ac in
+      (typed_list Σ [] l1 l2) * (wf Σ l2).
 Proof.
-  intros Σ ind mb hg hd id bs ac n.
+  intros Σ ind mb hg hd id bs inds ac n.
   induction n.
-  - replace (#|bs| - 0) with #|bs| by omega.
-    rewrite skipn_all. rewrite firstn_O. cbn.
+  - rewrite !lastn_O. cbn.
     split ; constructor.
-  - assert (lq : #|ac| = #|bs|) by (apply rev_map_length).
+  - assert (#|ac| = #|bs|) by (apply rev_map_length).
+    assert (#|inds| = #|bs|) by (apply sinds_length).
     case_eq (#|bs| <=? n) ; intro e ; bprop e ; clear e.
-    + replace (#|bs| - S n) with 0 by omega.
-      replace (#|bs| - n) with 0 in IHn by omega.
-      rewrite firstn_all2 by omega.
-      rewrite firstn_all2 in IHn by omega.
+    + rewrite !lastn_all2 by omega.
+      rewrite !lastn_all2 in IHn by omega.
       assumption.
     + intros l1 l2.
-      case_eq (nth_error bs (#|bs| - S n)).
-      * intros a hn1.
+      case_eq (nth_error bs n).
+      * intros a hn.
         (* Reconstructing l1 *)
-        pose proof (skipn_reconstruct hn1) as hl1.
-        change (skipn (#|bs| - S n) bs) with l1 in hl1.
-        replace (S (#|bs| - S n)) with (#|bs| - n) in hl1 by omega.
-        set (l1' := skipn (#|bs| - n) bs) in *.
+        assert (e : #|inds| - S n < #|bs|) by omega.
+        pose proof (sinds_nth_error id e) as hn1.
+        change (sinds id bs) with inds in hn1.
+        pose proof (lastn_reconstruct hn1 ltac:(omega)) as hl1.
+        change (lastn (S n) inds) with l1 in hl1.
+        set (l1' := lastn n inds) in *.
         (* Same with l2 *)
-        assert (hn2 : nth_error ac (#|bs| - S (#|bs| - S n)) =
+        assert (hn2 : nth_error ac (#|ac| - S n) =
                       Some (svass (nNamed (sind_name a)) (sind_type a))).
-        { unfold ac, arities_context.
+        { rewrite H.
+          unfold ac, arities_context.
           erewrite rev_map_nth_error.
           - reflexivity.
           - assumption.
         }
-        pose proof (firstn_reconstruct hn2) as hl2.
-        replace (S (#|bs| - S (#|bs| - S n)))
-          with (S n) in hl2
-          by omega.
-        change (firstn (S n) ac) with l2 in hl2.
-        replace (#|bs| - S (#|bs| - S n))
-          with n in hl2
-          by omega.
-        set (l2' := firstn n ac) in *.
+        pose proof (lastn_reconstruct hn2 ltac:(omega)) as hl2.
+        change (lastn (S n) ac) with l2 in hl2.
+        set (l2' := lastn n ac) in *.
         unfold l1 in IHn.
         destruct IHn as [ih1 ih2].
         rewrite !hl1, !hl2.
+        set (univs := sind_universes mb).
+        assert (isdecl :
+          sdeclared_inductive (fst Σ) {| inductive_mind := id; inductive_ind := #|bs| - S (#|inds| - S n) |} univs a
+        ).
+        { eapply ind_bodies_declared ; try eassumption.
+          replace (#|bs| - S (#|inds| - S n)) with n by omega.
+          assumption.
+        }
         split.
-        -- rewrite sinds_cons.
-           (* econstructor. *)
-           (* ++ assumption. *)
-           (* ++ rewrite nil_cat. eapply type_Ind. *)
-           (*    ** assumption. *)
-           (*    ** eapply ind_bodies_declared ; try eassumption. *)
-           (*       unfold l'. rewrite skipn_length. *)
-           (*       replace (#|bs| - (#|bs| - n)) with n by omega. *)
-           (*       unfold bs in hn. *)
-           give_up.
-        -- (* rewrite arities_context_cons. econstructor. *)
-           (* ++ assumption. *)
-           (* ++ *) give_up.
+        -- econstructor.
+           ++ assumption.
+           ++ rewrite nil_cat. eapply type_Ind ; eassumption.
+        -- destruct (typed_ind_type hg isdecl) as [s h].
+           econstructor.
+           ++ assumption.
+           ++ instantiate (1 := s).
+              change (sSort s) with (lift #|l2'| #|@nil scontext_decl| (sSort s)).
+              replace (sind_type a)
+                with (lift #|l2'| #|@nil scontext_decl| (sind_type a))
+                by (erewrite lift_ind_type by eassumption ; reflexivity).
+              eapply meta_ctx_conv.
+              ** eapply @type_lift with (Γ := []) (Ξ := []) (Δ := l2').
+                 --- cbn. assumption.
+                 --- assumption.
+                 --- rewrite nil_cat. assumption.
+              ** cbn. apply nil_cat.
       * intro hn.
         pose proof (nth_error_error hn) as h. omega.
-Admitted.
+Defined.
 
-Corollary type_arities' :
+Corollary type_arities :
   forall {Σ ind mb},
     type_glob Σ ->
     sdeclared_minductive (fst Σ) (inductive_mind ind) mb ->
     let id := inductive_mind ind in
     let bs := sind_bodies mb in
-    (typed_list Σ [] (sinds id bs) (arities_context bs)) *
-    (wf Σ (arities_context bs)).
+    let inds := sinds id bs in
+    let ac := arities_context bs in
+    (typed_list Σ [] inds ac) * (wf Σ ac).
 Proof.
-  intros Σ ind mb hg hd id bs.
-  pose proof (type_arities hg hd #|bs|) as h.
-  unfold bs in h.
-  replace (#|sind_bodies mb| - #|sind_bodies mb|) with 0 in h by omega.
-  replace #|sind_bodies mb| with #|arities_context (sind_bodies mb)| in h
-    by (now rewrite rev_map_length).
-  rewrite !firstn_all in h.
-  apply h.
+  intros Σ ind mb hg hd id bs inds ac.
+  pose proof (type_arities' hg hd #|bs|) as h.
+  rewrite !lastn_all2 in h.
+  - cbn in h. apply h.
+  - rewrite rev_map_length. auto.
+  - rewrite sinds_length. auto.
 Defined.
-
-Fact typed_arities'' :
-  forall {Σ id l u},
-    type_glob Σ ->
-    (forall n d,
-        nth_error l n = Some d ->
-        sdeclared_inductive (fst Σ) (mkInd id (#|l| - n)) u d) ->
-    (typed_list Σ [] (sinds id l) (arities_context l)) *
-    (wf Σ (arities_context l)).
-Proof.
-  intros Σ id l u hg.
-  induction l ; intro h.
-  - cbn. split ; constructor.
-  - destruct IHl as [? ?].
-    + intros n d hn.
-      pose proof (h (S n) d hn) as hh.
-      cbn in hh. apply hh.
-    + split.
-      * rewrite sinds_cons, arities_context_cons.
-        econstructor.
-        -- assumption.
-        -- rewrite nil_cat. eapply type_Ind.
-           ++ assumption.
-           ++ pose proof (h 0 a eq_refl) as hh. cbn in hh.
-
-(* eapply h. *)
-              (* We have some m instead of #|l|... *)
-              give_up.
-      * (* destruct (typed_ind_type hg isdecl) as [s h]. *)
-        (* rewrite arities_context_cons. econstructor. *)
-        (* -- assumption. *)
-        (* -- *)
-
-(* exists s. *)
-(*     change (sSort s) with (lift #|Γ| #|@nil scontext_decl| (sSort s)). *)
-(*     replace (sind_type decl) *)
-(*       with (lift #|Γ| #|@nil scontext_decl| (sind_type decl)) *)
-(*       by (erewrite lift_ind_type by eassumption ; reflexivity). *)
-(*     eapply meta_ctx_conv. *)
-(*     + eapply @type_lift with (Γ := []) (Ξ := []) (Δ := Γ). *)
-(*       * assumption. *)
-(*       * assumption. *)
-(*       * rewrite nil_cat. assumption. *)
-(*     + cbn. apply nil_cat. *)
-Abort.
 
 Fact typed_type_of_constructor :
   forall {Σ : sglobal_context},
@@ -1729,7 +1761,7 @@ Proof.
       exists s. erewrite <- substl_sort.
       eapply type_substl.
       * econstructor ; eassumption.
-      * eapply type_arities'.
+      * eapply type_arities.
         -- econstructor ; eassumption.
         -- cbn. assumption.
       * rewrite nil_cat.

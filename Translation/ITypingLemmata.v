@@ -1609,15 +1609,15 @@ Proof.
       cbn in t.
       pose proof (type_ind_type_constr t hn) as tc.
       destruct (typed_type_constructors tc hn') as [s hh].
-      eapply weak_glob_isType ; [| eassumption ].
       exists s. erewrite <- substl_sort.
       eapply type_substl.
-      * assumption.
+      * econstructor ; eassumption.
       * eapply type_arities'.
-        -- assumption.
-        -- (* We have a problem of global context, we need to be in the big one. *)
-           give_up.
-      * rewrite nil_cat. exact hh.
+        -- econstructor ; eassumption.
+        -- cbn. assumption.
+      * rewrite nil_cat.
+        eapply weak_glob_type ; [| eassumption ].
+        exact hh.
     + intro e. erewrite stype_of_constructor_cons by assumption.
       eapply weak_glob_isType ; [| eassumption ].
       apply IHhg.

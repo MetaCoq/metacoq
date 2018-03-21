@@ -1523,9 +1523,25 @@ Proof.
            ++ give_up.
       * intro hn.
         pose proof (nth_error_error hn) as h. omega.
-Abort.
+Admitted.
 
-Fact typed_arities :
+Corollary type_arities' :
+  forall {Σ ind mb},
+    type_glob Σ ->
+    sdeclared_minductive (fst Σ) (inductive_mind ind) mb ->
+    let id := inductive_mind ind in
+    let bs := sind_bodies mb in
+    (typed_list Σ [] (sinds id bs) (arities_context bs)) *
+    (wf Σ (arities_context bs)).
+Proof.
+  intros Σ ind mb hg hd id bs.
+  pose proof (type_arities hg hd #|bs|) as h.
+  unfold bs in h.
+  replace (#|sind_bodies mb| - #|sind_bodies mb|) with 0 in h by omega.
+  apply h.
+Defined.
+
+Fact typed_arities'' :
   forall {Σ id l u},
     type_glob Σ ->
     (forall n d,
@@ -1597,8 +1613,10 @@ Proof.
       exists s. erewrite <- substl_sort.
       eapply type_substl.
       * assumption.
-      * (* typed_list (Σ, ϕ) [] (sinds (inductive_mind ind) (sind_bodies mb)) (arities_context (sind_bodies mb)) *)
-        admit.
+      * eapply type_arities'.
+        -- assumption.
+        -- (* We have a problem of global context, we need to be in the big one. *)
+           give_up.
       * rewrite nil_cat. exact hh.
     + intro e. erewrite stype_of_constructor_cons by assumption.
       eapply weak_glob_isType ; [| eassumption ].

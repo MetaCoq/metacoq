@@ -94,7 +94,7 @@ Ltac idind := iind idtac.
 
 Ltac magic :=
   (* unshelve (repeat (try assumption ; try rind ; try idind ; try tdecl ; try econstr)) ; try tdecl ; try lom. *)
-  unshelve (repeat (try assumption ; try idind ; try tdecl ; try econstr)) ; try tdecl ; try lom.
+  unshelve (repeat (try assumption ; try iconstruct ; try idind ; try tdecl ; try econstr)) ; try tdecl ; try lom.
 
 Definition lΣi := [
   SInductiveDecl "Translation.Quotes.vec" {|
@@ -258,33 +258,7 @@ Fact hΣi : type_glob Σi.
       assert (IT.wf Σ Γ5') by magic.
       assert (IT.wf Σ Γ6') by magic.
       assert (IT.wf Σ Γ5'') by magic.
-      econstr.
-      * magic.
-      * econstr.
-        -- magic.
-        -- econstr.
-           ++ magic.
-           ++ econstr.
-              ** econstr.
-                 --- magic.
-                 --- magic.
-                 --- econstr.
-                     +++ magic.
-                     +++ econstr.
-                         *** magic.
-                         *** magic.
-                     +++ magic.
-                     +++ magic.
-                 --- magic.
-              ** econstr.
-                 --- magic.
-                 --- magic.
-                 --- magic.
-                 --- econstr.
-                     +++ magic.
-                     +++ magic.
-                     +++ iconstruct. assumption.
-                     +++ magic.
+      magic.
 Defined.
 
 

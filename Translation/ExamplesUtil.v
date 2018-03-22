@@ -72,6 +72,17 @@ Ltac iind tac :=
   | cbn ; reflexivity
   ].
 
+Ltac iconstruct :=
+  eapply meta_conv ; [
+    unshelve (eapply IT.type_Construct) ; [
+      shelve
+    | shelve
+    | tdecl
+    | idtac
+    ]
+  | cbn ; reflexivity
+  ].
+
 Ltac lom := cbn ; omega.
 
 Ltac reo :=
@@ -272,8 +283,7 @@ Fact hΣi : type_glob Σi.
                  --- econstr.
                      +++ magic.
                      +++ magic.
-                     +++ (* This is where we lose time! *)
-                         cheat.
+                     +++ iconstruct. assumption.
                      +++ magic.
 Defined.
 

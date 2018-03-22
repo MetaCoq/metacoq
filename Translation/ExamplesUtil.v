@@ -174,11 +174,17 @@ Ltac tenv :=
   repeat (cbn ; try eapply fresh_global_cons ;
           try eapply fresh_global_nil ; try discriminate).
 
+Ltac xcomp :=
+  match goal with
+  | |- Xcomp _ => repeat econstructor
+  end.
+
 Ltac tind :=
   cbn ; constructor ; [
     idtac
   | repeat constructor
   | cbn ; repeat eapply type_cnstrs_cons ; [ .. | eapply type_cnstrs_nil ]
+    ; try xcomp
   | cbn ; constructor
   | cbn ; constructor
   ].

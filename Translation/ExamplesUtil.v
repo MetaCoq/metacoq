@@ -50,9 +50,9 @@ Ltac unsafe_tdecl :=
 (* Instead of doing econstructor, we're doing something slightly smarter. *)
 Ltac econstr :=
   match goal with
-  | |- _ ;;; _ |- sApp _ _ _ _ _ : _ =>
+  | |- _ ;;; _ |-i sApp _ _ _ _ _ : _ =>
     refine (IT.type_App _ _ _ _ _ _ _ _ _ _ _ _ _)
-  | |- _ ;;; _ |- sRel _ : _ =>
+  | |- _ ;;; _ |-i sRel _ : _ =>
     refine (IT.type_Rel _ _ _ _ _)
   | _ => econstructor
   end.
@@ -200,19 +200,19 @@ Fact hΣi : type_glob Σi.
   (* bool *)
   - tind.
     + exists 1. repeat econstr.
-    + exists 0. unshelve (repeat econstr). cbn. omega.
-    + exists 0. unshelve (repeat econstr). cbn. omega.
+    + exists 0. repeat econstr.
+    + exists 0. repeat econstr.
   (* nat *)
   - tind.
     + exists 1. constructor. constructor.
-    + exists 0. unshelve (repeat econstr). cbn. omega.
-    + exists (max 0 0). unshelve (repeat econstr).
-      all: cbn ; omega.
+    + exists 0. magic.
+    + exists (max 0 0). magic.
   (* vec *)
   - tind.
     + exists (max_sort 1 (max 0 1)). repeat econstr.
-    + exists (max_sort 1 0). econstr.
-      * repeat econstr.
+    + exists (max_sort 1 0).
+      econstr.
+      * magic.
       * econstr.
         -- magic.
         -- magic.
@@ -220,7 +220,7 @@ Fact hΣi : type_glob Σi.
         -- econstr.
            ++ magic.
            ++ magic.
-           ++ cbn. magic.
+           ++ magic.
     + exists (max 1 (max 0 (max 0 (max 0 0)))).
       (* econstr. *)
       (* * magic. *)
@@ -243,10 +243,23 @@ Fact hΣi : type_glob Σi.
       (*         ** econstr. *)
       (*            --- idind. econstr. *)
       (*                +++ magic. *)
-      (*                +++ magic. *)
+      (*                +++ econstr. *)
+      (*                    *** econstr. *)
+      (*                        ---- magic. *)
+      (*                        ---- magic. *)
+      (*                        ---- econstr. magic. *)
+      (*                    *** magic. *)
+      (*                    *** magic. *)
+      (*                    *** magic. *)
       (*            --- econstr. magic. *)
-      (*            --- magic. *)
-      (*            --- magic. *)
+      (*            --- econstr. *)
+      (*                +++ magic. *)
+      (*                +++ econstr. *)
+      (*                    *** cheat. *)
+      (*                    *** cheat. *)
+      (*                +++ cheat. *)
+      (*                +++ cheat. *)
+      (*            --- cheat. *)
       cheat.
 Defined.
 

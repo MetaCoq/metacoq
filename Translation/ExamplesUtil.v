@@ -82,7 +82,8 @@ Ltac rind := iind reo.
 Ltac idind := iind idtac.
 
 Ltac magic :=
-  unshelve (repeat (try rind ; try idind ; try tdecl ; try econstr)) ; try tdecl ; try lom.
+  (* unshelve (repeat (try assumption ; try rind ; try idind ; try tdecl ; try econstr)) ; try tdecl ; try lom. *)
+  unshelve (repeat (try assumption ; try idind ; try tdecl ; try econstr)) ; try tdecl ; try lom.
 
 Definition lΣi := [
   SInductiveDecl "Translation.Quotes.vec" {|
@@ -222,45 +223,58 @@ Fact hΣi : type_glob Σi.
            ++ magic.
            ++ magic.
     + exists (max 1 (max 0 (max 0 (max 0 0)))).
-      (* econstr. *)
-      (* * magic. *)
-      (* * econstr. *)
-      (*   -- magic. *)
-      (*   -- econstr. *)
-      (*      ++ magic. *)
-      (*      ++ econstr. *)
-      (*         ** econstr. *)
-      (*            --- magic. *)
-      (*            --- magic. *)
-      (*            --- econstr. *)
-      (*                +++ magic. *)
-      (*                +++ econstr. *)
-      (*                    *** magic. *)
-      (*                    *** magic. *)
-      (*                +++ magic. *)
-      (*                +++ magic. *)
-      (*            --- magic. *)
-      (*         ** econstr. *)
-      (*            --- idind. econstr. *)
-      (*                +++ magic. *)
-      (*                +++ econstr. *)
-      (*                    *** econstr. *)
-      (*                        ---- magic. *)
-      (*                        ---- magic. *)
-      (*                        ---- econstr. magic. *)
-      (*                    *** magic. *)
-      (*                    *** magic. *)
-      (*                    *** magic. *)
-      (*            --- econstr. magic. *)
-      (*            --- econstr. *)
-      (*                +++ magic. *)
-      (*                +++ econstr. *)
-      (*                    *** cheat. *)
-      (*                    *** cheat. *)
-      (*                +++ cheat. *)
-      (*                +++ cheat. *)
-      (*            --- cheat. *)
-      cheat.
+      match goal with
+      | |- ?Σ' ;;; _ |-i _ : _ => set (Σ := Σ')
+      end.
+      set (Γ1 := [svass (nNamed "vec") vec_type]).
+      set (Γ2 := Γ1,, svass (nNamed "A") (sSort 0)).
+      set (Γ3 := Γ2,, svass nAnon (sRel 0)).
+      set (Γ4 := Γ3,, svass (nNamed "n") sNat).
+      set (Γ5 := Γ4,, svass nAnon sNat).
+      set (Γ5' := Γ4,, svass (nNamed "A") (sSort 0)).
+      set (Γ6' := Γ5',, svass nAnon sNat).
+      set (Γ5'' := Γ4,,
+           svass nAnon (sApp
+                          (sApp (sRel 3)
+                                (nNamed "A") (sSort 0)
+                                vec_cod (sRel 2))
+                          nAnon sNat (sSort 0) (sRel 0))).
+      assert (IT.wf Σ Γ1) by magic.
+      assert (IT.wf Σ Γ2) by magic.
+      assert (IT.wf Σ Γ3) by magic.
+      assert (IT.wf Σ Γ4) by magic.
+      assert (IT.wf Σ Γ5) by magic.
+      assert (IT.wf Σ Γ5') by magic.
+      assert (IT.wf Σ Γ6') by magic.
+      assert (IT.wf Σ Γ5'') by magic.
+      econstr.
+      * magic.
+      * econstr.
+        -- magic.
+        -- econstr.
+           ++ magic.
+           ++ econstr.
+              ** econstr.
+                 --- magic.
+                 --- magic.
+                 --- econstr.
+                     +++ magic.
+                     +++ econstr.
+                         *** magic.
+                         *** magic.
+                     +++ magic.
+                     +++ magic.
+                 --- magic.
+              ** econstr.
+                 --- magic.
+                 --- magic.
+                 --- magic.
+                 --- econstr.
+                     +++ magic.
+                     +++ magic.
+                     +++ (* This is where we lose time! *)
+                         cheat.
+                     +++ magic.
 Defined.
 
 

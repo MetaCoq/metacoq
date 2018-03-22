@@ -1,7 +1,7 @@
 From Coq Require Import Bool String List BinPos Compare_dec Omega.
 From Equations Require Import Equations DepElimDec.
 From Template Require Import Ast utils Typing.
-From Translation Require Import SAst SLiftSubst SCommon ITyping.
+From Translation Require Import SAst SInduction SLiftSubst SCommon ITyping.
 
 (* Lemmata about typing *)
 
@@ -587,13 +587,109 @@ Proof.
       * assumption.
 Defined.
 
+Definition xcomp_list : list sterm -> Type :=
+  ForallT Xcomp.
+
+Fact xcomp_lift :
+  forall {t}, Xcomp t ->
+  forall {n k}, Xcomp (lift n k t).
+Proof.
+  intros t h. induction h ; intros m k.
+  all: try (cbn ; constructor ; easy).
+  cbn. destruct (k <=? n) ; constructor.
+Defined.
+
+Fact xcomp_subst :
+  forall {t}, Xcomp t ->
+  forall {u}, Xcomp u ->
+  forall {n}, Xcomp (t{ n := u}).
+Proof.
+  intros t ht. induction ht ; intros t' ht' m.
+  all: try (cbn ; constructor ; easy).
+  cbn. case_eq (m ?= n) ; try constructor.
+  intro e. apply xcomp_lift. assumption.
+Defined.
+
+Fact xcomp_substl :
+  forall {l},
+    xcomp_list l ->
+    forall {t},
+      Xcomp t ->
+      Xcomp (substl l t).
+Proof.
+  intros l xl. induction xl ; intros t h.
+  - cbn. assumption.
+  - rewrite substl_cons. apply IHxl.
+    apply xcomp_subst ; assumption.
+Defined.
+
+Fact xcomp_sinds :
+  forall {Σ id l},
+      type_inductive Σ l ->
+      xcomp_list (sinds id l).
+Proof.
+  intros Σ id l ti.
+  unfold type_inductive in ti. induction ti.
+  - cbn. constructor.
+  - rewrite sinds_cons. econstructor.
+    + constructor.
+    + assumption.
+Defined.
+
+Fact xcomp_type_constructors :
+  forall {Σ : sglobal_context} {Γ l},
+    type_constructors Σ Γ l ->
+    forall {i decl},
+      nth_error l i = Some decl ->
+      let '(_, t, _) := decl in
+      Xcomp t.
+Proof.
+  intros Σ Γ l htc. induction htc ; intros m decl hm.
+  - destruct m ; cbn in hm ; inversion hm.
+  - destruct m.
+    + cbn in hm. inversion hm. subst. clear hm.
+      assumption.
+    + cbn in hm. eapply IHhtc. eassumption.
+Defined.
+
 Fact xcomp_type_of_constructor :
   forall {Σ : sglobal_context},
     type_glob Σ ->
     forall {ind i decl univs}
       (isdecl : sdeclared_constructor (fst Σ) (ind, i) univs decl),
       Xcomp (stype_of_constructor (fst Σ) (ind, i) univs decl isdecl).
-Admitted.
+Proof.
+  intros Σ hg. unfold type_glob in hg. destruct Σ as [Σ ϕ].
+  cbn in hg.
+  induction hg ; intros ind i decl univs isdecl.
+  - cbn. contrad.
+  - case_eq (ident_eq (inductive_mind ind) (sglobal_decl_ident d)).
+    + intro e.
+      destruct isdecl as [ib [[mb [[d' ?] hn]] hn']].
+      assert (eqd : d = SInductiveDecl (inductive_mind ind) mb).
+      { unfold sdeclared_minductive in d'. cbn in d'. rewrite e in d'.
+        now inversion d'.
+      }
+      subst.
+      rewrite stype_of_constructor_eq by assumption.
+      cbn in t.
+      eapply xcomp_substl.
+      * eapply xcomp_sinds. eassumption.
+      * destruct decl as [[id trm] ci].
+        pose proof (type_ind_type_constr t hn) as tc.
+        apply (xcomp_type_constructors tc hn').
+    + intro e. erewrite stype_of_constructor_cons by assumption.
+      apply IHhg.
+      Unshelve.
+      destruct isdecl as [ib [[mb [[d' ?] ?]] ?]].
+      exists ib. split.
+      * exists mb. repeat split.
+        -- unfold sdeclared_minductive in *. cbn in d'.
+           rewrite e in d'. exact d'.
+        -- assumption.
+        -- assumption.
+      * assumption.
+Defined.
 
 Fact lift_type_of_constructor :
   forall {Σ : sglobal_context},

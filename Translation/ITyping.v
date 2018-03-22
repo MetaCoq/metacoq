@@ -555,6 +555,7 @@ Inductive type_constructors (Σ : sglobal_context) (Γ : scontext) :
 | type_cnstrs_nil : type_constructors Σ Γ []
 | type_cnstrs_cons id t n l :
     isType Σ Γ t ->
+    Xcomp t ->
     type_constructors Σ Γ l ->
     (** TODO: check it has n products ending in a tRel application *)
     type_constructors Σ Γ ((id, t, n) :: l).

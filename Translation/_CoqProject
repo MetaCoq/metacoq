@@ -1,0 +1,20 @@
+-I ../src
+-R ../theories Template
+-R . Translation
+-arg "-w default,-notation-overridden"
+
+SAst.v
+SInduction.v
+SLiftSubst.v
+SCommon.v
+ITyping.v
+XTyping.v
+ITypingLemmata.v
+ITypingMore.v
+PackLifts.v
+Translation.v
+Reduction.v
+Quotes.v
+FinalTranslation.v
+ExamplesUtil.v
+Example.v

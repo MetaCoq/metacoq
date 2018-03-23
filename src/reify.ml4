@@ -84,9 +84,9 @@ type ('a,'b) sum =
   Left of 'a | Right of 'b
 
 type ('term, 'name, 'nat) adef = { adname : 'name; adtype : 'term; adbody : 'term; rarg : 'nat }
-  
+
 type ('term, 'name, 'nat) amfixpoint = ('term, 'name, 'nat) adef list
-    
+
 type ('term, 'nat, 'ident, 'name, 'quoted_sort, 'cast_kind, 'kername, 'inductive, 'universe_instance, 'projection) structure_of_term =
   | ACoq_tRel of 'nat
   | ACoq_tVar of 'ident
@@ -105,7 +105,7 @@ type ('term, 'nat, 'ident, 'name, 'quoted_sort, 'cast_kind, 'kername, 'inductive
   | ACoq_tProj of 'projection * 'term
   | ACoq_tFix of ('term, 'name, 'nat) amfixpoint * 'nat
   | ACoq_tCoFix of ('term, 'name, 'nat) amfixpoint * 'nat
-      
+
 module type Quoter = sig
   type t
 
@@ -217,7 +217,7 @@ module type Quoter = sig
   val unquote_name : quoted_name -> Name.t
   val unquote_int :  quoted_int -> int
   val unquote_bool : quoted_bool -> bool
-  (* val unquote_sort : quoted_sort -> Sorts.t 
+  (* val unquote_sort : quoted_sort -> Sorts.t
      val unquote_sort_family : quoted_sort_family -> Sorts.family *)
   val unquote_cast_kind : quoted_cast_kind -> Constr.cast_kind
   val unquote_kn :  quoted_kernel_name -> Libnames.qualid
@@ -727,9 +727,9 @@ struct
     match Term.kind_of_term trm with
       Term.App (f, xs) -> app_full f (Array.to_list xs @ acc)
     | _ -> (trm, acc)
-           
+
   let print_term (u: t) : Pp.std_ppcmds = Printer.pr_constr u
-  
+
   let from_coq_pair trm =
     let (h,args) = app_full trm [] in
     if Term.eq_constr h c_pair then
@@ -749,7 +749,7 @@ struct
       | _ -> bad_term trm
     else
       not_supported_verb trm "from_coq_list"
-        
+
   let inspectTerm (t:Term.constr) :  (Term.constr, quoted_int, quoted_ident, quoted_name, quoted_sort, quoted_cast_kind, quoted_kernel_name, quoted_inductive, quoted_univ_instance, quoted_proj) structure_of_term =
     let (h,args) = app_full t [] in
     if Term.eq_constr h tRel then
@@ -763,6 +763,10 @@ struct
     else if Term.eq_constr h tMeta then
       match args with
         x :: _ -> ACoq_tMeta x
+      | _ -> CErrors.user_err (print_term t ++ Pp.str ("has bad structure"))
+    else if Term.eq_constr h tCast then
+      match args with
+        x :: y :: z :: _ -> ACoq_tCast (x, y, z)
       | _ -> CErrors.user_err (print_term t ++ Pp.str ("has bad structure"))
     else if Term.eq_constr h tSort then
       match args with
@@ -852,14 +856,14 @@ struct
          | _ -> not_supported_verb trm "nat_to_int nil"
        else
          not_supported_verb trm "nat_to_int"
-      
+
     let unquote_bool trm =
       if Term.eq_constr trm ttrue then
         true
       else if Term.eq_constr trm tfalse then
         false
       else not_supported_verb trm "from_bool"
-  
+
     let unquote_char trm =
       let (h,args) = app_full trm [] in
       if Term.eq_constr h tAscii then
@@ -871,7 +875,7 @@ struct
         | _ -> assert false
       else
         not_supported trm
-  
+
     let unquote_string trm =
       let rec go n trm =
         let (h,args) = app_full trm [] in
@@ -888,10 +892,10 @@ struct
     not_supported_verb trm "unquote_string"
       in
       Bytes.to_string (go 0 trm)
-  
+
     let unquote_ident trm =
       Names.id_of_string (unquote_string trm)
-  
+
     let unquote_cast_kind trm =
       if Term.eq_constr trm kVmCast then
         Term.VMcast
@@ -903,8 +907,8 @@ struct
         Term.VMcast
       else
         bad_term trm
-  
-  
+
+
     let unquote_name trm =
       let (h,args) = app_full trm [] in
       if Term.eq_constr h nAnon then
@@ -1020,7 +1024,7 @@ struct
     else
       bad_term_verb trm "non-constructor"
 
-        
+
   end
 
 
@@ -1420,11 +1424,11 @@ struct
       match Q.inspectTerm trm with
         ACoq_tApp (f, xs) -> app_full_abs f (xs @ acc)
       | _ -> (trm, acc)
-    
+
     let str_abs (t: Q.t) : Pp.std_ppcmds = Q.print_term t (* unfold this defn everywhere and delete*)
     let not_supported_verb (t: Q.t) s = CErrors.user_err (Pp.(str_abs t ++ Pp.str s))
-    let bad_term (t: Q.t) = not_supported_verb t "bad_term" 
-          
+    let bad_term (t: Q.t) = not_supported_verb t "bad_term"
+
   (** NOTE: Because the representation is lossy, I should probably
    ** come back through elaboration.
    ** - This would also allow writing terms with holes
@@ -1442,16 +1446,16 @@ let denote_term evdref (trm: Q.t) : Term.constr =
   | ACoq_tProd (n,t,b) -> Term.mkProd (Q.unquote_name n, aux t, aux b)
   | ACoq_tLambda (n,t,b) -> Term.mkLambda (Q.unquote_name n, aux t, aux b)
   | ACoq_tLetIn (n,e,t,b) -> Term.mkLetIn (Q.unquote_name n, aux e, aux t, aux b)
-  | ACoq_tApp (f,xs) ->   
+  | ACoq_tApp (f,xs) ->
       Term.mkApp (aux f, Array.of_list (List.map aux  xs))
-  | ACoq_tConst (s,_) ->   
+  | ACoq_tConst (s,_) ->
        (* TODO: unquote universes *)
-       let s = (Q.unquote_kn s) in 
+       let s = (Q.unquote_kn s) in
        (try
          match Nametab.locate s with
          | Globnames.ConstRef c ->
             EConstr.Unsafe.to_constr (Evarutil.e_new_global evdref (Globnames.ConstRef c))
-         | Globnames.IndRef _ -> CErrors.user_err (str "the constant is an inductive. use tInd : " 
+         | Globnames.IndRef _ -> CErrors.user_err (str "the constant is an inductive. use tInd : "
               ++  Pp.str (Libnames.string_of_qualid s))
          | Globnames.VarRef _ -> CErrors.user_err (str "the constant is a variable. use tVar : " ++ Pp.str (Libnames.string_of_qualid s))
          | Globnames.ConstructRef _ -> CErrors.user_err (str "the constant is a consructor. use tConstructor : "++ Pp.str (Libnames.string_of_qualid s))
@@ -1472,21 +1476,21 @@ let denote_term evdref (trm: Q.t) : Term.constr =
             aux br
       in
       Term.mkCase (ci, aux ty, aux d, Array.of_list (List.map denote_branch (brs)))
-  | ACoq_tFix (lbd, i) -> 
-      let (names,types,bodies,rargs) = (List.map (fun p->p.adname) lbd,  List.map (fun p->p.adtype) lbd, List.map (fun p->p.adbody) lbd, 
+  | ACoq_tFix (lbd, i) ->
+      let (names,types,bodies,rargs) = (List.map (fun p->p.adname) lbd,  List.map (fun p->p.adtype) lbd, List.map (fun p->p.adbody) lbd,
         List.map (fun p->p.rarg) lbd) in
       let (types,bodies) = (List.map aux types, List.map aux bodies) in
       let (names,rargs) = (List.map Q.unquote_name names, List.map Q.unquote_int rargs) in
       let la = Array.of_list in
     Term.mkFix ((la rargs,Q.unquote_int i), (la names, la types, la bodies))
-  | ACoq_tCoFix (lbd, i) -> 
-      let (names,types,bodies,rargs) = (List.map (fun p->p.adname) lbd,  List.map (fun p->p.adtype) lbd, List.map (fun p->p.adbody) lbd, 
+  | ACoq_tCoFix (lbd, i) ->
+      let (names,types,bodies,rargs) = (List.map (fun p->p.adname) lbd,  List.map (fun p->p.adtype) lbd, List.map (fun p->p.adbody) lbd,
         List.map (fun p->p.rarg) lbd) in
       let (types,bodies) = (List.map aux types, List.map aux bodies) in
       let (names,rargs) = (List.map Q.unquote_name names, List.map Q.unquote_int rargs) in
       let la = Array.of_list in
       Term.mkCoFix (Q.unquote_int i, (la names, la types, la bodies))
-  | ACoq_tProj (proj,t) -> 
+  | ACoq_tProj (proj,t) ->
     let (ind, _, narg) = Q.unquote_proj proj in (* is narg the correct projection? *)
     let ind' = Q.unquote_inductive ind in
     let idx = Q.unquote_int narg in
@@ -1516,7 +1520,7 @@ let denote_term evdref (trm: Q.t) : Term.constr =
   else
     not_supported_verb trm "big_case" *)
   in aux trm
-  
+
 end
 
 module TermReify = Reify(TemplateCoqQuoter)

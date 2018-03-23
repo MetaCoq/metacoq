@@ -90,3 +90,7 @@ src/uGraph0.mli
 /src/univSubst.mli
 /src/utils.ml
 /src/utils.mli
+
+/Translation/Makefile.conf
+/Translation/Makefile.coq.bak
+/Translation/Makefile.coq.conf

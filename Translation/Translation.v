@@ -647,9 +647,9 @@ Proof.
     { change (sInd ind) with (rlift0 #|Γm| (sInd ind)).
       eapply type_rlift0 ; eassumption.
     }
+    exists (sHeqRefl (llift0 #|Γm| U1) (sInd ind)).
     destruct (uniqueness h1' h2') as [s ee].
     destruct (eq_typing hg ee) as [hlU1 hrU2].
-    exists (sHeqRefl (llift0 #|Γm| U1) (sInd ind)).
     eapply type_conv' ; try assumption.
     + eapply type_HeqRefl ; eassumption.
     + eapply cong_Heq.
@@ -667,9 +667,9 @@ Proof.
     { change (sConstruct ind i) with (rlift0 #|Γm| (sConstruct ind i)).
       eapply type_rlift0 ; eassumption.
     }
+    exists (sHeqRefl (llift0 #|Γm| U1) (sConstruct ind i)).
     destruct (uniqueness h1' h2') as [s ee].
     destruct (eq_typing hg ee) as [hlU1 hrU2].
-    exists (sHeqRefl (llift0 #|Γm| U1) (sConstruct ind i)).
     eapply type_conv' ; try assumption.
     + eapply type_HeqRefl ; eassumption.
     + eapply cong_Heq.

@@ -665,7 +665,7 @@ Section Typecheck2.
     | tProd n t b =>
       s1 <- infer_type infer Γ t ;;
       s2 <- infer_type infer (Γ ,, vass n t) b ;;
-      ret (tSort (Universe.sup s1 s2))
+      ret (tSort (Universe.sort_of_product s1 s2))
 
     | tLambda n t b =>
       infer_type infer Γ t ;;

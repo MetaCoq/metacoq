@@ -466,7 +466,7 @@ Inductive typing (Σ : global_context) (Γ : context) : term -> term -> Type :=
 | type_Prod n t b s1 s2 :
     Σ ;;; Γ |- t : tSort s1 ->
     Σ ;;; Γ ,, vass n t |- b : tSort s2 ->
-    Σ ;;; Γ |- (tProd n t b) : tSort (Universe.sup s1 s2)
+    Σ ;;; Γ |- (tProd n t b) : tSort (Universe.sort_of_product s1 s2)
 
 | type_Lambda n n' t b s1 bty :
     Σ ;;; Γ |- t : tSort s1 ->
@@ -938,7 +938,7 @@ Lemma typing_ind_env :
         Σ ;;; Γ |- t : tSort s1 ->
         P Σ Γ t (tSort s1) ->
         Σ ;;; Γ,, vass n t |- b : tSort s2 ->
-        P Σ (Γ,, vass n t) b (tSort s2) -> P Σ Γ (tProd n t b) (tSort (Universe.sup s1 s2))) ->
+        P Σ (Γ,, vass n t) b (tSort s2) -> P Σ Γ (tProd n t b) (tSort (Universe.sort_of_product s1 s2))) ->
     (forall Σ (wfΣ : wf Σ) (Γ : context) (n n' : name) (t b : term) (s1 : universe) (bty : term),
         Σ ;;; Γ |- t : tSort s1 ->
         P Σ Γ t (tSort s1) ->

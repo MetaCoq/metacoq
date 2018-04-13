@@ -135,3 +135,19 @@ Module Test5.
   (* Check convertible ltac:(term_type term) inferred_type. *)
 End Test5.
 
+
+Universe i.
+
+Definition f1 := (forall (A:Type@{i}) (B: Prop), A -> B -> A).
+(* : Type@{Set+1, i+1} *)
+
+Definition f2 := (forall (A:Type@{i}) (B: Prop), A -> B -> B).
+(* : Prop *)
+
+Quote Definition f1' := (forall (A:Type@{i}) (B: Prop), A -> B -> A). 
+
+Eval lazy in infer (nil, uGraph.init_graph) nil f1'.
+
+Quote Definition f2' := (forall (A:Type@{i}) (B: Prop), A -> B -> B). 
+
+Eval lazy in infer (nil, uGraph.init_graph) nil f2'.

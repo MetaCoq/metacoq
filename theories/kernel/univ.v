@@ -263,6 +263,20 @@ Module Universe.
 
   Definition existsb : (Expr.t -> bool) -> t -> bool := @existsb _.
   Definition for_all : (Expr.t -> bool) -> t -> bool := @forallb _.
+
+  (* Type of product *)
+
+  Definition sort_of_product (domsort rangsort:t) :=
+  match (domsort, rangsort) with
+  (* Product rule (s,Prop,Prop) *)
+    | (_,[(Level.lProp,false)])  => rangsort
+    (* Product rule (Prop,Type,Type) *)
+    | ([(Level.lProp, false)], _) => rangsort
+    (* (* Product rule (Type_i,Type_i,Type_i) *) *)
+    | (u1,u2) => Universe.sup u1 u2
+  end.
+
+           
 End Universe.
 
 Definition universe := Universe.t.

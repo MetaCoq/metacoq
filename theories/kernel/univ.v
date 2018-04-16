@@ -270,8 +270,6 @@ Module Universe.
   match (domsort, rangsort) with
   (* Product rule (s,Prop,Prop) *)
     | (_,[(Level.lProp,false)])  => rangsort
-    (* Product rule (Prop,Type,Type) *)
-    | ([(Level.lProp, false)], _) => rangsort
     (* (* Product rule (Type_i,Type_i,Type_i) *) *)
     | (u1,u2) => Universe.sup u1 u2
   end.

@@ -1,4 +1,4 @@
-Require Import String List utils.
+Require Import Ascii String List utils.
 Import ListNotations.
 
 (* Sorted lists without duplicates *)
@@ -18,9 +18,19 @@ Fixpoint insert {A} `{ComparableType A} (x : A) (l : list A) :=
 Definition list_union {A} `{ComparableType A} (l l' : list A) : list A
   := fold_left (fun l' x => insert x l') l l'.
 
-(* FIXME *)
-Definition compare_string s1 s2 := Nat.compare (String.length s1) (String.length s2).
+Infix "<?" := Nat.ltb (at level 70) : nat_scope.
 
+Fixpoint compare_string (s1 s2 : string) : comparison :=
+  match (s1,s2) with
+      | (EmptyString, EmptyString) => Eq
+      | (EmptyString, _) => Lt
+      | (_, EmptyString) => Gt
+      | (String c1 s1, String c2 s2) =>
+        if nat_of_ascii c1 <? nat_of_ascii c2 then Lt
+        else if nat_of_ascii c2 <? nat_of_ascii c1 then Gt else
+  compare_string s1 s2
+end.
+  
 Definition compare_bool b1 b2 :=
   match b1, b2 with
   | false, true => Lt

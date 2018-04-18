@@ -7,7 +7,7 @@ Require Import Coq.Strings.Ascii.
 Require Import Coq.Bool.Bool.
 Import ListNotations.
 
-Require Import Template.TemplateCoqChecker.
+(* Require Import Template.TemplateCoqChecker. *)
 Require Import Template.Typing.
 Require Import Template.Checker.
 Require Import Template.Ast.
@@ -135,8 +135,7 @@ Module Test5.
   (* Check convertible ltac:(term_type term) inferred_type. *)
 End Test5.
 
-
-Universe i.
+Universe i j.
 
 Definition f1 := (forall (A:Type@{i}) (B: Prop), A -> B -> A).
 (* : Type@{Set+1, i+1} *)
@@ -151,3 +150,12 @@ Eval lazy in infer (nil, uGraph.init_graph) nil f1'.
 Quote Definition f2' := (forall (A:Type@{i}) (B: Prop), A -> B -> B). 
 
 Eval lazy in infer (nil, uGraph.init_graph) nil f2'.
+
+Definition f := (forall (A:Type@{i}) (B: Type@{j}), A -> B -> A).
+(* : Type@{i+1, j+1} *)
+
+Quote Definition f' := (forall (A:Type@{i}) (B:Type@{j}), A -> B -> A). 
+
+Quote Definition f'' := (forall (B: Type@{j}), B -> B). 
+
+Eval lazy in infer (nil, uGraph.init_graph) nil f'.

@@ -27,5 +27,6 @@ theories/UnivSubst.v
 theories/Typing.v
 theories/MetaTheory.v
 theories/Checker.v
+theories/WcbvEval.v
 theories/All.v
 theories/Extraction.v

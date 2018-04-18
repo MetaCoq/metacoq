@@ -156,13 +156,15 @@ Definition is_constructor n ts :=
   | None => false
   end.
 
-Definition iota_red npar c args brs :=
-  (mkApps (snd (List.nth c brs (0, tRel 0))) (List.skipn npar args)).
+Definition tDummy := tRel 0.
 
-(** *** One step beta-zeta-iota-fix-delta reduction
+Definition iota_red npar c args brs :=
+  (mkApps (snd (List.nth c brs (0, tDummy))) (List.skipn npar args)).
+
+(** *** One step strong beta-zeta-iota-fix-delta reduction
 
   Inspired by the reduction relation from Coq in Coq [Barras'99].
-  TODO: Projections and CoFixpoints
+  TODO: CoFixpoints
 *)
 
 Inductive red1 (Σ : global_declarations) (Γ : context) : term -> term -> Prop :=
@@ -190,12 +192,15 @@ Inductive red1 (Σ : global_declarations) (Γ : context) : term -> term -> Prop 
     is_constructor narg args = true ->
     red1 Σ Γ (mkApps (tFix mfix idx) args) (mkApps fn args)
 
-(** Constant unfolding *) (* TODO Universes *)
+(** Constant unfolding *)
 | red_delta c decl body (isdecl : declared_constant Σ c decl) u :
     decl.(cst_body) = Some body ->
-    red1 Σ Γ (tConst c u) body
+    red1 Σ Γ (tConst c u) (subst_instance_constr u body)
 
-(* TODO Proj CoFix *)
+(** Proj *)
+| red_proj i pars arg args k u :
+    red1 Σ Γ (tProj (i, pars, arg) (mkApps (tConstruct i k u) args))
+         (List.nth (pars + arg) args tDummy)
 
 | abs_red_l na M M' N : red1 Σ Γ M M' -> red1 Σ Γ (tLambda na M N) (tLambda na M' N)
 | abs_red_r na M M' N : red1 Σ (Γ ,, vass na N) M M' -> red1 Σ Γ (tLambda na N M) (tLambda na N M')
@@ -206,6 +211,8 @@ Inductive red1 (Σ : global_declarations) (Γ : context) : term -> term -> Prop 
 
 | case_red_discr ind p c c' brs : red1 Σ Γ c c' -> red1 Σ Γ (tCase ind p c brs) (tCase ind p c' brs)
 | case_red_brs ind p c brs brs' : redbrs1 Σ Γ brs brs' -> red1 Σ Γ (tCase ind p c brs) (tCase ind p c brs')
+
+| proj_red p c c' : red1 Σ Γ c c' -> red1 Σ Γ (tProj p c) (tProj p c')
 
 | app_red_l M1 N1 M2 : red1 Σ Γ M1 N1 -> red1 Σ Γ (tApp M1 M2) (tApp N1 M2)
 | app_red_r M2 N2 M1 : reds1 Σ Γ M2 N2 -> red1 Σ Γ (tApp M1 M2) (tApp M1 N2)

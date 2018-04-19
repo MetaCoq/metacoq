@@ -28,5 +28,6 @@ theories/Typing.v
 theories/MetaTheory.v
 theories/Checker.v
 theories/WcbvEval.v
+theories/Retyping.v
 theories/All.v
 theories/Extraction.v

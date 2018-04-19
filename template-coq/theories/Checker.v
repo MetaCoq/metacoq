@@ -509,8 +509,6 @@ Instance monad_exc : MonadExc type_error typing_result :=
       end
   }.
 
-Class Fuel := { fuel : nat }.
-
 Definition check_conv_gen `{checker_flags} {F:Fuel} conv_pb Σ Γ t u :=
   match isconv Σ fuel conv_pb Γ t [] u [] with
   | Some b => if b then ret () else raise (NotConvertible Γ t u t u)

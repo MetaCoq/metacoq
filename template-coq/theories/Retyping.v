@@ -34,7 +34,7 @@ Section TypeOf.
   Section SortOf.
     Context (type_of : context -> term -> typing_result term).
 
-    Definition sort_of Γ t :=
+    Definition type_of_as_sort Γ t :=
       tx <- type_of Γ t ;;
       reduce_to_sort (fst Σ) Γ tx.
 
@@ -57,8 +57,8 @@ Section TypeOf.
     | tCast c k t => ret t
 
     | tProd n t b =>
-      s1 <- sort_of type_of Γ t ;;
-      s2 <- sort_of type_of (Γ ,, vass n t) b ;;
+      s1 <- type_of_as_sort type_of Γ t ;;
+      s2 <- type_of_as_sort type_of (Γ ,, vass n t) b ;;
       ret (tSort (Universe.sort_of_product s1 s2))
 
     | tLambda n t b =>
@@ -112,4 +112,9 @@ Section TypeOf.
       | None => raise (IllFormedFix mfix n)
       end
     end.
+
+  Definition sort_of (Γ : context) (t : term) : typing_result universe :=
+    ty <- type_of Γ t;;
+    type_of_as_sort type_of Γ ty.
+
 End TypeOf.

@@ -1,7 +1,7 @@
 (* Distributed under the terms of the MIT license.   *)
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
-From Template Require Import Template utils monad_utils Ast univ Induction LiftSubst UnivSubst Typing Checker Retyping.
+From Template Require Import Template utils monad_utils Ast univ Induction LiftSubst UnivSubst Typing Checker Retyping MetaTheory WcbvEval.
 From Template Require AstUtils.
 Require Import String.
 Local Open Scope string_scope.
@@ -85,3 +85,84 @@ Section Erase.
      end.
 
 End Erase.
+
+(** * Erasure correctness
+    
+    The statement below expresses that any well-typed term's
+    extraction has the same operational semantics as its source, under
+    a few conditions:
+
+    - The terms has to be locally closed, otherwise evaluation could get 
+      stuck on free variables. Typing under an empty context ensures that.
+    - The global environment is axiom-free, for the same reason.
+    - The object is of inductive type, or more generally a function resulting 
+      ultimately in an inductive value when applied.
+
+   We use an observational equality relation to relate the two values, 
+   which is indifferent to the erased parts.
+ *)
+
+Fixpoint inductive_arity (t : term) :=
+  match t with
+  | tApp f _ | f =>
+    match f with
+    | tInd ind u => Some ind
+    | _ => None
+    end
+  end.
+
+(* Inductive inductive_arity : term -> Prop := *)
+(* | inductive_arity_concl ind u args : inductive_arity (mkApps (tInd ind u) args) *)
+(* | inductive_arity_arrow na b t : inductive_arity t -> inductive_arity (tProd na b t). *)
+
+Definition option_is_none {A} (o : option A) :=
+  match o with
+  | Some _ => false
+  | None => true
+  end.
+
+Definition is_axiom_decl g :=
+  match g with
+  | ConstantDecl kn cb => option_is_none cb.(cst_body)
+  | InductiveDecl kn ind => false
+  end.
+
+Definition axiom_free Σ :=
+  List.forallb (fun g => negb (is_axiom_decl g)) Σ.
+
+Definition computational_ind Σ ind :=
+  let 'mkInd mind n := ind in
+  let mib := lookup_env Σ mind in
+  match mib with
+  | Some (InductiveDecl kn decl) =>
+    match List.nth_error decl.(ind_bodies) n with
+    | Some body =>
+      match destArity [] body.(ind_type) with
+      | Some arity => negb (is_prop_sort (snd arity))
+      | None => false
+      end
+    | None => false
+    end
+  | _ => false
+  end.
+
+Require Import Bool.
+Coercion is_true : bool >-> Sortclass.
+
+(** The precondition on the extraction theorem. *)
+
+Record extraction_pre (Σ : global_context) t T :=
+  { extr_typed : Σ ;;; [] |- t : T;
+    extr_env_axiom_free : axiom_free (fst Σ);
+    extr_computational_inductive :
+      exists ind, inductive_arity T = Some ind /\ computational_ind Σ ind }.
+
+(** The extraction correctness theorem we conjecture. *)
+
+Definition erasure_correctness :=
+  forall Σ t T, extraction_pre Σ t T ->
+    forall (f : Fuel) (t' : term),
+      erase Σ [] t = Checked t' ->
+      forall v, eval Σ [] t v -> eval Σ [] t' v.
+      
+Conjecture erasure_correct : erasure_correctness.

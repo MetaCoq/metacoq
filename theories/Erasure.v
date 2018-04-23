@@ -44,20 +44,20 @@ Section Erase.
     if is_prop_sort s then ret dummy
     else match t with
     | tRel _ | tVar _ | tMeta _ | tEvar _ _ | tSort _ | tConst _ _ | tInd _ _ | tConstruct _ _ _ => ret t
-    | tCast t k ty => t' <- erase Γ t ;;
-                      ty' <- erase Γ ty ;;
-                      ret (tCast t' k ty')
+    | tCast t k ty => erase Γ t
+                      (* ty' <- erase Γ ty ;; *)
+                      (* ret (tCast t' k ty') *)
     | tProd na b t => b' <- erase Γ b;;
-                      t' <- erase Γ t;;
+                      t' <- erase (vass na b :: Γ) t;;
                       ret (tProd na b' t')
     | tLambda na b t =>
       b' <- erase Γ b;;
-      t' <- erase Γ t;;
+      t' <- erase (vass na b :: Γ) t;;
       ret (tLambda na b' t')
     | tLetIn na b t0 t1 =>
       b' <- erase Γ b;;
       t0' <- erase Γ t0;;
-      t1' <- erase Γ t1;;
+      t1' <- erase (vdef na b t0 :: Γ) t1;;
       ret (tLetIn na b' t0' t1')
     | tApp f l =>
       f' <- erase Γ f;;
@@ -166,3 +166,26 @@ Definition erasure_correctness :=
       forall v, eval Σ [] t v -> eval Σ [] t' v.
       
 Conjecture erasure_correct : erasure_correctness.
+
+Quote Recursively Definition zero_syntax := 0.
+
+Definition erase_rec (t : global_declarations * term) : typing_result term :=
+  let '(Σ, t) := t in
+  erase (reconstruct_global_context Σ) [] t.
+
+(* A few tests *)
+
+Quote Recursively Definition true_syntax := I.
+Eval vm_compute in erase_rec true_syntax.
+
+Quote Recursively Definition exist_syntax := (exist _ 0 I : { x : nat | True }).
+Eval vm_compute in erase_rec exist_syntax.
+
+Quote Recursively Definition exist'_syntax := ((exist _ (S 0) (le_n (S 0))) : { x : nat | 0 < x }).
+Eval vm_compute in erase_rec exist'_syntax.
+
+Quote Recursively Definition fun_syntax := (fun (x : nat) (bla : x < 0) => x).
+Eval vm_compute in erase_rec fun_syntax. (* Not erasing bindings *)
+
+Quote Recursively Definition fun'_syntax := (fun (x : nat) (bla : x < 0) => bla).
+Eval vm_compute in erase_rec fun'_syntax. 

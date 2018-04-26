@@ -379,7 +379,7 @@ struct
   let cParameter_entry = r_reify "Build_parameter_entry"
   let cDefinition_entry = r_reify "Build_definition_entry"
 
-  let (tcbv, tcbn, thnf, tall, tlazy) = (r_reify "cbv", r_reify "cbn", r_reify "hnf", r_reify "all", r_reify "lazy")
+  let (tcbv, tcbn, thnf, tall, tlazy, tunfold) = (r_reify "cbv", r_reify "cbn", r_reify "hnf", r_reify "all", r_reify "lazy", r_reify "unfold")
 
   let (tglobal_reference, tConstRef, tIndRef, tConstructRef) = (r_reify "global_reference", r_reify "ConstRef", r_reify "IndRef", r_reify "ConstructRef")
 
@@ -1535,9 +1535,13 @@ struct
    ** - This would also allow writing terms with holes
    **)
 
+let constant str = Universes.constr_of_global (Smartlocate.locate_global_with_alias (None, Libnames.qualid_of_string str))
 
-
-  let denote_reduction_strategy (trm : quoted_reduction_strategy) : Redexpr.red_expr =
+  let denote_reduction_strategy evm (trm : quoted_reduction_strategy) : Redexpr.red_expr =
+    let env = Global.env () in
+    let (evm, pgm) = reduce_hnf env evm trm in
+    let (trm, args) = app_full pgm [] in
+    
     (* from g_tactic.ml4 *)
     let default_flags = Redops.make_red_flag [FBeta;FMatch;FFix;FCofix;FZeta;FDeltaBut []] in
     if Term.eq_constr trm tcbv then Cbv default_flags
@@ -1545,6 +1549,11 @@ struct
     else if Term.eq_constr trm thnf then Hnf
     else if Term.eq_constr trm tall then Cbv all_flags
     else if Term.eq_constr trm tlazy then Lazy all_flags
+    else if Term.eq_constr trm tunfold then (match args with name (* to unfold *) :: _ ->
+                                                              let (evm, name) = reduce_all env evm name in
+                                                              let name = unquote_ident name in
+                                                              Unfold [AllOccurrences, EvalConstRef (fst (EConstr.destConst evm (EConstr.of_constr (constant (Names.Id.to_string name))))) ] 
+                                                          | _ -> raise  (Failure "ill-typed reduction strategy"))
     else not_supported_verb trm "denote_reduction_strategy"
 
 
@@ -1807,7 +1816,7 @@ struct
     else if Term.eq_constr coConstr tmEval then
       match args with
       | s(*reduction strategy*)::_(*type*)::trm::[] ->
-         let red = denote_reduction_strategy s in
+         let red = denote_reduction_strategy evm s in
          let (evm, trm) = reduce_all ~red env evm trm
          in k (evm, trm)
       | _ -> monad_failure "tmEval" 3
@@ -1987,7 +1996,7 @@ END;;
 
 VERNAC COMMAND EXTEND Run_program CLASSIFIED AS SIDEFF
     | [ "Run" "TemplateProgram" constr(def) ] ->
-      [ check_inside_section () ;
+      [ (* check_inside_section () ; *)
 	let (evm, env) = Lemmas.get_current_context () in
         let (def, _) = Constrintern.interp_constr env evm def in
         (* todo : uctx ? *)

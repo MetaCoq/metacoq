@@ -22,6 +22,7 @@ clean: Makefile.coq Makefile.coqplugin Makefile.coqchecker
 	$(MAKE) -f Makefile.coq clean
 	$(MAKE) -f Makefile.coqplugin clean
 	$(MAKE) -f Makefile.coqchecker clean
+	git checkout html/coqdoc.css
 
 mrproper: clean
 	rm -f Makefile.coq Makefile.coqplugin Makefile.coqchecker

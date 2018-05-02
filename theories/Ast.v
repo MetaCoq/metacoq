@@ -271,7 +271,7 @@ Inductive global_reference :=
 
 (** *** The TemplateMonad type *)
 
-Inductive TemplateMonad : Type -> Prop :=
+Inductive TemplateMonad : Type -> Type :=
 (* Monadic operations *)
 | tmReturn : forall {A:Type}, A -> TemplateMonad A
 | tmBind : forall {A B : Type}, TemplateMonad A -> (A -> TemplateMonad B)

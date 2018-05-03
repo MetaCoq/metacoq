@@ -102,6 +102,32 @@ Definition mkApps t us :=
 
 Definition mkApp t u := Eval cbn in mkApps t [u].
 
+Definition isApp t :=
+  match t with
+  | tApp _ _ => true
+  | _ => false
+  end.
+
+(** Well-formed terms: invariants which are not ensured by the OCaml type system *)
+
+Inductive wf : term -> Prop :=
+| wf_tRel n : wf (tRel n)
+| wf_tVar id : wf (tVar id)
+| wf_tMeta n : wf (tMeta n)
+| wf_tEvar n l : Forall wf l -> wf (tEvar n l)
+| wf_tSort u : wf (tSort u)
+| wf_tCast t k t' : wf t -> wf t' -> wf (tCast t k t')
+| wf_tProd na t b : wf t -> wf b -> wf (tProd na t b)
+| wf_tLambda na t b : wf t -> wf b -> wf (tLambda na t b)
+| wf_tLetIn na t b b' : wf t -> wf b -> wf b' -> wf (tLetIn na t b b')
+| wf_tApp t u : ~ isApp t = true -> u <> nil -> wf t -> Forall wf u -> wf (tApp t u)
+| wf_tConst k u : wf (tConst k u)
+| wf_tInd i u : wf (tInd i u)
+| wf_tConstruct i k u : wf (tConstruct i k u)
+| wf_tCase ci p c brs : wf p -> wf c -> Forall (Program.Basics.compose wf snd) brs -> wf (tCase ci p c brs)
+| wf_tProj p t : wf t -> wf (tProj p t)
+| wf_tFix mfix k : Forall (fun def => wf def.(dtype _) /\ wf def.(dbody _)) mfix -> wf (tFix mfix k)
+| wf_tCoFix mfix k : Forall (fun def => wf def.(dtype _) /\ wf def.(dbody _)) mfix -> wf (tCoFix mfix k).
 
 (** ** Entries
 

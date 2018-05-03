@@ -52,7 +52,7 @@ Fixpoint subst t k u :=
     end
   | tEvar ev args => tEvar ev (List.map (subst t k) args)
   | tLambda na T M => tLambda na (subst t k T) (subst t (S k) M)
-  | tApp u v => tApp (subst t k u) (List.map (subst t k) v)
+  | tApp u v => mkApps (subst t k u) (List.map (subst t k) v)
   | tProd na A B => tProd na (subst t k A) (subst t (S k) B)
   | tCast c kind ty => tCast (subst t k c) kind (subst t k ty)
   | tLetIn na b ty b' => tLetIn na (subst t k b) (subst t k ty) (subst t (S k) b')
@@ -145,6 +145,11 @@ Lemma lift_rel_lt : forall k n p, p > n -> lift_rec k (tRel n) p = tRel n.
 Proof.
   intros; simpl in |- *.
   now elim (leb_spec p n).
+Qed.
+
+Lemma lift_rel_alt : forall n k i, lift n k (tRel i) = tRel (if Nat.leb k i then n + i else i).
+Proof.
+  intros; simpl. now destruct leb.
 Qed.
 
 Lemma subst_rel_lt : forall u n k, k > n -> subst_rec u (tRel n) k = tRel n.
@@ -243,13 +248,67 @@ Lemma permute_lift :
   apply permute_lift_rec; easy.
 Qed.
 
+Lemma Forall_map {A B} (P : B -> Prop) (f : A -> B) l : Forall (Program.Basics.compose P f) l -> Forall P (map f l).
+Proof.
+  induction 1; constructor; auto.
+Qed.
+
+Lemma Forall_impl {A} (P Q : A -> Prop) : forall l, Forall P l -> (forall x, P x -> Q x) -> Forall Q l.
+Proof.
+  induction 1; constructor; auto.
+Qed.
+
+Lemma lift_rec_isApp n k t : ~ isApp t = true -> ~ isApp (lift n k t) = true.
+Proof.
+  induction t; auto.
+  intros.
+  simpl. destruct leb; auto.
+Qed.
+
+Lemma map_non_nil {A B} (f : A -> B) l : l <> nil -> map f l <> nil.
+Proof.
+  intros. intro.
+  destruct l; try discriminate.
+  contradiction.
+Qed.
+
+Lemma lift_rec_wf n k t : wf t -> wf (lift_rec n t k).
+Proof.
+  intros wft; revert t wft k.
+  apply (term_wf_forall_list_ind (fun t => forall k, wf (lift n k t))) ; simpl; intros; try constructor; auto.
+
+  destruct leb; constructor.
+  apply Forall_map.
+  induction H; constructor; auto.
+  now apply lift_rec_isApp.
+  now apply map_non_nil.
+  apply Forall_map. eapply Forall_impl. apply H2. auto.
+  apply Forall_map. eapply Forall_impl. apply H1.
+  intros [n' t]. simpl. repeat red; simpl; auto.
+  apply Forall_map. eapply Forall_impl. apply H.
+  simpl. intros. red; intuition (simpl; auto).
+  apply Forall_map. eapply Forall_impl. apply H.
+  simpl. intros. red; intuition (simpl; auto).
+Qed.
+
+Lemma mkApps_tApp t l :
+  ~ isApp t = true -> l <> nil -> mkApps t l = tApp t l.
+Proof.
+  intros.
+  destruct l. simpl. contradiction.
+  destruct t; simpl; try reflexivity.
+  simpl in H. contradiction.
+Qed.
+
+Hint Unfold compose.
+Hint Transparent compose.
+
 Lemma simpl_subst_rec :
-  forall M N n p k,
+  forall M (H : wf M) N n p k,
     p <= n + k ->
     k <= p -> subst_rec N (lift_rec (S n) M k) p = lift_rec n M k.
 Proof.
-  intros M.
-  elim M using term_forall_list_ind;
+  intros M wfM. induction wfM using term_wf_forall_list_ind;
     intros; simpl; try easy;
       rewrite ?map_map_compose, ?compose_on_snd, ?compose_map_def;
       try solve [f_equal; easy];
@@ -260,11 +319,34 @@ Proof.
   - elim (leb_spec k n); intros; try easy.
     + rewrite subst_rel_gt; try easy.
     + rewrite subst_rel_lt; try easy.
+
+  - rewrite IHwfM; auto.
+    apply (lift_rec_isApp n k) in H.
+    rewrite mkApps_tApp; auto using map_non_nil.
+    f_equal. eapply forall_map_spec. apply H1; simpl; auto.
+    simpl; intros. typeclasses eauto with core.
 Qed.
 
 Lemma simpl_subst :
-  forall N M n p, p <= n -> subst_rec N (lift0 (S n) M) p = lift0 n M.
+  forall N M (H : wf M) n p, p <= n -> subst_rec N (lift0 (S n) M) p = lift0 n M.
   intros; now apply simpl_subst_rec.
+Qed.
+
+Lemma mkApps_tRel n a l : mkApps (tRel n) (a :: l) = tApp (tRel n) (a :: l).
+Proof.
+  simpl. reflexivity.
+Qed.
+
+Lemma lift_mkApps n k t l : lift n k (mkApps t l) = mkApps (lift n k t) (map (lift n k) l).
+Proof.
+  revert n k t; induction l; intros n k t; destruct t; try reflexivity.
+  rewrite lift_rel_alt. rewrite !mkApps_tRel.
+  simpl lift.
+  simpl map. rewrite !mkApps_tRel.
+  f_equal. destruct leb; auto.
+
+  simpl. f_equal.
+  now rewrite map_app.
 Qed.
 
 Lemma commut_lift_subst_rec :
@@ -293,13 +375,16 @@ Proof.
       now rewrite subst_rel_lt.
     + rewrite lift_rel_lt; try easy.
       now rewrite subst_rel_lt.
+
+  - rewrite lift_mkApps. f_equal. auto.
+    rewrite map_map_compose. apply_spec. intros.
+    now apply H2.
 Qed.
 
 Lemma commut_lift_subst :
   forall M N k, subst_rec N (lift0 1 M) (S k) = lift0 1 (subst_rec N M k).
   now intros; rewrite commut_lift_subst_rec.
 Qed.
-
 
 Lemma distr_lift_subst_rec :
   forall M N n p k,
@@ -333,6 +418,9 @@ Proof.
     + rewrite lift_rel_lt; try easy.
       now rewrite subst_rel_lt.
 
+  - rewrite lift_mkApps. f_equal; auto.
+    rewrite map_map_compose; apply_spec; simpl.
+    intros. apply H1.
   - rewrite add_assoc, H0. f_equal. now f_equal.
   - rewrite add_assoc, H0. f_equal. now f_equal.
 Qed.
@@ -347,9 +435,21 @@ Proof.
   apply distr_lift_subst_rec.
 Qed.
 
+Lemma mkApp_nested f l l' : mkApps (mkApps f l) l' = mkApps f (l ++ l').
+Proof.
+  induction l; destruct f; destruct l'; simpl; rewrite ?app_nil_r; auto.
+  f_equal. now rewrite <- app_assoc.
+Qed.
+
+Lemma subst_mkApps u k t l : subst u k (mkApps t l) = mkApps (subst u k t) (map (subst u k) l).
+Proof.
+  revert u k t; induction l; intros u k t; destruct t; try reflexivity.
+  intros. simpl mkApps at 1. simpl subst at 2. simpl subst at 1.
+  rewrite map_app. now rewrite mkApp_nested.
+Qed.
 
 Lemma distr_subst_rec :
-  forall M N (P : term) n p,
+  forall M N (P : term) (wfP : wf P) n p,
     subst_rec P (subst_rec N M p) (p + n) =
     subst_rec (subst_rec P N n) (subst_rec P M (S (p + n))) p.
 Proof.
@@ -383,18 +483,21 @@ Proof.
          now rewrite subst_rel_gt.
     + rewrite !subst_rel_lt; try easy.
 
-  - rewrite add_assoc, H0. f_equal. now f_equal.
-  - rewrite add_assoc, H0. f_equal. now f_equal.
+  - rewrite !subst_mkApps. rewrite H; auto. f_equal.
+    rewrite !map_map_compose. apply_spec. intros.
+    unfold compose. auto.
+  - rewrite add_assoc, H0; auto. f_equal. now f_equal.
+  - rewrite add_assoc, H0; auto. f_equal. now f_equal.
 Qed.
 
 Lemma distr_subst :
-  forall (P : term) N M k,
+  forall (P : term) (wfP : wf P) N M k,
     subst_rec P (subst0 N M) k = subst0 (subst_rec P N k) (subst_rec P M (S k)).
 Proof.
   intros; unfold subst in |- *.
   pattern k at 1 3 in |- *.
   change k with (0 + k).
-  apply distr_subst_rec.
+  now apply distr_subst_rec.
 Qed.
 
 

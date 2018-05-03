@@ -29,6 +29,7 @@ theories/MetaTheory.v
 theories/Checker.v
 theories/WcbvEval.v
 theories/Retyping.v
-theories/Erasure.v
+theories/Erasure/Ast.v
+theories/Erasure/Erase.v
 theories/All.v
 theories/Extraction.v

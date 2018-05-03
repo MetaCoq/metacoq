@@ -253,3 +253,83 @@ Ltac apply_spec :=
   | H : tFixProp _ _ |- map _ _ = map _ _ =>
     eapply (tfix_map_spec H)
   end.
+
+Lemma lift_to_list (P : term -> Prop) : (forall t, wf t -> P t) -> forall l, Forall wf l -> Forall P l.
+Proof.
+  intros IH.
+  fix 1.
+  destruct l; constructor.
+  apply IH. now inversion_clear H.
+  apply lift_to_list. now inversion_clear H.
+Defined.
+
+Lemma lift_to_wf_list (P : term -> Prop) : forall l, Forall (fun t => wf t -> P t) l -> Forall wf l -> Forall P l.
+Proof.
+  induction 1. constructor.
+  inversion_clear 1. specialize (IHForall H3).
+  constructor; auto.
+Qed.
+
+Ltac inv H := inversion_clear H.
+Lemma term_wf_forall_list_ind :
+  forall P : term -> Prop,
+    (forall n : nat, P (tRel n)) ->
+    (forall i : ident, P (tVar i)) ->
+    (forall n : nat, P (tMeta n)) ->
+    (forall (n : nat) (l : list term), Forall P l -> P (tEvar n l)) ->
+    (forall s, P (tSort s)) ->
+    (forall t : term, P t -> forall (c : cast_kind) (t0 : term), P t0 -> P (tCast t c t0)) ->
+    (forall (n : name) (t : term), P t -> forall t0 : term, P t0 -> P (tProd n t t0)) ->
+    (forall (n : name) (t : term), P t -> forall t0 : term, P t0 -> P (tLambda n t t0)) ->
+    (forall (n : name) (t : term),
+        P t -> forall t0 : term, P t0 -> forall t1 : term, P t1 -> P (tLetIn n t t0 t1)) ->
+    (forall t : term, ~ isApp t = true -> P t -> forall l : list term, l <> nil -> Forall P l -> P (tApp t l)) ->
+    (forall (s : String.string) (u : list Level.t), P (tConst s u)) ->
+    (forall (i : inductive) (u : list Level.t), P (tInd i u)) ->
+    (forall (i : inductive) (n : nat) (u : list Level.t), P (tConstruct i n u)) ->
+    (forall (p : inductive * nat) (t : term),
+        P t -> forall t0 : term, P t0 -> forall l : list (nat * term),
+            tCaseBrsProp P l -> P (tCase p t t0 l)) ->
+    (forall (s : projection) (t : term), P t -> P (tProj s t)) ->
+    (forall (m : mfixpoint term) (n : nat), tFixProp P m -> P (tFix m n)) ->
+    (forall (m : mfixpoint term) (n : nat), tFixProp P m -> P (tCoFix m n)) ->
+    forall t : term, wf t -> P t.
+Proof.
+  intros until t. revert t.
+  apply (term_forall_list_ind (fun t => wf t -> P t));
+    intros; try solve [match goal with
+                 H : _ |- _ => apply H
+              end; auto].
+  apply H2. inv H17.
+  auto using lift_to_wf_list.
+
+  inv H18; auto.
+  inv H18; auto.
+  inv H18; auto.
+  inv H19; auto.
+  inv H18; auto.
+
+  apply H8; auto.
+  auto using lift_to_wf_list.
+
+  inv H19; apply H12; auto.
+  red.
+  red in H18.
+  induction H18.
+  constructor.
+  inv H22; auto.
+
+  inv H17; auto.
+
+  inv H17; auto.
+  apply H14. red.
+  red in H16.
+  induction H16. constructor.
+  inv H18; constructor; intuition auto.
+
+  inv H17; auto.
+  apply H15. red.
+  red in H16.
+  induction H16. constructor.
+  inv H18; constructor; intuition auto.
+Qed.

@@ -2,7 +2,7 @@
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
 From Template Require Import Template utils monad_utils Ast univ Induction LiftSubst UnivSubst Typing Checker Retyping MetaTheory WcbvEval.
-From Template Require AstUtils.
+From Template Require AstUtils ErasedTerm.
 Require Import String.
 Local Open Scope string_scope.
 Set Asymmetric Patterns.
@@ -14,74 +14,87 @@ Definition is_prop_sort s :=
   | None => false
   end.
 
+Module E := ErasedTerm.
+
 Section Erase.
   Context `{F : Fuel}.
   Context (Σ : global_context).
 
-  Definition dummy := tVar "dummy".
-  Definition assertfalse := tVar "assertfalse".
-  Definition is_dummy c := match c with
-                           | tVar s => eq_string "dummy" s
-                           | _ => false
-                           end.
+  Definition is_box c := match c with
+                         | E.tBox => true
+                         | _ => false
+                         end.
+
 
   Definition on_snd_map {A B C} (f : B -> C) (p : A * B) :=
     (fst p, f (snd p)).
 
   Section EraseMfix.
-    Context (erase : forall (Γ : context) (t : term), typing_result term).
+    Context (erase : forall (Γ : context) (t : term), typing_result E.term).
 
     Definition erase_mfix Γ (defs : mfixpoint term) :=
       let Γ' := (fix_decls defs ++ Γ)%list in
       monad_map (fun d => dtype' <- erase Γ d.(dtype);;
-                          dbody' <- erase Γ' d.(dbody);;
-                          ret ({| dname := d.(dname); rarg := d.(rarg);
-                                  dtype := dtype'; dbody := dbody' |})) defs.
+                        dbody' <- erase Γ' d.(dbody);;
+                        ret ({| dname := d.(dname); rarg := d.(rarg);
+                                dtype := dtype'; dbody := dbody' |})) defs.
   End EraseMfix.
-
-  Fixpoint erase (Γ : context) (t : term) : typing_result term :=
+  
+  Fixpoint erase (Γ : context) (t : term) : typing_result E.term :=
     s <- sort_of Σ Γ t;;
-    if is_prop_sort s then ret dummy
+    if is_prop_sort s then ret E.tBox
     else match t with
-    | tRel _ | tVar _ | tMeta _ | tEvar _ _ | tSort _ | tConst _ _ | tInd _ _ | tConstruct _ _ _ => ret t
+    | tRel i => ret (E.tRel i)
+    | tVar n => ret (E.tVar n)
+    | tMeta m => ret (E.tMeta m)
+    | tEvar m l =>
+      l' <- monad_map (erase Γ) l;;
+      ret (E.tEvar m l')
+    | tSort u => ret (E.tSort u)
+    | tConst kn u => ret (E.tConst kn u)
+    | tInd kn u => ret (E.tInd kn u)
+    | tConstruct kn k u => ret (E.tConstruct kn k u)
     | tCast t k ty => erase Γ t
                       (* ty' <- erase Γ ty ;; *)
                       (* ret (tCast t' k ty') *)
     | tProd na b t => b' <- erase Γ b;;
                       t' <- erase (vass na b :: Γ) t;;
-                      ret (tProd na b' t')
+                      ret (E.tProd na b' t')
     | tLambda na b t =>
       b' <- erase Γ b;;
       t' <- erase (vass na b :: Γ) t;;
-      ret (tLambda na b' t')
+      ret (E.tLambda na b' t')
     | tLetIn na b t0 t1 =>
       b' <- erase Γ b;;
       t0' <- erase Γ t0;;
       t1' <- erase (vdef na b t0 :: Γ) t1;;
-      ret (tLetIn na b' t0' t1')
+      ret (E.tLetIn na b' t0' t1')
     | tApp f l =>
       f' <- erase Γ f;;
       l' <- monad_map (erase Γ) l;;
-      ret (tApp f' l') (* if is_dummy f' then ret dummy else *)
+      ret (E.tApp f' l') (* if is_dummy f' then ret dummy else *)
     | tCase ip p c brs =>
       c' <- erase Γ c;;
-      if is_dummy c' then
+      if is_box c' then
         match brs with
         | (_, x) :: _ => erase Γ x (* Singleton elimination *)
-        | nil => ret assertfalse (* Falsity elimination *)
+        | nil =>
+          p' <- erase Γ p;;
+          ret (E.tCase ip p' c' nil) (* Falsity elimination *)
         end
       else
         brs' <- monad_map (T:=typing_result) (fun x => x' <- erase Γ (snd x);; ret (fst x, x')) brs;;
-        ret (tCase ip p c' brs')
+        p' <- erase Γ p;;
+        ret (E.tCase ip p' c' brs')
     | tProj p c =>
       c' <- erase Γ c;;
-      ret (tProj p c')
+      ret (E.tProj p c')
     | tFix mfix n =>
       mfix' <- erase_mfix erase Γ mfix;;
-      ret (tFix mfix' n)
+      ret (E.tFix mfix' n)
     | tCoFix mfix n =>
       mfix' <- erase_mfix erase Γ mfix;;
-      ret (tCoFix mfix' n)
+      ret (E.tCoFix mfix' n)
      end.
 
 End Erase.
@@ -149,13 +162,79 @@ Definition computational_ind Σ ind :=
 Require Import Bool.
 Coercion is_true : bool >-> Sortclass.
 
+Definition computational_type Σ T :=
+  exists ind, inductive_arity T = Some ind /\ computational_ind Σ ind.
+
 (** The precondition on the extraction theorem. *)
 
 Record extraction_pre (Σ : global_context) t T :=
   { extr_typed : Σ ;;; [] |- t : T;
     extr_env_axiom_free : axiom_free (fst Σ);
-    extr_computational_inductive :
-      exists ind, inductive_arity T = Some ind /\ computational_ind Σ ind }.
+    extr_computational_type : computational_type Σ T }.
+
+(** The observational equivalence relation between source and erased values. *)
+
+Definition destApp t :=
+  match t with
+  | tApp f args => (f, args)
+  | f => (f, [])
+  end.
+
+Inductive Question : Set  := 
+| Cnstr : Ast.inductive -> nat -> Question 
+| Abs : Question.
+
+Definition observe (q : Question) (v : E.term) : bool :=
+  match q with
+  | Cnstr i k =>
+    match v with
+    | E.tConstruct i' k' u =>
+      eq_ind i i' && eq_nat k k'
+    | _ => false
+    end
+  | Abs =>
+    match v with
+    | E.tLambda _ _ _ => true
+    | E.tFix _ _ => true
+    | _ => false
+    end
+  end.
+             
+
+(*
+Fixpoint obs_eq (Σ : global_context) (v v' : term) (T : term) (s : universe) : Prop :=
+  if is_prop_sort s then is_dummy v'
+  else
+    match T with
+    | tInd ind u =>
+      (* Canonical inductive value *)
+      let '(hd, args) := destApp v in
+      let '(hd', args') := destApp v' in
+      eq_term Σ hd hd' /\ obs_eq 
+      
+ | obs_eq_prf v T s : Σ ;;; [] |- v : T ->
+  Σ ;;; [] |- T : tSort s ->
+  is_prop_sort s ->
+  obs_eq Σ v dummy
+
+| obs_eq_cstr ind k u args args' T : Σ ;;; [] |- mkApps (tConstruct ind k u) args : T ->
+  computational_type Σ T ->
+  Forall2 (obs_eq Σ) args args' ->
+  obs_eq Σ (mkApps (tConstruct ind k u) args) (mkApps (tConstruct ind k u) args')
+
+| obs_eq_arrow na f f' T T' :
+    Σ ;;; [] |- f : tProd na T T' ->
+    (forall arg arg', obs_eq Σ arg arg' -> 
+    
+    obs_eq Σ f f'.                                     
+*)                      
+
+Record extraction_post (Σ : global_context) (t' v : term) :=
+  { extr_value : E.term;
+    extr_eval : EEval.eval Σ [] t' extr_value;
+    (* extr_equiv : obs_eq Σ v extr_value *) }.
+    
+
 
 (** The extraction correctness theorem we conjecture. *)
 
@@ -163,7 +242,8 @@ Definition erasure_correctness :=
   forall Σ t T, extraction_pre Σ t T ->
     forall (f : Fuel) (t' : term),
       erase Σ [] t = Checked t' ->
-      forall v, eval Σ [] t v -> eval Σ [] t' v.
+      forall v, eval Σ [] t v ->
+      exists v', E.EEval Σ [] t' v'.
       
 Conjecture erasure_correct : erasure_correctness.
 

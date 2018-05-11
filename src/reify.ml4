@@ -349,9 +349,9 @@ struct
   let cMonomorphic_ctx = resolve_symbol pkg_univ "Monomorphic_ctx"
   let cPolymorphic_ctx = resolve_symbol pkg_univ "Polymorphic_ctx"
   let tUContextmake = resolve_symbol (ext_pkg_univ "UContext") "make"
-  (* let tConstraintempty = resolve_symbol (ext_pkg_univ "Constraint") "empty" *)
-  let tConstraintempty = Universes.constr_of_global (Coqlib.find_reference "template coq bug" (ext_pkg_univ "Constraint") "empty")
-  let tConstraintadd = Universes.constr_of_global (Coqlib.find_reference "template coq bug" (ext_pkg_univ "Constraint") "add")
+  (* let tConstraintSetempty = resolve_symbol (ext_pkg_univ "ConstraintSet") "empty" *)
+  let tConstraintSetempty = Universes.constr_of_global (Coqlib.find_reference "template coq bug" (ext_pkg_univ "ConstraintSet") "empty")
+  let tConstraintSetadd = Universes.constr_of_global (Coqlib.find_reference "template coq bug" (ext_pkg_univ "ConstraintSet") "add")
   let tmake_univ_constraint = resolve_symbol pkg_univ "make_univ_constraint"
   let tinit_graph = resolve_symbol pkg_ugraph "init_graph"
   let tadd_global_constraints = resolve_symbol pkg_ugraph  "add_global_constraints"
@@ -513,8 +513,8 @@ struct
     let const = Univ.Constraint.elements const in
     List.fold_left (fun tm c ->
         let c = quote_univ_constraint c in
-        Term.mkApp (tConstraintadd, [| c; tm|])
-      ) tConstraintempty const
+        Term.mkApp (tConstraintSetadd, [| c; tm|])
+      ) tConstraintSetempty const
 
   let quote_ucontext inst const =
     let inst' = quote_univ_instance inst in

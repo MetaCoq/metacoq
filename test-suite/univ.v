@@ -61,8 +61,8 @@ Module toto.
   (*               tProd nAnon (tSort ((Level.Var 0, false) :: nil)%list) (tRel 1), *)
   (*               1) :: nil; *)
   (*  ind_projs := nil |}] (UContext.make (Level.Var 0 :: Level.Var 1 :: nil)%list *)
-  (*    (Constraint.add (make_univ_constraint (Level.Var 0) Lt (Level.Var 1)) *)
-  (*       Constraint.empty)))) ;; *)
+  (*    (ConstraintSet.add (make_univ_constraint (Level.Var 0) Lt (Level.Var 1)) *)
+  (*       ConstraintSet.empty)))) ;; *)
 
 End toto.
 

@@ -638,7 +638,7 @@ Definition type_global_decl Σ decl :=
 
 Definition contains_init_graph φ :=
   LevelSet.In Level.prop (fst φ) /\ LevelSet.In Level.set (fst φ) /\
-  Constraint.In (Level.prop, ConstraintType.Le, Level.set) (snd φ).
+  ConstraintSet.In (Level.prop, ConstraintType.Le, Level.set) (snd φ).
 
 Definition wf_graph φ :=
   contains_init_graph φ /\ (no_universe_inconsistency φ = true).

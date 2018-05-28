@@ -3,7 +3,7 @@
 
 src/reify.mli
 src/reify.ml4
-src/template_plugin.mllib
+src/template_coq.mlpack
 
 theories/utils.v
 theories/monad_utils.v
@@ -11,7 +11,7 @@ theories/kernel/univ.v
 theories/kernel/uGraph.v
 theories/Ast.v
 theories/AstUtils.v
-theories/Template.v
+theories/Loader.v
 theories/Induction.v
 theories/LiftSubst.v
 theories/WeakSubst.v
@@ -19,3 +19,4 @@ theories/UnivSubst.v
 theories/Typing.v
 theories/Checker.v
 theories/All.v
+theories/Extraction.v

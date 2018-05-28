@@ -1,7 +1,7 @@
 (* Distributed under the terms of the MIT license.   *)
 
 Require Import List Program.
-Require Import Template.Template Template.Ast.
+Require Import Template.Ast.
 Require Import BinPos.
 Require Import Coq.Arith.Compare_dec Bool.
 Require Import Template.Induction.
@@ -45,7 +45,7 @@ Definition up := lift 1 0.
 Fixpoint subst t k u :=
   match u with
   | tRel n =>
-    match nat_compare k n with
+    match Nat.compare k n with
     | Datatypes.Eq => lift0 k t
     | Datatypes.Gt => tRel n
     | Datatypes.Lt => tRel (pred n)

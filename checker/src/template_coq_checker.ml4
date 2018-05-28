@@ -1,12 +1,11 @@
-(* -*- compile-command: "make -C .. -f Makefile.coqchecker" -*- *)
 (*i camlp4deps: "grammar/grammar.cma" i*)
 
-DECLARE PLUGIN "template_coq_checker_plugin"
+DECLARE PLUGIN "template_coq_checker"
 
 open Stdarg
 open Pp
 open PeanoNat.Nat
-open Checker
+open Checker0
 let pr_char c = str (Char.escaped c)
    
 let pr_char_list = prlist_with_sep mt pr_char
@@ -16,10 +15,10 @@ let check gr =
   let sigma = Evd.from_env env in
   let sigma, c = Evarutil.new_global sigma gr in
   Feedback.msg_debug (str"Quoting");
-  let term = Template_coq.quote_term_rec env (EConstr.to_constr sigma c) in
+  let term = Term_quoter.quote_term_rec env (EConstr.to_constr sigma c) in
   Feedback.msg_debug (str"Finished quoting.. checking.");
   let fuel = pow two (pow two (pow two two)) in
-  match Checker.typecheck_program fuel term with
+  match Checker0.typecheck_program fuel term with
   | CorrectDecl t ->
      Feedback.msg_debug (str"Finished checking successfully")
   | EnvError (AlreadyDeclared id) ->

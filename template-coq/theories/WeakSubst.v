@@ -1,7 +1,7 @@
 (* Distributed under the terms of the MIT license.   *)
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
-From Template Require Import Template Ast Induction utils LiftSubst Typing.
+From Template Require Import Ast Induction utils LiftSubst Typing.
 
 (** * Weakening and substitution lemmas for typing derivations.
 

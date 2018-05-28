@@ -5,7 +5,7 @@ From Template Require Export
      monad_utils  (* Monadic notations *)
      Ast          (* The term AST *)
      AstUtils     (* Utilities on the AST *)
-     Template     (* Declaration of the Template Coq plugin *)
+     Loader       (* Declaration of the Template Coq plugin *)
      Induction    (* Induction *)
      LiftSubst    (* Lifting and substitution for terms *)
      WeakSubst    (* Weakening and substitution lemmas *)

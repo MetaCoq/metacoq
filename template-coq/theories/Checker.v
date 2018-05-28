@@ -1,7 +1,7 @@
 (* Distributed under the terms of the MIT license.   *)
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
-From Template Require Import Template univ Ast Induction LiftSubst UnivSubst Typing
+From Template Require Import univ Ast Induction LiftSubst UnivSubst Typing
      monad_utils utils.
 Import MonadNotation.
 

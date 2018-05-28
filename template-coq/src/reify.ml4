@@ -1872,7 +1872,7 @@ end
 
 
 
-DECLARE PLUGIN "template_plugin"
+DECLARE PLUGIN "template_coq"
 
 (** Calling Ltac **)
 

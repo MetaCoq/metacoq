@@ -298,12 +298,12 @@ Run TemplateProgram (printInductive "NonRec").
 Set Printing Universes.
 Monomorphic Definition Funtm (A B: Type) := A->B.
 Polymorphic Definition Funtp@{i} (A B: Type@{i}) := A->B.
-Run TemplateProgram (printConstant "TemplateTestSuite.demo.Funtp").
+(* Run TemplateProgram (printConstant "TemplateTestSuite.demo.Funtp"). *)
 Run TemplateProgram (printConstant "TemplateTestSuite.demo.Funtm").
 
 Polymorphic Definition Funtp2@{i j} 
    (A: Type@{i}) (B: Type@{j}) := A->B.
-Run TemplateProgram (printConstant "TemplateTestSuite.demo.Funtp2").
+(* Run TemplateProgram (printConstant "TemplateTestSuite.demo.Funtp2"). *) (* TODOO *)
 
 
 Definition tmDefinition' : ident -> forall {A}, A -> TemplateMonad unit

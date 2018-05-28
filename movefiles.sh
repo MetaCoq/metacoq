@@ -1,5 +1,6 @@
 #/bin/bash
 
+cd template-coq
 for i in *.ml*; do
-  mv $i src/`echo $i | cut -b 1 | tr '[:upper:]' '[:lower:]'``echo $i | cut -b 2-`;
+  mv $i ../checker/src/`echo $i | cut -b 1 | tr '[:upper:]' '[:lower:]'``echo $i | cut -b 2-`;
 done

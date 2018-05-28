@@ -1,12 +1,9 @@
-(* -*- compile-command: "make -C .. -f Makefile.coqplugin" -*- *)
 (*i camlp4deps: "parsing/grammar.cma" i*)
 (*i camlp4use: "pa_extend.cmp" i*)
 
 open Term
 open Ast0
 open Reify
-
-DECLARE PLUGIN "template_coq_plugin"
 
 let quote_string s =
   let rec aux acc i =

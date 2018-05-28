@@ -1,6 +1,6 @@
 (* Distributed under the terms of the MIT license.   *)
 
-From Template Require Import Template Ast univ.
+From Template Require Import Ast univ.
 Require Import List Program.
 Require Import BinPos.
 Require Import Coq.Arith.Compare_dec Bool.

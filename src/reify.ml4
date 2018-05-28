@@ -43,21 +43,25 @@ let toDecl (old: Name.t * ((Constr.constr) option) * Constr.constr) : Context.Re
 let getType env (t:Constr.t) : Constr.t =
     EConstr.to_constr Evd.empty (Retyping.get_type_of env Evd.empty (EConstr.of_constr t))
 
+let pr_constr trm =
+  let (evm, env) = Pfedit.get_current_context () in
+  Printer.pr_constr_env env evm trm
+
 let not_supported trm =
-  CErrors.user_err (str "Not Supported:" ++ spc () ++ Printer.pr_constr trm)
+  CErrors.user_err (str "Not Supported:" ++ spc () ++ pr_constr trm)
 
 let not_supported_verb trm rs =
-  CErrors.user_err (str "Not Supported raised at " ++ str rs ++ str ":" ++ spc () ++ Printer.pr_constr trm)
+  CErrors.user_err (str "Not Supported raised at " ++ str rs ++ str ":" ++ spc () ++ pr_constr trm)
 
 let bad_term trm =
-  CErrors.user_err (str "Bad term:" ++ spc () ++ Printer.pr_constr trm)
+  CErrors.user_err (str "Bad term:" ++ spc () ++ pr_constr trm)
 
 let bad_term_verb trm rs =
-  CErrors.user_err (str "Bad term:" ++ spc () ++ Printer.pr_constr trm
+  CErrors.user_err (str "Bad term:" ++ spc () ++ pr_constr trm
                     ++ spc () ++ str " Error: " ++ str rs)
 
 let gen_constant_in_modules locstr dirs s =
-  Universes.constr_of_global (Coqlib.gen_reference_in_modules locstr dirs s)
+  UnivGen.constr_of_global (Coqlib.gen_reference_in_modules locstr dirs s)
 
 let opt_hnf_ctor_types = ref false
 
@@ -351,8 +355,8 @@ struct
   let cPolymorphic_ctx = resolve_symbol pkg_univ "Polymorphic_ctx"
   let tUContextmake = resolve_symbol (ext_pkg_univ "UContext") "make"
   (* let tConstraintSetempty = resolve_symbol (ext_pkg_univ "ConstraintSet") "empty" *)
-  let tConstraintSetempty = Universes.constr_of_global (Coqlib.find_reference "template coq bug" (ext_pkg_univ "ConstraintSet") "empty")
-  let tConstraintSetadd = Universes.constr_of_global (Coqlib.find_reference "template coq bug" (ext_pkg_univ "ConstraintSet") "add")
+  let tConstraintSetempty = UnivGen.constr_of_global (Coqlib.find_reference "template coq bug" (ext_pkg_univ "ConstraintSet") "empty")
+  let tConstraintSetadd = UnivGen.constr_of_global (Coqlib.find_reference "template coq bug" (ext_pkg_univ "ConstraintSet") "add")
   let tmake_univ_constraint = resolve_symbol pkg_univ "make_univ_constraint"
   let tinit_graph = resolve_symbol pkg_ugraph "init_graph"
   let tadd_global_constraints = resolve_symbol pkg_ugraph  "add_global_constraints"
@@ -545,7 +549,7 @@ struct
 
   let quote_ugraph (g : UGraph.t) =
     let inst' = quote_univ_instance Univ.Instance.empty in
-    let const' = quote_univ_constraints (UGraph.constraints_of_universes g) in
+    let const' = quote_univ_constraints (fst (UGraph.constraints_of_universes g)) in
     let uctx = Constr.mkApp (tUContextmake, [|inst' ; const'|]) in
     Constr.mkApp (tadd_global_constraints, [|Constr.mkApp (cMonomorphic_ctx, [| uctx |]); tinit_graph|])
 
@@ -709,7 +713,7 @@ struct
     | None -> Constr.mkApp (cNone, [| opType |])
 
 
-  let quote_global_reference : Globnames.global_reference -> quoted_global_reference = function
+  let quote_global_reference : Names.GlobRef.t -> quoted_global_reference = function
     | Globnames.VarRef _ -> CErrors.user_err (str "VarRef unsupported")
     | Globnames.ConstRef c ->
        let kn = quote_kn (Names.Constant.canonical c) in
@@ -729,7 +733,7 @@ struct
       Term.App (f, xs) -> app_full f (Array.to_list xs @ acc)
     | _ -> (trm, acc)
            
-  let print_term (u: t) : Pp.t = Printer.pr_constr u
+  let print_term (u: t) : Pp.t = pr_constr u
   
   let from_coq_pair trm =
     let (h,args) = app_full trm [] in
@@ -1077,7 +1081,7 @@ CumulativityInfo.make (expose univs, ACumulativityInfo.variance cumi)
       | Term.Meta n -> (Q.mkMeta (Q.quote_int n), acc)
       | Term.Evar (n,args) ->
 	let (acc,args') =
-	  CArray.fold_map (fun acc x ->
+	  CArray.fold_left_map (fun acc x ->
 	    let (x,acc) = quote_term acc env x in acc,x)
 	                  acc args in
          (Q.mkEvar (Q.quote_int (Evar.repr n)) args', acc)
@@ -1108,7 +1112,7 @@ CumulativityInfo.make (expose univs, ACumulativityInfo.variance cumi)
       | Term.App (f,xs) ->
 	let (f',acc) = quote_term acc env f in
 	let (acc,xs') =
-	  CArray.fold_map (fun acc x ->
+	  CArray.fold_left_map (fun acc x ->
 	    let (x,acc) = quote_term acc env x in acc,x)
 	    acc xs in
 	(Q.mkApp f' xs', acc)
@@ -1185,9 +1189,9 @@ CumulativityInfo.make (expose univs, ACumulativityInfo.variance cumi)
       let ns' = Array.map Q.quote_name ns in
       let b' = Q.quote_int b in
       let acc, ts' =
-        CArray.fold_map (fun acc t -> let x,acc = quote_term acc env t in acc, x) acc ts in
+        CArray.fold_left_map (fun acc t -> let x,acc = quote_term acc env t in acc, x) acc ts in
       let acc, ds' =
-        CArray.fold_map (fun acc t -> let x,y = quote_term acc envfix t in y, x) acc ds in
+        CArray.fold_left_map (fun acc t -> let x,y = quote_term acc envfix t in y, x) acc ds in
       ((b',(ns',ts',ds')), acc)
     and quote_fixpoint acc env t =
       let ((a,b),decl) = t in
@@ -1380,7 +1384,7 @@ CumulativityInfo.make (expose univs, ACumulativityInfo.variance cumi)
 
   (* CHANGE: this is the only way (ugly) I found to construct [absrt_info] with empty fields,
 since  [absrt_info] is a private type *)
-  let empty_segment = Lib.section_segment_of_reference (Names.VarRef (Names.Id.of_string "blah"))
+  let empty_segment = Lib.section_segment_of_reference (Names.GlobRef.VarRef (Names.Id.of_string "blah"))
       
   let quote_mut_ind env (mi:Declarations.mutual_inductive_body) =
    let t= Discharge.process_inductive empty_segment (Names.Cmap.empty,Names.Mindmap.empty) mi in
@@ -1450,7 +1454,7 @@ since  [absrt_info] is a private type *)
 
 let denote_term evdref (trm: Q.t) : Constr.t =
   let rec aux (trm: Q.t) : Constr.t =
-  (*debug (fun () -> Pp.(str "denote_term" ++ spc () ++ Printer.pr_constr trm)) ; *)
+  (*debug (fun () -> Pp.(str "denote_term" ++ spc () ++ pr_constr trm)) ; *)
   match (Q.inspectTerm trm) with
   | ACoq_tRel x -> Constr.mkRel (Q.unquote_int x + 1)
   | ACoq_tVar x -> Constr.mkVar (Q.unquote_ident x)
@@ -1467,8 +1471,7 @@ let denote_term evdref (trm: Q.t) : Constr.t =
        let s = (Q.unquote_kn s) in 
        (try
          match Nametab.locate s with
-         | Globnames.ConstRef c ->
-            EConstr.Unsafe.to_constr (Evarutil.e_new_global evdref (Globnames.ConstRef c))
+         | Globnames.ConstRef c -> UnivGen.constr_of_global (Globnames.ConstRef c)
          | Globnames.IndRef _ -> CErrors.user_err (str "the constant is an inductive. use tInd : " 
               ++  Pp.str (Libnames.string_of_qualid s))
          | Globnames.VarRef _ -> CErrors.user_err (str "the constant is a variable. use tVar : " ++ Pp.str (Libnames.string_of_qualid s))
@@ -1724,7 +1727,8 @@ struct
          let typ = Constrextern.extern_type true env evm (EConstr.of_constr typ) in
          ComDefinition.do_definition ~program_mode:true (unquote_ident name) kind None [] None hole (Some typ)
                                (Lemmas.mk_hook (fun _ gr -> let env = Global.env () in
-                                                            let evm, t = Evd.fresh_global env evm gr in k (evm, t)))
+                                                            let evm, t = Evd.fresh_global env evm gr in
+                                                            let t = EConstr.to_constr evm t in k (evm, t)))
          (* let kind = Decl_kinds.(Global, Flags.use_polymorphic_flag (), DefinitionBody Definition) in *)
          (* Lemmas.start_proof (unquote_ident name) kind evm (EConstr.of_constr typ) *)
                             (* (Lemmas.mk_hook (fun _ gr -> *)
@@ -1739,8 +1743,7 @@ struct
          let (evm, def) = reduce_all env evm body in
          let evdref = ref evm in
          let trm = TermReify.denote_term evdref def in
-         let _ = Typing.e_type_of env evdref (EConstr.of_constr trm) in
-         let evm = !evdref in
+         let (evm, _) = Typing.type_of env !evdref (EConstr.of_constr trm) in
          let _ = Declare.declare_definition ~kind:Decl_kinds.Definition (unquote_ident name) (trm, Monomorphic_const_entry (Evd.universe_context_set evm)) in
          k (evm, unit_tt)
       | _ -> monad_failure "tmMkDefinition" 2
@@ -1797,7 +1800,7 @@ struct
       | _ -> monad_failure "tmQuoteUniverses" 1
     else if Constr.equal coConstr tmPrint then
       match args with
-      | _::trm::[] -> Feedback.msg_info (Printer.pr_constr trm);
+      | _::trm::[] -> Feedback.msg_info (pr_constr trm);
                       k (evm, unit_tt)
       | _ -> monad_failure "tmPrint" 2
     else if Constr.equal coConstr tmFail then
@@ -1854,17 +1857,17 @@ struct
         let (evm, t) = reduce_all env evm t in
         let evdref = ref evm in
         let t' = TermReify.denote_term evdref t in
-        let t' = Typing.e_solve_evars env evdref (EConstr.of_constr t') in
-        Typing.e_check env evdref t' (EConstr.of_constr typ) ;
+        let (evm, t') = Typing.solve_evars env !evdref (EConstr.of_constr t') in
+        let evm = Typing.check env evm t' (EConstr.of_constr typ) in
         let t' = EConstr.to_constr !evdref t' in
-        k (!evdref, t')
+        k (evm, t')
       | _ -> monad_failure "tmUnquoteTyped" 2
     else if Constr.equal coConstr tmFreshName then
       match args with
       | name::[] -> let name' = Namegen.next_ident_away_from (unquote_ident name) (fun id -> Nametab.exists_cci (Lib.make_path id)) in
                     k (evm, quote_ident name')
       | _ -> monad_failure "tmFreshName" 1
-    else CErrors.user_err (str "Invalid argument or not yet implemented. The argument must be a TemplateProgram: " ++ Printer.pr_constr coConstr)
+    else CErrors.user_err (str "Invalid argument or not yet implemented. The argument must be a TemplateProgram: " ++ pr_constr coConstr)
 end
 
 
@@ -2029,6 +2032,6 @@ VERNAC COMMAND EXTEND Make_tests CLASSIFIED AS QUERY
 	let (evm,env) = Pfedit.get_current_context () in
 	let c = Constrintern.interp_constr env evm c in
 	let result = TermReify.quote_term env (EConstr.to_constr evm (fst c)) in
-        Feedback.msg_notice (Printer.pr_constr result) ;
+        Feedback.msg_notice (pr_constr result) ;
 	() ]
 END;;

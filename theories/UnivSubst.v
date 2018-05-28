@@ -21,9 +21,9 @@ Definition subst_instance_level u l :=
   end.
 
 Definition subst_instance_cstrs u cstrs :=
-  Constraint.fold (fun '(l,d,r) =>
-                     Constraint.add (subst_instance_level u l, d, subst_instance_level u r))
-                  cstrs Constraint.empty.
+  ConstraintSet.fold (fun '(l,d,r) =>
+                     ConstraintSet.add (subst_instance_level u l, d, subst_instance_level u r))
+                  cstrs ConstraintSet.empty.
 
 Definition subst_instance_level_expr (u : universe_instance) (s : Universe.Expr.t) :=
   let '(l, b) := s in (subst_instance_level u l, b).

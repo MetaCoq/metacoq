@@ -9,7 +9,7 @@ From Template Require Import univ.
 
 (* For the moment we recompute the graph each time *)
 (* TODO the first component is useless *)
-Definition t : Type := LevelSet.t * Constraint.t.
+Definition t : Type := LevelSet.t * ConstraintSet.t.
 
 (* TODO use nat where Z is not useful or BinNat *)
 Local Open Scope Z.
@@ -26,7 +26,7 @@ Definition edges_of_constraint (uc : univ_constraint) : list edge
 
 Definition init_graph : t :=
   let levels := LevelSet.add Level.prop (LevelSet.add Level.set LevelSet.empty) in
-  let constraints := Constraint.add (Level.prop, ConstraintType.Lt, Level.set) Constraint.empty in
+  let constraints := ConstraintSet.add (Level.prop, ConstraintType.Lt, Level.set) ConstraintSet.empty in
   (levels, constraints).
 
 (* The monomorphic levels are > Set while polymorphic ones are >= Set. *)
@@ -35,8 +35,8 @@ Definition add_node (l : Level.t) (G : t) : t
      let constraints :=
          match l with
          | Level.lProp | Level.lSet => snd G (* supposed to be yet here *)
-         | Level.Var _ => Constraint.add (Level.set, ConstraintType.Le, l) (snd G)
-         | Level.Level _ => Constraint.add (Level.set, ConstraintType.Lt, l) (snd G)
+         | Level.Var _ => ConstraintSet.add (Level.set, ConstraintType.Le, l) (snd G)
+         | Level.Level _ => ConstraintSet.add (Level.set, ConstraintType.Lt, l) (snd G)
          end in
      (levels, constraints).
 
@@ -45,7 +45,7 @@ Definition add_constraint (uc : univ_constraint) (G : t) : t
      (* maybe useless if we always add constraints
         in which the universes are declared *)
      let G := add_node l (add_node l' G) in
-     let constraints := Constraint.add uc (snd G) in
+     let constraints := ConstraintSet.add uc (snd G) in
      (fst G, constraints).
 
 Definition repr (uctx : universe_context) : UContext.t :=
@@ -58,7 +58,7 @@ Definition add_global_constraints (uctx : universe_context) (G : t) : t
   := match uctx with
      | Monomorphic_ctx (inst, cstrs) =>
        let G := List.fold_left (fun s l => add_node l s) inst G in
-       Constraint.fold add_constraint cstrs G
+       ConstraintSet.fold add_constraint cstrs G
      | Polymorphic_ctx _ => G
      end.
 
@@ -67,7 +67,7 @@ Section UGraph.
 
   (* FIXME duplicates *)
   Definition edges : list edge
-    := Constraint.fold (fun uc E => edges_of_constraint uc ++ E) (snd φ) [].
+    := ConstraintSet.fold (fun uc E => edges_of_constraint uc ++ E) (snd φ) [].
 
   (* The graph *)
   (* For each node we record its predecessos  *)
@@ -137,8 +137,8 @@ Section UGraph.
     | ConstraintType.Le => check_le_level l r
     end.
 
-  Definition check_constraints (cstrs : Constraint.t) :=
-    Constraint.for_all check_constraint cstrs.
+  Definition check_constraints (cstrs : ConstraintSet.t) :=
+    ConstraintSet.for_all check_constraint cstrs.
 
   Definition check_le_level_expr (e1 e2 : Universe.Expr.t) : bool :=
     match e1, e2 with

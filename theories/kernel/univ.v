@@ -305,14 +305,14 @@ Module UnivConstraintDec.
     unfold eq. repeat decide equality.
   Defined.
 End UnivConstraintDec.
-Module Constraint := MSets.MSetWeakList.Make UnivConstraintDec.
+Module ConstraintSet := MSets.MSetWeakList.Make UnivConstraintDec.
 
 Definition make_univ_constraint : universe_level -> constraint_type -> universe_level -> univ_constraint
   := fun x y z => (x, y, z).
 
 (** Needs to be in Type because template polymorphism of MSets does not allow setting
     the lowest universe *)
-Definition constraints : Type := Constraint.t.  (* list univ_constraint *)
+Definition constraints : Type := ConstraintSet.t.  (* list univ_constraint *)
 
 (* val empty_constraint : constraints *)
 (* val union_constraint : constraints -> constraints -> constraints *)
@@ -397,15 +397,15 @@ Module UContext.
   Definition t := constrained Instance.t.
 
   (* Definition make : constrained Instance.t -> t := fun x => x. *)
-  Definition make : Instance.t -> Constraint.t -> t := pair.
+  Definition make : Instance.t -> ConstraintSet.t -> t := pair.
 
-  Definition empty : t := (Instance.empty, Constraint.empty).
+  Definition empty : t := (Instance.empty, ConstraintSet.empty).
   (* val is_empty : t -> bool *)
 
   Definition instance : t -> Instance.t := fst.
   Definition constraints : t -> constraints := snd.
 
-  Definition dest : t -> Instance.t * Constraint.t := fun x => x.
+  Definition dest : t -> Instance.t * ConstraintSet.t := fun x => x.
 
   (* (** Keeps the order of the instances *) *)
   (* val union : t -> t -> t *)

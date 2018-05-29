@@ -1,6 +1,6 @@
 all: template-coq checker
 
-.PHONY: all template-coq checker install html clean mrproper
+.PHONY: all template-coq checker install html clean mrproper .merlin
 
 install: 
 	$(MAKE) -C template-coq install
@@ -8,13 +8,13 @@ install:
 
 html: all
 	$(MAKE) -C template-coq html
-	$(MAKE) -C checker html
-#	git checkout html/coqdoc.css # Preserve custom coqdoc
+	mv template-coq/html/*.html html
+	rm template-coq/html/coqdoc.css
+	rm -d template-coq/html
 
 clean:
 	$(MAKE) -C template-coq clean
 	$(MAKE) -C checker clean
-# git checkout html/coqdoc.css
 
 mrproper:
 	$(MAKE) -C template-coq mrproper

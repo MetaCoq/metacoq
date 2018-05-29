@@ -15,7 +15,7 @@ Makefile.coq.conf
 *.mllib.d
 *.d
 .merlin
-/html/Template.*.html
+html/*.html
 
 
 template-coq/Ascii.ml

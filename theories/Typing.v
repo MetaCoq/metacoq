@@ -653,9 +653,9 @@ Inductive fresh_global (s : string) : global_declarations -> Prop :=
 
 Inductive type_global_env φ : global_declarations -> Type :=
 | globenv_nil : wf_graph φ -> type_global_env φ []
-| globenv_decl Σ id d :
+| globenv_decl Σ d :
     type_global_env φ Σ ->
-    fresh_global id Σ ->
+    fresh_global (global_decl_ident d) Σ ->
     type_global_decl (Σ, φ) d ->
     type_global_env φ (d :: Σ).
 

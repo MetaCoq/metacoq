@@ -374,19 +374,13 @@ Fixpoint rels_of {A} (Γ : list A) acc : list term :=
 (** Compute the type of a case from the predicate [p], actual parameters [pars] and
     an inductive declaration. *)
 
-Definition types_of_case ind u pars p decl :=
-  match destArity [] decl.(ind_type) with
-  | Some (args, s) =>
-    let pred :=
-        it_mkLambda_or_LetIn args
-          (tProd (nNamed decl.(ind_name))
-                 (mkApps (tInd ind u) (pars ++ rels_of args 0))
-                 (tSort [(Level.Level "large", false)]))    (* FIXME *)
-    in
+Definition types_of_case pars p pty decl :=
+  match destArity [] decl.(ind_type), destArity [] pty with
+  | Some (args, s), Some (args', s') =>
     let brs :=
-      List.map (fun '(id, t, ar) => (ar, substl (p :: pars) t)) decl.(ind_ctors)
-    in Some (pred, s, brs)
-  | None => None
+        List.map (fun '(id, t, ar) => (ar, substl (p :: pars) t)) decl.(ind_ctors)
+    in Some (args, args', s', brs)
+  | _, _ => None
   end.
 
 (** Family of a universe [u]. *)
@@ -449,6 +443,31 @@ Conjecture congr_cumul_prod : forall Σ Γ na na' M1 M2 N1 N2,
     cumul Σ (Γ ,, vass na M1) M2 N2 ->
     cumul Σ Γ (tProd na M1 M2) (tProd na' N1 N2).
 
+Definition eq_opt_term φ (t u : option term) :=
+  match t, u with
+  | Some t, Some u => eq_term φ t u
+  | None, None => true
+  | _, _ => false
+  end.
+
+Definition eq_decl φ (d d' : context_decl) :=
+  eq_opt_term φ d.(decl_body) d'.(decl_body) && eq_term φ d.(decl_type) d'.(decl_type).
+
+Definition eq_context φ (Γ Δ : context) :=
+  forallb2 (eq_decl φ) Γ Δ.
+
+Definition check_correct_arity φ decl ind u ctx pars pctx :=
+  let inddecl :=
+      {| decl_name := nNamed decl.(ind_name);
+         decl_body := None;
+         decl_type := mkApps (tInd ind u) (pars ++ rels_of ctx 0) |}
+  in eq_context φ (inddecl :: subst_instance_context u ctx) pctx.
+
+Inductive Forall2 {A B : Type} (R : A -> B -> Type) : list A -> list B -> Type :=
+  Forall2_nil : Forall2 R [] []
+| Forall2_cons : forall (x : A) (y : B) (l : list A) (l' : list B),
+    R x y -> Forall2 R l l' -> Forall2 R (x :: l) (y :: l').
+
 (** ** Typing relation *)
 
 Inductive typing (Σ : global_context) (Γ : context) : term -> term -> Type :=
@@ -504,11 +523,12 @@ Inductive typing (Σ : global_context) (Γ : context) : term -> term -> Type :=
     forall univs decl' (isdecl' : declared_inductive (fst Σ) ind univs decl'),
     decl.(ind_npars) = npar ->
     let pars := List.firstn npar args in
-    forall pty s btys, types_of_case ind u pars p decl' = Some (pty,s,btys) ->
-    List.Exists (fun sf => universe_family s = sf) decl'.(ind_kelim) ->
-    Σ ;;; Γ |- p : pty ->
+    forall pty, Σ ;;; Γ |- p : pty ->
+    forall indctx pctx ps btys, types_of_case pars p pty decl' = Some (indctx, pctx, ps, btys) ->
+    check_correct_arity (snd Σ) decl' ind u indctx pars pctx = true ->
+    List.Exists (fun sf => universe_family ps = sf) decl'.(ind_kelim) ->
     Σ ;;; Γ |- c : mkApps (tInd ind u) args ->
-    Forall2 (fun x y => fst x = fst y /\ squash (Σ ;;; Γ |- snd x : snd y)) brs btys ->
+    Forall2 (fun x y => (fst x = fst y) * (Σ ;;; Γ |- snd x : snd y)) brs btys ->
     Σ ;;; Γ |- tCase (ind, npar) p c brs : tApp p (List.skipn npar args ++ [c])
 
 | type_Proj p c u :
@@ -858,19 +878,36 @@ Inductive Forall_decls_typing φ (P : global_declarations -> term -> term -> Typ
 
 Definition size := nat.
 
+Section Forall2_size.
+  Context {A} (P : A -> A -> Type) (fn : forall x1 x2, P x1 x2 -> size).
+  Fixpoint forall2_size {l1 l2 : list A} (f : Forall2 P l1 l2) : size :=
+  match f with
+  | Forall2_nil => 0
+  | Forall2_cons x y l l' rxy rll' => fn _ _ rxy + forall2_size rll'
+  end.
+End Forall2_size.
+
 Definition typing_size {Σ Γ t T} (d : Σ ;;; Γ |- t : T) : size.
 Proof.
-  induction d;
-    match goal with
-    | H1 : size, H2 : size, H3 : size |- _ => exact (S (Nat.max H1 (Nat.max H2 H3)))
-    | H1 : size, H2 : size |- _ => exact (S (Nat.max H1 H2))
-    | H1 : size |- _  => exact (S H1)
-    | H : declared_constant _ _ _ |- _ => exact 2%nat
-    | _ : declared_inductive _ _ _ |- _  => exact 2%nat
-    | _ : declared_constructor _ _ _ |- _  => exact 2%nat
-    | _ : declared_projection _ _ _ |- _  => exact 2%nat
-    | _ => exact 1
-    end.
+  revert Σ Γ t T d.
+  fix 5.
+  destruct 1 ;
+  repeat match goal with
+         | H : typing _ _ _ _ |- _ => apply typing_size in H
+         end ;
+  match goal with
+  | H : Forall2 _ _ _ |- _ => idtac
+  | H1 : size, H2 : size, H3 : size |- _ => exact (S (Nat.max H1 (Nat.max H2 H3)))
+  | H1 : size, H2 : size |- _ => exact (S (Nat.max H1 H2))
+  | H1 : size |- _  => exact (S H1)
+  | H : declared_constant _ _ _ |- _ => exact 2%nat
+  | _ : declared_inductive _ _ _ |- _  => exact 2%nat
+  | _ : declared_constructor _ _ _ |- _  => exact 2%nat
+  | _ : declared_projection _ _ _ |- _  => exact 2%nat
+  | _ => exact 1
+  end.
+  exact (S (Nat.max d1 (Nat.max d2
+      (forall2_size _ (fun x y p => typing_size Σ Γ (snd x) (snd y) (snd p)) f)))).
 Defined.
 
 Fixpoint globenv_size (Σ : global_declarations) : size :=
@@ -926,6 +963,8 @@ Defined.
 
  TODO: thread the property on local contexts as well, avoiding to redo work at binding constructs. *)
 
+Require Import Lia.
+
 Lemma typing_ind_env :
   forall (P : global_context -> context -> term -> term -> Set),
     (forall Σ (wfΣ : wf Σ) (Γ : context) (n : nat) (isdecl : n < #|Γ|),
@@ -970,14 +1009,16 @@ Lemma typing_ind_env :
         declared_inductive (fst Σ) ind univs decl' ->
         ind_npars decl = npar ->
         let pars := firstn npar args in
-        forall (pty : term) (s : universe) (btys : list (nat * term)),
-        types_of_case ind u pars p decl' = Some (pty, s, btys) ->
-        Exists (fun sf : sort_family => universe_family s = sf) (ind_kelim decl') ->
-        Σ;;; Γ |- p : pty ->
+        forall (pty : term), Σ ;;; Γ |- p : pty -> P Σ Γ p pty ->
+        forall indctx pctx ps btys,
+        types_of_case pars p pty decl' = Some (indctx, pctx, ps, btys) ->
+        check_correct_arity (snd Σ) decl' ind u indctx pars pctx = true ->
+        Exists (fun sf : sort_family => universe_family ps = sf) (ind_kelim decl') ->
         P Σ Γ p pty ->
         Σ;;; Γ |- c : mkApps (tInd ind u) args ->
         P Σ Γ c (mkApps (tInd ind u) args) ->
-        Forall2 (fun x y : nat * term => fst x = fst y /\ squash (Σ;;; Γ |- snd x : snd y)) brs btys ->
+        Forall2 (fun x y : nat * term => (fst x = fst y) * (Σ;;; Γ |- snd x : snd y)
+                                         * P Σ Γ (snd x) (snd y))%type brs btys ->
         P Σ Γ (tCase (ind, npar) p c brs) (tApp p (skipn npar args ++ [c]))) ->
        (forall Σ (wfΣ : wf Σ) (Γ : context) (p : projection) (c : term) u (decl : ident * term),
         declared_projection (fst Σ) p decl ->
@@ -1070,4 +1111,17 @@ try solve [  match reverse goal with
   apply X6; eauto.
   specialize (X14 [] _ _ (type_Sort _ _ Level.prop)).
   simpl in X14. forward X14; auto. apply X14.
+  eapply X9; eauto.
+  eapply (X14 _ _ _ H); eauto. simpl; auto with arith.
+  eapply (X14 _ _ _ H); eauto. simpl; auto with arith. simpl in *.
+  eapply (X14 _ _ _ H0); eauto. simpl; auto with arith. simpl in *.
+  induction f; simpl; lia.
+  simpl in *.
+  revert f X14. clear. intros.
+  induction f; simpl in *. constructor.
+  destruct r. constructor. split; auto.
+  eapply (X14 _ _ _ t); eauto. simpl; auto with arith.
+  lia.
+  apply IHf. auto. intros.
+  eapply (X14 _ _ _ Hty). lia.
 Qed.

@@ -18,6 +18,7 @@ theories/*.cmxs
 /src/template_AST.ml
 /src/template_AST.mli
 *.d
+*.lia.cache
 /Makefile.coqplugin
 /src/ascii.ml
 /src/ascii.mli

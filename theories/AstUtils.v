@@ -3,6 +3,13 @@ From Coq Require Import List.
 From Template Require Import Ast utils monad_utils.
 Import List.ListNotations MonadNotation.
 
+Definition map_decl f (d : context_decl) :=
+  {| decl_name := d.(decl_name);
+     decl_body := option_map f d.(decl_body);
+     decl_type := f d.(decl_type) |}.
+
+Definition map_context f c :=
+  List.map (map_decl f) c.
 
 Definition string_of_gref gr :=
   match gr with

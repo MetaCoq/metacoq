@@ -378,7 +378,7 @@ Inductive type_error :=
 | NotAProduct (t t' : term)
 | NotAnInductive (t : term)
 | IllFormedFix (m : mfixpoint term) (i : nat)
-| UnsatisfiedConstraints (c : Constraint.t)
+| UnsatisfiedConstraints (c : ConstraintSet.t)
 | NotEnoughFuel (n : nat).
 
 Definition string_of_nat (n : nat) := Template.utils.string_of_int n.
@@ -595,7 +595,7 @@ Section Typecheck2.
 
   Definition polymorphic_constraints (u : universe_context) :=
     match u with
-    | Monomorphic_ctx _ => Constraint.empty
+    | Monomorphic_ctx _ => ConstraintSet.empty
     | Polymorphic_ctx ctx => UContext.constraints ctx
     end.
 

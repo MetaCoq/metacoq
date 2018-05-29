@@ -1927,7 +1927,7 @@ END;;
 
 VERNAC COMMAND EXTEND Make_vernac CLASSIFIED AS SIDEFF
     | [ "Quote" "Definition" ident(name) ":=" constr(def) ] ->
-      [ check_inside_section () ;
+      [ 
 	let (evm,env) = Lemmas.get_current_context () in
 	let def,uctx = Constrintern.interp_constr env evm def in
 	let trm = TermReify.quote_term env def in
@@ -1937,7 +1937,7 @@ END;;
 
 VERNAC COMMAND EXTEND Make_vernac_reduce CLASSIFIED AS SIDEFF
     | [ "Quote" "Definition" ident(name) ":=" "Eval" red_expr(rd) "in" constr(def) ] ->
-      [ check_inside_section () ;
+      [ 
 	let (evm,env) = Lemmas.get_current_context () in
 	let def, uctx = Constrintern.interp_constr env evm def in
         let evm = Evd.from_ctx uctx in
@@ -1950,7 +1950,7 @@ END;;
 
 VERNAC COMMAND EXTEND Make_recursive CLASSIFIED AS SIDEFF
     | [ "Quote" "Recursively" "Definition" ident(name) ":=" constr(def) ] ->
-      [ check_inside_section () ;
+      [ 
 	let (evm,env) = Lemmas.get_current_context () in
 	let def, uctx = Constrintern.interp_constr env evm def in
 	let trm = TermReify.quote_term_rec env def in
@@ -1961,7 +1961,7 @@ END;;
 
 VERNAC COMMAND EXTEND Unquote_vernac CLASSIFIED AS SIDEFF
     | [ "Make" "Definition" ident(name) ":=" constr(def) ] ->
-      [ check_inside_section () ;
+      [ 
 	let (evm, env) = Lemmas.get_current_context () in
 	let (trm, uctx) = Constrintern.interp_constr env evm def in
         let evdref = ref (Evd.from_ctx uctx) in
@@ -1972,7 +1972,7 @@ END;;
 
 VERNAC COMMAND EXTEND Unquote_vernac_red CLASSIFIED AS SIDEFF
     | [ "Make" "Definition" ident(name) ":=" "Eval" red_expr(rd) "in" constr(def) ] ->
-      [ check_inside_section () ;
+      [ 
 	let (evm, env) = Lemmas.get_current_context () in
 	let (trm, uctx) = Constrintern.interp_constr env evm def in
         let evm = Evd.from_ctx uctx in
@@ -1986,7 +1986,7 @@ END;;
 
 VERNAC COMMAND EXTEND Unquote_inductive CLASSIFIED AS SIDEFF
     | [ "Make" "Inductive" constr(def) ] ->
-      [ check_inside_section () ;
+      [ 
 	let (evm,env) = Lemmas.get_current_context () in
 	let (body,uctx) = Constrintern.interp_constr env evm def in
         Denote.declare_inductive env evm body ]
@@ -1994,7 +1994,7 @@ END;;
 
 VERNAC COMMAND EXTEND Run_program CLASSIFIED AS SIDEFF
     | [ "Run" "TemplateProgram" constr(def) ] ->
-      [ check_inside_section () ;
+      [ 
 	let (evm, env) = Lemmas.get_current_context () in
         let (def, _) = Constrintern.interp_constr env evm def in
         (* todo : uctx ? *)
@@ -2003,7 +2003,7 @@ END;;
 
 VERNAC COMMAND EXTEND Make_tests CLASSIFIED AS QUERY
     | [ "Test" "Quote" constr(c) ] ->
-      [ check_inside_section () ;
+      [ 
 	let (evm,env) = Lemmas.get_current_context () in
 	let c = Constrintern.interp_constr env evm c in
 	let result = TermReify.quote_term env (fst c) in

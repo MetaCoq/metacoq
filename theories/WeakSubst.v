@@ -38,7 +38,7 @@ Proof.
   unfold lift_decl, map_decl. destruct a. simpl. rewrite IHΓ; f_equal.
   rewrite lift_rec0. now destruct decl_body; simpl; rewrite ?lift_rec0.
 Qed.
-  
+
 Lemma lift_context_rec_fst n k Γ :
   fst (lift_context_rec n k Γ) = #|Γ| + k.
 Proof.
@@ -136,7 +136,7 @@ Proof.
       specialize (IHΓ' Γ'' v  H nth Heqnth).
       rewrite <- IHΓ'.
       f_equal. unfold lift_context. rewrite Heq. reflexivity.
-Qed.  
+Qed.
 
 Lemma typecheck_closed : env_prop (fun Σ Γ t T =>
                                      type_local_env Σ Γ ->
@@ -147,16 +147,16 @@ Proof.
     admit (* Need induction with IHs for environments *).
   - intuition auto.
     + eapply H0. constructor; auto.
-      red. now exists s1. 
+      red. now exists s1.
   - intuition; eapply H0; constructor; auto.
-    now exists s1. now exists s1. 
+    now exists s1. now exists s1.
   - intuition; try eapply H1; try constructor; auto.
   - (* typing spine ind *) admit.
   - admit. (* easy now *)
   - admit.
   - admit.
-  - specialize (H4 H7).
-    intuition auto. admit. admit. 
+  - specialize (H6 H8).
+    intuition auto. admit. admit.
   - (* proj *) admit.
   - admit.
   - admit.
@@ -167,7 +167,7 @@ Inductive BoolSpecSet (P Q : Prop) : bool -> Set :=
 
 Lemma leb_spec_Set : forall x y : nat, BoolSpecSet (x <= y) (y < x) (x <=? y).
 Proof.
-  intros. 
+  intros.
   destruct (Nat.leb_spec0 x y).
   now constructor.
   constructor. now auto with arith.
@@ -180,13 +180,13 @@ Lemma weakening_rec Σ Γ Γ' Γ'' (t : term) :
     Σ ;;; Γ ,,, Γ'' ,,, lift_context #|Γ''| 0 Γ' |-
     lift #|Γ''| #|Γ'| t : lift #|Γ''| #|Γ'| T).
 Proof.
-  intros HΣ HΓΓ' HΓ'' * H. revert Γ'' HΓ''. 
+  intros HΣ HΓΓ' HΓ'' * H. revert Γ'' HΓ''.
   dependent induction H; intros Γ'' HΓ''; simpl in *; try solve [econstructor; eauto].
 
   - elim (leb_spec_Set); intros Hn.
     + destruct (weaken_safe_nth_ge _ _ _ isdecl Γ'' Hn) as [isdecl' ->].
       rewrite simpl_lift_rec; try omega. rewrite Nat.add_succ_r.
-      constructor. 
+      constructor.
     + destruct (weaken_safe_nth_lt _ _ _ isdecl Γ'' Hn) as [isdecl' H'].
       apply (f_equal decl_type) in H'.
       unfold lift_decl in H'. simpl in H'.
@@ -202,7 +202,7 @@ Proof.
     forward IHtyping2. constructor; simpl; auto. red. now exists s1.
     specialize (IHtyping2 eq_refl Γ'').
     forward IHtyping2. rewrite lift_context_snoc. constructor. simpl; auto.
-    exists s1. simpl. rewrite Nat.add_0_r. eapply IHtyping1; auto. 
+    exists s1. simpl. rewrite Nat.add_0_r. eapply IHtyping1; auto.
     rewrite lift_context_snoc, plus_0_r in IHtyping2.
     eapply IHtyping2.
 
@@ -212,14 +212,14 @@ Proof.
     forward IHtyping2. constructor; simpl; auto. red. now exists s1.
     specialize (IHtyping2 eq_refl Γ'').
     forward IHtyping2. rewrite lift_context_snoc. constructor. simpl; auto.
-    exists s1. simpl. rewrite Nat.add_0_r. eapply IHtyping1; auto. 
+    exists s1. simpl. rewrite Nat.add_0_r. eapply IHtyping1; auto.
     rewrite lift_context_snoc, plus_0_r in IHtyping2.
     eapply IHtyping2.
 
   - econstructor; auto.
     simpl.
     specialize (IHtyping3 Γ (Γ' ,, vdef n b b_ty) HΣ).
-    forward IHtyping3. constructor; simpl; auto. 
+    forward IHtyping3. constructor; simpl; auto.
     specialize (IHtyping3 eq_refl Γ'').
     forward IHtyping3. rewrite lift_context_snoc, Nat.add_0_r.
     simpl.
@@ -254,7 +254,7 @@ Proof.
   intros HΣ HΓΓ' * H.
   pose (weakening_rec Σ Γ [] Γ' t).
   forward t0; eauto.
-  forward t0; eauto. now eapply type_local_env_app in HΓΓ'. 
+  forward t0; eauto. now eapply type_local_env_app in HΓΓ'.
 Qed.
 
 Lemma substitution Σ Γ n u U (t : term) :

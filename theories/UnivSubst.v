@@ -59,3 +59,6 @@ Fixpoint subst_instance_constr (u : universe_instance) (c : term) :=
     let mfix' := List.map (map_def (subst_instance_constr u)) mfix in
     tCoFix mfix' idx
   end.
+
+Definition subst_instance_context (u : universe_instance) (c : context) : context :=
+  AstUtils.map_context (subst_instance_constr u) c.

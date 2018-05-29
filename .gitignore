@@ -41,6 +41,8 @@ src/string0.mli
 /Makefile.coqchecker
 /src/ast0.ml
 /src/ast0.mli
+/src/astUtils0.ml
+/src/astUtils0.mli
 src/monad_utils.mli
 src/monad_utils.ml
 /src/list0.ml

@@ -1,4 +1,4 @@
-Require Import Template.Ast Template.Template.
+Require Import Template.Ast Template.Loader.
 Require Import List String. Import ListNotations.
 
 Set Primitive Projections.

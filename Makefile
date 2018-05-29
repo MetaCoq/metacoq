@@ -1,6 +1,6 @@
 all: template-coq checker
 
-.PHONY: all template-coq checker install html clean mrproper .merlin
+.PHONY: all template-coq checker install html clean mrproper .merlin test-suite translations
 
 install: 
 	$(MAKE) -C template-coq install
@@ -15,6 +15,8 @@ html: all
 clean:
 	$(MAKE) -C template-coq clean
 	$(MAKE) -C checker clean
+	$(MAKE) -C test-suite clean
+	$(MAKE) -C translations clean
 
 mrproper:
 	$(MAKE) -C template-coq mrproper
@@ -33,3 +35,6 @@ checker: template-coq
 
 test-suite: template-coq checker
 	$(MAKE) -C test-suite
+
+translations: template-coq
+	$(MAKE) -C translations

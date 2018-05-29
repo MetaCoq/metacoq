@@ -283,9 +283,9 @@ Inductive TemplateMonad : Type -> Type :=
 | tmEval : reductionStrategy -> forall {A:Type}, A -> TemplateMonad A
 
 (* Return the defined constant *)
-| tmDefinition : ident -> forall {A:Type}, A -> TemplateMonad A
+| tmDefinition : ident -> option reductionStrategy -> forall {A:Type}, A -> TemplateMonad A
 | tmAxiom : ident -> forall A, TemplateMonad A
-| tmLemma : ident -> forall A, TemplateMonad A
+| tmLemma : ident -> option reductionStrategy -> forall A, TemplateMonad A
 
 (* Guarenteed to not cause "... already declared" error *)
 | tmFreshName : ident -> TemplateMonad ident

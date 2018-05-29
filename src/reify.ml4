@@ -1567,6 +1567,19 @@ struct
       else bad_term trm
       | _ -> bad_term trm
 
+  let denote_option trm =
+    let (h,args) = app_full trm [] in
+    if Term.eq_constr h cSome then
+    match args with
+	  _ :: x :: _ -> Some (x)
+      | _ -> bad_term trm
+    else if Term.eq_constr h cNone then
+    match args with
+	  _ :: [] -> None
+      | _ -> bad_term trm
+    else
+      not_supported_verb trm "unqote_map_option"
+           
   let unquote_map_option f trm =
     let (h,args) = app_full trm [] in
     if Term.eq_constr h cSome then
@@ -1678,13 +1691,13 @@ struct
       | _ -> monad_failure_full "tmBind" 4 pgm
     else if Term.eq_constr coConstr tmDefinition then
       match args with
-      | name::typ::body::[] ->
+      | name::s::typ::body::[] ->
          let (evm, name) = reduce_all env evm name in
          (* todo: let the user choose the reduction used for the type *)
-         let (evm, typ) = reduce_hnf env evm typ in
+         let (evm, typ) = (match denote_option s with Some s -> let red = denote_reduction_strategy evm s in reduce_all ~red env evm typ | None -> (evm, typ)) in
          let n = Declare.declare_definition ~kind:Decl_kinds.Definition (unquote_ident name) ~types:typ (body, Evd.universe_context_set evm) in
          k (evm, Term.mkConst n)
-      | _ -> monad_failure "tmDefinition" 3
+      | _ -> monad_failure "tmDefinition" 4
     else if Term.eq_constr coConstr tmAxiom then
       match args with
       | name::typ::[] ->
@@ -1696,9 +1709,9 @@ struct
       | _ -> monad_failure "tmAxiom" 2
     else if Term.eq_constr coConstr tmLemma then
       match args with
-      | name::typ::[] ->
+      | name::s::typ::[] ->
          let (evm, name) = reduce_all env evm name in
-         let (evm, typ) = reduce_hnf env evm typ in
+         let (evm, typ) = (match denote_option s with Some s -> let red = denote_reduction_strategy evm s in reduce_all ~red env evm typ | None -> (evm, typ)) in
          let kind = (Decl_kinds.Global, Flags.use_polymorphic_flag (), Decl_kinds.Definition) in
          let hole = CAst.make (Constrexpr.CHole (None, Misctypes.IntroAnonymous, None)) in
          let typ = Constrextern.extern_type true env evm (EConstr.of_constr typ) in

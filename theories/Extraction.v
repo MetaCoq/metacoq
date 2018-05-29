@@ -1,16 +1,16 @@
 (** Extraction setup for template-coq.
-    
+
     Any extracted code planning to link with the plugin's OCaml reifier
     should use these same directives for consistency.
 *)
 
-From Template Require univ uGraph Ast.
+From Template Require univ uGraph Ast AstUtils.
 
 Require Import FSets.
 Require Import ExtrOcamlBasic.
 Require Import ExtrOcamlString ExtrOcamlZInt.
 
-Extraction Blacklist uGraph univ Ast String List Nat.
+Extraction Blacklist uGraph univ Ast AstUtils String List Nat.
 
 Set Warnings "-extraction-opaque-accessed".
 Extraction Library List.
@@ -39,3 +39,4 @@ Extraction Library monad_utils.
 Extraction Library univ.
 Extraction Library uGraph.
 Extraction Library Ast.
+Extraction Library AstUtils.

@@ -26,3 +26,4 @@ theories/Typing.v
 theories/Checker.v
 theories/All.v
 theories/Extraction.v
+demo.v

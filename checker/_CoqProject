@@ -72,3 +72,4 @@ src/g_template_checker.ml4
 src/template_coq_checker_plugin.mlpack
 
 theories/Loader.v
+demo.v

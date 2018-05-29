@@ -1,5 +1,3 @@
-(* -*- coq-prog-args: ("-top" "TemplateTestSuite.demo") -*-  *)
-
 Require Import List Arith.
 Require Import Template.All.
 Import ListNotations MonadNotation.
@@ -298,12 +296,13 @@ Run TemplateProgram (printInductive "NonRec").
 Set Printing Universes.
 Monomorphic Definition Funtm (A B: Type) := A->B.
 Polymorphic Definition Funtp@{i} (A B: Type@{i}) := A->B.
-(* Run TemplateProgram (printConstant "TemplateTestSuite.demo.Funtp"). *)
-Run TemplateProgram (printConstant "TemplateTestSuite.demo.Funtm").
+(* Run TemplateProgram (printConstant "Top.demo.Funtp"). *)
+Locate Funtm.
+Run TemplateProgram (printConstant "Top.demo.Funtm").
 
 Polymorphic Definition Funtp2@{i j} 
    (A: Type@{i}) (B: Type@{j}) := A->B.
-(* Run TemplateProgram (printConstant "TemplateTestSuite.demo.Funtp2"). *) (* TODOO *)
+(* Run TemplateProgram (printConstant "Top.demo.Funtp2"). *) (* TODOO *)
 
 
 Definition tmDefinition' : ident -> forall {A}, A -> TemplateMonad unit

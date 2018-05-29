@@ -83,3 +83,105 @@ Proof.
     simpl in isdecl.
     now rewrite <- IHl.
 Qed.
+
+Definition rev {A} (l : list A) : list A :=
+  let fix aux (l : list A) (acc : list A) : list A :=
+      match l with
+      | [] => acc
+      | x :: l => aux l (x :: acc)
+      end
+  in aux l [].
+
+Definition rev_map {A B} (f : A -> B) (l : list A) : list B :=
+  let fix aux (l : list A) (acc : list B) : list B :=
+      match l with
+      | [] => acc
+      | x :: l => aux l (f x :: acc)
+      end
+  in aux l [].
+
+Fact rev_cons :
+  forall {A} {l} {a : A},
+    rev (a :: l) = (rev l ++ [a])%list.
+Proof.
+  intro A.
+  unfold rev.
+  match goal with
+  | |- forall l a, ?faux _ _ = _ => set (aux := faux)
+  end.
+  assert (h : forall l acc, aux l acc = (aux l [] ++ acc)%list).
+  { intro l. induction l ; intro acc.
+    - cbn. reflexivity.
+    - cbn. rewrite (IHl [a]). rewrite IHl.
+      change (a :: acc) with ([a] ++ acc)%list.
+      auto with datatypes.
+  }
+  intros l a.
+  apply h.
+Defined.
+
+Fact rev_map_cons :
+  forall {A B} {f : A -> B} {l} {a : A},
+    rev_map f (a :: l) = (rev_map f l ++ [f a])%list.
+Proof.
+  intros A B f.
+  unfold rev_map.
+  match goal with
+  | |- forall l a, ?faux _ _ = _ => set (aux := faux)
+  end.
+  assert (h : forall l acc, aux l acc = (aux l [] ++ acc)%list).
+  { intro l. induction l ; intro acc.
+    - cbn. reflexivity.
+    - cbn. rewrite (IHl [f a]). rewrite IHl.
+      change (f a :: acc) with ([f a] ++ acc)%list.
+      auto with datatypes.
+  }
+  intros l a.
+  apply h.
+Defined.
+
+Fact rev_length :
+  forall {A} {l : list A},
+    List.length (rev l) = List.length l.
+Proof.
+  intro A.
+  unfold rev.
+  match goal with
+  | |- context [ List.length (?faux _ _) ] => set (aux := faux)
+  end.
+  assert (h : forall l acc, List.length (aux l acc) = (List.length acc + List.length l)%nat).
+  { intro l. induction l ; intro acc.
+    - cbn. auto with arith.
+    - cbn. rewrite IHl. cbn. auto with arith.
+  }
+  intro l. apply h.
+Defined.
+
+Fact rev_map_length :
+  forall {A B} {f : A -> B} {l : list A},
+    List.length (rev_map f l) = List.length l.
+Proof.
+  intros A B f.
+  unfold rev_map.
+  match goal with
+  | |- context [ List.length (?faux _ _) ] => set (aux := faux)
+  end.
+  assert (h : forall l acc, List.length (aux l acc) =
+                       (List.length acc + List.length l)%nat).
+  { intro l. induction l ; intro acc.
+    - cbn. auto with arith.
+    - cbn. rewrite IHl. cbn. auto with arith.
+  }
+  intro l. apply h.
+Defined.
+
+Fact rev_map_app :
+  forall {A B} {f : A -> B} {l1 l2},
+    (rev_map f (l1 ++ l2) = rev_map f l2 ++ rev_map f l1)%list.
+Proof.
+  intros A B f l1 l2. revert B f l2.
+  induction l1 ; intros B f l2.
+  - simpl. cbn. rewrite app_nil_r. reflexivity.
+  - simpl. rewrite !rev_map_cons. rewrite IHl1.
+    rewrite app_assoc. reflexivity.
+Defined.

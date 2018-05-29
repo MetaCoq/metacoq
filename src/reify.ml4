@@ -1836,18 +1836,20 @@ struct
     else if Term.eq_constr coConstr tmUnquote then
       match args with
       | t::[] ->
-        let (evm, t) = reduce_all env evm t in
-        let evdref = ref evm in
-        let t' = TermReify.denote_term evdref t in
-        let evm = !evdref in
-        let typ = EConstr.to_constr evm (Retyping.get_type_of env evm (EConstr.of_constr t')) in
+         try 
+           let (evm, t) = reduce_all env evm t in
+           let evdref = ref evm in
+           let t' = TermReify.denote_term evdref t in
+           let evm = !evdref in
+           let typ = EConstr.to_constr evm (Retyping.get_type_of env evm (EConstr.of_constr t')) in
         (* todo: we could declare a new universe <= Coq.Init.Specif.7 or 8 instead of using [texistT_typed_term] *)
         (* let (evm, u) = Evd.fresh_sort_in_family env evm Sorts.InType in *)
         (* (env, evm, Term.mkApp (texistT, [|Term.mkSort u; *)
         (*                                   Term.mkLambda (Names.Name (Names.Id.of_string "T"), Term.mkSort u, Term.mkRel 1); *)
         (*                                   typ; t'|])) *)
-        k (evm, Term.mkApp (texistT_typed_term, [|typ; t'|]))
-      | _ -> monad_failure "tmUnquote" 1
+           k (evm, Term.mkApp (texistT_typed_term, [|typ; t'|]))
+         with Reduction.NotArity -> CErrors.user_err (str "unquoting ill-typed term")
+         | _ -> monad_failure "tmUnquote" 1
     else if Term.eq_constr coConstr tmUnquoteTyped then
       match args with
       | typ::t::[] ->

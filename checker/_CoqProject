@@ -65,13 +65,8 @@ src/string0.ml
 src/liftSubst.mli
 src/liftSubst.ml
 
-../template-coq/src/reify.mli
-../template-coq/src/reify.ml4
-
-src/term_quoter.mli
 src/term_quoter.ml
-src/template_coq_checker.mli
-src/template_coq_checker.ml4
+src/g_template_checker.ml4
 src/template_coq_checker_plugin.mlpack
 
 theories/Loader.v

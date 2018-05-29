@@ -14,6 +14,8 @@ Set Asymmetric Patterns.
 Set Asymmetric Patterns.
 Generalizable Variables Σ Γ t T.
 
+Local Ltac easy := myeasy.
+
 Lemma length_app_context Γ Γ' : #|Γ ,,, Γ'| = #|Γ| + #|Γ'|.
 Proof.
   unfold app_context. rewrite app_length. omega.
@@ -76,7 +78,7 @@ Proof.
 
   now rewrite Nat.sub_0_r.
   destruct v. omega.
-  simpl. rewrite IHΓ'; easy.
+  simpl. rewrite IHΓ'; myeasy.
 Qed.
 
 Lemma nth_error_app_lt v Γ Γ' : v < #|Γ'| -> nth_error (Γ ,,, Γ') v = nth_error Γ' v.
@@ -170,7 +172,7 @@ Proof.
   intros. 
   destruct (Nat.leb_spec0 x y).
   now constructor.
-  constructor. now auto with arith.
+  constructor. auto with arith; easy.
 Qed.
 
 Lemma weakening_rec Σ Γ Γ' Γ'' (t : term) :

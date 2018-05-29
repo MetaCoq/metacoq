@@ -126,7 +126,8 @@ Ltac easy0 :=
 Require Import Omega.
 Hint Extern 100 => omega : terms.
 
-Ltac easy ::= easy0 || solve [eauto 7 with core arith terms].
+Ltac myeasy := easy0 || solve [eauto 7 with core arith terms].
+Local Tactic Notation "now" tactic(t) := t; myeasy.
 
 Notation lift_rec n c k := (lift n k c) (only parsing).
 Notation subst_rec N M k := (subst N k M) (only parsing).
@@ -150,7 +151,7 @@ Qed.
 Lemma subst_rel_lt : forall u n k, k > n -> subst_rec u (tRel n) k = tRel n.
 Proof.
   simpl in |- *; intros.
-  elim (compare_spec k n); intro Hcomp; easy.
+  elim (compare_spec k n); intro Hcomp; myeasy.
 Qed.
 
 Lemma subst_rel_gt :
@@ -169,8 +170,8 @@ Qed.
 Lemma lift_rec0 : forall M k, lift_rec 0 M k = M.
 Proof.
   intros M.
-  elim M using term_forall_list_ind; simpl in |- *; intros; try easy ;
-    try (try rewrite H; try rewrite H0 ; try rewrite H1 ; easy).
+  elim M using term_forall_list_ind; simpl in |- *; intros; try myeasy ;
+    try (try rewrite H; try rewrite H0 ; try rewrite H1 ; myeasy).
 
   - now elim (leb k n).
   - f_equal. rewrite <- map_id. now eapply (forall_map_spec H).
@@ -186,7 +187,7 @@ Qed.
 
 Lemma lift0_p : forall M, lift0 0 M = M.
   intros; unfold lift in |- *.
-  apply lift_rec0; easy.
+  apply lift_rec0; myeasy.
 Qed.
 
 
@@ -197,10 +198,10 @@ Lemma simpl_lift_rec :
 Proof.
   intros M.
   elim M using term_forall_list_ind;
-    intros; simpl; try easy;
+    intros; simpl; try myeasy;
       rewrite ?map_map_compose, ?compose_on_snd, ?compose_map_def;
       try (rewrite H, ?H0, ?H1; auto); try (f_equal; apply_spec);
-        try rewrite ?map_length; try easy.
+        try rewrite ?map_length; try myeasy.
 
   - elim (leb_spec k n); intros.
     now rewrite lift_rel_ge.
@@ -218,21 +219,21 @@ Lemma permute_lift_rec :
 Proof.
   intros M.
   elim M using term_forall_list_ind;
-    intros; simpl; try easy;
+    intros; simpl; try myeasy;
       rewrite ?map_map_compose, ?compose_on_snd, ?compose_map_def;
-      try solve [f_equal; easy];
-      try (f_equal; try easy; apply_spec);
+      try solve [f_equal; myeasy];
+      try (f_equal; try myeasy; apply_spec);
       unfold compose; intros;
-        try rewrite ?map_length; try easy ;
-        try (rewrite H, H0; f_equal; try easy; now f_equal);
-        try (rewrite H, H0, H1; f_equal; try easy; now f_equal);
+        try rewrite ?map_length; try myeasy ;
+        try (rewrite H, H0; f_equal; try myeasy; now f_equal);
+        try (rewrite H, H0, H1; f_equal; try myeasy; now f_equal);
         try (rewrite H1; now f_equal).
   
   - elim (leb_spec k n); intros;
-    elim (leb_spec i n); intros; try easy.
-    + rewrite 2!lift_rel_ge; try easy.
-    + rewrite lift_rel_ge, lift_rel_lt; try easy.
-    + rewrite 2!lift_rel_lt; try easy.
+    elim (leb_spec i n); intros; try myeasy.
+    + rewrite 2!lift_rel_ge; try myeasy.
+    + rewrite lift_rel_ge, lift_rel_lt; try myeasy.
+    + rewrite 2!lift_rel_lt; try myeasy.
 Qed.
 
 Lemma permute_lift :
@@ -240,7 +241,7 @@ Lemma permute_lift :
   intros.
   change (lift_rec 1 (lift_rec 1 M k) 0 = lift_rec 1 (lift_rec 1 M 0) (1 + k))
     in |- *.
-  apply permute_lift_rec; easy.
+  apply permute_lift_rec; myeasy.
 Qed.
 
 Lemma simpl_subst_rec :
@@ -250,16 +251,16 @@ Lemma simpl_subst_rec :
 Proof.
   intros M.
   elim M using term_forall_list_ind;
-    intros; simpl; try easy;
+    intros; simpl; try myeasy;
       rewrite ?map_map_compose, ?compose_on_snd, ?compose_map_def;
-      try solve [f_equal; easy];
-      try (f_equal; try easy; apply_spec); intros;
-        try rewrite ?map_length; try easy ||
-      (try rewrite H, H0; f_equal; try easy; now f_equal).
+      try solve [f_equal; myeasy];
+      try (f_equal; try myeasy; apply_spec); intros;
+        try rewrite ?map_length; try myeasy ||
+      (try rewrite H, H0; f_equal; try myeasy; now f_equal).
   
-  - elim (leb_spec k n); intros; try easy.
-    + rewrite subst_rel_gt; try easy.
-    + rewrite subst_rel_lt; try easy.
+  - elim (leb_spec k n); intros; try myeasy.
+    + rewrite subst_rel_gt; try myeasy.
+    + rewrite subst_rel_lt; try myeasy.
 Qed.
 
 Lemma simpl_subst :
@@ -274,24 +275,24 @@ Lemma commut_lift_subst_rec :
 Proof.
   intros M.
   elim M using term_forall_list_ind;
-    intros; simpl; try easy;
+    intros; simpl; try myeasy;
       rewrite ?map_map_compose, ?compose_on_snd, ?compose_map_def;
-      try solve [f_equal; easy];
-      try (f_equal; try easy; apply_spec);
+      try solve [f_equal; myeasy];
+      try (f_equal; try myeasy; apply_spec);
       unfold compose; intros;
-        try rewrite ?map_length; try easy ;
-        try (rewrite H, H0; f_equal; try easy; now f_equal);
-        try (rewrite H, H0, H1; f_equal; try easy; now f_equal);
+        try rewrite ?map_length; try myeasy ;
+        try (rewrite H, H0; f_equal; try myeasy; now f_equal);
+        try (rewrite H, H0, H1; f_equal; try myeasy; now f_equal);
         try (rewrite H1; now f_equal).
   
-  - elim (compare_spec p n); elim (leb_spec k n); intros; subst; try easy.
-    + rewrite subst_rel_eq; try easy.
+  - elim (compare_spec p n); elim (leb_spec k n); intros; subst; try myeasy.
+    + rewrite subst_rel_eq; try myeasy.
       now rewrite simpl_lift_rec.
-    + rewrite subst_rel_gt; try easy.
+    + rewrite subst_rel_gt; try myeasy.
       now rewrite lift_rel_ge.
-    + rewrite lift_rel_ge; try easy.
+    + rewrite lift_rel_ge; try myeasy.
       now rewrite subst_rel_lt.
-    + rewrite lift_rel_lt; try easy.
+    + rewrite lift_rel_lt; try myeasy.
       now rewrite subst_rel_lt.
 Qed.
 
@@ -311,26 +312,26 @@ Proof.
     intros; match goal with
               |- context [tRel _] => idtac
             | |- _ => simpl
-            end; try easy;
+            end; try myeasy;
       rewrite ?map_map_compose, ?compose_on_snd, ?compose_map_def;
-      try solve [f_equal; easy];
-      try (f_equal; try easy; apply_spec);
+      try solve [f_equal; myeasy];
+      try (f_equal; try myeasy; apply_spec);
       unfold compose; intros;
-        try rewrite ?map_length; try easy ;
-        try (erewrite H, <- H0; f_equal; try easy; now f_equal);
-        try (erewrite H, <- H0, <- H1; f_equal; try easy; now f_equal);
+        try rewrite ?map_length; try myeasy ;
+        try (erewrite H, <- H0; f_equal; try myeasy; now f_equal);
+        try (erewrite H, <- H0, <- H1; f_equal; try myeasy; now f_equal);
         try (erewrite H1; now f_equal).
   
   - unfold subst at 1. unfold lift at 4.
-    elim (compare_spec p n); intros; try easy;
-    elim (leb_spec (S (p + k)) n); intros; subst; try easy.
+    elim (compare_spec p n); intros; try myeasy;
+    elim (leb_spec (S (p + k)) n); intros; subst; try myeasy.
     
     + rewrite subst_rel_eq. now rewrite <- permute_lift_rec. 
-    + rewrite lift_rel_ge; try easy.
+    + rewrite lift_rel_ge; try myeasy.
       now rewrite subst_rel_gt.
-    + rewrite lift_rel_lt; try easy.
+    + rewrite lift_rel_lt; try myeasy.
       now rewrite subst_rel_gt.
-    + rewrite lift_rel_lt; try easy.
+    + rewrite lift_rel_lt; try myeasy.
       now rewrite subst_rel_lt.
 
   - rewrite add_assoc, H0. f_equal. now f_equal.
@@ -343,7 +344,7 @@ Lemma distr_lift_subst :
 Proof.
   intros; unfold subst in |- *.
   pattern k at 1 3 in |- *.
-  replace k with (0 + k); try easy.
+  replace k with (0 + k); try myeasy.
   apply distr_lift_subst_rec.
 Qed.
 
@@ -358,30 +359,30 @@ Proof.
     intros; match goal with
               |- context [tRel _] => idtac
             | |- _ => simpl
-            end; try easy;
+            end; try myeasy;
       rewrite ?map_map_compose, ?compose_on_snd, ?compose_map_def;
-      try solve [f_equal; easy];
-      try (f_equal; try easy; apply_spec);
+      try solve [f_equal; myeasy];
+      try (f_equal; try myeasy; apply_spec);
       unfold compose; intros;
-        try rewrite ?map_length; try easy ;
-        try (erewrite H, <- H0; f_equal; try easy; now f_equal);
-        try (erewrite H, <- H0, <- H1; f_equal; try easy; now f_equal);
+        try rewrite ?map_length; try myeasy ;
+        try (erewrite H, <- H0; f_equal; try myeasy; now f_equal);
+        try (erewrite H, <- H0, <- H1; f_equal; try myeasy; now f_equal);
         try (erewrite H1; now f_equal).
   
   - unfold subst at 2. 
-    elim (compare_spec p n); intros; try easy.
+    elim (compare_spec p n); intros; try myeasy.
     
-    + subst. rewrite subst_rel_lt; try easy.
-      rewrite subst_rel_eq; try easy.
+    + subst. rewrite subst_rel_lt; try myeasy.
+      rewrite subst_rel_eq; try myeasy.
       now rewrite <- commut_lift_subst_rec.
     + unfold subst at 4.
-      elim (compare_spec (S (p + n0)) n); intros; subst; try easy.
+      elim (compare_spec (S (p + n0)) n); intros; subst; try myeasy.
       ++ rewrite subst_rel_eq.
          now rewrite simpl_subst_rec.
-      ++ rewrite !subst_rel_gt; try easy.
-      ++ rewrite subst_rel_lt; try easy.
+      ++ rewrite !subst_rel_gt; try myeasy.
+      ++ rewrite subst_rel_lt; try myeasy.
          now rewrite subst_rel_gt.
-    + rewrite !subst_rel_lt; try easy.
+    + rewrite !subst_rel_lt; try myeasy.
 
   - rewrite add_assoc, H0. f_equal. now f_equal.
   - rewrite add_assoc, H0. f_equal. now f_equal.
@@ -401,12 +402,12 @@ Qed.
 Lemma lift_closed n k t : closedn k t = true -> lift n k t = t.
 Proof.
   revert k.
-  elim t using term_forall_list_ind; intros; try easy;
+  elim t using term_forall_list_ind; intros; try myeasy;
     rewrite ?map_map_compose, ?compose_on_snd, ?compose_map_def;
     try (f_equal; apply_spec);  simpl closed in *;
-    try rewrite ?map_length; try easy.
+    try rewrite ?map_length; try myeasy.
   - rewrite lift_rel_lt; auto.
-    revert H. elim (Nat.ltb_spec n0 k); intros; try easy.
+    revert H. elim (Nat.ltb_spec n0 k); intros; try myeasy.
   - simpl lift; f_equal.
     rewrite <- map_id. 
     apply_spec; eauto.

@@ -1997,7 +1997,7 @@ END;;
 
 VERNAC COMMAND EXTEND Run_program CLASSIFIED AS SIDEFF
     | [ "Run" "TemplateProgram" constr(def) ] ->
-      [ (* check_inside_section () ; *)
+      [ 
 	let (evm, env) = Lemmas.get_current_context () in
         let (def, _) = Constrintern.interp_constr env evm def in
         (* todo : uctx ? *)

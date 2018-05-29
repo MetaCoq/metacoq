@@ -172,7 +172,7 @@ Proof.
   intros. 
   destruct (Nat.leb_spec0 x y).
   now constructor.
-  constructor. auto with arith; easy.
+  constructor. now auto with arith.
 Qed.
 
 Lemma weakening_rec Σ Γ Γ' Γ'' (t : term) :

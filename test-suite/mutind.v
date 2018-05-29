@@ -1,4 +1,4 @@
-Require Import Template.Template.
+Require Import Template.Loader.
 
 Section with_T.
   Variable T : Type.

@@ -1,4 +1,4 @@
-Require Import Template.Template.
+Require Import Template.Loader.
 
 Definition f := fun (n : nat) =>
   match n with

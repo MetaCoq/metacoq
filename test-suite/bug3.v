@@ -1,5 +1,5 @@
 (** Reported by Randy Pollack **)
-Require Import Template.Template.
+Require Import Template.Loader.
 
 Section foo.
   Variable x : nat.

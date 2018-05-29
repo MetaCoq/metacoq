@@ -1,4 +1,4 @@
-Require Import Template.Template.
+Require Import Template.Loader.
 Require Import String.
 Set Template Cast Propositions.
 

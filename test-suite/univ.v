@@ -1,4 +1,4 @@
-From Template Require Import Ast Template.
+From Template Require Import Ast Loader.
 Require Import String.
 
 Open Scope string.

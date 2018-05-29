@@ -30,3 +30,6 @@ template-coq:
 checker: template-coq
 	./movefiles.sh
 	$(MAKE) -C checker
+
+test-suite: template-coq checker
+	$(MAKE) -C test-suite

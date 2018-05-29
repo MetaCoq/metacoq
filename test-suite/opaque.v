@@ -1,4 +1,4 @@
-Require Import Template.Template.
+Require Import Template.Loader.
 
 Definition foo : nat. exact 0. Qed.
 

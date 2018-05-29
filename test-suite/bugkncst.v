@@ -16,7 +16,7 @@ Require Import Coq.Lists.List.
 Require Import Coq.Strings.String.
 Require Import Coq.Strings.Ascii.
 Require Import Coq.Bool.Bool.
-Require Import Template.Template.
+Require Import Template.Loader.
 Require Import Template.Ast.
 
 Unset Template Cast Propositions.

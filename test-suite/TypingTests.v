@@ -7,11 +7,11 @@ Require Import Coq.Strings.Ascii.
 Require Import Coq.Bool.Bool.
 Import ListNotations.
 
-(* Require Import Template.TemplateCoqChecker. *)
+(* Require Import Template.LoaderCoqChecker. *)
 Require Import Template.Typing.
 Require Import Template.Checker.
 Require Import Template.Ast.
-Require Import Template.Template.
+Require Import Template.Loader.
 Require Import Template.utils.
 
 Quote Recursively Definition idq := @Coq.Classes.Morphisms.Proper.

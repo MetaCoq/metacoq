@@ -72,10 +72,18 @@ let hnf_type env ty =
   in
   hnf_type true ty
 
+(* Remove '#' from names *)
+let clean_name s =
+  let l = List.rev (CString.split '#' s) in
+  match l with
+    s :: rst -> s
+  | [] -> raise (Failure "Empty name cannot be quoted")
+
 let split_name s : (Names.DirPath.t * Names.Id.t) =
   let ss = List.rev (CString.split '.' s) in
   match ss with
     nm :: rst ->
+     let nm = clean_name nm in
      let dp = (Names.make_dirpath (List.map Names.id_of_string rst)) in (dp, Names.Id.of_string nm)
   | [] -> raise (Failure "Empty name cannot be quoted")
 
@@ -988,9 +996,8 @@ struct
     in evd, u
 
   let unquote_kn (k : quoted_kernel_name) : Libnames.qualid =
-    let s = unquote_string k in
-    Libnames.qualid_of_string s
-
+    Libnames.qualid_of_string (clean_name (unquote_string k))
+    
   let unquote_proj (qp : quoted_proj) : (quoted_inductive * quoted_int * quoted_int) =
     let (h,args) = app_full qp [] in
     match args with

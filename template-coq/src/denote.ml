@@ -137,9 +137,9 @@ let rec unquote_int trm =
   else if Constr.equal h tS then
     match args with
       n :: _ -> 1 + unquote_int n
-    | _ -> not_supported_verb trm "nat_to_int nil"
+    | _ -> not_supported_verb trm "unquote_int nil"
   else
-    not_supported_verb trm "nat_to_int"
+    not_supported_verb trm "unquote_int"
   
 let unquote_bool trm =
   if Constr.equal trm ttrue then
@@ -205,7 +205,7 @@ let unquote_name trm =
     raise (Failure "non-value")
 
 
-  (* CHANGES: This code was taken from (old version of) Pretyping, because it is not exposed globally *)
+  (* FIXME CHANGES: This code was taken from (old version of) Pretyping, because it is not exposed globally *)
   (* the case for strict universe declarations was removed *)
 
  (* It seems that the way to work with global universe declarations has changed.
@@ -236,11 +236,6 @@ let get_level evd s =
 (* end of code from Pretyping *)
 
 
-let rec nat_to_int c =
-  match Constr.kind c with
-  | Term.Construct _ -> 0
-  | Term.App (s, [| c |]) -> 1 + nat_to_int c
-  | _ -> bad_term_verb c "unquote_nat"
 
 let unquote_level evd trm (* of type level *) : Evd.evar_map * Univ.Level.t =
   let (h,args) = app_full trm [] in
@@ -258,7 +253,7 @@ let unquote_level evd trm (* of type level *) : Evd.evar_map * Univ.Level.t =
     | _ -> bad_term_verb trm "unquote_level"
   else if Constr.equal h tLevelVar then
     match args with
-    | l :: [] -> evd, Univ.Level.var (nat_to_int l)
+    | l :: [] -> evd, Univ.Level.var (unquote_int l)
     | _ -> bad_term_verb trm "unquote_level"
   else
     not_supported_verb trm "unquote_level"
@@ -319,14 +314,6 @@ let rec app_full_abs (trm: Constr.t) (acc: Constr.t list) =
     ACoq_tApp (f, xs) -> app_full_abs f (xs @ acc)
   | _ -> (trm, acc)
        
-let str_abs (t: Constr.t) :Pp.t = print_term t (* unfold this defn everywhere and delete*)
-let not_supported_verb (t: Constr.t) s = CErrors.user_err (Pp.(str_abs t ++ Pp.str s))
-let bad_term (t: Constr.t) = not_supported_verb t "bad_term" 
-                      
-(** NOTE: Because the representation is lossy, I should probably
- ** come back through elaboration.
- ** - This would also allow writing terms with holes
- **)
 
 let denote_term evdref (trm: Constr.t) : Constr.t =
   let rec aux (trm: Constr.t) : Constr.t =
@@ -386,32 +373,11 @@ let denote_term evdref (trm: Constr.t) : Constr.t =
     | ACoq_tProj (proj,t) -> 
        let (ind, _, narg) = unquote_proj proj in (* is narg the correct projection? *)
        let ind' = unquote_inductive ind in
-       let idx = unquote_int narg in
-       let (mib,_) = Inductive.lookup_mind_specif (Global.env ()) ind' in
-       let cst =
-         match mib.mind_record with
-         | Some (Some (_id, csts, _projs)) ->
-            assert (Array.length csts > idx);
-            csts.(idx)
-         | _ -> not_supported_verb trm "not a primitive record"
-       in
-       Constr.mkProj (Names.Projection.make cst false, aux t)
-    | _ ->  not_supported_verb trm "big_case"
-
-  (*
-  else if Constr.equal h tProj then
-    match args with
-    | [ proj ; t ] ->
-       let (p, narg) = from_coq_pair proj in
-       let (ind, _) = from_coq_pair p in
- let ind' = denote_inductive ind in
        let projs = Recordops.lookup_projections ind' in
-       (match List.nth projs (nat_to_int narg) with
+       (match List.nth projs (unquote_int narg) with
         | Some p -> Constr.mkProj (Names.Projection.make p false, aux t)
         | None -> bad_term trm)
-    | _ -> raise (Failure "ill-typed (proj)")
-  else
-    not_supported_verb trm "big_case" *)
+    | _ ->  not_supported_verb trm "big_case"
   in aux trm
 
 
@@ -488,7 +454,7 @@ let denote_mind_entry_universes trm =
  *       (try
  *         match Nametab.locate (Libnames.make_qualid dp nm) with
  *         | Globnames.ConstRef c ->  CErrors.user_err (str "this not an inductive constant. use tConst instead of tInd : " ++ str s)
- *         | Globnames.IndRef i -> (fst i, nat_to_int  num)
+ *         | Globnames.IndRef i -> (fst i, unquote_int  num)
  *         | Globnames.VarRef _ -> CErrors.user_err (str "the constant is a variable. use tVar : " ++ str s)
  *         | Globnames.ConstructRef _ -> CErrors.user_err (str "the constant is a consructor. use tConstructor : " ++ str s)
  *       with
@@ -577,7 +543,7 @@ let rec run_template_program_rec (k : Evd.evar_map * Constr.t -> unit)  ((evm, p
     | name::typ::[] ->
        let (evm, name) = reduce_all env evm name in
        let (evm, typ) = reduce_hnf env evm typ in
-       (* CHANGE:  Flags.use_polymorphic_flag was removed. See https://github.com/coq/coq/commit/05fc0542f6c7a15b9187a2a91beb0aa7a42bb2fa *)
+       (* FIXME CHANGE:  Flags.use_polymorphic_flag was removed. See https://github.com/coq/coq/commit/05fc0542f6c7a15b9187a2a91beb0aa7a42bb2fa *)
        (* What should we pass here then? For now I pass polymorphic = true  *)
        let kind = (Decl_kinds.Global, true, Decl_kinds.Definition) in
        let hole = CAst.make (Constrexpr.CHole (None, Misctypes.IntroAnonymous, None)) in

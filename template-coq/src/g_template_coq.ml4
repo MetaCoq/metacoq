@@ -65,13 +65,6 @@ TACTIC EXTEND get_goal
 	  let c = Constr_quoter.TermReify.quote_term env (EConstr.to_constr (Proofview.Goal.sigma gl) c) in
 	  ltac_apply tac (List.map to_ltac_val [EConstr.of_constr c])
   end ]
-(*
-    | [ "quote_goal" ] ->
-      [ (** get the representation of the goal **)
-	fun gl -> assert false ]
-    | [ "get_inductive" constr(i) ] ->
-      [ fun gl -> assert false ]
-*)
 END;;
 
 TACTIC EXTEND denote_term

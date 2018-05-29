@@ -42,6 +42,7 @@ let bad_term_verb trm rs =
   CErrors.user_err (str "Bad term:" ++ spc () ++ pr_constr trm
                     ++ spc () ++ str " Error: " ++ str rs)
 
+(* TODO: remove? *)
 let opt_hnf_ctor_types = ref false
 
 let hnf_type env ty =
@@ -196,23 +197,6 @@ module type Quoter = sig
   val add_global_decl : quoted_global_decl -> quoted_global_declarations -> quoted_global_declarations
 
   val mk_program : quoted_global_declarations -> t -> quoted_program
-
-  (* val unquote_ident : quoted_ident -> Id.t *)
-  (* val unquote_name : quoted_name -> Name.t *)
-  (* val unquote_int :  quoted_int -> int *)
-  (* val unquote_bool : quoted_bool -> bool *)
-  (* (\* val unquote_sort : quoted_sort -> Sorts.t  *)
-  (*    val unquote_sort_family : quoted_sort_family -> Sorts.family *\) *)
-  (* val unquote_cast_kind : quoted_cast_kind -> Constr.cast_kind *)
-  (* val unquote_kn :  quoted_kernel_name -> Libnames.qualid *)
-  (* val unquote_inductive :  quoted_inductive -> Names.inductive *)
-  (* (\* val unquote_univ_instance :  quoted_univ_instance -> Univ.Instance.t *\) *)
-  (* val unquote_proj : quoted_proj -> (quoted_inductive * quoted_int * quoted_int) *)
-  (* val unquote_universe : Evd.evar_map -> quoted_sort -> Evd.evar_map * Univ.Universe.t *)
-
-  (* val print_term : t ->Pp.t *)
-  (* val representsIndConstuctor : quoted_inductive -> Constr.t -> bool *)
-  (* val inspectTerm : t -> (t, quoted_int, quoted_ident, quoted_name, quoted_sort, quoted_cast_kind, quoted_kernel_name, quoted_inductive, quoted_univ_instance, quoted_proj) structure_of_term *)
 end
 
 
@@ -227,7 +211,7 @@ let reduce_all env evm ?(red=Genredexpr.Cbv Redops.all_flags) trm =
 
 
 
-module Reify(Q : Quoter) =
+module Reify (Q : Quoter) =
 struct
 
   let push_rel decl (in_prop, env) = (in_prop, Environ.push_rel decl env)
@@ -241,8 +225,8 @@ struct
     let inst = AUContext.instance ctx in
     let cst = AUContext.instantiate inst ctx in
     UContext.make (inst, cst)
-  in
-CumulativityInfo.make (expose univs, ACumulativityInfo.variance cumi)
+  in CumulativityInfo.make (expose univs, ACumulativityInfo.variance cumi)
+
   let get_abstract_inductive_universes iu =
     match iu with
     | Declarations.Monomorphic_ind ctx -> Univ.ContextSet.to_context ctx
@@ -557,7 +541,8 @@ CumulativityInfo.make (expose univs, ACumulativityInfo.variance cumi)
     match le with
     | Entries.LocalAssumEntry t -> (Environ.push_rel (toDecl (Names.Name n,None,t)) env, f a None t n env)
     | Entries.LocalDefEntry b ->
-       let typ = getType env b in
+       let evm = Evd.from_env env in
+       let typ = EConstr.to_constr evm (Retyping.get_type_of env evm (EConstr.of_constr b)) in
        (Environ.push_rel (toDecl (Names.Name n, Some b, typ)) env, f a (Some b) typ n env)
 
   let quote_mind_params env (params:(Names.Id.t * Entries.local_entry) list) =

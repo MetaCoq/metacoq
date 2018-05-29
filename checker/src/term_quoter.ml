@@ -3,6 +3,7 @@
 
 open Term
 open Ast0
+open Template_coq
 open Reify
 
 let quote_string s =

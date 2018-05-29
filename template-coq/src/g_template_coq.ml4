@@ -52,10 +52,6 @@ let ltac_apply (f : Value.t) (args: Tacinterp.Value.t list) =
 
 let to_ltac_val c = Tacinterp.Value.of_constr c
 
-let check_inside_section () =
-  if Lib.sections_are_opened () then
-    CErrors.user_err ~hdr:"Quote" (Pp.str "You can not quote within a section.")
-
 
 TACTIC EXTEND get_goal
     | [ "quote_term" constr(c) tactic(tac) ] ->
@@ -85,8 +81,7 @@ END;;
 
 VERNAC COMMAND EXTEND Make_vernac CLASSIFIED AS SIDEFF
     | [ "Quote" "Definition" ident(name) ":=" constr(def) ] ->
-      [ check_inside_section () ;
-	let (evm,env) = Pfedit.get_current_context () in
+      [ let (evm,env) = Pfedit.get_current_context () in
 	let def,uctx = Constrintern.interp_constr env evm def in
 	let trm = Constr_quoter.TermReify.quote_term env (EConstr.to_constr evm def) in
 	ignore(Declare.declare_definition
@@ -96,8 +91,7 @@ END;;
 
 VERNAC COMMAND EXTEND Make_vernac_reduce CLASSIFIED AS SIDEFF
     | [ "Quote" "Definition" ident(name) ":=" "Eval" red_expr(rd) "in" constr(def) ] ->
-      [ check_inside_section () ;
-	let (evm,env) = Pfedit.get_current_context () in
+      [ let (evm,env) = Pfedit.get_current_context () in
 	let def, uctx = Constrintern.interp_constr env evm def in
         let evm = Evd.from_ctx uctx in
         let (evm,rd) = Tacinterp.interp_redexp env evm rd in
@@ -111,8 +105,7 @@ END;;
 
 VERNAC COMMAND EXTEND Make_recursive CLASSIFIED AS SIDEFF
     | [ "Quote" "Recursively" "Definition" ident(name) ":=" constr(def) ] ->
-      [ check_inside_section () ;
-	let (evm,env) = Pfedit.get_current_context () in
+      [ let (evm,env) = Pfedit.get_current_context () in
 	let def, uctx = Constrintern.interp_constr env evm def in
 	let trm = Constr_quoter.TermReify.quote_term_rec env (EConstr.to_constr evm def) in
 	ignore(Declare.declare_definition
@@ -122,8 +115,7 @@ END;;
 
 VERNAC COMMAND EXTEND Unquote_vernac CLASSIFIED AS SIDEFF
     | [ "Make" "Definition" ident(name) ":=" constr(def) ] ->
-      [ check_inside_section () ;
-	let (evm, env) = Pfedit.get_current_context () in
+      [ let (evm, env) = Pfedit.get_current_context () in
 	let (trm, uctx) = Constrintern.interp_constr env evm def in
         let evdref = ref (Evd.from_ctx uctx) in
 	let trm = Denote.denote_term evdref (EConstr.to_constr evm trm) in
@@ -136,8 +128,7 @@ END;;
 
 VERNAC COMMAND EXTEND Unquote_vernac_red CLASSIFIED AS SIDEFF
     | [ "Make" "Definition" ident(name) ":=" "Eval" red_expr(rd) "in" constr(def) ] ->
-      [ check_inside_section () ;
-	let (evm, env) = Pfedit.get_current_context () in
+      [ let (evm, env) = Pfedit.get_current_context () in
 	let (trm, uctx) = Constrintern.interp_constr env evm def in
         let evm = Evd.from_ctx uctx in
         let (evm,rd) = Tacinterp.interp_redexp env evm rd in
@@ -151,16 +142,14 @@ END;;
 
 VERNAC COMMAND EXTEND Unquote_inductive CLASSIFIED AS SIDEFF
     | [ "Make" "Inductive" constr(def) ] ->
-      [ check_inside_section () ;
-	let (evm,env) = Pfedit.get_current_context () in
+      [ let (evm,env) = Pfedit.get_current_context () in
 	let (body,uctx) = Constrintern.interp_constr env evm def in
         Denote.declare_inductive env evm (EConstr.to_constr evm body) ]
 END;;
 
 VERNAC COMMAND EXTEND Run_program CLASSIFIED AS SIDEFF
     | [ "Run" "TemplateProgram" constr(def) ] ->
-      [ check_inside_section () ;
-	let (evm, env) = Pfedit.get_current_context () in
+      [ let (evm, env) = Pfedit.get_current_context () in
         let (def, _) = Constrintern.interp_constr env evm def in
         (* todo : uctx ? *)
         Denote.run_template_program_rec (fun _ -> ()) (evm, (EConstr.to_constr evm def)) ]
@@ -168,8 +157,7 @@ END;;
 
 VERNAC COMMAND EXTEND Make_tests CLASSIFIED AS QUERY
     | [ "Test" "Quote" constr(c) ] ->
-      [ check_inside_section () ;
-	let (evm,env) = Pfedit.get_current_context () in
+      [ let (evm,env) = Pfedit.get_current_context () in
 	let c = Constrintern.interp_constr env evm c in
 	let result = Constr_quoter.TermReify.quote_term env (EConstr.to_constr evm (fst c)) in
         Feedback.msg_notice (Quoter.pr_constr result) ;

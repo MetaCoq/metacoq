@@ -56,6 +56,10 @@ let inspectTerm (t:Constr.t) :  (Constr.t, quoted_int, quoted_ident, quoted_name
     match args with
       x :: _ -> ACoq_tSort x
     | _ -> CErrors.user_err (print_term t ++ Pp.str ("has bad structure"))
+  else if Term.eq_constr h tCast then
+    match args with
+      x :: y :: z :: _ -> ACoq_tCast (x, y, z)
+    | _ -> CErrors.user_err (print_term t ++ Pp.str ("has bad structure"))
   else if Constr.equal h tProd then
     match args with
       n :: t :: b :: _ -> ACoq_tProd (n,t,b)
@@ -274,8 +278,7 @@ let unquote_universe evd trm (* of type universe *) =
   in evd, u
 
 let unquote_kn (k : quoted_kernel_name) : Libnames.qualid =
-  let s = unquote_string k in
-  Libnames.qualid_of_string s
+  Libnames.qualid_of_string (clean_name (unquote_string k))
 
 let unquote_proj (qp : quoted_proj) : (quoted_inductive * quoted_int * quoted_int) =
   let (h,args) = app_full qp [] in

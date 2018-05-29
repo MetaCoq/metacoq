@@ -52,6 +52,8 @@ src/induction.mli
 src/induction.ml
 src/ast0.mli
 src/ast0.ml
+src/astUtils.mli
+src/astUtils.ml
 src/uGraph0.mli
 src/uGraph0.ml
 src/binInt.mli

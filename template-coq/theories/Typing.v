@@ -535,7 +535,7 @@ Inductive typing (Σ : global_context) (Γ : context) : term -> term -> Type :=
     forall decl (isdecl : declared_projection (fst Σ) p decl) args,
     Σ ;;; Γ |- c : mkApps (tInd (fst (fst p)) u) args ->
     let ty := snd decl in
-    Σ ;;; Γ |- tProj p c : substl (c :: List.rev args) ty
+    Σ ;;; Γ |- tProj p c : substl (c :: rev args) ty
 
 | type_Fix mfix n :
     forall (isdecl : n < List.length mfix),
@@ -609,7 +609,7 @@ Inductive type_projections (Σ : global_context) (Γ : context) :
     type_projections Σ Γ ((id, t) :: l).
 
 Definition arities_context (l : list one_inductive_body) :=
-  List.map (fun ind => vass (nNamed ind.(ind_name)) ind.(ind_type)) l.
+  rev_map (fun ind => vass (nNamed ind.(ind_name)) ind.(ind_type)) l.
 
 Definition isArity Σ Γ T :=
   isType Σ Γ T (* FIXME  /\ decompose_prod_n *).
@@ -673,9 +673,9 @@ Inductive fresh_global (s : string) : global_declarations -> Prop :=
 
 Inductive type_global_env φ : global_declarations -> Type :=
 | globenv_nil : wf_graph φ -> type_global_env φ []
-| globenv_decl Σ id d :
+| globenv_decl Σ d :
     type_global_env φ Σ ->
-    fresh_global id Σ ->
+    fresh_global (global_decl_ident d) Σ ->
     type_global_decl (Σ, φ) d ->
     type_global_env φ (d :: Σ).
 
@@ -890,7 +890,7 @@ End Forall2_size.
 Definition typing_size {Σ Γ t T} (d : Σ ;;; Γ |- t : T) : size.
 Proof.
   revert Σ Γ t T d.
-  fix 5.
+  fix typing_size 5.
   destruct 1 ;
   repeat match goal with
          | H : typing _ _ _ _ |- _ => apply typing_size in H

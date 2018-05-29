@@ -16,12 +16,14 @@ Makefile.coq.conf
 *.d
 .merlin
 html/*.html
-
+.lia.cache
 
 template-coq/Ascii.ml
 template-coq/Ascii.mli
 template-coq/Ast0.ml
 template-coq/Ast0.mli
+template-coq/AstUtils.ml
+template-coq/AstUtils.mli
 template-coq/Basics.ml
 template-coq/Basics.mli
 template-coq/BinInt.ml
@@ -88,6 +90,8 @@ checker/src/ascii.ml
 checker/src/ascii.mli
 checker/src/ast0.ml
 checker/src/ast0.mli
+checker/src/astUtils.ml
+checker/src/astUtils.mli
 checker/src/basics.ml
 checker/src/basics.mli
 checker/src/binInt.ml

@@ -78,7 +78,7 @@ Definition declared_projection Σ (proj : projection) decl : Prop :=
   let '(ind, ppars, arg) := proj in
   exists univs decl', declared_inductive Σ ind univs decl' /\
                 List.nth_error decl'.(ind_projs) arg = Some decl.
-  
+
 Program
 Definition type_of_constant_decl (d : global_decl | is_constant_decl d = true) : term :=
   match d with
@@ -177,8 +177,8 @@ Inductive red1 (Σ : global_declarations) (Γ : context) : term -> term -> Prop 
 
 | red_rel i (isdecl : i < List.length Γ) body :
     (safe_nth Γ (exist _ i isdecl)).(decl_body) = Some body ->
-    red1 Σ Γ (tRel i) (lift0 (S i) body) 
-         
+    red1 Σ Γ (tRel i) (lift0 (S i) body)
+
 (** Case *)
 | red_iota ind pars c u args p brs :
     red1 Σ Γ (tCase (ind, pars) p (mkApps (tConstruct ind c u) args) brs)
@@ -196,7 +196,7 @@ Inductive red1 (Σ : global_declarations) (Γ : context) : term -> term -> Prop 
     red1 Σ Γ (tConst c u) body
 
 (* TODO Proj CoFix *)
-         
+
 | abs_red_l na M M' N : red1 Σ Γ M M' -> red1 Σ Γ (tLambda na M N) (tLambda na M' N)
 | abs_red_r na M M' N : red1 Σ (Γ ,, vass na N) M M' -> red1 Σ Γ (tLambda na N M) (tLambda na N M')
 
@@ -218,7 +218,7 @@ Inductive red1 (Σ : global_declarations) (Γ : context) : term -> term -> Prop 
 
 | cast_red_l M1 k M2 N1 : red1 Σ Γ M1 N1 -> red1 Σ Γ (tCast M1 k M2) (tCast N1 k M2)
 | cast_red_r M2 k N2 M1 : red1 Σ Γ M2 N2 -> red1 Σ Γ (tCast M1 k M2) (tCast M1 k N2)
-                                       
+
 with reds1 (Σ : global_declarations) (Γ : context): list term -> list term -> Prop :=
 | reds1_hd hd hd' tl : red1 Σ Γ hd hd' -> reds1 Σ Γ (hd :: tl) (hd' :: tl)
 | reds1_tl hd tl tl' : reds1 Σ Γ tl tl' -> reds1 Σ Γ (hd :: tl) (hd :: tl')
@@ -577,7 +577,7 @@ Inductive type_constructors (Σ : global_context) (Γ : context) :
 | type_cnstrs_cons id t n l :
     isType Σ Γ t ->
     type_constructors Σ Γ l ->
-    (** TODO: check it has n products ending in a tRel application *)              
+    (** TODO: check it has n products ending in a tRel application *)
     type_constructors Σ Γ ((id, t, n) :: l).
 
 Inductive type_projections (Σ : global_context) (Γ : context) :
@@ -587,9 +587,9 @@ Inductive type_projections (Σ : global_context) (Γ : context) :
     isType Σ Γ t ->
     type_projections Σ Γ l ->
     type_projections Σ Γ ((id, t) :: l).
-      
+
 Definition arities_context (l : list one_inductive_body) :=
-  List.map (fun ind => vass (nNamed ind.(ind_name)) ind.(ind_type)) l.
+  rev_map (fun ind => vass (nNamed ind.(ind_name)) ind.(ind_type)) l.
 
 Definition isArity Σ Γ T :=
   isType Σ Γ T (* FIXME  /\ decompose_prod_n *).
@@ -715,7 +715,7 @@ Proof.
   simpl. constructor.
   setenv Σ.
   econstructor.
-  construct. 
+  construct.
   econstructor. apply cumul_refl'.
   construct.
   econstructor.
@@ -766,7 +766,7 @@ Proof.
   intros until t.
   revert t.
   fix auxt 1.
-  move auxt at top. 
+  move auxt at top.
   destruct t; match goal with
                  H : _ |- _ => apply H
               end; auto.
@@ -984,7 +984,7 @@ Lemma typing_ind_env :
         forall args : list term,
         Σ ;;; Γ |- c : mkApps (tInd (fst (fst p)) u) args ->
         P Σ Γ c (mkApps (tInd (fst (fst p)) u) args) ->
-        let ty := snd decl in P Σ Γ (tProj p c) (substl (c :: rev args) ty)) ->
+        let ty := snd decl in P Σ Γ (tProj p c) (substl (c :: List.rev args) ty)) ->
        (forall Σ (wfΣ : wf Σ) (Γ : context) (mfix : list (def term)) (n : nat) (isdecl : n < #|mfix|),
         let ty := dtype (safe_nth mfix (exist (fun n0 : nat => n0 < #|mfix|) n isdecl)) in
         P Σ Γ (tFix mfix n) ty) ->

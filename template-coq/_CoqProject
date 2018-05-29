@@ -1,8 +1,14 @@
 -I src
 -R theories Template
 
-src/reify.mli
-src/reify.ml4
+# src/quoter.mli
+src/quoter.ml
+# src/constr_quoter.mli
+src/constr_quoter.ml
+# src/denote.mli
+src/denote.ml
+# src/g_template_coq.mli
+src/g_template_coq.ml4
 src/template_coq.mlpack
 
 theories/utils.v

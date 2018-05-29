@@ -1,7 +1,7 @@
 (* -*- coq-prog-args: ("-top" "TemplateTestSuite.demo") -*-  *)
 
 Require Import List Arith.
-Require Import Template.monad_utils Template.Ast Template.Template.
+Require Import Template.All.
 Import ListNotations MonadNotation.
 
 Local Open Scope string_scope.

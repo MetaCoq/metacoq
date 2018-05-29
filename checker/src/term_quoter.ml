@@ -4,7 +4,7 @@
 open Term
 open Ast0
 open Template_coq
-open Reify
+open Quoter
 
 let quote_string s =
   let rec aux acc i =

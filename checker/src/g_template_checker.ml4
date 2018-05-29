@@ -14,17 +14,17 @@ let check gr =
   let env = Global.env () in
   let sigma = Evd.from_env env in
   let sigma, c = Evarutil.new_global sigma gr in
-  Feedback.msg_debug (str"Quoting");
+  (* Feedback.msg_debug (str"Quoting"); *)
   let term = Term_quoter.quote_term_rec env (EConstr.to_constr sigma c) in
-  Feedback.msg_debug (str"Finished quoting.. checking.");
+  (* Feedback.msg_debug (str"Finished quoting.. checking."); *)
   let fuel = pow two (pow two (pow two two)) in
   match Checker0.typecheck_program fuel term with
   | CorrectDecl t ->
-     Feedback.msg_debug (str"Finished checking successfully")
+     Feedback.msg_info (str "Successfully checked of type: " ++ pr_char_list (Checker0.string_of_term t))
   | EnvError (AlreadyDeclared id) ->
      CErrors.user_err ~hdr:"template-coq" (str "Already declared: " ++ pr_char_list id)
   | EnvError (IllFormedDecl (id, e)) ->
-     CErrors.user_err ~hdr:"template-coq" (str "Type error while checking: " ++ pr_char_list id)
+     CErrors.user_err ~hdr:"template-coq" (pr_char_list (Checker0.string_of_type_error e) ++ str ", while checking " ++ pr_char_list id)
     
 VERNAC COMMAND EXTEND TemplateCheck CLASSIFIED AS QUERY
 | [ "Template" "Check" global(gr) ] -> [

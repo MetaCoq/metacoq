@@ -764,6 +764,10 @@ struct
       match args with
         x :: _ -> ACoq_tMeta x
       | _ -> CErrors.user_err (print_term t ++ Pp.str ("has bad structure"))
+    else if Term.eq_constr h tCast then
+      match args with
+        x :: y :: z :: _ -> ACoq_tCast (x, y, z)
+      | _ -> CErrors.user_err (print_term t ++ Pp.str ("has bad structure"))
     else if Term.eq_constr h tSort then
       match args with
         x :: _ -> ACoq_tSort x

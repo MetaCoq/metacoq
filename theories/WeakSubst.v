@@ -78,7 +78,7 @@ Proof.
 
   now rewrite Nat.sub_0_r.
   destruct v. omega.
-  simpl. rewrite IHΓ'; eauto 9 using term. omega.
+  simpl. rewrite IHΓ'; easy.
 Qed.
 
 Lemma nth_error_app_lt v Γ Γ' : v < #|Γ'| -> nth_error (Γ ,,, Γ') v = nth_error Γ' v.

@@ -1663,6 +1663,22 @@ struct
        str "While trying to run: " ++ fnl () ++ print_term prg ++ fnl () ++
        str "Please file a bug with Template-Coq.")
 
+
+  let do_definition ident k pl c typ hook evm =
+    let evd = evm in
+    let env = Global.env () in
+    (* let (c,ctx), sideff = Future.force ce.const_entry_body in *)
+    (* assert(Safe_typing.empty_private_constants = sideff); *)
+    (* assert(Univ.ContextSet.is_empty ctx); *)
+    Obligations.check_evars env evd;
+    let obls, _, c, cty = 
+      Obligations.eterm_obligations env ident evd 0 c typ
+    in
+    let ctx = Evd.evar_universe_context evd in
+    let hook = Lemmas.mk_hook (fun l r _ -> Lemmas.call_hook (fun exn -> exn) hook l r) in
+    ignore(Obligations.add_definition
+             ident ~term:c cty ctx ?pl ~kind:k ~hook obls)
+    
   let rec run_template_program_rec (k : Evd.evar_map * Term.constr -> unit)  ((evm, pgm) : Evd.evar_map * Term.constr) : unit =
     let env = Global.env () in
     let (evm, pgm) = reduce_hnf env evm pgm in
@@ -1691,7 +1707,7 @@ struct
          let (evm, name) = reduce_all env evm name in
          let (evm, typ) = reduce_hnf env evm typ in
          let param = Entries.ParameterEntry (None, false, (typ, UState.context (Evd.evar_universe_context evm)), None) in
-         let n = Declare.declare_constant (unquote_ident name) (param, Decl_kinds.IsDefinition Decl_kinds.Definition) in
+         let n = Declare.declare_constant (unquote_ident name) (param, Decl_kinds.IsDefinition Decl_kinds.Definition) in 
          k (evm, Term.mkConst n)
       | _ -> monad_failure "tmAxiom" 2
     else if Term.eq_constr coConstr tmLemma then
@@ -1700,11 +1716,11 @@ struct
          let (evm, name) = reduce_all env evm name in
          let (evm, typ) = reduce_hnf env evm typ in
          let kind = (Decl_kinds.Global, Flags.use_polymorphic_flag (), Decl_kinds.Definition) in
-         let hole = CAst.make (Constrexpr.CHole (None, Misctypes.IntroAnonymous, None)) in
-         let typ = Constrextern.extern_type true env evm (EConstr.of_constr typ) in
+         let (evm, hole) = Evarutil.new_evar env evm (EConstr.of_constr typ) in
+         (* let typ = Constrextern.extern_type true env evm (EConstr.of_constr typ) in *)
          let original_program_flag = !Flags.program_mode in
          Flags.program_mode := true;
-         Command.do_definition (unquote_ident name) kind None [] None hole (Some typ)
+         do_definition (unquote_ident name) kind None (EConstr.to_constr evm hole) typ
                                (Lemmas.mk_hook (fun _ gr -> let env = Global.env () in
                                                             let evm, t = Evd.fresh_global env evm gr in k (evm, t)));
          Flags.program_mode := original_program_flag

@@ -15,6 +15,7 @@ Set Asymmetric Patterns.
 Generalizable Variables Σ Γ t T.
 
 Local Ltac easy := localeasy.
+Local Tactic Notation "now" tactic(t) := t; easy.                         
 
 Lemma length_app_context Γ Γ' : #|Γ ,,, Γ'| = #|Γ| + #|Γ'|.
 Proof.

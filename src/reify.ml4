@@ -1664,13 +1664,9 @@ struct
        str "Please file a bug with Template-Coq.")
 
 
-  let do_definition ident k pl c typ hook evm =
-    let evd = evm in
+  let do_definition ident evd k pl c typ hook =
     let env = Global.env () in
-    (* let (c,ctx), sideff = Future.force ce.const_entry_body in *)
-    (* assert(Safe_typing.empty_private_constants = sideff); *)
-    (* assert(Univ.ContextSet.is_empty ctx); *)
-    Obligations.check_evars env evd;
+    (* Obligations.check_evars env evd; *)
     let obls, _, c, cty = 
       Obligations.eterm_obligations env ident evd 0 c typ
     in
@@ -1720,7 +1716,7 @@ struct
          (* let typ = Constrextern.extern_type true env evm (EConstr.of_constr typ) in *)
          let original_program_flag = !Flags.program_mode in
          Flags.program_mode := true;
-         do_definition (unquote_ident name) kind None (EConstr.to_constr evm hole) typ
+         do_definition (unquote_ident name) evm kind None (EConstr.to_constr evm hole) typ
                                (Lemmas.mk_hook (fun _ gr -> let env = Global.env () in
                                                             let evm, t = Evd.fresh_global env evm gr in k (evm, t)));
          Flags.program_mode := original_program_flag

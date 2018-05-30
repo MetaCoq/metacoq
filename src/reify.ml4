@@ -1819,7 +1819,7 @@ struct
     else if Term.eq_constr coConstr tmUnquote then
       match args with
       | t::[] ->
-         try 
+         (try 
            let (evm, t) = reduce_all env evm t in
            let evdref = ref evm in
            let t' = TermReify.denote_term evdref t in
@@ -1831,8 +1831,8 @@ struct
         (*                                   Term.mkLambda (Names.Name (Names.Id.of_string "T"), Term.mkSort u, Term.mkRel 1); *)
         (*                                   typ; t'|])) *)
            k (evm, Term.mkApp (texistT_typed_term, [|typ; t'|]))
-         with Reduction.NotArity -> CErrors.user_err (str "unquoting ill-typed term")
-         | _ -> monad_failure "tmUnquote" 1
+         with Reduction.NotArity -> CErrors.user_err (str "unquoting ill-typed term"))
+      | _ -> monad_failure "tmUnquote" 1
     else if Term.eq_constr coConstr tmUnquoteTyped then
       match args with
       | typ::t::[] ->

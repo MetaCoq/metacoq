@@ -1854,12 +1854,6 @@ struct
     else CErrors.user_err (str "Invalid argument or not yet implemented. The argument must be a TemplateProgram: " ++ Printer.pr_constr coConstr)
 end
 
-(* let vernac_declare_instances id info =
- *   let info = Pcoq.hint_info in
- *   let glob = not (make_section_locality true) in
- *   Classes.existing_instance glob id (Some info) *)
-
-
 open Vernac
 
 

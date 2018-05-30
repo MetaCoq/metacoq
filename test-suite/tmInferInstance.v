@@ -6,5 +6,5 @@ Import MonadNotation.
 Existing Class True.
 Existing Instance I.
 
-Run TemplateProgram (tmInferInstance True >>= tmDefinition "bla" None).
-
+Run TemplateProgram (tmInferInstance True >>= tmPrint).
+Run TemplateProgram (tmInferInstance False >>= tmPrint).

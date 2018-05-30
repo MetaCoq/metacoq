@@ -384,11 +384,11 @@ struct
   let (tglobal_reference, tConstRef, tIndRef, tConstructRef) = (r_reify "global_reference", r_reify "ConstRef", r_reify "IndRef", r_reify "ConstructRef")
 
   let (tmReturn, tmBind, tmQuote, tmQuoteRec, tmEval, tmDefinition, tmAxiom, tmLemma, tmFreshName, tmAbout, tmCurrentModPath,
-       tmMkDefinition, tmMkInductive, tmPrint, tmFail, tmQuoteInductive, tmQuoteConstant, tmQuoteUniverses, tmUnquote, tmUnquoteTyped) =
+       tmMkDefinition, tmMkInductive, tmPrint, tmFail, tmQuoteInductive, tmQuoteConstant, tmQuoteUniverses, tmUnquote, tmUnquoteTyped, tmExistingInstance) =
     (r_reify "tmReturn", r_reify "tmBind", r_reify "tmQuote", r_reify "tmQuoteRec", r_reify "tmEval", r_reify "tmDefinition",
      r_reify "tmAxiom", r_reify "tmLemma", r_reify "tmFreshName", r_reify "tmAbout", r_reify "tmCurrentModPath",
      r_reify "tmMkDefinition", r_reify "tmMkInductive", r_reify "tmPrint", r_reify "tmFail", r_reify "tmQuoteInductive", r_reify "tmQuoteConstant",
-     r_reify "tmQuoteUniverses", r_reify "tmUnquote", r_reify "tmUnquoteTyped")
+     r_reify "tmQuoteUniverses", r_reify "tmUnquote", r_reify "tmUnquoteTyped", r_reify "tmExistingInstance")
 
   (* let pkg_specif = ["Coq";"Init";"Specif"] *)
   (* let texistT = resolve_symbol pkg_specif "existT" *)
@@ -1847,9 +1847,20 @@ struct
       | name::[] -> let name' = Namegen.next_ident_away_from (unquote_ident name) (fun id -> Nametab.exists_cci (Lib.make_path id)) in
                     k (evm, quote_ident name')
       | _ -> monad_failure "tmFreshName" 1
+    else if Term.eq_constr coConstr tmExistingInstance then
+      match args with
+      | name :: [] -> Classes.existing_instance true (Libnames.Ident (None, unquote_ident name)) None
+      | _ -> monad_failure "tmExistingInstance" 1
     else CErrors.user_err (str "Invalid argument or not yet implemented. The argument must be a TemplateProgram: " ++ Printer.pr_constr coConstr)
 end
 
+(* let vernac_declare_instances id info =
+ *   let info = Pcoq.hint_info in
+ *   let glob = not (make_section_locality true) in
+ *   Classes.existing_instance glob id (Some info) *)
+
+
+open Vernac
 
 
 DECLARE PLUGIN "template_plugin"

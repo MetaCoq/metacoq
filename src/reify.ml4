@@ -1713,7 +1713,6 @@ struct
          let (evm, typ) = reduce_hnf env evm typ in
          let kind = (Decl_kinds.Global, Flags.use_polymorphic_flag (), Decl_kinds.Definition) in
          let (evm, hole) = Evarutil.new_evar env evm (EConstr.of_constr typ) in
-         (* let typ = Constrextern.extern_type true env evm (EConstr.of_constr typ) in *)
          let original_program_flag = !Flags.program_mode in
          Flags.program_mode := true;
          do_definition (unquote_ident name) evm kind None (EConstr.to_constr evm hole) typ

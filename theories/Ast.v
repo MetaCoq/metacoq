@@ -311,6 +311,7 @@ Inductive TemplateMonad : Type -> Type :=
 
 (* Not yet implemented *)
 | tmExistingInstance : ident -> TemplateMonad unit
+| tmInferInstance : forall A, TemplateMonad (option A)
 .
 
 (** This allow to use notations of MonadNotation *)

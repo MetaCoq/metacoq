@@ -1853,9 +1853,7 @@ struct
       | _ -> monad_failure "tmExistingInstance" 1
     else CErrors.user_err (str "Invalid argument or not yet implemented. The argument must be a TemplateProgram: " ++ Printer.pr_constr coConstr)
 end
-
-open Vernac
-
+  
 
 DECLARE PLUGIN "template_plugin"
 

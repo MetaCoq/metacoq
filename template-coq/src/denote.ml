@@ -699,4 +699,8 @@ let rec run_template_program_rec (k : Evd.evar_map * Constr.t -> unit)  ((evm, p
     | name::[] -> let name' = Namegen.next_ident_away_from (unquote_ident name) (fun id -> Nametab.exists_cci (Lib.make_path id)) in
                   k (evm, quote_ident name')
     | _ -> monad_failure "tmFreshName" 1
+  else if Constr.equal coConstr tmExistingInstance then
+    match args with
+    | name :: [] -> Classes.existing_instance true (CAst.make (Libnames.Qualid (Libnames.qualid_of_ident (unquote_ident name)))) None
+    | _ -> monad_failure "tmExistingInstance" 1
   else CErrors.user_err (str "Invalid argument or not yet implemented. The argument must be a TemplateProgram: " ++ pr_constr coConstr)

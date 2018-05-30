@@ -598,9 +598,6 @@ with typing_spine `{checker_flags} (Σ : global_context) (Γ : context) : term -
 
 (** ** Typechecking of global environments *)
 
-Definition add_constraints_env u (Σ : global_context)
-  := (fst Σ, add_global_constraints u (snd Σ)).
-
 Definition add_global_decl (decl : global_decl) (Σ : global_context) :=
   let univs := match decl with
                | ConstantDecl _ d => d.(cst_universes)

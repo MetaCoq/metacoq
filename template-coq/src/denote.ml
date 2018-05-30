@@ -703,4 +703,14 @@ let rec run_template_program_rec (k : Evd.evar_map * Constr.t -> unit)  ((evm, p
     match args with
     | name :: [] -> Classes.existing_instance true (CAst.make (Libnames.Qualid (Libnames.qualid_of_ident (unquote_ident name)))) None
     | _ -> monad_failure "tmExistingInstance" 1
+  else if Constr.equal coConstr tmInferInstance then
+    match args with
+    | typ :: [] ->
+       (try
+          let (evm,t) = Typeclasses.resolve_one_typeclass env evm (EConstr.of_constr typ) in
+          k (evm, Term.mkApp (cSome, [| typ; EConstr.to_constr evm t|]))
+        with
+          Not_found -> k (evm, Term.mkApp (cNone, [|typ|]))
+       )
+    | _ -> monad_failure "tmInferInstance" 1
   else CErrors.user_err (str "Invalid argument or not yet implemented. The argument must be a TemplateProgram: " ++ pr_constr coConstr)

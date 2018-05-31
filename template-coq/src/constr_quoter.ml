@@ -62,6 +62,7 @@ struct
   let pkg_template_monad = ["Template";"TemplateMonad"]
   let pkg_univ = ["Template";"kernel";"univ"]
   let pkg_level = ["Template";"kernel";"univ";"Level"]
+  let pkg_variance = ["Template";"kernel";"univ";"Variance"]
   let pkg_ugraph = ["Template";"kernel";"uGraph"]
   let ext_pkg_univ s = List.append pkg_univ [s]
 
@@ -80,6 +81,7 @@ struct
   let tfalse = resolve_symbol pkg_datatypes "false"
   let unit_tt = resolve_symbol pkg_datatypes "tt"
   let tAscii = resolve_symbol ["Coq";"Strings";"Ascii"] "Ascii"
+  let tlist = resolve_symbol pkg_datatypes "list"
   let c_nil = resolve_symbol pkg_datatypes "nil"
   let c_cons = resolve_symbol pkg_datatypes "cons"
   let prod_type = resolve_symbol pkg_datatypes "prod"
@@ -122,8 +124,14 @@ struct
   let tunivLt = resolve_symbol (ext_pkg_univ "ConstraintType") "Lt"
   let tunivEq = resolve_symbol (ext_pkg_univ "ConstraintType") "Eq"
   (* let tunivcontext = resolve_symbol pkg_univ "universe_context" *)
+  let tVariance = resolve_symbol pkg_variance "t"
+  let cIrrelevant = resolve_symbol pkg_variance "Irrelevant"
+  let cCovariant = resolve_symbol pkg_variance "Covariant"
+  let cInvariant = resolve_symbol pkg_variance "Invariant"
   let cMonomorphic_ctx = resolve_symbol pkg_univ "Monomorphic_ctx"
   let cPolymorphic_ctx = resolve_symbol pkg_univ "Polymorphic_ctx"
+  let cCumulative_ctx = resolve_symbol pkg_univ "Cumulative_ctx"
+  let tUContext = resolve_symbol (ext_pkg_univ "UContext") "t"
   let tUContextmake = resolve_symbol (ext_pkg_univ "UContext") "make"
   (* let tConstraintSetempty = resolve_symbol (ext_pkg_univ "ConstraintSet") "empty" *)
   let tConstraintSetempty = Universes.constr_of_global (Coqlib.find_reference "template coq bug" (ext_pkg_univ "ConstraintSet") "empty")
@@ -295,6 +303,16 @@ struct
         Constr.mkApp (tConstraintSetadd, [| c; tm|])
       ) tConstraintSetempty const
 
+  let quote_variance v =
+    match v with
+    | Univ.Variance.Irrelevant -> cIrrelevant
+    | Univ.Variance.Covariant -> cCovariant
+    | Univ.Variance.Invariant -> cInvariant
+
+  let quote_cuminfo_variance var =
+    let var_list = CArray.map_to_list quote_variance var in
+    to_coq_list tVariance var_list
+
   let quote_ucontext inst const =
     let inst' = quote_univ_instance inst in
     let const' = quote_univ_constraints const in
@@ -304,6 +322,17 @@ struct
     let inst = Univ.UContext.instance uctx in
     let const = Univ.UContext.constraints uctx in
     Constr.mkApp (cMonomorphic_ctx, [| quote_ucontext inst const |])
+
+  let quote_cumulative_univ_context cumi =
+    let uctx = Univ.CumulativityInfo.univ_context cumi in
+    let inst = Univ.UContext.instance uctx in
+    let const = Univ.UContext.constraints uctx in
+    let var = Univ.CumulativityInfo.variance cumi in
+    let uctx' = quote_ucontext inst const in
+    let var' = quote_cuminfo_variance var in
+    let listvar = Constr.mkApp (tlist, [| tVariance |]) in
+    let cumi' = pair tUContext listvar uctx' var' in
+    Constr.mkApp (cCumulative_ctx, [| cumi' |])
 
   let quote_abstract_univ_context_aux uctx =
     let inst = Univ.UContext.instance uctx in

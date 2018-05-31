@@ -10,12 +10,9 @@ let pr_char c = str (Char.escaped c)
    
 let pr_char_list = prlist_with_sep mt pr_char
 
-let check gr =
-  let env = Global.env () in
-  let sigma = Evd.from_env env in
-  let sigma, c = Evarutil.new_global sigma gr in
+let check env evm c =
   (* Feedback.msg_debug (str"Quoting"); *)
-  let term = Term_quoter.quote_term_rec env (EConstr.to_constr sigma c) in
+  let term = Term_quoter.quote_term_rec env (EConstr.to_constr evm c) in
   (* Feedback.msg_debug (str"Finished quoting.. checking."); *)
   let fuel = pow two (pow two (pow two two)) in
   match Checker0.typecheck_program fuel term with
@@ -27,8 +24,9 @@ let check gr =
      CErrors.user_err ~hdr:"template-coq" (pr_char_list (Checker0.string_of_type_error e) ++ str ", while checking " ++ pr_char_list id)
     
 VERNAC COMMAND EXTEND TemplateCheck CLASSIFIED AS QUERY
-| [ "Template" "Check" global(gr) ] -> [
-    let gr = Nametab.global gr in
-    check gr
+| [ "Template" "Check" constr(c) ] -> [
+    let (evm,env) = Pfedit.get_current_context () in
+    let (c, _) = Constrintern.interp_constr env evm c in
+    check env evm c
   ]
 END

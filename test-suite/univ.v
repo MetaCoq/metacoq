@@ -1,9 +1,13 @@
-From Template Require Import Ast TemplateMonad Loader.
+From Template Require Import Ast TemplateMonad Loader monad_utils.
 Require Import String.
 
 Open Scope string.
+Import MonadNotation.
 
 Set Printing Universes.
+
+Polymorphic Cumulative Inductive test := .
+Run TemplateProgram (α <- tmQuoteInductive "test" ;; tmPrint α).
 
 
 Inductive foo (A : Type) : Type :=

@@ -630,6 +630,7 @@ Section Typecheck2.
     match u with
     | Monomorphic_ctx _ => ConstraintSet.empty
     | Polymorphic_ctx ctx => UContext.constraints ctx
+    | Cumulative_ctx ctx => UContext.constraints (CumulativityInfo.univ_context ctx)
     end.
 
   Definition lookup_constant_type cst u :=
@@ -889,6 +890,7 @@ Section Typecheck2.
       destruct cst_universes. simpl. reflexivity.
       simpl in *. destruct cst0. simpl in *.
       destruct c. unfold check_consistent_constraints. rewrite H0. reflexivity.
+      admit.
 
     - admit.
     - admit.

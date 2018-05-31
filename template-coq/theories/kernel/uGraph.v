@@ -52,6 +52,7 @@ Definition repr (uctx : universe_context) : UContext.t :=
   match uctx with
   | Monomorphic_ctx c => c
   | Polymorphic_ctx c => c
+  | Cumulative_ctx c => CumulativityInfo.univ_context c
   end.
 
 Definition add_global_constraints (uctx : universe_context) (G : t) : t
@@ -60,6 +61,7 @@ Definition add_global_constraints (uctx : universe_context) (G : t) : t
        let G := List.fold_left (fun s l => add_node l s) inst G in
        ConstraintSet.fold add_constraint cstrs G
      | Polymorphic_ctx _ => G
+     | Cumulative_ctx _ => G
      end.
 
 Section UGraph.

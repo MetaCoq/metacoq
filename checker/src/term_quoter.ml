@@ -126,10 +126,28 @@ struct
   let quote_univ_constraints (c : Univ.Constraint.t) : quoted_univ_constraints =
     List.map quote_univ_constraint (Univ.Constraint.elements c)
 
+  let quote_variance (v : Univ.Variance.t) =
+    match v with
+    | Univ.Variance.Irrelevant -> Univ0.Variance.Irrelevant
+    | Univ.Variance.Covariant -> Univ0.Variance.Covariant
+    | Univ.Variance.Invariant -> Univ0.Variance.Invariant
+
+  let quote_cuminfo_variance (var : Univ.Variance.t array) =
+    CArray.map_to_list quote_variance var
+
   let quote_univ_context (uctx : Univ.UContext.t) : quoted_univ_context =
     let levels = Univ.UContext.instance uctx  in
     let constraints = Univ.UContext.constraints uctx in
     Univ0.Monomorphic_ctx (quote_univ_instance levels, quote_univ_constraints constraints)
+
+  let quote_cumulative_univ_context (cumi : Univ.CumulativityInfo.t) : quoted_univ_context =
+    let uctx = Univ.CumulativityInfo.univ_context cumi in
+    let levels = Univ.UContext.instance uctx  in
+    let constraints = Univ.UContext.constraints uctx in
+    let var = Univ.CumulativityInfo.variance cumi in
+    let uctx' = (quote_univ_instance levels, quote_univ_constraints constraints) in
+    let var' = quote_cuminfo_variance var in
+    Univ0.Cumulative_ctx (uctx', var')
 
   let quote_abstract_univ_context_aux uctx : quoted_univ_context =
     let levels = Univ.UContext.instance uctx in

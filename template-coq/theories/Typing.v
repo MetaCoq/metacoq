@@ -397,7 +397,8 @@ Definition universe_family u :=
 Definition consistent_universe_context_instance (Σ : global_context) uctx u :=
   match uctx with
   | Monomorphic_ctx c => True
-  | Polymorphic_ctx c =>
+  | Polymorphic_ctx c
+  | Cumulative_ctx (c, _) =>
     let '(inst, cstrs) := UContext.dest c in
     List.length inst = List.length u /\
     check_constraints (snd Σ) (subst_instance_cstrs u cstrs) = true

@@ -529,7 +529,10 @@ let rec run_template_program_rec (k : Evd.evar_map * Constr.t -> unit)  ((evm, p
        let (evm, name) = reduce_all env evm name in
        (* todo: let the user choose the reduction used for the type *)
        let (evm, typ) = reduce_hnf env evm typ in
-       let n = Declare.declare_definition ~kind:Decl_kinds.Definition (unquote_ident name) ~types:typ (body, Monomorphic_const_entry (Evd.universe_context_set evm)) in
+       let univs =
+         if Flags.is_universe_polymorphism () then Polymorphic_const_entry (Evd.to_universe_context evm)
+         else Monomorphic_const_entry (Evd.universe_context_set evm) in
+       let n = Declare.declare_definition ~kind:Decl_kinds.Definition (unquote_ident name) ~types:typ (body, univs) in
        k (evm, Constr.mkConst n)
     | _ -> monad_failure "tmDefinition" 3
   else if Constr.equal coConstr tmAxiom then
@@ -546,9 +549,8 @@ let rec run_template_program_rec (k : Evd.evar_map * Constr.t -> unit)  ((evm, p
     | name::typ::[] ->
        let (evm, name) = reduce_all env evm name in
        let (evm, typ) = reduce_hnf env evm typ in
-       (* FIXME CHANGE:  Flags.use_polymorphic_flag was removed. See https://github.com/coq/coq/commit/05fc0542f6c7a15b9187a2a91beb0aa7a42bb2fa *)
-       (* What should we pass here then? For now I pass polymorphic = true  *)
-       let kind = (Decl_kinds.Global, true, Decl_kinds.Definition) in
+       let poly = Flags.is_universe_polymorphism () in
+       let kind = (Decl_kinds.Global, poly, Decl_kinds.Definition) in
        let hole = CAst.make (Constrexpr.CHole (None, Misctypes.IntroAnonymous, None)) in
        let typ = Constrextern.extern_type true env evm (EConstr.of_constr typ) in
        ComDefinition.do_definition ~program_mode:true (unquote_ident name) kind None [] None hole (Some typ)

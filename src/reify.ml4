@@ -383,10 +383,10 @@ struct
 
   let (tglobal_reference, tConstRef, tIndRef, tConstructRef) = (r_reify "global_reference", r_reify "ConstRef", r_reify "IndRef", r_reify "ConstructRef")
 
-  let (tmReturn, tmBind, tmQuote, tmQuoteRec, tmEval, tmDefinition, tmAxiom, tmLemma, tmFreshName, tmAbout, tmCurrentModPath,
+  let (tmReturn, tmBind, tmQuote, tmQuoteRec, tmEval, tmDefinitionRed, tmAxiomRed, tmLemmaRed, tmFreshName, tmAbout, tmCurrentModPath,
        tmMkDefinition, tmMkInductive, tmPrint, tmFail, tmQuoteInductive, tmQuoteConstant, tmQuoteUniverses, tmUnquote, tmUnquoteTyped) =
-    (r_reify "tmReturn", r_reify "tmBind", r_reify "tmQuote", r_reify "tmQuoteRec", r_reify "tmEval", r_reify "tmDefinition",
-     r_reify "tmAxiom", r_reify "tmLemma", r_reify "tmFreshName", r_reify "tmAbout", r_reify "tmCurrentModPath",
+    (r_reify "tmReturn", r_reify "tmBind", r_reify "tmQuote", r_reify "tmQuoteRec", r_reify "tmEval", r_reify "tmDefinitionRed",
+     r_reify "tmAxiomRed", r_reify "tmLemmaRed", r_reify "tmFreshName", r_reify "tmAbout", r_reify "tmCurrentModPath",
      r_reify "tmMkDefinition", r_reify "tmMkInductive", r_reify "tmPrint", r_reify "tmFail", r_reify "tmQuoteInductive", r_reify "tmQuoteConstant",
      r_reify "tmQuoteUniverses", r_reify "tmUnquote", r_reify "tmUnquoteTyped")
 
@@ -1689,7 +1689,7 @@ struct
       | _::_::a::f::[] ->
          run_template_program_rec (fun (evm, ar) -> run_template_program_rec k (evm, Term.mkApp (f, [|ar|]))) (evm, a)
       | _ -> monad_failure_full "tmBind" 4 pgm
-    else if Term.eq_constr coConstr tmDefinition then
+    else if Term.eq_constr coConstr tmDefinitionRed then
       match args with
       | name::s::typ::body::[] ->
          let (evm, name) = reduce_all env evm name in
@@ -1697,17 +1697,17 @@ struct
          let (evm, typ) = (match denote_option s with Some s -> let red = denote_reduction_strategy s in reduce_all ~red env evm typ | None -> (evm, typ)) in
          let n = Declare.declare_definition ~kind:Decl_kinds.Definition (unquote_ident name) ~types:typ (body, Evd.universe_context_set evm) in
          k (evm, Term.mkConst n)
-      | _ -> monad_failure "tmDefinition" 4
-    else if Term.eq_constr coConstr tmAxiom then
+      | _ -> monad_failure "tmDefinitionRed" 4
+    else if Term.eq_constr coConstr tmAxiomRed then
       match args with
-      | name::typ::[] ->
+      | name::s::typ::[] ->
          let (evm, name) = reduce_all env evm name in
-         let (evm, typ) = reduce_hnf env evm typ in
+         let (evm, typ) = (match denote_option s with Some s -> let red = denote_reduction_strategy s in reduce_all ~red env evm typ | None -> (evm, typ)) in
          let param = Entries.ParameterEntry (None, false, (typ, UState.context (Evd.evar_universe_context evm)), None) in
          let n = Declare.declare_constant (unquote_ident name) (param, Decl_kinds.IsDefinition Decl_kinds.Definition) in
          k (evm, Term.mkConst n)
-      | _ -> monad_failure "tmAxiom" 2
-    else if Term.eq_constr coConstr tmLemma then
+      | _ -> monad_failure "tmAxiomRed" 3
+    else if Term.eq_constr coConstr tmLemmaRed then
       match args with
       | name::s::typ::[] ->
          let (evm, name) = reduce_all env evm name in
@@ -1727,7 +1727,7 @@ struct
                                  (* let evm, t = Evd.fresh_global env evm gr in k (env, evm, t) *)
                                  (* k (env, evm, unit_tt) *)
                             (* )); *)
-      | _ -> monad_failure "tmLemma" 2
+      | _ -> monad_failure "tmLemmaRed" 2
     else if Term.eq_constr coConstr tmMkDefinition then
       match args with
       | name::body::[] ->

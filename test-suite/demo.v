@@ -258,9 +258,11 @@ Run TemplateProgram (tmDefinition "foo4'" nat >>= tmPrint).
 (* We can chain the definition. In the following,
  foo5' = 12 and foo6' = foo5' *)
 Run TemplateProgram (t <- tmDefinition "foo5'" 12 ;;
-                     tmDefinition "foo6'" t).
+                       tmDefinition "foo6'" t).
 
-Run TemplateProgram (tmLemma "foo51" nat ;;
+Obligation Tactic := idtac.
+
+Run TemplateProgram (tmLemma "foo51" nat;;
                      tmLemma "foo61" bool).
 Next Obligation.
   exact 3.
@@ -268,7 +270,6 @@ Defined.
 Next Obligation.
   exact true.
 Qed.
-
 
 
 

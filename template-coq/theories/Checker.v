@@ -325,7 +325,7 @@ Section Conversion.
       else
         cred <- reduce_stack_term RedFlags.default (fst Σ) Γ n c ;;
         c'red <- reduce_stack_term RedFlags.default (fst Σ) Γ n c' ;;
-        if eq_term (snd Σ) cred c && eq_term (snd Σ) c'red c' then ret false
+        if eq_term (snd Σ) cred c && eq_term (snd Σ) c'red c' then ret true
         else
           isconv n leq Γ (tCase (ind, par) p cred brs) l1 (tCase (ind, par) p c'red brs') l2
 

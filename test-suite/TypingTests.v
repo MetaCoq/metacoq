@@ -7,7 +7,7 @@ Require Import Coq.Strings.Ascii.
 Require Import Coq.Bool.Bool.
 Import ListNotations.
 
-(* Require Import Template.LoaderCoqChecker. *)
+Require Import TemplateChecker.Loader.
 Require Import Template.Typing.
 Require Import Template.Checker.
 Require Import Template.Ast.
@@ -119,7 +119,12 @@ Module Test5.
   Defined.
 
   (* Time Template Check Plus1. *)
-  (* Too long with universes on  *)
+  (* Time Template Check Coq.ZArith.BinInt.Z.succ_pred. (* -> 16 s *) *)
+  (* Quote Recursively Definition plop := Coq.ZArith.BinInt.Z.succ_pred. *)
+  (* Eval native_compute in (typecheck_program plop). (* -> 31 min!! *) *)
+
+
+  (* (* Too long with universes on *) *)
   (* Quote Recursively Definition p_Plus1 := Plus1. *)
   
   (* Definition term := Plus1. *)

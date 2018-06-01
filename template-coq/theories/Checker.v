@@ -370,6 +370,7 @@ Inductive type_error :=
 | UnboundVar (id : string)
 | UnboundMeta (m : nat)
 | UnboundEvar (ev : nat)
+| NotLevelUniverse (u : universe)
 | UndeclaredConstant (c : string)
 | UndeclaredInductive (c : inductive)
 | UndeclaredConstructor (c : inductive) (i : nat)
@@ -459,6 +460,7 @@ Definition string_of_type_error (e : type_error) : string :=
   | UnboundVar id => "Unbound var " ++ id
   | UnboundMeta m => "Unbound meta " ++ string_of_nat m
   | UnboundEvar ev => "Unbound evar " ++ string_of_nat ev
+  | NotLevelUniverse u => "Not a level universe " ++ string_of_sort u
   | UndeclaredConstant c => "Undeclared constant " ++ c
   | UndeclaredInductive c => "Undeclared inductive " ++ (inductive_mind c)
   | UndeclaredConstructor c i => "Undeclared inductive " ++ (inductive_mind c)
@@ -645,9 +647,6 @@ Section Typecheck2.
     if check_constraints (snd Σ) cstrs then ret tt
     else raise (UnsatisfiedConstraints cstrs).
 
-  Definition try_suc (u : Universe.t) : Universe.t :=   (* FIXME suc s *)
-    map (fun '(l, b) =>  (l, true)) u.
-
   
   Fixpoint infer (Γ : context) (t : term) : typing_result term :=
     match t with
@@ -661,8 +660,10 @@ Section Typecheck2.
     | tMeta n => raise (UnboundMeta n)
     | tEvar ev args => raise (UnboundEvar ev)
 
-    | tSort s => ret (tSort (try_suc s))
-
+    | tSort s => match Universe.level s with
+                | Some l => ret (tSort (Universe.super l))
+                | None => raise (NotLevelUniverse s)
+                end
     | tCast c k t =>
       infer_type infer Γ t ;;
       infer_cumul infer Γ c t ;;
@@ -816,8 +817,6 @@ Section Typecheck2.
 
     - eexists. rewrite (nth_error_safe_nth n _ isdecl).
       split; [ reflexivity | tc ].
-
-    - admit.
 
     - eexists.
       apply cumul_reduce_to_sort in IHX1 as [s'' [-> Hs'']].

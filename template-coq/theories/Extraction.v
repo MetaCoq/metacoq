@@ -8,9 +8,8 @@ From Template Require All.
 
 Require Import FSets.
 Require Import ExtrOcamlBasic.
-Require Import ExtrOcamlString (* ExtrOcamlZInt *).
+Require Import ExtrOcamlString (* (* TODO add this when it will be fixed in Coq *) ExtrOcamlZInt *).
 
 Extraction Blacklist uGraph univ Ast String List Nat UnivSubst Typing Checker.
-Print Extraction Blacklist.
 Set Warnings "-extraction-opaque-accessed".
 Recursive Extraction Library Checker.

@@ -1,4 +1,3 @@
-open Declarations
 open CErrors
 open Univ
 open Entries
@@ -56,7 +55,7 @@ let inspectTerm (t:Constr.t) :  (Constr.t, quoted_int, quoted_ident, quoted_name
     match args with
       x :: _ -> ACoq_tSort x
     | _ -> CErrors.user_err (print_term t ++ Pp.str ("has bad structure"))
-  else if Term.eq_constr h tCast then
+  else if Constr.equal h tCast then
     match args with
       x :: y :: z :: _ -> ACoq_tCast (x, y, z)
     | _ -> CErrors.user_err (print_term t ++ Pp.str ("has bad structure"))

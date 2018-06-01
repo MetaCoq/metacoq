@@ -2,14 +2,8 @@
 (*i camlp4use: "pa_extend.cmp" i*)
 
 open Ltac_plugin
-open Declarations
-open CErrors
-open Univ
 open Entries
 open Names
-open Redops
-open Genredexpr
-open Pp (* this adds the ++ to the current scope *)
 
 
 DECLARE PLUGIN "template_coq"

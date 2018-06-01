@@ -107,7 +107,7 @@ struct
     | NATIVEcast -> NativeCast
     | VMcast -> VmCast
 
-  let quote_kn kn = quote_string (Names.string_of_kn kn)
+  let quote_kn kn = quote_string (KerName.to_string kn)
   let quote_inductive (kn, i) = { inductive_mind = kn ; inductive_ind = i }
   let quote_proj ind p a = ((ind,p),a)
 
@@ -219,9 +219,9 @@ struct
   let mk_program decls tm = (decls, tm)
 
   let quote_mind_finiteness = function
-    | Decl_kinds.Finite -> Finite
-    | Decl_kinds.CoFinite -> CoFinite
-    | Decl_kinds.BiFinite -> BiFinite
+    | Declarations.Finite -> Finite
+    | Declarations.CoFinite -> CoFinite
+    | Declarations.BiFinite -> BiFinite
 
   let quote_mind_params l =
     let map (id, body) =
@@ -339,7 +339,7 @@ struct
           let u' = unquote_level_expr l b in Univ.Universe.sup u u')
         (unquote_level_expr l b) q
 
-  let print_term  (u: t) : Pp.std_ppcmds = failwith "not yet implemented"
+  let print_term (u: t) : Pp.t = failwith "print_term in term_quoter.ml not yet implemented"
 
 end
 

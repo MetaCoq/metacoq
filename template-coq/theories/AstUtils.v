@@ -15,9 +15,9 @@ Definition string_of_gref gr :=
   match gr with
   | ConstRef s => s
   | IndRef (mkInd s n) =>
-    "Inductive " ++ s ++ " " ++ (string_of_int n)
+    "Inductive " ++ s ++ " " ++ (string_of_nat n)
   | ConstructRef (mkInd s n) k =>
-    "Constructor " ++ s ++ " " ++ (string_of_int n) ++ " " ++ (string_of_int k)
+    "Constructor " ++ s ++ " " ++ (string_of_nat n) ++ " " ++ (string_of_nat k)
   end.
 
 Definition gref_eq_dec

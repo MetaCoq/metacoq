@@ -381,7 +381,6 @@ Inductive type_error :=
 | UnsatisfiedConstraints (c : ConstraintSet.t)
 | NotEnoughFuel (n : nat).
 
-Definition string_of_nat (n : nat) := Template.utils.string_of_int n.
 
 Definition string_of_list_aux {A} (f : A -> string) (l : list A) : string :=
   let fix aux l :=
@@ -417,6 +416,13 @@ Definition string_of_name (na : name) :=
 Definition string_of_universe_instance u :=
   string_of_list string_of_level u.
 
+Definition string_of_def {A : Set} (f : A -> string) (def : def A) :=
+  "(" ++ string_of_name (dname def) ++ "," ++ f (dtype def) ++ "," ++ f (dbody def) ++ ","
+      ++ string_of_nat (rarg def) ++ ")".
+
+Definition string_of_inductive (i : inductive) :=
+  (inductive_mind i) ++ "," ++ string_of_nat (inductive_ind i).
+
 Fixpoint string_of_term (t : term) :=
   match t with
   | tRel n => "Rel(" ++ string_of_nat n ++ ")"
@@ -434,17 +440,17 @@ Fixpoint string_of_term (t : term) :=
                                  ++ "," ++ string_of_term t' ++ "," ++ string_of_term t ++ ")"
   | tApp f l => "App(" ++ string_of_term f ++ "," ++ string_of_list string_of_term l ++ ")"
   | tConst c u => "Const(" ++ c ++ "," ++ string_of_universe_instance u ++ ")"
-  | tInd (mkInd c i) u => "Ind(" ++ c ++ "," ++ string_of_int i ++ ","
-                                 ++ string_of_universe_instance u ++ ")"
-  | tConstruct (mkInd c i) n u => "Construct(" ++ c ++ "," ++ string_of_int i ++ "," ++
-                                               string_of_int n ++ "," ++
-                                               string_of_universe_instance u ++ ")"
+  | tInd i u => "Ind(" ++ string_of_inductive i ++ "," ++ string_of_universe_instance u ++ ")"
+  | tConstruct i n u => "Construct(" ++ string_of_inductive i ++ "," ++ string_of_nat n ++ ","
+                                    ++ string_of_universe_instance u ++ ")"
   | tCase (ind, i) t p brs =>
-    "Case(" ++ string_of_term t ++ "," ++ string_of_term p ++ "," ++
-            string_of_list (fun b => string_of_term (snd b)) brs ++ ")"
-  | tProj p c =>
-    "Proj(" ++ "TODO" ++ "," ++ string_of_term c ++ ")"
-  | _ => "TODO string_of_term"
+    "Case(" ++ string_of_inductive ind ++ "," ++ string_of_nat i ++ "," ++ string_of_term t ++ ","
+            ++ string_of_term p ++ "," ++ string_of_list (fun b => string_of_term (snd b)) brs ++ ")"
+  | tProj (ind, i, k) c =>
+    "Proj(" ++ string_of_inductive ind ++ "," ++ string_of_nat i ++ "," ++ string_of_nat k ++ ","
+            ++ string_of_term c ++ ")"
+  | tFix l n => "Fix(" ++ (string_of_list (string_of_def string_of_term) l) ++ "," ++ string_of_nat n ++ ")"
+  | tCoFix l n => "CoFix(" ++ (string_of_list (string_of_def string_of_term) l) ++ "," ++ string_of_nat n ++ ")"
   end.
 
 Definition string_of_type_error (e : type_error) : string :=

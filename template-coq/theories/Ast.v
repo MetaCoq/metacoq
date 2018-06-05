@@ -65,7 +65,7 @@ Definition projection : Set := inductive * nat (* params *) * nat (* argument *)
 Record def (term : Set) : Set := mkdef {
   dname : name; (* the name **)
   dtype : term;
-  dbody : term; (* the body (a lambda term). Note, this may mention other (mutually-defined) name **)
+  dbody : term; (* the body (a lambda term). Note, this may mention other (mutually-defined) names **)
   rarg  : nat  (* the index of the recursive argument, 0 for cofixpoints **) }.
 
 Definition mfixpoint (term : Set) : Set :=

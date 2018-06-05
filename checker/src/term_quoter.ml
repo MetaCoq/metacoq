@@ -1,7 +1,7 @@
 (*i camlp4deps: "parsing/grammar.cma" i*)
 (*i camlp4use: "pa_extend.cmp" i*)
 
-open Term
+open Constr
 open Ast0
 open Template_coq
 open Quoter

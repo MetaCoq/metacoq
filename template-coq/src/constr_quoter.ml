@@ -236,10 +236,10 @@ struct
 
   let quote_cast_kind k =
     match k with
-      Term.VMcast -> kVmCast
-    | Term.DEFAULTcast -> kCast
-    | Term.REVERTcast -> kRevertCast
-    | Term.NATIVEcast -> kNative
+      Constr.VMcast -> kVmCast
+    | Constr.DEFAULTcast -> kCast
+    | Constr.REVERTcast -> kRevertCast
+    | Constr.NATIVEcast -> kNative
 
   let string_of_level s =
     to_string (Univ.Level.to_string s)

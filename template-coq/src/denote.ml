@@ -12,11 +12,11 @@ open TemplateCoqQuoter
 
 let rec app_full trm acc =
   match Constr.kind trm with
-    Term.App (f, xs) -> app_full f (Array.to_list xs @ acc)
+    Constr.App (f, xs) -> app_full f (Array.to_list xs @ acc)
   | _ -> (trm, acc)
-       
+
 let print_term (u: t) : Pp.t = pr_constr u
-                             
+
 let from_coq_pair trm =
   let (h,args) = app_full trm [] in
   if Constr.equal h c_pair then
@@ -36,7 +36,7 @@ let rec from_coq_list trm =
     | _ -> bad_term trm
   else
     not_supported_verb trm "from_coq_list"
-  
+
 let inspectTerm (t:Constr.t) :  (Constr.t, quoted_int, quoted_ident, quoted_name, quoted_sort, quoted_cast_kind, quoted_kernel_name, quoted_inductive, quoted_univ_instance, quoted_proj) structure_of_term =
   let (h,args) = app_full t [] in
   if Constr.equal h tRel then
@@ -143,14 +143,14 @@ let rec unquote_int trm =
     | _ -> not_supported_verb trm "unquote_int nil"
   else
     not_supported_verb trm "unquote_int"
-  
+
 let unquote_bool trm =
   if Constr.equal trm ttrue then
     true
   else if Constr.equal trm tfalse then
     false
   else not_supported_verb trm "from_bool"
-  
+
 let unquote_char trm =
   let (h,args) = app_full trm [] in
   if Constr.equal h tAscii then
@@ -162,7 +162,7 @@ let unquote_char trm =
     | _ -> assert false
   else
     not_supported trm
-  
+
 let unquote_string trm =
   let rec go n trm =
     let (h,args) = app_full trm [] in
@@ -179,23 +179,23 @@ let unquote_string trm =
       not_supported_verb trm "unquote_string"
   in
   Bytes.to_string (go 0 trm)
-  
+
 let unquote_ident trm =
   Id.of_string (unquote_string trm)
-  
+
 let unquote_cast_kind trm =
   if Constr.equal trm kVmCast then
-    Term.VMcast
+    Constr.VMcast
   else if Constr.equal trm kCast then
-    Term.DEFAULTcast
+    Constr.DEFAULTcast
   else if Constr.equal trm kRevertCast then
-    Term.REVERTcast
+    Constr.REVERTcast
   else if Constr.equal trm kNative then
-    Term.VMcast
+    Constr.VMcast
   else
     bad_term trm
-  
-  
+
+
 let unquote_name trm =
   let (h,args) = app_full trm [] in
   if Constr.equal h nAnon then
@@ -216,7 +216,7 @@ let unquote_name trm =
     Also, instead of strings, new level manupulation functions
     use [qualid]. Maybe it's worth considering to make corresponding changes to template-coq representations as well.
   *)
-      
+
 let get_level evd s =
   if CString.string_contains ~where:s ~what:"." then
     match List.rev (CString.split '.' s) with
@@ -315,7 +315,7 @@ let rec app_full_abs (trm: Constr.t) (acc: Constr.t list) =
   match inspectTerm trm with
     ACoq_tApp (f, xs) -> app_full_abs f (xs @ acc)
   | _ -> (trm, acc)
-       
+
 
 let denote_term evdref (trm: Constr.t) : Constr.t =
   let rec aux (trm: Constr.t) : Constr.t =
@@ -329,15 +329,15 @@ let denote_term evdref (trm: Constr.t) : Constr.t =
     | ACoq_tProd (n,t,b) -> Constr.mkProd (unquote_name n, aux t, aux b)
     | ACoq_tLambda (n,t,b) -> Constr.mkLambda (unquote_name n, aux t, aux b)
     | ACoq_tLetIn (n,e,t,b) -> Constr.mkLetIn (unquote_name n, aux e, aux t, aux b)
-    | ACoq_tApp (f,xs) ->   
+    | ACoq_tApp (f,xs) ->
        Constr.mkApp (aux f, Array.of_list (List.map aux  xs))
-    | ACoq_tConst (s,_) ->   
+    | ACoq_tConst (s,_) ->
        (* TODO: unquote universes *)
-       let s = (unquote_kn s) in 
+       let s = (unquote_kn s) in
        (try
           match Nametab.locate s with
           | Globnames.ConstRef c -> UnivGen.constr_of_global (Globnames.ConstRef c)
-          | Globnames.IndRef _ -> CErrors.user_err (str "the constant is an inductive. use tInd : " 
+          | Globnames.IndRef _ -> CErrors.user_err (str "the constant is an inductive. use tInd : "
                                                     ++  Pp.str (Libnames.string_of_qualid s))
           | Globnames.VarRef _ -> CErrors.user_err (str "the constant is a variable. use tVar : " ++ Pp.str (Libnames.string_of_qualid s))
           | Globnames.ConstructRef _ -> CErrors.user_err (str "the constant is a consructor. use tConstructor : "++ Pp.str (Libnames.string_of_qualid s))
@@ -352,27 +352,27 @@ let denote_term evdref (trm: Constr.t) : Constr.t =
     | ACoq_tCase (info, ty, d, brs) ->
        let i, _ = info in
        let ind = unquote_inductive i in
-       let ci = Inductiveops.make_case_info (Global.env ()) ind Term.RegularStyle in
+       let ci = Inductiveops.make_case_info (Global.env ()) ind Constr.RegularStyle in
        let denote_branch br =
          let _, br = br in
          aux br
        in
        Constr.mkCase (ci, aux ty, aux d, Array.of_list (List.map denote_branch (brs)))
-    | ACoq_tFix (lbd, i) -> 
-       let (names,types,bodies,rargs) = (List.map (fun p->p.adname) lbd,  List.map (fun p->p.adtype) lbd, List.map (fun p->p.adbody) lbd, 
+    | ACoq_tFix (lbd, i) ->
+       let (names,types,bodies,rargs) = (List.map (fun p->p.adname) lbd,  List.map (fun p->p.adtype) lbd, List.map (fun p->p.adbody) lbd,
                                          List.map (fun p->p.rarg) lbd) in
        let (types,bodies) = (List.map aux types, List.map aux bodies) in
        let (names,rargs) = (List.map unquote_name names, List.map unquote_int rargs) in
        let la = Array.of_list in
        Constr.mkFix ((la rargs,unquote_int i), (la names, la types, la bodies))
-    | ACoq_tCoFix (lbd, i) -> 
-       let (names,types,bodies,rargs) = (List.map (fun p->p.adname) lbd,  List.map (fun p->p.adtype) lbd, List.map (fun p->p.adbody) lbd, 
+    | ACoq_tCoFix (lbd, i) ->
+       let (names,types,bodies,rargs) = (List.map (fun p->p.adname) lbd,  List.map (fun p->p.adtype) lbd, List.map (fun p->p.adbody) lbd,
                                          List.map (fun p->p.rarg) lbd) in
        let (types,bodies) = (List.map aux types, List.map aux bodies) in
        let (names,rargs) = (List.map unquote_name names, List.map unquote_int rargs) in
        let la = Array.of_list in
        Constr.mkCoFix (unquote_int i, (la names, la types, la bodies))
-    | ACoq_tProj (proj,t) -> 
+    | ACoq_tProj (proj,t) ->
        let (ind, _, narg) = unquote_proj proj in (* is narg the correct projection? *)
        let ind' = unquote_inductive ind in
        let projs = Recordops.lookup_projections ind' in

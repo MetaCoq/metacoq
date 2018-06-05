@@ -8,7 +8,7 @@ open Quoter
 let contrib_name = "template-coq"
 
 let gen_constant_in_modules locstr dirs s =
-  Universes.constr_of_global (Coqlib.gen_reference_in_modules locstr dirs s)
+  UnivGen.constr_of_global (Coqlib.gen_reference_in_modules locstr dirs s)
 
 (** The reifier to Coq values *)
 module TemplateCoqQuoter =
@@ -120,8 +120,8 @@ struct
   let cPolymorphic_ctx = resolve_symbol pkg_univ "Polymorphic_ctx"
   let tUContextmake = resolve_symbol (ext_pkg_univ "UContext") "make"
   (* let tConstraintSetempty = resolve_symbol (ext_pkg_univ "ConstraintSet") "empty" *)
-  let tConstraintSetempty = Universes.constr_of_global (Coqlib.find_reference "template coq bug" (ext_pkg_univ "ConstraintSet") "empty")
-  let tConstraintSetadd = Universes.constr_of_global (Coqlib.find_reference "template coq bug" (ext_pkg_univ "ConstraintSet") "add")
+  let tConstraintSetempty = UnivGen.constr_of_global (Coqlib.find_reference "template coq bug" (ext_pkg_univ "ConstraintSet") "empty")
+  let tConstraintSetadd = UnivGen.constr_of_global (Coqlib.find_reference "template coq bug" (ext_pkg_univ "ConstraintSet") "add")
   let tmake_univ_constraint = resolve_symbol pkg_univ "make_univ_constraint"
   let tinit_graph = resolve_symbol pkg_ugraph "init_graph"
   let tadd_global_constraints = resolve_symbol pkg_ugraph  "add_global_constraints"
@@ -314,7 +314,7 @@ struct
 
   let quote_ugraph (g : UGraph.t) =
     let inst' = quote_univ_instance Univ.Instance.empty in
-    let const' = quote_univ_constraints (UGraph.constraints_of_universes g) in
+    let const' = quote_univ_constraints (fst (UGraph.constraints_of_universes g)) in
     let uctx = Constr.mkApp (tUContextmake, [|inst' ; const'|]) in
     Constr.mkApp (tadd_global_constraints, [|Constr.mkApp (cMonomorphic_ctx, [| uctx |]); tinit_graph|])
 
@@ -478,7 +478,7 @@ struct
     | None -> Constr.mkApp (cNone, [| opType |])
 
 
-  let quote_global_reference : Globnames.global_reference -> quoted_global_reference = function
+  let quote_global_reference : Names.GlobRef.t -> quoted_global_reference = function
     | Globnames.VarRef _ -> CErrors.user_err (str "VarRef unsupported")
     | Globnames.ConstRef c ->
        let kn = quote_kn (Names.Constant.canonical c) in

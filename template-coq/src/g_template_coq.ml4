@@ -52,7 +52,7 @@ TACTIC EXTEND get_goal
       [ (** quote the given term, pass the result to t **)
         Proofview.Goal.nf_enter begin fun gl ->
           let env = Proofview.Goal.env gl in
-          let c = EConstr.to_constr (Proofview.Goal.sigma gl) c in
+          let c = EConstr.to_constr ~abort_on_undefined_evars:false (Proofview.Goal.sigma gl) c in
 	  let c = Constr_quoter.TermReify.quote_term env c in
 	  ltac_apply tac (List.map to_ltac_val [EConstr.of_constr c])
   end ]

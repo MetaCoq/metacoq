@@ -336,7 +336,7 @@ let denote_term evdref (trm: Constr.t) : Constr.t =
        let s = (unquote_kn s) in
        (try
           match Nametab.locate s with
-          | Globnames.ConstRef c -> Universes.constr_of_global (Globnames.ConstRef c)
+          | Globnames.ConstRef c -> UnivGen.constr_of_global (Globnames.ConstRef c)
           | Globnames.IndRef _ -> CErrors.user_err (str "the constant is an inductive. use tInd : "
                                                     ++  Pp.str (Libnames.string_of_qualid s))
           | Globnames.VarRef _ -> CErrors.user_err (str "the constant is a variable. use tVar : " ++ Pp.str (Libnames.string_of_qualid s))
@@ -555,7 +555,7 @@ let rec run_template_program_rec (k : Evd.evar_map * Constr.t -> unit)  ((evm, p
        ComDefinition.do_definition ~program_mode:true (unquote_ident name) kind None [] None hole (Some typ)
                                    (Lemmas.mk_hook (fun _ gr -> let env = Global.env () in
                                                                 let evm, t = Evd.fresh_global env evm gr in
-                                                                  k (evm, t)))
+                                                                let t = EConstr.to_constr evm t in k (evm, t)))
     (* let kind = Decl_kinds.(Global, Flags.use_polymorphic_flag (), DefinitionBody Definition) in *)
     (* Lemmas.start_proof (unquote_ident name) kind evm (EConstr.of_constr typ) *)
     (* (Lemmas.mk_hook (fun _ gr -> *)
@@ -684,8 +684,8 @@ let rec run_template_program_rec (k : Evd.evar_map * Constr.t -> unit)  ((evm, p
        let (evm, t) = reduce_all env evm t in
        let evdref = ref evm in
        let t' = denote_term evdref t in
-       let t' = Typing.e_solve_evars env evdref (EConstr.of_constr t') in
-       Typing.e_check env evdref t' (EConstr.of_constr typ);
+       let (evm, t') = Typing.solve_evars env !evdref (EConstr.of_constr t') in
+       let evm = Typing.check env evm t' (EConstr.of_constr typ) in
        let t' = EConstr.to_constr !evdref t' in
        k (evm, t')
     | _ -> monad_failure "tmUnquoteTyped" 2

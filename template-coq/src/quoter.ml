@@ -570,7 +570,7 @@ struct
 
   (* CHANGE: this is the only way (ugly) I found to construct [absrt_info] with empty fields,
 since  [absrt_info] is a private type *)
-  let empty_segment = Lib.section_segment_of_reference (Globnames.VarRef (Names.Id.of_string "blah"))
+  let empty_segment = Lib.section_segment_of_reference (Names.GlobRef.VarRef (Names.Id.of_string "blah"))
 
   let quote_mut_ind env (mi:Declarations.mutual_inductive_body) =
    let t= Discharge.process_inductive empty_segment (Names.Cmap.empty,Names.Mindmap.empty) mi in

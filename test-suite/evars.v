@@ -1,4 +1,4 @@
-Require Import Template.Template.
+Require Import Template.Loader.
 
 Goal True.
   evar (n : nat).

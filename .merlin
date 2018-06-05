@@ -1,4 +1,0 @@
-PKG coq.kernel coq.pretyping coq.tactics coq.lib coq.intf
-S src
-B src
-S theories

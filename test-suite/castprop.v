@@ -1,4 +1,4 @@
-Require Import Template.Template.
+Require Import Template.Loader.
 Require Import String.
 Set Template Cast Propositions.
 
@@ -17,4 +17,4 @@ Definition setprop : { x : nat | x = 0 } := exist _ 0 eq_refl.
 Quote Recursively Definition q_setprop := setprop.
 
 Notation proof t :=
-  (Ast.tCast t Ast.Cast (Ast.tCast _ Ast.Cast (Ast.tSort Ast.sProp))).
+  (Ast.tCast t Ast.Cast (Ast.tCast _ Ast.Cast (Ast.tSort univ.Universe.type0m))).

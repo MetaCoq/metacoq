@@ -1,26 +1,40 @@
-all: coq templatecoq
+all: template-coq checker
 
-coq: Makefile.coq
-	$(MAKE) -f Makefile.coq
-	
-install: Makefile.coq
-	$(MAKE) -f Makefile.coq install
-	$(MAKE) -f Makefile.coqplugin install
+.PHONY: all template-coq checker install html clean mrproper .merlin test-suite translations
 
-clean: Makefile.coq Makefile.coqplugin
-	$(MAKE) -f Makefile.coq clean
-	$(MAKE) -f Makefile.coqplugin clean
+install: 
+	$(MAKE) -C template-coq install
+	$(MAKE) -C checker install
 
-Makefile.coq: _CoqProject
-	$(COQBIN)coq_makefile -f _CoqProject -o Makefile.coq
+html: all
+	$(MAKE) -C template-coq html
+	mv template-coq/html/*.html html
+	rm template-coq/html/coqdoc.css
+	rm -d template-coq/html
 
-Makefile.coqplugin: _CompilerProject
-	$(COQBIN)coq_makefile -f _CompilerProject -o Makefile.coqplugin
+clean:
+	$(MAKE) -C template-coq clean
+	$(MAKE) -C checker clean
+	$(MAKE) -C test-suite clean
+	$(MAKE) -C translations clean
 
-test-suite: coq
+mrproper:
+	$(MAKE) -C template-coq mrproper
+	$(MAKE) -C checker mrproper
+
+.merlin:
+	$(MAKE) -C template-coq .merlin
+	$(MAKE) -C checker .merlin
+
+template-coq:
+	$(MAKE) -C template-coq
+
+checker: template-coq
+	./movefiles.sh
+	$(MAKE) -C checker
+
+test-suite: template-coq checker
 	$(MAKE) -C test-suite
 
-templatecoq: coq Makefile.coqplugin
-	$(COQBIN)coqc -R theories Template theories/Extraction.v
-	sh movefiles.sh
-	$(MAKE) -f Makefile.coqplugin
+translations: template-coq
+	$(MAKE) -C translations

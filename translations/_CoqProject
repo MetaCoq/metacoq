@@ -1,0 +1,13 @@
+-R ../template-coq/theories Template
+-R . Translations
+-I ../template-coq/src
+-arg -type-in-type
+
+sigma.v
+translation_utils.v
+tsl_param.v
+tsl_param2.v
+tsl_param3.v
+tsl_fun.v
+param2_correctness.v
+param3_correctness.v

@@ -16,13 +16,13 @@ Require Import Coq.Lists.List.
 Require Import Coq.Strings.String.
 Require Import Coq.Strings.Ascii.
 Require Import Coq.Bool.Bool.
-Require Import Template.Template.
+Require Import Template.Loader.
 Require Import Template.Ast.
 
 Unset Template Cast Propositions.
 
-(* Uase template-coq to make a [program] from function defined above *)
-Quote Recursively Definition p_Plus1 := Plus1.
+(* Use template-coq to make a [program] from function defined above *)
+Time Quote Recursively Definition p_Plus1 := Plus1.
 
 (** The program p_Plus1 is too big to read, so we define some
 *** diagnostic software **)
@@ -39,7 +39,7 @@ Fixpoint pocc_term (n:nat) (t:term): bool :=
         | tLambda _ ty t => pocc_term n t || pocc_term n ty
         | tLetIn _ dfn ty t => pocc_term n dfn || pocc_term n t || pocc_term n ty
         | tApp fn args => pocc_term n fn || fold_left orb (map (pocc_term n) args) false
-        | tConst nm => if string_dec str nm then true else false
+        | tConst nm _ => if string_dec str nm then true else false
         | tCase _ ty mch brs =>
           pocc_term n ty || pocc_term n mch ||
                     fold_left orb (map (fun x => pocc_term n (snd x)) brs) false
@@ -50,26 +50,28 @@ Fixpoint pocc_term (n:nat) (t:term): bool :=
       end
   end.
   (** does [tConst str] occur anywhere in a program? **)
-Fixpoint pocc_program (p:program): bool :=
-  match p with
-    | PConstr _ _ t q => pocc_term 2000 t || pocc_program q
-    | PType _ _ _ q =>  pocc_program q
-    | PAxiom _ t q => pocc_term 2000 t || pocc_program q
-    | PIn t =>  pocc_term 2000 t
+
+Definition bound_global_decl (d : global_decl) : bool :=
+  match d with
+  | ConstantDecl kn _
+  | InductiveDecl kn _ => if string_dec str kn then true else false
   end.
-  (** is [str] in a program's environment? **)
-Fixpoint bound_program (p:program): bool :=
-  match p with
-    | PConstr nm _ _ q 
-    | PType nm _ _ q
-    | PAxiom nm _ q =>
-      (if string_dec str nm then true else false) || bound_program q
-    | PIn _ =>  false
-  end.
+
+Definition bound_program (p : program) := List.existsb bound_global_decl (fst p).
+
+Definition pocc_global_decl (d : global_decl) : bool :=
+match d with
+| ConstantDecl kn {| cst_type := ty;  cst_body := Some t |} => pocc_term 2000 ty || pocc_term 2000 t
+| ConstantDecl kn {| cst_type := ty;  cst_body := None |} => pocc_term 2000 ty
+| InductiveDecl kn _ => false
+end.
+
+Definition pocc_program p := pocc_term 2000 (snd p) || List.existsb pocc_global_decl (fst p).
+
 End occ_term_Sec.
 
-Eval vm_compute in pocc_program "Coq.Arith.PeanoNat.Nat.pred" p_Plus1.
-Eval vm_compute in bound_program "Coq.Arith.PeanoNat.Nat.pred" p_Plus1.
+Eval vm_compute in (eq_refl : pocc_program "Coq.Arith.PeanoNat.Nat.pred" p_Plus1 = false).
+Eval vm_compute in (eq_refl : bound_program "Coq.Arith.PeanoNat.Nat.pred" p_Plus1 = false).
 
-Eval vm_compute in pocc_program "Coq.Init.Nat.pred" p_Plus1.
-Eval vm_compute in bound_program "Coq.Init.Nat.pred" p_Plus1.
+Eval vm_compute in (eq_refl : pocc_program "Coq.Init.Nat.pred" p_Plus1 = true).
+Eval vm_compute in (eq_refl : bound_program "Coq.Init.Nat.pred" p_Plus1 = true).

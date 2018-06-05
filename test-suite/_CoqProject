@@ -1,25 +1,26 @@
--I ../src
--Q ../theories Template
+-I ../template-coq/src
+-I ../checker/src
+-Q ../template-coq/theories Template
+-Q ../checker/theories TemplateChecker
 -R . TemplateTestSuite
 
+add_constructor.v
 bug1.v
 bug2.v
-bug3.v
-bug4.v
+bug5.v
 bug6.v
 bug7.v
 bug8.v
-demo.v
+bugkncst.v
+case.v
+castprop.v
+CheckerTest.v
+cofix.v
+evars.v
 hnf_ctor.v
+letin.v
 mutind.v
 opaque.v
-letin.v
-case.v
-bugkncst.v
-evars.v
 proj.v
-cofix.v
-CheckerTest.v
 TypingTests.v
-add_constructor.v
-castprop.v
+univ.v

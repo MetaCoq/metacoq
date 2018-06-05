@@ -1,4 +1,4 @@
-From Template Require Import Ast Template.
+From Template Require Import Ast Loader.
 Require Import String.
 
 Open Scope string.
@@ -61,8 +61,8 @@ Module toto.
   (*               tProd nAnon (tSort ((Level.Var 0, false) :: nil)%list) (tRel 1), *)
   (*               1) :: nil; *)
   (*  ind_projs := nil |}] (UContext.make (Level.Var 0 :: Level.Var 1 :: nil)%list *)
-  (*    (Constraint.add (make_univ_constraint (Level.Var 0) Lt (Level.Var 1)) *)
-  (*       Constraint.empty)))) ;; *)
+  (*    (ConstraintSet.add (make_univ_constraint (Level.Var 0) Lt (Level.Var 1)) *)
+  (*       ConstraintSet.empty)))) ;; *)
 
 End toto.
 
@@ -132,3 +132,25 @@ Make Definition t2 := (Ast.tLambda (Ast.nNamed "T") (Ast.tSort [(Level.Level "To
 Set Printing Universes.
 Print t2.
 (* Print Universes. *)
+
+
+Monomorphic Universe i1 j1.
+Definition f := (forall (A:Type@{i1}) (B: Type@{j1}), A -> B -> A).
+(* : Type@{i1+1, j1+1} *)
+
+Quote Recursively Definition ff := f.
+Require Import Template.Checker.
+Check (eq_refl :
+         true =
+         let T := infer (Typing.reconstruct_global_context (fst ff)) [] (snd ff) in
+         match T with
+         | Checked (tSort [(Level.Level _, true); (Level.Level _, true)]) => true
+         | _ => false
+         end).
+Check (eq_refl :
+         true =
+         let T := infer ([], init_graph) [] ((tProd (nNamed "A") (tSort [(Level.Level "Toto.85", false)]) (tProd (nNamed "B") (tSort [(Level.Level "Toto.86", false)]) (tProd nAnon (tRel 1) (tProd nAnon (tRel 1) (tRel 3)))))) in
+         match T with
+         | Checked (tSort [(Level.Level _, true); (Level.Level _, true)]) => true
+         | _ => false
+         end).

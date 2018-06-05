@@ -1,6 +1,6 @@
--R ../theories Template
+-R ../template-coq/theories Template
 -R . Translations
--I ../src
+-I ../template-coq/src
 -arg -type-in-type
 
 sigma.v

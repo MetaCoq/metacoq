@@ -1,4 +1,4 @@
-Require Import Template.Template.
+Require Import Template.Loader.
 Require Import Streams.
 
 CoFixpoint ones := Cons 1 ones.

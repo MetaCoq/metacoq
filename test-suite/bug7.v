@@ -1,4 +1,4 @@
-Require Import Template.Template.
+Require Import Template.Loader.
 
 Axiom a_nat : nat.
 

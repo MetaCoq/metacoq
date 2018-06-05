@@ -1,5 +1,5 @@
 (* -*- coq-prog-args : ("-type-in-type") -*-  *)
-Require Import Template.TemplateCoqChecker.
+Require Import TemplateChecker.Loader.
 Definition foo := 2 * 2.
 
 Template Check foo.

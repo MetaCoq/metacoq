@@ -126,7 +126,9 @@ Ltac easy0 :=
 Require Import Omega.
 Hint Extern 100 => omega : terms.
 
-Ltac easy ::= easy0 || solve [eauto 7 with core arith terms].
+Ltac localeasy := easy0 || solve [eauto 7 with core arith terms].
+Local Ltac easy := localeasy.
+Local Tactic Notation "now" tactic(t) := t; easy.
 
 Notation lift_rec n c k := (lift n k c) (only parsing).
 Notation subst_rec N M k := (subst N k M) (only parsing).

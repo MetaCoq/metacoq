@@ -49,9 +49,9 @@ let hnf_type env ty =
   let rec hnf_type continue ty =
     match Constr.kind ty with
       Constr.Prod (n,t,b) -> Constr.mkProd (n,t,hnf_type true b)
-    | Term.LetIn _
-      | Term.Cast _
-      | Term.App _ when continue ->
+    | Constr.LetIn _
+      | Constr.Cast _
+      | Constr.App _ when continue ->
        hnf_type false (Reduction.whd_all env ty)
     | _ -> ty
   in
@@ -77,9 +77,9 @@ type ('a,'b) sum =
   Left of 'a | Right of 'b
 
 type ('term, 'name, 'nat) adef = { adname : 'name; adtype : 'term; adbody : 'term; rarg : 'nat }
-  
+
 type ('term, 'name, 'nat) amfixpoint = ('term, 'name, 'nat) adef list
-    
+
 type ('term, 'nat, 'ident, 'name, 'quoted_sort, 'cast_kind, 'kername, 'inductive, 'universe_instance, 'projection) structure_of_term =
   | ACoq_tRel of 'nat
   | ACoq_tVar of 'ident
@@ -98,7 +98,7 @@ type ('term, 'nat, 'ident, 'name, 'quoted_sort, 'cast_kind, 'kername, 'inductive
   | ACoq_tProj of 'projection * 'term
   | ACoq_tFix of ('term, 'name, 'nat) amfixpoint * 'nat
   | ACoq_tCoFix of ('term, 'name, 'nat) amfixpoint * 'nat
-      
+
 module type Quoter = sig
   type t
 
@@ -261,40 +261,40 @@ struct
     let rec quote_term (acc : 'a) env trm =
       let aux acc env trm =
       match Constr.kind trm with
-	Term.Rel i -> (Q.mkRel (Q.quote_int (i - 1)), acc)
-      | Term.Var v -> (Q.mkVar (Q.quote_ident v), acc)
-      | Term.Meta n -> (Q.mkMeta (Q.quote_int n), acc)
-      | Term.Evar (n,args) ->
+	Constr.Rel i -> (Q.mkRel (Q.quote_int (i - 1)), acc)
+      | Constr.Var v -> (Q.mkVar (Q.quote_ident v), acc)
+      | Constr.Meta n -> (Q.mkMeta (Q.quote_int n), acc)
+      | Constr.Evar (n,args) ->
 	let (acc,args') =
 	  CArray.fold_left_map (fun acc x ->
 	    let (x,acc) = quote_term acc env x in acc,x)
 	                  acc args in
          (Q.mkEvar (Q.quote_int (Evar.repr n)) args', acc)
-      | Term.Sort s -> (Q.mkSort (Q.quote_sort s), acc)
-      | Term.Cast (c,k,t) ->
+      | Constr.Sort s -> (Q.mkSort (Q.quote_sort s), acc)
+      | Constr.Cast (c,k,t) ->
 	let (c',acc) = quote_term acc env c in
 	let (t',acc) = quote_term acc env t in
         let k' = Q.quote_cast_kind k in
         (Q.mkCast c' k' t', acc)
 
-      | Term.Prod (n,t,b) ->
+      | Constr.Prod (n,t,b) ->
 	let (t',acc) = quote_term acc env t in
         let env = push_rel (toDecl (n, None, t)) env in
         let (b',acc) = quote_term acc env b in
         (Q.mkProd (Q.quote_name n) t' b', acc)
 
-      | Term.Lambda (n,t,b) ->
+      | Constr.Lambda (n,t,b) ->
 	let (t',acc) = quote_term acc env t in
         let (b',acc) = quote_term acc (push_rel (toDecl (n, None, t)) env) b in
         (Q.mkLambda (Q.quote_name n) t' b', acc)
 
-      | Term.LetIn (n,e,t,b) ->
+      | Constr.LetIn (n,e,t,b) ->
 	let (e',acc) = quote_term acc env e in
 	let (t',acc) = quote_term acc env t in
 	let (b',acc) = quote_term acc (push_rel (toDecl (n, Some e, t)) env) b in
 	(Q.mkLetIn (Q.quote_name n) e' t' b', acc)
 
-      | Term.App (f,xs) ->
+      | Constr.App (f,xs) ->
 	let (f',acc) = quote_term acc env f in
 	let (acc,xs') =
 	  CArray.fold_left_map (fun acc x ->
@@ -302,24 +302,24 @@ struct
 	    acc xs in
 	(Q.mkApp f' xs', acc)
 
-      | Term.Const (c,pu) ->
+      | Constr.Const (c,pu) ->
          let kn = Names.Constant.canonical c in
          let pu' = Q.quote_univ_instance pu in
 	 (Q.mkConst (Q.quote_kn kn) pu', add_constant kn acc)
 
-      | Term.Construct (((ind,i),c),pu) ->
+      | Constr.Construct (((ind,i),c),pu) ->
          (Q.mkConstruct (Q.quote_inductive (Q.quote_kn (Names.MutInd.canonical ind), Q.quote_int i),
                          Q.quote_int (c - 1))
             (Q.quote_univ_instance pu), add_inductive (ind,i) acc)
 
-      | Term.Ind ((ind,i),pu) ->
+      | Constr.Ind ((ind,i),pu) ->
          (Q.mkInd (Q.quote_inductive (Q.quote_kn (Names.MutInd.canonical ind), Q.quote_int i))
             (Q.quote_univ_instance pu), add_inductive (ind,i) acc)
 
-      | Term.Case (ci,typeInfo,discriminant,e) ->
-         let ind = Q.quote_inductive (Q.quote_kn (Names.MutInd.canonical (fst ci.Term.ci_ind)),
-                                      Q.quote_int (snd ci.Term.ci_ind)) in
-         let npar = Q.quote_int ci.Term.ci_npar in
+      | Constr.Case (ci,typeInfo,discriminant,e) ->
+         let ind = Q.quote_inductive (Q.quote_kn (Names.MutInd.canonical (fst ci.Constr.ci_ind)),
+                                      Q.quote_int (snd ci.Constr.ci_ind)) in
+         let npar = Q.quote_int ci.Constr.ci_npar in
          let (qtypeInfo,acc) = quote_term acc env typeInfo in
 	 let (qdiscriminant,acc) = quote_term acc env discriminant in
          let (branches,nargs,acc) =
@@ -327,12 +327,12 @@ struct
                let (x,acc) = quote_term acc env x in
                let narg = Q.quote_int narg in
                (x :: xs, narg :: nargs, acc))
-             ([],[],acc) e ci.Term.ci_cstr_nargs in
+             ([],[],acc) e ci.Constr.ci_cstr_nargs in
          (Q.mkCase (ind, npar) (List.rev nargs) qtypeInfo qdiscriminant (List.rev branches), acc)
 
-      | Term.Fix fp -> quote_fixpoint acc env fp
-      | Term.CoFix fp -> quote_cofixpoint acc env fp
-      | Term.Proj (p,c) ->
+      | Constr.Fix fp -> quote_fixpoint acc env fp
+      | Constr.CoFix fp -> quote_cofixpoint acc env fp
+      | Constr.Proj (p,c) ->
          let proj = Environ.lookup_projection p (snd env) in
          let ind = proj.Declarations.proj_ind in
          let ind = Q.quote_inductive (Q.quote_kn (Names.MutInd.canonical ind),
@@ -363,8 +363,8 @@ struct
         in
         if sf == Term.InProp then
           aux acc (true, env')
-              (Constr.mkCast (trm, Term.DEFAULTcast,
-                            Constr.mkCast (EConstr.to_constr Evd.empty ty, Term.DEFAULTcast, Constr.mkProp)))
+              (Constr.mkCast (trm, Constr.DEFAULTcast,
+                            Constr.mkCast (EConstr.to_constr Evd.empty ty, Constr.DEFAULTcast, Constr.mkProp)))
         else aux acc env trm
       else aux acc env trm
     and quote_recdecl (acc : 'a) env b (ns,ts,ds) =
@@ -506,7 +506,7 @@ struct
                 (* match cd.const_type with
 	         * | RegularArity ty -> ty
 	         * | TemplateArity (ctx,ar) ->
-                 *    Term.it_mkProd_or_LetIn (Constr.mkSort (Sorts.Type ar.template_level)) ctx *)
+                 *    Constr.it_mkProd_or_LetIn (Constr.mkSort (Sorts.Type ar.template_level)) ctx *)
               in
               (try quote_term acc (Global.env ()) ty
                with e ->
@@ -571,7 +571,7 @@ struct
   (* CHANGE: this is the only way (ugly) I found to construct [absrt_info] with empty fields,
 since  [absrt_info] is a private type *)
   let empty_segment = Lib.section_segment_of_reference (Globnames.VarRef (Names.Id.of_string "blah"))
-      
+
   let quote_mut_ind env (mi:Declarations.mutual_inductive_body) =
    let t= Discharge.process_inductive empty_segment (Names.Cmap.empty,Names.Mindmap.empty) mi in
     let mf = Q.quote_mind_finiteness t.mind_entry_finite in
@@ -622,5 +622,5 @@ since  [absrt_info] is a private type *)
   let quote_entry bypass env evm t =
     let entry = quote_entry_aux bypass env evm t in
     Q.quote_entry entry
-  
+
 end

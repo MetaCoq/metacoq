@@ -26,14 +26,11 @@ env:
   - COQ_VER="8.8.0"
 
 install:
-- opam update
 - opam init -j ${NJOBS} --switch=${COMPILER} -n -y
 - eval $(opam config env)
 - opam config list
-- opam repo add coq-core-dev https://coq.inria.fr/opam/core-dev
 - opam update
 - opam install -j ${NJOBS} -y camlp5.${CAMLP5_VER} ocamlfind.${FINDLIB_VER} coq.${COQ_VER}
-- opam upgrade -y coq.${COQ_VER}
 - opam list
 
 script:

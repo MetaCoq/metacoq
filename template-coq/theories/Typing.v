@@ -2,7 +2,7 @@
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
 From Template Require Import utils Ast univ Induction LiftSubst UnivSubst.
-From Template Require AstUtils Loader.
+From Template Require config AstUtils Loader.
 Require Import String.
 Local Open Scope string_scope.
 Set Asymmetric Patterns.
@@ -266,10 +266,12 @@ Fixpoint subst_app (t : term) (us : list term) : term :=
 (** We try syntactic equality before checking the graph. *)
 
 Definition eq_universe φ s s' :=
+  let cf := config.default_checker_flags in
   if univ.Universe.equal s s' then true
   else uGraph.check_leq φ s s' && uGraph.check_leq φ s' s.
 
 Definition leq_universe φ s s' :=
+  let cf := config.default_checker_flags in
   if univ.Universe.equal s s' then true
   else uGraph.check_leq φ s s'.
 

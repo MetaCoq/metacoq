@@ -148,10 +148,10 @@ Section Reduce.
       let A' := f Γ A in
       tProd na A' (f (Γ ,, vass na A') B)
     | tCast c kind t => tCast (f Γ c) kind (f Γ t)
-    | tLetIn na b t b' =>
+    | tLetIn na b t c =>
       let b' := f Γ b in
       let t' := f Γ t in
-      tLetIn na b' t' (f (Γ ,, vdef na b' t') b')
+      tLetIn na b' t' (f (Γ ,, vdef na b' t') c)
     | tCase ind p c brs =>
       let brs' := List.map (on_snd (f Γ)) brs in
       tCase ind (f Γ p) (f Γ c) brs'

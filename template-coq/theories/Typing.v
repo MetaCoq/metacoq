@@ -2,7 +2,7 @@
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
 From Template Require Import utils Ast univ Induction LiftSubst UnivSubst.
-From Template Require AstUtils Loader.
+From Template Require config AstUtils Loader.
 Require Import String.
 Local Open Scope string_scope.
 Set Asymmetric Patterns.
@@ -940,8 +940,8 @@ Arguments lexprod [A B].
 Notation wf := (fun Σ => type_global_env (snd Σ) (fst Σ)).
 
 Conjecture wf_graph_prop_set : forall φ (H : wf_graph φ),
-    check_lt φ Universe.type0m Universe.type1 = true /\
-    check_lt φ Universe.type0 Universe.type1 = true.
+    check_lt (cf := config.default_checker_flags) φ Universe.type0m Universe.type1 = true /\
+    check_lt (cf := config.default_checker_flags) φ Universe.type0 Universe.type1 = true.
 
 Definition env_prop (P : forall Σ Γ t T, Set) :=
   forall Σ (wfΣ : wf Σ) Γ t T, Σ ;;; Γ |- t : T ->

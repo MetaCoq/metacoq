@@ -1,5 +1,5 @@
 Require Import BinInt List. Import ListNotations.
-From Template Require Import univ.
+From Template Require Import config univ.
 
 
 
@@ -177,8 +177,8 @@ Section UGraph.
   Definition check_leq (u1 u2 : Universe.t) : bool :=
     Universe.for_all (fun e => exists_bigger_or_eq e u2) u1.
 
-  Definition check_lt (u1 u2 : Universe.t) : bool :=
-    Universe.for_all (fun e => exists_strictly_bigger e u2) u1.
+  Definition check_lt `{cf : checker_flags} (u1 u2 : Universe.t) : bool :=
+    (negb check_univs) || Universe.for_all (fun e => exists_strictly_bigger e u2) u1.
 
   (* true is all is ok *)
   Definition no_universe_inconsistency : bool :=

@@ -266,10 +266,12 @@ Fixpoint subst_app (t : term) (us : list term) : term :=
 (** We try syntactic equality before checking the graph. *)
 
 Definition eq_universe φ s s' :=
+  let cf := config.default_checker_flags in
   if univ.Universe.equal s s' then true
   else uGraph.check_leq φ s s' && uGraph.check_leq φ s' s.
 
 Definition leq_universe φ s s' :=
+  let cf := config.default_checker_flags in
   if univ.Universe.equal s s' then true
   else uGraph.check_leq φ s s'.
 
@@ -940,8 +942,8 @@ Arguments lexprod [A B].
 Notation wf := (fun Σ => type_global_env (snd Σ) (fst Σ)).
 
 Conjecture wf_graph_prop_set : forall φ (H : wf_graph φ),
-    check_lt (cf := config.default_checker_flags) φ Universe.type0m Universe.type1 = true /\
-    check_lt (cf := config.default_checker_flags) φ Universe.type0 Universe.type1 = true.
+    check_lt φ Universe.type0m Universe.type1 = true /\
+    check_lt φ Universe.type0 Universe.type1 = true.
 
 Definition env_prop (P : forall Σ Γ t T, Set) :=
   forall Σ (wfΣ : wf Σ) Γ t T, Σ ;;; Γ |- t : T ->

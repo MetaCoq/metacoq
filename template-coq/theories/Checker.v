@@ -364,7 +364,7 @@ Definition try_reduce Σ Γ n t :=
   | None => t
   end.
 
-  
+
 Inductive type_error :=
 | UnboundRel (n : nat)
 | UnboundVar (id : string)
@@ -648,7 +648,7 @@ Section Typecheck2.
   Definition try_suc (u : Universe.t) : Universe.t :=   (* FIXME suc s *)
     map (fun '(l, b) =>  (l, true)) u.
 
-  
+
   Fixpoint infer (Γ : context) (t : term) : typing_result term :=
     match t with
     | tRel n =>
@@ -757,6 +757,7 @@ Section Typecheck2.
     Σ ;;; Γ |- t <= t' <-> convert_leq Γ t t' = Checked ().
 
   Conjecture cumul_reduce_to_sort : forall Γ t s',
+      let cf := config.default_checker_flags in
       Σ ;;; Γ |- t <= tSort s' <->
       exists s'', reduce_to_sort (fst Σ) Γ t = Checked s''
              /\ check_leq (snd Σ) s'' s' = true.
@@ -790,7 +791,7 @@ Section Typecheck2.
     unfold lookup_constant_type, lookup_env.
     red in isdecl. rewrite isdecl. destruct decl. reflexivity.
   Qed.
-  
+
   Lemma lookup_constant_type_is_declared cst u T :
     lookup_constant_type cst u = Checked T ->
     { decl | declared_constant (fst Σ) cst decl /\
@@ -802,7 +803,7 @@ Section Typecheck2.
     injection H as eq. subst T. rewrite (lookup_env_id Hlook). simpl.
     eexists. split; eauto.
   Qed.
-  
+
   Lemma eq_ind_refl i i' : eq_ind i i' = true <-> i = i'.
   Admitted.
 
@@ -851,7 +852,7 @@ Section Typecheck2.
 
     - (* destruct indpar. *)
       apply cumul_reduce_to_ind in IHX2 as [args' [-> Hcumul]].
-      simpl in *. rewrite (proj2 (eq_ind_refl ind ind) eq_refl). 
+      simpl in *. rewrite (proj2 (eq_ind_refl ind ind) eq_refl).
       eexists ; split; [ reflexivity | tc ].
       admit.
 
@@ -889,8 +890,8 @@ Section Typecheck2.
         destruct (convert_leq Γ t t2) eqn:?; [ simpl | simpl; intro; discriminate ]
       end; try intros [= <-].
 
-  Lemma leq_universe_refl x : check_leq (snd Σ) x x = true. (* FIXME condition on φ? *)
-  Proof. induction x. reflexivity. simpl. Admitted.
+  Lemma leq_universe_refl `{config.checker_flags} x : check_leq (snd Σ) x x = true. (* FIXME condition on φ? *)
+  Proof. induction x. unfold check_leq. cbn. auto with bool. unfold check_leq. simpl. Admitted.
   Hint Resolve leq_universe_refl : typecheck.
   Lemma infer_type_correct Γ t x :
     (forall (Γ : context) (T : term), infer Γ t = Checked T -> Σ ;;; Γ |- t : T) ->
@@ -934,10 +935,10 @@ Section Typecheck2.
   Qed.
 
   Ltac infco := eauto using infer_cumul_correct, infer_type_correct.
-  
+
   (* Axiom cheat : forall A, A. *)
   (* Ltac admit := apply cheat. *)
-  
+
   Lemma infer_correct Γ t T :
     infer Γ t = Checked T -> Σ ;;; Γ |- t : T.
   Proof.
@@ -1004,7 +1005,7 @@ Section Typecheck2.
       destruct (nth_error_Some_safe_nth _ _ _ _ Heqo).
       constructor.
   Admitted.
-  
+
 End Typecheck2.
 
 Extract Constant infer_type_correct => "(fun f sigma ctx t x -> assert false)".

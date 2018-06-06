@@ -63,9 +63,9 @@ Definition projection : Set := inductive * nat (* params *) * nat (* argument *)
 
 (** Parametrized by term because term is not yet defined *)
 Record def (term : Set) : Set := mkdef {
-  dname : name; (* the name (note, this may mention other definitions **)
+  dname : name; (* the name **)
   dtype : term;
-  dbody : term; (* the body (a lambda term) **)
+  dbody : term; (* the body (a lambda term). Note, this may mention other (mutually-defined) names **)
   rarg  : nat  (* the index of the recursive argument, 0 for cofixpoints **) }.
 
 Definition mfixpoint (term : Set) : Set :=
@@ -129,7 +129,7 @@ Inductive constant_entry :=
 
 (** *** Inductive entries *)
 
-(** This is the epresentation of mutual inductives.
+(** This is the representation of mutual inductives.
     nearly copied from [kernel/entries.mli]
 
   Assume the following definition in concrete syntax:
@@ -287,7 +287,7 @@ Inductive TemplateMonad : Type -> Type :=
 | tmAxiom : ident -> forall A, TemplateMonad A
 | tmLemma : ident -> forall A, TemplateMonad A
 
-(* Guarenteed to not cause "... already declared" error *)
+(* Guaranteed to not cause "... already declared" error *)
 | tmFreshName : ident -> TemplateMonad ident
 
 | tmAbout : ident -> TemplateMonad (option global_reference)

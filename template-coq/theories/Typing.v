@@ -1,8 +1,8 @@
 (* Distributed under the terms of the MIT license.   *)
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
-From Template Require Import utils Ast univ Induction LiftSubst UnivSubst.
-From Template Require config AstUtils Loader.
+From Template Require Import config utils Ast univ Induction LiftSubst UnivSubst.
+From Template Require AstUtils Loader.
 Require Import String.
 Local Open Scope string_scope.
 Set Asymmetric Patterns.
@@ -266,12 +266,11 @@ Fixpoint subst_app (t : term) (us : list term) : term :=
 (** We try syntactic equality before checking the graph. *)
 
 Definition eq_universe φ s s' :=
-  let cf := config.default_checker_flags in
+  let cf := default_checker_flags in
   if univ.Universe.equal s s' then true
   else uGraph.check_leq φ s s' && uGraph.check_leq φ s' s.
 
-Definition leq_universe φ s s' :=
-  let cf := config.default_checker_flags in
+Definition leq_universe `{checker_flags} φ s s' :=
   if univ.Universe.equal s s' then true
   else uGraph.check_leq φ s s'.
 
@@ -313,7 +312,7 @@ Fixpoint eq_term (φ : uGraph.t) (t u : term) {struct t} :=
 
   We shouldn't look at printing annotations *)
 
-Fixpoint leq_term (φ : uGraph.t) (t u : term) {struct t} :=
+Fixpoint leq_term `{checker_flags} (φ : uGraph.t) (t u : term) {struct t} :=
   match t, u with
   | tRel n, tRel n' => eq_nat n n'
   | tMeta n, tMeta n' => eq_nat n n'
@@ -417,30 +416,30 @@ Reserved Notation " Σ ;;; Γ |- t <= u " (at level 50, Γ, t, u at next level).
 
 (** ** Cumulativity *)
 
-Inductive cumul (Σ : global_context) (Γ : context) : term -> term -> Prop :=
+Inductive cumul `{checker_flags} (Σ : global_context) (Γ : context) : term -> term -> Prop :=
 | cumul_refl t u : leq_term (snd Σ) t u = true -> Σ ;;; Γ |- t <= u
 | cumul_red_l t u v : red1 (fst Σ) Γ t v -> Σ ;;; Γ |- v <= u -> Σ ;;; Γ |- t <= u
 | cumul_red_r t u v : Σ ;;; Γ |- t <= v -> red1 (fst Σ) Γ u v -> Σ ;;; Γ |- t <= u
 
-where " Σ ;;; Γ |- t <= u " := (@cumul Σ Γ t u) : type_scope.
+where " Σ ;;; Γ |- t <= u " := (@cumul _ Σ Γ t u) : type_scope.
 
 (** *** Conversion
 
    Defined as cumulativity in both directions.
  *)
 
-Definition conv Σ Γ T U :=
+Definition conv `{checker_flags} Σ Γ T U :=
   Σ ;;; Γ |- T <= U /\ Σ ;;; Γ |- U <= T.
 
-Notation " Σ ;;; Γ |- t = u " := (@conv Σ Γ t u) (at level 50, Γ, t, u at next level) : type_scope.
+Notation " Σ ;;; Γ |- t = u " := (@conv _ Σ Γ t u) (at level 50, Γ, t, u at next level) : type_scope.
 
-Axiom conv_refl : forall Σ Γ t, Σ ;;; Γ |- t = t.
-Axiom cumul_refl' : forall Σ Γ t, Σ ;;; Γ |- t <= t. (* easy *)
-Axiom cumul_trans : forall Σ Γ t u v, Σ ;;; Γ |- t <= u -> Σ ;;; Γ |- u <= v -> Σ ;;; Γ |- t <= v.
+Axiom conv_refl : forall `{checker_flags} Σ Γ t, Σ ;;; Γ |- t = t.
+Axiom cumul_refl' : forall `{checker_flags} Σ Γ t, Σ ;;; Γ |- t <= t. (* easy *)
+Axiom cumul_trans : forall `{checker_flags} Σ Γ t u v, Σ ;;; Γ |- t <= u -> Σ ;;; Γ |- u <= v -> Σ ;;; Γ |- t <= v.
 
 Hint Resolve conv_refl cumul_refl' : typecheck.
 
-Conjecture congr_cumul_prod : forall Σ Γ na na' M1 M2 N1 N2,
+Conjecture congr_cumul_prod : forall `{checker_flags} Σ Γ na na' M1 M2 N1 N2,
     cumul Σ Γ M1 N1 ->
     cumul Σ (Γ ,, vass na M1) M2 N2 ->
     cumul Σ Γ (tProd na M1 M2) (tProd na' N1 N2).
@@ -472,7 +471,7 @@ Inductive Forall2 {A B : Type} (R : A -> B -> Type) : list A -> list B -> Type :
 
 (** ** Typing relation *)
 
-Inductive typing (Σ : global_context) (Γ : context) : term -> term -> Type :=
+Inductive typing `{checker_flags} (Σ : global_context) (Γ : context) : term -> term -> Type :=
 | type_Rel n : forall (isdecl : n < List.length Γ),
     Σ ;;; Γ |- (tRel n) : lift0 (S n) (safe_nth Γ (exist _ n isdecl)).(decl_type)
 
@@ -557,11 +556,11 @@ Inductive typing (Σ : global_context) (Γ : context) : term -> term -> Type :=
     Σ ;;; Γ |- A <= B ->
     Σ ;;; Γ |- t : B
 
-where " Σ ;;; Γ |- t : T " := (@typing Σ Γ t T) : type_scope
+where " Σ ;;; Γ |- t : T " := (@typing _ Σ Γ t T) : type_scope
 
 (* Typing of "spines", currently just the arguments of applications *)
 
-with typing_spine (Σ : global_context) (Γ : context) : term -> list term -> term -> Prop :=
+with typing_spine `{checker_flags} (Σ : global_context) (Γ : context) : term -> list term -> term -> Prop :=
 | type_spine_nil ty : typing_spine Σ Γ ty [] ty
 | type_spine_const hd tl na A B T B' :
     Σ ;;; Γ |- tProd na A B <= T ->
@@ -588,12 +587,12 @@ Definition reconstruct_global_context Σ
  := add_global_declarations Σ ([], init_graph).
 
 
-Definition isType (Σ : global_context) (Γ : context) (t : term) :=
+Definition isType `{checker_flags} (Σ : global_context) (Γ : context) (t : term) :=
   { s : _ & Σ ;;; Γ |- t : tSort s }.
 
 (** *** Typing of inductive declarations *)
 
-Inductive type_constructors (Σ : global_context) (Γ : context) :
+Inductive type_constructors `{checker_flags} (Σ : global_context) (Γ : context) :
   list (ident * term * nat) -> Type :=
 | type_cnstrs_nil : type_constructors Σ Γ []
 | type_cnstrs_cons id t n l :
@@ -602,7 +601,7 @@ Inductive type_constructors (Σ : global_context) (Γ : context) :
     (** TODO: check it has n products ending in a tRel application *)
     type_constructors Σ Γ ((id, t, n) :: l).
 
-Inductive type_projections (Σ : global_context) (Γ : context) :
+Inductive type_projections `{checker_flags} (Σ : global_context) (Γ : context) :
   list (ident * term) -> Type :=
 | type_projs_nil : type_projections Σ Γ []
 | type_projs_cons id t l :
@@ -613,14 +612,14 @@ Inductive type_projections (Σ : global_context) (Γ : context) :
 Definition arities_context (l : list one_inductive_body) :=
   rev_map (fun ind => vass (nNamed ind.(ind_name)) ind.(ind_type)) l.
 
-Definition isArity Σ Γ T :=
+Definition isArity `{checker_flags} Σ Γ T :=
   isType Σ Γ T (* FIXME  /\ decompose_prod_n *).
 
 Definition app_context (Γ Γ' : context) : context := (Γ' ++ Γ)%list.
 Notation " Γ  ,,, Γ' " := (app_context Γ Γ') (at level 25, Γ' at next level, left associativity).
 Notation "#| Γ |" := (List.length Γ) (at level 0, Γ at level 99, format "#| Γ |").
 
-Inductive type_inddecls (Σ : global_context) (pars : context) (Γ : context) :
+Inductive type_inddecls `{checker_flags} (Σ : global_context) (pars : context) (Γ : context) :
   list one_inductive_body -> Type :=
 | type_ind_nil : type_inddecls Σ pars Γ []
 | type_ind_cons na ty cstrs projs kelim l :
@@ -635,19 +634,19 @@ Inductive type_inddecls (Σ : global_context) (pars : context) (Γ : context) :
     (** TODO: check kelim*)
     type_inddecls Σ pars Γ (Build_one_inductive_body na ty kelim cstrs projs :: l).
 
-Definition type_inductive Σ inds :=
+Definition type_inductive `{checker_flags} Σ inds :=
   (** FIXME: should be pars ++ arities w/o params *)
   type_inddecls Σ [] (arities_context inds) inds.
 
 (** *** Typing of constant declarations *)
 
-Definition type_constant_decl Σ d :=
+Definition type_constant_decl `{checker_flags} Σ d :=
   match d.(cst_body) with
   | Some trm => Σ ;;; [] |- trm : d.(cst_type)
   | None => isType Σ [] d.(cst_type)
   end.
 
-Definition type_global_decl Σ decl :=
+Definition type_global_decl `{checker_flags} Σ decl :=
   match decl with  (* TODO universes *)
   | ConstantDecl id d => type_constant_decl Σ d
   | InductiveDecl ind inds => type_inductive Σ inds.(ind_bodies)
@@ -673,7 +672,7 @@ Inductive fresh_global (s : string) : global_declarations -> Prop :=
     fresh_global s env -> global_decl_ident g <> s ->
     fresh_global s (cons g env).
 
-Inductive type_global_env φ : global_declarations -> Type :=
+Inductive type_global_env `{checker_flags} φ : global_declarations -> Type :=
 | globenv_nil : wf_graph φ -> type_global_env φ []
 | globenv_decl Σ d :
     type_global_env φ Σ ->
@@ -683,13 +682,13 @@ Inductive type_global_env φ : global_declarations -> Type :=
 
 (** *** Typing of local environments *)
 
-Definition type_local_decl Σ Γ d :=
+Definition type_local_decl `{checker_flags} Σ Γ d :=
   match d.(decl_body) with
   | None => isType Σ Γ d.(decl_type)
   | Some body => Σ ;;; Γ |- body : d.(decl_type)
   end.
 
-Inductive type_local_env (Σ : global_context) : context -> Prop :=
+Inductive type_local_env `{checker_flags} (Σ : global_context) : context -> Prop :=
 | localenv_nil : type_local_env Σ []
 | localenv_cons Γ d :
     type_local_env Σ Γ ->
@@ -697,7 +696,7 @@ Inductive type_local_env (Σ : global_context) : context -> Prop :=
     type_local_env Σ (Γ ,, d).
 
 (** *** Typing of programs *)
-Definition type_program (p : program) (ty : term) : Prop :=
+Definition type_program `{checker_flags} (p : program) (ty : term) : Prop :=
   let Σ := reconstruct_global_context (fst p) in
   squash (Σ ;;; [] |- (snd p) : ty).
 
@@ -722,8 +721,9 @@ Ltac construct :=
 
 Quote Definition natr := nat.
 
-Goal type_program foo natr.
+Goal let cf := default_checker_flags in type_program foo natr.
 Proof.
+  intro cf.
   red.
   simpl. constructor.
   setenv Σ.
@@ -731,8 +731,9 @@ Proof.
 Qed.
 
 Quote Recursively Definition foo' := 1.
-Goal type_program foo' natr.
+Goal let cf := default_checker_flags in  type_program foo' natr.
 Proof.
+  intro cf.
   red.
   simpl. constructor.
   setenv Σ.
@@ -871,7 +872,7 @@ Definition on_decl_typing (P : term -> term -> Type) d :=
     Forall (fun ind => forall s, P ind.(ind_type) s) ind.(ind_bodies)
   end.
 
-Inductive Forall_decls_typing φ (P : global_declarations -> term -> term -> Type) : global_declarations -> Type :=
+Inductive Forall_decls_typing `{checker_flags} φ (P : global_declarations -> term -> term -> Type) : global_declarations -> Type :=
 | Forall_decls_typing_nil : Forall_decls_typing φ P nil
 | Forall_decls_typing_cons Σ d :
     Forall_decls_typing φ P Σ ->
@@ -889,7 +890,7 @@ Section Forall2_size.
   end.
 End Forall2_size.
 
-Definition typing_size {Σ Γ t T} (d : Σ ;;; Γ |- t : T) : size.
+Definition typing_size `{checker_flags} {Σ Γ t T} (d : Σ ;;; Γ |- t : T) : size.
 Proof.
   revert Σ Γ t T d.
   fix typing_size 5.
@@ -945,17 +946,17 @@ Conjecture wf_graph_prop_set : forall φ (H : wf_graph φ),
     check_lt φ Universe.type0m Universe.type1 = true /\
     check_lt φ Universe.type0 Universe.type1 = true.
 
-Definition env_prop (P : forall Σ Γ t T, Set) :=
+Definition env_prop `{checker_flags} (P : forall Σ Γ t T, Set) :=
   forall Σ (wfΣ : wf Σ) Γ t T, Σ ;;; Γ |- t : T ->
     Forall_decls_typing (snd Σ) (fun Σ' t ty => P (Σ', snd Σ) [] t ty) (fst Σ) *
     P Σ Γ t T.
 
-Lemma env_prop_typing P : env_prop P ->
+Lemma env_prop_typing `{checker_flags} P : env_prop P ->
   forall Σ (wf : wf Σ) (Γ : context) (t T : term),
     Σ ;;; Γ |- t : T -> P Σ Γ t T.
 Proof. intros. now apply X. Qed.
 
-Lemma env_prop_sigma P : env_prop P ->
+Lemma env_prop_sigma `{checker_flags} P : env_prop P ->
   forall Σ (wf : wf Σ),
     Forall_decls_typing (snd Σ) (fun Σ0 (t0 ty : term) => P (Σ0, snd Σ) [] t0 ty) (fst Σ).
 Proof. intros. eapply X. apply wf. apply (type_Sort Σ [] Level.prop).
@@ -967,7 +968,7 @@ Defined.
 
 Require Import Lia.
 
-Lemma typing_ind_env :
+Lemma typing_ind_env `{cf : checker_flags} :
   forall (P : global_context -> context -> term -> term -> Set),
     (forall Σ (wfΣ : wf Σ) (Γ : context) (n : nat) (isdecl : n < #|Γ|),
         P Σ Γ (tRel n)

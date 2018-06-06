@@ -1,7 +1,7 @@
 (* Distributed under the terms of the MIT license.   *)
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
-From Template Require Import univ Ast Induction LiftSubst UnivSubst Typing
+From Template Require Import config univ Ast Induction LiftSubst UnivSubst Typing
      monad_utils utils.
 Import MonadNotation.
 
@@ -238,7 +238,7 @@ Section Conversion.
     | None => false
     end.
 
-  Fixpoint isconv (n : nat) (leq : conv_pb) (Γ : context)
+  Fixpoint isconv `{checker_flags} (n : nat) (leq : conv_pb) (Γ : context)
            (t1 : term) (l1 : list term) (t2 : term) (l2 : list term) {struct n} : option bool :=
     match n with 0 => None | S n =>
     red1 <- reduce_stack nodelta_flags (fst Σ) Γ n t1 l1 ;;
@@ -247,7 +247,7 @@ Section Conversion.
     let '(t2,l2) := red2 in
     isconv_prog n leq Γ t1 l1 t2 l2
     end
-  with isconv_prog (n : nat) (leq : conv_pb) (Γ : context)
+  with isconv_prog `{checker_flags} (n : nat) (leq : conv_pb) (Γ : context)
                    (t1 : term) (l1 : list term) (t2 : term) (l2 : list term)
                    {struct n} : option bool :=
     match n with 0 => None | S n =>
@@ -499,22 +499,23 @@ Instance monad_exc : MonadExc type_error typing_result :=
 
 Class Fuel := { fuel : nat }.
 
-Definition check_conv_gen {F:Fuel} conv_pb Σ Γ t u :=
+Definition check_conv_gen `{checker_flags} {F:Fuel} conv_pb Σ Γ t u :=
   match isconv Σ fuel conv_pb Γ t [] u [] with
   | Some b => if b then ret () else raise (NotConvertible Γ t u t u)
   | None => raise (NotEnoughFuel fuel)
   end.
 
-Definition check_conv_leq {F:Fuel} := check_conv_gen Cumul.
-Definition check_conv {F:Fuel} := check_conv_gen Conv.
+Definition check_conv_leq `{checker_flags} {F:Fuel} := check_conv_gen Cumul.
+Definition check_conv `{checker_flags} {F:Fuel} := check_conv_gen Conv.
 
-Conjecture conv_spec : forall {F:Fuel} Σ Γ t u,
+Conjecture conv_spec : forall `{checker_flags} {F:Fuel} Σ Γ t u,
     Σ ;;; Γ |- t = u <-> check_conv Σ Γ t u = Checked ().
 
-Conjecture cumul_spec : forall {F:Fuel} Σ Γ t u,
+Conjecture cumul_spec : forall `{checker_flags} {F:Fuel} Σ Γ t u,
     Σ ;;; Γ |- t <= u <-> check_conv_leq Σ Γ t u = Checked ().
 
-Conjecture reduce_cumul : forall Σ Γ n t, Σ ;;; Γ |- try_reduce (fst Σ) Γ n t <= t.
+Conjecture reduce_cumul :
+  forall `{checker_flags} Σ Γ n t, Σ ;;; Γ |- try_reduce (fst Σ) Γ n t <= t.
 
 
 Section Typecheck.
@@ -557,7 +558,8 @@ Section Typecheck.
 End Typecheck.
 
 Section Typecheck2.
-  Context `{F:Fuel}.
+  Context `{cf : checker_flags}.
+  Context `{F : Fuel}.
   Context (Σ : global_context).
 
   Definition convert_leq Γ (t u : term) : typing_result unit :=
@@ -757,7 +759,6 @@ Section Typecheck2.
     Σ ;;; Γ |- t <= t' <-> convert_leq Γ t t' = Checked ().
 
   Conjecture cumul_reduce_to_sort : forall Γ t s',
-      let cf := config.default_checker_flags in
       Σ ;;; Γ |- t <= tSort s' <->
       exists s'', reduce_to_sort (fst Σ) Γ t = Checked s''
              /\ check_leq (snd Σ) s'' s' = true.
@@ -1021,6 +1022,7 @@ Fixpoint fresh id env : bool :=
 
 Section Checker.
 
+  Context `{cf : checker_flags}.
   Context `{F:Fuel}.
 
   Inductive env_error :=

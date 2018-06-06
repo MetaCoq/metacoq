@@ -40,6 +40,8 @@ template-coq/Bool.ml
 template-coq/Bool.mli
 template-coq/Checker0.ml
 template-coq/Checker0.mli
+template-coq/config0.ml
+template-coq/config0.mli
 template-coq/Datatypes.ml
 template-coq/Datatypes.mli
 template-coq/DecidableType.ml
@@ -108,6 +110,8 @@ checker/src/bool.ml
 checker/src/bool.mli
 checker/src/checker0.ml
 checker/src/checker0.mli
+checker/src/config0.ml
+checker/src/config0.mli
 checker/src/datatypes.ml
 checker/src/datatypes.mli
 checker/src/decidableType.ml

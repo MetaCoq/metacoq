@@ -10,6 +10,6 @@ Require Import FSets.
 Require Import ExtrOcamlBasic.
 Require Import ExtrOcamlString (* (* TODO add this when it will be fixed in Coq *) ExtrOcamlZInt *).
 
-Extraction Blacklist uGraph univ Ast String List Nat UnivSubst Typing Checker.
+Extraction Blacklist config uGraph univ Ast String List Nat UnivSubst Typing Checker.
 Set Warnings "-extraction-opaque-accessed".
 Recursive Extraction Library Checker.

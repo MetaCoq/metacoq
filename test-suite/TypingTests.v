@@ -16,6 +16,8 @@ Require Import Template.utils.
 
 Quote Recursively Definition idq := @Coq.Classes.Morphisms.Proper.
 
+Existing Instance config.default_checker_flags.
+
 Eval vm_compute in typecheck_program idq.
 
 Unset Template Cast Propositions.

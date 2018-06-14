@@ -10,6 +10,8 @@ MSetWeakList
 FSetWeakList
 FMapWeakList
 Nat0
+BinNums
+BinPosDef
 BinPos
 BinNat
 BinInt

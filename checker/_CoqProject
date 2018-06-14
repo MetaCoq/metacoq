@@ -2,6 +2,7 @@
 -R theories TemplateChecker
 -I  ../template-coq/src
 -I src
+-Q src TemplateChecker
 
 src/decimal.mli
 src/decimal.ml

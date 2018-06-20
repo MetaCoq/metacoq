@@ -551,11 +551,16 @@ let rec run_template_program_rec (k : Evd.evar_map * Constr.t -> unit)  ((evm, p
        let poly = Flags.is_universe_polymorphism () in
        let kind = (Decl_kinds.Global, poly, Decl_kinds.Definition) in
        let hole = CAst.make (Constrexpr.CHole (None, Misctypes.IntroAnonymous, None)) in
-       let typ = Constrextern.extern_type true env evm (EConstr.of_constr typ) in
-       ComDefinition.do_definition ~program_mode:true (unquote_ident name) kind None [] None hole (Some typ)
-                                   (Lemmas.mk_hook (fun _ gr -> let env = Global.env () in
-                                                                let evm, t = Evd.fresh_global env evm gr in
-                                                                  k (evm, t)))
+       let evm, (c, _) = Constrintern.interp_casted_constr_evars_impls env evm hole (EConstr.of_constr typ) in
+       let ident = unquote_ident name in
+       Obligations.check_evars env evm;
+       let obls, _, c, cty = Obligations.eterm_obligations env ident evm 0 (EConstr.to_constr evm c) typ in
+       (* let evm = Evd.minimize_universes evm in *)
+       let ctx = Evd.evar_universe_context evm in
+       let hook = Lemmas.mk_hook (fun _ gr _ -> let env = Global.env () in
+                                                let evm = Evd.from_env env in
+                                                let evm, t = Evd.fresh_global env evm gr in k (evm, t)) in
+       ignore (Obligations.add_definition ident ~term:c cty ctx ~kind ~hook obls)
     (* let kind = Decl_kinds.(Global, Flags.use_polymorphic_flag (), DefinitionBody Definition) in *)
     (* Lemmas.start_proof (unquote_ident name) kind evm (EConstr.of_constr typ) *)
     (* (Lemmas.mk_hook (fun _ gr -> *)
@@ -686,8 +691,8 @@ let rec run_template_program_rec (k : Evd.evar_map * Constr.t -> unit)  ((evm, p
        let t' = denote_term evdref t in
        let t' = Typing.e_solve_evars env evdref (EConstr.of_constr t') in
        Typing.e_check env evdref t' (EConstr.of_constr typ);
-       let t' = EConstr.to_constr !evdref t' in
-       k (evm, t')
+       let evm = !evdref in
+       k (evm, EConstr.to_constr evm t')
     | _ -> monad_failure "tmUnquoteTyped" 2
   else if Constr.equal coConstr tmFreshName then
     match args with

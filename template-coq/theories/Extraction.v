@@ -8,7 +8,11 @@ From Template Require All.
 
 Require Import FSets.
 Require Import ExtrOcamlBasic.
-Require Import ExtrOcamlString (* (* TODO add this when it will be fixed in Coq *) ExtrOcamlZInt *).
+Require Import ExtrOcamlString ExtrOcamlZInt.
+
+(* Ignore [Decimal.int] before the extraction issue is solved:
+   https://github.com/coq/coq/issues/7017. *)
+Extract Inductive Decimal.int => unit [ "(fun _ -> ())" "(fun _ -> ())" ] "(fun _ _ _ -> assert false)".
 
 Extraction Blacklist uGraph univ Ast String List Nat UnivSubst Typing Checker.
 Set Warnings "-extraction-opaque-accessed".

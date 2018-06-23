@@ -522,16 +522,21 @@ let rec run_template_program_rec (k : Evd.evar_map * Constr.t -> unit)  ((evm, p
   let env = Global.env () in
   let (evm, pgm) = reduce_hnf env evm pgm in
   let (coConstr, args) = app_full pgm [] in
-  if Constr.equal coConstr tmReturn then
+  let glob_ref =
+    try Globnames.global_of_constr coConstr
+    with _ ->
+      CErrors.user_err (str "Invalid argument or not yet implemented. The argument must be a TemplateProgram: " ++ pr_constr coConstr)
+  in
+  if Globnames.eq_gr glob_ref tmReturn then
     match args with
     | _::h::[] -> k (evm, h)
     | _ -> monad_failure "tmReturn" 2
-  else if Constr.equal coConstr tmBind then
+  else if Globnames.eq_gr glob_ref tmBind then
     match args with
     | _::_::a::f::[] ->
        run_template_program_rec (fun (evm, ar) -> run_template_program_rec k (evm, Constr.mkApp (f, [|ar|]))) (evm, a)
     | _ -> monad_failure_full "tmBind" 4 pgm
-  else if Constr.equal coConstr tmDefinition then
+  else if Globnames.eq_gr glob_ref tmDefinition then
     match args with
     | name::typ::body::[] ->
        let (evm, name) = reduce_all env evm name in
@@ -543,7 +548,7 @@ let rec run_template_program_rec (k : Evd.evar_map * Constr.t -> unit)  ((evm, p
        let n = Declare.declare_definition ~kind:Decl_kinds.Definition (unquote_ident name) ~types:typ (body, univs) in
        k (evm, Constr.mkConst n)
     | _ -> monad_failure "tmDefinition" 3
-  else if Constr.equal coConstr tmAxiom then
+  else if Globnames.eq_gr glob_ref tmAxiom then
     match args with
     | name::typ::[] ->
        let (evm, name) = reduce_all env evm name in
@@ -552,7 +557,7 @@ let rec run_template_program_rec (k : Evd.evar_map * Constr.t -> unit)  ((evm, p
        let n = Declare.declare_constant (unquote_ident name) (param, Decl_kinds.IsDefinition Decl_kinds.Definition) in
        k (evm, Constr.mkConst n)
     | _ -> monad_failure "tmAxiom" 2
-  else if Constr.equal coConstr tmLemma then
+  else if Globnames.eq_gr glob_ref tmLemma then
     match args with
     | name::typ::[] ->
        let (evm, name) = reduce_all env evm name in
@@ -577,7 +582,7 @@ let rec run_template_program_rec (k : Evd.evar_map * Constr.t -> unit)  ((evm, p
     (* k (env, evm, unit_tt) *)
     (* )); *)
     | _ -> monad_failure "tmLemma" 2
-  else if Constr.equal coConstr tmMkDefinition then
+  else if Globnames.eq_gr glob_ref tmMkDefinition then
     match args with
     | name::body::[] ->
        let (evm, name) = reduce_all env evm name in
@@ -588,17 +593,17 @@ let rec run_template_program_rec (k : Evd.evar_map * Constr.t -> unit)  ((evm, p
        let _ = Declare.declare_definition ~kind:Decl_kinds.Definition (unquote_ident name) (trm, Monomorphic_const_entry (Evd.universe_context_set evm)) in
        k (evm, unit_tt)
     | _ -> monad_failure "tmMkDefinition" 2
-  else if Constr.equal coConstr tmQuote then
+  else if Globnames.eq_gr glob_ref tmQuote then
     match args with
     | _::trm::[] -> let qt = TermReify.quote_term env trm (* user should do the reduction (using tmEval) if they want *)
                     in k (evm, qt)
     | _ -> monad_failure "tmQuote" 2
-  else if Constr.equal coConstr tmQuoteRec then
+  else if Globnames.eq_gr glob_ref tmQuoteRec then
     match args with
     | _::trm::[] -> let qt = TermReify.quote_term_rec env trm in
                     k (evm, qt)
     | _ -> monad_failure "tmQuoteRec" 2
-  else if Constr.equal coConstr tmQuoteInductive then
+  else if Globnames.eq_gr glob_ref tmQuoteInductive then
     match args with
     | name::[] ->
        let (evm, name) = reduce_all env evm name in
@@ -618,7 +623,7 @@ let rec run_template_program_rec (k : Evd.evar_map * Constr.t -> unit)  ((evm, p
         | _ -> CErrors.user_err (str name ++ str " does not seem to be an inductive."))
     (* k (evm, entry) *)
     | _ -> monad_failure "tmQuoteInductive" 1
-  else if Constr.equal coConstr tmQuoteConstant then
+  else if Globnames.eq_gr glob_ref tmQuoteConstant then
     match args with
     | name::b::[] ->
        let (evm, name) = reduce_all env evm name in
@@ -634,21 +639,21 @@ let rec run_template_program_rec (k : Evd.evar_map * Constr.t -> unit)  ((evm, p
        in
        k (evm, entry)
     | _ -> monad_failure "tmQuoteConstant" 2
-  else if Constr.equal coConstr tmQuoteUniverses then
+  else if Globnames.eq_gr glob_ref tmQuoteUniverses then
     match args with
     | _::[] -> let univs = Environ.universes env in
                k (evm, quote_ugraph univs)
     | _ -> monad_failure "tmQuoteUniverses" 1
-  else if Constr.equal coConstr tmPrint then
+  else if Globnames.eq_gr glob_ref tmPrint then
     match args with
     | _::trm::[] -> Feedback.msg_info (pr_constr trm);
                     k (evm, unit_tt)
     | _ -> monad_failure "tmPrint" 2
-  else if Constr.equal coConstr tmFail then
+  else if Globnames.eq_gr glob_ref tmFail then
     match args with
     | _::trm::[] -> CErrors.user_err (str (unquote_string trm))
     | _ -> monad_failure "tmFail" 2
-  else if Constr.equal coConstr tmAbout then
+  else if Globnames.eq_gr glob_ref tmAbout then
     match args with
     | id::[] -> let id = unquote_string id in
                 (try
@@ -658,26 +663,26 @@ let rec run_template_program_rec (k : Evd.evar_map * Constr.t -> unit)  ((evm, p
                  with
                  | Not_found -> k (evm, Constr.mkApp (cNone, [|tglobal_reference|])))
     | _ -> monad_failure "tmAbout" 1
-  else if Constr.equal coConstr tmCurrentModPath then
+  else if Globnames.eq_gr glob_ref tmCurrentModPath then
     match args with
     | _::[] -> let mp = Lib.current_mp () in
                (* let dp' = Lib.cwd () in (* different on sections ? *) *)
                let s = quote_string (Names.ModPath.to_string mp) in
                k (evm, s)
     | _ -> monad_failure "tmCurrentModPath" 1
-  else if Constr.equal coConstr tmEval then
+  else if Globnames.eq_gr glob_ref tmEval then
     match args with
     | s(*reduction strategy*)::_(*type*)::trm::[] ->
        let red = denote_reduction_strategy evm s in
        let (evm, trm) = reduce_all ~red env evm trm
        in k (evm, trm)
     | _ -> monad_failure "tmEval" 3
-  else if Constr.equal coConstr tmMkInductive then
+  else if Globnames.eq_gr glob_ref tmMkInductive then
     match args with
     | mind::[] -> declare_inductive env evm mind;
                   k (evm, unit_tt)
     | _ -> monad_failure "tmMkInductive" 1
-  else if Constr.equal coConstr tmUnquote then
+  else if Globnames.eq_gr glob_ref tmUnquote then
     match args with
     | t::[] ->
        (try
@@ -694,7 +699,7 @@ let rec run_template_program_rec (k : Evd.evar_map * Constr.t -> unit)  ((evm, p
          k (evm, Constr.mkApp (texistT_typed_term, [|typ; t'|]))
        with Reduction.NotArity -> CErrors.user_err (str "unquoting ill-typed term"))
     | _ -> monad_failure "tmUnquote" 1
-  else if Constr.equal coConstr tmUnquoteTyped then
+  else if Globnames.eq_gr glob_ref tmUnquoteTyped then
     match args with
     | typ::t::[] ->
        let (evm, t) = reduce_all env evm t in
@@ -705,16 +710,16 @@ let rec run_template_program_rec (k : Evd.evar_map * Constr.t -> unit)  ((evm, p
        let evm = !evdref in
        k (evm, EConstr.to_constr evm t')
     | _ -> monad_failure "tmUnquoteTyped" 2
-  else if Constr.equal coConstr tmFreshName then
+  else if Globnames.eq_gr glob_ref tmFreshName then
     match args with
     | name::[] -> let name' = Namegen.next_ident_away_from (unquote_ident name) (fun id -> Nametab.exists_cci (Lib.make_path id)) in
                   k (evm, quote_ident name')
     | _ -> monad_failure "tmFreshName" 1
-  else if Constr.equal coConstr tmExistingInstance then
+  else if Globnames.eq_gr glob_ref tmExistingInstance then
     match args with
     | name :: [] -> Classes.existing_instance true (CAst.make (Libnames.Qualid (Libnames.qualid_of_ident (unquote_ident name)))) None
     | _ -> monad_failure "tmExistingInstance" 1
-  else if Constr.equal coConstr tmInferInstance then
+  else if Globnames.eq_gr glob_ref tmInferInstance then
     match args with
     | typ :: [] ->
        (try

@@ -53,6 +53,9 @@ struct
   let resolve_symbol (path : string list) (tm : string) : Constr.t =
     gen_constant_in_modules contrib_name [path] tm
 
+  let resolve_symbol_p (path : string list) (tm : string) : global_reference =
+    Coqlib.gen_reference_in_modules contrib_name [path] tm
+
   let pkg_datatypes = ["Coq";"Init";"Datatypes"]
   let pkg_string = ["Coq";"Strings";"String"]
   let pkg_reify = ["Template";"Ast"]
@@ -64,6 +67,7 @@ struct
 
   let r_reify = resolve_symbol pkg_reify
   let r_template_monad = resolve_symbol pkg_template_monad
+  let r_template_monad_p = resolve_symbol_p pkg_template_monad
 
   let tString = resolve_symbol pkg_string "String"
   let tEmptyString = resolve_symbol pkg_string "EmptyString"
@@ -157,10 +161,10 @@ struct
 
   let (tmReturn, tmBind, tmQuote, tmQuoteRec, tmEval, tmDefinition, tmAxiom, tmLemma, tmFreshName, tmAbout, tmCurrentModPath,
        tmMkDefinition, tmMkInductive, tmPrint, tmFail, tmQuoteInductive, tmQuoteConstant, tmQuoteUniverses, tmUnquote, tmUnquoteTyped, tmInferInstance, tmExistingInstance) =
-    (r_template_monad "tmReturn", r_template_monad "tmBind", r_template_monad "tmQuote", r_template_monad "tmQuoteRec", r_template_monad "tmEval", r_template_monad "tmDefinition",
-     r_template_monad "tmAxiom", r_template_monad "tmLemma", r_template_monad "tmFreshName", r_template_monad "tmAbout", r_template_monad "tmCurrentModPath",
-     r_template_monad "tmMkDefinition", r_template_monad "tmMkInductive", r_template_monad "tmPrint", r_template_monad "tmFail", r_template_monad "tmQuoteInductive", r_template_monad "tmQuoteConstant",
-     r_template_monad "tmQuoteUniverses", r_template_monad "tmUnquote", r_template_monad "tmUnquoteTyped", r_template_monad "tmInferInstance", r_template_monad "tmExistingInstance")
+    (r_template_monad_p "tmReturn", r_template_monad_p "tmBind", r_template_monad_p "tmQuote", r_template_monad_p "tmQuoteRec", r_template_monad_p "tmEval", r_template_monad_p "tmDefinition",
+     r_template_monad_p "tmAxiom", r_template_monad_p "tmLemma", r_template_monad_p "tmFreshName", r_template_monad_p "tmAbout", r_template_monad_p "tmCurrentModPath",
+     r_template_monad_p "tmMkDefinition", r_template_monad_p "tmMkInductive", r_template_monad_p "tmPrint", r_template_monad_p "tmFail", r_template_monad_p "tmQuoteInductive", r_template_monad_p "tmQuoteConstant",
+     r_template_monad_p "tmQuoteUniverses", r_template_monad_p "tmUnquote", r_template_monad_p "tmUnquoteTyped", r_template_monad_p "tmInferInstance", r_template_monad_p "tmExistingInstance")
 
   (* let pkg_specif = ["Coq";"Init";"Specif"] *)
   (* let texistT = resolve_symbol pkg_specif "existT" *)

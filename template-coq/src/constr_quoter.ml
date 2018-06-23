@@ -56,12 +56,14 @@ struct
   let pkg_datatypes = ["Coq";"Init";"Datatypes"]
   let pkg_string = ["Coq";"Strings";"String"]
   let pkg_reify = ["Template";"Ast"]
+  let pkg_template_monad = ["Template";"TemplateMonad"]
   let pkg_univ = ["Template";"kernel";"univ"]
   let pkg_level = ["Template";"kernel";"univ";"Level"]
   let pkg_ugraph = ["Template";"kernel";"uGraph"]
   let ext_pkg_univ s = List.append pkg_univ [s]
 
   let r_reify = resolve_symbol pkg_reify
+  let r_template_monad = resolve_symbol pkg_template_monad
 
   let tString = resolve_symbol pkg_string "String"
   let tEmptyString = resolve_symbol pkg_string "EmptyString"
@@ -149,20 +151,20 @@ struct
   let cParameter_entry = r_reify "Build_parameter_entry"
   let cDefinition_entry = r_reify "Build_definition_entry"
 
-  let (tcbv, tcbn, thnf, tall, tlazy, tunfold) = (r_reify "cbv", r_reify "cbn", r_reify "hnf", r_reify "all", r_reify "lazy", r_reify "unfold")
+  let (tcbv, tcbn, thnf, tall, tlazy, tunfold) = (r_template_monad "cbv", r_template_monad "cbn", r_template_monad "hnf", r_template_monad "all", r_template_monad "lazy", r_template_monad "unfold")
 
   let (tglobal_reference, tConstRef, tIndRef, tConstructRef) = (r_reify "global_reference", r_reify "ConstRef", r_reify "IndRef", r_reify "ConstructRef")
 
   let (tmReturn, tmBind, tmQuote, tmQuoteRec, tmEval, tmDefinition, tmAxiom, tmLemma, tmFreshName, tmAbout, tmCurrentModPath,
        tmMkDefinition, tmMkInductive, tmPrint, tmFail, tmQuoteInductive, tmQuoteConstant, tmQuoteUniverses, tmUnquote, tmUnquoteTyped, tmInferInstance, tmExistingInstance) =
-    (r_reify "tmReturn", r_reify "tmBind", r_reify "tmQuote", r_reify "tmQuoteRec", r_reify "tmEval", r_reify "tmDefinition",
-     r_reify "tmAxiom", r_reify "tmLemma", r_reify "tmFreshName", r_reify "tmAbout", r_reify "tmCurrentModPath",
-     r_reify "tmMkDefinition", r_reify "tmMkInductive", r_reify "tmPrint", r_reify "tmFail", r_reify "tmQuoteInductive", r_reify "tmQuoteConstant",
-     r_reify "tmQuoteUniverses", r_reify "tmUnquote", r_reify "tmUnquoteTyped", r_reify "tmInferInstance", r_reify "tmExistingInstance")
+    (r_template_monad "tmReturn", r_template_monad "tmBind", r_template_monad "tmQuote", r_template_monad "tmQuoteRec", r_template_monad "tmEval", r_template_monad "tmDefinition",
+     r_template_monad "tmAxiom", r_template_monad "tmLemma", r_template_monad "tmFreshName", r_template_monad "tmAbout", r_template_monad "tmCurrentModPath",
+     r_template_monad "tmMkDefinition", r_template_monad "tmMkInductive", r_template_monad "tmPrint", r_template_monad "tmFail", r_template_monad "tmQuoteInductive", r_template_monad "tmQuoteConstant",
+     r_template_monad "tmQuoteUniverses", r_template_monad "tmUnquote", r_template_monad "tmUnquoteTyped", r_template_monad "tmInferInstance", r_template_monad "tmExistingInstance")
 
   (* let pkg_specif = ["Coq";"Init";"Specif"] *)
   (* let texistT = resolve_symbol pkg_specif "existT" *)
-  let texistT_typed_term = r_reify "existT_typed_term"
+  let texistT_typed_term = r_template_monad "existT_typed_term"
 
   let to_coq_list typ =
     let the_nil = Constr.mkApp (c_nil, [| typ |]) in

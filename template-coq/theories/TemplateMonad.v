@@ -3,6 +3,7 @@ From Template Require Import Ast.
 From Template Require Import monad_utils.
 
 Set Universe Polymorphism.
+Set Primitive Projections.
 Set Printing Universes.
 
 (** ** The Template Monad
@@ -14,11 +15,18 @@ Set Printing Universes.
 Inductive reductionStrategy : Set :=
   cbv | cbn | hnf | all | lazy | unfold (i : ident).
 
+Record typed_term : Type := existT_typed_term
+{ my_projT1 : Type
+; my_projT2 : my_projT1
+}.
+(*
 Polymorphic Definition typed_term@{t} := {T : Type@{t} & T}.
-Monomorphic Definition existT_typed_term a t : typed_term := @existT Type (fun T => T) a t. (* todo: need to fix this *)
+Polymorphic Definition existT_typed_term a t : typed_term :=
+  @existT Type (fun T => T) a t. (* todo: need to fix this *)
 
 Definition my_projT1 (t : typed_term) : Type := @projT1 Type (fun T => T) t.
 Definition my_projT2 (t : typed_term) : my_projT1 t := @projT2 Type (fun T => T) t.
+*)
 
 (** *** The TemplateMonad type *)
 
@@ -46,19 +54,19 @@ Inductive TemplateMonad@{t u} : Type@{t} -> Type :=
 
 (* Quoting and unquoting commands *)
 (* Similar to Quote Definition ... := ... *)
-| tmQuote : forall {A:Type@{t}}, A  -> TemplateMonad term
+| tmQuote : forall {A:Type@{t}}, A  -> TemplateMonad Ast.term
 (* Similar to Quote Recursively Definition ... := ...*)
 | tmQuoteRec : forall {A:Type@{t}}, A  -> TemplateMonad program
 (* Quote the body of a definition or inductive. Its name need not be fully qualified *)
 | tmQuoteInductive : kername -> TemplateMonad mutual_inductive_body
 | tmQuoteUniverses : unit -> TemplateMonad uGraph.t
 | tmQuoteConstant : kername -> bool (* bypass opacity? *) -> TemplateMonad constant_entry
-| tmMkDefinition : ident -> term -> TemplateMonad unit
+| tmMkDefinition : ident -> Ast.term -> TemplateMonad unit
     (* unquote before making the definition *)
     (* FIXME take an optional universe context as well *)
 | tmMkInductive : mutual_inductive_entry -> TemplateMonad unit
-| tmUnquote : term  -> TemplateMonad typed_term@{u}
-| tmUnquoteTyped : forall A : Type@{t}, term -> TemplateMonad A
+| tmUnquote : Ast.term  -> TemplateMonad typed_term@{u}
+| tmUnquoteTyped : forall A : Type@{t}, Ast.term -> TemplateMonad A
 
 (* Typeclass registration and querying for an instance *)
 | tmExistingInstance : ident -> TemplateMonad unit

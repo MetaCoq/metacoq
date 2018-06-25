@@ -522,8 +522,15 @@ let rec run_template_program_rec (k : Evd.evar_map * Constr.t -> unit)  ((evm, p
   let env = Global.env () in
   let (evm, pgm) = reduce_hnf env evm pgm in
   let (coConstr, args) = app_full pgm [] in
-  let glob_ref =
-    try Globnames.global_of_constr coConstr
+  let (glob_ref, universes) =
+    try
+      (* todo: copied from engine/univGen.ml *)
+      match Constr.kind coConstr with
+      | Const (c, u) -> ConstRef c, u
+      | Ind (i, u) -> IndRef i, u
+      | Construct (c, u) -> ConstructRef c, u
+      | Var id -> VarRef id, Instance.empty
+      | _ -> raise Not_found
     with _ ->
       CErrors.user_err (str "Invalid argument or not yet implemented. The argument must be a TemplateProgram: " ++ pr_constr coConstr)
   in
@@ -691,13 +698,15 @@ let rec run_template_program_rec (k : Evd.evar_map * Constr.t -> unit)  ((evm, p
          let t' = denote_term evdref t in
          let evm = !evdref in
          let typ = EConstr.to_constr evm (Retyping.get_type_of env evm (EConstr.of_constr t')) in
-         (* todo: we could declare a new universe <= Coq.Init.Specif.7 or 8 instead of using [texistT_typed_term] *)
-         (* let (evm, u) = Evd.fresh_sort_in_family env evm Sorts.InType in *)
-         (* (env, evm, Constr.mkApp (texistT, [|Constr.mkSort u; *)
-         (*                                   Constr.mkLambda (Names.Name (Names.Id.of_string "T"), Constr.mkSort u, Constr.mkRel 1); *)
-         (*                                   typ; t'|])) *)
-         k (evm, Constr.mkApp (texistT_typed_term, [|typ; t'|]))
-       with Reduction.NotArity -> CErrors.user_err (str "unquoting ill-typed term"))
+         let make_typed_term typ term evm =
+           match texistT_typed_term with
+           | ConstructRef ctor ->
+             let u = (Univ.Instance.to_array universes).(1) in
+               (* todo: we should add a constraint that the universe of `typ` is less than or equal to `u`. *)
+               (evm, Constr.mkApp (Constr.mkConstructU (ctor, Univ.Instance.of_array [|u|]), [|typ; t'|]))
+         in
+           k (make_typed_term typ t' evm)
+        with Reduction.NotArity -> CErrors.user_err (str "unquoting ill-typed term"))
     | _ -> monad_failure "tmUnquote" 1
   else if Globnames.eq_gr glob_ref tmUnquoteTyped then
     match args with

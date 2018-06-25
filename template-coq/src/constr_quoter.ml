@@ -168,7 +168,8 @@ struct
 
   (* let pkg_specif = ["Coq";"Init";"Specif"] *)
   (* let texistT = resolve_symbol pkg_specif "existT" *)
-  let texistT_typed_term = r_template_monad "existT_typed_term"
+  (* let texistT_typed_term = r_template_monad "existT_typed_term" *)
+  let texistT_typed_term = r_template_monad_p "existT_typed_term"
 
   let to_coq_list typ =
     let the_nil = Constr.mkApp (c_nil, [| typ |]) in

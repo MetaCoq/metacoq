@@ -1,7 +1,7 @@
 (* Distributed under the terms of the MIT license.   *)
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
-From Template Require Import Ast Induction utils LiftSubst Typing.
+From Template Require Import config Ast Induction utils LiftSubst Typing.
 
 (** * Weakening and substitution lemmas for typing derivations.
 
@@ -138,7 +138,7 @@ Proof.
       f_equal. unfold lift_context. rewrite Heq. reflexivity.
 Qed.
 
-Lemma typecheck_closed : env_prop (fun Σ Γ t T =>
+Lemma typecheck_closed `{cf : checker_flags} : env_prop (fun Σ Γ t T =>
                                      type_local_env Σ Γ ->
                                      closedn #|Γ| t && closedn #|Γ| T = true).
 Proof.
@@ -146,8 +146,7 @@ Proof.
   - elim (Nat.ltb_spec n #|Γ|); intuition.
     admit (* Need induction with IHs for environments *).
   - intuition auto.
-    + eapply H0. constructor; auto.
-      red. now exists s1.
+    simpl in H0. apply H0. constructor ; auto. red. now exists s1.
   - intuition; eapply H0; constructor; auto.
     now exists s1. now exists s1.
   - intuition; try eapply H1; try constructor; auto.
@@ -173,7 +172,7 @@ Proof.
   constructor. now auto with arith.
 Qed.
 
-Lemma weakening_rec Σ Γ Γ' Γ'' (t : term) :
+Lemma weakening_rec `{cf : checker_flags} Σ Γ Γ' Γ'' (t : term) :
   type_global_env (snd Σ) (fst Σ) -> type_local_env Σ (Γ ,,, Γ') ->
   type_local_env Σ (Γ ,,, Γ'' ,,, lift_context #|Γ''| 0 Γ') ->
   `(Σ ;;; Γ ,,, Γ' |- t : T ->
@@ -243,10 +242,10 @@ Proof.
     admit.
 Admitted.
 
-Lemma type_local_env_app Σ (Γ Γ' : context) : type_local_env Σ (Γ ,,, Γ') -> type_local_env Σ Γ.
+Lemma type_local_env_app `{checker_flags} Σ (Γ Γ' : context) : type_local_env Σ (Γ ,,, Γ') -> type_local_env Σ Γ.
 Admitted.
 
-Lemma weakening Σ Γ Γ' (t : term) :
+Lemma weakening `{cf : checker_flags} Σ Γ Γ' (t : term) :
   type_global_env (snd Σ) (fst Σ) -> type_local_env Σ (Γ ,,, Γ') ->
   `(Σ ;;; Γ |- t : T ->
     Σ ;;; Γ ,,, Γ' |- lift0 #|Γ'| t : lift0 #|Γ'| T).
@@ -257,7 +256,7 @@ Proof.
   forward t0; eauto. now eapply type_local_env_app in HΓΓ'.
 Qed.
 
-Lemma substitution Σ Γ n u U (t : term) :
+Lemma substitution `{checker_flags} Σ Γ n u U (t : term) :
   type_global_env (snd Σ) (fst Σ) -> type_local_env Σ Γ ->
   `(Σ ;;; Γ ,, vass n U |- t : T -> Σ ;;; Γ |- u : U ->
     Σ ;;; Γ |- t {0 := u} : T {0 := u}).

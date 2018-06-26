@@ -12,6 +12,7 @@ src/g_template_coq.ml4
 src/template_coq.mlpack
 
 theories/utils.v
+theories/config.v
 theories/monad_utils.v
 theories/kernel/univ.v
 theories/kernel/uGraph.v

@@ -1,7 +1,7 @@
 (* Distributed under the terms of the MIT license.   *)
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
-From Template Require Import univ Ast Induction LiftSubst UnivSubst Typing
+From Template Require Import config univ Ast Induction LiftSubst UnivSubst Typing
      monad_utils utils.
 Import MonadNotation.
 
@@ -238,7 +238,7 @@ Section Conversion.
     | None => false
     end.
 
-  Fixpoint isconv (n : nat) (leq : conv_pb) (Γ : context)
+  Fixpoint isconv `{checker_flags} (n : nat) (leq : conv_pb) (Γ : context)
            (t1 : term) (l1 : list term) (t2 : term) (l2 : list term) {struct n} : option bool :=
     match n with 0 => None | S n =>
     red1 <- reduce_stack nodelta_flags (fst Σ) Γ n t1 l1 ;;
@@ -247,7 +247,7 @@ Section Conversion.
     let '(t2,l2) := red2 in
     isconv_prog n leq Γ t1 l1 t2 l2
     end
-  with isconv_prog (n : nat) (leq : conv_pb) (Γ : context)
+  with isconv_prog `{checker_flags} (n : nat) (leq : conv_pb) (Γ : context)
                    (t1 : term) (l1 : list term) (t2 : term) (l2 : list term)
                    {struct n} : option bool :=
     match n with 0 => None | S n =>
@@ -364,7 +364,7 @@ Definition try_reduce Σ Γ n t :=
   | None => t
   end.
 
-  
+
 Inductive type_error :=
 | UnboundRel (n : nat)
 | UnboundVar (id : string)
@@ -499,22 +499,23 @@ Instance monad_exc : MonadExc type_error typing_result :=
 
 Class Fuel := { fuel : nat }.
 
-Definition check_conv_gen {F:Fuel} conv_pb Σ Γ t u :=
+Definition check_conv_gen `{checker_flags} {F:Fuel} conv_pb Σ Γ t u :=
   match isconv Σ fuel conv_pb Γ t [] u [] with
   | Some b => if b then ret () else raise (NotConvertible Γ t u t u)
   | None => raise (NotEnoughFuel fuel)
   end.
 
-Definition check_conv_leq {F:Fuel} := check_conv_gen Cumul.
-Definition check_conv {F:Fuel} := check_conv_gen Conv.
+Definition check_conv_leq `{checker_flags} {F:Fuel} := check_conv_gen Cumul.
+Definition check_conv `{checker_flags} {F:Fuel} := check_conv_gen Conv.
 
-Conjecture conv_spec : forall {F:Fuel} Σ Γ t u,
+Conjecture conv_spec : forall `{checker_flags} {F:Fuel} Σ Γ t u,
     Σ ;;; Γ |- t = u <-> check_conv Σ Γ t u = Checked ().
 
-Conjecture cumul_spec : forall {F:Fuel} Σ Γ t u,
+Conjecture cumul_spec : forall `{checker_flags} {F:Fuel} Σ Γ t u,
     Σ ;;; Γ |- t <= u <-> check_conv_leq Σ Γ t u = Checked ().
 
-Conjecture reduce_cumul : forall Σ Γ n t, Σ ;;; Γ |- try_reduce (fst Σ) Γ n t <= t.
+Conjecture reduce_cumul :
+  forall `{checker_flags} Σ Γ n t, Σ ;;; Γ |- try_reduce (fst Σ) Γ n t <= t.
 
 
 Section Typecheck.
@@ -557,7 +558,8 @@ Section Typecheck.
 End Typecheck.
 
 Section Typecheck2.
-  Context `{F:Fuel}.
+  Context `{cf : checker_flags}.
+  Context `{F : Fuel}.
   Context (Σ : global_context).
 
   Definition convert_leq Γ (t u : term) : typing_result unit :=
@@ -648,7 +650,7 @@ Section Typecheck2.
   Definition try_suc (u : Universe.t) : Universe.t :=   (* FIXME suc s *)
     map (fun '(l, b) =>  (l, true)) u.
 
-  
+
   Fixpoint infer (Γ : context) (t : term) : typing_result term :=
     match t with
     | tRel n =>
@@ -790,7 +792,7 @@ Section Typecheck2.
     unfold lookup_constant_type, lookup_env.
     red in isdecl. rewrite isdecl. destruct decl. reflexivity.
   Qed.
-  
+
   Lemma lookup_constant_type_is_declared cst u T :
     lookup_constant_type cst u = Checked T ->
     { decl | declared_constant (fst Σ) cst decl /\
@@ -802,7 +804,7 @@ Section Typecheck2.
     injection H as eq. subst T. rewrite (lookup_env_id Hlook). simpl.
     eexists. split; eauto.
   Qed.
-  
+
   Lemma eq_ind_refl i i' : eq_ind i i' = true <-> i = i'.
   Admitted.
 
@@ -851,7 +853,7 @@ Section Typecheck2.
 
     - (* destruct indpar. *)
       apply cumul_reduce_to_ind in IHX2 as [args' [-> Hcumul]].
-      simpl in *. rewrite (proj2 (eq_ind_refl ind ind) eq_refl). 
+      simpl in *. rewrite (proj2 (eq_ind_refl ind ind) eq_refl).
       eexists ; split; [ reflexivity | tc ].
       admit.
 
@@ -889,8 +891,8 @@ Section Typecheck2.
         destruct (convert_leq Γ t t2) eqn:?; [ simpl | simpl; intro; discriminate ]
       end; try intros [= <-].
 
-  Lemma leq_universe_refl x : check_leq (snd Σ) x x = true. (* FIXME condition on φ? *)
-  Proof. induction x. reflexivity. simpl. Admitted.
+  Lemma leq_universe_refl `{config.checker_flags} x : check_leq (snd Σ) x x = true. (* FIXME condition on φ? *)
+  Proof. induction x. unfold check_leq. cbn. auto with bool. unfold check_leq. simpl. Admitted.
   Hint Resolve leq_universe_refl : typecheck.
   Lemma infer_type_correct Γ t x :
     (forall (Γ : context) (T : term), infer Γ t = Checked T -> Σ ;;; Γ |- t : T) ->
@@ -934,10 +936,10 @@ Section Typecheck2.
   Qed.
 
   Ltac infco := eauto using infer_cumul_correct, infer_type_correct.
-  
+
   (* Axiom cheat : forall A, A. *)
   (* Ltac admit := apply cheat. *)
-  
+
   Lemma infer_correct Γ t T :
     infer Γ t = Checked T -> Σ ;;; Γ |- t : T.
   Proof.
@@ -1004,7 +1006,7 @@ Section Typecheck2.
       destruct (nth_error_Some_safe_nth _ _ _ _ Heqo).
       constructor.
   Admitted.
-  
+
 End Typecheck2.
 
 Extract Constant infer_type_correct => "(fun f sigma ctx t x -> assert false)".
@@ -1020,6 +1022,7 @@ Fixpoint fresh id env : bool :=
 
 Section Checker.
 
+  Context `{cf : checker_flags}.
   Context `{F:Fuel}.
 
   Inductive env_error :=

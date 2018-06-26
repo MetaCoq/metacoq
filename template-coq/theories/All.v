@@ -2,6 +2,7 @@
 
 From Template Require Export
      utils        (* Utility functions *)
+     config       (* Configurations *)
      monad_utils  (* Monadic notations *)
      Ast          (* The term AST *)
      AstUtils     (* Utilities on the AST *)

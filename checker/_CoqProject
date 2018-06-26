@@ -16,6 +16,8 @@ src/checker0.mli
 src/checker0.ml
 src/utils.mli
 src/utils.ml
+src/config0.mli
+src/config0.ml
 src/univSubst0.mli
 src/univSubst0.ml
 src/univ0.mli

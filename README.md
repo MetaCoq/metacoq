@@ -18,10 +18,10 @@ In addition to this representation of terms, Template Coq includes:
 
 - Denotation of terms and global declarations
 
-The branch `master` is stable and works with Coq 8.6, an opam package is
-available.
+The branch `master` is stable and works with Coq 8.6, and 8.7, an opam
+package is available.
 
-The [coq-8.7](https://github.com/Template-Coq/template-coq/tree/coq-8.7),
+The [coq-8.8](https://github.com/Template-Coq/template-coq/tree/coq-8.8),
 branch is in development and contains additional features:
 
 - Complete reification and denotation of CIC terms, including universes
@@ -38,8 +38,8 @@ branch is in development and contains additional features:
 Documentation
 =============
 
-The 8.7 branch [documentation (coqdoc files)](html/Template.All.html)
-and pretty-printed HTML versions of the [translations](html/translations) are available.
+The 8.8 branch [documentation (coqdoc files)](html-master/Template.All.html)
+and pretty-printed HTML versions of the [translations](html-master/translations) are available.
 
 Papers
 ======
@@ -49,7 +49,7 @@ Papers
 
 - ["Towards Certified Meta-Programming with Typed Template-Coq"](https://github.com/Template-Coq/template-coq/raw/master/docs/submission.pdf)
   A. Anand, S. Boulier, C. Cohen, M. Sozeau and N. Tabareau.
-  Submitted.
+  ITP'18
 
 Credits
 =======
@@ -64,8 +64,8 @@ Contributors include [Yannick Forster](https://github.com/yforster),
 [Cyril Cohen](https://github.com/CohenCyril) and [Nicolas
 Tabareau](https://github.com/Tabareau).
 
-Copyright (c) 2014-2018 Gregory Malecha\
-Copyright (c) 2015-2018 Abhishek Anand, Matthieu Sozeau\
+Copyright (c) 2014-2018 Gregory Malecha\  
+Copyright (c) 2015-2018 Abhishek Anand, Matthieu Sozeau\  
 Copyright (c) 2017-2018 Simon Boulier, Nicolas Tabareau, Cyril Cohen
 
 This software is distributed under the terms of the MIT license.
@@ -80,27 +80,27 @@ Branches
   and the ability to make plugins.
  
 - The development branch is
-  [coq-8.7](https://github.com/Template-Coq/template-coq/tree/coq-8.7),
+  [coq-8.8](https://github.com/Template-Coq/template-coq/tree/coq-8.8),
   which includes:
 
   - The full syntax of CIC:
-    [Ast](https://github.com/Template-Coq/template-coq/blob/coq-8.7/theories/Ast.v)
+    [Ast](https://github.com/Template-Coq/template-coq/blob/coq-8.8/template-coq/theories/Ast.v)
 
   - The typing judgment of CIC: 
-    [Typing](https://github.com/Template-Coq/template-coq/blob/coq-8.7/theories/Typing.v#L488)
+    [Typing](https://github.com/Template-Coq/template-coq/blob/coq-8.8/template-coq/theories/Typing.v#L488)
     
   - A partial type-checker implementation:
-    [Checker](https://github.com/Template-Coq/template-coq/blob/coq-8.7/theories/Checker.v)
+    [Checker](https://github.com/Template-Coq/template-coq/blob/coq-8.8/template-coq/theories/Checker.v)
 
   - The `TemplateMonad` datatype and the `Run TemplateProgram` command
     to run template programs:
-    [Ast](https://github.com/Template-Coq/template-coq/blob/coq-8.7/theories/Ast.v#L193)
+    [Ast](https://github.com/Template-Coq/template-coq/blob/coq-8.8/template-coq/theories/Ast.v#L193)
         
 Examples of plugins
 -------------------
-- a plugin to add a constructor in [test-suite/add_constructor.v](https://github.com/Template-Coq/template-coq/tree/coq-8.7/test-suite/add_constructor.v)
-- a parametricity plugin in [translations/tsl_param.v](https://github.com/Template-Coq/template-coq/tree/coq-8.7/translations/tsl_param.v)
-- a plugin to negate funext in [translations/fun.v](https://github.com/Template-Coq/template-coq/tree/coq-8.7/translations/tsl_fun.v)
+- a plugin to add a constructor in [test-suite/add_constructor.v](https://github.com/Template-Coq/template-coq/tree/coq-8.8/test-suite/add_constructor.v)
+- a parametricity plugin in [translations/tsl_param.v](https://github.com/Template-Coq/template-coq/tree/coq-8.8/translations/tsl_param.v)
+- a plugin to negate funext in [translations/fun.v](https://github.com/Template-Coq/template-coq/tree/coq-8.8/translations/tsl_fun.v)
 
 
 Installation instructions
@@ -112,17 +112,17 @@ Install from scratch (for 8.6 and development versions)
 To get the source code:
 
     # git clone https://github.com/Template-Coq/template-coq.git
-    # git checkout -b coq-8.7 origin/coq-8.7
+    # git checkout -b coq-8.8 origin/coq-8.8
     # git status
     
-Check that you are indeed on the `coq-8.7` branch.
+Check that you are indeed on the `coq-8.8` branch.
 
 Requirements
 ------------
 
 To compile the library, you need:
 
-- `Coq 8.7.1` (8.7.0 might work as well) and
+- `Coq 8.8.1` (8.8.0 might work as well) and
 - `OCaml` (tested with `4.04.1`, beware that `OCaml 4.06.0` can 
   produce linking errors on some platforms).
 
@@ -134,16 +134,16 @@ The easiest way to get both is through [opam](http://opam.ocaml.org):
 You might want to create a "switch" (an environment of `opam` packages) for `Coq` if
 you don't have one yet:
     
-    # opam switch -A 4.04.1 coq.8.7.1
+    # opam switch -A 4.04.1 coq.8.8.1
     # eval `opam config env`
     
-This creates the `coq.8.7.1` switch which initially contains only the
+This creates the `coq.8.8.1` switch which initially contains only the
 basic `OCaml` `4.04.1` compiler, and puts you in the right environment
 (check with `ocamlc -v`).
 
 Once in the right switch, you can install `Coq` using:
     
-    # opam pin add coq 8.7.1 
+    # opam pin add coq 8.8.1 
     
 Pinning `coq` prevents opam from trying to upgrade it afterwards, in
 this switch. If the command is successful you should have `coq`
@@ -154,9 +154,9 @@ Compile
 
 Once in the right environment, Use:
 
-- `make` to compile the template-coq plugin (and the checker in `coq-8.7`)
+- `make` to compile the template-coq plugin (and the checker in `coq-8.8`)
 
-- `make translations` to compile the translation plugins (in `coq-8.7`)
+- `make translations` to compile the translation plugins (in `coq-8.8`)
 
 - `make test-suite` to compile the test suite
 

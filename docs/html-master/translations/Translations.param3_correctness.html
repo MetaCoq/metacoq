@@ -1,0 +1,395 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<link href="coqdoc.css" rel="stylesheet" type="text/css" />
+<title>Translations.param3_correctness</title>
+</head>
+
+<body>
+
+<div id="page">
+
+<div id="header">
+</div>
+
+<div id="main">
+
+<h1 class="libtitle">Library Translations.param3_correctness</h1>
+
+<div class="code">
+<span class="comment">(*&nbsp;Require&nbsp;Import&nbsp;ssreflect&nbsp;ssrfun&nbsp;ssrbool.&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;From&nbsp;mathcomp&nbsp;Require&nbsp;Import&nbsp;all_ssreflect.&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;Require&nbsp;Import&nbsp;Template.All.&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;Require&nbsp;Import&nbsp;Arith.Compare_dec.&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;From&nbsp;Translations&nbsp;Require&nbsp;Import&nbsp;translation_utils.&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;Import&nbsp;String&nbsp;Lists.List.ListNotations&nbsp;MonadNotation.&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;Open&nbsp;Scope&nbsp;list_scope.&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;Open&nbsp;Scope&nbsp;string_scope.&nbsp;*)</span><br/>
+
+<br/>
+<span class="comment">(*&nbsp;Require&nbsp;Import&nbsp;tsl_param3.&nbsp;*)</span><br/>
+
+<br/>
+<span class="comment">(*&nbsp;Definition&nbsp;map_context_decl&nbsp;(f&nbsp;:&nbsp;term&nbsp;-&gt;&nbsp;term)&nbsp;(decl&nbsp;:&nbsp;context_decl):&nbsp;context_decl&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;:=&nbsp;{|&nbsp;decl_name&nbsp;:=&nbsp;decl.(decl_name);&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;decl_body&nbsp;:=&nbsp;option_map&nbsp;f&nbsp;decl.(decl_body);&nbsp;decl_type&nbsp;:=&nbsp;f&nbsp;decl.(decl_type)&nbsp;|}.&nbsp;*)</span><br/>
+
+<br/>
+<span class="comment">(*&nbsp;Notation&nbsp;"&nbsp;Γ&nbsp;,,&nbsp;d&nbsp;"&nbsp;:=&nbsp;(d&nbsp;::&nbsp;Γ)&nbsp;(at&nbsp;level&nbsp;20,&nbsp;d&nbsp;at&nbsp;next&nbsp;level,&nbsp;only&nbsp;parsing).&nbsp;*)</span><br/>
+
+<br/>
+<span class="comment">(*&nbsp;Fixpoint&nbsp;tsl_ctx&nbsp;(E&nbsp;:&nbsp;tsl_table)&nbsp;(Γ&nbsp;:&nbsp;context)&nbsp;:&nbsp;context&nbsp;:=&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;match&nbsp;Γ&nbsp;with&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;|&nbsp;<span class="inlinecode"></span>&nbsp;=&gt;&nbsp;<span class="inlinecode"></span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;<span class="comment">(*&nbsp;|&nbsp;Γ&nbsp;,,&nbsp;{|&nbsp;decl_name&nbsp;:=&nbsp;n;&nbsp;decl_body&nbsp;:=&nbsp;None;&nbsp;decl_type&nbsp;:=&nbsp;A&nbsp;|}&nbsp;=&gt;&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;tsl_ctx&nbsp;E&nbsp;Γ&nbsp;,,&nbsp;vass&nbsp;n&nbsp;(tsl_rec0&nbsp;0&nbsp;A)&nbsp;,,&nbsp;vass&nbsp;(tsl_name&nbsp;n)&nbsp;(mkApp&nbsp;(lift0&nbsp;1&nbsp;(tsl_rec1&nbsp;E&nbsp;0&nbsp;A))&nbsp;(tRel&nbsp;0))&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;|&nbsp;Γ&nbsp;,,&nbsp;decl&nbsp;=&gt;&nbsp;let&nbsp;n&nbsp;:=&nbsp;decl.(decl_name)&nbsp;in&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;let&nbsp;x&nbsp;:=&nbsp;decl.(decl_body)&nbsp;in&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;let&nbsp;A&nbsp;:=&nbsp;decl.(decl_type)&nbsp;in&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;tsl_ctx&nbsp;E&nbsp;Γ&nbsp;,,&nbsp;Build_context_decl&nbsp;n&nbsp;(omap&nbsp;(tsl_rec0&nbsp;0)&nbsp;x)&nbsp;(tsl_rec0&nbsp;0&nbsp;A)&nbsp;&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;,,&nbsp;Build_context_decl&nbsp;(tsl_name&nbsp;tsl_ident&nbsp;n)&nbsp;(omap&nbsp;(lift&nbsp;1&nbsp;0&nbsp;\o&nbsp;tsl_rec1&nbsp;E)&nbsp;x)&nbsp;(mkApps&nbsp;(lift0&nbsp;1&nbsp;(tsl_rec1&nbsp;E&nbsp;A))&nbsp;<span class="inlinecode"><span class="id" title="var">tRel</span></span> <span class="inlinecode">0</span>)&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;end.&nbsp;*)</span><br/>
+
+<br/>
+<span class="comment">(*&nbsp;Delimit&nbsp;Scope&nbsp;term_scope&nbsp;with&nbsp;term.&nbsp;*)</span><br/>
+
+<br/>
+<span class="comment">(*&nbsp;Notation&nbsp;"| Γ |" := (List.length Γ) (at level 0, Γ at level 99, format "|&nbsp;Γ&nbsp;|")&nbsp;:&nbsp;term_scope.&nbsp;*)</span><br/>
+
+<br/>
+
+<br/>
+<span class="comment">(*&nbsp;Lemma&nbsp;tsl_ctx_length&nbsp;E&nbsp;(Γ&nbsp;:&nbsp;context)&nbsp;:&nbsp;|tsl_ctx E Γ| = 2 * |Γ|*)</span><br/>
+<span class="comment">(*&nbsp;Proof.&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;induction&nbsp;Γ.&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;reflexivity.&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;destruct&nbsp;a,&nbsp;decl_body;&nbsp;simpl;&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;by&nbsp;rewrite&nbsp;IHΓ&nbsp;mulnS.&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;Qed.&nbsp;*)</span><br/>
+
+<br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;Fixpoint&nbsp;removefirst_n&nbsp;{A}&nbsp;(n&nbsp;:&nbsp;nat)&nbsp;(l&nbsp;:&nbsp;list&nbsp;A)&nbsp;:&nbsp;list&nbsp;A&nbsp;:=&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;match&nbsp;n&nbsp;with&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;|&nbsp;O&nbsp;=&gt;&nbsp;l&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;|&nbsp;S&nbsp;n&nbsp;=&gt;&nbsp;match&nbsp;l&nbsp;with&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|&nbsp;<span class="inlinecode"></span>&nbsp;=&gt;&nbsp;<span class="inlinecode"></span>&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|&nbsp;a&nbsp;::&nbsp;l&nbsp;=&gt;&nbsp;removefirst_n&nbsp;n&nbsp;l&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;end&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;end.&nbsp;*)</span>&nbsp;*)</span><br/>
+
+<br/>
+<span class="comment">(*&nbsp;Notation&nbsp;"(&nbsp;x&nbsp;;&nbsp;y&nbsp;)"&nbsp;:=&nbsp;(exist&nbsp;_&nbsp;x&nbsp;y).&nbsp;*)</span><br/>
+
+<br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;Lemma&nbsp;tsl_ctx_safe_nth&nbsp;fuel&nbsp;Σ&nbsp;E&nbsp;Γ&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;:&nbsp;forall&nbsp;Γ',&nbsp;tsl_ctx&nbsp;fuel&nbsp;Σ&nbsp;E&nbsp;Γ&nbsp;=&nbsp;Success&nbsp;Γ'&nbsp;-&gt;&nbsp;forall&nbsp;n&nbsp;p,&nbsp;exists&nbsp;p',&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;map_context_decl&nbsp;(tsl_ty&nbsp;fuel&nbsp;Σ&nbsp;E&nbsp;(removefirst_n&nbsp;(S&nbsp;n)&nbsp;Γ))&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(safe_nth&nbsp;Γ&nbsp;(n;&nbsp;p))&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;=&nbsp;Success&nbsp;(safe_nth&nbsp;Γ'&nbsp;(n;&nbsp;p')).&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;intros&nbsp;Γ'&nbsp;H&nbsp;n&nbsp;p.&nbsp;cbn&nbsp;beta&nbsp;in&nbsp;*.&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;revert&nbsp;Γ&nbsp;Γ'&nbsp;H&nbsp;p.&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;induction&nbsp;n;&nbsp;intros&nbsp;Γ&nbsp;Γ'&nbsp;H&nbsp;p;&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(destruct&nbsp;Γ&nbsp;as&nbsp;<span class="inlinecode">|<span class="id" title="var">A</span></span> <span class="inlinecode"><span class="id" title="var">Γ</span></span>;&nbsp;<span class="inlinecode"><span class="id" title="tactic">inversion</span></span> <span class="inlinecode"><span class="id" title="var">p</span>|</span>).&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;-&nbsp;cbn&nbsp;-<span class="inlinecode"><span class="id" title="var">map_context_decl</span></span>.&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;rewrite&nbsp;tsl_ctx_cons&nbsp;in&nbsp;H.&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;remember&nbsp;(map_context_decl&nbsp;(tsl_term&nbsp;fuel&nbsp;Σ&nbsp;E&nbsp;Γ)&nbsp;A).&nbsp;&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;destruct&nbsp;t;&nbsp;<span class="inlinecode">|<span class="id" title="tactic">discriminate</span></span>.&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;remember&nbsp;(tsl_ctx&nbsp;fuel&nbsp;Σ&nbsp;E&nbsp;Γ).&nbsp;&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;destruct&nbsp;t;&nbsp;<span class="inlinecode">|<span class="id" title="tactic">discriminate</span></span>.&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;cbn&nbsp;in&nbsp;H.&nbsp;inversion&nbsp;H;&nbsp;clear&nbsp;H.&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;clear&nbsp;p&nbsp;H1.&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;unshelve&nbsp;econstructor.&nbsp;apply&nbsp;le_n_S,&nbsp;le_0_n.&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;reflexivity.&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;-&nbsp;cbn&nbsp;-<span class="inlinecode"><span class="id" title="var">map_context_decl</span></span>.&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;rewrite&nbsp;tsl_ctx_cons&nbsp;in&nbsp;H.&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;remember&nbsp;(map_context_decl&nbsp;(tsl_term&nbsp;fuel&nbsp;Σ&nbsp;E&nbsp;Γ)&nbsp;A).&nbsp;&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;destruct&nbsp;t;&nbsp;<span class="inlinecode">|<span class="id" title="tactic">discriminate</span></span>.&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;remember&nbsp;(tsl_ctx&nbsp;fuel&nbsp;Σ&nbsp;E&nbsp;Γ).&nbsp;&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;destruct&nbsp;t;&nbsp;<span class="inlinecode">|<span class="id" title="tactic">discriminate</span></span>.&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;cbn&nbsp;in&nbsp;H.&nbsp;inversion&nbsp;H;&nbsp;clear&nbsp;H.&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;symmetry&nbsp;in&nbsp;Heqt0.&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;set&nbsp;(Typing.safe_nth_obligation_2&nbsp;context_decl&nbsp;(A&nbsp;::&nbsp;Γ)&nbsp;(S&nbsp;n;&nbsp;p)&nbsp;A&nbsp;Γ&nbsp;eq_refl&nbsp;n&nbsp;eq_refl).&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;specialize&nbsp;(IHn&nbsp;Γ&nbsp;c0&nbsp;Heqt0&nbsp;l).&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;destruct&nbsp;IHn.&nbsp;*)</span>&nbsp;*)</span><br/>
+
+<br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;unshelve&nbsp;econstructor.&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;cbn.&nbsp;rewrite&nbsp;&lt;-&nbsp;(tsl_ctx_length&nbsp;fuel&nbsp;Σ&nbsp;E&nbsp;Γ&nbsp;_&nbsp;Heqt0).&nbsp;exact&nbsp;p.&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;etransitivity.&nbsp;exact&nbsp;π2.&nbsp;cbn.&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;apply&nbsp;f_equal,&nbsp;f_equal,&nbsp;f_equal.&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;apply&nbsp;le_irr.&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;Defined.&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;Admitted.&nbsp;*)</span>&nbsp;*)</span><br/>
+
+<br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;todo&nbsp;inductives&nbsp;*)</span>&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;Definition&nbsp;global_ctx_correct&nbsp;(Σ&nbsp;:&nbsp;global_context)&nbsp;(E&nbsp;:&nbsp;tsl_context)&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;:=&nbsp;forall&nbsp;id&nbsp;T,&nbsp;lookup_constant_type&nbsp;Σ&nbsp;id&nbsp;=&nbsp;Checked&nbsp;T&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;-&gt;&nbsp;exists&nbsp;fuel&nbsp;t'&nbsp;T',&nbsp;lookup_tsl_ctx&nbsp;E&nbsp;(ConstRef&nbsp;id)&nbsp;=&nbsp;Some&nbsp;t'&nbsp;/\&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;tsl_term&nbsp;fuel&nbsp;Σ&nbsp;E&nbsp;<span class="inlinecode"></span>&nbsp;T&nbsp;=&nbsp;Success&nbsp;_&nbsp;T'&nbsp;/\&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;squash&nbsp;(Σ&nbsp;;;;&nbsp;<span class="inlinecode"></span>&nbsp;|--&nbsp;t'&nbsp;:&nbsp;T').&nbsp;*)</span>&nbsp;*)</span><br/>
+
+<br/>
+<span class="comment">(*&nbsp;Definition&nbsp;tsl_table_correct&nbsp;(Σ&nbsp;:&nbsp;global_context)&nbsp;(E&nbsp;:&nbsp;tsl_table)&nbsp;:&nbsp;Type&nbsp;:=&nbsp;todo.&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;:=&nbsp;forall&nbsp;id&nbsp;t'&nbsp;T,&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;lookup_tsl_table&nbsp;E&nbsp;(ConstRef&nbsp;id)&nbsp;=&nbsp;Some&nbsp;t'&nbsp;-&gt;&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;lookup_constant_type&nbsp;Σ&nbsp;id&nbsp;=&nbsp;Checked&nbsp;T&nbsp;-&gt;&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;exists&nbsp;fuel&nbsp;T',&nbsp;((tsl_ty&nbsp;fuel&nbsp;Σ&nbsp;E&nbsp;<span class="inlinecode"></span>&nbsp;T&nbsp;=&nbsp;Success&nbsp;T')&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;*&nbsp;(Σ&nbsp;;;;&nbsp;<span class="inlinecode"></span>&nbsp;|--&nbsp;&nbsp;t'&nbsp;:&nbsp;T'))*)</span>&nbsp;*)</span><br/>
+
+<br/>
+<span class="comment">(*&nbsp;Lemma&nbsp;LmapE&nbsp;:&nbsp;@List.map&nbsp;=&nbsp;@seq.map.&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;reflexivity.&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;Qed.&nbsp;*)</span><br/>
+
+<br/>
+<span class="comment">(*&nbsp;Lemma&nbsp;lebE&nbsp;(m&nbsp;n&nbsp;:&nbsp;nat)&nbsp;:&nbsp;(Nat.leb&nbsp;m&nbsp;n)&nbsp;=&nbsp;(leq&nbsp;m&nbsp;n).&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;Admitted.&nbsp;*)</span><br/>
+
+<br/>
+<span class="comment">(*&nbsp;Lemma&nbsp;term_eqP&nbsp;:&nbsp;Equality.axiom&nbsp;eq_term.&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;Admitted.&nbsp;*)</span><br/>
+
+<br/>
+<span class="comment">(*&nbsp;Definition&nbsp;term_eqMixin&nbsp;:=&nbsp;EqMixin&nbsp;term_eqP.&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;Canonical&nbsp;termT_eqype&nbsp;:=&nbsp;EqType&nbsp;term&nbsp;term_eqMixin.&nbsp;*)</span><br/>
+
+<br/>
+<span class="comment">(*&nbsp;Lemma&nbsp;tsl_rec0_lift&nbsp;m&nbsp;n&nbsp;t&nbsp;:&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;tsl_rec0&nbsp;m&nbsp;(lift&nbsp;n&nbsp;m&nbsp;t)&nbsp;=&nbsp;lift&nbsp;(2&nbsp;*&nbsp;n)&nbsp;m&nbsp;(tsl_rec0&nbsp;m&nbsp;t).&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;Proof.&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;elim/term_forall_list_ind&nbsp;:&nbsp;t&nbsp;m&nbsp;n&nbsp;=&gt;&nbsp;//=;&nbsp;rewrite&nbsp;?plusE.&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;-&nbsp;move=&gt;&nbsp;n&nbsp;m&nbsp;k.&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;rewrite&nbsp;lebE.&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;case:&nbsp;leqP&nbsp;=&gt;&nbsp;/=&nbsp;mn;&nbsp;rewrite&nbsp;lebE&nbsp;plusE.&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;rewrite&nbsp;!ifT&nbsp;?mulnDr&nbsp;?addnA&nbsp;//.&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;admit.&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;admit.&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;by&nbsp;rewrite&nbsp;leqNgt&nbsp;mn.&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;-&nbsp;admit.&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;-&nbsp;by&nbsp;move=&gt;&nbsp;t&nbsp;IHt&nbsp;c&nbsp;t0&nbsp;IHt0&nbsp;m&nbsp;n;&nbsp;rewrite&nbsp;IHt&nbsp;IHt0.&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;-&nbsp;by&nbsp;move=&gt;&nbsp;n0&nbsp;t&nbsp;-IHt&nbsp;t0&nbsp;IHt0&nbsp;m&nbsp;n&nbsp;/=;&nbsp;rewrite&nbsp;IHt&nbsp;addn1&nbsp;IHt0.&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;-&nbsp;by&nbsp;move=&gt;&nbsp;n&nbsp;t&nbsp;IHt&nbsp;t0&nbsp;IHt0&nbsp;m&nbsp;n0;&nbsp;rewrite&nbsp;IHt&nbsp;addn1&nbsp;IHt0.&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;-&nbsp;by&nbsp;move=&gt;&nbsp;n&nbsp;t&nbsp;IHt&nbsp;t0&nbsp;IHt0&nbsp;t1&nbsp;IHt1&nbsp;m&nbsp;n0;&nbsp;rewrite&nbsp;!addn1&nbsp;IHt&nbsp;IHt0&nbsp;IHt1.&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;-&nbsp;move=&gt;&nbsp;t&nbsp;IHt&nbsp;l&nbsp;IHl&nbsp;m&nbsp;n;&nbsp;rewrite&nbsp;IHt.&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;rewrite&nbsp;LmapE.&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;rewrite&nbsp;-!map_comp.&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;congr&nbsp;(tApp&nbsp;_&nbsp;_).&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;apply/eq_in_map&nbsp;=&gt;&nbsp;i&nbsp;/=.&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;admit.&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;-&nbsp;move=&gt;&nbsp;p&nbsp;t&nbsp;IHt&nbsp;t0&nbsp;IHt0&nbsp;l&nbsp;IHl&nbsp;m&nbsp;n.&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;rewrite&nbsp;IHt&nbsp;IHt0.&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;admit.&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;-&nbsp;by&nbsp;move=&gt;&nbsp;s&nbsp;t&nbsp;IHt&nbsp;m&nbsp;n;&nbsp;rewrite&nbsp;IHt.&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;-&nbsp;admit.&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;-&nbsp;admit.&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;Admitted.&nbsp;*)</span><br/>
+
+<br/>
+<span class="comment">(*&nbsp;Lemma&nbsp;lift_mkApps&nbsp;n&nbsp;k&nbsp;t&nbsp;us&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;:&nbsp;lift&nbsp;n&nbsp;k&nbsp;(mkApps&nbsp;t&nbsp;us)&nbsp;=&nbsp;mkApps&nbsp;(lift&nbsp;n&nbsp;k&nbsp;t)&nbsp;(List.map&nbsp;(lift&nbsp;n&nbsp;k)&nbsp;us).&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;Proof.&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;destruct&nbsp;us;&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;destruct&nbsp;t;&nbsp;try&nbsp;reflexivity.&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;cbn.&nbsp;destruct&nbsp;(Nat.leb&nbsp;k&nbsp;n0);&nbsp;try&nbsp;reflexivity.&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;cbn.&nbsp;by&nbsp;rewrite&nbsp;List.map_app.&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;Qed.&nbsp;*)</span><br/>
+
+<br/>
+<span class="comment">(*&nbsp;Arguments&nbsp;subst_app&nbsp;:&nbsp;simpl&nbsp;nomatch.&nbsp;*)</span><br/>
+
+<br/>
+<span class="comment">(*&nbsp;Lemma&nbsp;tsl_rec1_lift&nbsp;E&nbsp;n&nbsp;t&nbsp;:&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;<span class="comment">(*&nbsp;tsl_rec1&nbsp;E&nbsp;0&nbsp;(lift&nbsp;n&nbsp;m&nbsp;t)&nbsp;=&nbsp;lift&nbsp;(2&nbsp;*&nbsp;n)&nbsp;(2&nbsp;*&nbsp;m)&nbsp;(tsl_rec1&nbsp;E&nbsp;0&nbsp;t).&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;tsl_rec1&nbsp;E&nbsp;(lift0&nbsp;n&nbsp;t)&nbsp;=&nbsp;lift0&nbsp;(2&nbsp;*&nbsp;n)&nbsp;(tsl_rec1&nbsp;E&nbsp;t).&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;Proof.&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;elim/term_forall_list_ind&nbsp;:&nbsp;t&nbsp;n&nbsp;=&gt;&nbsp;//;&nbsp;rewrite&nbsp;?plusE.&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;-&nbsp;move=&gt;&nbsp;n&nbsp;k.&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;<span class="comment">(*&nbsp;rewrite&nbsp;!lebE&nbsp;fun_if&nbsp;/=&nbsp;leq_mul2l&nbsp;/=.&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;by&nbsp;have&nbsp;<span class="inlinecode"></span>&nbsp;:=&nbsp;leqP&nbsp;m&nbsp;n&nbsp;=&gt;&nbsp;//=;&nbsp;*)</span>&nbsp;by&nbsp;rewrite&nbsp;/=&nbsp;mulnDr.&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;-&nbsp;admit.&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;-&nbsp;admit.&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;-&nbsp;admit.&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;-&nbsp;move=&gt;&nbsp;t&nbsp;IHt&nbsp;c&nbsp;t0&nbsp;IHt0&nbsp;n&nbsp;/=;&nbsp;rewrite&nbsp;IHt&nbsp;IHt0&nbsp;?lift_mkApps.&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;congr&nbsp;(tCast&nbsp;_&nbsp;_&nbsp;(mkApps&nbsp;_&nbsp;_)).&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;by&nbsp;rewrite&nbsp;!tsl_rec0_lift.&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;-&nbsp;move=&gt;&nbsp;n&nbsp;t&nbsp;IHt&nbsp;t0&nbsp;IHt0&nbsp;n0.&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;rewrite&nbsp;/=.&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;rewrite&nbsp;!IHt.&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;rewrite&nbsp;!tsl_rec0_lift.&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;rewrite&nbsp;lift_simpl.&nbsp;*)</span>&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;rewrite&nbsp;IHt&nbsp;addn1&nbsp;IHt0.&nbsp;*)</span>&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;-&nbsp;by&nbsp;move=&gt;&nbsp;n&nbsp;t&nbsp;IHt&nbsp;t0&nbsp;IHt0&nbsp;m&nbsp;n0;&nbsp;rewrite&nbsp;IHt&nbsp;addn1&nbsp;IHt0.&nbsp;*)</span>&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;-&nbsp;by&nbsp;move=&gt;&nbsp;n&nbsp;t&nbsp;IHt&nbsp;t0&nbsp;IHt0&nbsp;t1&nbsp;IHt1&nbsp;m&nbsp;n0;&nbsp;rewrite&nbsp;!addn1&nbsp;IHt&nbsp;IHt0&nbsp;IHt1.&nbsp;*)</span>&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;-&nbsp;move=&gt;&nbsp;t&nbsp;IHt&nbsp;l&nbsp;IHl&nbsp;m&nbsp;n;&nbsp;rewrite&nbsp;IHt.&nbsp;*)</span>&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;rewrite&nbsp;LmapE.&nbsp;*)</span>&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;rewrite&nbsp;-!map_comp.&nbsp;*)</span>&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;congr&nbsp;(tApp&nbsp;_&nbsp;_).&nbsp;*)</span>&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;apply/eq_in_map&nbsp;=&gt;&nbsp;i&nbsp;/=.&nbsp;*)</span>&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;admit.&nbsp;*)</span>&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;-&nbsp;move=&gt;&nbsp;p&nbsp;t&nbsp;IHt&nbsp;t0&nbsp;IHt0&nbsp;l&nbsp;IHl&nbsp;m&nbsp;n.&nbsp;*)</span>&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;rewrite&nbsp;IHt&nbsp;IHt0.&nbsp;*)</span>&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;admit.&nbsp;*)</span>&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;-&nbsp;by&nbsp;move=&gt;&nbsp;s&nbsp;t&nbsp;IHt&nbsp;m&nbsp;n;&nbsp;rewrite&nbsp;IHt.&nbsp;*)</span>&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;-&nbsp;admit.&nbsp;*)</span>&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;-&nbsp;admit.&nbsp;*)</span>&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;Admitted.&nbsp;*)</span><br/>
+
+<br/>
+
+<br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;Admitted.&nbsp;*)</span>&nbsp;*)</span><br/>
+
+<br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;Lemma&nbsp;tsl_rec0_lift&nbsp;n&nbsp;t&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;:&nbsp;tsl_rec0&nbsp;0&nbsp;(lift0&nbsp;n&nbsp;t)&nbsp;=&nbsp;lift0&nbsp;n&nbsp;(tsl_rec0&nbsp;0&nbsp;t).&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;Admitted.&nbsp;*)</span>&nbsp;*)</span><br/>
+
+<br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;Lemma&nbsp;tsl_ty_lift&nbsp;fuel&nbsp;Σ&nbsp;E&nbsp;Γ&nbsp;n&nbsp;(p&nbsp;:&nbsp;n&nbsp;&lt;=&nbsp;|Γ|) t *)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;:&nbsp;tsl_ty&nbsp;fuel&nbsp;Σ&nbsp;E&nbsp;Γ&nbsp;(lift0&nbsp;n&nbsp;t)&nbsp;=&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(t'&nbsp;&lt;-&nbsp;tsl_ty&nbsp;fuel&nbsp;Σ&nbsp;E&nbsp;(removefirst_n&nbsp;n&nbsp;Γ)&nbsp;t&nbsp;;;&nbsp;ret&nbsp;(lift0&nbsp;n&nbsp;t')).&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;Admitted.&nbsp;*)</span>&nbsp;*)</span><br/>
+
+<br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;Lemma&nbsp;tsl_S_fuel&nbsp;{fuel&nbsp;Σ&nbsp;E&nbsp;Γ&nbsp;t&nbsp;t'}&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;:&nbsp;tsl_term&nbsp;fuel&nbsp;Σ&nbsp;E&nbsp;Γ&nbsp;t&nbsp;=&nbsp;Success&nbsp;t'&nbsp;-&gt;&nbsp;tsl_term&nbsp;(S&nbsp;fuel)&nbsp;Σ&nbsp;E&nbsp;Γ&nbsp;t&nbsp;=&nbsp;Success&nbsp;t'.&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;Admitted.&nbsp;*)</span>&nbsp;*)</span><br/>
+
+<br/>
+<span class="comment">(*&nbsp;Record&nbsp;hidden&nbsp;T&nbsp;:=&nbsp;Hidden&nbsp;{show&nbsp;:&nbsp;T}.&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;Arguments&nbsp;show&nbsp;:&nbsp;simpl&nbsp;never.&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;Notation&nbsp;"'hidden"&nbsp;:=&nbsp;(show&nbsp;_&nbsp;(Hidden&nbsp;_&nbsp;_)).&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;Lemma&nbsp;hide&nbsp;T&nbsp;(t&nbsp;:&nbsp;T)&nbsp;:&nbsp;t&nbsp;=&nbsp;show&nbsp;T&nbsp;(Hidden&nbsp;T&nbsp;t).&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;Proof.&nbsp;by&nbsp;<span class="inlinecode"></span>.&nbsp;Qed.&nbsp;*)</span><br/>
+
+<br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;From&nbsp;mathcomp&nbsp;Require&nbsp;Import&nbsp;ssrnat.&nbsp;*)</span>&nbsp;*)</span><br/>
+
+<br/>
+<span class="comment">(*&nbsp;Arguments&nbsp;safe_nth&nbsp;:&nbsp;simpl&nbsp;nomatch.&nbsp;*)</span><br/>
+
+<br/>
+<span class="comment">(*&nbsp;Lemma&nbsp;eq_safe_nth&nbsp;T&nbsp;(l&nbsp;:&nbsp;list&nbsp;T)&nbsp;n&nbsp;n'&nbsp;p&nbsp;p'&nbsp;:&nbsp;n&nbsp;=&nbsp;n'&nbsp;-&gt;&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;safe_nth&nbsp;l&nbsp;(n;&nbsp;p)&nbsp;=&nbsp;safe_nth&nbsp;l&nbsp;(n';&nbsp;p')&nbsp;:&gt;&nbsp;T.&nbsp;&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;Proof.&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;move=&gt;&nbsp;eq_n;&nbsp;case:&nbsp;_&nbsp;/&nbsp;eq_n&nbsp;in&nbsp;p&nbsp;p'&nbsp;*.&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;elim:&nbsp;l&nbsp;=&gt;&nbsp;<span class="inlinecode">|<span class="id" title="var">x</span></span> <span class="inlinecode"><span class="id" title="var">l</span></span> <span class="inlinecode"><span class="id" title="var">IHl</span></span>&nbsp;in&nbsp;n&nbsp;p&nbsp;p'&nbsp;*.&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;by&nbsp;inversion&nbsp;p.&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;by&nbsp;case:&nbsp;n&nbsp;=&gt;&nbsp;<span class="inlinecode">//|<span class="id" title="var">n</span></span>&nbsp;in&nbsp;p&nbsp;p'&nbsp;*;&nbsp;apply:&nbsp;IHl.&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;Qed.&nbsp;*)</span><br/>
+
+<br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Lemma&nbsp;tsl_rec0_decl_type&nbsp;(Γ&nbsp;:&nbsp;context)&nbsp;(n&nbsp;:&nbsp;nat)&nbsp;(isdecl&nbsp;:&nbsp;(n&nbsp;&lt;&nbsp;|Γ|%term)%coq_nat) (E : tsl_table) (isdecl' : (2 * n + 1 < |tsl_ctx&nbsp;E&nbsp;Γ|coq_nat)&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:&nbsp;tsl_rec0&nbsp;0&nbsp;(decl_type&nbsp;(safe_nth&nbsp;Γ&nbsp;(n;&nbsp;isdecl)))&nbsp;=&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;decl_type&nbsp;(safe_nth&nbsp;(tsl_ctx&nbsp;E&nbsp;Γ)&nbsp;(2&nbsp;*&nbsp;n&nbsp;+&nbsp;1;&nbsp;isdecl')).&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Proof.&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;elim:&nbsp;Γ&nbsp;=&gt;&nbsp;<span class="inlinecode">|<span class="id" title="var">a</span></span> <span class="inlinecode"><span class="id" title="var">Γ</span></span> <span class="inlinecode"><span class="id" title="var">IHΓ</span></span>&nbsp;in&nbsp;n&nbsp;isdecl&nbsp;isdecl'&nbsp;*.&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;by&nbsp;inversion&nbsp;isdecl.&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;simpl.&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;case:&nbsp;n&nbsp;=&gt;&nbsp;<span class="inlinecode">//|<span class="id" title="var">n</span></span>&nbsp;in&nbsp;isdecl&nbsp;isdecl'&nbsp;*.&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;rewrite&nbsp;addn1&nbsp;/=&nbsp;in&nbsp;isdecl'&nbsp;*.&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;rewrite&nbsp;IHΓ&nbsp;addn1&nbsp;//.&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;apply/leP;&nbsp;move/leP&nbsp;:&nbsp;isdecl'.&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;by&nbsp;rewrite&nbsp;!mul2n&nbsp;doubleS.&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;move=&gt;&nbsp;isdecl''.&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;congr&nbsp;(decl_type&nbsp;_);&nbsp;apply:&nbsp;eq_safe_nth.&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;by&nbsp;rewrite&nbsp;plusE&nbsp;addn0&nbsp;mul2n&nbsp;-addnn&nbsp;addnS.&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Qed.&nbsp;*)</span><br/>
+
+<br/>
+<span class="comment">(*&nbsp;Lemma&nbsp;tsl_rec1_decl_type&nbsp;(Γ&nbsp;:&nbsp;context)&nbsp;(n&nbsp;:&nbsp;nat)&nbsp;(E&nbsp;:&nbsp;tsl_table)&nbsp;p&nbsp;p'&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;(Γ'&nbsp;:=&nbsp;tsl_ctx&nbsp;E&nbsp;Γ)&nbsp;:&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;mkApps&nbsp;(lift0&nbsp;1&nbsp;(decl_type&nbsp;(safe_nth&nbsp;Γ'&nbsp;((2&nbsp;*&nbsp;n);&nbsp;p))))&nbsp;<span class="inlinecode"><span class="id" title="var">tRel</span></span> <span class="inlinecode">0</span>&nbsp;=&nbsp;&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;decl_type&nbsp;(safe_nth&nbsp;Γ'&nbsp;(2&nbsp;*&nbsp;n;&nbsp;p')).&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;Proof.&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;subst&nbsp;Γ';&nbsp;elim:&nbsp;Γ&nbsp;=&gt;&nbsp;<span class="inlinecode">|<span class="id" title="var">a</span></span> <span class="inlinecode"><span class="id" title="var">Γ</span></span> <span class="inlinecode"><span class="id" title="var">IHΓ</span></span>&nbsp;in&nbsp;n&nbsp;p&nbsp;p'&nbsp;*.&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;by&nbsp;inversion&nbsp;p.&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;simpl.&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;case:&nbsp;n&nbsp;=&gt;&nbsp;<span class="inlinecode">|<span class="id" title="var">n</span></span>&nbsp;//=&nbsp;in&nbsp;p&nbsp;p'&nbsp;*.&nbsp;*)</span>&nbsp;*)</span><br/>
+
+<br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;rewrite&nbsp;/=.&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;rewrite&nbsp;addn1&nbsp;/=&nbsp;in&nbsp;p'&nbsp;*.&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;rewrite&nbsp;IHΓ&nbsp;addn1&nbsp;//.&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;apply/leP;&nbsp;move/leP&nbsp;:&nbsp;p'.&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;by&nbsp;rewrite&nbsp;!mul2n&nbsp;doubleS.&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;move=&gt;&nbsp;p''.&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;congr&nbsp;(decl_type&nbsp;_);&nbsp;apply:&nbsp;eq_safe_nth.&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;by&nbsp;rewrite&nbsp;plusE&nbsp;addn0&nbsp;mul2n&nbsp;-addnn&nbsp;addnS.&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Qed.&nbsp;*)</span>&nbsp;*)</span><br/>
+
+<br/>
+<span class="comment">(*&nbsp;Admitted.&nbsp;*)</span><br/>
+
+<br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">(*&nbsp;Lemma&nbsp;tsl_rec1_decl_type&nbsp;(Γ&nbsp;:&nbsp;context)&nbsp;(n&nbsp;:&nbsp;nat)&nbsp;(isdecl&nbsp;:&nbsp;(n&nbsp;&lt;&nbsp;|Γ|%term)%coq_nat) (E : tsl_table) (isdecl' : (2 * n + 1 < |tsl_ctx&nbsp;E&nbsp;Γ|coq_nat)&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;:&nbsp;tsl_rec1&nbsp;E&nbsp;(decl_type&nbsp;(safe_nth&nbsp;Γ&nbsp;(n;&nbsp;isdecl)))&nbsp;=&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;decl_type&nbsp;(safe_nth&nbsp;(tsl_ctx&nbsp;E&nbsp;Γ)&nbsp;(2&nbsp;*&nbsp;n&nbsp;+&nbsp;1;&nbsp;isdecl')).&nbsp;*)</span>&nbsp;*)</span><br/>
+
+<br/>
+<span class="comment">(*&nbsp;Lemma&nbsp;tsl_correct&nbsp;Σ&nbsp;φ&nbsp;Γ&nbsp;t&nbsp;T&nbsp;(H&nbsp;:&nbsp;Σ&nbsp;;;;&nbsp;φ&nbsp;;;;&nbsp;Γ&nbsp;|-&nbsp;t&nbsp;:&nbsp;T)&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;:&nbsp;forall&nbsp;E,&nbsp;tsl_table_correct&nbsp;Σ&nbsp;E&nbsp;-&gt;&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;let&nbsp;Γ'&nbsp;:=&nbsp;tsl_ctx&nbsp;E&nbsp;Γ&nbsp;in&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;let&nbsp;t0&nbsp;:=&nbsp;tsl_rec0&nbsp;0&nbsp;t&nbsp;in&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;let&nbsp;t1&nbsp;:=&nbsp;tsl_rec1&nbsp;E&nbsp;t&nbsp;in&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;let&nbsp;T0&nbsp;:=&nbsp;tsl_rec0&nbsp;0&nbsp;T&nbsp;in&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;let&nbsp;T1&nbsp;:=&nbsp;tsl_rec1&nbsp;E&nbsp;T&nbsp;in&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Σ&nbsp;;;;&nbsp;φ&nbsp;;;;&nbsp;Γ'&nbsp;|-&nbsp;t0&nbsp;:&nbsp;T0&nbsp;/\&nbsp;Σ&nbsp;;;;&nbsp;φ&nbsp;;;;&nbsp;Γ'&nbsp;|-&nbsp;t1&nbsp;:&nbsp;mkApps&nbsp;T1&nbsp;<span class="inlinecode"><span class="id" title="var">t0</span></span>.&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;Proof.&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;elim/typing_ind:&nbsp;H&nbsp;=&gt;&nbsp;{Γ&nbsp;t&nbsp;T}&nbsp;Γ.&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;-&nbsp;move=&gt;&nbsp;n&nbsp;isdecl&nbsp;E&nbsp;X&nbsp;Γ'&nbsp;/=.&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;rewrite&nbsp;tsl_rec0_lift&nbsp;mulnS&nbsp;add2n&nbsp;(tsl_rec0_decl_type&nbsp;_&nbsp;_&nbsp;_&nbsp;E).&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;rewrite&nbsp;tsl_ctx_length.&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;apply/leP.&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;by&nbsp;rewrite&nbsp;addn1&nbsp;mul2n&nbsp;-doubleS&nbsp;-mul2n&nbsp;leq_mul2l;&nbsp;apply/leP.&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;rewrite&nbsp;!addn1;&nbsp;move=&gt;&nbsp;isdecl'.&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;split;&nbsp;first&nbsp;exact:&nbsp;type_Rel.&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;have&nbsp;:=&nbsp;type_Rel&nbsp;Σ&nbsp;Γ'&nbsp;(2&nbsp;*&nbsp;n)&nbsp;_.&nbsp;*)</span>&nbsp;*)</span><br/>
+
+<br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;evar&nbsp;(l&nbsp;:&nbsp;(2&nbsp;*&nbsp;n&nbsp;&lt;&nbsp;|Γ'|%term)%coq_nat). *)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;move=&gt;&nbsp;/(_&nbsp;l).&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;rewrite&nbsp;-tsl_rec1_decl_type&nbsp;/=.&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;admit.&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;<span class="comment">(*&nbsp;rewrite&nbsp;simpl_lift_rec;&nbsp;do&nbsp;?easy.&nbsp;*)</span>&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;<span class="comment">(*&nbsp;by&nbsp;rewrite&nbsp;plusE&nbsp;addn0&nbsp;addn1.&nbsp;*)</span>&nbsp;*)</span>&nbsp;*)</span><br/>
+
+<br/>
+
+<br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;-&nbsp;admit.&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;-&nbsp;admit.&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;-&nbsp;admit.&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;-&nbsp;admit.&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;-&nbsp;admit.&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;-&nbsp;rewrite&nbsp;/=&nbsp;=&gt;&nbsp;t&nbsp;l&nbsp;t'&nbsp;t''&nbsp;tt'&nbsp;IHt'&nbsp;spine&nbsp;E&nbsp;ΣE_correct;&nbsp;rewrite&nbsp;/mkApps;&nbsp;split.&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;apply:&nbsp;type_App.&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;have&nbsp;<span class="inlinecode"></span>&nbsp;:=&nbsp;IHt'&nbsp;_&nbsp;ΣE_correct.&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;by&nbsp;move=&gt;&nbsp;t0_ty&nbsp;?;&nbsp;exact:&nbsp;t0_ty.&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;admit.&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;apply:&nbsp;type_App.&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;have&nbsp;<span class="inlinecode"></span>&nbsp;:=&nbsp;IHt'&nbsp;_&nbsp;ΣE_correct.&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;by&nbsp;move=&gt;&nbsp;?&nbsp;t1_ty;&nbsp;exact:&nbsp;t1_ty.&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;admit.&nbsp;*)</span>&nbsp;*)</span><br/>
+
+<br/>
+
+<br/>
+
+<br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;rewrite&nbsp;/Γ'&nbsp;=&gt;&nbsp;isdecl';&nbsp;clear.&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;<span class="comment">(*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;case:&nbsp;Γ&nbsp;isdecl&nbsp;isdecl'.&nbsp;*)</span>&nbsp;*)</span><br/>
+<span class="comment">(*&nbsp;Abort.&nbsp;*)</span></div>
+</div>
+
+<div id="footer">
+<hr/><a href="index.html">Index</a><hr/>This page has been generated by <a href="http://coq.inria.fr/">coqdoc</a>
+</div>
+
+</div>
+
+</body>
+</html>

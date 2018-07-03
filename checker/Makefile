@@ -4,7 +4,7 @@
 ##   \VV/  #                                                                 ##
 ##    //   #                                                                 ##
 ###############################################################################
-## GNUMakefile for Coq 8.8+alpha
+## GNUMakefile for Coq 8.9+alpha
 
 # For debugging purposes (must stay here, don't move below)
 INITIAL_VARS := $(.VARIABLES)
@@ -187,7 +187,7 @@ COQDOCLIBS?=$(COQLIBS_NOML)
 # The version of Coq being run and the version of coq_makefile that
 # generated this makefile
 COQ_VERSION:=$(shell $(COQC) --print-version | cut -d " " -f 1)
-COQMAKEFILE_VERSION:=8.8+alpha
+COQMAKEFILE_VERSION:=8.9+alpha
 
 COQSRCLIBS?= $(foreach d,$(COQ_SRC_SUBDIRS), -I "$(COQLIB)$(d)")
 

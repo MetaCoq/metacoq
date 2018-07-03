@@ -164,10 +164,10 @@ Record one_inductive_entry : Set := {
   mind_entry_lc : list term (* constructor list *) }.
 
 Record mutual_inductive_entry := {
-  mind_entry_record    : option (option ident);
-  (* Is this mutual inductive defined as a record?
+  mind_entry_record    : option (option (list ident));
+  (* Is this mutual inductive defined as primitive records?
      If so, is it primitive, using binder name [ident]
-     for the record in primitive projections ? *)
+     for the records in primitive projections ? *)
   mind_entry_finite    : recursivity_kind;
   mind_entry_params    : list (ident * local_entry);
   mind_entry_inds      : list one_inductive_entry;

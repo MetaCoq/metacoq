@@ -484,7 +484,7 @@ let declare_inductive (env: Environ.env) (evm: Evd.evar_map) (body: Constr.t) : 
   in
   let mut_ind mr mf mp mi uctx mpr : Entries.mutual_inductive_entry =
     {
-      mind_entry_record = unquote_map_option (unquote_map_option unquote_ident) mr;
+      mind_entry_record = unquote_map_option (unquote_map_option (fun x -> Array.of_list (List.map unquote_ident (from_coq_list x)))) mr;
       mind_entry_finite = denote_mind_entry_finite mf; (* inductive *)
       mind_entry_params = List.map (fun p -> let (l,r) = (from_coq_pair p) in (unquote_ident l, (denote_local_entry evdref r)))
                                    (List.rev (from_coq_list mp));
@@ -644,7 +644,7 @@ let rec run_template_program_rec (k : Evd.evar_map * Constr.t -> unit)  ((evm, p
     match args with
     | id::[] -> let id = unquote_string id in
                 (try
-                   let gr = Smartlocate.locate_global_with_alias (CAst.make (Libnames.qualid_of_string id)) in
+                   let gr = Smartlocate.locate_global_with_alias (Libnames.qualid_of_string id) in
                    let opt = Constr.mkApp (cSome , [|tglobal_reference ; quote_global_reference gr|]) in
                    k (evm, opt)
                  with

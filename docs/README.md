@@ -82,17 +82,17 @@ Branches
   which includes:
 
   - The full syntax of CIC:
-    [Ast](https://github.com/Template-Coq/template-coq/blob/coq-8.8/theories/Ast.v)
+    [Ast](https://github.com/Template-Coq/template-coq/blob/coq-8.8/template-coq/theories/Ast.v)
 
   - The typing judgment of CIC: 
-    [Typing](https://github.com/Template-Coq/template-coq/blob/coq-8.8/theories/Typing.v#L488)
+    [Typing](https://github.com/Template-Coq/template-coq/blob/coq-8.8/template-coq/theories/Typing.v#L488)
     
   - A partial type-checker implementation:
-    [Checker](https://github.com/Template-Coq/template-coq/blob/coq-8.8/theories/Checker.v)
+    [Checker](https://github.com/Template-Coq/template-coq/blob/coq-8.8/template-coq/theories/Checker.v)
 
   - The `TemplateMonad` datatype and the `Run TemplateProgram` command
     to run template programs:
-    [Ast](https://github.com/Template-Coq/template-coq/blob/coq-8.8/theories/Ast.v#L193)
+    [Ast](https://github.com/Template-Coq/template-coq/blob/coq-8.8/template-coq/theories/Ast.v#L193)
         
 Examples of plugins
 -------------------

@@ -181,7 +181,7 @@ Definition one_pt_i : one_inductive_entry :=
 
 Definition mut_pt_i : mutual_inductive_entry :=
 {|
-  mind_entry_record := Some (Some "pp");
+  mind_entry_record := Some (Some ["pp"]);
   mind_entry_finite := BiFinite;
   mind_entry_params := [("A", LocalAssum (tSort Universe.type0))];
   mind_entry_inds := [one_pt_i];
@@ -298,7 +298,7 @@ Monomorphic Definition Funtm (A B: Type) := A->B.
 Polymorphic Definition Funtp@{i} (A B: Type@{i}) := A->B.
 (* Run TemplateProgram (printConstant "Top.demo.Funtp"). *)
 Locate Funtm.
-Run TemplateProgram (printConstant "Top.demo.Funtm").
+Run TemplateProgram (printConstant "Funtm").
 
 Polymorphic Definition Funtp2@{i j} 
    (A: Type@{i}) (B: Type@{j}) := A->B.

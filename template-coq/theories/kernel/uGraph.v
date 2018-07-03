@@ -54,6 +54,14 @@ Definition repr (uctx : universe_context) : UContext.t :=
   | Polymorphic_ctx c => c
   end.
 
+Definition add_local_constraints (uctx : universe_context) (G : t) : t
+  := match uctx with
+     | Polymorphic_ctx (inst, cstrs) =>
+       let G := List.fold_left (fun s l => add_node l s) inst G in
+       ConstraintSet.fold add_constraint cstrs G
+     | Monomorphic_ctx _ => G
+     end.
+
 Definition add_global_constraints (uctx : universe_context) (G : t) : t
   := match uctx with
      | Monomorphic_ctx (inst, cstrs) =>

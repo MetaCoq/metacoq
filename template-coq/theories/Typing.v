@@ -190,10 +190,10 @@ Inductive red1 (Σ : global_declarations) (Γ : context) : term -> term -> Prop 
     is_constructor narg args = true ->
     red1 Σ Γ (mkApps (tFix mfix idx) args) (mkApps fn args)
 
-(** Constant unfolding *) (* TODO Universes *)
+(** Constant unfolding *)
 | red_delta c decl body (isdecl : declared_constant Σ c decl) u :
     decl.(cst_body) = Some body ->
-    red1 Σ Γ (tConst c u) body
+    red1 Σ Γ (tConst c u) (subst_instance_constr u body)
 
 (* TODO Proj CoFix *)
 
@@ -504,7 +504,7 @@ Inductive typing `{checker_flags} (Σ : global_context) (Γ : context) : term ->
     typing_spine Σ Γ t_ty l t' ->
     Σ ;;; Γ |- (tApp t l) : t'
 
-| type_Const cst u : (* TODO Universes *)
+| type_Const cst u :
     forall decl (isdecl : declared_constant (fst Σ) cst decl),
     consistent_universe_context_instance Σ decl.(cst_universes) u ->
     Σ ;;; Γ |- (tConst cst u) : subst_instance_constr u decl.(cst_type)
@@ -635,21 +635,25 @@ Inductive type_inddecls `{checker_flags} (Σ : global_context) (pars : context) 
     type_inddecls Σ pars Γ (Build_one_inductive_body na ty kelim cstrs projs :: l).
 
 Definition type_inductive `{checker_flags} Σ inds :=
+  let cstrs := add_local_constraints inds.(ind_universes) (snd Σ) in
+  let Σ := (fst Σ, cstrs) in
   (** FIXME: should be pars ++ arities w/o params *)
-  type_inddecls Σ [] (arities_context inds) inds.
+  type_inddecls Σ [] (arities_context inds.(ind_bodies)) inds.(ind_bodies).
 
 (** *** Typing of constant declarations *)
 
 Definition type_constant_decl `{checker_flags} Σ d :=
+  let cstrs := add_local_constraints d.(cst_universes) (snd Σ) in
+  let Σ := (fst Σ, cstrs) in
   match d.(cst_body) with
   | Some trm => Σ ;;; [] |- trm : d.(cst_type)
   | None => isType Σ [] d.(cst_type)
   end.
 
 Definition type_global_decl `{checker_flags} Σ decl :=
-  match decl with  (* TODO universes *)
+  match decl with
   | ConstantDecl id d => type_constant_decl Σ d
-  | InductiveDecl ind inds => type_inductive Σ inds.(ind_bodies)
+  | InductiveDecl ind inds => type_inductive Σ inds
   end.
 
 (** *** Typing of global environment
@@ -1000,45 +1004,44 @@ Lemma typing_ind_env `{cf : checker_flags} :
         Forall_decls_typing (snd Σ) (fun Σ' t ty => P (Σ', snd Σ) [] t ty) (fst Σ) ->
         P Σ Γ (tConst cst u) (subst_instance_constr u (cst_type decl))) ->
 
-        (forall Σ (wfΣ : wf Σ) (Γ : context) (ind : inductive) u univs (decl : one_inductive_body),
+    (forall Σ (wfΣ : wf Σ) (Γ : context) (ind : inductive) u univs (decl : one_inductive_body),
         declared_inductive (fst Σ) ind univs decl -> P Σ Γ (tInd ind u) (subst_instance_constr u (ind_type decl))) ->
-       (forall Σ (wfΣ : wf Σ) (Γ : context) (ind : inductive) (i : nat) u univs (decl : ident * term * nat)
-          (isdecl : declared_constructor (fst Σ) (ind, i) univs decl),
+    (forall Σ (wfΣ : wf Σ) (Γ : context) (ind : inductive) (i : nat) u univs (decl : ident * term * nat)
+            (isdecl : declared_constructor (fst Σ) (ind, i) univs decl),
         P Σ Γ (tConstruct ind i u) (type_of_constructor (fst Σ) (ind, i) univs u decl isdecl)) ->
-       (forall Σ (wfΣ : wf Σ) (Γ : context) (ind : inductive) u (npar : nat) (p c : term) (brs : list (nat * term))
-          (args : list term) (decl : mutual_inductive_body),
+    (forall Σ (wfΣ : wf Σ) (Γ : context) (ind : inductive) u (npar : nat) (p c : term) (brs : list (nat * term))
+            (args : list term) (decl : mutual_inductive_body),
         declared_minductive (fst Σ) (inductive_mind ind) decl ->
         forall univs ( decl' : one_inductive_body ),
-        declared_inductive (fst Σ) ind univs decl' ->
-        ind_npars decl = npar ->
-        let pars := firstn npar args in
-        forall (pty : term), Σ ;;; Γ |- p : pty -> P Σ Γ p pty ->
-        forall indctx pctx ps btys,
-        types_of_case pars p pty decl' = Some (indctx, pctx, ps, btys) ->
-        check_correct_arity (snd Σ) decl' ind u indctx pars pctx = true ->
-        Exists (fun sf : sort_family => universe_family ps = sf) (ind_kelim decl') ->
-        P Σ Γ p pty ->
-        Σ;;; Γ |- c : mkApps (tInd ind u) args ->
-        P Σ Γ c (mkApps (tInd ind u) args) ->
-        Forall2 (fun x y : nat * term => (fst x = fst y) * (Σ;;; Γ |- snd x : snd y)
-                                         * P Σ Γ (snd x) (snd y))%type brs btys ->
-        P Σ Γ (tCase (ind, npar) p c brs) (tApp p (skipn npar args ++ [c]))) ->
-       (forall Σ (wfΣ : wf Σ) (Γ : context) (p : projection) (c : term) u (decl : ident * term),
+          declared_inductive (fst Σ) ind univs decl' ->
+          ind_npars decl = npar ->
+          let pars := firstn npar args in
+          forall (pty : term), Σ ;;; Γ |- p : pty -> P Σ Γ p pty ->
+          forall indctx pctx ps btys,
+            types_of_case pars p pty decl' = Some (indctx, pctx, ps, btys) ->
+            check_correct_arity (snd Σ) decl' ind u indctx pars pctx = true ->
+            Exists (fun sf : sort_family => universe_family ps = sf) (ind_kelim decl') ->
+            P Σ Γ p pty ->
+            Σ ;;; Γ |- c : mkApps (tInd ind u) args ->
+            P Σ Γ c (mkApps (tInd ind u) args) ->
+            Forall2 (fun x y : nat * term => (fst x = fst y) * (Σ;;; Γ |- snd x : snd y)
+                                             * P Σ Γ (snd x) (snd y))%type brs btys ->
+            P Σ Γ (tCase (ind, npar) p c brs) (tApp p (skipn npar args ++ [c]))) ->
+    (forall Σ (wfΣ : wf Σ) (Γ : context) (p : projection) (c : term) u (decl : ident * term),
         declared_projection (fst Σ) p decl ->
         forall args : list term,
-        Σ ;;; Γ |- c : mkApps (tInd (fst (fst p)) u) args ->
-        P Σ Γ c (mkApps (tInd (fst (fst p)) u) args) ->
-        let ty := snd decl in P Σ Γ (tProj p c) (substl (c :: rev args) ty)) ->
-       (forall Σ (wfΣ : wf Σ) (Γ : context) (mfix : list (def term)) (n : nat) (isdecl : n < #|mfix|),
+          Σ ;;; Γ |- c : mkApps (tInd (fst (fst p)) u) args ->
+          P Σ Γ c (mkApps (tInd (fst (fst p)) u) args) ->
+          let ty := snd decl in P Σ Γ (tProj p c) (substl (c :: rev args) ty)) ->
+    (forall Σ (wfΣ : wf Σ) (Γ : context) (mfix : list (def term)) (n : nat) (isdecl : n < #|mfix|),
         let ty := dtype (safe_nth mfix (exist (fun n0 : nat => n0 < #|mfix|) n isdecl)) in
         P Σ Γ (tFix mfix n) ty) ->
-       (forall Σ (wfΣ : wf Σ) (Γ : context) (mfix : list (def term)) (n : nat) (isdecl : n < #|mfix|),
+    (forall Σ (wfΣ : wf Σ) (Γ : context) (mfix : list (def term)) (n : nat) (isdecl : n < #|mfix|),
         let ty := dtype (safe_nth mfix (exist (fun n0 : nat => n0 < #|mfix|) n isdecl)) in
         P Σ Γ (tCoFix mfix n) ty) ->
-       (forall Σ (wfΣ : wf Σ) (Γ : context) (t A B : term) (s : universe),
+    (forall Σ (wfΣ : wf Σ) (Γ : context) (t A B : term) (s : universe),
         Σ ;;; Γ |- t : A ->
-                       P Σ Γ t A -> Σ ;;; Γ |- B : tSort s -> P Σ Γ B (tSort s) -> Σ ;;; Γ |- A <= B -> P Σ Γ t B) ->
-
+        P Σ Γ t A -> Σ ;;; Γ |- B : tSort s -> P Σ Γ B (tSort s) -> Σ ;;; Γ |- A <= B -> P Σ Γ t B) ->
        env_prop P.
 Proof.
   unfold env_prop.

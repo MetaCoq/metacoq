@@ -4,6 +4,7 @@ From Translations Require Import translation_utils sigma.
 Import String Lists.List.ListNotations MonadNotation.
 Open Scope list_scope. Open Scope string_scope. Open Scope sigma_scope.
 
+Local Existing Instance config.default_checker_flags.
 
 Reserved Notation "'tsl_ty_param'".
 

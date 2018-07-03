@@ -3,6 +3,8 @@ From Translations Require Import translation_utils.
 Import String Lists.List.ListNotations MonadNotation.
 Open Scope list_scope. Open Scope string_scope.
 
+Local Existing Instance config.default_checker_flags.
+
 Set Primitive Projections.
 Record prod A B := pair { fst : A ; snd : B }.
 

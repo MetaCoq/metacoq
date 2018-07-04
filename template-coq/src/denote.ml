@@ -671,17 +671,19 @@ let rec run_template_program_rec (k : Evd.evar_map * Constr.t -> unit)  ((evm, p
   else if Constr.equal coConstr tmUnquote then
     match args with
     | t::[] ->
-       let (evm, t) = reduce_all env evm t in
-       let evdref = ref evm in
-       let t' = denote_term evdref t in
-       let evm = !evdref in
-       let typ = EConstr.to_constr evm (Retyping.get_type_of env evm (EConstr.of_constr t')) in
-       (* todo: we could declare a new universe <= Coq.Init.Specif.7 or 8 instead of using [texistT_typed_term] *)
-       (* let (evm, u) = Evd.fresh_sort_in_family env evm Sorts.InType in *)
-       (* (env, evm, Constr.mkApp (texistT, [|Constr.mkSort u; *)
-       (*                                   Constr.mkLambda (Names.Name (Names.Id.of_string "T"), Constr.mkSort u, Constr.mkRel 1); *)
-       (*                                   typ; t'|])) *)
-       k (evm, Constr.mkApp (texistT_typed_term, [|typ; t'|]))
+       (try
+         let (evm, t) = reduce_all env evm t in
+         let evdref = ref evm in
+         let t' = denote_term evdref t in
+         let evm = !evdref in
+         let typ = EConstr.to_constr evm (Retyping.get_type_of env evm (EConstr.of_constr t')) in
+         (* todo: we could declare a new universe <= Coq.Init.Specif.7 or 8 instead of using [texistT_typed_term] *)
+         (* let (evm, u) = Evd.fresh_sort_in_family env evm Sorts.InType in *)
+         (* (env, evm, Constr.mkApp (texistT, [|Constr.mkSort u; *)
+         (*                                   Constr.mkLambda (Names.Name (Names.Id.of_string "T"), Constr.mkSort u, Constr.mkRel 1); *)
+         (*                                   typ; t'|])) *)
+         k (evm, Constr.mkApp (texistT_typed_term, [|typ; t'|]))
+       with Reduction.NotArity -> CErrors.user_err (str "unquoting ill-typed term"))
     | _ -> monad_failure "tmUnquote" 1
   else if Constr.equal coConstr tmUnquoteTyped then
     match args with

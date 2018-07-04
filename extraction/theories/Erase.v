@@ -2,7 +2,7 @@
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
 From Template Require Import config utils monad_utils Ast univ Induction LiftSubst UnivSubst Typing Checker Retyping MetaTheory WcbvEval.
-From Template Require AstUtils Erasure.Ast Erasure.WcbvEval.
+From Extraction Require Ast WcbvEval.
 Require Import String.
 Local Open Scope string_scope.
 Set Asymmetric Patterns.

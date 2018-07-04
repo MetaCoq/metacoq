@@ -2,7 +2,7 @@
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
 From Template Require Import config utils Ast univ.
-From Template.Erasure Require Import Ast Induction LiftSubst UnivSubst Typing.
+From Extraction Require Import Ast Induction LiftSubst UnivSubst Typing.
 From Template Require AstUtils.
 Require Import String.
 Local Open Scope string_scope.
@@ -298,16 +298,3 @@ Section Wcbv.
   Admitted. (* FIXME complete *)
 
 End Wcbv.
-
-(** Well-typed closed programs can't go wrong: they always evaluate to a value. *)
-
-Conjecture closed_typed_wcbeval : forall (Σ : global_context) t T,
-    Σ ;;; [] |- t : T -> exists u, eval (fst Σ) [] t u.
-
-(** Evaluation is a subrelation of reduction: *)
-
-Lemma wcbeval_red : forall (Σ : global_declarations) Γ t u,
-    eval Σ Γ t u -> red Σ Γ t u.
-Proof.
-  induction 1; try constructor; eauto.
-Admitted. (** TODO: Congruence lemmas of red for all constructions (as done in Coq in Coq) *)

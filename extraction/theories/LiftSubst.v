@@ -1,10 +1,10 @@
 (* Distributed under the terms of the MIT license.   *)
 
 Require Import List Program.
-Require Import Erasure.Ast.
+Require Import Ast.
 Require Import BinPos.
 Require Import Coq.Arith.Compare_dec Bool.
-Require Import Erasure.Induction.
+Require Import Induction.
 
 (** * Lifting and substitution for the AST
 

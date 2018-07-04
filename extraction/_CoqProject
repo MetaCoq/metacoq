@@ -1,0 +1,10 @@
+-R theories Extraction
+-Q ../template-coq/theories Template
+
+theories/Ast.v
+theories/Induction.v
+theories/LiftSubst.v
+theories/UnivSubst.v
+theories/WcbvEval.v
+theories/Typing.v
+theories/Erase.v

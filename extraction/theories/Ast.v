@@ -6,9 +6,9 @@ Require Import List. Import ListNotations.
 From Template Require Import monad_utils.
 From Template Require Export univ uGraph Ast.
 
-(** Erased terms
+(** Extracted terms
 
-  These are the terms produced by erasure:
+  These are the terms produced by extraction:
   compared to kernel terms, all proofs are translated to [tBox] and
   casts are removed.
 *)

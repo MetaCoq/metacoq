@@ -30,7 +30,7 @@ Definition my_projT2 (t : typed_term) : my_projT1 t := @projT2 Type (fun T => T)
 
 (** *** The TemplateMonad type *)
 
-Inductive TemplateMonad@{t u} : Type@{t} -> Type :=
+Cumulative Inductive TemplateMonad@{t u} : Type@{t} -> Type :=
 (* Monadic operations *)
 | tmReturn : forall {A:Type@{t}}, A -> TemplateMonad A
 | tmBind : forall {A B : Type@{t}}, TemplateMonad A -> (A -> TemplateMonad B)
@@ -72,8 +72,6 @@ Inductive TemplateMonad@{t u} : Type@{t} -> Type :=
 | tmExistingInstance : ident -> TemplateMonad unit
 | tmInferInstance : forall A : Type@{t}, TemplateMonad (option A)
 .
-
-Print TemplateMonad.
 
 (** This allow to use notations of MonadNotation *)
 

@@ -1,5 +1,6 @@
 Require Import List.
 
+Set Universe Polymorphism.
 
 Class Monad@{d c} (m : Type@{d} -> Type@{c}) : Type :=
 { ret : forall {t : Type@{d}}, t -> m t

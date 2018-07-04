@@ -524,8 +524,8 @@ let rec run_template_program_rec (k : Evd.evar_map * Constr.t -> unit)  ((evm, p
   let (coConstr, args) = app_full pgm [] in
   let (glob_ref, universes) =
     try
-      (* todo: copied from engine/univGen.ml *)
-      match Constr.kind coConstr with
+      let open Constr in
+      match kind coConstr with
       | Const (c, u) -> ConstRef c, u
       | Ind (i, u) -> IndRef i, u
       | Construct (c, u) -> ConstructRef c, u
@@ -702,8 +702,10 @@ let rec run_template_program_rec (k : Evd.evar_map * Constr.t -> unit)  ((evm, p
            match texistT_typed_term with
            | ConstructRef ctor ->
              let u = (Univ.Instance.to_array universes).(1) in
-               (* todo: we should add a constraint that the universe of `typ` is less than or equal to `u`. *)
-               (evm, Constr.mkApp (Constr.mkConstructU (ctor, Univ.Instance.of_array [|u|]), [|typ; t'|]))
+             let term = Constr.mkApp
+               (Constr.mkConstructU (ctor, Univ.Instance.of_array [|u|]), [|typ; t'|]) in
+             let evm, _ = Typing.type_of env evm (EConstr.of_constr term) in
+               (evm, term)
          in
            k (make_typed_term typ t' evm)
         with Reduction.NotArity -> CErrors.user_err (str "unquoting ill-typed term"))

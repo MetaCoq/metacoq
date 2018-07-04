@@ -136,6 +136,8 @@ checker/src/mSetWeakList.ml
 checker/src/mSetWeakList.mli
 checker/src/monad_utils.ml
 checker/src/monad_utils.mli
+checker/src/templateMonad.ml
+checker/src/templateMonad.mli
 checker/src/nat0.ml
 checker/src/nat0.mli
 checker/src/peanoNat.ml

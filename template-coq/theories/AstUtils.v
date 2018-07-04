@@ -1,6 +1,6 @@
 From Coq Require Import String Bool.
 From Coq Require Import List.
-From Template Require Import Ast utils monad_utils.
+From Template Require Import Ast TemplateMonad utils monad_utils.
 Import List.ListNotations MonadNotation.
 
 Definition map_decl f (d : context_decl) :=
@@ -21,7 +21,7 @@ Definition string_of_gref gr :=
   end.
 
 Definition gref_eq_dec
-  : forall gr gr' : global_reference, {gr = gr'} + {~ gr = gr'}.
+: forall gr gr' : global_reference, {gr = gr'} + {~ gr = gr'}.
   decide equality; eauto with eq_dec.
   destruct i, i0.
   decide equality; eauto with eq_dec.

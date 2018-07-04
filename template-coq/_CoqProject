@@ -17,6 +17,7 @@ theories/monad_utils.v
 theories/kernel/univ.v
 theories/kernel/uGraph.v
 theories/Ast.v
+theories/TemplateMonad.v
 theories/AstUtils.v
 theories/Loader.v
 theories/Induction.v

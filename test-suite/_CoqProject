@@ -24,3 +24,6 @@ opaque.v
 proj.v
 TypingTests.v
 univ.v
+tmInferInstance.v
+issue27.v
+issue28.v

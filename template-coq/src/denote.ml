@@ -671,7 +671,7 @@ let rec run_template_program_rec (k : Evd.evar_map * Constr.t -> unit)  ((evm, p
   else if Constr.equal coConstr tmUnquote then
     match args with
     | t::[] ->
-       try
+       (try
          let (evm, t) = reduce_all env evm t in
          let evdref = ref evm in
          let t' = denote_term evdref t in

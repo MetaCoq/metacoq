@@ -382,8 +382,6 @@ let denote_term evdref (trm: Constr.t) : Constr.t =
     | _ ->  not_supported_verb trm "big_case"
   in aux trm
 
-let constant str = Universes.constr_of_global (Smartlocate.locate_global_with_alias (None, Libnames.qualid_of_string str)) 
-
 let denote_reduction_strategy evm (trm : quoted_reduction_strategy) : Redexpr.red_expr =
   let env = Global.env () in
   let (evm, pgm) = reduce_hnf env evm trm in
@@ -398,7 +396,7 @@ let denote_reduction_strategy evm (trm : quoted_reduction_strategy) : Redexpr.re
   else if Term.eq_constr trm tunfold then (match args with name (* to unfold *) :: _ ->
                                                             let (evm, name) = reduce_all env evm name in
                                                             let name = unquote_ident name in
-                                                            (try Unfold [AllOccurrences, EvalConstRef (fst (EConstr.destConst evm (EConstr.of_constr (constant (Names.Id.to_string name))))) ]
+                                                            (try Unfold [AllOccurrences, Tacred.evaluable_of_global_reference env (Nametab.global (CAst.make (Libnames.Qualid (Libnames.qualid_of_ident name))))]
                                                              with
                                                                _ -> CErrors.user_err (str "Constant not found or not a constant: " ++ Pp.str (Names.Id.to_string name)))
                                                          | _ -> raise  (Failure "ill-typed reduction strategy"))

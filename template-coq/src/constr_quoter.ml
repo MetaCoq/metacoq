@@ -53,7 +53,7 @@ struct
   let resolve_symbol (path : string list) (tm : string) : Constr.t =
     gen_constant_in_modules contrib_name [path] tm
 
-  let resolve_symbol_p (path : string list) (tm : string) : global_reference =
+  let resolve_symbol_p (path : string list) (tm : string) : Names.GlobRef.t =
     Coqlib.gen_reference_in_modules contrib_name [path] tm
 
   let pkg_datatypes = ["Coq";"Init";"Datatypes"]

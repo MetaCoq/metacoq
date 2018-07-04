@@ -383,8 +383,8 @@ let denote_term evdref (trm: Constr.t) : Constr.t =
   in aux trm
 
 let denote_reduction_strategy env evm (trm : quoted_reduction_strategy) : Redexpr.red_expr =
-  let (evm, pgm) = reduce_hnf env evm trm in
-  let (trm, args) = app_full pgm [] in
+  let trm = Reduction.whd_all env trm in
+  let (trm, args) = app_full trm [] in
   (* from g_tactic.ml4 *)
   let default_flags = Redops.make_red_flag [FBeta;FMatch;FFix;FCofix;FZeta;FDeltaBut []] in
   if Constr.equal trm tcbv then Cbv default_flags
@@ -392,12 +392,12 @@ let denote_reduction_strategy env evm (trm : quoted_reduction_strategy) : Redexp
   else if Constr.equal trm thnf then Hnf
   else if Constr.equal trm tall then Cbv all_flags
   else if Constr.equal trm tlazy then Lazy all_flags
-  else if Term.eq_constr trm tunfold then
+  else if Constr.equal trm tunfold then
     match args with
     | name (* to unfold *) :: _ ->
-       let (evm, name) = reduce_all env evm name in
+       let name = reduce_all env evm name in
        let name = unquote_ident name in
-       (try Unfold [AllOccurrences, Tacred.evaluable_of_global_reference env (Nametab.global (CAst.make (Libnames.Qualid (Libnames.qualid_of_ident name))))]
+       (try Unfold [Locus.AllOccurrences, Tacred.evaluable_of_global_reference env (Nametab.global (CAst.make (Libnames.Qualid (Libnames.qualid_of_ident name))))]
         with
         | _ -> CErrors.user_err (str "Constant not found or not a constant: " ++ Pp.str (Names.Id.to_string name)))
     | _ -> raise  (Failure "ill-typed reduction strategy")
@@ -476,7 +476,7 @@ let denote_mind_entry_universes trm =
  *     bad_term_verb trm "non-constructor" *)
 
 let declare_inductive (env: Environ.env) (evm: Evd.evar_map) (body: Constr.t) : unit =
-  let (evm,body) = reduce_all env evm body in
+  let body = reduce_all env evm body in
   let (_,args) = app_full body [] in (* check that the first component is Build_mut_ind .. *)
   let evdref = ref evm in
   let one_ind b1 : Entries.one_inductive_entry =
@@ -521,7 +521,7 @@ let monad_failure_full s k prg =
 
 let rec run_template_program_rec (k : Evd.evar_map * Constr.t -> unit)  ((evm, pgm) : Evd.evar_map * Constr.t) : unit =
   let env = Global.env () in
-  let (evm, pgm) = reduce_hnf env evm pgm in
+  let pgm = Reduction.whd_all env pgm in
   let (coConstr, args) = app_full pgm [] in
   let (glob_ref, universes) =
     try
@@ -547,9 +547,7 @@ let rec run_template_program_rec (k : Evd.evar_map * Constr.t -> unit)  ((evm, p
   else if Globnames.eq_gr glob_ref tmDefinition then
     match args with
     | name::typ::body::[] ->
-       let (evm, name) = reduce_all env evm name in
-       (* todo: let the user choose the reduction used for the type *)
-       let (evm, typ) = reduce_hnf env evm typ in
+       let name = reduce_all env evm name in
        let univs =
          if Flags.is_universe_polymorphism () then Polymorphic_const_entry (Evd.to_universe_context evm)
          else Monomorphic_const_entry (Evd.universe_context_set evm) in
@@ -559,8 +557,7 @@ let rec run_template_program_rec (k : Evd.evar_map * Constr.t -> unit)  ((evm, p
   else if Globnames.eq_gr glob_ref tmAxiom then
     match args with
     | name::typ::[] ->
-       let (evm, name) = reduce_all env evm name in
-       let (evm, typ) = reduce_hnf env evm typ in
+       let name = reduce_all env evm name in
        let param = Entries.ParameterEntry (None, (typ, Monomorphic_const_entry (Evd.universe_context_set evm)), None) in
        let n = Declare.declare_constant (unquote_ident name) (param, Decl_kinds.IsDefinition Decl_kinds.Definition) in
        k (evm, Constr.mkConst n)
@@ -568,8 +565,7 @@ let rec run_template_program_rec (k : Evd.evar_map * Constr.t -> unit)  ((evm, p
   else if Globnames.eq_gr glob_ref tmLemma then
     match args with
     | name::typ::[] ->
-       let (evm, name) = reduce_all env evm name in
-       let (evm, typ) = reduce_hnf env evm typ in
+       let name = reduce_all env evm name in
        let poly = Flags.is_universe_polymorphism () in
        let kind = (Decl_kinds.Global, poly, Decl_kinds.Definition) in
        let hole = CAst.make (Constrexpr.CHole (None, Misctypes.IntroAnonymous, None)) in
@@ -593,10 +589,9 @@ let rec run_template_program_rec (k : Evd.evar_map * Constr.t -> unit)  ((evm, p
   else if Globnames.eq_gr glob_ref tmMkDefinition then
     match args with
     | name::body::[] ->
-       let (evm, name) = reduce_all env evm name in
-       let (evm, def) = reduce_all env evm body in
+       let name = reduce_all env evm name in
        let evdref = ref evm in
-       let trm = denote_term evdref def in
+       let trm = denote_term evdref body in
        let (evm, _) = Typing.type_of env !evdref (EConstr.of_constr trm) in
        let _ = Declare.declare_definition ~kind:Decl_kinds.Definition (unquote_ident name) (trm, Monomorphic_const_entry (Evd.universe_context_set evm)) in
        k (evm, unit_tt)
@@ -614,7 +609,7 @@ let rec run_template_program_rec (k : Evd.evar_map * Constr.t -> unit)  ((evm, p
   else if Globnames.eq_gr glob_ref tmQuoteInductive then
     match args with
     | name::[] ->
-       let (evm, name) = reduce_all env evm name in
+       let name = reduce_all env evm name in
        let name = unquote_string name in
        let (dp, nm) = split_name name in
        (match Nametab.locate (Libnames.make_qualid dp nm) with
@@ -633,11 +628,11 @@ let rec run_template_program_rec (k : Evd.evar_map * Constr.t -> unit)  ((evm, p
     | _ -> monad_failure "tmQuoteInductive" 1
   else if Globnames.eq_gr glob_ref tmQuoteConstant then
     match args with
-    | name::b::[] ->
-       let (evm, name) = reduce_all env evm name in
+    | name::bypass::[] ->
+       let name = reduce_all env evm name in
        let name = unquote_string name in
-       let (evm, b) = reduce_all env evm b in
-       let bypass = unquote_bool b in
+       let bypass = reduce_all env evm bypass in
+       let bypass = unquote_bool bypass in
        let entry = TermReify.quote_entry_aux bypass env evm name in
        let entry =
          match entry with
@@ -682,7 +677,7 @@ let rec run_template_program_rec (k : Evd.evar_map * Constr.t -> unit)  ((evm, p
     match args with
     | s(*reduction strategy*)::_(*type*)::trm::[] ->
        let red = denote_reduction_strategy env evm s in
-       let (evm, trm) = reduce_all ~red env evm trm
+       let (evm, trm) = reduce env evm red trm
        in k (evm, trm)
     | _ -> monad_failure "tmEval" 3
   else if Globnames.eq_gr glob_ref tmMkInductive then
@@ -694,7 +689,7 @@ let rec run_template_program_rec (k : Evd.evar_map * Constr.t -> unit)  ((evm, p
     match args with
     | t::[] ->
        (try
-         let (evm, t) = reduce_all env evm t in
+         let t = reduce_all env evm t in
          let evdref = ref evm in
          let t' = denote_term evdref t in
          let evm = !evdref in
@@ -714,7 +709,7 @@ let rec run_template_program_rec (k : Evd.evar_map * Constr.t -> unit)  ((evm, p
   else if Globnames.eq_gr glob_ref tmUnquoteTyped then
     match args with
     | typ::t::[] ->
-       let (evm, t) = reduce_all env evm t in
+       let t = reduce_all env evm t in
        let evdref = ref evm in
        let t' = denote_term evdref t in
        let t' = Typing.e_solve_evars env evdref (EConstr.of_constr t') in

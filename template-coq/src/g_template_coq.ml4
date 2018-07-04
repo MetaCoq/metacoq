@@ -90,7 +90,7 @@ VERNAC COMMAND EXTEND Make_vernac_reduce CLASSIFIED AS SIDEFF
 	let def, uctx = Constrintern.interp_constr env evm def in
         let evm = Evd.from_ctx uctx in
         let (evm,rd) = Tacinterp.interp_redexp env evm rd in
-	let (evm,def) = Quoter.reduce_all env evm ~red:rd (EConstr.to_constr evm def) in
+	let (evm,def) = Quoter.reduce env evm rd (EConstr.to_constr evm def) in
 	let trm = Constr_quoter.TermReify.quote_term env def in
 	ignore(Declare.declare_definition
                  ~kind:Decl_kinds.Definition
@@ -127,7 +127,7 @@ VERNAC COMMAND EXTEND Unquote_vernac_red CLASSIFIED AS SIDEFF
 	let (trm, uctx) = Constrintern.interp_constr env evm def in
         let evm = Evd.from_ctx uctx in
         let (evm,rd) = Tacinterp.interp_redexp env evm rd in
-	let (evm,trm) = Quoter.reduce_all env evm ~red:rd (EConstr.to_constr evm trm) in
+	let (evm,trm) = Quoter.reduce env evm rd (EConstr.to_constr evm trm) in
         let evdref = ref evm in
         let trm = Denote.denote_term evdref trm in
 	let _ = Declare.declare_definition ~kind:Decl_kinds.Definition name

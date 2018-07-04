@@ -208,15 +208,13 @@ module type Quoter = sig
 end
 
 
-let reduce_hnf env evm (trm : Constr.t) =
-  let trm = Tacred.hnf_constr env evm (EConstr.of_constr trm) in
-  (evm, EConstr.to_constr evm trm)
-
-let reduce_all env evm ?(red=Genredexpr.Cbv Redops.all_flags) trm =
+let reduce env evm red trm =
   let red, _ = Redexpr.reduction_of_red_expr env red in
   let evm, red = red env evm (EConstr.of_constr trm) in
   (evm, EConstr.to_constr evm red)
 
+let reduce_all env evm trm =
+  EConstr.to_constr evm (Reductionops.nf_all env evm (EConstr.of_constr trm))
 
 
 module Reify (Q : Quoter) =

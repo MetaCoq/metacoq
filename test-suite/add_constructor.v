@@ -30,7 +30,7 @@ Fixpoint try_remove_n_lambdas (n : nat) (t : term) {struct n} : term :=
 (* [add_ctor] add a constructor to a [mutual_inductive_body]
  (that is a reified declaration of an inductive). *)
 
-Definition add_ctor (mind : mutual_inductive_body) (ind0 : inductive) (idc : ident) (ctor : term)
+Polymorphic Definition add_ctor (mind : mutual_inductive_body) (ind0 : inductive) (idc : ident) (ctor : term)
   : mutual_inductive_body
   := let i0 := inductive_ind ind0 in
      {| ind_npars := mind.(ind_npars) ;
@@ -51,7 +51,7 @@ Definition add_ctor (mind : mutual_inductive_body) (ind0 : inductive) (idc : ide
 (* [add_constructor] is a new command (in Template Coq style) *)
 (* which do what we want *)
 
-Definition add_constructor {A} (ind : A) (idc : ident) {B} (ctor : B)
+Polymorphic Definition add_constructor {A} (ind : A) (idc : ident) {B} (ctor : B)
   : TemplateMonad unit
   := tm <- tmQuote ind ;;
      match tm with

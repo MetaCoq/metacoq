@@ -177,7 +177,7 @@ Notation " Γ ,, d " := (snoc Γ d) (at level 20, d at next level).
 (** *** Environments *)
 
 (** See [one_inductive_body] from [declarations.ml]. *)
-Record one_inductive_body := {
+Record one_inductive_body : Set := {
   ind_name : ident;
   ind_type : term; (* Closed arity *)
   ind_kelim : list sort_family; (* Allowed elimination sorts *)

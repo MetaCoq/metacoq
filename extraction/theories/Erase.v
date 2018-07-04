@@ -2,7 +2,7 @@
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
 From Template Require Import config utils monad_utils Ast univ Induction LiftSubst UnivSubst Typing Checker Retyping MetaTheory WcbvEval.
-From Extraction Require Ast WcbvEval.
+From Extraction Require Ast Typing WcbvEval.
 Require Import String.
 Local Open Scope string_scope.
 Set Asymmetric Patterns.
@@ -16,17 +16,17 @@ Definition is_prop_sort s :=
   | None => false
   end.
 
-Module E := Erasure.Ast.
+Module E := Extraction.Ast.
 
 Section Erase.
   Context `{F : Fuel}.
   Context (Σ : global_context).
 
-  Definition is_box c := match c with
-                         | E.tBox => true
-                         | _ => false
-                         end.
-
+  Definition is_box c :=
+    match c with
+    | E.tBox => true
+    | _ => false
+    end.
 
   Definition on_snd_map {A B C} (f : B -> C) (p : A * B) :=
     (fst p, f (snd p)).
@@ -100,6 +100,54 @@ Section Erase.
      end.
 
 End Erase.
+
+Definition optM {M : Type -> Type} `{Monad M} {A B} (x : option A) (f : A -> M B) : M (option B) :=
+  match x with
+  | Some x => y <- f x ;; ret (Some y)
+  | None => ret None
+  end.
+
+Definition erase_constant_body `{F:Fuel} Σ (cb : constant_body) : typing_result E.constant_body :=
+  ty <- erase Σ [] cb.(cst_type) ;;
+  body <- optM cb.(cst_body) (fun b => erase Σ [] b);;
+  ret {| E.cst_universes := cb.(cst_universes);
+         E.cst_type := ty; E.cst_body := body; |}.
+
+Definition erase_one_inductive_body `{F:Fuel} Σ
+           (oib : one_inductive_body) : typing_result E.one_inductive_body :=
+  type <- erase Σ [] oib.(ind_type) ;;
+  ctors <- monad_map (fun '(x, y, z) => y' <- erase Σ [] y;; ret (x, y', z)) oib.(ind_ctors);;
+  projs <- monad_map (fun '(x, y) => y' <- erase Σ [] y;; ret (x, y')) oib.(ind_projs);;
+  ret {| E.ind_name := oib.(ind_name);
+         E.ind_type := type;
+         E.ind_kelim := oib.(ind_kelim);
+         E.ind_ctors := ctors;
+         E.ind_projs := projs |}.
+
+Definition erase_mutual_inductive_body `{F:Fuel} Σ
+           (mib : mutual_inductive_body) : typing_result E.mutual_inductive_body :=
+  bodies <- monad_map (erase_one_inductive_body Σ) mib.(ind_bodies) ;;
+  ret {| E.ind_npars := mib.(ind_npars);
+         E.ind_bodies := bodies;
+         E.ind_universes := mib.(ind_universes) |}.
+
+Fixpoint erase_global_decls univs Σ : typing_result E.global_declarations :=
+  match Σ with
+  | [] => ret []
+  | ConstantDecl kn cb :: Σ =>
+    cb' <- erase_constant_body (Σ, univs) cb;;
+    Σ' <- erase_global_decls univs Σ;;
+    ret (E.ConstantDecl kn cb' :: Σ')
+  | InductiveDecl kn mib :: Σ =>
+    mib' <- erase_mutual_inductive_body (Σ, univs) mib;;
+    Σ' <- erase_global_decls univs Σ;;
+    ret (E.InductiveDecl kn mib' :: Σ')
+  end.
+
+Definition erase_global Σ :=
+  let '(Σ, univs) := Σ in
+  Σ' <- erase_global_decls univs Σ;;
+  ret (Σ', univs).
 
 (** * Erasure correctness
     
@@ -231,27 +279,26 @@ Fixpoint obs_eq (Σ : global_context) (v v' : term) (T : term) (s : universe) : 
     obs_eq Σ f f'.                                     
 *)                      
 
-Record extraction_post (Σ : global_context) (t' v : term) :=
+Record extraction_post (Σ : global_context) (Σ' : Ast.global_context) (t : term) (t' : E.term) :=
   { extr_value : E.term;
-    extr_eval : EEval.eval Σ [] t' extr_value;
+    extr_eval : Extraction.WcbvEval.eval (fst Σ') [] t' extr_value;
     (* extr_equiv : obs_eq Σ v extr_value *) }.
-    
-
 
 (** The extraction correctness theorem we conjecture. *)
 
 Definition erasure_correctness :=
   forall Σ t T, extraction_pre Σ t T ->
-    forall (f : Fuel) (t' : term),
-      erase Σ [] t = Checked t' ->
-      forall v, eval Σ [] t v ->
-      exists v', E.EEval Σ [] t' v'.
+  forall v, eval Σ [] t v ->
+  forall (f : Fuel) Σ' (t' : E.term),
+    erase Σ [] t = Checked t' ->
+    erase_global Σ = Checked Σ' ->
+    extraction_post Σ Σ' t t'.
       
 Conjecture erasure_correct : erasure_correctness.
 
 Quote Recursively Definition zero_syntax := 0.
 
-Definition erase_rec (t : global_declarations * term) : typing_result term :=
+Definition erase_rec (t : global_declarations * term) : typing_result E.term :=
   let '(Σ, t) := t in
   erase (reconstruct_global_context Σ) [] t.
 

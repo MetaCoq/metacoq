@@ -1,5 +1,6 @@
 -R theories Extraction
 -Q ../template-coq/theories Template
+-I ../template-coq/src
 
 theories/Ast.v
 theories/Induction.v

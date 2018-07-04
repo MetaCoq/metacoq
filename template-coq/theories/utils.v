@@ -4,6 +4,15 @@ Open Scope string_scope.
 
 Class Fuel := { fuel : nat }.
 
+(** Such a useful tactic it should be part of the stdlib. *)
+Ltac forward_gen H tac :=
+  match type of H with
+  | ?X -> _ => let H' := fresh in assert (H':X) ; [tac|specialize (H H'); clear H']
+  end.
+
+Tactic Notation "forward" constr(H) := forward_gen H ltac:(idtac).
+Tactic Notation "forward" constr(H) "by" tactic(tac) := forward_gen H tac.
+
 Record squash (A : Type) : Prop := { _ : A }.
 
 Definition string_of_nat n :=

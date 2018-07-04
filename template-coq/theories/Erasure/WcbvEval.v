@@ -1,12 +1,14 @@
 (* Distributed under the terms of the MIT license.   *)
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
-From Template Require Import Template utils Ast univ Induction LiftSubst UnivSubst Typing.
-From Template.Erasure Require Import Ast.
+From Template Require Import config utils Ast univ.
+From Template.Erasure Require Import Ast Induction LiftSubst UnivSubst Typing.
 From Template Require AstUtils.
 Require Import String.
 Local Open Scope string_scope.
 Set Asymmetric Patterns.
+
+Existing Instance config.default_checker_flags.
 
 
 (** * Weak (head) call-by-value evaluation strategy.
@@ -21,6 +23,37 @@ Set Asymmetric Patterns.
   the extraction conjecture that can be applied to Coq terms to produce
   (untyped) terms where all proofs are erased to a dummy value. *)
 
+(** Helpers for reduction *)
+
+Definition iota_red npar c args brs :=
+  (mkApps (snd (List.nth c brs (0, tBox))) (List.skipn npar args)).
+
+Definition fix_subst (l : mfixpoint term) :=
+  let fix aux n :=
+      match n with
+      | 0 => []
+      | S n => tFix l n :: aux n
+      end
+  in aux (List.length l).
+
+Definition unfold_fix (mfix : mfixpoint term) (idx : nat) :=
+  match List.nth_error mfix idx with
+  | Some d => Some (d.(rarg), substl (fix_subst mfix) d.(dbody))
+  | None => None
+  end.
+
+Definition is_constructor n ts :=
+  match List.nth_error ts n with
+  | Some a =>
+    match a with
+    | tConstruct _ _ _ => true
+    | tApp (tConstruct _ _ _) _ => true
+    | _ => false
+    end
+  | None => false
+  end.
+
+
 (** ** Big step version of weak cbv beta-zeta-iota-fix-delta reduction.
 
   TODO: CoFixpoints *)
@@ -31,6 +64,9 @@ Section Wcbv.
 
   Inductive eval : term -> term -> Prop :=
   (** Reductions *)
+  | eval_box : eval tBox tBox
+
+
   (** Beta *)
   | eval_beta f na t b a a' l res :
       eval f (tLambda na t b) ->
@@ -102,14 +138,13 @@ Section Wcbv.
       eval (tApp f l) (tApp (tConstruct i k u) l')
 
   (* | evar ev l l' : evals l l' -> eval (tEvar ev l) (tEvar ev l') *)
-  | eval_evar ev l : eval (tEvar ev l) (tEvar ev l) (* Lets say it is a value for now *)
-
-  | eval_cast M1 k M2 N1 : eval M1 N1 -> eval (tCast M1 k M2) N1.
+  | eval_evar ev l : eval (tEvar ev l) (tEvar ev l) (* Lets say it is a value for now *).
 
   (** The right induction principle for the nested [Forall] cases: *)
 
   Lemma eval_evals_ind :
     forall P : term -> term -> Prop,
+      (P tBox tBox) ->
       (forall (f : term) (na : name) (t b a a' : term) (l : list term) (res : term),
           eval f (tLambda na t b) ->
           P f (tLambda na t b) ->
@@ -173,11 +208,9 @@ Section Wcbv.
 
       (forall (ev : nat) (l : list term), P (tEvar ev l) (tEvar ev l)) ->
 
-      (forall (M1 : term) (k : cast_kind) (M2 N1 : term), eval M1 N1 -> P M1 N1 -> P (tCast M1 k M2) N1) ->
-
       forall t t0 : term, eval t t0 -> P t t0.
   Proof.
-    intros P Hbeta Hlet Hreldef Hrelvar Hcase Hfix Hconst Hproj Hlam Hprod Hind Hindapp Hcstr Hcstrapp Hevar Hcast.
+    intros P Hbox Hbeta Hlet Hreldef Hrelvar Hcase Hfix Hconst Hproj Hlam Hprod Hind Hindapp Hcstr Hcstrapp Hevar.
     fix 3. destruct 1;
              try match goal with [ H : _ |- _ ] =>
                              match type of H with
@@ -201,6 +234,7 @@ Section Wcbv.
       de Bruijn variables. *)
 
   Inductive value : term -> Prop :=
+  | value_tBox : value tBox
   | value_tRel i : value (tRel i)
   | value_tEvar ev l : value (tEvar ev l)
   | value_tLam na t b : value (tLambda na t b)
@@ -209,6 +243,7 @@ Section Wcbv.
   | value_tConstruct i k u l : List.Forall value l -> value (mkApps (tConstruct i k u) l).
 
   Lemma value_values_ind : forall P : term -> Prop,
+      (P tBox) ->
        (forall i : nat, P (tRel i)) ->
        (forall (ev : nat) (l : list term), P (tEvar ev l)) ->
        (forall (na : name) (t b : term), P (tLambda na t b)) ->
@@ -217,13 +252,13 @@ Section Wcbv.
        (forall (i : inductive) (k : nat) (u : universe_instance) (l : list term),
         List.Forall value l -> List.Forall P l -> P (mkApps (tConstruct i k u) l)) -> forall t : term, value t -> P t.
   Proof.
-    intros P ??????.
+    intros P ???????.
     fix value_values_ind 2. destruct 1. 1-4:clear value_values_ind; auto.
-    apply H3. apply H5.
-    revert l H5. fix aux 2. destruct 1. constructor; auto.
+    apply H3. apply H4. apply H6.
+    revert l H6. fix aux 2. destruct 1. constructor; auto.
     constructor. now apply value_values_ind. now apply aux.
-    apply H4. apply H5.
-    revert l H5. fix aux 2. destruct 1. constructor; auto.
+    apply H5. apply H6.
+    revert l H6. fix aux 2. destruct 1. constructor; auto.
     constructor. now apply value_values_ind. now apply aux.
   Defined.
 

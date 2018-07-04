@@ -947,14 +947,6 @@ Fixpoint globenv_size (Σ : global_declarations) : size :=
     - size of the global_context, including size of the global declarations in it
     - size of the derivation. *)
 
-(** Such a useful tactic it should be part of the stdlib. *)
-Ltac forward_gen H tac :=
-  match type of H with
-  | ?X -> _ => let H' := fresh in assert (H':X) ; [tac|specialize (H H'); clear H']
-  end.
-
-Tactic Notation "forward" constr(H) := forward_gen H ltac:(idtac).
-Tactic Notation "forward" constr(H) "by" tactic(tac) := forward_gen H tac.
 Require Import Wf.
 
 (** Define non-dependent lexicographic products *)

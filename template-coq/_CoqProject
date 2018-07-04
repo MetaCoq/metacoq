@@ -30,6 +30,11 @@ theories/Checker.v
 theories/WcbvEval.v
 theories/Retyping.v
 theories/Erasure/Ast.v
+theories/Erasure/Induction.v
+theories/Erasure/LiftSubst.v
+theories/Erasure/UnivSubst.v
+theories/Erasure/WcbvEval.v
+theories/Erasure/Typing.v
 theories/Erasure/Erase.v
 theories/All.v
 theories/Extraction.v

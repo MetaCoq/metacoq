@@ -1,11 +1,13 @@
 (* Distributed under the terms of the MIT license.   *)
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
-From Template Require Import Template utils Ast univ Induction LiftSubst UnivSubst Typing.
+From Template Require Import config utils Ast univ Induction LiftSubst UnivSubst Typing.
 From Template Require AstUtils.
 Require Import String.
 Local Open Scope string_scope.
 Set Asymmetric Patterns.
+
+Existing Instance config.default_checker_flags.
 
 (** Use a coercion for this common projection of the global context. *)
 Definition fst_ctx : global_context -> global_declarations := fst.

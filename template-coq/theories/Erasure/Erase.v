@@ -1,12 +1,14 @@
 (* Distributed under the terms of the MIT license.   *)
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
-From Template Require Import Template utils monad_utils Ast univ Induction LiftSubst UnivSubst Typing Checker Retyping MetaTheory WcbvEval.
-From Template Require AstUtils ErasedTerm.
+From Template Require Import config utils monad_utils Ast univ Induction LiftSubst UnivSubst Typing Checker Retyping MetaTheory WcbvEval.
+From Template Require AstUtils Erasure.Ast Erasure.WcbvEval.
 Require Import String.
 Local Open Scope string_scope.
 Set Asymmetric Patterns.
 Import MonadNotation.
+
+Existing Instance config.default_checker_flags.
 
 Definition is_prop_sort s :=
   match Universe.level s with
@@ -14,7 +16,7 @@ Definition is_prop_sort s :=
   | None => false
   end.
 
-Module E := ErasedTerm.
+Module E := Erasure.Ast.
 
 Section Erase.
   Context `{F : Fuel}.

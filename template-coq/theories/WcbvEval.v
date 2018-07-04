@@ -1,12 +1,13 @@
 (* Distributed under the terms of the MIT license.   *)
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
-From Template Require Import Template utils Ast univ Induction LiftSubst UnivSubst Typing.
+From Template Require Import config utils Ast univ Induction LiftSubst UnivSubst Typing.
 From Template Require AstUtils.
 Require Import String.
 Local Open Scope string_scope.
 Set Asymmetric Patterns.
 
+Existing Instance default_checker_flags.
 
 (** * Weak (head) call-by-value evaluation strategy.
 
@@ -188,10 +189,10 @@ Section Wcbv.
     constructor. now apply eval_evals_ind. now apply aux.
     revert l l' H H1. fix aux 4. destruct 2. contradiction. constructor.
     now apply eval_evals_ind.
-    destruct l. inv H2; constructor.
+    destruct l. inv H1; constructor.
     now apply aux.
     revert l l' H H1. fix aux 4. destruct 2. contradiction. constructor.
-    now apply eval_evals_ind. destruct l. inv H2; constructor. now apply aux.
+    now apply eval_evals_ind. destruct l. inv H1; constructor. now apply aux.
   Defined.
 
   (** Characterization of values for this reduction relation:

@@ -382,8 +382,7 @@ let denote_term evdref (trm: Constr.t) : Constr.t =
     | _ ->  not_supported_verb trm "big_case"
   in aux trm
 
-let denote_reduction_strategy evm (trm : quoted_reduction_strategy) : Redexpr.red_expr =
-  let env = Global.env () in
+let denote_reduction_strategy env evm (trm : quoted_reduction_strategy) : Redexpr.red_expr =
   let (evm, pgm) = reduce_hnf env evm trm in
   let (trm, args) = app_full pgm [] in
   (* from g_tactic.ml4 *)
@@ -393,13 +392,15 @@ let denote_reduction_strategy evm (trm : quoted_reduction_strategy) : Redexpr.re
   else if Constr.equal trm thnf then Hnf
   else if Constr.equal trm tall then Cbv all_flags
   else if Constr.equal trm tlazy then Lazy all_flags
-  else if Term.eq_constr trm tunfold then (match args with name (* to unfold *) :: _ ->
-                                                            let (evm, name) = reduce_all env evm name in
-                                                            let name = unquote_ident name in
-                                                            (try Unfold [AllOccurrences, Tacred.evaluable_of_global_reference env (Nametab.global (CAst.make (Libnames.Qualid (Libnames.qualid_of_ident name))))]
-                                                             with
-                                                               _ -> CErrors.user_err (str "Constant not found or not a constant: " ++ Pp.str (Names.Id.to_string name)))
-                                                         | _ -> raise  (Failure "ill-typed reduction strategy"))
+  else if Term.eq_constr trm tunfold then
+    match args with
+    | name (* to unfold *) :: _ ->
+       let (evm, name) = reduce_all env evm name in
+       let name = unquote_ident name in
+       (try Unfold [AllOccurrences, Tacred.evaluable_of_global_reference env (Nametab.global (CAst.make (Libnames.Qualid (Libnames.qualid_of_ident name))))]
+        with
+        | _ -> CErrors.user_err (str "Constant not found or not a constant: " ++ Pp.str (Names.Id.to_string name)))
+    | _ -> raise  (Failure "ill-typed reduction strategy")
   else not_supported_verb trm "denote_reduction_strategy"
 
 
@@ -680,7 +681,7 @@ let rec run_template_program_rec (k : Evd.evar_map * Constr.t -> unit)  ((evm, p
   else if Globnames.eq_gr glob_ref tmEval then
     match args with
     | s(*reduction strategy*)::_(*type*)::trm::[] ->
-       let red = denote_reduction_strategy evm s in
+       let red = denote_reduction_strategy env evm s in
        let (evm, trm) = reduce_all ~red env evm trm
        in k (evm, trm)
     | _ -> monad_failure "tmEval" 3

@@ -3,7 +3,7 @@ Template Coq
 
 <img src="https://github.com/Template-Coq/template-coq/raw/master/docs/assets/LOGO.png" alt="Template Coq" width="50px"/>
 
-[![Build Status](https://travis-ci.org/Template-Coq/template-coq.svg?branch=coq-8.7)](https://travis-ci.org/Template-Coq/template-coq)
+[![Build Status](https://travis-ci.org/Template-Coq/template-coq.svg?branch=coq-8.8)](https://travis-ci.org/Template-Coq/template-coq)
 [![Gitter](https://img.shields.io/gitter/room/nwjs/nw.js.svg)](https://gitter.im/coq/Template-Coq)
 
 Template Coq is a quoting library for [Coq](http://coq.inria.fr). It
@@ -18,12 +18,6 @@ In addition to this representation of terms, Template Coq includes:
 
 - Denotation of terms and global declarations
 
-The branch `master` is stable and works with Coq 8.6, and 8.7, an opam
-package is available.
-
-The [coq-8.8](https://github.com/Template-Coq/template-coq/tree/coq-8.8),
-branch is in development and contains additional features:
-
 - Complete reification and denotation of CIC terms, including universes
 
 - A monad for manipulating global declarations, calling the type
@@ -34,6 +28,13 @@ branch is in development and contains additional features:
   runable as a plugin.
   
 - Example plugins built on top of this.
+
+The [coq-8.8](https://github.com/Template-Coq/template-coq/tree/coq-8.8) branch is the active development branch. If possible, it's strongly recommended to use this branch.
+
+The branch [coq-8.8](https://github.com/Template-Coq/template-coq/tree/coq-8.6) is stable, but only contains the first two features in the above list.
+The [coq-8.7](https://github.com/Template-Coq/template-coq/tree/coq-8.7) is stable and contains all features, but may not receive new ones.
+
+The branch `master` tracks the current Coq `master` branch.
 
 Documentation
 =============
@@ -71,17 +72,11 @@ Copyright (c) 2017-2018 Simon Boulier, Nicolas Tabareau, Cyril Cohen
 This software is distributed under the terms of the MIT license.
 See [LICENSE](LICENSE) for details.
 
-Branches
+Subdirectories
 ========
 
-- The current stable branch is
-  [master](https://github.com/Template-Coq/template-coq/tree/master) and
-  works with *Coq 8.6*. It includes only the syntax part of Template-Coq
-  and the ability to make plugins.
- 
-- The development branch is
-  [coq-8.8](https://github.com/Template-Coq/template-coq/tree/coq-8.8),
-  which includes:
+The current development branch is [coq-8.8](https://github.com/Template-Coq/template-coq/tree/coq-8.8),
+which includes:
 
   - The full syntax of CIC:
     [Ast](https://github.com/Template-Coq/template-coq/blob/coq-8.8/template-coq/theories/Ast.v)
@@ -106,7 +101,7 @@ Examples of plugins
 Installation instructions
 =========================
 
-Install from scratch (for 8.6 and development versions)
+Install the 8.8 version from scratch
 -------------------------------------------------------
 
 To get the source code:

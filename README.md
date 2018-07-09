@@ -89,7 +89,7 @@ which includes:
 
   - The `TemplateMonad` datatype and the `Run TemplateProgram` command
     to run template programs:
-    [Ast](https://github.com/Template-Coq/template-coq/blob/coq-8.8/template-coq/theories/Ast.v#L193)
+    [TemplateMonad](https://github.com/Template-Coq/template-coq/blob/coq-8.8/template-coq/theories/TemplateMonad.v)
         
 Examples of plugins
 -------------------

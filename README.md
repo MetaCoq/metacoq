@@ -31,10 +31,10 @@ In addition to this representation of terms, Template Coq includes:
 
 The [coq-8.8](https://github.com/Template-Coq/template-coq/tree/coq-8.8) branch is the active development branch. If possible, it's strongly recommended to use this branch.
 
-The branch [coq-8.8](https://github.com/Template-Coq/template-coq/tree/coq-8.6) is stable, but only contains the first two features in the above list.
+The branch [coq-8.6](https://github.com/Template-Coq/template-coq/tree/coq-8.6) is stable, but only contains the first two features in the above list.
 The [coq-8.7](https://github.com/Template-Coq/template-coq/tree/coq-8.7) is stable and contains all features, but may not receive new ones.
 
-The branch `master` tracks the current Coq `master` branch.
+The branch [master](https://github.com/Template-Coq/template-coq/tree/master) tracks the current Coq `master` branch.
 
 Documentation
 =============

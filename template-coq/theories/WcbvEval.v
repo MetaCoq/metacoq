@@ -66,7 +66,7 @@ Section Wcbv.
       Forall2 eval args args' -> (* FIXME should we reduce the args after the recursive arg here? *)
       is_constructor narg args' = true ->
       eval (mkApps fn args') res ->
-      eval (mkApps (tFix mfix idx) args) res
+      eval (tApp (tFix mfix idx) args) res
 
   (** Constant unfolding *)
   | eval_delta c decl body (isdecl : declared_constant Σ c decl) u res :
@@ -138,7 +138,7 @@ Section Wcbv.
           Forall2 eval args args' ->
           Forall2 P args args' ->
           is_constructor narg args' = true ->
-          eval (mkApps fn args') res -> P (mkApps fn args') res -> P (mkApps (tFix mfix idx) args) res) ->
+          eval (mkApps fn args') res -> P (mkApps fn args') res -> P (tApp (tFix mfix idx) args) res) ->
 
       (forall (c : ident) (decl : constant_body) (body : term),
           declared_constant Σ c decl ->

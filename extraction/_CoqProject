@@ -8,4 +8,4 @@ theories/LiftSubst.v
 theories/UnivSubst.v
 theories/WcbvEval.v
 theories/Typing.v
-theories/Erase.v
+theories/Extract.v

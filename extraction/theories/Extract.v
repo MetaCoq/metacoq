@@ -32,17 +32,17 @@ Section Erase.
     (fst p, f (snd p)).
 
   Section EraseMfix.
-    Context (erase : forall (Γ : context) (t : term), typing_result E.term).
+    Context (extract : forall (Γ : context) (t : term), typing_result E.term).
 
-    Definition erase_mfix Γ (defs : mfixpoint term) :=
+    Definition extract_mfix Γ (defs : mfixpoint term) :=
       let Γ' := (fix_decls defs ++ Γ)%list in
-      monad_map (fun d => dtype' <- erase Γ d.(dtype);;
-                        dbody' <- erase Γ' d.(dbody);;
+      monad_map (fun d => dtype' <- extract Γ d.(dtype);;
+                        dbody' <- extract Γ' d.(dbody);;
                         ret ({| dname := d.(dname); rarg := d.(rarg);
                                 dtype := dtype'; dbody := dbody' |})) defs.
   End EraseMfix.
   
-  Fixpoint erase (Γ : context) (t : term) : typing_result E.term :=
+  Fixpoint extract (Γ : context) (t : term) : typing_result E.term :=
     s <- sort_of Σ Γ t;;
     if is_prop_sort s then ret E.tBox
     else match t with
@@ -50,52 +50,52 @@ Section Erase.
     | tVar n => ret (E.tVar n)
     | tMeta m => ret (E.tMeta m)
     | tEvar m l =>
-      l' <- monad_map (erase Γ) l;;
+      l' <- monad_map (extract Γ) l;;
       ret (E.tEvar m l')
     | tSort u => ret (E.tSort u)
     | tConst kn u => ret (E.tConst kn u)
     | tInd kn u => ret (E.tInd kn u)
     | tConstruct kn k u => ret (E.tConstruct kn k u)
-    | tCast t k ty => erase Γ t
-                      (* ty' <- erase Γ ty ;; *)
+    | tCast t k ty => extract Γ t
+                      (* ty' <- extract Γ ty ;; *)
                       (* ret (tCast t' k ty') *)
-    | tProd na b t => b' <- erase Γ b;;
-                      t' <- erase (vass na b :: Γ) t;;
+    | tProd na b t => b' <- extract Γ b;;
+                      t' <- extract (vass na b :: Γ) t;;
                       ret (E.tProd na b' t')
     | tLambda na b t =>
-      b' <- erase Γ b;;
-      t' <- erase (vass na b :: Γ) t;;
+      b' <- extract Γ b;;
+      t' <- extract (vass na b :: Γ) t;;
       ret (E.tLambda na b' t')
     | tLetIn na b t0 t1 =>
-      b' <- erase Γ b;;
-      t0' <- erase Γ t0;;
-      t1' <- erase (vdef na b t0 :: Γ) t1;;
+      b' <- extract Γ b;;
+      t0' <- extract Γ t0;;
+      t1' <- extract (vdef na b t0 :: Γ) t1;;
       ret (E.tLetIn na b' t0' t1')
     | tApp f l =>
-      f' <- erase Γ f;;
-      l' <- monad_map (erase Γ) l;;
+      f' <- extract Γ f;;
+      l' <- monad_map (extract Γ) l;;
       ret (E.tApp f' l') (* if is_dummy f' then ret dummy else *)
     | tCase ip p c brs =>
-      c' <- erase Γ c;;
+      c' <- extract Γ c;;
       if is_box c' then
         match brs with
-        | (_, x) :: _ => erase Γ x (* Singleton elimination *)
+        | (_, x) :: _ => extract Γ x (* Singleton elimination *)
         | nil =>
-          p' <- erase Γ p;;
+          p' <- extract Γ p;;
           ret (E.tCase ip p' c' nil) (* Falsity elimination *)
         end
       else
-        brs' <- monad_map (T:=typing_result) (fun x => x' <- erase Γ (snd x);; ret (fst x, x')) brs;;
-        p' <- erase Γ p;;
+        brs' <- monad_map (T:=typing_result) (fun x => x' <- extract Γ (snd x);; ret (fst x, x')) brs;;
+        p' <- extract Γ p;;
         ret (E.tCase ip p' c' brs')
     | tProj p c =>
-      c' <- erase Γ c;;
+      c' <- extract Γ c;;
       ret (E.tProj p c')
     | tFix mfix n =>
-      mfix' <- erase_mfix erase Γ mfix;;
+      mfix' <- extract_mfix extract Γ mfix;;
       ret (E.tFix mfix' n)
     | tCoFix mfix n =>
-      mfix' <- erase_mfix erase Γ mfix;;
+      mfix' <- extract_mfix extract Γ mfix;;
       ret (E.tCoFix mfix' n)
      end.
 
@@ -107,46 +107,46 @@ Definition optM {M : Type -> Type} `{Monad M} {A B} (x : option A) (f : A -> M B
   | None => ret None
   end.
 
-Definition erase_constant_body `{F:Fuel} Σ (cb : constant_body) : typing_result E.constant_body :=
-  ty <- erase Σ [] cb.(cst_type) ;;
-  body <- optM cb.(cst_body) (fun b => erase Σ [] b);;
+Definition extract_constant_body `{F:Fuel} Σ (cb : constant_body) : typing_result E.constant_body :=
+  ty <- extract Σ [] cb.(cst_type) ;;
+  body <- optM cb.(cst_body) (fun b => extract Σ [] b);;
   ret {| E.cst_universes := cb.(cst_universes);
          E.cst_type := ty; E.cst_body := body; |}.
 
-Definition erase_one_inductive_body `{F:Fuel} Σ
+Definition extract_one_inductive_body `{F:Fuel} Σ
            (oib : one_inductive_body) : typing_result E.one_inductive_body :=
-  type <- erase Σ [] oib.(ind_type) ;;
-  ctors <- monad_map (fun '(x, y, z) => y' <- erase Σ [] y;; ret (x, y', z)) oib.(ind_ctors);;
-  projs <- monad_map (fun '(x, y) => y' <- erase Σ [] y;; ret (x, y')) oib.(ind_projs);;
+  type <- extract Σ [] oib.(ind_type) ;;
+  ctors <- monad_map (fun '(x, y, z) => y' <- extract Σ [] y;; ret (x, y', z)) oib.(ind_ctors);;
+  projs <- monad_map (fun '(x, y) => y' <- extract Σ [] y;; ret (x, y')) oib.(ind_projs);;
   ret {| E.ind_name := oib.(ind_name);
          E.ind_type := type;
          E.ind_kelim := oib.(ind_kelim);
          E.ind_ctors := ctors;
          E.ind_projs := projs |}.
 
-Definition erase_mutual_inductive_body `{F:Fuel} Σ
+Definition extract_mutual_inductive_body `{F:Fuel} Σ
            (mib : mutual_inductive_body) : typing_result E.mutual_inductive_body :=
-  bodies <- monad_map (erase_one_inductive_body Σ) mib.(ind_bodies) ;;
+  bodies <- monad_map (extract_one_inductive_body Σ) mib.(ind_bodies) ;;
   ret {| E.ind_npars := mib.(ind_npars);
          E.ind_bodies := bodies;
          E.ind_universes := mib.(ind_universes) |}.
 
-Fixpoint erase_global_decls univs Σ : typing_result E.global_declarations :=
+Fixpoint extract_global_decls univs Σ : typing_result E.global_declarations :=
   match Σ with
   | [] => ret []
   | ConstantDecl kn cb :: Σ =>
-    cb' <- erase_constant_body (Σ, univs) cb;;
-    Σ' <- erase_global_decls univs Σ;;
+    cb' <- extract_constant_body (Σ, univs) cb;;
+    Σ' <- extract_global_decls univs Σ;;
     ret (E.ConstantDecl kn cb' :: Σ')
   | InductiveDecl kn mib :: Σ =>
-    mib' <- erase_mutual_inductive_body (Σ, univs) mib;;
-    Σ' <- erase_global_decls univs Σ;;
+    mib' <- extract_mutual_inductive_body (Σ, univs) mib;;
+    Σ' <- extract_global_decls univs Σ;;
     ret (E.InductiveDecl kn mib' :: Σ')
   end.
 
-Definition erase_global Σ :=
+Definition extract_global Σ :=
   let '(Σ, univs) := Σ in
-  Σ' <- erase_global_decls univs Σ;;
+  Σ' <- extract_global_decls univs Σ;;
   ret (Σ', univs).
 
 (** * Erasure correctness
@@ -162,7 +162,7 @@ Definition erase_global Σ :=
       ultimately in an inductive value when applied.
 
    We use an observational equality relation to relate the two values, 
-   which is indifferent to the erased parts.
+   which is indifferent to the extractd parts.
  *)
 
 Fixpoint inductive_arity (t : term) :=
@@ -222,7 +222,7 @@ Record extraction_pre (Σ : global_context) t T :=
     extr_env_axiom_free : axiom_free (fst Σ);
     extr_computational_type : computational_type Σ T }.
 
-(** The observational equivalence relation between source and erased values. *)
+(** The observational equivalence relation between source and extractd values. *)
 
 Definition destApp t :=
   match t with
@@ -290,31 +290,31 @@ Definition erasure_correctness :=
   forall Σ t T, extraction_pre Σ t T ->
   forall v, eval Σ [] t v ->
   forall (f : Fuel) Σ' (t' : E.term),
-    erase Σ [] t = Checked t' ->
-    erase_global Σ = Checked Σ' ->
+    extract Σ [] t = Checked t' ->
+    extract_global Σ = Checked Σ' ->
     extraction_post Σ Σ' t t'.
       
 Conjecture erasure_correct : erasure_correctness.
 
 Quote Recursively Definition zero_syntax := 0.
 
-Definition erase_rec (t : global_declarations * term) : typing_result E.term :=
+Definition extract_rec (t : global_declarations * term) : typing_result E.term :=
   let '(Σ, t) := t in
-  erase (reconstruct_global_context Σ) [] t.
+  extract (reconstruct_global_context Σ) [] t.
 
 (* A few tests *)
 
 Quote Recursively Definition true_syntax := I.
-Eval vm_compute in erase_rec true_syntax.
+Eval vm_compute in extract_rec true_syntax.
 
 Quote Recursively Definition exist_syntax := (exist _ 0 I : { x : nat | True }).
-Eval vm_compute in erase_rec exist_syntax.
+Eval vm_compute in extract_rec exist_syntax.
 
 Quote Recursively Definition exist'_syntax := ((exist _ (S 0) (le_n (S 0))) : { x : nat | 0 < x }).
-Eval vm_compute in erase_rec exist'_syntax.
+Eval vm_compute in extract_rec exist'_syntax.
 
 Quote Recursively Definition fun_syntax := (fun (x : nat) (bla : x < 0) => x).
-Eval vm_compute in erase_rec fun_syntax. (* Not erasing bindings *)
+Eval vm_compute in extract_rec fun_syntax. (* Not erasing bindings *)
 
 Quote Recursively Definition fun'_syntax := (fun (x : nat) (bla : x < 0) => bla).
-Eval vm_compute in erase_rec fun'_syntax. 
+Eval vm_compute in extract_rec fun'_syntax.

@@ -189,6 +189,12 @@ Definition isConstruct c :=
   | _ => false
   end.
 
+Definition isCoFix c :=
+  match c with
+  | tCoFix _ _ => true
+  | _ => false
+  end.
+
 Inductive conv_pb :=
 | Conv
 | Cumul.
@@ -207,12 +213,12 @@ Section Conversion.
     c <- nth_error l arg ;;
     cred <- reduce_stack RedFlags.default (fst Σ) Γ n c [] ;;
     let '(cred, _) := cred in
-    if eq_term (snd Σ) cred c || negb (isConstruct cred) then None
+    if negb (isConstruct cred) then None
     else Some fn.
 
   Definition unfold_one_case n Γ c :=
     cred <- reduce_stack_term RedFlags.default (fst Σ) Γ n c ;;
-    if eq_term (snd Σ) cred c then None
+    if negb (isConstruct cred || isCoFix cred) then None
     else Some cred.
 
   Definition reducible_head n Γ c l :=
@@ -222,6 +228,11 @@ Section Conversion.
       match unfold_one_case n Γ c' with
       | None => None
       | Some c' => Some (tCase ind' p' c' brs)
+      end
+    | tProj p c =>
+      match unfold_one_case n Γ c with
+      | None => None
+      | Some c' => Some (tProj p c')
       end
     | tConst c _ => (* TODO Universes *)
       match lookup_env (fst Σ) c with

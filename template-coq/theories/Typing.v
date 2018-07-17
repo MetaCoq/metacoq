@@ -292,11 +292,14 @@ Definition leq_universe `{checker_flags} φ s s' :=
   if univ.Universe.equal s s' then true
   else uGraph.check_leq φ s s'.
 
+Definition eq_universe_instance `{checker_flags} φ u v :=
+  univ.Instance.equal_upto (uGraph.check_eq_level φ) u v.
+
 (* ** Syntactic equality up-to universes
 
   We shouldn't look at printing annotations *)
 
-Fixpoint eq_term (φ : uGraph.t) (t u : term) {struct t} :=
+Fixpoint eq_term `{checker_flags} (φ : uGraph.t) (t u : term) {struct t} :=
   match t, u with
   | tRel n, tRel n' => eq_nat n n'
   | tMeta n, tMeta n' => eq_nat n n'
@@ -305,9 +308,10 @@ Fixpoint eq_term (φ : uGraph.t) (t u : term) {struct t} :=
   | tSort s, tSort s' => eq_universe φ s s'
   | tApp f args, tApp f' args' => eq_term φ f f' && forallb2 (eq_term φ) args args'
   | tCast t _ v, tCast u _ v' => eq_term φ t u && eq_term φ v v'
-  | tConst c u, tConst c' u' => eq_constant c c' (* TODO Universes *)
-  | tInd i u, tInd i' u' => eq_ind i i'
+  | tConst c u, tConst c' u' => eq_constant c c' && eq_universe_instance φ u u'
+  | tInd i u, tInd i' u' => eq_ind i i' && eq_universe_instance φ u u'
   | tConstruct i k u, tConstruct i' k' u' => eq_ind i i' && eq_nat k k'
+                                                    && eq_universe_instance φ u u'
   | tLambda _ b t, tLambda _ b' t' => eq_term φ b b' && eq_term φ t t'
   | tProd _ b t, tProd _ b' t' => eq_term φ b b' && eq_term φ t t'
   | tCase (ind, par) p c brs,
@@ -339,9 +343,10 @@ Fixpoint leq_term `{checker_flags} (φ : uGraph.t) (t u : term) {struct t} :=
   | tSort s, tSort s' => leq_universe φ s s'
   | tApp f args, tApp f' args' => eq_term φ f f' && forallb2 (eq_term φ) args args'
   | tCast t _ v, tCast u _ v' => leq_term φ t u
-  | tConst c u, tConst c' u' => eq_constant c c' (* TODO Universes *)
-  | tInd i u, tInd i' u' => eq_ind i i'
-  | tConstruct i k u, tConstruct i' k' u' => eq_ind i i' && eq_nat k k'
+  | tConst c u, tConst c' u' => eq_constant c c' && eq_universe_instance φ u u'
+  | tInd i u, tInd i' u' => eq_ind i i' && eq_universe_instance φ u u'
+  | tConstruct i k u, tConstruct i' k' u' => eq_ind i i' && eq_nat k k' &&
+                                                    eq_universe_instance φ u u'
   | tLambda _ b t, tLambda _ b' t' => eq_term φ b b' && eq_term φ t t'
   | tProd _ b t, tProd _ b' t' => eq_term φ b b' && leq_term φ t t'
   | tCase (ind, par) p c brs,
@@ -462,20 +467,20 @@ Conjecture congr_cumul_prod : forall `{checker_flags} Σ Γ na na' M1 M2 N1 N2,
     cumul Σ (Γ ,, vass na M1) M2 N2 ->
     cumul Σ Γ (tProd na M1 M2) (tProd na' N1 N2).
 
-Definition eq_opt_term φ (t u : option term) :=
+Definition eq_opt_term `{checker_flags} φ (t u : option term) :=
   match t, u with
   | Some t, Some u => eq_term φ t u
   | None, None => true
   | _, _ => false
   end.
 
-Definition eq_decl φ (d d' : context_decl) :=
+Definition eq_decl `{checker_flags} φ (d d' : context_decl) :=
   eq_opt_term φ d.(decl_body) d'.(decl_body) && eq_term φ d.(decl_type) d'.(decl_type).
 
-Definition eq_context φ (Γ Δ : context) :=
+Definition eq_context `{checker_flags} φ (Γ Δ : context) :=
   forallb2 (eq_decl φ) Γ Δ.
 
-Definition check_correct_arity φ decl ind u ctx pars pctx :=
+Definition check_correct_arity `{checker_flags} φ decl ind u ctx pars pctx :=
   let inddecl :=
       {| decl_name := nNamed decl.(ind_name);
          decl_body := None;

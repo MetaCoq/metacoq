@@ -364,6 +364,13 @@ Module Instance.
   (* val to_array : t -> Level.t array *)
   (* val append : t -> t -> t *)
   (* (** To concatenate two instances, used for discharge *) *)
+
+  Definition equal (i j : t) :=
+    forallb2 Level.equal i j.
+
+  Definition equal_upto (f : Level.t -> Level.t -> bool) (i j : t) :=
+    forallb2 f i j.
+
   (* val equal : t -> t -> bool *)
   (* (** Equality *) *)
   (* val length : t -> int *)

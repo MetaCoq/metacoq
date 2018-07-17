@@ -195,6 +195,7 @@ Inductive conv_pb :=
 
 Section Conversion.
 
+  Context `{checker_flags}.
   Context (flags : RedFlags.t).
   Context (Σ : global_context).
 
@@ -238,7 +239,7 @@ Section Conversion.
     | None => false
     end.
 
-  Fixpoint isconv `{checker_flags} (n : nat) (leq : conv_pb) (Γ : context)
+  Fixpoint isconv (n : nat) (leq : conv_pb) (Γ : context)
            (t1 : term) (l1 : list term) (t2 : term) (l2 : list term) {struct n} : option bool :=
     match n with 0 => None | S n =>
     red1 <- reduce_stack nodelta_flags (fst Σ) Γ n t1 l1 ;;

@@ -164,7 +164,6 @@ Definition iota_red npar c args brs :=
 (** *** One step strong beta-zeta-iota-fix-delta reduction
 
   Inspired by the reduction relation from Coq in Coq [Barras'99].
-  TODO: CoFixpoints
 *)
 
 Inductive red1 (Σ : global_declarations) (Γ : context) : term -> term -> Prop :=
@@ -190,7 +189,19 @@ Inductive red1 (Σ : global_declarations) (Γ : context) : term -> term -> Prop 
 | red_fix mfix idx args narg fn :
     unfold_fix mfix idx = Some (narg, fn) ->
     is_constructor narg args = true ->
-    red1 Σ Γ (mkApps (tFix mfix idx) args) (mkApps fn args)
+    red1 Σ Γ (tApp (tFix mfix idx) args) (tApp fn args)
+
+(** CoFix-case unfolding *)
+| red_cofix_case ip p mfix idx args narg fn brs :
+    unfold_fix mfix idx = Some (narg, fn) ->
+    red1 Σ Γ (tCase ip p (mkApps (tCoFix mfix idx) args) brs)
+         (tCase ip (tApp fn args) p brs)
+
+(** CoFix-proj unfolding *)
+| red_cofix_proj p mfix idx args narg fn :
+    unfold_fix mfix idx = Some (narg, fn) ->
+    red1 Σ Γ (tProj p (mkApps (tCoFix mfix idx) args))
+         (tProj p (tApp fn args))
 
 (** Constant unfolding *)
 | red_delta c decl body (isdecl : declared_constant Σ c decl) u :
@@ -221,7 +232,7 @@ Inductive red1 (Σ : global_declarations) (Γ : context) : term -> term -> Prop 
 | prod_red_r na na' M2 N2 M1 : red1 Σ (Γ ,, vass na M1) M2 N2 ->
                                red1 Σ Γ (tProd na M1 M2) (tProd na' M1 N2)
 
-| evar ev l l' : reds1 Σ Γ l l' -> red1 Σ Γ (tEvar ev l) (tEvar ev l')
+| evar_red ev l l' : reds1 Σ Γ l l' -> red1 Σ Γ (tEvar ev l) (tEvar ev l')
 
 | cast_red_l M1 k M2 N1 : red1 Σ Γ M1 N1 -> red1 Σ Γ (tCast M1 k M2) (tCast N1 k M2)
 | cast_red_r M2 k N2 M1 : red1 Σ Γ M2 N2 -> red1 Σ Γ (tCast M1 k M2) (tCast M1 k N2)

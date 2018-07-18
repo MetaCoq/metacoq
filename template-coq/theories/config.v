@@ -7,3 +7,7 @@ Class checker_flags := {
 Local Instance default_checker_flags : checker_flags := {|
   check_univs := true
 |}.
+
+Local Instance type_in_type : checker_flags := {|
+  check_univs := false
+|}.

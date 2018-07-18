@@ -283,8 +283,7 @@ Fixpoint subst_app (t : term) (us : list term) : term :=
 
 (** We try syntactic equality before checking the graph. *)
 
-Definition eq_universe φ s s' :=
-  let cf := default_checker_flags in
+Definition eq_universe `{checker_flags} φ s s' :=
   if univ.Universe.equal s s' then true
   else uGraph.check_leq φ s s' && uGraph.check_leq φ s' s.
 

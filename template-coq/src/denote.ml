@@ -511,7 +511,8 @@ let declare_inductive (env: Environ.env) (evm: Evd.evar_map) (body: Constr.t) : 
 let monad_failure s k =
   CErrors.user_err  (str (s ^ " must take " ^ (string_of_int k) ^ " argument" ^ (if k > 0 then "s" else "") ^ ".")
                      ++ str "Please file a bug with Template-Coq.")
-
+let not_in_tactic s =
+  CErrors.user_err  (str ("You can not use " ^ s ^ " in a tactic."))
 
 let monad_failure_full s k prg =
   CErrors.user_err
@@ -519,7 +520,7 @@ let monad_failure_full s k prg =
        str "While trying to run: " ++ fnl () ++ print_term prg ++ fnl () ++
        str "Please file a bug with Template-Coq.")
 
-let rec run_template_program_rec (k : Evd.evar_map * Constr.t -> unit)  ((evm, pgm) : Evd.evar_map * Constr.t) : unit =
+let rec run_template_program_rec ?(intactic=false) (k : Evd.evar_map * Constr.t -> unit)  ((evm, pgm) : Evd.evar_map * Constr.t) : unit =
   let env = Global.env () in
   let pgm = Reduction.whd_all env pgm in
   let (coConstr, args) = app_full pgm [] in
@@ -542,9 +543,10 @@ let rec run_template_program_rec (k : Evd.evar_map * Constr.t -> unit)  ((evm, p
   else if Globnames.eq_gr glob_ref tmBind then
     match args with
     | _::_::a::f::[] ->
-       run_template_program_rec (fun (evm, ar) -> run_template_program_rec k (evm, Constr.mkApp (f, [|ar|]))) (evm, a)
+       run_template_program_rec ~intactic:intactic (fun (evm, ar) -> run_template_program_rec k (evm, Constr.mkApp (f, [|ar|]))) (evm, a)
     | _ -> monad_failure_full "tmBind" 4 pgm
   else if Globnames.eq_gr glob_ref tmDefinition then
+    if intactic then not_in_tactic "tmDefinition" else
     match args with
     | name::typ::body::[] ->
        let name = reduce_all env evm name in
@@ -555,6 +557,7 @@ let rec run_template_program_rec (k : Evd.evar_map * Constr.t -> unit)  ((evm, p
        k (evm, Constr.mkConst n)
     | _ -> monad_failure "tmDefinition" 3
   else if Globnames.eq_gr glob_ref tmAxiom then
+    if intactic then not_in_tactic "tmAxiom" else
     match args with
     | name::typ::[] ->
        let name = reduce_all env evm name in
@@ -563,6 +566,7 @@ let rec run_template_program_rec (k : Evd.evar_map * Constr.t -> unit)  ((evm, p
        k (evm, Constr.mkConst n)
     | _ -> monad_failure "tmAxiom" 2
   else if Globnames.eq_gr glob_ref tmLemma then
+    if intactic then not_in_tactic "tmLemma" else  
     match args with
     | name::typ::[] ->
        let name = reduce_all env evm name in
@@ -587,6 +591,7 @@ let rec run_template_program_rec (k : Evd.evar_map * Constr.t -> unit)  ((evm, p
     (* )); *)
     | _ -> monad_failure "tmLemma" 2
   else if Globnames.eq_gr glob_ref tmMkDefinition then
+    if intactic then not_in_tactic "tmExistingInstance" else  
     match args with
     | name::body::[] ->
        let name = reduce_all env evm name in

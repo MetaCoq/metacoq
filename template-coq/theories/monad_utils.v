@@ -1,3 +1,6 @@
+(* todo(gmm): This file should really be replaced by a real
+ * monad library.
+ *)
 Require Import List.
 
 Set Universe Polymorphism.

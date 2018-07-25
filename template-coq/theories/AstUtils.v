@@ -1,7 +1,7 @@
 From Coq Require Import String Bool.
 From Coq Require Import List.
-From Template Require Import Ast TemplateMonad utils monad_utils.
-Import List.ListNotations MonadNotation.
+From Template Require Import Ast utils.
+Import List.ListNotations.
 
 Definition map_decl f (d : context_decl) :=
   {| decl_name := d.(decl_name);
@@ -22,6 +22,7 @@ Definition string_of_gref gr :=
 
 Definition gref_eq_dec
 : forall gr gr' : global_reference, {gr = gr'} + {~ gr = gr'}.
+Proof.
   decide equality; eauto with eq_dec.
   destruct i, i0.
   decide equality; eauto with eq_dec.
@@ -51,13 +52,6 @@ Fixpoint remove_arity (n : nat) (t : term) : term :=
           | _ => t (* todo *)
           end
   end.
-
-Definition print_nf {A} (msg : A) : TemplateMonad unit
-  := (tmEval all msg) >>= tmPrint.
-
-Definition fail_nf {A} (msg : string) : TemplateMonad A
-  := (tmEval all msg) >>= tmFail.
-
 
 Fixpoint lookup_mind_decl (id : ident) (decls : global_declarations)
  := match decls with
@@ -100,6 +94,3 @@ Proof.
     refine (List.map (fun x => remove_arity decl.(ind_npars)
                                                 (snd (fst x))) ind_ctors).
 Defined.
-
-Definition tmMkInductive' (mind : mutual_inductive_body) : TemplateMonad unit
-  := tmMkInductive (mind_body_to_entry mind).

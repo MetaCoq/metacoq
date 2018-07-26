@@ -1,10 +1,7 @@
 (* Distributed under the terms of the MIT license.   *)
 
-Require Import List Program.
-Require Import Ast.
-Require Import BinPos.
-Require Import Coq.Arith.Compare_dec Bool.
-Require Import Induction.
+From Coq Require Import List Program BinPos Arith.Compare_dec Bool.
+From TemplateExtraction Require Import Ast Induction.
 
 (** * Lifting and substitution for the AST
 

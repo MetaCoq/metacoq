@@ -2,7 +2,7 @@
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
 Require Import Template.config Template.utils Template.kernel.univ.
-From Extraction Require Import Ast Induction LiftSubst UnivSubst.
+From TemplateExtraction Require Import Ast Induction LiftSubst UnivSubst.
 Require Import String.
 Local Open Scope string_scope.
 Set Asymmetric Patterns.

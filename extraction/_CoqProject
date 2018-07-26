@@ -1,4 +1,4 @@
--R theories Extraction
+-R theories TemplateExtraction
 -Q ../template-coq/theories Template
 -I ../template-coq/src
 

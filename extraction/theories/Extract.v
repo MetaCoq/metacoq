@@ -2,7 +2,7 @@
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
 From Template Require Import config utils monad_utils Ast univ Induction LiftSubst UnivSubst Typing Checker Retyping MetaTheory WcbvEval.
-From Extraction Require Ast Typing WcbvEval.
+From TemplateExtraction Require Ast Typing WcbvEval.
 Require Import String.
 Local Open Scope string_scope.
 Set Asymmetric Patterns.
@@ -16,7 +16,7 @@ Definition is_prop_sort s :=
   | None => false
   end.
 
-Module E := Extraction.Ast.
+Module E := TemplateExtraction.Ast.
 
 Section Erase.
   Context `{F : Fuel}.
@@ -281,7 +281,7 @@ Fixpoint obs_eq (Σ : global_context) (v v' : term) (T : term) (s : universe) : 
 
 Record extraction_post (Σ : global_context) (Σ' : Ast.global_context) (t : term) (t' : E.term) :=
   { extr_value : E.term;
-    extr_eval : Extraction.WcbvEval.eval (fst Σ') [] t' extr_value;
+    extr_eval : TemplateExtraction.WcbvEval.eval (fst Σ') [] t' extr_value;
     (* extr_equiv : obs_eq Σ v extr_value *) }.
 
 (** The extraction correctness theorem we conjecture. *)

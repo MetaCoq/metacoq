@@ -54,6 +54,12 @@ Definition is_constructor n ts :=
   end.
 
 
+Definition mktApp f l :=
+  match l with
+  | nil => f
+  | l => tApp f l
+  end.
+
 (** ** Big step version of weak cbv beta-zeta-iota-fix-delta reduction.
 
   TODO: CoFixpoints *)
@@ -64,8 +70,7 @@ Section Wcbv.
 
   Inductive eval : term -> term -> Prop :=
   (** Reductions *)
-  | eval_box : eval tBox tBox
-
+  | eval_box l : eval (mktApp tBox l) tBox
 
   (** Beta *)
   | eval_beta f na t b a a' l res :
@@ -144,7 +149,7 @@ Section Wcbv.
 
   Lemma eval_evals_ind :
     forall P : term -> term -> Prop,
-      (P tBox tBox) ->
+      (forall l, P (mktApp tBox l) tBox) ->
       (forall (f : term) (na : name) (t b a a' : term) (l : list term) (res : term),
           eval f (tLambda na t b) ->
           P f (tLambda na t b) ->

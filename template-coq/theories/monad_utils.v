@@ -57,32 +57,32 @@ End MapOpt.
 
 Section MonadOperations.
   Context {T} {M : Monad T}.
-
-  Fixpoint monad_map {A B} (f : A -> T B) (l : list A)
+  Context {A B} (f : A -> T B).
+  Fixpoint monad_map (l : list A)
     : T (list B)
     := match l with
        | nil => ret nil
        | x :: l => x' <- f x ;;
-                  l' <- monad_map f l ;;
+                  l' <- monad_map l ;;
                   ret (x' :: l')
        end.
 
-  Fixpoint monad_fold_left {A B} (f : A -> B -> T A) (l : list B) (x : A)
-    : T A
+  Context (g : A -> B -> T A).
+  Fixpoint monad_fold_left (l : list B) (x : A) : T A
     := match l with
        | nil => ret x
-       | y :: l => x' <- f x y ;;
-                     monad_fold_left f l x'
+       | y :: l => x' <- g x y ;;
+                   monad_fold_left l x'
        end.
 
-
-  Fixpoint monad_map_i_aux {A B} (f : nat -> A -> T B) (n0 : nat) (l : list A) : T (list B)
+  Context (h : nat -> A -> T B).
+  Fixpoint monad_map_i_aux (n0 : nat) (l : list A) : T (list B)
     := match l with
        | nil => ret nil
-       | x :: l => x' <- (f n0 x) ;;
-                     l' <- (monad_map_i_aux f (S n0) l) ;;
-                     ret (x' :: l')
+       | x :: l => x' <- (h n0 x) ;;
+                   l' <- (monad_map_i_aux (S n0) l) ;;
+                   ret (x' :: l')
        end.
 
-  Definition monad_map_i {A B} f := @monad_map_i_aux A B f 0.
+  Definition monad_map_i := @monad_map_i_aux 0.
 End MonadOperations.

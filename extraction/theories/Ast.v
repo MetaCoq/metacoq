@@ -3,83 +3,26 @@
 Require Import Coq.Strings.String.
 Require Import Coq.PArith.BinPos.
 Require Import List. Import ListNotations.
-From Template Require Export univ uGraph.
+From Template Require Import monad_utils.
+From Template Require Export univ uGraph Ast.
 
-(** * AST of Coq kernel terms and kernel data structures
+(** Extracted terms
 
-    ** Basic data-types:
-
-      We reflect identifiers [ident], sort families [sort_family], names
-    [name], cast kinds [cast_kind], inductives [inductive] and primitive
-    projections [projection] and (co)-fixpoint blocks [mfixpoint] and
-    [def].
-
-    ** Terms:
-
-      The AST is [term : Set]
-
-      Smart constructors [mkApp], [mkApps] maintain the invariant
-    of no nested or empty n-ary applications.
-      List in fixpoints and cofixpoint should be non-empty.
-
-    ** Kernel interface: entries and declarations
-
-      Kernel input declarations for constants [constant_entry] and mutual
-    inductives [mutual_inductive_entry]. Kernel safe declarations for
-    constants [constand_decl] and inductives [minductive_decl].
-
-    ** Environments of declarations
-
-      The global environment [global_context]: a list of [global_decl] and
-    a universe graph [uGraph.t].
-
-    ** The Template Monad
-
-      A monad for programming with template-coq operations. Use [Run
-    TemplateProgram] on a monad action to produce its side-effects.
-    Uses a reduction strategy specifier [reductionStrategy].  *)
-
-Definition ident := string. (* e.g. nat *)
-Definition kername := string. (* e.g. Coq.Init.Datatypes.nat *)
-
-Inductive sort_family : Set := InProp | InSet | InType.
-
-Inductive name : Set :=
-| nAnon
-| nNamed (_ : ident).
-
-Inductive cast_kind : Set :=
-| VmCast
-| NativeCast
-| Cast
-| RevertCast.
-
-Record inductive : Set := mkInd { inductive_mind : kername ;
-                                  inductive_ind : nat }.
-Arguments mkInd _%string _%nat.
-
-Definition projection : Set := inductive * nat (* params *) * nat (* argument *).
-
-(** Parametrized by term because term is not yet defined *)
-Record def (term : Set) : Set := mkdef {
-  dname : name; (* the name **)
-  dtype : term;
-  dbody : term; (* the body (a lambda term). Note, this may mention other (mutually-defined) names **)
-  rarg  : nat  (* the index of the recursive argument, 0 for cofixpoints **) }.
-
-Definition mfixpoint (term : Set) : Set :=
-  list (def term).
+  These are the terms produced by extraction:
+  compared to kernel terms, all proofs are translated to [tBox] and
+  casts are removed.
+*)
 
 Inductive term : Set :=
+| tBox       : term (* Represents all proofs *)
 | tRel       : nat -> term
 | tVar       : ident -> term (* For free variables (e.g. in a goal) *)
 | tMeta      : nat -> term   (* NOTE: this will go away *)
 | tEvar      : nat -> list term -> term
 | tSort      : universe -> term
-| tCast      : term -> cast_kind -> term -> term
 | tProd      : name -> term (* the type *) -> term -> term
-| tLambda    : name -> term (* the type *) -> term -> term
-| tLetIn     : name -> term (* the term *) -> term (* the type *) -> term -> term
+| tLambda    : name -> term -> term -> term
+| tLetIn     : name -> term (* the term *) -> term -> term -> term
 | tApp       : term -> list term -> term
 | tConst     : kername -> universe_instance -> term
 | tInd       : inductive -> universe_instance -> term
@@ -89,6 +32,7 @@ Inductive term : Set :=
 | tProj      : projection -> term -> term
 | tFix       : mfixpoint term -> nat -> term
 | tCoFix     : mfixpoint term -> nat -> term.
+
 
 
 Definition mkApps t us :=
@@ -111,12 +55,12 @@ Definition isApp t :=
 (** Well-formed terms: invariants which are not ensured by the OCaml type system *)
 
 Inductive wf : term -> Prop :=
+| wf_tBox : wf tBox
 | wf_tRel n : wf (tRel n)
 | wf_tVar id : wf (tVar id)
 | wf_tMeta n : wf (tMeta n)
 | wf_tEvar n l : Forall wf l -> wf (tEvar n l)
 | wf_tSort u : wf (tSort u)
-| wf_tCast t k t' : wf t -> wf t' -> wf (tCast t k t')
 | wf_tProd na t b : wf t -> wf b -> wf (tProd na t b)
 | wf_tLambda na t b : wf t -> wf b -> wf (tLambda na t b)
 | wf_tLetIn na t b b' : wf t -> wf b -> wf b' -> wf (tLetIn na t b b')
@@ -233,7 +177,7 @@ Notation " Γ ,, d " := (snoc Γ d) (at level 20, d at next level).
 (** *** Environments *)
 
 (** See [one_inductive_body] from [declarations.ml]. *)
-Record one_inductive_body := {
+Record one_inductive_body : Set := {
   ind_name : ident;
   ind_type : term; (* Closed arity *)
   ind_kelim : list sort_family; (* Allowed elimination sorts *)
@@ -270,11 +214,3 @@ Definition global_context : Type := global_declarations * uGraph.t.
   A set of declarations and a term, as produced by [Quote Recursively]. *)
 
 Definition program : Type := global_declarations * term.
-
-(** Kernel declaration references [global_reference] *)
-
-Inductive global_reference :=
-(* VarRef of Names.variable *)
-| ConstRef : kername -> global_reference
-| IndRef : inductive -> global_reference
-| ConstructRef : inductive -> nat -> global_reference.

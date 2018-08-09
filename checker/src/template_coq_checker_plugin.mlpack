@@ -32,6 +32,7 @@ UGraph0
 LiftSubst
 Typing0
 Checker0
+Retyping0
 
 Term_quoter
 G_template_checker

@@ -1,0 +1,16 @@
+-I src
+-R theories TemplateExtraction
+
+src/ast1.ml
+src/ast1.mli
+src/induction0.ml
+src/induction0.mli
+src/liftSubst0.ml
+src/liftSubst0.mli
+src/typing1.ml
+src/typing1.mli
+src/univSubst1.ml
+src/univSubst1.mli
+src/extract.mli
+src/extract.ml
+src/template_coq_extraction_plugin.mlpack

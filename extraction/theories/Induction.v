@@ -1,6 +1,6 @@
 (* Distributed under the terms of the MIT license.   *)
 
-From Template Require Import univ.
+From Template Require Import univ Ast.
 From TemplateExtraction Require Import Ast.
 Require Import List Program.
 Require Import BinPos.

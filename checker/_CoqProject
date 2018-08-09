@@ -71,6 +71,8 @@ src/string0.mli
 src/string0.ml
 src/liftSubst.mli
 src/liftSubst.ml
+src/retyping0.mli
+src/retyping0.ml
 
 src/term_quoter.ml
 src/g_template_checker.ml4

@@ -1,7 +1,7 @@
 (* Distributed under the terms of the MIT license.   *)
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
-From Template Require Import config utils monad_utils Ast univ Induction LiftSubst UnivSubst Typing Checker Retyping MetaTheory WcbvEval.
+From Template Require Import config utils monad_utils Ast univ Induction Typing Checker Retyping MetaTheory WcbvEval.
 From TemplateExtraction Require Ast Typing WcbvEval.
 Require Import String.
 Local Open Scope string_scope.
@@ -113,10 +113,19 @@ Definition extract_constant_body `{F:Fuel} Σ (cb : constant_body) : typing_resu
   ret {| E.cst_universes := cb.(cst_universes);
          E.cst_type := ty; E.cst_body := body; |}.
 
-Definition extract_one_inductive_body `{F:Fuel} Σ
+Fixpoint decompose_prod_n acc n ty :=
+  match n, ty with
+  | S n, tProd na t t' => decompose_prod_n (acc ,, vass na t) n t'
+  | S n, tLetIn na t b t' => decompose_prod_n (acc ,, vdef na b t) n t'
+  | _, _ => (acc, ty)
+  end.
+
+Definition extract_one_inductive_body `{F:Fuel} Σ npars arities
            (oib : one_inductive_body) : typing_result E.one_inductive_body :=
+  let '(params, arity) := decompose_prod_n [] npars oib.(ind_type) in
   type <- extract Σ [] oib.(ind_type) ;;
-  ctors <- monad_map (fun '(x, y, z) => y' <- extract Σ [] y;; ret (x, y', z)) oib.(ind_ctors);;
+  ctors <- monad_map (fun '(x, y, z) => y' <- extract Σ arities y;; ret (x, y', z)) oib.(ind_ctors);;
+  let projctx := arities ,,, params ,, vass nAnon oib.(ind_type) in
   projs <- monad_map (fun '(x, y) => y' <- extract Σ [] y;; ret (x, y')) oib.(ind_projs);;
   ret {| E.ind_name := oib.(ind_name);
          E.ind_type := type;
@@ -126,7 +135,9 @@ Definition extract_one_inductive_body `{F:Fuel} Σ
 
 Definition extract_mutual_inductive_body `{F:Fuel} Σ
            (mib : mutual_inductive_body) : typing_result E.mutual_inductive_body :=
-  bodies <- monad_map (extract_one_inductive_body Σ) mib.(ind_bodies) ;;
+  let bds := mib.(ind_bodies) in
+  let arities := arities_context bds in
+  bodies <- monad_map (extract_one_inductive_body Σ mib.(ind_npars) arities) bds ;;
   ret {| E.ind_npars := mib.(ind_npars);
          E.ind_bodies := bodies;
          E.ind_universes := mib.(ind_universes) |}.
@@ -146,8 +157,8 @@ Fixpoint extract_global_decls univs Σ : typing_result E.global_declarations :=
 
 Definition extract_global Σ :=
   let '(Σ, univs) := Σ in
-  Σ' <- extract_global_decls univs Σ;;
-  ret (Σ', univs).
+  Σ' <- extract_global_decls univs (List.rev Σ);;
+  ret (List.rev Σ', univs).
 
 (** * Erasure correctness
     
@@ -294,7 +305,7 @@ Definition erasure_correctness :=
     extract_global Σ = Checked Σ' ->
     extraction_post Σ Σ' t t'.
       
-Conjecture erasure_correct : erasure_correctness.
+(* Conjecture erasure_correct : erasure_correctness. *)
 
 Quote Recursively Definition zero_syntax := 0.
 
@@ -318,3 +329,11 @@ Eval vm_compute in extract_rec fun_syntax. (* Not erasing bindings *)
 
 Quote Recursively Definition fun'_syntax := (fun (x : nat) (bla : x < 0) => bla).
 Eval vm_compute in extract_rec fun'_syntax.
+
+Quote Recursively Definition foo_nil := (@nil nat).
+Eval vm_compute in (extract_global (fst foo_nil, uGraph.init_graph)).
+
+Quote Recursively Definition foo_c := (3 + 4).
+Eval vm_compute in (extract_global (fst foo_c, uGraph.init_graph)).
+
+Eval vm_compute in extract_rec foo_c.

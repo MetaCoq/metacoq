@@ -12,4 +12,5 @@ From Template Require Export
      WeakSubst     (* Weakening and substitution lemmas *)
      UnivSubst     (* Substitution of universe instances *)
      Typing        (* Typing judgment *)
-     Checker.      (* Partial typechecker implementation *)
+     Checker       (* Partial typechecker implementation *)
+     Retyping      (* Fast retyping judgment *).

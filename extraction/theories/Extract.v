@@ -20,7 +20,6 @@ Module E := TemplateExtraction.Ast.
 
 Section Erase.
   Context `{F : Fuel}.
-  Context (Σ : global_context).
 
   Definition is_box c :=
     match c with
@@ -42,60 +41,67 @@ Section Erase.
                                 dtype := dtype'; dbody := dbody' |})) defs.
   End EraseMfix.
   
-  Fixpoint extract (Γ : context) (t : term) : typing_result E.term :=
-    s <- sort_of Σ Γ t;;
-    if is_prop_sort s then ret E.tBox
-    else match t with
+  Fixpoint extract (Σ : global_context) (Γ : context) (t : term) : typing_result E.term :=
+    match t with
     | tRel i => ret (E.tRel i)
     | tVar n => ret (E.tVar n)
     | tMeta m => ret (E.tMeta m)
     | tEvar m l =>
-      l' <- monad_map (extract Γ) l;;
+      l' <- monad_map (extract Σ Γ) l;;
       ret (E.tEvar m l')
     | tSort u => ret (E.tSort u)
     | tConst kn u => ret (E.tConst kn u)
     | tInd kn u => ret (E.tInd kn u)
     | tConstruct kn k u => ret (E.tConstruct kn k u)
-    | tCast t k ty => extract Γ t
-                      (* ty' <- extract Γ ty ;; *)
+    | tCast t k ty =>
+      match t with
+      | tCast t' k' ty' =>
+        match ty with
+        | tSort u =>
+          if is_prop_sort u then ret E.tBox
+          else extract Σ Γ t'
+        | _ => extract Σ Γ t'
+        end
+      | _ => extract Σ Γ t
+      end          (* ty' <- extract Γ ty ;; *)
                       (* ret (tCast t' k ty') *)
-    | tProd na b t => b' <- extract Γ b;;
-                      t' <- extract (vass na b :: Γ) t;;
+    | tProd na b t => b' <- extract Σ Γ b;;
+                      t' <- extract Σ (vass na b :: Γ) t;;
                       ret (E.tProd na b' t')
     | tLambda na b t =>
-      b' <- extract Γ b;;
-      t' <- extract (vass na b :: Γ) t;;
+      b' <- extract Σ Γ b;;
+      t' <- extract Σ (vass na b :: Γ) t;;
       ret (E.tLambda na b' t')
     | tLetIn na b t0 t1 =>
-      b' <- extract Γ b;;
-      t0' <- extract Γ t0;;
-      t1' <- extract (vdef na b t0 :: Γ) t1;;
+      b' <- extract Σ Γ b;;
+      t0' <- extract Σ Γ t0;;
+      t1' <- extract Σ (vdef na b t0 :: Γ) t1;;
       ret (E.tLetIn na b' t0' t1')
     | tApp f l =>
-      f' <- extract Γ f;;
-      l' <- monad_map (extract Γ) l;;
+      f' <- extract Σ Γ f;;
+      l' <- monad_map (extract Σ Γ) l;;
       ret (E.tApp f' l') (* if is_dummy f' then ret dummy else *)
     | tCase ip p c brs =>
-      c' <- extract Γ c;;
+      c' <- extract Σ Γ c;;
       if is_box c' then
         match brs with
-        | (_, x) :: _ => extract Γ x (* Singleton elimination *)
+        | (_, x) :: _ => extract Σ Γ x (* Singleton elimination *)
         | nil =>
-          p' <- extract Γ p;;
+          p' <- extract Σ Γ p;;
           ret (E.tCase ip p' c' nil) (* Falsity elimination *)
         end
       else
-        brs' <- monad_map (T:=typing_result) (fun x => x' <- extract Γ (snd x);; ret (fst x, x')) brs;;
-        p' <- extract Γ p;;
+        brs' <- monad_map (T:=typing_result) (fun x => x' <- extract Σ Γ (snd x);; ret (fst x, x')) brs;;
+        p' <- extract Σ Γ p;;
         ret (E.tCase ip p' c' brs')
     | tProj p c =>
-      c' <- extract Γ c;;
+      c' <- extract Σ Γ c;;
       ret (E.tProj p c')
     | tFix mfix n =>
-      mfix' <- extract_mfix extract Γ mfix;;
+      mfix' <- extract_mfix (extract Σ) Γ mfix;;
       ret (E.tFix mfix' n)
     | tCoFix mfix n =>
-      mfix' <- extract_mfix extract Γ mfix;;
+      mfix' <- extract_mfix (extract Σ) Γ mfix;;
       ret (E.tCoFix mfix' n)
      end.
 

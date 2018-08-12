@@ -312,35 +312,3 @@ Definition erasure_correctness :=
     extraction_post Σ Σ' t t'.
       
 (* Conjecture erasure_correct : erasure_correctness. *)
-
-Quote Recursively Definition zero_syntax := 0.
-
-Definition extract_rec (t : global_declarations * term) : typing_result E.term :=
-  let '(Σ, t) := t in
-  extract (reconstruct_global_context Σ) [] t.
-
-(* A few tests *)
-
-Set Template Cast Propositions.
-Quote Recursively Definition true_syntax := I.
-Eval vm_compute in extract_rec true_syntax.
-
-Quote Recursively Definition exist_syntax := (exist _ 0 I : { x : nat | True }).
-Eval vm_compute in extract_rec exist_syntax.
-
-Quote Recursively Definition exist'_syntax := ((exist _ (S 0) (le_n (S 0))) : { x : nat | 0 < x }).
-Eval vm_compute in extract_rec exist'_syntax.
-
-Quote Recursively Definition fun_syntax := (fun (x : nat) (bla : x < 0) => x).
-Eval vm_compute in extract_rec fun_syntax. (* Not erasing bindings *)
-
-Quote Recursively Definition fun'_syntax := (fun (x : nat) (bla : x < 0) => bla).
-Eval vm_compute in extract_rec fun'_syntax.
-
-Quote Recursively Definition foo_nil := (@nil nat).
-Eval vm_compute in (extract_global (fst foo_nil, uGraph.init_graph)).
-
-Quote Recursively Definition foo_c := (3 + 4).
-Eval vm_compute in (extract_global (fst foo_c, uGraph.init_graph)).
-
-Eval vm_compute in extract_rec foo_c.

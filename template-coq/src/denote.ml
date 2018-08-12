@@ -707,6 +707,7 @@ let rec run_template_program_rec ?(intactic=false) (k : Evd.evar_map * Constr.t 
                (Constr.mkConstructU (ctor, Univ.Instance.of_array [|u|]), [|typ; t'|]) in
              let evm, _ = Typing.type_of env evm (EConstr.of_constr term) in
                (evm, term)
+           | _ -> anomaly (str "texistT_typed_term does not refer to a constructor")
          in
            k (make_typed_term typ t' evm)
         with Reduction.NotArity -> CErrors.user_err (str "unquoting ill-typed term"))

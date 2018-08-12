@@ -153,7 +153,6 @@ END;;
 TACTIC EXTEND run_program
     | [ "run_template_program" constr(c) tactic(tac) ] ->
       [ Proofview.Goal.enter (begin fun gl ->
-         let env = Proofview.Goal.env gl in
          let evm = Proofview.Goal.sigma gl in
          let ret = ref None in
          Denote.run_template_program_rec ~intactic:true (fun (evm, t) -> ret := Some t) (evm, EConstr.to_constr evm c);

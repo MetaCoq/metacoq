@@ -1,4 +1,5 @@
 -I src
+-I ../checker/src
 -R theories TemplateExtraction
 
 src/ast1.ml

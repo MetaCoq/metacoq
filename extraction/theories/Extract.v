@@ -54,13 +54,13 @@ Section Erase.
     | tInd kn u => ret (E.tInd kn u)
     | tConstruct kn k u => ret (E.tConstruct kn k u)
     | tCast t k ty =>
-      match t with
-      | tCast t' k' ty' =>
-        match ty with
+      match ty with
+      | tCast _ k' ty' =>
+        match ty' with
         | tSort u =>
           if is_prop_sort u then ret E.tBox
-          else extract Σ Γ t'
-        | _ => extract Σ Γ t'
+          else extract Σ Γ t
+        | _ => extract Σ Γ t
         end
       | _ => extract Σ Γ t
       end          (* ty' <- extract Γ ty ;; *)
@@ -321,6 +321,7 @@ Definition extract_rec (t : global_declarations * term) : typing_result E.term :
 
 (* A few tests *)
 
+Set Template Cast Propositions.
 Quote Recursively Definition true_syntax := I.
 Eval vm_compute in extract_rec true_syntax.
 

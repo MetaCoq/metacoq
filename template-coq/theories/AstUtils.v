@@ -1,4 +1,4 @@
-From Coq Require Import String Bool.
+From Coq Require Import Ascii String Bool OrderedType.
 From Coq Require Import List.
 From Template Require Import Ast utils.
 Import List.ListNotations.
@@ -29,6 +29,12 @@ Proof.
   destruct i, i0.
   decide equality; eauto with eq_dec.
 Defined.
+
+Definition decompose_app (t : term) :=
+  match t with
+  | tApp f l => (f, l)
+  | _ => (t, [])
+  end.
 
 Fixpoint decompose_prod (t : term) : (list name) * (list term) * term :=
   match t with

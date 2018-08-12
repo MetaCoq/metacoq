@@ -177,3 +177,9 @@ checker/src/wf.mli
 /extraction/src/univSubst1.ml
 /extraction/src/univSubst1.mli
 /checker/Makefile.conf
+/checker/src/ordersTac.mli
+/checker/src/orderedType0.ml
+/checker/src/orderedType0.mli
+/checker/src/orders.ml
+/checker/src/orders.mli
+/checker/src/ordersTac.ml

@@ -698,7 +698,8 @@ let rec run_template_program_rec ?(intactic=false) (k : Evd.evar_map * Constr.t 
          let evdref = ref evm in
          let t' = denote_term evdref t in
          let evm = !evdref in
-         let typ = EConstr.to_constr evm (Retyping.get_type_of env evm (EConstr.of_constr t')) in
+         let typ = Retyping.get_type_of env evm (EConstr.of_constr t') in
+         let evm, typ = Evarsolve.refresh_universes (Some false) env evm typ in
          let make_typed_term typ term evm =
            match texistT_typed_term with
            | ConstructRef ctor ->
@@ -709,7 +710,7 @@ let rec run_template_program_rec ?(intactic=false) (k : Evd.evar_map * Constr.t 
                (evm, term)
            | _ -> anomaly (str "texistT_typed_term does not refer to a constructor")
          in
-           k (make_typed_term typ t' evm)
+           k (make_typed_term (EConstr.to_constr evm typ) t' evm)
         with Reduction.NotArity -> CErrors.user_err (str "unquoting ill-typed term"))
     | _ -> monad_failure "tmUnquote" 1
   else if Globnames.eq_gr glob_ref tmUnquoteTyped then

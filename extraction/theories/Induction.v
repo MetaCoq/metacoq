@@ -258,7 +258,7 @@ Ltac apply_spec :=
 Lemma lift_to_list (P : term -> Prop) : (forall t, wf t -> P t) -> forall l, Forall wf l -> Forall P l.
 Proof.
   intros IH.
-  fix 1.
+  fix lift_to_list 1.
   destruct l; constructor.
   apply IH. now inversion_clear H.
   apply lift_to_list. now inversion_clear H.

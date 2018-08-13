@@ -1,4 +1,4 @@
-From Coq Require Import Bool Program List String.
+From Coq Require Import Bool Program List Ascii String OrderedType.
 Import ListNotations.
 Open Scope string_scope.
 
@@ -236,3 +236,161 @@ Proof.
   - simpl. rewrite !rev_map_cons. rewrite IHl1.
     rewrite app_assoc. reflexivity.
 Defined.
+
+(** Facts about booleans, characters and strings *)
+
+Definition bool_compare (x y : bool) : comparison :=
+  if x then if y then Eq else Gt else if y then Lt else Eq.
+
+Definition bool_lt (x y : bool) :=
+  if x then False else y = true.
+
+Local Notation " x =? y " := (bool_compare x y) (at level 10).
+Local Notation " c ?? y " := (match c with Eq => y | Lt => Lt | Gt => Gt end) (at level 100).
+
+Definition bool_Compare (x y : bool) : Compare bool_lt eq x y.
+Proof.
+  destruct x, y.
+  - apply EQ. reflexivity.
+  - apply GT. reflexivity.
+  - apply LT. reflexivity.
+  - apply EQ. reflexivity.
+Defined.
+
+Definition ascii_compare x y :=
+  let 'Ascii a b c d e f g h := x in
+  let 'Ascii a' b' c' d' e' f' g' h' := y in
+  bool_compare a a'
+    ?? bool_compare b b'
+    ?? bool_compare c c'
+    ?? bool_compare d d'
+    ?? bool_compare e e'
+    ?? bool_compare f f'
+    ?? bool_compare g g'
+    ?? bool_compare h h'.
+
+Definition ascii_lt x y := ascii_compare x y = Lt.
+
+Ltac tryone a a' H :=
+  destruct a, a'; simpl in *; try (reflexivity || discriminate).
+
+Lemma ascii_Compare_eq : forall x y, ascii_compare x y = Eq <-> x = y.
+Proof.
+  destruct x as [a b c d e f g h].
+  destruct y as [a' b' c' d' e' f' g' h'].
+  split. intros H.
+  tryone a a' H;
+    tryone b b' H;
+    tryone c c' H;
+    tryone d d' H;
+    tryone e e' H;
+    tryone f f' H;
+    tryone g g' H;
+    tryone h h' H; reflexivity.
+  intros H; injection H. intros; subst.
+  destruct a', b', c', d', e', f', g', h'; reflexivity.
+Qed.
+
+Lemma ascii_compare_Lt x y : ascii_compare x y = Gt <-> ascii_compare y x = Lt.
+Proof.
+  destruct x as [a b c d e f g h].
+  destruct y as [a' b' c' d' e' f' g' h'].
+  split.
+  intros H.
+  tryone a a' H;
+    tryone b b' H;
+    tryone c c' H;
+    tryone d d' H;
+    tryone e e' H;
+    tryone f f' H;
+    tryone g g' H;
+    tryone h h' H; try reflexivity.
+  intros H.
+  tryone a a' H;
+    tryone b b' H;
+    tryone c c' H;
+    tryone d d' H;
+    tryone e e' H;
+    tryone f f' H;
+    tryone g g' H;
+    tryone h h' H; try reflexivity.
+Qed.
+
+Definition ascii_Compare (x y : ascii) : Compare ascii_lt eq x y.
+Proof.
+  case_eq (ascii_compare x y).
+  intros.
+  - apply EQ.
+    now apply ascii_Compare_eq.
+  - intros. apply LT.
+    destruct x as [a b c d e f g h].
+    destruct y as [a' b' c' d' e' f' g' h'].
+    unfold ascii_lt. apply H.
+  - intros.
+    apply GT. red. now apply ascii_compare_Lt.
+Qed.
+
+Fixpoint string_compare x y :=
+  match x, y with
+  | EmptyString, EmptyString => Eq
+  | String a s, String b s' =>
+    match ascii_compare a b with
+    | Eq => string_compare s s'
+    | Lt => Lt
+    | Gt => Gt
+    end
+  | EmptyString, String _ _ => Lt
+  | String _ _, EmptyString => Gt
+  end.
+
+Definition string_lt x y : Prop := string_compare x y = Lt.
+
+Lemma string_compare_eq : forall x y : string, string_compare x y = Eq <-> eq x y.
+Proof.
+  split.
+  induction x in y |- *.
+  + destruct y. reflexivity.
+    discriminate.
+  + destruct y. discriminate.
+    simpl. destruct (ascii_Compare a a0). red in a1. rewrite a1. discriminate.
+    subst a0.
+    pose (proj2 (ascii_Compare_eq a a) Logic.eq_refl).
+    rewrite e. intros H. specialize (IHx _ H). rewrite IHx. reflexivity.
+    red in a1. apply ascii_compare_Lt in a1. rewrite a1. discriminate.
+  + intros ->.
+    induction y. reflexivity.
+    simpl. now rewrite (proj2 (ascii_Compare_eq a a) Logic.eq_refl).
+Qed.
+
+Lemma string_compare_lt : forall x y : string, string_compare x y = Lt <-> string_compare y x = Gt.
+Proof.
+  split.
+  - induction x in y |- *.
+    + destruct y. discriminate.
+      reflexivity.
+    + destruct y. discriminate.
+      simpl. destruct (ascii_Compare a a0). red in a1. rewrite a1.
+      apply ascii_compare_Lt in a1. rewrite a1. reflexivity.
+      subst a0.
+      pose (proj2 (ascii_Compare_eq a a) Logic.eq_refl).
+      rewrite e. intros H. now specialize (IHx _ H).
+      red in a1. rewrite a1. apply ascii_compare_Lt in a1. rewrite a1. discriminate.
+  - induction x in y |- *.
+    + destruct y. discriminate.
+      reflexivity.
+    + destruct y. discriminate.
+      simpl. destruct (ascii_Compare a a0). red in a1. rewrite a1.
+      apply ascii_compare_Lt in a1. rewrite a1. reflexivity.
+      subst a0.
+      pose (proj2 (ascii_Compare_eq a a) Logic.eq_refl).
+      rewrite e. intros H. now specialize (IHx _ H).
+      red in a1. rewrite a1. apply ascii_compare_Lt in a1. rewrite a1. discriminate.
+Qed.
+
+Definition string_Compare (x y : string) : Compare string_lt eq x y.
+Proof.
+  case_eq (string_compare x y); intros H.
+  - apply EQ. now apply string_compare_eq.
+  - apply LT; assumption.
+  - apply GT. red. now apply string_compare_lt.
+Qed.

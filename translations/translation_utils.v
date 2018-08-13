@@ -125,21 +125,22 @@ Definition tImplement {tsl : Translation} (ΣE : tsl_context)
   match tA' with
   | Error e => print_nf e ;; fail_nf ("Translation error during the translation of the type of " ++ id)
   | Success tA' =>
-      id' <- tmEval all (tsl_id id) ;;
-      A' <- tmUnquoteTyped Type tA' ;;
-      tmLemma id' A' ;;
-      tmAxiom id A ;;
-      gr <- tmAbout id ;;
-      match gr with
-      | Some (ConstRef kn) =>
-        let decl := {| cst_universes := Monomorphic_ctx UContext.empty;
-                       cst_type := tA; cst_body := None |} in
-        let Σ' := add_global_decl (ConstantDecl kn decl) (fst ΣE) in
-        let E' := (ConstRef kn, tConst id' []) :: (snd ΣE) in
-        print_nf (id ++ " has been translated as " ++ id') ;;
-        ret (Σ', E')
-      | _ => fail_nf (id ++ " was not found or is not a constant, this is a bug")
-      end
+    id' <- tmEval all (tsl_id id) ;;
+    let ty := Type in
+    A' <- tmUnquoteTyped ty tA' ;;
+     tmLemma id' (A' : ty) ;;
+     tmAxiom id A ;;
+     gr <- tmAbout id ;;
+     match gr with
+     | Some (ConstRef kn) =>
+       let decl := {| cst_universes := Monomorphic_ctx UContext.empty;
+                      cst_type := tA; cst_body := None |} in
+       let Σ' := add_global_decl (ConstantDecl kn decl) (fst ΣE) in
+       let E' := (ConstRef kn, tConst id' []) :: (snd ΣE) in
+       print_nf (id ++ " has been translated as " ++ id') ;;
+       ret (Σ', E')
+     | _ => fail_nf (id ++ " was not found or is not a constant, this is a bug")
+     end
   end.
 
 

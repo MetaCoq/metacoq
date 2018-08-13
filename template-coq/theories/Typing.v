@@ -43,11 +43,17 @@ Definition is_inductive_decl_for i d :=
   end.
 
 Definition ident_eq (x y : ident) :=
-  if string_dec x y then true else false.
+  match string_compare x y with
+  | Eq => true
+  | _ => false
+  end.
 
 Lemma ident_eq_spec x y : reflect (x = y) (ident_eq x y).
 Proof.
-  unfold ident_eq. destruct string_dec; constructor; auto.
+  unfold ident_eq. destruct (string_compare_eq x y).
+  destruct string_compare; constructor; auto.
+  intro Heq; specialize (H0 Heq). discriminate.
+  intro Heq; specialize (H0 Heq). discriminate.
 Qed.
 
 Fixpoint lookup_env (Σ : global_declarations) (id : ident) : option global_decl :=
@@ -378,7 +384,7 @@ Fixpoint destArity Γ (t : term) :=
 
 (** Make a lambda/let-in string of abstractions from a context [Γ], ending with term [t]. *)
 
-Fixpoint it_mkLambda_or_LetIn (l : context) (t : term) :=
+Definition it_mkLambda_or_LetIn (l : context) (t : term) :=
   List.fold_left
     (fun acc d =>
        match d.(decl_body) with

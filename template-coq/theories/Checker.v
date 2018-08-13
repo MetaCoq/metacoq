@@ -1,7 +1,7 @@
 (* Distributed under the terms of the MIT license.   *)
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
-From Template Require Import config univ Ast Induction LiftSubst UnivSubst Typing
+From Template Require Import config univ Ast AstUtils Induction LiftSubst UnivSubst Typing
      monad_utils utils.
 Import MonadNotation.
 
@@ -68,10 +68,12 @@ Section Reduce.
       reduce_stack Γ n (subst0 b c) stack
     else ret (t, stack)
 
-  | tConst c u => (* TODO Universes *)
+  | tConst c u =>
     if RedFlags.delta flags then
       match lookup_env Σ c with
-      | Some (ConstantDecl _ {| cst_body := Some body |}) => reduce_stack Γ n body stack
+      | Some (ConstantDecl _ {| cst_body := Some body |}) =>
+        let body' := subst_instance_constr u body in
+        reduce_stack Γ n body' stack
       | _ => ret (t, stack)
       end
     else ret (t, stack)
@@ -82,11 +84,12 @@ Section Reduce.
     if RedFlags.beta flags then
       match stack with
       | a :: args' =>
-        (** CBV reduction: we reduce arguments before substitution *)
-        a' <- reduce_stack Γ n a [] ;;
-        reduce_stack Γ n (subst0 (zip a') b) args'
-      | _ => b' <- reduce_stack (Γ ,, vass na ty) n b stack ;;
-               ret (tLambda na ty (zip b'), stack)
+        (** CBN reduction: we do not reduce arguments before substitution *)
+        (* a' <- reduce_stack Γ n a [] ;; *)
+        reduce_stack Γ n (subst0 a b) args'
+      | _ => ret (t, stack)
+               (*  b' <- reduce_stack (Γ ,, vass na ty) n b stack ;; *)
+               (* ret (tLambda na ty (zip b'), stack) *)
       end
     else ret (t, stack)
 
@@ -105,10 +108,11 @@ Section Reduce.
       end
     else ret (t, stack)
 
-  | tProd na b t =>
-    b' <- reduce_stack Γ n b [] ;;
-    t' <- reduce_stack (Γ ,, vass na (zip b')) n t [] ;;
-    ret (tProd na (zip b') (zip t'), stack)
+  | tProd _ _ _ => ret (t, stack)
+
+    (* b' <- reduce_stack Γ n b [] ;; *)
+    (* t' <- reduce_stack (Γ ,, vass na (zip b')) n t [] ;; *)
+    (* ret (tProd na (zip b') (zip t'), stack) *)
 
   | tCast c _ _ => reduce_stack Γ n c stack
 
@@ -545,25 +549,36 @@ Section Typecheck.
     end.
 
   Definition reduce_to_sort Γ (t : term) : typing_result universe :=
-    t' <- hnf_stack Γ t ;;
-    match t' with
-    | (tSort s, []) => ret s
-    | _ => raise (NotASort t)
+    match t with
+    | tSort s => ret s
+    | _ =>
+      t' <- hnf_stack Γ t ;;
+      match t' with
+      | (tSort s, []) => ret s
+      | _ => raise (NotASort t)
+      end
     end.
 
   Definition reduce_to_prod Γ (t : term) : typing_result (term * term) :=
-    t' <- hnf_stack Γ t ;;
-    match t' with
-    | (tProd _ a b,[]) => ret (a, b)
-    | _ => raise (NotAProduct t (zip t'))
+    match t with
+    | tProd _ a b => ret (a, b)
+    | _ =>
+      t' <- hnf_stack Γ t ;;
+      match t' with
+      | (tProd _ a b,[]) => ret (a, b)
+      | _ => raise (NotAProduct t (zip t'))
+      end
     end.
 
   Definition reduce_to_ind Γ (t : term) :
     typing_result (inductive * list Level.t * list term) :=
-    t' <- hnf_stack Γ t ;;
-    match t' with
+    match decompose_app t with
     | (tInd i u, l) => ret (i, u, l)
-    | _ => raise (NotAnInductive t)
+    | _ => t' <- hnf_stack Γ t ;;
+           match t' with
+           | (tInd i u, l) => ret (i, u, l)
+           | _ => raise (NotAnInductive t)
+           end
     end.
 End Typecheck.
 
@@ -620,38 +635,56 @@ Section Typecheck2.
   Definition lookup_constant_type cst u :=
     match lookup_env Σ cst with
     | Some (ConstantDecl _ {| cst_type := ty; cst_universes := uctx |}) =>
+      ret (subst_instance_constr u ty)
+    |  _ => raise (UndeclaredConstant cst)
+    end.
+
+  Definition lookup_constant_type_cstrs cst u :=
+    match lookup_env Σ cst with
+    | Some (ConstantDecl _ {| cst_type := ty; cst_universes := uctx |}) =>
       let cstrs := polymorphic_constraints uctx in
       ret (subst_instance_constr u ty, subst_instance_cstrs u cstrs)
       |  _ => raise (UndeclaredConstant cst)
     end.
 
-  Definition lookup_ind_type ind i (u : list Level.t) (* TODO Universes *) :=
+  Definition lookup_ind_decl ind i :=
     match lookup_env Σ ind with
     | Some (InductiveDecl _ {| ind_bodies := l; ind_universes := uctx |}) =>
       match nth_error l i with
-      | Some body =>
-        let cstrs := polymorphic_constraints uctx in
-        ret (subst_instance_constr u body.(ind_type), subst_instance_cstrs u cstrs)
+      | Some body => ret (l, uctx, body)
       | None => raise (UndeclaredInductive (mkInd ind i))
       end
-    |  _ => raise (UndeclaredInductive (mkInd ind i))
+    | _ => raise (UndeclaredInductive (mkInd ind i))
+    end.
+
+  Definition lookup_ind_type ind i (u : list Level.t) :=
+    res <- lookup_ind_decl ind i ;;
+    ret (subst_instance_constr u (snd res).(ind_type)).
+
+  Definition lookup_ind_type_cstrs ind i (u : list Level.t) :=
+    res <- lookup_ind_decl ind i ;;
+    let '(l, uctx, body) := res in
+    let cstrs := polymorphic_constraints uctx in
+    ret (subst_instance_constr u body.(ind_type), subst_instance_cstrs u cstrs).
+
+  Definition lookup_constructor_decl ind i k :=
+    res <- lookup_ind_decl ind i;;
+    let '(l, uctx, body) := res in
+    match nth_error body.(ind_ctors) k with
+    | Some (_, ty, _) => ret (l, uctx, ty)
+    | None => raise (UndeclaredConstructor (mkInd ind i) k)
     end.
 
   Definition lookup_constructor_type ind i k u :=
-    match lookup_env Σ ind with
-    | Some (InductiveDecl _ {| ind_bodies := l ; ind_universes := uctx |}) =>
-      match nth_error l i with
-      | Some body =>
-        match nth_error body.(ind_ctors) k with
-        | Some (_, ty, _) =>
-          let cstrs := polymorphic_constraints uctx in
-          ret (substl (inds ind u l) ty, subst_instance_cstrs u cstrs)
-        | None => raise (UndeclaredConstructor (mkInd ind i) k)
-        end
-      | None => raise (UndeclaredInductive (mkInd ind i))
-      end
-    |  _ => raise (UndeclaredInductive (mkInd ind i))
-    end.
+    res <- lookup_constructor_decl ind i k ;;
+    let '(l, uctx, ty) := res in
+    ret (substl (inds ind u l) ty).
+
+  Definition lookup_constructor_type_cstrs ind i k u :=
+    res <- lookup_constructor_decl ind i k ;;
+    let '(l, uctx, ty) := res in
+    let cstrs := polymorphic_constraints uctx in
+    ret (substl (inds ind u l) ty, subst_instance_cstrs u cstrs).
 
   Definition check_consistent_constraints cstrs :=
     if check_constraints (snd Σ) cstrs then ret tt
@@ -659,7 +692,6 @@ Section Typecheck2.
 
   Definition try_suc (u : Universe.t) : Universe.t :=   (* FIXME suc s *)
     map (fun '(l, b) =>  (l, true)) u.
-
 
   Fixpoint infer (Γ : context) (t : term) : typing_result term :=
     match t with
@@ -701,19 +733,19 @@ Section Typecheck2.
       infer_spine infer Γ t_ty l
 
     | tConst cst u =>
-      tycstrs <- lookup_constant_type cst u ;;
+      tycstrs <- lookup_constant_type_cstrs cst u ;;
       let '(ty, cstrs) := tycstrs in
       check_consistent_constraints cstrs;;
       ret ty
 
     | tInd (mkInd ind i) u =>
-      tycstrs <- lookup_ind_type ind i u;;
+      tycstrs <- lookup_ind_type_cstrs ind i u;;
       let '(ty, cstrs) := tycstrs in
       check_consistent_constraints cstrs;;
       ret ty
 
     | tConstruct (mkInd ind i) k u =>
-      tycstrs <- lookup_constructor_type ind i k u ;;
+      tycstrs <- lookup_constructor_type_cstrs ind i k u ;;
       let '(ty, cstrs) := tycstrs in
       check_consistent_constraints cstrs;;
       ret ty
@@ -795,20 +827,20 @@ Section Typecheck2.
   Qed.
 
   Lemma lookup_constant_type_declared cst u decl (isdecl : declared_constant (fst Σ) cst decl) :
-    lookup_constant_type cst u =
+    lookup_constant_type_cstrs cst u =
     Checked (subst_instance_constr u decl.(cst_type),
              subst_instance_cstrs u (polymorphic_constraints decl.(cst_universes))).
   Proof.
-    unfold lookup_constant_type, lookup_env.
+    unfold lookup_constant_type_cstrs, lookup_env.
     red in isdecl. rewrite isdecl. destruct decl. reflexivity.
   Qed.
 
   Lemma lookup_constant_type_is_declared cst u T :
-    lookup_constant_type cst u = Checked T ->
+    lookup_constant_type_cstrs cst u = Checked T ->
     { decl | declared_constant (fst Σ) cst decl /\
              subst_instance_constr u decl.(cst_type) = fst T }.
   Proof.
-    unfold lookup_constant_type, lookup_env, declared_constant.
+    unfold lookup_constant_type_cstrs, lookup_env, declared_constant.
     destruct Typing.lookup_env eqn:Hlook; try discriminate.
     destruct g eqn:Hg; intros; try discriminate. destruct c.
     injection H as eq. subst T. rewrite (lookup_env_id Hlook). simpl.

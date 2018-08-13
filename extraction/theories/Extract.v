@@ -1,7 +1,7 @@
 (* Distributed under the terms of the MIT license.   *)
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
-From Template Require Import config utils monad_utils Ast univ Induction LiftSubst UnivSubst Typing Checker Retyping MetaTheory WcbvEval.
+From Template Require Import config utils monad_utils Ast univ Induction Typing Checker Retyping MetaTheory WcbvEval.
 From TemplateExtraction Require Ast Typing WcbvEval.
 Require Import String.
 Local Open Scope string_scope.
@@ -20,7 +20,6 @@ Module E := TemplateExtraction.Ast.
 
 Section Erase.
   Context `{F : Fuel}.
-  Context (Σ : global_context).
 
   Definition is_box c :=
     match c with
@@ -42,60 +41,58 @@ Section Erase.
                                 dtype := dtype'; dbody := dbody' |})) defs.
   End EraseMfix.
   
-  Fixpoint extract (Γ : context) (t : term) : typing_result E.term :=
-    s <- sort_of Σ Γ t;;
-    if is_prop_sort s then ret E.tBox
-    else match t with
+  Fixpoint extract (Σ : global_context) (Γ : context) (t : term) : typing_result E.term :=
+    u <- sort_of Σ Γ t ;;
+    if is_prop_sort u then ret E.tBox else
+    match t with
     | tRel i => ret (E.tRel i)
     | tVar n => ret (E.tVar n)
     | tMeta m => ret (E.tMeta m)
     | tEvar m l =>
-      l' <- monad_map (extract Γ) l;;
+      l' <- monad_map (extract Σ Γ) l;;
       ret (E.tEvar m l')
     | tSort u => ret (E.tSort u)
     | tConst kn u => ret (E.tConst kn u)
     | tInd kn u => ret (E.tInd kn u)
     | tConstruct kn k u => ret (E.tConstruct kn k u)
-    | tCast t k ty => extract Γ t
-                      (* ty' <- extract Γ ty ;; *)
-                      (* ret (tCast t' k ty') *)
-    | tProd na b t => b' <- extract Γ b;;
-                      t' <- extract (vass na b :: Γ) t;;
+    | tCast t k ty => extract Σ Γ t
+    | tProd na b t => b' <- extract Σ Γ b;;
+                      t' <- extract Σ (vass na b :: Γ) t;;
                       ret (E.tProd na b' t')
     | tLambda na b t =>
-      b' <- extract Γ b;;
-      t' <- extract (vass na b :: Γ) t;;
+      b' <- extract Σ Γ b;;
+      t' <- extract Σ (vass na b :: Γ) t;;
       ret (E.tLambda na b' t')
     | tLetIn na b t0 t1 =>
-      b' <- extract Γ b;;
-      t0' <- extract Γ t0;;
-      t1' <- extract (vdef na b t0 :: Γ) t1;;
+      b' <- extract Σ Γ b;;
+      t0' <- extract Σ Γ t0;;
+      t1' <- extract Σ (vdef na b t0 :: Γ) t1;;
       ret (E.tLetIn na b' t0' t1')
     | tApp f l =>
-      f' <- extract Γ f;;
-      l' <- monad_map (extract Γ) l;;
+      f' <- extract Σ Γ f;;
+      l' <- monad_map (extract Σ Γ) l;;
       ret (E.tApp f' l') (* if is_dummy f' then ret dummy else *)
     | tCase ip p c brs =>
-      c' <- extract Γ c;;
+      c' <- extract Σ Γ c;;
       if is_box c' then
         match brs with
-        | (_, x) :: _ => extract Γ x (* Singleton elimination *)
+        | (_, x) :: _ => extract Σ Γ x (* Singleton elimination *)
         | nil =>
-          p' <- extract Γ p;;
+          p' <- extract Σ Γ p;;
           ret (E.tCase ip p' c' nil) (* Falsity elimination *)
         end
       else
-        brs' <- monad_map (T:=typing_result) (fun x => x' <- extract Γ (snd x);; ret (fst x, x')) brs;;
-        p' <- extract Γ p;;
+        brs' <- monad_map (T:=typing_result) (fun x => x' <- extract Σ Γ (snd x);; ret (fst x, x')) brs;;
+        p' <- extract Σ Γ p;;
         ret (E.tCase ip p' c' brs')
     | tProj p c =>
-      c' <- extract Γ c;;
+      c' <- extract Σ Γ c;;
       ret (E.tProj p c')
     | tFix mfix n =>
-      mfix' <- extract_mfix extract Γ mfix;;
+      mfix' <- extract_mfix (extract Σ) Γ mfix;;
       ret (E.tFix mfix' n)
     | tCoFix mfix n =>
-      mfix' <- extract_mfix extract Γ mfix;;
+      mfix' <- extract_mfix (extract Σ) Γ mfix;;
       ret (E.tCoFix mfix' n)
      end.
 
@@ -113,10 +110,19 @@ Definition extract_constant_body `{F:Fuel} Σ (cb : constant_body) : typing_resu
   ret {| E.cst_universes := cb.(cst_universes);
          E.cst_type := ty; E.cst_body := body; |}.
 
-Definition extract_one_inductive_body `{F:Fuel} Σ
+Fixpoint decompose_prod_n acc n ty :=
+  match n, ty with
+  | S n, tProd na t t' => decompose_prod_n (acc ,, vass na t) n t'
+  | S n, tLetIn na t b t' => decompose_prod_n (acc ,, vdef na b t) n t'
+  | _, _ => (acc, ty)
+  end.
+
+Definition extract_one_inductive_body `{F:Fuel} Σ npars arities
            (oib : one_inductive_body) : typing_result E.one_inductive_body :=
+  let '(params, arity) := decompose_prod_n [] npars oib.(ind_type) in
   type <- extract Σ [] oib.(ind_type) ;;
-  ctors <- monad_map (fun '(x, y, z) => y' <- extract Σ [] y;; ret (x, y', z)) oib.(ind_ctors);;
+  ctors <- monad_map (fun '(x, y, z) => y' <- extract Σ arities y;; ret (x, y', z)) oib.(ind_ctors);;
+  let projctx := arities ,,, params ,, vass nAnon oib.(ind_type) in
   projs <- monad_map (fun '(x, y) => y' <- extract Σ [] y;; ret (x, y')) oib.(ind_projs);;
   ret {| E.ind_name := oib.(ind_name);
          E.ind_type := type;
@@ -126,7 +132,9 @@ Definition extract_one_inductive_body `{F:Fuel} Σ
 
 Definition extract_mutual_inductive_body `{F:Fuel} Σ
            (mib : mutual_inductive_body) : typing_result E.mutual_inductive_body :=
-  bodies <- monad_map (extract_one_inductive_body Σ) mib.(ind_bodies) ;;
+  let bds := mib.(ind_bodies) in
+  let arities := arities_context bds in
+  bodies <- monad_map (extract_one_inductive_body Σ mib.(ind_npars) arities) bds ;;
   ret {| E.ind_npars := mib.(ind_npars);
          E.ind_bodies := bodies;
          E.ind_universes := mib.(ind_universes) |}.
@@ -146,8 +154,8 @@ Fixpoint extract_global_decls univs Σ : typing_result E.global_declarations :=
 
 Definition extract_global Σ :=
   let '(Σ, univs) := Σ in
-  Σ' <- extract_global_decls univs Σ;;
-  ret (Σ', univs).
+  Σ' <- extract_global_decls univs (List.rev Σ);;
+  ret (List.rev Σ', univs).
 
 (** * Erasure correctness
     
@@ -294,27 +302,4 @@ Definition erasure_correctness :=
     extract_global Σ = Checked Σ' ->
     extraction_post Σ Σ' t t'.
       
-Conjecture erasure_correct : erasure_correctness.
-
-Quote Recursively Definition zero_syntax := 0.
-
-Definition extract_rec (t : global_declarations * term) : typing_result E.term :=
-  let '(Σ, t) := t in
-  extract (reconstruct_global_context Σ) [] t.
-
-(* A few tests *)
-
-Quote Recursively Definition true_syntax := I.
-Eval vm_compute in extract_rec true_syntax.
-
-Quote Recursively Definition exist_syntax := (exist _ 0 I : { x : nat | True }).
-Eval vm_compute in extract_rec exist_syntax.
-
-Quote Recursively Definition exist'_syntax := ((exist _ (S 0) (le_n (S 0))) : { x : nat | 0 < x }).
-Eval vm_compute in extract_rec exist'_syntax.
-
-Quote Recursively Definition fun_syntax := (fun (x : nat) (bla : x < 0) => x).
-Eval vm_compute in extract_rec fun_syntax. (* Not erasing bindings *)
-
-Quote Recursively Definition fun'_syntax := (fun (x : nat) (bla : x < 0) => bla).
-Eval vm_compute in extract_rec fun'_syntax.
+(* Conjecture erasure_correct : erasure_correctness. *)

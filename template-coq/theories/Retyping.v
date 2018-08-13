@@ -29,8 +29,8 @@ Section TypeOf.
     | nil => ret ty
     | cons x xs =>
       pi <- reduce_to_prod (fst Σ) Γ ty ;;
-         let '(a1, b1) := pi in
-         infer_spine Γ (subst0 x b1) xs
+       let '(a1, b1) := pi in
+       infer_spine Γ (subst0 x b1) xs
     end.
 
   Section SortOf.
@@ -75,20 +75,12 @@ Section TypeOf.
       t_ty <- type_of Γ t ;;
       infer_spine Γ t_ty l
 
-    | tConst cst u =>
-      tycstrs <- lookup_constant_type Σ cst u ;;
-      let '(ty, cstrs) := tycstrs in
-      ret ty
+    | tConst cst u => lookup_constant_type Σ cst u
 
-    | tInd (mkInd ind i) u =>
-      tycstrs <- lookup_ind_type Σ ind i u;;
-      let '(ty, cstrs) := tycstrs in
-      ret ty
+    | tInd (mkInd ind i) u => lookup_ind_type Σ ind i u
 
     | tConstruct (mkInd ind i) k u =>
-      tycstrs <- lookup_constructor_type  Σ ind i k u ;;
-      let '(ty, cstrs) := tycstrs in
-      ret ty
+      lookup_constructor_type Σ ind i k u
 
     | tCase (ind, par) p c brs =>
       ty <- type_of Γ c ;;

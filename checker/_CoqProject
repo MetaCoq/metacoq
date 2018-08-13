@@ -51,6 +51,13 @@ src/binPos.ml
 src/binPosDef.mli
 src/binPosDef.ml
 
+src/orders.mli
+src/orders.ml
+src/ordersTac.mli
+src/ordersTac.ml
+src/orderedType0.mli
+src/orderedType0.ml
+
 src/induction.mli
 src/induction.ml
 src/ast0.mli
@@ -71,6 +78,8 @@ src/string0.mli
 src/string0.ml
 src/liftSubst.mli
 src/liftSubst.ml
+src/retyping0.mli
+src/retyping0.ml
 
 src/term_quoter.ml
 src/g_template_checker.ml4

@@ -14,6 +14,12 @@ Require Import ExtrOcamlString ExtrOcamlZInt.
    https://github.com/coq/coq/issues/7017. *)
 Extract Inductive Decimal.int => unit [ "(fun _ -> ())" "(fun _ -> ())" ] "(fun _ _ _ -> assert false)".
 
-Extraction Blacklist config uGraph univ Ast String List Nat UnivSubst Typing Checker.
+Extract Constant utils.ascii_compare =>
+ "fun x y -> match Char.compare x y with 0 -> Eq | x when x < 0 -> Lt | _ -> Gt".
+
+Extraction Blacklist config uGraph univ Ast String List Nat Int
+           UnivSubst Typing Checker Retyping OrderedType.
 Set Warnings "-extraction-opaque-accessed".
+
 Recursive Extraction Library Checker.
+Recursive Extraction Library Retyping.

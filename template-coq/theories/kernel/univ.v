@@ -20,17 +20,6 @@ Definition list_union {A} `{ComparableType A} (l l' : list A) : list A
 
 Infix "<?" := Nat.ltb (at level 70) : nat_scope.
 
-Fixpoint compare_string (s1 s2 : string) : comparison :=
-  match (s1,s2) with
-      | (EmptyString, EmptyString) => Eq
-      | (EmptyString, _) => Lt
-      | (_, EmptyString) => Gt
-      | (String c1 s1, String c2 s2) =>
-        if nat_of_ascii c1 <? nat_of_ascii c2 then Lt
-        else if nat_of_ascii c2 <? nat_of_ascii c1 then Gt else
-  compare_string s1 s2
-end.
-  
 Definition compare_bool b1 b2 :=
   match b1, b2 with
   | false, true => Lt
@@ -80,7 +69,7 @@ Module Level.
     | lSet, lSet => Eq
     | lSet, _ => Lt
     | _, lSet => Gt
-    | Level s1, Level s2 => compare_string s1 s2
+    | Level s1, Level s2 => string_compare s1 s2
     | Level _, _ => Lt
     | _, Level _ => Gt
     | Var n, Var m => Nat.compare n m
@@ -117,7 +106,7 @@ Module LevelDecidableType.
    Definition eq_sym : forall x y : t, eq x y -> eq y x := @eq_sym _.
    Definition eq_trans : forall x y z : t, eq x y -> eq y z -> eq x z := @eq_trans _.
    Definition eq_dec : forall x y : t, {eq x y} + {~ eq x y}.
-     unfold eq. repeat decide equality.
+     unfold eq. decide equality. apply string_dec. apply Peano_dec.eq_nat_dec.
    Defined.
 End LevelDecidableType.
 Module LevelSet := FSets.FSetWeakList.Make LevelDecidableType.
@@ -302,7 +291,9 @@ Module UnivConstraintDec.
   Definition eq : t -> t -> Prop := eq.
   Definition eq_equiv : RelationClasses.Equivalence eq := _.
   Definition eq_dec : forall x y : t, {eq x y} + {~ eq x y}.
-    unfold eq. repeat decide equality.
+    unfold eq.
+    decide equality. decide equality. apply string_dec. apply Peano_dec.eq_nat_dec.
+    decide equality. decide equality. apply LevelDecidableType.eq_dec.
   Defined.
 End UnivConstraintDec.
 Module ConstraintSet := MSets.MSetWeakList.Make UnivConstraintDec.

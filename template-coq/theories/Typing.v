@@ -43,11 +43,17 @@ Definition is_inductive_decl_for i d :=
   end.
 
 Definition ident_eq (x y : ident) :=
-  if string_dec x y then true else false.
+  match string_compare x y with
+  | Eq => true
+  | _ => false
+  end.
 
 Lemma ident_eq_spec x y : reflect (x = y) (ident_eq x y).
 Proof.
-  unfold ident_eq. destruct string_dec; constructor; auto.
+  unfold ident_eq. destruct (string_compare_eq x y).
+  destruct string_compare; constructor; auto.
+  intro Heq; specialize (H0 Heq). discriminate.
+  intro Heq; specialize (H0 Heq). discriminate.
 Qed.
 
 Fixpoint lookup_env (Σ : global_declarations) (id : ident) : option global_decl :=
@@ -156,13 +162,14 @@ Definition is_constructor n ts :=
   | None => false
   end.
 
-Definition iota_red npar c args brs :=
-  (mkApps (snd (List.nth c brs (0, tRel 0))) (List.skipn npar args)).
+Definition tDummy := tRel 0.
 
-(** *** One step beta-zeta-iota-fix-delta reduction
+Definition iota_red npar c args brs :=
+  (mkApps (snd (List.nth c brs (0, tDummy))) (List.skipn npar args)).
+
+(** *** One step strong beta-zeta-iota-fix-delta reduction
 
   Inspired by the reduction relation from Coq in Coq [Barras'99].
-  TODO: Projections and CoFixpoints
 *)
 
 Inductive red1 (Σ : global_declarations) (Γ : context) : term -> term -> Prop :=
@@ -188,14 +195,29 @@ Inductive red1 (Σ : global_declarations) (Γ : context) : term -> term -> Prop 
 | red_fix mfix idx args narg fn :
     unfold_fix mfix idx = Some (narg, fn) ->
     is_constructor narg args = true ->
-    red1 Σ Γ (mkApps (tFix mfix idx) args) (mkApps fn args)
+    red1 Σ Γ (tApp (tFix mfix idx) args) (tApp fn args)
+
+(** CoFix-case unfolding *)
+| red_cofix_case ip p mfix idx args narg fn brs :
+    unfold_fix mfix idx = Some (narg, fn) ->
+    red1 Σ Γ (tCase ip p (mkApps (tCoFix mfix idx) args) brs)
+         (tCase ip (tApp fn args) p brs)
+
+(** CoFix-proj unfolding *)
+| red_cofix_proj p mfix idx args narg fn :
+    unfold_fix mfix idx = Some (narg, fn) ->
+    red1 Σ Γ (tProj p (mkApps (tCoFix mfix idx) args))
+         (tProj p (tApp fn args))
 
 (** Constant unfolding *)
 | red_delta c decl body (isdecl : declared_constant Σ c decl) u :
     decl.(cst_body) = Some body ->
     red1 Σ Γ (tConst c u) (subst_instance_constr u body)
 
-(* TODO Proj CoFix *)
+(** Proj *)
+| red_proj i pars arg args k u :
+    red1 Σ Γ (tProj (i, pars, arg) (mkApps (tConstruct i k u) args))
+         (List.nth (pars + arg) args tDummy)
 
 | abs_red_l na M M' N : red1 Σ Γ M M' -> red1 Σ Γ (tLambda na M N) (tLambda na M' N)
 | abs_red_r na M M' N : red1 Σ (Γ ,, vass na N) M M' -> red1 Σ Γ (tLambda na N M) (tLambda na N M')
@@ -207,6 +229,8 @@ Inductive red1 (Σ : global_declarations) (Γ : context) : term -> term -> Prop 
 | case_red_discr ind p c c' brs : red1 Σ Γ c c' -> red1 Σ Γ (tCase ind p c brs) (tCase ind p c' brs)
 | case_red_brs ind p c brs brs' : redbrs1 Σ Γ brs brs' -> red1 Σ Γ (tCase ind p c brs) (tCase ind p c brs')
 
+| proj_red p c c' : red1 Σ Γ c c' -> red1 Σ Γ (tProj p c) (tProj p c')
+
 | app_red_l M1 N1 M2 : red1 Σ Γ M1 N1 -> red1 Σ Γ (tApp M1 M2) (tApp N1 M2)
 | app_red_r M2 N2 M1 : reds1 Σ Γ M2 N2 -> red1 Σ Γ (tApp M1 M2) (tApp M1 N2)
 
@@ -214,7 +238,7 @@ Inductive red1 (Σ : global_declarations) (Γ : context) : term -> term -> Prop 
 | prod_red_r na na' M2 N2 M1 : red1 Σ (Γ ,, vass na M1) M2 N2 ->
                                red1 Σ Γ (tProd na M1 M2) (tProd na' M1 N2)
 
-| evar ev l l' : reds1 Σ Γ l l' -> red1 Σ Γ (tEvar ev l) (tEvar ev l')
+| evar_red ev l l' : reds1 Σ Γ l l' -> red1 Σ Γ (tEvar ev l) (tEvar ev l')
 
 | cast_red_l M1 k M2 N1 : red1 Σ Γ M1 N1 -> red1 Σ Γ (tCast M1 k M2) (tCast N1 k M2)
 | cast_red_r M2 k N2 M1 : red1 Σ Γ M2 N2 -> red1 Σ Γ (tCast M1 k M2) (tCast M1 k N2)
@@ -265,8 +289,7 @@ Fixpoint subst_app (t : term) (us : list term) : term :=
 
 (** We try syntactic equality before checking the graph. *)
 
-Definition eq_universe φ s s' :=
-  let cf := default_checker_flags in
+Definition eq_universe `{checker_flags} φ s s' :=
   if univ.Universe.equal s s' then true
   else uGraph.check_leq φ s s' && uGraph.check_leq φ s' s.
 
@@ -274,11 +297,14 @@ Definition leq_universe `{checker_flags} φ s s' :=
   if univ.Universe.equal s s' then true
   else uGraph.check_leq φ s s'.
 
+Definition eq_universe_instance `{checker_flags} φ u v :=
+  univ.Instance.equal_upto (uGraph.check_eq_level φ) u v.
+
 (* ** Syntactic equality up-to universes
 
   We shouldn't look at printing annotations *)
 
-Fixpoint eq_term (φ : uGraph.t) (t u : term) {struct t} :=
+Fixpoint eq_term `{checker_flags} (φ : uGraph.t) (t u : term) {struct t} :=
   match t, u with
   | tRel n, tRel n' => eq_nat n n'
   | tMeta n, tMeta n' => eq_nat n n'
@@ -287,9 +313,10 @@ Fixpoint eq_term (φ : uGraph.t) (t u : term) {struct t} :=
   | tSort s, tSort s' => eq_universe φ s s'
   | tApp f args, tApp f' args' => eq_term φ f f' && forallb2 (eq_term φ) args args'
   | tCast t _ v, tCast u _ v' => eq_term φ t u && eq_term φ v v'
-  | tConst c u, tConst c' u' => eq_constant c c' (* TODO Universes *)
-  | tInd i u, tInd i' u' => eq_ind i i'
+  | tConst c u, tConst c' u' => eq_constant c c' && eq_universe_instance φ u u'
+  | tInd i u, tInd i' u' => eq_ind i i' && eq_universe_instance φ u u'
   | tConstruct i k u, tConstruct i' k' u' => eq_ind i i' && eq_nat k k'
+                                                    && eq_universe_instance φ u u'
   | tLambda _ b t, tLambda _ b' t' => eq_term φ b b' && eq_term φ t t'
   | tProd _ b t, tProd _ b' t' => eq_term φ b b' && eq_term φ t t'
   | tCase (ind, par) p c brs,
@@ -321,9 +348,10 @@ Fixpoint leq_term `{checker_flags} (φ : uGraph.t) (t u : term) {struct t} :=
   | tSort s, tSort s' => leq_universe φ s s'
   | tApp f args, tApp f' args' => eq_term φ f f' && forallb2 (eq_term φ) args args'
   | tCast t _ v, tCast u _ v' => leq_term φ t u
-  | tConst c u, tConst c' u' => eq_constant c c' (* TODO Universes *)
-  | tInd i u, tInd i' u' => eq_ind i i'
-  | tConstruct i k u, tConstruct i' k' u' => eq_ind i i' && eq_nat k k'
+  | tConst c u, tConst c' u' => eq_constant c c' && eq_universe_instance φ u u'
+  | tInd i u, tInd i' u' => eq_ind i i' && eq_universe_instance φ u u'
+  | tConstruct i k u, tConstruct i' k' u' => eq_ind i i' && eq_nat k k' &&
+                                                    eq_universe_instance φ u u'
   | tLambda _ b t, tLambda _ b' t' => eq_term φ b b' && eq_term φ t t'
   | tProd _ b t, tProd _ b' t' => eq_term φ b b' && leq_term φ t t'
   | tCase (ind, par) p c brs,
@@ -356,7 +384,7 @@ Fixpoint destArity Γ (t : term) :=
 
 (** Make a lambda/let-in string of abstractions from a context [Γ], ending with term [t]. *)
 
-Fixpoint it_mkLambda_or_LetIn (l : context) (t : term) :=
+Definition it_mkLambda_or_LetIn (l : context) (t : term) :=
   List.fold_left
     (fun acc d =>
        match d.(decl_body) with
@@ -444,20 +472,20 @@ Conjecture congr_cumul_prod : forall `{checker_flags} Σ Γ na na' M1 M2 N1 N2,
     cumul Σ (Γ ,, vass na M1) M2 N2 ->
     cumul Σ Γ (tProd na M1 M2) (tProd na' N1 N2).
 
-Definition eq_opt_term φ (t u : option term) :=
+Definition eq_opt_term `{checker_flags} φ (t u : option term) :=
   match t, u with
   | Some t, Some u => eq_term φ t u
   | None, None => true
   | _, _ => false
   end.
 
-Definition eq_decl φ (d d' : context_decl) :=
+Definition eq_decl `{checker_flags} φ (d d' : context_decl) :=
   eq_opt_term φ d.(decl_body) d'.(decl_body) && eq_term φ d.(decl_type) d'.(decl_type).
 
-Definition eq_context φ (Γ Δ : context) :=
+Definition eq_context `{checker_flags} φ (Γ Δ : context) :=
   forallb2 (eq_decl φ) Γ Δ.
 
-Definition check_correct_arity φ decl ind u ctx pars pctx :=
+Definition check_correct_arity `{checker_flags} φ decl ind u ctx pars pctx :=
   let inddecl :=
       {| decl_name := nNamed decl.(ind_name);
          decl_body := None;
@@ -928,14 +956,6 @@ Fixpoint globenv_size (Σ : global_declarations) : size :=
     - size of the global_context, including size of the global declarations in it
     - size of the derivation. *)
 
-(** Such a useful tactic it should be part of the stdlib. *)
-Ltac forward_gen H tac :=
-  match type of H with
-  | ?X -> _ => let H' := fresh in assert (H':X) ; [tac|specialize (H H'); clear H']
-  end.
-
-Tactic Notation "forward" constr(H) := forward_gen H ltac:(idtac).
-Tactic Notation "forward" constr(H) "by" tactic(tac) := forward_gen H tac.
 Require Import Wf.
 
 (** Define non-dependent lexicographic products *)

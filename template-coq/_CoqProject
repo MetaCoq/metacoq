@@ -13,11 +13,9 @@ src/template_coq.mlpack
 
 theories/utils.v
 theories/config.v
-theories/monad_utils.v
 theories/kernel/univ.v
 theories/kernel/uGraph.v
 theories/Ast.v
-theories/TemplateMonad.v
 theories/AstUtils.v
 theories/Loader.v
 theories/Induction.v
@@ -25,6 +23,15 @@ theories/LiftSubst.v
 theories/WeakSubst.v
 theories/UnivSubst.v
 theories/Typing.v
+theories/MetaTheory.v
 theories/Checker.v
+theories/WcbvEval.v
+theories/Retyping.v
 theories/All.v
 theories/Extraction.v
+
+# the Template monad
+theories/TemplateMonad.v
+theories/TemplateMonad/Core.v
+theories/TemplateMonad/Monad.v
+theories/monad_utils.v

@@ -1,6 +1,7 @@
 (* Distributed under the terms of the MIT license.   *)
 
-From Template Require Import Ast univ.
+From Template Require Import univ Ast.
+From TemplateExtraction Require Import Ast.
 Require Import List Program.
 Require Import BinPos.
 Require Import Coq.Arith.Compare_dec Bool.
@@ -88,12 +89,12 @@ Definition tFixProp (P : term -> Prop) (m : mfixpoint term) :=
 
 Lemma term_forall_list_ind :
   forall P : term -> Prop,
+    (P tBox) ->
     (forall n : nat, P (tRel n)) ->
     (forall i : ident, P (tVar i)) ->
     (forall n : nat, P (tMeta n)) ->
     (forall (n : nat) (l : list term), Forall P l -> P (tEvar n l)) ->
     (forall s, P (tSort s)) ->
-    (forall t : term, P t -> forall (c : cast_kind) (t0 : term), P t0 -> P (tCast t c t0)) ->
     (forall (n : name) (t : term), P t -> forall t0 : term, P t0 -> P (tProd n t t0)) ->
     (forall (n : name) (t : term), P t -> forall t0 : term, P t0 -> P (tLambda n t t0)) ->
     (forall (n : name) (t : term),
@@ -270,15 +271,34 @@ Proof.
   constructor; auto.
 Qed.
 
-Ltac inv H := inversion_clear H.
+Ltac applyhyp :=
+  match goal with
+    H : _ |- _ => apply H
+  end.
+
+Class Hyp (T : Type) := hyp : T.
+Hint Extern 10 (Hyp _) => exactly_once multimatch goal with H : _ |- _
+=> exact H end : typeclass_instances.
+Class AHyp (T : Type) := ahyp : T.
+Hint Extern 10 (AHyp _) => multimatch goal with H : _ |- _
+=> eapply H; shelve end : typeclass_instances.
+
+Ltac inv H :=
+  inversion_clear H ||
+  match H with
+  | @hyp _ ?X => inversion_clear X
+  | @ahyp _ ?X => inversion_clear X
+  end.
+
+
 Lemma term_wf_forall_list_ind :
   forall P : term -> Prop,
+    (P tBox) ->
     (forall n : nat, P (tRel n)) ->
     (forall i : ident, P (tVar i)) ->
     (forall n : nat, P (tMeta n)) ->
     (forall (n : nat) (l : list term), Forall P l -> P (tEvar n l)) ->
     (forall s, P (tSort s)) ->
-    (forall t : term, P t -> forall (c : cast_kind) (t0 : term), P t0 -> P (tCast t c t0)) ->
     (forall (n : name) (t : term), P t -> forall t0 : term, P t0 -> P (tProd n t t0)) ->
     (forall (n : name) (t : term), P t -> forall t0 : term, P t0 -> P (tLambda n t t0)) ->
     (forall (n : name) (t : term),
@@ -295,24 +315,23 @@ Lemma term_wf_forall_list_ind :
     (forall (m : mfixpoint term) (n : nat), tFixProp P m -> P (tCoFix m n)) ->
     forall t : term, wf t -> P t.
 Proof.
-  intros until t. revert t.
+  intros P; intros until t. revert t.
   apply (term_forall_list_ind (fun t => wf t -> P t));
     intros; try solve [match goal with
                  H : _ |- _ => apply H
-              end; auto].
-  apply H2. inv H17.
+                       end; auto].
+  unshelve apply (ahyp: (P (tEvar _ _))).
+  inv H17.
   auto using lift_to_wf_list.
 
-  inv H18; auto.
-  inv H18; auto.
-  inv H18; auto.
-  inv H19; auto.
-  inv H18; auto.
+  inv (hyp: wf _); auto.
+  inv (hyp: wf _); auto.
+  inv (hyp: wf _); auto.
+  inv (hyp: wf _); auto.
 
-  apply H8; auto.
-  auto using lift_to_wf_list.
+  applyhyp; auto using lift_to_wf_list.
 
-  inv H19; apply H12; auto.
+  inv (hyp: wf _). applyhyp; auto.
   red.
   red in H18.
   induction H18.

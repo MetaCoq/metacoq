@@ -89,7 +89,7 @@ VERNAC COMMAND EXTEND Make_vernac_reduce CLASSIFIED AS SIDEFF
 	let def, uctx = Constrintern.interp_constr env evm def in
         let evm = Evd.from_ctx uctx in
         let (evm,rd) = Tacinterp.interp_redexp env evm rd in
-	let (evm,def) = Quoter.reduce_all env evm ~red:rd (EConstr.to_constr evm def) in
+	let (evm,def) = Quoter.reduce env evm rd (EConstr.to_constr evm def) in
 	let trm = Constr_quoter.TermReify.quote_term env def in
 	ignore(Declare.declare_definition
                  ~kind:Decl_kinds.Definition
@@ -126,7 +126,7 @@ VERNAC COMMAND EXTEND Unquote_vernac_red CLASSIFIED AS SIDEFF
 	let (trm, uctx) = Constrintern.interp_constr env evm def in
         let evm = Evd.from_ctx uctx in
         let (evm,rd) = Tacinterp.interp_redexp env evm rd in
-	let (evm,trm) = Quoter.reduce_all env evm ~red:rd (EConstr.to_constr evm trm) in
+	let (evm,trm) = Quoter.reduce env evm rd (EConstr.to_constr evm trm) in
         let evdref = ref evm in
         let trm = Denote.denote_term evdref trm in
 	let _ = Declare.declare_definition ~kind:Decl_kinds.Definition name
@@ -147,6 +147,19 @@ VERNAC COMMAND EXTEND Run_program CLASSIFIED AS SIDEFF
         let (def, _) = Constrintern.interp_constr env evm def in
         (* todo : uctx ? *)
         Denote.run_template_program_rec (fun _ -> ()) (evm, (EConstr.to_constr evm def)) ]
+END;;
+
+TACTIC EXTEND run_program
+    | [ "run_template_program" constr(c) tactic(tac) ] ->
+      [ Proofview.Goal.enter (begin fun gl ->
+         let evm = Proofview.Goal.sigma gl in
+         let ret = ref None in
+         Denote.run_template_program_rec ~intactic:true (fun (evm, t) -> ret := Some t) (evm, EConstr.to_constr evm c);
+         match !ret with
+           Some c ->
+           ltac_apply tac (List.map to_ltac_val [EConstr.of_constr c])
+         | None -> Proofview.tclUNIT ()
+       end) ]
 END;;
 
 VERNAC COMMAND EXTEND Make_tests CLASSIFIED AS QUERY

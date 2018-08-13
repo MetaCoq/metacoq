@@ -18,6 +18,9 @@ BinInt
 Ascii
 String0
 Specif
+Orders
+OrdersTac
+OrderedType0
 
 Utils
 Config0
@@ -32,6 +35,7 @@ UGraph0
 LiftSubst
 Typing0
 Checker0
+Retyping0
 
 Term_quoter
 G_template_checker

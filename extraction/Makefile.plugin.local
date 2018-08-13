@@ -1,0 +1,2 @@
+CAMLFLAGS+=-open Template_coq_checker_plugin -open Template_coq_checker_plugin.Typing0
+CAMLFLAGS+=-w -33 # Unused opens

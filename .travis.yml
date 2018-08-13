@@ -18,8 +18,7 @@ addons:
 env:
   global:
   - NJOBS=2
-  # system is == 4.02.3
-  - COMPILER="system"
+  - COMPILER="4.06.1"
   - CAMLP5_VER="7.05"
   - FINDLIB_VER="1.8.0"
   - NATIVE_COMP="yes"
@@ -27,7 +26,8 @@ env:
 
 install:
 - opam update
-- opam init -j ${NJOBS} --switch=${COMPILER} -n -y
+- opam init -j ${NJOBS} -n -y
+- opam switch set ${COMPILER}
 - eval $(opam config env)
 - opam config list
 - opam repo add coq-core-dev https://coq.inria.fr/opam/core-dev || echo "coq-core-dev registered"
@@ -36,8 +36,7 @@ install:
 - opam list
 
 script:
- - make -j ${NJOBS}
- - make -j ${NJOBS} test-suite
+ - make -j ${NJOBS} VERBOSE=1 all test-suite
 
 notifications:
   webhooks:

@@ -1,10 +1,7 @@
 (* Distributed under the terms of the MIT license.   *)
 
-Require Import List Program.
-Require Import Template.Ast.
-Require Import BinPos.
-Require Import Coq.Arith.Compare_dec Bool.
-Require Import Template.Induction.
+From Coq Require Import List Program BinPos Arith.Compare_dec Bool.
+From TemplateExtraction Require Import Ast Induction.
 
 (** * Lifting and substitution for the AST
 
@@ -21,7 +18,6 @@ Fixpoint lift n k t : term :=
   | tLambda na T M => tLambda na (lift n k T) (lift n (S k) M)
   | tApp u v => tApp (lift n k u) (List.map (lift n k) v)
   | tProd na A B => tProd na (lift n k A) (lift n (S k) B)
-  | tCast c kind t => tCast (lift n k c) kind (lift n k t)
   | tLetIn na b t b' => tLetIn na (lift n k b) (lift n k t) (lift n (S k) b')
   | tCase ind p c brs =>
     let brs' := List.map (on_snd (lift n k)) brs in
@@ -35,7 +31,7 @@ Fixpoint lift n k t : term :=
     let k' := List.length mfix + k in
     let mfix' := List.map (map_def (lift n k')) mfix in
     tCoFix mfix' idx
-  | x => x
+  | _ => t
   end.
 
 
@@ -54,7 +50,6 @@ Fixpoint subst t k u :=
   | tLambda na T M => tLambda na (subst t k T) (subst t (S k) M)
   | tApp u v => mkApps (subst t k u) (List.map (subst t k) v)
   | tProd na A B => tProd na (subst t k A) (subst t (S k) B)
-  | tCast c kind ty => tCast (subst t k c) kind (subst t k ty)
   | tLetIn na b ty b' => tLetIn na (subst t k b) (subst t k ty) (subst t (S k) b')
   | tCase ind p c brs =>
     let brs' := List.map (on_snd (subst t k)) brs in
@@ -84,7 +79,6 @@ Fixpoint closedn k (t : term) : bool :=
   | tEvar ev args => List.forallb (closedn k) args
   | tLambda _ T M | tProd _ T M => closedn k T && closedn (S k) M
   | tApp u v => closedn k u && List.forallb (closedn k) v
-  | tCast c kind t => closedn k c && closedn k t
   | tLetIn na b t b' => closedn k b && closedn k t && closedn (S k) b'
   | tCase ind p c brs =>
     let brs' := List.forallb (test_snd (closedn k)) brs in
@@ -276,7 +270,6 @@ Lemma lift_rec_wf n k t : wf t -> wf (lift_rec n t k).
 Proof.
   intros wft; revert t wft k.
   apply (term_wf_forall_list_ind (fun t => forall k, wf (lift n k t))) ; simpl; intros; try constructor; auto.
-
   destruct leb; constructor.
   apply Forall_map.
   induction H; constructor; auto.
@@ -514,7 +507,6 @@ Proof.
     rewrite <- map_id. 
     apply_spec; eauto.
   - simpl lift. rewrite andb_true_iff in H1. f_equal; intuition eauto.
-  - simpl lift; rewrite andb_true_iff in H1. f_equal; intuition eauto.
   - simpl lift; rewrite andb_true_iff in H1. f_equal; intuition eauto.
   - simpl lift. rewrite !andb_true_iff in H2. f_equal; intuition eauto.
   - simpl lift. rewrite !andb_true_iff in H1. f_equal; intuition eauto.

@@ -216,7 +216,7 @@ Section Wcbv.
       forall t t0 : term, eval t t0 -> P t t0.
   Proof.
     intros P Hbox Hbeta Hlet Hreldef Hrelvar Hcase Hfix Hconst Hproj Hlam Hprod Hind Hindapp Hcstr Hcstrapp Hevar.
-    fix 3. destruct 1;
+    fix eval_evals_ind 3. destruct 1;
              try match goal with [ H : _ |- _ ] =>
                              match type of H with
                                forall t t0, eval t t0 -> _ => fail 1

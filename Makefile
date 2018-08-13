@@ -33,7 +33,7 @@ mrproper:
 template-coq:
 	$(MAKE) -C template-coq
 
-extraction: template-coq
+extraction: checker template-coq
 	$(MAKE) -C extraction
 
 checker: template-coq

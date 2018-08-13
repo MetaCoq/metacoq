@@ -1,3 +1,4 @@
+*.annot
 .coq_config
 *.cm*
 *.vo

@@ -84,9 +84,9 @@ Section Reduce.
     if RedFlags.beta flags then
       match stack with
       | a :: args' =>
-        (** CBV reduction: we reduce arguments before substitution *)
-        a' <- reduce_stack Γ n a [] ;;
-        reduce_stack Γ n (subst0 (zip a') b) args'
+        (** CBN reduction: we do not reduce arguments before substitution *)
+        (* a' <- reduce_stack Γ n a [] ;; *)
+        reduce_stack Γ n (subst0 a b) args'
       | _ => ret (t, stack)
                (*  b' <- reduce_stack (Γ ,, vass na ty) n b stack ;; *)
                (* ret (tLambda na ty (zip b'), stack) *)

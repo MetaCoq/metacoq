@@ -42,6 +42,8 @@ Section Erase.
   End EraseMfix.
   
   Fixpoint extract (Σ : global_context) (Γ : context) (t : term) : typing_result E.term :=
+    u <- sort_of Σ Γ t ;;
+    if is_prop_sort u then ret E.tBox else
     match t with
     | tRel i => ret (E.tRel i)
     | tVar n => ret (E.tVar n)
@@ -53,18 +55,7 @@ Section Erase.
     | tConst kn u => ret (E.tConst kn u)
     | tInd kn u => ret (E.tInd kn u)
     | tConstruct kn k u => ret (E.tConstruct kn k u)
-    | tCast t k ty =>
-      match ty with
-      | tCast _ k' ty' =>
-        match ty' with
-        | tSort u =>
-          if is_prop_sort u then ret E.tBox
-          else extract Σ Γ t
-        | _ => extract Σ Γ t
-        end
-      | _ => extract Σ Γ t
-      end          (* ty' <- extract Γ ty ;; *)
-                      (* ret (tCast t' k ty') *)
+    | tCast t k ty => extract Σ Γ t
     | tProd na b t => b' <- extract Σ Γ b;;
                       t' <- extract Σ (vass na b :: Γ) t;;
                       ret (E.tProd na b' t')

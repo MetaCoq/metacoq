@@ -214,7 +214,7 @@ let reduce env evm red trm =
   (evm, EConstr.to_constr evm red)
 
 let reduce_all env evm trm =
-  EConstr.to_constr evm (Reductionops.nf_all env evm (EConstr.of_constr trm))
+  EConstr.Unsafe.to_constr (Reductionops.nf_all env evm (EConstr.of_constr trm))
 
 
 module Reify (Q : Quoter) =
@@ -331,12 +331,11 @@ struct
       | Constr.Fix fp -> quote_fixpoint acc env fp
       | Constr.CoFix fp -> quote_cofixpoint acc env fp
       | Constr.Proj (p,c) ->
-         let proj = Environ.lookup_projection p (snd env) in
-         let ind,i = proj.Declarations.proj_ind in
+         let ind,i = Names.Projection.inductive p in
          let ind = Q.quote_inductive (Q.quote_kn (Names.MutInd.canonical ind),
                                       Q.quote_int i) in
-         let pars = Q.quote_int proj.Declarations.proj_npars in
-         let arg = Q.quote_int proj.Declarations.proj_arg in
+         let pars = Q.quote_int (Names.Projection.npars p) in
+         let arg = Q.quote_int (Names.Projection.arg p) in
          let p' = Q.quote_proj ind pars arg in
          let kn = Names.Constant.canonical (Names.Projection.constant p) in
          let t', acc = quote_term acc env c in
@@ -425,9 +424,8 @@ struct
                let indbinder = Context.Rel.Declaration.LocalAssum (Names.Name id,indty) in
                let envpars = push_rel_context (indbinder :: ctxwolet) env in
                let ps, acc = CArray.fold_right2 (fun cst pb (ls,acc) ->
-                             let (ty, acc) = quote_term acc envpars pb.Declarations.proj_type in
-                             let kn = Names.KerName.label (Names.Constant.canonical cst) in
-                             let na = Q.quote_ident (Names.Label.to_id kn) in
+                             let (ty, acc) = quote_term acc envpars pb in
+                             let na = Q.quote_ident (Names.Label.to_id cst) in
                              ((na, ty) :: ls, acc)) csts ps ([],acc)
                in ps, acc
             | _ -> [], acc

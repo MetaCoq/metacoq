@@ -375,9 +375,10 @@ let denote_term evdref (trm: Constr.t) : Constr.t =
     | ACoq_tProj (proj,t) ->
        let (ind, _, narg) = unquote_proj proj in (* is narg the correct projection? *)
        let ind' = unquote_inductive ind in
-       let projs = Recordops.lookup_projections ind' in
-       (match List.nth projs (unquote_int narg) with
-        | Some p -> Constr.mkProj (Names.Projection.make p false, aux t)
+       let narg = unquote_int narg in
+       let projs = Environ.get_projections (Global.env ()) ind' in
+       (match projs with
+        | Some projs -> Constr.mkProj (Names.Projection.make projs.(narg) false, aux t)
         | None -> bad_term trm)
     | _ ->  not_supported_verb trm "big_case"
   in aux trm
@@ -394,7 +395,7 @@ let denote_reduction_strategy env evm (trm : quoted_reduction_strategy) : Redexp
   else if Constr.equal trm tlazy then Lazy all_flags
   else if Constr.equal trm tunfold then
     (match args with name (* to unfold *) :: _ ->
-    let (evm, name) = reduce_all env evm name in
+    let name = reduce_all env evm name in
     let name = unquote_ident name in
       (try Unfold [Locus.AllOccurrences, Tacred.evaluable_of_global_reference env
         (Nametab.global (Libnames.qualid_of_ident name))]

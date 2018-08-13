@@ -34,8 +34,7 @@ install:
 - opam list
 
 script:
- - make -j ${NJOBS}
- - make -j ${NJOBS} test-suite
+ - make -j ${NJOBS} VERBOSE=1 all test-suite
 
 notifications:
   webhooks:

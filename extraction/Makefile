@@ -8,15 +8,15 @@ Makefile.extraction:
 	coq_makefile -f _CoqProject -o Makefile.extraction
 
 theory: Makefile.extraction
-	make -f	Makefile.extraction
+	$(MAKE) -f Makefile.extraction
 	sh clean_extraction.sh
 
 plugin: theory Makefile.plugin
-	make -f	Makefile.plugin
+	$(MAKE) -f Makefile.plugin
 
 install: theory plugin
-	make -f Makefile.extraction install
-	make -f Makefile.plugin install
+	$(MAKE) -f Makefile.extraction install
+	$(MAKE) -f Makefile.plugin install
 
 clean: Makefile.extraction Makefile.plugin
 	make -f Makefile.extraction clean

@@ -21,3 +21,7 @@ install: theory plugin
 clean: Makefile.extraction Makefile.plugin
 	make -f Makefile.extraction clean
 	make -f Makefile.plugin clean
+
+mrproper:
+	rm -f Makefile.plugin
+	rm -f Makefile.extraction

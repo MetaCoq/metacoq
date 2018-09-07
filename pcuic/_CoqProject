@@ -1,0 +1,20 @@
+-I ../template-coq/src
+-R ../template-coq/theories Template
+-R theories PCUIC
+
+theories/Ast.v
+theories/AstUtils.v
+theories/Induction.v
+theories/LiftSubst.v
+theories/UnivSubst.v
+theories/Typing.v
+theories/WeakeningEnv.v
+theories/Closed.v
+theories/Weakening.v
+theories/Substitution.v
+theories/MetaTheory.v
+theories/WcbvEval.v
+theories/Checker.v
+theories/Retyping.v
+# theories/All.v
+# theories/Extraction.v

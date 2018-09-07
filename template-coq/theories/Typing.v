@@ -1,8 +1,8 @@
 (* Distributed under the terms of the MIT license.   *)
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
-From Template Require Import config utils Ast univ Induction LiftSubst UnivSubst.
-From Template Require AstUtils Loader.
+From Template Require Import config utils Ast AstUtils univ Induction LiftSubst UnivSubst.
+From Template Require Loader.
 Require Import String.
 Local Open Scope string_scope.
 Set Asymmetric Patterns.
@@ -41,20 +41,6 @@ Definition is_inductive_decl_for i d :=
   | InductiveDecl _ cb => i < List.length cb.(ind_bodies)
   | _ => False
   end.
-
-Definition ident_eq (x y : ident) :=
-  match string_compare x y with
-  | Eq => true
-  | _ => false
-  end.
-
-Lemma ident_eq_spec x y : reflect (x = y) (ident_eq x y).
-Proof.
-  unfold ident_eq. destruct (string_compare_eq x y).
-  destruct string_compare; constructor; auto.
-  intro Heq; specialize (H0 Heq). discriminate.
-  intro Heq; specialize (H0 Heq). discriminate.
-Qed.
 
 Fixpoint lookup_env (Σ : global_declarations) (id : ident) : option global_decl :=
   match Σ with
@@ -966,7 +952,7 @@ Conjecture wf_graph_prop_set : forall φ (H : wf_graph φ),
     check_lt φ Universe.type0m Universe.type1 = true /\
     check_lt φ Universe.type0 Universe.type1 = true.
 
-Definition env_prop `{checker_flags} (P : forall Σ Γ t T, Set) :=
+Definition env_prop `{checker_flags} (P : forall Σ Γ t T, Type) :=
   forall Σ (wfΣ : wf Σ) Γ t T, Σ ;;; Γ |- t : T ->
     Forall_decls_typing (snd Σ) (fun Σ' t ty => P (Σ', snd Σ) [] t ty) (fst Σ) *
     P Σ Γ t T.
@@ -989,7 +975,7 @@ Defined.
 Require Import Lia.
 
 Lemma typing_ind_env `{cf : checker_flags} :
-  forall (P : global_context -> context -> term -> term -> Set),
+  forall (P : global_context -> context -> term -> term -> Type),
     (forall Σ (wfΣ : wf Σ) (Γ : context) (n : nat) (isdecl : n < #|Γ|),
         P Σ Γ (tRel n)
           (lift0 (S n) (decl_type (safe_nth Γ (exist (fun n0 : nat => n0 < #|Γ|) n isdecl))))) ->

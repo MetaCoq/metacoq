@@ -1,7 +1,7 @@
 (* Distributed under the terms of the MIT license.   *)
 
 Require Import List Program.
-Require Import Template.Ast.
+From Template Require Import Ast AstUtils.
 Require Import BinPos.
 Require Import Coq.Arith.Compare_dec Bool.
 Require Import Template.Induction.
@@ -246,16 +246,6 @@ Lemma permute_lift :
   change (lift_rec 1 (lift_rec 1 M k) 0 = lift_rec 1 (lift_rec 1 M 0) (1 + k))
     in |- *.
   apply permute_lift_rec; easy.
-Qed.
-
-Lemma Forall_map {A B} (P : B -> Prop) (f : A -> B) l : Forall (Program.Basics.compose P f) l -> Forall P (map f l).
-Proof.
-  induction 1; constructor; auto.
-Qed.
-
-Lemma Forall_impl {A} (P Q : A -> Prop) : forall l, Forall P l -> (forall x, P x -> Q x) -> Forall Q l.
-Proof.
-  induction 1; constructor; auto.
 Qed.
 
 Lemma lift_rec_isApp n k t : ~ isApp t = true -> ~ isApp (lift n k t) = true.

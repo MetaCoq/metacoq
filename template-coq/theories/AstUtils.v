@@ -118,6 +118,18 @@ Defined.
 
 (** Combinators *)
 
+(** Forall combinators in Type to allow building them by *)
+Inductive All (A : Type) (P : A -> Type) : list A -> Type :=
+    All_nil : All A P []
+  | All_cons : forall (x : A) (l : list A),
+                  P x -> All A P l -> All A P (x :: l).
+Arguments All {A} P l.
+
+Inductive All2 {A B : Type} (R : A -> B -> Type) : list A -> list B -> Type :=
+  All2_nil : All2 R [] []
+| All2_cons : forall (x : A) (y : B) (l : list A) (l' : list B),
+    R x y -> All2 R l l' -> All2 R (x :: l) (y :: l').
+
 Arguments dname {term} _.
 Arguments dtype {term} _.
 Arguments dbody {term} _.
@@ -310,4 +322,47 @@ Qed.
 Lemma Forall_impl {A} (P Q : A -> Prop) : forall l, Forall P l -> (forall x, P x -> Q x) -> Forall Q l.
 Proof.
   induction 1; constructor; auto.
+Qed.
+
+Lemma Forall_app {A} (P : A -> Prop) l l' : List.Forall P (l ++ l') -> List.Forall P l /\ List.Forall P l'.
+Proof.
+  induction l; intros H. split; try constructor. apply H.
+  inversion_clear H. split; intuition auto.
+Qed.
+
+Lemma Forall_app_inv {A} (P : A -> Prop) l l' : List.Forall P l /\ List.Forall P l' -> List.Forall P (l ++ l').
+  intros [Hl Hl']. induction Hl. apply Hl'.
+  constructor; intuition auto.
+Qed.
+
+Lemma firstn_map {A B} n (f : A -> B) l : firstn n (map f l) = map f (firstn n l).
+Proof.
+  revert l; induction n. reflexivity.
+  destruct l; simpl in *; congruence.
+Qed.
+
+Lemma Forall2_Forall_left {A B} (P : A -> B -> Type) (Q : A -> Prop) (l : list A) (l' : list B) :
+  (forall x y, P x y -> Q x) ->
+  All2 P l l' -> List.Forall Q l.
+Proof.
+  intros H. induction 1; constructor; eauto.
+Qed.
+
+Lemma Forall2_Forall_right {A B} (P : A -> B -> Type) (Q : B -> Prop) (l : list A) (l' : list B) :
+  (forall x y, P x y -> Q y) ->
+  All2 P l l' -> List.Forall Q l'.
+Proof.
+  intros H. induction 1; constructor; eauto.
+Qed.
+
+Lemma Forall2_right {A B} (P : B -> Prop) (l : list A) (l' : list B) :
+  Forall2 (fun x y => P y) l l' -> List.Forall (fun x => P x) l'.
+Proof.
+  induction 1; constructor; auto.
+Qed.
+
+Lemma Forall2_non_nil {A B} (P : A -> B -> Prop) (l : list A) (l' : list B) :
+  Forall2 P l l' -> l <> nil -> l' <> nil.
+Proof.
+  induction 1; congruence.
 Qed.

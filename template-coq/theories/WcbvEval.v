@@ -2,7 +2,7 @@
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
 From Template Require Import config utils Ast univ Induction LiftSubst UnivSubst Typing.
-From Template Require AstUtils.
+From Template Require Import AstUtils.
 Require Import String.
 Local Open Scope string_scope.
 Set Asymmetric Patterns.
@@ -189,10 +189,10 @@ Section Wcbv.
     constructor. now apply eval_evals_ind. now apply aux.
     revert l l' H H1. fix aux 4. destruct 2. contradiction. constructor.
     now apply eval_evals_ind.
-    destruct l. inv H1; constructor.
+    destruct l. inv H2; constructor.
     now apply aux.
     revert l l' H H1. fix aux 4. destruct 2. contradiction. constructor.
-    now apply eval_evals_ind. destruct l. inv H1; constructor. now apply aux.
+    now apply eval_evals_ind. destruct l. inv H2; constructor. now apply aux.
   Defined.
 
   (** Characterization of values for this reduction relation:
@@ -229,18 +229,6 @@ Section Wcbv.
 
   (** The codomain of evaluation is only values:
       It means no redex can remain at the head of an evaluated term. *)
-
-  Lemma Forall2_right {A B} (P : B -> Prop) (l : list A) (l' : list B) :
-    Forall2 (fun x y => P y) l l' -> List.Forall (fun x => P x) l'.
-  Proof.
-    induction 1; constructor; auto.
-  Qed.
-
-  Lemma Forall2_non_nil {A B} (P : A -> B -> Prop) (l : list A) (l' : list B) :
-    Forall2 P l l' -> l <> nil -> l' <> nil.
-  Proof.
-    induction 1; congruence.
-  Qed.
 
   Lemma eval_to_value e e' : eval e e' -> value e'.
   Proof.

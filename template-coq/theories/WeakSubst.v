@@ -138,25 +138,19 @@ Proof.
       f_equal. unfold lift_context. rewrite Heq. reflexivity.
 Qed.
 
-Lemma typecheck_closed `{cf : checker_flags} : env_prop (fun Σ Γ t T =>
-                                     type_local_env Σ Γ ->
-                                     closedn #|Γ| t && closedn #|Γ| T = true).
+Lemma typecheck_closed `{cf : checker_flags} :
+  env_prop (fun Σ Γ t T =>
+              closedn #|Γ| t && closedn #|Γ| T = true).
 Proof.
   apply typing_ind_env; intros; simpl; rewrite ?andb_true_iff in *; try solve [intuition auto].
   - elim (Nat.ltb_spec n #|Γ|); intuition.
     admit (* Need induction with IHs for environments *).
-  - intuition auto.
-    simpl in H0. apply H0. constructor ; auto. red. now exists s1.
-  - intuition; eapply H0; constructor; auto.
-    now exists s1. now exists s1.
-  - intuition; try eapply H1; try constructor; auto.
   - (* typing spine ind *) admit.
   - admit. (* easy now *)
   - admit.
   - admit.
-  - specialize (H6 H8).
-    intuition auto. admit. admit.
-  - (* proj *) admit.
+  - admit.
+  - admit.
   - admit.
   - admit.
 Admitted.
@@ -173,8 +167,8 @@ Proof.
 Qed.
 
 Lemma weakening_rec `{cf : checker_flags} Σ Γ Γ' Γ'' (t : term) :
-  type_global_env (snd Σ) (fst Σ) -> type_local_env Σ (Γ ,,, Γ') ->
-  type_local_env Σ (Γ ,,, Γ'' ,,, lift_context #|Γ''| 0 Γ') ->
+  type_global_env (snd Σ) (fst Σ) -> wf_local Σ (Γ ,,, Γ') ->
+  wf_local Σ (Γ ,,, Γ'' ,,, lift_context #|Γ''| 0 Γ') ->
   `(Σ ;;; Γ ,,, Γ' |- t : T ->
     Σ ;;; Γ ,,, Γ'' ,,, lift_context #|Γ''| 0 Γ' |-
     lift #|Γ''| #|Γ'| t : lift #|Γ''| #|Γ'| T).
@@ -198,20 +192,20 @@ Proof.
   - econstructor; auto.
     simpl.
     specialize (IHtyping2 Γ (Γ' ,, vass n t) HΣ).
-    forward IHtyping2. constructor; simpl; auto. red. now exists s1.
+    forward IHtyping2. econstructor; eauto.
     specialize (IHtyping2 eq_refl Γ'').
-    forward IHtyping2. rewrite lift_context_snoc. constructor. simpl; auto.
-    exists s1. simpl. rewrite Nat.add_0_r. eapply IHtyping1; auto.
+    forward IHtyping2. rewrite lift_context_snoc. econstructor; eauto.
+    simpl. rewrite Nat.add_0_r. eapply IHtyping1; auto.
     rewrite lift_context_snoc, plus_0_r in IHtyping2.
     eapply IHtyping2.
 
   - econstructor; auto.
     simpl.
     specialize (IHtyping2 Γ (Γ' ,, vass n t) HΣ).
-    forward IHtyping2. constructor; simpl; auto. red. now exists s1.
+    forward IHtyping2. econstructor; eauto.
     specialize (IHtyping2 eq_refl Γ'').
-    forward IHtyping2. rewrite lift_context_snoc. constructor. simpl; auto.
-    exists s1. simpl. rewrite Nat.add_0_r. eapply IHtyping1; auto.
+    forward IHtyping2. rewrite lift_context_snoc. econstructor; eauto.
+    rewrite Nat.add_0_r. eapply IHtyping1; auto.
     rewrite lift_context_snoc, plus_0_r in IHtyping2.
     eapply IHtyping2.
 
@@ -223,12 +217,13 @@ Proof.
     forward IHtyping3. rewrite lift_context_snoc, Nat.add_0_r.
     simpl.
     constructor. simpl; auto.
-    red. simpl. eapply IHtyping2; auto. simpl.
+    simpl. eapply IHtyping2; auto. simpl.
     rewrite lift_context_snoc, plus_0_r in IHtyping3.
     eapply IHtyping3.
 
   - econstructor; auto.
-    simpl.
+    now apply lift_rec_isApp.
+    now apply map_non_nil.
     admit.
 
   - admit.
@@ -242,22 +237,22 @@ Proof.
     admit.
 Admitted.
 
-Lemma type_local_env_app `{checker_flags} Σ (Γ Γ' : context) : type_local_env Σ (Γ ,,, Γ') -> type_local_env Σ Γ.
+Lemma wf_local_app `{checker_flags} Σ (Γ Γ' : context) : wf_local Σ (Γ ,,, Γ') -> wf_local Σ Γ.
 Admitted.
 
 Lemma weakening `{cf : checker_flags} Σ Γ Γ' (t : term) :
-  type_global_env (snd Σ) (fst Σ) -> type_local_env Σ (Γ ,,, Γ') ->
+  type_global_env (snd Σ) (fst Σ) -> wf_local Σ (Γ ,,, Γ') ->
   `(Σ ;;; Γ |- t : T ->
     Σ ;;; Γ ,,, Γ' |- lift0 #|Γ'| t : lift0 #|Γ'| T).
 Proof.
   intros HΣ HΓΓ' * H.
   pose (weakening_rec Σ Γ [] Γ' t).
   forward t0; eauto.
-  forward t0; eauto. now eapply type_local_env_app in HΓΓ'.
+  forward t0; eauto. now eapply wf_local_app in HΓΓ'.
 Qed.
 
 Lemma substitution `{checker_flags} Σ Γ n u U (t : term) :
-  type_global_env (snd Σ) (fst Σ) -> type_local_env Σ Γ ->
+  type_global_env (snd Σ) (fst Σ) -> wf_local Σ Γ ->
   `(Σ ;;; Γ ,, vass n U |- t : T -> Σ ;;; Γ |- u : U ->
     Σ ;;; Γ |- t {0 := u} : T {0 := u}).
 Proof.

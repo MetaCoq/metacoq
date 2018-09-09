@@ -272,7 +272,7 @@ Proof.
   induction H; constructor; auto.
   now apply lift_rec_isApp.
   now apply map_non_nil.
-  apply Forall_map. eapply Forall_impl. apply H2. auto.
+  apply Forall_map. eapply Forall_impl. eauto. eauto.
   apply Forall_map. eapply Forall_impl. apply H1.
   intros [n' t]. simpl. repeat red; simpl; auto.
   apply Forall_map. eapply Forall_impl. apply H.
@@ -313,7 +313,7 @@ Proof.
   - rewrite IHwfM; auto.
     apply (lift_rec_isApp n k) in H.
     rewrite mkApps_tApp; auto using map_non_nil.
-    f_equal. eapply forall_map_spec. apply H1; simpl; auto.
+    f_equal. eapply forall_map_spec. apply H2; simpl; auto.
     simpl; intros. typeclasses eauto with core.
 Qed.
 
@@ -519,4 +519,47 @@ Proof.
   - simpl lift. f_equal.
     transitivity (map (map_def id) m). apply_spec; eauto.
     now autorewrite with core.
+Qed.
+
+Lemma mkApps_mkApp u a v : wf u -> mkApps (mkApp u a) v = mkApps u (a :: v).
+Proof.
+  induction v. simpl.
+  destruct u; simpl; try reflexivity.
+  intros. simpl.
+  destruct u; simpl; try reflexivity.
+  inversion_clear H. simpl in H0. f_equal.
+  now rewrite <- app_assoc.
+Qed.
+
+Lemma wf_mkApp u a : wf u -> wf a -> wf (mkApp u a).
+Proof.
+  intros H H'.
+  inversion_clear H; try constructor; simpl; auto; try congruence; try constructor; auto.
+  intro. destruct u0; simpl in *; congruence.
+  apply Forall_app_inv. split; auto.
+Qed.
+
+Lemma wf_mkApps u a : wf u -> List.Forall wf a -> wf (mkApps u a).
+Proof.
+  intros H H'.
+  induction a; simpl; auto.
+  inversion_clear H; try constructor; simpl; auto; try congruence; try constructor; auto.
+  intro. destruct u0; simpl in *; congruence.
+  apply Forall_app_inv. split; auto.
+Qed.
+
+Lemma wf_subst t k u : wf t -> wf u -> wf (subst t k u).
+Proof.
+  intros wft wfu; revert k.
+  induction wfu using term_wf_forall_list_ind ; simpl; intros; try constructor; auto.
+
+  - destruct Init.Nat.compare; try constructor. apply lift_rec_wf; auto.
+  - apply Forall_map.
+    induction H; constructor; auto.
+  - apply wf_mkApps; auto. apply Forall_map. eapply Forall_impl; eauto.
+  - apply Forall_map. eapply Forall_impl; eauto. intros. apply H0.
+  - apply Forall_map. eapply Forall_impl; eauto. intros.
+    destruct x; simpl in *. red; simpl; intuition auto.
+  - apply Forall_map. eapply Forall_impl; eauto. intros.
+    destruct x; simpl in *. red; simpl; intuition auto.
 Qed.

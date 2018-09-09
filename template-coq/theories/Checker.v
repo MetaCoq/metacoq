@@ -1042,11 +1042,11 @@ Section Typecheck2.
 
     - destruct nth_error eqn:?; intros [= <-].
       destruct (nth_error_Some_safe_nth _ _ _ _ Heqo).
-      constructor.
+      constructor. admit. admit.
 
     - destruct nth_error eqn:?; intros [= <-].
       destruct (nth_error_Some_safe_nth _ _ _ _ Heqo).
-      constructor.
+      constructor. admit. admit.
   Admitted.
 
 End Typecheck2.

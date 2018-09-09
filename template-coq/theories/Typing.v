@@ -337,7 +337,7 @@ Fixpoint leq_term `{checker_flags} (φ : uGraph.t) (t u : term) {struct t} :=
   | tVar id, tVar id' => eq_string id id'
   | tSort s, tSort s' => leq_universe φ s s'
   | tApp f args, tApp f' args' => eq_term φ f f' && forallb2 (eq_term φ) args args'
-  | tCast t _ v, tCast u _ v' => leq_term φ t u
+  | tCast t _ v, tCast u _ v' => leq_term φ t u && eq_term φ v v'
   | tConst c u, tConst c' u' => eq_constant c c' && eq_universe_instance φ u u'
   | tInd i u, tInd i' u' => eq_ind i i' && eq_universe_instance φ u u'
   | tConstruct i k u, tConstruct i' k' u' => eq_ind i i' && eq_nat k k' &&
@@ -596,7 +596,8 @@ where " Σ ;;; Γ |- t : T " := (@typing _ Σ Γ t T) : type_scope
 
 with typing_spine `{checker_flags} (Σ : global_context) (Γ : context) : term -> list term -> term -> Type :=
 | type_spine_nil ty : typing_spine Σ Γ ty [] ty
-| type_spine_cons hd tl na A B T B' :
+| type_spine_cons hd tl na A B s T B' :
+    Σ ;;; Γ |- tProd na A B : tSort s ->
     Σ ;;; Γ |- tProd na A B <= T ->
     Σ ;;; Γ |- hd : A ->
     typing_spine Σ Γ (subst0 hd B) tl B' ->
@@ -771,10 +772,11 @@ Proof.
   setenv Σ.
   econstructor.
   construct. intro. simpl in H. congruence. intro; congruence.
-  econstructor. apply cumul_refl'.
-  construct.
-  econstructor.
-Qed.
+  econstructor. 2:apply cumul_refl'.
+Admitted.
+(*   construct. *)
+(*   econstructor. *)
+(* Qed. *)
 
 
 (** ** Induction principle for terms up-to a global environment *)
@@ -907,10 +909,12 @@ Inductive Forall_decls_typing `{checker_flags} φ (P : global_declarations -> te
 Inductive Forall_typing_spine `{checker_flags} Σ Γ (P : term -> term -> Type) :
   forall (T : term) (t : list term) (U : term), typing_spine Σ Γ T t U -> Type :=
 | Forall_type_spine_nil T : Forall_typing_spine Σ Γ P T [] T (type_spine_nil Σ Γ T)
-| Forall_type_spine_cons hd tl na A B T B' tls
+| Forall_type_spine_cons hd tl na A B s T B' tls
+   (typrod : Σ ;;; Γ |- tProd na A B : tSort s)
    (cumul : Σ ;;; Γ |- tProd na A B <= T) (ty : Σ ;;; Γ |- hd : A) :
     P hd A -> Forall_typing_spine Σ Γ P (B {0 := hd}) tl B' tls ->
-    Forall_typing_spine Σ Γ P T (hd :: tl) B' (type_spine_cons Σ Γ hd tl na A B T B' cumul ty tls).
+    Forall_typing_spine Σ Γ P T (hd :: tl) B'
+      (type_spine_cons Σ Γ hd tl na A B s T B' typrod cumul ty tls).
 
 Definition size := nat.
 
@@ -952,7 +956,8 @@ Section Typing_Spine_size.
   Fixpoint typing_spine_size t T U (s : typing_spine Σ Γ t T U) : size :=
   match s with
   | type_spine_nil _ => 0
-  | type_spine_cons hd tl na A B T B' cumul ty s' => fn _ _ _ _ ty + typing_spine_size _ _ _ s'
+  | type_spine_cons hd tl na A B s T B' typrod cumul ty s' => fn _ _ _ _ ty + fn _ _ _ _ typrod +
+                                                            typing_spine_size _ _ _ s'
   end.
 End Typing_Spine_size.
 
@@ -1220,6 +1225,7 @@ Proof.
     econstructor; eauto.
   - eapply X4; eauto; unshelve eapply X14; simpl; (auto with arith || ltac:(try lia)).
     constructor; auto.
+
   - clear X X0 X1 X2 X3 X4 X6 X7 X8 X9 X10 X11 X12 X13.
     eapply X5 with t_ty t0; eauto.
     unshelve eapply X14; simpl; auto with arith.
@@ -1238,9 +1244,11 @@ Proof.
     induction t0; constructor.
     unshelve eapply X; clear X; simpl; auto with arith.
     eapply IHt0; eauto. intros. eapply (X _ X0 _ _ Hty) ; eauto. simpl. lia.
+
   - apply X6; eauto.
     specialize (X14 [] (localenv_nil _ _) _ _ (type_Sort _ _ Level.prop)).
     simpl in X14. forward X14; auto. apply X14.
+
   - eapply X9; eauto.
     eapply (X14 _ _ _ _ H); eauto. simpl; auto with arith.
     eapply (X14 _ _ _ _ H); eauto. simpl; auto with arith. simpl in *.
@@ -1297,6 +1305,7 @@ Proof.
          eapply (X _ a _ _ p). simpl. lia.
       ++ eapply IHa0. intros.
          eapply (X _ X0 _ _ Hty). simpl; lia.
+
   - clear X X0 X1 X2 X3 X4 X5 X6 X7 X8 X9 X10 X11 X13.
     eapply X12; eauto; clear X12. simpl in *. subst types.
     remember (Γ ,,, fix_context mfix) as Γ'.

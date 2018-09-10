@@ -130,6 +130,10 @@ Inductive All2 {A B : Type} (R : A -> B -> Type) : list A -> list B -> Type :=
 | All2_cons : forall (x : A) (y : B) (l : list A) (l' : list B),
     R x y -> All2 R l l' -> All2 R (x :: l) (y :: l').
 
+Inductive OnOne2 {A : Type} (P : A -> A -> Type) : list A -> list A -> Type :=
+| OnOne2_hd hd hd' tl : P hd hd' -> OnOne2 P (hd :: tl) (hd' :: tl)
+| OnOne2_tl hd tl tl' : OnOne2 P tl tl' -> OnOne2 P (hd :: tl) (hd :: tl').
+
 Arguments dname {term} _.
 Arguments dtype {term} _.
 Arguments dbody {term} _.

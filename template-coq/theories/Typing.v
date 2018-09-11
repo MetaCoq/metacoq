@@ -141,6 +141,20 @@ Definition unfold_fix (mfix : mfixpoint term) (idx : nat) :=
   | None => None
   end.
 
+Definition cofix_subst (l : mfixpoint term) :=
+  let fix aux n :=
+      match n with
+      | 0 => []
+      | S n => tCoFix l n :: aux n
+      end
+  in aux (List.length l).
+
+Definition unfold_cofix (mfix : mfixpoint term) (idx : nat) :=
+  match List.nth_error mfix idx with
+  | Some d => Some (d.(rarg), substl (cofix_subst mfix) d.(dbody))
+  | None => None
+  end.
+
 Definition is_constructor n ts :=
   match List.nth_error ts n with
   | Some a =>
@@ -189,15 +203,15 @@ Inductive red1 (Σ : global_declarations) (Γ : context) : term -> term -> Prop 
 
 (** CoFix-case unfolding *)
 | red_cofix_case ip p mfix idx args narg fn brs :
-    unfold_fix mfix idx = Some (narg, fn) ->
+    unfold_cofix mfix idx = Some (narg, fn) ->
     red1 Σ Γ (tCase ip p (mkApps (tCoFix mfix idx) args) brs)
-         (tCase ip (tApp fn args) p brs)
+         (tCase ip (mkApps fn args) p brs)
 
 (** CoFix-proj unfolding *)
 | red_cofix_proj p mfix idx args narg fn :
-    unfold_fix mfix idx = Some (narg, fn) ->
+    unfold_cofix mfix idx = Some (narg, fn) ->
     red1 Σ Γ (tProj p (mkApps (tCoFix mfix idx) args))
-         (tProj p (tApp fn args))
+         (tProj p (mkApps fn args))
 
 (** Constant unfolding *)
 | red_delta c decl body (isdecl : declared_constant Σ c decl) u :
@@ -221,7 +235,7 @@ Inductive red1 (Σ : global_declarations) (Γ : context) : term -> term -> Prop 
 
 | proj_red p c c' : red1 Σ Γ c c' -> red1 Σ Γ (tProj p c) (tProj p c')
 
-| app_red_l M1 N1 M2 : red1 Σ Γ M1 N1 -> red1 Σ Γ (tApp M1 M2) (tApp N1 M2)
+| app_red_l M1 N1 M2 : red1 Σ Γ M1 N1 -> red1 Σ Γ (tApp M1 M2) (mkApps N1 M2)
 | app_red_r M2 N2 M1 : OnOne2 (red1 Σ Γ) M2 N2 -> red1 Σ Γ (tApp M1 M2) (tApp M1 N2)
 
 | prod_red_l na na' M1 M2 N1 : red1 Σ Γ M1 N1 -> red1 Σ Γ (tProd na M1 M2) (tProd na' N1 M2)
@@ -248,11 +262,11 @@ Lemma red1_ind_all :
         is_constructor narg args = true -> P Γ (tApp (tFix mfix idx) args) (tApp fn args)) ->
        (forall (Γ : context) (ip : inductive * nat) (p : term) (mfix : mfixpoint term) (idx : nat)
           (args : list term) (narg : nat) (fn : term) (brs : list (nat * term)),
-        unfold_fix mfix idx = Some (narg, fn) ->
-        P Γ (tCase ip p (mkApps (tCoFix mfix idx) args) brs) (tCase ip (tApp fn args) p brs)) ->
+        unfold_cofix mfix idx = Some (narg, fn) ->
+        P Γ (tCase ip p (mkApps (tCoFix mfix idx) args) brs) (tCase ip (mkApps fn args) p brs)) ->
        (forall (Γ : context) (p : projection) (mfix : mfixpoint term) (idx : nat) (args : list term)
           (narg : nat) (fn : term),
-        unfold_fix mfix idx = Some (narg, fn) -> P Γ (tProj p (mkApps (tCoFix mfix idx) args)) (tProj p (tApp fn args))) ->
+        unfold_cofix mfix idx = Some (narg, fn) -> P Γ (tProj p (mkApps (tCoFix mfix idx) args)) (tProj p (mkApps fn args))) ->
        (forall (Γ : context) (c : ident) (decl : constant_body) (body : term),
         declared_constant Σ c decl ->
         forall u : universe_instance, cst_body decl = Some body -> P Γ (tConst c u) (subst_instance_constr u body)) ->
@@ -274,7 +288,7 @@ Lemma red1_ind_all :
            OnOne2 (fun x y : nat * term => red1 Σ Γ (snd x) (snd y) /\ P Γ (snd x) (snd y)) brs brs' ->
            P Γ (tCase ind p c brs) (tCase ind p c brs')) ->
        (forall (Γ : context) (p : projection) (c c' : term), red1 Σ Γ c c' -> P Γ c c' -> P Γ (tProj p c) (tProj p c')) ->
-       (forall (Γ : context) (M1 N1 : term) (M2 : list term), red1 Σ Γ M1 N1 -> P Γ M1 N1 -> P Γ (tApp M1 M2) (tApp N1 M2)) ->
+       (forall (Γ : context) (M1 N1 : term) (M2 : list term), red1 Σ Γ M1 N1 -> P Γ M1 N1 -> P Γ (tApp M1 M2) (mkApps N1 M2)) ->
        (forall (Γ : context) (M2 N2 : list term) (M1 : term), OnOne2 (fun x y => red1 Σ Γ x y /\ P Γ x y) M2 N2 -> P Γ (tApp M1 M2) (tApp M1 N2)) ->
        (forall (Γ : context) (na na' : name) (M1 M2 N1 : term),
         red1 Σ Γ M1 N1 -> P Γ M1 N1 -> P Γ (tProd na M1 M2) (tProd na' N1 M2)) ->
@@ -318,6 +332,8 @@ Proof.
     constructor. split; auto.
     constructor. auto.
 Defined.
+
+Hint Resolve wf_mkApps wf_subst wf_lift : wf.
 
 (** *** Reduction
 
@@ -635,7 +651,7 @@ Inductive typing `{checker_flags} (Σ : global_context) (Γ : context) : term ->
     check_correct_arity (snd Σ) decl' ind u indctx pars pctx = true ->
     List.Exists (fun sf => universe_family ps = sf) decl'.(ind_kelim) ->
     Σ ;;; Γ |- c : mkApps (tInd ind u) args ->
-    All2 (fun x y => (fst x = fst y) * (Σ ;;; Γ |- snd x : snd y)) brs btys ->
+    Forall2 (fun x y => (fst x = fst y) * (Σ ;;; Γ |- snd x : snd y)) brs btys ->
     Σ ;;; Γ |- tCase (ind, npar) p c brs : tApp p (List.skipn npar args ++ [c])
 
 | type_Proj p c u :
@@ -649,7 +665,7 @@ Inductive typing `{checker_flags} (Σ : global_context) (Γ : context) : term ->
     let ty := (safe_nth mfix (exist _ n isdecl)).(dtype) in
     let types := fix_context mfix in
     All_local_env typing Σ (Γ ,,, types) ->
-    All (fun d => Σ ;;; Γ ,,, types |- d.(dbody) : d.(dtype)) mfix ->
+    All (fun d => (Σ ;;; Γ ,,, types |- d.(dbody) : d.(dtype)) * (isLambda d.(dbody) = true)%type) mfix ->
     (** TODO check well-formed fix *)
     Σ ;;; Γ |- tFix mfix n : ty
 
@@ -1007,10 +1023,10 @@ End All_size.
 
 Section All2_size.
   Context {A} (P : A -> A -> Type) (fn : forall x1 x2, P x1 x2 -> size).
-  Fixpoint all2_size {l1 l2 : list A} (f : All2 P l1 l2) : size :=
+  Fixpoint all2_size {l1 l2 : list A} (f : Forall2 P l1 l2) : size :=
   match f with
-  | All2_nil => 0
-  | All2_cons x y l l' rxy rll' => fn _ _ rxy + all2_size rll'
+  | Forall2_nil => 0
+  | Forall2_cons x y l l' rxy rll' => fn _ _ rxy + all2_size rll'
   end.
 End All2_size.
 
@@ -1049,7 +1065,7 @@ Proof.
          | H : typing _ _ _ _ |- _ => apply typing_size in H
          end ;
   match goal with
-  | H : All2 _ _ _ |- _ => idtac
+  | H : Forall2 _ _ _ |- _ => idtac
   | H : All _ _ |- _ => idtac
   | H : typing_spine _ _ _ _ _ |- _ => idtac
   | H1 : size, H2 : size, H3 : size |- _ => exact (S (Nat.max H1 (Nat.max H2 H3)))
@@ -1063,8 +1079,8 @@ Proof.
   end.
   exact (S (Nat.max d (typing_spine_size typing_size _ _ _ _ _ t0))).
   exact (S (Nat.max d1 (Nat.max d2
-                                (all2_size _ (fun x y p => typing_size Σ Γ (snd x) (snd y) (snd p)) a)))).
-  exact (S (Nat.max (wf_local_size _ typing_size _ a) (all_size _ (fun x p => typing_size Σ _ _ _ p) a0))).
+                                (all2_size _ (fun x y p => typing_size Σ Γ (snd x) (snd y) (snd p)) f)))).
+  exact (S (Nat.max (wf_local_size _ typing_size _ a) (all_size _ (fun x p => typing_size Σ _ _ _ (fst p)) a0))).
   exact (S (Nat.max (wf_local_size _ typing_size _ a) (all_size _ (fun x p => typing_size Σ _ _ _ p) a0))).
 Defined.
 
@@ -1189,7 +1205,7 @@ Lemma typing_ind_env `{cf : checker_flags} :
         P Σ Γ p pty ->
         Σ;;; Γ |- c : mkApps (tInd ind u) args ->
         P Σ Γ c (mkApps (tInd ind u) args) ->
-        All2 (fun x y : nat * term => (fst x = fst y) * (Σ;;; Γ |- snd x : snd y)
+        Forall2 (fun x y : nat * term => (fst x = fst y) * (Σ;;; Γ |- snd x : snd y)
                                          * P Σ Γ (snd x) (snd y))%type brs btys ->
         P Σ Γ (tCase (ind, npar) p c brs) (tApp p (skipn npar args ++ [c]))) ->
 
@@ -1205,6 +1221,7 @@ Lemma typing_ind_env `{cf : checker_flags} :
         let types := fix_context mfix in
         All_local_env (fun Σ Γ b ty => (typing Σ Γ b ty * P Σ Γ b ty)%type) Σ (Γ ,,, types) ->
         All (fun d => (Σ ;;; Γ ,,, types |- d.(dbody) : d.(dtype))%type *
+                   (isLambda d.(dbody) = true)%type *
             P Σ (Γ ,,, types) d.(dbody) d.(dtype))%type mfix ->
         P Σ Γ (tFix mfix n) ty) ->
 
@@ -1331,14 +1348,14 @@ Proof.
     eapply (X14 _ _ _ _ H); eauto. simpl; auto with arith.
     eapply (X14 _ _ _ _ H); eauto. simpl; auto with arith. simpl in *.
     eapply (X14 _ _ _ _ H0); eauto. simpl; auto with arith. simpl in *.
-    induction a; simpl; lia.
+    induction f; simpl; lia.
     simpl in *.
-    revert a wfΓ X14. clear. intros.
-    induction a; simpl in *. constructor.
+    revert f wfΓ X14. clear. intros.
+    induction f; simpl in *. constructor.
     destruct r. constructor. split; auto.
     eapply (X14 _ _ _ _ t); eauto. simpl; auto with arith.
     lia.
-    apply IHa. auto. intros.
+    apply IHf. auto. intros.
     eapply (X14 _ _ _ _ Hty). lia.
 
   - clear X X0 X1 X2 X3 X4 X5 X6 X7 X8 X9 X10 X12 X13.
@@ -1370,8 +1387,9 @@ Proof.
         forall (t T : term) (Hty : Σ;;; Γ0 |- t : T),
         typing_size Hty <
         S
-          (all_size (fun x : def term => Σ;;; Γ ,,, fix_context mfix |- dbody x : dtype x)
-                (fun (x : def term) (p : Σ;;; Γ ,,, fix_context mfix |- dbody x : dtype x) => typing_size p) a0) ->
+          (all_size (fun x : def term => (Σ;;; Γ ,,, fix_context mfix |- dbody x : dtype x)%type
+           * (isLambda (dbody x) = true)%type)%type
+                (fun (x : def term) p => typing_size (fst p)) a0) ->
         Forall_decls_typing (snd Σ) (fun (Σ' : global_declarations) (t0 ty : term) => P (Σ', snd Σ) [] t0 ty)
                             (fst Σ) * P Σ Γ0 t T).
       intros. eapply (X14 _ X _ _ Hty); eauto. lia. clear X14.
@@ -1380,7 +1398,7 @@ Proof.
       subst ty. clear isdecl.
       induction a0; econstructor; eauto.
       ++ split; auto.
-         eapply (X _ a _ _ p). simpl. lia.
+         eapply (X _ a _ _ (fst p)). simpl. lia.
       ++ eapply IHa0. intros.
          eapply (X _ X0 _ _ Hty). simpl; lia.
 
@@ -1432,14 +1450,195 @@ Qed.
 
 (** Example: only well-formed terms are well-typed *)
 
-Lemma typing_wf `{checker_flags} Σ (wfΣ : wf Σ) Γ (wfΓ : wf_local Σ Γ) t T : Σ ;;; Γ |- t : T -> Ast.wf t.
+Lemma wf_mkApps_napp t u : isApp t = false -> Ast.wf (mkApps t u) -> Ast.wf t /\ List.Forall Ast.wf u.
 Proof.
-  revert Σ wfΣ Γ wfΓ t T. apply typing_ind_env; intros; try constructor; auto.
+  induction u in t |- *; simpl.
+  - intuition.
+  - intros Happ H; destruct t; try solve [inv H; intuition auto].
+    specialize (IHu (tApp t (l ++ [a]))).
+    forward IHu.
+    induction u; trivial. discriminate.
+Qed.
+Hint Resolve wf_mkApps_napp : wf.
 
+Lemma wf_mkApps_inv t u : Ast.wf (mkApps t u) -> List.Forall Ast.wf u.
+Proof.
+  induction u in t |- *; simpl.
+  - intuition.
+  - intros H; destruct t; try solve [inv H; intuition auto].
+    specialize (IHu (tApp t (l ++ [a]))).
+    forward IHu.
+    induction u; trivial.
+    simpl. rewrite <- app_assoc. simpl. apply H.
+    intuition. inv H.
+    apply Forall_app in H3. intuition.
+Qed.
+Hint Resolve wf_mkApps_inv : wf.
+Hint Constructors Ast.wf : wf.
+
+Lemma isLambda_substl s t : isLambda t = true -> isLambda (substl s t) = true.
+Proof.
+  destruct t; simpl; try congruence.
+  intros. induction s in n, t1, t2 |- *; simpl; auto.
+Qed.
+
+Lemma isLambda_isApp t : isLambda t = true -> isApp t = false.
+Proof. destruct t; simpl; congruence. Qed.
+
+Lemma unfold_fix_wf:
+  forall (mfix : mfixpoint term) (idx : nat) (narg : nat) (fn : term),
+    unfold_fix mfix idx = Some (narg, fn) ->
+    Ast.wf (tFix mfix idx) ->
+    Ast.wf fn /\ isApp fn <> true.
+Proof.
+  intros mfix idx narg fn Hf Hwf.
+  unfold unfold_fix in Hf. inv Hwf.
+  destruct nth_error eqn:eqnth; try congruence.
+  pose proof (nth_error_forall _ _ _ _ eqnth H). simpl in H0.
+  injection Hf. intros <- <-.
+  destruct H0 as [ _ [ wfd islamd ] ]. apply (isLambda_substl (fix_subst mfix)) in islamd.
+  apply isLambda_isApp in islamd. split; try congruence.
+  apply wf_substl; auto. clear wfd islamd Hf eqnth.
+  assert(forall n, Ast.wf (tFix mfix n)). constructor; auto.
+  unfold fix_subst. generalize #|mfix|; intros. induction n; auto.
+Qed.
+
+Lemma unfold_cofix_wf:
+  forall (mfix : mfixpoint term) (idx : nat) (narg : nat) (fn : term),
+    unfold_cofix mfix idx = Some (narg, fn) ->
+    Ast.wf (tCoFix mfix idx) -> Ast.wf fn.
+Proof.
+  intros mfix idx narg fn Hf Hwf.
+  unfold unfold_cofix in Hf. inv Hwf.
+  destruct nth_error eqn:eqnth; try congruence.
+  pose proof (nth_error_forall _ _ _ _ eqnth H). simpl in H0.
+  injection Hf. intros <- <-.
+  destruct H0 as [ _ wfd ].
+  apply wf_substl; auto. clear wfd Hf eqnth.
+  assert(forall n, Ast.wf (tCoFix mfix n)). constructor; auto.
+  unfold cofix_subst. generalize #|mfix|; intros. induction n; auto.
+Qed.
+
+Lemma wf_subst_instance_constr u c : Ast.wf c ->
+                                     Ast.wf (subst_instance_constr u c).
+Proof.
+  induction 1 using term_wf_forall_list_ind; simpl; try solve [ constructor; auto using Forall_map ].
+
+  constructor; auto. destruct t; simpl in *; try congruence. destruct l; simpl in *; congruence.
+  now apply Forall_map.
+  constructor; auto. merge_Forall. apply Forall_map.
+  eapply Forall_impl; eauto. intros. simpl in *. red. intuition auto.
+  destruct x; simpl in *.
+  destruct dbody; simpl in *; congruence.
+Qed.
+
+Lemma lookup_env_Forall_decls P g c d :
+  Forall_decls (fun _ x => P x) g ->
+  lookup_env g c = Some d -> on_decl P d.
+Proof.
+  intros H. induction H in c, d. simpl. congruence.
+  simpl. destruct ident_eq. intros [= ->]. apply H0.
+  eauto.
+Qed.
+
+Lemma wf_nth:
+  forall (n : nat) (args : list term), Forall Ast.wf args -> Ast.wf (nth n args tDummy).
+Proof.
+  intros n args H. induction H in n; destruct n; simpl; try constructor; auto.
+Qed.
+Hint Resolve wf_nth.
+
+Lemma wf_red1 `{CF:checker_flags} Σ Γ M N :
+  Forall_decls (fun g t => Ast.wf t) Σ ->
+  List.Forall (fun d => match decl_body d with Some b => Ast.wf b | None => True end) Γ ->
+  Ast.wf M -> red1 Σ Γ M N -> Ast.wf N.
+Proof.
+  intros wfΣ wfΓ wfM H.
+  induction H using red1_ind_all in wfM, wfΓ |- *; inv wfM; try solve[ constructor; auto with wf ].
+
+  - inv H1. inv H2.
+    eauto with wf.
+  - auto with wf.
+  - apply wf_lift.
+    induction wfΓ in i, isdecl, H. inv isdecl. destruct i. simpl in *. rewrite H in H0. auto. eapply IHwfΓ.
+    simpl in H. apply H.
+  - unfold iota_red.
+    apply wf_mkApps_inv in H0.
+    apply wf_mkApps; auto.
+    induction brs in c, H1 |- *; destruct c; simpl in *. constructor. constructor.
+    inv H1; auto. inv H1; auto.
+    induction H0 in pars |- *; destruct pars; try constructor; auto. simpl. auto.
+  - apply unfold_fix_wf in H; auto. constructor; intuition auto.
+  - constructor; auto. apply wf_mkApps_napp in H1 as [Hcof Hargs]; auto.
+    apply unfold_cofix_wf in H; auto.
+    apply wf_mkApps; intuition auto.
+  - constructor; auto. apply wf_mkApps_napp in H0 as [Hcof Hargs]; auto.
+    apply unfold_cofix_wf in H; auto.
+    apply wf_mkApps; intuition auto.
+  - apply wf_subst_instance_constr.
+    unfold declared_constant in H.
+    eapply lookup_env_Forall_decls in H; eauto. destruct decl; simpl in *.
+    now subst cst_body.
+  - apply wf_mkApps_inv in H.
+    auto with wf.
+  - constructor; auto. apply IHred1; auto. constructor; simpl; auto.
+  - constructor; auto. apply IHred1; auto. constructor; simpl; auto.
+  - constructor; auto. induction H; constructor; inv H2; intuition auto.
+  - apply wf_mkApps; auto.
+  - constructor; auto. induction H; congruence.
+    clear H1. induction H; inv H3; constructor; intuition auto.
+  - constructor; auto. apply IHred1; auto. constructor; simpl; auto.
+  - constructor; auto. induction H; inv H0; constructor; intuition auto.
+Qed.
+
+Lemma All_app {A} (P : A -> Type) l l' : All P (l ++ l') -> All P l * All P l'.
+Proof.
+  induction l; simpl; auto. intros. constructor; auto. constructor.
+  intros. inv X. intuition auto. constructor; auto.
+Qed.
+
+Lemma All_local_env_app `{checker_flags} (P : global_context -> context -> term -> term -> Type) Σ l l' :
+  All_local_env P Σ (l ,,, l') -> All_local_env P Σ l.
+Proof.
+  induction l'; simpl; auto. intros. unfold app_context in X.
+  inv X. intuition auto. auto.
+Qed.
+
+Lemma Forall_rev {A} (P : A -> Prop) (l : list A) : Forall P l -> Forall P (List.rev l).
+Proof.
+  induction l using rev_ind. constructor.
+  intros. rewrite rev_app_distr. apply Forall_app_inv. apply Forall_app in H. intuition auto.
+Qed.
+
+Lemma typing_wf `{checker_flags} Σ (wfΣ : wf Σ) Γ (wfΓ : wf_local Σ Γ) t T :
+  Σ ;;; Γ |- t : T ->
+  Forall_decls (fun g t => Ast.wf t) (fst Σ) ->
+  List.Forall (fun d => match decl_body d with Some b => Ast.wf b | None => True end /\ Ast.wf (decl_type d)) Γ ->
+  Ast.wf t.
+Proof.
+  revert Σ wfΣ Γ wfΓ t T.
+  apply (typing_ind_env (fun Σ Γ t T =>
+                           Forall_decls (fun g t => Ast.wf t) (fst Σ) ->
+                           List.Forall (fun d => match decl_body d with Some b => Ast.wf b | None => True end /\ Ast.wf (decl_type d)) Γ ->
+                           Ast.wf t)); intros; try split; try constructor; auto.
+
+  - apply H1. auto. simpl; constructor; simpl; auto.
+  - apply H1. auto. simpl; constructor; simpl; auto.
+  - apply H2. auto. simpl; constructor; simpl; auto.
   - clear H1 H2 X.
     induction X0. constructor. constructor; auto.
   - eapply Forall2_Forall_left; eauto. simpl. intuition auto.
   - subst types.
-    induction X0; constructor; auto. split; intuition auto. shelve.
-  - subst types. induction X0; constructor; auto. split; intuition auto. shelve.
+    induction mfix using rev_ind. constructor.
+    apply Forall_app_inv. split; auto. apply IHmfix. shelve. shelve. shelve.
+    constructor; auto.  clear IHmfix. simpl in X.
+    apply All_app in X0 as [Allmfix Hx]. inv Hx.
+    intuition. unfold app_context, fix_context in X.
+    rewrite map_app in X.
+    rewrite rev_app_distr in X.
+    rewrite <- app_assoc in X. simpl in X.
+    inv X. apply X2. auto. apply Forall_app_inv; split; auto.
+    clear X2 H2 H1 X1. apply Forall_rev.
+    apply Forall_map. shelve. shelve.
+  - shelve.
 Admitted.

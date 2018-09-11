@@ -262,7 +262,7 @@ Proof.
   contradiction.
 Qed.
 
-Lemma lift_rec_wf n k t : wf t -> wf (lift_rec n t k).
+Lemma wf_lift n k t : wf t -> wf (lift_rec n t k).
 Proof.
   intros wft; revert t wft k.
   apply (term_wf_forall_list_ind (fun t => forall k, wf (lift n k t))) ; simpl; intros; try constructor; auto.
@@ -275,8 +275,11 @@ Proof.
   apply Forall_map. eapply Forall_impl. eauto. eauto.
   apply Forall_map. eapply Forall_impl. apply H1.
   intros [n' t]. simpl. repeat red; simpl; auto.
-  apply Forall_map. eapply Forall_impl. apply H.
+  apply Forall_map. red in H.
+  apply (Forall_mix _ _ _ H) in H0.
+  eapply Forall_impl. apply H0.
   simpl. intros. red; intuition (simpl; auto).
+  destruct (dbody x); try discriminate. auto.
   apply Forall_map. eapply Forall_impl. apply H.
   simpl. intros. red; intuition (simpl; auto).
 Qed.
@@ -553,13 +556,21 @@ Proof.
   intros wft wfu; revert k.
   induction wfu using term_wf_forall_list_ind ; simpl; intros; try constructor; auto.
 
-  - destruct Init.Nat.compare; try constructor. apply lift_rec_wf; auto.
+  - destruct Init.Nat.compare; try constructor. apply wf_lift; auto.
   - apply Forall_map.
     induction H; constructor; auto.
   - apply wf_mkApps; auto. apply Forall_map. eapply Forall_impl; eauto.
   - apply Forall_map. eapply Forall_impl; eauto. intros. apply H0.
+  - merge_Forall. apply Forall_map. eapply Forall_impl; eauto. intros.
+    destruct x; simpl in *. red; simpl; intuition auto.
+    induction dbody; try discriminate. reflexivity.
   - apply Forall_map. eapply Forall_impl; eauto. intros.
     destruct x; simpl in *. red; simpl; intuition auto.
-  - apply Forall_map. eapply Forall_impl; eauto. intros.
-    destruct x; simpl in *. red; simpl; intuition auto.
+Qed.
+
+Lemma wf_substl ts u : List.Forall wf ts -> wf u -> wf (substl ts u).
+Proof.
+  intros wfts wfu.
+  induction wfts in u, wfu; simpl; intros; try constructor; auto.
+  apply IHwfts. now apply wf_subst.
 Qed.

@@ -108,6 +108,12 @@ Definition isApp t :=
   | _ => false
   end.
 
+Definition isLambda t :=
+  match t with
+  | tLambda _ _ _ => true
+  | _ => false
+  end.
+
 (** Well-formed terms: invariants which are not ensured by the OCaml type system *)
 
 Inductive wf : term -> Prop :=
@@ -126,7 +132,8 @@ Inductive wf : term -> Prop :=
 | wf_tConstruct i k u : wf (tConstruct i k u)
 | wf_tCase ci p c brs : wf p -> wf c -> Forall (Program.Basics.compose wf snd) brs -> wf (tCase ci p c brs)
 | wf_tProj p t : wf t -> wf (tProj p t)
-| wf_tFix mfix k : Forall (fun def => wf def.(dtype _) /\ wf def.(dbody _)) mfix -> wf (tFix mfix k)
+| wf_tFix mfix k : Forall (fun def => wf def.(dtype _) /\ wf def.(dbody _) /\ isLambda def.(dbody _) = true) mfix ->
+                   wf (tFix mfix k)
 | wf_tCoFix mfix k : Forall (fun def => wf def.(dtype _) /\ wf def.(dbody _)) mfix -> wf (tCoFix mfix k).
 
 (** ** Entries

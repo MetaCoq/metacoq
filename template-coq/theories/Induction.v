@@ -107,7 +107,7 @@ Lemma term_wf_forall_list_ind :
         P t -> forall t0 : term, P t0 -> forall l : list (nat * term),
             tCaseBrsProp P l -> P (tCase p t t0 l)) ->
     (forall (s : projection) (t : term), P t -> P (tProj s t)) ->
-    (forall (m : mfixpoint term) (n : nat), tFixProp P m -> P (tFix m n)) ->
+    (forall (m : mfixpoint term) (n : nat), tFixProp P m -> Forall (fun def => isLambda (dbody def) = true) m -> P (tFix m n)) ->
     (forall (m : mfixpoint term) (n : nat), tFixProp P m -> P (tCoFix m n)) ->
     forall t : term, wf t -> P t.
 Proof.
@@ -142,6 +142,7 @@ Proof.
   red in H16.
   induction H16. constructor.
   inv H18; constructor; intuition auto.
+  clear H16; induction H18; constructor; intuition auto.
 
   inv H17; auto.
   apply H15. red.

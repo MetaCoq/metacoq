@@ -1598,10 +1598,12 @@ Proof.
 Qed.
 
 Lemma All_local_env_app `{checker_flags} (P : global_context -> context -> term -> term -> Type) Σ l l' :
-  All_local_env P Σ (l ,,, l') -> All_local_env P Σ l.
+  All_local_env P Σ (l ,,, l') -> All_local_env P Σ l * All_local_env (fun Σ Γ t T => P Σ (l ,,, Γ) t T) Σ l'.
 Proof.
-  induction l'; simpl; auto. intros. unfold app_context in X.
-  inv X. intuition auto. auto.
+  induction l'; simpl; split; auto. constructor. intros. unfold app_context in X.
+  inv X. intuition auto. auto. apply IHl'. auto.
+  inv X. eapply localenv_cons_abs. apply IHl'. apply X0. apply X1.
+  eapply localenv_cons_def. apply IHl'. apply X0. apply X1.
 Qed.
 
 Lemma Forall_rev {A} (P : A -> Prop) (l : list A) : Forall P l -> Forall P (List.rev l).
@@ -1610,35 +1612,67 @@ Proof.
   intros. rewrite rev_app_distr. apply Forall_app_inv. apply Forall_app in H. intuition auto.
 Qed.
 
+Definition wf_decl d := match decl_body d with Some b => Ast.wf b | None => True end /\ Ast.wf (decl_type d).
+
 Lemma typing_wf `{checker_flags} Σ (wfΣ : wf Σ) Γ (wfΓ : wf_local Σ Γ) t T :
   Σ ;;; Γ |- t : T ->
   Forall_decls (fun g t => Ast.wf t) (fst Σ) ->
-  List.Forall (fun d => match decl_body d with Some b => Ast.wf b | None => True end /\ Ast.wf (decl_type d)) Γ ->
+  List.Forall wf_decl Γ ->
   Ast.wf t.
 Proof.
   revert Σ wfΣ Γ wfΓ t T.
   apply (typing_ind_env (fun Σ Γ t T =>
                            Forall_decls (fun g t => Ast.wf t) (fst Σ) ->
-                           List.Forall (fun d => match decl_body d with Some b => Ast.wf b | None => True end /\ Ast.wf (decl_type d)) Γ ->
+                           List.Forall wf_decl Γ ->
                            Ast.wf t)); intros; try split; try constructor; auto.
 
-  - apply H1. auto. simpl; constructor; simpl; auto.
-  - apply H1. auto. simpl; constructor; simpl; auto.
-  - apply H2. auto. simpl; constructor; simpl; auto.
+  - apply H1. auto. unfold wf_decl in *; simpl; constructor; simpl; auto.
+  - apply H1. auto. unfold wf_decl in *; simpl; constructor; simpl; auto.
+  - apply H2. auto. unfold wf_decl in *; simpl; constructor; simpl; auto.
   - clear H1 H2 X.
     induction X0. constructor. constructor; auto.
   - eapply Forall2_Forall_left; eauto. simpl. intuition auto.
   - subst types.
-    induction mfix using rev_ind. constructor.
-    apply Forall_app_inv. split; auto. apply IHmfix. shelve. shelve. shelve.
-    constructor; auto.  clear IHmfix. simpl in X.
-    apply All_app in X0 as [Allmfix Hx]. inv Hx.
-    intuition. unfold app_context, fix_context in X.
-    rewrite map_app in X.
-    rewrite rev_app_distr in X.
-    rewrite <- app_assoc in X. simpl in X.
-    inv X. apply X2. auto. apply Forall_app_inv; split; auto.
-    clear X2 H2 H1 X1. apply Forall_rev.
-    apply Forall_map. shelve. shelve.
-  - shelve.
-Admitted.
+    apply All_local_env_app in X as [HΓ Hmfix].
+    clear ty. clear isdecl.
+    assert (Forall wf_decl (fix_context mfix)).
+    clear X0. induction mfix using rev_ind. constructor.
+    unfold fix_context in *.
+    rewrite map_app, rev_app_distr in *. simpl in *.
+    inv Hmfix. constructor. red. simpl. split; auto; apply X0.
+    auto. apply Forall_app_inv. split; auto. eapply IHmfix.
+    auto. clear Hmfix.
+    pose proof H2.
+    revert X0 H2. generalize (fix_context mfix). intros.
+    induction mfix. constructor. constructor.
+    Focus 2. apply IHmfix.
+    unfold fix_context in H2. simpl in H2. inv X0.
+    unfold fix_context in H3. simpl in H3. apply Forall_app in H3 as [wfl wfx]. auto.
+    inv X0. apply X1.
+
+    split.
+    unfold fix_context in H3. simpl in H3. apply Forall_app in H3 as [wfl wfx].
+    inv wfx. apply H3. inv X0. intuition.
+    apply H4. apply Forall_app_inv; auto.
+  - subst types.
+    apply All_local_env_app in X as [HΓ Hmfix].
+    clear ty. clear isdecl.
+    assert (Forall wf_decl (fix_context mfix)).
+    clear X0. induction mfix using rev_ind. constructor.
+    unfold fix_context in *.
+    rewrite map_app, rev_app_distr in *. simpl in *.
+    inv Hmfix. constructor. red. simpl. split; auto; apply X0.
+    auto. apply Forall_app_inv. split; auto. eapply IHmfix.
+    auto. clear Hmfix.
+    pose proof H2.
+    revert X0 H2. generalize (fix_context mfix). intros.
+    induction mfix. constructor. constructor.
+    Focus 2. apply IHmfix.
+    unfold fix_context in H2. simpl in H2. inv X0.
+    unfold fix_context in H3. simpl in H3. apply Forall_app in H3 as [wfl wfx]. auto.
+    inv X0. apply X1.
+    split.
+    unfold fix_context in H3. simpl in H3. apply Forall_app in H3 as [wfl wfx].
+    inv wfx. apply H3. inv X0. intuition.
+    apply H4. apply Forall_app_inv; auto.
+Qed.

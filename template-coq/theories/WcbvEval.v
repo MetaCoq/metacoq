@@ -189,10 +189,10 @@ Section Wcbv.
     constructor. now apply eval_evals_ind. now apply aux.
     revert l l' H H1. fix aux 4. destruct 2. contradiction. constructor.
     now apply eval_evals_ind.
-    destruct l. inv H2; constructor.
+    destruct l. inv H1; constructor.
     now apply aux.
     revert l l' H H1. fix aux 4. destruct 2. contradiction. constructor.
-    now apply eval_evals_ind. destruct l. inv H2; constructor. now apply aux.
+    now apply eval_evals_ind. destruct l. inv H1; constructor. now apply aux.
   Defined.
 
   (** Characterization of values for this reduction relation:

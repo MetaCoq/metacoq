@@ -594,9 +594,11 @@ End TypeLocal.
 
 Inductive typing `{checker_flags} (Σ : global_context) (Γ : context) : term -> term -> Type :=
 | type_Rel n : forall (isdecl : n < List.length Γ),
+    All_local_env typing Σ Γ ->
     Σ ;;; Γ |- (tRel n) : lift0 (S n) (safe_nth Γ (exist _ n isdecl)).(decl_type)
 
 | type_Sort l :
+    All_local_env typing Σ Γ ->
     Σ ;;; Γ |- (tSort (Universe.make l)) : tSort (Universe.super l)
 
 | type_Cast c k t s :
@@ -1066,6 +1068,7 @@ Proof.
          end ;
   match goal with
   | H : Forall2 _ _ _ |- _ => idtac
+  | H : All_local_env _ _ _ |- _ => idtac
   | H : All _ _ |- _ => idtac
   | H : typing_spine _ _ _ _ _ |- _ => idtac
   | H1 : size, H2 : size, H3 : size |- _ => exact (S (Nat.max H1 (Nat.max H2 H3)))
@@ -1077,12 +1080,21 @@ Proof.
   | _ : declared_projection _ _ _ |- _  => exact 2%nat
   | _ => exact 1
   end.
+  exact (S (wf_local_size _ typing_size _ a)).
+  exact (S (wf_local_size _ typing_size _ a)).
   exact (S (Nat.max d (typing_spine_size typing_size _ _ _ _ _ t0))).
   exact (S (Nat.max d1 (Nat.max d2
                                 (all2_size _ (fun x y p => typing_size Σ Γ (snd x) (snd y) (snd p)) f)))).
   exact (S (Nat.max (wf_local_size _ typing_size _ a) (all_size _ (fun x p => typing_size Σ _ _ _ (fst p)) a0))).
   exact (S (Nat.max (wf_local_size _ typing_size _ a) (all_size _ (fun x p => typing_size Σ _ _ _ p) a0))).
 Defined.
+
+Require Import Lia.
+
+Lemma typing_size_pos `{checker_flags} {Σ Γ t T} (d : Σ ;;; Γ |- t : T) : typing_size d > 0.
+Proof.
+  induction d; simpl; lia.
+Qed.
 
 Fixpoint globenv_size (Σ : global_declarations) : size :=
   match Σ with
@@ -1123,19 +1135,37 @@ Lemma env_prop_sigma `{checker_flags} P : env_prop P ->
   forall Σ (wf : wf Σ),
     Forall_decls_typing (snd Σ) (fun Σ0 (t0 ty : term) => P (Σ0, snd Σ) [] t0 ty) (fst Σ).
 Proof.
-  intros. eapply X. apply wf. constructor. apply (type_Sort Σ [] Level.prop).
+  intros. eapply X. apply wf. constructor. apply (type_Sort Σ [] Level.prop). constructor.
 Defined.
+
+Lemma wf_local_inv `{checker_flags} Σ d Γ (w : wf_local Σ (d :: Γ)) :
+  { w' : wf_local Σ Γ &
+    match d.(decl_body) with
+    | Some b => { ty : Σ ;;; Γ |- b : d.(decl_type) |
+                  wf_local_size Σ (@typing_size _) _ w' < wf_local_size _ (@typing_size _) _ w /\
+                  typing_size ty <= wf_local_size _ (@typing_size _) _ w }
+    | None => { u & { ty : Σ ;;; Γ |- d.(decl_type) : tSort u |
+                      wf_local_size Σ (@typing_size _) _ w' < wf_local_size _ (@typing_size _) _ w /\
+                      typing_size ty <= wf_local_size _ (@typing_size _) _ w } }
+    end }.
+Proof.
+  remember (d :: Γ) as ctx. revert Heqctx. destruct w. simpl.
+  congruence.
+  intros [=]. subst d Γ0.
+  exists w; simpl. exists u. exists t0. pose (typing_size_pos t0). lia.
+  intros [=]. subst d Γ0.
+  exists w; simpl. exists t0. pose (typing_size_pos t0). lia.
+Qed.
 
 (** *** An induction principle ensuring the Σ declarations enjoy the same properties.
     Also theads the well-formedness of the local context and gives the right induction hypothesis
     on typing judgments in application spines, fix and cofix blocks.
  *)
 
-Require Import Lia.
-
 Lemma typing_ind_env `{cf : checker_flags} :
   forall (P : global_context -> context -> term -> term -> Type),
     (forall Σ (wfΣ : wf Σ) (Γ : context) (wfΓ : wf_local Σ Γ) (n : nat) (isdecl : n < #|Γ|),
+        All_local_env typing Σ Γ -> All_local_env P Σ Γ ->
         P Σ Γ (tRel n)
           (lift0 (S n) (decl_type (safe_nth Γ (exist (fun n0 : nat => n0 < #|Γ|) n isdecl))))) ->
     (forall Σ (wfΣ : wf Σ) (Γ : context) (wfΓ : wf_local Σ Γ) (l : Level.t), P Σ Γ (tSort (Universe.make l)) (tSort (Universe.super l))) ->
@@ -1265,7 +1295,7 @@ Proof.
   constructor.
   cbn in wfΣ; inversion_clear wfΣ.
   constructor.
-  specialize (IH (existT _ (Σ, φ) (existT _ X14 (existT _ [] (existT _ (localenv_nil typing (Σ, φ)) (existT _ (tSort Universe.type0m ) (existT _ _ (type_Sort _ _ Level.prop)))))))).
+  specialize (IH (existT _ (Σ, φ) (existT _ X14 (existT _ [] (existT _ (localenv_nil typing (Σ, φ)) (existT _ (tSort Universe.type0m ) (existT _ _ (type_Sort _ _ Level.prop (localenv_nil typing (Σ, φ)))))))))).
   simpl in IH. forward IH. constructor 1. simpl. omega.
   apply IH.
   destruct g; simpl.
@@ -1309,17 +1339,38 @@ Proof.
                  unshelve eapply X14; simpl; auto with arith].
   - match reverse goal with
       H : _ |- _ => eapply H
-    end; eauto;
+    end; eauto. clear -a X14. simpl in X14. clear isdecl.
+    induction Γ. constructor.
+    destruct a0. destruct decl_body.
+    + destruct (wf_local_inv _ _ _ a).
+      simpl in y. destruct y as [Hty [sizex sizety]].
+      constructor.
+      eapply IHΓ with x. intros.
+      eapply X14 with Hty0. eauto. lia.
       unshelve eapply X14; simpl; auto with arith;
-    repeat (rewrite Nat.max_comm, <- Nat.max_assoc; auto with arith).
+        repeat (rewrite Nat.max_comm, <- Nat.max_assoc; auto with arith).
+    + destruct (wf_local_inv _ _ _ a).
+      simpl in y. destruct y as [u [Hty [sizex sizety]]].
+      apply localenv_cons_abs with u.
+      eapply IHΓ with x. intros.
+      eapply X14 with Hty0. eauto. lia.
+      unshelve eapply X14; simpl; auto with arith;
+        repeat (rewrite Nat.max_comm, <- Nat.max_assoc; auto with arith).
+  - match reverse goal with
+      H : _ |- _ => eapply H
+    end; eauto;
+      unshelve eapply X14; simpl; auto with arith.
     econstructor; eauto.
   - match reverse goal with
       H : _ |- _ => eapply H
     end; eauto;
       unshelve eapply X14; simpl; auto with arith.
     econstructor; eauto.
-  - eapply X4; eauto; unshelve eapply X14; simpl; (auto with arith || ltac:(try lia)).
-    constructor; auto.
+  - match reverse goal with
+      H : _ |- _ => eapply H
+    end; eauto;
+      unshelve eapply X14; simpl; auto with arith. lia.
+    econstructor; eauto. lia.
 
   - clear X X0 X1 X2 X3 X4 X6 X7 X8 X9 X10 X11 X12 X13.
     eapply X5 with t_ty t0; eauto.
@@ -1341,7 +1392,7 @@ Proof.
     eapply IHt0; eauto. intros. eapply (X _ X0 _ _ Hty) ; eauto. simpl. lia.
 
   - apply X6; eauto.
-    specialize (X14 [] (localenv_nil _ _) _ _ (type_Sort _ _ Level.prop)).
+    specialize (X14 [] (localenv_nil _ _) _ _ (type_Sort _ _ Level.prop (localenv_nil _ _))).
     simpl in X14. forward X14; auto. apply X14.
 
   - eapply X9; eauto.

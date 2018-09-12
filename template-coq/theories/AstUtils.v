@@ -144,20 +144,20 @@ Arguments rarg {term} _.
 Definition on_snd {A B C} (f : B -> C) (p : A * B) :=
   (fst p, f (snd p)).
 
-Definition map_def {A B : Set} (f : A -> B) (d : def A) :=
-  {| dname := d.(dname); dtype := f d.(dtype); dbody := f d.(dbody); rarg := d.(rarg) |}.
+Definition map_def {A B : Set} (tyf bodyf : A -> B) (d : def A) :=
+  {| dname := d.(dname); dtype := tyf d.(dtype); dbody := bodyf d.(dbody); rarg := d.(rarg) |}.
 
 Definition test_snd {A B} (f : B -> bool) (p : A * B) :=
   f (snd p).
 
-Definition test_def {A : Set} (f : A -> bool) (d : def A) :=
-  f d.(dtype) && f d.(dbody).
+Definition test_def {A : Set} (tyf bodyf : A -> bool) (d : def A) :=
+  tyf d.(dtype) && bodyf d.(dbody).
 
 Definition tCaseBrsProp {A} (P : A -> Prop) (l : list (nat * A)) :=
   Forall (fun x => P (snd x)) l.
 
-Definition tFixProp {A : Set} (P : A -> Prop) (m : mfixpoint A) :=
-  Forall (fun x : def A => P x.(dtype) /\ P x.(dbody)) m.
+Definition tFixProp {A : Set} (P P' : A -> Prop) (m : mfixpoint A) :=
+  Forall (fun x : def A => P x.(dtype) /\ P' x.(dbody)) m.
 
 Lemma on_snd_on_snd {A B C D} (f : C -> D) (g : B -> C) (d : A * B) :
   on_snd f (on_snd g d) = on_snd (fun x => f (g x)) d.
@@ -171,14 +171,14 @@ Proof.
   reflexivity.
 Qed.
 
-Lemma map_def_map_def {A B C : Set} (f : B -> C) (g : A -> B) (d : def A) :
-  map_def f (map_def g d) = map_def (fun x => f (g x)) d.
+Lemma map_def_map_def {A B C : Set} (f f' : B -> C) (g g' : A -> B) (d : def A) :
+  map_def f f' (map_def g g' d) = map_def (fun x => f (g x)) (fun x => f' (g' x)) d.
 Proof.
   destruct d; reflexivity.
 Qed.
 
-Lemma compose_map_def {A B C : Set} (f : B -> C) (g : A -> B) :
-  compose (A:=def A) (map_def f) (map_def g) = map_def (compose f g).
+Lemma compose_map_def {A B C : Set} (f f' : B -> C) (g g' : A -> B) :
+  compose (A:=def A) (map_def f f') (map_def g g') = map_def (compose f g) (compose f' g').
 Proof. reflexivity. Qed.
 
 Lemma combine_map_id {A B} (l : list (A * B)) :
@@ -202,13 +202,21 @@ Proof.
   rewrite H. f_equal. eauto.
 Qed.
 
-Lemma map_def_id {t : Set} : map_def (@id t) = id.
+Lemma map_def_id {t : Set} : map_def (@id t) (@id t) = id.
 Proof. extensionality p. now destruct p. Qed.
 Hint Rewrite @map_def_id @map_id.
 
 Lemma forall_map_spec {A B} {P : A -> Prop} {l} {f g : A -> B} :
   Forall P l -> (forall x, P x -> f x = g x) ->
   map f l = map g l.
+Proof.
+  induction 1; simpl; trivial.
+  intros Heq. rewrite Heq. f_equal. apply IHForall. apply Heq. apply H.
+Qed.
+
+Lemma forall_map_id_spec {A} {P : A -> Prop} {l} {f : A -> A} :
+  Forall P l -> (forall x, P x -> f x = x) ->
+  map f l = l.
 Proof.
   induction 1; simpl; trivial.
   intros Heq. rewrite Heq. f_equal. apply IHForall. apply Heq. apply H.
@@ -222,12 +230,13 @@ Proof.
   now rewrite H0; auto.
 Qed.
 
-Lemma map_def_spec {A B : Set} (P : A -> Prop) (f g : A -> B) (x : def A) :
-  P x.(dbody) -> P x.(dtype) -> (forall x, P x -> f x = g x) ->
-  map_def f x = map_def g x.
+Lemma map_def_spec {A B : Set} (P P' : A -> Prop) (f f' g g' : A -> B) (x : def A) :
+  P' x.(dbody) -> P x.(dtype) -> (forall x, P x -> f x = g x) ->
+  (forall x, P' x -> f' x = g' x) ->
+  map_def f f' x = map_def g g' x.
 Proof.
   intros. destruct x. unfold map_def. simpl.
-  rewrite !H1; auto.
+  rewrite !H1, !H2; auto.
 Qed.
 
 Lemma case_brs_map_spec {A B : Set} {P : A -> Prop} {l} {f g : A -> B} :
@@ -240,13 +249,14 @@ Proof.
   eapply on_snd_spec; eauto.
 Qed.
 
-Lemma tfix_map_spec {A B : Set} {P : A -> Prop} {l} {f g : A -> B} :
-  tFixProp P l -> (forall x, P x -> f x = g x) ->
-  map (map_def f) l = map (map_def g) l.
+Lemma tfix_map_spec {A B : Set} {P P' : A -> Prop} {l} {f f' g g' : A -> B} :
+  tFixProp P P' l -> (forall x, P x -> f x = g x) ->
+  (forall x, P' x -> f' x = g' x) ->
+  map (map_def f f') l = map (map_def g g') l.
 Proof.
   intros.
   eapply (forall_map_spec H).
-  intros. destruct H1;
+  intros. destruct H2;
   eapply map_def_spec; eauto.
 Qed.
 
@@ -261,12 +271,91 @@ Proof.
   intros l Hl Hq. induction Hl; inv Hq; constructor; auto.
 Qed.
 
+Lemma forallb2_Forall2 {A : Type} {p : A -> A -> bool}
+      {l l' : list A} :
+  forallb2 p l l' = true -> Forall2 (fun x y => p x y = true) l l'.
+Proof.
+  induction l in l' |- *; destruct l'; simpl; intros; try congruence.
+  - constructor.
+  - constructor. revert H; rewrite andb_true_iff; intros [px pl]. auto.
+    apply IHl. revert H; rewrite andb_true_iff; intros [px pl]. auto.
+Qed.
+
+Lemma Forall2_forallb2 {A : Type} {p : A -> A -> bool}
+      {l l' : list A} :
+  Forall2 (fun x y => p x y = true) l l' -> forallb2 p l l' = true.
+Proof.
+  induction 1; simpl; intros; try congruence.
+  rewrite andb_true_iff. intuition auto.
+Qed.
+
+Lemma Forall2_List_Forall_mix {A : Type} {P : A -> Prop} {Q : A -> A -> Prop}
+      {l l' : list A} :
+    List.Forall P l -> Forall2 Q l l' -> Forall2 (fun x y => P x /\ Q x y) l l'.
+Proof.
+  induction 2; simpl; intros; constructor.
+  inv H; intuition auto.
+  apply IHX. inv H; intuition auto.
+Qed.
+
+Lemma Forall2_List_Forall_mix_right {A : Type} {P : A -> Prop} {Q : A -> A -> Prop}
+      {l l' : list A} :
+    List.Forall P l' -> Forall2 Q l l' -> Forall2 (fun x y => P y /\ Q x y) l l'.
+Proof.
+  induction 2; simpl; intros; constructor.
+  inv H; intuition auto.
+  apply IHX. inv H; intuition auto.
+Qed.
+
+Lemma Forall2_Forall_mix {A : Set} {P : A -> Type} {Q : A -> A -> Type}
+      {l l' : list A} :
+  All P l -> Forall2 Q l l' -> Forall2 (fun x y => (P x * Q x y)%type) l l'.
+Proof.
+  induction 2; simpl; intros; constructor.
+  inv X; intuition auto.
+  apply IHX0. inv X; intuition auto.
+Qed.
+
+Lemma Forall2_map {A B C D} (R : C -> D -> Type) (f : A -> C) (g : B -> D) l l' :
+  Forall2 (fun x y => R (f x) (g y)) l l' -> Forall2 R (map f l) (map g l').
+Proof. induction 1; simpl; constructor; try congruence. Qed.
+
+Lemma OnOne2_mix_Forall_left {A} {P : A -> A -> Prop} {Q : A -> Prop} {l l'} :
+  List.Forall Q l -> OnOne2 P l l' -> OnOne2 (fun x y => P x y /\ Q x) l l'.
+Proof.
+  intros H; induction 1; constructor; try inv H; intuition.
+  apply IHX. now inv H.
+Qed.
+
+Lemma Forall_skipn {A} {P : A -> Prop} {l} {n} : List.Forall P l -> List.Forall P (skipn n l).
+Proof. intros HPL; induction HPL in n |- * ; simpl; destruct n; try econstructor; eauto. Qed.
+
+Lemma nth_error_forall {A} {P : A -> Prop} {l : list A} {n x} :
+  nth_error l n = Some x -> List.Forall P l -> P x.
+Proof.
+  intros Hnth HPl. induction HPl in n, Hnth |- *. destruct n; discriminate.
+  revert Hnth. destruct n. now intros [= ->].
+  intros H'; eauto.
+Qed.
+
+Lemma All_Forall {A} (P : A -> Type) (Q : A -> Prop) l :
+  (forall x, P x -> Q x) ->
+  All P l -> Forall Q l.
+Proof. induction 2; constructor; auto. Qed.
+
 Ltac merge_Forall := unfold tFixProp, tCaseBrsProp in *;
   repeat match goal with
   | H : Forall _ ?x, H' : Forall _ ?x |- _ =>
     apply (Forall_mix _ _ _ H) in H'; clear H
   | H : Forall _ ?x, H' : forallb _ ?x = _ |- _ =>
     eapply (Forall_forall_mix H) in H'; clear H
+  | H : forallb2 _ _ _ = _ |- _ => apply forallb2_Forall2 in H
+  | |- forallb2 _ _ _ = _ => apply Forall2_forallb2
+  | H : Forall _ ?x, H' : Forall2 _ ?x _  |- _ =>
+    apply (Forall2_List_Forall_mix H) in H'; clear H
+  | H : Forall _ ?x, H' : Forall2 _ _ ?x  |- _ =>
+    apply (Forall2_List_Forall_mix_right H) in H'; clear H
+  | |- Forall2 _ (map _ _) (map _ _) => apply Forall2_map
   end.
 
 Lemma forall_forallb_map_spec {A B : Type} {P : A -> Prop} {p : A -> bool}
@@ -279,6 +368,15 @@ Proof.
   f_equal. now apply Hx. now apply IHForall.
 Qed.
 
+Lemma forall_forallb_forallb_spec {A : Type} {P : A -> Prop} {p : A -> bool}
+      {l : list A} {f : A -> bool} :
+    Forall P l -> forallb p l = true ->
+    (forall x : A, P x -> p x = true -> f x = true) -> forallb f l = true.
+Proof.
+  induction 1; simpl; trivial.
+  rewrite !andb_true_iff. intros [px pl] Hx. eauto.
+Qed.
+
 Lemma on_snd_test_spec {A B C} (P : B -> Prop) (p : B -> bool) (f g : B -> C) (x : A * B) :
   P (snd x) -> (forall x, P x -> p x = true -> f x = g x) ->
   test_snd p x = true ->
@@ -288,14 +386,16 @@ Proof.
   now rewrite H0; auto.
 Qed.
 
-Lemma map_def_test_spec {A B : Set} (P : A -> Prop) p (f g : A -> B) (x : def A) :
-  P x.(dbody) -> P x.(dtype) -> (forall x, P x -> p x = true -> f x = g x) ->
-  test_def p x = true ->
-  map_def f x = map_def g x.
+Lemma map_def_test_spec {A B : Set}
+      (P P' : A -> Prop) p p' (f f' g g' : A -> B) (x : def A) :
+  P x.(dtype) -> P' x.(dbody) -> (forall x, P x -> p x = true -> f x = g x) ->
+  (forall x, P' x -> p' x = true -> f' x = g' x) ->
+  test_def p p' x = true ->
+  map_def f f' x = map_def g g' x.
 Proof.
   intros. destruct x. unfold map_def. simpl.
-  unfold test_def in H2; simpl in H2. rewrite andb_true_iff in H2.
-  rewrite !H1; intuition auto.
+  unfold test_def in H3; simpl in H3. rewrite andb_true_iff in H3.
+  rewrite !H1, !H2; intuition auto.
 Qed.
 
 Lemma case_brs_forallb_map_spec {A B : Set} {P : A -> Prop} {p : A -> bool}
@@ -311,15 +411,16 @@ Proof.
   eapply on_snd_test_spec; eauto.
 Qed.
 
-Lemma tfix_forallb_map_spec {A B : Set} {P : A -> Prop} {p} {l} {f g : A -> B} :
-  tFixProp P l ->
-  forallb (test_def p) l = true ->
+Lemma tfix_forallb_map_spec {A B : Set} {P P' : A -> Prop} {p p'} {l} {f f' g g' : A -> B} :
+  tFixProp P P' l ->
+  forallb (test_def p p') l = true ->
   (forall x, P x -> p x = true -> f x = g x) ->
-  map (map_def f) l = map (map_def g) l.
+  (forall x, P' x -> p' x = true -> f' x = g' x) ->
+  map (map_def f f') l = map (map_def g g') l.
 Proof.
   intros.
   eapply (forall_forallb_map_spec H H0).
-  intros. destruct H2.
+  intros. destruct H3.
   eapply map_def_test_spec; eauto.
 Qed.
 
@@ -327,16 +428,20 @@ Ltac apply_spec :=
   match goal with
   | H : Forall _ _, H' : forallb _ _ = _ |- map _ _ = map _ _ =>
     eapply (forall_forallb_map_spec H H')
+  | H : Forall _ _, H' : forallb _ _ = _ |- forallb _ _ = _ =>
+    eapply (forall_forallb_forallb_spec H H')
   | H : tCaseBrsProp _ _, H' : forallb _ _ = _ |- map _ _ = map _ _ =>
     eapply (case_brs_forallb_map_spec H H')
   | H : tCaseBrsProp _ _ |- map _ _ = map _ _ =>
     eapply (case_brs_map_spec H)
-  | H : tFixProp _ _, H' : forallb _ _ = _ |- map _ _ = map _ _ =>
+  | H : tFixProp _ _ _, H' : forallb _ _ = _ |- map _ _ = map _ _ =>
     eapply (tfix_forallb_map_spec H H')
-  | H : tFixProp _ _ |- map _ _ = map _ _ =>
+  | H : tFixProp _ _ _ |- map _ _ = map _ _ =>
     eapply (tfix_map_spec H)
   | H : Forall _ _ |- map _ _ = map _ _ =>
     eapply (forall_map_spec H)
+  | H : Forall _ _ |- map _ _ = _ =>
+    eapply (forall_map_id_spec H)
   end.
 
 Lemma Forall_map {A B} (P : B -> Prop) (f : A -> B) l : Forall (Program.Basics.compose P f) l -> Forall P (map f l).
@@ -344,7 +449,16 @@ Proof.
   induction 1; constructor; auto.
 Qed.
 
-Lemma Forall_impl {A} (P Q : A -> Prop) : forall l, Forall P l -> (forall x, P x -> Q x) -> Forall Q l.
+Lemma Forall_impl {A} {P Q : A -> Prop} {l} :
+  Forall P l -> (forall x, P x -> Q x) -> Forall Q l.
+Proof.
+  induction 1; constructor; auto.
+Qed.
+
+Lemma Forall2_impl {A B} {P Q : A -> B -> Type} {l l'} :
+    Forall2 P l l' ->
+    (forall x y, P x y -> Q x y) ->
+    Forall2 Q l l'.
 Proof.
   induction 1; constructor; auto.
 Qed.
@@ -366,25 +480,35 @@ Proof.
   destruct l; simpl in *; congruence.
 Qed.
 
-Lemma Forall2_Forall_left {A B} (P : A -> B -> Type) (Q : A -> Prop) (l : list A) (l' : list B) :
+Lemma Forall2_Forall_left {A B} {P : A -> B -> Type} {Q : A -> Prop} {l l'} :
+  Forall2 P l l' ->
   (forall x y, P x y -> Q x) ->
-  Forall2 P l l' -> List.Forall Q l.
+  List.Forall Q l.
 Proof.
-  intros H. induction 1; constructor; eauto.
+  intros HF H. induction HF; constructor; eauto.
 Qed.
 
-Lemma Forall2_Forall_right {A B} (P : A -> B -> Type) (Q : B -> Prop) (l : list A) (l' : list B) :
+Lemma Forall2_Forall_right {A B} {P : A -> B -> Type} {Q : B -> Prop} {l l'} :
+  Forall2 P l l' ->
   (forall x y, P x y -> Q y) ->
-  Forall2 P l l' -> List.Forall Q l'.
+  List.Forall Q l'.
 Proof.
-  intros H. induction 1; constructor; eauto.
+  intros HF H. induction HF; constructor; eauto.
 Qed.
 
-Lemma Forall2_right {A B} (P : B -> Prop) (l : list A) (l' : list B) :
+Lemma Forall2_right {A B} {P : B -> Prop} {l : list A} {l'} :
   Forall2 (fun x y => P y) l l' -> List.Forall (fun x => P x) l'.
 Proof.
   induction 1; constructor; auto.
 Qed.
+
+Ltac close_Forall :=
+  match goal with
+  | H : Forall _ _ _ |- Forall _ _ _ => apply (Forall_impl H)
+  | H : Forall2 _ _ _ |- Forall2 _ _ _ => apply (Forall2_impl H)
+  | H : Forall2 _ _ _ |- Forall _ _ _ =>
+    apply (Forall2_Forall_left H) || apply (Forall2_Forall_right H)
+  end.
 
 Lemma Forall2_non_nil {A B} (P : A -> B -> Prop) (l : list A) (l' : list B) :
   Forall2 P l l' -> l <> nil -> l' <> nil.
@@ -416,65 +540,20 @@ Proof.
   - by case => //.
 Qed.
 
-Lemma forallb2_Forall {A : Type} {p : A -> A -> bool}
-      {l l' : list A} :
-    forallb2 p l l' = true -> Forall2 (fun x y => p x y = true) l l'.
-Proof.
-  induction l in l' |- *; destruct l'; simpl; intros; try congruence.
-  - constructor.
-  - constructor. revert H; rewrite andb_true_iff; intros [px pl]. auto.
-    apply IHl. revert H; rewrite andb_true_iff; intros [px pl]. auto.
-Qed.
-
-Lemma Forall2_List_Forall_mix {A : Type} {P : A -> Prop} {Q : A -> A -> Prop}
-      {l l' : list A} :
-    List.Forall P l -> Forall2 Q l l' -> Forall2 (fun x y => P x /\ Q x y) l l'.
-Proof.
-  induction 2; simpl; intros; constructor.
-  inv H; intuition auto.
-  apply IHX. inv H; intuition auto.
-Qed.
-
-Lemma Forall2_List_Forall_mix_right {A : Type} {P : A -> Prop} {Q : A -> A -> Prop}
-      {l l' : list A} :
-    List.Forall P l' -> Forall2 Q l l' -> Forall2 (fun x y => P y /\ Q x y) l l'.
-Proof.
-  induction 2; simpl; intros; constructor.
-  inv H; intuition auto.
-  apply IHX. inv H; intuition auto.
-Qed.
-
-Lemma Forall2_Forall_mix {A : Set} {P : A -> Type} {Q : A -> A -> Type}
-      {l l' : list A} :
-  All P l -> Forall2 Q l l' -> Forall2 (fun x y => (P x * Q x y)%type) l l'.
-Proof.
-  induction 2; simpl; intros; constructor.
-  inv X; intuition auto.
-  apply IHX0. inv X; intuition auto.
-Qed.
-
 Lemma map_nil {A B} (f : A -> B) (l : list A) : l <> [] -> map f l <> [].
 Proof. induction l; simpl; congruence. Qed.
+Hint Resolve map_nil : wf.
 
-Lemma OnOne2_mix_Forall_left {A} {P : A -> A -> Prop} {Q : A -> Prop} {l l'} :
-  List.Forall Q l -> OnOne2 P l l' -> OnOne2 (fun x y => P x y /\ Q x) l l'.
+
+Require Import Compare_dec BinPos Omega.
+
+Inductive BoolSpecSet (P Q : Prop) : bool -> Set :=
+    BoolSpecT : P -> BoolSpecSet P Q true | BoolSpecF : Q -> BoolSpecSet P Q false.
+
+Lemma leb_spec_Set : forall x y : nat, BoolSpecSet (x <= y) (y < x) (x <=? y).
 Proof.
-  intros H; induction 1; constructor; try inv H; intuition.
-  apply IHX. now inv H.
+  intros.
+  destruct (Nat.leb_spec0 x y).
+  now constructor.
+  constructor. now omega.
 Qed.
-
-Lemma Forall_skipn {A} (P : A -> Prop) l n : List.Forall P l -> List.Forall P (skipn n l).
-Proof. intros HPL; induction HPL in n |- * ; simpl; destruct n; try econstructor; eauto. Qed.
-
-Lemma nth_error_forall {A} (P : A -> Prop) (l : list A) n x :
-  nth_error l n = Some x -> List.Forall P l -> P x.
-Proof.
-  intros Hnth HPl. induction HPl in n, Hnth |- *. destruct n; discriminate.
-  revert Hnth. destruct n. now intros [= ->].
-  intros H'; eauto.
-Qed.
-
-Lemma All_Forall {A} (P : A -> Type) (Q : A -> Prop) l :
-  (forall x, P x -> Q x) ->
-  All P l -> Forall Q l.
-Proof. induction 2; constructor; auto. Qed.

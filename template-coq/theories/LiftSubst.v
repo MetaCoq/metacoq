@@ -29,11 +29,11 @@ Fixpoint lift n k t : term :=
   | tProj p c => tProj p (lift n k c)
   | tFix mfix idx =>
     let k' := List.length mfix + k in
-    let mfix' := List.map (map_def (lift n k')) mfix in
+    let mfix' := List.map (map_def (lift n k) (lift n k')) mfix in
     tFix mfix' idx
   | tCoFix mfix idx =>
     let k' := List.length mfix + k in
-    let mfix' := List.map (map_def (lift n k')) mfix in
+    let mfix' := List.map (map_def (lift n k) (lift n k')) mfix in
     tCoFix mfix' idx
   | x => x
   end.
@@ -42,41 +42,46 @@ Fixpoint lift n k t : term :=
 Notation lift0 n := (lift n 0).
 Definition up := lift 1 0.
 
-Fixpoint subst t k u :=
+(** Parallel substitution: it assumes that all terms in the substitution live in the
+    same context *)
+
+Fixpoint parsubst s k u :=
   match u with
   | tRel n =>
-    match Nat.compare k n with
-    | Datatypes.Eq => lift0 k t
-    | Datatypes.Gt => tRel n
-    | Datatypes.Lt => tRel (pred n)
-    end
-  | tEvar ev args => tEvar ev (List.map (subst t k) args)
-  | tLambda na T M => tLambda na (subst t k T) (subst t (S k) M)
-  | tApp u v => mkApps (subst t k u) (List.map (subst t k) v)
-  | tProd na A B => tProd na (subst t k A) (subst t (S k) B)
-  | tCast c kind ty => tCast (subst t k c) kind (subst t k ty)
-  | tLetIn na b ty b' => tLetIn na (subst t k b) (subst t k ty) (subst t (S k) b')
+    if Nat.leb k n then
+      match nth_error s (n - k) with
+      | Some b => lift0 k b
+      | None => tRel (n - List.length s)
+      end
+    else tRel n
+  | tEvar ev args => tEvar ev (List.map (parsubst s k) args)
+  | tLambda na T M => tLambda na (parsubst s k T) (parsubst s (S k) M)
+  | tApp u v => mkApps (parsubst s k u) (List.map (parsubst s k) v)
+  | tProd na A B => tProd na (parsubst s k A) (parsubst s (S k) B)
+  | tCast c kind ty => tCast (parsubst s k c) kind (parsubst s k ty)
+  | tLetIn na b ty b' => tLetIn na (parsubst s k b) (parsubst s k ty) (parsubst s (S k) b')
   | tCase ind p c brs =>
-    let brs' := List.map (on_snd (subst t k)) brs in
-    tCase ind (subst t k p) (subst t k c) brs'
-  | tProj p c => tProj p (subst t k c)
+    let brs' := List.map (on_snd (parsubst s k)) brs in
+    tCase ind (parsubst s k p) (parsubst s k c) brs'
+  | tProj p c => tProj p (parsubst s k c)
   | tFix mfix idx =>
     let k' := List.length mfix + k in
-    let mfix' := List.map (map_def (subst t k')) mfix in
+    let mfix' := List.map (map_def (parsubst s k) (parsubst s k')) mfix in
     tFix mfix' idx
   | tCoFix mfix idx =>
     let k' := List.length mfix + k in
-    let mfix' := List.map (map_def (subst t k')) mfix in
+    let mfix' := List.map (map_def (parsubst s k) (parsubst s k')) mfix in
     tCoFix mfix' idx
   | x => x
   end.
 
+Notation parsubst0 t := (parsubst t 0).
+Definition subst t k u := parsubst [t] k u.
 Notation subst0 t := (subst t 0).
 Notation "M { j := N }" := (subst N j M) (at level 10, right associativity).
 
-(** Substitutes [t1 ; .. ; tn] in u for [Rel 0; .. Rel (n-1)]*)
-Definition substl l t :=
-  List.fold_left (fun t u => subst0 u t) l t.
+(** Substitutes [t1 ; .. ; tn] in u for [Rel 0; .. Rel (n-1)] *in parallel* *)
+Definition substl s := parsubst s 0.
 
 Fixpoint closedn k (t : term) : bool :=
   match t with
@@ -92,10 +97,10 @@ Fixpoint closedn k (t : term) : bool :=
   | tProj p c => closedn k c
   | tFix mfix idx =>
     let k' := List.length mfix + k in
-    List.forallb (test_def (closedn k')) mfix
+    List.forallb (test_def (closedn k) (closedn k')) mfix
   | tCoFix mfix idx =>
     let k' := List.length mfix + k in
-    List.forallb (test_def (closedn k')) mfix
+    List.forallb (test_def (closedn k) (closedn k')) mfix
   | x => true
   end.
 
@@ -128,20 +133,19 @@ Hint Extern 100 => omega : terms.
 
 Ltac easy ::= easy0 || solve [eauto 7 with core arith terms].
 
-Notation lift_rec n c k := (lift n k c) (only parsing).
 Notation subst_rec N M k := (subst N k M) (only parsing).
 
 Require Import PeanoNat.
 Import Nat.
 
 Lemma lift_rel_ge :
-  forall k n p, p <= n -> lift_rec k (tRel n) p = tRel (k + n).
+  forall k n p, p <= n -> lift k p (tRel n) = tRel (k + n).
 Proof.
   intros; simpl in |- *.
   now elim (leb_spec p n).
 Qed.
 
-Lemma lift_rel_lt : forall k n p, p > n -> lift_rec k (tRel n) p = tRel n.
+Lemma lift_rel_lt : forall k n p, p > n -> lift k p (tRel n) = tRel n.
 Proof.
   intros; simpl in |- *.
   now elim (leb_spec p n).
@@ -152,26 +156,34 @@ Proof.
   intros; simpl. now destruct leb.
 Qed.
 
-Lemma subst_rel_lt : forall u n k, k > n -> subst_rec u (tRel n) k = tRel n.
+Lemma subst_rel_lt : forall u n k, k > n -> parsubst u k (tRel n) = tRel n.
 Proof.
   simpl in |- *; intros.
-  elim (compare_spec k n); intro Hcomp; easy.
+  elim (leb_spec k n); intro Hcomp; easy.
 Qed.
+
+Require Import Lia.
 
 Lemma subst_rel_gt :
-  forall u n k, n > k -> subst_rec u (tRel n) k = tRel (pred n).
+  forall u n k, n >= k + length u -> parsubst u k (tRel n) = tRel (n - length u).
 Proof.
   simpl in |- *; intros.
-  now elim (compare_spec k n). 
+  elim (leb_spec k n). intros. destruct nth_error eqn:Heq.
+  assert (n - k < length u) by (apply nth_error_Some; congruence). lia. reflexivity.
+  lia.
 Qed.
 
-Lemma subst_rel_eq : forall u n, subst_rec u (tRel n) n = lift0 n u.
+Lemma subst_rel_eq :
+  forall (u : list term) n i t p,
+    List.nth_error u i = Some t -> p = n + i ->
+    parsubst u n (tRel p) = lift0 n t.
 Proof.
-  intros; simpl in |- *.
-  now elim (compare_spec n n).
+  intros; simpl in |- *. subst p.
+  elim (leb_spec n (n + i)). intros. assert (n + i - n = i) by lia. rewrite H1, H.
+  reflexivity. intros. lia.
 Qed.
 
-Lemma lift_rec0 : forall M k, lift_rec 0 M k = M.
+Lemma lift0_id : forall M k, lift 0 k M = M.
 Proof.
   intros M.
   elim M using term_forall_list_ind; simpl in |- *; intros; try easy ;
@@ -183,22 +195,21 @@ Proof.
   - f_equal; auto. rewrite <- map_id. eapply (forall_map_spec H1).
     intros. destruct x; unfold on_snd. simpl. rewrite H2. reflexivity.
 
-  - f_equal. transitivity (map (map_def id) m). eapply (tfix_map_spec H); auto.
+  - f_equal. transitivity (map (map_def id id) m). eapply (tfix_map_spec H); auto.
     rewrite <- map_id. f_equal. extensionality x. destruct x; reflexivity.
-  - f_equal. transitivity (map (map_def id) m). eapply (tfix_map_spec H); auto.
+  - f_equal. transitivity (map (map_def id id) m). eapply (tfix_map_spec H); auto.
     rewrite <- map_id. f_equal. extensionality x. destruct x; reflexivity.
 Qed.
 
 Lemma lift0_p : forall M, lift0 0 M = M.
   intros; unfold lift in |- *.
-  apply lift_rec0; easy.
+  apply lift0_id; easy.
 Qed.
 
-
-Lemma simpl_lift_rec :
+Lemma simpl_lift :
   forall M n k p i,
     i <= k + n ->
-    k <= i -> lift_rec p (lift_rec n M k) i = lift_rec (p + n) M k.
+    k <= i -> lift p i (lift n k M) = lift (p + n) k M.
 Proof.
   intros M.
   elim M using term_forall_list_ind;
@@ -212,14 +223,14 @@ Proof.
     now rewrite lift_rel_lt.
 Qed.
 
-Lemma simpl_lift : forall M n, lift0 (S n) M = lift0 1 (lift0 n M).
-  now intros; rewrite simpl_lift_rec.
+Lemma simpl_lift0 : forall M n, lift0 (S n) M = lift0 1 (lift0 n M).
+  now intros; rewrite simpl_lift.
 Qed.
 
-Lemma permute_lift_rec :
+Lemma permute_lift :
   forall M n k p i,
     i <= k ->
-    lift_rec p (lift_rec n M k) i = lift_rec n (lift_rec p M i) (p + k).
+    lift p i (lift n k M) = lift n (p + k) (lift p i M).
 Proof.
   intros M.
   elim M using term_forall_list_ind;
@@ -240,15 +251,15 @@ Proof.
     + rewrite 2!lift_rel_lt; try easy.
 Qed.
 
-Lemma permute_lift :
-  forall M k, lift0 1 (lift_rec 1 M k) = lift_rec 1 (lift0 1 M) (S k).
+Lemma permute_lift0 :
+  forall M k, lift0 1 (lift 1 k M) = lift 1 (S k) (lift0 1 M).
   intros.
-  change (lift_rec 1 (lift_rec 1 M k) 0 = lift_rec 1 (lift_rec 1 M 0) (1 + k))
+  change (lift 1 0 (lift 1 k M) = lift 1 (1 + k) (lift 1 0 M))
     in |- *.
-  apply permute_lift_rec; easy.
+  apply permute_lift; easy.
 Qed.
 
-Lemma lift_rec_isApp n k t : ~ isApp t = true -> ~ isApp (lift n k t) = true.
+Lemma lift_isApp n k t : ~ isApp t = true -> ~ isApp (lift n k t) = true.
 Proof.
   induction t; auto.
   intros.
@@ -262,7 +273,7 @@ Proof.
   contradiction.
 Qed.
 
-Lemma wf_lift n k t : wf t -> wf (lift_rec n t k).
+Lemma wf_lift n k t : wf t -> wf (lift n k t).
 Proof.
   intros wft; revert t wft k.
   apply (term_wf_forall_list_ind (fun t => forall k, wf (lift n k t))) ; simpl; intros; try constructor; auto.
@@ -270,7 +281,7 @@ Proof.
   destruct leb; constructor.
   apply Forall_map.
   induction H; constructor; auto.
-  now apply lift_rec_isApp.
+  now apply lift_isApp.
   now apply map_non_nil.
   apply Forall_map. eapply Forall_impl. eauto. eauto.
   apply Forall_map. eapply Forall_impl. apply H1.
@@ -299,7 +310,7 @@ Hint Transparent compose.
 Lemma simpl_subst_rec :
   forall M (H : wf M) N n p k,
     p <= n + k ->
-    k <= p -> subst_rec N (lift_rec (S n) M k) p = lift_rec n M k.
+    k <= p -> parsubst N p (lift (List.length N + n) k M) = lift n k M.
 Proof.
   intros M wfM. induction wfM using term_wf_forall_list_ind;
     intros; simpl; try easy;
@@ -309,19 +320,19 @@ Proof.
         try rewrite ?map_length; try easy ||
       (try rewrite H, H0; f_equal; try easy; now f_equal).
   
-  - elim (leb_spec k n); intros; try easy.
-    + rewrite subst_rel_gt; try easy.
+  - elim (leb_spec k n); intros.
+    + rewrite subst_rel_gt; f_equal; lia.
     + rewrite subst_rel_lt; try easy.
 
   - rewrite IHwfM; auto.
-    apply (lift_rec_isApp n k) in H.
+    apply (lift_isApp n k) in H.
     rewrite mkApps_tApp; auto using map_non_nil.
     f_equal. eapply forall_map_spec. apply H2; simpl; auto.
     simpl; intros. typeclasses eauto with core.
 Qed.
 
 Lemma simpl_subst :
-  forall N M (H : wf M) n p, p <= n -> subst_rec N (lift0 (S n) M) p = lift0 n M.
+  forall N M (H : wf M) n p, p + length N < n -> parsubst N p (lift0 (length N + n) M) = lift0 n M.
   intros; now apply simpl_subst_rec.
 Qed.
 
@@ -342,10 +353,21 @@ Proof.
   now rewrite map_app.
 Qed.
 
+Inductive nth_error_spec {A} (l : list A) (n : nat) : option A -> Type :=
+| nth_error_some a : nth_error l n = Some a -> n < length l -> nth_error_spec l n (Some a)
+| nth_error_none : nth_error l n = None -> length l <= n -> nth_error_spec l n None.
+
+Lemma nth_error_elim {A} (l : list A) n : nth_error_spec l n (nth_error l n).
+Proof.
+  destruct (nth_error l n) eqn:Heq.
+  constructor; auto. apply nth_error_Some. congruence.
+  constructor; auto; apply nth_error_None. congruence.
+Qed.
+
 Lemma commut_lift_subst_rec :
   forall M N n p k,
     k <= p ->
-    lift_rec n (subst_rec N M p) k = subst_rec N (lift_rec n M k) (n + p).
+    lift n k (parsubst N p M) = parsubst N (n + p) (lift n k M).
 Proof.
   intros M.
   elim M using term_forall_list_ind;
@@ -359,15 +381,16 @@ Proof.
         try (rewrite H, H0, H1; f_equal; try easy; now f_equal);
         try (rewrite H1; now f_equal).
   
-  - elim (compare_spec p n); elim (leb_spec k n); intros; subst; try easy.
-    + rewrite subst_rel_eq; try easy.
-      now rewrite simpl_lift_rec.
-    + rewrite subst_rel_gt; try easy.
-      now rewrite lift_rel_ge.
-    + rewrite lift_rel_ge; try easy.
-      now rewrite subst_rel_lt.
-    + rewrite lift_rel_lt; try easy.
-      now rewrite subst_rel_lt.
+  - elim (leb_spec p n); elim (leb_spec k n); intros; subst; try easy.
+    + destruct (nth_error_elim N (n - p)).
+      ++ rewrite simpl_lift by easy.
+         erewrite subst_rel_eq; eauto. lia.
+      ++ rewrite lift_rel_ge by lia.
+         rewrite subst_rel_gt; f_equal; lia.
+    + rewrite subst_rel_lt by lia.
+      rewrite lift_rel_ge; congruence.
+    + rewrite lift_rel_lt; auto.
+      rewrite subst_rel_lt; auto. lia.
 
   - rewrite lift_mkApps. f_equal. auto.
     rewrite map_map_compose. apply_spec. intros.
@@ -375,20 +398,20 @@ Proof.
 Qed.
 
 Lemma commut_lift_subst :
-  forall M N k, subst_rec N (lift0 1 M) (S k) = lift0 1 (subst_rec N M k).
+  forall M N k, parsubst N (S k) (lift0 1 M) = lift0 1 (parsubst N k M).
   now intros; rewrite commut_lift_subst_rec.
 Qed.
 
 Lemma distr_lift_subst_rec :
   forall M N n p k,
-    lift_rec n (subst_rec N M p) (p + k) =
-    subst_rec (lift_rec n N k) (lift_rec n M (S (p + k))) p.
+    lift n (p + k) (parsubst N p M) =
+    parsubst (List.map (lift n k) N) p (lift n (p + length N + k) M).
 Proof.
   intros M.
   elim M using term_forall_list_ind;
     intros; match goal with
               |- context [tRel _] => idtac
-            | |- _ => simpl
+            | |- _ => cbn -[plus]
             end; try easy;
       rewrite ?map_map_compose, ?compose_on_snd, ?compose_map_def;
       try solve [f_equal; easy];
@@ -399,18 +422,25 @@ Proof.
         try (erewrite H, <- H0, <- H1; f_equal; try easy; now f_equal);
         try (erewrite H1; now f_equal).
   
-  - unfold subst at 1. unfold lift at 4.
-    elim (compare_spec p n); intros; try easy;
-    elim (leb_spec (S (p + k)) n); intros; subst; try easy.
+  - unfold parsubst at 1. unfold lift at 4.
+    elim (leb_spec p n); intros; try easy;
+    elim (leb_spec (p + length N + k) n); intros; subst; try easy.
     
-    + rewrite subst_rel_eq. now rewrite <- permute_lift_rec. 
-    + rewrite lift_rel_ge; try easy.
-      now rewrite subst_rel_gt.
-    + rewrite lift_rel_lt; try easy.
-      now rewrite subst_rel_gt.
+    + destruct (nth_error_elim N (n - p)).
+      ++ rewrite <- permute_lift by lia.
+         erewrite subst_rel_eq; eauto.
+         rewrite nth_error_map; eauto. rewrite e. reflexivity.
+         lia.
+      ++ rewrite lift_rel_ge; try easy.
+         rewrite subst_rel_gt; rewrite map_length; f_equal; lia.
+    + destruct (nth_error_elim N (n - p)).
+      ++ rewrite <- permute_lift by lia.
+         erewrite subst_rel_eq; eauto.
+         rewrite nth_error_map. rewrite e. reflexivity. lia.
+      ++ rewrite lift_rel_lt; try easy.
+         rewrite subst_rel_gt; rewrite map_length; auto. lia.
     + rewrite lift_rel_lt; try easy.
       now rewrite subst_rel_lt.
-
   - rewrite lift_mkApps. f_equal; auto.
     rewrite map_map_compose; apply_spec; simpl.
     intros. apply H1.
@@ -420,7 +450,7 @@ Qed.
 
 Lemma distr_lift_subst :
   forall M N n k,
-    lift_rec n (subst0 N M) k = subst0 (lift_rec n N k) (lift_rec n M (S k)).
+    lift n k (subst0 N M) = subst0 (lift n k N) (lift n (S k) M).
 Proof.
   intros; unfold subst in |- *.
   pattern k at 1 3 in |- *.
@@ -434,17 +464,22 @@ Proof.
   f_equal. now rewrite <- app_assoc.
 Qed.
 
-Lemma subst_mkApps u k t l : subst u k (mkApps t l) = mkApps (subst u k t) (map (subst u k) l).
+Lemma parsubst_mkApps u k t l :
+  parsubst u k (mkApps t l) = mkApps (parsubst u k t) (map (parsubst u k) l).
 Proof.
   revert u k t; induction l; intros u k t; destruct t; try reflexivity.
-  intros. simpl mkApps at 1. simpl subst at 2. simpl subst at 1.
-  rewrite map_app. now rewrite mkApp_nested.
+  intros. simpl mkApps at 1. simpl parsubst at 1 2. rewrite map_app. now rewrite mkApp_nested.
+Qed.
+
+Lemma subst_mkApps u k t l : subst u k (mkApps t l) = mkApps (subst u k t) (map (subst u k) l).
+Proof.
+  apply parsubst_mkApps.
 Qed.
 
 Lemma distr_subst_rec :
-  forall M N (P : term) (wfP : wf P) n p,
-    subst_rec P (subst_rec N M p) (p + n) =
-    subst_rec (subst_rec P N n) (subst_rec P M (S (p + n))) p.
+  forall M N (P : list term) (wfP : Forall wf P) n p,
+    parsubst P (p + n) (parsubst N p M) =
+    parsubst (map (parsubst P n) N) p (parsubst P (p + length N + n) M).
 Proof.
   intros M.
   elim M using term_forall_list_ind;
@@ -461,22 +496,28 @@ Proof.
         try (erewrite H, <- H0, <- H1; f_equal; try easy; now f_equal);
         try (erewrite H1; now f_equal).
   
-  - unfold subst at 2. 
-    elim (compare_spec p n); intros; try easy.
+  - unfold parsubst at 2.
+    elim (leb_spec p n); intros; try easy.
     
-    + subst. rewrite subst_rel_lt; try easy.
-      rewrite subst_rel_eq; try easy.
-      now rewrite <- commut_lift_subst_rec.
-    + unfold subst at 4.
-      elim (compare_spec (S (p + n0)) n); intros; subst; try easy.
-      ++ rewrite subst_rel_eq.
-         now rewrite simpl_subst_rec.
-      ++ rewrite !subst_rel_gt; try easy.
-      ++ rewrite subst_rel_lt; try easy.
-         now rewrite subst_rel_gt.
+    + destruct (nth_error_elim N (n - p)).
+      ++ rewrite subst_rel_lt by lia.
+         erewrite subst_rel_eq; try easy.
+         2:rewrite nth_error_map, e; reflexivity.
+         now rewrite <- commut_lift_subst_rec.
+      ++ unfold parsubst at 4.
+         elim (leb_spec (p + length N + n0) n); intros; subst; try easy.
+         destruct (nth_error_elim P (n - (p + length N + n0))).
+         +++ erewrite subst_rel_eq. 2:eauto. 2:lia.
+             assert (p + length N + n0 = length (map (parsubst P n0) N) + (p + n0))
+               by (rewrite map_length; lia).
+             rewrite H1. rewrite simpl_subst_rec; eauto; try lia.
+             eapply nth_error_forall in e0; eauto.
+         +++ rewrite !subst_rel_gt; rewrite ?map_length; try lia. f_equal; lia.
+         +++ rewrite subst_rel_lt; try easy.
+             rewrite subst_rel_gt; rewrite map_length. trivial. lia.
     + rewrite !subst_rel_lt; try easy.
 
-  - rewrite !subst_mkApps. rewrite H; auto. f_equal.
+  - rewrite !parsubst_mkApps. rewrite H; auto. f_equal.
     rewrite !map_map_compose. apply_spec. intros.
     unfold compose. auto.
   - rewrite add_assoc, H0; auto. f_equal. now f_equal.
@@ -484,15 +525,14 @@ Proof.
 Qed.
 
 Lemma distr_subst :
-  forall (P : term) (wfP : wf P) N M k,
-    subst_rec P (subst0 N M) k = subst0 (subst_rec P N k) (subst_rec P M (S k)).
+  forall P (wfP : Forall Ast.wf P) N M k,
+    parsubst P k (parsubst0 N M) = parsubst0 (map (parsubst P k) N) (parsubst P (length N + k) M).
 Proof.
-  intros; unfold subst in |- *.
+  intros.
   pattern k at 1 3 in |- *.
-  change k with (0 + k).
-  now apply distr_subst_rec.
+  change k with (0 + k). hnf.
+  apply distr_subst_rec. auto.
 Qed.
-
 
 Lemma lift_closed n k t : closedn k t = true -> lift n k t = t.
 Proof.
@@ -517,11 +557,31 @@ Proof.
     rewrite <- map_id. f_equal. unfold on_snd. extensionality p. now destruct p.
   - simpl lift. f_equal; eauto.
   - simpl lift. f_equal.
-    transitivity (map (map_def id) m). apply_spec; eauto.
+    transitivity (map (map_def id id) m). apply_spec; eauto.
     now autorewrite with core.
   - simpl lift. f_equal.
-    transitivity (map (map_def id) m). apply_spec; eauto.
+    transitivity (map (map_def id id) m). apply_spec; eauto.
     now autorewrite with core.
+Qed.
+
+Lemma closed_upwards k t : closedn k t = true -> forall k', k' >= k -> closedn k' t = true.
+Proof.
+  revert k.
+  elim t using term_forall_list_ind; intros; try lia;
+    rewrite ?map_map_compose, ?compose_on_snd, ?compose_map_def;
+    try (try f_equal; simpl; apply_spec; eauto); simpl closed in *;
+        try (apply_spec; eauto with arith);
+        try (rewrite ?andb_true_iff in *; intuition eauto 4 with arith).
+
+  - elim (ltb_spec n k'); auto. intros.
+    apply ltb_lt in H. lia.
+
+  - apply_spec. eauto with arith.
+  - red in H1. apply_spec. intros. destruct x; unfold test_snd; simpl in *. eauto with arith.
+  - red in H. apply_spec. intros. destruct x; unfold test_def in *; simpl in *.
+    rewrite andb_true_iff in *; intuition eauto with arith.
+  - red in H. apply_spec. intros. destruct x; unfold test_def in *; simpl in *.
+    rewrite andb_true_iff in *; intuition eauto with arith.
 Qed.
 
 Lemma mkApps_mkApp u a v : wf u -> mkApps (mkApp u a) v = mkApps u (a :: v).
@@ -551,14 +611,15 @@ Proof.
   apply Forall_app_inv. split; auto.
 Qed.
 
-Lemma wf_subst t k u : wf t -> wf u -> wf (subst t k u).
+Lemma wf_parsubst ts k u : List.Forall wf ts -> wf u -> wf (parsubst ts k u).
 Proof.
-  intros wft wfu; revert k.
-  induction wfu using term_wf_forall_list_ind ; simpl; intros; try constructor; auto.
+  intros wfts wfu.
+  induction wfu in k using term_wf_forall_list_ind; simpl; intros; try constructor; auto.
 
-  - destruct Init.Nat.compare; try constructor. apply wf_lift; auto.
-  - apply Forall_map.
-    induction H; constructor; auto.
+  - unfold parsubst. destruct (leb_spec k n).
+    destruct nth_error eqn:Heq. apply (nth_error_forall Heq) in wfts.
+    apply wf_lift; auto. constructor. constructor.
+  - apply Forall_map. eapply Forall_impl; eauto.
   - apply wf_mkApps; auto. apply Forall_map. eapply Forall_impl; eauto.
   - apply Forall_map. eapply Forall_impl; eauto. intros. apply H0.
   - merge_Forall. apply Forall_map. eapply Forall_impl; eauto. intros.
@@ -568,9 +629,37 @@ Proof.
     destruct x; simpl in *. red; simpl; intuition auto.
 Qed.
 
-Lemma wf_substl ts u : List.Forall wf ts -> wf u -> wf (substl ts u).
+Lemma wf_subst t k u : wf t -> wf u -> wf (subst t k u).
+Proof.
+  intros wft wfu. apply wf_parsubst. constructor; auto. auto.
+Qed.
+
+Definition substl' l t :=
+  List.fold_left (fun t u => subst0 u t) l t.
+
+Lemma wf_substl' ts u : List.Forall wf ts -> wf u -> wf (substl' ts u).
 Proof.
   intros wfts wfu.
   induction wfts in u, wfu; simpl; intros; try constructor; auto.
   apply IHwfts. now apply wf_subst.
+Qed.
+
+Lemma parsubst_empty k a : Ast.wf a -> parsubst [] k a = a.
+Proof.
+  induction 1 in k |- * using term_wf_forall_list_ind; simpl; try congruence;
+    try solve [f_equal; eauto; apply_spec; eauto].
+
+  - elim (Nat.compare_spec k n); destruct (Nat.leb_spec k n); intros; try easy.
+    subst. rewrite Nat.sub_diag. simpl. rewrite Nat.sub_0_r. reflexivity.
+    assert (n - k > 0) by lia.
+    assert (exists n', n - k = S n'). exists (pred (n - k)). lia.
+    destruct H2. rewrite H2. simpl. now rewrite Nat.sub_0_r.
+  - rewrite IHwf. rewrite mkApps_tApp; eauto with wf.
+    f_equal; apply_spec. auto.
+  - rewrite IHwf, IHwf0. f_equal. red in H. apply_spec. intros; eauto.
+    destruct x; unfold on_snd; simpl in *; congruence.
+  - f_equal. clear H0. red in H; apply_spec. intuition auto.
+    destruct x; unfold map_def; simpl in *; congruence.
+  - f_equal. red in H; apply_spec. intuition auto.
+    destruct x; unfold map_def; simpl in *; congruence.
 Qed.

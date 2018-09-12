@@ -166,7 +166,7 @@ Definition is_constructor n ts :=
   | None => false
   end.
 
-Definition tDummy := tRel 0.
+Definition tDummy := tVar "".
 
 Definition iota_red npar c args brs :=
   (mkApps (snd (List.nth c brs (0, tDummy))) (List.skipn npar args)).
@@ -660,7 +660,7 @@ Inductive typing `{checker_flags} (Σ : global_context) (Γ : context) : term ->
     forall decl (isdecl : declared_projection (fst Σ) p decl) args,
     Σ ;;; Γ |- c : mkApps (tInd (fst (fst p)) u) args ->
     let ty := snd decl in
-    Σ ;;; Γ |- tProj p c : substl (c :: rev args) ty
+    Σ ;;; Γ |- tProj p c : substl (c :: List.rev args) ty
 
 | type_Fix mfix n :
     forall (isdecl : n < List.length mfix),
@@ -912,8 +912,8 @@ Lemma term_env_ind :
         P Σ t -> forall t0 : term, P Σ t0 -> forall l : list (nat * term),
             tCaseBrsProp (P Σ) l -> P Σ (tCase p t t0 l)) ->
     (forall Σ (s : projection) (t : term), P Σ t -> P Σ (tProj s t)) ->
-    (forall Σ (m : mfixpoint term) (n : nat), tFixProp (P Σ) m -> P Σ (tFix m n)) ->
-    (forall Σ (m : mfixpoint term) (n : nat), tFixProp (P Σ) m -> P Σ (tCoFix m n)) ->
+    (forall Σ (m : mfixpoint term) (n : nat), tFixProp (P Σ) (P Σ) m -> P Σ (tFix m n)) ->
+    (forall Σ (m : mfixpoint term) (n : nat), tFixProp (P Σ) (P Σ) m -> P Σ (tCoFix m n)) ->
     forall Σ t, P Σ t.
 Proof.
   intros until t.
@@ -966,8 +966,8 @@ Lemma term_env_ind' :
         P Σ t -> forall t0 : term, P Σ t0 -> forall l : list (nat * term),
             tCaseBrsProp (P Σ) l -> P Σ (tCase p t t0 l)) ->
     (forall Σ (s : projection) (t : term), P Σ t -> P Σ (tProj s t)) ->
-    (forall Σ (m : mfixpoint term) (n : nat), tFixProp (P Σ) m -> P Σ (tFix m n)) ->
-    (forall Σ (m : mfixpoint term) (n : nat), tFixProp (P Σ) m -> P Σ (tCoFix m n)) ->
+    (forall Σ (m : mfixpoint term) (n : nat), tFixProp (P Σ) (P Σ) m -> P Σ (tFix m n)) ->
+    (forall Σ (m : mfixpoint term) (n : nat), tFixProp (P Σ) (P Σ) m -> P Σ (tCoFix m n)) ->
     forall Σ, Forall_decls P Σ.
 Proof.
   intros until Σ.
@@ -1008,7 +1008,7 @@ Inductive Forall_typing_spine `{checker_flags} Σ Γ (P : term -> term -> Type) 
 | Forall_type_spine_cons hd tl na A B s T B' tls
    (typrod : Σ ;;; Γ |- tProd na A B : tSort s)
    (cumul : Σ ;;; Γ |- tProd na A B <= T) (ty : Σ ;;; Γ |- hd : A) :
-    P hd A -> Forall_typing_spine Σ Γ P (B {0 := hd}) tl B' tls ->
+    P (tProd na A B) (tSort s) -> P hd A -> Forall_typing_spine Σ Γ P (B {0 := hd}) tl B' tls ->
     Forall_typing_spine Σ Γ P T (hd :: tl) B'
       (type_spine_cons Σ Γ hd tl na A B s T B' typrod cumul ty tls).
 
@@ -1244,7 +1244,7 @@ Lemma typing_ind_env `{cf : checker_flags} :
         forall args : list term,
         Σ ;;; Γ |- c : mkApps (tInd (fst (fst p)) u) args ->
         P Σ Γ c (mkApps (tInd (fst (fst p)) u) args) ->
-        let ty := snd decl in P Σ Γ (tProj p c) (substl (c :: rev args) ty)) ->
+        let ty := snd decl in P Σ Γ (tProj p c) (substl (c :: List.rev args) ty)) ->
 
     (forall Σ (wfΣ : wf Σ) (Γ : context) (wfΓ : wf_local Σ Γ) (mfix : list (def term)) (n : nat) (isdecl : n < #|mfix|),
         let ty := dtype (safe_nth mfix (exist (fun n0 : nat => n0 < #|mfix|) n isdecl)) in
@@ -1389,6 +1389,7 @@ Proof.
     intros. unshelve eapply X14; eauto. lia. clear X14. clear n n0 H.
     induction t0; constructor.
     unshelve eapply X; clear X; simpl; auto with arith.
+    unshelve eapply X; clear X; simpl; auto with arith.
     eapply IHt0; eauto. intros. eapply (X _ X0 _ _ Hty) ; eauto. simpl. lia.
 
   - apply X6; eauto.
@@ -1530,7 +1531,6 @@ Hint Constructors Ast.wf : wf.
 Lemma isLambda_substl s t : isLambda t = true -> isLambda (substl s t) = true.
 Proof.
   destruct t; simpl; try congruence.
-  intros. induction s in n, t1, t2 |- *; simpl; auto.
 Qed.
 
 Lemma isLambda_isApp t : isLambda t = true -> isApp t = false.
@@ -1545,11 +1545,11 @@ Proof.
   intros mfix idx narg fn Hf Hwf.
   unfold unfold_fix in Hf. inv Hwf.
   destruct nth_error eqn:eqnth; try congruence.
-  pose proof (nth_error_forall _ _ _ _ eqnth H). simpl in H0.
+  pose proof (nth_error_forall eqnth H). simpl in H0.
   injection Hf. intros <- <-.
   destruct H0 as [ _ [ wfd islamd ] ]. apply (isLambda_substl (fix_subst mfix)) in islamd.
   apply isLambda_isApp in islamd. split; try congruence.
-  apply wf_substl; auto. clear wfd islamd Hf eqnth.
+  apply wf_parsubst; auto. clear wfd islamd Hf eqnth.
   assert(forall n, Ast.wf (tFix mfix n)). constructor; auto.
   unfold fix_subst. generalize #|mfix|; intros. induction n; auto.
 Qed.
@@ -1562,10 +1562,10 @@ Proof.
   intros mfix idx narg fn Hf Hwf.
   unfold unfold_cofix in Hf. inv Hwf.
   destruct nth_error eqn:eqnth; try congruence.
-  pose proof (nth_error_forall _ _ _ _ eqnth H). simpl in H0.
+  pose proof (nth_error_forall eqnth H). simpl in H0.
   injection Hf. intros <- <-.
   destruct H0 as [ _ wfd ].
-  apply wf_substl; auto. clear wfd Hf eqnth.
+  apply wf_parsubst; auto. clear wfd Hf eqnth.
   assert(forall n, Ast.wf (tCoFix mfix n)). constructor; auto.
   unfold cofix_subst. generalize #|mfix|; intros. induction n; auto.
 Qed.

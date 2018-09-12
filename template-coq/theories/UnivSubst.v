@@ -52,12 +52,47 @@ Fixpoint subst_instance_constr (u : universe_instance) (c : term) :=
     tCase ind (subst_instance_constr u p) (subst_instance_constr u c) brs'
   | tProj p c => tProj p (subst_instance_constr u c)
   | tFix mfix idx =>
-    let mfix' := List.map (map_def (subst_instance_constr u)) mfix in
+    let mfix' := List.map (map_def (subst_instance_constr u) (subst_instance_constr u)) mfix in
     tFix mfix' idx
   | tCoFix mfix idx =>
-    let mfix' := List.map (map_def (subst_instance_constr u)) mfix in
+    let mfix' := List.map (map_def (subst_instance_constr u) (subst_instance_constr u)) mfix in
     tCoFix mfix' idx
   end.
 
 Definition subst_instance_context (u : universe_instance) (c : context) : context :=
   AstUtils.map_context (subst_instance_constr u) c.
+
+Lemma lift_subst_instance_constr u c n k :
+  lift n k (subst_instance_constr u c) = subst_instance_constr u (lift n k c).
+Proof.
+  induction c in k |- * using term_forall_list_ind; simpl; auto;
+    rewrite ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length;
+    try solve [f_equal; eauto; apply_spec; eauto].
+
+  elim (Nat.leb k n0); reflexivity.
+Qed.
+
+Lemma subst_instance_constr_mkApps u f a :
+  subst_instance_constr u (mkApps f a) =
+  mkApps (subst_instance_constr u f) (map (subst_instance_constr u) a).
+Proof.
+  induction a in f |- *; auto.
+  simpl map. simpl. destruct f; try reflexivity.
+  simpl. f_equal. rewrite map_app. reflexivity.
+Qed.
+
+Lemma parsubst_subst_instance_constr u c N k :
+  parsubst (map (subst_instance_constr u) N) k (subst_instance_constr u c) =
+  subst_instance_constr u (parsubst N k c).
+Proof.
+  induction c in k |- * using term_forall_list_ind; simpl; auto;
+    rewrite ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length;
+    try solve [f_equal; eauto; apply_spec; eauto].
+
+  elim (Nat.leb k n). rewrite nth_error_map.
+  destruct (nth_error N (n - k)). simpl.
+  apply lift_subst_instance_constr. reflexivity. reflexivity.
+
+  rewrite subst_instance_constr_mkApps. f_equal; auto.
+  rewrite map_map_compose. apply_spec; eauto.
+Qed.

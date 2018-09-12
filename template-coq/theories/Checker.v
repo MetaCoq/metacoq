@@ -162,11 +162,11 @@ Section Reduce.
     | tProj p c => tProj p (f Γ c)
     | tFix mfix idx =>
       let Γ' := fix_decls mfix ++ Γ in
-      let mfix' := List.map (map_def (f Γ')) mfix in
+      let mfix' := List.map (map_def (f Γ) (f Γ')) mfix in
       tFix mfix' idx
     | tCoFix mfix k =>
       let Γ' := fix_decls mfix ++ Γ in
-      let mfix' := List.map (map_def (f Γ')) mfix in
+      let mfix' := List.map (map_def (f Γ) (f Γ')) mfix in
       tCoFix mfix' k
     | x => x
     end.

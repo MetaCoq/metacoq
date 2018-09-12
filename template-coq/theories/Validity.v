@@ -1,5 +1,5 @@
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
-From Template Require Import Template Ast Induction LiftSubst Typing WeakSubst.
+From Template Require Import config utils Ast AstUtils Induction LiftSubst Typing WeakSubst.
 
 Lemma type_local_env_isdecl Σ n Γ :
   forall isdecl : n < #|Γ|, type_local_env Σ Γ ->

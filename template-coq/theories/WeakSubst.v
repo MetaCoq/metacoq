@@ -179,7 +179,7 @@ Proof.
   - elim (leb_spec_Set); intros Hn.
     + destruct (weaken_safe_nth_ge _ _ _ isdecl Γ'' Hn) as [isdecl' ->].
       rewrite simpl_lift_rec; try omega. rewrite Nat.add_succ_r.
-      constructor.
+      constructor. auto.
     + destruct (weaken_safe_nth_lt _ _ _ isdecl Γ'' Hn) as [isdecl' H'].
       apply (f_equal decl_type) in H'.
       unfold lift_decl in H'. simpl in H'.
@@ -187,7 +187,7 @@ Proof.
       intros. assert (#|Γ'| = S n + (#|Γ'| - S n)) by easy.
       rewrite H at 2.
       rewrite <- permute_lift_rec; try easy.
-      rewrite <- H. rewrite <- H'. do 2 constructor.
+      rewrite <- H. rewrite <- H'. constructor. auto.
 
   - econstructor; auto.
     simpl.

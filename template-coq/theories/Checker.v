@@ -982,7 +982,7 @@ Section Typecheck2.
   (* Axiom cheat : forall A, A. *)
   (* Ltac admit := apply cheat. *)
 
-  Lemma infer_correct Γ t T :
+  Lemma infer_correct Γ t T : wf_local Σ Γ ->
     infer Γ t = Checked T -> Σ ;;; Γ |- t : T.
   Proof.
     induction t in Γ, T |- * ; simpl; intros; try discriminate;
@@ -991,7 +991,7 @@ Section Typecheck2.
     - destruct nth_error eqn:Heq; try discriminate.
       pose proof (nth_error_Some_safe_nth _ _ _ _ Heq).
       destruct H.
-      intros [= <-]. constructor.
+      intros [= <-]. constructor. auto.
 
     - admit.
     - admit.
@@ -1023,12 +1023,12 @@ Section Typecheck2.
     - (* Construct *) admit.
 
     - (* Case *)
-      destruct p.
-      infers.
-      destruct reduce_to_ind eqn:?; try discriminate. simpl.
-      destruct a0 as [[ind' u] args].
-      destruct eq_ind eqn:?; try discriminate.
-      intros [= <-].
+      (* destruct p. *)
+      (* infers. *)
+      (* destruct reduce_to_ind eqn:?; try discriminate. simpl. *)
+      (* destruct a0 as [[ind' u] args]. *)
+      (* destruct eq_ind eqn:?; try discriminate. *)
+      (* intros [= <-]. *)
       admit.
       (* eapply type_Case. simpl in *. *)
       (* eapply type_Conv. eauto. *)
@@ -1039,6 +1039,10 @@ Section Typecheck2.
       (* tc. *)
 
     - (* Proj *) admit.
+    - admit.
+    - admit.
+    - admit.
+    - admit.
 
     - destruct nth_error eqn:?; intros [= <-].
       destruct (nth_error_Some_safe_nth _ _ _ _ Heqo).

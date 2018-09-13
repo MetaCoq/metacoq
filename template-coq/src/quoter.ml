@@ -213,9 +213,10 @@ let reduce env evm red trm =
   let evm, red = red env evm (EConstr.of_constr trm) in
   (evm, EConstr.to_constr evm red)
 
-let reduce_all env evm trm =
-  EConstr.to_constr evm (Reductionops.nf_all env evm (EConstr.of_constr trm))
-
+let reduce_all env evm ?(red=Genredexpr.Cbv Redops.all_flags) trm =
+  let red, _ = Redexpr.reduction_of_red_expr env red in
+  let evm, red = red env evm (EConstr.of_constr trm) in
+  EConstr.to_constr evm red
 
 module Reify (Q : Quoter) =
 struct

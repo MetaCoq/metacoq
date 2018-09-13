@@ -462,6 +462,16 @@ Definition it_mkLambda_or_LetIn (l : context) (t : term) :=
        | Some b => tLetIn d.(decl_name) b d.(decl_type) acc
        end) l t.
 
+(** Make a prod/let-in string of abstractions from a context [Γ], ending with term [t]. *)
+
+Definition it_mkProd_or_LetIn (l : context) (t : term) :=
+  List.fold_left
+    (fun acc d =>
+       match d.(decl_body) with
+       | None => tProd d.(decl_name) d.(decl_type) acc
+       | Some b => tLetIn d.(decl_name) b d.(decl_type) acc
+       end) l t.
+
 (** Make a list of variables of length [#|Γ|], starting at [acc]. *)
 
 Fixpoint rels_of {A} (Γ : list A) acc : list term :=
@@ -473,12 +483,73 @@ Fixpoint rels_of {A} (Γ : list A) acc : list term :=
 (** Compute the type of a case from the predicate [p], actual parameters [pars] and
     an inductive declaration. *)
 
-Definition types_of_case pars p pty decl :=
-  match destArity [] decl.(ind_type), destArity [] pty with
+Definition mapi {A B} (f : nat -> A -> B) (l : list A) : list B :=
+  let fix aux n l :=
+      match l with
+      | [] => []
+      | hd :: tl => f n hd :: aux (S n) tl
+      end
+  in aux 0 l.
+
+Fixpoint decompose_prod_assum (Γ : context) (t : term) : context * term :=
+  match t with
+  | tProd n A B => decompose_prod_assum (Γ ,, vass n A) B
+  | tLetIn na b bty b' => decompose_prod_assum (Γ ,, vdef na b bty) b'
+  | tCast t _ _ => decompose_prod_assum Γ t
+  | _ => (Γ, t)
+  end.
+
+Definition to_extended_list Γ :=
+  let fix reln l p Γ :=
+      match Γ with
+      | {| decl_body := None |} :: hyps => reln (tRel p :: l) (p+1) hyps
+      | _ :: hyps => reln l (p+1) hyps
+      | [] => l
+      end
+  in reln [] 0 Γ.
+
+Fixpoint chop {A} (n : nat) (l : list A) :=
+  match n with
+  | 0 => ([], l)
+  | S n =>
+    match l with
+    | hd :: tl =>
+      let '(l, r) := chop n tl in
+      (hd :: l, r)
+    | [] => ([], [])
+    end
+  end.
+
+Fixpoint instantiate_params pars ty :=
+  match pars with
+  | [] => ty
+  | hd :: tl =>
+    match ty with
+    | tProd _ _ B => instantiate_params tl (subst0 hd B)
+    | tLetIn _ b _ b' => instantiate_params tl (subst0 b b')
+    | _ => ty (* error *)
+    end
+  end.
+
+Definition build_branches_type ind mdecl idecl params u p :=
+  let inds := inds (inductive_mind ind) u mdecl.(ind_bodies) in
+  let branch_type i '(id, t, ar) :=
+    let ty := substl inds (subst_instance_constr u t) in
+    let ty := instantiate_params params ty in
+    let '(sign, ccl) := decompose_prod_assum [] ty in
+    let nargs := List.length sign in
+    let allargs := snd (decompose_app ccl) in
+    let '(paramrels, args) := chop mdecl.(ind_npars) allargs in
+    let cstr := tConstruct ind i u in
+    let args := (args ++ [mkApps cstr (paramrels ++ to_extended_list sign)])%list in
+    (ar, it_mkProd_or_LetIn sign (mkApps (lift0 nargs p) args))
+  in mapi branch_type idecl.(ind_ctors).
+
+Definition types_of_case ind mdecl idecl params u p pty :=
+  match destArity [] idecl.(ind_type), destArity [] pty with
   | Some (args, s), Some (args', s') =>
-    let brs :=
-        List.map (fun '(id, t, ar) => (ar, substl (p :: pars) t)) decl.(ind_ctors)
-    in Some (args, args', s', brs)
+    let brtys := build_branches_type ind mdecl idecl params u p in
+    Some (args, args', s', brtys)
   | _, _ => None
   end.
 
@@ -638,7 +709,7 @@ Inductive typing `{checker_flags} (Σ : global_context) (Γ : context) : term ->
     decl.(ind_npars) = npar ->
     let pars := List.firstn npar args in
     forall pty, Σ ;;; Γ |- p : pty ->
-    forall indctx pctx ps btys, types_of_case pars p pty decl' = Some (indctx, pctx, ps, btys) ->
+    forall indctx pctx ps btys, types_of_case ind decl decl' pars u p pty = Some (indctx, pctx, ps, btys) ->
     check_correct_arity (snd Σ) decl' ind u indctx pars pctx = true ->
     List.Exists (fun sf => universe_family ps = sf) decl'.(ind_kelim) ->
     Σ ;;; Γ |- c : mkApps (tInd ind u) args ->
@@ -1210,7 +1281,7 @@ Lemma typing_ind_env `{cf : checker_flags} :
         let pars := firstn npar args in
         forall (pty : term), Σ ;;; Γ |- p : pty -> P Σ Γ p pty ->
         forall indctx pctx ps btys,
-        types_of_case pars p pty decl' = Some (indctx, pctx, ps, btys) ->
+        types_of_case ind decl decl' pars u p pty = Some (indctx, pctx, ps, btys) ->
         check_correct_arity (snd Σ) decl' ind u indctx pars pctx = true ->
         Exists (fun sf : sort_family => universe_family ps = sf) (ind_kelim decl') ->
         P Σ Γ p pty ->

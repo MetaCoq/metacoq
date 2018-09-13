@@ -235,11 +235,11 @@ Section Wcbv.
     induction 1 using eval_evals_ind; simpl; auto using value.
     eapply (value_tInd i u []); try constructor.
     pose proof (value_tInd i u l'). forward H3.
-    apply (Forall2_right _ _ _ H2).
+    apply (Forall2_right H2).
     rewrite mkApps_tApp in H3; auto. simpl; auto. eauto using Forall2_non_nil.
     eapply (value_tConstruct i k u []); try constructor.
     pose proof (value_tConstruct i k u l'). forward H3.
-    apply (Forall2_right _ _ _ H2).
+    apply (Forall2_right H2).
     rewrite mkApps_tApp in H3; auto. simpl; auto. eauto using Forall2_non_nil.
   Qed.
 

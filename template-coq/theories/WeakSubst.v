@@ -293,11 +293,11 @@ Proof. destruct d; reflexivity. Qed.
 Lemma declared_decl_info `{checker_flags} Σ c decl :
   type_global_env (snd Σ) (fst Σ) ->
   lookup_env (fst Σ) c = Some decl ->
-  { Σ' & { wfΣ' : type_global_env (snd Σ) Σ' & type_global_decl (Σ', snd Σ) decl } }.
+  { Σ' & { wfΣ' : wf Σ' & type_global_decl Σ' decl } }.
 Proof.
   induction 1; simpl. congruence.
   destruct ident_eq. intros [= ->].
-  exists Σ0. exists X. auto.
+  exists (Σ0, snd Σ). exists X. auto.
   apply IHX.
 Qed.
 
@@ -331,28 +331,132 @@ Proof.
   rewrite ccst. reflexivity. lia. auto. constructor.
 Qed.
 
-(* Lemma forall_decls_declared_minductive Σ cst decl : *)
-(*   declared_minductive Σ cst decl -> *)
-(*   declared_minductive (trans_global_decls Σ) cst (trans_minductive_body decl). *)
-(* Proof. *)
-(*   unfold declared_minductive, TTy.declared_minductive. *)
-(*   induction Σ => //; try discriminate. *)
-(*   case: a => // /= k b; case: (ident_eq cst k); auto. *)
-(*   - by discriminate. *)
-(*   - by move => [=] -> ->. *)
-(* Qed. *)
+Definition on_pi2 {A B C} (f : B -> B) (p : A * B * C) : A * B * C :=
+  (fst (fst p), f (snd (fst p)), snd p).
 
-(* Lemma forall_decls_declared_inductive Σ cst univs decl : *)
-(*   TTy.declared_inductive Σ cst univs decl -> *)
-(*   declared_inductive (trans_global_decls Σ) cst univs (trans_one_ind_body decl). *)
-(* Proof. *)
-(*   unfold declared_inductive, TTy.declared_inductive. *)
-(*   move=> [decl' [H [Hu Hnth]]]. *)
-(*   pose proof (forall_decls_declared_minductive _ _ _ H). *)
-(*   eexists. split; eauto. destruct decl'; simpl in *. *)
-(*   subst univs. split; auto. *)
-(*   by rewrite nth_error_map Hnth. *)
-(* Qed. *)
+Definition map_one_inductive_body params arities f m :=
+  match m with
+  | Build_one_inductive_body ind_name ind_type ind_kelim ind_ctors ind_projs =>
+    Build_one_inductive_body ind_name
+                             (f [] ind_type)
+                             ind_kelim
+                             (map (on_pi2 (f arities)) ind_ctors)
+                             (map (on_snd (f (arities ,,, params ,, vass nAnon ind_type))) ind_projs)
+  end.
+
+Definition map_mutual_inductive_body f m :=
+  match m with
+  | Build_mutual_inductive_body ind_npars ind_bodies ind_universes =>
+    let params := [] in (* FIXME *)
+    let arities := arities_context ind_bodies in
+    Build_mutual_inductive_body ind_npars
+                                (map (map_one_inductive_body params arities f) ind_bodies)
+                                ind_universes
+  end.
+
+Definition lift_mutual_inductive_body n k m :=
+  map_mutual_inductive_body (fun Γ => lift n (#|Γ| + k)) m.
+
+Lemma typed_liftn `{checker_flags} Σ Γ t T n k :
+  wf Σ -> wf_local Σ Γ -> k >= #|Γ| ->
+  Σ ;;; Γ |- t : T -> lift n k t = t.
+Proof.
+  intros wfΣ wfΓ Hk Hty.
+  apply typecheck_closed in Hty; eauto.
+  destruct Hty as [_ Hcl].
+  rewrite andb_true_iff in Hcl. destruct Hcl as [clb clty].
+  pose proof (closed_upwards _ _ clb k).
+  simpl in *. forward H0 by lia.
+  now apply (lift_closed n) in H0.
+Qed.
+
+Lemma All_map_id {A} {P : A -> Type} {l} {f} :
+  All P l ->
+  (forall x, P x -> f x = x) ->
+  map f l = l.
+Proof.
+  induction 1; simpl; f_equal; intuition auto.
+  f_equal; auto.
+Qed.
+
+Lemma lift_declared_minductive `{checker_flags} Σ cst decl n k :
+  wf Σ ->
+  declared_minductive (fst Σ) cst decl ->
+  lift_mutual_inductive_body n k decl = decl.
+Proof.
+  unfold declared_minductive.
+  intros.
+  eapply declared_decl_info in H0; auto.
+  destruct H0 as [Σ' [wfΣ' decl']].
+  do 2 red in decl'.
+  destruct decl. simpl in *. f_equal.
+  revert decl'. generalize ind_bodies at 2 4 5. induction 1. constructor.
+  simpl. f_equal; auto. clear IHdecl'.
+  f_equal.
+  red in i. red in i. destruct i as [s tys].
+  eapply typed_liftn; eauto. constructor. simpl; lia.
+  red in t.
+  apply (All_map_id t).
+  intros [[x p] n']. intros [s Hty].
+  unfold on_pi2; f_equal; f_equal. eapply typed_liftn; eauto with wf. lia.
+  apply (All_map_id t0).
+  intros [x p]. intros [s Hty].
+  unfold on_snd; f_equal; f_equal.
+  eapply typed_liftn. 4:eapply Hty. eauto with wf. eauto with wf. simpl. lia.
+Qed.
+
+Lemma ind_type_map f pars arities oib :
+  ind_type (map_one_inductive_body pars arities f oib) = f [] (ind_type oib).
+Proof. destruct oib; reflexivity. Qed.
+
+Lemma lift_declared_inductive `{checker_flags} Σ ind mdecl idecl n k :
+  wf Σ ->
+  declared_inductive (fst Σ) ind mdecl idecl ->
+  map_one_inductive_body [] (arities_context mdecl.(ind_bodies)) (fun Γ => lift n (#|Γ| + k)) idecl = idecl.
+Proof.
+  unfold declared_inductive. intros wfΣ [Hmdecl Hidecl].
+  destruct Σ. eapply (lift_declared_minductive _ _ _ n k) in Hmdecl.
+  unfold lift_mutual_inductive_body in Hmdecl.
+  destruct mdecl. simpl in *.
+  injection Hmdecl. intros Heq.
+  clear Hmdecl.
+  pose proof Hidecl as Hidecl'.
+  rewrite <- Heq in Hidecl'.
+  rewrite nth_error_map in Hidecl'.
+  clear Heq.
+  unfold option_map in Hidecl'. rewrite Hidecl in Hidecl'.
+  congruence. auto.
+Qed.
+
+Lemma inds_length ind u l : #|inds ind u l| = #|l|.
+Proof.
+  unfold inds. induction l; simpl; congruence.
+Qed.
+
+Lemma lift_declared_constructor `{checker_flags} Σ c u mdecl idecl cdecl n k :
+  wf Σ ->
+  declared_constructor (fst Σ) mdecl idecl c cdecl ->
+  lift n k (type_of_constructor mdecl cdecl c u) = (type_of_constructor mdecl cdecl c u).
+Proof.
+  unfold declared_constructor. destruct c as [i ci]. intros wfΣ [Hidecl Hcdecl].
+  destruct Σ. eapply (lift_declared_inductive _ _ _ _ n k) in Hidecl; eauto.
+  unfold type_of_constructor. destruct cdecl as [[id t] arity].
+  destruct idecl; simpl in *. injection Hidecl.
+  intros.
+  pose Hcdecl as Hcdecl'.
+  rewrite <- H1 in Hcdecl'.
+  rewrite nth_error_map in Hcdecl'. rewrite Hcdecl in Hcdecl'.
+  simpl in Hcdecl'. injection Hcdecl'.
+  intros.
+  rewrite <- H3 at 2.
+  rewrite <- UnivSubst.lift_subst_instance_constr.
+  unfold substl.
+  rewrite (distr_lift_subst_rec _ _ n 0 k). simpl.
+  unfold arities_context. rewrite rev_map_length, inds_length.
+  f_equal. generalize (ind_bodies mdecl).
+  clear. intros.
+  induction l; unfold inds; simpl; auto. f_equal. auto.
+Qed.
 
 Lemma weakening_red1 `{CF:checker_flags} Σ Γ Γ' Γ'' M N :
   type_global_env (snd Σ) (fst Σ) ->
@@ -497,9 +601,6 @@ Proof.
   rewrite IHl. f_equal. f_equal. pi.
 Qed.
 
-Lemma wf_local_app `{checker_flags} Σ (Γ Γ' : context) : wf_local Σ (Γ ,,, Γ') -> wf_local Σ Γ.
-Admitted.
-
 Lemma weakening_rec `{cf : checker_flags} Σ Γ Γ' Γ'' (t : term) :
   type_global_env (snd Σ) (fst Σ) ->
   wf_local Σ (Γ ,,, Γ') -> (* Not necessary now *)
@@ -566,14 +667,19 @@ Proof.
     rewrite distr_lift_subst in IHX1. apply IHX1.
 
   - autorewrite with lift.
-    rewrite map_cst_type. constructor.
-    erewrite <- lift_declared_constant; eauto.
+    rewrite map_cst_type. constructor; auto.
     erewrite <- lift_declared_constant; eauto.
 
   - autorewrite with lift.
-    admit.
+    erewrite <- (ind_type_map (fun Γ => lift #|Γ''| (#|Γ| + #|Γ'|)) []).
+    econstructor; eauto. red.
+    pose proof isdecl as isdecl'.
+    destruct isdecl. intuition auto.
+    eapply lift_declared_inductive in isdecl'.
+    rewrite isdecl'. auto. apply wfΣ.
 
-  - admit.
+  - rewrite (lift_declared_constructor _ (ind, i) u mdecl idecl cdecl _ _ wfΣ isdecl).
+    econstructor; eauto.
 
   - rewrite map_app, map_skipn.
     specialize (X3 _ _ _ X5 eq_refl).
@@ -593,8 +699,8 @@ Proof.
     simpl. rewrite map_rev.
     subst ty.
     rewrite List.rev_length.
-    replace (lift #|Γ''| (S (#|args| + #|Γ'|)) (snd decl))
-      with (snd (on_snd (lift #|Γ''| (S (#|args| + #|Γ'|))) decl)) by now destruct decl.
+    replace (lift #|Γ''| (S (#|args| + #|Γ'|)) (snd pdecl))
+      with (snd (on_snd (lift #|Γ''| (S (#|args| + #|Γ'|))) pdecl)) by now destruct pdecl.
     econstructor. admit.
     specialize (X0 _ _ _ X1 eq_refl).
     rewrite lift_mkApps in X0. eapply X0.

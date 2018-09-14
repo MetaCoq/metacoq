@@ -469,14 +469,6 @@ Definition it_mkProd_or_LetIn (l : context) (t : term) :=
        | Some b => tLetIn d.(decl_name) b d.(decl_type) acc
        end) l t.
 
-(** Make a list of variables of length [#|Γ|], starting at [acc]. *)
-
-Fixpoint rels_of {A} (Γ : list A) acc : list term :=
-  match Γ with
-  | _ :: Γ' => tRel acc :: rels_of Γ' (S acc)
-  | [] => []
-  end.
-
 (** Compute the type of a case from the predicate [p], actual parameters [pars] and
     an inductive declaration. *)
 
@@ -607,7 +599,7 @@ Definition check_correct_arity `{checker_flags} φ decl ind u ctx pars pctx :=
   let inddecl :=
       {| decl_name := nNamed decl.(ind_name);
          decl_body := None;
-         decl_type := mkApps (tInd ind u) (pars ++ rels_of ctx 0) |}
+         decl_type := mkApps (tInd ind u) (map (lift0 #|ctx|) pars ++ to_extended_list ctx) |}
   in eq_context φ (inddecl :: subst_instance_context u ctx) pctx.
 
 Definition fix_context (m : mfixpoint term) : context :=
@@ -681,14 +673,14 @@ Inductive typing `{checker_flags} (Σ : global_context) (Γ : context) : term ->
     Σ ;;; Γ |- (tConstruct ind i u) : type_of_constructor mdecl cdecl (ind, i) u
 
 | type_Case ind u npar p c brs args :
-    forall decl (isdecl : declared_minductive (fst Σ) (inductive_mind ind) decl),
-    forall univs decl' (isdecl' : declared_inductive (fst Σ) ind univs decl'),
-    decl.(ind_npars) = npar ->
+    forall mdecl (isdecl : declared_minductive (fst Σ) (inductive_mind ind) mdecl),
+    forall idecl (isdecl' : declared_inductive (fst Σ) ind mdecl idecl),
+    mdecl.(ind_npars) = npar ->
     let pars := List.firstn npar args in
     forall pty, Σ ;;; Γ |- p : pty ->
-    forall indctx pctx ps btys, types_of_case ind decl decl' pars u p pty = Some (indctx, pctx, ps, btys) ->
-    check_correct_arity (snd Σ) decl' ind u indctx pars pctx = true ->
-    List.Exists (fun sf => universe_family ps = sf) decl'.(ind_kelim) ->
+    forall indctx pctx ps btys, types_of_case ind mdecl idecl pars u p pty = Some (indctx, pctx, ps, btys) ->
+    check_correct_arity (snd Σ) idecl ind u indctx pars pctx = true ->
+    List.Exists (fun sf => universe_family ps = sf) idecl.(ind_kelim) ->
     Σ ;;; Γ |- c : mkApps (tInd ind u) args ->
     Forall2 (fun x y => (fst x = fst y) * (Σ ;;; Γ |- snd x : snd y)) brs btys ->
     Σ ;;; Γ |- tCase (ind, npar) p c brs : mkApps p (List.skipn npar args ++ [c])
@@ -1158,18 +1150,18 @@ Lemma typing_ind_env `{cf : checker_flags} :
 
     (forall Σ (wfΣ : wf Σ) (Γ : context) (wfΓ : wf_local Σ Γ) (ind : inductive) u (npar : nat)
             (p c : term) (brs : list (nat * term))
-            (args : list term) (decl : mutual_inductive_body),
-        declared_minductive (fst Σ) (inductive_mind ind) decl ->
+            (args : list term) (mdecl : mutual_inductive_body),
+        declared_minductive (fst Σ) (inductive_mind ind) mdecl ->
         Forall_decls_typing P Σ ->
-        forall univs ( decl' : one_inductive_body ),
-        declared_inductive (fst Σ) ind univs decl' ->
-        ind_npars decl = npar ->
+        forall idecl : one_inductive_body,
+        declared_inductive (fst Σ) ind mdecl idecl ->
+        ind_npars mdecl = npar ->
         let pars := firstn npar args in
         forall (pty : term), Σ ;;; Γ |- p : pty -> P Σ Γ p pty ->
         forall indctx pctx ps btys,
-        types_of_case ind decl decl' pars u p pty = Some (indctx, pctx, ps, btys) ->
-        check_correct_arity (snd Σ) decl' ind u indctx pars pctx = true ->
-        Exists (fun sf : sort_family => universe_family ps = sf) (ind_kelim decl') ->
+        types_of_case ind mdecl idecl pars u p pty = Some (indctx, pctx, ps, btys) ->
+        check_correct_arity (snd Σ) idecl ind u indctx pars pctx = true ->
+        Exists (fun sf : sort_family => universe_family ps = sf) (ind_kelim idecl) ->
         P Σ Γ p pty ->
         Σ;;; Γ |- c : mkApps (tInd ind u) args ->
         P Σ Γ c (mkApps (tInd ind u) args) ->

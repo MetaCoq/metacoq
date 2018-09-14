@@ -294,7 +294,7 @@ Lemma lift_declared_constant `{checker_flags} Σ cst decl n k :
 Proof.
   unfold declared_constant.
   intros.
-  eapply declared_decl_info in H0; auto.
+  eapply lookup_on_global_env in H0; eauto.
   destruct H0 as [Σ' [wfΣ' decl']].
   red in decl'. red in decl'.
   destruct decl. simpl in *. destruct cst_body. unfold map_constant_body. simpl.
@@ -374,23 +374,24 @@ Lemma lift_declared_minductive `{checker_flags} Σ cst decl n k :
 Proof.
   unfold declared_minductive.
   intros.
-  eapply declared_decl_info in H0; auto.
+  eapply lookup_on_global_env in H0; eauto.
   destruct H0 as [Σ' [wfΣ' decl']].
   do 2 red in decl'.
   destruct decl. simpl in *. f_equal.
   revert decl'. generalize ind_bodies at 2 4 5. induction 1. constructor.
   simpl. f_equal; auto. clear IHdecl'.
   f_equal.
-  red in i. red in i. destruct i as [s tys].
+  destruct p, x; simpl in *.
+  f_equal.
+  destruct onArity as [s Hs].
   eapply typed_liftn; eauto. constructor. simpl; lia.
-  red in t.
-  apply (All_map_id t).
+  apply (All_map_id onConstructors).
   intros [[x p] n']. intros [s Hty].
-  unfold on_pi2; f_equal; f_equal. eapply typed_liftn; eauto with wf. lia.
-  apply (All_map_id t0).
+  unfold on_pi2; f_equal; f_equal. eapply typed_liftn. 4:eapply Hty. wf. wf. lia.
+  apply (All_map_id onProjections).
   intros [x p]. intros [s Hty].
   unfold on_snd; f_equal; f_equal.
-  eapply typed_liftn. 4:eapply Hty. eauto with wf. eauto with wf. simpl. lia.
+  eapply typed_liftn. 4:eapply Hty. wf. wf. simpl. lia.
 Qed.
 
 Lemma lift_declared_inductive `{checker_flags} Σ ind mdecl idecl n k :
@@ -437,7 +438,7 @@ Lemma lift_declared_constructor `{checker_flags} Σ c u mdecl idecl cdecl n k :
 Proof.
   unfold declared_constructor. destruct c as [i ci]. intros wfΣ [Hidecl Hcdecl].
   destruct Σ. eapply (lift_declared_inductive _ _ _ _ n k) in Hidecl; eauto.
-  unfold type_of_constructor. destruct cdecl as [[id t] arity].
+  unfold type_of_constructor. destruct cdecl as [[id t'] arity].
   destruct idecl; simpl in *. injection Hidecl.
   intros.
   pose Hcdecl as Hcdecl'.
@@ -610,7 +611,7 @@ Proof.
 Qed.
 
 Lemma weakening_red1 `{CF:checker_flags} Σ Γ Γ' Γ'' M N :
-  type_global_env (snd Σ) (fst Σ) ->
+  wf Σ ->
   red1 (fst Σ) (Γ ,,, Γ') M N ->
   red1 (fst Σ) (Γ ,,, Γ'' ,,, lift_context #|Γ''| 0 Γ') (lift #|Γ''| #|Γ'| M) (lift #|Γ''| #|Γ'| N).
 Proof.
@@ -633,7 +634,7 @@ Proof.
 
   - econstructor.
     eauto. rewrite H0. f_equal.
-    eapply (declared_decl_info _ _ _ wfΣ) in H.
+    eapply (lookup_on_global_env _ _ _ _ wfΣ) in H.
     destruct H as [Σ' [wfΣ' decl']].
     red in decl'. red in decl'.
     rewrite H0 in decl'.
@@ -659,7 +660,6 @@ Proof.
   - constructor.
     induction H; constructor; auto.
     intuition; eauto.
-    apply H0. auto.
 
   - constructor.
     induction H; constructor; auto.
@@ -727,7 +727,7 @@ Proof.
 Qed.
 
 Lemma weakening_cumul `{CF:checker_flags} Σ Γ Γ' Γ'' M N :
-  type_global_env (snd Σ) (fst Σ) ->
+  wf Σ ->
   Σ ;;; Γ ,,, Γ' |- M <= N ->
   Σ ;;; Γ ,,, Γ'' ,,, lift_context #|Γ''| 0 Γ' |- lift #|Γ''| #|Γ'| M <= lift #|Γ''| #|Γ'| N.
 Proof.
@@ -740,8 +740,54 @@ Proof.
     econstructor 3; eauto.
 Qed.
 
+Lemma forallb2_length {A} (p : A -> A -> bool) l l' : forallb2 p l l' = true -> length l = length l'.
+Proof.
+  induction l in l' |- *; destruct l'; simpl; try congruence.
+  rewrite !andb_true_iff. intros [Hp Hl]. erewrite IHl; eauto.
+Qed.
+
+(* Definition check_correct_arity `{checker_flags} φ decl ind u ctx pars pctx := *)
+(*   let inddecl := *)
+(*       {| decl_name := nNamed decl.(ind_name); *)
+(*          decl_body := None; *)
+(*          decl_type := mkApps (tInd ind u) (map (lift0 #|ctx|) pars ++ to_extended_list ctx) |} *)
+(*   in eq_context φ (inddecl :: UnivSubst.subst_instance_context u ctx) pctx. *)
+
+Lemma lift_check_correct_arity:
+  forall (cf : checker_flags) (Σ : global_context) (Γ' : context) (ind : inductive) (u : universe_instance)
+         (npar : nat) (args : list term) (idecl : one_inductive_body)
+         (Γ'' : context) (indctx pctx : list context_decl),
+    check_correct_arity (snd Σ) idecl ind u indctx (firstn npar args) pctx = true ->
+    check_correct_arity
+      (snd Σ) idecl ind u (lift_context #|Γ''| #|Γ'| indctx) (firstn npar (map (lift #|Γ''| #|Γ'|) args))
+      (lift_context #|Γ''| #|Γ'| pctx) = true.
+Proof.
+  intros cf Σ Γ' ind u npar args idecl Γ'' indctx pctx.
+  unfold check_correct_arity.
+  destruct pctx. simpl; try congruence. simpl.
+  rewrite lift_context_snoc0. simpl.
+  unfold eq_context.
+  unfold UnivSubst.subst_instance_context.
+  rewrite !andb_true_iff. intros.
+  destruct H. split.
+  destruct c. destruct decl_body; try discriminate.
+  unfold eq_decl in *. simpl in *.
+  assert (#|indctx| = #|pctx|).
+  { eapply forallb2_length in H0.
+    unfold map_context in H0.
+    now rewrite map_length in H0. }
+  rewrite <- H1.
+  clear H0.
+  eapply (lift_eq_term _ #|Γ''| (#|indctx| + #|Γ'|)) in H.
+  rewrite lift_mkApps, map_app in H. simpl in H.
+  rewrite firstn_map. rewrite to_extended_list_lift.
+  erewrite <- (to_extended_list_map_lift #|Γ''|) in H.
+  rewrite <- H. f_equal. f_equal. f_equal.
+Admitted.
+
+
 Lemma weakening_typing `{cf : checker_flags} Σ Γ Γ' Γ'' (t : term) :
-  type_global_env (snd Σ) (fst Σ) ->
+  wf Σ ->
   wf_local Σ (Γ ,,, Γ') ->
   wf_local Σ (Γ ,,, Γ'' ,,, lift_context #|Γ''| 0 Γ') ->
   `(Σ ;;; Γ ,,, Γ' |- t : T ->
@@ -820,22 +866,28 @@ Proof.
   - rewrite (lift_declared_constructor _ (ind, i) u mdecl idecl cdecl _ _ wfΣ isdecl).
     econstructor; eauto.
 
-  - rewrite map_app, map_skipn.
-    specialize (X3 _ _ _ X5 eq_refl).
-    specialize (X1 _ _ _ X5 eq_refl).
-    specialize (X0 _ _ _ X5 eq_refl).
+  - rewrite lift_mkApps, map_app, map_skipn.
+    specialize (X4 _ _ _ X6 eq_refl).
+    specialize (X2 _ _ _ X6 eq_refl).
+    specialize (X1 _ _ _ X6 eq_refl).
     simpl. econstructor. shelve. shelve. shelve. eauto.
     eapply lift_types_of_case in H2.
-    simpl in H2. subst pars. rewrite firstn_map. eapply H2; eauto with wf.
+    simpl in H2. subst pars. rewrite firstn_map. eapply H2.
 
-
-    eapply typing_wf in X; eauto.
-    shelve. shelve. shelve. shelve.
-    admit.
-    destruct decl'; simpl in *; auto.
-    now rewrite !lift_mkApps in X3.
-    eapply Forall2_map. close_Forall. intros; intuition eauto.
-    destruct x, y; simpl in *. eauto.
+    -- eapply typing_wf in X0; wf.
+    -- eapply typing_wf_sigma in wfΣ.
+       destruct H0. red in H0.
+       eapply (lookup_on_global_env _ _ _ _ wfΣ) in H0 as [Σ' [wfΣ' H0]]; eauto.
+       red in H0. red in H0.
+       eapply (nth_error_all H5) in H0. apply onArity in H0; wf.
+    -- revert H3.
+       subst pars.
+       erewrite lift_declared_inductive; eauto.
+       apply lift_check_correct_arity.
+    -- destruct idecl; simpl in *; auto.
+    -- now rewrite !lift_mkApps in X4.
+    -- eapply Forall2_map. close_Forall. intros; intuition eauto.
+      destruct x, y; simpl in *. eauto.
 
   - unfold substl. simpl.
     erewrite (distr_lift_subst_rec _ _ _ 0 #|Γ'|).
@@ -844,9 +896,29 @@ Proof.
     rewrite List.rev_length.
     replace (lift #|Γ''| (S (#|args| + #|Γ'|)) (snd pdecl))
       with (snd (on_snd (lift #|Γ''| (S (#|args| + #|Γ'|))) pdecl)) by now destruct pdecl.
-    econstructor. admit.
-    specialize (X0 _ _ _ X1 eq_refl).
-    rewrite lift_mkApps in X0. eapply X0.
+    econstructor.
+Lemma lift_declared_projection `{checker_flags} Σ c mdecl idecl pdecl n k :
+  wf Σ ->
+  declared_projection (fst Σ) mdecl idecl c pdecl ->
+  on_snd (lift n (S (#|arities_context (ind_bodies mdecl)| + k))) pdecl = pdecl.
+Proof.
+  unfold declared_projection. destruct c as [[i k'] ci]. intros wfΣ [Hidecl Hcdecl].
+  destruct Σ. eapply (lift_declared_inductive _ _ _ _ n k) in Hidecl; eauto.
+  destruct pdecl as [id t'].
+  destruct idecl; simpl in *. injection Hidecl.
+  intros.
+  pose Hcdecl as Hcdecl'.
+  rewrite <- H0 in Hcdecl'.
+  rewrite nth_error_map in Hcdecl'. rewrite Hcdecl in Hcdecl'.
+  simpl in Hcdecl'. injection Hcdecl'.
+  intros. unfold on_snd. simpl. now rewrite H3.
+Qed.
+     lift_declared_projection.
+    red. destruct isdecl. split. apply d.
+    rewrite e. f_equal.
+
+    specialize (X1 _ _ _ X2 eq_refl).
+    rewrite lift_mkApps in X1. eapply X1.
 
   - subst ty.
     erewrite map_dtype, map_def_safe_nth. simpl.
@@ -863,24 +935,24 @@ Proof.
 Admitted.
 
 Lemma weakening `{cf : checker_flags} Σ Γ Γ' (t : term) T :
-  type_global_env (snd Σ) (fst Σ) -> wf_local Σ (Γ ,,, Γ') ->
+  wf Σ -> wf_local Σ (Γ ,,, Γ') ->
   Σ ;;; Γ |- t : T ->
   Σ ;;; Γ ,,, Γ' |- lift0 #|Γ'| t : lift0 #|Γ'| T.
 Proof.
   intros HΣ HΓΓ' * H.
-  pose (weakening_rec Σ Γ [] Γ' t).
+  pose (weakening_typing Σ Γ [] Γ' t).
   forward t0; eauto.
   forward t0; eauto. now eapply wf_local_app in HΓΓ'.
 Qed.
 
-Inductive subs Σ (Γ : context) : list term -> context -> Type :=
+Inductive subs `{cf : checker_flags} Σ (Γ : context) : list term -> context -> Type :=
 | emptys : subs Σ Γ [] []
 | conss Δ s na t T : subs Σ Γ s Δ ->
               Σ ;;; Γ |- t : substl s T ->
               subs Σ Γ (t :: s) (Δ ,, vass na T).
 
 Theorem substitution `{checker_flags} Σ Γ Γ' s Δ (t : term) T :
-  type_global_env (snd Σ) (fst Σ) -> wf_local Σ Γ ->
+  wf Σ -> wf_local Σ Γ ->
   subs Σ Γ s Γ' ->
   Σ ;;; Γ ,,, Γ' ,,, Δ |- t : T ->
   Σ ;;; Γ ,,, map_context (substl s) Δ |- substl s t : substl s T.
@@ -889,7 +961,7 @@ Proof.
 Admitted.
 
 Lemma substitution0 `{checker_flags} Σ Γ n u U (t : term) :
-  type_global_env (snd Σ) (fst Σ) -> wf_local Σ Γ ->
+  wf Σ -> wf_local Σ Γ ->
   `(Σ ;;; Γ ,, vass n U |- t : T -> Σ ;;; Γ |- u : U ->
     Σ ;;; Γ |- t {0 := u} : T {0 := u}).
 Proof.

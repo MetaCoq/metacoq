@@ -129,6 +129,10 @@ Inductive All (A : Type) (P : A -> Type) : list A -> Type :=
                   P x -> All A P l -> All A P (x :: l).
 Arguments All {A} P l.
 
+Inductive Alli {A} (P : nat -> A -> Type) (n : nat) : list A -> Type :=
+| Alli_nil : Alli P n []
+| Alli_cons hd tl : P n hd -> Alli P (S n) tl -> Alli P n (hd :: tl).
+
 Inductive Forall2 {A B : Type} (R : A -> B -> Type) : list A -> list B -> Type :=
   Forall2_nil : Forall2 R [] []
 | Forall2_cons : forall (x : A) (y : B) (l : list A) (l' : list B),
@@ -347,6 +351,15 @@ Proof.
   revert Hnth. destruct n. now intros [= ->].
   intros H'; eauto.
 Qed.
+Require Import Arith.
+Lemma nth_error_alli {A} {P : nat -> A -> Type} {l : list A} {n x} {k} :
+  nth_error l n = Some x -> Alli P k l -> P (k + n) x.
+Proof.
+  intros Hnth HPl. induction HPl in n, Hnth |- *.
+  destruct n; discriminate.
+  revert Hnth. destruct n. intros [= ->]. now rewrite Nat.add_0_r.
+  intros H'; eauto. rewrite <- Nat.add_succ_comm. eauto.
+Qed.
 
 Lemma All_mix {A} (P : A -> Type) (Q : A -> Type) l :
   All P l -> All Q l -> All (fun x => (P x * Q x)%type) l.
@@ -357,12 +370,23 @@ Lemma All_Forall {A} (P : A -> Type) (Q : A -> Prop) l :
   All P l -> Forall Q l.
 Proof. induction 2; constructor; auto. Qed.
 
+Lemma Alli_mix {A} (P : nat -> A -> Type) (Q : nat -> A -> Type) n l :
+  Alli P n l -> Alli Q n l -> Alli (fun n x => (P n x * Q n x)%type) n l.
+Proof. induction 1; intros Hq; inv Hq; constructor; auto. Qed.
+
+Lemma Alli_Forall {A} (P : nat -> A -> Type) (Q : A -> Prop) l n :
+  (forall n x, P n x -> Q x) ->
+  Alli P n l -> Forall Q l.
+Proof. induction 2; constructor; eauto. Qed.
+
 Ltac merge_Forall := unfold tFixProp, tCaseBrsProp in *;
   repeat match goal with
   | H : Forall _ ?x, H' : Forall _ ?x |- _ =>
     apply (Forall_mix _ _ _ H) in H'; clear H
   | H : All _ ?x, H' : All _ ?x |- _ =>
     apply (All_mix _ _ _ H) in H'; clear H
+  | H : Alli _ _ ?x, H' : Alli _ _ ?x |- _ =>
+    apply (Alli_mix _ _ _ _ H) in H'; clear H
   | H : Forall _ ?x, H' : forallb _ ?x = _ |- _ =>
     eapply (Forall_forall_mix H) in H'; clear H
   | H : forallb2 _ _ _ = _ |- _ => apply forallb2_Forall2 in H
@@ -539,6 +563,9 @@ Definition size := nat.
 Lemma All_impl {A} {P Q} (l : list A) : All P l -> (forall x, P x -> Q x) -> All Q l.
 Proof. induction 1; try constructor; intuition auto. Qed.
 
+Lemma Alli_impl {A} {P Q} (l : list A) {n} : Alli P n l -> (forall n x, P n x -> Q n x) -> Alli Q n l.
+Proof. induction 1; try constructor; intuition auto. Qed.
+
 Section All_size.
   Context {A} (P : A -> Type) (fn : forall x1, P x1 -> size).
   Fixpoint all_size {l1 : list A} (f : All P l1) : size :=
@@ -547,6 +574,15 @@ Section All_size.
   | All_cons x l px pl => fn _ px + all_size pl
   end.
 End All_size.
+
+Section Alli_size.
+  Context {A} (P : nat -> A -> Type) (fn : forall n x1, P n x1 -> size).
+  Fixpoint alli_size {l1 : list A} {n} (f : Alli P n l1) : size :=
+  match f with
+  | Alli_nil => 0
+  | Alli_cons x l px pl => fn _ _ px + alli_size pl
+  end.
+End Alli_size.
 
 Section All2_size.
   Context {A} (P : A -> A -> Type) (fn : forall x1 x2, P x1 x2 -> size).
@@ -618,13 +654,34 @@ Proof.
   now intros [=].
 Qed.
 
-Definition mapi {A B} (f : nat -> A -> B) (l : list A) : list B :=
-  let fix aux n l :=
-      match l with
-      | [] => []
-      | hd :: tl => f n hd :: aux (S n) tl
-      end
-  in aux 0 l.
+Fixpoint mapi_rec {A B} (f : nat -> A -> B) (l : list A) (n : nat) : list B :=
+  match l with
+  | [] => []
+  | hd :: tl => f n hd :: mapi_rec f tl (S n)
+  end.
+
+Definition mapi {A B} (f : nat -> A -> B) (l : list A) := mapi_rec f l 0.
+
+Lemma mapi_rec_eqn {A B} (f : nat -> A -> B) (l : list A) a n :
+  mapi_rec f (a :: l) n = f n a :: mapi_rec f l (S n).
+Proof. simpl. f_equal. Qed.
+
+Lemma nth_error_mapi_rec {A B} (f : nat -> A -> B) n k l :
+  nth_error (mapi_rec f l k) n = option_map (f (n + k)) (nth_error l n).
+Proof.
+  induction l in n, k |- *.
+  - destruct n; reflexivity.
+  - destruct n; simpl.
+    + reflexivity.
+    + rewrite IHl. by rewrite <- Nat.add_succ_comm.
+Qed.
+
+Lemma nth_error_mapi {A B} (f : nat -> A -> B) n l :
+  nth_error (mapi f l) n = option_map (f n) (nth_error l n).
+Proof.
+  unfold mapi; rewrite nth_error_mapi_rec.
+  now rewrite -> Nat.add_0_r.
+Qed.
 
 Fixpoint chop {A} (n : nat) (l : list A) :=
   match n with
@@ -657,6 +714,15 @@ Proof.
   f_equal; auto.
 Qed.
 
+Lemma Alli_map_id {A} {P : nat -> A -> Type} {l} {f} {n} :
+  Alli P n l ->
+  (forall n x, P n x -> f n x = x) ->
+  mapi_rec f l n = l.
+Proof.
+  induction 1; simpl; f_equal; intuition auto.
+  f_equal; eauto.
+Qed.
+
 Lemma nlt_map {A B} (l : list A) (f : A -> B) (n : {n | n < length l }) : `n < length (map f l).
 Proof. destruct n. simpl. now rewrite map_length. Defined.
 
@@ -672,8 +738,7 @@ Qed.
 Lemma mapi_map {A B} (f : nat -> A -> B) (l : list A) (g : A -> A) :
   mapi f (map g l) = mapi (fun i x => f i (g x)) l.
 Proof.
-  unfold mapi. generalize 0. induction l; simpl; congruence.
-Qed.
+  unfold mapi. generalize 0. induction l; simpl; congruence. Qed.
 
 Lemma map_mapi {A B} (f : nat -> A -> B) (l : list A) (g : B -> B) :
   map g (mapi f l) = mapi (fun i x => g (f i x)) l.

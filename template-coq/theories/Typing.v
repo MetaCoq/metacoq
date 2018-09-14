@@ -515,6 +515,7 @@ Definition build_branches_type ind mdecl idecl params u p :=
   in mapi branch_type idecl.(ind_ctors).
 
 Definition types_of_case ind mdecl idecl params u p pty :=
+  let indty := instantiate_params params (subst_instance_constr u idecl.(ind_type)) in
   match destArity [] idecl.(ind_type), destArity [] pty with
   | Some (args, s), Some (args', s') =>
     let brtys := build_branches_type ind mdecl idecl params u p in
@@ -541,6 +542,13 @@ Definition consistent_universe_context_instance (Σ : global_context) uctx u :=
     List.length inst = List.length u /\
     check_constraints (snd Σ) (subst_instance_cstrs u cstrs) = true
   end.
+
+Definition polymorphic_instance uctx :=
+  match uctx with
+  | Monomorphic_ctx c => Instance.empty
+  | Polymorphic_ctx c => fst (UContext.dest c)
+  end.
+
 
 (* Definition allowed_elim u (f : sort_family) := *)
 (*   match f with *)
@@ -600,7 +608,7 @@ Definition check_correct_arity `{checker_flags} φ decl ind u ctx pars pctx :=
       {| decl_name := nNamed decl.(ind_name);
          decl_body := None;
          decl_type := mkApps (tInd ind u) (map (lift0 #|ctx|) pars ++ to_extended_list ctx) |}
-  in eq_context φ (inddecl :: subst_instance_context u ctx) pctx.
+  in eq_context φ (inddecl :: ctx) pctx.
 
 Definition fix_context (m : mfixpoint term) : context :=
   List.rev (List.map (fun d => vass d.(dname) d.(dtype)) m).
@@ -777,20 +785,22 @@ Section GlobalMaps.
     rev_map (fun ind => vass (nNamed ind.(ind_name)) ind.(ind_type)) l.
 
   Record on_ind_body
-         (Σ : global_context) (pars : context) (Γ : context) (oib : one_inductive_body) :=
+         (Σ : global_context) (mind : kername) (u : universe_instance) (Γ : context) (n : nat) (oib : one_inductive_body) :=
     { onArity : (** Arity is well-formed *) on_type Σ [] oib.(ind_type);
       (** Constructors are well-typed *)
       onConstructors : on_constructors Σ Γ oib.(ind_ctors);
       (** Projections are well-typed *)
-      onProjections : on_projections Σ (Γ ,,, pars ,, vass nAnon oib.(ind_type)) oib.(ind_projs)
+      onProjections :
+        let '(ctx, _) := decompose_prod_assum [] oib.(ind_type) in
+        on_projections Σ (ctx,, vass (nNamed oib.(ind_name))
+                             (mkApps (tInd (mkInd mind n) u) (to_extended_list ctx))) oib.(ind_projs)
       (** TODO: check kelim *) }.
 
-  Definition on_ind_bodies (Σ : global_context) (pars : context) (Γ : context) (l : list one_inductive_body) :=
-    All (on_ind_body Σ pars Γ) l.
+  Definition on_ind_bodies (Σ : global_context) ind u (Γ : context) (l : list one_inductive_body) :=
+    Alli (on_ind_body Σ ind u Γ) 0 l.
 
-  Definition on_inductive Σ inds :=
-    (** FIXME: should be pars ++ arities w/o params *)
-    on_ind_bodies Σ [] (arities_context inds) inds.
+  Definition on_inductive Σ ind u inds :=
+    on_ind_bodies Σ ind u (arities_context inds) inds.
 
   (** *** Typing of constant declarations *)
 
@@ -803,7 +813,8 @@ Section GlobalMaps.
   Definition on_global_decl Σ decl :=
     match decl with
     | ConstantDecl id d => on_constant_decl Σ d
-    | InductiveDecl ind inds => on_inductive Σ inds.(ind_bodies)
+    | InductiveDecl ind inds =>
+      on_inductive Σ ind (polymorphic_instance inds.(ind_universes)) inds.(ind_bodies)
     end.
 
   (** *** Typing of global environment
@@ -854,7 +865,7 @@ Proof.
     split; auto.
   - do 2 red in o, X2 |- *. simpl in *.
     revert o X2. generalize (ind_bodies m). intros l; generalize (arities_context l).
-    intros. red in o, X2. merge_Forall. eapply All_impl; eauto. clear X2.
+    intros. red in o, X2. merge_Forall. eapply Alli_impl; eauto. clear X2.
     intros.
     destruct x; simpl in *.
     destruct X0 as [Xl Xr].
@@ -862,7 +873,9 @@ Proof.
     + apply onArity in Xl; apply onArity in Xr. intuition.
     + apply onConstructors in Xl; apply onConstructors in Xr. intuition.
       red in Xl, Xr. merge_Forall. eapply All_impl; eauto.
-    + apply onProjections in Xl; apply onProjections in Xr. intuition.
+    + apply onProjections in Xl; apply onProjections in Xr. simpl in *.
+      fold (decompose_prod_assum [] ind_type). destruct (decompose_prod_assum [] ind_type).
+      intuition.
       red in Xl, Xr. merge_Forall. eapply All_impl; eauto.
 Qed.
 
@@ -878,13 +891,15 @@ Proof.
     red in o |- *. simpl in *. red in o. red. auto.
   - do 2 red in o |- *. simpl in *.
     revert o. generalize (ind_bodies m). intros l; generalize (arities_context l).
-    intros. red in o. merge_Forall. eapply All_impl; eauto. intros.
+    intros. red in o. merge_Forall. eapply Alli_impl; eauto. intros.
     destruct x; simpl in *.
     constructor; red; simpl.
     + apply onArity in X1. intuition.
     + apply onConstructors in X1.
       red in X1. eapply All_impl; intuition eauto. now do 2 red in X2 |- *.
-    + apply onProjections in X1.
+    + apply onProjections in X1. simpl in *.
+      fold (decompose_prod_assum [] ind_type).
+      destruct (decompose_prod_assum [] ind_type).
       red in X1. eapply All_impl; intuition eauto. now do 2 red in X2 |- *.
 Qed.
 
@@ -1250,7 +1265,7 @@ Proof.
       forward IH. constructor 1. simpl; omega.
       apply IH.
     + do 3 red in X15. do 2 red.
-      eapply All_impl; eauto. clear X15; intros.
+      eapply Alli_impl; eauto. clear X15; intros.
       constructor.
       ++ apply onArity in X15. destruct X15 as [s Hs]. exists s.
          specialize (IH (existT _ (Σ, φ) (existT _ X14 (existT _ _ (existT _ (localenv_nil typing _) (existT _ _ (existT _ _ Hs))))))).
@@ -1261,7 +1276,8 @@ Proof.
          pose proof (typing_wf_local (Σ:= (Σ, φ)) X14 Hs).
          specialize (IH (existT _ (Σ, φ) (existT _ X14 (existT _ _ (existT _ X16 (existT _ _ (existT _ _ Hs))))))).
          simpl in IH. apply IH; constructor 1; simpl; omega.
-      ++ apply onProjections in X15.
+      ++ apply onProjections in X15. simpl in *.
+         destruct (decompose_prod_assum [] (ind_type x)).
          red in X15 |- *. eapply All_impl; eauto. intros.
          red in X16 |- *. destruct X16 as [s Hs]. exists s.
          pose proof (typing_wf_local (Σ:= (Σ, φ)) X14 Hs).
@@ -1679,13 +1695,13 @@ Proof.
     destruct isdecl as [Hmdecl Hidecl]. red in Hmdecl.
     eapply lookup_on_global_env in X as [Σ' [wfΣ' prf]]; eauto.
     do 3 red in prf.
-    eapply nth_error_all in Hidecl; eauto.
+    eapply nth_error_alli in Hidecl; eauto.
     eapply onArity in Hidecl.
     destruct Hidecl; wf.
   - split. wf.
     destruct isdecl as [[Hmdecl Hidecl] Hcdecl]. red in Hmdecl.
     eapply lookup_on_global_env in X as [Σ' [wfΣ' prf]]; eauto. red in prf.
-    eapply nth_error_all in Hidecl; eauto. simpl in *. intuition.
+    eapply nth_error_alli in Hidecl; eauto. simpl in *. intuition.
     apply onConstructors in Hidecl.
     eapply nth_error_all in Hcdecl; eauto.
     destruct Hcdecl as [s Hs]. unfold type_of_constructor. wf.
@@ -1697,8 +1713,8 @@ Proof.
     apply wf_mkApps_inv in H2. now apply Forall_rev.
     subst ty. destruct isdecl as [[Hmdecl Hidecl] Hpdecl].
     eapply lookup_on_global_env in Hmdecl as [Σ' [wfΣ' prf]]; eauto. red in prf.
-    eapply nth_error_all in Hidecl; eauto. intuition.
-    eapply onProjections in Hidecl.
+    eapply nth_error_alli in Hidecl; eauto. intuition.
+    eapply onProjections in Hidecl. destruct decompose_prod_assum.
     eapply nth_error_all in Hpdecl; eauto.
     destruct Hpdecl as [s Hs]. apply Hs.
   - subst types.

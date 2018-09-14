@@ -12,7 +12,6 @@ From Template Require Import config utils Ast AstUtils Induction utils LiftSubst
 Set Asymmetric Patterns.
 
 Generalizable Variables Σ Γ t T.
-Existing Instance default_checker_flags.
 
 Lemma length_app_context Γ Γ' : #|Γ ,,, Γ'| = #|Γ| + #|Γ'|.
 Proof.
@@ -299,17 +298,6 @@ Proof. destruct d; reflexivity. Qed.
 Lemma map_dbody {A B : Set} (f : A -> B) (g : A -> B) (d : def A) :
   g (dbody d) = dbody (map_def f g d).
 Proof. destruct d; reflexivity. Qed.
-
-Lemma declared_decl_info `{checker_flags} Σ c decl :
-  type_global_env (snd Σ) (fst Σ) ->
-  lookup_env (fst Σ) c = Some decl ->
-  { Σ' & { wfΣ' : wf Σ' & type_global_decl Σ' decl } }.
-Proof.
-  induction 1; simpl. congruence.
-  destruct ident_eq. intros [= ->].
-  exists (Σ0, snd Σ). exists X. auto.
-  apply IHX.
-Qed.
 
 Lemma lift_declared_constant `{checker_flags} Σ cst decl n k :
   wf Σ ->
@@ -807,7 +795,7 @@ Proof.
     econstructor 3; eauto.
 Qed.
 
-Lemma weakening_rec `{cf : checker_flags} Σ Γ Γ' Γ'' (t : term) :
+Lemma weakening_typing `{cf : checker_flags} Σ Γ Γ' Γ'' (t : term) :
   type_global_env (snd Σ) (fst Σ) ->
   wf_local Σ (Γ ,,, Γ') ->
   wf_local Σ (Γ ,,, Γ'' ,,, lift_context #|Γ''| 0 Γ') ->
@@ -894,6 +882,8 @@ Proof.
     simpl. econstructor. shelve. shelve. shelve. eauto.
     eapply lift_types_of_case in H2.
     simpl in H2. subst pars. rewrite firstn_map. eapply H2; eauto with wf.
+
+
     eapply typing_wf in X; eauto.
     shelve. shelve. shelve. shelve.
     admit.

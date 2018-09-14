@@ -338,6 +338,18 @@ Proof.
   intros H'; eauto.
 Qed.
 
+Lemma nth_error_all {A} {P : A -> Type} {l : list A} {n x} :
+  nth_error l n = Some x -> All P l -> P x.
+Proof.
+  intros Hnth HPl. induction HPl in n, Hnth |- *. destruct n; discriminate.
+  revert Hnth. destruct n. now intros [= ->].
+  intros H'; eauto.
+Qed.
+
+Lemma All_mix {A} (P : A -> Type) (Q : A -> Type) l :
+  All P l -> All Q l -> All (fun x => (P x * Q x)%type) l.
+Proof. induction 1; intros Hq; inv Hq; constructor; auto. Qed.
+
 Lemma All_Forall {A} (P : A -> Type) (Q : A -> Prop) l :
   (forall x, P x -> Q x) ->
   All P l -> Forall Q l.
@@ -347,6 +359,8 @@ Ltac merge_Forall := unfold tFixProp, tCaseBrsProp in *;
   repeat match goal with
   | H : Forall _ ?x, H' : Forall _ ?x |- _ =>
     apply (Forall_mix _ _ _ H) in H'; clear H
+  | H : All _ ?x, H' : All _ ?x |- _ =>
+    apply (All_mix _ _ _ H) in H'; clear H
   | H : Forall _ ?x, H' : forallb _ ?x = _ |- _ =>
     eapply (Forall_forall_mix H) in H'; clear H
   | H : forallb2 _ _ _ = _ |- _ => apply forallb2_Forall2 in H

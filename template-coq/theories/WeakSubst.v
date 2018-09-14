@@ -76,11 +76,6 @@ Proof.
 Qed.
 Hint Rewrite lift_context_snoc : lift.
 
-Lemma some_inj {A} {x y : A} : Some x = Some y -> x = y.
-Proof.
-  now intros [=].
-Qed.
-
 Lemma nth_error_app_ge v Γ Γ' : #|Γ'| <= v -> nth_error (Γ ,,, Γ') v = nth_error Γ (v - #|Γ'|).
 Proof.
   revert v; induction Γ'; simpl; intros.
@@ -174,13 +169,6 @@ Proof.
   intros. assert (#|Γ'| = S i + (#|Γ'| - S i)) by easy.
   rewrite H0 at 2.
   rewrite <- permute_lift; try easy.
-Qed.
-
-Lemma nth_map {A} (f : A -> A) n l d :
-  (d = f d) ->
-  nth n (map f l) d = f (nth n l d).
-Proof.
-  induction n in l |- *; destruct l; simpl; auto.
 Qed.
 
 Lemma lift_iota_red n k pars c args brs :
@@ -329,9 +317,6 @@ Proof.
   rewrite ccst. reflexivity. lia. auto. constructor.
 Qed.
 
-Definition on_pi2 {A B C} (f : B -> B) (p : A * B * C) : A * B * C :=
-  (fst (fst p), f (snd (fst p)), snd p).
-
 Definition map_one_inductive_body params arities f m :=
   match m with
   | Build_one_inductive_body ind_name ind_type ind_kelim ind_ctors ind_projs =>
@@ -380,15 +365,6 @@ Proof.
   pose proof (closed_upwards _ _ clb k).
   simpl in *. forward H0 by lia.
   now apply (lift_closed n) in H0.
-Qed.
-
-Lemma All_map_id {A} {P : A -> Type} {l} {f} :
-  All P l ->
-  (forall x, P x -> f x = x) ->
-  map f l = l.
-Proof.
-  induction 1; simpl; f_equal; intuition auto.
-  f_equal; auto.
 Qed.
 
 Lemma lift_declared_minductive `{checker_flags} Σ cst decl n k :
@@ -474,18 +450,6 @@ Proof.
   now rewrite substl_inds_lift.
 Qed.
 
-Lemma nlt_map {A B} (l : list A) (f : A -> B) (n : {n | n < #|l| }) : `n < #|map f l|.
-Proof. destruct n. simpl. now rewrite map_length. Defined.
-
-Lemma map_def_safe_nth {A B} (l : list A) (n : {n | n < #|l| }) (f : A -> B) :
-  f (safe_nth l n) = safe_nth (map f l) (exist _ (`n) (nlt_map l f n)).
-Proof.
-  destruct n.
-  induction l in x, l0 |- *. simpl. bang.
-  simpl. destruct x. reflexivity. simpl.
-  rewrite IHl. f_equal. f_equal. pi.
-Qed.
-
 Lemma lift_destArity ctx t n k : Ast.wf t ->
         destArity (lift_context n k ctx) (lift n (#|ctx| + k) t) =
         match destArity ctx t with
@@ -502,18 +466,6 @@ Proof.
   reflexivity.
   specialize (IHwf1 n k (ctx,, vdef n0 t t0)). rewrite lift_context_snoc in IHwf1.
   unfold vdef, lift_decl, map_decl in *. simpl in *. rewrite IHwf1. reflexivity.
-Qed.
-
-Lemma mapi_map {A B} (f : nat -> A -> B) (l : list A) (g : A -> A) :
-  mapi f (map g l) = mapi (fun i x => f i (g x)) l.
-Proof.
-  unfold mapi. generalize 0. induction l; simpl; congruence.
-Qed.
-
-Lemma map_mapi {A B} (f : nat -> A -> B) (l : list A) (g : B -> B) :
-  map g (mapi f l) = mapi (fun i x => g (f i x)) l.
-Proof.
-  unfold mapi. generalize 0. induction l; simpl; congruence.
 Qed.
 
 Lemma lift_instantiate_params n k args t :
@@ -555,13 +507,6 @@ Lemma decompose_app_lift n k t f a :
   decompose_app t = (f, a) -> decompose_app (lift n k t) = (lift n k f, map (lift n k) a).
 Proof. destruct t; simpl; intros [= <- <-]; try reflexivity.
        simpl. now destruct (Nat.leb k n0). Qed.
-
-Lemma chop_map {A B} (f : A -> B) n l l' l'' :
-  chop n l = (l', l'') -> chop n (map f l) = (map f l', map f l'').
-Proof.
-  induction n in l, l', l'' |- *; destruct l; try intros [= <- <-]; simpl; try congruence.
-  destruct (chop n l) eqn:Heq. specialize (IHn _ _ _ Heq).
-  intros [= <- <-]. now rewrite IHn. Qed.
 
 Lemma lift_it_mkProd_or_LetIn n k ctx t :
   lift n k (it_mkProd_or_LetIn ctx t) =

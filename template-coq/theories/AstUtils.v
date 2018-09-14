@@ -1,8 +1,10 @@
 From Coq Require Import Ascii String Bool OrderedType.
-From Coq Require Import List.
+From Coq Require Import List Program.
 From Template Require Import Ast utils.
 Import List.ListNotations.
 Require Import FunctionalExtensionality.
+
+Set Asymmetric Patterns.
 
 Ltac inv H := inversion_clear H.
 
@@ -516,6 +518,45 @@ Proof.
   induction 1; constructor; auto.
 Qed.
 
+Lemma All_safe_nth {A} {P : A -> Type} {Γ n} (isdecl : n < length Γ) : All P Γ ->
+   P (safe_nth Γ (exist _ n isdecl)).
+Proof.
+  induction 1 in n, isdecl |- *. simpl. bang.
+  destruct n. simpl. auto.
+  simpl in *. eapply IHX.
+Qed.
+
+Lemma Forall_rev_map {A B} (P : A -> Prop) f (l : list B) : Forall (compose P f) l -> Forall P (rev_map f l).
+Proof. induction 1. constructor. rewrite rev_map_cons. apply Forall_app_inv. split; auto. Qed.
+
+Lemma Forall_rev {A} (P : A -> Prop) (l : list A) : Forall P l -> Forall P (List.rev l).
+Proof.
+  induction l using rev_ind. constructor.
+  intros. rewrite rev_app_distr. apply Forall_app_inv. apply Forall_app in H. intuition auto.
+Qed.
+
+Definition size := nat.
+Lemma All_impl {A} {P Q} (l : list A) : All P l -> (forall x, P x -> Q x) -> All Q l.
+Proof. induction 1; try constructor; intuition auto. Qed.
+
+Section All_size.
+  Context {A} (P : A -> Type) (fn : forall x1, P x1 -> size).
+  Fixpoint all_size {l1 : list A} (f : All P l1) : size :=
+  match f with
+  | All_nil => 0
+  | All_cons x l px pl => fn _ px + all_size pl
+  end.
+End All_size.
+
+Section All2_size.
+  Context {A} (P : A -> A -> Type) (fn : forall x1 x2, P x1 x2 -> size).
+  Fixpoint all2_size {l1 l2 : list A} (f : Forall2 P l1 l2) : size :=
+  match f with
+  | Forall2_nil => 0
+  | Forall2_cons x y l l' rxy rll' => fn _ _ rxy + all2_size rll'
+  end.
+End All2_size.
+
 Ltac close_Forall :=
   match goal with
   | H : Forall _ _ _ |- Forall _ _ _ => apply (Forall_impl H)
@@ -571,3 +612,78 @@ Proof.
   now constructor.
   constructor. now omega.
 Qed.
+
+Lemma some_inj {A} {x y : A} : Some x = Some y -> x = y.
+Proof.
+  now intros [=].
+Qed.
+
+Definition mapi {A B} (f : nat -> A -> B) (l : list A) : list B :=
+  let fix aux n l :=
+      match l with
+      | [] => []
+      | hd :: tl => f n hd :: aux (S n) tl
+      end
+  in aux 0 l.
+
+Fixpoint chop {A} (n : nat) (l : list A) :=
+  match n with
+  | 0 => ([], l)
+  | S n =>
+    match l with
+    | hd :: tl =>
+      let '(l, r) := chop n tl in
+      (hd :: l, r)
+    | [] => ([], [])
+    end
+  end.
+
+Lemma nth_map {A} (f : A -> A) n l d :
+  (d = f d) ->
+  nth n (map f l) d = f (nth n l d).
+Proof.
+  induction n in l |- *; destruct l; simpl; auto.
+Qed.
+
+Definition on_pi2 {A B C} (f : B -> B) (p : A * B * C) : A * B * C :=
+  (fst (fst p), f (snd (fst p)), snd p).
+
+Lemma All_map_id {A} {P : A -> Type} {l} {f} :
+  All P l ->
+  (forall x, P x -> f x = x) ->
+  map f l = l.
+Proof.
+  induction 1; simpl; f_equal; intuition auto.
+  f_equal; auto.
+Qed.
+
+Lemma nlt_map {A B} (l : list A) (f : A -> B) (n : {n | n < length l }) : `n < length (map f l).
+Proof. destruct n. simpl. now rewrite map_length. Defined.
+
+Lemma map_def_safe_nth {A B} (l : list A) (n : {n | n < length l}) (f : A -> B) :
+  f (safe_nth l n) = safe_nth (map f l) (exist _ (`n) (nlt_map l f n)).
+Proof.
+  destruct n.
+  induction l in x, l0 |- *. simpl. bang.
+  simpl. destruct x. reflexivity. simpl.
+  rewrite IHl. f_equal. f_equal. pi.
+Qed.
+
+Lemma mapi_map {A B} (f : nat -> A -> B) (l : list A) (g : A -> A) :
+  mapi f (map g l) = mapi (fun i x => f i (g x)) l.
+Proof.
+  unfold mapi. generalize 0. induction l; simpl; congruence.
+Qed.
+
+Lemma map_mapi {A B} (f : nat -> A -> B) (l : list A) (g : B -> B) :
+  map g (mapi f l) = mapi (fun i x => g (f i x)) l.
+Proof.
+  unfold mapi. generalize 0. induction l; simpl; congruence.
+Qed.
+
+Lemma chop_map {A B} (f : A -> B) n l l' l'' :
+  chop n l = (l', l'') -> chop n (map f l) = (map f l', map f l'').
+Proof.
+  induction n in l, l', l'' |- *; destruct l; try intros [= <- <-]; simpl; try congruence.
+  destruct (chop n l) eqn:Heq. specialize (IHn _ _ _ Heq).
+  intros [= <- <-]. now rewrite IHn. Qed.

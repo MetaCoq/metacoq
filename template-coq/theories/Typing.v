@@ -480,14 +480,6 @@ Fixpoint rels_of {A} (Γ : list A) acc : list term :=
 (** Compute the type of a case from the predicate [p], actual parameters [pars] and
     an inductive declaration. *)
 
-Definition mapi {A B} (f : nat -> A -> B) (l : list A) : list B :=
-  let fix aux n l :=
-      match l with
-      | [] => []
-      | hd :: tl => f n hd :: aux (S n) tl
-      end
-  in aux 0 l.
-
 Fixpoint decompose_prod_assum (Γ : context) (t : term) : context * term :=
   match t with
   | tProd n A B => decompose_prod_assum (Γ ,, vass n A) B
@@ -504,18 +496,6 @@ Definition to_extended_list Γ :=
       | [] => l
       end
   in reln [] 0 Γ.
-
-Fixpoint chop {A} (n : nat) (l : list A) :=
-  match n with
-  | 0 => ([], l)
-  | S n =>
-    match l with
-    | hd :: tl =>
-      let '(l, r) := chop n tl in
-      (hd :: l, r)
-    | [] => ([], [])
-    end
-  end.
 
 Fixpoint instantiate_params pars ty :=
   match pars with
@@ -867,18 +847,60 @@ Section GlobalMaps.
 
 End GlobalMaps.
 
-(* Definition on_decl_typing (P : context -> term -> term -> Type) d := *)
-(*   match d with *)
-(*   | ConstantDecl id cst => *)
-(*     match cst.(cst_body) with *)
-(*     | Some b => P [] b cst.(cst_type) *)
-(*     | None => forall s, P [] cst.(cst_type) s *)
-(*     end *)
-(*   | InductiveDecl id ind => *)
-(*     All (fun ind => forall s, P [] ind.(ind_type) s *)
-(*     /\ Forall (fun x => P (arities_context ind.(ind_bodies)) (snd (fst x))) ind.(ind_ctors) *)
-(*     /\ Forall (fun x => P (arities_context ind.(ind_bodies)) (snd x)) ind.(ind_projs)) ind.(ind_bodies) *)
-(*   end. *)
+Lemma on_global_decls_mix `{checker_flags} {Σ P Q} :
+  on_global_env P Σ -> on_global_env Q Σ -> on_global_env (fun Σ Γ t T => (P Σ Γ t T * Q Σ Γ t T)%type) Σ.
+Proof.
+  intros. destruct Σ as [Σ φ]. red in X, X0 |- *.
+  simpl in *. induction X in X0 |- *. inv X0. constructor; auto.
+  inv X0. constructor; auto.
+  clear IHX.
+  destruct d; simpl.
+  - destruct c; simpl. destruct cst_body; simpl in *.
+    red in o, X2 |- *. simpl in *.
+    split; auto.
+    red in o, X2 |- *. simpl in *.
+    split; auto.
+  - do 2 red in o, X2 |- *. simpl in *.
+    revert o X2. generalize (ind_bodies m). intros l; generalize (arities_context l).
+    intros. red in o, X2. merge_Forall. eapply All_impl; eauto. clear X2.
+    intros.
+    destruct x; simpl in *.
+    destruct X0 as [Xl Xr].
+    constructor; red; simpl.
+    + apply onArity in Xl; apply onArity in Xr. intuition.
+    + apply onConstructors in Xl; apply onConstructors in Xr. intuition.
+      red in Xl, Xr. merge_Forall. eapply All_impl; eauto.
+    + apply onProjections in Xl; apply onProjections in Xr. intuition.
+      red in Xl, Xr. merge_Forall. eapply All_impl; eauto.
+Qed.
+
+Lemma on_global_decls_impl `{checker_flags} Σ P Q :
+  (forall Σ Γ t T, on_global_env P Σ -> P Σ Γ t T -> Q Σ Γ t T) ->
+  on_global_env P Σ -> on_global_env Q Σ.
+Proof.
+  intros. destruct Σ as [Σ φ]. red in X0 |- *.
+  simpl in *. induction X0; constructor; auto.
+  clear IHX0. destruct d; simpl.
+  - destruct c; simpl. destruct cst_body; simpl in *.
+    red in o |- *. simpl in *. auto.
+    red in o |- *. simpl in *. red in o. red. auto.
+  - do 2 red in o |- *. simpl in *.
+    revert o. generalize (ind_bodies m). intros l; generalize (arities_context l).
+    intros. red in o. merge_Forall. eapply All_impl; eauto. intros.
+    destruct x; simpl in *.
+    constructor; red; simpl.
+    + apply onArity in X1. intuition.
+    + apply onConstructors in X1.
+      red in X1. eapply All_impl; intuition eauto. now do 2 red in X2 |- *.
+    + apply onProjections in X1.
+      red in X1. eapply All_impl; intuition eauto. now do 2 red in X2 |- *.
+Qed.
+
+Lemma on_global_decls_proj `{checker_flags} {Σ P Q} :
+  on_global_env (fun Σ Γ t T => (P Σ Γ t T * Q Σ Γ t T)%type) Σ -> on_global_env P Σ.
+Proof.
+  intros. eapply on_global_decls_impl. intros. 2:eauto. simpl in X1; intuition.
+Qed.
 
 Definition lift_typing (P : global_context -> context -> term -> term -> Type) :
   (global_context -> context -> option term -> term -> Type) :=
@@ -920,44 +942,11 @@ Definition Forall_decls_typing `{checker_flags}
            (P : global_context -> context -> term -> term -> Type) : global_context -> Type :=
   on_global_env (lift_typing P).
 
-Lemma All_impl {A} {P Q} (l : list A) : All P l -> (forall x, P x -> Q x) -> All Q l.
-Proof. induction 1; try constructor; intuition auto. Qed.
-
 Lemma on_type_lift_all `{checker_flags} P Σ Γ T :
   on_type (lift_typing typing) Σ Γ T -> on_type (all_typing P) Σ Γ T ->
   on_type (lift_typing P) Σ Γ T.
 Proof. intros. red in X, X0. red. red. destruct X. exists x.  apply X0. Qed.
 Hint Resolve on_type_lift_all.
-
-(* Lemma type_global_env_Forall_decls `{checker_flags} Σ P : *)
-(*   type_global_env Σ -> Forall_decls_typing P Σ -> *)
-(*   on_global_env (lift_typing P) Σ. *)
-(* Proof. *)
-(*   intros. destruct Σ as [Σ φ]. *)
-(*   red in X. red in X. red. simpl in *. *)
-(*   induction X; econstructor; eauto. *)
-(*   apply IHX. now inv X0. *)
-(*   inv X0. *)
-
-(*   destruct d; simpl in *. *)
-(*   - destruct c; simpl in *. *)
-(*     destruct cst_body; simpl in *; unfold on_constant_decl in *; simpl in *. *)
-(*     eauto. red. red. *)
-(*     destruct o. exists x. eauto. *)
-(*   - unfold on_inductive, on_ind_bodies in *. *)
-(*     merge_Forall. apply (All_impl _ X2). clear X2; intros. *)
-(*     destruct X0 as [l r]. *)
-(*     unfold on_type, on_constructors, on_projections in *. *)
-(*     constructor. *)
-(*     + apply onArity in l; apply onArity in r. eauto. *)
-(*     + apply onConstructors in l; apply onConstructors in r. *)
-(*       red in l, r |- *; merge_Forall. eapply All_impl; eauto. clear r. *)
-(*       intros [[id t] arity]. *)
-(*       intros [onc onc']. red in onc, onc' |- *. eauto. *)
-(*     + apply onProjections in l; apply onProjections in r. *)
-(*       red in l, r |- *; merge_Forall. eapply All_impl; eauto. clear r. *)
-(*       intros [id t] [onc onc']. red in onc, onc' |- *. eauto. *)
-(* Qed. *)
 
 Inductive Forall_typing_spine `{checker_flags} Σ Γ (P : term -> term -> Type) :
   forall (T : term) (t : list term) (U : term), typing_spine Σ Γ T t U -> Type :=
@@ -968,26 +957,6 @@ Inductive Forall_typing_spine `{checker_flags} Σ Γ (P : term -> term -> Type) 
     P (tProd na A B) (tSort s) -> P hd A -> Forall_typing_spine Σ Γ P (B {0 := hd}) tl B' tls ->
     Forall_typing_spine Σ Γ P T (hd :: tl) B'
       (type_spine_cons Σ Γ hd tl na A B s T B' typrod cumul ty tls).
-
-Definition size := nat.
-
-Section All_size.
-  Context {A} (P : A -> Type) (fn : forall x1, P x1 -> size).
-  Fixpoint all_size {l1 : list A} (f : All P l1) : size :=
-  match f with
-  | All_nil => 0
-  | All_cons x l px pl => fn _ px + all_size pl
-  end.
-End All_size.
-
-Section All2_size.
-  Context {A} (P : A -> A -> Type) (fn : forall x1 x2, P x1 x2 -> size).
-  Fixpoint all2_size {l1 l2 : list A} (f : Forall2 P l1 l2) : size :=
-  match f with
-  | Forall2_nil => 0
-  | Forall2_cons x y l l' rxy rll' => fn _ _ rxy + all2_size rll'
-  end.
-End All2_size.
 
 Section wf_local_size.
   Context `{checker_flags} (Σ : global_context).
@@ -1650,12 +1619,6 @@ Proof.
   eapply localenv_cons_def. apply IHl'. apply X0. apply X1.
 Qed.
 
-Lemma Forall_rev {A} (P : A -> Prop) (l : list A) : Forall P l -> Forall P (List.rev l).
-Proof.
-  induction l using rev_ind. constructor.
-  intros. rewrite rev_app_distr. apply Forall_app_inv. apply Forall_app in H. intuition auto.
-Qed.
-
 Definition wf_decl d := match decl_body d with Some b => Ast.wf b | None => True end /\ Ast.wf (decl_type d).
 
 Ltac wf := intuition try (eauto with wf || congruence || solve [constructor]).
@@ -1695,20 +1658,8 @@ Proof.
   simpl in *. eapply IHX.
 Qed.
 
-Lemma All_lookup `{checker_flags} {P : def term -> Type} {Γ n} (isdecl : n < #|Γ|) : All P Γ ->
-   P (safe_nth Γ (exist _ n isdecl)).
-Proof.
-  induction 1 in n, isdecl |- *. simpl. bang.
-  destruct n. simpl. auto.
-  simpl in *. eapply IHX.
-Qed.
 
-Lemma Forall_rev_map {A B} (P : A -> Prop) f (l : list B) : Forall (compose P f) l -> Forall P (rev_map f l).
-Proof. induction 1. constructor. rewrite rev_map_cons. apply Forall_app_inv. split; auto. Qed.
-
-Lemma typing_wf_gen `{checker_flags} : env_prop (fun Σ Γ t T =>
-  List.Forall wf_decl Γ ->
-  Ast.wf t /\ Ast.wf T).
+Lemma typing_wf_gen `{checker_flags} : env_prop (fun Σ Γ t T => Ast.wf t /\ Ast.wf T).
 Proof.
   apply typing_ind_env; intros; auto with wf;
     specialize_goal;
@@ -1718,23 +1669,19 @@ Proof.
     pose proof (All_local_env_lookup isdecl H0) as Pn.
     destruct safe_nth; red in Pn.
     destruct decl_body; cbn -[skipn] in *; wf.
-    apply Pn. wf.
-    destruct Pn as [u Pn]. wf. apply Pn; wf.
-  - split; constructor; wf. apply H1; wf.
-  - forward H1; wf.
-  - forward H2; wf.
+    destruct Pn. wf.
   - split. constructor; auto. wf.
     clear H1 H2 X.
     induction X0. wf. constructor. wf.
-    apply IHX0. split. wf. apply wf_subst. wf. wf. now inv H4.
+    apply IHX0. split. wf. apply wf_subst. wf. wf. now inv H0.
     clear H1 H2 X.
     induction X0. wf. apply IHX0. constructor. wf.
-    apply wf_subst. wf. wf. now inv H4.
+    apply wf_subst. wf. wf. now inv H0.
   - split. wf. apply wf_subst_instance_constr. wf.
     red in H0.
     eapply lookup_on_global_env in H0 as [Σ' [wfΣ' prf]]; eauto.
     red in prf. destruct decl; destruct cst_body; red in prf; simpl in *; wf.
-    apply prf. constructor. destruct prf. apply a. constructor.
+    destruct prf. apply a.
 
   - split. wf. apply wf_subst_instance_constr. wf.
     destruct isdecl as [Hmdecl Hidecl]. red in Hmdecl.
@@ -1742,85 +1689,46 @@ Proof.
     do 3 red in prf.
     eapply nth_error_all in Hidecl; eauto.
     eapply onArity in Hidecl.
-    destruct Hidecl; wf. apply a; eauto.
+    destruct Hidecl; wf.
   - split. wf.
     destruct isdecl as [[Hmdecl Hidecl] Hcdecl]. red in Hmdecl.
     eapply lookup_on_global_env in X as [Σ' [wfΣ' prf]]; eauto. red in prf.
     eapply nth_error_all in Hidecl; eauto. simpl in *. intuition.
-    assert (Forall wf_decl (arities_context (ind_bodies mdecl))).
-    { clear Hidecl. do 2 red in prf.
-      unfold arities_context. apply Forall_rev_map.
-      eapply All_Forall. eauto. eapply All_impl; eauto. intros.
-      eapply onArity in X. red. red. simpl. split; auto. destruct X. apply a. wf. }
     apply onConstructors in Hidecl.
     eapply nth_error_all in Hcdecl; eauto.
     destruct Hcdecl as [s Hs]. unfold type_of_constructor. wf.
   - split. wf. constructor; eauto.
     eapply Forall2_Forall_left; eauto. simpl. intuition auto.
     apply wf_mkApps. wf. apply Forall_app_inv. split. 2:wf.
-    inv H8. apply wf_mkApps_inv in H11. now apply Forall_skipn.
+    inv H8. apply wf_mkApps_inv in H10. now apply Forall_skipn.
   - split. wf. apply wf_parsubst. constructor. wf. intuition.
-    apply wf_mkApps_inv in H3. now apply Forall_rev.
+    apply wf_mkApps_inv in H2. now apply Forall_rev.
     subst ty. destruct isdecl as [[Hmdecl Hidecl] Hpdecl].
     eapply lookup_on_global_env in Hmdecl as [Σ' [wfΣ' prf]]; eauto. red in prf.
     eapply nth_error_all in Hidecl; eauto. intuition.
-    assert (Forall wf_decl (arities_context (ind_bodies mdecl) ,, vass nAnon (ind_type idecl))).
-    { constructor. apply onArity in Hidecl. destruct Hidecl as [s Hs]. red.
-      simpl. split; auto. apply Hs. wf.
-      clear Hidecl. unfold arities_context. apply Forall_rev_map.
-      eapply All_Forall. eauto. eapply All_impl; eauto. intros.
-      eapply onArity in X1. red. red. simpl. split; auto. destruct X1. apply a. wf. }
     eapply onProjections in Hidecl.
     eapply nth_error_all in Hpdecl; eauto.
-    destruct Hpdecl as [s Hs]. apply Hs. wf.
+    destruct Hpdecl as [s Hs]. apply Hs.
   - subst types.
     apply All_local_env_app in X as [HΓ Hmfix].
-    assert (Forall wf_decl (fix_context mfix)).
-    { clear ty isdecl X0. induction mfix using rev_ind. constructor.
-      unfold fix_context in *.
-      rewrite map_app, rev_app_distr in *. simpl in *.
-      inv Hmfix. constructor. red. simpl. split; auto; apply X0.
-      auto. apply Forall_app_inv. split; auto. eapply IHmfix.
-      auto. }
     clear Hmfix.
-    pose proof H1.
     split.
-    + revert X0 H1. generalize (fix_context mfix). intros.
+    + revert X0. generalize (fix_context mfix). intros.
       clear ty isdecl. constructor. induction mfix. constructor. constructor.
-      2:{ apply IHmfix.
-          unfold fix_context in H2. simpl in H2. inv X0.
-          unfold fix_context in H2. simpl in H2. apply Forall_app in H2 as [wfl wfx]. auto.
-          inv X0. apply X1. }
-      split.
-      unfold fix_context in H2. simpl in H2. apply Forall_app in H2 as [wfl wfx].
-      inv wfx. apply H2. inv X0. intuition.
-      apply b. apply Forall_app_inv; auto.
+      2:{ apply IHmfix. inv X0. auto. }
+      inv X0. intuition.
     + subst ty.
-      eapply All_lookup in X0. intuition. apply b. eapply Forall_app_inv; wf.
+      eapply All_safe_nth in X0. intuition eauto.
   - subst types.
     apply All_local_env_app in X as [HΓ Hmfix].
-    assert (Forall wf_decl (fix_context mfix)).
-    { clear ty isdecl X0. induction mfix using rev_ind. constructor.
-      unfold fix_context in *.
-      rewrite map_app, rev_app_distr in *. simpl in *.
-      inv Hmfix. constructor. red. simpl. split; auto; apply X0.
-      auto. apply Forall_app_inv. split; auto. eapply IHmfix.
-      auto. }
     clear Hmfix.
-    pose proof H1.
     split.
-    + revert X0 H1. generalize (fix_context mfix). intros.
+    + revert X0. generalize (fix_context mfix). intros.
       clear ty isdecl. constructor. induction mfix. constructor. constructor.
-      2:{ apply IHmfix.
-          unfold fix_context in H2. simpl in H2. inv X0.
-          unfold fix_context in H2. simpl in H2. apply Forall_app in H2 as [wfl wfx]. auto.
-          inv X0. apply X1. }
-      split.
-      unfold fix_context in H2. simpl in H2. apply Forall_app in H2 as [wfl wfx].
-      inv wfx. apply H2. inv X0. intuition.
-      apply b. apply Forall_app_inv; auto.
+      2:{ apply IHmfix. inv X0. auto. }
+      inv X0. intuition.
     + subst ty.
-      eapply All_lookup in X0. intuition. apply b. eapply Forall_app_inv; wf.
+      eapply All_safe_nth in X0. intuition eauto.
 Qed.
 
 Lemma typing_all_wf_decl `{checker_flags} Σ (wfΣ : wf Σ) Γ (wfΓ : wf_local Σ Γ) :
@@ -1832,61 +1740,6 @@ Proof.
 Qed.
 Hint Resolve typing_all_wf_decl : wf.
 
-Lemma on_global_decls_mix `{checker_flags} {Σ P Q} :
-  on_global_env P Σ -> on_global_env Q Σ -> on_global_env (fun Σ Γ t T => (P Σ Γ t T * Q Σ Γ t T)%type) Σ.
-Proof.
-  intros. destruct Σ as [Σ φ]. red in X, X0 |- *.
-  simpl in *. induction X in X0 |- *. inv X0. constructor; auto.
-  inv X0. constructor; auto.
-  clear IHX.
-  destruct d; simpl.
-  - destruct c; simpl. destruct cst_body; simpl in *.
-    red in o, X2 |- *. simpl in *.
-    split; auto.
-    red in o, X2 |- *. simpl in *.
-    split; auto.
-  - do 2 red in o, X2 |- *. simpl in *.
-    revert o X2. generalize (ind_bodies m). intros l; generalize (arities_context l).
-    intros. red in o, X2. merge_Forall. eapply All_impl; eauto. clear X2.
-    intros.
-    destruct x; simpl in *.
-    destruct X0 as [Xl Xr].
-    constructor; red; simpl.
-    + apply onArity in Xl; apply onArity in Xr. intuition.
-    + apply onConstructors in Xl; apply onConstructors in Xr. intuition.
-      red in Xl, Xr. merge_Forall. eapply All_impl; eauto.
-    + apply onProjections in Xl; apply onProjections in Xr. intuition.
-      red in Xl, Xr. merge_Forall. eapply All_impl; eauto.
-Qed.
-
-Lemma on_global_decls_impl `{checker_flags} Σ P Q :
-  (forall Σ Γ t T, on_global_env P Σ -> P Σ Γ t T -> Q Σ Γ t T) ->
-  on_global_env P Σ -> on_global_env Q Σ.
-Proof.
-  intros. destruct Σ as [Σ φ]. red in X0 |- *.
-  simpl in *. induction X0; constructor; auto.
-  clear IHX0. destruct d; simpl.
-  - destruct c; simpl. destruct cst_body; simpl in *.
-    red in o |- *. simpl in *. auto.
-    red in o |- *. simpl in *. red in o. red. auto.
-  - do 2 red in o |- *. simpl in *.
-    revert o. generalize (ind_bodies m). intros l; generalize (arities_context l).
-    intros. red in o. merge_Forall. eapply All_impl; eauto. intros.
-    destruct x; simpl in *.
-    constructor; red; simpl.
-    + apply onArity in X1. intuition.
-    + apply onConstructors in X1.
-      red in X1. eapply All_impl; intuition eauto. now do 2 red in X2 |- *.
-    + apply onProjections in X1.
-      red in X1. eapply All_impl; intuition eauto. now do 2 red in X2 |- *.
-Qed.
-
-Lemma on_global_decls_proj `{checker_flags} {Σ P Q} :
-  on_global_env (fun Σ Γ t T => (P Σ Γ t T * Q Σ Γ t T)%type) Σ -> on_global_env P Σ.
-Proof.
-  intros. eapply on_global_decls_impl. intros. 2:eauto. simpl in X1; intuition.
-Qed.
-
 Lemma typing_wf_sigma `{checker_flags} Σ (wfΣ : wf Σ) :
   on_global_env (fun Σ Γ t T => match t with Some b => Ast.wf b /\ Ast.wf T | None => Ast.wf T end) Σ.
 Proof.
@@ -1897,11 +1750,7 @@ Proof.
   eapply on_global_decls_impl; eauto; simpl; intros. clear X.
   destruct X1 as [Hty Ht].
   pose proof (on_global_decls_proj X0).
-  destruct t. apply Ht. red in Hty.
-  eapply typing_all_wf_decl; eauto. eapply typing_wf_local; eauto.
-  destruct Hty as [s' Hs'].
-  destruct Ht as [s Hs]. apply Hs.
-  eapply typing_all_wf_decl; eauto. eapply typing_wf_local; eauto.
+  destruct t. apply Ht. destruct Ht; wf.
 Qed.
 
 Lemma typing_wf `{checker_flags} Σ (wfΣ : wf Σ) Γ (wfΓ : wf_local Σ Γ) t T :

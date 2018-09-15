@@ -663,3 +663,7 @@ Proof.
   - f_equal. red in H; apply_spec. intuition auto.
     destruct x; unfold map_def; simpl in *; congruence.
 Qed.
+
+Lemma isLambda_lift n k (bod : term) :
+  isLambda bod = true -> isLambda (lift n k bod) = true.
+Proof. destruct bod; simpl; try congruence. Qed.

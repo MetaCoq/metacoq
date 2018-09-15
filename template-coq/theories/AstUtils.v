@@ -1,10 +1,14 @@
-From Coq Require Import Ascii String Bool OrderedType.
-From Coq Require Import List Program.
+From Coq Require Import Ascii String Bool OrderedType Lia List Program.
 From Template Require Import Ast utils.
 Import List.ListNotations.
 Require Import FunctionalExtensionality.
 
 Set Asymmetric Patterns.
+
+Arguments dname {term} _.
+Arguments dtype {term} _.
+Arguments dbody {term} _.
+Arguments rarg {term} _.
 
 Ltac inv H := inversion_clear H.
 
@@ -142,10 +146,13 @@ Inductive OnOne2 {A : Type} (P : A -> A -> Type) : list A -> list A -> Type :=
 | OnOne2_hd hd hd' tl : P hd hd' -> OnOne2 P (hd :: tl) (hd' :: tl)
 | OnOne2_tl hd tl tl' : OnOne2 P tl tl' -> OnOne2 P (hd :: tl) (hd :: tl').
 
-Arguments dname {term} _.
-Arguments dtype {term} _.
-Arguments dbody {term} _.
-Arguments rarg {term} _.
+Fixpoint mapi_rec {A B} (f : nat -> A -> B) (l : list A) (n : nat) : list B :=
+  match l with
+  | [] => []
+  | hd :: tl => f n hd :: mapi_rec f tl (S n)
+  end.
+
+Definition mapi {A B} (f : nat -> A -> B) (l : list A) := mapi_rec f l 0.
 
 Definition on_snd {A B C} (f : B -> C) (p : A * B) :=
   (fst p, f (snd p)).
@@ -566,6 +573,14 @@ Proof. induction 1; try constructor; intuition auto. Qed.
 Lemma Alli_impl {A} {P Q} (l : list A) {n} : Alli P n l -> (forall n x, P n x -> Q n x) -> Alli Q n l.
 Proof. induction 1; try constructor; intuition auto. Qed.
 
+Lemma All_map {A B} (P : B -> Type) (f : A -> B) (l : list A) :
+  All (compose P f) l -> All P (map f l).
+Proof. induction 1; constructor; auto. Qed.
+
+(* Lemma Alli_mapi {A B} (P : nat -> B -> Type) (f : nat -> A -> B) (l : list A) n : *)
+(*   Alli (fun n x => P n (f n x)) n l -> Alli P n (mapi f l). *)
+(* Proof. induction 1; constructor; auto. Qed. *)
+
 Section All_size.
   Context {A} (P : A -> Type) (fn : forall x1, P x1 -> size).
   Fixpoint all_size {l1 : list A} (f : All P l1) : size :=
@@ -653,14 +668,6 @@ Lemma some_inj {A} {x y : A} : Some x = Some y -> x = y.
 Proof.
   now intros [=].
 Qed.
-
-Fixpoint mapi_rec {A B} (f : nat -> A -> B) (l : list A) (n : nat) : list B :=
-  match l with
-  | [] => []
-  | hd :: tl => f n hd :: mapi_rec f tl (S n)
-  end.
-
-Definition mapi {A B} (f : nat -> A -> B) (l : list A) := mapi_rec f l 0.
 
 Lemma mapi_rec_eqn {A B} (f : nat -> A -> B) (l : list A) a n :
   mapi_rec f (a :: l) n = f n a :: mapi_rec f l (S n).
@@ -752,3 +759,89 @@ Proof.
   induction n in l, l', l'' |- *; destruct l; try intros [= <- <-]; simpl; try congruence.
   destruct (chop n l) eqn:Heq. specialize (IHn _ _ _ Heq).
   intros [= <- <-]. now rewrite IHn. Qed.
+
+Lemma mapi_mapi {A B C} (g : nat -> A -> B) (f : nat -> B -> C) (l : list A) :
+  mapi f (mapi g l) = mapi (fun n x => f n (g n x)) l.
+Proof. unfold mapi. generalize 0. induction l; simpl; try congruence. Qed.
+
+Lemma mapi_rec_ext {A B} (f g : nat -> A -> B) (l : list A) n :
+  (forall k x, n <= k -> k < length l + n -> f k x = g k x) ->
+  mapi_rec f l n = mapi_rec g l n.
+Proof.
+  intros Hfg. induction l in n, Hfg |- *; simpl; try congruence.
+  intros. rewrite Hfg; simpl; try lia. f_equal.
+  rewrite IHl; auto. intros. apply Hfg. simpl; lia. simpl. lia.
+Qed.
+
+Lemma mapi_ext {A B} (f g : nat -> A -> B) (l : list A) :
+  (forall n x, f n x = g n x) ->
+  mapi f l = mapi g l.
+Proof. intros; now apply mapi_rec_ext. Qed.
+
+Lemma mapi_rec_app {A B} (f : nat -> A -> B) (l l' : list A) n :
+  (mapi_rec f (l ++ l') n = mapi_rec f l n ++ mapi_rec f l' (length l + n))%list.
+Proof.
+  induction l in n |- *; simpl; try congruence.
+  rewrite IHl. f_equal. now rewrite <- Nat.add_succ_comm.
+Qed.
+
+Lemma mapi_app {A B} (f : nat -> A -> B) (l l' : list A) :
+  (mapi f (l ++ l') = mapi f l ++ mapi (fun n x => f (length l + n) x) l')%list.
+Proof.
+  unfold mapi; rewrite mapi_rec_app.
+  f_equal. generalize 0.
+  induction l'; intros. reflexivity. rewrite mapi_rec_eqn.
+  change (S (length l + n)) with (S (length l) + n).
+  rewrite (Nat.add_succ_comm _ n). now rewrite IHl'.
+Qed.
+
+Lemma mapi_rec_Sk {A B} (f : nat -> A -> B) (l : list A) k :
+  mapi_rec f l (S k) = mapi_rec (fun n x => f (S n) x) l k.
+Proof.
+  induction l in k |- *; simpl; congruence.
+Qed.
+
+Lemma rev_mapi_rec {A B} (f : nat -> A -> B) (l : list A) n k : k <= n ->
+  List.rev (mapi_rec f l (n - k)) = mapi_rec (fun k x => f (pred (length l) + n - k) x) (List.rev l) k.
+Proof.
+  unfold mapi.
+  induction l in n, k |- * using rev_ind; simpl; try congruence.
+  intros. rewrite rev_unit. simpl.
+  rewrite mapi_rec_app rev_app_distr; simpl. rewrite IHl; auto. simpl.
+  rewrite app_length. simpl. f_equal. f_equal. lia. rewrite mapi_rec_Sk.
+  apply mapi_rec_ext. intros. f_equal. rewrite List.rev_length in H1.
+  rewrite Nat.add_1_r. simpl; lia.
+Qed.
+
+Lemma rev_mapi {A B} (f : nat -> A -> B) (l : list A) :
+  List.rev (mapi f l) = mapi (fun k x => f (pred (length l) - k) x) (List.rev l).
+Proof.
+  unfold mapi. change 0 with (0 - 0) at 1.
+  rewrite rev_mapi_rec; auto. now rewrite Nat.add_0_r.
+Qed.
+
+Lemma mapi_rec_rev {A B} (f : nat -> A -> B) (l : list A) n :
+  mapi_rec f (List.rev l) n = List.rev (mapi (fun k x => f (length l + n - S k) x) l).
+Proof.
+  unfold mapi.
+  induction l in n |- * using rev_ind; simpl; try congruence.
+  intros. rewrite rev_unit. simpl.
+  rewrite IHl mapi_rec_app.
+  simpl. rewrite rev_unit. f_equal.
+  rewrite app_length. simpl. f_equal. lia.
+  rewrite app_length. simpl.
+  f_equal. f_equal. extensionality k. extensionality x'.
+  f_equal. lia.
+Qed.
+
+Lemma mapi_rev {A B} (f : nat -> A -> B) (l : list A) :
+  mapi f (List.rev l) = List.rev (mapi (fun k x => f (length l - S k) x) l).
+Proof. unfold mapi at 1. rewrite mapi_rec_rev. now rewrite Nat.add_0_r. Qed.
+
+Lemma mapi_rec_length {A B} (f : nat -> A -> B) (l : list A) n :
+  length (mapi_rec f l n) = length l.
+Proof. induction l in n |- *; simpl; try congruence. Qed.
+
+Lemma mapi_length {A B} (f : nat -> A -> B) (l : list A) :
+  length (mapi f l) = length l.
+Proof. apply mapi_rec_length. Qed.

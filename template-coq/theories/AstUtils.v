@@ -273,7 +273,7 @@ Proof.
   eapply map_def_spec; eauto.
 Qed.
 
-Lemma Forall_forall_mix {A B : Type} {P : A -> Prop} {p : A -> bool} {l : list A} :
+Lemma Forall_forall_mix {A : Type} {P : A -> Prop} {p : A -> bool} {l : list A} :
   Forall P l -> forallb p l = true -> Forall (fun x => P x /\ p x = true) l.
 Proof.
   induction 1. constructor. simpl. rewrite andb_true_iff. intuition.
@@ -845,3 +845,73 @@ Proof. induction l in n |- *; simpl; try congruence. Qed.
 Lemma mapi_length {A B} (f : nat -> A -> B) (l : list A) :
   length (mapi f l) = length l.
 Proof. apply mapi_rec_length. Qed.
+
+Lemma skipn_length {A} n (l : list A) : n <= length l -> length (skipn n l) = length l - n.
+Proof.
+  induction l in n |- *; destruct n; simpl; auto.
+  intros. rewrite IHl; auto with arith.
+Qed.
+
+Lemma forallb_map {A B} (f : A -> B) (l : list A) p :
+  forallb p (map f l) = forallb (compose p f) l.
+Proof.
+  induction l in p, f |- *; unfold compose; simpl; rewrite ?andb_true_iff;
+    intuition (f_equal; auto). apply IHl.
+Qed.
+
+Lemma Forall_forallb {A} P (l : list A) p :
+  Forall P l ->
+  (forall x, P x -> p x = true) ->
+  forallb p l = true.
+Proof.
+  induction 1 in p |- *; unfold compose; simpl; rewrite ?andb_true_iff;
+    intuition auto.
+Qed.
+
+Lemma All_forallb {A} P (l : list A) p :
+  All P l ->
+  (forall x, P x -> p x = true) ->
+  forallb p l = true.
+Proof.
+  induction 1 in p |- *; unfold compose; simpl; rewrite ?andb_true_iff;
+    intuition auto.
+Qed.
+
+Lemma forallb_Forall {A} (P : A -> Prop) (l : list A) p :
+  forallb p l = true ->
+  (forall x, p x = true -> P x) ->
+  Forall P l.
+Proof.
+  induction l in p |- *; unfold compose; simpl. constructor.
+  intros. constructor; eauto; rewrite -> andb_true_iff in H; intuition eauto.
+Qed.
+
+Lemma forallb_skipn {A} (p : A -> bool) n l :
+  forallb p l = true ->
+  forallb p (skipn n l) = true.
+Proof.
+  induction l in n |- *; destruct n; simpl; try congruence.
+  intros. apply IHl. rewrite -> andb_true_iff in H; intuition.
+Qed.
+
+Lemma forallb_rev {A} (p : A -> bool) l :
+  forallb p (List.rev l) = forallb p l.
+Proof.
+  induction l using rev_ind in |- *; simpl; try congruence.
+  rewrite rev_unit forallb_app. simpl. rewrite <- IHl.
+  now rewrite andb_comm andb_true_r.
+Qed.
+
+Lemma Forall_forallb_eq_forallb {A} (P : A -> Prop) (p q : A -> bool) l :
+  Forall P l ->
+  (forall x, P x -> p x = q x) ->
+  forallb p l = forallb q l.
+Proof.
+  induction 1; simpl; intuition (f_equal; auto).
+Qed.
+
+Lemma forallb2_length {A} (p : A -> A -> bool) l l' : forallb2 p l l' = true -> length l = length l'.
+Proof.
+  induction l in l' |- *; destruct l'; simpl; try congruence.
+  rewrite !andb_true_iff. intros [Hp Hl]. erewrite IHl; eauto.
+Qed.

@@ -20,15 +20,6 @@ Import MonadNotation.
   that are used to type-check terms in reasonable time. *)
 Set Asymmetric Patterns.
 
-Ltac start :=
-  let Σ := fresh "Σ" in red; simpl; setenv Σ.
-
-Ltac fill_tApp :=
-  match goal with
-    |- context[mkApps _ ?x] => unify x (@nil term)
-  end.
-
-
 Module RedFlags.
 
   Record t := mk

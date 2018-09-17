@@ -9,8 +9,8 @@ From Template Require Export
      Loader        (* Declaration of the Template Coq plugin *)
      Induction     (* Induction *)
      LiftSubst     (* Lifting and substitution for terms *)
-     WeakSubst     (* Weakening and substitution lemmas *)
      UnivSubst     (* Substitution of universe instances *)
      Typing        (* Typing judgment *)
+     Weakening     (* Weakening lemmas *)
      Checker       (* Partial typechecker implementation *)
      Retyping      (* Fast retyping judgment *).

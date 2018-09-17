@@ -20,9 +20,9 @@ theories/AstUtils.v
 theories/Loader.v
 theories/Induction.v
 theories/LiftSubst.v
-theories/WeakSubst.v
 theories/UnivSubst.v
 theories/Typing.v
+theories/Weakening.v
 theories/MetaTheory.v
 theories/Checker.v
 theories/WcbvEval.v

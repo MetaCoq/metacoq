@@ -543,7 +543,7 @@ let rec run_template_program_rec ?(intactic=false) (k : Evd.evar_map * Constr.t 
   else if Globnames.eq_gr glob_ref tmBind then
     match args with
     | _::_::a::f::[] ->
-       run_template_program_rec ~intactic:intactic (fun (evm, ar) -> run_template_program_rec k (evm, Constr.mkApp (f, [|ar|]))) (evm, a)
+       run_template_program_rec ~intactic:intactic (fun (evm, ar) -> run_template_program_rec ~intactic:intactic k (evm, Constr.mkApp (f, [|ar|]))) (evm, a)
     | _ -> monad_failure_full "tmBind" 4 pgm
   else if Globnames.eq_gr glob_ref tmDefinition then
     if intactic then not_in_tactic "tmDefinition" else

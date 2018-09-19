@@ -528,8 +528,7 @@ let monad_failure_full s k prg =
        str "While trying to run: " ++ fnl () ++ print_term prg ++ fnl () ++
        str "Please file a bug with Template-Coq.")
 
-let rec run_template_program_rec ?(intactic=false) (k : Evd.evar_map * Constr.t -> unit)  ((evm, pgm) : Evd.evar_map * Constr.t) : unit =
-  let env = Global.env () in
+let rec run_template_program_rec ?(intactic=false) (k : Evd.evar_map * Constr.t -> unit) env ((evm, pgm) : Evd.evar_map * Constr.t) : unit =
   let pgm = Reduction.whd_all env pgm in
   let (coConstr, args) = app_full pgm [] in
   let (glob_ref, universes) =
@@ -551,7 +550,7 @@ let rec run_template_program_rec ?(intactic=false) (k : Evd.evar_map * Constr.t 
   else if Globnames.eq_gr glob_ref tmBind then
     match args with
     | _::_::a::f::[] ->
-       run_template_program_rec ~intactic:intactic (fun (evm, ar) -> run_template_program_rec ~intactic:intactic k (evm, Constr.mkApp (f, [|ar|]))) (evm, a)
+       run_template_program_rec ~intactic:intactic (fun (evm, ar) -> run_template_program_rec ~intactic:intactic k env (evm, Constr.mkApp (f, [|ar|]))) env (evm, a)
     | _ -> monad_failure_full "tmBind" 4 pgm
   else if Globnames.eq_gr glob_ref tmDefinitionRed then
     if intactic then not_in_tactic "tmDefinitionRed" else

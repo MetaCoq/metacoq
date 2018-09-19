@@ -147,15 +147,16 @@ VERNAC COMMAND EXTEND Run_program CLASSIFIED AS SIDEFF
       [ let (evm, env) = Pfedit.get_current_context () in
         let (def, _) = Constrintern.interp_constr env evm def in
         (* todo : uctx ? *)
-        Denote.run_template_program_rec (fun _ -> ()) (evm, (EConstr.to_constr evm def)) ]
+        Denote.run_template_program_rec (fun _ -> ()) (Global.env ()) (evm, (EConstr.to_constr evm def)) ]
 END;;
 
 TACTIC EXTEND run_program
     | [ "run_template_program" constr(c) tactic(tac) ] ->
       [ Proofview.Goal.enter (begin fun gl ->
          let evm = Proofview.Goal.sigma gl in
+         let env = Proofview.Goal.env gl in
          let ret = ref None in
-         Denote.run_template_program_rec ~intactic:true (fun (evm, t) -> ret := Some t) (evm, EConstr.to_constr evm c);
+         Denote.run_template_program_rec ~intactic:true (fun (evm, t) -> ret := Some t) env (evm, EConstr.to_constr evm c);
          match !ret with
            Some c ->
            ltac_apply tac (List.map to_ltac_val [EConstr.of_constr c])

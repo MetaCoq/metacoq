@@ -593,13 +593,12 @@ Proof.
     rewrite andb_true_iff in *; intuition eauto with arith.
 Qed.
 
-Lemma mkApps_mkApp u a v : wf u -> mkApps (mkApp u a) v = mkApps u (a :: v).
+Lemma mkApps_mkApp u a v : mkApps (mkApp u a) v = mkApps u (a :: v).
 Proof.
   induction v. simpl.
   destruct u; simpl; try reflexivity.
   intros. simpl.
   destruct u; simpl; try reflexivity.
-  inversion_clear H. simpl in H0. f_equal.
   now rewrite <- app_assoc.
 Qed.
 

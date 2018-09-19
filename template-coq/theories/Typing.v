@@ -240,9 +240,10 @@ Inductive red1 (Σ : global_declarations) (Γ : context) : term -> term -> Prop 
     red1 Σ Γ (tConst c u) (subst_instance_constr u body)
 
 (** Proj *)
-| red_proj i pars arg args k u :
-    red1 Σ Γ (tProj (i, pars, arg) (mkApps (tConstruct i k u) args))
-         (List.nth (pars + arg) args tDummy)
+| red_proj i pars narg args k u arg:
+    nth_error args (pars + narg) = Some arg ->
+    red1 Σ Γ (tProj (i, pars, narg) (mkApps (tConstruct i k u) args)) arg
+
 
 | abs_red_l na M M' N : red1 Σ Γ M M' -> red1 Σ Γ (tLambda na M N) (tLambda na M' N)
 | abs_red_r na M M' N : red1 Σ (Γ ,, vass na N) M M' -> red1 Σ Γ (tLambda na N M) (tLambda na N M')
@@ -291,8 +292,10 @@ Lemma red1_ind_all :
        (forall (Γ : context) (c : ident) (decl : constant_body) (body : term),
         declared_constant Σ c decl ->
         forall u : universe_instance, cst_body decl = Some body -> P Γ (tConst c u) (subst_instance_constr u body)) ->
-       (forall (Γ : context) (i : inductive) (pars arg : nat) (args : list term) (k : nat) (u : universe_instance),
-        P Γ (tProj (i, pars, arg) (mkApps (tConstruct i k u) args)) (nth (pars + arg) args tDummy)) ->
+       (forall (Γ : context) (i : inductive) (pars narg : nat) (args : list term) (k : nat) (u : universe_instance)
+         (arg : term),
+           nth_error args (pars + narg) = Some arg ->
+           P Γ (tProj (i, pars, narg) (mkApps (tConstruct i k u) args)) arg) ->
        (forall (Γ : context) (na : name) (M M' N : term),
         red1 Σ Γ M M' -> P Γ M M' -> P Γ (tLambda na M N) (tLambda na M' N)) ->
        (forall (Γ : context) (na : name) (M M' N : term),
@@ -422,6 +425,7 @@ Fixpoint eq_term `{checker_flags} (φ : uGraph.t) (t u : term) {struct t} :=
                                                     && eq_universe_instance φ u u'
   | tLambda _ b t, tLambda _ b' t' => eq_term φ b b' && eq_term φ t t'
   | tProd _ b t, tProd _ b' t' => eq_term φ b b' && eq_term φ t t'
+  | tLetIn _ b t c, tLetIn _ b' t' c' => eq_term φ b b' && eq_term φ t t' && eq_term φ c c'
   | tCase (ind, par) p c brs,
     tCase (ind',par') p' c' brs' =>
     eq_ind ind ind' && eq_nat par par' &&
@@ -457,6 +461,7 @@ Fixpoint leq_term `{checker_flags} (φ : uGraph.t) (t u : term) {struct t} :=
                                                     eq_universe_instance φ u u'
   | tLambda _ b t, tLambda _ b' t' => eq_term φ b b' && eq_term φ t t'
   | tProd _ b t, tProd _ b' t' => eq_term φ b b' && leq_term φ t t'
+  | tLetIn _ b t c, tLetIn _ b' t' c' => eq_term φ b b' && eq_term φ t t' && leq_term φ c c'
   | tCase (ind, par) p c brs,
     tCase (ind',par') p' c' brs' =>
     eq_ind ind ind' && eq_nat par par' &&
@@ -1646,8 +1651,8 @@ Proof.
     eapply lookup_on_global_env in H as [Σ' [onΣ' prf]]; eauto.
     destruct decl; simpl in *.
     subst cst_body; intuition. red in prf. simpl in prf. easy.
-  - apply wf_mkApps_inv in H.
-    auto with wf.
+  - apply wf_mkApps_inv in H0.
+    eapply nth_error_forall in H0; eauto.
   - constructor; auto. apply IHred1; auto. constructor; simpl; auto.
   - constructor; auto. apply IHred1; auto. constructor; simpl; auto.
   - constructor; auto. induction H; constructor; inv H2; intuition auto.

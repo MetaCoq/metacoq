@@ -549,7 +549,7 @@ Proof.
     + rewrite <- lift_simpl by easy.
       econstructor.
       rewrite (weaken_nth_error_lt Hn).
-      now unfold lift_decl; rewrite option_map_decl_body_lift_decl, H.
+      now unfold lift_decl; rewrite option_map_decl_body_map_decl, H.
 
   - econstructor.
     eauto. rewrite H0. f_equal.
@@ -565,8 +565,8 @@ Proof.
     apply (lift_closed #|Γ''| #|Γ'|) in H. auto.
     constructor.
 
-  - simpl. rewrite <- nth_map by reflexivity.
-    constructor.
+  - simpl. constructor.
+    now rewrite nth_error_map, H.
 
   - constructor.
     specialize (IHred1 Γ0 (Γ' ,, vass na N) Γ'' eq_refl).

@@ -17,8 +17,46 @@ Definition map_decl f (d : context_decl) :=
      decl_body := option_map f d.(decl_body);
      decl_type := f d.(decl_type) |}.
 
+Lemma map_decl_type f decl : f (decl_type decl) = decl_type (map_decl f decl).
+Proof. destruct decl; reflexivity. Qed.
+
+Lemma map_decl_body f decl : option_map f (decl_body decl) = decl_body (map_decl f decl).
+Proof. destruct decl; reflexivity. Qed.
+
+Lemma option_map_decl_body_map_decl f x :
+  option_map decl_body (option_map (map_decl f) x) =
+  option_map (option_map f) (option_map decl_body x).
+Proof. destruct x; reflexivity. Qed.
+
+Lemma option_map_decl_type_map_decl f x :
+  option_map decl_type (option_map (map_decl f) x) =
+  option_map f (option_map decl_type x).
+Proof. destruct x; reflexivity. Qed.
+
 Definition map_context f c :=
   List.map (map_decl f) c.
+
+Definition map_constant_body f decl :=
+  {| cst_type := f decl.(cst_type);
+     cst_body := option_map f decl.(cst_body);
+     cst_universes := decl.(cst_universes) |}.
+
+Lemma map_cst_type f decl : f (cst_type decl) = cst_type (map_constant_body f decl).
+Proof. destruct decl; reflexivity. Qed.
+
+Lemma map_cst_body f decl : option_map f (cst_body decl) = cst_body (map_constant_body f decl).
+Proof. destruct decl; reflexivity. Qed.
+
+Definition map_def {A B : Set} (tyf bodyf : A -> B) (d : def A) :=
+  {| dname := d.(dname); dtype := tyf d.(dtype); dbody := bodyf d.(dbody); rarg := d.(rarg) |}.
+
+Lemma map_dtype {A B : Set} (f : A -> B) (g : A -> B) (d : def A) :
+  f (dtype d) = dtype (map_def f g d).
+Proof. destruct d; reflexivity. Qed.
+
+Lemma map_dbody {A B : Set} (f : A -> B) (g : A -> B) (d : def A) :
+  g (dbody d) = dbody (map_def f g d).
+Proof. destruct d; reflexivity. Qed.
 
 Definition string_of_gref gr :=
   match gr with
@@ -156,9 +194,6 @@ Definition mapi {A B} (f : nat -> A -> B) (l : list A) := mapi_rec f l 0.
 
 Definition on_snd {A B C} (f : B -> C) (p : A * B) :=
   (fst p, f (snd p)).
-
-Definition map_def {A B : Set} (tyf bodyf : A -> B) (d : def A) :=
-  {| dname := d.(dname); dtype := tyf d.(dtype); dbody := bodyf d.(dbody); rarg := d.(rarg) |}.
 
 Definition test_snd {A B} (f : B -> bool) (p : A * B) :=
   f (snd p).
@@ -342,6 +377,13 @@ Qed.
 
 Lemma Forall_skipn {A} {P : A -> Prop} {l} {n} : List.Forall P l -> List.Forall P (skipn n l).
 Proof. intros HPL; induction HPL in n |- * ; simpl; destruct n; try econstructor; eauto. Qed.
+
+Lemma nth_error_Some_length {A} {l : list A} {n t} : nth_error l n = Some t -> n < length l.
+Proof. rewrite <- nth_error_Some. destruct (nth_error l n); congruence. Qed.
+
+Lemma nth_error_nil {A} n : nth_error (@nil A) n = None.
+Proof. destruct n; auto. Qed.
+Hint Rewrite @nth_error_nil.
 
 Lemma nth_error_forall {A} {P : A -> Prop} {l : list A} {n x} :
   nth_error l n = Some x -> List.Forall P l -> P x.
@@ -914,4 +956,114 @@ Lemma forallb2_length {A} (p : A -> A -> bool) l l' : forallb2 p l l' = true -> 
 Proof.
   induction l in l' |- *; destruct l'; simpl; try congruence.
   rewrite !andb_true_iff. intros [Hp Hl]. erewrite IHl; eauto.
+Qed.
+
+Definition arities_context (l : list one_inductive_body) :=
+  rev_map (fun ind => vass (nNamed ind.(ind_name)) ind.(ind_type)) l.
+
+Fixpoint decompose_prod_assum (Γ : context) (t : term) : context * term :=
+  match t with
+  | tProd n A B => decompose_prod_assum (Γ ,, vass n A) B
+  | tLetIn na b bty b' => decompose_prod_assum (Γ ,, vdef na b bty) b'
+  | tCast t _ _ => decompose_prod_assum Γ t
+  | _ => (Γ, t)
+  end.
+
+Fixpoint reln (l : list term) (p : nat) (Γ0 : list context_decl) {struct Γ0} : list term :=
+  match Γ0 with
+  | [] => l
+  | {| decl_body := Some _ |} :: hyps => reln l (p + 1) hyps
+  | {| decl_body := None |} :: hyps => reln (tRel p :: l) (p + 1) hyps
+  end.
+
+Definition to_extended_list Γ := reln [] 0 Γ.
+
+Lemma reln_list_lift_above l p Γ :
+  Forall (fun x => exists n, x = tRel n /\ n < p + length Γ) l ->
+  Forall (fun x => exists n, x = tRel n /\ n < p + length Γ) (reln l p Γ).
+Proof.
+  induction Γ in p, l |- *. simpl. auto.
+  intros. destruct a. destruct decl_body. simpl.
+  specialize (IHΓ l (S p)). rewrite <- Nat.add_succ_comm, Nat.add_1_r.
+  eapply IHΓ. simpl in *. rewrite <- Nat.add_succ_comm in H. auto.
+  simpl in *.
+  specialize (IHΓ (tRel p :: l) (S p)). rewrite <- Nat.add_succ_comm, Nat.add_1_r.
+  eapply IHΓ. simpl in *. rewrite <- Nat.add_succ_comm in H. auto.
+  simpl in *.
+  constructor. exists p. intuition lia. auto.
+Qed.
+
+Lemma to_extended_list_lift_above Γ :
+  Forall (fun x => exists n, x = tRel n /\ n < length Γ) (to_extended_list Γ).
+Proof.
+  pose (reln_list_lift_above [] 0 Γ).
+  unfold to_extended_list.
+  forward f. constructor. apply f.
+Qed.
+
+Definition polymorphic_instance uctx :=
+  match uctx with
+  | Monomorphic_ctx c => Instance.empty
+  | Polymorphic_ctx c => fst (UContext.dest c)
+  end.
+
+Definition map_one_inductive_body mind u arities f n m :=
+  match m with
+  | Build_one_inductive_body ind_name ind_type ind_kelim ind_ctors ind_projs =>
+    let '(ctx, _) := decompose_prod_assum [] (f [] ind_type) in
+    let indty := mkApps (tInd (mkInd mind n) u) (to_extended_list ctx) in
+    Build_one_inductive_body ind_name
+                             (f [] ind_type)
+                             ind_kelim
+                             (map (on_pi2 (f arities)) ind_ctors)
+                             (map (on_snd (f (ctx ,, vass (nNamed ind_name) indty))) ind_projs)
+  end.
+
+Definition map_mutual_inductive_body mind f m :=
+  match m with
+  | Build_mutual_inductive_body ind_npars ind_bodies ind_universes =>
+    let arities := arities_context ind_bodies in
+    let u := polymorphic_instance ind_universes in
+    Build_mutual_inductive_body
+      ind_npars
+      (mapi (map_one_inductive_body mind u arities f) ind_bodies)
+      ind_universes
+  end.
+
+Lemma ind_type_map f arities mind u n oib :
+  ind_type (map_one_inductive_body mind u arities f n oib) = f [] (ind_type oib).
+Proof. destruct oib. simpl. destruct decompose_prod_assum. reflexivity. Qed.
+
+Lemma ind_ctors_map f arities mind u n oib :
+  ind_ctors (map_one_inductive_body mind u arities f n oib) =
+  map (on_pi2 (f arities)) (ind_ctors oib).
+Proof. destruct oib; simpl; destruct decompose_prod_assum; reflexivity. Qed.
+
+Lemma ind_projs_map f mind u arities n oib :
+  ind_projs (map_one_inductive_body mind u arities f n oib) =
+  let '(ctx, _) := decompose_prod_assum [] (f [] oib.(ind_type)) in
+  map (on_snd (f (ctx ,, vass (nNamed oib.(ind_name))
+      (mkApps (tInd (mkInd mind n) u) (to_extended_list ctx))))) (ind_projs oib).
+Proof. destruct oib; simpl. destruct decompose_prod_assum. simpl. reflexivity. Qed.
+
+
+Fixpoint map_option_out {A} (l : list (option A)) : option (list A) :=
+  match l with
+  | nil => Some nil
+  | hd :: tl => match hd, map_option_out tl with
+                | Some hd, Some tl => Some (hd :: tl)
+                | _, _ => None
+                end
+  end.
+
+Lemma map_option_out_map_option_map {A} (l : list (option A)) (f : A -> A) :
+  map_option_out (map (option_map f) l) =
+  option_map (map f) (map_option_out l).
+Proof.
+  induction l; simpl; auto.
+  destruct (option_map f a) eqn:fa.
+  rewrite IHl. destruct (map_option_out l). simpl in *.
+  destruct a; simpl in *; congruence.
+  simpl. destruct a; reflexivity.
+  destruct a; simpl in *; congruence.
 Qed.

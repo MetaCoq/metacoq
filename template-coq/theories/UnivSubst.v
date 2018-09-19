@@ -81,9 +81,9 @@ Proof.
   simpl. f_equal. rewrite map_app. reflexivity.
 Qed.
 
-Lemma parsubst_subst_instance_constr u c N k :
-  parsubst (map (subst_instance_constr u) N) k (subst_instance_constr u c) =
-  subst_instance_constr u (parsubst N k c).
+Lemma subst_subst_instance_constr u c N k :
+  subst (map (subst_instance_constr u) N) k (subst_instance_constr u c) =
+  subst_instance_constr u (subst N k c).
 Proof.
   induction c in k |- * using term_forall_list_ind; simpl; auto;
     rewrite ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length;

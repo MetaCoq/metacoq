@@ -1220,17 +1220,6 @@ Proof.
       auto with wf. eapply subs_wf in sub; eauto.
       now apply Forall_firstn.
 
-         (* depending on wf_local subst_context assumption *)
-      (* * clear Heq Hn H1 Hlt x H0. clear X. *)
-      (*   generalize_eqs X0. *)
-      (*   intros Heq. *)
-      (*   induction X1 in Δ, wfΓ0, X0 |- *. *)
-      (*   erewrite (subst0_context Σ); eauto. *)
-      (*   eapply typing_all_wf_decl in wfΓ0; eauto. *)
-      (*   apply All_local_env_wf_decl. *)
-      (*   unfold app_context in wfΓ0; eapply Forall_app in wfΓ0. *)
-      (*   intuition. *)
-      (*   rewrite subst_context_alt. *)
     + intros Hs.
       pose proof (subst_length _ _ _ _ sub).
       rewrite H1 in Hs.
@@ -1428,6 +1417,24 @@ Proof.
     now eapply typing_wf in X1.
 Admitted. (* 4 subgoals remaining: univ substs and case *)
 
+Theorem substitution_alt `{checker_flags} Σ Γ Γ' s Δ (t : term) T :
+  wf Σ -> subs Σ Γ s Γ' ->
+  Σ ;;; Γ ,,, Γ' ,,, Δ |- t : T ->
+  Σ ;;; Γ ,,, subst_context s 0 Δ |- subst s #|Δ| t : subst s #|Δ| T.
+Proof.
+  intros.
+  eapply substitution; eauto.
+  eapply All_local_env_app_inv.
+  apply typing_wf_local in X1; eauto.
+  apply All_local_env_app in X1 as [X1 X2].
+  apply All_local_env_app in X1. intuition.
+  induction X2; simpl; rewrite ?subst_context_snoc0; econstructor; eauto.
+  eapply substitution in t1; simpl in *; eauto.
+  eapply All_local_env_app_inv; intuition.
+  eapply substitution in t1; simpl in *; eauto.
+  eapply All_local_env_app_inv; intuition.
+Qed.
+
 Lemma substitution0 `{checker_flags} Σ Γ n u U (t : term) T :
   wf Σ ->
   Σ ;;; Γ ,, vass n U |- t : T -> Σ ;;; Γ |- u : U ->
@@ -1436,8 +1443,8 @@ Proof.
   intros HΣ Ht Hu.
   assert (wfΓ : wf_local Σ Γ).
   apply typing_wf_local in Hu; eauto.
-  pose proof (substitution Σ Γ [vass n U] [u] [] t T HΣ) as thm.
+  pose proof (substitution_alt Σ Γ [vass n U] [u] [] t T HΣ) as thm.
   forward thm. constructor. constructor. unfold substl. rewrite subst_empty; auto.
   apply typing_wf in Hu; intuition.
-  now apply (thm Ht wfΓ).
+  now apply (thm Ht).
 Qed.

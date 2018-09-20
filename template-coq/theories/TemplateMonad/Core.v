@@ -70,7 +70,7 @@ Cumulative Inductive TemplateMonad@{t u} : Type@{t} -> Type :=
 
 (* Typeclass registration and querying for an instance *)
 | tmExistingInstance : ident -> TemplateMonad unit
-| tmInferInstance : forall A : Type@{t}, TemplateMonad (option A)
+| tmInferInstance : option reductionStrategy -> forall A : Type@{t}, TemplateMonad (option A)
 .
 
 Definition print_nf {A} (msg : A) : TemplateMonad unit

@@ -743,12 +743,13 @@ let rec run_template_program_rec ?(intactic=false) (k : Evd.evar_map * Constr.t 
     | _ -> monad_failure "tmExistingInstance" 1
   else if Globnames.eq_gr glob_ref tmInferInstance then
     match args with
-    | typ :: [] ->
+    | s :: typ :: [] ->
+       let typ = (match denote_option s with Some s -> let red = denote_reduction_strategy env evm s in reduce_all ~red env evm typ | None -> typ) in
        (try
           let (evm,t) = Typeclasses.resolve_one_typeclass env evm (EConstr.of_constr typ) in
           k (evm, Constr.mkApp (cSome, [| typ; EConstr.to_constr evm t|]))
         with
           Not_found -> k (evm, Constr.mkApp (cNone, [|typ|]))
        )
-    | _ -> monad_failure "tmInferInstance" 1
+    | _ -> monad_failure "tmInferInstance" 2
   else CErrors.user_err (str "Invalid argument or not yet implemented. The argument must be a TemplateProgram: " ++ pr_constr coConstr)

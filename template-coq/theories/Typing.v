@@ -754,7 +754,7 @@ with typing_spine `{checker_flags} (Σ : global_context) (Γ : context) : term -
 | type_spine_nil ty : typing_spine Σ Γ ty [] ty
 | type_spine_cons hd tl na A B s T B' :
     Σ ;;; Γ |- tProd na A B : tSort s ->
-    Σ ;;; Γ |- tProd na A B <= T ->
+    Σ ;;; Γ |- T <= tProd na A B ->
     Σ ;;; Γ |- hd : A ->
     typing_spine Σ Γ (subst10 hd B) tl B' ->
     typing_spine Σ Γ T (cons hd tl) B'.
@@ -978,7 +978,7 @@ Inductive Forall_typing_spine `{checker_flags} Σ Γ (P : term -> term -> Type) 
 | Forall_type_spine_nil T : Forall_typing_spine Σ Γ P T [] T (type_spine_nil Σ Γ T)
 | Forall_type_spine_cons hd tl na A B s T B' tls
    (typrod : Σ ;;; Γ |- tProd na A B : tSort s)
-   (cumul : Σ ;;; Γ |- tProd na A B <= T) (ty : Σ ;;; Γ |- hd : A) :
+   (cumul : Σ ;;; Γ |- T <= tProd na A B) (ty : Σ ;;; Γ |- hd : A) :
     P (tProd na A B) (tSort s) -> P hd A -> Forall_typing_spine Σ Γ P (B {0 := hd}) tl B' tls ->
     Forall_typing_spine Σ Γ P T (hd :: tl) B'
       (type_spine_cons Σ Γ hd tl na A B s T B' typrod cumul ty tls).

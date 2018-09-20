@@ -12,6 +12,15 @@ Arguments rarg {term} _.
 
 Ltac inv H := inversion_clear H.
 
+Definition on_some {A} (P : A -> Type) (o : option A) :=
+  match o with
+  | Some t => P t
+  | None => False
+  end.
+
+Definition option_default {A B} (f : A -> B) (o : option A) (b : B) :=
+  match o with Some x => f x | None => b end.
+
 Definition map_decl f (d : context_decl) :=
   {| decl_name := d.(decl_name);
      decl_body := option_map f d.(decl_body);
@@ -337,6 +346,24 @@ Proof.
   rewrite andb_true_iff. intuition auto.
 Qed.
 
+Lemma forallb2_app {A} (p : A -> A -> bool) l l' q q' :
+  forallb2 p l l' && forallb2 p q q' = true -> forallb2 p (l ++ q) (l' ++ q') = true.
+Proof.
+  induction l in l' |- *; destruct l'; simpl; try congruence.
+  intros.
+  rewrite !andb_true_iff in *.
+  rewrite IHl; intuition auto. now rewrite H2, H1.
+Qed.
+
+Lemma forallb2_forallb2 {A} (f : A -> A -> bool) g l l' :
+  (forall x y, f x y = true -> f (g x) (g y) = true) ->
+  forallb2 f l l' = true -> forallb2 f (map g l) (map g l') = true.
+Proof.
+  induction l in l' |- *; destruct l'; auto.
+  simpl; intros.
+  rewrite andb_true_iff in *. intuition.
+Qed.
+
 Lemma Forall2_List_Forall_mix {A : Type} {P : A -> Prop} {Q : A -> A -> Prop}
       {l l' : list A} :
     List.Forall P l -> Forall2 Q l l' -> Forall2 (fun x y => P x /\ Q x y) l l'.
@@ -375,11 +402,52 @@ Proof.
   apply IHX. now inv H.
 Qed.
 
+Lemma OnOne2_app {A} (P : A -> A -> Type) l tl tl' : OnOne2 P tl tl' -> OnOne2 P (l ++ tl) (l ++ tl').
+Proof. induction l; simpl; try constructor; auto. Qed.
+
+Lemma Forall_firstn {A} {P : A -> Prop} {l} {n} : List.Forall P l -> List.Forall P (firstn n l).
+Proof. intros HPL; induction HPL in n |- * ; simpl; destruct n; try econstructor; eauto. Qed.
+
 Lemma Forall_skipn {A} {P : A -> Prop} {l} {n} : List.Forall P l -> List.Forall P (skipn n l).
 Proof. intros HPL; induction HPL in n |- * ; simpl; destruct n; try econstructor; eauto. Qed.
 
+Inductive nth_error_Spec {A} (l : list A) (n : nat) : option A -> Type :=
+| nth_error_Spec_Some x : nth_error l n = Some x -> n < length l -> nth_error_Spec l n (Some x)
+| nth_error_Spec_None : length l <= n -> nth_error_Spec l n None.
+
 Lemma nth_error_Some_length {A} {l : list A} {n t} : nth_error l n = Some t -> n < length l.
 Proof. rewrite <- nth_error_Some. destruct (nth_error l n); congruence. Qed.
+
+Lemma nth_error_spec {A} (l : list A) (n : nat) : nth_error_Spec l n (nth_error l n).
+Proof.
+  destruct nth_error eqn:Heq.
+  constructor; auto. now apply nth_error_Some_length in Heq.
+  constructor; auto. now apply nth_error_None in Heq.
+Qed.
+
+Require Import Arith.
+
+Lemma nth_error_app_ge {A} (l l' : list A) (v : nat) :
+  length l <= v ->
+  nth_error (l ++ l') v = nth_error l' (v - length l).
+Proof.
+  revert v; induction l; simpl; intros.
+  now rewrite Nat.sub_0_r.
+  destruct v. lia.
+  simpl. rewrite IHl; auto with arith.
+Qed.
+
+Lemma nth_error_app_lt {A} (l l' : list A) (v : nat) :
+  v < length l ->
+  nth_error (l ++ l') v = nth_error l v.
+Proof.
+  revert v; induction l; simpl; intros. easy.
+  destruct v; trivial.
+  simpl. rewrite IHl; auto with arith.
+Qed.
+
+Lemma nth_error_app_left {A} (l l' : list A) n t : nth_error l n = Some t -> nth_error (l ++ l') n = Some t.
+Proof. induction l in n |- *; destruct n; simpl; try congruence. auto. Qed.
 
 Lemma nth_error_nil {A} n : nth_error (@nil A) n = None.
 Proof. destruct n; auto. Qed.

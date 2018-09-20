@@ -353,17 +353,6 @@ Proof.
   now rewrite map_app.
 Qed.
 
-Inductive nth_error_spec {A} (l : list A) (n : nat) : option A -> Type :=
-| nth_error_some a : nth_error l n = Some a -> n < length l -> nth_error_spec l n (Some a)
-| nth_error_none : nth_error l n = None -> length l <= n -> nth_error_spec l n None.
-
-Lemma nth_error_elim {A} (l : list A) n : nth_error_spec l n (nth_error l n).
-Proof.
-  destruct (nth_error l n) eqn:Heq.
-  constructor; auto. apply nth_error_Some. congruence.
-  constructor; auto; apply nth_error_None. congruence.
-Qed.
-
 Lemma commut_lift_subst_rec :
   forall M N n p k,
     k <= p ->
@@ -382,7 +371,7 @@ Proof.
         try (rewrite H1; now f_equal).
   
   - elim (leb_spec p n); elim (leb_spec k n); intros; subst; try easy.
-    + destruct (nth_error_elim N (n - p)).
+    + destruct (nth_error_spec N (n - p)).
       ++ rewrite simpl_lift by easy.
          erewrite subst_rel_eq; eauto. lia.
       ++ rewrite lift_rel_ge by lia.
@@ -426,14 +415,14 @@ Proof.
     elim (leb_spec p n); intros; try easy;
     elim (leb_spec (p + length N + k) n); intros; subst; try easy.
     
-    + destruct (nth_error_elim N (n - p)).
+    + destruct (nth_error_spec N (n - p)).
       ++ rewrite <- permute_lift by lia.
          erewrite subst_rel_eq; eauto.
          rewrite nth_error_map; eauto. rewrite e. reflexivity.
          lia.
       ++ rewrite lift_rel_ge; try easy.
          rewrite subst_rel_gt; rewrite map_length; f_equal; lia.
-    + destruct (nth_error_elim N (n - p)).
+    + destruct (nth_error_spec N (n - p)).
       ++ rewrite <- permute_lift by lia.
          erewrite subst_rel_eq; eauto.
          rewrite nth_error_map. rewrite e. reflexivity. lia.
@@ -508,19 +497,19 @@ Proof.
   - unfold subst at 2.
     elim (leb_spec p n); intros; try easy.
     
-    + destruct (nth_error_elim N (n - p)).
+    + destruct (nth_error_spec N (n - p)).
       ++ rewrite subst_rel_lt by lia.
          erewrite subst_rel_eq; try easy.
          2:rewrite nth_error_map, e; reflexivity.
          now rewrite <- commut_lift_subst_rec.
       ++ unfold subst at 4.
          elim (leb_spec (p + length N + n0) n); intros; subst; try easy.
-         destruct (nth_error_elim P (n - (p + length N + n0))).
+         destruct (nth_error_spec P (n - (p + length N + n0))).
          +++ erewrite subst_rel_eq. 2:eauto. 2:lia.
              assert (p + length N + n0 = length (map (subst P n0) N) + (p + n0))
                by (rewrite map_length; lia).
              rewrite H1. rewrite simpl_subst_rec; eauto; try lia.
-             eapply nth_error_forall in e0; eauto.
+             eapply nth_error_forall in e; eauto.
          +++ rewrite !subst_rel_gt; rewrite ?map_length; try lia. f_equal; lia.
          +++ rewrite subst_rel_lt; try easy.
              rewrite subst_rel_gt; rewrite map_length. trivial. lia.

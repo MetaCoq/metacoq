@@ -293,12 +293,12 @@ Proof.
   destruct (decompose_prod_assum [] (subst n k ind_type)) eqn:Heq'.
   destruct X0. simpl in *.
   assert (subst n k ind_type = ind_type).
-  destruct onArity as [s Hs].
+  destruct onArity as [[s Hs] Hpars].
   eapply typed_subst; eauto. simpl; lia.
   rewrite H0 in Heq'. rewrite Heq in Heq'. revert Heq'; intros [= <- <-].
   f_equal; auto.
   apply (All_map_id onConstructors).
-  intros [[x p] n']. intros [s Hty].
+  intros [[x p] n']. intros [[s Hty] Hpars].
   unfold on_pi2; f_equal; f_equal. eapply typed_subst. 4:eapply Hty. wf. wf. lia.
   rewrite Heq in onProjections. destruct onProjections as [_ onProjections].
   apply (All_map_id onProjections).
@@ -450,61 +450,188 @@ Proof.
     destruct destArity as [[args s]|]. apply IHwf1. exact I.
 Qed.
 
-(* Lemma subst_instantiate_params n k args t k' : *)
-(*   closedn k' t = true -> Forall Ast.wf n -> *)
-(*   option_map (subst n k) (instantiate_params args t) = *)
-(*   instantiate_params (map (subst n k) args) (subst n k t). *)
-(* Proof. *)
-(*   induction args in t, n, k |- *. reflexivity. *)
-(*   simpl. destruct t; try (simpl; congruence). *)
-(*   - simpl. rewrite Nat.ltb_lt. intros IH. *)
-(*     destruct (leb_spec_Set k n0). lia. reflexivity. *)
-(*   - intros. rewrite IHargs. f_equal. unfold subst1. *)
-(*     simpl. f_equal. simpl in H. *)
-(*     rewrite andb_true_iff in H. destruct H. *)
-(*     rewrite distr_subst; simpl. reflexivity. auto. simpl in H. *)
-(*     unfold subst1. simpl. *)
-(*     replace k with (k + 0) by lia. *)
-(*     (* eapply (closedn_subst _ _ 0). admit. simpl. *) *)
-(*     (* replace (k + 0 + 1) with (S k) by lia. *) *)
-(*     (* now rewrite andb_true_iff in H. auto. *) *)
-(* Admitted. *)
-(* (*   - rewrite IHargs; f_equal. apply distr_lift_subst. *) *)
-(* (* Qed. *) *)
-(* Hint Rewrite subst_instantiate_params : lift. *)
-
-Lemma subst_decompose_prod_assum_rec ctx t n k :
-  let (ctx', t') := decompose_prod_assum ctx t in
-  (subst_context n k ctx', subst n (length ctx' + k) t') =
-  decompose_prod_assum (subst_context n k ctx) (subst n (length ctx + k) t).
+Lemma has_nparams_ex {nass t} :
+  has_nparams nass t -> { p & decompose_prod_n_assum [] nass t = Some p }.
 Proof.
-  induction t in n, k, ctx |- *; simpl;
-    try rewrite Nat.sub_diag, Nat.add_0_r; try (eauto; congruence).
-  - destruct (Nat.leb (#|ctx| + k) n0).
-    destruct nth_error eqn:Heq.
-  (* - eapply IHt1. *)
-  (* - specialize (IHt2 (ctx ,, vass n0 t1) n k). *)
-  (*   destruct decompose_prod_assum. rewrite IHt2. simpl. *)
-  (*   rewrite lift_context_snoc. reflexivity. *)
-  (* - specialize (IHt3 (ctx ,, vdef n0 t1 t2) n k). *)
-  (*   destruct decompose_prod_assum. rewrite IHt3. simpl. *)
-  (*   rewrite lift_context_snoc. reflexivity. *)
-Admitted.
+  unfold has_nparams.
+  destruct decompose_prod_n_assum. intros.
+  exists p. reflexivity.
+  congruence.
+Qed.
 
-Lemma subst_decompose_prod_assum t n k :
-  let (ctx', t') := decompose_prod_assum [] t in
-  (subst_context n k ctx', subst n (length ctx' + k) t') =
-  decompose_prod_assum [] (subst n k t).
-Proof. apply subst_decompose_prod_assum_rec. Qed.
+Lemma decompose_prod_n_assum0 ctx t : decompose_prod_n_assum ctx 0 t = Some (ctx, t).
+Proof. destruct t; simpl; reflexivity. Qed.
 
-Lemma decompose_app_subst n k t f a :
-  closedn k t = true ->
-  decompose_app t = (f, a) -> decompose_app (subst n k t) = (subst n k f, map (subst n k) a).
+Lemma strip_outer_cast_tProd_tLetIn_subst t n k :
+  match strip_outer_cast t with
+  | tProd na A B =>
+    strip_outer_cast (subst n k t) = tProd na (subst n k A) (subst n (S k) B)
+  | tLetIn na b ty b' =>
+    strip_outer_cast (subst n k t) = tLetIn na (subst n k b) (subst n k ty) (subst n (S k) b')
+  | _ => True
+  end.
 Proof.
-  (* destruct t; simpl; intros [= <- <-]; try reflexivity. *)
-  (* simpl. *)
-  (* now destruct (Nat.leb k n0). Qed. *)
-Admitted.
+  induction t; simpl in *; auto.
+Qed.
+
+Lemma subst_decompose_prod_n_assum_rec ctx nass t n k ctx' t' :
+  decompose_prod_n_assum ctx nass t = Some (ctx', t') ->
+  decompose_prod_n_assum (subst_context n k ctx) nass (subst n (length ctx + k) t) =
+  Some (subst_context n k ctx', subst n (length ctx' + k) t').
+Proof.
+  induction nass in n, k, t, ctx, ctx', t' |- *;
+    try (rewrite !decompose_prod_n_assum0; intros [= -> ->]; reflexivity);
+      (simpl; try congruence);
+      try rewrite Nat.sub_diag, Nat.add_0_r; try (eauto; congruence).
+  pose proof (strip_outer_cast_tProd_tLetIn_subst t n (#|ctx| + k)) as Hsubst.
+  destruct (strip_outer_cast t) eqn:Ht; try congruence; rewrite Hsubst.
+  - specialize (IHnass (ctx ,, vass n0 t0_1) t0_2 n k ctx' t').
+    unfold snoc in IHnass; rewrite subst_context_snoc in IHnass. apply IHnass.
+  - specialize (IHnass (ctx ,, vdef n0 t0_1 t0_2) t0_3 n k ctx' t').
+    unfold snoc in IHnass; rewrite subst_context_snoc in IHnass. apply IHnass.
+Qed.
+
+Lemma subst_decompose_prod_n_assum nass t n k :
+  has_nparams nass t ->
+  match decompose_prod_n_assum [] nass t with
+  | Some (ctx', t') =>
+    decompose_prod_n_assum [] nass (subst n k t) = Some (subst_context n k ctx', subst n (length ctx' + k) t')
+  | None => False
+  end.
+Proof.
+  intros Hpars. apply has_nparams_ex in Hpars as [[ctx' t'] Heq].
+  rewrite Heq. eapply subst_decompose_prod_n_assum_rec in Heq. apply Heq.
+Qed.
+
+Lemma subst_instantiate_params n k npars args t :
+  Forall Ast.wf n ->
+  forall t', instantiate_params npars args t = Some t' ->
+             instantiate_params npars (map (subst n k) args) (subst n k t) = Some (subst n k t').
+Proof.
+  intros Hn.
+  induction npars in args, Hn, t, n, k |- *.
+  destruct args; simpl; intros t' [= ->]; reflexivity.
+
+  intros t'. simpl.
+  pose proof (strip_outer_cast_tProd_tLetIn_subst t n k) as Hsubst.
+  destruct (strip_outer_cast t) eqn:Ht; try congruence; rewrite Hsubst.
+  destruct args; simpl; try congruence; auto.
+  - intros Ht'. specialize (IHnpars n k args (t0_2 {0 := t0}) Hn t' Ht').
+    rewrite <- IHnpars. f_equal.
+    unfold subst1. rewrite distr_subst; auto.
+  - intros Ht'. specialize (IHnpars n k args (t0_3 {0 := t0_1}) Hn t' Ht').
+    rewrite <- IHnpars. f_equal.
+    unfold subst1. rewrite distr_subst; auto.
+Qed.
+Hint Rewrite subst_instantiate_params : subst.
+
+Lemma decompose_prod_n_assum_subst_ind ctx0 ctx1 ctx2 ctx3 n t s t' :
+  Forall Ast.wf s ->
+  decompose_prod_n_assum (ctx0 ,,, ctx1 ,,, ctx2) n t =
+  Some (ctx0 ,,, ctx1 ,,, ctx3, t') ->
+  decompose_prod_n_assum (ctx0 ,,, subst_context s 0 ctx2) n (subst s #|ctx2| t) =
+  Some (ctx0 ,,, subst_context s 0 ctx3, subst s #|ctx3| t').
+Proof.
+  induction n in ctx0, ctx1, ctx2, ctx3, t, t' |- *.
+  simpl. intros.
+  - injection H0. intros <- Heq.
+    f_equal.
+    unfold app_context in *.
+    rewrite !app_assoc in Heq.
+    repeat apply app_inv_tail in Heq. subst ctx2. reflexivity.
+  - simpl.
+    intros.
+    pose proof (strip_outer_cast_tProd_tLetIn_subst t s #|ctx2|) as Hsubst.
+    destruct (strip_outer_cast t); simpl in *; try discriminate; rewrite Hsubst.
+    -- specialize (IHn ctx0 ctx1 (ctx2 ,, vass n0 t0_1) ctx3 t0_2 t' H).
+       simpl in *. unfold snoc in H0.
+       forward IHn. rewrite H0. reflexivity.
+       now rewrite subst_context_snoc0 in IHn.
+    -- specialize (IHn ctx0 ctx1 (ctx2 ,, vdef n0 t0_1 t0_2) ctx3 t0_3 t' H).
+       simpl in *. unfold snoc in H0.
+       forward IHn. rewrite H0. reflexivity.
+       now rewrite subst_context_snoc0 in IHn.
+Qed.
+Close Scope string_scope.
+
+Lemma decompose_prod_n_assum_ctx ctx n t ctx' t' :
+  decompose_prod_n_assum ctx n t = Some (ctx', t') -> exists ctx'', ctx' = (ctx ,,, ctx'').
+Proof.
+  induction n in ctx, t, ctx', t' |- *. simpl. intros [= -> ->]. exists []; eauto.
+  simpl.
+  destruct (strip_outer_cast t); simpl; try congruence.
+  intros H. apply IHn in H as [ctx'' ->].
+  exists (ctx'' ++ [vass n0 t0_1]). unfold app_context, snoc.
+  rewrite <- app_assoc. reflexivity.
+  intros H. apply IHn in H as [ctx'' ->].
+  exists (ctx'' ++ [vdef n0 t0_1 t0_2]). unfold app_context, snoc.
+  rewrite <- app_assoc. reflexivity.
+Qed.
+
+Lemma decompose_prod_n_assum_subst ctx0 ctx1 ctx3 n t s t' :
+  Forall Ast.wf s ->
+  decompose_prod_n_assum (ctx0 ,,, ctx1) n t = Some (ctx0 ,,, ctx1 ,,, ctx3, t') ->
+  decompose_prod_n_assum ctx0 n (subst s 0 t) =
+  Some (ctx0 ,,, subst_context s 0 ctx3, subst s #|ctx3| t').
+Proof.
+  intros.
+  pose proof (decompose_prod_n_assum_subst_ind ctx0 ctx1 [] ctx3 n t s t' H).
+  simpl in *. specialize (H1 H0). auto.
+Qed.
+
+Lemma wf_strip_outer_cast t : Ast.wf t -> Ast.wf (strip_outer_cast t).
+Proof.
+  induction t; auto.
+  simpl. intros H; now inv H.
+Qed.
+
+Lemma subst_instantiate_params_none n k npars args t :
+  Forall Ast.wf n -> has_nparams npars t -> Forall Ast.wf args -> Ast.wf t ->
+  instantiate_params npars args t = None ->
+  instantiate_params npars (map (subst n k) args) (subst n k t) = None.
+Proof.
+  intros Hn Hp Hargs Ht.
+  apply has_nparams_ex in Hp as [[ctx' t'] He].
+  revert ctx' t' He. generalize (@nil context_decl).
+  induction npars in args, Hargs, Hn, t, Ht, n, k |- *.
+  destruct args; simpl. discriminate. reflexivity.
+
+  simpl.
+  pose proof (strip_outer_cast_tProd_tLetIn_subst t n k) as Hsubst.
+  intros l' ctx' t'.
+  destruct (strip_outer_cast t) eqn:Hstript; try congruence; try reflexivity; try rewrite Hsubst.
+  destruct args; simpl; try congruence; auto.
+  - intros Ht'.
+    pose proof (decompose_prod_n_assum_ctx _ _ _ _ _ Ht') as [ctx'' ->].
+    change (l',, vass n0 t0_1 ,,, ctx'') with (l' ,,, [vass n0 t0_1] ,,, ctx'') in Ht'.
+    change (l' ,, vass n0 t0_1) with (l' ,,, [vass n0 t0_1]) in Ht'.
+    eapply (decompose_prod_n_assum_subst _ _ _ _ _ [t0]) in Ht'.
+    inv Hargs.
+    assert (Ast.wf ((subst0 [t0]) t0_2)). apply wf_subst. wf.
+    apply wf_strip_outer_cast in Ht. rewrite Hstript in Ht.
+    now inv Ht.
+    specialize (IHnpars n k args _ Hn H0 H1 _ _ _ Ht').
+    unfold subst1 in *.
+    intros. specialize (IHnpars H2).
+    rewrite <- IHnpars. f_equal.
+    now rewrite distr_subst.
+    now inv Hargs.
+  - intros Ht'.
+    pose proof (decompose_prod_n_assum_ctx _ _ _ _ _ Ht') as [ctx'' ->].
+    change (l',, vdef n0 t0_1 t0_2 ,,, ctx'') with (l' ,,, [vdef n0 t0_1 t0_2] ,,, ctx'') in Ht'.
+    change (l' ,, vdef n0 t0_1 t0_2) with (l' ,,, [vdef n0 t0_1 t0_2]) in Ht'.
+    eapply (decompose_prod_n_assum_subst _ _ _ _ _ [t0_1]) in Ht'.
+    assert (Ast.wf ((subst0 [t0_1]) t0_3)).
+    apply wf_strip_outer_cast in Ht. rewrite Hstript in Ht.
+    inv Ht; now apply wf_subst.
+    specialize (IHnpars n k args _ Hn Hargs H _ _ _ Ht').
+    unfold subst1 in *.
+    intros. specialize (IHnpars H0).
+    rewrite <- IHnpars. f_equal.
+    now rewrite distr_subst.
+    apply wf_strip_outer_cast in Ht. rewrite Hstript in Ht.
+    now inv Ht.
+Qed.
 
 Lemma subst_it_mkProd_or_LetIn n k ctx t :
   subst n k (it_mkProd_or_LetIn ctx t) =
@@ -539,6 +666,7 @@ Qed.
 Lemma subst_types_of_case ind mdecl idecl args u p pty indctx pctx ps btys n k :
   let f ctx := subst n (#|ctx| + k) in
   let f_ctx := subst_context n k in
+  Forall Ast.wf n -> Forall Ast.wf args ->
   Ast.wf pty -> Ast.wf (ind_type idecl) ->
   types_of_case ind mdecl idecl args u p pty = Some (indctx, pctx, ps, btys) ->
   types_of_case ind mdecl (map_one_inductive_body (inductive_mind ind) (polymorphic_instance mdecl.(ind_universes))
@@ -546,7 +674,7 @@ Lemma subst_types_of_case ind mdecl idecl args u p pty indctx pctx ps btys n k :
                 (map (f []) args) u (f [] p) (f [] pty) =
   Some (f_ctx indctx, f_ctx pctx, ps, map (on_snd (f [])) btys).
 Proof.
-  simpl. intros wfpty wfdecl. simpl.
+  simpl. intros wfn wfargs wfpty wfdecl. simpl.
   unfold types_of_case. simpl.
   pose proof (subst_destArity [] (ind_type idecl) n k wfdecl); trivial. simpl in H.
   unfold subst_context in H. simpl in H. rewrite ind_type_map. simpl.
@@ -568,12 +696,16 @@ Proof.
   destruct x as [[id t] arity]. simpl.
   rewrite <- UnivSubst.subst_subst_instance_constr.
   rewrite substl_inds_subst.
-(*   rewrite <- subst_instantiate_params. *)
-(*   destruct (instantiate_params _ _) eqn:Heqip. simpl. *)
-(*   epose proof (subst_decompose_prod_assum t0 n k). *)
-(*   destruct (decompose_prod_assum [] t0). *)
-(*   rewrite <- H. *)
-(*   destruct (decompose_app t1) as [fn arg] eqn:?. *)
+  assert (map (UnivSubst.subst_instance_constr u) n = n). admit.
+  rewrite H. clear H.
+  destruct (instantiate_params _ args) eqn:Heq.
+  pose proof (subst_instantiate_params n k _ _ _ wfn _ Heq).
+  2:{ eapply subst_instantiate_params_none in Heq.
+      rewrite Heq. all:eauto. admit.
+      apply wf_subst. apply wf_inds. apply wf_subst_instance_constr. admit. }
+  rewrite H.
+  destruct (decompose_prod_assum [] t0) eqn:Heq'.
+  destruct (decompose_app t1) as [fn arg] eqn:?.
 (*   rewrite (decompose_app_subst _ _ _ fn arg); auto. simpl. *)
 (*   destruct (chop _ arg) eqn:Heqchop. eapply chop_map in Heqchop. *)
 (*   rewrite Heqchop. clear Heqchop. *)
@@ -830,6 +962,17 @@ Proof.
   now rewrite eq_ind_refl, !Nat.eqb_refl.
 Qed.
 
+Lemma strip_outer_cast_invol t : strip_outer_cast (strip_outer_cast t) = strip_outer_cast t.
+Proof.
+  induction t; simpl; auto.
+Qed.
+
+Lemma eq_term_strip_outer_cast:
+  forall (H : checker_flags) (φ : t) (t u : term), eq_term φ t u = true -> eq_term φ t (strip_outer_cast u) = true.
+Proof.
+  intros H φ. destruct t; intros *; simpl; rewrite ?strip_outer_cast_invol; auto.
+Qed.
+
 Lemma eq_term_refl `{checker_flags} φ t : eq_term φ t t = true.
 Proof.
   induction t using term_forall_list_ind; simpl; try reflexivity; try discriminate;
@@ -842,8 +985,10 @@ Proof.
   - unfold eq_evar. rewrite Nat.eqb_refl.
     simpl. induction H0; simpl; auto. now rewrite H0, IHForall.
   - apply eq_universe_refl.
-  - eapply (Forall_forallb _ _ (fun x => eq_term φ x x)) in H0.
-    rewrite IHt. induction l; simpl; auto.
+  - now apply eq_term_strip_outer_cast.
+  - rewrite IHt; simpl.
+    eapply (Forall_forallb _ _ (fun x => eq_term φ x x)) in H0.
+    induction l; simpl; auto.
     simpl in H0. rewrite andb_true_iff in H0. intuition.
     auto.
   - unfold eq_constant. rewrite eq_string_refl.
@@ -873,22 +1018,32 @@ Proof.
     try (merge_Forall; close_Forall; intuition auto);
     try (rewrite ?IHt1, ?IHt2, ?IHt3; reflexivity).
 
-  - destruct u; try discriminate. now apply eq_universe_leq_universe.
-  - destruct u; try discriminate.
+  - destruct (strip_outer_cast u); auto. now apply eq_universe_leq_universe.
+  - destruct (strip_outer_cast u); try discriminate.
     rewrite andb_true_iff in *. intuition.
-  - destruct u; try discriminate.
-    rewrite andb_true_iff in *. intuition.
-  - destruct u; try discriminate.
+  - destruct (strip_outer_cast u); try discriminate.
     rewrite andb_true_iff in *. intuition.
 Qed.
 
 Lemma eq_term_App `{checker_flags} φ f f' :
   eq_term φ f f' = true ->
-  isApp f = isApp f'.
+  isApp (strip_outer_cast f) = isApp (strip_outer_cast f').
 Proof.
   destruct f, f'; simpl; try congruence.
-  destruct p. auto.
-Qed.
+Admitted.  (* destruct p. auto. *)
+(* Qed. *)
+
+Lemma eq_term_mkApp `{checker_flags} φ f l f' l' :
+  eq_term φ f f' = true ->
+  eq_term φ l l' = true ->
+  eq_term φ (mkApp f l) (mkApp f' l') = true.
+Proof.
+  intros.
+  destruct (isApp (strip_outer_cast f)) eqn:Heq.
+  eapply eq_term_App in H0.
+
+  destruct f, f'; simpl in *; try discriminate.
+
 
 Lemma eq_term_mkApps `{checker_flags} φ f l f' l' :
   eq_term φ f f' = true ->
@@ -1015,6 +1170,37 @@ Proof.
   simpl in *. rewrite andb_true_iff in *.
   intuition auto using subst_eq_term.
   intuition auto using subst_eq_term.
+Qed.
+
+Lemma subst_check_correct_arity:
+  forall (cf : checker_flags) (Σ : global_context) (ind : inductive) (u : universe_instance)
+         (npar : nat) (args : list term) (idecl : one_inductive_body)
+         (indctx pctx : list context_decl) s k,
+    check_correct_arity (snd Σ) idecl ind u indctx (firstn npar args) pctx = true ->
+    check_correct_arity
+      (snd Σ) idecl ind u (subst_context s k indctx) (firstn npar (map (subst s k) args))
+      (subst_context s k pctx) = true.
+Proof.
+  intros cf Σ ind u npar args idecl indctx pctx s k.
+  unfold check_correct_arity.
+  destruct pctx in indctx |- *. simpl; try congruence. simpl.
+  rewrite subst_context_snoc. simpl.
+  unfold eq_context.
+  rewrite !andb_true_iff. intros.
+  destruct H. split.
+  destruct c. destruct decl_body; try discriminate.
+  unfold eq_decl in *. simpl in *.
+  assert (#|indctx| = #|pctx|) by now eapply forallb2_length in H0.
+  rewrite <- H1.
+  clear H0.
+  eapply (subst_eq_term _ s (#|indctx| + k)) in H.
+  rewrite subst_mkApps, map_app in H. simpl in H.
+  rewrite firstn_map. rewrite to_extended_list_subst.
+  erewrite <- (to_extended_list_map_subst s) in H.
+  rewrite <- H. f_equal. f_equal. f_equal. rewrite subst_context_length.
+  rewrite !map_map_compose. apply map_ext.
+  intros. unfold compose. now rewrite commut_lift_subst_rec.
+  eapply subst_eq_context in H0. eapply H0.
 Qed.
 
 Lemma subs_wf `{checker_flags} Σ Γ s Δ : wf Σ -> subs Σ Γ s Δ -> Forall Ast.wf s.
@@ -1316,7 +1502,7 @@ Proof.
     -- auto.
     -- revert H4. subst pars.
        erewrite subst_declared_inductive; eauto.
-       admit. (* apply subst_check_correct_arity.*)
+       apply subst_check_correct_arity.
     -- destruct idecl; simpl in *; auto.
        destruct decompose_prod_assum. auto.
     -- now rewrite !subst_mkApps in X4.
@@ -1415,7 +1601,7 @@ Proof.
     eapply substitution_cumul; eauto.
     now eapply typing_wf in X.
     now eapply typing_wf in X1.
-Admitted. (* 4 subgoals remaining: univ substs and case *)
+Admitted. (* 3 subgoals remaining: univ substs *)
 
 Theorem substitution_alt `{checker_flags} Σ Γ Γ' s Δ (t : term) T :
   wf Σ -> subs Σ Γ s Γ' ->

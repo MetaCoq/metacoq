@@ -238,7 +238,7 @@ Proof.
   - rewrite closedn_subst_instance_constr.
     eapply declared_inductive_inv in X0; eauto.
     apply onArity in X0. repeat red in X0.
-    destruct X0 as [s Hs]. rewrite -> andb_true_iff in Hs.
+    destruct X0 as [[s Hs] _]. rewrite -> andb_true_iff in Hs.
     intuition eauto using closed_upwards with arith.
 
   - destruct isdecl as [Hidecl Hcdecl].
@@ -246,7 +246,7 @@ Proof.
     apply onConstructors in X0. repeat red in X0.
     eapply nth_error_all in Hcdecl; eauto.
     repeat red in Hcdecl.
-    destruct Hcdecl as [s Hs]. rewrite -> andb_true_iff in Hs.
+    destruct Hcdecl as [[s Hs] _]. rewrite -> andb_true_iff in Hs.
     destruct Hs as [Hdecl _].
     unfold type_of_constructor.
     apply closedn_substl.

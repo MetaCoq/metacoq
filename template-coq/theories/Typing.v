@@ -408,17 +408,17 @@ Definition eq_universe_instance `{checker_flags} φ u v :=
 
 (* ** Syntactic equality up-to universes
 
-  We shouldn't look at printing annotations *)
+  We shouldn't look at printing annotations nor casts *)
 
 Fixpoint eq_term `{checker_flags} (φ : uGraph.t) (t u : term) {struct t} :=
-  match t, u with
+  match t, strip_outer_cast u with
   | tRel n, tRel n' => eq_nat n n'
   | tMeta n, tMeta n' => eq_nat n n'
   | tEvar ev args, tEvar ev' args' => eq_evar ev ev' && forallb2 (eq_term φ) args args'
   | tVar id, tVar id' => eq_string id id'
   | tSort s, tSort s' => eq_universe φ s s'
   | tApp f args, tApp f' args' => eq_term φ f f' && forallb2 (eq_term φ) args args'
-  | tCast t _ v, tCast u _ v' => eq_term φ t u && eq_term φ v v'
+  | tCast t _ _, u => eq_term φ t u
   | tConst c u, tConst c' u' => eq_constant c c' && eq_universe_instance φ u u'
   | tInd i u, tInd i' u' => eq_ind i i' && eq_universe_instance φ u u'
   | tConstruct i k u, tConstruct i' k' u' => eq_ind i i' && eq_nat k k'
@@ -444,17 +444,17 @@ Fixpoint eq_term `{checker_flags} (φ : uGraph.t) (t u : term) {struct t} :=
 
 (* ** Syntactic cumulativity up-to universes
 
-  We shouldn't look at printing annotations *)
+  We shouldn't look at printing annotations or casts *)
 
 Fixpoint leq_term `{checker_flags} (φ : uGraph.t) (t u : term) {struct t} :=
-  match t, u with
+  match t, strip_outer_cast u with
   | tRel n, tRel n' => eq_nat n n'
   | tMeta n, tMeta n' => eq_nat n n'
   | tEvar ev args, tEvar ev' args' => eq_nat ev ev' && forallb2 (eq_term φ) args args'
   | tVar id, tVar id' => eq_string id id'
   | tSort s, tSort s' => leq_universe φ s s'
   | tApp f args, tApp f' args' => eq_term φ f f' && forallb2 (eq_term φ) args args'
-  | tCast t _ v, tCast u _ v' => leq_term φ t u && eq_term φ v v'
+  | tCast t _ _, u => leq_term φ t u
   | tConst c u, tConst c' u' => eq_constant c c' && eq_universe_instance φ u u'
   | tInd i u, tInd i' u' => eq_ind i i' && eq_universe_instance φ u u'
   | tConstruct i k u, tConstruct i' k' u' => eq_ind i i' && eq_nat k k' &&
@@ -513,14 +513,21 @@ Definition it_mkProd_or_LetIn (l : context) (t : term) :=
 (** Compute the type of a case from the predicate [p], actual parameters [pars] and
     an inductive declaration. *)
 
-Fixpoint instantiate_params pars ty :=
-  match pars with
-  | [] => Some ty
-  | hd :: tl =>
-    match ty with
-    | tProd _ _ B => instantiate_params tl (subst10 hd B)
-    | tLetIn _ b _ b' => instantiate_params tl (subst10 b b')
-    | _ => None (* Parameters and type do not match *)
+Fixpoint instantiate_params npars pars ty :=
+  match npars with
+  | 0 => match pars with
+         | [] => Some ty
+         | _ :: _ => None (* Too many arguments to substitute *)
+         end
+  | S n =>
+    match strip_outer_cast ty with
+    | tProd _ _ B =>
+      match pars with
+      | hd :: tl => instantiate_params n tl (subst10 hd B)
+      | [] => None (* Not enough arguments to substitute *)
+      end
+    | tLetIn _ b _ b' => instantiate_params n pars (subst10 b b')
+    | _ => None (* Not enough products in the type *)
     end
   end.
 
@@ -528,7 +535,7 @@ Definition build_branches_type ind mdecl idecl params u p :=
   let inds := inds (inductive_mind ind) u mdecl.(ind_bodies) in
   let branch_type i '(id, t, ar) :=
     let ty := substl inds (subst_instance_constr u t) in
-    match instantiate_params params ty with
+    match instantiate_params mdecl.(ind_npars) params ty with
     | Some ty =>
       let '(sign, ccl) := decompose_prod_assum [] ty in
       let nargs := List.length sign in
@@ -783,6 +790,30 @@ Definition reconstruct_global_context Σ
 Definition isType `{checker_flags} (Σ : global_context) (Γ : context) (t : term) :=
   { s : _ & Σ ;;; Γ |- t : tSort s }.
 
+Definition has_nparams npars ty :=
+  decompose_prod_n_assum [] npars ty <> None.
+
+(* Definition is_some {A} (t : option A) := *)
+(*   match t with *)
+(*   | Some _ => true *)
+(*   | None => false *)
+(*   end. *)
+
+(* Definition isArity t := is_some (destArity [] t). *)
+
+(* Inductive isArity_Spec (t : term) : bool -> Set := *)
+(* | isArity_Spec_true ctx s : *)
+(*     t = it_mkProd_or_LetIn ctx (tSort s) -> isArity_Spec t true. *)
+
+(* Lemma isArity_spec t : isArity_Spec t (isArity t). *)
+(* Proof. *)
+(*   unfold isArity in *. *)
+(*   destruct (destArity [] t) eqn:Heq. *)
+(*   simpl in *. destruct p as [ctx' u]. *)
+(*   induction t; try discriminate; simpl in Heq. *)
+(*   injection Heq. intros <- <-. *)
+(*   apply (isArity_Spec_true _ [] u0). reflexivity. *)
+
 (** *** Typing of inductive declarations *)
 
 Section GlobalMaps.
@@ -791,12 +822,15 @@ Section GlobalMaps.
 
   Definition on_type Σ Γ T := P Σ Γ None T.
 
-  Definition on_constructor (Σ : global_context) (Γ : context) (c : ident * term * nat) :=
-    on_type Σ Γ (snd (fst c)).
+  Definition on_arity Σ Γ npars indty : Type :=
+    on_type Σ Γ indty * has_nparams npars indty.
+
+  Definition on_constructor (Σ : global_context) (Γ : context) npars (c : ident * term * nat) : Type :=
+    on_type Σ Γ (snd (fst c)) * has_nparams npars (snd (fst c)).
     (** TODO: check it has n products ending in a tRel application *)
 
-  Definition on_constructors (Σ : global_context) (Γ : context) l :=
-    All (on_constructor Σ Γ) l.
+  Definition on_constructors (Σ : global_context) (Γ : context) npars l :=
+    All (on_constructor Σ Γ npars) l.
 
   Definition on_projection (Σ : global_context) (Γ : context) (p : ident * term) :=
     on_type Σ Γ (snd p).
@@ -806,9 +840,10 @@ Section GlobalMaps.
 
   Record on_ind_body
          (Σ : global_context) (mind : kername) (u : universe_instance) npars (Γ : context) (n : nat) (oib : one_inductive_body) :=
-    { onArity : (** Arity is well-formed *) on_type Σ [] oib.(ind_type);
+    { onArity : (** Arity is well-formed *)
+        on_arity Σ [] npars oib.(ind_type);
       (** Constructors are well-typed *)
-      onConstructors : on_constructors Σ Γ oib.(ind_ctors);
+      onConstructors : on_constructors Σ Γ npars oib.(ind_ctors);
       (** Projections are well-typed *)
       onProjections :
         let '(ctx, _) := decompose_prod_assum [] oib.(ind_type) in
@@ -888,9 +923,12 @@ Proof.
     destruct x; simpl in *.
     destruct X0 as [Xl Xr].
     constructor; red; simpl.
-    + apply onArity in Xl; apply onArity in Xr. intuition.
+    + apply onArity in Xl; apply onArity in Xr.
+      unfold on_arity, on_type in *. intuition.
     + apply onConstructors in Xl; apply onConstructors in Xr. intuition.
-      red in Xl, Xr. merge_Forall. eapply All_impl; eauto.
+      red in Xl, Xr.
+      unfold on_constructor, on_type in *.
+      merge_Forall. eapply All_impl; eauto. simpl; intuition eauto.
     + apply onProjections in Xl; apply onProjections in Xr. simpl in *.
       fold (decompose_prod_assum [] ind_type). destruct (decompose_prod_assum [] ind_type).
       intuition.
@@ -912,9 +950,10 @@ Proof.
     intros. red in o. merge_Forall. eapply Alli_impl; eauto. intros.
     destruct x; simpl in *.
     constructor; red; simpl.
-    + apply onArity in X1. intuition.
+    + apply onArity in X1. unfold on_arity, on_type in *; simpl in *; intuition.
     + apply onConstructors in X1.
-      red in X1. eapply All_impl; intuition eauto. now do 2 red in X2 |- *.
+      red in X1. unfold on_constructor, on_type in *. eapply All_impl; eauto.
+      simpl; intuition eauto.
     + apply onProjections in X1. simpl in *.
       fold (decompose_prod_assum [] ind_type).
       destruct (decompose_prod_assum [] ind_type).
@@ -1312,12 +1351,12 @@ Proof.
     + do 3 red in X15. do 2 red.
       eapply Alli_impl; eauto. clear X15; intros.
       constructor.
-      ++ apply onArity in X15. destruct X15 as [s Hs]. exists s.
+      ++ apply onArity in X15. destruct X15 as [[s Hs] Hpars]. split; auto. exists s.
          specialize (IH (existT _ (Σ, φ) (existT _ X14 (existT _ _ (existT _ (localenv_nil typing _) (existT _ _ (existT _ _ Hs))))))).
          simpl in IH. apply IH; constructor 1; simpl; omega.
       ++ apply onConstructors in X15.
          red in X15 |- *. eapply All_impl; eauto. intros.
-         red in X16 |- *. destruct X16 as [s Hs]. exists s.
+         red in X16 |- *. destruct X16 as [[s Hs] Hpars]. split; auto. exists s.
          pose proof (typing_wf_local (Σ:= (Σ, φ)) X14 Hs).
          specialize (IH (existT _ (Σ, φ) (existT _ X14 (existT _ _ (existT _ X16 (existT _ _ (existT _ _ Hs))))))).
          simpl in IH. apply IH; constructor 1; simpl; omega.
@@ -1806,14 +1845,14 @@ Proof.
     do 3 red in prf.
     eapply nth_error_alli in Hidecl; eauto.
     eapply onArity in Hidecl.
-    destruct Hidecl; wf.
+    destruct Hidecl as [[s Hs] Hpars]; wf.
   - split. wf.
     destruct isdecl as [[Hmdecl Hidecl] Hcdecl]. red in Hmdecl.
     eapply lookup_on_global_env in X as [Σ' [wfΣ' prf]]; eauto. red in prf.
     eapply nth_error_alli in Hidecl; eauto. simpl in *. intuition.
     apply onConstructors in Hidecl.
     eapply nth_error_all in Hcdecl; eauto.
-    destruct Hcdecl as [s Hs]. unfold type_of_constructor. wf.
+    destruct Hcdecl as [[s Hs] Hpars]. unfold type_of_constructor. wf.
   - split. wf. constructor; eauto.
     eapply Forall2_Forall_left; eauto. simpl. intuition auto.
     apply wf_mkApps. wf. apply Forall_app_inv. split. 2:wf.

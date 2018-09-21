@@ -196,9 +196,9 @@ Proof.
   do 2 red in Hdecl. eapply Alli_impl; eauto.
   intros.
   destruct X. constructor.
-  unfold on_type in *; eauto.
+  unfold on_arity, on_type in *; intuition eauto.
   unfold on_constructors in *. eapply All_impl; eauto.
-  intros [[id t] ar]. unfold on_constructor, on_type in *; eauto.
+  intros [[id t] ar]. unfold on_constructor, on_type in *; intuition eauto.
   destruct decompose_prod_assum. intuition.
   eapply All_impl; eauto. intros [id trm].
   unfold on_projection, on_type; eauto.

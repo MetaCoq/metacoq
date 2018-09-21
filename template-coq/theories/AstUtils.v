@@ -1037,6 +1037,23 @@ Fixpoint decompose_prod_assum (Γ : context) (t : term) : context * term :=
   | _ => (Γ, t)
   end.
 
+Fixpoint strip_outer_cast t :=
+  match t with
+  | tCast t _ _ => strip_outer_cast t
+  | _ => t
+  end.
+
+Fixpoint decompose_prod_n_assum (Γ : context) n (t : term) : option (context * term) :=
+  match n with
+  | 0 => Some (Γ, t)
+  | S n =>
+    match strip_outer_cast t with
+    | tProd na A B => decompose_prod_n_assum (Γ ,, vass na A) n B
+    | tLetIn na b bty b' => decompose_prod_n_assum (Γ ,, vdef na b bty) n b'
+    | _ => None
+    end
+  end.
+
 Fixpoint reln (l : list term) (p : nat) (Γ0 : list context_decl) {struct Γ0} : list term :=
   match Γ0 with
   | [] => l

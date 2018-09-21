@@ -264,12 +264,12 @@ Proof.
   destruct (decompose_prod_assum [] (lift n k ind_type)) eqn:Heq'.
   destruct X0. simpl in *.
   assert (lift n k ind_type = ind_type).
-  destruct onArity as [s Hs].
+  destruct onArity as [[s Hs] Hpars].
   eapply typed_liftn; eauto. constructor. simpl; lia.
   rewrite H0 in Heq'. rewrite Heq in Heq'. revert Heq'; intros [= <- <-].
   f_equal; auto.
   apply (All_map_id onConstructors).
-  intros [[x p] n']. intros [s Hty].
+  intros [[x p] n']. intros [[s Hty] Hpars].
   unfold on_pi2; f_equal; f_equal. eapply typed_liftn. 4:eapply Hty. wf. wf. lia.
   rewrite Heq in onProjections. destruct onProjections as [_ onProjections].
   apply (All_map_id onProjections).
@@ -405,15 +405,26 @@ Proof.
   unfold vdef, lift_decl, map_decl in *. simpl in *. rewrite IHwf1. reflexivity.
 Qed.
 
-Lemma lift_instantiate_params n k args t :
-  option_map (lift n k) (instantiate_params args t) =
-  instantiate_params (map (lift n k) args) (lift n k t).
+Lemma lift_strip_outer_cast n k t : lift n k (strip_outer_cast t) = strip_outer_cast (lift n k t).
 Proof.
-  induction args in t, n, k |- *. reflexivity.
-  simpl. destruct t; simpl; try congruence.
-  - now destruct (Nat.leb k n0).
-  - rewrite IHargs. f_equal. apply distr_lift_subst.
-  - rewrite IHargs; f_equal. apply distr_lift_subst.
+  induction t; simpl; try reflexivity.
+  destruct Nat.leb; reflexivity.
+  now rewrite IHt1.
+Qed.
+
+Lemma lift_instantiate_params n k npars args t :
+  option_map (lift n k) (instantiate_params npars args t) =
+  instantiate_params npars (map (lift n k) args) (lift n k t).
+Proof.
+  induction npars in args, t, n, k |- *.
+  - destruct args; reflexivity.
+  - simpl. rewrite <- lift_strip_outer_cast. generalize (strip_outer_cast t).
+    clear t; intros t.
+    destruct t; simpl; try congruence.
+    -- now destruct (Nat.leb k n0).
+    -- destruct args; try congruence; auto.
+       simpl. rewrite IHnpars. f_equal. apply distr_lift_subst.
+    -- simpl. rewrite IHnpars; f_equal. apply distr_lift_subst.
 Qed.
 Hint Rewrite lift_instantiate_params : lift.
 
@@ -597,51 +608,69 @@ Lemma lift_eq_term `{checker_flags} ϕ n k T U :
   eq_term ϕ T U = true ->
   eq_term ϕ (lift n k T) (lift n k U) = true.
 Proof.
-  intros Hleq.
-  induction T in n, k, U, Hleq |- * using term_forall_list_ind; intros;
-    destruct U; try discriminate;
-  try solve [simpl; auto]; try
-                             (destruct (mkApps_trans_wf _ _ H0) as [U' [V' ->]]; reflexivity);
-  simpl in *; revert Hleq; try rewrite !andb_true_iff in *; intuition auto;
-    try (merge_Forall; close_Forall; intuition auto).
+  induction T in n, k, U |- * using term_forall_list_ind;
+    try match goal with
+          |- eq_term _ (tCast _ _ _) _ = _ -> _ => simpl; rewrite <- (lift_strip_outer_cast n k U); eauto
+        end;
+    simpl;
+    try (rewrite <- (lift_strip_outer_cast n k U); destruct (strip_outer_cast U) eqn:Heq);
+    try discriminate;
+  try solve [simpl; auto];
+  simpl in *; try rewrite !andb_true_iff in *; intros Hleq; intuition auto;
+  try solve [merge_Forall; close_Forall; intuition auto].
 
-  - intros. apply Nat.eqb_eq in Hleq. subst.
-    destruct Nat.leb; simpl. apply Nat.eqb_eq. reflexivity. apply Nat.eqb_refl.
+  - elim leb_spec_Set; simpl.
+    -- rewrite <- lift_strip_outer_cast. destruct (strip_outer_cast U); try discriminate.
+       simpl. apply Nat.eqb_eq in Hleq. subst.
+       intros Hk. apply Nat.leb_le in Hk. rewrite Hk. apply Nat.eqb_refl.
+    -- rewrite <- lift_strip_outer_cast. destruct (strip_outer_cast U); try discriminate.
+       intros Hk. simpl. apply Nat.eqb_eq in Hleq. subst.
+       elim leb_spec_Set; intros. lia. apply Nat.eqb_refl.
   - destruct p. destruct Nat.leb. discriminate. discriminate.
   - destruct p, p0. rewrite !andb_true_iff in *. intuition auto.
     red in H0. merge_Forall. close_Forall. intuition auto. destruct y. simpl. auto.
-  - rewrite !andb_true_iff in *.
+  - merge_Forall; close_Forall. intuition auto.
+    intros. rewrite !andb_true_iff in *.
     destruct x, y; simpl in *; intuition auto.
-    assert (#|m| = #|m0|). clear -H2. induction H2; simpl; auto. rewrite H4. auto.
-  - rewrite !andb_true_iff in *.
+    assert (#|m| = #|m0|). clear -H1. induction H1; simpl; auto. rewrite H4. auto.
+  - merge_Forall; close_Forall. intuition auto.
+    intros. rewrite !andb_true_iff in *.
     destruct x, y; simpl in *; intuition auto.
-    assert (#|m| = #|m0|). clear -H2. induction H2; simpl; auto. rewrite H4. auto.
+    assert (#|m| = #|m0|). clear -H1. induction H1; simpl; auto. rewrite H4. auto.
 Qed.
 
 Lemma lift_leq_term `{checker_flags} ϕ n k T U :
   leq_term ϕ T U = true ->
   leq_term ϕ (lift n k T) (lift n k U) = true.
 Proof.
-  intros Hleq.
-  induction T in n, k, U, Hleq |- * using term_forall_list_ind; intros;
-    destruct U; try discriminate;
-  try solve [simpl; auto]; try
-                             (destruct (mkApps_trans_wf _ _ H0) as [U' [V' ->]]; reflexivity);
-  simpl in *; revert Hleq; try destruct p, p0; try rewrite !andb_true_iff in *;
+  induction T in n, k, U |- * using term_forall_list_ind;
+    try match goal with
+          |- leq_term _ (tCast _ _ _) _ = _ -> _ => simpl; rewrite <- (lift_strip_outer_cast n k U); eauto
+        end;
+    simpl;
+    try (rewrite <- (lift_strip_outer_cast n k U); destruct (strip_outer_cast U) eqn:Heq);
+    try discriminate;
+  try solve [simpl; auto];
+  simpl in *; try destruct p, p0; try rewrite !andb_true_iff in *; intros Hleq;
     intuition auto using lift_eq_term;
     try (merge_Forall; close_Forall; intuition eauto using lift_eq_term).
 
-  - intros. apply Nat.eqb_eq in Hleq. subst.
-    destruct Nat.leb; simpl. apply Nat.eqb_eq. reflexivity. apply Nat.eqb_refl.
-  - destruct p. destruct (Nat.leb k n0); discriminate.
-  - destruct y. simpl. auto using lift_eq_term.
+  - elim leb_spec_Set; simpl.
+    -- rewrite <- lift_strip_outer_cast. destruct (strip_outer_cast U); try discriminate.
+       simpl. apply Nat.eqb_eq in Hleq. subst.
+       intros Hk. apply Nat.leb_le in Hk. rewrite Hk. apply Nat.eqb_refl.
+    -- rewrite <- lift_strip_outer_cast. destruct (strip_outer_cast U); try discriminate.
+       intros Hk. simpl. apply Nat.eqb_eq in Hleq. subst.
+       elim leb_spec_Set; intros. lia. apply Nat.eqb_refl.
+  - destruct p. destruct Nat.leb. discriminate. discriminate.
+  - destruct y. simpl in *. auto using lift_eq_term.
   - rewrite !andb_true_iff in *.
     destruct x, y; simpl in *; intuition auto using lift_eq_term.
-    assert (#|m| = #|m0|). clear -H2. induction H2; simpl; auto. rewrite H4.
+    assert (#|m| = #|m0|). clear -H1. induction H1; simpl; auto. rewrite H4.
     auto using lift_eq_term.
   - rewrite !andb_true_iff in *.
     destruct x, y; simpl in *; intuition auto using lift_eq_term.
-    assert (#|m| = #|m0|). clear -H2. induction H2; simpl; auto. rewrite H4.
+    assert (#|m| = #|m0|). clear -H1. induction H1; simpl; auto. rewrite H4.
     auto using lift_eq_term.
 Qed.
 
@@ -800,7 +829,7 @@ Proof.
        destruct H0. red in H0.
        eapply (lookup_on_global_env _ _ _ _ wfΣ) in H0 as [Σ' [wfΣ' H0]]; eauto.
        red in H0. red in H0.
-       eapply (nth_error_alli H5) in H0. apply onArity in H0; wf. }
+       eapply (nth_error_alli H5) in H0. apply onArity in H0 as [Hs Hpars]. wf. }
     -- eauto.
     -- erewrite lift_declared_inductive; eauto.
     -- auto.

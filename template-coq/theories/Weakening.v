@@ -609,24 +609,19 @@ Lemma lift_eq_term `{checker_flags} ϕ n k T U :
   eq_term ϕ (lift n k T) (lift n k U) = true.
 Proof.
   induction T in n, k, U |- * using term_forall_list_ind;
-    try match goal with
-          |- eq_term _ (tCast _ _ _) _ = _ -> _ => simpl; rewrite <- (lift_strip_outer_cast n k U); eauto
-        end;
-    simpl;
-    try (rewrite <- (lift_strip_outer_cast n k U); destruct (strip_outer_cast U) eqn:Heq);
+    destruct U; simpl;
     try discriminate;
   try solve [simpl; auto];
   simpl in *; try rewrite !andb_true_iff in *; intros Hleq; intuition auto;
   try solve [merge_Forall; close_Forall; intuition auto].
 
-  - elim leb_spec_Set; simpl.
-    -- rewrite <- lift_strip_outer_cast. destruct (strip_outer_cast U); try discriminate.
-       simpl. apply Nat.eqb_eq in Hleq. subst.
+  - simpl.
+    elim leb_spec_Set; simpl.
+    -- apply Nat.eqb_eq in Hleq. subst.
        intros Hk. apply Nat.leb_le in Hk. rewrite Hk. apply Nat.eqb_refl.
-    -- rewrite <- lift_strip_outer_cast. destruct (strip_outer_cast U); try discriminate.
-       intros Hk. simpl. apply Nat.eqb_eq in Hleq. subst.
+    -- apply Nat.eqb_eq in Hleq. subst.
        elim leb_spec_Set; intros. lia. apply Nat.eqb_refl.
-  - destruct p. destruct Nat.leb. discriminate. discriminate.
+  - destruct p. destruct Nat.leb; discriminate.
   - destruct p, p0. rewrite !andb_true_iff in *. intuition auto.
     red in H0. merge_Forall. close_Forall. intuition auto. destruct y. simpl. auto.
   - merge_Forall; close_Forall. intuition auto.
@@ -644,11 +639,7 @@ Lemma lift_leq_term `{checker_flags} ϕ n k T U :
   leq_term ϕ (lift n k T) (lift n k U) = true.
 Proof.
   induction T in n, k, U |- * using term_forall_list_ind;
-    try match goal with
-          |- leq_term _ (tCast _ _ _) _ = _ -> _ => simpl; rewrite <- (lift_strip_outer_cast n k U); eauto
-        end;
-    simpl;
-    try (rewrite <- (lift_strip_outer_cast n k U); destruct (strip_outer_cast U) eqn:Heq);
+    destruct U; simpl;
     try discriminate;
   try solve [simpl; auto];
   simpl in *; try destruct p, p0; try rewrite !andb_true_iff in *; intros Hleq;
@@ -656,11 +647,9 @@ Proof.
     try (merge_Forall; close_Forall; intuition eauto using lift_eq_term).
 
   - elim leb_spec_Set; simpl.
-    -- rewrite <- lift_strip_outer_cast. destruct (strip_outer_cast U); try discriminate.
-       simpl. apply Nat.eqb_eq in Hleq. subst.
+    -- simpl. apply Nat.eqb_eq in Hleq. subst.
        intros Hk. apply Nat.leb_le in Hk. rewrite Hk. apply Nat.eqb_refl.
-    -- rewrite <- lift_strip_outer_cast. destruct (strip_outer_cast U); try discriminate.
-       intros Hk. simpl. apply Nat.eqb_eq in Hleq. subst.
+    -- apply Nat.eqb_eq in Hleq. subst.
        elim leb_spec_Set; intros. lia. apply Nat.eqb_refl.
   - destruct p. destruct Nat.leb. discriminate. discriminate.
   - destruct y. simpl in *. auto using lift_eq_term.

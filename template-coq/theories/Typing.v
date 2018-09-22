@@ -267,7 +267,8 @@ Inductive red1 (Σ : global_declarations) (Γ : context) : term -> term -> Prop 
 | evar_red ev l l' : OnOne2 (red1 Σ Γ) l l' -> red1 Σ Γ (tEvar ev l) (tEvar ev l')
 
 | cast_red_l M1 k M2 N1 : red1 Σ Γ M1 N1 -> red1 Σ Γ (tCast M1 k M2) (tCast N1 k M2)
-| cast_red_r M2 k N2 M1 : red1 Σ Γ M2 N2 -> red1 Σ Γ (tCast M1 k M2) (tCast M1 k N2).
+| cast_red_r M2 k N2 M1 : red1 Σ Γ M2 N2 -> red1 Σ Γ (tCast M1 k M2) (tCast M1 k N2)
+| cast_red M1 k M2 : red1 Σ Γ (tCast M1 k M2) M1.
 
 Lemma red1_ind_all :
   forall (Σ : global_declarations) (P : context -> term -> term -> Prop),
@@ -323,9 +324,11 @@ Lemma red1_ind_all :
         red1 Σ Γ M1 N1 -> P Γ M1 N1 -> P Γ (tCast M1 k M2) (tCast N1 k M2)) ->
        (forall (Γ : context) (M2 : term) (k : cast_kind) (N2 M1 : term),
         red1 Σ Γ M2 N2 -> P Γ M2 N2 -> P Γ (tCast M1 k M2) (tCast M1 k N2)) ->
+       (forall (Γ : context) (M1 : term) (k : cast_kind) (M2 : term),
+        P Γ (tCast M1 k M2) M1) ->
        forall (Γ : context) (t t0 : term), red1 Σ Γ t t0 -> P Γ t t0.
 Proof.
-  intros. revert Γ t t0 H23.
+  intros. revert Γ t t0 H24.
   fix aux 4. intros Γ t T.
   move aux at top.
   destruct 1; match goal with
@@ -338,19 +341,19 @@ Proof.
   eapply H4; eauto.
   eapply H5; eauto.
 
-  - revert brs brs' H23.
+  - revert brs brs' H24.
     fix auxl 3.
     intros l l' Hl. destruct Hl.
     constructor. split; auto.
     constructor. auto.
 
-  - revert M2 N2 H23.
+  - revert M2 N2 H24.
     fix auxl 3.
     intros l l' Hl. destruct Hl.
     constructor. split; auto.
     constructor. auto.
 
-  - revert l l' H23.
+  - revert l l' H24.
     fix auxl 3.
     intros l l' Hl. destruct Hl.
     constructor. split; auto.
@@ -408,17 +411,21 @@ Definition eq_universe_instance `{checker_flags} φ u v :=
 
 (* ** Syntactic equality up-to universes
 
-  We shouldn't look at printing annotations nor casts *)
+  We shouldn't look at printing annotations nor casts.
+  It is however not possible to write a structurally recursive definition
+  for syntactic equality up-to casts due to the [tApp (tCast f _ _) args] case.
+  We hence implement first an equality which considers casts and do a stripping
+  phase of casts before checking equality. *)
 
 Fixpoint eq_term `{checker_flags} (φ : uGraph.t) (t u : term) {struct t} :=
-  match t, strip_outer_cast u with
+  match t, u with
   | tRel n, tRel n' => eq_nat n n'
   | tMeta n, tMeta n' => eq_nat n n'
   | tEvar ev args, tEvar ev' args' => eq_evar ev ev' && forallb2 (eq_term φ) args args'
   | tVar id, tVar id' => eq_string id id'
   | tSort s, tSort s' => eq_universe φ s s'
+  | tCast f k T, tCast f' k' T' => eq_term φ f f' && eq_term φ T T'
   | tApp f args, tApp f' args' => eq_term φ f f' && forallb2 (eq_term φ) args args'
-  | tCast t _ _, u => eq_term φ t u
   | tConst c u, tConst c' u' => eq_constant c c' && eq_universe_instance φ u u'
   | tInd i u, tInd i' u' => eq_ind i i' && eq_universe_instance φ u u'
   | tConstruct i k u, tConstruct i' k' u' => eq_ind i i' && eq_nat k k'
@@ -444,17 +451,17 @@ Fixpoint eq_term `{checker_flags} (φ : uGraph.t) (t u : term) {struct t} :=
 
 (* ** Syntactic cumulativity up-to universes
 
-  We shouldn't look at printing annotations or casts *)
+  We shouldn't look at printing annotations *)
 
 Fixpoint leq_term `{checker_flags} (φ : uGraph.t) (t u : term) {struct t} :=
-  match t, strip_outer_cast u with
+  match t, u with
   | tRel n, tRel n' => eq_nat n n'
   | tMeta n, tMeta n' => eq_nat n n'
   | tEvar ev args, tEvar ev' args' => eq_nat ev ev' && forallb2 (eq_term φ) args args'
   | tVar id, tVar id' => eq_string id id'
   | tSort s, tSort s' => leq_universe φ s s'
   | tApp f args, tApp f' args' => eq_term φ f f' && forallb2 (eq_term φ) args args'
-  | tCast t _ _, u => leq_term φ t u
+  | tCast f k T, tCast f' k' T' => eq_term φ f f' && eq_term φ T T'
   | tConst c u, tConst c' u' => eq_constant c c' && eq_universe_instance φ u u'
   | tInd i u, tInd i' u' => eq_ind i i' && eq_universe_instance φ u u'
   | tConstruct i k u, tConstruct i' k' u' => eq_ind i i' && eq_nat k k' &&
@@ -477,6 +484,33 @@ Fixpoint leq_term `{checker_flags} (φ : uGraph.t) (t u : term) {struct t} :=
     eq_nat idx idx'
   | _, _ => false
   end.
+
+Fixpoint strip_casts t :=
+  match t with
+  | tEvar ev args => tEvar ev (List.map strip_casts args)
+  | tLambda na T M => tLambda na (strip_casts T) (strip_casts M)
+  | tApp u v => mkApps (strip_casts u) (List.map (strip_casts) v)
+  | tProd na A B => tProd na (strip_casts A) (strip_casts B)
+  | tCast c kind t => strip_casts c
+  | tLetIn na b t b' => tLetIn na (strip_casts b) (strip_casts t) (strip_casts b')
+  | tCase ind p c brs =>
+    let brs' := List.map (on_snd (strip_casts)) brs in
+    tCase ind (strip_casts p) (strip_casts c) brs'
+  | tProj p c => tProj p (strip_casts c)
+  | tFix mfix idx =>
+    let mfix' := List.map (map_def strip_casts strip_casts) mfix in
+    tFix mfix' idx
+  | tCoFix mfix idx =>
+    let mfix' := List.map (map_def strip_casts strip_casts) mfix in
+    tCoFix mfix' idx
+  | tRel _ | tVar _ | tMeta _ | tSort _ | tConst _ _ | tInd _ _ | tConstruct _ _ _ => t
+  end.
+
+Definition eq_term_nocast `{checker_flags} (φ : uGraph.t) (t u : term) :=
+  eq_term φ (strip_casts t) (strip_casts u).
+
+Definition leq_term_nocast `{checker_flags} (φ : uGraph.t) (t u : term) :=
+  leq_term φ (strip_casts t) (strip_casts u).
 
 (** ** Utilities for typing *)
 
@@ -1700,6 +1734,7 @@ Proof.
     clear H1. induction H; inv H3; constructor; intuition auto.
   - constructor; auto. apply IHred1; auto. constructor; simpl; auto.
   - constructor; auto. induction H; inv H0; constructor; intuition auto.
+  - auto.
 Qed.
 
 Lemma All_app {A} (P : A -> Type) l l' : All P (l ++ l') -> All P l * All P l'.

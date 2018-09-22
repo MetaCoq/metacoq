@@ -462,6 +462,12 @@ Qed.
 Lemma decompose_prod_n_assum0 ctx t : decompose_prod_n_assum ctx 0 t = Some (ctx, t).
 Proof. destruct t; simpl; reflexivity. Qed.
 
+Lemma wf_strip_outer_cast t : Ast.wf t -> Ast.wf (strip_outer_cast t).
+Proof.
+  induction t; auto.
+  simpl. intros H; now inv H.
+Qed.
+
 Lemma strip_outer_cast_tProd_tLetIn_subst t n k :
   match strip_outer_cast t with
   | tProd na A B =>
@@ -577,12 +583,6 @@ Proof.
   intros.
   pose proof (decompose_prod_n_assum_subst_ind ctx0 ctx1 [] ctx3 n t s t' H).
   simpl in *. specialize (H1 H0). auto.
-Qed.
-
-Lemma wf_strip_outer_cast t : Ast.wf t -> Ast.wf (strip_outer_cast t).
-Proof.
-  induction t; auto.
-  simpl. intros H; now inv H.
 Qed.
 
 Lemma subst_instantiate_params_none n k npars args t :
@@ -962,17 +962,6 @@ Proof.
   now rewrite eq_ind_refl, !Nat.eqb_refl.
 Qed.
 
-Lemma strip_outer_cast_invol t : strip_outer_cast (strip_outer_cast t) = strip_outer_cast t.
-Proof.
-  induction t; simpl; auto.
-Qed.
-
-Lemma eq_term_strip_outer_cast:
-  forall (H : checker_flags) (φ : t) (t u : term), eq_term φ t u = true -> eq_term φ t (strip_outer_cast u) = true.
-Proof.
-  intros H φ. destruct t; intros *; simpl; rewrite ?strip_outer_cast_invol; auto.
-Qed.
-
 Lemma eq_term_refl `{checker_flags} φ t : eq_term φ t t = true.
 Proof.
   induction t using term_forall_list_ind; simpl; try reflexivity; try discriminate;
@@ -985,7 +974,6 @@ Proof.
   - unfold eq_evar. rewrite Nat.eqb_refl.
     simpl. induction H0; simpl; auto. now rewrite H0, IHForall.
   - apply eq_universe_refl.
-  - now apply eq_term_strip_outer_cast.
   - rewrite IHt; simpl.
     eapply (Forall_forallb _ _ (fun x => eq_term φ x x)) in H0.
     induction l; simpl; auto.
@@ -1018,32 +1006,20 @@ Proof.
     try (merge_Forall; close_Forall; intuition auto);
     try (rewrite ?IHt1, ?IHt2, ?IHt3; reflexivity).
 
-  - destruct (strip_outer_cast u); auto. now apply eq_universe_leq_universe.
-  - destruct (strip_outer_cast u); try discriminate.
+  - destruct u; auto. now apply eq_universe_leq_universe.
+  - destruct u; try discriminate.
     rewrite andb_true_iff in *. intuition.
-  - destruct (strip_outer_cast u); try discriminate.
+  - destruct u; try discriminate.
     rewrite andb_true_iff in *. intuition.
 Qed.
 
 Lemma eq_term_App `{checker_flags} φ f f' :
   eq_term φ f f' = true ->
-  isApp (strip_outer_cast f) = isApp (strip_outer_cast f').
+  isApp f = isApp f'.
 Proof.
   destruct f, f'; simpl; try congruence.
-Admitted.  (* destruct p. auto. *)
-(* Qed. *)
-
-Lemma eq_term_mkApp `{checker_flags} φ f l f' l' :
-  eq_term φ f f' = true ->
-  eq_term φ l l' = true ->
-  eq_term φ (mkApp f l) (mkApp f' l') = true.
-Proof.
-  intros.
-  destruct (isApp (strip_outer_cast f)) eqn:Heq.
-  eapply eq_term_App in H0.
-
-  destruct f, f'; simpl in *; try discriminate.
-
+  destruct p; congruence.
+Qed.
 
 Lemma eq_term_mkApps `{checker_flags} φ f l f' l' :
   eq_term φ f f' = true ->
@@ -1063,7 +1039,7 @@ Proof.
 
   rewrite !mkApps_tApp; auto. simpl. rewrite H0.
   apply H1.
-  pose (eq_term_App _ _ _ H0). all:congruence.
+  pose proof (eq_term_App _ _ _ H0). all:congruence.
 Qed.
 
 Lemma leq_term_mkApps `{checker_flags} φ f l f' l' :
@@ -1489,13 +1465,17 @@ Proof.
     specialize (X2 Γ Γ' Δ s sub eq_refl wfsubs).
     simpl. econstructor.
     5:{ eapply subst_types_of_case in H3.
-        simpl in H3. subst pars. rewrite firstn_map. eapply H3.
+        simpl in H3. subst pars. rewrite firstn_map. eapply H3; eauto.
+        -- now apply subs_wf in sub.
+        -- subst pars. eapply Forall_firstn.
+           apply typing_wf in X3 as [_ X3]; eauto.
+           now apply wf_mkApps_inv in X3.
         -- eapply typing_wf in X0; wf.
         -- eapply typing_wf_sigma in wfΣ.
            red in H0.
            eapply (lookup_on_global_env _ _ _ _ wfΣ) in H0 as [Σ' [wfΣ' H0]]; eauto.
            destruct H1.
-           eapply (nth_error_alli H6) in H0. apply onArity in H0; wf. }
+           eapply (nth_error_alli H6) in H0. apply onArity in H0; red in H0. wf. }
     -- eauto.
     -- erewrite subst_declared_inductive; eauto.
     -- auto.

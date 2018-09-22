@@ -257,7 +257,7 @@ Proof.
   destruct decl. simpl in *. f_equal.
   revert decl'. generalize ind_bodies at 2 4 5.
   intros.
-  eapply Alli_map_id in decl'. eauto.
+  eapply (Alli_mapi_id decl').
   clear decl'. intros.
   destruct x; simpl in *.
   destruct (decompose_prod_assum [] ind_type) eqn:Heq.
@@ -268,12 +268,12 @@ Proof.
   eapply typed_liftn; eauto. constructor. simpl; lia.
   rewrite H0 in Heq'. rewrite Heq in Heq'. revert Heq'; intros [= <- <-].
   f_equal; auto.
-  apply (All_map_id onConstructors).
-  intros [[x p] n']. intros [[s Hty] Hpars].
+  apply (Alli_map_id onConstructors).
+  intros n1 [[x p] n']. intros [[s Hty] Hpars].
   unfold on_pi2; f_equal; f_equal. eapply typed_liftn. 4:eapply Hty. wf. wf. lia.
   rewrite Heq in onProjections. destruct onProjections as [_ onProjections].
-  apply (All_map_id onProjections).
-  intros [x p]. intros [s Hty].
+  apply (Alli_map_id onProjections).
+  intros n1 [x p]. intros [s Hty].
   unfold on_snd; f_equal; f_equal.
   eapply typed_liftn. 4:eapply Hty. wf. wf. simpl. lia.
 Qed.

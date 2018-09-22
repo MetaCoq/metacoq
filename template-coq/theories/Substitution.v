@@ -286,7 +286,7 @@ Proof.
   destruct decl. simpl in *. f_equal.
   revert decl'. generalize ind_bodies at 2 4 5.
   intros.
-  eapply Alli_map_id in decl'. eauto.
+  eapply Alli_mapi_id in decl'. eauto.
   clear decl'. intros.
   destruct x; simpl in *.
   destruct (decompose_prod_assum [] ind_type) eqn:Heq.
@@ -297,12 +297,12 @@ Proof.
   eapply typed_subst; eauto. simpl; lia.
   rewrite H0 in Heq'. rewrite Heq in Heq'. revert Heq'; intros [= <- <-].
   f_equal; auto.
-  apply (All_map_id onConstructors).
-  intros [[x p] n']. intros [[s Hty] Hpars].
+  apply (Alli_map_id onConstructors).
+  intros n1 [[x p] n']. intros [[s Hty] Hpars].
   unfold on_pi2; f_equal; f_equal. eapply typed_subst. 4:eapply Hty. wf. wf. lia.
   rewrite Heq in onProjections. destruct onProjections as [_ onProjections].
-  apply (All_map_id onProjections).
-  intros [x p]. intros [s Hty].
+  apply (Alli_map_id onProjections).
+  intros n1 [x p]. intros [s Hty].
   unfold on_snd; f_equal; f_equal.
   eapply typed_subst. 4:eapply Hty. wf. wf. simpl. lia.
 Qed.
@@ -663,18 +663,20 @@ Proof.
   destruct (leb_spec_Set (#|c| + k) x0). lia. reflexivity.
 Qed.
 
-Lemma subst_types_of_case ind mdecl idecl args u p pty indctx pctx ps btys n k :
+Lemma subst_types_of_case `{cf:checker_flags} Σ ind mdecl idecl args u p pty indctx pctx ps btys n k :
   let f ctx := subst n (#|ctx| + k) in
   let f_ctx := subst_context n k in
   Forall Ast.wf n -> Forall Ast.wf args ->
   Ast.wf pty -> Ast.wf (ind_type idecl) ->
+  on_ind_body (lift_typing typing) Σ (inductive_mind ind) (polymorphic_instance mdecl.(ind_universes))
+              (ind_npars mdecl) (arities_context mdecl.(ind_bodies)) (inductive_ind ind) idecl ->
   types_of_case ind mdecl idecl args u p pty = Some (indctx, pctx, ps, btys) ->
   types_of_case ind mdecl (map_one_inductive_body (inductive_mind ind) (polymorphic_instance mdecl.(ind_universes))
                                                   (arities_context mdecl.(ind_bodies)) f (inductive_ind ind) idecl)
                 (map (f []) args) u (f [] p) (f [] pty) =
   Some (f_ctx indctx, f_ctx pctx, ps, map (on_snd (f [])) btys).
 Proof.
-  simpl. intros wfn wfargs wfpty wfdecl. simpl.
+  simpl. intros wfn wfargs wfpty wfdecl wfidecl. simpl.
   unfold types_of_case. simpl.
   pose proof (subst_destArity [] (ind_type idecl) n k wfdecl); trivial. simpl in H.
   unfold subst_context in H. simpl in H. rewrite ind_type_map. simpl.
@@ -692,7 +694,11 @@ Proof.
          map (option_map (on_snd (subst n k))) brs).
   unfold build_branches_type. simpl. intros brs. intros <-.
   rewrite ind_ctors_map.
-  rewrite mapi_map, map_mapi. f_equal. extensionality i. extensionality x.
+  rewrite mapi_map, map_mapi.
+  apply onConstructors in wfidecl.
+  red in wfidecl.
+
+  f_equal. extensionality i. extensionality x.
   destruct x as [[id t] arity]. simpl.
   rewrite <- UnivSubst.subst_subst_instance_constr.
   rewrite substl_inds_subst.
@@ -1475,7 +1481,9 @@ Proof.
            red in H0.
            eapply (lookup_on_global_env _ _ _ _ wfΣ) in H0 as [Σ' [wfΣ' H0]]; eauto.
            destruct H1.
-           eapply (nth_error_alli H6) in H0. apply onArity in H0; red in H0. wf. }
+           eapply (nth_error_alli H6) in H0. apply onArity in H0; red in H0. wf.
+        -- apply declared_inductive_inv; eauto.
+           apply weaken_env_prop_typing. }
     -- eauto.
     -- erewrite subst_declared_inductive; eauto.
     -- auto.

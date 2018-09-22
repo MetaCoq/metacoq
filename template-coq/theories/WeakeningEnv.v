@@ -11,7 +11,7 @@ Set Asymmetric Patterns.
 Generalizable Variables Σ Γ t T.
 
 Definition extends (Σ Σ' : global_context) :=
-  exists Σ'', Σ' = (Σ'' ++ fst Σ, snd Σ)%list.
+  { Σ'' & Σ' = (Σ'' ++ fst Σ, snd Σ)%list }.
 
 Lemma lookup_env_Some_fresh `{checker_flags} Σ φ c decl :
   wf (Σ, φ) -> lookup_env Σ c = Some decl ->
@@ -62,11 +62,11 @@ Lemma weakening_env_red1 `{CF:checker_flags} Σ Σ' Γ M N :
   red1 (fst Σ') Γ M N.
 Proof.
   induction 3 using red1_ind_all; try econstructor; eauto.
-  eapply extends_lookup in H0; eauto.
+  eapply extends_lookup in X0; eauto.
 
-  induction H0; constructor; intuition eauto.
-  induction H0; constructor; intuition eauto.
-  induction H0; constructor; intuition eauto.
+  induction H; constructor; intuition eauto.
+  induction H; constructor; intuition eauto.
+  induction H; constructor; intuition eauto.
 Qed.
 
 Lemma weakening_env_cumul `{CF:checker_flags} Σ Σ' Γ M N :
@@ -162,15 +162,15 @@ Proof.
     clear H0 H1 X X0. induction X1 in wfΓ |- *; econstructor; eauto.
     eapply weakening_env_cumul in cumul; eauto.
   - econstructor; eauto 2 with extends.
-    destruct H6 as [Σ'' ->]. simpl; auto.
+    destruct X7 as [Σ'' ->]. simpl; auto.
     close_Forall. intros; intuition eauto with extends.
   - econstructor; eauto with extends.
     eapply weakening_All_local_env_impl. eapply X.
-    clear -X1 H1. simpl; intros. intuition eauto with extends.
+    clear -X1 X2. simpl; intros. intuition eauto with extends.
     eapply All_impl; eauto; simpl; intuition eauto with extends.
   - econstructor; eauto with extends.
     eapply weakening_All_local_env_impl. eapply X.
-    clear -X1 H1. simpl; intros. intuition eauto with extends.
+    clear -X1 X2. simpl; intros. intuition eauto with extends.
     eapply All_impl; eauto; simpl; intuition eauto with extends.
   - eapply weakening_env_cumul in H0; eauto. econstructor; eauto.
 Qed.
@@ -197,10 +197,10 @@ Proof.
   intros.
   destruct X. constructor.
   unfold on_arity, on_type in *; intuition eauto.
-  unfold on_constructors in *. eapply All_impl; eauto.
-  intros [[id t] ar]. unfold on_constructor, on_type in *; intuition eauto.
+  unfold on_constructors in *. eapply Alli_impl; eauto.
+  intros ik [[id t] ar]. unfold on_constructor, on_type in *; intuition eauto.
   destruct decompose_prod_assum. intuition.
-  eapply All_impl; eauto. intros [id trm].
+  eapply Alli_impl; eauto. intros ip [id trm].
   unfold on_projection, on_type; eauto.
 Qed.
 
@@ -215,7 +215,7 @@ Proof.
   induction HΣ; simpl. congruence.
   destruct ident_eq. intros [= ->].
   eapply weakening_on_global_decl. eauto. eauto. 2:{ eapply o. }
-  destruct Hext. simpl in *. rewrite H0.
+  destruct Hext. simpl in *. rewrite e.
   exists ((x ++ [decl])%list). simpl.
   now rewrite <- app_assoc.
 
@@ -260,4 +260,22 @@ Proof.
   eapply declared_minductive_inv in Hmdecl; eauto.
   eapply nth_error_alli in Hidecl; eauto.
   apply Hidecl.
+Qed.
+
+Lemma wf_extends `{checker_flags} {Σ Σ'} : wf Σ' -> extends Σ Σ' -> wf Σ.
+Proof.
+  unfold wf, on_global_env. unfold extends. simpl.
+  intros HΣ' [Σ'' ->]. simpl in *.
+  induction Σ''. auto.
+  inv HΣ'. auto.
+Qed.
+
+Lemma weaken_env_prop_typing `{checker_flags} : weaken_env_prop (lift_typing typing).
+Proof.
+  red. intros * wfΣ' Hext *.
+  destruct t; simpl.
+  intros Ht. pose proof (wf_extends wfΣ' Hext).
+  eapply weakening_env; eauto. eapply typing_wf_local in Ht; eauto.
+  intros [s Ht]. pose proof (wf_extends wfΣ' Hext). exists s.
+  eapply weakening_env; eauto. eapply typing_wf_local in Ht; eauto.
 Qed.

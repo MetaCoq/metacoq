@@ -859,18 +859,18 @@ Section GlobalMaps.
   Definition on_arity Σ Γ npars indty : Type :=
     on_type Σ Γ indty * has_nparams npars indty.
 
-  Definition on_constructor (Σ : global_context) (Γ : context) npars (c : ident * term * nat) : Type :=
+  Definition on_constructor (Σ : global_context) (Γ : context) npars (k : nat) (c : ident * term * nat) : Type :=
     on_type Σ Γ (snd (fst c)) * has_nparams npars (snd (fst c)).
     (** TODO: check it has n products ending in a tRel application *)
 
   Definition on_constructors (Σ : global_context) (Γ : context) npars l :=
-    All (on_constructor Σ Γ npars) l.
+    Alli (on_constructor Σ Γ npars) 0 l.
 
-  Definition on_projection (Σ : global_context) (Γ : context) (p : ident * term) :=
+  Definition on_projection (Σ : global_context) (Γ : context) (k : nat) (p : ident * term) :=
     on_type Σ Γ (snd p).
 
   Definition on_projections (Σ : global_context) (Γ : context) (l : list (ident * term)) : Type :=
-    All (on_projection Σ Γ) l.
+    Alli (on_projection Σ Γ) 0 l.
 
   Record on_ind_body
          (Σ : global_context) (mind : kername) (u : universe_instance) npars (Γ : context) (n : nat) (oib : one_inductive_body) :=
@@ -962,11 +962,11 @@ Proof.
     + apply onConstructors in Xl; apply onConstructors in Xr. intuition.
       red in Xl, Xr.
       unfold on_constructor, on_type in *.
-      merge_Forall. eapply All_impl; eauto. simpl; intuition eauto.
+      merge_Forall. eapply Alli_impl; eauto. simpl; intuition eauto.
     + apply onProjections in Xl; apply onProjections in Xr. simpl in *.
       fold (decompose_prod_assum [] ind_type). destruct (decompose_prod_assum [] ind_type).
       intuition.
-      red in b, b0. merge_Forall. eapply All_impl; eauto.
+      red in b, b0. merge_Forall. eapply Alli_impl; eauto.
 Qed.
 
 Lemma on_global_decls_impl `{checker_flags} Σ P Q :
@@ -986,12 +986,12 @@ Proof.
     constructor; red; simpl.
     + apply onArity in X1. unfold on_arity, on_type in *; simpl in *; intuition.
     + apply onConstructors in X1.
-      red in X1. unfold on_constructor, on_type in *. eapply All_impl; eauto.
+      red in X1. unfold on_constructor, on_type in *. eapply Alli_impl; eauto.
       simpl; intuition eauto.
     + apply onProjections in X1. simpl in *.
       fold (decompose_prod_assum [] ind_type).
       destruct (decompose_prod_assum [] ind_type).
-      intuition. red in b. eapply All_impl; intuition eauto. now do 2 red in X1 |- *.
+      intuition. red in b. eapply Alli_impl; intuition eauto. now do 2 red in X1 |- *.
 Qed.
 
 Lemma on_global_decls_proj `{checker_flags} {Σ P Q} :
@@ -1389,7 +1389,7 @@ Proof.
          specialize (IH (existT _ (Σ, φ) (existT _ X14 (existT _ _ (existT _ (localenv_nil typing _) (existT _ _ (existT _ _ Hs))))))).
          simpl in IH. apply IH; constructor 1; simpl; omega.
       ++ apply onConstructors in X15.
-         red in X15 |- *. eapply All_impl; eauto. intros.
+         red in X15 |- *. eapply Alli_impl; eauto. intros.
          red in X16 |- *. destruct X16 as [[s Hs] Hpars]. split; auto. exists s.
          pose proof (typing_wf_local (Σ:= (Σ, φ)) X14 Hs).
          specialize (IH (existT _ (Σ, φ) (existT _ X14 (existT _ _ (existT _ X16 (existT _ _ (existT _ _ Hs))))))).
@@ -1397,7 +1397,7 @@ Proof.
       ++ apply onProjections in X15. simpl in *.
          destruct (decompose_prod_assum [] (ind_type x)).
          destruct X15; split; auto.
-         red in o |- *. eapply All_impl; eauto. intros.
+         red in o |- *. eapply Alli_impl; eauto. intros.
          red in X15 |- *. destruct X15 as [s Hs]. exists s.
          pose proof (typing_wf_local (Σ:= (Σ, φ)) X14 Hs).
          specialize (IH (existT _ (Σ, φ) (existT _ X14 (existT _ _ (existT _ X15 (existT _ _ (existT _ _ Hs))))))).
@@ -1886,7 +1886,7 @@ Proof.
     eapply lookup_on_global_env in X as [Σ' [wfΣ' prf]]; eauto. red in prf.
     eapply nth_error_alli in Hidecl; eauto. simpl in *. intuition.
     apply onConstructors in Hidecl.
-    eapply nth_error_all in Hcdecl; eauto.
+    eapply nth_error_alli in Hcdecl; eauto.
     destruct Hcdecl as [[s Hs] Hpars]. unfold type_of_constructor. wf.
   - split. wf. constructor; eauto.
     eapply Forall2_Forall_left; eauto. simpl. intuition auto.
@@ -1899,7 +1899,7 @@ Proof.
     eapply nth_error_alli in Hidecl; eauto. intuition.
     eapply onProjections in Hidecl.
     destruct decompose_prod_assum. destruct Hidecl as [Hnpars Hidecl].
-    eapply nth_error_all in Hpdecl; eauto.
+    eapply nth_error_alli in Hpdecl; eauto.
     destruct Hpdecl as [s Hs]. apply wf_subst_instance_constr. apply Hs.
   - subst types.
     apply All_local_env_app in X as [HΓ Hmfix].

@@ -244,7 +244,7 @@ Proof.
   - destruct isdecl as [Hidecl Hcdecl].
     eapply declared_inductive_inv in X0; eauto.
     apply onConstructors in X0. repeat red in X0.
-    eapply nth_error_all in Hcdecl; eauto.
+    eapply nth_error_alli in Hcdecl; eauto.
     repeat red in Hcdecl.
     destruct Hcdecl as [[s Hs] _]. rewrite -> andb_true_iff in Hs.
     destruct Hs as [Hdecl _].
@@ -277,7 +277,7 @@ Proof.
     apply onProjections in isdecl.
     destruct decompose_prod_assum eqn:Heq.
     destruct isdecl as [Hc isdecl].
-    eapply nth_error_all in isdecl; eauto.
+    eapply nth_error_alli in isdecl; eauto.
     destruct isdecl as [s Hs]. simpl in *.
     forward Hc. intro. rewrite H in Hpdecl; destruct (snd p); discriminate.
     rewrite <- Hc in H0. rewrite <- H0 in Hs.

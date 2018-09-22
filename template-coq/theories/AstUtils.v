@@ -831,10 +831,19 @@ Proof.
   f_equal; auto.
 Qed.
 
-Lemma Alli_map_id {A} {P : nat -> A -> Type} {l} {f} {n} :
+Lemma Alli_mapi_id {A} {P : nat -> A -> Type} {l} {f} {n} :
   Alli P n l ->
   (forall n x, P n x -> f n x = x) ->
   mapi_rec f l n = l.
+Proof.
+  induction 1; simpl; f_equal; intuition auto.
+  f_equal; eauto.
+Qed.
+
+Lemma Alli_map_id {A} {P : nat -> A -> Type} {l} {f} {n} :
+  Alli P n l ->
+  (forall n x, P n x -> f x = x) ->
+  map f l = l.
 Proof.
   induction 1; simpl; f_equal; intuition auto.
   f_equal; eauto.

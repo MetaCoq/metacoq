@@ -270,7 +270,7 @@ Proof.
   f_equal; auto.
   apply (Alli_map_id onConstructors).
   intros n1 [[x p] n']. intros [[s Hty] Hpars].
-  unfold on_pi2; f_equal; f_equal. eapply typed_liftn. 4:eapply Hty. wf. wf. lia.
+  unfold on_pi2; f_equal; f_equal. eapply typed_liftn. 4:eapply Hty. wf. wf. simpl. lia.
   rewrite Heq in onProjections. destruct onProjections as [_ onProjections].
   apply (Alli_map_id onProjections).
   intros n1 [x p]. intros [s Hty].

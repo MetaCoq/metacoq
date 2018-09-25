@@ -192,8 +192,7 @@ Proof.
   red in Hdecl |- *. simpl in *.
   eapply HPΣ; eauto.
   eapply HPΣ; eauto.
-  simpl in *.
-  do 2 red in Hdecl. eapply Alli_impl; eauto.
+  simpl in *. eapply Alli_impl; eauto.
   intros.
   destruct X. constructor.
   unfold on_arity, on_type in *; intuition eauto.
@@ -239,9 +238,7 @@ Lemma declared_minductive_inv `{checker_flags} Σ P ind mdecl :
   weaken_env_prop (lift_typing P) ->
   wf Σ -> Forall_decls_typing P Σ ->
   declared_minductive (fst Σ) ind mdecl ->
-  on_inductive (lift_typing P) Σ ind
-               (polymorphic_instance (ind_universes mdecl))
-               (ind_npars mdecl) (ind_bodies mdecl).
+  on_inductive (lift_typing P) Σ ind mdecl.
 Proof.
   intros.
   eapply weaken_lookup_on_global_env in X1; eauto. apply X1.
@@ -251,9 +248,7 @@ Lemma declared_inductive_inv `{checker_flags} Σ P ind mdecl idecl :
   weaken_env_prop (lift_typing P) ->
   wf Σ -> Forall_decls_typing P Σ ->
   declared_inductive (fst Σ) ind mdecl idecl ->
-  on_ind_body (lift_typing P) Σ (inductive_mind ind)
-               (polymorphic_instance (ind_universes mdecl))
-               (ind_npars mdecl) (arities_context (ind_bodies mdecl)) (inductive_ind ind) idecl.
+  on_ind_body (lift_typing P) Σ (inductive_mind ind) mdecl (inductive_ind ind) idecl.
 Proof.
   intros.
   destruct H0 as [Hmdecl Hidecl].

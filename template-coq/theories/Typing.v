@@ -851,46 +851,67 @@ Definition has_nparams npars ty :=
 (** *** Typing of inductive declarations *)
 
 Section GlobalMaps.
-
   Context (P : global_context -> context -> option term -> term -> Type).
+
+  Implicit Types (mdecl : mutual_inductive_body) (idecl : one_inductive_body) (cdecl : ident * term * nat).
 
   Definition on_type Σ Γ T := P Σ Γ None T.
 
   Definition on_arity Σ Γ npars indty : Type :=
     on_type Σ Γ indty * has_nparams npars indty.
 
-  Definition on_constructor (Σ : global_context) (Γ : context) npars (k : nat) (c : ident * term * nat) : Type :=
-    on_type Σ Γ (snd (fst c)) * has_nparams npars (snd (fst c)).
-    (** TODO: check it has n products ending in a tRel application *)
+  Record constructor_shape mdecl i idecl cdecl :=
+    { cshape_params : context;
+      (* Parameters (with lets) *)
+      cshape_arity : context;
+      (* Arity (with lets) *)
+      cshape_concl_head := tRel (#|mdecl.(ind_bodies)| - i + #|cshape_params| + #|cshape_arity|);
+      (* Conclusion head: reference to the current inductive in the block *)
+      cshape_args : list term;
+      (* Arguments of the constructor, whose length should be the real arguments length of the inductive *)
+      cshape_eq : snd (fst cdecl) = it_mkProd_or_LetIn cshape_params
+                         (it_mkProd_or_LetIn cshape_arity
+                         (mkApps cshape_concl_head
+                                 (to_extended_list cshape_params ++ cshape_args)))
+      (* The type of the constructor canonically has this shape: parameters, real arguments ending
+         with a reference to the inductive applied to the (non-lets) parameters and arguments *)
+    }.
 
-  Definition on_constructors (Σ : global_context) (Γ : context) npars l :=
-    Alli (on_constructor Σ Γ npars) 0 l.
+  Definition on_constructor (Σ : global_context)
+             (mdecl : mutual_inductive_body)
+             (i : nat) (idecl : one_inductive_body)
+             (c : nat) (cdecl : ident * term * nat) : Type :=
+    let constructor_type := snd (fst cdecl) in
+    on_type Σ (arities_context mdecl.(ind_bodies)) constructor_type *
+    constructor_shape mdecl i idecl cdecl.
 
-  Definition on_projection (Σ : global_context) (Γ : context) (k : nat) (p : ident * term) :=
+  Definition on_constructors (Σ : global_context) mdecl i idecl l :=
+    Alli (on_constructor Σ mdecl i idecl) 0 l.
+
+  Definition on_projection (Σ : global_context) Γ (k : nat) (p : ident * term) :=
     on_type Σ Γ (snd p).
 
-  Definition on_projections (Σ : global_context) (Γ : context) (l : list (ident * term)) : Type :=
+  Definition on_projections (Σ : global_context) Γ (l : list (ident * term)) : Type :=
     Alli (on_projection Σ Γ) 0 l.
 
   Record on_ind_body
-         (Σ : global_context) (mind : kername) (u : universe_instance) npars (Γ : context) (n : nat) (oib : one_inductive_body) :=
+         (Σ : global_context) (mind : kername) mdecl (i : nat) idecl :=
     { onArity : (** Arity is well-formed *)
-        on_arity Σ [] npars oib.(ind_type);
+        on_arity Σ [] mdecl.(ind_npars) idecl.(ind_type);
       (** Constructors are well-typed *)
-      onConstructors : on_constructors Σ Γ npars oib.(ind_ctors);
+      onConstructors : on_constructors Σ mdecl i idecl idecl.(ind_ctors);
       (** Projections are well-typed *)
       onProjections :
-        let '(ctx, _) := decompose_prod_assum [] oib.(ind_type) in
-        (oib.(ind_projs) <> nil -> #|ctx| = npars) *
-        on_projections Σ (ctx,, vass (nNamed oib.(ind_name))
-                             (mkApps (tInd (mkInd mind n) u) (to_extended_list ctx))) oib.(ind_projs)
+        let '(ctx, _) := decompose_prod_assum [] idecl.(ind_type) in
+        (idecl.(ind_projs) <> nil -> #|ctx| = mdecl.(ind_npars)) *
+        on_projections Σ (ctx,, vass (nNamed idecl.(ind_name))
+                             (mkApps (tInd (mkInd mind i) (polymorphic_instance mdecl.(ind_universes)))
+                                           (to_extended_list ctx)))
+        idecl.(ind_projs)
       (** TODO: check kelim *) }.
 
-  Definition on_ind_bodies (Σ : global_context) ind u npars (Γ : context) (l : list one_inductive_body) :=
-    Alli (on_ind_body Σ ind u npars Γ) 0 l.
-
-  Definition on_inductive Σ ind u npars inds :=
-    on_ind_bodies Σ ind u npars (arities_context inds) inds.
+  Definition on_inductive Σ ind inds :=
+    Alli (on_ind_body Σ ind inds) 0 inds.(ind_bodies).
 
   (** *** Typing of constant declarations *)
 
@@ -903,8 +924,7 @@ Section GlobalMaps.
   Definition on_global_decl Σ decl :=
     match decl with
     | ConstantDecl id d => on_constant_decl Σ d
-    | InductiveDecl ind inds =>
-      on_inductive Σ ind (polymorphic_instance inds.(ind_universes)) inds.(ind_npars) inds.(ind_bodies)
+    | InductiveDecl ind inds => on_inductive Σ ind inds
     end.
 
   (** *** Typing of global environment
@@ -950,16 +970,16 @@ Proof.
     split; auto.
     red in o, X2 |- *. simpl in *.
     split; auto.
-  - do 2 red in o, X2 |- *. simpl in *.
-    revert o X2. generalize (ind_bodies m). intros l; generalize (arities_context l).
-    intros. red in o, X2. merge_Forall. eapply Alli_impl; eauto. clear X2.
+  - do 2 red in o, X2. red. simpl in *.
+    revert o X2. generalize (ind_bodies m). intros l.
+    intros. merge_Forall. eapply Alli_impl; eauto. clear X2.
     intros.
     destruct x; simpl in *.
     destruct X0 as [Xl Xr].
     constructor; red; simpl.
     + apply onArity in Xl; apply onArity in Xr.
       unfold on_arity, on_type in *. intuition.
-    + apply onConstructors in Xl; apply onConstructors in Xr. intuition.
+    + apply onConstructors in Xl; apply onConstructors in Xr. simpl in *.
       red in Xl, Xr.
       unfold on_constructor, on_type in *.
       merge_Forall. eapply Alli_impl; eauto. simpl; intuition eauto.
@@ -979,14 +999,12 @@ Proof.
   - destruct c; simpl. destruct cst_body; simpl in *.
     red in o |- *. simpl in *. auto.
     red in o |- *. simpl in *. red in o. red. auto.
-  - do 2 red in o |- *. simpl in *.
-    revert o. generalize (ind_bodies m). intros l; generalize (arities_context l).
-    intros. red in o. merge_Forall. eapply Alli_impl; eauto. intros.
+  - do 2 red in o. simpl in *. red.
+    eapply Alli_impl; eauto. intros.
     destruct x; simpl in *.
     constructor; red; simpl.
     + apply onArity in X1. unfold on_arity, on_type in *; simpl in *; intuition.
-    + apply onConstructors in X1.
-      red in X1. unfold on_constructor, on_type in *. eapply Alli_impl; eauto.
+    + apply onConstructors in X1. red in X1. unfold on_constructor, on_type in *. eapply Alli_impl; eauto.
       simpl; intuition eauto.
     + apply onProjections in X1. simpl in *.
       fold (decompose_prod_assum [] ind_type).
@@ -1382,7 +1400,7 @@ Proof.
       simpl in IH.
       forward IH. constructor 1. simpl; omega.
       apply IH.
-    + do 3 red in X15. do 2 red.
+    + do 2 red in X15. red.
       eapply Alli_impl; eauto. clear X15; intros.
       constructor.
       ++ apply onArity in X15. destruct X15 as [[s Hs] Hpars]. split; auto. exists s.
@@ -1877,7 +1895,7 @@ Proof.
   - split. wf. apply wf_subst_instance_constr. wf.
     destruct isdecl as [Hmdecl Hidecl]. red in Hmdecl.
     eapply lookup_on_global_env in X as [Σ' [wfΣ' prf]]; eauto.
-    do 3 red in prf.
+    do 2 red in prf.
     eapply nth_error_alli in Hidecl; eauto.
     eapply onArity in Hidecl.
     destruct Hidecl as [[s Hs] Hpars]; wf.

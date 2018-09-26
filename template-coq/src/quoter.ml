@@ -128,6 +128,10 @@ module type Quoter = sig
   type quoted_mind_finiteness
   type quoted_entry
 
+  (* Local contexts *)
+  type quoted_context_decl
+  type quoted_context
+
   type quoted_one_inductive_body
   type quoted_mutual_inductive_body
   type quoted_constant_body
@@ -185,15 +189,19 @@ module type Quoter = sig
   val mkFix : (quoted_int array * quoted_int) * (quoted_name array * t array * t array) -> t
   val mkCoFix : quoted_int * (quoted_name array * t array * t array) -> t
 
+  val quote_context_decl : quoted_name -> t option -> t -> quoted_context_decl
+  val quote_context : quoted_context_decl list -> quoted_context
+
   val mk_one_inductive_body : quoted_ident * t (* ind type *) * quoted_sort_family list
                                  * (quoted_ident * t (* constr type *) * quoted_int) list
                                  * (quoted_ident * t (* projection type *)) list
                                  -> quoted_one_inductive_body
 
-  val mk_mutual_inductive_body : quoted_int (* params *)
-                                    -> quoted_one_inductive_body list
-                                    -> quoted_univ_context
-                                    -> quoted_mutual_inductive_body
+  val mk_mutual_inductive_body : quoted_int (* number of params (no lets) *)
+    -> quoted_context (* parameters context with lets *)
+    -> quoted_one_inductive_body list
+    -> quoted_univ_context
+    -> quoted_mutual_inductive_body
 
   val mk_constant_body : t (* type *) -> t option (* body *) -> quoted_univ_context -> quoted_constant_body
 
@@ -385,6 +393,19 @@ struct
       let (a,decl) = t in
       let (a',decl'),acc = quote_recdecl acc env a decl in
       (Q.mkCoFix (a',decl'), acc)
+    and quote_rel_decl acc env = function
+      | Context.Rel.Declaration.LocalAssum (na, t) ->
+        let t', acc = quote_term acc env t in
+        (Q.quote_context_decl (Q.quote_name na) None t', acc)
+      | Context.Rel.Declaration.LocalDef (na, b, t) ->
+        let b', acc = quote_term acc env b in
+        let t', acc = quote_term acc env t in
+        (Q.quote_context_decl (Q.quote_name na) (Some b') t', acc)
+    and quote_rel_context acc env ctx =
+      let decls, acc =
+        List.fold_left (fun (ds, acc) decl -> let x, acc = quote_rel_decl acc env decl in (x :: ds, acc))
+          ([],acc) ctx in
+      Q.quote_context decls, acc
     and quote_minductive_type (acc : 'a) env (t : MutInd.t) =
       let mib = Environ.lookup_mind t (snd env) in
       let uctx = get_abstract_inductive_universes mib.Declarations.mind_universes in
@@ -435,10 +456,11 @@ struct
 	  (Q.quote_ident oib.mind_typename, indty, sf, (List.rev reified_ctors), projs) :: ls, acc)
 	  ([],acc) (Array.to_list mib.mind_packets)
       in
-      let params = Q.quote_int mib.Declarations.mind_nparams in
+      let nparams = Q.quote_int mib.Declarations.mind_nparams in
+      let paramsctx, acc = quote_rel_context acc env mib.Declarations.mind_params_ctxt in
       let uctx = quote_abstract_inductive_universes mib.Declarations.mind_universes in
       let bodies = List.map Q.mk_one_inductive_body (List.rev ls) in
-      let mind = Q.mk_mutual_inductive_body params bodies uctx in
+      let mind = Q.mk_mutual_inductive_body nparams paramsctx bodies uctx in
       Q.mk_inductive_decl ref_name mind, acc
     in ((fun acc env -> quote_term acc (false, env)),
         (fun acc env -> quote_minductive_type acc (false, env)))

@@ -252,6 +252,7 @@ Record one_inductive_body := {
 (** See [mutual_inductive_body] from [declarations.ml]. *)
 Record mutual_inductive_body := {
   ind_npars : nat;
+  ind_params : context;
   ind_bodies : list one_inductive_body ;
   ind_universes : universe_context }.
 

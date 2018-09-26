@@ -192,15 +192,18 @@ Proof.
   red in Hdecl |- *. simpl in *.
   eapply HPΣ; eauto.
   eapply HPΣ; eauto.
-  simpl in *. eapply Alli_impl; eauto.
-  intros.
-  destruct X. constructor.
-  unfold on_arity, on_type in *; intuition eauto.
-  unfold on_constructors in *. eapply Alli_impl; eauto.
-  intros ik [[id t] ar]. unfold on_constructor, on_type in *; intuition eauto.
-  destruct decompose_prod_assum. intuition.
-  eapply Alli_impl; eauto. intros ip [id trm].
-  unfold on_projection, on_type; eauto.
+  simpl in *.
+  destruct Hdecl as [onI onP onnP]; constructor; eauto.
+  - eapply Alli_impl; eauto. intros.
+    destruct X. constructor.
+    unfold on_arity, on_type in *; intuition eauto.
+    unfold on_constructors in *. eapply Alli_impl; eauto.
+    intros ik [[id t] ar]. unfold on_constructor, on_type in *; intuition eauto.
+    destruct decompose_prod_assum. intuition.
+    eapply Alli_impl; eauto. intros ip [id trm].
+    unfold on_projection, on_type; eauto.
+  - red in onP |- *. eapply weakening_All_local_env_impl; eauto.
+    intros. eapply HPΣ; eauto.
 Qed.
 
 Lemma weakening_env_lookup_on_global_env `{checker_flags} P Σ Σ' c decl :
@@ -253,6 +256,7 @@ Proof.
   intros.
   destruct H0 as [Hmdecl Hidecl].
   eapply declared_minductive_inv in Hmdecl; eauto.
+  apply onInductives in Hmdecl.
   eapply nth_error_alli in Hidecl; eauto.
   apply Hidecl.
 Qed.

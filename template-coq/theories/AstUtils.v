@@ -1104,28 +1104,107 @@ Definition polymorphic_instance uctx :=
 Definition map_one_inductive_body mind u arities f n m :=
   match m with
   | Build_one_inductive_body ind_name ind_type ind_kelim ind_ctors ind_projs =>
-    let '(ctx, _) := decompose_prod_assum [] (f [] ind_type) in
+    let '(ctx, _) := decompose_prod_assum [] (f 0 ind_type) in
     let indty := mkApps (tInd (mkInd mind n) u) (to_extended_list ctx) in
     Build_one_inductive_body ind_name
-                             (f [] ind_type)
+                             (f 0 ind_type)
                              ind_kelim
                              (map (on_pi2 (f arities)) ind_ctors)
-                             (map (on_snd (f (ctx ,, vass (nNamed ind_name) indty))) ind_projs)
+                             (map (on_snd (f (S (length ctx)))) ind_projs)
   end.
+
+Definition fold_context f (Γ : context) : context :=
+  List.rev (mapi (fun k' decl => map_decl (f k') decl) (List.rev Γ)).
+
+Lemma fold_context_alt f Γ :
+  fold_context f Γ =
+  mapi (fun k' d => map_decl (f (pred (length Γ) - k')) d) Γ.
+Proof.
+  unfold fold_context. rewrite rev_mapi. rewrite List.rev_involutive.
+  apply mapi_ext. intros. f_equal. now rewrite List.rev_length.
+Qed.
+
+Lemma fold_context_length f Γ : length (fold_context f Γ) = length Γ.
+Proof.
+  unfold fold_context. now rewrite !List.rev_length mapi_length List.rev_length.
+Qed.
+
+Lemma fold_context_snoc0 f Γ d : fold_context f (d :: Γ) = fold_context f Γ ,, map_decl (f (length Γ)) d.
+Proof.
+  unfold fold_context.
+  rewrite !rev_mapi !rev_involutive. unfold mapi; rewrite mapi_rec_eqn.
+  unfold snoc. f_equal. now rewrite Nat.sub_0_r List.rev_length.
+  rewrite mapi_rec_Sk. simpl. apply mapi_rec_ext. intros.
+  rewrite app_length !List.rev_length. simpl. f_equal. f_equal. lia.
+Qed.
+Close Scope string_scope.
+
+Lemma fold_context_app f Γ Δ :
+  fold_context f (Δ ++ Γ) = fold_context (fun k => f (length Γ + k)) Δ ++ fold_context f Γ.
+Proof.
+  unfold fold_context.
+  rewrite List.rev_app_distr.
+  rewrite mapi_app. rewrite <- List.rev_app_distr. f_equal. f_equal.
+  apply mapi_ext. intros. f_equal. rewrite List.rev_length. f_equal.
+Qed.
+
+Lemma nth_error_fold_context (f : nat -> term -> term):
+  forall (Γ' Γ'' : context) (v : nat),
+    v < length Γ' -> forall nth,
+    nth_error Γ' v = Some nth ->
+    nth_error (fold_context f Γ') v = Some (map_decl (f (length Γ' - S v)) nth).
+Proof.
+  induction Γ'; intros.
+  - easy.
+  - simpl. destruct v; rewrite fold_context_snoc0.
+    + simpl. repeat f_equal; try lia. simpl in *. congruence.
+    + simpl. apply IHΓ'; simpl in *; (lia || congruence).
+Qed.
+
+Lemma nth_error_fold_context_eq:
+  forall (Γ' : context) (v : nat) f,
+    nth_error (fold_context f Γ') v =
+    option_map (map_decl (f (length Γ' - S v))) (nth_error Γ' v).
+Proof.
+  induction Γ'; intros.
+  - simpl. unfold fold_context, fold_context; simpl. now rewrite nth_error_nil.
+  - simpl. destruct v; rewrite fold_context_snoc0.
+    + simpl. repeat f_equal; try lia.
+    + simpl. apply IHΓ'; simpl in *; (lia || congruence).
+Qed.
+
+Lemma nth_error_ge {Γ Γ' v Γ''} f : length Γ' <= v ->
+  nth_error (Γ' ++ Γ) v =
+  nth_error (fold_context (f 0) Γ' ++ Γ'' ++ Γ) (length Γ'' + v).
+Proof.
+  intros Hv.
+  rewrite -> !nth_error_app_ge, ?fold_context_length. f_equal. lia.
+  rewrite fold_context_length. lia.
+  rewrite fold_context_length. lia. auto.
+Qed.
+
+Lemma nth_error_lt {Γ Γ' Γ'' v} (f : nat -> term -> term) : v < length Γ' ->
+  nth_error (fold_context f Γ' ++ Γ'' ++ Γ) v =
+  option_map (map_decl (f (length Γ' - S v))) (nth_error (Γ' ++ Γ) v).
+Proof.
+  simpl. intros Hv.
+  rewrite -> !nth_error_app_lt.
+  rewrite nth_error_fold_context_eq.
+  do 2 f_equal. lia. now rewrite fold_context_length.
+Qed.
 
 Definition map_mutual_inductive_body mind f m :=
   match m with
-  | Build_mutual_inductive_body ind_npars ind_bodies ind_universes =>
+  | Build_mutual_inductive_body ind_npars ind_pars ind_bodies ind_universes =>
     let arities := arities_context ind_bodies in
     let u := polymorphic_instance ind_universes in
-    Build_mutual_inductive_body
-      ind_npars
-      (mapi (map_one_inductive_body mind u arities f) ind_bodies)
+    Build_mutual_inductive_body ind_npars (fold_context f ind_pars)
+      (mapi (map_one_inductive_body mind u (length arities) f) ind_bodies)
       ind_universes
   end.
 
 Lemma ind_type_map f arities mind u n oib :
-  ind_type (map_one_inductive_body mind u arities f n oib) = f [] (ind_type oib).
+  ind_type (map_one_inductive_body mind u arities f n oib) = f 0 (ind_type oib).
 Proof. destruct oib. simpl. destruct decompose_prod_assum. reflexivity. Qed.
 
 Lemma ind_ctors_map f arities mind u n oib :
@@ -1133,11 +1212,15 @@ Lemma ind_ctors_map f arities mind u n oib :
   map (on_pi2 (f arities)) (ind_ctors oib).
 Proof. destruct oib; simpl; destruct decompose_prod_assum; reflexivity. Qed.
 
+Lemma ind_pars_map mind f m :
+  ind_params (map_mutual_inductive_body mind f m) =
+  fold_context f (ind_params m).
+Proof. destruct m; simpl; reflexivity. Qed.
+
 Lemma ind_projs_map f mind u arities n oib :
   ind_projs (map_one_inductive_body mind u arities f n oib) =
-  let '(ctx, _) := decompose_prod_assum [] (f [] oib.(ind_type)) in
-  map (on_snd (f (ctx ,, vass (nNamed oib.(ind_name))
-      (mkApps (tInd (mkInd mind n) u) (to_extended_list ctx))))) (ind_projs oib).
+  let '(ctx, _) := decompose_prod_assum [] (f 0 oib.(ind_type)) in
+  map (on_snd (f (S (length ctx)))) (ind_projs oib).
 Proof. destruct oib; simpl. destruct decompose_prod_assum. simpl. reflexivity. Qed.
 
 

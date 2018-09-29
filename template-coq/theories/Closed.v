@@ -323,3 +323,27 @@ Proof.
     rewrite Nat.add_comm in H0.
     now eapply closedn_lift_inv in H0.
 Qed.
+
+Lemma declared_decl_closed `{checker_flags} Σ cst decl :
+  wf Σ ->
+  lookup_env (fst Σ) cst = Some decl ->
+  on_global_decl (fun Σ Γ b t =>
+                    match b with Some b => Ast.wf b | None => True end /\ Ast.wf t /\
+                    option_default (closedn #|Γ|) b true && closedn #|Γ| t = true) Σ decl.
+Proof.
+  intros.
+  eapply weaken_lookup_on_global_env; try red; eauto.
+  eapply on_global_decls_impl; cycle 1.
+  eapply on_global_decls_mix.
+  2:apply (env_prop_sigma _ typecheck_closed _ X).
+  2:apply (env_prop_sigma _ typing_wf_gen _ X).
+  red; intros. unfold lift_typing in *. destruct b; intuition auto with wf.
+  destruct X0 as [s0 Hs0]. exists s0. intuition auto with wf.
+  intros.
+  simpl in X1. destruct X1 as [Hcl Hwf]. red in Hcl, Hwf.
+  destruct t; simpl; intuition auto.
+  destruct Hwf; simpl; intuition auto.
+  destruct Hwf; simpl; intuition auto.
+  destruct Hcl; simpl; intuition auto.
+  rewrite -> andb_true_iff in e. intuition.
+Qed.

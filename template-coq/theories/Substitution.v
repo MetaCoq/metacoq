@@ -101,6 +101,27 @@ Proof.
   apply mapi_ext. intros. f_equal. rewrite List.rev_length. f_equal. lia.
 Qed.
 
+Lemma map_vass_map_def g l n k :
+  (mapi (fun i (d : def term) => vass (dname d) (lift0 i (dtype d)))
+        (map (map_def (subst n k) g) l)) =
+  (mapi (fun i d => map_decl (subst n (i + k)) d) (mapi (fun i (d : def term) => vass (dname d) (lift0 i (dtype d))) l)).
+Proof.
+  rewrite mapi_mapi, mapi_map. apply mapi_ext.
+  intros. unfold map_decl, vass; simpl; f_equal.
+  rewrite commut_lift_subst_rec. f_equal; lia. lia.
+Qed.
+
+Lemma All_local_env_subst `{checker_flags} (P Q : global_context -> context -> term -> term -> Type) Σ c n k :
+  All_local_env Q Σ c ->
+  (forall Γ t T,
+      Q Σ Γ t T -> P Σ (subst_context n k Γ) (subst n (#|Γ| + k) t) (subst n (#|Γ| + k) T)) ->
+  All_local_env P Σ (subst_context n k c).
+Proof.
+  intros Hq Hf. induction Hq in |- *; try econstructor; eauto;
+                  simpl; unfold snoc; rewrite subst_context_snoc; econstructor; eauto.
+  simpl. eapply (Hf _ _ (tSort u)). eauto.
+Qed.
+
 Lemma nth_error_subst_context (Γ' : context) s (v : nat) k :
     nth_error (subst_context s k Γ') v =
     option_map (subst_decl s (#|Γ'| - S v + k)) (nth_error Γ' v).
@@ -228,30 +249,6 @@ Proof.
   eapply typed_subst; eauto. lia. unfold vdef.
   f_equal. f_equal. eapply typed_subst; eauto. lia.
   eapply typed_subst in t0 as [Ht HT]; eauto. lia.
-Qed.
-
-Lemma declared_decl_closed `{checker_flags} Σ cst decl :
-  wf Σ ->
-  lookup_env (fst Σ) cst = Some decl ->
-  on_global_decl (fun Σ Γ b t =>
-                    match b with Some b => Ast.wf b | None => True end /\ Ast.wf t /\
-                    option_default (closedn #|Γ|) b true && closedn #|Γ| t = true) Σ decl.
-Proof.
-  intros.
-  eapply weaken_lookup_on_global_env; try red; eauto.
-  eapply on_global_decls_impl; cycle 1.
-  eapply on_global_decls_mix.
-  2:apply (env_prop_sigma _ typecheck_closed _ X).
-  2:apply (env_prop_sigma _ typing_wf_gen _ X).
-  red; intros. unfold lift_typing in *. destruct b; intuition auto with wf.
-  destruct X0 as [s0 Hs0]. exists s0. intuition auto with wf.
-  intros.
-  simpl in X1. destruct X1 as [Hcl Hwf]. red in Hcl, Hwf.
-  destruct t; simpl; intuition auto.
-  destruct Hwf; simpl; intuition auto.
-  destruct Hwf; simpl; intuition auto.
-  destruct Hcl; simpl; intuition auto.
-  rewrite andb_true_iff in e. intuition.
 Qed.
 
 Lemma subst_declared_constant `{checker_flags} Σ cst decl n k u :
@@ -408,16 +405,6 @@ Proof.
   congruence.
 Qed.
 
-Lemma map_vass_map_def g l n k :
-  (mapi (fun i (d : def term) => vass (dname d) (lift0 i (dtype d)))
-        (map (map_def (subst n k) g) l)) =
-  (mapi (fun i d => map_decl (subst n (i + k)) d) (mapi (fun i (d : def term) => vass (dname d) (lift0 i (dtype d))) l)).
-Proof.
-  rewrite mapi_mapi, mapi_map. apply mapi_ext.
-  intros. unfold map_decl, vass; simpl; f_equal.
-  rewrite commut_lift_subst_rec. f_equal; lia. lia.
-Qed.
-
 Lemma subst_fix_context:
   forall (mfix : list (def term)) n (k : nat),
     fix_context (map (map_def (subst n k) (subst n (#|mfix| + k))) mfix) =
@@ -428,17 +415,6 @@ Proof.
   fold (fix_context mfix).
   rewrite (subst_context_alt n k (fix_context mfix)).
   unfold subst_decl. now rewrite mapi_length, fix_context_length.
-Qed.
-
-Lemma All_local_env_subst `{checker_flags} (P Q : global_context -> context -> term -> term -> Type) Σ c n k :
-  All_local_env Q Σ c ->
-  (forall Γ t T,
-      Q Σ Γ t T -> P Σ (subst_context n k Γ) (subst n (#|Γ| + k) t) (subst n (#|Γ| + k) T)) ->
-  All_local_env P Σ (subst_context n k c).
-Proof.
-  intros Hq Hf. induction Hq in |- *; try econstructor; eauto;
-                  simpl; unfold snoc; rewrite subst_context_snoc; econstructor; eauto.
-  simpl. eapply (Hf _ _ (tSort u)). eauto.
 Qed.
 
 Lemma subst_destArity ctx t n k :
@@ -461,14 +437,14 @@ Proof.
     destruct destArity as [[args s]|]. apply IHwf1. exact I.
 Qed.
 
-Lemma has_nparams_ex {nass t} :
-  has_nparams nass t -> { p & decompose_prod_n_assum [] nass t = Some p }.
-Proof.
-  unfold has_nparams.
-  destruct decompose_prod_n_assum. intros.
-  exists p. reflexivity.
-  congruence.
-Qed.
+(* Lemma has_nparams_ex {nass t} : *)
+(*   has_nparams nass t -> { p & decompose_prod_n_assum [] nass t = Some p }. *)
+(* Proof. *)
+(*   unfold has_nparams. *)
+(*   destruct decompose_prod_n_assum. intros. *)
+(*   exists p. reflexivity. *)
+(*   congruence. *)
+(* Qed. *)
 
 Lemma decompose_prod_n_assum0 ctx t : decompose_prod_n_assum ctx 0 t = Some (ctx, t).
 Proof. destruct t; simpl; reflexivity. Qed.
@@ -513,17 +489,17 @@ Proof.
     unfold snoc in IHnass; rewrite subst_context_snoc in IHnass. apply IHnass.
 Qed.
 
-Lemma subst_decompose_prod_n_assum nass t n k :
-  has_nparams nass t ->
-  match decompose_prod_n_assum [] nass t with
-  | Some (ctx', t') =>
-    decompose_prod_n_assum [] nass (subst n k t) = Some (subst_context n k ctx', subst n (length ctx' + k) t')
-  | None => False
-  end.
-Proof.
-  intros Hpars. apply has_nparams_ex in Hpars as [[ctx' t'] Heq].
-  rewrite Heq. eapply subst_decompose_prod_n_assum_rec in Heq. apply Heq.
-Qed.
+(* Lemma subst_decompose_prod_n_assum nass t n k : *)
+(*   has_nparams nass t -> *)
+(*   match decompose_prod_n_assum [] nass t with *)
+(*   | Some (ctx', t') => *)
+(*     decompose_prod_n_assum [] nass (subst n k t) = Some (subst_context n k ctx', subst n (length ctx' + k) t') *)
+(*   | None => False *)
+(*   end. *)
+(* Proof. *)
+(*   intros Hpars. apply has_nparams_ex in Hpars as [[ctx' t'] Heq]. *)
+(*   rewrite Heq. eapply subst_decompose_prod_n_assum_rec in Heq. apply Heq. *)
+(* Qed. *)
 
 Definition snoc_morph (f : nat -> term -> term) (f_ctx : nat -> context -> context) :=
   forall (k : nat) (Γ : list context_decl) (d : context_decl),
@@ -551,20 +527,20 @@ Proof.
     unfold snoc in IHnass; rewrite Hsnoc in IHnass. apply IHnass.
 Qed.
 
-Lemma subst_decompose_prod_n_assum_morph f_ctx f nass t k :
-  snoc_morph f f_ctx ->
-  strip_outer_cast_tProd_tLetIn_morph f ->
-  (forall k, f_ctx k [] = []) ->
-  has_nparams nass t ->
-  match decompose_prod_n_assum [] nass t with
-  | Some (ctx', t') =>
-    decompose_prod_n_assum [] nass (f k t) = Some (f_ctx k ctx', f (length ctx' + k) t')
-  | None => False
-  end.
-Proof.
-  intros Hsnoc Hstrip Hf Hpars. apply has_nparams_ex in Hpars as [[ctx' t'] Heq].
-  rewrite Heq. eapply decompose_prod_n_assum_rec_morph in Heq; eauto. rewrite (Hf k) in Heq. eapply Heq.
-Qed.
+(* Lemma subst_decompose_prod_n_assum_morph f_ctx f nass t k : *)
+(*   snoc_morph f f_ctx -> *)
+(*   strip_outer_cast_tProd_tLetIn_morph f -> *)
+(*   (forall k, f_ctx k [] = []) -> *)
+(*   has_nparams nass t -> *)
+(*   match decompose_prod_n_assum [] nass t with *)
+(*   | Some (ctx', t') => *)
+(*     decompose_prod_n_assum [] nass (f k t) = Some (f_ctx k ctx', f (length ctx' + k) t') *)
+(*   | None => False *)
+(*   end. *)
+(* Proof. *)
+(*   intros Hsnoc Hstrip Hf Hpars. apply has_nparams_ex in Hpars as [[ctx' t'] Heq]. *)
+(*   rewrite Heq. eapply decompose_prod_n_assum_rec_morph in Heq; eauto. rewrite (Hf k) in Heq. eapply Heq. *)
+(* Qed. *)
 
 Lemma snoc_morph_subst_instance_constr u :
   snoc_morph (fun _ => subst_instance_constr u) (fun _ => subst_instance_context u).
@@ -584,20 +560,20 @@ Proof.
   rewrite strip_outer_cast_subst_instane_constr. now rewrite Heq.
 Qed.
 
-Lemma subst_instance_constr_decompose_prod_n_assum nass t u :
-  has_nparams nass t ->
-  match decompose_prod_n_assum [] nass t with
-  | Some (ctx', t') =>
-    decompose_prod_n_assum [] nass (subst_instance_constr u t) =
-    Some (subst_instance_context u ctx', subst_instance_constr u t')
-  | None => False
-  end.
-Proof.
-  eapply (subst_decompose_prod_n_assum_morph (fun _ => subst_instance_context u) (fun _ => subst_instance_constr u)).
-  exact 0. apply snoc_morph_subst_instance_constr.
-  apply strip_outer_cast_tProd_tLetIn_subst_instance_constr.
-  reflexivity.
-Qed.
+(* Lemma subst_instance_constr_decompose_prod_n_assum nass t u : *)
+(*   has_nparams nass t -> *)
+(*   match decompose_prod_n_assum [] nass t with *)
+(*   | Some (ctx', t') => *)
+(*     decompose_prod_n_assum [] nass (subst_instance_constr u t) = *)
+(*     Some (subst_instance_context u ctx', subst_instance_constr u t') *)
+(*   | None => False *)
+(*   end. *)
+(* Proof. *)
+(*   eapply (subst_decompose_prod_n_assum_morph (fun _ => subst_instance_context u) (fun _ => subst_instance_constr u)). *)
+(*   exact 0. apply snoc_morph_subst_instance_constr. *)
+(*   apply strip_outer_cast_tProd_tLetIn_subst_instance_constr. *)
+(*   reflexivity. *)
+(* Qed. *)
 
 Require Import Weakening.
 
@@ -780,10 +756,10 @@ Lemma subst_instantiate_params_none n k params args s t :
   instantiate_params_subst params (map (subst n k) args) s (subst n k t) = None.
 Proof.
   intros Hn Hp Hargs Ht.
-  apply has_nparams_ex in Hp as [[ctx' t'] He].
-  revert ctx' t' He. generalize (@nil context_decl).
-  induction params in args, Hargs, Hn, t, Ht, n, k |- *.
-  destruct args; simpl. discriminate. reflexivity.
+  (* apply has_nparams_ex in Hp as [[ctx' t'] He]. *)
+  (* revert ctx' t' He. generalize (@nil context_decl). *)
+  (* induction params in args, Hargs, Hn, t, Ht, n, k |- *. *)
+  (* destruct args; simpl. discriminate. reflexivity. *)
 
   (* simpl. *)
   (* pose proof (strip_outer_cast_tProd_tLetIn_subst n t k) as Hsubst. *)
@@ -862,19 +838,19 @@ Hint Rewrite subst_instantiate_params : lift.
 (* Qed. *)
 (* Hint Rewrite subst_instantiate_params : subst. *)
 
-Lemma has_nparams_subst n t s k : has_nparams n t -> has_nparams n (subst s k t).
-Proof.
-  intros H. eapply subst_decompose_prod_n_assum in H.
-  destruct decompose_prod_n_assum. destruct p as [ctx' t'].
-  red. rewrite -> H. congruence. elim H.
-Qed.
+(* Lemma has_nparams_subst n t s k : has_nparams n t -> has_nparams n (subst s k t). *)
+(* Proof. *)
+(*   intros H. eapply subst_decompose_prod_n_assum in H. *)
+(*   destruct decompose_prod_n_assum. destruct p as [ctx' t']. *)
+(*   red. rewrite -> H. congruence. elim H. *)
+(* Qed. *)
 
-Lemma has_nparams_subst_instance_constr n t u : has_nparams n t -> has_nparams n (subst_instance_constr u t).
-Proof.
-  intros H. eapply subst_instance_constr_decompose_prod_n_assum in H.
-  destruct decompose_prod_n_assum. destruct p as [ctx' t'].
-  red. rewrite -> H. congruence. elim H.
-Qed.
+(* Lemma has_nparams_subst_instance_constr n t u : has_nparams n t -> has_nparams n (subst_instance_constr u t). *)
+(* Proof. *)
+(*   intros H. eapply subst_instance_constr_decompose_prod_n_assum in H. *)
+(*   destruct decompose_prod_n_assum. destruct p as [ctx' t']. *)
+(*   red. rewrite -> H. congruence. elim H. *)
+(* Qed. *)
 
 Lemma subst_instance_constr_it_mkProd_or_LetIn u ctx t :
   subst_instance_constr u (it_mkProd_or_LetIn ctx t) =

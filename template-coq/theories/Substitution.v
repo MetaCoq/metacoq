@@ -1714,8 +1714,7 @@ Proof.
     -- eapply Forall2_map. close_Forall. intros; intuition eauto.
        destruct x, y; simpl in *. eauto.
 
-  -  simpl.
-    specialize (X1 Γ Γ' Δ s sub eq_refl wfsubs).
+  - specialize (X1 Γ Γ' Δ s sub eq_refl wfsubs).
     eapply refine_type. econstructor.
     eauto.
     rewrite subst_mkApps in X1. eauto.

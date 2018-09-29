@@ -82,7 +82,6 @@ Definition subst1 t k u := subst [t] k u.
 Notation subst10 t := (subst1 t 0).
 Notation "M { j := N }" := (subst1 N j M) (at level 10, right associativity).
 
-
 Fixpoint closedn k (t : term) : bool :=
   match t with
   | tRel i => Nat.ltb i k

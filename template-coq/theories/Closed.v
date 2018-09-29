@@ -4,6 +4,12 @@ From Coq Require Import Bool String List Program BinPos Compare_dec Omega Lia.
 From Template Require Import config utils Ast AstUtils Induction utils LiftSubst Typing.
 From Template Require Import WeakeningEnv.
 
+Definition closed_decl n d :=
+  option_default (closedn n) d.(decl_body) true && closedn n d.(decl_type).
+
+Definition closed_ctx ctx :=
+  forallb id (mapi (fun k d => closed_decl k d) (List.rev ctx)).
+
 (** * Lemmas about the [closedn] predicate *)
 
 Lemma closedn_lift n k k' t : closedn k t = true -> closedn (k + n) (lift n k' t) = true.

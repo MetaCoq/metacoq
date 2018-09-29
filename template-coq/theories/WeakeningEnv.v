@@ -278,3 +278,23 @@ Proof.
   intros [s Ht]. pose proof (wf_extends wfΣ' Hext). exists s.
   eapply weakening_env; eauto. eapply typing_wf_local in Ht; eauto.
 Qed.
+
+Lemma on_declared_minductive `{checker_flags} Σ ref decl :
+  wf Σ ->
+  declared_minductive (fst Σ) ref decl ->
+  on_inductive (lift_typing typing) Σ ref decl.
+Proof.
+  intros wfΣ Hdecl.
+  apply (declared_minductive_inv _ _ _ _ weaken_env_prop_typing wfΣ wfΣ Hdecl).
+Qed.
+
+Lemma on_declared_inductive `{checker_flags} Σ ref mdecl idecl :
+  wf Σ ->
+  declared_inductive (fst Σ) ref mdecl idecl ->
+  on_inductive (lift_typing typing) Σ (inductive_mind ref) mdecl *
+  on_ind_body (lift_typing typing) Σ (inductive_mind ref) mdecl (inductive_ind ref) idecl.
+Proof.
+  intros wfΣ Hdecl.
+  split. destruct Hdecl as [Hmdecl _]. now apply on_declared_minductive in Hmdecl.
+  apply (declared_inductive_inv _ _ _ mdecl idecl weaken_env_prop_typing wfΣ wfΣ Hdecl).
+Qed.

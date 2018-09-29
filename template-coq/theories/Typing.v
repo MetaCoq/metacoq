@@ -560,13 +560,13 @@ Fixpoint instantiate_params_subst params pars s ty :=
       | hd :: tl => instantiate_params_subst params tl (hd :: s) B
       | [] => None (* Not enough arguments to substitute *)
       end
-    | Some _, tLetIn _ b _ b' => instantiate_params_subst params pars (subst0 s b :: s) b'
+    | Some b, tLetIn _ _ _ b' => instantiate_params_subst params pars (subst0 s b :: s) b'
     | _, _ => None (* Not enough products in the type *)
     end
   end.
 
 Definition instantiate_params params pars ty :=
-  match instantiate_params_subst params pars [] ty with
+  match instantiate_params_subst (List.rev params) pars [] ty with
   | Some (s, ty) => Some (subst0 s ty)
   | None => None
   end.
@@ -891,14 +891,14 @@ Section GlobalMaps.
   Record constructor_shape mdecl i idecl cdecl :=
     { cshape_arity : context;
       (* Arity (with lets) *)
-      cshape_concl_head := tRel (#|mdecl.(ind_bodies)| - i + #|mdecl.(ind_params)| + #|cshape_arity|);
+      cshape_concl_head := tRel (#|mdecl.(ind_bodies)| - S i + #|mdecl.(ind_params)| + #|cshape_arity|);
       (* Conclusion head: reference to the current inductive in the block *)
       cshape_args : list term;
       (* Arguments of the constructor, whose length should be the real arguments length of the inductive *)
       cshape_eq : snd (fst cdecl) = it_mkProd_or_LetIn mdecl.(ind_params)
                          (it_mkProd_or_LetIn cshape_arity
                          (mkApps cshape_concl_head
-                                 (to_extended_list mdecl.(ind_params) ++ cshape_args)))
+                                 (to_extended_list_k mdecl.(ind_params) #|cshape_arity| ++ cshape_args)))
       (* The type of the constructor canonically has this shape: parameters, real arguments ending
          with a reference to the inductive applied to the (non-lets) parameters and arguments *)
     }.

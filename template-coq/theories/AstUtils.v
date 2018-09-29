@@ -1070,21 +1070,33 @@ Fixpoint reln (l : list term) (p : nat) (Γ0 : list context_decl) {struct Γ0} :
   | {| decl_body := None |} :: hyps => reln (tRel p :: l) (p + 1) hyps
   end.
 
-Definition to_extended_list Γ := reln [] 0 Γ.
+Definition to_extended_list_k Γ k := reln [] k Γ.
+Definition to_extended_list Γ := to_extended_list_k Γ 0.
 
 Lemma reln_list_lift_above l p Γ :
-  Forall (fun x => exists n, x = tRel n /\ n < p + length Γ) l ->
-  Forall (fun x => exists n, x = tRel n /\ n < p + length Γ) (reln l p Γ).
+  Forall (fun x => exists n, x = tRel n /\ p <= n /\ n < p + length Γ) l ->
+  Forall (fun x => exists n, x = tRel n /\ p <= n /\ n < p + length Γ) (reln l p Γ).
 Proof.
+  generalize (le_refl p).
+  generalize p at 1 3 5.
   induction Γ in p, l |- *. simpl. auto.
   intros. destruct a. destruct decl_body. simpl.
-  specialize (IHΓ l (S p)). rewrite <- Nat.add_succ_comm, Nat.add_1_r.
-  eapply IHΓ. simpl in *. rewrite <- Nat.add_succ_comm in H. auto.
+  assert(p0 <= S p) by lia.
+  specialize (IHΓ l (S p) p0 H1). rewrite <- Nat.add_succ_comm, Nat.add_1_r.
+  simpl in *. rewrite <- Nat.add_succ_comm in H0. eauto.
   simpl in *.
-  specialize (IHΓ (tRel p :: l) (S p)). rewrite <- Nat.add_succ_comm, Nat.add_1_r.
-  eapply IHΓ. simpl in *. rewrite <- Nat.add_succ_comm in H. auto.
+  specialize (IHΓ (tRel p :: l) (S p) p0 ltac:(lia)). rewrite <- Nat.add_succ_comm, Nat.add_1_r.
+  eapply IHΓ. simpl in *. rewrite <- Nat.add_succ_comm in H0. auto.
   simpl in *.
   constructor. exists p. intuition lia. auto.
+Qed.
+
+Lemma to_extended_list_k_spec Γ k :
+  Forall (fun x => exists n, x = tRel n /\ k <= n /\ n < k + length Γ) (to_extended_list_k Γ k).
+Proof.
+  pose (reln_list_lift_above [] k Γ).
+  unfold to_extended_list_k.
+  forward f. constructor. apply f.
 Qed.
 
 Lemma to_extended_list_lift_above Γ :
@@ -1092,7 +1104,8 @@ Lemma to_extended_list_lift_above Γ :
 Proof.
   pose (reln_list_lift_above [] 0 Γ).
   unfold to_extended_list.
-  forward f. constructor. apply f.
+  forward f. constructor. eapply Forall_impl; eauto. intros.
+  destruct H; eexists; intuition eauto.
 Qed.
 
 Definition polymorphic_instance uctx :=

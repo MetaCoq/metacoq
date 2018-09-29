@@ -796,27 +796,6 @@ Definition isType `{checker_flags} (Σ : global_context) (Γ : context) (t : ter
 Definition has_nparams npars ty :=
   decompose_prod_n_assum [] npars ty <> None.
 
-(* Definition is_some {A} (t : option A) := *)
-(*   match t with *)
-(*   | Some _ => true *)
-(*   | None => false *)
-(*   end. *)
-
-(* Definition isArity t := is_some (destArity [] t). *)
-
-(* Inductive isArity_Spec (t : term) : bool -> Set := *)
-(* | isArity_Spec_true ctx s : *)
-(*     t = it_mkProd_or_LetIn ctx (tSort s) -> isArity_Spec t true. *)
-
-(* Lemma isArity_spec t : isArity_Spec t (isArity t). *)
-(* Proof. *)
-(*   unfold isArity in *. *)
-(*   destruct (destArity [] t) eqn:Heq. *)
-(*   simpl in *. destruct p as [ctx' u]. *)
-(*   induction t; try discriminate; simpl in Heq. *)
-(*   injection Heq. intros <- <-. *)
-(*   apply (isArity_Spec_true _ [] u0). reflexivity. *)
-
 Fixpoint context_assumptions (Γ : context) :=
   match Γ with
   | [] => 0
@@ -992,7 +971,7 @@ Proof.
     intros.
     destruct x; simpl in *.
     destruct X0 as [Xl Xr].
-    constructor; red; simpl.
+    constructor; red; simpl. simpl in *.
     + apply onArity in Xl; apply onArity in Xr.
       unfold on_arity, on_type in *. intuition.
     + apply onConstructors in Xl; apply onConstructors in Xr. simpl in *.

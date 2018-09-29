@@ -569,6 +569,8 @@ Ltac merge_Forall := unfold tFixProp, tCaseBrsProp in *;
   | H : Forall _ ?x, H' : Forall2 _ _ ?x  |- _ =>
     apply (Forall2_List_Forall_mix_right H) in H'; clear H
   | |- Forall2 _ (map _ _) (map _ _) => apply Forall2_map
+  | H : Forall _ ?x, H' : is_true (forallb _ ?x) |- _ =>
+    eapply (Forall_forall_mix H) in H'; clear H
   end.
 
 Lemma forall_forallb_map_spec {A B : Type} {P : A -> Prop} {p : A -> bool}
@@ -637,6 +639,15 @@ Proof.
   eapply map_def_test_spec; eauto.
 Qed.
 
+Lemma Forall_forallb {A} P (l : list A) p :
+  Forall P l ->
+  (forall x, P x -> p x = true) ->
+  forallb p l = true.
+Proof.
+  induction 1 in p |- *; unfold compose; simpl; rewrite ?andb_true_iff;
+    intuition auto.
+Qed.
+
 Ltac apply_spec :=
   match goal with
   | H : Forall _ _, H' : forallb _ _ = _ |- map _ _ = map _ _ =>
@@ -644,6 +655,12 @@ Ltac apply_spec :=
   | H : Forall _ _, H' : forallb _ _ = _ |- forallb _ _ = _ =>
     eapply (forall_forallb_forallb_spec H H')
   | H : tCaseBrsProp _ _, H' : forallb _ _ = _ |- map _ _ = map _ _ =>
+    eapply (case_brs_forallb_map_spec H H')
+  | H : Forall _ _, H' : is_true (forallb _ _) |- map _ _ = map _ _ =>
+    eapply (forall_forallb_map_spec H H')
+  | H : Forall _ _, H' : is_true (forallb _ _) |- forallb _ _ = _ =>
+    eapply (forall_forallb_forallb_spec H H')
+  | H : tCaseBrsProp _ _, H' : is_true (forallb _ _) |- map _ _ = map _ _ =>
     eapply (case_brs_forallb_map_spec H H')
   | H : tCaseBrsProp _ _ |- map _ _ = map _ _ =>
     eapply (case_brs_map_spec H)
@@ -655,6 +672,8 @@ Ltac apply_spec :=
     eapply (forall_map_spec H)
   | H : Forall _ _ |- map _ _ = _ =>
     eapply (forall_map_id_spec H)
+  | H : Forall _ _ |- is_true (forallb _ _) =>
+    eapply (Forall_forallb _ _ _ H); clear H
   end.
 
 Lemma Forall_map {A B} (P : B -> Prop) (f : A -> B) l : Forall (Program.Basics.compose P f) l -> Forall P (map f l).
@@ -1038,15 +1057,6 @@ Lemma forallb_map {A B} (f : A -> B) (l : list A) p :
 Proof.
   induction l in p, f |- *; unfold compose; simpl; rewrite ?andb_true_iff;
     intuition (f_equal; auto). apply IHl.
-Qed.
-
-Lemma Forall_forallb {A} P (l : list A) p :
-  Forall P l ->
-  (forall x, P x -> p x = true) ->
-  forallb p l = true.
-Proof.
-  induction 1 in p |- *; unfold compose; simpl; rewrite ?andb_true_iff;
-    intuition auto.
 Qed.
 
 Lemma All_forallb {A} P (l : list A) p :

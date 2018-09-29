@@ -81,6 +81,17 @@ Proof.
   simpl. f_equal. rewrite map_app. reflexivity.
 Qed.
 
+Lemma subst_instance_constr_it_mkProd_or_LetIn u ctx t :
+  subst_instance_constr u (it_mkProd_or_LetIn ctx t) =
+  it_mkProd_or_LetIn (subst_instance_context u ctx) (subst_instance_constr u t).
+Proof.
+  induction ctx in u, t |- *; simpl; try congruence.
+  rewrite IHctx. f_equal. destruct (decl_body a); eauto.
+Qed.
+
+Lemma subst_instance_context_length u ctx : #|subst_instance_context u ctx| = #|ctx|.
+Proof. unfold subst_instance_context, map_context. now rewrite map_length. Qed.
+
 Lemma subst_subst_instance_constr u c N k :
   subst (map (subst_instance_constr u) N) k (subst_instance_constr u c) =
   subst_instance_constr u (subst N k c).
@@ -95,4 +106,11 @@ Proof.
 
   rewrite subst_instance_constr_mkApps. f_equal; auto.
   rewrite map_map_compose. apply_spec; eauto.
+Qed.
+
+Lemma map_subst_instance_constr_to_extended_list_k u ctx k :
+  map (subst_instance_constr u) (to_extended_list_k ctx k) = to_extended_list_k ctx k.
+Proof.
+  pose proof (to_extended_list_k_spec ctx k).
+  apply_spec. intros. now destruct H0 as [n [-> _]].
 Qed.

@@ -57,7 +57,6 @@ Proof.
     elim (Nat.leb_spec k n0); intros. simpl in *.
     elim (Nat.ltb_spec); auto. apply Nat.ltb_lt in H1. intros. lia.
     revert H1. simpl. elim (Nat.ltb_spec); auto. intros. apply Nat.ltb_lt. lia.
-    intros; discriminate.
   - rewrite forallb_map in H1. merge_Forall. eapply Forall_forallb; eauto.
     simpl; intuition eauto.
   - specialize (IHt2 n (S k) (S k')). eauto with arith.
@@ -150,11 +149,10 @@ Proof.
     f_equal; lia. rewrite <- H5. f_equal; lia.
 Qed.
 
-Lemma closedn_substl s k t :
+Lemma closedn_subst0 s k t :
   forallb (closedn k) s = true -> closedn (k + #|s|) t = true ->
-  closedn k (substl s t) = true.
+  closedn k (subst0 s t) = true.
 Proof.
-  unfold substl.
   intros.
   generalize (closedn_subst s k 0 t H).
   rewrite Nat.add_0_r. eauto.
@@ -255,7 +253,7 @@ Proof.
     destruct Hcdecl as [[s Hs] _]. rewrite -> andb_true_iff in Hs.
     destruct Hs as [Hdecl _].
     unfold type_of_constructor.
-    apply closedn_substl.
+    apply closedn_subst0.
     unfold inds. clear. simpl. induction #|ind_bodies mdecl|. constructor.
     simpl. now rewrite IHn.
     rewrite inds_length. unfold arities_context in Hdecl.
@@ -274,7 +272,7 @@ Proof.
     now apply closedn_mkApps_inv in H11.
 
   - intuition. subst ty.
-    apply closedn_substl.
+    apply closedn_subst0.
     simpl. apply closedn_mkApps_inv in H2.
     rewrite forallb_rev H1. apply H2.
     rewrite closedn_subst_instance_constr.

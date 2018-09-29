@@ -4,6 +4,7 @@ From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
 From Template Require Import config utils Ast AstUtils univ Induction LiftSubst UnivSubst.
 From Template Require Loader.
 Require Import String.
+Require Import ssreflect.
 Local Open Scope string_scope.
 Set Asymmetric Patterns.
 
@@ -15,31 +16,6 @@ Set Asymmetric Patterns.
   Inductive relations for reduction, conversion and typing of CIC terms.
 
  *)
-
-Definition app_context (Γ Γ' : context) : context := (Γ' ++ Γ)%list.
-Notation " Γ  ,,, Γ' " := (app_context Γ Γ') (at level 25, Γ' at next level, left associativity).
-Notation "#| Γ |" := (List.length Γ) (at level 0, Γ at level 99, format "#| Γ |").
-
-Lemma app_context_assoc Γ Γ' Γ'' : Γ ,,, (Γ' ,,, Γ'') = Γ ,,, Γ' ,,, Γ''.
-Proof. unfold app_context; now rewrite app_assoc. Qed.
-
-Lemma app_context_length Γ Γ' : #|Γ ,,, Γ'| = #|Γ'| + #|Γ|.
-Proof. unfold app_context. now rewrite app_length. Qed.
-
-Lemma nth_error_app_ge v Γ Γ' : #|Γ'| <= v -> nth_error (Γ ,,, Γ') v = nth_error Γ (v - #|Γ'|).
-Proof.
-  revert v; induction Γ'; simpl; intros.
-  now rewrite Nat.sub_0_r.
-  destruct v. omega.
-  simpl. rewrite IHΓ'; easy.
-Qed.
-
-Lemma nth_error_app_lt v Γ Γ' : v < #|Γ'| -> nth_error (Γ ,,, Γ') v = nth_error Γ' v.
-Proof.
-  revert v; induction Γ'; simpl; intros. easy.
-  destruct v; trivial.
-  simpl. rewrite IHΓ'; easy.
-Qed.
 
 (** ** Environment lookup *)
 
@@ -128,9 +104,16 @@ Proof.
   unfold inds. induction l; simpl; congruence.
 Qed.
 
+Lemma inds_spec ind u l :
+  inds ind u l = List.rev (mapi (fun i _ => tInd {| inductive_mind := ind; inductive_ind := i |} u) l).
+Proof.
+  unfold inds, mapi. induction l using rev_ind. simpl. reflexivity.
+  now rewrite app_length /= Nat.add_1_r IHl mapi_rec_app /= rev_app_distr /= Nat.add_0_r.
+Qed.
+
 Definition type_of_constructor mdecl (cdecl : ident * term * nat) (c : inductive * nat) (u : list Level.t) :=
   let mind := inductive_mind (fst c) in
-  substl (inds mind u mdecl.(ind_bodies)) (subst_instance_constr u (snd (fst cdecl))).
+  subst0 (inds mind u mdecl.(ind_bodies)) (subst_instance_constr u (snd (fst cdecl))).
 
 (** ** Reduction *)
 
@@ -146,7 +129,7 @@ Definition fix_subst (l : mfixpoint term) :=
 
 Definition unfold_fix (mfix : mfixpoint term) (idx : nat) :=
   match List.nth_error mfix idx with
-  | Some d => Some (d.(rarg), substl (fix_subst mfix) d.(dbody))
+  | Some d => Some (d.(rarg), subst0 (fix_subst mfix) d.(dbody))
   | None => None
   end.
 
@@ -160,7 +143,7 @@ Definition cofix_subst (l : mfixpoint term) :=
 
 Definition unfold_cofix (mfix : mfixpoint term) (idx : nat) :=
   match List.nth_error mfix idx with
-  | Some d => Some (d.(rarg), substl (cofix_subst mfix) d.(dbody))
+  | Some d => Some (d.(rarg), subst0 (cofix_subst mfix) d.(dbody))
   | None => None
   end.
 
@@ -371,7 +354,7 @@ Inductive red Σ Γ M : term -> Prop :=
 (** ** Term equality and cumulativity *)
 
 Definition eq_string s s' :=
-  if string_dec s s' then true else false.
+  if string_compare s s' is Eq then true else false.
 
 Definition eq_ind i i' :=
   let 'mkInd i n := i in
@@ -524,26 +507,6 @@ Fixpoint destArity Γ (t : term) :=
   | _ => None
   end.
 
-(** Make a lambda/let-in string of abstractions from a context [Γ], ending with term [t]. *)
-
-Definition it_mkLambda_or_LetIn (l : context) (t : term) :=
-  List.fold_left
-    (fun acc d =>
-       match d.(decl_body) with
-       | None => tLambda d.(decl_name) d.(decl_type) acc
-       | Some b => tLetIn d.(decl_name) b d.(decl_type) acc
-       end) l t.
-
-(** Make a prod/let-in string of abstractions from a context [Γ], ending with term [t]. *)
-
-Definition it_mkProd_or_LetIn (l : context) (t : term) :=
-  List.fold_left
-    (fun acc d =>
-       match d.(decl_body) with
-       | None => tProd d.(decl_name) d.(decl_type) acc
-       | Some b => tLetIn d.(decl_name) b d.(decl_type) acc
-       end) l t.
-
 (** Compute the type of a case from the predicate [p], actual parameters [pars] and
     an inductive declaration. *)
 
@@ -574,7 +537,7 @@ Definition instantiate_params params pars ty :=
 Definition build_branches_type ind mdecl idecl params u p :=
   let inds := inds (inductive_mind ind) u mdecl.(ind_bodies) in
   let branch_type i '(id, t, ar) :=
-    let ty := substl inds (subst_instance_constr u t) in
+    let ty := subst0 inds (subst_instance_constr u t) in
     match instantiate_params mdecl.(ind_params) params ty with
     | Some ty =>
       let '(sign, ccl) := decompose_prod_assum [] ty in
@@ -680,7 +643,7 @@ Definition fix_context (m : mfixpoint term) : context :=
   List.rev (mapi (fun i d => vass d.(dname) (lift0 i d.(dtype))) m).
 
 Lemma fix_context_length mfix : #|fix_context mfix| = #|mfix|.
-Proof. unfold fix_context. now rewrite List.rev_length, mapi_length. Qed.
+Proof. unfold fix_context. now rewrite List.rev_length mapi_length. Qed.
 
 (** ** Typing relation *)
 
@@ -769,7 +732,7 @@ Inductive typing `{checker_flags} (Σ : global_context) (Γ : context) : term ->
     (** Actually ensured by typing + validity, but necessary for weakening and substitution. *)
     #|args| = ind_npars mdecl ->
     let ty := snd pdecl in
-    Σ ;;; Γ |- tProj p c : substl (c :: List.rev args) (subst_instance_constr u ty)
+    Σ ;;; Γ |- tProj p c : subst0 (c :: List.rev args) (subst_instance_constr u ty)
 
 | type_Fix mfix n decl :
     let types := fix_context mfix in
@@ -1375,7 +1338,7 @@ Lemma typing_ind_env `{cf : checker_flags} :
         Σ ;;; Γ |- c : mkApps (tInd (fst (fst p)) u) args ->
         P Σ Γ c (mkApps (tInd (fst (fst p)) u) args) ->
         #|args| = ind_npars mdecl ->
-        let ty := snd pdecl in P Σ Γ (tProj p c) (substl (c :: List.rev args) (subst_instance_constr u ty))) ->
+        let ty := snd pdecl in P Σ Γ (tProj p c) (subst0 (c :: List.rev args) (subst_instance_constr u ty))) ->
 
     (forall Σ (wfΣ : wf Σ) (Γ : context) (wfΓ : wf_local Σ Γ) (mfix : list (def term)) (n : nat) decl,
         let types := fix_context mfix in
@@ -1499,14 +1462,14 @@ Proof.
           eapply IHΓ with _ _ Hty. eauto. intros. eapply X14 with Hty0; eauto. lia.
           apply typing_wf_local_size.
           unshelve eapply X14; simpl; auto with arith;
-            repeat (rewrite Nat.max_comm, <- Nat.max_assoc; auto with arith); lia.
+            repeat (rewrite Nat.max_comm -Nat.max_assoc; auto with arith); lia.
       --- destruct (wf_local_inv _ _ _ (typing_wf_local wfΣ H)).
           simpl in y. destruct y as [s [Hs [sizex sizety]]].
           econstructor; eauto.
           eapply IHΓ with _ _ Hs. intros. eapply X14 with Hty; eauto. lia.
           apply typing_wf_local_size.
           unshelve eapply X14; simpl; eauto with arith;
-            repeat (rewrite Nat.max_comm, <- Nat.max_assoc; auto with arith). }
+            repeat (rewrite Nat.max_comm -Nat.max_assoc; auto with arith). }
 
     destruct H;
       try solve [  match reverse goal with
@@ -1695,7 +1658,7 @@ Qed.
 Hint Resolve wf_mkApps_inv : wf.
 Hint Constructors Ast.wf : wf.
 
-Lemma isLambda_substl s t : isLambda t = true -> isLambda (substl s t) = true.
+Lemma isLambda_subst s t : isLambda t = true -> isLambda (subst0 s t) = true.
 Proof.
   destruct t; simpl; try congruence.
 Qed.
@@ -1714,7 +1677,7 @@ Proof.
   destruct nth_error eqn:eqnth; try congruence.
   pose proof (nth_error_forall eqnth H). simpl in H0.
   injection Hf. intros <- <-.
-  destruct H0 as [ _ [ wfd islamd ] ]. apply (isLambda_substl (fix_subst mfix)) in islamd.
+  destruct H0 as [ _ [ wfd islamd ] ]. apply (isLambda_subst (fix_subst mfix)) in islamd.
   apply isLambda_isApp in islamd. split; try congruence.
   apply wf_subst; auto. clear wfd islamd Hf eqnth.
   assert(forall n, Ast.wf (tFix mfix n)). constructor; auto.
@@ -1737,8 +1700,8 @@ Proof.
   unfold cofix_subst. generalize #|mfix|; intros. induction n; auto.
 Qed.
 
-Lemma wf_subst_instance_constr u c : Ast.wf c ->
-                                     Ast.wf (subst_instance_constr u c).
+Lemma wf_subst_instance_constr u c :
+  Ast.wf c -> Ast.wf (subst_instance_constr u c).
 Proof.
   induction 1 using term_wf_forall_list_ind; simpl; try solve [ constructor; auto using Forall_map ].
 
@@ -1882,9 +1845,9 @@ Lemma map_vass_map_def g l n k :
         (map (map_def (lift n k) g) l)) =
   (mapi (fun i d => map_decl (lift n (i + k)) d) (mapi (fun i (d : def term) => vass (dname d) (lift0 i (dtype d))) l)).
 Proof.
-  rewrite mapi_mapi, mapi_map. apply mapi_ext.
+  rewrite mapi_mapi mapi_map. apply mapi_ext.
   intros. unfold map_decl, vass; simpl; f_equal.
-  rewrite permute_lift. f_equal; lia. lia.
+  rewrite permute_lift. lia. f_equal; lia.
 Qed.
 
 Lemma All_local_env_map `{checker_flags} (P : global_context -> context -> term -> term -> Type) Σ f l :

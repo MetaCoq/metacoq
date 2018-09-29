@@ -5,6 +5,7 @@ From Template Require Import Ast AstUtils.
 Require Import BinPos.
 Require Import Coq.Arith.Compare_dec Bool.
 Require Import Template.Induction.
+Require Import Lia.
 
 (** * Lifting and substitution for the AST
 
@@ -75,13 +76,12 @@ Fixpoint subst s k u :=
   | x => x
   end.
 
+(** Substitutes [t1 ; .. ; tn] in u for [Rel 0; .. Rel (n-1)] *in parallel* *)
 Notation subst0 t := (subst t 0).
 Definition subst1 t k u := subst [t] k u.
 Notation subst10 t := (subst1 t 0).
 Notation "M { j := N }" := (subst1 N j M) (at level 10, right associativity).
 
-(** Substitutes [t1 ; .. ; tn] in u for [Rel 0; .. Rel (n-1)] *in parallel* *)
-Definition substl s := subst s 0.
 
 Fixpoint closedn k (t : term) : bool :=
   match t with
@@ -108,6 +108,8 @@ Notation closed t := (closedn 0 t).
 
 Create HintDb terms.
 
+Ltac arith_congr := (congruence || ltac:(repeat (try lia; progress f_equal))).
+
 Ltac easy0 :=
   let rec use_hyp H :=
    (match type of H with
@@ -125,13 +127,13 @@ Ltac easy0 :=
     | _ => idtac
     end)
   in
-  let do_atom := (solve [ trivial with eq_true | reflexivity | symmetry; trivial | contradiction ]) in
-  let rec do_ccl := (try do_atom; repeat (do_intro; try do_atom); (solve [ split; do_ccl ])) in
+  let do_atom := (solve [ trivial with eq_true | reflexivity | symmetry; trivial | contradiction]) in
+  let rec do_ccl := (try do_atom; repeat (do_intro; try do_atom); try arith_congr; (solve [ split; do_ccl ])) in
   (solve [ do_atom | use_hyps; do_ccl ]) || fail "Cannot solve this goal".
-Require Import Omega.
-Hint Extern 100 => omega : terms.
 
-Ltac easy ::= easy0 || solve [eauto 7 with core arith terms].
+Hint Extern 100 => lia : terms.
+
+Ltac easy ::= easy0 || solve [eauto 3 with core arith terms].
 
 Notation subst_rec N M k := (subst N k M) (only parsing).
 
@@ -213,7 +215,7 @@ Lemma simpl_lift :
 Proof.
   intros M.
   elim M using term_forall_list_ind;
-    intros; simpl; try easy;
+    intros; simpl;
       rewrite ?map_map_compose, ?compose_on_snd, ?compose_map_def;
       try (rewrite H, ?H0, ?H1; auto); try (f_equal; apply_spec);
         try rewrite ?map_length; try easy.
@@ -631,16 +633,6 @@ Proof.
   intros wft wfu. apply wf_subst. constructor; auto. auto.
 Qed.
 
-(* Definition substl' l t := *)
-(*   List.fold_left (fun t u => subst10 u t) l t. *)
-
-(* Lemma wf_substl' ts u : List.Forall wf ts -> wf u -> wf (substl' ts u). *)
-(* Proof. *)
-(*   intros wfts wfu. *)
-(*   induction wfts in u, wfu; simpl; intros; try constructor; auto. *)
-(*   apply IHwfts. now apply wf_subst. *)
-(* Qed. *)
-
 Hint Resolve wf_mkApps wf_subst wf_subst1 wf_lift : wf.
 
 Lemma subst_empty k a : Ast.wf a -> subst [] k a = a.
@@ -666,3 +658,75 @@ Qed.
 Lemma isLambda_lift n k (bod : term) :
   isLambda bod = true -> isLambda (lift n k bod) = true.
 Proof. destruct bod; simpl; try congruence. Qed.
+
+Require Import ssreflect.
+
+Lemma lift_to_extended_list_k Γ k : forall k',
+    to_extended_list_k Γ (k' + k) = map (lift0 k') (to_extended_list_k Γ k).
+Proof.
+  unfold to_extended_list_k.
+  intros k'. rewrite !reln_alt_eq !app_nil_r.
+  induction Γ in k, k' |- *; simpl; auto.
+  destruct a as [na [body|] ty].
+  now rewrite -Nat.add_assoc (IHΓ (k + 1) k').
+  simpl. now rewrite -Nat.add_assoc (IHΓ (k + 1) k') map_app.
+Qed.
+
+
+Lemma simpl_subst_k (N : list term) (M : term) :
+  Ast.wf M -> forall k p, p = #|N| -> subst N k (lift p k M) = M.
+Proof.
+  intros. subst p. rewrite <- (Nat.add_0_r #|N|).
+  rewrite -> simpl_subst_rec, lift0_id; auto. Qed.
+
+Ltac nth_leb_simpl :=
+  match goal with
+    |- context [leb ?k ?n] => elim (leb_spec_Set k n); try lia; intros; simpl
+  | |- context [nth_error ?l ?n] => elim (nth_error_spec l n); rewrite -> ?app_length, ?map_length;
+                                    try lia; intros; simpl
+  | H : context[nth_error (?l ++ ?l') ?n] |- _ =>
+    (rewrite -> (AstUtils.nth_error_app_ge l l' n) in H by lia) ||
+    (rewrite -> (AstUtils.nth_error_app_lt l l' n) in H by lia)
+  | H : nth_error ?l ?n = Some _, H' : nth_error ?l ?n' = Some _ |- _ =>
+    replace n' with n in H' by lia; rewrite -> H in H'; injection H'; intros; subst
+  | _ => lia || congruence || solve [repeat (f_equal; try lia)]
+  end.
+
+Ltac change_Sk :=
+  match goal with
+    |- context [S (?x + ?y)] => progress change (S (x + y)) with (S x + y)
+  end.
+
+Lemma subst_app_decomp l l' k t :
+  Ast.wf t -> Forall Ast.wf l ->
+  subst (l ++ l') k t = subst l' k (subst (List.map (lift0 (length l')) l) k t).
+Proof.
+  intros wft wfl.
+  induction wft in k |- * using term_wf_forall_list_ind; simpl; auto;
+    rewrite ?subst_mkApps; try change_Sk;
+    try (f_equal; rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length;
+         eauto; apply_spec; eauto).
+
+  - repeat nth_leb_simpl.
+    rewrite nth_error_map in e0. rewrite e in e0.
+    injection e0; intros <-.
+    rewrite -> permute_lift, Nat.add_0_r by auto.
+    rewrite <- (Nat.add_0_r #|l'|).
+    rewrite -> simpl_subst_rec, lift0_id; auto with wf; try lia. apply wf_lift.
+    eapply nth_error_forall in e; eauto.
+Qed.
+
+Lemma subst_app_simpl l l' k t :
+  Ast.wf t -> Forall Ast.wf l -> Forall Ast.wf l' ->
+  subst (l ++ l') k t = subst l k (subst l' (k + length l) t).
+Proof.
+  intros wft wfl wfl'.
+  induction wft in k |- * using term_wf_forall_list_ind; simpl; eauto;
+    rewrite ?subst_mkApps; try change_Sk;
+    try (f_equal; rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length, ?Nat.add_assoc;
+         eauto; apply_spec; eauto).
+
+  - repeat nth_leb_simpl.
+    rewrite -> Nat.add_comm, simpl_subst; eauto.
+    eapply nth_error_forall in e; eauto.
+Qed.

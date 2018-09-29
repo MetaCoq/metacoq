@@ -11,6 +11,22 @@ From Template Require Import WeakeningEnv Closed.
 Set Asymmetric Patterns.
 Generalizable Variables Σ Γ t T.
 
+Lemma typed_liftn `{checker_flags} Σ Γ t T n k :
+  wf Σ -> wf_local Σ Γ -> k >= #|Γ| ->
+  Σ ;;; Γ |- t : T -> lift n k T = T /\ lift n k t = t.
+Proof.
+  intros wfΣ wfΓ Hk Hty.
+  apply typecheck_closed in Hty; eauto.
+  destruct Hty as [_ Hcl].
+  rewrite andb_true_iff in Hcl. destruct Hcl as [clb clty].
+  pose proof (closed_upwards _ _ clb k).
+  pose proof (closed_upwards _ _ clty k).
+  simpl in *. forward H0 by lia.
+  apply (lift_closed n) in H0.
+  simpl in *. forward H1 by lia.
+  now apply (lift_closed n) in H1.
+Qed.
+
 Definition lift_decl n k d := (map_decl (lift n k) d).
 
 Definition lift_context n k (Γ : context) : context :=
@@ -91,7 +107,7 @@ Lemma weaken_nth_error_ge {Γ Γ' v Γ''} : #|Γ'| <= v ->
   nth_error (Γ ,,, Γ'' ,,, lift_context #|Γ''| 0 Γ') (#|Γ''| + v).
 Proof.
   intros Hv.
-  rewrite !nth_error_app_ge, ?lift_context_length. f_equal. lia.
+  rewrite !nth_error_app_context_ge, ?lift_context_length. f_equal. lia.
   rewrite lift_context_length. lia.
   rewrite lift_context_length. lia. auto.
 Qed.
@@ -101,7 +117,7 @@ Lemma weaken_nth_error_lt {Γ Γ' Γ'' v} : v < #|Γ'| ->
   option_map (lift_decl #|Γ''| (#|Γ'| - S v)) (nth_error (Γ ,,, Γ') v).
 Proof.
   simpl. intros Hv.
-  rewrite !nth_error_app_lt.
+  rewrite !nth_error_app_context_lt.
   rewrite nth_error_lift_context_eq.
   do 2 f_equal. lia. lia. now rewrite lift_context_length.
 Qed.
@@ -148,7 +164,7 @@ Lemma lift_unfold_fix n k mfix idx narg fn :
 Proof.
   unfold unfold_fix.
   rewrite nth_error_map. destruct (nth_error mfix idx) eqn:Hdef; try congruence.
-  intros [= <- <-]. simpl. repeat f_equal. unfold substl.
+  intros [= <- <-]. simpl. repeat f_equal.
   rewrite (distr_lift_subst_rec _ _ n 0 k).
   rewrite fix_subst_length. f_equal.
   unfold fix_subst. rewrite !map_length.
@@ -163,7 +179,7 @@ Lemma lift_unfold_cofix n k mfix idx narg fn :
 Proof.
   unfold unfold_cofix.
   rewrite nth_error_map. destruct (nth_error mfix idx) eqn:Hdef; try congruence.
-  intros [= <- <-]. simpl. repeat f_equal. unfold substl.
+  intros [= <- <-]. simpl. repeat f_equal.
   rewrite (distr_lift_subst_rec _ _ n 0 k).
   rewrite cofix_subst_length. f_equal.
   unfold cofix_subst. rewrite !map_length.
@@ -221,22 +237,6 @@ Qed.
 
 Definition lift_mutual_inductive_body n k mind m :=
   map_mutual_inductive_body mind (fun k' => lift n (k' + k)) m.
-
-Lemma typed_liftn `{checker_flags} Σ Γ t T n k :
-  wf Σ -> wf_local Σ Γ -> k >= #|Γ| ->
-  Σ ;;; Γ |- t : T -> lift n k T = T /\ lift n k t = t.
-Proof.
-  intros wfΣ wfΓ Hk Hty.
-  apply typecheck_closed in Hty; eauto.
-  destruct Hty as [_ Hcl].
-  rewrite andb_true_iff in Hcl. destruct Hcl as [clb clty].
-  pose proof (closed_upwards _ _ clb k).
-  pose proof (closed_upwards _ _ clty k).
-  simpl in *. forward H0 by lia.
-  apply (lift_closed n) in H0.
-  simpl in *. forward H1 by lia.
-  now apply (lift_closed n) in H1.
-Qed.
 
 Lemma lift_wf_local `{checker_flags} Σ Γ n k : wf Σ -> wf_local Σ Γ -> lift_context n k Γ = Γ.
 Proof.
@@ -318,12 +318,11 @@ Proof.
   congruence. auto.
 Qed.
 
-Lemma substl_inds_lift ind u mdecl n k t :
-  (substl (inds (inductive_mind ind) u (ind_bodies mdecl))
+Lemma subst0_inds_lift ind u mdecl n k t :
+  (subst0 (inds (inductive_mind ind) u (ind_bodies mdecl))
           (lift n (#|arities_context (ind_bodies mdecl)| + k) t)) =
-  lift n k (substl (inds (inductive_mind ind) u (ind_bodies mdecl)) t).
+  lift n k (subst0 (inds (inductive_mind ind) u (ind_bodies mdecl)) t).
 Proof.
-  unfold substl.
   rewrite (distr_lift_subst_rec _ _ n 0 k). simpl.
   unfold arities_context. rewrite rev_map_length, inds_length.
   f_equal. generalize (ind_bodies mdecl).
@@ -350,7 +349,7 @@ Proof.
   intros.
   rewrite <- H3 at 2.
   rewrite <- UnivSubst.lift_subst_instance_constr.
-  now rewrite substl_inds_lift.
+  now rewrite subst0_inds_lift.
 Qed.
 
 Lemma lift_declared_projection `{checker_flags} Σ c mdecl idecl pdecl n k :
@@ -505,11 +504,6 @@ Proof.
   rewrite IHctx // lift_decl_closed //. now apply: closed_decl_upwards.
 Qed.
 
-(* Lemma closed_ctx_app ctx ctx' : closed_ctx (ctx ++ ctx') -> closed_ctx ctx && closed_ctx ctx'. *)
-(* Proof. *)
-(*   rewrite /closed_ctx rev_app_distr mapi_app forallb_app. *)
-(*   move/andP => Hctx' Hctx. *)
-
 Lemma closed_tele_lift n k ctx :
   closed_ctx ctx ->
   mapi (fun (k' : nat) (decl : context_decl) => lift_decl n (k' + k) decl) (List.rev ctx) = List.rev ctx.
@@ -538,27 +532,6 @@ Proof.
   move/instantiate_params_subst_length: E => -> /=.  do 3 f_equal. lia.
 Qed.
 Hint Rewrite lift_instantiate_params : lift.
-
-(* Lemma lift_instantiate_params n k params args t : *)
-(*   option_map (lift n k) (instantiate_params params args t) = *)
-(*   instantiate_params params (map (lift n k) args) (lift n k t). *)
-(* Proof. *)
-(*   induction params in args, t, n, k |- *. *)
-(*   - destruct args; reflexivity. *)
-(*   - simpl. rewrite <- lift_strip_outer_cast. generalize (strip_outer_cast t). *)
-(*     clear t; intros t. *)
-(*     destruct (decl_body a); try congruence. *)
-(*     destruct t; simpl; try congruence. *)
-(*     -- now destruct (Nat.leb k n0). *)
-(*     -- destruct args; try congruence; auto. *)
-(*        simpl. rewrite IHparams. f_equal. apply distr_lift_subst. *)
-(*        simpl. rewrite IHparams; f_equal. apply distr_lift_subst. *)
-(*     -- destruct t; simpl; try congruence. *)
-(*        now destruct (Nat.leb k n0). *)
-(*        destruct args; try congruence; auto. *)
-(*        simpl. rewrite IHparams. f_equal. apply distr_lift_subst. *)
-(* Qed. *)
-(* Hint Rewrite lift_instantiate_params : lift. *)
 
 (* bug eauto with let .. in hypothesis failing *)
 Lemma lift_decompose_prod_assum_rec ctx t n k :
@@ -652,7 +625,7 @@ Proof.
   rewrite -> mapi_map, map_mapi. f_equal. extensionality i. extensionality x.
   destruct x as [[id t] arity]. simpl.
   rewrite <- UnivSubst.lift_subst_instance_constr.
-  rewrite substl_inds_lift.
+  rewrite subst0_inds_lift.
   rewrite <- lift_instantiate_params.
   destruct (instantiate_params _ _) eqn:Heqip. simpl.
   epose proof (lift_decompose_prod_assum t0 n k).
@@ -977,7 +950,7 @@ Proof.
     -- eapply Forall2_map. close_Forall. intros; intuition eauto.
        destruct x, y; simpl in *. eauto.
 
-  - unfold substl. simpl.
+  - simpl.
     erewrite (distr_lift_subst_rec _ _ _ 0 #|Γ'|).
     simpl. rewrite -> map_rev.
     subst ty.

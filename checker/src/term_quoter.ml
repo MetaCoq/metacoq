@@ -51,6 +51,8 @@ struct
   type quoted_mind_finiteness = recursivity_kind
   type quoted_entry = (constant_entry, quoted_mind_entry) sum option
 
+  type quoted_context_decl = context_decl
+  type quoted_context = context
   type quoted_one_inductive_body = one_inductive_body
   type quoted_mutual_inductive_body = mutual_inductive_body
   type quoted_constant_body = constant_body
@@ -146,6 +148,13 @@ struct
     | Entries.Cumulative_ind_entry ctx ->
       quote_abstract_univ_context_aux (Univ.CumulativityInfo.univ_context ctx)
 
+  let quote_context_decl na b t =
+    { decl_name = na;
+      decl_body = b;
+      decl_type = t }
+
+  let quote_context l = l
+
   let mkAnon = Coq_nAnon
   let mkName i = Coq_nNamed i
 
@@ -202,8 +211,8 @@ struct
     { ind_name = id; ind_type = ty;
       ind_kelim = kel; ind_ctors = ctr; ind_projs = proj }
 
-  let mk_mutual_inductive_body parms inds uctx =
-    {ind_npars = parms; ind_bodies = inds; ind_universes = uctx}
+  let mk_mutual_inductive_body npars params inds uctx =
+    {ind_npars = npars; ind_params = params; ind_bodies = inds; ind_universes = uctx}
 
   let mk_constant_body ty tm uctx =
     {cst_type = ty; cst_body = tm; cst_universes = uctx}

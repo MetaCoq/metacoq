@@ -35,13 +35,13 @@ Section Wcbv.
   | eval_beta f na t b a a' l res :
       eval f (tLambda na t b) ->
       eval a a' ->
-      eval (mkApps (subst0 a' b) l) res ->
+      eval (mkApps (subst10 a' b) l) res ->
       eval (tApp f (a :: l)) res
 
   (** Let *)
   | eval_zeta na b0 b0' t b1 res :
       eval b0 b0' ->
-      eval (subst0 b0' b1) res ->
+      eval (subst10 b0' b1) res ->
       eval (tLetIn na b0 t b1) res
 
   (** Local variables: defined or undefined *)
@@ -246,7 +246,7 @@ Section Wcbv.
   (** Evaluation preserves closedness: *)
   Lemma eval_closed : forall n t u, closedn n t = true -> eval t u -> closedn n u = true.
   Proof.
-    induction 2 using eval_evals_ind; simpl in *; eauto. eapply IHeval3.
+    induction 2 using eval_evals_ind; simpl in *; eauto 2. eapply IHeval3.
     admit.
   Admitted. (* FIXME complete *)
 

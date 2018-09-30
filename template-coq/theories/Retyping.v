@@ -30,7 +30,7 @@ Section TypeOf.
     | cons x xs =>
       pi <- reduce_to_prod (fst Σ) Γ ty ;;
        let '(a1, b1) := pi in
-       infer_spine Γ (subst0 x b1) xs
+       infer_spine Γ (subst10 x b1) xs
     end.
 
   Section SortOf.

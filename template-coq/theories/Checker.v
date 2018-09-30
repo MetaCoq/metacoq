@@ -56,7 +56,7 @@ Section Reduce.
 
   | tLetIn _ b _ c =>
     if RedFlags.zeta flags then
-      reduce_stack Γ n (subst0 b c) stack
+      reduce_stack Γ n (subst10 b c) stack
     else ret (t, stack)
 
   | tConst c u =>
@@ -77,7 +77,7 @@ Section Reduce.
       | a :: args' =>
         (** CBN reduction: we do not reduce arguments before substitution *)
         (* a' <- reduce_stack Γ n a [] ;; *)
-        reduce_stack Γ n (subst0 a b) args'
+        reduce_stack Γ n (subst10 a b) args'
       | _ => ret (t, stack)
                (*  b' <- reduce_stack (Γ ,, vass na ty) n b stack ;; *)
                (* ret (tLambda na ty (zip b'), stack) *)
@@ -604,7 +604,7 @@ Section Typecheck2.
        let '(a1, b1) := pi in
        tx <- infer Γ x ;;
        convert_leq Γ tx a1 ;;
-       infer_spine Γ (subst0 x b1) xs
+       infer_spine Γ (subst10 x b1) xs
     end.
 
     Definition infer_type Γ t :=
@@ -669,13 +669,14 @@ Section Typecheck2.
   Definition lookup_constructor_type ind i k u :=
     res <- lookup_constructor_decl ind i k ;;
     let '(l, uctx, ty) := res in
-    ret (substl (inds ind u l) ty).
+    ret (subst0 (inds ind u l) (subst_instance_constr u ty)).
 
   Definition lookup_constructor_type_cstrs ind i k u :=
     res <- lookup_constructor_decl ind i k ;;
     let '(l, uctx, ty) := res in
     let cstrs := polymorphic_constraints uctx in
-    ret (substl (inds ind u l) ty, subst_instance_cstrs u cstrs).
+    ret (subst0 (inds ind u l) (subst_instance_constr u ty),
+         subst_instance_cstrs u cstrs).
 
   Definition check_consistent_constraints cstrs :=
     if check_constraints (snd Σ) cstrs then ret tt
@@ -849,10 +850,12 @@ Section Typecheck2.
         H : exists T', _ |- _ => destruct H as [? [-> H]]
       end; simpl; try (eexists; split; [ reflexivity | solve [ tc ] ]).
 
-    - eexists. rewrite (nth_error_safe_nth n _ isdecl).
+    - eexists. rewrite e.
       split; [ reflexivity | tc ].
 
-    - admit.
+    - eexists. split; [reflexivity | tc].
+      constructor. simpl. unfold leq_universe.
+      admit.
 
     - eexists.
       apply cumul_reduce_to_sort in IHX1 as [s'' [-> Hs'']].
@@ -892,24 +895,16 @@ Section Typecheck2.
 
     - admit.
 
-    - eexists.
-      rewrite (nth_error_safe_nth _ _ isdecl).
+    - eexists. rewrite e.
       split; [ reflexivity | tc ].
 
-    - eexists.
-      rewrite (nth_error_safe_nth _ _ isdecl).
+    - eexists. rewrite e.
       split; [ reflexivity | tc ].
 
     - eexists.
       split; [ reflexivity | tc ].
       eapply cumul_trans; eauto.
-
   Admitted.
-  Lemma nth_error_isdecl {A} {l : list A} {n c} : nth_error l n = Some c -> n < Datatypes.length l.
-  Proof.
-    intros.
-    rewrite <- nth_error_Some. intro H'. rewrite H' in H; discriminate.
-  Qed.
 
   Ltac infers :=
     repeat
@@ -960,14 +955,6 @@ Section Typecheck2.
     destruct a0. now rewrite cumul_convert_leq.
   Qed.
 
-  Lemma nth_error_Some_safe_nth A (l : list A) n c :
-    forall e : nth_error l n = Some c, safe_nth l (exist _ n (nth_error_isdecl e)) = c.
-  Proof.
-    intros H.
-    pose proof (nth_error_safe_nth _ _ (nth_error_isdecl H)).
-    rewrite H in H0 at 1. now injection H0 as ->.
-  Qed.
-
   Ltac infco := eauto using infer_cumul_correct, infer_type_correct.
 
   (* Axiom cheat : forall A, A. *)
@@ -980,9 +967,7 @@ Section Typecheck2.
       revert H; infers; try solve [econstructor; infco].
 
     - destruct nth_error eqn:Heq; try discriminate.
-      pose proof (nth_error_Some_safe_nth _ _ _ _ Heq).
-      destruct H.
-      intros [= <-]. constructor. auto.
+      intros [= <-]. constructor; auto.
 
     - admit.
     - admit.
@@ -1036,12 +1021,10 @@ Section Typecheck2.
     - admit.
 
     - destruct nth_error eqn:?; intros [= <-].
-      destruct (nth_error_Some_safe_nth _ _ _ _ Heqo).
-      constructor. admit. admit.
+      constructor; auto. admit. admit.
 
     - destruct nth_error eqn:?; intros [= <-].
-      destruct (nth_error_Some_safe_nth _ _ _ _ Heqo).
-      constructor. admit. admit.
+      constructor; auto. admit. admit.
   Admitted.
 
 End Typecheck2.

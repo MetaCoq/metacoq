@@ -252,7 +252,7 @@ Qed.
 Lemma declared_inductive_inv `{checker_flags} Σ P ind mdecl idecl :
   weaken_env_prop (lift_typing P) ->
   wf Σ -> Forall_decls_typing P Σ ->
-  declared_inductive (fst Σ) ind mdecl idecl ->
+  declared_inductive (fst Σ) mdecl ind idecl ->
   on_ind_body (lift_typing P) Σ (inductive_mind ind) mdecl (inductive_ind ind) idecl.
 Proof.
   intros.
@@ -319,7 +319,7 @@ Qed.
 
 Lemma on_declared_inductive `{checker_flags} {Σ ref mdecl idecl} :
   wf Σ ->
-  declared_inductive (fst Σ) ref mdecl idecl ->
+  declared_inductive (fst Σ) mdecl ref idecl ->
   on_inductive (lift_typing typing) Σ (inductive_mind ref) mdecl *
   on_ind_body (lift_typing typing) Σ (inductive_mind ref) mdecl (inductive_ind ref) idecl.
 Proof.

@@ -300,7 +300,7 @@ Qed.
 
 Lemma lift_declared_inductive `{checker_flags} Σ ind mdecl idecl n k :
   wf Σ ->
-  declared_inductive (fst Σ) ind mdecl idecl ->
+  declared_inductive (fst Σ) mdecl ind idecl ->
   map_one_inductive_body (inductive_mind ind) (polymorphic_instance (mdecl.(ind_universes)))
                          (length (arities_context mdecl.(ind_bodies))) (fun k' => lift n (k' + k))
                          (inductive_ind ind) idecl = idecl.
@@ -917,19 +917,19 @@ Proof.
     specialize (X4 _ _ _ X6 eq_refl).
     specialize (X2 _ _ _ X6 eq_refl).
     specialize (X1 _ _ _ X6 eq_refl).
-    simpl. econstructor; auto.
-    5:{ eapply lift_types_of_case in H2.
-        simpl in H2. subst pars. rewrite -> firstn_map. eapply H2.
+    simpl. econstructor.
+    4:{ eapply lift_types_of_case in H0.
+        simpl in H0. subst pars. rewrite -> firstn_map. eapply H0.
         -- eapply typing_wf in X0; wf.
         -- wf.
-        -- eapply on_declared_minductive in H; eauto.
-           eapply onParams in H.
-           eapply closed_wf_local in H; eauto. }
-    -- eauto.
+        -- destruct isdecl as [Hmdecl Hidecl].
+           eapply on_declared_minductive in Hmdecl; eauto.
+           eapply onParams in Hmdecl.
+           eapply closed_wf_local in Hmdecl; eauto. }
     -- erewrite -> lift_declared_inductive; eauto.
     -- auto.
     -- auto.
-    -- revert H3.
+    -- revert H1.
        subst pars.
        erewrite lift_declared_inductive; eauto.
        apply lift_check_correct_arity.

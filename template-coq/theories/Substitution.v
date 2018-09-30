@@ -228,11 +228,12 @@ Hint Resolve subst_is_constructor.
 Hint Constructors All_local_env.
 
 Lemma typed_subst `{checker_flags} Σ Γ t T n k :
-  wf Σ -> wf_local Σ Γ -> k >= #|Γ| ->
+  wf Σ -> k >= #|Γ| ->
   Σ ;;; Γ |- t : T -> subst n k T = T /\ subst n k t = t.
 Proof.
-  intros wfΣ wfΓ Hk Hty.
-  pose proof (typing_wf _ wfΣ _ wfΓ _ _ Hty) as [wft wfT].
+  intros wfΣ Hk Hty.
+  pose proof (typing_wf_local wfΣ Hty).
+  pose proof (typing_wf _ wfΣ _ _ _ Hty) as [wft wfT].
   apply typecheck_closed in Hty; eauto.
   destruct Hty as [_ Hcl].
   rewrite -> andb_true_iff in Hcl. destruct Hcl as [clb clty].
@@ -306,18 +307,18 @@ Proof.
     f_equal; auto.
     apply (Alli_map_id onConstructors).
     intros n1 [[x p] n']. intros [[s Hty] Hpars].
-    unfold on_pi2; f_equal; f_equal. eapply typed_subst. 4:eapply Hty. wf. wf. simpl. lia.
+    unfold on_pi2; f_equal; f_equal. eapply typed_subst. 3:eapply Hty. wf. simpl. lia.
     apply (Alli_map_id onProjections).
     intros n1 [x p]. unfold on_projection; simpl.
     destruct decompose_prod_assum.
     intros [[s Hty] Hpars].
     unfold on_snd; f_equal; f_equal.
-    eapply typed_subst. 4:eapply Hty. wf. wf. simpl. injection Heq. intros -> ->. lia.
+    eapply typed_subst. 3:eapply Hty. wf. wf. simpl. injection Heq. intros -> ->. lia.
 Qed.
 
 Lemma subst_declared_inductive `{checker_flags} Σ ind mdecl idecl n k :
   wf Σ ->
-  declared_inductive (fst Σ) ind mdecl idecl ->
+  declared_inductive (fst Σ) mdecl ind idecl ->
   map_one_inductive_body (inductive_mind ind) (polymorphic_instance (mdecl.(ind_universes)))
                          (length (arities_context mdecl.(ind_bodies)))
                          (fun k' => subst n (k' + k)) (inductive_ind ind) idecl = idecl.
@@ -642,7 +643,7 @@ Proof.
   intros wfΣ [[s Hs] Hparams].
   pose proof (typing_wf_local wfΣ Hs).
   destruct cdecl as [[id cty] car].
-  pose proof (typing_wf _ wfΣ _ X _ _ Hs) as [wfty _].
+  pose proof (typing_wf _ wfΣ _ _ _ Hs) as [wfty _].
   eapply (env_prop_typing _ typecheck_closed) in Hs; eauto.
   rewrite arities_context_length in Hs.
   rewrite -> andb_true_iff in *. simpl in *.
@@ -664,7 +665,7 @@ Proof.
   intros [[s Hs] Hparams].
   pose proof (typing_wf_local wfΣ Hs).
   destruct pdecl as [id cty].
-  pose proof (typing_wf _ wfΣ _ X _ _ Hs) as [wfty _].
+  pose proof (typing_wf _ wfΣ _ _ _ Hs) as [wfty _].
   eapply (env_prop_typing _ typecheck_closed) in Hs; eauto.
   rewrite -> andb_true_iff in *. simpl in *.
   destruct Hs as [Hs _]. split; auto.
@@ -881,7 +882,7 @@ Lemma subst_types_of_case `{cf:checker_flags} Σ ind mdecl idecl args u p pty in
   wf Σ ->
   Forall Ast.wf n -> Forall Ast.wf args ->
   Ast.wf pty -> Ast.wf (ind_type idecl) ->
-  declared_inductive (fst Σ) ind mdecl idecl ->
+  declared_inductive (fst Σ) mdecl ind idecl ->
   types_of_case ind mdecl idecl args u p pty = Some (indctx, pctx, ps, btys) ->
   types_of_case ind mdecl idecl (map (f []) args) u (f [] p) (f [] pty) =
   Some (f_ctx indctx, f_ctx pctx, ps, map (on_snd (f [])) btys).
@@ -993,7 +994,7 @@ Proof.
        now rewrite to_extended_list_k_subst.
     -- apply Forall_map. eapply Forall_impl; eauto. apply wf_subst_instance_constr. }
   specialize (H0 _ Hbrs). now rewrite H0.
-Qed. (* only remaining goal is for subst_instance_constr in the substitution n *)
+Qed.
 
 Hint Unfold subst1 : subst.
 Hint Rewrite subst_mkApps distr_subst: subst.
@@ -1130,7 +1131,6 @@ Proof.
          rewrite -> Hi in wfΓ. simpl in H.
          destruct c; simpl in H; try discriminate.
          injection H. intros ->. red in wfΓ. cbn in *. apply typing_wf in wfΓ. intuition eauto. eauto.
-         eapply typing_wf_local in wfΓ; eauto.
          apply nth_error_Some_length in Hi. lia. discriminate.
     + rewrite -> nth_error_app_context_lt in H by lia.
       pose (commut_lift_subst_rec body s (S i) (#|Γ''| - S i) 0).
@@ -1464,7 +1464,6 @@ Proof.
   induction 2; constructor.
   apply typing_wf in t0; intuition auto with wf.
   eapply typing_wf_local in t0; eauto.
-  auto.
 Qed.
 
 Lemma wf_red1_wf `{checker_flags} Σ Γ M N : wf Σ -> wf_local Σ Γ -> Ast.wf M -> red1 (fst Σ) Γ M N -> Ast.wf N.
@@ -1683,11 +1682,11 @@ Proof.
   - eapply refine_type. econstructor; eauto.
     eapply on_declared_inductive in isdecl as [on_mind on_ind]; auto.
     apply onArity in on_ind as [[s' Hindty] _].
-    pose proof (typing_wf _ wfΣ _ (localenv_nil _ _) _ _ Hindty) as [clty _].
+    pose proof (typing_wf _ wfΣ _ _ _ Hindty) as [clty _].
     apply typecheck_closed in Hindty as [_ Hindty]; eauto. symmetry.
     move/andP/proj1: Hindty. rewrite -(closedn_subst_instance_constr _ _ u) => Hty.
     apply: (subst_closedn s #|Δ|); auto with wf.
-    now eapply closed_upwards.
+    eapply closed_upwards. eauto. simpl; lia.
 
   - eapply refine_type. econstructor; eauto.
     symmetry.
@@ -1701,21 +1700,20 @@ Proof.
     specialize (X4 Γ Γ' Δ s sub eq_refl wfsubs).
     specialize (X2 Γ Γ' Δ s sub eq_refl wfsubs).
     simpl. econstructor.
-    5:{ eapply subst_types_of_case in H3.
-        simpl in H3. subst pars. rewrite firstn_map. eapply H3; eauto.
+    4:{ eapply subst_types_of_case in H1.
+        simpl in H1. subst pars. rewrite firstn_map. eapply H1; eauto.
         all:eauto.
         -- now apply subs_wf in sub.
         -- subst pars. eapply Forall_firstn.
            apply typing_wf in X3 as [_ X3]; eauto.
            now apply wf_mkApps_inv in X3.
         -- eapply typing_wf in X0; wf.
-        -- eapply on_declared_inductive in H1 as [Hmdecl Hidecl]; auto.
+        -- eapply on_declared_inductive in isdecl as [Hmdecl Hidecl]; auto.
            apply onArity in Hidecl as [[s' Hty] _]. now eapply typing_wf in Hty; eauto. }
     -- eauto.
     -- eauto.
     -- eauto.
-    -- eauto.
-    -- revert H4. subst pars.
+    -- revert H2. subst pars.
        apply subst_check_correct_arity.
     -- destruct idecl; simpl in *; auto.
     -- now rewrite !subst_mkApps in X4.

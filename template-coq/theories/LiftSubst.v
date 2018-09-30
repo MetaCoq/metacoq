@@ -107,12 +107,13 @@ Notation closed t := (closedn 0 t).
 
 Create HintDb terms.
 
-Ltac arith_congr := (congruence || ltac:(repeat (try lia; progress f_equal))).
+Ltac arith_congr := repeat (try lia; progress f_equal).
 
 Ltac easy0 :=
   let rec use_hyp H :=
    (match type of H with
     | _ /\ _ => exact H || destruct_hyp H
+    | _ * _ => exact H || destruct_hyp H
     | _ => try (solve [ inversion H ])
     end)
   with do_intro := (let H := fresh in
@@ -122,17 +123,21 @@ Ltac easy0 :=
   let rec use_hyps :=
    (match goal with
     | H:_ /\ _ |- _ => exact H || (destruct_hyp H; use_hyps)
+    | H:_ * _ |- _ => exact H || (destruct_hyp H; use_hyps)
     | H:_ |- _ => solve [ inversion H ]
     | _ => idtac
     end)
   in
-  let do_atom := (solve [ trivial with eq_true | reflexivity | symmetry; trivial | contradiction]) in
+  let do_atom := (solve [ trivial with eq_true | reflexivity | symmetry; trivial | contradiction | congruence]) in
   let rec do_ccl := (try do_atom; repeat (do_intro; try do_atom); try arith_congr; (solve [ split; do_ccl ])) in
   (solve [ do_atom | use_hyps; do_ccl ]) || fail "Cannot solve this goal".
 
-Hint Extern 100 => lia : terms.
 
-Ltac easy ::= easy0 || solve [eauto 3 with core arith terms].
+Hint Extern 10 (_ < _)%nat => lia : terms.
+Hint Extern 10 (_ <= _)%nat => lia : terms.
+Hint Extern 10 (@eq nat _ _) => lia : terms.
+
+Ltac easy ::= easy0 || solve [intuition eauto 3 with core terms].
 
 Notation subst_rec N M k := (subst N k M) (only parsing).
 
@@ -162,8 +167,6 @@ Proof.
   simpl in |- *; intros.
   elim (leb_spec k n); intro Hcomp; easy.
 Qed.
-
-Require Import Lia.
 
 Lemma subst_rel_gt :
   forall u n k, n >= k + length u -> subst u k (tRel n) = tRel (n - length u).
@@ -235,15 +238,12 @@ Lemma permute_lift :
 Proof.
   intros M.
   elim M using term_forall_list_ind;
-    intros; simpl; try easy;
+    intros; simpl; 
       rewrite ?map_map_compose, ?compose_on_snd, ?compose_map_def;
-      try solve [f_equal; easy];
       try (f_equal; try easy; apply_spec);
       unfold compose; intros;
-        try rewrite ?map_length; try easy ;
-        try (rewrite H, H0; f_equal; try easy; now f_equal);
-        try (rewrite H, H0, H1; f_equal; try easy; now f_equal);
-        try (rewrite H1; now f_equal).
+        try rewrite ?map_length;
+        try (rewrite H, H0, H1 || rewrite H, H0 || rewrite H1); try easy.
   
   - elim (leb_spec k n); intros;
     elim (leb_spec i n); intros; try easy.
@@ -502,7 +502,7 @@ Proof.
       ++ rewrite subst_rel_lt by lia.
          erewrite subst_rel_eq; try easy.
          2:rewrite nth_error_map, e; reflexivity.
-         now rewrite <- commut_lift_subst_rec.
+         now rewrite <- commut_lift_subst_rec. lia.
       ++ unfold subst at 4.
          elim (leb_spec (p + length N + n0) n); intros; subst; try easy.
          destruct (nth_error_spec P (n - (p + length N + n0))).
@@ -557,10 +557,10 @@ Proof.
   - simpl lift. f_equal; eauto.
   - simpl lift. f_equal.
     transitivity (map (map_def id id) m). apply_spec; eauto.
-    now autorewrite with core.
+    now autorewrite with map.
   - simpl lift. f_equal.
     transitivity (map (map_def id id) m). apply_spec; eauto.
-    now autorewrite with core.
+    now autorewrite with map.
 Qed.
 
 Lemma closed_upwards {k t} k' : closedn k t = true -> k' >= k -> closedn k' t = true.
@@ -670,7 +670,6 @@ Proof.
   now rewrite -Nat.add_assoc (IHΓ (k + 1) k').
   simpl. now rewrite -Nat.add_assoc (IHΓ (k + 1) k') map_app.
 Qed.
-
 
 Lemma simpl_subst_k (N : list term) (M : term) :
   Ast.wf M -> forall k p, p = #|N| -> subst N k (lift p k M) = M.

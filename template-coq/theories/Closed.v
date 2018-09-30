@@ -265,11 +265,11 @@ Proof.
     eapply Forall_forallb; eauto.
     eapply Forall2_Forall_left; eauto.
     simpl; intros. destruct X4. rewrite -> andb_true_iff in e. destruct e.
-    apply H7. simpl; intros. eauto.
+    apply H5. simpl; intros. eauto.
     apply closedn_mkApps; auto.
-    rewrite forallb_app. simpl. rewrite H6.
+    rewrite forallb_app. simpl. rewrite H4.
     rewrite forallb_skipn; auto.
-    now apply closedn_mkApps_inv in H11.
+    now apply closedn_mkApps_inv in H9.
 
   - intuition. subst ty.
     apply closedn_subst0.

@@ -25,24 +25,6 @@ Definition global_decl_ident d :=
   | InductiveDecl id _ => id
   end.
 
-Definition is_constant_decl d :=
-  match d with
-  | InductiveDecl _ _ => false
-  | _ => true
-  end.
-
-Definition is_minductive_decl d :=
-  match d with
-  | InductiveDecl _ _ => true
-  | _ => false
-  end.
-
-Definition is_inductive_decl_for i d :=
-  match d with
-  | InductiveDecl _ cb => i < List.length cb.(ind_bodies)
-  | _ => False
-  end.
-
 Fixpoint lookup_env (Σ : global_declarations) (id : ident) : option global_decl :=
   match Σ with
   | nil => None
@@ -57,40 +39,19 @@ Definition declared_constant (Σ : global_declarations) (id : ident) decl : Prop
 Definition declared_minductive Σ mind decl :=
   lookup_env Σ mind = Some (InductiveDecl mind decl).
 
-Definition declared_inductive Σ ind mdecl decl :=
+Definition declared_inductive Σ mdecl ind decl :=
   declared_minductive Σ (inductive_mind ind) mdecl /\
   List.nth_error mdecl.(ind_bodies) (inductive_ind ind) = Some decl.
 
 Definition declared_constructor Σ mdecl idecl cstr cdecl : Prop :=
-  declared_inductive Σ (fst cstr) mdecl idecl /\
+  declared_inductive Σ mdecl (fst cstr) idecl /\
   List.nth_error idecl.(ind_ctors) (snd cstr) = Some cdecl.
 
 Definition declared_projection Σ mdecl idecl (proj : projection) pdecl : Prop :=
-  declared_inductive Σ (fst (fst proj)) mdecl idecl /\
+  declared_inductive Σ mdecl (fst (fst proj)) idecl /\
   List.nth_error idecl.(ind_projs) (snd proj) = Some pdecl.
 
-Program
-Definition type_of_constant_decl (d : global_decl | is_constant_decl d = true) : term :=
-  match d with
-  | InductiveDecl _ _ => !
-  | ConstantDecl _ decl => decl.(cst_type)
-  end.
-
-Program
-Definition body_of_constant_decl (d : global_decl | is_constant_decl d = true) : option term :=
-  match d with
-  | InductiveDecl _ _ => !
-  | ConstantDecl _ decl => decl.(cst_body)
-  end.
-
-Program
-Definition types_of_minductive_decl (d : global_decl | is_minductive_decl d = true) :
-  list one_inductive_body :=
-  match d with
-  | InductiveDecl _ tys => tys.(ind_bodies)
-  | ConstantDecl _ _ => !
-  end.
-
+(** Inductive substitution, to produce a constructors' type *)
 Definition inds ind u (l : list one_inductive_body) :=
   let fix aux n :=
       match n with
@@ -703,7 +664,7 @@ Inductive typing `{checker_flags} (Σ : global_context) (Γ : context) : term ->
 
 | type_Ind ind u :
     All_local_env typing Σ Γ ->
-    forall mdecl idecl (isdecl : declared_inductive (fst Σ) ind mdecl idecl),
+    forall mdecl idecl (isdecl : declared_inductive (fst Σ) mdecl ind idecl),
     consistent_universe_context_instance Σ mdecl.(ind_universes) u ->
     Σ ;;; Γ |- (tInd ind u) : subst_instance_constr u idecl.(ind_type)
 
@@ -714,8 +675,7 @@ Inductive typing `{checker_flags} (Σ : global_context) (Γ : context) : term ->
     Σ ;;; Γ |- (tConstruct ind i u) : type_of_constructor mdecl cdecl (ind, i) u
 
 | type_Case ind u npar p c brs args :
-    forall mdecl (isdecl : declared_minductive (fst Σ) (inductive_mind ind) mdecl),
-    forall idecl (isdecl' : declared_inductive (fst Σ) ind mdecl idecl),
+    forall mdecl idecl (isdecl : declared_inductive (fst Σ) mdecl ind idecl),
     mdecl.(ind_npars) = npar ->
     let pars := List.firstn npar args in
     forall pty, Σ ;;; Γ |- p : pty ->
@@ -1056,7 +1016,6 @@ Lemma on_type_lift_all `{checker_flags} P Σ Γ T :
   on_type (lift_typing typing) Σ Γ T -> on_type (all_typing P) Σ Γ T ->
   on_type (lift_typing P) Σ Γ T.
 Proof. intros. red in X, X0. red. red. destruct X. exists x.  apply X0. Qed.
-Hint Resolve on_type_lift_all.
 
 Inductive Forall_typing_spine `{checker_flags} Σ Γ (P : term -> term -> Type) :
   forall (T : term) (t : list term) (U : term), typing_spine Σ Γ T t U -> Type :=
@@ -1279,7 +1238,7 @@ Lemma typing_ind_env `{cf : checker_flags} :
         P Σ Γ (tConst cst u) (subst_instance_constr u (cst_type decl))) ->
 
     (forall Σ (wfΣ : wf Σ) (Γ : context) (wfΓ : wf_local Σ Γ) (ind : inductive) u
-          mdecl idecl (isdecl : declared_inductive (fst Σ) ind mdecl idecl),
+          mdecl idecl (isdecl : declared_inductive (fst Σ) mdecl ind idecl),
         Forall_decls_typing P Σ ->
         All_local_env typing Σ Γ -> All_local_env P Σ Γ ->
         consistent_universe_context_instance Σ mdecl.(ind_universes) u ->
@@ -1294,11 +1253,9 @@ Lemma typing_ind_env `{cf : checker_flags} :
 
     (forall Σ (wfΣ : wf Σ) (Γ : context) (wfΓ : wf_local Σ Γ) (ind : inductive) u (npar : nat)
             (p c : term) (brs : list (nat * term))
-            (args : list term) (mdecl : mutual_inductive_body),
-        declared_minductive (fst Σ) (inductive_mind ind) mdecl ->
+            (args : list term) (mdecl : mutual_inductive_body) (idecl : one_inductive_body)
+            (isdecl : declared_inductive (fst Σ) mdecl ind idecl),
         Forall_decls_typing P Σ ->
-        forall idecl : one_inductive_body,
-        declared_inductive (fst Σ) ind mdecl idecl ->
         ind_npars mdecl = npar ->
         let pars := firstn npar args in
         forall (pty : term), Σ ;;; Γ |- p : pty -> P Σ Γ p pty ->
@@ -1756,12 +1713,6 @@ Proof.
   - auto.
 Qed.
 
-Lemma All_app {A} (P : A -> Type) l l' : All P (l ++ l') -> All P l * All P l'.
-Proof.
-  induction l; simpl; auto. intros. constructor; auto. constructor.
-  intros. inv X. intuition auto. constructor; auto.
-Qed.
-
 Lemma All_local_env_app `{checker_flags} (P : global_context -> context -> term -> term -> Type) Σ l l' :
   All_local_env P Σ (l ,,, l') -> All_local_env P Σ l * All_local_env (fun Σ Γ t T => P Σ (l ,,, Γ) t T) Σ l'.
 Proof.
@@ -1838,9 +1789,6 @@ Proof.
   simpl. rewrite Hf in t0. eapply t0.
 Qed.
 
-Lemma Forall_map_inv {A B} (P : B -> Prop) (f : A -> B) l : Forall P (map f l) -> Forall (compose P f) l.
-Proof. induction l; intros Hf; inv Hf; try constructor; eauto. Qed.
-
 Lemma wf_lift_wf n k t : Ast.wf (lift n k t) -> Ast.wf t.
 Proof.
   induction t in n, k |- * using term_forall_list_ind; simpl in *;
@@ -1904,7 +1852,7 @@ Proof.
   - split. wf. constructor; eauto.
     eapply Forall2_Forall_left; eauto. simpl. intuition auto.
     apply wf_mkApps. wf. apply Forall_app_inv. split. 2:wf.
-    inv H8. apply wf_mkApps_inv in H10. now apply Forall_skipn.
+    inv H6. apply wf_mkApps_inv in H8. now apply Forall_skipn.
   - split. wf. apply wf_subst. constructor. wf. intuition.
     apply wf_mkApps_inv in H3. now apply Forall_rev.
     subst ty. destruct isdecl as [[Hmdecl Hidecl] Hpdecl].
@@ -1962,8 +1910,8 @@ Proof.
   destruct t. apply Ht. destruct Ht; wf.
 Qed.
 
-Lemma typing_wf `{checker_flags} Σ (wfΣ : wf Σ) Γ (wfΓ : wf_local Σ Γ) t T :
+Lemma typing_wf `{checker_flags} Σ (wfΣ : wf Σ) Γ t T :
   Σ ;;; Γ |- t : T -> Ast.wf t /\ Ast.wf T.
 Proof.
-  intros. eapply typing_wf_gen; eauto with wf.
+  intros. eapply typing_wf_gen in X; intuition eauto with wf.
 Qed.

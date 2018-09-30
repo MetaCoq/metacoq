@@ -329,7 +329,7 @@ Qed.
 
 Lemma map_def_id {t : Set} : map_def (@id t) (@id t) = id.
 Proof. extensionality p. now destruct p. Qed.
-Hint Rewrite @map_def_id @map_id.
+Hint Rewrite @map_def_id @map_id : map.
 
 Lemma forall_map_spec {A B} {P : A -> Prop} {l} {f g : A -> B} :
   Forall P l -> (forall x, P x -> f x = g x) ->
@@ -526,6 +526,12 @@ Proof.
   intros H'; eauto. rewrite <- Nat.add_succ_comm. eauto.
 Qed.
 
+Lemma All_app {A} (P : A -> Type) l l' : All P (l ++ l') -> All P l * All P l'.
+Proof.
+  induction l; simpl; auto. intros. constructor; auto. constructor.
+  intros. inv X. intuition auto. constructor; auto.
+Qed.
+
 Lemma All_mix {A} (P : A -> Type) (Q : A -> Type) l :
   All P l -> All Q l -> All (fun x => (P x * Q x)%type) l.
 Proof. induction 1; intros Hq; inv Hq; constructor; auto. Qed.
@@ -680,6 +686,9 @@ Lemma Forall_map {A B} (P : B -> Prop) (f : A -> B) l : Forall (Program.Basics.c
 Proof.
   induction 1; constructor; auto.
 Qed.
+
+Lemma Forall_map_inv {A B} (P : B -> Prop) (f : A -> B) l : Forall P (map f l) -> Forall (compose P f) l.
+Proof. induction l; intros Hf; inv Hf; try constructor; eauto. Qed.
 
 Lemma Forall_impl {A} {P Q : A -> Prop} {l} :
   Forall P l -> (forall x, P x -> Q x) -> Forall Q l.

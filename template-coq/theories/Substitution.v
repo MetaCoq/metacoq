@@ -17,6 +17,48 @@ Definition subst_decl s k (d : context_decl) := map_decl (subst s k) d.
 Definition subst_context n k (Γ : context) : context :=
   fold_context (fun k' => subst n (k' + k)) Γ.
 
+(** Well-typed substitution into a context with *no* let-ins *)
+
+Inductive subs `{cf : checker_flags} Σ (Γ : context) : list term -> context -> Type :=
+| emptys : subs Σ Γ [] []
+| cons_ass Δ s na t T : subs Σ Γ s Δ ->
+              Σ ;;; Γ |- t : subst0 s T ->
+             subs Σ Γ (t :: s) (Δ ,, vass na T).
+(* | cons_let Δ s na t T : subs Σ Γ s Δ -> *)
+(*               Σ ;;; Γ |- subst0 s t : subst0 s T -> *)
+(*               subs Σ Γ (subst0 s t :: s) (Δ ,, vdef na t T). *)
+
+(** Linking a cantext (with let-ins), an instance (reversed substitution)
+    for its assumptions and a well-formed substitution for it. *)
+
+Inductive context_subst : context -> list term -> list term -> Set :=
+| context_subst_nil : context_subst [] [] []
+| context_subst_ass Γ args s na t a :
+    context_subst Γ args s ->
+    context_subst (vass na t :: Γ) (args ++ [a]) (a :: s)
+| context_subst_def Γ args s na b t :
+    context_subst Γ args s ->
+    context_subst (vdef na b t :: Γ) args (subst s 0 b :: s).
+
+(** Promoting a substitution for the non-let declarations of ctx into a
+    substitution for the whole context *)
+
+Fixpoint make_context_subst ctx args s :=
+  match ctx with
+  | [] => match args with
+          | [] => Some s
+          | a :: args => None
+          end
+  | d :: ctx =>
+    match d.(decl_body) with
+    | Some body => make_context_subst ctx args (subst0 s body :: s)
+    | None => match args with
+              | a :: args => make_context_subst ctx args (a :: s)
+              | [] => None
+              end
+    end
+  end.
+
 Lemma subst_decl0 Σ Γ k d : on_local_decl wf_decl_pred Σ Γ d -> map_decl (subst [] k) d = d.
 Proof.
   unfold wf_decl_pred; intros Hd; destruct d; destruct decl_body;
@@ -110,15 +152,6 @@ Proof.
     + simpl. repeat f_equal; try lia.
     + simpl. rewrite IHΓ'; simpl in *; (lia || congruence).
 Qed.
-
-Inductive subs `{cf : checker_flags} Σ (Γ : context) : list term -> context -> Type :=
-| emptys : subs Σ Γ [] []
-| cons_ass Δ s na t T : subs Σ Γ s Δ ->
-              Σ ;;; Γ |- t : subst0 s T ->
-                             subs Σ Γ (t :: s) (Δ ,, vass na T).
-(* | cons_let Δ s na t T : subs Σ Γ s Δ -> *)
-(*               Σ ;;; Γ |- subst0 s t : subst0 s T -> *)
-(*               subs Σ Γ (subst0 s t :: s) (Δ ,, vdef na t T). *)
 
 Lemma subst_length `{checker_flags} Σ Γ s Γ' : subs Σ Γ s Γ' -> #|s| = #|Γ'|.
 Proof.
@@ -424,7 +457,7 @@ Proof.
   induction t; simpl in *; auto.
 Qed.
 
-Lemma strip_outer_cast_subst_instane_constr u t :
+Lemma strip_outer_cast_subst_instance_constr u t :
   strip_outer_cast (subst_instance_constr u t) =
   subst_instance_constr u (strip_outer_cast t).
 Proof. induction t; simpl; auto. Qed.
@@ -434,8 +467,8 @@ Lemma strip_outer_cast_tProd_tLetIn_subst_instance_constr u :
 Proof.
   red. intros.
   destruct (strip_outer_cast t) eqn:Heq; try auto.
-  rewrite strip_outer_cast_subst_instane_constr. now rewrite Heq.
-  rewrite strip_outer_cast_subst_instane_constr. now rewrite Heq.
+  rewrite strip_outer_cast_subst_instance_constr. now rewrite Heq.
+  rewrite strip_outer_cast_subst_instance_constr. now rewrite Heq.
 Qed.
 
 Lemma subst_instantiate_params_subst n k params args s t :
@@ -559,8 +592,6 @@ Proof.
 Qed.
 Hint Rewrite subst_instantiate_params : lift.
 
-Require Import Weakening.
-
 Lemma wf_arities_context `{checker_flags} Σ mind mdecl : wf Σ ->
   declared_minductive (fst Σ) mind mdecl -> wf_local Σ (arities_context mdecl.(ind_bodies)).
 Proof.
@@ -628,16 +659,6 @@ Proof.
   auto with wf.
 Qed.
 
-(** Linking a cantext (with let-ins) and a well-formed substitution for it. *)
-Inductive context_subst : context -> list term -> list term -> Set :=
-| context_subst_nil : context_subst [] [] []
-| context_subst_ass Γ args s na t a :
-    context_subst Γ args s ->
-    context_subst (vass na t :: Γ) (args ++ [a]) (a :: s)
-| context_subst_def Γ args s na b t :
-    context_subst Γ args s ->
-    context_subst (vdef na b t :: Γ) args (subst s 0 b :: s).
-
 Lemma context_subst_length Γ a s : context_subst Γ a s -> #|Γ| = #|s|.
 Proof. induction 1; simpl; congruence. Qed.
 
@@ -675,22 +696,6 @@ Proof.
     apply Forall_app in Hs0. intuition.
     apply Forall_app in Hs0. intuition.
 Qed.
-
-Fixpoint make_context_subst ctx args s :=
-  match ctx with
-  | [] => match args with
-          | [] => Some s
-          | a :: args => None
-          end
-  | d :: ctx =>
-    match d.(decl_body) with
-    | Some body => make_context_subst ctx args (subst0 s body :: s)
-    | None => match args with
-              | a :: args => make_context_subst ctx args (a :: s)
-              | [] => None
-              end
-    end
-  end.
 
 Lemma make_context_subst_rec_spec ctx args s tele args' s' :
   context_subst ctx args s ->
@@ -1158,34 +1163,6 @@ Proof.
     induction H; constructor; auto.
     inv H0. intuition. eapply H3; eauto.
     apply IHOnOne2. now inv H0.
-Qed.
-
-Conjecture eq_universe_refl : forall `{checker_flags} φ u, eq_universe φ u u = true.
-Conjecture eq_universe_instance_refl : forall `{checker_flags} φ u, eq_universe_instance φ u u = true.
-Conjecture eq_universe_leq_universe : forall `{checker_flags} φ x y,
-    eq_universe φ x y = true ->
-    leq_universe φ x y = true.
-
-Lemma eq_string_refl x : eq_string x x = true.
-Proof.
-  unfold eq_string.
-  now rewrite (proj2 (string_compare_eq x x) eq_refl).
-Qed.
-
-Lemma eq_ind_refl i : eq_ind i i = true.
-Proof.
-  destruct i as [mind k].
-  unfold eq_ind. now rewrite eq_string_refl Nat.eqb_refl.
-Qed.
-
-Lemma eq_nat_refl n : eq_nat n n = true.
-Proof. by rewrite /eq_nat Nat.eqb_refl. Qed.
-
-Lemma eq_projection_refl i : eq_projection i i = true.
-Proof.
-  destruct i as [[mind k] p].
-  unfold eq_projection.
-  now rewrite eq_ind_refl !eq_nat_refl.
 Qed.
 
 Lemma eq_term_refl `{checker_flags} φ t : eq_term φ t t = true.

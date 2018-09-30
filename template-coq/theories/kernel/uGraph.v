@@ -227,3 +227,25 @@ End UGraph.
 (*   Compute (no_universe_inconsistency G''). *)
 
 (* End Test. *)
+
+(** *** Universe comparisons *)
+
+(** We try syntactic equality before checking the graph. *)
+
+Require Import Bool.
+
+Definition eq_universe `{checker_flags} φ s s' :=
+  if univ.Universe.equal s s' then true
+  else check_leq φ s s' && check_leq φ s' s.
+
+Definition leq_universe `{checker_flags} φ s s' :=
+  if univ.Universe.equal s s' then true
+  else check_leq φ s s'.
+
+Definition eq_universe_instance `{checker_flags} φ u v :=
+  univ.Instance.equal_upto (check_eq_level φ) u v.
+
+Conjecture eq_universe_refl : forall `{checker_flags} φ u, eq_universe φ u u = true.
+Conjecture eq_universe_instance_refl : forall `{checker_flags} φ u, eq_universe_instance φ u u = true.
+Conjecture eq_universe_leq_universe : forall `{checker_flags} φ x y,
+    eq_universe φ x y = true -> leq_universe φ x y = true.

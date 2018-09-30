@@ -314,45 +314,6 @@ Inductive red Σ Γ M : term -> Prop :=
 
 (** ** Term equality and cumulativity *)
 
-Definition eq_string s s' :=
-  if string_compare s s' is Eq then true else false.
-
-Definition eq_ind i i' :=
-  let 'mkInd i n := i in
-  let 'mkInd i' n' := i' in
-  eq_string i i' && Nat.eqb n n'.
-
-Definition eq_constant := eq_string.
-
-Definition eq_nat := Nat.eqb.
-Definition eq_evar := eq_nat.
-Definition eq_projection p p' :=
-  let '(ind, pars, arg) := p in
-  let '(ind', pars', arg') := p' in
-  eq_ind ind ind' && eq_nat pars pars' && eq_nat arg arg'.
-
-Fixpoint subst_app (t : term) (us : list term) : term :=
-  match t, us with
-  | tLambda _ A t, u :: us => subst_app (t {0 := u}) us
-  | _, [] => t
-  | _, _ => mkApps t us
-  end.
-
-(** *** Universe comparisons *)
-
-(** We try syntactic equality before checking the graph. *)
-
-Definition eq_universe `{checker_flags} φ s s' :=
-  if univ.Universe.equal s s' then true
-  else uGraph.check_leq φ s s' && uGraph.check_leq φ s' s.
-
-Definition leq_universe `{checker_flags} φ s s' :=
-  if univ.Universe.equal s s' then true
-  else uGraph.check_leq φ s s'.
-
-Definition eq_universe_instance `{checker_flags} φ u v :=
-  univ.Instance.equal_upto (uGraph.check_eq_level φ) u v.
-
 (* ** Syntactic equality up-to universes
 
   We shouldn't look at printing annotations nor casts.

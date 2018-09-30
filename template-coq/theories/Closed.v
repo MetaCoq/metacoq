@@ -1,7 +1,7 @@
 (* Distributed under the terms of the MIT license.   *)
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega Lia.
-From Template Require Import config utils Ast AstUtils Induction utils LiftSubst Typing.
+From Template Require Import config utils Ast AstUtils Induction utils LiftSubst Typing TypingWf.
 From Template Require Import WeakeningEnv.
 
 Definition closed_decl n d :=
@@ -343,4 +343,12 @@ Proof.
   destruct Hwf; simpl; intuition auto.
   destruct Hcl; simpl; intuition auto.
   rewrite -> andb_true_iff in e. intuition.
+Qed.
+
+Require Import ssreflect ssrbool.
+Lemma closed_decl_upwards k d : closed_decl k d -> forall k', k <= k' -> closed_decl k' d.
+Proof.
+  case: d => na [body|] ty; rewrite /closed_decl /=.
+  move/andP => [cb cty] k' lek'. do 2 rewrite (@closed_upwards k) //.
+  move=> cty k' lek'; rewrite (@closed_upwards k) //.
 Qed.

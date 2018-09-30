@@ -1,8 +1,8 @@
 (* Distributed under the terms of the MIT license.   *)
 
-From Coq Require Import Bool String List Program BinPos Compare_dec Omega Lia.
-From Template Require Import config utils Ast AstUtils Induction utils LiftSubst UnivSubst Typing.
-From Template Require Import WeakeningEnv Closed Weakening.
+From Coq Require Import Bool String List Program BinPos Compare_dec Arith Lia.
+From Template Require Import config utils Ast AstUtils Induction utils LiftSubst UnivSubst Typing TypingWf.
+From Template Require Import Generation WeakeningEnv Closed Weakening.
 Require Import ssreflect ssrbool.
 
 (** * Substitution lemmas for typing derivations. *)
@@ -17,36 +17,12 @@ Definition subst_decl s k (d : context_decl) := map_decl (subst s k) d.
 Definition subst_context n k (Γ : context) : context :=
   fold_context (fun k' => subst n (k' + k)) Γ.
 
-Definition wf_decl_pred : global_context -> context -> term -> term -> Type :=
-  (fun _ _ t T => Ast.wf t /\ Ast.wf T).
-
 Lemma subst_decl0 Σ Γ k d : on_local_decl wf_decl_pred Σ Γ d -> map_decl (subst [] k) d = d.
 Proof.
   unfold wf_decl_pred; intros Hd; destruct d; destruct decl_body;
     unfold on_local_decl in Hd; unfold subst_decl, map_decl; simpl in *;
     f_equal; simpl; rewrite subst_empty; intuition trivial.
   destruct Hd as [u Hu]; intuition trivial.
-Qed.
-
-Lemma nth_error_All_local_env `{checker_flags} {P Σ Γ n} (isdecl : n < #|Γ|) :
-  All_local_env P Σ Γ ->
-  on_some (on_local_decl P Σ (skipn (S n) Γ)) (nth_error Γ n).
-Proof.
-  induction 1 in n, isdecl |- *. red; simpl.
-  - destruct n; simpl; inv isdecl.
-  - destruct n. red; simpl. now exists u.
-    simpl. apply IHX. simpl in isdecl. lia.
-  - destruct n. auto.
-    apply IHX. simpl in *. lia.
-Qed.
-
-Lemma All_local_env_wf_decl_inv:
-  forall (Σ : global_context) (a : context_decl) (Γ : list context_decl)
-         (X : All_local_env wf_decl_pred Σ (a :: Γ)),
-    on_local_decl wf_decl_pred Σ Γ a * All_local_env wf_decl_pred Σ Γ.
-Proof.
-  intros Σ a Γ X.
-  inv X; intuition; red; simpl; eauto.
 Qed.
 
 Lemma subst0_context Σ k Γ : All_local_env wf_decl_pred Σ Γ -> subst_context [] k Γ = Γ.
@@ -431,12 +407,6 @@ Qed.
 Lemma decompose_prod_n_assum0 ctx t : decompose_prod_n_assum ctx 0 t = Some (ctx, t).
 Proof. destruct t; simpl; reflexivity. Qed.
 
-Lemma wf_strip_outer_cast t : Ast.wf t -> Ast.wf (strip_outer_cast t).
-Proof.
-  induction t; auto.
-  simpl. intros H; now inv H.
-Qed.
-
 Definition strip_outer_cast_tProd_tLetIn_morph f :=
   forall t k,
   match strip_outer_cast t with
@@ -501,13 +471,6 @@ Proof.
   case: d => na [body|] ty; rewrite /closed_decl /subst_decl /map_decl /wf_decl /= => [[wfb wfty]].
   move/andP => [cb cty]. rewrite !subst_closedn //.
   move=> cty; now rewrite !subst_closedn //.
-Qed.
-
-Lemma closed_decl_upwards k d : closed_decl k d -> forall k', k <= k' -> closed_decl k' d.
-Proof.
-  case: d => na [body|] ty; rewrite /closed_decl /=.
-  move/andP => [cb cty] k' lek'. do 2 rewrite (@closed_upwards k) //.
-  move=> cty k' lek'; rewrite (@closed_upwards k) //.
 Qed.
 
 Lemma closed_ctx_subst n k ctx : Forall wf_decl ctx -> closed_ctx ctx = true -> subst_context n k ctx = ctx.
@@ -575,14 +538,6 @@ Proof.
   symmetry. apply_spec. intros.
   destruct H1. intuition. subst x. simpl.
   destruct (leb_spec_Set k x0). lia. reflexivity.
-Qed.
-
-Lemma Alli_mapi_spec {A B} {P : nat -> A -> Type} {l} {f g : nat -> A -> B} {n} :
-  Alli P n l -> (forall n x, P n x -> f n x = g n x) ->
-  mapi_rec f l n = mapi_rec g l n.
-Proof.
-  induction 1; simpl; trivial.
-  intros Heq. rewrite Heq; f_equal; auto.
 Qed.
 
 Lemma subst_instantiate_params n k params args t ty :
@@ -1019,11 +974,6 @@ Qed.
 Lemma red1_tApp_mkApps_l Σ Γ M1 N1 M2 :
   red1 Σ Γ M1 N1 -> red1 Σ Γ (tApp M1 M2) (mkApps N1 M2).
 Proof. constructor. auto. Qed.
-Lemma mkApp_mkApps f a l : mkApp (mkApps f l) a = mkApps f (l ++ [a]).
-Proof.
-  destruct l. simpl. reflexivity.
-  rewrite <- mkApp_nested. reflexivity.
-Qed.
 
 Lemma red1_tApp_mkApp Σ Γ M1 N1 M2 :
   red1 Σ Γ M1 N1 -> red1 Σ Γ (tApp M1 [M2]) (mkApp N1 M2).
@@ -1032,9 +982,6 @@ Proof.
   change (mkApp N1 M2) with (mkApps N1 [M2]).
   apply app_red_l. auto.
 Qed.
-
-Lemma mkApp_tApp f u : isApp f = false -> mkApp f u = tApp f [u].
-Proof. intros. destruct f; (discriminate || reflexivity). Qed.
 
 Lemma red1_mkApp Σ Γ M1 N1 M2 :
   Ast.wf M1 ->
@@ -1499,80 +1446,6 @@ Proof.
     now econstructor 3.
 Qed.
 
-Lemma All_local_env_wf_decl:
-  forall (H : checker_flags) Σ (Γ : context),
-    Forall wf_decl Γ -> All_local_env wf_decl_pred Σ Γ.
-Proof.
-  intros H Σ Γ X.
-  induction Γ in X |- *.
-  - constructor; eauto.
-  - destruct a as [na [body|] ty].
-    constructor. apply IHΓ. inv X; eauto.
-    red. inv X. eauto.
-    eapply (localenv_cons_abs _ _ _ _ _ (Universe.make Level.lProp)).
-    apply IHΓ. inv X; eauto.
-    red. inv X. red in H0. intuition eauto. constructor.
-Qed.
-
-Lemma refine_type `{checker_flags} Σ Γ t T U : Σ ;;; Γ |- t : T -> T = U -> Σ ;;; Γ |- t : U.
-Proof. now intros Ht ->. Qed.
-
-Lemma invert_type_App `{checker_flags} Σ Γ f u T :
-  Σ ;;; Γ |- tApp f u : T ->
-  { T' : term & { U' & ((Σ ;;; Γ |- f : T') * typing_spine Σ Γ T' u U' *
-                        (isApp f <> true) * (u <> []) *
-                        (Σ ;;; Γ |- U' <= T))%type } }.
-Proof.
-  intros Hty.
-  dependent induction Hty.
-  exists t_ty, t'. intuition.
-  specialize (IHHty1 _ _ eq_refl) as [T' [U' [H' H'']]].
-  exists T', U'. split; auto.
-  eapply cumul_trans; eauto.
-Qed.
-
-Lemma type_mkApp `{checker_flags} Σ Γ f u T T' :
-  Σ ;;; Γ |- f : T ->
-  typing_spine Σ Γ T [u] T' ->
-  Σ ;;; Γ |- mkApp f u : T'.
-Proof.
-  intros Hf Hu. inv Hu.
-  simpl. destruct (isApp f) eqn:Happ.
-  destruct f; try discriminate. simpl.
-  eapply invert_type_App in Hf.
-  destruct Hf as (T'' & U' & (((Hf & HU) & Happf) & Hunil) & Hcumul).
-  eapply type_App; eauto. intro. apply Hunil.
-  destruct l; simpl in *; congruence.
-  inv X1. clear Happ Hf Hunil.
-  induction HU. simpl. econstructor; eauto.
-  eapply cumul_trans; eauto.
-  econstructor. econstructor. eapply t. eauto. eauto.
-  apply IHHU; eauto.
-  rewrite -> mkApp_tApp; eauto.
-  econstructor; eauto. congruence.
-  econstructor; eauto.
-Qed.
-
-Lemma type_mkApps `{checker_flags} Σ Γ f u T T' :
-  Σ ;;; Γ |- f : T ->
-  typing_spine Σ Γ T u T' ->
-  Σ ;;; Γ |- mkApps f u : T'.
-Proof.
-  intros Hf Hu. induction Hu in f, Hf |- *. auto.
-  rewrite <- mkApps_mkApp.
-  eapply IHHu. eapply type_mkApp. eauto.
-  econstructor; eauto. constructor.
-Qed.
-
-Lemma snd_on_snd {A B C} (f : B -> C) (p : A * B) : snd (on_snd f p) = f (snd p).
-Proof. destruct p; reflexivity. Qed.
-
-Lemma isLambda_subst (s : list term) k (bod : term) :
-  isLambda bod = true -> isLambda (subst s k bod) = true.
-Proof.
-  intros. destruct bod; try discriminate. reflexivity.
-Qed.
-
 Theorem substitution `{checker_flags} Σ Γ Γ' s Δ (t : term) T :
   wf Σ -> subs Σ Γ s Γ' ->
   Σ ;;; Γ ,,, Γ' ,,, Δ |- t : T ->
@@ -1767,7 +1640,7 @@ Proof.
         specialize (IH X1).
         rewrite subst_context_length fix_context_length.
         now rewrite commut_lift_subst_rec.
-        now apply isLambda_subst.
+        now apply LiftSubst.isLambda_subst.
 
   - assert (wf_local Σ (Γ ,,, subst_context s 0 Δ ,,, subst_context s #|Δ| (fix_context mfix))).
     subst types.

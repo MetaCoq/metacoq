@@ -173,6 +173,21 @@ Proof.
     destruct f; simpl; try (discriminate || reflexivity).
 Qed.
 
+Lemma mkApp_nested f l l' : mkApps (mkApps f l) l' = mkApps f (l ++ l').
+Proof.
+  induction l; destruct f; destruct l'; simpl; rewrite ?app_nil_r; auto.
+  f_equal. now rewrite <- app_assoc.
+Qed.
+
+Lemma mkApp_mkApps f a l : mkApp (mkApps f l) a = mkApps f (l ++ [a]).
+Proof.
+  destruct l. simpl. reflexivity.
+  rewrite <- mkApp_nested. reflexivity.
+Qed.
+
+Lemma mkApp_tApp f u : isApp f = false -> mkApp f u = tApp f [u].
+Proof. intros. destruct f; (discriminate || reflexivity). Qed.
+
 Fixpoint decompose_prod (t : term) : (list name) * (list term) * term :=
   match t with
   | tProd n A B => let (nAs, B) := decompose_prod B in
@@ -289,6 +304,9 @@ Lemma on_snd_on_snd {A B C D} (f : C -> D) (g : B -> C) (d : A * B) :
 Proof.
   destruct d; reflexivity.
 Qed.
+
+Lemma snd_on_snd {A B C} (f : B -> C) (p : A * B) : snd (on_snd f p) = f (snd p).
+Proof. destruct p; reflexivity. Qed.
 
 Lemma compose_on_snd {A B C D} (f : C -> D) (g : B -> C) :
   compose (A:=A * B) (on_snd f) (on_snd g) = on_snd (compose f g).
@@ -913,6 +931,14 @@ Lemma All_map_id {A} {P : A -> Type} {l} {f} :
 Proof.
   induction 1; simpl; f_equal; intuition auto.
   f_equal; auto.
+Qed.
+
+Lemma Alli_mapi_spec {A B} {P : nat -> A -> Type} {l} {f g : nat -> A -> B} {n} :
+  Alli P n l -> (forall n x, P n x -> f n x = g n x) ->
+  mapi_rec f l n = mapi_rec g l n.
+Proof.
+  induction 1; simpl; trivial.
+  intros Heq. rewrite Heq; f_equal; auto.
 Qed.
 
 Lemma Alli_mapi_id {A} {P : nat -> A -> Type} {l} {f} {n} :

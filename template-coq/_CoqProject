@@ -22,6 +22,8 @@ theories/Induction.v
 theories/LiftSubst.v
 theories/UnivSubst.v
 theories/Typing.v
+theories/TypingWf.v
+theories/Generation.v
 theories/WeakeningEnv.v
 theories/Closed.v
 theories/Weakening.v

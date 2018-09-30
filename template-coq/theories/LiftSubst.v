@@ -457,12 +457,6 @@ Proof.
   apply distr_lift_subst_rec.
 Qed.
 
-Lemma mkApp_nested f l l' : mkApps (mkApps f l) l' = mkApps f (l ++ l').
-Proof.
-  induction l; destruct f; destruct l'; simpl; rewrite ?app_nil_r; auto.
-  f_equal. now rewrite <- app_assoc.
-Qed.
-
 Lemma subst_mkApps u k t l :
   subst u k (mkApps t l) = mkApps (subst u k t) (map (subst u k) l).
 Proof.
@@ -727,4 +721,10 @@ Proof.
   - repeat nth_leb_simpl.
     rewrite -> Nat.add_comm, simpl_subst; eauto.
     eapply nth_error_forall in e; eauto.
+Qed.
+
+Lemma isLambda_subst (s : list term) k (bod : term) :
+  isLambda bod = true -> isLambda (subst s k bod) = true.
+Proof.
+  intros. destruct bod; try discriminate. reflexivity.
 Qed.

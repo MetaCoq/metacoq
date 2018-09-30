@@ -644,7 +644,7 @@ Inductive typing `{checker_flags} (Σ : global_context) (Γ : context) : term ->
     check_correct_arity (snd Σ) idecl ind u indctx pars pctx = true ->
     List.Exists (fun sf => universe_family ps = sf) idecl.(ind_kelim) ->
     Σ ;;; Γ |- c : mkApps (tInd ind u) args ->
-    Forall2 (fun x y => (fst x = fst y) * (Σ ;;; Γ |- snd x : snd y)) brs btys ->
+    All2 (fun x y => (fst x = fst y) * (Σ ;;; Γ |- snd x : snd y)) brs btys ->
     Σ ;;; Γ |- tCase (ind, npar) p c brs : mkApps p (List.skipn npar args ++ [c])
 
 | type_Proj p c u :
@@ -888,7 +888,7 @@ Proof.
         intros H1. inv H1.
         econstructor; eauto. red. intuition eauto. }
     clear onParams0 onParams1 onNpars0 onNpars1.
-    merge_Forall. eapply Alli_impl; eauto. clear onInductives1.
+    solve_all. eapply Alli_impl; eauto. clear onInductives1.
     intros.
     destruct x; simpl in *.
     destruct X0 as [Xl Xr].
@@ -898,9 +898,9 @@ Proof.
     + apply onConstructors in Xl; apply onConstructors in Xr. simpl in *.
       red in Xl, Xr.
       unfold on_constructor, on_type in *.
-      merge_Forall. eapply Alli_impl; eauto. simpl; intuition eauto.
+      solve_all. eapply Alli_impl; eauto. simpl; intuition eauto.
     + apply onProjections in Xl; apply onProjections in Xr. simpl in *.
-      red in Xl, Xr. merge_Forall. eapply Alli_impl; eauto.
+      red in Xl, Xr. solve_all. eapply Alli_impl; eauto.
       simpl. intuition eauto.
       red in a, b |- *. simpl in *. destruct (decompose_prod_assum [] ind_type).
       intuition. unfold on_type in *. eauto.
@@ -1026,7 +1026,7 @@ Proof.
          | H : typing _ _ _ _ |- _ => apply typing_size in H
          end ;
   match goal with
-  | H : Forall2 _ _ _ |- _ => idtac
+  | H : All2 _ _ _ |- _ => idtac
   | H : All_local_env _ _ _ |- _ => idtac
   | H : All _ _ |- _ => idtac
   | H : typing_spine _ _ _ _ _ |- _ => idtac
@@ -1042,7 +1042,7 @@ Proof.
   exact (S (S (wf_local_size _ typing_size _ a))).
   exact (S (S (wf_local_size _ typing_size _ a))).
   exact (S (Nat.max d1 (Nat.max d2
-                                (all2_size _ (fun x y p => typing_size Σ Γ (snd x) (snd y) (snd p)) f)))).
+                                (all2_size _ (fun x y p => typing_size Σ Γ (snd x) (snd y) (snd p)) a)))).
   exact (S (Nat.max (wf_local_size _ typing_size _ a) (all_size _ (fun x p => typing_size Σ _ _ _ (fst p)) a0))).
   exact (S (Nat.max (wf_local_size _ typing_size _ a) (all_size _ (fun x p => typing_size Σ _ _ _ p) a0))).
 Defined.
@@ -1228,7 +1228,7 @@ Lemma typing_ind_env `{cf : checker_flags} :
         P Σ Γ p pty ->
         Σ;;; Γ |- c : mkApps (tInd ind u) args ->
         P Σ Γ c (mkApps (tInd ind u) args) ->
-        Forall2 (fun x y : nat * term => (fst x = fst y) * (Σ;;; Γ |- snd x : snd y)
+        All2 (fun x y : nat * term => (fst x = fst y) * (Σ;;; Γ |- snd x : snd y)
                                          * P Σ Γ (snd x) (snd y))%type brs btys ->
         P Σ Γ (tCase (ind, npar) p c brs) (mkApps p (skipn npar args ++ [c]))) ->
 
@@ -1430,14 +1430,14 @@ Proof.
        eapply (X14 _ wfΓ _ _ H); eauto. simpl; auto with arith. simpl in *.
        eapply (X14 _ wfΓ _ _ H); eauto. simpl; auto with arith. simpl in *.
        eapply (X14 _ wfΓ _ _ H0); eauto. simpl; auto with arith. simpl in *.
-       induction f; simpl; lia.
+       induction a; simpl; lia.
        simpl in *.
-       revert f wfΓ X14. clear. intros.
-       induction f; simpl in *. constructor.
+       revert a wfΓ X14. clear. intros.
+       induction a; simpl in *. constructor.
        destruct r. constructor. split; auto.
        eapply (X14 _ wfΓ _ _ t); eauto. simpl; auto with arith.
        lia.
-       apply IHf. auto. intros.
+       apply IHa. auto. intros.
        eapply (X14 _ wfΓ0 _ _ Hty). lia.
 
     -- eapply X10; eauto.

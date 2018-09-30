@@ -6,6 +6,7 @@ Require Import BinPos.
 Require Import Coq.Arith.Compare_dec Bool.
 Require Import Template.Induction.
 Require Import Lia.
+Require Import ssreflect ssrbool.
 
 (** * Lifting and substitution for the AST
 
@@ -183,26 +184,81 @@ Lemma subst_rel_eq :
     subst u n (tRel p) = lift0 n t.
 Proof.
   intros; simpl in |- *. subst p.
-  elim (leb_spec n (n + i)). intros. assert (n + i - n = i) by lia. rewrite H1, H.
+  elim (leb_spec n (n + i)). intros. assert (n + i - n = i) by lia. rewrite H1 H.
   reflexivity. intros. lia.
 Qed.
+
+Hint Extern 0 (_ = _) => progress f_equal : all.
+Hint Unfold on_snd snd : all.
+
+Lemma on_snd_eq_id_spec {A B} (f : B -> B) (x : A * B) :
+  f (snd x) = snd x <->
+  on_snd f x = x.
+Proof.
+  destruct x; simpl; unfold on_snd; simpl. split; congruence.
+Qed.
+Hint Resolve -> on_snd_eq_id_spec : all.
+Hint Resolve -> on_snd_eq_spec : all.
+
+Lemma map_def_eq_spec {A B : Set} (f f' g g' : A -> B) (x : def A) :
+  f (dtype x) = g (dtype x) ->
+  f' (dbody x) = g' (dbody x) ->
+  map_def f f' x = map_def g g' x.
+Proof.
+  intros. unfold map_def; f_equal; auto.
+Qed.
+Hint Resolve map_def_eq_spec : all.
+
+Lemma map_def_id_spec {A : Set} (f f' : A -> A) (x : def A) :
+  f (dtype x) = (dtype x) ->
+  f' (dbody x) = (dbody x) ->
+  map_def f f' x = x.
+Proof.
+  intros. rewrite (map_def_eq_spec _ _ id id); auto. destruct x; auto.
+Qed.
+Hint Resolve map_def_id_spec : all.
+
+Hint Extern 10 (_ < _)%nat => lia : all.
+Hint Extern 10 (_ <= _)%nat => lia : all.
+Hint Extern 10 (@eq nat _ _) => lia : all.
+
+Ltac change_Sk :=
+  repeat match goal with
+    |- context [S (?x + ?y)] => progress change (S (x + y)) with (S x + y)
+  end.
+
+Ltac all_simpl :=
+  progress (unfold compose; simpl).
+
+Hint Extern 10 => all_simpl : all.
+
+Ltac solve_all :=
+  unfold tCaseBrsProp, tFixProp in *;
+  repeat toAll; try All_map; try close_Forall;
+  change_Sk; auto with all;
+  intuition eauto 4 with all.
+
+Ltac nth_leb_simpl :=
+  match goal with
+    |- context [leb ?k ?n] => elim (leb_spec_Set k n); try lia; intros; simpl
+  | |- context [nth_error ?l ?n] => elim (nth_error_spec l n); rewrite -> ?app_length, ?map_length;
+                                    try lia; intros; simpl
+  | H : context[nth_error (?l ++ ?l') ?n] |- _ =>
+    (rewrite -> (AstUtils.nth_error_app_ge l l' n) in H by lia) ||
+    (rewrite -> (AstUtils.nth_error_app_lt l l' n) in H by lia)
+  | H : nth_error ?l ?n = Some _, H' : nth_error ?l ?n' = Some _ |- _ =>
+    replace n' with n in H' by lia; rewrite -> H in H'; injection H'; intros; subst
+  | _ => lia || congruence || solve [repeat (f_equal; try lia)]
+  end.
 
 Lemma lift0_id : forall M k, lift 0 k M = M.
 Proof.
   intros M.
   elim M using term_forall_list_ind; simpl in |- *; intros; try easy ;
-    try (try rewrite H; try rewrite H0 ; try rewrite H1 ; easy).
+    try (try rewrite H; try rewrite H0 ; try rewrite H1 ; easy);
+    try (f_equal; auto; solve_all).
 
   - now elim (leb k n).
-  - f_equal. rewrite <- map_id. now eapply (forall_map_spec H).
-  - f_equal. auto. rewrite <- map_id. now eapply (forall_map_spec H0).
-  - f_equal; auto. rewrite <- map_id. eapply (forall_map_spec H1).
-    intros. destruct x; unfold on_snd. simpl. rewrite H2. reflexivity.
-
-  - f_equal. transitivity (map (map_def id id) m). eapply (tfix_map_spec H); auto.
-    rewrite <- map_id. f_equal. extensionality x. destruct x; reflexivity.
-  - f_equal. transitivity (map (map_def id id) m). eapply (tfix_map_spec H); auto.
-    rewrite <- map_id. f_equal. extensionality x. destruct x; reflexivity.
 Qed.
 
 Lemma lift0_p : forall M, lift0 0 M = M.
@@ -218,9 +274,8 @@ Proof.
   intros M.
   elim M using term_forall_list_ind;
     intros; simpl;
-      rewrite ?map_map_compose, ?compose_on_snd, ?compose_map_def;
-      try (rewrite H, ?H0, ?H1; auto); try (f_equal; apply_spec);
-        try rewrite ?map_length; try easy.
+      rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length;
+      try (rewrite -> H, ?H0, ?H1; auto); try (f_equal; auto; solve_all).
 
   - elim (leb_spec k n); intros.
     now rewrite lift_rel_ge.
@@ -234,22 +289,13 @@ Qed.
 Lemma permute_lift :
   forall M n k p i,
     i <= k ->
-    lift p i (lift n k M) = lift n (p + k) (lift p i M).
+    lift p i (lift n k M) = lift n (k + p) (lift p i M).
 Proof.
   intros M.
   elim M using term_forall_list_ind;
     intros; simpl; 
-      rewrite ?map_map_compose, ?compose_on_snd, ?compose_map_def;
-      try (f_equal; try easy; apply_spec);
-      unfold compose; intros;
-        try rewrite ?map_length;
-        try (rewrite H, H0, H1 || rewrite H, H0 || rewrite H1); try easy.
-  
-  - elim (leb_spec k n); intros;
-    elim (leb_spec i n); intros; try easy.
-    + rewrite 2!lift_rel_ge; try easy.
-    + rewrite lift_rel_ge, lift_rel_lt; try easy.
-    + rewrite 2!lift_rel_lt; try easy.
+      rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length, ?Nat.add_assoc;
+      try solve [f_equal; auto; solve_all]; repeat nth_leb_simpl.
 Qed.
 
 Lemma permute_lift0 :
@@ -257,7 +303,7 @@ Lemma permute_lift0 :
   intros.
   change (lift 1 0 (lift 1 k M) = lift 1 (1 + k) (lift 1 0 M))
     in |- *.
-  apply permute_lift; easy.
+  rewrite permute_lift; easy.
 Qed.
 
 Lemma lift_isApp n k t : ~ isApp t = true -> ~ isApp (lift n k t) = true.
@@ -274,26 +320,20 @@ Proof.
   contradiction.
 Qed.
 
+Lemma isLambda_lift n k (bod : term) :
+  isLambda bod = true -> isLambda (lift n k bod) = true.
+Proof. destruct bod; simpl; try congruence. Qed.
+
+Hint Resolve lift_isApp map_non_nil isLambda_lift : all.
+
 Lemma wf_lift n k t : wf t -> wf (lift n k t).
 Proof.
   intros wft; revert t wft k.
-  apply (term_wf_forall_list_ind (fun t => forall k, wf (lift n k t))) ; simpl; intros; try constructor; auto.
+  apply (term_wf_forall_list_ind (fun t => forall k, wf (lift n k t))) ; simpl; intros; try constructor; auto;
+    solve_all.
 
-  destruct leb; constructor.
-  apply Forall_map.
-  induction H; constructor; auto.
-  now apply lift_isApp.
-  now apply map_non_nil.
-  apply Forall_map. eapply Forall_impl. eauto. eauto.
-  apply Forall_map. eapply Forall_impl. apply H1.
-  intros [n' t]. simpl. repeat red; simpl; auto.
-  apply Forall_map. red in H.
-  apply (Forall_mix _ _ _ H) in H0.
-  eapply Forall_impl. apply H0.
-  simpl. intros. red; intuition (simpl; auto).
-  destruct (dbody x); try discriminate. auto.
-  apply Forall_map. eapply Forall_impl. apply H.
-  simpl. intros. red; intuition (simpl; auto).
+  - destruct leb; constructor.
+  - unfold compose. solve_all.
 Qed.
 
 Lemma mkApps_tApp t l :
@@ -314,28 +354,19 @@ Lemma simpl_subst_rec :
     k <= p -> subst N p (lift (List.length N + n) k M) = lift n k M.
 Proof.
   intros M wfM. induction wfM using term_wf_forall_list_ind;
-    intros; simpl; try easy;
-      rewrite ?map_map_compose, ?compose_on_snd, ?compose_map_def;
-      try solve [f_equal; easy];
-      try (f_equal; try easy; apply_spec); intros;
-        try rewrite ?map_length; try easy ||
-      (try rewrite H, H0; f_equal; try easy; now f_equal).
-  
-  - elim (leb_spec k n); intros.
-    + rewrite subst_rel_gt; f_equal; lia.
-    + rewrite subst_rel_lt; try easy.
+    intros; simpl;
+      rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length;
+      try solve [f_equal; auto; solve_all]; repeat nth_leb_simpl.
 
   - rewrite IHwfM; auto.
     apply (lift_isApp n k) in H.
     rewrite mkApps_tApp; auto using map_non_nil.
-    f_equal. eapply forall_map_spec. apply H2; simpl; auto.
-    simpl; intros. typeclasses eauto with core.
+    f_equal; solve_all.
 Qed.
 
 Lemma simpl_subst :
   forall N M (H : wf M) n p, p <= n -> subst N p (lift0 (length N + n) M) = lift0 n M.
-  intros. rewrite simpl_subst_rec. reflexivity. auto. now rewrite Nat.add_0_r. lia.
-Qed.
+Proof.  intros. rewrite simpl_subst_rec; auto. now rewrite Nat.add_0_r. lia. Qed.
 
 Lemma mkApps_tRel n a l : mkApps (tRel n) (a :: l) = tApp (tRel n) (a :: l).
 Proof.
@@ -345,7 +376,7 @@ Qed.
 Lemma lift_mkApps n k t l : lift n k (mkApps t l) = mkApps (lift n k t) (map (lift n k) l).
 Proof.
   revert n k t; induction l; intros n k t; destruct t; try reflexivity.
-  rewrite lift_rel_alt. rewrite !mkApps_tRel.
+  rewrite lift_rel_alt. rewrite -> !mkApps_tRel.
   simpl lift.
   simpl map. rewrite !mkApps_tRel.
   f_equal. destruct leb; auto.
@@ -357,34 +388,18 @@ Qed.
 Lemma commut_lift_subst_rec :
   forall M N n p k,
     k <= p ->
-    lift n k (subst N p M) = subst N (n + p) (lift n k M).
+    lift n k (subst N p M) = subst N (p + n) (lift n k M).
 Proof.
   intros M.
   elim M using term_forall_list_ind;
     intros; simpl; try easy;
-      rewrite ?map_map_compose, ?compose_on_snd, ?compose_map_def;
-      try solve [f_equal; easy];
-      try (f_equal; try easy; apply_spec);
-      unfold compose; intros;
-        try rewrite ?map_length; try easy ;
-        try (rewrite H, H0; f_equal; try easy; now f_equal);
-        try (rewrite H, H0, H1; f_equal; try easy; now f_equal);
-        try (rewrite H1; now f_equal).
-  
-  - elim (leb_spec p n); elim (leb_spec k n); intros; subst; try easy.
-    + destruct (nth_error_spec N (n - p)).
-      ++ rewrite simpl_lift by easy.
-         erewrite subst_rel_eq; eauto. lia.
-      ++ rewrite lift_rel_ge by lia.
-         rewrite subst_rel_gt; f_equal; lia.
-    + rewrite subst_rel_lt by lia.
-      rewrite lift_rel_ge; congruence.
-    + rewrite lift_rel_lt; auto.
-      rewrite subst_rel_lt; auto. lia.
+      rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length, ?Nat.add_assoc;
+      try solve [f_equal; auto; solve_all].
 
+  - repeat nth_leb_simpl.
+    rewrite -> simpl_lift by easy. f_equal; lia.
   - rewrite lift_mkApps. f_equal. auto.
-    rewrite map_map_compose. apply_spec. intros.
-    now apply H2.
+    rewrite map_map_compose. solve_all.
 Qed.
 
 Lemma commut_lift_subst :
@@ -403,39 +418,16 @@ Proof.
               |- context [tRel _] => idtac
             | |- _ => cbn -[plus]
             end; try easy;
-      rewrite ?map_map_compose, ?compose_on_snd, ?compose_map_def;
-      try solve [f_equal; easy];
-      try (f_equal; try easy; apply_spec);
-      unfold compose; intros;
-        try rewrite ?map_length; try easy ;
-        try (erewrite H, <- H0; f_equal; try easy; now f_equal);
-        try (erewrite H, <- H0, <- H1; f_equal; try easy; now f_equal);
-        try (erewrite H1; now f_equal).
-  
+      rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length, ?Nat.add_assoc;
+      try solve [f_equal; auto; solve_all].
+
   - unfold subst at 1. unfold lift at 4.
-    elim (leb_spec p n); intros; try easy;
-    elim (leb_spec (p + length N + k) n); intros; subst; try easy.
-    
-    + destruct (nth_error_spec N (n - p)).
-      ++ rewrite <- permute_lift by lia.
-         erewrite subst_rel_eq; eauto.
-         rewrite nth_error_map; eauto. rewrite e. reflexivity.
-         lia.
-      ++ rewrite lift_rel_ge; try easy.
-         rewrite subst_rel_gt; rewrite map_length; f_equal; lia.
-    + destruct (nth_error_spec N (n - p)).
-      ++ rewrite <- permute_lift by lia.
-         erewrite subst_rel_eq; eauto.
-         rewrite nth_error_map. rewrite e. reflexivity. lia.
-      ++ rewrite lift_rel_lt; try easy.
-         rewrite subst_rel_gt; rewrite map_length; auto. lia.
-    + rewrite lift_rel_lt; try easy.
-      now rewrite subst_rel_lt.
+    repeat nth_leb_simpl.
+    rewrite nth_error_map in e0. rewrite e in e0.
+    revert e0. intros [= <-].
+    now rewrite (permute_lift x n0 k p 0).
   - rewrite lift_mkApps. f_equal; auto.
-    rewrite map_map_compose; apply_spec; simpl.
-    intros. apply H1.
-  - rewrite add_assoc, H0. f_equal. now f_equal.
-  - rewrite add_assoc, H0. f_equal. now f_equal.
+    rewrite map_map_compose; solve_all.
 Qed.
 
 Lemma distr_lift_subst :
@@ -470,7 +462,7 @@ Proof.
 Qed.
 
 Lemma distr_subst_rec :
-  forall M N (P : list term) (wfP : Forall wf P) n p,
+  forall M N (P : list term) (wfP : All wf P) n p,
     subst P (p + n) (subst N p M) =
     subst (map (subst P n) N) p (subst P (p + length N + n) M).
 Proof.
@@ -480,23 +472,24 @@ Proof.
               |- context [tRel _] => idtac
             | |- _ => simpl
             end; try easy;
-      rewrite ?map_map_compose, ?compose_on_snd, ?compose_map_def;
-      try solve [f_equal; easy];
-      try (f_equal; try easy; apply_spec);
-      unfold compose; intros;
-        try rewrite ?map_length; try easy ;
-        try (erewrite H, <- H0; f_equal; try easy; now f_equal);
-        try (erewrite H, <- H0, <- H1; f_equal; try easy; now f_equal);
-        try (erewrite H1; now f_equal).
+      rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length, ?Nat.add_assoc;
+      try solve [f_equal; auto; solve_all].
+
+      (* try (f_equal; try easy; apply_spec); *)
+      (* unfold compose; intros; *)
+      (*   try rewrite ?map_length; try easy ; *)
+      (*   try (erewrite H, <- H0; f_equal; try easy; now f_equal); *)
+      (*   try (erewrite H, <- H0, <- H1; f_equal; try easy; now f_equal); *)
+      (*   try (erewrite H1; now f_equal). *)
   
   - unfold subst at 2.
     elim (leb_spec p n); intros; try easy.
     
     + destruct (nth_error_spec N (n - p)).
-      ++ rewrite subst_rel_lt by lia.
+      ++ rewrite -> subst_rel_lt by lia.
          erewrite subst_rel_eq; try easy.
-         2:rewrite nth_error_map, e; reflexivity.
-         now rewrite <- commut_lift_subst_rec. lia.
+         2:rewrite -> nth_error_map, e; reflexivity.
+         now rewrite commut_lift_subst_rec. lia.
       ++ unfold subst at 4.
          elim (leb_spec (p + length N + n0) n); intros; subst; try easy.
          destruct (nth_error_spec P (n - (p + length N + n0))).
@@ -504,21 +497,18 @@ Proof.
              assert (p + length N + n0 = length (map (subst P n0) N) + (p + n0))
                by (rewrite map_length; lia).
              rewrite H1. rewrite simpl_subst_rec; eauto; try lia.
-             eapply nth_error_forall in e; eauto.
+             eapply nth_error_all in e; eauto.
          +++ rewrite !subst_rel_gt; rewrite ?map_length; try lia. f_equal; lia.
          +++ rewrite subst_rel_lt; try easy.
-             rewrite subst_rel_gt; rewrite map_length. trivial. lia.
+             rewrite -> subst_rel_gt; rewrite map_length. trivial. lia.
     + rewrite !subst_rel_lt; try easy.
 
   - rewrite !subst_mkApps. rewrite H; auto. f_equal.
-    rewrite !map_map_compose. apply_spec. intros.
-    unfold compose. auto.
-  - rewrite add_assoc, H0; auto. f_equal. now f_equal.
-  - rewrite add_assoc, H0; auto. f_equal. now f_equal.
+    rewrite !map_map_compose. solve_all.
 Qed.
 
 Lemma distr_subst :
-  forall P (wfP : Forall Ast.wf P) N M k,
+  forall P (wfP : All Ast.wf P) N M k,
     subst P k (subst0 N M) = subst0 (map (subst P k) N) (subst P (length N + k) M).
 Proof.
   intros.
@@ -527,54 +517,35 @@ Proof.
   apply distr_subst_rec. auto.
 Qed.
 
-Lemma lift_closed n k t : closedn k t = true -> lift n k t = t.
+Ltac toProp ::=
+  repeat match goal with
+  | H : is_true (_ && _) |- _ => apply andb_and in H; destruct H
+  | |- context [is_true (_ && _)] => rewrite andb_and
+  end.
+
+Lemma lift_closed n k t : closedn k t -> lift n k t = t.
 Proof.
   revert k.
   elim t using term_forall_list_ind; intros; try easy;
-    rewrite ?map_map_compose, ?compose_on_snd, ?compose_map_def;
-    try (f_equal; apply_spec);  simpl closed in *;
-    try rewrite ?map_length; try easy.
+    rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length;
+    unfold test_def in *;
+    simpl closed in *; try solve [simpl lift; simpl closed; f_equal; auto; toProp; solve_all]; try easy.
   - rewrite lift_rel_lt; auto.
     revert H. elim (Nat.ltb_spec n0 k); intros; try easy.
-  - simpl lift; f_equal.
-    rewrite <- map_id. 
-    apply_spec; eauto.
-  - simpl lift. rewrite andb_true_iff in H1. f_equal; intuition eauto.
-  - simpl lift; rewrite andb_true_iff in H1. f_equal; intuition eauto.
-  - simpl lift; rewrite andb_true_iff in H1. f_equal; intuition eauto.
-  - simpl lift. rewrite !andb_true_iff in H2. f_equal; intuition eauto.
-  - simpl lift. rewrite !andb_true_iff in H1. f_equal; intuition eauto.
-    rewrite <- map_id; apply_spec; eauto.
-  - simpl lift. rewrite !andb_true_iff in H2. f_equal; intuition eauto.
-    transitivity (map (on_snd id) l). apply_spec; eauto.
-    rewrite <- map_id. f_equal. unfold on_snd. extensionality p. now destruct p.
-  - simpl lift. f_equal; eauto.
-  - simpl lift. f_equal.
-    transitivity (map (map_def id id) m). apply_spec; eauto.
-    now autorewrite with map.
-  - simpl lift. f_equal.
-    transitivity (map (map_def id id) m). apply_spec; eauto.
-    now autorewrite with map.
+  - simpl lift. f_equal. solve_all. unfold test_def in b. toProp. solve_all.
+  - simpl lift. f_equal. solve_all. unfold test_def in b. toProp. solve_all.
 Qed.
 
-Lemma closed_upwards {k t} k' : closedn k t = true -> k' >= k -> closedn k' t = true.
+Lemma closed_upwards {k t} k' : closedn k t -> k' >= k -> closedn k' t.
 Proof.
   revert k k'.
   elim t using term_forall_list_ind; intros; try lia;
-    rewrite ?map_map_compose, ?compose_on_snd, ?compose_map_def;
-    try (try f_equal; simpl; apply_spec; eauto); simpl closed in *;
-        try (apply_spec; eauto with arith);
-        try (rewrite ?andb_true_iff in *; intuition eauto 4 with arith).
+    rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length;
+    simpl closed in *; unfold test_snd, test_def in *;
+      try solve [(try f_equal; simpl; repeat (toProp; solve_all); eauto)].
 
   - elim (ltb_spec n k'); auto. intros.
     apply ltb_lt in H. lia.
-
-  - apply_spec. eauto with arith.
-  - red in H1. apply_spec. intros. destruct x; unfold test_snd; simpl in *. eauto with arith.
-  - red in H. apply_spec. intros. destruct x; unfold test_def in *; simpl in *.
-    rewrite andb_true_iff in *; intuition eauto with arith.
-  - red in H. apply_spec. intros. destruct x; unfold test_def in *; simpl in *.
-    rewrite andb_true_iff in *; intuition eauto with arith.
 Qed.
 
 Lemma mkApps_mkApp u a v : mkApps (mkApp u a) v = mkApps u (a :: v).
@@ -590,8 +561,8 @@ Lemma wf_mkApp u a : wf u -> wf a -> wf (mkApp u a).
 Proof.
   intros H H'.
   inversion_clear H; try constructor; simpl; auto; try congruence; try constructor; auto.
-  intro. destruct u0; simpl in *; congruence.
-  apply Forall_app_inv. split; auto.
+  intro. destruct u0; simpl in *; congruence. solve_all.
+  apply All_app_inv; auto.
 Qed.
 
 Lemma wf_mkApps u a : wf u -> List.Forall wf a -> wf (mkApps u a).
@@ -600,7 +571,7 @@ Proof.
   induction a; simpl; auto.
   inversion_clear H; try constructor; simpl; auto; try congruence; try constructor; auto.
   intro. destruct u0; simpl in *; congruence.
-  apply Forall_app_inv. split; auto.
+  solve_all. apply All_app_inv; auto.
 Qed.
 
 Lemma wf_subst ts k u : List.Forall wf ts -> wf u -> wf (subst ts k u).
@@ -614,8 +585,7 @@ Proof.
   - apply Forall_map. eapply Forall_impl; eauto.
   - apply wf_mkApps; auto. apply Forall_map. eapply Forall_impl; eauto.
   - apply Forall_map. eapply Forall_impl; eauto. intros. apply H0.
-  - merge_Forall. apply Forall_map. eapply Forall_impl; eauto. intros.
-    destruct x; simpl in *. red; simpl; intuition auto.
+  - solve_all. unfold compose, map_def. simpl. solve_all.
     induction dbody; try discriminate. reflexivity.
   - apply Forall_map. eapply Forall_impl; eauto. intros.
     destruct x; simpl in *. red; simpl; intuition auto.
@@ -631,7 +601,7 @@ Hint Resolve wf_mkApps wf_subst wf_subst1 wf_lift : wf.
 Lemma subst_empty k a : Ast.wf a -> subst [] k a = a.
 Proof.
   induction 1 in k |- * using term_wf_forall_list_ind; simpl; try congruence;
-    try solve [f_equal; eauto; apply_spec; eauto].
+    try solve [f_equal; eauto; solve_all].
 
   - elim (Nat.compare_spec k n); destruct (Nat.leb_spec k n); intros; try easy.
     subst. rewrite Nat.sub_diag. simpl. rewrite Nat.sub_0_r. reflexivity.
@@ -639,20 +609,8 @@ Proof.
     assert (exists n', n - k = S n'). exists (pred (n - k)). lia.
     destruct H2. rewrite H2. simpl. now rewrite Nat.sub_0_r.
   - rewrite IHwf. rewrite mkApps_tApp; eauto with wf.
-    f_equal; apply_spec. auto.
-  - rewrite IHwf, IHwf0. f_equal. red in H. apply_spec. intros; eauto.
-    destruct x; unfold on_snd; simpl in *; congruence.
-  - f_equal. clear H0. red in H; apply_spec. intuition auto.
-    destruct x; unfold map_def; simpl in *; congruence.
-  - f_equal. red in H; apply_spec. intuition auto.
-    destruct x; unfold map_def; simpl in *; congruence.
+    f_equal; solve_all.
 Qed.
-
-Lemma isLambda_lift n k (bod : term) :
-  isLambda bod = true -> isLambda (lift n k bod) = true.
-Proof. destruct bod; simpl; try congruence. Qed.
-
-Require Import ssreflect.
 
 Lemma lift_to_extended_list_k Γ k : forall k',
     to_extended_list_k Γ (k' + k) = map (lift0 k') (to_extended_list_k Γ k).
@@ -671,24 +629,6 @@ Proof.
   intros. subst p. rewrite <- (Nat.add_0_r #|N|).
   rewrite -> simpl_subst_rec, lift0_id; auto. Qed.
 
-Ltac nth_leb_simpl :=
-  match goal with
-    |- context [leb ?k ?n] => elim (leb_spec_Set k n); try lia; intros; simpl
-  | |- context [nth_error ?l ?n] => elim (nth_error_spec l n); rewrite -> ?app_length, ?map_length;
-                                    try lia; intros; simpl
-  | H : context[nth_error (?l ++ ?l') ?n] |- _ =>
-    (rewrite -> (AstUtils.nth_error_app_ge l l' n) in H by lia) ||
-    (rewrite -> (AstUtils.nth_error_app_lt l l' n) in H by lia)
-  | H : nth_error ?l ?n = Some _, H' : nth_error ?l ?n' = Some _ |- _ =>
-    replace n' with n in H' by lia; rewrite -> H in H'; injection H'; intros; subst
-  | _ => lia || congruence || solve [repeat (f_equal; try lia)]
-  end.
-
-Ltac change_Sk :=
-  match goal with
-    |- context [S (?x + ?y)] => progress change (S (x + y)) with (S x + y)
-  end.
-
 Lemma subst_app_decomp l l' k t :
   Ast.wf t -> Forall Ast.wf l ->
   subst (l ++ l') k t = subst l' k (subst (List.map (lift0 (length l')) l) k t).
@@ -697,15 +637,15 @@ Proof.
   induction wft in k |- * using term_wf_forall_list_ind; simpl; auto;
     rewrite ?subst_mkApps; try change_Sk;
     try (f_equal; rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length;
-         eauto; apply_spec; eauto).
+         eauto; solve_all).
 
   - repeat nth_leb_simpl.
     rewrite nth_error_map in e0. rewrite e in e0.
     injection e0; intros <-.
-    rewrite -> permute_lift, Nat.add_0_r by auto.
+    rewrite -> permute_lift by auto.
     rewrite <- (Nat.add_0_r #|l'|).
     rewrite -> simpl_subst_rec, lift0_id; auto with wf; try lia. apply wf_lift.
-    eapply nth_error_forall in e; eauto.
+    eapply nth_error_forall in e; eauto. solve_all.
 Qed.
 
 Lemma subst_app_simpl l l' k t :
@@ -716,11 +656,11 @@ Proof.
   induction wft in k |- * using term_wf_forall_list_ind; simpl; eauto;
     rewrite ?subst_mkApps; try change_Sk;
     try (f_equal; rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length, ?Nat.add_assoc;
-         eauto; apply_spec; eauto).
+         eauto; solve_all; eauto).
 
   - repeat nth_leb_simpl.
     rewrite -> Nat.add_comm, simpl_subst; eauto.
-    eapply nth_error_forall in e; eauto.
+    eapply nth_error_all in e; eauto.
 Qed.
 
 Lemma isLambda_subst (s : list term) k (bod : term) :

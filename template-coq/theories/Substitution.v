@@ -191,13 +191,14 @@ Proof.
 Qed.
 
 Lemma subst_unfold_fix n k mfix idx narg fn :
-  Forall Ast.wf n ->
+  All Ast.wf n ->
   unfold_fix mfix idx = Some (narg, fn) ->
   unfold_fix (map (map_def (subst n k) (subst n (#|mfix| + k))) mfix) idx = Some (narg, subst n k fn).
 Proof.
   unfold unfold_fix. intros wfn.
   rewrite nth_error_map. destruct (nth_error mfix idx) eqn:Hdef; try congruence.
   move=> [= <- <-] /=. f_equal. f_equal.
+  solve_all.
   erewrite (distr_subst_rec _ _ _ wfn k 0).
   rewrite fix_subst_length. simpl. f_equal.
   unfold fix_subst. rewrite !map_length.
@@ -207,13 +208,13 @@ Qed.
 Hint Resolve subst_unfold_fix.
 
 Lemma subst_unfold_cofix n k mfix idx narg fn :
-  Forall Ast.wf n ->
+  All Ast.wf n ->
   unfold_cofix mfix idx = Some (narg, fn) ->
   unfold_cofix (map (map_def (subst n k) (subst n (#|mfix| + k))) mfix) idx = Some (narg, subst n k fn).
 Proof.
   unfold unfold_cofix. intros wfn.
   rewrite nth_error_map. destruct (nth_error mfix idx) eqn:Hdef; try congruence.
-  intros [= <- <-]. simpl. do 2 f_equal.
+  intros [= <- <-]. simpl. do 2 f_equal. solve_all.
   erewrite (distr_subst_rec _ _ _ wfn k 0).
   rewrite cofix_subst_length. simpl. f_equal.
   unfold cofix_subst. rewrite !map_length.
@@ -245,7 +246,7 @@ Proof.
   pose proof (typing_wf _ wfΣ _ _ _ Hty) as [wft wfT].
   apply typecheck_closed in Hty; eauto.
   destruct Hty as [_ Hcl].
-  rewrite -> andb_true_iff in Hcl. destruct Hcl as [clb clty].
+  rewrite -> andb_and in Hcl. destruct Hcl as [clb clty].
   pose proof (closed_upwards k clb).
   simpl in *. forward H0 by lia.
   pose proof (closed_upwards k clty).
@@ -273,7 +274,7 @@ Proof.
   eapply declared_decl_closed in H0; eauto.
   unfold map_constant_body.
   do 2 red in H0. destruct decl as [ty [body|] univs]; simpl in *.
-  rewrite -> andb_true_iff in H0. intuition.
+  rewrite -> andb_and in H0. intuition.
   rewrite <- (closedn_subst_instance_constr 0 body u) in H2.
   rewrite <- (closedn_subst_instance_constr 0 ty u) in H4.
   f_equal. apply subst_closedn; eauto using closed_upwards with arith wf.
@@ -347,7 +348,7 @@ Proof.
 Qed.
 
 Lemma subst0_inds_subst ind u mdecl n k t :
-  Forall Ast.wf n ->
+  All Ast.wf n ->
   (subst0 (inds (inductive_mind ind) u (ind_bodies mdecl))
           (subst n (#|arities_context (ind_bodies mdecl)| + k) t)) =
   subst n k (subst0 (inds (inductive_mind ind) u (ind_bodies mdecl)) t).
@@ -362,7 +363,7 @@ Proof.
 Qed.
 
 Lemma subst_declared_constructor `{checker_flags} Σ c u mdecl idecl cdecl n k :
-  wf Σ -> Forall Ast.wf n ->
+  wf Σ -> All Ast.wf n ->
   declared_constructor (fst Σ) mdecl idecl c cdecl ->
   subst (map (UnivSubst.subst_instance_constr u) n) k (type_of_constructor mdecl cdecl c u) = (type_of_constructor mdecl cdecl c u).
 Proof.
@@ -381,12 +382,12 @@ Proof.
   rewrite <- H3 at 2.
   rewrite <- subst0_inds_subst. f_equal.
   now rewrite <- UnivSubst.subst_subst_instance_constr.
-  apply Forall_map. unfold compose. eapply Forall_impl; eauto.
+  apply All_map. unfold compose. eapply All_impl; eauto.
   intros. now apply wf_subst_instance_constr.
 Qed.
 
 Lemma subst_declared_projection `{checker_flags} Σ c mdecl idecl pdecl n k :
-  wf Σ -> Forall Ast.wf n ->
+  wf Σ -> All Ast.wf n ->
   declared_projection (fst Σ) mdecl idecl c pdecl ->
   on_snd (subst n (S (ind_npars mdecl + k))) pdecl = pdecl.
 Proof.
@@ -472,7 +473,7 @@ Proof.
 Qed.
 
 Lemma subst_instantiate_params_subst n k params args s t :
-  Forall Ast.wf n -> forall s' t',
+  All Ast.wf n -> forall s' t',
     instantiate_params_subst params args s t = Some (s', t') ->
     instantiate_params_subst
       (mapi_rec (fun k' decl => subst_decl n (k' + k) decl) params #|s|)
@@ -506,23 +507,23 @@ Proof.
   move=> cty; now rewrite !subst_closedn //.
 Qed.
 
-Lemma closed_ctx_subst n k ctx : Forall wf_decl ctx -> closed_ctx ctx = true -> subst_context n k ctx = ctx.
+Lemma closed_ctx_subst n k ctx : All wf_decl ctx -> closed_ctx ctx = true -> subst_context n k ctx = ctx.
 Proof.
   induction ctx in n, k |- *; auto.
   unfold closed_ctx, id. intros wfctx. inv wfctx.
   rewrite mapi_app forallb_app List.rev_length /= Nat.add_0_r.
-  move/andb_true_iff => /= [Hctx /andb_true_iff [Ha _]].
+  move/andb_and => /= [Hctx /andb_and [Ha _]].
   rewrite subst_context_snoc /snoc /= IHctx // subst_decl_closed //.
   now apply: closed_decl_upwards.
 Qed.
 
 Lemma closed_tele_subst n k ctx :
-  Forall wf_decl ctx -> closed_ctx ctx ->
+  All wf_decl ctx -> closed_ctx ctx ->
   mapi (fun (k' : nat) (decl : context_decl) => subst_decl n (k' + k) decl) (List.rev ctx) = List.rev ctx.
 Proof.
   rewrite /closed_ctx /mapi. generalize 0.
   induction ctx using rev_ind; try easy.
-  move=> n0 /Forall_app [wfctx wfx]. inv wfx.
+  move=> n0 /All_app [wfctx wfx]. inv wfx.
   rewrite /closed_ctx !rev_app_distr /id /=.
   move/andP => [closedx Hctx].
   rewrite subst_decl_closed //. rewrite (closed_decl_upwards n0) //; lia.
@@ -568,13 +569,13 @@ Lemma to_extended_list_k_map_subst:
 Proof.
   intros n k c k'.
   pose proof (to_extended_list_k_spec c k').
-  symmetry. apply_spec. intros.
-  destruct H1. intuition. subst x. simpl.
-  destruct (leb_spec_Set k x0). lia. reflexivity.
+  symmetry. solve_all.
+  destruct H as [x' [-> Hx']]. intuition. simpl.
+  destruct (leb_spec_Set k x'). lia. reflexivity.
 Qed.
 
 Lemma subst_instantiate_params n k params args t ty :
-  Forall wf_decl params -> Forall Ast.wf n -> Forall Ast.wf args -> Ast.wf t ->
+  All wf_decl params -> All Ast.wf n -> All Ast.wf args -> Ast.wf t ->
   closed_ctx params ->
   instantiate_params params args t = Some ty ->
   instantiate_params params (map (subst n k) args) (subst n k t) = Some (subst n k ty).
@@ -613,7 +614,7 @@ Proof.
   now rewrite app_context_nil_l.
   simpl in X.
   eapply (env_prop_typing _ typecheck_closed) in Hs; eauto.
-  rewrite -> andb_true_iff in Hs. destruct Hs as [Hs Ht].
+  rewrite -> andb_and in Hs. destruct Hs as [Hs Ht].
   simpl in Hs. apply (lift_closed #|arities_context l|) in Hs.
   rewrite -> Hs, app_context_nil_l in X.
   apply X.
@@ -632,7 +633,7 @@ Proof.
   pose proof (typing_wf _ wfΣ _ _ _ Hs) as [wfty _].
   eapply (env_prop_typing _ typecheck_closed) in Hs; eauto.
   rewrite arities_context_length in Hs.
-  rewrite -> andb_true_iff in *. simpl in *.
+  rewrite -> andb_and in *. simpl in *.
   destruct Hs as [Hs _]. split; auto.
   eapply (closedn_subst _ 0 0).
   clear. unfold inds. induction #|ind_bodies mdecl|; simpl; try constructor; auto.
@@ -653,7 +654,7 @@ Proof.
   destruct pdecl as [id cty].
   pose proof (typing_wf _ wfΣ _ _ _ Hs) as [wfty _].
   eapply (env_prop_typing _ typecheck_closed) in Hs; eauto.
-  rewrite -> andb_true_iff in *. simpl in *.
+  rewrite -> andb_and in *. simpl in *.
   destruct Hs as [Hs _]. split; auto.
   rewrite Hparams in Hs. now rewrite -> closedn_subst_instance_constr.
   auto with wf.
@@ -667,7 +668,7 @@ Proof. induction 1; simpl; try congruence. rewrite app_length /=. lia. Qed.
 
 Lemma context_subst_app `{cf:checker_flags} Σ Γ Γ' a s :
   All_local_env (fun _ _ t T => Ast.wf t /\ Ast.wf T) Σ Γ' ->
-  Forall Ast.wf a -> Forall Ast.wf s ->
+  All Ast.wf a -> All Ast.wf s ->
   context_subst (Γ' ++ Γ) a s ->
   { a0 & { a1 & { s0 & { s1 & (context_subst Γ a0 s0 * context_subst (subst_context s0 0 Γ') a1 s1
                                * (a = a0 ++ a1) * (s = s1 ++ s0))%type } } } }.
@@ -677,13 +678,13 @@ Proof.
 
   simpl. intros wfΓ wfa wfs Hs.
   revert wfΓ wfa wfs. inv Hs; intros wfΓ wfa wfs; inv wfΓ.
-  - eapply Forall_app in wfa as [Hargs Ha1];
-    eapply (Forall_app _ [a1]) in wfs as [Ha'' Hs0].
+  - eapply All_app in wfa as [Hargs Ha1];
+    eapply (All_app (l:=[a1])) in wfs as [Ha'' Hs0].
     specialize (IHΓ' _ _ _ H0 Hargs Hs0 H).
     destruct IHΓ' as (a0' & a1' & s1 & s2 & ((sa0 & sa1) & eqargs) & eqs0).
     subst. exists a0', (a1' ++ [a1]), s1, (a1 :: s2). intuition eauto.
     rewrite subst_context_snoc. constructor. auto. now rewrite app_assoc.
-  - eapply (Forall_app _ [subst0 s0 b]) in wfs as [Ha'' Hs0].
+  - eapply (All_app (l:=[subst0 s0 b])) in wfs as [Ha'' Hs0].
     specialize (IHΓ' _ _ _ H0 wfa Hs0 H).
     destruct IHΓ' as (a0' & a1' & s1 & s2 & ((sa0 & sa1) & eqargs) & eqs0).
     subst. exists a0', a1', s1, (subst s2 0 (subst s1 #|Γ'| b) :: s2). intuition eauto.
@@ -693,8 +694,8 @@ Proof.
     rewrite -> subst_app_simpl; auto. simpl.
     pose proof(context_subst_length _ _ _ sa1) as Hs1.
     rewrite subst_context_length in Hs1. rewrite -> Hs1. auto. auto.
-    apply Forall_app in Hs0. intuition.
-    apply Forall_app in Hs0. intuition.
+    apply All_app in Hs0. solve_all.
+    apply All_app in Hs0. solve_all.
 Qed.
 
 Lemma make_context_subst_rec_spec ctx args s tele args' s' :
@@ -787,7 +788,7 @@ Proof.
 Qed.
 
 Lemma subst_to_extended_list_k s k args ctx :
-  Forall Ast.wf s ->
+  All Ast.wf s ->
   make_context_subst (List.rev ctx) args [] = Some s ->
   map (subst s k) (to_extended_list_k ctx k) = map (lift0 k) args.
 Proof.
@@ -800,7 +801,7 @@ Proof.
     f_equal.
     rewrite (lift_to_extended_list_k _ _ 1) map_map_compose.
     pose proof (to_extended_list_k_spec Γ k).
-    apply_spec. intros x [n [-> Hn]].
+    solve_all. destruct H3 as [n [-> Hn]].
     rewrite /compose /lift (subst_app_decomp [a] s k); auto with wf.
     rewrite subst_rel_gt. simpl; lia.
     repeat (f_equal; simpl; try lia).
@@ -809,38 +810,40 @@ Proof.
     rewrite -IHcontext_subst // to_extended_list_k_cons /=.
     rewrite (lift_to_extended_list_k _ _ 1) map_map_compose.
     pose proof (to_extended_list_k_spec Γ k).
-    apply_spec. intros x [n [-> Hn]].
+    solve_all. destruct H3 as [n [-> Hn]].
     rewrite /compose /lift (subst_app_decomp [subst0 s b] s k); auto with wf.
     rewrite subst_rel_gt. simpl; lia.
     repeat (f_equal; simpl; try lia).
 Qed.
 
 Lemma wf_context_subst ctx args s :
-  Forall wf_decl ctx -> Forall Ast.wf args ->
-  context_subst ctx args s -> Forall Ast.wf s.
+  All wf_decl ctx -> All Ast.wf args ->
+  context_subst ctx args s -> All Ast.wf s.
 Proof.
   move=> wfctx wfargs.
   induction 1. constructor.
-  eapply Forall_app in wfargs as [wfargs wfa]. inv wfa. inv wfctx.
+  eapply All_app in wfargs as [wfargs wfa]. inv wfa. inv wfctx.
   constructor; intuition auto.
-  inv wfctx. red in H0. constructor; intuition auto with wf.
+  inv wfctx. red in H0. constructor; solve_all. apply wf_subst. solve_all. intuition auto with wf.
 Qed.
 
 Lemma wf_make_context_subst ctx args s' :
-  Forall wf_decl ctx -> Forall Ast.wf args ->
-  make_context_subst (List.rev ctx) args [] = Some s' -> Forall Ast.wf s'.
+  All wf_decl ctx -> All Ast.wf args ->
+  make_context_subst (List.rev ctx) args [] = Some s' -> All Ast.wf s'.
 Proof.
   move=> wfctx wfargs.
   move/make_context_subst_spec. rewrite rev_involutive.
   eauto using wf_context_subst.
 Qed.
 
+Hint Resolve All_Forall : wf.
+
 (** check_correct_arity is probably wrong, w.r.t. let-ins reduced or not at least  *)
 Lemma subst_types_of_case `{cf:checker_flags} Σ ind mdecl idecl args u p pty indctx pctx ps btys n k :
   let f (ctx : context) := subst n (#|ctx| + k) in
   let f_ctx := subst_context n k in
   wf Σ ->
-  Forall Ast.wf n -> Forall Ast.wf args ->
+  All Ast.wf n -> All Ast.wf args ->
   Ast.wf pty -> Ast.wf (ind_type idecl) ->
   declared_inductive (fst Σ) mdecl ind idecl ->
   types_of_case ind mdecl idecl args u p pty = Some (indctx, pctx, ps, btys) ->
@@ -865,8 +868,8 @@ Proof.
   apply onParams in onmind as Hparams.
   assert(closedparams : closed_ctx (ind_params mdecl)).
   eapply closed_wf_local; eauto.
-  assert(wfparams : Forall wf_decl (ind_params mdecl)).
-  eapply typing_all_wf_decl; eauto.
+  assert(wfparams : All wf_decl (ind_params mdecl)).
+  apply Forall_All. eapply typing_all_wf_decl; eauto.
   assert(forall brs,
          map_option_out (build_branches_type ind mdecl idecl args u p) = Some brs ->
          map_option_out (build_branches_type ind mdecl
@@ -945,14 +948,14 @@ Proof.
     rewrite subst_it_mkProd_or_LetIn !subst_context_length !subst_mkApps
             !subst_instance_context_length !map_app.
     f_equal. f_equal. f_equal.
-    -- rewrite commut_lift_subst_rec. lia. reflexivity.
+    -- rewrite -> commut_lift_subst_rec. arith_congr. lia.
     -- f_equal. simpl. f_equal.
        rewrite !subst_mkApps /= !map_app. f_equal.
        f_equal.
        rewrite /to_extended_list -to_extended_list_k_map_subst.
        rewrite !subst_context_length subst_instance_context_length. lia.
        now rewrite to_extended_list_k_subst.
-    -- apply Forall_map. eapply Forall_impl; eauto. apply wf_subst_instance_constr. }
+    -- apply All_map. eapply All_impl; eauto. apply wf_subst_instance_constr. }
   specialize (H0 _ Hbrs). now rewrite H0.
 Qed.
 
@@ -1015,7 +1018,7 @@ Proof.
 Qed.
 
 Lemma red1_mkApps_l Σ Γ M1 N1 M2 :
-  Ast.wf M1 -> Forall Ast.wf M2 ->
+  Ast.wf M1 -> All Ast.wf M2 ->
   red1 Σ Γ M1 N1 -> red1 Σ Γ (mkApps M1 M2) (mkApps N1 M2).
 Proof.
   induction M2 in M1, N1 |- *. simpl; auto.
@@ -1029,7 +1032,7 @@ Proof.
 Qed.
 
 Lemma red1_mkApps_r Σ Γ M1 M2 N2 :
-  Ast.wf M1 -> Forall Ast.wf M2 ->
+  Ast.wf M1 -> All Ast.wf M2 ->
   OnOne2 (red1 Σ Γ) M2 N2 -> red1 Σ Γ (mkApps M1 M2) (mkApps M1 N2).
 Proof.
   intros. induction H1 in M1, H, H0 |- *.
@@ -1046,7 +1049,7 @@ Proof.
 Qed.
 
 Lemma substitution_red1 `{CF:checker_flags} Σ Γ Γ' Γ'' s M N :
-  wf Σ -> Forall Ast.wf s -> subs Σ Γ s Γ' -> wf_local Σ Γ -> Ast.wf M ->
+  wf Σ -> All Ast.wf s -> subs Σ Γ s Γ' -> wf_local Σ Γ -> Ast.wf M ->
   red1 (fst Σ) (Γ ,,, Γ' ,,, Γ'') M N ->
   red1 (fst Σ) (Γ ,,, subst_context s 0 Γ'') (subst s #|Γ''| M) (subst s #|Γ''| N).
 Proof.
@@ -1086,7 +1089,7 @@ Proof.
          apply nth_error_Some_length in Hi. lia. discriminate.
     + rewrite -> nth_error_app_context_lt in H by lia.
       pose (commut_lift_subst_rec body s (S i) (#|Γ''| - S i) 0).
-      assert(eq:(S i + (#|Γ''| - S i)) = #|Γ''|) by lia.
+      assert(eq:#|Γ''| - S i + S i = #|Γ''|) by lia.
       rewrite -> eq in e. rewrite <- e by lia.
       constructor.
       rewrite -> nth_error_app_context_lt by (autorewrite with wf; lia).
@@ -1140,14 +1143,14 @@ Proof.
   - inv wfM.
     specialize (IHred1 H2 _ _ _ eq_refl).
     specialize (IHred1 wfΓ Hs).
-    apply red1_mkApps_l. apply wf_subst; auto.
-    apply Forall_map; eapply Forall_impl. eauto.
-    intros. now apply wf_subst.
+    apply red1_mkApps_l. apply wf_subst; auto. solve_all.
+    solve_all. apply wf_subst. solve_all. auto.
     apply IHred1.
 
   - inv wfM.
     apply red1_mkApps_r; auto with wf.
-    apply Forall_map. eapply Forall_impl; eauto. simpl; eauto with wf.
+    apply All_map. apply (Forall_All (fun x => Ast.wf (subst s #|Γ''| x))).
+    eapply Forall_impl; eauto. simpl; eauto with wf.
     clear -H H2 H3 wfΓ Hs.
     induction H; constructor; auto.
     inv H3. intuition.
@@ -1165,10 +1168,9 @@ Proof.
     apply IHOnOne2. now inv H0.
 Qed.
 
-Lemma eq_term_refl `{checker_flags} φ t : eq_term φ t t = true.
+Lemma eq_term_refl `{checker_flags} φ t : eq_term φ t t.
 Proof.
   induction t using term_forall_list_ind; simpl; try reflexivity; try discriminate;
-    try (merge_Forall; close_Forall; intuition auto);
     try (rewrite -> ?IHt1, ?IHt2, ?IHt3; reflexivity).
 
   - apply Nat.eqb_refl.
@@ -1180,7 +1182,7 @@ Proof.
   - rewrite IHt; simpl.
     eapply (Forall_forallb _ _ (fun x => eq_term φ x x)) in H0.
     induction l; simpl; auto.
-    simpl in H0. rewrite -> andb_true_iff in H0. intuition.
+    simpl in H0. rewrite -> andb_and in H0. intuition.
     auto.
   - unfold eq_constant. rewrite eq_string_refl.
     apply eq_universe_instance_refl.
@@ -1206,7 +1208,7 @@ Qed.
 Lemma eq_term_leq_term `{checker_flags} φ t u : eq_term φ t u = true -> leq_term φ t u = true.
 Proof.
   induction t in u |- * using term_forall_list_ind; simpl; intros; auto; try reflexivity; try discriminate;
-    try (merge_Forall; close_Forall; intuition auto);
+    try (merge_All; close_Forall; intuition auto);
     try (rewrite -> ?IHt1, ?IHt2, ?IHt3; reflexivity).
 
   - destruct u; auto. now apply eq_universe_leq_universe.
@@ -1217,7 +1219,7 @@ Proof.
 Qed.
 
 Lemma eq_term_App `{checker_flags} φ f f' :
-  eq_term φ f f' = true ->
+  eq_term φ f f' ->
   isApp f = isApp f'.
 Proof.
   destruct f, f'; simpl; try congruence.
@@ -1225,9 +1227,9 @@ Proof.
 Qed.
 
 Lemma eq_term_mkApps `{checker_flags} φ f l f' l' :
-  eq_term φ f f' = true ->
-  forallb2 (eq_term φ) l l' = true ->
-  eq_term φ (mkApps f l) (mkApps f' l') = true.
+  eq_term φ f f' ->
+  forallb2 (eq_term φ) l l' ->
+  eq_term φ (mkApps f l) (mkApps f' l').
 Proof.
   induction l in f, f' |- *; destruct l'; try (simpl; congruence).
   intros.
@@ -1236,7 +1238,7 @@ Proof.
   destruct f; try discriminate.
   destruct f'; try discriminate.
   simpl in *.
-  rewrite -> andb_true_iff in *. intuition.
+  rewrite -> andb_and in *. intuition.
   rewrite forallb2_app; auto.
   simpl. now rewrite H3 H0 H4.
 
@@ -1246,9 +1248,9 @@ Proof.
 Qed.
 
 Lemma leq_term_mkApps `{checker_flags} φ f l f' l' :
-  eq_term φ f f' = true ->
-  forallb2 (eq_term φ) l l' = true ->
-  leq_term φ (mkApps f l) (mkApps f' l') = true.
+  eq_term φ f f' ->
+  forallb2 (eq_term φ) l l' ->
+  leq_term φ (mkApps f l) (mkApps f' l').
 Proof.
   induction l in f, f' |- *; destruct l'; try (simpl; congruence).
   intros. simpl. apply eq_term_leq_term. auto.
@@ -1258,7 +1260,7 @@ Proof.
   destruct f; try discriminate.
   destruct f'; try discriminate.
   simpl in *.
-  rewrite -> andb_true_iff in *. intuition.
+  rewrite -> andb_and in *. intuition.
   rewrite forallb2_app; auto.
   simpl. now rewrite H3 H0 H4.
 
@@ -1268,16 +1270,16 @@ Proof.
 Qed.
 
 Lemma subst_eq_term `{checker_flags} ϕ n k T U :
-  eq_term ϕ T U = true ->
-  eq_term ϕ (subst n k T) (subst n k U) = true.
+  eq_term ϕ T U ->
+  eq_term ϕ (subst n k T) (subst n k U).
 Proof.
   intros Hleq.
   induction T in n, k, U, Hleq |- * using term_forall_list_ind; intros;
     destruct U; try discriminate;
   try solve [simpl; auto]; try
                              (destruct (mkApps_trans_wf _ _ H0) as [U' [V' ->]]; reflexivity);
-  simpl in *; revert Hleq; try rewrite -> !andb_true_iff in *; intuition auto;
-    try (merge_Forall; close_Forall; intuition auto).
+  simpl in *; revert Hleq; try rewrite -> !andb_and in *; intuition auto;
+    try solve [solve_all; intuition auto].
 
   - intros.
     apply Nat.eqb_eq in Hleq. subst.
@@ -1287,66 +1289,58 @@ Proof.
     apply eq_term_refl.
 
   - apply eq_term_mkApps. eauto. eauto.
-    merge_Forall. eapply Forall2_impl; eauto.
+    merge_All. eapply All2_impl; eauto.
     simpl; intros; intuition auto.
 
   - destruct p. destruct Nat.leb. discriminate. discriminate.
   - destruct p. discriminate.
-  - destruct p, p0. rewrite -> !andb_true_iff in *. intuition auto.
-    red in H0. merge_Forall. close_Forall. intuition auto. destruct y. simpl. auto.
-  - rewrite -> !andb_true_iff in *.
-    destruct x, y; simpl in *; intuition auto.
-    assert (#|m| = #|m0|). clear -H2. induction H2; simpl; auto. rewrite H4. auto.
-  - rewrite -> !andb_true_iff in *.
-    destruct x, y; simpl in *; intuition auto.
-    assert (#|m| = #|m0|). clear -H2. induction H2; simpl; auto. rewrite H4. auto.
+  - destruct p, p0. toProp; solve_all. solve_all. simpl. destruct y. simpl. auto.
+  - assert (#|m| = #|m0|) as <-. solve_all. clear -H2. induction H2; simpl; auto.
+    repeat (toProp; solve_all).
+  - assert (#|m| = #|m0|) as <-. solve_all. clear -H2. induction H2; simpl; auto.
+    repeat (toProp; solve_all).
 Qed.
 
 Lemma subst_leq_term `{checker_flags} ϕ n k T U :
-  leq_term ϕ T U = true ->
-  leq_term ϕ (subst n k T) (subst n k U) = true.
+  leq_term ϕ T U ->
+  leq_term ϕ (subst n k T) (subst n k U).
 Proof.
   intros Hleq.
   induction T in n, k, U, Hleq |- * using term_forall_list_ind; intros;
     destruct U; try discriminate;
   try solve [simpl; auto]; try
                              (destruct (mkApps_trans_wf _ _ H0) as [U' [V' ->]]; reflexivity);
-  simpl in *; revert Hleq; try destruct p, p0; try rewrite -> !andb_true_iff in *;
+  simpl in *; revert Hleq; try destruct p, p0; try rewrite -> !andb_and in *;
     intuition auto using subst_eq_term;
-    try (merge_Forall; close_Forall; intuition eauto using subst_eq_term).
+    try solve [solve_all; intuition eauto using subst_eq_term].
 
   - apply Nat.eqb_eq in Hleq. subst.
     destruct Nat.leb; simpl. destruct nth_error.
     eapply eq_term_leq_term. apply eq_term_refl. simpl.
     apply Nat.eqb_refl. apply Nat.eqb_refl.
   - apply leq_term_mkApps.
-    now apply subst_eq_term.
-    apply forallb2_forallb2; auto using subst_eq_term.
+    now apply subst_eq_term. solve_all. auto using subst_eq_term.
   - destruct p. discriminate.
   - destruct p; discriminate.
-  - destruct y. simpl. auto using subst_eq_term.
-  - rewrite -> !andb_true_iff in *.
-    destruct x, y; simpl in *; intuition auto using subst_eq_term.
-    assert (#|m| = #|m0|). clear -H2. induction H2; simpl; auto. rewrite H4.
-    auto using subst_eq_term.
-  - rewrite -> !andb_true_iff in *.
-    destruct x, y; simpl in *; intuition auto using subst_eq_term.
-    assert (#|m| = #|m0|). clear -H2. induction H2; simpl; auto. rewrite H4.
-    auto using subst_eq_term.
+  - solve_all. destruct y. simpl. auto using subst_eq_term.
+  - assert (#|m| = #|m0|) as <-. solve_all. clear -H2. induction H2; simpl; auto.
+    repeat (toProp; solve_all); auto using subst_eq_term.
+  - assert (#|m| = #|m0|) as <-. solve_all. clear -H2. induction H2; simpl; auto.
+    repeat (toProp; solve_all); auto using subst_eq_term.
 Qed.
 
 Lemma subst_eq_context `{checker_flags} φ l l' n k :
-  eq_context φ l l' = true ->
-  eq_context φ (subst_context n k l) (subst_context n k l') = true.
+  eq_context φ l l' ->
+  eq_context φ (subst_context n k l) (subst_context n k l').
 Proof.
   induction l in l', n, k |- *; intros; destruct l'; rewrite ?subst_context_snoc;
     try (discriminate || reflexivity).
-  simpl in *. rewrite -> andb_true_iff in *.
+  simpl in *. rewrite -> andb_and in *.
   intuition. unfold eq_context in H2. apply forallb2_length in H2. rewrite <- H2.
   destruct a, c; try congruence.
   unfold eq_decl in *. simpl.
   destruct decl_body, decl_body0; simpl in *; try congruence.
-  simpl in *. rewrite -> andb_true_iff in *.
+  simpl in *. rewrite -> andb_and in *.
   intuition auto using subst_eq_term.
   intuition auto using subst_eq_term.
 Qed.
@@ -1355,17 +1349,17 @@ Lemma subst_check_correct_arity:
   forall (cf : checker_flags) (Σ : global_context) (ind : inductive) (u : universe_instance)
          (npar : nat) (args : list term) (idecl : one_inductive_body)
          (indctx pctx : list context_decl) s k,
-    check_correct_arity (snd Σ) idecl ind u indctx (firstn npar args) pctx = true ->
+    check_correct_arity (snd Σ) idecl ind u indctx (firstn npar args) pctx ->
     check_correct_arity
       (snd Σ) idecl ind u (subst_context s k indctx) (firstn npar (map (subst s k) args))
-      (subst_context s k pctx) = true.
+      (subst_context s k pctx).
 Proof.
   intros cf Σ ind u npar args idecl indctx pctx s k.
   unfold check_correct_arity.
   destruct pctx in indctx |- *. simpl; try congruence. simpl.
   rewrite subst_context_snoc. simpl.
   unfold eq_context.
-  rewrite -> !andb_true_iff. intros.
+  rewrite -> !andb_and. intros.
   destruct H. split.
   destruct c. destruct decl_body; try discriminate.
   unfold eq_decl in *. simpl in *.
@@ -1377,13 +1371,13 @@ Proof.
   rewrite firstn_map. rewrite /to_extended_list to_extended_list_k_subst.
   unfold to_extended_list in H.
   erewrite <- (to_extended_list_k_map_subst s) in H.
-  rewrite <- H. f_equal. f_equal. f_equal. rewrite subst_context_length.
+  rewrite /is_true -H. f_equal. f_equal. f_equal. rewrite subst_context_length.
   rewrite -> !map_map_compose. apply map_ext.
   intros. unfold compose. now rewrite commut_lift_subst_rec. lia.
   eapply subst_eq_context in H0. eapply H0.
 Qed.
 
-Lemma subs_wf `{checker_flags} Σ Γ s Δ : wf Σ -> subs Σ Γ s Δ -> Forall Ast.wf s.
+Lemma subs_wf `{checker_flags} Σ Γ s Δ : wf Σ -> subs Σ Γ s Δ -> All Ast.wf s.
 Proof.
   induction 2; constructor.
   apply typing_wf in t0; intuition auto with wf.
@@ -1456,8 +1450,7 @@ Proof.
       eapply refine_type.
       eapply (weakening _ _ (subst_context s 0 Δ)) in Heq; eauto with wf.
       rewrite subst_context_length in Heq. eapply Heq.
-       rewrite -> commut_lift_subst_rec by lia.
-      rewrite Nat.add_0_r.
+      rewrite -> commut_lift_subst_rec by lia.
       rewrite <- (firstn_skipn (S (n - #|Δ|)) s) at 2.
       rewrite -> subst_app_decomp. f_equal.
       replace (S n) with ((S n - #|Δ|) + #|Δ|) by lia.
@@ -1465,7 +1458,7 @@ Proof.
       rewrite map_length. rewrite -> firstn_length by lia. lia.
       rewrite <- eq. rewrite -> simpl_subst_rec; auto; try lia.
       auto with wf. eapply subs_wf in sub; eauto.
-      now apply Forall_firstn.
+      now apply All_Forall, All_firstn.
 
     + intros Hs.
       pose proof (subst_length _ _ _ _ sub).
@@ -1554,9 +1547,9 @@ Proof.
         simpl in H1. subst pars. rewrite firstn_map. eapply H1; eauto.
         all:eauto.
         -- now apply subs_wf in sub.
-        -- subst pars. eapply Forall_firstn.
+        -- subst pars. eapply All_firstn.
            apply typing_wf in X3 as [_ X3]; eauto.
-           now apply wf_mkApps_inv in X3.
+           now (apply (Forall_All); apply wf_mkApps_inv in X3).
         -- eapply typing_wf in X0; wf.
         -- eapply on_declared_inductive in isdecl as [Hmdecl Hidecl]; auto.
            apply onArity in Hidecl as [[s' Hty] _]. now eapply typing_wf in Hty; eauto. }
@@ -1567,8 +1560,7 @@ Proof.
        apply subst_check_correct_arity.
     -- destruct idecl; simpl in *; auto.
     -- now rewrite !subst_mkApps in X4.
-    -- eapply Forall2_map. close_Forall. intros; intuition eauto.
-       destruct x, y; simpl in *. eauto.
+    -- solve_all.
 
   - specialize (X1 Γ Γ' Δ s sub eq_refl wfsubs).
     eapply refine_type. econstructor.
@@ -1616,7 +1608,7 @@ Proof.
         rewrite !app_context_assoc Nat.add_0_r !app_context_length fix_context_length in IH.
         specialize (IH X1).
         rewrite subst_context_length fix_context_length.
-        now rewrite commut_lift_subst_rec.
+        rewrite commut_lift_subst_rec. lia. now rewrite (Nat.add_comm #|Δ|).
         now apply LiftSubst.isLambda_subst.
 
   - assert (wf_local Σ (Γ ,,, subst_context s 0 Δ ,,, subst_context s #|Δ| (fix_context mfix))).
@@ -1650,7 +1642,8 @@ Proof.
         rewrite !app_context_assoc Nat.add_0_r !app_context_length fix_context_length in IH.
         specialize (IH X1).
         rewrite subst_context_length fix_context_length.
-        now rewrite commut_lift_subst_rec.
+        rewrite commut_lift_subst_rec. lia.
+        now rewrite (Nat.add_comm #|Δ|).
 
   - econstructor; eauto.
     eapply substitution_cumul; eauto.

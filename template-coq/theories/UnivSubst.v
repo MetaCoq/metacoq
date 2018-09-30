@@ -67,7 +67,7 @@ Lemma lift_subst_instance_constr u c n k :
 Proof.
   induction c in k |- * using term_forall_list_ind; simpl; auto;
     rewrite ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length;
-    try solve [f_equal; eauto; apply_spec; eauto].
+    try solve [f_equal; eauto; solve_all; eauto].
 
   elim (Nat.leb k n0); reflexivity.
 Qed.
@@ -98,21 +98,21 @@ Lemma subst_subst_instance_constr u c N k :
 Proof.
   induction c in k |- * using term_forall_list_ind; simpl; auto;
     rewrite ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length;
-    try solve [f_equal; eauto; apply_spec; eauto].
+    try solve [f_equal; eauto; solve_all; eauto].
 
   elim (Nat.leb k n). rewrite nth_error_map.
   destruct (nth_error N (n - k)). simpl.
   apply lift_subst_instance_constr. reflexivity. reflexivity.
 
   rewrite subst_instance_constr_mkApps. f_equal; auto.
-  rewrite map_map_compose. apply_spec; eauto.
+  rewrite map_map_compose. solve_all.
 Qed.
 
 Lemma map_subst_instance_constr_to_extended_list_k u ctx k :
   map (subst_instance_constr u) (to_extended_list_k ctx k) = to_extended_list_k ctx k.
 Proof.
   pose proof (to_extended_list_k_spec ctx k).
-  apply_spec. intros. now destruct H0 as [n [-> _]].
+  solve_all. now destruct H as [n [-> _]].
 Qed.
 
 Section Closedu.
@@ -161,9 +161,6 @@ End Closedu.
 
 Require Import ssreflect ssrbool.
 
-Lemma andb_and b b' : b && b' <-> b /\ b'.
-Proof. elim (@andP b b'); intuition. Qed.
-
 (** Universe-closed terms are unaffected by universe substitution. *)
 
 Section UniverseClosedSubst.
@@ -183,16 +180,15 @@ Section UniverseClosedSubst.
   Lemma closedu_subst_instance_univ u t : closedu_universe 0 t -> subst_instance_univ u t = t.
   Proof.
     rewrite /closedu_universe /subst_instance_univ => H.
-    eapply (forallb_Forall (closedu_level_expr 0)) in H; auto.
-    apply_spec. now move=> x /(closedu_subst_instance_level_expr u).
+    eapply (forallb_Forall (closedu_level_expr 0)) in H; auto. solve_all.
+    now apply (closedu_subst_instance_level_expr u).
   Qed.
   Hint Resolve closedu_subst_instance_level_expr closedu_subst_instance_level closedu_subst_instance_univ : terms.
 
   Lemma closedu_subst_instance_instance u t : closedu_instance 0 t -> subst_instance_instance u t = t.
   Proof.
-    rewrite /closedu_instance /subst_instance_instance => H.
-    eapply (forallb_Forall (closedu_level 0)) in H; auto.
-    apply_spec. now move=> x /(closedu_subst_instance_level u).
+    rewrite /closedu_instance /subst_instance_instance => H. solve_all.
+    now apply (closedu_subst_instance_level u).
   Qed.
   Hint Resolve closedu_subst_instance_instance : terms.
 
@@ -200,21 +196,8 @@ Section UniverseClosedSubst.
   Proof.
     induction t in |- * using term_forall_list_ind; simpl; auto; intros H';
       rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length;
-      try f_equal; eauto with terms;
-        try rewrite -> !andb_and in *; try intuition eauto with terms;
-          try solve [f_equal; eauto; merge_Forall; apply_spec; intuition eauto with terms].
-
-    - red in H. merge_Forall. apply_spec.
-      move => [ar t] /=; rewrite /on_snd /=; intuition eauto.
-      now rewrite H.
-    - red in H; merge_Forall; apply_spec.
-      move => [na b ty] /=; rewrite /map_def /test_def /=; intuition try easy.
-      rewrite -> !andb_true_iff in *.
-      f_equal; intuition eauto.
-    - red in H; merge_Forall; apply_spec.
-      move => [na b ty] /=; rewrite /map_def /test_def /=; intuition try easy.
-      rewrite -> !andb_true_iff in *.
-      f_equal; intuition eauto.
+      try f_equal; eauto with terms; unfold test_def in *;
+        try solve [f_equal; eauto; repeat (toProp; solve_all)].
   Qed.
 End UniverseClosedSubst.
 
@@ -274,14 +257,7 @@ Section SubstInstanceClosed.
     induction t in |- * using term_forall_list_ind; simpl; auto; intros H';
     rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length, ?forallb_map;
     try f_equal; auto with terms;
-    try rewrite -> !andb_and in *; try intuition auto with terms;
-    try solve [f_equal; eauto; merge_Forall; apply_spec; intuition auto with terms].
-
-    - merge_Forall. apply_spec.
-      intros [na b ty]; unfold test_def, compose; simpl; intuition;
-        rewrite -> andb_true_iff in *; simpl; intuition auto.
-    - merge_Forall. apply_spec.
-      intros [na b ty]; unfold test_def, compose; simpl; intuition;
-        rewrite -> andb_true_iff in *; simpl; intuition auto.
+    unfold test_def, map_def, compose in *;
+    try solve [f_equal; eauto; repeat (toProp; solve_all); intuition auto with terms].
   Qed.
 End SubstInstanceClosed.

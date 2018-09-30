@@ -3,6 +3,7 @@
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega Lia.
 From Template Require Import config utils Ast AstUtils Induction utils LiftSubst Typing TypingWf.
 From Template Require Import WeakeningEnv Closed.
+Require Import ssreflect ssrbool.
 
 (** * Weakening lemmas for typing derivations.
 
@@ -18,7 +19,7 @@ Proof.
   intros wfΣ wfΓ Hk Hty.
   apply typecheck_closed in Hty; eauto.
   destruct Hty as [_ Hcl].
-  rewrite andb_true_iff in Hcl. destruct Hcl as [clb clty].
+  rewrite -> andb_and in Hcl. destruct Hcl as [clb clty].
   pose proof (closed_upwards k clb).
   pose proof (closed_upwards k clty).
   simpl in *. forward H0 by lia.
@@ -63,7 +64,7 @@ Hint Rewrite lift_context_snoc : lift.
 
 Lemma lift_context_alt n k Γ :
   lift_context n k Γ =
-  mapi (fun k' d => lift_decl n (pred #|Γ| - k' + k) d) Γ.
+  mapi (fun k' d => lift_decl n (Nat.pred #|Γ| - k' + k) d) Γ.
 Proof.
   unfold lift_context. apply fold_context_alt.
 Qed.
@@ -107,7 +108,7 @@ Lemma weaken_nth_error_ge {Γ Γ' v Γ''} : #|Γ'| <= v ->
   nth_error (Γ ,,, Γ'' ,,, lift_context #|Γ''| 0 Γ') (#|Γ''| + v).
 Proof.
   intros Hv.
-  rewrite !nth_error_app_context_ge, ?lift_context_length. f_equal. lia.
+  rewrite -> !nth_error_app_context_ge, ?lift_context_length. f_equal. lia.
   rewrite lift_context_length. lia.
   rewrite lift_context_length. lia. auto.
 Qed.
@@ -117,7 +118,7 @@ Lemma weaken_nth_error_lt {Γ Γ' Γ'' v} : v < #|Γ'| ->
   option_map (lift_decl #|Γ''| (#|Γ'| - S v)) (nth_error (Γ ,,, Γ') v).
 Proof.
   simpl. intros Hv.
-  rewrite !nth_error_app_context_lt.
+  rewrite -> !nth_error_app_context_lt.
   rewrite nth_error_lift_context_eq.
   do 2 f_equal. lia. lia. now rewrite lift_context_length.
 Qed.
@@ -126,8 +127,8 @@ Lemma lift_simpl {Γ'' Γ' : context} {i t} : i < #|Γ'| ->
   lift0 (S i) (lift #|Γ''| (#|Γ'| - S i) t) = lift #|Γ''| #|Γ'| (lift0 (S i) t).
 Proof.
   intros. assert (#|Γ'| = S i + (#|Γ'| - S i)) by easy.
-  rewrite H0 at 2.
-  rewrite <- permute_lift; try easy.
+  rewrite -> H0 at 2.
+  rewrite permute_lift; try easy.
 Qed.
 
 Lemma lift_iota_red n k pars c args brs :
@@ -141,21 +142,15 @@ Qed.
 Lemma parsubst_empty k a : Ast.wf a -> subst [] k a = a.
 Proof.
   induction 1 in k |- * using term_wf_forall_list_ind; simpl; try congruence;
-    try solve [f_equal; eauto; apply_spec; eauto].
+    try solve [f_equal; eauto; solve_all; eauto].
 
   - elim (Nat.compare_spec k n); destruct (Nat.leb_spec k n); intros; try easy.
     subst. rewrite Nat.sub_diag. simpl. rewrite Nat.sub_0_r. reflexivity.
     assert (n - k > 0) by lia.
-    assert (exists n', n - k = S n'). exists (pred (n - k)). lia.
+    assert (exists n', n - k = S n'). exists (Nat.pred (n - k)). lia.
     destruct H2. rewrite H2. simpl. now rewrite Nat.sub_0_r.
   - rewrite IHwf. rewrite mkApps_tApp; eauto with wf.
-    f_equal; apply_spec. auto.
-  - rewrite IHwf, IHwf0. f_equal. red in H. apply_spec. intros; eauto.
-    destruct x; unfold on_snd; simpl in *; congruence.
-  - f_equal. clear H0. red in H; apply_spec. intuition auto.
-    destruct x; unfold map_def; simpl in *; congruence.
-  - f_equal. red in H; apply_spec. intuition auto.
-    destruct x; unfold map_def; simpl in *; congruence.
+    f_equal; solve_all.
 Qed.
 
 Lemma lift_unfold_fix n k mfix idx narg fn :
@@ -219,17 +214,17 @@ Proof.
   pose proof decl' as declty.
   apply typecheck_closed in declty; eauto.
   destruct declty as [declty Hcl].
-  rewrite andb_true_iff in Hcl. destruct Hcl as [clb clty].
+  rewrite -> andb_and in Hcl. destruct Hcl as [clb clty].
   pose proof (closed_upwards k clb).
   pose proof (closed_upwards k clty).
   simpl in *. forward H0 by lia. forward H1 by lia.
   apply (lift_closed n k) in H0.
-  apply (lift_closed n k) in H1. rewrite H0, H1. reflexivity.
+  apply (lift_closed n k) in H1. rewrite H0 H1. reflexivity.
   constructor.
   red in decl'.
   destruct decl'.
   apply typecheck_closed in t. destruct t as [_ ccst].
-  rewrite andb_true_iff in ccst. destruct ccst as [ccst _].
+  rewrite -> andb_and in ccst. destruct ccst as [ccst _].
   eapply closed_upwards in ccst; simpl.
   apply (lift_closed n k) in ccst. unfold map_constant_body. simpl.
   rewrite ccst. reflexivity. lia. auto. constructor.
@@ -248,16 +243,16 @@ Proof.
   eapply typed_liftn in t0 as [Ht HT]; eauto. lia.
 Qed.
 
-Lemma closed_wf_local `{checker_flags} Σ Γ : wf Σ -> wf_local Σ Γ -> closed_ctx Γ = true.
+Lemma closed_wf_local `{checker_flags} Σ Γ : wf Σ -> wf_local Σ Γ -> closed_ctx Γ.
 Proof.
   intros wfΣ. unfold closed_ctx, mapi. intros wf. generalize 0.
   induction wf; intros n; auto; unfold closed_ctx, snoc; simpl;
-    rewrite mapi_rec_app, forallb_app; unfold id, closed_decl. simpl.
+    rewrite mapi_rec_app forallb_app; unfold id, closed_decl. simpl.
   eapply typecheck_closed in t0 as [closedΓ tcl]; eauto.
-  rewrite andb_true_iff in *. intuition auto.
+  rewrite -> andb_and in *. intuition auto.
   erewrite closed_upwards; eauto. rewrite List.rev_length. lia.
   simpl. eapply typecheck_closed in t0 as [closedΓ tcl]; eauto.
-  rewrite andb_true_iff in *. intuition auto.
+  rewrite -> andb_and in *. intuition auto.
   erewrite closed_upwards; eauto.
   erewrite closed_upwards; eauto.
   rewrite List.rev_length. lia.
@@ -325,7 +320,7 @@ Lemma subst0_inds_lift ind u mdecl n k t :
   lift n k (subst0 (inds (inductive_mind ind) u (ind_bodies mdecl)) t).
 Proof.
   rewrite (distr_lift_subst_rec _ _ n 0 k). simpl.
-  unfold arities_context. rewrite rev_map_length, inds_length.
+  unfold arities_context. rewrite rev_map_length inds_length.
   f_equal. generalize (ind_bodies mdecl).
   clear. intros.
   induction l; unfold inds; simpl; auto. f_equal. auto.
@@ -378,10 +373,10 @@ Lemma lift_fix_context:
     fix_context (map (map_def (lift n k) (lift n (#|mfix| + k))) mfix) = lift_context n k (fix_context mfix).
 Proof.
   intros mfix n k. unfold fix_context.
-  rewrite map_vass_map_def, rev_mapi.
+  rewrite map_vass_map_def rev_mapi.
   fold (fix_context mfix).
   rewrite (lift_context_alt n k (fix_context mfix)).
-  unfold lift_decl. now rewrite mapi_length, fix_context_length.
+  unfold lift_decl. now rewrite mapi_length fix_context_length.
 Qed.
 
 Hint Rewrite <- lift_fix_context : lift.
@@ -468,8 +463,6 @@ Proof.
   intros. erewrite IHparams; eauto. simpl. lia.
 Qed.
 
-Require Import ssreflect ssrbool.
-
 Lemma lift_decl_closed n k d : closed_decl k d -> lift_decl n k d = d.
 Proof.
   case: d => na [body|] ty; rewrite /closed_decl /lift_decl /map_decl /=.
@@ -484,12 +477,12 @@ Proof.
   move=> cty k' lek'; rewrite (@closed_upwards k) //.
 Qed.
 
-Lemma closed_ctx_lift n k ctx : closed_ctx ctx = true -> lift_context n k ctx = ctx.
+Lemma closed_ctx_lift n k ctx : closed_ctx ctx -> lift_context n k ctx = ctx.
 Proof.
   induction ctx in n, k |- *; auto.
   unfold closed_ctx, id. simpl.
   rewrite mapi_app forallb_app List.rev_length /= lift_context_snoc0 /snoc Nat.add_0_r.
-  move/andb_true_iff => /= [Hctx /andb_true_iff [Ha _]].
+  move/andb_and => /= [Hctx /andb_and [Ha _]].
   rewrite IHctx // lift_decl_closed //. now apply: closed_decl_upwards.
 Qed.
 
@@ -507,7 +500,7 @@ Proof.
 Qed.
 
 Lemma lift_instantiate_params n k params args t :
-  closed_ctx params = true ->
+  closed_ctx params ->
   option_map (lift n k) (instantiate_params params args t) =
   instantiate_params params (map (lift n k) args) (lift n k t).
 Proof.
@@ -578,9 +571,9 @@ Lemma to_extended_list_map_lift:
 Proof.
   intros n k c.
   pose proof (to_extended_list_lift_above c).
-  symmetry. apply_spec. intros.
-  destruct H0. intuition. subst x. simpl.
-  destruct (leb_spec_Set (#|c| + k) x0). f_equal. lia. reflexivity.
+  symmetry. solve_all.
+  destruct H as [x' [-> Hx]]. simpl.
+  destruct (leb_spec_Set (#|c| + k) x'). f_equal. lia. reflexivity.
 Qed.
 
 Lemma lift_types_of_case ind mdecl idecl args u p pty indctx pctx ps btys n k :
@@ -628,7 +621,7 @@ Proof.
   unfold on_snd. simpl. f_equal.
   rewrite -> lift_it_mkProd_or_LetIn, !lift_mkApps, map_app; simpl.
   rewrite -> !lift_mkApps, !map_app, lift_context_length.
-  rewrite -> permute_lift by lia. repeat f_equal.
+  rewrite -> permute_lift by lia. arith_congr.
   now rewrite -> to_extended_list_lift, <- to_extended_list_map_lift.
   simpl. reflexivity. auto.
   specialize (H _ eq_refl). rewrite -> H. clear H.
@@ -658,14 +651,14 @@ Proof.
       rewrite -> (weaken_nth_error_lt Hn).
       now unfold lift_decl; rewrite -> option_map_decl_body_map_decl, H.
 
-  - econstructor.
-    eauto. rewrite -> H0. f_equal.
+  - econstructor; eauto.
+    rewrite H0. f_equal.
     eapply (lookup_on_global_env _ _ _ _ wfΣ) in H.
     destruct H as [Σ' [wfΣ' decl']].
     red in decl'. red in decl'.
     rewrite -> H0 in decl'.
     apply typecheck_closed in decl'; eauto. destruct decl'.
-    rewrite -> andb_true_iff in e. destruct e as [Hclosed _].
+    rewrite -> andb_and in i. destruct i as [Hclosed _].
     simpl in Hclosed.
     pose proof (closed_upwards #|Γ'| Hclosed).
     forward H by lia.
@@ -701,15 +694,15 @@ Proof.
 Qed.
 
 Lemma lift_eq_term `{checker_flags} ϕ n k T U :
-  eq_term ϕ T U = true ->
-  eq_term ϕ (lift n k T) (lift n k U) = true.
+  eq_term ϕ T U ->
+  eq_term ϕ (lift n k T) (lift n k U).
 Proof.
   induction T in n, k, U |- * using term_forall_list_ind;
     destruct U; simpl;
     try discriminate;
   try solve [simpl; auto];
-  simpl in *; try rewrite -> !andb_true_iff in *; intros Hleq; intuition auto;
-  try solve [merge_Forall; close_Forall; intuition auto].
+  simpl in *; try rewrite -> !andb_and in *; intros Hleq; intuition auto;
+  try solve [solve_all; intuition auto].
 
   - simpl.
     elim leb_spec_Set; simpl.
@@ -718,29 +711,25 @@ Proof.
     -- apply Nat.eqb_eq in Hleq. subst.
        elim leb_spec_Set; intros. lia. apply Nat.eqb_refl.
   - destruct p. destruct Nat.leb; discriminate.
-  - destruct p, p0. rewrite -> !andb_true_iff in *. intuition auto.
-    red in H0. merge_Forall. close_Forall. intuition auto. destruct y. simpl. auto.
-  - merge_Forall; close_Forall. intuition auto.
-    intros. rewrite -> !andb_true_iff in *.
-    destruct x, y; simpl in *; intuition auto.
-    assert (#|m| = #|m0|). clear -H1. induction H1; simpl; auto. rewrite -> H4. auto.
-  - merge_Forall; close_Forall. intuition auto.
-    intros. rewrite -> !andb_true_iff in *.
-    destruct x, y; simpl in *; intuition auto.
-    assert (#|m| = #|m0|). clear -H1. induction H1; simpl; auto. rewrite -> H4. auto.
+  - destruct p, p0. rewrite -> !andb_and in *. intuition auto.
+    solve_all. destruct y. simpl. auto.
+  - assert (#|m| = #|m0|). solve_all. clear -H1. induction H1; simpl; auto. rewrite -> H3.
+    repeat (toProp; solve_all).
+  - assert (#|m| = #|m0|). solve_all. clear -H1. induction H1; simpl; auto. rewrite -> H3.
+    repeat (toProp; solve_all).
 Qed.
 
 Lemma lift_leq_term `{checker_flags} ϕ n k T U :
-  leq_term ϕ T U = true ->
-  leq_term ϕ (lift n k T) (lift n k U) = true.
+  leq_term ϕ T U ->
+  leq_term ϕ (lift n k T) (lift n k U).
 Proof.
   induction T in n, k, U |- * using term_forall_list_ind;
     destruct U; simpl;
     try discriminate;
   try solve [simpl; auto];
-  simpl in *; try destruct p, p0; try rewrite -> !andb_true_iff in *; intros Hleq;
+  simpl in *; try destruct p, p0; try rewrite -> !andb_and in *; intros Hleq;
     intuition auto using lift_eq_term;
-    try (merge_Forall; close_Forall; intuition eauto using lift_eq_term).
+    try solve [solve_all; intuition eauto using lift_eq_term].
 
   - elim leb_spec_Set; simpl.
     -- simpl. apply Nat.eqb_eq in Hleq. subst.
@@ -748,15 +737,11 @@ Proof.
     -- apply Nat.eqb_eq in Hleq. subst.
        elim leb_spec_Set; intros. lia. apply Nat.eqb_refl.
   - destruct p. destruct Nat.leb. discriminate. discriminate.
-  - destruct y. simpl in *. auto using lift_eq_term.
-  - rewrite -> !andb_true_iff in *.
-    destruct x, y; simpl in *; intuition auto using lift_eq_term.
-    assert (#|m| = #|m0|). clear -H1. induction H1; simpl; auto. rewrite -> H4.
-    auto using lift_eq_term.
-  - rewrite -> !andb_true_iff in *.
-    destruct x, y; simpl in *; intuition auto using lift_eq_term.
-    assert (#|m| = #|m0|). clear -H1. induction H1; simpl; auto. rewrite -> H4.
-    auto using lift_eq_term.
+  - solve_all. destruct y. simpl in *. auto using lift_eq_term.
+  - assert (#|m| = #|m0|) as ->. solve_all. clear -H1. induction H1; simpl; auto.
+    repeat (toProp; solve_all); eauto using lift_eq_term.
+  - assert (#|m| = #|m0|) as ->. solve_all. clear -H1. induction H1; simpl; auto.
+    repeat (toProp; solve_all); eauto using lift_eq_term.
 Qed.
 
 Lemma weakening_cumul `{CF:checker_flags} Σ Γ Γ' Γ'' M N :
@@ -774,17 +759,17 @@ Proof.
 Qed.
 
 Lemma lift_eq_context `{checker_flags} φ l l' n k :
-  eq_context φ l l' = true ->
-  eq_context φ (lift_context n k l) (lift_context n k l') = true.
+  eq_context φ l l' ->
+  eq_context φ (lift_context n k l) (lift_context n k l').
 Proof.
   induction l in l', n, k |- *; intros; destruct l'; rewrite -> ?lift_context_snoc0;
     try (discriminate || reflexivity).
-  simpl in *. rewrite -> andb_true_iff in *.
+  simpl in *. rewrite -> andb_and in *.
   intuition. unfold eq_context in H2. apply forallb2_length in H2. rewrite <- H2.
   destruct a, c; try congruence.
   unfold eq_decl in *. simpl.
   destruct decl_body, decl_body0; simpl in *; try congruence.
-  simpl in *. rewrite -> andb_true_iff in *.
+  simpl in *. rewrite -> andb_and in *.
   intuition auto using lift_eq_term.
   intuition auto using lift_eq_term.
 Qed.
@@ -793,10 +778,10 @@ Lemma lift_check_correct_arity:
   forall (cf : checker_flags) (Σ : global_context) (Γ' : context) (ind : inductive) (u : universe_instance)
          (npar : nat) (args : list term) (idecl : one_inductive_body)
          (Γ'' : context) (indctx pctx : list context_decl),
-    check_correct_arity (snd Σ) idecl ind u indctx (firstn npar args) pctx = true ->
+    check_correct_arity (snd Σ) idecl ind u indctx (firstn npar args) pctx ->
     check_correct_arity
       (snd Σ) idecl ind u (lift_context #|Γ''| #|Γ'| indctx) (firstn npar (map (lift #|Γ''| #|Γ'|) args))
-      (lift_context #|Γ''| #|Γ'| pctx) = true.
+      (lift_context #|Γ''| #|Γ'| pctx).
 Proof.
   intros cf Σ Γ' ind u npar args idecl Γ'' indctx pctx.
   unfold check_correct_arity.
@@ -804,7 +789,7 @@ Proof.
   rewrite -> lift_context_snoc0. simpl.
   unfold eq_context.
   unfold UnivSubst.subst_instance_context.
-  rewrite -> !andb_true_iff. intros.
+  rewrite -> !andb_and. intros.
   destruct H. split.
   destruct c. destruct decl_body; try discriminate.
   unfold eq_decl in *. simpl in *.
@@ -815,7 +800,8 @@ Proof.
   rewrite -> lift_mkApps, map_app in H. simpl in H.
   rewrite -> firstn_map. rewrite -> to_extended_list_lift.
   erewrite <- (to_extended_list_map_lift #|Γ''|) in H.
-  rewrite <- H. f_equal. f_equal. f_equal. rewrite -> lift_context_length.
+  rewrite -> lift_context_length.
+  rewrite /is_true -H. f_equal. f_equal. f_equal.
   rewrite -> !map_map_compose. apply map_ext.
   intros. unfold compose. now rewrite -> permute_lift.
   eapply lift_eq_context in H0. eapply H0.
@@ -858,7 +844,7 @@ Proof.
     + assert (forall t, lift0 (S n) (lift #|Γ''| (#|Γ'| - S n) t) = lift #|Γ''| #|Γ'| (lift0 (S n) t)).
       intros. assert (#|Γ'| = S n + (#|Γ'| - S n)) by easy.
       rewrite -> H0 at 2.
-      rewrite <- permute_lift; try easy.
+      rewrite permute_lift; try easy.
       rewrite <- H0.
       rewrite -> map_decl_type. constructor; auto.
       now rewrite -> (weaken_nth_error_lt Hn), H.
@@ -936,8 +922,7 @@ Proof.
     -- destruct idecl; simpl in *; auto.
        destruct decompose_prod_assum. auto.
     -- now rewrite -> !lift_mkApps in X4.
-    -- eapply Forall2_map. close_Forall. intros; intuition eauto.
-       destruct x, y; simpl in *. eauto.
+    -- solve_all.
 
   - simpl.
     erewrite (distr_lift_subst_rec _ _ _ 0 #|Γ'|).
@@ -997,10 +982,9 @@ Proof.
        rewrite -> lift_context_app in IH.
        rewrite -> !app_context_assoc, Nat.add_0_r, !app_context_length, fix_context_length in IH.
        specialize (IH X2 eq_refl).
-       rewrite -> permute_lift, lift_context_length, fix_context_length.
-       subst types; rewrite -> fix_context_length in IH; apply IH.
-       lia.
-       now apply isLambda_lift.
+       rewrite -> permute_lift, lift_context_length, fix_context_length by lia.
+       subst types; rewrite -> fix_context_length in IH.
+       rewrite (Nat.add_comm #|Γ'|). apply IH.
 
   - assert (wf_local Σ (Γ ,,, Γ'' ,,, lift_context #|Γ''| 0 Γ' ,,, lift_context #|Γ''| #|Γ'| (fix_context mfix))).
     subst types.
@@ -1045,7 +1029,9 @@ Proof.
        rewrite -> !app_context_assoc, Nat.add_0_r, !app_context_length, fix_context_length in IH.
        specialize (IH X2 eq_refl).
        rewrite -> permute_lift, lift_context_length, fix_context_length.
-       subst types; rewrite -> fix_context_length in IH; apply IH.
+       subst types; rewrite -> fix_context_length in IH.
+       rewrite (Nat.add_comm #|Γ'|).
+       apply IH.
        lia.
 
   - econstructor; eauto.

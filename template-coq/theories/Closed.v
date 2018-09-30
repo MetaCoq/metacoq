@@ -3,6 +3,7 @@
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega Lia.
 From Template Require Import config utils Ast AstUtils Induction utils LiftSubst Typing TypingWf.
 From Template Require Import WeakeningEnv.
+Require Import ssreflect ssrbool.
 
 Definition closed_decl n d :=
   option_default (closedn n) d.(decl_body) true && closedn n d.(decl_type).
@@ -12,85 +13,57 @@ Definition closed_ctx ctx :=
 
 (** * Lemmas about the [closedn] predicate *)
 
-Lemma closedn_lift n k k' t : closedn k t = true -> closedn (k + n) (lift n k' t) = true.
+Lemma closedn_lift n k k' t : closedn k t -> closedn (k + n) (lift n k' t).
 Proof.
   revert k.
   induction t in n, k' |- * using term_forall_list_ind; intros;
-    simpl in *; rewrite ?andb_true_iff in *;
-    rewrite ?map_map_compose, ?compose_on_snd, ?compose_map_def;
-    try (f_equal; apply_spec);  simpl closed in *;
-      try rewrite ?map_length; intuition auto.
+    simpl in *; rewrite -> ?andb_and in *;
+    rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length, ?Nat.add_assoc;
+    simpl closed in *; solve_all;
+    unfold compose, test_def, test_snd in *;
+      try solve [simpl lift; simpl closed; f_equal; auto; repeat (toProp; solve_all)]; try easy.
 
   - elim (Nat.leb_spec k' n0); intros. simpl.
     elim (Nat.ltb_spec); auto. apply Nat.ltb_lt in H. lia.
     simpl. elim (Nat.ltb_spec); auto. intros.
     apply Nat.ltb_lt in H. lia.
-  - merge_Forall. rewrite forallb_map. eapply Forall_forallb in H0; intuition eauto.
-  - specialize (IHt2 n (S k') _ H1). eauto.
-  - specialize (IHt2 n (S k') _ H1). eauto.
-  - specialize (IHt3 n (S k') _ H1). eauto.
-  - merge_Forall. rewrite forallb_map. eapply Forall_forallb in H2; intuition eauto.
-  - merge_Forall. rewrite forallb_map. eapply Forall_forallb in H2; intuition eauto.
-    destruct x; unfold test_snd, compose, on_snd; simpl. eapply H1. auto.
-  - merge_Forall. rewrite forallb_map. eapply Forall_forallb in H0; intuition eauto.
-    unfold test_def, compose, map_def in *. simpl.
-    rewrite !andb_true_iff in *. intuition auto.
-    rewrite Nat.add_assoc. eauto.
-  - merge_Forall. rewrite forallb_map. eapply Forall_forallb in H0; intuition eauto.
-    unfold test_def, compose, map_def in *. simpl.
-    rewrite !andb_true_iff in *. intuition auto.
-    rewrite Nat.add_assoc. eauto.
 Qed.
 
-
 Lemma closedn_lift_inv n k k' t : k <= k' ->
-                                   closedn (k' + n) (lift n k t) = true ->
-                                   closedn k' t = true.
+                                   closedn (k' + n) (lift n k t) ->
+                                   closedn k' t.
 Proof.
   induction t in n, k, k' |- * using term_forall_list_ind; intros;
-    simpl in *; rewrite ?andb_true_iff in *;
-    rewrite ?map_map_compose, ?compose_on_snd, ?compose_map_def;
-    try (f_equal; apply_spec);  simpl closed in *;
-      try rewrite ?map_length; intuition eauto 2.
+    simpl in *;
+    rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length, ?Nat.add_assoc in *;
+    simpl closed in *; repeat (toProp; solve_all); try change_Sk;
+    unfold compose, test_def, on_snd, test_snd in *; simpl in *; eauto with all.
 
   - revert H0.
     elim (Nat.leb_spec k n0); intros. simpl in *.
     elim (Nat.ltb_spec); auto. apply Nat.ltb_lt in H1. intros. lia.
     revert H1. simpl. elim (Nat.ltb_spec); auto. intros. apply Nat.ltb_lt. lia.
-  - rewrite forallb_map in H1. merge_Forall. eapply Forall_forallb; eauto.
-    simpl; intuition eauto.
-  - specialize (IHt2 n (S k) (S k')). eauto with arith.
-  - specialize (IHt2 n (S k) (S k')). eauto with arith.
-  - specialize (IHt3 n (S k) (S k')). eauto with arith.
-  - rewrite forallb_map in H3. merge_Forall. eapply Forall_forallb; eauto. simpl; intuition eauto.
-  - rewrite forallb_map in H3. merge_Forall. eapply Forall_forallb; eauto. simpl; intuition eauto.
-    destruct x; unfold test_snd, compose, on_snd in *; simpl in *; eauto.
-  - rewrite forallb_map in H1. merge_Forall. eapply Forall_forallb; intuition eauto.
-    unfold test_def, compose, map_def in *. simpl in *.
-    rewrite !andb_true_iff in *. rewrite !map_length in *. intuition eauto 2.
-    rewrite Nat.add_assoc in H5. specialize (H4 n (#|m| + k) (#|m| + k')). forward H4 by lia.
-    apply H4. auto.
-  - rewrite forallb_map in H1. merge_Forall. eapply Forall_forallb; intuition eauto.
-    unfold test_def, compose, map_def in *. simpl in *.
-    rewrite !andb_true_iff in *. rewrite !map_length in *. intuition eauto 2.
-    rewrite Nat.add_assoc in H5. specialize (H4 n (#|m| + k) (#|m| + k')). forward H4 by lia.
-    apply H4. auto.
+  - specialize (IHt2 n (S k) (S k')). eauto with all.
+  - specialize (IHt2 n (S k) (S k')). eauto with all.
+  - specialize (IHt3 n (S k) (S k')). eauto with all.
+  - toProp. solve_all. specialize (H1 n (#|m| + k) (#|m| + k')). eauto with all.
+  - toProp. solve_all. specialize (H1 n (#|m| + k) (#|m| + k')). eauto with all.
 Qed.
 
 Lemma closedn_mkApps k f u:
-  closedn k f = true -> forallb (closedn k) u = true ->
-  closedn k (mkApps f u) = true.
+  closedn k f -> forallb (closedn k) u ->
+  closedn k (mkApps f u).
 Proof.
   intros Hf Hu.
   induction u; simpl; auto.
-  destruct f; simpl in *; try rewrite Hf, Hu; auto.
+  destruct f; simpl in *; try rewrite Hf Hu; auto.
   rewrite forallb_app. simpl. rewrite Hu.
   rewrite andb_assoc. now rewrite Hf.
 Qed.
 
 Lemma closedn_mkApps_inv k f u:
-  closedn k (mkApps f u) = true ->
-  closedn k f && forallb (closedn k) u = true.
+  closedn k (mkApps f u) ->
+  closedn k f && forallb (closedn k) u.
 Proof.
   induction u; simpl; auto.
   - now rewrite andb_true_r.
@@ -100,58 +73,44 @@ Proof.
 Qed.
 
 Lemma closedn_subst s k k' t :
-  forallb (closedn k) s = true -> closedn (k + k' + #|s|) t = true ->
-  closedn (k + k') (subst s k' t) = true.
+  forallb (closedn k) s -> closedn (k + k' + #|s|) t ->
+  closedn (k + k') (subst s k' t).
 Proof.
+  intros Hs. solve_all. revert H.
   induction t in k' |- * using term_forall_list_ind; intros;
-    simpl in *; rewrite ?andb_true_iff in *;
-    rewrite ?map_map_compose, ?compose_on_snd, ?compose_map_def;
-    try (f_equal; apply_spec);  simpl closed in *;
-      try rewrite ?map_length; intuition auto.
+    simpl in *;
+    rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length;
+    simpl closed in *; try change_Sk; repeat (toProp; solve_all);
+    unfold compose, test_def, on_snd, test_snd in *; simpl in *; eauto with all.
 
   - elim (Nat.leb_spec k' n); intros. simpl.
-    apply Nat.ltb_lt in H0.
+    apply Nat.ltb_lt in H.
     destruct nth_error eqn:Heq.
-    -- eapply closedn_lift. eapply forallb_Forall in H; eauto. 2:{ intros. apply H2. }
-       now eapply nth_error_forall in Heq; simpl; eauto; simpl in *.
+    -- eapply closedn_lift.
+       now eapply nth_error_all in Heq; simpl; eauto; simpl in *.
     -- simpl. elim (Nat.ltb_spec); auto. intros.
        apply nth_error_None in Heq. lia.
     -- simpl. apply Nat.ltb_lt in H0.
-       apply Nat.ltb_lt. lia.
+       apply Nat.ltb_lt. apply Nat.ltb_lt in H0. lia.
 
-  - merge_Forall. rewrite forallb_map.
-    eapply Forall_forallb; eauto. unfold compose; intuition eauto.
-  - specialize (IHt2 (S k') H).
+  - specialize (IHt2 (S k')).
     rewrite <- Nat.add_succ_comm in IHt2. eauto.
-  - specialize (IHt2 (S k') H).
+  - specialize (IHt2 (S k')).
     rewrite <- Nat.add_succ_comm in IHt2. eauto.
-  - specialize (IHt3 (S k') H).
+  - specialize (IHt3 (S k')).
     rewrite <- Nat.add_succ_comm in IHt3. eauto.
-  - merge_Forall.
-    rewrite closedn_mkApps. eauto.
-    now specialize (IHt k' H0).
-    rewrite forallb_map. eapply Forall_forallb; eauto. simpl; intuition eauto.
-  - merge_Forall. rewrite forallb_map. eapply Forall_forallb; eauto.
-    simpl. intros [n trm]. unfold test_snd, on_snd, compose. intuition eauto.
-  - merge_Forall. rewrite forallb_map. eapply Forall_forallb; eauto. simpl; intuition eauto.
-    unfold test_def, compose, map_def in *. simpl.
-    rewrite !andb_true_iff in *. intuition auto.
-    rewrite Nat.add_assoc.
-    specialize (H4 (#|m| + k')).
-    rewrite <- H4; eauto.
-    f_equal; lia. rewrite <- H5. f_equal; lia.
-  - merge_Forall. rewrite forallb_map. eapply Forall_forallb; eauto. simpl; intuition eauto.
-    unfold test_def, compose, map_def in *. simpl.
-    rewrite !andb_true_iff in *. intuition auto.
-    rewrite Nat.add_assoc.
-    specialize (H4 (#|m| + k')).
-    rewrite <- H4; eauto.
-    f_equal; lia. rewrite <- H5. f_equal; lia.
+  - rewrite closedn_mkApps; solve_all.
+  - toProp; solve_all. rewrite -> !Nat.add_assoc in *.
+    specialize (H0 (#|m| + k')). unfold is_true. rewrite <- H0. f_equal. lia.
+    unfold is_true. rewrite <- H2. f_equal. lia.
+  - toProp; solve_all. rewrite -> !Nat.add_assoc in *.
+    specialize (H0 (#|m| + k')). unfold is_true. rewrite <- H0. f_equal. lia.
+    unfold is_true. rewrite <- H2. f_equal. lia.
 Qed.
 
 Lemma closedn_subst0 s k t :
-  forallb (closedn k) s = true -> closedn (k + #|s|) t = true ->
-  closedn k (subst0 s t) = true.
+  forallb (closedn k) s -> closedn (k + #|s|) t ->
+  closedn k (subst0 s t).
 Proof.
   intros.
   generalize (closedn_subst s k 0 t H).
@@ -159,7 +118,7 @@ Proof.
 Qed.
 
 Lemma subst_closedn s k t : Ast.wf t ->
-  closedn k t = true -> subst s k t = t.
+  closedn k t -> subst s k t = t.
 Proof.
   intros Hcl.
   pose proof (simpl_subst_rec _ Hcl s 0 k k).
@@ -173,8 +132,8 @@ Lemma closedn_subst_instance_constr k t u :
 Proof.
   revert k.
   induction t in |- * using term_forall_list_ind; intros;
-    simpl in *; rewrite ?andb_true_iff in *;
-    rewrite ?map_map_compose, ?compose_on_snd, ?compose_map_def;
+    simpl in *; rewrite -> ?andb_and in *;
+    rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def;
     try solve [repeat (f_equal; eauto)];  simpl closed in *;
       try rewrite ?map_length; intuition auto.
 
@@ -196,53 +155,54 @@ Require Import ssreflect.
 
 Lemma typecheck_closed `{cf : checker_flags} :
   env_prop (fun Σ Γ t T =>
-              closedn #|Γ| t && closedn #|Γ| T = true).
+              closedn #|Γ| t && closedn #|Γ| T).
 Proof.
   assert(weaken_env_prop (lift_typing (fun (_ : global_context) (Γ : context) (t T : term) =>
-                                         closedn #|Γ| t && closedn #|Γ| T = true))).
+                                         closedn #|Γ| t && closedn #|Γ| T))).
   { repeat red. intros. destruct t; red in X0; eauto. }
 
-  apply typing_ind_env; intros; simpl; rewrite -> ?andb_true_iff in *; try solve [intuition auto].
+  apply typing_ind_env; intros; simpl; rewrite -> ?andb_and in *; try solve [intuition auto].
   - pose proof (nth_error_Some_length H).
     elim (Nat.ltb_spec n #|Γ|); intuition.
     eapply (All_local_env_lookup H0) in H. red in H.
     destruct decl_body.
-    -- move/andb_true_iff: H => [].
+    -- move/andb_and: H => [].
        rewrite skipn_length; try lia; move=> Ht.
        move/(closedn_lift (S n)).
        now have->: #|Γ| - S n + S n = #|Γ| by lia.
     -- move: H => [s].
-       move/andb_true_iff => [Hty _].
+       move/andb_and => [Hty _].
        move: Hty; rewrite skipn_length; try lia.
        move/(closedn_lift (S n)).
-       by have->: #|Γ| - S n + S n = #|Γ| by lia.
+       have->: #|Γ| - S n + S n = #|Γ| by lia.
+       eauto.
 
   - destruct H. rewrite and_assoc. split. auto.
     clear X0 H H0 H1.
     induction X1; simpl. intuition auto.
-    rewrite -> andb_true_iff in *. destruct p0. rewrite H.
-    rewrite <- andb_true_iff. simpl.
+    rewrite -> andb_and in *. destruct p0. rewrite H.
+    rewrite <- andb_and. simpl.
     apply IHX1. unfold subst.
     pose proof (closedn_subst [hd] #|Γ| 0). rewrite Nat.add_0_r in H1.
     apply H1. simpl. now rewrite H.
-    simpl. simpl in p. rewrite -> andb_true_iff in p. intuition auto.
+    simpl. simpl in p. rewrite -> andb_and in p. intuition auto.
     rewrite Nat.add_1_r. auto.
 
   - rewrite closedn_subst_instance_constr.
     eapply lookup_on_global_env in H; eauto.
     destruct H as [Σ' [HΣ' IH]].
     repeat red in IH. destruct decl, cst_body. simpl in *.
-    rewrite -> andb_true_iff in IH. intuition.
+    rewrite -> andb_and in IH. intuition.
     eauto using closed_upwards with arith.
     simpl in *.
     repeat red in IH. destruct IH as [s Hs].
-    rewrite -> andb_true_iff in Hs. intuition.
+    rewrite -> andb_and in Hs. intuition.
     eauto using closed_upwards with arith.
 
   - rewrite closedn_subst_instance_constr.
     eapply declared_inductive_inv in X0; eauto.
     apply onArity in X0. repeat red in X0.
-    destruct X0 as [[s Hs] _]. rewrite -> andb_true_iff in Hs.
+    destruct X0 as [[s Hs] _]. rewrite -> andb_and in Hs.
     intuition eauto using closed_upwards with arith.
 
   - destruct isdecl as [Hidecl Hcdecl].
@@ -250,7 +210,7 @@ Proof.
     apply onConstructors in X0. repeat red in X0.
     eapply nth_error_alli in Hcdecl; eauto.
     repeat red in Hcdecl.
-    destruct Hcdecl as [[s Hs] _]. rewrite -> andb_true_iff in Hs.
+    destruct Hcdecl as [[s Hs] _]. rewrite -> andb_and in Hs.
     destruct Hs as [Hdecl _].
     unfold type_of_constructor.
     apply closedn_subst0.
@@ -261,11 +221,8 @@ Proof.
     rewrite closedn_subst_instance_constr.
     eauto using closed_upwards with arith.
 
-  - intuition auto.
-    eapply Forall_forallb; eauto.
-    eapply Forall2_Forall_left; eauto.
-    simpl; intros. destruct X4. rewrite -> andb_true_iff in e. destruct e.
-    apply H5. simpl; intros. eauto.
+  - intuition auto. solve_all. unfold test_snd. simpl in *.
+    toProp; eauto.
     apply closedn_mkApps; auto.
     rewrite forallb_app. simpl. rewrite H4.
     rewrite forallb_skipn; auto.
@@ -287,35 +244,28 @@ Proof.
     rewrite andb_true_r in Hs. rewrite List.rev_length.
     eauto using closed_upwards with arith.
 
-  - split. eapply All_forallb; eauto.
-    simpl; eauto. intros. intuition.
+  - split. solve_all.
     destruct x; simpl in *.
-    unfold test_def. simpl.
-    rewrite -> andb_true_iff in *. destruct b.
+    unfold test_def. simpl. toProp.
     split.
     rewrite -> app_context_length in *. rewrite -> Nat.add_comm in *.
     eapply closedn_lift_inv in H1; eauto. lia.
     subst types.
     now rewrite app_context_length fix_context_length in H0.
-    eapply nth_error_all in H; eauto. simpl in H. intuition.
-    rewrite -> !andb_true_iff in b. intuition.
+    eapply nth_error_all in H; eauto. simpl in H. intuition. toProp.
     subst types. rewrite app_context_length in H0.
     rewrite Nat.add_comm in H0.
     now eapply closedn_lift_inv in H0.
 
-  - split. eapply All_forallb; eauto.
-    simpl; eauto. intros. intuition.
-    destruct x; simpl in *.
-    unfold test_def. simpl.
-    rewrite -> andb_true_iff in *. destruct b.
+  - split. solve_all. destruct x; simpl in *.
+    unfold test_def. simpl. toProp.
     split.
     rewrite -> app_context_length in *. rewrite -> Nat.add_comm in *.
     eapply closedn_lift_inv in H1; eauto. lia.
     subst types.
     now rewrite -> app_context_length, fix_context_length in H0.
     eapply (nth_error_all) in H; eauto. simpl in *.
-    intuition.
-    rewrite -> !andb_true_iff in b. intuition.
+    intuition. toProp.
     subst types. rewrite app_context_length in H0.
     rewrite Nat.add_comm in H0.
     now eapply closedn_lift_inv in H0.
@@ -326,7 +276,7 @@ Lemma declared_decl_closed `{checker_flags} Σ cst decl :
   lookup_env (fst Σ) cst = Some decl ->
   on_global_decl (fun Σ Γ b t =>
                     match b with Some b => Ast.wf b | None => True end /\ Ast.wf t /\
-                    option_default (closedn #|Γ|) b true && closedn #|Γ| t = true) Σ decl.
+                    option_default (closedn #|Γ|) b true && closedn #|Γ| t) Σ decl.
 Proof.
   intros.
   eapply weaken_lookup_on_global_env; try red; eauto.
@@ -342,7 +292,7 @@ Proof.
   destruct Hwf; simpl; intuition auto.
   destruct Hwf; simpl; intuition auto.
   destruct Hcl; simpl; intuition auto.
-  rewrite -> andb_true_iff in e. intuition.
+  toProp; intuition.
 Qed.
 
 Require Import ssreflect ssrbool.

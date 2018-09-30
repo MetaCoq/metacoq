@@ -119,8 +119,8 @@ Proof.
 
   constructor; auto. destruct t; simpl in *; try congruence. destruct l; simpl in *; congruence.
   now apply Forall_map.
-  constructor; auto. merge_Forall. apply Forall_map.
-  eapply Forall_impl; eauto. intros. simpl in *. red. intuition auto.
+  constructor; auto. solve_all.
+  unfold compose. solve_all.
   destruct x; simpl in *.
   destruct dbody; simpl in *; congruence.
 Qed.
@@ -183,7 +183,7 @@ Hint Extern 10 => progress simpl : wf.
 Hint Unfold snoc : wf.
 Hint Extern 3 => apply wf_lift || apply wf_subst || apply wf_subst_instance_constr : wf.
 Hint Extern 10 => constructor : wf.
-Hint Resolve Forall_skipn : wf.
+Hint Resolve All_skipn : wf.
 
 Lemma wf_inds mind bodies u : Forall Ast.wf (inds mind u bodies).
 Proof.
@@ -211,23 +211,14 @@ Qed.
 Lemma wf_lift_wf n k t : Ast.wf (lift n k t) -> Ast.wf t.
 Proof.
   induction t in n, k |- * using term_forall_list_ind; simpl in *;
-    intros Hwf; inv Hwf; try constructor; eauto.
+    intros Hwf; inv Hwf; try constructor; eauto;
+      repeat (unfold compose, snd, on_snd in *; simpl in *; solve_all).
 
-  - apply Forall_map_inv in H0. merge_Forall. eapply Forall_impl; eauto.
-    simpl ; intros. intuition eauto.
   - destruct t; try discriminate. simpl in *. congruence.
   - destruct l; simpl in *; congruence.
-  - apply Forall_map_inv in H3. merge_Forall. eapply Forall_impl; eauto.
-    simpl ; intros. intuition eauto.
-  - apply Forall_map_inv in H2. merge_Forall. eapply Forall_impl; eauto.
-    simpl ; intros. intuition eauto. unfold compose in *.
-    destruct x; simpl in *; eauto.
-  - apply Forall_map_inv in H0. merge_Forall. eapply Forall_impl; eauto.
-    simpl ; intros. unfold compose in *; destruct x; simpl in *; intuition eauto.
-    destruct dbody; try discriminate. simpl in H5. destruct Nat.leb; auto.
+  - destruct x; simpl in *; intuition eauto.
+    destruct dbody; simpl in *; try discriminate. destruct Nat.leb; auto.
     reflexivity.
-  - apply Forall_map_inv in H0. merge_Forall. eapply Forall_impl; eauto.
-    simpl ; intros. unfold compose in *; destruct x; simpl in *; intuition eauto.
 Qed.
 
 Lemma typing_wf_gen `{checker_flags} : env_prop (fun Σ Γ t T => Ast.wf t /\ Ast.wf T).
@@ -268,12 +259,11 @@ Proof.
     apply onConstructors in Hidecl.
     eapply nth_error_alli in Hcdecl; eauto.
     destruct Hcdecl as [[s Hs] Hpars]. unfold type_of_constructor. wf.
-  - split. wf. constructor; eauto.
-    eapply Forall2_Forall_left; eauto. simpl. intuition auto.
-    apply wf_mkApps. wf. apply Forall_app_inv. split. 2:wf.
-    inv H6. apply wf_mkApps_inv in H8. now apply Forall_skipn.
-  - split. wf. apply wf_subst. constructor. wf. intuition.
-    apply wf_mkApps_inv in H3. now apply Forall_rev.
+  - split. wf. constructor; eauto. solve_all.
+    apply wf_mkApps. wf. solve_all. apply wf_mkApps_inv in H10. solve_all.
+    apply All_app_inv; solve_all. now apply All_skipn.
+  - split. wf. apply wf_subst. solve_all. constructor. wf.
+    apply wf_mkApps_inv in H3. apply All_rev. solve_all.
     subst ty. destruct isdecl as [[Hmdecl Hidecl] Hpdecl].
     eapply lookup_on_global_env in Hmdecl as [Σ' [wfΣ' prf]]; eauto. red in prf.
     apply onInductives in prf.

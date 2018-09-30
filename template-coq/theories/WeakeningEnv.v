@@ -199,9 +199,11 @@ Proof.
     unfold on_arity, on_type in *; intuition eauto.
     unfold on_constructors in *. eapply Alli_impl; eauto.
     intros ik [[id t] ar]. unfold on_constructor, on_type in *; intuition eauto.
-    destruct decompose_prod_assum. intuition.
+    red in onProjections |- *.
     eapply Alli_impl; eauto. intros ip [id trm].
     unfold on_projection, on_type; eauto.
+    destruct decompose_prod_assum. intuition auto.
+    eapply HPΣ; eauto.
   - red in onP |- *. eapply weakening_All_local_env_impl; eauto.
     intros. eapply HPΣ; eauto.
 Qed.
@@ -261,6 +263,33 @@ Proof.
   apply Hidecl.
 Qed.
 
+Lemma declared_constructor_inv `{checker_flags} Σ P mdecl idecl ref cdecl :
+  weaken_env_prop (lift_typing P) ->
+  wf Σ -> Forall_decls_typing P Σ ->
+  declared_constructor (fst Σ) mdecl idecl ref cdecl ->
+  on_constructor (lift_typing P) Σ (inductive_mind (fst ref)) mdecl (inductive_ind (fst ref)) idecl (snd ref) cdecl.
+Proof.
+  intros.
+  destruct H0 as [Hidecl Hcdecl].
+  eapply declared_inductive_inv in Hidecl; eauto.
+  apply onConstructors in Hidecl.
+  eapply nth_error_alli in Hidecl; eauto.
+Qed.
+
+Lemma declared_projection_inv `{checker_flags} Σ P mdecl idecl ref pdecl :
+  weaken_env_prop (lift_typing P) ->
+  wf Σ -> Forall_decls_typing P Σ ->
+  declared_projection (fst Σ) mdecl idecl ref pdecl ->
+  on_projection (lift_typing P) Σ (inductive_mind (fst (fst ref))) mdecl
+                (inductive_ind (fst (fst ref))) idecl (snd ref) pdecl.
+Proof.
+  intros.
+  destruct H0 as [Hidecl Hcdecl].
+  eapply declared_inductive_inv in Hidecl; eauto.
+  apply onProjections in Hidecl.
+  eapply nth_error_alli in Hidecl; eauto.
+Qed.
+
 Lemma wf_extends `{checker_flags} {Σ Σ'} : wf Σ' -> extends Σ Σ' -> wf Σ.
 Proof.
   unfold wf, on_global_env. unfold extends. simpl.
@@ -279,7 +308,7 @@ Proof.
   eapply weakening_env; eauto. eapply typing_wf_local in Ht; eauto.
 Qed.
 
-Lemma on_declared_minductive `{checker_flags} Σ ref decl :
+Lemma on_declared_minductive `{checker_flags} {Σ ref decl} :
   wf Σ ->
   declared_minductive (fst Σ) ref decl ->
   on_inductive (lift_typing typing) Σ ref decl.
@@ -288,7 +317,7 @@ Proof.
   apply (declared_minductive_inv _ _ _ _ weaken_env_prop_typing wfΣ wfΣ Hdecl).
 Qed.
 
-Lemma on_declared_inductive `{checker_flags} Σ ref mdecl idecl :
+Lemma on_declared_inductive `{checker_flags} {Σ ref mdecl idecl} :
   wf Σ ->
   declared_inductive (fst Σ) ref mdecl idecl ->
   on_inductive (lift_typing typing) Σ (inductive_mind ref) mdecl *
@@ -297,4 +326,29 @@ Proof.
   intros wfΣ Hdecl.
   split. destruct Hdecl as [Hmdecl _]. now apply on_declared_minductive in Hmdecl.
   apply (declared_inductive_inv _ _ _ mdecl idecl weaken_env_prop_typing wfΣ wfΣ Hdecl).
+Qed.
+
+Lemma on_declared_constructor `{checker_flags} {Σ ref mdecl idecl cdecl} :
+  wf Σ ->
+  declared_constructor (fst Σ) mdecl idecl ref cdecl ->
+  on_inductive (lift_typing typing) Σ (inductive_mind (fst ref)) mdecl *
+  on_ind_body (lift_typing typing) Σ (inductive_mind (fst ref)) mdecl (inductive_ind (fst ref)) idecl *
+  on_constructor (lift_typing typing) Σ (inductive_mind (fst ref)) mdecl (inductive_ind (fst ref)) idecl (snd ref) cdecl.
+Proof.
+  intros wfΣ Hdecl.
+  split. destruct Hdecl as [Hidecl Hcdecl]. now apply on_declared_inductive in Hidecl.
+  apply (declared_constructor_inv _ _ mdecl idecl ref cdecl weaken_env_prop_typing wfΣ wfΣ Hdecl).
+Qed.
+
+Lemma on_declared_projection `{checker_flags} {Σ ref mdecl idecl pdecl} :
+  wf Σ ->
+  declared_projection (fst Σ) mdecl idecl ref pdecl ->
+  on_inductive (lift_typing typing) Σ (inductive_mind (fst (fst ref))) mdecl *
+  on_ind_body (lift_typing typing) Σ (inductive_mind (fst (fst ref))) mdecl (inductive_ind (fst (fst ref))) idecl *
+  on_projection (lift_typing typing) Σ (inductive_mind (fst (fst ref))) mdecl
+                (inductive_ind (fst (fst ref))) idecl (snd ref) pdecl.
+Proof.
+  intros wfΣ Hdecl.
+  split. destruct Hdecl as [Hidecl Hcdecl]. now apply on_declared_inductive in Hidecl.
+  apply (declared_projection_inv _ _ mdecl idecl ref pdecl weaken_env_prop_typing wfΣ wfΣ Hdecl).
 Qed.

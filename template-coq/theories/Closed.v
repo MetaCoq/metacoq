@@ -279,11 +279,10 @@ Proof.
     destruct isdecl as [isdecl Hpdecl].
     eapply declared_inductive_inv in isdecl; eauto.
     apply onProjections in isdecl.
-    destruct decompose_prod_assum eqn:Heq.
-    destruct isdecl as [Hc isdecl].
     eapply nth_error_alli in isdecl; eauto.
-    destruct isdecl as [s Hs]. simpl in *.
-    forward Hc. intro. rewrite H in Hpdecl; destruct (snd p); discriminate.
+    red in isdecl.
+    destruct decompose_prod_assum eqn:Heq.
+    destruct isdecl as [[s Hs] Hc]. simpl in *.
     rewrite <- Hc in H0. rewrite <- H0 in Hs.
     rewrite andb_true_r in Hs. rewrite List.rev_length.
     eauto using closed_upwards with arith.

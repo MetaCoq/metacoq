@@ -19,8 +19,8 @@ Proof.
   apply typecheck_closed in Hty; eauto.
   destruct Hty as [_ Hcl].
   rewrite andb_true_iff in Hcl. destruct Hcl as [clb clty].
-  pose proof (closed_upwards _ _ clb k).
-  pose proof (closed_upwards _ _ clty k).
+  pose proof (closed_upwards k clb).
+  pose proof (closed_upwards k clty).
   simpl in *. forward H0 by lia.
   apply (lift_closed n) in H0.
   simpl in *. forward H1 by lia.
@@ -220,8 +220,8 @@ Proof.
   apply typecheck_closed in declty; eauto.
   destruct declty as [declty Hcl].
   rewrite andb_true_iff in Hcl. destruct Hcl as [clb clty].
-  pose proof (closed_upwards _ _ clb k).
-  pose proof (closed_upwards _ _ clty k).
+  pose proof (closed_upwards k clb).
+  pose proof (closed_upwards k clty).
   simpl in *. forward H0 by lia. forward H1 by lia.
   apply (lift_closed n k) in H0.
   apply (lift_closed n k) in H1. rewrite H0, H1. reflexivity.
@@ -290,9 +290,10 @@ Proof.
     apply (Alli_map_id onConstructors).
     intros n1 [[x p] n']. intros [[s Hty] Hpars].
     unfold on_pi2; f_equal; f_equal. eapply typed_liftn. 4:eapply Hty. wf. wf. simpl. lia.
-    rewrite Heq in onProjections. destruct onProjections as [_ onProjections].
     apply (Alli_map_id onProjections).
-    intros n1 [x p]. intros [s Hty].
+    intros n1 [x p].
+    unfold on_projection. simpl. rewrite Heq.
+    intros [[s Hty] Hpars].
     unfold on_snd; f_equal; f_equal.
     eapply typed_liftn. 4:eapply Hty. wf. wf. simpl. lia.
 Qed.
@@ -357,31 +358,19 @@ Lemma lift_declared_projection `{checker_flags} Σ c mdecl idecl pdecl n k :
   declared_projection (fst Σ) mdecl idecl c pdecl ->
   on_snd (lift n (S (ind_npars mdecl + k))) pdecl = pdecl.
 Proof.
-  unfold declared_projection. destruct c as [[i k'] ci]. intros wfΣ [Hidecl Hcdecl].
-  simpl in *.
-  pose proof Hidecl. destruct H0 as [Hmdecl Hidecl'].
-  eapply lookup_on_global_env in Hmdecl; eauto.
-  destruct Hmdecl as [Σ' [wfΣ' ongdecl]].
-  red in ongdecl.
-  apply onInductives in ongdecl.
-  eapply nth_error_alli in Hidecl'; eauto.
-  apply onProjections in Hidecl'.
-  destruct decompose_prod_assum eqn:Heq.
-  destruct Hidecl' as [Hpars _].
-  destruct Σ. eapply (lift_declared_inductive _ _ _ _ n k) in Hidecl; eauto.
-  destruct pdecl as [id t'].
-  destruct idecl; simpl in *.
-  destruct (decompose_prod_assum _ _) eqn:Heq'.
-  injection Hidecl.
   intros.
-  rewrite <- H2 in Heq. rewrite Heq in Heq'. injection Heq'. intros <- <-.
-  forward Hpars. destruct ind_projs; destruct ci; discriminate.
-  rewrite Hpars in H0.
-  pose proof Hcdecl as Hcdecl'.
-  rewrite <- H0 in Hcdecl.
-  rewrite nth_error_map in Hcdecl; eauto.
-  rewrite Hcdecl' in Hcdecl. simpl in Hcdecl.
-  congruence.
+  destruct H0 as [[Hmdecl Hidecl] Hpdecl].
+  eapply declared_decl_closed in Hmdecl.
+  simpl in Hmdecl.
+  apply onInductives in Hmdecl.
+  eapply nth_error_alli in Hmdecl; eauto.
+  eapply onProjections in Hmdecl; eauto.
+  eapply nth_error_alli in Hmdecl; eauto.
+  red in Hmdecl.
+  destruct decompose_prod_assum eqn:Heq.
+  destruct Hmdecl as [[s Hwf] Hpars].
+  intuition auto. destruct pdecl as [id ty]. unfold on_snd; simpl in *.
+  f_equal. eapply lift_closed. rewrite <- Hpars. eapply closed_upwards; eauto. lia. auto.
 Qed.
 
 Lemma lift_fix_context:
@@ -491,8 +480,8 @@ Qed.
 Lemma closed_decl_upwards k d : closed_decl k d -> forall k', k <= k' -> closed_decl k' d.
 Proof.
   case: d => na [body|] ty; rewrite /closed_decl /=.
-  move/andP => [cb cty] k' lek'. do 2 rewrite (closed_upwards k) //.
-  move=> cty k' lek'; rewrite (closed_upwards k) //.
+  move/andP => [cb cty] k' lek'. do 2 rewrite (@closed_upwards k) //.
+  move=> cty k' lek'; rewrite (@closed_upwards k) //.
 Qed.
 
 Lemma closed_ctx_lift n k ctx : closed_ctx ctx = true -> lift_context n k ctx = ctx.
@@ -513,7 +502,7 @@ Proof.
   move=> n0.
   rewrite /closed_ctx !rev_app_distr /id /=.
   move/andP => [closedx Hctx].
-  rewrite lift_decl_closed. rewrite (closed_decl_upwards n0) //; lia.
+  rewrite lift_decl_closed. rewrite (@closed_decl_upwards n0) //; lia.
   f_equal. now rewrite IHctx.
 Qed.
 
@@ -678,7 +667,7 @@ Proof.
     apply typecheck_closed in decl'; eauto. destruct decl'.
     rewrite -> andb_true_iff in e. destruct e as [Hclosed _].
     simpl in Hclosed.
-    pose proof (closed_upwards _ _ Hclosed #|Γ'|).
+    pose proof (closed_upwards #|Γ'| Hclosed).
     forward H by lia.
     apply (lift_closed #|Γ''| #|Γ'|) in H. auto.
     constructor.

@@ -563,9 +563,9 @@ Proof.
     now autorewrite with core.
 Qed.
 
-Lemma closed_upwards k t : closedn k t = true -> forall k', k' >= k -> closedn k' t = true.
+Lemma closed_upwards {k t} k' : closedn k t = true -> k' >= k -> closedn k' t = true.
 Proof.
-  revert k.
+  revert k k'.
   elim t using term_forall_list_ind; intros; try lia;
     rewrite ?map_map_compose, ?compose_on_snd, ?compose_map_def;
     try (try f_equal; simpl; apply_spec; eauto); simpl closed in *;

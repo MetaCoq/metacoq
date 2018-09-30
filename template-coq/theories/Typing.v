@@ -845,7 +845,7 @@ Section GlobalMaps.
          with a reference to the inductive applied to the (non-lets) parameters and arguments *)
     }.
 
-  Definition on_constructor (Σ : global_context)
+  Definition on_constructor (Σ : global_context) (mind : kername)
              (mdecl : mutual_inductive_body)
              (i : nat) (idecl : one_inductive_body)
              (c : nat) (cdecl : ident * term * nat) : Type :=
@@ -853,29 +853,29 @@ Section GlobalMaps.
     on_type Σ (arities_context mdecl.(ind_bodies)) constructor_type *
     constructor_shape mdecl i idecl cdecl.
 
-  Definition on_constructors (Σ : global_context) mdecl i idecl l :=
-    Alli (on_constructor Σ mdecl i idecl) 0 l.
+  Definition on_constructors (Σ : global_context) mind mdecl i idecl l :=
+    Alli (on_constructor Σ mind mdecl i idecl) 0 l.
 
-  Definition on_projection (Σ : global_context) Γ (k : nat) (p : ident * term) :=
-    on_type Σ Γ (snd p).
+  Definition on_projection (Σ : global_context) mind mdecl (i : nat) (idecl : one_inductive_body)
+             (k : nat) (p : ident * term) :=
+    let '(ctx, _) := decompose_prod_assum [] idecl.(ind_type) in
+    let Γ := ctx,, vass (nNamed idecl.(ind_name))
+                (mkApps (tInd (mkInd mind i) (polymorphic_instance mdecl.(ind_universes)))
+                        (to_extended_list ctx))
+    in
+    (on_type Σ Γ (snd p) * (#|ctx| = mdecl.(ind_npars)))%type.
 
-  Definition on_projections (Σ : global_context) Γ (l : list (ident * term)) : Type :=
-    Alli (on_projection Σ Γ) 0 l.
+  Definition on_projections (Σ : global_context) mind mdecl i idecl (l : list (ident * term)) : Type :=
+    Alli (on_projection Σ mind mdecl i idecl) 0 l.
 
   Record on_ind_body
          (Σ : global_context) (mind : kername) mdecl (i : nat) idecl :=
     { onArity : (** Arity is well-formed *)
         on_arity Σ [] mdecl.(ind_npars) idecl.(ind_type);
       (** Constructors are well-typed *)
-      onConstructors : on_constructors Σ mdecl i idecl idecl.(ind_ctors);
+      onConstructors : on_constructors Σ mind mdecl i idecl idecl.(ind_ctors);
       (** Projections are well-typed *)
-      onProjections :
-        let '(ctx, _) := decompose_prod_assum [] idecl.(ind_type) in
-        (idecl.(ind_projs) <> nil -> #|ctx| = mdecl.(ind_npars)) *
-        on_projections Σ (ctx,, vass (nNamed idecl.(ind_name))
-                             (mkApps (tInd (mkInd mind i) (polymorphic_instance mdecl.(ind_universes)))
-                                           (to_extended_list ctx)))
-        idecl.(ind_projs)
+      onProjections :  on_projections Σ mind mdecl i idecl idecl.(ind_projs)
       (** TODO: check kelim *) }.
 
   Definition on_context Σ ctx :=
@@ -979,9 +979,10 @@ Proof.
       unfold on_constructor, on_type in *.
       merge_Forall. eapply Alli_impl; eauto. simpl; intuition eauto.
     + apply onProjections in Xl; apply onProjections in Xr. simpl in *.
-      fold (decompose_prod_assum [] ind_type). destruct (decompose_prod_assum [] ind_type).
-      intuition.
-      red in b, b0. merge_Forall. eapply Alli_impl; eauto.
+      red in Xl, Xr. merge_Forall. eapply Alli_impl; eauto.
+      simpl. intuition eauto.
+      red in a, b |- *. simpl in *. destruct (decompose_prod_assum [] ind_type).
+      intuition. unfold on_type in *. eauto.
 Qed.
 
 Lemma on_global_decls_impl `{checker_flags} Σ P Q :
@@ -1004,9 +1005,10 @@ Proof.
        --- apply onConstructors in X1. red in X1. unfold on_constructor, on_type in *. eapply Alli_impl; eauto.
            simpl; intuition eauto.
        --- apply onProjections in X1. simpl in *.
-           fold (decompose_prod_assum [] ind_type).
-           destruct (decompose_prod_assum [] ind_type).
-           intuition. red in b. eapply Alli_impl; intuition eauto. now do 2 red in X1 |- *.
+           unfold on_projections in *. eapply Alli_impl; intuition eauto. clear X1.
+           unfold on_projection in *; simpl in *.
+           destruct decompose_prod_assum. unfold on_type in *; eauto.
+           intuition eauto.
     -- red in onP. red.
        eapply All_local_env_impl. eauto.
        intros. red in X1. red. apply X. auto. auto.
@@ -1406,10 +1408,9 @@ Proof.
          specialize (IH (existT _ (Σ, φ) (existT _ X14 (existT _ _ (existT _ X16 (existT _ _ (existT _ _ Hs))))))).
          simpl in IH. apply IH; constructor 1; simpl; omega.
       ++ apply onProjections in X15. simpl in *.
-         destruct (decompose_prod_assum [] (ind_type x)).
-         destruct X15; split; auto.
-         red in o |- *. eapply Alli_impl; eauto. intros.
-         red in X15 |- *. destruct X15 as [s Hs]. exists s.
+         red in X15 |- *. eapply Alli_impl; eauto. clear X15. intros.
+         red in X15 |- *. destruct (decompose_prod_assum [] (ind_type x)).
+         destruct X15 as [[s Hs] Hpars]. split; auto. exists s.
          pose proof (typing_wf_local (Σ:= (Σ, φ)) X14 Hs).
          specialize (IH (existT _ (Σ, φ) (existT _ X14 (existT _ _ (existT _ X15 (existT _ _ (existT _ _ Hs))))))).
          simpl in IH. apply IH; constructor 1; simpl; omega.
@@ -1911,9 +1912,9 @@ Proof.
     apply onInductives in prf.
     eapply nth_error_alli in Hidecl; eauto. intuition.
     eapply onProjections in Hidecl.
-    destruct decompose_prod_assum. destruct Hidecl as [Hnpars Hidecl].
-    eapply nth_error_alli in Hpdecl; eauto.
-    destruct Hpdecl as [s Hs]. apply wf_subst_instance_constr. apply Hs.
+    eapply nth_error_alli in Hidecl; eauto. red in Hidecl.
+    destruct decompose_prod_assum.
+    destruct Hidecl as [[s Hs] Hnpars]. apply wf_subst_instance_constr. apply Hs.
   - subst types.
     apply All_local_env_app in X as [HΓ Hmfix].
     clear Hmfix.

@@ -2,7 +2,7 @@ From Coq Require Import Ascii String Bool OrderedType Lia List Program Arith.
 From Template Require Import Ast utils.
 Import List.ListNotations.
 Require Import FunctionalExtensionality.
-Require Import ssreflect ssrbool ssrfun.
+Require Import ssreflect.
 
 Set Asymmetric Patterns.
 
@@ -12,6 +12,17 @@ Arguments dbody {term} _.
 Arguments rarg {term} _.
 
 Ltac inv H := inversion_clear H.
+
+(** We cannot use ssrbool as it breaks extraction. *)
+Coercion is_true : bool >-> Sortclass.
+
+Definition pred (A : Type) := A -> bool.
+
+Lemma andb_and b b' : b && b' <-> b /\ b'.
+Proof. apply andb_true_iff. Qed.
+
+Lemma andP {b b'} : b && b' -> b /\ b'.
+Proof. apply andb_and. Qed.
 
 (** Make a lambda/let-in string of abstractions from a context [Γ], ending with term [t]. *)
 
@@ -470,9 +481,6 @@ Section Reverse_Induction.
     Qed.
 
 End Reverse_Induction.
-
-Lemma andb_and b b' : b && b' <-> b /\ b'.
-Proof. elim (@andP b b'); intuition. Qed.
 
 Lemma forallb_Forall {A} (p : pred A) l : Forall p l <-> forallb p l.
 Proof.

@@ -6,7 +6,7 @@ Require Import BinPos.
 Require Import Coq.Arith.Compare_dec Bool.
 Require Import Template.Induction.
 Require Import Lia.
-Require Import ssreflect ssrbool.
+Require Import ssreflect.
 
 (** * Lifting and substitution for the AST
 

@@ -1166,6 +1166,44 @@ Proof.
     induction H; constructor; auto.
     inv H0. intuition. eapply H3; eauto.
     apply IHOnOne2. now inv H0.
+
+  - inv wfM.
+    constructor.
+    rewrite -> (OnOne2_length H). generalize (#|mfix1|).
+    induction H; simpl; constructor; auto.
+    inv H0. intuition. eapply H4; eauto.
+    apply IHOnOne2. now inv H0.
+
+  - inv wfM.
+    apply fix_red_body. rewrite !subst_fix_context.
+    solve_all. apply (OnOne2_All_mix_left H0) in H. clear H0.
+    rewrite <- (OnOne2_length H).
+    eapply OnOne2_map. unfold comp_rel_fn; solve_all.
+    specialize (H2 Γ0 Γ' (Γ'' ,,, fix_context mfix0)).
+    rewrite app_context_assoc in H2. specialize (H2 eq_refl).
+    rewrite -> app_context_length, fix_context_length in *.
+    rewrite -> subst_context_app in *.
+    rewrite -> app_context_assoc, Nat.add_0_r in *.
+    auto.
+
+  - inv wfM.
+    constructor.
+    rewrite -> (OnOne2_length H). generalize (#|mfix1|).
+    induction H; simpl; constructor; auto.
+    inv H0. intuition. eapply H2; eauto.
+    apply IHOnOne2. now inv H0.
+
+  - inv wfM.
+    apply cofix_red_body. rewrite !subst_fix_context.
+    solve_all. apply (OnOne2_All_mix_left H0) in H. clear H0.
+    rewrite <- (OnOne2_length H).
+    eapply OnOne2_map. unfold comp_rel_fn; solve_all.
+    specialize (H0 Γ0 Γ' (Γ'' ,,, fix_context mfix0)).
+    rewrite app_context_assoc in H0. specialize (H0 eq_refl).
+    rewrite -> app_context_length, fix_context_length in *.
+    rewrite -> subst_context_app in *.
+    rewrite -> app_context_assoc, Nat.add_0_r in *.
+    auto.
 Qed.
 
 Lemma eq_term_refl `{checker_flags} φ t : eq_term φ t t.

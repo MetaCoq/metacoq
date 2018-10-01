@@ -132,6 +132,31 @@ Proof.
 Qed.
 Hint Resolve wf_nth.
 
+Lemma red1_isLambda Σ Γ t u :
+  red1 Σ Γ t u -> isLambda t -> isLambda u.
+Proof.
+  induction 1 using red1_ind_all; simpl; try discriminate; auto.
+Qed.
+
+Lemma OnOne2_All_All {A} {P Q} {l l' : list A} :
+  OnOne2 P l l' ->
+  (forall x y, P x y -> Q x -> Q y) ->
+  All Q l -> All Q l'.
+Proof. intros Hl H. induction Hl; intros H'; inv H'; constructor; eauto. Qed.
+
+Lemma All_mapi {A B} (P : B -> Type) (l : list A) (f : nat -> A -> B) :
+  Alli (fun i x => P (f i x)) 0 l -> All P (mapi f l).
+Proof.
+  unfold mapi. generalize 0.
+  induction 1; constructor; auto.
+Qed.
+
+Lemma Alli_id {A} (P : nat -> A -> Type) n (l : list A) :
+  (forall n x, P n x) -> Alli P n l.
+Proof.
+  intros H. induction l in n |- *; constructor; auto.
+Qed.
+
 Lemma wf_red1 `{CF:checker_flags} Σ Γ M N :
   on_global_env (fun Σ Γ t T => match t with Some b => Ast.wf b /\ Ast.wf T | None => Ast.wf T end) Σ ->
   List.Forall (fun d => match decl_body d with Some b => Ast.wf b | None => True end) Γ ->
@@ -175,6 +200,26 @@ Proof.
   - constructor; auto. apply IHred1; auto. constructor; simpl; auto.
   - constructor; auto. induction H; inv H0; constructor; intuition auto.
   - auto.
+  - constructor; auto.
+    induction H; inv H0; constructor; intuition auto; congruence.
+  - constructor; auto. solve_all.
+    revert H0.
+    apply (OnOne2_All_All H). clear H.
+    intros. destruct H as [Hred [<- Hwf]].
+    intuition. apply Hwf. solve_all. apply All_app_inv; auto. unfold fix_context.
+    apply All_rev.
+    eapply All_mapi. simpl. apply Alli_id. intros; exact I.
+    auto.
+    apply red1_isLambda in Hred; auto.
+  - constructor; auto.
+    induction H; inv H0; constructor; intuition auto; congruence.
+  - constructor; auto. solve_all. revert H0.
+    apply (OnOne2_All_All H). clear H.
+    intros. destruct H as [Hred [<- Hwf]].
+    intuition. apply Hwf. solve_all. apply All_app_inv; auto. unfold fix_context.
+    apply All_rev.
+    eapply All_mapi. simpl. apply Alli_id. intros; exact I.
+    auto.
 Qed.
 
 Ltac wf := intuition try (eauto with wf || congruence || solve [constructor]).

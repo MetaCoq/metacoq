@@ -699,6 +699,14 @@ Proof.
   eapply IHl; eauto.
 Qed.
 
+Lemma OnOne2_impl {A} {P Q} {l l' : list A} :
+  OnOne2 P l l' ->
+  (forall x y, P x y -> Q x y) ->
+  OnOne2 Q l l'.
+Proof.
+  induction 1; constructor; intuition eauto.
+Qed.
+
 Ltac toProp :=
   repeat match goal with
   | H : _ && _ |- _ => apply andb_and in H; destruct H
@@ -952,6 +960,7 @@ Ltac close_Forall :=
   match goal with
   | H : Forall _ _ |- Forall _ _ => apply (Forall_impl H); clear H; simpl
   | H : All _ _ |- All _ _ => apply (All_impl H); clear H; simpl
+  | H : OnOne2 _ _ _ |- OnOne2 _ _ _ => apply (OnOne2_impl H); clear H; simpl
   | H : All2 _ _ _ |- All2 _ _ _ => apply (All2_impl H); clear H; simpl
   | H : All2 _ _ _ |- All _ _ =>
     (apply (All2_All_left H) || apply (All2_All_right H)); clear H; simpl

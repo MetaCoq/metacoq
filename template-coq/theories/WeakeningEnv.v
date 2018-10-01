@@ -61,12 +61,12 @@ Lemma weakening_env_red1 `{CF:checker_flags} Σ Σ' Γ M N :
   red1 (fst Σ) Γ M N ->
   red1 (fst Σ') Γ M N.
 Proof.
-  induction 3 using red1_ind_all; try econstructor; eauto.
-  eapply extends_lookup in X0; eauto.
+  induction 3 using red1_ind_all;
+    try solve [econstructor; eauto;
+               eapply (OnOne2_impl H); simpl; intuition eauto].
 
-  induction H; constructor; intuition eauto.
-  induction H; constructor; intuition eauto.
-  induction H; constructor; intuition eauto.
+  eapply extends_lookup in X0; eauto.
+  econstructor; eauto.
 Qed.
 
 Lemma weakening_env_cumul `{CF:checker_flags} Σ Σ' Γ M N :

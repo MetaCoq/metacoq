@@ -131,6 +131,12 @@ Proof.
   induction mfix; simpl; auto.
 Qed.
 
+Definition fix_context (m : mfixpoint term) : context :=
+  List.rev (mapi (fun i d => vass d.(dname) (lift0 i d.(dtype))) m).
+
+Lemma fix_context_length mfix : #|fix_context mfix| = #|mfix|.
+Proof. unfold fix_context. now rewrite List.rev_length mapi_length. Qed.
+
 Definition tDummy := tVar "".
 
 Definition iota_red npar c args brs :=
@@ -212,7 +218,24 @@ Inductive red1 (Σ : global_declarations) (Γ : context) : term -> term -> Prop 
 
 | cast_red_l M1 k M2 N1 : red1 Σ Γ M1 N1 -> red1 Σ Γ (tCast M1 k M2) (tCast N1 k M2)
 | cast_red_r M2 k N2 M1 : red1 Σ Γ M2 N2 -> red1 Σ Γ (tCast M1 k M2) (tCast M1 k N2)
-| cast_red M1 k M2 : red1 Σ Γ (tCast M1 k M2) M1.
+| cast_red M1 k M2 : red1 Σ Γ (tCast M1 k M2) M1
+
+| fix_red_ty mfix0 mfix1 idx :
+    OnOne2 (fun d0 d1 => red1 Σ Γ (dtype d0) (dtype d1) /\ dbody d0 = dbody d1) mfix0 mfix1 ->
+    red1 Σ Γ (tFix mfix0 idx) (tFix mfix1 idx)
+
+| fix_red_body mfix0 mfix1 idx :
+    OnOne2 (fun d0 d1 => red1 Σ (Γ ,,, fix_context mfix0) (dbody d0) (dbody d1) /\ dtype d0 = dtype d1) mfix0 mfix1 ->
+    red1 Σ Γ (tFix mfix0 idx) (tFix mfix1 idx)
+
+| cofix_red_ty mfix0 mfix1 idx :
+    OnOne2 (fun d0 d1 => red1 Σ Γ (dtype d0) (dtype d1) /\ dbody d0 = dbody d1) mfix0 mfix1 ->
+    red1 Σ Γ (tCoFix mfix0 idx) (tCoFix mfix1 idx)
+
+| cofix_red_body mfix0 mfix1 idx :
+    OnOne2 (fun d0 d1 => red1 Σ (Γ ,,, fix_context mfix0) (dbody d0) (dbody d1) /\ dtype d0 = dtype d1) mfix0 mfix1 ->
+    red1 Σ Γ (tCoFix mfix0 idx) (tCoFix mfix1 idx).
+
 
 Lemma red1_ind_all :
   forall (Σ : global_declarations) (P : context -> term -> term -> Prop),
@@ -269,13 +292,27 @@ Lemma red1_ind_all :
        (forall (Γ : context) (M2 : term) (k : cast_kind) (N2 M1 : term),
         red1 Σ Γ M2 N2 -> P Γ M2 N2 -> P Γ (tCast M1 k M2) (tCast M1 k N2)) ->
        (forall (Γ : context) (M1 : term) (k : cast_kind) (M2 : term),
-        P Γ (tCast M1 k M2) M1) ->
+           P Γ (tCast M1 k M2) M1) ->
+       (forall (Γ : context) (mfix0 mfix1 : list (def term)) (idx : nat),
+        OnOne2 (fun d0 d1 : def term => red1 Σ Γ (dtype d0) (dtype d1) /\ dbody d0 = dbody d1 /\ P Γ (dtype d0) (dtype d1)) mfix0 mfix1 ->
+        P Γ (tFix mfix0 idx) (tFix mfix1 idx)) ->
+       (forall (Γ : context) (mfix0 mfix1 : list (def term)) (idx : nat),
+        OnOne2 (fun d0 d1 : def term => red1 Σ (Γ ,,, fix_context mfix0) (dbody d0) (dbody d1) /\ dtype d0 = dtype d1 /\ P (Γ ,,, fix_context mfix0) (dbody d0) (dbody d1)) mfix0 mfix1 ->
+        P Γ (tFix mfix0 idx) (tFix mfix1 idx)) ->
+       (forall (Γ : context) (mfix0 mfix1 : list (def term)) (idx : nat),
+        OnOne2 (fun d0 d1 : def term => red1 Σ Γ (dtype d0) (dtype d1) /\ dbody d0 = dbody d1 /\ P Γ (dtype d0) (dtype d1)) mfix0 mfix1 ->
+        P Γ (tCoFix mfix0 idx) (tCoFix mfix1 idx)) ->
+       (forall (Γ : context) (mfix0 mfix1 : list (def term)) (idx : nat),
+        OnOne2 (fun d0 d1 : def term => red1 Σ (Γ ,,, fix_context mfix0) (dbody d0) (dbody d1) /\ dtype d0 = dtype d1 /\ P (Γ ,,, fix_context mfix0) (dbody d0) (dbody d1)) mfix0 mfix1 ->
+        P Γ (tCoFix mfix0 idx) (tCoFix mfix1 idx)) ->
        forall (Γ : context) (t t0 : term), red1 Σ Γ t t0 -> P Γ t t0.
 Proof.
-  intros. revert Γ t t0 H24.
+  intros. revert Γ t t0 H28.
   fix aux 4. intros Γ t T.
   move aux at top.
   destruct 1; match goal with
+              | |- P _ (tFix _ _) (tFix _ _) => idtac
+              | |- P _ (tCoFix _ _) (tCoFix _ _) => idtac
               | |- P _ (tApp (tFix _ _) _) _ => idtac
               | |- P _ (tCase _ _ (mkApps (tCoFix _ _) _) _) _ => idtac
               | |- P _ (tProj _ (mkApps (tCoFix _ _) _)) _ => idtac
@@ -285,23 +322,41 @@ Proof.
   eapply H4; eauto.
   eapply H5; eauto.
 
-  - revert brs brs' H24.
+  - revert brs brs' H28.
     fix auxl 3.
     intros l l' Hl. destruct Hl.
     constructor. split; auto.
     constructor. auto.
 
-  - revert M2 N2 H24.
+  - revert M2 N2 H28.
     fix auxl 3.
     intros l l' Hl. destruct Hl.
     constructor. split; auto.
     constructor. auto.
 
-  - revert l l' H24.
+  - revert l l' H28.
     fix auxl 3.
     intros l l' Hl. destruct Hl.
     constructor. split; auto.
     constructor. auto.
+
+  - eapply H24.
+    revert mfix0 mfix1 H28; fix auxl 3; intros l l' Hl; destruct Hl;
+      constructor; try split; auto; intuition.
+
+  - eapply H25.
+    revert H28. generalize (fix_context mfix0). intros c H28.
+    revert mfix0 mfix1 H28; fix auxl 3; intros l l' Hl;
+    destruct Hl; constructor; try split; auto; intuition.
+
+  - eapply H26.
+    revert mfix0 mfix1 H28; fix auxl 3; intros l l' Hl; destruct Hl;
+      constructor; try split; auto; intuition.
+
+  - eapply H27.
+    revert H28. generalize (fix_context mfix0). intros c H28.
+    revert mfix0 mfix1 H28; fix auxl 3; intros l l' Hl; destruct Hl;
+      constructor; try split; auto; intuition.
 Defined.
 
 (** *** Reduction
@@ -560,12 +615,6 @@ Definition check_correct_arity `{checker_flags} φ decl ind u ctx pars pctx :=
          decl_body := None;
          decl_type := mkApps (tInd ind u) (map (lift0 #|ctx|) pars ++ to_extended_list ctx) |}
   in eq_context φ (inddecl :: ctx) pctx.
-
-Definition fix_context (m : mfixpoint term) : context :=
-  List.rev (mapi (fun i d => vass d.(dname) (lift0 i d.(dtype))) m).
-
-Lemma fix_context_length mfix : #|fix_context mfix| = #|mfix|.
-Proof. unfold fix_context. now rewrite List.rev_length mapi_length. Qed.
 
 (** ** Typing relation *)
 

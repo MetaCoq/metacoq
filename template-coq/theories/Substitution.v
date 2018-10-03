@@ -1178,7 +1178,7 @@ Proof.
     apply fix_red_body. rewrite !subst_fix_context.
     solve_all. apply (OnOne2_All_mix_left H0) in H. clear H0.
     rewrite <- (OnOne2_length H).
-    eapply OnOne2_map. unfold comp_rel_fn; solve_all.
+    eapply OnOne2_map. unfold on_rel; solve_all.
     specialize (H2 Γ0 Γ' (Γ'' ,,, fix_context mfix0)).
     rewrite app_context_assoc in H2. specialize (H2 eq_refl).
     rewrite -> app_context_length, fix_context_length in *.
@@ -1197,7 +1197,7 @@ Proof.
     apply cofix_red_body. rewrite !subst_fix_context.
     solve_all. apply (OnOne2_All_mix_left H0) in H. clear H0.
     rewrite <- (OnOne2_length H).
-    eapply OnOne2_map. unfold comp_rel_fn; solve_all.
+    eapply OnOne2_map. unfold on_rel; solve_all.
     specialize (H0 Γ0 Γ' (Γ'' ,,, fix_context mfix0)).
     rewrite app_context_assoc in H0. specialize (H0 eq_refl).
     rewrite -> app_context_length, fix_context_length in *.

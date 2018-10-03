@@ -24,6 +24,9 @@ Proof. apply andb_true_iff. Qed.
 Lemma andP {b b'} : b && b' -> b /\ b'.
 Proof. apply andb_and. Qed.
 
+Definition on_rel {A B} (R : A -> A -> Prop) (f : B -> A) : B -> B -> Prop :=
+  fun x y => R (f x) (f y).
+
 (** Make a lambda/let-in string of abstractions from a context [Γ], ending with term [t]. *)
 
 Definition it_mkLambda_or_LetIn (l : context) (t : term) :=
@@ -603,6 +606,13 @@ Qed.
 
 Lemma OnOne2_app {A} (P : A -> A -> Type) l tl tl' : OnOne2 P tl tl' -> OnOne2 P (l ++ tl) (l ++ tl').
 Proof. induction l; simpl; try constructor; auto. Qed.
+
+Lemma OnOne2_length {A} {P} {l l' : list A} : OnOne2 P l l' -> #|l| = #|l'|.
+Proof. induction 1; simpl; congruence. Qed.
+
+Lemma OnOne2_map {A B} {P} {l l' : list A} (f : A -> B) :
+  OnOne2 (on_rel P f) l l' -> OnOne2 P (map f l) (map f l').
+Proof. induction 1; simpl; constructor; try congruence. apply p. Qed.
 
 Lemma All_firstn {A} {P : A -> Type} {l} {n} : All P l -> All P (firstn n l).
 Proof. intros HPL; induction HPL in n |- * ; simpl; destruct n; try econstructor; eauto. Qed.

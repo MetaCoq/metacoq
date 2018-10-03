@@ -630,16 +630,6 @@ Proof.
   intros [= -> -> -> <-]. reflexivity. congruence.
 Qed.
 
-Lemma OnOne2_length {A} {P} {l l' : list A} : OnOne2 P l l' -> #|l| = #|l'|.
-Proof. induction 1; simpl; congruence. Qed.
-
-Definition comp_rel_fn {A B} (R : A -> A -> Prop) (f : B -> A) : B -> B -> Prop :=
-  fun x y => R (f x) (f y).
-
-Lemma OnOne2_map {A B} {P} {l l' : list A} (f : A -> B) :
-  OnOne2 (comp_rel_fn P f) l l' -> OnOne2 P (map f l) (map f l').
-Proof. induction 1; simpl; constructor; try congruence. apply p. Qed.
-
 Lemma weakening_red1 `{CF:checker_flags} Σ Γ Γ' Γ'' M N :
   wf Σ ->
   red1 (fst Σ) (Γ ,,, Γ') M N ->
@@ -708,7 +698,7 @@ Proof.
 
   - apply fix_red_body. rewrite !lift_fix_context.
     rewrite <- (OnOne2_length H).
-    eapply OnOne2_map. unfold comp_rel_fn; solve_all.
+    eapply OnOne2_map. unfold on_rel; solve_all.
     specialize (H2 Γ0 (Γ' ,,, fix_context mfix0)).
     rewrite app_context_assoc in H2. specialize (H2 Γ'' eq_refl).
     rewrite -> app_context_length, fix_context_length in *.
@@ -722,7 +712,7 @@ Proof.
 
   - apply cofix_red_body. rewrite !lift_fix_context.
     rewrite <- (OnOne2_length H).
-    eapply OnOne2_map. unfold comp_rel_fn; solve_all.
+    eapply OnOne2_map. unfold on_rel; solve_all.
     specialize (H2 Γ0 (Γ' ,,, fix_context mfix0)).
     rewrite app_context_assoc in H2. specialize (H2 Γ'' eq_refl).
     rewrite -> app_context_length, fix_context_length in *.

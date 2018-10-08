@@ -111,9 +111,9 @@ Definition unfold_cofix (mfix : mfixpoint term) (idx : nat) :=
 Definition is_constructor n ts :=
   match List.nth_error ts n with
   | Some a =>
-    match a with
+    let (f, _) := decompose_app a in
+    match f with
     | tConstruct _ _ _ => true
-    | tApp (tConstruct _ _ _) _ => true
     | _ => false
     end
   | None => false

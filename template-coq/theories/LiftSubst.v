@@ -1,12 +1,8 @@
 (* Distributed under the terms of the MIT license.   *)
 
-Require Import List Program.
-From Template Require Import Ast AstUtils.
-Require Import BinPos.
-Require Import Coq.Arith.Compare_dec Bool.
-Require Import Template.Induction.
-Require Import Lia.
-Require Import ssreflect.
+From Coq Require Import List Program.
+From Template Require Import utils Ast AstUtils Induction.
+From Coq Require Import BinPos Arith.Compare_dec Bool Lia.
 
 (** * Lifting and substitution for the AST
 
@@ -184,7 +180,7 @@ Lemma subst_rel_eq :
     subst u n (tRel p) = lift0 n t.
 Proof.
   intros; simpl in |- *. subst p.
-  elim (leb_spec n (n + i)). intros. assert (n + i - n = i) by lia. rewrite H1 H.
+  elim (leb_spec n (n + i)). intros. assert (n + i - n = i) by lia. rewrite H1, H.
   reflexivity. intros. lia.
 Qed.
 
@@ -475,13 +471,6 @@ Proof.
       rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length, ?Nat.add_assoc;
       try solve [f_equal; auto; solve_all].
 
-      (* try (f_equal; try easy; apply_spec); *)
-      (* unfold compose; intros; *)
-      (*   try rewrite ?map_length; try easy ; *)
-      (*   try (erewrite H, <- H0; f_equal; try easy; now f_equal); *)
-      (*   try (erewrite H, <- H0, <- H1; f_equal; try easy; now f_equal); *)
-      (*   try (erewrite H1; now f_equal). *)
-  
   - unfold subst at 2.
     elim (leb_spec p n); intros; try easy.
     
@@ -516,12 +505,6 @@ Proof.
   change k with (0 + k). hnf.
   apply distr_subst_rec. auto.
 Qed.
-
-Ltac toProp ::=
-  repeat match goal with
-  | H : is_true (_ && _) |- _ => apply andb_and in H; destruct H
-  | |- context [is_true (_ && _)] => rewrite andb_and
-  end.
 
 Lemma lift_closed n k t : closedn k t -> lift n k t = t.
 Proof.
@@ -616,11 +599,11 @@ Lemma lift_to_extended_list_k Γ k : forall k',
     to_extended_list_k Γ (k' + k) = map (lift0 k') (to_extended_list_k Γ k).
 Proof.
   unfold to_extended_list_k.
-  intros k'. rewrite !reln_alt_eq !app_nil_r.
+  intros k'. rewrite !reln_alt_eq, !app_nil_r.
   induction Γ in k, k' |- *; simpl; auto.
   destruct a as [na [body|] ty].
-  now rewrite -Nat.add_assoc (IHΓ (k + 1) k').
-  simpl. now rewrite -Nat.add_assoc (IHΓ (k + 1) k') map_app.
+  now rewrite <- Nat.add_assoc, (IHΓ (k + 1) k').
+  simpl. now rewrite <- Nat.add_assoc, (IHΓ (k + 1) k'), map_app.
 Qed.
 
 Lemma simpl_subst_k (N : list term) (M : term) :
@@ -667,4 +650,14 @@ Lemma isLambda_subst (s : list term) k (bod : term) :
   isLambda bod = true -> isLambda (subst s k bod) = true.
 Proof.
   intros. destruct bod; try discriminate. reflexivity.
+Qed.
+
+Lemma map_vass_map_def g l n k :
+  (mapi (fun i (d : def term) => vass (dname d) (lift0 i (dtype d)))
+        (map (map_def (lift n k) g) l)) =
+  (mapi (fun i d => map_decl (lift n (i + k)) d) (mapi (fun i (d : def term) => vass (dname d) (lift0 i (dtype d))) l)).
+Proof.
+  rewrite mapi_mapi, mapi_map. apply mapi_ext.
+  intros. unfold map_decl, vass; simpl; f_equal.
+  rewrite permute_lift. f_equal; lia. lia.
 Qed.

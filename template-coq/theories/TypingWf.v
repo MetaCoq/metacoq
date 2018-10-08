@@ -243,16 +243,6 @@ Ltac specialize_goal :=
   | H : ?P -> _, H' : ?P |- _ => specialize (H H')
   end.
 
-Lemma map_vass_map_def g l n k :
-  (mapi (fun i (d : def term) => vass (dname d) (lift0 i (dtype d)))
-        (map (map_def (lift n k) g) l)) =
-  (mapi (fun i d => map_decl (lift n (i + k)) d) (mapi (fun i (d : def term) => vass (dname d) (lift0 i (dtype d))) l)).
-Proof.
-  rewrite mapi_mapi mapi_map. apply mapi_ext.
-  intros. unfold map_decl, vass; simpl; f_equal.
-  rewrite permute_lift. lia. f_equal; lia.
-Qed.
-
 Lemma wf_lift_wf n k t : Ast.wf (lift n k t) -> Ast.wf t.
 Proof.
   induction t in n, k |- * using term_forall_list_ind; simpl in *;

@@ -67,6 +67,11 @@ Record def (term : Set) : Set := mkdef {
   dbody : term; (* the body (a lambda term). Note, this may mention other (mutually-defined) names **)
   rarg  : nat  (* the index of the recursive argument, 0 for cofixpoints **) }.
 
+Arguments dname {term} _.
+Arguments dtype {term} _.
+Arguments dbody {term} _.
+Arguments rarg {term} _.
+
 Definition mfixpoint (term : Set) : Set :=
   list (def term).
 
@@ -132,9 +137,9 @@ Inductive wf : term -> Prop :=
 | wf_tConstruct i k u : wf (tConstruct i k u)
 | wf_tCase ci p c brs : wf p -> wf c -> Forall (Program.Basics.compose wf snd) brs -> wf (tCase ci p c brs)
 | wf_tProj p t : wf t -> wf (tProj p t)
-| wf_tFix mfix k : Forall (fun def => wf def.(dtype _) /\ wf def.(dbody _) /\ isLambda def.(dbody _) = true) mfix ->
+| wf_tFix mfix k : Forall (fun def => wf def.(dtype) /\ wf def.(dbody) /\ isLambda def.(dbody) = true) mfix ->
                    wf (tFix mfix k)
-| wf_tCoFix mfix k : Forall (fun def => wf def.(dtype _) /\ wf def.(dbody _)) mfix -> wf (tCoFix mfix k).
+| wf_tCoFix mfix k : Forall (fun def => wf def.(dtype) /\ wf def.(dbody)) mfix -> wf (tCoFix mfix k).
 
 (** ** Entries
 

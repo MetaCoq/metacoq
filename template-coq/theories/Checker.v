@@ -388,10 +388,10 @@ Inductive type_error :=
 | UnsatisfiedConstraints (c : ConstraintSet.t)
 | NotEnoughFuel (n : nat).
 
-
+Local Open Scope string_scope.
 Definition string_of_list_aux {A} (f : A -> string) (l : list A) : string :=
   let fix aux l :=
-      match l with
+      match l return string with
       | nil => ""
       | cons a nil => f a
       | cons a l => f a ++ "," ++ aux l

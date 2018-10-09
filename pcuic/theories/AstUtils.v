@@ -111,25 +111,6 @@ Proof. apply nth_error_app_lt. Qed.
 Lemma app_context_nil_l Γ : [] ,,, Γ = Γ.
 Proof. unfold app_context; now rewrite app_nil_r. Qed.
 
-Definition string_of_gref gr : string :=
-  match gr with
-  | ConstRef s => s
-  | IndRef (mkInd s n) =>
-    "Inductive " ++ s ++ " " ++ (string_of_nat n)
-  | ConstructRef (mkInd s n) k =>
-    "Constructor " ++ s ++ " " ++ (string_of_nat n) ++ " " ++ (string_of_nat k)
-  end.
-
-Definition gref_eq_dec
-: forall gr gr' : global_reference, {gr = gr'} + {~ gr = gr'}.
-Proof.
-  decide equality; eauto with eq_dec.
-  destruct i, i0.
-  decide equality; eauto with eq_dec.
-  destruct i, i0.
-  decide equality; eauto with eq_dec.
-Defined.
-
 Fixpoint decompose_app_rec (t : term) l :=
   match t with
   | tApp f a => decompose_app_rec f (a :: l)

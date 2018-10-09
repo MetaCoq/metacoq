@@ -16,5 +16,6 @@ theories/MetaTheory.v
 theories/WcbvEval.v
 theories/Checker.v
 theories/Retyping.v
+theories/TemplateToPCUIC.v
 # theories/All.v
 # theories/Extraction.v

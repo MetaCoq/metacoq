@@ -1138,12 +1138,13 @@ Proof.
   rewrite IHl. f_equal. f_equal. pi.
 Qed.
 
-Lemma mapi_map {A B} (f : nat -> A -> B) (l : list A) (g : A -> A) :
+Lemma mapi_map {A B C} (f : nat -> B -> C) (l : list A) (g : A -> B) :
   mapi f (map g l) = mapi (fun i x => f i (g x)) l.
 Proof.
-  unfold mapi. generalize 0. induction l; simpl; congruence. Qed.
+  unfold mapi. generalize 0. induction l; simpl; congruence.
+Qed.
 
-Lemma map_mapi {A B} (f : nat -> A -> B) (l : list A) (g : B -> B) :
+Lemma map_mapi {A B C} (f : nat -> A -> B) (l : list A) (g : B -> C) :
   map g (mapi f l) = mapi (fun i x => g (f i x)) l.
 Proof.
   unfold mapi. generalize 0. induction l; simpl; congruence.

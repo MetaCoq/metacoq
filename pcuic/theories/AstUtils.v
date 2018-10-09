@@ -130,59 +130,6 @@ Proof.
   decide equality; eauto with eq_dec.
 Defined.
 
-Definition ident_eq (x y : ident) :=
-  match string_compare x y with
-  | Eq => true
-  | _ => false
-  end.
-
-Lemma ident_eq_spec x y : reflect (x = y) (ident_eq x y).
-Proof.
-  unfold ident_eq. destruct (string_compare_eq x y).
-  destruct string_compare; constructor; auto.
-  intro Heq; specialize (H0 Heq). discriminate.
-  intro Heq; specialize (H0 Heq). discriminate.
-Qed.
-
-Definition eq_string s s' :=
-  if string_compare s s' is Eq then true else false.
-
-Definition eq_ind i i' :=
-  let 'mkInd i n := i in
-  let 'mkInd i' n' := i' in
-  eq_string i i' && Nat.eqb n n'.
-
-Definition eq_constant := eq_string.
-
-Definition eq_nat := Nat.eqb.
-Definition eq_evar := eq_nat.
-Definition eq_projection p p' :=
-  let '(ind, pars, arg) := p in
-  let '(ind', pars', arg') := p' in
-  eq_ind ind ind' && eq_nat pars pars' && eq_nat arg arg'.
-
-Lemma eq_string_refl x : eq_string x x.
-Proof.
-  unfold eq_string.
-  now rewrite (proj2 (string_compare_eq x x) eq_refl).
-Qed.
-
-Lemma eq_ind_refl i : eq_ind i i.
-Proof.
-  destruct i as [mind k].
-  unfold eq_ind. now rewrite eq_string_refl Nat.eqb_refl.
-Qed.
-
-Lemma eq_nat_refl n : eq_nat n n.
-Proof. by rewrite /eq_nat Nat.eqb_refl. Qed.
-
-Lemma eq_projection_refl i : eq_projection i i.
-Proof.
-  destruct i as [[mind k] p].
-  unfold eq_projection.
-  now rewrite eq_ind_refl !eq_nat_refl.
-Qed.
-
 Fixpoint decompose_app_rec (t : term) l :=
   match t with
   | tApp f a => decompose_app_rec f (a :: l)

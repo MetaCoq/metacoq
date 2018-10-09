@@ -3,7 +3,7 @@
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
 From Template Require Import config utils univ AstUtils.
 From Template Require Import Ast Typing.
-From PCUIC Require Import Ast Induction (* LiftSubst UnivSubst AstUtils Typing.*).
+From PCUIC Require Import Ast Induction LiftSubst UnivSubst AstUtils Typing Substitution.
 Require Import String.
 Local Open Scope string_scope.
 Set Asymmetric Patterns.
@@ -23,7 +23,7 @@ Fixpoint trans (t : T.term) : term :=
   | T.tLambda na T M => tLambda na (trans T) (trans M)
   | T.tApp u v => mkApps (trans u) (List.map trans v)
   | T.tProd na A B => tProd na (trans A) (trans B)
-  | T.tCast c kind t => tCast (trans c) kind (trans t)
+  | T.tCast c kind t => trans c
   | T.tLetIn na b t b' => tLetIn na (trans b) (trans t) (trans b')
   | T.tCase ind p c brs =>
     let brs' := List.map (on_snd trans) brs in
@@ -48,29 +48,21 @@ Definition trans_decl (d : T.context_decl) :=
 Definition trans_local Γ := List.map trans_decl Γ.
 
 Definition trans_one_ind_body (d : T.one_inductive_body) :=
-  match d with
-  | {| T.ind_name := na; T.ind_type := ty; T.ind_kelim := k;
-       T.ind_ctors := ctors;
-       T.ind_projs := projs |} =>
-    {| ind_name := na;
-       ind_type := trans ty;
-       ind_kelim := k;
-       ind_ctors := List.map (fun '(x, y, z) => (x, trans y, z)) ctors;
-       ind_projs := List.map (fun '(x, y) => (x, trans y)) projs |}
-  end.
+  {| ind_name := d.(T.ind_name);
+     ind_type := trans d.(T.ind_type);
+     ind_kelim := d.(T.ind_kelim);
+     ind_ctors := List.map (fun '(x, y, z) => (x, trans y, z)) d.(T.ind_ctors);
+     ind_projs := List.map (fun '(x, y) => (x, trans y)) d.(T.ind_projs) |}.
 
 Definition trans_constant_body bd :=
-  match bd with
-    {| T.cst_type := ty; T.cst_body := b; T.cst_universes := u |} =>
-    {| cst_type := trans ty; cst_body := option_map trans b; cst_universes := u |}
-  end.
+  {| cst_type := trans bd.(T.cst_type); cst_body := option_map trans bd.(T.cst_body);
+     cst_universes := bd.(T.cst_universes) |}.
 
 Definition trans_minductive_body md :=
-  match md with
-    {| T.ind_npars := n; T.ind_bodies := bds; T.ind_universes := u |} =>
-    let bds' := List.map trans_one_ind_body bds in
-    {| ind_npars := n; ind_bodies := bds'; ind_universes := u |}
-  end.
+  {| ind_npars := md.(T.ind_npars);
+     ind_params := trans_local md.(T.ind_params);
+     ind_bodies := map trans_one_ind_body md.(T.ind_bodies);
+     ind_universes := md.(T.ind_universes) |}.
 
 Definition trans_global_decl (d : T.global_decl) :=
   match d with
@@ -101,20 +93,20 @@ Qed.
 Ltac solve_list :=
   rewrite !map_map_compose, ?compose_on_snd, ?compose_map_def;
   try rewrite !map_length;
-  apply_spec; try typeclasses eauto with core.
+  try solve_all; try typeclasses eauto with core.
 
 Lemma trans_lift n k t :
   trans (TL.lift n k t) = lift n k (trans t).
 Proof.
   revert k. induction t using Template.Induction.term_forall_list_ind; simpl; intros; try congruence.
   - now destruct leb.
-  - f_equal. rewrite !map_map_compose. apply_spec. simpl; intros. apply H0.
+  - f_equal. rewrite !map_map_compose. solve_all.
   - rewrite lift_mkApps, IHt, map_map.
-    f_equal. rewrite map_map. apply_spec; auto.
+    f_equal. rewrite map_map; solve_all.
 
-  - f_equal; auto; solve_list.
-  - f_equal; auto; solve_list.
-  - f_equal; auto; solve_list.
+  - f_equal; auto. red in H. solve_list.
+  - f_equal; auto; red in H; solve_list.
+  - f_equal; auto; red in H; solve_list.
 Qed.
 
 Lemma mkApps_app f l l' : mkApps f (l ++ l') = mkApps (mkApps f l) l'.
@@ -145,13 +137,16 @@ Proof.
   inversion_clear H0. auto.
 Qed.
 
-Lemma trans_subst t k u : T.wf t -> T.wf u ->
-  trans (TL.subst t k u) = subst (trans t) k (trans u).
+Lemma trans_subst t k u : All T.wf t -> T.wf u ->
+  trans (TL.subst t k u) = subst (map trans t) k (trans u).
 Proof.
   intros wft wfu.
   revert k. induction wfu using Template.Induction.term_wf_forall_list_ind; simpl; intros; try congruence.
 
-  - destruct Init.Nat.compare; trivial. now rewrite trans_lift.
+  - repeat nth_leb_simpl; auto.
+    rewrite trans_lift.
+    rewrite nth_error_map in e0. rewrite e in e0.
+    injection e0. congruence.
 
   - f_equal; solve_list.
 
@@ -159,22 +154,11 @@ Proof.
     rewrite trans_mkApps. f_equal.
     solve_list.
     apply Template.LiftSubst.wf_subst; auto.
-    apply Forall_map. apply (Forall_impl _ _ _ H1). auto using Template.LiftSubst.wf_subst.
+    solve_all. solve_all. apply Template.LiftSubst.wf_subst; auto. solve_all.
 
-  - f_equal; auto; solve_list.
-  - f_equal; auto; solve_list.
-  - f_equal; auto; solve_list.
-Qed.
-
-Lemma trans_substl l u :
-  List.Forall T.wf l -> T.wf u ->
-  trans (TL.substl l u) = substl (List.map trans l) (trans u).
-Proof.
-  revert u; induction l; intros; simpl; auto using trans_subst.
-
-  inversion_clear H.
-  rewrite IHl; auto.
-  rewrite trans_subst; eauto. now apply Template.LiftSubst.wf_subst.
+  - f_equal; auto; red in H; solve_list.
+  - f_equal; auto; red in H; solve_list.
+  - f_equal; auto; red in H; solve_list.
 Qed.
 
 Notation Tterm := Template.Ast.term.
@@ -184,11 +168,11 @@ Lemma trans_subst_instance_constr u t : trans (Template.UnivSubst.subst_instance
                                         subst_instance_constr u (trans t).
 Proof.
   induction t using Template.Induction.term_forall_list_ind; simpl; try congruence.
-  f_equal. rewrite !map_map_compose. apply_spec; auto.
+  f_equal. rewrite !map_map_compose. solve_all.
   rewrite IHt. rewrite map_map_compose.
   rewrite mkApps_morphism; auto. f_equal.
-  rewrite !map_map_compose. apply_spec. auto. auto.
-  1-3:f_equal; auto; solve_list.
+  rewrite !map_map_compose. solve_all.
+  1-3:f_equal; auto; Template.AstUtils.merge_All; solve_list.
 Qed.
 
 Require Import ssreflect.
@@ -215,15 +199,15 @@ Proof.
   - by move => [=] -> ->.
 Qed.
 
-Lemma forall_decls_declared_inductive Σ cst univs decl :
-  TTy.declared_inductive Σ cst univs decl ->
-  declared_inductive (trans_global_decls Σ) cst univs (trans_one_ind_body decl).
+Lemma forall_decls_declared_inductive Σ mdecl ind decl :
+  TTy.declared_inductive Σ mdecl ind decl ->
+  declared_inductive (trans_global_decls Σ) (trans_minductive_body mdecl) ind (trans_one_ind_body decl).
 Proof.
   unfold declared_inductive, TTy.declared_inductive.
-  move=> [decl' [H [Hu Hnth]]].
-  pose proof (forall_decls_declared_minductive _ _ _ H).
-  eexists. split; eauto. destruct decl'; simpl in *.
-  subst univs. split; auto.
+  move=> [decl' Hnth].
+  pose proof (forall_decls_declared_minductive _ _ _ decl').
+  eexists. eauto. destruct decl'; simpl in *.
+  red in H. destruct mdecl; simpl.
   by rewrite nth_error_map Hnth.
 Qed.
 
@@ -234,50 +218,79 @@ Proof.
   revert t a; induction l; intros; simpl; try congruence.
 Qed.
 
-Lemma trans_destArity ctx t : T.wf t ->
-        destArity (trans_local ctx) (trans t) =
-        match TTy.destArity ctx t with
-        | Some (args, s) => Some (trans_local args, s)
-        | None => None
-        end.
+Lemma trans_destArity ctx t :
+  T.wf t ->
+  match TTy.destArity ctx t with
+  | Some (args, s) =>
+    destArity (trans_local ctx) (trans t) =
+    Some (trans_local args, s)
+  | None => True
+  end.
 Proof.
   intros wf; revert ctx.
   induction wf using Template.Induction.term_wf_forall_list_ind; intros ctx; simpl; trivial.
-  now rewrite (IHwf0 (T.vass n t :: ctx)).
-  now rewrite (IHwf1 (T.vdef n t t0 :: ctx)).
-  rewrite destArity_mkApps; auto. destruct l; simpl; congruence.
+  apply (IHwf0 (T.vass n t :: ctx)).
+  apply (IHwf1 (T.vdef n t t0 :: ctx)).
 Qed.
 
-Axiom wf_cheat : forall {A}, A.
+Lemma map_option_out_mapi_Some_spec {A B B'} (f : nat -> A -> option B) (g' : B -> B')
+      (g : nat -> A -> option B') l t :
+  (forall i x t, f i x = Some t -> g i x = Some (g' t)) ->
+  map_option_out (mapi f l) = Some t ->
+  map_option_out (mapi g l) = Some (map g' t).
+Proof.
+  unfold mapi. generalize 0.
+  move => n Hfg. move: t n.
+  induction l; try constructor; auto.
+  move=> t n /= [= <-] //.
+  move=> t n /=.
+  case E: (f n a) => [b|]; try congruence.
+  rewrite (Hfg n _ _ E).
+  case E' : map_option_out => [b'|]; try congruence.
+  move=> [= <-]. now rewrite (IHl _ _ E').
+Qed.
 
-Lemma trans_types_of_case args p pty decl indctx pctx ps btys :
-  T.wf p -> T.wf pty -> T.wf (T.ind_type decl) ->
-  TTy.types_of_case args p pty decl = Some (indctx, pctx, ps, btys) ->
-  types_of_case (map trans args) (trans p) (trans pty) (trans_one_ind_body decl) =
+Lemma trans_types_of_case ind mdecl idecl args p u pty indctx pctx ps btys :
+  T.wf p -> T.wf pty -> T.wf (T.ind_type idecl) ->
+  TTy.types_of_case ind mdecl idecl args u p pty = Some (indctx, pctx, ps, btys) ->
+  types_of_case ind (trans_minductive_body mdecl) (trans_one_ind_body idecl)
+  (map trans args) u (trans p) (trans pty) =
   Some (trans_local indctx, trans_local pctx, ps, map (on_snd trans) btys).
 Proof.
-  intros wfp wfpty wfdecl; destruct decl. simpl.
+  intros wfp wfpty wfdecl. simpl.
   unfold TTy.types_of_case, types_of_case. simpl.
-  rewrite (trans_destArity [] ind_type); trivial.
+  pose proof (trans_destArity [] (T.ind_type idecl) wfdecl); trivial.
   destruct TTy.destArity as [[ctx s] | ]; try congruence.
-  rewrite (trans_destArity [] pty); trivial.
+  rewrite H.
+  pose proof (trans_destArity [] pty wfpty); trivial.
   destruct TTy.destArity as [[ctx' s'] | ]; try congruence.
-  intros [= -> -> -> <-].
-  f_equal. f_equal.
-  rewrite !map_map_compose. apply map_ext. intros [[id t] n].
+  rewrite H0.
+  assert(forall brtys,
+            map_option_out (TTy.build_branches_type ind mdecl idecl args u p) = Some brtys ->
+            map_option_out
+              (build_branches_type ind (trans_minductive_body mdecl) (trans_one_ind_body idecl) (map trans args) u (trans p)) =
+            Some (map (on_snd trans) brtys)).
+  intros brtys.
+  unfold TTy.build_branches_type, build_branches_type.
+  unfold trans_one_ind_body. simpl. rewrite -> mapi_map.
+  eapply map_option_out_mapi_Some_spec; eauto.
+  intros i [[id t] n] [t0 ar].
   unfold compose, on_snd. simpl. f_equal.
-  rewrite trans_substl.
-  apply wf_cheat. apply wf_cheat.
-  rewrite trans_subst; auto.
-  apply wf_cheat.
-Defined.
+  unfold TTy.instantiate_params.
+  admit.
+  revert H1. destruct map_option_out. intros.
+  specialize (H1 _ eq_refl). rewrite H1.
+  congruence.
+  intros. discriminate.
+Admitted.
 
 Inductive typing_spine `{checker_flags} (Σ : global_context) (Γ : context) : term -> list term -> term -> Type :=
 | type_spine_nil ty : typing_spine Σ Γ ty [] ty
-| type_spine_cons hd tl na A B T B' :
-    Σ ;;; Γ |- tProd na A B <= T ->
+| type_spine_cons hd tl na A B s T B' :
+    Σ ;;; Γ |- tProd na A B : tSort s ->
+    Σ ;;; Γ |- T <= tProd na A B ->
     Σ ;;; Γ |- hd : A ->
-    typing_spine Σ Γ (subst0 hd B) tl B' ->
+    typing_spine Σ Γ (subst10 hd B) tl B' ->
     typing_spine Σ Γ T (cons hd tl) B'.
 
 Lemma type_mkApps Σ Γ t u T t_ty :
@@ -289,12 +302,15 @@ Proof.
   revert t Ht. induction Hsp; simpl; auto.
 
   intros.
-  specialize (IHHsp (tApp t0 hd)). apply IHHsp.
-  eapply type_App. eauto. eauto. eauto.
+  specialize (IHHsp (tApp t1 hd)). apply IHHsp.
+  eapply type_App.
+  eapply type_Conv; eauto. eauto.
 Qed.
 
 Hint Constructors T.wf : wf.
-Hint Resolve TTy.typing_wf : wf.
+
+Require Import Template.TypingWf.
+Hint Resolve Template.TypingWf.typing_wf : wf.
 
 Lemma mkApps_trans_wf U l : T.wf (T.tApp U l) -> exists U' V', trans (T.tApp U l) = tApp U' V'.
 Proof.
@@ -306,8 +322,8 @@ Proof.
 Qed.
 
 Lemma eq_term_mkApps ϕ t u t' u' :
-  eq_term ϕ t t' = true -> forallb2 (eq_term ϕ) u u' = true ->
-  eq_term ϕ (mkApps t u) (mkApps t' u') = true.
+  eq_term ϕ t t' -> forallb2 (eq_term ϕ) u u' ->
+  eq_term ϕ (mkApps t u) (mkApps t' u').
 Proof.
   intros Ht Hu.
   revert t t' Ht; induction u in u', Hu |- *; intros.
@@ -317,117 +333,59 @@ Proof.
 
   destruct u'; try discriminate.
   simpl in Hu.
-  revert Hu; rewrite andb_true_iff.
-  intros [Ha Hu].
-  specialize (IHu _ Hu).
-  simpl. apply IHu.
-  simpl. now rewrite Ht Ha.
+  simpl. toProp. apply IHu; simpl; auto. simpl.
+  now rewrite Ht H.
 Qed.
 
 Lemma trans_eq_term ϕ T U :
-  T.wf T -> T.wf U -> TTy.eq_term ϕ T U = true ->
-  eq_term ϕ (trans T) (trans U) = true.
+  T.wf T -> T.wf U -> TTy.eq_term ϕ T U ->
+  eq_term ϕ (trans T) (trans U).
 Proof.
   intros.
-  revert U H0 H1; induction H using Template.Induction.term_wf_forall_list_ind; intros; destruct U; try discriminate;
+  revert U H0 H1; induction H using Template.Induction.term_wf_forall_list_ind; intros U Hwf; intros; destruct U; try discriminate;
   try solve [simpl; auto]; try
-                             (destruct (mkApps_trans_wf _ _ H0) as [U' [V' ->]]; reflexivity).
+                             (destruct (mkApps_trans_wf _ _ H0) as [U' [V' ->]]; reflexivity);
+  try solve[inv Hwf; auto; simpl in *; toProp; solve_all; eauto].
 
-  - simpl in *. f_equal.
-    revert H1; rewrite !andb_true_iff. move=> [Hev Hl]; split=> //.
-    inv H0. apply forallb2_Forall in Hl.
-    apply (Forall2_List_Forall_mix H) in Hl.
-    simpl in Hl.
-    apply (Forall2_List_Forall_mix_right H1) in Hl.
-    simpl in Hl.
-    clear H H1 Hev; induction Hl.
-    reflexivity.
-    destruct r as [wfy [Hx Heq]]. simpl.
-    rewrite !andb_true_iff. intuition auto.
-
-  - simpl in *. revert H1. inv H0. rewrite !andb_true_iff; intuition.
-  - inv H0; auto. revert H1; rewrite !andb_true_iff; intuition.
-  - inv H0; auto. revert H1; rewrite !andb_true_iff; intuition.
-  - inv H4; simpl in *. revert H5; rewrite !andb_true_iff; intuition.
-    apply eq_term_mkApps; auto.
-    apply forallb2_Forall in H10.
-    apply (Forall2_List_Forall_mix H2) in H10.
-    apply (Forall2_List_Forall_mix_right H9) in H10.
-    clear H2 H9.
-    apply (Forall2_List_Forall_mix H3) in H10.
-    clear H3 H7 H1. induction H10; trivial.
-    destruct r as [Heq [wfy [wfx Heqxy]]].
-    simpl; rewrite !andb_true_iff; intuition auto.
-
+  - simpl in *. inv Hwf. toProp; solve_all. solve_all.
+  - simpl in *. inv Hwf. toProp; solve_all.
+    apply eq_term_mkApps; auto. solve_all.
+  - simpl. destruct p. simpl in *. discriminate.
   - destruct p; simpl in *; discriminate.
-  - inv H0. destruct p, p0. simpl. simpl in H1.
-    revert H1; rewrite !andb_true_iff. intuition.
-    apply forallb2_Forall in H5. red in H.
-    apply (Forall2_List_Forall_mix H) in H5.
-    apply (Forall2_List_Forall_mix_right H4) in H5. clear H H4.
-    clear -H5. induction H5.
-    reflexivity.
-    destruct r as [wfy [Heq Heqb]].
-    simpl; rewrite !andb_true_iff. intuition.
-    apply Heq; auto.
-    destruct x, y; auto.
-  - inv H0; auto. simpl in *. revert H1. rewrite !andb_true_iff. intuition.
-  - inv H1; auto. simpl in *. revert H2. rewrite !andb_true_iff. intuition.
-    eapply forallb2_Forall in H2.
-    apply (Forall2_List_Forall_mix H) in H2.
-    apply (Forall2_List_Forall_mix_right H3) in H2.
-    clear H H3.
-    induction H2; trivial.
-    simpl; intuition.
-    revert H6. rewrite !andb_true_iff. intros [Heqbod Heqty].
-    intuition auto. apply IHForall2. inv H0; auto.
-  - inv H0; auto. simpl in *. revert H1. rewrite !andb_true_iff. intuition.
-    apply forallb2_Forall in H1.
-    apply (Forall2_List_Forall_mix H) in H1.
-    apply (Forall2_List_Forall_mix_right H2) in H1.
-    clear H H2 H3.
-    induction H1; trivial.
-    simpl; intuition.
-    revert H4. rewrite !andb_true_iff. intros [Heqbod Heqty].
-    intuition auto.
+  - simpl in *. inv Hwf. destruct p, p0; red in H; toProp; solve_all.
+    solve_all. destruct y; red in b0; simpl in *. eauto.
+  - red in H. simpl in *. inv Hwf. toProp. solve_all.
+    solve_all. toProp. auto.
+  - red in H. simpl in *. inv Hwf. toProp. solve_all.
+    solve_all. toProp. auto.
 Qed.
 
 Lemma trans_eq_term_list ϕ T U :
-  List.Forall T.wf T -> List.Forall T.wf U -> forallb2 (TTy.eq_term ϕ) T U = true ->
-  forallb2 (eq_term ϕ) (List.map trans T) (List.map trans U) = true.
+  List.Forall T.wf T -> List.Forall T.wf U -> forallb2 (TTy.eq_term ϕ) T U ->
+  forallb2 (eq_term ϕ) (List.map trans T) (List.map trans U).
 Proof.
-  intros.
-  apply forallb2_Forall in H1.
-  apply (Forall2_List_Forall_mix H) in H1.
-  apply (Forall2_List_Forall_mix_right H0) in H1. clear H H0.
-  induction H1; trivial. intuition. simpl. rewrite !andb_true_iff.
-  intuition auto using trans_eq_term.
+  intros. solve_all. intuition auto using trans_eq_term.
 Qed.
 
-Lemma leq_term_mkApps ϕ t u t' u' : u <> nil ->
-  eq_term ϕ t t' = true -> forallb2 (eq_term ϕ) u u' = true ->
-  leq_term ϕ (mkApps t u) (mkApps t' u') = true.
+Lemma leq_term_mkApps ϕ t u t' u' : (* u <> nil -> *)
+  eq_term ϕ t t' -> forallb2 (eq_term ϕ) u u' ->
+  leq_term ϕ (mkApps t u) (mkApps t' u').
 Proof.
-  intros Hn Ht Hu.
-  revert t t' Ht Hn; induction u in u', Hu |- *; intros.
+  intros Hn Ht.
+  revert t t' Ht Hn; induction u in u' |- *; intros.
 
   destruct u'; try discriminate.
-  simpl. congruence.
+  simpl. apply Substitution.eq_term_leq_term. auto.
 
   destruct u'; try discriminate.
-  simpl in Hu.
-  revert Hu; rewrite andb_true_iff.
-  intros [Ha Hu].
-  specialize (IHu _ Hu).
-  simpl. destruct u. simpl. destruct u'; try discriminate. simpl.
-  rewrite !andb_true_iff; intuition.
-  apply IHu.
-  simpl. now rewrite Ht Ha. congruence.
+  simpl in *. apply IHu. toProp; auto. simpl; toProp; auto.
 Qed.
+
+Require Template.Substitution.
 
 Lemma trans_leq_term ϕ T U :
-  T.wf T -> T.wf U -> TTy.leq_term ϕ T U = true ->
-  leq_term ϕ (trans T) (trans U) = true.
+  T.wf T -> T.wf U -> TTy.leq_term ϕ T U ->
+  leq_term ϕ (trans T) (trans U).
 Proof.
   intros HwfT HwfU Hleq.
   pose proof HwfT.
@@ -437,90 +395,45 @@ Proof.
                              (destruct (mkApps_trans_wf _ _ H0) as [U' [V' ->]]; reflexivity);
   simpl in *; revert Hleq; try rewrite !andb_true_iff; inv HwfU; inv HwfT'.
   - intuition auto using trans_eq_term_list.
-  - intuition auto using trans_eq_term.
-  - intuition auto using trans_eq_term.
-  - intuition auto using trans_eq_term.
-  - intuition auto using trans_eq_term_list.
+    toProp; solve_all. solve_all.
+    intuition auto using trans_eq_term.
+  - toProp; intuition auto using trans_eq_term, Template.Substitution.eq_term_leq_term.
+  - toProp; intuition auto using trans_eq_term, Template.Substitution.eq_term_leq_term.
+  - toProp; intuition auto using trans_eq_term, Template.Substitution.eq_term_leq_term.
+  - toProp; intuition auto using trans_eq_term, Template.Substitution.eq_term_leq_term.
+  - toProp; intuition auto using trans_eq_term, Template.Substitution.eq_term_leq_term.
     apply leq_term_mkApps; auto using map_nil, trans_eq_term, trans_eq_term_list.
   - destruct p; congruence.
+  - destruct p; congruence.
   - destruct p, p0.
-    rewrite !andb_true_iff; intuition auto using trans_eq_term, trans_eq_term_list.
-    apply forallb2_Forall in H8.
-    apply (Forall2_List_Forall_mix H) in H8.
-    apply (Forall2_List_Forall_mix H5) in H8.
-    apply (Forall2_List_Forall_mix_right H2) in H8. clear H H2.
-    clear -H8. induction H8; trivial.
-    destruct r as [wfy [Heq Heqb]].
-    simpl; rewrite !andb_true_iff. intuition.
-    destruct x, y; simpl; auto. auto using trans_eq_term.
-  - intuition auto using trans_eq_term.
-  - intuition auto using trans_eq_term_list.
-    apply forallb2_Forall in H4.
-    apply (Forall2_List_Forall_mix H) in H4.
-    apply (Forall2_List_Forall_mix H2) in H4.
-    apply (Forall2_List_Forall_mix_right H1) in H4.
-    clear -H4. induction H4; trivial. simpl. intuition.
-    revert H7; rewrite !andb_true_iff; intuition auto using trans_eq_term.
-  - intuition auto using trans_eq_term_list.
-    apply forallb2_Forall in H3.
-    apply (Forall2_List_Forall_mix H) in H3.
-    apply (Forall2_List_Forall_mix H1) in H3.
-    apply (Forall2_List_Forall_mix_right H0) in H3.
-    clear -H3. induction H3; trivial. simpl. intuition.
-    revert H6; rewrite !andb_true_iff; intuition auto using trans_eq_term.
+    red in H; toProp; solve_all; eauto using trans_eq_term.
+    solve_all. destruct y; simpl in *. red in b0, b2.
+    simpl in *; eauto using trans_eq_term.
+  - toProp; intuition auto using trans_eq_term.
+  - red in H; toProp; solve_all. solve_all.
+    toProp; intuition eauto using trans_eq_term.
+  - red in H; toProp; solve_all. solve_all.
+    toProp; intuition eauto using trans_eq_term.
 Qed.
 
-Lemma wf_mkApps t u : T.wf (T.mkApps t u) -> List.Forall T.wf u.
-Proof.
-  induction u in t |- *; simpl.
-  - intuition.
-  - intros H; destruct t; try solve [inv H; intuition auto].
-    specialize (IHu (T.tApp t (l ++ [a]))).
-    forward IHu.
-    induction u; trivial.
-    simpl. rewrite <- app_assoc. simpl. apply H.
-    intuition. inv H.
-    apply Forall_app in H3. intuition.
-Qed.
-Hint Resolve wf_mkApps : wf.
-
-Lemma wf_mkApps_napp t u : isApp t = false -> T.wf (T.mkApps t u) -> T.wf t /\ List.Forall T.wf u.
-Proof.
-  induction u in t |- *; simpl.
-  - intuition.
-  - intros Happ H; destruct t; try solve [inv H; intuition auto].
-    specialize (IHu (T.tApp t (l ++ [a]))).
-    forward IHu.
-    induction u; trivial. discriminate.
-Qed.
-Hint Resolve wf_mkApps_napp : wf.
+(* Lemma wf_mkApps t u : T.wf (T.mkApps t u) -> List.Forall T.wf u. *)
+(* Proof. *)
+(*   induction u in t |- *; simpl. *)
+(*   - intuition. *)
+(*   - intros H; destruct t; try solve [inv H; intuition auto]. *)
+(*     specialize (IHu (T.tApp t (l ++ [a]))). *)
+(*     forward IHu. *)
+(*     induction u; trivial. *)
+(*     simpl. rewrite <- app_assoc. simpl. apply H. *)
+(*     intuition. inv H. *)
+(*     apply Forall_app in H3. intuition. *)
+(* Qed. *)
+(* Hint Resolve wf_mkApps : wf. *)
 
 Lemma trans_nth n l x : trans (nth n l x) = nth n (List.map trans l) (trans x).
 Proof.
   induction l in n |- *; destruct n; trivial.
   simpl in *. congruence.
-Qed.
-
-Lemma trans_safe_nth Γ i (isdecl : i < #|Γ|) decl :
-  safe_nth Γ (exist (fun n : nat => n < #|Γ|) i isdecl) = decl ->
-  { isdecl' &
-  safe_nth (trans_local Γ) (exist (fun n : nat => n < #|trans_local Γ|) i isdecl') = trans_decl decl }.
-Proof.
-  revert i isdecl; induction Γ; intros.
-  inv isdecl.
-  simpl. unfold trans_local.
-  assert (i < S #|map trans_decl Γ|) by (rewrite map_length; auto with arith).
-  exists H0. destruct i. simpl in H. congruence.
-  simpl in *. specialize (IHΓ _ _ H). destruct IHΓ.
-  rewrite <- e. f_equal. f_equal. pi.
-Qed.
-
-Lemma red1_mkApps_l Σ Γ M1 N1 M2 : red1 Σ Γ M1 N1 -> red1 Σ Γ (mkApps M1 M2) (mkApps N1 M2).
-Proof.
-  revert M1 N1; induction M2. auto. intros. simpl.
-  assert (red1 Σ Γ (tApp M1 a) (tApp N1 a)).
-  - constructor. auto.
-  - auto.
 Qed.
 
 Lemma trans_iota_red pars ind c u args brs :
@@ -535,24 +448,24 @@ Proof.
   - induction wfbrs in c |- *.
     destruct c; simpl; constructor.
     destruct c; simpl; try constructor; auto with wf.
-  - apply wf_mkApps in wfapp. now apply Forall_skipn.
+  - apply wf_mkApps_napp in wfapp. solve_all. apply All_skipn. solve_all. constructor.
   - f_equal. induction brs in c |- *; simpl; destruct c; trivial.
     now rewrite map_skipn.
 Qed.
 
 Lemma trans_unfold_fix mfix idx narg fn :
-  List.Forall (fun def : T.def Tterm => T.wf (T.dtype Tterm def) /\ T.wf (T.dbody Tterm def) /\
-              T.isLambda (T.dbody Tterm def) = true) mfix ->
+  List.Forall (fun def : T.def Tterm => T.wf (T.dtype def) /\ T.wf (T.dbody def) /\
+              T.isLambda (T.dbody def) = true) mfix ->
   TTy.unfold_fix mfix idx = Some (narg, fn) ->
-  unfold_fix (map (map_def trans) mfix) idx = Some (narg, trans fn).
+  unfold_fix (map (map_def trans trans) mfix) idx = Some (narg, trans fn).
 Proof.
   unfold TTy.unfold_fix, unfold_fix. intros wffix.
   rewrite nth_error_map. destruct (nth_error mfix idx) eqn:Hdef.
   intros [= <- <-]. simpl. repeat f_equal.
-  rewrite trans_substl. clear Hdef.
+  rewrite trans_subst. clear Hdef.
   unfold TTy.fix_subst. generalize mfix at 2.
   induction mfix0. constructor. simpl. repeat (constructor; auto).
-  apply (nth_error_forall _ _ _ _ Hdef) in wffix. simpl in wffix; intuition.
+  apply (nth_error_forall Hdef) in wffix. simpl in wffix; intuition.
   f_equal. clear Hdef.
   unfold fix_subst, TTy.fix_subst. rewrite map_length.
   generalize mfix at 1 3.
@@ -562,17 +475,17 @@ Proof.
 Qed.
 
 Lemma trans_unfold_cofix mfix idx narg fn :
-  List.Forall (fun def : T.def Tterm => T.wf (T.dtype Tterm def) /\ T.wf (T.dbody Tterm def)) mfix ->
+  List.Forall (fun def : T.def Tterm => T.wf (T.dtype def) /\ T.wf (T.dbody def)) mfix ->
   TTy.unfold_cofix mfix idx = Some (narg, fn) ->
-  unfold_cofix (map (map_def trans) mfix) idx = Some (narg, trans fn).
+  unfold_cofix (map (map_def trans trans) mfix) idx = Some (narg, trans fn).
 Proof.
   unfold TTy.unfold_cofix, unfold_cofix. intros wffix.
   rewrite nth_error_map. destruct (nth_error mfix idx) eqn:Hdef.
   intros [= <- <-]. simpl. repeat f_equal.
-  rewrite trans_substl. clear Hdef.
+  rewrite trans_subst. clear Hdef.
   unfold TTy.cofix_subst. generalize mfix at 2.
   induction mfix0. constructor. simpl. repeat (constructor; auto).
-  apply (nth_error_forall _ _ _ _ Hdef) in wffix. simpl in wffix; intuition.
+  apply (nth_error_forall Hdef) in wffix. simpl in wffix; intuition.
   f_equal. clear Hdef.
   unfold cofix_subst, TTy.cofix_subst. rewrite map_length.
   generalize mfix at 1 3.
@@ -583,13 +496,6 @@ Qed.
 
 Definition isApp t := match t with tApp _ _ => true | _ => false end.
 
-Lemma decompose_app_mkApps:
-  forall f l l', decompose_app_aux (mkApps f l) l' = decompose_app_aux f (l ++ l').
-Proof.
-  intros f. induction l in f |- *; simpl; intros. reflexivity.
-  rewrite IHl. simpl. reflexivity.
-Qed.
-
 Lemma trans_is_constructor:
   forall (args : list Tterm) (narg : nat),
     Template.Typing.is_constructor narg args = true -> is_constructor narg (map trans args) = true.
@@ -599,7 +505,7 @@ Proof.
   rewrite nth_error_map. destruct nth_error. simpl. intros.
   destruct t; try discriminate || reflexivity.
   destruct t; try discriminate || reflexivity.
-  simpl. unfold decompose_app; now rewrite decompose_app_mkApps.
+  simpl. unfold decompose_app; now rewrite decompose_app_rec_mkApps.
   congruence.
 Qed.
 

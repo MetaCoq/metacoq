@@ -36,23 +36,23 @@ Section Wcbv.
   | eval_box l : eval (mkApps tBox l) tBox
 
   (** Beta *)
-  | eval_beta f na t b a a' res :
-      eval f (tLambda na t b) ->
+  | eval_beta f na b a a' res :
+      eval f (tLambda na b) ->
       eval a a' ->
       eval (subst10 a' b) res ->
       eval (tApp f a) res
 
   (** Let *)
-  | eval_zeta na b0 b0' t b1 res :
+  | eval_zeta na b0 b0' b1 res :
       eval b0 b0' ->
       eval (subst10 b0' b1) res ->
-      eval (tLetIn na b0 t b1) res
+      eval (tLetIn na b0 b1) res
 
   (** Case *)
-  | eval_iota ind pars discr c u args p brs res :
+  | eval_iota ind pars discr c u args brs res :
       eval discr (mkApps (tConstruct ind c u) args) ->
       eval (iota_red pars c args brs) res ->
-      eval (tCase (ind, pars) p discr brs) res
+      eval (tCase (ind, pars) discr brs) res
 
   (** Fix unfolding, with guard *)
   | eval_fix mfix idx args args' narg fn res :
@@ -63,10 +63,10 @@ Section Wcbv.
       eval (mkApps (tFix mfix idx) args) res
 
   (** CoFix-case unfolding *)
-  | red_cofix_case ip p mfix idx args narg fn brs res :
+  | red_cofix_case ip mfix idx args narg fn brs res :
       unfold_cofix mfix idx = Some (narg, fn) ->
-      eval (tCase ip (mkApps fn args) p brs) res ->
-      eval (tCase ip p (mkApps (tCoFix mfix idx) args) brs) res
+      eval (tCase ip (mkApps fn args) brs) res ->
+      eval (tCase ip (mkApps (tCoFix mfix idx) args) brs) res
 
 
   (** CoFix-proj unfolding *)
@@ -88,7 +88,7 @@ Section Wcbv.
       eval (tProj (i, pars, arg) discr) res
 
   (** Abstractions are values *)
-  | eval_abs na M N : eval (tLambda na M N) (tLambda na M N)
+  | eval_abs na N : eval (tLambda na N) (tLambda na N)
 
   (** Constructors applied to values are values *)
   | eval_constr f i k u l l' :
@@ -104,22 +104,22 @@ Section Wcbv.
   Lemma eval_evals_ind :
     forall P : term -> term -> Prop,
       (forall l, P (mkApps tBox l) tBox) ->
-      (forall (f : term) (na : name) (t b a a' : term) (res : term),
-          eval f (tLambda na t b) ->
-          P f (tLambda na t b) ->
+      (forall (f : term) (na : name) (b a a' : term) (res : term),
+          eval f (tLambda na b) ->
+          P f (tLambda na b) ->
           eval a a' -> P a a' ->
           eval (b {0 := a'}) res -> P (b {0 := a'}) res -> P (tApp f a) res) ->
 
-      (forall (na : name) (b0 b0' t b1 res : term),
+      (forall (na : name) (b0 b0' b1 res : term),
           eval b0 b0' -> P b0 b0' -> eval (b1 {0 := b0'}) res -> P (b1 {0 := b0'}) res ->
-          P (tLetIn na b0 t b1) res) ->
+          P (tLetIn na b0 b1) res) ->
 
       (forall (ind : inductive) (pars : nat) (discr : term) (c : nat) (u : universe_instance)
-              (args : list term) (p : term) (brs : list (nat * term)) (res : term),
+              (args : list term) (brs : list (nat * term)) (res : term),
           eval discr (mkApps (tConstruct ind c u) args) ->
           P discr (mkApps (tConstruct ind c u) args) ->
           eval (iota_red pars c args brs) res ->
-          P (iota_red pars c args brs) res -> P (tCase (ind, pars) p discr brs) res) ->
+          P (iota_red pars c args brs) res -> P (tCase (ind, pars) discr brs) res) ->
 
       (forall (mfix : mfixpoint term) (idx : nat) (args args' : list term) (narg : nat) (fn res : term),
           unfold_fix mfix idx = Some (narg, fn) ->
@@ -128,11 +128,11 @@ Section Wcbv.
           is_constructor narg args' = true ->
           eval (mkApps fn args') res -> P (mkApps fn args') res -> P (mkApps (tFix mfix idx) args) res) ->
 
-      (forall (ip : inductive * nat) (p : term) (mfix : mfixpoint term) (idx : nat) (args : list term)
+      (forall (ip : inductive * nat)  (mfix : mfixpoint term) (idx : nat) (args : list term)
               (narg : nat) (fn : term) (brs : list (nat * term)) (res : term),
           unfold_cofix mfix idx = Some (narg, fn) ->
-          eval (tCase ip (mkApps fn args) p brs) res ->
-          P (tCase ip (mkApps fn args) p brs) res -> P (tCase ip p (mkApps (tCoFix mfix idx) args) brs) res) ->
+          eval (tCase ip (mkApps fn args) brs) res ->
+          P (tCase ip (mkApps fn args) brs) res -> P (tCase ip (mkApps (tCoFix mfix idx) args) brs) res) ->
 
       (forall (p : projection) (mfix : mfixpoint term) (idx : nat) (args : list term) (narg : nat) (fn res : term),
           unfold_cofix mfix idx = Some (narg, fn) ->
@@ -152,7 +152,7 @@ Section Wcbv.
           eval (nth (pars + arg) args tDummy) res ->
           P (nth (pars + arg) args tDummy) res -> P (tProj (i, pars, arg) discr) res) ->
 
-      (forall (na : name) (M N : term), P (tLambda na M N) (tLambda na M N)) ->
+      (forall (na : name) (M N : term), P (tLambda na N) (tLambda na N)) ->
 
       (forall (f8 : term) (i : inductive) (k : nat) (u : universe_instance) (l l' : list term),
           eval f8 (tConstruct i k u) ->
@@ -185,14 +185,14 @@ Section Wcbv.
   Inductive value : term -> Prop :=
   | value_tBox : value tBox
   | value_tEvar ev l : value (tEvar ev l)
-  | value_tLam na t b : value (tLambda na t b)
+  | value_tLam na b : value (tLambda na b)
   | value_tConstruct i k u l : List.Forall value l -> value (mkApps (tConstruct i k u) l).
 
   Lemma value_values_ind : forall P : term -> Prop,
       (P tBox) ->
        (forall i : nat, P (tRel i)) ->
        (forall (ev : nat) (l : list term), P (tEvar ev l)) ->
-       (forall (na : name) (t b : term), P (tLambda na t b)) ->
+       (forall (na : name) (b : term), P (tLambda na b)) ->
        (forall (i : inductive) (k : nat) (u : universe_instance) (l : list term),
            List.Forall value l -> List.Forall P l -> P (mkApps (tConstruct i k u) l)) ->
        forall t : term, value t -> P t.

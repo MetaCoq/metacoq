@@ -119,12 +119,6 @@ Proof.
   induction mfix; simpl; auto.
 Qed.
 
-Definition fix_context (m : mfixpoint term) : context :=
-  List.rev (mapi (fun i d => vass d.(dname) (lift0 i d.(dtype))) m).
-
-Lemma fix_context_length mfix : #|fix_context mfix| = #|mfix|.
-Proof. unfold fix_context. now rewrite List.rev_length, mapi_length. Qed.
-
 Definition tDummy := tVar "".
 
 Definition iota_red npar c args brs :=

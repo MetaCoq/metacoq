@@ -8,11 +8,23 @@ From Template Require Export univ uGraph Ast.
 
 (** Extracted terms
 
-  These are the terms produced by extraction:
-  compared to kernel terms, all proofs and types are
-  translated to [tBox], applications are in binary form
-  and casts are removed.
-*)
+  These are the terms produced by extraction: compared to kernel terms,
+  all proofs and types are translated to [tBox] or erased (type annotations
+  at lambda and let-ins, types of fix/cofixpoints), applications
+  are in binary form and casts are removed.  *)
+
+Record def (term : Set) := { dname : name; dbody : term; rarg : nat }.
+Arguments dname {term} d.
+Arguments dbody {term} d.
+Arguments rarg {term} d.
+
+Definition map_def {term : Set} (f : term -> term) (d : def term) :=
+  {| dname := d.(dname); dbody := f d.(dbody); rarg := d.(rarg) |}.
+
+Definition test_def {term : Set} (f : term -> bool) (d : def term) :=
+  f d.(dbody).
+
+Definition mfixpoint (term : Set) := list (def term).
 
 Inductive term : Set :=
 | tBox       : term (* Represents all proofs *)
@@ -20,13 +32,13 @@ Inductive term : Set :=
 | tVar       : ident -> term (* For free variables (e.g. in a goal) *)
 | tMeta      : nat -> term   (* NOTE: this will go away *)
 | tEvar      : nat -> list term -> term
-| tLambda    : name -> term -> term -> term
-| tLetIn     : name -> term (* the term *) -> term -> term -> term
+| tLambda    : name -> term -> term
+| tLetIn     : name -> term (* the term *) -> term -> term
 | tApp       : term -> term -> term
 | tConst     : kername -> universe_instance -> term
 | tConstruct : inductive -> nat -> universe_instance -> term
-| tCase      : (inductive * nat) (* # of parameters *) -> term (* type info *)
-               -> term (* discriminee *) -> list (nat * term) (* branches *) -> term
+| tCase      : (inductive * nat) (* # of parameters *) ->
+               term (* discriminee *) -> list (nat * term) (* branches *) -> term
 | tProj      : projection -> term -> term
 | tFix       : mfixpoint term -> nat -> term
 | tCoFix     : mfixpoint term -> nat -> term.
@@ -47,7 +59,7 @@ Definition isApp t :=
 
 Definition isLambda t :=
   match t with
-  | tLambda _ _ _ => true
+  | tLambda _ _ => true
   | _ => false
   end.
 

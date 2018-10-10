@@ -17,20 +17,20 @@ Fixpoint lift n k t : term :=
   match t with
   | tRel i => if Nat.leb k i then tRel (n + i) else tRel i
   | tEvar ev args => tEvar ev (List.map (lift n k) args)
-  | tLambda na T M => tLambda na (lift n k T) (lift n (S k) M)
+  | tLambda na M => tLambda na (lift n (S k) M)
   | tApp u v => tApp (lift n k u) (lift n k v)
-  | tLetIn na b t b' => tLetIn na (lift n k b) (lift n k t) (lift n (S k) b')
-  | tCase ind p c brs =>
+  | tLetIn na b b' => tLetIn na (lift n k b) (lift n (S k) b')
+  | tCase ind c brs =>
     let brs' := List.map (on_snd (lift n k)) brs in
-    tCase ind (lift n k p) (lift n k c) brs'
+    tCase ind (lift n k c) brs'
   | tProj p c => tProj p (lift n k c)
   | tFix mfix idx =>
     let k' := List.length mfix + k in
-    let mfix' := List.map (map_def (lift n k) (lift n k')) mfix in
+    let mfix' := List.map (map_def (lift n k')) mfix in
     tFix mfix' idx
   | tCoFix mfix idx =>
     let k' := List.length mfix + k in
-    let mfix' := List.map (map_def (lift n k) (lift n k')) mfix in
+    let mfix' := List.map (map_def (lift n k')) mfix in
     tCoFix mfix' idx
   | tBox => t
   | tVar _ => t
@@ -56,20 +56,20 @@ Fixpoint subst s k u :=
       end
     else tRel n
   | tEvar ev args => tEvar ev (List.map (subst s k) args)
-  | tLambda na T M => tLambda na (subst s k T) (subst s (S k) M)
+  | tLambda na M => tLambda na (subst s (S k) M)
   | tApp u v => tApp (subst s k u) (subst s k v)
-  | tLetIn na b ty b' => tLetIn na (subst s k b) (subst s k ty) (subst s (S k) b')
-  | tCase ind p c brs =>
+  | tLetIn na b b' => tLetIn na (subst s k b) (subst s (S k) b')
+  | tCase ind c brs =>
     let brs' := List.map (on_snd (subst s k)) brs in
-    tCase ind (subst s k p) (subst s k c) brs'
+    tCase ind (subst s k c) brs'
   | tProj p c => tProj p (subst s k c)
   | tFix mfix idx =>
     let k' := List.length mfix + k in
-    let mfix' := List.map (map_def (subst s k) (subst s k')) mfix in
+    let mfix' := List.map (map_def (subst s k')) mfix in
     tFix mfix' idx
   | tCoFix mfix idx =>
     let k' := List.length mfix + k in
-    let mfix' := List.map (map_def (subst s k) (subst s k')) mfix in
+    let mfix' := List.map (map_def (subst s k')) mfix in
     tCoFix mfix' idx
   | x => x
   end.
@@ -84,19 +84,19 @@ Fixpoint closedn k (t : term) : bool :=
   match t with
   | tRel i => Nat.ltb i k
   | tEvar ev args => List.forallb (closedn k) args
-  | tLambda _ T M => closedn k T && closedn (S k) M
+  | tLambda _ M => closedn (S k) M
   | tApp u v => closedn k u && closedn k v
-  | tLetIn na b t b' => closedn k b && closedn k t && closedn (S k) b'
-  | tCase ind p c brs =>
+  | tLetIn na b b' => closedn k b && closedn (S k) b'
+  | tCase ind c brs =>
     let brs' := List.forallb (test_snd (closedn k)) brs in
-    closedn k p && closedn k c && brs'
+    closedn k c && brs'
   | tProj p c => closedn k c
   | tFix mfix idx =>
     let k' := List.length mfix + k in
-    List.forallb (test_def (closedn k) (closedn k')) mfix
+    List.forallb (test_def (closedn k')) mfix
   | tCoFix mfix idx =>
     let k' := List.length mfix + k in
-    List.forallb (test_def (closedn k) (closedn k')) mfix
+    List.forallb (test_def (closedn k')) mfix
   | x => true
   end.
 
@@ -195,23 +195,25 @@ Proof.
 Qed.
 Hint Resolve -> on_snd_eq_id_spec : all.
 
-Lemma map_def_eq_spec {A B : Set} (f f' g g' : A -> B) (x : def A) :
-  f (dtype x) = g (dtype x) ->
-  f' (dbody x) = g' (dbody x) ->
-  map_def f f' x = map_def g g' x.
+Lemma map_def_eq_spec (f g : term -> term) (x : def term) :
+  f (dbody x) = g (dbody x) ->
+  map_def f x = map_def g x.
 Proof.
   intros. unfold map_def; f_equal; auto.
 Qed.
 Hint Resolve map_def_eq_spec : all.
 
-Lemma map_def_id_spec {A : Set} (f f' : A -> A) (x : def A) :
-  f (dtype x) = (dtype x) ->
-  f' (dbody x) = (dbody x) ->
-  map_def f f' x = x.
+Lemma map_def_id_spec (f : term -> term) (x : def term) :
+  f (dbody x) = (dbody x) ->
+  map_def f x = x.
 Proof.
-  intros. rewrite (map_def_eq_spec _ _ id id); auto. destruct x; auto.
+  intros. rewrite (map_def_eq_spec f id); auto. destruct x; auto.
 Qed.
 Hint Resolve map_def_id_spec : all.
+
+Lemma compose_map_def (f g : term -> term) :
+  compose (map_def f) (map_def g) = map_def (compose f g).
+Proof. reflexivity. Qed.
 
 Hint Extern 10 (_ < _)%nat => lia : all.
 Hint Extern 10 (_ <= _)%nat => lia : all.
@@ -465,8 +467,6 @@ Proof.
     simpl closed in *; try solve [simpl lift; simpl closed; f_equal; auto; toProp; solve_all]; try easy.
   - rewrite lift_rel_lt; auto.
     revert H. elim (Nat.ltb_spec n0 k); intros; try easy.
-  - simpl lift. f_equal. solve_all. unfold test_def in b. toProp. solve_all.
-  - simpl lift. f_equal. solve_all. unfold test_def in b. toProp. solve_all.
 Qed.
 
 Lemma closed_upwards {k t} k' : closedn k t -> k' >= k -> closedn k' t.
@@ -543,14 +543,4 @@ Lemma isLambda_subst (s : list term) k (bod : term) :
   isLambda bod = true -> isLambda (subst s k bod) = true.
 Proof.
   intros. destruct bod; try discriminate. reflexivity.
-Qed.
-
-Lemma map_vass_map_def g l n k :
-  (mapi (fun i (d : def term) => vass (dname d) (lift0 i (dtype d)))
-        (map (map_def (lift n k) g) l)) =
-  (mapi (fun i d => map_decl (lift n (i + k)) d) (mapi (fun i (d : def term) => vass (dname d) (lift0 i (dtype d))) l)).
-Proof.
-  rewrite mapi_mapi, mapi_map. apply mapi_ext.
-  intros. unfold map_decl, vass; simpl; f_equal.
-  rewrite permute_lift. f_equal; lia. lia.
 Qed.

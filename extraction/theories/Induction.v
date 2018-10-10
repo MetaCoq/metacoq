@@ -23,18 +23,18 @@ Lemma term_forall_list_ind :
     (forall i : ident, P (tVar i)) ->
     (forall n : nat, P (tMeta n)) ->
     (forall (n : nat) (l : list term), Forall P l -> P (tEvar n l)) ->
-    (forall (n : name) (t : term), P t -> forall t0 : term, P t0 -> P (tLambda n t t0)) ->
+    (forall (n : name) (t : term), P t -> P (tLambda n t)) ->
     (forall (n : name) (t : term),
-        P t -> forall t0 : term, P t0 -> forall t1 : term, P t1 -> P (tLetIn n t t0 t1)) ->
+        P t -> forall t0 : term, P t0 -> P (tLetIn n t t0)) ->
     (forall t u : term, P t -> P u -> P (tApp t u)) ->
     (forall (s : String.string) (u : list Level.t), P (tConst s u)) ->
     (forall (i : inductive) (n : nat) (u : list Level.t), P (tConstruct i n u)) ->
     (forall (p : inductive * nat) (t : term),
-        P t -> forall t0 : term, P t0 -> forall l : list (nat * term),
-            tCaseBrsProp P l -> P (tCase p t t0 l)) ->
+        P t -> forall l : list (nat * term),
+            tCaseBrsProp P l -> P (tCase p t l)) ->
     (forall (s : projection) (t : term), P t -> P (tProj s t)) ->
-    (forall (m : mfixpoint term) (n : nat), tFixProp P P m -> P (tFix m n)) ->
-    (forall (m : mfixpoint term) (n : nat), tFixProp P P m -> P (tCoFix m n)) ->
+    (forall (m : mfixpoint term) (n : nat), Forall (fun x => P (dbody x)) m -> P (tFix m n)) ->
+    (forall (m : mfixpoint term) (n : nat), Forall (fun x => P (dbody x)) m -> P (tCoFix m n)) ->
     forall t : term, P t.
 Proof.
   intros until t. revert t.
@@ -55,11 +55,12 @@ Proof.
   revert m.
   fix auxm 1.
   destruct m; constructor; [|apply auxm].
-  split; apply auxt.
+  apply auxt.
+
   revert m.
   fix auxm 1.
   destruct m; constructor; [|apply auxm].
-  split; apply auxt.
+  apply auxt.
 Defined.
 
 Ltac applyhyp :=

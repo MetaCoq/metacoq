@@ -3,7 +3,7 @@
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
 From Template Require Import config utils monad_utils Ast AstUtils univ.
 From PCUIC Require Import Ast AstUtils Induction Typing Checker Retyping MetaTheory WcbvEval.
-From TemplateExtraction Require Ast LiftSubst. (* Typing WcbvEval. *)
+From TemplateExtraction Require Ast LiftSubst Typing WcbvEval.
 Require Import String.
 Local Open Scope string_scope.
 Set Asymmetric Patterns.
@@ -34,12 +34,11 @@ Section Erase.
   Section EraseMfix.
     Context (extract : forall (Γ : context) (t : term), typing_result E.term).
 
-    Definition extract_mfix Γ (defs : mfixpoint term) :=
+    Definition extract_mfix Γ (defs : mfixpoint term) : typing_result (TemplateExtraction.Ast.mfixpoint E.term) :=
       let Γ' := (fix_decls defs ++ Γ)%list in
-      monad_map (fun d => dtype' <- extract Γ d.(dtype);;
-                        dbody' <- extract Γ' d.(dbody);;
-                        ret ({| dname := d.(dname); rarg := d.(rarg);
-                                dtype := dtype'; dbody := dbody' |})) defs.
+      monad_map (fun d => dbody' <- extract Γ' d.(dbody);;
+                          ret ({| E.dname := d.(dname); E.rarg := d.(rarg);
+                                  E.dbody := dbody' |})) defs.
   End EraseMfix.
   
   Fixpoint extract (Σ : global_context) (Γ : context) (t : term) : typing_result E.term :=
@@ -58,14 +57,12 @@ Section Erase.
     | tConstruct kn k u => ret (E.tConstruct kn k u)
     | tProd na b t => ret E.tBox
     | tLambda na b t =>
-      b' <- extract Σ Γ b;;
       t' <- extract Σ (vass na b :: Γ) t;;
-      ret (E.tLambda na b' t')
+      ret (E.tLambda na t')
     | tLetIn na b t0 t1 =>
       b' <- extract Σ Γ b;;
-      t0' <- extract Σ Γ t0;;
       t1' <- extract Σ (vdef na b t0 :: Γ) t1;;
-      ret (E.tLetIn na b' t0' t1')
+      ret (E.tLetIn na b' t1')
     | tApp f u =>
       f' <- extract Σ Γ f;;
       l' <- extract Σ Γ u;;
@@ -76,13 +73,11 @@ Section Erase.
         match brs with
         | (_, x) :: _ => extract Σ Γ x (* Singleton elimination *)
         | nil =>
-          p' <- extract Σ Γ p;;
-          ret (E.tCase ip p' c' nil) (* Falsity elimination *)
+          ret (E.tCase ip c' nil) (* Falsity elimination *)
         end
       else
         brs' <- monad_map (T:=typing_result) (fun x => x' <- extract Σ Γ (snd x);; ret (fst x, x')) brs;;
-        p' <- extract Σ Γ p;;
-        ret (E.tCase ip p' c' brs')
+        ret (E.tCase ip c' brs')
     | tProj p c =>
       c' <- extract Σ Γ c;;
       ret (E.tProj p c')
@@ -242,7 +237,7 @@ Definition observe (q : Question) (v : E.term) : bool :=
     end
   | Abs =>
     match v with
-    | E.tLambda _ _ _ => true
+    | E.tLambda _ _ => true
     | E.tFix _ _ => true
     | _ => false
     end
@@ -279,7 +274,7 @@ Fixpoint obs_eq (Σ : global_context) (v v' : term) (T : term) (s : universe) : 
 
 Record extraction_post (Σ : global_context) (Σ' : Ast.global_context) (t : term) (t' : E.term) :=
   { extr_value : E.term;
-    (* extr_eval : TemplateExtraction.WcbvEval.eval (fst Σ') [] t' extr_value; *)
+    extr_eval : TemplateExtraction.WcbvEval.eval (fst Σ') t' extr_value;
     (* extr_equiv : obs_eq Σ v extr_value *) }.
 
 (** The extraction correctness theorem we conjecture. *)

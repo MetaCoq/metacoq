@@ -1,8 +1,9 @@
 (* Distributed under the terms of the MIT license.   *)
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
-From Template Require Import config utils monad_utils Ast univ Induction Typing Checker Retyping MetaTheory WcbvEval.
-From TemplateExtraction Require Ast Typing WcbvEval.
+From Template Require Import config utils monad_utils Ast AstUtils univ.
+From PCUIC Require Import Ast AstUtils Induction Typing Checker Retyping MetaTheory WcbvEval.
+From TemplateExtraction Require Ast LiftSubst. (* Typing WcbvEval. *)
 Require Import String.
 Local Open Scope string_scope.
 Set Asymmetric Patterns.
@@ -51,14 +52,11 @@ Section Erase.
     | tEvar m l =>
       l' <- monad_map (extract Σ Γ) l;;
       ret (E.tEvar m l')
-    | tSort u => ret (E.tSort u)
+    | tSort u => ret E.tBox
     | tConst kn u => ret (E.tConst kn u)
-    | tInd kn u => ret (E.tInd kn u)
+    | tInd kn u => ret E.tBox
     | tConstruct kn k u => ret (E.tConstruct kn k u)
-    | tCast t k ty => extract Σ Γ t
-    | tProd na b t => b' <- extract Σ Γ b;;
-                      t' <- extract Σ (vass na b :: Γ) t;;
-                      ret (E.tProd na b' t')
+    | tProd na b t => ret E.tBox
     | tLambda na b t =>
       b' <- extract Σ Γ b;;
       t' <- extract Σ (vass na b :: Γ) t;;
@@ -68,9 +66,9 @@ Section Erase.
       t0' <- extract Σ Γ t0;;
       t1' <- extract Σ (vdef na b t0 :: Γ) t1;;
       ret (E.tLetIn na b' t0' t1')
-    | tApp f l =>
+    | tApp f u =>
       f' <- extract Σ Γ f;;
-      l' <- monad_map (extract Σ Γ) l;;
+      l' <- extract Σ Γ u;;
       ret (E.tApp f' l') (* if is_dummy f' then ret dummy else *)
     | tCase ip p c brs =>
       c' <- extract Σ Γ c;;
@@ -110,16 +108,17 @@ Definition extract_constant_body `{F:Fuel} Σ (cb : constant_body) : typing_resu
   ret {| E.cst_universes := cb.(cst_universes);
          E.cst_type := ty; E.cst_body := body; |}.
 
-Fixpoint decompose_prod_n acc n ty :=
-  match n, ty with
-  | S n, tProd na t t' => decompose_prod_n (acc ,, vass na t) n t'
-  | S n, tLetIn na t b t' => decompose_prod_n (acc ,, vdef na b t) n t'
-  | _, _ => (acc, ty)
+Definition lift_opt_typing {A} (a : option A) (e : type_error) : typing_result A :=
+  match a with
+  | Some x => ret x
+  | None => raise e
   end.
 
 Definition extract_one_inductive_body `{F:Fuel} Σ npars arities
            (oib : one_inductive_body) : typing_result E.one_inductive_body :=
-  let '(params, arity) := decompose_prod_n [] npars oib.(ind_type) in
+  decty <- lift_opt_typing (decompose_prod_n_assum [] npars oib.(ind_type))
+        (NotAnInductive oib.(ind_type)) ;;
+  let '(params, arity) := decty in
   type <- extract Σ [] oib.(ind_type) ;;
   ctors <- monad_map (fun '(x, y, z) => y' <- extract Σ arities y;; ret (x, y', z)) oib.(ind_ctors);;
   let projctx := arities ,,, params ,, vass nAnon oib.(ind_type) in
@@ -217,9 +216,6 @@ Definition computational_ind Σ ind :=
   | _ => false
   end.
 
-Require Import Bool.
-Coercion is_true : bool >-> Sortclass.
-
 Definition computational_type Σ T :=
   exists ind, inductive_arity T = Some ind /\ computational_ind Σ ind.
 
@@ -231,12 +227,6 @@ Record extraction_pre (Σ : global_context) t T :=
     extr_computational_type : computational_type Σ T }.
 
 (** The observational equivalence relation between source and extractd values. *)
-
-Definition destApp t :=
-  match t with
-  | tApp f args => (f, args)
-  | f => (f, [])
-  end.
 
 Inductive Question : Set  := 
 | Cnstr : Ast.inductive -> nat -> Question 
@@ -289,7 +279,7 @@ Fixpoint obs_eq (Σ : global_context) (v v' : term) (T : term) (s : universe) : 
 
 Record extraction_post (Σ : global_context) (Σ' : Ast.global_context) (t : term) (t' : E.term) :=
   { extr_value : E.term;
-    extr_eval : TemplateExtraction.WcbvEval.eval (fst Σ') [] t' extr_value;
+    (* extr_eval : TemplateExtraction.WcbvEval.eval (fst Σ') [] t' extr_value; *)
     (* extr_equiv : obs_eq Σ v extr_value *) }.
 
 (** The extraction correctness theorem we conjecture. *)

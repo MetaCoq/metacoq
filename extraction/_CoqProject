@@ -1,8 +1,10 @@
 -Q ../template-coq/theories Template
+-Q ../pcuic/theories PCUIC
 -R theories TemplateExtraction
 -I ../template-coq/src
 
 theories/Ast.v
+theories/AstUtils.v
 theories/Induction.v
 theories/LiftSubst.v
 theories/UnivSubst.v

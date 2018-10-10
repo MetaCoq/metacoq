@@ -9,8 +9,9 @@ From Template Require Export univ uGraph Ast.
 (** Extracted terms
 
   These are the terms produced by extraction:
-  compared to kernel terms, all proofs are translated to [tBox] and
-  casts are removed.
+  compared to kernel terms, all proofs and types are
+  translated to [tBox], applications are in binary form
+  and casts are removed.
 *)
 
 Inductive term : Set :=
@@ -19,13 +20,10 @@ Inductive term : Set :=
 | tVar       : ident -> term (* For free variables (e.g. in a goal) *)
 | tMeta      : nat -> term   (* NOTE: this will go away *)
 | tEvar      : nat -> list term -> term
-| tSort      : universe -> term
-| tProd      : name -> term (* the type *) -> term -> term
 | tLambda    : name -> term -> term -> term
 | tLetIn     : name -> term (* the term *) -> term -> term -> term
-| tApp       : term -> list term -> term
+| tApp       : term -> term -> term
 | tConst     : kername -> universe_instance -> term
-| tInd       : inductive -> universe_instance -> term
 | tConstruct : inductive -> nat -> universe_instance -> term
 | tCase      : (inductive * nat) (* # of parameters *) -> term (* type info *)
                -> term (* discriminee *) -> list (nat * term) (* branches *) -> term
@@ -33,15 +31,10 @@ Inductive term : Set :=
 | tFix       : mfixpoint term -> nat -> term
 | tCoFix     : mfixpoint term -> nat -> term.
 
-
-
-Definition mkApps t us :=
+Fixpoint mkApps t us :=
   match us with
   | nil => t
-  | _ => match t with
-        | tApp f args => tApp f (args ++ us)
-        | _ => tApp t us
-        end
+  | a :: args => mkApps (tApp t a) args
   end.
 
 Definition mkApp t u := Eval cbn in mkApps t [u].
@@ -52,26 +45,11 @@ Definition isApp t :=
   | _ => false
   end.
 
-(** Well-formed terms: invariants which are not ensured by the OCaml type system *)
-
-Inductive wf : term -> Prop :=
-| wf_tBox : wf tBox
-| wf_tRel n : wf (tRel n)
-| wf_tVar id : wf (tVar id)
-| wf_tMeta n : wf (tMeta n)
-| wf_tEvar n l : Forall wf l -> wf (tEvar n l)
-| wf_tSort u : wf (tSort u)
-| wf_tProd na t b : wf t -> wf b -> wf (tProd na t b)
-| wf_tLambda na t b : wf t -> wf b -> wf (tLambda na t b)
-| wf_tLetIn na t b b' : wf t -> wf b -> wf b' -> wf (tLetIn na t b b')
-| wf_tApp t u : ~ isApp t = true -> u <> nil -> wf t -> Forall wf u -> wf (tApp t u)
-| wf_tConst k u : wf (tConst k u)
-| wf_tInd i u : wf (tInd i u)
-| wf_tConstruct i k u : wf (tConstruct i k u)
-| wf_tCase ci p c brs : wf p -> wf c -> Forall (Program.Basics.compose wf snd) brs -> wf (tCase ci p c brs)
-| wf_tProj p t : wf t -> wf (tProj p t)
-| wf_tFix mfix k : Forall (fun def => wf def.(dtype _) /\ wf def.(dbody _)) mfix -> wf (tFix mfix k)
-| wf_tCoFix mfix k : Forall (fun def => wf def.(dtype _) /\ wf def.(dbody _)) mfix -> wf (tCoFix mfix k).
+Definition isLambda t :=
+  match t with
+  | tLambda _ _ _ => true
+  | _ => false
+  end.
 
 (** ** Entries
 
@@ -167,6 +145,16 @@ Definition vdef x t A := {| decl_name := x; decl_body := Some t; decl_type := A 
 (** Local (de Bruijn) context *)
 
 Definition context := list context_decl.
+
+(** Mapping over a declaration and context. *)
+
+Definition map_decl f (d : context_decl) :=
+  {| decl_name := d.(decl_name);
+     decl_body := option_map f d.(decl_body);
+     decl_type := f d.(decl_type) |}.
+
+Definition map_context f c :=
+  List.map (map_decl f) c.
 
 (** Last declaration first *)
 

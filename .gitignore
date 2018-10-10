@@ -184,3 +184,5 @@ checker/src/wf.mli
 /checker/src/orders.ml
 /checker/src/orders.mli
 /checker/src/ordersTac.ml
+/pcuic/Makefile
+/pcuic/Makefile.conf

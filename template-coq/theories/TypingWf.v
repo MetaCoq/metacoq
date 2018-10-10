@@ -256,6 +256,24 @@ Proof.
     reflexivity.
 Qed.
 
+Lemma declared_projection_wf:
+  forall (H : checker_flags) (Σ : global_context) (p : projection) (u : universe_instance)
+         (mdecl : mutual_inductive_body) (idecl : one_inductive_body) (pdecl : ident * term),
+    declared_projection (fst Σ) mdecl idecl p pdecl ->
+    Forall_decls_typing (fun (_ : global_context) (_ : context) (t T : term) => Ast.wf t /\ Ast.wf T) Σ ->
+    Ast.wf (subst_instance_constr u (snd pdecl)).
+Proof.
+  intros H Σ p u mdecl idecl pdecl isdecl X.
+  destruct isdecl as [[Hmdecl Hidecl] Hpdecl].
+  eapply lookup_on_global_env in Hmdecl as [Σ' [wfΣ' prf]]; eauto. red in prf.
+  apply onInductives in prf.
+  eapply nth_error_alli in Hidecl; eauto. intuition.
+  eapply onProjections in Hidecl.
+  eapply nth_error_alli in Hidecl; eauto. red in Hidecl.
+  destruct decompose_prod_assum.
+  destruct Hidecl as [[s Hs] Hnpars]. apply wf_subst_instance_constr. apply Hs.
+Qed.
+
 Lemma typing_wf_gen `{checker_flags} : env_prop (fun Σ Γ t T => Ast.wf t /\ Ast.wf T).
 Proof.
   apply typing_ind_env; intros; auto with wf;
@@ -299,14 +317,8 @@ Proof.
     apply All_app_inv; solve_all. now apply All_skipn.
   - split. wf. apply wf_subst. solve_all. constructor. wf.
     apply wf_mkApps_inv in H3. apply All_rev. solve_all.
-    subst ty. destruct isdecl as [[Hmdecl Hidecl] Hpdecl].
-    eapply lookup_on_global_env in Hmdecl as [Σ' [wfΣ' prf]]; eauto. red in prf.
-    apply onInductives in prf.
-    eapply nth_error_alli in Hidecl; eauto. intuition.
-    eapply onProjections in Hidecl.
-    eapply nth_error_alli in Hidecl; eauto. red in Hidecl.
-    destruct decompose_prod_assum.
-    destruct Hidecl as [[s Hs] Hnpars]. apply wf_subst_instance_constr. apply Hs.
+    subst ty. eapply declared_projection_wf in isdecl; eauto.
+
   - subst types.
     apply All_local_env_app in X as [HΓ Hmfix].
     clear Hmfix.

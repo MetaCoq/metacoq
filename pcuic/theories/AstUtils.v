@@ -216,12 +216,6 @@ Fixpoint decompose_prod_assum (Γ : context) (t : term) : context * term :=
   | _ => (Γ, t)
   end.
 
-Fixpoint strip_outer_cast t :=
-  match t with
-  | tCast t _ _ => strip_outer_cast t
-  | _ => t
-  end.
-
 Fixpoint decompose_prod_n_assum (Γ : context) n (t : term) : option (context * term) :=
   match n with
   | 0 => Some (Γ, t)

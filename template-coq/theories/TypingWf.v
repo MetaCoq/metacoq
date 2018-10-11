@@ -293,7 +293,8 @@ Lemma declared_constructor_wf:
   forall (H : checker_flags) (Σ : global_context) (ind : inductive) (i : nat) (u : list Level.t)
          (mdecl : mutual_inductive_body) (idecl : one_inductive_body) (cdecl : ident * term * nat),
     Forall_decls_typing (fun (_ : global_context) (_ : context) (t T : term) => Ast.wf t /\ Ast.wf T) Σ ->
-    declared_constructor (fst Σ) mdecl idecl (ind, i) cdecl -> Ast.wf (type_of_constructor mdecl cdecl (ind, i) u).
+    declared_constructor (fst Σ) mdecl idecl (ind, i) cdecl ->
+    Ast.wf (snd (fst cdecl)).
 Proof.
   intros H Σ ind i u mdecl idecl cdecl X isdecl.
   destruct isdecl as [[Hmdecl Hidecl] Hcdecl]. red in Hmdecl.
@@ -331,7 +332,9 @@ Proof.
   - split. wf. apply wf_subst_instance_constr.
     eapply declared_inductive_wf; eauto.
 
-  - split. wf. eapply declared_constructor_wf; eauto.
+  - split. wf. unfold type_of_constructor.
+    apply wf_subst; auto with wf. apply wf_subst_instance_constr.
+    eapply declared_constructor_wf; eauto.
   - split. wf. constructor; eauto. solve_all.
     apply wf_mkApps. wf. solve_all. apply wf_mkApps_inv in H10. solve_all.
     apply All_app_inv; solve_all. now apply All_skipn.

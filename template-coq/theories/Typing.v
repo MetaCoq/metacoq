@@ -494,7 +494,7 @@ Fixpoint instantiate_params_subst params pars s ty :=
           | _ :: _ => None (* Too many arguments to substitute *)
           end
   | d :: params =>
-    match d.(decl_body), strip_outer_cast ty with
+    match d.(decl_body), ty with
     | None, tProd _ _ B =>
       match pars with
       | hd :: tl => instantiate_params_subst params tl (hd :: s) B

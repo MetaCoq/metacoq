@@ -484,9 +484,8 @@ Proof.
   induction params in args, t, n, Hn, k, s |- *; intros ctx' t'.
   - destruct args; simpl; rewrite ?Nat.add_0_r; try congruence.
   - simpl.
-    pose proof (strip_outer_cast_tProd_tLetIn_subst n t (#|s| + k)) as Hsubst.
     destruct a as [na [body|] ty]; simpl; try congruence;
-    destruct (strip_outer_cast t); try congruence; rewrite Hsubst.
+    destruct t; try congruence.
     -- intros Ht'.
        specialize (IHparams _ k _ _ _ Hn _ _ Ht').
        simpl in IHparams.
@@ -736,14 +735,14 @@ Proof.
   induction ctx in args, s, ty, s' |- *; simpl.
   case: args => [|a args'] // [= <- <-]. exists []; intuition congruence.
   case: a => [na [body|] ty''] /=.
-  - destruct (strip_outer_cast ty); try congruence.
+  - destruct ty; try congruence.
     intros. move: (IHctx _ _ _ _ H) => [ctx'' [Hmake Hdecomp]].
-    eapply (decompose_prod_n_assum_extend_ctx [vdef n t1 t2]) in Hdecomp.
+    eapply (decompose_prod_n_assum_extend_ctx [vdef n ty1 ty2]) in Hdecomp.
     unfold snoc. eexists; intuition eauto.
-  - destruct (strip_outer_cast ty); try congruence.
+  - destruct ty; try congruence.
     case: args => [|a args']; try congruence.
     move=> H. move: (IHctx _ _ _ _ H) => [ctx'' [Hmake Hdecomp]].
-    eapply (decompose_prod_n_assum_extend_ctx [vass n t1]) in Hdecomp.
+    eapply (decompose_prod_n_assum_extend_ctx [vass n ty1]) in Hdecomp.
     unfold snoc. eexists; intuition eauto.
 Qed.
 

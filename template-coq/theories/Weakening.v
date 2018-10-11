@@ -427,8 +427,7 @@ Lemma lift_instantiate_params_subst n k params args s t :
 Proof.
   induction params in args, t, n, k, s |- *.
   - destruct args; simpl; rewrite ?Nat.add_0_r; reflexivity.
-  - simpl. simpl. rewrite <- lift_strip_outer_cast. generalize (strip_outer_cast t).
-    clear t; intros t.
+  - simpl. simpl.
     destruct a as [na [body|] ty]; simpl; try congruence.
     destruct t; simpl; try congruence.
     -- now destruct (Nat.leb (#|s| + k) n0).
@@ -453,13 +452,13 @@ Proof.
   induction params in args, s, t, ctx, t' |- * ; destruct args; simpl; auto; try congruence.
   rewrite Nat.add_0_r. congruence.
   destruct decl_body. simpl.
-  destruct (strip_outer_cast t); simpl; try congruence.
+  destruct t; simpl; try congruence.
   intros. erewrite IHparams; eauto. simpl. lia.
-  destruct (strip_outer_cast t); simpl; try congruence.
+  destruct t; simpl; try congruence.
   destruct decl_body. simpl.
-  destruct (strip_outer_cast t); simpl; try congruence.
+  destruct t; simpl; try congruence.
   intros. erewrite IHparams; eauto. simpl. lia.
-  destruct (strip_outer_cast t); simpl; try congruence.
+  destruct t; simpl; try congruence.
   intros. erewrite IHparams; eauto. simpl. lia.
 Qed.
 

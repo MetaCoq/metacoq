@@ -18,6 +18,10 @@ Record typed_term : Type := existT_typed_term
 { my_projT1 : Type
 ; my_projT2 : my_projT1
 }.
+
+Inductive my_option (A:Type) : Type :=
+  | my_Some : A -> my_option A
+  | my_None : my_option A.
 (*
 Polymorphic Definition typed_term@{t} := {T : Type@{t} & T}.
 Polymorphic Definition existT_typed_term a t : typed_term :=
@@ -48,7 +52,7 @@ Cumulative Inductive TemplateMonad@{t u} : Type@{t} -> Type :=
 (* Guaranteed to not cause "... already declared" error *)
 | tmFreshName : ident -> TemplateMonad ident
 
-| tmAbout : ident -> TemplateMonad (option global_reference)
+| tmAbout : ident -> TemplateMonad (my_option global_reference)
 | tmCurrentModPath : unit -> TemplateMonad string
 
 (* Quoting and unquoting commands *)
@@ -69,7 +73,7 @@ Cumulative Inductive TemplateMonad@{t u} : Type@{t} -> Type :=
 
 (* Typeclass registration and querying for an instance *)
 | tmExistingInstance : ident -> TemplateMonad unit
-| tmInferInstance : forall A : Type@{t}, TemplateMonad (option A)
+| tmInferInstance : forall A : Type@{t}, TemplateMonad (my_option A)
 .
 
 Definition print_nf {A} (msg : A) : TemplateMonad unit

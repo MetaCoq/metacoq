@@ -274,6 +274,37 @@ Proof.
   destruct Hidecl as [[s Hs] Hnpars]. apply wf_subst_instance_constr. apply Hs.
 Qed.
 
+Lemma declared_inductive_wf :
+  forall (H : checker_flags) (Σ : global_context) ind
+         (mdecl : mutual_inductive_body) (idecl : one_inductive_body),
+  Forall_decls_typing (fun (_ : global_context) (_ : context) (t T : term) => Ast.wf t /\ Ast.wf T) Σ ->
+  declared_inductive (fst Σ) mdecl ind idecl -> Ast.wf (ind_type idecl).
+Proof.
+  intros.
+  destruct H0 as [Hmdecl Hidecl]. red in Hmdecl.
+  eapply lookup_on_global_env in X as [Σ' [wfΣ' prf]]; eauto.
+  apply onInductives in prf.
+  eapply nth_error_alli in Hidecl; eauto.
+  eapply onArity in Hidecl.
+  destruct Hidecl as [[s Hs] Hpars]; wf.
+Qed.
+
+Lemma declared_constructor_wf:
+  forall (H : checker_flags) (Σ : global_context) (ind : inductive) (i : nat) (u : list Level.t)
+         (mdecl : mutual_inductive_body) (idecl : one_inductive_body) (cdecl : ident * term * nat),
+    Forall_decls_typing (fun (_ : global_context) (_ : context) (t T : term) => Ast.wf t /\ Ast.wf T) Σ ->
+    declared_constructor (fst Σ) mdecl idecl (ind, i) cdecl -> Ast.wf (type_of_constructor mdecl cdecl (ind, i) u).
+Proof.
+  intros H Σ ind i u mdecl idecl cdecl X isdecl.
+  destruct isdecl as [[Hmdecl Hidecl] Hcdecl]. red in Hmdecl.
+  eapply lookup_on_global_env in X as [Σ' [wfΣ' prf]]; eauto. red in prf.
+  apply onInductives in prf.
+  eapply nth_error_alli in Hidecl; eauto. simpl in *. intuition.
+  apply onConstructors in Hidecl.
+  eapply nth_error_alli in Hcdecl; eauto.
+  destruct Hcdecl as [[s Hs] Hpars]. unfold type_of_constructor. wf.
+Qed.
+
 Lemma typing_wf_gen `{checker_flags} : env_prop (fun Σ Γ t T => Ast.wf t /\ Ast.wf T).
 Proof.
   apply typing_ind_env; intros; auto with wf;
@@ -297,21 +328,10 @@ Proof.
     red in prf. destruct decl; destruct cst_body; red in prf; simpl in *; wf.
     destruct prf. apply a.
 
-  - split. wf. apply wf_subst_instance_constr. wf.
-    destruct isdecl as [Hmdecl Hidecl]. red in Hmdecl.
-    eapply lookup_on_global_env in X as [Σ' [wfΣ' prf]]; eauto.
-    apply onInductives in prf.
-    eapply nth_error_alli in Hidecl; eauto.
-    eapply onArity in Hidecl.
-    destruct Hidecl as [[s Hs] Hpars]; wf.
-  - split. wf.
-    destruct isdecl as [[Hmdecl Hidecl] Hcdecl]. red in Hmdecl.
-    eapply lookup_on_global_env in X as [Σ' [wfΣ' prf]]; eauto. red in prf.
-    apply onInductives in prf.
-    eapply nth_error_alli in Hidecl; eauto. simpl in *. intuition.
-    apply onConstructors in Hidecl.
-    eapply nth_error_alli in Hcdecl; eauto.
-    destruct Hcdecl as [[s Hs] Hpars]. unfold type_of_constructor. wf.
+  - split. wf. apply wf_subst_instance_constr.
+    eapply declared_inductive_wf; eauto.
+
+  - split. wf. eapply declared_constructor_wf; eauto.
   - split. wf. constructor; eauto. solve_all.
     apply wf_mkApps. wf. solve_all. apply wf_mkApps_inv in H10. solve_all.
     apply All_app_inv; solve_all. now apply All_skipn.

@@ -126,7 +126,8 @@ struct
     CArray.map_to_list quote_level arr
 
   let quote_univ_constraints (c : Univ.Constraint.t) : quoted_univ_constraints =
-    List.map quote_univ_constraint (Univ.Constraint.elements c)
+    let l = List.map quote_univ_constraint (Univ.Constraint.elements c) in
+    Univ0.ConstraintSet.(List.fold_right add l empty)
 
   let quote_univ_context (uctx : Univ.UContext.t) : quoted_univ_context =
     let levels = Univ.UContext.instance uctx  in

@@ -12,8 +12,8 @@ Require Import ExtrOcamlString ExtrOcamlZInt.
    https://github.com/coq/coq/issues/7017. *)
 Extract Inductive Decimal.int => unit [ "(fun _ -> ())" "(fun _ -> ())" ] "(fun _ _ _ -> assert false)".
 
-Extraction Blacklist config uGraph univ Ast AstUtils String List Nat UnivSubst UnivSubst0
-           LiftSubst Induction Typing Retyping Typing0 Checker.
+Extraction Blacklist config uGraph univ Ast String List Nat UnivSubst
+           LiftSubst Induction Typing Retyping Checker.
 Set Warnings "-extraction-opaque-accessed".
 
 From TemplateExtraction Require Import EAst EAstUtils EUnivSubst EInduction ELiftSubst ETyping Extract.

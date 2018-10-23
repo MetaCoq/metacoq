@@ -18,4 +18,4 @@ theories/PCUICChecker.v
 theories/PCUICRetyping.v
 theories/TemplateToPCUIC.v
 # theories/All.v
-# theories/Extraction.v
+theories/Extraction.v

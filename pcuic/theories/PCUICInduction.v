@@ -1,7 +1,7 @@
 (* Distributed under the terms of the MIT license.   *)
 
 From Template Require Import univ Ast.
-From PCUIC Require Import Ast AstUtils.
+From PCUIC Require Import PCUICAst PCUICAstUtils.
 Require Import List Program.
 Require Import BinPos.
 Require Import Coq.Arith.Compare_dec Bool.

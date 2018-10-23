@@ -3,7 +3,7 @@
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
 From Template Require Import config utils univ AstUtils.
 From Template Require Import Ast Typing.
-From PCUIC Require Import Ast Induction LiftSubst UnivSubst AstUtils Typing Substitution.
+From PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICSubstitution.
 Require Import String.
 Local Open Scope string_scope.
 Set Asymmetric Patterns.
@@ -384,24 +384,23 @@ Proof.
   now eapply typing_wf in t.
   rewrite trans_subst_instance_constr trans_inds in Heq.
   rewrite Heq.
-  apply PCUIC.Substitution.instantiate_params_subst_make_context_subst in Heq.
-  destruct Heq as [ctx'' [Hs0 Hdecomp]].
+  apply PCUICSubstitution.instantiate_params_subst_make_context_subst in Heq.
+  destruct Heq as [ctx''' [Hs0 Hdecomp]].
   rewrite List.rev_length map_length in Hdecomp.
   rewrite <- trans_subst_instance_constr in Hdecomp.
   rewrite !Template.UnivSubst.subst_instance_constr_it_mkProd_or_LetIn in Hdecomp.
   rewrite !trans_it_mkProd_or_LetIn in Hdecomp.
   assert (#|Template.Ast.ind_params mdecl| =
-    #|PCUIC.Substitution.subst_context
+    #|PCUICSubstitution.subst_context
       (inds (inductive_mind ind) u (map trans_one_ind_body (Template.Ast.ind_bodies mdecl))) 0
       (map trans_decl (Template.UnivSubst.subst_instance_context u (Template.Ast.ind_params mdecl)))|).
-  now rewrite PCUIC.Substitution.subst_context_length map_length Template.UnivSubst.subst_instance_context_length.
+  now rewrite PCUICSubstitution.subst_context_length map_length Template.UnivSubst.subst_instance_context_length.
   rewrite H1 in Hdecomp.
-  rewrite PCUIC.Substitution.subst_it_mkProd_or_LetIn in Hdecomp.
-  rewrite AstUtils.decompose_prod_n_assum_it_mkProd in Hdecomp.
+  rewrite PCUICSubstitution.subst_it_mkProd_or_LetIn in Hdecomp.
+  rewrite decompose_prod_n_assum_it_mkProd in Hdecomp.
   injection Hdecomp. intros <- <-. clear Hdecomp.
 
-
-  admit.
+  admit. admit. admit. admit. congruence.
   revert H1. destruct map_option_out. intros.
   specialize (H1 _ eq_refl). rewrite H1.
   congruence.
@@ -499,7 +498,7 @@ Proof.
   revert t t' Ht Hn; induction u in u' |- *; intros.
 
   destruct u'; try discriminate.
-  simpl. apply Substitution.eq_term_leq_term. auto.
+  simpl. apply PCUICSubstitution.eq_term_leq_term. auto.
 
   destruct u'; try discriminate.
   simpl in *. apply IHu. toProp; auto. simpl; toProp; auto.
@@ -643,7 +642,7 @@ Proof.
   induction 1 using Template.Typing.red1_ind_all; inv Hwf; simpl; try solve [econstructor; eauto].
 
   - simpl. inv H1. inv H2. rewrite trans_mkApps; auto. apply Template.LiftSubst.wf_subst; auto.
-    rewrite trans_subst; auto. apply red1_mkApps_l. constructor.
+    rewrite trans_subst; auto. apply PCUICSubstitution.red1_mkApps_l. constructor.
 
   - rewrite trans_subst; eauto. constructor.
   - rewrite trans_lift; eauto.
@@ -688,11 +687,11 @@ Proof.
     solve_all. red. simpl. apply H2. solve_all. simpl. auto.
 
   - rewrite !trans_mkApps; auto with wf. eapply wf_red1 in H; auto.
-    apply red1_mkApps_l. auto.
+    apply PCUICSubstitution.red1_mkApps_l. auto.
 
   - clear H0 H1 H2. revert M1. induction H.
     simpl. intuition. inv H3. specialize (H1 H0).
-    apply red1_mkApps_l. apply app_red_r. auto.
+    apply PCUICSubstitution.red1_mkApps_l. apply app_red_r. auto.
     inv H3. specialize (IHOnOne2 H1).
     simpl. intros.
     eapply (IHOnOne2 (T.tApp M1 [hd])).
@@ -851,11 +850,13 @@ Proof.
     -- eapply typing_wf in X0; intuition auto.
     -- eapply declared_inductive_wf in isdecl; eauto.
        apply typing_wf_wf; auto.
+    -- eapply typing_wf in X3; intuition auto.
+       eapply wf_mkApps_inv in H4. apply All_firstn. solve_all.
+    -- destruct idecl; simpl in *. unfold TTy.check_correct_arity, check_correct_arity in *. admit. (* destruct idecl; auto. apply H1. *)
     -- admit.
-    -- destruct idecl; auto.
     -- rewrite trans_mkApps in X4; auto with wf.
        eapply typing_wf in X3; auto. intuition. eapply wf_mkApps_inv in H4; auto.
-    -- solve_all.
+    -- apply All2_map. solve_all.
 
   - destruct pdecl as [arity ty]; simpl in *.
     pose proof (TypingWf.declared_projection_wf _ _ p u _ _ _ isdecl).

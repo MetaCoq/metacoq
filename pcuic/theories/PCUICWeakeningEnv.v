@@ -2,7 +2,7 @@
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Arith Lia.
 From Template Require Import config utils Ast AstUtils.
-From PCUIC Require Import Ast AstUtils LiftSubst Typing.
+From PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICLiftSubst PCUICUnivSubst PCUICTyping.
 Require Import ssreflect ssrbool.
 
 (** * Weakening lemmas w.r.t. the global environment *)

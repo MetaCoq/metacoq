@@ -2,7 +2,7 @@
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Arith Lia.
 From Template Require Import utils univ UnivSubst.
-From PCUIC Require Import Ast Induction LiftSubst AstUtils.
+From PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICLiftSubst.
 Require Import String.
 Local Open Scope string_scope.
 Set Asymmetric Patterns.
@@ -40,7 +40,7 @@ Fixpoint subst_instance_constr (u : universe_instance) (c : term) :=
   end.
 
 Definition subst_instance_context (u : universe_instance) (c : context) : context :=
-  AstUtils.map_context (subst_instance_constr u) c.
+  PCUICAstUtils.map_context (subst_instance_constr u) c.
 
 Lemma lift_subst_instance_constr u c n k :
   lift n k (subst_instance_constr u c) = subst_instance_constr u (lift n k c).

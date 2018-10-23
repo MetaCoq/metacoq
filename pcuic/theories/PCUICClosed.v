@@ -2,7 +2,7 @@
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Arith Lia.
 From Template Require Import config utils Ast.
-From PCUIC Require Import Ast AstUtils Induction LiftSubst Typing WeakeningEnv.
+From PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICWeakeningEnv.
 Require Import ssreflect ssrbool.
 
 Definition closed_decl n d :=
@@ -122,7 +122,7 @@ Proof.
 Qed.
 
 Lemma closedn_subst_instance_constr k t u :
-  closedn k (UnivSubst.subst_instance_constr u t) = closedn k t.
+  closedn k (subst_instance_constr u t) = closedn k t.
 Proof.
   revert k.
   induction t in |- * using term_forall_list_ind; intros;

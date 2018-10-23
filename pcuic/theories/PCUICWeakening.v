@@ -2,7 +2,7 @@
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega Lia.
 From Template Require Import config utils Ast.
-From PCUIC Require Import Ast AstUtils Induction LiftSubst Typing WeakeningEnv Closed.
+From PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICWeakeningEnv PCUICClosed.
 Require Import ssreflect ssrbool.
 
 (** * Weakening lemmas for typing derivations.
@@ -213,7 +213,7 @@ Proof.
 Qed.
 Hint Resolve lift_is_constructor.
 
-Hint Rewrite UnivSubst.lift_subst_instance_constr : lift.
+Hint Rewrite lift_subst_instance_constr : lift.
 Hint Rewrite lift_mkApps : lift.
 Hint Rewrite distr_lift_subst distr_lift_subst10 : lift.
 Hint Rewrite lift_iota_red : lift.
@@ -364,7 +364,7 @@ Proof.
   simpl in Hcdecl'. injection Hcdecl'.
   intros.
   rewrite <- H3 at 2.
-  rewrite <- UnivSubst.lift_subst_instance_constr.
+  rewrite <- lift_subst_instance_constr.
   now rewrite subst0_inds_lift.
 Qed.
 
@@ -619,7 +619,7 @@ Proof.
   rewrite -> ind_ctors_map.
   rewrite -> mapi_map, map_mapi. f_equal. extensionality i. extensionality x.
   destruct x as [[id t] arity]. simpl.
-  rewrite <- UnivSubst.lift_subst_instance_constr.
+  rewrite <- lift_subst_instance_constr.
   rewrite subst0_inds_lift.
   rewrite <- lift_instantiate_params.
   destruct (instantiate_params _ _) eqn:Heqip. simpl.
@@ -942,7 +942,7 @@ Proof.
     erewrite (distr_lift_subst_rec _ _ _ 0 #|Γ'|).
     simpl. rewrite -> map_rev.
     subst ty.
-    rewrite -> List.rev_length, UnivSubst.lift_subst_instance_constr.
+    rewrite -> List.rev_length, lift_subst_instance_constr.
     replace (lift #|Γ''| (S (#|args| + #|Γ'|)) (snd pdecl))
       with (snd (on_snd (lift #|Γ''| (S (#|args| + #|Γ'|))) pdecl)) by now destruct pdecl.
     econstructor.

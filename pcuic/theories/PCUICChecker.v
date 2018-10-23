@@ -813,7 +813,7 @@ Section Typecheck2.
              subst_instance_constr u decl.(cst_type) = fst T }.
   Proof.
     unfold lookup_constant_type_cstrs, lookup_env, declared_constant.
-    destruct Typing.lookup_env eqn:Hlook; try discriminate.
+    destruct PCUICTyping.lookup_env eqn:Hlook; try discriminate.
     destruct g eqn:Hg; intros; try discriminate. destruct c.
     injection H as eq. subst T. rewrite (lookup_env_id Hlook). simpl.
     eexists. split; eauto.

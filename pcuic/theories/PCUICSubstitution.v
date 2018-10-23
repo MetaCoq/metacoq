@@ -2,7 +2,7 @@
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Arith Lia.
 From Template Require Import config utils Ast AstUtils.
-From PCUIC Require Import Ast AstUtils Induction LiftSubst UnivSubst Typing WeakeningEnv Closed Weakening.
+From PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICWeakeningEnv PCUICClosed PCUICWeakening.
 Require Import ssreflect.
 
 (** * Substitution lemmas for typing derivations. *)
@@ -285,8 +285,8 @@ Qed.
 Lemma subst_declared_constant `{checker_flags} Σ cst decl n k u :
   wf Σ ->
   declared_constant (fst Σ) cst decl ->
-  map_constant_body (subst n k) (map_constant_body (UnivSubst.subst_instance_constr u) decl) =
-  map_constant_body (UnivSubst.subst_instance_constr u) decl.
+  map_constant_body (subst n k) (map_constant_body (subst_instance_constr u) decl) =
+  map_constant_body (subst_instance_constr u) decl.
 Proof.
   intros.
   eapply declared_decl_closed in H0; eauto.
@@ -380,7 +380,7 @@ Qed.
 
 Lemma subst_declared_constructor `{checker_flags} Σ c u mdecl idecl cdecl n k :
   wf Σ -> declared_constructor (fst Σ) mdecl idecl c cdecl ->
-  subst (map (UnivSubst.subst_instance_constr u) n) k (type_of_constructor mdecl cdecl c u) = (type_of_constructor mdecl cdecl c u).
+  subst (map (subst_instance_constr u) n) k (type_of_constructor mdecl cdecl c u) = (type_of_constructor mdecl cdecl c u).
 Proof.
   unfold declared_constructor. destruct c as [i ci]. intros wfΣ [Hidecl Hcdecl].
   destruct Σ. eapply (subst_declared_inductive _ _ _ _ n k) in Hidecl; eauto.
@@ -396,7 +396,7 @@ Proof.
   intros.
   rewrite <- H3 at 2.
   rewrite <- subst0_inds_subst. f_equal.
-  now rewrite <- UnivSubst.subst_subst_instance_constr.
+  now rewrite <- subst_subst_instance_constr.
 Qed.
 
 Lemma subst_declared_projection `{checker_flags} Σ c mdecl idecl pdecl n k :

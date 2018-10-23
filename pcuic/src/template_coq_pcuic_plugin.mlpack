@@ -4,4 +4,6 @@ PCUICInduction
 PCUICUnivSubst
 PCUICLiftSubst
 PCUICTyping
+PCUICChecker
+PCUICRetyping
 TemplateToPCUIC

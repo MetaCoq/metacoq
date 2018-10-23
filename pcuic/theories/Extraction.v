@@ -17,7 +17,7 @@ Extraction Blacklist config uGraph univ Ast String List Nat Int
 Set Warnings "-extraction-opaque-accessed".
 
 From PCUIC Require Import PCUICAst PCUICAstUtils PCUICUnivSubst PCUICInduction PCUICLiftSubst PCUICTyping
-     TemplateToPCUIC.
+     PCUICChecker PCUICRetyping TemplateToPCUIC.
 
 Extraction Library PCUICAst.
 Extraction Library PCUICAstUtils.
@@ -25,4 +25,6 @@ Extraction Library PCUICUnivSubst.
 Extraction Library PCUICInduction.
 Extraction Library PCUICLiftSubst.
 Extraction Library PCUICTyping.
+Extraction Library PCUICChecker.
+Extraction Library PCUICRetyping.
 Extraction Library TemplateToPCUIC.

@@ -14,6 +14,10 @@ src/pCUICTyping.ml
 src/pCUICTyping.mli
 src/pCUICUnivSubst.ml
 src/pCUICUnivSubst.mli
+src/pCUICChecker.ml
+src/pCUICChecker.mli
+src/pCUICRetyping.ml
+src/pCUICRetyping.mli
 src/templateToPCUIC.mli
 src/templateToPCUIC.ml
 src/template_coq_pcuic_plugin.mlpack

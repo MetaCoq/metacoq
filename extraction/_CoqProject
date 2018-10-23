@@ -3,13 +3,13 @@
 -R theories TemplateExtraction
 -I ../template-coq/src
 
-theories/Ast.v
-theories/AstUtils.v
-theories/Induction.v
-theories/LiftSubst.v
-theories/UnivSubst.v
-theories/WcbvEval.v
-theories/Typing.v
+theories/EAst.v
+theories/EAstUtils.v
+theories/EInduction.v
+theories/ELiftSubst.v
+theories/EUnivSubst.v
+theories/EWcbvEval.v
+theories/ETyping.v
 theories/Extract.v
-theories/All.v
+theories/EAll.v
 theories/Extraction.v

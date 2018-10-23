@@ -1,4 +1,4 @@
-(** Extraction setup for template-coq.
+(** Extraction setup for the extraction phase of template-coq.
 
     Any extracted code planning to link with the plugin's OCaml reifier
     should use these same directives for consistency.
@@ -16,25 +16,12 @@ Extraction Blacklist config uGraph univ Ast AstUtils String List Nat UnivSubst U
            LiftSubst Induction Typing Retyping Typing0 Checker.
 Set Warnings "-extraction-opaque-accessed".
 
-From TemplateExtraction Require Import Ast.
-Extraction Library Ast.
+From TemplateExtraction Require Import EAst EAstUtils EUnivSubst EInduction ELiftSubst ETyping Extract.
 
-From TemplateExtraction Require Import AstUtils.
-Extraction Library AstUtils.
-
-From TemplateExtraction Require Import UnivSubst.
-Extraction Library UnivSubst.
-
-From TemplateExtraction Require Import Induction.
-Extraction Library Induction.
-
-From TemplateExtraction Require Import LiftSubst.
-Extraction Library LiftSubst.
-
-From TemplateExtraction Require Import Typing.
-Extraction Library Typing.
-
-(** Do it here, otherwise, LiftSubst, Typing etc refer to the ones of Template!
-    Side-effect of Require... *)
-From TemplateExtraction Require Extract.
+Extraction Library EAst.
+Extraction Library EAstUtils.
+Extraction Library EUnivSubst.
+Extraction Library EInduction.
+Extraction Library ELiftSubst.
+Extraction Library ETyping.
 Extraction Library Extract.

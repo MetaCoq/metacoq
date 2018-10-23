@@ -2,18 +2,18 @@
 -I ../checker/src
 -R theories TemplateExtraction
 
-src/ast1.ml
-src/ast1.mli
-src/astUtils0.ml
-src/astUtils0.mli
-src/induction0.ml
-src/induction0.mli
-src/liftSubst0.ml
-src/liftSubst0.mli
-src/typing1.ml
-src/typing1.mli
-src/univSubst2.ml
-src/univSubst2.mli
+src/eAst.ml
+src/eAst.mli
+src/eAstUtils.ml
+src/eAstUtils.mli
+src/eInduction.ml
+src/eInduction.mli
+src/eLiftSubst.ml
+src/eLiftSubst.mli
+src/eTyping.ml
+src/eTyping.mli
+src/eUnivSubst.ml
+src/eUnivSubst.mli
 src/extract.mli
 src/extract.ml
 src/template_coq_extraction_plugin.mlpack

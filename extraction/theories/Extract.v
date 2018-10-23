@@ -2,8 +2,8 @@
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
 From Template Require Import config utils monad_utils Ast AstUtils univ.
-From PCUIC Require Import Ast AstUtils Induction Typing Checker Retyping MetaTheory WcbvEval.
-From TemplateExtraction Require Ast LiftSubst Typing WcbvEval.
+From PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICTyping PCUICChecker PCUICRetyping PCUICMetaTheory PCUICWcbvEval.
+From TemplateExtraction Require EAst ELiftSubst ETyping EWcbvEval.
 Require Import String.
 Local Open Scope string_scope.
 Set Asymmetric Patterns.
@@ -17,7 +17,7 @@ Definition is_prop_sort s :=
   | None => false
   end.
 
-Module E := TemplateExtraction.Ast.
+Module E := EAst.
 
 Section Erase.
   Context `{F : Fuel}.
@@ -34,7 +34,7 @@ Section Erase.
   Section EraseMfix.
     Context (extract : forall (Γ : context) (t : term), typing_result E.term).
 
-    Definition extract_mfix Γ (defs : mfixpoint term) : typing_result (TemplateExtraction.Ast.mfixpoint E.term) :=
+    Definition extract_mfix Γ (defs : mfixpoint term) : typing_result (EAst.mfixpoint E.term) :=
       let Γ' := (fix_decls defs ++ Γ)%list in
       monad_map (fun d => dbody' <- extract Γ' d.(dbody);;
                           ret ({| E.dname := d.(dname); E.rarg := d.(rarg);
@@ -272,9 +272,9 @@ Fixpoint obs_eq (Σ : global_context) (v v' : term) (T : term) (s : universe) : 
     obs_eq Σ f f'.                                     
 *)                      
 
-Record extraction_post (Σ : global_context) (Σ' : Ast.global_context) (t : term) (t' : E.term) :=
+Record extraction_post (Σ : global_context) (Σ' : EAst.global_context) (t : term) (t' : E.term) :=
   { extr_value : E.term;
-    extr_eval : TemplateExtraction.WcbvEval.eval (fst Σ') t' extr_value;
+    extr_eval : EWcbvEval.eval (fst Σ') t' extr_value;
     (* extr_equiv : obs_eq Σ v extr_value *) }.
 
 (** The extraction correctness theorem we conjecture. *)

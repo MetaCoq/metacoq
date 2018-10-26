@@ -77,19 +77,18 @@ Inductive term : Set :=
 | tEvar      : nat -> list term -> term
 | tSort      : universe -> term
 | tCast      : term -> cast_kind -> term -> term
-| tProd      : name -> term (* the type *) -> term -> term
-| tLambda    : name -> term (* the type *) -> term -> term
-| tLetIn     : name -> term (* the term *) -> term (* the type *) -> term -> term
+| tProd      : forall (_:name) (type:term) (body:term), term
+| tLambda    : forall (_:name) (type:term) (body:term), term
+| tLetIn     : forall (_:name) (def:term) (type:term) (body:term), term
 | tApp       : term -> list term -> term
 | tConst     : kername -> universe_instance -> term
 | tInd       : inductive -> universe_instance -> term
 | tConstruct : inductive -> nat -> universe_instance -> term
-| tCase      : (inductive * nat) (* # of parameters *) -> term (* type info *)
-               -> term (* discriminee *) -> list (nat * term) (* branches *) -> term
+| tCase      : forall (inductive_and_nb_params:inductive*nat) (type_info:term)
+                      (discriminee:term) (branches : list (nat * term)), term
 | tProj      : projection -> term -> term
 | tFix       : mfixpoint term -> nat -> term
 | tCoFix     : mfixpoint term -> nat -> term.
-
 
 Definition mkApps t us :=
   match us with

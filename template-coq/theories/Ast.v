@@ -71,24 +71,24 @@ Definition mfixpoint (term : Set) : Set :=
   list (def term).
 
 Inductive term : Set :=
-| tRel       : nat -> term
-| tVar       : ident -> term (* For free variables (e.g. in a goal) *)
-| tMeta      : nat -> term   (* NOTE: this will go away *)
-| tEvar      : nat -> list term -> term
-| tSort      : universe -> term
-| tCast      : term -> cast_kind -> term -> term
-| tProd      : forall (_:name) (type:term) (body:term), term
-| tLambda    : forall (_:name) (type:term) (body:term), term
-| tLetIn     : forall (_:name) (def:term) (type:term) (body:term), term
-| tApp       : term -> list term -> term
-| tConst     : kername -> universe_instance -> term
-| tInd       : inductive -> universe_instance -> term
-| tConstruct : inductive -> nat -> universe_instance -> term
-| tCase      : forall (inductive_and_nb_params:inductive*nat) (type_info:term)
-                      (discriminee:term) (branches : list (nat * term)), term
-| tProj      : projection -> term -> term
-| tFix       : mfixpoint term -> nat -> term
-| tCoFix     : mfixpoint term -> nat -> term.
+| tRel (n : nat)
+| tVar (id : ident) (* For free variables (e.g. in a goal) *)
+| tMeta (meta : nat) (* NOTE: this will go away *)
+| tEvar (ev : nat) (args : list term)
+| tSort (s : universe)
+| tCast (t : term) (kind : cast_kind) (v : term)
+| tProd (na : name) (ty : term) (body : term)
+| tLambda (na : name) (ty : term) (body : term)
+| tLetIn (na : name) (def : term) (def_ty : term) (body : term)
+| tApp (f : term) (args : list term)
+| tConst (c : kername) (u : universe_instance)
+| tInd (ind : inductive) (u : universe_instance)
+| tConstruct (ind : inductive) (idx : nat) (u : universe_instance)
+| tCase (ind_and_nbparams: inductive*nat) (type_info:term)
+        (discr:term) (branches : list (nat * term))
+| tProj (proj : projection) (t : term)
+| tFix (mfix : mfixpoint term) (idx : nat)
+| tCoFix (mfix : mfixpoint term) (idx : nat).
 
 Definition mkApps t us :=
   match us with

@@ -818,30 +818,16 @@ Proof.
   revert t.
   fix auxt 1.
   move auxt at top.
-  destruct t; match goal with
-                 H : _ |- _ => apply H
-              end; auto.
-  revert l.
-  fix auxl' 1.
-  destruct l; constructor; [|apply auxl'].
-  apply auxt.
-  revert l.
-  fix auxl' 1.
-  destruct l; constructor; [|apply auxl'].
-  apply auxt.
-  revert l.
-  fix auxl' 1.
-  destruct l; constructor; [|apply auxl'].
-  apply auxt.
-
-  revert m.
-  fix auxm 1.
-  destruct m; constructor; [|apply auxm].
-  split; apply auxt.
-  revert m.
-  fix auxm 1.
-  destruct m; constructor; [|apply auxm].
-  split; apply auxt.
+  destruct t;
+    match goal with
+      H : _ |- _ => apply H
+    end; auto;
+    match goal with
+      |- _ (P Σ) ?arg =>
+      revert arg; fix aux_arg 1; intro arg;
+        destruct arg; constructor; [|apply aux_arg];
+          try split; apply auxt
+    end.
 Defined.
 
 Lemma term_env_ind' :

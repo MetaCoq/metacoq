@@ -1023,7 +1023,7 @@ Section Typecheck2.
     - (* Construct *) admit.
 
     - (* Case *)
-      destruct p.
+      match goal with H : inductive * nat |- _ => destruct H end.
       infers.
       destruct reduce_to_ind eqn:?; try discriminate. simpl.
       destruct a0 as [[ind' u] args].

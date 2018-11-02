@@ -538,7 +538,9 @@ let rec run_template_program_rec ?(intactic=false) (k : Evd.evar_map * Constr.t 
   in
   if Globnames.eq_gr glob_ref tmReturn then
     match args with
-    | _::h::[] -> k (evm, h)
+    | _::h::[] ->
+       let (evm, _) = Typing.type_of env evm (EConstr.of_constr h) in
+       k (evm, h)
     | _ -> monad_failure "tmReturn" 2
   else if Globnames.eq_gr glob_ref tmBind then
     match args with
@@ -703,11 +705,11 @@ let rec run_template_program_rec ?(intactic=false) (k : Evd.evar_map * Constr.t 
          let make_typed_term typ term evm =
            match texistT_typed_term with
            | ConstructRef ctor ->
-             let u = (Univ.Instance.to_array universes).(1) in
+             let (evm,c) = Evarutil.new_global evm texistT_typed_term in
              let term = Constr.mkApp
-               (Constr.mkConstructU (ctor, Univ.Instance.of_array [|u|]), [|typ; t'|]) in
+               (EConstr.to_constr evm c, [|typ; t'|]) in
              let evm, _ = Typing.type_of env evm (EConstr.of_constr term) in
-               (evm, term)
+              (evm, term)
            | _ -> anomaly (str "texistT_typed_term does not refer to a constructor")
          in
            k (make_typed_term (EConstr.to_constr evm typ) t' evm)

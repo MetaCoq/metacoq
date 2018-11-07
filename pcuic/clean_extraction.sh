@@ -25,7 +25,9 @@ then
     # We have to patch templateToPCUIC because a module path equality fails
     # to be recognized by the OCaml compiler
     patch -N -p0 < ../templateToPCUIC.patch
+    rm -f templateToPCUIC.ml.orig
     patch -N -p0 < ../templateToPCUICmli.patch
+    rm -f templateToPCUIC.mli.orig
     cd ..
 else
     echo "No files to extract"

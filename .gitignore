@@ -184,7 +184,6 @@ checker/src/wf.mli
 /checker/src/orders.ml
 /checker/src/orders.mli
 /checker/src/ordersTac.ml
-/pcuic/Makefile
 /pcuic/Makefile.conf
 /pcuic/src/templateToPCUIC.mli
 /pcuic/src/templateToPCUIC.ml
@@ -207,3 +206,9 @@ checker/src/wf.mli
 /extraction/src/eAstUtils.ml
 /extraction/src/eAstUtils.mli
 /extraction/src/eTyping.ml
+/pcuic/src/pCUICChecker.ml
+/pcuic/src/pCUICChecker.mli
+/pcuic/src/pCUICRetyping.ml
+/pcuic/src/pCUICRetyping.mli
+/pcuic/src/templateToPCUIC.ml.rej
+/pcuic/src/templateToPCUIC.mli.rej

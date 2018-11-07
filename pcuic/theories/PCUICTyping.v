@@ -1062,7 +1062,7 @@ Proof.
 Defined.
 Hint Resolve wf_local_app : wf.
 
-Lemma typing_wf_local `{checker_flags} {Σ} (wfΣ : wf Σ) {Γ t T} :
+Lemma typing_wf_local `{checker_flags} {Σ} {Γ t T} :
   Σ ;;; Γ |- t : T -> wf_local Σ Γ.
 Proof.
   induction 1; eauto using wf_local_app.
@@ -1078,9 +1078,9 @@ Proof.
   specialize (IHΓ' _ wf). simpl. unfold eq_rect_r. simpl. lia.
 Qed.
 
-Lemma typing_wf_local_size `{checker_flags} {Σ} (wfΣ : wf Σ) {Γ t T}
+Lemma typing_wf_local_size `{checker_flags} {Σ} {Γ t T}
       (d :Σ ;;; Γ |- t : T) :
-  wf_local_size Σ (@typing_size _) _ (typing_wf_local wfΣ d) < typing_size d.
+  wf_local_size Σ (@typing_size _) _ (typing_wf_local d) < typing_size d.
 Proof.
   induction d; simpl; try lia.
   pose proof (size_wf_local_app _ _ a).
@@ -1285,20 +1285,20 @@ Proof.
       ++ apply onConstructors in Xg.
          red in Xg |- *. eapply Alli_impl; eauto. intros.
          red in X14 |- *. destruct X14 as [[s Hs] Hpars]. split; auto. exists s.
-         pose proof (typing_wf_local (Σ:= (Σ, φ)) X13 Hs).
+         pose proof (typing_wf_local (Σ:= (Σ, φ)) Hs).
          specialize (IH (existT _ (Σ, φ) (existT _ X13 (existT _ _ (existT _ X14 (existT _ _ (existT _ _ Hs))))))).
          simpl in IH. apply IH; constructor 1; simpl; lia.
       ++ apply onProjections in Xg. simpl in *.
          red in Xg |- *. eapply Alli_impl; eauto. clear Xg. intros.
          red in X14 |- *. destruct (decompose_prod_assum [] (ind_type x)).
          destruct X14 as [[s Hs] Hpars]. split; auto. exists s.
-         pose proof (typing_wf_local (Σ:= (Σ, φ)) X13 Hs).
+         pose proof (typing_wf_local (Σ:= (Σ, φ)) Hs).
          specialize (IH (existT _ (Σ, φ) (existT _ X13 (existT _ _ (existT _ X14 (existT _ _ (existT _ _ Hs))))))).
          simpl in IH. apply IH; constructor 1; simpl; lia.
       ++ red in onP |- *.
          eapply All_local_env_impl; eauto.
          intros. do 2 red in X14 |- *.
-         specialize (IH (existT _ (Σ, φ) (existT _ X13 (existT _ _ (existT _ (typing_wf_local (Σ:=(Σ,φ)) X13 X14)
+         specialize (IH (existT _ (Σ, φ) (existT _ X13 (existT _ _ (existT _ (typing_wf_local (Σ:=(Σ,φ)) X14)
                                                                            (existT _ _ (existT _ _ X14))))))).
          simpl in IH. apply IH. constructor 1. simpl. lia.
 
@@ -1315,17 +1315,17 @@ Proof.
 
     assert (All_local_env P Σ Γ).
     { clear -wfΓ wfΣ X14.
-      pose proof (typing_wf_local_size wfΣ H). clear wfΓ.
+      pose proof (typing_wf_local_size H). clear wfΓ.
       induction Γ in t, t0, H, H0, X14 |- *. constructor.
       destruct a. destruct decl_body.
-      --- destruct (wf_local_inv _ _ _ (typing_wf_local wfΣ H)).
+      --- destruct (wf_local_inv _ _ _ (typing_wf_local H)).
           simpl in y. destruct y as [Hty [sizex sizety]].
           constructor.
           eapply IHΓ with _ _ Hty. eauto. intros. eapply X14 with Hty0; eauto. lia.
           apply typing_wf_local_size.
           unshelve eapply X14; simpl; auto with arith;
             repeat (rewrite Nat.max_comm -Nat.max_assoc; auto with arith); lia.
-      --- destruct (wf_local_inv _ _ _ (typing_wf_local wfΣ H)).
+      --- destruct (wf_local_inv _ _ _ (typing_wf_local H)).
           simpl in y. destruct y as [s [Hs [sizex sizety]]].
           econstructor; eauto.
           eapply IHΓ with _ _ Hs. intros. eapply X14 with Hty; eauto. lia.

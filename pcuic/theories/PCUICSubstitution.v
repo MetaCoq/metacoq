@@ -261,7 +261,7 @@ Lemma typed_subst `{checker_flags} Σ Γ t T n k :
   Σ ;;; Γ |- t : T -> subst n k T = T /\ subst n k t = t.
 Proof.
   intros wfΣ Hk Hty.
-  pose proof (typing_wf_local wfΣ Hty).
+  pose proof (typing_wf_local Hty).
   apply typecheck_closed in Hty; eauto.
   destruct Hty as [_ Hcl].
   rewrite -> andb_and in Hcl. destruct Hcl as [clb clty].
@@ -633,7 +633,7 @@ Lemma on_constructor_closed `{checker_flags} {Σ mind mdecl u i idecl cdecl} :
   in closed cty.
 Proof.
   intros wfΣ [[s Hs] Hparams].
-  pose proof (typing_wf_local wfΣ Hs).
+  pose proof (typing_wf_local Hs).
   destruct cdecl as [[id cty] car].
   eapply (env_prop_typing _ typecheck_closed) in Hs; eauto.
   rewrite arities_context_length in Hs.
@@ -653,7 +653,7 @@ Proof.
   intros wfΣ. unfold on_projection.
   destruct decompose_prod_assum.
   intros [[s Hs] Hparams].
-  pose proof (typing_wf_local wfΣ Hs).
+  pose proof (typing_wf_local Hs).
   destruct pdecl as [id cty].
   eapply (env_prop_typing _ typecheck_closed) in Hs; eauto.
   rewrite -> andb_and in *. simpl in *.
@@ -1296,7 +1296,7 @@ Theorem substitution `{checker_flags} Σ Γ Γ' s Δ (t : term) T :
   Σ ;;; Γ ,,, subst_context s 0 Δ |- subst s #|Δ| t : subst s #|Δ| T.
 Proof.
   intros HΣ Hs Ht.
-  pose proof (typing_wf_local HΣ Ht).
+  pose proof (typing_wf_local Ht).
   generalize_eqs Ht. intros eqw. rewrite <- eqw in X.
   revert Γ Γ' Δ s Hs eqw.
   revert Σ HΣ Γ0 X t T Ht.

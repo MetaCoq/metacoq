@@ -23,7 +23,7 @@ Fixpoint trans (t : T.term) : term :=
   | T.tLambda na T M => tLambda na (trans T) (trans M)
   | T.tApp u v => mkApps (trans u) (List.map trans v)
   | T.tProd na A B => tProd na (trans A) (trans B)
-  | T.tCast c kind t => trans c
+  | T.tCast c kind t => tApp (tLambda nAnon (trans t) (tRel 0)) (trans c)
   | T.tLetIn na b t b' => tLetIn na (trans b) (trans t) (trans b')
   | T.tCase ind p c brs =>
     let brs' := List.map (on_snd trans) brs in
@@ -278,12 +278,6 @@ Qed.
 Definition on_pair {A B C D} (f : A -> B) (g : C -> D) (x : A * C) :=
   (f (fst x), g (snd x)).
 
-Lemma trans_strip_outer_cast t : trans (strip_outer_cast t) = trans t.
-Proof.
-  induction t; simpl; try reflexivity.
-  now rewrite IHt1.
-Qed.
-
 Lemma trans_inds kn u bodies : map trans (TTy.inds kn u bodies) = inds kn u (map trans_one_ind_body bodies).
 Proof.
   unfold inds, TTy.inds. rewrite map_length.
@@ -374,8 +368,6 @@ Proof.
   destruct p0 as [s0 ty].
   pose proof Heq.
   apply instantiate_params_subst_make_context_subst in H1 as [ctx'' Hctx''].
-
-
 
   eapply trans_instantiate_params_subst in Heq. simpl in Heq.
   rewrite map_rev in Heq.
@@ -474,7 +466,6 @@ Proof.
   - simpl in *. inv Hwf. toProp; solve_all.
     apply eq_term_mkApps; auto. solve_all.
   - simpl. destruct p. simpl in *. discriminate.
-  - destruct p; simpl in *; discriminate.
   - simpl in *. inv Hwf. destruct p, p0; red in H; toProp; solve_all.
     solve_all. destruct y; red in b0; simpl in *. eauto.
   - red in H. simpl in *. inv Hwf. toProp. solve_all.
@@ -526,7 +517,6 @@ Proof.
   - toProp; intuition auto using trans_eq_term, Template.Substitution.eq_term_leq_term.
   - toProp; intuition auto using trans_eq_term, Template.Substitution.eq_term_leq_term.
     apply leq_term_mkApps; auto using map_nil, trans_eq_term, trans_eq_term_list.
-  - destruct p; congruence.
   - destruct p; congruence.
   - destruct p, p0.
     red in H; toProp; solve_all; eauto using trans_eq_term.
@@ -632,6 +622,16 @@ Proof.
   congruence.
 Qed.
 
+Lemma refine_red1_r Σ Γ t u u' : u = u' -> red1 Σ Γ t u -> red1 Σ Γ t u'.
+Proof.
+  intros ->. trivial.
+Qed.
+
+Lemma refine_red1_Γ Σ Γ Γ' t u : Γ = Γ' -> red1 Σ Γ t u -> red1 Σ Γ' t u.
+Proof.
+  intros ->. trivial.
+Qed.
+
 Lemma trans_red1 Σ Γ T U :
   TTy.on_global_env (fun Σ Γ t T => match t with Some b => Ast.wf b /\ Ast.wf T | None => Ast.wf T end) Σ ->
   List.Forall (fun d => match T.decl_body d with Some b => T.wf b | None => True end) Γ ->
@@ -700,9 +700,8 @@ Proof.
   - constructor. induction H; simpl; repeat constructor. apply p. now inv H0. now inv H0.
     apply IHOnOne2. now inv H0.
 
-  - eauto.
-  - eauto. (* Cast *) admit.
-  - admit. (* Cast *)
+  - constructor. constructor. eapply IHred1; auto.
+  - eapply refine_red1_r; [|constructor]. unfold subst1. simpl. now rewrite lift0_p.
 
   - constructor. apply OnOne2_map. repeat toAll.
     apply (OnOne2_All_mix_left H0) in H. clear H0.
@@ -719,16 +718,41 @@ Proof.
     unfold app_context. unfold Template.Typing.fix_context in H4.
     rewrite map_rev map_mapi in H4. simpl in H4.
     unfold fix_context. rewrite mapi_map. simpl.
-    admit. admit.
+    forward H4.
+    { solve_all. eapply All_app_inv; auto.
+      apply All_rev. apply All_mapi. simpl. clear; generalize 0; induction mfix0; constructor; auto. }
+    forward H4 by auto.
+    eapply (refine_red1_Γ); [|apply H4].
+    f_equal. f_equal. apply mapi_ext; intros [] [].
+    rewrite lift0_p. simpl. rewrite LiftSubst.lift0_p. reflexivity.
+    rewrite trans_lift. simpl. reflexivity.
+    now rewrite H3.
 
-  - constructor. solve_all. apply OnOne2_map. solve_all.
-    red. split; auto.
-    admit. admit.
+  - constructor. solve_all. apply OnOne2_map. repeat toAll.
+    apply (OnOne2_All_mix_left H0) in H. clear H0.
+    solve_all.
+    red. rewrite <- !map_dtype. rewrite <- !map_dbody. intuition eauto.
+    apply H4. toAll. auto. auto. rewrite H3. auto.
 
-  - constructor. solve_all. apply OnOne2_map. solve_all.
-    red. split; auto.
-    admit. admit.
-Admitted.
+  - apply cofix_red_body. apply OnOne2_map. repeat toAll.
+    apply (OnOne2_All_mix_left H0) in H. clear H0.
+    solve_all.
+    red. rewrite <- !map_dtype. rewrite <- !map_dbody. intuition eauto.
+    unfold trans_local, Template.AstUtils.app_context in H4.
+    rewrite -> map_app in H4.
+    unfold app_context. unfold Template.Typing.fix_context in H4.
+    rewrite map_rev map_mapi in H4. simpl in H4.
+    unfold fix_context. rewrite mapi_map. simpl.
+    forward H4.
+    { solve_all. eapply All_app_inv; auto.
+      apply All_rev. apply All_mapi. simpl. clear; generalize 0; induction mfix0; constructor; auto. }
+    forward H4 by auto.
+    eapply (refine_red1_Γ); [|apply H4].
+    f_equal. f_equal. apply mapi_ext; intros [] [].
+    rewrite lift0_p. simpl. rewrite LiftSubst.lift0_p. reflexivity.
+    rewrite trans_lift. simpl. reflexivity.
+    now rewrite H3.
+Qed.
 
 Lemma trans_cumul Σ Γ T U :
   TTy.on_global_env (fun Σ Γ t T => match t with Some b => Ast.wf b /\ Ast.wf T | None => Ast.wf T end) Σ ->
@@ -783,7 +807,7 @@ Proof.
   pose proof (TTy.typing_wf_local X X0).
   revert Σ X Γ X1 t T X0.
   apply (TTy.typing_ind_env
-           (fun Σ Γ t T => typing (trans_global Σ) (trans_local Γ) (trans t) (trans T))); simpl; intros;
+           (fun Σ Γ t T => typing (trans_global Σ) (trans_local Γ) (trans t) (trans T))%type); simpl; intros;
     auto; try solve [econstructor; eauto with trans].
 
   - rewrite trans_lift.
@@ -791,6 +815,12 @@ Proof.
     now apply trans_wf_local.
     unfold trans_local. rewrite nth_error_map. rewrite H. reflexivity.
     f_equal. destruct decl; reflexivity.
+
+  - (* Casts *)
+    eapply refine_type. eapply type_App with nAnon (trans t).
+    eapply type_Lambda; eauto. eapply type_Rel. econstructor; auto.
+    eapply typing_wf_local. eauto. eauto. simpl. reflexivity. eauto.
+    simpl. unfold subst1. rewrite simpl_subst; auto. now rewrite lift0_p.
 
   - (* The interesting application case *)
     eapply type_mkApps; eauto.
@@ -852,8 +882,10 @@ Proof.
        apply typing_wf_wf; auto.
     -- eapply typing_wf in X3; intuition auto.
        eapply wf_mkApps_inv in H4. apply All_firstn. solve_all.
-    -- destruct idecl; simpl in *. unfold TTy.check_correct_arity, check_correct_arity in *. admit. (* destruct idecl; auto. apply H1. *)
-    -- admit.
+    -- destruct idecl; simpl in *. unfold TTy.check_correct_arity, check_correct_arity in *.
+       simpl. (* Types of cases check *)
+       admit. (* destruct idecl; auto. apply H1. *)
+    -- destruct idecl; simpl in *; auto.
     -- rewrite trans_mkApps in X4; auto with wf.
        eapply typing_wf in X3; auto. intuition. eapply wf_mkApps_inv in H4; auto.
     -- apply All2_map. solve_all.
@@ -925,4 +957,4 @@ Proof.
     apply typing_all_wf_decl in wfΓ; auto. solve_all.
     destruct x as [na [body|] ty']; simpl in *; intuition auto.
     destruct H1. auto.
-Admitted. (* Case Fix and CoFix are partially done *)
+Admitted. (* types_of_cases is not finished yet *)

@@ -35,7 +35,7 @@ let ltac_apply (f : Value.t) (args: Tacinterp.Value.t list) =
   let fold arg (i, vars, lfun) =
     let id = Names.Id.of_string ("x" ^ string_of_int i) in
     let (l,n) = (Loc.tag id) in
-    let x = Reference (ArgVar (CAst.make ?loc:l n)) in
+    let x = Reference (Locus.ArgVar (CAst.make ?loc:l n)) in
     (succ i, x :: vars, Id.Map.add id arg lfun)
   in
   let (_, args, lfun) = List.fold_right fold args (0, [], Id.Map.empty) in

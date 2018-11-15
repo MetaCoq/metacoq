@@ -20,7 +20,6 @@ let gen_constant_in_modules locstr dirs s =
   let evm = (Evd.from_env (Global.env ())) in
   EConstr.to_constr evm (snd (Evarutil.new_global evm (Coqlib.gen_reference_in_modules locstr dirs s)))
 
-
 (** The reifier to Coq values *)
 module TemplateCoqQuoter =
 struct
@@ -66,7 +65,7 @@ struct
   let resolve_symbol (path : string list) (tm : string) : Constr.t =
     gen_constant_in_modules contrib_name [path] tm
 
-  let resolve_symbol_p (path : string list) (tm : string) : GlobRef.t =
+  let resolve_symbol_p (path : string list) (tm : string) : Names.GlobRef.t =
     Coqlib.gen_reference_in_modules contrib_name [path] tm
 
   let pkg_datatypes = ["Coq";"Init";"Datatypes"]

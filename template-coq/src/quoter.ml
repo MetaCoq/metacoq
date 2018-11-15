@@ -18,7 +18,6 @@ let debug (m : unit ->Pp.t) =
   else
     ()
 
-
 let toDecl (old: Name.t Context.binder_annot * ((Constr.constr) option) * Constr.constr) : Constr.rel_declaration =
   let (b_annot,value,typ) = old in
   match value with
@@ -223,7 +222,7 @@ let reduce env evm red trm =
   (evm, EConstr.to_constr evm red)
 
 let reduce_all env evm trm =
-  EConstr.to_constr evm (Reductionops.nf_all env evm (EConstr.of_constr trm))
+  EConstr.Unsafe.to_constr (Reductionops.nf_all env evm (EConstr.of_constr trm))
 
 
 module Reify (Q : Quoter) =
@@ -347,11 +346,11 @@ struct
       | Constr.Fix fp -> quote_fixpoint acc env fp
       | Constr.CoFix fp -> quote_cofixpoint acc env fp
       | Constr.Proj (p,c) ->
-         let (ind, _) = Projection.inductive p in
+         let ind,i = Names.Projection.inductive p in
          let ind = Q.quote_inductive (Q.quote_kn (Names.MutInd.canonical ind),
-                                      Q.quote_int 0) in
-         let pars = Q.quote_int (Projection.npars p) in
-         let arg = Q.quote_int (Projection.arg p) in
+                                      Q.quote_int i) in
+         let pars = Q.quote_int (Names.Projection.npars p) in
+         let arg = Q.quote_int (Names.Projection.arg p) in
          let p' = Q.quote_proj ind pars arg in
          let kn = Names.Constant.canonical (Names.Projection.constant p) in
          let t', acc = quote_term acc env c in
@@ -413,8 +412,8 @@ struct
       in
       let envind = push_rel_context (List.rev indtys) env in
       let ref_name = Q.quote_kn (MutInd.canonical t) in
-      let (ls,acc) =
-	List.fold_left (fun (ls,acc) oib ->
+      let (ls,n,acc) =
+        List.fold_left (fun (ls,n,acc) oib ->
 	  let named_ctors =
 	    CList.combine3
 	      (Array.to_list oib.mind_consnames)
@@ -434,11 +433,11 @@ struct
 	  in
           let projs, acc =
             match mib.Declarations.mind_record with
-            | PrimRecord info ->
-               (* TODO : handle mutual records *)
-               let id, ps, rs, csts = info.(0) in
+            | Declarations.PrimRecord records ->
+               let id, ps, rs, csts = records.(n) in
                let ctxwolet = Termops.smash_rel_context mib.mind_params_ctxt in
                (* SPROP: we assume that there is only one inductive body and we take it relevance *)
+               (* FIXME: should we use [n]?*)
                let relevance = mib.mind_packets.(0).mind_relevant in
                let indty = Constr.mkApp (Constr.mkIndU ((t,0),inst),
                                          Context.Rel.to_extended_vect Constr.mkRel 0 ctxwolet) in
@@ -453,8 +452,8 @@ struct
             | _ -> [], acc
           in
           let sf = List.map Q.quote_sort_family oib.Declarations.mind_kelim in
-	  (Q.quote_ident oib.mind_typename, indty, sf, (List.rev reified_ctors), projs, Q.quote_relevance oib.mind_relevant) :: ls, acc)
-	  ([],acc) (Array.to_list mib.mind_packets)
+          (Q.quote_ident oib.mind_typename, indty, sf, (List.rev reified_ctors), projs, Q.quote_relevance oib.mind_relevant) :: ls, succ n, acc)
+          ([],0,acc) (Array.to_list mib.mind_packets)
       in
       let params = Q.quote_int mib.Declarations.mind_nparams in
       let uctx = quote_abstract_inductive_universes mib.Declarations.mind_universes in

@@ -22,15 +22,17 @@ env:
   - CAMLP5_VER="7.05"
   - FINDLIB_VER="1.8.0"
   - NATIVE_COMP="yes"
-  - COQ_VER="8.8.0"
+  - COQ_VER="dev"
 
 install:
 - opam init -j ${NJOBS} -n -y
+- opam update
 - opam switch set ${COMPILER}
 - eval $(opam config env)
 - opam config list
-- opam update
+- opam repo add coq-core-dev https://coq.inria.fr/opam/core-dev || echo "coq-core-dev registered"
 - opam install -j ${NJOBS} -y camlp5.${CAMLP5_VER} ocamlfind.${FINDLIB_VER} coq.${COQ_VER}
+- opam upgrade -y coq.${COQ_VER}
 - opam list
 
 script:

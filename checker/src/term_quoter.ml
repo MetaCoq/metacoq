@@ -29,6 +29,8 @@ struct
   type quoted_int = Datatypes.nat
   type quoted_bool = bool
   type quoted_name = name
+  type quoted_aname = Ast0.aname
+  type quoted_relevance = Ast0.relevance
   type quoted_sort = Univ0.universe
   type quoted_cast_kind = cast_kind
   type quoted_kernel_name = char list
@@ -62,6 +64,18 @@ struct
 
   let quote_ident id =
     quote_string (Id.to_string id)
+
+  let quote_relevance r =
+    match r with
+    | Sorts.Relevant -> Ast0.Relevant
+    | Sorts.Irrelevant -> Ast0.Irrelevant
+
+  let quote_aname ann_n =
+    let {Context.binder_name = n; Context.binder_relevance = relevance} = ann_n in
+    let r = quote_relevance relevance in
+    match n with
+    | Anonymous -> {Ast0.binder_name = Coq_nAnon; Ast0.binder_relevance = r}
+    | Name i -> {Ast0.binder_name = Coq_nNamed (quote_ident i); Ast0.binder_relevance = r}
 
   let quote_name = function
     | Anonymous -> Coq_nAnon
@@ -149,6 +163,10 @@ struct
   let mkAnon = Coq_nAnon
   let mkName i = Coq_nNamed i
 
+  let mkAAnon r = {Ast0.binder_name = mkAnon; Ast0.binder_relevance = r}
+  let mkAName i r = {Ast0.binder_name = mkName i; Ast0.binder_relevance = r}
+
+
   let mkRel n = Coq_tRel n
   let mkVar id = Coq_tVar id
   let mkMeta n = Coq_tMeta n
@@ -191,16 +209,16 @@ struct
     let block = List.rev defs in
     Coq_tFix (block, a)
 
-  let mkCase (ind, npar) nargs p c brs =
+  let mkCase (ind, npar) nargs p is c brs =
     let info = (ind, npar) in
     let branches = List.map2 (fun br nargs ->  (nargs, br)) brs nargs in
-    Coq_tCase (info,p,c,branches)
+    Coq_tCase (info,p,is,c,branches)
   let mkProj p c = Coq_tProj (p,c)
 
-  let mk_one_inductive_body (id, ty, kel, ctr, proj) =
+  let mk_one_inductive_body (id, ty, kel, ctr, proj, relevance) =
     let ctr = List.map (fun (a, b, c) -> ((a, b), c)) ctr in
     { ind_name = id; ind_type = ty;
-      ind_kelim = kel; ind_ctors = ctr; ind_projs = proj }
+      ind_kelim = kel; ind_ctors = ctr; ind_projs = proj; ind_relevant = relevance }
 
   let mk_mutual_inductive_body parms inds uctx =
     {ind_npars = parms; ind_bodies = inds; ind_universes = uctx}
@@ -300,11 +318,11 @@ struct
 
   let unquote_inductive (q: quoted_inductive) : Names.inductive =
     let { inductive_mind = na; inductive_ind = i } = q in
-    let comps = CString.split '.' (unquote_string na) in
+    let comps = CString.split_on_char '.' (unquote_string na) in
     let comps = List.map Id.of_string comps in
     let id, dp = CList.sep_last comps in
     let dp = DirPath.make dp in
-    let mind = Globnames.encode_mind dp id in
+    let mind = MutInd.make2 (MPfile dp) (Label.of_id id) in
     (mind, unquote_int i)
 
   (*val unquote_univ_instance :  quoted_univ_instance -> Univ.Instance.t *)

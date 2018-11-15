@@ -1,14 +1,25 @@
-open Univ
+open UnivGen
 open Entries
 open Names
+open Context
 open Pp
 
 open Quoter
 
 let contrib_name = "template-coq"
 
+(* NOTE:  This implementation fails to work with polymorphic constants due to
+    [UnivGen.constr_of_global] which is an alias for [UnivGen.constr_of_monomorphic_global]*)
+let gen_constant_in_modules_old locstr dirs s =
+  UnivGen.constr_of_global (Coqlib.gen_reference_in_modules locstr dirs s)
+
+(* TODO: here we create a new instance of evar_map form the global environment.
+   We also discard the evar_map part of the [Evarutil.new_global] call, potentially
+   throwing aways something that might be important. It seems to work fine with current examples, though. *)
 let gen_constant_in_modules locstr dirs s =
-  Universes.constr_of_global (Coqlib.gen_reference_in_modules locstr dirs s)
+  let evm = (Evd.from_env (Global.env ())) in
+  EConstr.to_constr evm (snd (Evarutil.new_global evm (Coqlib.gen_reference_in_modules locstr dirs s)))
+
 
 (** The reifier to Coq values *)
 module TemplateCoqQuoter =
@@ -18,7 +29,9 @@ struct
   type quoted_ident = Constr.t (* of type Ast.ident *)
   type quoted_int = Constr.t (* of type nat *)
   type quoted_bool = Constr.t (* of type bool *)
+  type quoted_relevance = Constr.t (* of type Ast.relevance *)
   type quoted_name = Constr.t (* of type Ast.name *)
+  type quoted_aname = Constr.t (* of type Ast.aname *)
   type quoted_sort = Constr.t (* of type Ast.universe *)
   type quoted_cast_kind = Constr.t  (* of type Ast.cast_kind *)
   type quoted_kernel_name = Constr.t (* of type Ast.kername *)
@@ -53,7 +66,7 @@ struct
   let resolve_symbol (path : string list) (tm : string) : Constr.t =
     gen_constant_in_modules contrib_name [path] tm
 
-  let resolve_symbol_p (path : string list) (tm : string) : global_reference =
+  let resolve_symbol_p (path : string list) (tm : string) : GlobRef.t =
     Coqlib.gen_reference_in_modules contrib_name [path] tm
 
   let pkg_datatypes = ["Coq";"Init";"Datatypes"]
@@ -92,7 +105,13 @@ struct
   let c_pair = resolve_symbol pkg_datatypes "pair"
   let pair a b f s = Constr.mkApp (c_pair, [| a ; b ; f ; s |])
 
-    (* reify the constructors in Template.Ast.v, which are the building blocks of reified terms *)
+  let tRelevance = r_reify "relevance"
+  let (tRelevant,tIrrelevant) = (r_reify "Relevant", r_reify "Irrelevant")
+  let taname = r_reify "aname"
+  let tmkBindAnn = r_reify "mkBindAnn"
+
+  (* reify the constructors in Template.Ast.v, which are the building blocks of reified terms *)
+  let tname = r_reify "name"
   let nAnon = r_reify "nAnon"
   let nNamed = r_reify "nNamed"
   let kVmCast = r_reify "VmCast"
@@ -102,6 +121,7 @@ struct
   let lProp = resolve_symbol pkg_level "lProp"
   let lSet = resolve_symbol pkg_level "lSet"
   let sfProp = r_reify "InProp"
+  let sfSProp = r_reify "InSProp"
   let sfSet = r_reify "InSet"
   let sfType = r_reify "InType"
   let tident = r_reify "ident"
@@ -126,8 +146,8 @@ struct
   let cPolymorphic_ctx = resolve_symbol pkg_univ "Polymorphic_ctx"
   let tUContextmake = resolve_symbol (ext_pkg_univ "UContext") "make"
   (* let tConstraintSetempty = resolve_symbol (ext_pkg_univ "ConstraintSet") "empty" *)
-  let tConstraintSetempty = Universes.constr_of_global (Coqlib.find_reference "template coq bug" (ext_pkg_univ "ConstraintSet") "empty")
-  let tConstraintSetadd = Universes.constr_of_global (Coqlib.find_reference "template coq bug" (ext_pkg_univ "ConstraintSet") "add")
+  let tConstraintSetempty = UnivGen.constr_of_global (Coqlib.find_reference "template coq bug" (ext_pkg_univ "ConstraintSet") "empty")
+  let tConstraintSetadd = UnivGen.constr_of_global (Coqlib.find_reference "template coq bug" (ext_pkg_univ "ConstraintSet") "add")
   let tmake_univ_constraint = resolve_symbol pkg_univ "make_univ_constraint"
   let tinit_graph = resolve_symbol pkg_ugraph "init_graph"
   let tadd_global_constraints = resolve_symbol pkg_ugraph  "add_global_constraints"
@@ -236,10 +256,18 @@ struct
     let s = Id.to_string i in
     quote_string s
 
-  let quote_name n =
+  let quote_relevance r =
+    match r with
+    | Sorts.Relevant -> tRelevant
+    | Sorts.Irrelevant -> tIrrelevant
+
+  let quote_aname ann_n =
+    let {binder_name = n; binder_relevance = relevance} = ann_n in
+    let r = quote_relevance relevance in
     match n with
-      Names.Name id -> Constr.mkApp (nNamed, [| quote_ident id |])
-    | Names.Anonymous -> nAnon
+      Names.Name id -> let nm = Constr.mkApp (nNamed, [| quote_ident id |]) in
+                       Constr.mkApp (tmkBindAnn, [| tname; nm; r|])
+    | Names.Anonymous -> Constr.mkApp (tmkBindAnn, [|tname; nAnon; r|])
 
   let quote_cast_kind k =
     match k with
@@ -252,21 +280,23 @@ struct
     to_string (Univ.Level.to_string s)
 
   let quote_level l =
-    if Level.is_prop l then lProp
-    else if Level.is_set l then lSet
-    else match Level.var_index l with
+    if Univ.Level.is_prop l then lProp
+    else if Univ.Level.is_set l then lSet
+    else match Univ.Level.var_index l with
          | Some x -> Constr.mkApp (tLevelVar, [| int_to_nat x |])
          | None -> Constr.mkApp (tLevel, [| string_of_level l|])
 
   let quote_universe s =
     (* hack because we can't recover the list of level*int *)
     (* todo : map on LSet is now exposed in Coq trunk, we should use it to remove this hack *)
-    let levels = LSet.elements (Universe.levels s) in
-    let levels = List.map (fun l -> let l' = quote_level l in
-                                    (* is indeed i always 0 or 1 ? *)
-                                    let b' = quote_bool (Universe.exists (fun (l2,i) -> Level.equal l l2 && i = 1) s) in
-                                    pair tlevel bool_type l' b')
-                          levels in
+    (* let levels = LSet.elements (Universe.levels s) in *)
+    let levels = Univ.Universe.map (fun k ->
+                     let (l,_) = k in
+                     let l' = quote_level l in
+                     (* is indeed i always 0 or 1 ? *)
+                     let b' = quote_bool (Univ.Universe.exists (fun (l2,i) -> Univ.Level.equal l l2 && i = 1) s) in
+                     pair tlevel bool_type l' b')
+                   s in
     to_coq_list (prod tlevel bool_type) levels
 
   (* todo : can be deduced from quote_level, hence shoud be in the Reify module *)
@@ -317,11 +347,11 @@ struct
     | Monomorphic_ind_entry uctx -> quote_univ_context (Univ.ContextSet.to_context uctx)
     | Polymorphic_ind_entry uctx -> quote_abstract_univ_context_aux uctx
     | Cumulative_ind_entry info ->
-      quote_abstract_univ_context_aux (CumulativityInfo.univ_context info) (* FIXME lossy *)
+      quote_abstract_univ_context_aux (Univ.CumulativityInfo.univ_context info) (* FIXME lossy *)
 
   let quote_ugraph (g : UGraph.t) =
     let inst' = quote_univ_instance Univ.Instance.empty in
-    let const' = quote_univ_constraints (UGraph.constraints_of_universes g) in
+    let const' = quote_univ_constraints (fst (UGraph.constraints_of_universes g)) in
     let uctx = Constr.mkApp (tUContextmake, [|inst' ; const'|]) in
     Constr.mkApp (tadd_global_constraints, [|Constr.mkApp (cMonomorphic_ctx, [| uctx |]); tinit_graph|])
 
@@ -332,6 +362,7 @@ struct
     | Sorts.InProp -> sfProp
     | Sorts.InSet -> sfSet
     | Sorts.InType -> sfType
+    | Sorts.InSProp -> sfSProp
 
   let mk_ctor_list =
     let ctor_list =
@@ -352,6 +383,8 @@ struct
 
   let mkAnon = nAnon
   let mkName id = Constr.mkApp (nNamed, [| id |])
+  let mkAName id r = Constr.mkApp (tmkBindAnn, [| tname; mkName id; r|])
+  let mkAAnon r = Constr.mkApp (tmkBindAnn, [| tname; mkAnon; r|])
   let quote_int = int_to_nat
   let quote_kn kn = quote_string (KerName.to_string kn)
   let mkRel i = Constr.mkApp (tRel, [| i |])
@@ -398,11 +431,12 @@ struct
 
   let mkInd i u = Constr.mkApp (tInd, [| i ; u |])
 
-  let mkCase (ind, npar) nargs p c brs =
+  let mkCase (ind, npar) nargs p is c brs =
     let info = pair tIndTy tnat ind npar in
     let branches = List.map2 (fun br nargs ->  pair tnat tTerm nargs br) brs nargs in
+    let opt_is = quote_option tTerm is in
     let tl = prod tnat tTerm in
-    Constr.mkApp (tCase, [| info ; p ; c ; to_coq_list tl branches |])
+    Constr.mkApp (tCase, [| info ; p ; opt_is; c ; to_coq_list tl branches |])
 
   let quote_proj ind pars args =
     pair (prod tIndTy tnat) tnat (pair tIndTy tnat ind pars) args
@@ -410,11 +444,11 @@ struct
   let mkProj kn t =
     Constr.mkApp (tProj, [| kn; t |])
 
-  let mk_one_inductive_body (a, b, c, d, e) =
+  let mk_one_inductive_body (a, b, c, d, e, f) =
     let c = to_coq_list tsort_family c in
     let d = mk_ctor_list d in
     let e = mk_proj_list e in
-    Constr.mkApp (tBuild_one_inductive_body, [| a; b; c; d; e |])
+    Constr.mkApp (tBuild_one_inductive_body, [| a; b; c; d; e; f |])
 
   let mk_mutual_inductive_body p inds uctx =
     let inds = to_coq_list tone_inductive_body inds in
@@ -485,7 +519,7 @@ struct
     | None -> Constr.mkApp (cNone, [| opType |])
 
 
-  let quote_global_reference : Globnames.global_reference -> quoted_global_reference = function
+  let quote_global_reference : Names.GlobRef.t -> quoted_global_reference = function
     | Globnames.VarRef _ -> CErrors.user_err (str "VarRef unsupported")
     | Globnames.ConstRef c ->
        let kn = quote_kn (Names.Constant.canonical c) in

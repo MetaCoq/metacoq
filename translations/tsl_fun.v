@@ -135,6 +135,7 @@ Definition tsl_mind_body (ΣE : tsl_context) (kn kn' : kername)
                      ind_type := ind_type';
                      ind_kelim := ind.(ind_kelim);
                      ind_ctors := Datatypes.snd ctors';
+                     ind_relevant := ind.(ind_relevant);
                      ind_projs := [] |})).
   + (* arity *)
     refine (let L := decompose_prod ind.(ind_type) in _).

@@ -65,10 +65,10 @@ Class Translation := { tsl_id : ident -> ident ;
 
 Definition tsl_ident (id : ident) : ident := (id ++ "ᵗ")%string.
 
-Definition tsl_name tsl_ident n :=
-  match n with
-  | nAnon => nAnon
-  | nNamed n => nNamed (tsl_ident n)
+Definition tsl_aname tsl_ident an :=
+  match an.(binder_name) with
+  | nAnon => mkBindAnn nAnon an.(binder_relevance)
+  | nNamed n => mkBindAnn (nNamed (tsl_ident n)) an.(binder_relevance)
   end.
 
 

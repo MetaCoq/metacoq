@@ -7,6 +7,15 @@ Open Scope list_scope. Open Scope string_scope. Open Scope sigma_scope.
 Local Existing Instance config.default_checker_flags.
 
 Reserved Notation "'tsl_ty_param'".
+Definition rName (n : ident) := mkBindAnn (nNamed n) Relevant.
+Definition rAnon := mkBindAnn nAnon Relevant.
+Definition irName (n : ident) := mkBindAnn (nNamed n) Irrelevant.
+Definition irAnon := mkBindAnn nAnon Irrelevant.
+
+(* SPROP: TODO : check all the [tCase] cases.
+   The additional argument [is] - informative match on SProp inductives -
+   is not properly translated *)
+
 
 Fixpoint refresh_universes (t : term) {struct t} :=
   match t with
@@ -25,7 +34,7 @@ Fixpoint tsl_rec (fuel : nat) (Σ : global_context) (E : tsl_table) (Γ : contex
   match t with
   | tRel n => ret (proj b (tRel n))
   | tSort s => if b then ret (tSort s)
-              else ret (tLambda (nNamed "A") (tSort s) (tProd nAnon (tRel 0) (tSort s)))
+              else ret (tLambda (rName "A") (tSort s) (tProd rAnon (tRel 0) (tSort s)))
   | tCast t c A => if b then
                     t1 <- tsl_rec fuel Σ E Γ true t ;;
                     A1 <- tsl_rec fuel Σ E Γ true A ;;
@@ -43,7 +52,8 @@ Fixpoint tsl_rec (fuel : nat) (Σ : global_context) (E : tsl_table) (Γ : contex
                     A' <- tsl_ty_param fuel Σ E Γ A ;;
                     B1 <- tsl_rec fuel Σ E (Γ ,, vass n A) true B ;;
                     B2 <- tsl_rec fuel Σ E (Γ ,, vass n A) false B ;;
-                    ret (tLambda (nNamed "f") (tProd n A' B1)
+                    (* SPROP : reusing the relevance of a binder [n] for the lambda below*)
+                    ret (tLambda (mkBindAnn (nNamed "f") n.(binder_relevance)) (tProd n A' B1)
                                  (tProd n (lift 1 0 A')
                                         (tApp (lift 1 1 B2)
                                               [tApp (tRel 1) [tRel 0]])))

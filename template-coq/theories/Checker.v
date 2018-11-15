@@ -115,13 +115,14 @@ Section Reduce.
     (* ret (tProd na (zip b') (zip t'), stack) *)
 
   | tCast c _ _ => reduce_stack Γ n c stack
-
-  | tCase (ind, par) p c brs =>
+    (* SPROP: CHECK: if we need to do something with the additional arg to tCase [is]
+       - informative match on SProp inductives *)
+  | tCase (ind, par) p is c brs =>
     if RedFlags.iota flags then
       c' <- reduce_stack Γ n c [] ;;
       match c' with
       | (tConstruct ind c _, args) => reduce_stack Γ n (iota_red par c args brs) stack
-      | _ => ret (tCase (ind, par) p (zip c') brs, stack)
+      | _ => ret (tCase (ind, par) p is (zip c') brs, stack)
       end
     else ret (t, stack)
 
@@ -156,9 +157,12 @@ Section Reduce.
       let b' := f Γ b in
       let t' := f Γ t in
       tLetIn na b' t' (f (Γ ,, vdef na b' t') c)
-    | tCase ind p c brs =>
+
+    (* SPROP: CHECK: if we need to do something with the additional arg to tCase [is]
+       - informative match on SProp inductives *)
+    | tCase ind p is c brs =>
       let brs' := List.map (on_snd (f Γ)) brs in
-      tCase ind (f Γ p) (f Γ c) brs'
+      tCase ind (f Γ p) is (f Γ c) brs'
     | tProj p c => tProj p (f Γ c)
     | tFix mfix idx =>
       let Γ' := fix_decls mfix ++ Γ in
@@ -228,10 +232,12 @@ Section Conversion.
   Definition reducible_head n Γ c l :=
     match c with
     | tFix mfix idx => unfold_one_fix n Γ mfix idx l
-    | tCase ind' p' c' brs =>
+    (* SPROP: CHECK: if we need to do something with the additional arg to tCase [is]
+       - informative match on SProp inductives *)
+    | tCase ind' p' is' c' brs =>
       match unfold_one_case n Γ c' with
       | None => None
-      | Some c' => Some (tCase ind' p' c' brs)
+      | Some c' => Some (tCase ind' p' is' c' brs)
       end
     | tProj p c =>
       match unfold_one_case n Γ c with
@@ -333,8 +339,9 @@ Section Conversion.
         isconv n leq (Γ ,, vass na b) t [] t' []
       else ret false
 
-    | tCase (ind, par) p c brs,
-      tCase (ind',par') p' c' brs' => (* Hnf did not reduce, maybe delta needed in c *)
+     (* SPROP: FIXME: currently ignores [is] argument *)
+    | tCase (ind, par) p is c brs,
+      tCase (ind',par') p' is' c' brs' => (* Hnf did not reduce, maybe delta needed in c *)
       if eq_term (snd Σ) p p' && eq_term (snd Σ) c c'
       && forallb2 (fun '(a, b) '(a', b') => eq_term (snd Σ) b b') brs brs' then
         ret true
@@ -343,7 +350,7 @@ Section Conversion.
         c'red <- reduce_stack_term RedFlags.default (fst Σ) Γ n c' ;;
         if eq_term (snd Σ) cred c && eq_term (snd Σ) c'red c' then ret true
         else
-          isconv n leq Γ (tCase (ind, par) p cred brs) l1 (tCase (ind, par) p c'red brs') l2
+          isconv n leq Γ (tCase (ind, par) p is cred brs) l1 (tCase (ind, par) p is' c'red brs') l2
 
     | tProj p c, tProj p' c' => on_cond (eq_projection p p' && eq_term (snd Σ) c c')
 
@@ -410,6 +417,12 @@ Definition string_of_list_aux {A} (f : A -> string) (l : list A) : string :=
 Definition string_of_list {A} (f : A -> string) (l : list A) : string :=
   "[" ++ string_of_list_aux f l ++ "]".
 
+Definition string_of_option {A} (f : A -> string) (o : option A) : string :=
+  match o with
+  | Some v => "Some " ++ f v
+  | None => "None"
+  end.
+
 Definition string_of_level (l : Level.t) : string :=
   match l with
   | Level.lProp => "Prop"
@@ -429,11 +442,20 @@ Definition string_of_name (na : name) :=
   | nAnon => "Anonymous"
   | nNamed n => n
   end.
+
+Definition string_of_relevance (r : relevance) :=
+  match r with
+  | Relevant => "Relevant"
+  | Irrelevant => "Irrelevant"
+  end.
+
+Definition string_of_aname (an : aname) :=
+  string_of_name an.(binder_name) ++ "#" ++ string_of_relevance an.(binder_relevance).
 Definition string_of_universe_instance u :=
   string_of_list string_of_level u.
 
 Definition string_of_def {A : Set} (f : A -> string) (def : def A) :=
-  "(" ++ string_of_name (dname def) ++ "," ++ f (dtype def) ++ "," ++ f (dbody def) ++ ","
+  "(" ++ string_of_aname (dname def) ++ "," ++ f (dtype def) ++ "," ++ f (dbody def) ++ ","
       ++ string_of_nat (rarg def) ++ ")".
 
 Definition string_of_inductive (i : inductive) :=
@@ -448,19 +470,20 @@ Fixpoint string_of_term (t : term) :=
   | tSort s => "Sort(" ++ string_of_sort s ++ ")"
   | tCast c k t => "Cast(" ++ string_of_term c ++ (* TODO *) ","
                            ++ string_of_term t ++ ")"
-  | tProd na b t => "Prod(" ++ string_of_name na ++ "," ++
+  | tProd na b t => "Prod(" ++ string_of_aname na ++ "," ++
                             string_of_term b ++ "," ++ string_of_term t ++ ")"
-  | tLambda na b t => "Lambda(" ++ string_of_name na ++ "," ++ string_of_term b
+  | tLambda na b t => "Lambda(" ++ string_of_aname na ++ "," ++ string_of_term b
                                 ++ "," ++ string_of_term t ++ ")"
-  | tLetIn na b t' t => "LetIn(" ++ string_of_name na ++ "," ++ string_of_term b
+  | tLetIn na b t' t => "LetIn(" ++ string_of_aname na ++ "," ++ string_of_term b
                                  ++ "," ++ string_of_term t' ++ "," ++ string_of_term t ++ ")"
   | tApp f l => "App(" ++ string_of_term f ++ "," ++ string_of_list string_of_term l ++ ")"
   | tConst c u => "Const(" ++ c ++ "," ++ string_of_universe_instance u ++ ")"
   | tInd i u => "Ind(" ++ string_of_inductive i ++ "," ++ string_of_universe_instance u ++ ")"
   | tConstruct i n u => "Construct(" ++ string_of_inductive i ++ "," ++ string_of_nat n ++ ","
                                     ++ string_of_universe_instance u ++ ")"
-  | tCase (ind, i) t p brs =>
+  | tCase (ind, i) t is p brs =>
     "Case(" ++ string_of_inductive ind ++ "," ++ string_of_nat i ++ "," ++ string_of_term t ++ ","
+            ++ string_of_option string_of_term is ++ ","
             ++ string_of_term p ++ "," ++ string_of_list (fun b => string_of_term (snd b)) brs ++ ")"
   | tProj (ind, i, k) c =>
     "Proj(" ++ string_of_inductive ind ++ "," ++ string_of_nat i ++ "," ++ string_of_nat k ++ ","
@@ -750,7 +773,9 @@ Section Typecheck2.
       check_consistent_constraints cstrs;;
       ret ty
 
-    | tCase (ind, par) p c brs =>
+       (* SPROP: CHECK: if we need to do something with the additional arg to tCase [is]
+         - informative match on SProp inductives - ignored for now *)
+    | tCase (ind, par) p _ c brs =>
       ty <- infer Γ c ;;
       indargs <- reduce_to_ind (fst Σ) Γ ty ;;
       (** TODO check branches *)
@@ -1143,3 +1168,27 @@ Section Checker.
     check_wf_env Σ ;; infer_term Σ (snd p).
 
 End Checker.
+
+
+Section Relevance.
+
+
+  Inductive rel_result :=
+  | RelOk : relevance -> rel_result
+  | RelNotSort : term -> rel_result
+  | RelTypingError : type_error -> rel_result.
+
+ Import ListNotations.
+
+ (* TODO : this is too restrictive to determine relevance. *)
+  Definition to_relevance c : rel_result  :=
+  match c with
+  | Checked (tSort ([(Level.Level "SProp", _)])) => RelOk Irrelevant
+  | Checked (tSort _) => RelOk Relevant
+  | Checked trm => RelNotSort trm
+  | TypeError te => RelTypingError te
+  end.
+
+  Definition relevance_of_type `{checker_flags} (g_decls : global_declarations) (ctx : context) (trm : term)
+    : rel_result  := to_relevance (infer (reconstruct_global_context g_decls) ctx trm).
+End Relevance.

@@ -1,7 +1,9 @@
 open Names
+open Context
 open Entries
 open Declarations
 open Pp
+open Termops
 
 let cast_prop = ref (false)
 
@@ -16,11 +18,12 @@ let debug (m : unit ->Pp.t) =
   else
     ()
 
-let toDecl (old: Name.t * ((Constr.constr) option) * Constr.constr) : Context.Rel.Declaration.t =
-  let (name,value,typ) = old in
+
+let toDecl (old: Name.t Context.binder_annot * ((Constr.constr) option) * Constr.constr) : Constr.rel_declaration =
+  let (b_annot,value,typ) = old in
   match value with
-  | Some value -> Context.Rel.Declaration.LocalDef (name,value,typ)
-  | None -> Context.Rel.Declaration.LocalAssum (name,typ)
+  | Some value -> Context.Rel.Declaration.LocalDef (b_annot,value,typ)
+  | None -> Context.Rel.Declaration.LocalAssum (b_annot,typ)
 
 let getType env (t:Constr.t) : Constr.t =
     EConstr.to_constr Evd.empty (Retyping.get_type_of env Evd.empty (EConstr.of_constr t))
@@ -59,13 +62,13 @@ let hnf_type env ty =
 
 (* Remove '#' from names *)
 let clean_name s =
-  let l = List.rev (CString.split '#' s) in
+  let l = List.rev (CString.split_on_char '#' s) in
   match l with
     s :: rst -> s
   | [] -> raise (Failure "Empty name cannot be quoted")
 
 let split_name s : (Names.DirPath.t * Names.Id.t) =
-  let ss = List.rev (CString.split '.' s) in
+  let ss = List.rev (CString.split_on_char '.' s) in
   match ss with
     nm :: rst ->
      let nm = clean_name nm in
@@ -76,28 +79,28 @@ let split_name s : (Names.DirPath.t * Names.Id.t) =
 type ('a,'b) sum =
   Left of 'a | Right of 'b
 
-type ('term, 'name, 'nat) adef = { adname : 'name; adtype : 'term; adbody : 'term; rarg : 'nat }
+type ('term, 'abinder, 'nat) adef = { adname : 'abinder; adtype : 'term; adbody : 'term; rarg : 'nat }
 
-type ('term, 'name, 'nat) amfixpoint = ('term, 'name, 'nat) adef list
+type ('term, 'abinder, 'nat) amfixpoint = ('term, 'abinder, 'nat) adef list
 
-type ('term, 'nat, 'ident, 'name, 'quoted_sort, 'cast_kind, 'kername, 'inductive, 'universe_instance, 'projection) structure_of_term =
+type ('term, 'nat, 'ident, 'abinder, 'quoted_sort, 'cast_kind, 'kername, 'inductive, 'universe_instance, 'projection) structure_of_term =
   | ACoq_tRel of 'nat
   | ACoq_tVar of 'ident
   | ACoq_tMeta of 'nat
   | ACoq_tEvar of 'nat * 'term list
   | ACoq_tSort of 'quoted_sort
   | ACoq_tCast of 'term * 'cast_kind * 'term
-  | ACoq_tProd of 'name * 'term * 'term
-  | ACoq_tLambda of 'name * 'term * 'term
-  | ACoq_tLetIn of 'name * 'term * 'term * 'term
+  | ACoq_tProd of 'abinder * 'term * 'term
+  | ACoq_tLambda of 'abinder * 'term * 'term
+  | ACoq_tLetIn of 'abinder * 'term * 'term * 'term
   | ACoq_tApp of 'term * 'term list
   | ACoq_tConst of 'kername * 'universe_instance
   | ACoq_tInd of 'inductive * 'universe_instance
   | ACoq_tConstruct of 'inductive * 'nat * 'universe_instance
-  | ACoq_tCase of ('inductive * 'nat) * 'term * 'term * ('nat * 'term) list
+  | ACoq_tCase of ('inductive * 'nat) * 'term * 'term option * 'term * ('nat * 'term) list
   | ACoq_tProj of 'projection * 'term
-  | ACoq_tFix of ('term, 'name, 'nat) amfixpoint * 'nat
-  | ACoq_tCoFix of ('term, 'name, 'nat) amfixpoint * 'nat
+  | ACoq_tFix of ('term, 'abinder, 'nat) amfixpoint * 'nat
+  | ACoq_tCoFix of ('term, 'abinder, 'nat) amfixpoint * 'nat
 
 module type Quoter = sig
   type t
@@ -105,7 +108,9 @@ module type Quoter = sig
   type quoted_ident
   type quoted_int
   type quoted_bool
+  type quoted_relevance
   type quoted_name
+  type quoted_aname
   type quoted_sort
   type quoted_cast_kind
   type quoted_kernel_name
@@ -136,7 +141,8 @@ module type Quoter = sig
   type quoted_program  (* the return type of quote_recursively *)
 
   val quote_ident : Id.t -> quoted_ident
-  val quote_name : Name.t -> quoted_name
+  val quote_relevance : Sorts.relevance -> quoted_relevance
+  val quote_aname : Name.t Context.binder_annot -> quoted_aname
   val quote_int : int -> quoted_int
   val quote_bool : bool -> quoted_bool
   val quote_sort : Sorts.t -> quoted_sort
@@ -164,7 +170,9 @@ module type Quoter = sig
   val quote_entry : (quoted_definition_entry, quoted_mind_entry) sum option -> quoted_entry
 
   val mkName : quoted_ident -> quoted_name
+  val mkAName : quoted_ident -> quoted_relevance-> quoted_aname
   val mkAnon : quoted_name
+  val mkAAnon : quoted_relevance-> quoted_aname
 
   val mkRel : quoted_int -> t
   val mkVar : quoted_ident -> t
@@ -172,22 +180,23 @@ module type Quoter = sig
   val mkEvar : quoted_int -> t array -> t
   val mkSort : quoted_sort -> t
   val mkCast : t -> quoted_cast_kind -> t -> t
-  val mkProd : quoted_name -> t -> t -> t
-  val mkLambda : quoted_name -> t -> t -> t
-  val mkLetIn : quoted_name -> t -> t -> t -> t
+  val mkProd : quoted_aname -> t -> t -> t
+  val mkLambda : quoted_aname -> t -> t -> t
+  val mkLetIn : quoted_aname -> t -> t -> t -> t
   val mkApp : t -> t array -> t
   val mkConst : quoted_kernel_name -> quoted_univ_instance -> t
   val mkInd : quoted_inductive -> quoted_univ_instance -> t
   val mkConstruct : quoted_inductive * quoted_int -> quoted_univ_instance -> t
-  val mkCase : (quoted_inductive * quoted_int) -> quoted_int list -> t -> t ->
+  val mkCase : (quoted_inductive * quoted_int) -> quoted_int list -> t -> t option-> t ->
                t list -> t
   val mkProj : quoted_proj -> t -> t
-  val mkFix : (quoted_int array * quoted_int) * (quoted_name array * t array * t array) -> t
-  val mkCoFix : quoted_int * (quoted_name array * t array * t array) -> t
+  val mkFix : (quoted_int array * quoted_int) * (quoted_aname array * t array * t array) -> t
+  val mkCoFix : quoted_int * (quoted_aname array * t array * t array) -> t
 
   val mk_one_inductive_body : quoted_ident * t (* ind type *) * quoted_sort_family list
                                  * (quoted_ident * t (* constr type *) * quoted_int) list
                                  * (quoted_ident * t (* projection type *)) list
+                                 * quoted_relevance (* relevance *)
                                  -> quoted_one_inductive_body
 
   val mk_mutual_inductive_body : quoted_int (* params *)
@@ -279,18 +288,18 @@ struct
 	let (t',acc) = quote_term acc env t in
         let env = push_rel (toDecl (n, None, t)) env in
         let (b',acc) = quote_term acc env b in
-        (Q.mkProd (Q.quote_name n) t' b', acc)
+        (Q.mkProd (Q.quote_aname n) t' b', acc)
 
       | Constr.Lambda (n,t,b) ->
 	let (t',acc) = quote_term acc env t in
         let (b',acc) = quote_term acc (push_rel (toDecl (n, None, t)) env) b in
-        (Q.mkLambda (Q.quote_name n) t' b', acc)
+        (Q.mkLambda (Q.quote_aname n) t' b', acc)
 
       | Constr.LetIn (n,e,t,b) ->
 	let (e',acc) = quote_term acc env e in
 	let (t',acc) = quote_term acc env t in
 	let (b',acc) = quote_term acc (push_rel (toDecl (n, Some e, t)) env) b in
-	(Q.mkLetIn (Q.quote_name n) e' t' b', acc)
+	(Q.mkLetIn (Q.quote_aname n) e' t' b', acc)
 
       | Constr.App (f,xs) ->
 	let (f',acc) = quote_term acc env f in
@@ -314,29 +323,35 @@ struct
          (Q.mkInd (Q.quote_inductive (Q.quote_kn (Names.MutInd.canonical ind), Q.quote_int i))
             (Q.quote_univ_instance pu), add_inductive (ind,i) acc)
 
-      | Constr.Case (ci,typeInfo,discriminant,e) ->
+      | Constr.Case (ci,typeInfo,is,discriminant,e) ->
+         (* NOTE: 3rd argument [is] is the indices of [discriminant]. Present only if matching on SProp inductive *)
          let ind = Q.quote_inductive (Q.quote_kn (Names.MutInd.canonical (fst ci.Constr.ci_ind)),
                                       Q.quote_int (snd ci.Constr.ci_ind)) in
          let npar = Q.quote_int ci.Constr.ci_npar in
          let (qtypeInfo,acc) = quote_term acc env typeInfo in
 	 let (qdiscriminant,acc) = quote_term acc env discriminant in
+         let (qis,acc) =
+           match is with
+           | None -> (None, acc)
+           | Some res -> let (qis_,acc_) = quote_term acc env res in
+                         (Some qis_,acc_)
+         in
          let (branches,nargs,acc) =
            CArray.fold_left2 (fun (xs,nargs,acc) x narg ->
                let (x,acc) = quote_term acc env x in
                let narg = Q.quote_int narg in
                (x :: xs, narg :: nargs, acc))
              ([],[],acc) e ci.Constr.ci_cstr_nargs in
-         (Q.mkCase (ind, npar) (List.rev nargs) qtypeInfo qdiscriminant (List.rev branches), acc)
+         (Q.mkCase (ind, npar) (List.rev nargs) qtypeInfo qis qdiscriminant (List.rev branches), acc)
 
       | Constr.Fix fp -> quote_fixpoint acc env fp
       | Constr.CoFix fp -> quote_cofixpoint acc env fp
       | Constr.Proj (p,c) ->
-         let proj = Environ.lookup_projection p (snd env) in
-         let ind = proj.Declarations.proj_ind in
+         let (ind, _) = Projection.inductive p in
          let ind = Q.quote_inductive (Q.quote_kn (Names.MutInd.canonical ind),
                                       Q.quote_int 0) in
-         let pars = Q.quote_int proj.Declarations.proj_npars in
-         let arg = Q.quote_int proj.Declarations.proj_arg in
+         let pars = Q.quote_int (Projection.npars p) in
+         let arg = Q.quote_int (Projection.arg p) in
          let p' = Q.quote_proj ind pars arg in
          let kn = Names.Constant.canonical (Names.Projection.constant p) in
          let t', acc = quote_term acc env c in
@@ -349,14 +364,14 @@ struct
           try Retyping.get_type_of env' Evd.empty trm
           with e ->
             Feedback.msg_debug (str"Anomaly trying to get the type of: " ++
-                                  Termops.print_constr_env (snd env) Evd.empty trm);
+                                  Termops.Internal.print_constr_env (snd env) Evd.empty trm);
             raise e
         in
         let sf =
           try Retyping.get_sort_family_of env' Evd.empty ty
           with e ->
             Feedback.msg_debug (str"Anomaly trying to get the sort of: " ++
-                                  Termops.print_constr_env (snd env) Evd.empty ty);
+                                  Termops.Internal.print_constr_env (snd env) Evd.empty ty);
             raise e
         in
         if sf == Term.InProp then
@@ -369,7 +384,7 @@ struct
       let ctxt =
         CArray.map2_i (fun i na t -> (Context.Rel.Declaration.LocalAssum (na, Vars.lift i t))) ns ts in
       let envfix = push_rel_context (CArray.rev_to_list ctxt) env in
-      let ns' = Array.map Q.quote_name ns in
+      let ns' = Array.map Q.quote_aname ns in
       let b' = Q.quote_int b in
       let acc, ts' =
         CArray.fold_left_map (fun acc t -> let x,acc = quote_term acc env t in acc, x) acc ts in
@@ -391,8 +406,10 @@ struct
       let inst = Univ.UContext.instance uctx in
       let indtys =
         (CArray.map_to_list (fun oib ->
-           let ty = Inductive.type_of_inductive (snd env) ((mib,oib),inst) in
-           (Context.Rel.Declaration.LocalAssum (Names.Name oib.mind_typename, ty))) mib.mind_packets)
+             let ty = Inductive.type_of_inductive (snd env) ((mib,oib),inst) in
+             let relevance = oib.mind_relevant in
+             let b_annot = {binder_name = Names.Name oib.mind_typename; binder_relevance = relevance} in
+           (Context.Rel.Declaration.LocalAssum (b_annot, ty))) mib.mind_packets)
       in
       let envind = push_rel_context (List.rev indtys) env in
       let ref_name = Q.quote_kn (MutInd.canonical t) in
@@ -417,22 +434,26 @@ struct
 	  in
           let projs, acc =
             match mib.Declarations.mind_record with
-            | Some (Some (id, csts, ps)) ->
+            | PrimRecord info ->
+               (* TODO : handle mutual records *)
+               let id, ps, rs, csts = info.(0) in
                let ctxwolet = Termops.smash_rel_context mib.mind_params_ctxt in
+               (* SPROP: we assume that there is only one inductive body and we take it relevance *)
+               let relevance = mib.mind_packets.(0).mind_relevant in
                let indty = Constr.mkApp (Constr.mkIndU ((t,0),inst),
-                                       Context.Rel.to_extended_vect Constr.mkRel 0 ctxwolet) in
-               let indbinder = Context.Rel.Declaration.LocalAssum (Names.Name id,indty) in
+                                         Context.Rel.to_extended_vect Constr.mkRel 0 ctxwolet) in
+               let b_annot = {binder_name = Names.Name id; binder_relevance = relevance} in
+               let indbinder = Context.Rel.Declaration.LocalAssum (b_annot,indty) in
                let envpars = push_rel_context (indbinder :: ctxwolet) env in
-               let ps, acc = CArray.fold_right2 (fun cst pb (ls,acc) ->
-                 let (ty, acc) = quote_term acc envpars pb.Declarations.proj_type in
-                 let kn = Names.KerName.label (Names.Constant.canonical cst) in
+               let ps, acc = CArray.fold_right2 (fun pt kn (ls,acc) ->
+                 let (ty, acc) = quote_term acc envpars pt in
                  let na = Q.quote_ident (Names.Label.to_id kn) in
                  ((na, ty) :: ls, acc)) csts ps ([],acc)
                in ps, acc
             | _ -> [], acc
           in
           let sf = List.map Q.quote_sort_family oib.Declarations.mind_kelim in
-	  (Q.quote_ident oib.mind_typename, indty, sf, (List.rev reified_ctors), projs) :: ls, acc)
+	  (Q.quote_ident oib.mind_typename, indty, sf, (List.rev reified_ctors), projs, Q.quote_relevance oib.mind_relevant) :: ls, acc)
 	  ([],acc) (Array.to_list mib.mind_packets)
       in
       let params = Q.quote_int mib.Declarations.mind_nparams in
@@ -540,19 +561,25 @@ struct
     (iname, arity, templatePoly, consnames, constypes)
 
   let process_local_entry
-        (f: 'a -> Constr.t option (* body *) -> Constr.t (* type *) -> Names.Id.t -> Environ.env -> 'a)
+        (f: 'a -> Constr.t option (* body *) -> Constr.t (* type *) -> Names.Id.t -> Sorts.relevance -> Environ.env -> 'a)
         ((env,a):(Environ.env*'a))
         ((n,le):(Names.Id.t * Entries.local_entry))
       :  (Environ.env * 'a) =
+    (* SPROP: we reconstruct relevance through retyping *)
     match le with
-    | Entries.LocalAssumEntry t -> (Environ.push_rel (toDecl (Names.Name n,None,t)) env, f a None t n env)
+    | Entries.LocalAssumEntry t ->
+       let relevance = Retypeops.relevance_of_term env t in
+       let b_annot = {binder_name = Names.Name n; binder_relevance = relevance} in
+       (Environ.push_rel (toDecl (b_annot,None,t)) env, f a None t n relevance env)
     | Entries.LocalDefEntry b ->
        let evm = Evd.from_env env in
+       let relevance = Retypeops.relevance_of_term env b in
+       let b_annot = {binder_name = Names.Name n; binder_relevance = relevance} in
        let typ = EConstr.to_constr evm (Retyping.get_type_of env evm (EConstr.of_constr b)) in
-       (Environ.push_rel (toDecl (Names.Name n, Some b, typ)) env, f a (Some b) typ n env)
+       (Environ.push_rel (toDecl (b_annot, Some b, typ)) env, f a (Some b) typ n relevance env)
 
   let quote_mind_params env (params:(Names.Id.t * Entries.local_entry) list) =
-    let f lr ob t n env =
+    let f lr ob t n r env =
       match ob with
       | Some b -> (Q.quote_ident n, Left (quote_term env b))::lr
       | None ->
@@ -563,11 +590,13 @@ struct
 
   let mind_params_as_types ((env,t):Environ.env*Constr.t) (params:(Names.Id.t * Entries.local_entry) list) :
         Environ.env*Constr.t =
-    List.fold_left (process_local_entry (fun tr ob typ n env -> Term.mkProd_or_LetIn (toDecl (Names.Name n,ob,typ)) tr)) (env,t)
+    List.fold_left (process_local_entry (fun tr ob typ n r env ->
+                        let b_annot = {binder_name = Names.Name n; binder_relevance = r} in
+                        Term.mkProd_or_LetIn (toDecl (b_annot,ob,typ)) tr)) (env,t)
       (List.rev params)
 
-  (* CHANGE: this is the only way (ugly) I found to construct [absrt_info] with empty fields,
-since  [absrt_info] is a private type *)
+  (* CHANGE: this is the only way (ugly) I found to construct [abstr_info] with empty fields,
+since  [abstr_info] is a private type *)
   let empty_segment = Lib.section_segment_of_reference (Globnames.VarRef (Names.Id.of_string "blah"))
 
   let quote_mut_ind env (mi:Declarations.mutual_inductive_body) =
@@ -581,10 +610,15 @@ since  [absrt_info] is a private type *)
                    snd (mind_params_as_types (env,x.mind_entry_arity) (t.mind_entry_params))))
         t.mind_entry_inds in
     (* env for quoting constructors of inductives. First push inductices, then params *)
-    let envC = List.fold_left (fun env p -> Environ.push_rel (toDecl (Names.Name (fst p), None, snd p)) env) env (one_arities) in
-    let (envC,_) = List.fold_left (process_local_entry (fun _ _ _ _ _ -> ())) (envC,()) (List.rev (t.mind_entry_params)) in
+    let envC =
+      List.fold_left (fun env p ->
+          (* SPROP: we reconstruct relevance through retyping *)
+          let relevance = Retypeops.relevance_of_term env (snd p) in
+          let b_annot = {binder_name = Names.Name (fst p); binder_relevance = relevance} in
+          Environ.push_rel (toDecl (b_annot, None, snd p)) env) env (one_arities) in
+    let (envC,_) = List.fold_left (process_local_entry (fun _ _ _ _ _ _ -> ())) (envC,()) (List.rev (t.mind_entry_params)) in
     (* env for quoting arities of inductives -- just push the params *)
-    let (envA,_) = List.fold_left (process_local_entry (fun _ _ _ _ _ -> ())) (env,()) (List.rev (t.mind_entry_params)) in
+    let (envA,_) = List.fold_left (process_local_entry (fun _ _ _ _ _ _ -> ())) (env,()) (List.rev (t.mind_entry_params)) in
     let is = List.map (quote_one_ind envA envC) t.mind_entry_inds in
    let uctx = Q.quote_inductive_universes t.mind_entry_universes in
     Q.quote_mutual_inductive_entry (mf, mp, is, uctx)
@@ -595,7 +629,7 @@ since  [absrt_info] is a private type *)
       match Nametab.locate (Libnames.make_qualid dp nm) with
       | Globnames.ConstRef c ->
          let cd = Environ.lookup_constant c env in
-         (*CHANGE :  template polymorphism for definitions was removed.
+         (* CHANGE :  template polymorphism for definitions was removed.
                      See: https://github.com/coq/coq/commit/d9530632321c0b470ece6337cda2cf54d02d61eb *)
          let ty = quote_term env cd.const_type in
          let body = match cd.const_body with

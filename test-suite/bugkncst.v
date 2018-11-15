@@ -40,7 +40,7 @@ Fixpoint pocc_term (n:nat) (t:term): bool :=
         | tLetIn _ dfn ty t => pocc_term n dfn || pocc_term n t || pocc_term n ty
         | tApp fn args => pocc_term n fn || fold_left orb (map (pocc_term n) args) false
         | tConst nm _ => if string_dec str nm then true else false
-        | tCase _ ty mch brs =>
+        | tCase _ ty _ mch brs =>
           pocc_term n ty || pocc_term n mch ||
                     fold_left orb (map (fun x => pocc_term n (snd x)) brs) false
         | tFix ds _ =>

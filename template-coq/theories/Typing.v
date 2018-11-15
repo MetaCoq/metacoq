@@ -187,8 +187,8 @@ Inductive red1 (Σ : global_declarations) (Γ : context) : term -> term -> Prop 
     red1 Σ Γ (tRel i) (lift0 (S i) body)
 
 (** Case *)
-| red_iota ind pars c u args p brs :
-    red1 Σ Γ (tCase (ind, pars) p (mkApps (tConstruct ind c u) args) brs)
+| red_iota ind pars c u args is p brs :
+    red1 Σ Γ (tCase (ind, pars) p is (mkApps (tConstruct ind c u) args) brs)
          (iota_red pars c args brs)
 
 (** Fix unfolding, with guard *)
@@ -198,10 +198,10 @@ Inductive red1 (Σ : global_declarations) (Γ : context) : term -> term -> Prop 
     red1 Σ Γ (tApp (tFix mfix idx) args) (tApp fn args)
 
 (** CoFix-case unfolding *)
-| red_cofix_case ip p mfix idx args narg fn brs :
+| red_cofix_case ip p mfix idx is args narg fn brs :
     unfold_fix mfix idx = Some (narg, fn) ->
-    red1 Σ Γ (tCase ip p (mkApps (tCoFix mfix idx) args) brs)
-         (tCase ip (tApp fn args) p brs)
+    red1 Σ Γ (tCase ip p is (mkApps (tCoFix mfix idx) args) brs)
+         (tCase ip (tApp fn args) is p brs)
 
 (** CoFix-proj unfolding *)
 | red_cofix_proj p mfix idx args narg fn :
@@ -226,8 +226,8 @@ Inductive red1 (Σ : global_declarations) (Γ : context) : term -> term -> Prop 
 | letin_red_ty na b t b' r : red1 Σ Γ t r -> red1 Σ Γ (tLetIn na b t b') (tLetIn na b r b')
 | letin_red_body na b t b' r : red1 Σ (Γ ,, vdef na b t) b' r -> red1 Σ Γ (tLetIn na b t b') (tLetIn na b t r)
 
-| case_red_discr ind p c c' brs : red1 Σ Γ c c' -> red1 Σ Γ (tCase ind p c brs) (tCase ind p c' brs)
-| case_red_brs ind p c brs brs' : redbrs1 Σ Γ brs brs' -> red1 Σ Γ (tCase ind p c brs) (tCase ind p c brs')
+| case_red_discr ind p c is c' brs : red1 Σ Γ c c' -> red1 Σ Γ (tCase ind p is c brs) (tCase ind p is c' brs)
+| case_red_brs ind p c is brs brs' : redbrs1 Σ Γ brs brs' -> red1 Σ Γ (tCase ind p is c brs) (tCase ind p is c brs')
 
 | proj_red p c c' : red1 Σ Γ c c' -> red1 Σ Γ (tProj p c) (tProj p c')
 
@@ -319,10 +319,11 @@ Fixpoint eq_term `{checker_flags} (φ : uGraph.t) (t u : term) {struct t} :=
                                                     && eq_universe_instance φ u u'
   | tLambda _ b t, tLambda _ b' t' => eq_term φ b b' && eq_term φ t t'
   | tProd _ b t, tProd _ b' t' => eq_term φ b b' && eq_term φ t t'
-  | tCase (ind, par) p c brs,
-    tCase (ind',par') p' c' brs' =>
+  | tCase (ind, par) p is c brs,
+    tCase (ind',par') p' is' c' brs' =>
     eq_ind ind ind' && eq_nat par par' &&
-    eq_term φ p p' && eq_term φ c c' && forallb2 (fun '(a, b) '(a', b') => eq_term φ b b') brs brs'
+           eq_term φ p p' && foroptb2 (eq_term φ) is is' && eq_term φ c c'
+           && forallb2 (fun '(a, b) '(a', b') => eq_term φ b b') brs brs'
   | tProj p c, tProj p' c' => eq_projection p p' && eq_term φ c c'
   | tFix mfix idx, tFix mfix' idx' =>
     forallb2 (fun x y =>
@@ -354,10 +355,11 @@ Fixpoint leq_term `{checker_flags} (φ : uGraph.t) (t u : term) {struct t} :=
                                                     eq_universe_instance φ u u'
   | tLambda _ b t, tLambda _ b' t' => eq_term φ b b' && eq_term φ t t'
   | tProd _ b t, tProd _ b' t' => eq_term φ b b' && leq_term φ t t'
-  | tCase (ind, par) p c brs,
-    tCase (ind',par') p' c' brs' =>
+  | tCase (ind, par) p is c brs,
+    tCase (ind',par') p' is' c' brs' =>
     eq_ind ind ind' && eq_nat par par' &&
-    eq_term φ p p' && eq_term φ c c' && forallb2 (fun '(a, b) '(a', b') => eq_term φ b b') brs brs'
+           eq_term φ p p' && foroptb2 (eq_term φ) is is' && eq_term φ c c'
+           && forallb2 (fun '(a, b) '(a', b') => eq_term φ b b') brs brs'
   | tProj p c, tProj p' c' => eq_projection p p' && eq_term φ c c'
   | tFix mfix idx, tFix mfix' idx' =>
     forallb2 (fun x y =>
@@ -487,7 +489,7 @@ Definition eq_context `{checker_flags} φ (Γ Δ : context) :=
 
 Definition check_correct_arity `{checker_flags} φ decl ind u ctx pars pctx :=
   let inddecl :=
-      {| decl_name := nNamed decl.(ind_name);
+      {| decl_name := mkBindAnn (nNamed decl.(ind_name)) decl.(ind_relevant);
          decl_body := None;
          decl_type := mkApps (tInd ind u) (pars ++ rels_of ctx 0) |}
   in eq_context φ (inddecl :: subst_instance_context u ctx) pctx.
@@ -547,7 +549,8 @@ Inductive typing `{checker_flags} (Σ : global_context) (Γ : context) : term ->
     consistent_universe_context_instance Σ univs u ->
     Σ ;;; Γ |- (tConstruct ind i u) : type_of_constructor (fst Σ) (ind, i) univs u decl isdecl
 
-| type_Case ind u npar p c brs args :
+  (* SPROP: FIXME: add support for [is] parameter - informative case match *)
+| type_Case ind u npar p is c brs args :
     forall decl (isdecl : declared_minductive (fst Σ) (inductive_mind ind) decl),
     forall univs decl' (isdecl' : declared_inductive (fst Σ) ind univs decl'),
     decl.(ind_npars) = npar ->
@@ -558,7 +561,7 @@ Inductive typing `{checker_flags} (Σ : global_context) (Γ : context) : term ->
     List.Exists (fun sf => universe_family ps = sf) decl'.(ind_kelim) ->
     Σ ;;; Γ |- c : mkApps (tInd ind u) args ->
     Forall2 (fun x y => (fst x = fst y) * (Σ ;;; Γ |- snd x : snd y)) brs btys ->
-    Σ ;;; Γ |- tCase (ind, npar) p c brs : tApp p (List.skipn npar args ++ [c])
+    Σ ;;; Γ |- tCase (ind, npar) p is c brs : tApp p (List.skipn npar args ++ [c])
 
 | type_Proj p c u :
     forall decl (isdecl : declared_projection (fst Σ) p decl) args,
@@ -638,7 +641,7 @@ Inductive type_projections `{checker_flags} (Σ : global_context) (Γ : context)
     type_projections Σ Γ ((id, t) :: l).
 
 Definition arities_context (l : list one_inductive_body) :=
-  rev_map (fun ind => vass (nNamed ind.(ind_name)) ind.(ind_type)) l.
+  rev_map (fun ind => vass (mkBindAnn (nNamed ind.(ind_name)) ind.(ind_relevant)) ind.(ind_type)) l.
 
 Definition isArity `{checker_flags} Σ Γ T :=
   isType Σ Γ T (* FIXME  /\ decompose_prod_n *).
@@ -650,17 +653,17 @@ Notation "#| Γ |" := (List.length Γ) (at level 0, Γ at level 99, format "#| �
 Inductive type_inddecls `{checker_flags} (Σ : global_context) (pars : context) (Γ : context) :
   list one_inductive_body -> Type :=
 | type_ind_nil : type_inddecls Σ pars Γ []
-| type_ind_cons na ty cstrs projs kelim l :
+| type_ind_cons na ty cstrs projs kelim l r :
     (** Arity is well-formed *)
     isArity Σ [] ty ->
     (** Constructors are well-typed *)
     type_constructors Σ Γ cstrs ->
     (** Projections are well-typed *)
-    type_projections Σ (Γ ,,, pars ,, vass nAnon ty) projs ->
+    type_projections Σ (Γ ,,, pars ,, vass (mkBindAnn nAnon r) ty) projs ->
     (** The other inductives in the block are well-typed *)
     type_inddecls Σ pars Γ l ->
     (** TODO: check kelim*)
-    type_inddecls Σ pars Γ (Build_one_inductive_body na ty kelim cstrs projs :: l).
+    type_inddecls Σ pars Γ (Build_one_inductive_body na ty kelim cstrs projs r :: l).
 
 Definition type_inductive `{checker_flags} Σ inds :=
   (** FIXME: should be pars ++ arities w/o params *)
@@ -798,17 +801,17 @@ Lemma term_env_ind :
     (forall Σ (n : nat) (l : list term), Forall (P Σ) l -> P Σ (tEvar n l)) ->
     (forall Σ s, P Σ (tSort s)) ->
     (forall Σ t, P Σ t -> forall (c : cast_kind) (t0 : term), P Σ t0 -> P Σ (tCast t c t0)) ->
-    (forall Σ (n : name) (t : term), P Σ t -> forall t0 : term, P Σ t0 -> P Σ (tProd n t t0)) ->
-    (forall Σ (n : name) (t : term), P Σ t -> forall t0 : term, P Σ t0 -> P Σ (tLambda n t t0)) ->
-    (forall Σ (n : name) (t : term),
+    (forall Σ (n : aname) (t : term), P Σ t -> forall t0 : term, P Σ t0 -> P Σ (tProd n t t0)) ->
+    (forall Σ (n : aname) (t : term), P Σ t -> forall t0 : term, P Σ t0 -> P Σ (tLambda n t t0)) ->
+    (forall Σ (n : aname) (t : term),
         P Σ t -> forall t0 : term, P Σ t0 -> forall t1 : term, P Σ t1 -> P Σ (tLetIn n t t0 t1)) ->
     (forall Σ t, P Σ t -> forall l : list term, Forall (P Σ) l -> P Σ (tApp t l)) ->
     (forall Σ s u, P Σ (tConst s u)) ->
     (forall Σ i u, P Σ (tInd i u)) ->
     (forall Σ (i : inductive) (n : nat) u, P Σ (tConstruct i n u)) ->
-    (forall Σ (p : inductive * nat) (t : term),
+    (forall Σ (p : inductive * nat) (t : term) (is : option term),
         P Σ t -> forall t0 : term, P Σ t0 -> forall l : list (nat * term),
-            tCaseBrsProp (P Σ) l -> P Σ (tCase p t t0 l)) ->
+            tCaseBrsProp (P Σ) l -> P Σ (tCase p t is t0 l)) ->
     (forall Σ (s : projection) (t : term), P Σ t -> P Σ (tProj s t)) ->
     (forall Σ (m : mfixpoint term) (n : nat), tFixProp (P Σ) m -> P Σ (tFix m n)) ->
     (forall Σ (m : mfixpoint term) (n : nat), tFixProp (P Σ) m -> P Σ (tCoFix m n)) ->
@@ -852,17 +855,17 @@ Lemma term_env_ind' :
     (forall Σ (n : nat) (l : list term), Forall (P Σ) l -> P Σ (tEvar n l)) ->
     (forall Σ s, P Σ (tSort s)) ->
     (forall Σ t, P Σ t -> forall (c : cast_kind) (t0 : term), P Σ t0 -> P Σ (tCast t c t0)) ->
-    (forall Σ (n : name) (t : term), P Σ t -> forall t0 : term, P Σ t0 -> P Σ (tProd n t t0)) ->
-    (forall Σ (n : name) (t : term), P Σ t -> forall t0 : term, P Σ t0 -> P Σ (tLambda n t t0)) ->
-    (forall Σ (n : name) (t : term),
+    (forall Σ (n : aname) (t : term), P Σ t -> forall t0 : term, P Σ t0 -> P Σ (tProd n t t0)) ->
+    (forall Σ (n : aname) (t : term), P Σ t -> forall t0 : term, P Σ t0 -> P Σ (tLambda n t t0)) ->
+    (forall Σ (n : aname) (t : term),
         P Σ t -> forall t0 : term, P Σ t0 -> forall t1 : term, P Σ t1 -> P Σ (tLetIn n t t0 t1)) ->
     (forall Σ t, P Σ t -> forall l : list term, Forall (P Σ) l -> P Σ (tApp t l)) ->
     (forall Σ s u, P Σ (tConst s u)) ->
     (forall Σ i u, P Σ (tInd i u)) ->
     (forall Σ (i : inductive) (n : nat) u, P Σ (tConstruct i n u)) ->
-    (forall Σ (p : inductive * nat) (t : term),
+    (forall Σ (p : inductive * nat) (t : term) (is : option term),
         P Σ t -> forall t0 : term, P Σ t0 -> forall l : list (nat * term),
-            tCaseBrsProp (P Σ) l -> P Σ (tCase p t t0 l)) ->
+            tCaseBrsProp (P Σ) l -> P Σ (tCase p t is t0 l)) ->
     (forall Σ (s : projection) (t : term), P Σ t -> P Σ (tProj s t)) ->
     (forall Σ (m : mfixpoint term) (n : nat), tFixProp (P Σ) m -> P Σ (tFix m n)) ->
     (forall Σ (m : mfixpoint term) (n : nat), tFixProp (P Σ) m -> P Σ (tCoFix m n)) ->
@@ -996,22 +999,22 @@ Lemma typing_ind_env `{cf : checker_flags} :
     (forall Σ (wfΣ : wf Σ) (Γ : context) (l : Level.t), P Σ Γ (tSort (Universe.make l)) (tSort (Universe.super l))) ->
     (forall Σ (wfΣ : wf Σ) (Γ : context) (c : term) (k : cast_kind) (t : term) (s : universe),
         Σ ;;; Γ |- t : tSort s -> P Σ Γ t (tSort s) -> Σ ;;; Γ |- c : t -> P Σ Γ c t -> P Σ Γ (tCast c k t) t) ->
-    (forall Σ (wfΣ : wf Σ) (Γ : context) (n : name) (t b : term) (s1 s2 : universe),
+    (forall Σ (wfΣ : wf Σ) (Γ : context) (an : aname) (t b : term) (s1 s2 : universe),
         Σ ;;; Γ |- t : tSort s1 ->
         P Σ Γ t (tSort s1) ->
-        Σ ;;; Γ,, vass n t |- b : tSort s2 ->
-        P Σ (Γ,, vass n t) b (tSort s2) -> P Σ Γ (tProd n t b) (tSort (Universe.sort_of_product s1 s2))) ->
-    (forall Σ (wfΣ : wf Σ) (Γ : context) (n n' : name) (t b : term) (s1 : universe) (bty : term),
+        Σ ;;; Γ,, vass an t |- b : tSort s2 ->
+        P Σ (Γ,, vass an t) b (tSort s2) -> P Σ Γ (tProd an t b) (tSort (Universe.sort_of_product s1 s2))) ->
+    (forall Σ (wfΣ : wf Σ) (Γ : context) (an an' : aname) (t b : term) (s1 : universe) (bty : term),
         Σ ;;; Γ |- t : tSort s1 ->
         P Σ Γ t (tSort s1) ->
-        Σ ;;; Γ,, vass n t |- b : bty -> P Σ (Γ,, vass n t) b bty -> P Σ Γ (tLambda n t b) (tProd n' t bty)) ->
-    (forall Σ (wfΣ : wf Σ) (Γ : context) (n : name) (b b_ty b' : term) (s1 : universe) (b'_ty : term),
+        Σ ;;; Γ,, vass an t |- b : bty -> P Σ (Γ,, vass an t) b bty -> P Σ Γ (tLambda an t b) (tProd an' t bty)) ->
+    (forall Σ (wfΣ : wf Σ) (Γ : context) (an : aname) (b b_ty b' : term) (s1 : universe) (b'_ty : term),
         Σ ;;; Γ |- b_ty : tSort s1 ->
         P Σ Γ b_ty (tSort s1) ->
         Σ ;;; Γ |- b : b_ty ->
         P Σ Γ b b_ty ->
-        Σ ;;; Γ,, vdef n b b_ty |- b' : b'_ty ->
-        P Σ (Γ,, vdef n b b_ty) b' b'_ty -> P Σ Γ (tLetIn n b b_ty b') (tLetIn n b b_ty b'_ty)) ->
+        Σ ;;; Γ,, vdef an b b_ty |- b' : b'_ty ->
+        P Σ (Γ,, vdef an b b_ty) b' b'_ty -> P Σ Γ (tLetIn an b b_ty b') (tLetIn an b b_ty b'_ty)) ->
     (forall Σ (wfΣ : wf Σ) (Γ : context) (t : term) (l : list term) (t_ty t' : term),
         Σ ;;; Γ |- t : t_ty -> P Σ Γ t t_ty -> typing_spine Σ Γ t_ty l t' -> P Σ Γ (tApp t l) t') ->
 
@@ -1033,7 +1036,7 @@ Lemma typing_ind_env `{cf : checker_flags} :
         ind_npars decl = npar ->
         let pars := firstn npar args in
         forall (pty : term), Σ ;;; Γ |- p : pty -> P Σ Γ p pty ->
-        forall indctx pctx ps btys,
+        forall indctx pctx ps btys is,
         types_of_case pars p pty decl' = Some (indctx, pctx, ps, btys) ->
         check_correct_arity (snd Σ) decl' ind u indctx pars pctx = true ->
         Exists (fun sf : sort_family => universe_family ps = sf) (ind_kelim decl') ->
@@ -1042,7 +1045,7 @@ Lemma typing_ind_env `{cf : checker_flags} :
         P Σ Γ c (mkApps (tInd ind u) args) ->
         Forall2 (fun x y : nat * term => (fst x = fst y) * (Σ;;; Γ |- snd x : snd y)
                                          * P Σ Γ (snd x) (snd y))%type brs btys ->
-        P Σ Γ (tCase (ind, npar) p c brs) (tApp p (skipn npar args ++ [c]))) ->
+        P Σ Γ (tCase (ind, npar) p is c brs) (tApp p (skipn npar args ++ [c]))) ->
        (forall Σ (wfΣ : wf Σ) (Γ : context) (p : projection) (c : term) u (decl : ident * term),
         declared_projection (fst Σ) p decl ->
         forall args : list term,
@@ -1121,15 +1124,14 @@ Proof.
   forward IH.
   constructor 2. simpl. apply H0.
   apply IH. clear IH.
+
   destruct H;
-try solve [  match reverse goal with
+    try solve [  match reverse goal with
     H : _ |- _ => eapply H
-  end; eauto;
-             unshelve eapply X14; simpl; auto with arith].
+  end; eauto; unshelve eapply X14; simpl; auto with arith].
   match reverse goal with
-    H : _ |- _ => eapply H
-  end; eauto;
-  unshelve eapply X14; simpl; auto with arith;
+    H : _ |- P _ _ _ _ => eapply H
+  end; eauto; unshelve eapply X14; simpl; auto with arith;
     repeat (rewrite Nat.max_comm, <- Nat.max_assoc; auto with arith).
   apply X6; eauto.
   specialize (X14 [] _ _ (type_Sort _ _ Level.prop)).

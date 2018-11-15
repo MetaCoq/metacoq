@@ -36,11 +36,11 @@ Definition decompose_app (t : term) :=
   | _ => (t, [])
   end.
 
-Fixpoint decompose_prod (t : term) : (list name) * (list term) * term :=
+Fixpoint decompose_prod (t : term) : (list aname) * (list term) * term :=
   match t with
-  | tProd n A B => let (nAs, B) := decompose_prod B in
-                  let (ns, As) := nAs in
-                  (n :: ns, A :: As, B)
+  | tProd an A B => let (nAs, B) := decompose_prod B in
+                    let (ns, As) := nAs in
+                    (an :: ns, A :: As, B)
   | _ => ([], [], t)
   end.
 
@@ -86,7 +86,7 @@ Proof.
     apply (List.firstn decl.(ind_npars)) in names.
     apply (List.firstn decl.(ind_npars)) in types.
     refine (List.combine _ _).
-    exact (List.map get_ident names).
+    exact (List.map (fun x => get_ident x.(binder_name)) names).
     exact (List.map LocalAssum types).
   - refine (List.map _ decl.(ind_bodies)).
     intros [].

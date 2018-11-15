@@ -47,9 +47,9 @@ Fixpoint subst_instance_constr (u : universe_instance) (c : term) :=
   | tProd na A B => tProd na (subst_instance_constr u A) (subst_instance_constr u B)
   | tLetIn na b ty b' => tLetIn na (subst_instance_constr u b) (subst_instance_constr u ty)
                                 (subst_instance_constr u b')
-  | tCase ind p c brs =>
+  | tCase ind p is c brs =>
     let brs' := List.map (on_snd (subst_instance_constr u)) brs in
-    tCase ind (subst_instance_constr u p) (subst_instance_constr u c) brs'
+    tCase ind (subst_instance_constr u p) (option_map (subst_instance_constr u) is ) (subst_instance_constr u c) brs'
   | tProj p c => tProj p (subst_instance_constr u c)
   | tFix mfix idx =>
     let mfix' := List.map (map_def (subst_instance_constr u)) mfix in

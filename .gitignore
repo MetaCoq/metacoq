@@ -87,6 +87,14 @@ template-coq/univ0.ml
 template-coq/univ0.mli
 template-coq/utils.ml
 template-coq/utils.mli
+template-coq/OrderedType0.ml
+template-coq/OrderedType0.mli
+template-coq/Orders.ml
+template-coq/Orders.mli
+template-coq/OrdersTac.ml
+template-coq/OrdersTac.mli
+template-coq/Retyping0.ml
+template-coq/Retyping0.mli
 
 checker/src/ascii.ml
 checker/src/ascii.mli

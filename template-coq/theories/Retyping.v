@@ -19,6 +19,10 @@ Existing Instance default_checker_flags.
   substitution are costly here. No universe checking or conversion is done
   in particular. *)
 
+  (* SPROP: CHECK: if we need to do something with the additional arg to tCase [is]
+    - informative match on SProp inductives *)
+
+
 Section TypeOf.
   Context `{F : Fuel}.
   Context (Σ : global_context).
@@ -82,7 +86,8 @@ Section TypeOf.
     | tConstruct (mkInd ind i) k u =>
       lookup_constructor_type Σ ind i k u
 
-    | tCase (ind, par) p c brs =>
+
+    | tCase (ind, par) p is c brs =>
       ty <- type_of Γ c ;;
       indargs <- reduce_to_ind (fst Σ) Γ ty ;;
       let '(ind', u, args) := indargs in

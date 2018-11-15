@@ -72,19 +72,29 @@ Section Erase.
       f' <- extract Σ Γ f;;
       l' <- monad_map (extract Σ Γ) l;;
       ret (E.tApp f' l') (* if is_dummy f' then ret dummy else *)
-    | tCase ip p c brs =>
+    | tCase ip p is c brs =>
       c' <- extract Σ Γ c;;
       if is_box c' then
         match brs with
         | (_, x) :: _ => extract Σ Γ x (* Singleton elimination *)
         | nil =>
           p' <- extract Σ Γ p;;
-          ret (E.tCase ip p' c' nil) (* Falsity elimination *)
+          is' <- match is with
+                 | Some v => v' <- extract Σ Γ v;;
+                             ret (Some v')
+                 | None => ret None
+                 end;;
+          ret (E.tCase ip p' is' c' nil) (* Falsity elimination *)
         end
       else
         brs' <- monad_map (T:=typing_result) (fun x => x' <- extract Σ Γ (snd x);; ret (fst x, x')) brs;;
         p' <- extract Σ Γ p;;
-        ret (E.tCase ip p' c' brs')
+        is' <- match is with
+               | Some v => v' <- extract Σ Γ v;;
+                           ret (Some v')
+               | None => ret None
+               end;;
+        ret (E.tCase ip p' is' c' brs')
     | tProj p c =>
       c' <- extract Σ Γ c;;
       ret (E.tProj p c')
@@ -122,7 +132,8 @@ Definition extract_one_inductive_body `{F:Fuel} Σ npars arities
   let '(params, arity) := decompose_prod_n [] npars oib.(ind_type) in
   type <- extract Σ [] oib.(ind_type) ;;
   ctors <- monad_map (fun '(x, y, z) => y' <- extract Σ arities y;; ret (x, y', z)) oib.(ind_ctors);;
-  let projctx := arities ,,, params ,, vass nAnon oib.(ind_type) in
+  let rAnon := mkBindAnn nAnon oib.(ind_relevant) in
+  let projctx := arities ,,, params ,, vass rAnon oib.(ind_type) in
   projs <- monad_map (fun '(x, y) => y' <- extract Σ [] y;; ret (x, y')) oib.(ind_projs);;
   ret {| E.ind_name := oib.(ind_name);
          E.ind_type := type;

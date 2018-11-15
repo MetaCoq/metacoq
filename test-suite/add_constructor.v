@@ -45,7 +45,8 @@ Polymorphic Definition add_ctor (mind : mutual_inductive_body) (ind0 : inductive
                                            let typ := try_remove_n_lambdas n ctor in
                                            ctors ++ [(idc, typ, 0)]  (* fixme 0 *)
                                          else ctors;
-                            ind_projs := ind.(ind_projs) |})
+                            ind_projs := ind.(ind_projs) ;
+                            ind_relevant := Relevant |})
                             mind.(ind_bodies) |}.
 
 (* [add_constructor] is a new command (in Template Coq style) *)
@@ -57,6 +58,7 @@ Polymorphic Definition add_constructor {A} (ind : A) (idc : ident) {B} (ctor : B
      match tm with
      | tInd ind0 _ =>
        decl <- tmQuoteInductive (inductive_mind ind0) ;;
+            print_nf decl ;;
        ctor <- tmQuote ctor ;;
        ind' <- tmEval lazy (add_ctor decl ind0 idc ctor) ;;
        tmMkInductive' ind'

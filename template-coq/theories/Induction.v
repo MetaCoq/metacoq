@@ -94,17 +94,18 @@ Lemma term_forall_list_ind :
     (forall (n : nat) (l : list term), Forall P l -> P (tEvar n l)) ->
     (forall s, P (tSort s)) ->
     (forall t : term, P t -> forall (c : cast_kind) (t0 : term), P t0 -> P (tCast t c t0)) ->
-    (forall (n : name) (t : term), P t -> forall t0 : term, P t0 -> P (tProd n t t0)) ->
-    (forall (n : name) (t : term), P t -> forall t0 : term, P t0 -> P (tLambda n t t0)) ->
-    (forall (n : name) (t : term),
+    (forall (n : aname) (t : term), P t -> forall t0 : term, P t0 -> P (tProd n t t0)) ->
+    (forall (n : aname) (t : term), P t -> forall t0 : term, P t0 -> P (tLambda n t t0)) ->
+    (forall (n : aname) (t : term),
         P t -> forall t0 : term, P t0 -> forall t1 : term, P t1 -> P (tLetIn n t t0 t1)) ->
     (forall t : term, P t -> forall l : list term, Forall P l -> P (tApp t l)) ->
     (forall (s : String.string) (u : list Level.t), P (tConst s u)) ->
     (forall (i : inductive) (u : list Level.t), P (tInd i u)) ->
     (forall (i : inductive) (n : nat) (u : list Level.t), P (tConstruct i n u)) ->
     (forall (p : inductive * nat) (t : term),
-        P t -> forall t0 : term, P t0 -> forall l : list (nat * term),
-            tCaseBrsProp P l -> P (tCase p t t0 l)) ->
+        P t -> forall t0 : option term, ForOption P t0 -> forall t1 : term, P t1 ->
+        forall l : list (nat * term),
+            tCaseBrsProp P l -> P (tCase p t t0 t1 l)) ->
     (forall (s : projection) (t : term), P t -> P (tProj s t)) ->
     (forall (m : mfixpoint term) (n : nat), tFixProp P m -> P (tFix m n)) ->
     (forall (m : mfixpoint term) (n : nat), tFixProp P m -> P (tCoFix m n)) ->
@@ -116,28 +117,37 @@ Proof.
   destruct t; match goal with
                  H : _ |- _ => apply H
               end; auto.
-  revert l.
-  fix auxl' 1.
-  destruct l; constructor; [|apply auxl'].
-  apply auxt.
-  revert l.
-  fix auxl' 1.
-  destruct l; constructor; [|apply auxl'].
-  apply auxt.
-  revert l.
-  fix auxl' 1.
-  destruct l; constructor; [|apply auxl'].
-  apply auxt.
+  - revert l.
+    fix auxl' 1.
+    destruct l; constructor; [|apply auxl'].
+    apply auxt.
+  - revert l.
+    fix auxl' 1.
+    destruct l;constructor; [|apply auxl'].
+    apply auxt.
+  - destruct o; [constructor;apply auxt | constructor].
+  - revert l.
+    fix auxl' 1.
+    destruct l; constructor; [|apply auxl'].
+    apply auxt.
 
-  revert m.
-  fix auxm 1.
-  destruct m; constructor; [|apply auxm].
-  split; apply auxt.
-  revert m.
-  fix auxm 1.
-  destruct m; constructor; [|apply auxm].
-  split; apply auxt.
+  - revert m.
+    fix auxm 1.
+    destruct m; constructor; [|apply auxm].
+    split; apply auxt.
+  - revert m.
+    fix auxm 1.
+    destruct m; constructor; [|apply auxm].
+    split; apply auxt.
 Defined.
+
+Lemma option_map_spec {A} {P : A -> Prop} {l} {f g : A -> A} :
+  ForOption P l -> (forall x, P x -> f x = g x) ->
+  option_map f l = option_map g l.
+Proof.
+  destruct 1; simpl; trivial.
+  intros Heq. rewrite Heq. f_equal. assumption.
+Qed.
 
 Lemma forall_map_spec {A} {P : A -> Prop} {l} {f g : A -> A} :
   Forall P l -> (forall x, P x -> f x = g x) ->
@@ -226,6 +236,19 @@ Proof.
   eapply on_snd_test_spec; eauto.
 Qed.
 
+Lemma forotion_foroptb_option_map_spec {P : term -> Prop} {p : term -> bool}
+      {l} {f g : term -> term} :
+  ForOption P l ->
+  foroptb p l = true ->
+  (forall x, P x -> p x = true -> f x = g x) ->
+  option_map f l = option_map g l.
+Proof.
+  induction 1; simpl; trivial.
+  intros pl Hx. f_equal. now apply Hx.
+Qed.
+
+(* option_get true (option_map (closedn k) t1) = true *)
+
 Lemma tfix_forallb_map_spec {P : term -> Prop} {p} {l} {f g : term -> term} :
   tFixProp P l -> 
   forallb (test_def p) l = true ->
@@ -244,6 +267,10 @@ Ltac apply_spec :=
     eapply (forall_forallb_map_spec H H')
   | H : Forall _ _ |- map _ _ = map _ _ =>
     eapply (forall_map_spec H)
+  | H : ForOption _ _, H' : foroptb _ _ = _ |- option_map _ _ = option_map _ _ =>
+    eapply (forotion_foroptb_option_map_spec H)
+  | H : ForOption _ _ |- option_map _ _ = option_map _ _ =>
+    eapply (option_map_spec H)
   | H : tCaseBrsProp _ _, H' : forallb _ _ = _ |- map _ _ = map _ _ =>
     eapply (case_brs_forallb_map_spec H H')
   | H : tCaseBrsProp _ _ |- map _ _ = map _ _ =>
@@ -279,17 +306,20 @@ Lemma term_wf_forall_list_ind :
     (forall (n : nat) (l : list term), Forall P l -> P (tEvar n l)) ->
     (forall s, P (tSort s)) ->
     (forall t : term, P t -> forall (c : cast_kind) (t0 : term), P t0 -> P (tCast t c t0)) ->
-    (forall (n : name) (t : term), P t -> forall t0 : term, P t0 -> P (tProd n t t0)) ->
-    (forall (n : name) (t : term), P t -> forall t0 : term, P t0 -> P (tLambda n t t0)) ->
-    (forall (n : name) (t : term),
+    (forall (n : aname) (t : term), P t -> forall t0 : term, P t0 -> P (tProd n t t0)) ->
+    (forall (n : aname) (t : term), P t -> forall t0 : term, P t0 -> P (tLambda n t t0)) ->
+    (forall (n : aname) (t : term),
         P t -> forall t0 : term, P t0 -> forall t1 : term, P t1 -> P (tLetIn n t t0 t1)) ->
     (forall t : term, ~ isApp t = true -> P t -> forall l : list term, l <> nil -> Forall P l -> P (tApp t l)) ->
     (forall (s : String.string) (u : list Level.t), P (tConst s u)) ->
     (forall (i : inductive) (u : list Level.t), P (tInd i u)) ->
     (forall (i : inductive) (n : nat) (u : list Level.t), P (tConstruct i n u)) ->
     (forall (p : inductive * nat) (t : term),
-        P t -> forall t0 : term, P t0 -> forall l : list (nat * term),
-            tCaseBrsProp P l -> P (tCase p t t0 l)) ->
+        P t -> forall t0 : option term,
+          ForOption P t0 ->
+          forall t1 : term,
+            P t1 -> forall l : list (nat * term),
+                tCaseBrsProp P l -> P (tCase p t t0 t1 l)) ->
     (forall (s : projection) (t : term), P t -> P (tProj s t)) ->
     (forall (m : mfixpoint term) (n : nat), tFixProp P m -> P (tFix m n)) ->
     (forall (m : mfixpoint term) (n : nat), tFixProp P m -> P (tCoFix m n)) ->
@@ -312,12 +342,12 @@ Proof.
   apply H8; auto.
   auto using lift_to_wf_list.
 
-  inv H19; apply H12; auto.
+  inv H20;apply H12;auto. destruct H22; inversion H17;subst;constructor;auto.
   red.
-  red in H18.
-  induction H18.
+  red in H19.
+  induction H19.
   constructor.
-  inv H22; auto.
+  inv H24; auto.
 
   inv H17; auto.
 

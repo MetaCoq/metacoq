@@ -19,9 +19,9 @@ Fixpoint lift n k t : term :=
   | tApp u v => tApp (lift n k u) (List.map (lift n k) v)
   | tProd na A B => tProd na (lift n k A) (lift n (S k) B)
   | tLetIn na b t b' => tLetIn na (lift n k b) (lift n k t) (lift n (S k) b')
-  | tCase ind p c brs =>
+  | tCase ind p is c brs =>
     let brs' := List.map (on_snd (lift n k)) brs in
-    tCase ind (lift n k p) (lift n k c) brs'
+    tCase ind (lift n k p) (option_map (lift n k) is) (lift n k c) brs'
   | tProj p c => tProj p (lift n k c)
   | tFix mfix idx =>
     let k' := List.length mfix + k in
@@ -51,9 +51,9 @@ Fixpoint subst t k u :=
   | tApp u v => mkApps (subst t k u) (List.map (subst t k) v)
   | tProd na A B => tProd na (subst t k A) (subst t (S k) B)
   | tLetIn na b ty b' => tLetIn na (subst t k b) (subst t k ty) (subst t (S k) b')
-  | tCase ind p c brs =>
+  | tCase ind p is c brs =>
     let brs' := List.map (on_snd (subst t k)) brs in
-    tCase ind (subst t k p) (subst t k c) brs'
+    tCase ind (subst t k p) (option_map (subst t k) is) (subst t k c) brs'
   | tProj p c => tProj p (subst t k c)
   | tFix mfix idx =>
     let k' := List.length mfix + k in
@@ -80,9 +80,9 @@ Fixpoint closedn k (t : term) : bool :=
   | tLambda _ T M | tProd _ T M => closedn k T && closedn (S k) M
   | tApp u v => closedn k u && List.forallb (closedn k) v
   | tLetIn na b t b' => closedn k b && closedn k t && closedn (S k) b'
-  | tCase ind p c brs =>
+  | tCase ind p is c brs =>
     let brs' := List.forallb (test_snd (closedn k)) brs in
-    closedn k p && closedn k c && brs'
+    closedn k p && (foroptb (closedn k) is) && closedn k c && brs'
   | tProj p c => closedn k c
   | tFix mfix idx =>
     let k' := List.length mfix + k in
@@ -174,8 +174,9 @@ Proof.
   - now elim (leb k n).
   - f_equal. rewrite <- map_id. now eapply (forall_map_spec H).
   - f_equal. auto. rewrite <- map_id. now eapply (forall_map_spec H0).
-  - f_equal; auto. rewrite <- map_id. eapply (forall_map_spec H1).
-    intros. destruct x; unfold on_snd. simpl. rewrite H2. reflexivity.
+  - f_equal; auto. destruct t1;inv H0;simpl; [apply f_equal;auto | reflexivity].
+    rewrite <- map_id. eapply (forall_map_spec H2).
+    intros. destruct x; unfold on_snd. simpl. rewrite H3. reflexivity.
 
   - f_equal. transitivity (map (map_def id) m). eapply (tfix_map_spec H); auto.
     rewrite <- map_id. f_equal. extensionality x. destruct x; reflexivity.
@@ -188,6 +189,12 @@ Lemma lift0_p : forall M, lift0 0 M = M.
   apply lift_rec0; easy.
 Qed.
 
+Lemma option_map_compose {A B C : Type} (f : A -> B) (g : B -> C) (l : option A) :
+  option_map g (option_map f l) = option_map (g ∘ f) l.
+Proof.
+  destruct l;easy.
+Qed.
+
 
 Lemma simpl_lift_rec :
   forall M n k p i,
@@ -197,7 +204,7 @@ Proof.
   intros M.
   elim M using term_forall_list_ind;
     intros; simpl; try easy;
-      rewrite ?map_map_compose, ?compose_on_snd, ?compose_map_def;
+      rewrite ?map_map_compose, ?option_map_compose, ?compose_on_snd, ?compose_map_def;
       try (rewrite H, ?H0, ?H1; auto); try (f_equal; apply_spec);
         try rewrite ?map_length; try easy.
 
@@ -218,7 +225,7 @@ Proof.
   intros M.
   elim M using term_forall_list_ind;
     intros; simpl; try easy;
-      rewrite ?map_map_compose, ?compose_on_snd, ?compose_map_def;
+      rewrite ?map_map_compose, ?option_map_compose, ?compose_on_snd, ?compose_map_def;
       try solve [f_equal; easy];
       try (f_equal; try easy; apply_spec);
       unfold compose; intros;
@@ -266,6 +273,19 @@ Proof.
   contradiction.
 Qed.
 
+Lemma ForOption_map : forall (A B : Type) (P : B -> Prop) (f : A -> B) (l : option A),
+    ForOption (P ∘ f) l -> ForOption P (option_map f l).
+Proof.
+  intros.
+  destruct H; simpl in *; constructor;easy.
+Qed.
+
+Lemma ForOption_impl {A} : forall (P Q : A -> Prop) (l : option A),
+    ForOption P l -> (forall x : A, P x -> Q x) -> ForOption Q l.
+Proof.
+  intros.   destruct H; simpl in *; constructor;easy.
+Qed.
+
 Lemma lift_rec_wf n k t : wf t -> wf (lift_rec n t k).
 Proof.
   intros wft; revert t wft k.
@@ -276,7 +296,8 @@ Proof.
   now apply lift_rec_isApp.
   now apply map_non_nil.
   apply Forall_map. eapply Forall_impl. apply H2. auto.
-  apply Forall_map. eapply Forall_impl. apply H1.
+  apply ForOption_map. eapply ForOption_impl;eauto.
+  apply Forall_map. eapply Forall_impl. apply H2.
   intros [n' t]. simpl. repeat red; simpl; auto.
   apply Forall_map. eapply Forall_impl. apply H.
   simpl. intros. red; intuition (simpl; auto).
@@ -303,7 +324,7 @@ Lemma simpl_subst_rec :
 Proof.
   intros M wfM. induction wfM using term_wf_forall_list_ind;
     intros; simpl; try easy;
-      rewrite ?map_map_compose, ?compose_on_snd, ?compose_map_def;
+      rewrite ?map_map_compose, ?option_map_compose, ?compose_on_snd, ?compose_map_def;
       try solve [f_equal; easy];
       try (f_equal; try easy; apply_spec); intros;
         try rewrite ?map_length; try easy ||
@@ -350,7 +371,7 @@ Proof.
   intros M.
   elim M using term_forall_list_ind;
     intros; simpl; try easy;
-      rewrite ?map_map_compose, ?compose_on_snd, ?compose_map_def;
+      rewrite ?map_map_compose, ?option_map_compose, ?compose_on_snd, ?compose_map_def;
       try solve [f_equal; easy];
       try (f_equal; try easy; apply_spec);
       unfold compose; intros;
@@ -390,7 +411,7 @@ Proof.
               |- context [tRel _] => idtac
             | |- _ => simpl
             end; try easy;
-      rewrite ?map_map_compose, ?compose_on_snd, ?compose_map_def;
+      rewrite ?map_map_compose, ?option_map_compose, ?compose_on_snd, ?compose_map_def;
       try solve [f_equal; easy];
       try (f_equal; try easy; apply_spec);
       unfold compose; intros;
@@ -452,7 +473,7 @@ Proof.
               |- context [tRel _] => idtac
             | |- _ => simpl
             end; try easy;
-      rewrite ?map_map_compose, ?compose_on_snd, ?compose_map_def;
+      rewrite ?map_map_compose, ?option_map_compose, ?compose_on_snd, ?compose_map_def;
       try solve [f_equal; easy];
       try (f_equal; try easy; apply_spec);
       unfold compose; intros;
@@ -498,7 +519,7 @@ Lemma lift_closed n k t : closedn k t = true -> lift n k t = t.
 Proof.
   revert k.
   elim t using term_forall_list_ind; intros; try easy;
-    rewrite ?map_map_compose, ?compose_on_snd, ?compose_map_def;
+    rewrite ?map_map_compose, ?option_map_compose, ?compose_on_snd, ?compose_map_def;
     try (f_equal; apply_spec);  simpl closed in *;
     try rewrite ?map_length; try easy.
   - rewrite lift_rel_lt; auto.
@@ -511,8 +532,9 @@ Proof.
   - simpl lift. rewrite !andb_true_iff in H2. f_equal; intuition eauto.
   - simpl lift. rewrite !andb_true_iff in H1. f_equal; intuition eauto.
     rewrite <- map_id; apply_spec; eauto.
-  - simpl lift. rewrite !andb_true_iff in H2. f_equal; intuition eauto.
-    transitivity (map (on_snd id) l). apply_spec; eauto.
+  - simpl lift. rewrite !andb_true_iff in H3. f_equal; intuition eauto.
+    transitivity (option_map id t1). apply_spec; eauto. destruct t1;easy.
+    transitivity (map (on_snd id) l). apply_spec; eauto. 
     rewrite <- map_id. f_equal. unfold on_snd. extensionality p. now destruct p.
   - simpl lift. f_equal; eauto.
   - simpl lift. f_equal.

@@ -3,7 +3,7 @@
 Require Import Coq.Strings.String.
 Require Import Coq.PArith.BinPos.
 Require Import List. Import ListNotations.
-From Template Require Export univ uGraph.
+From Template Require Export univ uGraph utils.
 
 (** * AST of Coq kernel terms and kernel data structures
 
@@ -42,7 +42,16 @@ From Template Require Export univ uGraph.
 Definition ident := string. (* e.g. nat *)
 Definition kername := string. (* e.g. Coq.Init.Datatypes.nat *)
 
-Inductive sort_family : Set := InProp | InSet | InType.
+Inductive relevance : Set := Relevant | Irrelevant.
+
+(** Binders annotated with relevance *)
+Record binder_annot (A : Type) := mkBindAnn { binder_name : A; binder_relevance : relevance }.
+
+Arguments mkBindAnn {_}.
+Arguments binder_name {_}.
+Arguments binder_relevance {_}.
+
+Inductive sort_family : Set := InSProp | InProp | InSet | InType.
 
 Inductive name : Set :=
 | nAnon
@@ -60,9 +69,12 @@ Arguments mkInd _%string _%nat.
 
 Definition projection : Set := inductive * nat (* params *) * nat (* argument *).
 
+(** Type of annotated names *)
+Definition aname := binder_annot name.
+
 (** Parametrized by term because term is not yet defined *)
 Record def (term : Set) : Set := mkdef {
-  dname : name; (* the name **)
+  dname : aname; (* the name **)
   dtype : term;
   dbody : term; (* the body (a lambda term). Note, this may mention other (mutually-defined) names **)
   rarg  : nat  (* the index of the recursive argument, 0 for cofixpoints **) }.
@@ -77,14 +89,15 @@ Inductive term : Set :=
 | tEvar      : nat -> list term -> term
 | tSort      : universe -> term
 | tCast      : term -> cast_kind -> term -> term
-| tProd      : name -> term (* the type *) -> term -> term
-| tLambda    : name -> term (* the type *) -> term -> term
-| tLetIn     : name -> term (* the term *) -> term (* the type *) -> term -> term
+| tProd      : aname -> term (* the type *) -> term -> term
+| tLambda    : aname -> term (* the type *) -> term -> term
+| tLetIn     : aname -> term (* the term *) -> term (* the type *) -> term -> term
 | tApp       : term -> list term -> term
 | tConst     : kername -> universe_instance -> term
 | tInd       : inductive -> universe_instance -> term
 | tConstruct : inductive -> nat -> universe_instance -> term
-| tCase      : (inductive * nat) (* # of parameters *) -> term (* type info *)
+| tCase      : (inductive * nat) (* # of parameters *) -> term (* type info *) ->
+               option term (* indices (informative match on SProp inductive) *)
                -> term (* discriminee *) -> list (nat * term) (* branches *) -> term
 | tProj      : projection -> term -> term
 | tFix       : mfixpoint term -> nat -> term
@@ -108,6 +121,7 @@ Definition isApp t :=
   | _ => false
   end.
 
+
 (** Well-formed terms: invariants which are not ensured by the OCaml type system *)
 
 Inductive wf : term -> Prop :=
@@ -124,7 +138,7 @@ Inductive wf : term -> Prop :=
 | wf_tConst k u : wf (tConst k u)
 | wf_tInd i u : wf (tInd i u)
 | wf_tConstruct i k u : wf (tConstruct i k u)
-| wf_tCase ci p c brs : wf p -> wf c -> Forall (Program.Basics.compose wf snd) brs -> wf (tCase ci p c brs)
+| wf_tCase ci p is c brs : wf p -> ForOption wf is -> wf c -> Forall (Program.Basics.compose wf snd) brs -> wf (tCase ci p is c brs)
 | wf_tProj p t : wf t -> wf (tProj p t)
 | wf_tFix mfix k : Forall (fun def => wf def.(dtype _) /\ wf def.(dbody _)) mfix -> wf (tFix mfix k)
 | wf_tCoFix mfix k : Forall (fun def => wf def.(dtype _) /\ wf def.(dbody _)) mfix -> wf (tCoFix mfix k).
@@ -208,7 +222,7 @@ Record mutual_inductive_entry := {
 (** *** The context of De Bruijn indices *)
 
 Record context_decl := {
-  decl_name : name ;
+  decl_name : aname ;
   decl_body : option term ;
   decl_type : term }.
 
@@ -239,8 +253,9 @@ Record one_inductive_body := {
   ind_kelim : list sort_family; (* Allowed elimination sorts *)
   ind_ctors : list (ident * term (* Under context of arities of the mutual inductive *)
                     * nat (* arity, w/o lets, w/o parameters *));
-  ind_projs : list (ident * term) (* names and types of projections, if any.
-                                     Type under context of params and inductive object *) }.
+  ind_projs : list (ident * term); (* names and types of projections, if any.
+                                     Type under context of params and inductive object *)
+  ind_relevant : relevance}.
 
 (** See [mutual_inductive_body] from [declarations.ml]. *)
 Record mutual_inductive_body := {

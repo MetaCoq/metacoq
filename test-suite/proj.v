@@ -1,5 +1,7 @@
 Require Import Template.Loader.
 Require Import String.
+Require Import List.
+Import ListNotations.
 Set Primitive Projections.
 
 Record Eq (A : Type) := { eq : A -> A -> bool; eq_proof : forall x y, eq x y = true <-> x = y }.

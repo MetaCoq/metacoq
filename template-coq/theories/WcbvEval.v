@@ -25,6 +25,10 @@ Existing Instance default_checker_flags.
 
   TODO: CoFixpoints *)
 
+(* SPROP: CHECK: if we need to do something with the additional arg to tCase [is]
+       - informative match on SProp inductives *)
+
+
 Section Wcbv.
   Context (Σ : global_declarations) (Γ : context).
   (* The local context is fixed: we are only doing weak reductions *)
@@ -55,10 +59,10 @@ Section Wcbv.
       eval (tRel i) (tRel i)
 
   (** Case *)
-  | eval_iota ind pars discr c u args p brs res :
+  | eval_iota ind pars discr c u args p brs res is :
       eval discr (mkApps (tConstruct ind c u) args) ->
       eval (iota_red pars c args brs) res ->
-      eval (tCase (ind, pars) p discr brs) res
+      eval (tCase (ind, pars) p is discr brs) res
 
   (** Fix unfolding, with guard *)
   | eval_fix mfix idx args args' narg fn res :
@@ -110,13 +114,13 @@ Section Wcbv.
 
   Lemma eval_evals_ind :
     forall P : term -> term -> Prop,
-      (forall (f : term) (na : name) (t b a a' : term) (l : list term) (res : term),
+      (forall (f : term) (na : aname) (t b a a' : term) (l : list term) (res : term),
           eval f (tLambda na t b) ->
           P f (tLambda na t b) ->
           eval a a' -> P a a' ->
           eval (mkApps (b {0 := a'}) l) res -> P (mkApps (b {0 := a'}) l) res -> P (tApp f (a :: l)) res) ->
 
-      (forall (na : name) (b0 b0' t b1 res : term),
+      (forall (na : aname) (b0 b0' t b1 res : term),
           eval b0 b0' -> P b0 b0' -> eval (b1 {0 := b0'}) res -> P (b1 {0 := b0'}) res -> P (tLetIn na b0 t b1) res) ->
 
       (forall (i : nat) (isdecl : i < #|Γ|) (body res : term),
@@ -127,11 +131,11 @@ Section Wcbv.
           decl_body (safe_nth Γ (exist (fun n : nat => n < #|Γ|) i isdecl)) = None -> P (tRel i) (tRel i)) ->
 
       (forall (ind : inductive) (pars : nat) (discr : term) (c : nat) (u : universe_instance)
-              (args : list term) (p : term) (brs : list (nat * term)) (res : term),
+              (args : list term) (p : term) (brs : list (nat * term)) (res : term) (is : option term),
           eval discr (mkApps (tConstruct ind c u) args) ->
           P discr (mkApps (tConstruct ind c u) args) ->
           eval (iota_red pars c args brs) res ->
-          P (iota_red pars c args brs) res -> P (tCase (ind, pars) p discr brs) res) ->
+          P (iota_red pars c args brs) res -> P (tCase (ind, pars) p is discr brs) res) ->
 
       (forall (mfix : mfixpoint term) (idx : nat) (args args' : list term) (narg : nat) (fn res : term),
           unfold_fix mfix idx = Some (narg, fn) ->
@@ -153,9 +157,9 @@ Section Wcbv.
           eval (nth (pars + arg) args tDummy) res ->
           P (nth (pars + arg) args tDummy) res -> P (tProj (i, pars, arg) discr) res) ->
 
-      (forall (na : name) (M N : term), P (tLambda na M N) (tLambda na M N)) ->
+      (forall (na : aname) (M N : term), P (tLambda na M N) (tLambda na M N)) ->
 
-      (forall (na : name) (M M' N N' : term),
+      (forall (na : aname) (M M' N N' : term),
           eval M M' -> eval N N' -> P M M' -> P N N' ->
           P (tProd na M N) (tProd na M' N')) ->
 
@@ -211,8 +215,8 @@ Section Wcbv.
   Lemma value_values_ind : forall P : term -> Prop,
        (forall i : nat, P (tRel i)) ->
        (forall (ev : nat) (l : list term), P (tEvar ev l)) ->
-       (forall (na : name) (t b : term), P (tLambda na t b)) ->
-       (forall (na : name) (t u : term), P (tProd na t u)) ->
+       (forall (na : aname) (t b : term), P (tLambda na t b)) ->
+       (forall (na : aname) (t u : term), P (tProd na t u)) ->
        (forall (i : inductive) (k : universe_instance) l, List.Forall value l -> List.Forall P l -> P (mkApps (tInd i k) l)) ->
        (forall (i : inductive) (k : nat) (u : universe_instance) (l : list term),
         List.Forall value l -> List.Forall P l -> P (mkApps (tConstruct i k u) l)) -> forall t : term, value t -> P t.

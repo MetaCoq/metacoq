@@ -1,7 +1,7 @@
 -I ../template-coq/src
--I ../checker/src
+# -I ../checker/src
 -Q ../template-coq/theories Template
--Q ../checker/theories TemplateChecker
+# -Q ../checker/theories TemplateChecker
 -R . TemplateTestSuite
 
 add_constructor.v
@@ -14,7 +14,7 @@ bug8.v
 bugkncst.v
 case.v
 castprop.v
-CheckerTest.v
+# CheckerTest.v
 cofix.v
 evars.v
 hnf_ctor.v
@@ -22,8 +22,8 @@ letin.v
 mutind.v
 opaque.v
 proj.v
-TypingTests.v
-univ.v
+# TypingTests.v
+# univ.v
 tmInferInstance.v
 issue27.v
 issue28.v

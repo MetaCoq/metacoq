@@ -20,14 +20,15 @@ Inductive term : Set :=
 | tMeta      : nat -> term   (* NOTE: this will go away *)
 | tEvar      : nat -> list term -> term
 | tSort      : universe -> term
-| tProd      : name -> term (* the type *) -> term -> term
-| tLambda    : name -> term -> term -> term
-| tLetIn     : name -> term (* the term *) -> term -> term -> term
+| tProd      : aname -> term (* the type *) -> term -> term
+| tLambda    : aname -> term -> term -> term
+| tLetIn     : aname -> term (* the term *) -> term -> term -> term
 | tApp       : term -> list term -> term
 | tConst     : kername -> universe_instance -> term
 | tInd       : inductive -> universe_instance -> term
 | tConstruct : inductive -> nat -> universe_instance -> term
-| tCase      : (inductive * nat) (* # of parameters *) -> term (* type info *)
+| tCase      : (inductive * nat) (* # of parameters *) -> term (* type info *) ->
+               option term (* indices (informative match on SProp inductive) *)
                -> term (* discriminee *) -> list (nat * term) (* branches *) -> term
 | tProj      : projection -> term -> term
 | tFix       : mfixpoint term -> nat -> term
@@ -68,7 +69,7 @@ Inductive wf : term -> Prop :=
 | wf_tConst k u : wf (tConst k u)
 | wf_tInd i u : wf (tInd i u)
 | wf_tConstruct i k u : wf (tConstruct i k u)
-| wf_tCase ci p c brs : wf p -> wf c -> Forall (Program.Basics.compose wf snd) brs -> wf (tCase ci p c brs)
+| wf_tCase ci p is c brs : wf p -> ForOption wf is -> wf c -> Forall (Program.Basics.compose wf snd) brs -> wf (tCase ci p is c brs)
 | wf_tProj p t : wf t -> wf (tProj p t)
 | wf_tFix mfix k : Forall (fun def => wf def.(dtype _) /\ wf def.(dbody _)) mfix -> wf (tFix mfix k)
 | wf_tCoFix mfix k : Forall (fun def => wf def.(dtype _) /\ wf def.(dbody _)) mfix -> wf (tCoFix mfix k).

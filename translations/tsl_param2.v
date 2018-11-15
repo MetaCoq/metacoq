@@ -8,9 +8,19 @@ Open Scope string_scope.
 Open Scope list_scope.
 Open Scope sigma_scope.
 
+(* SPROP: TODO : check all the [tCase] cases.
+   The additional argument [is] - informative match on SProp inductives -
+   is not properly translated *)
+
+
 Local Existing Instance config.default_checker_flags.
 
 Reserved Notation "'tsl_ty_param'".
+Definition rName (n : ident) := mkBindAnn (nNamed n) Relevant.
+Definition rAnon := mkBindAnn nAnon Relevant.
+Definition irName (n : ident) := mkBindAnn (nNamed n) Irrelevant.
+Definition irAnon := mkBindAnn nAnon Irrelevant.
+
 
 
 Fixpoint tsl_rec1 (n : nat) (t : term) {struct t} : term :=
@@ -22,7 +32,7 @@ Fixpoint tsl_rec1 (n : nat) (t : term) {struct t} : term :=
   | tLambda x A t => tLambda x (tsl_rec1 n A) (tsl_rec1 (n+1) t)
   | tLetIn x a t u => tLetIn x (tsl_rec1 n a) (tsl_rec1 n t) (tsl_rec1 (n+1) u)
   | tApp t lu => tApp (tsl_rec1 n t) (List.map (tsl_rec1 n) lu)
-  | tCase ik t u br => tCase ik (tsl_rec1 n t) (tsl_rec1 n u)
+  | tCase ik t is u br => tCase ik (tsl_rec1 n t) is (tsl_rec1 n u)
                             (List.map (fun x => (fst x, tsl_rec1 n (snd x))) br)
   | tProj p t => tProj p (tsl_rec1 n t)
   (* | tFix : mfixpoint term -> nat -> term *)
@@ -38,8 +48,8 @@ Fixpoint tsl_rec2 (fuel : nat) (Σ : global_context) (E : tsl_table) (Γ : conte
   | S fuel =>
   match t with
   | tRel n => ret (proj2 (tRel n))
-  | tSort s => ret (tLambda (nNamed "A") (tSort s)
-                           (tProd nAnon (tRel 0) (tSort s)))
+  | tSort s => ret (tLambda (rName "A") (tSort s)
+                           (tProd rAnon (tRel 0) (tSort s)))
   | tCast t c A => let t1 := tsl_rec1 0 t in
                   t2 <- tsl_rec2 fuel Σ E Γ t ;;
                   A2 <- tsl_rec2 fuel Σ E Γ A ;;
@@ -48,7 +58,8 @@ Fixpoint tsl_rec2 (fuel : nat) (Σ : global_context) (E : tsl_table) (Γ : conte
                   let B1 := tsl_rec1 0 B in
                   A' <- tsl_ty_param fuel Σ E Γ A ;;
                   B2 <- tsl_rec2 fuel Σ E (Γ ,, vass n A) B ;;
-                  ret (tLambda (nNamed "f") ΠAB'
+                  (* SPROP : reusing the relevance of a binder [n] for the lambda below*)
+                  ret (tLambda (mkBindAnn (nNamed "f") n.(binder_relevance)) ΠAB'
                                (tProd n (lift 1 0 A')
                                       (tApp (lift 1 1 B2)
                                             [tApp (tRel 1) [proj1 (tRel 0)]])))
@@ -127,9 +138,9 @@ Fixpoint replace t k u {struct u} :=
   | tProd na A B => tProd na (replace t k A) (replace (lift0 1 t) (S k) B)
   | tCast c kind ty => tCast (replace t k c) kind (replace t k ty)
   | tLetIn na b ty b' => tLetIn na (replace t k b) (replace t k ty) (replace (lift0 1 t) (S k) b')
-  | tCase ind p c brs =>
+  | tCase ind p is c brs =>
     let brs' := List.map (on_snd (replace t k)) brs in
-    tCase ind (replace t k p) (replace t k c) brs'
+    tCase ind (replace t k p) is (replace t k c) brs'
   | tProj p c => tProj p (replace t k c)
   | tFix mfix idx =>
     let k' := List.length mfix + k in
@@ -170,6 +181,7 @@ Definition tsl_mind_body (ΣE : tsl_context)
                    ind_type := A;
                    ind_kelim := ind.(ind_kelim);
                    ind_ctors := ctors;
+                   ind_relevant := ind.(ind_relevant);
                    ind_projs := [] |}).  (* TODO *)
     + (* arity  *)
       refine (t2 <- tsl2' ind.(ind_type) ;;

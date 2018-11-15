@@ -4,7 +4,7 @@
 open Ltac_plugin
 open Entries
 open Names
-
+open Locus
 
 DECLARE PLUGIN "template_coq"
 
@@ -15,11 +15,10 @@ let ltac_lcall tac args =
     (* Loc.tag @@ Names.Id.of_string tac *)
   in
   Tacexpr.TacArg(Loc.tag @@ Tacexpr.TacCall
-                              (Loc.tag (Misctypes.ArgVar (CAst.make ?loc:location name),args)))
+                              (Loc.tag (Locus.ArgVar (CAst.make ?loc:location name),args)))
 
 open Tacexpr
 open Tacinterp
-open Misctypes
 open Stdarg
 open Tacarg
 
@@ -50,9 +49,12 @@ let to_ltac_val c = Tacinterp.Value.of_constr c
 TACTIC EXTEND get_goal
     | [ "quote_term" constr(c) tactic(tac) ] ->
       [ (** quote the given term, pass the result to t **)
-        Proofview.Goal.nf_enter begin fun gl ->
+        Proofview.Goal.enter begin fun gl ->
           let env = Proofview.Goal.env gl in
-          let c = EConstr.to_constr (Proofview.Goal.sigma gl) c in
+          (* FIXME (8.8->master): We have pass the [~abort_on_undefined_evars:false] flag to make the quoter work with evars,
+             but this flag is depricated (https://github.com/coq/coq/commit/fc13ad4128b2d75a459829556669a59c10e8e1fe), but [quote_term] takes only [Constr.t].
+             If we remove the flag, then test [test-suite/evars.v] fails *)
+          let c = EConstr.to_constr ~abort_on_undefined_evars:false (Proofview.Goal.sigma gl) c in
 	  let c = Constr_quoter.TermReify.quote_term env c in
 	  ltac_apply tac (List.map to_ltac_val [EConstr.of_constr c])
   end ]

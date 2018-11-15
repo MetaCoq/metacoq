@@ -155,7 +155,7 @@ Proof.
   - admit.
   - admit.
   - specialize (H6 H8).
-    intuition auto. admit. admit.
+    intuition auto. admit. admit. admit.
   - (* proj *) admit.
   - admit.
   - admit.

@@ -5,10 +5,19 @@ Import String List Lists.List.ListNotations MonadNotation.
 Open Scope list_scope.
 Open Scope string_scope.
 
+(* SPROP: TODO : check all the [tCase] cases.
+   The additional argument [is] - informative match on SProp inductives -
+   is not properly translated *)
+
+
 Infix "<=" := Nat.leb.
 
 Definition default_term := tVar "constant_not_found".
 Definition debug_term msg:= tVar ("debug: " ++ msg).
+Definition rName (n : ident) := mkBindAnn (nNamed n) Relevant.
+Definition rAnon := mkBindAnn nAnon Relevant.
+Definition irName (n : ident) := mkBindAnn (nNamed n) Irrelevant.
+Definition irAnon := mkBindAnn nAnon Irrelevant.
 
 Fixpoint tsl_rec0 (n : nat) (t : term) {struct t} : term :=
   match t with
@@ -19,7 +28,7 @@ Fixpoint tsl_rec0 (n : nat) (t : term) {struct t} : term :=
   | tLambda na A t => tLambda na (tsl_rec0 n A) (tsl_rec0 (n+1) t)
   | tLetIn na t A u => tLetIn na (tsl_rec0 n t) (tsl_rec0 n A) (tsl_rec0 (n+1) u)
   | tApp t lu => tApp (tsl_rec0 n t) (map (tsl_rec0 n) lu)
-  | tCase ik t u br => tCase ik (tsl_rec0 n t) (tsl_rec0 n u)
+  | tCase ik t is u br => tCase ik (tsl_rec0 n t) is (tsl_rec0 n u)
                             (map (fun x => (fst x, tsl_rec0 n (snd x))) br)
   | tProj p t => tProj p (tsl_rec0 n t)
   (* | tFix : mfixpoint term -> nat -> term *)
@@ -35,13 +44,13 @@ Fixpoint tsl_rec1_app (app : option term) (E : tsl_table) (t : term) : term :=
   | tLambda na A t =>
     let A0 := tsl_rec0 0 A in
     let A1 := tsl_rec1_app None E A in
-    tLambda na A0 (tLambda (tsl_name tsl_ident na)
+    tLambda na A0 (tLambda (tsl_aname tsl_ident na)
                            (subst_app (lift0 1 A1) [tRel 0])
                            (tsl_rec1_app (option_map (lift 2 2) app) E t))
   | t => let t1 :=
   match t with
   | tRel k => tRel (2 * k)
-  | tSort s => tLambda (nNamed "A") (tSort s) (tProd nAnon (tRel 0) (tSort s))
+  | tSort s => tLambda (rName "A") (tSort s) (tProd rAnon (tRel 0) (tSort s))
 
   | tProd na A B =>
     let A0 := tsl_rec0 0 A in
@@ -49,9 +58,9 @@ Fixpoint tsl_rec1_app (app : option term) (E : tsl_table) (t : term) : term :=
     let B0 := tsl_rec0 1 B in
     let B1 := tsl_rec1 E B in
     let ΠAB0 := tProd na A0 B0 in
-    tLambda (nNamed "f") ΠAB0
+    tLambda (mkBindAnn (nNamed "f") na.(binder_relevance)) ΠAB0
       (tProd na (lift0 1 A0)
-             (tProd (tsl_name tsl_ident na)
+             (tProd (tsl_aname tsl_ident na)
                     (subst_app (lift0 2 A1) [tRel 0])
                     (subst_app (lift 1 2 B1)
                                [tApp (tRel 2) [tRel 1]])))
@@ -66,7 +75,7 @@ Fixpoint tsl_rec1_app (app : option term) (E : tsl_table) (t : term) : term :=
     let A1 := tsl_rec1 E A in
     let u0 := tsl_rec0 0 u in
     let u1 := tsl_rec1 E u in
-    tLetIn na t0 A0 (tLetIn (tsl_name tsl_ident na) (lift0 1 t1)
+    tLetIn na t0 A0 (tLetIn (tsl_aname tsl_ident na) (lift0 1 t1)
                             (subst_app (lift0 1 A1) [tRel 0]) u1)
 
   | tCast t c A => let t0 := tsl_rec0 0 t in
@@ -90,13 +99,14 @@ Fixpoint tsl_rec1_app (app : option term) (E : tsl_table) (t : term) : term :=
     | Some t => t
     | None => debug "tConstruct" (match i with mkInd s _ => s end)
     end
-  | tCase ik t u brs as case =>
+  | tCase ik t is u brs as case =>
     let brs' := List.map (on_snd (lift0 1)) brs in
-    let case1 := tCase ik (lift0 1 t) (tRel 0) brs' in
+    let case1 := tCase ik (lift0 1 t) is (tRel 0) brs' in
     match lookup_tsl_table E (IndRef (fst ik)) with
     | Some (tInd i _univ) =>
       tCase (i, (snd ik) * 2)
             (tsl_rec1_app (Some (tsl_rec0 0 case1)) E t)
+            None
             (tsl_rec1 E u)
             (map (on_snd (tsl_rec1 E)) brs)
     | _ => debug "tCase" (match (fst ik) with mkInd s _ => s end)
@@ -125,7 +135,9 @@ Definition tsl_mind_body (E : tsl_table)
               ind_type := _;
               ind_kelim := ind.(ind_kelim);
               ind_ctors := _;
-              ind_projs := [] |}. (* todo *)
+              ind_projs := [];
+              ind_relevant :=ind.(ind_relevant)
+           |}. (* todo *)
     + (* arity  *)
       refine (let ar := subst_app (tsl_rec1 E ind.(ind_type))
                                   [tInd (mkInd kn i) []] in

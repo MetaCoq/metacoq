@@ -6,14 +6,17 @@ Import MonadNotation.
 
 Inductive test (X : Type) := test_T : test X -> test X.
 
+Definition rName (n : ident) := mkBindAnn (nNamed n) Relevant.
+
 Definition T :=
 tFix
-  [mkdef term (nNamed "f") (tProd (nNamed "x") (tApp (tInd (mkInd "Top.test" 0) []) [tInd (mkInd "Coq.Init.Datatypes.unit" 0) []]) (tInd (mkInd "Coq.Init.Datatypes.unit" 0) []))
-     (tLambda (nNamed "x") (tApp (tInd (mkInd "Top.test" 0) []) [tRel 0])
+  [mkdef term (rName "f") (tProd (rName "x") (tApp (tInd (mkInd "Top.test" 0) []) [tInd (mkInd "Coq.Init.Datatypes.unit" 0) []]) (tInd (mkInd "Coq.Init.Datatypes.unit" 0) []))
+     (tLambda (rName "x") (tApp (tInd (mkInd "Top.test" 0) []) [tRel 0])
         (tCase (mkInd "Top.test" 0, 1)
-           (tLambda (nNamed "x") (tApp (tInd (mkInd "Top.test" 0) []) [tInd (mkInd "Coq.Init.Datatypes.unit" 0) []]) (tInd (mkInd "Coq.Init.Datatypes.unit" 0) []))
+           (tLambda (rName "x") (tApp (tInd (mkInd "Top.test" 0) []) [tInd (mkInd "Coq.Init.Datatypes.unit" 0) []]) (tInd (mkInd "Coq.Init.Datatypes.unit" 0) []))
+           None
            (tRel 0)
-           [(1, tLambda (nNamed "x0") (tApp (tInd (mkInd "Top.test" 0) []) [tInd (mkInd "Coq.Init.Datatypes.unit" 0) []]) (tApp (tRel 2) [tRel 0]))]))
+           [(1, tLambda (rName "x0") (tApp (tInd (mkInd "Top.test" 0) []) [tInd (mkInd "Coq.Init.Datatypes.unit" 0) []]) (tApp (tRel 2) [tRel 0]))]))
      0] 0.
 Fail Run TemplateProgram (tmUnquote T >>= tmPrint).
 

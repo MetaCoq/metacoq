@@ -106,6 +106,22 @@ Section Forallb2.
     end.
 End Forallb2.
 
+(** Analogous to Forall, but for the [option] type *)
+(* Helpful for induction principles and predicates on [term] *)
+Inductive ForOption {A} (P : A -> Prop) : option A -> Prop :=
+| fo_Some : forall t, P t -> ForOption P (Some t)
+| fo_None : ForOption P None.
+
+Definition foroptb {A : Type} (p : A -> bool) (o : option A) : bool :=
+  option_get true (option_map p o).
+
+Definition foroptb2 {A : Type} (p : A -> A -> bool) (o o': option A) : bool :=
+  match o, o' with
+  | Some v, Some v' => p v v'
+  | None, None => true
+  | _, _ => false
+  end.
+
 Program Fixpoint safe_nth {A} (l : list A) (n : nat | n < List.length l) : A :=
   match l with
   | nil => !
@@ -245,7 +261,7 @@ Definition bool_compare (x y : bool) : comparison :=
 Definition bool_lt (x y : bool) :=
   if x then False else y = true.
 
-Local Notation " x =? y " := (bool_compare x y) (at level 10).
+Local Notation " x =? y " := (bool_compare x y) (at level 70).
 Local Notation " c ?? y " := (match c with Eq => y | Lt => Lt | Gt => Gt end) (at level 100).
 
 Definition bool_Compare (x y : bool) : Compare bool_lt eq x y.

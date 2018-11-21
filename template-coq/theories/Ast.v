@@ -191,9 +191,9 @@ Inductive recursivity_kind :=
   | CoFinite (* = coinductive *)
   | BiFinite (* = non-recursive, like in "Record" definitions *).
 
-Inductive local_entry : Set :=
-| LocalDef : term -> local_entry (* local let binding *)
-| LocalAssum : term -> local_entry.
+Inductive rel_declaration : Set :=
+  | LocalDef : aname -> term -> term -> rel_declaration (* local let binding: takes an annotated name, a value and a type *)
+  | LocalAssum : aname -> term -> rel_declaration.
 
 Record one_inductive_entry : Set := {
   mind_entry_typename : ident;
@@ -208,7 +208,7 @@ Record mutual_inductive_entry := {
      If so, is it primitive, using binder name [ident]
      for the records in primitive projections ? *)
   mind_entry_finite    : recursivity_kind;
-  mind_entry_params    : list (ident * local_entry);
+  mind_entry_params    : list rel_declaration;
   mind_entry_inds      : list one_inductive_entry;
   mind_entry_universes : universe_context;
   mind_entry_private   : option bool

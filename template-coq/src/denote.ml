@@ -227,7 +227,7 @@ let unquote_name trm =
       n :: _ -> Names.Name (unquote_ident n)
     | _ -> raise (Failure "ill-typed, expected name")
   else
-    raise (Failure "non-value")
+    raise (Failure "unquote_name: non-value")
 
 
 let unquote_aname trm =
@@ -237,7 +237,7 @@ let unquote_aname trm =
       _ :: nm :: relevance :: _ -> { Context.binder_name = unquote_name nm; Context.binder_relevance = unquote_relevance relevance }
     | _ -> raise (Failure "ill-typed, expected annotated name")
   else
-    raise (Failure "non-value")
+    raise (Failure "unquote_aname: non-value")
 
 
   (* FIXME CHANGES: This code was taken from (old version of) Pretyping, because it is not exposed globally *)
@@ -340,8 +340,6 @@ let unquote_inductive trm =
   else
     bad_term_verb trm "non-constructor"
 
-
-
 (* TODO: replace app_full by this abstract version?*)
 let rec app_full_abs (trm: Constr.t) (acc: Constr.t list) =
   match inspectTerm trm with
@@ -439,12 +437,13 @@ let denote_reduction_strategy env evm (trm : quoted_reduction_strategy) : Redexp
 
 
 
-let denote_local_entry evdref trm =
+let denote_rel_declaration evdref trm =
   let (h,args) = app_full trm [] in
   match args with
-    x :: [] ->
-    if Constr.equal h tLocalDef then Entries.LocalDefEntry (denote_term evdref x)
-    else (if  Constr.equal h tLocalAssum then Entries.LocalAssumEntry (denote_term evdref x) else bad_term trm)
+  | n :: b :: t :: [] ->
+    if Constr.equal h tLocalDef then Context.Rel.Declaration.LocalDef (unquote_aname n, denote_term evdref b, denote_term evdref t)
+    else bad_term trm
+  | n :: t :: [] -> (if  Constr.equal h tLocalAssum then Context.Rel.Declaration.LocalAssum (unquote_aname n, denote_term evdref t) else bad_term trm)
   | _ -> bad_term trm
 
 let denote_mind_entry_finite trm =
@@ -488,7 +487,7 @@ let denote_universe_context (trm : Constr.t) : bool * UContext.t =
 let denote_mind_entry_universes trm =
   match denote_universe_context trm with
   | false, ctx -> Monomorphic_ind_entry (Univ.ContextSet.of_context ctx)
-  | true, ctx -> Polymorphic_ind_entry ctx
+  | true, ctx -> Polymorphic_ind_entry ([| |], ctx)
 
 (* let denote_inductive_first trm =
  *   let (h,args) = app_full trm [] in
@@ -530,8 +529,7 @@ let declare_inductive (env: Environ.env) (evm: Evd.evar_map) (body: Constr.t) : 
     {
       mind_entry_record = unquote_map_option (unquote_map_option (fun x -> Array.of_list (List.map unquote_ident (from_coq_list x)))) mr;
       mind_entry_finite = denote_mind_entry_finite mf; (* inductive *)
-      mind_entry_params = List.map (fun p -> let (l,r) = (from_coq_pair p) in (unquote_ident l, (denote_local_entry evdref r)))
-                                   (List.rev (from_coq_list mp));
+      mind_entry_params = List.map (fun p -> (denote_rel_declaration evdref p)) (List.rev (from_coq_list mp));
       mind_entry_inds = List.map one_ind (from_coq_list mi);
       mind_entry_universes = denote_mind_entry_universes uctx;
       mind_entry_private = unquote_map_option unquote_bool mpr (*mpr*)
@@ -553,6 +551,7 @@ let monad_failure_full s k prg =
     (str (s ^ " must take " ^ (string_of_int k) ^ " argument" ^ (if k > 0 then "s" else "") ^ ".") ++
        str "While trying to run: " ++ fnl () ++ print_term prg ++ fnl () ++
        str "Please file a bug with Template-Coq.")
+
 
 let rec run_template_program_rec ?(intactic=false) (k : Evd.evar_map * Constr.t -> unit)  ((evm, pgm) : Evd.evar_map * Constr.t) : unit =
   let env = Global.env () in
@@ -586,7 +585,9 @@ let rec run_template_program_rec ?(intactic=false) (k : Evd.evar_map * Constr.t 
     | name::typ::body::[] ->
        let name = reduce_all env evm name in
        let univs =
-         if Flags.is_universe_polymorphism () then Polymorphic_const_entry (Evd.to_universe_context evm)
+         if Attributes.is_universe_polymorphism ()
+         (* FIXME: we pass an empty array of univrse variable names for now *)
+         then Polymorphic_const_entry ([| |],Evd.to_universe_context evm)
          else Monomorphic_const_entry (Evd.universe_context_set evm) in
        let n = Declare.declare_definition ~kind:Decl_kinds.Definition (unquote_ident name) ~types:typ (body, univs) in
        k (evm, Constr.mkConst n)
@@ -605,17 +606,19 @@ let rec run_template_program_rec ?(intactic=false) (k : Evd.evar_map * Constr.t 
     match args with
     | name::typ::[] ->
        let name = reduce_all env evm name in
-       let poly = Flags.is_universe_polymorphism () in
+       let poly = Attributes.is_universe_polymorphism () in
        let kind = (Decl_kinds.Global, poly, Decl_kinds.Definition) in
-       let hole = CAst.make (Constrexpr.CHole (None, Namegen.IntroAnonymous, None)) in
-       let evm, (c, _) = Constrintern.interp_casted_constr_evars_impls env evm hole (EConstr.of_constr typ) in
+       let hole_kind = Evar_kinds.(QuestionMark default_question_mark) in
+       let hole = CAst.make (Constrexpr.CHole (Some hole_kind, Namegen.IntroAnonymous, None)) in
+       let evm, c = Constrintern.interp_casted_constr_evars env evm hole (EConstr.of_constr typ) in
        let ident = unquote_ident name in
+       let evm = Evd.set_obligation_evar evm (fst (EConstr.destEvar evm c)) in
        Obligations.check_evars env evm;
        (* SPROP: [Evd.fresh_global] now returns [evar_map * EContsr.t] and we have to convert [t] (see [g_template_coq.ml4 for more comments]) *)
        let obls, _, c, cty = Obligations.eterm_obligations env ident evm 0
                                (EConstr.to_constr ~abort_on_undefined_evars:false evm c) typ in
        let ctx = Evd.evar_universe_context evm in
-       let hook = Obligations.mk_univ_hook (fun _ _ gr ->
+       let hook = Obligations.mk_univ_hook (fun _ _ _ gr ->
                       let env = Global.env () in
                       let evm = Evd.from_env env in
                       let evm, t = Evd.fresh_global env evm gr in

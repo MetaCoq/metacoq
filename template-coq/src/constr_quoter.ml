@@ -37,6 +37,7 @@ struct
   type quoted_inductive = Constr.t (* of type Ast.inductive *)
   type quoted_proj = Constr.t (* of type Ast.projection *)
   type quoted_global_reference = Constr.t (* of type Ast.global_reference *)
+  type quoted_rel_declaration = Constr.t (* of type Ast.rel_declaration *)
 
   type quoted_sort_family = Constr.t (* of type Ast.sort_family *)
   type quoted_constraint_type = Constr.t (* of type univ.constraint_type *)
@@ -46,7 +47,7 @@ struct
   type quoted_univ_context = Constr.t (* of type univ.universe_context *)
   type quoted_inductive_universes = Constr.t (* of type univ.universe_context *)
 
-  type quoted_mind_params = Constr.t (* of type list (Ast.ident * list (ident * local_entry)local_entry) *)
+  type quoted_mind_params = Constr.t (* of type list Ast.rel_declaration *)
   type quoted_ind_entry = quoted_ident * t * quoted_bool * quoted_ident list * t list
   type quoted_definition_entry = t * t option * quoted_univ_context
   type quoted_mind_entry = Constr.t (* of type Ast.mutual_inductive_entry *)
@@ -152,7 +153,7 @@ struct
   let tadd_global_constraints = resolve_symbol pkg_ugraph  "add_global_constraints"
 
   let (tdef,tmkdef) = (r_reify "def", r_reify "mkdef")
-  let (tLocalDef,tLocalAssum,tlocal_entry) = (r_reify "LocalDef", r_reify "LocalAssum", r_reify "local_entry")
+  let (tLocalDef,tLocalAssum,trel_declaration) = (r_reify "LocalDef", r_reify "LocalAssum", r_reify "rel_declaration")
 
   let (cFinite,cCoFinite,cBiFinite) = (r_reify "Finite", r_reify "CoFinite", r_reify "BiFinite")
   let tone_inductive_body = r_reify "one_inductive_body"
@@ -305,9 +306,9 @@ struct
 
   let quote_constraint_type (c : Univ.constraint_type) =
     match c with
-    | Lt -> tunivLt
-    | Le -> tunivLe
-    | Eq -> tunivEq
+    | Univ.Lt -> tunivLt
+    | Univ.Le -> tunivLe
+    | Univ.Eq -> tunivEq
 
   let quote_univ_constraint ((l1, ct, l2) : Univ.univ_constraint) =
     let l1 = quote_level l1 in
@@ -344,8 +345,9 @@ struct
   let quote_inductive_universes uctx =
     match uctx with
     | Monomorphic_ind_entry uctx -> quote_univ_context (Univ.ContextSet.to_context uctx)
-    | Polymorphic_ind_entry uctx -> quote_abstract_univ_context_aux uctx
-    | Cumulative_ind_entry info ->
+    | Polymorphic_ind_entry (_,uctx) -> quote_abstract_univ_context_aux uctx
+    (* FIXME: currently, we ignoring universe names *)
+    | Cumulative_ind_entry (_,info) ->
       quote_abstract_univ_context_aux (Univ.CumulativityInfo.univ_context info) (* FIXME lossy *)
 
   let quote_ugraph (g : UGraph.t) =
@@ -483,13 +485,12 @@ struct
     Constr.mkApp (tBuild_one_inductive_entry, [| iname; arity; templatePoly; consnames; constypes |])
 
   let quote_mind_params l =
-    let pair i l = pair tident tlocal_entry i l in
     let map (id, ob) =
       match ob with
-      | Left b -> pair id (Constr.mkApp (tLocalDef,[|b|]))
-      | Right t -> pair id (Constr.mkApp (tLocalAssum,[|t|]))
+      | Left (b,t) -> Constr.mkApp (tLocalDef,[|id;b;t|])
+      | Right t -> Constr.mkApp (tLocalAssum,[|id;t|])
     in
-    let the_prod = Constr.mkApp (prod_type,[|tident; tlocal_entry|]) in
+    let the_prod = Constr.mkApp (prod_type,[|tident; trel_declaration|]) in
     to_coq_list the_prod (List.map map l)
 
   let quote_mutual_inductive_entry (mf, mp, is, mpol) =

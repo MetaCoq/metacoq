@@ -179,10 +179,14 @@ Tactic Notation "tSpecialize" ident(H) uconstr(t) := apply fst in H; specialize 
 
 Tactic Notation "tIntro" ident(H) := refine (fun H => _; true).
 
+Definition blah := ((forall (A B : Set) (f g : A -> B), (forall x:A, f x = g x) -> f = g) -> False).
+
 Run TemplateProgram (TC <- tTranslate emptyTC "eq" ;;
                      TC <- tTranslate TC "False" ;;
+                     (* tTranslate TC "blah" *)
                      tImplement TC "notFunext"
-                     ((forall (A B : Set) (f g : A -> B), (forall x:A, f x = g x) -> f = g) -> False)).
+                     ((forall (A B : Set) (f g : A -> B), (forall x:A, f x = g x) -> f = g) -> False)
+                    ).
 
 Next Obligation.
   tIntro H. 

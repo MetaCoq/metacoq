@@ -22,7 +22,9 @@ Eval vm_compute in typecheck_program idq.
 
 Unset Template Cast Propositions.
 
-Definition timpl x y := tProd nAnon x (LiftSubst.lift0 1 y).
+Definition rAnon := mkBindAnn nAnon Relevant.
+
+Definition timpl x y := tProd rAnon x (LiftSubst.lift0 1 y).
 
 Quote Recursively Definition four := (2 + 2).
 Unset Printing Matching.

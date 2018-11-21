@@ -46,7 +46,7 @@ struct
   type quoted_univ_context = Univ0.universe_context
   type quoted_inductive_universes = quoted_univ_context
 
-  type quoted_mind_params = (ident * local_entry) list
+  type quoted_mind_params = Ast0.rel_declaration list
   type quoted_ind_entry = quoted_ident * t * quoted_bool * quoted_ident list * t list
   type quoted_definition_entry = t * t option * quoted_univ_context
   type quoted_mind_entry = mutual_inductive_entry
@@ -112,6 +112,7 @@ struct
   let quote_sort_family s =
     match s with
     | Sorts.InProp -> Ast0.InProp
+    | Sorts.InSProp -> Ast0.InSProp
     | Sorts.InSet -> Ast0.InSet
     | Sorts.InType -> Ast0.InType
 
@@ -156,8 +157,8 @@ struct
 
   let quote_inductive_universes = function
     | Entries.Monomorphic_ind_entry ctx -> quote_univ_context (Univ.ContextSet.to_context ctx)
-    | Entries.Polymorphic_ind_entry ctx -> quote_abstract_univ_context_aux ctx
-    | Entries.Cumulative_ind_entry ctx ->
+    | Entries.Polymorphic_ind_entry (_,ctx) -> quote_abstract_univ_context_aux ctx
+    | Entries.Cumulative_ind_entry (_,ctx) ->
       quote_abstract_univ_context_aux (Univ.CumulativityInfo.univ_context ctx)
 
   let mkAnon = Coq_nAnon
@@ -242,10 +243,10 @@ struct
     | Declarations.BiFinite -> BiFinite
 
   let quote_mind_params l =
-    let map (id, body) =
+    let map (n,body) =
       match body with
-      | Left ty -> (id, LocalAssum ty)
-      | Right trm -> (id, LocalDef trm)
+      | Right ty -> LocalAssum (n,ty)
+      | Left (b,t) -> LocalDef (n,b,t)
     in List.map map l
 
   let quote_one_inductive_entry (id, ar, b, consnames, constypes) =

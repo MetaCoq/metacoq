@@ -159,7 +159,7 @@ module type Quoter = sig
   val quote_abstract_univ_context : Univ.AUContext.t -> quoted_univ_context
   val quote_inductive_universes : Entries.inductive_universes -> quoted_inductive_universes
 
-  val quote_mind_params : (quoted_ident * (t,t) sum) list -> quoted_mind_params
+  val quote_mind_params : (quoted_aname * ((t * t),t) sum) list -> quoted_mind_params
   val quote_mind_finiteness : Declarations.recursivity_kind -> quoted_mind_finiteness
   val quote_mutual_inductive_entry :
     quoted_mind_finiteness * quoted_mind_params * quoted_ind_entry list *
@@ -236,7 +236,7 @@ struct
   let open Univ in
   let univs = ACumulativityInfo.univ_context cumi in
   let expose ctx =
-    let inst = AUContext.instance ctx in
+    let inst = UContext.instance (AUContext.repr ctx)  in
     let cst = AUContext.instantiate inst ctx in
     UContext.make (inst, cst)
   in CumulativityInfo.make (expose univs, ACumulativityInfo.variance cumi)
@@ -560,38 +560,34 @@ struct
     (iname, arity, templatePoly, consnames, constypes)
 
   let process_local_entry
-        (f: 'a -> Constr.t option (* body *) -> Constr.t (* type *) -> Names.Id.t -> Sorts.relevance -> Environ.env -> 'a)
+        (f: 'a -> Constr.t option (* body *) -> Constr.t (* type *) -> Names.Name.t Context.binder_annot -> Environ.env -> 'a)
         ((env,a):(Environ.env*'a))
-        ((n,le):(Names.Id.t * Entries.local_entry))
+        (le: Constr.rel_declaration)
       :  (Environ.env * 'a) =
-    (* SPROP: we reconstruct relevance through retyping *)
     match le with
-    | Entries.LocalAssumEntry t ->
-       let relevance = Retypeops.relevance_of_term env t in
-       let b_annot = {binder_name = Names.Name n; binder_relevance = relevance} in
-       (Environ.push_rel (toDecl (b_annot,None,t)) env, f a None t n relevance env)
-    | Entries.LocalDefEntry b ->
-       let evm = Evd.from_env env in
-       let relevance = Retypeops.relevance_of_term env b in
-       let b_annot = {binder_name = Names.Name n; binder_relevance = relevance} in
-       let typ = EConstr.to_constr evm (Retyping.get_type_of env evm (EConstr.of_constr b)) in
-       (Environ.push_rel (toDecl (b_annot, Some b, typ)) env, f a (Some b) typ n relevance env)
+    | Context.Rel.Declaration.LocalAssum (n,t) ->
+       (Environ.push_rel (toDecl (n,None,t)) env, f a None t n env)
+    | Context.Rel.Declaration.LocalDef (n,b,t) ->
+       (* It seems, there is no need to retype, because [t] is what we need (the same for relevance
+          - it is in [n]) *)
+       (* let evm = Evd.from_env env in *)
+       (* let typ = EConstr.to_constr evm (Retyping.get_type_of env evm (EConstr.of_constr b)) in *)
+       (Environ.push_rel (toDecl (n, Some b, t)) env, f a (Some b) t n env)
 
-  let quote_mind_params env (params:(Names.Id.t * Entries.local_entry) list) =
-    let f lr ob t n r env =
+  let quote_mind_params env (params: Constr.rel_context) =
+    let f lr ob t n env =
+      let t' = quote_term env t in
       match ob with
-      | Some b -> (Q.quote_ident n, Left (quote_term env b))::lr
+      | Some b -> (Q.quote_aname n, Left ((quote_term env b, t')))::lr
       | None ->
-         let t' = quote_term env t in
-         (Q.quote_ident n, Right t')::lr in
+         (Q.quote_aname n, Right t')::lr in
     let (env, params) = List.fold_left (process_local_entry f) (env,[]) (List.rev params) in
     (env, Q.quote_mind_params (List.rev params))
 
-  let mind_params_as_types ((env,t):Environ.env*Constr.t) (params:(Names.Id.t * Entries.local_entry) list) :
+  let mind_params_as_types ((env,t):Environ.env*Constr.t) (params:Constr.rel_context) :
         Environ.env*Constr.t =
-    List.fold_left (process_local_entry (fun tr ob typ n r env ->
-                        let b_annot = {binder_name = Names.Name n; binder_relevance = r} in
-                        Term.mkProd_or_LetIn (toDecl (b_annot,ob,typ)) tr)) (env,t)
+    List.fold_left (process_local_entry (fun tr ob typ n env ->
+                        Term.mkProd_or_LetIn (toDecl (n,ob,typ)) tr)) (env,t)
       (List.rev params)
 
   (* CHANGE: this is the only way (ugly) I found to construct [abstr_info] with empty fields,
@@ -615,9 +611,9 @@ since  [abstr_info] is a private type *)
           let relevance = Retypeops.relevance_of_term env (snd p) in
           let b_annot = {binder_name = Names.Name (fst p); binder_relevance = relevance} in
           Environ.push_rel (toDecl (b_annot, None, snd p)) env) env (one_arities) in
-    let (envC,_) = List.fold_left (process_local_entry (fun _ _ _ _ _ _ -> ())) (envC,()) (List.rev (t.mind_entry_params)) in
+    let (envC,_) = List.fold_left (process_local_entry (fun _ _ _ _ _ -> ())) (envC,()) (List.rev (t.mind_entry_params)) in
     (* env for quoting arities of inductives -- just push the params *)
-    let (envA,_) = List.fold_left (process_local_entry (fun _ _ _ _ _ _ -> ())) (env,()) (List.rev (t.mind_entry_params)) in
+    let (envA,_) = List.fold_left (process_local_entry (fun _ _ _ _ _-> ())) (env,()) (List.rev (t.mind_entry_params)) in
     let is = List.map (quote_one_ind envA envC) t.mind_entry_inds in
    let uctx = Q.quote_inductive_universes t.mind_entry_universes in
     Q.quote_mutual_inductive_entry (mf, mp, is, uctx)

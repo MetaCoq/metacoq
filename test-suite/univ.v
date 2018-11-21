@@ -81,8 +81,11 @@ Unset Printing Universes.
 Quote Definition qtest := Eval compute in (fun (T : Type@{i}) (T2 : Type@{j}) => T -> T2).
 Print qtest.
 
+Notation "'rAnon'" := (mkBindAnn nAnon Relevant).
+Notation "'rName' n" := (mkBindAnn (nNamed n) Relevant) (at level 100).
+
 Make Definition bla := Eval compute in qtest.
-Make Definition bla' := (tLambda (nNamed "T") (tSort ((Level.Level "Top.2", false) :: nil)%list) (tLambda (nNamed "T2") (tSort ((Level.Level "Top.1", false) :: nil)%list) (tProd nAnon (tRel 1) (tRel 1)))).
+Make Definition bla' := (tLambda (rName "T") (tSort ((Level.Level "Top.2", false) :: nil)%list) (tLambda (rName "T2") (tSort ((Level.Level "Top.1", false) :: nil)%list) (tProd rAnon (tRel 1) (tRel 1)))).
 
 Set Printing Universes.
 Print bla.
@@ -117,7 +120,9 @@ Polymorphic Definition F@{i} := Type@{i}.
 
 Quote Definition qT := Eval compute in F.
 Require Import List. Import ListNotations.
-Make Definition T' := (tSort [(Level.Var 1, false)]).
+
+(* FIXME: this does not work *)
+Fail Make Definition T' := (tSort [(Level.Var 1, false)]).
 
 Quote Recursively Definition qT' := F.
 
@@ -127,8 +132,8 @@ Print qFuntp.
 there the poly vars actually show up *)
 
 
-Make Definition t2 := (Ast.tLambda (Ast.nNamed "T") (Ast.tSort [(Level.Level "Top.10001", false)])
-                                   (Ast.tLambda (Ast.nNamed "T2") (Ast.tSort [(Level.Level "Top.10002", false)]) (Ast.tProd Ast.nAnon (Ast.tRel 1) (Ast.tRel 1)))).
+Make Definition t2 := (Ast.tLambda (rName "T") (Ast.tSort [(Level.Level "Top.10001", false)])
+                                   (Ast.tLambda (rName "T2") (Ast.tSort [(Level.Level "Top.10002", false)]) (Ast.tProd rAnon (Ast.tRel 1) (Ast.tRel 1)))).
 Set Printing Universes.
 Print t2.
 (* Print Universes. *)
@@ -149,7 +154,7 @@ Check (eq_refl :
          end).
 Check (eq_refl :
          true =
-         let T := infer ([], init_graph) [] ((tProd (nNamed "A") (tSort [(Level.Level "Toto.85", false)]) (tProd (nNamed "B") (tSort [(Level.Level "Toto.86", false)]) (tProd nAnon (tRel 1) (tProd nAnon (tRel 1) (tRel 3)))))) in
+         let T := infer ([], init_graph) [] ((tProd (rName "A") (tSort [(Level.Level "Toto.85", false)]) (tProd (rName "B") (tSort [(Level.Level "Toto.86", false)]) (tProd rAnon (tRel 1) (tProd rAnon (tRel 1) (tRel 3)))))) in
          match T with
          | Checked (tSort [(Level.Level _, true); (Level.Level _, true)]) => true
          | _ => false

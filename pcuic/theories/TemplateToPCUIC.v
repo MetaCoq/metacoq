@@ -40,7 +40,7 @@ Fixpoint trans (t : T.term) : term :=
 Module TTy := Template.Typing.
 
 Definition trans_decl (d : T.context_decl) :=
-  let 'T.Build_context_decl na b t := d in
+  let 'T.mkdecl na b t := d in
   {| decl_name := na;
      decl_body := option_map trans b;
      decl_type := trans t |}.

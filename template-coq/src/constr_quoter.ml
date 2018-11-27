@@ -112,6 +112,7 @@ struct
   let tIndTy = r_reify "inductive"
   let tmkInd = r_reify "mkInd"
   let tsort_family = r_reify "sort_family"
+  let tmkdecl = r_reify "mkdecl"
   let (tTerm,tRel,tVar,tMeta,tEvar,tSort,tCast,tProd,
        tLambda,tLetIn,tApp,tCase,tFix,tConstructor,tConst,tInd,tCoFix,tProj) =
     (r_reify "term", r_reify "tRel", r_reify "tVar", r_reify "tMeta", r_reify "tEvar",
@@ -341,8 +342,7 @@ struct
     | Sorts.InType -> sfType
 
   let quote_context_decl na b t =
-    pair (prod tname (Constr.mkApp (option_type, [| tTerm |]))) tTerm
-      (pair tname (Constr.mkApp (option_type, [| tTerm |])) na (quote_option tTerm b)) t
+    Constr.mkApp (tmkdecl, [| na; quote_option tTerm b; t |])
 
   let quote_context ctx =
     to_coq_list tcontext_decl ctx

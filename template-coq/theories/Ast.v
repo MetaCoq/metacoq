@@ -219,7 +219,7 @@ Record mutual_inductive_entry := {
 
 (** *** The context of De Bruijn indices *)
 
-Record context_decl := {
+Record context_decl := mkdecl {
   decl_name : name ;
   decl_body : option term ;
   decl_type : term }.

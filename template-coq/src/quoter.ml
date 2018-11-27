@@ -402,9 +402,11 @@ struct
         let t', acc = quote_term acc env t in
         (Q.quote_context_decl (Q.quote_name na) (Some b') t', acc)
     and quote_rel_context acc env ctx =
-      let decls, acc =
-        List.fold_left (fun (ds, acc) decl -> let x, acc = quote_rel_decl acc env decl in (x :: ds, acc))
-          ([],acc) ctx in
+      let decls, env, acc =
+        List.fold_right (fun decl (ds, env, acc) ->
+            let x, acc = quote_rel_decl acc env decl in
+            (x :: ds, push_rel decl env, acc))
+          ctx ([],env,acc) in
       Q.quote_context decls, acc
     and quote_minductive_type (acc : 'a) env (t : MutInd.t) =
       let mib = Environ.lookup_mind t (snd env) in

@@ -35,8 +35,8 @@ Fixpoint lift n k t : term :=
   | tBox => t
   | tVar _ => t
   | tMeta _ => t
-  | tConst _ _ => t
-  | tConstruct _ _ _ => t
+  | tConst _ => t
+  | tConstruct _ _ => t
   end.
 
 

@@ -4,7 +4,7 @@ Require Import Coq.Strings.String.
 Require Import Coq.PArith.BinPos.
 Require Import List. Import ListNotations.
 From Template Require Import monad_utils.
-From Template Require Export univ uGraph Ast.
+From Template Require Export Ast.
 
 (** Extracted terms
 
@@ -35,8 +35,8 @@ Inductive term : Set :=
 | tLambda    : name -> term -> term
 | tLetIn     : name -> term (* the term *) -> term -> term
 | tApp       : term -> term -> term
-| tConst     : kername -> universe_instance -> term
-| tConstruct : inductive -> nat -> universe_instance -> term
+| tConst     : kername -> term
+| tConstruct : inductive -> nat -> term
 | tCase      : (inductive * nat) (* # of parameters *) ->
                term (* discriminee *) -> list (nat * term) (* branches *) -> term
 | tProj      : projection -> term -> term
@@ -71,14 +71,11 @@ Definition isLambda t :=
 
 (** *** Constant and axiom entries *)
 
-Record parameter_entry := {
-  parameter_entry_type      : term;
-  parameter_entry_universes : universe_context }.
+Record parameter_entry := { parameter_entry_type : term }.
 
 Record definition_entry := {
   definition_entry_type      : term;
   definition_entry_body      : term;
-  definition_entry_universes : universe_context;
   definition_entry_opaque    : bool }.
 
 
@@ -130,7 +127,6 @@ Record mutual_inductive_entry := {
   mind_entry_finite    : recursivity_kind;
   mind_entry_params    : list (ident * local_entry);
   mind_entry_inds      : list one_inductive_entry;
-  mind_entry_universes : universe_context;
   mind_entry_private   : option bool
   (* Private flag for sealing an inductive definition in an enclosing
      module. Not handled by Template Coq yet. *) }.
@@ -189,14 +185,12 @@ Record one_inductive_body : Set := {
 (** See [mutual_inductive_body] from [declarations.ml]. *)
 Record mutual_inductive_body := {
   ind_npars : nat;
-  ind_bodies : list one_inductive_body ;
-  ind_universes : universe_context }.
+  ind_bodies : list one_inductive_body }.
 
 (** See [constant_body] from [declarations.ml] *)
 Record constant_body := {
     cst_type : term;
-    cst_body : option term;
-    cst_universes : universe_context }.
+    cst_body : option term }.
 
 Inductive global_decl :=
 | ConstantDecl : kername -> constant_body -> global_decl
@@ -204,13 +198,14 @@ Inductive global_decl :=
 
 Definition global_declarations := list global_decl.
 
-(** A context of global declarations + global universe constraints,
+(** A context of global declarations +
     i.e. a global environment *)
 
-Definition global_context : Type := global_declarations * uGraph.t.
+Definition global_context : Type := global_declarations.
 
 (** *** Programs
 
-  A set of declarations and a term, as produced by [Quote Recursively]. *)
+  A set of declarations and a term, as produced by extraction from
+  template-coq programs. *)
 
 Definition program : Type := global_declarations * term.

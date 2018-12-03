@@ -1,8 +1,8 @@
 (* Distributed under the terms of the MIT license.   *)
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
-From Template Require Import config utils Ast univ.
-From TemplateExtraction Require Import EAst EInduction ELiftSubst EUnivSubst ETyping.
+From Template Require Import config utils Ast.
+From TemplateExtraction Require Import EAst EInduction ELiftSubst ETyping.
 From Template Require AstUtils.
 Require Import String.
 Local Open Scope string_scope.
@@ -49,8 +49,8 @@ Section Wcbv.
       eval (tLetIn na b0 b1) res
 
   (** Case *)
-  | eval_iota ind pars discr c u args brs res :
-      eval discr (mkApps (tConstruct ind c u) args) ->
+  | eval_iota ind pars discr c args brs res :
+      eval discr (mkApps (tConstruct ind c) args) ->
       eval (iota_red pars c args brs) res ->
       eval (tCase (ind, pars) discr brs) res
 
@@ -76,14 +76,14 @@ Section Wcbv.
       eval (tProj p (mkApps (tCoFix mfix idx) args)) res
 
   (** Constant unfolding *)
-  | eval_delta c decl body (isdecl : declared_constant Σ c decl) u res :
+  | eval_delta c decl body (isdecl : declared_constant Σ c decl) res :
       decl.(cst_body) = Some body ->
-      eval (subst_instance_constr u body) res ->
-      eval (tConst c u) res
+      eval body res ->
+      eval (tConst c) res
 
   (** Proj *)
-  | eval_proj i pars arg discr args k u res :
-      eval discr (mkApps (tConstruct i k u) args) ->
+  | eval_proj i pars arg discr args k res :
+      eval discr (mkApps (tConstruct i k) args) ->
       eval (List.nth (pars + arg) args tDummy) res ->
       eval (tProj (i, pars, arg) discr) res
 
@@ -91,10 +91,10 @@ Section Wcbv.
   | eval_abs na N : eval (tLambda na N) (tLambda na N)
 
   (** Constructors applied to values are values *)
-  | eval_constr f i k u l l' :
-      eval f (tConstruct i k u) ->
+  | eval_constr f i k l l' :
+      eval f (tConstruct i k) ->
       Forall2 eval l l' ->
-      eval (mkApps f l) (mkApps (tConstruct i k u) l')
+      eval (mkApps f l) (mkApps (tConstruct i k) l')
 
   (* | evar ev l l' : evals l l' -> eval (tEvar ev l) (tEvar ev l') *)
   | eval_evar ev l : eval (tEvar ev l) (tEvar ev l) (* Lets say it is a value for now *).
@@ -114,10 +114,10 @@ Section Wcbv.
           eval b0 b0' -> P b0 b0' -> eval (b1 {0 := b0'}) res -> P (b1 {0 := b0'}) res ->
           P (tLetIn na b0 b1) res) ->
 
-      (forall (ind : inductive) (pars : nat) (discr : term) (c : nat) (u : universe_instance)
+      (forall (ind : inductive) (pars : nat) (discr : term) (c : nat)
               (args : list term) (brs : list (nat * term)) (res : term),
-          eval discr (mkApps (tConstruct ind c u) args) ->
-          P discr (mkApps (tConstruct ind c u) args) ->
+          eval discr (mkApps (tConstruct ind c) args) ->
+          P discr (mkApps (tConstruct ind c) args) ->
           eval (iota_red pars c args brs) res ->
           P (iota_red pars c args brs) res -> P (tCase (ind, pars) discr brs) res) ->
 
@@ -141,22 +141,22 @@ Section Wcbv.
 
       (forall (c : ident) (decl : constant_body) (body : term),
           declared_constant Σ c decl ->
-          forall (u : universe_instance) (res : term),
+          forall (res : term),
             cst_body decl = Some body ->
-            eval (subst_instance_constr u body) res -> P (subst_instance_constr u body) res -> P (tConst c u) res) ->
+            eval body res -> P body res -> P (tConst c) res) ->
 
       (forall (i : inductive) (pars arg : nat) (discr : term) (args : list term) (k : nat)
-              (u : universe_instance) (res : term),
-          eval discr (mkApps (tConstruct i k u) args) ->
-          P discr (mkApps (tConstruct i k u) args) ->
+              (res : term),
+          eval discr (mkApps (tConstruct i k) args) ->
+          P discr (mkApps (tConstruct i k) args) ->
           eval (nth (pars + arg) args tDummy) res ->
           P (nth (pars + arg) args tDummy) res -> P (tProj (i, pars, arg) discr) res) ->
 
       (forall (na : name) (M N : term), P (tLambda na N) (tLambda na N)) ->
 
-      (forall (f8 : term) (i : inductive) (k : nat) (u : universe_instance) (l l' : list term),
-          eval f8 (tConstruct i k u) ->
-          P f8 (tConstruct i k u) -> Forall2 eval l l' -> Forall2 P l l' -> P (mkApps f8 l) (mkApps (tConstruct i k u) l')) ->
+      (forall (f8 : term) (i : inductive) (k : nat) (l l' : list term),
+          eval f8 (tConstruct i k) ->
+          P f8 (tConstruct i k) -> Forall2 eval l l' -> Forall2 P l l' -> P (mkApps f8 l) (mkApps (tConstruct i k) l')) ->
 
       (forall (ev : nat) (l : list term), P (tEvar ev l) (tEvar ev l)) ->
 
@@ -186,15 +186,15 @@ Section Wcbv.
   | value_tBox : value tBox
   | value_tEvar ev l : value (tEvar ev l)
   | value_tLam na b : value (tLambda na b)
-  | value_tConstruct i k u l : List.Forall value l -> value (mkApps (tConstruct i k u) l).
+  | value_tConstruct i k l : List.Forall value l -> value (mkApps (tConstruct i k) l).
 
   Lemma value_values_ind : forall P : term -> Prop,
       (P tBox) ->
        (forall i : nat, P (tRel i)) ->
        (forall (ev : nat) (l : list term), P (tEvar ev l)) ->
        (forall (na : name) (b : term), P (tLambda na b)) ->
-       (forall (i : inductive) (k : nat) (u : universe_instance) (l : list term),
-           List.Forall value l -> List.Forall P l -> P (mkApps (tConstruct i k u) l)) ->
+       (forall (i : inductive) (k : nat) (l : list term),
+           List.Forall value l -> List.Forall P l -> P (mkApps (tConstruct i k) l)) ->
        forall t : term, value t -> P t.
   Proof.
     intros P ?????.
@@ -210,7 +210,7 @@ Section Wcbv.
   Lemma eval_to_value e e' : eval e e' -> value e'.
   Proof.
     induction 1 using eval_evals_ind; simpl; auto using value.
-    eapply (value_tConstruct i k u).
+    eapply (value_tConstruct i k).
     apply (Forall2_right _ _ _ H1).
   Qed.
 

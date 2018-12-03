@@ -1,7 +1,7 @@
 (* Distributed under the terms of the MIT license.   *)
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
-From Template Require Import config utils monad_utils Ast AstUtils univ.
+From Template Require Import config utils monad_utils Ast AstUtils.
 From PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICTyping PCUICChecker PCUICRetyping PCUICMetaTheory PCUICWcbvEval.
 From TemplateExtraction Require EAst ELiftSubst ETyping EWcbvEval.
 Require Import String.
@@ -52,9 +52,9 @@ Section Erase.
       l' <- monad_map (extract Σ Γ) l;;
       ret (E.tEvar m l')
     | tSort u => ret E.tBox
-    | tConst kn u => ret (E.tConst kn u)
+    | tConst kn u => ret (E.tConst kn)
     | tInd kn u => ret E.tBox
-    | tConstruct kn k u => ret (E.tConstruct kn k u)
+    | tConstruct kn k u => ret (E.tConstruct kn k)
     | tProd na b t => ret E.tBox
     | tLambda na b t =>
       t' <- extract Σ (vass na b :: Γ) t;;
@@ -100,8 +100,7 @@ Definition optM {M : Type -> Type} `{Monad M} {A B} (x : option A) (f : A -> M B
 Definition extract_constant_body `{F:Fuel} Σ (cb : constant_body) : typing_result E.constant_body :=
   ty <- extract Σ [] cb.(cst_type) ;;
   body <- optM cb.(cst_body) (fun b => extract Σ [] b);;
-  ret {| E.cst_universes := cb.(cst_universes);
-         E.cst_type := ty; E.cst_body := body; |}.
+  ret {| E.cst_type := ty; E.cst_body := body; |}.
 
 Definition lift_opt_typing {A} (a : option A) (e : type_error) : typing_result A :=
   match a with
@@ -130,8 +129,7 @@ Definition extract_mutual_inductive_body `{F:Fuel} Σ
   let arities := arities_context bds in
   bodies <- monad_map (extract_one_inductive_body Σ mib.(ind_npars) arities) bds ;;
   ret {| E.ind_npars := mib.(ind_npars);
-         E.ind_bodies := bodies;
-         E.ind_universes := mib.(ind_universes) |}.
+         E.ind_bodies := bodies; |}.
 
 Fixpoint extract_global_decls univs Σ : typing_result E.global_declarations :=
   match Σ with
@@ -149,7 +147,7 @@ Fixpoint extract_global_decls univs Σ : typing_result E.global_declarations :=
 Definition extract_global Σ :=
   let '(Σ, univs) := Σ in
   Σ' <- extract_global_decls univs (List.rev Σ);;
-  ret (List.rev Σ', univs).
+  ret (List.rev Σ').
 
 (** * Erasure correctness
     
@@ -231,7 +229,7 @@ Definition observe (q : Question) (v : E.term) : bool :=
   match q with
   | Cnstr i k =>
     match v with
-    | E.tConstruct i' k' u =>
+    | E.tConstruct i' k' =>
       eq_ind i i' && eq_nat k k'
     | _ => false
     end
@@ -274,7 +272,7 @@ Fixpoint obs_eq (Σ : global_context) (v v' : term) (T : term) (s : universe) : 
 
 Record extraction_post (Σ : global_context) (Σ' : EAst.global_context) (t : term) (t' : E.term) :=
   { extr_value : E.term;
-    extr_eval : EWcbvEval.eval (fst Σ') t' extr_value;
+    extr_eval : EWcbvEval.eval Σ' t' extr_value;
     (* extr_equiv : obs_eq Σ v extr_value *) }.
 
 (** The extraction correctness theorem we conjecture. *)

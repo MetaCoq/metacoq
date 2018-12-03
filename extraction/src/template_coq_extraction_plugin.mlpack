@@ -1,7 +1,6 @@
 EAst
 EAstUtils
 EInduction
-EUnivSubst
 ELiftSubst
 ETyping
 Extract

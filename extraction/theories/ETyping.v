@@ -1,8 +1,8 @@
 (* Distributed under the terms of the MIT license.   *)
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
-From Template Require Import config utils kernel.univ AstUtils.
-From TemplateExtraction Require Import EAst EAstUtils EInduction ELiftSubst EUnivSubst.
+From Template Require Import config utils AstUtils.
+From TemplateExtraction Require Import EAst EAstUtils EInduction ELiftSubst.
 Require Import String.
 Local Open Scope string_scope.
 Set Asymmetric Patterns.
@@ -101,7 +101,7 @@ Definition is_constructor n ts :=
   | Some a =>
     let (f, a) := decompose_app a in
     match f with
-    | tConstruct _ _ _ => true
+    | tConstruct _ _ => true
     | _ => false
     end
   | None => false

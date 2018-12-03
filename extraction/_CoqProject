@@ -7,7 +7,6 @@ theories/EAst.v
 theories/EAstUtils.v
 theories/EInduction.v
 theories/ELiftSubst.v
-theories/EUnivSubst.v
 theories/EWcbvEval.v
 theories/ETyping.v
 theories/Extract.v

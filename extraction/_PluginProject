@@ -13,8 +13,6 @@ src/eLiftSubst.ml
 src/eLiftSubst.mli
 src/eTyping.ml
 src/eTyping.mli
-src/eUnivSubst.ml
-src/eUnivSubst.mli
 src/extract.mli
 src/extract.ml
 src/template_coq_extraction_plugin.mlpack

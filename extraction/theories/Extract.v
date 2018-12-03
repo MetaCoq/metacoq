@@ -17,6 +17,30 @@ Definition is_prop_sort s :=
   | None => false
   end.
 
+Section IsType.
+  Context {F : Fuel}.
+  Variables (Σ : global_context) (Γ : context).
+
+  Fixpoint is_arity (F : Fuel) t : typing_result bool :=
+    match F with
+    | 0 => raise (NotEnoughFuel F)
+    | S F =>
+      match reduce_to_sort Σ Γ t with
+      | Checked u => ret true
+      | TypeError _ =>
+        p <- reduce_to_prod Σ Γ t ;;
+        is_arity F (snd p)
+      end
+    end.
+
+  Definition is_type_or_proof t :=
+    ty <- type_of Σ Γ t ;;
+     if is_arity F ty then ret true
+     else
+       s <- type_of_as_sort Σ (type_of Σ) Γ ty ;;
+       ret (is_prop_sort s).
+End IsType.
+
 Module E := EAst.
 
 Section Erase.
@@ -42,8 +66,8 @@ Section Erase.
   End EraseMfix.
   
   Fixpoint extract (Σ : global_context) (Γ : context) (t : term) : typing_result E.term :=
-    u <- sort_of Σ Γ t ;;
-    if is_prop_sort u then ret E.tBox else
+    b <- is_type_or_proof Σ Γ t ;;
+    if (b : bool) then ret E.tBox else
     match t with
     | tRel i => ret (E.tRel i)
     | tVar n => ret (E.tVar n)

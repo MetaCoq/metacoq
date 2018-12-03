@@ -47,7 +47,7 @@ Definition option_default {A B} (f : A -> B) (o : option A) (b : B) :=
 Definition on_rel {A B} (R : A -> A -> Prop) (f : B -> A) : B -> B -> Prop :=
   fun x y => R (f x) (f y).
 
-Class Fuel := { fuel : nat }.
+Class Fuel := fuel : nat.
 
 (** Such a useful tactic it should be part of the stdlib. *)
 Ltac forward_gen H tac :=

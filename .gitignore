@@ -212,3 +212,5 @@ checker/src/wf.mli
 /pcuic/src/pCUICRetyping.mli
 /pcuic/src/templateToPCUIC.ml.rej
 /pcuic/src/templateToPCUIC.mli.rej
+/pcuic/src/pCUICMetaTheory.ml
+/pcuic/src/pCUICMetaTheory.mli

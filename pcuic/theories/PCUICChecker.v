@@ -1005,7 +1005,7 @@ End Typecheck2.
 Extract Constant infer_type_correct => "(fun f sigma ctx t x -> assert false)".
 Extract Constant infer_correct => "(fun f sigma ctx t ty -> assert false)".
 
-Definition default_fuel : Fuel := {| fuel := 2 ^ 14 |}.
+Definition default_fuel : Fuel := 2 ^ 14.
 
 Fixpoint fresh id env : bool :=
   match env with

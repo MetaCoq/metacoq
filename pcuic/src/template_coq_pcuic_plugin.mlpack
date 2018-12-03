@@ -6,4 +6,5 @@ PCUICLiftSubst
 PCUICTyping
 PCUICChecker
 PCUICRetyping
+PCUICMetaTheory
 TemplateToPCUIC

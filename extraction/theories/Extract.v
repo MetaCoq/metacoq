@@ -131,7 +131,7 @@ Definition extract_mutual_inductive_body `{F:Fuel} Σ
   ret {| E.ind_npars := mib.(ind_npars);
          E.ind_bodies := bodies; |}.
 
-Fixpoint extract_global_decls univs Σ : typing_result E.global_declarations :=
+Fixpoint extract_global_decls `{F:Fuel} univs Σ : typing_result E.global_declarations :=
   match Σ with
   | [] => ret []
   | ConstantDecl kn cb :: Σ =>
@@ -144,7 +144,7 @@ Fixpoint extract_global_decls univs Σ : typing_result E.global_declarations :=
     ret (E.InductiveDecl kn mib' :: Σ')
   end.
 
-Definition extract_global Σ :=
+Definition extract_global `{F : Fuel} Σ :=
   let '(Σ, univs) := Σ in
   Σ' <- extract_global_decls univs (List.rev Σ);;
   ret (List.rev Σ').

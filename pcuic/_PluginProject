@@ -6,8 +6,6 @@ src/pCUICAst.ml
 src/pCUICAst.mli
 src/pCUICAstUtils.ml
 src/pCUICAstUtils.mli
-src/pCUICInduction.ml
-src/pCUICInduction.mli
 src/pCUICLiftSubst.ml
 src/pCUICLiftSubst.mli
 src/pCUICTyping.ml

@@ -22,7 +22,6 @@ From PCUIC Require Import PCUICAst PCUICAstUtils PCUICUnivSubst PCUICInduction P
 Extraction Library PCUICAst.
 Extraction Library PCUICAstUtils.
 Extraction Library PCUICUnivSubst.
-Extraction Library PCUICInduction.
 Extraction Library PCUICLiftSubst.
 Extraction Library PCUICTyping.
 Extraction Library PCUICChecker.

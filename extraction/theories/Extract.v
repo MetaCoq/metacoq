@@ -52,6 +52,12 @@ Section Erase.
     | _ => false
     end.
 
+  Fixpoint mkAppBox c n :=
+    match n with
+    | 0 => c
+    | S n => mkAppBox (E.tApp c E.tBox) n
+    end.
+
   Definition on_snd_map {A B C} (f : B -> C) (p : A * B) :=
     (fst p, f (snd p)).
 
@@ -95,7 +101,9 @@ Section Erase.
       c' <- extract Σ Γ c;;
       if is_box c' then
         match brs with
-        | (_, x) :: _ => extract Σ Γ x (* Singleton elimination *)
+        | (n, x) :: _ =>
+          x' <- extract Σ Γ x;;
+          ret (mkAppBox x' n) (* Singleton elimination *)
         | nil =>
           ret (E.tCase ip c' nil) (* Falsity elimination *)
         end

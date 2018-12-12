@@ -158,10 +158,8 @@ Fixpoint print_extracted_term (t:term) (names : list name) (inapp : bool) : stri
   | tCoFix _ n => " (COFIX " ++ (nat_to_string n) ++ ") "
   end.
 
-Set Printing Depth 10000.
-
-Definition print_def c :=
-  match extract_copy with
+Definition print_def (extract : option E.program) c :=
+  match extract with
   | Some (env, term) =>
     match lookup_env env c with
     | Some (ConstantDecl _ cb) =>
@@ -176,5 +174,12 @@ Definition print_def c :=
   | None => "nothing"
   end.
 
-Eval cbv in print_def "Top.provedCopy_terminate".
-Eval cbv in print_def "Coq.Init.Logic.and_rect".
+Eval cbv in print_def extract_copy "Top.provedCopy_terminate".
+Eval cbv in print_def extract_copy "Coq.Init.Logic.and_rect".
+
+Quote Recursively Definition fixf := Fix_F.
+
+Definition extract_fix := Eval native_compute in extract fixf.
+
+(** Extracts to general fixpoint *)
+Eval cbv in print_def extract_fix "Coq.Init.Wf.Fix_F".

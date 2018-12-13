@@ -2,7 +2,7 @@
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
 From Template Require Import config utils univ AstUtils.
-From Template Require Import Ast Typing.
+From Template Require Import BasicAst Ast Typing.
 From PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICSubstitution.
 Require Import String.
 Local Open Scope string_scope.
@@ -567,8 +567,8 @@ Proof.
 Qed.
 
 Lemma trans_unfold_fix mfix idx narg fn :
-  List.Forall (fun def : T.def Tterm => T.wf (T.dtype def) /\ T.wf (T.dbody def) /\
-              T.isLambda (T.dbody def) = true) mfix ->
+  List.Forall (fun def : def Tterm => T.wf (dtype def) /\ T.wf (dbody def) /\
+              T.isLambda (dbody def) = true) mfix ->
   TTy.unfold_fix mfix idx = Some (narg, fn) ->
   unfold_fix (map (map_def trans trans) mfix) idx = Some (narg, trans fn).
 Proof.
@@ -588,7 +588,7 @@ Proof.
 Qed.
 
 Lemma trans_unfold_cofix mfix idx narg fn :
-  List.Forall (fun def : T.def Tterm => T.wf (T.dtype def) /\ T.wf (T.dbody def)) mfix ->
+  List.Forall (fun def : def Tterm => T.wf (dtype def) /\ T.wf (dbody def)) mfix ->
   TTy.unfold_cofix mfix idx = Some (narg, fn) ->
   unfold_cofix (map (map_def trans trans) mfix) idx = Some (narg, trans fn).
 Proof.

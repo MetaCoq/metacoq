@@ -49,21 +49,6 @@ Definition declared_projection Σ mdecl idecl (proj : projection) pdecl : Prop :
   declared_inductive Σ mdecl (fst (fst proj)) idecl /\
   List.nth_error idecl.(ind_projs) (snd proj) = Some pdecl.
 
-(** Inductive substitution, to produce a constructors' type *)
-Definition inds ind u (l : list one_inductive_body) :=
-  let fix aux n :=
-      match n with
-      | 0 => []
-      | S n => tInd (mkInd ind n) u :: aux n
-      end
-  in aux (List.length l).
-
-Lemma inds_length ind u l : #|inds ind u l| = #|l|.
-Proof.
-  unfold inds. induction l; simpl; congruence.
-Qed.
-
-
 (** ** Reduction *)
 
 (** *** Helper functions for reduction *)

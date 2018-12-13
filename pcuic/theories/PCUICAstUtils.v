@@ -1,6 +1,6 @@
 From Coq Require Import Ascii String Bool OrderedType Lia List Program Arith.
 From Template Require Import utils.
-From Template Require Import Ast.
+From Template Require Import BasicAst.
 From PCUIC Require Import PCUICAst.
 Import List.ListNotations.
 Require Import FunctionalExtensionality.

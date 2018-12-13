@@ -12,7 +12,7 @@ From Template Require Export univ uGraph.
       We reflect identifiers [ident], sort families [sort_family], names
     [name], cast kinds [cast_kind], inductives [inductive] and primitive
     projections [projection] and (co)-fixpoint blocks [mfixpoint] and
-    [def].
+    [def]. These are defined in the [BasicAst] file.
 
     ** Terms:
 
@@ -39,41 +39,7 @@ From Template Require Export univ uGraph.
     TemplateProgram] on a monad action to produce its side-effects.
     Uses a reduction strategy specifier [reductionStrategy].  *)
 
-Definition ident := string. (* e.g. nat *)
-Definition kername := string. (* e.g. Coq.Init.Datatypes.nat *)
-
-Inductive sort_family : Set := InProp | InSet | InType.
-
-Inductive name : Set :=
-| nAnon
-| nNamed (_ : ident).
-
-Inductive cast_kind : Set :=
-| VmCast
-| NativeCast
-| Cast
-| RevertCast.
-
-Record inductive : Set := mkInd { inductive_mind : kername ;
-                                  inductive_ind : nat }.
-Arguments mkInd _%string _%nat.
-
-Definition projection : Set := inductive * nat (* params *) * nat (* argument *).
-
-(** Parametrized by term because term is not yet defined *)
-Record def (term : Set) : Set := mkdef {
-  dname : name; (* the name **)
-  dtype : term;
-  dbody : term; (* the body (a lambda term). Note, this may mention other (mutually-defined) names **)
-  rarg  : nat  (* the index of the recursive argument, 0 for cofixpoints **) }.
-
-Arguments dname {term} _.
-Arguments dtype {term} _.
-Arguments dbody {term} _.
-Arguments rarg {term} _.
-
-Definition mfixpoint (term : Set) : Set :=
-  list (def term).
+Require Export BasicAst.
 
 Inductive term : Set :=
 | tRel       : nat -> term
@@ -283,11 +249,3 @@ Definition global_context : Type := global_declarations * uGraph.t.
   A set of declarations and a term, as produced by [Quote Recursively]. *)
 
 Definition program : Type := global_declarations * term.
-
-(** Kernel declaration references [global_reference] *)
-
-Inductive global_reference :=
-(* VarRef of Names.variable *)
-| ConstRef : kername -> global_reference
-| IndRef : inductive -> global_reference
-| ConstructRef : inductive -> nat -> global_reference.

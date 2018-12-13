@@ -4,7 +4,7 @@ Require Import Coq.Strings.String.
 Require Import Coq.PArith.BinPos.
 Require Import List. Import ListNotations.
 From Template Require Export univ uGraph.
-From Template Require Import Ast.
+From Template Require Import BasicAst.
 
 (** * AST of the Polymorphic Cumulative Calculus of Inductive Constructions
 
@@ -191,11 +191,3 @@ Definition global_context : Type := global_declarations * uGraph.t.
   A set of declarations and a term, as produced by [Quote Recursively]. *)
 
 Definition program : Type := global_declarations * term.
-
-(** Kernel declaration references [global_reference] *)
-
-Inductive global_reference :=
-(* VarRef of Names.variable *)
-| ConstRef : kername -> global_reference
-| IndRef : inductive -> global_reference
-| ConstructRef : inductive -> nat -> global_reference.

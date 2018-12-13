@@ -1,7 +1,7 @@
 (* Distributed under the terms of the MIT license.   *)
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
-From Template Require Import config utils monad_utils Ast AstUtils.
+From Template Require Import config utils monad_utils BasicAst AstUtils.
 From PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICTyping PCUICChecker PCUICRetyping PCUICMetaTheory PCUICWcbvEval.
 From TemplateExtraction Require EAst ELiftSubst ETyping EWcbvEval.
 Require Import String.
@@ -119,7 +119,7 @@ Section Erase.
     | tCoFix mfix n =>
       mfix' <- extract_mfix (extract Σ) Γ mfix;;
       ret (E.tCoFix mfix' n)
-     end.
+    end.
 
 End Erase.
 
@@ -254,7 +254,7 @@ Record extraction_pre (Σ : global_context) t T :=
 (** The observational equivalence relation between source and extractd values. *)
 
 Inductive Question : Set  := 
-| Cnstr : Ast.inductive -> nat -> Question 
+| Cnstr : inductive -> nat -> Question
 | Abs : Question.
 
 Definition observe (q : Question) (v : E.term) : bool :=

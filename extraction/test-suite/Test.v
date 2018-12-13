@@ -183,3 +183,13 @@ Definition extract_fix := Eval native_compute in extract fixf.
 
 (** Extracts to general fixpoint *)
 Eval cbv in print_def extract_fix "Coq.Init.Wf.Fix_F".
+
+Function unprovedCopy (n:nat) {wf lt n} :=
+  match n with 0 => 0 | S k => S (provedCopy k) end.
+Proof. Admitted.
+
+Quote Recursively Definition admitcopy := unprovedCopy.
+
+Definition extract_admitcopy := Eval native_compute in extract admitcopy.
+
+Eval cbv in print_def extract_copy "Top.provedCopy_terminate".

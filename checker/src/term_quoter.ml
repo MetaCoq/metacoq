@@ -2,6 +2,7 @@
 (*i camlp4use: "pa_extend.cmp" i*)
 
 open Constr
+open BasicAst
 open Ast0
 open Template_coq
 open Quoter
@@ -99,9 +100,9 @@ struct
 
   let quote_sort_family s =
     match s with
-    | Sorts.InProp -> Ast0.InProp
-    | Sorts.InSet -> Ast0.InSet
-    | Sorts.InType -> Ast0.InType
+    | Sorts.InProp -> BasicAst.InProp
+    | Sorts.InSet -> BasicAst.InSet
+    | Sorts.InType -> BasicAst.InType
 
   let quote_cast_kind = function
     | DEFAULTcast -> Cast

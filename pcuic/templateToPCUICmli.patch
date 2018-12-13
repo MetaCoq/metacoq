@@ -1,64 +1,11 @@
---- templateToPCUIC.mli	2018-11-07 11:41:04.000000000 +0100
-+++ templateToPCUIC.mli	2018-11-07 11:41:21.000000000 +0100
-@@ -15,312 +15,7 @@
+--- templateToPCUIC.mli.orig	2018-12-13 13:20:58.000000000 +0100
++++ templateToPCUIC.mli	2018-12-13 13:21:09.000000000 +0100
+@@ -16,246 +16,7 @@
  
  type __ = Obj.t
  
 -module T :
 - sig
--  type ident = char list
--
--  type kername = char list
--
--  type sort_family = Ast0.sort_family =
--  | InProp
--  | InSet
--  | InType
--
--  val sort_family_rect : 'a1 -> 'a1 -> 'a1 -> sort_family -> 'a1
--
--  val sort_family_rec : 'a1 -> 'a1 -> 'a1 -> sort_family -> 'a1
--
--  type name = Ast0.name =
--  | Coq_nAnon
--  | Coq_nNamed of ident
--
--  val name_rect : 'a1 -> (ident -> 'a1) -> name -> 'a1
--
--  val name_rec : 'a1 -> (ident -> 'a1) -> name -> 'a1
--
--  type cast_kind = Ast0.cast_kind =
--  | VmCast
--  | NativeCast
--  | Cast
--  | RevertCast
--
--  val cast_kind_rect : 'a1 -> 'a1 -> 'a1 -> 'a1 -> cast_kind -> 'a1
--
--  val cast_kind_rec : 'a1 -> 'a1 -> 'a1 -> 'a1 -> cast_kind -> 'a1
--
--  type inductive = Ast0.inductive = { inductive_mind : kername;
--                                      inductive_ind : nat }
--
--  val inductive_mind : inductive -> kername
--
--  val inductive_ind : inductive -> nat
--
--  type projection = (inductive * nat) * nat
--
--  type 'term def = 'term Ast0.def = { dname : name; dtype : 'term;
--                                      dbody : 'term; rarg : nat }
--
--  val dname : 'a1 def -> name
--
--  val dtype : 'a1 def -> 'a1
--
--  val dbody : 'a1 def -> 'a1
--
--  val rarg : 'a1 def -> nat
--
--  type 'term mfixpoint = 'term def list
--
 -  type term = Ast0.term =
 -  | Coq_tRel of nat
 -  | Coq_tVar of ident
@@ -296,19 +243,6 @@
 -  type global_context = global_declarations * t
 -
 -  type program = global_declarations * term
--
--  type global_reference = Ast0.global_reference =
--  | ConstRef of kername
--  | IndRef of inductive
--  | ConstructRef of inductive * nat
--
--  val global_reference_rect :
--    (kername -> 'a1) -> (inductive -> 'a1) -> (inductive -> nat -> 'a1) ->
--    global_reference -> 'a1
--
--  val global_reference_rec :
--    (kername -> 'a1) -> (inductive -> 'a1) -> (inductive -> nat -> 'a1) ->
--    global_reference -> 'a1
 - end
 +module T = Ast0
  

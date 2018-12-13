@@ -1,6 +1,6 @@
 (* Distributed under the terms of the MIT license.   *)
 
-From Template Require Import univ Ast.
+From Template Require Import univ BasicAst.
 From PCUIC Require Import PCUICAst PCUICAstUtils.
 Require Import List Program.
 Require Import BinPos.

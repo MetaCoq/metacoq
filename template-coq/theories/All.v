@@ -3,6 +3,7 @@
 From Template Require Export
      utils         (* Utility functions *)
      monad_utils   (* Monadic notations *)
+     BasicAst      (* The basic AST structures *)
      Ast           (* The term AST *)
      TemplateMonad (* The TemplateMonad *)
      AstUtils      (* Utilities on the AST *)

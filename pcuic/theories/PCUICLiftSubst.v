@@ -1,7 +1,7 @@
 (* Distributed under the terms of the MIT license.   *)
 
 From Coq Require Import List Program.
-From Template Require Import utils Ast.
+From Template Require Import utils BasicAst.
 From PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction.
 From Coq Require Import BinPos Arith.Compare_dec Bool Lia.
 

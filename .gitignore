@@ -214,3 +214,5 @@ checker/src/wf.mli
 /pcuic/src/templateToPCUIC.mli.rej
 /pcuic/src/pCUICMetaTheory.ml
 /pcuic/src/pCUICMetaTheory.mli
+/checker/src/basicAst.ml
+/checker/src/basicAst.mli

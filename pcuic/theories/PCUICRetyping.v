@@ -108,6 +108,39 @@ Section TypeOf.
       { s'' & (reduce_to_sort (fst Σ) Γ t = Checked s'')
             * (check_leq (snd Σ) s'' s' = true) }.
 
+  Ltac one_ih :=
+    let T := fresh "T" in
+    let e := fresh "e" in
+    let hT := fresh "hT" in
+    let hc := fresh "hc" in
+    match goal with
+    | H : { _ : term &  _ } |- _ => destruct H as [T [[e hT] hc]]
+    end.
+
+  Ltac ih :=
+    repeat one_ih.
+
+  Ltac rewrite_eq :=
+    match goal with
+    | e : _ = _ |- _ => rewrite e
+    end.
+
+  Ltac rewrite_eqs :=
+    repeat rewrite_eq.
+
+  Ltac makedo :=
+    simpl ;
+    ih ;
+    rewrite_eqs ;
+    simpl ;
+    eexists ; split ; [
+      split ; [
+        reflexivity
+      | try (solve [ econstructor ; eassumption ])
+      ]
+    | try (solve [ eapply cumul_refl' ])
+    ].
+
   Theorem type_of_sound :
     forall {Γ t A},
       Σ ;;; Γ |- t : A ->
@@ -117,16 +150,12 @@ Section TypeOf.
   Proof.
     intros Γ t A h.
     induction h.
-    - cbn. rewrite e.
-      eexists. split ; [split |].
-      + reflexivity.
-      + econstructor ; assumption.
-      + apply cumul_refl'.
-    - cbn. eexists. split ; [split |].
-      + reflexivity.
+    - makedo.
+    - makedo.
       + admit.
       + admit.
-    - destruct IHh1 as [T1 [[e1 hT1] hc1]].
+    - (* makedo. *)
+      destruct IHh1 as [T1 [[e1 hT1] hc1]].
       destruct IHh2 as [T2 [[e2 hT2] hc2]].
       simpl. unfold type_of_as_sort. rewrite e1. rewrite e2. simpl.
       apply cumul_reduce_to_sort in hc1 as hs1.
@@ -143,17 +172,22 @@ Section TypeOf.
         * econstructor ; try eassumption.
           all: admit.
       + admit.
-    - simpl.
-      destruct IHh1 as [T1 [[e1 hT1] hc1]].
-      destruct IHh2 as [T2 [[e2 hT2] hc2]].
-      rewrite e2.
-      eexists. split ; [split |].
-      + reflexivity.
-      + econstructor ; eassumption.
-      + eapply congr_cumul_prod.
-        * eapply cumul_refl'.
-        * assumption.
-    -
+    - makedo.
+      eapply congr_cumul_prod.
+      + eapply cumul_refl'.
+      + assumption.
+    - makedo. admit.
+    - (* makedo. *) admit.
+    - (* makedo. *) admit.
+    - (* makedo. *) admit.
+    - (* makedo. *) admit.
+    - (* makedo. *) admit.
+    - (* makedo. *) admit.
+    - makedo.
+    - makedo.
+    - makedo.
+      + assumption.
+      + eapply cumul_trans ; eassumption.
   Admitted.
 
 

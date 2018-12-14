@@ -128,11 +128,14 @@ Section TypeOf.
   Ltac rewrite_eqs :=
     repeat rewrite_eq.
 
-  Ltac makedo :=
+  Ltac simple_makedo :=
     simpl ;
     ih ;
     rewrite_eqs ;
-    simpl ;
+    simpl.
+
+  Ltac makedo :=
+    simple_makedo ;
     eexists ; split ; [
       split ; [
         reflexivity
@@ -177,12 +180,15 @@ Section TypeOf.
       + eapply cumul_refl'.
       + assumption.
     - makedo. admit.
-    - (* makedo. *) admit.
-    - (* makedo. *) admit.
-    - (* makedo. *) admit.
-    - (* makedo. *) admit.
-    - (* makedo. *) admit.
-    - (* makedo. *) admit.
+    - simple_makedo. admit.
+    - simple_makedo. admit.
+    - simple_makedo. (* makedo. *) admit.
+    - destruct ind. simple_makedo.
+      (* makedo. *) admit.
+    - simple_makedo.
+      (* makedo. *) admit.
+    - simple_makedo.
+      (* makedo. *) admit.
     - makedo.
     - makedo.
     - makedo.

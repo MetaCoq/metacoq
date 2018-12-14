@@ -101,4 +101,61 @@ Section TypeOf.
     ty <- type_of Γ t;;
     type_of_as_sort type_of Γ ty.
 
+  Open Scope type_scope.
+
+  Conjecture cumul_reduce_to_sort : forall Γ t s',
+      Σ ;;; Γ |- t <= tSort s' ->
+      { s'' & (reduce_to_sort (fst Σ) Γ t = Checked s'')
+            * (check_leq (snd Σ) s'' s' = true) }.
+
+  Theorem type_of_sound :
+    forall {Γ t A},
+      Σ ;;; Γ |- t : A ->
+      { B : term & (type_of Γ t = Checked B)
+                 * (Σ ;;; Γ |- t : B)
+                 * (cumul Σ Γ B A) }.
+  Proof.
+    intros Γ t A h.
+    induction h.
+    - cbn. rewrite e.
+      eexists. split ; [split |].
+      + reflexivity.
+      + econstructor ; assumption.
+      + apply cumul_refl'.
+    - cbn. eexists. split ; [split |].
+      + reflexivity.
+      + admit.
+      + admit.
+    - destruct IHh1 as [T1 [[e1 hT1] hc1]].
+      destruct IHh2 as [T2 [[e2 hT2] hc2]].
+      simpl. unfold type_of_as_sort. rewrite e1. rewrite e2. simpl.
+      apply cumul_reduce_to_sort in hc1 as hs1.
+      apply cumul_reduce_to_sort in hc2 as hs2.
+      destruct hs1 as [z1 [ez1 c1]].
+      destruct hs2 as [z2 [ez2 c2]].
+      rewrite ez1, ez2.
+      eexists. split ; [split |].
+      + reflexivity.
+      + econstructor.
+        * econstructor ; try eassumption.
+          -- admit.
+          -- admit.
+        * econstructor ; try eassumption.
+          all: admit.
+      + admit.
+    - simpl.
+      destruct IHh1 as [T1 [[e1 hT1] hc1]].
+      destruct IHh2 as [T2 [[e2 hT2] hc2]].
+      rewrite e2.
+      eexists. split ; [split |].
+      + reflexivity.
+      + econstructor ; eassumption.
+      + eapply congr_cumul_prod.
+        * eapply cumul_refl'.
+        * assumption.
+    -
+  Admitted.
+
+
+
 End TypeOf.

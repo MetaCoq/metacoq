@@ -108,6 +108,12 @@ Section TypeOf.
       { s'' & (reduce_to_sort (fst Σ) Γ t = Checked s'')
             * (check_leq (snd Σ) s'' s' = true) }.
 
+  Conjecture congr_cumul_letin : forall Γ n a A t n' a' A' t',
+    Σ ;;; Γ |- a <= a' ->
+    Σ ;;; Γ |- A <= A' ->
+    Σ ;;; Γ ,, vdef n a A' |- t <= t' ->
+    Σ ;;; Γ |- tLetIn n a A t <= tLetIn n' a' A' t'.
+
   Ltac one_ih :=
     let T := fresh "T" in
     let e := fresh "e" in
@@ -179,7 +185,9 @@ Section TypeOf.
       eapply congr_cumul_prod.
       + eapply cumul_refl'.
       + assumption.
-    - makedo. admit.
+    - makedo. eapply congr_cumul_letin.
+      all: try eapply cumul_refl'.
+      assumption.
     - simple_makedo. admit.
     - simple_makedo. admit.
     - simple_makedo. (* makedo. *) admit.

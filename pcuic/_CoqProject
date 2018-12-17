@@ -16,6 +16,7 @@ theories/PCUICMetaTheory.v
 theories/PCUICWcbvEval.v
 theories/PCUICChecker.v
 theories/PCUICRetyping.v
+theories/PCUICAAst.v
 theories/TemplateToPCUIC.v
 # theories/All.v
 theories/Extraction.v

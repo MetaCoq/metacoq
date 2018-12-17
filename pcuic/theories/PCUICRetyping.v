@@ -103,10 +103,24 @@ Section TypeOf.
 
   Open Scope type_scope.
 
+  Notation "'∑'  x .. y , P" := (sigT (fun x => .. (sigT (fun y => P)) ..))
+    (at level 200, x binder, y binder, right associativity) : type_scope.
+
+  Notation "( x ; .. ; y ; z )" :=
+    (existT x (.. (existT y z) ..)) : type_scope.
+
   Conjecture cumul_reduce_to_sort : forall Γ t s',
       Σ ;;; Γ |- t <= tSort s' ->
       { s'' & (reduce_to_sort (fst Σ) Γ t = Checked s'')
             * (check_leq (snd Σ) s'' s' = true) }.
+
+  Conjecture cumul_reduce_to_prod :
+    forall Γ T na A B,
+      Σ ;;; Γ |- T <= tProd na A B ->
+      ∑ A' B',
+        (reduce_to_prod (fst Σ) Γ T = Checked (A', B')) *
+        (eq_term (snd Σ) A A') *
+        (leq_term (snd Σ) B B').
 
   Conjecture congr_cumul_letin : forall Γ n a A t n' a' A' t',
     Σ ;;; Γ |- a <= a' ->
@@ -140,8 +154,7 @@ Section TypeOf.
     rewrite_eqs ;
     simpl.
 
-  Ltac makedo :=
-    simple_makedo ;
+  Ltac finish :=
     eexists ; split ; [
       split ; [
         reflexivity
@@ -149,6 +162,9 @@ Section TypeOf.
       ]
     | try (solve [ eapply cumul_refl' ])
     ].
+
+  Ltac makedo :=
+    simple_makedo ; finish.
 
   Theorem type_of_sound :
     forall {Γ t A},
@@ -175,7 +191,8 @@ Section TypeOf.
       eexists. split ; [split |].
       + reflexivity.
       + econstructor.
-        * econstructor ; try eassumption.
+        * econstructor.
+          -- exact hT1.
           -- admit.
           -- admit.
         * econstructor ; try eassumption.
@@ -188,7 +205,26 @@ Section TypeOf.
     - makedo. eapply congr_cumul_letin.
       all: try eapply cumul_refl'.
       assumption.
-    - simple_makedo. admit.
+    - simple_makedo.
+      match goal with
+      | h : _ ;;; _ |- _ <= tProd _ _ _ |- _ =>
+        apply cumul_reduce_to_prod in h as hP
+      end.
+      destruct hP as [A' [B' [[hred eA] eB]]].
+      rewrite hred.
+      finish.
+      + eapply type_App with (A0 := A').
+        * econstructor.
+          -- eassumption.
+          -- econstructor.
+             ++ admit.
+             ++ admit.
+          -- admit.
+        * econstructor.
+          -- eassumption.
+          -- admit.
+          -- admit.
+      + admit.
     - simple_makedo. admit.
     - simple_makedo. (* makedo. *) admit.
     - destruct ind. simple_makedo.

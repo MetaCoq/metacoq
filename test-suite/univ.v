@@ -159,3 +159,19 @@ Check (eq_refl :
          | Checked (tSort [(Level.Level _, true); (Level.Level _, true)]) => true
          | _ => false
          end).
+
+Set Universe Polymorphism.
+
+Definition id_f := fun x : nat => x.
+
+Quote Definition id_syn := f.
+
+
+(* Fails with "globalization of polymorphic reference f would forget universes." *)
+(* Fail Make Definition id_f' := Eval compute in id_syn. *)
+
+Fail Run TemplateProgram (
+     id_syn <- tmQuote id_f;;
+     id_f <- tmUnquoteTyped (nat -> nat) id_syn;;
+     tmDefinition "id_f''" id_f
+     ).

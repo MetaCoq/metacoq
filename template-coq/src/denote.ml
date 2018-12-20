@@ -552,7 +552,6 @@ let monad_failure_full s k prg =
        str "While trying to run: " ++ fnl () ++ print_term prg ++ fnl () ++
        str "Please file a bug with Template-Coq.")
 
-
 let rec run_template_program_rec ?(intactic=false) (k : Evd.evar_map * Constr.t -> unit)  ((evm, pgm) : Evd.evar_map * Constr.t) : unit =
   let env = Global.env () in
   let pgm = Reduction.whd_all env pgm in
@@ -584,11 +583,7 @@ let rec run_template_program_rec ?(intactic=false) (k : Evd.evar_map * Constr.t 
     match args with
     | name::typ::body::[] ->
        let name = reduce_all env evm name in
-       let univs =
-         if Attributes.is_universe_polymorphism ()
-         (* FIXME: we pass an empty array of univrse variable names for now *)
-         then Polymorphic_const_entry ([| |],Evd.to_universe_context evm)
-         else Monomorphic_const_entry (Evd.universe_context_set evm) in
+       let univs = Evd.const_univ_entry ~poly:(Attributes.is_universe_polymorphism ()) evm  in
        let n = Declare.declare_definition ~kind:Decl_kinds.Definition (unquote_ident name) ~types:typ (body, univs) in
        k (evm, Constr.mkConst n)
     | _ -> monad_failure "tmDefinition" 3
@@ -598,6 +593,8 @@ let rec run_template_program_rec ?(intactic=false) (k : Evd.evar_map * Constr.t 
     | name::typ::[] ->
        let name = reduce_all env evm name in
        let param = Entries.ParameterEntry (None, (typ, Monomorphic_const_entry (Evd.universe_context_set evm)), None) in
+       (* let univs = Evd.const_univ_entry ~poly:(Attributes.is_universe_polymorphism ()) evm  in
+        * let param = Entries.ParameterEntry (None, (typ, univs), None) in *)
        let n = Declare.declare_constant (unquote_ident name) (param, Decl_kinds.IsDefinition Decl_kinds.Definition) in
        k (evm, Constr.mkConst n)
     | _ -> monad_failure "tmAxiom" 2

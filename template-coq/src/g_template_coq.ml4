@@ -132,8 +132,9 @@ VERNAC COMMAND EXTEND Unquote_vernac_red CLASSIFIED AS SIDEFF
 	let (evm,trm) = Quoter.reduce env evm rd (EConstr.to_constr evm trm) in
         let evdref = ref evm in
         let trm = Denote.denote_term evdref trm in
+        let univs = Evd.const_univ_entry ~poly:(Attributes.is_universe_polymorphism ()) !evdref in
 	let _ = Declare.declare_definition ~kind:Decl_kinds.Definition name
-                  (trm, Monomorphic_const_entry (Evd.universe_context_set !evdref)) in
+                  (trm, univs) in
         () ]
 END;;
 

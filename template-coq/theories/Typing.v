@@ -1,8 +1,7 @@
 (* Distributed under the terms of the MIT license.   *)
-
+From Template Require AstUtils Loader.
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
 From Template Require Import config utils Ast univ Induction LiftSubst UnivSubst.
-From Template Require AstUtils Loader.
 Require Import String.
 Local Open Scope string_scope.
 Set Asymmetric Patterns.

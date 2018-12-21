@@ -168,7 +168,7 @@ Quote Definition id_syn := f.
 
 
 (* Fails with "globalization of polymorphic reference f would forget universes." *)
-(* Fail Make Definition id_f' := Eval compute in id_syn. *)
+Fail Make Definition id_f' := Eval compute in id_syn.
 
 Fail Run TemplateProgram (
      id_syn <- tmQuote id_f;;

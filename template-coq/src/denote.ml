@@ -592,9 +592,8 @@ let rec run_template_program_rec ?(intactic=false) (k : Evd.evar_map * Constr.t 
     match args with
     | name::typ::[] ->
        let name = reduce_all env evm name in
-       let param = Entries.ParameterEntry (None, (typ, Monomorphic_const_entry (Evd.universe_context_set evm)), None) in
-       (* let univs = Evd.const_univ_entry ~poly:(Attributes.is_universe_polymorphism ()) evm  in
-        * let param = Entries.ParameterEntry (None, (typ, univs), None) in *)
+       let univs = Evd.const_univ_entry ~poly:(Attributes.is_universe_polymorphism ()) evm  in
+       let param = Entries.ParameterEntry (None, (typ, univs), None) in
        let n = Declare.declare_constant (unquote_ident name) (param, Decl_kinds.IsDefinition Decl_kinds.Definition) in
        k (evm, Constr.mkConst n)
     | _ -> monad_failure "tmAxiom" 2

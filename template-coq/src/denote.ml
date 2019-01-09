@@ -10,6 +10,7 @@ open Quoter
 open Constr_quoter
 open TemplateCoqQuoter
 
+(* todo: the recursive call is uneeded provided we call it on well formed terms *)
 let rec app_full trm acc =
   match Constr.kind trm with
     Constr.App (f, xs) -> app_full f (Array.to_list xs @ acc)
@@ -17,25 +18,26 @@ let rec app_full trm acc =
 
 let print_term (u: t) : Pp.t = pr_constr u
 
-let from_coq_pair trm =
+let unquote_pair trm =
   let (h,args) = app_full trm [] in
   if Constr.equal h c_pair then
     match args with
       _ :: _ :: x :: y :: [] -> (x, y)
-    | _ -> bad_term trm
+    | _ -> bad_term_verb trm "unquote_pair"
   else
-    not_supported_verb trm "from_coq_pair"
+    not_supported_verb trm "unquote_pair"
 
-
-let rec from_coq_list trm =
+let rec unquote_list trm =
   let (h,args) = app_full trm [] in
-  if Constr.equal h c_nil then []
+  if Constr.equal h c_nil then
+    []
   else if Constr.equal h c_cons then
     match args with
-      _ :: x :: xs :: _ -> x :: from_coq_list xs
-    | _ -> bad_term trm
+      _ :: x :: xs :: [] -> x :: unquote_list xs
+    | _ -> bad_term_verb trm "unquote_list"
   else
-    not_supported_verb trm "from_coq_list"
+    not_supported_verb trm "unquote_list"
+
 
 let inspectTerm (t:Constr.t) :  (Constr.t, quoted_int, quoted_ident, quoted_name, quoted_sort, quoted_cast_kind, quoted_kernel_name, quoted_inductive, quoted_univ_instance, quoted_proj) structure_of_term =
   let (h,args) = app_full t [] in
@@ -73,7 +75,7 @@ let inspectTerm (t:Constr.t) :  (Constr.t, quoted_int, quoted_ident, quoted_name
     | _ -> CErrors.user_err (print_term t ++ Pp.str ("has bad structure"))
   else if Constr.equal h tApp then
     match args with
-      f::xs::_ -> ACoq_tApp (f, from_coq_list xs)
+      f::xs::_ -> ACoq_tApp (f, unquote_list xs)
     | _ -> CErrors.user_err (print_term t ++ Pp.str ("has bad structure"))
   else if Constr.equal h tConst then
     match args with
@@ -89,7 +91,7 @@ let inspectTerm (t:Constr.t) :  (Constr.t, quoted_int, quoted_ident, quoted_name
     | _ -> CErrors.user_err (print_term t ++ Pp.str ("has bad structure: constructor case"))
   else if Constr.equal h tCase then
     match args with
-      info::ty::d::brs::_ -> ACoq_tCase (from_coq_pair info, ty, d, List.map from_coq_pair (from_coq_list brs))
+      info::ty::d::brs::_ -> ACoq_tCase (unquote_pair info, ty, d, List.map unquote_pair (unquote_list brs))
     | _ -> CErrors.user_err (print_term t ++ Pp.str ("has bad structure"))
   else if Constr.equal h tFix then
     match args with
@@ -105,7 +107,7 @@ let inspectTerm (t:Constr.t) :  (Constr.t, quoted_int, quoted_ident, quoted_name
            }
         |_ -> raise (Failure " (mkdef must take exactly 5 arguments)")
       in
-      let lbd = List.map unquoteFbd (from_coq_list bds) in
+      let lbd = List.map unquoteFbd (unquote_list bds) in
       ACoq_tFix (lbd, i)
     | _ -> CErrors.user_err (print_term t ++ Pp.str ("has bad structure"))
   else if Constr.equal h tCoFix then
@@ -122,7 +124,7 @@ let inspectTerm (t:Constr.t) :  (Constr.t, quoted_int, quoted_ident, quoted_name
            }
         |_ -> raise (Failure " (mkdef must take exactly 5 arguments)")
       in
-      let lbd = List.map unquoteFbd (from_coq_list bds) in
+      let lbd = List.map unquoteFbd (unquote_list bds) in
       ACoq_tCoFix (lbd, i)
     | _ -> CErrors.user_err (print_term t ++ Pp.str ("has bad structure"))
   else if Constr.equal h tProj then
@@ -133,16 +135,17 @@ let inspectTerm (t:Constr.t) :  (Constr.t, quoted_int, quoted_ident, quoted_name
   else
     CErrors.user_err (str"inspect_term: cannot recognize " ++ print_term t)
 
-let rec unquote_int trm =
+(* Unquote Coq nat to OCaml int *)
+let rec unquote_nat trm =
   let (h,args) = app_full trm [] in
   if Constr.equal h tO then
     0
   else if Constr.equal h tS then
     match args with
-      n :: _ -> 1 + unquote_int n
-    | _ -> not_supported_verb trm "unquote_int nil"
+      n :: [] -> 1 + unquote_nat n
+    | _ -> bad_term_verb trm "unquote_nat"
   else
-    not_supported_verb trm "unquote_int"
+    not_supported_verb trm "unquote_nat"
 
 let unquote_bool trm =
   if Constr.equal trm ttrue then
@@ -155,11 +158,11 @@ let unquote_char trm =
   let (h,args) = app_full trm [] in
   if Constr.equal h tAscii then
     match args with
-      a :: b :: c :: d :: e :: f :: g :: h :: _ ->
+      a :: b :: c :: d :: e :: f :: g :: h :: [] ->
       let bits = List.rev [a;b;c;d;e;f;g;h] in
       let v = List.fold_left (fun a n -> (a lsl 1) lor if unquote_bool n then 1 else 0) 0 bits in
       char_of_int v
-    | _ -> assert false
+    | _ -> bad_term_verb trm "unquote_char"
   else
     not_supported trm
 
@@ -170,7 +173,7 @@ let unquote_string trm =
       Bytes.create n
     else if Constr.equal h tString then
       match args with
-        c :: s :: _ ->
+        c :: s :: [] ->
         let res = go (n + 1) s in
         let _ = Bytes.set res n (unquote_char c) in
         res
@@ -193,7 +196,7 @@ let unquote_cast_kind trm =
   else if Constr.equal trm kNative then
     Constr.VMcast
   else
-    bad_term trm
+    not_supported_verb trm "unquote_cast_kind"
 
 
 let unquote_name trm =
@@ -202,10 +205,10 @@ let unquote_name trm =
     Names.Anonymous
   else if Constr.equal h nNamed then
     match args with
-      n :: _ -> Names.Name (unquote_ident n)
-    | _ -> raise (Failure "ill-typed, expected name")
+      n :: [] -> Names.Name (unquote_ident n)
+    | _ -> bad_term_verb trm "unquote_name"
   else
-    raise (Failure "non-value")
+    not_supported_verb trm "unquote_name"
 
 
   (* FIXME CHANGES: This code was taken from (old version of) Pretyping, because it is not exposed globally *)
@@ -256,7 +259,7 @@ let unquote_level evd trm (* of type level *) : Evd.evar_map * Univ.Level.t =
     | _ -> bad_term_verb trm "unquote_level"
   else if Constr.equal h tLevelVar then
     match args with
-    | l :: [] -> evd, Univ.Level.var (unquote_int l)
+    | l :: [] -> evd, Univ.Level.var (unquote_nat l)
     | _ -> bad_term_verb trm "unquote_level"
   else
     not_supported_verb trm "unquote_level"
@@ -268,7 +271,7 @@ let unquote_level_expr evd trm (* of type level *) b (* of type bool *) : Evd.ev
   else evd, u
 
 let unquote_universe evd trm (* of type universe *) =
-  let levels = List.map from_coq_pair (from_coq_list trm) in
+  let levels = List.map unquote_pair (unquote_list trm) in
   let evd, u = match levels with
     | [] -> Evd.new_univ_variable (Evd.UnivFlexible false) evd
     | (l,b)::q -> List.fold_left (fun (evd,u) (l,b) -> let evd, u' = unquote_level_expr evd l b
@@ -286,8 +289,8 @@ let unquote_proj (qp : quoted_proj) : (quoted_inductive * quoted_int * quoted_in
      let (h',args') = app_full indpars [] in
      (match args' with
       | tyind :: tynat :: ind :: n :: [] -> (ind, n, idx)
-      | _ -> bad_term_verb qp "not a projection")
-  | _ -> bad_term_verb qp "not a projection"
+      | _ -> bad_term_verb qp "unquote_proj")
+  | _ -> bad_term_verb qp "unquote_proj"
 
 let unquote_inductive trm =
   let (h,args) = app_full trm [] in
@@ -299,7 +302,7 @@ let unquote_inductive trm =
       (try
          match Nametab.locate (Libnames.make_qualid dp nm) with
          | Globnames.ConstRef c ->  CErrors.user_err (str "this not an inductive constant. use tConst instead of tInd : " ++ str s)
-         | Globnames.IndRef i -> (fst i, unquote_int  num)
+         | Globnames.IndRef i -> (fst i, unquote_nat  num)
          | Globnames.VarRef _ -> CErrors.user_err (str "the constant is a variable. use tVar : " ++ str s)
          | Globnames.ConstructRef _ -> CErrors.user_err (str "the constant is a consructor. use tConstructor : " ++ str s)
        with
@@ -321,7 +324,7 @@ let denote_term evdref (trm: Constr.t) : Constr.t =
   let rec aux (trm: Constr.t) : Constr.t =
     (*debug (fun () -> Pp.(str "denote_term" ++ spc () ++ pr_constr trm)) ; *)
     match (inspectTerm trm) with
-    | ACoq_tRel x -> Constr.mkRel (unquote_int x + 1)
+    | ACoq_tRel x -> Constr.mkRel (unquote_nat x + 1)
     | ACoq_tVar x -> Constr.mkVar (unquote_ident x)
     | ACoq_tSort x ->
        let evd, u = unquote_universe !evdref x in evdref := evd; Constr.mkType u
@@ -345,7 +348,7 @@ let denote_term evdref (trm: Constr.t) : Constr.t =
           Not_found -> CErrors.user_err (str "Constant not found : " ++ Pp.str (Libnames.string_of_qualid s)))
     | ACoq_tConstruct (i,idx,_) ->
        let ind = unquote_inductive i in
-       Constr.mkConstruct (ind, unquote_int idx + 1)
+       Constr.mkConstruct (ind, unquote_nat idx + 1)
     | ACoq_tInd (i, _) ->
        let i = unquote_inductive i in
        Constr.mkInd i
@@ -362,21 +365,21 @@ let denote_term evdref (trm: Constr.t) : Constr.t =
        let (names,types,bodies,rargs) = (List.map (fun p->p.adname) lbd,  List.map (fun p->p.adtype) lbd, List.map (fun p->p.adbody) lbd,
                                          List.map (fun p->p.rarg) lbd) in
        let (types,bodies) = (List.map aux types, List.map aux bodies) in
-       let (names,rargs) = (List.map unquote_name names, List.map unquote_int rargs) in
+       let (names,rargs) = (List.map unquote_name names, List.map unquote_nat rargs) in
        let la = Array.of_list in
-       Constr.mkFix ((la rargs,unquote_int i), (la names, la types, la bodies))
+       Constr.mkFix ((la rargs,unquote_nat i), (la names, la types, la bodies))
     | ACoq_tCoFix (lbd, i) ->
        let (names,types,bodies,rargs) = (List.map (fun p->p.adname) lbd,  List.map (fun p->p.adtype) lbd, List.map (fun p->p.adbody) lbd,
                                          List.map (fun p->p.rarg) lbd) in
        let (types,bodies) = (List.map aux types, List.map aux bodies) in
-       let (names,rargs) = (List.map unquote_name names, List.map unquote_int rargs) in
+       let (names,rargs) = (List.map unquote_name names, List.map unquote_nat rargs) in
        let la = Array.of_list in
-       Constr.mkCoFix (unquote_int i, (la names, la types, la bodies))
+       Constr.mkCoFix (unquote_nat i, (la names, la types, la bodies))
     | ACoq_tProj (proj,t) ->
        let (ind, _, narg) = unquote_proj proj in (* is narg the correct projection? *)
        let ind' = unquote_inductive ind in
        let projs = Recordops.lookup_projections ind' in
-       (match List.nth projs (unquote_int narg) with
+       (match List.nth projs (unquote_nat narg) with
         | Some p -> Constr.mkProj (Names.Projection.make p false, aux t)
         | None -> bad_term trm)
     | _ ->  not_supported_verb trm "big_case"
@@ -400,8 +403,8 @@ let denote_reduction_strategy env evm (trm : quoted_reduction_strategy) : Redexp
        (try Unfold [Locus.AllOccurrences, Tacred.evaluable_of_global_reference env (Nametab.global (CAst.make (Libnames.Qualid (Libnames.qualid_of_ident name))))]
         with
         | _ -> CErrors.user_err (str "Constant not found or not a constant: " ++ Pp.str (Names.Id.to_string name)))
-    | _ -> raise  (Failure "ill-typed reduction strategy")
-  else not_supported_verb trm "denote_reduction_strategy"
+    | _ -> bad_term_verb trm "quoted_reduction_strategy"
+  else not_supported_verb trm "quoted_reduction_strategy"
 
 
 
@@ -471,7 +474,7 @@ let denote_mind_entry_universes trm =
  *       (try
  *         match Nametab.locate (Libnames.make_qualid dp nm) with
  *         | Globnames.ConstRef c ->  CErrors.user_err (str "this not an inductive constant. use tConst instead of tInd : " ++ str s)
- *         | Globnames.IndRef i -> (fst i, unquote_int  num)
+ *         | Globnames.IndRef i -> (fst i, unquote_nat  num)
  *         | Globnames.VarRef _ -> CErrors.user_err (str "the constant is a variable. use tVar : " ++ str s)
  *         | Globnames.ConstructRef _ -> CErrors.user_err (str "the constant is a consructor. use tConstructor : " ++ str s)
  *       with
@@ -492,8 +495,8 @@ let declare_inductive (env: Environ.env) (evm: Evd.evar_map) (body: Constr.t) : 
          mind_entry_typename = unquote_ident mt;
          mind_entry_arity = denote_term evdref ma;
          mind_entry_template = unquote_bool mtemp;
-         mind_entry_consnames = List.map unquote_ident (from_coq_list mcn);
-         mind_entry_lc = List.map (denote_term evdref) (from_coq_list mct)
+         mind_entry_consnames = List.map unquote_ident (unquote_list mcn);
+         mind_entry_lc = List.map (denote_term evdref) (unquote_list mct)
        }
     | _ -> raise (Failure "ill-typed one_inductive_entry")
   in
@@ -501,9 +504,9 @@ let declare_inductive (env: Environ.env) (evm: Evd.evar_map) (body: Constr.t) : 
     {
       mind_entry_record = unquote_map_option (unquote_map_option unquote_ident) mr;
       mind_entry_finite = denote_mind_entry_finite mf; (* inductive *)
-      mind_entry_params = List.map (fun p -> let (l,r) = (from_coq_pair p) in (unquote_ident l, (denote_local_entry evdref r)))
-                                   (List.rev (from_coq_list mp));
-      mind_entry_inds = List.map one_ind (from_coq_list mi);
+      mind_entry_params = List.map (fun p -> let (l,r) = (unquote_pair p) in (unquote_ident l, (denote_local_entry evdref r)))
+                                   (List.rev (unquote_list mp));
+      mind_entry_inds = List.map one_ind (unquote_list mi);
       mind_entry_universes = denote_mind_entry_universes uctx;
       mind_entry_private = unquote_map_option unquote_bool mpr (*mpr*)
     } in
@@ -744,7 +747,7 @@ let rec run_template_program_rec ?(intactic=false) (k : Evd.evar_map * Constr.t 
   else if Globnames.eq_gr glob_ref tmInferInstance then
     match args with
     | s :: typ :: [] ->
-       let typ = (match denote_option s with Some s -> let red = denote_reduction_strategy env evm s in reduce_all ~red env evm typ | None -> typ) in
+       let evm, typ = (match denote_option s with Some s -> let red = denote_reduction_strategy env evm s in reduce env evm red typ | None -> evm, typ) in
        (try
           let (evm,t) = Typeclasses.resolve_one_typeclass env evm (EConstr.of_constr typ) in
           k (evm, Constr.mkApp (cSome, [| typ; EConstr.to_constr evm t|]))

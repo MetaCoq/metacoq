@@ -272,7 +272,7 @@ Qed.
 
 Definition printConstant (name  : ident): TemplateMonad unit :=
   X <- tmUnquote (tConst name []) ;;
-  X' <- tmEval all (projT2 X) ;;
+  X' <- tmEval all (my_projT2 X) ;;
  tmPrint X'.
 
 Fail Run TemplateProgram (printInductive "Coq.Arith.PeanoNat.Nat.add").
@@ -298,7 +298,7 @@ Monomorphic Definition Funtm (A B: Type) := A->B.
 Polymorphic Definition Funtp@{i} (A B: Type@{i}) := A->B.
 (* Run TemplateProgram (printConstant "Top.demo.Funtp"). *)
 Locate Funtm.
-Run TemplateProgram (printConstant "Top.demo.Funtm").
+Run TemplateProgram (printConstant "Top.Funtm").
 
 Polymorphic Definition Funtp2@{i j} 
    (A: Type@{i}) (B: Type@{j}) := A->B.
@@ -311,11 +311,11 @@ Definition tmDefinition' : ident -> forall {A}, A -> TemplateMonad unit
 (** A bit less efficient, but does the same job as tmMkDefinition *)
 Definition tmMkDefinition' : ident -> term -> TemplateMonad unit
   := fun id t => x <- tmUnquote t ;;
-              x' <- tmEval all (projT2 x) ;;
+              x' <- tmEval all (my_projT2 x) ;;
               tmDefinition' id x'.
 
 Run TemplateProgram (tmMkDefinition' "foo" add_syntax).
-Run TemplateProgram (tmMkDefinition "foo1" add_syntax).
+Run TemplateProgram (tmEval all add_syntax >>= tmMkDefinition "foo1").
 
 Run TemplateProgram ((tmFreshName "foo") >>= tmPrint).
 Run TemplateProgram (tmAxiom "foo0" (nat -> nat) >>= tmPrint).

@@ -184,7 +184,9 @@ struct
     | Some tm -> Constr.mkApp (cSome, [|ty; tm|])
     | None -> Constr.mkApp (cNone, [|ty|])
 
-  let int_to_nat =
+  (* Quote OCaml int to Coq nat *)
+  let quote_int =
+    (* the cache is global but only accessible through quote_int *)
     let cache = Hashtbl.create 10 in
     let rec recurse i =
       try Hashtbl.find cache i
@@ -200,8 +202,8 @@ struct
 	    result
     in
     fun i ->
-      assert (i >= 0) ;
-      recurse i
+    if i >= 0 then recurse i else
+      CErrors.anomaly (str "Negative int can't be unquoted to nat.")
 
   let quote_bool b =
     if b then ttrue else tfalse
@@ -255,7 +257,7 @@ struct
     if Level.is_prop l then lProp
     else if Level.is_set l then lSet
     else match Level.var_index l with
-         | Some x -> Constr.mkApp (tLevelVar, [| int_to_nat x |])
+         | Some x -> Constr.mkApp (tLevelVar, [| quote_int x |])
          | None -> Constr.mkApp (tLevel, [| string_of_level l|])
 
   let quote_universe s =
@@ -352,7 +354,6 @@ struct
 
   let mkAnon = nAnon
   let mkName id = Constr.mkApp (nNamed, [| id |])
-  let quote_int = int_to_nat
   let quote_kn kn = quote_string (KerName.to_string kn)
   let mkRel i = Constr.mkApp (tRel, [| i |])
   let mkVar id = Constr.mkApp (tVar, [| id |])

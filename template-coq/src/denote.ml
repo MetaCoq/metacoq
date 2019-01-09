@@ -385,7 +385,7 @@ let denote_term evdref (trm: Constr.t) : Constr.t =
     | _ ->  not_supported_verb trm "big_case"
   in aux trm
 
-let denote_reduction_strategy env evm (trm : quoted_reduction_strategy) : Redexpr.red_expr =
+let quoted_reduction_strategy env evm (trm : quoted_reduction_strategy) : Redexpr.red_expr =
   let trm = Reduction.whd_all env trm in
   let (trm, args) = app_full trm [] in
   (* from g_tactic.ml4 *)
@@ -691,7 +691,7 @@ let rec run_template_program_rec ?(intactic=false) (k : Evd.evar_map * Constr.t 
   else if Globnames.eq_gr glob_ref tmEval then
     match args with
     | s(*reduction strategy*)::_(*type*)::trm::[] ->
-       let red = denote_reduction_strategy env evm s in
+       let red = quoted_reduction_strategy env evm s in
        let (evm, trm) = reduce env evm red trm
        in k (evm, trm)
     | _ -> monad_failure "tmEval" 3

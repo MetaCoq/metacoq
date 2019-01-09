@@ -413,19 +413,6 @@ let denote_local_entry evdref trm =
     else (if  Constr.equal h tLocalAssum then Entries.LocalAssumEntry (denote_term evdref x) else bad_term trm)
   | _ -> bad_term trm
 
-let denote_option trm =
-  let (h,args) = app_full trm [] in
-  if Term.eq_constr h cSome then
-    match args with
-      _ :: x :: _ -> Some (x)
-    | _ -> bad_term trm
-  else if Term.eq_constr h cNone then
-    match args with
-      _ :: [] -> None
-    | _ -> bad_term trm
-  else
-    not_supported_verb trm "unqote_map_option"
-  
 let denote_mind_entry_finite trm =
   let (h,args) = app_full trm [] in
   match args with
@@ -437,19 +424,22 @@ let denote_mind_entry_finite trm =
   | _ -> bad_term trm
 
 
-       
+
 let unquote_map_option f trm =
   let (h,args) = app_full trm [] in
   if Constr.equal h cSome then
     match args with
-      _ :: x :: _ -> Some (f x)
+      _ :: x :: [] -> Some (f x)
     | _ -> bad_term trm
   else if Constr.equal h cNone then
     match args with
       _ :: [] -> None
     | _ -> bad_term trm
   else
-    not_supported_verb trm "unqote_map_option"
+    not_supported_verb trm "unquote_map_option"
+
+let denote_option = unquote_map_option (fun x -> x)
+
 
 let denote_ucontext (trm : Constr.t) : UContext.t =
   Univ.UContext.empty (* FIXME *)
@@ -565,7 +555,7 @@ let rec run_template_program_rec ?(intactic=false) (k : Evd.evar_map * Constr.t 
     match args with
     | name::s::typ::body::[] ->
        let name = reduce_all env evm name in
-       let typ = (match denote_option s with Some s -> let red = denote_reduction_strategy env evm s in reduce_all ~red env evm typ | None -> typ) in
+       let evm, typ = (match denote_option s with Some s -> let red = denote_reduction_strategy env evm s in reduce env evm red typ | None -> evm, typ) in
        let univs =
          if Flags.is_universe_polymorphism () then Polymorphic_const_entry (Evd.to_universe_context evm)
          else Monomorphic_const_entry (Evd.universe_context_set evm) in
@@ -577,17 +567,17 @@ let rec run_template_program_rec ?(intactic=false) (k : Evd.evar_map * Constr.t 
     match args with
     | name::s::typ::[] ->
        let name = reduce_all env evm name in
-       let typ = (match denote_option s with Some s -> let red = denote_reduction_strategy env evm s in reduce_all ~red env evm typ | None -> typ) in
+       let evm, typ = (match denote_option s with Some s -> let red = denote_reduction_strategy env evm s in reduce env evm red typ | None -> evm, typ) in
        let param = Entries.ParameterEntry (None, (typ, Monomorphic_const_entry (Evd.universe_context_set evm)), None) in
        let n = Declare.declare_constant (unquote_ident name) (param, Decl_kinds.IsDefinition Decl_kinds.Definition) in
        k (evm, Constr.mkConst n)
-    | _ -> monad_failure "tmAxiomRed" 2
+    | _ -> monad_failure "tmAxiomRed" 3
   else if Globnames.eq_gr glob_ref tmLemmaRed then
-    if intactic then not_in_tactic "tmLemmaRed" else  
+    if intactic then not_in_tactic "tmLemmaRed" else
     match args with
     | name::s::typ::[] ->
        let name = reduce_all env evm name in
-       let typ = (match denote_option s with Some s -> let red = denote_reduction_strategy env evm s in reduce_all ~red env evm typ | None -> typ) in
+       let evm, typ = (match denote_option s with Some s -> let red = denote_reduction_strategy env evm s in reduce env evm red typ | None -> evm, typ) in
        let poly = Flags.is_universe_polymorphism () in
        let kind = (Decl_kinds.Global, poly, Decl_kinds.Definition) in
        let hole = CAst.make (Constrexpr.CHole (None, Misctypes.IntroAnonymous, None)) in
@@ -607,9 +597,9 @@ let rec run_template_program_rec ?(intactic=false) (k : Evd.evar_map * Constr.t 
     (* let evm, t = Evd.fresh_global env evm gr in k (env, evm, t) *)
     (* k (env, evm, unit_tt) *)
     (* )); *)
-    | _ -> monad_failure "tmLemmaRed" 2
+    | _ -> monad_failure "tmLemmaRed" 3
   else if Globnames.eq_gr glob_ref tmMkDefinition then
-    if intactic then not_in_tactic "tmExistingInstance" else  
+    if intactic then not_in_tactic "tmExistingInstance" else
     match args with
     | name::body::[] ->
        let name = reduce_all env evm name in

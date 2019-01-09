@@ -386,7 +386,7 @@ let denote_term evdref (trm: Constr.t) : Constr.t =
     | _ ->  not_supported_verb trm "big_case"
   in aux trm
 
-let denote_reduction_strategy env evm (trm : quoted_reduction_strategy) : Redexpr.red_expr =
+let quote_reduction_strategy env evm (trm : quoted_reduction_strategy) : Redexpr.red_expr =
   let trm = Reduction.whd_all env trm in
   let (trm, args) = app_full trm [] in
   (* from g_tactic.ml4 *)
@@ -404,8 +404,8 @@ let denote_reduction_strategy env evm (trm : quoted_reduction_strategy) : Redexp
        (try Unfold [Locus.AllOccurrences, Tacred.evaluable_of_global_reference env (Nametab.global (CAst.make (Libnames.Qualid (Libnames.qualid_of_ident name))))]
         with
         | _ -> CErrors.user_err (str "Constant not found or not a constant: " ++ Pp.str (Names.Id.to_string name)))
-    | _ -> bad_term_verb trm "quoted_reduction_strategy"
-  else not_supported_verb trm "quoted_reduction_strategy"
+    | _ -> bad_term_verb trm "quote_reduction_strategy"
+  else not_supported_verb trm "quote_reduction_strategy"
 
 
 
@@ -535,7 +535,7 @@ let rec run_template_program_rec ?(intactic=false) (k : Evd.evar_map * Constr.t 
     run_template_program_rec ~intactic:intactic (fun (evm, ar) -> run_template_program_rec ~intactic:intactic k env (evm, Constr.mkApp (f, [|ar|]))) env (evm, a)
   | TmDefinition (name,s,typ,body) ->
     let name = reduce_all env evm name in
-    let evm, typ = (match denote_option s with Some s -> let red = denote_reduction_strategy env evm s in reduce env evm red typ | None -> evm, typ) in
+    let evm, typ = (match denote_option s with Some s -> let red = quote_reduction_strategy env evm s in reduce env evm red typ | None -> evm, typ) in
     let univs =
       if Flags.is_universe_polymorphism () then Polymorphic_const_entry (Evd.to_universe_context evm)
       else Monomorphic_const_entry (Evd.universe_context_set evm) in
@@ -543,13 +543,13 @@ let rec run_template_program_rec ?(intactic=false) (k : Evd.evar_map * Constr.t 
     k (evm, Constr.mkConst n)
   | TmAxiom (name,s,typ) ->
     let name = reduce_all env evm name in
-    let evm, typ = (match denote_option s with Some s -> let red = denote_reduction_strategy env evm s in reduce env evm red typ | None -> evm, typ) in
+    let evm, typ = (match denote_option s with Some s -> let red = quote_reduction_strategy env evm s in reduce env evm red typ | None -> evm, typ) in
     let param = Entries.ParameterEntry (None, (typ, Monomorphic_const_entry (Evd.universe_context_set evm)), None) in
     let n = Declare.declare_constant (unquote_ident name) (param, Decl_kinds.IsDefinition Decl_kinds.Definition) in
     k (evm, Constr.mkConst n)
   | TmLemma (name,s,typ) ->
     let name = reduce_all env evm name in
-    let evm, typ = (match denote_option s with Some s -> let red = denote_reduction_strategy env evm s in reduce env evm red typ | None -> evm, typ) in
+    let evm, typ = (match denote_option s with Some s -> let red = quote_reduction_strategy env evm s in reduce env evm red typ | None -> evm, typ) in
     let poly = Flags.is_universe_polymorphism () in
     let kind = (Decl_kinds.Global, poly, Decl_kinds.Definition) in
     let hole = CAst.make (Constrexpr.CHole (None, Misctypes.IntroAnonymous, None)) in
@@ -634,7 +634,7 @@ let rec run_template_program_rec ?(intactic=false) (k : Evd.evar_map * Constr.t 
     let s = quote_string (Names.ModPath.to_string mp) in
     k (evm, s)
   | TmEval (s, trm) ->
-    let red = denote_reduction_strategy env evm s in
+    let red = quote_reduction_strategy env evm s in
     let (evm, trm) = reduce env evm red trm
     in k (evm, trm)
   | TmMkInductive mind ->
@@ -674,7 +674,7 @@ let rec run_template_program_rec ?(intactic=false) (k : Evd.evar_map * Constr.t 
   | TmExistingInstance name ->
     Classes.existing_instance true (CAst.make (Libnames.Qualid (Libnames.qualid_of_ident (unquote_ident name)))) None
   | TmInferInstance (s, typ) ->
-       let evm, typ = (match denote_option s with Some s -> let red = denote_reduction_strategy env evm s in reduce env evm red typ | None -> evm, typ) in
+       let evm, typ = (match denote_option s with Some s -> let red = quote_reduction_strategy env evm s in reduce env evm red typ | None -> evm, typ) in
        (try
           let (evm,t) = Typeclasses.resolve_one_typeclass env evm (EConstr.of_constr typ) in
           k (evm, Constr.mkApp (cSome, [| typ; EConstr.to_constr evm t|]))

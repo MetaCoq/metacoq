@@ -40,7 +40,7 @@ Cumulative Inductive TemplateMonad@{t u} : Type@{t} -> Type :=
 | tmFail : forall {A:Type@{t}}, string -> TemplateMonad A
 | tmEval : reductionStrategy -> forall {A:Type@{t}}, A -> TemplateMonad A
 
-                                                                 
+
 (* Return the defined constant *)
 | tmDefinitionRed : ident -> option reductionStrategy -> forall {A:Type@{t}}, A -> TemplateMonad A
 | tmAxiomRed : ident -> option reductionStrategy -> forall A : Type@{t}, TemplateMonad A

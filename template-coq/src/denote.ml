@@ -258,8 +258,13 @@ let _ =
       optread  = (fun () -> !strict_unquote_universe_mode);
       optwrite = (fun b -> strict_unquote_universe_mode := b) }
 
+let map_evm (f : 'a -> 'b -> 'a * 'c) (evm : 'a) (l : 'b list) : 'a * ('c list) =
+  let evm, res = List.fold_left (fun (evm, l) b -> let evm, c = f evm b in evm, c :: l) (evm, []) l in
+  evm, List.rev res
 
-let get_level s =
+
+
+let get_level evm s =
   if CString.string_contains ~where:s ~what:"." then
     match List.rev (CString.split '.' s) with
     | [] -> CErrors.anomaly (str"Invalid universe name " ++ str s ++ str".")
@@ -268,62 +273,71 @@ let get_level s =
        let dp = DirPath.make (List.map Id.of_string dp) in
        let l = Univ.Level.make dp num in
        try
-         ignore (UGraph.add_universe l false (Environ.universes(Global.env ())));
+         let evm = Evd.add_global_univ evm l in
+         (* ignore (UGraph.add_universe l false evm); *)
          if !strict_unquote_universe_mode then
            CErrors.user_err ~hdr:"unquote_level" (str ("Level "^s^" is not a declared level and you are in Strict Unquote Universe Mode."))
          else (
-           Global.push_context false (Univ.UContext.make (Univ.Instance.of_array [|l|], Univ.Constraint.empty));
-           Feedback.msg_info (str"Fresh universe " ++ Level.pr l ++ str" was added to the global context.");
-           l)
+           (* Global.push_context false (Univ.UContext.make (Univ.Instance.of_array [|l|], Univ.Constraint.empty)); *)
+           Feedback.msg_info (str"Fresh universe " ++ Level.pr l ++ str" was added to the context.");
+           evm, l)
        with
-       | UGraph.AlreadyDeclared -> l
+       | UGraph.AlreadyDeclared -> evm, l
   else
     try
-      Evd.universe_of_name (Evd.from_env (Global.env ())) (Id.of_string s)
+      evm, Evd.universe_of_name evm (Id.of_string s)
     with Not_found ->
       CErrors.user_err ~hdr:"unquote_level" (str ("Level "^s^" is not a declared level."))
 
 
 
-let unquote_level trm (* of type level *) : Univ.Level.t =
+let unquote_level evm trm (* of type level *) : Evd.evar_map * Univ.Level.t =
   let (h,args) = app_full trm [] in
   if Constr.equal h lProp then
     match args with
-    | [] -> Univ.Level.prop
+    | [] -> evm, Univ.Level.prop
     | _ -> bad_term_verb trm "unquote_level"
   else if Constr.equal h lSet then
     match args with
-    | [] -> Univ.Level.set
+    | [] -> evm, Univ.Level.set
     | _ -> bad_term_verb trm "unquote_level"
   else if Constr.equal h tLevel then
     match args with
     | s :: [] -> debug (fun () -> str "Unquoting level " ++ pr_constr trm);
-                 get_level (unquote_string s)
+                 get_level evm (unquote_string s)
     | _ -> bad_term_verb trm "unquote_level"
   else if Constr.equal h tLevelVar then
     match args with
-    | l :: [] -> Univ.Level.var (unquote_nat l)
+    | l :: [] -> evm, Univ.Level.var (unquote_nat l)
     | _ -> bad_term_verb trm "unquote_level"
   else
     not_supported_verb trm "unquote_level"
 
-let unquote_level_expr trm (* of type level *) b (* of type bool *) : Univ.Universe.t=
-  let u = Univ.Universe.make (unquote_level trm) in
-  if unquote_bool b then Univ.Universe.super u else u
+let unquote_level_expr evm trm (* of type level *) b (* of type bool *) : Evd.evar_map * Univ.Universe.t =
+  let evm, l = unquote_level evm trm in
+  let u = Univ.Universe.make l in
+  evm, if unquote_bool b then Univ.Universe.super u else u
 
 
-let unquote_universe trm (* of type universe *) =
+let unquote_universe evm trm (* of type universe *) =
   let levels = List.map unquote_pair (unquote_list trm) in
   match levels with
   | [] -> if !strict_unquote_universe_mode then
             CErrors.user_err ~hdr:"unquote_universe" (str "It is not possible to unquote an empty universe in Strict Unquote Universe Mode.")
           else
-            let evm, u = Evd.new_univ_variable (Evd.UnivFlexible false) (Evd.from_env (Global.env ())) in
-            Feedback.msg_info (str"Fresh universe " ++ Universe.pr u ++ str" was added to the global context.");
-            Global.push_context false (Evd.to_universe_context evm);
-            u
-  | (l,b)::q -> List.fold_left (fun u (l,b) -> Univ.Universe.sup u (unquote_level_expr l b))
-                               (unquote_level_expr l b) q
+            let evm, u = Evd.new_univ_variable (Evd.UnivFlexible false) evm in
+            Feedback.msg_info (str"Fresh universe " ++ Universe.pr u ++ str" was added to the context.");
+            (* Global.push_context false (Evd.to_universe_context evm); *)
+            evm, u
+  | (l,b)::q -> List.fold_left (fun (evm,u) (l,b) -> let evm, u' = unquote_level_expr evm l b
+                                                     in evm, Univ.Universe.sup u u')
+                               (unquote_level_expr evm l b) q
+
+let unquote_universe_instance evm trm (* of type universe_instance *) =
+  let l = unquote_list trm in
+  let evm, l = map_evm unquote_level evm l in
+  evm, Univ.Instance.of_array (Array.of_list l)
+
 
 
 let unquote_kn (k : quoted_kernel_name) : Libnames.qualid =
@@ -367,69 +381,84 @@ let rec app_full_abs (trm: Constr.t) (acc: Constr.t list) =
   | _ -> (trm, acc)
 
 
-let denote_term (trm: Constr.t) : Constr.t =
-  let rec aux (trm: Constr.t) : Constr.t =
-    (*debug (fun () -> Pp.(str "denote_term" ++ spc () ++ pr_constr trm)) ; *)
+let denote_term evm (trm: Constr.t) : Evd.evar_map * Constr.t =
+  let rec aux evm (trm: Constr.t) : _ * Constr.t =
+    debug (fun () -> Pp.(str "denote_term" ++ spc () ++ pr_constr trm)) ;
     match (inspectTerm trm) with
-    | ACoq_tRel x -> Constr.mkRel (unquote_nat x + 1)
-    | ACoq_tVar x -> Constr.mkVar (unquote_ident x)
-    | ACoq_tSort x -> Constr.mkType (unquote_universe x)
-    | ACoq_tCast (t,c,ty) -> Constr.mkCast (aux t, unquote_cast_kind c, aux ty)
-    | ACoq_tProd (n,t,b) -> Constr.mkProd (unquote_name n, aux t, aux b)
-    | ACoq_tLambda (n,t,b) -> Constr.mkLambda (unquote_name n, aux t, aux b)
-    | ACoq_tLetIn (n,e,t,b) -> Constr.mkLetIn (unquote_name n, aux e, aux t, aux b)
-    | ACoq_tApp (f,xs) ->
-       Constr.mkApp (aux f, Array.of_list (List.map aux  xs))
-    | ACoq_tConst (s,_) ->
-       (* TODO: unquote universes *)
-       let s = (unquote_kn s) in
+    | ACoq_tRel x -> evm, Constr.mkRel (unquote_nat x + 1)
+    | ACoq_tVar x -> evm, Constr.mkVar (unquote_ident x)
+    | ACoq_tSort x -> let evm, u = unquote_universe evm x in evm, Constr.mkType u
+    | ACoq_tCast (t,c,ty) -> let evm, t = aux evm t in
+                             let evm, ty = aux evm ty in
+                             evm, Constr.mkCast (t, unquote_cast_kind c, ty)
+    | ACoq_tProd (n,t,b) -> let evm, t = aux evm t in
+                            let evm, b = aux evm b in
+                            evm, Constr.mkProd (unquote_name n, t, b)
+    | ACoq_tLambda (n,t,b) -> let evm, t = aux evm t in
+                              let evm, b = aux evm b in
+                              evm, Constr.mkLambda (unquote_name n, t, b)
+    | ACoq_tLetIn (n,e,t,b) -> let evm, e = aux evm e in
+                               let evm, t = aux evm t in
+                               let evm, b = aux evm b in
+                               evm, Constr.mkLetIn (unquote_name n, e, t, b)
+    | ACoq_tApp (f,xs) -> let evm, f = aux evm f in
+                          let evm, xs = map_evm aux evm xs in
+                          evm, Constr.mkApp (f, Array.of_list xs)
+    | ACoq_tConst (s,u) ->
+       let s = unquote_kn s in
+       let evm, u = unquote_universe_instance evm u in
        (try
           match Nametab.locate s with
-          | Globnames.ConstRef c -> Universes.constr_of_global (Globnames.ConstRef c)
-          | Globnames.IndRef _ -> CErrors.user_err (str "the constant is an inductive. use tInd : "
-                                                    ++  Pp.str (Libnames.string_of_qualid s))
-          | Globnames.VarRef _ -> CErrors.user_err (str "the constant is a variable. use tVar : " ++ Pp.str (Libnames.string_of_qualid s))
-          | Globnames.ConstructRef _ -> CErrors.user_err (str "the constant is a consructor. use tConstructor : "++ Pp.str (Libnames.string_of_qualid s))
+          | Globnames.ConstRef c -> evm, Constr.mkConstU (c, u)
+          | Globnames.IndRef _ -> CErrors.user_err (str"The constant " ++ Libnames.pr_qualid s ++ str" is an inductive, use tInd.")
+          | Globnames.VarRef _ -> CErrors.user_err (str"The constant " ++ Libnames.pr_qualid s ++ str" is a variable, use tVar.")
+          | Globnames.ConstructRef _ -> CErrors.user_err (str"The constant " ++ Libnames.pr_qualid s ++ str" is a constructor, use tConstructor.")
         with
-          Not_found -> CErrors.user_err (str "Constant not found : " ++ Pp.str (Libnames.string_of_qualid s)))
-    | ACoq_tConstruct (i,idx,_) ->
+          Not_found -> CErrors.user_err (str"Constant not found: " ++ Libnames.pr_qualid s))
+    | ACoq_tConstruct (i,idx,u) ->
        let ind = unquote_inductive i in
-       Constr.mkConstruct (ind, unquote_nat idx + 1)
-    | ACoq_tInd (i, _) ->
+       let evm, u = unquote_universe_instance evm u in
+       evm, Constr.mkConstructU ((ind, unquote_nat idx + 1), u)
+    | ACoq_tInd (i, u) ->
        let i = unquote_inductive i in
-       Constr.mkInd i
-    | ACoq_tCase (info, ty, d, brs) ->
-       let i, _ = info in
+       let evm, u = unquote_universe_instance evm u in
+       evm, Constr.mkIndU (i, u)
+    | ACoq_tCase ((i, _), ty, d, brs) ->
        let ind = unquote_inductive i in
+       let evm, ty = aux evm ty in
+       let evm, d = aux evm d in
+       let evm, brs = map_evm aux evm (List.map snd brs) in
+       (* todo: reify better case_info *)
        let ci = Inductiveops.make_case_info (Global.env ()) ind Constr.RegularStyle in
-       let denote_branch br =
-         let _, br = br in
-         aux br
-       in
-       Constr.mkCase (ci, aux ty, aux d, Array.of_list (List.map denote_branch (brs)))
+       evm, Constr.mkCase (ci, ty, d, Array.of_list brs)
     | ACoq_tFix (lbd, i) ->
        let (names,types,bodies,rargs) = (List.map (fun p->p.adname) lbd,  List.map (fun p->p.adtype) lbd, List.map (fun p->p.adbody) lbd,
                                          List.map (fun p->p.rarg) lbd) in
-       let (types,bodies) = (List.map aux types, List.map aux bodies) in
+       let evm, types = map_evm aux evm types in
+       let evm, bodies = map_evm aux evm bodies in
        let (names,rargs) = (List.map unquote_name names, List.map unquote_nat rargs) in
        let la = Array.of_list in
-       Constr.mkFix ((la rargs,unquote_nat i), (la names, la types, la bodies))
+       evm, Constr.mkFix ((la rargs,unquote_nat i), (la names, la types, la bodies))
     | ACoq_tCoFix (lbd, i) ->
        let (names,types,bodies,rargs) = (List.map (fun p->p.adname) lbd,  List.map (fun p->p.adtype) lbd, List.map (fun p->p.adbody) lbd,
                                          List.map (fun p->p.rarg) lbd) in
-       let (types,bodies) = (List.map aux types, List.map aux bodies) in
+       let evm, types = map_evm aux evm types in
+       let evm, bodies = map_evm aux evm bodies in
        let (names,rargs) = (List.map unquote_name names, List.map unquote_nat rargs) in
        let la = Array.of_list in
-       Constr.mkCoFix (unquote_nat i, (la names, la types, la bodies))
+       evm, Constr.mkCoFix (unquote_nat i, (la names, la types, la bodies))
     | ACoq_tProj (proj,t) ->
-       let (ind, _, narg) = unquote_proj proj in (* is narg the correct projection? *)
+       let (ind, _, narg) = unquote_proj proj in (* todo: is narg the correct projection? *)
        let ind' = unquote_inductive ind in
        let projs = Recordops.lookup_projections ind' in
+       let evm, t = aux evm t in
        (match List.nth projs (unquote_nat narg) with
-        | Some p -> Constr.mkProj (Names.Projection.make p false, aux t)
+        | Some p -> evm, Constr.mkProj (Names.Projection.make p false, t)
         | None -> bad_term trm)
     | _ ->  not_supported_verb trm "big_case"
-  in aux trm
+  in aux evm trm
+
+
 
 let quote_reduction_strategy env evm (trm : quoted_reduction_strategy) : Redexpr.red_expr =
   let trm = Reduction.whd_all env trm in
@@ -454,13 +483,19 @@ let quote_reduction_strategy env evm (trm : quoted_reduction_strategy) : Redexpr
 
 
 
-let denote_local_entry trm =
+let denote_local_entry evm trm =
   let (h,args) = app_full trm [] in
   match args with
     x :: [] ->
-    if Constr.equal h tLocalDef then Entries.LocalDefEntry (denote_term x)
-    else (if  Constr.equal h tLocalAssum then Entries.LocalAssumEntry (denote_term x) else bad_term trm)
-  | _ -> bad_term trm
+    if Constr.equal h tLocalDef then
+      let evm, x = denote_term evm x in
+      evm, Entries.LocalDefEntry x
+    else if  Constr.equal h tLocalAssum then
+      let evm, x = denote_term evm x in
+      evm, Entries.LocalAssumEntry x
+    else
+      not_supported_verb trm "denote_local_entry"
+  | _ -> bad_term_verb trm "denote_local_entry"
 
 let denote_mind_entry_finite trm =
   let (h,args) = app_full trm [] in
@@ -469,8 +504,8 @@ let denote_mind_entry_finite trm =
     if Constr.equal h cFinite then Declarations.Finite
     else if  Constr.equal h cCoFinite then Declarations.CoFinite
     else if  Constr.equal h cBiFinite then Declarations.BiFinite
-    else bad_term trm
-  | _ -> bad_term trm
+    else not_supported_verb trm "denote_mind_entry_finite"
+  | _ -> bad_term_verb trm "denote_mind_entry_finite"
 
 
 
@@ -490,76 +525,106 @@ let unquote_map_option f trm =
 let denote_option = unquote_map_option (fun x -> x)
 
 
-let denote_ucontext (trm : Constr.t) : UContext.t =
-  Univ.UContext.empty (* FIXME *)
 
-let denote_universe_context (trm : Constr.t) : bool * UContext.t =
-  let (h, args) = app_full trm [] in
-  let b =
-   if Constr.equal h cMonomorphic_ctx then Some false
-    else if Constr.equal h cPolymorphic_ctx then Some true
-    else None
-  in
-  match b, args with
-  | Some poly, ctx :: [] ->
-     poly, denote_ucontext ctx
-  | _, _ -> bad_term trm
-
-let denote_mind_entry_universes trm =
-  match denote_universe_context trm with
-  | false, ctx -> Monomorphic_ind_entry (Univ.ContextSet.of_context ctx)
-  | true, ctx -> Polymorphic_ind_entry ctx
-
-(* let denote_inductive_first trm =
- *   let (h,args) = app_full trm [] in
- *   if Constr.equal h tmkInd then
- *     match args with
- *       nm :: num :: _ ->
- *       let s = (unquote_string nm) in
- *       let (dp, nm) = split_name s in
- *       (try
- *         match Nametab.locate (Libnames.make_qualid dp nm) with
- *         | Globnames.ConstRef c ->  CErrors.user_err (str "this not an inductive constant. use tConst instead of tInd : " ++ str s)
- *         | Globnames.IndRef i -> (fst i, unquote_nat  num)
- *         | Globnames.VarRef _ -> CErrors.user_err (str "the constant is a variable. use tVar : " ++ str s)
- *         | Globnames.ConstructRef _ -> CErrors.user_err (str "the constant is a consructor. use tConstructor : " ++ str s)
- *       with
- *       Not_found ->   CErrors.user_err (str "Constant not found : " ++ str s))
- *     | _ -> assert false
- *   else
- *     bad_term_verb trm "non-constructor" *)
-
-let declare_inductive (env: Environ.env) (evm: Evd.evar_map) (body: Constr.t) : unit =
-  let body = reduce_all env evm body in
-  let (_,args) = app_full body [] in (* check that the first component is Build_mut_ind .. *)
-  let one_ind b1 : Entries.one_inductive_entry =
-    let (_,args) = app_full b1 [] in (* check that the first component is Build_one_ind .. *)
-    match args with
-    | mt::ma::mtemp::mcn::mct::[] ->
-       {
-         mind_entry_typename = unquote_ident mt;
-         mind_entry_arity = denote_term ma;
-         mind_entry_template = unquote_bool mtemp;
-         mind_entry_consnames = List.map unquote_ident (unquote_list mcn);
-         mind_entry_lc = List.map denote_term (unquote_list mct)
-       }
-    | _ -> raise (Failure "ill-typed one_inductive_entry")
-  in
-  let mut_ind mr mf mp mi uctx mpr : Entries.mutual_inductive_entry =
-    {
-      mind_entry_record = unquote_map_option (unquote_map_option unquote_ident) mr;
-      mind_entry_finite = denote_mind_entry_finite mf; (* inductive *)
-      mind_entry_params = List.map (fun p -> let (l,r) = (unquote_pair p) in (unquote_ident l, denote_local_entry r))
-                                   (List.rev (unquote_list mp));
-      mind_entry_inds = List.map one_ind (unquote_list mi);
-      mind_entry_universes = denote_mind_entry_universes uctx;
-      mind_entry_private = unquote_map_option unquote_bool mpr (*mpr*)
-    } in
+let unquote_constraint_type trm (* of type constraint_type *) : constraint_type =
+  let (h,args) = app_full trm [] in
   match args with
-    mr::mf::mp::mi::univs::mpr::[] ->
-    ignore(ComInductive.declare_mutual_inductive_with_eliminations (mut_ind mr mf mp mi univs mpr) Names.Id.Map.empty [])
-  | _ -> raise (Failure "ill-typed mutual_inductive_entry")
+    [] ->
+    if Constr.equal h tunivLt then Univ.Lt
+    else if Constr.equal h tunivLe then Univ.Le
+    else if Constr.equal h tunivEq then Univ.Eq
+    else not_supported_verb trm "unquote_constraint_type"
+  | _ -> bad_term_verb trm "unquote_constraint_type"
 
+let unquote_univ_constraint evm c (* of type univ_constraint *) : univ_constraint =
+  let c, l2 = unquote_pair c in
+  let l1, c = unquote_pair c in
+  let evm, l1 = unquote_level evm l1 in
+  let evm, l2 = unquote_level evm l2 in
+  let c = unquote_constraint_type c in
+  (l1, c, l2)
+
+let unquote_constraints evm c (* of type constraints *) : _ * Constraint.t =
+  (* TODO *)
+  evm, Constraint.empty
+
+
+let denote_ucontext evm trm (* of type UContext.t *) : _ * UContext.t =
+  let i, c = unquote_pair trm in
+  let evm, i = unquote_universe_instance evm i in
+  let evm, c = unquote_constraints evm c in
+  evm, Univ.UContext.make (i, c)
+
+(* todo : stick to Coq implem *)
+type universe_context_type = Mono | Poly | Cumul
+
+let denote_universe_context evm trm (* of type universe_context *) : _ * (universe_context_type * UContext.t) =
+  let (h, args) = app_full trm [] in
+  let b = if Constr.equal h cMonomorphic_ctx then Mono
+          else if Constr.equal h cPolymorphic_ctx then Poly
+          else if Constr.equal h cCumulative_ctx then Cumul
+          else not_supported_verb trm "denote_universe_context" in
+  match args with
+  | ctx :: [] -> let evm, ctx = denote_ucontext evm ctx in
+                 evm, (b, ctx)
+  | _ -> bad_term_verb trm "denote_universe_context"
+
+let denote_mind_entry_universes evm trm =
+  match denote_universe_context evm trm with
+  | evm, (Mono, ctx) -> evm, Monomorphic_ind_entry (Univ.ContextSet.of_context ctx)
+  | evm, (Poly, ctx) -> evm, Polymorphic_ind_entry ctx
+  | evm, (Cumul, ctx) -> not_supported_verb trm "denote_mind_entry_universes"
+
+
+let unquote_one_inductive_entry evm trm (* of type one_inductive_entry *) : _ * Entries.one_inductive_entry =
+  let (h,args) = app_full trm [] in
+  if Constr.equal h tBuild_one_inductive_entry then
+    match args with
+    | id::ar::template::cnames::ctms::[] ->
+       let id = unquote_ident id in
+       let evm, ar = denote_term evm ar in
+       let template = unquote_bool template in
+       let cnames = List.map unquote_ident (unquote_list cnames) in
+       let evm, ctms = map_evm denote_term evm (unquote_list ctms) in
+       evm, { mind_entry_typename = id ;
+              mind_entry_arity = ar;
+              mind_entry_template = template;
+              mind_entry_consnames = cnames;
+              mind_entry_lc = ctms }
+    | _ -> bad_term_verb trm "unquote_one_inductive_entry"
+  else
+    not_supported_verb trm "unquote_one_inductive_entry"
+
+let unquote_mutual_inductive_entry evm trm (* of type mutual_inductive_entry *) : _ * Entries.mutual_inductive_entry =
+  let (h,args) = app_full trm [] in
+  if Constr.equal h tBuild_mutual_inductive_entry then
+    match args with
+    | record::finite::params::inds::univs::priv::[] ->
+       let record = unquote_map_option (unquote_map_option unquote_ident) record in
+       let finite = denote_mind_entry_finite finite in
+       let evm, params = map_evm (fun evm p -> let (l,r) = unquote_pair p in
+                                               let evm, e = denote_local_entry evm r in
+                                               evm, (unquote_ident l, e))
+                                 evm (List.rev (unquote_list params)) in (* TODO: rev ?? *)
+       let evm, inds = map_evm unquote_one_inductive_entry evm (unquote_list inds) in
+       let evm, univs = denote_mind_entry_universes evm univs in
+       let priv = unquote_map_option unquote_bool priv in
+       evm, { mind_entry_record = record;
+              mind_entry_finite = finite;
+              mind_entry_params = params;
+              mind_entry_inds = inds;
+              mind_entry_universes = univs;
+              mind_entry_private = priv }
+    | _ -> bad_term_verb trm "unquote_mutual_inductive_entry"
+  else
+    not_supported_verb trm "unquote_mutual_inductive_entry"
+
+
+let declare_inductive (env: Environ.env) (evm: Evd.evar_map) (mind: Constr.t) : unit =
+  let mind = reduce_all env evm mind in
+  debug (fun () -> str"declare_inductive: " ++ pr_constr mind);
+  let evm, mind = unquote_mutual_inductive_entry evm mind in
+  ignore (ComInductive.declare_mutual_inductive_with_eliminations mind Names.Id.Map.empty [])
 
 let not_in_tactic s =
   CErrors.user_err  (str ("You can not use " ^ s ^ " in a tactic."))
@@ -615,7 +680,8 @@ let rec run_template_program_rec ?(intactic=false) (k : Evd.evar_map * Constr.t 
     (* )); *)
   | TmMkDefinition (name, body) ->
     let name = reduce_all env evm name in
-    let trm = denote_term body in
+    let body = reduce_all env evm body in
+    let evm, trm = denote_term evm body in
     let (evm, _) = Typing.type_of env evm (EConstr.of_constr trm) in
     let _ = Declare.declare_definition ~kind:Decl_kinds.Definition (unquote_ident name) (trm, Monomorphic_const_entry (Evd.universe_context_set evm)) in
     k (evm, unit_tt)
@@ -686,9 +752,7 @@ let rec run_template_program_rec ?(intactic=false) (k : Evd.evar_map * Constr.t 
   | TmUnquote t ->
        (try
          let t = reduce_all env evm t in
-         let evdref = ref evm in
-         let t' = denote_term t in
-         let evm = !evdref in
+         let evm, t' = denote_term evm t in
          let typ = Retyping.get_type_of env evm (EConstr.of_constr t') in
          let evm, typ = Evarsolve.refresh_universes (Some false) env evm typ in
          let make_typed_term typ term evm =
@@ -705,8 +769,8 @@ let rec run_template_program_rec ?(intactic=false) (k : Evd.evar_map * Constr.t 
         with Reduction.NotArity -> CErrors.user_err (str "unquoting ill-typed term"))
   | TmUnquoteTyped (typ, t) ->
        let t = reduce_all env evm t in
+       let evm, t' = denote_term evm t in
        let evdref = ref evm in
-       let t' = denote_term t in
        let t' = Typing.e_solve_evars env evdref (EConstr.of_constr t') in
        Typing.e_check env evdref t' (EConstr.of_constr typ);
        let evm = !evdref in

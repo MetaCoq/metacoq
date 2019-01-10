@@ -63,12 +63,11 @@ TACTIC EXTEND denote_term
       [ Proofview.Goal.enter (begin fun gl ->
          let env = Proofview.Goal.env gl in
          let evm = Proofview.Goal.sigma gl in
-         let evdref = ref evm in
-         let c = Denote.denote_term (EConstr.to_constr evm c) in
+         let evm, c = Denote.denote_term evm (EConstr.to_constr evm c) in
          (* TODO : not the right way of retype things *)
-         let def' = Constrextern.extern_constr true env !evdref (EConstr.of_constr c) in
-         let def = Constrintern.interp_constr env !evdref def' in
-         Proofview.tclTHEN (Proofview.Unsafe.tclEVARS !evdref)
+         let def' = Constrextern.extern_constr true env evm (EConstr.of_constr c) in
+         let def = Constrintern.interp_constr env evm def' in
+         Proofview.tclTHEN (Proofview.Unsafe.tclEVARS evm)
 	   (ltac_apply tac (List.map to_ltac_val [fst def]))
       end) ]
 END;;
@@ -112,12 +111,11 @@ VERNAC COMMAND EXTEND Unquote_vernac CLASSIFIED AS SIDEFF
     | [ "Make" "Definition" ident(name) ":=" constr(def) ] ->
       [ let (evm, env) = Pfedit.get_current_context () in
 	let (trm, uctx) = Constrintern.interp_constr env evm def in
-        let evdref = ref (Evd.from_ctx uctx) in
-	let trm = Denote.denote_term (EConstr.to_constr evm trm) in
+	let evm, trm = Denote.denote_term evm (EConstr.to_constr evm trm) in
 	let _ = Declare.declare_definition
                   ~kind:Decl_kinds.Definition
                   name
-                  (trm, Monomorphic_const_entry (Evd.universe_context_set !evdref)) in
+                  (trm, Monomorphic_const_entry (Evd.universe_context_set evm)) in
         () ]
 END;;
 
@@ -128,10 +126,9 @@ VERNAC COMMAND EXTEND Unquote_vernac_red CLASSIFIED AS SIDEFF
         let evm = Evd.from_ctx uctx in
         let (evm,rd) = Tacinterp.interp_redexp env evm rd in
 	let (evm,trm) = Quoter.reduce env evm rd (EConstr.to_constr evm trm) in
-        let evdref = ref evm in
-        let trm = Denote.denote_term trm in
+        let evm, trm = Denote.denote_term evm trm in
 	let _ = Declare.declare_definition ~kind:Decl_kinds.Definition name
-                  (trm, Monomorphic_const_entry (Evd.universe_context_set !evdref)) in
+                  (trm, Monomorphic_const_entry (Evd.universe_context_set evm)) in
         () ]
 END;;
 

@@ -8,7 +8,7 @@ let cast_prop = ref (false)
 (* whether Set Template Cast Propositions is on, as needed for erasure in Certicoq *)
 let is_cast_prop () = !cast_prop
 
-let opt_debug = ref false
+let opt_debug = ref true
 
 let debug (m : unit ->Pp.t) =
   if !opt_debug then
@@ -411,7 +411,7 @@ struct
           let indty, acc = quote_term acc env indty in
 	  let (reified_ctors,acc) =
 	    List.fold_left (fun (ls,acc) (nm,ty,ar) ->
-	      debug (fun () -> Pp.(str "XXXX" ++ spc () ++
+	      debug (fun () -> Pp.(str "opt_hnf_ctor_types:" ++ spc () ++
                             bool !opt_hnf_ctor_types)) ;
 	      let ty = if !opt_hnf_ctor_types then hnf_type (snd envind) ty else ty in
 	      let (ty,acc) = quote_term acc envind ty in

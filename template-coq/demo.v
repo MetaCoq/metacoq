@@ -361,6 +361,8 @@ Test Quote Prop.
 Inductive T : Type :=
   | toto : Type -> T.
 Quote Recursively Definition TT := T.
+
+Unset Strict Unquote Universe Mode.
 Make Definition t := (tSort ([(Level.Level "Top.20000", false)])).
 Make Definition t' := (tSort ([(Level.Level "Top.20000", false); (Level.Level "Top.20001", true)])).
 Make Definition myProp := (tSort [(Level.lProp, false)]).

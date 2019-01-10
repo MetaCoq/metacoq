@@ -1,10 +1,48 @@
 From Template Require Import Ast TemplateMonad Loader monad_utils.
-Require Import String.
-
+Require Import String List Arith.
+Import ListNotations MonadNotation.
 Open Scope string.
-Import MonadNotation.
 
 Set Printing Universes.
+
+Test Quote Type.
+
+Fail Make Definition t1 := (tSort []).
+Fail Make Definition t1 := (tSort [(Level.Level "Top.400", false)]).
+
+Monomorphic Definition T := Type.
+Print Sorted Universes.
+(* Make Definition t1 := (tSort [(Level.Level "Top.2", false)]). *)
+
+Unset Strict Unquote Universe Mode.
+Make Definition t2 := (tSort []).
+Make Definition t3 := (tSort [(Level.Level "Top.400", false)]).
+Make Definition t4 := (tSort [(Level.Level "Top.2", false); (Level.Level "Top.2", true); (Level.Level "Top.200", false)]).
+Print Sorted Universes.
+
+Set Strict Unquote Universe Mode.
+
+Section foo.
+Polymorphic Universe i j.
+Polymorphic Definition T' := Type@{i}.
+
+(* Make Definition T'' := (tSort [(Level.Var "i", false)]). *)
+(* Test Quote (Type@{j} -> Type@{i}). *)
+
+
+Polymorphic Definition pidentity {A : Type} (a : A) := a.
+Test Quote @pidentity.
+Polymorphic Definition selfpid := pidentity (@pidentity).
+Set Printing Universes.
+
+(* Polymorphic Cumulative Inductive list {A : Type} := *)
+(* | nil : list *)
+(* | cons : A -> list -> list. *)
+
+(* Print list. *)
+(* Polymorphic Cumulative Record packType := {pk : Type}. *)
+
+End foo.
 
 Polymorphic Cumulative Inductive test := .
 Run TemplateProgram (α <- tmQuoteInductive "test" ;; tmPrint α).
@@ -76,7 +114,7 @@ End toto.
 (* Set Universe Polymorphism. *)
 
 Monomorphic Universe i j.
-Definition test := (fun (T : Type@{i}) (T2 : Type@{j}) => T -> T2).
+Definition test2 := (fun (T : Type@{i}) (T2 : Type@{j}) => T -> T2).
 Set Printing Universes.
 Print test.
 (* Print Universes. *)
@@ -86,6 +124,7 @@ Quote Definition qtest := Eval compute in (fun (T : Type@{i}) (T2 : Type@{j}) =>
 Print qtest.
 
 Make Definition bla := Eval compute in qtest.
+Unset Strict Unquote Universe Mode.
 Make Definition bla' := (tLambda (nNamed "T") (tSort ((Level.Level "Top.2", false) :: nil)%list) (tLambda (nNamed "T2") (tSort ((Level.Level "Top.1", false) :: nil)%list) (tProd nAnon (tRel 1) (tRel 1)))).
 
 Set Printing Universes.
@@ -121,7 +160,7 @@ Polymorphic Definition F@{i} := Type@{i}.
 
 Quote Definition qT := Eval compute in F.
 Require Import List. Import ListNotations.
-Make Definition T' := (tSort [(Level.Var 1, false)]).
+Make Definition T'2 := (tSort [(Level.Var 1, false)]).
 
 Quote Recursively Definition qT' := F.
 
@@ -131,7 +170,7 @@ Print qFuntp.
 there the poly vars actually show up *)
 
 
-Make Definition t2 := (Ast.tLambda (Ast.nNamed "T") (Ast.tSort [(Level.Level "Top.10001", false)])
+Make Definition t22 := (Ast.tLambda (Ast.nNamed "T") (Ast.tSort [(Level.Level "Top.10001", false)])
                                    (Ast.tLambda (Ast.nNamed "T2") (Ast.tSort [(Level.Level "Top.10002", false)]) (Ast.tProd Ast.nAnon (Ast.tRel 1) (Ast.tRel 1)))).
 Set Printing Universes.
 Print t2.

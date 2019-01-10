@@ -255,6 +255,7 @@ struct
     to_string (Univ.Level.to_string s)
 
   let quote_level l =
+    debug (fun () -> str"quote_level " ++ Level.pr l);
     if Level.is_prop l then lProp
     else if Level.is_set l then lSet
     else match Level.var_index l with
@@ -262,14 +263,7 @@ struct
          | None -> Constr.mkApp (tLevel, [| string_of_level l|])
 
   let quote_universe s =
-    (* hack because we can't recover the list of level*int *)
-    (* todo : map on LSet is now exposed in Coq trunk, we should use it to remove this hack *)
-    let levels = LSet.elements (Universe.levels s) in
-    let levels = List.map (fun l -> let l' = quote_level l in
-                                    (* is indeed i always 0 or 1 ? *)
-                                    let b' = quote_bool (Universe.exists (fun (l2,i) -> Level.equal l l2 && i = 1) s) in
-                                    pair tlevel bool_type l' b')
-                          levels in
+    let levels = Universe.map (fun (l,i) -> pair tlevel bool_type (quote_level l) (if i > 0 then ttrue else tfalse)) s in
     to_coq_list (prod tlevel bool_type) levels
 
   (* todo : can be deduced from quote_level, hence shoud be in the Reify module *)

@@ -29,6 +29,7 @@ theories/WcbvEval.v
 theories/Retyping.v
 theories/All.v
 theories/Extraction.v
+demo.v
 
 # the Template monad
 theories/TemplateMonad.v

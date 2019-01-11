@@ -133,7 +133,7 @@ let inspectTerm (t:Constr.t) :  (Constr.t, quoted_int, quoted_ident, quoted_name
     | _ -> CErrors.user_err (print_term t ++ Pp.str ("has bad structure"))
 
   else
-    CErrors.user_err (str"inspect_term: cannot recognize " ++ print_term t)
+    CErrors.user_err (str"inspect_term: cannot recognize " ++ print_term t ++ str" (maybe you forgot to reduce it?)")
 
 (* Unquote Coq nat to OCaml int *)
 let rec unquote_nat trm =
@@ -459,8 +459,7 @@ let denote_term evm (trm: Constr.t) : Evd.evar_map * Constr.t =
 
 
 
-let quoted_reduction_strategy env evm (trm : quoted_reduction_strategy) : Redexpr.red_expr =
-  let trm = Reduction.whd_all env trm in
+let unquote_reduction_strategy env evm trm (* of type reductionStrategy *) : Redexpr.red_expr =
   let (trm, args) = app_full trm [] in
   (* from g_tactic.ml4 *)
   let default_flags = Redops.make_red_flag [FBeta;FMatch;FFix;FCofix;FZeta;FDeltaBut []] in
@@ -477,8 +476,8 @@ let quoted_reduction_strategy env evm (trm : quoted_reduction_strategy) : Redexp
        (try Unfold [Locus.AllOccurrences, Tacred.evaluable_of_global_reference env (Nametab.global (CAst.make (Libnames.Qualid (Libnames.qualid_of_ident name))))]
         with
         | _ -> CErrors.user_err (str "Constant not found or not a constant: " ++ Pp.str (Names.Id.to_string name)))
-    | _ -> bad_term_verb trm "quoted_reduction_strategy"
-  else not_supported_verb trm "quoted_reduction_strategy"
+    | _ -> bad_term_verb trm "unquote_reduction_strategy"
+  else not_supported_verb trm "unquote_reduction_strategy"
 
 
 
@@ -800,7 +799,7 @@ let rec run_template_program_rec ?(intactic=false) (k : Evd.evar_map * Constr.t 
   else if Globnames.eq_gr glob_ref tmEval then
     match args with
     | s(*reduction strategy*)::_(*type*)::trm::[] ->
-       let red = quoted_reduction_strategy env evm s in
+       let red = unquote_reduction_strategy env evm s in
        let (evm, trm) = reduce env evm red trm
        in k (evm, trm)
     | _ -> monad_failure "tmEval" 3

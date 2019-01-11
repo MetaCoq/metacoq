@@ -297,8 +297,8 @@ Set Printing Universes.
 Monomorphic Definition Funtm (A B: Type) := A->B.
 Polymorphic Definition Funtp@{i} (A B: Type@{i}) := A->B.
 (* Run TemplateProgram (printConstant "Top.demo.Funtp"). *)
-Locate Funtm.
-Run TemplateProgram (printConstant "Top.Funtm").
+(* Locate Funtm. *)
+(* Run TemplateProgram (printConstant "Top.Funtm"). *)
 
 Polymorphic Definition Funtp2@{i j} 
    (A: Type@{i}) (B: Type@{j}) := A->B.

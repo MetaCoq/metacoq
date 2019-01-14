@@ -142,9 +142,8 @@ END;;
 VERNAC COMMAND EXTEND Run_program CLASSIFIED AS SIDEFF
     | [ "Run" "TemplateProgram" constr(def) ] ->
       [ let (evm, env) = Pfedit.get_current_context () in
-        let (def, _) = Constrintern.interp_constr env evm def in
-        (* todo : uctx ? *)
-        Denote.run_template_program_rec (fun _ -> ()) (Global.env ()) (evm, (EConstr.to_constr evm def)) ]
+        let (evm, def) = Constrintern.interp_open_constr env evm def in
+        Denote.run_template_program_rec (fun _ -> ()) env (evm, (EConstr.to_constr evm def)) ]
 END;;
 
 TACTIC EXTEND run_program

@@ -10,8 +10,17 @@ Open Scope sigma_scope.
 
 Local Existing Instance config.default_checker_flags.
 
-Reserved Notation "'tsl_ty_param'".
 
+Fixpoint refresh_universes (t : term) {struct t} :=
+  match t with
+  | tSort s => tSort (if Universe.is_level s then s else [])
+  | tProd na b t => tProd na b (refresh_universes t)
+  | tLetIn na b t' t => tLetIn na b t' (refresh_universes t)
+  | _ => t
+  end.
+
+
+Reserved Notation "'tsl_ty_param'".
 
 Fixpoint tsl_rec1 (n : nat) (t : term) {struct t} : term :=
   match t with
@@ -79,23 +88,12 @@ with tsl_term  (fuel : nat) (Σ : global_context) (E : tsl_table) (Γ : context)
   | tCast t c A => t' <- tsl_term fuel Σ E Γ t ;;
                   A' <- tsl_ty_param fuel Σ E Γ A ;;
                   ret (tCast t' c A')
-  | tConst s univs =>
-    match lookup_tsl_table E (ConstRef s) with
-    | Some t => ret t
-    | None => raise (TranslationNotFound s)
-    end
-  | tInd i univs =>
-    match lookup_tsl_table E (IndRef i) with
-    | Some t => ret t
-    | None => raise (TranslationNotFound (string_of_gref (IndRef i)))
-    end
-  | tConstruct i n univs =>
-    match lookup_tsl_table E (ConstructRef i n) with
-    | Some t => ret t
-    | None => raise (TranslationNotFound (string_of_gref (ConstructRef i n)))
-    end
+  | tConst s univs => lookup_tsl_table' E (ConstRef s)
+  | tInd i univs => lookup_tsl_table' E (IndRef i)
+  | tConstruct i n univs => lookup_tsl_table' E (ConstructRef i n)
   | t => match infer Σ Γ t with
-        | Checked typ => let t1 := tsl_rec1 0 t in
+        | Checked typ => let typ := refresh_universes typ in
+                        let t1 := tsl_rec1 0 t in
                         t2 <- tsl_rec2 fuel Σ E Γ t ;;
                         let typ1 := tsl_rec1 0 typ in
                         typ2 <- tsl_rec2 fuel Σ E Γ typ ;;
@@ -116,7 +114,7 @@ where "'tsl_ty_param'" := (fun fuel Σ E Γ t =>
 Fixpoint replace t k u {struct u} :=
   match u with
   | tRel n =>
-    match nat_compare k n with
+    match Nat.compare k n with
     | Datatypes.Eq => t
     | Datatypes.Gt => tRel n
     | Datatypes.Lt => tRel n
@@ -144,11 +142,12 @@ Fixpoint replace t k u {struct u} :=
 
 
 
-Definition tsl_mind_body (ΣE : tsl_context)
-           (kn kn' : kername) (mind : mutual_inductive_body)
+Definition tsl_mind_body (ΣE : tsl_context) (mp : string)
+           (kn : kername) (mind : mutual_inductive_body)
   : tsl_result (tsl_table * list mutual_inductive_body).
   refine (let tsl_ty' := tsl_ty_param fuel (fst ΣE) (snd ΣE) [] in _).
-  refine (let tsl2' := tsl_rec2 fuel (fst ΣE) (snd ΣE) [] in _).
+  refine (let tsl2' := tsl_rec2 fuel (fst ΣE) (snd ΣE) [] in
+          let kn' := tsl_kn tsl_ident kn mp in _).
   simple refine (let arities := List.map ind_type mind.(ind_bodies) in
                  arities2 <- monad_map tsl2' arities ;;
                  bodies <- _ ;;
@@ -202,25 +201,25 @@ Defined.
 Instance tsl_param : Translation
   := {| tsl_id := tsl_ident ;
         tsl_tm := fun ΣE => tsl_term fuel (fst ΣE) (snd ΣE) [] ;
-        tsl_ty := fun ΣE => tsl_ty_param fuel (fst ΣE) (snd ΣE) [] ;
+        tsl_ty := Some (fun ΣE => tsl_ty_param fuel (fst ΣE) (snd ΣE) []) ;
         tsl_ind := tsl_mind_body |}.
 
-Definition TslParam := @tTranslate tsl_param.
-Definition ImplParam := @tImplement tsl_param.
 
-Notation "'TYPE'" := (exists A, A -> Type).
+Print Visibility.
+Notation "'TYPE'" := (sigma Type (fun A => A -> Type)).
 Notation "'El' A" := (sigma (π1 A) (π2 A)) (at level 20).
 
 Definition ty := nat -> nat.
+Definition to := Type.
 
-Run TemplateProgram (TslParam emptyTC "nat" >>= print_nf).
+Run TemplateProgram (Translate emptyTC "nat" >>= print_nf).
 
 Require Vector.
 Require Even.
-Run TemplateProgram (TslParam emptyTC "list" >>= tmPrint).
+Run TemplateProgram (Translate emptyTC "list" >>= tmPrint).
 Check (listᵗ : forall (A : TYPE), list A.1 -> Type).
 Check (nilᵗ : forall (A : TYPE), listᵗ A nil).
-Check (consᵗ : forall (A : TYPE) (x : El A) (lH : exists l, listᵗ A l),
+Check (consᵗ : forall (A : TYPE) (x : El A) (lH : ∃ l, listᵗ A l),
           listᵗ A (x.1 :: lH.1)).
 
 

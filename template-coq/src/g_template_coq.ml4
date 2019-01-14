@@ -65,10 +65,10 @@ TACTIC EXTEND denote_term
          let evm = Proofview.Goal.sigma gl in
          let evm, c = Denote.denote_term evm (EConstr.to_constr evm c) in
          (* TODO : not the right way of retype things *)
-         let def' = Constrextern.extern_constr true env evm (EConstr.of_constr c) in
-         let def = Constrintern.interp_constr env evm def' in
+         (* let def' = Constrextern.extern_constr true env evm (EConstr.of_constr c) in *)
+         (* let def = Constrintern.interp_constr env evm def' in *)
          Proofview.tclTHEN (Proofview.Unsafe.tclEVARS evm)
-	   (ltac_apply tac (List.map to_ltac_val [fst def]))
+	   (ltac_apply tac (List.map to_ltac_val [EConstr.of_constr c]))
       end) ]
 END;;
 
@@ -150,10 +150,11 @@ END;;
 TACTIC EXTEND run_program
     | [ "run_template_program" constr(c) tactic(tac) ] ->
       [ Proofview.Goal.enter (begin fun gl ->
+         let env = Proofview.Goal.env gl in
          let evm = Proofview.Goal.sigma gl in
          let env = Proofview.Goal.env gl in
          let ret = ref None in
-         Denote.run_template_program_rec ~intactic:true (fun (evm, t) -> ret := Some t) env (evm, EConstr.to_constr evm c);
+         Denote.run_template_program_rec ~intactic:true (fun (env, evm, t) -> ret := Some t) env (evm, EConstr.to_constr evm c);
          match !ret with
            Some c ->
            ltac_apply tac (List.map to_ltac_val [EConstr.of_constr c])

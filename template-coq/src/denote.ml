@@ -212,37 +212,6 @@ let unquote_name trm =
     not_supported_verb trm "unquote_name"
 
 
-  (* FIXME CHANGES: This code was taken from (old version of) Pretyping, because it is not exposed globally *)
-  (* the case for strict universe declarations was removed *)
-
- (* It seems that the way to work with global universe declarations has changed.
-    See: https://github.com/coq/coq/commit/20c98eab851210702b39e1c66e005acfc351d8dd
-    Also, instead of strings, new level manupulation functions
-    use [qualid]. Maybe it's worth considering to make corresponding changes to template-coq representations as well.
-  *)
-
-(* let get_level evd s = *)
-(*   if CString.string_contains ~where:s ~what:"." then *)
-(*     match List.rev (CString.split '.' s) with *)
-(*     | [] -> CErrors.anomaly (str"Invalid universe name " ++ str s ++ str".") *)
-(*     | n :: dp -> *)
-(*        let num = int_of_string n in *)
-(*        let dp = DirPath.make (List.map Id.of_string dp) in *)
-(*        let level = Univ.Level.make dp num in *)
-(*        let evd = *)
-(*          try Evd.add_global_univ evd level *)
-(*          with UGraph.AlreadyDeclared -> evd *)
-(*        in evd, level *)
-(*   else *)
-(*     try *)
-(*       let level = Evd.universe_of_name evd (Id.of_string s) in *)
-(*       evd, level *)
-(*     with Not_found -> *)
-(*       user_err  ~hdr:"interp_universe_level_name" *)
-(*                 (Pp.(str "Undeclared universe: " ++ Id.print (Id.of_string s))) *)
-(* (\* end of code from Pretyping *\) *)
-
-
 (* If strict unquote universe mode is on then fail when unquoting a non *)
 (* declared universe / an empty list of level expressions. *)
 (* Otherwise, add it / a fresh level the global environnment. *)
@@ -274,20 +243,23 @@ let get_level evm s =
        let l = Univ.Level.make dp num in
        try
          let evm = Evd.add_global_univ evm l in
-         (* ignore (UGraph.add_universe l false evm); *)
          if !strict_unquote_universe_mode then
            CErrors.user_err ~hdr:"unquote_level" (str ("Level "^s^" is not a declared level and you are in Strict Unquote Universe Mode."))
-         else (
-           (* Global.push_context false (Univ.UContext.make (Univ.Instance.of_array [|l|], Univ.Constraint.empty)); *)
-           Feedback.msg_info (str"Fresh universe " ++ Level.pr l ++ str" was added to the context.");
-           evm, l)
+         else (Feedback.msg_info (str"Fresh universe " ++ Level.pr l ++ str" was added to the context.");
+               evm, l)
        with
        | UGraph.AlreadyDeclared -> evm, l
   else
     try
       evm, Evd.universe_of_name evm (Id.of_string s)
     with Not_found ->
-      CErrors.user_err ~hdr:"unquote_level" (str ("Level "^s^" is not a declared level."))
+         try
+           let univ, k = Nametab.locate_universe (Libnames.qualid_of_string s) in
+           evm, Univ.Level.make univ k
+         with Not_found ->
+           CErrors.user_err ~hdr:"unquote_level" (str ("Level "^s^" is not a declared level."))
+
+
 
 
 
@@ -327,7 +299,6 @@ let unquote_universe evm trm (* of type universe *) =
           else
             let evm, u = Evd.new_univ_variable (Evd.UnivFlexible false) evm in
             Feedback.msg_info (str"Fresh universe " ++ Universe.pr u ++ str" was added to the context.");
-            (* Global.push_context false (Evd.to_universe_context evm); *)
             evm, u
   | (l,b)::q -> List.fold_left (fun (evm,u) (l,b) -> let evm, u' = unquote_level_expr evm l b
                                                      in evm, Univ.Universe.sup u u')
@@ -634,13 +605,13 @@ let monad_failure_full s k prg =
        str "While trying to run: " ++ fnl () ++ print_term prg ++ fnl () ++
        str "Please file a bug with Template-Coq.")
 
-let rec run_template_program_rec ?(intactic=false) (k : Evd.evar_map * Constr.t -> unit) env ((evm, pgm) : Evd.evar_map * Constr.t) : unit =
+let rec run_template_program_rec ?(intactic=false) (k : Environ.env * Evd.evar_map * Constr.t -> unit) env ((evm, pgm) : Evd.evar_map * Constr.t) : unit =
   let open TemplateMonad in
   let (kind, universes) = next_action env pgm in
   match kind with
-    TmReturn h -> k (evm, h)
+    TmReturn h -> k (env, evm, h)
   | TmBind (a,f) ->
-    run_template_program_rec ~intactic:intactic (fun (evm, ar) -> run_template_program_rec ~intactic:intactic k env (evm, Constr.mkApp (f, [|ar|]))) env (evm, a)
+    run_template_program_rec ~intactic:intactic (fun (env, evm, ar) -> run_template_program_rec ~intactic:intactic k env (evm, Constr.mkApp (f, [|ar|]))) env (evm, a)
   | TmDefinition (name,s,typ,body) ->
     let name = reduce_all env evm name in
     let evm, typ = (match denote_option s with Some s -> let red = unquote_reduction_strategy env evm s in reduce env evm red typ | None -> evm, typ) in
@@ -648,13 +619,15 @@ let rec run_template_program_rec ?(intactic=false) (k : Evd.evar_map * Constr.t 
       if Flags.is_universe_polymorphism () then Polymorphic_const_entry (Evd.to_universe_context evm)
       else Monomorphic_const_entry (Evd.universe_context_set evm) in
     let n = Declare.declare_definition ~kind:Decl_kinds.Definition (unquote_ident name) ~types:typ (body, univs) in
-    k (evm, Constr.mkConst n)
+    let env = Global.env () in
+    k (env, evm, Constr.mkConst n)
   | TmAxiom (name,s,typ) ->
     let name = reduce_all env evm name in
     let evm, typ = (match denote_option s with Some s -> let red = unquote_reduction_strategy env evm s in reduce env evm red typ | None -> evm, typ) in
     let param = Entries.ParameterEntry (None, (typ, Monomorphic_const_entry (Evd.universe_context_set evm)), None) in
     let n = Declare.declare_constant (unquote_ident name) (param, Decl_kinds.IsDefinition Decl_kinds.Definition) in
-    k (evm, Constr.mkConst n)
+    let env = Global.env () in
+    k (env, evm, Constr.mkConst n)
   | TmLemma (name,s,typ) ->
     let name = reduce_all env evm name in
     let evm, typ = (match denote_option s with Some s -> let red = unquote_reduction_strategy env evm s in reduce env evm red typ | None -> evm, typ) in
@@ -669,7 +642,7 @@ let rec run_template_program_rec ?(intactic=false) (k : Evd.evar_map * Constr.t 
        let ctx = Evd.evar_universe_context evm in
        let hook = Lemmas.mk_hook (fun _ gr _ -> let env = Global.env () in
                                                 let evm = Evd.from_env env in
-                                                let evm, t = Evd.fresh_global env evm gr in k (evm, t)) in
+                                                let evm, t = Evd.fresh_global env evm gr in k (env, evm, t)) in  (* todo better *)
        ignore (Obligations.add_definition ident ~term:c cty ctx ~kind ~hook obls)
     (* let kind = Decl_kinds.(Global, Flags.use_polymorphic_flag (), DefinitionBody Definition) in *)
     (* Lemmas.start_proof (unquote_ident name) kind evm (EConstr.of_constr typ) *)
@@ -683,13 +656,14 @@ let rec run_template_program_rec ?(intactic=false) (k : Evd.evar_map * Constr.t 
     let evm, trm = denote_term evm body in
     let (evm, _) = Typing.type_of env evm (EConstr.of_constr trm) in
     let _ = Declare.declare_definition ~kind:Decl_kinds.Definition (unquote_ident name) (trm, Monomorphic_const_entry (Evd.universe_context_set evm)) in
-    k (evm, unit_tt)
+    let env = Global.env () in
+    k (env, evm, unit_tt)
   | TmQuote trm ->
     let qt = TermReify.quote_term env trm (* user should do the reduction (using tmEval) if they want *)
-    in k (evm, qt)
+    in k (env, evm, qt)
   | TmQuoteRec trm ->
     let qt = TermReify.quote_term_rec env trm in
-    k (evm, qt)
+    k (env, evm, qt)
   | TmQuoteInd name ->
        let name = reduce_all env evm name in
        let name = unquote_string name in
@@ -700,7 +674,7 @@ let rec run_template_program_rec ?(intactic=false) (k : Evd.evar_map * Constr.t 
            let _, args = Constr.destApp t in
            (match args with
             | [|kn; decl|] ->
-               k (evm, decl)
+               k (env, evm, decl)
             | _ -> bad_term_verb t "anomaly in quoting of inductive types")
         (* quote_mut_ind produce an entry rather than a decl *)
         (* let c = Environ.lookup_mind (fst ni) env in (\* FIX: For efficienctly, we should also export (snd ni)*\) *)
@@ -718,12 +692,12 @@ let rec run_template_program_rec ?(intactic=false) (k : Evd.evar_map * Constr.t 
          | Some (Right _) -> CErrors.user_err (str name ++ str " refers to an inductive")
          | None -> bad_term_verb pgm "anomaly in QuoteConstant"
        in
-       k (evm, entry)
+       k (env, evm, entry)
   | TmQuoteUnivs ->
     let univs = Environ.universes env in
-    k (evm, quote_ugraph univs)
+    k (env, evm, quote_ugraph univs)
   | TmPrint trm -> Feedback.msg_info (pr_constr trm);
-    k (evm, unit_tt)
+    k (env, evm, unit_tt)
   | TmFail trm ->
     CErrors.user_err (str (unquote_string trm))
   | TmAbout id ->
@@ -732,22 +706,23 @@ let rec run_template_program_rec ?(intactic=false) (k : Evd.evar_map * Constr.t 
       try
         let gr = Smartlocate.locate_global_with_alias (CAst.make (Libnames.qualid_of_string id)) in
         let opt = Constr.mkApp (cSome , [|tglobal_reference ; quote_global_reference gr|]) in
-        k (evm, opt)
+        k (env, evm, opt)
       with
-      | Not_found -> k (evm, Constr.mkApp (cNone, [|tglobal_reference|]))
+      | Not_found -> k (env, evm, Constr.mkApp (cNone, [|tglobal_reference|]))
     end
   | TmCurrentModPath ->
     let mp = Lib.current_mp () in
     (* let dp' = Lib.cwd () in (* different on sections ? *) *)
     let s = quote_string (Names.ModPath.to_string mp) in
-    k (evm, s)
+    k (env, evm, s)
   | TmEval (s, trm) ->
     let red = unquote_reduction_strategy env evm s in
     let (evm, trm) = reduce env evm red trm
-    in k (evm, trm)
+    in k (env, evm, trm)
   | TmMkInductive mind ->
     declare_inductive env evm mind;
-    k (evm, unit_tt)
+    let env = Global.env () in
+    k (env, evm, unit_tt)
   | TmUnquote t ->
        (try
          let t = reduce_all env evm t in
@@ -761,7 +736,7 @@ let rec run_template_program_rec ?(intactic=false) (k : Evd.evar_map * Constr.t 
              let term = Constr.mkApp
                (Constr.mkConstructU (ctor, Univ.Instance.of_array [|u|]), [|typ; t'|]) in
              let evm, _ = Typing.type_of env evm (EConstr.of_constr term) in
-               (evm, term)
+               (env, evm, term)
            | _ -> anomaly (str "texistT_typed_term does not refer to a constructor")
          in
            k (make_typed_term (EConstr.to_constr evm typ) t' evm)
@@ -770,20 +745,21 @@ let rec run_template_program_rec ?(intactic=false) (k : Evd.evar_map * Constr.t 
        let t = reduce_all env evm t in
        let evm, t' = denote_term evm t in
        let evdref = ref evm in
-       let t' = Typing.e_solve_evars env evdref (EConstr.of_constr t') in
-       Typing.e_check env evdref t' (EConstr.of_constr typ);
+       (* let t' = Typing.e_solve_evars env evdref (EConstr.of_constr t') in *)
+       Feedback.msg_debug (Printer.pr_constr typ);
+       Typing.e_check env evdref (EConstr.of_constr t') (EConstr.of_constr typ);
        let evm = !evdref in
-       k (evm, EConstr.to_constr evm t')
+       k (env, evm, t')
   | TmFreshName name ->
     let name' = Namegen.next_ident_away_from (unquote_ident name) (fun id -> Nametab.exists_cci (Lib.make_path id)) in
-    k (evm, quote_ident name')
+    k (env, evm, quote_ident name')
   | TmExistingInstance name ->
     Classes.existing_instance true (CAst.make (Libnames.Qualid (Libnames.qualid_of_ident (unquote_ident name)))) None
   | TmInferInstance (s, typ) ->
        let evm, typ = (match denote_option s with Some s -> let red = unquote_reduction_strategy env evm s in reduce env evm red typ | None -> evm, typ) in
        (try
           let (evm,t) = Typeclasses.resolve_one_typeclass env evm (EConstr.of_constr typ) in
-          k (evm, Constr.mkApp (cSome, [| typ; EConstr.to_constr evm t|]))
+          k (env, evm, Constr.mkApp (cSome, [| typ; EConstr.to_constr evm t|]))
         with
-          Not_found -> k (evm, Constr.mkApp (cNone, [|typ|]))
+          Not_found -> k (env, evm, Constr.mkApp (cNone, [|typ|]))
        )

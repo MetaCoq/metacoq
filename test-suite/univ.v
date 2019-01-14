@@ -12,7 +12,7 @@ Fail Make Definition t1 := (tSort [(Level.Level "Top.400", false)]).
 
 Monomorphic Definition T := Type.
 Print Sorted Universes.
-(* Make Definition t1 := (tSort [(Level.Level "Top.2", false)]). *)
+Make Definition t1 := (tSort [(Level.Level "Top.2", false)]).
 
 Unset Strict Unquote Universe Mode.
 Make Definition t2 := (tSort []).
@@ -22,18 +22,32 @@ Print Sorted Universes.
 
 Set Strict Unquote Universe Mode.
 
-Section foo.
-Polymorphic Universe i j.
-Polymorphic Definition T' := Type@{i}.
+(* Section foo. *)
+Monomorphic Universe i j.
+(* Polymorphic Definition T' := Type@{i}. *)
 
-(* Make Definition T'' := (tSort [(Level.Var "i", false)]). *)
-(* Test Quote (Type@{j} -> Type@{i}). *)
+Test Quote (Type@{j} -> Type@{i}).
+Make Definition T'' := (tSort [(Level.Level "j", false)]).
 
 
 Polymorphic Definition pidentity {A : Type} (a : A) := a.
 Test Quote @pidentity.
 Polymorphic Definition selfpid := pidentity (@pidentity).
+Test Quote @selfpid.
+
+Unset Strict Unquote Universe Mode.
+Print Sorted Universes.
+Constraint i < j.
+Make Definition yuyu := (tConst "Top.selfpid" [Level.Level "j"; Level.Level "i"]).
+
+Quote Definition t0 := nat.
+Run TemplateProgram (tmUnquoteTyped Type t0).
 Set Printing Universes.
+Print Sorted Universes.
+Definition ty : Type := Type.
+Run TemplateProgram (tmUnquoteTyped ty t0).
+
+
 
 (* Polymorphic Cumulative Inductive list {A : Type} := *)
 (* | nil : list *)
@@ -41,8 +55,6 @@ Set Printing Universes.
 
 (* Print list. *)
 (* Polymorphic Cumulative Record packType := {pk : Type}. *)
-
-End foo.
 
 Polymorphic Cumulative Inductive test := .
 Run TemplateProgram (α <- tmQuoteInductive "test" ;; tmPrint α).

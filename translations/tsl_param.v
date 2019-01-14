@@ -141,7 +141,7 @@ Definition tsl_mind_body (E : tsl_table)
                               mind.(ind_bodies))).
 Defined.
 
-
+Unset Strict Unquote Universe Mode.
 Run TemplateProgram (tm <- tmQuote (forall A, A -> A) ;;
                      let tm' := tsl_rec1 [] tm in
                      tmUnquote tm' >>= tmPrint).

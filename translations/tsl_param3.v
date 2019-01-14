@@ -121,6 +121,8 @@ Definition ImplParam := @tImplement tsl_param.
 Notation "'TYPE'" := (exists A, A -> Type).
 Notation "'El' A" := (sigma (π1 A) (π2 A)) (at level 20).
 
+Unset Strict Unquote Universe Mode.
+
 Definition Ty := Type.
 Set Printing Universes.
 Run TemplateProgram (TslParam emptyTC "Ty").

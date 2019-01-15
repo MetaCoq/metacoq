@@ -11,23 +11,20 @@ Fail Make Definition t1 := (tSort []).
 Fail Make Definition t1 := (tSort [(Level.Level "Top.400", false)]).
 
 Monomorphic Definition T := Type.
-Print Sorted Universes.
 Make Definition t1 := (tSort [(Level.Level "Top.2", false)]).
 
 Unset Strict Unquote Universe Mode.
 Make Definition t2 := (tSort []).
 Make Definition t3 := (tSort [(Level.Level "Top.400", false)]).
 Make Definition t4 := (tSort [(Level.Level "Top.2", false); (Level.Level "Top.2", true); (Level.Level "Top.200", false)]).
-Print Sorted Universes.
+
+
+Monomorphic Universe i j.
 
 Set Strict Unquote Universe Mode.
-
-(* Section foo. *)
-Monomorphic Universe i j.
-(* Polymorphic Definition T' := Type@{i}. *)
-
 Test Quote (Type@{j} -> Type@{i}).
 Make Definition T'' := (tSort [(Level.Level "j", false)]).
+Unset Strict Unquote Universe Mode.
 
 
 Polymorphic Definition pidentity {A : Type} (a : A) := a.
@@ -35,29 +32,86 @@ Test Quote @pidentity.
 Polymorphic Definition selfpid := pidentity (@pidentity).
 Test Quote @selfpid.
 
-Unset Strict Unquote Universe Mode.
-Print Sorted Universes.
 Constraint i < j.
 Make Definition yuyu := (tConst "Top.selfpid" [Level.Level "j"; Level.Level "i"]).
 
+
 Quote Definition t0 := nat.
 Run TemplateProgram (tmUnquoteTyped Type t0).
-Set Printing Universes.
-Print Sorted Universes.
 Definition ty : Type := Type.
 Run TemplateProgram (tmUnquoteTyped ty t0).
 
-
-
-(* Polymorphic Cumulative Inductive list {A : Type} := *)
-(* | nil : list *)
-(* | cons : A -> list -> list. *)
-
-(* Print list. *)
-(* Polymorphic Cumulative Record packType := {pk : Type}. *)
-
 Polymorphic Cumulative Inductive test := .
+Polymorphic Cumulative Record packType := {pk : Type}.
 Run TemplateProgram (α <- tmQuoteInductive "test" ;; tmPrint α).
+Run TemplateProgram (tmQuoteInductive "packType" >>= tmEval all >>= tmPrint).
+Polymorphic Cumulative Record Category@{i j} :=
+{ Obj : Type@{i}; Hom : Obj -> Obj -> Type@{j} }.
+Polymorphic  Record Functor@{i j} (C D : Category@{i j}):=
+{ ObjF : C.(Obj) -> D.(Obj) }.
+Polymorphic Definition Cat@{i j k l} : Category@{i j}
+ := Build_Category@{i j} Category@{k l} Functor@{k l}.
+
+Run TemplateProgram (tmQuoteInductive "Category" >>= tmEval all >>= tmPrint).
+Run TemplateProgram (tmQuoteConstant "Cat" false >>= tmEval all >>= tmPrint).
+
+
+Compute (AstUtils.mind_body_to_entry {|
+ind_npars := 0;
+ind_bodies := [{|
+               ind_name := "Category";
+               ind_type := tSort
+                             [(Level.Level "Top.275", true);
+                             (Level.Level "Top.276", true)];
+               ind_kelim := [InProp; InSet; InType];
+               ind_ctors := [("Build_Category",
+                             tProd (nNamed "Obj") (tSort [(Level.Var 0, false)])
+                               (tProd (nNamed "Hom")
+                                  (tProd nAnon (tRel 0)
+                                     (tProd nAnon (tRel 1)
+                                        (tSort [(Level.Var 1, false)]))) 
+                                  (tRel 2)), 2)];
+               ind_projs := [] |}];
+ind_universes := Cumulative_ctx
+                   ([Level.Level "Top.275"; Level.Level "Top.276"],
+                   {|
+                   ConstraintSet.this := [];
+                   ConstraintSet.is_ok := ConstraintSet.Raw.empty_ok |},
+                   [Variance.Covariant; Variance.Covariant]) |}).
+
+Fail Make Inductive {|
+       mind_entry_record := None;
+       mind_entry_finite := Finite;
+       mind_entry_params := [];
+       mind_entry_inds := [{|
+                           mind_entry_typename := "Category";
+                           mind_entry_arity := tSort
+                                                 [(Level.Level "Top.275", true);
+                                                 (Level.Level "Top.276", true)];
+                           mind_entry_template := false;
+                           mind_entry_consnames := ["Build_Category"];
+                           mind_entry_lc := [tProd (nNamed "Obj")
+                                               (tSort [(Level.Var 0, false)])
+                                               (tProd 
+                                                  (nNamed "Hom")
+                                                  (tProd nAnon 
+                                                     (tRel 0)
+                                                     (tProd nAnon 
+                                                     (tRel 1)
+                                                     (tSort [(Level.Var 1, false)])))
+                                                  (tRel 2))] |}];
+       mind_entry_universes := Cumulative_ctx
+                                 ([Level.Level "Top.275"; Level.Level "Top.276"],
+                                 {|
+                                 ConstraintSet.this := [];
+                                 ConstraintSet.is_ok := ConstraintSet.Raw.empty_ok |},
+                                 [Variance.Covariant; Variance.Covariant]);
+       mind_entry_private := None |}.
+
+
+Definition f@{i j k} := fun (E:Type@{i}) => Type@{max(i,j)}.
+Quote Definition qf := Eval cbv in f.
+Make Definition uqf := Eval cbv in qf.
 
 
 Inductive foo (A : Type) : Type :=
@@ -125,7 +179,7 @@ End toto.
 
 (* Set Universe Polymorphism. *)
 
-Monomorphic Universe i j.
+
 Definition test2 := (fun (T : Type@{i}) (T2 : Type@{j}) => T -> T2).
 Set Printing Universes.
 Print test.
@@ -190,10 +244,10 @@ Print t2.
 
 
 Monomorphic Universe i1 j1.
-Definition f := (forall (A:Type@{i1}) (B: Type@{j1}), A -> B -> A).
+Definition f' := (forall (A:Type@{i1}) (B: Type@{j1}), A -> B -> A).
 (* : Type@{i1+1, j1+1} *)
 
-Quote Recursively Definition ff := f.
+Quote Recursively Definition ff := f'.
 Require Import Template.Checker.
 Check (eq_refl :
          true =

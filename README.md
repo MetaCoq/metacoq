@@ -74,6 +74,22 @@ Documentation
 The 8.7 branch [documentation (coqdoc files)](html/Template.All.html)
 and pretty-printed HTML versions of the [translations](html/translations) are available.
 
+Options
+-------
+
+`Set / Unset Strict Unquote Universe Mode`. When this mode is on (on by default):
+
+- the unquoting of a universe level fails if this level does not exists
+
+- the unquoting of a sort which is an empty list fails
+
+Otherwise:
+
+- the level is added to the current context
+
+- or a fresh level is added.
+
+
 Papers
 ======
 

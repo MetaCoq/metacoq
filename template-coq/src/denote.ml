@@ -604,7 +604,7 @@ let unquote_mutual_inductive_entry evm trm (* of type mutual_inductive_entry *) 
        let evm, params = map_evm (fun evm p -> let (l,r) = unquote_pair p in
                                                let evm, e = denote_local_entry evm r in
                                                evm, (unquote_ident l, e))
-                                 evm (List.rev (unquote_list params)) in (* TODO: rev ?? *)
+                                 evm (unquote_list params) in
        let evm, inds = map_evm unquote_one_inductive_entry evm (unquote_list inds) in
        let evm, univs = denote_universe_context evm univs in
        let priv = unquote_map_option unquote_bool priv in

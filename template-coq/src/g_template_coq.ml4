@@ -64,9 +64,6 @@ TACTIC EXTEND denote_term
          let env = Proofview.Goal.env gl in
          let evm = Proofview.Goal.sigma gl in
          let evm, c = Denote.denote_term evm (EConstr.to_constr evm c) in
-         (* TODO : not the right way of retype things *)
-         (* let def' = Constrextern.extern_constr true env evm (EConstr.of_constr c) in *)
-         (* let def = Constrintern.interp_constr env evm def' in *)
          Proofview.tclTHEN (Proofview.Unsafe.tclEVARS evm)
 	   (ltac_apply tac (List.map to_ltac_val [EConstr.of_constr c]))
       end) ]

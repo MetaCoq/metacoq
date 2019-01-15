@@ -78,7 +78,7 @@ Proof.
             mind_entry_universes := decl.(ind_universes);
             mind_entry_private := None |}.
   - refine (match List.hd_error decl.(ind_bodies) with
-            | Some i0 => _
+            | Some i0 => List.rev _
             | None => nil (* assert false: at least one inductive in a mutual block *)
             end).
     pose (typ := decompose_prod i0.(ind_type)).

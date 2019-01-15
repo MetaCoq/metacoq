@@ -159,13 +159,6 @@ struct
 
   let (tglobal_reference, tConstRef, tIndRef, tConstructRef) = (r_reify "global_reference", r_reify "ConstRef", r_reify "IndRef", r_reify "ConstructRef")
 
-  let (tmReturn, tmBind, tmQuote, tmQuoteRec, tmEval, tmDefinitionRed, tmAxiomRed, tmLemmaRed, tmFreshName, tmAbout, tmCurrentModPath,
-       tmMkDefinition, tmMkInductive, tmPrint, tmFail, tmQuoteInductive, tmQuoteConstant, tmQuoteUniverses, tmUnquote, tmUnquoteTyped, tmInferInstance, tmExistingInstance) =
-    (r_template_monad_p "tmReturn", r_template_monad_p "tmBind", r_template_monad_p "tmQuote", r_template_monad_p "tmQuoteRec", r_template_monad_p "tmEval", r_template_monad_p "tmDefinitionRed",
-     r_template_monad_p "tmAxiomRed", r_template_monad_p "tmLemmaRed", r_template_monad_p "tmFreshName", r_template_monad_p "tmAbout", r_template_monad_p "tmCurrentModPath",
-     r_template_monad_p "tmMkDefinition", r_template_monad_p "tmMkInductive", r_template_monad_p "tmPrint", r_template_monad_p "tmFail", r_template_monad_p "tmQuoteInductive", r_template_monad_p "tmQuoteConstant",
-     r_template_monad_p "tmQuoteUniverses", r_template_monad_p "tmUnquote", r_template_monad_p "tmUnquoteTyped", r_template_monad_p "tmInferInstance", r_template_monad_p "tmExistingInstance")
-
   (* let pkg_specif = ["Coq";"Init";"Specif"] *)
   (* let texistT = resolve_symbol pkg_specif "existT" *)
   (* let texistT_typed_term = r_template_monad "existT_typed_term" *)

@@ -10,6 +10,7 @@ src/denote.ml
 # src/g_template_coq.mli
 src/g_template_coq.ml4
 src/template_coq.mlpack
+src/template_monad.ml
 
 theories/utils.v
 theories/config.v

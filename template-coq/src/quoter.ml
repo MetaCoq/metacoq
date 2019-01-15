@@ -8,7 +8,7 @@ let cast_prop = ref (false)
 (* whether Set Template Cast Propositions is on, as needed for erasure in Certicoq *)
 let is_cast_prop () = !cast_prop
 
-let opt_debug = ref true
+let opt_debug = ref false
 
 let debug (m : unit ->Pp.t) =
   if !opt_debug then
@@ -236,8 +236,7 @@ struct
 
   let get_abstract_inductive_universes iu =
     match iu with
-    | Declarations.Monomorphic_ind ctx ->
-       Univ.ContextSet.to_context ctx
+    | Declarations.Monomorphic_ind ctx -> Univ.ContextSet.to_context ctx
     | Polymorphic_ind ctx -> Univ.AUContext.repr ctx
     | Cumulative_ind cumi ->
        let cumi = instantiate_cumulativity_info cumi in

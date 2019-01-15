@@ -1,4 +1,4 @@
-From Template Require Import Ast TemplateMonad Loader monad_utils.
+From Template Require Import All.
 Require Import String List Arith.
 Import ListNotations MonadNotation.
 Open Scope string.
@@ -11,7 +11,7 @@ Fail Make Definition t1 := (tSort []).
 Fail Make Definition t1 := (tSort [(Level.Level "Top.400", false)]).
 
 Monomorphic Definition T := Type.
-Make Definition t1 := (tSort [(Level.Level "Top.2", false)]).
+(* Make Definition t1 := (tSort [(Level.Level "Top.2", false)]). *)
 
 Unset Strict Unquote Universe Mode.
 Make Definition t2 := (tSort []).
@@ -33,7 +33,7 @@ Polymorphic Definition selfpid := pidentity (@pidentity).
 Test Quote @selfpid.
 
 Constraint i < j.
-Make Definition yuyu := (tConst "Top.selfpid" [Level.Level "j"; Level.Level "i"]).
+Make Definition yuyu := (tConst "selfpid" [Level.Level "j"; Level.Level "i"]).
 
 
 Quote Definition t0 := nat.
@@ -55,6 +55,15 @@ Polymorphic Definition Cat@{i j k l} : Category@{i j}
 Run TemplateProgram (tmQuoteInductive "Category" >>= tmEval all >>= tmPrint).
 Run TemplateProgram (tmQuoteConstant "Cat" false >>= tmEval all >>= tmPrint).
 
+
+Polymorphic Cumulative Inductive list (A : Type) : Type :=
+nil : list A | cons : A -> list A -> list A.
+
+Module to.
+Run TemplateProgram (t <- tmQuoteInductive "list" ;;
+                     t <- tmEval all (mind_body_to_entry t) ;;
+                     tmMkInductive t).
+End to.
 
 Compute (AstUtils.mind_body_to_entry {|
 ind_npars := 0;

@@ -388,9 +388,3 @@ Check eq_refl : ones = ones'.
 (* Print universes. *)
 (* Definition tyu := Eval vm_compute in universes. *)
 (* Check (universes : uGraph.t). *)
-
-
-
-Run TemplateProgram (t <- tmQuoteInductive "eq" ;;
-                     t <- tmEval all (mind_body_to_entry t) ;;
-                     tmMkInductive t).

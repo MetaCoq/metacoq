@@ -506,18 +506,33 @@ let unquote_constraint_type trm (* of type constraint_type *) : constraint_type 
     else not_supported_verb trm "unquote_constraint_type"
   | _ -> bad_term_verb trm "unquote_constraint_type"
 
-let unquote_univ_constraint evm c (* of type univ_constraint *) : univ_constraint =
+let unquote_univ_constraint evm c (* of type univ_constraint *) : _ * univ_constraint =
   let c, l2 = unquote_pair c in
   let l1, c = unquote_pair c in
   let evm, l1 = unquote_level evm l1 in
   let evm, l2 = unquote_level evm l2 in
   let c = unquote_constraint_type c in
-  (l1, c, l2)
+  evm, (l1, c, l2)
+
+(* set given by MSets.MSetWeakList.Make *)
+let unquote_set trm =
+  let (h, args) = app_full trm [] in
+  (* h supposed to be Mkt, the constructor of the record *)
+  match args with
+  | list :: ok :: [] -> unquote_list list
+  | _ -> not_supported_verb trm "unquote_set"
 
 let unquote_constraints evm c (* of type constraints *) : _ * Constraint.t =
-  (* TODO *)
-  evm, Constraint.empty
+  let c = unquote_set c in
+  List.fold_left (fun (evm, set) c -> let evm, c = unquote_univ_constraint evm c in evm, Constraint.add c set)
+                 (evm, Constraint.empty) c 
 
+
+let denote_variance trm (* of type Variance *) : Variance.t =
+  if Constr.equal trm cIrrelevant then Variance.Irrelevant
+  else if Constr.equal trm cCovariant then Variance.Covariant
+  else if Constr.equal trm cInvariant then Variance.Invariant
+  else not_supported_verb trm "denote_variance"
 
 let denote_ucontext evm trm (* of type UContext.t *) : _ * UContext.t =
   let i, c = unquote_pair trm in
@@ -525,25 +540,40 @@ let denote_ucontext evm trm (* of type UContext.t *) : _ * UContext.t =
   let evm, c = unquote_constraints evm c in
   evm, Univ.UContext.make (i, c)
 
-(* todo : stick to Coq implem *)
-type universe_context_type = Mono | Poly | Cumul
+let denote_cumulativity_info evm trm (* of type CumulativityInfo *) : _ * CumulativityInfo.t =
+  let uctx, variances = unquote_pair trm in
+  let evm, uctx = denote_ucontext evm uctx in
+  let variances = List.map denote_variance (unquote_list variances) in
+  evm, CumulativityInfo.make (uctx, Array.of_list variances)
 
-let denote_universe_context evm trm (* of type universe_context *) : _ * (universe_context_type * UContext.t) =
+
+(* todo : stick to Coq implem *)
+type universe_context_type =
+  | Monomorphic_uctx of Univ.UContext.t
+  | Polymorphic_uctx of Univ.UContext.t
+  | Cumulative_uctx of Univ.CumulativityInfo.t
+
+let to_entry_inductive_universes = function
+  | Monomorphic_uctx ctx -> Monomorphic_ind_entry (ContextSet.of_context ctx)
+  | Polymorphic_uctx ctx -> Polymorphic_ind_entry ctx
+  | Cumulative_uctx ctx -> Cumulative_ind_entry ctx
+
+let denote_universe_context evm trm (* of type universe_context *) : _ * universe_context_type =
   let (h, args) = app_full trm [] in
-  let b = if Constr.equal h cMonomorphic_ctx then Mono
-          else if Constr.equal h cPolymorphic_ctx then Poly
-          else if Constr.equal h cCumulative_ctx then Cumul
-          else not_supported_verb trm "denote_universe_context" in
   match args with
-  | ctx :: [] -> let evm, ctx = denote_ucontext evm ctx in
-                 evm, (b, ctx)
+  | ctx :: [] -> if Constr.equal h cMonomorphic_ctx then
+                   let evm, ctx = denote_ucontext evm ctx in
+                   evm, Monomorphic_uctx ctx
+                 else if Constr.equal h cPolymorphic_ctx then
+                   let evm, ctx = denote_ucontext evm ctx in
+                   evm, Polymorphic_uctx ctx
+                 else if Constr.equal h cCumulative_ctx then
+                   let evm, ctx = denote_cumulativity_info evm ctx in
+                   evm, Cumulative_uctx ctx
+                 else
+                   not_supported_verb trm "denote_universe_context"
   | _ -> bad_term_verb trm "denote_universe_context"
 
-let denote_mind_entry_universes evm trm =
-  match denote_universe_context evm trm with
-  | evm, (Mono, ctx) -> evm, Monomorphic_ind_entry (Univ.ContextSet.of_context ctx)
-  | evm, (Poly, ctx) -> evm, Polymorphic_ind_entry ctx
-  | evm, (Cumul, ctx) -> not_supported_verb trm "denote_mind_entry_universes"
 
 
 let unquote_one_inductive_entry evm trm (* of type one_inductive_entry *) : _ * Entries.one_inductive_entry =
@@ -577,13 +607,13 @@ let unquote_mutual_inductive_entry evm trm (* of type mutual_inductive_entry *) 
                                                evm, (unquote_ident l, e))
                                  evm (List.rev (unquote_list params)) in (* TODO: rev ?? *)
        let evm, inds = map_evm unquote_one_inductive_entry evm (unquote_list inds) in
-       let evm, univs = denote_mind_entry_universes evm univs in
+       let evm, univs = denote_universe_context evm univs in
        let priv = unquote_map_option unquote_bool priv in
        evm, { mind_entry_record = record;
               mind_entry_finite = finite;
               mind_entry_params = params;
               mind_entry_inds = inds;
-              mind_entry_universes = univs;
+              mind_entry_universes = to_entry_inductive_universes univs;
               mind_entry_private = priv }
     | _ -> bad_term_verb trm "unquote_mutual_inductive_entry"
   else

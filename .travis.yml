@@ -13,7 +13,6 @@ addons:
     packages:
     - opam
     - aspcud
-    - gcc-multilib
 
 env:
   global:
@@ -21,7 +20,6 @@ env:
   - COMPILER="4.06.1"
   - CAMLP5_VER="7.05"
   - FINDLIB_VER="1.8.0"
-  - NATIVE_COMP="yes"
   - COQ_VER="8.8.0"
 
 install:

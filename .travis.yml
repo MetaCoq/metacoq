@@ -25,7 +25,7 @@ env:
   - COQ_VER="8.8.0"
 
 install:
-- opam init -j ${NJOBS} -n -y
+- opam init -j ${NJOBS} -n -y --compiler=$COMPILER
 - opam switch set ${COMPILER}
 - eval $(opam config env)
 - opam config list

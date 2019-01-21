@@ -190,6 +190,7 @@ End Reduce.
 Definition isConstruct c :=
   match c with
   | tConstruct _ _ _ => true
+  | tApp (tConstruct _ _ _) _ => true
   | _ => false
   end.
 

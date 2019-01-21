@@ -263,7 +263,7 @@ Section Conversion.
     let '(t2,l2) := red2 in
     isconv_prog n leq Γ t1 l1 t2 l2
     end
-  with isconv_prog `{checker_flags} (n : nat) (leq : conv_pb) (Γ : context)
+  with isconv_prog (n : nat) (leq : conv_pb) (Γ : context)
                    (t1 : term) (l1 : list term) (t2 : term) (l2 : list term)
                    {struct n} : option bool :=
     match n with 0 => None | S n =>

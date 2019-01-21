@@ -111,14 +111,14 @@ struct
        ttmFreshName,
        ttmAbout,
        ttmCurrentModPath,
-       ttmMkDefinition,
+(*       ttmMkDefinition, *)
        ttmMkInductive,
        ttmFail,
        ttmQuoteInductive,
        ttmQuoteConstant,
        ttmQuoteUniverses,
-       ttmUnquote,
-       ttmUnquoteTyped,
+(*       ttmUnquote,
+       ttmUnquoteTyped, *)
        ttmInferInstance,
        ttmExistingInstance) =
     (r_template_monad_type_p "tmReturn",
@@ -130,14 +130,14 @@ struct
      r_template_monad_type_p "tmFreshName",
      r_template_monad_type_p "tmAbout",
      r_template_monad_type_p "tmCurrentModPath",
-     r_template_monad_type_p "tmMkDefinition",
+(*     r_template_monad_type_p "tmMkDefinition", *)
      r_template_monad_type_p "tmMkInductive",
      r_template_monad_type_p "tmFail",
      r_template_monad_type_p "tmQuoteInductive",
      r_template_monad_type_p "tmQuoteConstant",
      r_template_monad_type_p "tmQuoteUniverses",
-     r_template_monad_type_p "tmUnquote",
-     r_template_monad_type_p "tmUnquoteTyped",
+(*     r_template_monad_type_p "tmUnquote",
+     r_template_monad_type_p "tmUnquoteTyped", *)
      r_template_monad_type_p "tmInferInstance",
      r_template_monad_type_p "tmExistingInstance")
 
@@ -225,7 +225,7 @@ struct
       | name::s::typ::[] ->
         (TmLemma (name,s,typ), universes)
       | _ -> monad_failure "tmLemmaRed" 3
-    else if Globnames.eq_gr glob_ref ptmMkDefinition || Globnames.eq_gr glob_ref ttmMkDefinition then
+    else if Globnames.eq_gr glob_ref ptmMkDefinition then
       match args with
       | name::body::[] ->
         (TmMkDefinition (name, body), universes)
@@ -252,9 +252,9 @@ struct
       | _ -> monad_failure "tmQuoteConstant" 2
     else if Globnames.eq_gr glob_ref ptmQuoteUniverses || Globnames.eq_gr glob_ref ttmQuoteUniverses then
       match args with
-      | _::[] ->
+      | [] ->
         (TmQuoteUnivs, universes)
-      | _ -> monad_failure "tmQuoteUniverses" 1
+      | _ -> monad_failure "tmQuoteUniverses" 0
     else if Globnames.eq_gr glob_ref ptmPrint then
       match args with
       | _::trm::[] ->
@@ -284,12 +284,12 @@ struct
       match args with
       | mind::[] -> (TmMkInductive mind, universes)
       | _ -> monad_failure "tmMkInductive" 1
-    else if Globnames.eq_gr glob_ref ptmUnquote || Globnames.eq_gr glob_ref ttmUnquote then
+    else if Globnames.eq_gr glob_ref ptmUnquote then
       match args with
       | t::[] ->
         (TmUnquote t, universes)
       | _ -> monad_failure "tmUnquote" 1
-    else if Globnames.eq_gr glob_ref ptmUnquoteTyped || Globnames.eq_gr glob_ref ttmUnquoteTyped then
+    else if Globnames.eq_gr glob_ref ptmUnquoteTyped then
       match args with
       | typ::t::[] ->
         (TmUnquoteTyped (typ, t), universes)

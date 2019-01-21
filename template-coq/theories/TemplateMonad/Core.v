@@ -60,7 +60,7 @@ Module InProp.
   | tmQuoteRec : forall {A:Type@{t}}, A  -> TemplateMonad program
   (* Quote the body of a definition or inductive. Its name need not be fully qualified *)
   | tmQuoteInductive : kername -> TemplateMonad mutual_inductive_body
-  | tmQuoteUniverses : unit -> TemplateMonad uGraph.t
+  | tmQuoteUniverses : TemplateMonad uGraph.t
   | tmQuoteConstant : kername -> bool (* bypass opacity? *) -> TemplateMonad constant_entry
   | tmMkDefinition : ident -> Ast.term -> TemplateMonad unit
   (* unquote before making the definition *)
@@ -78,18 +78,27 @@ End InProp.
 Module InType.
   Cumulative Inductive TemplateMonad@{t u} : Type@{t} -> Type :=
   (* Monadic operations *)
-  | tmReturn : forall {A:Type@{t}}, A -> TemplateMonad A
-  | tmBind : forall {A B : Type@{t}}, TemplateMonad A -> (A -> TemplateMonad B)
-                                 -> TemplateMonad B
+  | tmReturn {A:Type@{t}}
+    : A -> TemplateMonad A
+  | tmBind {A B : Type@{t}}
+    : TemplateMonad A -> (A -> TemplateMonad B) -> TemplateMonad B
 
   (* General commands *)
+  | tmPrint : Ast.term -> TemplateMonad unit
   | tmFail : forall {A:Type@{t}}, string -> TemplateMonad A
-  | tmEval : reductionStrategy -> forall {A:Type@{t}}, A -> TemplateMonad A
+  | tmEval (red : reductionStrategy) (tm : Ast.term)
+    : TemplateMonad Ast.term
 
   (* Return the defined constant *)
-  | tmDefinitionRed : ident -> option reductionStrategy -> forall {A:Type@{t}}, A -> TemplateMonad A
-  | tmAxiomRed : ident -> option reductionStrategy -> forall A : Type@{t}, TemplateMonad A
-  | tmLemmaRed : ident -> option reductionStrategy -> forall A : Type@{t}, TemplateMonad A
+  | tmDefinitionRed (nm : ident) (red : option reductionStrategy)
+                    (type : option Ast.term) (term : Ast.term)
+    : TemplateMonad kername
+  | tmAxiomRed (nm : ident) (red : option reductionStrategy)
+               (type : Ast.term)
+    : TemplateMonad kername
+  | tmLemmaRed (nm : ident) (red : option reductionStrategy)
+               (type : option Ast.term) (term : Ast.term)
+    : TemplateMonad kername
 
   (* Guaranteed to not cause "... already declared" error *)
   | tmFreshName : ident -> TemplateMonad ident
@@ -98,19 +107,22 @@ Module InType.
   | tmCurrentModPath : unit -> TemplateMonad string
 
   (* Quote the body of a definition or inductive. Its name need not be fully qualified *)
-  | tmQuoteInductive : kername -> TemplateMonad mutual_inductive_body
-  | tmQuoteUniverses : unit -> TemplateMonad uGraph.t
-  | tmQuoteConstant : kername -> bool (* bypass opacity? *) -> TemplateMonad constant_entry
-  | tmMkDefinition : ident -> Ast.term -> TemplateMonad unit
+  (* note(gmm): quoting requires universes for polymorphic kernel names *)
+  | tmQuoteInductive (nm : kername)
+    : TemplateMonad mutual_inductive_body
+  | tmQuoteUniverses : TemplateMonad uGraph.t
+  | tmQuoteConstant (nm : kername) (bypass_opacity : bool)
+    : TemplateMonad constant_entry
+
   (* unquote before making the definition *)
   (* FIXME take an optional universe context as well *)
   | tmMkInductive : mutual_inductive_entry -> TemplateMonad unit
-  | tmUnquote : Ast.term  -> TemplateMonad typed_term@{u}
-  | tmUnquoteTyped : forall A : Type@{t}, Ast.term -> TemplateMonad A
 
   (* Typeclass registration and querying for an instance *)
   | tmExistingInstance : ident -> TemplateMonad unit
-  | tmInferInstance : option reductionStrategy -> forall A : Type@{t}, TemplateMonad (option A)
+  | tmInferInstance (red : option reductionStrategy)
+                    (type : Ast.term)
+    : TemplateMonad (option Ast.term)
   .
 End InType.
 
@@ -123,12 +135,14 @@ Module TMAbs.
 
   (* General commands *)
   ; tmFail : forall {A:Type@{t}}, string -> TemplateMonad A
-  ; tmEval : reductionStrategy -> forall {A:Type@{t}}, A -> TemplateMonad A
+(*  ; tmEval : reductionStrategy -> forall {A:Type@{t}}, A -> TemplateMonad A *)
 
   (* Return the defined constant *)
+(*
   ; tmDefinitionRed : ident -> option reductionStrategy -> forall {A:Type@{t}}, A -> TemplateMonad A
   ; tmAxiomRed : ident -> option reductionStrategy -> forall A : Type@{t}, TemplateMonad A
   ; tmLemmaRed : ident -> option reductionStrategy -> forall A : Type@{t}, TemplateMonad A
+*)
 
   (* Guaranteed to not cause "... already declared" error *)
   ; tmFreshName : ident -> TemplateMonad ident
@@ -138,18 +152,21 @@ Module TMAbs.
 
   (* Quote the body of a definition or inductive. Its name need not be fully qualified *)
   ; tmQuoteInductive : kername -> TemplateMonad mutual_inductive_body
-  ; tmQuoteUniverses : unit -> TemplateMonad uGraph.t
+  ; tmQuoteUniverses : TemplateMonad uGraph.t
   ; tmQuoteConstant : kername -> bool (* bypass opacity? *) -> TemplateMonad constant_entry
-  ; tmMkDefinition : ident -> Ast.term -> TemplateMonad unit
+(*  ; tmMkDefinition : ident -> Ast.term -> TemplateMonad unit *)
   (* unquote before making the definition *)
   (* FIXME take an optional universe context as well *)
   ; tmMkInductive : mutual_inductive_entry -> TemplateMonad unit
+(*
   ; tmUnquote : Ast.term  -> TemplateMonad typed_term@{u}
   ; tmUnquoteTyped : forall A : Type@{t}, Ast.term -> TemplateMonad A
-
+*)
   (* Typeclass registration and querying for an instance *)
   ; tmExistingInstance : ident -> TemplateMonad unit
+(*
   ; tmInferInstance : option reductionStrategy -> forall A : Type@{t}, TemplateMonad (option A)
+*)
   }.
 
 End TMAbs.
@@ -159,22 +176,25 @@ End TMAbs.
      ; TMAbs.tmReturn:=@InProp.tmReturn
      ; TMAbs.tmBind:=@InProp.tmBind
      ; TMAbs.tmFail:=@InProp.tmFail
-     ; TMAbs.tmEval:=@InProp.tmEval
+(*     ; TMAbs.tmEval:=@InProp.tmEval
      ; TMAbs.tmDefinitionRed:=@InProp.tmDefinitionRed
      ; TMAbs.tmAxiomRed:=@InProp.tmAxiomRed
      ; TMAbs.tmLemmaRed:=@InProp.tmLemmaRed
+*)
      ; TMAbs.tmFreshName:=@InProp.tmFreshName
      ; TMAbs.tmAbout:=@InProp.tmAbout
      ; TMAbs.tmCurrentModPath:=@InProp.tmCurrentModPath
      ; TMAbs.tmQuoteInductive:=@InProp.tmQuoteInductive
      ; TMAbs.tmQuoteUniverses:=@InProp.tmQuoteUniverses
      ; TMAbs.tmQuoteConstant:=@InProp.tmQuoteConstant
-     ; TMAbs.tmMkDefinition:=@InProp.tmMkDefinition
+(*     ; TMAbs.tmMkDefinition:=@InProp.tmMkDefinition *)
      ; TMAbs.tmMkInductive:=@InProp.tmMkInductive
+(*
      ; TMAbs.tmUnquote:=@InProp.tmUnquote
      ; TMAbs.tmUnquoteTyped:=@InProp.tmUnquoteTyped
+*)
      ; TMAbs.tmExistingInstance:=@InProp.tmExistingInstance
-     ; TMAbs.tmInferInstance:=@InProp.tmInferInstance
+(*     ; TMAbs.tmInferInstance:=@InProp.tmInferInstance *)
     |}.
 
   Definition TypeInstance@{t u r}: TMAbs.TMInstance@{t u r} :=
@@ -182,36 +202,42 @@ End TMAbs.
      ; TMAbs.tmReturn:=@InType.tmReturn
      ; TMAbs.tmBind:=@InType.tmBind
      ; TMAbs.tmFail:=@InType.tmFail
-     ; TMAbs.tmEval:=@InType.tmEval
+(*     ; TMAbs.tmEval:=@InType.tmEval
      ; TMAbs.tmDefinitionRed:=@InType.tmDefinitionRed
      ; TMAbs.tmAxiomRed:=@InType.tmAxiomRed
      ; TMAbs.tmLemmaRed:=@InType.tmLemmaRed
+*)
      ; TMAbs.tmFreshName:=@InType.tmFreshName
      ; TMAbs.tmAbout:=@InType.tmAbout
      ; TMAbs.tmCurrentModPath:=@InType.tmCurrentModPath
      ; TMAbs.tmQuoteInductive:=@InType.tmQuoteInductive
      ; TMAbs.tmQuoteUniverses:=@InType.tmQuoteUniverses
      ; TMAbs.tmQuoteConstant:=@InType.tmQuoteConstant
-     ; TMAbs.tmMkDefinition:=@InType.tmMkDefinition
+(*     ; TMAbs.tmMkDefinition:=@InType.tmMkDefinition *)
      ; TMAbs.tmMkInductive:=@InType.tmMkInductive
+(*
      ; TMAbs.tmUnquote:=@InType.tmUnquote
      ; TMAbs.tmUnquoteTyped:=@InType.tmUnquoteTyped
+*)
      ; TMAbs.tmExistingInstance:=@InType.tmExistingInstance
-     ; TMAbs.tmInferInstance:=@InType.tmInferInstance
+(*     ; TMAbs.tmInferInstance:=@InType.tmInferInstance *)
     |}.
   (* Monadic operations *)
 
-Export InProp.
+Export InType.
 
-Definition print_nf {A} (msg : A) : TemplateMonad unit
+Definition print_nf (msg : Ast.term) : TemplateMonad unit
   := tmBind (tmEval all msg) tmPrint.
 
+(*
 Definition fail_nf {A} (msg : string) : TemplateMonad A
   := tmBind (tmEval all msg) tmFail.
+*)
 
 Definition tmMkInductive' (mind : mutual_inductive_body) : TemplateMonad unit
   := tmMkInductive (mind_body_to_entry mind).
 
 Definition tmLemma (i : ident) := tmLemmaRed i (Some hnf).
 Definition tmAxiom (i : ident) := tmAxiomRed i (Some hnf).
-Definition tmDefinition (i : ident) {A : Type} := @tmDefinitionRed i (Some hnf) A.
+Definition tmDefinition (i : ident) :=
+  @tmDefinitionRed i (Some hnf).

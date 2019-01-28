@@ -46,8 +46,8 @@ struct
 
   let pkg_reify = ["Template";"Ast"]
   let pkg_template_monad = ["Template";"TemplateMonad"]
-  let pkg_template_monad_prop = ["Template";"TemplateMonad";"Core";"InProp"]
-  let pkg_template_monad_type = ["Template";"TemplateMonad";"Core";"InType"]
+  let pkg_template_monad_prop = ["Template";"TemplateMonad";"Core"]
+  let pkg_template_monad_type = ["Template";"TemplateMonad";"Extractable"]
 
   let r_reify = resolve_symbol pkg_reify
   let r_template_monad = resolve_symbol pkg_template_monad

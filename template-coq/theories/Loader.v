@@ -1,4 +1,4 @@
-Require Import Template.Ast.
-Require Import Template.TemplateMonad.
+Require Template.TemplateMonad.Core.
+Require Template.TemplateMonad.Extractable.
 
 Declare ML Module "template_coq".

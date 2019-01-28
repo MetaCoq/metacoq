@@ -33,6 +33,8 @@ theories/Extraction.v
 
 # the Template monad
 theories/TemplateMonad.v
+theories/TemplateMonad/Common.v
 theories/TemplateMonad/Core.v
+theories/TemplateMonad/Extractable.v
 theories/TemplateMonad/Monad.v
 theories/monad_utils.v

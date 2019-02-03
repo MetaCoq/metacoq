@@ -15,7 +15,7 @@ Set Printing Universes.
  *)
 
 
-Cumulative Inductive TM@{t u} : Type@{t} -> Type :=
+Cumulative Inductive TM@{t} : Type@{t} -> Type :=
 (* Monadic operations *)
 | tmReturn {A:Type@{t}}
   : A -> TM A
@@ -24,6 +24,7 @@ Cumulative Inductive TM@{t u} : Type@{t} -> Type :=
 
 (* General commands *)
 | tmPrint : Ast.term -> TM unit
+| tmMsg  : string -> TM unit
 | tmFail : forall {A:Type@{t}}, string -> TM A
 | tmEval (red : reductionStrategy) (tm : Ast.term)
   : TM Ast.term
@@ -59,15 +60,14 @@ Cumulative Inductive TM@{t u} : Type@{t} -> Type :=
 | tmMkInductive : mutual_inductive_entry -> TM unit
 
 (* Typeclass registration and querying for an instance *)
-| tmExistingInstance : ident -> TM unit
+| tmExistingInstance : kername -> TM unit
 | tmInferInstance (red : option reductionStrategy)
                   (type : Ast.term)
   : TM (option Ast.term)
 .
 
-
-Definition TypeInstance@{t u r}: Common.TMInstance@{t u r} :=
-  {| Common.TemplateMonad := TM@{t u}
+Definition TypeInstance : Common.TMInstance :=
+  {| Common.TemplateMonad := TM
    ; Common.tmReturn:=@tmReturn
    ; Common.tmBind:=@tmBind
    ; Common.tmFail:=@tmFail

@@ -651,6 +651,16 @@ let rec run_template_program_rec ?(intactic=false) (k : Environ.env * Evd.evar_m
     let n = Declare.declare_definition ~kind:Decl_kinds.Definition (unquote_ident name) ~types:typ (body, univs) in
     let env = Global.env () in
     k (env, evm, Constr.mkConst n)
+
+  | TmMkDefinition (name, body) ->
+    let name = reduce_all env evm name in
+    let body = reduce_all env evm body in
+    let evm, trm = denote_term evm body in
+    let (evm, _) = Typing.type_of env evm (EConstr.of_constr trm) in
+    let _ = Declare.declare_definition ~kind:Decl_kinds.Definition (unquote_ident name) (trm, Monomorphic_const_entry (Evd.universe_context_set evm)) in
+    let env = Global.env () in
+    k (env, evm, unit_tt)
+
   | TmAxiom (name,s,typ) ->
     let name = reduce_all env evm name in
     let evm, typ = (match denote_option s with Some s -> let red = unquote_reduction_strategy env evm s in reduce env evm red typ | None -> evm, typ) in
@@ -680,18 +690,10 @@ let rec run_template_program_rec ?(intactic=false) (k : Environ.env * Evd.evar_m
     (* let evm, t = Evd.fresh_global env evm gr in k (env, evm, t) *)
     (* k (env, evm, unit_tt) *)
     (* )); *)
-  | TmMkDefinition (name, body) ->
-    let name = reduce_all env evm name in
-    let body = reduce_all env evm body in
-    let evm, trm = denote_term evm body in
-    let (evm, _) = Typing.type_of env evm (EConstr.of_constr trm) in
-    let _ = Declare.declare_definition ~kind:Decl_kinds.Definition (unquote_ident name) (trm, Monomorphic_const_entry (Evd.universe_context_set evm)) in
-    let env = Global.env () in
-    k (env, evm, unit_tt)
-  | TmQuote trm ->
+  | TmQuote (false, trm) ->
     let qt = TermReify.quote_term env trm (* user should do the reduction (using tmEval) if they want *)
     in k (env, evm, qt)
-  | TmQuoteRec trm ->
+  | TmQuote (true, trm) ->
     let qt = TermReify.quote_term_rec env trm in
     k (env, evm, qt)
   | TmQuoteInd name ->
@@ -793,3 +795,17 @@ let rec run_template_program_rec ?(intactic=false) (k : Environ.env * Evd.evar_m
         with
           Not_found -> k (env, evm, Constr.mkApp (cNone, [|typ|]))
        )
+  | TmMsg msg ->
+    let msg = reduce_all env evm msg in
+    let msg = unquote_string msg in
+    Feedback.msg_info (str msg)
+  | TmPrintTerm trm ->
+    begin
+      try
+       let t = reduce_all env evm trm in
+       let evdref = ref evm in
+       let evm',t' = denote_term evm t in
+       Feedback.msg_info (pr_constr t')
+      with
+      Reduction.NotArity -> CErrors.user_err (str "printing ill-typed term")
+    end

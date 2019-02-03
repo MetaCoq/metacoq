@@ -23,6 +23,7 @@ Cumulative Inductive TemplateMonad@{t u} : Type@{t} -> Prop :=
 
 (* General commands *)
 | tmPrint : forall {A:Type@{t}}, A -> TemplateMonad unit
+| tmMsg   : string -> TemplateMonad unit
 | tmFail : forall {A:Type@{t}}, string -> TemplateMonad A
 | tmEval : reductionStrategy -> forall {A:Type@{t}}, A -> TemplateMonad A
 
@@ -56,7 +57,7 @@ Cumulative Inductive TemplateMonad@{t u} : Type@{t} -> Prop :=
 | tmUnquoteTyped : forall A : Type@{t}, Ast.term -> TemplateMonad A
 
 (* Typeclass registration and querying for an instance *)
-| tmExistingInstance : ident -> TemplateMonad unit
+| tmExistingInstance : kername -> TemplateMonad unit
 | tmInferInstance : option reductionStrategy -> forall A : Type@{t}, TemplateMonad (option A)
 .
 

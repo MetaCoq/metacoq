@@ -29,16 +29,14 @@ Cumulative Inductive TM@{t} : Type@{t} -> Type :=
 | tmEval (red : reductionStrategy) (tm : Ast.term)
   : TM Ast.term
 
-| tmResolve : string -> TM kername
-
 (* Return the defined constant *)
-| tmDefinitionRed (nm : ident) (red : option reductionStrategy)
+| tmDefinition (nm : ident)
                   (type : option Ast.term) (term : Ast.term)
   : TM kername
-| tmAxiomRed (nm : ident) (red : option reductionStrategy)
+| tmAxiom (nm : ident)
              (type : Ast.term)
   : TM kername
-| tmLemmaRed (nm : ident) (red : option reductionStrategy)
+| tmLemma (nm : ident)
              (type : option Ast.term) (term : Ast.term)
   : TM kername
 
@@ -61,8 +59,7 @@ Cumulative Inductive TM@{t} : Type@{t} -> Type :=
 
 (* Typeclass registration and querying for an instance *)
 | tmExistingInstance : kername -> TM unit
-| tmInferInstance (red : option reductionStrategy)
-                  (type : Ast.term)
+| tmInferInstance (type : Ast.term)
   : TM (option Ast.term)
 .
 
@@ -93,7 +90,24 @@ Definition fail_nf {A} (msg : string) : TM A
 Definition tmMkInductive' (mind : mutual_inductive_body) : TM unit
   := tmMkInductive (mind_body_to_entry mind).
 
-Definition tmLemma (i : ident) := tmLemmaRed i (Some hnf).
-Definition tmAxiom (i : ident) := tmAxiomRed i (Some hnf).
-Definition tmDefinition (i : ident) :=
-  @tmDefinitionRed i (Some hnf).
+Definition tmLemmaRed (i : ident) (rd : reductionStrategy)
+           (ty : option Ast.term) (body : Ast.term) :=
+  match ty with
+  | None => tmLemma i None body
+  | Some ty =>
+    tmBind (tmEval rd ty) (fun ty => tmLemma i (Some ty) body)
+  end.
+Definition tmAxiomRed (i : ident) (rd : reductionStrategy) (ty : Ast.term)
+  :=
+    tmBind (tmEval rd ty) (fun ty => tmAxiom i ty).
+Definition tmDefinitionRed (i : ident) (rd : reductionStrategy)
+           (ty : option Ast.term) (body : Ast.term) :=
+  match ty with
+  | None => tmDefinition i None body
+  | Some ty =>
+    tmBind (tmEval rd ty) (fun ty => tmDefinition i (Some ty) body)
+  end.
+
+Definition tmInferInstanceRed (rd : reductionStrategy) (type : Ast.term)
+  : TM (option Ast.term) :=
+  tmBind (tmEval rd type) (fun type => tmInferInstance type).

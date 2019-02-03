@@ -23,14 +23,12 @@ sig
     | TmEval of Constr.t * Constr.t      (* only Prop *)
     | TmEvalTerm of Constr.t * Constr.t  (* only Extractable *)
 
-    | TmResolve of Constr.t
-
       (* creating definitions *)
     | TmDefinition of Constr.t * Constr.t * Constr.t * Constr.t
-    | TmDefinitionTerm of defn_kind * Constr.t * Constr.t * Constr.t * Constr.t
+    | TmDefinitionTerm of defn_kind * Constr.t * Constr.t * Constr.t
     | TmLemma of Constr.t * Constr.t * Constr.t
     | TmAxiom of Constr.t * Constr.t * Constr.t
-    | TmAxiomTerm of Constr.t * Constr.t * Constr.t
+    | TmAxiomTerm of Constr.t * Constr.t
     | TmMkDefinition of Constr.t * Constr.t
     | TmMkInductive of Constr.t
 
@@ -45,13 +43,13 @@ sig
     | TmQuoteConst of Constr.t * Constr.t
     | TmQuoteUnivs
 
-    | TmUnquote of Constr.t                   (* only Prop *)
+    | TmUnquote of Constr.t                 (* only Prop *)
     | TmUnquoteTyped of Constr.t * Constr.t (* only Prop *)
 
       (* typeclass resolution *)
     | TmExistingInstance of Constr.t
-    | TmInferInstance of Constr.t * Constr.t     (* only Prop *)
-    | TmInferInstanceTerm of Constr.t * Constr.t (* only Extractable *)
+    | TmInferInstance of Constr.t * Constr.t (* only Prop *)
+    | TmInferInstanceTerm of Constr.t        (* only Extractable *)
 
   val next_action
     : Environ.env -> Constr.t -> (template_monad * Univ.Instance.t)
@@ -78,8 +76,6 @@ struct
        ptmFail,
 
        ptmEval,
-
-       ptmResolve,
 
        ptmDefinitionRed,
        ptmLemmaRed,
@@ -112,8 +108,6 @@ struct
 
      r_template_monad_prop_p "tmEval",
 
-     r_template_monad_prop_p "tmResolve",
-
      r_template_monad_prop_p "tmDefinitionRed",
      r_template_monad_prop_p "tmLemmaRed",
      r_template_monad_prop_p "tmAxiomRed",
@@ -134,8 +128,8 @@ struct
      r_template_monad_prop_p "tmUnquote",
      r_template_monad_prop_p "tmUnquoteTyped",
 
-     r_template_monad_prop_p "tmExistingInstance",
-     r_template_monad_prop_p "tmInferInstance")
+     r_template_monad_prop_p "tmInferInstance",
+     r_template_monad_prop_p "tmExistingInstance")
 
   (* for "Extractable" *)
   let (ttmReturn,
@@ -144,7 +138,6 @@ struct
        ttmMsg,
        ttmFail,
        ttmEval,
-       ttmResolve,
 
        ttmDefinitionRed,
        ttmAxiomRed,
@@ -156,8 +149,8 @@ struct
        ttmQuoteConstant,
        ttmQuoteUniverses,
        ttmMkInductive,
-       ttmExistingInstance,
-       ttmInferInstance) =
+       ttmInferInstance,
+       ttmExistingInstance) =
     (r_template_monad_type_p "tmReturn",
      r_template_monad_type_p "tmBind",
 
@@ -165,8 +158,6 @@ struct
      r_template_monad_type_p "tmMsg",
      r_template_monad_type_p "tmFail",
      r_template_monad_type_p "tmEval",
-
-     r_template_monad_type_p "tmResolve",
 
      r_template_monad_type_p "tmDefinitionRed",
      r_template_monad_type_p "tmAxiomRed",
@@ -183,8 +174,8 @@ struct
 
      r_template_monad_type_p "tmMkInductive",
 
-     r_template_monad_type_p "tmExistingInstance",
-     r_template_monad_type_p "tmInferInstance")
+     r_template_monad_type_p "tmInferInstance",
+     r_template_monad_type_p "tmExistingInstance")
 
   type constr = Constr.t
 
@@ -204,14 +195,12 @@ struct
     | TmEval of Constr.t * Constr.t      (* only Prop *)
     | TmEvalTerm of Constr.t * Constr.t  (* only Extractable *)
 
-    | TmResolve of Constr.t
-
       (* creating definitions *)
     | TmDefinition of Constr.t * Constr.t * Constr.t * Constr.t
-    | TmDefinitionTerm of defn_kind * Constr.t * Constr.t * Constr.t * Constr.t
+    | TmDefinitionTerm of defn_kind * Constr.t * Constr.t * Constr.t
     | TmLemma of Constr.t * Constr.t * Constr.t
     | TmAxiom of Constr.t * Constr.t * Constr.t
-    | TmAxiomTerm of Constr.t * Constr.t * Constr.t
+    | TmAxiomTerm of Constr.t * Constr.t
     | TmMkDefinition of Constr.t * Constr.t
     | TmMkInductive of Constr.t
 
@@ -231,8 +220,8 @@ struct
 
       (* typeclass resolution *)
     | TmExistingInstance of Constr.t
-    | TmInferInstance of Constr.t * Constr.t     (* only Prop *)
-    | TmInferInstanceTerm of Constr.t * Constr.t (* only Extractable *)
+    | TmInferInstance of Constr.t * Constr.t (* only Prop *)
+    | TmInferInstanceTerm of Constr.t        (* only Extractable *)
 
   (* todo: the recursive call is uneeded provided we call it on well formed terms *)
   let rec app_full trm acc =
@@ -287,7 +276,7 @@ struct
       | trm::[] ->
         (TmPrintTerm trm, universes)
       | _ -> monad_failure "tmPrint" 1
-    else if Globnames.eq_gr glob_ref ttmMsg then
+    else if Globnames.eq_gr glob_ref ptmMsg || Globnames.eq_gr glob_ref ttmMsg then
       match args with
       | trm::[] ->
         (TmMsg trm, universes)
@@ -306,11 +295,6 @@ struct
       | strat::trm::[] -> (TmEvalTerm (strat, trm), universes)
       | _ -> monad_failure "tmEval" 2
 
-    else if Globnames.eq_gr glob_ref ttmResolve || Globnames.eq_gr glob_ref ptmResolve then
-      match args with
-      | [s] -> (TmResolve s, universes)
-      | _ -> monad_failure "tmResolve" 1
-
     else if Globnames.eq_gr glob_ref ptmDefinitionRed then
       match args with
       | name::s::typ::body::[] ->
@@ -318,8 +302,8 @@ struct
       | _ -> monad_failure "tmDefinitionRed" 4
     else if Globnames.eq_gr glob_ref ttmDefinitionRed then
       match args with
-      | name::s::typ::body::[] ->
-        (TmDefinitionTerm (Definition, name, s, typ, body), universes)
+      | name::typ::body::[] ->
+        (TmDefinitionTerm (Definition, name, typ, body), universes)
       | _ -> monad_failure "tmDefinitionRed" 4
 
     else if Globnames.eq_gr glob_ref ptmLemmaRed then
@@ -329,8 +313,8 @@ struct
       | _ -> monad_failure "tmLemmaRed" 3
     else if Globnames.eq_gr glob_ref ttmLemmaRed then
       match args with
-      | name::s::typ::term::[] ->
-        (TmDefinitionTerm (Lemma, name, s, typ, term), universes)
+      | name::typ::term::[] ->
+        (TmDefinitionTerm (Lemma, name, typ, term), universes)
       | _ -> monad_failure "tmLemmaRed" 3
 
     else if Globnames.eq_gr glob_ref ptmAxiomRed then
@@ -340,8 +324,8 @@ struct
       | _ -> monad_failure "tmAxiomRed" 3
     else if Globnames.eq_gr glob_ref ttmAxiomRed then
       match args with
-      | name::s::typ::[] ->
-        (TmAxiomTerm (name, s, typ), universes)
+      | name::typ::[] ->
+        (TmAxiomTerm (name, typ), universes)
       | _ -> monad_failure "tmAxiomRed" 3
 
     else if Globnames.eq_gr glob_ref ptmFreshName || Globnames.eq_gr glob_ref ttmFreshName then
@@ -422,8 +406,8 @@ struct
       | _ -> monad_failure "tmInferInstance" 2
     else if Globnames.eq_gr glob_ref ttmInferInstance then
       match args with
-      | s :: typ :: [] ->
-        (TmInferInstanceTerm (s, typ), universes)
+      | typ :: [] ->
+        (TmInferInstanceTerm typ, universes)
       | _ -> monad_failure "tmInferInstance" 2
 
     else CErrors.user_err (str "Invalid argument or not yet implemented. The argument must be a TemplateProgram: " ++ pr_constr coConstr)

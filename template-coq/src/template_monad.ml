@@ -10,27 +10,27 @@ module TemplateMonad :
 sig
   type template_monad =
       TmReturn of Constr.t
-    | TmBind  of (Constr.t * Constr.t)
-    | TmDefinition of Constr.t list
-    | TmLemma of Constr.t list
-    | TmAxiom of Constr.t list
-    | TmMkDef of Constr.t list
-    | TmQuote of bool * Constr.t
-    | TmQuoteInd of Constr.t
-    | TmQuoteConst of Constr.t list
-    | TmQuoteUnivs
+    | TmBind  of Constr.t * Constr.t
     | TmPrint of Constr.t
     | TmFail of Constr.t
+    | TmEval of Constr.t * Constr.t
+    | TmDefinition of Constr.t * Constr.t * Constr.t * Constr.t
+    | TmAxiom of Constr.t * Constr.t * Constr.t
+    | TmLemma of Constr.t * Constr.t * Constr.t
+    | TmFreshName of Constr.t
     | TmAbout of Constr.t
     | TmCurrentModPath
-    | TmEval of Constr.t list
-    | TmMkDefinition of (Constr.t * Constr.t)
+    | TmQuote of Constr.t
+    | TmQuoteRec of Constr.t
+    | TmQuoteInd of Constr.t
+    | TmQuoteUnivs
+    | TmQuoteConst of Constr.t * Constr.t
+    | TmMkDefinition of Constr.t * Constr.t
     | TmMkInductive of Constr.t
     | TmUnquote of Constr.t
-    | TmUnquoteTyped of (Constr.t * Constr.t)
-    | TmFreshName of Constr.t
+    | TmUnquoteTyped of Constr.t * Constr.t
     | TmExistingInstance of Constr.t
-    | TmInferInstance of (Constr.t * Constr.t)
+    | TmInferInstance of Constr.t * Constr.t
 
   val next_action
     : Environ.env -> Constr.t -> (template_monad * Univ.Instance.t)
@@ -144,28 +144,28 @@ struct
   type constr = Constr.t
 
   type template_monad =
-      TmReturn of constr
-    | TmBind  of (constr * constr)
-    | TmDefinition of constr list
-    | TmLemma of constr list
-    | TmAxiom of constr list
-    | TmMkDef of constr list
-    | TmQuote of bool * constr
-    | TmQuoteInd of constr
-    | TmQuoteConst of constr list
-    | TmQuoteUnivs
-    | TmPrint of constr
-    | TmFail of constr
-    | TmAbout of constr
+      TmReturn of Constr.t
+    | TmBind  of Constr.t * Constr.t
+    | TmPrint of Constr.t
+    | TmFail of Constr.t
+    | TmEval of Constr.t * Constr.t
+    | TmDefinition of Constr.t * Constr.t * Constr.t * Constr.t
+    | TmAxiom of Constr.t * Constr.t * Constr.t
+    | TmLemma of Constr.t * Constr.t * Constr.t
+    | TmFreshName of Constr.t
+    | TmAbout of Constr.t
     | TmCurrentModPath
-    | TmEval of constr list
-    | TmMkDefinition of (constr * constr)
-    | TmMkInductive of constr
-    | TmUnquote of constr
-    | TmUnquoteTyped of (constr * constr)
-    | TmFreshName of constr
-    | TmExistingInstance of constr
-    | TmInferInstance of (constr * constr)
+    | TmQuote of Constr.t
+    | TmQuoteRec of Constr.t
+    | TmQuoteInd of Constr.t
+    | TmQuoteUnivs
+    | TmQuoteConst of Constr.t * Constr.t
+    | TmMkDefinition of Constr.t * Constr.t
+    | TmMkInductive of Constr.t
+    | TmUnquote of Constr.t
+    | TmUnquoteTyped of Constr.t * Constr.t
+    | TmExistingInstance of Constr.t
+    | TmInferInstance of Constr.t * Constr.t
 
   (* todo: the recursive call is uneeded provided we call it on well formed terms *)
   let rec app_full trm acc =
@@ -213,17 +213,17 @@ struct
     else if Globnames.eq_gr glob_ref ptmDefinitionRed || Globnames.eq_gr glob_ref ttmDefinitionRed then
       match args with
       | name::s::typ::body::[] ->
-        (TmDefinition args, universes)
+        (TmDefinition (name,s,typ,body), universes)
       | _ -> monad_failure "tmDefinitionRed" 4
     else if Globnames.eq_gr glob_ref ptmAxiomRed || Globnames.eq_gr glob_ref ttmAxiomRed then
       match args with
       | name::s::typ::[] ->
-        (TmAxiom args, universes)
+        (TmAxiom (name,s,typ), universes)
       | _ -> monad_failure "tmAxiomRed" 3
     else if Globnames.eq_gr glob_ref ptmLemmaRed || Globnames.eq_gr glob_ref ttmLemmaRed then
       match args with
       | name::s::typ::[] ->
-        (TmLemma args, universes)
+        (TmLemma (name,s,typ), universes)
       | _ -> monad_failure "tmLemmaRed" 3
     else if Globnames.eq_gr glob_ref ptmMkDefinition || Globnames.eq_gr glob_ref ttmMkDefinition then
       match args with
@@ -233,12 +233,12 @@ struct
     else if Globnames.eq_gr glob_ref ptmQuote then
       match args with
       | _::trm::[] ->
-        (TmQuote (false, trm), universes)
+        (TmQuote trm, universes)
       | _ -> monad_failure "tmQuote" 2
     else if Globnames.eq_gr glob_ref ptmQuoteRec then
       match args with
       | _::trm::[] ->
-        (TmQuote (true, trm), universes)
+        (TmQuoteRec trm, universes)
       | _ -> monad_failure "tmQuoteRec" 2
     else if Globnames.eq_gr glob_ref ptmQuoteInductive || Globnames.eq_gr glob_ref ttmQuoteInductive then
       match args with
@@ -248,7 +248,7 @@ struct
     else if Globnames.eq_gr glob_ref ptmQuoteConstant || Globnames.eq_gr glob_ref ttmQuoteConstant then
       match args with
       | name::bypass::[] ->
-        (TmQuoteConst args, universes)
+        (TmQuoteConst (name, bypass), universes)
       | _ -> monad_failure "tmQuoteConstant" 2
     else if Globnames.eq_gr glob_ref ptmQuoteUniverses || Globnames.eq_gr glob_ref ttmQuoteUniverses then
       match args with
@@ -278,7 +278,7 @@ struct
     else if Globnames.eq_gr glob_ref ptmEval || Globnames.eq_gr glob_ref ttmEval then
       match args with
       | s(*reduction strategy*)::_(*type*)::trm::[] ->
-        (TmEval args, universes)
+        (TmEval (s, trm), universes)
       | _ -> monad_failure "tmEval" 3
     else if Globnames.eq_gr glob_ref ptmMkInductive || Globnames.eq_gr glob_ref ttmMkInductive then
       match args with

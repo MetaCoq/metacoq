@@ -533,7 +533,7 @@ let rec run_template_program_rec ?(intactic=false) (k : Evd.evar_map * Constr.t 
     TmReturn h -> k (evm, h)
   | TmBind (a,f) ->
     run_template_program_rec ~intactic:intactic (fun (evm, ar) -> run_template_program_rec ~intactic:intactic k env (evm, Constr.mkApp (f, [|ar|]))) env (evm, a)
-  | TmDefinition (name::s::typ::body::[]) ->
+  | TmDefinition (name,s,typ,body) ->
     let name = reduce_all env evm name in
     let evm, typ = (match denote_option s with Some s -> let red = denote_reduction_strategy env evm s in reduce env evm red typ | None -> evm, typ) in
     let univs =
@@ -541,13 +541,13 @@ let rec run_template_program_rec ?(intactic=false) (k : Evd.evar_map * Constr.t 
       else Monomorphic_const_entry (Evd.universe_context_set evm) in
     let n = Declare.declare_definition ~kind:Decl_kinds.Definition (unquote_ident name) ~types:typ (body, univs) in
     k (evm, Constr.mkConst n)
-  | TmAxiom (name::s::typ::[]) ->
+  | TmAxiom (name,s,typ) ->
     let name = reduce_all env evm name in
     let evm, typ = (match denote_option s with Some s -> let red = denote_reduction_strategy env evm s in reduce env evm red typ | None -> evm, typ) in
     let param = Entries.ParameterEntry (None, (typ, Monomorphic_const_entry (Evd.universe_context_set evm)), None) in
     let n = Declare.declare_constant (unquote_ident name) (param, Decl_kinds.IsDefinition Decl_kinds.Definition) in
     k (evm, Constr.mkConst n)
-  | TmLemma (name::s::typ::[]) ->
+  | TmLemma (name,s,typ) ->
     let name = reduce_all env evm name in
     let evm, typ = (match denote_option s with Some s -> let red = denote_reduction_strategy env evm s in reduce env evm red typ | None -> evm, typ) in
     let poly = Flags.is_universe_polymorphism () in
@@ -569,17 +569,17 @@ let rec run_template_program_rec ?(intactic=false) (k : Evd.evar_map * Constr.t 
     (* let evm, t = Evd.fresh_global env evm gr in k (env, evm, t) *)
     (* k (env, evm, unit_tt) *)
     (* )); *)
-  | TmDefinition (name::s::typ::body::[]) ->
+  | TmMkDefinition (name, body) ->
     let name = reduce_all env evm name in
     let evdref = ref evm in
     let trm = denote_term evdref body in
     let (evm, _) = Typing.type_of env !evdref (EConstr.of_constr trm) in
     let _ = Declare.declare_definition ~kind:Decl_kinds.Definition (unquote_ident name) (trm, Monomorphic_const_entry (Evd.universe_context_set evm)) in
     k (evm, unit_tt)
-  | TmQuote (false, trm) ->
+  | TmQuote trm ->
     let qt = TermReify.quote_term env trm (* user should do the reduction (using tmEval) if they want *)
     in k (evm, qt)
-  | TmQuote (true, trm) ->
+  | TmQuoteRec trm ->
     let qt = TermReify.quote_term_rec env trm in
     k (evm, qt)
   | TmQuoteInd name ->
@@ -598,7 +598,7 @@ let rec run_template_program_rec ?(intactic=false) (k : Evd.evar_map * Constr.t 
         (* let c = Environ.lookup_mind (fst ni) env in (\* FIX: For efficienctly, we should also export (snd ni)*\) *)
         (* TermReify.quote_mut_ind env c *)
         | _ -> CErrors.user_err (str name ++ str " does not seem to be an inductive."))
-  | TmQuoteConst (name::bypass::[]) ->
+  | TmQuoteConst (name,bypass) ->
        let name = reduce_all env evm name in
        let name = unquote_string name in
        let bypass = reduce_all env evm bypass in
@@ -633,7 +633,7 @@ let rec run_template_program_rec ?(intactic=false) (k : Evd.evar_map * Constr.t 
     (* let dp' = Lib.cwd () in (* different on sections ? *) *)
     let s = quote_string (Names.ModPath.to_string mp) in
     k (evm, s)
-  | TmEval (s(*reduction strategy*)::_(*type*)::trm::[]) ->
+  | TmEval (s, trm) ->
     let red = denote_reduction_strategy env evm s in
     let (evm, trm) = reduce env evm red trm
     in k (evm, trm)
@@ -681,5 +681,3 @@ let rec run_template_program_rec ?(intactic=false) (k : Evd.evar_map * Constr.t 
         with
           Not_found -> k (evm, Constr.mkApp (cNone, [|typ|]))
        )
-  | _ ->
-    CErrors.user_err (str "Invalid argument or not yet implemented. The argument must be a TemplateProgram: " ++ pr_constr pgm)

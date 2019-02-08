@@ -20,8 +20,8 @@ env:
   - COMPILER="4.06.1"
   - CAMLP5_VER="7.05"
   - FINDLIB_VER="1.8.0"
-  - COQ_VER="8.8.2"
-  - EQUATIONS_VER="1.2~beta2+8.8"
+  - EQUATIONS_VER="1.2+8.9"
+  - COQ_VER="8.9.1"
 
 install:
 - opam init -j ${NJOBS} -n -y --compiler=$COMPILER

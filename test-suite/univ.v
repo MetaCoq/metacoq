@@ -235,7 +235,7 @@ Polymorphic Definition F@{i} := Type@{i}.
 
 Quote Definition qT := Eval compute in F.
 Require Import List. Import ListNotations.
-Make Definition T'2 := (tSort [(Level.Var 1, false)]).
+Fail Make Definition T'2 := (tSort [(Level.Var 1, false)]).
 
 Quote Recursively Definition qT' := F.
 

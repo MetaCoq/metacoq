@@ -1,6 +1,7 @@
 open CErrors
 open Univ
 open Names
+open GlobRef
 open Constr_quoter
 open Pp
 

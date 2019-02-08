@@ -1,4 +1,4 @@
-Require Import BinInt List. Import ListNotations.
+Require Import BinInt List String. Import ListNotations.
 From Template Require Import config univ.
 
 

@@ -245,7 +245,6 @@ Definition bool_compare (x y : bool) : comparison :=
 Definition bool_lt (x y : bool) :=
   if x then False else y = true.
 
-Local Notation " x =? y " := (bool_compare x y) (at level 10).
 Local Notation " c ?? y " := (match c with Eq => y | Lt => Lt | Gt => Gt end) (at level 100).
 
 Definition bool_Compare (x y : bool) : Compare bool_lt eq x y.

@@ -5,6 +5,7 @@ open Names
 open Redops
 open Genredexpr
 open Pp (* this adds the ++ to the current scope *)
+open GlobRef
 
 open Quoter
 open Constr_quoter
@@ -419,13 +420,16 @@ let denote_term evm (trm: Constr.t) : Evd.evar_map * Constr.t =
        let la = Array.of_list in
        evm, Constr.mkCoFix (unquote_nat i, (la names, la types, la bodies))
     | ACoq_tProj (proj,t) ->
-       let (ind, _, narg) = unquote_proj proj in (* todo: is narg the correct projection? *)
+       let (ind, npars, arg) = unquote_proj proj in
        let ind' = unquote_inductive ind in
-       let projs = Recordops.lookup_projections ind' in
-       let evm, t = aux evm t in
-       (match List.nth projs (unquote_nat narg) with
-        | Some p -> evm, Constr.mkProj (Names.Projection.make p false, t)
-        | None -> bad_term trm)
+       let proj_npars = unquote_nat npars in
+       let proj_arg = unquote_nat arg in
+       let l = (match List.nth (Recordops.lookup_projections ind') proj_arg with
+        | Some p -> Names.Constant.label p
+        | None -> bad_term trm) in
+       let p' = Names.Projection.make (Projection.Repr.make ind' ~proj_npars ~proj_arg l) false in
+       let evm, t' = aux evm t in
+       evm, Constr.mkProj (p', t')
     | _ ->  not_supported_verb trm "big_case"
   in aux evm trm
 
@@ -445,7 +449,7 @@ let unquote_reduction_strategy env evm trm (* of type reductionStrategy *) : Red
     | name (* to unfold *) :: _ ->
        let name = reduce_all env evm name in
        let name = unquote_ident name in
-       (try Unfold [Locus.AllOccurrences, Tacred.evaluable_of_global_reference env (Nametab.global (CAst.make (Libnames.Qualid (Libnames.qualid_of_ident name))))]
+       (try Unfold [Locus.AllOccurrences, Tacred.evaluable_of_global_reference env (Nametab.global (Libnames.qualid_of_ident name))]
         with
         | _ -> CErrors.user_err (str "Constant not found or not a constant: " ++ Pp.str (Names.Id.to_string name)))
     | _ -> bad_term_verb trm "unquote_reduction_strategy"
@@ -609,7 +613,7 @@ let unquote_mutual_inductive_entry evm trm (* of type mutual_inductive_entry *) 
        let evm, inds = map_evm unquote_one_inductive_entry evm (unquote_list inds) in
        let evm, univs = denote_universe_context evm univs in
        let priv = unquote_map_option unquote_bool priv in
-       evm, { mind_entry_record = record;
+       evm, { mind_entry_record = None; (* record TODO TODO *)
               mind_entry_finite = finite;
               mind_entry_params = params;
               mind_entry_inds = inds;
@@ -672,7 +676,7 @@ let rec run_template_program_rec ?(intactic=false) (k : Environ.env * Evd.evar_m
        let ctx = Evd.evar_universe_context evm in
        let hook = Lemmas.mk_hook (fun _ gr _ -> let env = Global.env () in
                                                 let evm = Evd.from_env env in
-                                                let evm, t = Evd.fresh_global env evm gr in k (env, evm, t)) in  (* todo better *)
+                                                let evm, t = Evd.fresh_global env evm gr in k (env, evm, EConstr.to_constr evm t)) in
        ignore (Obligations.add_definition ident ~term:c cty ctx ~kind ~hook obls)
     (* let kind = Decl_kinds.(Global, Flags.use_polymorphic_flag (), DefinitionBody Definition) in *)
     (* Lemmas.start_proof (unquote_ident name) kind evm (EConstr.of_constr typ) *)
@@ -734,7 +738,7 @@ let rec run_template_program_rec ?(intactic=false) (k : Environ.env * Evd.evar_m
     begin
       let id = unquote_string id in
       try
-        let gr = Smartlocate.locate_global_with_alias (CAst.make (Libnames.qualid_of_string id)) in
+        let gr = Smartlocate.locate_global_with_alias (Libnames.qualid_of_string id) in
         let opt = Constr.mkApp (cSome , [|tglobal_reference ; quote_global_reference gr|]) in
         k (env, evm, opt)
       with
@@ -784,7 +788,7 @@ let rec run_template_program_rec ?(intactic=false) (k : Environ.env * Evd.evar_m
     let name' = Namegen.next_ident_away_from (unquote_ident name) (fun id -> Nametab.exists_cci (Lib.make_path id)) in
     k (env, evm, quote_ident name')
   | TmExistingInstance name ->
-    Classes.existing_instance true (CAst.make (Libnames.Qualid (Libnames.qualid_of_ident (unquote_ident name)))) None
+     Classes.existing_instance true (Libnames.qualid_of_ident (unquote_ident name)) None
   | TmInferInstance (s, typ) ->
        let evm, typ = (match denote_option s with Some s -> let red = unquote_reduction_strategy env evm s in reduce env evm red typ | None -> evm, typ) in
        (try

@@ -1,4 +1,4 @@
-Require Import List Arith.
+Require Import List Arith String.
 Require Import Template.All.
 Import ListNotations MonadNotation.
 

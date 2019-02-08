@@ -753,7 +753,7 @@ Lemma instantiate_params_make_context_subst ctx args ty ty' :
     make_context_subst (List.rev ctx) args [] = Some s' /\ ty' = subst0 s' ty''.
 Proof.
   unfold instantiate_params.
-  case E: instantiate_params_subst => [[s ty'']].
+  case E: instantiate_params_subst => [[s ty'']|].
   move=> [= <-].
   eapply instantiate_params_subst_make_context_subst in E.
   destruct E as [ctx'' [Hs Hty'']].

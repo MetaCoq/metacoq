@@ -3,7 +3,13 @@
 -I src
 -R theories MetaCoq.Checker
 
-# from MetaCoq (include verbatim)
+CAMLFLAGS = -linkall
+
+src/decimal.mli
+src/decimal.ml
+src/peanoNat.mli
+src/peanoNat.ml
+src/datatypes.mli
 src/datatypes.ml
 src/datatypes.mli
 src/bool.ml
@@ -105,3 +111,4 @@ src/g_metacoq_checker.ml4
 src/metacoq_checker_plugin.mlpack
 
 theories/Loader.v
+demo.v

@@ -1,7 +1,6 @@
-Require Import BinInt List. Import ListNotations.
+Require Import BinInt List String.
+Import ListNotations.
 From MetaCoq.Template Require Import config Universes.
-
-
 
 (* Prop < Set <= other levels *)
 (* Each time a level l is inserted in the graph, the constraint *)

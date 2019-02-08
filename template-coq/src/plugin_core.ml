@@ -108,7 +108,7 @@ let tmLemma (nm : ident) ?poly:(poly=false)(ty : term) : kername tm =
         let env = Global.env () in
         let evm = Evd.from_env env in
         let evm, t = Evd.fresh_global env evm gr in
-        match Constr.kind t with
+        match Constr.kind (EConstr.to_constr evm t) with
         | Constr.Const (tm, _) ->
           success env evm (Names.Constant.canonical tm)
         | _ -> failwith "Evd.fresh_global did not return a Const") in
@@ -123,7 +123,7 @@ let tmFreshName (nm : ident) : ident tm =
 let tmAbout (qualid : qualid) : global_reference option tm =
   fun env evd success _fail ->
     try
-      let gr = Smartlocate.locate_global_with_alias (CAst.make qualid) in
+      let gr = Smartlocate.locate_global_with_alias qualid in
       success env evd (Some gr)
     with
       Not_found -> success env evd None
@@ -170,7 +170,7 @@ let tmExistingInstance (kn : kername) : unit tm =
   fun env evd success _fail ->
     (* note(gmm): this seems wrong. *)
     let ident = Names.Id.of_string (Names.KerName.to_string kn) in
-    Classes.existing_instance true (CAst.make (Libnames.Qualid (Libnames.qualid_of_ident ident))) None;
+    Classes.existing_instance true (Libnames.qualid_of_ident ident) None;
     success env evd ()
 
 let tmInferInstance (typ : term) : term option tm =

@@ -101,17 +101,17 @@ let of_mib (env : Environ.env) (t : Names.MutInd.t) (mib : Plugin_core.mutual_in
 	in
         let projs, acc =
           match mib.mind_record with
-          | Some (Some (id, csts, ps)) ->
+          | PrimRecord [|id, csts, ps|] ->
             let ctxwolet = Termops.smash_rel_context mib.mind_params_ctxt in
             let indty = Constr.mkApp (Constr.mkIndU ((t,0),inst),
                                       Context.Rel.to_extended_vect Constr.mkRel 0 ctxwolet) in
             let indbinder = Context.Rel.Declaration.LocalAssum (Names.Name id,indty) in
             let envpars = Environ.push_rel_context (indbinder :: ctxwolet) env in
             let ps, acc = CArray.fold_right2 (fun cst pb (ls,acc) ->
-                let ty = quote_term envpars pb.proj_type in
+                let ty = quote_term envpars (assert false) (* pb.proj_type *) in
                 let kn = Names.KerName.label (Names.Constant.canonical cst) in
                 let na = Ast_quoter.quote_ident (Names.Label.to_id kn) in
-                ((na, ty) :: ls, acc)) csts ps ([],acc)
+                ((na, ty) :: ls, acc)) (assert false) ps ([],acc)
             in ps, acc
           | _ -> [], acc
         in

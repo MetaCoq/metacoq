@@ -182,7 +182,7 @@ struct
 
   let quote_ugraph (g : UGraph.t) =
     let inst' = quote_univ_instance Univ.Instance.empty in
-    let const' = quote_univ_constraints (UGraph.constraints_of_universes g) in
+    let const' = quote_univ_constraints (fst (UGraph.constraints_of_universes g)) in
     let uctx = Constr.mkApp (tUContextmake, [|inst' ; const'|]) in
     Constr.mkApp (tadd_global_constraints, [|Constr.mkApp (cMonomorphic_ctx, [| uctx |]); tinit_graph|])
 

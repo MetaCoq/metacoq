@@ -1,5 +1,7 @@
 open Univ
 open Names
+open GlobRef
+open Constr_quoter
 open Pp
 
 open Tm_util

@@ -799,6 +799,22 @@ Qed.
 
 Hint Resolve trans_wf_local : trans.
 
+Lemma check_correct_arity_trans Σ idecl ind u indctx npar args pctx :
+  TTy.check_correct_arity (snd Σ) idecl ind u indctx (firstn npar args) pctx = true ->
+  check_correct_arity (snd (trans_global Σ)) (trans_one_ind_body idecl) ind u
+                      (trans_local indctx) (firstn npar (map trans args))
+                      (trans_local pctx) = true.
+Proof.
+  destruct idecl; simpl in *. unfold TTy.check_correct_arity, check_correct_arity in *.
+Admitted.
+  (* simpl. (* Types of cases check *) *)
+  (* revert H1. clear. simpl. induction pctx; simpl. auto. *)
+  (* intros. apply andb_prop in H1 as [Hdecl Hr]. *)
+  (* simpl in *. *)
+  (* destruct pctx. simpl. simpl in H1. discriminate. *)
+  (* simpl in *. *)
+  (* admit. (* destruct idecl; auto. apply H1. *) *)
+
 Lemma template_to_pcuic Σ Γ t T :
   TTy.wf Σ -> TTy.typing Σ Γ t T ->
   typing (trans_global Σ) (trans_local Γ) (trans t) (trans T).
@@ -882,9 +898,7 @@ Proof.
        apply typing_wf_wf; auto.
     -- eapply typing_wf in X3; intuition auto.
        eapply wf_mkApps_inv in H4. apply All_firstn. solve_all.
-    -- destruct idecl; simpl in *. unfold TTy.check_correct_arity, check_correct_arity in *.
-       simpl. (* Types of cases check *)
-       admit. (* destruct idecl; auto. apply H1. *)
+    -- revert H1. apply check_correct_arity_trans.
     -- destruct idecl; simpl in *; auto.
     -- rewrite trans_mkApps in X4; auto with wf.
        eapply typing_wf in X3; auto. intuition. eapply wf_mkApps_inv in H4; auto.
@@ -957,4 +971,4 @@ Proof.
     apply typing_all_wf_decl in wfΓ; auto. solve_all.
     destruct x as [na [body|] ty']; simpl in *; intuition auto.
     destruct H1. auto.
-Admitted. (* types_of_cases is not finished yet *)
+Qed.

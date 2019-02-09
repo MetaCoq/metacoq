@@ -15,8 +15,10 @@ Coercion fst_ctx : global_context >-> global_declarations.
 
 (** The subject reduction property of the system: *)
 
-Conjecture subject_reduction : forall (Σ : global_context) Γ t u T,
-    Σ ;;; Γ |- t : T -> red Σ Γ t u -> Σ ;;; Γ |- u : T.
+(* Commented otherwise extraction would produce an axiom making the whole
+   extracted code unusable *)
+(* Conjecture subject_reduction : forall (Σ : global_context) Γ t u T, *)
+(*     Σ ;;; Γ |- t : T -> red Σ Γ t u -> Σ ;;; Γ |- u : T. *)
 
 (** Weak Normalization: every term has a normal form *)
 

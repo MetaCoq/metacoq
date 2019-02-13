@@ -1,3 +1,4 @@
+Require Import ssreflect.
 Require Import Template.All.
 Require Import Arith.Compare_dec.
 From Translations Require Import translation_utils.
@@ -9,35 +10,121 @@ Infix "<=" := Nat.leb.
 
 Definition default_term := tVar "constant_not_found".
 Definition debug_term msg:= tVar ("debug: " ++ msg).
+Definition ttodo := tConst "Translations.translation_utils.todo" [].
+Definition tytodo := mkApp ttodo (tSort []).
+Definition gentodo := mkApp ttodo tytodo.
 
-Fixpoint tsl_rec0 (n : nat) (t : term) {struct t} : term :=
+Fixpoint term_map (alt : nat -> term -> option term)
+         (f : nat -> nat -> term) (k : nat) t {struct t} : term :=
+  match alt k t with Some t' => t'
+  | None =>
   match t with
-  | tRel k => if n <= k then tRel (2*k-n+1) else t
-  | tEvar k ts => tEvar k (map (tsl_rec0 n) ts)
-  | tCast t c a => tCast (tsl_rec0 n t) c (tsl_rec0 n a)
-  | tProd na A B => tProd na (tsl_rec0 n A) (tsl_rec0 (n+1) B)
-  | tLambda na A t => tLambda na (tsl_rec0 n A) (tsl_rec0 (n+1) t)
-  | tLetIn na t A u => tLetIn na (tsl_rec0 n t) (tsl_rec0 n A) (tsl_rec0 (n+1) u)
-  | tApp t lu => tApp (tsl_rec0 n t) (map (tsl_rec0 n) lu)
-  | tCase ik t u br => tCase ik (tsl_rec0 n t) (tsl_rec0 n u)
-                            (map (fun x => (fst x, tsl_rec0 n (snd x))) br)
-  | tProj p t => tProj p (tsl_rec0 n t)
-  (* | tFix : mfixpoint term -> nat -> term *)
-  (* | tCoFix : mfixpoint term -> nat -> term *)
-  | _ => t
+  | tRel i => if Nat.leb k i then f k i else tRel i
+  | tEvar ev args => tEvar ev (List.map (term_map alt f k) args)
+  | tLambda na T M => tLambda na (term_map alt f k T) (term_map alt f (S k) M)
+  | tApp u v => tApp (term_map alt f k u) (List.map (term_map alt f k) v)
+  | tProd na A B => tProd na (term_map alt f k A) (term_map alt f (S k) B)
+  | tCast c kind t => tCast (term_map alt f k c) kind (term_map alt f k t)
+  | tLetIn na b t b' => tLetIn na (term_map alt f k b) (term_map alt f k t) (term_map alt f (S k) b')
+  | tCase ind p c brs =>
+    let brs' := List.map (on_snd (term_map alt f k)) brs in
+    tCase ind (term_map alt f k p) (term_map alt f k c) brs'
+  | tProj p c => tProj p (term_map alt f k c)
+  | tFix mfix idx =>
+    let k' := List.length mfix + k in
+    let mfix' := List.map (map_def (term_map alt f k')) mfix in
+    tFix mfix' idx
+  | tCoFix mfix idx =>
+    let k' := List.length mfix + k in
+    let mfix' := List.map (map_def (term_map alt f k')) mfix in
+    tCoFix mfix' idx
+  | x => x
+  end end.
+Definition term_map_lift alt f := term_map alt (fun k0 i => lift0 k0 (f (i - k0))).
+
+Definition tsl_rec0 := term_map_lift (fun _ _ => None) (fun i => tRel (2 * i + 1)).
+
+Definition regroup (n : nat) := term_map_lift (fun _ _ => None)
+  (fun i => if Nat.leb i (2 * n) then tRel ((Nat.modulo i 2) * n + (Nat.div i 2)) else tRel i).
+Notation regroup0 n := (regroup n 0).
+
+Definition unapp (t : term) : term * list term :=
+  match t with tApp t lu => (t, lu) | _ => (t, []) end.
+
+Definition dummy_inductive_body function_name :=
+  Build_one_inductive_body
+    (function_name ++ ": wrong inductive") (tRel 0) [] [] [].
+Definition dummy_minductive_decl := Build_mutual_inductive_body 0 [].
+
+Fixpoint subst_prods (args : list term) (ty : term) : term :=
+  match args, ty with
+  | [], _ => ty
+  | hd :: tl, tProd na A B => subst_prods tl (B {0 := hd})
+  | _, _ => debug_term "subst_prod: no prod to substitute"
+end.
+
+Definition generalize (Σ : global_context) x :=
+  term_map_lift (fun k y => if eq_term (snd Σ) (lift0 k x) y then Some (tRel k) else None)
+          (fun i => tRel (S i)).
+
+Fixpoint abstract (k : nat) (Σ : global_context)
+  (t : term) (args : list term) (ty : term) : term :=
+  match args, ty with
+  | [], _ => t
+  | hd :: tl, tProd na A B =>
+    tLambda na A (generalize Σ hd k (abstract k Σ t tl B))
+  | _, _ => debug_term "abstract: no prod to type the abstraction"
   end.
 
-Fixpoint tsl_rec1_app (app : option term) (E : tsl_table) (t : term) : term :=
+Definition trivial_match k (Σ : global_context) (rarg : nat) (ty : term) (ter : term) : term :=
+  (fix aux k n ty :=
+  match n, ty with
+  | 0, tProd na A B => let (cind, args) := unapp A in
+    match cind with
+    | tInd (mkInd indname indnum) _ =>
+      match lookup_env Σ indname with
+      | Some (InductiveDecl _ decl) =>
+        let (p, bodies, _univ) := decl in
+        let body := nth indnum bodies (dummy_inductive_body "trivial_match") in
+        let (_, indty, _, indKs, _) := body in
+        let (largs, rargs) := (firstn p args, skipn p args) in
+        let rindty := subst_prods largs indty in
+        let matchtype := abstract k Σ (tLambda na A B) rargs rindty in
+        let absf := abstract k Σ ter rargs rindty in
+        let branches := map_i (fun i (ktn : ident * term * nat)  =>
+          match ktn with (kname, kty, kargs) =>
+            let rk := mkApps (tVar kname) largs in
+            let rtys := substl largs kty in
+            let (_ind, indexes) := unapp rtys in
+            (i, tLetIn nAnon rk kty (subst_app absf indexes))
+          end
+          ) indKs in
+        tLambda na A (tCase
+           (mkInd indname indnum, decl.(ind_npars))
+          matchtype (tRel 0) branches)
+      | _ => debug_term ("trivial_match: inductive " ++ indname ++
+                         " not in global context")
+      end
+    | _ => debug_term ("trivial_match: not an inductive " ++ string_of_term cind)
+    end
+  | S n, tProd na A B =>   tLambda nAnon A (aux (S k) n B)
+  | remaining, not_prod => debug_term ("trivial_match: "
+                                       ++ "still expecting " ++ string_of_nat (remaining + 1)
+                                       ++ " prods in (" ++ string_of_term not_prod ++ ")")
+  end) k rarg ty.
+
+Fixpoint tsl_rec1_app (app : option term) (ΣE : tsl_context) (t : term) : term :=
+  let (Σ, E) := ΣE in
   let tsl_rec1 := tsl_rec1_app None in
   let debug case symbol :=
       debug_term ("tsl_rec1: " ++ case ++ " " ++ symbol ++ " not found") in
   match t with
   | tLambda na A t =>
     let A0 := tsl_rec0 0 A in
-    let A1 := tsl_rec1_app None E A in
+    let A1 := tsl_rec1_app None ΣE A in
     tLambda na A0 (tLambda (tsl_name tsl_ident na)
                            (subst_app (lift0 1 A1) [tRel 0])
-                           (tsl_rec1_app (option_map (lift 2 2) app) E t))
+                           (tsl_rec1_app (option_map (lift 2 2) app) ΣE t))
   | t => let t1 :=
   match t with
   | tRel k => tRel (2 * k)
@@ -45,9 +132,9 @@ Fixpoint tsl_rec1_app (app : option term) (E : tsl_table) (t : term) : term :=
 
   | tProd na A B =>
     let A0 := tsl_rec0 0 A in
-    let A1 := tsl_rec1 E A in
+    let A1 := tsl_rec1 ΣE A in
     let B0 := tsl_rec0 1 B in
-    let B1 := tsl_rec1 E B in
+    let B1 := tsl_rec1 ΣE B in
     let ΠAB0 := tProd na A0 B0 in
     tLambda (nNamed "f") ΠAB0
       (tProd na (lift0 1 A0)
@@ -56,23 +143,22 @@ Fixpoint tsl_rec1_app (app : option term) (E : tsl_table) (t : term) : term :=
                     (subst_app (lift 1 2 B1)
                                [tApp (tRel 2) [tRel 1]])))
   | tApp t us =>
-    let us' := concat (map (fun v => [tsl_rec0 0 v; tsl_rec1 E v]) us) in
-    mkApps (tsl_rec1 E t) us'
+    let us' := concat (map (fun v => [tsl_rec0 0 v; tsl_rec1 ΣE v]) us) in
+    mkApps (tsl_rec1 ΣE t) us'
 
   | tLetIn na t A u =>
     let t0 := tsl_rec0 0 t in
-    let t1 := tsl_rec1 E t in
+    let t1 := tsl_rec1 ΣE t in
     let A0 := tsl_rec0 0 A in
-    let A1 := tsl_rec1 E A in
-    let u0 := tsl_rec0 0 u in
-    let u1 := tsl_rec1 E u in
+    let A1 := tsl_rec1 ΣE A in
+    let u1 := tsl_rec1 ΣE u in
     tLetIn na t0 A0 (tLetIn (tsl_name tsl_ident na) (lift0 1 t1)
                             (subst_app (lift0 1 A1) [tRel 0]) u1)
 
   | tCast t c A => let t0 := tsl_rec0 0 t in
-                  let t1 := tsl_rec1 E t in
+                  let t1 := tsl_rec1 ΣE t in
                   let A0 := tsl_rec0 0 A in
-                  let A1 := tsl_rec1 E A in
+                  let A1 := tsl_rec1 ΣE A in
                   tCast t1 c (mkApps A1 [tCast t0 c A0]) (* apply_subst ? *)
 
   | tConst s univs =>
@@ -96,14 +182,43 @@ Fixpoint tsl_rec1_app (app : option term) (E : tsl_table) (t : term) : term :=
     match lookup_tsl_table E (IndRef (fst ik)) with
     | Some (tInd i _univ) =>
       tCase (i, (snd ik) * 2)
-            (tsl_rec1_app (Some (tsl_rec0 0 case1)) E t)
-            (tsl_rec1 E u)
-            (map (on_snd (tsl_rec1 E)) brs)
+            (tsl_rec1_app (Some (tsl_rec0 0 case1)) ΣE t)
+            (tsl_rec1 ΣE u)
+            (map (on_snd (tsl_rec1 ΣE)) brs)
     | _ => debug "tCase" (match (fst ik) with mkInd s _ => s end)
     end
+  | tFix [dt] 0 =>
+    let dt0 := map_def (tsl_rec0 1) dt in
+    let dt1 := mkdef _ (tsl_name tsl_ident dt.(dname)) (tsl_rec1 ΣE dt.(dtype))
+                       (tsl_rec1 ΣE dt.(dbody))        (2 * dt.(rarg) + 1) in
+    tLetIn (nNamed "fix0") (tFix [dt0] 0) dt.(dtype)
+    (tFix [mkdef _ dt1.(dname)
+              (subst_app (dt1.(dtype)) [tRel 0])
+              (trivial_match 0 Σ (dt1.(rarg))
+                             (subst_app (dt1.(dtype)) [tRel 1])
+                             (dt1.(dbody)))
+              (dt1.(rarg))] 0)
+  | tFix _ k => tVar ("tFix: not implemented for " ++ string_of_nat k ++ " > 1 fixpoints")
+  (* | tFix fs k => *)
+  (*   let N := List.length fs in *)
+  (*   let fs0 := map (map_def (tsl_rec0 0)) fs in *)
+  (*   let fs1 := map (fun dt => *)
+  (*     let rai := 2 * dt.(rarg) + 1 in *)
+  (*     let tyi := subst_app (up (tsl_rec1 ΣE dt.(dtype))) [tRel 0] in *)
+  (*     mkdef _ (tsl_name tsl_ident dt.(dname)) tyi *)
+  (*        (tLetIn (nNamed "modfix") tyi (up (tsl_rec1 ΣE dt.(dbody))) *)
+  (*                (trivial_match 2 Σ (rai + 2) (up tyi) (tRel 0))) *)
+  (*        (rai)) fs in *)
+  (*   fold_left_i (fun term i f0 => tLetIn (nNamed ("fix" ++ string_of_nat k)) *)
+  (*               (nth k fs0 f0).(dtype) (tFix fs0 i) term) (rev fs0) *)
+  (*   (tFix (map_i (fun i dt => *)
+  (*     mkdef _ dt.(dname) *)
+  (*             (dt.(dtype) {0 := tRel (N - S i)}) *)
+  (*             (regroup N 0 (dt.(dbody) {0 := tRel (2 * (N - S i) + 1)})) *)
+  (*             dt.(rarg)) fs1) k) *)
+
   | tProj _ _ => todo
-  | tFix _ _ | tCoFix _ _ => todo
-  | tVar _ | tMeta _ | tEvar _ _ => todo
+  | tCoFix _ _ | tVar _ | tMeta _ | tEvar _ _ => todo
   | tLambda _ _ _ => tVar "impossible"
   end in
   match app with Some t' => mkApp t1 (t' {3 := tRel 1} {2 := tRel 0})
@@ -111,7 +226,7 @@ Fixpoint tsl_rec1_app (app : option term) (E : tsl_table) (t : term) : term :=
   end.
 Definition tsl_rec1 := tsl_rec1_app None.
 
-Definition tsl_mind_body (E : tsl_table) (mp : string) (kn : kername)
+Definition tsl_mind_body (ΣE : tsl_context) (mp : string) (kn : kername)
            (mind : mutual_inductive_body) : tsl_table * list mutual_inductive_body.
   refine (_, [{| ind_npars := 2 * mind.(ind_npars);
                  ind_bodies := _;
@@ -131,7 +246,7 @@ Definition tsl_mind_body (E : tsl_table) (mp : string) (kn : kername)
               ind_ctors := _;
               ind_projs := [] |}. (* UGLY HACK!!! todo *)
     + (* arity  *)
-      refine (let ar := subst_app (tsl_rec1 E ind.(ind_type))
+      refine (let ar := subst_app (tsl_rec1 ΣE ind.(ind_type))
                                   [tInd (mkInd kn i) []] in
               ar).
     + (* constructors *)
@@ -139,7 +254,7 @@ Definition tsl_mind_body (E : tsl_table) (mp : string) (kn : kername)
       intros k ((name, typ), nargs).
       refine (tsl_ident name, _, 2 * nargs).
       refine (subst_app _ [tConstruct (mkInd kn i) k []]).
-      refine (fold_left_i (fun t0 i u  => t0 {S i := u}) _ (tsl_rec1 E typ)).
+      refine (fold_left_i (fun t0 i u  => t0 {S i := u}) _ (tsl_rec1 ΣE typ)).
       (* [I_n-1; ... I_0] *)
       refine (rev (map_i (fun i _ => tInd (mkInd kn i) [])
                               mind.(ind_bodies))).
@@ -156,14 +271,10 @@ Defined.
 
 Instance param : Translation :=
   {| tsl_id := tsl_ident ;
-     tsl_tm := fun ΣE t => ret (tsl_rec1 (snd ΣE) t) ;
+     tsl_tm := fun ΣE t => ret (tsl_rec1 ΣE t) ;
      (* Implement and Implement Existing cannot be used with this translation *)
      tsl_ty := None ;
-     tsl_ind := fun ΣE mp kn mind => ret (tsl_mind_body (snd ΣE) mp kn mind) |}.
-
-
-
-
+     tsl_ind := fun ΣE mp kn mind => ret (tsl_mind_body ΣE mp kn mind) |}.
 
 
 Definition T := forall A, A -> A.
@@ -174,10 +285,30 @@ Definition tm := ((fun A (x:A) => x) (Type -> Type) (fun x => x)).
 Run TemplateProgram (Translate emptyTC "tm").
 
 Run TemplateProgram (TC <- Translate emptyTC "nat" ;;
-                     tmDefinition "nat_TC" TC ).
+                     tmDefinition "nat_TC" TC).
 
 Run TemplateProgram (Translate nat_TC "pred").
+Check Top.natᵗ.
 
+(* Definition prg : TemplateMonad unit  := *)
+(*   gr <- tmAbout "natᵗ";; *)
+(*   match gr with *)
+(*    | Some (IndRef (mkInd kn _)) => *)
+(*      d <- tmQuoteInductive kn;; *)
+(*      let TC := (add_global_decl (InductiveDecl kn d) (fst nat_TC), snd nat_TC) in *)
+(*      tmDefinition "nat_TC'" TC *)
+(*    | _ => tmPrint "not an inductive" *)
+(*    end. *)
+
+Run TemplateProgram (
+     d <- tmQuoteInductive "Top.natᵗ";;
+     let TC := (add_global_decl (InductiveDecl "Top.natᵗ" d) (fst nat_TC), snd nat_TC) in
+     tmDefinition "nat_TC2" TC
+                    ).
+Fail Run TemplateProgram (Translate nat_TC2 "plus").
+
+Print plusᵗ.
+STOP.
 
 Module Id1.
   Definition ID := forall A, A -> A.
@@ -249,7 +380,9 @@ Run TemplateProgram (TC <- Translate emptyTC "list" ;;
                      TC <- Translate TC "rev_type" ;;
                      tmDefinition "list_TC" TC ).
 
+Run TemplateProgram (Translate nat_TC' "plus" ).
 
+(* LetIn(fix0,Prod(n,Ind(Coq.Init.Datatypes.nat,0,[]),Prod(m,Ind(Coq.Init.Datatypes.nat,0,[]),Ind(Coq.Init.Datatypes.nat,0,[]))),TODO string_of_term,TODO string_of_term)" *)
 
 Require Import MiniHoTT.
 Module Axioms.
@@ -293,17 +426,16 @@ Module Axioms.
     apply h.
   Defined.
 
-  
+
   Definition wFunext
     := forall A (B : A -> Type) (f g : forall x, B x), (forall x, f x = g x) -> f = g.
- 
 
   Run TemplateProgram (Translate eqTC "wFunext").
 
   Theorem wFunext_provably_parametric : forall h : wFunext, wFunextᵗ h.
   Proof.
     unfold wFunext, wFunextᵗ.
-    intros h A Aᵗ B Bᵗ f fᵗ g gᵗ X H. 
+    intros h A Aᵗ B Bᵗ f fᵗ g gᵗ X H.
     apply eq_eqᵗ.
     apply h; intro x.
     apply h; intro xᵗ.
@@ -386,7 +518,7 @@ Module Axioms.
   Lemma pathsᵗ_ok2 {A} {Aᵗ : A -> Type} {x y} {xᵗ : Aᵗ y} (p q : x = y) e r
         (Hr : e # (pathsᵗ_ok p) = r)
     : pathsᵗ (x = y) (pathsᵗ A Aᵗ x (transport Aᵗ p^ xᵗ) y xᵗ) p (pathsᵗ_ok p) q r e.
-    destruct e, p, Hr; reflexivity. 
+    destruct e, p, Hr; reflexivity.
   Defined.
 
   Definition apᵗ_idmap  {A} {Aᵗ : A -> Type} {x y xᵗ yᵗ} (p : x = y)
@@ -414,7 +546,7 @@ Module Axioms.
     intros x xᵗ; cbn. eapply pathsᵗ_ok2.
     set (coh x). set (q1 x) in *. set (q2 x) in *.
     clearbody p p1 p0; clear; cbn in *.
-    set (g x) in *. clearbody a. 
+    set (g x) in *. clearbody a.
     rewrite transport_pp.
     destruct p1. cbn in *.
     match goal with

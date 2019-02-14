@@ -29,14 +29,6 @@ In addition to this representation of terms, Template Coq includes:
 
 - Denotation of terms and global declarations
 
-The branch `master` is stable and works with Coq 8.6, an opam package is
-available.
-
-The [coq-8.7](https://github.com/Template-Coq/template-coq/tree/coq-8.7),
-branch is in development and contains additional features:
-
-- Complete reification and denotation of CIC terms, including universes
-
 - A monad for manipulating global declarations, calling the type
   checker, and inserting them in the global environment, in
   the stype of MTac.
@@ -59,17 +51,26 @@ PCUIC and Extraction
 Translations
 ------------
 
-- Example plugins built on top of this.
+- Example of plugin built on top of this.
 
-The [coq-8.8](https://github.com/MetaCoq/metacoq/tree/coq-8.8) branch is the active development branch. If possible, it's strongly recommended to use this branch.
 
-The branch [coq-8.6](https://github.com/MetaCoq/metacoq/tree/coq-8.6) is stable, but only contains the first two features in the above list.
-The [coq-8.7](https://github.com/MetaCoq/metacoq/tree/coq-8.7) is stable and contains all features, but may not receive new ones.
+Branches
+========
+
+The [coq-8.9](https://github.com/MetaCoq/metacoq/tree/coq-8.9) branch is the active development branch. If possible, it's strongly recommended to use this branch.
+
+The branches [coq-8.6](https://github.com/MetaCoq/metacoq/tree/coq-8.6),
+[coq-8.7](https://github.com/MetaCoq/metacoq/tree/coq-8.7) and
+[coq-8.8](https://github.com/MetaCoq/metacoq/tree/coq-8.8)
+are stable but may not receive new features.
 
 The branch [master](https://github.com/MetaCoq/metacoq/tree/master) tracks the current Coq `master` branch.
 
+
 Documentation
 =============
+
+You may want to start by a demo: [demo.v](https://github.com/MetaCoq/metacoq/tree/coq-8.8/test-suite/demo.v)
 
 The 8.7 branch [documentation (coqdoc files)](html/Template.All.html)
 and pretty-printed HTML versions of the [translations](html/translations) are available.
@@ -89,6 +90,13 @@ Otherwise:
 
 - or a fresh level is added.
 
+Examples of plugins
+-------------------
+
+- a plugin to add a constructor in [test-suite/add_constructor.v](https://github.com/MetaCoq/metacoq/tree/coq-8.8/test-suite/add_constructor.v)
+- a parametricity plugin in [translations/param_original.v](https://github.com/MetaCoq/metacoq/tree/coq-8.8/translations/param_original.v)
+- a plugin to negate funext in [translations/times_bool_fun.v](https://github.com/MetaCoq/metacoq/tree/coq-8.8/translations/times_bool_fun.v)
+
 
 Papers
 ======
@@ -96,9 +104,9 @@ Papers
 - The system was presented at 
   [Coq'PL 2018](https://popl18.sigplan.org/event/coqpl-2018-typed-template-coq)
 
-- ["Towards Certified Meta-Programming with Typed Template-Coq"](https://github.com/MetaCoq/metacoq/raw/master/docs/submission.pdf)
+- ["Towards Certified Meta-Programming with Typed Template-Coq"](https://hal.archives-ouvertes.fr/hal-01809681/document)
   A. Anand, S. Boulier, C. Cohen, M. Sozeau and N. Tabareau.
-  Submitted.
+  ITP 2018.
 
 Credits
 =======
@@ -120,37 +128,12 @@ Copyright (c) 2017-2018 Simon Boulier, Nicolas Tabareau, Cyril Cohen
 This software is distributed under the terms of the MIT license.
 See [LICENSE](LICENSE) for details.
 
-Branches
-========
-
-The current development branch is [coq-8.8](https://github.com/MetaCoq/metacoq/tree/coq-8.8),
-which includes:
-
-  - The full syntax of CIC:
-    [Ast](https://github.com/MetaCoq/metacoq/blob/coq-8.8/template-coq/theories/Ast.v)
-
-  - The typing judgment of CIC: 
-    [Typing](https://github.com/MetaCoq/metacoq/blob/coq-8.8/template-coq/theories/Typing.v#L488)
-    
-  - A partial type-checker implementation:
-    [Checker](https://github.com/MetaCoq/metacoq/blob/coq-8.8/template-coq/theories/Checker.v)
-
-  - The `TemplateMonad` datatype and the `Run TemplateProgram` command
-    to run template programs:
-    [TemplateMonad](https://github.com/MetaCoq/metacoq/blob/coq-8.8/template-coq/theories/TemplateMonad.v)
-        
-Examples of plugins
--------------------
-
-- a plugin to add a constructor in [test-suite/add_constructor.v](https://github.com/MetaCoq/metacoq/tree/coq-8.8/test-suite/add_constructor.v)
-- a parametricity plugin in [translations/tsl_param.v](https://github.com/MetaCoq/metacoq/tree/coq-8.8/translations/tsl_param.v)
-- a plugin to negate funext in [translations/fun.v](https://github.com/MetaCoq/metacoq/tree/coq-8.8/translations/tsl_fun.v)
 
 Installation instructions
 =========================
 
-Install from scratch (for 8.6 and development versions)
--------------------------------------------------------
+Install from GitHub repository
+------------------------------
 
 To get the source code:
 
@@ -208,8 +191,10 @@ Once in the right environment, Use:
   library. Then the `Template` namespace can be used for `Require
   Import` statements, e.g. `From Template Require Import All.`.
 
-Install with OPAM (for 8.6 version only)
-----------------------------------------
+Install with OPAM
+-----------------
+Alternatively, you can install MetaCoq through Opam.
+
 Add the Coq repository:
 
     opam repo add coq-released https://coq.inria.fr/opam/released
@@ -222,12 +207,14 @@ To get beta versions of Coq, you might want to activate the repository:
 
     opam repo add coq-core-dev https://coq.inria.fr/opam/core-dev
 
+Packages `2.1~beta` and `2.1~beta3` are for Coq 8.8. Package `2.0~beta` is for Coq 8.7.
+
 How to Use
 ==========
 
 Check `test-suite/demo.v` for examples.
 
-Unless you installed the library, you must add the theories directory to
+Unless you installed the library (with `make install`), you must add the theories directory to
 your Coq load path with the prefix Template. This can be done on the
 command line by adding:
 

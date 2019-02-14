@@ -4,6 +4,7 @@
 -Q ../checker/theories TemplateChecker
 -R . TemplateTestSuite
 
+demo.v
 add_constructor.v
 bug1.v
 bug2.v

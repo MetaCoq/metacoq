@@ -3,7 +3,7 @@ MetaCoq
 
 <img src="https://github.com/MetaCoq/metacoq/raw/master/docs/assets/LOGO.png" alt="MetaCoq" width="50px"/>
 
-[![Build Status](https://travis-ci.org/MetaCoq/metacoq.svg?branch=coq-8.8)](https://travis-ci.org/MetaCoq/metacoq)
+[![Build Status](https://travis-ci.org/MetaCoq/metacoq.svg?branch=coq-8.9)](https://travis-ci.org/MetaCoq/metacoq)
 [![Gitter](https://img.shields.io/gitter/room/nwjs/nw.js.svg)](https://gitter.im/coq/Template-Coq)
 
 MetaCoq is a project formalizing Coq in Coq and providing tools for
@@ -70,7 +70,7 @@ The branch [master](https://github.com/MetaCoq/metacoq/tree/master) tracks the c
 Documentation
 =============
 
-You may want to start by a demo: [demo.v](https://github.com/MetaCoq/metacoq/tree/coq-8.8/test-suite/demo.v)
+You may want to start by a demo: [demo.v](https://github.com/MetaCoq/metacoq/tree/coq-8.9/test-suite/demo.v)
 
 The 8.7 branch [documentation (coqdoc files)](html/Template.All.html)
 and pretty-printed HTML versions of the [translations](html/translations) are available.
@@ -111,9 +111,9 @@ Otherwise:
 Examples of plugins
 -------------------
 
-- a plugin to add a constructor in [test-suite/add_constructor.v](https://github.com/MetaCoq/metacoq/tree/coq-8.8/test-suite/add_constructor.v)
-- a parametricity plugin in [translations/param_original.v](https://github.com/MetaCoq/metacoq/tree/coq-8.8/translations/param_original.v)
-- a plugin to negate funext in [translations/times_bool_fun.v](https://github.com/MetaCoq/metacoq/tree/coq-8.8/translations/times_bool_fun.v)
+- a plugin to add a constructor in [test-suite/add_constructor.v](https://github.com/MetaCoq/metacoq/tree/coq-8.9/test-suite/add_constructor.v)
+- a parametricity plugin in [translations/param_original.v](https://github.com/MetaCoq/metacoq/tree/coq-8.9/translations/param_original.v)
+- a plugin to negate funext in [translations/times_bool_fun.v](https://github.com/MetaCoq/metacoq/tree/coq-8.9/translations/times_bool_fun.v)
 
 
 Papers
@@ -162,10 +162,10 @@ Install from GitHub repository
 To get the source code:
 
     # git clone https://github.com/MetaCoq/metacoq.git
-    # git checkout -b coq-8.8 origin/coq-8.8
+    # git checkout -b coq-8.9 origin/coq-8.9
     # git status
     
-Check that you are indeed on the `coq-8.8` branch.
+Check that you are indeed on the `coq-8.9` branch.
 
 Requirements
 ------------
@@ -183,19 +183,32 @@ Requirements through opam
 The easiest way to get all is through [opam](http://opam.ocaml.org):
 
 You might want to create a "switch" (an environment of `opam` packages) for `Coq` if
+<<<<<<< HEAD
 you don't have one yet. You need to use **opam 2** to obtain the right version of `Equations`.
 
     # opam switch create coq.8.8.2 4.04.1 
     # eval $(opam env)
     
 This creates the `coq.8.8.2` switch which initially contains only the
+=======
+you don't have one yet:
+    
+    # opam switch -A 4.04.1 coq.8.9
+    # eval `opam config env`
+    
+This creates the `coq.8.9` switch which initially contains only the
+>>>>>>> Update Readme to 8.9
 basic `OCaml` `4.04.1` compiler, and puts you in the right environment
 (check with `ocamlc -v`).
 
 Once in the right switch, you can install `Coq` and the `Equations` package using:
     
+<<<<<<< HEAD
     # opam pin add coq 8.8.2
     # opam pin add coq-equations 1.2+8.8
+=======
+    # opam pin add coq 8.9
+>>>>>>> Update Readme to 8.9
     
 Pinning the packages prevents opam from trying to upgrade it afterwards, in
 this switch. If the commands are successful you should have `coq`

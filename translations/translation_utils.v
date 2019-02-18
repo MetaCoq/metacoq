@@ -6,17 +6,17 @@ Open Scope string_scope.
 Axiom todo : forall {A}, A.
 
 
-Definition tsl_table := list (global_reference * term).
+Definition table T := list (global_reference * T).
+Notation tsl_table := (table term).
 
-Fixpoint lookup_tsl_table (E : tsl_table) (gr : global_reference)
-  : option term :=
+Fixpoint lookup_table {T} (E : table T) (gr : global_reference) : option T :=
   match E with
   | nil => None
   | hd :: tl =>
     if gref_eq_dec gr (fst hd) then Some (snd hd)
-    else lookup_tsl_table tl gr
+    else lookup_table tl gr
   end.
-
+Notation lookup_tsl_table := (@lookup_table term).
 
 Definition tsl_context := (global_context * tsl_table)%type.
 

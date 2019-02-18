@@ -18,10 +18,10 @@ Arguments dtype {term} _.
 Arguments dbody {term} _.
 Arguments rarg {term} _.
 
-Definition on_snd {A B} (f : B -> B) (p : A * B) :=
+Definition on_snd {A B B'} (f : B -> B') (p : A * B) :=
   (fst p, f (snd p)).
 
-Definition map_def {term : Set} (f : term -> term) (d : def term) :=
+Definition map_def {term term' : Set} (f : term -> term') (d : def term) :=
   {| dname := d.(dname); dtype := f d.(dtype); dbody := f d.(dbody); rarg := d.(rarg) |}.
 
 Definition test_snd {A B} (f : B -> bool) (p : A * B) :=
@@ -30,26 +30,28 @@ Definition test_snd {A B} (f : B -> bool) (p : A * B) :=
 Definition test_def {term : Set} (f : term -> bool) (d : def term) :=
   f d.(dtype) && f d.(dbody).
 
-Lemma on_snd_on_snd {A B} (f g : B -> B) (d : A * B) :
+Lemma on_snd_on_snd {A B B' B''} (f : B' -> B'') (g : B -> B') (d : A * B) :
   on_snd f (on_snd g d) = on_snd (fun x => f (g x)) d.
 Proof.
   destruct d; reflexivity.
 Qed.
 
-Lemma compose_on_snd {A B} (f g : B -> B) :
+Lemma compose_on_snd {A B B' B''} (f : B' -> B'') (g : B -> B') :
   compose (A:=A * B) (on_snd f) (on_snd g) = on_snd (compose f g).
 Proof.
   reflexivity.
 Qed.
 
 
-Lemma map_def_map_def {term : Set} (f g : term -> term) (d : def term) :
+Lemma map_def_map_def {term term' term'': Set}
+  (f : term' -> term'') (g : term -> term') (d : def term) :
   map_def f (map_def g d) = map_def (fun x => f (g x)) d.
 Proof.
   destruct d; reflexivity.
 Qed.
 
-Lemma compose_map_def {term : Set} (f g : term -> term) :
+Lemma compose_map_def {term term' term'': Set}
+  (f : term' -> term'') (g : term -> term') :
   compose (A:=def term) (map_def f) (map_def g) = map_def (compose f g).
 Proof. reflexivity. Qed.
 
@@ -133,7 +135,7 @@ Proof.
   intros Heq. rewrite Heq. f_equal. apply IHForall. apply Heq. apply H.
 Qed.
 
-Lemma on_snd_spec {A B} (P : B -> Prop) (f g : B -> B) (x : A * B) :
+Lemma on_snd_spec {A B B'} (P : B -> Prop) (f g : B -> B') (x : A * B) :
   P (snd x) -> (forall x, P x -> f x = g x) ->
   on_snd f x = on_snd g x.
 Proof.
@@ -141,7 +143,8 @@ Proof.
   now rewrite H0; auto.
 Qed.
 
-Lemma map_def_spec (P : term -> Prop) (f g : term -> term) (x : def term) :
+Lemma map_def_spec {term term' : Set} (P : term -> Prop)
+  (f g : term -> term') (x : def term) :
   P x.(dbody) -> P x.(dtype) -> (forall x, P x -> f x = g x) ->
   map_def f x = map_def g x.
 Proof.

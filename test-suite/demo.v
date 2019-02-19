@@ -222,7 +222,6 @@ Qed.
 Run TemplateProgram ((tmQuoteConstant "six" true) >>= tmPrint).
 Run TemplateProgram ((tmQuoteConstant "six" false) >>= tmPrint).
 
-
 Run TemplateProgram (t <- tmLemma "foo4" nat ;;
                      tmDefinition "foo5" (t + t + 2)).
 Next Obligation.

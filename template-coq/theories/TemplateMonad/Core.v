@@ -72,5 +72,5 @@ Definition tmMkInductive' (mind : mutual_inductive_body) : TemplateMonad unit
 
 Definition tmLemma (i : ident) := tmLemmaRed i (Some hnf).
 Definition tmAxiom (i : ident) := tmAxiomRed i (Some hnf).
-Definition tmDefinition (i : ident) :=
-  @tmDefinitionRed i (Some hnf).
+Definition tmDefinition (i : ident) {T} (t : T) :=
+  @tmDefinitionRed i (Some hnf) T t.

@@ -591,7 +591,7 @@ Proof.
   rewrite -{2}Heq //.
   specialize (subst_instantiate_params_subst n k (List.rev params) args [] t).
   move=> /= Heq'.
-  case E: (instantiate_params_subst (List.rev params) args)=> [[l' t']|] /= //.
+  case E: (instantiate_params_subst (List.rev params) args)=> /= [[l' t']|] /= //.
   specialize (Heq' _ _ E). rewrite Heq'. move=> [= <-]. f_equal.
   rewrite distr_subst //.
   move/instantiate_params_subst_length: E => -> /=. do 2 f_equal. lia.
@@ -748,13 +748,12 @@ Lemma instantiate_params_make_context_subst ctx args ty ty' :
     make_context_subst (List.rev ctx) args [] = Some s' /\ ty' = subst0 s' ty''.
 Proof.
   unfold instantiate_params.
-  case E: instantiate_params_subst => [[s ty'']].
+  case E: instantiate_params_subst => // [[s ty'']].
   move=> [= <-].
   eapply instantiate_params_subst_make_context_subst in E.
   destruct E as [ctx'' [Hs Hty'']].
   exists ctx'', ty'', s. split; auto.
   now rewrite -> List.rev_length in Hty''.
-  congruence.
 Qed.
 
 Lemma subst_cstr_concl_head ind u mdecl (arity : context) args :

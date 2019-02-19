@@ -12,24 +12,14 @@ src/g_template_coq.ml4
 src/template_coq.mlpack
 src/template_monad.ml
 
-theories/utils.v
-theories/config.v
-theories/kernel/univ.v
-theories/kernel/uGraph.v
-theories/Ast.v
-theories/AstUtils.v
-theories/Loader.v
-theories/Induction.v
-theories/LiftSubst.v
-theories/WeakSubst.v
-theories/UnivSubst.v
-theories/Typing.v
-theories/MetaTheory.v
-theories/Checker.v
-theories/WcbvEval.v
-theories/Retyping.v
-theories/All.v
-theories/Extraction.v
+theories/utils.v theories/config.v theories/kernel/univ.v
+theories/kernel/uGraph.v theories/BasicAst.v theories/Ast.v
+theories/AstUtils.v theories/Loader.v theories/Induction.v
+theories/LiftSubst.v theories/UnivSubst.v theories/Typing.v
+theories/TypingWf.v theories/Generation.v theories/WeakeningEnv.v
+theories/Closed.v theories/Weakening.v theories/Substitution.v
+theories/MetaTheory.v theories/Checker.v theories/WcbvEval.v
+theories/Retyping.v theories/All.v theories/Extraction.v
 
 # the Template monad
 theories/TemplateMonad.v

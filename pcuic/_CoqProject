@@ -1,0 +1,21 @@
+-I ../template-coq/src
+-R ../template-coq/theories Template
+-R theories PCUIC
+
+theories/PCUICAst.v
+theories/PCUICAstUtils.v
+theories/PCUICInduction.v
+theories/PCUICLiftSubst.v
+theories/PCUICUnivSubst.v
+theories/PCUICTyping.v
+theories/PCUICWeakeningEnv.v
+theories/PCUICClosed.v
+theories/PCUICWeakening.v
+theories/PCUICSubstitution.v
+theories/PCUICMetaTheory.v
+theories/PCUICWcbvEval.v
+theories/PCUICChecker.v
+theories/PCUICRetyping.v
+theories/TemplateToPCUIC.v
+# theories/All.v
+theories/Extraction.v

@@ -1,8 +1,53 @@
-From Coq Require Import Bool Program List Ascii String OrderedType.
+From Coq Require Import Bool Program List Ascii String OrderedType Lia.
 Import ListNotations.
-Open Scope string_scope.
+Require Import ssreflect.
+Set Asymmetric Patterns.
+Require Import Arith.
 
-Class Fuel := { fuel : nat }.
+Notation "#| l |" := (List.length l) (at level 0, l at level 99, format "#| l |").
+
+(** We cannot use ssrbool as it breaks extraction. *)
+Coercion is_true : bool >-> Sortclass.
+
+Definition pred (A : Type) := A -> bool.
+
+Lemma andb_and b b' : b && b' <-> b /\ b'.
+Proof. apply andb_true_iff. Qed.
+
+Lemma andP {b b'} : b && b' -> b /\ b'.
+Proof. apply andb_and. Qed.
+
+Ltac toProp :=
+  repeat match goal with
+  | H : is_true (_ && _) |- _ => apply andb_and in H; destruct H
+  | |- context [is_true (_ && _)] => rewrite andb_and
+  end.
+
+Definition on_snd {A B C} (f : B -> C) (p : A * B) :=
+  (fst p, f (snd p)).
+
+Definition test_snd {A B} (f : B -> bool) (p : A * B) :=
+  f (snd p).
+
+Definition option_get {A} (default : A) (x : option A) : A
+  := match x with
+     | Some x => x
+     | None => default
+     end.
+
+Definition on_some {A} (P : A -> Type) (o : option A) :=
+  match o with
+  | Some t => P t
+  | None => False
+  end.
+
+Definition option_default {A B} (f : A -> B) (o : option A) (b : B) :=
+  match o with Some x => f x | None => b end.
+
+Definition on_rel {A B} (R : A -> A -> Prop) (f : B -> A) : B -> B -> Prop :=
+  fun x y => R (f x) (f y).
+
+Class Fuel := fuel : nat.
 
 (** Such a useful tactic it should be part of the stdlib. *)
 Ltac forward_gen H tac :=
@@ -10,12 +55,14 @@ Ltac forward_gen H tac :=
   | ?X -> _ => let H' := fresh in assert (H':X) ; [tac|specialize (H H'); clear H']
   end.
 
+Ltac inv H := inversion_clear H.
+
 Tactic Notation "forward" constr(H) := forward_gen H ltac:(idtac).
 Tactic Notation "forward" constr(H) "by" tactic(tac) := forward_gen H tac.
 
 Record squash (A : Type) : Prop := { _ : A }.
 
-Definition string_of_nat n :=
+Definition string_of_nat n : string :=
   match n with
   | 0 => "0"
   | 1 => "1"
@@ -71,12 +118,6 @@ Definition string_of_nat n :=
   end.
 
 Hint Resolve String.string_dec Peano_dec.eq_nat_dec : eq_dec.
-
-Definition option_get {A} (default : A) (x : option A) : A
-  := match x with
-     | Some x => x
-     | None => default
-     end.
 
 Fixpoint fold_left_i_aux {A B} (f : A -> nat -> B -> A) (n0 : nat) (l : list B)
          (a0 : A) {struct l} : A
@@ -245,7 +286,6 @@ Definition bool_compare (x y : bool) : comparison :=
 Definition bool_lt (x y : bool) :=
   if x then False else y = true.
 
-Local Notation " x =? y " := (bool_compare x y) (at level 10).
 Local Notation " c ?? y " := (match c with Eq => y | Lt => Lt | Gt => Gt end) (at level 100).
 
 Definition bool_Compare (x y : bool) : Compare bool_lt eq x y.
@@ -393,4 +433,944 @@ Proof.
   - apply EQ. now apply string_compare_eq.
   - apply LT; assumption.
   - apply GT. red. now apply string_compare_lt.
+Qed.
+
+(** Combinators *)
+
+(** Forall combinators in Type to allow building them by recursion *)
+Inductive All (A : Type) (P : A -> Type) : list A -> Type :=
+    All_nil : All A P []
+  | All_cons : forall (x : A) (l : list A),
+                  P x -> All A P l -> All A P (x :: l).
+Arguments All {A} P l.
+
+Inductive Alli {A} (P : nat -> A -> Type) (n : nat) : list A -> Type :=
+| Alli_nil : Alli P n []
+| Alli_cons hd tl : P n hd -> Alli P (S n) tl -> Alli P n (hd :: tl).
+
+Inductive All2 {A B : Type} (R : A -> B -> Type) : list A -> list B -> Type :=
+  All2_nil : All2 R [] []
+| All2_cons : forall (x : A) (y : B) (l : list A) (l' : list B),
+    R x y -> All2 R l l' -> All2 R (x :: l) (y :: l').
+
+Inductive OnOne2 {A : Type} (P : A -> A -> Type) : list A -> list A -> Type :=
+| OnOne2_hd hd hd' tl : P hd hd' -> OnOne2 P (hd :: tl) (hd' :: tl)
+| OnOne2_tl hd tl tl' : OnOne2 P tl tl' -> OnOne2 P (hd :: tl) (hd :: tl').
+
+Fixpoint mapi_rec {A B} (f : nat -> A -> B) (l : list A) (n : nat) : list B :=
+  match l with
+  | [] => []
+  | hd :: tl => f n hd :: mapi_rec f tl (S n)
+  end.
+
+Definition mapi {A B} (f : nat -> A -> B) (l : list A) := mapi_rec f l 0.
+
+Lemma on_snd_on_snd {A B C D} (f : C -> D) (g : B -> C) (d : A * B) :
+  on_snd f (on_snd g d) = on_snd (fun x => f (g x)) d.
+Proof.
+  destruct d; reflexivity.
+Qed.
+
+Lemma snd_on_snd {A B C} (f : B -> C) (p : A * B) : snd (on_snd f p) = f (snd p).
+Proof. destruct p; reflexivity. Qed.
+
+Lemma compose_on_snd {A B C D} (f : C -> D) (g : B -> C) :
+  compose (A:=A * B) (on_snd f) (on_snd g) = on_snd (compose f g).
+Proof.
+  reflexivity.
+Qed.
+
+Lemma map_map_compose :
+  forall (A B C : Type) (f : A -> B) (g : B -> C) (l : list A),
+    map g (map f l) = map (compose g f) l.
+Proof. apply map_map. Qed.
+Hint Unfold compose : terms.
+
+Lemma map_id_f {A} (l : list A) (f : A -> A) :
+  (forall x, f x = x) ->
+  map f l = l.
+Proof.
+  induction l; intros; simpl; try easy.
+  rewrite H. f_equal. eauto.
+Qed.
+
+Lemma forall_map_spec {A B} {l} {f g : A -> B} :
+  Forall (fun x => f x = g x) l <->
+  map f l = map g l.
+Proof.
+  split.
+  induction 1; simpl; trivial.
+  now rewrite IHForall H.
+  induction l => /= // [=] Ha Hl; constructor; auto.
+Qed.
+
+Lemma forall_map_id_spec {A} {P : A -> Prop} {l} {f : A -> A} :
+  Forall (fun x => f x = x) l <-> map f l = l.
+Proof.
+  rewrite -{3}(map_id l). apply forall_map_spec.
+Qed.
+
+Lemma on_snd_eq_spec {A B C} (f g : B -> C) (x : A * B) :
+  f (snd x) = g (snd x) <->
+  on_snd f x = on_snd g x.
+Proof.
+  case: x => /=; rewrite /on_snd /=. split; congruence.
+Qed.
+
+Section Reverse_Induction.
+  Context {A : Type}.
+  Lemma rev_list_ind :
+    forall P:list A-> Type,
+      P [] ->
+        (forall (a:A) (l:list A), P (List.rev l) -> P (List.rev (a :: l))) ->
+        forall l:list A, P (List.rev l).
+  Proof.
+    induction l; auto.
+  Qed.
+
+  Theorem rev_ind :
+    forall P:list A -> Type,
+      P [] ->
+      (forall (x:A) (l:list A), P l -> P (l ++ [x])) -> forall l:list A, P l.
+  Proof.
+    intros.
+    generalize (rev_involutive l).
+    intros E; rewrite <- E.
+    apply (rev_list_ind P).
+    auto.
+
+    simpl.
+    intros.
+    apply (X0 a (List.rev l0)).
+    auto.
+  Qed.
+
+End Reverse_Induction.
+
+Lemma forallb_Forall {A} (p : pred A) l : Forall p l <-> forallb p l.
+Proof.
+  split.
+  induction 1; rewrite /= // H IHForall //.
+  induction l; rewrite /= //. move/andP => [pa pl].
+  constructor; auto.
+Qed.
+
+(** Generic strategy for dealing with Forall/forall, etc:
+
+    1) Move all boolean foralls into All/All2 (in the goal and the context).
+    2) Merge all context Foralls into one
+    3) Apply Forall implication
+    4) optionally simplify and call eauto.
+*)
+
+Lemma Forall_mix {A} (P Q : A -> Prop) : forall l, Forall P l -> Forall Q l -> Forall (fun x => P x /\ Q x) l.
+Proof.
+  intros l Hl Hq. induction Hl; inv Hq; constructor; auto.
+Qed.
+
+Lemma forallb2_All2 {A : Type} {p : A -> A -> bool}
+      {l l' : list A} :
+  forallb2 p l l' -> All2 (fun x y => p x y) l l'.
+Proof.
+  induction l in l' |- *; destruct l'; simpl; intros; try congruence.
+  - constructor.
+  - constructor. revert H; rewrite andb_and; intros [px pl]. auto.
+    apply IHl. revert H; rewrite andb_and; intros [px pl]. auto.
+Qed.
+
+Lemma All2_forallb2 {A : Type} {p : A -> A -> bool}
+      {l l' : list A} :
+  All2 (fun x y => p x y) l l' -> forallb2 p l l'.
+Proof.
+  induction 1; simpl; intros; try congruence.
+  rewrite andb_and. intuition auto.
+Qed.
+
+Lemma forallb2_app {A} (p : A -> A -> bool) l l' q q' :
+  forallb2 p l l' && forallb2 p q q' -> forallb2 p (l ++ q) (l' ++ q').
+Proof.
+  induction l in l' |- *; destruct l'; simpl; try congruence.
+  move=> /andP[/andP[pa pl] pq]. now rewrite pa IHl // pl pq.
+Qed.
+
+Lemma All2_map {A B C D} (R : C -> D -> Type) (f : A -> C) (g : B -> D) l l' :
+  All2 (fun x y => R (f x) (g y)) l l' -> All2 R (map f l) (map g l').
+Proof. induction 1; simpl; constructor; try congruence. Qed.
+
+Lemma All2_map_inv {A B C D} (R : C -> D -> Type) (f : A -> C) (g : B -> D) l l' :
+  All2 R (map f l) (map g l') -> All2 (fun x y => R (f x) (g y)) l l'.
+Proof. induction l in l' |- *; destruct l'; simpl;
+         move=> H;inv H; try constructor; try congruence. eauto.
+Qed.
+
+(* Lemma All2_List_Forall_mix_left {A : Type} {P : A -> Prop} {Q : A -> A -> Prop} *)
+(*       {l l' : list A} : *)
+(*     Forall P l -> All2 Q l l' -> All2 (fun x y => P x /\ Q x y) l l'. *)
+(* Proof. *)
+(*   induction 2; simpl; intros; constructor. *)
+(*   inv H; intuition auto. *)
+(*   apply IHX. inv H; intuition auto. *)
+(* Qed. *)
+
+(* Lemma All2_List_Forall_mix_right {A : Type} {P : A -> Prop} {Q : A -> A -> Prop} *)
+(*       {l l' : list A} : *)
+(*     Forall P l' -> All2 Q l l' -> All2 (fun x y => P y /\ Q x y) l l'. *)
+(* Proof. *)
+(*   induction 2; simpl; intros; constructor. *)
+(*   inv H; intuition auto. *)
+(*   apply IHX. inv H; intuition auto. *)
+(* Qed. *)
+
+Lemma All2_All_mix_left {A} {P : A -> Type} {Q : A -> A -> Type}
+      {l l' : list A} :
+  All P l -> All2 Q l l' -> All2 (fun x y => (P x * Q x y)%type) l l'.
+Proof.
+  induction 2; simpl; intros; constructor.
+  inv X; intuition auto.
+  apply IHX0. inv X; intuition auto.
+Qed.
+
+Lemma All2_All_mix_right {A} {P : A -> Type} {Q : A -> A -> Type}
+      {l l' : list A} :
+  All P l' -> All2 Q l l' -> All2 (fun x y => (Q x y * P y)%type) l l'.
+Proof.
+  induction 2; simpl; intros; constructor.
+  inv X; intuition auto.
+  apply IHX0. inv X; intuition auto.
+Qed.
+
+Lemma Forall_All {A : Type} (P : A -> Prop) l :
+  Forall P l -> All P l.
+Proof.
+  induction l; intros H; constructor; auto. inv H. auto.
+  apply IHl. inv H; auto.
+Qed.
+
+Lemma All_Forall {A : Type} (P : A -> Prop) l :
+  All P l -> Forall P l.
+Proof. induction 1; constructor; auto. Qed.
+
+Lemma forallb_All {A} (p : pred A) l : forallb p l -> All p l.
+Proof.
+  move/forallb_Forall. apply Forall_All.
+Qed.
+
+Lemma All_forallb {A} (p : pred A) l : All p l -> forallb p l.
+Proof.
+  move/All_Forall. apply forallb_Forall.
+Qed.
+
+Lemma OnOne2_All_mix_left {A} {P : A -> A -> Type} {Q : A -> Type} {l l'} :
+  All Q l -> OnOne2 P l l' -> OnOne2 (fun x y => (P x y * Q x)%type) l l'.
+Proof.
+  intros H; induction 1; constructor; try inv H; intuition.
+Qed.
+
+Lemma OnOne2_app {A} (P : A -> A -> Type) l tl tl' : OnOne2 P tl tl' -> OnOne2 P (l ++ tl) (l ++ tl').
+Proof. induction l; simpl; try constructor; auto. Qed.
+
+Lemma OnOne2_length {A} {P} {l l' : list A} : OnOne2 P l l' -> #|l| = #|l'|.
+Proof. induction 1; simpl; congruence. Qed.
+
+Lemma OnOne2_map {A B} {P} {l l' : list A} (f : A -> B) :
+  OnOne2 (on_rel P f) l l' -> OnOne2 P (map f l) (map f l').
+Proof. induction 1; simpl; constructor; try congruence. apply p. Qed.
+
+Lemma All_firstn {A} {P : A -> Type} {l} {n} : All P l -> All P (firstn n l).
+Proof. intros HPL; induction HPL in n |- * ; simpl; destruct n; try econstructor; eauto. Qed.
+
+Lemma All_skipn {A} {P : A -> Type} {l} {n} : All P l -> All P (skipn n l).
+Proof. intros HPL; induction HPL in n |- * ; simpl; destruct n; try econstructor; eauto. Qed.
+
+Lemma All_app {A} {P : A -> Type} {l l'} : All P (l ++ l') -> All P l * All P l'.
+Proof.
+  induction l; simpl; auto. intros. constructor; auto. constructor.
+  intros. inv X. intuition auto. constructor; auto.
+Qed.
+
+Lemma All_app_inv {A} (P : A -> Type) l l' : All P l -> All P l' -> All P (l ++ l').
+Proof.
+  intros Hl Hl'. induction Hl. apply Hl'.
+  constructor; intuition auto.
+Qed.
+
+Lemma All_mix {A} {P : A -> Type} {Q : A -> Type} {l} :
+  All P l -> All Q l -> All (fun x => (P x * Q x)%type) l.
+Proof. induction 1; intros Hq; inv Hq; constructor; auto. Qed.
+
+Lemma All2_All_left {A B} {P : A -> B -> Type} {Q : A -> Type} {l l'} :
+  All2 P l l' ->
+  (forall x y, P x y -> Q x) ->
+  All Q l.
+Proof.
+  intros HF H. induction HF; constructor; eauto.
+Qed.
+
+Lemma All2_All_right {A B} {P : A -> B -> Type} {Q : B -> Type} {l l'} :
+  All2 P l l' ->
+  (forall x y, P x y -> Q y) ->
+  All Q l'.
+Proof.
+  intros HF H. induction HF; constructor; eauto.
+Qed.
+
+Lemma All2_right {A B} {P : B -> Type} {l : list A} {l'} :
+  All2 (fun x y => P y) l l' -> All P l'.
+Proof.
+  induction 1; constructor; auto.
+Qed.
+
+Hint Constructors All All2.
+
+Lemma All_rev_map {A B} (P : A -> Prop) f (l : list B) : All (compose P f) l -> All P (rev_map f l).
+Proof. induction 1. constructor. rewrite rev_map_cons. apply All_app_inv; auto. Qed.
+
+Lemma All_rev {A} (P : A -> Prop) (l : list A) : All P l -> All P (List.rev l).
+Proof.
+  induction l using rev_ind. constructor.
+  intros. rewrite rev_app_distr. simpl. apply All_app in X as [Alll Allx]. inv Allx.
+  constructor; intuition eauto.
+Qed.
+
+Lemma All_rev_inv {A} (P : A -> Prop) (l : list A) : All P (List.rev l) -> All P l.
+Proof.
+  induction l using rev_ind. constructor.
+  intros. rewrite rev_app_distr in X. simpl.
+  apply All_app in X as [Allx Alll]. inv Allx.
+   apply All_app_inv; intuition eauto.
+Qed.
+
+Lemma All_impl {A} {P Q} {l : list A} : All P l -> (forall x, P x -> Q x) -> All Q l.
+Proof. induction 1; try constructor; intuition auto. Qed.
+
+Lemma Alli_impl {A} {P Q} (l : list A) {n} : Alli P n l -> (forall n x, P n x -> Q n x) -> Alli Q n l.
+Proof. induction 1; try constructor; intuition auto. Qed.
+
+Lemma All_map {A B} {P : B -> Type} {f : A -> B} {l : list A} :
+  All (compose P f) l -> All P (map f l).
+Proof. induction 1; constructor; auto. Qed.
+
+Lemma All_map_inv {A B} (P : B -> Prop) (f : A -> B) l : All P (map f l) -> All (compose P f) l.
+Proof. induction l; intros Hf; inv Hf; try constructor; eauto. Qed.
+
+Lemma Alli_mix {A} {P : nat -> A -> Type} {Q : nat -> A -> Type} {n l} :
+  Alli P n l -> Alli Q n l -> Alli (fun n x => (P n x * Q n x)%type) n l.
+Proof. induction 1; intros Hq; inv Hq; constructor; auto. Qed.
+
+Lemma Alli_All {A} {P : nat -> A -> Type} {Q : A -> Type} {l n} :
+  Alli P n l ->
+  (forall n x, P n x -> Q x) ->
+  All Q l.
+Proof. induction 1; constructor; eauto. Qed.
+
+Lemma Alli_app {A} (P : nat -> A -> Type) n l l' : Alli P n (l ++ l') -> Alli P n l * Alli P (length l + n) l'.
+Proof.
+  induction l in n, l' |- *; intros H. split; try constructor. apply H.
+  inversion_clear H. split; intuition auto. constructor; auto. eapply IHl; eauto.
+  simpl. replace (S (#|l| + n)) with (#|l| + S n) by lia.
+  eapply IHl; eauto.
+Qed.
+
+Lemma OnOne2_impl {A} {P Q} {l l' : list A} :
+  OnOne2 P l l' ->
+  (forall x y, P x y -> Q x y) ->
+  OnOne2 Q l l'.
+Proof.
+  induction 1; constructor; intuition eauto.
+Qed.
+
+Ltac toAll :=
+  match goal with
+  | H : is_true (forallb _ _) |- _ => apply forallb_All in H
+
+  | |- is_true (forallb _ _) => apply All_forallb
+
+  | H : Forall _ ?x |- _ => apply Forall_All in H
+
+  | |- Forall _ _ => apply All_Forall
+
+  | H : is_true (forallb2 _ _ _) |- _ => apply forallb2_All2 in H
+
+  | |- is_true (forallb2 _ _ _) => apply All2_forallb2
+
+  | H : All _ ?x, H' : All _ ?x |- _ =>
+    apply (All_mix H) in H'; clear H
+
+  | H : Alli _ _ ?x, H' : Alli _ _ ?x |- _ =>
+    apply (Alli_mix H) in H'; clear H
+
+  | H : All _ ?x, H' : All2 _ ?x _  |- _ =>
+    apply (All2_All_mix_left H) in H'; clear H
+
+  | H : All _ ?x, H' : All2 _ _ ?x  |- _ =>
+    apply (All2_All_mix_right H) in H'; clear H
+
+  | |- All _ (map _ _) => apply All_map
+
+  | H : All _ (map _ _) |- _ => apply All_map_inv in H
+
+  | |- All _ (rev_map _ _) => apply All_rev_map
+
+  | |- All _ (List.rev _) => apply All_rev
+
+  | |- All2 _ (map _ _) (map _ _) => apply All2_map
+  end.
+
+Lemma All_map_eq {A B} {l} {f g : A -> B} :
+  All (fun x => f x = g x) l ->
+  map f l = map g l.
+Proof.
+  induction 1; simpl; trivial.
+  now rewrite IHX p.
+Qed.
+
+Lemma All_map_id {A} {l} {f : A -> A} :
+  All (fun x => f x = x) l ->
+  map f l = l.
+Proof.
+  induction 1; simpl; trivial.
+  now rewrite IHX p.
+Qed.
+
+Ltac All_map :=
+  match goal with
+    |- map _ _ = map _ _ => apply All_map_eq
+  | |- map _ _ = _ => apply All_map_id
+  end.
+
+Lemma forall_forallb_map_spec {A B : Type} {P : A -> Prop} {p : A -> bool}
+      {l : list A} {f g : A -> B} :
+    Forall P l -> forallb p l ->
+    (forall x : A, P x -> p x -> f x = g x) -> map f l = map g l.
+Proof.
+  induction 1; simpl; trivial.
+  rewrite andb_and. intros [px pl] Hx.
+  f_equal. now apply Hx. now apply IHForall.
+Qed.
+
+Lemma forall_forallb_forallb_spec {A : Type} {P : A -> Prop} {p : A -> bool}
+      {l : list A} {f : A -> bool} :
+    Forall P l -> forallb p l ->
+    (forall x : A, P x -> p x -> f x) -> forallb f l.
+Proof.
+  induction 1; simpl; trivial.
+  rewrite !andb_and. intros [px pl] Hx. eauto.
+Qed.
+
+Lemma on_snd_test_spec {A B C} (P : B -> Prop) (p : B -> bool) (f g : B -> C) (x : A * B) :
+  P (snd x) -> (forall x, P x -> p x -> f x = g x) ->
+  test_snd p x ->
+  on_snd f x = on_snd g x.
+Proof.
+  intros. destruct x. unfold on_snd. simpl.
+  now rewrite H0; auto.
+Qed.
+
+Lemma Forall_map {A B} (P : B -> Prop) (f : A -> B) l : Forall (Program.Basics.compose P f) l -> Forall P (map f l).
+Proof.
+  induction 1; constructor; auto.
+Qed.
+
+Lemma Forall_map_inv {A B} (P : B -> Prop) (f : A -> B) l : Forall P (map f l) -> Forall (compose P f) l.
+Proof. induction l; intros Hf; inv Hf; try constructor; eauto. Qed.
+
+Lemma Forall_impl {A} {P Q : A -> Prop} {l} :
+  Forall P l -> (forall x, P x -> Q x) -> Forall Q l.
+Proof.
+  induction 1; constructor; auto.
+Qed.
+
+Lemma All2_impl {A B} {P Q : A -> B -> Type} {l l'} :
+    All2 P l l' ->
+    (forall x y, P x y -> Q x y) ->
+    All2 Q l l'.
+Proof.
+  induction 1; constructor; auto.
+Qed.
+
+Lemma Forall_app {A} (P : A -> Prop) l l' : Forall P (l ++ l') -> Forall P l /\ Forall P l'.
+Proof.
+  induction l; intros H. split; try constructor. apply H.
+  inversion_clear H. split; intuition auto.
+Qed.
+
+
+Lemma firstn_map {A B} n (f : A -> B) l : firstn n (map f l) = map f (firstn n l).
+Proof.
+  revert l; induction n. reflexivity.
+  destruct l; simpl in *; congruence.
+Qed.
+
+Lemma All_safe_nth {A} {P : A -> Type} {Γ n} (isdecl : n < length Γ) : All P Γ ->
+   P (safe_nth Γ (exist _ n isdecl)).
+Proof.
+  induction 1 in n, isdecl |- *. simpl. bang.
+  destruct n. simpl. auto.
+  simpl in *. eapply IHX.
+Qed.
+
+Definition size := nat.
+
+(* Lemma Alli_mapi {A B} (P : nat -> B -> Type) (f : nat -> A -> B) (l : list A) n : *)
+(*   Alli (fun n x => P n (f n x)) n l -> Alli P n (mapi f l). *)
+(* Proof. induction 1; constructor; auto. Qed. *)
+
+Section All_size.
+  Context {A} (P : A -> Type) (fn : forall x1, P x1 -> size).
+  Fixpoint all_size {l1 : list A} (f : All P l1) : size :=
+  match f with
+  | All_nil => 0
+  | All_cons x l px pl => fn _ px + all_size pl
+  end.
+End All_size.
+
+Section Alli_size.
+  Context {A} (P : nat -> A -> Type) (fn : forall n x1, P n x1 -> size).
+  Fixpoint alli_size {l1 : list A} {n} (f : Alli P n l1) : size :=
+  match f with
+  | Alli_nil => 0
+  | Alli_cons x l px pl => fn _ _ px + alli_size pl
+  end.
+End Alli_size.
+
+Section All2_size.
+  Context {A} (P : A -> A -> Type) (fn : forall x1 x2, P x1 x2 -> size).
+  Fixpoint all2_size {l1 l2 : list A} (f : All2 P l1 l2) : size :=
+  match f with
+  | All2_nil => 0
+  | All2_cons x y l l' rxy rll' => fn _ _ rxy + all2_size rll'
+  end.
+End All2_size.
+
+Ltac close_Forall :=
+  match goal with
+  | H : Forall _ _ |- Forall _ _ => apply (Forall_impl H); clear H; simpl
+  | H : All _ _ |- All _ _ => apply (All_impl H); clear H; simpl
+  | H : OnOne2 _ _ _ |- OnOne2 _ _ _ => apply (OnOne2_impl H); clear H; simpl
+  | H : All2 _ _ _ |- All2 _ _ _ => apply (All2_impl H); clear H; simpl
+  | H : All2 _ _ _ |- All _ _ =>
+    (apply (All2_All_left H) || apply (All2_All_right H)); clear H; simpl
+  end.
+
+Lemma All2_non_nil {A B} (P : A -> B -> Prop) (l : list A) (l' : list B) :
+  All2 P l l' -> l <> nil -> l' <> nil.
+Proof.
+  induction 1; congruence.
+Qed.
+
+Lemma map_ext {A B : Type} (f g : A -> B) (l : list A) :
+  (forall x, f x = g x) ->
+  map f l = map g l.
+Proof.
+  intros.
+  induction l; trivial.
+  intros. simpl. rewrite H. congruence.
+Defined.
+
+Require Import ssreflect.
+
+Lemma map_skipn {A B} (f : A -> B) (l : list A) (n : nat) : map f (skipn n l) = skipn n (map f l).
+Proof.
+  elim: n l => l // IHn.
+  by case => //.
+Qed.
+
+Lemma nth_error_map {A B} (f : A -> B) n l : nth_error (map f l) n = option_map f (nth_error l n).
+Proof.
+  elim: n l; case => // IHn l /=.
+  - by case: l => //.
+  - by case => //.
+Qed.
+
+Lemma map_nil {A B} (f : A -> B) (l : list A) : l <> [] -> map f l <> [].
+Proof. induction l; simpl; congruence. Qed.
+Hint Resolve map_nil : wf.
+
+Inductive BoolSpecSet (P Q : Prop) : bool -> Set :=
+    BoolSpecT : P -> BoolSpecSet P Q true | BoolSpecF : Q -> BoolSpecSet P Q false.
+
+Lemma leb_spec_Set : forall x y : nat, BoolSpecSet (x <= y) (y < x) (x <=? y).
+Proof.
+  intros.
+  destruct (Nat.leb_spec0 x y).
+  now constructor.
+  constructor. now lia.
+Qed.
+
+Lemma some_inj {A} {x y : A} : Some x = Some y -> x = y.
+Proof.
+  now intros [=].
+Qed.
+
+Inductive nth_error_Spec {A} (l : list A) (n : nat) : option A -> Type :=
+| nth_error_Spec_Some x : nth_error l n = Some x -> n < length l -> nth_error_Spec l n (Some x)
+| nth_error_Spec_None : length l <= n -> nth_error_Spec l n None.
+
+Lemma mapi_rec_eqn {A B} (f : nat -> A -> B) (l : list A) a n :
+  mapi_rec f (a :: l) n = f n a :: mapi_rec f l (S n).
+Proof. simpl. f_equal. Qed.
+
+Lemma nth_error_mapi_rec {A B} (f : nat -> A -> B) n k l :
+  nth_error (mapi_rec f l k) n = option_map (f (n + k)) (nth_error l n).
+Proof.
+  induction l in n, k |- *.
+  - destruct n; reflexivity.
+  - destruct n; simpl.
+    + reflexivity.
+    + rewrite IHl. by rewrite <- Nat.add_succ_comm.
+Qed.
+
+Lemma nth_error_mapi {A B} (f : nat -> A -> B) n l :
+  nth_error (mapi f l) n = option_map (f n) (nth_error l n).
+Proof.
+  unfold mapi; rewrite nth_error_mapi_rec.
+  now rewrite -> Nat.add_0_r.
+Qed.
+
+Lemma nth_error_Some_length {A} {l : list A} {n t} : nth_error l n = Some t -> n < length l.
+Proof. rewrite <- nth_error_Some. destruct (nth_error l n); congruence. Qed.
+
+Lemma nth_error_spec {A} (l : list A) (n : nat) : nth_error_Spec l n (nth_error l n).
+Proof.
+  destruct nth_error eqn:Heq.
+  constructor; auto. now apply nth_error_Some_length in Heq.
+  constructor; auto. now apply nth_error_None in Heq.
+Qed.
+
+Lemma nth_error_app_left {A} (l l' : list A) n t : nth_error l n = Some t -> nth_error (l ++ l') n = Some t.
+Proof. induction l in n |- *; destruct n; simpl; try congruence. auto. Qed.
+
+Lemma nth_error_nil {A} n : nth_error (@nil A) n = None.
+Proof. destruct n; auto. Qed.
+Hint Rewrite @nth_error_nil.
+
+Lemma nth_error_forall {A} {P : A -> Prop} {l : list A} {n x} :
+  nth_error l n = Some x -> Forall P l -> P x.
+Proof.
+  intros Hnth HPl. induction HPl in n, Hnth |- *. destruct n; discriminate.
+  revert Hnth. destruct n. now intros [= ->].
+  intros H'; eauto.
+Qed.
+
+Lemma nth_error_all {A} {P : A -> Type} {l : list A} {n x} :
+  nth_error l n = Some x -> All P l -> P x.
+Proof.
+  intros Hnth HPl. induction HPl in n, Hnth |- *. destruct n; discriminate.
+  revert Hnth. destruct n. now intros [= ->].
+  intros H'; eauto.
+Qed.
+Require Import Arith.
+Lemma nth_error_alli {A} {P : nat -> A -> Type} {l : list A} {n x} {k} :
+  nth_error l n = Some x -> Alli P k l -> P (k + n) x.
+Proof.
+  intros Hnth HPl. induction HPl in n, Hnth |- *.
+  destruct n; discriminate.
+  revert Hnth. destruct n. intros [= ->]. now rewrite Nat.add_0_r.
+  intros H'; eauto. rewrite <- Nat.add_succ_comm. eauto.
+Qed.
+
+Fixpoint chop {A} (n : nat) (l : list A) :=
+  match n with
+  | 0 => ([], l)
+  | S n =>
+    match l with
+    | hd :: tl =>
+      let '(l, r) := chop n tl in
+      (hd :: l, r)
+    | [] => ([], [])
+    end
+  end.
+
+Lemma nth_map {A} (f : A -> A) n l d :
+  (d = f d) ->
+  nth n (map f l) d = f (nth n l d).
+Proof.
+  induction n in l |- *; destruct l; simpl; auto.
+Qed.
+
+Definition on_pi2 {A B C} (f : B -> B) (p : A * B * C) : A * B * C :=
+  (fst (fst p), f (snd (fst p)), snd p).
+
+Lemma All_map_id' {A} {P : A -> Type} {l} {f} :
+  All P l ->
+  (forall x, P x -> f x = x) ->
+  map f l = l.
+Proof.
+  induction 1; simpl; f_equal; intuition auto.
+  f_equal; auto.
+Qed.
+
+Lemma Alli_mapi_spec {A B} {P : nat -> A -> Type} {l} {f g : nat -> A -> B} {n} :
+  Alli P n l -> (forall n x, P n x -> f n x = g n x) ->
+  mapi_rec f l n = mapi_rec g l n.
+Proof.
+  induction 1; simpl; trivial.
+  intros Heq. rewrite Heq; f_equal; auto.
+Qed.
+
+Lemma Alli_mapi_id {A} {P : nat -> A -> Type} {l} {f} {n} :
+  Alli P n l ->
+  (forall n x, P n x -> f n x = x) ->
+  mapi_rec f l n = l.
+Proof.
+  induction 1; simpl; f_equal; intuition auto.
+  f_equal; eauto.
+Qed.
+
+Lemma Alli_map_id {A} {P : nat -> A -> Type} {l} {f} {n} :
+  Alli P n l ->
+  (forall n x, P n x -> f x = x) ->
+  map f l = l.
+Proof.
+  induction 1; simpl; f_equal; intuition auto.
+  f_equal; eauto.
+Qed.
+
+Lemma nlt_map {A B} (l : list A) (f : A -> B) (n : {n | n < length l }) : `n < length (map f l).
+Proof. destruct n. simpl. now rewrite map_length. Defined.
+
+Lemma map_def_safe_nth {A B} (l : list A) (n : {n | n < length l}) (f : A -> B) :
+  f (safe_nth l n) = safe_nth (map f l) (exist _ (`n) (nlt_map l f n)).
+Proof.
+  destruct n.
+  induction l in x, l0 |- *. simpl. bang.
+  simpl. destruct x. reflexivity. simpl.
+  rewrite IHl. f_equal. f_equal. pi.
+Qed.
+
+Lemma mapi_map {A B C} (f : nat -> B -> C) (l : list A) (g : A -> B) :
+  mapi f (map g l) = mapi (fun i x => f i (g x)) l.
+Proof.
+  unfold mapi. generalize 0. induction l; simpl; congruence.
+Qed.
+
+Lemma map_mapi {A B C} (f : nat -> A -> B) (l : list A) (g : B -> C) :
+  map g (mapi f l) = mapi (fun i x => g (f i x)) l.
+Proof.
+  unfold mapi. generalize 0. induction l; simpl; congruence.
+Qed.
+
+Lemma chop_map {A B} (f : A -> B) n l l' l'' :
+  chop n l = (l', l'') -> chop n (map f l) = (map f l', map f l'').
+Proof.
+  induction n in l, l', l'' |- *; destruct l; try intros [= <- <-]; simpl; try congruence.
+  destruct (chop n l) eqn:Heq. specialize (IHn _ _ _ Heq).
+  intros [= <- <-]. now rewrite IHn. Qed.
+
+Lemma chop_n_app {A} {l l' : list A} {n} : n = length l -> chop n (l ++ l') = (l, l').
+Proof.
+  intros ->. induction l; simpl; try congruence.
+  now rewrite IHl.
+Qed.
+
+Lemma mapi_mapi {A B C} (g : nat -> A -> B) (f : nat -> B -> C) (l : list A) :
+  mapi f (mapi g l) = mapi (fun n x => f n (g n x)) l.
+Proof. unfold mapi. generalize 0. induction l; simpl; try congruence. Qed.
+
+Lemma mapi_rec_ext {A B} (f g : nat -> A -> B) (l : list A) n :
+  (forall k x, n <= k -> k < length l + n -> f k x = g k x) ->
+  mapi_rec f l n = mapi_rec g l n.
+Proof.
+  intros Hfg. induction l in n, Hfg |- *; simpl; try congruence.
+  intros. rewrite Hfg; simpl; try lia. f_equal.
+  rewrite IHl; auto. intros. apply Hfg. simpl; lia. simpl. lia.
+Qed.
+
+Lemma mapi_ext {A B} (f g : nat -> A -> B) (l : list A) :
+  (forall n x, f n x = g n x) ->
+  mapi f l = mapi g l.
+Proof. intros; now apply mapi_rec_ext. Qed.
+
+Lemma mapi_rec_app {A B} (f : nat -> A -> B) (l l' : list A) n :
+  (mapi_rec f (l ++ l') n = mapi_rec f l n ++ mapi_rec f l' (length l + n))%list.
+Proof.
+  induction l in n |- *; simpl; try congruence.
+  rewrite IHl. f_equal. now rewrite <- Nat.add_succ_comm.
+Qed.
+
+Lemma mapi_app {A B} (f : nat -> A -> B) (l l' : list A) :
+  (mapi f (l ++ l') = mapi f l ++ mapi (fun n x => f (length l + n) x) l')%list.
+Proof.
+  unfold mapi; rewrite mapi_rec_app.
+  f_equal. generalize 0.
+  induction l'; intros. reflexivity. rewrite mapi_rec_eqn.
+  change (S (length l + n)) with (S (length l) + n).
+  rewrite (Nat.add_succ_comm _ n). now rewrite IHl'.
+Qed.
+
+Lemma mapi_rec_Sk {A B} (f : nat -> A -> B) (l : list A) k :
+  mapi_rec f l (S k) = mapi_rec (fun n x => f (S n) x) l k.
+Proof.
+  induction l in k |- *; simpl; congruence.
+Qed.
+
+Lemma rev_mapi_rec {A B} (f : nat -> A -> B) (l : list A) n k : k <= n ->
+  List.rev (mapi_rec f l (n - k)) = mapi_rec (fun k x => f (Nat.pred (length l) + n - k) x) (List.rev l) k.
+Proof.
+  unfold mapi. revert n k.
+  induction l using rev_ind; simpl; try congruence.
+  intros. rewrite rev_unit. simpl.
+  rewrite mapi_rec_app rev_app_distr; simpl. rewrite IHl; auto. simpl.
+  rewrite app_length. simpl. f_equal. f_equal. lia. rewrite mapi_rec_Sk.
+  apply mapi_rec_ext. intros. f_equal. rewrite List.rev_length in H1.
+  rewrite Nat.add_1_r. simpl; lia.
+Qed.
+
+Lemma rev_mapi {A B} (f : nat -> A -> B) (l : list A) :
+  List.rev (mapi f l) = mapi (fun k x => f (Nat.pred (length l) - k) x) (List.rev l).
+Proof.
+  unfold mapi. change 0 with (0 - 0) at 1.
+  rewrite rev_mapi_rec; auto. now rewrite Nat.add_0_r.
+Qed.
+
+Lemma mapi_rec_rev {A B} (f : nat -> A -> B) (l : list A) n :
+  mapi_rec f (List.rev l) n = List.rev (mapi (fun k x => f (length l + n - S k) x) l).
+Proof.
+  unfold mapi. revert n.
+  induction l using rev_ind; simpl; try congruence.
+  intros. rewrite rev_unit. simpl.
+  rewrite IHl mapi_rec_app.
+  simpl. rewrite rev_unit. f_equal.
+  rewrite app_length. simpl. f_equal. lia.
+  rewrite app_length. simpl.
+  f_equal. f_equal. extensionality k. extensionality x'.
+  f_equal. lia.
+Qed.
+
+Lemma mapi_rev {A B} (f : nat -> A -> B) (l : list A) :
+  mapi f (List.rev l) = List.rev (mapi (fun k x => f (length l - S k) x) l).
+Proof. unfold mapi at 1. rewrite mapi_rec_rev. now rewrite Nat.add_0_r. Qed.
+
+Lemma mapi_rec_length {A B} (f : nat -> A -> B) (l : list A) n :
+  length (mapi_rec f l n) = length l.
+Proof. induction l in n |- *; simpl; try congruence. Qed.
+
+Lemma mapi_length {A B} (f : nat -> A -> B) (l : list A) :
+  length (mapi f l) = length l.
+Proof. apply mapi_rec_length. Qed.
+
+Lemma skipn_length {A} n (l : list A) : n <= length l -> length (skipn n l) = length l - n.
+Proof.
+  induction l in n |- *; destruct n; simpl; auto.
+  intros. rewrite IHl; auto with arith.
+Qed.
+
+Lemma forallb_map {A B} (f : A -> B) (l : list A) p :
+  forallb p (map f l) = forallb (compose p f) l.
+Proof.
+  induction l in p, f |- *; unfold compose; simpl; rewrite ?andb_and;
+    intuition (f_equal; auto). apply IHl.
+Qed.
+
+Lemma All_forallb' {A} P (l : list A) (p : pred A) :
+  All P l ->
+  (forall x, P x -> p x) ->
+  forallb p l.
+Proof.
+  induction 1 in p |- *; unfold compose; simpl; rewrite ?andb_and;
+    intuition auto.
+Qed.
+
+Lemma forallb_Forall' {A} (P : A -> Prop) (l : list A) p :
+  forallb p l ->
+  (forall x, p x -> P x) ->
+  Forall P l.
+Proof.
+  induction l in p |- *; unfold compose; simpl. constructor.
+  intros. constructor; eauto; rewrite -> andb_and in H; intuition eauto.
+Qed.
+
+Lemma forallb_skipn {A} (p : A -> bool) n l :
+  forallb p l ->
+  forallb p (skipn n l).
+Proof.
+  induction l in n |- *; destruct n; simpl; try congruence.
+  intros. apply IHl. rewrite -> andb_and in H; intuition.
+Qed.
+
+Lemma forallb_rev {A} (p : A -> bool) l :
+  forallb p (List.rev l) = forallb p l.
+Proof.
+  induction l using rev_ind; simpl; try congruence.
+  rewrite rev_unit forallb_app. simpl. rewrite <- IHl.
+  now rewrite andb_comm andb_true_r.
+Qed.
+
+Lemma Forall_forallb_eq_forallb {A} (P : A -> Prop) (p q : A -> bool) l :
+  Forall P l ->
+  (forall x, P x -> p x = q x) ->
+  forallb p l = forallb q l.
+Proof.
+  induction 1; simpl; intuition (f_equal; auto).
+Qed.
+
+Lemma forallb2_length {A} (p : A -> A -> bool) l l' : forallb2 p l l' -> length l = length l'.
+Proof.
+  induction l in l' |- *; destruct l'; simpl; try congruence.
+  rewrite !andb_and. intros [Hp Hl]. erewrite IHl; eauto.
+Qed.
+
+
+Fixpoint map_option_out {A} (l : list (option A)) : option (list A) :=
+  match l with
+  | nil => Some nil
+  | hd :: tl => match hd, map_option_out tl with
+                | Some hd, Some tl => Some (hd :: tl)
+                | _, _ => None
+                end
+  end.
+
+Lemma map_option_out_map_option_map {A} (l : list (option A)) (f : A -> A) :
+  map_option_out (map (option_map f) l) =
+  option_map (map f) (map_option_out l).
+Proof.
+  induction l; simpl; auto.
+  destruct (option_map f a) eqn:fa.
+  rewrite IHl. destruct (map_option_out l). simpl in *.
+  destruct a; simpl in *; congruence.
+  simpl. destruct a; reflexivity.
+  destruct a; simpl in *; congruence.
+Qed.
+
+Lemma Alli_map_option_out_mapi_Some_spec {A B} (f g : nat -> A -> option B) l t P :
+  Alli P 0 l ->
+  (forall i x t, P i x -> f i x = Some t -> g i x = Some t) ->
+  map_option_out (mapi f l) = Some t ->
+  map_option_out (mapi g l) = Some t.
+Proof.
+  unfold mapi. generalize 0.
+  move => n Ha Hfg. move: t.
+  induction Ha; try constructor; auto.
+  move=> t /=. case E: (f n hd) => [b|]; try congruence.
+  rewrite (Hfg n _ _ p E).
+  case E' : map_option_out => [b'|]; try congruence.
+  move=> [= <-]. now rewrite (IHHa _ E').
+Qed.
+
+Lemma combine_map_id {A B} (l : list (A * B)) :
+ l = combine (map fst l) (map snd l).
+Proof.
+  induction l ; simpl; try easy.
+  destruct a. now f_equal.
+Qed.
+
+Lemma Forall_forallb {A} P (l : list A) (p : pred A) :
+  Forall P l ->
+  (forall x, P x -> p x) ->
+  forallb p l.
+Proof.
+  induction 1 in p |- *; unfold compose; simpl; rewrite ?andb_and;
+    intuition auto.
+Qed.
+
+Lemma Forall2_right {A B} (P : B -> Prop) (l : list A) (l' : list B) :
+  Forall2 (fun x y => P y) l l' -> List.Forall (fun x => P x) l'.
+Proof.
+  induction 1; constructor; auto.
+Qed.
+
+Lemma Forall2_non_nil {A B} (P : A -> B -> Prop) (l : list A) (l' : list B) :
+  Forall2 P l l' -> l <> nil -> l' <> nil.
+Proof.
+  induction 1; congruence.
 Qed.

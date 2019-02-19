@@ -739,7 +739,7 @@ let rec run_template_program_rec ?(intactic=false) (k : Environ.env * Evd.evar_m
     let ctx = Evd.evar_universe_context evm in
     let hook = Lemmas.mk_hook (fun _ gr _ -> let env = Global.env () in
                                 let evm = Evd.from_env env in
-                                let evm, t = Evd.fresh_global env evm gr in k (env, evm, EConstr.to_constr evm t)) in
+                                let evm, t = Evd.fresh_global env evm gr in k (env, evm, t)) in
     ignore (Obligations.add_definition ident ~term:c cty ctx ~kind ~hook obls)
   (* let kind = Decl_kinds.(Global, Flags.use_polymorphic_flag (), DefinitionBody Definition) in *)
   (* Lemmas.start_proof (unquote_ident name) kind evm (EConstr.of_constr typ) *)

@@ -245,8 +245,8 @@ Print qFuntp.
 there the poly vars actually show up *)
 
 
-Make Definition t22 := (Ast.tLambda (Ast.nNamed "T") (Ast.tSort [(Level.Level "Top.10001", false)])
-                                   (Ast.tLambda (Ast.nNamed "T2") (Ast.tSort [(Level.Level "Top.10002", false)]) (Ast.tProd Ast.nAnon (Ast.tRel 1) (Ast.tRel 1)))).
+Make Definition t22 := (Ast.tLambda (BasicAst.nNamed "T") (Ast.tSort [(Level.Level "Top.10001", false)])
+                                   (Ast.tLambda (BasicAst.nNamed "T2") (Ast.tSort [(Level.Level "Top.10002", false)]) (Ast.tProd BasicAst.nAnon (Ast.tRel 1) (Ast.tRel 1)))).
 Set Printing Universes.
 Print t2.
 (* Print Universes. *)

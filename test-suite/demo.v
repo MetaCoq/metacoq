@@ -64,9 +64,8 @@ Quote Definition eo_syntax := Eval compute in even.
 
 Quote Definition add'_syntax := Eval compute in add'.
 
-
 (** Reflecting definitions **)
-Make Definition zero_from_syntax := (Ast.tConstruct (Ast.mkInd "Coq.Init.Datatypes.nat" 0) 0 []).
+Make Definition zero_from_syntax := (Ast.tConstruct (mkInd "Coq.Init.Datatypes.nat" 0) 0 []).
 
 (* the function unquote_kn in reify.ml4 is not yet implemented *)
 Make Definition add_from_syntax := ltac:(let t:= eval compute in add_syntax in exact t).
@@ -75,9 +74,9 @@ Make Definition eo_from_syntax :=
 ltac:(let t:= eval compute in eo_syntax in exact t).
 Print eo_from_syntax.
 
-Make Definition two_from_syntax := (Ast.tApp (Ast.tConstruct (Ast.mkInd "Coq.Init.Datatypes.nat" 0) 1 nil)
-   (Ast.tApp (Ast.tConstruct (Ast.mkInd "Coq.Init.Datatypes.nat" 0) 1 nil)
-      (Ast.tConstruct (Ast.mkInd "Coq.Init.Datatypes.nat" 0) 0 nil :: nil) :: nil)).
+Make Definition two_from_syntax := (Ast.tApp (Ast.tConstruct (BasicAst.mkInd "Coq.Init.Datatypes.nat" 0) 1 nil)
+   (Ast.tApp (Ast.tConstruct (BasicAst.mkInd "Coq.Init.Datatypes.nat" 0) 1 nil)
+      (Ast.tConstruct (BasicAst.mkInd "Coq.Init.Datatypes.nat" 0) 0 nil :: nil) :: nil)).
 
 Quote Recursively Definition plus_synax := plus.
 

@@ -1,6 +1,6 @@
 Require Import Template.All.
 Require Export String List.
-
+Open Scope string.
 Import ListNotations.
 Import MonadNotation.
 

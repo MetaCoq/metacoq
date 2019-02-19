@@ -1,0 +1,23 @@
+-I src
+-I ../checker/src
+-R theories PCUIC
+
+src/pCUICAst.ml
+src/pCUICAst.mli
+src/pCUICAstUtils.ml
+src/pCUICAstUtils.mli
+src/pCUICLiftSubst.ml
+src/pCUICLiftSubst.mli
+src/pCUICTyping.ml
+src/pCUICTyping.mli
+src/pCUICUnivSubst.ml
+src/pCUICUnivSubst.mli
+src/pCUICChecker.ml
+src/pCUICChecker.mli
+src/pCUICRetyping.ml
+src/pCUICRetyping.mli
+src/pCUICMetaTheory.ml
+src/pCUICMetaTheory.mli
+src/templateToPCUIC.mli
+src/templateToPCUIC.ml
+src/template_coq_pcuic_plugin.mlpack

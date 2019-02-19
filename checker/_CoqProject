@@ -60,8 +60,8 @@ src/ordersTac.ml
 src/orderedType0.mli
 src/orderedType0.ml
 
-src/induction.mli
-src/induction.ml
+src/basicAst.mli
+src/basicAst.ml
 src/ast0.mli
 src/ast0.ml
 src/astUtils.mli

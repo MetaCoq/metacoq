@@ -41,6 +41,9 @@ struct
   type quoted_mind_finiteness = Constr.t (* of type Ast.mutual_inductive_entry ?? *)
   type quoted_entry = Constr.t (* of type option (constant_entry + mutual_inductive_entry) *)
 
+  type quoted_context_decl = Constr.t (* in Ast *)
+  type quoted_context = Constr.t (* in Ast *)
+
   type quoted_one_inductive_body = Constr.t (* of type Ast.one_inductive_body *)
   type quoted_mutual_inductive_body = Constr.t (* of type Ast.mutual_inductive_body *)
   type quoted_constant_body = Constr.t (* of type Ast.constant_body *)
@@ -58,6 +61,7 @@ struct
 
   let pkg_datatypes = ["Coq";"Init";"Datatypes"]
   let pkg_string = ["Coq";"Strings";"String"]
+  let pkg_base_reify = ["Template";"BasicAst"]
   let pkg_reify = ["Template";"Ast"]
   let pkg_template_monad = ["Template";"TemplateMonad"]
   let pkg_univ = ["Template";"kernel";"univ"]
@@ -66,6 +70,7 @@ struct
   let pkg_ugraph = ["Template";"kernel";"uGraph"]
   let ext_pkg_univ s = List.append pkg_univ [s]
 
+  let r_base_reify = resolve_symbol pkg_base_reify
   let r_reify = resolve_symbol pkg_reify
   let r_template_monad = resolve_symbol pkg_template_monad
   let r_template_monad_p = resolve_symbol_p pkg_template_monad
@@ -95,21 +100,23 @@ struct
   let pair a b f s = Constr.mkApp (c_pair, [| a ; b ; f ; s |])
 
     (* reify the constructors in Template.Ast.v, which are the building blocks of reified terms *)
-  let nAnon = r_reify "nAnon"
-  let nNamed = r_reify "nNamed"
-  let kVmCast = r_reify "VmCast"
-  let kNative = r_reify "NativeCast"
-  let kCast = r_reify "Cast"
-  let kRevertCast = r_reify "RevertCast"
+  let nAnon = r_base_reify "nAnon"
+  let nNamed = r_base_reify "nNamed"
+  let kVmCast = r_base_reify "VmCast"
+  let kNative = r_base_reify "NativeCast"
+  let kCast = r_base_reify "Cast"
+  let kRevertCast = r_base_reify "RevertCast"
   let lProp = resolve_symbol pkg_level "lProp"
   let lSet = resolve_symbol pkg_level "lSet"
-  let sfProp = r_reify "InProp"
-  let sfSet = r_reify "InSet"
-  let sfType = r_reify "InType"
-  let tident = r_reify "ident"
-  let tIndTy = r_reify "inductive"
-  let tmkInd = r_reify "mkInd"
-  let tsort_family = r_reify "sort_family"
+  let sfProp = r_base_reify "InProp"
+  let sfSet = r_base_reify "InSet"
+  let sfType = r_base_reify "InType"
+  let tident = r_base_reify "ident"
+  let tname = r_base_reify "name"
+  let tIndTy = r_base_reify "inductive"
+  let tmkInd = r_base_reify "mkInd"
+  let tsort_family = r_base_reify "sort_family"
+  let tmkdecl = r_reify "mkdecl"
   let (tTerm,tRel,tVar,tMeta,tEvar,tSort,tCast,tProd,
        tLambda,tLetIn,tApp,tCase,tFix,tConstructor,tConst,tInd,tCoFix,tProj) =
     (r_reify "term", r_reify "tRel", r_reify "tVar", r_reify "tMeta", r_reify "tEvar",
@@ -140,7 +147,7 @@ struct
   let tinit_graph = resolve_symbol pkg_ugraph "init_graph"
   let tadd_global_constraints = resolve_symbol pkg_ugraph  "add_global_constraints"
 
-  let (tdef,tmkdef) = (r_reify "def", r_reify "mkdef")
+  let (tdef,tmkdef) = (r_base_reify "def", r_base_reify "mkdef")
   let (tLocalDef,tLocalAssum,tlocal_entry) = (r_reify "LocalDef", r_reify "LocalAssum", r_reify "local_entry")
 
   let (cFinite,cCoFinite,cBiFinite) = (r_reify "Finite", r_reify "CoFinite", r_reify "BiFinite")
@@ -152,6 +159,9 @@ struct
   let tConstantDecl = r_reify "ConstantDecl"
   let tInductiveDecl = r_reify "InductiveDecl"
   let tglobal_declarations = r_reify "global_declarations"
+
+  let tcontext_decl = r_reify "context_decl"
+  let tcontext = r_reify "context"
 
   let tMutual_inductive_entry = r_reify "mutual_inductive_entry"
   let tOne_inductive_entry = r_reify "one_inductive_entry"
@@ -165,7 +175,8 @@ struct
 
   let (tcbv, tcbn, thnf, tall, tlazy, tunfold) = (r_template_monad "cbv", r_template_monad "cbn", r_template_monad "hnf", r_template_monad "all", r_template_monad "lazy", r_template_monad "unfold")
 
-  let (tglobal_reference, tConstRef, tIndRef, tConstructRef) = (r_reify "global_reference", r_reify "ConstRef", r_reify "IndRef", r_reify "ConstructRef")
+  let (tglobal_reference, tConstRef, tIndRef, tConstructRef) =
+    (r_base_reify "global_reference", r_base_reify "ConstRef", r_base_reify "IndRef", r_base_reify "ConstructRef")
 
   (* let pkg_specif = ["Coq";"Init";"Specif"] *)
   (* let texistT = resolve_symbol pkg_specif "existT" *)
@@ -351,6 +362,12 @@ struct
     | Sorts.InSet -> sfSet
     | Sorts.InType -> sfType
 
+  let quote_context_decl na b t =
+    Constr.mkApp (tmkdecl, [| na; quote_option tTerm b; t |])
+
+  let quote_context ctx =
+    to_coq_list tcontext_decl ctx
+
   let mk_ctor_list =
     let ctor_list =
       let ctor_info_typ = prod (prod tident tTerm) tnat in
@@ -433,9 +450,9 @@ struct
     let e = mk_proj_list e in
     Constr.mkApp (tBuild_one_inductive_body, [| a; b; c; d; e |])
 
-  let mk_mutual_inductive_body p inds uctx =
+  let mk_mutual_inductive_body npars params inds uctx =
     let inds = to_coq_list tone_inductive_body inds in
-    Constr.mkApp (tBuild_mutual_inductive_body, [|p; inds; uctx|])
+    Constr.mkApp (tBuild_mutual_inductive_body, [|npars; params; inds; uctx|])
 
   let mk_constant_body ty tm uctx =
     let tm = quote_option tTerm tm in

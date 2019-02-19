@@ -3,27 +3,25 @@
 Require Import Coq.Strings.String.
 Require Import Coq.PArith.BinPos.
 Require Import List. Import ListNotations.
-From Template Require Import monad_utils.
-From Template Require Export univ uGraph Ast.
+From Template Require Export univ uGraph.
+From Template Require Import BasicAst.
 
-(** Extracted terms
+(** * AST of the Polymorphic Cumulative Calculus of Inductive Constructions
 
-  These are the terms produced by extraction:
-  compared to kernel terms, all proofs are translated to [tBox] and
-  casts are removed.
-*)
+   This AST is a cleaned-up version of Coq's internal AST better fitted for reasoning.
+   In particular, it has binary applications and all terms are well-formed.
+   Casts are absent as well. *)
 
 Inductive term : Set :=
-| tBox       : term (* Represents all proofs *)
 | tRel       : nat -> term
 | tVar       : ident -> term (* For free variables (e.g. in a goal) *)
 | tMeta      : nat -> term   (* NOTE: this will go away *)
 | tEvar      : nat -> list term -> term
 | tSort      : universe -> term
 | tProd      : name -> term (* the type *) -> term -> term
-| tLambda    : name -> term -> term -> term
-| tLetIn     : name -> term (* the term *) -> term -> term -> term
-| tApp       : term -> list term -> term
+| tLambda    : name -> term (* the type *) -> term -> term
+| tLetIn     : name -> term (* the term *) -> term (* the type *) -> term -> term
+| tApp       : term -> term -> term
 | tConst     : kername -> universe_instance -> term
 | tInd       : inductive -> universe_instance -> term
 | tConstruct : inductive -> nat -> universe_instance -> term
@@ -33,18 +31,11 @@ Inductive term : Set :=
 | tFix       : mfixpoint term -> nat -> term
 | tCoFix     : mfixpoint term -> nat -> term.
 
-
-
-Definition mkApps t us :=
+Fixpoint mkApps t us :=
   match us with
   | nil => t
-  | _ => match t with
-        | tApp f args => tApp f (args ++ us)
-        | _ => tApp t us
-        end
+  | u :: us => mkApps (tApp t u) us
   end.
-
-Definition mkApp t u := Eval cbn in mkApps t [u].
 
 Definition isApp t :=
   match t with
@@ -52,26 +43,11 @@ Definition isApp t :=
   | _ => false
   end.
 
-(** Well-formed terms: invariants which are not ensured by the OCaml type system *)
-
-Inductive wf : term -> Prop :=
-| wf_tBox : wf tBox
-| wf_tRel n : wf (tRel n)
-| wf_tVar id : wf (tVar id)
-| wf_tMeta n : wf (tMeta n)
-| wf_tEvar n l : Forall wf l -> wf (tEvar n l)
-| wf_tSort u : wf (tSort u)
-| wf_tProd na t b : wf t -> wf b -> wf (tProd na t b)
-| wf_tLambda na t b : wf t -> wf b -> wf (tLambda na t b)
-| wf_tLetIn na t b b' : wf t -> wf b -> wf b' -> wf (tLetIn na t b b')
-| wf_tApp t u : ~ isApp t = true -> u <> nil -> wf t -> Forall wf u -> wf (tApp t u)
-| wf_tConst k u : wf (tConst k u)
-| wf_tInd i u : wf (tInd i u)
-| wf_tConstruct i k u : wf (tConstruct i k u)
-| wf_tCase ci p c brs : wf p -> wf c -> Forall (Program.Basics.compose wf snd) brs -> wf (tCase ci p c brs)
-| wf_tProj p t : wf t -> wf (tProj p t)
-| wf_tFix mfix k : Forall (fun def => wf def.(dtype _) /\ wf def.(dbody _)) mfix -> wf (tFix mfix k)
-| wf_tCoFix mfix k : Forall (fun def => wf def.(dtype _) /\ wf def.(dbody _)) mfix -> wf (tCoFix mfix k).
+Definition isLambda t :=
+  match t with
+  | tLambda _ _ _ => true
+  | _ => false
+  end.
 
 (** ** Entries
 
@@ -177,7 +153,7 @@ Notation " Γ ,, d " := (snoc Γ d) (at level 20, d at next level).
 (** *** Environments *)
 
 (** See [one_inductive_body] from [declarations.ml]. *)
-Record one_inductive_body : Set := {
+Record one_inductive_body := {
   ind_name : ident;
   ind_type : term; (* Closed arity *)
   ind_kelim : list sort_family; (* Allowed elimination sorts *)
@@ -189,6 +165,7 @@ Record one_inductive_body : Set := {
 (** See [mutual_inductive_body] from [declarations.ml]. *)
 Record mutual_inductive_body := {
   ind_npars : nat;
+  ind_params : context;
   ind_bodies : list one_inductive_body ;
   ind_universes : universe_context }.
 

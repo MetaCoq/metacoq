@@ -17,4 +17,4 @@ Definition setprop : { x : nat | x = 0 } := exist _ 0 eq_refl.
 Quote Recursively Definition q_setprop := setprop.
 
 Notation proof t :=
-  (Ast.tCast t Ast.Cast (Ast.tCast _ Ast.Cast (Ast.tSort univ.Universe.type0m))).
+  (Ast.tCast t BasicAst.Cast (Ast.tCast _ BasicAst.Cast (Ast.tSort (((univ.Level.lProp, false) :: nil)%list)))).

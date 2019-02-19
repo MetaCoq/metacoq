@@ -12,7 +12,7 @@ From Template Require Export univ uGraph.
       We reflect identifiers [ident], sort families [sort_family], names
     [name], cast kinds [cast_kind], inductives [inductive] and primitive
     projections [projection] and (co)-fixpoint blocks [mfixpoint] and
-    [def].
+    [def]. These are defined in the [BasicAst] file.
 
     ** Terms:
 
@@ -39,36 +39,7 @@ From Template Require Export univ uGraph.
     TemplateProgram] on a monad action to produce its side-effects.
     Uses a reduction strategy specifier [reductionStrategy].  *)
 
-Definition ident := string. (* e.g. nat *)
-Definition kername := string. (* e.g. Coq.Init.Datatypes.nat *)
-
-Inductive sort_family : Set := InProp | InSet | InType.
-
-Inductive name : Set :=
-| nAnon
-| nNamed (_ : ident).
-
-Inductive cast_kind : Set :=
-| VmCast
-| NativeCast
-| Cast
-| RevertCast.
-
-Record inductive : Set := mkInd { inductive_mind : kername ;
-                                  inductive_ind : nat }.
-Arguments mkInd _%string _%nat.
-
-Definition projection : Set := inductive * nat (* params *) * nat (* argument *).
-
-(** Parametrized by term because term is not yet defined *)
-Record def (term : Set) : Set := mkdef {
-  dname : name; (* the name **)
-  dtype : term;
-  dbody : term; (* the body (a lambda term). Note, this may mention other (mutually-defined) names **)
-  rarg  : nat  (* the index of the recursive argument, 0 for cofixpoints **) }.
-
-Definition mfixpoint (term : Set) : Set :=
-  list (def term).
+Require Export BasicAst.
 
 Inductive term : Set :=
 | tRel (n : nat)
@@ -107,6 +78,12 @@ Definition isApp t :=
   | _ => false
   end.
 
+Definition isLambda t :=
+  match t with
+  | tLambda _ _ _ => true
+  | _ => false
+  end.
+
 (** Well-formed terms: invariants which are not ensured by the OCaml type system *)
 
 Inductive wf : term -> Prop :=
@@ -125,8 +102,9 @@ Inductive wf : term -> Prop :=
 | wf_tConstruct i k u : wf (tConstruct i k u)
 | wf_tCase ci p c brs : wf p -> wf c -> Forall (Program.Basics.compose wf snd) brs -> wf (tCase ci p c brs)
 | wf_tProj p t : wf t -> wf (tProj p t)
-| wf_tFix mfix k : Forall (fun def => wf def.(dtype _) /\ wf def.(dbody _)) mfix -> wf (tFix mfix k)
-| wf_tCoFix mfix k : Forall (fun def => wf def.(dtype _) /\ wf def.(dbody _)) mfix -> wf (tCoFix mfix k).
+| wf_tFix mfix k : Forall (fun def => wf def.(dtype) /\ wf def.(dbody) /\ isLambda def.(dbody) = true) mfix ->
+                   wf (tFix mfix k)
+| wf_tCoFix mfix k : Forall (fun def => wf def.(dtype) /\ wf def.(dbody)) mfix -> wf (tCoFix mfix k).
 
 (** ** Entries
 
@@ -206,7 +184,7 @@ Record mutual_inductive_entry := {
 
 (** *** The context of De Bruijn indices *)
 
-Record context_decl := {
+Record context_decl := mkdecl {
   decl_name : name ;
   decl_body : option term ;
   decl_type : term }.
@@ -244,6 +222,7 @@ Record one_inductive_body := {
 (** See [mutual_inductive_body] from [declarations.ml]. *)
 Record mutual_inductive_body := {
   ind_npars : nat;
+  ind_params : context;
   ind_bodies : list one_inductive_body ;
   ind_universes : universe_context }.
 
@@ -269,11 +248,3 @@ Definition global_context : Type := global_declarations * uGraph.t.
   A set of declarations and a term, as produced by [Quote Recursively]. *)
 
 Definition program : Type := global_declarations * term.
-
-(** Kernel declaration references [global_reference] *)
-
-Inductive global_reference :=
-(* VarRef of Names.variable *)
-| ConstRef : kername -> global_reference
-| IndRef : inductive -> global_reference
-| ConstructRef : inductive -> nat -> global_reference.

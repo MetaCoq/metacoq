@@ -2,7 +2,7 @@
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
 From Template Require Import config utils Ast univ Induction LiftSubst UnivSubst Typing.
-From Template Require AstUtils.
+From Template Require Import AstUtils.
 Require Import String.
 Local Open Scope string_scope.
 Set Asymmetric Patterns.
@@ -35,13 +35,13 @@ Section Wcbv.
   | eval_beta f na t b a a' l res :
       eval f (tLambda na t b) ->
       eval a a' ->
-      eval (mkApps (subst0 a' b) l) res ->
+      eval (mkApps (subst10 a' b) l) res ->
       eval (tApp f (a :: l)) res
 
   (** Let *)
   | eval_zeta na b0 b0' t b1 res :
       eval b0 b0' ->
-      eval (subst0 b0' b1) res ->
+      eval (subst10 b0' b1) res ->
       eval (tLetIn na b0 t b1) res
 
   (** Local variables: defined or undefined *)
@@ -189,10 +189,10 @@ Section Wcbv.
     constructor. now apply eval_evals_ind. now apply aux.
     revert l l' H H1. fix aux 4. destruct 2. contradiction. constructor.
     now apply eval_evals_ind.
-    destruct l. inv H1; constructor.
+    destruct l. inv H2; constructor.
     now apply aux.
     revert l l' H H1. fix aux 4. destruct 2. contradiction. constructor.
-    now apply eval_evals_ind. destruct l. inv H1; constructor. now apply aux.
+    now apply eval_evals_ind. destruct l. inv H2; constructor. now apply aux.
   Defined.
 
   (** Characterization of values for this reduction relation:
@@ -230,35 +230,24 @@ Section Wcbv.
   (** The codomain of evaluation is only values:
       It means no redex can remain at the head of an evaluated term. *)
 
-  Lemma Forall2_right {A B} (P : B -> Prop) (l : list A) (l' : list B) :
-    Forall2 (fun x y => P y) l l' -> List.Forall (fun x => P x) l'.
-  Proof.
-    induction 1; constructor; auto.
-  Qed.
-
-  Lemma Forall2_non_nil {A B} (P : A -> B -> Prop) (l : list A) (l' : list B) :
-    Forall2 P l l' -> l <> nil -> l' <> nil.
-  Proof.
-    induction 1; congruence.
-  Qed.
-
   Lemma eval_to_value e e' : eval e e' -> value e'.
   Proof.
     induction 1 using eval_evals_ind; simpl; auto using value.
     eapply (value_tInd i u []); try constructor.
-    pose proof (value_tInd i u l'). forward H3.
-    apply (Forall2_right _ _ _ H2).
-    rewrite mkApps_tApp in H3; auto. simpl; auto. eauto using Forall2_non_nil.
-    eapply (value_tConstruct i k u []); try constructor.
-    pose proof (value_tConstruct i k u l'). forward H3.
-    apply (Forall2_right _ _ _ H2).
-    rewrite mkApps_tApp in H3; auto. simpl; auto. eauto using Forall2_non_nil.
-  Qed.
+    pose proof (value_tInd i u l'). forward H3. solve_all.
+  Admitted. (* change in All representation *)
+    (*   apply (All2_right H2). *)
+  (*   rewrite mkApps_tApp in H3; auto. simpl; auto. eauto using Forall2_non_nil. *)
+  (*   eapply (value_tConstruct i k u []); try constructor. *)
+  (*   pose proof (value_tConstruct i k u l'). forward H3. *)
+  (*   apply (Forall2_right H2). *)
+  (*   rewrite mkApps_tApp in H3; auto. simpl; auto. eauto using Forall2_non_nil. *)
+  (* Qed. *)
 
   (** Evaluation preserves closedness: *)
   Lemma eval_closed : forall n t u, closedn n t = true -> eval t u -> closedn n u = true.
   Proof.
-    induction 2 using eval_evals_ind; simpl in *; eauto. eapply IHeval3.
+    induction 2 using eval_evals_ind; simpl in *; eauto 2. eapply IHeval3.
     admit.
   Admitted. (* FIXME complete *)
 

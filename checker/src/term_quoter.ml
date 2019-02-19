@@ -2,6 +2,7 @@
 (*i camlp4use: "pa_extend.cmp" i*)
 
 open Constr
+open BasicAst
 open Ast0
 open Template_coq
 open Quoter
@@ -51,6 +52,8 @@ struct
   type quoted_mind_finiteness = recursivity_kind
   type quoted_entry = (constant_entry, quoted_mind_entry) sum option
 
+  type quoted_context_decl = context_decl
+  type quoted_context = context
   type quoted_one_inductive_body = one_inductive_body
   type quoted_mutual_inductive_body = mutual_inductive_body
   type quoted_constant_body = constant_body
@@ -97,9 +100,9 @@ struct
 
   let quote_sort_family s =
     match s with
-    | Sorts.InProp -> Ast0.InProp
-    | Sorts.InSet -> Ast0.InSet
-    | Sorts.InType -> Ast0.InType
+    | Sorts.InProp -> BasicAst.InProp
+    | Sorts.InSet -> BasicAst.InSet
+    | Sorts.InType -> BasicAst.InType
 
   let quote_cast_kind = function
     | DEFAULTcast -> Cast
@@ -124,7 +127,8 @@ struct
     CArray.map_to_list quote_level arr
 
   let quote_univ_constraints (c : Univ.Constraint.t) : quoted_univ_constraints =
-    List.map quote_univ_constraint (Univ.Constraint.elements c)
+    let l = List.map quote_univ_constraint (Univ.Constraint.elements c) in
+    Univ0.ConstraintSet.(List.fold_right add l empty)
 
   let quote_variance (v : Univ.Variance.t) =
     match v with
@@ -163,6 +167,13 @@ struct
     | Entries.Polymorphic_ind_entry ctx -> quote_abstract_univ_context_aux ctx
     | Entries.Cumulative_ind_entry ctx ->
       quote_abstract_univ_context_aux (Univ.CumulativityInfo.univ_context ctx)
+
+  let quote_context_decl na b t =
+    { decl_name = na;
+      decl_body = b;
+      decl_type = t }
+
+  let quote_context l = l
 
   let mkAnon = Coq_nAnon
   let mkName i = Coq_nNamed i
@@ -220,8 +231,8 @@ struct
     { ind_name = id; ind_type = ty;
       ind_kelim = kel; ind_ctors = ctr; ind_projs = proj }
 
-  let mk_mutual_inductive_body parms inds uctx =
-    {ind_npars = parms; ind_bodies = inds; ind_universes = uctx}
+  let mk_mutual_inductive_body npars params inds uctx =
+    {ind_npars = npars; ind_params = params; ind_bodies = inds; ind_universes = uctx}
 
   let mk_constant_body ty tm uctx =
     {cst_type = ty; cst_body = tm; cst_universes = uctx}

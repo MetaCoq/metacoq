@@ -100,16 +100,18 @@ End Level.
 Require FSets.FSetWeakList.
 Require FSets.FMapWeakList.
 Module LevelDecidableType.
-   Definition t : Set := Level.t.
+   Definition t : Type := Level.t.
    Definition eq : t -> t -> Prop := eq.
    Definition eq_refl : forall x : t, eq x x := @eq_refl _.
    Definition eq_sym : forall x y : t, eq x y -> eq y x := @eq_sym _.
    Definition eq_trans : forall x y z : t, eq x y -> eq y z -> eq x z := @eq_trans _.
+   Definition eq_equiv : RelationClasses.Equivalence eq.
+   Proof. constructor. red. apply eq_refl. red. apply eq_sym. red. apply eq_trans. Defined.
    Definition eq_dec : forall x y : t, {eq x y} + {~ eq x y}.
      unfold eq. decide equality. apply string_dec. apply Peano_dec.eq_nat_dec.
    Defined.
 End LevelDecidableType.
-Module LevelSet := FSets.FSetWeakList.Make LevelDecidableType.
+Module LevelSet <: (MSetInterface.WSetsOn LevelDecidableType) := MSets.MSetWeakList.Make LevelDecidableType.
 Module LevelMap := FSets.FMapWeakList.Make LevelDecidableType.
 
 Definition universe_level := Level.t.
@@ -296,7 +298,7 @@ Module UnivConstraintDec.
     decide equality. decide equality. apply LevelDecidableType.eq_dec.
   Defined.
 End UnivConstraintDec.
-Module ConstraintSet := MSets.MSetWeakList.Make UnivConstraintDec.
+Module ConstraintSet <: MSetInterface.WSetsOn UnivConstraintDec := MSets.MSetWeakList.Make UnivConstraintDec.
 
 Definition make_univ_constraint : universe_level -> constraint_type -> universe_level -> univ_constraint
   := fun x y z => (x, y, z).

@@ -9,6 +9,7 @@ Open Scope list_scope.
 Open Scope sigma_scope.
 
 Local Existing Instance config.default_checker_flags.
+Local Existing Instance Checker.default_fuel.
 
 
 Fixpoint refresh_universes (t : term) {struct t} :=
@@ -131,11 +132,11 @@ Fixpoint replace t k u {struct u} :=
   | tProj p c => tProj p (replace t k c)
   | tFix mfix idx =>
     let k' := List.length mfix + k in
-    let mfix' := List.map (map_def (replace t k')) mfix in
+    let mfix' := List.map (map_def (replace t k) (replace t k')) mfix in
     tFix mfix' idx
   | tCoFix mfix idx =>
     let k' := List.length mfix + k in
-    let mfix' := List.map (map_def (replace t k')) mfix in
+    let mfix' := List.map (map_def (replace t k) (replace t k')) mfix in
     tCoFix mfix' idx
   | x => x
   end.
@@ -194,6 +195,7 @@ Definition tsl_mind_body (ΣE : tsl_context) (mp : string)
       (* refine (fold_left_i (fun E k _ => _ :: E) ind.(ind_ctors) []). *)
       (* exact (ConstructRef (mkInd id i) k, tConstruct (mkInd id' i) k []). *)
       refine [].
+  - (* FIXME don't know what to do *) refine (mind.(ind_params)).
 Defined.
 
 

@@ -36,6 +36,7 @@ Fixpoint refresh_universes (t : term) {struct t} :=
 
 Local Instance tit : config.checker_flags
   := {| config.check_univs := false |}.
+Existing Instance Checker.default_fuel.
 
 (* if b it is the first translation, else the second *)
 Fixpoint tsl_rec (fuel : nat) (Σ : global_context) (E : tsl_table) (Γ : context)

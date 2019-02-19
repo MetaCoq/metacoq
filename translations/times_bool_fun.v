@@ -34,6 +34,7 @@ Definition pairTrue typ tm := tApp tpair [typ; tbool; tm; ttrue].
 
 
 Local Instance tit : config.checker_flags := {| config.check_univs := false |}.
+Existing Instance Checker.default_fuel.
 
 Fixpoint tsl_rec (fuel : nat) (Σ : global_context) (E : tsl_table) (Γ : context) (t : term) {struct fuel}
   : tsl_result term :=
@@ -115,6 +116,12 @@ Fixpoint replace pat u t {struct t} :=
     | _ => t (* todo *)
     end.
 
+Fixpoint subst_app (t : term) (us : list term) : term :=
+  match t, us with
+  | tLambda _ A t, u :: us => subst_app (t {0 := u}) us
+  | _, [] => t
+  | _, _ => mkApps t us
+  end.
 
 (* If tm of type typ = Π [A0] [A1] ... . [B], returns *)
 (* a term of type [Π A0 A1 ... . B] *)
@@ -140,9 +147,10 @@ Definition tsl_mind_body (ΣE : tsl_context) (mp : string) (kn : kername)
                              | Error _ => todo
                              end in
           let kn' := tsl_kn tsl_ident kn mp in _).
-  refine (let LI := List.split (map_i _ mind.(ind_bodies)) in
+  unshelve refine (let LI := List.split (map_i _ mind.(ind_bodies)) in
           ret (List.concat (fst LI),
                [{| ind_npars := mind.(ind_npars);
+                   ind_params := _;
                    ind_bodies := snd LI;
                    ind_universes := mind.(ind_universes)|}])). (* FIXME always ok? *)
   intros i ind.
@@ -182,6 +190,9 @@ Definition tsl_mind_body (ΣE : tsl_context) (mp : string) (kn : kername)
                           mind.(ind_bodies) ctor_type').
   + (* table *)
     refine (IndRef (mkInd kn i), pouet (tInd (mkInd kn' i) []) ind_type').
+  + (* parameters *)
+    simple refine (List.fold_left _ (mind.(ind_params)) []).
+    exact (fun Γ' A => Γ' ,, vass (decl_name A) (tsl Γ' (decl_type A))).
 Defined.
 
 

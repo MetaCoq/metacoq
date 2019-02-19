@@ -27,6 +27,13 @@ Fixpoint tsl_rec0 (n : nat) (t : term) {struct t} : term :=
   | _ => t
   end.
 
+Fixpoint subst_app (t : term) (us : list term) : term :=
+  match t, us with
+  | tLambda _ A t, u :: us => subst_app (t {0 := u}) us
+  | _, [] => t
+  | _, _ => mkApps t us
+  end.
+
 Fixpoint tsl_rec1_app (app : option term) (E : tsl_table) (t : term) : term :=
   let tsl_rec1 := tsl_rec1_app None in
   let debug case symbol :=
@@ -114,6 +121,7 @@ Definition tsl_rec1 := tsl_rec1_app None.
 Definition tsl_mind_body (E : tsl_table) (mp : string) (kn : kername)
            (mind : mutual_inductive_body) : tsl_table * list mutual_inductive_body.
   refine (_, [{| ind_npars := 2 * mind.(ind_npars);
+                 ind_params := _;
                  ind_bodies := _;
                  ind_universes := mind.(ind_universes)|}]).  (* FIXME always ok? *)
   - refine (let kn' := tsl_kn tsl_ident kn mp in
@@ -123,6 +131,8 @@ Definition tsl_mind_body (E : tsl_table) (mp : string) (kn : kername)
     + (* ctors *)
       refine (fold_left_i (fun E k _ => _ :: E) ind.(ind_ctors) []).
       exact (ConstructRef (mkInd kn i) k, tConstruct (mkInd kn' i) k []).
+  - (* params: 2 times the same parameters? Probably wrong *)
+    refine (mind.(ind_params) ++ mind.(ind_params))%list.
   - refine (map_i _ mind.(ind_bodies)).
     intros i ind.
     refine {| ind_name := tsl_ident ind.(ind_name);
@@ -176,7 +186,10 @@ Run TemplateProgram (Translate emptyTC "tm").
 Run TemplateProgram (TC <- Translate emptyTC "nat" ;;
                      tmDefinition "nat_TC" TC ).
 
-Run TemplateProgram (Translate nat_TC "pred").
+Run TemplateProgram (TC <- Translate nat_TC "bool" ;;
+                     tmDefinition "bool_TC" TC ).
+
+Run TemplateProgram (Translate bool_TC "pred").
 
 
 Module Id1.

@@ -258,7 +258,7 @@ Definition ImplementExisting {tsl : Translation} (ΣE : tsl_context) (id : ident
                           ++ id ++ " has not enough constructors. This is a bug.")
       | Some (_, ty, _) =>  (* keep id? *)
         tmDebug "plop3" ;;
-        let A := substl (inds kn [] (* FIXME uctx *) (ind_bodies d)) ty in
+        let A := subst0 (inds kn [] (* FIXME uctx *) (ind_bodies d)) ty in
         tmDebug "plop4" ;;
         tA' <- tmEval lazy (tsl_ty ΣE A) ;;
         tmDebug "plop5" ;;

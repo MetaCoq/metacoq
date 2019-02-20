@@ -59,6 +59,14 @@ Require Import ETyping.
 
 Definition extract_copy := Eval native_compute in extract copy.
 
+Function unprovedCopy (n:nat) {wf lt n} :=
+  match n with 0 => 0 | S k => S (unprovedCopy k) end.
+Proof. Admitted.
+
+Quote Recursively Definition admitcopy := unprovedCopy.
+
+Definition extract_admitcopy := Eval native_compute in extract admitcopy.
+
 Require Import EAst.
 Section PP.
 Require Import Coq.Arith.Div2 Coq.Numbers.Natural.Peano.NPeano Coq.Program.Wf.
@@ -158,6 +166,21 @@ Fixpoint print_extracted_term (t:term) (names : list name) (inapp : bool) : stri
   | tCoFix _ n => " (COFIX " ++ (nat_to_string n) ++ ") "
   end.
 
+Definition get_def (extract : option E.program) c :=
+  match extract with
+  | Some (env, term) =>
+    match lookup_env env c with
+    | Some (ConstantDecl _ cb) =>
+      match cb.(cst_body) with
+      | Some b => Some b
+      | None => None
+      end
+    | Some (InductiveDecl _ _) => None
+    | None => None
+    end
+  | None => None
+  end.
+
 Definition print_def (extract : option E.program) c :=
   match extract with
   | Some (env, term) =>
@@ -184,12 +207,11 @@ Definition extract_fix := Eval native_compute in extract fixf.
 (** Extracts to general fixpoint *)
 Eval cbv in print_def extract_fix "Coq.Init.Wf.Fix_F".
 
-Function unprovedCopy (n:nat) {wf lt n} :=
-  match n with 0 => 0 | S k => S (provedCopy k) end.
-Proof. Admitted.
-
-Quote Recursively Definition admitcopy := unprovedCopy.
-
-Definition extract_admitcopy := Eval native_compute in extract admitcopy.
-
 Eval cbv in print_def extract_copy "Top.provedCopy_terminate".
+Eval cbv in print_def extract_admitcopy "Top.unprovedCopy_terminate".
+
+(** Check that the termination condition is completely erased by extraction. *)
+Definition same : get_def extract_admitcopy "Top.unprovedCopy_terminate" =
+                  get_def extract_copy "Top.provedCopy_terminate".
+  reflexivity.
+Defined.

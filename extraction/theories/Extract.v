@@ -1,3 +1,4 @@
+
 (* Distributed under the terms of the MIT license.   *)
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
@@ -302,7 +303,7 @@ Fixpoint obs_eq (Σ : global_context) (v v' : term) (T : term) (s : universe) : 
     obs_eq Σ f f'.                                     
 *)                      
 
-Record extraction_post (Σ : global_context) (Σ' : EAst.global_context) (t : term) (t' : E.term) :=
+Record extraction_post (Σ : global_context) (Σ' : EAst.global_context) (t : term) (t' : E.term) : Prop :=
   { extr_value : E.term;
     extr_eval : EWcbvEval.eval Σ' t' extr_value;
     (* extr_equiv : obs_eq Σ v extr_value *) }.

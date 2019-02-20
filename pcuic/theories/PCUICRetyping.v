@@ -109,135 +109,140 @@ Section TypeOf.
   Notation "( x ; .. ; y ; z )" :=
     (existT x (.. (existT y z) ..)) : type_scope.
 
-  Conjecture cumul_reduce_to_sort : forall Γ t s',
-      Σ ;;; Γ |- t <= tSort s' ->
-      { s'' & (reduce_to_sort (fst Σ) Γ t = Checked s'')
-            * (check_leq (snd Σ) s'' s' = true) }.
+  Conjecture cumul_reduce_to_sort : forall {Γ T s},
+    reduce_to_sort (fst Σ) Γ T = Checked s ->
+    Σ ;;; Γ |- T <= tSort s.
 
-  Conjecture cumul_reduce_to_prod :
-    forall Γ T na A B,
-      Σ ;;; Γ |- T <= tProd na A B ->
-      ∑ A' B',
-        (reduce_to_prod (fst Σ) Γ T = Checked (A', B')) *
-        (eq_term (snd Σ) A A') *
-        (leq_term (snd Σ) B B').
+  Conjecture cumul_reduce_to_prod : forall {Γ T A B},
+    reduce_to_prod (fst Σ) Γ T = Checked (A, B) ->
+    forall n, Σ ;;; Γ |- T <= tProd n A B.
 
-  Conjecture congr_cumul_letin : forall Γ n a A t n' a' A' t',
+  Conjecture congr_cumul_letin : forall {Γ n a A t n' a' A' t'},
     Σ ;;; Γ |- a <= a' ->
     Σ ;;; Γ |- A <= A' ->
     Σ ;;; Γ ,, vdef n a A' |- t <= t' ->
     Σ ;;; Γ |- tLetIn n a A t <= tLetIn n' a' A' t'.
 
-  Ltac one_ih :=
-    let T := fresh "T" in
-    let e := fresh "e" in
-    let hT := fresh "hT" in
-    let hc := fresh "hc" in
+  Ltac case_eq_match :=
+    lazymatch goal with
+    | |- context [ match ?t with _ => _ end ] =>
+      case_eq t ; try solve [ intros ; discriminate ]
+    | h : context [ match ?t with _ => _ end ] |- _ =>
+      revert h ;
+      case_eq t ; try solve [ intros ; discriminate ]
+    end.
+
+  Ltac deal_as_sort :=
+    lazymatch goal with
+    | h : type_of_as_sort _ _ _ = _ |- _ =>
+      unfold type_of_as_sort in h ;
+      simpl in h
+    end.
+
+  Ltac deal_reduce_to_sort :=
+    lazymatch goal with
+    | h : reduce_to_sort _ _ _ = Checked _ |- _ =>
+      pose proof (cumul_reduce_to_sort h) ;
+      clear h
+    end.
+
+  Ltac deal_reduce_to_prod :=
+    lazymatch goal with
+    | h : reduce_to_prod _ _ _ = Checked _ |- _ =>
+      let hh := fresh h in
+      pose proof (cumul_reduce_to_prod h) as hh ;
+      clear h ;
+      lazymatch goal with
+      | na : name |- _ => specialize (hh na)
+      | |- _ => specialize (hh nAnon)
+      end
+    end.
+
+  Ltac deal_Checked :=
     match goal with
-    | H : { _ : term &  _ } |- _ => destruct H as [T [[e hT] hc]]
+    | h : Checked _ = Checked _ |- _ =>
+      inversion h ; subst ; clear h
+    end.
+
+  Ltac go eq :=
+    simpl in eq ; revert eq ;
+    repeat (case_eq_match ; intros) ;
+    repeat deal_as_sort ;
+    repeat (case_eq_match ; intros) ;
+    repeat deal_Checked ;
+    repeat deal_reduce_to_sort ;
+    repeat deal_reduce_to_prod.
+
+  Ltac one_ih :=
+    lazymatch goal with
+    | h : _ -> _ -> (_ ;;; _ |- ?t : _) * _ |- _ ;;; _ |- ?t : _ =>
+      eapply h
+    | h : _ -> _ -> _ * (_ ;;; _ |- _ <= ?A) |- _ ;;; _ |- _ <= ?A =>
+      eapply h
     end.
 
   Ltac ih :=
-    repeat one_ih.
+    one_ih ; eassumption.
 
-  Ltac rewrite_eq :=
-    match goal with
-    | e : _ = _ |- _ => rewrite e
-    end.
-
-  Ltac rewrite_eqs :=
-    repeat rewrite_eq.
-
-  Ltac simple_makedo :=
-    simpl ;
-    ih ;
-    rewrite_eqs ;
-    simpl.
-
-  Ltac finish :=
-    eexists ; split ; [
-      split ; [
-        reflexivity
-      | try (solve [ econstructor ; eassumption ])
-      ]
-    | try (solve [ eapply cumul_refl' ])
+  Ltac cih :=
+    eapply type_Conv ; [
+      ih
+    | try eassumption
+    | try eassumption
     ].
 
-  Ltac makedo :=
-    simple_makedo ; finish.
-
   Theorem type_of_sound :
-    forall {Γ t A},
+    forall {Γ t A B},
       Σ ;;; Γ |- t : A ->
-      { B : term & (type_of Γ t = Checked B)
-                 * (Σ ;;; Γ |- t : B)
-                 * (cumul Σ Γ B A) }.
+      type_of Γ t = Checked B ->
+      (Σ ;;; Γ |- t : B) * (Σ ;;; Γ |- B <= A).
   Proof.
-    intros Γ t A h.
-    induction h.
-    - makedo.
-    - makedo.
-      + admit.
-      + admit.
-    - (* makedo. *)
-      destruct IHh1 as [T1 [[e1 hT1] hc1]].
-      destruct IHh2 as [T2 [[e2 hT2] hc2]].
-      simpl. unfold type_of_as_sort. rewrite e1. rewrite e2. simpl.
-      apply cumul_reduce_to_sort in hc1 as hs1.
-      apply cumul_reduce_to_sort in hc2 as hs2.
-      destruct hs1 as [z1 [ez1 c1]].
-      destruct hs2 as [z2 [ez2 c2]].
-      rewrite ez1, ez2.
-      eexists. split ; [split |].
-      + reflexivity.
-      + econstructor.
-        * econstructor.
-          -- exact hT1.
-          -- admit.
-          -- admit.
-        * econstructor ; try eassumption.
-          all: admit.
-      + admit.
-    - makedo.
-      eapply congr_cumul_prod.
+    intros Γ t A B h eq. revert B eq.
+    induction h ; intros T eq.
+    - cbn in eq. rewrite e in eq.
+      inversion eq. subst. clear eq.
+      split.
+      + econstructor ; eassumption.
       + eapply cumul_refl'.
-      + assumption.
-    - makedo. eapply congr_cumul_letin.
-      all: try eapply cumul_refl'.
-      assumption.
-    - simple_makedo.
-      match goal with
-      | h : _ ;;; _ |- _ <= tProd _ _ _ |- _ =>
-        apply cumul_reduce_to_prod in h as hP
-      end.
-      destruct hP as [A' [B' [[hred eA] eB]]].
-      rewrite hred.
-      finish.
-      + eapply type_App with (A0 := A').
-        * econstructor.
-          -- eassumption.
-          -- econstructor.
-             ++ admit.
-             ++ admit.
-          -- admit.
-        * econstructor.
-          -- eassumption.
-          -- admit.
-          -- admit.
+    - cbn in eq. inversion eq. subst. clear eq.
+      split.
+      + (* Proving Typeᵢ : Typeᵢ₊₁ shouldn't be hard... *)
+        admit.
+      + (* destruct l. all: cbn. all: econstructor. all: cbn. all: try reflexivity. *)
+        admit.
+    - go eq.
+      split.
+      + econstructor ; try eassumption ; try ih ; try cih.
+        (* Again we're missing result on how to type sorts... *)
+        all: admit.
+      + (* Sorts again *)
+        admit.
+    - go eq. split.
+      + econstructor ; try eassumption ; try ih ; try cih.
+      + eapply congr_cumul_prod.
+        * eapply cumul_refl'.
+        * ih.
+    - go eq. split.
+      + econstructor ; try eassumption ; try ih ; try cih.
+      + eapply congr_cumul_letin. all: try eapply cumul_refl'.
+        ih.
+    - go eq. split.
+      + econstructor ; try eassumption ; try ih ; try cih.
+        all: admit.
+      + (* eapply cumul_subst. *)
+        admit.
+    - simpl in eq. split.
       + admit.
-    - simple_makedo. admit.
-    - simple_makedo. (* makedo. *) admit.
-    - destruct ind. simple_makedo.
-      (* makedo. *) admit.
-    - simple_makedo.
-      (* makedo. *) admit.
-    - simple_makedo.
-      (* makedo. *) admit.
-    - makedo.
-    - makedo.
-    - makedo.
-      + assumption.
-      + eapply cumul_trans ; eassumption.
+      + admit.
+    - admit.
+    - admit.
+    - admit.
+    - admit.
+    - admit.
+    - admit.
+    - split.
+      + ih.
+      + eapply cumul_trans ; try eassumption. ih.
   Admitted.
 
 

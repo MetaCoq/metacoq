@@ -62,10 +62,8 @@ Cumulative Inductive TemplateMonad@{t u} : Type@{t} -> Prop :=
 Definition print_nf (msg : Ast.term) : TemplateMonad unit
   := tmBind (tmEval all msg) tmPrint.
 
-(*
 Definition fail_nf {A} (msg : string) : TemplateMonad A
   := tmBind (tmEval all msg) tmFail.
-*)
 
 Definition tmMkInductive' (mind : mutual_inductive_body) : TemplateMonad unit
   := tmMkInductive (mind_body_to_entry mind).

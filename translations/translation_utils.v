@@ -1,4 +1,4 @@
-From Template Require Import All.
+From Template Require Import All TemplateMonad.Core Monad monad_utils.
 Require Import List.
 Import ListNotations MonadNotation String.
 Open Scope string_scope.
@@ -90,7 +90,7 @@ Definition Translate {tsl : Translation} (ΣE : tsl_context) (id : ident)
   : TemplateMonad tsl_context :=
   tmDebug ("Translate" ++ id);;
   gr <- tmAbout id ;;
-  tmDebug gr ;;
+  tmDebug gr;;
   match gr with
   | None => fail_nf (id ++ " not found")
   | Some (ConstructRef (mkInd kn n) _)
@@ -100,7 +100,8 @@ Definition Translate {tsl : Translation} (ΣE : tsl_context) (id : ident)
     d' <- tmEval lazy (tsl_ind ΣE mp kn d) ;;
     match d' with
     | Error e =>
-      print_nf e ;;
+      e' <- @tmQuote tsl_error e ;;
+      print_nf e' ;;
       fail_nf ("Translation error during the translation of the inductive " ++ id)
     | Success (E, decls) =>
       monad_iter tmMkInductive' decls ;;
@@ -108,7 +109,7 @@ Definition Translate {tsl : Translation} (ΣE : tsl_context) (id : ident)
       let E' := (E ++ (snd ΣE))%list in
       Σ' <- tmEval lazy Σ' ;;
       E' <- tmEval lazy E' ;;
-      print_nf  (kn ++ " has been translated.") ;;
+      tmMsg (kn ++ " has been translated.") ;;
       ret (Σ', E')
     end
     
@@ -125,7 +126,8 @@ Definition Translate {tsl : Translation} (ΣE : tsl_context) (id : ident)
       tmDebug t' ;;
       match t' with
       | Error e =>
-        print_nf e ;;
+        msg <- tmQuote e;;
+        print_nf msg ;;
         fail_nf ("Translation error during the translation of the body of " ++ id)
       | Success t' =>
         id' <- tmEval all (tsl_id id) ;;
@@ -140,12 +142,14 @@ Definition Translate {tsl : Translation} (ΣE : tsl_context) (id : ident)
         let E' := (ConstRef kn, tConst id' []) :: (snd ΣE) in
         Σ' <- tmEval lazy Σ' ;;
         E' <- tmEval lazy E' ;;
-        print_nf  (id ++ " has been translated as " ++ id') ;;
+        tmMsg  (id ++ " has been translated as " ++ id') ;;
         ret (Σ', E')
       end
     end
   end.
 
+Definition print_nf {A} (a : A) : TemplateMonad unit :=
+  a' <- tmQuote a ;; print_nf a'.
 
 Definition Implement {tsl : Translation} (ΣE : tsl_context)
            (id : ident) (A : Type)

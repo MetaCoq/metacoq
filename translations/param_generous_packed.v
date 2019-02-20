@@ -143,7 +143,7 @@ Instance tsl_param : Translation
 
 
 
-Notation "'TYPE'" := (exists A, A -> Type).
+Notation "'TYPE'" := ({ A : Type & A -> Type}).
 Notation "'El' A" := (@sigT A.1 A.2) (at level 20).
 
 
@@ -273,7 +273,6 @@ Defined.
 
 Run TemplateProgram (TC <- Translate TC6 "equiv" ;;
                      tmDefinition "TC7" TC).
-
 
 (* 244s (~ 4 min) to execute *)
 Check "go".

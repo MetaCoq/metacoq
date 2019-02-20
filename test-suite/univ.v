@@ -155,6 +155,8 @@ Quote Recursively Definition qfoo3 := foo3.
 Compute qfoo3.
 
 Require Import Template.monad_utils. Import MonadNotation.
+Require Import Template.TemplateMonad.Core.
+
 Run TemplateProgram (tmQuoteInductive "foo" >>= tmPrint).
 Run TemplateProgram (tmQuoteInductive "foo2" >>= tmPrint).
 Run TemplateProgram (tmQuoteInductive "foo3" >>= tmPrint).

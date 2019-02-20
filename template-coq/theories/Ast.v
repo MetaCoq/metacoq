@@ -31,13 +31,7 @@ From Template Require Export univ uGraph.
     ** Environments of declarations
 
       The global environment [global_context]: a list of [global_decl] and
-    a universe graph [uGraph.t].
-
-    ** The Template Monad
-
-      A monad for programming with template-coq operations. Use [Run
-    TemplateProgram] on a monad action to produce its side-effects.
-    Uses a reduction strategy specifier [reductionStrategy].  *)
+    a universe graph [uGraph.t].  *)
 
 Require Export BasicAst.
 

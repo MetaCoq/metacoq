@@ -2,8 +2,8 @@ Require Import Template.All.
 Import String Lists.List.ListNotations MonadNotation.
 Open Scope list_scope. Open Scope string_scope.
 Require Import translation_utils times_bool_fun MiniHoTT.
-Require Import TypingFlags.Loader.
-Print Typing Flags.
+
+Unset Strict Unquote Universe Mode.
 
 Run TemplateProgram (TC <- ImplementExisting emptyTC "paths" ;;
                      TC <- ImplementExisting TC "idpath" ;;
@@ -83,18 +83,6 @@ Run TemplateProgram (TC <- Translate eqTC "isequiv" ;;
 Next Obligation.
   tIntro A. tIntro x. tIntro y. exact (@eq A x y).
 Defined.
-
-
-Fail Run TemplateProgram (TC <- TranslateRec eqTC2 (UA -> False) ;;
-                     tmDefinition "eqTC'" TC ;;
-                     Implement TC "notUA" (UA -> False)).
-
-
-Run TemplateProgram (TC <- Translate eqTC "isequiv" ;;
-                     tmDefinition "eqTC2" TC).
-
-Run TemplateProgram (TC <- Translate eqTC2 "equiv" ;;
-                     tmDefinition "eqTC2'" TC).
 
 
 Definition contr A := exists x : A, forall y, x = y.

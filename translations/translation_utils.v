@@ -100,8 +100,7 @@ Definition Translate {tsl : Translation} (ΣE : tsl_context) (id : ident)
     d' <- tmEval lazy (tsl_ind ΣE mp kn d) ;;
     match d' with
     | Error e =>
-      e' <- @tmQuote tsl_error e ;;
-      print_nf e' ;;
+      print_nf e ;;
       fail_nf ("Translation error during the translation of the inductive " ++ id)
     | Success (E, decls) =>
       monad_iter tmMkInductive' decls ;;
@@ -126,8 +125,7 @@ Definition Translate {tsl : Translation} (ΣE : tsl_context) (id : ident)
       tmDebug t' ;;
       match t' with
       | Error e =>
-        msg <- tmQuote e;;
-        print_nf msg ;;
+        print_nf e ;;
         fail_nf ("Translation error during the translation of the body of " ++ id)
       | Success t' =>
         id' <- tmEval all (tsl_id id) ;;
@@ -142,14 +140,12 @@ Definition Translate {tsl : Translation} (ΣE : tsl_context) (id : ident)
         let E' := (ConstRef kn, tConst id' []) :: (snd ΣE) in
         Σ' <- tmEval lazy Σ' ;;
         E' <- tmEval lazy E' ;;
-        tmMsg  (id ++ " has been translated as " ++ id') ;;
+        print_nf (id ++ " has been translated as " ++ id') ;;
         ret (Σ', E')
       end
     end
   end.
 
-Definition print_nf {A} (a : A) : TemplateMonad unit :=
-  a' <- tmQuote a ;; print_nf a'.
 
 Definition Implement {tsl : Translation} (ΣE : tsl_context)
            (id : ident) (A : Type)

@@ -156,11 +156,11 @@ Definition tsl_mind_body (E : tsl_table) (mp : string) (kn : kername)
 Defined.
 
 
-(* Run TemplateProgram (typ <- tmQuote (forall A, A -> A) ;; *)
-(*                      typ' <- tmEval all (tsl_rec1 [] typ) ;; *)
-(*                      tm <- tmQuote (fun A (x : A) => x) ;; *)
-(*                      tm' <- tmEval all (tsl_rec1 [] tm) ;; *)
-(*                      tmUnquote (tApp typ' [tm]) >>= print_nf). *)
+Run TemplateProgram (typ <- tmQuote (forall A, A -> A) ;;
+                     typ' <- tmEval all (tsl_rec1 [] typ) ;;
+                     tm <- tmQuote (fun A (x : A) => x) ;;
+                     tm' <- tmEval all (tsl_rec1 [] tm) ;;
+                     tmUnquote (tApp typ' [tm]) >>= print_nf).
 
 
 

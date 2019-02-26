@@ -79,14 +79,6 @@ Definition TypeInstance : Common.TMInstance :=
    |}.
 (* Monadic operations *)
 
-Definition print_nf (msg : Ast.term) : TM unit
-  := tmBind (tmEval all msg) tmPrint.
-
-(*
-Definition fail_nf {A} (msg : string) : TM A
-  := tmBind (tmEval all msg) tmFail.
-*)
-
 Definition tmMkInductive' (mind : mutual_inductive_body) : TM unit
   := tmMkInductive (mind_body_to_entry mind).
 

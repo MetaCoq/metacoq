@@ -823,6 +823,11 @@ let rec run_template_program_rec ?(intactic=false) (k : Environ.env * Evd.evar_m
     k (env, evm, quote_ugraph univs)
   | TmPrint trm -> Feedback.msg_info (pr_constr trm);
     k (env, evm, unit_tt)
+  | TmMsg msg ->
+     let msg = reduce_all env evm msg in
+     let msg = unquote_string msg in
+     Feedback.msg_info (str msg);
+     k (env, evm, unit_tt)
   | TmFail trm ->
     CErrors.user_err (str (unquote_string trm))
   | TmAbout id ->
@@ -907,17 +912,14 @@ let rec run_template_program_rec ?(intactic=false) (k : Environ.env * Evd.evar_m
       with
         Not_found -> k (env, evm, Constr.mkApp (cNone, [| tTerm|]))
      end
-  | TmMsg msg ->
-    let msg = reduce_all env evm msg in
-    let msg = unquote_string msg in
-    Feedback.msg_info (str msg)
   | TmPrintTerm trm ->
     begin
       try
        let t = reduce_all env evm trm in
        let evdref = ref evm in
        let evm',t' = denote_term evm t in
-       Feedback.msg_info (pr_constr t')
+       Feedback.msg_info (pr_constr t');
+       k (env, evm, unit_tt)
       with
       Reduction.NotArity -> CErrors.user_err (str "printing ill-typed term")
     end

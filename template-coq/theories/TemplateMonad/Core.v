@@ -59,7 +59,7 @@ Cumulative Inductive TemplateMonad@{t u} : Type@{t} -> Prop :=
 | tmInferInstance : option reductionStrategy -> forall A : Type@{t}, TemplateMonad (option A)
 .
 
-Definition print_nf (msg : Ast.term) : TemplateMonad unit
+Definition print_nf {A} (msg : A) : TemplateMonad unit
   := tmBind (tmEval all msg) tmPrint.
 
 Definition fail_nf {A} (msg : string) : TemplateMonad A

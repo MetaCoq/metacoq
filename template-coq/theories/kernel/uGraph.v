@@ -175,7 +175,7 @@ Section UGraph.
     Universe.existsb (check_lt_level_expr e1) u2.
 
   Definition check_leq `{cf : checker_flags} (u1 u2 : Universe.t) : bool :=
-    (negb check_univs) || Universe.for_all (fun e => exists_bigger_or_eq e u2) u1.
+    negb check_univs || Universe.equal u1 Universe.type0m || Universe.for_all (fun e => exists_bigger_or_eq e u2) u1.
 
   Definition check_lt (u1 u2 : Universe.t) : bool :=
     Universe.for_all (fun e => exists_strictly_bigger e u2) u1.

@@ -150,10 +150,12 @@ TACTIC EXTEND run_program
          let evm = Proofview.Goal.sigma gl in
          let env = Proofview.Goal.env gl in
          let ret = ref None in
-         Denote.run_template_program_rec ~intactic:true (fun (env, evm, t) -> ret := Some t) env (evm, EConstr.to_constr evm c);
+         Denote.run_template_program_rec ~intactic:true (fun x -> ret := Some x) env (evm, EConstr.to_constr evm c);
          match !ret with
-           Some c ->
-           ltac_apply tac (List.map to_ltac_val [EConstr.of_constr c])
+           Some (env, evm, t) ->
+            Proofview.tclTHEN
+              (Proofview.Unsafe.tclEVARS evm) 
+              (ltac_apply tac (List.map to_ltac_val [EConstr.of_constr t]))
          | None -> Proofview.tclUNIT ()
        end) ]
 END;;

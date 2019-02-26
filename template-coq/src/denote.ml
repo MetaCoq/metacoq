@@ -692,7 +692,9 @@ let rec run_template_program_rec ?(intactic=false) (k : Environ.env * Evd.evar_m
   let open TemplateMonad in
   let (kind, universes) = next_action env pgm in
   match kind with
-    TmReturn h -> k (env, evm, h)
+    TmReturn h ->
+     let (evm, _) = Typing.type_of env evm (EConstr.of_constr h) in
+     k (env, evm, h)
   | TmBind (a,f) ->
     run_template_program_rec ~intactic:intactic (fun (env, evm, ar) -> run_template_program_rec ~intactic:intactic k env (evm, Constr.mkApp (f, [|ar|]))) env (evm, a)
   | TmDefinition (name,s,typ,body) ->
@@ -870,9 +872,9 @@ let rec run_template_program_rec ?(intactic=false) (k : Environ.env * Evd.evar_m
          let make_typed_term typ term evm =
            match texistT_typed_term with
            | ConstructRef ctor ->
-             let u = (Univ.Instance.to_array universes).(1) in
-             let term = Constr.mkApp
-               (Constr.mkConstructU (ctor, Univ.Instance.of_array [|u|]), [|typ; t'|]) in
+              let (evm,c) = Evarutil.new_global evm texistT_typed_term in
+              let term = Constr.mkApp
+               (EConstr.to_constr evm c, [|typ; t'|]) in
              let evm, _ = Typing.type_of env evm (EConstr.of_constr term) in
                (env, evm, term)
            | _ -> anomaly (str "texistT_typed_term does not refer to a constructor")

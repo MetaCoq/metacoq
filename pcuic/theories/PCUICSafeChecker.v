@@ -42,7 +42,17 @@ End RedFlags.
    This seems to be slightly stronger than simply assuming there are no infinite paths.
    This is however the version we need to do well-founded recursion.
 *)
-Axiom normalisation : forall {Σ Γ}, well_founded (red Σ Γ).
+Section Normalisation.
+
+  Context (flags : RedFlags.t).
+  Context `{checker_flags}.
+
+  Axiom normalisation :
+    forall Σ Γ t A,
+      Σ ;;; Γ |- t : A ->
+      Acc (red (fst Σ) Γ) t.
+
+End Normalisation.
 
 Section Reduce.
 
@@ -52,11 +62,46 @@ Section Reduce.
 
   Definition zip (t : term * list term) := mkApps (fst t) (snd t).
 
-  Fail Program Fixpoint reduce_stack (Γ : context) (t : term) (stack : list term)
-           {wf (red Σ Γ) t}
-    : option (term * list term) :=
+  Program Definition _reduce_stack Γ t stack
+             (h : closedn #|Γ| t = true)
+             (reduce : forall Γ t' stack h, red Σ Γ t t' -> term * list term)
+    : term * list term :=
     match t with
-    | _ => None
+    | tRel c =>
+      if RedFlags.zeta flags then
+        match nth_error Γ c with
+        | None => !
+        | Some d =>
+          match d.(decl_body) with
+          | None => (t, stack)
+          | Some b => reduce Γ (lift0 (S c) b) stack h _
+          end
+        end
+      else (t, stack)
+    | _ => (tRel 0, [])
     end.
+  Next Obligation.
+    clear - h Heq_anonymous. revert c h Heq_anonymous.
+    induction Γ ; intros c h eq.
+    - cbn in *. discriminate.
+    - destruct c.
+      + cbn in eq. discriminate.
+      + cbn in eq, h. eapply IHΓ ; eassumption.
+  Qed.
+  Next Obligation.
+    econstructor. econstructor. eapply red_rel.
+    rewrite <- Heq_anonymous0. cbn. f_equal. eauto.
+  Qed.
+
+  Program Definition reduce_stack Γ t stack h :=
+    Fix_F (R := red Σ Γ)
+          (fun x => (term * list term)%type)
+          (fun t' f => _reduce_stack Γ t stack h (fun Γ t' stack h => f t')).
+  Next Obligation.
+  Admitted.
+  Next Obligation.
+  Admitted.
+  Next Obligation.
+  Admitted.
 
 End Reduce.

@@ -4,6 +4,7 @@ From Coq Require Import Bool String List Program BinPos Compare_dec Arith Lia.
 From Template
 Require Import config univ monad_utils utils BasicAst AstUtils UnivSubst.
 From PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICLiftSubst PCUICUnivSubst PCUICTyping.
+From Equations Require Import Equations.
 
 Import MonadNotation.
 
@@ -62,6 +63,32 @@ Section Reduce.
 
   Definition zip (t : term * list term) := mkApps (fst t) (snd t).
 
+  (* TODO Get equations in obligations *)
+  (* Equations _reduce_stack (Γ : context) (t : term) (stack : list term) *)
+  (*           (h : closedn #|Γ| t = true) *)
+  (*           (reduce : forall Γ t' (stack : list term) (h : closedn #|Γ| t' = true), red Σ Γ t t' -> term * list term) *)
+  (*   : term * list term := *)
+  (*   _reduce_stack Γ (tRel c) stack h reduce with RedFlags.zeta flags := { *)
+  (*   | true with nth_error Γ c := { *)
+  (*     | None := ! ; *)
+  (*     | Some d with d.(decl_body) := { *)
+  (*       | None := (tRel c, stack) ; *)
+  (*       | Some b := reduce Γ (lift0 (S c) b) stack _ _ *)
+  (*       } *)
+  (*     } ; *)
+  (*   | false := (tRel c, stack) *)
+  (*   } ; *)
+  (*   _reduce_stack Γ t stack h reduce := (t, stack). *)
+  (* Next Obligation. *)
+  (* Admitted. *)
+  (* Next Obligation. *)
+  (*   econstructor. *)
+  (*   - econstructor. *)
+  (*   - econstructor. *)
+  (* Admitted. *)
+  (* Next Obligation. *)
+  (* Abort. *)
+
   Program Definition _reduce_stack Γ t stack
              (h : closedn #|Γ| t = true)
              (reduce : forall Γ t' stack h, red Σ Γ t t' -> term * list term)
@@ -93,15 +120,32 @@ Section Reduce.
     rewrite <- Heq_anonymous0. cbn. f_equal. eauto.
   Qed.
 
-  Program Definition reduce_stack Γ t stack h :=
-    Fix_F (R := red Σ Γ)
-          (fun x => (term * list term)%type)
-          (fun t' f => _reduce_stack Γ t stack h (fun Γ t' stack h => f t')).
+  Equations reduce_stack (Γ : context) (t : term) (stack : list term)
+            (h : closedn #|Γ| t) : term * list term :=
+    reduce_stack Γ t stack h :=
+      Fix_F (R := red Σ Γ)
+            (fun x => (term * list term)%type)
+            (fun t' f => _) (x := t) _.
   Next Obligation.
+    eapply _reduce_stack.
+    - exact stack.
+    - eassumption.
+    - intros Γ0 t'0 stack0 h0 H.
+      eapply f.
   Admitted.
   Next Obligation.
+    (* Actually need typing. *)
   Admitted.
-  Next Obligation.
-  Admitted.
+
+  (* Program Definition reduce_stack Γ t stack h := *)
+  (*   Fix_F (R := red Σ Γ) *)
+  (*         (fun x => (term * list term)%type) *)
+  (*         (fun t' f => _reduce_stack Γ t stack h (fun Γ t' stack h => f t')). *)
+  (* Next Obligation. *)
+  (* Admitted. *)
+  (* Next Obligation. *)
+  (* Admitted. *)
+  (* Next Obligation. *)
+  (* Admitted. *)
 
 End Reduce.

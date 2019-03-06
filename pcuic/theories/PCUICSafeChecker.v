@@ -122,24 +122,26 @@ Section Reduce.
     rewrite <- Heq_anonymous0. cbn. f_equal. eauto.
   Qed.
 
-  Equations reduce_stack (Γ : context) (t A : term) (stack : list term)
-            (h : Σ ;;; Γ |- t : A) : term * list term :=
+  Equations? reduce_stack (Γ : context) (t A : term) (stack : list term)
+           (h : Σ ;;; Γ |- t : A) : term * list term :=
     reduce_stack Γ t A stack h :=
       Fix_F (R := red (fst Σ) Γ)
             (fun x => (term * list term)%type)
             (fun t' f => _) (x := t) _.
-  Next Obligation.
-    eapply _reduce_stack.
-    - (* exact stack. *)
-      shelve.
-    - (* Probably derived from typing *)
-      shelve.
-    - intros t'0 H0.
-      eapply f.
-  Admitted.
-  Next Obligation.
-    eapply normalisation. eassumption.
-  Defined.
+  Proof.
+    - { eapply _reduce_stack.
+        - (* exact stack. *)
+          shelve.
+        - (* Probably derived from typing *)
+          shelve.
+        - intros t'0 H0.
+          eapply f.
+          give_up.
+      }
+    - { eapply normalisation. eassumption. }
+  (* Admitted. *) (* This fails! *)
+  Abort.
+
 
   (* Program Definition reduce_stack Γ t stack h := *)
   (*   Fix_F (R := red Σ Γ) *)

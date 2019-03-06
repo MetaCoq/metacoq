@@ -59,7 +59,9 @@ Section Reduce.
 
   Context (flags : RedFlags.t).
 
-  Context (Σ : global_declarations).
+  Context (Σ : global_context).
+
+  Context `{checker_flags}.
 
   Definition zip (t : term * list term) := mkApps (fst t) (snd t).
 
@@ -91,7 +93,7 @@ Section Reduce.
 
   Program Definition _reduce_stack Γ t stack
              (h : closedn #|Γ| t = true)
-             (reduce : forall Γ t' stack h, red Σ Γ t t' -> term * list term)
+             (reduce : forall Γ t' stack h, red (fst Σ) Γ t t' -> term * list term)
     : term * list term :=
     match t with
     | tRel c =>
@@ -120,22 +122,22 @@ Section Reduce.
     rewrite <- Heq_anonymous0. cbn. f_equal. eauto.
   Qed.
 
-  Equations reduce_stack (Γ : context) (t : term) (stack : list term)
-            (h : closedn #|Γ| t) : term * list term :=
-    reduce_stack Γ t stack h :=
-      Fix_F (R := red Σ Γ)
+  Equations reduce_stack (Γ : context) (t A : term) (stack : list term)
+            (h : Σ ;;; Γ |- t : A) : term * list term :=
+    reduce_stack Γ t A stack h :=
+      Fix_F (R := red (fst Σ) Γ)
             (fun x => (term * list term)%type)
             (fun t' f => _) (x := t) _.
   Next Obligation.
     eapply _reduce_stack.
     - exact stack.
-    - eassumption.
-    - intros Γ0 t'0 stack0 h0 H.
-      eapply f.
+    - shelve.
+    - intros Γ0 t'0 stack0 h0 H0.
+      eapply f. admit.
   Admitted.
   Next Obligation.
-    (* Actually need typing. *)
-  Admitted.
+    eapply normalisation. eassumption.
+  Defined.
 
   (* Program Definition reduce_stack Γ t stack h := *)
   (*   Fix_F (R := red Σ Γ) *)

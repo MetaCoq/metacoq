@@ -93,7 +93,7 @@ Section Reduce.
 
   Program Definition _reduce_stack Γ t stack
              (h : closedn #|Γ| t = true)
-             (reduce : forall Γ t' stack h, red (fst Σ) Γ t t' -> term * list term)
+             (reduce : forall t', red (fst Σ) Γ t t' -> term * list term)
     : term * list term :=
     match t with
     | tRel c =>
@@ -103,7 +103,7 @@ Section Reduce.
         | Some d =>
           match d.(decl_body) with
           | None => (t, stack)
-          | Some b => reduce Γ (lift0 (S c) b) stack h _
+          | Some b => reduce (lift0 (S c) b) _
           end
         end
       else (t, stack)
@@ -130,10 +130,12 @@ Section Reduce.
             (fun t' f => _) (x := t) _.
   Next Obligation.
     eapply _reduce_stack.
-    - exact stack.
-    - shelve.
-    - intros Γ0 t'0 stack0 h0 H0.
-      eapply f. admit.
+    - (* exact stack. *)
+      shelve.
+    - (* Probably derived from typing *)
+      shelve.
+    - intros t'0 H0.
+      eapply f.
   Admitted.
   Next Obligation.
     eapply normalisation. eassumption.

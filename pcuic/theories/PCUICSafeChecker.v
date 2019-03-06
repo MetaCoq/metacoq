@@ -48,10 +48,12 @@ Section Normalisation.
   Context (flags : RedFlags.t).
   Context `{checker_flags}.
 
+  Definition cored Σ Γ u v := red Σ Γ v u.
+
   Axiom normalisation :
     forall Σ Γ t A,
       Σ ;;; Γ |- t : A ->
-      Acc (red (fst Σ) Γ) t.
+      Acc (cored (fst Σ) Γ) t.
 
 End Normalisation.
 
@@ -125,18 +127,15 @@ Section Reduce.
   Equations? reduce_stack (Γ : context) (t A : term) (stack : list term)
            (h : Σ ;;; Γ |- t : A) : term * list term :=
     reduce_stack Γ t A stack h :=
-      Fix_F (R := red (fst Σ) Γ)
+      Fix_F (R := cored (fst Σ) Γ)
             (fun x => (term * list term)%type)
             (fun t' f => _) (x := t) _.
   Proof.
     - { eapply _reduce_stack.
-        - (* exact stack. *)
+        - exact stack.
+        - (* How should I derive it? (?t is t') *)
           shelve.
-        - (* Probably derived from typing *)
-          shelve.
-        - intros t'0 H0.
-          eapply f.
-          give_up.
+        - eapply f.
       }
     - { eapply normalisation. eassumption. }
   (* Admitted. *) (* This fails! *)

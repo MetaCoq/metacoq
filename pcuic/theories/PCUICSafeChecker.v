@@ -104,6 +104,7 @@ Section Reduce.
             (* (reduce : forall Γ t' (stack : list term) (h : closedn #|Γ| t' = true), red (fst Σ) Γ t t' -> term * list term) *)
             (reduce : forall t', red (fst Σ) Γ t t' -> term * list term)
     : term * list term :=
+
     _reduce_stack Γ (tRel c) stack h reduce with RedFlags.zeta flags := {
     | true with inspect (nth_error Γ c) := {
       | @exist None eq := ! ;
@@ -114,6 +115,26 @@ Section Reduce.
       } ;
     | false := (tRel c, stack)
     } ;
+
+    _reduce_stack Γ (tLetIn A b B c) stack h reduce with RedFlags.zeta flags := {
+    | true := reduce (subst10 b c) _ ;
+    | false := (tLetIn A b B c, stack)
+    } ;
+
+    _reduce_stack Γ (tConst c u) stack h reduce with RedFlags.delta flags := {
+    | true with inspect (lookup_env (fst Σ) c) := {
+      | @exist (Some (ConstantDecl _ {| cst_body := Some body |})) eq :=
+        let body' := subst_instance_constr u body in
+        reduce body' _ ;
+      | @exist _ eq := (tConst c u, stack)
+      } ;
+    | _ := (tConst c u, stack)
+    } ;
+
+    (* We need the stack argument... *)
+    (* _reduce_stack Γ (tApp f a) stack h reduce := *)
+    (*   reduce f (a :: stack) _ ; *)
+
     _reduce_stack Γ t stack h reduce := (t, stack).
   Next Obligation.
     econstructor.
@@ -122,12 +143,36 @@ Section Reduce.
       symmetry. assumption.
   Qed.
   Next Obligation.
+    (* Should be a lemma! *)
     clear - eq h. revert c h eq.
     induction Γ ; intros c h eq.
     - cbn in h. discriminate.
     - destruct c.
       + cbn in eq. discriminate.
       + cbn in eq. eapply IHΓ ; try eassumption. apply h.
+  Qed.
+  Next Obligation.
+    econstructor.
+    - econstructor.
+    - econstructor.
+  Qed.
+  Next Obligation.
+    econstructor.
+    - econstructor.
+    - econstructor.
+      (* Should be a lemma! *)
+      + unfold declared_constant. rewrite <- eq. f_equal.
+        f_equal. clear - eq.
+        revert c wildcard wildcard0 body wildcard1 eq.
+        set (Σ' := fst Σ). clearbody Σ'. clear Σ. rename Σ' into Σ.
+        induction Σ ; intros c na t body univ eq.
+        * cbn in eq. discriminate.
+        * cbn in eq. revert eq.
+          case_eq (ident_eq c (global_decl_ident a)).
+          -- intros e eq. inversion eq. subst. clear eq.
+             cbn in e. revert e. destruct (ident_eq_spec c na) ; easy.
+          -- intros e eq. eapply IHg. eassumption.
+      + cbn. reflexivity.
   Qed.
 
   (* Program Definition _reduce_stack Γ t stack *)
@@ -273,6 +318,6 @@ Section Reduce.
       }
     - { eapply normalisation. eassumption. }
     - { eapply closedn_typed. eassumption. }
-  Defined.
+  Qed.
 
 End Reduce.

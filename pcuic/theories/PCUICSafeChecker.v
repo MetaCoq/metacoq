@@ -4,7 +4,7 @@ From Coq Require Import Bool String List Program BinPos Compare_dec Arith Lia.
 From Template
 Require Import config univ monad_utils utils BasicAst AstUtils UnivSubst.
 From PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICLiftSubst PCUICUnivSubst PCUICTyping.
-From Equations Require Import Equations.
+From Equations Require Import Equations NoConfusion.
 
 Import MonadNotation.
 
@@ -60,114 +60,41 @@ Section Normalisation.
   | cored1 : forall u v, red1 Σ Γ u v -> cored Σ Γ v u
   | cored_trans : forall u v w, cored Σ Γ v u -> red1 Σ Γ v w -> cored Σ Γ w u.
 
-  (* Inductive R Σ Γ : (term * list term) -> (term * list term) -> Prop := *)
-  (* | R_red : forall u v, cored Σ Γ (zip u) (zip v) -> R Σ Γ u v *)
-  (* | R_subterm : forall u v π, term_subterm u v -> R Σ Γ (u,π) (v,π). *)
+  Definition R Σ Γ u v :=
+    Subterm.lexprod _ _ (cored Σ Γ) term_subterm (zip u, fst u) (zip v, fst v).
 
   Axiom normalisation :
     forall Σ Γ t A,
       Σ ;;; Γ |- t : A ->
       Acc (cored (fst Σ) Γ) t.
 
+  Corollary R_Acc_aux :
+    forall Σ Γ t A,
+      Σ ;;; Γ |- zip t : A ->
+      Acc (Subterm.lexprod _ _ (cored (fst Σ) Γ) term_subterm) (zip t, fst t).
+  Proof.
+    intros Σ Γ t A h.
+    eapply Subterm.acc_A_B_lexprod.
+    - eapply normalisation. eassumption.
+    - eapply well_founded_term_subterm.
+    - eapply well_founded_term_subterm.
+  Qed.
+
   Derive Signature for Acc.
 
-  (* Lemma R_Acc_from_lexprod : *)
-  (*   forall Σ Γ t, *)
-  (*     Acc (Subterm.lexprod _ _ (cored Σ Γ) term_subterm) (zip t, fst t) -> *)
-  (*     Acc (R Σ Γ) t. *)
-  (* Proof. *)
-  (*   intros Σ Γ t h. *)
-  (*   dependent induction h. *)
-  (*   constructor. intros y hy. *)
-  (*   simple inversion hy. *)
-  (*   - subst. intro hr. eapply H1. *)
-  (*     + eapply Subterm.left_lex. eassumption. *)
-  (*     + reflexivity. *)
-  (*   - subst. intro hs. eapply H1 ; try reflexivity. *)
-  (*     eapply Subterm.right_lex. *)
-
-  (*     + eapply Subterm.right_lex. eassumption. *)
-  (*     + cbn. *)
-
-
-  (*   simple inversion h. *)
-  (*   intros h1. constructor. *)
-  (*   intros y hy. *)
-
-
-  (* Corollary R_Acc_aux : *)
-  (*   forall Σ Γ t, *)
-  (*     Acc (cored Σ Γ) (zip t) -> *)
-  (*     Acc (R Σ Γ) t. *)
-  (* Proof. *)
-  (*   intros Σ Γ t h. *)
-  (*   dependent induction h. *)
-  (*   constructor. intros y h. *)
-  (*   simple inversion h. *)
-  (*   - subst. intro hr. eapply H1. *)
-  (*     + eassumption. *)
-  (*     + reflexivity. *)
-  (*   - subst. intro hs. eapply H1. *)
-
-
-
-  (* Corollary R_Acc_aux : *)
-  (*   forall Σ Γ t, *)
-  (*     Acc (cored Σ Γ) (zip t) -> *)
-  (*     Acc term_subterm (fst t) -> *)
-  (*     Acc (R Σ Γ) t. *)
-  (* Proof. *)
-  (*   intros Σ Γ t h1. *)
-  (*   dependent induction h1. *)
-  (*   intro h2. dependent induction h2. *)
-  (*   apply Acc_intro. intros y h. *)
-  (*   simple inversion h. *)
-  (*   - subst. intro hr. *)
-  (*     eapply H3. *)
-  (*     + eassumption. *)
-  (*     + reflexivity. *)
-  (*     + eapply well_founded_term_subterm. *)
-  (*   - subst. intro hs. *)
-  (*     eapply H1. *)
-  (*     + eassumption. *)
-  (*     + cbn. intros y H4. *)
-
-
-
-
-  (*   dependent induction 1 *)
-  (*   induction 1 as [y h2 ih2]. *)
-  (*   apply Acc_intro. intros z h3. *)
-  (*   simple inversion h3. *)
-  (*   - subst. intro h4. *)
-  (*     eapply ih1. *)
-  (*     all: try eassumption. *)
-
-
-  (*   destruct h3. *)
-  (*   - simple inversion h1. *)
-
-
-
-
-
-  (* Corollary R_Acc : *)
-  (*   forall Σ Γ t A, *)
-  (*     Σ ;;; Γ |- zip t : A -> *)
-  (*     Acc (R (fst Σ) Γ) t. *)
-  (* Proof. *)
-  (*   intros Σ Γ t A h. *)
-  (*   pose proof (normalisation _ _ _ _ h) as h1. *)
-  (*   pose proof (well_founded_term_subterm) as h2. *)
-  (*   unfold WellFounded in h2. unfold well_founded in h2. *)
-  (*   specialize (h2 (fst t)). *)
-  (*   clear A h. revert h2. induction h1. *)
-  (*   intros h2. induction h2. *)
-  (*   apply Acc_intro. *)
-  (*   intros y hy. destruct hy. *)
-  (*   - eapply H1. *)
-  (*     + *)
-
+  Corollary R_Acc :
+    forall Σ Γ t A,
+      Σ ;;; Γ |- zip t : A ->
+      Acc (R (fst Σ) Γ) t.
+  Proof.
+    intros Σ Γ t A h.
+    pose proof (R_Acc_aux _ _ _ _ h) as h'.
+    clear A h. rename h' into h.
+    dependent induction h.
+    constructor. intros y hy.
+    eapply H1 ; try reflexivity.
+    unfold R in hy. assumption.
+  Qed.
 
 End Normalisation.
 
@@ -179,18 +106,20 @@ Section Reduce.
 
   Context `{checker_flags}.
 
-  Definition zip (t : term * list term) := mkApps (fst t) (snd t).
-
   Derive NoConfusion NoConfusionHom for option.
   Derive NoConfusion NoConfusionHom for context_decl.
 
+  Lemma red1_context :
+    forall Σ Γ t u stack,
+      red1 Σ Γ t u ->
+      red1 Σ Γ (zip (t, stack)) (zip (u, stack)).
+  Admitted.
+
   Definition inspect {A} (x : A) : { y : A | y = x } := exist _ x eq_refl.
-  Require Import Equations.NoConfusion.
 
   Equations _reduce_stack (Γ : context) (t : term) (stack : list term)
             (h : closedn #|Γ| t = true)
-            (* (reduce : forall Γ t' (stack : list term) (h : closedn #|Γ| t' = true), red (fst Σ) Γ t t' -> term * list term) *)
-            (reduce : forall t' (stack : list term), red (fst Σ) Γ t t' -> term * list term)
+            (reduce : forall t' stack', R (fst Σ) Γ (t',stack') (t,stack) -> term * list term)
     : term * list term :=
 
     _reduce_stack Γ (tRel c) stack h reduce with RedFlags.zeta flags := {
@@ -219,15 +148,16 @@ Section Reduce.
     | _ := (tConst c u, stack)
     } ;
 
-    (* _reduce_stack Γ (tApp f a) stack h reduce := *)
-    (*   reduce f (a :: stack) _ ; *)
+    _reduce_stack Γ (tApp f a) stack h reduce :=
+      reduce f (a :: stack) _ ;
 
     _reduce_stack Γ t stack h reduce := (t, stack).
   Next Obligation.
     econstructor.
-    - econstructor.
-    - eapply red_rel. rewrite <- eq. cbn. f_equal.
-      symmetry. assumption.
+    econstructor.
+    eapply red1_context.
+    eapply red_rel. rewrite <- eq. cbn. f_equal.
+    symmetry. assumption.
   Qed.
   Next Obligation.
     (* Should be a lemma! *)
@@ -239,31 +169,29 @@ Section Reduce.
       + cbn in eq. eapply IHΓ ; try eassumption. apply h.
   Qed.
   Next Obligation.
+    econstructor. econstructor.
+    eapply red1_context.
     econstructor.
-    - econstructor.
-    - econstructor.
   Qed.
-  (* Next Obligation. *)
-  (*   econstructor. *)
-  (*   - econstructor. *)
-  (*   - *)
   Next Obligation.
+    eapply Subterm.right_lex. cbn. constructor. constructor.
+  Qed.
+  Next Obligation.
+    econstructor. econstructor. eapply red1_context.
     econstructor.
-    - econstructor.
-    - econstructor.
-      (* Should be a lemma! *)
-      + unfold declared_constant. rewrite <- eq. f_equal.
-        f_equal. clear - eq.
-        revert c wildcard wildcard0 body wildcard1 eq.
-        set (Σ' := fst Σ). clearbody Σ'. clear Σ. rename Σ' into Σ.
-        induction Σ ; intros c na t body univ eq.
-        * cbn in eq. discriminate.
-        * cbn in eq. revert eq.
-          case_eq (ident_eq c (global_decl_ident a)).
-          -- intros e eq. inversion eq. subst. clear eq.
-             cbn in e. revert e. destruct (ident_eq_spec c na) ; easy.
-          -- intros e eq. eapply IHg. eassumption.
-      + cbn. reflexivity.
+    (* Should be a lemma! *)
+    - unfold declared_constant. rewrite <- eq. f_equal.
+      f_equal. clear - eq.
+      revert c wildcard wildcard0 body wildcard1 eq.
+      set (Σ' := fst Σ). clearbody Σ'. clear Σ. rename Σ' into Σ.
+      induction Σ ; intros c na t body univ eq.
+      + cbn in eq. discriminate.
+      + cbn in eq. revert eq.
+        case_eq (ident_eq c (global_decl_ident a)).
+        * intros e eq. inversion eq. subst. clear eq.
+          cbn in e. revert e. destruct (ident_eq_spec c na) ; easy.
+        * intros e eq. eapply IHg. eassumption.
+    - cbn. reflexivity.
   Qed.
 
   Lemma closedn_red :
@@ -280,20 +208,20 @@ Section Reduce.
   Admitted.
 
   Equations? reduce_stack (Γ : context) (t A : term) (stack : list term)
-           (h : Σ ;;; Γ |- t : A) : term * list term :=
+           (h : Σ ;;; Γ |- zip (t,stack) : A) : term * list term :=
     reduce_stack Γ t A stack h :=
-      Fix_F (R := cored (fst Σ) Γ)
-            (fun x => closedn #|Γ| x = true -> (term * list term)%type)
-            (fun t' f => _) (x := t) _ _.
+      Fix_F (R := R (fst Σ) Γ)
+            (fun x => closedn #|Γ| (zip x) = true -> (term * list term)%type)
+            (fun t' f => _) (x := (t, stack)) _ _.
   Proof.
     - { eapply _reduce_stack.
-        - exact stack.
         - eassumption.
         - intros. eapply f.
           + eassumption.
-          + eapply closedn_red ; eassumption.
+          + cbn. (* eapply closedn_red ; try eassumption. *)
+            admit.
       }
-    - { eapply normalisation. eassumption. }
+    - { eapply R_Acc. cbn.
     - { eapply closedn_typed. eassumption. }
   Qed.
 

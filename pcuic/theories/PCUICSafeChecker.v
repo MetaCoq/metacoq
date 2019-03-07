@@ -102,7 +102,7 @@ Section Reduce.
   Equations _reduce_stack (Γ : context) (t : term) (stack : list term)
             (h : closedn #|Γ| t = true)
             (* (reduce : forall Γ t' (stack : list term) (h : closedn #|Γ| t' = true), red (fst Σ) Γ t t' -> term * list term) *)
-            (reduce : forall t', red (fst Σ) Γ t t' -> term * list term)
+            (reduce : forall t' (stack : list term), red (fst Σ) Γ t t' -> term * list term)
     : term * list term :=
 
     _reduce_stack Γ (tRel c) stack h reduce with RedFlags.zeta flags := {
@@ -110,14 +110,14 @@ Section Reduce.
       | @exist None eq := ! ;
       | @exist (Some d) eq with inspect d.(decl_body) := {
         | @exist None _ := (tRel c, stack) ;
-        | @exist (Some b) H := reduce (lift0 (S c) b) _
+        | @exist (Some b) H := reduce (lift0 (S c) b) stack _
         }
       } ;
     | false := (tRel c, stack)
     } ;
 
     _reduce_stack Γ (tLetIn A b B c) stack h reduce with RedFlags.zeta flags := {
-    | true := reduce (subst10 b c) _ ;
+    | true := reduce (subst10 b c) stack _ ;
     | false := (tLetIn A b B c, stack)
     } ;
 
@@ -125,13 +125,12 @@ Section Reduce.
     | true with inspect (lookup_env (fst Σ) c) := {
       | @exist (Some (ConstantDecl _ {| cst_body := Some body |})) eq :=
         let body' := subst_instance_constr u body in
-        reduce body' _ ;
+        reduce body' stack _ ;
       | @exist _ eq := (tConst c u, stack)
       } ;
     | _ := (tConst c u, stack)
     } ;
 
-    (* We need the stack argument... *)
     (* _reduce_stack Γ (tApp f a) stack h reduce := *)
     (*   reduce f (a :: stack) _ ; *)
 
@@ -156,6 +155,10 @@ Section Reduce.
     - econstructor.
     - econstructor.
   Qed.
+  (* Next Obligation. *)
+  (*   econstructor. *)
+  (*   - econstructor. *)
+  (*   - *)
   Next Obligation.
     econstructor.
     - econstructor.
@@ -312,7 +315,7 @@ Section Reduce.
     - { eapply _reduce_stack.
         - exact stack.
         - eassumption.
-        - intros t'0 H1. eapply f.
+        - intros. eapply f.
           + eassumption.
           + eapply closedn_red ; eassumption.
       }

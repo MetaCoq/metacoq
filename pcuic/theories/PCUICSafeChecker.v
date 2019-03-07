@@ -109,7 +109,13 @@ Section Reduce.
           end
         end
       else (t, stack)
-    | _ => (tRel 0, [])
+
+    | tLetIn _ b _ c =>
+      if RedFlags.zeta flags then
+        reduce (subst10 b c) _
+      else (t, stack)
+
+    | _ => (t, stack)
     end.
   Next Obligation.
     clear - h Heq_anonymous. revert c h Heq_anonymous.
@@ -120,8 +126,85 @@ Section Reduce.
       + cbn in eq, h. eapply IHΓ ; eassumption.
   Qed.
   Next Obligation.
-    econstructor. econstructor. eapply red_rel.
-    rewrite <- Heq_anonymous0. cbn. f_equal. eauto.
+    econstructor.
+    - econstructor.
+    - eapply red_rel.
+      rewrite <- Heq_anonymous0. cbn. f_equal. eauto.
+  Qed.
+  Next Obligation.
+    econstructor.
+    - econstructor.
+    - eapply red_zeta.
+  Qed.
+  Next Obligation.
+    split.
+    - intros. discriminate.
+    - intros. discriminate.
+  Qed.
+  Next Obligation.
+    split.
+    - intros. discriminate.
+    - intros. discriminate.
+  Qed.
+  Next Obligation.
+    split.
+    - intros. discriminate.
+    - intros. discriminate.
+  Qed.
+  Next Obligation.
+    split.
+    - intros. discriminate.
+    - intros. discriminate.
+  Qed.
+  Next Obligation.
+    split.
+    - intros. discriminate.
+    - intros. discriminate.
+  Qed.
+  Next Obligation.
+    split.
+    - intros. discriminate.
+    - intros. discriminate.
+  Qed.
+  Next Obligation.
+    split.
+    - intros. discriminate.
+    - intros. discriminate.
+  Qed.
+  Next Obligation.
+    split.
+    - intros. discriminate.
+    - intros. discriminate.
+  Qed.
+  Next Obligation.
+    split.
+    - intros. discriminate.
+    - intros. discriminate.
+  Qed.
+  Next Obligation.
+    split.
+    - intros. discriminate.
+    - intros. discriminate.
+  Qed.
+  Next Obligation.
+    split.
+    - intros. discriminate.
+    - intros. discriminate.
+  Qed.
+  Next Obligation.
+    split.
+    - intros. discriminate.
+    - intros. discriminate.
+  Qed.
+  Next Obligation.
+    split.
+    - intros. discriminate.
+    - intros. discriminate.
+  Qed.
+  Next Obligation.
+    split.
+    - intros. discriminate.
+    - intros. discriminate.
   Qed.
 
   Lemma closedn_red :

@@ -48,12 +48,126 @@ Section Normalisation.
   Context (flags : RedFlags.t).
   Context `{checker_flags}.
 
-  Definition cored Σ Γ u v := red Σ Γ v u.
+  Derive NoConfusion NoConfusionHom Subterm for term.
+
+  Definition zip (t : term * list term) := mkApps (fst t) (snd t).
+
+  (* red is the reflexive transitive closure of one-step reduction and thus
+     can't be used as well order. We thus define the transitive closure,
+     but we take the symmetric version.
+   *)
+  Inductive cored Σ Γ: term -> term -> Prop :=
+  | cored1 : forall u v, red1 Σ Γ u v -> cored Σ Γ v u
+  | cored_trans : forall u v w, cored Σ Γ v u -> red1 Σ Γ v w -> cored Σ Γ w u.
+
+  (* Inductive R Σ Γ : (term * list term) -> (term * list term) -> Prop := *)
+  (* | R_red : forall u v, cored Σ Γ (zip u) (zip v) -> R Σ Γ u v *)
+  (* | R_subterm : forall u v π, term_subterm u v -> R Σ Γ (u,π) (v,π). *)
 
   Axiom normalisation :
     forall Σ Γ t A,
       Σ ;;; Γ |- t : A ->
       Acc (cored (fst Σ) Γ) t.
+
+  Derive Signature for Acc.
+
+  (* Lemma R_Acc_from_lexprod : *)
+  (*   forall Σ Γ t, *)
+  (*     Acc (Subterm.lexprod _ _ (cored Σ Γ) term_subterm) (zip t, fst t) -> *)
+  (*     Acc (R Σ Γ) t. *)
+  (* Proof. *)
+  (*   intros Σ Γ t h. *)
+  (*   dependent induction h. *)
+  (*   constructor. intros y hy. *)
+  (*   simple inversion hy. *)
+  (*   - subst. intro hr. eapply H1. *)
+  (*     + eapply Subterm.left_lex. eassumption. *)
+  (*     + reflexivity. *)
+  (*   - subst. intro hs. eapply H1 ; try reflexivity. *)
+  (*     eapply Subterm.right_lex. *)
+
+  (*     + eapply Subterm.right_lex. eassumption. *)
+  (*     + cbn. *)
+
+
+  (*   simple inversion h. *)
+  (*   intros h1. constructor. *)
+  (*   intros y hy. *)
+
+
+  (* Corollary R_Acc_aux : *)
+  (*   forall Σ Γ t, *)
+  (*     Acc (cored Σ Γ) (zip t) -> *)
+  (*     Acc (R Σ Γ) t. *)
+  (* Proof. *)
+  (*   intros Σ Γ t h. *)
+  (*   dependent induction h. *)
+  (*   constructor. intros y h. *)
+  (*   simple inversion h. *)
+  (*   - subst. intro hr. eapply H1. *)
+  (*     + eassumption. *)
+  (*     + reflexivity. *)
+  (*   - subst. intro hs. eapply H1. *)
+
+
+
+  (* Corollary R_Acc_aux : *)
+  (*   forall Σ Γ t, *)
+  (*     Acc (cored Σ Γ) (zip t) -> *)
+  (*     Acc term_subterm (fst t) -> *)
+  (*     Acc (R Σ Γ) t. *)
+  (* Proof. *)
+  (*   intros Σ Γ t h1. *)
+  (*   dependent induction h1. *)
+  (*   intro h2. dependent induction h2. *)
+  (*   apply Acc_intro. intros y h. *)
+  (*   simple inversion h. *)
+  (*   - subst. intro hr. *)
+  (*     eapply H3. *)
+  (*     + eassumption. *)
+  (*     + reflexivity. *)
+  (*     + eapply well_founded_term_subterm. *)
+  (*   - subst. intro hs. *)
+  (*     eapply H1. *)
+  (*     + eassumption. *)
+  (*     + cbn. intros y H4. *)
+
+
+
+
+  (*   dependent induction 1 *)
+  (*   induction 1 as [y h2 ih2]. *)
+  (*   apply Acc_intro. intros z h3. *)
+  (*   simple inversion h3. *)
+  (*   - subst. intro h4. *)
+  (*     eapply ih1. *)
+  (*     all: try eassumption. *)
+
+
+  (*   destruct h3. *)
+  (*   - simple inversion h1. *)
+
+
+
+
+
+  (* Corollary R_Acc : *)
+  (*   forall Σ Γ t A, *)
+  (*     Σ ;;; Γ |- zip t : A -> *)
+  (*     Acc (R (fst Σ) Γ) t. *)
+  (* Proof. *)
+  (*   intros Σ Γ t A h. *)
+  (*   pose proof (normalisation _ _ _ _ h) as h1. *)
+  (*   pose proof (well_founded_term_subterm) as h2. *)
+  (*   unfold WellFounded in h2. unfold well_founded in h2. *)
+  (*   specialize (h2 (fst t)). *)
+  (*   clear A h. revert h2. induction h1. *)
+  (*   intros h2. induction h2. *)
+  (*   apply Acc_intro. *)
+  (*   intros y hy. destruct hy. *)
+  (*   - eapply H1. *)
+  (*     + *)
+
 
 End Normalisation.
 
@@ -67,7 +181,6 @@ Section Reduce.
 
   Definition zip (t : term * list term) := mkApps (fst t) (snd t).
 
-  Derive NoConfusion NoConfusionHom for term.
   Derive NoConfusion NoConfusionHom for option.
   Derive NoConfusion NoConfusionHom for context_decl.
 

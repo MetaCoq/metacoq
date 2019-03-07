@@ -67,145 +67,182 @@ Section Reduce.
 
   Definition zip (t : term * list term) := mkApps (fst t) (snd t).
 
+  Derive NoConfusion NoConfusionHom for term.
+  Derive NoConfusion NoConfusionHom for option.
+  Derive NoConfusion NoConfusionHom for context_decl.
+
   (* TODO Get equations in obligations *)
   (* Equations _reduce_stack (Γ : context) (t : term) (stack : list term) *)
   (*           (h : closedn #|Γ| t = true) *)
-  (*           (reduce : forall Γ t' (stack : list term) (h : closedn #|Γ| t' = true), red Σ Γ t t' -> term * list term) *)
+  (*           (* (reduce : forall Γ t' (stack : list term) (h : closedn #|Γ| t' = true), red (fst Σ) Γ t t' -> term * list term) *) *)
+  (*           (reduce : forall t', red (fst Σ) Γ t t' -> term * list term) *)
   (*   : term * list term := *)
   (*   _reduce_stack Γ (tRel c) stack h reduce with RedFlags.zeta flags := { *)
   (*   | true with nth_error Γ c := { *)
   (*     | None := ! ; *)
   (*     | Some d with d.(decl_body) := { *)
   (*       | None := (tRel c, stack) ; *)
-  (*       | Some b := reduce Γ (lift0 (S c) b) stack _ _ *)
+  (*       | Some b := reduce (lift0 (S c) b) _ *)
   (*       } *)
   (*     } ; *)
   (*   | false := (tRel c, stack) *)
   (*   } ; *)
   (*   _reduce_stack Γ t stack h reduce := (t, stack). *)
   (* Next Obligation. *)
-  (* Admitted. *)
-  (* Next Obligation. *)
   (*   econstructor. *)
   (*   - econstructor. *)
-  (*   - econstructor. *)
+  (*   - eapply red_rel. *)
   (* Admitted. *)
   (* Next Obligation. *)
   (* Abort. *)
 
-  Program Definition _reduce_stack Γ t stack
-             (h : closedn #|Γ| t = true)
-             (reduce : forall t', red (fst Σ) Γ t t' -> term * list term)
+  Definition inspect {A} (x : A) : { y : A | y = x } := exist _ x eq_refl.
+  Require Import Equations.NoConfusion.
+
+  Equations _reduce_stack (Γ : context) (t : term) (stack : list term)
+            (h : closedn #|Γ| t = true)
+            (* (reduce : forall Γ t' (stack : list term) (h : closedn #|Γ| t' = true), red (fst Σ) Γ t t' -> term * list term) *)
+            (reduce : forall t', red (fst Σ) Γ t t' -> term * list term)
     : term * list term :=
-    match t with
-    | tRel c =>
-      if RedFlags.zeta flags then
-        match nth_error Γ c with
-        | None => !
-        | Some d =>
-          match d.(decl_body) with
-          | None => (t, stack)
-          | Some b => reduce (lift0 (S c) b) _
-          end
-        end
-      else (t, stack)
-
-    | tLetIn _ b _ c =>
-      if RedFlags.zeta flags then
-        reduce (subst10 b c) _
-      else (t, stack)
-
-    | _ => (t, stack)
-    end.
+    _reduce_stack Γ (tRel c) stack h reduce with RedFlags.zeta flags := {
+    | true with inspect (nth_error Γ c) := {
+      | @exist None eq := ! ;
+      | @exist (Some d) eq with inspect d.(decl_body) := {
+        | @exist None _ := (tRel c, stack) ;
+        | @exist (Some b) H := reduce (lift0 (S c) b) _
+        }
+      } ;
+    | false := (tRel c, stack)
+    } ;
+    _reduce_stack Γ t stack h reduce := (t, stack).
   Next Obligation.
-    clear - h Heq_anonymous. revert c h Heq_anonymous.
+    econstructor.
+    - econstructor.
+    - eapply red_rel. rewrite <- eq. cbn. f_equal.
+      symmetry. assumption.
+  Qed.
+  Next Obligation.
+    clear - eq h. revert c h eq.
     induction Γ ; intros c h eq.
-    - cbn in *. discriminate.
+    - cbn in h. discriminate.
     - destruct c.
       + cbn in eq. discriminate.
-      + cbn in eq, h. eapply IHΓ ; eassumption.
+      + cbn in eq. eapply IHΓ ; try eassumption. apply h.
   Qed.
-  Next Obligation.
-    econstructor.
-    - econstructor.
-    - eapply red_rel.
-      rewrite <- Heq_anonymous0. cbn. f_equal. eauto.
-  Qed.
-  Next Obligation.
-    econstructor.
-    - econstructor.
-    - eapply red_zeta.
-  Qed.
-  Next Obligation.
-    split.
-    - intros. discriminate.
-    - intros. discriminate.
-  Qed.
-  Next Obligation.
-    split.
-    - intros. discriminate.
-    - intros. discriminate.
-  Qed.
-  Next Obligation.
-    split.
-    - intros. discriminate.
-    - intros. discriminate.
-  Qed.
-  Next Obligation.
-    split.
-    - intros. discriminate.
-    - intros. discriminate.
-  Qed.
-  Next Obligation.
-    split.
-    - intros. discriminate.
-    - intros. discriminate.
-  Qed.
-  Next Obligation.
-    split.
-    - intros. discriminate.
-    - intros. discriminate.
-  Qed.
-  Next Obligation.
-    split.
-    - intros. discriminate.
-    - intros. discriminate.
-  Qed.
-  Next Obligation.
-    split.
-    - intros. discriminate.
-    - intros. discriminate.
-  Qed.
-  Next Obligation.
-    split.
-    - intros. discriminate.
-    - intros. discriminate.
-  Qed.
-  Next Obligation.
-    split.
-    - intros. discriminate.
-    - intros. discriminate.
-  Qed.
-  Next Obligation.
-    split.
-    - intros. discriminate.
-    - intros. discriminate.
-  Qed.
-  Next Obligation.
-    split.
-    - intros. discriminate.
-    - intros. discriminate.
-  Qed.
-  Next Obligation.
-    split.
-    - intros. discriminate.
-    - intros. discriminate.
-  Qed.
-  Next Obligation.
-    split.
-    - intros. discriminate.
-    - intros. discriminate.
-  Qed.
+
+  (* Program Definition _reduce_stack Γ t stack *)
+  (*            (h : closedn #|Γ| t = true) *)
+  (*            (reduce : forall t', red (fst Σ) Γ t t' -> term * list term) *)
+  (*   : term * list term := *)
+  (*   match t with *)
+  (*   | tRel c => *)
+  (*     if RedFlags.zeta flags then *)
+  (*       match nth_error Γ c with *)
+  (*       | None => ! *)
+  (*       | Some d => *)
+  (*         match d.(decl_body) with *)
+  (*         | None => (t, stack) *)
+  (*         | Some b => reduce (lift0 (S c) b) _ *)
+  (*         end *)
+  (*       end *)
+  (*     else (t, stack) *)
+
+  (*   | tLetIn _ b _ c => *)
+  (*     if RedFlags.zeta flags then *)
+  (*       reduce (subst10 b c) _ *)
+  (*     else (t, stack) *)
+
+  (*   | _ => (t, stack) *)
+  (*   end. *)
+  (* Next Obligation. *)
+  (*   clear - h Heq_anonymous. revert c h Heq_anonymous. *)
+  (*   induction Γ ; intros c h eq. *)
+  (*   - cbn in *. discriminate. *)
+  (*   - destruct c. *)
+  (*     + cbn in eq. discriminate. *)
+  (*     + cbn in eq, h. eapply IHΓ ; eassumption. *)
+  (* Qed. *)
+  (* Next Obligation. *)
+  (*   econstructor. *)
+  (*   - econstructor. *)
+  (*   - eapply red_rel. *)
+  (*     rewrite <- Heq_anonymous0. cbn. f_equal. eauto. *)
+  (* Qed. *)
+  (* Next Obligation. *)
+  (*   econstructor. *)
+  (*   - econstructor. *)
+  (*   - eapply red_zeta. *)
+  (* Qed. *)
+  (* Next Obligation. *)
+  (*   split. *)
+  (*   - intros. discriminate. *)
+  (*   - intros. discriminate. *)
+  (* Qed. *)
+  (* Next Obligation. *)
+  (*   split. *)
+  (*   - intros. discriminate. *)
+  (*   - intros. discriminate. *)
+  (* Qed. *)
+  (* Next Obligation. *)
+  (*   split. *)
+  (*   - intros. discriminate. *)
+  (*   - intros. discriminate. *)
+  (* Qed. *)
+  (* Next Obligation. *)
+  (*   split. *)
+  (*   - intros. discriminate. *)
+  (*   - intros. discriminate. *)
+  (* Qed. *)
+  (* Next Obligation. *)
+  (*   split. *)
+  (*   - intros. discriminate. *)
+  (*   - intros. discriminate. *)
+  (* Qed. *)
+  (* Next Obligation. *)
+  (*   split. *)
+  (*   - intros. discriminate. *)
+  (*   - intros. discriminate. *)
+  (* Qed. *)
+  (* Next Obligation. *)
+  (*   split. *)
+  (*   - intros. discriminate. *)
+  (*   - intros. discriminate. *)
+  (* Qed. *)
+  (* Next Obligation. *)
+  (*   split. *)
+  (*   - intros. discriminate. *)
+  (*   - intros. discriminate. *)
+  (* Qed. *)
+  (* Next Obligation. *)
+  (*   split. *)
+  (*   - intros. discriminate. *)
+  (*   - intros. discriminate. *)
+  (* Qed. *)
+  (* Next Obligation. *)
+  (*   split. *)
+  (*   - intros. discriminate. *)
+  (*   - intros. discriminate. *)
+  (* Qed. *)
+  (* Next Obligation. *)
+  (*   split. *)
+  (*   - intros. discriminate. *)
+  (*   - intros. discriminate. *)
+  (* Qed. *)
+  (* Next Obligation. *)
+  (*   split. *)
+  (*   - intros. discriminate. *)
+  (*   - intros. discriminate. *)
+  (* Qed. *)
+  (* Next Obligation. *)
+  (*   split. *)
+  (*   - intros. discriminate. *)
+  (*   - intros. discriminate. *)
+  (* Qed. *)
+  (* Next Obligation. *)
+  (*   split. *)
+  (*   - intros. discriminate. *)
+  (*   - intros. discriminate. *)
+  (* Qed. *)
 
   Lemma closedn_red :
     forall Σ Γ u v,

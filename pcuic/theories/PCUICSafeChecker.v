@@ -201,9 +201,9 @@ Section Reduce.
     - cbn. reflexivity.
   Qed.
 
-  Lemma closedn_red :
+  Lemma closedn_cored :
     forall Σ Γ u v,
-      red Σ Γ u v ->
+      cored Σ Γ v u ->
       closedn #|Γ| u = true ->
       closedn #|Γ| v = true.
   Admitted.
@@ -225,12 +225,15 @@ Section Reduce.
         - eassumption.
         - intros. eapply f.
           + eassumption.
-          + (* eapply closedn_red ; try eassumption. *)
-            admit.
+          + simple inversion H1.
+            * inversion H3. inversion H4. subst.
+              intro hr.
+              eapply closedn_cored ; eassumption.
+            * inversion H3. inversion H4. subst.
+              intro hs. rewrite H7. assumption.
       }
     - { eapply R_Acc. eassumption. }
     - { eapply closedn_typed. eassumption. }
-  (* Qed. *)
-  Admitted.
+  Qed.
 
 End Reduce.

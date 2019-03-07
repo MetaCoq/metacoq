@@ -124,33 +124,35 @@ Section Reduce.
     rewrite <- Heq_anonymous0. cbn. f_equal. eauto.
   Qed.
 
+  Lemma closedn_red :
+    forall Σ Γ u v,
+      red Σ Γ u v ->
+      closedn #|Γ| u = true ->
+      closedn #|Γ| v = true.
+  Admitted.
+
+  Lemma closedn_typed :
+    forall Σ Γ t A,
+      Σ ;;; Γ |- t : A ->
+      closedn #|Γ| t = true.
+  Admitted.
+
   Equations? reduce_stack (Γ : context) (t A : term) (stack : list term)
            (h : Σ ;;; Γ |- t : A) : term * list term :=
     reduce_stack Γ t A stack h :=
       Fix_F (R := cored (fst Σ) Γ)
-            (fun x => (term * list term)%type)
-            (fun t' f => _) (x := t) _.
+            (fun x => closedn #|Γ| x = true -> (term * list term)%type)
+            (fun t' f => _) (x := t) _ _.
   Proof.
     - { eapply _reduce_stack.
         - exact stack.
-        - (* How should I derive it? (?t is t') *)
-          shelve.
-        - eapply f.
+        - eassumption.
+        - intros t'0 H1. eapply f.
+          + eassumption.
+          + eapply closedn_red ; eassumption.
       }
     - { eapply normalisation. eassumption. }
-  (* Admitted. *) (* This fails! *)
-  Abort.
-
-
-  (* Program Definition reduce_stack Γ t stack h := *)
-  (*   Fix_F (R := red Σ Γ) *)
-  (*         (fun x => (term * list term)%type) *)
-  (*         (fun t' f => _reduce_stack Γ t stack h (fun Γ t' stack h => f t')). *)
-  (* Next Obligation. *)
-  (* Admitted. *)
-  (* Next Obligation. *)
-  (* Admitted. *)
-  (* Next Obligation. *)
-  (* Admitted. *)
+    - { eapply closedn_typed. eassumption. }
+  Defined.
 
 End Reduce.

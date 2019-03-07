@@ -115,10 +115,16 @@ Section Reduce.
       red1 Σ Γ (zip (t, stack)) (zip (u, stack)).
   Admitted.
 
+  Lemma closedn_context :
+    forall n t,
+      closedn n (zip t) = true ->
+      closedn n (fst t).
+  Admitted.
+
   Definition inspect {A} (x : A) : { y : A | y = x } := exist _ x eq_refl.
 
   Equations _reduce_stack (Γ : context) (t : term) (stack : list term)
-            (h : closedn #|Γ| t = true)
+            (h : closedn #|Γ| (zip (t,stack)) = true)
             (reduce : forall t' stack', R (fst Σ) Γ (t',stack') (t,stack) -> term * list term)
     : term * list term :=
 
@@ -160,13 +166,14 @@ Section Reduce.
     symmetry. assumption.
   Qed.
   Next Obligation.
+    pose proof (closedn_context _ _ h) as hc. simpl in hc.
     (* Should be a lemma! *)
-    clear - eq h. revert c h eq.
-    induction Γ ; intros c h eq.
-    - cbn in h. discriminate.
+    clear - eq hc. revert c hc eq.
+    induction Γ ; intros c hc eq.
+    - cbn in hc. discriminate.
     - destruct c.
       + cbn in eq. discriminate.
-      + cbn in eq. eapply IHΓ ; try eassumption. apply h.
+      + cbn in eq. eapply IHΓ ; try eassumption. apply hc.
   Qed.
   Next Obligation.
     econstructor. econstructor.
@@ -218,11 +225,12 @@ Section Reduce.
         - eassumption.
         - intros. eapply f.
           + eassumption.
-          + cbn. (* eapply closedn_red ; try eassumption. *)
+          + (* eapply closedn_red ; try eassumption. *)
             admit.
       }
-    - { eapply R_Acc. cbn.
+    - { eapply R_Acc. eassumption. }
     - { eapply closedn_typed. eassumption. }
-  Qed.
+  (* Qed. *)
+  Admitted.
 
 End Reduce.

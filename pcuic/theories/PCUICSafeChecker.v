@@ -157,6 +157,25 @@ Section Reduce.
     _reduce_stack Γ (tApp f a) stack h reduce :=
       reduce f (a :: stack) _ ;
 
+    _reduce_stack Γ (tLambda na A t) (a :: args) h reduce with RedFlags.beta flags := {
+    | true := reduce (subst10 a t) args _ ;
+    | false := (tLambda na A t, a :: args)
+    } ;
+
+    _reduce_stack Γ (tFix mfix idx) stack h reduce with RedFlags.fix_ flags := {
+    | true with inspect (unfold_fix mfix idx) := {
+      | @exist (Some (narg, fn)) eq1 with inspect (nth_error stack narg) := {
+        | @exist (Some c) eq2 with inspect (fst (reduce c [] _)) := {
+          | @exist (tConstruct _ _ _) eq3 := reduce fn stack _ ;
+          | _ := (tFix mfix idx, stack)
+          } ;
+        | _ := (tFix mfix idx, stack)
+        } ;
+      | _ := (tFix mfix idx, stack)
+      } ;
+    | false := (tFix mfix idx, stack)
+    } ;
+
     _reduce_stack Γ t stack h reduce := (t, stack).
   Next Obligation.
     econstructor.
@@ -174,6 +193,10 @@ Section Reduce.
     - destruct c.
       + cbn in eq. discriminate.
       + cbn in eq. eapply IHΓ ; try eassumption. apply hc.
+  Qed.
+  Next Obligation.
+    econstructor. econstructor.
+    cbn. eapply red1_context. econstructor.
   Qed.
   Next Obligation.
     econstructor. econstructor.
@@ -200,6 +223,25 @@ Section Reduce.
         * intros e eq. eapply IHg. eassumption.
     - cbn. reflexivity.
   Qed.
+  Next Obligation.
+    (* Problem. Once again the order is too restrictive.
+       We also need to allow reduction on the stack it seems.
+     *)
+    admit.
+  Admitted.
+  Next Obligation.
+    econstructor. econstructor. cbn.
+    econstructor.
+    - rewrite <- eq1. reflexivity.
+    - unfold is_constructor. rewrite <- eq2.
+      (* Problem of a more dangerouns kind.
+         To show termination we already need soundness.
+         Or we need to fix the red_fix rule.
+         Indeed, it is broken because it wants stack(narg) to be already
+         a constructor, which doesn't even allow reduction.
+       *)
+      unfold decompose_app.
+  Admitted.
 
   Lemma closedn_cored :
     forall Σ Γ u v,

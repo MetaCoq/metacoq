@@ -123,6 +123,48 @@ Section Reduce.
       red1 Σ Γ (zip (t, stack)) (zip (u, stack)).
   Admitted.
 
+  Corollary red_context :
+    forall Σ Γ t u stack,
+      red Σ Γ t u ->
+      red Σ Γ (zip (t, stack)) (zip (u, stack)).
+  Proof.
+    intros Σ' Γ t u stack h. revert stack. induction h ; intro stack.
+    - constructor.
+    - econstructor.
+      + eapply IHh.
+      + eapply red1_context. assumption.
+  Qed.
+
+  (* This suggests that this should be the actual definition.
+     ->+ = ->*.->
+   *)
+  Lemma cored_red_trans :
+    forall Σ Γ u v w,
+      red Σ Γ u v ->
+      red1 Σ Γ v w ->
+      cored Σ Γ w u.
+  Proof.
+    intros Σ' Γ u v w h1 h2.
+    revert w h2. induction h1 ; intros w h2.
+    - constructor. assumption.
+    - eapply cored_trans.
+      + eapply IHh1. eassumption.
+      + assumption.
+  Qed.
+
+  Lemma case_reds_discr :
+    forall Σ Γ ind p c c' brs,
+      red Σ Γ c c' ->
+      red Σ Γ (tCase ind p c brs) (tCase ind p c' brs).
+  Proof.
+    intros Σ' Γ ind p c c' brs h.
+    revert ind p brs. induction h ; intros ind p brs.
+    - constructor.
+    - econstructor.
+      + eapply IHh.
+      + econstructor. assumption.
+  Qed.
+
   Lemma closedn_context :
     forall n t,
       closedn n (zip t) = true ->
@@ -249,12 +291,10 @@ Section Reduce.
     admit.
   Admitted.
   Next Obligation.
-    econstructor. eapply cored_trans.
-    - econstructor. eapply red1_context. eapply case_red_discr.
+    econstructor. eapply cored_red_trans.
+    - eapply red_context. eapply case_reds_discr.
       instantiate (1 := zip (tConstruct ind' c' wildcard, args)).
-      (* This involves soundness of reduction. Although not in one step.
-         Meaning, we need red_context actually.
-       *)
+      (* This involves soundness of reduction. *)
       admit.
     - eapply red1_context. cbn.
       Fail eapply red_iota.

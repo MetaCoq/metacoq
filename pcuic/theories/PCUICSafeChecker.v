@@ -52,6 +52,14 @@ Section Normalisation.
 
   Definition zip (t : term * list term) := mkApps (fst t) (snd t).
 
+  (* We sometimes need to reduce an element on the stack.
+     We thus have an order that takes an element on the stack.
+     PROBLEM This doesn't really work well with the other orders.
+     I don't know yet how to allow to reduce on the stack.
+   *)
+  Definition stackel (c : term) stack : Prop :=
+    exists n, nth_error stack n = Some c.
+
   (* red is the reflexive transitive closure of one-step reduction and thus
      can't be used as well order. We thus define the transitive closure,
      but we take the symmetric version.
@@ -176,6 +184,17 @@ Section Reduce.
     | false := (tFix mfix idx, stack)
     } ;
 
+    (* Nothing special seems to be done for Π-types. *)
+    (* _reduce_stack Γ (tProd na A B) *)
+
+    _reduce_stack Γ (tCase (ind, par) p c brs) stack h reduce with RedFlags.iota flags := {
+    | true with inspect (reduce c [] _) := {
+      | @exist (tConstruct ind' c' _, args) eq := reduce (iota_red par c' args brs) stack _ ;
+      | @exist c' eq := (tCase (ind, par) p (zip c') brs, stack)
+      } ;
+    | false := (tCase (ind, par) p c brs, stack)
+    } ;
+
     _reduce_stack Γ t stack h reduce := (t, stack).
   Next Obligation.
     econstructor.
@@ -223,6 +242,29 @@ Section Reduce.
         * intros e eq. eapply IHg. eassumption.
     - cbn. reflexivity.
   Qed.
+  Next Obligation.
+    (* Similar to fix reducing on the stack.
+       Here we indeed reduce a subterm. However the stack isn't preserved.
+     *)
+    admit.
+  Admitted.
+  Next Obligation.
+    econstructor. eapply cored_trans.
+    - econstructor. eapply red1_context. eapply case_red_discr.
+      instantiate (1 := zip (tConstruct ind' c' wildcard, args)).
+      (* This involves soundness of reduction. Although not in one step.
+         Meaning, we need red_context actually.
+       *)
+      admit.
+    - eapply red1_context. cbn.
+      Fail eapply red_iota.
+      (* This is not clear how to apply the rule.
+         We indeed need ind = ind' which cannot be deduced from the context.
+         This is actually enforced by typing, which we do not have at the
+         moment.
+       *)
+      admit.
+  Admitted.
   Next Obligation.
     (* Problem. Once again the order is too restrictive.
        We also need to allow reduction on the stack it seems.

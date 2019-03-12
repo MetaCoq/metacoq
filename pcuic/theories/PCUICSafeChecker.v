@@ -40,8 +40,6 @@ End RedFlags.
 (* We assume normalisation of the reduction.
 
    We state is as well-foundedness of the reduction.
-   This seems to be slightly stronger than simply assuming there are no infinite paths.
-   This is however the version we need to do well-founded recursion.
 *)
 Section Normalisation.
 
@@ -50,15 +48,27 @@ Section Normalisation.
 
   Derive NoConfusion NoConfusionHom Subterm for term.
 
-  Definition zip (t : term * list term) := mkApps (fst t) (snd t).
+  Inductive stack : Type :=
+  | Empty
+  | App (t : term) (e : stack)
+  | Fix (f : mfixpoint term) (n : nat) (e : stack)
+  | Case (indn : inductive * nat) (pred : term) (brs : list (nat * term)) (e : stack).
 
-  (* We sometimes need to reduce an element on the stack.
-     We thus have an order that takes an element on the stack.
-     PROBLEM This doesn't really work well with the other orders.
-     I don't know yet how to allow to reduce on the stack.
-   *)
-  Definition stackel (c : term) stack : Prop :=
-    exists n, nth_error stack n = Some c.
+  Fixpoint zipc t stack :=
+    match stack with
+    | Empty => t
+    | App u e => zipc (tApp t u) e
+    | Fix f n e => zipc (tFix f n) e
+    | Case indn pred brs e => zipc (tCase indn pred t brs) e
+    end.
+
+  Definition zip (t : term * stack) := zipc (fst t) (snd t).
+
+  Fixpoint stack_args (π : stack) : list term :=
+    match π with
+    | App u π => u :: (stack_args π)
+    | _ => []
+    end.
 
   (* red is the reflexive transitive closure of one-step reduction and thus
      can't be used as well order. We thus define the transitive closure,
@@ -173,71 +183,71 @@ Section Reduce.
 
   Definition inspect {A} (x : A) : { y : A | y = x } := exist _ x eq_refl.
 
-  Equations _reduce_stack (Γ : context) (t : term) (stack : list term)
-            (h : closedn #|Γ| (zip (t,stack)) = true)
-            (reduce : forall t' stack', R (fst Σ) Γ (t',stack') (t,stack) -> term * list term)
-    : term * list term :=
+  Equations _reduce_stack (Γ : context) (t : term) (π : stack)
+            (h : closedn #|Γ| (zip (t,π)) = true)
+            (reduce : forall t' π', R (fst Σ) Γ (t',π') (t,π) -> term * stack)
+    : term * stack :=
 
-    _reduce_stack Γ (tRel c) stack h reduce with RedFlags.zeta flags := {
+    _reduce_stack Γ (tRel c) π h reduce with RedFlags.zeta flags := {
     | true with inspect (nth_error Γ c) := {
       | @exist None eq := ! ;
       | @exist (Some d) eq with inspect d.(decl_body) := {
-        | @exist None _ := (tRel c, stack) ;
-        | @exist (Some b) H := reduce (lift0 (S c) b) stack _
+        | @exist None _ := (tRel c, π) ;
+        | @exist (Some b) H := reduce (lift0 (S c) b) π _
         }
       } ;
-    | false := (tRel c, stack)
+    | false := (tRel c, π)
     } ;
 
-    _reduce_stack Γ (tLetIn A b B c) stack h reduce with RedFlags.zeta flags := {
-    | true := reduce (subst10 b c) stack _ ;
-    | false := (tLetIn A b B c, stack)
+    _reduce_stack Γ (tLetIn A b B c) π h reduce with RedFlags.zeta flags := {
+    | true := reduce (subst10 b c) π _ ;
+    | false := (tLetIn A b B c, π)
     } ;
 
-    _reduce_stack Γ (tConst c u) stack h reduce with RedFlags.delta flags := {
+    _reduce_stack Γ (tConst c u) π h reduce with RedFlags.delta flags := {
     | true with inspect (lookup_env (fst Σ) c) := {
       | @exist (Some (ConstantDecl _ {| cst_body := Some body |})) eq :=
         let body' := subst_instance_constr u body in
-        reduce body' stack _ ;
-      | @exist _ eq := (tConst c u, stack)
+        reduce body' π _ ;
+      | @exist _ eq := (tConst c u, π)
       } ;
-    | _ := (tConst c u, stack)
+    | _ := (tConst c u, π)
     } ;
 
-    _reduce_stack Γ (tApp f a) stack h reduce :=
-      reduce f (a :: stack) _ ;
+    _reduce_stack Γ (tApp f a) π h reduce :=
+      reduce f (App a π) _ ;
 
-    _reduce_stack Γ (tLambda na A t) (a :: args) h reduce with RedFlags.beta flags := {
+    _reduce_stack Γ (tLambda na A t) (App a args) h reduce with RedFlags.beta flags := {
     | true := reduce (subst10 a t) args _ ;
-    | false := (tLambda na A t, a :: args)
+    | false := (tLambda na A t, App a args)
     } ;
 
-    _reduce_stack Γ (tFix mfix idx) stack h reduce with RedFlags.fix_ flags := {
+    _reduce_stack Γ (tFix mfix idx) π h reduce with RedFlags.fix_ flags := {
     | true with inspect (unfold_fix mfix idx) := {
-      | @exist (Some (narg, fn)) eq1 with inspect (nth_error stack narg) := {
-        | @exist (Some c) eq2 with inspect (fst (reduce c [] _)) := {
-          | @exist (tConstruct _ _ _) eq3 := reduce fn stack _ ;
-          | _ := (tFix mfix idx, stack)
+      | @exist (Some (narg, fn)) eq1 with inspect (nth_error (stack_args π) narg) := {
+        | @exist (Some c) eq2 with inspect (fst (reduce c (Fix mfix idx π) _)) := {
+          | @exist (tConstruct _ _ _) eq3 := reduce fn π _ ;
+          | _ := (tFix mfix idx, π)
           } ;
-        | _ := (tFix mfix idx, stack)
+        | _ := (tFix mfix idx, π)
         } ;
-      | _ := (tFix mfix idx, stack)
+      | _ := (tFix mfix idx, π)
       } ;
-    | false := (tFix mfix idx, stack)
+    | false := (tFix mfix idx, π)
     } ;
 
     (* Nothing special seems to be done for Π-types. *)
     (* _reduce_stack Γ (tProd na A B) *)
 
-    _reduce_stack Γ (tCase (ind, par) p c brs) stack h reduce with RedFlags.iota flags := {
-    | true with inspect (reduce c [] _) := {
-      | @exist (tConstruct ind' c' _, args) eq := reduce (iota_red par c' args brs) stack _ ;
-      | @exist c' eq := (tCase (ind, par) p (zip c') brs, stack)
+    _reduce_stack Γ (tCase (ind, par) p c brs) π h reduce with RedFlags.iota flags := {
+    | true with inspect (reduce c (Case (ind, par) p brs π) _) := {
+      | @exist (tConstruct ind' c' _, args) eq := reduce (iota_red par c' (stack_args args) brs) π _ ;
+      | @exist c' eq := (tCase (ind, par) p (zip c') brs, π)
       } ;
-    | false := (tCase (ind, par) p c brs, stack)
+    | false := (tCase (ind, par) p c brs, π)
     } ;
 
-    _reduce_stack Γ t stack h reduce := (t, stack).
+    _reduce_stack Γ t π h reduce := (t, π).
   Next Obligation.
     econstructor.
     econstructor.
@@ -285,16 +295,16 @@ Section Reduce.
     - cbn. reflexivity.
   Qed.
   Next Obligation.
-    (* Similar to fix reducing on the stack.
-       Here we indeed reduce a subterm. However the stack isn't preserved.
-     *)
-    admit.
-  Admitted.
+    eapply Subterm.right_lex. cbn. constructor. constructor.
+  Qed.
   Next Obligation.
     econstructor. eapply cored_red_trans.
     - eapply red_context. eapply case_reds_discr.
       instantiate (1 := zip (tConstruct ind' c' wildcard, args)).
       (* This involves soundness of reduction. *)
+      (* With the Case stack, this becomes a bit tricky...
+         It seems zip is not what we want...
+       *)
       admit.
     - eapply red1_context. cbn.
       Fail eapply red_iota.
@@ -303,6 +313,7 @@ Section Reduce.
          This is actually enforced by typing, which we do not have at the
          moment.
        *)
+      (* Worst now with the new stacks... *)
       admit.
   Admitted.
   Next Obligation.

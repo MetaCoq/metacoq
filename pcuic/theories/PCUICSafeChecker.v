@@ -114,6 +114,69 @@ Section Normalisation.
     unfold R in hy. assumption.
   Qed.
 
+  Definition Req Σ Γ t t' :=
+    t = t' \/ R Σ Γ t t'.
+
+  Derive Signature for Subterm.lexprod.
+
+  Lemma cored_trans' :
+    forall {Σ Γ u v w},
+      cored Σ Γ u v ->
+      cored Σ Γ v w ->
+      cored Σ Γ u w.
+  Proof.
+    intros Σ Γ u v w h1 h2. revert w h2.
+    induction h1 ; intros z h2.
+    - eapply cored_trans ; eassumption.
+    - eapply cored_trans.
+      + eapply IHh1. assumption.
+      + assumption.
+  Qed.
+
+  Definition transitive {A} (R : A -> A -> Prop) :=
+    forall u v w, R u v -> R v w -> R u w.
+
+  Lemma lexprod_trans :
+    forall A B RA RB,
+      transitive RA ->
+      transitive RB ->
+      transitive (Subterm.lexprod A B RA RB).
+  Proof.
+    intros A B RA RB hA hB [u1 u2] [v1 v2] [w1 w2] h1 h2.
+    revert w1 w2 h2. induction h1 ; intros w1 w2 h2.
+    - dependent induction h2.
+      + eapply Subterm.left_lex. eapply hA ; eassumption.
+      + eapply Subterm.left_lex. assumption.
+    - dependent induction h2.
+      + eapply Subterm.left_lex. assumption.
+      + eapply Subterm.right_lex. eapply hB ; eassumption.
+  Qed.
+
+  Lemma Rtrans :
+    forall Σ Γ u v w,
+      R Σ Γ u v ->
+      R Σ Γ v w ->
+      R Σ Γ u w.
+  Proof.
+    intros Σ Γ u v w h1 h2.
+    eapply lexprod_trans.
+    - intros ? ? ? ? ?. eapply cored_trans' ; eassumption.
+    - intros ? ? ? ? ?. eapply Relation_Operators.t_trans ; eassumption.
+    - eassumption.
+    - eassumption.
+  Qed.
+
+  Lemma Req_trans :
+    forall {Σ Γ}, transitive (Req Σ Γ).
+  Proof.
+    intros Σ Γ u v w h1 h2.
+    destruct h1.
+    - subst. assumption.
+    - destruct h2.
+      + subst. right. assumption.
+      + right. eapply Rtrans ; eassumption.
+  Qed.
+
 End Normalisation.
 
 Section Reduce.
@@ -183,57 +246,59 @@ Section Reduce.
 
   Definition inspect {A} (x : A) : { y : A | y = x } := exist _ x eq_refl.
 
+  Notation repack t := (let '(exist _ res prf) := t in (exist _ res _)).
+
   Equations _reduce_stack (Γ : context) (t : term) (π : stack)
             (h : closedn #|Γ| (zip (t,π)) = true)
-            (reduce : forall t' π', R (fst Σ) Γ (t',π') (t,π) -> term * stack)
-    : term * stack :=
+            (reduce : forall t' π', R (fst Σ) Γ (t',π') (t,π) -> { t'' : term * stack | Req (fst Σ) Γ t'' (t',π')})
+    : { t' : term * stack | Req (fst Σ) Γ t' (t,π) } :=
 
     _reduce_stack Γ (tRel c) π h reduce with RedFlags.zeta flags := {
     | true with inspect (nth_error Γ c) := {
       | @exist None eq := ! ;
       | @exist (Some d) eq with inspect d.(decl_body) := {
-        | @exist None _ := (tRel c, π) ;
-        | @exist (Some b) H := reduce (lift0 (S c) b) π _
+        | @exist None _ := exist _ (tRel c, π) _ ;
+        | @exist (Some b) H := repack (reduce (lift0 (S c) b) π _)
         }
       } ;
-    | false := (tRel c, π)
+    | false := exist _ (tRel c, π) _
     } ;
 
     _reduce_stack Γ (tLetIn A b B c) π h reduce with RedFlags.zeta flags := {
-    | true := reduce (subst10 b c) π _ ;
-    | false := (tLetIn A b B c, π)
+    | true := repack (reduce (subst10 b c) π _) ;
+    | false := exist _ (tLetIn A b B c, π) _
     } ;
 
     _reduce_stack Γ (tConst c u) π h reduce with RedFlags.delta flags := {
     | true with inspect (lookup_env (fst Σ) c) := {
       | @exist (Some (ConstantDecl _ {| cst_body := Some body |})) eq :=
         let body' := subst_instance_constr u body in
-        reduce body' π _ ;
-      | @exist _ eq := (tConst c u, π)
+        repack (reduce body' π _) ;
+      | @exist _ eq := exist _ (tConst c u, π) _
       } ;
-    | _ := (tConst c u, π)
+    | _ := exist _ (tConst c u, π) _
     } ;
 
     _reduce_stack Γ (tApp f a) π h reduce :=
-      reduce f (App a π) _ ;
+      repack (reduce f (App a π) _) ;
 
     _reduce_stack Γ (tLambda na A t) (App a args) h reduce with RedFlags.beta flags := {
-    | true := reduce (subst10 a t) args _ ;
-    | false := (tLambda na A t, App a args)
+    | true := repack (reduce (subst10 a t) args _) ;
+    | false := exist _ (tLambda na A t, App a args) _
     } ;
 
     _reduce_stack Γ (tFix mfix idx) π h reduce with RedFlags.fix_ flags := {
     | true with inspect (unfold_fix mfix idx) := {
       | @exist (Some (narg, fn)) eq1 with inspect (nth_error (stack_args π) narg) := {
-        | @exist (Some c) eq2 with inspect (fst (reduce c (Fix mfix idx π) _)) := {
-          | @exist (tConstruct _ _ _) eq3 := reduce fn π _ ;
-          | _ := (tFix mfix idx, π)
+        | @exist (Some c) eq2 with inspect (reduce c (Fix mfix idx π) _) := {
+          | @exist (@exist ((tConstruct _ _ _), _) prf) eq3 := repack (reduce fn π _) ;
+          | _ := exist _ (tFix mfix idx, π) _
           } ;
-        | _ := (tFix mfix idx, π)
+        | _ := exist _ (tFix mfix idx, π) _
         } ;
-      | _ := (tFix mfix idx, π)
+      | _ := exist _ (tFix mfix idx, π) _
       } ;
-    | false := (tFix mfix idx, π)
+    | false := exist _ (tFix mfix idx, π) _
     } ;
 
     (* Nothing special seems to be done for Π-types. *)
@@ -241,13 +306,14 @@ Section Reduce.
 
     _reduce_stack Γ (tCase (ind, par) p c brs) π h reduce with RedFlags.iota flags := {
     | true with inspect (reduce c (Case (ind, par) p brs π) _) := {
-      | @exist (tConstruct ind' c' _, args) eq := reduce (iota_red par c' (stack_args args) brs) π _ ;
-      | @exist c' eq := (tCase (ind, par) p (zip c') brs, π)
+      | @exist (@exist (tConstruct ind' c' _, args) prf) eq :=
+        repack (reduce (iota_red par c' (stack_args args) brs) π _) ;
+      | @exist (@exist c' prf) eq := exist _ (tCase (ind, par) p (zip c') brs, π) _
       } ;
-    | false := (tCase (ind, par) p c brs, π)
+    | false := exist _ (tCase (ind, par) p c brs, π) _
     } ;
 
-    _reduce_stack Γ t π h reduce := (t, π).
+    _reduce_stack Γ t π h reduce := exist _ (t, π) _.
   Next Obligation.
     econstructor.
     econstructor.
@@ -255,6 +321,15 @@ Section Reduce.
     eapply red_rel. rewrite <- eq. cbn. f_equal.
     symmetry. assumption.
   Qed.
+  Next Obligation.
+    eapply Req_trans ; try eassumption.
+    right. econstructor.
+    econstructor.
+    eapply red1_context.
+    eapply red_rel. rewrite <- eq. cbn. f_equal.
+    symmetry. assumption.
+  Qed.
+  (* TODO OLD BELOW *)
   Next Obligation.
     pose proof (closedn_context _ _ h) as hc. simpl in hc.
     (* Should be a lemma! *)

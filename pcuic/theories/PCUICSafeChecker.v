@@ -358,49 +358,15 @@ Section Reduce.
       + cbn in eq. discriminate.
       + cbn in eq. eapply IHΓ ; try eassumption. apply hc.
   Qed.
-  (* This does nothing... Unsettling! *)
-  (* Solve All Obligations with reflexivity. *)
-  Next Obligation.
-    reflexivity.
-  Qed.
-  Next Obligation.
-    reflexivity.
-  Qed.
-  Next Obligation.
-    reflexivity.
-  Qed.
-  Next Obligation.
-    reflexivity.
-  Qed.
-  Next Obligation.
-    reflexivity.
-  Qed.
-  Next Obligation.
-    reflexivity.
-  Qed.
-  Next Obligation.
-    reflexivity.
-  Qed.
+  Solve All Obligations with (program_simpl ; reflexivity).
   Next Obligation.
     econstructor. econstructor.
     cbn. eapply red1_context. econstructor.
   Qed.
   Next Obligation.
-    reflexivity.
-  Qed.
-  Next Obligation.
-    reflexivity.
-  Qed.
-  Next Obligation.
-    reflexivity.
-  Qed.
-  Next Obligation.
     econstructor. econstructor.
     eapply red1_context.
     econstructor.
-  Qed.
-  Next Obligation.
-    reflexivity.
   Qed.
   Next Obligation.
     eapply Subterm.right_lex. cbn. constructor. constructor.
@@ -421,24 +387,6 @@ Section Reduce.
           cbn in e. revert e. destruct (ident_eq_spec c na) ; easy.
         * intros e eq. eapply IHg. eassumption.
     - cbn. reflexivity.
-  Qed.
-  Next Obligation.
-    reflexivity.
-  Qed.
-  Next Obligation.
-    reflexivity.
-  Qed.
-  Next Obligation.
-    reflexivity.
-  Qed.
-  Next Obligation.
-    reflexivity.
-  Qed.
-  Next Obligation.
-    reflexivity.
-  Qed.
-  Next Obligation.
-    reflexivity.
   Qed.
   Next Obligation.
     eapply Subterm.right_lex. cbn. constructor. constructor.
@@ -493,50 +441,12 @@ Section Reduce.
   Next Obligation.
   Admitted.
   Next Obligation.
-    reflexivity.
-  Qed.
-  Next Obligation.
-    reflexivity.
-  Qed.
-  Next Obligation.
     (* Problem. Once again the order is too restrictive.
        We also need to allow reduction on the stack it seems.
      *)
     admit.
   Admitted.
-  Next Obligation.
-    reflexivity.
-  Qed.
-  Next Obligation.
-    reflexivity.
-  Qed.
-  Next Obligation.
-    reflexivity.
-  Qed.
-  Next Obligation.
-    reflexivity.
-  Qed.
-  Next Obligation.
-    reflexivity.
-  Qed.
-  Next Obligation.
-    reflexivity.
-  Qed.
-  Next Obligation.
-    reflexivity.
-  Qed.
-  Next Obligation.
-    reflexivity.
-  Qed.
-  Next Obligation.
-    reflexivity.
-  Qed.
-  Next Obligation.
-    reflexivity.
-  Qed.
-  Next Obligation.
-    reflexivity.
-  Qed.
+  Solve All Obligations with (program_simpl ; reflexivity).
   Next Obligation.
     econstructor. econstructor. cbn.
     (* Also worse now. We used to have mkApps. No longer.
@@ -554,30 +464,6 @@ Section Reduce.
     (*    *) *)
     (*   unfold decompose_app. *)
   Admitted.
-  Next Obligation.
-    reflexivity.
-  Qed.
-  Next Obligation.
-    reflexivity.
-  Qed.
-  Next Obligation.
-    reflexivity.
-  Qed.
-  Next Obligation.
-    reflexivity.
-  Qed.
-  Next Obligation.
-    reflexivity.
-  Qed.
-  Next Obligation.
-    reflexivity.
-  Qed.
-  Next Obligation.
-    reflexivity.
-  Qed.
-  Next Obligation.
-    reflexivity.
-  Qed.
 
   Lemma closedn_cored :
     forall Σ Γ u v,

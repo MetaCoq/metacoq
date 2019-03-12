@@ -192,6 +192,18 @@ Section Normalisation.
     left. reflexivity.
   Qed.
 
+  Lemma R_Req_R :
+    forall {Σ Γ u v w},
+      R Σ Γ u v ->
+      Req Σ Γ v w ->
+      R Σ Γ u w.
+  Proof.
+    intros Σ Γ u v w h1 h2.
+    destruct h2.
+    - subst. assumption.
+    - eapply Rtrans ; eassumption.
+  Qed.
+
 End Normalisation.
 
 Section Reduce.
@@ -219,6 +231,18 @@ Section Reduce.
     intros Σ' Γ t u stack h. revert stack. induction h ; intro stack.
     - constructor.
     - econstructor.
+      + eapply IHh.
+      + eapply red1_context. assumption.
+  Qed.
+
+  Corollary cored_context :
+    forall Σ Γ t u stack,
+      cored Σ Γ t u ->
+      cored Σ Γ (zip (t, stack)) (zip (u, stack)).
+  Proof.
+    intros Σ' Γ t u stack h. revert stack. induction h ; intro stack.
+    - constructor. eapply red1_context. assumption.
+    - eapply cored_trans.
       + eapply IHh.
       + eapply red1_context. assumption.
   Qed.
@@ -253,6 +277,45 @@ Section Reduce.
       + econstructor. assumption.
   Qed.
 
+  Existing Instance Req_refl.
+
+  Lemma cored_case :
+    forall Σ Γ ind p c c' brs,
+      cored Σ Γ c c' ->
+      cored Σ Γ (tCase ind p c brs) (tCase ind p c' brs).
+  Proof.
+    intros Σ' Γ ind p c c' brs h.
+    revert ind p brs. induction h ; intros ind p brs.
+    - constructor. constructor. assumption.
+    - eapply cored_trans.
+      + eapply IHh.
+      + econstructor. assumption.
+  Qed.
+
+  Lemma R_case :
+    forall Σ Γ ind p c c' brs π,
+      R Σ Γ c c' ->
+      Req Σ Γ (tCase ind p (zip c) brs, π) (tCase ind p (zip c') brs, π).
+  Proof.
+    intros Σ' Γ ind p [c e] [c' e'] brs π h.
+    dependent destruction h.
+    - right. econstructor. eapply cored_context. eapply cored_case.
+      assumption.
+    - cbn in H1. inversion H1. subst. clear H1.
+      cbn in H0. cbn. rewrite H3. reflexivity.
+  Qed.
+
+  Lemma Req_case :
+    forall Σ Γ ind p c c' brs π,
+      Req Σ Γ c c' ->
+      Req Σ Γ (tCase ind p (zip c) brs, π) (tCase ind p (zip c') brs, π).
+  Proof.
+    intros Σ' Γ ind p [c e] [c' e'] brs π h.
+    dependent destruction h.
+    - rewrite H0. reflexivity.
+    - eapply R_case. assumption.
+  Qed.
+
   Lemma closedn_context :
     forall n t,
       closedn n (zip t) = true ->
@@ -268,8 +331,6 @@ Section Reduce.
     ).
 
   (* Notation repack t := (let '(exist _ res prf) := t in (exist _ res _)). *)
-
-  Existing Instance Req_refl.
 
   Equations _reduce_stack (Γ : context) (t : term) (π : stack)
             (h : closedn #|Γ| (zip (t,π)) = true)
@@ -414,22 +475,26 @@ Section Reduce.
   Next Obligation.
   Admitted.
   Next Obligation.
-     econstructor. eapply cored_red_trans.
-    - eapply red_context. eapply case_reds_discr.
-      instantiate (1 := zip (tConstruct ind' c' wildcard, args)).
-      (* This involves soundness of reduction. *)
-      (* With the Case stack, this becomes a bit tricky...
-         It seems zip is not what we want...
-       *)
-      admit.
-    - eapply red1_context. cbn.
-      Fail eapply red_iota.
-      (* This is not clear how to apply the rule.
-         We indeed need ind = ind' which cannot be deduced from the context.
-         This is actually enforced by typing, which we do not have at the
-         moment.
-       *)
-      (* Worst now with the new stacks... *)
+    eapply R_Req_R.
+    - econstructor. econstructor. eapply red1_context.
+      eapply red_iota.
+    - Fail eapply Req_case.
+
+    (* econstructor. eapply cored_red_trans. *)
+    (* - eapply red_context. eapply case_reds_discr. *)
+    (*   instantiate (1 := zip (tConstruct ind' c' wildcard, args)). *)
+    (*   (* This involves soundness of reduction. *) *)
+    (*   (* With the Case stack, this becomes a bit tricky... *)
+    (*      It seems zip is not what we want... *)
+    (*    *) *)
+    (*   admit. *)
+    (* - eapply red1_context. cbn. *)
+    (*   Fail eapply red_iota. *)
+    (*   (* This is not clear how to apply the rule. *)
+    (*      We indeed need ind = ind' which cannot be deduced from the context. *)
+    (*      This is actually enforced by typing, which we do not have at the *)
+    (*      moment. *)
+    (*    *) *)
       admit.
   Admitted.
   Next Obligation.

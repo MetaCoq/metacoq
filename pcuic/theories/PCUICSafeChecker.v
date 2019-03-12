@@ -324,16 +324,20 @@ Section Reduce.
   Admitted.
   Next Obligation.
     econstructor. econstructor. cbn.
-    econstructor.
-    - rewrite <- eq1. reflexivity.
-    - unfold is_constructor. rewrite <- eq2.
-      (* Problem of a more dangerouns kind.
-         To show termination we already need soundness.
-         Or we need to fix the red_fix rule.
-         Indeed, it is broken because it wants stack(narg) to be already
-         a constructor, which doesn't even allow reduction.
-       *)
-      unfold decompose_app.
+    (* Also worse now. We used to have mkApps. No longer.
+       Perhaps is it that we should match on the stack in those cases
+       as well.
+     *)
+    (* econstructor. *)
+    (* - rewrite <- eq1. reflexivity. *)
+    (* - unfold is_constructor. rewrite <- eq2. *)
+    (*   (* Problem of a more dangerouns kind. *)
+    (*      To show termination we already need soundness. *)
+    (*      Or we need to fix the red_fix rule. *)
+    (*      Indeed, it is broken because it wants stack(narg) to be already *)
+    (*      a constructor, which doesn't even allow reduction. *)
+    (*    *) *)
+    (*   unfold decompose_app. *)
   Admitted.
 
   Lemma closedn_cored :
@@ -349,12 +353,12 @@ Section Reduce.
       closedn #|Γ| t = true.
   Admitted.
 
-  Equations? reduce_stack (Γ : context) (t A : term) (stack : list term)
-           (h : Σ ;;; Γ |- zip (t,stack) : A) : term * list term :=
-    reduce_stack Γ t A stack h :=
+  Equations? reduce_stack (Γ : context) (t A : term) (π : stack)
+           (h : Σ ;;; Γ |- zip (t,π) : A) : term * stack :=
+    reduce_stack Γ t A π h :=
       Fix_F (R := R (fst Σ) Γ)
-            (fun x => closedn #|Γ| (zip x) = true -> (term * list term)%type)
-            (fun t' f => _) (x := (t, stack)) _ _.
+            (fun x => closedn #|Γ| (zip x) = true -> (term * stack)%type)
+            (fun t' f => _) (x := (t, π)) _ _.
   Proof.
     - { eapply _reduce_stack.
         - eassumption.

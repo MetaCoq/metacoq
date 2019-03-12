@@ -1,6 +1,6 @@
 (* Distributed under the terms of the MIT license.   *)
 
-From Coq Require Import Bool String List Program BinPos Compare_dec Arith Lia.
+From Coq Require Import Bool String List Program BinPos Compare_dec Arith Lia Classes.RelationClasses.
 From Template
 Require Import config univ monad_utils utils BasicAst AstUtils UnivSubst.
 From PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICLiftSubst PCUICUnivSubst PCUICTyping.
@@ -186,6 +186,12 @@ Section Normalisation.
     right. assumption.
   Qed.
 
+  Instance Req_refl : forall Σ Γ, Reflexive (Req Σ Γ).
+  Proof.
+    intros Σ Γ.
+    left. reflexivity.
+  Qed.
+
 End Normalisation.
 
 Section Reduce.
@@ -263,6 +269,8 @@ Section Reduce.
 
   (* Notation repack t := (let '(exist _ res prf) := t in (exist _ res _)). *)
 
+  Existing Instance Req_refl.
+
   Equations _reduce_stack (Γ : context) (t : term) (π : stack)
             (h : closedn #|Γ| (zip (t,π)) = true)
             (reduce : forall t' π', R (fst Σ) Γ (t',π') (t,π) -> { t'' : term * stack | Req (fst Σ) Γ t'' (t',π')})
@@ -337,7 +345,9 @@ Section Reduce.
     symmetry. assumption.
   Qed.
   Next Obligation.
-    (* TODO This should be obvious. *)
+    reflexivity.
+    (* I don't understand why this isn't solved automtically. *)
+  Qed.
   Next Obligation.
     pose proof (closedn_context _ _ h) as hc. simpl in hc.
     (* Should be a lemma! *)
@@ -348,14 +358,49 @@ Section Reduce.
       + cbn in eq. discriminate.
       + cbn in eq. eapply IHΓ ; try eassumption. apply hc.
   Qed.
+  (* This does nothing... Unsettling! *)
+  (* Solve All Obligations with reflexivity. *)
+  Next Obligation.
+    reflexivity.
+  Qed.
+  Next Obligation.
+    reflexivity.
+  Qed.
+  Next Obligation.
+    reflexivity.
+  Qed.
+  Next Obligation.
+    reflexivity.
+  Qed.
+  Next Obligation.
+    reflexivity.
+  Qed.
+  Next Obligation.
+    reflexivity.
+  Qed.
+  Next Obligation.
+    reflexivity.
+  Qed.
   Next Obligation.
     econstructor. econstructor.
     cbn. eapply red1_context. econstructor.
   Qed.
   Next Obligation.
+    reflexivity.
+  Qed.
+  Next Obligation.
+    reflexivity.
+  Qed.
+  Next Obligation.
+    reflexivity.
+  Qed.
+  Next Obligation.
     econstructor. econstructor.
     eapply red1_context.
     econstructor.
+  Qed.
+  Next Obligation.
+    reflexivity.
   Qed.
   Next Obligation.
     eapply Subterm.right_lex. cbn. constructor. constructor.
@@ -378,10 +423,50 @@ Section Reduce.
     - cbn. reflexivity.
   Qed.
   Next Obligation.
+    reflexivity.
+  Qed.
+  Next Obligation.
+    reflexivity.
+  Qed.
+  Next Obligation.
+    reflexivity.
+  Qed.
+  Next Obligation.
+    reflexivity.
+  Qed.
+  Next Obligation.
+    reflexivity.
+  Qed.
+  Next Obligation.
+    reflexivity.
+  Qed.
+  Next Obligation.
     eapply Subterm.right_lex. cbn. constructor. constructor.
   Qed.
   Next Obligation.
-    econstructor. eapply cored_red_trans.
+  Admitted.
+  Next Obligation.
+  Admitted.
+  Next Obligation.
+  Admitted.
+  Next Obligation.
+  Admitted.
+  Next Obligation.
+  Admitted.
+  Next Obligation.
+  Admitted.
+  Next Obligation.
+  Admitted.
+  Next Obligation.
+  Admitted.
+  Next Obligation.
+  Admitted.
+  Next Obligation.
+  Admitted.
+  Next Obligation.
+  Admitted.
+  Next Obligation.
+     econstructor. eapply cored_red_trans.
     - eapply red_context. eapply case_reds_discr.
       instantiate (1 := zip (tConstruct ind' c' wildcard, args)).
       (* This involves soundness of reduction. *)
@@ -400,11 +485,58 @@ Section Reduce.
       admit.
   Admitted.
   Next Obligation.
+  Admitted.
+  Next Obligation.
+  Admitted.
+  Next Obligation.
+  Admitted.
+  Next Obligation.
+  Admitted.
+  Next Obligation.
+    reflexivity.
+  Qed.
+  Next Obligation.
+    reflexivity.
+  Qed.
+  Next Obligation.
     (* Problem. Once again the order is too restrictive.
        We also need to allow reduction on the stack it seems.
      *)
     admit.
   Admitted.
+  Next Obligation.
+    reflexivity.
+  Qed.
+  Next Obligation.
+    reflexivity.
+  Qed.
+  Next Obligation.
+    reflexivity.
+  Qed.
+  Next Obligation.
+    reflexivity.
+  Qed.
+  Next Obligation.
+    reflexivity.
+  Qed.
+  Next Obligation.
+    reflexivity.
+  Qed.
+  Next Obligation.
+    reflexivity.
+  Qed.
+  Next Obligation.
+    reflexivity.
+  Qed.
+  Next Obligation.
+    reflexivity.
+  Qed.
+  Next Obligation.
+    reflexivity.
+  Qed.
+  Next Obligation.
+    reflexivity.
+  Qed.
   Next Obligation.
     econstructor. econstructor. cbn.
     (* Also worse now. We used to have mkApps. No longer.
@@ -422,6 +554,30 @@ Section Reduce.
     (*    *) *)
     (*   unfold decompose_app. *)
   Admitted.
+  Next Obligation.
+    reflexivity.
+  Qed.
+  Next Obligation.
+    reflexivity.
+  Qed.
+  Next Obligation.
+    reflexivity.
+  Qed.
+  Next Obligation.
+    reflexivity.
+  Qed.
+  Next Obligation.
+    reflexivity.
+  Qed.
+  Next Obligation.
+    reflexivity.
+  Qed.
+  Next Obligation.
+    reflexivity.
+  Qed.
+  Next Obligation.
+    reflexivity.
+  Qed.
 
   Lemma closedn_cored :
     forall Σ Γ u v,
@@ -436,12 +592,18 @@ Section Reduce.
       closedn #|Γ| t = true.
   Admitted.
 
-  Equations? reduce_stack (Γ : context) (t A : term) (π : stack)
+  Equations reduce_stack (Γ : context) (t A : term) (π : stack)
            (h : Σ ;;; Γ |- zip (t,π) : A) : term * stack :=
     reduce_stack Γ t A π h :=
-      Fix_F (R := R (fst Σ) Γ)
-            (fun x => closedn #|Γ| (zip x) = true -> (term * stack)%type)
-            (fun t' f => _) (x := (t, π)) _ _.
+      let '(exist _ ts _) :=
+          Fix_F (R := R (fst Σ) Γ)
+                (fun x => closedn #|Γ| (zip x) = true -> { t' : term * stack | R (fst Σ) Γ t' x })
+                (fun t' f => _) (x := (t, π)) _ _
+      in ts.
+  Next Obligation.
+    eapply _reduce_stack.
+
+
   Proof.
     - { eapply _reduce_stack.
         - eassumption.

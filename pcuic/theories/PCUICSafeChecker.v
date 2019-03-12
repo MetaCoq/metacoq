@@ -177,6 +177,15 @@ Section Normalisation.
       + right. eapply Rtrans ; eassumption.
   Qed.
 
+  Lemma R_to_Req :
+    forall {Σ Γ u v},
+      R Σ Γ u v ->
+      Req Σ Γ u v.
+  Proof.
+    intros Σ Γ u v h.
+    right. assumption.
+  Qed.
+
 End Normalisation.
 
 Section Reduce.
@@ -246,7 +255,13 @@ Section Reduce.
 
   Definition inspect {A} (x : A) : { y : A | y = x } := exist _ x eq_refl.
 
-  Notation repack t := (let '(exist _ res prf) := t in (exist _ res _)).
+  Notation rec reduce t π :=
+    (let smaller := _ in
+     let '(exist _ res prf) := reduce t π smaller in
+     exist _ res (Req_trans _ _ _ _ (R_to_Req smaller))
+    ).
+
+  (* Notation repack t := (let '(exist _ res prf) := t in (exist _ res _)). *)
 
   Equations _reduce_stack (Γ : context) (t : term) (π : stack)
             (h : closedn #|Γ| (zip (t,π)) = true)
@@ -258,14 +273,14 @@ Section Reduce.
       | @exist None eq := ! ;
       | @exist (Some d) eq with inspect d.(decl_body) := {
         | @exist None _ := exist _ (tRel c, π) _ ;
-        | @exist (Some b) H := repack (reduce (lift0 (S c) b) π _)
+        | @exist (Some b) H := rec reduce (lift0 (S c) b) π
         }
       } ;
     | false := exist _ (tRel c, π) _
     } ;
 
     _reduce_stack Γ (tLetIn A b B c) π h reduce with RedFlags.zeta flags := {
-    | true := repack (reduce (subst10 b c) π _) ;
+    | true := rec reduce (subst10 b c) π ;
     | false := exist _ (tLetIn A b B c, π) _
     } ;
 
@@ -273,17 +288,17 @@ Section Reduce.
     | true with inspect (lookup_env (fst Σ) c) := {
       | @exist (Some (ConstantDecl _ {| cst_body := Some body |})) eq :=
         let body' := subst_instance_constr u body in
-        repack (reduce body' π _) ;
+        rec reduce body' π ;
       | @exist _ eq := exist _ (tConst c u, π) _
       } ;
     | _ := exist _ (tConst c u, π) _
     } ;
 
     _reduce_stack Γ (tApp f a) π h reduce :=
-      repack (reduce f (App a π) _) ;
+      rec reduce f (App a π) ;
 
     _reduce_stack Γ (tLambda na A t) (App a args) h reduce with RedFlags.beta flags := {
-    | true := repack (reduce (subst10 a t) args _) ;
+    | true := rec reduce (subst10 a t) args ;
     | false := exist _ (tLambda na A t, App a args) _
     } ;
 
@@ -291,7 +306,7 @@ Section Reduce.
     | true with inspect (unfold_fix mfix idx) := {
       | @exist (Some (narg, fn)) eq1 with inspect (nth_error (stack_args π) narg) := {
         | @exist (Some c) eq2 with inspect (reduce c (Fix mfix idx π) _) := {
-          | @exist (@exist ((tConstruct _ _ _), _) prf) eq3 := repack (reduce fn π _) ;
+          | @exist (@exist ((tConstruct _ _ _), _) prf) eq3 := rec reduce fn π ;
           | _ := exist _ (tFix mfix idx, π) _
           } ;
         | _ := exist _ (tFix mfix idx, π) _
@@ -307,7 +322,7 @@ Section Reduce.
     _reduce_stack Γ (tCase (ind, par) p c brs) π h reduce with RedFlags.iota flags := {
     | true with inspect (reduce c (Case (ind, par) p brs π) _) := {
       | @exist (@exist (tConstruct ind' c' _, args) prf) eq :=
-        repack (reduce (iota_red par c' (stack_args args) brs) π _) ;
+        rec reduce (iota_red par c' (stack_args args) brs) π ;
       | @exist (@exist c' prf) eq := exist _ (tCase (ind, par) p (zip c') brs, π) _
       } ;
     | false := exist _ (tCase (ind, par) p c brs, π) _
@@ -322,14 +337,7 @@ Section Reduce.
     symmetry. assumption.
   Qed.
   Next Obligation.
-    eapply Req_trans ; try eassumption.
-    right. econstructor.
-    econstructor.
-    eapply red1_context.
-    eapply red_rel. rewrite <- eq. cbn. f_equal.
-    symmetry. assumption.
-  Qed.
-  (* TODO OLD BELOW *)
+    (* TODO This should be obvious. *)
   Next Obligation.
     pose proof (closedn_context _ _ h) as hc. simpl in hc.
     (* Should be a lemma! *)

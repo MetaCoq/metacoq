@@ -70,6 +70,8 @@ Section Normalisation.
     | _ => []
     end.
 
+  Definition zipapp t := mkApps (fst t) (stack_args (snd t)).
+
   (* red is the reflexive transitive closure of one-step reduction and thus
      can't be used as well order. We thus define the transitive closure,
      but we take the symmetric version.
@@ -292,29 +294,65 @@ Section Reduce.
       + econstructor. assumption.
   Qed.
 
-  Lemma R_case :
-    forall Σ Γ ind p c c' brs π,
-      R Σ Γ c c' ->
-      Req Σ Γ (tCase ind p (zip c) brs, π) (tCase ind p (zip c') brs, π).
-  Proof.
-    intros Σ' Γ ind p [c e] [c' e'] brs π h.
-    dependent destruction h.
-    - right. econstructor. eapply cored_context. eapply cored_case.
-      assumption.
-    - cbn in H1. inversion H1. subst. clear H1.
-      cbn in H0. cbn. rewrite H3. reflexivity.
-  Qed.
+  (* Lemma R_case : *)
+  (*   forall Σ Γ ind p c c' brs π, *)
+  (*     R Σ Γ c c' -> *)
+  (*     Req Σ Γ (tCase ind p (zipapp c) brs, π) (tCase ind p (zipapp c') brs, π). *)
+  (* Proof. *)
+  (*   intros Σ' Γ ind p [c e] [c' e'] brs π h. *)
+  (*   dependent destruction h. *)
+  (*   - right. econstructor. eapply cored_context. eapply cored_case. *)
+  (*     assumption. *)
+  (*   - cbn in H1. inversion H1. subst. clear H1. *)
+  (*     cbn in H0. cbn. rewrite H3. reflexivity. *)
+  (* Qed. *)
 
-  Lemma Req_case :
-    forall Σ Γ ind p c c' brs π,
-      Req Σ Γ c c' ->
-      Req Σ Γ (tCase ind p (zip c) brs, π) (tCase ind p (zip c') brs, π).
-  Proof.
-    intros Σ' Γ ind p [c e] [c' e'] brs π h.
-    dependent destruction h.
-    - rewrite H0. reflexivity.
-    - eapply R_case. assumption.
-  Qed.
+  (* Lemma Req_case : *)
+  (*   forall Σ Γ ind p c c' brs π, *)
+  (*     Req Σ Γ c c' -> *)
+  (*     Req Σ Γ (tCase ind p (zipapp c) brs, π) (tCase ind p (zipapp c') brs, π). *)
+  (* Proof. *)
+  (*   intros Σ' Γ ind p [c e] [c' e'] brs π h. *)
+  (*   dependent destruction h. *)
+  (*   - rewrite H0. reflexivity. *)
+  (*   - eapply R_case. assumption. *)
+  (* Qed. *)
+
+ (*  Lemma R_case : *)
+ (*    forall Σ Γ ind p c c' brs π, *)
+ (*      R Σ Γ c (c', Case ind p brs π) -> *)
+ (*      Req Σ Γ (tCase ind p (zipapp c) brs, π) (tCase ind p c' brs, π). *)
+ (*  Proof. *)
+ (*    intros Σ' Γ ind p [c e] c' brs π h. *)
+ (*    dependent destruction h. *)
+ (*    - cbn in H0. cbn. eapply Req_trans. *)
+ (*      2:{ right. econstructor. *)
+ (*          instantiate (1 := (c,e)). cbn. *)
+ (*          exact H0. *)
+ (*      } *)
+
+
+ (*      right. econstructor. eapply cored_context. eapply cored_case. *)
+ (*      assumption. *)
+ (*    - cbn in H1. inversion H1. subst. clear H1. *)
+ (*      cbn in H0. cbn. rewrite H3. reflexivity. *)
+ (*  Qed. *)
+
+ (*  Lemma Req_case : *)
+ (*    forall Σ Γ ind p c c' brs π, *)
+ (*      Req Σ Γ c (c', Case ind p brs π) -> *)
+ (*      Req Σ Γ (tCase ind p (zipapp c) brs, π) (tCase ind p c' brs, π). *)
+ (*  Proof. *)
+ (*    intros Σ' Γ ind p [c e] c' brs π h. *)
+ (*    dependent destruction h. *)
+ (*    - rewrite H0. reflexivity. *)
+ (*    - eapply R_case. assumption. *)
+ (*  Qed. *)
+
+ (* prf : Req (fst Σ) Γ (tConstruct ind' c' wildcard, args) (c, Case (ind, par) p brs π) *)
+ (*  ============================ *)
+ (*  Req (fst Σ) Γ (tCase (?Goal1, par) ?Goal0 (mkApps (tConstruct ?Goal1 c' ?u) (stack_args args)) brs, π) *)
+ (*    (tCase (ind, par) p c brs, π) *)
 
   Lemma closedn_context :
     forall n t,
@@ -453,6 +491,8 @@ Section Reduce.
     eapply Subterm.right_lex. cbn. constructor. constructor.
   Qed.
   Next Obligation.
+    (* clear - prf. destruct prf. *)
+    (* - rewrite <- H. *)
   Admitted.
   Next Obligation.
   Admitted.

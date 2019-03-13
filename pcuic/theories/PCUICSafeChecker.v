@@ -430,22 +430,19 @@ Section Reduce.
     | true with inspect (reduce c (Case (ind, par) p brs π) _) := {
       | @exist (@exist (tConstruct ind' c' _, args) prf) eq :=
         rec reduce (iota_red par c' (stack_args args) brs) π ;
-      | @exist (@exist c' prf) eq := exist _ (tCase (ind, par) p (zip c') brs, π) _
+      | @exist (@exist (t,args) prf) eq := exist _ (tCase (ind, par) p (zipapp (t, args)) brs, π) _
       } ;
     | false := exist _ (tCase (ind, par) p c brs, π) _
     } ;
 
     _reduce_stack Γ t π h reduce := exist _ (t, π) _.
+  Solve All Obligations with (program_simpl ; reflexivity).
   Next Obligation.
     econstructor.
     econstructor.
     eapply red1_context.
     eapply red_rel. rewrite <- eq. cbn. f_equal.
     symmetry. assumption.
-  Qed.
-  Next Obligation.
-    reflexivity.
-    (* I don't understand why this isn't solved automtically. *)
   Qed.
   Next Obligation.
     pose proof (closedn_context _ _ h) as hc. simpl in hc.
@@ -457,7 +454,6 @@ Section Reduce.
       + cbn in eq. discriminate.
       + cbn in eq. eapply IHΓ ; try eassumption. apply hc.
   Qed.
-  Solve All Obligations with (program_simpl ; reflexivity).
   Next Obligation.
     econstructor. econstructor.
     cbn. eapply red1_context. econstructor.
@@ -491,8 +487,12 @@ Section Reduce.
     eapply Subterm.right_lex. cbn. constructor. constructor.
   Qed.
   Next Obligation.
-    (* clear - prf. destruct prf. *)
-    (* - rewrite <- H. *)
+    clear - prf. destruct prf.
+    - rewrite H. cbn. reflexivity.
+    - dependent destruction H.
+      + cbn in H0. inversion H0. subst. clear H0.
+        right. econstructor. cbn.
+        (* It seems we have the zip wrong... *)
   Admitted.
   Next Obligation.
   Admitted.

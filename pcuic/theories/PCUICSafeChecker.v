@@ -487,12 +487,18 @@ Section Reduce.
     eapply Subterm.right_lex. cbn. constructor. constructor.
   Qed.
   Next Obligation.
-    clear - prf. destruct prf.
+    clear - prf. subst t. destruct prf.
     - rewrite H. cbn. reflexivity.
     - dependent destruction H.
       + cbn in H0. inversion H0. subst. clear H0.
         right. econstructor. cbn.
-        (* It seems we have the zip wrong... *)
+        (* Not very clear how it can be proven *)
+        admit.
+      + cbn in H0. inversion H0. subst. clear H0.
+        right. unfold R. (* cbn. rewrite H5. *)
+        (* eapply Subterm.right_lex. *)
+        (* Once again, not very clear... *)
+        admit.
   Admitted.
   Next Obligation.
   Admitted.

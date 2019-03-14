@@ -65,13 +65,13 @@ Section Normalisation.
 
   Definition zip (t : term * stack) := zipc (fst t) (snd t).
 
-  Fixpoint stack_args (π : stack) : list term :=
-    match π with
-    | App u π => u :: (stack_args π)
-    | _ => []
-    end.
+  (* Fixpoint stack_args (π : stack) : list term := *)
+  (*   match π with *)
+  (*   | App u π => u :: (stack_args π) *)
+  (*   | _ => [] *)
+  (*   end. *)
 
-  Definition zipapp t := mkApps (fst t) (stack_args (snd t)).
+  (* Definition zipapp t := mkApps (fst t) (stack_args (snd t)). *)
 
   (* Get the arguments out of a stack *)
   (* TODO Tail-rec version *)
@@ -116,6 +116,15 @@ Section Normalisation.
     cbn in eq. revert eq. case_eq (decompose_stack π).
     intros l0 s H0 eq. inversion eq. subst.
     eapply IHπ. eassumption.
+  Qed.
+
+  Lemma zipc_appstack :
+    forall {t args ρ},
+      zipc t (appstack args ρ) = zipc (mkApps t args) ρ.
+  Proof.
+    intros t args ρ. revert t ρ. induction args ; intros t ρ.
+    - cbn. reflexivity.
+    - cbn. rewrite IHargs. reflexivity.
   Qed.
 
   Fixpoint decompose_stack_at π n : option (list term * term * stack) :=
@@ -468,28 +477,32 @@ Section Reduce.
     | false := exist _ (tLambda na A t, App a args) _
     } ;
 
-    _reduce_stack Γ (tFix mfix idx) π h reduce with RedFlags.fix_ flags := {
-    | true with inspect (unfold_fix mfix idx) := {
-      | @exist (Some (narg, fn)) eq1 with inspect (nth_error (stack_args π) narg) := {
-        | @exist (Some c) eq2 with inspect (reduce c (Fix mfix idx π) _) := {
-          | @exist (@exist ((tConstruct _ _ _), _) prf) eq3 := rec reduce fn π ;
-          | _ := exist _ (tFix mfix idx, π) _
-          } ;
-        | _ := exist _ (tFix mfix idx, π) _
-        } ;
-      | _ := exist _ (tFix mfix idx, π) _
-      } ;
-    | false := exist _ (tFix mfix idx, π) _
-    } ;
+(* TODO Later *)
+    (* _reduce_stack Γ (tFix mfix idx) π h reduce with RedFlags.fix_ flags := { *)
+    (* | true with inspect (unfold_fix mfix idx) := { *)
+    (*   | @exist (Some (narg, fn)) eq1 with inspect (nth_error (stack_args π) narg) := { *)
+    (*     | @exist (Some c) eq2 with inspect (reduce c (Fix mfix idx π) _) := { *)
+    (*       | @exist (@exist ((tConstruct _ _ _), _) prf) eq3 := rec reduce fn π ; *)
+    (*       | _ := exist _ (tFix mfix idx, π) _ *)
+    (*       } ; *)
+    (*     | _ := exist _ (tFix mfix idx, π) _ *)
+    (*     } ; *)
+    (*   | _ := exist _ (tFix mfix idx, π) _ *)
+    (*   } ; *)
+    (* | false := exist _ (tFix mfix idx, π) _ *)
+    (* } ; *)
 
     (* Nothing special seems to be done for Π-types. *)
     (* _reduce_stack Γ (tProd na A B) *)
 
     _reduce_stack Γ (tCase (ind, par) p c brs) π h reduce with RedFlags.iota flags := {
     | true with inspect (reduce c (Case (ind, par) p brs π) _) := {
-      | @exist (@exist (tConstruct ind' c' _, args) prf) eq :=
-        rec reduce (iota_red par c' (stack_args args) brs) π ;
-      | @exist (@exist (t,args) prf) eq := exist _ (tCase (ind, par) p (zipapp (t, args)) brs, π) _
+      | @exist (@exist (tConstruct ind' c' _, π') prf) eq with inspect (decompose_stack π') := {
+        | @exist (args, ρ) prf' := rec reduce (iota_red par c' args brs) π
+        } ;
+      | @exist (@exist (t,π') prf) eq with inspect (decompose_stack π') := {
+        | @exist (args, ρ) prf' := exist _ (tCase (ind, par) p (mkApps t args) brs, π) _
+        }
       } ;
     | false := exist _ (tCase (ind, par) p c brs, π) _
     } ;
@@ -546,12 +559,26 @@ Section Reduce.
     eapply Subterm.right_lex. cbn. constructor. constructor.
   Qed.
   Next Obligation.
-    clear - prf. subst t. destruct prf.
-    - rewrite H. cbn. reflexivity.
+    clear - prf prf'. subst t. destruct prf.
+    - inversion H. subst. clear H.
+      cbn in prf'. inversion prf'. subst. clear prf'.
+      reflexivity.
     - dependent destruction H.
       + cbn in H0. inversion H0. subst. clear H0.
+        symmetry in prf'.
+        pose proof (decompose_stack_eq _ _ _ prf') as eq.
+        subst.
+        rewrite zipc_appstack in H1.
         right. econstructor. cbn.
-        (* Not very clear how it can be proven *)
+        (* It seems we lost too much information by saying the whole case
+           reduces.
+           We would like to know that c itself reduced to a constructor!
+           Actually, it might be that the definition itself is wrong!
+           Or we need a property that (t,Case) reduces to (t',Case), never going
+           under the Case.
+         *)
+        (* destruct ρ. *)
+        (* * cbn in H1. *)
         admit.
       + cbn in H0. inversion H0. subst. clear H0.
         right. unfold R. (* cbn. rewrite H5. *)

@@ -1,11 +1,13 @@
 (* this file is the interface that extracted plugins will use.
  *)
 
-type ident   (* Template.Ast.ident *)
-type kername (* Template.Ast.kername *)
+type ident   = Names.Id.t (* Template.Ast.ident *)
+type kername = Names.Constant.t (* Template.Ast.kername *)
 type reductionStrategy (* Template.TemplateMonad.Common.reductionStrategy *)
 type global_reference (* Template.Ast.global_reference *)
 type term = Constr.t  (* Ast.term *)
+type mutual_inductive_body (* Template.Ast.mutual_inductive_body *)
+type constant_entry (* Template.Ast.constant_entry *)
 
 type 'a tm
 
@@ -25,11 +27,11 @@ val tmLemma : ident -> term option -> term -> kername tm
 val tmFreshName : ident -> ident tm
 
 val tmAbout : ident -> global_reference option tm
-val tmCurrentModPath : unit -> string tm
+val tmCurrentModPath : unit -> Names.ModPath.t tm
 
-val tmQuoteInductive : kername -> _ tm
+val tmQuoteInductive : kername -> mutual_inductive_body tm
 val tmQuoteUniverses : _ tm
-val tmQuoteConstant : kername -> bool -> _ tm
+val tmQuoteConstant : kername -> bool -> constant_entry tm
 
 val tmMkInductive : _ -> _ tm
 

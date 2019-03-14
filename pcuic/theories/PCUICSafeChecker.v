@@ -581,7 +581,12 @@ Section Reduce.
         (* * cbn in H1. *)
         admit.
       + cbn in H0. inversion H0. subst. clear H0.
-        right. unfold R. (* cbn. rewrite H5. *)
+        symmetry in prf'.
+        pose proof (decompose_stack_eq _ _ _ prf') as eq.
+        subst.
+        cbn in H5.
+        rewrite zipc_appstack in H5.
+        right. unfold R. cbn. rewrite H5.
         (* eapply Subterm.right_lex. *)
         (* Once again, not very clear... *)
         admit.
@@ -610,7 +615,8 @@ Section Reduce.
     eapply R_Req_R.
     - econstructor. econstructor. eapply red1_context.
       eapply red_iota.
-    - Fail eapply Req_case.
+    - (* Fail eapply Req_case. *)
+
 
     (* econstructor. eapply cored_red_trans. *)
     (* - eapply red_context. eapply case_reds_discr. *)
@@ -637,30 +643,30 @@ Section Reduce.
   Admitted.
   Next Obligation.
   Admitted.
-  Next Obligation.
-    (* Problem. Once again the order is too restrictive.
-       We also need to allow reduction on the stack it seems.
-     *)
-    admit.
-  Admitted.
-  Solve All Obligations with (program_simpl ; reflexivity).
-  Next Obligation.
-    econstructor. econstructor. cbn.
-    (* Also worse now. We used to have mkApps. No longer.
-       Perhaps is it that we should match on the stack in those cases
-       as well.
-     *)
-    (* econstructor. *)
-    (* - rewrite <- eq1. reflexivity. *)
-    (* - unfold is_constructor. rewrite <- eq2. *)
-    (*   (* Problem of a more dangerouns kind. *)
-    (*      To show termination we already need soundness. *)
-    (*      Or we need to fix the red_fix rule. *)
-    (*      Indeed, it is broken because it wants stack(narg) to be already *)
-    (*      a constructor, which doesn't even allow reduction. *)
-    (*    *) *)
-    (*   unfold decompose_app. *)
-  Admitted.
+  (* Next Obligation. *)
+  (*   (* Problem. Once again the order is too restrictive. *)
+  (*      We also need to allow reduction on the stack it seems. *)
+  (*    *) *)
+  (*   admit. *)
+  (* Admitted. *)
+  (* Solve All Obligations with (program_simpl ; reflexivity). *)
+  (* Next Obligation. *)
+  (*   econstructor. econstructor. cbn. *)
+  (*   (* Also worse now. We used to have mkApps. No longer. *)
+  (*      Perhaps is it that we should match on the stack in those cases *)
+  (*      as well. *)
+  (*    *) *)
+  (*   (* econstructor. *) *)
+  (*   (* - rewrite <- eq1. reflexivity. *) *)
+  (*   (* - unfold is_constructor. rewrite <- eq2. *) *)
+  (*   (*   (* Problem of a more dangerouns kind. *) *)
+  (*   (*      To show termination we already need soundness. *) *)
+  (*   (*      Or we need to fix the red_fix rule. *) *)
+  (*   (*      Indeed, it is broken because it wants stack(narg) to be already *) *)
+  (*   (*      a constructor, which doesn't even allow reduction. *) *)
+  (*   (*    *) *) *)
+  (*   (*   unfold decompose_app. *) *)
+  (* Admitted. *)
 
   Lemma closedn_cored :
     forall Σ Γ u v,
@@ -680,27 +686,28 @@ Section Reduce.
     reduce_stack Γ t A π h :=
       let '(exist _ ts _) :=
           Fix_F (R := R (fst Σ) Γ)
-                (fun x => closedn #|Γ| (zip x) = true -> { t' : term * stack | R (fst Σ) Γ t' x })
+                (fun x => closedn #|Γ| (zip x) = true -> { t' : term * stack | Req (fst Σ) Γ t' x })
                 (fun t' f => _) (x := (t, π)) _ _
       in ts.
   Next Obligation.
+    intro hc.
     eapply _reduce_stack.
-
-
-  Proof.
-    - { eapply _reduce_stack.
-        - eassumption.
-        - intros. eapply f.
-          + eassumption.
-          + simple inversion H1.
-            * inversion H3. inversion H4. subst.
-              intro hr.
-              eapply closedn_cored ; eassumption.
-            * inversion H3. inversion H4. subst.
-              intro hs. rewrite H7. assumption.
-      }
-    - { eapply R_Acc. eassumption. }
-    - { eapply closedn_typed. eassumption. }
+    - assumption.
+    - intros t' π' h'.
+      eapply f.
+      + assumption.
+      + simple inversion h'.
+        * inversion H1. inversion H2. subst. clear H1 H2.
+          intros H0.
+          eapply closedn_cored ; eassumption.
+        * inversion H1. inversion H2. subst. clear H1 H2.
+          intros H0. rewrite H5. assumption.
+  Qed.
+  Next Obligation.
+    eapply R_Acc. eassumption.
+  Qed.
+  Next Obligation.
+    eapply closedn_typed. eassumption.
   Qed.
 
 End Reduce.

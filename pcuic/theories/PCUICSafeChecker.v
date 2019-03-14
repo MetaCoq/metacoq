@@ -48,6 +48,7 @@ Section Normalisation.
 
   Derive NoConfusion NoConfusionHom Subterm for term.
 
+  (* TODO Change constructor for Fix, it should highlight the nth argument *)
   Inductive stack : Type :=
   | Empty
   | App (t : term) (e : stack)
@@ -71,6 +72,64 @@ Section Normalisation.
     end.
 
   Definition zipapp t := mkApps (fst t) (stack_args (snd t)).
+
+  (* Get the arguments out of a stack *)
+  (* TODO Tail-rec version *)
+  Fixpoint decompose_stack π :=
+    match π with
+    | App u π => let '(l,π) := decompose_stack π in (u :: l, π)
+    | _ => ([], π)
+    end.
+
+  (* TODO Tail-rec *)
+  Fixpoint appstack l π :=
+    match l with
+    | u :: l => App u (appstack l π)
+    | [] => π
+    end.
+
+  Lemma decompose_stack_eq :
+    forall π l ρ,
+      decompose_stack π = (l, ρ) ->
+      π = appstack l ρ.
+  Proof.
+    intros π l ρ eq.
+    revert l ρ eq. induction π ; intros l ρ eq.
+    - cbn in eq. inversion eq. subst. reflexivity.
+    - destruct l.
+      + cbn in eq. revert eq. case_eq (decompose_stack π).
+        intros. inversion eq.
+      + cbn in eq. revert eq. case_eq (decompose_stack π).
+        intros l0 s H0 eq. inversion eq. subst.
+        cbn. f_equal. eapply IHπ. assumption.
+    - cbn in eq. inversion eq. subst. reflexivity.
+    - cbn in eq. inversion eq. subst. reflexivity.
+  Qed.
+
+  Lemma decompose_stack_not_app :
+    forall π l u ρ,
+      decompose_stack π = (l, App u ρ) -> False.
+  Proof.
+    intros π l u ρ eq.
+    revert u l ρ eq. induction π ; intros u l ρ eq.
+    all: try solve [ cbn in eq ; inversion eq ].
+    cbn in eq. revert eq. case_eq (decompose_stack π).
+    intros l0 s H0 eq. inversion eq. subst.
+    eapply IHπ. eassumption.
+  Qed.
+
+  Fixpoint decompose_stack_at π n : option (list term * term * stack) :=
+    match π with
+    | App u π =>
+      match n with
+      | 0 => ret ([], u, π)
+      | S n =>
+        r <- decompose_stack_at π n ;;
+        let '(l, v, π) := r in
+        ret (u :: l, v, π)
+      end
+    | _ => None
+    end.
 
   (* red is the reflexive transitive closure of one-step reduction and thus
      can't be used as well order. We thus define the transitive closure,

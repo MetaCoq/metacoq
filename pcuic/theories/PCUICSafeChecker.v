@@ -437,6 +437,8 @@ Section Reduce.
 
   (* Notation repack t := (let '(exist _ res prf) := t in (exist _ res _)). *)
 
+  (* Set Equations Debug. *)
+
   Equations _reduce_stack (Γ : context) (t : term) (π : stack)
             (h : closedn #|Γ| (zip (t,π)) = true)
             (reduce : forall t' π', R (fst Σ) Γ (t',π') (t,π) -> { t'' : term * stack | Req (fst Σ) Γ t'' (t',π')})
@@ -444,7 +446,8 @@ Section Reduce.
 
     _reduce_stack Γ (tRel c) π h reduce with RedFlags.zeta flags := {
     | true with inspect (nth_error Γ c) := {
-      | @exist None eq := ! ;
+      (* | @exist None eq := ! ; *)
+      | @exist None eq := _ ;
       | @exist (Some d) eq with inspect d.(decl_body) := {
         | @exist None _ := exist _ (tRel c, π) _ ;
         | @exist (Some b) H := rec reduce (lift0 (S c) b) π
@@ -476,19 +479,19 @@ Section Reduce.
     | false := exist _ (tLambda na A t, App a args) _
     } ;
 
-    _reduce_stack Γ (tFix mfix idx) π h reduce with RedFlags.fix_ flags := {
-    | true with inspect (unfold_fix mfix idx) := {
-      | @exist (Some (narg, fn)) eq1 with inspect (decompose_stack_at π narg) := {
-        | @exist (Some (args, c, ρ)) eq2 with inspect (reduce c (Fix mfix idx args ρ)) := {
-          | @exist (@exist ((tConstruct _ _ _), _) prf) eq3 := rec reduce fn π ;
-          | _ := exist _ (tFix mfix idx, π) _
-          } ;
-        | _ := exist _ (tFix mfix idx, π) _
-        } ;
-      | _ := exist _ (tFix mfix idx, π) _
-      } ;
-    | false := exist _ (tFix mfix idx, π) _
-    } ;
+    (* _reduce_stack Γ (tFix mfix idx) π h reduce with RedFlags.fix_ flags := { *)
+    (* | true with inspect (unfold_fix mfix idx) := { *)
+    (*   | @exist (Some (narg, fn)) eq1 with inspect (decompose_stack_at π narg) := { *)
+    (*     | @exist (Some (args, c, ρ)) eq2 with inspect (reduce c (Fix mfix idx args ρ)) := { *)
+    (*       | @exist (@exist (tConstruct ind n ui, ρ') prf) eq3 := rec reduce fn π ; *)
+    (*       | _ := exist _ (tFix mfix idx, π) _ *)
+    (*       } ; *)
+    (*     | _ := exist _ (tFix mfix idx, π) _ *)
+    (*     } ; *)
+    (*   | _ := exist _ (tFix mfix idx, π) _ *)
+    (*   } ; *)
+    (* | false := exist _ (tFix mfix idx, π) _ *)
+    (* } ; *)
 
     (* Nothing special seems to be done for Π-types. *)
     (* _reduce_stack Γ (tProd na A B) *)

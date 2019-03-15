@@ -175,14 +175,6 @@ Section Normalisation.
     unfold R in hy. assumption.
   Qed.
 
-  (* Req doesn't have to be this.
-     It only needs to be reflexive and have the following property:
-     Req u v -> R v w -> Req u w
-     So it remains unclear if it can be anything else interesting than
-     the current definition, but it opens the possibility.
-     The hope would be that it is easier to reason on.
-     By concluding on the first component perhaps for reduction.
-   *)
   Definition Req Σ Γ t t' :=
     t = t' \/ R Σ Γ t t'.
 

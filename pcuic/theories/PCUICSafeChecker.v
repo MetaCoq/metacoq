@@ -48,33 +48,24 @@ Section Normalisation.
 
   Derive NoConfusion NoConfusionHom Subterm for term.
 
-  (* TODO Change constructor for Fix, it should highlight the nth argument *)
   Inductive stack : Type :=
   | Empty
   | App (t : term) (e : stack)
-  | Fix (f : mfixpoint term) (n : nat) (e : stack)
+  | Fix (f : mfixpoint term) (n : nat) (args : list term) (e : stack)
   | Case (indn : inductive * nat) (pred : term) (brs : list (nat * term)) (e : stack).
 
   Fixpoint zipc t stack :=
     match stack with
     | Empty => t
     | App u e => zipc (tApp t u) e
-    | Fix f n e => zipc (tFix f n) e
+    | Fix f n args e => zipc (tApp (mkApps (tFix f n) args) t) e
     | Case indn pred brs e => zipc (tCase indn pred t brs) e
     end.
 
   Definition zip (t : term * stack) := zipc (fst t) (snd t).
 
-  (* Fixpoint stack_args (π : stack) : list term := *)
-  (*   match π with *)
-  (*   | App u π => u :: (stack_args π) *)
-  (*   | _ => [] *)
-  (*   end. *)
-
-  (* Definition zipapp t := mkApps (fst t) (stack_args (snd t)). *)
-
-  (* Get the arguments out of a stack *)
   (* TODO Tail-rec version *)
+  (* Get the arguments out of a stack *)
   Fixpoint decompose_stack π :=
     match π with
     | App u π => let '(l,π) := decompose_stack π in (u :: l, π)
@@ -184,6 +175,14 @@ Section Normalisation.
     unfold R in hy. assumption.
   Qed.
 
+  (* Req doesn't have to be this.
+     It only needs to be reflexive and have the following property:
+     Req u v -> R v w -> Req u w
+     So it remains unclear if it can be anything else interesting than
+     the current definition, but it opens the possibility.
+     The hope would be that it is easier to reason on.
+     By concluding on the first component perhaps for reduction.
+   *)
   Definition Req Σ Γ t t' :=
     t = t' \/ R Σ Γ t t'.
 
@@ -477,20 +476,19 @@ Section Reduce.
     | false := exist _ (tLambda na A t, App a args) _
     } ;
 
-(* TODO Later *)
-    (* _reduce_stack Γ (tFix mfix idx) π h reduce with RedFlags.fix_ flags := { *)
-    (* | true with inspect (unfold_fix mfix idx) := { *)
-    (*   | @exist (Some (narg, fn)) eq1 with inspect (nth_error (stack_args π) narg) := { *)
-    (*     | @exist (Some c) eq2 with inspect (reduce c (Fix mfix idx π) _) := { *)
-    (*       | @exist (@exist ((tConstruct _ _ _), _) prf) eq3 := rec reduce fn π ; *)
-    (*       | _ := exist _ (tFix mfix idx, π) _ *)
-    (*       } ; *)
-    (*     | _ := exist _ (tFix mfix idx, π) _ *)
-    (*     } ; *)
-    (*   | _ := exist _ (tFix mfix idx, π) _ *)
-    (*   } ; *)
-    (* | false := exist _ (tFix mfix idx, π) _ *)
-    (* } ; *)
+    _reduce_stack Γ (tFix mfix idx) π h reduce with RedFlags.fix_ flags := {
+    | true with inspect (unfold_fix mfix idx) := {
+      | @exist (Some (narg, fn)) eq1 with inspect (decompose_stack_at π narg) := {
+        | @exist (Some (args, c, ρ)) eq2 with inspect (reduce c (Fix mfix idx args ρ)) := {
+          | @exist (@exist ((tConstruct _ _ _), _) prf) eq3 := rec reduce fn π ;
+          | _ := exist _ (tFix mfix idx, π) _
+          } ;
+        | _ := exist _ (tFix mfix idx, π) _
+        } ;
+      | _ := exist _ (tFix mfix idx, π) _
+      } ;
+    | false := exist _ (tFix mfix idx, π) _
+    } ;
 
     (* Nothing special seems to be done for Π-types. *)
     (* _reduce_stack Γ (tProd na A B) *)

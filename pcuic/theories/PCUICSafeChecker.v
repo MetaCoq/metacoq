@@ -438,8 +438,7 @@ Section Reduce.
 
     _reduce_stack Γ (tRel c) π h reduce with RedFlags.zeta flags := {
     | true with inspect (nth_error Γ c) := {
-      (* | @exist None eq := ! ; *)
-      | @exist None eq := _ ;
+      | @exist None eq := ! ;
       | @exist (Some d) eq with inspect d.(decl_body) := {
         | @exist None _ := exist _ (tRel c, π) _ ;
         | @exist (Some b) H := rec reduce (lift0 (S c) b) π

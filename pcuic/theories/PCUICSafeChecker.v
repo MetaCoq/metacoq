@@ -421,35 +421,50 @@ Section Reduce.
 
   Definition inspect {A} (x : A) : { y : A | y = x } := exist _ x eq_refl.
 
+  (* Notation givePr := (fun indn c args ρ e => _) (only parsing). *)
+  (* Notation givePr := (_) (only parsing). *)
+  Notation givePr := (I) (only parsing).
+
   Notation rec reduce t π :=
     (let smaller := _ in
      let '(exist _ res prf) := reduce t π smaller in
-     exist _ res (Req_trans _ _ _ _ (R_to_Req smaller))
-    ).
+     exist _ res (conj (Req_trans _ _ _ _ (R_to_Req smaller)) givePr)
+    ) (only parsing).
+
+  Notation give t π :=
+    (exist _ (t,π) (conj _ givePr)) (only parsing).
 
   (* Notation repack t := (let '(exist _ res prf) := t in (exist _ res _)). *)
 
   (* Set Equations Debug. *)
 
+  (* Definition Pr (t' : term * stack) π := *)
+  (*   forall indn c args ρ, *)
+  (*     π = Case indn c args ρ -> *)
+  (*     let '(args', ρ') := decompose_stack (snd t') in *)
+  (*     ρ' = Case indn c args ρ. *)
+
+  Definition Pr (t' : term * stack) (π : stack) := True.
+
   Equations _reduce_stack (Γ : context) (t : term) (π : stack)
             (h : closedn #|Γ| (zip (t,π)) = true)
             (reduce : forall t' π', R (fst Σ) Γ (t',π') (t,π) -> { t'' : term * stack | Req (fst Σ) Γ t'' (t',π')})
-    : { t' : term * stack | Req (fst Σ) Γ t' (t,π) } :=
+    : { t' : term * stack | Req (fst Σ) Γ t' (t,π) /\ Pr t' π } :=
 
     _reduce_stack Γ (tRel c) π h reduce with RedFlags.zeta flags := {
     | true with inspect (nth_error Γ c) := {
       | @exist None eq := ! ;
       | @exist (Some d) eq with inspect d.(decl_body) := {
-        | @exist None _ := exist _ (tRel c, π) _ ;
+        | @exist None _ := give (tRel c) π ;
         | @exist (Some b) H := rec reduce (lift0 (S c) b) π
         }
       } ;
-    | false := exist _ (tRel c, π) _
+    | false := give (tRel c) π
     } ;
 
     _reduce_stack Γ (tLetIn A b B c) π h reduce with RedFlags.zeta flags := {
     | true := rec reduce (subst10 b c) π ;
-    | false := exist _ (tLetIn A b B c, π) _
+    | false := give (tLetIn A b B c) π
     } ;
 
     _reduce_stack Γ (tConst c u) π h reduce with RedFlags.delta flags := {
@@ -457,9 +472,9 @@ Section Reduce.
       | @exist (Some (ConstantDecl _ {| cst_body := Some body |})) eq :=
         let body' := subst_instance_constr u body in
         rec reduce body' π ;
-      | @exist _ eq := exist _ (tConst c u, π) _
+      | @exist _ eq := give (tConst c u) π
       } ;
-    | _ := exist _ (tConst c u, π) _
+    | _ := give (tConst c u) π
     } ;
 
     _reduce_stack Γ (tApp f a) π h reduce :=
@@ -467,7 +482,7 @@ Section Reduce.
 
     _reduce_stack Γ (tLambda na A t) (App a args) h reduce with RedFlags.beta flags := {
     | true := rec reduce (subst10 a t) args ;
-    | false := exist _ (tLambda na A t, App a args) _
+    | false := give (tLambda na A t) (App a args)
     } ;
 
     (* _reduce_stack Γ (tFix mfix idx) π h reduce with RedFlags.fix_ flags := { *)
@@ -493,14 +508,15 @@ Section Reduce.
         | @exist (args, ρ) prf' := rec reduce (iota_red par c' args brs) π
         } ;
       | @exist (@exist (t,π') prf) eq with inspect (decompose_stack π') := {
-        | @exist (args, ρ) prf' := exist _ (tCase (ind, par) p (mkApps t args) brs, π) _
+        | @exist (args, ρ) prf' := give (tCase (ind, par) p (mkApps t args) brs) π
         }
       } ;
-    | false := exist _ (tCase (ind, par) p c brs, π) _
+    | false := give (tCase (ind, par) p c brs) π
     } ;
 
-    _reduce_stack Γ t π h reduce := exist _ (t, π) _.
+    _reduce_stack Γ t π h reduce := give t π.
   Solve All Obligations with (program_simpl ; reflexivity).
+  (* Solve All Obligations with (program_simpl ; unfold Pr ; auto). *)
   Next Obligation.
     econstructor.
     econstructor.
@@ -508,6 +524,12 @@ Section Reduce.
     eapply red_rel. rewrite <- eq. cbn. f_equal.
     symmetry. assumption.
   Qed.
+  (* Next Obligation. *)
+  (*   cbn. destruct prf. *)
+  (*   - inversion H1. subst. *)
+  (*     cbn. reflexivity. *)
+  (*   - dependent destruction H1. *)
+  (*     + cbn in H1. *)
   Next Obligation.
     pose proof (closedn_context _ _ h) as hc. simpl in hc.
     (* Should be a lemma! *)

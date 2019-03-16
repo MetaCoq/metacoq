@@ -421,13 +421,13 @@ Section Reduce.
 
   Definition inspect {A} (x : A) : { y : A | y = x } := exist _ x eq_refl.
 
-  (* Notation givePr := (fun indn c args ρ e => _) (only parsing). *)
+  Notation givePr := (fun indn c args ρ e => _) (only parsing).
   (* Notation givePr := (_) (only parsing). *)
-  Notation givePr := (I) (only parsing).
+  (* Notation givePr := (I) (only parsing). *)
 
   Notation rec reduce t π :=
     (let smaller := _ in
-     let '(exist _ res prf) := reduce t π smaller in
+     let '(exist _ res (conj prf h)) := reduce t π smaller in
      exist _ res (conj (Req_trans _ _ _ _ (R_to_Req smaller)) givePr)
     ) (only parsing).
 
@@ -438,17 +438,17 @@ Section Reduce.
 
   (* Set Equations Debug. *)
 
-  (* Definition Pr (t' : term * stack) π := *)
-  (*   forall indn c args ρ, *)
-  (*     π = Case indn c args ρ -> *)
-  (*     let '(args', ρ') := decompose_stack (snd t') in *)
-  (*     ρ' = Case indn c args ρ. *)
+  Definition Pr (t' : term * stack) π :=
+    forall indn c args ρ,
+      π = Case indn c args ρ ->
+      let '(args', ρ') := decompose_stack (snd t') in
+      ρ' = Case indn c args ρ.
 
-  Definition Pr (t' : term * stack) (π : stack) := True.
+  (* Definition Pr (t' : term * stack) (π : stack) := True. *)
 
   Equations _reduce_stack (Γ : context) (t : term) (π : stack)
             (h : closedn #|Γ| (zip (t,π)) = true)
-            (reduce : forall t' π', R (fst Σ) Γ (t',π') (t,π) -> { t'' : term * stack | Req (fst Σ) Γ t'' (t',π')})
+            (reduce : forall t' π', R (fst Σ) Γ (t',π') (t,π) -> { t'' : term * stack | Req (fst Σ) Γ t'' (t',π') /\ Pr t'' π' })
     : { t' : term * stack | Req (fst Σ) Γ t' (t,π) /\ Pr t' π } :=
 
     _reduce_stack Γ (tRel c) π h reduce with RedFlags.zeta flags := {
@@ -524,12 +524,11 @@ Section Reduce.
     eapply red_rel. rewrite <- eq. cbn. f_equal.
     symmetry. assumption.
   Qed.
-  (* Next Obligation. *)
-  (*   cbn. destruct prf. *)
-  (*   - inversion H1. subst. *)
-  (*     cbn. reflexivity. *)
-  (*   - dependent destruction H1. *)
-  (*     + cbn in H1. *)
+  Next Obligation.
+    cbn. unfold Pr in h.
+    specialize h with (1 := eq_refl).
+    cbn in h. assumption.
+  Qed.
   Next Obligation.
     pose proof (closedn_context _ _ h) as hc. simpl in hc.
     (* Should be a lemma! *)
@@ -550,8 +549,21 @@ Section Reduce.
     econstructor.
   Qed.
   Next Obligation.
+    cbn. unfold Pr in h.
+    specialize h with (1 := eq_refl).
+    cbn in h. assumption.
+  Qed.
+  Next Obligation.
     eapply Subterm.right_lex. cbn. constructor. constructor.
   Qed.
+  Next Obligation.
+    (* Pr probably needs to be updated to decompose π as well. *)
+    (* unfold Pr in H1. *)
+    (* cbn. unfold Pr in h. *)
+    (* specialize h with (1 := eq_refl). *)
+    (* cbn in h. assumption. *)
+  (* Qed. *)
+  Admitted.
   Next Obligation.
     econstructor. econstructor. eapply red1_context.
     econstructor.
@@ -570,40 +582,51 @@ Section Reduce.
     - cbn. reflexivity.
   Qed.
   Next Obligation.
+    cbn. unfold Pr in h.
+    specialize h with (1 := eq_refl).
+    cbn in h. assumption.
+  Qed.
+  Next Obligation.
     eapply Subterm.right_lex. cbn. constructor. constructor.
   Qed.
   Next Obligation.
-    clear - prf prf'. subst t. destruct prf.
-    - inversion H. subst. clear H.
-      cbn in prf'. inversion prf'. subst. clear prf'.
-      reflexivity.
-    - dependent destruction H.
-      + cbn in H0. inversion H0. subst. clear H0.
-        symmetry in prf'.
-        pose proof (decompose_stack_eq _ _ _ prf') as eq.
-        subst.
-        rewrite zipc_appstack in H1.
-        right. econstructor. cbn.
-        (* It seems we lost too much information by saying the whole case
-           reduces.
-           We would like to know that c itself reduced to a constructor!
-           Actually, it might be that the definition itself is wrong!
-           Or we need a property that (t,Case) reduces to (t',Case), never going
-           under the Case.
-         *)
-        (* destruct ρ. *)
-        (* * cbn in H1. *)
-        admit.
-      + cbn in H0. inversion H0. subst. clear H0.
-        symmetry in prf'.
-        pose proof (decompose_stack_eq _ _ _ prf') as eq.
-        subst.
-        cbn in H5.
-        rewrite zipc_appstack in H5.
-        right. unfold R. cbn. rewrite H5.
-        (* eapply Subterm.right_lex. *)
-        (* Once again, not very clear... *)
-        admit.
+    clear - prf' r p0. unfold Pr in p0.
+    specialize p0 with (1 := eq_refl).
+    cbn in p0. rewrite <- prf' in p0. subst.
+
+
+
+    (* clear - prf prf'. subst t. destruct prf. *)
+    (* - inversion H. subst. clear H. *)
+    (*   cbn in prf'. inversion prf'. subst. clear prf'. *)
+    (*   reflexivity. *)
+    (* - dependent destruction H. *)
+    (*   + cbn in H0. inversion H0. subst. clear H0. *)
+    (*     symmetry in prf'. *)
+    (*     pose proof (decompose_stack_eq _ _ _ prf') as eq. *)
+    (*     subst. *)
+    (*     rewrite zipc_appstack in H1. *)
+    (*     right. econstructor. cbn. *)
+    (*     (* It seems we lost too much information by saying the whole case *)
+    (*        reduces. *)
+    (*        We would like to know that c itself reduced to a constructor! *)
+    (*        Actually, it might be that the definition itself is wrong! *)
+    (*        Or we need a property that (t,Case) reduces to (t',Case), never going *)
+    (*        under the Case. *)
+    (*      *) *)
+    (*     (* destruct ρ. *) *)
+    (*     (* * cbn in H1. *) *)
+    (*     admit. *)
+    (*   + cbn in H0. inversion H0. subst. clear H0. *)
+    (*     symmetry in prf'. *)
+    (*     pose proof (decompose_stack_eq _ _ _ prf') as eq. *)
+    (*     subst. *)
+    (*     cbn in H5. *)
+    (*     rewrite zipc_appstack in H5. *)
+    (*     right. unfold R. cbn. rewrite H5. *)
+    (*     (* eapply Subterm.right_lex. *) *)
+    (*     (* Once again, not very clear... *) *)
+    (*     admit. *)
   Admitted.
   Next Obligation.
   Admitted.

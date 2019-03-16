@@ -419,6 +419,17 @@ Section Reduce.
       closedn n (fst t).
   Admitted.
 
+  Lemma zipc_inj :
+    forall u v π, zipc u π = zipc v π -> u = v.
+  Proof.
+    intros u v π e. revert u v e.
+    induction π ; intros u v e.
+    - cbn in e. assumption.
+    - cbn in e. apply IHπ in e. inversion e. reflexivity.
+    - cbn in e. apply IHπ in e. inversion e. reflexivity.
+    - cbn in e. apply IHπ in e. inversion e. reflexivity.
+  Qed.
+
   Definition inspect {A} (x : A) : { y : A | y = x } := exist _ x eq_refl.
 
   Notation givePr := (fun indn c args ρ e => _) (only parsing).
@@ -607,22 +618,7 @@ Section Reduce.
         right. econstructor. assumption.
       + cbn in H0. inversion H0. subst. clear H0.
         rewrite zipc_appstack in H5. cbn in H5.
-        (* right. unfold R. *)
-        (* cbn. rewrite <- H5. *)
-        (* eapply Subterm.right_lex. *)
-        (* econstructor. econstructor. *)
-
-        (* TODO Take out as a lemma *)
-        assert (forall u v π, zipc u π = zipc v π -> u = v).
-        { clear. intros u v π e. revert u v e.
-          induction π ; intros u v e.
-          - cbn in e. assumption.
-          - cbn in e. apply IHπ in e. inversion e. reflexivity.
-          - cbn in e. apply IHπ in e. inversion e. reflexivity.
-          - cbn in e. apply IHπ in e. inversion e. reflexivity.
-        }
-
-        apply H0 in H5. inversion H5. subst. reflexivity.
+        apply zipc_inj in H5. inversion H5. subst. reflexivity.
   Qed.
   Next Obligation.
   Admitted.

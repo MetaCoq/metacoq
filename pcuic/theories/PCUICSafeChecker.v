@@ -593,41 +593,37 @@ Section Reduce.
     clear - prf' r p0. unfold Pr in p0.
     specialize p0 with (1 := eq_refl).
     cbn in p0. rewrite <- prf' in p0. subst.
+    symmetry in prf'.
+    pose proof (decompose_stack_eq _ _ _ prf'). subst.
+    subst t.
+    destruct r.
+    - inversion H. subst. clear H.
+      destruct args.
+      + cbn. reflexivity.
+      + cbn in H2. discriminate H2.
+    - dependent destruction H.
+      + cbn in H0. inversion H0. subst. clear H0.
+        rewrite zipc_appstack in H1. cbn in H1.
+        right. econstructor. assumption.
+      + cbn in H0. inversion H0. subst. clear H0.
+        rewrite zipc_appstack in H5. cbn in H5.
+        (* right. unfold R. *)
+        (* cbn. rewrite <- H5. *)
+        (* eapply Subterm.right_lex. *)
+        (* econstructor. econstructor. *)
 
+        (* TODO Take out as a lemma *)
+        assert (forall u v π, zipc u π = zipc v π -> u = v).
+        { clear. intros u v π e. revert u v e.
+          induction π ; intros u v e.
+          - cbn in e. assumption.
+          - cbn in e. apply IHπ in e. inversion e. reflexivity.
+          - cbn in e. apply IHπ in e. inversion e. reflexivity.
+          - cbn in e. apply IHπ in e. inversion e. reflexivity.
+        }
 
-
-    (* clear - prf prf'. subst t. destruct prf. *)
-    (* - inversion H. subst. clear H. *)
-    (*   cbn in prf'. inversion prf'. subst. clear prf'. *)
-    (*   reflexivity. *)
-    (* - dependent destruction H. *)
-    (*   + cbn in H0. inversion H0. subst. clear H0. *)
-    (*     symmetry in prf'. *)
-    (*     pose proof (decompose_stack_eq _ _ _ prf') as eq. *)
-    (*     subst. *)
-    (*     rewrite zipc_appstack in H1. *)
-    (*     right. econstructor. cbn. *)
-    (*     (* It seems we lost too much information by saying the whole case *)
-    (*        reduces. *)
-    (*        We would like to know that c itself reduced to a constructor! *)
-    (*        Actually, it might be that the definition itself is wrong! *)
-    (*        Or we need a property that (t,Case) reduces to (t',Case), never going *)
-    (*        under the Case. *)
-    (*      *) *)
-    (*     (* destruct ρ. *) *)
-    (*     (* * cbn in H1. *) *)
-    (*     admit. *)
-    (*   + cbn in H0. inversion H0. subst. clear H0. *)
-    (*     symmetry in prf'. *)
-    (*     pose proof (decompose_stack_eq _ _ _ prf') as eq. *)
-    (*     subst. *)
-    (*     cbn in H5. *)
-    (*     rewrite zipc_appstack in H5. *)
-    (*     right. unfold R. cbn. rewrite H5. *)
-    (*     (* eapply Subterm.right_lex. *) *)
-    (*     (* Once again, not very clear... *) *)
-    (*     admit. *)
-  Admitted.
+        apply H0 in H5. inversion H5. subst. reflexivity.
+  Qed.
   Next Obligation.
   Admitted.
   Next Obligation.

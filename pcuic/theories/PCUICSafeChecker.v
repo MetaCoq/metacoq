@@ -563,28 +563,35 @@ Section Reduce.
   Next Obligation.
     cbn. case_eq (decompose_stack args).
     intros l θ e1 e2. subst.
-    Fail idtac.
+    unfold Pr in H1.
+    rewrite e1 in H1. specialize H1 with (1 := eq_refl).
+    cbn in H1. assumption.
+  Qed.
+  Next Obligation.
+    cbn. case_eq (decompose_stack args).
+    intros. assumption.
+  Qed.
   Next Obligation.
     econstructor. econstructor.
     eapply red1_context.
     econstructor.
   Qed.
   Next Obligation.
-    cbn. unfold Pr in h.
-    specialize h with (1 := eq_refl).
-    cbn in h. assumption.
+    cbn. case_eq (decompose_stack π).
+    intros l θ e1 e2. subst.
+    unfold Pr in H1. rewrite e1 in H1.
+    specialize H1 with (1 := eq_refl).
+    cbn in H1. assumption.
   Qed.
   Next Obligation.
     eapply Subterm.right_lex. cbn. constructor. constructor.
   Qed.
   Next Obligation.
-    (* Pr probably needs to be updated to decompose π as well. *)
-    (* unfold Pr in H1. *)
-    (* cbn. unfold Pr in h. *)
-    (* specialize h with (1 := eq_refl). *)
-    (* cbn in h. assumption. *)
-  (* Qed. *)
-  Admitted.
+    cbn. case_eq (decompose_stack π).
+    intros l θ e1 e2. subst.
+    unfold Pr in H1. cbn in H1. rewrite e1 in H1.
+    specialize H1 with (1 := eq_refl). assumption.
+  Qed.
   Next Obligation.
     econstructor. econstructor. eapply red1_context.
     econstructor.
@@ -603,17 +610,20 @@ Section Reduce.
     - cbn. reflexivity.
   Qed.
   Next Obligation.
-    cbn. unfold Pr in h.
-    specialize h with (1 := eq_refl).
-    cbn in h. assumption.
+    cbn. case_eq (decompose_stack π).
+    intros l θ e1 e2. subst.
+    unfold Pr in H1. rewrite e1 in H1.
+    specialize H1 with (1 := eq_refl).
+    cbn in H1. assumption.
   Qed.
   Next Obligation.
     eapply Subterm.right_lex. cbn. constructor. constructor.
   Qed.
   Next Obligation.
     clear - prf' r p0. unfold Pr in p0.
+    cbn in p0.
     specialize p0 with (1 := eq_refl).
-    cbn in p0. rewrite <- prf' in p0. subst.
+    rewrite <- prf' in p0. subst.
     symmetry in prf'.
     pose proof (decompose_stack_eq _ _ _ prf'). subst.
     subst t.
@@ -631,7 +641,7 @@ Section Reduce.
         apply zipc_inj in H5. inversion H5. subst. reflexivity.
   Qed.
   Next Obligation.
-  Admitted.
+
   Next Obligation.
   Admitted.
   Next Obligation.

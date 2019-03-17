@@ -932,13 +932,113 @@ Section Reduce.
           admit.
   Admitted.
   Next Obligation.
-
+    case_eq (decompose_stack π).
+    intros l θ e1 e2. subst.
+    unfold Pr in H1.
+    rewrite e1 in H1. cbn in H1.
+    specialize H1 with (1 := eq_refl).
+    cbn. assumption.
+  Qed.
   Next Obligation.
-  Admitted.
+    clear eq reduce h.
+    destruct r.
+    - inversion H0. subst. subst t.
+      clear H0.
+      cbn in prf'. inversion prf'. subst. reflexivity.
+    - unfold Pr in p0. cbn in p0.
+      specialize p0 with (1 := eq_refl).
+      rewrite <- prf' in p0. subst. subst t.
+      dependent destruction H0.
+      + cbn in H0. symmetry in prf'.
+        pose proof (decompose_stack_eq _ _ _ prf'). subst.
+        rewrite zipc_appstack in H0. cbn in H0.
+        right. econstructor. assumption.
+      + cbn in H1. inversion H1. subst. clear H1.
+        symmetry in prf'.
+        pose proof (decompose_stack_eq _ _ _ prf'). subst.
+        rewrite zipc_appstack in H3. cbn in H3.
+        apply zipc_inj in H3. inversion H3. subst.
+        reflexivity.
+  Qed.
   Next Obligation.
-  Admitted.
+    case_eq (decompose_stack π).
+    intros l θ e1 e2. assumption.
+  Qed.
   Next Obligation.
-  Admitted.
+    clear eq reduce h.
+    destruct r.
+    - inversion H0. subst. subst t.
+      clear H0.
+      cbn in prf'. inversion prf'. subst. reflexivity.
+    - unfold Pr in p0. cbn in p0.
+      specialize p0 with (1 := eq_refl).
+      rewrite <- prf' in p0. subst. subst t.
+      dependent destruction H0.
+      + cbn in H0. symmetry in prf'.
+        pose proof (decompose_stack_eq _ _ _ prf'). subst.
+        rewrite zipc_appstack in H0. cbn in H0.
+        right. econstructor. assumption.
+      + cbn in H1. inversion H1. subst. clear H1.
+        symmetry in prf'.
+        pose proof (decompose_stack_eq _ _ _ prf'). subst.
+        rewrite zipc_appstack in H3. cbn in H3.
+        apply zipc_inj in H3. inversion H3. subst.
+        reflexivity.
+  Qed.
+  Next Obligation.
+    case_eq (decompose_stack π).
+    intros l θ e1 e2. assumption.
+  Qed.
+  Next Obligation.
+    clear eq reduce h.
+    destruct r.
+    - inversion H0. subst. subst t.
+      clear H0.
+      cbn in prf'. inversion prf'. subst. reflexivity.
+    - unfold Pr in p0. cbn in p0.
+      specialize p0 with (1 := eq_refl).
+      rewrite <- prf' in p0. subst. subst t.
+      dependent destruction H0.
+      + cbn in H0. symmetry in prf'.
+        pose proof (decompose_stack_eq _ _ _ prf'). subst.
+        rewrite zipc_appstack in H0. cbn in H0.
+        right. econstructor. assumption.
+      + cbn in H1. inversion H1. subst. clear H1.
+        symmetry in prf'.
+        pose proof (decompose_stack_eq _ _ _ prf'). subst.
+        rewrite zipc_appstack in H3. cbn in H3.
+        apply zipc_inj in H3. inversion H3. subst.
+        reflexivity.
+  Qed.
+  Next Obligation.
+    case_eq (decompose_stack π).
+    intros l θ e1 e2. assumption.
+  Qed.
+  Next Obligation.
+    clear eq reduce h.
+    destruct r.
+    - inversion H0. subst. subst t.
+      clear H0.
+      cbn in prf'. inversion prf'. subst. reflexivity.
+    - unfold Pr in p0. cbn in p0.
+      specialize p0 with (1 := eq_refl).
+      rewrite <- prf' in p0. subst. subst t.
+      dependent destruction H0.
+      + cbn in H0. symmetry in prf'.
+        pose proof (decompose_stack_eq _ _ _ prf'). subst.
+        rewrite zipc_appstack in H0. cbn in H0.
+        right. econstructor. assumption.
+      + cbn in H1. inversion H1. subst. clear H1.
+        symmetry in prf'.
+        pose proof (decompose_stack_eq _ _ _ prf'). subst.
+        rewrite zipc_appstack in H3. cbn in H3.
+        apply zipc_inj in H3. inversion H3. subst.
+        reflexivity.
+  Qed.
+  Next Obligation.
+    case_eq (decompose_stack π).
+    intros l θ e1 e2. assumption.
+  Qed.
   (* Next Obligation. *)
   (*   (* Problem. Once again the order is too restrictive. *)
   (*      We also need to allow reduction on the stack it seems. *)
@@ -982,7 +1082,7 @@ Section Reduce.
     reduce_stack Γ t A π h :=
       let '(exist _ ts _) :=
           Fix_F (R := R (fst Σ) Γ)
-                (fun x => closedn #|Γ| (zip x) = true -> { t' : term * stack | Req (fst Σ) Γ t' x })
+                (fun x => closedn #|Γ| (zip x) = true -> { t' : term * stack | Req (fst Σ) Γ t' x /\ Pr t' (snd x) })
                 (fun t' f => _) (x := (t, π)) _ _
       in ts.
   Next Obligation.

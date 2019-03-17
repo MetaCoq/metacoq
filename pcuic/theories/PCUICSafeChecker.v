@@ -142,17 +142,25 @@ Section Normalisation.
   Definition R Σ Γ u v :=
     Subterm.lexprod _ _ (cored Σ Γ) term_subterm (zip u, fst u) (zip v, fst v).
 
+  Inductive welltyped Σ Γ t : Prop :=
+  | iswelltyped A : Σ ;;; Γ |- t : A -> welltyped Σ Γ t.
+
+  (* Axiom normalisation : *)
+  (*   forall Σ Γ t A, *)
+  (*     Σ ;;; Γ |- t : A -> *)
+  (*     Acc (cored (fst Σ) Γ) t. *)
+
   Axiom normalisation :
-    forall Σ Γ t A,
-      Σ ;;; Γ |- t : A ->
+    forall Σ Γ t,
+      welltyped Σ Γ t ->
       Acc (cored (fst Σ) Γ) t.
 
   Corollary R_Acc_aux :
-    forall Σ Γ t A,
-      Σ ;;; Γ |- zip t : A ->
+    forall Σ Γ t,
+      welltyped Σ Γ (zip t) ->
       Acc (Subterm.lexprod _ _ (cored (fst Σ) Γ) term_subterm) (zip t, fst t).
   Proof.
-    intros Σ Γ t A h.
+    intros Σ Γ t h.
     eapply Subterm.acc_A_B_lexprod.
     - eapply normalisation. eassumption.
     - eapply well_founded_term_subterm.
@@ -162,13 +170,13 @@ Section Normalisation.
   Derive Signature for Acc.
 
   Corollary R_Acc :
-    forall Σ Γ t A,
-      Σ ;;; Γ |- zip t : A ->
+    forall Σ Γ t,
+      welltyped Σ Γ (zip t) ->
       Acc (R (fst Σ) Γ) t.
   Proof.
-    intros Σ Γ t A h.
-    pose proof (R_Acc_aux _ _ _ _ h) as h'.
-    clear A h. rename h' into h.
+    intros Σ Γ t h.
+    pose proof (R_Acc_aux _ _ _ h) as h'.
+    clear h. rename h' into h.
     dependent induction h.
     constructor. intros y hy.
     eapply H1 ; try reflexivity.
@@ -1078,7 +1086,7 @@ Section Reduce.
   Admitted.
 
   Equations reduce_stack (Γ : context) (t A : term) (π : stack)
-           (h : Σ ;;; Γ |- zip (t,π) : A) : term * stack :=
+           (h : welltyped Σ Γ (zip (t,π))) : term * stack :=
     reduce_stack Γ t A π h :=
       let '(exist _ ts _) :=
           Fix_F (R := R (fst Σ) Γ)
@@ -1103,6 +1111,7 @@ Section Reduce.
     eapply R_Acc. eassumption.
   Qed.
   Next Obligation.
+    destruct h.
     eapply closedn_typed. eassumption.
   Qed.
 

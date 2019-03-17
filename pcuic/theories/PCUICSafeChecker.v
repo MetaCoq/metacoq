@@ -641,51 +641,298 @@ Section Reduce.
         apply zipc_inj in H5. inversion H5. subst. reflexivity.
   Qed.
   Next Obligation.
-
+    case_eq (decompose_stack π).
+    intros l θ e1 e2. assumption.
+  Qed.
   Next Obligation.
-  Admitted.
+    clear - prf' r p0. unfold Pr in p0.
+    cbn in p0.
+    specialize p0 with (1 := eq_refl).
+    rewrite <- prf' in p0. subst.
+    symmetry in prf'.
+    pose proof (decompose_stack_eq _ _ _ prf'). subst.
+    subst t.
+    destruct r.
+    - inversion H. subst. clear H.
+      destruct args.
+      + cbn. reflexivity.
+      + cbn in H2. discriminate H2.
+    - dependent destruction H.
+      + cbn in H0. inversion H0. subst. clear H0.
+        rewrite zipc_appstack in H1. cbn in H1.
+        right. econstructor. assumption.
+      + cbn in H0. inversion H0. subst. clear H0.
+        rewrite zipc_appstack in H5. cbn in H5.
+        apply zipc_inj in H5. inversion H5. subst. reflexivity.
+  Qed.
   Next Obligation.
-  Admitted.
+    case_eq (decompose_stack π).
+    intros l θ e1 e2. assumption.
+  Qed.
   Next Obligation.
-  Admitted.
+    clear - prf' r p0. unfold Pr in p0.
+    cbn in p0.
+    specialize p0 with (1 := eq_refl).
+    rewrite <- prf' in p0. subst.
+    symmetry in prf'.
+    pose proof (decompose_stack_eq _ _ _ prf'). subst.
+    subst t.
+    destruct r.
+    - inversion H. subst. clear H.
+      destruct args.
+      + cbn. reflexivity.
+      + cbn in H2. discriminate H2.
+    - dependent destruction H.
+      + cbn in H0. inversion H0. subst. clear H0.
+        rewrite zipc_appstack in H1. cbn in H1.
+        right. econstructor. assumption.
+      + cbn in H0. inversion H0. subst. clear H0.
+        rewrite zipc_appstack in H5. cbn in H5.
+        apply zipc_inj in H5. inversion H5. subst. reflexivity.
+  Qed.
   Next Obligation.
-  Admitted.
+    case_eq (decompose_stack π).
+    intros l θ e1 e2. assumption.
+  Qed.
   Next Obligation.
-  Admitted.
+    clear - prf' r p0. unfold Pr in p0.
+    cbn in p0.
+    specialize p0 with (1 := eq_refl).
+    rewrite <- prf' in p0. subst.
+    symmetry in prf'.
+    pose proof (decompose_stack_eq _ _ _ prf'). subst.
+    subst t.
+    destruct r.
+    - inversion H. subst. clear H.
+      destruct args.
+      + cbn. reflexivity.
+      + cbn in H2. discriminate H2.
+    - dependent destruction H.
+      + cbn in H0. inversion H0. subst. clear H0.
+        rewrite zipc_appstack in H1. cbn in H1.
+        right. econstructor. assumption.
+      + cbn in H0. inversion H0. subst. clear H0.
+        rewrite zipc_appstack in H5. cbn in H5.
+        apply zipc_inj in H5. inversion H5. subst. reflexivity.
+  Qed.
   Next Obligation.
-  Admitted.
+    case_eq (decompose_stack π).
+    intros l θ e1 e2. assumption.
+  Qed.
   Next Obligation.
-  Admitted.
+    clear - prf' r p0. unfold Pr in p0.
+    cbn in p0.
+    specialize p0 with (1 := eq_refl).
+    rewrite <- prf' in p0. subst.
+    symmetry in prf'.
+    pose proof (decompose_stack_eq _ _ _ prf'). subst.
+    subst t.
+    destruct r.
+    - inversion H. subst. clear H.
+      destruct args.
+      + cbn. reflexivity.
+      + cbn in H2. discriminate H2.
+    - dependent destruction H.
+      + cbn in H0. inversion H0. subst. clear H0.
+        rewrite zipc_appstack in H1. cbn in H1.
+        right. econstructor. assumption.
+      + cbn in H0. inversion H0. subst. clear H0.
+        rewrite zipc_appstack in H5. cbn in H5.
+        apply zipc_inj in H5. inversion H5. subst. reflexivity.
+  Qed.
   Next Obligation.
-  Admitted.
+    case_eq (decompose_stack π).
+    intros l θ e1 e2. assumption.
+  Qed.
   Next Obligation.
-  Admitted.
+    clear - prf' r p0. unfold Pr in p0.
+    cbn in p0.
+    specialize p0 with (1 := eq_refl).
+    rewrite <- prf' in p0. subst.
+    symmetry in prf'.
+    pose proof (decompose_stack_eq _ _ _ prf'). subst.
+    subst t.
+    destruct r.
+    - inversion H. subst. clear H.
+      destruct args.
+      + cbn. reflexivity.
+      + cbn in H2. discriminate H2.
+    - dependent destruction H.
+      + cbn in H0. inversion H0. subst. clear H0.
+        rewrite zipc_appstack in H1. cbn in H1.
+        right. econstructor. assumption.
+      + cbn in H0. inversion H0. subst. clear H0.
+        rewrite zipc_appstack in H5. cbn in H5.
+        apply zipc_inj in H5. inversion H5. subst. reflexivity.
+  Qed.
   Next Obligation.
+    case_eq (decompose_stack π).
+    intros l θ e1 e2. assumption.
+  Qed.
+  Next Obligation.
+    clear - prf' r p0. unfold Pr in p0.
+    cbn in p0.
+    specialize p0 with (1 := eq_refl).
+    rewrite <- prf' in p0. subst.
+    symmetry in prf'.
+    pose proof (decompose_stack_eq _ _ _ prf'). subst.
+    subst t.
+    destruct r.
+    - inversion H. subst. clear H.
+      destruct args.
+      + cbn. reflexivity.
+      + cbn in H2. discriminate H2.
+    - dependent destruction H.
+      + cbn in H0. inversion H0. subst. clear H0.
+        rewrite zipc_appstack in H1. cbn in H1.
+        right. econstructor. assumption.
+      + cbn in H0. inversion H0. subst. clear H0.
+        rewrite zipc_appstack in H5. cbn in H5.
+        apply zipc_inj in H5. inversion H5. subst. reflexivity.
+  Qed.
+  Next Obligation.
+    case_eq (decompose_stack π).
+    intros l θ e1 e2. assumption.
+  Qed.
+  Next Obligation.
+    clear - prf' r p0. unfold Pr in p0.
+    cbn in p0.
+    specialize p0 with (1 := eq_refl).
+    rewrite <- prf' in p0. subst.
+    symmetry in prf'.
+    pose proof (decompose_stack_eq _ _ _ prf'). subst.
+    subst t.
+    destruct r.
+    - inversion H. subst. clear H.
+      destruct args.
+      + cbn. reflexivity.
+      + cbn in H2. discriminate H2.
+    - dependent destruction H.
+      + cbn in H0. inversion H0. subst. clear H0.
+        rewrite zipc_appstack in H1. cbn in H1.
+        right. econstructor. assumption.
+      + cbn in H0. inversion H0. subst. clear H0.
+        rewrite zipc_appstack in H5. cbn in H5.
+        apply zipc_inj in H5. inversion H5. subst. reflexivity.
+  Qed.
+  Next Obligation.
+    case_eq (decompose_stack π).
+    intros l θ e1 e2. assumption.
+  Qed.
+  Next Obligation.
+    clear - prf' r p0. unfold Pr in p0.
+    cbn in p0.
+    specialize p0 with (1 := eq_refl).
+    rewrite <- prf' in p0. subst.
+    symmetry in prf'.
+    pose proof (decompose_stack_eq _ _ _ prf'). subst.
+    subst t.
+    destruct r.
+    - inversion H. subst. clear H.
+      destruct args.
+      + cbn. reflexivity.
+      + cbn in H2. discriminate H2.
+    - dependent destruction H.
+      + cbn in H0. inversion H0. subst. clear H0.
+        rewrite zipc_appstack in H1. cbn in H1.
+        right. econstructor. assumption.
+      + cbn in H0. inversion H0. subst. clear H0.
+        rewrite zipc_appstack in H5. cbn in H5.
+        apply zipc_inj in H5. inversion H5. subst. reflexivity.
+  Qed.
+  Next Obligation.
+    case_eq (decompose_stack π).
+    intros l θ e1 e2. assumption.
+  Qed.
+  Next Obligation.
+    clear - prf' r p0. unfold Pr in p0.
+    cbn in p0.
+    specialize p0 with (1 := eq_refl).
+    rewrite <- prf' in p0. subst.
+    symmetry in prf'.
+    pose proof (decompose_stack_eq _ _ _ prf'). subst.
+    subst t.
+    destruct r.
+    - inversion H. subst. clear H.
+      destruct args.
+      + cbn. reflexivity.
+      + cbn in H2. discriminate H2.
+    - dependent destruction H.
+      + cbn in H0. inversion H0. subst. clear H0.
+        rewrite zipc_appstack in H1. cbn in H1.
+        right. econstructor. assumption.
+      + cbn in H0. inversion H0. subst. clear H0.
+        rewrite zipc_appstack in H5. cbn in H5.
+        apply zipc_inj in H5. inversion H5. subst. reflexivity.
+  Qed.
+  Next Obligation.
+    case_eq (decompose_stack π).
+    intros l θ e1 e2. assumption.
+  Qed.
+  Next Obligation.
+    clear - prf' r p0. unfold Pr in p0.
+    cbn in p0.
+    specialize p0 with (1 := eq_refl).
+    rewrite <- prf' in p0. subst.
+    symmetry in prf'.
+    pose proof (decompose_stack_eq _ _ _ prf'). subst.
+    subst t.
+    destruct r.
+    - inversion H. subst. clear H.
+      destruct args.
+      + cbn. reflexivity.
+      + cbn in H2. discriminate H2.
+    - dependent destruction H.
+      + cbn in H0. inversion H0. subst. clear H0.
+        rewrite zipc_appstack in H1. cbn in H1.
+        right. econstructor. assumption.
+      + cbn in H0. inversion H0. subst. clear H0.
+        rewrite zipc_appstack in H5. cbn in H5.
+        apply zipc_inj in H5. inversion H5. subst. reflexivity.
+  Qed.
+  Next Obligation.
+    case_eq (decompose_stack π).
+    intros l θ e1 e2. assumption.
+  Qed.
+  Next Obligation.
+    unfold Pr in p0. cbn in p0.
+    specialize p0 with (1 := eq_refl) as hh.
+    rewrite <- prf' in hh. subst.
     eapply R_Req_R.
     - econstructor. econstructor. eapply red1_context.
       eapply red_iota.
-    - (* Fail eapply Req_case. *)
-
-
-    (* econstructor. eapply cored_red_trans. *)
-    (* - eapply red_context. eapply case_reds_discr. *)
-    (*   instantiate (1 := zip (tConstruct ind' c' wildcard, args)). *)
-    (*   (* This involves soundness of reduction. *) *)
-    (*   (* With the Case stack, this becomes a bit tricky... *)
-    (*      It seems zip is not what we want... *)
-    (*    *) *)
-    (*   admit. *)
-    (* - eapply red1_context. cbn. *)
-    (*   Fail eapply red_iota. *)
-    (*   (* This is not clear how to apply the rule. *)
-    (*      We indeed need ind = ind' which cannot be deduced from the context. *)
-    (*      This is actually enforced by typing, which we do not have at the *)
-    (*      moment. *)
-    (*    *) *)
-      admit.
+    - instantiate (4 := ind'). instantiate (2 := p).
+      instantiate (1 := wildcard).
+      destruct r.
+      + inversion e.
+        subst.
+        cbn in prf'. inversion prf'. subst. clear prf'.
+        cbn.
+        (* We still have the ind = ind' problem! *)
+        Fail reflexivity.
+        admit.
+      + clear eq. dependent destruction r.
+        * cbn in H0.
+          symmetry in prf'.
+          pose proof (decompose_stack_eq _ _ _ prf'). subst.
+          rewrite zipc_appstack in H0.
+          cbn in H0.
+          right. econstructor.
+          Fail exact H0.
+          (* Again ind = ind' is missing :( *)
+          admit.
+        * cbn in H1. inversion H1. subst. clear H1.
+          symmetry in prf'.
+          pose proof (decompose_stack_eq _ _ _ prf'). subst.
+          rewrite zipc_appstack in H3. cbn in H3.
+          apply zipc_inj in H3.
+          inversion H3. subst.
+          (* Once again ind = ind' is needed!! *)
+          Fail reflexivity.
+          admit.
   Admitted.
   Next Obligation.
-  Admitted.
+
   Next Obligation.
   Admitted.
   Next Obligation.

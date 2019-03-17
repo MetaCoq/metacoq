@@ -432,7 +432,22 @@ Section Reduce.
 
   Definition inspect {A} (x : A) : { y : A | y = x } := exist _ x eq_refl.
 
-  Notation givePr := (fun indn c args ρ e => _) (only parsing).
+  (* Definition Pr (t' : term * stack) (π : stack) := True. *)
+
+  (* Definition Pr (t' : term * stack) π := *)
+  (*   forall indn c args ρ, *)
+  (*     π = Case indn c args ρ -> *)
+  (*     let '(args', ρ') := decompose_stack (snd t') in *)
+  (*     ρ' = Case indn c args ρ. *)
+
+  Definition Pr (t' : term * stack) π :=
+    forall indn c args ρ,
+      let '(l, θ) := decompose_stack π in
+      θ = Case indn c args ρ ->
+      let '(args', ρ') := decompose_stack (snd t') in
+      ρ' = Case indn c args ρ.
+
+  Notation givePr := (fun indn c args ρ (* e *) => _) (only parsing).
   (* Notation givePr := (_) (only parsing). *)
   (* Notation givePr := (I) (only parsing). *)
 
@@ -444,18 +459,6 @@ Section Reduce.
 
   Notation give t π :=
     (exist _ (t,π) (conj _ givePr)) (only parsing).
-
-  (* Notation repack t := (let '(exist _ res prf) := t in (exist _ res _)). *)
-
-  (* Set Equations Debug. *)
-
-  Definition Pr (t' : term * stack) π :=
-    forall indn c args ρ,
-      π = Case indn c args ρ ->
-      let '(args', ρ') := decompose_stack (snd t') in
-      ρ' = Case indn c args ρ.
-
-  (* Definition Pr (t' : term * stack) (π : stack) := True. *)
 
   Equations _reduce_stack (Γ : context) (t : term) (π : stack)
             (h : closedn #|Γ| (zip (t,π)) = true)
@@ -527,6 +530,7 @@ Section Reduce.
 
     _reduce_stack Γ t π h reduce := give t π.
   Solve All Obligations with (program_simpl ; reflexivity).
+  Solve All Obligations with (program_simpl ; case_eq (decompose_stack π) ; intros ; assumption).
   (* Solve All Obligations with (program_simpl ; unfold Pr ; auto). *)
   Next Obligation.
     econstructor.
@@ -536,9 +540,11 @@ Section Reduce.
     symmetry. assumption.
   Qed.
   Next Obligation.
-    cbn. unfold Pr in h.
+    case_eq (decompose_stack π). intros l θ e1 e2.
+    subst.
+    unfold Pr in h. rewrite e1 in h.
     specialize h with (1 := eq_refl).
-    cbn in h. assumption.
+    cbn in h. cbn. assumption.
   Qed.
   Next Obligation.
     pose proof (closedn_context _ _ h) as hc. simpl in hc.
@@ -554,6 +560,10 @@ Section Reduce.
     econstructor. econstructor.
     cbn. eapply red1_context. econstructor.
   Qed.
+  Next Obligation.
+    cbn. case_eq (decompose_stack args).
+    intros l θ e1 e2. subst.
+    Fail idtac.
   Next Obligation.
     econstructor. econstructor.
     eapply red1_context.

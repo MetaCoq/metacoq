@@ -653,13 +653,13 @@ Section Reduce.
       | @exist (Some (narg, fn)) eq1 with inspect (decompose_stack_at π narg) := {
         | @exist (Some (args, c, ρ)) eq2 with inspect (reduce c (Fix mfix idx args ρ) _) := {
           | @exist (@exist (tConstruct ind n ui, ρ') prf) eq3 := rec reduce fn π ;
-          | _ := exist _ (tFix mfix idx, π) _
+          | _ := give (tFix mfix idx) π
           } ;
-        | _ := exist _ (tFix mfix idx, π) _
+        | _ := give (tFix mfix idx) π
         } ;
-      | _ := exist _ (tFix mfix idx, π) _
+      | _ := give (tFix mfix idx) π
       } ;
-    | false := exist _ (tFix mfix idx, π) _
+    | false := give (tFix mfix idx) π
     } ;
 
     (* Nothing special seems to be done for Π-types. *)
@@ -1220,7 +1220,17 @@ Section Reduce.
   Next Obligation.
     Fail eapply Subterm.right_lex.
   Admitted.
-  Admit Obligations.
+  Solve All Obligations with (program_simpl ; reflexivity).
+  Solve All Obligations with (program_simpl ; case_eq (decompose_stack π) ; intros ; assumption).
+  Next Obligation.
+  Admitted.
+  Next Obligation.
+    case_eq (decompose_stack π). intros l θ e1 e2. subst.
+    cbn. unfold Pr in H1. rewrite e1 in H1.
+    specialize H1 with (1 := eq_refl).
+    cbn in H1. assumption.
+  Qed.
+
 
   (* Next Obligation. *)
   (*   (* Problem. Once again the order is too restrictive. *)

@@ -138,6 +138,45 @@ Section Normalisation.
     | _ => None
     end.
 
+  Lemma decompose_stack_at_eq :
+    forall π n l u ρ,
+      decompose_stack_at π n = Some (l,u,ρ) ->
+      π = appstack l (App u ρ).
+  Proof.
+    intros π n l u ρ h. revert n l u ρ h.
+    induction π ; intros m l u ρ h.
+    all: try solve [ cbn in h ; discriminate ].
+    destruct m.
+    - cbn in h. inversion h. subst.
+      cbn. reflexivity.
+    - cbn in h. revert h.
+      case_eq (decompose_stack_at π m).
+      + intros [[l' v] ρ'] e1 e2.
+        inversion e2. subst. clear e2.
+        specialize IHπ with (1 := e1). subst.
+        cbn. reflexivity.
+      + intros H0 h. discriminate.
+  Qed.
+
+  Lemma decompose_stack_at_length :
+    forall π n l u ρ,
+      decompose_stack_at π n = Some (l,u,ρ) ->
+      #|l| = n.
+  Proof.
+    intros π n l u ρ h. revert n l u ρ h.
+    induction π ; intros m l u ρ h.
+    all: try solve [ cbn in h ; discriminate ].
+    destruct m.
+    - cbn in h. inversion h. reflexivity.
+    - cbn in h. revert h.
+      case_eq (decompose_stack_at π m).
+      + intros [[l' v] ρ'] e1 e2.
+        inversion e2. subst. clear e2.
+        specialize IHπ with (1 := e1). subst.
+        cbn. reflexivity.
+      + intros H0 h. discriminate.
+  Qed.
+
   (* red is the reflexive transitive closure of one-step reduction and thus
      can't be used as well order. We thus define the transitive closure,
      but we take the symmetric version.
@@ -1218,11 +1257,19 @@ Section Reduce.
     intros l θ e1 e2. assumption.
   Qed.
   Next Obligation.
-    Fail eapply Subterm.right_lex.
+    symmetry in eq2.
+    pose proof (decompose_stack_at_eq _ _ _ _ _ eq2). subst.
+    unfold R. cbn. rewrite zipc_appstack. cbn.
+    (* eapply Subterm.right_lex. *)
+    (* Not a subterm! :( *)
   Admitted.
   Solve All Obligations with (program_simpl ; reflexivity).
   Solve All Obligations with (program_simpl ; case_eq (decompose_stack π) ; intros ; assumption).
   Next Obligation.
+    (* clear eq3. *)
+    (* symmetry in eq2. *)
+    (* pose proof (decompose_stack_at_eq _ _ _ _ _ eq2). subst. *)
+    (* unfold R. cbn. rewrite zipc_appstack. cbn. *)
   Admitted.
   Next Obligation.
     case_eq (decompose_stack π). intros l θ e1 e2. subst.

@@ -1266,10 +1266,60 @@ Section Reduce.
   Solve All Obligations with (program_simpl ; reflexivity).
   Solve All Obligations with (program_simpl ; case_eq (decompose_stack π) ; intros ; assumption).
   Next Obligation.
-    (* clear eq3. *)
-    (* symmetry in eq2. *)
-    (* pose proof (decompose_stack_at_eq _ _ _ _ _ eq2). subst. *)
-    (* unfold R. cbn. rewrite zipc_appstack. cbn. *)
+    left.
+    case_eq (decompose_stack π). intros l θ e.
+    pose proof (decompose_stack_eq _ _ _ e). subst.
+    cbn. rewrite 2!zipc_appstack.
+    zip fold. zip fold.
+    eapply cored_context.
+    left. eapply red_fix.
+    - symmetry. eassumption.
+    - unfold is_constructor.
+      clear eq3. symmetry in eq2.
+      pose proof (decompose_stack_at_eq _ _ _ _ _ eq2).
+      pose proof (decompose_stack_at_length _ _ _ _ _ eq2).
+      case_eq (decompose_stack ρ). intros l' θ' e'.
+      pose proof (decompose_stack_eq _ _ _ e'). subst.
+      assert (l = args ++ (c :: l')).
+      { clear - e e' eq2 H0. rename H0 into eq.
+        assert (forall u ρ, θ <> App u ρ) as hθ.
+        { intros u ρ bot. eapply decompose_stack_not_app.
+          subst. eassumption.
+        }
+        assert (forall u ρ, θ' <> App u ρ) as hθ'.
+        { intros u ρ bot. eapply decompose_stack_not_app.
+          subst. eassumption.
+        }
+        clear - hθ hθ' eq.
+        revert args c θ l' θ' eq hθ hθ'.
+        induction l ; intros args c θ l' θ' eq hθ hθ'.
+        - exfalso.
+          cbn in *. subst. destruct args.
+          + cbn in *. eapply hθ. reflexivity.
+          + cbn in *. eapply hθ. reflexivity.
+        - cbn in eq. destruct args.
+          + cbn in *. inversion eq. subst.
+            f_equal. clear - H1 hθ hθ'.
+            revert l' H1.
+            induction l ; intros l' H1.
+            * cbn in *. subst.
+              destruct l' ; try reflexivity.
+              cbn in hθ. exfalso. eapply hθ. reflexivity.
+            * destruct l'.
+              -- cbn in *. exfalso. eapply hθ'.
+                 subst. reflexivity.
+              -- cbn in H1. inversion H1. subst.
+                 f_equal. eapply IHl. assumption.
+          + cbn in *. inversion eq. subst.
+            f_equal. eapply IHl ; eassumption.
+      } subst.
+      rewrite nth_error_app2 by eauto.
+      replace (#|args| - #|args|) with 0 by auto with arith.
+      cbn.
+      (* It was actually wrong.
+         We need to replace c by its reduced version first.
+         Then we can do all this.
+       *)
   Admitted.
   Next Obligation.
     case_eq (decompose_stack π). intros l θ e1 e2. subst.

@@ -427,6 +427,30 @@ Section Reduce.
       closedn n (fst t).
   Admitted.
 
+  Lemma welltyped_context :
+    forall Σ Γ t,
+      welltyped Σ Γ (zip t) ->
+      welltyped Σ Γ (fst t).
+  Proof.
+    intros Σ' Γ [t π] h.
+    destruct h as [A h].
+    revert Γ t A h.
+    induction π ; intros Γ u A h.
+    - cbn. cbn in h. eexists. eassumption.
+    - cbn. cbn in h. cbn in IHπ. apply IHπ in h.
+      destruct h as [B h].
+      (* By inversion on typing *)
+      admit.
+    - cbn. cbn in h. cbn in IHπ. apply IHπ in h.
+      destruct h as [B h].
+      (* By inversion on typing *)
+      admit.
+    - cbn. cbn in h. cbn in IHπ. apply IHπ in h.
+      destruct h as [B h].
+      (* By inversion on typing *)
+      admit.
+  Admitted.
+
   Lemma zipc_inj :
     forall u v π, zipc u π = zipc v π -> u = v.
   Proof.
@@ -468,8 +492,22 @@ Section Reduce.
   Notation give t π :=
     (exist _ (t,π) (conj _ givePr)) (only parsing).
 
+  Tactic Notation "zip" "fold" "in" hyp(h) :=
+    lazymatch type of h with
+    | context C[ zipc ?t ?π ] =>
+      let C' := context C[ zip (t,π) ] in
+      change C' in h
+    end.
+
+  Tactic Notation "zip" "fold" :=
+    lazymatch goal with
+    | |- context C[ zipc ?t ?π ] =>
+      let C' := context C[ zip (t,π) ] in
+      change C'
+    end.
+
   Equations _reduce_stack (Γ : context) (t : term) (π : stack)
-            (h : closedn #|Γ| (zip (t,π)) = true)
+            (h : welltyped Σ Γ (zip (t,π)))
             (reduce : forall t' π', R (fst Σ) Γ (t',π') (t,π) -> { t'' : term * stack | Req (fst Σ) Γ t'' (t',π') /\ Pr t'' π' })
     : { t' : term * stack | Req (fst Σ) Γ t' (t,π) /\ Pr t' π } :=
 
@@ -555,15 +593,21 @@ Section Reduce.
     cbn in h. cbn. assumption.
   Qed.
   Next Obligation.
-    pose proof (closedn_context _ _ h) as hc. simpl in hc.
+    pose proof (welltyped_context _ _ _ h) as hc.
+    simpl in hc.
     (* Should be a lemma! *)
     clear - eq hc. revert c hc eq.
     induction Γ ; intros c hc eq.
-    - cbn in hc. discriminate.
+    - destruct hc as [A h].
+      (* By inversion on typing. *)
+      admit.
     - destruct c.
       + cbn in eq. discriminate.
-      + cbn in eq. eapply IHΓ ; try eassumption. apply hc.
-  Qed.
+      + cbn in eq. eapply IHΓ ; try eassumption.
+        (* Should be doable *)
+        admit.
+  (* Qed. *)
+  Admitted.
   Next Obligation.
     econstructor. econstructor.
     cbn. eapply red1_context. econstructor.
@@ -916,9 +960,14 @@ Section Reduce.
         subst.
         cbn in prf'. inversion prf'. subst. clear prf'.
         cbn.
-        (* We still have the ind = ind' problem! *)
-        Fail reflexivity.
-        admit.
+        assert (ind = ind').
+        { clear - h flags.
+          apply welltyped_context in h.
+          cbn in h. destruct h as [A h].
+          (* This should now follow by inversion of typing *)
+          admit.
+        } subst.
+        reflexivity.
       + clear eq. dependent destruction r.
         * cbn in H0.
           symmetry in prf'.
@@ -926,18 +975,37 @@ Section Reduce.
           rewrite zipc_appstack in H0.
           cbn in H0.
           right. econstructor.
-          Fail exact H0.
-          (* Again ind = ind' is missing :( *)
-          admit.
+          lazymatch goal with
+          | h : cored _ _ ?t _ |- _ =>
+            assert (welltyped Σ Γ t) as h'
+          end.
+          { clear - h H0.
+            (* Here we need subject reduction *)
+            admit.
+          }
+          assert (ind = ind').
+          { clear - h' flags.
+            zip fold in h'.
+            apply welltyped_context in h'.
+            cbn in h'. destruct h' as [A h].
+            (* This should now follow by inversion of typing *)
+            admit.
+          } subst.
+          exact H0.
         * cbn in H1. inversion H1. subst. clear H1.
           symmetry in prf'.
           pose proof (decompose_stack_eq _ _ _ prf'). subst.
           rewrite zipc_appstack in H3. cbn in H3.
           apply zipc_inj in H3.
           inversion H3. subst.
-          (* Once again ind = ind' is needed!! *)
-          Fail reflexivity.
-          admit.
+          assert (ind = ind').
+          { clear - h flags.
+            apply welltyped_context in h.
+            cbn in h. destruct h as [A h].
+            (* This should now follow by inversion of typing *)
+            admit.
+          } subst.
+          reflexivity.
   Admitted.
   Next Obligation.
     case_eq (decompose_stack π).
@@ -1090,7 +1158,7 @@ Section Reduce.
     reduce_stack Γ t A π h :=
       let '(exist _ ts _) :=
           Fix_F (R := R (fst Σ) Γ)
-                (fun x => closedn #|Γ| (zip x) = true -> { t' : term * stack | Req (fst Σ) Γ t' x /\ Pr t' (snd x) })
+                (fun x => welltyped Σ Γ (zip x) -> { t' : term * stack | Req (fst Σ) Γ t' x /\ Pr t' (snd x) })
                 (fun t' f => _) (x := (t, π)) _ _
       in ts.
   Next Obligation.
@@ -1103,16 +1171,13 @@ Section Reduce.
       + simple inversion h'.
         * inversion H1. inversion H2. subst. clear H1 H2.
           intros H0.
-          eapply closedn_cored ; eassumption.
+          (* One more we need subject reduction *)
+          admit.
         * inversion H1. inversion H2. subst. clear H1 H2.
           intros H0. rewrite H5. assumption.
-  Qed.
+  Admitted.
   Next Obligation.
     eapply R_Acc. eassumption.
-  Qed.
-  Next Obligation.
-    destruct h.
-    eapply closedn_typed. eassumption.
   Qed.
 
 End Reduce.

@@ -648,19 +648,19 @@ Section Reduce.
     | false := give (tLambda na A t) (App a args)
     } ;
 
-    (* _reduce_stack Γ (tFix mfix idx) π h reduce with RedFlags.fix_ flags := { *)
-    (* | true with inspect (unfold_fix mfix idx) := { *)
-    (*   | @exist (Some (narg, fn)) eq1 with inspect (decompose_stack_at π narg) := { *)
-    (*     | @exist (Some (args, c, ρ)) eq2 with inspect (reduce c (Fix mfix idx args ρ)) := { *)
-    (*       | @exist (@exist (tConstruct ind n ui, ρ') prf) eq3 := rec reduce fn π ; *)
-    (*       | _ := exist _ (tFix mfix idx, π) _ *)
-    (*       } ; *)
-    (*     | _ := exist _ (tFix mfix idx, π) _ *)
-    (*     } ; *)
-    (*   | _ := exist _ (tFix mfix idx, π) _ *)
-    (*   } ; *)
-    (* | false := exist _ (tFix mfix idx, π) _ *)
-    (* } ; *)
+    _reduce_stack Γ (tFix mfix idx) π h reduce with RedFlags.fix_ flags := {
+    | true with inspect (unfold_fix mfix idx) := {
+      | @exist (Some (narg, fn)) eq1 with inspect (decompose_stack_at π narg) := {
+        | @exist (Some (args, c, ρ)) eq2 with inspect (reduce c (Fix mfix idx args ρ) _) := {
+          | @exist (@exist (tConstruct ind n ui, ρ') prf) eq3 := rec reduce fn π ;
+          | _ := exist _ (tFix mfix idx, π) _
+          } ;
+        | _ := exist _ (tFix mfix idx, π) _
+        } ;
+      | _ := exist _ (tFix mfix idx, π) _
+      } ;
+    | false := exist _ (tFix mfix idx, π) _
+    } ;
 
     (* Nothing special seems to be done for Π-types. *)
     (* _reduce_stack Γ (tProd na A B) *)
@@ -1217,6 +1217,11 @@ Section Reduce.
     case_eq (decompose_stack π).
     intros l θ e1 e2. assumption.
   Qed.
+  Next Obligation.
+    Fail eapply Subterm.right_lex.
+  Admitted.
+  Admit Obligations.
+
   (* Next Obligation. *)
   (*   (* Problem. Once again the order is too restrictive. *)
   (*      We also need to allow reduction on the stack it seems. *)

@@ -48,6 +48,13 @@ Section Normalisation.
 
   Derive NoConfusion NoConfusionHom Subterm for term.
 
+  Lemma subject_reduction :
+    forall {Σ Γ u v A},
+      Σ ;;; Γ |- u : A ->
+      red1 (fst Σ) Γ u v ->
+      Σ ;;; Γ |- v : A.
+  Admitted.
+
   Inductive stack : Type :=
   | Empty
   | App (t : term) (e : stack)
@@ -181,6 +188,21 @@ Section Normalisation.
     constructor. intros y hy.
     eapply H1 ; try reflexivity.
     unfold R in hy. assumption.
+  Qed.
+
+  Lemma cored_welltyped :
+    forall {Σ Γ u v},
+      welltyped Σ Γ u ->
+      cored (fst Σ) Γ v u ->
+      welltyped Σ Γ v.
+  Proof.
+    intros Σ Γ u v h r.
+    revert h. induction r ; intros h.
+    - destruct h as [A h]. exists A.
+      eapply subject_reduction ; eassumption.
+    - specialize IHr with (1 := ltac:(eassumption)).
+      destruct IHr as [A ?]. exists A.
+      eapply subject_reduction ; eassumption.
   Qed.
 
   Definition Req Σ Γ t t' :=
@@ -979,9 +1001,8 @@ Section Reduce.
           | h : cored _ _ ?t _ |- _ =>
             assert (welltyped Σ Γ t) as h'
           end.
-          { clear - h H0.
-            (* Here we need subject reduction *)
-            admit.
+          { clear - h H0 flags.
+            eapply cored_welltyped ; eassumption.
           }
           assert (ind = ind').
           { clear - h' flags.
@@ -1171,11 +1192,10 @@ Section Reduce.
       + simple inversion h'.
         * inversion H1. inversion H2. subst. clear H1 H2.
           intros H0.
-          (* One more we need subject reduction *)
-          admit.
+          eapply cored_welltyped ; eassumption.
         * inversion H1. inversion H2. subst. clear H1 H2.
           intros H0. rewrite H5. assumption.
-  Admitted.
+  Qed.
   Next Obligation.
     eapply R_Acc. eassumption.
   Qed.

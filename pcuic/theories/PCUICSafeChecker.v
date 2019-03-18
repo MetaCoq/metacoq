@@ -449,6 +449,65 @@ Section Reduce.
       closedn n (fst t).
   Admitted.
 
+  Notation "∥ T ∥" := (squash T) (at level 10).
+
+  Derive Signature for typing.
+
+  Lemma inversion_App :
+    forall {Σ Γ u v T},
+      Σ ;;; Γ |- tApp u v : T ->
+      exists na A B,
+        ∥ Σ ;;; Γ |- u : tProd na A B ∥ /\
+        ∥ Σ ;;; Γ |- v : A ∥ /\
+        (Σ ;;; Γ |- B{ 0 := v } <= T).
+  Proof.
+    intros Σ' Γ u v T h. dependent induction h.
+    - exists na, A, B. split ; [| split].
+      + constructor. assumption.
+      + constructor. assumption.
+      + apply cumul_refl'.
+    - destruct IHh1 as [na [A' [B' [? [? ?]]]]].
+      exists na, A', B'. split ; [| split].
+      + assumption.
+      + assumption.
+      + eapply cumul_trans ; eassumption.
+  Qed.
+
+  Lemma inversion_Rel :
+    forall {Σ Γ n T},
+      Σ ;;; Γ |- tRel n : T ->
+      exists decl,
+        ∥ wf_local Σ Γ ∥ /\
+        (nth_error Γ n = Some decl) /\
+        (Σ ;;; Γ |- lift0 (S n) (decl_type decl) <= T).
+  Proof.
+    intros Σ' Γ n T h.
+    dependent induction h.
+    - exists decl. split ; [| split].
+      + constructor. assumption.
+      + assumption.
+      + apply cumul_refl'.
+    - destruct IHh1 as [decl [? [? ?]]].
+      exists decl. split ; [| split].
+      + assumption.
+      + assumption.
+      + eapply cumul_trans ; eassumption.
+  Qed.
+
+  (* Weaker inversion lemma *)
+  Lemma weak_inversion_Case :
+    forall {Σ Γ ind npar pred c brs T},
+      Σ ;;; Γ |- tCase (ind, npar) pred c brs : T ->
+      exists args u,
+        ∥ Σ ;;; Γ |- c : mkApps (tInd ind u) args ∥.
+  Proof.
+    intros Σ' Γ ind npar pred c brs T h.
+    dependent induction h.
+    - exists args, u. constructor. assumption.
+    - destruct IHh1 as [args [u ?]].
+      exists args, u. assumption.
+  Qed.
+
   Lemma welltyped_context :
     forall Σ Γ t,
       welltyped Σ Γ (zip t) ->
@@ -461,17 +520,39 @@ Section Reduce.
     - cbn. cbn in h. eexists. eassumption.
     - cbn. cbn in h. cbn in IHπ. apply IHπ in h.
       destruct h as [B h].
-      (* By inversion on typing *)
-      admit.
+      destruct (inversion_App h) as [na [A' [B' [[?] [[?] ?]]]]].
+      eexists. eassumption.
     - cbn. cbn in h. cbn in IHπ. apply IHπ in h.
       destruct h as [B h].
-      (* By inversion on typing *)
-      admit.
+      destruct (inversion_App h) as [na [A' [B' [[?] [[?] ?]]]]].
+      eexists. eassumption.
     - cbn. cbn in h. cbn in IHπ. apply IHπ in h.
       destruct h as [B h].
-      (* By inversion on typing *)
-      admit.
+      destruct indn.
+      destruct (weak_inversion_Case h) as [? [? [?]]].
+      eexists. eassumption.
+  Qed.
+
+  Lemma Case_Construct_ind_eq :
+    forall {Σ Γ ind ind' npar pred i u brs args},
+      welltyped Σ Γ (tCase (ind, npar) pred (mkApps (tConstruct ind' i u) args) brs) ->
+      ind = ind'.
+  (* Proof. *)
+  (*   intros Σ' Γ ind ind' npar pred i u brs args [A h]. *)
+  (*   destruct (weak_inversion_Case h) as [args' [ui [hh]]]. *)
+  (*   clear - hh. induction args. *)
+  (*   - cbn in hh. dependent induction hh. *)
+  (*     + unfold type_of_constructor in H0. *)
+  (*       cbn in H0. induction args'. *)
+  (*       * cbn in H0. admit. *)
+  (*       * eapply IHargs'. cbn in H0. *)
   Admitted.
+
+  (* Lemma weak_inversion_Construct : *)
+  (*   forall {Σ Γ ind i u T}, *)
+  (*     Σ ;;; Γ |- tConstruct ind i u : T -> *)
+  (*     exists mdecl idecl cdecl, *)
+  (*       Σ ;;; Γ |- type_of_constructor mdecl cdecl (ind, i) u <= T. *)
 
   Lemma zipc_inj :
     forall u v π, zipc u π = zipc v π -> u = v.
@@ -621,15 +702,15 @@ Section Reduce.
     clear - eq hc. revert c hc eq.
     induction Γ ; intros c hc eq.
     - destruct hc as [A h].
-      (* By inversion on typing. *)
-      admit.
+      destruct (inversion_Rel h) as [? [[?] [e ?]]].
+      rewrite e in eq. discriminate eq.
     - destruct c.
       + cbn in eq. discriminate.
       + cbn in eq. eapply IHΓ ; try eassumption.
-        (* Should be doable *)
-        admit.
-  (* Qed. *)
-  Admitted.
+        destruct hc as [A h].
+        destruct (inversion_Rel h) as [? [[?] [e ?]]].
+        cbn in e. rewrite e in eq. discriminate.
+  Qed.
   Next Obligation.
     econstructor. econstructor.
     cbn. eapply red1_context. econstructor.
@@ -985,9 +1066,9 @@ Section Reduce.
         assert (ind = ind').
         { clear - h flags.
           apply welltyped_context in h.
-          cbn in h. destruct h as [A h].
-          (* This should now follow by inversion of typing *)
-          admit.
+          cbn in h.
+          apply (Case_Construct_ind_eq (args := [])) in h.
+          assumption.
         } subst.
         reflexivity.
       + clear eq. dependent destruction r.
@@ -1008,9 +1089,9 @@ Section Reduce.
           { clear - h' flags.
             zip fold in h'.
             apply welltyped_context in h'.
-            cbn in h'. destruct h' as [A h].
-            (* This should now follow by inversion of typing *)
-            admit.
+            cbn in h'.
+            apply Case_Construct_ind_eq in h'.
+            assumption.
           } subst.
           exact H0.
         * cbn in H1. inversion H1. subst. clear H1.
@@ -1022,12 +1103,12 @@ Section Reduce.
           assert (ind = ind').
           { clear - h flags.
             apply welltyped_context in h.
-            cbn in h. destruct h as [A h].
-            (* This should now follow by inversion of typing *)
-            admit.
+            cbn in h.
+            apply Case_Construct_ind_eq in h.
+            assumption.
           } subst.
           reflexivity.
-  Admitted.
+  Qed.
   Next Obligation.
     case_eq (decompose_stack π).
     intros l θ e1 e2. subst.

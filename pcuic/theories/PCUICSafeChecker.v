@@ -1293,8 +1293,29 @@ Section Reduce.
              symmetry in ee. subst.
              right. left.
              cbn. rewrite !zipc_appstack.
-             (* TODO Using Pr' *)
-             admit.
+             unfold Pr' in p0. cbn in p0.
+             specialize p0 with (1 := eq_refl).
+             rewrite e1 in p0. subst.
+             cbn in H1.
+             clear - H1.
+
+             match goal with
+             | |- ?A =>
+               let e := fresh "e" in
+               let B := type of H1 in
+               assert (A = B) as e ; [| rewrite e ; assumption ]
+             end.
+             set (t := tConstruct ind n ui). clearbody t.
+             set (f := tFix mfix idx). clearbody f.
+             f_equal.
+             ++ clear. revert ll π' l' t f.
+                induction args ; intros ll π' l' t f.
+                ** cbn. rewrite zipc_appstack. reflexivity.
+                ** cbn. rewrite IHargs. reflexivity.
+             ++ clear. revert π' l' c f.
+                induction args ; intros π' l' c f.
+                ** cbn. reflexivity.
+                ** cbn. rewrite IHargs. reflexivity.
           -- pose proof (decompose_stack_eq _ _ _ e2) as ee. cbn in ee.
              subst. exfalso.
              eapply decompose_stack_not_app. eassumption.

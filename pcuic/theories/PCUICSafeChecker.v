@@ -635,14 +635,29 @@ Section Reduce.
   (* Notation givePr := (_) (only parsing). *)
   (* Notation givePr := (I) (only parsing). *)
 
+  (* Definition Pr' (t' : term * stack) π := *)
+  (*   forall f n args ρ, *)
+  (*     snd (decompose_stack π) = Fix f n args ρ -> *)
+  (*     snd (decompose_stack (snd t')) = Fix f n args ρ. *)
+
+  Definition Pr' (t' : term * stack) π :=
+    forall f n args ρ,
+      let '(l, θ) := decompose_stack π in
+      θ = Fix f n args ρ ->
+      let '(l', θ') := decompose_stack (snd t') in
+      θ' = Fix f n args ρ.
+
+  (* Notation givePr' := (fun f n args ρ e => _) (only parsing). *)
+  Notation givePr' := (fun f n args ρ => _) (only parsing).
+
   Notation rec reduce t π :=
     (let smaller := _ in
-     let '(exist _ res (conj prf h)) := reduce t π smaller in
-     exist _ res (conj (Req_trans _ _ _ _ (R_to_Req smaller)) givePr)
+     let '(exist _ res (conj prf (conj h h'))) := reduce t π smaller in
+     exist _ res (conj (Req_trans _ _ _ _ (R_to_Req smaller)) (conj givePr givePr'))
     ) (only parsing).
 
   Notation give t π :=
-    (exist _ (t,π) (conj _ givePr)) (only parsing).
+    (exist _ (t,π) (conj _ (conj givePr givePr'))) (only parsing).
 
   Tactic Notation "zip" "fold" "in" hyp(h) :=
     lazymatch type of h with
@@ -658,10 +673,38 @@ Section Reduce.
       change C'
     end.
 
+  Ltac dealPr_Pr' P :=
+    lazymatch goal with
+    | h : P (?t,?s) ?π |- let '(_,_) := decompose_stack ?π in _ =>
+      let e := fresh "e" in
+      case_eq (decompose_stack π) ; intros ? ? e ? ; subst ;
+      unfold P in h ; rewrite e in h ;
+      specialize h with (1 := eq_refl) ;
+      cbn in h ; assumption
+    end.
+
+  Ltac dealPr := dealPr_Pr' Pr.
+  Ltac dealPr' := dealPr_Pr' Pr'.
+
+  Ltac dealDecompose :=
+    lazymatch goal with
+    | |- let '(_,_) := decompose_stack ?π in _ =>
+      case_eq (decompose_stack π) ; intros ; assumption
+    end.
+
+  Ltac obTac :=
+    program_simpl ;
+    try reflexivity ;
+    try dealDecompose ;
+    try dealPr ;
+    try dealPr'.
+
+  Obligation Tactic := obTac.
+
   Equations _reduce_stack (Γ : context) (t : term) (π : stack)
             (h : welltyped Σ Γ (zip (t,π)))
-            (reduce : forall t' π', R (fst Σ) Γ (t',π') (t,π) -> { t'' : term * stack | Req (fst Σ) Γ t'' (t',π') /\ Pr t'' π' })
-    : { t' : term * stack | Req (fst Σ) Γ t' (t,π) /\ Pr t' π } :=
+            (reduce : forall t' π', R (fst Σ) Γ (t',π') (t,π) -> { t'' : term * stack | Req (fst Σ) Γ t'' (t',π') /\ Pr t'' π' /\ Pr' t'' π' })
+    : { t' : term * stack | Req (fst Σ) Γ t' (t,π) /\ Pr t' π /\ Pr' t' π } :=
 
     _reduce_stack Γ (tRel c) π h reduce with RedFlags.zeta flags := {
     | true with inspect (nth_error Γ c) := {
@@ -730,21 +773,12 @@ Section Reduce.
     } ;
 
     _reduce_stack Γ t π h reduce := give t π.
-  Solve All Obligations with (program_simpl ; reflexivity).
-  Solve All Obligations with (program_simpl ; case_eq (decompose_stack π) ; intros ; assumption).
   Next Obligation.
     econstructor.
     econstructor.
     eapply red1_context.
     eapply red_rel. rewrite <- eq. cbn. f_equal.
     symmetry. assumption.
-  Qed.
-  Next Obligation.
-    case_eq (decompose_stack π). intros l θ e1 e2.
-    subst.
-    unfold Pr in h. rewrite e1 in h.
-    specialize h with (1 := eq_refl).
-    cbn in h. cbn. assumption.
   Qed.
   Next Obligation.
     pose proof (welltyped_context _ _ _ h) as hc.
@@ -769,9 +803,20 @@ Section Reduce.
   Next Obligation.
     cbn. case_eq (decompose_stack args).
     intros l θ e1 e2. subst.
-    unfold Pr in H1.
-    rewrite e1 in H1. specialize H1 with (1 := eq_refl).
-    cbn in H1. assumption.
+    unfold Pr in h.
+    rewrite e1 in h. specialize h with (1 := eq_refl).
+    cbn in h. assumption.
+  Qed.
+  Next Obligation.
+    cbn. case_eq (decompose_stack args).
+    intros l θ e1 e2. subst.
+    unfold Pr' in h'.
+    rewrite e1 in h'. specialize h' with (1 := eq_refl).
+    cbn in h'. assumption.
+  Qed.
+  Next Obligation.
+    cbn. case_eq (decompose_stack args).
+    intros. assumption.
   Qed.
   Next Obligation.
     cbn. case_eq (decompose_stack args).
@@ -783,20 +828,19 @@ Section Reduce.
     econstructor.
   Qed.
   Next Obligation.
-    cbn. case_eq (decompose_stack π).
-    intros l θ e1 e2. subst.
-    unfold Pr in H1. rewrite e1 in H1.
-    specialize H1 with (1 := eq_refl).
-    cbn in H1. assumption.
-  Qed.
-  Next Obligation.
     eapply Subterm.right_lex. cbn. constructor. constructor.
   Qed.
   Next Obligation.
     cbn. case_eq (decompose_stack π).
     intros l θ e1 e2. subst.
-    unfold Pr in H1. cbn in H1. rewrite e1 in H1.
-    specialize H1 with (1 := eq_refl). assumption.
+    unfold Pr in h. cbn in h. rewrite e1 in h.
+    specialize h with (1 := eq_refl). assumption.
+  Qed.
+  Next Obligation.
+    cbn. case_eq (decompose_stack π).
+    intros l θ e1 e2. subst.
+    unfold Pr' in h'. cbn in h'. rewrite e1 in h'.
+    specialize h' with (1 := eq_refl). assumption.
   Qed.
   Next Obligation.
     econstructor. econstructor. eapply red1_context.
@@ -816,13 +860,6 @@ Section Reduce.
     - cbn. reflexivity.
   Qed.
   Next Obligation.
-    cbn. case_eq (decompose_stack π).
-    intros l θ e1 e2. subst.
-    unfold Pr in H1. rewrite e1 in H1.
-    specialize H1 with (1 := eq_refl).
-    cbn in H1. assumption.
-  Qed.
-  Next Obligation.
     eapply Subterm.right_lex. cbn. constructor. constructor.
   Qed.
   Next Obligation.
@@ -847,8 +884,25 @@ Section Reduce.
         apply zipc_inj in H5. inversion H5. subst. reflexivity.
   Qed.
   Next Obligation.
-    case_eq (decompose_stack π).
-    intros l θ e1 e2. assumption.
+    clear - prf' r p0. unfold Pr in p0.
+    cbn in p0.
+    specialize p0 with (1 := eq_refl).
+    rewrite <- prf' in p0. subst.
+    symmetry in prf'.
+    pose proof (decompose_stack_eq _ _ _ prf'). subst.
+    subst t.
+    destruct r.
+    - inversion H. subst. clear H.
+      destruct args.
+      + cbn. reflexivity.
+      + cbn in H2. discriminate H2.
+    - dependent destruction H.
+      + cbn in H0. inversion H0. subst. clear H0.
+        rewrite zipc_appstack in H1. cbn in H1.
+        right. econstructor. assumption.
+      + cbn in H0. inversion H0. subst. clear H0.
+        rewrite zipc_appstack in H5. cbn in H5.
+        apply zipc_inj in H5. inversion H5. subst. reflexivity.
   Qed.
   Next Obligation.
     clear - prf' r p0. unfold Pr in p0.
@@ -872,8 +926,25 @@ Section Reduce.
         apply zipc_inj in H5. inversion H5. subst. reflexivity.
   Qed.
   Next Obligation.
-    case_eq (decompose_stack π).
-    intros l θ e1 e2. assumption.
+    clear - prf' r p0. unfold Pr in p0.
+    cbn in p0.
+    specialize p0 with (1 := eq_refl).
+    rewrite <- prf' in p0. subst.
+    symmetry in prf'.
+    pose proof (decompose_stack_eq _ _ _ prf'). subst.
+    subst t.
+    destruct r.
+    - inversion H. subst. clear H.
+      destruct args.
+      + cbn. reflexivity.
+      + cbn in H2. discriminate H2.
+    - dependent destruction H.
+      + cbn in H0. inversion H0. subst. clear H0.
+        rewrite zipc_appstack in H1. cbn in H1.
+        right. econstructor. assumption.
+      + cbn in H0. inversion H0. subst. clear H0.
+        rewrite zipc_appstack in H5. cbn in H5.
+        apply zipc_inj in H5. inversion H5. subst. reflexivity.
   Qed.
   Next Obligation.
     clear - prf' r p0. unfold Pr in p0.
@@ -897,8 +968,25 @@ Section Reduce.
         apply zipc_inj in H5. inversion H5. subst. reflexivity.
   Qed.
   Next Obligation.
-    case_eq (decompose_stack π).
-    intros l θ e1 e2. assumption.
+    clear - prf' r p0. unfold Pr in p0.
+    cbn in p0.
+    specialize p0 with (1 := eq_refl).
+    rewrite <- prf' in p0. subst.
+    symmetry in prf'.
+    pose proof (decompose_stack_eq _ _ _ prf'). subst.
+    subst t.
+    destruct r.
+    - inversion H. subst. clear H.
+      destruct args.
+      + cbn. reflexivity.
+      + cbn in H2. discriminate H2.
+    - dependent destruction H.
+      + cbn in H0. inversion H0. subst. clear H0.
+        rewrite zipc_appstack in H1. cbn in H1.
+        right. econstructor. assumption.
+      + cbn in H0. inversion H0. subst. clear H0.
+        rewrite zipc_appstack in H5. cbn in H5.
+        apply zipc_inj in H5. inversion H5. subst. reflexivity.
   Qed.
   Next Obligation.
     clear - prf' r p0. unfold Pr in p0.
@@ -922,8 +1010,25 @@ Section Reduce.
         apply zipc_inj in H5. inversion H5. subst. reflexivity.
   Qed.
   Next Obligation.
-    case_eq (decompose_stack π).
-    intros l θ e1 e2. assumption.
+    clear - prf' r p0. unfold Pr in p0.
+    cbn in p0.
+    specialize p0 with (1 := eq_refl).
+    rewrite <- prf' in p0. subst.
+    symmetry in prf'.
+    pose proof (decompose_stack_eq _ _ _ prf'). subst.
+    subst t.
+    destruct r.
+    - inversion H. subst. clear H.
+      destruct args.
+      + cbn. reflexivity.
+      + cbn in H2. discriminate H2.
+    - dependent destruction H.
+      + cbn in H0. inversion H0. subst. clear H0.
+        rewrite zipc_appstack in H1. cbn in H1.
+        right. econstructor. assumption.
+      + cbn in H0. inversion H0. subst. clear H0.
+        rewrite zipc_appstack in H5. cbn in H5.
+        apply zipc_inj in H5. inversion H5. subst. reflexivity.
   Qed.
   Next Obligation.
     clear - prf' r p0. unfold Pr in p0.
@@ -947,10 +1052,6 @@ Section Reduce.
         apply zipc_inj in H5. inversion H5. subst. reflexivity.
   Qed.
   Next Obligation.
-    case_eq (decompose_stack π).
-    intros l θ e1 e2. assumption.
-  Qed.
-  Next Obligation.
     clear - prf' r p0. unfold Pr in p0.
     cbn in p0.
     specialize p0 with (1 := eq_refl).
@@ -972,10 +1073,6 @@ Section Reduce.
         apply zipc_inj in H5. inversion H5. subst. reflexivity.
   Qed.
   Next Obligation.
-    case_eq (decompose_stack π).
-    intros l θ e1 e2. assumption.
-  Qed.
-  Next Obligation.
     clear - prf' r p0. unfold Pr in p0.
     cbn in p0.
     specialize p0 with (1 := eq_refl).
@@ -995,110 +1092,6 @@ Section Reduce.
       + cbn in H0. inversion H0. subst. clear H0.
         rewrite zipc_appstack in H5. cbn in H5.
         apply zipc_inj in H5. inversion H5. subst. reflexivity.
-  Qed.
-  Next Obligation.
-    case_eq (decompose_stack π).
-    intros l θ e1 e2. assumption.
-  Qed.
-  Next Obligation.
-    clear - prf' r p0. unfold Pr in p0.
-    cbn in p0.
-    specialize p0 with (1 := eq_refl).
-    rewrite <- prf' in p0. subst.
-    symmetry in prf'.
-    pose proof (decompose_stack_eq _ _ _ prf'). subst.
-    subst t.
-    destruct r.
-    - inversion H. subst. clear H.
-      destruct args.
-      + cbn. reflexivity.
-      + cbn in H2. discriminate H2.
-    - dependent destruction H.
-      + cbn in H0. inversion H0. subst. clear H0.
-        rewrite zipc_appstack in H1. cbn in H1.
-        right. econstructor. assumption.
-      + cbn in H0. inversion H0. subst. clear H0.
-        rewrite zipc_appstack in H5. cbn in H5.
-        apply zipc_inj in H5. inversion H5. subst. reflexivity.
-  Qed.
-  Next Obligation.
-    case_eq (decompose_stack π).
-    intros l θ e1 e2. assumption.
-  Qed.
-  Next Obligation.
-    clear - prf' r p0. unfold Pr in p0.
-    cbn in p0.
-    specialize p0 with (1 := eq_refl).
-    rewrite <- prf' in p0. subst.
-    symmetry in prf'.
-    pose proof (decompose_stack_eq _ _ _ prf'). subst.
-    subst t.
-    destruct r.
-    - inversion H. subst. clear H.
-      destruct args.
-      + cbn. reflexivity.
-      + cbn in H2. discriminate H2.
-    - dependent destruction H.
-      + cbn in H0. inversion H0. subst. clear H0.
-        rewrite zipc_appstack in H1. cbn in H1.
-        right. econstructor. assumption.
-      + cbn in H0. inversion H0. subst. clear H0.
-        rewrite zipc_appstack in H5. cbn in H5.
-        apply zipc_inj in H5. inversion H5. subst. reflexivity.
-  Qed.
-  Next Obligation.
-    case_eq (decompose_stack π).
-    intros l θ e1 e2. assumption.
-  Qed.
-  Next Obligation.
-    clear - prf' r p0. unfold Pr in p0.
-    cbn in p0.
-    specialize p0 with (1 := eq_refl).
-    rewrite <- prf' in p0. subst.
-    symmetry in prf'.
-    pose proof (decompose_stack_eq _ _ _ prf'). subst.
-    subst t.
-    destruct r.
-    - inversion H. subst. clear H.
-      destruct args.
-      + cbn. reflexivity.
-      + cbn in H2. discriminate H2.
-    - dependent destruction H.
-      + cbn in H0. inversion H0. subst. clear H0.
-        rewrite zipc_appstack in H1. cbn in H1.
-        right. econstructor. assumption.
-      + cbn in H0. inversion H0. subst. clear H0.
-        rewrite zipc_appstack in H5. cbn in H5.
-        apply zipc_inj in H5. inversion H5. subst. reflexivity.
-  Qed.
-  Next Obligation.
-    case_eq (decompose_stack π).
-    intros l θ e1 e2. assumption.
-  Qed.
-  Next Obligation.
-    clear - prf' r p0. unfold Pr in p0.
-    cbn in p0.
-    specialize p0 with (1 := eq_refl).
-    rewrite <- prf' in p0. subst.
-    symmetry in prf'.
-    pose proof (decompose_stack_eq _ _ _ prf'). subst.
-    subst t.
-    destruct r.
-    - inversion H. subst. clear H.
-      destruct args.
-      + cbn. reflexivity.
-      + cbn in H2. discriminate H2.
-    - dependent destruction H.
-      + cbn in H0. inversion H0. subst. clear H0.
-        rewrite zipc_appstack in H1. cbn in H1.
-        right. econstructor. assumption.
-      + cbn in H0. inversion H0. subst. clear H0.
-        rewrite zipc_appstack in H5. cbn in H5.
-        apply zipc_inj in H5. inversion H5. subst. reflexivity.
-  Qed.
-  Next Obligation.
-    case_eq (decompose_stack π).
-    intros l θ e1 e2. assumption.
   Qed.
   Next Obligation.
     unfold Pr in p0. cbn in p0.
@@ -1161,12 +1154,25 @@ Section Reduce.
           reflexivity.
   Qed.
   Next Obligation.
-    case_eq (decompose_stack π).
-    intros l θ e1 e2. subst.
-    unfold Pr in H1.
-    rewrite e1 in H1. cbn in H1.
-    specialize H1 with (1 := eq_refl).
-    cbn. assumption.
+    clear eq reduce h.
+    destruct r.
+    - inversion H0. subst. subst t.
+      clear H0.
+      cbn in prf'. inversion prf'. subst. reflexivity.
+    - unfold Pr in p0. cbn in p0.
+      specialize p0 with (1 := eq_refl).
+      rewrite <- prf' in p0. subst. subst t.
+      dependent destruction H0.
+      + cbn in H0. symmetry in prf'.
+        pose proof (decompose_stack_eq _ _ _ prf'). subst.
+        rewrite zipc_appstack in H0. cbn in H0.
+        right. econstructor. assumption.
+      + cbn in H1. inversion H1. subst. clear H1.
+        symmetry in prf'.
+        pose proof (decompose_stack_eq _ _ _ prf'). subst.
+        rewrite zipc_appstack in H3. cbn in H3.
+        apply zipc_inj in H3. inversion H3. subst.
+        reflexivity.
   Qed.
   Next Obligation.
     clear eq reduce h.
@@ -1190,10 +1196,6 @@ Section Reduce.
         reflexivity.
   Qed.
   Next Obligation.
-    case_eq (decompose_stack π).
-    intros l θ e1 e2. assumption.
-  Qed.
-  Next Obligation.
     clear eq reduce h.
     destruct r.
     - inversion H0. subst. subst t.
@@ -1215,10 +1217,6 @@ Section Reduce.
         reflexivity.
   Qed.
   Next Obligation.
-    case_eq (decompose_stack π).
-    intros l θ e1 e2. assumption.
-  Qed.
-  Next Obligation.
     clear eq reduce h.
     destruct r.
     - inversion H0. subst. subst t.
@@ -1238,35 +1236,6 @@ Section Reduce.
         rewrite zipc_appstack in H3. cbn in H3.
         apply zipc_inj in H3. inversion H3. subst.
         reflexivity.
-  Qed.
-  Next Obligation.
-    case_eq (decompose_stack π).
-    intros l θ e1 e2. assumption.
-  Qed.
-  Next Obligation.
-    clear eq reduce h.
-    destruct r.
-    - inversion H0. subst. subst t.
-      clear H0.
-      cbn in prf'. inversion prf'. subst. reflexivity.
-    - unfold Pr in p0. cbn in p0.
-      specialize p0 with (1 := eq_refl).
-      rewrite <- prf' in p0. subst. subst t.
-      dependent destruction H0.
-      + cbn in H0. symmetry in prf'.
-        pose proof (decompose_stack_eq _ _ _ prf'). subst.
-        rewrite zipc_appstack in H0. cbn in H0.
-        right. econstructor. assumption.
-      + cbn in H1. inversion H1. subst. clear H1.
-        symmetry in prf'.
-        pose proof (decompose_stack_eq _ _ _ prf'). subst.
-        rewrite zipc_appstack in H3. cbn in H3.
-        apply zipc_inj in H3. inversion H3. subst.
-        reflexivity.
-  Qed.
-  Next Obligation.
-    case_eq (decompose_stack π).
-    intros l θ e1 e2. assumption.
   Qed.
   Next Obligation.
     symmetry in eq2.
@@ -1275,8 +1244,6 @@ Section Reduce.
     (* eapply Subterm.right_lex. *)
     (* Not a subterm! :( *)
   Admitted.
-  Solve All Obligations with (program_simpl ; reflexivity).
-  Solve All Obligations with (program_simpl ; case_eq (decompose_stack π) ; intros ; assumption).
   Next Obligation.
     case_eq (decompose_stack π). intros ll π' e.
     pose proof (decompose_stack_eq _ _ _ e). subst.
@@ -1326,7 +1293,7 @@ Section Reduce.
              symmetry in ee. subst.
              right. left.
              cbn. rewrite !zipc_appstack.
-             (* Similarly to Case, we need a tailored Pr *)
+             (* TODO Using Pr' *)
              admit.
           -- pose proof (decompose_stack_eq _ _ _ e2) as ee. cbn in ee.
              subst. exfalso.
@@ -1338,10 +1305,10 @@ Section Reduce.
   Admitted.
   Next Obligation.
     case_eq (decompose_stack π). intros ll π' e1 e2. subst.
-    cbn. unfold Pr in H1.
-    rewrite decompose_stack_appstack in H1. cbn in H1.
+    cbn. unfold Pr in h.
+    rewrite decompose_stack_appstack in h. cbn in h.
     case_eq (decompose_stack ρ). intros l' θ' e.
-    rewrite e in H1. cbn in H1.
+    rewrite e in h. cbn in h.
     pose proof (decompose_stack_eq _ _ _ e). subst.
 
     clear eq3 smaller. symmetry in eq2.
@@ -1351,7 +1318,25 @@ Section Reduce.
     rewrite e in e1. cbn in e1.
     inversion e1. subst.
 
-    specialize H1 with (1 := eq_refl).
+    specialize h with (1 := eq_refl).
+    assumption.
+  Qed.
+  Next Obligation.
+    case_eq (decompose_stack π). intros ll π' e1 e2. subst.
+    cbn. unfold Pr' in h'.
+    rewrite decompose_stack_appstack in h'. cbn in h'.
+    case_eq (decompose_stack ρ). intros l' θ' e.
+    rewrite e in h'. cbn in h'.
+    pose proof (decompose_stack_eq _ _ _ e). subst.
+
+    clear eq3 smaller. symmetry in eq2.
+    pose proof (decompose_stack_at_eq _ _ _ _ _ eq2).
+    subst.
+    rewrite decompose_stack_appstack in e1. cbn in e1.
+    rewrite e in e1. cbn in e1.
+    inversion e1. subst.
+
+    specialize h' with (1 := eq_refl).
     assumption.
   Qed.
 
@@ -1373,7 +1358,7 @@ Section Reduce.
     reduce_stack Γ t A π h :=
       let '(exist _ ts _) :=
           Fix_F (R := R (fst Σ) Γ)
-                (fun x => welltyped Σ Γ (zip x) -> { t' : term * stack | Req (fst Σ) Γ t' x /\ Pr t' (snd x) })
+                (fun x => welltyped Σ Γ (zip x) -> { t' : term * stack | Req (fst Σ) Γ t' x /\ Pr t' (snd x) /\ Pr' t' (snd x) })
                 (fun t' f => _) (x := (t, π)) _ _
       in ts.
   Next Obligation.

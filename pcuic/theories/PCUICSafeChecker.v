@@ -691,7 +691,9 @@ Section Reduce.
     | true with inspect (unfold_fix mfix idx) := {
       | @exist (Some (narg, fn)) eq1 with inspect (decompose_stack_at π narg) := {
         | @exist (Some (args, c, ρ)) eq2 with inspect (reduce c (Fix mfix idx args ρ) _) := {
-          | @exist (@exist (tConstruct ind n ui, ρ') prf) eq3 := rec reduce fn π ;
+          (* | @exist (@exist (tConstruct ind n ui, ρ') prf) eq3 := rec reduce fn π ; *)
+          | @exist (@exist (tConstruct ind n ui, ρ') prf) eq3 :=
+            rec reduce fn (appstack args (App (zip (tConstruct ind n ui, ρ')) ρ)) ;
           | _ := give (tFix mfix idx) π
           } ;
         | _ := give (tFix mfix idx) π
@@ -719,7 +721,6 @@ Section Reduce.
     _reduce_stack Γ t π h reduce := give t π.
   Solve All Obligations with (program_simpl ; reflexivity).
   Solve All Obligations with (program_simpl ; case_eq (decompose_stack π) ; intros ; assumption).
-  (* Solve All Obligations with (program_simpl ; unfold Pr ; auto). *)
   Next Obligation.
     econstructor.
     econstructor.
@@ -1313,8 +1314,8 @@ Section Reduce.
     eapply R_Req_R.
     instantiate (1 := (tFix mfix idx, appstack (args ++ (mkApps (tConstruct ind n ui) l) :: l') θ)).
     - left. cbn. rewrite 2!zipc_appstack.
-      zip fold. zip fold. eapply cored_context.
-      left. Fail eapply red_fix.
+      zip fold. zip fold. (* eapply cored_context. *)
+      (* left. Fail eapply red_fix. *)
       (* Most interesting (and problematic)!
 
          A fix can be unfolded if the nth argument on the stack is a
@@ -1384,10 +1385,16 @@ Section Reduce.
   Admitted.
   Next Obligation.
     case_eq (decompose_stack π). intros l θ e1 e2. subst.
-    cbn. unfold Pr in H1. rewrite e1 in H1.
-    specialize H1 with (1 := eq_refl).
-    cbn in H1. assumption.
-  Qed.
+    cbn. unfold Pr in H1.
+    (* Need decompose_stack_appstack or something *)
+(*     clear eq3 smaller. symmetry in eq2. *)
+(*     pose proof (decompose_stack_at_eq _ _ _ _ _ eq2). *)
+
+(* rewrite e1 in H1. *)
+(*     specialize H1 with (1 := eq_refl). *)
+(*     cbn in H1. assumption. *)
+(*   Qed. *)
+  Admitted.
 
   Lemma closedn_cored :
     forall Σ Γ u v,

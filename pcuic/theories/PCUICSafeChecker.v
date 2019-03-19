@@ -1309,7 +1309,32 @@ Section Reduce.
         cbn.
         rewrite decompose_app_mkApps by reflexivity.
         reflexivity.
-    - admit.
+    - destruct r.
+      + inversion H1. subst.
+        destruct ll.
+        * cbn in H4. subst. cbn in eq4. inversion eq4. subst.
+          reflexivity.
+        * cbn in H4. discriminate H4.
+      + dependent destruction H1.
+        * cbn in H1. rewrite 2!zipc_appstack in H1.
+          rewrite decompose_stack_appstack in eq4.
+          case_eq (decompose_stack s). intros l0 s0 e2.
+          rewrite e2 in eq4. cbn in eq4.
+          destruct l0.
+          -- rewrite app_nil_r in eq4. inversion eq4. subst. clear eq4.
+             pose proof (decompose_stack_eq _ _ _ e2) as ee. cbn in ee.
+             symmetry in ee. subst.
+             right. left.
+             cbn. rewrite !zipc_appstack.
+             (* Similarly to Case, we need a tailored Pr *)
+             admit.
+          -- pose proof (decompose_stack_eq _ _ _ e2) as ee. cbn in ee.
+             subst. exfalso.
+             eapply decompose_stack_not_app. eassumption.
+        * (* This case is not really worth doing as the definition of R is
+             expected to change. *)
+          cbn in H1. cbn in H2. inversion H2. subst. clear H2.
+          admit.
   Admitted.
   Next Obligation.
     case_eq (decompose_stack π). intros ll π' e1 e2. subst.

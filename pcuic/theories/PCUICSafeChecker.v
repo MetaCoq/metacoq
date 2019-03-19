@@ -701,9 +701,10 @@ Section Reduce.
     | true with inspect (unfold_fix mfix idx) := {
       | @exist (Some (narg, fn)) eq1 with inspect (decompose_stack_at π narg) := {
         | @exist (Some (args, c, ρ)) eq2 with inspect (reduce c (Fix mfix idx args ρ) _) := {
-          (* | @exist (@exist (tConstruct ind n ui, ρ') prf) eq3 := rec reduce fn π ; *)
-          | @exist (@exist (tConstruct ind n ui, ρ') prf) eq3 :=
-            rec reduce fn (appstack args (App (zip (tConstruct ind n ui, ρ')) ρ)) ;
+          | @exist (@exist (tConstruct ind n ui, ρ') prf) eq3 with inspect (decompose_stack ρ') := {
+            | @exist (l, θ) eq4 :=
+              rec reduce fn (appstack args (App (mkApps (tConstruct ind n ui) l) ρ))
+            } ;
           | _ := give (tFix mfix idx) π
           } ;
         | _ := give (tFix mfix idx) π
@@ -1277,7 +1278,7 @@ Section Reduce.
   Solve All Obligations with (program_simpl ; reflexivity).
   Solve All Obligations with (program_simpl ; case_eq (decompose_stack π) ; intros ; assumption).
   Next Obligation.
-    case_eq (decompose_stack π). intros l θ e.
+    case_eq (decompose_stack π). intros ll π' e.
     pose proof (decompose_stack_eq _ _ _ e). subst.
     clear eq3. symmetry in eq2.
     pose proof (decompose_stack_at_eq _ _ _ _ _ eq2).
@@ -1287,12 +1288,11 @@ Section Reduce.
     rewrite H0 in e. rewrite decompose_stack_appstack in e.
     cbn in e. rewrite e' in e. inversion e. subst. clear e.
 
-    case_eq (decompose_stack ρ'). intros l s e1.
+    case_eq (decompose_stack ρ'). intros ll s e1.
     pose proof (decompose_stack_eq _ _ _ e1). subst.
-    cbn. rewrite zipc_appstack. zip fold.
 
     eapply R_Req_R.
-    - instantiate (1 := (tFix mfix idx, appstack (args ++ (zip (mkApps (tConstruct ind n ui) l, s)) :: l') θ)).
+    - instantiate (1 := (tFix mfix idx, appstack (args ++ (mkApps (tConstruct ind n ui) l) :: l') π')).
       left. cbn. rewrite 2!zipc_appstack. cbn. rewrite zipc_appstack.
       repeat zip fold. eapply cored_context.
       assert (forall args l u v, mkApps (tApp (mkApps u args) v) l = mkApps u (args ++ v :: l)) as thm.
@@ -1307,12 +1307,12 @@ Section Reduce.
         rewrite nth_error_app2 by eauto.
         replace (#|args| - #|args|) with 0 by auto with arith.
         cbn.
-        (* The zip here is wrong, reduce has to be fixed for fix *)
-        admit.
+        rewrite decompose_app_mkApps by reflexivity.
+        reflexivity.
     - admit.
   Admitted.
   Next Obligation.
-    case_eq (decompose_stack π). intros l θ e1 e2. subst.
+    case_eq (decompose_stack π). intros ll π' e1 e2. subst.
     cbn. unfold Pr in H1.
     rewrite decompose_stack_appstack in H1. cbn in H1.
     case_eq (decompose_stack ρ). intros l' θ' e.

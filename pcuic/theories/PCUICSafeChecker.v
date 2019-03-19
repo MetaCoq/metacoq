@@ -125,6 +125,16 @@ Section Normalisation.
     - cbn. rewrite IHargs. reflexivity.
   Qed.
 
+  Lemma decompose_stack_appstack :
+    forall l ρ,
+      decompose_stack (appstack l ρ) =
+      (l ++ fst (decompose_stack ρ), snd (decompose_stack ρ)).
+  Proof.
+    intros l. induction l ; intros ρ.
+    - cbn. destruct (decompose_stack ρ). reflexivity.
+    - cbn. rewrite IHl. reflexivity.
+  Qed.
+
   Fixpoint decompose_stack_at π n : option (list term * term * stack) :=
     match π with
     | App u π =>
@@ -1386,15 +1396,21 @@ Section Reduce.
   Next Obligation.
     case_eq (decompose_stack π). intros l θ e1 e2. subst.
     cbn. unfold Pr in H1.
-    (* Need decompose_stack_appstack or something *)
-(*     clear eq3 smaller. symmetry in eq2. *)
-(*     pose proof (decompose_stack_at_eq _ _ _ _ _ eq2). *)
+    rewrite decompose_stack_appstack in H1. cbn in H1.
+    case_eq (decompose_stack ρ). intros l' θ' e.
+    rewrite e in H1. cbn in H1.
+    pose proof (decompose_stack_eq _ _ _ e). subst.
 
-(* rewrite e1 in H1. *)
-(*     specialize H1 with (1 := eq_refl). *)
-(*     cbn in H1. assumption. *)
-(*   Qed. *)
-  Admitted.
+    clear eq3 smaller. symmetry in eq2.
+    pose proof (decompose_stack_at_eq _ _ _ _ _ eq2).
+    subst.
+    rewrite decompose_stack_appstack in e1. cbn in e1.
+    rewrite e in e1. cbn in e1.
+    inversion e1. subst.
+
+    specialize H1 with (1 := eq_refl).
+    assumption.
+  Qed.
 
   Lemma closedn_cored :
     forall Σ Γ u v,

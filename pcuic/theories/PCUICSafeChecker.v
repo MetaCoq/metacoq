@@ -1284,114 +1284,32 @@ Section Reduce.
     pose proof (decompose_stack_at_length _ _ _ _ _ eq2).
     case_eq (decompose_stack ρ). intros l' θ' e'.
     pose proof (decompose_stack_eq _ _ _ e'). subst.
-    assert (l = args ++ (c :: l')).
-    { clear - e e' eq2 H0. rename H0 into eq.
-      assert (forall u ρ, θ <> App u ρ) as hθ.
-      { intros u ρ bot. eapply decompose_stack_not_app.
-        subst. eassumption.
-      }
-      assert (forall u ρ, θ' <> App u ρ) as hθ'.
-      { intros u ρ bot. eapply decompose_stack_not_app.
-        subst. eassumption.
-      }
-      clear - hθ hθ' eq.
-      revert args c θ l' θ' eq hθ hθ'.
-      induction l ; intros args c θ l' θ' eq hθ hθ'.
-      - exfalso.
-        cbn in *. subst. destruct args.
-        + cbn in *. eapply hθ. reflexivity.
-        + cbn in *. eapply hθ. reflexivity.
-      - cbn in eq. destruct args.
-        + cbn in *. inversion eq. subst.
-          f_equal. clear - H1 hθ hθ'.
-          revert l' H1.
-          induction l ; intros l' H1.
-          * cbn in *. subst.
-            destruct l' ; try reflexivity.
-            cbn in hθ. exfalso. eapply hθ. reflexivity.
-          * destruct l'.
-            -- cbn in *. exfalso. eapply hθ'.
-               subst. reflexivity.
-            -- cbn in H1. inversion H1. subst.
-               f_equal. eapply IHl. assumption.
-        + cbn in *. inversion eq. subst.
-          f_equal. eapply IHl ; eassumption.
-    } subst.
+    rewrite H0 in e. rewrite decompose_stack_appstack in e.
+    cbn in e. rewrite e' in e. inversion e. subst. clear e.
 
     case_eq (decompose_stack ρ'). intros l s e1.
     pose proof (decompose_stack_eq _ _ _ e1). subst.
+    cbn. rewrite zipc_appstack. zip fold.
 
     eapply R_Req_R.
-    instantiate (1 := (tFix mfix idx, appstack (args ++ (mkApps (tConstruct ind n ui) l) :: l') θ)).
-    - left. cbn. rewrite 2!zipc_appstack.
-      zip fold. zip fold. (* eapply cored_context. *)
-      (* left. Fail eapply red_fix. *)
-      (* Most interesting (and problematic)!
-
-         A fix can be unfolded if the nth argument on the stack is a
-         constructor. However, we want to reduce simply knowing it
-         reduces to a constructor while keeping it untouched.
-         This actually means we ought to take some reduction steps in
-         the reverse order.
-       *)
-
-
-(*
-    left.
-    case_eq (decompose_stack π). intros l θ e.
-    pose proof (decompose_stack_eq _ _ _ e). subst.
-    cbn. rewrite 2!zipc_appstack.
-    zip fold. zip fold.
-    eapply cored_context.
-    left. eapply red_fix.
-    - symmetry. eassumption.
-    - unfold is_constructor.
-      clear eq3. symmetry in eq2.
-      pose proof (decompose_stack_at_eq _ _ _ _ _ eq2).
-      pose proof (decompose_stack_at_length _ _ _ _ _ eq2).
-      case_eq (decompose_stack ρ). intros l' θ' e'.
-      pose proof (decompose_stack_eq _ _ _ e'). subst.
-      assert (l = args ++ (c :: l')).
-      { clear - e e' eq2 H0. rename H0 into eq.
-        assert (forall u ρ, θ <> App u ρ) as hθ.
-        { intros u ρ bot. eapply decompose_stack_not_app.
-          subst. eassumption.
-        }
-        assert (forall u ρ, θ' <> App u ρ) as hθ'.
-        { intros u ρ bot. eapply decompose_stack_not_app.
-          subst. eassumption.
-        }
-        clear - hθ hθ' eq.
-        revert args c θ l' θ' eq hθ hθ'.
-        induction l ; intros args c θ l' θ' eq hθ hθ'.
-        - exfalso.
-          cbn in *. subst. destruct args.
-          + cbn in *. eapply hθ. reflexivity.
-          + cbn in *. eapply hθ. reflexivity.
-        - cbn in eq. destruct args.
-          + cbn in *. inversion eq. subst.
-            f_equal. clear - H1 hθ hθ'.
-            revert l' H1.
-            induction l ; intros l' H1.
-            * cbn in *. subst.
-              destruct l' ; try reflexivity.
-              cbn in hθ. exfalso. eapply hθ. reflexivity.
-            * destruct l'.
-              -- cbn in *. exfalso. eapply hθ'.
-                 subst. reflexivity.
-              -- cbn in H1. inversion H1. subst.
-                 f_equal. eapply IHl. assumption.
-          + cbn in *. inversion eq. subst.
-            f_equal. eapply IHl ; eassumption.
-      } subst.
-      rewrite nth_error_app2 by eauto.
-      replace (#|args| - #|args|) with 0 by auto with arith.
-      cbn.
-      (* It was actually wrong.
-         We need to replace c by its reduced version first.
-         Then we can do all this.
-       *)
-*)
+    - instantiate (1 := (tFix mfix idx, appstack (args ++ (zip (mkApps (tConstruct ind n ui) l, s)) :: l') θ)).
+      left. cbn. rewrite 2!zipc_appstack. cbn. rewrite zipc_appstack.
+      repeat zip fold. eapply cored_context.
+      assert (forall args l u v, mkApps (tApp (mkApps u args) v) l = mkApps u (args ++ v :: l)) as thm.
+      { clear. intro args. induction args ; intros l u v.
+        - reflexivity.
+        - cbn. rewrite IHargs. reflexivity.
+      }
+      rewrite thm.
+      left. eapply red_fix.
+      + eauto.
+      + unfold is_constructor.
+        rewrite nth_error_app2 by eauto.
+        replace (#|args| - #|args|) with 0 by auto with arith.
+        cbn.
+        (* The zip here is wrong, reduce has to be fixed for fix *)
+        admit.
+    - admit.
   Admitted.
   Next Obligation.
     case_eq (decompose_stack π). intros l θ e1 e2. subst.

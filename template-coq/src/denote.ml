@@ -892,7 +892,8 @@ let rec run_template_program_rec ?(intactic=false) (k : Environ.env * Evd.evar_m
     let name' = Namegen.next_ident_away_from (unquote_ident name) (fun id -> Nametab.exists_cci (Lib.make_path id)) in
     k (env, evm, quote_ident name')
   | TmExistingInstance name ->
-    Classes.existing_instance true (CAst.make (Libnames.Qualid (Libnames.qualid_of_ident (unquote_ident name)))) None
+     Classes.existing_instance true (CAst.make (Libnames.Qualid (Libnames.qualid_of_ident (unquote_ident name)))) None;
+     k (env, evm, unit_tt)
   | TmInferInstance (s, typ) ->
     begin
       let evm, typ = (match denote_option s with Some s -> let red = unquote_reduction_strategy env evm s in reduce env evm red typ | None -> evm, typ) in

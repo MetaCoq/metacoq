@@ -884,7 +884,6 @@ let rec run_template_program_rec ?(intactic=false) (k : Environ.env * Evd.evar_m
        let evm, t' = denote_term evm t in
        let evdref = ref evm in
        (* let t' = Typing.e_solve_evars env evdref (EConstr.of_constr t') in *)
-       Feedback.msg_debug (Printer.pr_constr typ);
        Typing.e_check env evdref (EConstr.of_constr t') (EConstr.of_constr typ);
        let evm = !evdref in
        k (env, evm, t')

@@ -1266,6 +1266,66 @@ Section Reduce.
   Solve All Obligations with (program_simpl ; reflexivity).
   Solve All Obligations with (program_simpl ; case_eq (decompose_stack π) ; intros ; assumption).
   Next Obligation.
+    case_eq (decompose_stack π). intros l θ e.
+    pose proof (decompose_stack_eq _ _ _ e). subst.
+    clear eq3. symmetry in eq2.
+    pose proof (decompose_stack_at_eq _ _ _ _ _ eq2).
+    pose proof (decompose_stack_at_length _ _ _ _ _ eq2).
+    case_eq (decompose_stack ρ). intros l' θ' e'.
+    pose proof (decompose_stack_eq _ _ _ e'). subst.
+    assert (l = args ++ (c :: l')).
+    { clear - e e' eq2 H0. rename H0 into eq.
+      assert (forall u ρ, θ <> App u ρ) as hθ.
+      { intros u ρ bot. eapply decompose_stack_not_app.
+        subst. eassumption.
+      }
+      assert (forall u ρ, θ' <> App u ρ) as hθ'.
+      { intros u ρ bot. eapply decompose_stack_not_app.
+        subst. eassumption.
+      }
+      clear - hθ hθ' eq.
+      revert args c θ l' θ' eq hθ hθ'.
+      induction l ; intros args c θ l' θ' eq hθ hθ'.
+      - exfalso.
+        cbn in *. subst. destruct args.
+        + cbn in *. eapply hθ. reflexivity.
+        + cbn in *. eapply hθ. reflexivity.
+      - cbn in eq. destruct args.
+        + cbn in *. inversion eq. subst.
+          f_equal. clear - H1 hθ hθ'.
+          revert l' H1.
+          induction l ; intros l' H1.
+          * cbn in *. subst.
+            destruct l' ; try reflexivity.
+            cbn in hθ. exfalso. eapply hθ. reflexivity.
+          * destruct l'.
+            -- cbn in *. exfalso. eapply hθ'.
+               subst. reflexivity.
+            -- cbn in H1. inversion H1. subst.
+               f_equal. eapply IHl. assumption.
+        + cbn in *. inversion eq. subst.
+          f_equal. eapply IHl ; eassumption.
+    } subst.
+
+    case_eq (decompose_stack ρ'). intros l s e1.
+    pose proof (decompose_stack_eq _ _ _ e1). subst.
+
+    eapply R_Req_R.
+    instantiate (1 := (tFix mfix idx, appstack (args ++ (mkApps (tConstruct ind n ui) l) :: l') θ)).
+    - left. cbn. rewrite 2!zipc_appstack.
+      zip fold. zip fold. eapply cored_context.
+      left. Fail eapply red_fix.
+      (* Most interesting (and problematic)!
+
+         A fix can be unfolded if the nth argument on the stack is a
+         constructor. However, we want to reduce simply knowing it
+         reduces to a constructor while keeping it untouched.
+         This actually means we ought to take some reduction steps in
+         the reverse order.
+       *)
+
+
+(*
     left.
     case_eq (decompose_stack π). intros l θ e.
     pose proof (decompose_stack_eq _ _ _ e). subst.
@@ -1320,6 +1380,7 @@ Section Reduce.
          We need to replace c by its reduced version first.
          Then we can do all this.
        *)
+*)
   Admitted.
   Next Obligation.
     case_eq (decompose_stack π). intros l θ e1 e2. subst.
@@ -1327,32 +1388,6 @@ Section Reduce.
     specialize H1 with (1 := eq_refl).
     cbn in H1. assumption.
   Qed.
-
-
-  (* Next Obligation. *)
-  (*   (* Problem. Once again the order is too restrictive. *)
-  (*      We also need to allow reduction on the stack it seems. *)
-  (*    *) *)
-  (*   admit. *)
-  (* Admitted. *)
-  (* Solve All Obligations with (program_simpl ; reflexivity). *)
-  (* Next Obligation. *)
-  (*   econstructor. econstructor. cbn. *)
-  (*   (* Also worse now. We used to have mkApps. No longer. *)
-  (*      Perhaps is it that we should match on the stack in those cases *)
-  (*      as well. *)
-  (*    *) *)
-  (*   (* econstructor. *) *)
-  (*   (* - rewrite <- eq1. reflexivity. *) *)
-  (*   (* - unfold is_constructor. rewrite <- eq2. *) *)
-  (*   (*   (* Problem of a more dangerouns kind. *) *)
-  (*   (*      To show termination we already need soundness. *) *)
-  (*   (*      Or we need to fix the red_fix rule. *) *)
-  (*   (*      Indeed, it is broken because it wants stack(narg) to be already *) *)
-  (*   (*      a constructor, which doesn't even allow reduction. *) *)
-  (*   (*    *) *) *)
-  (*   (*   unfold decompose_app. *) *)
-  (* Admitted. *)
 
   Lemma closedn_cored :
     forall Σ Γ u v,

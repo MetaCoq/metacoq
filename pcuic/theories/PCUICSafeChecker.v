@@ -236,58 +236,68 @@ Section Normalisation.
   Definition posR t p q :=
     Relation_Operators.clos_trans _ (posR_direct t) p q.
 
+  Ltac dismiss_nopos hp IHp :=
+    unfold valid_pos in * ;
+    cbn in hp ; exfalso ;
+    revert hp IHp ;
+    lazymatch goal with
+    | |- context [ atpos ?t ?p ] =>
+      case_eq (atpos t p)
+    end ; [
+      let t := fresh "t" in
+      let eq := fresh "eq" in
+      intros t eq hp IHp ;
+      specialize (IHp I) ; subst ;
+      cbn in eq ; inversion eq ; subst ;
+      assumption
+    | intros ; assumption
+    ].
+
+  (* Ltac posR_one_case := *)
+  (*   eapply Transitive_Closure.wf_clos_trans ; *)
+  (*   unfold well_founded ; *)
+  (*   let p := fresh "p" in *)
+  (*   let hp := fresh "hp" in *)
+  (*   intros [p hp] ; *)
+  (*   assert (p = root) ; [ *)
+  (*     induction p ; [ reflexivity | dismiss_nopos hp IHp .. ] *)
+  (*   | subst ; *)
+  (*     constructor ; *)
+  (*     let q := fresh "q" in *)
+  (*     let h := fresh "h" in *)
+  (*     intros q h ; *)
+  (*     dependent destruction h ; *)
+  (*     cbn in h1 ; try (exfalso ; assumption) ; *)
+  (*     discriminate *)
+  (*   ]. *)
+
   Lemma posR_Acc :
     forall t p,
       Acc (posR t) p.
   Proof.
     intro t. induction t.
+    all: try solve [
+      eapply Transitive_Closure.wf_clos_trans ;
+      unfold well_founded ;
+      let p := fresh "p" in
+      let hp := fresh "hp" in
+      intros [p hp] ;
+      assert (p = root) ; [
+        induction p ; [ reflexivity | dismiss_nopos hp IHp .. ]
+      | subst ;
+        constructor ;
+        let q := fresh "q" in
+        let h := fresh "h" in
+        intros q h ;
+        dependent destruction h ;
+        cbn in h1 ; try (exfalso ; assumption) ;
+        discriminate
+      ]
+    ].
+
     - eapply Transitive_Closure.wf_clos_trans.
       unfold well_founded.
       intros [p hp].
-      assert (p = root).
-      { induction p.
-        - reflexivity.
-        - unfold valid_pos in *.
-          cbn in hp. exfalso.
-          revert hp IHp.
-          match goal with
-          | |- context [ atpos ?t ?p ] =>
-            case_eq (atpos t p)
-          end.
-          + intros t eq hp IHp.
-            specialize (IHp I). subst.
-            cbn in eq. inversion eq. subst.
-            assumption.
-          + intros bot hp IHp. assumption.
-        - unfold valid_pos in *.
-          cbn in hp. exfalso.
-          revert hp IHp.
-          match goal with
-          | |- context [ atpos ?t ?p ] =>
-            case_eq (atpos t p)
-          end.
-          + intros t eq hp IHp.
-            specialize (IHp I). subst.
-            cbn in eq. inversion eq. subst.
-            assumption.
-          + intros bot hp IHp. assumption.
-        - unfold valid_pos in *.
-          cbn in hp. exfalso.
-          revert hp IHp.
-          match goal with
-          | |- context [ atpos ?t ?p ] =>
-            case_eq (atpos t p)
-          end.
-          + intros t eq hp IHp.
-            specialize (IHp I). subst.
-            cbn in eq. inversion eq. subst.
-            assumption.
-          + intros bot hp IHp. assumption.
-      } subst.
-      constructor. intros q h.
-      dependent destruction h.
-      all: cbn in h1 ; try (exfalso ; assumption).
-      discriminate.
 
 Abort.
 

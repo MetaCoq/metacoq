@@ -187,6 +187,43 @@ Section Normalisation.
       + intros H0 h. discriminate.
   Qed.
 
+  Inductive position : term -> Type :=
+  | root : forall t, position t
+  | app_l : forall u (p : position u) v, position (tApp u v)
+  | app_r : forall u v (p : position v), position (tApp u v)
+  | case_c : forall indn pr c brs (p : position c), position (tCase indn pr c brs).
+
+  Inductive posR_direct : forall {u v : term}, position u -> position v -> Prop :=
+  | posR_app_l : forall u p v, posR_direct (app_l u p v) p
+  | posR_app_r : forall u v p, posR_direct (app_r u v p) p
+  | posR_case_c : forall indn pr c brs p, posR_direct (case_c indn pr c brs p) p
+  | posR_app_lr : forall u v pu pv, posR_direct (app_r u v pv) (app_l u pu v).
+
+  Derive Signature for posR_direct.
+
+  Definition posR t p q :=
+    Relation_Operators.clos_trans _ (@posR_direct t t) p q.
+
+  Lemma posR_Acc :
+    forall t p,
+      Acc (posR t) p.
+  Proof.
+    intros t. eapply Transitive_Closure.wf_clos_trans.
+    unfold well_founded. intro p.
+    induction p.
+    - constructor. intros q h.
+      dependent destruction h.
+      + inversion H0. subst.
+
+  Abort.
+
+(*
+
+    intro t. induction t.
+    all: try solve [
+      eapply Transitive_Closure.wf_clos_trans ;
+      unfold well_founded ;
+
   Inductive position :=
   | root
   | app_l (p : position)
@@ -362,6 +399,8 @@ Abort.
   (*   - constructor. intros q hq. *)
   (*     dependent induction hq. *)
   (*     + *)
+
+*)
 
   (* red is the reflexive transitive closure of one-step reduction and thus
      can't be used as well order. We thus define the transitive closure,

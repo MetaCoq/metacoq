@@ -298,6 +298,10 @@ Section Normalisation.
     - eapply Transitive_Closure.wf_clos_trans.
       unfold well_founded.
       intros [p hp].
+      constructor. intros q h.
+      dependent destruction h.
+      + unfold valid_pos in h1.
+        cbn in h1. unfold valid_pos in hp.
 
 Abort.
 

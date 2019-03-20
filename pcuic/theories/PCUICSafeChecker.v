@@ -193,6 +193,24 @@ Section Normalisation.
   | app_r : forall u v (p : position v), position (tApp u v)
   | case_c : forall indn pr c brs (p : position c), position (tCase indn pr c brs).
 
+  (* There is likely a problem with this definition of position again.
+     Indeed, it is not very clear how to compare
+     (f u, π) and (f, App u π)
+     that way.
+
+     In any case, the following definition is extensionally equal
+     to root. Which is a problem as well.
+     Does this suggest that app_l should take a position in t and
+     return a new position in t?
+   *)
+  Equations stack_position t π : position (zipc t π) :=
+    stack_position t π with π := {
+    | Empty => root t ;
+    | App u ρ => stack_position (tApp t u) ρ ;
+    | Fix f n args ρ => _ ;
+    | Case indn pred brs ρ => _
+    }.
+
   Inductive posR_direct : forall {u v : term}, position u -> position v -> Prop :=
   | posR_app_l : forall u p v, posR_direct (app_l u p v) p
   | posR_app_r : forall u v p, posR_direct (app_r u v p) p

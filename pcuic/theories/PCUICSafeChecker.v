@@ -222,16 +222,107 @@ Section Normalisation.
     | None => False
     end.
 
-  Inductive posR_direct : position -> position -> Prop :=
-  | posR_app_l_deep : forall p, posR_direct (app_l p) p
-  | posR_app_r_deep : forall p, posR_direct (app_r p) p
-  | posR_case_c_deep : forall p, posR_direct (case_c p) p
-  | posR_app_lr : forall p, posR_direct (app_r p) (app_l p).
+  Definition pos (t : term) := { p : position & valid_pos t p }.
+  Notation "( t ; h )" := (existT _ t h).
 
-  Definition posR (t : term) (p q : position) :=
-    valid_pos t p /\
-    valid_pos t q /\
-    Relation_Operators.clos_trans _ posR_direct p q.
+  Inductive posR_direct (t : term) : pos t -> pos t -> Prop :=
+  | posR_app_l_deep : forall p h1 h2, posR_direct t (app_l p ; h1) (p ; h2)
+  | posR_app_r_deep : forall p h1 h2, posR_direct t (app_r p ; h1) (p ; h2)
+  | posR_case_c_deep : forall p h1 h2, posR_direct t (case_c p ; h1) (p ; h2)
+  | posR_app_lr : forall p h1 h2, posR_direct t (app_r p ; h1) (app_l p ; h2).
+
+  Derive Signature for posR_direct.
+
+  Definition posR t p q :=
+    Relation_Operators.clos_trans _ (posR_direct t) p q.
+
+  Lemma posR_Acc :
+    forall t p,
+      Acc (posR t) p.
+  Proof.
+    intro t. induction t.
+    - eapply Transitive_Closure.wf_clos_trans.
+      unfold well_founded.
+      intros [p hp].
+      assert (p = root).
+      { induction p.
+        - reflexivity.
+        - unfold valid_pos in *.
+          cbn in hp. exfalso.
+          revert hp IHp.
+          match goal with
+          | |- context [ atpos ?t ?p ] =>
+            case_eq (atpos t p)
+          end.
+          + intros t eq hp IHp.
+            specialize (IHp I). subst.
+            cbn in eq. inversion eq. subst.
+            assumption.
+          + intros bot hp IHp. assumption.
+        - unfold valid_pos in *.
+          cbn in hp. exfalso.
+          revert hp IHp.
+          match goal with
+          | |- context [ atpos ?t ?p ] =>
+            case_eq (atpos t p)
+          end.
+          + intros t eq hp IHp.
+            specialize (IHp I). subst.
+            cbn in eq. inversion eq. subst.
+            assumption.
+          + intros bot hp IHp. assumption.
+        - unfold valid_pos in *.
+          cbn in hp. exfalso.
+          revert hp IHp.
+          match goal with
+          | |- context [ atpos ?t ?p ] =>
+            case_eq (atpos t p)
+          end.
+          + intros t eq hp IHp.
+            specialize (IHp I). subst.
+            cbn in eq. inversion eq. subst.
+            assumption.
+          + intros bot hp IHp. assumption.
+      } subst.
+      constructor. intros q h.
+      dependent destruction h.
+      all: cbn in h1 ; try (exfalso ; assumption).
+      discriminate.
+
+Abort.
+
+
+    (*   destruct p ; cbn in hp ; try (exfalso ; apply hp). *)
+    (*   Focus 2. unfold valid_pos in hp. cbn in hp. *)
+
+
+    (* intros t. eapply Transitive_Closure.wf_clos_trans. *)
+    (* unfold well_founded. *)
+    (* intro p. constructor. intros q h. destruct h. *)
+    (* - induction p. *)
+    (*   + destruct t. *)
+    (*     all: cbn in h1. *)
+    (*     all: try (exfalso ; apply h1). *)
+    (*     constructor. intros q hq. *)
+    (*     dependent induction  hq. *)
+    (*     * *)
+
+    (*   unfold valid_pos in h1, h2. cbn in h1. *)
+    (*   revert h1 h2. *)
+    (*   destruct (atpos t p). *)
+
+
+  (* Inductive posR (t : term) : pos t -> pos t -> Prop := *)
+  (* | posR_app_l_deep : forall p h1 h2, posR t (app_l p ; h1) (p ; h2) *)
+  (* | posR_app_r_deep : forall p h1 h2, posR t (app_r p ; h1) (p ; h2) *)
+  (* | posR_case_c_deep : forall p h1 h2, posR t (case_c p ; h1) (p ; h2) *)
+  (* | posR_app_lr : forall p h1 h2, posR t (app_r p ; h1) (app_l p ; h2) *)
+  (* | posR_trans : forall p q r, posR t p q -> posR t q r -> posR t p q. *)
+
+  (* Definition posR (t : term) (p q : position) := *)
+  (*   valid_pos t p /\ *)
+  (*   valid_pos t q /\ *)
+  (*   Relation_Operators.clos_trans _ posR_direct p q. *)
 
   (* Lemma posR_Acc : *)
   (*   forall t p, *)

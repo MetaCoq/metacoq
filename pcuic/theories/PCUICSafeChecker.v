@@ -216,24 +216,34 @@ Section Normalisation.
       end
     end.
 
-  Inductive posR : position -> position -> Prop :=
-  | posR_app_l_deep : forall p, posR (app_l p) p
-  | posR_app_r_deep : forall p, posR (app_r p) p
-  | posR_case_c_deep : forall p, posR (case_c p) p
-  | posR_app_lr : forall p, posR (app_r p) (app_l p).
-
   Definition valid_pos (t : term) (p : position) :=
     match atpos t p with
     | Some _ => True
     | None => False
     end.
 
+  Inductive posR_ : position -> position -> Prop :=
+  | posR_app_l_deep : forall p, posR_ (app_l p) p
+  | posR_app_r_deep : forall p, posR_ (app_r p) p
+  | posR_case_c_deep : forall p, posR_ (case_c p) p
+  | posR_app_lr : forall p, posR_ (app_r p) (app_l p).
+
+  Definition posR (t : term) (p q : position) :=
+    valid_pos t p /\
+    valid_pos t q /\
+    posR_ p q.
+
   (* Lemma posR_Acc : *)
   (*   forall t p, *)
   (*     valid_pos t p -> *)
-  (*     Acc posR p. *)
+  (*     Acc (posR t) p. *)
   (* Proof. *)
-  (*   intros t p h. *)
+  (*   intros t p vp. *)
+  (*   constructor. intros q hq. *)
+  (*   destruct hq as [vq [_ h]]. *)
+  (*   revert t vp vq. induction h ; intros t vp vq. *)
+  (*   -  *)
+
 
   (*   constructor. intros q hq. *)
   (*   revert t h hq. revert p. *)

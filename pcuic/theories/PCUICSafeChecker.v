@@ -187,6 +187,63 @@ Section Normalisation.
       + intros H0 h. discriminate.
   Qed.
 
+  Inductive position :=
+  | root
+  | app_l (p : position)
+  | app_r (p : position)
+  | case_c (p : position).
+
+  Fixpoint atpos (t : term) (p : position) : option term :=
+    match p with
+    | root => ret t
+    | app_l p =>
+      tp <- atpos t p ;;
+      match tp with
+      | tApp u v => ret u
+      | _ => None
+      end
+    | app_r p =>
+      tp <- atpos t p ;;
+      match tp with
+      | tApp u v => ret u
+      | _ => None
+      end
+    | case_c p =>
+      tp <- atpos t p ;;
+      match tp with
+      | tCase indn pred c brs => ret c
+      | _ => None
+      end
+    end.
+
+  Inductive posR : position -> position -> Prop :=
+  | posR_app_l_deep : forall p, posR (app_l p) p
+  | posR_app_r_deep : forall p, posR (app_r p) p
+  | posR_case_c_deep : forall p, posR (case_c p) p
+  | posR_app_lr : forall p, posR (app_r p) (app_l p).
+
+  Definition valid_pos (t : term) (p : position) :=
+    match atpos t p with
+    | Some _ => True
+    | None => False
+    end.
+
+  (* Lemma posR_Acc : *)
+  (*   forall t p, *)
+  (*     valid_pos t p -> *)
+  (*     Acc posR p. *)
+  (* Proof. *)
+  (*   intros t p h. *)
+
+  (*   constructor. intros q hq. *)
+  (*   revert t h hq. revert p. *)
+
+  (*   revert t h. *)
+  (*   induction p ; intros t h. *)
+  (*   - constructor. intros q hq. *)
+  (*     dependent induction hq. *)
+  (*     + *)
+
   (* red is the reflexive transitive closure of one-step reduction and thus
      can't be used as well order. We thus define the transitive closure,
      but we take the symmetric version.

@@ -222,22 +222,26 @@ Section Normalisation.
     | None => False
     end.
 
-  Inductive posR_ : position -> position -> Prop :=
-  | posR_app_l_deep : forall p, posR_ (app_l p) p
-  | posR_app_r_deep : forall p, posR_ (app_r p) p
-  | posR_case_c_deep : forall p, posR_ (case_c p) p
-  | posR_app_lr : forall p, posR_ (app_r p) (app_l p).
+  Inductive posR_direct : position -> position -> Prop :=
+  | posR_app_l_deep : forall p, posR_direct (app_l p) p
+  | posR_app_r_deep : forall p, posR_direct (app_r p) p
+  | posR_case_c_deep : forall p, posR_direct (case_c p) p
+  | posR_app_lr : forall p, posR_direct (app_r p) (app_l p).
 
   Definition posR (t : term) (p q : position) :=
     valid_pos t p /\
     valid_pos t q /\
-    posR_ p q.
+    Relation_Operators.clos_trans _ posR_direct p q.
 
   (* Lemma posR_Acc : *)
   (*   forall t p, *)
-  (*     valid_pos t p -> *)
   (*     Acc (posR t) p. *)
   (* Proof. *)
+  (*   intros t p. constructor. intros q [vq [vp h]]. *)
+  (*   revert t vp vq. induction h ; intros t vp vq. *)
+  (*   - *)
+
+
   (*   intros t p vp. *)
   (*   constructor. intros q hq. *)
   (*   destruct hq as [vq [_ h]]. *)

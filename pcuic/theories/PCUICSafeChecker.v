@@ -258,6 +258,33 @@ Section Normalisation.
       forall indn pr c brs p q,
         posR p q -> posR (case_c indn pr c brs p) (case_c indn pr c brs q).
 
+  Derive Signature for position.
+  Derive Signature for posR.
+
+  Lemma posR_Acc :
+    forall t p, Acc (@posR t) p.
+  Proof.
+    intros t p. induction p.
+    - constructor. intros q h.
+      dependent induction h.
+      all: try discriminate.
+    - constructor. intros q h.
+      dependent induction h.
+      all: try discriminate.
+      + (* assert (pu = p). *)
+        (* { clear - H0. revert v p H0. induction pu ; intros w p h. *)
+        (*   - destruct p. all: try discriminate. *)
+        (*     reflexivity. *)
+        (*   - dependent destruction p. *)
+        (*     all: try discriminate. *)
+        (*     cbn in h. *)
+        constructor. intros r h.
+        dependent induction h.
+        all: try discriminate.
+        specialize IHh with (1 := IHp) (2 := H0).
+  Abort.
+
+
   (* Probably correct, but how do we add something at the end? *)
 
   (* There is likely a problem with this definition of position again.

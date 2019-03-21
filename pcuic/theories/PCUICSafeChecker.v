@@ -256,7 +256,10 @@ Section Normalisation.
   | posR_app_r : forall u v p q, posR p q -> posR (app_r u v p) (app_r u v q)
   | posR_case_c :
       forall indn pr c brs p q,
-        posR p q -> posR (case_c indn pr c brs p) (case_c indn pr c brs q).
+        posR p q -> posR (case_c indn pr c brs p) (case_c indn pr c brs q)
+  | posR_app_l_root : forall u v, posR (app_l u root v) root
+  | posR_app_r_root : forall u v, posR (app_r u v root) root
+  | posR_case_c_root : forall indn pr c brs, posR (case_c indn pr c brs root) root.
 
   Derive Signature for position.
   Derive Signature for posR.
@@ -267,11 +270,8 @@ Section Normalisation.
       p = q.
   Proof.
     intros u p q eq.
-    (* revert q eq. dependent induction p ; intros q eq. *)
-    (* - dependent destruction q. *)
-    (*   + reflexivity. *)
-    (*   + cbn in H1. *)
-    revert p q eq. induction u ; intros q r eq.
+    revert p q eq.
+    induction u ; intros q r eq.
     all: try (
       dependent destruction q ;
       dependent destruction r ;
@@ -322,24 +322,26 @@ Section Normalisation.
     - constructor. intros q h.
       dependent induction h.
       all: try discriminate.
-    - constructor.
+      + (* Probably the wrong approach, we should do it by induction on the
+           term *)
+    (* - constructor. *)
 
-      (* intro q. *)
-      (* dependent destruction q ; intro h. *)
-      (* + dependent destruction h. all: discriminate. *)
-      (* + dependent destruction h. all: try discriminate. *)
-      (*   cbn in H0. inversion H0. clear H0. *)
+    (*   (* intro q. *) *)
+    (*   (* dependent destruction q ; intro h. *) *)
+    (*   (* + dependent destruction h. all: discriminate. *) *)
+    (*   (* + dependent destruction h. all: try discriminate. *) *)
+    (*   (*   cbn in H0. inversion H0. clear H0. *) *)
 
-      intros q h.
-      dependent induction h.
-      all: try discriminate.
-      + apply app_l_inj in H0. subst.
-        constructor. intros r h.
-        dependent induction h.
-        all: try discriminate.
-        apply app_r_inj in H0. subst.
-        specialize IHh with (1 := IHp).
-        (* I don't see where this is going... *)
+    (*   intros q h. *)
+    (*   dependent induction h. *)
+    (*   all: try discriminate. *)
+    (*   + apply app_l_inj in H0. subst. *)
+    (*     constructor. intros r h. *)
+    (*     dependent induction h. *)
+    (*     all: try discriminate. *)
+    (*     apply app_r_inj in H0. subst. *)
+    (*     specialize IHh with (1 := IHp). *)
+    (*     (* I don't see where this is going... *) *)
   Abort.
 
   (* red is the reflexive transitive closure of one-step reduction and thus

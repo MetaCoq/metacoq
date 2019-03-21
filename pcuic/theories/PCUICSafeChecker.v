@@ -360,7 +360,7 @@ Section Normalisation.
       dependent destruction h
     ].
     - admit.
-    - assert (forall indn pr q, Acc posR (case_c indn pr t1 l q)).
+    - assert (forall indn pr q, Acc posR (case_c indn pr t1 l q)) as hcase.
       { clear q. intros indn pr q.
         specialize (IHt1 q).
         clear - IHt1.
@@ -374,6 +374,18 @@ Section Normalisation.
           eapply H0. assumption.
         - inversion H1.
       }
+      assert (forall indn pr, Acc (@posR (tCase indn pr t1 l)) root).
+      { clear - hcase. intros indn pr.
+        constructor. intros p h.
+        dependent destruction h.
+        - discriminate.
+        - apply hcase.
+      }
+      constructor. intros r h.
+      dependent destruction h.
+      +
+
+
 
 
 

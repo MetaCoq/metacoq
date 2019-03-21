@@ -207,31 +207,56 @@ Section Normalisation.
 
   Arguments root {_}.
 
-  (* Equations stack_position t π : position (zipc t π) := *)
-  (*   stack_position t π with π := { *)
-  (*   | Empty => root ; *)
-  (*   | App u ρ => poscat _ (stack_position _ ρ) _ ; *)
-  (*   | Fix f n args ρ => _ ; *)
-  (*   | Case indn pred brs ρ => _ *)
-  (*   }. *)
-  (* Next Obligation. *)
+  Lemma atpos_poscat :
+    forall t p q,
+      atpos t (poscat t p q) = atpos (atpos t p) q.
+  Proof.
+    intros t p q. revert q. induction p ; intros q.
+    - reflexivity.
+    - rewrite <- IHp. reflexivity.
+    - rewrite <- IHp. reflexivity.
+    - rewrite <- IHp. reflexivity.
+  Qed.
 
   Notation ex t := (exist _ t _) (only parsing).
 
-  (* Need some property on atpos and poscat *)
-  (* Equations stack_position t π : { p : position (zipc t π) | atpos _ p = t } := *)
-  (*   stack_position t π with π := { *)
-  (*   | Empty => ex root ; *)
-  (*   | App u ρ with stack_position _ ρ := { *)
-  (*     | @exist p h => ex (poscat _ p _) *)
-  (*     } ; *)
-  (*   | Fix f n args ρ => _ ; *)
-  (*   | Case indn pred brs ρ => _ *)
-  (*   }. *)
-  (* Next Obligation. *)
-  (*   rewrite h. exact (app_l _ root _). *)
-  (* Defined. *)
-  (* Next Obligation. *)
+  Equations stack_position t π : { p : position (zipc t π) | atpos _ p = t } :=
+    stack_position t π with π := {
+    | Empty => ex root ;
+    | App u ρ with stack_position _ ρ := {
+      | @exist p h => ex (poscat _ p _)
+      } ;
+    | Fix f n args ρ with stack_position _ ρ := {
+      | @exist p h => ex (poscat _ p _)
+      } ;
+    | Case indn pred brs ρ with stack_position _ ρ := {
+      | @exist p h => ex (poscat _ p _)
+      }
+    }.
+  Next Obligation.
+    rewrite h. exact (app_l _ root _).
+  Defined.
+  Next Obligation.
+    rewrite atpos_poscat.
+    unfold stack_position_obligations_obligation_2.
+    rewrite h. cbn. reflexivity.
+  Qed.
+  Next Obligation.
+    rewrite h. exact (app_r _ _ root).
+  Defined.
+  Next Obligation.
+    rewrite atpos_poscat.
+    unfold stack_position_obligations_obligation_4.
+    rewrite h. cbn. reflexivity.
+  Qed.
+  Next Obligation.
+    rewrite h. exact (case_c _ _ _ _ root).
+  Defined.
+  Next Obligation.
+    rewrite atpos_poscat.
+    unfold stack_position_obligations_obligation_6.
+    rewrite h. cbn. reflexivity.
+  Qed.
 
   (* Probably correct, but how do we add something at the end? *)
 

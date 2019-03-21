@@ -261,6 +261,22 @@ Section Normalisation.
   Derive Signature for position.
   Derive Signature for posR.
 
+  (* Lemma app_l_inj : *)
+  (*   forall u v p q, app_l u p v = app_l u q v -> p = q. *)
+  (* Proof. *)
+  (*   intro u. induction u ; intros v q r h. *)
+  (*   all: try ( *)
+  (*     dependent destruction q ; *)
+  (*     dependent destruction r ; *)
+  (*     reflexivity *)
+  (*   ). *)
+  (*   - dependent destruction q. *)
+  (*     all: dependent destruction r ; try discriminate. *)
+  (*     + reflexivity. *)
+  (*     + cbn in h. f_equal. *)
+  (*       * intros H0 H1 H2. subst. reflexivity. *)
+  (*       * eapply IHu1. *)
+
   Lemma posR_Acc :
     forall t p, Acc (@posR t) p.
   Proof.
@@ -271,14 +287,7 @@ Section Normalisation.
     - constructor. intros q h.
       dependent induction h.
       all: try discriminate.
-      + (* assert (pu = p). *)
-        (* { clear - H0. revert v p H0. induction pu ; intros w p h. *)
-        (*   - destruct p. all: try discriminate. *)
-        (*     reflexivity. *)
-        (*   - dependent destruction p. *)
-        (*     all: try discriminate. *)
-        (*     cbn in h. *)
-        constructor. intros r h.
+      + constructor. intros r h.
         dependent induction h.
         all: try discriminate.
         specialize IHh with (1 := IHp) (2 := H0).

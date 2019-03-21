@@ -315,30 +315,40 @@ Section Normalisation.
     eapply existT_position_inj. assumption.
   Qed.
 
-  Lemma root_Acc :
-    forall t, Acc (@posR t) root.
+  Lemma case_c_inj :
+    forall indn pr c brs p q,
+      case_c indn pr c brs p = case_c indn pr c brs q ->
+      p = q.
   Proof.
-    intro t. induction t.
-    all: try solve [
-      constructor ; intros q h ;
-      dependent induction h
-    ].
-    - constructor. intros p h.
-      dependent induction h.
-      all: try discriminate.
-      + constructor. intros p h.
-        dependent induction h.
-        all: try discriminate.
-        * apply app_l_inj in H0. subst.
-          admit.
-        * apply app_l_inj in H0. subst.
-          admit.
-      + constructor. intros p h.
-        dependent induction h.
-        all: try discriminate.
-        apply app_r_inj in H0. subst.
-        (* eapply IHh ; try assumption. *)
-  Abort.
+    intros indn pr c brs p q eq.
+    inversion eq.
+    eapply existT_position_inj. assumption.
+  Qed.
+
+  (* Lemma root_Acc : *)
+  (*   forall t, Acc (@posR t) root. *)
+  (* Proof. *)
+  (*   intro t. induction t. *)
+  (*   all: try solve [ *)
+  (*     constructor ; intros q h ; *)
+  (*     dependent induction h *)
+  (*   ]. *)
+  (*   - constructor. intros p h. *)
+  (*     dependent induction h. *)
+  (*     all: try discriminate. *)
+  (*     + constructor. intros p h. *)
+  (*       dependent induction h. *)
+  (*       all: try discriminate. *)
+  (*       * apply app_l_inj in H0. subst. *)
+  (*         admit. *)
+  (*       * apply app_l_inj in H0. subst. *)
+  (*         admit. *)
+  (*     + constructor. intros p h. *)
+  (*       dependent induction h. *)
+  (*       all: try discriminate. *)
+  (*       apply app_r_inj in H0. subst. *)
+  (*       (* eapply IHh ; try assumption. *) *)
+  (* Abort. *)
 
   Lemma posR_Acc :
     forall t p, Acc (@posR t) p.
@@ -349,7 +359,24 @@ Section Normalisation.
       constructor ; intros r h ;
       dependent destruction h
     ].
-    -
+    - admit.
+    - assert (forall indn pr q, Acc posR (case_c indn pr t1 l q)).
+      { clear q. intros indn pr q.
+        specialize (IHt1 q).
+        clear - IHt1.
+        rename IHt1 into h, t1 into c.
+        revert l indn pr.
+        induction h.
+        intros l indn pr.
+        constructor. intros p h.
+        dependent destruction h.
+        - apply case_c_inj in H1. subst.
+          eapply H0. assumption.
+        - inversion H1.
+      }
+
+
+
 
 
       (* dependent destruction q. *)

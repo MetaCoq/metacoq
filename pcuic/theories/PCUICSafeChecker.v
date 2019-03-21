@@ -187,6 +187,8 @@ Section Normalisation.
       + intros H0 h. discriminate.
   Qed.
 
+  (*! Notion of term positions and an order on them *)
+
   Inductive position : term -> Type :=
   | root : forall t, position t
   | app_l : forall u (p : position u) v, position (tApp u v)
@@ -220,11 +222,6 @@ Section Normalisation.
 
   Notation ex t := (exist _ t _) (only parsing).
 
-  (* Definition coe : forall A B, A = B -> A -> B. *)
-  (*   intros A B h t. induction h. assumption. *)
-  (*   Show Proof. *)
-
-  (* Notation coe h t := (eq_rect _ (fun x => position x) t _ h). *)
   Notation coe h t := (eq_rec_r (fun x => position x) t h).
 
   Equations stack_position t π : { p : position (zipc t π) | atpos _ p = t } :=
@@ -252,6 +249,14 @@ Section Normalisation.
     rewrite atpos_poscat.
     rewrite h. cbn. reflexivity.
   Qed.
+
+  Inductive posR : forall {t}, position t -> position t -> Prop :=
+  | posR_app_lr : forall u v pu pv, posR (app_r u v pv) (app_l u pu v)
+  | posR_app_l : forall u v p q, posR p q -> posR (app_l u p v) (app_l u q v)
+  | posR_app_r : forall u v p q, posR p q -> posR (app_r u v p) (app_r u v q)
+  | posR_case_c :
+      forall indn pr c brs p q,
+        posR p q -> posR (case_c indn pr c brs p) (case_c indn pr c brs q).
 
   (* Probably correct, but how do we add something at the end? *)
 

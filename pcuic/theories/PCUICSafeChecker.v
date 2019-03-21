@@ -359,7 +359,32 @@ Section Normalisation.
       constructor ; intros r h ;
       dependent destruction h
     ].
-    - admit.
+    - assert (forall u v p, Acc posR p -> Acc posR (app_r u v p)) as hr.
+      { clear. intros u v p h. induction h.
+        constructor. intros p h.
+        dependent destruction h.
+        all: try discriminate.
+        apply app_r_inj in H1. subst.
+        eapply H0. assumption.
+      }
+      assert (forall u v p, Acc posR p -> (forall q : position v, Acc posR q) -> Acc posR (app_l u p v)) as hl.
+      { clear - hr. intros u v p h ih.
+        induction h.
+        constructor. intros p h.
+        dependent destruction h.
+        all: try discriminate.
+        - apply app_l_inj in H1. subst.
+          eapply hr. apply ih.
+        - apply app_l_inj in H1. subst.
+          eapply H0. assumption.
+      }
+      constructor. intros r h.
+      dependent destruction h.
+      + eapply hr. apply IHt2.
+      + eapply hl ; try assumption. apply IHt1.
+      + eapply hr. apply IHt2.
+      + eapply hl ; try assumption. apply IHt1.
+      + eapply hr. apply IHt2.
     - assert (forall indn pr q, Acc posR (case_c indn pr t2 l q)) as hcase.
       { clear q. intros indn pr q.
         specialize (IHt2 q).
@@ -374,18 +399,11 @@ Section Normalisation.
           eapply H0. assumption.
         - inversion H1.
       }
-      (* assert (forall indn pr, Acc (@posR (tCase indn pr t2 l)) root). *)
-      (* { clear - hcase. intros indn pr. *)
-      (*   constructor. intros p h. *)
-      (*   dependent destruction h. *)
-      (*   - discriminate. *)
-      (*   - apply hcase. *)
-      (* } *)
       constructor. intros r h.
       dependent destruction h.
       + eapply hcase.
       + eapply hcase.
-  Abort.
+  Qed.
 
   (* red is the reflexive transitive closure of one-step reduction and thus
      can't be used as well order. We thus define the transitive closure,

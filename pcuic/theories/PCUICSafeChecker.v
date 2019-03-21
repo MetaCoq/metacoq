@@ -315,33 +315,52 @@ Section Normalisation.
     eapply existT_position_inj. assumption.
   Qed.
 
+  Lemma root_Acc :
+    forall t, Acc (@posR t) root.
+  Proof.
+    intro t. induction t.
+    all: try solve [
+      constructor ; intros q h ;
+      dependent induction h
+    ].
+    - constructor. intros p h.
+      dependent induction h.
+      all: try discriminate.
+      + constructor. intros p h.
+        dependent induction h.
+        all: try discriminate.
+        * apply app_l_inj in H0. subst.
+          admit.
+        * apply app_l_inj in H0. subst.
+          admit.
+      + constructor. intros p h.
+        dependent induction h.
+        all: try discriminate.
+        apply app_r_inj in H0. subst.
+        (* eapply IHh ; try assumption. *)
+  Abort.
+
   Lemma posR_Acc :
     forall t p, Acc (@posR t) p.
   Proof.
-    intros t p. induction p.
-    - constructor. intros q h.
-      dependent induction h.
-      all: try discriminate.
-      + (* Probably the wrong approach, we should do it by induction on the
-           term *)
-    (* - constructor. *)
+    intro t. induction t ; intro q.
+    all: try solve [
+      dependent destruction q ;
+      constructor ; intros r h ;
+      dependent destruction h
+    ].
+    -
 
-    (*   (* intro q. *) *)
-    (*   (* dependent destruction q ; intro h. *) *)
-    (*   (* + dependent destruction h. all: discriminate. *) *)
-    (*   (* + dependent destruction h. all: try discriminate. *) *)
-    (*   (*   cbn in H0. inversion H0. clear H0. *) *)
 
-    (*   intros q h. *)
-    (*   dependent induction h. *)
-    (*   all: try discriminate. *)
-    (*   + apply app_l_inj in H0. subst. *)
-    (*     constructor. intros r h. *)
-    (*     dependent induction h. *)
-    (*     all: try discriminate. *)
-    (*     apply app_r_inj in H0. subst. *)
-    (*     specialize IHh with (1 := IHp). *)
-    (*     (* I don't see where this is going... *) *)
+      (* dependent destruction q. *)
+      (* + constructor. intros p h. *)
+      (*   dependent destruction h. *)
+      (*   all: try discriminate. *)
+      (*   * constructor. intros p h. *)
+
+      (* constructor. intros p h. *)
+      (* dependent induction h. *)
+      (* + cbn in *. *)
   Abort.
 
   (* red is the reflexive transitive closure of one-step reduction and thus

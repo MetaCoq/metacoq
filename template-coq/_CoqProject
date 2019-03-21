@@ -12,6 +12,7 @@ src/g_template_coq.ml4
 src/template_coq.mlpack
 src/template_monad.ml
 
+theories/LibHypsNaming.v
 theories/utils.v theories/config.v theories/kernel/univ.v
 theories/kernel/uGraph.v theories/BasicAst.v theories/Ast.v
 theories/AstUtils.v theories/Loader.v theories/Induction.v

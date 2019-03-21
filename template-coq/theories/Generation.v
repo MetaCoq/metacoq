@@ -34,7 +34,7 @@ Proof.
   eapply invert_type_App in Hf.
   destruct Hf as (T'' & U' & (((Hf & HU) & Happf) & Hunil) & Hcumul).
   eapply type_App; eauto. intro. destruct args; discriminate.
-  inv X1. clear Happ Hf Hunil.
+  inv X2. clear Happ Hf Hunil.
   induction HU. simpl. econstructor; eauto.
   eapply cumul_trans; eauto.
   econstructor. econstructor. eapply t. eauto. eauto.

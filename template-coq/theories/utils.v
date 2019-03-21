@@ -23,6 +23,15 @@ Ltac toProp :=
   | |- context [is_true (_ && _)] => rewrite andb_and
   end.
 
+(** "Incoherent" notion of equivalence, that we only apply to hProps actually. *)
+Record isEquiv (A B : Type) :=
+  { equiv : A -> B;
+    equiv_inv : B -> A}.
+
+Infix "<~>" := isEquiv (at level 90).
+
+Record squash (A : Type) : Prop := sq { _ : A }.
+
 Definition on_snd {A B C} (f : B -> C) (p : A * B) :=
   (fst p, f (snd p)).
 
@@ -47,6 +56,9 @@ Definition option_default {A B} (f : A -> B) (o : option A) (b : B) :=
 Definition on_rel {A B} (R : A -> A -> Prop) (f : B -> A) : B -> B -> Prop :=
   fun x y => R (f x) (f y).
 
+Definition on_Trel {A B} (R : A -> A -> Type) (f : B -> A) : B -> B -> Type :=
+  fun x y => R (f x) (f y).
+
 Class Fuel := fuel : nat.
 
 (** Such a useful tactic it should be part of the stdlib. *)
@@ -59,8 +71,6 @@ Ltac inv H := inversion_clear H.
 
 Tactic Notation "forward" constr(H) := forward_gen H ltac:(idtac).
 Tactic Notation "forward" constr(H) "by" tactic(tac) := forward_gen H tac.
-
-Record squash (A : Type) : Prop := { _ : A }.
 
 Definition string_of_nat n : string :=
   match n with
@@ -672,8 +682,12 @@ Proof. induction l; simpl; try constructor; auto. Qed.
 Lemma OnOne2_length {A} {P} {l l' : list A} : OnOne2 P l l' -> #|l| = #|l'|.
 Proof. induction 1; simpl; congruence. Qed.
 
-Lemma OnOne2_map {A B} {P} {l l' : list A} (f : A -> B) :
+Lemma OnOne2_mapP {A B} {P} {l l' : list A} (f : A -> B) :
   OnOne2 (on_rel P f) l l' -> OnOne2 P (map f l) (map f l').
+Proof. induction 1; simpl; constructor; try congruence. apply p. Qed.
+
+Lemma OnOne2_map {A B} {P : B -> B -> Type} {l l' : list A} (f : A -> B) :
+  OnOne2 (on_Trel P f) l l' -> OnOne2 P (map f l) (map f l').
 Proof. induction 1; simpl; constructor; try congruence. apply p. Qed.
 
 Lemma All_firstn {A} {P : A -> Type} {l} {n} : All P l -> All P (firstn n l).

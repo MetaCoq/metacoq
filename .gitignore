@@ -216,3 +216,11 @@ checker/src/wf.mli
 /pcuic/src/pCUICMetaTheory.mli
 /checker/src/basicAst.ml
 /checker/src/basicAst.mli
+/checker/src/typingWf.ml
+/checker/src/typingWf.mli
+/pcuic/src/pCUICSubstitution.ml
+/pcuic/src/pCUICSubstitution.mli
+/pcuic/src/pCUICWeakening.ml
+/pcuic/src/pCUICWeakening.mli
+/pcuic/src/pCUICWeakeningEnv.ml
+/pcuic/src/pCUICWeakeningEnv.mli

@@ -508,10 +508,10 @@ Definition check_conv_leq `{checker_flags} {F:Fuel} := check_conv_gen Cumul.
 Definition check_conv `{checker_flags} {F:Fuel} := check_conv_gen Conv.
 
 Conjecture conv_spec : forall `{checker_flags} {F:Fuel} Σ Γ t u,
-    Σ ;;; Γ |- t = u <-> check_conv Σ Γ t u = Checked ().
+    Σ ;;; Γ |- t = u <~> check_conv Σ Γ t u = Checked ().
 
 Conjecture cumul_spec : forall `{checker_flags} {F:Fuel} Σ Γ t u,
-    Σ ;;; Γ |- t <= u <-> check_conv_leq Σ Γ t u = Checked ().
+    Σ ;;; Γ |- t <= u <~> check_conv_leq Σ Γ t u = Checked ().
 
 Conjecture reduce_cumul :
   forall `{checker_flags} Σ Γ n t, Σ ;;; Γ |- try_reduce (fst Σ) Γ n t <= t.
@@ -771,10 +771,10 @@ Section Typecheck2.
   Open Scope monad.
 
   Conjecture cumul_convert_leq : forall Γ t t',
-    Σ ;;; Γ |- t <= t' <-> convert_leq Γ t t' = Checked ().
+    Σ ;;; Γ |- t <= t' <~> convert_leq Γ t t' = Checked ().
 
   Conjecture cumul_reduce_to_sort : forall Γ t s',
-      Σ ;;; Γ |- t <= tSort s' <->
+      Σ ;;; Γ |- t <= tSort s' <~>
       exists s'', reduce_to_sort (fst Σ) Γ t = Checked s''
              /\ check_leq (snd Σ) s'' s' = true.
 
@@ -782,13 +782,13 @@ Section Typecheck2.
       Σ ;;; Γ |- t <= tProd na a b ->
       exists a' b',
         reduce_to_prod (fst Σ) Γ t = Checked (a', b') /\
-        cumul Σ Γ (tProd na a' b') (tProd na a b).
+        squash (cumul Σ Γ (tProd na a' b') (tProd na a b)).
 
   Conjecture cumul_reduce_to_ind : forall Γ t i u args,
-      Σ ;;; Γ |- t <= mkApps (tInd i u) args <->
+      Σ ;;; Γ |- t <= mkApps (tInd i u) args <~>
       exists args',
         reduce_to_ind (fst Σ) Γ t = Checked (i, u, args') /\
-        cumul Σ Γ (mkApps (tInd i u) args') (mkApps (tInd i u) args).
+        squash (cumul Σ Γ (mkApps (tInd i u) args') (mkApps (tInd i u) args)).
 
   Lemma lookup_env_id {id decl} : lookup_env Σ id = Some decl -> id = global_decl_ident decl.
   Proof.
@@ -823,13 +823,20 @@ Section Typecheck2.
   Lemma eq_ind_refl i i' : eq_ind i i' = true <-> i = i'.
   Admitted.
 
+  Hint Resolve sq.
+
+  Ltac unsquash :=
+    repeat match goal with
+             | [ H : squash _ |- _ ] => destruct H as [H]
+           end.
+
   Lemma infer_complete Γ t T :
-    Σ ;;; Γ |- t : T -> exists T', infer Γ t = Checked T' /\ cumul Σ Γ T' T.
+    Σ ;;; Γ |- t : T -> exists T', infer Γ t = Checked T' /\ squash (cumul Σ Γ T' T).
   Proof.
     induction 1; unfold infer_type, infer_cumul in *; simpl; unfold infer_type, infer_cumul in *;
       repeat match goal with
         H : exists T', _ |- _ => destruct H as [? [-> H]]
-      end; simpl; try (eexists; split; [ reflexivity | solve [ tc ] ]).
+      end; simpl; try (eexists; split; [ reflexivity | solve [ tc ] ]); unsquash.
 
     - eexists. rewrite e.
       split; [ reflexivity | tc ].
@@ -843,7 +850,7 @@ Section Typecheck2.
       admit.
 
     - apply cumul_reduce_to_sort in IHX1 as [s'' [-> Hs'']].
-      eexists; intuition eauto.
+      eexists; intuition eauto. constructor.
       eapply congr_cumul_prod; tc.
 
     - apply cumul_convert_leq in IHX2 as ->; simpl.
@@ -881,7 +888,7 @@ Section Typecheck2.
       split; [ reflexivity | tc ].
 
     - eexists.
-      split; [ reflexivity | tc ].
+      split; [ reflexivity | tc ]. constructor.
       eapply cumul_trans; eauto.
   Admitted.
 
@@ -912,8 +919,7 @@ Section Typecheck2.
     specialize (IH _ _ Heqt0).
     intros.
     eapply type_Conv. apply IH.
-    admit.
-    rewrite cumul_reduce_to_sort. exists x. split; tc.
+    admit. apply cumul_reduce_to_sort. exists x. split; tc.
   Admitted.
 
 
@@ -931,7 +937,7 @@ Section Typecheck2.
     intros.
     eapply type_Conv. apply IH'.
     apply infer_type_correct; eauto.
-    destruct a0. now rewrite cumul_convert_leq.
+    destruct a0. now apply cumul_convert_leq.
   Qed.
 
   Ltac infco := eauto using infer_cumul_correct, infer_type_correct.

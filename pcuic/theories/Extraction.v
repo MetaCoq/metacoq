@@ -24,6 +24,9 @@ Extraction Library PCUICAstUtils.
 Extraction Library PCUICUnivSubst.
 Extraction Library PCUICLiftSubst.
 Extraction Library PCUICTyping.
+Extraction Library PCUICWeakeningEnv.
+Extraction Library PCUICWeakening.
+Extraction Library PCUICSubstitution.
 Extraction Library PCUICChecker.
 Extraction Library PCUICRetyping.
 Extraction Library PCUICMetaTheory.

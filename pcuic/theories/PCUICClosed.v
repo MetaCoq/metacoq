@@ -154,7 +154,7 @@ Proof.
                                          closedn #|Γ| t && closedn #|Γ| T))).
   { repeat red. intros. destruct t; red in X0; eauto. }
 
-  apply typing_ind_env; intros; simpl; rewrite -> ?andb_and in *; try solve [intuition auto].
+  apply typing_ind_env; intros * wfΣ Γ wfΓ *; simpl; intros; rewrite -> ?andb_and in *; try solve [intuition auto].
   - pose proof (nth_error_Some_length H).
     elim (Nat.ltb_spec n #|Γ|); intuition.
     eapply (All_local_env_lookup H0) in H. red in H.
@@ -170,16 +170,14 @@ Proof.
        have->: #|Γ| - S n + S n = #|Γ| by lia.
        eauto.
 
-  - destruct H as [Ht Hp]. rewrite and_assoc. split. auto.
-    intuition.
-    simpl in Hp. move/andb_and: Hp => [HA HB].
+  - intuition.
     generalize (closedn_subst [u] #|Γ| 0 B). rewrite Nat.add_0_r.
-    move=> Hs. apply: Hs => /=. rewrite H => //.
+    move=> Hs. apply: Hs => /=. rewrite H0 => //.
     rewrite Nat.add_1_r. auto.
 
   - rewrite closedn_subst_instance_constr.
-    eapply lookup_on_global_env in H; eauto.
-    destruct H as [Σ' [HΣ' IH]].
+    eapply lookup_on_global_env in H0; eauto.
+    destruct H0 as [Σ' [HΣ' IH]].
     repeat red in IH. destruct decl, cst_body. simpl in *.
     rewrite -> andb_and in IH. intuition.
     eauto using closed_upwards with arith.
@@ -213,14 +211,14 @@ Proof.
   - intuition auto. solve_all. unfold test_snd. simpl in *.
     toProp; eauto.
     apply closedn_mkApps; auto.
-    rewrite forallb_app. simpl. rewrite H4.
+    rewrite forallb_app. simpl. rewrite H5.
     rewrite forallb_skipn; auto.
-    now apply closedn_mkApps_inv in H9.
+    now apply closedn_mkApps_inv in H10.
 
-  - intuition. subst ty.
+  - intuition.
     apply closedn_subst0.
-    simpl. apply closedn_mkApps_inv in H2.
-    rewrite forallb_rev H1. apply H2.
+    simpl. apply closedn_mkApps_inv in H3.
+    rewrite forallb_rev H2. apply H3.
     rewrite closedn_subst_instance_constr.
     destruct isdecl as [isdecl Hpdecl].
     eapply declared_inductive_inv in isdecl; eauto.
@@ -229,7 +227,7 @@ Proof.
     red in isdecl.
     destruct decompose_prod_assum eqn:Heq.
     destruct isdecl as [[s Hs] Hc]. simpl in *.
-    rewrite <- Hc in H0. rewrite <- H0 in Hs.
+    rewrite <- Hc in H1. rewrite <- H1 in Hs.
     rewrite andb_true_r in Hs. rewrite List.rev_length.
     eauto using closed_upwards with arith.
 

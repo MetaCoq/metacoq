@@ -360,11 +360,11 @@ Section Normalisation.
       dependent destruction h
     ].
     - admit.
-    - assert (forall indn pr q, Acc posR (case_c indn pr t1 l q)) as hcase.
+    - assert (forall indn pr q, Acc posR (case_c indn pr t2 l q)) as hcase.
       { clear q. intros indn pr q.
-        specialize (IHt1 q).
-        clear - IHt1.
-        rename IHt1 into h, t1 into c.
+        specialize (IHt2 q).
+        clear - IHt2.
+        rename IHt2 into h, t2 into c.
         revert l indn pr.
         induction h.
         intros l indn pr.
@@ -374,32 +374,17 @@ Section Normalisation.
           eapply H0. assumption.
         - inversion H1.
       }
-      assert (forall indn pr, Acc (@posR (tCase indn pr t1 l)) root).
-      { clear - hcase. intros indn pr.
-        constructor. intros p h.
-        dependent destruction h.
-        - discriminate.
-        - apply hcase.
-      }
+      (* assert (forall indn pr, Acc (@posR (tCase indn pr t2 l)) root). *)
+      (* { clear - hcase. intros indn pr. *)
+      (*   constructor. intros p h. *)
+      (*   dependent destruction h. *)
+      (*   - discriminate. *)
+      (*   - apply hcase. *)
+      (* } *)
       constructor. intros r h.
       dependent destruction h.
-      +
-
-
-
-
-
-
-
-      (* dependent destruction q. *)
-      (* + constructor. intros p h. *)
-      (*   dependent destruction h. *)
-      (*   all: try discriminate. *)
-      (*   * constructor. intros p h. *)
-
-      (* constructor. intros p h. *)
-      (* dependent induction h. *)
-      (* + cbn in *. *)
+      + eapply hcase.
+      + eapply hcase.
   Abort.
 
   (* red is the reflexive transitive closure of one-step reduction and thus

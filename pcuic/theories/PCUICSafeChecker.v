@@ -193,47 +193,92 @@ Section Normalisation.
   | app_r : forall u v (p : position v), position (tApp u v)
   | case_c : forall indn pr c brs (p : position c), position (tCase indn pr c brs).
 
+  Equations atpos (t : term) (p : position t) : term :=
+    atpos ?(t) (root t) := t ;
+    atpos ?(tApp u v) (app_l u p v) := atpos u p ;
+    atpos ?(tApp u v) (app_r u v p) := atpos v p ;
+    atpos ?(tCase indn pr c brs) (case_c indn pr c brs p) := atpos c p.
+
+  Equations poscat t (p : position t) (q : position (atpos t p)) : position t :=
+    poscat _ (root t) q := q ;
+    poscat _ (app_l u p v) q := app_l u (poscat _ p q) v ;
+    poscat _ (app_r u v p) q := app_r u v (poscat _ p q) ;
+    poscat _ (case_c indn pr c brs p) q := case_c indn pr c brs (poscat _ p q).
+
+  Arguments root {_}.
+
+  (* Equations stack_position t π : position (zipc t π) := *)
+  (*   stack_position t π with π := { *)
+  (*   | Empty => root ; *)
+  (*   | App u ρ => poscat _ (stack_position _ ρ) _ ; *)
+  (*   | Fix f n args ρ => _ ; *)
+  (*   | Case indn pred brs ρ => _ *)
+  (*   }. *)
+  (* Next Obligation. *)
+
+  Notation ex t := (exist _ t _) (only parsing).
+
+  (* Need some property on atpos and poscat *)
+  (* Equations stack_position t π : { p : position (zipc t π) | atpos _ p = t } := *)
+  (*   stack_position t π with π := { *)
+  (*   | Empty => ex root ; *)
+  (*   | App u ρ with stack_position _ ρ := { *)
+  (*     | @exist p h => ex (poscat _ p _) *)
+  (*     } ; *)
+  (*   | Fix f n args ρ => _ ; *)
+  (*   | Case indn pred brs ρ => _ *)
+  (*   }. *)
+  (* Next Obligation. *)
+  (*   rewrite h. exact (app_l _ root _). *)
+  (* Defined. *)
+  (* Next Obligation. *)
+
+  (* Probably correct, but how do we add something at the end? *)
+
   (* There is likely a problem with this definition of position again.
      Indeed, it is not very clear how to compare
      (f u, π) and (f, App u π)
      that way.
+
+     For pos (f, App u π), we have p = pos (f u, π)
+     and we return p.app_l.
 
      In any case, the following definition is extensionally equal
      to root. Which is a problem as well.
      Does this suggest that app_l should take a position in t and
      return a new position in t?
    *)
-  Equations stack_position t π : position (zipc t π) :=
-    stack_position t π with π := {
-    | Empty => root t ;
-    | App u ρ => stack_position (tApp t u) ρ ;
-    | Fix f n args ρ => _ ;
-    | Case indn pred brs ρ => _
-    }.
+  (* Equations stack_position t π : position (zipc t π) := *)
+  (*   stack_position t π with π := { *)
+  (*   | Empty => root t ; *)
+  (*   | App u ρ => stack_position (tApp t u) ρ ; *)
+  (*   | Fix f n args ρ => _ ; *)
+  (*   | Case indn pred brs ρ => _ *)
+  (*   }. *)
 
-  Inductive posR_direct : forall {u v : term}, position u -> position v -> Prop :=
-  | posR_app_l : forall u p v, posR_direct (app_l u p v) p
-  | posR_app_r : forall u v p, posR_direct (app_r u v p) p
-  | posR_case_c : forall indn pr c brs p, posR_direct (case_c indn pr c brs p) p
-  | posR_app_lr : forall u v pu pv, posR_direct (app_r u v pv) (app_l u pu v).
+  (* Inductive posR_direct : forall {u v : term}, position u -> position v -> Prop := *)
+  (* | posR_app_l : forall u p v, posR_direct (app_l u p v) p *)
+  (* | posR_app_r : forall u v p, posR_direct (app_r u v p) p *)
+  (* | posR_case_c : forall indn pr c brs p, posR_direct (case_c indn pr c brs p) p *)
+  (* | posR_app_lr : forall u v pu pv, posR_direct (app_r u v pv) (app_l u pu v). *)
 
-  Derive Signature for posR_direct.
+  (* Derive Signature for posR_direct. *)
 
-  Definition posR t p q :=
-    Relation_Operators.clos_trans _ (@posR_direct t t) p q.
+  (* Definition posR t p q := *)
+  (*   Relation_Operators.clos_trans _ (@posR_direct t t) p q. *)
 
-  Lemma posR_Acc :
-    forall t p,
-      Acc (posR t) p.
-  Proof.
-    intros t. eapply Transitive_Closure.wf_clos_trans.
-    unfold well_founded. intro p.
-    induction p.
-    - constructor. intros q h.
-      dependent destruction h.
-      + inversion H0. subst.
+  (* Lemma posR_Acc : *)
+  (*   forall t p, *)
+  (*     Acc (posR t) p. *)
+  (* Proof. *)
+  (*   intros t. eapply Transitive_Closure.wf_clos_trans. *)
+  (*   unfold well_founded. intro p. *)
+  (*   induction p. *)
+  (*   - constructor. intros q h. *)
+  (*     dependent destruction h. *)
+  (*     + inversion H0. subst. *)
 
-  Abort.
+  (* Abort. *)
 
 (*
 

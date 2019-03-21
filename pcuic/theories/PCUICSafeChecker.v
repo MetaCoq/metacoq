@@ -220,41 +220,36 @@ Section Normalisation.
 
   Notation ex t := (exist _ t _) (only parsing).
 
+  (* Definition coe : forall A B, A = B -> A -> B. *)
+  (*   intros A B h t. induction h. assumption. *)
+  (*   Show Proof. *)
+
+  (* Notation coe h t := (eq_rect _ (fun x => position x) t _ h). *)
+  Notation coe h t := (eq_rec_r (fun x => position x) t h).
+
   Equations stack_position t π : { p : position (zipc t π) | atpos _ p = t } :=
     stack_position t π with π := {
     | Empty => ex root ;
     | App u ρ with stack_position _ ρ := {
-      | @exist p h => ex (poscat _ p _)
+      | @exist p h => ex (poscat _ p (coe h (app_l _ root _)))
       } ;
     | Fix f n args ρ with stack_position _ ρ := {
-      | @exist p h => ex (poscat _ p _)
+      | @exist p h => ex (poscat _ p (coe h (app_r _ _ root)))
       } ;
     | Case indn pred brs ρ with stack_position _ ρ := {
-      | @exist p h => ex (poscat _ p _)
+      | @exist p h => ex (poscat _ p (coe h (case_c _ _ _ _ root)))
       }
     }.
   Next Obligation.
-    rewrite h. exact (app_l _ root _).
-  Defined.
-  Next Obligation.
     rewrite atpos_poscat.
-    unfold stack_position_obligations_obligation_2.
     rewrite h. cbn. reflexivity.
   Qed.
   Next Obligation.
-    rewrite h. exact (app_r _ _ root).
-  Defined.
-  Next Obligation.
     rewrite atpos_poscat.
-    unfold stack_position_obligations_obligation_4.
     rewrite h. cbn. reflexivity.
   Qed.
   Next Obligation.
-    rewrite h. exact (case_c _ _ _ _ root).
-  Defined.
-  Next Obligation.
     rewrite atpos_poscat.
-    unfold stack_position_obligations_obligation_6.
     rewrite h. cbn. reflexivity.
   Qed.
 

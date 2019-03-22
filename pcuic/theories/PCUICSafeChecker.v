@@ -870,6 +870,54 @@ Section Reduce.
     - cbn in e. apply IHπ in e. inversion e. reflexivity.
   Qed.
 
+  Lemma posR_poscat :
+    forall t p q, q <> @root (atpos t p) -> posR (poscat t p q) p.
+  Proof.
+    clear. intros t p q h.
+    funelim (poscat t p q).
+    - revert q h.
+      assert (forall q : position t, q <> root t -> posR q (root t)) as h.
+      { intros q h.
+        dependent destruction q.
+        - exfalso. apply h. reflexivity.
+        - econstructor.
+        - econstructor.
+        - econstructor.
+      }
+      apply h.
+    - revert u v p q H h.
+      assert (forall u v p (q : position (atpos u p)),
+                 (q <> root _ -> posR (poscat _ p q) p) ->
+                 q <> root _ ->
+                 posR (app_l u (poscat u p q) v) (app_l u p v)
+             ).
+      { intros u v p q ih h. specialize (ih h).
+        econstructor. assumption.
+      }
+      assumption.
+    - revert u0 v0 p0 q H h.
+      assert (forall u v p (q : position (atpos v p)),
+                 (q <> root _ -> posR (poscat v p q) p) ->
+                 q <> root _ ->
+                 posR (app_r u v (poscat v p q)) (app_r u v p)
+             ).
+      { intros u v p q ih h. specialize (ih h).
+        econstructor. assumption.
+      }
+      assumption.
+    - revert indn pr c p1 q H h.
+      assert (
+          forall indn pr c p (q : position (atpos c p)),
+            (q <> root _ -> posR (poscat c p q) p) ->
+            q <> root _ ->
+            posR (case_c indn pr c brs (poscat c p q)) (case_c indn pr c brs p)
+        ).
+      { intros indn pr c p q ih h. specialize (ih h).
+        econstructor. assumption.
+      }
+      assumption.
+  Qed.
+
   Definition inspect {A} (x : A) : { y : A | y = x } := exist _ x eq_refl.
 
   (* Definition Pr (t' : term * stack) (π : stack) := True. *)
@@ -1089,52 +1137,7 @@ Section Reduce.
     (* case_eq (stack_position (tApp f a) π). intros p hp eq. cbn. *)
     simp stack_position.
     destruct stack_position_clause_1. cbn.
-    assert (forall t p q, q <> @root (atpos t p) -> posR (poscat t p q) p).
-    { clear. intros t p q h.
-      funelim (poscat t p q).
-      - revert q h.
-        assert (forall q : position t, q <> root t -> posR q (root t)) as h.
-        { intros q h.
-          dependent destruction q.
-          - exfalso. apply h. reflexivity.
-          - econstructor.
-          - econstructor.
-          - econstructor.
-        }
-        apply h.
-      - revert u v p q H h.
-        assert (forall u v p (q : position (atpos u p)),
-                   (q <> root _ -> posR (poscat _ p q) p) ->
-                   q <> root _ ->
-                   posR (app_l u (poscat u p q) v) (app_l u p v)
-               ).
-        { intros u v p q ih h. specialize (ih h).
-          econstructor. assumption.
-        }
-        assumption.
-      - revert u0 v0 p0 q H h.
-        assert (forall u v p (q : position (atpos v p)),
-                   (q <> root _ -> posR (poscat v p q) p) ->
-                   q <> root _ ->
-                   posR (app_r u v (poscat v p q)) (app_r u v p)
-               ).
-        { intros u v p q ih h. specialize (ih h).
-          econstructor. assumption.
-        }
-        assumption.
-      - revert indn pr c p1 q H h.
-        assert (
-          forall indn pr c p (q : position (atpos c p)),
-            (q <> root _ -> posR (poscat c p q) p) ->
-            q <> root _ ->
-            posR (case_c indn pr c brs (poscat c p q)) (case_c indn pr c brs p)
-        ).
-        { intros indn pr c p q ih h. specialize (ih h).
-          econstructor. assumption.
-        }
-        assumption.
-    }
-    apply H0. intro bot. clear - bot.
+    apply posR_poscat. intro bot. clear - bot.
     revert x e bot.
     generalize (zipc (tApp f a)).
     intros t x.

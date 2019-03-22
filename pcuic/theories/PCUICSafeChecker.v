@@ -325,31 +325,6 @@ Section Normalisation.
     eapply existT_position_inj. assumption.
   Qed.
 
-  (* Lemma root_Acc : *)
-  (*   forall t, Acc (@posR t) root. *)
-  (* Proof. *)
-  (*   intro t. induction t. *)
-  (*   all: try solve [ *)
-  (*     constructor ; intros q h ; *)
-  (*     dependent induction h *)
-  (*   ]. *)
-  (*   - constructor. intros p h. *)
-  (*     dependent induction h. *)
-  (*     all: try discriminate. *)
-  (*     + constructor. intros p h. *)
-  (*       dependent induction h. *)
-  (*       all: try discriminate. *)
-  (*       * apply app_l_inj in H0. subst. *)
-  (*         admit. *)
-  (*       * apply app_l_inj in H0. subst. *)
-  (*         admit. *)
-  (*     + constructor. intros p h. *)
-  (*       dependent induction h. *)
-  (*       all: try discriminate. *)
-  (*       apply app_r_inj in H0. subst. *)
-  (*       (* eapply IHh ; try assumption. *) *)
-  (* Abort. *)
-
   Lemma posR_Acc :
     forall t p, Acc (@posR t) p.
   Proof.
@@ -413,8 +388,75 @@ Section Normalisation.
   | cored1 : forall u v, red1 Σ Γ u v -> cored Σ Γ v u
   | cored_trans : forall u v w, cored Σ Γ v u -> red1 Σ Γ v w -> cored Σ Γ w u.
 
+  (* Definition R Σ Γ u v := *)
+  (*   Subterm.lexprod _ _ (cored Σ Γ) term_subterm (zip u, fst u) (zip v, fst v). *)
+
+  (* Definition R Σ Γ u v := *)
+  (*   Subterm.lexprod _ _ (cored Σ Γ) posR *)
+  (*                   (zip u, proj1_sig (stack_position (fst u) (snd u))) *)
+  (*                   (zip v, proj1_sig (stack_position (fst v) (snd v))). *)
+
+  (* Since there is a dependency in the orders we need to redefine
+     the lexicographic order ourselves.
+   *)
+
+  Notation "( x ; y )" := (existT _ x y).
+
+  Inductive dlexprod {A} {B : A -> Type} (leA : A -> A -> Prop) (leB : forall x, B x -> B x -> Prop) : sigT B -> sigT B -> Prop :=
+  | left_lex : forall x x' y y', leA x x' -> dlexprod leA leB (x;y) (x';y')
+  | right_lex : forall x y y', leB x y y' -> dlexprod leA leB (x;y) (x;y').
+
+  (* Lemma acc_dlexprod : *)
+  (*   forall A B leA leB x, *)
+  (*     Acc leA x -> *)
+  (*     well_founded (leB x) -> *)
+  (*     forall y, *)
+  (*       Acc (leB x) y -> *)
+  (*       Acc (@dlexprod A B leA leB) (x;y). *)
+  (* Proof. *)
+  (*   intros A B leA leB. *)
+  (*   induction 1 as [x hx ih1]. *)
+  (*   intros hB y. *)
+  (*   induction 1 as [y hy ih2]. *)
+  (*   constructor. *)
+  (*   intros [x' y'] h. simple inversion h. *)
+  (*   - intro. inversion H1. inversion H2. subst. *)
+  (*     eapply ih1. *)
+  (*     + assumption. *)
+  (*     + admit. *)
+  (*     +  *)
+
+  Lemma acc_dlexprod :
+    forall A B leA leB,
+      (forall (x : A) (y y' : B x), (x; y) = (x; y') -> y = y') ->
+      (forall x, well_founded (leB x)) ->
+      forall x,
+        Acc leA x ->
+        forall y,
+          Acc (leB x) y ->
+          Acc (@dlexprod A B leA leB) (x;y).
+  Proof.
+    intros A B leA leB hinj hw.
+    induction 1 as [x hx ih1].
+    intros y.
+    induction 1 as [y hy ih2].
+    constructor.
+    intros [x' y'] h. simple inversion h.
+    - intro hA. inversion H1. inversion H2. subst.
+      eapply ih1.
+      + assumption.
+      + apply hw.
+    - intro hB.
+      inversion H1. inversion H2. subst.
+      eapply ih2.
+      apply hinj in H2. subst.
+      assumption.
+  Qed.
+
   Definition R Σ Γ u v :=
-    Subterm.lexprod _ _ (cored Σ Γ) term_subterm (zip u, fst u) (zip v, fst v).
+    dlexprod (cored Σ Γ) (@posR)
+             (zip u; proj1_sig (stack_position (fst u) (snd u)))
+             (zip v; proj1_sig (stack_position (fst v) (snd v))).
 
   Inductive welltyped Σ Γ t : Prop :=
   | iswelltyped A : Σ ;;; Γ |- t : A -> welltyped Σ Γ t.
@@ -432,13 +474,16 @@ Section Normalisation.
   Corollary R_Acc_aux :
     forall Σ Γ t,
       welltyped Σ Γ (zip t) ->
-      Acc (Subterm.lexprod _ _ (cored (fst Σ) Γ) term_subterm) (zip t, fst t).
+      Acc (dlexprod (cored (fst Σ) Γ) (@posR))
+          (zip t ; proj1_sig (stack_position (fst t) (snd t))).
   Proof.
     intros Σ Γ t h.
-    eapply Subterm.acc_A_B_lexprod.
+    eapply acc_dlexprod.
+    - apply existT_position_inj.
+    - intros x. unfold well_founded.
+      eapply posR_Acc.
     - eapply normalisation. eassumption.
-    - eapply well_founded_term_subterm.
-    - eapply well_founded_term_subterm.
+    - eapply posR_Acc.
   Qed.
 
   Derive Signature for Acc.
@@ -475,7 +520,7 @@ Section Normalisation.
   Definition Req Σ Γ t t' :=
     t = t' \/ R Σ Γ t t'.
 
-  Derive Signature for Subterm.lexprod.
+  Derive Signature for dlexprod.
 
   Lemma cored_trans' :
     forall {Σ Γ u v w},
@@ -494,20 +539,20 @@ Section Normalisation.
   Definition transitive {A} (R : A -> A -> Prop) :=
     forall u v w, R u v -> R v w -> R u w.
 
-  Lemma lexprod_trans :
+  Lemma dlexprod_trans :
     forall A B RA RB,
       transitive RA ->
-      transitive RB ->
-      transitive (Subterm.lexprod A B RA RB).
+      (forall x, transitive (RB x)) ->
+      transitive (@dlexprod A B RA RB).
   Proof.
     intros A B RA RB hA hB [u1 u2] [v1 v2] [w1 w2] h1 h2.
     revert w1 w2 h2. induction h1 ; intros w1 w2 h2.
     - dependent induction h2.
-      + eapply Subterm.left_lex. eapply hA ; eassumption.
-      + eapply Subterm.left_lex. assumption.
+      + left. eapply hA ; eassumption.
+      + left. assumption.
     - dependent induction h2.
-      + eapply Subterm.left_lex. assumption.
-      + eapply Subterm.right_lex. eapply hB ; eassumption.
+      + left. assumption.
+      + right. eapply hB ; eassumption.
   Qed.
 
   Lemma Rtrans :
@@ -517,7 +562,7 @@ Section Normalisation.
       R Σ Γ u w.
   Proof.
     intros Σ Γ u v w h1 h2.
-    eapply lexprod_trans.
+    eapply dlexprod_trans.
     - intros ? ? ? ? ?. eapply cored_trans' ; eassumption.
     - intros ? ? ? ? ?. eapply Relation_Operators.t_trans ; eassumption.
     - eassumption.

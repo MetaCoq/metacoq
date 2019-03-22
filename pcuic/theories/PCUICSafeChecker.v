@@ -1134,7 +1134,6 @@ Section Reduce.
   Next Obligation.
     right.
     cbn.
-    (* case_eq (stack_position (tApp f a) π). intros p hp eq. cbn. *)
     simp stack_position.
     destruct stack_position_clause_1. cbn.
     apply posR_poscat. intro bot. clear - bot.
@@ -1157,7 +1156,7 @@ Section Reduce.
     specialize h' with (1 := eq_refl). assumption.
   Qed.
   Next Obligation.
-    econstructor. econstructor. eapply red1_context.
+    left. econstructor. eapply red1_context.
     econstructor.
     (* Should be a lemma! *)
     - unfold declared_constant. rewrite <- eq. f_equal.
@@ -1174,7 +1173,20 @@ Section Reduce.
     - cbn. reflexivity.
   Qed.
   Next Obligation.
-    eapply Subterm.right_lex. cbn. constructor. constructor.
+    right. simp stack_position.
+    destruct stack_position_clause_1. cbn.
+    apply posR_poscat. clear.
+    intro bot.
+    revert x e bot. cbn.
+    match goal with
+    | |- forall x : position ?t, _ =>
+      generalize t
+    end.
+    intros t x.
+    generalize (atpos t x).
+    intros t' e bot.
+    subst. cbn in bot.
+    discriminate.
   Qed.
   Next Obligation.
     clear - prf' r p0. unfold Pr in p0.

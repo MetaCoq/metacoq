@@ -257,9 +257,9 @@ Section Normalisation.
   | posR_case_c :
       forall indn pr c brs p q,
         posR p q -> posR (case_c indn pr c brs p) (case_c indn pr c brs q)
-  | posR_app_l_root : forall u v, posR (app_l u root v) root
-  | posR_app_r_root : forall u v, posR (app_r u v root) root
-  | posR_case_c_root : forall indn pr c brs, posR (case_c indn pr c brs root) root.
+  | posR_app_l_root : forall u v p, posR (app_l u p v) root
+  | posR_app_r_root : forall u v p, posR (app_r u v p) root
+  | posR_case_c_root : forall indn pr c brs p, posR (case_c indn pr c brs p) root.
 
   Derive Signature for position.
   Derive Signature for posR.
@@ -560,6 +560,7 @@ Section Normalisation.
   Proof.
     intros t p q r h1 h2.
     revert r h2. dependent induction h1 ; intros r h2.
+    all: try (dependent induction h2 ; discriminate).
     - dependent induction h2.
       all: try discriminate.
       + cbn in H0. inversion H0. subst.
@@ -569,8 +570,41 @@ Section Normalisation.
       + cbn in H0. inversion H0. subst.
         apply existT_position_inj in H2. subst.
         clear H0.
-        (* Seems posR_app_r_root should be stronger. *)
-  Abort.
+        econstructor.
+    - dependent induction h2.
+      all: try discriminate.
+      + cbn in H0. inversion H0. subst.
+        apply existT_position_inj in H2. subst.
+        clear H0.
+        econstructor. eapply IHh1. assumption.
+      + cbn in H0. inversion H0. subst.
+        apply existT_position_inj in H2. subst.
+        clear H0.
+        econstructor.
+    - dependent induction h2.
+      all: try discriminate.
+      + cbn in H0. inversion H0. subst.
+        apply existT_position_inj in H2. subst.
+        clear H0.
+        econstructor.
+      + cbn in H0. inversion H0. subst.
+        apply existT_position_inj in H2. subst.
+        clear H0.
+        econstructor. eapply IHh1. assumption.
+      + cbn in H0. inversion H0. subst.
+        apply existT_position_inj in H2. subst.
+        clear H0.
+        econstructor.
+    - dependent induction h2.
+      + cbn in H0. inversion H0. subst.
+        apply existT_position_inj in H2. subst.
+        clear H0.
+        econstructor. eapply IHh1. assumption.
+      + cbn in H0. inversion H0. subst.
+        apply existT_position_inj in H2. subst.
+        clear H0.
+        econstructor.
+  Qed.
 
   Lemma Rtrans :
     forall Σ Γ u v w,
@@ -581,7 +615,7 @@ Section Normalisation.
     intros Σ Γ u v w h1 h2.
     eapply dlexprod_trans.
     - intros ? ? ? ? ?. eapply cored_trans' ; eassumption.
-    - intros ? ? ? ? ?. eapply Relation_Operators.t_trans ; eassumption.
+    - eapply posR_trans.
     - eassumption.
     - eassumption.
   Qed.
@@ -711,66 +745,6 @@ Section Reduce.
       + eapply IHh.
       + econstructor. assumption.
   Qed.
-
-  (* Lemma R_case : *)
-  (*   forall Σ Γ ind p c c' brs π, *)
-  (*     R Σ Γ c c' -> *)
-  (*     Req Σ Γ (tCase ind p (zipapp c) brs, π) (tCase ind p (zipapp c') brs, π). *)
-  (* Proof. *)
-  (*   intros Σ' Γ ind p [c e] [c' e'] brs π h. *)
-  (*   dependent destruction h. *)
-  (*   - right. econstructor. eapply cored_context. eapply cored_case. *)
-  (*     assumption. *)
-  (*   - cbn in H1. inversion H1. subst. clear H1. *)
-  (*     cbn in H0. cbn. rewrite H3. reflexivity. *)
-  (* Qed. *)
-
-  (* Lemma Req_case : *)
-  (*   forall Σ Γ ind p c c' brs π, *)
-  (*     Req Σ Γ c c' -> *)
-  (*     Req Σ Γ (tCase ind p (zipapp c) brs, π) (tCase ind p (zipapp c') brs, π). *)
-  (* Proof. *)
-  (*   intros Σ' Γ ind p [c e] [c' e'] brs π h. *)
-  (*   dependent destruction h. *)
-  (*   - rewrite H0. reflexivity. *)
-  (*   - eapply R_case. assumption. *)
-  (* Qed. *)
-
- (*  Lemma R_case : *)
- (*    forall Σ Γ ind p c c' brs π, *)
- (*      R Σ Γ c (c', Case ind p brs π) -> *)
- (*      Req Σ Γ (tCase ind p (zipapp c) brs, π) (tCase ind p c' brs, π). *)
- (*  Proof. *)
- (*    intros Σ' Γ ind p [c e] c' brs π h. *)
- (*    dependent destruction h. *)
- (*    - cbn in H0. cbn. eapply Req_trans. *)
- (*      2:{ right. econstructor. *)
- (*          instantiate (1 := (c,e)). cbn. *)
- (*          exact H0. *)
- (*      } *)
-
-
- (*      right. econstructor. eapply cored_context. eapply cored_case. *)
- (*      assumption. *)
- (*    - cbn in H1. inversion H1. subst. clear H1. *)
- (*      cbn in H0. cbn. rewrite H3. reflexivity. *)
- (*  Qed. *)
-
- (*  Lemma Req_case : *)
- (*    forall Σ Γ ind p c c' brs π, *)
- (*      Req Σ Γ c (c', Case ind p brs π) -> *)
- (*      Req Σ Γ (tCase ind p (zipapp c) brs, π) (tCase ind p c' brs, π). *)
- (*  Proof. *)
- (*    intros Σ' Γ ind p [c e] c' brs π h. *)
- (*    dependent destruction h. *)
- (*    - rewrite H0. reflexivity. *)
- (*    - eapply R_case. assumption. *)
- (*  Qed. *)
-
- (* prf : Req (fst Σ) Γ (tConstruct ind' c' wildcard, args) (c, Case (ind, par) p brs π) *)
- (*  ============================ *)
- (*  Req (fst Σ) Γ (tCase (?Goal1, par) ?Goal0 (mkApps (tConstruct ?Goal1 c' ?u) (stack_args args)) brs, π) *)
- (*    (tCase (ind, par) p c brs, π) *)
 
   Lemma closedn_context :
     forall n t,

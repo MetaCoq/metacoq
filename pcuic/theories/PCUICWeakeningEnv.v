@@ -155,13 +155,17 @@ Proof.
   induction 1; intros; simpl; econstructor; eauto. Qed.
 
 Lemma weakening_env `{checker_flags} :
-  env_prop (fun Σ Γ t T =>
-              forall Σ', wf Σ' -> extends Σ Σ' -> Σ' ;;; Γ |- t : T).
+  env_prop_opt (fun Σ Γ t T =>
+              forall Σ', wf Σ' -> extends Σ Σ' ->
+                         match T with
+                         | Some T => Σ' ;;; Γ |- t : T
+                         | None => { T & Σ' ;;; Γ |- t : T }
+                         end).
 Proof.
   apply typing_ind_env; intros; try solve [econstructor; eauto 2 with extends].
 
   - econstructor; eauto 2 with extends.
-    destruct X8 as [Σ'' ->]. simpl; auto.
+    destruct X1 as [Σ'' ->]. simpl; auto.
     close_Forall. intros; intuition eauto with extends.
   - econstructor; eauto with extends.
     eapply weakening_All_local_env_impl. eapply X.

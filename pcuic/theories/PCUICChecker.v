@@ -581,21 +581,6 @@ Ltac unsquash :=
          | [ H : squash _ |- _ ] => destruct H as [H]
          end.
 
-Require Import LibHypsNaming.
-
-Ltac my_rename_hyp h th :=
-  match th with
-  | (typing _ _ ?t _) => fresh "type" t
-  | (@cumul _ _ _ ?t _) => fresh "cumul" t
-  | (conv _ _ ?t _) => fresh "conv" t
-  | (All_local_env (@typing _) _ ?G) => fresh "wf" G
-  | (All_local_env (@typing _) _ _) => fresh "wf"
-  | (All_local_env _ _ ?G) => fresh "H" G
-  | context [typing _ _ (_ ?t) _] => fresh "IH" t
-  end.
-
-Ltac rename_hyp h ht ::= my_rename_hyp h ht.
-
 Section Typecheck2.
   Context `{cf : checker_flags}.
   Context `{F : Fuel}.

@@ -555,6 +555,23 @@ Section Normalisation.
       + right. eapply hB ; eassumption.
   Qed.
 
+  Lemma posR_trans :
+    forall t, transitive (@posR t).
+  Proof.
+    intros t p q r h1 h2.
+    revert r h2. dependent induction h1 ; intros r h2.
+    - dependent induction h2.
+      all: try discriminate.
+      + cbn in H0. inversion H0. subst.
+        apply existT_position_inj in H2. subst.
+        clear H0.
+        econstructor.
+      + cbn in H0. inversion H0. subst.
+        apply existT_position_inj in H2. subst.
+        clear H0.
+        (* Seems posR_app_r_root should be stronger. *)
+  Abort.
+
   Lemma Rtrans :
     forall Σ Γ u v w,
       R Σ Γ u v ->

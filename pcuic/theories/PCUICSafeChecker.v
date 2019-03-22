@@ -224,6 +224,8 @@ Section Normalisation.
 
   Notation coe h t := (eq_rec_r (fun x => position x) t h).
 
+  (* Set Equations Debug. *)
+
   Equations stack_position t π : { p : position (zipc t π) | atpos _ p = t } :=
     stack_position t π with π := {
     | Empty => ex root ;
@@ -1028,7 +1030,7 @@ Section Reduce.
 
     _reduce_stack Γ t π h reduce := give t π.
   Next Obligation.
-    econstructor.
+    left.
     econstructor.
     eapply red1_context.
     eapply red_rel. rewrite <- eq. cbn. f_equal.
@@ -1051,7 +1053,7 @@ Section Reduce.
         cbn in e. rewrite e in eq. discriminate.
   Qed.
   Next Obligation.
-    econstructor. econstructor.
+    left. econstructor.
     cbn. eapply red1_context. econstructor.
   Qed.
   Next Obligation.
@@ -1077,12 +1079,67 @@ Section Reduce.
     intros. assumption.
   Qed.
   Next Obligation.
-    econstructor. econstructor.
+    left. econstructor.
     eapply red1_context.
     econstructor.
   Qed.
   Next Obligation.
-    eapply Subterm.right_lex. cbn. constructor. constructor.
+    right.
+    cbn.
+    (* case_eq (stack_position (tApp f a) π). intros p hp eq. cbn. *)
+    simp stack_position.
+    destruct stack_position_clause_1. cbn.
+    assert (forall t p q, q <> @root (atpos t p) -> posR (poscat t p q) p).
+    { clear. intros t p q h.
+      funelim (poscat t p q).
+      - revert q h.
+        assert (forall q : position t, q <> root t -> posR q (root t)) as h.
+        { intros q h.
+          dependent destruction q.
+          - exfalso. apply h. reflexivity.
+          - econstructor.
+          - econstructor.
+          - econstructor.
+        }
+        apply h.
+      - revert u v p q H h.
+        assert (forall u v p (q : position (atpos u p)),
+                   (q <> root _ -> posR (poscat _ p q) p) ->
+                   q <> root _ ->
+                   posR (app_l u (poscat u p q) v) (app_l u p v)
+               ).
+        { intros u v p q ih h. specialize (ih h).
+          econstructor. assumption.
+        }
+        assumption.
+      - revert u0 v0 p0 q H h.
+        assert (forall u v p (q : position (atpos v p)),
+                   (q <> root _ -> posR (poscat v p q) p) ->
+                   q <> root _ ->
+                   posR (app_r u v (poscat v p q)) (app_r u v p)
+               ).
+        { intros u v p q ih h. specialize (ih h).
+          econstructor. assumption.
+        }
+        assumption.
+      - revert indn pr c p1 q H h.
+        assert (
+          forall indn pr c p (q : position (atpos c p)),
+            (q <> root _ -> posR (poscat c p q) p) ->
+            q <> root _ ->
+            posR (case_c indn pr c brs (poscat c p q)) (case_c indn pr c brs p)
+        ).
+        { intros indn pr c p q ih h. specialize (ih h).
+          econstructor. assumption.
+        }
+        assumption.
+    }
+    apply H0. intro bot. clear - bot.
+    revert x e bot.
+    generalize (zipc (tApp f a)).
+    intros t x.
+    generalize (atpos (t π) x).
+    intros t0 e bot. subst. cbn in bot. discriminate.
   Qed.
   Next Obligation.
     cbn. case_eq (decompose_stack π).

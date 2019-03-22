@@ -8,6 +8,8 @@ Require Import ssreflect.
 
 Set Asymmetric Patterns.
 
+Open Scope pcuic.
+
 (** Make a lambda/let-in string of abstractions from a context [Γ], ending with term [t]. *)
 
 Definition it_mkLambda_or_LetIn (l : context) (t : term) :=
@@ -75,7 +77,7 @@ Lemma map_dbody {A B : Set} (f : A -> B) (g : A -> B) (d : def A) :
 Proof. destruct d; reflexivity. Qed.
 
 Definition app_context (Γ Γ' : context) : context := (Γ' ++ Γ)%list.
-Notation " Γ  ,,, Γ' " := (app_context Γ Γ') (at level 25, Γ' at next level, left associativity).
+Notation " Γ  ,,, Γ' " := (app_context Γ Γ') (at level 25, Γ' at next level, left associativity) : pcuic.
 
 Lemma app_context_assoc Γ Γ' Γ'' : Γ ,,, (Γ' ,,, Γ'') = Γ ,,, Γ' ,,, Γ''.
 Proof. unfold app_context; now rewrite app_assoc. Qed.

@@ -1063,7 +1063,10 @@ Proof.
        lia.
 
   - econstructor; eauto.
-    now eapply weakening_cumul.
+    destruct IHB.
+    + left. destruct B; now destruct i.
+    + right. destruct s as [u Hu]; exists u. intuition; now eapply weakening_cumul.
+    + now eapply weakening_cumul.
 Qed.
 
 Lemma weakening `{cf : checker_flags} Σ Γ Γ' (t : term) T :

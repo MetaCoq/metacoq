@@ -1488,7 +1488,10 @@ Proof.
         now rewrite (Nat.add_comm #|Δ|).
 
   - econstructor; eauto.
-    eapply substitution_cumul; eauto.
+    destruct X2 as [Bs|[u Hu]].
+    + left; destruct B; now destruct Bs.
+    + right; exists u; intuition eauto.
+    + eapply substitution_cumul; eauto.
 Qed.
 
 Theorem substitution_alt `{checker_flags} Σ Γ Γ' s Δ (t : term) T :

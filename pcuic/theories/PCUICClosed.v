@@ -256,6 +256,9 @@ Proof.
     subst types. rewrite app_context_length in H0.
     rewrite Nat.add_comm in H0.
     now eapply closedn_lift_inv in H0.
+  - destruct X1; intuition eauto.
+    destruct B; simpl in i; destruct i. constructor.
+    destruct s. rewrite andb_true_r in p. intuition auto.
 Qed.
 
 Lemma declared_decl_closed `{checker_flags} Σ cst decl :

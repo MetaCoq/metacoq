@@ -171,7 +171,11 @@ Proof.
     eapply weakening_All_local_env_impl. eapply X.
     clear -X1 X2. simpl; intros. intuition eauto with extends.
     eapply All_impl; eauto; simpl; intuition eauto with extends.
-  - eapply weakening_env_cumul in X4; eauto. econstructor; eauto.
+  - econstructor. eapply X1; eauto.
+    destruct X2 as [isB|[u [Hu Ps]]].
+    + left; auto.
+    + right. exists u. eapply Ps; auto.
+    + eapply weakening_env_cumul in X4; eauto.
 Qed.
 
 

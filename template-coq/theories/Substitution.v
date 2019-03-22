@@ -1000,8 +1000,9 @@ Proof.
   revert wfM1. inv H. simpl. intros.
   rewrite mkApp_mkApps. constructor.
 
-  intros. inv wfM1. simpl.
+  intros.
   econstructor; eauto.
+  inv wfM1. simpl.
   clear -H1.
   unfold is_constructor in *.
   destruct (nth_error args narg) eqn:Heq.
@@ -1010,7 +1011,7 @@ Proof.
   intros. rewrite mkApp_mkApps. now constructor.
 
   intros. simpl.
-  constructor. clear -H0. induction H0; constructor; auto.
+  constructor. clear -X. induction X; constructor; auto.
 
   rewrite mkApp_tApp; auto.
   now apply red1_tApp_mkApp.
@@ -1034,7 +1035,7 @@ Lemma red1_mkApps_r Σ Γ M1 M2 N2 :
   Ast.wf M1 -> All Ast.wf M2 ->
   OnOne2 (red1 Σ Γ) M2 N2 -> red1 Σ Γ (mkApps M1 M2) (mkApps M1 N2).
 Proof.
-  intros. induction H1 in M1, H, H0 |- *.
+  intros. induction X in M1, H, H0 |- *.
   inv H0.
   destruct (isApp M1) eqn:Heq. destruct M1; try discriminate.
   simpl. constructor. apply OnOne2_app. constructor. auto.
@@ -1042,10 +1043,28 @@ Proof.
   rewrite mkApps_tApp; try congruence.
   constructor. constructor. auto.
   inv H0.
-  specialize (IHOnOne2 (mkApp M1 hd)). forward IHOnOne2.
-  apply wf_mkApp; auto. forward IHOnOne2; auto.
-  now rewrite !mkApps_mkApp in IHOnOne2.
+  specialize (IHX (mkApp M1 hd)). forward IHX.
+  apply wf_mkApp; auto. forward IHX; auto.
+  now rewrite !mkApps_mkApp in IHX.
 Qed.
+
+Lemma wf_fix :
+  forall (mfix : list (def term)) (k : nat), Ast.wf (tFix mfix k) ->
+    Forall
+      (fun def : def term => Ast.wf (dtype def) /\ Ast.wf (dbody def) /\ isLambda (dbody def) = true)
+      mfix.
+Proof.
+  intros. inv H. auto.
+Defined.
+
+Lemma wf_cofix :
+  forall (mfix : list (def term)) (k : nat), Ast.wf (tCoFix mfix k) ->
+    Forall
+      (fun def : def term => Ast.wf (dtype def) /\ Ast.wf (dbody def))
+      mfix.
+Proof.
+  intros. inv H. auto.
+Defined.
 
 Lemma substitution_red1 `{CF:checker_flags} Σ Γ Γ' Γ'' s M N :
   wf Σ -> All Ast.wf s -> subs Σ Γ s Γ' -> wf_local Σ Γ -> Ast.wf M ->
@@ -1056,7 +1075,7 @@ Proof.
   remember (Γ ,,, Γ' ,,, Γ'') as Γ0. revert Γ Γ' Γ'' HeqΓ0 wfΓ Hs.
   induction H using red1_ind_all in |- *; intros Γ0 Γ' Γ'' HeqΓ0 wfΓ Hs; try subst Γ; simpl;
     autorewrite with subst;
-    try solve [  econstructor; try inv wfM; eauto ].
+    try solve [  econstructor; try eapply IHred1; try inv wfM; eauto ].
 
   - unfold subst1. rewrite distr_subst; auto. constructor.
   - unfold subst1. rewrite distr_subst; auto. constructor.
@@ -1098,10 +1117,11 @@ Proof.
   - rewrite subst_iota_red.
     constructor.
 
-  - inv wfM. rewrite mkApps_tApp; simpl; auto with wf.
-    rewrite -> mkApps_tApp; simpl; auto with wf.
+  - rewrite mkApps_tApp; simpl; auto with wf.
+    inv wfM. auto with wf. rewrite -> mkApps_tApp; simpl; auto with wf.
     eapply red_fix. erewrite subst_unfold_fix; eauto.
     now apply subst_is_constructor.
+    inv wfM; auto with wf.
     inv H3.
     unfold unfold_fix in H.
     destruct nth_error eqn:Heq.
@@ -1110,7 +1130,7 @@ Proof.
     destruct d as [na b ty]; simpl in *.
     destruct H5 as [_ [_ Hty]].
     destruct ty; try discriminate.
-    discriminate.
+    discriminate. inv wfM; auto with wf.
 
   - pose proof (subst_declared_constant _ _ _ s #|Γ''| u wfΣ H).
     apply (f_equal cst_body) in H1.
@@ -1118,87 +1138,94 @@ Proof.
     injection H1. intros ->.
     econstructor. eauto. eauto.
 
-  - inv wfM.
-    simpl. constructor.
+  - simpl. constructor.
+    inv wfM.
     now rewrite nth_error_map H.
 
   - constructor.
-    inv wfM.
-    specialize (IHred1 H1 Γ0 Γ' (Γ'' ,, vass na N) eq_refl).
+    forward IHred1; try now inv wfM.
+    specialize (IHred1 Γ0 Γ' (Γ'' ,, vass na N) eq_refl).
     now rewrite subst_context_snoc0 in IHred1.
 
   - constructor.
-    inv wfM.
-    specialize (IHred1 H2 Γ0 Γ' (Γ'' ,, _) eq_refl).
+    forward IHred1; try now inv wfM.
+    specialize (IHred1 Γ0 Γ' (Γ'' ,, _) eq_refl).
     now rewrite subst_context_snoc0 in IHred1.
 
-  - inv wfM. constructor.
-    induction H; constructor; auto.
+  - constructor.
+    induction X; constructor; auto.
     intuition; eauto.
-    inv H2. specialize (H3 H4 _ _ _ eq_refl).
-    destruct hd, hd'; simpl in *. now eapply H3.
-    eapply IHOnOne2. inv H2; eauto.
+    forward b. inv wfM. now inv H1.
+    specialize (b _ _ _ eq_refl).
+    destruct hd, hd'; simpl in *. now eapply b.
+    eapply IHX. inv wfM; eauto. inv H1; eauto with wf.
 
-  - inv wfM.
-    specialize (IHred1 H2 _ _ _ eq_refl).
+  - forward IHred1; try now inv wfM.
+    assert(All (Ast.wf ∘ subst s #|Γ''|) M2).
+    eapply (Forall_All (fun x => Ast.wf (subst s #|Γ''| x))). inv wfM; solve_all.
+    apply wf_subst; auto. solve_all.
+    specialize (IHred1 _ _ _ eq_refl).
     specialize (IHred1 wfΓ Hs).
-    apply red1_mkApps_l. apply wf_subst; auto. solve_all.
-    solve_all. apply wf_subst. solve_all. auto.
-    apply IHred1.
+    apply red1_mkApps_l; auto. inv wfM. apply wf_subst; auto. solve_all.
+    solve_all.
 
-  - inv wfM.
+  - assert(Ast.wf (subst s #|Γ''| M1)). inv wfM. apply wf_subst; auto with wf.
+    assert(All (Ast.wf ∘ subst s #|Γ''|) M2).
+    { apply (Forall_All (fun x => Ast.wf (subst s #|Γ''| x))).
+      inv wfM.
+      eapply Forall_impl; eauto. simpl; eauto with wf. }
     apply red1_mkApps_r; auto with wf.
-    apply All_map. apply (Forall_All (fun x => Ast.wf (subst s #|Γ''| x))).
-    eapply Forall_impl; eauto. simpl; eauto with wf.
-    clear -H H2 H3 wfΓ Hs.
-    induction H; constructor; auto.
-    inv H3. intuition.
-    eapply H4; eauto.
-    apply IHOnOne2. inv H3. eauto.
+    now apply All_map.
+    assert(Ast.wf M1). now inv wfM.
+    assert(All Ast.wf M2). eapply Forall_All. now inv wfM.
+    clear -X H1 H2 wfΓ Hs.
+    induction X; constructor; auto.
+    intuition.
+    eapply b; eauto. now inv H2.
+    apply IHX. now inv H2.
 
-  - inv wfM.
-    constructor. specialize (IHred1 H1 _ _ (Γ'' ,, vass na M1) eq_refl).
+  - forward IHred1. now inv wfM.
+    constructor. specialize (IHred1 _ _ (Γ'' ,, vass na M1) eq_refl).
     now rewrite subst_context_snoc0 in IHred1.
 
-  - inv wfM.
-    constructor.
-    induction H; constructor; auto.
-    inv H0. intuition. eapply H3; eauto.
-    apply IHOnOne2. now inv H0.
+  - constructor.
+    induction X; constructor; auto.
+    intuition. eapply b; eauto.
+    inv wfM. now inv H.
+    apply IHX. inv wfM. inv H; now constructor.
 
-  - inv wfM.
-    constructor.
-    rewrite -> (OnOne2_length H). generalize (#|mfix1|).
-    induction H; simpl; constructor; auto.
-    inv H0. intuition. eapply H4; eauto.
-    apply IHOnOne2. now inv H0.
+  - constructor.
+    rewrite -> (OnOne2_length X). generalize (#|mfix1|).
+    induction X; simpl; constructor; auto.
+    intuition. eapply b; eauto.
+    inv wfM. inv H. intuition; auto.
+    apply IHX. inv wfM. inv H. intuition.
 
-  - inv wfM.
+  - apply wf_fix in wfM.
     apply fix_red_body. rewrite !subst_fix_context.
-    solve_all. apply (OnOne2_All_mix_left H0) in H. clear H0.
-    rewrite <- (OnOne2_length H).
-    eapply OnOne2_map. unfold on_rel; solve_all.
-    specialize (H2 Γ0 Γ' (Γ'' ,,, fix_context mfix0)).
-    rewrite app_context_assoc in H2. specialize (H2 eq_refl).
+    solve_all. apply (OnOne2_All_mix_left wfM) in X. clear wfM.
+    rewrite <- (OnOne2_length X).
+    eapply OnOne2_map. unfold on_Trel; solve_all.
+    specialize (X Γ0 Γ' (Γ'' ,,, fix_context mfix0)).
+    rewrite app_context_assoc in X. specialize (X eq_refl).
     rewrite -> app_context_length, fix_context_length in *.
     rewrite -> subst_context_app in *.
     rewrite -> app_context_assoc, Nat.add_0_r in *.
     auto.
 
-  - inv wfM.
-    constructor.
-    rewrite -> (OnOne2_length H). generalize (#|mfix1|).
-    induction H; simpl; constructor; auto.
-    inv H0. intuition. eapply H2; eauto.
-    apply IHOnOne2. now inv H0.
+  - apply wf_cofix in wfM. constructor.
+    rewrite -> (OnOne2_length X). generalize (#|mfix1|).
+    induction X; simpl; constructor; auto.
+    intuition. eapply b; eauto. now inv wfM.
+    apply IHX. now inv wfM; inv H0.
 
-  - inv wfM.
+  - apply wf_cofix in wfM.
     apply cofix_red_body. rewrite !subst_fix_context.
-    solve_all. apply (OnOne2_All_mix_left H0) in H. clear H0.
-    rewrite <- (OnOne2_length H).
-    eapply OnOne2_map. unfold on_rel; solve_all.
-    specialize (H0 Γ0 Γ' (Γ'' ,,, fix_context mfix0)).
-    rewrite app_context_assoc in H0. specialize (H0 eq_refl).
+    solve_all. apply (OnOne2_All_mix_left wfM) in X. clear wfM.
+    rewrite <- (OnOne2_length X).
+    eapply OnOne2_map. unfold on_Trel; solve_all.
+    specialize (X Γ0 Γ' (Γ'' ,,, fix_context mfix0)).
+    rewrite app_context_assoc in X. specialize (X eq_refl).
     rewrite -> app_context_length, fix_context_length in *.
     rewrite -> subst_context_app in *.
     rewrite -> app_context_assoc, Nat.add_0_r in *.
@@ -1441,15 +1468,15 @@ Proof.
   intros wfΣ wfΓ Hs wfM wfN. induction 1.
   constructor.
   - now apply subst_leq_term.
-  - pose proof H.
-    apply wf_red1_wf in H1; eauto.
-    eapply substitution_red1 in H. 4:eauto. all:auto.
+  - pose proof r.
+    apply wf_red1_wf in X0; eauto.
+    eapply substitution_red1 in r. 4:eauto. all:auto.
     econstructor 2; eauto.
     eauto using subs_wf.
     eauto with wf.
-  - pose proof H0.
-    apply wf_red1_wf in H1; eauto.
-    eapply substitution_red1 in H0. 4:eauto.
+  - pose proof r.
+    apply wf_red1_wf in X0; eauto.
+    eapply substitution_red1 in r. 4:eauto.
     all:eauto using subs_wf with wf.
     now econstructor 3.
 Qed.

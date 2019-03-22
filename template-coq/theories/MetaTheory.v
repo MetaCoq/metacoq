@@ -13,14 +13,18 @@ Existing Instance config.default_checker_flags.
 Definition fst_ctx : global_context -> global_declarations := fst.
 Coercion fst_ctx : global_context >-> global_declarations.
 
-(** The subject reduction property of the system: *)
-
+(** The subject reduction property of the system.
+    We comment this as otherwise extraction can produce "axioms to be realized"
+    values that make extracted code useless, as type are in Type.
+ *)
+(*
 Conjecture subject_reduction : forall (Σ : global_context) Γ t u T,
     Σ ;;; Γ |- t : T -> red Σ Γ t u -> Σ ;;; Γ |- u : T.
-
+*)
 (** Weak Normalization: every term has a normal form *)
 
-Definition normal (Σ : global_context) Γ t := ~ exists u, red1 Σ Γ t u.
-
+Definition normal (Σ : global_context) Γ t := { u & red1 Σ Γ t u } -> False.
+(*
 Conjecture weak_normalization : forall (Σ : global_context) Γ t T,
-    Σ ;;; Γ |- t : T -> exists u, red Σ Γ t u /\ normal Σ Γ u.
+    Σ ;;; Γ |- t : T -> { u & (red Σ Γ t u * normal Σ Γ u)%type }.
+*)

@@ -676,11 +676,11 @@ Proof.
     rewrite -> lift_context_snoc, Nat.add_0_r in IHred1. apply IHred1.
 
   - constructor.
-    induction H; constructor; auto.
+    induction X; constructor; auto.
     intuition; eauto.
 
   - constructor.
-    induction H; constructor; auto.
+    induction X; constructor; auto.
     intuition; eauto.
 
   - constructor.
@@ -688,32 +688,32 @@ Proof.
     rewrite -> lift_context_snoc, Nat.add_0_r in IHred1. apply IHred1.
 
   - constructor.
-    induction H; constructor; auto.
+    induction X; constructor; auto.
     intuition; eauto.
 
   - constructor.
-    rewrite -> (OnOne2_length H). generalize (#|mfix1|).
-    induction H; simpl; constructor; intuition; eauto.
+    rewrite -> (OnOne2_length X). generalize (#|mfix1|).
+    induction X; simpl; constructor; intuition; eauto.
 
   - apply fix_red_body. rewrite !lift_fix_context.
-    rewrite <- (OnOne2_length H).
-    eapply OnOne2_map. unfold on_rel; solve_all.
-    specialize (H2 Γ0 (Γ' ,,, fix_context mfix0)).
-    rewrite app_context_assoc in H2. specialize (H2 Γ'' eq_refl).
+    rewrite <- (OnOne2_length X).
+    eapply OnOne2_map. unfold on_Trel; solve_all.
+    specialize (b Γ0 (Γ' ,,, fix_context mfix0)).
+    rewrite app_context_assoc in b. specialize (b Γ'' eq_refl).
     rewrite -> app_context_length, fix_context_length in *.
     rewrite -> lift_context_app in *.
     rewrite -> app_context_assoc, Nat.add_0_r in *.
     auto.
 
   - constructor.
-    rewrite -> (OnOne2_length H). generalize (#|mfix1|).
-    induction H; simpl; constructor; intuition; eauto.
+    rewrite -> (OnOne2_length X). generalize (#|mfix1|).
+    induction X; simpl; constructor; intuition; eauto.
 
   - apply cofix_red_body. rewrite !lift_fix_context.
-    rewrite <- (OnOne2_length H).
-    eapply OnOne2_map. unfold on_rel; solve_all.
-    specialize (H2 Γ0 (Γ' ,,, fix_context mfix0)).
-    rewrite app_context_assoc in H2. specialize (H2 Γ'' eq_refl).
+    rewrite <- (OnOne2_length X).
+    eapply OnOne2_map. unfold on_Trel; solve_all.
+    specialize (b Γ0 (Γ' ,,, fix_context mfix0)).
+    rewrite app_context_assoc in b. specialize (b Γ'' eq_refl).
     rewrite -> app_context_length, fix_context_length in *.
     rewrite -> lift_context_app in *.
     rewrite -> app_context_assoc, Nat.add_0_r in *.
@@ -779,9 +779,9 @@ Proof.
   intros wfΣ. induction 1.
   constructor.
   - now apply lift_leq_term.
-  - eapply weakening_red1 in H; auto.
+  - eapply weakening_red1 in r; auto.
     econstructor 2; eauto.
-  - eapply weakening_red1 in H0; auto.
+  - eapply weakening_red1 in r; auto.
     econstructor 3; eauto.
 Qed.
 

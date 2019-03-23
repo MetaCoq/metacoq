@@ -918,6 +918,14 @@ Section Reduce.
       assumption.
   Qed.
 
+  Notation "( x ; y )" := (existT _ x y).
+
+  (* Lemma right_lex_eq : *)
+  (*   forall {A B leA} {leB : forall x : A, B x -> B x -> Prop} {x x' y y'}, *)
+  (*     x = x' -> *)
+  (*     leB x y y' -> *)
+  (*     @dlexprod A B leA leB (x;y) (x';y'). *)
+
   Definition inspect {A} (x : A) : { y : A | y = x } := exist _ x eq_refl.
 
   (* Definition Pr (t' : term * stack) (π : stack) := True. *)
@@ -1566,9 +1574,19 @@ Section Reduce.
   Next Obligation.
     symmetry in eq2.
     pose proof (decompose_stack_at_eq _ _ _ _ _ eq2). subst.
-    unfold R. cbn. rewrite zipc_appstack. cbn.
-    (* eapply Subterm.right_lex. *)
-    (* Not a subterm! :( *)
+    unfold R. cbn.
+    (* rewrite zipc_appstack. cbn. *)
+    simp stack_position.
+    (* case_eq stack_position_clause_1. *)
+    destruct stack_position_clause_1 as [p hp]. cbn.
+    destruct stack_position_clause_1 as [q hq]. cbn.
+    revert p hp q hq.
+    rewrite zipc_appstack.
+    intros p hp q hq.
+    cbn. right.
+    (* Perhaps do we need to do case_eq instead of destruct? *)
+    (* This way we could relate p and q. *)
+    (* Maybe a case analysis on p and/or q will prove sufficient. *)
   Admitted.
   Next Obligation.
     case_eq (decompose_stack π). intros ll π' e.

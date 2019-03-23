@@ -12,23 +12,25 @@ Open Scope pcuic.
 
 (** Make a lambda/let-in string of abstractions from a context [Γ], ending with term [t]. *)
 
+Definition mkLambda_or_LetIn d t :=
+  match d.(decl_body) with
+  | None => tLambda d.(decl_name) d.(decl_type) t
+  | Some b => tLetIn d.(decl_name) b d.(decl_type) t
+  end.
+
 Definition it_mkLambda_or_LetIn (l : context) (t : term) :=
-  List.fold_left
-    (fun acc d =>
-       match d.(decl_body) with
-       | None => tLambda d.(decl_name) d.(decl_type) acc
-       | Some b => tLetIn d.(decl_name) b d.(decl_type) acc
-       end) l t.
+  List.fold_left (fun acc d => mkLambda_or_LetIn d acc) l t.
 
 (** Make a prod/let-in string of abstractions from a context [Γ], ending with term [t]. *)
 
+Definition mkProd_or_LetIn d t :=
+  match d.(decl_body) with
+  | None => tProd d.(decl_name) d.(decl_type) t
+  | Some b => tLetIn d.(decl_name) b d.(decl_type) t
+  end.
+
 Definition it_mkProd_or_LetIn (l : context) (t : term) :=
-  List.fold_left
-    (fun acc d =>
-       match d.(decl_body) with
-       | None => tProd d.(decl_name) d.(decl_type) acc
-       | Some b => tLetIn d.(decl_name) b d.(decl_type) acc
-       end) l t.
+  List.fold_left (fun acc d => mkProd_or_LetIn d acc) l t.
 
 Definition map_decl f (d : context_decl) :=
   {| decl_name := d.(decl_name);

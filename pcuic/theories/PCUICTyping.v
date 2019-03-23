@@ -25,6 +25,14 @@ Definition isSort T :=
   | _ => False
   end.
 
+Fixpoint isArity T :=
+  match T with
+  | tSort u => True
+  | tProd _ _ codom => isArity codom
+  | tLetIn _ _ _ codom => isArity codom
+  | _ => False
+  end.
+
 (** ** Environment lookup *)
 
 Definition global_decl_ident d :=
@@ -630,8 +638,23 @@ Section TypeLocalOver.
 
   | localenv_over_cons_def Γ na b t (all : All_local_env (lift_typing typing) Σ Γ) (tb : typing Σ Γ b t) :
       All_local_env_over Σ Γ all ->
+      property Σ Γ all _ _ tb ->
       All_local_env_over Σ (Γ ,, vdef na b t) (localenv_cons_def _ Σ Γ na b t all tb).
 End TypeLocalOver.
+
+Section WfArity.
+  Context (typing : forall (Σ : global_context) (Γ : context), term -> term -> Type).
+
+  Definition isWfArity Σ (Γ : context) T :=
+    { ctx & { s & (destArity [] T = Some (ctx, s)) * All_local_env (lift_typing typing) Σ (Γ ,,, ctx) } }.
+
+  Context (property : forall (Σ : global_context) (Γ : context),
+              All_local_env (lift_typing typing) Σ Γ ->
+              forall (t T : term), typing Σ Γ t T -> Type).
+
+  Definition isWfArity_prop Σ (Γ : context) T :=
+    { wfa : isWfArity Σ Γ T & All_local_env_over typing property Σ _ (snd (projT2 (projT2 wfa))) }.
+End WfArity.
 
 Inductive typing `{checker_flags} (Σ : global_context) (Γ : context) : term -> term -> Type :=
 | type_Rel n decl :
@@ -725,9 +748,8 @@ Inductive typing `{checker_flags} (Σ : global_context) (Γ : context) : term ->
 
 | type_Conv t A B :
     Σ ;;; Γ |- t : A ->
-                   (isSort B + {s & Σ ;;; Γ |- B : tSort s})%type ->
-                   Σ ;;; Γ |- A <= B ->
-                              Σ ;;; Γ |- t : B
+    (isWfArity typing Σ Γ B + {s & Σ ;;; Γ |- B : tSort s})%type ->
+    Σ ;;; Γ |- A <= B -> Σ ;;; Γ |- t : B
 
 where " Σ ;;; Γ |- t : T " := (@typing _ Σ Γ t T) : type_scope.
 
@@ -751,9 +773,6 @@ Definition reconstruct_global_context Σ
 
 Definition isType `{checker_flags} (Σ : global_context) (Γ : context) (t : term) :=
   { s : _ & Σ ;;; Γ |- t : tSort s }.
-
-Definition isType_or_Sort `{checker_flags} Σ Γ T : Type :=
-  (isSort T + isType Σ Γ T).
 
 Definition has_nparams npars ty :=
   decompose_prod_n_assum [] npars ty <> None.
@@ -1065,14 +1084,15 @@ Proof.
                                 (all2_size _ (fun x y p => typing_size Σ Γ (snd x) (snd y) (snd p)) a)))).
   exact (S (Nat.max (wf_local_size _ typing_size _ a) (all_size _ (fun x p => typing_size Σ _ _ _ (fst p)) a0))).
   exact (S (Nat.max (wf_local_size _ typing_size _ a) (all_size _ (fun x p => typing_size Σ _ _ _ p) a0))).
-  destruct s. exact (S d).
+  destruct s. red in i.
+  exact (S (Nat.max (wf_local_size _ typing_size _ (snd (projT2 (projT2 i)))) d)).
   destruct s as [u Hu]. apply typing_size in Hu.
   exact (S (Nat.max d Hu)).
 Defined.
 
 Lemma typing_size_pos `{checker_flags} {Σ Γ t T} (d : Σ ;;; Γ |- t : T) : typing_size d > 0.
 Proof.
-  induction d; simpl; try lia. destruct s as [s | [u Hu]]; lia.
+  induction d; simpl; try lia. destruct s as [s | [u Hu]]; try lia.
 Qed.
 
 Fixpoint globenv_size (Σ : global_declarations) : size :=
@@ -1147,7 +1167,7 @@ Proof.
   eapply Nat.le_lt_trans. eauto. subst types. lia.
   pose proof (size_wf_local_app _ _ a).
   eapply Nat.le_lt_trans. eauto. subst types. lia.
-  destruct s as [s | [u Hu]]; lia.
+  destruct s as [s | [u Hu]]; try lia.
 Qed.
 
 Lemma wf_local_inv `{checker_flags} {Σ Γ'} (w : wf_local Σ Γ') :
@@ -1690,7 +1710,7 @@ Lemma typing_ind_env `{cf : checker_flags} :
         All_local_env_over typing Pdecl Σ Γ wfΓ ->
         Σ ;;; Γ |- t : A ->
         P Σ Γ t A ->
-        (isSort B + {s & (Σ ;;; Γ |- B : tSort s) * P Σ Γ B (tSort s)})%type ->
+        (isWfArity_prop typing Pdecl Σ Γ B + {s & (Σ ;;; Γ |- B : tSort s) * P Σ Γ B (tSort s)})%type ->
         Σ ;;; Γ |- A <= B ->
         P Σ Γ t B) ->
 
@@ -1796,7 +1816,8 @@ Proof.
       induction foo; simpl in *; try destruct t2 as [u Hu]; simpl in *; constructor.
       - simpl in *. apply IHfoo. lia.
       - red. eapply (X14 _ foo _ _ Hu). lia.
-      - simpl in *. apply IHfoo. lia. }
+      - simpl in *. apply IHfoo. lia.
+      - red. apply (X14 _ foo _ _ t2). lia. }
 
     destruct H;
       try solve [  match reverse goal with
@@ -1953,19 +1974,27 @@ Proof.
        ++ eapply IHa0. intros.
          eapply (X _ X0 _ _ Hty). simpl; lia.
     -- eapply X12; eauto.
-       eapply (X14 _ wfΓ _ _ H); simpl. destruct s as [s | [u Hu]]; lia.
-       destruct s as [s | [u Hu]]. left. auto. right.
+       eapply (X14 _ wfΓ _ _ H); simpl. destruct s as [s | [u Hu]]; try lia.
+       simpl in X14, X13.
+       destruct s as [s | [u Hu]]. left.
+       { red. exists s. red in s. revert X14.
+         generalize (snd (projT2 (projT2 s))).
+         induction a; simpl in *; intros X14 *; constructor.
+         apply IHa. intros. eapply (X14 _ wfΓ0 _ _ Hty). lia. red. eapply (X14 _ a _ _ (projT2 t1)). lia.
+         apply IHa. intros. eapply (X14 _ wfΓ0 _ _ Hty). lia. red. eapply (X14 _ a _ _ t1). lia. }
+       auto. right.
        exists u. intuition.
        eapply (X14 _ wfΓ _ _ Hu); simpl. lia.
 Qed.
 
 Ltac my_rename_hyp h th :=
   match th with
+  | (type_global_env ?E) => fresh "wf" E
   | (typing _ _ ?t _) => fresh "type" t
   | (@cumul _ _ _ ?t _) => fresh "cumul" t
   | (conv _ _ ?t _) => fresh "conv" t
-  | (All_local_env (@typing _) _ ?G) => fresh "wf" G
-  | (All_local_env (@typing _) _ _) => fresh "wf"
+  | (All_local_env (lift_typing (@typing _)) _ ?G) => fresh "wf" G
+  | (All_local_env (lift_typing (@typing _)) _ _) => fresh "wf"
   | (All_local_env _ _ ?G) => fresh "H" G
   | context [typing _ _ (_ ?t) _] => fresh "IH" t
   end.
@@ -2033,3 +2062,59 @@ Proof.
   intros Hf. induction 1; econstructor; eauto.
 Qed.
 
+Definition property `{checker_flags} :=
+  forall (Σ : global_context) (Γ : context),
+    All_local_env (lift_typing typing) Σ Γ -> forall t T : term, typing Σ Γ t T -> Type.
+
+Definition lookup_wf_local {Σ Γ P} (wfΓ : All_local_env P Σ Γ) (n : nat) (isdecl : n < #|Γ|) :
+  All_local_env P Σ (skipn (S n) Γ).
+Proof.
+  induction wfΓ in n, isdecl |- *; simpl. constructor.
+  cbn -[skipn] in *. destruct n.
+  simpl. exact wfΓ.
+  apply IHwfΓ. auto with arith.
+  destruct n. exact wfΓ.
+  apply IHwfΓ. auto with arith.
+Defined.
+
+Definition on_local_decl_glob (P : term -> option term -> Type) d :=
+  match d.(decl_body) with
+  | Some b => P b (Some d.(decl_type))
+  | None => P d.(decl_type) None
+  end.
+
+Definition lookup_wf_local_decl {Σ Γ P} (wfΓ : All_local_env P Σ Γ) (n : nat)
+           {decl} (eq : nth_error Γ n = Some decl) :
+  { Pskip : All_local_env P Σ (skipn (S n) Γ) &
+            on_local_decl_glob (P Σ (skipn (S n) Γ)) decl }.
+Proof.
+  induction wfΓ in n, decl, eq |- *; simpl. elimtype False. destruct n; depelim eq.
+  cbn -[skipn] in *. destruct n.
+  simpl. exists wfΓ. injection eq; intros <-. apply t0.
+  apply IHwfΓ. auto with arith.
+  destruct n. exists wfΓ. injection eq; intros <-. apply t0.
+  apply IHwfΓ. apply eq.
+Defined.
+
+Definition on_wf_local_decl `{checker_flags} {Σ Γ} (P : forall Σ Γ (wfΓ : wf_local Σ Γ) t T, Σ ;;; Γ |- t : T -> Type)
+           (wfΓ : wf_local Σ Γ) {d} (H : on_local_decl_glob (lift_typing typing Σ Γ) d) :=
+  match d as d' return (on_local_decl_glob (lift_typing typing Σ Γ) d') -> Type with
+  | {| decl_name := na; decl_body := Some b; decl_type := ty |} => fun H => P Σ Γ wfΓ b ty H
+  | {| decl_name := na; decl_body := None; decl_type := ty |} => fun H => P Σ Γ wfΓ _ _ (projT2 H)
+  end H.
+
+From Equations Require Import Equations.
+
+Lemma nth_error_All_local_env_over `{checker_flags} {P Σ Γ n decl} (eq : nth_error Γ n = Some decl) {wfΓ : All_local_env (lift_typing typing) Σ Γ} :
+  All_local_env_over typing P Σ Γ wfΓ ->
+  let Γ' := skipn (S n) Γ in
+  let p := lookup_wf_local_decl wfΓ n eq in
+  (All_local_env_over typing P Σ Γ' (projT1 p) * on_wf_local_decl P (projT1 p) (projT2 p))%type.
+Proof.
+  induction 1 in n, decl, eq |- *. simpl.
+  - destruct n; simpl; elimtype False; discriminate eq.
+  - destruct n. cbn [skipn]. noconf eq. split. apply X. simpl. apply p.
+    simpl. apply IHX.
+  - destruct n. noconf eq. simpl. split; auto.
+    apply IHX.
+Defined.

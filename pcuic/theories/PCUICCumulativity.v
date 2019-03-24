@@ -15,22 +15,6 @@ Existing Instance config.default_checker_flags.
 
 Reserved Notation " Σ ;;; Γ |- t == u " (at level 50, Γ, t, u at next level).
 
-Lemma red_step Σ Γ t u v : red1 Σ Γ t u -> red Σ Γ u v -> red Σ Γ t v.
-Proof.
-  induction 2. econstructor; auto. constructor. apply X.
-  econstructor 2; eauto.
-Qed.
-
-Require Import Equations.Type.Relation Equations.Type.Relation_Properties.
-
-Lemma red_alt@{i j +} Σ Γ t u : red Σ Γ t u <~> clos_refl_trans@{i j} (red1 Σ Γ) t u.
-Proof.
-  split. intros H. apply clos_rt_rtn1_iff.
-  induction H; econstructor; eauto.
-  intros H. apply clos_rt_rtn1_iff in H.
-  induction H; econstructor; eauto.
-Qed.
-
 Lemma cumul_alt Σ Γ t u :
   Σ ;;; Γ |- t <= u <~> { v & { v' & (red Σ Γ t v * red Σ Γ u v' * leq_term (snd Σ) v v')%type } }.
 Proof.

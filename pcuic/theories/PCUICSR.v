@@ -179,39 +179,44 @@ Definition SR_red1 (Σ : global_context) Γ t T :=
 Lemma sr_red1 : env_prop SR_red1.
 Proof.
   apply typing_ind_env; intros Σ wfΣ Γ wfΓ; unfold SR_red1; intros **; rename_all_hyps;
-    depelim Hu; try (apply mkApps_Fix_eq in x; noconf x);
-      try solve [econstructor; eauto].
+    match goal with
+    | [H : (_ ;;; _ |- _ <= _) |- _ ] => idtac
+    | _ =>
+      depelim Hu; try (apply mkApps_Fix_eq in x; noconf x);
+      try solve [econstructor; eauto]
+    end.
 
-  - rewrite heq_nth_error in e. destruct decl as [na b ty]; noconf e.
+  - (* Rel *)
+    rewrite heq_nth_error in e. destruct decl as [na b ty]; noconf e.
     simpl.
-    (*
-    pose proof (All_local_env_lookup wfΓ heq_nth_error); eauto.
-    unfold on_local_decl in wfΓ. cbn -[skipn] in wfΓ.
-    unshelve epose proof (typecheck_closed _ _ _ _ _ _ X) as [_ Hb]; auto.
-    now eapply All_local_env_skipn.
-    cbn -[skipn] in *.
-    apply utils.andP in Hb as [clb clty].
+    pose proof (nth_error_All_local_env_over heq_nth_error X); eauto.
+    destruct lookup_wf_local_decl; cbn in *.
     rewrite <- (firstn_skipn (S n) Γ).
-    assert (#|firstn (S n) Γ| = S n).
-    { apply nth_error_Some_length in heq_nth_error.
-      rewrite firstn_length_le; auto with arith. }
-    rewrite -{3 4}H. apply weakening; auto.
-    unfold app_context. rewrite firstn_skipn. auto.
-     *) admit.
+    assert(S n = #|firstn (S n) Γ|).
+    { rewrite firstn_length_le; auto. apply nth_error_Some_length in heq_nth_error. auto with arith. }
+    rewrite {3 4}H. apply weakening; auto.
+    now unfold app_context; rewrite firstn_skipn.
 
-  - constructor; eauto.
+  - (* Prod *)
+    constructor; eauto.
     eapply (context_conversion _ wfΣ _ _ _ _ typeb).
     constructor. auto. admit.
     constructor. exists s1; auto. apply conv_conv_alt.
     auto.
 
-  - eapply type_Conv. eapply type_Lambda; eauto.
+  - (* Lambda *)
+    eapply type_Conv. eapply type_Lambda; eauto.
     eapply (context_conversion _ wfΣ _ _ _ _ typeb).
     constructor. auto. admit.
     constructor. exists s1; auto. apply conv_conv_alt.
     auto. assert (Σ ;;; Γ |- tLambda n t b : tProd n t bty). econstructor; eauto.
     edestruct (validity _ wfΣ _ HΓ _ _ X0). apply i.
     admit.
+
+  - (* LetIn *)
+    s
+    eapply type_Conv. epose (substitution _ Γ ([vdef n b b_ty]) [] [] _ _ wfΣ _ typeb').
+
 Admitted.
 
 

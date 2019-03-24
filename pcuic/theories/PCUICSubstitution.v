@@ -25,9 +25,6 @@ Inductive subs `{cf : checker_flags} Σ (Γ : context) : list term -> context ->
 | cons_ass Δ s na t T : subs Σ Γ s Δ ->
               Σ ;;; Γ |- t : subst0 s T ->
              subs Σ Γ (t :: s) (Δ ,, vass na T).
-(* | cons_let Δ s na t T : subs Σ Γ s Δ -> *)
-(*               Σ ;;; Γ |- subst0 s t : subst0 s T -> *)
-(*               subs Σ Γ (subst0 s t :: s) (Δ ,, vdef na t T). *)
 
 (** Linking a cantext (with let-ins), an instance (reversed substitution)
     for its assumptions and a well-formed substitution for it. *)
@@ -941,7 +938,9 @@ Proof.
   induction 1 in n |- *; simpl; auto; destruct n; simpl; try congruence.
   - intros [= <-]. intros [= ->].
     simpl. exact t1.
-  - apply IHX.
+  - intros. destruct decl as [na' [b|] ty]; cbn in *.
+    eapply IHX. eauto. eauto.
+    now apply IHX.
 Qed.
 
 (* Lemma red1_mkApp Σ Γ M1 N1 M2 : *)
@@ -987,6 +986,7 @@ Proof.
 Qed.
 
 Arguments iota_red : simpl never.
+From Equations Require Import Equations.
 
 Lemma substitution_red1 `{CF:checker_flags} Σ Γ Γ' Γ'' s M N :
   wf Σ -> subs Σ Γ s Γ' -> wf_local Σ Γ ->
@@ -1008,10 +1008,9 @@ Proof.
       ++ pose proof (nth_error_Some_length Heq).
          rewrite -> nth_error_app_context_ge in H by lia.
          rewrite -> nth_error_app_context_lt in H by lia.
-         destruct nth_error eqn:HΓ'.
-         eapply subs_nth_error in Heq; eauto.
-         simpl in H. destruct decl_body; try contradiction.
-         discriminate. discriminate.
+         destruct nth_error eqn:HΓ'. destruct c as [na [b|] ty]; noconf H.
+         eapply subs_nth_error in Heq; eauto. simpl in Heq. destruct Heq.
+         noconf H.
       ++ apply nth_error_None in Heq.
          assert(S i = #|s| + (S (i - #|s|))) by lia.
          rewrite H1. rewrite -> simpl_subst; try lia.
@@ -1095,6 +1094,175 @@ Proof.
     auto.
 Qed.
 
+Lemma subst_skipn n s k t : n <= #|s| -> subst (skipn n s) k t = subst s k (lift n k t).
+Proof.
+  intros Hn.
+  assert (#|firstn n s| = n) by (rewrite firstn_length_le; lia).
+  rewrite <- (firstn_skipn n s) at 2.
+  rewrite subst_app_simpl. rewrite H.
+  rewrite <- commut_lift_subst_rec; auto with arith.
+  rewrite -{3}H. now rewrite simpl_subst_k.
+Qed.
+
+
+(** Well-typed substitution into a context with let-ins *)
+
+Inductive subslet `{cf : checker_flags} Σ (Γ : context) : list term -> context -> Type :=
+| emptyslet : subslet Σ Γ [] []
+| cons_let_ass Δ s na t T : subslet Σ Γ s Δ ->
+              Σ ;;; Γ |- t : subst0 s T ->
+             subslet Σ Γ (t :: s) (Δ ,, vass na T)
+| cons_let_def Δ s na t T :
+    subslet Σ Γ s Δ ->
+    Σ ;;; Γ |- subst0 s t : subst0 s T ->
+    subslet Σ Γ (subst0 s t :: s) (Δ ,, vdef na t T).
+
+Lemma subslet_nth_error `{checker_flags} Σ Γ s Δ decl n t :
+  subslet Σ Γ s Δ ->
+  nth_error Δ n = Some decl ->
+  nth_error s n = Some t ->
+  match decl_body decl return Type with
+  | Some t' =>
+    let b := subst0 (skipn (S n) s) t' in
+    let ty := subst0 (skipn (S n) s) (decl_type decl) in
+    ((t = b) * (Σ ;;; Γ |- b : ty))%type
+  | None =>
+    let ty := subst0 (skipn (S n) s) (decl_type decl) in
+    Σ ;;; Γ |- t : ty
+  end.
+Proof.
+  induction 1 in n |- *; simpl; auto; destruct n; simpl; try congruence.
+  - intros [= <-]. intros [= ->].
+    simpl. exact t1.
+  - intros. destruct decl as [na' [b|] ty]; cbn in *.
+    specialize (IHX _ H0 H1). intuition auto.
+    now apply IHX.
+  - intros [= <-]. intros [= <-].
+    simpl. split; auto.
+  - apply IHX.
+Qed.
+
+Lemma substlet_length `{checker_flags} {Σ Γ s Δ} : subslet Σ Γ s Δ -> #|s| = #|Δ|.
+Proof.
+  induction 1; simpl; auto with arith.
+Qed.
+(* Require Import PCUICCumulativity. *)
+(* Lemma substitution_let_red1 `{CF:checker_flags} Σ Γ Δ Γ' s M N : *)
+(*   wf Σ -> subslet Σ Γ s Δ -> wf_local Σ Γ -> *)
+(*   red1 (fst Σ) (Γ ,,, Δ ,,, Γ') M N -> *)
+(*   red (fst Σ) (Γ ,,, subst_context s 0 Γ') (subst s #|Γ'| M) (subst s #|Γ'| N). *)
+(* Proof. *)
+(*   intros wfΣ Hs wfΓ H. *)
+(*   remember (Γ ,,, Δ ,,, Γ') as Γ0. revert Γ Δ Γ' HeqΓ0 wfΓ Hs. *)
+(*   induction H using red1_ind_all in |- *; intros Γ0 Δ Γ' HeqΓ0 wfΓ Hs; try subst Γ; cbn -[iota_red]; *)
+(*   match goal with *)
+(*     |- context [iota_red _ _ _ _] => idtac *)
+(*   | |- _ => autorewrite with subst *)
+(*   end; *)
+(*     try solve [ apply red1_red; econstructor; try inv wfM; eauto ]. *)
+
+(*   - pose proof (substlet_length Hs). *)
+(*     elim (leb_spec_Set); intros Hn. *)
+(*     + destruct (nth_error s) eqn:Heq. *)
+(*       ++ pose proof (nth_error_Some_length Heq). *)
+(*          rewrite -> nth_error_app_context_ge in H by lia. *)
+(*          rewrite -> nth_error_app_context_lt in H by lia. *)
+(*          destruct nth_error eqn:HΓ'. destruct c as [na [b|] ty]; noconf H. *)
+(*          eapply subslet_nth_error in Heq; eauto. simpl in Heq. destruct Heq. *)
+(*          subst t. *)
+(*          pose (commut_lift_subst_rec body (skipn (S (i - #|Γ'|)) s) #|Γ'| 0 0). *)
+(*          forward e by lia. rewrite e. *)
+(*          simpl. rewrite subst_skipn. auto with arith. *)
+(*          rewrite simpl_lift; auto with arith. *)
+(*          assert(S (i - #|Γ'|) + #|Γ'| = S i) as -> by lia. *)
+(*          constructor. *)
+(*          noconf H. *)
+(*       ++ apply nth_error_None in Heq. *)
+(*          assert(S i = #|s| + (S (i - #|s|))) by lia. *)
+(*          rewrite H1. rewrite -> simpl_subst; try lia. *)
+(*          apply red1_red. *)
+(*          econstructor. *)
+(*          rewrite nth_error_app_context_ge // in H. *)
+(*          rewrite nth_error_app_context_ge // in H. lia. *)
+(*          rewrite -> nth_error_app_context_ge. 2:(autorewrite with wf; lia). *)
+(*          rewrite <- H. f_equal. f_equal. autorewrite with wf. lia. *)
+(*     + rewrite -> nth_error_app_context_lt in H by lia. *)
+(*       pose (commut_lift_subst_rec body s (S i) (#|Γ'| - S i) 0). *)
+(*       assert(eq:#|Γ'| - S i + S i = #|Γ'|) by lia. *)
+(*       rewrite -> eq in e. rewrite <- e by lia. *)
+(*       apply red1_red. constructor. *)
+(*       rewrite -> nth_error_app_context_lt by (autorewrite with wf; lia). *)
+(*       rewrite -> nth_error_subst_context. *)
+(*       unfold subst_decl; now rewrite -> option_map_decl_body_map_decl, H, Nat.add_0_r. *)
+
+(*   - rewrite subst_iota_red. *)
+(*     autorewrite with subst. *)
+(*     apply red1_red; constructor. *)
+
+(*   - pose proof (subst_declared_constant _ _ _ s #|Γ'| u wfΣ H). *)
+(*     apply (f_equal cst_body) in H1. *)
+(*     rewrite <- !map_cst_body in H1. rewrite H0 in H1. simpl in H1. *)
+(*     injection H1. intros ->. apply red1_red. *)
+(*     econstructor. eauto. eauto. *)
+
+(*   - simpl. apply red1_red; constructor. *)
+(*     now rewrite nth_error_map H. *)
+
+(*   - specialize (IHred1 Γ0 Δ Γ' eq_refl). *)
+(*     now rewrite subst_context_snoc0 in IHred1. *)
+
+(*     specialize (IHred1 Γ0 Δ (Γ' ,, vass na N) eq_refl). *)
+(*     now rewrite subst_context_snoc0 in IHred1. *)
+
+(*   - constructor. *)
+(*     specialize (IHred1 Γ0 Γ' (Γ'' ,, _) eq_refl). *)
+(*     now rewrite subst_context_snoc0 in IHred1. *)
+
+(*   - constructor. *)
+(*     induction X; constructor; auto. *)
+(*     intuition; eauto. *)
+
+(*   - constructor. specialize (IHred1 _ _ (Γ'' ,, vass na M1) eq_refl). *)
+(*     now rewrite subst_context_snoc0 in IHred1. *)
+
+(*   - constructor. *)
+(*     induction X; constructor; auto. *)
+(*     intuition. *)
+
+(*   - constructor. *)
+(*     rewrite -> (OnOne2_length X). generalize (#|mfix1|). *)
+(*     induction X; simpl; constructor; auto. *)
+(*     intuition. *)
+
+(*   - apply fix_red_body. rewrite !subst_fix_context. *)
+(*     solve_all. *)
+(*     rewrite <- (OnOne2_length X). *)
+(*     eapply OnOne2_map. unfold on_Trel; solve_all. *)
+(*     specialize (b Γ0 Γ' (Γ'' ,,, fix_context mfix0)). *)
+(*     rewrite app_context_assoc in b. specialize (b eq_refl). *)
+(*     rewrite -> app_context_length, fix_context_length in *. *)
+(*     rewrite -> subst_context_app in *. *)
+(*     rewrite -> app_context_assoc, Nat.add_0_r in *. *)
+(*     auto. *)
+
+(*   - constructor. *)
+(*     rewrite -> (OnOne2_length X). generalize (#|mfix1|). *)
+(*     induction X; simpl; constructor; auto. *)
+(*     intuition auto. eapply b; eauto. *)
+(*     now rewrite <- !map_dbody, b0. *)
+
+(*   - apply cofix_red_body. rewrite !subst_fix_context. *)
+(*     solve_all. *)
+(*     rewrite <- (OnOne2_length X). *)
+(*     eapply OnOne2_map. unfold on_Trel; solve_all. *)
+(*     specialize (b Γ0 Γ' (Γ'' ,,, fix_context mfix0)). *)
+(*     rewrite app_context_assoc in b. specialize (b eq_refl). *)
+(*     rewrite -> app_context_length, fix_context_length in *. *)
+(*     rewrite -> subst_context_app in *. *)
+(*     rewrite -> app_context_assoc, Nat.add_0_r in *. *)
+(*     auto. *)
+(* Qed. *)
+
 Lemma eq_term_refl `{checker_flags} φ t : eq_term φ t t.
 Proof.
   induction t using term_forall_list_ind; simpl; try reflexivity; try discriminate;
@@ -1104,7 +1272,7 @@ Proof.
   - apply eq_string_refl.
   - apply Nat.eqb_refl.
   - rewrite /eq_evar eq_nat_refl.
-    simpl. induction H0; simpl; auto. now rewrite H0 IHForall.
+    simpl. induction H0; simpl; auto. now rewrite p IHAll.
   - apply eq_universe_refl.
   - unfold eq_constant. rewrite eq_string_refl.
     apply eq_universe_instance_refl.
@@ -1114,17 +1282,17 @@ Proof.
     rewrite eq_ind_refl eq_nat_refl IHt1 IHt2.
     simpl. induction l.
     reflexivity.
-    simpl. destruct a. inv H0. simpl in H1. rewrite H1.
+    simpl. destruct a. inv X. simpl in H0. rewrite H0.
     rewrite IHl; auto.
   - now rewrite eq_projection_refl IHt.
   - rewrite eq_nat_refl.
     induction m. reflexivity.
-    inv H0. intuition.
-    simpl. rewrite H0 H3. simpl. apply H1.
+    inv X. intuition.
+    simpl. rewrite a0 b. simpl. apply H0.
   - rewrite Nat.eqb_refl.
     induction m. reflexivity.
-    inv H0. intuition.
-    simpl. rewrite H0 H3. simpl. apply H1.
+    inv X. intuition.
+    simpl. rewrite a0 b. simpl. apply H0.
 Qed.
 
 Lemma eq_term_leq_term `{checker_flags} φ t u : eq_term φ t u = true -> leq_term φ t u = true.
@@ -1197,9 +1365,9 @@ Proof.
 
   - destruct p. destruct Nat.leb. discriminate. discriminate.
   - destruct p, p0. toProp; solve_all. solve_all. simpl. destruct y. simpl. auto.
-  - assert (#|m| = #|m0|) as <-. solve_all. clear -H2. induction H2; simpl; auto.
+  - assert (#|m| = #|m0|) as <-. solve_all. clear -H1. induction H1; simpl; auto.
     repeat (toProp; solve_all).
-  - assert (#|m| = #|m0|) as <-. solve_all. clear -H2. induction H2; simpl; auto.
+  - assert (#|m| = #|m0|) as <-. solve_all. clear -H1. induction H1; simpl; auto.
     repeat (toProp; solve_all).
 Qed.
 
@@ -1222,9 +1390,9 @@ Proof.
     apply Nat.eqb_refl. apply Nat.eqb_refl.
   - destruct p. discriminate.
   - solve_all. destruct y. simpl. auto using subst_eq_term.
-  - assert (#|m| = #|m0|) as <-. solve_all. clear -H2. induction H2; simpl; auto.
+  - assert (#|m| = #|m0|) as <-. solve_all. clear -H1. induction H1; simpl; auto.
     repeat (toProp; solve_all); auto using subst_eq_term.
-  - assert (#|m| = #|m0|) as <-. solve_all. clear -H2. induction H2; simpl; auto.
+  - assert (#|m| = #|m0|) as <-. solve_all. clear -H1. induction H1; simpl; auto.
     repeat (toProp; solve_all); auto using subst_eq_term.
 Qed.
 
@@ -1292,6 +1460,9 @@ Proof.
   - eapply substitution_red1 in r. 4:eauto. all:eauto with wf.
     now econstructor 3.
 Qed.
+
+Derive NoConfusion for All_local_env_over.
+Derive NoConfusion for context_decl.
 
 Theorem substitution `{checker_flags} Σ Γ Γ' s Δ (t : term) T :
   wf Σ -> subs Σ Γ s Γ' ->
@@ -1501,7 +1672,8 @@ Proof.
       clear -sub wfsubs a.
       induction ctx; try constructor; depelim a.
       -- rewrite subst_context_snoc.
-         constructor; auto.
+         unfold snoc. unfold vass, snoc in H0. noconf H0.
+         econstructor; auto.
          eapply IHctx. eapply a.
          simpl. destruct tu as [u tu]. exists u.
          specialize (t0 _ _ (Δ ,,, ctx) _ sub). forward t0.
@@ -1511,6 +1683,7 @@ Proof.
          eapply IHctx. eapply a.
          now rewrite subst_context_app Nat.add_0_r app_context_assoc app_length in t0.
       -- rewrite subst_context_snoc.
+         unfold vdef, snoc in H0 |- *. noconf H0.
          constructor; auto.
          eapply IHctx. eapply a.
          simpl.
@@ -1555,3 +1728,21 @@ Proof.
   forward thm. constructor. constructor. rewrite subst_empty; auto.
   now apply (thm Ht).
 Qed.
+(* Derive Signature for All_local_env. *)
+(* Lemma substitution_let `{checker_flags} Σ Γ n u U (t : term) T s : *)
+(*   wf Σ -> *)
+(*   Σ ;;; Γ |- U : tSort s -> *)
+(*   Σ ;;; Γ ,, vdef n u U |- t : T -> *)
+(*   Σ ;;; Γ |- t {0 := u} : T {0 := u}. *)
+(* Proof. *)
+(*   intros HΣ Hs Ht. *)
+(*   assert (wfΓ : wf_local Σ Γ). *)
+(*   apply typing_wf_local in Hs; eauto with wf. *)
+(*   unshelve epose proof (type_LetIn _ _ _ _ _ _ _ _ Hs _ Ht). *)
+(*   apply typing_wf_local in Ht. unfold vdef in Ht. depelim Ht; unfold vdef, vass in H0;simpl in H0; noconf H0. *)
+(*   apply l. *)
+
+(*   pose proof (substitution_alt Σ Γ [vass n U] [u] [] t T HΣ) as thm. *)
+(*   forward thm. constructor. constructor. rewrite subst_empty; auto. *)
+(*   now apply (thm Ht). *)
+(* Qed. *)

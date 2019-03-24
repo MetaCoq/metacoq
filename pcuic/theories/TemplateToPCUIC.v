@@ -4,7 +4,7 @@ From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
 From Template Require Import config utils univ AstUtils.
 From Template Require Import BasicAst Ast WfInv Typing.
 From PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICLiftSubst
-     PCUICUnivSubst PCUICTyping PCUICSubstitution.
+     PCUICUnivSubst PCUICTyping PCUICSubstitution PCUICGeneration.
 Require Import String.
 Local Open Scope string_scope.
 Set Asymmetric Patterns.
@@ -754,17 +754,23 @@ Proof.
   apply trans_red1 in r; auto.
 Qed.
 
+Definition Tlift_typing (P : Template.Ast.global_context -> Tcontext -> Tterm -> Tterm -> Type) :=
+  fun Σ Γ t T =>
+    match T with
+    | Some T => P Σ Γ t T
+    | None => { s : universe & P Σ Γ t (T.tSort s) }
+    end.
+
 Lemma trans_wf_local:
   forall (Σ : Template.Ast.global_context) (Γ : Tcontext),
-    TTy.All_local_env
-      (fun (Σ0 : Template.Ast.global_context) (Γ0 : Tcontext) (t T : Tterm) =>
-         trans_global Σ0;;; trans_local Γ0 |- trans t : trans T) Σ Γ ->
+    let P := (fun (Σ0 : Template.Ast.global_context) (Γ0 : Tcontext) (t T : Tterm) =>
+         trans_global Σ0;;; trans_local Γ0 |- trans t : trans T) in
+    TTy.All_local_env P Σ Γ ->
     wf_local (trans_global Σ) (trans_local Γ).
 Proof.
-  intros. eapply All_local_env_impl.
+  intros.
   induction X. simpl. constructor. econstructor.
-  eapply IHX. eapply t0. constructor; auto.
-  auto.
+  eapply IHX. simpl. exists u. eapply t0. constructor; auto.
 Qed.
 
 Lemma typing_wf_wf:
@@ -818,8 +824,10 @@ Proof.
   - (* Casts *)
     eapply refine_type. eapply type_App with nAnon (trans t).
     eapply type_Lambda; eauto. eapply type_Rel. econstructor; auto.
-    eapply typing_wf_local. eauto. eauto. simpl. reflexivity. eauto.
+    eapply typing_wf_local. eauto. eauto. simpl. exists s; auto. reflexivity. eauto.
     simpl. unfold subst1. rewrite simpl_subst; auto. now rewrite lift0_p.
+
+  - admit. (* FIX Typing  alhpa-equiv *)
 
   - (* The interesting application case *)
     eapply type_mkApps; eauto.
@@ -829,7 +837,7 @@ Proof.
     simpl in p.
     destruct (TypingWf.typing_wf _ wfΣ _ _ _ typrod) as [wfAB _].
     intros wfT.
-    econstructor; eauto.
+    econstructor; eauto. right. exists s; eauto.
     change (tProd na (trans A) (trans B)) with (trans (T.tProd na A B)).
     apply trans_cumul; auto with trans.
     apply TypingWf.typing_wf_sigma; auto.
@@ -954,4 +962,4 @@ Proof.
     apply typing_all_wf_decl in wfΓ; auto. solve_all.
     destruct x as [na [body|] ty']; simpl in *; intuition auto.
     destruct H0. auto.
-Qed.
+Admitted.

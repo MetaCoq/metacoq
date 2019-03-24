@@ -4,7 +4,7 @@ From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
 From Template Require Import config utils univ.
 From PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICWeakeningEnv PCUICWeakening
-     PCUICSubstitution PCUICClosed.
+     PCUICSubstitution PCUICClosed PCUICReduction.
 Require Import ssreflect ssrbool.
 Require Import String.
 Require Import LibHypsNaming.

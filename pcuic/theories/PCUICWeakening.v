@@ -920,7 +920,6 @@ Proof.
 
   - rewrite -> lift_mkApps, map_app, map_skipn.
     specialize (IHc _ _ _ wf eq_refl).
-    specialize (IHp0 _ _ _ wf eq_refl).
     specialize (IHp _ _ _ wf eq_refl).
     simpl. econstructor.
     4:{ eapply lift_types_of_case in heq_types_of_case.

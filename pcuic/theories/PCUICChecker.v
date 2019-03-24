@@ -887,7 +887,7 @@ Section Typecheck2.
     specialize (IH _ _ Heqt0).
     intros.
     eapply type_Conv. apply IH.
-    left. exact I.
+    left. exists [], x. intuition auto with wf. now apply typing_wf_local in IH.
     apply cumul_reduce_to_sort. exists x. split; tc.
   Qed.
 
@@ -1019,7 +1019,7 @@ Section Infer_Complete.
       destruct Hpi as [[Hdom Hcodom]].
       assert (Σ;;; Γ |- x <= dom).
       destruct Hdom. eapply cumul_trans; eauto.
-      apply cumul_convert_leq in X as ->. simpl.
+      apply cumul_convert_leq in X0 as ->. simpl.
       eexists; split; [reflexivity|].
       constructor. eapply (substitution_cumul _ _ (vass na A :: []) []); eauto.
       (* econstructor; auto. *) (* Validity *) admit.
@@ -1028,15 +1028,15 @@ Section Infer_Complete.
     - (* Constant *)
       erewrite lookup_constant_type_declared; eauto.
       eexists ; split; [ try reflexivity | tc ].
-      simpl. unfold consistent_universe_context_instance in H1.
+      simpl. unfold consistent_universe_context_instance in H0.
       destruct cst_universes.
       -- simpl. reflexivity.
       -- simpl in *. destruct cst0. simpl in *.
          unfold check_consistent_constraints.
-         now destruct H1 as [eqtu ->].
+         now destruct H0 as [eqtu ->].
       -- simpl in *. destruct ctx as [[inst csts] variance]. simpl in *.
          unfold check_consistent_constraints.
-         now destruct H1 as [eqtu ->].
+         now destruct H0 as [eqtu ->].
 
     - (* Inductive *)
       admit.

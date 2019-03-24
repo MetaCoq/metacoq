@@ -2,7 +2,8 @@
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Arith Lia.
 From Template Require Import config utils BasicAst AstUtils.
-From PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICWeakeningEnv PCUICClosed PCUICWeakening.
+From PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICLiftSubst
+     PCUICUnivSubst PCUICTyping PCUICWeakeningEnv PCUICClosed PCUICWeakening.
 Require Import ssreflect.
 
 (** * Substitution lemmas for typing derivations. *)
@@ -1393,8 +1394,7 @@ Proof.
 
   - rewrite subst_mkApps map_app map_skipn.
     specialize (X2 Γ Γ' Δ s sub eq_refl wfsubs).
-    specialize (X5 Γ Γ' Δ s sub eq_refl wfsubs).
-    specialize (X3 Γ Γ' Δ s sub eq_refl wfsubs).
+    specialize (X4 Γ Γ' Δ s sub eq_refl wfsubs).
     simpl. econstructor.
     4:{ eapply subst_types_of_case in H1.
         simpl in H1. subst pars. rewrite firstn_map. eapply H1; eauto.
@@ -1405,7 +1405,7 @@ Proof.
     -- revert H2. subst pars.
        apply subst_check_correct_arity.
     -- destruct idecl; simpl in *; auto.
-    -- now rewrite !subst_mkApps in X5.
+    -- now rewrite !subst_mkApps in X4.
     -- solve_all.
 
   - specialize (X2 Γ Γ' Δ s sub eq_refl wfsubs).
@@ -1428,10 +1428,10 @@ Proof.
     apply All_local_env_app_inv. intuition.
     revert Hfixc. clear X0 X H0.
     induction 1; simpl; auto.
-    + destruct t0 as [Ht IHt].
+    + destruct t0 as [u [Ht IHt]].
       specialize (IHt Γ Γ' (Δ ,,, Γ0) s sub). forward IHt. now rewrite app_context_assoc.
       rewrite app_context_length subst_context_app app_context_assoc Nat.add_0_r in IHt.
-      unfold snoc; rewrite subst_context_snoc; econstructor; auto;
+      unfold snoc; rewrite subst_context_snoc; econstructor; auto. exists u.
         apply IHt; apply All_local_env_app_inv; intuition.
     + destruct t0 as [Ht IHt].
        specialize (IHt Γ Γ' (Δ ,,, Γ0) s sub). forward IHt. now rewrite app_context_assoc.
@@ -1462,10 +1462,10 @@ Proof.
     apply All_local_env_app_inv. intuition.
     revert Hfixc. clear X0 X H0.
     induction 1; simpl; auto.
-    + destruct t0 as [Ht IHt].
+    + destruct t0 as [u [Ht IHt]].
       specialize (IHt Γ Γ' (Δ ,,, Γ0) s sub). forward IHt. now rewrite app_context_assoc.
       rewrite app_context_length subst_context_app app_context_assoc Nat.add_0_r in IHt.
-      unfold snoc; rewrite subst_context_snoc; econstructor; auto;
+      unfold snoc; rewrite subst_context_snoc; econstructor; auto. exists u.
         apply IHt; apply All_local_env_app_inv; intuition.
     + destruct t0 as [Ht IHt].
        specialize (IHt Γ Γ' (Δ ,,, Γ0) s sub). forward IHt. now rewrite app_context_assoc.
@@ -1492,7 +1492,34 @@ Proof.
 
   - econstructor; eauto.
     destruct X2 as [Bs|[u Hu]].
-    + left; destruct B; now destruct Bs.
+    + left. destruct Bs as [[ctx [u [Hd IH]]]]. simpl in *.
+      exists (subst_context s #|Δ| ctx), u.
+      pose proof (subst_destArity [] B s #|Δ|). rewrite Hd in H0.
+      rewrite H0. clear H0.
+      split; auto.
+      apply All_local_env_app_inv; intuition auto.
+      clear -sub wfsubs a.
+      induction ctx; try constructor; depelim a.
+      -- rewrite subst_context_snoc.
+         constructor; auto.
+         eapply IHctx. eapply a.
+         simpl. destruct tu as [u tu]. exists u.
+         specialize (t0 _ _ (Δ ,,, ctx) _ sub). forward t0.
+         now rewrite app_context_assoc. simpl in t0.
+         forward t0. rewrite subst_context_app app_context_assoc Nat.add_0_r.
+         apply All_local_env_app_inv. split; auto.
+         eapply IHctx. eapply a.
+         now rewrite subst_context_app Nat.add_0_r app_context_assoc app_length in t0.
+      -- rewrite subst_context_snoc.
+         constructor; auto.
+         eapply IHctx. eapply a.
+         simpl.
+         specialize (t0 _ _ (Δ ,,, ctx) _ sub). forward t0.
+         now rewrite app_context_assoc. simpl in t0.
+         forward t0. rewrite subst_context_app app_context_assoc Nat.add_0_r.
+         apply All_local_env_app_inv. split; auto.
+         eapply IHctx. eapply a.
+         now rewrite subst_context_app Nat.add_0_r app_context_assoc app_length in t0.
     + right; exists u; intuition eauto.
     + eapply substitution_cumul; eauto.
 Qed.
@@ -1509,7 +1536,8 @@ Proof.
   apply All_local_env_app in X1 as [X1 X2].
   apply All_local_env_app in X1. intuition.
   induction X2; simpl; rewrite ?subst_context_snoc0; econstructor; eauto.
-  eapply substitution in t1; simpl in *; eauto.
+  destruct t1 as [u tu].
+  eapply substitution in tu; simpl in *; eauto.
   eapply All_local_env_app_inv; intuition.
   eapply substitution in t1; simpl in *; eauto.
   eapply All_local_env_app_inv; intuition.

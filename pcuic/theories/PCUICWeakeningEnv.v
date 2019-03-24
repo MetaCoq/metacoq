@@ -253,6 +253,16 @@ Proof.
   exists []; simpl; destruct Σ; eauto.
 Qed.
 
+Lemma declared_constant_inv `{checker_flags} Σ P cst decl :
+  weaken_env_prop (lift_typing P) ->
+  wf Σ -> Forall_decls_typing P Σ ->
+  declared_constant (fst Σ) cst decl ->
+  on_constant_decl (lift_typing P) Σ decl.
+Proof.
+  intros.
+  eapply weaken_lookup_on_global_env in X1; eauto. apply X1.
+Qed.
+
 Lemma declared_minductive_inv `{checker_flags} Σ P ind mdecl :
   weaken_env_prop (lift_typing P) ->
   wf Σ -> Forall_decls_typing P Σ ->
@@ -321,6 +331,14 @@ Proof.
   intros [s Ht]. pose proof (wf_extends wfΣ' Hext). exists s.
   eapply weakening_env; eauto. eapply typing_wf_local in Ht; eauto.
 Qed.
+Hint Unfold weaken_env_prop : pcuic.
+
+Lemma weaken_wf_local `{checker_flags} Σ Σ' Γ : extends Σ Σ' -> wf Σ' -> wf_local Σ Γ -> wf_local Σ' Γ.
+Proof.
+  intros * wfΣ' Hext *.
+  induction 1; constructor; auto; eauto using weaken_env_prop_typing.
+Qed.
+Hint Resolve 100 weaken_wf_local : pcuic.
 
 Lemma on_declared_minductive `{checker_flags} {Σ ref decl} :
   wf Σ ->

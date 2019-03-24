@@ -2,8 +2,11 @@
 From Equations Require Import Equations.
 From Coq Require Import Bool String List Program BinPos Compare_dec Arith Lia.
 From Template Require Import config utils Ast.
-From PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICWeakeningEnv.
+From PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICLiftSubst
+     PCUICUnivSubst PCUICTyping PCUICWeakeningEnv.
 Require Import ssreflect ssrbool.
+
+(** * Lemmas about the [closedn] predicate *)
 
 Definition closed_decl n d :=
   option_default (closedn n) d.(decl_body) true && closedn n d.(decl_type).
@@ -12,8 +15,6 @@ Definition closedn_ctx n ctx :=
   forallb id (mapi (fun k d => closed_decl (n + k) d) (List.rev ctx)).
 
 Notation closed_ctx ctx := (closedn_ctx 0 ctx).
-
-(** * Lemmas about the [closedn] predicate *)
 
 Lemma closedn_lift n k k' t : closedn k t -> closedn (k + n) (lift n k' t).
 Proof.
@@ -292,9 +293,9 @@ Proof.
   - intuition auto. solve_all. unfold test_snd. simpl in *.
     toProp; eauto.
     apply closedn_mkApps; auto.
-    rewrite forallb_app. simpl. rewrite H4.
+    rewrite forallb_app. simpl. rewrite H3.
     rewrite forallb_skipn; auto.
-    now apply closedn_mkApps_inv in H9.
+    now apply closedn_mkApps_inv in H7.
 
   - intuition auto.
     apply closedn_subst0.

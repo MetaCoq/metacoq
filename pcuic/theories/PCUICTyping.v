@@ -19,6 +19,10 @@ Set Asymmetric Patterns.
 
  *)
 
+(** Use a coercion for this common projection of the global context. *)
+Definition fst_ctx : global_context -> global_declarations := fst.
+Coercion fst_ctx : global_context >-> global_declarations.
+
 Definition isSort T :=
   match T with
   | tSort u => True
@@ -676,10 +680,10 @@ Inductive typing `{checker_flags} (Σ : global_context) (Γ : context) : term ->
     Σ ;;; Γ ,, vass n t |- b : tSort s2 ->
     Σ ;;; Γ |- (tProd n t b) : tSort (Universe.sort_of_product s1 s2)
 
-| type_Lambda n n' t b s1 bty :
+| type_Lambda n t b s1 bty :
     Σ ;;; Γ |- t : tSort s1 ->
     Σ ;;; Γ ,, vass n t |- b : bty ->
-    Σ ;;; Γ |- (tLambda n t b) : tProd n' t bty
+    Σ ;;; Γ |- (tLambda n t b) : tProd n t bty
 
 | type_LetIn n b b_ty b' s1 b'_ty :
     Σ ;;; Γ |- b_ty : tSort s1 ->
@@ -1019,12 +1023,12 @@ Definition type_local_decl `{checker_flags} Σ Γ d :=
 
 
 Definition all_typing `{checker_flags} (P : global_context -> context -> term -> term -> Type) :
-  (global_context -> context -> option term -> term -> Type) :=
+  (global_context -> context -> term -> option term -> Type) :=
   let P' := (fun Σ Γ t T => Σ ;;; Γ |- t : T -> P Σ Γ t T) in
   fun Σ Γ t T =>
-    match t with
-    | Some b => P Σ Γ b T
-    | None => forall s, P Σ Γ T s
+    match T with
+    | Some T => P Σ Γ t T
+    | None => forall s, P Σ Γ t s
     end.
 
 Definition Forall_decls_typing `{checker_flags}
@@ -1032,8 +1036,19 @@ Definition Forall_decls_typing `{checker_flags}
   on_global_env (lift_typing P).
 
 Definition Forall_decls `{checker_flags}
-           (P : global_context -> context -> term -> option term -> Type) : global_context -> Type :=
-  on_global_env P.
+           (P : global_context -> context -> term -> term -> Type) : global_context -> Type :=
+  on_global_env (all_typing P).
+
+Lemma Forall_decls_typing_P `{checker_flags}
+      (P : global_context -> context -> term -> term -> Type) (Σ : global_context)
+      (wfΣ : type_global_env Σ) :
+  Forall_decls P Σ -> Forall_decls_typing P Σ.
+Proof.
+  destruct Σ. red in wfΣ. red in wfΣ. simpl in *.
+  unfold Forall_decls, on_global_env. simpl.
+  induction 1. constructor. apply w.
+  simpl in *.
+Admitted.
 
 (* Lemma on_type_lift_all `{checker_flags} P Σ Γ T : *)
 (*   on_type (lift_typing typing) Σ Γ T -> on_type (all_typing P) Σ Γ T -> *)
@@ -1132,7 +1147,7 @@ Proof. intros. now apply X. Qed.
 Lemma env_prop_sigma `{checker_flags} P : env_prop P ->
   forall Σ (wf : wf Σ), Forall_decls_typing P Σ.
 Proof.
-  intros. eapply X. apply wf. constructor. apply (type_Sort Σ [] Level.prop). constructor.
+  intros. red in X. eapply X. apply wf. constructor. apply (type_Sort Σ [] Level.prop). constructor.
 Defined.
 
 Lemma wf_local_app `{checker_flags} Σ (Γ Γ' : context) : wf_local Σ (Γ ,,, Γ') -> wf_local Σ Γ.
@@ -1616,12 +1631,12 @@ Lemma typing_ind_env `{cf : checker_flags} :
         Σ ;;; Γ,, vass n t |- b : tSort s2 ->
         P Σ (Γ,, vass n t) b (tSort s2) -> P Σ Γ (tProd n t b) (tSort (Universe.sort_of_product s1 s2))) ->
 
-    (forall Σ (wfΣ : wf Σ) (Γ : context) (wfΓ : wf_local Σ Γ) (n n' : name) (t b : term)
+    (forall Σ (wfΣ : wf Σ) (Γ : context) (wfΓ : wf_local Σ Γ) (n : name) (t b : term)
             (s1 : universe) (bty : term),
         All_local_env_over typing Pdecl Σ Γ wfΓ ->
         Σ ;;; Γ |- t : tSort s1 ->
         P Σ Γ t (tSort s1) ->
-        Σ ;;; Γ,, vass n t |- b : bty -> P Σ (Γ,, vass n t) b bty -> P Σ Γ (tLambda n t b) (tProd n' t bty)) ->
+        Σ ;;; Γ,, vass n t |- b : bty -> P Σ (Γ,, vass n t) b bty -> P Σ Γ (tLambda n t b) (tProd n t bty)) ->
 
     (forall Σ (wfΣ : wf Σ) (Γ : context) (wfΓ : wf_local Σ Γ) (n : name) (b b_ty b' : term)
             (s1 : universe) (b'_ty : term),
@@ -1667,7 +1682,7 @@ Lemma typing_ind_env `{cf : checker_flags} :
         Forall_decls_typing P Σ -> All_local_env_over typing Pdecl Σ Γ wfΓ ->
         ind_npars mdecl = npar ->
         let pars := firstn npar args in
-        forall (pty : term), Σ ;;; Γ |- p : pty -> P Σ Γ p pty ->
+        forall (pty : term), Σ ;;; Γ |- p : pty ->
         forall indctx pctx ps btys,
         types_of_case ind mdecl idecl pars u p pty = Some (indctx, pctx, ps, btys) ->
         check_correct_arity (snd Σ) idecl ind u indctx pars pctx = true ->
@@ -1876,11 +1891,10 @@ Proof.
     -- eapply X8; eauto.
        eapply (X14 _ wfΓ _ _ H); eauto. simpl; auto with arith.
        eapply (X14 _ wfΓ _ _ H); eauto. simpl; auto with arith. simpl in *.
-       eapply (X14 _ wfΓ _ _ H); eauto. simpl; auto with arith. simpl in *.
-       eapply (X14 _ wfΓ _ _ H0); eauto. simpl; auto with arith. simpl in *.
-       induction a; simpl; lia.
-       simpl in *.
-       revert a wfΓ X14. clear. intros.
+       eapply (X14 _ wfΓ _ _ H0); eauto. lia.
+       (* induction a; simpl; constructor; try lia. *)
+       (* simpl in *. *)
+       clear X13. revert a wfΓ X14. simpl. clear. intros.
        induction a; simpl in *. constructor.
        destruct r. constructor. split; auto.
        eapply (X14 _ wfΓ _ _ t); eauto. simpl; auto with arith.

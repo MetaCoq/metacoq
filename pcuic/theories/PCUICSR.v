@@ -4,7 +4,7 @@ From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
 From Template Require Import config utils univ.
 From PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICWeakeningEnv PCUICWeakening
-     PCUICSubstitution PCUICClosed.
+     PCUICSubstitution PCUICClosed PCUICCumulativity PCUICGeneration PCUICValidity.
 Require Import ssreflect ssrbool.
 Require Import String.
 Require Import LibHypsNaming.
@@ -12,10 +12,6 @@ Local Open Scope string_scope.
 Set Asymmetric Patterns.
 
 Existing Instance config.default_checker_flags.
-
-(** Use a coercion for this common projection of the global context. *)
-Definition fst_ctx : global_context -> global_declarations := fst.
-Coercion fst_ctx : global_context >-> global_declarations.
 
 (* Commented otherwise extraction would produce an axiom making the whole
    extracted code unusable *)
@@ -93,36 +89,39 @@ Qed.
 (* Definition red1_context := context_relation red1_decls. *)
 
 Inductive conv_decls Σ Γ Γ' : forall (x y : context_decl), Type :=
-| conv_vass na T T' : isType Σ Γ' T' -> conv Σ Γ T T' -> conv_decls Σ Γ Γ' (vass na T) (vass na T')
-| conv_vdef_type na b T T' : Σ ;;; Γ' |- b : T' -> conv Σ Γ T T' -> conv_decls Σ Γ Γ' (vdef na b T) (vdef na b T')
+| conv_vass na T T' : isType Σ Γ' T' -> conv Σ Γ T T' ->
+                      conv_decls Σ Γ Γ' (vass na T) (vass na T')
+
+| conv_vdef_type na b T T' : isType Σ Γ' T' -> conv Σ Γ T T' ->
+                             conv_decls Σ Γ Γ' (vdef na b T) (vdef na b T')
+
 | conv_vdef_body na b b' T : Σ ;;; Γ' |- b' : T -> conv Σ Γ b b' -> conv_decls Σ Γ Γ' (vdef na b T) (vdef na b' T).
 
 Notation conv_context := (context_relation conv_decls).
 Require Import Equations.Tactics.
-Lemma wf_conv_context Σ Γ Δ :
-  All_local_env
-    (fun (Σ : global_context) (Γ : context) (t T : term) =>
-       forall Γ' : context, conv_context Σ Γ Γ' -> Σ;;; Γ' |- t : T) Σ Γ ->
-  conv_context Σ Γ Δ -> wf_local Σ Γ -> wf_local Σ Δ.
+
+(* First needs to show that cumulativity is closed under context conv *)
+Lemma wf_conv_context Σ Γ Δ (wfΓ : wf_local Σ Γ) :
+  All_local_env_over typing
+    (fun (Σ : global_context) (Γ : context) wfΓ (t T : term) Ht =>
+       forall Γ' : context, conv_context Σ Γ Γ' -> Σ;;; Γ' |- t : T) Σ Γ wfΓ ->
+  conv_context Σ Γ Δ -> wf_local Σ Δ.
 Proof.
   intros wfredctx. revert Δ.
-  induction wfredctx; intros Δ wfred; depelim wfred; intros wfH; depelim wfH. constructor.
+  induction wfredctx; intros Δ wfred; depelim wfred; constructor; eauto.
+  simpl.
   depelim c. destruct i.
   econstructor; eauto.
-  constructor. eauto.
-  depelim c. specialize (t0 _ wfred). apply t1.
-  apply t1.
-Defined.
-
+  depelim c. simpl. eapply type_Conv; eauto. admit.
+  simpl. auto.
+Admitted.
 
 Lemma conv_context_refl Σ Γ : wf_local Σ Γ -> conv_context Σ Γ Γ.
 Proof.
   induction Γ; try econstructor.
   destruct a as [na [b|] ty]; intros wfΓ; depelim wfΓ; econstructor; eauto;
   constructor; auto. (* Needs validity *)
-
-
-  constructor.
+Admitted.
 
 (* Lemma wf_red1_context Σ Γ Δ : *)
 (*   All_local_env *)
@@ -177,85 +176,6 @@ Admitted.
 Definition SR_red1 (Σ : global_context) Γ t T :=
   forall u (Hu : red1 Σ Γ t u), Σ ;;; Γ |- u : T.
 
-Reserved Notation " Σ ;;; Γ |- t == u " (at level 50, Γ, t, u at next level).
-
-Lemma red_step Σ Γ t u v : red1 Σ Γ t u -> red Σ Γ u v -> red Σ Γ t v.
-Proof.
-  induction 2. econstructor; auto. constructor. apply X.
-  econstructor 2; eauto.
-Qed.
-
-Require Import Equations.Type.Relation Equations.Type.Relation_Properties.
-
-Lemma red_alt@{i j +} Σ Γ t u : red Σ Γ t u <~> clos_refl_trans@{i j} (red1 Σ Γ) t u.
-Proof.
-  split. intros H. apply clos_rt_rtn1_iff.
-  induction H; econstructor; eauto.
-  intros H. apply clos_rt_rtn1_iff in H.
-  induction H; econstructor; eauto.
-Qed.
-
-Lemma cumul_alt Σ Γ t u :
-  Σ ;;; Γ |- t <= u -> { v & { v' & (red Σ Γ t v * red Σ Γ u v' * leq_term (snd Σ) v v')%type } }.
-Proof.
-  induction 1. exists t, u. intuition auto; constructor.
-  destruct IHX as (v' & v'' & (redv & redv') & leqv).
-  exists v', v''. intuition auto. now eapply red_step.
-  destruct IHX as (v' & v'' & (redv & redv') & leqv).
-  exists v', v''. intuition auto. now eapply red_step.
-Qed.
-
-Inductive conv_alt `{checker_flags} (Σ : global_context) (Γ : context) : term -> term -> Type :=
-| conv_alt_refl t u : eq_term (snd Σ) t u = true -> Σ ;;; Γ |- t == u
-| conv_alt_red_l t u v : red1 (fst Σ) Γ t v -> Σ ;;; Γ |- v == u -> Σ ;;; Γ |- t == u
-| conv_alt_red_r t u v : Σ ;;; Γ |- t == v -> red1 (fst Σ) Γ u v -> Σ ;;; Γ |- t == u
-where " Σ ;;; Γ |- t == u " := (@conv_alt _ Σ Γ t u) : type_scope.
-
-Lemma red_conv_alt Σ Γ t u : red (fst Σ) Γ t u -> Σ ;;; Γ |- t == u.
-Proof.
-  intros. apply red_alt in X. apply clos_rt_rt1n_iff in X.
-  induction X. constructor. apply eq_term_refl.
-  apply clos_rt_rt1n_iff in X. apply red_alt in X.
-  econstructor 2; eauto.
-Qed.
-Hint Resolve red_conv_alt.
-
-Lemma red1_red (Σ : global_context) Γ t u : red1 (fst Σ) Γ t u -> red (fst Σ) Γ t u.
-Proof. econstructor; eauto. constructor. Qed.
-Hint Resolve red1_red.
-
-Lemma leq_term_antisym Σ t u : leq_term Σ t u -> leq_term Σ u t -> eq_term Σ t u.
-Proof.
-Admitted.
-
-Lemma eq_term_sym Σ t u : eq_term Σ t u -> eq_term Σ u t.
-Proof.
-Admitted.
-
-Lemma cumul_conv_alt Σ Γ t u :
-  Σ ;;; Γ |- t <= u -> Σ ;;; Γ |- u <= t -> Σ ;;; Γ |- t == u.
-             (* (forall v, Σ ;;; Γ |- u == v -> Σ ;;; Γ |- t == v). *)
-Proof.
-  intros H. apply cumul_alt in H.
-  destruct H as (v & v' & (redv & redv') & leqv).
-  intros H'. apply cumul_alt in H'.
-  destruct H' as (v0 & v'0 & (redv0 & redv'0) & leqv0).
-  (** Needs confluence to show the two redexes can be joined *)
-Admitted.
-
-
-
-Lemma conv_conv_alt Σ Γ t u : Σ ;;; Γ |- t = u <~> Σ ;;; Γ |- t == u.
-Proof.
-  split; induction 1. apply cumul_conv_alt in b; auto.
-  constructor; constructor. now eapply eq_term_leq_term.
-  eapply eq_term_leq_term; now apply eq_term_sym.
-  constructor. econstructor 2; eauto. apply IHX.
-  econstructor 3; eauto. apply IHX.
-  constructor. econstructor 3; eauto. apply IHX.
-  econstructor 2; eauto. apply IHX.
-Qed.
-
 Lemma sr_red1 : env_prop SR_red1.
 Proof.
   apply typing_ind_env; intros Σ wfΣ Γ wfΓ; unfold SR_red1; intros **; rename_all_hyps;
@@ -264,6 +184,7 @@ Proof.
 
   - rewrite heq_nth_error in e. destruct decl as [na b ty]; noconf e.
     simpl.
+    (*
     pose proof (All_local_env_lookup wfΓ heq_nth_error); eauto.
     unfold on_local_decl in wfΓ. cbn -[skipn] in wfΓ.
     unshelve epose proof (typecheck_closed _ _ _ _ _ _ X) as [_ Hb]; auto.
@@ -276,6 +197,7 @@ Proof.
       rewrite firstn_length_le; auto with arith. }
     rewrite -{3 4}H. apply weakening; auto.
     unfold app_context. rewrite firstn_skipn. auto.
+     *) admit.
 
   - constructor; eauto.
     eapply (context_conversion _ wfΣ _ _ _ _ typeb).
@@ -283,22 +205,14 @@ Proof.
     constructor. exists s1; auto. apply conv_conv_alt.
     auto.
 
-  - eapply refine_type. eapply type_Lambda; eauto.
+  - eapply type_Conv. eapply type_Lambda; eauto.
     eapply (context_conversion _ wfΣ _ _ _ _ typeb).
     constructor. auto. admit.
     constructor. exists s1; auto. apply conv_conv_alt.
-    auto.
-
-    apply red
-
-
-
-
-
-
-
-
-
+    auto. assert (Σ ;;; Γ |- tLambda n t b : tProd n t bty). econstructor; eauto.
+    edestruct (validity _ wfΣ _ HΓ _ _ X0). apply i.
+    admit.
+Admitted.
 
 
 Definition sr_stmt (Σ : global_context) Γ t T :=

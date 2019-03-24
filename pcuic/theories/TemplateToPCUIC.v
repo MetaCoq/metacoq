@@ -400,29 +400,6 @@ Proof.
   intros. discriminate.
 Admitted.
 
-Inductive typing_spine `{checker_flags} (Σ : global_context) (Γ : context) : term -> list term -> term -> Type :=
-| type_spine_nil ty : typing_spine Σ Γ ty [] ty
-| type_spine_cons hd tl na A B s T B' :
-    Σ ;;; Γ |- tProd na A B : tSort s ->
-    Σ ;;; Γ |- T <= tProd na A B ->
-    Σ ;;; Γ |- hd : A ->
-    typing_spine Σ Γ (subst10 hd B) tl B' ->
-    typing_spine Σ Γ T (cons hd tl) B'.
-
-Lemma type_mkApps Σ Γ t u T t_ty :
-  Σ ;;; Γ |- t : t_ty ->
-  typing_spine Σ Γ t_ty u T ->
-  Σ ;;; Γ |- mkApps t u : T.
-Proof.
-  intros Ht Hsp.
-  revert t Ht. induction Hsp; simpl; auto.
-
-  intros.
-  specialize (IHHsp (tApp t1 hd)). apply IHHsp.
-  eapply type_App.
-  eapply type_Conv; eauto. eauto.
-Qed.
-
 Hint Constructors T.wf : wf.
 
 Require Import Template.TypingWf.

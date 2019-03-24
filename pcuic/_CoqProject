@@ -12,6 +12,9 @@ theories/PCUICWeakeningEnv.v
 theories/PCUICClosed.v
 theories/PCUICWeakening.v
 theories/PCUICSubstitution.v
+theories/PCUICCumulativity.v
+theories/PCUICGeneration.v
+theories/PCUICValidity.v
 theories/PCUICMetaTheory.v
 theories/PCUICWcbvEval.v
 theories/PCUICChecker.v

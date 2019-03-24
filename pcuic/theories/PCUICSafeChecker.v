@@ -1575,18 +1575,57 @@ Section Reduce.
     symmetry in eq2.
     pose proof (decompose_stack_at_eq _ _ _ _ _ eq2). subst.
     unfold R. cbn.
+    (* Induction on args maube? *)
+
+    (* Unfortunately, this is probably wrong with the order as it is.
+       Indeed, we have p.app_r < p.app_l, which is fine when considering
+       fix c, but not for (fix x) c which requires p.app_r < p.app_l.app_l.
+       Actually it seems it is the case. We compare the heads first, no matter
+       how deep we go afterwards.
+
+       As such, induction on args might be a safe bet.
+       I hope I don't have to remove dependency in order to remove
+       unwanted transports...
+
+       Maybe a lemma to say (coe h app_r p) < app_l q or something of
+       the sort (might even be usefyl those times I did generalize).
+
+       destruct args might actually be enough, since we only need to know
+       we're going left or right.
+
+       Maybe a lemma stackpos (c, fix) = poscat (fst _) (coe (snd _) _)
+     *)
+
     (* rewrite zipc_appstack. cbn. *)
+
+    assert (` (stack_position c (Fix mfix idx args ρ)) = )
+
     simp stack_position.
-    (* case_eq stack_position_clause_1. *)
+
     destruct stack_position_clause_1 as [p hp]. cbn.
     destruct stack_position_clause_1 as [q hq]. cbn.
     revert p hp q hq.
     rewrite zipc_appstack.
     intros p hp q hq.
     cbn. right.
+
+    (* case_eq (stack_position_clause_1 stack_position (appstack args (App c ρ)) *)
+    (*                                  (appstack args (App c ρ)) (tFix mfix idx)). *)
+    (* cbn. *)
+    (* intros p hp ep. *)
+    (* case_eq (stack_position_clause_1 stack_position ρ ρ *)
+    (*                                  (tApp (mkApps (tFix mfix idx) args) c)). *)
+    (* cbn. *)
+    (* intros q hq eq. *)
+    (* revert p hp ep q hq eq. *)
+    (* Fail rewrite zipc_appstack. *)
+
     (* Perhaps do we need to do case_eq instead of destruct? *)
     (* This way we could relate p and q. *)
     (* Maybe a case analysis on p and/or q will prove sufficient. *)
+    dependent destruction q.
+    - admit.
+    - inversion H0.
   Admitted.
   Next Obligation.
     case_eq (decompose_stack π). intros ll π' e.

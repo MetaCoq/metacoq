@@ -282,6 +282,31 @@ Section Normalisation.
     - simp stack_position.
   Qed.
 
+  (* Lemma stack_position_appstack : *)
+  (*   forall t args c ρ, *)
+  (*     exists u v q, *)
+  (*       let p := stack_position _ ρ in *)
+  (*       ` (stack_position t (appstack args (App c ρ))) = *)
+  (*       poscat _ (` p) (coe (proj2_sig p) (app_l u q v)). *)
+
+  (* Lemma stack_position_appstack : *)
+  (*   forall t args c ρ, *)
+  (*     exists h1 q h2, *)
+  (*       ` (stack_position t (appstack args (App c ρ))) = *)
+  (*       coe h1 (poscat _ (` (stack_position (tApp (mkApps t args) c) ρ)) (coe h2 (app_l t q c))). *)
+  (* Proof. *)
+  (*   intros t args c ρ. *)
+  (*   (* exists zipc_appstack. *) *)
+  (*   revert t ρ. *)
+  (*   induction args ; intros t ρ. *)
+  (*   - cbn. rewrite stack_position_app. *)
+  (*     exists eq_refl. cbn. do 2 eexists. *)
+  (*     reflexivity. *)
+  (*   - cbn. rewrite stack_position_app. *)
+  (*     destruct (IHargs (tApp t a) ρ) as [h1 [q [h2 e]]]. *)
+  (*     do 3 eexists. *)
+  (*     rewrite e. *)
+
   Lemma coe_app_l_not_root :
     forall u v p t (h : t = tApp u v),
       coe h (app_l u p v) <> root.
@@ -1623,15 +1648,21 @@ Section Reduce.
     unfold R. cbn.
 
     rewrite stack_position_fix.
+    clear.
     destruct args.
     - cbn. rewrite stack_position_app.
       right. eapply posR_poscat_posR.
       eapply posR_coe. econstructor.
     - cbn. rewrite stack_position_app.
-      (* case_eq (stack_position (tApp (mkApps (tApp (tFix mfix idx) t) args) c) ρ). *)
-      (* intros p hp _. cbn. *)
-      (* simp stack_position. *)
-      (* rewrite zipc_appstack. *)
+      case_eq (stack_position (tApp (mkApps (tApp (tFix mfix idx) t) args) c) ρ).
+      intros p hp eq. cbn.
+      simp stack_position.
+      replace (stack_position_clause_1 stack_position (appstack args (App c ρ)) (appstack args (App c ρ)) (tApp (tFix mfix idx) t))
+        with (stack_position (tApp (tFix mfix idx) t) (appstack args (App c ρ)))
+        by (simp stack_position).
+      case_eq (stack_position (tApp (tFix mfix idx) t) (appstack args (App c ρ))).
+      intros q hq eq2. cbn.
+      rewrite zipc_appstack.
       (* right. eapply posR_poscat_posR. *)
 
 

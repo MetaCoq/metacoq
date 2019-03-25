@@ -7,8 +7,6 @@ open Quoter
 
 module TemplateMonad :
 sig
-  type defn_kind = Definition | Lemma
-
   type template_monad =
       TmReturn of Constr.t
     | TmBind  of Constr.t * Constr.t
@@ -25,8 +23,9 @@ sig
 
       (* creating definitions *)
     | TmDefinition of Constr.t * Constr.t * Constr.t * Constr.t
-    | TmDefinitionTerm of defn_kind * Constr.t * Constr.t * Constr.t
+    | TmDefinitionTerm of Constr.t * Constr.t * Constr.t
     | TmLemma of Constr.t * Constr.t * Constr.t
+    | TmLemmaTerm of Constr.t * Constr.t
     | TmAxiom of Constr.t * Constr.t * Constr.t
     | TmAxiomTerm of Constr.t * Constr.t
     | TmMkDefinition of Constr.t * Constr.t
@@ -197,8 +196,9 @@ struct
 
       (* creating definitions *)
     | TmDefinition of Constr.t * Constr.t * Constr.t * Constr.t
-    | TmDefinitionTerm of defn_kind * Constr.t * Constr.t * Constr.t
+    | TmDefinitionTerm of Constr.t * Constr.t * Constr.t
     | TmLemma of Constr.t * Constr.t * Constr.t
+    | TmLemmaTerm of Constr.t * Constr.t
     | TmAxiom of Constr.t * Constr.t * Constr.t
     | TmAxiomTerm of Constr.t * Constr.t
     | TmMkDefinition of Constr.t * Constr.t
@@ -303,7 +303,7 @@ struct
     else if Globnames.eq_gr glob_ref ttmDefinitionRed then
       match args with
       | name::typ::body::[] ->
-        (TmDefinitionTerm (Definition, name, typ, body), universes)
+        (TmDefinitionTerm (name, typ, body), universes)
       | _ -> monad_failure "tmDefinitionRed" 4
 
     else if Globnames.eq_gr glob_ref ptmLemmaRed then
@@ -313,8 +313,8 @@ struct
       | _ -> monad_failure "tmLemmaRed" 3
     else if Globnames.eq_gr glob_ref ttmLemmaRed then
       match args with
-      | name::typ::term::[] ->
-        (TmDefinitionTerm (Lemma, name, typ, term), universes)
+      | name::typ::[] ->
+        (TmLemmaTerm (name, typ), universes)
       | _ -> monad_failure "tmLemmaRed" 3
 
     else if Globnames.eq_gr glob_ref ptmAxiomRed then

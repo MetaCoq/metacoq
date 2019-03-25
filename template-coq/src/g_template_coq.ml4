@@ -61,7 +61,6 @@ END;;
 TACTIC EXTEND denote_term
     | [ "denote_term" constr(c) tactic(tac) ] ->
       [ Proofview.Goal.enter (begin fun gl ->
-         let env = Proofview.Goal.env gl in
          let evm = Proofview.Goal.sigma gl in
          let evm, c = Denote.denote_term evm (EConstr.to_constr evm c) in
          Proofview.tclTHEN (Proofview.Unsafe.tclEVARS evm)
@@ -148,7 +147,6 @@ TACTIC EXTEND run_program
       [ Proofview.Goal.enter (begin fun gl ->
          let env = Proofview.Goal.env gl in
          let evm = Proofview.Goal.sigma gl in
-         let env = Proofview.Goal.env gl in
          let ret = ref None in
          Run_template_monad.run_template_program_rec ~intactic:true (fun x -> ret := Some x) env (evm, EConstr.to_constr evm c);
          match !ret with

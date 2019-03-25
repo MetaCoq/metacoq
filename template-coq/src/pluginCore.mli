@@ -2,7 +2,7 @@
  *)
 
 type ident   = Names.Id.t (* Template.Ast.ident *)
-type kername = Names.Constant.t (* Template.Ast.kername *)
+type kername = Names.KerName.t (* Template.Ast.kername *)
 type reductionStrategy (* Template.TemplateMonad.Common.reductionStrategy *)
 type global_reference (* Template.Ast.global_reference *)
 type term = Constr.t  (* Ast.term *)
@@ -10,6 +10,8 @@ type mutual_inductive_body (* Template.Ast.mutual_inductive_body *)
 type constant_entry (* Template.Ast.constant_entry *)
 
 type 'a tm
+
+val run : 'a tm -> Environ.env -> Evd.evar_map -> (Environ.env -> Evd.evar_map -> 'a -> unit) -> unit
 
 val tmReturn : 'a -> 'a tm
 val tmBind : 'a tm -> ('a -> 'b tm) -> 'b tm
@@ -22,7 +24,7 @@ val tmEval : reductionStrategy -> term -> term tm
 
 val tmDefinition : ident -> term option -> term -> kername tm
 val tmAxiom : ident -> term -> kername tm
-val tmLemma : ident -> term option -> term -> kername tm
+val tmLemma : bool -> ident -> term -> kername tm
 
 val tmFreshName : ident -> ident tm
 

@@ -1003,7 +1003,32 @@ Section Reduce.
     subst. cbn. assumption.
   Qed.
 
+  Lemma term_dec :
+    forall u v : term, { u = v } + { u <> v }.
+  Admitted.
+
+  Lemma posR_coe_r :
+    forall t h p q,
+      @posR t p q ->
+      @posR t p (coe h q).
+  Proof.
+    intros t e p q h.
+    revert e.
+    eapply Coq.Logic.Eqdep_dec.K_dec_type.
+    - apply term_dec.
+    - cbn. assumption.
+  Qed.
+
   Notation "( x ; y )" := (existT _ x y).
+
+  Lemma right_lex_coe :
+    forall Σ Γ t t' p p' (e : t = t'),
+      posR p (coe e p') ->
+      dlexprod (cored Σ Γ) (@posR) (t;p) (t';p').
+  Proof.
+    intros Σ' Γ t t' p p' e h. subst.
+    right. assumption.
+  Qed.
 
   (* Lemma right_lex_eq : *)
   (*   forall {A B leA} {leB : forall x : A, B x -> B x -> Prop} {x x' y y'}, *)
@@ -1648,21 +1673,17 @@ Section Reduce.
     unfold R. cbn.
 
     rewrite stack_position_fix.
-    clear.
-
-    (* TODO Move of course *)
-    Lemma right_lex_coe :
-      forall Σ Γ t t' p p' (e : t = t'),
-        posR p (coe e p') ->
-        dlexprod (cored Σ Γ) (@posR) (t;p) (t';p').
-    Proof.
-      intros Σ' Γ t t' p p' e h. subst.
-      right. assumption.
-    Qed.
+    clear - flags Σ H.
 
     unshelve eapply right_lex_coe.
     - apply (eq_sym (@zipc_appstack _ args (App c ρ))).
-    -
+    - revert c ρ mfix idx. induction args ; intros c ρ mfix idx.
+      + cbn. rewrite stack_position_app.
+        eapply posR_coe_r.
+        eapply posR_poscat_posR.
+        eapply posR_coe.
+        econstructor.
+      +
 
 
     destruct args.

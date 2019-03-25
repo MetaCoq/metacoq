@@ -204,21 +204,18 @@ let unquote_mutual_inductive_entry evm trm (* of type mutual_inductive_entry *) 
 
 let declare_inductive (env: Environ.env) (evm: Evd.evar_map) (mind: Constr.t) : unit =
   let mind = reduce_all env evm mind in
-  debug (fun () -> str"declare_inductive: " ++ Printer.pr_constr_env env evm mind);
+  debug (fun () -> str"declare_inductive: " ++ pr_constr mind);
   let evm, mind = unquote_mutual_inductive_entry evm mind in
   ignore (ComInductive.declare_mutual_inductive_with_eliminations mind Names.Id.Map.empty [])
 
+let not_in_tactic s =
+  CErrors.user_err  (str ("You can not use " ^ s ^ " in a tactic."))
 
-(* let not_in_tactic s =
- *   CErrors.user_err  (str ("You can not use " ^ s ^ " in a tactic.")) *)
-
-(*
-let monad_failure_full env evm s k prg =
+let monad_failure_full s k prg =
   CErrors.user_err
     (str (s ^ " must take " ^ (string_of_int k) ^ " argument" ^ (if k > 0 then "s" else "") ^ ".") ++
-       str "While trying to run: " ++ fnl () ++ Printer.pr_constr_env env evm prg ++ fnl () ++
+       str "While trying to run: " ++ fnl () ++ Printer.pr_constr prg ++ fnl () ++
        str "Please file a bug with Template-Coq.")
-*)
 
 (* note(gmm): polymorphism should probably be part an argument to `do_definition`
  *)
@@ -233,26 +230,6 @@ let do_definition evm k (name : Names.Id.t) (typ : Constr.t option) (body : Cons
   in
   Constr.mkConst n
 
-let do_lemma env evm k (poly : bool) (ident : Names.Id.t) (typ : Constr.t) (body : Constr.t) =
-  let kind = (Decl_kinds.Global, poly, Decl_kinds.Definition) in
-  let hole = CAst.make (Constrexpr.CHole (None, Misctypes.IntroAnonymous, None)) in
-  let evm, (c, _) =
-    Constrintern.interp_casted_constr_evars_impls env evm hole
-      (EConstr.of_constr typ)
-  in
-  Obligations.check_evars env evm;
-  let obls, _, c, cty =
-    Obligations.eterm_obligations env ident evm 0 (EConstr.to_constr evm c) typ
-  in
-  let ctx = Evd.evar_universe_context evm in
-  let hook =
-    Lemmas.mk_hook (fun _ gr _ -> let env = Global.env () in
-                     let evm = Evd.from_env env in
-                     let evm, t = Evd.fresh_global env evm gr in
-                     k (evm, t)) in
-  ignore (Obligations.add_definition ident ~term:c cty ctx ~kind ~hook obls)
-  (* question(gmm): why is this so different from `do_definition`? *)
-
 let do_axiom evm (ident : Names.Id.t) (typ : Constr.t) =
     let param =
       Entries.ParameterEntry
@@ -262,7 +239,7 @@ let do_axiom evm (ident : Names.Id.t) (typ : Constr.t) =
       Declare.declare_constant ident
         (param, Decl_kinds.IsDefinition Decl_kinds.Definition)
     in
-    n
+    Constr.mkConst n
 
 
 let under_option (f : Constr.t -> 'b) (t : Constr.t)
@@ -272,8 +249,7 @@ let under_option (f : Constr.t -> 'b) (t : Constr.t)
   | None -> None
 
 
-let rec run_template_program_rec ?(intactic=false)
-    (k : Environ.env * Evd.evar_map * Constr.t -> unit) env ((evm, pgm) : Evd.evar_map * Constr.t) : unit =
+let rec run_template_program_rec ?(intactic=false) (k : Environ.env * Evd.evar_map * Constr.t -> unit) env ((evm, pgm) : Evd.evar_map * Constr.t) : unit =
   let open TemplateMonad in
   let (kind, universes) = next_action env pgm in
   match kind with
@@ -284,11 +260,7 @@ let rec run_template_program_rec ?(intactic=false)
     run_template_program_rec ~intactic:intactic (fun (env, evm, ar) -> run_template_program_rec ~intactic:intactic k env (evm, Constr.mkApp (f, [|ar|]))) env (evm, a)
   | TmDefinition (name,s,typ,body) ->
     let name = reduce_all env evm name in
-    let evm, typ =
-      match denote_option s with
-        Some s -> let red = unquote_reduction_strategy env evm s in reduce env evm red typ
-      | None -> evm, typ
-    in
+    let evm, typ = (match denote_option s with Some s -> let red = unquote_reduction_strategy env evm s in reduce env evm red typ | None -> evm, typ) in
     let univs =
       if Flags.is_universe_polymorphism () then Polymorphic_const_entry (Evd.to_universe_context evm)
       else Monomorphic_const_entry (Evd.universe_context_set evm) in
@@ -298,81 +270,58 @@ let rec run_template_program_rec ?(intactic=false)
 
   | TmMkDefinition (name, body) ->
     let name = unquote_ident (reduce_all env evm name) in
-    let evm, trm = denote_term evm (reduce_all env evm body) in
+    let body = reduce_all env evm body in
+    let evm, trm = denote_term evm body in
     let (evm, _) = Typing.type_of env evm (EConstr.of_constr trm) in
     let _ = Declare.declare_definition ~kind:Decl_kinds.Definition name (trm, Monomorphic_const_entry (Evd.universe_context_set evm)) in
     let env = Global.env () in
     k (env, evm, unit_tt)
-  | TmDefinitionTerm (Definition, name, typ, body) ->
+  | TmDefinitionTerm (name, typ, body) ->
     let name = unquote_ident (reduce_all env evm name) in
     let evm,body = denote_term evm body in
     let evm,typ =
       match
-        under_option (fun t -> denote_term evm (reduce_all env evm t))
-          typ
+        under_option (fun t -> denote_term evm (reduce_all env evm t)) typ
       with
       | None -> (evm, None)
       | Some (evm,t) -> (evm, Some t)
     in
     let res = do_definition evm Decl_kinds.Definition name typ body in
     k (env, evm, res)
-  | TmDefinitionTerm (Lemma, name, typ, body) ->
+  | TmLemmaTerm (name, typ) ->
+    let ident = unquote_ident (reduce_all env evm name) in
+    let poly = Flags.is_universe_polymorphism () in
+    PluginCore.run (PluginCore.tmLemma poly ident typ) env evm
+      (fun a b c -> k (a,b,quote_kn c))
+  | TmAxiom (name,s,typ) ->
     let name = reduce_all env evm name in
+    let evm, typ = (match denote_option s with Some s -> let red = unquote_reduction_strategy env evm s in reduce env evm red typ | None -> evm, typ) in
+    let param = Entries.ParameterEntry (None, (typ, Monomorphic_const_entry (Evd.universe_context_set evm)), None) in
+    let n = Declare.declare_constant (unquote_ident name) (param, Decl_kinds.IsDefinition Decl_kinds.Definition) in
+    let env = Global.env () in
+    k (env, evm, Constr.mkConst n)
+  | TmAxiomTerm (name,typ) ->
+    let name = unquote_ident (reduce_all env evm name) in
+    let evm,typ = denote_term evm (reduce_all env evm typ) in
+    let res = do_axiom evm name typ in
+    let env = Global.env () in
+    k (env, evm, res)
+  | TmLemma (name,s,typ) ->
+    let name = reduce_all env evm name in
+    let evm, typ = (match denote_option s with Some s -> let red = unquote_reduction_strategy env evm s in reduce env evm red typ | None -> evm, typ) in
     let poly = Flags.is_universe_polymorphism () in
     let kind = (Decl_kinds.Global, poly, Decl_kinds.Definition) in
     let hole = CAst.make (Constrexpr.CHole (None, Misctypes.IntroAnonymous, None)) in
     let evm, (c, _) = Constrintern.interp_casted_constr_evars_impls env evm hole (EConstr.of_constr typ) in
     let ident = unquote_ident name in
     Obligations.check_evars env evm;
-    let obls, _, c, cty = Obligations.eterm_obligations env ident evm 0 (EConstr.to_constr evm c) typ in
-    (* let evm = Evd.minimize_universes evm in *)
-    let ctx = Evd.evar_universe_context evm in
-    let hook = Lemmas.mk_hook (fun _ gr _ -> let env = Global.env () in
-                                let evm = Evd.from_env env in
-                                let evm, t = Evd.fresh_global env evm gr in k (env, evm, t)) in
-    ignore (Obligations.add_definition ident ~term:c cty ctx ~kind ~hook obls)
-  (* let kind = Decl_kinds.(Global, Flags.use_polymorphic_flag (), DefinitionBody Definition) in *)
-  (* Lemmas.start_proof (unquote_ident name) kind evm (EConstr.of_constr typ) *)
-  (* (Lemmas.mk_hook (fun _ gr -> *)
-  (* let evm, t = Evd.fresh_global env evm gr in k (env, evm, t) *)
-  (* k (env, evm, unit_tt) *)
-  (* )); *)
-
-  | TmAxiom (name,s,typ) ->
-    let name = unquote_ident (reduce_all env evm name) in
-    let evm, typ =
-      match denote_option s with
-        Some s -> let red = unquote_reduction_strategy env evm s in reduce env evm red typ
-      | None -> evm, typ
-    in
-    let res = do_axiom evm name typ in
-    let env = Global.env () in
-    k (env, evm, Constr.mkConst res) (* why not return kername? *)
-  | TmAxiomTerm (name,typ) ->
-    let name = unquote_ident (reduce_all env evm name) in
-    let evm,typ = denote_term evm (reduce_all env evm typ) in
-    let res = do_axiom evm name typ in
-    let env = Global.env () in
-    k (env, evm, Constr.mkConst res) (* why not return kername? *)
-  | TmLemma (name,s,typ) ->
-    let name = unquote_ident (reduce_all env evm name) in
-    let evm, typ =
-      match denote_option s with
-        Some s -> let red = unquote_reduction_strategy env evm s in reduce env evm red typ
-      | None -> evm, typ
-    in
-    let poly = Flags.is_universe_polymorphism () in
-    let kind = (Decl_kinds.Global, poly, Decl_kinds.Definition) in
-    let hole = CAst.make (Constrexpr.CHole (None, Misctypes.IntroAnonymous, None)) in
-    let evm, (c, _) = Constrintern.interp_casted_constr_evars_impls env evm hole (EConstr.of_constr typ) in
-    Obligations.check_evars env evm;
-       let obls, _, c, cty = Obligations.eterm_obligations env name evm 0 (EConstr.to_constr evm c) typ in
+       let obls, _, c, cty = Obligations.eterm_obligations env ident evm 0 (EConstr.to_constr evm c) typ in
        (* let evm = Evd.minimize_universes evm in *)
        let ctx = Evd.evar_universe_context evm in
        let hook = Lemmas.mk_hook (fun _ gr _ -> let env = Global.env () in
                                                 let evm = Evd.from_env env in
                                                 let evm, t = Evd.fresh_global env evm gr in k (env, evm, t)) in  (* todo better *)
-       ignore (Obligations.add_definition name ~term:c cty ctx ~kind ~hook obls)
+       ignore (Obligations.add_definition ident ~term:c cty ctx ~kind ~hook obls)
     (* let kind = Decl_kinds.(Global, Flags.use_polymorphic_flag (), DefinitionBody Definition) in *)
     (* Lemmas.start_proof (unquote_ident name) kind evm (EConstr.of_constr typ) *)
     (* (Lemmas.mk_hook (fun _ gr -> *)
@@ -417,7 +366,7 @@ let rec run_template_program_rec ?(intactic=false)
   | TmQuoteUnivs ->
     let univs = Environ.universes env in
     k (env, evm, quote_ugraph univs)
-  | TmPrint trm -> Feedback.msg_info (Printer.pr_constr_env env evm trm);
+  | TmPrint trm -> Feedback.msg_info (pr_constr trm);
     k (env, evm, unit_tt)
   | TmMsg msg ->
      let msg = reduce_all env evm msg in
@@ -459,7 +408,8 @@ let rec run_template_program_rec ?(intactic=false)
     let env = Global.env () in
     k (env, evm, unit_tt)
   | TmUnquote t ->
-       (try
+    begin
+       try
          let t = reduce_all env evm t in
          let evm, t' = denote_term evm t in
          let typ = Retyping.get_type_of env evm (EConstr.of_constr t') in
@@ -475,13 +425,13 @@ let rec run_template_program_rec ?(intactic=false)
            | _ -> anomaly (str "texistT_typed_term does not refer to a constructor")
          in
            k (make_typed_term (EConstr.to_constr evm typ) t' evm)
-        with Reduction.NotArity -> CErrors.user_err (str "unquoting ill-typed term"))
+        with Reduction.NotArity -> CErrors.user_err (str "unquoting ill-typed term")
+      end
   | TmUnquoteTyped (typ, t) ->
        let t = reduce_all env evm t in
        let evm, t' = denote_term evm t in
        let evdref = ref evm in
        (* let t' = Typing.e_solve_evars env evdref (EConstr.of_constr t') in *)
-       Feedback.msg_debug (Printer.pr_constr_env env !evdref typ);
        Typing.e_check env evdref (EConstr.of_constr t') (EConstr.of_constr typ);
        let evm = !evdref in
        k (env, evm, t')
@@ -489,7 +439,8 @@ let rec run_template_program_rec ?(intactic=false)
     let name' = Namegen.next_ident_away_from (unquote_ident name) (fun id -> Nametab.exists_cci (Lib.make_path id)) in
     k (env, evm, quote_ident name')
   | TmExistingInstance name ->
-    Classes.existing_instance true (CAst.make (Libnames.Qualid (Libnames.qualid_of_ident (unquote_ident name)))) None
+     Classes.existing_instance true (CAst.make (Libnames.Qualid (Libnames.qualid_of_ident (unquote_ident name)))) None;
+     k (env, evm, unit_tt)
   | TmInferInstance (s, typ) ->
     begin
       let evm, typ = (match denote_option s with Some s -> let red = unquote_reduction_strategy env evm s in reduce env evm red typ | None -> evm, typ) in
@@ -515,7 +466,7 @@ let rec run_template_program_rec ?(intactic=false)
        let t = reduce_all env evm trm in
        let evdref = ref evm in
        let evm',t' = denote_term evm t in
-       Feedback.msg_info (Printer.pr_constr_env env evm' t');
+       Feedback.msg_info (pr_constr t');
        k (env, evm, unit_tt)
       with
       Reduction.NotArity -> CErrors.user_err (str "printing ill-typed term")

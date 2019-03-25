@@ -31,13 +31,13 @@ Cumulative Inductive TM@{t} : Type@{t} -> Type :=
 
 (* Return the defined constant *)
 | tmDefinition (nm : ident)
-                  (type : option Ast.term) (term : Ast.term)
+               (type : option Ast.term) (term : Ast.term)
   : TM kername
 | tmAxiom (nm : ident)
-             (type : Ast.term)
+          (type : Ast.term)
   : TM kername
 | tmLemma (nm : ident)
-             (type : option Ast.term) (term : Ast.term)
+          (type : Ast.term)
   : TM kername
 
 (* Guaranteed to not cause "... already declared" error *)
@@ -83,12 +83,8 @@ Definition tmMkInductive' (mind : mutual_inductive_body) : TM unit
   := tmMkInductive (mind_body_to_entry mind).
 
 Definition tmLemmaRed (i : ident) (rd : reductionStrategy)
-           (ty : option Ast.term) (body : Ast.term) :=
-  match ty with
-  | None => tmLemma i None body
-  | Some ty =>
-    tmBind (tmEval rd ty) (fun ty => tmLemma i (Some ty) body)
-  end.
+           (ty : Ast.term) :=
+  tmBind (tmEval rd ty) (fun ty => tmLemma i ty).
 Definition tmAxiomRed (i : ident) (rd : reductionStrategy) (ty : Ast.term)
   :=
     tmBind (tmEval rd ty) (fun ty => tmAxiom i ty).

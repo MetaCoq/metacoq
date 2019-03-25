@@ -267,6 +267,21 @@ Section Normalisation.
     - simp stack_position.
   Qed.
 
+  Lemma stack_position_app :
+    forall t u ρ,
+      ` (stack_position t (App u ρ)) =
+      poscat _ (` (stack_position _ ρ))
+             (coe (proj2_sig (stack_position _ ρ)) (app_l _ root _)).
+  Proof.
+    intros t u ρ.
+    simp stack_position.
+    replace (stack_position_clause_1 stack_position ρ ρ (tApp t u))
+      with (stack_position (tApp t u) ρ).
+    - case_eq (stack_position (tApp t u) ρ).
+      intros. cbn. reflexivity.
+    - simp stack_position.
+  Qed.
+
   Lemma coe_app_l_not_root :
     forall u v p t (h : t = tApp u v),
       coe h (app_l u p v) <> root.
@@ -447,28 +462,9 @@ Section Normalisation.
   | left_lex : forall x x' y y', leA x x' -> dlexprod leA leB (x;y) (x';y')
   | right_lex : forall x y y', leB x y y' -> dlexprod leA leB (x;y) (x;y').
 
-  (* Lemma acc_dlexprod : *)
-  (*   forall A B leA leB x, *)
-  (*     Acc leA x -> *)
-  (*     well_founded (leB x) -> *)
-  (*     forall y, *)
-  (*       Acc (leB x) y -> *)
-  (*       Acc (@dlexprod A B leA leB) (x;y). *)
-  (* Proof. *)
-  (*   intros A B leA leB. *)
-  (*   induction 1 as [x hx ih1]. *)
-  (*   intros hB y. *)
-  (*   induction 1 as [y hy ih2]. *)
-  (*   constructor. *)
-  (*   intros [x' y'] h. simple inversion h. *)
-  (*   - intro. inversion H1. inversion H2. subst. *)
-  (*     eapply ih1. *)
-  (*     + assumption. *)
-  (*     + admit. *)
-  (*     +  *)
-
   Lemma acc_dlexprod :
     forall A B leA leB,
+      (* UIP on A *)
       (forall (x : A) (y y' : B x), (x; y) = (x; y') -> y = y') ->
       (forall x, well_founded (leB x)) ->
       forall x,
@@ -712,6 +708,10 @@ Section Reduce.
   Derive NoConfusion NoConfusionHom for option.
   Derive NoConfusion NoConfusionHom for context_decl.
 
+  Arguments root {_}.
+  Arguments poscat {_} _ _.
+  Notation coe h t := (eq_rec_r (fun x => position x) t h).
+
   Lemma red1_context :
     forall Σ Γ t u stack,
       red1 Σ Γ t u ->
@@ -910,12 +910,12 @@ Section Reduce.
   Qed.
 
   Lemma posR_poscat :
-    forall t p q, q <> @root (atpos t p) -> posR (poscat t p q) p.
+    forall t p q, q <> @root (atpos t p) -> posR (poscat p q) p.
   Proof.
     clear. intros t p q h.
-    funelim (poscat t p q).
+    funelim (poscat p q).
     - revert q h.
-      assert (forall q : position t, q <> root t -> posR q (root t)) as h.
+      assert (forall q : position t, q <> root -> posR q root) as h.
       { intros q h.
         dependent destruction q.
         - exfalso. apply h. reflexivity.
@@ -926,9 +926,9 @@ Section Reduce.
       apply h.
     - revert u v p q H h.
       assert (forall u v p (q : position (atpos u p)),
-                 (q <> root _ -> posR (poscat _ p q) p) ->
-                 q <> root _ ->
-                 posR (app_l u (poscat u p q) v) (app_l u p v)
+                 (q <> root -> posR (poscat p q) p) ->
+                 q <> root ->
+                 posR (app_l u (poscat p q) v) (app_l u p v)
              ).
       { intros u v p q ih h. specialize (ih h).
         econstructor. assumption.
@@ -936,9 +936,9 @@ Section Reduce.
       assumption.
     - revert u0 v0 p0 q H h.
       assert (forall u v p (q : position (atpos v p)),
-                 (q <> root _ -> posR (poscat v p q) p) ->
-                 q <> root _ ->
-                 posR (app_r u v (poscat v p q)) (app_r u v p)
+                 (q <> root -> posR (poscat p q) p) ->
+                 q <> root ->
+                 posR (app_r u v (poscat p q)) (app_r u v p)
              ).
       { intros u v p q ih h. specialize (ih h).
         econstructor. assumption.
@@ -947,14 +947,35 @@ Section Reduce.
     - revert indn pr c p1 q H h.
       assert (
           forall indn pr c p (q : position (atpos c p)),
-            (q <> root _ -> posR (poscat c p q) p) ->
-            q <> root _ ->
-            posR (case_c indn pr c brs (poscat c p q)) (case_c indn pr c brs p)
+            (q <> root -> posR (poscat p q) p) ->
+            q <> root ->
+            posR (case_c indn pr c brs (poscat p q)) (case_c indn pr c brs p)
         ).
       { intros indn pr c p q ih h. specialize (ih h).
         econstructor. assumption.
       }
       assumption.
+  Qed.
+
+  Lemma posR_poscat_posR :
+    forall t r p q, posR p q -> @posR t (poscat r p) (poscat r q).
+  Proof.
+    intros t r p q h.
+    funelim (poscat r p).
+    - simp poscat.
+    - simp poscat. constructor.
+      apply H0. assumption.
+    - simp poscat. constructor.
+      apply H0. assumption.
+    - simp poscat. constructor.
+      apply H0. assumption.
+  Qed.
+
+  Lemma posR_coe :
+    forall t t' h p q, @posR t p q -> @posR t' (coe h p) (coe h q).
+  Proof.
+    intros t t' ? p q h.
+    subst. cbn. assumption.
   Qed.
 
   Notation "( x ; y )" := (existT _ x y).
@@ -1600,6 +1621,20 @@ Section Reduce.
     symmetry in eq2.
     pose proof (decompose_stack_at_eq _ _ _ _ _ eq2). subst.
     unfold R. cbn.
+
+    rewrite stack_position_fix.
+    destruct args.
+    - cbn. rewrite stack_position_app.
+      right. eapply posR_poscat_posR.
+      eapply posR_coe. econstructor.
+    - cbn. rewrite stack_position_app.
+      (* case_eq (stack_position (tApp (mkApps (tApp (tFix mfix idx) t) args) c) ρ). *)
+      (* intros p hp _. cbn. *)
+      (* simp stack_position. *)
+      (* rewrite zipc_appstack. *)
+      (* right. eapply posR_poscat_posR. *)
+
+
     (* Induction on args maube? *)
 
     (* Unfortunately, this is probably wrong with the order as it is.

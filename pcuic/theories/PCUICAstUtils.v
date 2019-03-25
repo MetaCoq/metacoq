@@ -540,6 +540,14 @@ Proof.
   rewrite !H // !H0 //; intuition auto.
 Qed.
 
+Lemma All_All2 {A} {P : A -> A -> Type} {Q} {l : list A} :
+  All Q l ->
+  (forall x, Q x -> P x x) ->
+  All2 P l l.
+Proof.
+  induction 1; constructor; auto.
+Qed.
+
 Lemma All_forallb_map_spec {A B : Type} {P : A -> Type} {p : A -> bool}
       {l : list A} {f g : A -> B} :
     All P l -> forallb p l ->
@@ -620,4 +628,16 @@ Ltac apply_spec :=
     eapply (All_map_id H)
   | H : All _ _ |- is_true (forallb _ _) =>
     eapply (All_forallb _ _ H); clear H
+  end.
+
+Ltac close_All :=
+  match goal with
+  | H : Forall _ _ |- Forall _ _ => apply (Forall_impl H); clear H; simpl
+  | H : All _ _ |- All _ _ => apply (All_impl H); clear H; simpl
+  | H : OnOne2 _ _ _ |- OnOne2 _ _ _ => apply (OnOne2_impl H); clear H; simpl
+  | H : All2 _ _ _ |- All2 _ _ _ => apply (All2_impl H); clear H; simpl
+  | H : All _ _ |- All2 _ _ _ =>
+    apply (All_All2 H); clear H; simpl
+  | H : All2 _ _ _ |- All _ _ =>
+    (apply (All2_All_left H) || apply (All2_All_right H)); clear H; simpl
   end.

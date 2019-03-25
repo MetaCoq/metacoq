@@ -267,6 +267,30 @@ Section Normalisation.
     - simp stack_position.
   Qed.
 
+  Lemma coe_app_l_not_root :
+    forall u v p t (h : t = tApp u v),
+      coe h (app_l u p v) <> root.
+  Proof.
+    intros.
+    subst. cbn. discriminate.
+  Qed.
+
+  Lemma coe_app_r_not_root :
+    forall u v p t (h : t = tApp u v),
+      coe h (app_r u v p) <> root.
+  Proof.
+    intros.
+    subst. cbn. discriminate.
+  Qed.
+
+  Lemma coe_case_c_not_root :
+    forall indn pr c brs p t (h : t = tCase indn pr c brs),
+      coe h (case_c indn pr c brs p) <> root.
+  Proof.
+    intros.
+    subst. cbn. discriminate.
+  Qed.
+
   Inductive posR : forall {t}, position t -> position t -> Prop :=
   | posR_app_lr : forall u v pu pv, posR (app_r u v pv) (app_l u pu v)
   | posR_app_l : forall u v p q, posR p q -> posR (app_l u p v) (app_l u q v)
@@ -1159,12 +1183,8 @@ Section Reduce.
     cbn.
     simp stack_position.
     destruct stack_position_clause_1. cbn.
-    apply posR_poscat. intro bot. clear - bot.
-    revert x e bot.
-    generalize (zipc (tApp f a)).
-    intros t x.
-    generalize (atpos (t π) x).
-    intros t0 e bot. subst. cbn in bot. discriminate.
+    apply posR_poscat.
+    apply coe_app_l_not_root.
   Qed.
   Next Obligation.
     cbn. case_eq (decompose_stack π).
@@ -1198,18 +1218,8 @@ Section Reduce.
   Next Obligation.
     right. simp stack_position.
     destruct stack_position_clause_1. cbn.
-    apply posR_poscat. clear.
-    intro bot.
-    revert x e bot. cbn.
-    match goal with
-    | |- forall x : position ?t, _ =>
-      generalize t
-    end.
-    intros t x.
-    generalize (atpos t x).
-    intros t' e bot.
-    subst. cbn in bot.
-    discriminate.
+    apply posR_poscat.
+    apply coe_case_c_not_root.
   Qed.
   Next Obligation.
     clear - prf' r p0. unfold Pr in p0.

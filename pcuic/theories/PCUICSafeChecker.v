@@ -1649,6 +1649,22 @@ Section Reduce.
 
     rewrite stack_position_fix.
     clear.
+
+    (* TODO Move of course *)
+    Lemma right_lex_coe :
+      forall Σ Γ t t' p p' (e : t = t'),
+        posR p (coe e p') ->
+        dlexprod (cored Σ Γ) (@posR) (t;p) (t';p').
+    Proof.
+      intros Σ' Γ t t' p p' e h. subst.
+      right. assumption.
+    Qed.
+
+    unshelve eapply right_lex_coe.
+    - apply (eq_sym (@zipc_appstack _ args (App c ρ))).
+    -
+
+
     destruct args.
     - cbn. rewrite stack_position_app.
       right. eapply posR_poscat_posR.

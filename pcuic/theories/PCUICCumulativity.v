@@ -1,10 +1,10 @@
 (* Distributed under the terms of the MIT license.   *)
 From Equations Require Import Equations.
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
-From Template Require Import config utils univ.
+From Template Require Import config utils AstUtils univ.
 From PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICWeakeningEnv PCUICWeakening
-     PCUICSubstitution PCUICClosed PCUICReduction.
+     PCUICClosed PCUICReduction.
 Require Import ssreflect ssrbool.
 Require Import String.
 Require Import LibHypsNaming.
@@ -34,6 +34,112 @@ Proof.
     econstructor 2; eauto. }
 Qed.
 
+Lemma red_cumul {Σ : global_context} {Γ t u} : red Σ Γ t u -> Σ ;;; Γ |- t <= u.
+Proof.
+  intros. apply red_alt in X. apply clos_rt_rt1n in X.
+  induction X. apply cumul_refl'.
+  econstructor 2; eauto.
+Qed.
+
+Lemma red_cumul_inv {Σ : global_context} {Γ t u} : red Σ Γ t u -> Σ ;;; Γ |- u <= t.
+Proof.
+  intros. apply red_alt in X. apply clos_rt_rt1n in X.
+  induction X. apply cumul_refl'.
+  econstructor 3; eauto.
+Qed.
+
+Lemma eq_term_refl `{checker_flags} φ t : eq_term φ t t.
+Proof.
+  induction t using term_forall_list_ind; simpl; try reflexivity; try discriminate;
+    try (rewrite -> ?IHt1, ?IHt2, ?IHt3; reflexivity).
+
+  - apply Nat.eqb_refl.
+  - apply eq_string_refl.
+  - apply Nat.eqb_refl.
+  - rewrite /eq_evar eq_nat_refl.
+    simpl. induction H0; simpl; auto. now rewrite p IHAll.
+  - apply eq_universe_refl.
+  - unfold eq_constant. rewrite eq_string_refl.
+    apply eq_universe_instance_refl.
+  - rewrite eq_ind_refl. apply eq_universe_instance_refl.
+  - rewrite eq_ind_refl. rewrite /eq_nat Nat.eqb_refl. apply eq_universe_instance_refl.
+  - destruct p. simpl.
+    rewrite eq_ind_refl eq_nat_refl IHt1 IHt2.
+    simpl. induction l.
+    reflexivity.
+    simpl. destruct a. inv X. simpl in H0. rewrite H0.
+    rewrite IHl; auto.
+  - now rewrite eq_projection_refl IHt.
+  - rewrite eq_nat_refl.
+    induction m. reflexivity.
+    inv X. intuition.
+    simpl. rewrite a0 b. simpl. apply H0.
+  - rewrite Nat.eqb_refl.
+    induction m. reflexivity.
+    inv X. intuition.
+    simpl. rewrite a0 b. simpl. apply H0.
+Qed.
+
+Lemma eq_term_leq_term `{checker_flags} φ t u : eq_term φ t u = true -> leq_term φ t u = true.
+Proof.
+  induction t in u |- * using term_forall_list_ind; simpl; intros; auto; try reflexivity; try discriminate;
+    try (merge_All; close_Forall; intuition auto);
+    try (rewrite -> ?IHt1, ?IHt2, ?IHt3; reflexivity).
+
+  - destruct u; auto. now apply eq_universe_leq_universe.
+  - destruct u; try discriminate.
+    rewrite -> andb_true_iff in *. intuition.
+  - destruct u; try discriminate.
+    rewrite -> andb_true_iff in *. intuition.
+  - destruct u; try discriminate.
+    rewrite -> andb_true_iff in *. intuition.
+Qed.
+
+Lemma eq_term_App `{checker_flags} φ f f' :
+  eq_term φ f f' ->
+  isApp f = isApp f'.
+Proof.
+  destruct f, f'; simpl; try congruence.
+  destruct p; congruence.
+Qed.
+
+Lemma eq_term_mkApps `{checker_flags} φ f l f' l' :
+  eq_term φ f f' ->
+  forallb2 (eq_term φ) l l' ->
+  eq_term φ (mkApps f l) (mkApps f' l').
+Proof.
+  induction l in f, f', l' |- *; destruct l'; try (simpl; congruence).
+  intros.
+  apply andb_and in H1 as [Ht Hl].
+  apply (IHl (tApp f a) (tApp f' t) l').
+  simpl; now rewrite H0 Ht.
+  apply Hl.
+Qed.
+
+Lemma leq_term_mkApps `{checker_flags} φ f l f' l' :
+  eq_term φ f f' ->
+  forallb2 (eq_term φ) l l' ->
+  leq_term φ (mkApps f l) (mkApps f' l').
+Proof.
+  induction l in f, f', l' |- *; destruct l'; try (simpl; congruence).
+  intros. simpl. now apply eq_term_leq_term.
+  intros H0 H1. apply andb_and in H1 as [Ht Hl].
+  apply (IHl (tApp f a) (tApp f' t) l').
+  simpl; now rewrite H0 Ht.
+  apply Hl.
+Qed.
+
+Lemma leq_term_antisym Σ t u : leq_term Σ t u -> leq_term Σ u t -> eq_term Σ t u.
+Proof.
+Admitted.
+
+Lemma leq_term_refl Σ t : leq_term Σ t t.
+Proof. apply eq_term_leq_term, eq_term_refl. Qed.
+
+Lemma eq_term_sym Σ t u : eq_term Σ t u -> eq_term Σ u t.
+Proof.
+Admitted.
+
 Inductive conv_alt `{checker_flags} (Σ : global_context) (Γ : context) : term -> term -> Type :=
 | conv_alt_refl t u : eq_term (snd Σ) t u = true -> Σ ;;; Γ |- t == u
 | conv_alt_red_l t u v : red1 (fst Σ) Γ t v -> Σ ;;; Γ |- v == u -> Σ ;;; Γ |- t == u
@@ -48,17 +154,6 @@ Proof.
   econstructor 2; eauto.
 Qed.
 Hint Resolve red_conv_alt.
-
-Lemma leq_term_antisym Σ t u : leq_term Σ t u -> leq_term Σ u t -> eq_term Σ t u.
-Proof.
-Admitted.
-
-Lemma leq_term_refl Σ t : leq_term Σ t t.
-Proof. apply eq_term_leq_term, eq_term_refl. Qed.
-
-Lemma eq_term_sym Σ t u : eq_term Σ t u -> eq_term Σ u t.
-Proof.
-Admitted.
 
 Lemma cumul_refl' Σ Γ t : cumul Σ Γ t t.
 Proof. apply cumul_refl, leq_term_refl. Qed.

@@ -1,7 +1,7 @@
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
 From Template Require Import utils.
 From PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICLiftSubst PCUICTyping
-     PCUICWeakeningEnv PCUICWeakening PCUICSubstitution PCUICCumulativity PCUICGeneration.
+     PCUICWeakeningEnv PCUICWeakening PCUICSubstitution PCUICReduction PCUICCumulativity PCUICGeneration.
 From Equations Require Import Equations.
 Require Import ssreflect.
 Existing Instance config.default_checker_flags.
@@ -194,7 +194,7 @@ Proof.
       econstructor.
       eapply type_LetIn; eauto. left. exists [], u; intuition eauto with wf.
       eapply cumul_alt. exists (tSort u), (tSort u); intuition auto.
-      apply red1_red; repeat constructor. constructor.
+      apply red1_red; repeat constructor.
 
   - (* Application *)
     destruct X1 as [[ctx [s [Heq Hs]]]|].
@@ -283,4 +283,3 @@ Proof.
     right. destruct s as [u [Hu _]]. now exists u.
 Admitted.
 
-Eval compute in validity.

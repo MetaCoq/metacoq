@@ -13,12 +13,33 @@ Require Import ExtrOcamlString ExtrOcamlZInt.
 Extract Inductive Decimal.int => unit [ "(fun _ -> ())" "(fun _ -> ())" ] "(fun _ _ _ -> assert false)".
 
 Extraction Blacklist config uGraph univ Ast String List Nat Int
-           UnivSubst Typing Checker Retyping OrderedType.
+           UnivSubst Typing Checker Retyping OrderedType Classes.
 Set Warnings "-extraction-opaque-accessed".
 
 From PCUIC Require Import PCUICAst PCUICAstUtils PCUICUnivSubst PCUICInduction PCUICLiftSubst PCUICTyping
+     PCUICWeakeningEnv
+     PCUICWeakening
+     PCUICSubstitution
      PCUICChecker PCUICRetyping PCUICMetaTheory TemplateToPCUIC.
+From Equations Require Import Equations.
 
+(* Should be in Equations *)
+Extraction Inline Equations.Prop.Classes.noConfusion.
+Extraction Inline Equations.Prop.Logic.eq_elim.
+Extraction Inline Equations.Prop.Logic.eq_elim_r.
+Extraction Inline Equations.Prop.Logic.transport.
+Extraction Inline Equations.Prop.Logic.transport_r.
+Extraction Inline Equations.Prop.Logic.False_rect_dep.
+Extraction Inline Equations.Prop.Logic.True_rect_dep.
+Extraction Inline Equations.Init.pr1.
+Extraction Inline Equations.Init.pr2.
+Extraction Inline Equations.Init.hidebody.
+Extraction Inline Equations.Prop.DepElim.solution_left.
+
+Extraction Inline NoConfusionPackage_All_local_env_over.
+Extraction Inline NoConfusionPackage_context_decl.
+
+Extraction Library Classes.
 Extraction Library PCUICAst.
 Extraction Library PCUICAstUtils.
 Extraction Library PCUICUnivSubst.

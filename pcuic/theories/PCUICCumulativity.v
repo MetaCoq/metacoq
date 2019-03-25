@@ -10,6 +10,8 @@ Require Import String.
 Require Import LibHypsNaming.
 Local Open Scope string_scope.
 Set Asymmetric Patterns.
+Require Import CRelationClasses.
+Require Import Equations.Type.Relation Equations.Type.Relation_Properties.
 
 Existing Instance config.default_checker_flags.
 

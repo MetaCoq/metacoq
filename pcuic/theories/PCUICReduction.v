@@ -10,6 +10,9 @@ Require Import LibHypsNaming.
 Local Open Scope string_scope.
 Set Asymmetric Patterns.
 
+Require Import CRelationClasses.
+Require Import Equations.Type.Relation Equations.Type.Relation_Properties.
+
 Existing Instance config.default_checker_flags.
 
 Lemma red1_red (Σ : global_context) Γ t u : red1 (fst Σ) Γ t u -> red (fst Σ) Γ t u.
@@ -21,9 +24,6 @@ Proof.
   induction 2. econstructor; auto.
   econstructor 2; eauto.
 Qed.
-
-Require Import CRelationClasses.
-Require Import Equations.Type.Relation Equations.Type.Relation_Properties.
 
 Lemma red_alt@{i j +} Σ Γ t u : red Σ Γ t u <~> clos_refl_trans@{i j} (red1 Σ Γ) t u.
 Proof.
@@ -57,29 +57,6 @@ Definition atom t :=
 
 Section ReductionCongruence.
   Context {Σ : global_context}.
-
-  (* Inductive list_context : list term -> list term -> term -> list term -> Type := *)
-  (* | list_context_head M MS : list_context (cons M MS) nil M MS *)
-  (* | list_context_cons MS Mleft M Mright M' : *)
-  (*     list_context MS Mleft M Mright -> *)
-  (*     list_context (cons M' MS) (cons M' Mleft) M Mright. *)
-  (* Derive NoConfusion for list_context. *)
-
-  (* TODO: fix lists *)
-
-  (* Inductive term_context : term -> Type := *)
-  (* | tHole M : term_context M *)
-  (* | tEvar_context n l lleft t lright : list_context l lleft t lright -> term_context (tEvar n l) *)
-  (* | tProd_context_dom na t t' : term_context t -> term_context (tProd na t t') *)
-  (* | tProd_context_codom na t t' : term_context t' -> term_context (tProd na t t') *)
-  (* | tLambda_context_dom na t t' : term_context t -> term_context (tLambda na t t') *)
-  (* | tLambda_context_codom na t t' : term_context t' -> term_context (tLambda na t t') *)
-  (* | tLetin_context_val na b t t' : term_context b -> term_context (tLetIn na b t t') *)
-  (* | tLetin_context_dom na b t t' : term_context t -> term_context (tLetIn na b t t') *)
-  (* | tLetin_context_codom na b t t' : term_context t' -> term_context (tLetIn na b t t') *)
-  (* | tApp_context_l f a : term_context f -> term_context (tApp f a) *)
-  (* | tApp_context_r f a : term_context a -> term_context (tApp f a) *)
-  (* (* missing Case/Proj/Fix/CoFix *). *)
 
   Inductive term_context : Set :=
   | tCtxHole : term_context

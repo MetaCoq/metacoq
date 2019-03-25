@@ -227,3 +227,11 @@ checker/src/wf.mli
 /template-coq/theories/*.vio
 /template-coq/theories/kernel/*.vio
 /template-coq/theories/TemplateMonad/*.vio
+/pcuic/src/logic0.mli
+/pcuic/src/logic0.ml
+/pcuic/src/logic.mli
+/pcuic/src/logic.ml
+/pcuic/src/init.mli
+/pcuic/src/init.ml
+/pcuic/src/classes0.mli
+/pcuic/src/classes0.ml

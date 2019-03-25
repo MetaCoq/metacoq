@@ -1,6 +1,7 @@
 (* Distributed under the terms of the MIT license.   *)
-
-From Coq Require Import Bool String List Program BinPos Compare_dec Omega Lia.
+From Equations Require Import Equations.
+From Coq Require Import Bool String List BinPos Compare_dec Omega Lia.
+Require Import Coq.Program.Syntax Coq.Program.Basics.
 From Template Require Import config utils BasicAst.
 From PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICWeakeningEnv PCUICClosed.
 Require Import ssreflect ssrbool.
@@ -11,6 +12,9 @@ Require Import ssreflect ssrbool.
 
 Set Asymmetric Patterns.
 Generalizable Variables Σ Γ t T.
+
+Derive NoConfusion for All_local_env_over.
+Derive NoConfusion for context_decl.
 
 Lemma typed_liftn `{checker_flags} Σ Γ t T n k :
   wf Σ -> wf_local Σ Γ -> k >= #|Γ| ->
@@ -592,6 +596,8 @@ Proof.
   destruct (leb_spec_Set (#|c| + k) x'). f_equal. lia. reflexivity.
 Qed.
 
+Require Import FunctionalExtensionality.
+
 Lemma lift_types_of_case ind mdecl idecl args u p pty indctx pctx ps btys n k :
   let f k' := lift n (k' + k) in
   let f_ctx := lift_context n k in
@@ -843,7 +849,7 @@ Proof.
   rewrite -> lift_context_length.
   rewrite /is_true -H. f_equal. f_equal. f_equal.
   rewrite -> !map_map_compose. apply map_ext.
-  intros. unfold compose. now rewrite -> permute_lift.
+  intros. unfold Basics.compose. now rewrite -> permute_lift.
   eapply lift_eq_context in H0. eapply H0.
 Qed.
 
@@ -993,7 +999,7 @@ Proof.
        rewrite -> lift_fix_context.
        apply All_map.
        clear X. eapply All_impl; eauto.
-       clear X0. unfold compose; simpl; intros [na ty bod] [[Htyd Hlam] IH].
+       clear X0. unfold Basics.compose; simpl; intros [na ty bod] [[Htyd Hlam] IH].
        simpl in *. intuition.
        specialize (IH Γ (Γ' ,,, fix_context mfix) Γ'').
        rewrite -> lift_context_app in IH.
@@ -1060,7 +1066,7 @@ Proof.
       apply All_local_env_app_inv; intuition auto.
       clear -wf a.
       induction ctx; try constructor; depelim a.
-      -- rewrite lift_context_snoc.
+      -- rewrite lift_context_snoc. unfold vass, snoc in H. noconf H.
          constructor; auto.
          eapply IHctx. eapply a.
          simpl. destruct tu as [u tu]. exists u.
@@ -1071,7 +1077,7 @@ Proof.
          rewrite app_context_assoc in t0.
          specialize (t0 eq_refl). simpl in t0.
          rewrite app_context_length lift_context_app app_context_assoc Nat.add_0_r in t0. apply t0.
-      -- rewrite lift_context_snoc.
+      -- rewrite lift_context_snoc. unfold vass, snoc in H; noconf H.
          constructor; auto.
          eapply IHctx. eapply a.
          simpl.

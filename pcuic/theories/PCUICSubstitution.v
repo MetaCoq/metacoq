@@ -1,12 +1,13 @@
 (* Distributed under the terms of the MIT license.   *)
 
-From Coq Require Import Bool String List Program BinPos Compare_dec Arith Lia.
+(** * Substitution lemmas for typing derivations. *)
+
+From Coq Require Import Bool String List BinPos Compare_dec Arith Lia.
+Require Import Coq.Program.Syntax Coq.Program.Basics.
 From Template Require Import config utils BasicAst AstUtils.
 From PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICLiftSubst
      PCUICUnivSubst PCUICTyping PCUICWeakeningEnv PCUICClosed PCUICWeakening.
 Require Import ssreflect.
-
-(** * Substitution lemmas for typing derivations. *)
 
 Set Asymmetric Patterns.
 Close Scope string_scope.
@@ -1460,9 +1461,6 @@ Proof.
   - eapply substitution_red1 in r. 4:eauto. all:eauto with wf.
     now econstructor 3.
 Qed.
-
-Derive NoConfusion for All_local_env_over.
-Derive NoConfusion for context_decl.
 
 Theorem substitution `{checker_flags} Σ Γ Γ' s Δ (t : term) T :
   wf Σ -> subs Σ Γ s Γ' ->

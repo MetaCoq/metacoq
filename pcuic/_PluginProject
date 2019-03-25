@@ -2,6 +2,10 @@
 -I ../checker/src
 -R theories PCUIC
 
+# From Equations
+src/classes0.mli
+src/classes0.ml
+
 src/pCUICAst.ml
 src/pCUICAst.mli
 src/pCUICAstUtils.ml

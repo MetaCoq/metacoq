@@ -47,10 +47,6 @@ Proof.
 Qed.
 Hint Resolve red_conv_alt.
 
-Lemma red1_red (Σ : global_context) Γ t u : red1 (fst Σ) Γ t u -> red (fst Σ) Γ t u.
-Proof. econstructor; eauto. constructor. Qed.
-Hint Resolve red1_red.
-
 Lemma leq_term_antisym Σ t u : leq_term Σ t u -> leq_term Σ u t -> eq_term Σ t u.
 Proof.
 Admitted.

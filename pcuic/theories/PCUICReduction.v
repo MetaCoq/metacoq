@@ -12,12 +12,17 @@ Set Asymmetric Patterns.
 
 Existing Instance config.default_checker_flags.
 
+Lemma red1_red (Σ : global_context) Γ t u : red1 (fst Σ) Γ t u -> red (fst Σ) Γ t u.
+Proof. econstructor; eauto. constructor. Qed.
+Hint Resolve red1_red refl_red.
+
 Lemma red_step Σ Γ t u v : red1 Σ Γ t u -> red Σ Γ u v -> red Σ Γ t v.
 Proof.
-  induction 2. econstructor; auto. constructor. apply X.
+  induction 2. econstructor; auto.
   econstructor 2; eauto.
 Qed.
 
+Require Import CRelationClasses.
 Require Import Equations.Type.Relation Equations.Type.Relation_Properties.
 
 Lemma red_alt@{i j +} Σ Γ t u : red Σ Γ t u <~> clos_refl_trans@{i j} (red1 Σ Γ) t u.
@@ -32,6 +37,9 @@ Lemma red_trans Σ Γ t u v : red Σ Γ t u -> red Σ Γ u v -> red Σ Γ t v.
 Proof.
   intros. apply red_alt. apply red_alt in X. apply red_alt in X0. now econstructor 3.
 Defined.
+
+Instance red_Transitive Σ Γ : Transitive (red Σ Γ).
+Proof. refine (red_trans _ _). Qed.
 
 (** Atoms reduce to themselves *)
 
@@ -109,94 +117,239 @@ Section ReductionCongruence.
   Section FillContext.
     Context (t : term).
 
-    Equations fill_context (ctx : term_context) (Γ : context) : term by struct ctx := {
-    | tCtxHole | Γ => t;
-    | tCtxEvar n l | Γ => tEvar n (fill_list_context l Γ);
-    | tCtxProd_l na ctx b | Γ => tProd na (fill_context ctx Γ) b;
-    | tCtxProd_r na ty ctx | Γ => tProd na ty (fill_context ctx (Γ ,, vass na ty));
-    | tCtxLambda_l na ty b | Γ => tLambda na (fill_context ty Γ) b;
-    | tCtxLambda_r na ty b | Γ => tLambda na ty (fill_context b (Γ ,, vass na ty));
-    | tCtxLetIn_l na b ty b' | Γ => tLetIn na (fill_context b Γ) ty b';
-    | tCtxLetIn_b na b ty b' | Γ => tLetIn na b (fill_context ty Γ) b';
-    | tCtxLetIn_r na b ty b' | Γ => tLetIn na b ty (fill_context b' (Γ ,, vdef na b ty));
-    | tCtxApp_l f a | Γ => tApp (fill_context f Γ) a;
-    | tCtxApp_r f a | Γ => tApp f (fill_context a Γ);
-    | tCtxCase_pred par p c brs | Γ => tCase par (fill_context p Γ) c brs;
-    | tCtxCase_discr par p c brs | Γ => tCase par p (fill_context c Γ) brs;
-    | tCtxCase_branch par p c brs | Γ => tCase par p c (fill_list_nat_context brs Γ);
-    | tCtxProj p c | Γ => tProj p (fill_context c Γ);
-    | tCtxFix mfix n | Γ => tFix mfix n;
-    | tCtxCoFix mfix n | Γ => tCoFix mfix n }
-    with fill_list_context (l : list_context) (Γ : context) : list term by struct l :=
-    { fill_list_context (tCtxHead ctx l) Γ => (fill_context ctx Γ) :: l;
-      fill_list_context (tCtxTail hd ctx) Γ => hd :: fill_list_context ctx Γ }
-    with fill_list_nat_context (l : list_nat_context) (Γ : context) : list (nat * term) by struct l :=
-    { fill_list_nat_context (tCtxHead_nat (n, ctx) l) Γ => (n, fill_context ctx Γ) :: l;
-      fill_list_nat_context (tCtxTail_nat hd ctx) Γ => hd :: fill_list_nat_context ctx Γ }.
-    Transparent fill_context fill_list_context fill_list_nat_context.
+    Equations fill_context (ctx : term_context) : term by struct ctx := {
+    | tCtxHole => t;
+    | tCtxEvar n l => tEvar n (fill_list_context l);
+    | tCtxProd_l na ctx b => tProd na (fill_context ctx) b;
+    | tCtxProd_r na ty ctx => tProd na ty (fill_context ctx);
+    | tCtxLambda_l na ty b => tLambda na (fill_context ty) b;
+    | tCtxLambda_r na ty b => tLambda na ty (fill_context b);
+    | tCtxLetIn_l na b ty b' => tLetIn na (fill_context b) ty b';
+    | tCtxLetIn_b na b ty b' => tLetIn na b (fill_context ty) b';
+    | tCtxLetIn_r na b ty b' => tLetIn na b ty (fill_context b');
+    | tCtxApp_l f a => tApp (fill_context f) a;
+    | tCtxApp_r f a => tApp f (fill_context a);
+    | tCtxCase_pred par p c brs => tCase par (fill_context p) c brs;
+    | tCtxCase_discr par p c brs => tCase par p (fill_context c) brs;
+    | tCtxCase_branch par p c brs => tCase par p c (fill_list_nat_context brs);
+    | tCtxProj p c => tProj p (fill_context c);
+    | tCtxFix mfix n => tFix mfix n;
+    | tCtxCoFix mfix n => tCoFix mfix n }
+    with fill_list_context (l : list_context) : list term by struct l :=
+    { fill_list_context (tCtxHead ctx l) => (fill_context ctx) :: l;
+      fill_list_context (tCtxTail hd ctx) => hd :: fill_list_context ctx }
+    with fill_list_nat_context (l : list_nat_context) : list (nat * term) by struct l :=
+    { fill_list_nat_context (tCtxHead_nat (n, ctx) l) => (n, fill_context ctx) :: l;
+      fill_list_nat_context (tCtxTail_nat hd ctx) => hd :: fill_list_nat_context ctx }.
+    Global Transparent fill_context fill_list_context fill_list_nat_context.
+
+    Equations hole_context (ctx : term_context) (Γ : context) : context by struct ctx := {
+    | tCtxHole | Γ => Γ;
+    | tCtxEvar n l | Γ => hole_list_context l Γ;
+    | tCtxProd_l na ctx b | Γ => hole_context ctx Γ;
+    | tCtxProd_r na ty ctx | Γ => hole_context ctx (Γ ,, vass na ty);
+    | tCtxLambda_l na ty b | Γ => hole_context ty Γ;
+    | tCtxLambda_r na ty b | Γ => hole_context b (Γ ,, vass na ty);
+    | tCtxLetIn_l na b ty b' | Γ => hole_context b Γ;
+    | tCtxLetIn_b na b ty b' | Γ => hole_context ty Γ;
+    | tCtxLetIn_r na b ty b' | Γ => hole_context b' (Γ ,, vdef na b ty);
+    | tCtxApp_l f a | Γ => hole_context f Γ;
+    | tCtxApp_r f a | Γ => hole_context a Γ;
+    | tCtxCase_pred par p c brs | Γ => hole_context p Γ;
+    | tCtxCase_discr par p c brs | Γ => hole_context c Γ;
+    | tCtxCase_branch par p c brs | Γ => hole_list_nat_context brs Γ;
+    | tCtxProj p c | Γ => hole_context c Γ;
+    | tCtxFix mfix n | Γ => Γ; (* TODO *)
+    | tCtxCoFix mfix n | Γ => Γ }
+    with hole_list_context (l : list_context) (Γ : context) : context by struct l :=
+    { hole_list_context (tCtxHead ctx l) Γ => hole_context ctx Γ;
+      hole_list_context (tCtxTail hd ctx) Γ => hole_list_context ctx Γ }
+    with hole_list_nat_context (l : list_nat_context) (Γ : context) : context by struct l :=
+    { hole_list_nat_context (tCtxHead_nat (n, ctx) l) Γ => hole_context ctx Γ;
+      hole_list_nat_context (tCtxTail_nat hd ctx) Γ => hole_list_nat_context ctx Γ }.
+    Global Transparent hole_context hole_list_context hole_list_nat_context.
+
   End FillContext.
+
   Inductive contextual_closure (red : ∀ Γ, term -> term -> Type) : context -> term -> term -> Type :=
   | ctxclos_atom Γ t : atom t -> contextual_closure red Γ t t
-  | ctxclos_ctx Γ (ctx : term_context) (c : context) (u u' : term) :
-      red (Γ ,,, c) u u' -> contextual_closure red Γ (fill_context u ctx c) (fill_context u' ctx c).
+  | ctxclos_ctx Γ (ctx : term_context) (u u' : term) :
+      red (hole_context ctx Γ) u u' -> contextual_closure red Γ (fill_context u ctx) (fill_context u' ctx).
 
-  Lemma contextual_closure_red1 Γ t u : contextual_closure (red Σ) Γ t u -> red Σ Γ t u.
+  (* Inductive OnOne2 P : list_context -> list term -> Type := *)
+  (* | OnOne2_hd hd hd' tl : P hd hd' -> OnOne2 P (hd :: tl) (hd' :: tl') *)
+  (* | OnOne2_tl hd tl tl' : OnOne2 P tl tl' -> OnOne2 P (hd :: tl) (hd :: tl'). *)
+
+  (* Lemma red1_contextual_closure Γ t u : red Σ Γ t u -> contextual_closure (red Σ) Γ t u. *)
+  (* Proof. *)
+  (*   intros Hred. *)
+  (*   apply (ctxclos_ctx (red Σ) Γ tCtxHole t u Hred). *)
+  (* Qed. *)
+
+  Lemma red_contextual_closure Γ t u : red Σ Γ t u -> contextual_closure (red Σ) Γ t u.
+  Proof.
+    intros Hred.
+    apply (ctxclos_ctx (red Σ) Γ tCtxHole t u Hred).
+  Qed.
+
+  Lemma red_contextual_closure' Γ t u :
+    red Σ Γ t u ->
+    forall ctx Γ', Γ = hole_context ctx Γ' ->
+    red Σ Γ' (fill_context t ctx) (fill_context u ctx).
+  Proof.
+    intros. subst Γ.
+  Admitted.
+
+  Arguments fill_list_context : simpl never.
+
+  Lemma contextual_closure_red Γ t u : contextual_closure (red Σ) Γ t u -> red Σ Γ t u.
   Proof.
     induction 1. constructor.
-    revert u' r.
-    eapply (fill_context_elim (fun ctx u t => forall u', red Σ (Γ ,,, c) u u' ->
-                                                         red Σ Γ t (fill_context ctx u')) _ _);
-      intros **; simpl; auto.
+    apply red_alt in r. apply clos_rt_rt1n in r.
+    induction r. constructor. apply clos_rt_rt1n_iff in r0. apply red_alt in r0.
+    eapply red_step; eauto. clear r0 IHr z.
+    set (P := fun ctx t => forall Γ y, red1 Σ (hole_context ctx Γ) x y ->
+                                     red1 Σ Γ t (fill_context y ctx)).
+    set (P' := fun l fill_l =>
+                 forall Γ y,
+                   red1 Σ (hole_list_context l Γ) x y ->
+                   OnOne2 (red1 (fst Σ) Γ) fill_l (fill_list_context y l)).
+    revert Γ y r.
+    eapply (fill_context_elim x P P' _); subst P P'; cbv beta;
+      intros **; simp fill_context; cbn in *; auto; try solve [constructor; eauto].
+    - simpl in *. (* FIXME missing case in red1 for predicate *)
+      admit.
+    - admit.
+    - admit.
+    - admit.
+  Admitted.
 
-  Lemma red_abs {Γ : context} na M M' N N' : red Σ Γ M M' -> red Σ (Γ ,, vass na M) N N' ->
-                               red Σ Γ (tLambda na M N) (tLambda na M' N').
+  Theorem red_contextual_closure_equiv Γ t u : red Σ Γ t u <~> contextual_closure (red Σ) Γ t u.
+  Proof.
+    split. apply red_contextual_closure. apply contextual_closure_red.
+  Qed.
+
+  (* Lemma contextual_closure_trans (R : context -> term -> term -> Type) Γ : *)
+  (*   Transitive (R Γ) -> *)
+  (*   forall t u v, *)
+  (*   contextual_closure R Γ t u -> contextual_closure R Γ u v -> *)
+  (*   contextual_closure R Γ t v. *)
+  (* Proof. *)
+  (*   intros Htr t u v. *)
+  (*   induction 1. destruct 1. constructor; auto. *)
+  (*   constructor. auto. *)
+  (*   intros H. depelim H. constructor; auto. *)
+  (* Admitted. *)
+
+  Lemma red_ctx {Γ} {M M'} ctx : red Σ (hole_context ctx Γ) M M' ->
+                               red Σ Γ (fill_context M ctx) (fill_context M' ctx).
   Proof.
     intros.
-    induction X, X0; try constructor.
-    econstructor 2.
+    apply red_contextual_closure_equiv.
+    now apply (ctxclos_ctx _ _ ctx).
+  Qed.
 
+  Section Congruences.
+    Context {Γ : context}.
 
+    Lemma red_abs na M M' N N' : red Σ Γ M M' -> red Σ (Γ ,, vass na M') N N' ->
+                                               red Σ Γ (tLambda na M N) (tLambda na M' N').
+    Proof.
+      intros. eapply (transitivity (y := tLambda na M' N)).
+      now apply (red_ctx (tCtxLambda_l _ tCtxHole _)).
+      now eapply (red_ctx (tCtxLambda_r _ _ tCtxHole)).
+    Qed.
 
-
-  Lemma red_app M0 M1 N0 N1 :
+    Lemma red_app M0 M1 N0 N1 :
       red Σ Γ M0 M1 ->
       red Σ Γ N0 N1 ->
-      red Σ Γ (tApp M0 N0) (tApp M1 N1)
-            (* do not handle mkApps yet *)
-  Lemma red_letin na d0 d1 t0 t1 b0 b1 :
-      red Σ Γ d0 d1 -> red Σ Γ t0 t1 -> red Σ (Γ ,, vdef na d0 t0) b0 b1 ->
-      red Σ Γ (tLetIn na d0 t0 b0) (tLetIn na d1 t1 b1)
+      red Σ Γ (tApp M0 N0) (tApp M1 N1).
+    Proof.
+      intros; eapply (transitivity (y := tApp M1 N0)).
+      now apply (red_ctx (tCtxApp_l tCtxHole _)).
+      now eapply (red_ctx (tCtxApp_r _ tCtxHole)).
+    Qed.
 
-  Lemma red_case ind p0 p1 c0 c1 brs0 brs1 :
+    Lemma red_letin na d0 d1 t0 t1 b0 b1 :
+      red Σ Γ d0 d1 -> red Σ Γ t0 t1 -> red Σ (Γ ,, vdef na d1 t1) b0 b1 ->
+      red Σ Γ (tLetIn na d0 t0 b0) (tLetIn na d1 t1 b1).
+    Proof.
+      intros; eapply (transitivity (y := tLetIn na d1 t0 b0)).
+      now apply (red_ctx (tCtxLetIn_l _ tCtxHole _ _)).
+      eapply (transitivity (y := tLetIn na d1 t1 b0)).
+      now eapply (red_ctx (tCtxLetIn_b _ _ tCtxHole _)).
+      now eapply (red_ctx (tCtxLetIn_r _ _ _ tCtxHole)).
+    Qed.
+
+    Lemma red_case ind p0 p1 c0 c1 brs0 brs1 :
       red Σ Γ p0 p1 ->
       red Σ Γ c0 c1 ->
       All2 (on_Trel (red Σ Γ) snd) brs0 brs1 ->
-      red Σ Γ (tCase ind p0 c0 brs0) (tCase ind p1 c1 brs1)
+      red Σ Γ (tCase ind p0 c0 brs0) (tCase ind p1 c1 brs1).
+    Proof.
+      intros; eapply (transitivity (y := tCase ind p1 c0 brs0)).
+      now apply (red_ctx (tCtxCase_pred _ tCtxHole _ _)).
+      eapply (transitivity (y := tCase ind p1 c1 brs0)).
+      now eapply (red_ctx (tCtxCase_discr _ _ tCtxHole _)).
+      admit.
+    Admitted.
 
-  Lemma red_proj_congr p c c' : red Σ Γ c c' -> red Σ Γ (tProj p c) (tProj p c')
+    Lemma red_proj_congr p c c' : red Σ Γ c c' -> red Σ Γ (tProj p c) (tProj p c').
+    Proof.
+    (*   intros; eapply (transitivity (y := tApp M1 N0)). *)
+    (*   now apply (red_ctx (tCtxApp_l tCtxHole _)). *)
+    (*   now eapply (red_ctx (tCtxApp_r _ tCtxHole)). *)
+    (* Qed. *)
+    Admitted.
 
-  Lemma red_fix_congr mfix0 mfix1 idx :
+    Lemma red_fix_congr mfix0 mfix1 idx :
       All2 (fun d0 d1 => (red Σ Γ (dtype d0) (dtype d1)) *
                          (red Σ (Γ ,,, fix_context mfix0) (dbody d0) (dbody d1)))%type mfix0 mfix1 ->
-      red Σ Γ (tFix mfix0 idx) (tFix mfix1 idx)
+      red Σ Γ (tFix mfix0 idx) (tFix mfix1 idx).
+    Proof.
+    Admitted.
 
-  Lemma red_cofix_congr mfix0 mfix1 idx :
+    (*   intros; eapply (transitivity (y := tApp M1 N0)). *)
+    (*   now apply (red_ctx (tCtxApp_l tCtxHole _)). *)
+    (*   now eapply (red_ctx (tCtxApp_r _ tCtxHole)). *)
+    (* Qed. *)
+
+    Lemma red_cofix_congr mfix0 mfix1 idx :
       All2 (fun d0 d1 => (red Σ Γ (dtype d0) (dtype d1)) *
-                            (red Σ (Γ ,,, fix_context mfix0) (dbody d0) (dbody d1)))%type mfix0 mfix1 ->
-      red Σ Γ (tCoFix mfix0 idx) (tCoFix mfix1 idx)
+                         (red Σ (Γ ,,, fix_context mfix0) (dbody d0) (dbody d1)))%type mfix0 mfix1 ->
+      red Σ Γ (tCoFix mfix0 idx) (tCoFix mfix1 idx).
+    Proof.
+    Admitted.
+    (*   intros; eapply (transitivity (y := tApp M1 N0)). *)
+    (*   now apply (red_ctx (tCtxApp_l tCtxHole _)). *)
+    (*   now eapply (red_ctx (tCtxApp_r _ tCtxHole)). *)
+    (* Qed. *)
 
-  Lemma red_prod na M0 M1 N0 N1 : red Σ Γ M0 M1 -> red Σ (Γ ,, vass na M0) N0 N1 ->
-                               red Σ Γ (tProd na M0 N0) (tProd na M1 N1)
+    Lemma red_prod na M0 M1 N0 N1 : red Σ Γ M0 M1 -> red Σ (Γ ,, vass na M0) N0 N1 ->
+                                    red Σ Γ (tProd na M0 N0) (tProd na M1 N1).
+    Proof.
+    (*   intros; eapply (transitivity (y := tApp M1 N0)). *)
+    (*   now apply (red_ctx (tCtxApp_l tCtxHole _)). *)
+    (*   now eapply (red_ctx (tCtxApp_r _ tCtxHole)). *)
+    (* Qed. *)
+    Admitted.
 
-  Lemma red_evar Σ ev l l' : All2 (red Σ Γ) l l' -> red Σ Γ (tEvar ev l) (tEvar ev l')
+    Lemma red_evar ev l l' : All2 (red Σ Γ) l l' -> red Σ Γ (tEvar ev l) (tEvar ev l').
+    Proof.
+    Admitted.
+    (*   intros; eapply (transitivity (y := tApp M1 N0)). *)
+    (*   now apply (red_ctx (tCtxApp_l tCtxHole _)). *)
+    (*   now eapply (red_ctx (tCtxApp_r _ tCtxHole)). *)
+    (* Qed. *)
 
-  Lemma red_atom t : atom t -> red Σ Γ t t.
-
-
-
-
+    Lemma red_atom t : atom t -> red Σ Γ t t.
+    Proof.
+      intros. constructor.
+    Qed.
+  End Congruences.
 End ReductionCongruence.
 
+Hint Resolve All_All2 : all.
 
 Section ParallelReduction.
   Context (Σ : global_declarations).
@@ -205,7 +358,7 @@ Section ParallelReduction.
   (** Reductions *)
   (** Beta *)
   | pred_beta na t b0 b1 a0 a1 :
-      pred1 Γ b0 b1 -> pred1 Γ a0 a1 ->
+      pred1 (Γ ,, vass na t) b0 b1 -> pred1 Γ a0 a1 ->
       pred1 Γ (tApp (tLambda na t b0) a0) (subst10 a1 b1)
 
   (** Let *)
@@ -342,9 +495,9 @@ Section ParallelReduction.
     forall P : forall (Γ : context) (t t0 : term), Type,
       let P' Γ x y := ((pred1 Γ x y) * P Γ x y)%type in
       (forall (Γ : context) (na : name) (t b0 b1 a0 a1 : term),
-          pred1 Γ b0 b1 -> P Γ b0 b1 -> pred1 Γ a0 a1 -> P Γ a0 a1 -> P Γ (tApp (tLambda na t b0) a0) (b1 {0 := a1})) ->
+          pred1 (Γ ,, vass na t) b0 b1 -> P (Γ ,, vass na t) b0 b1 -> pred1 Γ a0 a1 -> P Γ a0 a1 -> P Γ (tApp (tLambda na t b0) a0) (b1 {0 := a1})) ->
       (forall (Γ : context) (na : name) (d0 d1 t b0 b1 : term),
-          pred1 Γ d0 d1 -> P Γ d0 d1 -> pred1 Γ b0 b1 -> P Γ b0 b1 -> P Γ (tLetIn na d0 t b0) (b1 {0 := d1})) ->
+          pred1 Γ d0 d1 -> P Γ d0 d1 -> pred1 Γ b0 b1 -> P Γ (* FIXME *) b0 b1 -> P Γ (tLetIn na d0 t b0) (b1 {0 := d1})) ->
       (forall (Γ : context) (i : nat) (body body' : term),
           option_map decl_body (nth_error Γ i) = Some (Some body) ->
           pred1 Γ ((lift0 (S i)) body) body' -> P Γ ((lift0 (S i)) body) body' -> P Γ (tRel i) body') ->
@@ -439,8 +592,6 @@ Section ParallelReduction.
     - eapply (All2_All2_prop (P:=pred1) (Q:=P') (f:=id) a (extendP aux Γ)).
   Defined.
 
-  Hint Resolve All_All2 : all.
-
   Lemma pred1_refl Γ t : pred1 Γ t t.
   Proof.
     induction t in Γ |- * using term_forall_list_ind;
@@ -486,29 +637,47 @@ Section ParallelReduction.
     constructor; auto with pred. OnOne2_All2; intuition auto with pred. rewrite b0. auto with pred.
   Qed.
 
+End ParallelReduction.
+
+Hint Constructors pred1 : pred.
+Hint Resolve pred1_refl : pred.
+Hint Resolve All2_same : pred.
+Hint Unfold on_rel on_Trel snd on_snd : pred.
+Ltac OnOne2_All2 :=
+  match goal with
+  | [ H : OnOne2 ?P ?ts ?ts' |- All2 ?Q ?ts ?ts' ] =>
+    unshelve eapply (OnOne2_All2 _ _ P Q H); simpl; intros
+  end.
+Hint Extern 0 (All2 _ _ _) => OnOne2_All2; intuition auto with pred : pred.
+
+Section ParallelReduction2.
+  Context {Σ : global_context}.
+
   (** Parallel reduction is included in the reflexive transitive closure of 1-step reduction *)
-  Lemma pred1_red Γ : forall M N, pred1 Γ M N -> red Σ Γ M N.
+  Lemma pred1_red Γ : forall M N, pred1 Σ Γ M N -> red Σ Γ M N.
   Proof.
-    revert Γ. eapply pred1_ind_all; intros; try constructor; auto with pred.
+    revert Γ. eapply (@pred1_ind_all Σ); intros; try constructor; auto with pred.
 
-    - apply red_trans with (tApp (tLambda na t b1) a0).
-      apply
-
-
+    - (* Beta *)
+      apply red_trans with (tApp (tLambda na t b1) a0).
+      eapply (@red_app Σ); [apply red_abs|]; auto with pred.
+      apply red_trans with (tApp (tLambda na t b1) a1).
+      eapply (@red_app Σ); auto with pred.
+      apply red1_red. constructor.
 
   Admitted.
 
-End ParallelReduction.
+End ParallelReduction2.
 
-Lemma substitution_pred1 `{cf:checker_flags} Σ Γ Γ' Γ'' s M N :
-  wf Σ -> All Ast.wf s -> subs Σ Γ s Γ' -> wf_local Σ Γ -> Ast.wf M ->
-  wf_local Σ (Γ ,,, Γ' ,,, Γ'') ->
-  pred1 (fst Σ) (Γ ,,, Γ' ,,, Γ'') M N ->
-  pred1 (fst Σ) (Γ ,,, subst_context s 0 Γ'') (subst s #|Γ''| M) (subst s #|Γ''| N).
-Proof.
-  intros.
-  induction H1. constructor.
-  econstructor 2; eauto.
-  eapply substitution_red1; eauto.
-  eapply wf_red_wf. 4:eauto. all:eauto.
-Qed.
+(* Lemma substitution_pred1 `{cf:checker_flags} Σ Γ Γ' Γ'' s M N : *)
+(*   wf Σ -> All Ast.wf s -> subs Σ Γ s Γ' -> wf_local Σ Γ -> Ast.wf M -> *)
+(*   wf_local Σ (Γ ,,, Γ' ,,, Γ'') -> *)
+(*   pred1 (fst Σ) (Γ ,,, Γ' ,,, Γ'') M N -> *)
+(*   pred1 (fst Σ) (Γ ,,, subst_context s 0 Γ'') (subst s #|Γ''| M) (subst s #|Γ''| N). *)
+(* Proof. *)
+(*   intros. *)
+(*   induction H1. constructor. *)
+(*   econstructor 2; eauto. *)
+(*   eapply substitution_red1; eauto. *)
+(*   eapply wf_red_wf. 4:eauto. all:eauto. *)
+(* Qed. *)

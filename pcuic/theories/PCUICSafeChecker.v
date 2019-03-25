@@ -252,6 +252,21 @@ Section Normalisation.
     rewrite h. cbn. reflexivity.
   Qed.
 
+  Lemma stack_position_fix :
+    forall c mfix idx args ρ,
+      ` (stack_position c (Fix mfix idx args ρ)) =
+      poscat _ (` (stack_position _ ρ))
+             (coe (proj2_sig (stack_position _ ρ)) (app_r _ _ root)).
+  Proof.
+    intros c mfix idx args ρ.
+    simp stack_position.
+    replace (stack_position_clause_1 stack_position ρ ρ (tApp (mkApps (tFix mfix idx) args) c))
+      with (stack_position (tApp (mkApps (tFix mfix idx) args) c) ρ).
+    - case_eq (stack_position (tApp (mkApps (tFix mfix idx) args) c) ρ).
+      intros x e H0. cbn. reflexivity.
+    - simp stack_position.
+  Qed.
+
   Inductive posR : forall {t}, position t -> position t -> Prop :=
   | posR_app_lr : forall u v pu pv, posR (app_r u v pv) (app_l u pu v)
   | posR_app_l : forall u v p q, posR p q -> posR (app_l u p v) (app_l u q v)
@@ -1598,7 +1613,8 @@ Section Reduce.
 
     (* rewrite zipc_appstack. cbn. *)
 
-    assert (` (stack_position c (Fix mfix idx args ρ)) = )
+
+
 
     simp stack_position.
 

@@ -1,19 +1,38 @@
 (* Distributed under the terms of the MIT license.   *)
+Require Import ssreflect ssrbool.
+Require Import LibHypsNaming.
 From Equations Require Import Equations.
-From Coq Require Import Bool String List Program BinPos Compare_dec Omega Utf8.
+From Coq Require Import Bool String List Program BinPos Compare_dec Omega Utf8 String.
 From Template Require Import config utils univ BasicAst.
 From PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICLiftSubst PCUICUnivSubst PCUICTyping.
-Require Import ssreflect ssrbool.
-Require Import String.
-Require Import LibHypsNaming.
-Local Open Scope string_scope.
-Set Asymmetric Patterns.
 
+(* Type-valued relations. *)
 Require Import CRelationClasses.
 Require Import Equations.Type.Relation Equations.Type.Relation_Properties.
 
+Local Open Scope string_scope.
+Set Asymmetric Patterns.
+
 Existing Instance config.default_checker_flags.
+
+(** Atoms reduce to themselves *)
+
+Definition atom t :=
+  match t with
+  | tRel _
+  | tVar _
+  | tMeta _
+  | tSort _
+  | tConst _ _
+  | tInd _ _
+  | tConstruct _ _ _
+  | tFix _ _
+  | tCoFix _ _ => true
+  | _ => false
+  end.
+
+(** Simple lemmas about reduction *)
 
 Lemma red1_red (Σ : global_context) Γ t u : red1 (fst Σ) Γ t u -> red (fst Σ) Γ t u.
 Proof. econstructor; eauto. constructor. Qed.
@@ -41,19 +60,8 @@ Defined.
 Instance red_Transitive Σ Γ : Transitive (red Σ Γ).
 Proof. refine (red_trans _ _). Qed.
 
-(** Atoms reduce to themselves *)
-
-Definition atom t :=
-  match t with
-  | tRel _
-  | tVar _
-  | tMeta _
-  | tSort _
-  | tConst _ _
-  | tInd _ _
-  | tConstruct _ _ _ => true
-  | _ => false
-  end.
+(** Generic method to show that a relation is closed by congruence using
+    a notion of one-hole context. *)
 
 Section ReductionCongruence.
   Context {Σ : global_context}.
@@ -153,29 +161,11 @@ Section ReductionCongruence.
   | ctxclos_ctx Γ (ctx : term_context) (u u' : term) :
       red (hole_context ctx Γ) u u' -> contextual_closure red Γ (fill_context u ctx) (fill_context u' ctx).
 
-  (* Inductive OnOne2 P : list_context -> list term -> Type := *)
-  (* | OnOne2_hd hd hd' tl : P hd hd' -> OnOne2 P (hd :: tl) (hd' :: tl') *)
-  (* | OnOne2_tl hd tl tl' : OnOne2 P tl tl' -> OnOne2 P (hd :: tl) (hd :: tl'). *)
-
-  (* Lemma red1_contextual_closure Γ t u : red Σ Γ t u -> contextual_closure (red Σ) Γ t u. *)
-  (* Proof. *)
-  (*   intros Hred. *)
-  (*   apply (ctxclos_ctx (red Σ) Γ tCtxHole t u Hred). *)
-  (* Qed. *)
-
   Lemma red_contextual_closure Γ t u : red Σ Γ t u -> contextual_closure (red Σ) Γ t u.
   Proof.
     intros Hred.
     apply (ctxclos_ctx (red Σ) Γ tCtxHole t u Hred).
   Qed.
-
-  Lemma red_contextual_closure' Γ t u :
-    red Σ Γ t u ->
-    forall ctx Γ', Γ = hole_context ctx Γ' ->
-    red Σ Γ' (fill_context t ctx) (fill_context u ctx).
-  Proof.
-    intros. subst Γ.
-  Admitted.
 
   Arguments fill_list_context : simpl never.
 

@@ -1246,6 +1246,9 @@ Proof.
   - simplify_IH_hyps. eapply red_case; auto.
     apply All2_map, All2_same. intros. red. constructor.
 
+  - simplify_IH_hyps. eapply red_case; auto.
+    apply All2_map, All2_same. intros. red. constructor.
+
   - simplify_IH_hyps. apply red_case; auto.
     induction X; intuition.
 

@@ -8,17 +8,13 @@ From Equations Require Import Equations NoConfusion.
 
 Import MonadNotation.
 
-(** * Type checker for PCUIC without fuel
+(** * Reduction machine for PCUIC without fuel
 
-  *WIP*
+  We subsume the reduction machine of PCUICChecker without relying on fuel.
+  Instead we assume strong normalisation of the system (for well-typed terms)
+  and proceed by well-founded induction.
 
-  The idea is to subsume PCUICChecker by providing a fuel-free implementation
-  of reduction, conversion and type checking.
-
-  We will follow the same structure, except that we assume normalisation of
-  the system. Since we will be using an axiom to justify termination, the checker
-  won't run inside Coq, however, its extracted version should correspond more or less
-  to the current implementation in ocaml, except it will be certified.
+  Once extracted, this should roughly correspond to the ocaml implementation.
 
  *)
 

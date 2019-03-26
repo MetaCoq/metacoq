@@ -37,6 +37,19 @@ Module RedFlags.
 
 End RedFlags.
 
+Lemma mkApps_inj :
+  forall u v l,
+    mkApps u l = mkApps v l ->
+    u = v.
+Proof.
+  intros u v l eq.
+  revert u v eq.
+  induction l ; intros u v eq.
+  - cbn in eq. assumption.
+  - cbn in eq. apply IHl in eq.
+    inversion eq. reflexivity.
+Qed.
+
 (* We assume normalisation of the reduction.
 
    We state is as well-foundedness of the reduction.
@@ -1878,20 +1891,6 @@ Section Reduce.
           rewrite e1 in p0. subst.
           cbn in H4. rewrite zipc_appstack in H4.
           apply zipc_inj in H4.
-
-          Lemma mkApps_inj :
-            forall u v l,
-              mkApps u l = mkApps v l ->
-              u = v.
-          Proof.
-            intros u v l eq.
-            revert u v eq.
-            induction l ; intros u v eq.
-            - cbn in eq. assumption.
-            - cbn in eq. apply IHl in eq.
-              inversion eq. reflexivity.
-          Qed.
-
           apply mkApps_inj in H4.
           inversion H4. subst.
           rewrite e1 in eq4. inversion eq4. subst.

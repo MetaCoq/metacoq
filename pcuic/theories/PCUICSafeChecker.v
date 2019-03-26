@@ -1677,13 +1677,98 @@ Section Reduce.
 
     unshelve eapply right_lex_coe.
     - apply (eq_sym (@zipc_appstack _ args (App c ρ))).
-    - revert c ρ mfix idx. induction args ; intros c ρ mfix idx.
+    -
+
+      Lemma poscat_replace :
+        forall t p q t' (e : t = t') p',
+          p = coe e p' ->
+          exists e',
+            @poscat t p q = @poscat t (coe e p') (coe e' q).
+      Proof.
+        intros t p q t' e p' h.
+        subst. cbn in q. cbn.
+        exists eq_refl. cbn. reflexivity.
+      Qed.
+
+      Lemma poscat_replace_coe :
+        forall t p q t' (e : t = t') p',
+          p = coe e p' ->
+          exists e', @poscat t p q = coe e (@poscat t' p' (coe e' q)).
+      Proof.
+        intros t p q t' e p' h.
+        subst. cbn in q. cbn.
+        exists eq_refl. cbn. reflexivity.
+      Qed.
+
+      Lemma atpos_assoc :
+        forall t p q,
+          atpos (atpos t p) q = atpos t (poscat p q).
+      Proof.
+        intros t p q. revert q.
+        induction p ; intros q.
+        - simp atpos.
+        - simp atpos.
+        - simp atpos.
+        - simp atpos.
+      Defined.
+
+      Lemma poscat_assoc :
+        forall t p q r,
+          @poscat t (poscat p q) r =
+          poscat p (poscat q (coe (atpos_assoc t p q) r)).
+      Proof.
+        intros t p q r. revert q r.
+        induction p ; intros q r.
+        - cbn. simp poscat.
+        - simp poscat. rewrite <- IHp. simp poscat.
+        - simp poscat. rewrite <- IHp. simp poscat.
+        - simp poscat. rewrite <- IHp. simp poscat.
+      Qed.
+
+      Lemma stack_position_appstack :
+        forall t args ρ, exists q h,
+          let p := stack_position (mkApps t args) ρ in
+          ` (stack_position t (appstack args ρ)) =
+          coe h (poscat (` p) q).
+      Proof.
+        intros t args ρ. revert t ρ.
+        induction args ; intros t ρ.
+        - exists root. exists eq_refl. cbn.
+          set (p := ` (stack_position t ρ)). clearbody p.
+          revert p. generalize (zipc t ρ).
+          clear t ρ. intros t p.
+          funelim (poscat p root).
+          + reflexivity.
+          + f_equal. assumption.
+          + f_equal. assumption.
+          + f_equal. assumption.
+        - cbn in IHargs. cbn.
+          rewrite stack_position_app.
+          destruct (IHargs (tApp t a) ρ) as [q [h e]].
+          (* destruct (poscat_replace _ _ (coe (proj2_sig (stack_position (tApp t a) (appstack args ρ))) (app_l t root a)) _ _ _ e) *)
+          (*   as [e' hh]. *)
+          (* rewrite hh. *)
+          destruct (poscat_replace_coe _ _ (coe (proj2_sig (stack_position (tApp t a) (appstack args ρ))) (app_l t root a)) _ _ _ e)
+            as [e' hh].
+          rewrite hh.
+          rewrite poscat_assoc.
+          do 2 eexists. reflexivity.
+      Qed.
+
+
+
+
+
+      revert c ρ mfix idx. induction args ; intros c ρ mfix idx.
       + cbn. rewrite stack_position_app.
         eapply posR_coe_r.
         eapply posR_poscat_posR.
         eapply posR_coe.
         econstructor.
-      +
+      + cbn. rewrite stack_position_app.
+        eapply posR_trans.
+        * eapply IHargs.
+
 
 
     destruct args.

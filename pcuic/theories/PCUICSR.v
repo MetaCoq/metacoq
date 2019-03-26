@@ -513,13 +513,12 @@ Proof.
     constructor. constructor. now rewrite subst_empty.
 
   - (* Constant unfolding *)
-    eapply declared_constant_inv in X; eauto.
+    eapply declared_constant_inv in wfΣ; eauto with pcuic.
     destruct decl0 as [ty body' univs]; simpl in *; subst body'.
-    hnf in X. simpl in X. (* Substitutivity of typing w.r.t. universes *)
-    admit.
+    hnf in wfΣ. simpl in wfΣ. (* Substitutivity of typing w.r.t. universes *) admit.
+    eapply weaken_env_prop_typing.
 
-
-  - (* iota reduction *)  admit.
+  - (* iota reduction *) admit.
   - (* Case congruence *) admit.
   - (* Case congruence *) admit.
   - (* Case congruence *) admit.

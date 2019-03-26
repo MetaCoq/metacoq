@@ -19,7 +19,9 @@ theories/PCUICValidity.v
 theories/PCUICMetaTheory.v
 theories/PCUICWcbvEval.v
 theories/PCUICChecker.v
+theories/PCUICCheckerCompleteness.v
 theories/PCUICRetyping.v
 theories/TemplateToPCUIC.v
+theories/TemplateToPCUICCorrectness.v
 # theories/All.v
 theories/Extraction.v

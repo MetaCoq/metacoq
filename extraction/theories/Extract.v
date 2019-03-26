@@ -275,37 +275,36 @@ Definition observe (q : Question) (v : E.term) : bool :=
   end.
              
 
-(*
-Fixpoint obs_eq (Σ : global_context) (v v' : term) (T : term) (s : universe) : Prop :=
-  if is_prop_sort s then is_dummy v'
-  else
-    match T with
-    | tInd ind u =>
-      (* Canonical inductive value *)
-      let '(hd, args) := destApp v in
-      let '(hd', args') := destApp v' in
-      eq_term Σ hd hd' /\ obs_eq 
+
+(* Fixpoint obs_eq (Σ : global_context) (v v' : term) (T : term) (s : universe) : Prop := *)
+(*   if is_prop_sort s then is_dummy v' *)
+(*   else *)
+(*     match T with *)
+(*     | tInd ind u => *)
+(*       (* Canonical inductive value *) *)
+(*       let '(hd, args) := destApp v in *)
+(*       let '(hd', args') := destApp v' in *)
+(*       eq_term Σ hd hd' /\ obs_eq  *)
       
- | obs_eq_prf v T s : Σ ;;; [] |- v : T ->
-  Σ ;;; [] |- T : tSort s ->
-  is_prop_sort s ->
-  obs_eq Σ v dummy
+(*  | obs_eq_prf v T s : Σ ;;; [] |- v : T -> *)
+(*   Σ ;;; [] |- T : tSort s -> *)
+(*   is_prop_sort s -> *)
+(*   obs_eq Σ v dummy *)
 
-| obs_eq_cstr ind k u args args' T : Σ ;;; [] |- mkApps (tConstruct ind k u) args : T ->
-  computational_type Σ T ->
-  Forall2 (obs_eq Σ) args args' ->
-  obs_eq Σ (mkApps (tConstruct ind k u) args) (mkApps (tConstruct ind k u) args')
+(* | obs_eq_cstr ind k u args args' T : Σ ;;; [] |- mkApps (tConstruct ind k u) args : T -> *)
+(*   computational_type Σ T -> *)
+(*   Forall2 (obs_eq Σ) args args' -> *)
+(*   obs_eq Σ (mkApps (tConstruct ind k u) args) (mkApps (tConstruct ind k u) args') *)
 
-| obs_eq_arrow na f f' T T' :
-    Σ ;;; [] |- f : tProd na T T' ->
-    (forall arg arg', obs_eq Σ arg arg' -> 
+(* | obs_eq_arrow na f f' T T' : *)
+(*     Σ ;;; [] |- f : tProd na T T' -> *)
+(*     (forall arg arg', obs_eq Σ arg arg' ->  *)
     
-    obs_eq Σ f f'.                                     
-*)                      
+(*     obs_eq Σ f f'.                                                            *)
 
-Record extraction_post (Σ : global_context) (Σ' : EAst.global_context) (t : term) (t' : E.term) : Prop :=
+Record extraction_post (Σ : global_context) (Σ' : EAst.global_context) (t : term) (t' : E.term) (v : term) : Prop :=
   { extr_value : E.term;
-    extr_eval : EWcbvEval.eval Σ' t' extr_value;
+    extr_eval : EWcbvEval.eval Σ' t' extr_value
     (* extr_equiv : obs_eq Σ v extr_value *) }.
 
 (** The extraction correctness theorem we conjecture. *)
@@ -316,6 +315,6 @@ Definition erasure_correctness :=
   forall (f : Fuel) Σ' (t' : E.term),
     extract Σ [] t = Checked t' ->
     extract_global Σ = Checked Σ' ->
-    extraction_post Σ Σ' t t'.
+    exists v', extract Σ [] v = Checked v' /\  EWcbvEval.eval Σ' t' v'.
       
 (* Conjecture erasure_correct : erasure_correctness. *)

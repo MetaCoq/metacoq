@@ -247,6 +247,32 @@ Section ReductionCongruence.
       now eapply (red_ctx (tCtxApp_r _ tCtxHole)).
     Qed.
 
+    Fixpoint mkApps_context l :=
+      match l with
+      | [] => tCtxHole
+      | hd :: tl => tCtxApp_l (mkApps_context tl) hd
+      end.
+
+    Lemma mkApps_context_hole l Γ' : hole_context (mkApps_context (List.rev l)) Γ' = Γ'.
+    Proof. generalize (List.rev l) as l'; induction l'; simpl; auto. Qed.
+
+    Lemma fill_mkApps_context M l : fill_context M (mkApps_context (List.rev l)) = mkApps M l.
+    Proof.
+      rewrite -{2}(rev_involutive l).
+      generalize (List.rev l) as l'; induction l'; simpl; auto.
+      rewrite <- mkApps_nested. now rewrite <- IHl'.
+    Qed.
+
+    Lemma red_mkApps M0 M1 N0 N1 :
+      red Σ Γ M0 M1 ->
+      All2 (red Σ Γ) N0 N1 ->
+      red Σ Γ (mkApps M0 N0) (mkApps M1 N1).
+    Proof.
+      intros.
+      induction X0 in M0, M1, X |- *. auto.
+      simpl. eapply IHX0. now eapply red_app.
+    Qed.
+
     Lemma red_letin na d0 d1 t0 t1 b0 b1 :
       red Σ Γ d0 d1 -> red Σ Γ t0 t1 -> red Σ (Γ ,, vdef na d1 t1) b0 b1 ->
       red Σ Γ (tLetIn na d0 t0 b0) (tLetIn na d1 t1 b1).

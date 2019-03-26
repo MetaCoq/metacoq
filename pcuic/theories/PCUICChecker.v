@@ -2,9 +2,11 @@
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Arith Lia.
 From Template Require Import config univ monad_utils utils BasicAst AstUtils UnivSubst.
-From PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICLiftSubst PCUICUnivSubst PCUICTyping.
+From PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICLiftSubst PCUICUnivSubst
+     PCUICTyping PCUICSubstitution PCUICValidity.
 
 Import MonadNotation.
+Open Scope pcuic.
 
 (** * Coq type-checker for kernel terms
 
@@ -382,6 +384,7 @@ Inductive type_error :=
 | NotAnInductive (t : term)
 | IllFormedFix (m : mfixpoint term) (i : nat)
 | UnsatisfiedConstraints (c : ConstraintSet.t)
+| CannotTakeSuccessor (u : universe)
 | NotEnoughFuel (n : nat).
 
 Local Open Scope string_scope.
@@ -470,6 +473,7 @@ Definition string_of_type_error (e : type_error) : string :=
   | NotAProduct t t' => "Not a product"
   | NotAnInductive t => "Not an inductive"
   | IllFormedFix m i => "Ill-formed recursive definition"
+  | CannotTakeSuccessor u => "Cannot take the successor of a non-variable universe " ++ string_of_sort u
   | UnsatisfiedConstraints c => "Unsatisfied constraints"
   | NotEnoughFuel n => "Not enough fuel"
   end.
@@ -567,6 +571,16 @@ Section Typecheck.
     end.
 End Typecheck.
 
+
+Ltac tc := eauto with typecheck.
+
+Hint Resolve sq : typecheck.
+
+Ltac unsquash :=
+  repeat match goal with
+         | [ H : squash _ |- _ ] => destruct H as [H]
+         end.
+
 Section Typecheck2.
   Context `{cf : checker_flags}.
   Context `{F : Fuel}.
@@ -583,6 +597,20 @@ Section Typecheck2.
         t' <- reduce (fst Σ) Γ t ;;
         u' <- reduce (fst Σ) Γ u ;;
         if leq_term (snd Σ) t' u' then ret ()
+        else raise (NotConvertible Γ t u t' u')
+      end.
+
+  Definition convert_eq Γ (t u : term) : typing_result unit :=
+    if eq_term (snd Σ) t u then ret ()
+    else
+      match isconv Σ fuel Conv Γ t [] u [] with
+      | Some b =>
+        if b then ret ()
+        else raise (NotConvertible Γ t u t u)
+      | None => (* fallback *)
+        t' <- reduce (fst Σ) Γ t ;;
+        u' <- reduce (fst Σ) Γ u ;;
+        if eq_term (snd Σ) t' u' then ret ()
         else raise (NotConvertible Γ t u t' u')
       end.
 
@@ -680,7 +708,9 @@ Section Typecheck2.
     | tMeta n => raise (UnboundMeta n)
     | tEvar ev args => raise (UnboundEvar ev)
 
-    | tSort s => ret (tSort (try_suc s))
+    | tSort [(l, false)] => ret (tSort (Universe.super l))
+
+    | tSort u => raise (CannotTakeSuccessor u)
 
     | tProd n t b =>
       s1 <- infer_type infer Γ t ;;
@@ -765,24 +795,30 @@ Section Typecheck2.
     | TypeError _ => false
     end.
 
-  Ltac tc := eauto with typecheck.
-
   Arguments bind _ _ _ _ ! _.
   Open Scope monad.
 
   Conjecture cumul_convert_leq : forall Γ t t',
     Σ ;;; Γ |- t <= t' <~> convert_leq Γ t t' = Checked ().
 
+  Conjecture conv_convert_eq : forall Γ t t',
+    Σ ;;; Γ |- t = t' <~> convert_eq Γ t t' = Checked ().
+
   Conjecture cumul_reduce_to_sort : forall Γ t s',
       Σ ;;; Γ |- t <= tSort s' <~>
       exists s'', reduce_to_sort (fst Σ) Γ t = Checked s''
              /\ check_leq (snd Σ) s'' s' = true.
 
+  Conjecture conv_reduce_to_sort : forall Γ t s',
+      Σ ;;; Γ |- t = tSort s' <~>
+      exists s'', reduce_to_sort (fst Σ) Γ t = Checked s''
+             /\ eq_universe (snd Σ) s'' s' = true.
+
   Conjecture cumul_reduce_to_product : forall Γ t na a b,
       Σ ;;; Γ |- t <= tProd na a b ->
       exists a' b',
         reduce_to_prod (fst Σ) Γ t = Checked (a', b') /\
-        squash (cumul Σ Γ (tProd na a' b') (tProd na a b)).
+        squash (conv Σ Γ a a' * cumul Σ (vass na a :: Γ) b' b).
 
   Conjecture cumul_reduce_to_ind : forall Γ t i u args,
       Σ ;;; Γ |- t <= mkApps (tInd i u) args <~>
@@ -823,75 +859,6 @@ Section Typecheck2.
   Lemma eq_ind_refl i i' : eq_ind i i' = true <-> i = i'.
   Admitted.
 
-  Hint Resolve sq.
-
-  Ltac unsquash :=
-    repeat match goal with
-             | [ H : squash _ |- _ ] => destruct H as [H]
-           end.
-
-  Lemma infer_complete Γ t T :
-    Σ ;;; Γ |- t : T -> exists T', infer Γ t = Checked T' /\ squash (cumul Σ Γ T' T).
-  Proof.
-    induction 1; unfold infer_type, infer_cumul in *; simpl; unfold infer_type, infer_cumul in *;
-      repeat match goal with
-        H : exists T', _ |- _ => destruct H as [? [-> H]]
-      end; simpl; try (eexists; split; [ reflexivity | solve [ tc ] ]); unsquash.
-
-    - eexists. rewrite e.
-      split; [ reflexivity | tc ].
-
-    - eexists. split; [reflexivity | tc].
-      constructor. simpl. unfold leq_universe.
-      admit.
-
-    - eexists.
-      apply cumul_reduce_to_sort in IHX1 as [s'' [-> Hs'']].
-      admit.
-
-    - apply cumul_reduce_to_sort in IHX1 as [s'' [-> Hs'']].
-      eexists; intuition eauto. constructor.
-      eapply congr_cumul_prod; tc.
-
-    - apply cumul_convert_leq in IHX2 as ->; simpl.
-      apply cumul_reduce_to_sort in IHX1 as [s'' [-> Hs'']].
-      simpl. eexists; split; [reflexivity|].
-      admit.
-
-    - admit.
-
-    - erewrite lookup_constant_type_declared; eauto.
-      eexists ; split; [ try reflexivity | tc ].
-      simpl. unfold consistent_universe_context_instance in c.
-      destruct cst_universes.
-      -- simpl. reflexivity.
-      -- simpl in *. destruct cst0. simpl in *.
-         destruct c. unfold check_consistent_constraints. rewrite H0. reflexivity.
-      -- simpl in *. destruct ctx as [[inst csts] variance]. simpl in *.
-         destruct c. unfold check_consistent_constraints. rewrite H0. reflexivity.
-
-    - admit.
-    - admit.
-
-    - (* destruct indpar. *)
-      apply cumul_reduce_to_ind in IHX2 as [args' [-> Hcumul]].
-      simpl in *. rewrite (proj2 (eq_ind_refl ind ind) eq_refl).
-      eexists ; split; [ reflexivity | tc ].
-      admit.
-
-    - admit.
-
-    - eexists. rewrite e.
-      split; [ reflexivity | tc ].
-
-    - eexists. rewrite e.
-      split; [ reflexivity | tc ].
-
-    - eexists.
-      split; [ reflexivity | tc ]. constructor.
-      eapply cumul_trans; eauto.
-  Admitted.
-
   Ltac infers :=
     repeat
       match goal with
@@ -908,6 +875,7 @@ Section Typecheck2.
   Lemma leq_universe_refl `{config.checker_flags} x : check_leq (snd Σ) x x = true. (* FIXME condition on φ? *)
   Proof. induction x. unfold check_leq. cbn. auto with bool. unfold check_leq. simpl. Admitted.
   Hint Resolve leq_universe_refl : typecheck.
+
   Lemma infer_type_correct Γ t x :
     (forall (Γ : context) (T : term), infer Γ t = Checked T -> Σ ;;; Γ |- t : T) ->
     infer_type infer Γ t = Checked x ->
@@ -919,9 +887,9 @@ Section Typecheck2.
     specialize (IH _ _ Heqt0).
     intros.
     eapply type_Conv. apply IH.
-    admit. apply cumul_reduce_to_sort. exists x. split; tc.
-  Admitted.
-
+    left. exists [], x. intuition auto with wf. now apply typing_wf_local in IH.
+    apply cumul_reduce_to_sort. exists x. split; tc.
+  Qed.
 
   Lemma infer_cumul_correct Γ t u x x' :
     (forall (Γ : context) (T : term), infer Γ u = Checked T -> Σ ;;; Γ |- u : T) ->
@@ -936,7 +904,7 @@ Section Typecheck2.
     specialize (IH' _ _ Heqt0).
     intros.
     eapply type_Conv. apply IH'.
-    apply infer_type_correct; eauto.
+    apply infer_type_correct in H; eauto.
     destruct a0. now apply cumul_convert_leq.
   Qed.
 
@@ -954,7 +922,9 @@ Section Typecheck2.
     - destruct nth_error eqn:Heq; try discriminate.
       intros [= <-]. constructor; auto.
 
-    - admit.
+    - destruct u; intros Hu; try discriminate.
+      destruct t as [l [|]]; try discriminate. destruct u; try discriminate.
+      injection Hu. intros <-. pose (type_Sort _ _ l X). econstructor. admit.
     - admit.
 
     - admit.
@@ -1011,6 +981,101 @@ Section Typecheck2.
   Admitted.
 
 End Typecheck2.
+
+Section Infer_Complete.
+  (* Context `{cf : checker_flags}. *)
+  Existing Instance default_checker_flags.
+  Context `{F : Fuel}.
+
+  Lemma infer_complete :
+    env_prop (fun Σ Γ t T => exists T', infer Σ Γ t = Checked T' /\ squash (cumul Σ Γ T' T)).
+  Proof.
+    apply typing_ind_env; intros Σ wfΣ Γ wfΓ; intros **; rename_all_hyps; simpl in *;
+      try solve [econstructor; eauto];
+      unfold infer_type, infer_cumul in *; simpl; unfold infer_type, infer_cumul in *;
+      repeat match goal with
+        H : exists T', _ |- _ => destruct H as [? [-> H]]
+      end; simpl; try (eexists; split; [ reflexivity | solve [ tc ] ]); unsquash; rename_all_hyps.
+
+  - eexists. rewrite heq_nth_error.
+    split; [ reflexivity | tc ].
+
+    - apply cumul_reduce_to_sort in cumulx0 as [s'' [-> Hs'']].
+      apply cumul_reduce_to_sort in cumulx as [s2' [-> Hs2']].
+      simpl. eexists. split; [reflexivity|].
+      constructor. admit.
+
+    - apply cumul_reduce_to_sort in cumulx0 as [s'' [-> Hs'']].
+      eexists; intuition eauto. constructor.
+      eapply congr_cumul_prod; tc.
+
+    - apply cumul_convert_leq in cumulx0 as ->; simpl.
+      apply cumul_reduce_to_sort in cumulx1 as [s'' [-> Hs'']].
+      simpl. eexists; split; [reflexivity|]. constructor.
+      admit. (*Cumulativity *)
+
+    - (* Application *)
+      eapply cumul_reduce_to_product in cumulx0 as [dom [codom [-> Hpi]]].
+      simpl.
+      destruct Hpi as [[Hdom Hcodom]].
+      assert (Σ;;; Γ |- x <= dom).
+      destruct Hdom. eapply cumul_trans; eauto.
+      apply cumul_convert_leq in X0 as ->. simpl.
+      eexists; split; [reflexivity|].
+      constructor. apply (substitution_cumul Σ Γ (vass na A :: []) [] [u] codom B); eauto.
+      { simpl. eapply validity in typet. destruct typet.
+        destruct i as [[ctx [s [Ha Hb]]]|].
+        generalize (PCUICClosed.destArity_spec [] (tProd na A B)).
+        rewrite Ha. simpl. destruct ctx using rev_ind; intros H; try discriminate.
+        rewrite it_mkProd_or_LetIn_app in H.
+        destruct x1 as [na' [b|] ty]; try discriminate.
+        injection H. intros -> -> ->.
+        rewrite app_context_assoc in Hb.
+        eapply All_local_env_app in Hb. intuition auto.
+        destruct i. constructor; eauto with wf. simpl.
+        now eapply type_Prod_invert in t0 as [? [? [? ?]]]. auto. auto. }
+      constructor. constructor. rewrite subst_empty. apply typeu.
+
+    - (* Constant *)
+      erewrite lookup_constant_type_declared; eauto.
+      eexists ; split; [ try reflexivity | tc ].
+      simpl. unfold consistent_universe_context_instance in H0.
+      destruct cst_universes.
+      -- simpl. reflexivity.
+      -- simpl in *. destruct cst0. simpl in *.
+         unfold check_consistent_constraints.
+         now destruct H0 as [eqtu ->].
+      -- simpl in *. destruct ctx as [[inst csts] variance]. simpl in *.
+         unfold check_consistent_constraints.
+         now destruct H0 as [eqtu ->].
+
+    - (* Inductive *)
+      admit.
+    - (* Constructor *) admit.
+
+    - (* Case *)
+      (* destruct indpar. *)
+      apply cumul_reduce_to_ind in cumulx as [args' [-> Hcumul]].
+      simpl in *. rewrite (proj2 (eq_ind_refl Σ ind ind) eq_refl).
+      eexists ; split; [ reflexivity | tc ].
+      constructor.
+      (* Conversion of applications congruence *)
+      admit.
+
+    - (* Proj *) admit.
+
+    - (* Fix *) eexists. rewrite heq_nth_error.
+      split; [ reflexivity | tc ].
+
+    - (* CoFix *) eexists. rewrite heq_nth_error.
+      split; [ reflexivity | tc ].
+
+    - (* Conversion *) eexists.
+      split; [ reflexivity | tc ]. constructor.
+      eapply cumul_trans; eauto.
+  Admitted.
+
+End Infer_Complete.
 
 Extract Constant infer_type_correct => "(fun f sigma ctx t x -> assert false)".
 Extract Constant infer_correct => "(fun f sigma ctx t ty -> assert false)".

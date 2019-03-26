@@ -228,7 +228,7 @@ Hint Extern 10 => all_simpl : all.
 
 Ltac solve_all :=
   unfold tCaseBrsProp, tFixProp in *;
-  repeat toAll; try All_map; try close_Forall;
+  repeat toAll; try All_map; try close_All;
   change_Sk; auto with all;
   intuition eauto 4 with all.
 

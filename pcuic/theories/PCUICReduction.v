@@ -323,6 +323,7 @@ Section ReductionCongruence.
     Proof.
       intros. constructor.
     Qed.
+
   End Congruences.
 End ReductionCongruence.
 

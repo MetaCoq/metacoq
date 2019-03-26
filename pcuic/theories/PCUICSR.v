@@ -505,8 +505,20 @@ Proof.
     eapply validity; eauto.
     eauto. eauto.
 
-  - (* Congruence *) admit.
-  - (* Constant unfolding *) admit.
+  - (* Congruence *)
+    eapply type_Conv; [eapply type_App| |]; eauto with wf.
+    eapply validity. eauto. eauto.
+    eapply type_App; eauto. eapply red_cumul_inv.
+    eapply (red_red Σ Γ [vass na A] [] [u] [N2]); auto.
+    constructor. constructor. now rewrite subst_empty.
+
+  - (* Constant unfolding *)
+    eapply declared_constant_inv in X; eauto.
+    destruct decl0 as [ty body' univs]; simpl in *; subst body'.
+    hnf in X. simpl in X. (* Substitutivity of typing w.r.t. universes *)
+    admit.
+
+
   - (* iota reduction *)  admit.
   - (* Case congruence *) admit.
   - (* Case congruence *) admit.

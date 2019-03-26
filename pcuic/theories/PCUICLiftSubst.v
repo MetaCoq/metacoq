@@ -433,7 +433,6 @@ Proof.
 
   - unfold subst at 2.
     elim (leb_spec p n); intros; try easy.
-
     + destruct (nth_error_spec N (n - p)).
       ++ rewrite -> subst_rel_lt by lia.
          erewrite subst_rel_eq; try easy.

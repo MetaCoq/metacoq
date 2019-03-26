@@ -46,6 +46,10 @@ Proof.
     inversion eq. reflexivity.
 Qed.
 
+Lemma term_dec :
+  forall u v : term, { u = v } + { u <> v }.
+Admitted.
+
 (* We assume normalisation of the reduction.
 
    We state is as well-foundedness of the reduction.
@@ -54,8 +58,6 @@ Section Normalisation.
 
   Context (flags : RedFlags.t).
   Context `{checker_flags}.
-
-  Derive NoConfusion NoConfusionHom Subterm for term.
 
   Lemma subject_reduction :
     forall {Σ Γ u v A},
@@ -233,8 +235,6 @@ Section Normalisation.
   Notation ex t := (exist _ t _) (only parsing).
 
   Notation coe h t := (eq_rec_r (fun x => position x) t h).
-
-  (* Set Equations Debug. *)
 
   Equations stack_position t π : { p : position (zipc t π) | atpos _ p = t } :=
     stack_position t π with π := {
@@ -414,6 +414,9 @@ Section Normalisation.
 
   Derive Signature for position.
   Derive Signature for posR.
+  Derive NoConfusion NoConfusionHom for term.
+  (* TODO Add this, maybe even higher up. *)
+  (* Derive NoConfusion NoConfusionHom for position. *)
 
   Lemma existT_position_inj :
     forall u p q,
@@ -539,20 +542,9 @@ Section Normalisation.
   | cored1 : forall u v, red1 Σ Γ u v -> cored Σ Γ v u
   | cored_trans : forall u v w, cored Σ Γ v u -> red1 Σ Γ v w -> cored Σ Γ w u.
 
-  (* Definition R Σ Γ u v := *)
-  (*   Subterm.lexprod _ _ (cored Σ Γ) term_subterm (zip u, fst u) (zip v, fst v). *)
-
-  (* Definition R Σ Γ u v := *)
-  (*   Subterm.lexprod _ _ (cored Σ Γ) posR *)
-  (*                   (zip u, proj1_sig (stack_position (fst u) (snd u))) *)
-  (*                   (zip v, proj1_sig (stack_position (fst v) (snd v))). *)
-
-  (* Since there is a dependency in the orders we need to redefine
-     the lexicographic order ourselves.
-   *)
-
   Notation "( x ; y )" := (existT _ x y).
 
+  (* Dependent lexicographic order *)
   Inductive dlexprod {A} {B : A -> Type} (leA : A -> A -> Prop) (leB : forall x, B x -> B x -> Prop) : sigT B -> sigT B -> Prop :=
   | left_lex : forall x x' y y', leA x x' -> dlexprod leA leB (x;y) (x';y')
   | right_lex : forall x y y', leB x y y' -> dlexprod leA leB (x;y) (x;y').
@@ -592,11 +584,6 @@ Section Normalisation.
 
   Inductive welltyped Σ Γ t : Prop :=
   | iswelltyped A : Σ ;;; Γ |- t : A -> welltyped Σ Γ t.
-
-  (* Axiom normalisation : *)
-  (*   forall Σ Γ t A, *)
-  (*     Σ ;;; Γ |- t : A -> *)
-  (*     Acc (cored (fst Σ) Γ) t. *)
 
   Axiom normalisation :
     forall Σ Γ t,
@@ -882,12 +869,6 @@ Section Reduce.
       + econstructor. assumption.
   Qed.
 
-  Lemma closedn_context :
-    forall n t,
-      closedn n (zip t) = true ->
-      closedn n (fst t).
-  Admitted.
-
   Notation "∥ T ∥" := (squash T) (at level 10).
 
   Derive Signature for typing.
@@ -987,12 +968,6 @@ Section Reduce.
   (*       * eapply IHargs'. cbn in H0. *)
   Admitted.
 
-  (* Lemma weak_inversion_Construct : *)
-  (*   forall {Σ Γ ind i u T}, *)
-  (*     Σ ;;; Γ |- tConstruct ind i u : T -> *)
-  (*     exists mdecl idecl cdecl, *)
-  (*       Σ ;;; Γ |- type_of_constructor mdecl cdecl (ind, i) u <= T. *)
-
   Lemma zipc_inj :
     forall u v π, zipc u π = zipc v π -> u = v.
   Proof.
@@ -1073,10 +1048,6 @@ Section Reduce.
     subst. cbn. assumption.
   Qed.
 
-  Lemma term_dec :
-    forall u v : term, { u = v } + { u <> v }.
-  Admitted.
-
   Lemma posR_coe_r :
     forall t h p q,
       @posR t p q ->
@@ -1100,21 +1071,7 @@ Section Reduce.
     right. assumption.
   Qed.
 
-  (* Lemma right_lex_eq : *)
-  (*   forall {A B leA} {leB : forall x : A, B x -> B x -> Prop} {x x' y y'}, *)
-  (*     x = x' -> *)
-  (*     leB x y y' -> *)
-  (*     @dlexprod A B leA leB (x;y) (x';y'). *)
-
   Definition inspect {A} (x : A) : { y : A | y = x } := exist _ x eq_refl.
-
-  (* Definition Pr (t' : term * stack) (π : stack) := True. *)
-
-  (* Definition Pr (t' : term * stack) π := *)
-  (*   forall indn c args ρ, *)
-  (*     π = Case indn c args ρ -> *)
-  (*     let '(args', ρ') := decompose_stack (snd t') in *)
-  (*     ρ' = Case indn c args ρ. *)
 
   Definition Pr (t' : term * stack) π :=
     forall indn c args ρ,
@@ -1124,13 +1081,6 @@ Section Reduce.
       ρ' = Case indn c args ρ.
 
   Notation givePr := (fun indn c args ρ (* e *) => _) (only parsing).
-  (* Notation givePr := (_) (only parsing). *)
-  (* Notation givePr := (I) (only parsing). *)
-
-  (* Definition Pr' (t' : term * stack) π := *)
-  (*   forall f n args ρ, *)
-  (*     snd (decompose_stack π) = Fix f n args ρ -> *)
-  (*     snd (decompose_stack (snd t')) = Fix f n args ρ. *)
 
   Definition Pr' (t' : term * stack) π :=
     forall f n args ρ,
@@ -1139,7 +1089,6 @@ Section Reduce.
       let '(l', θ') := decompose_stack (snd t') in
       θ' = Fix f n args ρ.
 
-  (* Notation givePr' := (fun f n args ρ e => _) (only parsing). *)
   Notation givePr' := (fun f n args ρ => _) (only parsing).
 
   Notation rec reduce t π :=
@@ -1248,9 +1197,6 @@ Section Reduce.
       } ;
     | false := give (tFix mfix idx) π
     } ;
-
-    (* Nothing special seems to be done for Π-types. *)
-    (* _reduce_stack Γ (tProd na A B) *)
 
     _reduce_stack Γ (tCase (ind, par) p c brs) π h reduce with RedFlags.iota flags := {
     | true with inspect (reduce c (Case (ind, par) p brs π) _) := {
@@ -1928,19 +1874,6 @@ Section Reduce.
     specialize h' with (1 := eq_refl).
     assumption.
   Qed.
-
-  Lemma closedn_cored :
-    forall Σ Γ u v,
-      cored Σ Γ v u ->
-      closedn #|Γ| u = true ->
-      closedn #|Γ| v = true.
-  Admitted.
-
-  Lemma closedn_typed :
-    forall Σ Γ t A,
-      Σ ;;; Γ |- t : A ->
-      closedn #|Γ| t = true.
-  Admitted.
 
   Equations reduce_stack (Γ : context) (t A : term) (π : stack)
            (h : welltyped Σ Γ (zip (t,π))) : term * stack :=

@@ -208,10 +208,11 @@ Section Normalisation.
     poscat _ (case_c indn pr c brs p) q := case_c indn pr c brs (poscat _ p q).
 
   Arguments root {_}.
+  Arguments poscat {_} _ _.
 
   Lemma atpos_poscat :
     forall t p q,
-      atpos t (poscat t p q) = atpos (atpos t p) q.
+      atpos t (@poscat t p q) = atpos (atpos t p) q.
   Proof.
     intros t p q. revert q. induction p ; intros q.
     - reflexivity.
@@ -230,13 +231,13 @@ Section Normalisation.
     stack_position t π with π := {
     | Empty => ex root ;
     | App u ρ with stack_position _ ρ := {
-      | @exist p h => ex (poscat _ p (coe h (app_l _ root _)))
+      | @exist p h => ex (poscat p (coe h (app_l _ root _)))
       } ;
     | Fix f n args ρ with stack_position _ ρ := {
-      | @exist p h => ex (poscat _ p (coe h (app_r _ _ root)))
+      | @exist p h => ex (poscat p (coe h (app_r _ _ root)))
       } ;
     | Case indn pred brs ρ with stack_position _ ρ := {
-      | @exist p h => ex (poscat _ p (coe h (case_c _ _ _ _ root)))
+      | @exist p h => ex (poscat p (coe h (case_c _ _ _ _ root)))
       }
     }.
   Next Obligation.
@@ -255,7 +256,7 @@ Section Normalisation.
   Lemma stack_position_fix :
     forall c mfix idx args ρ,
       ` (stack_position c (Fix mfix idx args ρ)) =
-      poscat _ (` (stack_position _ ρ))
+      poscat (` (stack_position _ ρ))
              (coe (proj2_sig (stack_position _ ρ)) (app_r _ _ root)).
   Proof.
     intros c mfix idx args ρ.
@@ -270,7 +271,7 @@ Section Normalisation.
   Lemma stack_position_app :
     forall t u ρ,
       ` (stack_position t (App u ρ)) =
-      poscat _ (` (stack_position _ ρ))
+      poscat (` (stack_position _ ρ))
              (coe (proj2_sig (stack_position _ ρ)) (app_l _ root _)).
   Proof.
     intros t u ρ.
@@ -282,30 +283,78 @@ Section Normalisation.
     - simp stack_position.
   Qed.
 
-  (* Lemma stack_position_appstack : *)
-  (*   forall t args c ρ, *)
-  (*     exists u v q, *)
-  (*       let p := stack_position _ ρ in *)
-  (*       ` (stack_position t (appstack args (App c ρ))) = *)
-  (*       poscat _ (` p) (coe (proj2_sig p) (app_l u q v)). *)
+  Lemma poscat_replace :
+    forall t p q t' (e : t = t') p',
+      p = coe e p' ->
+      exists e',
+        @poscat t p q = @poscat t (coe e p') (coe e' q).
+  Proof.
+    intros t p q t' e p' h.
+    subst. cbn in q. cbn.
+    exists eq_refl. cbn. reflexivity.
+  Qed.
 
-  (* Lemma stack_position_appstack : *)
-  (*   forall t args c ρ, *)
-  (*     exists h1 q h2, *)
-  (*       ` (stack_position t (appstack args (App c ρ))) = *)
-  (*       coe h1 (poscat _ (` (stack_position (tApp (mkApps t args) c) ρ)) (coe h2 (app_l t q c))). *)
-  (* Proof. *)
-  (*   intros t args c ρ. *)
-  (*   (* exists zipc_appstack. *) *)
-  (*   revert t ρ. *)
-  (*   induction args ; intros t ρ. *)
-  (*   - cbn. rewrite stack_position_app. *)
-  (*     exists eq_refl. cbn. do 2 eexists. *)
-  (*     reflexivity. *)
-  (*   - cbn. rewrite stack_position_app. *)
-  (*     destruct (IHargs (tApp t a) ρ) as [h1 [q [h2 e]]]. *)
-  (*     do 3 eexists. *)
-  (*     rewrite e. *)
+  Lemma poscat_replace_coe :
+    forall t p q t' (e : t = t') p',
+      p = coe e p' ->
+      exists e', @poscat t p q = coe e (@poscat t' p' (coe e' q)).
+  Proof.
+    intros t p q t' e p' h.
+    subst. cbn in q. cbn.
+    exists eq_refl. cbn. reflexivity.
+  Qed.
+
+  Lemma atpos_assoc :
+    forall t p q,
+      atpos (atpos t p) q = atpos t (poscat p q).
+  Proof.
+    intros t p q. revert q.
+    induction p ; intros q.
+    - simp atpos.
+    - simp atpos.
+    - simp atpos.
+    - simp atpos.
+  Defined.
+
+  Lemma poscat_assoc :
+    forall t p q r,
+      @poscat t (poscat p q) r =
+      poscat p (poscat q (coe (atpos_assoc t p q) r)).
+  Proof.
+    intros t p q r. revert q r.
+    induction p ; intros q r.
+    - cbn. simp poscat.
+    - simp poscat. rewrite <- IHp. simp poscat.
+    - simp poscat. rewrite <- IHp. simp poscat.
+    - simp poscat. rewrite <- IHp. simp poscat.
+  Qed.
+
+  Lemma stack_position_appstack :
+    forall t args ρ, exists q h,
+        let p := stack_position (mkApps t args) ρ in
+        ` (stack_position t (appstack args ρ)) =
+        coe h (poscat (` p) q).
+  Proof.
+    intros t args ρ. revert t ρ.
+    induction args ; intros t ρ.
+    - exists root. exists eq_refl. cbn.
+      set (p := ` (stack_position t ρ)). clearbody p.
+      revert p. generalize (zipc t ρ).
+      clear t ρ. intros t p.
+      funelim (poscat p root).
+      + reflexivity.
+      + f_equal. assumption.
+      + f_equal. assumption.
+      + f_equal. assumption.
+    - cbn in IHargs. cbn.
+      rewrite stack_position_app.
+      destruct (IHargs (tApp t a) ρ) as [q [h e]].
+      destruct (poscat_replace_coe _ _ (coe (proj2_sig (stack_position (tApp t a) (appstack args ρ))) (app_l t root a)) _ _ _ e)
+        as [e' hh].
+      rewrite hh.
+      rewrite poscat_assoc.
+      do 2 eexists. reflexivity.
+  Qed.
 
   Lemma coe_app_l_not_root :
     forall u v p t (h : t = tApp u v),
@@ -1679,81 +1728,7 @@ Section Reduce.
     - apply (eq_sym (@zipc_appstack _ args (App c ρ))).
     -
 
-      Lemma poscat_replace :
-        forall t p q t' (e : t = t') p',
-          p = coe e p' ->
-          exists e',
-            @poscat t p q = @poscat t (coe e p') (coe e' q).
-      Proof.
-        intros t p q t' e p' h.
-        subst. cbn in q. cbn.
-        exists eq_refl. cbn. reflexivity.
-      Qed.
-
-      Lemma poscat_replace_coe :
-        forall t p q t' (e : t = t') p',
-          p = coe e p' ->
-          exists e', @poscat t p q = coe e (@poscat t' p' (coe e' q)).
-      Proof.
-        intros t p q t' e p' h.
-        subst. cbn in q. cbn.
-        exists eq_refl. cbn. reflexivity.
-      Qed.
-
-      Lemma atpos_assoc :
-        forall t p q,
-          atpos (atpos t p) q = atpos t (poscat p q).
-      Proof.
-        intros t p q. revert q.
-        induction p ; intros q.
-        - simp atpos.
-        - simp atpos.
-        - simp atpos.
-        - simp atpos.
-      Defined.
-
-      Lemma poscat_assoc :
-        forall t p q r,
-          @poscat t (poscat p q) r =
-          poscat p (poscat q (coe (atpos_assoc t p q) r)).
-      Proof.
-        intros t p q r. revert q r.
-        induction p ; intros q r.
-        - cbn. simp poscat.
-        - simp poscat. rewrite <- IHp. simp poscat.
-        - simp poscat. rewrite <- IHp. simp poscat.
-        - simp poscat. rewrite <- IHp. simp poscat.
-      Qed.
-
-      Lemma stack_position_appstack :
-        forall t args ρ, exists q h,
-          let p := stack_position (mkApps t args) ρ in
-          ` (stack_position t (appstack args ρ)) =
-          coe h (poscat (` p) q).
-      Proof.
-        intros t args ρ. revert t ρ.
-        induction args ; intros t ρ.
-        - exists root. exists eq_refl. cbn.
-          set (p := ` (stack_position t ρ)). clearbody p.
-          revert p. generalize (zipc t ρ).
-          clear t ρ. intros t p.
-          funelim (poscat p root).
-          + reflexivity.
-          + f_equal. assumption.
-          + f_equal. assumption.
-          + f_equal. assumption.
-        - cbn in IHargs. cbn.
-          rewrite stack_position_app.
-          destruct (IHargs (tApp t a) ρ) as [q [h e]].
-          (* destruct (poscat_replace _ _ (coe (proj2_sig (stack_position (tApp t a) (appstack args ρ))) (app_l t root a)) _ _ _ e) *)
-          (*   as [e' hh]. *)
-          (* rewrite hh. *)
-          destruct (poscat_replace_coe _ _ (coe (proj2_sig (stack_position (tApp t a) (appstack args ρ))) (app_l t root a)) _ _ _ e)
-            as [e' hh].
-          rewrite hh.
-          rewrite poscat_assoc.
-          do 2 eexists. reflexivity.
-      Qed.
+     (* Fail idtac "here". *)
 
 
 

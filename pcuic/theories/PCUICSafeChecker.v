@@ -329,6 +329,17 @@ Section Normalisation.
     - simp poscat. rewrite <- IHp. simp poscat.
   Qed.
 
+  Lemma poscat_root :
+    forall t p, @poscat t p root = p.
+  Proof.
+    intros t p.
+    funelim (poscat p root).
+    - reflexivity.
+    - f_equal. assumption.
+    - f_equal. assumption.
+    - f_equal. assumption.
+  Qed.
+
   Lemma stack_position_appstack :
     forall t args ρ, exists q h,
         let p := stack_position (mkApps t args) ρ in
@@ -338,14 +349,7 @@ Section Normalisation.
     intros t args ρ. revert t ρ.
     induction args ; intros t ρ.
     - exists root. exists eq_refl. cbn.
-      set (p := ` (stack_position t ρ)). clearbody p.
-      revert p. generalize (zipc t ρ).
-      clear t ρ. intros t p.
-      funelim (poscat p root).
-      + reflexivity.
-      + f_equal. assumption.
-      + f_equal. assumption.
-      + f_equal. assumption.
+      rewrite poscat_root. reflexivity.
     - cbn in IHargs. cbn.
       rewrite stack_position_app.
       destruct (IHargs (tApp t a) ρ) as [q [h e]].
@@ -1726,96 +1730,73 @@ Section Reduce.
 
     unshelve eapply right_lex_coe.
     - apply (eq_sym (@zipc_appstack _ args (App c ρ))).
-    -
+    - destruct (stack_position_appstack (tFix mfix idx) args (App c ρ))
+        as [q [h e]].
+      cbn in e.
+      pose proof (stack_position_app (mkApps (tFix mfix idx) args) c ρ) as eq.
+      destruct (poscat_replace _ _ q _ eq_refl _ eq) as [e' h'].
+      rewrite h' in e.
+      rewrite e.
+      cbn.
 
-     (* Fail idtac "here". *)
+      Lemma coe_coe :
+        forall t u v p (e : t = u) (e' : u = v),
+          coe e (coe e' p) = coe (eq_trans e e') p.
+      Proof.
+        intros t u v p e e'.
+        subst. reflexivity.
+      Qed.
 
-
-
-
-
-      revert c ρ mfix idx. induction args ; intros c ρ mfix idx.
-      + cbn. rewrite stack_position_app.
-        eapply posR_coe_r.
+      rewrite coe_coe.
+      match goal with
+      | |- posR _ (coe ?hh _) =>
+        generalize hh
+      end.
+      clear - flags Σ H.
+      eapply Coq.Logic.Eqdep_dec.K_dec_type.
+      + apply term_dec.
+      + cbn. rewrite poscat_assoc.
         eapply posR_poscat_posR.
-        eapply posR_coe.
-        econstructor.
-      + cbn. rewrite stack_position_app.
-        eapply posR_trans.
-        * eapply IHargs.
-
-
-
-    destruct args.
-    - cbn. rewrite stack_position_app.
-      right. eapply posR_poscat_posR.
-      eapply posR_coe. econstructor.
-    - cbn. rewrite stack_position_app.
-      case_eq (stack_position (tApp (mkApps (tApp (tFix mfix idx) t) args) c) ρ).
-      intros p hp eq. cbn.
-      simp stack_position.
-      replace (stack_position_clause_1 stack_position (appstack args (App c ρ)) (appstack args (App c ρ)) (tApp (tFix mfix idx) t))
-        with (stack_position (tApp (tFix mfix idx) t) (appstack args (App c ρ)))
-        by (simp stack_position).
-      case_eq (stack_position (tApp (tFix mfix idx) t) (appstack args (App c ρ))).
-      intros q hq eq2. cbn.
-      rewrite zipc_appstack.
-      (* right. eapply posR_poscat_posR. *)
-
-
-    (* Induction on args maube? *)
-
-    (* Unfortunately, this is probably wrong with the order as it is.
-       Indeed, we have p.app_r < p.app_l, which is fine when considering
-       fix c, but not for (fix x) c which requires p.app_r < p.app_l.app_l.
-       Actually it seems it is the case. We compare the heads first, no matter
-       how deep we go afterwards.
-
-       As such, induction on args might be a safe bet.
-       I hope I don't have to remove dependency in order to remove
-       unwanted transports...
-
-       Maybe a lemma to say (coe h app_r p) < app_l q or something of
-       the sort (might even be usefyl those times I did generalize).
-
-       destruct args might actually be enough, since we only need to know
-       we're going left or right.
-
-       Maybe a lemma stackpos (c, fix) = poscat (fst _) (coe (snd _) _)
-     *)
-
-    (* rewrite zipc_appstack. cbn. *)
-
-
-
-
-    simp stack_position.
-
-    destruct stack_position_clause_1 as [p hp]. cbn.
-    destruct stack_position_clause_1 as [q hq]. cbn.
-    revert p hp q hq.
-    rewrite zipc_appstack.
-    intros p hp q hq.
-    cbn. right.
-
-    (* case_eq (stack_position_clause_1 stack_position (appstack args (App c ρ)) *)
-    (*                                  (appstack args (App c ρ)) (tFix mfix idx)). *)
-    (* cbn. *)
-    (* intros p hp ep. *)
-    (* case_eq (stack_position_clause_1 stack_position ρ ρ *)
-    (*                                  (tApp (mkApps (tFix mfix idx) args) c)). *)
-    (* cbn. *)
-    (* intros q hq eq. *)
-    (* revert p hp ep q hq eq. *)
-    (* Fail rewrite zipc_appstack. *)
-
-    (* Perhaps do we need to do case_eq instead of destruct? *)
-    (* This way we could relate p and q. *)
-    (* Maybe a case analysis on p and/or q will prove sufficient. *)
-    dependent destruction q.
-    - admit.
-    - inversion H0.
-  Admitted.
+        set (pp := stack_position (tApp (mkApps (tFix mfix idx) args) c) ρ) in *.
+        clearbody pp.
+        set (e := (proj2_sig pp)) in *. clearbody e.
+        set (p := ` pp) in *. clearbody p.
+        clear pp.
+        rename q into q'.
+        match goal with
+        | |- posR _ (poscat _ ?qq) =>
+          set (q := qq) in *
+        end.
+        clearbody q.
+        clear - flags Σ H.
+        revert p e q.
+        match goal with
+        | |- forall p : position ?tt, _ =>
+          generalize tt
+        end.
+        generalize (tFix mfix idx).
+        clear - flags Σ H.
+        intros t.
+        generalize (mkApps t args).
+        clear - flags Σ H.
+        intros u t p e q.
+        revert e q.
+        generalize (atpos t p).
+        clear - flags Σ H.
+        intros t e q. subst.
+        cbn in *.
+        rename c into v.
+        revert v u q.
+        assert (forall u v (q : position u), posR (app_r u v root) (poscat (app_l u root v) q)) as h.
+        { intros u v q.
+          induction q.
+          - simp poscat. econstructor.
+          - simp poscat. econstructor.
+          - simp poscat. econstructor.
+          - simp poscat. econstructor.
+        }
+        intros. apply h.
+  Qed.
   Next Obligation.
     case_eq (decompose_stack π). intros ll π' e.
     pose proof (decompose_stack_eq _ _ _ e). subst.

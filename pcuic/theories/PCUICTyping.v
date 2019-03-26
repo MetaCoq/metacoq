@@ -867,6 +867,23 @@ Section GlobalMaps.
 
   (** *** Typing of constant declarations *)
 
+  Definition add_context_constraints (G : uGraph.t) (uctx : UContext.t) : uGraph.t :=
+    let '(inst, cstrs) := UContext.dest uctx in
+    let G0 := fold_left (fun (s : t) (l : Level.t) => add_node l s) inst G in
+    ConstraintSet.fold add_constraint cstrs G0.
+
+  Definition merge_context_set (G : uGraph.t) (uctx : uGraph.t) : uGraph.t :=
+    let '(levels, cstrs) := uctx in
+    let G0 := LevelSet.fold (fun (l : Level.t) (s : t) => add_node l s) levels G in
+    ConstraintSet.fold add_constraint cstrs G0.
+
+  Definition universe_context_context (uctx : universe_context) :=
+    match uctx with
+    | Monomorphic_ctx c
+    | Polymorphic_ctx c
+    | Cumulative_ctx (c, _) => c
+    end.
+
   Definition on_constant_decl Σ d :=
     match d.(cst_body) with
     | Some trm => P Σ [] trm (Some d.(cst_type))
@@ -891,18 +908,57 @@ Section GlobalMaps.
   Definition wf_graph φ :=
     contains_init_graph φ /\ (no_universe_inconsistency φ = true).
 
+  Definition global_decl_univs decl :=
+    match decl with
+    | ConstantDecl id d => d.(cst_universes)
+    | InductiveDecl ind inds => inds.(ind_universes)
+    end.
+
+  (** Alias for now, we want context sets with a well-defined union operation *)
+  Definition context_set := uGraph.t.
+
+  Inductive decl_univs_kind :=
+    | Monomorphic_decl (uctx : context_set)
+    | Polymorphic_decl (uctx : UContext.t).
+
+  Definition level_set_of_levels (l : list Level.t) :=
+    List.fold_left (fun l s => LevelSet.add s l) l LevelSet.empty.
+
+  Definition decl_univs uctx :=
+    match uctx with
+    | Monomorphic_ctx c =>
+      let (levels, cstrs) := c in
+      Monomorphic_decl (level_set_of_levels levels, cstrs)
+    | Polymorphic_ctx c
+    | Cumulative_ctx (c, _) => Polymorphic_decl c
+    end.
+
   (** Well-formed global environments have no name clash. *)
 
   Definition fresh_global (s : string) : global_declarations -> Prop :=
     Forall (fun g => global_decl_ident g <> s).
 
-  Inductive on_global_decls φ : global_declarations -> Type :=
-  | globenv_nil : wf_graph φ -> on_global_decls φ []
-  | globenv_decl Σ d :
+  Inductive on_global_decl_univs Σ φ (d : global_decl) : uGraph.t -> Type :=
+    | on_monomorphic_univs ctx :
+        decl_univs (global_decl_univs d) = Monomorphic_decl ctx ->
+        let φ' := merge_context_set φ ctx in
+        no_universe_inconsistency φ' = true ->
+        on_global_decl (Σ, φ) d ->
+        on_global_decl_univs Σ φ d φ'
+    | on_polymorphic_decl ctx :
+        decl_univs (global_decl_univs d) = Polymorphic_decl ctx ->
+        let φ' := add_context_constraints φ ctx in
+        no_universe_inconsistency φ' = true ->
+        on_global_decl (Σ, φ) d ->
+        on_global_decl_univs Σ φ d φ.
+
+  Inductive on_global_decls : forall φ, global_declarations -> Type :=
+  | globenv_nil φ : wf_graph φ -> on_global_decls φ []
+  | globenv_decl φ Σ d φ' :
       on_global_decls φ Σ ->
       fresh_global (global_decl_ident d) Σ ->
-      on_global_decl (Σ, φ) d ->
-      on_global_decls φ (d :: Σ).
+      on_global_decl_univs Σ φ d φ' ->
+      on_global_decls φ' (d :: Σ).
 
   Definition on_global_env (g : global_context) :=
     on_global_decls (snd g) (fst g).
@@ -926,61 +982,109 @@ Proof.
 Qed.
 Hint Resolve All_local_env_skipn : wf.
 
-(* Lemma on_global_decls_mix {Σ P Q} : *)
-(*   sort_irrelevant Q -> *)
-(*   on_global_env P Σ -> on_global_env Q Σ -> on_global_env (fun Σ Γ t T => (P Σ Γ t T * Q Σ Γ t T)%type) Σ. *)
-(* Proof. *)
-(*   intros HQ ? ?. destruct Σ as [Σ φ]. red in X, X0 |- *. *)
-(*   simpl in *. induction X in X0 |- *. inv X0. constructor; auto. *)
-(*   inv X0. constructor; auto. *)
-(*   clear IHX. *)
-(*   destruct d; simpl. *)
-(*   - destruct c; simpl. destruct cst_body; simpl in *. *)
-(*     red in o, X2 |- *. simpl in *. *)
-(*     split; auto. *)
-(*     red in o, X2 |- *. simpl in *. *)
-(*     split; auto. *)
-(*   - destruct o, X2. constructor; intuition. *)
-(*     2:{ red in onParams0, onParams1 |- *. *)
-(*         revert onParams0 onParams1. *)
-(*         clear onNpars0 onNpars1. *)
-(*         induction (ind_params m). constructor. *)
-(*         intros H1. inv H1. *)
-(*         intros H2. inv H2. *)
-(*         econstructor. eauto. red. *)
-(*         red in X2, X4; intuition eauto. *)
-(*         intros H1. inv H1. *)
-(*         econstructor; eauto. red. intuition eauto. } *)
-(*     clear onParams0 onParams1 onNpars0 onNpars1. *)
-(*     solve_all. eapply Alli_impl; eauto. clear onInductives1. *)
-(*     intros. *)
-(*     destruct x; simpl in *. *)
-(*     destruct X0 as [Xl Xr]. *)
-(*     constructor; red; simpl. simpl in *. *)
-(*     + apply onArity in Xl; apply onArity in Xr. *)
-(*       unfold on_arity, on_type in *. intuition. *)
-(*     + apply onConstructors in Xl; apply onConstructors in Xr. simpl in *. *)
-(*       red in Xl, Xr. *)
-(*       unfold on_constructor, on_type in *. *)
-(*       solve_all. eapply Alli_impl; eauto. simpl; intuition eauto. *)
-(*     + apply onProjections in Xl; apply onProjections in Xr. simpl in *. *)
-(*       red in Xl, Xr. solve_all. eapply Alli_impl; eauto. *)
-(*       simpl. intuition eauto. *)
-(*       red in a, b |- *. simpl in *. destruct (decompose_prod_assum [] ind_type). *)
-(*       intuition. unfold on_type in *. eauto. *)
-(* Qed. *)
+Conjecture contains_init_extend : forall φ c,
+  contains_init_graph φ ->
+  let ext := merge_context_set φ c in
+  no_universe_inconsistency ext = true ->
+  contains_init_graph ext.
+
+Definition consistent_graph_ext φ (c : context_set) :=
+  no_universe_inconsistency (merge_context_set φ c) = true.
+
+Lemma extend_wf_graph : forall φ,
+  wf_graph φ -> forall ctx, consistent_graph_ext φ ctx -> wf_graph (merge_context_set φ ctx).
+Proof.
+  intros * wfg ext consistent. red; intuition auto.
+  destruct wfg; apply contains_init_extend; eauto.
+Qed.
+
+Lemma on_global_decl_univs_wf_graph `{checker_flags} P Σ φ φ' d :
+  wf_graph φ ->
+  on_global_decl_univs P Σ φ d φ' ->
+  wf_graph φ'.
+Proof.
+  intros wfg.
+  destruct 1.
+  - red; subst φ'; intuition.
+    apply contains_init_extend; auto. apply wfg.
+  - auto.
+Qed.
+
+Lemma on_global_decls_wf_graph `{checker_flags} P φ Σ : on_global_decls P φ Σ -> wf_graph φ.
+Proof.
+  induction 1. exact w. now eapply on_global_decl_univs_wf_graph in o.
+Qed.
+
+(* Valid global context extensions (not invalidating previous universe constraints) *)
+Definition valid_global_ext (Σ : global_context) := consistent_graph_ext (snd Σ).
+
+Definition extend_global_context (Σ : global_context) uctx : global_context :=
+  (fst Σ, merge_context_set (snd Σ) uctx).
+
+(* Properties that are monotonous with respect to consistent constraint extensions *)
+Definition global_ext_prop (P : global_context -> context -> term -> option term -> Type) :=
+  (forall Σ Γ t T,
+      P Σ Γ t T ->
+      forall ctx, valid_global_ext Σ ctx ->
+      P (extend_global_context Σ ctx) Γ t T).
+
+Lemma merge_context_set_sym u v : merge_context_set u v = merge_context_set v u.
+Proof. (* Not true yet, we should rather use finset *) Admitted.
+
+Lemma merge_context_set_assoc φ ctx ctx' :
+  merge_context_set (merge_context_set φ ctx) ctx' =
+  merge_context_set φ (merge_context_set ctx ctx').
+Proof.
+  destruct ctx as [ls cstrs], ctx' as [ls' cstrs']. simpl.
+Admitted.
+
+Conjecture stable_universe_consistency : forall φ c,
+  no_universe_inconsistency (merge_context_set φ c) = true ->
+  no_universe_inconsistency φ = true.
+
+Lemma on_global_decl_univs_impl `{checker_flags} P :
+  global_ext_prop P ->
+  forall Σ φ φ' ctx d,
+    on_global_decl_univs P Σ φ d φ' ->
+    valid_global_ext (Σ, φ') ctx ->
+    on_global_decl_univs P Σ φ d (merge_context_set φ' ctx).
+Proof.
+  unfold valid_global_ext, consistent_graph_ext. simpl.
+  intros gP * ond isok. destruct ond.
+  subst φ'.
+  rewrite merge_context_set_assoc in isok.
+  rewrite (merge_context_set_sym ctx0) in isok.
+  rewrite <- merge_context_set_assoc in isok.
+  (* FIXME: false right now. We should restrict to universe polymorphic
+     definitions that do not mention any global universes so that they may
+     not contradict any extension of the global graph *)
+Admitted.
+
+Lemma on_global_decls_ext `{checker_flags} Σ P :
+  global_ext_prop P -> on_global_env P Σ ->
+  forall ctx, valid_global_ext Σ ctx -> on_global_env P (extend_global_context Σ ctx).
+Proof.
+  intros geP ge ctx ext. destruct Σ as [Σ φ]. red in ge |- *.
+  simpl in *.
+  induction ge. econstructor; auto. apply extend_wf_graph; auto.
+  econstructor; eauto.
+  repeat red in ext. simpl in ext.
+  apply on_global_decls_wf_graph in ge. destruct ge.
+  eapply on_global_decl_univs_impl in o; eauto.
+Qed.
 
 Lemma on_global_decls_impl `{checker_flags} Σ P Q :
   (forall Σ Γ t T, on_global_env P Σ -> P Σ Γ t T -> Q Σ Γ t T) ->
   on_global_env P Σ -> on_global_env Q Σ.
 Proof.
   intros. destruct Σ as [Σ φ]. red in X0 |- *.
-  simpl in *. induction X0; constructor; auto.
-  clear IHX0. destruct d; simpl.
-  - destruct c; simpl. destruct cst_body; simpl in *.
-    red in o |- *. simpl in *. auto.
-    red in o |- *. simpl in *. red in o. red. auto.
-  - red in o. simpl in *.
+  simpl in *. induction X0. constructor; auto.
+  econstructor; eauto.
+  destruct o.
+  - econstructor; eauto. destruct d; simpl; try discriminate. simpl in e.
+    destruct c. simpl in *. destruct cst_body. red in o.
+    eapply X; eauto. red in o |- *; simpl in *. unfold on_type in *; eauto.
+    red in o. simpl in *.
     destruct o as [onI onP onNP].
     constructor; auto.
     -- eapply Alli_impl; eauto. intros.
@@ -990,7 +1094,27 @@ Proof.
        --- apply onConstructors in X1. red in X1. unfold on_constructor, on_type in *. eapply Alli_impl; eauto.
            simpl; intuition eauto.
        --- apply onProjections in X1. simpl in *.
-           unfold on_projections in *. eapply Alli_impl; intuition eauto. clear X1.
+           unfold on_projections in *. eapply Alli_impl; intuition eauto.
+           unfold on_projection in *; simpl in *.
+           destruct decompose_prod_assum. unfold on_type in *; eauto.
+           intuition eauto.
+    -- red in onP. red.
+       eapply All_local_env_impl. eauto.
+       intros. apply X. auto. auto.
+  - econstructor; eauto. destruct d; simpl; try discriminate. simpl in e.
+    destruct c. simpl in *. destruct cst_body. red in o.
+    eapply X; eauto. red in o |- *; simpl in *. unfold on_type in *; eauto.
+    red in o. simpl in *.
+    destruct o as [onI onP onNP].
+    constructor; auto.
+    -- eapply Alli_impl; eauto. intros.
+       destruct x; simpl in *.
+       constructor; red; simpl.
+       --- apply onArity in X1. unfold on_arity, on_type in *; simpl in *; intuition.
+       --- apply onConstructors in X1. red in X1. unfold on_constructor, on_type in *. eapply Alli_impl; eauto.
+           simpl; intuition eauto.
+       --- apply onProjections in X1. simpl in *.
+           unfold on_projections in *. eapply Alli_impl; intuition eauto.
            unfold on_projection in *; simpl in *.
            destruct decompose_prod_assum. unfold on_type in *; eauto.
            intuition eauto.
@@ -1758,7 +1882,7 @@ Proof.
   constructor.
   cbn in wfΣ; inversion_clear wfΣ. auto.
   inv wfΣ.
-  rename X14 into Xg.
+  rename X14 into Xg. simpl in *.
   constructor; auto. unfold Forall_decls_typing in IH.
   - specialize (IH (existT _ (Σ, φ) (existT _ X13 (existT _ [] (existT _ (localenv_nil (lift_typing typing) (Σ, φ)) (existT _ (tSort Universe.type0m ) (existT _ _ (type_Sort _ _ Level.prop (localenv_nil _ (Σ, φ)))))))))).
     simpl in IH. forward IH. constructor 1. simpl. lia.

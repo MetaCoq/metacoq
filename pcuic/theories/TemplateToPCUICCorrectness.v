@@ -5,6 +5,7 @@ From Template Require Import config utils univ AstUtils.
 From Template Require Import BasicAst Ast WfInv Typing.
 From PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICLiftSubst
      PCUICUnivSubst PCUICTyping PCUICGeneration TemplateToPCUIC.
+
 Require Import String.
 Local Open Scope string_scope.
 Set Asymmetric Patterns.
@@ -737,7 +738,7 @@ Admitted.
   (* simpl in *. *)
   (* admit. (* destruct idecl; auto. apply H1. *) *)
 
-Lemma template_to_pcuic Σ Γ t T :
+Theorem template_to_pcuic Σ Γ t T :
   TTy.wf Σ -> TTy.typing Σ Γ t T ->
   typing (trans_global Σ) (trans_local Γ) (trans t) (trans T).
 Proof.

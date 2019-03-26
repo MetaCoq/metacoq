@@ -13,7 +13,7 @@ Section Infer_Complete.
   Existing Instance default_checker_flags.
   Context `{F : Fuel}.
 
-  Lemma infer_complete :
+  Theorem infer_complete :
     env_prop (fun Σ Γ t T => exists T', infer Σ Γ t = Checked T' /\ squash (cumul Σ Γ T' T)).
   Proof.
     apply typing_ind_env; intros Σ wfΣ Γ wfΓ; intros **; rename_all_hyps; simpl in *;

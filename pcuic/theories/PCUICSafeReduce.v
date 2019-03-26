@@ -206,6 +206,10 @@ Section Normalisation.
   | app_r : forall u v (p : position v), position (tApp u v)
   | case_c : forall indn pr c brs (p : position c), position (tCase indn pr c brs).
 
+  Derive Signature for position.
+  Derive NoConfusion NoConfusionHom for term.
+  Derive NoConfusion NoConfusionHom for position.
+
   Equations atpos (t : term) (p : position t) : term :=
     atpos ?(t) (root t) := t ;
     atpos ?(tApp u v) (app_l u p v) := atpos u p ;
@@ -412,11 +416,7 @@ Section Normalisation.
   | posR_app_r_root : forall u v p, posR (app_r u v p) root
   | posR_case_c_root : forall indn pr c brs p, posR (case_c indn pr c brs p) root.
 
-  Derive Signature for position.
-  Derive Signature for posR.
-  Derive NoConfusion NoConfusionHom for term.
-  (* TODO Add this, maybe even higher up. *)
-  (* Derive NoConfusion NoConfusionHom for position. *)
+  Derive Signature (* NoConfusion NoConfusionHom *) for posR.
 
   Lemma existT_position_inj :
     forall u p q,
@@ -493,7 +493,6 @@ Section Normalisation.
         constructor. intros p h.
         dependent destruction h.
         all: try discriminate.
-        apply app_r_inj in H1. subst.
         eapply H0. assumption.
       }
       assert (forall u v p, Acc posR p -> (forall q : position v, Acc posR q) -> Acc posR (app_l u p v)) as hl.
@@ -502,10 +501,8 @@ Section Normalisation.
         constructor. intros p h.
         dependent destruction h.
         all: try discriminate.
-        - apply app_l_inj in H1. subst.
-          eapply hr. apply ih.
-        - apply app_l_inj in H1. subst.
-          eapply H0. assumption.
+        - eapply hr. apply ih.
+        - eapply H0. assumption.
       }
       constructor. intros r h.
       dependent destruction h.
@@ -524,9 +521,7 @@ Section Normalisation.
         intros l indn pr.
         constructor. intros p h.
         dependent destruction h.
-        - apply case_c_inj in H1. subst.
-          eapply H0. assumption.
-        - inversion H1.
+        eapply H0. assumption.
       }
       constructor. intros r h.
       dependent destruction h.
@@ -681,48 +676,18 @@ Section Normalisation.
     revert r h2. dependent induction h1 ; intros r h2.
     all: try (dependent induction h2 ; discriminate).
     - dependent induction h2.
-      all: try discriminate.
-      + cbn in H0. inversion H0. subst.
-        apply existT_position_inj in H2. subst.
-        clear H0.
-        econstructor.
-      + cbn in H0. inversion H0. subst.
-        apply existT_position_inj in H2. subst.
-        clear H0.
-        econstructor.
+      + econstructor.
+      + econstructor.
     - dependent induction h2.
-      all: try discriminate.
-      + cbn in H0. inversion H0. subst.
-        apply existT_position_inj in H2. subst.
-        clear H0.
-        econstructor. eapply IHh1. assumption.
-      + cbn in H0. inversion H0. subst.
-        apply existT_position_inj in H2. subst.
-        clear H0.
-        econstructor.
+      + econstructor. eapply IHh1. assumption.
+      + econstructor.
     - dependent induction h2.
-      all: try discriminate.
-      + cbn in H0. inversion H0. subst.
-        apply existT_position_inj in H2. subst.
-        clear H0.
-        econstructor.
-      + cbn in H0. inversion H0. subst.
-        apply existT_position_inj in H2. subst.
-        clear H0.
-        econstructor. eapply IHh1. assumption.
-      + cbn in H0. inversion H0. subst.
-        apply existT_position_inj in H2. subst.
-        clear H0.
-        econstructor.
+      + econstructor.
+      + econstructor. eapply IHh1. assumption.
+      + econstructor.
     - dependent induction h2.
-      + cbn in H0. inversion H0. subst.
-        apply existT_position_inj in H2. subst.
-        clear H0.
-        econstructor. eapply IHh1. assumption.
-      + cbn in H0. inversion H0. subst.
-        apply existT_position_inj in H2. subst.
-        clear H0.
-        econstructor.
+      + econstructor. eapply IHh1. assumption.
+      + econstructor.
   Qed.
 
   Lemma Rtrans :

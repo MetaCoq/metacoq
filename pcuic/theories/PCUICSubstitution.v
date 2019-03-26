@@ -13,6 +13,8 @@ Require Import ssreflect.
 Set Asymmetric Patterns.
 Close Scope string_scope.
 
+Derive Signature for All_local_env All_local_env_over.
+
 Hint Rewrite @app_context_length : wf.
 
 Generalizable Variables Σ Γ t T.
@@ -1989,8 +1991,6 @@ Proof.
   forward thm. constructor. constructor. rewrite subst_empty; auto.
   now apply (thm Ht).
 Qed.
-
-Derive Signature for All_local_env.
 
 Lemma substitution_let  Σ Γ n u U (t : term) T :
   wf Σ ->

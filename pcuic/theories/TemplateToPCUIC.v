@@ -467,7 +467,7 @@ Proof.
   revert t t' Ht Hn; induction u in u' |- *; intros.
 
   destruct u'; try discriminate.
-  simpl. apply PCUICSubstitution.eq_term_leq_term. auto.
+  simpl. apply PCUICCumulativity.eq_term_leq_term. auto.
 
   destruct u'; try discriminate.
   simpl in *. apply IHu. toProp; auto. simpl; toProp; auto.

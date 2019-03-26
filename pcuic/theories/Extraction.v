@@ -40,11 +40,15 @@ Extraction Inline NoConfusionPackage_All_local_env_over.
 Extraction Inline NoConfusionPackage_context_decl.
 
 Extraction Library Classes.
+Extraction Library CRelationClasses.
+
 Extraction Library PCUICAst.
 Extraction Library PCUICAstUtils.
 Extraction Library PCUICUnivSubst.
 Extraction Library PCUICLiftSubst.
 Extraction Library PCUICTyping.
+Extraction Library PCUICReduction.
+Extraction Library PCUICCumulativity.
 Extraction Library PCUICWeakeningEnv.
 Extraction Library PCUICWeakening.
 Extraction Library PCUICSubstitution.

@@ -3,7 +3,7 @@
 From Coq Require Import Bool String List Program BinPos Compare_dec Arith Lia.
 From Template Require Import config univ monad_utils utils BasicAst AstUtils UnivSubst.
 From PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICLiftSubst PCUICUnivSubst
-     PCUICTyping PCUICSubstitution.
+     PCUICTyping PCUICSubstitution PCUICValidity.
 
 Import MonadNotation.
 Open Scope pcuic.
@@ -983,7 +983,8 @@ Section Typecheck2.
 End Typecheck2.
 
 Section Infer_Complete.
-  Context `{cf : checker_flags}.
+  (* Context `{cf : checker_flags}. *)
+  Existing Instance default_checker_flags.
   Context `{F : Fuel}.
 
   Lemma infer_complete :
@@ -1021,8 +1022,18 @@ Section Infer_Complete.
       destruct Hdom. eapply cumul_trans; eauto.
       apply cumul_convert_leq in X0 as ->. simpl.
       eexists; split; [reflexivity|].
-      constructor. eapply (substitution_cumul _ _ (vass na A :: []) []); eauto.
-      (* econstructor; auto. *) (* Validity *) admit.
+      constructor. apply (substitution_cumul Σ Γ (vass na A :: []) [] [u] codom B); eauto.
+      { simpl. eapply validity in typet. destruct typet.
+        destruct i as [[ctx [s [Ha Hb]]]|].
+        generalize (PCUICClosed.destArity_spec [] (tProd na A B)).
+        rewrite Ha. simpl. destruct ctx using rev_ind; intros H; try discriminate.
+        rewrite it_mkProd_or_LetIn_app in H.
+        destruct x1 as [na' [b|] ty]; try discriminate.
+        injection H. intros -> -> ->.
+        rewrite app_context_assoc in Hb.
+        eapply All_local_env_app in Hb. intuition auto.
+        destruct i. constructor; eauto with wf. simpl.
+        now eapply type_Prod_invert in t0 as [? [? [? ?]]]. auto. auto. }
       constructor. constructor. rewrite subst_empty. apply typeu.
 
     - (* Constant *)

@@ -6,6 +6,10 @@
 src/classes0.mli
 src/classes0.ml
 
+# From Coq
+src/cRelationClasses.mli
+src/cRelationClasses.ml
+
 src/pCUICAst.ml
 src/pCUICAst.mli
 src/pCUICAstUtils.ml
@@ -18,8 +22,12 @@ src/pCUICUnivSubst.ml
 src/pCUICUnivSubst.mli
 src/pCUICWeakeningEnv.ml
 src/pCUICWeakeningEnv.mli
-src/pCUICWeakening.ml
 src/pCUICWeakening.mli
+src/pCUICWeakening.ml
+src/pCUICReduction.mli
+src/pCUICReduction.ml
+src/pCUICCumulativity.mli
+src/pCUICCumulativity.ml
 src/pCUICSubstitution.ml
 src/pCUICSubstitution.mli
 src/pCUICChecker.ml

@@ -738,8 +738,10 @@ Inductive typing `{checker_flags} (Σ : global_context) (Γ : context) : term ->
     let types := fix_context mfix in
     nth_error mfix n = Some decl ->
     All_local_env (lift_typing typing) Σ (Γ ,,, types) ->
-    All (fun d => (Σ ;;; Γ ,,, types |- d.(dbody) : lift0 #|types| d.(dtype)) * (isLambda d.(dbody) = true)%type) mfix ->
+    All (fun d => (Σ ;;; Γ ,,, types |- d.(dbody) :
+                                          lift0 #|types| d.(dtype)) * (isLambda d.(dbody) = true)%type) mfix ->
     (** TODO check well-formed fix *)
+    (* Missing check on rarg *)
     Σ ;;; Γ |- tFix mfix n : decl.(dtype)
 
 | type_CoFix mfix n decl :

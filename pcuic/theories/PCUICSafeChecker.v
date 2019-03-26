@@ -384,6 +384,14 @@ Section Normalisation.
     subst. cbn. discriminate.
   Qed.
 
+  Lemma coe_coe :
+    forall t u v p (e : t = u) (e' : u = v),
+      coe e (coe e' p) = coe (eq_trans e e') p.
+  Proof.
+    intros t u v p e e'.
+    subst. reflexivity.
+  Qed.
+
   Inductive posR : forall {t}, position t -> position t -> Prop :=
   | posR_app_lr : forall u v pu pv, posR (app_r u v pv) (app_l u pu v)
   | posR_app_l : forall u v p q, posR p q -> posR (app_l u p v) (app_l u q v)
@@ -1738,15 +1746,6 @@ Section Reduce.
       rewrite h' in e.
       rewrite e.
       cbn.
-
-      Lemma coe_coe :
-        forall t u v p (e : t = u) (e' : u = v),
-          coe e (coe e' p) = coe (eq_trans e e') p.
-      Proof.
-        intros t u v p e e'.
-        subst. reflexivity.
-      Qed.
-
       rewrite coe_coe.
       match goal with
       | |- posR _ (coe ?hh _) =>

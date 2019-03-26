@@ -1871,11 +1871,32 @@ Section Reduce.
           -- pose proof (decompose_stack_eq _ _ _ e2) as ee. cbn in ee.
              subst. exfalso.
              eapply decompose_stack_not_app. eassumption.
-        * (* This case is not really worth doing as the definition of R is
-             expected to change. *)
-          cbn in H1. cbn in H2. inversion H2. subst. clear H2.
-          admit.
-  Admitted.
+        * cbn in H2. inversion H2.
+          rewrite 2!zipc_appstack in H4.
+          unfold Pr' in p0. cbn in p0.
+          specialize p0 with (1 := eq_refl).
+          rewrite e1 in p0. subst.
+          cbn in H4. rewrite zipc_appstack in H4.
+          apply zipc_inj in H4.
+
+          Lemma mkApps_inj :
+            forall u v l,
+              mkApps u l = mkApps v l ->
+              u = v.
+          Proof.
+            intros u v l eq.
+            revert u v eq.
+            induction l ; intros u v eq.
+            - cbn in eq. assumption.
+            - cbn in eq. apply IHl in eq.
+              inversion eq. reflexivity.
+          Qed.
+
+          apply mkApps_inj in H4.
+          inversion H4. subst.
+          rewrite e1 in eq4. inversion eq4. subst.
+          reflexivity.
+  Qed.
   Next Obligation.
     case_eq (decompose_stack π). intros ll π' e1 e2. subst.
     cbn. unfold Pr in h.

@@ -361,7 +361,7 @@ Section ParallelReduction.
 
   (** Let *)
   | pred_zeta na d0 d1 t b0 b1 :
-      pred1 Γ d0 d1 -> pred1 Γ b0 b1 ->
+      pred1 Γ d0 d1 -> pred1 (Γ ,, vdef na d1 t) b0 b1 ->
       pred1 Γ (tLetIn na d0 t b0) (subst10 d1 b1)
 
   (** Local variables *)
@@ -495,7 +495,7 @@ Section ParallelReduction.
       (forall (Γ : context) (na : name) (t b0 b1 a0 a1 : term),
           pred1 (Γ ,, vass na t) b0 b1 -> P (Γ ,, vass na t) b0 b1 -> pred1 Γ a0 a1 -> P Γ a0 a1 -> P Γ (tApp (tLambda na t b0) a0) (b1 {0 := a1})) ->
       (forall (Γ : context) (na : name) (d0 d1 t b0 b1 : term),
-          pred1 Γ d0 d1 -> P Γ d0 d1 -> pred1 Γ b0 b1 -> P Γ (* FIXME *) b0 b1 -> P Γ (tLetIn na d0 t b0) (b1 {0 := d1})) ->
+          pred1 Γ d0 d1 -> P Γ d0 d1 -> pred1 (Γ ,, vdef na d1 t) b0 b1 -> P (Γ ,, vdef na d1 t) b0 b1 -> P Γ (tLetIn na d0 t b0) (b1 {0 := d1})) ->
       (forall (Γ : context) (i : nat) (body body' : term),
           option_map decl_body (nth_error Γ i) = Some (Some body) ->
           pred1 Γ ((lift0 (S i)) body) body' -> P Γ ((lift0 (S i)) body) body' -> P Γ (tRel i) body') ->
@@ -526,7 +526,8 @@ Section ParallelReduction.
           pred1 Γ fn0 fn1 -> P Γ fn0 fn1 -> P Γ (tProj p (mkApps (tCoFix mfix idx) args0)) (tProj p (mkApps fn1 args1))) ->
       (forall (Γ : context) (c : ident) (decl : constant_body) (body : term),
           declared_constant Σ c decl ->
-          forall u : universe_instance, cst_body decl = Some body -> P Γ (tConst c u) (subst_instance_constr u body)) ->
+          forall u : universe_instance, cst_body decl = Some body ->
+                                        P Γ (tConst c u) (subst_instance_constr u body)) ->
       (forall (Γ : context) (i : inductive) (pars narg : nat) (args : list term) (k : nat) (u : universe_instance)
               (args0 args1 : list term) (arg1 : term),
           All2_prop Γ id P' args0 args1 ->
@@ -666,31 +667,64 @@ Section ParallelReduction2.
   Admitted.
 
 End ParallelReduction2.
+Definition subst_context n k (Γ : context) : context :=
+  fold_context (fun k' => subst n (k' + k)) Γ.
 
-(* Lemma substitution_pred1 `{cf:checker_flags} Σ Γ Γ' Γ'' s M N : *)
-(*   wf Σ -> All Ast.wf s -> subs Σ Γ s Γ' -> wf_local Σ Γ -> Ast.wf M -> *)
-(*   wf_local Σ (Γ ,,, Γ' ,,, Γ'') -> *)
-(*   pred1 (fst Σ) (Γ ,,, Γ' ,,, Γ'') M N -> *)
-(*   pred1 (fst Σ) (Γ ,,, subst_context s 0 Γ'') (subst s #|Γ''| M) (subst s #|Γ''| N). *)
-(* Proof. *)
-(*   intros. *)
-(*   induction H1. constructor. *)
-(*   econstructor 2; eauto. *)
-(*   eapply substitution_red1; eauto. *)
-(*   eapply wf_red_wf. 4:eauto. all:eauto. *)
-(* Qed. *)
+Lemma substitution_pred1 {Σ : global_context} Γ Γ' Γ'' s M N :
+  pred1 (fst Σ) (Γ ,,, Γ' ,,, Γ'') M N ->
+  pred1 (fst Σ) (Γ ,,, subst_context s 0 Γ'') (subst s #|Γ''| M) (subst s #|Γ''| N).
+Proof.
+  intros.
+Admitted.
 
-(* Theorem confluence Γ t : *)
-(*   forall t0 t1, pred1 Γ t t0 -> pred1 Γ t t1 -> *)
-(*                 exists v, pred1 Γ t0 v /\ pred1 Γ t1 v. *)
-(* Proof. *)
-(*   intros t0 t1 Ht0 Ht1. revert t1 Ht1. *)
-(*   induction Ht0; intros x Hx; *)
-(*   inv Hx; try solve [eexists; split; constructor]. *)
+Lemma substitution0_pred1 {Σ : global_declarations} Γ M M' na A N N' :
+  pred1 Σ Γ M M' ->
+  pred1 Σ (Γ ,, vass na A) N N' ->
+  pred1 Σ Γ (subst1 M 0 N) (subst1 M' 0 N').
+Proof.
+  intros.
+Admitted.
+Ltac apply_hyp :=
+  match reverse goal with
+  | [ H : forall r, pred1 _ _ ?s _ -> _, H' : pred1 _ _ ?s _ |- _ ] =>
+    let target := fresh "v" in specialize (H _ H') as [target [? ?]]
+  end.
 
-(*   - repeat match goal with *)
-(*     | H : (forall t, pred1 _ ?x _ -> _), H' : pred1 _ ?x _ |- _ => *)
-(*       let r := fresh x in *)
-(*       destruct (H _ H') as [r [? ?]]; clear H *)
-(*            end. *)
-(*     exists (mkApps (b2 {0 := a2}) l1). split. *)
+Derive NoConfusion for term.
+
+Lemma mkApps_Fix_eq mfix idx args t : mkApps (tFix mfix idx) args = t ->
+                                      fst (decompose_app t) = (tFix mfix idx).
+Proof.
+  intros H; apply (f_equal decompose_app) in H.
+  rewrite decompose_app_mkApps in H. reflexivity.
+  destruct t; noconf H. rewrite <- H. reflexivity.
+  reflexivity.
+Qed.
+
+Ltac solve_discr :=
+  try match goal with
+  | [ H : mkApps (tFix _ _) _ = _ |- _ ] => try solve [apply mkApps_Fix_eq in H; discriminate]
+  | [ H : is_true (atom _) |- _ ] => discriminate
+  end.
+
+Theorem confluence Σ Γ t l r :
+  pred1 Σ Γ t l -> forall (Hr : pred1 Σ Γ t r),
+  { v & (pred1 Σ Γ l v) * (pred1 Σ Γ r v) }%type.
+Proof with solve_discr.
+  intros H; revert Γ t l H r.
+  refine (pred1_ind_all Σ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _); intros *.
+  all:try intros **; rename_all_hyps;
+    try solve [specialize (forall_Γ _ X3); eauto]; eauto;
+    try solve [eexists; split; constructor; eauto].
+
+
+  - (* Beta *)
+    depelim Hr... clear X1 X. repeat apply_hyp.
+    intuition eauto using substitution0_pred1.
+    clear X1 X; repeat apply_hyp.
+    depelim Hr1... apply_hyp.
+    exists (v0 {0:=v}). intuition eauto using substitution0_pred1.
+    constructor; eauto. admit.
+
+  - (* to be continued :) *)
+Admitted.

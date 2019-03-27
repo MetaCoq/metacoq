@@ -33,8 +33,6 @@ let unquote_reduction_strategy env evm trm (* of type reductionStrategy *) : Red
     | _ -> bad_term_verb trm "unquote_reduction_strategy"
   else not_supported_verb trm "unquote_reduction_strategy"
 
-
-
 let denote_local_entry evm trm =
   let (h,args) = app_full trm [] in
   match args with
@@ -211,44 +209,6 @@ let declare_inductive (env: Environ.env) (evm: Evd.evar_map) (mind: Constr.t) : 
 let not_in_tactic s =
   CErrors.user_err  (str ("You can not use " ^ s ^ " in a tactic."))
 
-let monad_failure_full s k prg =
-  CErrors.user_err
-    (str (s ^ " must take " ^ (string_of_int k) ^ " argument" ^ (if k > 0 then "s" else "") ^ ".") ++
-       str "While trying to run: " ++ fnl () ++ Printer.pr_constr prg ++ fnl () ++
-       str "Please file a bug with Template-Coq.")
-
-(* note(gmm): polymorphism should probably be part an argument to `do_definition`
- *)
-let do_definition evm k (name : Names.Id.t) (typ : Constr.t option) (body : Constr.t) =
-  let univs =
-    if Flags.is_universe_polymorphism ()
-    then Polymorphic_const_entry (Evd.to_universe_context evm)
-    else Monomorphic_const_entry (Evd.universe_context_set evm) in
-  let n =
-      Declare.declare_definition ~kind:k name ?types:typ
-        (body, univs)
-  in
-  Constr.mkConst n
-
-let do_axiom evm (ident : Names.Id.t) (typ : Constr.t) =
-    let param =
-      Entries.ParameterEntry
-        (None, (typ, Monomorphic_const_entry (Evd.universe_context_set evm)), None)
-    in
-    let n =
-      Declare.declare_constant ident
-        (param, Decl_kinds.IsDefinition Decl_kinds.Definition)
-    in
-    Constr.mkConst n
-
-
-let under_option (f : Constr.t -> 'b) (t : Constr.t)
-  : 'b option =
-  match denote_option t with
-    Some t -> Some (f t)
-  | None -> None
-
-
 let rec run_template_program_rec ?(intactic=false) (k : Environ.env * Evd.evar_map * Constr.t -> unit) env ((evm, pgm) : Evd.evar_map * Constr.t) : unit =
   let open TemplateMonad in
   let (kind, universes) = next_action env pgm in
@@ -259,14 +219,17 @@ let rec run_template_program_rec ?(intactic=false) (k : Environ.env * Evd.evar_m
   | TmBind (a,f) ->
     run_template_program_rec ~intactic:intactic (fun (env, evm, ar) -> run_template_program_rec ~intactic:intactic k env (evm, Constr.mkApp (f, [|ar|]))) env (evm, a)
   | TmDefinition (name,s,typ,body) ->
-    let name = reduce_all env evm name in
-    let evm, typ = (match denote_option s with Some s -> let red = unquote_reduction_strategy env evm s in reduce env evm red typ | None -> evm, typ) in
-    let univs =
-      if Flags.is_universe_polymorphism () then Polymorphic_const_entry (Evd.to_universe_context evm)
-      else Monomorphic_const_entry (Evd.universe_context_set evm) in
-    let n = Declare.declare_definition ~kind:Decl_kinds.Definition (unquote_ident name) ~types:typ (body, univs) in
-    let env = Global.env () in
-    k (env, evm, Constr.mkConst n)
+    if intactic
+    then not_in_tactic "TmDefinition"
+    else
+      let name = reduce_all env evm name in
+      let evm, typ = (match denote_option s with Some s -> let red = unquote_reduction_strategy env evm s in reduce env evm red typ | None -> evm, typ) in
+      let univs =
+        if Flags.is_universe_polymorphism () then Polymorphic_const_entry (Evd.to_universe_context evm)
+        else Monomorphic_const_entry (Evd.universe_context_set evm) in
+      let n = Declare.declare_definition ~kind:Decl_kinds.Definition (unquote_ident name) ~types:typ (body, univs) in
+      let env = Global.env () in
+      k (env, evm, Constr.mkConst n)
 
   | TmMkDefinition (name, body) ->
     let name = unquote_ident (reduce_all env evm name) in
@@ -277,35 +240,50 @@ let rec run_template_program_rec ?(intactic=false) (k : Environ.env * Evd.evar_m
     let env = Global.env () in
     k (env, evm, unit_tt)
   | TmDefinitionTerm (name, typ, body) ->
-    let name = unquote_ident (reduce_all env evm name) in
-    let evm,body = denote_term evm body in
-    let evm,typ =
-      match
-        under_option (fun t -> denote_term evm (reduce_all env evm t)) typ
-      with
-      | None -> (evm, None)
-      | Some (evm,t) -> (evm, Some t)
-    in
-    let res = do_definition evm Decl_kinds.Definition name typ body in
-    k (env, evm, res)
+    if intactic
+    then not_in_tactic "TmDefinition"
+    else
+      let name = unquote_ident (reduce_all env evm name) in
+      let evm,body = denote_term evm body in
+      let evm,typ =
+        match denote_option typ with
+        | None -> (evm, None)
+        | Some t ->
+          let (evm, t) = denote_term evm (reduce_all env evm t) in
+          (evm, Some t)
+      in
+      let poly = Flags.is_universe_polymorphism () in
+      PluginCore.run (PluginCore.tmDefinition name ~poly typ body) env evm
+        (fun env evm res -> k (env, evm, quote_kn res))
   | TmLemmaTerm (name, typ) ->
     let ident = unquote_ident (reduce_all env evm name) in
     let poly = Flags.is_universe_polymorphism () in
     PluginCore.run (PluginCore.tmLemma poly ident typ) env evm
       (fun a b c -> k (a,b,quote_kn c))
   | TmAxiom (name,s,typ) ->
-    let name = reduce_all env evm name in
-    let evm, typ = (match denote_option s with Some s -> let red = unquote_reduction_strategy env evm s in reduce env evm red typ | None -> evm, typ) in
-    let param = Entries.ParameterEntry (None, (typ, Monomorphic_const_entry (Evd.universe_context_set evm)), None) in
-    let n = Declare.declare_constant (unquote_ident name) (param, Decl_kinds.IsDefinition Decl_kinds.Definition) in
-    let env = Global.env () in
-    k (env, evm, Constr.mkConst n)
+    if intactic
+    then not_in_tactic "TmAxiom"
+    else
+      let name = reduce_all env evm name in
+      let evm, typ =
+        match denote_option s with
+          Some s ->
+          let red = unquote_reduction_strategy env evm s in
+          reduce env evm red typ
+        | None -> evm, typ in
+      let param = Entries.ParameterEntry (None, (typ, Monomorphic_const_entry (Evd.universe_context_set evm)), None) in
+      let n = Declare.declare_constant (unquote_ident name) (param, Decl_kinds.IsDefinition Decl_kinds.Definition) in
+      let env = Global.env () in
+      k (env, evm, Constr.mkConst n)
   | TmAxiomTerm (name,typ) ->
-    let name = unquote_ident (reduce_all env evm name) in
-    let evm,typ = denote_term evm (reduce_all env evm typ) in
-    let res = do_axiom evm name typ in
-    let env = Global.env () in
-    k (env, evm, res)
+    if intactic
+    then not_in_tactic "TmAxiom"
+    else
+      let name = unquote_ident (reduce_all env evm name) in
+      let evm,typ = denote_term evm (reduce_all env evm typ) in
+      let poly = Flags.is_universe_polymorphism () in
+      PluginCore.run (PluginCore.tmAxiom name ~poly typ) env evm
+        (fun a b c -> k (a,b,quote_kn c))
   | TmLemma (name,s,typ) ->
     let name = reduce_all env evm name in
     let evm, typ = (match denote_option s with Some s -> let red = unquote_reduction_strategy env evm s in reduce env evm red typ | None -> evm, typ) in
@@ -397,7 +375,6 @@ let rec run_template_program_rec ?(intactic=false) (k : Environ.env * Evd.evar_m
     in k (env, evm, trm)
   | TmEvalTerm (s,trm) ->
     let red = unquote_reduction_strategy env evm s in
-    let evdref = ref evm in
     let (evm, trm) =
       let evm,t = denote_term evm trm in
       reduce env evm red t
@@ -464,9 +441,8 @@ let rec run_template_program_rec ?(intactic=false) (k : Environ.env * Evd.evar_m
     begin
       try
        let t = reduce_all env evm trm in
-       let evdref = ref evm in
        let evm',t' = denote_term evm t in
-       Feedback.msg_info (pr_constr t');
+       Feedback.msg_info (Printer.pr_constr_env env evm' t');
        k (env, evm, unit_tt)
       with
       Reduction.NotArity -> CErrors.user_err (str "printing ill-typed term")

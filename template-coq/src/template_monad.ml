@@ -178,8 +178,6 @@ struct
 
   type constr = Constr.t
 
-  type defn_kind = Definition | Lemma
-
   type template_monad =
       TmReturn of Constr.t
     | TmBind  of Constr.t * Constr.t
@@ -230,8 +228,9 @@ struct
     | _ -> (trm, acc)
 
   let monad_failure s k =
-    CErrors.user_err  (str (s ^ " must take " ^ (string_of_int k) ^ " argument" ^ (if k > 0 then "s" else "") ^ ".")
-                       ++ str "Please file a bug with Template-Coq.")
+    CErrors.user_err  Pp.(str s ++ str " must take " ++ int k ++
+                          str " argument" ++ str (if k > 0 then "s" else "") ++ str "." ++ fnl () ++
+                          str "Please file a bug with Template-Coq.")
 
   let print_term (u: Constr.t) : Pp.t = pr_constr u
 

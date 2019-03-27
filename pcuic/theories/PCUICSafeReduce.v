@@ -4,7 +4,8 @@ From Coq Require Import Bool String List Program BinPos Compare_dec Arith Lia Cl
 From Template
 Require Import config univ monad_utils utils BasicAst AstUtils UnivSubst.
 From PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICLiftSubst PCUICUnivSubst PCUICTyping.
-From Equations Require Import Equations NoConfusion.
+From Equations Require Import Equations.
+Require Import Equations.Prop.DepElim.
 
 Import MonadNotation.
 
@@ -345,7 +346,7 @@ Section Normalisation.
 
   Notation coe h t := (eq_rec_r (fun x => position x) t h).
 
-  Equations stack_position t π : { p : position (zipc t π) | atpos _ p = t } :=
+  Equations(noind) stack_position t π : { p : position (zipc t π) | atpos _ p = t } :=
     stack_position t π with π := {
     | Empty => ex root ;
     | App u ρ with stack_position _ ρ := {
@@ -383,7 +384,7 @@ Section Normalisation.
       with (stack_position (tApp (mkApps (tFix mfix idx) args) c) ρ).
     - case_eq (stack_position (tApp (mkApps (tFix mfix idx) args) c) ρ).
       intros x e H0. cbn. reflexivity.
-    - simp stack_position.
+    - simp stack_position. reflexivity.
   Qed.
 
   Lemma stack_position_app :
@@ -398,7 +399,7 @@ Section Normalisation.
       with (stack_position (tApp t u) ρ).
     - case_eq (stack_position (tApp t u) ρ).
       intros. cbn. reflexivity.
-    - simp stack_position.
+    - simp stack_position. reflexivity.
   Qed.
 
   Lemma poscat_replace :
@@ -428,10 +429,7 @@ Section Normalisation.
   Proof.
     intros t p q. revert q.
     induction p ; intros q.
-    - simp atpos.
-    - simp atpos.
-    - simp atpos.
-    - simp atpos.
+    all: simp atpos ; reflexivity.
   Defined.
 
   Lemma poscat_assoc :
@@ -441,10 +439,10 @@ Section Normalisation.
   Proof.
     intros t p q r. revert q r.
     induction p ; intros q r.
-    - cbn. simp poscat.
-    - simp poscat. rewrite <- IHp. simp poscat.
-    - simp poscat. rewrite <- IHp. simp poscat.
-    - simp poscat. rewrite <- IHp. simp poscat.
+    - cbn. reflexivity.
+    - simp poscat. rewrite <- IHp. reflexivity.
+    - simp poscat. rewrite <- IHp. reflexivity.
+    - simp poscat. rewrite <- IHp. reflexivity.
   Qed.
 
   Lemma poscat_root :
@@ -1062,7 +1060,8 @@ Section Reduce.
   Proof.
     clear. intros t p q h.
     funelim (poscat p q).
-    - revert q h.
+    - rename t0 into t.
+      revert q h.
       assert (forall q : position t, q <> root -> posR q root) as h.
       { intros q h.
         dependent destruction q.
@@ -1227,7 +1226,7 @@ Section Reduce.
 
     _reduce_stack Γ (tRel c) π h reduce with RedFlags.zeta flags := {
     | true with inspect (nth_error Γ c) := {
-      | @exist None eq := ! ;
+      | @exist None eq := False_rect _ _ ;
       | @exist (Some d) eq with inspect d.(decl_body) := {
         | @exist None _ := give (tRel c) π ;
         | @exist (Some b) H := rec reduce (lift0 (S c) b) π
@@ -1393,7 +1392,27 @@ Section Reduce.
     rewrite <- prf' in p0. subst.
     symmetry in prf'.
     pose proof (decompose_stack_eq _ _ _ prf'). subst.
-    subst t.
+    destruct r.
+    - inversion H. subst. clear H.
+      destruct args.
+      + cbn. reflexivity.
+      + cbn in H2. discriminate H2.
+    - dependent destruction H.
+      + subst.
+        cbn in H0. inversion H0. subst. clear H0.
+        rewrite zipc_appstack in H1. cbn in H1.
+        right. econstructor. assumption.
+      + cbn in H0. inversion H0. subst. clear H0.
+        rewrite zipc_appstack in H5. cbn in H5.
+        apply zipc_inj in H5. inversion H5. subst. reflexivity.
+  Qed.
+  Next Obligation.
+    clear - prf' r p0. unfold Pr in p0.
+    cbn in p0.
+    specialize p0 with (1 := eq_refl).
+    rewrite <- prf' in p0. subst.
+    symmetry in prf'.
+    pose proof (decompose_stack_eq _ _ _ prf'). subst.
     destruct r.
     - inversion H. subst. clear H.
       destruct args.
@@ -1414,7 +1433,6 @@ Section Reduce.
     rewrite <- prf' in p0. subst.
     symmetry in prf'.
     pose proof (decompose_stack_eq _ _ _ prf'). subst.
-    subst t.
     destruct r.
     - inversion H. subst. clear H.
       destruct args.
@@ -1435,7 +1453,6 @@ Section Reduce.
     rewrite <- prf' in p0. subst.
     symmetry in prf'.
     pose proof (decompose_stack_eq _ _ _ prf'). subst.
-    subst t.
     destruct r.
     - inversion H. subst. clear H.
       destruct args.
@@ -1456,7 +1473,6 @@ Section Reduce.
     rewrite <- prf' in p0. subst.
     symmetry in prf'.
     pose proof (decompose_stack_eq _ _ _ prf'). subst.
-    subst t.
     destruct r.
     - inversion H. subst. clear H.
       destruct args.
@@ -1477,7 +1493,6 @@ Section Reduce.
     rewrite <- prf' in p0. subst.
     symmetry in prf'.
     pose proof (decompose_stack_eq _ _ _ prf'). subst.
-    subst t.
     destruct r.
     - inversion H. subst. clear H.
       destruct args.
@@ -1498,7 +1513,6 @@ Section Reduce.
     rewrite <- prf' in p0. subst.
     symmetry in prf'.
     pose proof (decompose_stack_eq _ _ _ prf'). subst.
-    subst t.
     destruct r.
     - inversion H. subst. clear H.
       destruct args.
@@ -1519,7 +1533,6 @@ Section Reduce.
     rewrite <- prf' in p0. subst.
     symmetry in prf'.
     pose proof (decompose_stack_eq _ _ _ prf'). subst.
-    subst t.
     destruct r.
     - inversion H. subst. clear H.
       destruct args.
@@ -1540,7 +1553,6 @@ Section Reduce.
     rewrite <- prf' in p0. subst.
     symmetry in prf'.
     pose proof (decompose_stack_eq _ _ _ prf'). subst.
-    subst t.
     destruct r.
     - inversion H. subst. clear H.
       destruct args.
@@ -1561,7 +1573,6 @@ Section Reduce.
     rewrite <- prf' in p0. subst.
     symmetry in prf'.
     pose proof (decompose_stack_eq _ _ _ prf'). subst.
-    subst t.
     destruct r.
     - inversion H. subst. clear H.
       destruct args.
@@ -1582,28 +1593,6 @@ Section Reduce.
     rewrite <- prf' in p0. subst.
     symmetry in prf'.
     pose proof (decompose_stack_eq _ _ _ prf'). subst.
-    subst t.
-    destruct r.
-    - inversion H. subst. clear H.
-      destruct args.
-      + cbn. reflexivity.
-      + cbn in H2. discriminate H2.
-    - dependent destruction H.
-      + cbn in H0. inversion H0. subst. clear H0.
-        rewrite zipc_appstack in H1. cbn in H1.
-        right. econstructor. assumption.
-      + cbn in H0. inversion H0. subst. clear H0.
-        rewrite zipc_appstack in H5. cbn in H5.
-        apply zipc_inj in H5. inversion H5. subst. reflexivity.
-  Qed.
-  Next Obligation.
-    clear - prf' r p0. unfold Pr in p0.
-    cbn in p0.
-    specialize p0 with (1 := eq_refl).
-    rewrite <- prf' in p0. subst.
-    symmetry in prf'.
-    pose proof (decompose_stack_eq _ _ _ prf'). subst.
-    subst t.
     destruct r.
     - inversion H. subst. clear H.
       destruct args.
@@ -1680,12 +1669,12 @@ Section Reduce.
   Next Obligation.
     clear eq reduce h.
     destruct r.
-    - inversion H0. subst. subst t.
+    - inversion H0. subst.
       clear H0.
       cbn in prf'. inversion prf'. subst. reflexivity.
     - unfold Pr in p0. cbn in p0.
       specialize p0 with (1 := eq_refl).
-      rewrite <- prf' in p0. subst. subst t.
+      rewrite <- prf' in p0. subst.
       dependent destruction H0.
       + cbn in H0. symmetry in prf'.
         pose proof (decompose_stack_eq _ _ _ prf'). subst.
@@ -1701,12 +1690,12 @@ Section Reduce.
   Next Obligation.
     clear eq reduce h.
     destruct r.
-    - inversion H0. subst. subst t.
+    - inversion H0. subst.
       clear H0.
       cbn in prf'. inversion prf'. subst. reflexivity.
     - unfold Pr in p0. cbn in p0.
       specialize p0 with (1 := eq_refl).
-      rewrite <- prf' in p0. subst. subst t.
+      rewrite <- prf' in p0. subst.
       dependent destruction H0.
       + cbn in H0. symmetry in prf'.
         pose proof (decompose_stack_eq _ _ _ prf'). subst.
@@ -1722,12 +1711,12 @@ Section Reduce.
   Next Obligation.
     clear eq reduce h.
     destruct r.
-    - inversion H0. subst. subst t.
+    - inversion H0. subst.
       clear H0.
       cbn in prf'. inversion prf'. subst. reflexivity.
     - unfold Pr in p0. cbn in p0.
       specialize p0 with (1 := eq_refl).
-      rewrite <- prf' in p0. subst. subst t.
+      rewrite <- prf' in p0. subst.
       dependent destruction H0.
       + cbn in H0. symmetry in prf'.
         pose proof (decompose_stack_eq _ _ _ prf'). subst.
@@ -1743,12 +1732,12 @@ Section Reduce.
   Next Obligation.
     clear eq reduce h.
     destruct r.
-    - inversion H0. subst. subst t.
+    - inversion H0. subst.
       clear H0.
       cbn in prf'. inversion prf'. subst. reflexivity.
     - unfold Pr in p0. cbn in p0.
       specialize p0 with (1 := eq_refl).
-      rewrite <- prf' in p0. subst. subst t.
+      rewrite <- prf' in p0. subst.
       dependent destruction H0.
       + cbn in H0. symmetry in prf'.
         pose proof (decompose_stack_eq _ _ _ prf'). subst.
@@ -1789,6 +1778,11 @@ Section Reduce.
       + apply term_dec.
       + cbn. rewrite poscat_assoc.
         eapply posR_poscat_posR.
+        set (qq := coe e' q) in *.
+        change (coe e' q) with qq.
+        clearbody qq.
+        clear - flags Σ H.
+        rename qq into q.
         set (pp := stack_position (tApp (mkApps (tFix mfix idx) args) c) ρ) in *.
         clearbody pp.
         set (e := (proj2_sig pp)) in *. clearbody e.
@@ -1924,7 +1918,7 @@ Section Reduce.
     rewrite e in h. cbn in h.
     pose proof (decompose_stack_eq _ _ _ e). subst.
 
-    clear eq3 smaller. symmetry in eq2.
+    clear eq3. symmetry in eq2.
     pose proof (decompose_stack_at_eq _ _ _ _ _ eq2).
     subst.
     rewrite decompose_stack_appstack in e1. cbn in e1.
@@ -1942,7 +1936,7 @@ Section Reduce.
     rewrite e in h'. cbn in h'.
     pose proof (decompose_stack_eq _ _ _ e). subst.
 
-    clear eq3 smaller. symmetry in eq2.
+    clear eq3. symmetry in eq2.
     pose proof (decompose_stack_at_eq _ _ _ _ _ eq2).
     subst.
     rewrite decompose_stack_appstack in e1. cbn in e1.
@@ -1962,18 +1956,19 @@ Section Reduce.
                 (fun t' f => _) (x := (t, π)) _ _
       in ts.
   Next Obligation.
-    intro hc.
     eapply _reduce_stack.
     - assumption.
     - intros t' π' h'.
       eapply f.
       + assumption.
       + simple inversion h'.
-        * inversion H1. inversion H2. subst. clear H1 H2.
-          intros H0.
+        * cbn in H2. cbn in H3.
+          inversion H2. subst. inversion H3. subst. clear H2 H3.
+          intros.
           eapply cored_welltyped ; eassumption.
-        * inversion H1. inversion H2. subst. clear H1 H2.
-          intros H0. rewrite H5. assumption.
+        * cbn in H2. cbn in H3.
+          inversion H2. subst. inversion H3. subst. clear H2 H3.
+          intros. cbn. rewrite H4. assumption.
   Qed.
   Next Obligation.
     eapply R_Acc. eassumption.

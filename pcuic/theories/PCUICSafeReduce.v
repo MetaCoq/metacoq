@@ -865,10 +865,18 @@ Section Reduce.
   Notation coe h t := (eq_rec_r (fun x => position x) t h).
 
   Lemma red1_context :
-    forall Σ Γ t u stack,
+    forall Σ Γ t u π,
       red1 Σ Γ t u ->
-      red1 Σ Γ (zip (t, stack)) (zip (u, stack)).
-  Admitted.
+      red1 Σ Γ (zip (t, π)) (zip (u, π)).
+  Proof.
+    intros Σ' Γ t u π h.
+    cbn. revert t u h.
+    induction π ; intros u v h.
+    - cbn. assumption.
+    - cbn. apply IHπ. constructor. assumption.
+    - cbn. apply IHπ. constructor. assumption.
+    - cbn. apply IHπ. constructor. assumption.
+  Qed.
 
   Corollary red_context :
     forall Σ Γ t u stack,

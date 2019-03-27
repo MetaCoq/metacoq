@@ -830,8 +830,10 @@ let rec run_template_program_rec ?(intactic=false) (k : Environ.env * Evd.evar_m
      let msg = unquote_string msg in
      Feedback.msg_info (str msg);
      k (env, evm, unit_tt)
-  | TmFail trm ->
-    CErrors.user_err (str (unquote_string trm))
+  | TmFail err ->
+    let err = reduce_all env evm err in
+    let err = unquote_string err in
+    CErrors.user_err (str err)
   | TmAbout id ->
     begin
       let id = unquote_string id in

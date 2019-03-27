@@ -132,21 +132,26 @@ Ltac term_dec_tac term_dec :=
          | i : ident, i' : ident |- _ => fcase (string_dec i i')
          | i : kername, i' : kername |- _ => fcase (string_dec i i')
          | n : name, n' : name |- _ => fcase (name_dec n n')
-         | l : list term, l' : list term |- _ => fcase (list_dec term_dec l l')
+         (* | l : list term, l' : list term |- _ => fcase (list_dec term_dec l l') *)
          | i : inductive, i' : inductive |- _ => fcase (inductive_dec i i')
          | x : inductive * nat, y : inductive * nat |- _ =>
            fcase (prod_dec inductive_dec Nat.eq_dec x y)
-         | x : list (nat * term), y : list (nat * term) |- _ =>
-           fcase (list_dec (prod_dec Nat.eq_dec term_dec) x y)
+         (* | x : list (nat * term), y : list (nat * term) |- _ => *)
+         (*   fcase (list_dec (prod_dec Nat.eq_dec term_dec) x y) *)
          | x : projection, y : projection |- _ => fcase (projection_dec x y)
-         | f : mfixpoint term, g : mfixpoint term |- _ =>
-           fcase (mfixpoint_dec term_dec f g)
+         (* | f : mfixpoint term, g : mfixpoint term |- _ => *)
+         (*   fcase (mfixpoint_dec term_dec f g) *)
          end.
 
 Fixpoint term_dec (u v : term) : { u = v } + { u <> v }.
 Proof.
   destruct u ; destruct v ; try (right ; discriminate).
   all: term_dec_tac term_dec.
+  Guarded.
+  (* - fcase (list_dec term_dec l l0). *)
+  (*   Guarded. *)
+  (* 3:{ idtac. fcase (mfixpoint_dec term_dec m m0). } *)
+  (* Guarded. *)
 (* Defined. *)
 Admitted.
 

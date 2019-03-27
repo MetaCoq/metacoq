@@ -202,7 +202,7 @@ let unquote_mutual_inductive_entry evm trm (* of type mutual_inductive_entry *) 
 
 let declare_inductive (env: Environ.env) (evm: Evd.evar_map) (mind: Constr.t) : unit =
   let mind = reduce_all env evm mind in
-  debug (fun () -> str"declare_inductive: " ++ pr_constr mind);
+  debug (fun () -> str"declare_inductive: " ++ Printer.pr_constr_env env evm mind);
   let evm, mind = unquote_mutual_inductive_entry evm mind in
   ignore (ComInductive.declare_mutual_inductive_with_eliminations mind Names.Id.Map.empty [])
 

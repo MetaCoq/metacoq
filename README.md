@@ -75,6 +75,24 @@ You may want to start by a demo: [demo.v](https://github.com/MetaCoq/metacoq/tre
 The 8.7 branch [documentation (coqdoc files)](html/Template.All.html)
 and pretty-printed HTML versions of the [translations](html/translations) are available.
 
+ident vs. qualid. vs kername
+---------------------------
+
+TemplateCoq uses three types convertible to `string` which have a different intended meaning:
+
+- `ident` is the type of identifiers, they should not contains any dot.
+  E.g. `nat`
+
+- `qualid` is the type of partially qualified names.
+  E.g. `Datatypes.nat`
+
+- `kername` is the type of fully qualified names.
+  E.g. `Coq.Init.Datatypes.nat`
+
+Quoting always produce fully qualified names. On the converse, unquoting allow to
+have only partially qualified names and rely on Coq to resolve them. The commands
+of the TemplateMonad also allow partially qualified names.
+
 Options
 -------
 

@@ -33,7 +33,7 @@ val tmEval : reduction_strategy -> term -> term tm
 
 val tmDefinition : ident -> ?poly:bool -> term option -> term -> kername tm
 val tmAxiom : ident -> ?poly:bool -> term -> kername tm
-val tmLemma : bool -> ident -> term -> kername tm
+val tmLemma : ident -> ?poly:bool -> term -> kername tm
 
 val tmFreshName : ident -> ident tm
 

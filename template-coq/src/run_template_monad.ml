@@ -258,7 +258,7 @@ let rec run_template_program_rec ?(intactic=false) (k : Environ.env * Evd.evar_m
   | TmLemmaTerm (name, typ) ->
     let ident = unquote_ident (reduce_all env evm name) in
     let poly = Flags.is_universe_polymorphism () in
-    PluginCore.run (PluginCore.tmLemma poly ident typ) env evm
+    PluginCore.run (PluginCore.tmLemma ident ~poly typ) env evm
       (fun a b c -> k (a,b,quote_kn c))
   | TmAxiom (name,s,typ) ->
     if intactic

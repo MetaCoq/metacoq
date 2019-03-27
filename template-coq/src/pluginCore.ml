@@ -94,7 +94,7 @@ let tmAxiom (nm : ident) ?poly:(poly=false) (typ : term) : kername tm =
     success (Global.env ()) evm (Names.Constant.canonical n) }
 
 (* this generates a lemma leaving a hole *)
-let tmLemma (poly : bool) (nm : ident) (ty : term) : kername tm =
+let tmLemma (nm : ident) ?poly:(poly=false)(ty : term) : kername tm =
   { run_tm = fun env evm success fail ->
     let kind = (Decl_kinds.Global, poly, Decl_kinds.Definition) in
     let hole = CAst.make (Constrexpr.CHole (None, Misctypes.IntroAnonymous, None)) in

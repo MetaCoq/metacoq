@@ -955,18 +955,18 @@ Section Reduce.
       exists na A B,
         ∥ Σ ;;; Γ |- u : tProd na A B ∥ /\
         ∥ Σ ;;; Γ |- v : A ∥ /\
-        (Σ ;;; Γ |- B{ 0 := v } <= T).
+        ∥ Σ ;;; Γ |- B{ 0 := v } <= T ∥.
   Proof.
     intros Σ' Γ u v T h. dependent induction h.
     - exists na, A, B. split ; [| split].
       + constructor. assumption.
       + constructor. assumption.
-      + apply cumul_refl'.
-    - destruct IHh1 as [na [A' [B' [? [? ?]]]]].
+      + constructor. apply cumul_refl'.
+    - destruct IHh1 as [na [A' [B' [? [? [?]]]]]].
       exists na, A', B'. split ; [| split].
       + assumption.
       + assumption.
-      + eapply cumul_trans ; eassumption.
+      + constructor. eapply cumul_trans ; eassumption.
   Qed.
 
   Lemma inversion_Rel :
@@ -975,19 +975,19 @@ Section Reduce.
       exists decl,
         ∥ wf_local Σ Γ ∥ /\
         (nth_error Γ n = Some decl) /\
-        (Σ ;;; Γ |- lift0 (S n) (decl_type decl) <= T).
+        ∥ Σ ;;; Γ |- lift0 (S n) (decl_type decl) <= T ∥.
   Proof.
     intros Σ' Γ n T h.
     dependent induction h.
     - exists decl. split ; [| split].
       + constructor. assumption.
       + assumption.
-      + apply cumul_refl'.
-    - destruct IHh1 as [decl [? [? ?]]].
+      + constructor. apply cumul_refl'.
+    - destruct IHh1 as [decl [? [? [?]]]].
       exists decl. split ; [| split].
       + assumption.
       + assumption.
-      + eapply cumul_trans ; eassumption.
+      + constructor. eapply cumul_trans ; eassumption.
   Qed.
 
   (* Weaker inversion lemma *)

@@ -1219,6 +1219,18 @@ Section Reduce.
 
   Obligation Tactic := obTac.
 
+  Equations discr_construct (t : term) : Prop :=
+    discr_construct (tConstruct ind n ui) := False ;
+    discr_construct _ := True.
+
+  Inductive construct_view : term -> Set :=
+  | view_construct : forall ind n ui, construct_view (tConstruct ind n ui)
+  | view_other : forall t, discr_construct t -> construct_view t.
+
+  Equations construct_viewc t : construct_view t :=
+    construct_viewc (tConstruct ind n ui) := view_construct ind n ui ;
+    construct_viewc t := view_other t I.
+
   Equations _reduce_stack (Γ : context) (t : term) (π : stack)
             (h : welltyped Σ Γ (zip (t,π)))
             (reduce : forall t' π', R (fst Σ) Γ (t',π') (t,π) -> { t'' : term * stack | Req (fst Σ) Γ t'' (t',π') /\ Pr t'' π' /\ Pr' t'' π' })
@@ -1277,11 +1289,11 @@ Section Reduce.
 
     _reduce_stack Γ (tCase (ind, par) p c brs) π h reduce with RedFlags.iota flags := {
     | true with inspect (reduce c (Case (ind, par) p brs π) _) := {
-      | @exist (@exist (tConstruct ind' c' _, π') prf) eq with inspect (decompose_stack π') := {
-        | @exist (args, ρ) prf' := rec reduce (iota_red par c' args brs) π
-        } ;
       | @exist (@exist (t,π') prf) eq with inspect (decompose_stack π') := {
-        | @exist (args, ρ) prf' := give (tCase (ind, par) p (mkApps t args) brs) π
+        | @exist (args, ρ) prf' with inspect (construct_viewc t) := {
+          | @exist (view_construct ind' c' _) eq2 := rec reduce (iota_red par c' args brs) π ;
+          | @exist (view_other t ht) eq2 := give (tCase (ind, par) p (mkApps t args) brs) π
+          }
         }
       } ;
     | false := give (tCase (ind, par) p c brs) π
@@ -1386,227 +1398,6 @@ Section Reduce.
     apply coe_case_c_not_root.
   Qed.
   Next Obligation.
-    clear - prf' r p0. unfold Pr in p0.
-    cbn in p0.
-    specialize p0 with (1 := eq_refl).
-    rewrite <- prf' in p0. subst.
-    symmetry in prf'.
-    pose proof (decompose_stack_eq _ _ _ prf'). subst.
-    destruct r.
-    - inversion H. subst. clear H.
-      destruct args.
-      + cbn. reflexivity.
-      + cbn in H2. discriminate H2.
-    - dependent destruction H.
-      + subst.
-        cbn in H0. inversion H0. subst. clear H0.
-        rewrite zipc_appstack in H1. cbn in H1.
-        right. econstructor. assumption.
-      + cbn in H0. inversion H0. subst. clear H0.
-        rewrite zipc_appstack in H5. cbn in H5.
-        apply zipc_inj in H5. inversion H5. subst. reflexivity.
-  Qed.
-  Next Obligation.
-    clear - prf' r p0. unfold Pr in p0.
-    cbn in p0.
-    specialize p0 with (1 := eq_refl).
-    rewrite <- prf' in p0. subst.
-    symmetry in prf'.
-    pose proof (decompose_stack_eq _ _ _ prf'). subst.
-    destruct r.
-    - inversion H. subst. clear H.
-      destruct args.
-      + cbn. reflexivity.
-      + cbn in H2. discriminate H2.
-    - dependent destruction H.
-      + cbn in H0. inversion H0. subst. clear H0.
-        rewrite zipc_appstack in H1. cbn in H1.
-        right. econstructor. assumption.
-      + cbn in H0. inversion H0. subst. clear H0.
-        rewrite zipc_appstack in H5. cbn in H5.
-        apply zipc_inj in H5. inversion H5. subst. reflexivity.
-  Qed.
-  Next Obligation.
-    clear - prf' r p0. unfold Pr in p0.
-    cbn in p0.
-    specialize p0 with (1 := eq_refl).
-    rewrite <- prf' in p0. subst.
-    symmetry in prf'.
-    pose proof (decompose_stack_eq _ _ _ prf'). subst.
-    destruct r.
-    - inversion H. subst. clear H.
-      destruct args.
-      + cbn. reflexivity.
-      + cbn in H2. discriminate H2.
-    - dependent destruction H.
-      + cbn in H0. inversion H0. subst. clear H0.
-        rewrite zipc_appstack in H1. cbn in H1.
-        right. econstructor. assumption.
-      + cbn in H0. inversion H0. subst. clear H0.
-        rewrite zipc_appstack in H5. cbn in H5.
-        apply zipc_inj in H5. inversion H5. subst. reflexivity.
-  Qed.
-  Next Obligation.
-    clear - prf' r p0. unfold Pr in p0.
-    cbn in p0.
-    specialize p0 with (1 := eq_refl).
-    rewrite <- prf' in p0. subst.
-    symmetry in prf'.
-    pose proof (decompose_stack_eq _ _ _ prf'). subst.
-    destruct r.
-    - inversion H. subst. clear H.
-      destruct args.
-      + cbn. reflexivity.
-      + cbn in H2. discriminate H2.
-    - dependent destruction H.
-      + cbn in H0. inversion H0. subst. clear H0.
-        rewrite zipc_appstack in H1. cbn in H1.
-        right. econstructor. assumption.
-      + cbn in H0. inversion H0. subst. clear H0.
-        rewrite zipc_appstack in H5. cbn in H5.
-        apply zipc_inj in H5. inversion H5. subst. reflexivity.
-  Qed.
-  Next Obligation.
-    clear - prf' r p0. unfold Pr in p0.
-    cbn in p0.
-    specialize p0 with (1 := eq_refl).
-    rewrite <- prf' in p0. subst.
-    symmetry in prf'.
-    pose proof (decompose_stack_eq _ _ _ prf'). subst.
-    destruct r.
-    - inversion H. subst. clear H.
-      destruct args.
-      + cbn. reflexivity.
-      + cbn in H2. discriminate H2.
-    - dependent destruction H.
-      + cbn in H0. inversion H0. subst. clear H0.
-        rewrite zipc_appstack in H1. cbn in H1.
-        right. econstructor. assumption.
-      + cbn in H0. inversion H0. subst. clear H0.
-        rewrite zipc_appstack in H5. cbn in H5.
-        apply zipc_inj in H5. inversion H5. subst. reflexivity.
-  Qed.
-  Next Obligation.
-    clear - prf' r p0. unfold Pr in p0.
-    cbn in p0.
-    specialize p0 with (1 := eq_refl).
-    rewrite <- prf' in p0. subst.
-    symmetry in prf'.
-    pose proof (decompose_stack_eq _ _ _ prf'). subst.
-    destruct r.
-    - inversion H. subst. clear H.
-      destruct args.
-      + cbn. reflexivity.
-      + cbn in H2. discriminate H2.
-    - dependent destruction H.
-      + cbn in H0. inversion H0. subst. clear H0.
-        rewrite zipc_appstack in H1. cbn in H1.
-        right. econstructor. assumption.
-      + cbn in H0. inversion H0. subst. clear H0.
-        rewrite zipc_appstack in H5. cbn in H5.
-        apply zipc_inj in H5. inversion H5. subst. reflexivity.
-  Qed.
-  Next Obligation.
-    clear - prf' r p0. unfold Pr in p0.
-    cbn in p0.
-    specialize p0 with (1 := eq_refl).
-    rewrite <- prf' in p0. subst.
-    symmetry in prf'.
-    pose proof (decompose_stack_eq _ _ _ prf'). subst.
-    destruct r.
-    - inversion H. subst. clear H.
-      destruct args.
-      + cbn. reflexivity.
-      + cbn in H2. discriminate H2.
-    - dependent destruction H.
-      + cbn in H0. inversion H0. subst. clear H0.
-        rewrite zipc_appstack in H1. cbn in H1.
-        right. econstructor. assumption.
-      + cbn in H0. inversion H0. subst. clear H0.
-        rewrite zipc_appstack in H5. cbn in H5.
-        apply zipc_inj in H5. inversion H5. subst. reflexivity.
-  Qed.
-  Next Obligation.
-    clear - prf' r p0. unfold Pr in p0.
-    cbn in p0.
-    specialize p0 with (1 := eq_refl).
-    rewrite <- prf' in p0. subst.
-    symmetry in prf'.
-    pose proof (decompose_stack_eq _ _ _ prf'). subst.
-    destruct r.
-    - inversion H. subst. clear H.
-      destruct args.
-      + cbn. reflexivity.
-      + cbn in H2. discriminate H2.
-    - dependent destruction H.
-      + cbn in H0. inversion H0. subst. clear H0.
-        rewrite zipc_appstack in H1. cbn in H1.
-        right. econstructor. assumption.
-      + cbn in H0. inversion H0. subst. clear H0.
-        rewrite zipc_appstack in H5. cbn in H5.
-        apply zipc_inj in H5. inversion H5. subst. reflexivity.
-  Qed.
-  Next Obligation.
-    clear - prf' r p0. unfold Pr in p0.
-    cbn in p0.
-    specialize p0 with (1 := eq_refl).
-    rewrite <- prf' in p0. subst.
-    symmetry in prf'.
-    pose proof (decompose_stack_eq _ _ _ prf'). subst.
-    destruct r.
-    - inversion H. subst. clear H.
-      destruct args.
-      + cbn. reflexivity.
-      + cbn in H2. discriminate H2.
-    - dependent destruction H.
-      + cbn in H0. inversion H0. subst. clear H0.
-        rewrite zipc_appstack in H1. cbn in H1.
-        right. econstructor. assumption.
-      + cbn in H0. inversion H0. subst. clear H0.
-        rewrite zipc_appstack in H5. cbn in H5.
-        apply zipc_inj in H5. inversion H5. subst. reflexivity.
-  Qed.
-  Next Obligation.
-    clear - prf' r p0. unfold Pr in p0.
-    cbn in p0.
-    specialize p0 with (1 := eq_refl).
-    rewrite <- prf' in p0. subst.
-    symmetry in prf'.
-    pose proof (decompose_stack_eq _ _ _ prf'). subst.
-    destruct r.
-    - inversion H. subst. clear H.
-      destruct args.
-      + cbn. reflexivity.
-      + cbn in H2. discriminate H2.
-    - dependent destruction H.
-      + cbn in H0. inversion H0. subst. clear H0.
-        rewrite zipc_appstack in H1. cbn in H1.
-        right. econstructor. assumption.
-      + cbn in H0. inversion H0. subst. clear H0.
-        rewrite zipc_appstack in H5. cbn in H5.
-        apply zipc_inj in H5. inversion H5. subst. reflexivity.
-  Qed.
-  Next Obligation.
-    clear - prf' r p0. unfold Pr in p0.
-    cbn in p0.
-    specialize p0 with (1 := eq_refl).
-    rewrite <- prf' in p0. subst.
-    symmetry in prf'.
-    pose proof (decompose_stack_eq _ _ _ prf'). subst.
-    destruct r.
-    - inversion H. subst. clear H.
-      destruct args.
-      + cbn. reflexivity.
-      + cbn in H2. discriminate H2.
-    - dependent destruction H.
-      + cbn in H0. inversion H0. subst. clear H0.
-        rewrite zipc_appstack in H1. cbn in H1.
-        right. econstructor. assumption.
-      + cbn in H0. inversion H0. subst. clear H0.
-        rewrite zipc_appstack in H5. cbn in H5.
-        apply zipc_inj in H5. inversion H5. subst. reflexivity.
-  Qed.
-  Next Obligation.
     unfold Pr in p0. cbn in p0.
     specialize p0 with (1 := eq_refl) as hh.
     rewrite <- prf' in hh. subst.
@@ -1665,69 +1456,6 @@ Section Reduce.
             assumption.
           } subst.
           reflexivity.
-  Qed.
-  Next Obligation.
-    clear eq reduce h.
-    destruct r.
-    - inversion H0. subst.
-      clear H0.
-      cbn in prf'. inversion prf'. subst. reflexivity.
-    - unfold Pr in p0. cbn in p0.
-      specialize p0 with (1 := eq_refl).
-      rewrite <- prf' in p0. subst.
-      dependent destruction H0.
-      + cbn in H0. symmetry in prf'.
-        pose proof (decompose_stack_eq _ _ _ prf'). subst.
-        rewrite zipc_appstack in H0. cbn in H0.
-        right. econstructor. assumption.
-      + cbn in H1. inversion H1. subst. clear H1.
-        symmetry in prf'.
-        pose proof (decompose_stack_eq _ _ _ prf'). subst.
-        rewrite zipc_appstack in H3. cbn in H3.
-        apply zipc_inj in H3. inversion H3. subst.
-        reflexivity.
-  Qed.
-  Next Obligation.
-    clear eq reduce h.
-    destruct r.
-    - inversion H0. subst.
-      clear H0.
-      cbn in prf'. inversion prf'. subst. reflexivity.
-    - unfold Pr in p0. cbn in p0.
-      specialize p0 with (1 := eq_refl).
-      rewrite <- prf' in p0. subst.
-      dependent destruction H0.
-      + cbn in H0. symmetry in prf'.
-        pose proof (decompose_stack_eq _ _ _ prf'). subst.
-        rewrite zipc_appstack in H0. cbn in H0.
-        right. econstructor. assumption.
-      + cbn in H1. inversion H1. subst. clear H1.
-        symmetry in prf'.
-        pose proof (decompose_stack_eq _ _ _ prf'). subst.
-        rewrite zipc_appstack in H3. cbn in H3.
-        apply zipc_inj in H3. inversion H3. subst.
-        reflexivity.
-  Qed.
-  Next Obligation.
-    clear eq reduce h.
-    destruct r.
-    - inversion H0. subst.
-      clear H0.
-      cbn in prf'. inversion prf'. subst. reflexivity.
-    - unfold Pr in p0. cbn in p0.
-      specialize p0 with (1 := eq_refl).
-      rewrite <- prf' in p0. subst.
-      dependent destruction H0.
-      + cbn in H0. symmetry in prf'.
-        pose proof (decompose_stack_eq _ _ _ prf'). subst.
-        rewrite zipc_appstack in H0. cbn in H0.
-        right. econstructor. assumption.
-      + cbn in H1. inversion H1. subst. clear H1.
-        symmetry in prf'.
-        pose proof (decompose_stack_eq _ _ _ prf'). subst.
-        rewrite zipc_appstack in H3. cbn in H3.
-        apply zipc_inj in H3. inversion H3. subst.
-        reflexivity.
   Qed.
   Next Obligation.
     clear eq reduce h.

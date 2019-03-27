@@ -252,7 +252,7 @@ Proof.
             mind_entry_universes := decl.(ind_universes);
             mind_entry_private := None |}.
   - refine (match List.hd_error decl.(ind_bodies) with
-            | Some i0 => _
+            | Some i0 => List.rev _
             | None => nil (* assert false: at least one inductive in a mutual block *)
             end).
     pose (typ := decompose_prod i0.(ind_type)).
@@ -417,6 +417,7 @@ Definition polymorphic_instance uctx :=
   match uctx with
   | Monomorphic_ctx c => Instance.empty
   | Polymorphic_ctx c => fst (UContext.dest c)
+  | Cumulative_ctx c => fst (UContext.dest (fst c))
   end.
 
 Definition map_one_inductive_body mind u arities f n m :=

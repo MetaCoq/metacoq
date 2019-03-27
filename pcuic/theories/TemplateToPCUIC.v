@@ -2,8 +2,9 @@
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
 From Template Require Import config utils univ AstUtils.
-From Template Require Import BasicAst Ast Typing.
-From PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICSubstitution.
+From Template Require Import BasicAst Ast WfInv Typing.
+From PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICLiftSubst
+     PCUICUnivSubst PCUICTyping PCUICSubstitution.
 Require Import String.
 Local Open Scope string_scope.
 Set Asymmetric Patterns.
@@ -118,8 +119,8 @@ Lemma trans_mkApp u a : trans (T.mkApp u a) = tApp (trans u) (trans a).
 Proof.
   induction u; simpl; try reflexivity.
   rewrite map_app.
-  replace (tApp (mkApps (trans u) (map trans l)) (trans a))
-    with (mkApps (mkApps (trans u) (map trans l)) [trans a]) by reflexivity.
+  replace (tApp (mkApps (trans u) (map trans args)) (trans a))
+    with (mkApps (mkApps (trans u) (map trans args)) [trans a]) by reflexivity.
   rewrite mkApps_app. reflexivity.
 Qed.
 
@@ -466,7 +467,7 @@ Proof.
   - simpl in *. inv Hwf. toProp; solve_all.
     apply eq_term_mkApps; auto. solve_all.
   - simpl. destruct p. simpl in *. discriminate.
-  - simpl in *. inv Hwf. destruct p, p0; red in H; toProp; solve_all.
+  - simpl in *. inv Hwf. destruct p, ind_and_nbparams; red in H; toProp; solve_all.
     solve_all. destruct y; red in b0; simpl in *. eauto.
   - red in H. simpl in *. inv Hwf. toProp. solve_all.
     solve_all. toProp. auto.
@@ -518,7 +519,7 @@ Proof.
   - toProp; intuition auto using trans_eq_term, Template.Substitution.eq_term_leq_term.
     apply leq_term_mkApps; auto using map_nil, trans_eq_term, trans_eq_term_list.
   - destruct p; congruence.
-  - destruct p, p0.
+  - destruct p, ind_and_nbparams.
     red in H; toProp; solve_all; eauto using trans_eq_term.
     solve_all. destruct y; simpl in *. red in b0, b2.
     simpl in *; eauto using trans_eq_term.
@@ -631,6 +632,7 @@ Lemma refine_red1_Γ Σ Γ Γ' t u : Γ = Γ' -> red1 Σ Γ t u -> red1 Σ Γ' t
 Proof.
   intros ->. trivial.
 Qed.
+Ltac wf_inv H := try apply wf_inv in H; simpl in H; repeat destruct_conjs.
 
 Lemma trans_red1 Σ Γ T U :
   TTy.on_global_env (fun Σ Γ t T => match t with Some b => Ast.wf b /\ Ast.wf T | None => Ast.wf T end) Σ ->
@@ -639,12 +641,16 @@ Lemma trans_red1 Σ Γ T U :
   red1 (map trans_global_decl (fst Σ)) (trans_local Γ) (trans T) (trans U).
 Proof.
   intros wfΣ wfΓ Hwf.
-  induction 1 using Template.Typing.red1_ind_all; inv Hwf; simpl; try solve [econstructor; eauto].
+  induction 1 using Template.Typing.red1_ind_all; wf_inv Hwf; simpl in *;
+    try solve [econstructor; eauto].
 
-  - simpl. inv H1. inv H2. rewrite trans_mkApps; auto. apply Template.LiftSubst.wf_subst; auto.
+  - simpl. wf_inv H1. apply Forall_All in H2. inv H2.
+    rewrite trans_mkApps; auto. apply Template.LiftSubst.wf_subst; auto with wf; solve_all.
+    apply All_Forall. auto.
     rewrite trans_subst; auto. apply PCUICSubstitution.red1_mkApps_l. constructor.
 
-  - rewrite trans_subst; eauto. constructor.
+  - rewrite trans_subst; eauto. repeat constructor.
+
   - rewrite trans_lift; eauto.
     destruct nth_error eqn:Heq.
     econstructor. unfold trans_local. rewrite nth_error_map. rewrite Heq. simpl.
@@ -652,21 +658,21 @@ Proof.
     econstructor. simpl in H. discriminate.
 
   - rewrite trans_mkApps; eauto with wf; simpl.
-    erewrite trans_iota_red; eauto. constructor.
+    erewrite trans_iota_red; eauto. repeat constructor.
 
-  - simpl. eapply red_fix.
-    now apply trans_unfold_fix; inv H3; eauto.
+  - simpl. eapply red_fix. wf_inv H3.
+    now apply trans_unfold_fix; eauto.
     now apply trans_is_constructor.
 
   - apply wf_mkApps_napp in H1; auto.
     intuition.
-    pose proof (unfold_cofix_wf _ _ _ _ H H3). inv H3.
+    pose proof (unfold_cofix_wf _ _ _ _ H H3). wf_inv H3.
     rewrite !trans_mkApps; eauto with wf.
     apply trans_unfold_cofix in H; eauto with wf.
     eapply red_cofix_case; eauto.
 
-  - eapply wf_mkApps_napp in H0; auto.
-    intuition. pose proof (unfold_cofix_wf _ _ _ _ H H1). inv H1.
+  - eapply wf_mkApps_napp in Hwf; auto.
+    intuition. pose proof (unfold_cofix_wf _ _ _ _ H H0). wf_inv H0.
     rewrite !trans_mkApps; intuition eauto with wf.
     eapply red_cofix_proj; eauto.
     apply trans_unfold_cofix; eauto with wf.
@@ -678,80 +684,80 @@ Proof.
   - rewrite trans_mkApps; eauto with wf.
     simpl. constructor. now rewrite nth_error_map H.
 
-  - constructor. apply IHred1. constructor; simpl; auto. auto.
+  - constructor. apply IHX. constructor; simpl; auto. auto.
 
-  - constructor. apply IHred1. constructor; simpl; auto. auto.
+  - constructor. apply IHX. constructor; simpl; auto. auto.
 
   - constructor. solve_all. solve_all.
-    apply OnOne2_map. apply (OnOne2_All_mix_left H2) in H. clear H2.
-    solve_all. red. simpl. apply H2. solve_all. simpl. auto.
+    apply OnOne2_map. apply (OnOne2_All_mix_left H1) in X. clear H1.
+    solve_all. red. simpl. apply b1. solve_all. simpl. auto.
 
-  - rewrite !trans_mkApps; auto with wf. eapply wf_red1 in H; auto.
+  - rewrite !trans_mkApps; auto with wf. eapply wf_red1 in X; auto.
     apply PCUICSubstitution.red1_mkApps_l. auto.
 
-  - clear H0 H1 H2. revert M1. induction H.
-    simpl. intuition. inv H3. specialize (H1 H0).
+  - apply Forall_All in H2. clear H H0 H1. revert M1. induction X.
+    simpl. intuition. inv H2. specialize (X H).
     apply PCUICSubstitution.red1_mkApps_l. apply app_red_r. auto.
-    inv H3. specialize (IHOnOne2 H1).
+    inv H2. specialize (IHX H0).
     simpl. intros.
-    eapply (IHOnOne2 (T.tApp M1 [hd])).
+    eapply (IHX (T.tApp M1 [hd])).
 
-  - constructor. apply IHred1. constructor; simpl; auto. auto.
-  - constructor. induction H; simpl; repeat constructor. apply p. now inv H0. now inv H0.
-    apply IHOnOne2. now inv H0.
+  - constructor. apply IHX. constructor; simpl; auto. auto.
+  - constructor. induction X; simpl; repeat constructor. apply p; auto. now inv Hwf.
+    apply IHX. now inv Hwf.
 
-  - constructor. constructor. eapply IHred1; auto.
+  - constructor. constructor. eapply IHX; auto.
   - eapply refine_red1_r; [|constructor]. unfold subst1. simpl. now rewrite lift0_p.
 
   - constructor. apply OnOne2_map. repeat toAll.
-    apply (OnOne2_All_mix_left H0) in H. clear H0.
+    apply (OnOne2_All_mix_left Hwf) in X. clear Hwf.
     solve_all.
     red. rewrite <- !map_dtype. rewrite <- !map_dbody. intuition eauto.
-    eapply H4; solve_all; eauto. rewrite H3. auto.
+    eapply b0; solve_all; eauto. rewrite b. auto.
 
   - apply fix_red_body. apply OnOne2_map. repeat toAll.
-    apply (OnOne2_All_mix_left H0) in H. clear H0.
+    apply (OnOne2_All_mix_left Hwf) in X. clear Hwf.
     solve_all.
     red. rewrite <- !map_dtype. rewrite <- !map_dbody. intuition eauto.
-    unfold trans_local, Template.AstUtils.app_context in H4.
-    rewrite -> map_app in H4.
-    unfold app_context. unfold Template.Typing.fix_context in H4.
-    rewrite map_rev map_mapi in H4. simpl in H4.
+    unfold Template.AstUtils.app_context, trans_local in b0.
+    simpl in a. rewrite -> map_app in b0.
+    unfold app_context. unfold Template.Typing.fix_context in b0.
+    rewrite map_rev map_mapi in b0. simpl in b0.
     unfold fix_context. rewrite mapi_map. simpl.
-    forward H4.
+    forward b0.
     { solve_all. eapply All_app_inv; auto.
       apply All_rev. apply All_mapi. simpl. clear; generalize 0; induction mfix0; constructor; auto. }
-    forward H4 by auto.
-    eapply (refine_red1_Γ); [|apply H4].
+    forward b0 by auto.
+    eapply (refine_red1_Γ); [|apply b0].
     f_equal. f_equal. apply mapi_ext; intros [] [].
     rewrite lift0_p. simpl. rewrite LiftSubst.lift0_p. reflexivity.
     rewrite trans_lift. simpl. reflexivity.
-    now rewrite H3.
+    now rewrite b.
 
   - constructor. solve_all. apply OnOne2_map. repeat toAll.
-    apply (OnOne2_All_mix_left H0) in H. clear H0.
+    apply (OnOne2_All_mix_left Hwf) in X. clear Hwf.
     solve_all.
     red. rewrite <- !map_dtype. rewrite <- !map_dbody. intuition eauto.
-    apply H4. toAll. auto. auto. rewrite H3. auto.
+    apply b0. toAll. auto. auto. rewrite b. auto.
 
   - apply cofix_red_body. apply OnOne2_map. repeat toAll.
-    apply (OnOne2_All_mix_left H0) in H. clear H0.
+    apply (OnOne2_All_mix_left Hwf) in X. clear Hwf.
     solve_all.
     red. rewrite <- !map_dtype. rewrite <- !map_dbody. intuition eauto.
-    unfold trans_local, Template.AstUtils.app_context in H4.
-    rewrite -> map_app in H4.
-    unfold app_context. unfold Template.Typing.fix_context in H4.
-    rewrite map_rev map_mapi in H4. simpl in H4.
+    unfold Template.AstUtils.app_context, trans_local in b0.
+    simpl in a. rewrite -> map_app in b0.
+    unfold app_context. unfold Template.Typing.fix_context in b0.
+    rewrite map_rev map_mapi in b0. simpl in b0.
     unfold fix_context. rewrite mapi_map. simpl.
-    forward H4.
+    forward b0.
     { solve_all. eapply All_app_inv; auto.
       apply All_rev. apply All_mapi. simpl. clear; generalize 0; induction mfix0; constructor; auto. }
-    forward H4 by auto.
-    eapply (refine_red1_Γ); [|apply H4].
+    forward b0 by auto.
+    eapply (refine_red1_Γ); [|apply b0].
     f_equal. f_equal. apply mapi_ext; intros [] [].
     rewrite lift0_p. simpl. rewrite LiftSubst.lift0_p. reflexivity.
     rewrite trans_lift. simpl. reflexivity.
-    now rewrite H3.
+    now rewrite b.
 Qed.
 
 Lemma trans_cumul Σ Γ T U :
@@ -762,13 +768,13 @@ Lemma trans_cumul Σ Γ T U :
 Proof.
   intros wfΣ wfΓ.
   induction 3. constructor; auto.
-  apply trans_leq_term in H1; auto.
+  apply trans_leq_term in e; auto.
 
-  pose proof H1 as H3. apply wf_red1 in H3; auto.
-  apply trans_red1 in H1; auto. econstructor 2; eauto.
+  pose proof r as H3. apply wf_red1 in H3; auto.
+  apply trans_red1 in r; auto. econstructor 2; eauto.
   econstructor 3.
-  apply IHcumul; auto. apply wf_red1 in H2; auto.
-  apply trans_red1 in H2; auto.
+  apply IHX; auto. apply wf_red1 in r; auto.
+  apply trans_red1 in r; auto.
 Qed.
 
 Lemma trans_wf_local:
@@ -970,5 +976,5 @@ Proof.
     eapply typing_wf_sigma; auto.
     apply typing_all_wf_decl in wfΓ; auto. solve_all.
     destruct x as [na [body|] ty']; simpl in *; intuition auto.
-    destruct H1. auto.
+    destruct H0. auto.
 Qed.

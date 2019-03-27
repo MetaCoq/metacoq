@@ -155,6 +155,7 @@ module type Quoter = sig
   val quote_univ_instance : Univ.Instance.t -> quoted_univ_instance
   val quote_univ_constraints : Univ.Constraint.t -> quoted_univ_constraints
   val quote_univ_context : Univ.UContext.t -> quoted_univ_context
+  val quote_cumulative_univ_context : Univ.CumulativityInfo.t -> quoted_univ_context
   val quote_abstract_univ_context : Univ.AUContext.t -> quoted_univ_context
   val quote_inductive_universes : Entries.inductive_universes -> quoted_inductive_universes
 
@@ -233,13 +234,13 @@ struct
 
   (* From printmod.ml *)
   let instantiate_cumulativity_info cumi =
-  let open Univ in
-  let univs = ACumulativityInfo.univ_context cumi in
-  let expose ctx =
-    let inst = AUContext.instance ctx in
-    let cst = AUContext.instantiate inst ctx in
-    UContext.make (inst, cst)
-  in CumulativityInfo.make (expose univs, ACumulativityInfo.variance cumi)
+    let open Univ in
+    let univs = ACumulativityInfo.univ_context cumi in
+    let expose ctx =
+      let inst = AUContext.instance ctx in
+      let cst = AUContext.instantiate inst ctx in
+      UContext.make (inst, cst)
+    in CumulativityInfo.make (expose univs, ACumulativityInfo.variance cumi)
 
   let get_abstract_inductive_universes iu =
     match iu with
@@ -255,11 +256,12 @@ struct
 
   let quote_abstract_inductive_universes iu =
     match iu with
-    | Monomorphic_ind ctx -> Q.quote_univ_context (Univ.ContextSet.to_context ctx)
+    | Monomorphic_ind ctx ->
+       Q.quote_univ_context (Univ.ContextSet.to_context ctx)
     | Polymorphic_ind ctx -> Q.quote_abstract_univ_context ctx
     | Cumulative_ind cumi ->
-       let cumi = instantiate_cumulativity_info cumi in
-       Q.quote_univ_context (Univ.CumulativityInfo.univ_context cumi)  (* FIXME check also *)
+       let cumi = instantiate_cumulativity_info cumi in (* FIXME what is the point of that *)
+       Q.quote_cumulative_univ_context cumi
 
   let quote_term_remember
       (add_constant : KerName.t -> 'a -> 'a)
@@ -431,7 +433,7 @@ struct
           let indty, acc = quote_term acc env indty in
 	  let (reified_ctors,acc) =
 	    List.fold_left (fun (ls,acc) (nm,ty,ar) ->
-	      debug (fun () -> Pp.(str "XXXX" ++ spc () ++
+	      debug (fun () -> Pp.(str "opt_hnf_ctor_types:" ++ spc () ++
                             bool !opt_hnf_ctor_types)) ;
 	      let ty = if !opt_hnf_ctor_types then hnf_type (snd envind) ty else ty in
 	      let (ty,acc) = quote_term acc envind ty in

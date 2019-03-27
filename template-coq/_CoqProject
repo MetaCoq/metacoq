@@ -10,9 +10,12 @@ src/denote.ml
 # src/g_template_coq.mli
 src/g_template_coq.ml4
 src/template_coq.mlpack
+src/template_monad.ml
 
+theories/LibHypsNaming.v
 theories/utils.v theories/config.v theories/kernel/univ.v
 theories/kernel/uGraph.v theories/BasicAst.v theories/Ast.v
+theories/WfInv.v
 theories/AstUtils.v theories/Loader.v theories/Induction.v
 theories/LiftSubst.v theories/UnivSubst.v theories/Typing.v
 theories/TypingWf.v theories/Generation.v theories/WeakeningEnv.v
@@ -22,6 +25,8 @@ theories/Retyping.v theories/All.v theories/Extraction.v
 
 # the Template monad
 theories/TemplateMonad.v
+theories/TemplateMonad/Common.v
 theories/TemplateMonad/Core.v
+theories/TemplateMonad/Extractable.v
 theories/TemplateMonad/Monad.v
 theories/monad_utils.v

@@ -4,10 +4,13 @@
 -arg -type-in-type
 
 sigma.v
+MiniHoTT.v
+MiniHoTT_paths.v
 translation_utils.v
-tsl_param.v
-tsl_param2.v
-tsl_param3.v
-tsl_fun.v
-param2_correctness.v
-param3_correctness.v
+param_original.v
+param_cheap_packed.v
+param_generous_packed.v
+#param_generous_unpacked.v
+times_bool_fun.v
+param_cheap_packed_correctness.v
+param_generous_packed_correctness.v

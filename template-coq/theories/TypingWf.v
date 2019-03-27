@@ -54,7 +54,7 @@ Proof.
   induction u in t |- *; simpl.
   - intuition.
   - intros Happ H; destruct t; try solve [inv H; intuition auto].
-    specialize (IHu (tApp t (l ++ [a]))).
+    specialize (IHu (tApp t (u ++ [a]))).
     forward IHu.
     induction u; trivial. discriminate.
 Qed.
@@ -65,7 +65,7 @@ Proof.
   induction u in t |- *; simpl.
   - intuition.
   - intros H; destruct t; try solve [inv H; intuition auto].
-    specialize (IHu (tApp t (l ++ [a]))).
+    specialize (IHu (tApp t (args ++ [a]))).
     forward IHu.
     induction u; trivial.
     simpl. rewrite <- app_assoc. simpl. apply H.
@@ -193,29 +193,29 @@ Proof.
     eapply nth_error_forall in H0; eauto.
   - constructor; auto. apply IHred1; auto. constructor; simpl; auto.
   - constructor; auto. apply IHred1; auto. constructor; simpl; auto.
-  - constructor; auto. induction H; constructor; inv H2; intuition auto.
+  - constructor; auto. induction X; constructor; inv H1; intuition auto.
   - apply wf_mkApps; auto.
-  - constructor; auto. induction H; congruence.
-    clear H1. induction H; inv H3; constructor; intuition auto.
+  - constructor; auto. induction X; congruence.
+    clear H0. induction X; inv H2; constructor; intuition auto.
   - constructor; auto. apply IHred1; auto. constructor; simpl; auto.
-  - constructor; auto. induction H; inv H0; constructor; intuition auto.
+  - constructor; auto. induction X; inv H; constructor; intuition auto.
   - auto.
   - constructor; auto.
-    induction H; inv H0; constructor; intuition auto; congruence.
+    induction X; inv H; constructor; intuition auto; congruence.
   - constructor; auto. solve_all.
-    revert H0.
-    apply (OnOne2_All_All H). clear H.
-    intros. destruct H as [Hred [<- Hwf]].
+    revert H.
+    apply (OnOne2_All_All X). clear X.
+    intros. destruct X as [[Hred <-] Hwf].
     intuition. apply Hwf. solve_all. apply All_app_inv; auto. unfold fix_context.
     apply All_rev.
     eapply All_mapi. simpl. apply Alli_id. intros; exact I.
     auto.
     apply red1_isLambda in Hred; auto.
   - constructor; auto.
-    induction H; inv H0; constructor; intuition auto; congruence.
-  - constructor; auto. solve_all. revert H0.
-    apply (OnOne2_All_All H). clear H.
-    intros. destruct H as [Hred [<- Hwf]].
+    induction X; inv H; constructor; intuition auto; congruence.
+  - constructor; auto. solve_all. revert H.
+    apply (OnOne2_All_All X). clear X.
+    intros. destruct X as [[Hred <-] Hwf].
     intuition. apply Hwf. solve_all. apply All_app_inv; auto. unfold fix_context.
     apply All_rev.
     eapply All_mapi. simpl. apply Alli_id. intros; exact I.

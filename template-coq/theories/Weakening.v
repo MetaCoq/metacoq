@@ -524,10 +524,10 @@ Proof.
     try rewrite -> Nat.sub_diag, Nat.add_0_r; try (eauto; congruence).
   - now destruct (Nat.leb (#|ctx| + k) n0).
   - eapply IHt1.
-  - specialize (IHt2 (ctx ,, vass n0 t1) n k).
+  - specialize (IHt2 (ctx ,, vass na t1) n k).
     destruct decompose_prod_assum. rewrite IHt2. simpl.
     rewrite lift_context_snoc. reflexivity.
-  - specialize (IHt3 (ctx ,, vdef n0 t1 t2) n k).
+  - specialize (IHt3 (ctx ,, vdef na t1 t2) n k).
     destruct decompose_prod_assum. rewrite IHt3. simpl.
     rewrite lift_context_snoc. reflexivity.
 Qed.
@@ -676,11 +676,11 @@ Proof.
     rewrite -> lift_context_snoc, Nat.add_0_r in IHred1. apply IHred1.
 
   - constructor.
-    induction H; constructor; auto.
+    induction X; constructor; auto.
     intuition; eauto.
 
   - constructor.
-    induction H; constructor; auto.
+    induction X; constructor; auto.
     intuition; eauto.
 
   - constructor.
@@ -688,32 +688,32 @@ Proof.
     rewrite -> lift_context_snoc, Nat.add_0_r in IHred1. apply IHred1.
 
   - constructor.
-    induction H; constructor; auto.
+    induction X; constructor; auto.
     intuition; eauto.
 
   - constructor.
-    rewrite -> (OnOne2_length H). generalize (#|mfix1|).
-    induction H; simpl; constructor; intuition; eauto.
+    rewrite -> (OnOne2_length X). generalize (#|mfix1|).
+    induction X; simpl; constructor; intuition; eauto.
 
   - apply fix_red_body. rewrite !lift_fix_context.
-    rewrite <- (OnOne2_length H).
-    eapply OnOne2_map. unfold on_rel; solve_all.
-    specialize (H2 Γ0 (Γ' ,,, fix_context mfix0)).
-    rewrite app_context_assoc in H2. specialize (H2 Γ'' eq_refl).
+    rewrite <- (OnOne2_length X).
+    eapply OnOne2_map. unfold on_Trel; solve_all.
+    specialize (b Γ0 (Γ' ,,, fix_context mfix0)).
+    rewrite app_context_assoc in b. specialize (b Γ'' eq_refl).
     rewrite -> app_context_length, fix_context_length in *.
     rewrite -> lift_context_app in *.
     rewrite -> app_context_assoc, Nat.add_0_r in *.
     auto.
 
   - constructor.
-    rewrite -> (OnOne2_length H). generalize (#|mfix1|).
-    induction H; simpl; constructor; intuition; eauto.
+    rewrite -> (OnOne2_length X). generalize (#|mfix1|).
+    induction X; simpl; constructor; intuition; eauto.
 
   - apply cofix_red_body. rewrite !lift_fix_context.
-    rewrite <- (OnOne2_length H).
-    eapply OnOne2_map. unfold on_rel; solve_all.
-    specialize (H2 Γ0 (Γ' ,,, fix_context mfix0)).
-    rewrite app_context_assoc in H2. specialize (H2 Γ'' eq_refl).
+    rewrite <- (OnOne2_length X).
+    eapply OnOne2_map. unfold on_Trel; solve_all.
+    specialize (b Γ0 (Γ' ,,, fix_context mfix0)).
+    rewrite app_context_assoc in b. specialize (b Γ'' eq_refl).
     rewrite -> app_context_length, fix_context_length in *.
     rewrite -> lift_context_app in *.
     rewrite -> app_context_assoc, Nat.add_0_r in *.
@@ -738,11 +738,11 @@ Proof.
     -- apply Nat.eqb_eq in Hleq. subst.
        elim leb_spec_Set; intros. lia. apply Nat.eqb_refl.
   - destruct p. destruct Nat.leb; discriminate.
-  - destruct p, p0. rewrite -> !andb_and in *. intuition auto.
+  - destruct p, ind_and_nbparams. rewrite -> !andb_and in *. intuition auto.
     solve_all. destruct y. simpl. auto.
-  - assert (#|m| = #|m0|). solve_all. clear -H1. induction H1; simpl; auto. rewrite -> H3.
+  - assert (#|m| = #|mfix|). solve_all. clear -H1. induction H1; simpl; auto. rewrite -> H3.
     repeat (toProp; solve_all).
-  - assert (#|m| = #|m0|). solve_all. clear -H1. induction H1; simpl; auto. rewrite -> H3.
+  - assert (#|m| = #|mfix|). solve_all. clear -H1. induction H1; simpl; auto. rewrite -> H3.
     repeat (toProp; solve_all).
 Qed.
 
@@ -754,7 +754,7 @@ Proof.
     destruct U; simpl;
     try discriminate;
   try solve [simpl; auto];
-  simpl in *; try destruct p, p0; try rewrite -> !andb_and in *; intros Hleq;
+  simpl in *; try destruct p, ind_and_nbparams; try rewrite -> !andb_and in *; intros Hleq;
     intuition auto using lift_eq_term;
     try solve [solve_all; intuition eauto using lift_eq_term].
 
@@ -764,10 +764,10 @@ Proof.
     -- apply Nat.eqb_eq in Hleq. subst.
        elim leb_spec_Set; intros. lia. apply Nat.eqb_refl.
   - destruct p. destruct Nat.leb. discriminate. discriminate.
-  - solve_all. destruct y. simpl in *. auto using lift_eq_term.
-  - assert (#|m| = #|m0|) as ->. solve_all. clear -H1. induction H1; simpl; auto.
+  - solve_all. destruct y; simpl in *. auto using lift_eq_term.
+  - assert (#|m| = #|mfix|) as ->. solve_all. clear -H1. induction H1; simpl; auto.
     repeat (toProp; solve_all); eauto using lift_eq_term.
-  - assert (#|m| = #|m0|) as ->. solve_all. clear -H1. induction H1; simpl; auto.
+  - assert (#|m| = #|mfix|) as ->. solve_all. clear -H1. induction H1; simpl; auto.
     repeat (toProp; solve_all); eauto using lift_eq_term.
 Qed.
 
@@ -779,9 +779,9 @@ Proof.
   intros wfΣ. induction 1.
   constructor.
   - now apply lift_leq_term.
-  - eapply weakening_red1 in H; auto.
+  - eapply weakening_red1 in r; auto.
     econstructor 2; eauto.
-  - eapply weakening_red1 in H0; auto.
+  - eapply weakening_red1 in r; auto.
     econstructor 3; eauto.
 Qed.
 

@@ -80,6 +80,8 @@ src/liftSubst.mli
 src/liftSubst.ml
 src/retyping0.mli
 src/retyping0.ml
+src/typingWf.ml
+src/typingWf.mli
 
 src/term_quoter.ml
 src/g_template_checker.ml4

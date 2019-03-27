@@ -147,7 +147,7 @@ Definition iota_red npar c args brs :=
   Inspired by the reduction relation from Coq in Coq [Barras'99].
 *)
 
-Inductive red1 (Σ : global_declarations) (Γ : context) : term -> term -> Prop :=
+Inductive red1 (Σ : global_declarations) (Γ : context) : term -> term -> Type :=
 (** Reductions *)
 (** Beta *)
 | red_beta na t b a l :
@@ -221,24 +221,24 @@ Inductive red1 (Σ : global_declarations) (Γ : context) : term -> term -> Prop 
 | cast_red M1 k M2 : red1 Σ Γ (tCast M1 k M2) M1
 
 | fix_red_ty mfix0 mfix1 idx :
-    OnOne2 (fun d0 d1 => red1 Σ Γ (dtype d0) (dtype d1) /\ dbody d0 = dbody d1) mfix0 mfix1 ->
+    OnOne2 (fun d0 d1 => red1 Σ Γ (dtype d0) (dtype d1) * (dbody d0 = dbody d1))%type mfix0 mfix1 ->
     red1 Σ Γ (tFix mfix0 idx) (tFix mfix1 idx)
 
 | fix_red_body mfix0 mfix1 idx :
-    OnOne2 (fun d0 d1 => red1 Σ (Γ ,,, fix_context mfix0) (dbody d0) (dbody d1) /\ dtype d0 = dtype d1) mfix0 mfix1 ->
+    OnOne2 (fun d0 d1 => red1 Σ (Γ ,,, fix_context mfix0) (dbody d0) (dbody d1) * (dtype d0 = dtype d1))%type mfix0 mfix1 ->
     red1 Σ Γ (tFix mfix0 idx) (tFix mfix1 idx)
 
 | cofix_red_ty mfix0 mfix1 idx :
-    OnOne2 (fun d0 d1 => red1 Σ Γ (dtype d0) (dtype d1) /\ dbody d0 = dbody d1) mfix0 mfix1 ->
+    OnOne2 (fun d0 d1 => red1 Σ Γ (dtype d0) (dtype d1) * (dbody d0 = dbody d1))%type mfix0 mfix1 ->
     red1 Σ Γ (tCoFix mfix0 idx) (tCoFix mfix1 idx)
 
 | cofix_red_body mfix0 mfix1 idx :
-    OnOne2 (fun d0 d1 => red1 Σ (Γ ,,, fix_context mfix0) (dbody d0) (dbody d1) /\ dtype d0 = dtype d1) mfix0 mfix1 ->
+    OnOne2 (fun d0 d1 => red1 Σ (Γ ,,, fix_context mfix0) (dbody d0) (dbody d1) * (dtype d0 = dtype d1))%type mfix0 mfix1 ->
     red1 Σ Γ (tCoFix mfix0 idx) (tCoFix mfix1 idx).
 
 
 Lemma red1_ind_all :
-  forall (Σ : global_declarations) (P : context -> term -> term -> Prop),
+  forall (Σ : global_declarations) (P : context -> term -> term -> Type),
        (forall (Γ : context) (na : name) (t b a : term) (l : list term),
         P Γ (tApp (tLambda na t b) (a :: l)) (mkApps (b {0 := a}) l)) ->
        (forall (Γ : context) (na : name) (b t b' : term), P Γ (tLetIn na b t b') (b' {0 := b})) ->
@@ -277,16 +277,16 @@ Lemma red1_ind_all :
        (forall (Γ : context) (ind : inductive * nat) (p c c' : term) (brs : list (nat * term)),
         red1 Σ Γ c c' -> P Γ c c' -> P Γ (tCase ind p c brs) (tCase ind p c' brs)) ->
        (forall (Γ : context) (ind : inductive * nat) (p c : term) (brs brs' : list (nat * term)),
-           OnOne2 (fun x y : nat * term => red1 Σ Γ (snd x) (snd y) /\ P Γ (snd x) (snd y)) brs brs' ->
+           OnOne2 (fun x y : nat * term => (red1 Σ Γ (snd x) (snd y) * P Γ (snd x) (snd y)))%type brs brs' ->
            P Γ (tCase ind p c brs) (tCase ind p c brs')) ->
        (forall (Γ : context) (p : projection) (c c' : term), red1 Σ Γ c c' -> P Γ c c' -> P Γ (tProj p c) (tProj p c')) ->
        (forall (Γ : context) (M1 N1 : term) (M2 : list term), red1 Σ Γ M1 N1 -> P Γ M1 N1 -> P Γ (tApp M1 M2) (mkApps N1 M2)) ->
-       (forall (Γ : context) (M2 N2 : list term) (M1 : term), OnOne2 (fun x y => red1 Σ Γ x y /\ P Γ x y) M2 N2 -> P Γ (tApp M1 M2) (tApp M1 N2)) ->
+       (forall (Γ : context) (M2 N2 : list term) (M1 : term), OnOne2 (fun x y => red1 Σ Γ x y * P Γ x y)%type M2 N2 -> P Γ (tApp M1 M2) (tApp M1 N2)) ->
        (forall (Γ : context) (na : name) (M1 M2 N1 : term),
         red1 Σ Γ M1 N1 -> P Γ M1 N1 -> P Γ (tProd na M1 M2) (tProd na N1 M2)) ->
        (forall (Γ : context) (na : name) (M2 N2 M1 : term),
         red1 Σ (Γ,, vass na M1) M2 N2 -> P (Γ,, vass na M1) M2 N2 -> P Γ (tProd na M1 M2) (tProd na M1 N2)) ->
-       (forall (Γ : context) (ev : nat) (l l' : list term), OnOne2 (fun x y => red1 Σ Γ x y /\ P Γ x y) l l' -> P Γ (tEvar ev l) (tEvar ev l')) ->
+       (forall (Γ : context) (ev : nat) (l l' : list term), OnOne2 (fun x y => red1 Σ Γ x y * P Γ x y)%type l l' -> P Γ (tEvar ev l) (tEvar ev l')) ->
        (forall (Γ : context) (M1 : term) (k : cast_kind) (M2 N1 : term),
         red1 Σ Γ M1 N1 -> P Γ M1 N1 -> P Γ (tCast M1 k M2) (tCast N1 k M2)) ->
        (forall (Γ : context) (M2 : term) (k : cast_kind) (N2 M1 : term),
@@ -294,20 +294,20 @@ Lemma red1_ind_all :
        (forall (Γ : context) (M1 : term) (k : cast_kind) (M2 : term),
            P Γ (tCast M1 k M2) M1) ->
        (forall (Γ : context) (mfix0 mfix1 : list (def term)) (idx : nat),
-        OnOne2 (fun d0 d1 : def term => red1 Σ Γ (dtype d0) (dtype d1) /\ dbody d0 = dbody d1 /\ P Γ (dtype d0) (dtype d1)) mfix0 mfix1 ->
+        OnOne2 (fun d0 d1 : def term => red1 Σ Γ (dtype d0) (dtype d1) * (dbody d0 = dbody d1) * P Γ (dtype d0) (dtype d1))%type mfix0 mfix1 ->
         P Γ (tFix mfix0 idx) (tFix mfix1 idx)) ->
        (forall (Γ : context) (mfix0 mfix1 : list (def term)) (idx : nat),
-        OnOne2 (fun d0 d1 : def term => red1 Σ (Γ ,,, fix_context mfix0) (dbody d0) (dbody d1) /\ dtype d0 = dtype d1 /\ P (Γ ,,, fix_context mfix0) (dbody d0) (dbody d1)) mfix0 mfix1 ->
+        OnOne2 (fun d0 d1 : def term => red1 Σ (Γ ,,, fix_context mfix0) (dbody d0) (dbody d1) * (dtype d0 = dtype d1) * P (Γ ,,, fix_context mfix0) (dbody d0) (dbody d1))%type mfix0 mfix1 ->
         P Γ (tFix mfix0 idx) (tFix mfix1 idx)) ->
        (forall (Γ : context) (mfix0 mfix1 : list (def term)) (idx : nat),
-        OnOne2 (fun d0 d1 : def term => red1 Σ Γ (dtype d0) (dtype d1) /\ dbody d0 = dbody d1 /\ P Γ (dtype d0) (dtype d1)) mfix0 mfix1 ->
+        OnOne2 (fun d0 d1 : def term => red1 Σ Γ (dtype d0) (dtype d1) * (dbody d0 = dbody d1) * P Γ (dtype d0) (dtype d1))%type mfix0 mfix1 ->
         P Γ (tCoFix mfix0 idx) (tCoFix mfix1 idx)) ->
        (forall (Γ : context) (mfix0 mfix1 : list (def term)) (idx : nat),
-        OnOne2 (fun d0 d1 : def term => red1 Σ (Γ ,,, fix_context mfix0) (dbody d0) (dbody d1) /\ dtype d0 = dtype d1 /\ P (Γ ,,, fix_context mfix0) (dbody d0) (dbody d1)) mfix0 mfix1 ->
+        OnOne2 (fun d0 d1 : def term => red1 Σ (Γ ,,, fix_context mfix0) (dbody d0) (dbody d1) * (dtype d0 = dtype d1) * P (Γ ,,, fix_context mfix0) (dbody d0) (dbody d1))%type mfix0 mfix1 ->
         P Γ (tCoFix mfix0 idx) (tCoFix mfix1 idx)) ->
        forall (Γ : context) (t t0 : term), red1 Σ Γ t t0 -> P Γ t t0.
 Proof.
-  intros. revert Γ t t0 H28.
+  intros. revert Γ t t0 X28.
   fix aux 4. intros Γ t T.
   move aux at top.
   destruct 1; match goal with
@@ -318,43 +318,43 @@ Proof.
               | |- P _ (tProj _ (mkApps (tCoFix _ _) _)) _ => idtac
               | H : _ |- _ => eapply H; eauto
               end.
-  eapply H3; eauto.
-  eapply H4; eauto.
-  eapply H5; eauto.
+  eapply X3; eauto.
+  eapply X4; eauto.
+  eapply X5; eauto.
 
-  - revert brs brs' H28.
+  - revert brs brs' o.
     fix auxl 3.
     intros l l' Hl. destruct Hl.
     constructor. split; auto.
     constructor. auto.
 
-  - revert M2 N2 H28.
+  - revert M2 N2 o.
     fix auxl 3.
     intros l l' Hl. destruct Hl.
     constructor. split; auto.
     constructor. auto.
 
-  - revert l l' H28.
+  - revert l l' o.
     fix auxl 3.
     intros l l' Hl. destruct Hl.
     constructor. split; auto.
     constructor. auto.
 
-  - eapply H24.
-    revert mfix0 mfix1 H28; fix auxl 3; intros l l' Hl; destruct Hl;
+  - eapply X24.
+    revert mfix0 mfix1 o; fix auxl 3; intros l l' Hl; destruct Hl;
       constructor; try split; auto; intuition.
 
-  - eapply H25.
-    revert H28. generalize (fix_context mfix0). intros c H28.
+  - eapply X25.
+    revert o. generalize (fix_context mfix0). intros c H28.
     revert mfix0 mfix1 H28; fix auxl 3; intros l l' Hl;
     destruct Hl; constructor; try split; auto; intuition.
 
-  - eapply H26.
-    revert mfix0 mfix1 H28; fix auxl 3; intros l l' Hl; destruct Hl;
+  - eapply X26.
+    revert mfix0 mfix1 o; fix auxl 3; intros l l' Hl; destruct Hl;
       constructor; try split; auto; intuition.
 
-  - eapply H27.
-    revert H28. generalize (fix_context mfix0). intros c H28.
+  - eapply X27.
+    revert o. generalize (fix_context mfix0). intros c H28.
     revert mfix0 mfix1 H28; fix auxl 3; intros l l' Hl; destruct Hl;
       constructor; try split; auto; intuition.
 Defined.
@@ -363,7 +363,7 @@ Defined.
 
   The reflexive-transitive closure of 1-step reduction. *)
 
-Inductive red Σ Γ M : term -> Prop :=
+Inductive red Σ Γ M : term -> Type :=
 | refl_red : red Σ Γ M M
 | trans_red : forall (P : term) N, red Σ Γ M P -> red1 Σ Γ P N -> red Σ Γ M N.
 
@@ -550,7 +550,8 @@ Definition universe_family u :=
 Definition consistent_universe_context_instance (Σ : global_context) uctx u :=
   match uctx with
   | Monomorphic_ctx c => True
-  | Polymorphic_ctx c =>
+  | Polymorphic_ctx c
+  | Cumulative_ctx (c, _) =>
     let '(inst, cstrs) := UContext.dest c in
     List.length inst = List.length u /\
     check_constraints (snd Σ) (subst_instance_cstrs u cstrs) = true
@@ -568,7 +569,7 @@ Reserved Notation " Σ ;;; Γ |- t <= u " (at level 50, Γ, t, u at next level).
 
 (** ** Cumulativity *)
 
-Inductive cumul `{checker_flags} (Σ : global_context) (Γ : context) : term -> term -> Prop :=
+Inductive cumul `{checker_flags} (Σ : global_context) (Γ : context) : term -> term -> Type :=
 | cumul_refl t u : leq_term (snd Σ) t u = true -> Σ ;;; Γ |- t <= u
 | cumul_red_l t u v : red1 (fst Σ) Γ t v -> Σ ;;; Γ |- v <= u -> Σ ;;; Γ |- t <= u
 | cumul_red_r t u v : Σ ;;; Γ |- t <= v -> red1 (fst Σ) Γ u v -> Σ ;;; Γ |- t <= u
@@ -581,20 +582,33 @@ where " Σ ;;; Γ |- t <= u " := (@cumul _ Σ Γ t u) : type_scope.
  *)
 
 Definition conv `{checker_flags} Σ Γ T U :=
-  Σ ;;; Γ |- T <= U /\ Σ ;;; Γ |- U <= T.
+  ((Σ ;;; Γ |- T <= U) * (Σ ;;; Γ |- U <= T))%type.
 
 Notation " Σ ;;; Γ |- t = u " := (@conv _ Σ Γ t u) (at level 50, Γ, t, u at next level) : type_scope.
 
-Axiom conv_refl : forall `{checker_flags} Σ Γ t, Σ ;;; Γ |- t = t.
-Axiom cumul_refl' : forall `{checker_flags} Σ Γ t, Σ ;;; Γ |- t <= t. (* easy *)
-Axiom cumul_trans : forall `{checker_flags} Σ Γ t u v, Σ ;;; Γ |- t <= u -> Σ ;;; Γ |- u <= v -> Σ ;;; Γ |- t <= v.
+Axiom todo : string -> forall {A}, A.
+Ltac todo s := exact (todo s).
+Extract Constant todo => "fun s -> failwith (String.concat """" (List.map (String.make 1) s))".
+
+Lemma conv_refl : forall `{checker_flags} Σ Γ t, Σ ;;; Γ |- t = t.
+  intros. todo "conv_refl".
+Defined.
+
+Lemma cumul_refl' : forall `{checker_flags} Σ Γ t, Σ ;;; Γ |- t <= t. (* easy *)
+  intros. todo "cumul_refl'".
+Defined.
+
+Lemma cumul_trans : forall `{checker_flags} Σ Γ t u v, Σ ;;; Γ |- t <= u -> Σ ;;; Γ |- u <= v -> Σ ;;; Γ |- t <= v.
+  intros. todo "cumul_trans".
+Defined.
 
 Hint Resolve conv_refl cumul_refl' : typecheck.
 
-Conjecture congr_cumul_prod : forall `{checker_flags} Σ Γ na na' M1 M2 N1 N2,
+Lemma congr_cumul_prod : forall `{checker_flags} Σ Γ na na' M1 M2 N1 N2,
     cumul Σ Γ M1 N1 ->
     cumul Σ (Γ ,, vass na M1) M2 N2 ->
     cumul Σ Γ (tProd na M1 M2) (tProd na' N1 N2).
+Proof. intros. todo "congr_cumul_prod". Defined.
 
 Definition eq_opt_term `{checker_flags} φ (t u : option term) :=
   match t, u with
@@ -742,9 +756,6 @@ with typing_spine `{checker_flags} (Σ : global_context) (Γ : context) : term -
 Notation wf_local Σ Γ := (All_local_env typing Σ Γ).
 
 (** ** Typechecking of global environments *)
-
-Definition add_constraints_env u (Σ : global_context)
-  := (fst Σ, add_global_constraints u (snd Σ)).
 
 Definition add_global_decl (decl : global_decl) (Σ : global_context) :=
   let univs := match decl with
@@ -959,6 +970,21 @@ Lemma on_global_decls_impl `{checker_flags} Σ P Q :
   (forall Σ Γ t T, on_global_env P Σ -> P Σ Γ t T -> Q Σ Γ t T) ->
   on_global_env P Σ -> on_global_env Q Σ.
 Proof.
+(*   intros until t. *)
+(*   revert t. *)
+(*   fix auxt 1. *)
+(*   move auxt at top. *)
+(*   destruct t; *)
+(*     match goal with *)
+(*       H : _ |- _ => apply H *)
+(*     end; auto; *)
+(*     match goal with *)
+(*       |- _ (P Σ) ?arg => *)
+(*       revert arg; fix aux_arg 1; intro arg; *)
+(*         destruct arg; constructor; [|apply aux_arg]; *)
+(*           try split; apply auxt *)
+(*     end. *)
+(* Defined. *)
   intros. destruct Σ as [Σ φ]. red in X0 |- *.
   simpl in *. induction X0; constructor; auto.
   clear IHX0. destruct d; simpl.

@@ -29,7 +29,7 @@ Section Wcbv.
   Context (Σ : global_declarations) (Γ : context).
   (* The local context is fixed: we are only doing weak reductions *)
 
-  Inductive eval : term -> term -> Prop :=
+  Inductive eval : term -> term -> Type :=
   (** Reductions *)
   (** Beta *)
   | eval_beta f na t b a a' l res :
@@ -63,7 +63,7 @@ Section Wcbv.
   (** Fix unfolding, with guard *)
   | eval_fix mfix idx args args' narg fn res :
       unfold_fix mfix idx = Some (narg, fn) ->
-      Forall2 eval args args' -> (* FIXME should we reduce the args after the recursive arg here? *)
+      All2 eval args args' -> (* FIXME should we reduce the args after the recursive arg here? *)
       is_constructor narg args' = true ->
       eval (mkApps fn args') res ->
       eval (tApp (tFix mfix idx) args) res
@@ -90,7 +90,7 @@ Section Wcbv.
 
   | eval_app_ind t i u l l' : l <> nil ->
       eval t (tInd i u) ->
-      Forall2 eval l l' ->
+      All2 eval l l' ->
       eval (tApp t l) (tApp (tInd i u) l')
 
   | eval_constr i k u :
@@ -98,7 +98,7 @@ Section Wcbv.
 
   | eval_app_constr f i k u l l' : l <> nil ->
       eval f (tConstruct i k u) ->
-      Forall2 eval l l' ->
+      All2 eval l l' ->
       eval (tApp f l) (tApp (tConstruct i k u) l')
 
   (* | evar ev l l' : evals l l' -> eval (tEvar ev l) (tEvar ev l') *)
@@ -109,7 +109,7 @@ Section Wcbv.
   (** The right induction principle for the nested [Forall] cases: *)
 
   Lemma eval_evals_ind :
-    forall P : term -> term -> Prop,
+    forall P : term -> term -> Type,
       (forall (f : term) (na : name) (t b a a' : term) (l : list term) (res : term),
           eval f (tLambda na t b) ->
           P f (tLambda na t b) ->
@@ -135,8 +135,8 @@ Section Wcbv.
 
       (forall (mfix : mfixpoint term) (idx : nat) (args args' : list term) (narg : nat) (fn res : term),
           unfold_fix mfix idx = Some (narg, fn) ->
-          Forall2 eval args args' ->
-          Forall2 P args args' ->
+          All2 eval args args' ->
+          All2 P args args' ->
           is_constructor narg args' = true ->
           eval (mkApps fn args') res -> P (mkApps fn args') res -> P (tApp (tFix mfix idx) args) res) ->
 
@@ -163,13 +163,13 @@ Section Wcbv.
 
       (forall (f8 : term) (i : inductive) (u : universe_instance) (l l' : list term),
           l <> nil -> eval f8 (tInd i u) ->
-          P f8 (tInd i u) -> Forall2 eval l l' -> Forall2 P l l' -> P (tApp f8 l) (tApp (tInd i u) l')) ->
+          P f8 (tInd i u) -> All2 eval l l' -> All2 P l l' -> P (tApp f8 l) (tApp (tInd i u) l')) ->
 
       (forall i k u, P (tConstruct i k u) (tConstruct i k u)) ->
 
       (forall (f8 : term) (i : inductive) (k : nat) (u : universe_instance) (l l' : list term),
           l <> nil -> eval f8 (tConstruct i k u) ->
-          P f8 (tConstruct i k u) -> Forall2 eval l l' -> Forall2 P l l' -> P (tApp f8 l) (tApp (tConstruct i k u) l')) ->
+          P f8 (tConstruct i k u) -> All2 eval l l' -> All2 P l l' -> P (tApp f8 l) (tApp (tConstruct i k u) l')) ->
 
       (forall (ev : nat) (l : list term), P (tEvar ev l) (tEvar ev l)) ->
 
@@ -184,15 +184,15 @@ Section Wcbv.
                                forall t t0, eval t t0 -> _ => fail 1
                              | _ => eapply H
                              end end; eauto.
-    clear H1 H2.
-    revert args args' H0. fix aux 3. destruct 1. constructor; auto.
+    clear e0 X.
+    revert args args' a. fix aux 3. destruct 1.  constructor; auto.
     constructor. now apply eval_evals_ind. now apply aux.
-    revert l l' H H1. fix aux 4. destruct 2. contradiction. constructor.
+    revert l l' n a. fix aux 4. destruct 2. contradiction. constructor.
     now apply eval_evals_ind.
-    destruct l. inv H2; constructor.
+    destruct l. inv a; constructor.
     now apply aux.
-    revert l l' H H1. fix aux 4. destruct 2. contradiction. constructor.
-    now apply eval_evals_ind. destruct l. inv H2; constructor. now apply aux.
+    revert l l' n a. fix aux 4. destruct 2. contradiction. constructor.
+    now apply eval_evals_ind. destruct l. inv a; constructor. now apply aux.
   Defined.
 
   (** Characterization of values for this reduction relation:
@@ -234,7 +234,7 @@ Section Wcbv.
   Proof.
     induction 1 using eval_evals_ind; simpl; auto using value.
     eapply (value_tInd i u []); try constructor.
-    pose proof (value_tInd i u l'). forward H3. solve_all.
+    pose proof (value_tInd i u l'). forward H1. solve_all.
   Admitted. (* change in All representation *)
     (*   apply (All2_right H2). *)
   (*   rewrite mkApps_tApp in H3; auto. simpl; auto. eauto using Forall2_non_nil. *)
@@ -247,7 +247,7 @@ Section Wcbv.
   (** Evaluation preserves closedness: *)
   Lemma eval_closed : forall n t u, closedn n t = true -> eval t u -> closedn n u = true.
   Proof.
-    induction 2 using eval_evals_ind; simpl in *; eauto 2. eapply IHeval3.
+    induction 2 using eval_evals_ind; simpl in *; eauto 2. eapply IHX3.
     admit.
   Admitted. (* FIXME complete *)
 
@@ -256,7 +256,7 @@ End Wcbv.
 (** Well-typed closed programs can't go wrong: they always evaluate to a value. *)
 
 Conjecture closed_typed_wcbeval : forall (Σ : global_context) t T,
-    Σ ;;; [] |- t : T -> exists u, eval (fst Σ) [] t u.
+    Σ ;;; [] |- t : T -> { u & eval (fst Σ) [] t u }.
 
 (** Evaluation is a subrelation of reduction: *)
 

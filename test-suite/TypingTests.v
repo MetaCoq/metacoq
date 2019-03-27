@@ -14,35 +14,42 @@ Require Import Template.Ast.
 Require Import Template.Loader.
 Require Import Template.utils.
 
+Unset Template Cast Propositions.
+
 Quote Recursively Definition idq := @Coq.Classes.Morphisms.Proper.
 
 Existing Instance config.default_checker_flags.
+Existing Instance Checker.default_fuel.
 
 Eval vm_compute in typecheck_program idq.
-
-Unset Template Cast Propositions.
 
 Definition timpl x y := tProd nAnon x (LiftSubst.lift0 1 y).
 
 Quote Recursively Definition four := (2 + 2).
 Unset Printing Matching.
 
-Ltac typecheck := cbn; intros; constructor;
+Ltac typecheck := try red; cbn; intros;
   match goal with
     |- ?Σ ;;; ?Γ |- ?t : ?T =>
-    eapply (infer_correct Σ Γ t T); vm_compute; reflexivity
+    eapply (infer_correct Σ Γ t T); [constructor|vm_compute; reflexivity]
   end.
-Ltac infer := cbn; intros; constructor;
+Ltac infer := try red;
   match goal with
     |- ?Σ ;;; ?Γ |- ?t : ?T =>
-    eapply (infer_correct Σ Γ t T);
+    eapply (infer_correct Σ Γ t T); [constructor|
       let t' := eval vm_compute in (infer Σ Γ t) in
-          change (t' = Checked T); reflexivity
+          change (t' = Checked T); reflexivity]
   end.
+
+Quote Definition natr := nat.
+
+Definition type_program (p : global_declarations * term) (ty : term) :=
+  let Σ := reconstruct_global_context (fst p) in
+  Σ ;;; [] |- snd p : ty.
 
 Example typecheck_four : type_program four natr := ltac:(typecheck).
 
-Goal exists ty, type_program four ty.
+Goal { ty & type_program four ty }.
 Proof.
   eexists. infer.
 Qed.

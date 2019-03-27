@@ -341,6 +341,7 @@ Definition polymorphic_instance uctx :=
   match uctx with
   | Monomorphic_ctx c => Instance.empty
   | Polymorphic_ctx c => fst (UContext.dest c)
+  | Cumulative_ctx c => fst (UContext.dest (fst c))
   end.
 
 Definition map_one_inductive_body mind u arities f n m :=

@@ -1,2 +1,2 @@
-Require Export Template.TemplateMonad.Core.
-Require Export Template.TemplateMonad.Monad.
+From Template.TemplateMonad Require Export
+     Common Core Monad.

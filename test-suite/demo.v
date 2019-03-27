@@ -64,9 +64,8 @@ Quote Definition eo_syntax := Eval compute in even.
 
 Quote Definition add'_syntax := Eval compute in add'.
 
-
 (** Reflecting definitions **)
-Make Definition zero_from_syntax := (Ast.tConstruct (Ast.mkInd "Coq.Init.Datatypes.nat" 0) 0 []).
+Make Definition zero_from_syntax := (Ast.tConstruct (mkInd "Coq.Init.Datatypes.nat" 0) 0 []).
 
 (* the function unquote_kn in reify.ml4 is not yet implemented *)
 Make Definition add_from_syntax := ltac:(let t:= eval compute in add_syntax in exact t).
@@ -75,9 +74,9 @@ Make Definition eo_from_syntax :=
 ltac:(let t:= eval compute in eo_syntax in exact t).
 Print eo_from_syntax.
 
-Make Definition two_from_syntax := (Ast.tApp (Ast.tConstruct (Ast.mkInd "Coq.Init.Datatypes.nat" 0) 1 nil)
-   (Ast.tApp (Ast.tConstruct (Ast.mkInd "Coq.Init.Datatypes.nat" 0) 1 nil)
-      (Ast.tConstruct (Ast.mkInd "Coq.Init.Datatypes.nat" 0) 0 nil :: nil) :: nil)).
+Make Definition two_from_syntax := (Ast.tApp (Ast.tConstruct (BasicAst.mkInd "Coq.Init.Datatypes.nat" 0) 1 nil)
+   (Ast.tApp (Ast.tConstruct (BasicAst.mkInd "Coq.Init.Datatypes.nat" 0) 1 nil)
+      (Ast.tConstruct (BasicAst.mkInd "Coq.Init.Datatypes.nat" 0) 0 nil :: nil) :: nil)).
 
 Quote Recursively Definition plus_synax := plus.
 
@@ -222,7 +221,6 @@ Qed.
 Run TemplateProgram ((tmQuoteConstant "six" true) >>= tmPrint).
 Run TemplateProgram ((tmQuoteConstant "six" false) >>= tmPrint).
 
-
 Run TemplateProgram (t <- tmLemma "foo4" nat ;;
                      tmDefinition "foo5" (t + t + 2)).
 Next Obligation.
@@ -272,7 +270,7 @@ Qed.
 
 Definition printConstant (name  : ident): TemplateMonad unit :=
   X <- tmUnquote (tConst name []) ;;
-  X' <- tmEval all (projT2 X) ;;
+  X' <- tmEval all (my_projT2 X) ;;
  tmPrint X'.
 
 Fail Run TemplateProgram (printInductive "Coq.Arith.PeanoNat.Nat.add").
@@ -297,8 +295,8 @@ Set Printing Universes.
 Monomorphic Definition Funtm (A B: Type) := A->B.
 Polymorphic Definition Funtp@{i} (A B: Type@{i}) := A->B.
 (* Run TemplateProgram (printConstant "Top.demo.Funtp"). *)
-Locate Funtm.
-Run TemplateProgram (printConstant "Top.demo.Funtm").
+(* Locate Funtm. *)
+(* Run TemplateProgram (printConstant "Top.Funtm"). *)
 
 Polymorphic Definition Funtp2@{i j} 
    (A: Type@{i}) (B: Type@{j}) := A->B.
@@ -311,11 +309,11 @@ Definition tmDefinition' : ident -> forall {A}, A -> TemplateMonad unit
 (** A bit less efficient, but does the same job as tmMkDefinition *)
 Definition tmMkDefinition' : ident -> term -> TemplateMonad unit
   := fun id t => x <- tmUnquote t ;;
-              x' <- tmEval all (projT2 x) ;;
+              x' <- tmEval all (my_projT2 x) ;;
               tmDefinition' id x'.
 
 Run TemplateProgram (tmMkDefinition' "foo" add_syntax).
-Run TemplateProgram (tmMkDefinition "foo1" add_syntax).
+Run TemplateProgram (tmEval all add_syntax >>= tmMkDefinition "foo1").
 
 Run TemplateProgram ((tmFreshName "foo") >>= tmPrint).
 Run TemplateProgram (tmAxiom "foo0" (nat -> nat) >>= tmPrint).
@@ -361,6 +359,8 @@ Test Quote Prop.
 Inductive T : Type :=
   | toto : Type -> T.
 Quote Recursively Definition TT := T.
+
+Unset Strict Unquote Universe Mode.
 Make Definition t := (tSort ([(Level.Level "Top.20000", false)])).
 Make Definition t' := (tSort ([(Level.Level "Top.20000", false); (Level.Level "Top.20001", true)])).
 Make Definition myProp := (tSort [(Level.lProp, false)]).

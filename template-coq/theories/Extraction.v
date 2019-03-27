@@ -21,5 +21,6 @@ Extraction Blacklist config uGraph univ Ast String List Nat Int
            UnivSubst Typing Checker Retyping OrderedType.
 Set Warnings "-extraction-opaque-accessed".
 
+Recursive Extraction Library TypingWf.
 Recursive Extraction Library Checker.
 Recursive Extraction Library Retyping.

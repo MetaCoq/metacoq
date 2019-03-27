@@ -42,30 +42,16 @@ Proof.
   intros until t. revert t.
   fix auxt 1.
   move auxt at top. 
-  destruct t; match goal with
-                 H : _ |- _ => apply H
-              end; auto.
-  revert l.
-  fix auxl' 1.
-  destruct l; constructor; [|apply auxl'].
-  apply auxt.
-  revert l.
-  fix auxl' 1.
-  destruct l; constructor; [|apply auxl'].
-  apply auxt.
-  revert l.
-  fix auxl' 1.
-  destruct l; constructor; [|apply auxl'].
-  apply auxt.
-
-  revert m.
-  fix auxm 1.
-  destruct m; constructor; [|apply auxm].
-  split; apply auxt.
-  revert m.
-  fix auxm 1.
-  destruct m; constructor; [|apply auxm].
-  split; apply auxt.
+  destruct t;
+    match goal with
+      H : _ |- _ => apply H; auto
+    end;
+    match goal with
+      |- _ P ?arg =>
+      revert arg; fix aux_arg 1; intro arg;
+        destruct arg; constructor; [|apply aux_arg];
+          try split; apply auxt
+    end.
 Defined.
 
 

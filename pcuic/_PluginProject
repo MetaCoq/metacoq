@@ -12,6 +12,12 @@ src/pCUICTyping.ml
 src/pCUICTyping.mli
 src/pCUICUnivSubst.ml
 src/pCUICUnivSubst.mli
+src/pCUICWeakeningEnv.ml
+src/pCUICWeakeningEnv.mli
+src/pCUICWeakening.ml
+src/pCUICWeakening.mli
+src/pCUICSubstitution.ml
+src/pCUICSubstitution.mli
 src/pCUICChecker.ml
 src/pCUICChecker.mli
 src/pCUICRetyping.ml

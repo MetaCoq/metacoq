@@ -181,6 +181,7 @@ End Reduce.
 Definition isConstruct c :=
   match c with
   | tConstruct _ _ _ => true
+  | tApp (tConstruct _ _ _) _ => true
   | _ => false
   end.
 
@@ -254,7 +255,7 @@ Section Conversion.
     let '(t2,l2) := red2 in
     isconv_prog n leq Γ t1 l1 t2 l2
     end
-  with isconv_prog `{checker_flags} (n : nat) (leq : conv_pb) (Γ : context)
+  with isconv_prog (n : nat) (leq : conv_pb) (Γ : context)
                    (t1 : term) (l1 : list term) (t2 : term) (l2 : list term)
                    {struct n} : option bool :=
     match n with 0 => None | S n =>
@@ -513,14 +514,21 @@ Definition check_conv_gen `{checker_flags} {F:Fuel} conv_pb Σ Γ t u :=
 Definition check_conv_leq `{checker_flags} {F:Fuel} := check_conv_gen Cumul.
 Definition check_conv `{checker_flags} {F:Fuel} := check_conv_gen Conv.
 
-Conjecture conv_spec : forall `{checker_flags} {F:Fuel} Σ Γ t u,
-    Σ ;;; Γ |- t = u <-> check_conv Σ Γ t u = Checked ().
+Lemma conv_spec : forall `{checker_flags} {F:Fuel} Σ Γ t u,
+    Σ ;;; Γ |- t = u <~> check_conv Σ Γ t u = Checked ().
+Proof.
+  intros. todo "Checker.conv_spec".
+Defined.
 
-Conjecture cumul_spec : forall `{checker_flags} {F:Fuel} Σ Γ t u,
-    Σ ;;; Γ |- t <= u <-> check_conv_leq Σ Γ t u = Checked ().
+Lemma cumul_spec : forall `{checker_flags} {F:Fuel} Σ Γ t u,
+    Σ ;;; Γ |- t <= u <~> check_conv_leq Σ Γ t u = Checked ().
+Proof.
+  intros. todo "Checker.cumul_spec".
+Defined.
 
-Conjecture reduce_cumul :
+Lemma reduce_cumul :
   forall `{checker_flags} Σ Γ n t, Σ ;;; Γ |- try_reduce (fst Σ) Γ n t <= t.
+Proof. intros. todo "Checker.reduce_cumul". Defined.
 
 
 Section Typecheck.
@@ -621,6 +629,7 @@ Section Typecheck2.
     match u with
     | Monomorphic_ctx _ => ConstraintSet.empty
     | Polymorphic_ctx ctx => UContext.constraints ctx
+    | Cumulative_ctx ctx => UContext.constraints (CumulativityInfo.univ_context ctx)
     end.
 
   Definition lookup_constant_type cst u :=
@@ -789,25 +798,29 @@ Section Typecheck2.
   Arguments bind _ _ _ _ ! _.
   Open Scope monad.
 
-  Conjecture cumul_convert_leq : forall Γ t t',
-    Σ ;;; Γ |- t <= t' <-> convert_leq Γ t t' = Checked ().
+  Lemma cumul_convert_leq : forall Γ t t',
+    Σ ;;; Γ |- t <= t' <~> convert_leq Γ t t' = Checked ().
+  Proof. intros. todo "Checker.cumul_convert_leq". Defined.
 
-  Conjecture cumul_reduce_to_sort : forall Γ t s',
-      Σ ;;; Γ |- t <= tSort s' <->
-      exists s'', reduce_to_sort (fst Σ) Γ t = Checked s''
-             /\ check_leq (snd Σ) s'' s' = true.
+  Lemma cumul_reduce_to_sort : forall Γ t s',
+      Σ ;;; Γ |- t <= tSort s' <~>
+      { s'' & reduce_to_sort (fst Σ) Γ t = Checked s''
+              /\ check_leq (snd Σ) s'' s' = true }.
+  Proof. intros. todo "Checker.cumul_reduce_to_sort". Defined.
 
-  Conjecture cumul_reduce_to_product : forall Γ t na a b,
+  Lemma cumul_reduce_to_product : forall Γ t na a b,
       Σ ;;; Γ |- t <= tProd na a b ->
-      exists a' b',
-        reduce_to_prod (fst Σ) Γ t = Checked (a', b') /\
-        cumul Σ Γ (tProd na a' b') (tProd na a b).
+                 { a' & { b' &
+                          ((reduce_to_prod (fst Σ) Γ t = Checked (a', b')) *
+                           cumul Σ Γ (tProd na a' b') (tProd na a b))%type } }.
+  Proof. intros. todo "Checker.cumul_reduce_to_product". Defined.
 
-  Conjecture cumul_reduce_to_ind : forall Γ t i u args,
-      Σ ;;; Γ |- t <= mkApps (tInd i u) args <->
-      exists args',
-        reduce_to_ind (fst Σ) Γ t = Checked (i, u, args') /\
-        cumul Σ Γ (mkApps (tInd i u) args') (mkApps (tInd i u) args).
+  Lemma cumul_reduce_to_ind : forall Γ t i u args,
+      Σ ;;; Γ |- t <= mkApps (tInd i u) args <~>
+      { args' &
+        ((reduce_to_ind (fst Σ) Γ t = Checked (i, u, args')) *
+         cumul Σ Γ (mkApps (tInd i u) args') (mkApps (tInd i u) args))%type }.
+  Proof. intros. todo "Checker.cumul_reduce_to_ind". Defined.
 
   Lemma lookup_env_id {id decl} : lookup_env Σ id = Some decl -> id = global_decl_ident decl.
   Proof.
@@ -840,18 +853,19 @@ Section Typecheck2.
   Qed.
 
   Lemma eq_ind_refl i i' : eq_ind i i' = true <-> i = i'.
-  Admitted.
+  Proof. intros. todo "Checker.eq_ind_refl". Defined.
 
+  (*
   Lemma infer_complete Γ t T :
-    Σ ;;; Γ |- t : T -> exists T', infer Γ t = Checked T' /\ cumul Σ Γ T' T.
+    Σ ;;; Γ |- t : T -> { T' & ((infer Γ t = Checked T') /\ squash (cumul Σ Γ T' T)) }.
   Proof.
     induction 1; unfold infer_type, infer_cumul in *; simpl; unfold infer_type, infer_cumul in *;
       repeat match goal with
-        H : exists T', _ |- _ => destruct H as [? [-> H]]
+        H : { T' & _ } |- _ => destruct H as [? [-> H]]
       end; simpl; try (eexists; split; [ reflexivity | solve [ tc ] ]).
 
     - eexists. rewrite e.
-      split; [ reflexivity | tc ].
+      split; [ reflexivity | constructor; tc ].
 
     - eexists. split; [reflexivity | tc].
       constructor. simpl. unfold leq_universe.
@@ -883,6 +897,7 @@ Section Typecheck2.
       destruct cst_universes. simpl. reflexivity.
       simpl in *. destruct cst0. simpl in *.
       destruct c. unfold check_consistent_constraints. rewrite H0. reflexivity.
+      admit.
 
     - admit.
     - admit.
@@ -905,7 +920,7 @@ Section Typecheck2.
       split; [ reflexivity | tc ].
       eapply cumul_trans; eauto.
   Admitted.
-
+   *)
   Ltac infers :=
     repeat
       match goal with
@@ -934,7 +949,7 @@ Section Typecheck2.
     intros.
     eapply type_Conv. apply IH.
     admit.
-    rewrite cumul_reduce_to_sort. exists x. split; tc.
+    apply cumul_reduce_to_sort. exists x. split; tc.
   Admitted.
 
 
@@ -952,7 +967,7 @@ Section Typecheck2.
     intros.
     eapply type_Conv. apply IH'.
     apply infer_type_correct; eauto.
-    destruct a0. now rewrite cumul_convert_leq.
+    destruct a0. now apply cumul_convert_leq.
   Qed.
 
   Ltac infco := eauto using infer_cumul_correct, infer_type_correct.
@@ -999,7 +1014,7 @@ Section Typecheck2.
     - (* Construct *) admit.
 
     - (* Case *)
-      (* destruct p. *)
+      (* match goal with H : inductive * nat |- _ => destruct H end. *)
       (* infers. *)
       (* destruct reduce_to_ind eqn:?; try discriminate. simpl. *)
       (* destruct a0 as [[ind' u] args]. *)

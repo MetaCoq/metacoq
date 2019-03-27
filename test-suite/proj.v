@@ -17,7 +17,7 @@ Proof.
   end.
 Show.
   match goal with
-    H:= context [Ast.tProj (Ast.mkInd "TemplateTestSuite.proj.Eq"%string 0, 1, 0) _] |- _ => idtac
+    H:= context [Ast.tProj (BasicAst.mkInd "TemplateTestSuite.proj.Eq"%string 0, 1, 0) _] |- _ => idtac
   end.
   reflexivity.
 Qed.

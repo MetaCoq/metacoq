@@ -22,7 +22,7 @@ Coercion fst_ctx : global_context >-> global_declarations.
 
 (** Weak Normalization: every term has a normal form *)
 
-Definition normal (Σ : global_context) Γ t := ~ exists u, red1 Σ Γ t u.
+Definition normal (Σ : global_context) Γ t := { u : _ & red1 Σ Γ t u } -> False.
 
 Conjecture weak_normalization : forall (Σ : global_context) Γ t T,
-    Σ ;;; Γ |- t : T -> exists u, red Σ Γ t u /\ normal Σ Γ u.
+    Σ ;;; Γ |- t : T -> { u & (red Σ Γ t u * normal Σ Γ u)%type }.

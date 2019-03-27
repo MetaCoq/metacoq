@@ -66,6 +66,7 @@ struct
   let pkg_template_monad = ["Template";"TemplateMonad"]
   let pkg_univ = ["Template";"kernel";"univ"]
   let pkg_level = ["Template";"kernel";"univ";"Level"]
+  let pkg_variance = ["Template";"kernel";"univ";"Variance"]
   let pkg_ugraph = ["Template";"kernel";"uGraph"]
   let ext_pkg_univ s = List.append pkg_univ [s]
 
@@ -85,6 +86,7 @@ struct
   let tfalse = resolve_symbol pkg_datatypes "false"
   let unit_tt = resolve_symbol pkg_datatypes "tt"
   let tAscii = resolve_symbol ["Coq";"Strings";"Ascii"] "Ascii"
+  let tlist = resolve_symbol pkg_datatypes "list"
   let c_nil = resolve_symbol pkg_datatypes "nil"
   let c_cons = resolve_symbol pkg_datatypes "cons"
   let prod_type = resolve_symbol pkg_datatypes "prod"
@@ -129,8 +131,14 @@ struct
   let tunivLt = resolve_symbol (ext_pkg_univ "ConstraintType") "Lt"
   let tunivEq = resolve_symbol (ext_pkg_univ "ConstraintType") "Eq"
   (* let tunivcontext = resolve_symbol pkg_univ "universe_context" *)
+  let tVariance = resolve_symbol pkg_variance "t"
+  let cIrrelevant = resolve_symbol pkg_variance "Irrelevant"
+  let cCovariant = resolve_symbol pkg_variance "Covariant"
+  let cInvariant = resolve_symbol pkg_variance "Invariant"
   let cMonomorphic_ctx = resolve_symbol pkg_univ "Monomorphic_ctx"
   let cPolymorphic_ctx = resolve_symbol pkg_univ "Polymorphic_ctx"
+  let cCumulative_ctx = resolve_symbol pkg_univ "Cumulative_ctx"
+  let tUContext = resolve_symbol (ext_pkg_univ "UContext") "t"
   let tUContextmake = resolve_symbol (ext_pkg_univ "UContext") "make"
   (* let tConstraintSetempty = resolve_symbol (ext_pkg_univ "ConstraintSet") "empty" *)
   let tConstraintSetempty = Universes.constr_of_global (Coqlib.find_reference "template coq bug" (ext_pkg_univ "ConstraintSet") "empty")
@@ -170,13 +178,6 @@ struct
   let (tglobal_reference, tConstRef, tIndRef, tConstructRef) =
     (r_base_reify "global_reference", r_base_reify "ConstRef", r_base_reify "IndRef", r_base_reify "ConstructRef")
 
-  let (tmReturn, tmBind, tmQuote, tmQuoteRec, tmEval, tmDefinition, tmAxiom, tmLemma, tmFreshName, tmAbout, tmCurrentModPath,
-       tmMkDefinition, tmMkInductive, tmPrint, tmFail, tmQuoteInductive, tmQuoteConstant, tmQuoteUniverses, tmUnquote, tmUnquoteTyped, tmInferInstance, tmExistingInstance) =
-    (r_template_monad_p "tmReturn", r_template_monad_p "tmBind", r_template_monad_p "tmQuote", r_template_monad_p "tmQuoteRec", r_template_monad_p "tmEval", r_template_monad_p "tmDefinition",
-     r_template_monad_p "tmAxiom", r_template_monad_p "tmLemma", r_template_monad_p "tmFreshName", r_template_monad_p "tmAbout", r_template_monad_p "tmCurrentModPath",
-     r_template_monad_p "tmMkDefinition", r_template_monad_p "tmMkInductive", r_template_monad_p "tmPrint", r_template_monad_p "tmFail", r_template_monad_p "tmQuoteInductive", r_template_monad_p "tmQuoteConstant",
-     r_template_monad_p "tmQuoteUniverses", r_template_monad_p "tmUnquote", r_template_monad_p "tmUnquoteTyped", r_template_monad_p "tmInferInstance", r_template_monad_p "tmExistingInstance")
-
   (* let pkg_specif = ["Coq";"Init";"Specif"] *)
   (* let texistT = resolve_symbol pkg_specif "existT" *)
   (* let texistT_typed_term = r_template_monad "existT_typed_term" *)
@@ -195,7 +196,9 @@ struct
     | Some tm -> Constr.mkApp (cSome, [|ty; tm|])
     | None -> Constr.mkApp (cNone, [|ty|])
 
-  let int_to_nat =
+  (* Quote OCaml int to Coq nat *)
+  let quote_int =
+    (* the cache is global but only accessible through quote_int *)
     let cache = Hashtbl.create 10 in
     let rec recurse i =
       try Hashtbl.find cache i
@@ -211,8 +214,8 @@ struct
 	    result
     in
     fun i ->
-      assert (i >= 0) ;
-      recurse i
+    if i >= 0 then recurse i else
+      CErrors.anomaly (str "Negative int can't be unquoted to nat.")
 
   let quote_bool b =
     if b then ttrue else tfalse
@@ -263,21 +266,15 @@ struct
     to_string (Univ.Level.to_string s)
 
   let quote_level l =
+    debug (fun () -> str"quote_level " ++ Level.pr l);
     if Level.is_prop l then lProp
     else if Level.is_set l then lSet
     else match Level.var_index l with
-         | Some x -> Constr.mkApp (tLevelVar, [| int_to_nat x |])
+         | Some x -> Constr.mkApp (tLevelVar, [| quote_int x |])
          | None -> Constr.mkApp (tLevel, [| string_of_level l|])
 
   let quote_universe s =
-    (* hack because we can't recover the list of level*int *)
-    (* todo : map on LSet is now exposed in Coq trunk, we should use it to remove this hack *)
-    let levels = LSet.elements (Universe.levels s) in
-    let levels = List.map (fun l -> let l' = quote_level l in
-                                    (* is indeed i always 0 or 1 ? *)
-                                    let b' = quote_bool (Universe.exists (fun (l2,i) -> Level.equal l l2 && i = 1) s) in
-                                    pair tlevel bool_type l' b')
-                          levels in
+    let levels = Universe.map (fun (l,i) -> pair tlevel bool_type (quote_level l) (if i > 0 then ttrue else tfalse)) s in
     to_coq_list (prod tlevel bool_type) levels
 
   (* todo : can be deduced from quote_level, hence shoud be in the Reify module *)
@@ -304,6 +301,16 @@ struct
         Constr.mkApp (tConstraintSetadd, [| c; tm|])
       ) tConstraintSetempty const
 
+  let quote_variance v =
+    match v with
+    | Univ.Variance.Irrelevant -> cIrrelevant
+    | Univ.Variance.Covariant -> cCovariant
+    | Univ.Variance.Invariant -> cInvariant
+
+  let quote_cuminfo_variance var =
+    let var_list = CArray.map_to_list quote_variance var in
+    to_coq_list tVariance var_list
+
   let quote_ucontext inst const =
     let inst' = quote_univ_instance inst in
     let const' = quote_univ_constraints const in
@@ -313,6 +320,17 @@ struct
     let inst = Univ.UContext.instance uctx in
     let const = Univ.UContext.constraints uctx in
     Constr.mkApp (cMonomorphic_ctx, [| quote_ucontext inst const |])
+
+  let quote_cumulative_univ_context cumi =
+    let uctx = Univ.CumulativityInfo.univ_context cumi in
+    let inst = Univ.UContext.instance uctx in
+    let const = Univ.UContext.constraints uctx in
+    let var = Univ.CumulativityInfo.variance cumi in
+    let uctx' = quote_ucontext inst const in
+    let var' = quote_cuminfo_variance var in
+    let listvar = Constr.mkApp (tlist, [| tVariance |]) in
+    let cumi' = pair tUContext listvar uctx' var' in
+    Constr.mkApp (cCumulative_ctx, [| cumi' |])
 
   let quote_abstract_univ_context_aux uctx =
     let inst = Univ.UContext.instance uctx in
@@ -369,7 +387,6 @@ struct
 
   let mkAnon = nAnon
   let mkName id = Constr.mkApp (nNamed, [| id |])
-  let quote_int = int_to_nat
   let quote_kn kn = quote_string (KerName.to_string kn)
   let mkRel i = Constr.mkApp (tRel, [| i |])
   let mkVar id = Constr.mkApp (tVar, [| id |])

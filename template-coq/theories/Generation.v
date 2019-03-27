@@ -33,9 +33,8 @@ Proof.
   destruct f; try discriminate. simpl.
   eapply invert_type_App in Hf.
   destruct Hf as (T'' & U' & (((Hf & HU) & Happf) & Hunil) & Hcumul).
-  eapply type_App; eauto. intro. apply Hunil.
-  destruct l; simpl in *; congruence.
-  inv X1. clear Happ Hf Hunil.
+  eapply type_App; eauto. intro. destruct args; discriminate.
+  inv X2. clear Happ Hf Hunil.
   induction HU. simpl. econstructor; eauto.
   eapply cumul_trans; eauto.
   econstructor. econstructor. eapply t. eauto. eauto.

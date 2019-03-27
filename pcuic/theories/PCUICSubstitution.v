@@ -978,9 +978,9 @@ Qed.
 Lemma red1_mkApps_r Σ Γ M1 M2 N2 :
   OnOne2 (red1 Σ Γ) M2 N2 -> red1 Σ Γ (mkApps M1 M2) (mkApps M1 N2).
 Proof.
-  intros. induction H in M1 |- *.
+  intros. induction X in M1 |- *.
   simpl. eapply red1_mkApps_l. constructor; auto.
-  specialize (IHOnOne2 (tApp M1 hd)). apply IHOnOne2.
+  apply (IHX (tApp M1 hd)).
 Qed.
 
 Lemma substitution_red1 `{CF:checker_flags} Σ Γ Γ' Γ'' s M N :
@@ -1045,46 +1045,46 @@ Proof.
     now rewrite subst_context_snoc0 in IHred1.
 
   - constructor.
-    induction H; constructor; auto.
+    induction X; constructor; auto.
     intuition; eauto.
-    specialize (H0 _ _ _ eq_refl).
-    destruct hd, hd'; simpl in *. now eapply H0.
+    specialize (b0 _ _ _ eq_refl).
+    destruct hd, hd'; simpl in *. now eapply b0.
 
   - constructor. specialize (IHred1 _ _ (Γ'' ,, vass na M1) eq_refl).
     now rewrite subst_context_snoc0 in IHred1.
 
   - constructor.
-    induction H; constructor; auto.
-    intuition. eapply H0; eauto.
+    induction X; constructor; auto.
+    intuition. eapply b; eauto.
 
   - constructor.
-    rewrite -> (OnOne2_length H). generalize (#|mfix1|).
-    induction H; simpl; constructor; auto.
-    intuition. eapply H2; eauto.
+    rewrite -> (OnOne2_length X). generalize (#|mfix1|).
+    induction X; simpl; constructor; auto.
+    intuition. eapply b; eauto.
 
   - apply fix_red_body. rewrite !subst_fix_context.
     solve_all.
-    rewrite <- (OnOne2_length H).
-    eapply OnOne2_map. unfold on_rel; solve_all.
-    specialize (H2 Γ0 Γ' (Γ'' ,,, fix_context mfix0)).
-    rewrite app_context_assoc in H2. specialize (H2 eq_refl).
+    rewrite <- (OnOne2_length X).
+    eapply OnOne2_map. unfold on_Trel; solve_all.
+    specialize (b Γ0 Γ' (Γ'' ,,, fix_context mfix0)).
+    rewrite app_context_assoc in b. specialize (b eq_refl).
     rewrite -> app_context_length, fix_context_length in *.
     rewrite -> subst_context_app in *.
     rewrite -> app_context_assoc, Nat.add_0_r in *.
     auto.
 
   - constructor.
-    rewrite -> (OnOne2_length H). generalize (#|mfix1|).
-    induction H; simpl; constructor; auto.
-    intuition auto. eapply H2; eauto.
-    now rewrite <- !map_dbody, H1.
+    rewrite -> (OnOne2_length X). generalize (#|mfix1|).
+    induction X; simpl; constructor; auto.
+    intuition auto. eapply b; eauto.
+    now rewrite <- !map_dbody, b0.
 
   - apply cofix_red_body. rewrite !subst_fix_context.
     solve_all.
-    rewrite <- (OnOne2_length H).
-    eapply OnOne2_map. unfold on_rel; solve_all.
-    specialize (H2 Γ0 Γ' (Γ'' ,,, fix_context mfix0)).
-    rewrite app_context_assoc in H2. specialize (H2 eq_refl).
+    rewrite <- (OnOne2_length X).
+    eapply OnOne2_map. unfold on_Trel; solve_all.
+    specialize (b Γ0 Γ' (Γ'' ,,, fix_context mfix0)).
+    rewrite app_context_assoc in b. specialize (b eq_refl).
     rewrite -> app_context_length, fix_context_length in *.
     rewrite -> subst_context_app in *.
     rewrite -> app_context_assoc, Nat.add_0_r in *.
@@ -1282,10 +1282,10 @@ Proof.
   intros wfΣ wfΓ Hs. induction 1.
   constructor.
   - now apply subst_leq_term.
-  - eapply substitution_red1 in H. 4:eauto. all:eauto.
+  - eapply substitution_red1 in r. 4:eauto. all:eauto.
     econstructor 2; eauto.
     eauto with wf.
-  - eapply substitution_red1 in H0. 4:eauto. all:eauto with wf.
+  - eapply substitution_red1 in r. 4:eauto. all:eauto with wf.
     now econstructor 3.
 Qed.
 
@@ -1345,28 +1345,28 @@ Proof.
       rewrite -> commut_lift_subst_rec by lia.
       f_equal. lia.
 
-  - econstructor; auto. eapply X0; eauto.
-    specialize (X0 Γ Γ' Δ s sub eq_refl wfsubs).
-    specialize (X2 Γ Γ' (Δ,, vass n t) s sub eq_refl).
-    rewrite subst_context_snoc0 in X2. forward X2.
+  - econstructor; auto. eapply X1; eauto.
+    specialize (X1 Γ Γ' Δ s sub eq_refl wfsubs).
+    specialize (X3 Γ Γ' (Δ,, vass n t) s sub eq_refl).
+    rewrite subst_context_snoc0 in X3. forward X3.
     now econstructor; simpl; eauto.
-    eapply X2.
+    eapply X3.
 
-  - econstructor; auto. eapply X0; eauto.
-    specialize (X0 Γ Γ' Δ s sub eq_refl wfsubs).
-    specialize (X2 Γ Γ' (Δ,, vass n t) s sub eq_refl).
-    rewrite subst_context_snoc0 in X2. forward X2.
+  - econstructor; auto. eapply X1; eauto.
+    specialize (X1 Γ Γ' Δ s sub eq_refl wfsubs).
+    specialize (X3 Γ Γ' (Δ,, vass n t) s sub eq_refl).
+    rewrite subst_context_snoc0 in X3. forward X3.
     now econstructor; simpl; eauto.
-    eapply X2.
+    eapply X3.
 
-  - specialize (X0 Γ Γ' Δ s sub eq_refl wfsubs).
-    specialize (X2 Γ Γ' Δ s sub eq_refl wfsubs).
-    specialize (X4 Γ Γ' (Δ,, vdef n b b_ty) s sub eq_refl).
-    rewrite subst_context_snoc0 in X4. forward X4.
+  - specialize (X1 Γ Γ' Δ s sub eq_refl wfsubs).
+    specialize (X3 Γ Γ' Δ s sub eq_refl wfsubs).
+    specialize (X5 Γ Γ' (Δ,, vdef n b b_ty) s sub eq_refl).
+    rewrite subst_context_snoc0 in X5. forward X5.
     now econstructor; simpl; eauto.
     econstructor; eauto.
 
-  - specialize (X0 Γ Γ' Δ s sub eq_refl wfsubs).
+  - specialize (X1 Γ Γ' Δ s sub eq_refl wfsubs).
     eapply refine_type. econstructor; eauto.
     unfold subst1. rewrite -> distr_subst. simpl. reflexivity.
 
@@ -1389,9 +1389,9 @@ Proof.
     apply subst_closedn; eauto. eapply closed_upwards; eauto. lia.
 
   - rewrite subst_mkApps map_app map_skipn.
-    specialize (X1 Γ Γ' Δ s sub eq_refl wfsubs).
-    specialize (X4 Γ Γ' Δ s sub eq_refl wfsubs).
     specialize (X2 Γ Γ' Δ s sub eq_refl wfsubs).
+    specialize (X5 Γ Γ' Δ s sub eq_refl wfsubs).
+    specialize (X3 Γ Γ' Δ s sub eq_refl wfsubs).
     simpl. econstructor.
     4:{ eapply subst_types_of_case in H1.
         simpl in H1. subst pars. rewrite firstn_map. eapply H1; eauto.
@@ -1402,13 +1402,13 @@ Proof.
     -- revert H2. subst pars.
        apply subst_check_correct_arity.
     -- destruct idecl; simpl in *; auto.
-    -- now rewrite !subst_mkApps in X4.
+    -- now rewrite !subst_mkApps in X5.
     -- solve_all.
 
-  - specialize (X1 Γ Γ' Δ s sub eq_refl wfsubs).
+  - specialize (X2 Γ Γ' Δ s sub eq_refl wfsubs).
     eapply refine_type. econstructor.
     eauto.
-    rewrite subst_mkApps in X1. eauto.
+    rewrite subst_mkApps in X2. eauto.
     rewrite map_length; eauto.
     rewrite <- (Nat.add_0_l #|Δ|).
     erewrite distr_subst_rec. simpl.

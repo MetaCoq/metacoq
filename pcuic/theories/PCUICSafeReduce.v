@@ -1274,11 +1274,13 @@ Section Reduce.
     | true with inspect (unfold_fix mfix idx) := {
       | @exist (Some (narg, fn)) eq1 with inspect (decompose_stack_at π narg) := {
         | @exist (Some (args, c, ρ)) eq2 with inspect (reduce c (Fix mfix idx args ρ) _) := {
-          | @exist (@exist (tConstruct ind n ui, ρ') prf) eq3 with inspect (decompose_stack ρ') := {
-            | @exist (l, θ) eq4 :=
-              rec reduce fn (appstack args (App (mkApps (tConstruct ind n ui) l) ρ))
-            } ;
-          | _ := give (tFix mfix idx) π
+          | @exist (@exist (t, ρ') prf) eq3 with construct_viewc t := {
+            | view_construct ind n ui with inspect (decompose_stack ρ') := {
+              | @exist (l, θ) eq4 :=
+                rec reduce fn (appstack args (App (mkApps (tConstruct ind n ui) l) ρ))
+              } ;
+            | view_other t ht := give (tFix mfix idx) π
+            }
           } ;
         | _ := give (tFix mfix idx) π
         } ;
@@ -1290,9 +1292,9 @@ Section Reduce.
     _reduce_stack Γ (tCase (ind, par) p c brs) π h reduce with RedFlags.iota flags := {
     | true with inspect (reduce c (Case (ind, par) p brs π) _) := {
       | @exist (@exist (t,π') prf) eq with inspect (decompose_stack π') := {
-        | @exist (args, ρ) prf' with inspect (construct_viewc t) := {
-          | @exist (view_construct ind' c' _) eq2 := rec reduce (iota_red par c' args brs) π ;
-          | @exist (view_other t ht) eq2 := give (tCase (ind, par) p (mkApps t args) brs) π
+        | @exist (args, ρ) prf' with construct_viewc t := {
+          | view_construct ind' c' _ := rec reduce (iota_red par c' args brs) π ;
+          | view_other t ht := give (tCase (ind, par) p (mkApps t args) brs) π
           }
         }
       } ;

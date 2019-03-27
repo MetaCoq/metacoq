@@ -55,7 +55,7 @@ Cumulative Inductive TM@{t} : Type@{t} -> Type :=
 
 (* unquote before making the definition *)
 (* FIXME take an optional universe context as well *)
-| tmMkInductive : mutual_inductive_entry -> TM unit
+| tmInductive : mutual_inductive_entry -> TM unit
 
 (* Typeclass registration and querying for an instance *)
 | tmExistingInstance : kername -> TM unit
@@ -74,13 +74,13 @@ Definition TypeInstance : Common.TMInstance :=
    ; Common.tmQuoteInductive:=@tmQuoteInductive
    ; Common.tmQuoteUniverses:=@tmQuoteUniverses
    ; Common.tmQuoteConstant:=@tmQuoteConstant
-   ; Common.tmMkInductive:=@tmMkInductive
+   ; Common.tmMkInductive:=@tmInductive
    ; Common.tmExistingInstance:=@tmExistingInstance
    |}.
 (* Monadic operations *)
 
-Definition tmMkInductive' (mind : mutual_inductive_body) : TM unit
-  := tmMkInductive (mind_body_to_entry mind).
+Definition tmInductive' (mind : mutual_inductive_body) : TM unit
+  := tmInductive (mind_body_to_entry mind).
 
 Definition tmLemmaRed (i : ident) (rd : reductionStrategy)
            (ty : Ast.term) :=

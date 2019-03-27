@@ -8,6 +8,7 @@ type global_reference = Globnames.global_reference (* Template.Ast.global_refere
 type term = Constr.t  (* Ast.term *)
 type mutual_inductive_body = Declarations.mutual_inductive_body (* Template.Ast.mutual_inductive_body *)
 type constant_entry = Declarations.constant_body (* Template.Ast.constant_entry *)
+type mutual_inductive_entry = Entries.mutual_inductive_entry (* Template.Ast.mutual_inductive_entry *)
 
 let default_flags = Redops.make_red_flag Genredexpr.[FBeta;FMatch;FFix;FCofix;FZeta;FDeltaBut []]
 let rs_cbv = Genredexpr.Cbv default_flags
@@ -148,8 +149,8 @@ let tmQuoteConstant (kn : kername) (bypass : bool) : constant_entry tm =
         let cnst = Environ.lookup_constant (Names.Constant.make1 kn) env in
         success env evd cnst }
 
-let tmMkInductive : _ -> _ tm =
-  fun _ -> not_implemented "tmMkInductive"
+let tmInductive (mi : mutual_inductive_entry) : unit tm =
+  not_implemented "tmInductive"
 
 let tmExistingInstance (kn : kername) : unit tm =
   { run_tm = fun env evd success fail ->

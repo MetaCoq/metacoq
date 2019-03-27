@@ -8,6 +8,7 @@ type global_reference = Globnames.global_reference (* Template.Ast.global_refere
 type term = Constr.t  (* Ast.term *)
 type mutual_inductive_body = Declarations.mutual_inductive_body (* Template.Ast.mutual_inductive_body *)
 type constant_entry = Declarations.constant_body (* Template.Ast.constant_entry *)
+type mutual_inductive_entry = Entries.mutual_inductive_entry (* Template.Ast.mutual_inductive_entry *)
 
 val rs_cbv : reduction_strategy
 val rs_cbn : reduction_strategy
@@ -43,7 +44,7 @@ val tmQuoteInductive : kername -> mutual_inductive_body option tm
 val tmQuoteUniverses : _ tm
 val tmQuoteConstant : kername -> bool -> constant_entry tm
 
-val tmMkInductive : _ -> _ tm
+val tmInductive : mutual_inductive_entry -> unit tm
 
 val tmExistingInstance : kername -> unit tm
 val tmInferInstance : term -> term option tm

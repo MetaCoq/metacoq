@@ -147,7 +147,7 @@ struct
        ttmQuoteInductive,
        ttmQuoteConstant,
        ttmQuoteUniverses,
-       ttmMkInductive,
+       ttmInductive,
        ttmInferInstance,
        ttmExistingInstance) =
     (r_template_monad_type_p "tmReturn",
@@ -171,7 +171,7 @@ struct
      r_template_monad_type_p "tmQuoteUniverses",
      r_template_monad_type_p "tmQuoteConstant",
 
-     r_template_monad_type_p "tmMkInductive",
+     r_template_monad_type_p "tmInductive",
 
      r_template_monad_type_p "tmInferInstance",
      r_template_monad_type_p "tmExistingInstance")
@@ -377,11 +377,14 @@ struct
         (TmQuoteConst (name, bypass), universes)
       | _ -> monad_failure "tmQuoteConstant" 2
 
-    else if Globnames.eq_gr glob_ref ptmMkInductive || Globnames.eq_gr glob_ref ttmMkInductive then
+    else if Globnames.eq_gr glob_ref ptmMkInductive then
       match args with
       | mind::[] -> (TmMkInductive mind, universes)
       | _ -> monad_failure "tmMkInductive" 1
-
+    else if Globnames.eq_gr glob_ref ttmInductive then
+      match args with
+      | mind::[] -> (TmMkInductive mind, universes)
+      | _ -> monad_failure "tmInductive" 1
     else if Globnames.eq_gr glob_ref ptmUnquote then
       match args with
       | t::[] ->

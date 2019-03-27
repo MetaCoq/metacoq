@@ -16,7 +16,11 @@ Set Asymmetric Patterns.
 
 Existing Instance config.default_checker_flags.
 
-(** Atoms reduce to themselves *)
+(** * Parallel reduction and confluence *)
+
+(** For this notion of reductions, theses are the atoms that reduce to themselves:
+
+ *)
 
 Definition atom t :=
   match t with
@@ -675,3 +679,18 @@ End ParallelReduction2.
 (*   eapply substitution_red1; eauto. *)
 (*   eapply wf_red_wf. 4:eauto. all:eauto. *)
 (* Qed. *)
+
+(* Theorem confluence Γ t : *)
+(*   forall t0 t1, pred1 Γ t t0 -> pred1 Γ t t1 -> *)
+(*                 exists v, pred1 Γ t0 v /\ pred1 Γ t1 v. *)
+(* Proof. *)
+(*   intros t0 t1 Ht0 Ht1. revert t1 Ht1. *)
+(*   induction Ht0; intros x Hx; *)
+(*   inv Hx; try solve [eexists; split; constructor]. *)
+
+(*   - repeat match goal with *)
+(*     | H : (forall t, pred1 _ ?x _ -> _), H' : pred1 _ ?x _ |- _ => *)
+(*       let r := fresh x in *)
+(*       destruct (H _ H') as [r [? ?]]; clear H *)
+(*            end. *)
+(*     exists (mkApps (b2 {0 := a2}) l1). split. *)

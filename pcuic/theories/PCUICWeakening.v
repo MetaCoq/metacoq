@@ -13,7 +13,7 @@ Require Import ssreflect ssrbool.
 Set Asymmetric Patterns.
 Generalizable Variables Σ Γ t T.
 
-Derive NoConfusion for All_local_env_over.
+Derive Signature NoConfusion for All_local_env All_local_env_over.
 Derive NoConfusion for context_decl.
 
 Lemma typed_liftn `{checker_flags} Σ Γ t T n k :

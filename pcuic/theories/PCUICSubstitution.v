@@ -13,8 +13,6 @@ Require Import ssreflect.
 Set Asymmetric Patterns.
 Close Scope string_scope.
 
-Derive Signature for All_local_env All_local_env_over.
-
 Hint Rewrite @app_context_length : wf.
 
 Generalizable Variables Σ Γ t T.

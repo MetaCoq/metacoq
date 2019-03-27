@@ -28,6 +28,7 @@ install:
 - eval $(opam config env)
 - opam config list
 - opam update
+- opam repo add coq-released https://coq.inria.fr/opam/released || echo "coq-released registered"
 - opam install -j ${NJOBS} -y camlp5.${CAMLP5_VER} ocamlfind.${FINDLIB_VER} coq.${COQ_VER} coq-equations
 - opam list
 

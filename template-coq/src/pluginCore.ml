@@ -3,28 +3,40 @@
 
 type ident   = Names.Id.t (* Template.Ast.ident *)
 type kername = Names.KerName.t (* Template.Ast.kername *)
-type reductionStrategy =  (* Template.TemplateMonad.Common.reductionStrategy *)
-    Cbv
-  | Cbn
-  | Hnf
-  | All
-  | Lazy
-  | Unfold of ident
-type global_reference (* Template.Ast.global_reference *)
+type reduction_strategy = Redexpr.red_expr (* Template.TemplateMonad.Common.reductionStrategy *)
+type global_reference = Globnames.global_reference (* Template.Ast.global_reference *)
 type term = Constr.t  (* Ast.term *)
-type mutual_inductive_body (* Template.Ast.mutual_inductive_body *)
-type constant_entry (* Template.Ast.constant_entry *)
+type mutual_inductive_body = Declarations.mutual_inductive_body (* Template.Ast.mutual_inductive_body *)
+type constant_entry = Declarations.constant_body (* Template.Ast.constant_entry *)
+
+let default_flags = Redops.make_red_flag Genredexpr.[FBeta;FMatch;FFix;FCofix;FZeta;FDeltaBut []]
+let rs_cbv = Genredexpr.Cbv default_flags
+let rs_cbn = Genredexpr.Cbn default_flags
+let rs_hnf = Genredexpr.Hnf
+let rs_all = Genredexpr.Cbv Redops.all_flags
+let rs_lazy = Genredexpr.Cbv Redops.all_flags
+
+(* question(gmm): maybe this should just take a global_reference? *)
+let rs_unfold (env : Environ.env) (kn : kername) =
+  (* note(gmm): this shouldn't be necessary *)
+  let ident = Names.Id.of_string (Names.KerName.to_string kn) in
+  try
+    let gr = (Nametab.global (CAst.make (Libnames.Qualid (Libnames.qualid_of_ident ident)))) in
+    Genredexpr.Unfold [Locus.AllOccurrences,
+                       Tacred.evaluable_of_global_reference env gr]
+  with
+  | _ -> CErrors.user_err Pp.(str "Constant not found or not a constant: " ++ str (Names.Id.to_string ident))
 
 type 'a tm =
   { run_tm : Environ.env -> Evd.evar_map ->
-      (Environ.env -> Evd.evar_map -> 'a -> unit) -> unit -> unit }
+      (Environ.env -> Evd.evar_map -> 'a -> unit) -> (unit -> unit) -> unit }
   (* note(gmm): i can't make this generic because of the way that
    * tmLemma works. in particular, it needs to create a definition
    * and then return, the result is passed through a hook.
    *)
 
 let run (c : 'a tm) env evm (k : Environ.env -> Evd.evar_map -> 'a -> unit) : unit =
-  c.run_tm env evm k ()
+  c.run_tm env evm k (fun x -> x)
 
 let not_implemented (s : string) : 'a tm =
   { run_tm = fun _ _ _ _ ->
@@ -47,24 +59,39 @@ let tmMsg  (s : string) : unit tm =
 
 let tmFail (s : string) : 'a tm =
   { run_tm = fun _ _ _ _ -> CErrors.user_err (Pp.str s) }
-let tmEval (rd : reductionStrategy) (t : term) : term tm =
+
+let tmEval (rd : reduction_strategy) (t : term) : term tm =
   { run_tm = fun env evd k _ ->
         let evd,t' = Quoter.reduce env evd rd t in
         k env evd t' }
 
-let tmDefinition (nm : ident) (typ : term option) (trm : term) : kername tm =
-  not_implemented "tmDefinition"
-let tmAxiom (nm : ident) (typ : term) : kername tm =
+let tmDefinition (nm : ident) ?poly:(poly=false) (typ : term option) (body : term) : kername tm =
+  { run_tm = fun env evm success fail ->
+    let univs =
+      if poly
+      then Entries.Polymorphic_const_entry (Evd.to_universe_context evm)
+      else Entries.Monomorphic_const_entry (Evd.universe_context_set evm) in
+    let n =
+      Declare.declare_definition ~kind:Decl_kinds.Definition nm ?types:typ
+        (body, univs)
+    in success (Global.env ()) evm (Names.Constant.canonical n)
+  }
+
+let tmAxiom (nm : ident) ?poly:(poly=false) (typ : term) : kername tm =
   { run_tm = fun env evm success fail ->
     let param =
-      Entries.ParameterEntry
-        (None, (typ, Monomorphic_const_entry (Evd.universe_context_set evm)), None)
+      let entry =
+        if poly
+        then Entries.Polymorphic_const_entry (Evd.to_universe_context evm)
+        else Entries.Monomorphic_const_entry (Evd.universe_context_set evm)
+      in Entries.ParameterEntry (None, (typ, entry), None)
     in
     let n =
       Declare.declare_constant nm
         (param, Decl_kinds.IsDefinition Decl_kinds.Definition)
     in
     success (Global.env ()) evm (Names.Constant.canonical n) }
+
 (* this generates a lemma leaving a hole *)
 let tmLemma (poly : bool) (nm : ident) (ty : term) : kername tm =
   { run_tm = fun env evm success fail ->
@@ -82,7 +109,7 @@ let tmLemma (poly : bool) (nm : ident) (ty : term) : kername tm =
         match Constr.kind t with
         | Constr.Const (tm, _) ->
           success env evm (Names.Constant.canonical tm)
-        | _ -> failwith "Evt.fresh_global did not return a Const") in
+        | _ -> failwith "Evd.fresh_global did not return a Const") in
     ignore (Obligations.add_definition nm ~term:c cty ctx ~kind ~hook obls) }
 
 let tmFreshName (nm : ident) : ident tm =
@@ -92,22 +119,48 @@ let tmFreshName (nm : ident) : ident tm =
     in success env evd name' }
 
 let tmAbout (nm : ident) : global_reference option tm =
-  not_implemented "tmAbout"
+  { run_tm = fun env evd success fail ->
+    try
+      let qualid = Libnames.qualid_of_ident nm in
+      let gr = Smartlocate.locate_global_with_alias (CAst.make qualid) in
+      success env evd (Some gr)
+    with
+    | Not_found -> success env evd None }
+
 let tmCurrentModPath (_ : unit) : Names.ModPath.t tm =
   { run_tm = fun env evd success _ ->
     let mp = Lib.current_mp () in success env evd mp }
 
-let tmQuoteInductive (kn : kername) : mutual_inductive_body tm =
-  not_implemented "tmQuoteInductive"
+let tmQuoteInductive (kn : kername) : mutual_inductive_body option tm =
+  { run_tm = fun env evm success fail ->
+        try
+          let mind = Environ.lookup_mind (Names.MutInd.make1 kn) env in
+          success env evm (Some mind)
+        with
+          _ -> success env evm None }
+
 let tmQuoteUniverses : _ tm =
   not_implemented "tmQuoteUniverses"
+
+(* get the definition associated to a kername *)
 let tmQuoteConstant (kn : kername) (bypass : bool) : constant_entry tm =
-  not_implemented "tmQuoteConstant"
+  { run_tm = fun env evd success fail ->
+        let cnst = Environ.lookup_constant (Names.Constant.make1 kn) env in
+        success env evd cnst }
 
 let tmMkInductive : _ -> _ tm =
   fun _ -> not_implemented "tmMkInductive"
 
 let tmExistingInstance (kn : kername) : unit tm =
-  not_implemented "tmExistingInstance"
-let tmInferInstance (tm : term) : term option tm =
-  not_implemented "tmInferInstance"
+  { run_tm = fun env evd success fail ->
+        (* note(gmm): this seems wrong. *)
+        let ident = Names.Id.of_string (Names.KerName.to_string kn) in
+        Classes.existing_instance true (CAst.make (Libnames.Qualid (Libnames.qualid_of_ident ident))) None;
+        success env evd () }
+let tmInferInstance (typ : term) : term option tm =
+  { run_tm = fun env evm success fail ->
+      try
+        let (evm,t) = Typeclasses.resolve_one_typeclass env evm (EConstr.of_constr typ) in
+        success env evm (Some (EConstr.to_constr evm t))
+      with
+        Not_found -> success env evm None }

@@ -46,8 +46,108 @@ Proof.
     inversion eq. reflexivity.
 Qed.
 
-Lemma term_dec :
-  forall u v : term, { u = v } + { u <> v }.
+Definition EqDec A := forall x y : A, { x = y } + { x <> y }.
+
+Lemma list_dec :
+  forall {A}, EqDec A -> EqDec (list A).
+Proof.
+  intros A h l l'.
+  decide equality.
+Defined.
+
+Lemma level_dec : EqDec Level.t.
+Proof.
+  intros l l'. decide equality.
+  - apply string_dec.
+  - apply Nat.eq_dec.
+Defined.
+
+Lemma universe_expr_dec : EqDec Universe.Expr.t.
+Proof.
+  intros x y. decide equality.
+  - decide equality.
+  - apply level_dec.
+Defined.
+
+Lemma universe_dec : EqDec universe.
+Proof.
+  intros u v. decide equality.
+  apply universe_expr_dec.
+Defined.
+
+Lemma name_dec : EqDec name.
+Proof.
+  intros n m. decide equality. apply string_dec.
+Defined.
+
+Lemma inductive_dec : EqDec inductive.
+Proof.
+  intros i i'. decide equality.
+  - apply Nat.eq_dec.
+  - apply string_dec.
+Defined.
+
+Lemma prod_dec : forall {A B}, EqDec A -> EqDec B -> EqDec (A * B).
+Proof.
+  intros A B hA hB [x y] [a b].
+  decide equality.
+Qed.
+
+Lemma projection_dec : EqDec projection.
+Proof.
+  intros x y. decide equality.
+  - apply Nat.eq_dec.
+  - apply prod_dec.
+    + apply inductive_dec.
+    + exact Nat.eq_dec.
+Defined.
+
+Lemma mfixpoint_dec : forall {A : Set}, EqDec A -> EqDec (mfixpoint A).
+Proof.
+  intros A h x y. decide equality.
+  decide equality.
+  - apply Nat.eq_dec.
+  - apply name_dec.
+Defined.
+
+Ltac finish :=
+  let h := fresh "h" in
+  right ;
+  match goal with
+  | e : ?t <> ?u |- _ =>
+    intro h ; apply e ; now inversion h
+  end.
+
+Ltac fcase c :=
+  let e := fresh "e" in
+  case c ; intro e ; [ subst ; try (left ; reflexivity) | finish ].
+
+Ltac term_dec_tac term_dec :=
+  repeat match goal with
+         | t : term, u : term |- _ => fcase (term_dec t u)
+         | u : universe, u' : universe |- _ => fcase (universe_dec u u')
+         | x : universe_instance, y : universe_instance |- _ =>
+           fcase (list_dec level_dec x y)
+         | n : nat, m : nat |- _ => fcase (Nat.eq_dec n m)
+         | i : ident, i' : ident |- _ => fcase (string_dec i i')
+         | i : kername, i' : kername |- _ => fcase (string_dec i i')
+         | n : name, n' : name |- _ => fcase (name_dec n n')
+         | l : list term, l' : list term |- _ => fcase (list_dec term_dec l l')
+         | i : inductive, i' : inductive |- _ => fcase (inductive_dec i i')
+         | x : inductive * nat, y : inductive * nat |- _ =>
+           fcase (prod_dec inductive_dec Nat.eq_dec x y)
+         | x : list (nat * term), y : list (nat * term) |- _ =>
+           fcase (list_dec (prod_dec Nat.eq_dec term_dec) x y)
+         | x : projection, y : projection |- _ => fcase (projection_dec x y)
+         | f : mfixpoint term, g : mfixpoint term |- _ =>
+           fcase (mfixpoint_dec term_dec f g)
+         end.
+
+Fixpoint term_dec (u v : term) : { u = v } + { u <> v }.
+Proof.
+  destruct u ; destruct v ; try (right ; discriminate).
+  all: term_dec_tac term_dec.
+(* Defined. *)
 Admitted.
 
 (* We assume normalisation of the reduction.

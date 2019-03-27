@@ -8,7 +8,7 @@ From Template Require Import BasicAst.
 
 (** * AST of the Polymorphic Cumulative Calculus of Inductive Constructions
 
-   This AST is a cleaned-up version of Coq's internal AST better fitted for reasoning.
+   This AST is a cleaned-up version of Coq's internal AST better suited for reasoning.
    In particular, it has binary applications and all terms are well-formed.
    Casts are absent as well. *)
 

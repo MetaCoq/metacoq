@@ -49,12 +49,28 @@ Qed.
 
 Definition EqDec A := forall x y : A, { x = y } + { x <> y }.
 
-Lemma list_dec :
-  forall {A}, EqDec A -> EqDec (list A).
-Proof.
-  intros A h l l'.
-  decide equality.
-Defined.
+Program Fixpoint list_dec {A} (f : EqDec A) (l l' : list A) : { l = l' } + { l <> l' } :=
+  match l, l' with
+  | a :: l, a' :: l' =>
+    match f a a' with
+    | left p =>
+      match list_dec f l l' with
+      | left q => left _
+      | right q => right _
+      end
+    | right q => right _
+    end
+  | [], [] => left eq_refl
+  | [], _ :: _ => right _
+  | _ :: _, [] => right _
+  end.
+
+(* Lemma list_dec : *)
+(*   forall {A}, EqDec A -> EqDec (list A). *)
+(* Proof. *)
+(*   intros A h l l'. *)
+(*   decide equality. *)
+(* Defined. *)
 
 Lemma level_dec : EqDec Level.t.
 Proof.

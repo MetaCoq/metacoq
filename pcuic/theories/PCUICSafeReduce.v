@@ -368,6 +368,9 @@ Section Normalisation.
   Derive Signature for position.
   Derive NoConfusion NoConfusionHom for term.
   Derive NoConfusion NoConfusionHom for position.
+  Derive EqDec for position.
+
+  Set Equations With UIP.
 
   Equations atpos (t : term) (p : position t) : term :=
     atpos ?(t) (root t) := t ;
@@ -574,65 +577,36 @@ Section Normalisation.
 
   Derive Signature (* NoConfusion NoConfusionHom *) for posR.
 
+  (* TODO Remove, use noconf *)
   Lemma existT_position_inj :
     forall u p q,
       existT position u p = existT _ u q ->
       p = q.
   Proof.
-    intros u p q eq.
-    revert p q eq.
-    induction u ; intros q r eq.
-    all: try (
-      dependent destruction q ;
-      dependent destruction r ;
-      reflexivity
-    ).
-    - dependent destruction q.
-      + dependent destruction r.
-        all: try discriminate.
-        reflexivity.
-      + dependent destruction r.
-        all: try discriminate.
-        cbn in eq. inversion eq.
-        apply IHu1 in H1. subst. reflexivity.
-      + dependent destruction r.
-        all: try discriminate.
-        cbn in eq. inversion eq.
-        apply IHu2 in H1. subst. reflexivity.
-    - dependent destruction q.
-      + dependent destruction r.
-        all: try discriminate.
-        reflexivity.
-      + dependent destruction r.
-        all: try discriminate.
-        cbn in eq. inversion eq.
-        apply IHu2 in H1. subst. reflexivity.
+    intros u p q eq. noconf eq. reflexivity.
   Qed.
 
+  (* TODO Remove, use noconf *)
   Lemma app_l_inj :
     forall u v p q, app_l u p v = app_l u q v -> p = q.
   Proof.
-    intros u v p q eq.
-    inversion eq.
-    eapply existT_position_inj. assumption.
+    intros u v p q eq. noconf eq. reflexivity.
   Qed.
 
+  (* TODO Remove, use noconf *)
   Lemma app_r_inj :
     forall u v p q, app_r u v p = app_r u v q -> p = q.
   Proof.
-    intros u v p q eq.
-    inversion eq.
-    eapply existT_position_inj. assumption.
+    intros u v p q eq. noconf eq. reflexivity.
   Qed.
 
+  (* TODO Remove, use noconf *)
   Lemma case_c_inj :
     forall indn pr c brs p q,
       case_c indn pr c brs p = case_c indn pr c brs q ->
       p = q.
   Proof.
-    intros indn pr c brs p q eq.
-    inversion eq.
-    eapply existT_position_inj. assumption.
+    intros indn pr c brs p q eq. noconf eq. reflexivity.
   Qed.
 
   Lemma posR_Acc :

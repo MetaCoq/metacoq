@@ -211,8 +211,9 @@ Lemma lift_is_constructor:
 Proof.
   intros args narg.
   unfold is_constructor; intros.
-  rewrite nth_error_map. destruct nth_error; try discriminate. simpl. intros.
-  destruct decompose_app eqn:Heq. eapply decompose_app_lift in Heq as ->.
+  rewrite nth_error_map. destruct nth_error; try discriminate. simpl.
+  unfold isConstruct_app in *. destruct decompose_app eqn:Heq.
+  eapply decompose_app_lift in Heq as ->.
   destruct t0; try discriminate || reflexivity.
 Qed.
 Hint Resolve lift_is_constructor.

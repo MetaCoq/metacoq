@@ -305,6 +305,7 @@ Proof.
   intros args narg.
   unfold is_constructor; intros.
   rewrite nth_error_map. destruct nth_error; try discriminate. simpl. intros.
+  unfold isConstruct_app in *.
   destruct (decompose_app t) eqn:Heq. eapply decompose_app_subst in Heq as ->.
   destruct t0; try discriminate || reflexivity.
   destruct t0; try discriminate || reflexivity.

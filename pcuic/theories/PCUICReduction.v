@@ -350,6 +350,17 @@ Hint Resolve All_All2 : all.
 Section ParallelReduction.
   Context (Σ : global_declarations).
 
+  Definition on_Trel_eq {A B C} (R : A -> A -> Type) (f : B -> A) (g : B -> C) (x y : B) :=
+    (on_Trel R f x y * (g x = g y))%type.
+
+  Definition All2_prop2_eq Γ Γ' {A B} (f g : A -> term) (h : A -> B)
+             (rel : forall (Γ : context) (t t' : term), Type) :=
+    All2 (fun x y => on_Trel (rel Γ) f x y * on_Trel_eq (rel Γ') g h x y)%type.
+
+  Definition All2_prop2 Γ Γ' {A} (f g : A -> term)
+             (rel : forall (Γ : context) (t t' : term), Type) :=
+    All2 (fun x y => on_Trel (rel Γ) f x y * on_Trel (rel Γ') g x y)%type.
+
   Inductive pred1 (Γ : context) : term -> term -> Type :=
   (** Reductions *)
   (** Beta *)
@@ -371,7 +382,7 @@ Section ParallelReduction.
   (** Case *)
   | pred_iota ind pars c u args0 args1 p brs0 brs1 :
       All2 (pred1 Γ) args0 args1 ->
-      All2 (on_Trel (pred1 Γ) snd) brs0 brs1 ->
+      All2 (on_Trel_eq (pred1 Γ) snd fst) brs0 brs1 ->
       pred1 Γ (tCase (ind, pars) p (mkApps (tConstruct ind c u) args0) brs0)
             (iota_red pars c args1 brs1)
 
@@ -389,7 +400,7 @@ Section ParallelReduction.
       All2 (pred1 Γ) args0 args1 ->
       pred1 Γ fn0 fn1 ->
       pred1 Γ p0 p1 ->
-      All2 (on_Trel (pred1 Γ) snd) brs0 brs1 ->
+      All2 (on_Trel_eq (pred1 Γ) snd fst) brs0 brs1 ->
       pred1 Γ (tCase ip p0 (mkApps (tCoFix mfix idx) args0) brs0)
             (tCase ip (mkApps fn1 args1) p1 brs1)
 
@@ -429,19 +440,17 @@ Section ParallelReduction.
   | pred_case ind p0 p1 c0 c1 brs0 brs1 :
       pred1 Γ p0 p1 ->
       pred1 Γ c0 c1 ->
-      All2 (on_Trel (pred1 Γ) snd) brs0 brs1 ->
+      All2 (on_Trel_eq (pred1 Γ) snd fst) brs0 brs1 ->
       pred1 Γ (tCase ind p0 c0 brs0) (tCase ind p1 c1 brs1)
 
   | pred_proj_congr p c c' : pred1 Γ c c' -> pred1 Γ (tProj p c) (tProj p c')
 
   | pred_fix_congr mfix0 mfix1 idx :
-      All2 (fun d0 d1 => (pred1 Γ (dtype d0) (dtype d1)) *
-                         (pred1 (Γ ,,, fix_context mfix0) (dbody d0) (dbody d1)))%type mfix0 mfix1 ->
+      All2_prop2_eq Γ (Γ ,,, fix_context mfix0) dtype dbody (fun x => (dname x, rarg x)) pred1 mfix0 mfix1 ->
       pred1 Γ (tFix mfix0 idx) (tFix mfix1 idx)
 
   | pred_cofix_congr mfix0 mfix1 idx :
-      All2 (fun d0 d1 => (pred1 Γ (dtype d0) (dtype d1)) *
-                            (pred1 (Γ ,,, fix_context mfix0) (dbody d0) (dbody d1)))%type mfix0 mfix1 ->
+      All2_prop2_eq Γ (Γ ,,, fix_context mfix0) dtype dbody (fun x => (dname x, rarg x)) pred1 mfix0 mfix1 ->
       pred1 Γ (tCoFix mfix0 idx) (tCoFix mfix1 idx)
 
   | pred_prod na M0 M1 N0 N1 : pred1 Γ M0 M1 -> pred1 (Γ ,, vass na M0) N0 N1 ->
@@ -454,31 +463,54 @@ Section ParallelReduction.
   Definition All2_prop_relevant Γ {A} (f : A -> term) (rel1 : forall (t t' : term), pred1 Γ t t' -> Type) :=
     All2 (fun x y => { red : pred1 Γ (f x) (f y) & rel1 (f x) (f y) red}).
 
-  Definition All2_prop Γ {A} (f : A -> term) (rel : forall (Γ : context) (t t' : term), Type) :=
-    All2 (on_Trel (rel Γ) f).
+  Definition All2_prop_eq Γ {A B} (f : A -> term) (g : A -> B) (rel : forall (Γ : context) (t t' : term), Type) :=
+    All2 (on_Trel_eq (rel Γ) f g).
 
-  Definition All2_prop2 Γ Γ' {A} (f g : A -> term) (rel : forall (Γ : context) (t t' : term), Type) :=
-    All2 (fun x y => (on_Trel (rel Γ) f x y) * on_Trel (rel Γ') g x y)%type.
+  Definition All2_prop Γ (rel : forall (Γ : context) (t t' : term), Type) :=
+    All2 (rel Γ).
 
   (* Scheme pred1_ind_all_first := Minimality for pred1 Sort Type. *)
 
-  Lemma All2_All2_prop {A} {P Q : context -> term -> term -> Type} {par} {f : A -> term} {l l' : list A} :
-    All2 (on_Trel (P par) f) l l' ->
+  Lemma All2_All2_prop {P Q : context -> term -> term -> Type} {par} {l l' : list term} :
+    All2 (P par) l l' ->
     (forall x y, P par x y -> Q par x y) ->
-    All2_prop par f Q l l'.
+    All2_prop par Q l l'.
   Proof.
     intros H aux.
-    induction H; constructor. unfold on_Trel in *.
-    apply aux. apply r. apply IHAll2.
+    induction H; constructor. unfold on_Trel_eq, on_Trel in *.
+    apply aux; apply r. apply IHAll2.
   Defined.
 
-  Lemma All2_All2_prop2 {A} {P Q : context -> term -> term -> Type} {par par'} {f g : A -> term} {l l' : list A} :
+  Lemma All2_All2_prop_eq {A B} {P Q : context -> term -> term -> Type} {par}
+        {f : A -> term} {g : A -> B} {l l' : list A} :
+    All2 (on_Trel_eq (P par) f g) l l' ->
+    (forall x y, P par x y -> Q par x y) ->
+    All2_prop_eq par f g Q l l'.
+  Proof.
+    intros H aux.
+    induction H; constructor. unfold on_Trel_eq, on_Trel in *.
+    split. apply aux; apply r. apply r. apply IHAll2.
+  Defined.
+
+  Lemma All2_All2_prop2_eq {A B} {P Q : context -> term -> term -> Type} {par par'}
+        {f g : A -> term} {h : A -> B} {l l' : list A} :
+    All2_prop2_eq par par' f g h P l l' ->
+    (forall par x y, P par x y -> Q par x y) ->
+    All2_prop2_eq par par' f g h Q l l'.
+  Proof.
+    intros H aux.
+    induction H; constructor. unfold on_Trel_eq, on_Trel in *. split.
+    apply aux. destruct r. apply p. split. apply aux. apply r. apply r. apply IHAll2.
+  Defined.
+
+  Lemma All2_All2_prop2 {A} {P Q : context -> term -> term -> Type} {par par'}
+        {f g : A -> term} {l l' : list A} :
     All2_prop2 par par' f g P l l' ->
     (forall par x y, P par x y -> Q par x y) ->
     All2_prop2 par par' f g Q l l'.
   Proof.
     intros H aux.
-    induction H; constructor. unfold on_Trel in *. split.
+    induction H; constructor. unfold on_Trel_eq, on_Trel in *. split.
     apply aux. destruct r. apply p. apply aux. apply r. apply IHAll2.
   Defined.
 
@@ -500,28 +532,28 @@ Section ParallelReduction.
           pred1 Γ ((lift0 (S i)) body) body' -> P Γ ((lift0 (S i)) body) body' -> P Γ (tRel i) body') ->
       (forall (Γ : context) (ind : inductive) (pars c : nat) (u : universe_instance) (args0 args1 : list term)
               (p : term) (brs0 brs1 : list (nat * term)),
-          All2_prop Γ id P' args0 args1 ->
-          All2_prop Γ snd P' brs0 brs1 ->
+          All2_prop Γ P' args0 args1 ->
+          All2_prop_eq Γ snd fst P' brs0 brs1 ->
           P Γ (tCase (ind, pars) p (mkApps (tConstruct ind c u) args0) brs0) (iota_red pars c args1 brs1)) ->
       (forall (Γ : context) (mfix : mfixpoint term) (idx : nat) (args0 args1 : list term) (narg : nat) (fn0 fn1 : term),
           unfold_fix mfix idx = Some (narg, fn0) ->
           is_constructor narg args1 = true ->
-          All2_prop Γ id P' args0 args1 ->
+          All2_prop Γ P' args0 args1 ->
           pred1 Γ fn0 fn1 -> P Γ fn0 fn1 -> P Γ (mkApps (tFix mfix idx) args0) (mkApps fn1 args1)) ->
       (forall (Γ : context) (ip : inductive * nat) (p0 p1 : term) (mfix : mfixpoint term) (idx : nat)
               (args0 args1 : list term) (narg : nat) (fn0 fn1 : term) (brs0 brs1 : list (nat * term)),
           unfold_cofix mfix idx = Some (narg, fn0) ->
-          All2_prop Γ id P' args0 args1 ->
+          All2_prop Γ P' args0 args1 ->
           pred1 Γ fn0 fn1 ->
           P Γ fn0 fn1 ->
           pred1 Γ p0 p1 ->
           P Γ p0 p1 ->
-          All2_prop Γ snd P' brs0 brs1 ->
+          All2_prop_eq Γ snd fst P' brs0 brs1 ->
           P Γ (tCase ip p0 (mkApps (tCoFix mfix idx) args0) brs0) (tCase ip (mkApps fn1 args1) p1 brs1)) ->
       (forall (Γ : context) (p : projection) (mfix : mfixpoint term) (idx : nat) (args0 args1 : list term)
               (narg : nat) (fn0 fn1 : term),
           unfold_cofix mfix idx = Some (narg, fn0) ->
-          All2_prop Γ id P' args0 args1 ->
+          All2_prop Γ P' args0 args1 ->
           pred1 Γ fn0 fn1 -> P Γ fn0 fn1 -> P Γ (tProj p (mkApps (tCoFix mfix idx) args0)) (tProj p (mkApps fn1 args1))) ->
       (forall (Γ : context) (c : ident) (decl : constant_body) (body : term),
           declared_constant Σ c decl ->
@@ -529,7 +561,7 @@ Section ParallelReduction.
                                         P Γ (tConst c u) (subst_instance_constr u body)) ->
       (forall (Γ : context) (i : inductive) (pars narg : nat) (k : nat) (u : universe_instance)
               (args0 args1 : list term) (arg1 : term),
-          All2_prop Γ id P' args0 args1 ->
+          All2_prop Γ P' args0 args1 ->
           nth_error args1 (pars + narg) = Some arg1 ->
           P Γ (tProj (i, pars, narg) (mkApps (tConstruct i k u) args0)) arg1) ->
       (forall (Γ : context) (na : name) (M M' N N' : term),
@@ -547,18 +579,18 @@ Section ParallelReduction.
           pred1 Γ p0 p1 ->
           P Γ p0 p1 ->
           pred1 Γ c0 c1 ->
-          P Γ c0 c1 -> All2_prop Γ snd P' brs0 brs1 -> P Γ (tCase ind p0 c0 brs0) (tCase ind p1 c1 brs1)) ->
+          P Γ c0 c1 -> All2_prop_eq Γ snd fst P' brs0 brs1 -> P Γ (tCase ind p0 c0 brs0) (tCase ind p1 c1 brs1)) ->
       (forall (Γ : context) (p : projection) (c c' : term), pred1 Γ c c' -> P Γ c c' -> P Γ (tProj p c) (tProj p c')) ->
       (forall (Γ : context) (mfix0 : mfixpoint term) (mfix1 : list (def term)) (idx : nat),
-          All2_prop2 Γ (Γ ,,, fix_context mfix0) dtype dbody P' mfix0 mfix1 ->
+          All2_prop2_eq Γ (Γ ,,, fix_context mfix0) dtype dbody (fun x => (dname x, rarg x)) P' mfix0 mfix1 ->
           P Γ (tFix mfix0 idx) (tFix mfix1 idx)) ->
       (forall (Γ : context) (mfix0 : mfixpoint term) (mfix1 : list (def term)) (idx : nat),
-          All2_prop2 Γ (Γ ,,, fix_context mfix0) dtype dbody P' mfix0 mfix1 ->
+          All2_prop2_eq Γ (Γ ,,, fix_context mfix0) dtype dbody (fun x => (dname x, rarg x)) P' mfix0 mfix1 ->
           P Γ (tCoFix mfix0 idx) (tCoFix mfix1 idx)) ->
       (forall (Γ : context) (na : name) (M0 M1 N0 N1 : term),
           pred1 Γ M0 M1 ->
           P Γ M0 M1 -> pred1 (Γ,, vass na M0) N0 N1 -> P (Γ,, vass na M0) N0 N1 -> P Γ (tProd na M0 N0) (tProd na M1 N1)) ->
-      (forall (Γ : context) (ev : nat) (l l' : list term), All2_prop Γ id P' l l' -> P Γ (tEvar ev l) (tEvar ev l')) ->
+      (forall (Γ : context) (ev : nat) (l l' : list term), All2_prop Γ P' l l' -> P Γ (tEvar ev l) (tEvar ev l')) ->
       (forall (Γ : context) (t : term), atom t -> P Γ t t) ->
       forall (Γ : context) (t t0 : term), pred1 Γ t t0 -> P Γ t t0.
   Proof.
@@ -573,29 +605,29 @@ Section ParallelReduction.
                 | |- P _ (tProj _ (mkApps (tCoFix _ _) _)) _ => idtac
                 | H : _ |- _ => eapply H; eauto
                 end.
-    - apply (All2_All2_prop (P:=pred1) (Q:=P') (f:=id) a ((extendP aux) Γ)).
-    - apply (All2_All2_prop (P:=pred1) (Q:=P') (f:=snd) a0 (extendP aux Γ)).
+    - eapply (All2_All2_prop (P:=pred1) (Q:=P') a ((extendP aux) Γ)).
+    - eapply (All2_All2_prop_eq (P:=pred1) (Q:=P') (f:=snd) (g:=fst) a0 (extendP aux Γ)).
     - eapply X3; eauto.
-      eapply (All2_All2_prop (P:=pred1) (Q:=P') (f:=id) a (extendP aux Γ)).
+      eapply (All2_All2_prop (P:=pred1) (Q:=P') a (extendP aux Γ)).
     - eapply X4; eauto.
-      eapply (All2_All2_prop (P:=pred1) (Q:=P') (f:=id) a (extendP aux Γ)).
-      eapply (All2_All2_prop (P:=pred1) (Q:=P') (f:=snd) a0 (extendP aux Γ)).
+      eapply (All2_All2_prop (P:=pred1) (Q:=P') a (extendP aux Γ)).
+      eapply (All2_All2_prop_eq (P:=pred1) (Q:=P') (f:=snd) a0 (extendP aux Γ)).
     - eapply X5; eauto.
-      eapply (All2_All2_prop (P:=pred1) (Q:=P') (f:=id) a (extendP aux Γ)).
-    - eapply (All2_All2_prop (P:=pred1) (Q:=P') (f:=id) a (extendP aux Γ)).
-    - eapply (All2_All2_prop (P:=pred1) (Q:=P') (f:=snd) a (extendP aux Γ)).
+      eapply (All2_All2_prop (P:=pred1) (Q:=P') a (extendP aux Γ)).
+    - eapply (All2_All2_prop (P:=pred1) (Q:=P') a (extendP aux Γ)).
+    - eapply (All2_All2_prop_eq (P:=pred1) (Q:=P') (f:=snd) a (extendP aux Γ)).
     - eapply X13.
-      eapply (All2_All2_prop2 (P:=pred1) (Q:=P') (f:=dtype) (g:=dbody) a (extendP aux)).
+      eapply (All2_All2_prop2_eq (P:=pred1) (Q:=P') (f:=dtype) (g:=dbody) a (extendP aux)).
     - eapply X14.
-      eapply (All2_All2_prop2 (P:=pred1) (Q:=P') (f:=dtype) (g:=dbody) a (extendP aux)).
-    - eapply (All2_All2_prop (P:=pred1) (Q:=P') (f:=id) a (extendP aux Γ)).
+      eapply (All2_All2_prop2_eq (P:=pred1) (Q:=P') (f:=dtype) (g:=dbody) a (extendP aux)).
+    - eapply (All2_All2_prop (P:=pred1) (Q:=P') a (extendP aux Γ)).
   Defined.
 
   Lemma pred1_refl Γ t : pred1 Γ t t.
   Proof.
     induction t in Γ |- * using term_forall_list_ind;
       try solve [(apply pred_atom; reflexivity) || constructor; auto];
-      try solve [constructor; unfold on_Trel; solve_all].
+      try solve [try red in X; constructor; unfold All2_prop2_eq, All2_prop2, on_Trel_eq, on_Trel in *; solve_all].
   Qed.
 
   Hint Constructors pred1 : pred.
@@ -605,7 +637,7 @@ Section ParallelReduction.
   Proof. induction l; constructor; auto. Qed.
 
   Hint Resolve All2_same : pred.
-  Hint Unfold on_rel on_Trel snd on_snd : pred.
+  Hint Unfold All2_prop2_eq All2_prop2 on_rel on_Trel on_Trel_eq snd on_snd : pred.
 
   Lemma OnOne2_All2 {A}:
     forall (ts ts' : list A) P Q,
@@ -630,11 +662,14 @@ Section ParallelReduction.
     induction 1 using red1_ind_all; intros; eauto with pred;
       try solve [constructor; intuition auto with pred].
 
-    constructor; auto with pred. OnOne2_All2; intuition auto with pred. rewrite b0. auto with pred.
-    constructor; auto with pred. OnOne2_All2; intuition auto with pred. rewrite b0. auto with pred.
-    constructor; auto with pred. OnOne2_All2; intuition auto with pred. rewrite b0. auto with pred.
-    constructor; auto with pred. OnOne2_All2; intuition auto with pred. rewrite b0. auto with pred.
-  Qed.
+    econstructor; eauto with pred.
+    constructor; auto with pred. OnOne2_All2; intuition auto with pred. red. intuition auto with pred.
+    (* TODO update red1 to keep extra info equalities (on_Trel_eq) *)
+  Admitted.
+  (*   constructor; auto with pred. OnOne2_All2; intuition auto with pred. rewrite b0. auto with pred. *)
+  (*   constructor; auto with pred. OnOne2_All2; intuition auto with pred. rewrite b0. auto with pred. *)
+  (*   constructor; auto with pred. OnOne2_All2; intuition auto with pred. rewrite b0. auto with pred. *)
+  (* Qed. *)
 
 End ParallelReduction.
 

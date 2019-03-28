@@ -202,7 +202,6 @@ let unquote_mutual_inductive_entry evm trm (* of type mutual_inductive_entry *) 
 
 let declare_inductive (env: Environ.env) (evm: Evd.evar_map) (mind: Constr.t) : unit =
   let mind = reduce_all env evm mind in
-  debug (fun () -> str"declare_inductive: " ++ Printer.pr_constr_env env evm mind);
   let evm, mind = unquote_mutual_inductive_entry evm mind in
   ignore (ComInductive.declare_mutual_inductive_with_eliminations mind Names.Id.Map.empty [])
 
@@ -344,7 +343,8 @@ let rec run_template_program_rec ?(intactic=false) (k : Environ.env * Evd.evar_m
   | TmQuoteUnivs ->
     let univs = Environ.universes env in
     k (env, evm, quote_ugraph univs)
-  | TmPrint trm -> Feedback.msg_info (pr_constr trm);
+  | TmPrint trm ->
+    Feedback.msg_info (Printer.pr_constr_env env evm trm);
     k (env, evm, unit_tt)
   | TmMsg msg ->
      let msg = reduce_all env evm msg in
@@ -379,7 +379,7 @@ let rec run_template_program_rec ?(intactic=false) (k : Environ.env * Evd.evar_m
       let evm,t = denote_term evm trm in
       reduce env evm red t
     in
-    k (env,evm, trm)
+    k (env,evm, TermReify.quote_term env trm)
   | TmMkInductive mind ->
     declare_inductive env evm mind;
     let env = Global.env () in
@@ -420,7 +420,12 @@ let rec run_template_program_rec ?(intactic=false) (k : Environ.env * Evd.evar_m
      k (env, evm, unit_tt)
   | TmInferInstance (s, typ) ->
     begin
-      let evm, typ = (match denote_option s with Some s -> let red = unquote_reduction_strategy env evm s in reduce env evm red typ | None -> evm, typ) in
+      let evm, typ =
+        match denote_option s with
+          Some s ->
+          let red = unquote_reduction_strategy env evm s in
+          reduce env evm red typ
+        | None -> evm, typ in
       try
         let (evm,t) = Typeclasses.resolve_one_typeclass env evm (EConstr.of_constr typ) in
         k (env, evm, Constr.mkApp (cSome, [| typ; EConstr.to_constr evm t|]))

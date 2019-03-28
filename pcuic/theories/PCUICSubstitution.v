@@ -187,17 +187,6 @@ Proof.
   simpl. eapply (Hf _ _ (Some t)). eauto.
 Qed.
 
-Lemma nth_error_subst_context (Γ' : context) s (v : nat) k :
-    nth_error (subst_context s k Γ') v =
-    option_map (subst_decl s (#|Γ'| - S v + k)) (nth_error Γ' v).
-Proof.
-  induction Γ' in v |- *; intros.
-  - simpl. unfold subst_context, fold_context; simpl; rewrite nth_error_nil. easy.
-  - simpl. destruct v; rewrite subst_context_snoc.
-    + simpl. repeat f_equal; try lia.
-    + simpl. rewrite IHΓ'; simpl in *; (lia || congruence).
-Qed.
-
 Lemma subst_length  Σ Γ s Γ' : subs Σ Γ s Γ' -> #|s| = #|Γ'|.
 Proof.
   induction 1; simpl; auto with arith.
@@ -212,6 +201,17 @@ Proof.
   simpl.
   intros. rewrite app_context_length in H.
   rewrite !nth_error_app_ge; autorewrite with wf; f_equal; try lia.
+Qed.
+
+Lemma nth_error_subst_context (Γ' : context) s (v : nat) k :
+    nth_error (subst_context s k Γ') v =
+    option_map (subst_decl s (#|Γ'| - S v + k)) (nth_error Γ' v).
+Proof.
+  induction Γ' in v |- *; intros.
+  - simpl. unfold subst_context, fold_context; simpl; rewrite nth_error_nil. easy.
+  - simpl. destruct v; rewrite subst_context_snoc.
+    + simpl. repeat f_equal; try lia.
+    + simpl. rewrite IHΓ'; simpl in *; (lia || congruence).
 Qed.
 
 Lemma subs_nth_error_lt  Σ Γ Γ' Γ'' v s :

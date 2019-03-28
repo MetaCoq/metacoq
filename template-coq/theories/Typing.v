@@ -2,7 +2,6 @@
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Arith Lia.
 From Template Require Import config utils Ast AstUtils univ Induction LiftSubst UnivSubst.
-From Template Require Loader.
 Require Import String.
 Require Import ssreflect.
 Local Open Scope string_scope.

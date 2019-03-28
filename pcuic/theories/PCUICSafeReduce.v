@@ -47,8 +47,6 @@ Proof.
     inversion eq. reflexivity.
 Qed.
 
-Definition EqDec A := forall x y : A, { x = y } + { x <> y }.
-
 Lemma neq_sym : forall {A} {x y : A}, x <> y -> y <> x.
 Proof.
   intros A x y h.
@@ -94,6 +92,12 @@ Fixpoint list_dec {A} (f : EqDec A) (l l' : list A) : { l = l' } + { l <> l' } :
   | a :: l, [] => right (neq_sym (@nil_cons A a l))
   end.
 
+Instance list_eqdec : forall A, EqDec A -> EqDec (list A) := @list_dec.
+
+Derive EqDec for nat.
+
+Instance string_eqdec : EqDec string := string_dec.
+
 (* Lemma list_dec : *)
 (*   forall {A}, EqDec A -> EqDec (list A). *)
 (* Proof. *)
@@ -101,45 +105,45 @@ Fixpoint list_dec {A} (f : EqDec A) (l l' : list A) : { l = l' } + { l <> l' } :
 (*   decide equality. *)
 (* Defined. *)
 
-Lemma level_dec : EqDec Level.t.
+Instance level_dec : EqDec Level.t.
 Proof.
   intros l l'. decide equality.
   - apply string_dec.
   - apply Nat.eq_dec.
 Defined.
 
-Lemma universe_expr_dec : EqDec Universe.Expr.t.
+Instance universe_expr_dec : EqDec Universe.Expr.t.
 Proof.
   intros x y. decide equality.
   - decide equality.
   - apply level_dec.
 Defined.
 
-Lemma universe_dec : EqDec universe.
+Instance universe_dec : EqDec universe.
 Proof.
   intros u v. decide equality.
   apply universe_expr_dec.
 Defined.
 
-Lemma name_dec : EqDec name.
+Instance name_dec : EqDec name.
 Proof.
   intros n m. decide equality. apply string_dec.
 Defined.
 
-Lemma inductive_dec : EqDec inductive.
+Instance inductive_dec : EqDec inductive.
 Proof.
   intros i i'. decide equality.
   - apply Nat.eq_dec.
   - apply string_dec.
 Defined.
 
-Lemma prod_dec : forall {A B}, EqDec A -> EqDec B -> EqDec (A * B).
+Instance prod_dec : forall {A B}, EqDec A -> EqDec B -> EqDec (A * B).
 Proof.
   intros A B hA hB [x y] [a b].
   decide equality.
-Qed.
+Defined.
 
-Lemma projection_dec : EqDec projection.
+Instance projection_dec : EqDec projection.
 Proof.
   intros x y. decide equality.
   - apply Nat.eq_dec.
@@ -148,7 +152,7 @@ Proof.
     + exact Nat.eq_dec.
 Defined.
 
-Lemma mfixpoint_dec : forall {A : Set}, EqDec A -> EqDec (mfixpoint A).
+Instance mfixpoint_dec : forall {A : Set}, EqDec A -> EqDec (mfixpoint A).
 Proof.
   intros A h x y. decide equality.
   decide equality.
@@ -200,6 +204,10 @@ Proof.
   (* Guarded. *)
 (* Defined. *)
 Admitted.
+
+(* Derive EqDec for term. *)
+
+Instance term_eqdec : EqDec term := term_dec.
 
 (* We assume normalisation of the reduction.
 
@@ -1084,7 +1092,7 @@ Section Reduce.
   (*   clear - hh. induction args. *)
   (*   - cbn in hh. dependent induction hh. *)
   (*     + unfold type_of_constructor in H0. *)
-  (*       cbn in H0. induction args'. *)
+  (*       cbn in H0. (* clear - H0. *) induction args'. *)
   (*       * cbn in H0. admit. *)
   (*       * eapply IHargs'. cbn in H0. *)
   Admitted.

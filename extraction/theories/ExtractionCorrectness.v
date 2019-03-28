@@ -202,9 +202,9 @@ Proof.
         inv Ht'.
         econstructor. econstructor. 
         admit.
-        admit.
+        admit. (* tCase *)
     + congruence.
-  - admit.
+  - admit. (* tFix *)
   - simpl in Ht'. destruct Extract.is_type_or_proof eqn:Heq. destruct a.
     + inv Ht'. exists tBox. split. 2: repeat econstructor.
       eapply is_type_extract. eapply eval_is_type. 2:eapply Heq.
@@ -213,7 +213,7 @@ Proof.
       * econstructor; eauto. admit.
       * shelve.
       * eauto.
-      * exists x. split. eauto. econstructor. 3:eauto. admit. admit.
+      * exists x. split. eauto. econstructor. 3:eauto. admit. admit. (* tConst *)
     + congruence.
   - simpl in Ht'. destruct Extract.is_type_or_proof eqn:Heq. destruct a0.
     + inv Ht'. exists tBox. split. 2:repeat econstructor.
@@ -221,53 +221,53 @@ Proof.
       econstructor; eauto.
     + destruct ?; try congruence. inv Ht'. inv pre.
 
-      eapply IHeval1 in E as (? & ? & ?); eauto. clear IHeval1.
-      eapply extract_Apps in H3 as (? & ? & ?).
-      eapply nth_error_all in a1 as [] ; eauto.
-      eapply IHeval2 in e0 as (? & ? & ?).
-      * exists x2. split. eauto. econstructor.
-        eapply eval_constr.
+      (* eapply IHeval1 in E as (? & ? & ?); eauto. clear IHeval1. *)
+      (* eapply extract_Apps in H3 as (? & ? & ?). *)
+      (* eapply nth_error_all in a1 as [] ; eauto. *)
+      (* eapply IHeval2 in e0 as (? & ? & ?). *)
+      (* * exists x2. split. eauto. econstructor. *)
+      (*   eapply eval_constr. *)
         
 
       
-      induction args using rev_ind.
-      * destruct pars; inv H0. destruct arg; inv H6.
-      * rewrite mkApps_snoc in H3.
-        simpl in H3.
-        destruct ?. destruct a1.
-        -- inv H3. 
+      (* induction args using rev_ind. *)
+      (* * destruct pars; inv H0. destruct arg; inv H6. *)
+      (* * rewrite mkApps_snoc in H3. *)
+      (*   simpl in H3. *)
+      (*   destruct ?. destruct a1. *)
+      (*   -- inv H3.  *)
         
       
       
-      eexists. split. admit. econstructor. admit.
-      admit. admit.
+      (* eexists. split. admit. econstructor. admit. *)
+    (* admit. admit. *)
+      admit. (* tProj because of mkApps *)
     + congruence.
   - simpl in Ht'. destruct Extract.is_type_or_proof eqn:Heq. destruct a.
-    + inv Ht'. exists tBox. split. 2: specialize (eval_box Σ' []); cbn; eauto.
+    + inv Ht'. exists tBox. split. 2: repeat econstructor. 
       simpl. rewrite Heq. reflexivity.
     + destruct ?; try congruence.
       inv Ht'. eexists. split. 2:econstructor.
       simpl. now rewrite Heq, E.
     + congruence.
   - simpl in Ht'. destruct Extract.is_type_or_proof eqn:Heq. destruct a.
-    + inv Ht'. exists tBox. split. 2: specialize (eval_box Σ' []); cbn; eauto.
-      simpl. erewrite <- eval_is_type, Heq. 2:econstructor; eauto. reflexivity.
-    + inv Ht'. exists tBox. split. 2: specialize (eval_box Σ' []); cbn; eauto.
-      simpl. erewrite <- eval_is_type, Heq. 2:econstructor; eauto. reflexivity.
+    + inv Ht'. exists tBox. split. 2: repeat econstructor.
+      simpl. rewrite Heq. reflexivity.
+    + inv Ht'. exists tBox. split. 2: repeat econstructor.
+      simpl. now rewrite Heq. 
     + congruence. 
   - simpl in Ht'. destruct Extract.is_type_or_proof eqn:Heq. destruct a.
-    + inv Ht'. exists tBox. split. 2: specialize (eval_box Σ' []); cbn; eauto. 
+    + inv Ht'. exists tBox. split. 2: repeat econstructor.
       simpl. rewrite Heq. reflexivity.
-    + inv Ht'.  exists tBox. split. 2: specialize (eval_box Σ' []); cbn; eauto.
+    + inv Ht'.  exists tBox. split. 2: repeat econstructor.
       simpl. rewrite Heq. reflexivity.
     + congruence.
-  - admit.
+  - (* tInd because of mkApps *) admit.
   - simpl in Ht'. destruct Extract.is_type_or_proof eqn:Heq. destruct a.
-    + inv Ht'. exists tBox. split. 2: specialize (eval_box Σ' []); cbn; eauto. 
+    + inv Ht'. exists tBox. split. 2: repeat econstructor.
       simpl. rewrite Heq. reflexivity.
     + inv Ht'. eexists. split.
-      simpl. rewrite Heq. reflexivity. 
-      admit.
+      simpl. rewrite Heq. reflexivity. econstructor. eauto.
     + congruence.
-  - simpl in Ht'. admit.      
+  - simpl in Ht'. admit.   (* tConstruct *)
 Admitted.

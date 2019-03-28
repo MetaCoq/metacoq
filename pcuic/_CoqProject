@@ -22,6 +22,7 @@ theories/PCUICWcbvEval.v
 theories/PCUICChecker.v
 theories/PCUICCheckerCompleteness.v
 theories/PCUICRetyping.v
+theories/PCUICSR.v
 theories/TemplateToPCUIC.v
 theories/TemplateToPCUICCorrectness.v
 # theories/All.v

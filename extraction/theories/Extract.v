@@ -250,7 +250,8 @@ Definition computational_type Σ T :=
 Record extraction_pre (Σ : global_context) t T :=
   { extr_typed : Σ ;;; [] |- t : T;
     extr_env_axiom_free : axiom_free (fst Σ);
-    extr_computational_type : computational_type Σ T }.
+    extr_env_wf : wf Σ ;
+    (* extr_computational_type : computational_type Σ T *) }.
 
 (** The observational equivalence relation between source and extractd values. *)
 

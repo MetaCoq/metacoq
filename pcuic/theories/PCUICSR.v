@@ -204,6 +204,23 @@ Proof.
   eapply cumul_trans; eauto.
 Qed.
 
+Lemma type_tLetIn_inv Σ Γ na A b U a :
+  Σ ;;; Γ |- tLetIn na a A b : U ->
+  { s1 & { B &
+           (Σ ;;; Γ |- A : tSort s1) *
+           (Σ ;;; Γ |- a : A) *
+           (Σ ;;; Γ ,, vdef na a A |- b : B) *
+           (Σ ;;; Γ |- tLetIn na a A B <= U) } }%type.
+Proof.
+  intros H; depind H.
+  exists s1, b'_ty; intuition auto.
+  specialize (IHtyping _ _ _ _ eq_refl).
+  destruct IHtyping as [s1 [s2 Hs]].
+  eexists _, _; intuition eauto.
+  eapply cumul_trans; eauto.
+  eapply cumul_trans; eauto.
+Qed.
+
 (** Injectivity of products, the essential property of cumulativity needed for subject reduction. *)
 Lemma cumul_Prod_inv Σ Γ na na' A B A' B' :
   Σ ;;; Γ |- tProd na A B <= tProd na' A' B' ->
@@ -225,25 +242,39 @@ Proof.
     econstructor 2; eauto. admit. (* Red conversion *)
     auto.
 
+<<<<<<< HEAD
   - depelim r. solve_discr.
     specialize (IHcumul _ _ _ _ _ _ eq_refl eq_refl).
     intuition auto. apply conv_conv_alt.
     econstructor 3. apply conv_conv_alt. apply a. apply r.
     (* red conversion *) admit.
+=======
+  - depelim r. (* apply mkApps_Fix_eq in x. discriminate. *)
+    (* specialize (IHcumul _ _ _ _ _ _ eq_refl eq_refl). *)
+    (* intuition auto. apply conv_conv_alt. *)
+    (* econstructor 3. apply conv_conv_alt. apply a. apply r. *)
+    (* (* red conversion *) admit. *)
+>>>>>>> Prelim state
 
-    specialize (IHcumul _ _ _ _ _ _ eq_refl eq_refl).
-    intuition auto. apply cumul_trans with N2. auto.
-    eapply cumul_red_r; eauto.
+    (* specialize (IHcumul _ _ _ _ _ _ eq_refl eq_refl). *)
+    (* intuition auto. apply cumul_trans with N2. auto. *)
+    (* eapply cumul_red_r; eauto. *)
 Admitted.
 
 Lemma cumul_Sort_inv Σ Γ s s' :
   Σ ;;; Γ |- tSort s <= tSort s' -> leq_universe (snd Σ) s s'.
 Proof.
   intros H; depind H; auto.
+<<<<<<< HEAD
   - now inversion l.
   - depelim r. solve_discr.
   - depelim r. solve_discr.
 Qed.
+=======
+  - depelim r. admit. 
+  - depelim r. admit.
+Admitted.
+>>>>>>> Prelim state
 
 Lemma tProd_it_mkProd_or_LetIn na A B ctx s :
   tProd na A B = it_mkProd_or_LetIn ctx (tSort s) ->

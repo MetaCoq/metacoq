@@ -1672,14 +1672,14 @@ Section Reduce.
     assumption.
   Qed.
 
-  Equations reduce_stack (Γ : context) (t A : term) (π : stack)
-           (h : welltyped Σ Γ (zip (t,π))) : term * stack :=
-    reduce_stack Γ t A π h :=
-      let '(exist _ ts _) :=
+  Equations reduce_stack_full (Γ : context) (t A : term) (π : stack)
+           (h : welltyped Σ Γ (zip (t,π))) : { t' : term * stack | Req (fst Σ) Γ t' (t, π) } :=
+    reduce_stack_full Γ t A π h :=
+      let '(exist _ ts (conj r _)) :=
           Fix_F (R := R (fst Σ) Γ)
                 (fun x => welltyped Σ Γ (zip x) -> { t' : term * stack | Req (fst Σ) Γ t' x /\ Pr t' (snd x) /\ Pr' t' (snd x) })
                 (fun t' f => _) (x := (t, π)) _ _
-      in ts.
+      in exist _ ts r.
   Next Obligation.
     eapply _reduce_stack.
     - assumption.
@@ -1697,6 +1697,38 @@ Section Reduce.
   Qed.
   Next Obligation.
     eapply R_Acc. eassumption.
+  Qed.
+
+  Definition reduce_stack Γ t A π h :=
+    let '(exist _ ts _) := reduce_stack_full Γ t A π h in ts.
+
+  Theorem reduce_stack_sound :
+    forall Γ t A π h,
+      ∥ red (fst Σ) Γ (zip (t, π)) (zip (reduce_stack Γ t A π h)) ∥.
+  Proof.
+    intros Γ t A π h.
+    unfold reduce_stack.
+    destruct (reduce_stack_full Γ t A π h) as [[t' π'] r].
+    dependent destruction r.
+    - noconf H0. constructor. constructor.
+    - rename H0 into r. clear - flags r.
+      dependent destruction r.
+      + cbn in H0. cbn in H1.
+        inversion H0. subst. inversion H1. subst.
+        noconf H4. noconf H5. subst. clear H0 H1.
+        revert H. cbn.
+        generalize (zipc t' π').
+        generalize (zipc t π).
+        intros u v. clear - flags.
+        intro r.
+        induction r.
+        * constructor. econstructor ; try eassumption.
+          constructor.
+        * destruct IHr as [ih].
+          constructor. econstructor ; eassumption.
+      + cbn in H0, H1. inversion H0. inversion H1.
+        subst. cbn. rewrite H5.
+        constructor. constructor.
   Qed.
 
 End Reduce.

@@ -138,9 +138,9 @@ struct
        ttmFail,
        ttmEval,
 
-       ttmDefinitionRed,
-       ttmAxiomRed,
-       ttmLemmaRed,
+       ttmDefinition,
+       ttmAxiom,
+       ttmLemma,
        ttmFreshName,
        ttmAbout,
        ttmCurrentModPath,
@@ -158,9 +158,9 @@ struct
      r_template_monad_type_p "tmFail",
      r_template_monad_type_p "tmEval",
 
-     r_template_monad_type_p "tmDefinitionRed",
-     r_template_monad_type_p "tmAxiomRed",
-     r_template_monad_type_p "tmLemmaRed",
+     r_template_monad_type_p "tmDefinition",
+     r_template_monad_type_p "tmAxiom",
+     r_template_monad_type_p "tmLemma",
 
      r_template_monad_type_p "tmFreshName",
 
@@ -299,33 +299,33 @@ struct
       | name::s::typ::body::[] ->
         (TmDefinition (name, s, typ, body), universes)
       | _ -> monad_failure "tmDefinitionRed" 4
-    else if Globnames.eq_gr glob_ref ttmDefinitionRed then
+    else if Globnames.eq_gr glob_ref ttmDefinition then
       match args with
       | name::typ::body::[] ->
         (TmDefinitionTerm (name, typ, body), universes)
-      | _ -> monad_failure "tmDefinitionRed" 4
+      | _ -> monad_failure "tmDefinition" 3
 
     else if Globnames.eq_gr glob_ref ptmLemmaRed then
       match args with
       | name::s::typ::[] ->
         (TmLemma (name,s,typ), universes)
       | _ -> monad_failure "tmLemmaRed" 3
-    else if Globnames.eq_gr glob_ref ttmLemmaRed then
+    else if Globnames.eq_gr glob_ref ttmLemma then
       match args with
       | name::typ::[] ->
         (TmLemmaTerm (name, typ), universes)
-      | _ -> monad_failure "tmLemmaRed" 3
+      | _ -> monad_failure "tmLemma" 2
 
     else if Globnames.eq_gr glob_ref ptmAxiomRed then
       match args with
       | name::s::typ::[] ->
         (TmAxiom (name,s,typ), universes)
       | _ -> monad_failure "tmAxiomRed" 3
-    else if Globnames.eq_gr glob_ref ttmAxiomRed then
+    else if Globnames.eq_gr glob_ref ttmAxiom then
       match args with
       | name::typ::[] ->
         (TmAxiomTerm (name, typ), universes)
-      | _ -> monad_failure "tmAxiomRed" 3
+      | _ -> monad_failure "tmAxiom" 2
 
     else if Globnames.eq_gr glob_ref ptmFreshName || Globnames.eq_gr glob_ref ttmFreshName then
       match args with
@@ -338,10 +338,13 @@ struct
       | id::[] ->
         (TmAbout id, universes)
       | _ -> monad_failure "tmAbout" 1
-    else if Globnames.eq_gr glob_ref ptmCurrentModPath || Globnames.eq_gr glob_ref ttmCurrentModPath then
+    else if Globnames.eq_gr glob_ref ptmCurrentModPath then
       match args with
-      | _::[] ->
-        (TmCurrentModPath, universes)
+      | _::[] -> (TmCurrentModPath, universes)
+      | _ -> monad_failure "tmCurrentModPath" 1
+    else if Globnames.eq_gr glob_ref ttmCurrentModPath then
+      match args with
+      | [] -> (TmCurrentModPath, universes)
       | _ -> monad_failure "tmCurrentModPath" 1
 
     else if Globnames.eq_gr glob_ref ptmMkDefinition then

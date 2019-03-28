@@ -39,10 +39,6 @@ type 'a tm =
 let run (c : 'a tm) env evm (k : Environ.env -> Evd.evar_map -> 'a -> unit) : unit =
   c.run_tm env evm k (fun x -> x)
 
-let not_implemented (s : string) : 'a tm =
-  { run_tm = fun _ _ _ _ ->
-    failwith ("template monad operation " ^ s ^ " not yet implemented") }
-
 let tmReturn (x : 'a) : 'a tm =
   { run_tm = fun env evd k _ -> k env evd x }
 let tmBind (x : 'a tm) (k : 'a -> 'b tm) : 'b tm =
@@ -140,8 +136,9 @@ let tmQuoteInductive (kn : kername) : mutual_inductive_body option tm =
         with
           _ -> success env evm None }
 
-let tmQuoteUniverses : _ tm =
-  not_implemented "tmQuoteUniverses"
+let tmQuoteUniverses : UGraph.t tm =
+  { run_tm = fun env evm success fail ->
+        success env evm (Environ.universes env) }
 
 (* get the definition associated to a kername *)
 let tmQuoteConstant (kn : kername) (bypass : bool) : constant_entry tm =
@@ -150,7 +147,9 @@ let tmQuoteConstant (kn : kername) (bypass : bool) : constant_entry tm =
         success env evd cnst }
 
 let tmInductive (mi : mutual_inductive_entry) : unit tm =
-  not_implemented "tmInductive"
+  { run_tm = fun env evd success fail ->
+        ignore (ComInductive.declare_mutual_inductive_with_eliminations mi Names.Id.Map.empty []) ;
+        success (Global.env ()) evd () }
 
 let tmExistingInstance (kn : kername) : unit tm =
   { run_tm = fun env evd success fail ->

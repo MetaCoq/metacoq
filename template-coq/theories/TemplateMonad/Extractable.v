@@ -44,7 +44,7 @@ Cumulative Inductive TM@{t} : Type@{t} -> Type :=
 | tmFreshName : ident -> TM ident
 
 | tmAbout : ident -> TM (option global_reference)
-| tmCurrentModPath : unit -> TM string
+| tmCurrentModPath : TM string
 
 (* Quote the body of a definition or inductive. *)
 | tmQuoteInductive (nm : kername)
@@ -70,7 +70,7 @@ Definition TypeInstance : Common.TMInstance :=
    ; Common.tmFail:=@tmFail
    ; Common.tmFreshName:=@tmFreshName
    ; Common.tmAbout:=@tmAbout
-   ; Common.tmCurrentModPath:=@tmCurrentModPath
+   ; Common.tmCurrentModPath:=fun _ => @tmCurrentModPath
    ; Common.tmQuoteInductive:=@tmQuoteInductive
    ; Common.tmQuoteUniverses:=@tmQuoteUniverses
    ; Common.tmQuoteConstant:=@tmQuoteConstant

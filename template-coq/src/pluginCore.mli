@@ -41,7 +41,7 @@ val tmAbout : ident -> global_reference option tm
 val tmCurrentModPath : unit -> Names.ModPath.t tm
 
 val tmQuoteInductive : kername -> mutual_inductive_body option tm
-val tmQuoteUniverses : _ tm
+val tmQuoteUniverses : UGraph.t tm
 val tmQuoteConstant : kername -> bool -> constant_entry tm
 
 val tmInductive : mutual_inductive_entry -> unit tm

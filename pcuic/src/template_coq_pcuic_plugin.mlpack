@@ -1,13 +1,9 @@
-Classes0
 PCUICAst
 PCUICAstUtils
 PCUICInduction
 PCUICUnivSubst
 PCUICLiftSubst
 PCUICTyping
-PCUICWeakeningEnv
-PCUICWeakening
-PCUICSubstitution
 PCUICChecker
 PCUICRetyping
 PCUICMetaTheory

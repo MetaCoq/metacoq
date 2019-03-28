@@ -966,7 +966,7 @@ Ltac close_Forall :=
     (apply (All2_All_left H) || apply (All2_All_right H)); clear H; simpl
   end.
 
-Lemma All2_non_nil {A B} (P : A -> B -> Prop) (l : list A) (l' : list B) :
+Lemma All2_non_nil {A B} (P : A -> B -> Type) (l : list A) (l' : list B) :
   All2 P l l' -> l <> nil -> l' <> nil.
 Proof.
   induction 1; congruence.

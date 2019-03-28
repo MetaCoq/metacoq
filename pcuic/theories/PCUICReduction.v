@@ -1,19 +1,40 @@
 (* Distributed under the terms of the MIT license.   *)
+Require Import ssreflect ssrbool.
+Require Import LibHypsNaming.
 From Equations Require Import Equations.
-From Coq Require Import Bool String List Program BinPos Compare_dec Omega Utf8.
+From Coq Require Import Bool String List Program BinPos Compare_dec Omega Utf8 String Lia.
 From Template Require Import config utils univ BasicAst.
 From PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICLiftSubst PCUICUnivSubst PCUICTyping.
-Require Import ssreflect ssrbool.
-Require Import String.
-Require Import LibHypsNaming.
-Local Open Scope string_scope.
-Set Asymmetric Patterns.
 
+(* Type-valued relations. *)
 Require Import CRelationClasses.
 Require Import Equations.Type.Relation Equations.Type.Relation_Properties.
 
+Local Open Scope string_scope.
+Set Asymmetric Patterns.
+
 Existing Instance config.default_checker_flags.
+
+(** * Parallel reduction and confluence *)
+
+(** For this notion of reductions, theses are the atoms that reduce to themselves:
+
+ *)
+
+Definition atom t :=
+  match t with
+  | tRel _
+  | tVar _
+  | tMeta _
+  | tSort _
+  | tConst _ _
+  | tInd _ _
+  | tConstruct _ _ _ => true
+  | _ => false
+  end.
+
+(** Simple lemmas about reduction *)
 
 Lemma red1_red (Σ : global_context) Γ t u : red1 (fst Σ) Γ t u -> red (fst Σ) Γ t u.
 Proof. econstructor; eauto. constructor. Qed.
@@ -41,19 +62,8 @@ Defined.
 Instance red_Transitive Σ Γ : Transitive (red Σ Γ).
 Proof. refine (red_trans _ _). Qed.
 
-(** Atoms reduce to themselves *)
-
-Definition atom t :=
-  match t with
-  | tRel _
-  | tVar _
-  | tMeta _
-  | tSort _
-  | tConst _ _
-  | tInd _ _
-  | tConstruct _ _ _ => true
-  | _ => false
-  end.
+(** Generic method to show that a relation is closed by congruence using
+    a notion of one-hole context. *)
 
 Section ReductionCongruence.
   Context {Σ : global_context}.
@@ -153,29 +163,11 @@ Section ReductionCongruence.
   | ctxclos_ctx Γ (ctx : term_context) (u u' : term) :
       red (hole_context ctx Γ) u u' -> contextual_closure red Γ (fill_context u ctx) (fill_context u' ctx).
 
-  (* Inductive OnOne2 P : list_context -> list term -> Type := *)
-  (* | OnOne2_hd hd hd' tl : P hd hd' -> OnOne2 P (hd :: tl) (hd' :: tl') *)
-  (* | OnOne2_tl hd tl tl' : OnOne2 P tl tl' -> OnOne2 P (hd :: tl) (hd :: tl'). *)
-
-  (* Lemma red1_contextual_closure Γ t u : red Σ Γ t u -> contextual_closure (red Σ) Γ t u. *)
-  (* Proof. *)
-  (*   intros Hred. *)
-  (*   apply (ctxclos_ctx (red Σ) Γ tCtxHole t u Hred). *)
-  (* Qed. *)
-
   Lemma red_contextual_closure Γ t u : red Σ Γ t u -> contextual_closure (red Σ) Γ t u.
   Proof.
     intros Hred.
     apply (ctxclos_ctx (red Σ) Γ tCtxHole t u Hred).
   Qed.
-
-  Lemma red_contextual_closure' Γ t u :
-    red Σ Γ t u ->
-    forall ctx Γ', Γ = hole_context ctx Γ' ->
-    red Σ Γ' (fill_context t ctx) (fill_context u ctx).
-  Proof.
-    intros. subst Γ.
-  Admitted.
 
   Arguments fill_list_context : simpl never.
 
@@ -245,6 +237,32 @@ Section ReductionCongruence.
       intros; eapply (transitivity (y := tApp M1 N0)).
       now apply (red_ctx (tCtxApp_l tCtxHole _)).
       now eapply (red_ctx (tCtxApp_r _ tCtxHole)).
+    Qed.
+
+    Fixpoint mkApps_context l :=
+      match l with
+      | [] => tCtxHole
+      | hd :: tl => tCtxApp_l (mkApps_context tl) hd
+      end.
+
+    Lemma mkApps_context_hole l Γ' : hole_context (mkApps_context (List.rev l)) Γ' = Γ'.
+    Proof. generalize (List.rev l) as l'; induction l'; simpl; auto. Qed.
+
+    Lemma fill_mkApps_context M l : fill_context M (mkApps_context (List.rev l)) = mkApps M l.
+    Proof.
+      rewrite -{2}(rev_involutive l).
+      generalize (List.rev l) as l'; induction l'; simpl; auto.
+      rewrite <- mkApps_nested. now rewrite <- IHl'.
+    Qed.
+
+    Lemma red_mkApps M0 M1 N0 N1 :
+      red Σ Γ M0 M1 ->
+      All2 (red Σ Γ) N0 N1 ->
+      red Σ Γ (mkApps M0 N0) (mkApps M1 N1).
+    Proof.
+      intros.
+      induction X0 in M0, M1, X |- *. auto.
+      simpl. eapply IHX0. now eapply red_app.
     Qed.
 
     Lemma red_letin na d0 d1 t0 t1 b0 b1 :
@@ -323,6 +341,7 @@ Section ReductionCongruence.
     Proof.
       intros. constructor.
     Qed.
+
   End Congruences.
 End ReductionCongruence.
 
@@ -340,7 +359,7 @@ Section ParallelReduction.
 
   (** Let *)
   | pred_zeta na d0 d1 t b0 b1 :
-      pred1 Γ d0 d1 -> pred1 Γ b0 b1 ->
+      pred1 Γ d0 d1 -> pred1 (Γ ,, vdef na d0 t) b0 b1 ->
       pred1 Γ (tLetIn na d0 t b0) (subst10 d1 b1)
 
   (** Local variables *)
@@ -389,9 +408,9 @@ Section ParallelReduction.
       pred1 Γ (tConst c u) (subst_instance_constr u body)
 
   (** Proj *)
-  | pred_proj i pars narg args k u args0 args1 arg1 :
+  | pred_proj i pars narg k u args0 args1 arg1 :
       All2 (pred1 Γ) args0 args1 ->
-      nth_error args (pars + narg) = Some arg1 ->
+      nth_error args1 (pars + narg) = Some arg1 ->
       pred1 Γ (tProj (i, pars, narg) (mkApps (tConstruct i k u) args0)) arg1
 
   (** Congruences *)
@@ -402,6 +421,7 @@ Section ParallelReduction.
       pred1 Γ N0 N1 ->
       pred1 Γ (tApp M0 N0) (tApp M1 N1)
             (* do not handle mkApps yet *)
+
   | pred_letin na d0 d1 t0 t1 b0 b1 :
       pred1 Γ d0 d1 -> pred1 Γ t0 t1 -> pred1 (Γ ,, vdef na d0 t0) b0 b1 ->
       pred1 Γ (tLetIn na d0 t0 b0) (tLetIn na d1 t1 b1)
@@ -474,7 +494,7 @@ Section ParallelReduction.
       (forall (Γ : context) (na : name) (t b0 b1 a0 a1 : term),
           pred1 (Γ ,, vass na t) b0 b1 -> P (Γ ,, vass na t) b0 b1 -> pred1 Γ a0 a1 -> P Γ a0 a1 -> P Γ (tApp (tLambda na t b0) a0) (b1 {0 := a1})) ->
       (forall (Γ : context) (na : name) (d0 d1 t b0 b1 : term),
-          pred1 Γ d0 d1 -> P Γ d0 d1 -> pred1 Γ b0 b1 -> P Γ (* FIXME *) b0 b1 -> P Γ (tLetIn na d0 t b0) (b1 {0 := d1})) ->
+          pred1 Γ d0 d1 -> P Γ d0 d1 -> pred1 (Γ ,, vdef na d0 t) b0 b1 -> P (Γ ,, vdef na d0 t) b0 b1 -> P Γ (tLetIn na d0 t b0) (b1 {0 := d1})) ->
       (forall (Γ : context) (i : nat) (body body' : term),
           option_map decl_body (nth_error Γ i) = Some (Some body) ->
           pred1 Γ ((lift0 (S i)) body) body' -> P Γ ((lift0 (S i)) body) body' -> P Γ (tRel i) body') ->
@@ -505,11 +525,13 @@ Section ParallelReduction.
           pred1 Γ fn0 fn1 -> P Γ fn0 fn1 -> P Γ (tProj p (mkApps (tCoFix mfix idx) args0)) (tProj p (mkApps fn1 args1))) ->
       (forall (Γ : context) (c : ident) (decl : constant_body) (body : term),
           declared_constant Σ c decl ->
-          forall u : universe_instance, cst_body decl = Some body -> P Γ (tConst c u) (subst_instance_constr u body)) ->
-      (forall (Γ : context) (i : inductive) (pars narg : nat) (args : list term) (k : nat) (u : universe_instance)
+          forall u : universe_instance, cst_body decl = Some body ->
+                                        P Γ (tConst c u) (subst_instance_constr u body)) ->
+      (forall (Γ : context) (i : inductive) (pars narg : nat) (k : nat) (u : universe_instance)
               (args0 args1 : list term) (arg1 : term),
           All2_prop Γ id P' args0 args1 ->
-          nth_error args (pars + narg) = Some arg1 -> P Γ (tProj (i, pars, narg) (mkApps (tConstruct i k u) args0)) arg1) ->
+          nth_error args1 (pars + narg) = Some arg1 ->
+          P Γ (tProj (i, pars, narg) (mkApps (tConstruct i k u) args0)) arg1) ->
       (forall (Γ : context) (na : name) (M M' N N' : term),
           pred1 Γ M M' ->
           P Γ M M' -> pred1 (Γ,, vass na M) N N' -> P (Γ,, vass na M) N N' -> P Γ (tLambda na M N) (tLambda na M' N')) ->
@@ -645,16 +667,3 @@ Section ParallelReduction2.
   Admitted.
 
 End ParallelReduction2.
-
-(* Lemma substitution_pred1 `{cf:checker_flags} Σ Γ Γ' Γ'' s M N : *)
-(*   wf Σ -> All Ast.wf s -> subs Σ Γ s Γ' -> wf_local Σ Γ -> Ast.wf M -> *)
-(*   wf_local Σ (Γ ,,, Γ' ,,, Γ'') -> *)
-(*   pred1 (fst Σ) (Γ ,,, Γ' ,,, Γ'') M N -> *)
-(*   pred1 (fst Σ) (Γ ,,, subst_context s 0 Γ'') (subst s #|Γ''| M) (subst s #|Γ''| N). *)
-(* Proof. *)
-(*   intros. *)
-(*   induction H1. constructor. *)
-(*   econstructor 2; eauto. *)
-(*   eapply substitution_red1; eauto. *)
-(*   eapply wf_red_wf. 4:eauto. all:eauto. *)
-(* Qed. *)

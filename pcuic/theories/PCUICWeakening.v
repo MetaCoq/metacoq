@@ -3,7 +3,7 @@ From Equations Require Import Equations.
 From Coq Require Import Bool String List BinPos Compare_dec Omega Lia.
 Require Import Coq.Program.Syntax Coq.Program.Basics.
 From Template Require Import config utils BasicAst.
-From PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICWeakeningEnv PCUICClosed.
+From PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICWeakeningEnv PCUICClosed PCUICReduction.
 Require Import ssreflect ssrbool.
 
 (** * Weakening lemmas for typing derivations.
@@ -13,7 +13,7 @@ Require Import ssreflect ssrbool.
 Set Asymmetric Patterns.
 Generalizable Variables Σ Γ t T.
 
-Derive NoConfusion for All_local_env_over.
+Derive Signature NoConfusion for All_local_env All_local_env_over.
 Derive NoConfusion for context_decl.
 
 Lemma typed_liftn `{checker_flags} Σ Γ t T n k :
@@ -737,6 +737,16 @@ Proof.
     rewrite -> lift_context_app in *.
     rewrite -> app_context_assoc, Nat.add_0_r in *.
     auto.
+Qed.
+
+Lemma weakening_red `{CF:checker_flags} Σ Γ Γ' Γ'' M N :
+  wf Σ ->
+  red (fst Σ) (Γ ,,, Γ') M N ->
+  red (fst Σ) (Γ ,,, Γ'' ,,, lift_context #|Γ''| 0 Γ') (lift #|Γ''| #|Γ'| M) (lift #|Γ''| #|Γ'| N).
+Proof.
+  intros wfΣ; induction 1. constructor.
+  eapply red_trans with (lift #|Γ''| #|Γ'| P); eauto.
+  eapply red1_red. eapply weakening_red1; auto.
 Qed.
 
 Lemma lift_eq_term `{checker_flags} ϕ n k T U :

@@ -187,17 +187,6 @@ Proof.
   simpl. eapply (Hf _ _ (Some t)). eauto.
 Qed.
 
-Lemma nth_error_subst_context (Γ' : context) s (v : nat) k :
-    nth_error (subst_context s k Γ') v =
-    option_map (subst_decl s (#|Γ'| - S v + k)) (nth_error Γ' v).
-Proof.
-  induction Γ' in v |- *; intros.
-  - simpl. unfold subst_context, fold_context; simpl; rewrite nth_error_nil. easy.
-  - simpl. destruct v; rewrite subst_context_snoc.
-    + simpl. repeat f_equal; try lia.
-    + simpl. rewrite IHΓ'; simpl in *; (lia || congruence).
-Qed.
-
 Lemma subst_length  Σ Γ s Γ' : subs Σ Γ s Γ' -> #|s| = #|Γ'|.
 Proof.
   induction 1; simpl; auto with arith.
@@ -212,6 +201,17 @@ Proof.
   simpl.
   intros. rewrite app_context_length in H.
   rewrite !nth_error_app_ge; autorewrite with wf; f_equal; try lia.
+Qed.
+
+Lemma nth_error_subst_context (Γ' : context) s (v : nat) k :
+    nth_error (subst_context s k Γ') v =
+    option_map (subst_decl s (#|Γ'| - S v + k)) (nth_error Γ' v).
+Proof.
+  induction Γ' in v |- *; intros.
+  - simpl. unfold subst_context, fold_context; simpl; rewrite nth_error_nil. easy.
+  - simpl. destruct v; rewrite subst_context_snoc.
+    + simpl. repeat f_equal; try lia.
+    + simpl. rewrite IHΓ'; simpl in *; (lia || congruence).
 Qed.
 
 Lemma subs_nth_error_lt  Σ Γ Γ' Γ'' v s :
@@ -1244,6 +1244,9 @@ Proof.
   - simplify_IH_hyps. eapply red_case; auto.
     apply All2_map, All2_same. intros. red. constructor.
 
+  - simplify_IH_hyps. eapply red_case; auto.
+    apply All2_map, All2_same. intros. red. constructor.
+
   - simplify_IH_hyps. apply red_case; auto.
     induction X; intuition.
 
@@ -1404,6 +1407,59 @@ Proof.
   intros. unfold compose. now rewrite commut_lift_subst_rec. lia.
   eapply subst_eq_context in H0. eapply H0.
 Qed.
+
+Lemma substitution_red Σ Γ Δ Γ' s M N :
+  wf Σ -> subslet Σ Γ s Δ -> wf_local Σ Γ ->
+  red (fst Σ) (Γ ,,, Δ ,,, Γ') M N ->
+  red (fst Σ) (Γ ,,, subst_context s 0 Γ') (subst s #|Γ'| M) (subst s #|Γ'| N).
+Proof.
+  intros HG Hs Hl Hred. induction Hred. constructor.
+  eapply red_trans with (subst s #|Γ'| P); auto.
+  eapply substitution_let_red; eauto.
+Qed.
+
+Lemma red_red Σ Γ Δ Γ' s s' b : wf Σ ->
+  All2 (red Σ Γ) s s' ->
+  subslet Σ Γ s Δ ->
+  red Σ (Γ ,,, Γ') (subst s #|Γ'| b) (subst s' #|Γ'| b).
+Proof.
+  intros wfΣ Hall Hsubs.
+  revert Δ Γ' Hsubs.
+  elim b using term_forall_list_ind;
+        intros; match goal with
+                  |- context [tRel _] => idtac
+                | |- _ => cbn -[plus]
+                end; try easy;
+      rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length, ?Nat.add_assoc;
+      try solve [f_equal; auto; solve_all].
+
+  - unfold subst.
+    destruct (#|Γ'| <=? n) eqn:Heq.
+    destruct nth_error eqn:Heq'.
+    destruct (All2_nth_error_Some _ _ Hall Heq') as [t' [-> Ptt']].
+    intros. apply (weakening_red Σ Γ [] Γ' t t'); auto.
+    rewrite (All2_nth_error_None _ Hall Heq').
+    apply All2_length in Hall as ->. constructor. constructor.
+
+  - apply red_evar. apply All2_map. solve_all.
+  - apply red_prod; eauto.
+    now eapply (X0 Δ (Γ' ,, _)).
+
+  - apply red_abs; eauto.
+    now eapply (X0 Δ (Γ' ,, _)).
+
+  - apply red_letin; eauto.
+    now eapply (X1 Δ (Γ' ,, _)).
+
+  - apply red_app; eauto.
+  - apply red_case; eauto.
+    admit.
+  - apply red_proj_congr; eauto.
+  - apply red_fix_congr; eauto.
+    admit.
+  - apply red_cofix_congr; eauto.
+    admit.
+Admitted.
 
 (** The cumulativity relation is substitutive, yay! *)
 
@@ -1936,8 +1992,6 @@ Proof.
   forward thm. constructor. constructor. rewrite subst_empty; auto.
   now apply (thm Ht).
 Qed.
-
-Derive Signature for All_local_env.
 
 Lemma substitution_let  Σ Γ n u U (t : term) T :
   wf Σ ->

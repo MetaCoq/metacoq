@@ -26,17 +26,6 @@ Ltac my_rename_hyp h th :=
 
 Ltac rename_hyp h ht ::= my_rename_hyp h ht.
 
-Derive NoConfusion for term.
-
-Lemma mkApps_Fix_eq mfix idx args t : mkApps (tFix mfix idx) args = t ->
-                                      fst (decompose_app t) = (tFix mfix idx).
-Proof.
-  intros H; apply (f_equal decompose_app) in H.
-  rewrite decompose_app_mkApps in H. reflexivity.
-  destruct t; noconf H. rewrite <- H. reflexivity.
-  reflexivity.
-Qed.
-
 Lemma mkApps_Fix_spec mfix idx args t : mkApps (tFix mfix idx) args = t ->
                                       match decompose_app t with
                                       | (tFix mfix idx, args') => args' = args
@@ -505,9 +494,20 @@ Proof.
     eapply validity; eauto.
     eauto. eauto.
 
-  - (* Congruence *) admit.
-  - (* Constant unfolding *) admit.
-  - (* iota reduction *)  admit.
+  - (* Congruence *)
+    eapply type_Conv; [eapply type_App| |]; eauto with wf.
+    eapply validity. eauto. eauto.
+    eapply type_App; eauto. eapply red_cumul_inv.
+    eapply (red_red Σ Γ [vass na A] [] [u] [N2]); auto.
+    constructor. constructor. now rewrite subst_empty.
+
+  - (* Constant unfolding *)
+    eapply declared_constant_inv in wfΣ; eauto with pcuic.
+    destruct decl0 as [ty body' univs]; simpl in *; subst body'.
+    hnf in wfΣ. simpl in wfΣ. (* Substitutivity of typing w.r.t. universes *) admit.
+    eapply weaken_env_prop_typing.
+
+  - (* iota reduction *) admit.
   - (* Case congruence *) admit.
   - (* Case congruence *) admit.
   - (* Case congruence *) admit.

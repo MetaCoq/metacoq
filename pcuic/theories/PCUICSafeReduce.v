@@ -577,38 +577,6 @@ Section Normalisation.
 
   Derive Signature (* NoConfusion NoConfusionHom *) for posR.
 
-  (* TODO Remove, use noconf *)
-  Lemma existT_position_inj :
-    forall u p q,
-      existT position u p = existT _ u q ->
-      p = q.
-  Proof.
-    intros u p q eq. noconf eq. reflexivity.
-  Qed.
-
-  (* TODO Remove, use noconf *)
-  Lemma app_l_inj :
-    forall u v p q, app_l u p v = app_l u q v -> p = q.
-  Proof.
-    intros u v p q eq. noconf eq. reflexivity.
-  Qed.
-
-  (* TODO Remove, use noconf *)
-  Lemma app_r_inj :
-    forall u v p q, app_r u v p = app_r u v q -> p = q.
-  Proof.
-    intros u v p q eq. noconf eq. reflexivity.
-  Qed.
-
-  (* TODO Remove, use noconf *)
-  Lemma case_c_inj :
-    forall indn pr c brs p q,
-      case_c indn pr c brs p = case_c indn pr c brs q ->
-      p = q.
-  Proof.
-    intros indn pr c brs p q eq. noconf eq. reflexivity.
-  Qed.
-
   Lemma posR_Acc :
     forall t p, Acc (@posR t) p.
   Proof.
@@ -723,7 +691,7 @@ Section Normalisation.
   Proof.
     intros Σ Γ t h.
     eapply acc_dlexprod.
-    - apply existT_position_inj.
+    - intros x y y' eq. noconf eq. reflexivity.
     - intros x. unfold well_founded.
       eapply posR_Acc.
     - eapply normalisation. eassumption.

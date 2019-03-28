@@ -49,20 +49,49 @@ Qed.
 
 Definition EqDec A := forall x y : A, { x = y } + { x <> y }.
 
-Program Fixpoint list_dec {A} (f : EqDec A) (l l' : list A) : { l = l' } + { l <> l' } :=
+Lemma neq_sym : forall {A} {x y : A}, x <> y -> y <> x.
+Proof.
+  intros A x y h.
+  intro. subst. apply h. reflexivity.
+Qed.
+
+Lemma cong_cons : forall {A} {a a' : A} {l l'}, a = a' -> l = l' -> a :: l = a' :: l'.
+Proof.
+  intros A a a' l l' H H0. f_equal ; assumption.
+Qed.
+
+Lemma cons_tail_neq :
+  forall {A} {a a' : A} {l l'},
+    l <> l' ->
+    a :: l <> a' :: l'.
+Proof.
+  intros A a a' l l' H.
+  intro bot. inversion bot. subst. apply H. reflexivity.
+Qed.
+
+Lemma cons_head_neq :
+  forall {A} {a a' : A} {l l'},
+    a <> a' ->
+    a :: l <> a' :: l'.
+Proof.
+  intros A a a' l l' H.
+  intro bot. inversion bot. subst. apply H. reflexivity.
+Qed.
+
+Fixpoint list_dec {A} (f : EqDec A) (l l' : list A) : { l = l' } + { l <> l' } :=
   match l, l' with
   | a :: l, a' :: l' =>
     match f a a' with
     | left p =>
       match list_dec f l l' with
-      | left q => left _
-      | right q => right _
+      | left q => left (cong_cons p q)
+      | right q => right (cons_tail_neq q)
       end
-    | right q => right _
+    | right q => right (cons_head_neq q)
     end
   | [], [] => left eq_refl
-  | [], _ :: _ => right _
-  | _ :: _, [] => right _
+  | [], a' :: l' => right (@nil_cons A a' l')
+  | a :: l, [] => right (neq_sym (@nil_cons A a l))
   end.
 
 (* Lemma list_dec : *)
@@ -166,7 +195,7 @@ Proof.
   all: term_dec_tac term_dec.
   Guarded.
   (* - fcase (list_dec term_dec l l0). *)
-  (*   Guarded. *)
+    (* Guarded. *)
   (* 3:{ idtac. fcase (mfixpoint_dec term_dec m m0). } *)
   (* Guarded. *)
 (* Defined. *)

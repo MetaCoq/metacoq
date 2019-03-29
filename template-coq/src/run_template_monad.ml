@@ -221,12 +221,12 @@ let rec run_template_program_rec ?(intactic=false) (k : Environ.env * Evd.evar_m
     if intactic
     then not_in_tactic "tmDefinition"
     else
-      let name = reduce_all env evm name in
+      let name = unquote_ident (reduce_all env evm name) in
       let evm, typ = (match denote_option s with Some s -> let red = unquote_reduction_strategy env evm s in reduce env evm red typ | None -> evm, typ) in
       let univs =
         if Flags.is_universe_polymorphism () then Polymorphic_const_entry (Evd.to_universe_context evm)
         else Monomorphic_const_entry (Evd.universe_context_set evm) in
-      let n = Declare.declare_definition ~kind:Decl_kinds.Definition (unquote_ident name) ~types:typ (body, univs) in
+      let n = Declare.declare_definition ~kind:Decl_kinds.Definition name ~types:typ (body, univs) in
       let env = Global.env () in
       k (env, evm, Constr.mkConst n)
 
@@ -235,8 +235,7 @@ let rec run_template_program_rec ?(intactic=false) (k : Environ.env * Evd.evar_m
     then not_in_tactic "tmMkDefinition"
     else
       let name = unquote_ident (reduce_all env evm name) in
-      let body = reduce_all env evm body in
-      let evm, trm = denote_term evm body in
+      let evm, trm = denote_term evm (reduce_all env evm body) in
       let (evm, _) = Typing.type_of env evm (EConstr.of_constr trm) in
       let _ = Declare.declare_definition ~kind:Decl_kinds.Definition name (trm, Monomorphic_const_entry (Evd.universe_context_set evm)) in
       let env = Global.env () in
@@ -246,7 +245,7 @@ let rec run_template_program_rec ?(intactic=false) (k : Environ.env * Evd.evar_m
     then not_in_tactic "tmDefinition"
     else
       let name = unquote_ident (reduce_all env evm name) in
-      let evm,body = denote_term evm body in
+      let evm,body = denote_term evm (reduce_all env evm body) in
       let evm,typ =
         match denote_option typ with
         | None -> (evm, None)
@@ -259,6 +258,7 @@ let rec run_template_program_rec ?(intactic=false) (k : Environ.env * Evd.evar_m
         (fun env evm res -> k (env, evm, quote_kn res))
   | TmLemmaTerm (name, typ) ->
     let ident = unquote_ident (reduce_all env evm name) in
+    let evm,typ = denote_term evm (reduce_all env evm typ) in
     let poly = Flags.is_universe_polymorphism () in
     PluginCore.run (PluginCore.tmLemma ident ~poly typ) env evm
       (fun env evm kn -> k (env, evm, quote_kn kn))
@@ -266,7 +266,7 @@ let rec run_template_program_rec ?(intactic=false) (k : Environ.env * Evd.evar_m
     if intactic
     then not_in_tactic "tmAxiom"
     else
-      let name = reduce_all env evm name in
+      let name = unquote_ident (reduce_all env evm name) in
       let evm, typ =
         match denote_option s with
           Some s ->
@@ -274,7 +274,7 @@ let rec run_template_program_rec ?(intactic=false) (k : Environ.env * Evd.evar_m
           reduce env evm red typ
         | None -> evm, typ in
       let param = Entries.ParameterEntry (None, (typ, Monomorphic_const_entry (Evd.universe_context_set evm)), None) in
-      let n = Declare.declare_constant (unquote_ident name) (param, Decl_kinds.IsDefinition Decl_kinds.Definition) in
+      let n = Declare.declare_constant name (param, Decl_kinds.IsDefinition Decl_kinds.Definition) in
       let env = Global.env () in
       k (env, evm, Constr.mkConst n)
   | TmAxiomTerm (name,typ) ->
@@ -316,8 +316,7 @@ let rec run_template_program_rec ?(intactic=false) (k : Environ.env * Evd.evar_m
     let qt = TermReify.quote_term_rec env trm in
     k (env, evm, qt)
   | TmQuoteInd name ->
-       let name = reduce_all env evm name in
-       let name = unquote_string name in
+       let name = unquote_string (reduce_all env evm name) in
        let (dp, nm) = split_name name in
        (match Nametab.locate (Libnames.make_qualid dp nm) with
         | Globnames.IndRef ni ->
@@ -332,10 +331,8 @@ let rec run_template_program_rec ?(intactic=false) (k : Environ.env * Evd.evar_m
         (* TermReify.quote_mut_ind env c *)
         | _ -> CErrors.user_err (str name ++ str " does not seem to be an inductive."))
   | TmQuoteConst (name,bypass) ->
-       let name = reduce_all env evm name in
-       let name = unquote_string name in
-       let bypass = reduce_all env evm bypass in
-       let bypass = unquote_bool bypass in
+       let name = unquote_string (reduce_all env evm name) in
+       let bypass = unquote_bool (reduce_all env evm bypass) in
        let entry = TermReify.quote_entry_aux bypass env evm name in
        let entry =
          match entry with
@@ -372,12 +369,12 @@ let rec run_template_program_rec ?(intactic=false) (k : Environ.env * Evd.evar_m
     let s = quote_string (Names.ModPath.to_string mp) in
     k (env, evm, s)
   | TmEval (s, trm) ->
-    let red = unquote_reduction_strategy env evm s in
+    let red = unquote_reduction_strategy env evm (reduce_all env evm s) in
     let (evm, trm) = reduce env evm red trm
     in k (env, evm, trm)
   | TmEvalTerm (s,trm) ->
-    let red = unquote_reduction_strategy env evm s in
-    let evm,trm = denote_term evm trm in
+    let red = unquote_reduction_strategy env evm (reduce_all env evm s) in
+    let evm,trm = denote_term evm (reduce_all env evm trm) in
     PluginCore.run (PluginCore.tmEval red trm) env evm
       (fun env evm trm -> k (env, evm, TermReify.quote_term env trm))
   | TmMkInductive mind ->
@@ -405,8 +402,7 @@ let rec run_template_program_rec ?(intactic=false) (k : Environ.env * Evd.evar_m
         with Reduction.NotArity -> CErrors.user_err (str "unquoting ill-typed term")
       end
   | TmUnquoteTyped (typ, t) ->
-       let t = reduce_all env evm t in
-       let evm, t' = denote_term evm t in
+       let evm, t' = denote_term evm (reduce_all env evm t) in
        let evdref = ref evm in
        (* let t' = Typing.e_solve_evars env evdref (EConstr.of_constr t') in *)
        Typing.e_check env evdref (EConstr.of_constr t') (EConstr.of_constr typ);

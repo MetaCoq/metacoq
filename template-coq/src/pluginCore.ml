@@ -26,41 +26,38 @@ let rs_unfold (env : Environ.env) (gr : global_reference) =
            Pp.(str "Constant not found or not a constant: " ++ Printer.pr_global gr)
 
 type 'a tm =
-  { run_tm : Environ.env -> Evd.evar_map ->
-      (Environ.env -> Evd.evar_map -> 'a -> unit) -> (unit -> unit) -> unit }
-  (* note(gmm): i can't make this generic because of the way that
-   * tmLemma works. in particular, it needs to create a definition
-   * and then return, the result is passed through a hook.
-   *)
+  Environ.env -> Evd.evar_map ->
+  (Environ.env -> Evd.evar_map -> 'a -> unit) ->
+  (string -> unit) -> unit
 
 let run (c : 'a tm) env evm (k : Environ.env -> Evd.evar_map -> 'a -> unit) : unit =
-  c.run_tm env evm k (fun x -> x)
+  c env evm k (fun x -> CErrors.user_err (Pp.str x))
 
 let tmReturn (x : 'a) : 'a tm =
-  { run_tm = fun env evd k _ -> k env evd x }
+  fun env evd k _fail -> k env evd x
 let tmBind (x : 'a tm) (k : 'a -> 'b tm) : 'b tm =
-  { run_tm = fun env evd success fail ->
-        x.run_tm env evd (fun env evd v -> (k v).run_tm env evd success fail) fail }
+  fun env evd success fail ->
+        x env evd (fun env evd v -> k v env evd success fail) fail
 
 let tmPrint (t : term) : unit tm =
-  { run_tm = fun env evd success _ ->
+  fun env evd success _fail ->
     let _ = Feedback.msg_info (Printer.pr_constr_env env evd t) in
-    success env evd () }
+    success env evd ()
 let tmMsg  (s : string) : unit tm =
-  { run_tm = fun env evd success _ ->
+  fun env evd success _fail ->
     let _ = Feedback.msg_info (Pp.str s) in
-    success env evd () }
+    success env evd ()
 
 let tmFail (s : string) : 'a tm =
-  { run_tm = fun _ _ _ _ -> CErrors.user_err (Pp.str s) }
+  fun _ _ _ fail -> fail s
 
 let tmEval (rd : reduction_strategy) (t : term) : term tm =
-  { run_tm = fun env evd k _ ->
-        let evd,t' = Quoter.reduce env evd rd t in
-        k env evd t' }
+  fun env evd k _fail ->
+    let evd,t' = Quoter.reduce env evd rd t in
+    k env evd t'
 
 let tmDefinition (nm : ident) ?poly:(poly=false) (typ : term option) (body : term) : kername tm =
-  { run_tm = fun env evm success fail ->
+  fun env evm success _fail ->
     let univs =
       if poly
       then Entries.Polymorphic_const_entry (Evd.to_universe_context evm)
@@ -69,10 +66,9 @@ let tmDefinition (nm : ident) ?poly:(poly=false) (typ : term option) (body : ter
       Declare.declare_definition ~kind:Decl_kinds.Definition nm ?types:typ
         (body, univs)
     in success (Global.env ()) evm (Names.Constant.canonical n)
-  }
 
 let tmAxiom (nm : ident) ?poly:(poly=false) (typ : term) : kername tm =
-  { run_tm = fun env evm success fail ->
+  fun env evm success _fail ->
     let param =
       let entry =
         if poly
@@ -84,11 +80,11 @@ let tmAxiom (nm : ident) ?poly:(poly=false) (typ : term) : kername tm =
       Declare.declare_constant nm
         (param, Decl_kinds.IsDefinition Decl_kinds.Definition)
     in
-    success (Global.env ()) evm (Names.Constant.canonical n) }
+    success (Global.env ()) evm (Names.Constant.canonical n)
 
 (* this generates a lemma leaving a hole *)
 let tmLemma (nm : ident) ?poly:(poly=false)(ty : term) : kername tm =
-  { run_tm = fun env evm success fail ->
+  fun env evm success _fail ->
     let kind = (Decl_kinds.Global, poly, Decl_kinds.Definition) in
     let hole = CAst.make (Constrexpr.CHole (None, Misctypes.IntroAnonymous, None)) in
     let evm, (c, _) = Constrintern.interp_casted_constr_evars_impls env evm hole (EConstr.of_constr ty) in
@@ -104,59 +100,60 @@ let tmLemma (nm : ident) ?poly:(poly=false)(ty : term) : kername tm =
         | Constr.Const (tm, _) ->
           success env evm (Names.Constant.canonical tm)
         | _ -> failwith "Evd.fresh_global did not return a Const") in
-    ignore (Obligations.add_definition nm ~term:c cty ctx ~kind ~hook obls) }
+    ignore (Obligations.add_definition nm ~term:c cty ctx ~kind ~hook obls)
 
 let tmFreshName (nm : ident) : ident tm =
-  { run_tm = fun env evd success fail ->
+  fun env evd success _fail ->
     let name' =
       Namegen.next_ident_away_from nm (fun id -> Nametab.exists_cci (Lib.make_path id))
-    in success env evd name' }
+    in success env evd name'
 
 let tmAbout (qualid : qualid) : global_reference option tm =
-  { run_tm = fun env evd success fail ->
+  fun env evd success _fail ->
     try
       let gr = Smartlocate.locate_global_with_alias (CAst.make qualid) in
       success env evd (Some gr)
     with
-    | Not_found -> success env evd None }
+    | Not_found -> success env evd None
 
 let tmCurrentModPath : Names.ModPath.t tm =
-  { run_tm = fun env evd success _ ->
-    let mp = Lib.current_mp () in success env evd mp }
+  fun env evd success _fail ->
+    let mp = Lib.current_mp () in success env evd mp
 
 let tmQuoteInductive (kn : kername) : mutual_inductive_body option tm =
-  { run_tm = fun env evm success fail ->
-        try
-          let mind = Environ.lookup_mind (Names.MutInd.make1 kn) env in
-          success env evm (Some mind)
-        with
-          _ -> success env evm None }
+  fun env evm success _fail ->
+    try
+      let mind = Environ.lookup_mind (Names.MutInd.make1 kn) env in
+      success env evm (Some mind)
+    with
+      _ -> success env evm None
 
 let tmQuoteUniverses : UGraph.t tm =
-  { run_tm = fun env evm success fail ->
-        success env evm (Environ.universes env) }
+  fun env evm success _fail ->
+    success env evm (Environ.universes env)
 
 (* get the definition associated to a kername *)
 let tmQuoteConstant (kn : kername) (bypass : bool) : constant_entry tm =
-  { run_tm = fun env evd success fail ->
-        let cnst = Environ.lookup_constant (Names.Constant.make1 kn) env in
-        success env evd cnst }
+  fun env evd success _fail ->
+    let cnst = Environ.lookup_constant (Names.Constant.make1 kn) env in
+    success env evd cnst
 
 let tmInductive (mi : mutual_inductive_entry) : unit tm =
-  { run_tm = fun env evd success fail ->
-        ignore (ComInductive.declare_mutual_inductive_with_eliminations mi Names.Id.Map.empty []) ;
-        success (Global.env ()) evd () }
+  fun env evd success _fail ->
+    ignore (ComInductive.declare_mutual_inductive_with_eliminations mi Names.Id.Map.empty []) ;
+    success (Global.env ()) evd ()
 
 let tmExistingInstance (kn : kername) : unit tm =
-  { run_tm = fun env evd success fail ->
-        (* note(gmm): this seems wrong. *)
-        let ident = Names.Id.of_string (Names.KerName.to_string kn) in
-        Classes.existing_instance true (CAst.make (Libnames.Qualid (Libnames.qualid_of_ident ident))) None;
-        success env evd () }
+  fun env evd success _fail ->
+    (* note(gmm): this seems wrong. *)
+    let ident = Names.Id.of_string (Names.KerName.to_string kn) in
+    Classes.existing_instance true (CAst.make (Libnames.Qualid (Libnames.qualid_of_ident ident))) None;
+    success env evd ()
+
 let tmInferInstance (typ : term) : term option tm =
-  { run_tm = fun env evm success fail ->
-      try
-        let (evm,t) = Typeclasses.resolve_one_typeclass env evm (EConstr.of_constr typ) in
-        success env evm (Some (EConstr.to_constr evm t))
-      with
-        Not_found -> success env evm None }
+  fun env evm success fail ->
+    try
+      let (evm,t) = Typeclasses.resolve_one_typeclass env evm (EConstr.of_constr typ) in
+      success env evm (Some (EConstr.to_constr evm t))
+    with
+      Not_found -> success env evm None

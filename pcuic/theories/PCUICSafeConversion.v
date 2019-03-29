@@ -76,11 +76,11 @@ Section Conversion.
                       t2 π2 (h2 : welltyped Σ Γ (zip (t2, π2)))
     : { b : bool | if b then conv leq Σ Γ (zipc t1 π1) (zipc t2 π2) else True } :=
 
-    (* isconv_prog leq Γ (tLambda na A1 t1) π1 h1 (tLambda _ A2 t2) π2 h2 *)
-    (* with isconv leq Γ A1 Empty _ A2 Empty _ := { *)
-    (* | @exist true h => rec isconv Conv (Γ,, vass na A1) t1 Empty _ t2 Empty _ ; *)
-    (* | @exist false _ => no *)
-    (* } ; *)
+    isconv_prog leq Γ (tLambda na A1 t1) π1 h1 (tLambda _ A2 t2) π2 h2
+    with isconv leq Γ A1 Empty _ A2 Empty _ := {
+    | @exist true h => rec isconv Conv (Γ,, vass na A1) t1 Empty _ t2 Empty _ ;
+    | @exist false _ => no
+    } ;
 
     isconv_prog leq Γ t1 π1 h1 t2 π2 h2 := no.
   Next Obligation.
@@ -94,7 +94,6 @@ Section Conversion.
     - rewrite eq2.
       eapply reduce_stack_sound.
   Qed.
-  Next Obligation.
-  Admitted.
+  Admit Obligations.
 
 End Conversion.

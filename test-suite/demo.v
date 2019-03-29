@@ -394,7 +394,7 @@ Definition kername_of_qualid (q : qualid) : TemplateMonad kername :=
   | Some (ConstRef kn)  => ret kn
   | Some (IndRef ind) => ret ind.(inductive_mind)
   | Some (ConstructRef ind _) => ret ind.(inductive_mind)
-  | None => tmFail  ("tmLocate: " ++ q ++ " nat found")
+  | None => tmFail  ("tmLocate: " ++ q ++ " not found")
   end.
 
 Run TemplateProgram (kername_of_qualid "add" >>= tmPrint).

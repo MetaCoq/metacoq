@@ -15,8 +15,7 @@ val rs_cbn : reduction_strategy
 val rs_hnf : reduction_strategy
 val rs_all : reduction_strategy
 val rs_lazy : reduction_strategy
-(* val rs_unfold : ? *)
-
+val rs_unfold : Environ.env -> global_reference -> reduction_strategy
 
 type 'a tm
 

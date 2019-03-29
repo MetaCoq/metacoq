@@ -62,14 +62,21 @@ Section Conversion.
             (t1 : term) (π1 : stack) (h1 : welltyped Σ Γ (zip (t1, π1)))
             (t2 : term) (π2 : stack) (h2 : welltyped Σ Γ (zip (t2, π2)))
     : { b : bool | if b then conv leq Σ Γ (zipc t1 π1) (zipc t2 π2) else True } :=
+    (* isconv leq Γ t1 π1 h1 t2 π2 h2 *)
+    (* with inspect (reduce_stack nodelta_flags Σ Γ t1 π1 h1) := { *)
+    (* | @exist (t1',π1') eq1 *)
+    (*   with inspect (reduce_stack nodelta_flags Σ Γ t2 π2 h2) := { *)
+    (*   | @exist (t2',π2') eq2 => rec isconv_prog leq Γ t1' π1' _ t2' π2' _ *)
+    (*   } *)
+    (* } *)
     isconv leq Γ t1 π1 h1 t2 π2 h2 :=
-      let '(exist _ (t1,π1) eq1) :=
+      let '(exist _ (t1',π1') eq1) :=
           inspect (reduce_stack nodelta_flags Σ Γ t1 π1 h1)
       in
-      let '(exist _ (t2,π2) eq2) :=
+      let '(exist _ (t2',π2') eq2) :=
           inspect (reduce_stack nodelta_flags Σ Γ t2 π2 h2)
       in
-      rec isconv_prog leq Γ t1 π1 _ t2 π2 _
+      rec isconv_prog leq Γ t1' π1' _ t2' π2' _
   where
     isconv_prog leq Γ t1 π1 (h1 : welltyped Σ Γ (zip (t1, π1)))
                       t2 π2 (h2 : welltyped Σ Γ (zip (t2, π2)))

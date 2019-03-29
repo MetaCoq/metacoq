@@ -18,6 +18,7 @@ theories/PCUICChecker.v
 theories/PCUICRetyping.v
 
 theories/PCUICSafeReduce.v
+theories/PCUICSafeConversion.v
 
 theories/TemplateToPCUIC.v
 # theories/All.v

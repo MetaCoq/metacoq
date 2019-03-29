@@ -58,6 +58,27 @@ Section Conversion.
   Notation rec isconv_prog leq Γ t1 π1 h1 t2 π2 h2 :=
     (let '(exist _ b h) := isconv_prog leq Γ t1 π1 h1 t2 π2 h2 in exist _ b _).
 
+  (* We have to devise an order for termination.
+     It seems that we could somehow use the R from before, except that we would
+     need to include more positions.
+     So maybe, just lex cored subterm would work.
+
+     Another solution would be to consider (t,π) ≤ (u,θ)
+     when fst (reduce (t,π)) is a subterm of fst (reduce (u,θ)).
+
+     If we need to speak about the stacks for the order, then we probably have
+     to include a lot more stacks as well.
+     That would be unfortunate.
+
+     It seems that this approach is fine, except for a few (important) things:
+     - the fallback terminates because we check reduction progressed
+     - isconv_stacks needs to be able to reduce on the stack, so the order would
+       have to mention it.
+
+     A different point, we might need to update reduce in some way to assert
+     that it cannot return an application, they must reside on the stack.
+   *)
+
   Equations isconv (leq : conv_pb) (Γ : context)
             (t1 : term) (π1 : stack) (h1 : welltyped Σ Γ (zip (t1, π1)))
             (t2 : term) (π2 : stack) (h2 : welltyped Σ Γ (zip (t2, π2)))

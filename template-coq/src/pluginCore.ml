@@ -16,17 +16,13 @@ let rs_cbn = Genredexpr.Cbn default_flags
 let rs_hnf = Genredexpr.Hnf
 let rs_all = Genredexpr.Cbv Redops.all_flags
 let rs_lazy = Genredexpr.Cbv Redops.all_flags
-
-(* question(gmm): maybe this should just take a global_reference? *)
-let rs_unfold (env : Environ.env) (kn : kername) =
-  (* note(gmm): this shouldn't be necessary *)
-  let ident = Names.Id.of_string (Names.KerName.to_string kn) in
+let rs_unfold (env : Environ.env) (gr : global_reference) =
   try
-    let gr = (Nametab.global (CAst.make (Libnames.Qualid (Libnames.qualid_of_ident ident)))) in
     Genredexpr.Unfold [Locus.AllOccurrences,
                        Tacred.evaluable_of_global_reference env gr]
   with
-  | _ -> CErrors.user_err Pp.(str "Constant not found or not a constant: " ++ str (Names.Id.to_string ident))
+  | _ -> CErrors.user_err
+           Pp.(str "Constant not found or not a constant: " ++ Printer.pr_global gr)
 
 type 'a tm =
   { run_tm : Environ.env -> Evd.evar_map ->

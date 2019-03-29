@@ -210,7 +210,7 @@ let not_in_tactic s =
 
 let rec run_template_program_rec ?(intactic=false) (k : Environ.env * Evd.evar_map * Constr.t -> unit) env ((evm, pgm) : Evd.evar_map * Constr.t) : unit =
   let open TemplateMonad in
-  let (kind, universes) = next_action env pgm in
+  let (kind, universes) = next_action env evm pgm in
   match kind with
     TmReturn h ->
     let (evm, _) = Typing.type_of env evm (EConstr.of_constr h) in

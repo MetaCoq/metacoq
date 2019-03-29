@@ -32,7 +32,7 @@ let rec unquote_list trm =
     not_supported_verb trm "unquote_list"
 
 
-let inspectTerm (t:Constr.t) :  (Constr.t, quoted_int, quoted_ident, quoted_name, quoted_sort, quoted_cast_kind, quoted_kernel_name, quoted_inductive, quoted_univ_instance, quoted_proj) structure_of_term =
+let inspect_term (t:Constr.t) :  (Constr.t, quoted_int, quoted_ident, quoted_name, quoted_sort, quoted_cast_kind, quoted_kernel_name, quoted_inductive, quoted_univ_instance, quoted_proj) structure_of_term =
   let (h,args) = app_full t [] in
   if Constr.equal h tRel then
     match args with
@@ -339,7 +339,7 @@ let unquote_inductive trm =
 
 (* TODO: replace app_full by this abstract version?*)
 let rec app_full_abs (trm: Constr.t) (acc: Constr.t list) =
-  match inspectTerm trm with
+  match inspect_term trm with
     ACoq_tApp (f, xs) -> app_full_abs f (xs @ acc)
   | _ -> (trm, acc)
 
@@ -347,7 +347,7 @@ let rec app_full_abs (trm: Constr.t) (acc: Constr.t list) =
 let denote_term evm (trm: Constr.t) : Evd.evar_map * Constr.t =
   let rec aux evm (trm: Constr.t) : _ * Constr.t =
     debug (fun () -> Pp.(str "denote_term" ++ spc () ++ pr_constr trm)) ;
-    match (inspectTerm trm) with
+    match inspect_term trm with
     | ACoq_tRel x -> evm, Constr.mkRel (unquote_nat x + 1)
     | ACoq_tVar x -> evm, Constr.mkVar (unquote_ident x)
     | ACoq_tSort x -> let evm, u = unquote_universe evm x in evm, Constr.mkType u

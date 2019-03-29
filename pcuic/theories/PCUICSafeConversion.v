@@ -84,9 +84,17 @@ Section Conversion.
 
     isconv_prog leq Γ t1 π1 h1 t2 π2 h2 := no.
   Next Obligation.
-  Admitted.
+    eapply red_welltyped ; try eassumption.
+    rewrite eq1.
+    eapply reduce_stack_sound.
+  Qed.
+  Next Obligation.
+    eapply red_welltyped.
+    - eapply h2.
+    - rewrite eq2.
+      eapply reduce_stack_sound.
+  Qed.
   Next Obligation.
   Admitted.
-  Next Obligation.
 
 End Conversion.

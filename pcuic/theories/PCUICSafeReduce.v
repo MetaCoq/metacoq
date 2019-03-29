@@ -747,8 +747,6 @@ Section Normalisation.
 
   Lemma acc_dlexprod :
     forall A B leA leB,
-      (* UIP on A *)
-      (forall (x : A) (y y' : B x), (x; y) = (x; y') -> y = y') ->
       (forall x, well_founded (leB x)) ->
       forall x,
         Acc leA x ->
@@ -756,7 +754,7 @@ Section Normalisation.
           Acc (leB x) y ->
           Acc (@dlexprod A B leA leB) (x;y).
   Proof.
-    intros A B leA leB hinj hw.
+    intros A B leA leB hw.
     induction 1 as [x hx ih1].
     intros y.
     induction 1 as [y hy ih2].
@@ -766,11 +764,11 @@ Section Normalisation.
       eapply ih1.
       + assumption.
       + apply hw.
-    - intro hB.
-      inversion H1. inversion H2. subst.
-      eapply ih2.
-      apply hinj in H2. subst.
-      assumption.
+    - intro hB. rewrite <- H1.
+      pose proof (projT2_eq H2) as p2.
+      set (projT1_eq H2) as p1 in *; cbn in p1.
+      destruct p1; cbn in p2; destruct p2.
+      eapply ih2. assumption.
   Qed.
 
   Definition R Σ Γ u v :=
@@ -794,7 +792,6 @@ Section Normalisation.
   Proof.
     intros Σ Γ t h.
     eapply acc_dlexprod.
-    - intros x y y' eq. noconf eq. reflexivity.
     - intros x. unfold well_founded.
       eapply posR_Acc.
     - eapply normalisation. eassumption.

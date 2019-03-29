@@ -39,8 +39,8 @@ Section Conversion.
             (t2 : term) (π2 : stack) (h2 : welltyped Σ Γ (zip (t2, π2)))
     : bool :=
     isconv leq Γ t1 π1 h1 t2 π2 h2 :=
-      let '(t1,π1) := reduce_stack nodelta_flags Σ Γ t1 (tRel 0) π1 h1 in
-      let '(t2,π2) := reduce_stack nodelta_flags Σ Γ t2 (tRel 0) π2 h2 in
+      let '(t1,π1) := reduce_stack nodelta_flags Σ Γ t1 π1 h1 in
+      let '(t2,π2) := reduce_stack nodelta_flags Σ Γ t2 π2 h2 in
       isconv_prog leq Γ t1 π1 h1 t2 π2 h2
   where isconv_prog leq Γ t1 π1 h1 t2 π2 h2 : bool :=
         isconv_prog leq Γ t1 π1 h1 t2 π2 h2 := false.

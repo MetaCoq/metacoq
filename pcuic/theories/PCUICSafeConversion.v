@@ -31,9 +31,8 @@ Section Conversion.
 
   Definition nodelta_flags := RedFlags.mk true true true false true true.
 
-  (* There seems to be a problem with reduce_stack!
-     It shouldn't take an extra argument (tRel 0).
-   *)
+  Set Equations With UIP.
+
   Equations isconv (leq : conv_pb) (Γ : context)
             (t1 : term) (π1 : stack) (h1 : welltyped Σ Γ (zip (t1, π1)))
             (t2 : term) (π2 : stack) (h2 : welltyped Σ Γ (zip (t2, π2)))
@@ -42,7 +41,15 @@ Section Conversion.
       let '(t1,π1) := reduce_stack nodelta_flags Σ Γ t1 π1 h1 in
       let '(t2,π2) := reduce_stack nodelta_flags Σ Γ t2 π2 h2 in
       isconv_prog leq Γ t1 π1 h1 t2 π2 h2
-  where isconv_prog leq Γ t1 π1 h1 t2 π2 h2 : bool :=
-        isconv_prog leq Γ t1 π1 h1 t2 π2 h2 := false.
+  where
+    isconv_prog leq Γ t1 π1 h1 t2 π2 h2 : bool :=
+
+    (* Equations fail to find a covering if this case is added. *)
+    (* isconv_prog leq Γ (tLambda na A1 t1) π1 h1 (tLambda _ A2 t2) π2 h2 := *)
+    (*   if isconv leq Γ A1 Empty _ A2 Empty _ *)
+    (*   then isconv Conv Γ (Γ,, vass na A1) t1 Empty _ t2 Empty _ *)
+    (*   else false ; *)
+
+    isconv_prog leq Γ t1 π1 h1 t2 π2 h2 := false.
 
 End Conversion.

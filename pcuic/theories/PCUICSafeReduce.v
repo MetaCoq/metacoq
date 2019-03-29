@@ -747,8 +747,6 @@ Section Normalisation.
 
   Lemma acc_dlexprod :
     forall A B leA leB,
-      (* UIP on A *)
-      (forall (x : A) (y y' : B x), (x; y) = (x; y') -> y = y') ->
       (forall x, well_founded (leB x)) ->
       forall x,
         Acc leA x ->
@@ -756,7 +754,7 @@ Section Normalisation.
           Acc (leB x) y ->
           Acc (@dlexprod A B leA leB) (x;y).
   Proof.
-    intros A B leA leB hinj hw.
+    intros A B leA leB hw.
     induction 1 as [x hx ih1].
     intros y.
     induction 1 as [y hy ih2].
@@ -766,11 +764,11 @@ Section Normalisation.
       eapply ih1.
       + assumption.
       + apply hw.
-    - intro hB.
-      inversion H1. inversion H2. subst.
-      eapply ih2.
-      apply hinj in H2. subst.
-      assumption.
+    - intro hB. rewrite <- H1.
+      pose proof (projT2_eq H2) as p2.
+      set (projT1_eq H2) as p1 in *; cbn in p1.
+      destruct p1; cbn in p2; destruct p2.
+      eapply ih2. assumption.
   Qed.
 
   Definition R Σ Γ u v :=
@@ -794,7 +792,6 @@ Section Normalisation.
   Proof.
     intros Σ Γ t h.
     eapply acc_dlexprod.
-    - intros x y y' eq. noconf eq. reflexivity.
     - intros x. unfold well_founded.
       eapply posR_Acc.
     - eapply normalisation. eassumption.
@@ -1775,9 +1772,9 @@ Section Reduce.
     assumption.
   Qed.
 
-  Equations reduce_stack_full (Γ : context) (t A : term) (π : stack)
+  Equations reduce_stack_full (Γ : context) (t : term) (π : stack)
            (h : welltyped Σ Γ (zip (t,π))) : { t' : term * stack | Req (fst Σ) Γ t' (t, π) } :=
-    reduce_stack_full Γ t A π h :=
+    reduce_stack_full Γ t π h :=
       let '(exist _ ts (conj r _)) :=
           Fix_F (R := R (fst Σ) Γ)
                 (fun x => welltyped Σ Γ (zip x) -> { t' : term * stack | Req (fst Σ) Γ t' x /\ Pr t' (snd x) /\ Pr' t' (snd x) })
@@ -1802,16 +1799,16 @@ Section Reduce.
     eapply R_Acc. eassumption.
   Qed.
 
-  Definition reduce_stack Γ t A π h :=
-    let '(exist _ ts _) := reduce_stack_full Γ t A π h in ts.
+  Definition reduce_stack Γ t π h :=
+    let '(exist _ ts _) := reduce_stack_full Γ t π h in ts.
 
   Theorem reduce_stack_sound :
-    forall Γ t A π h,
-      ∥ red (fst Σ) Γ (zip (t, π)) (zip (reduce_stack Γ t A π h)) ∥.
+    forall Γ t π h,
+      ∥ red (fst Σ) Γ (zip (t, π)) (zip (reduce_stack Γ t π h)) ∥.
   Proof.
-    intros Γ t A π h.
+    intros Γ t π h.
     unfold reduce_stack.
-    destruct (reduce_stack_full Γ t A π h) as [[t' π'] r].
+    destruct (reduce_stack_full Γ t π h) as [[t' π'] r].
     dependent destruction r.
     - noconf H0. constructor. constructor.
     - rename H0 into r. clear - flags r.

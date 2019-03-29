@@ -34,6 +34,8 @@ Module RedFlags.
 
 End RedFlags.
 
+Notation "∥ T ∥" := (squash T) (at level 10).
+
 Lemma mkApps_inj :
   forall u v l,
     mkApps u l = mkApps v l ->
@@ -1039,8 +1041,6 @@ Section Reduce.
       + eapply IHh.
       + econstructor. assumption.
   Qed.
-
-  Notation "∥ T ∥" := (squash T) (at level 10).
 
   Derive Signature for typing.
 

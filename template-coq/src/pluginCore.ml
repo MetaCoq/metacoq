@@ -1,11 +1,12 @@
 (* this file is the interface that extracted plugins will use.
  *)
 
-type ident   = Names.Id.t (* Template.Ast.ident *)
-type kername = Names.KerName.t (* Template.Ast.kername *)
+type ident   = Names.Id.t (* Template.BasicAst.ident *)
+type qualid  = Libnames.qualid (* Template.BasicAst.qualid *)
+type kername = Names.KerName.t (* Template.BasicAst.kername *)
 type reduction_strategy = Redexpr.red_expr (* Template.TemplateMonad.Common.reductionStrategy *)
 type global_reference = Globnames.global_reference (* Template.Ast.global_reference *)
-type term = Constr.t  (* Ast.term *)
+type term = Constr.t  (* Template.Ast.term *)
 type mutual_inductive_body = Declarations.mutual_inductive_body (* Template.Ast.mutual_inductive_body *)
 type constant_entry = Declarations.constant_body (* Template.Ast.constant_entry *)
 type mutual_inductive_entry = Entries.mutual_inductive_entry (* Template.Ast.mutual_inductive_entry *)
@@ -111,16 +112,15 @@ let tmFreshName (nm : ident) : ident tm =
       Namegen.next_ident_away_from nm (fun id -> Nametab.exists_cci (Lib.make_path id))
     in success env evd name' }
 
-let tmAbout (nm : ident) : global_reference option tm =
+let tmAbout (qualid : qualid) : global_reference option tm =
   { run_tm = fun env evd success fail ->
     try
-      let qualid = Libnames.qualid_of_ident nm in
       let gr = Smartlocate.locate_global_with_alias (CAst.make qualid) in
       success env evd (Some gr)
     with
     | Not_found -> success env evd None }
 
-let tmCurrentModPath (_ : unit) : Names.ModPath.t tm =
+let tmCurrentModPath : Names.ModPath.t tm =
   { run_tm = fun env evd success _ ->
     let mp = Lib.current_mp () in success env evd mp }
 

@@ -105,7 +105,7 @@ let unquote_set trm =
 let unquote_constraints evm c (* of type constraints *) : _ * Constraint.t =
   let c = unquote_set c in
   List.fold_left (fun (evm, set) c -> let evm, c = unquote_univ_constraint evm c in evm, Constraint.add c set)
-                 (evm, Constraint.empty) c 
+                 (evm, Constraint.empty) c
 
 
 let denote_variance trm (* of type Variance *) : Variance.t =
@@ -258,7 +258,7 @@ let rec run_template_program_rec ?(intactic=false) (k : Environ.env * Evd.evar_m
     let ident = unquote_ident (reduce_all env evm name) in
     let poly = Flags.is_universe_polymorphism () in
     PluginCore.run (PluginCore.tmLemma ident ~poly typ) env evm
-      (fun a b c -> k (a,b,quote_kn c))
+      (fun env evm kn -> k (env, evm, quote_kn kn))
   | TmAxiom (name,s,typ) ->
     if intactic
     then not_in_tactic "TmAxiom"
@@ -306,7 +306,8 @@ let rec run_template_program_rec ?(intactic=false) (k : Environ.env * Evd.evar_m
     (* k (env, evm, unit_tt) *)
     (* )); *)
   | TmQuote (false, trm) ->
-    let qt = TermReify.quote_term env trm (* user should do the reduction (using tmEval) if they want *)
+    (* user should do the reduction (using tmEval) if they want *)
+    let qt = TermReify.quote_term env trm
     in k (env, evm, qt)
   | TmQuote (true, trm) ->
     let qt = TermReify.quote_term_rec env trm in
@@ -347,23 +348,21 @@ let rec run_template_program_rec ?(intactic=false) (k : Environ.env * Evd.evar_m
     Feedback.msg_info (Printer.pr_constr_env env evm trm);
     k (env, evm, unit_tt)
   | TmMsg msg ->
-     let msg = reduce_all env evm msg in
-     let msg = unquote_string msg in
-     Feedback.msg_info (str msg);
-     k (env, evm, unit_tt)
+     let msg = unquote_string (reduce_all env evm msg) in
+     PluginCore.run (PluginCore.tmMsg msg) env evm
+      (fun env evm _ -> k (env, evm, unit_tt))
   | TmFail trm ->
     let err = unquote_string (reduce_all env evm trm) in
     CErrors.user_err (str err)
   | TmAbout id ->
-    begin
-      let id = unquote_string id in
-      try
-        let gr = Smartlocate.locate_global_with_alias (CAst.make (Libnames.qualid_of_string id)) in
-        let opt = Constr.mkApp (cSome , [|tglobal_reference ; quote_global_reference gr|]) in
-        k (env, evm, opt)
-      with
-      | Not_found -> k (env, evm, Constr.mkApp (cNone, [|tglobal_reference|]))
-    end
+    let id = Libnames.qualid_of_string (unquote_string id) in
+    PluginCore.run (PluginCore.tmAbout id) env evm
+      (fun env evm -> function
+           None -> k (env, evm, Constr.mkApp (cNone, [|tglobal_reference|]))
+         | Some gr ->
+           let qgr = quote_global_reference gr in
+           let opt = Constr.mkApp (cSome , [|tglobal_reference ; qgr|]) in
+           k (env, evm, opt))
   | TmCurrentModPath ->
     let mp = Lib.current_mp () in
     (* let dp' = Lib.cwd () in (* different on sections ? *) *)
@@ -375,11 +374,9 @@ let rec run_template_program_rec ?(intactic=false) (k : Environ.env * Evd.evar_m
     in k (env, evm, trm)
   | TmEvalTerm (s,trm) ->
     let red = unquote_reduction_strategy env evm s in
-    let (evm, trm) =
-      let evm,t = denote_term evm trm in
-      reduce env evm red t
-    in
-    k (env,evm, TermReify.quote_term env trm)
+    let evm,trm = denote_term evm trm in
+    PluginCore.run (PluginCore.tmEval red trm) env evm
+      (fun env evm trm -> k (env, evm, TermReify.quote_term env trm))
   | TmMkInductive mind ->
     declare_inductive env evm mind;
     let env = Global.env () in
@@ -433,22 +430,14 @@ let rec run_template_program_rec ?(intactic=false) (k : Environ.env * Evd.evar_m
         Not_found -> k (env, evm, Constr.mkApp (cNone, [|typ|]))
     end
   | TmInferInstanceTerm typ ->
-    begin
-      let evm,typ = denote_term evm (reduce_all env evm typ) in
-      try
-        let (evm,t) = Typeclasses.resolve_one_typeclass env evm (EConstr.of_constr typ) in
-        let quoted = TermReify.quote_term env (EConstr.to_constr evm t) in
-        k (env, evm, Constr.mkApp (cSome, [| tTerm; quoted |]))
-      with
-        Not_found -> k (env, evm, Constr.mkApp (cNone, [| tTerm|]))
-     end
+    let evm,typ = denote_term evm (reduce_all env evm typ) in
+    PluginCore.run (PluginCore.tmInferInstance typ) env evm
+      (fun env evm -> function
+           None -> k (env, evm, Constr.mkApp (cNone, [| tTerm|]))
+         | Some trm ->
+           let qtrm = TermReify.quote_term env trm in
+           k (env, evm, Constr.mkApp (cSome, [| tTerm; qtrm |])))
   | TmPrintTerm trm ->
-    begin
-      try
-       let t = reduce_all env evm trm in
-       let evm',t' = denote_term evm t in
-       Feedback.msg_info (Printer.pr_constr_env env evm' t');
-       k (env, evm, unit_tt)
-      with
-      Reduction.NotArity -> CErrors.user_err (str "printing ill-typed term")
-    end
+    let evm,trm = denote_term evm (reduce_all env evm trm) in
+    PluginCore.run (PluginCore.tmPrint trm) env evm
+      (fun env evm _ -> k (env, evm, unit_tt))

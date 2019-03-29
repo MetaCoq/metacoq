@@ -1,11 +1,12 @@
 (* this file is the interface that extracted plugins will use.
  *)
 
-type ident   = Names.Id.t (* Template.Ast.ident *)
-type kername = Names.KerName.t (* Template.Ast.kername *)
+type ident   = Names.Id.t (* Template.BasicAst.ident *)
+type qualid  = Libnames.qualid (* Template.BasicAst.ident *)
+type kername = Names.KerName.t (* Template.BasicAst.kername *)
 type reduction_strategy = Redexpr.red_expr (* Template.TemplateMonad.Common.reductionStrategy *)
 type global_reference = Globnames.global_reference (* Template.Ast.global_reference *)
-type term = Constr.t  (* Ast.term *)
+type term = Constr.t  (* Template.Ast.term *)
 type mutual_inductive_body = Declarations.mutual_inductive_body (* Template.Ast.mutual_inductive_body *)
 type constant_entry = Declarations.constant_body (* Template.Ast.constant_entry *)
 type mutual_inductive_entry = Entries.mutual_inductive_entry (* Template.Ast.mutual_inductive_entry *)
@@ -36,8 +37,8 @@ val tmLemma : ident -> ?poly:bool -> term -> kername tm
 
 val tmFreshName : ident -> ident tm
 
-val tmAbout : ident -> global_reference option tm
-val tmCurrentModPath : unit -> Names.ModPath.t tm
+val tmAbout : qualid -> global_reference option tm
+val tmCurrentModPath : Names.ModPath.t tm
 
 val tmQuoteInductive : kername -> mutual_inductive_body option tm
 val tmQuoteUniverses : UGraph.t tm

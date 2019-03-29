@@ -219,7 +219,7 @@ let rec run_template_program_rec ?(intactic=false) (k : Environ.env * Evd.evar_m
     run_template_program_rec ~intactic:intactic (fun (env, evm, ar) -> run_template_program_rec ~intactic:intactic k env (evm, Constr.mkApp (f, [|ar|]))) env (evm, a)
   | TmDefinition (name,s,typ,body) ->
     if intactic
-    then not_in_tactic "TmDefinition"
+    then not_in_tactic "tmDefinition"
     else
       let name = reduce_all env evm name in
       let evm, typ = (match denote_option s with Some s -> let red = unquote_reduction_strategy env evm s in reduce env evm red typ | None -> evm, typ) in
@@ -231,16 +231,19 @@ let rec run_template_program_rec ?(intactic=false) (k : Environ.env * Evd.evar_m
       k (env, evm, Constr.mkConst n)
 
   | TmMkDefinition (name, body) ->
-    let name = unquote_ident (reduce_all env evm name) in
-    let body = reduce_all env evm body in
-    let evm, trm = denote_term evm body in
-    let (evm, _) = Typing.type_of env evm (EConstr.of_constr trm) in
-    let _ = Declare.declare_definition ~kind:Decl_kinds.Definition name (trm, Monomorphic_const_entry (Evd.universe_context_set evm)) in
-    let env = Global.env () in
-    k (env, evm, unit_tt)
+    if intactic
+    then not_in_tactic "tmMkDefinition"
+    else
+      let name = unquote_ident (reduce_all env evm name) in
+      let body = reduce_all env evm body in
+      let evm, trm = denote_term evm body in
+      let (evm, _) = Typing.type_of env evm (EConstr.of_constr trm) in
+      let _ = Declare.declare_definition ~kind:Decl_kinds.Definition name (trm, Monomorphic_const_entry (Evd.universe_context_set evm)) in
+      let env = Global.env () in
+      k (env, evm, unit_tt)
   | TmDefinitionTerm (name, typ, body) ->
     if intactic
-    then not_in_tactic "TmDefinition"
+    then not_in_tactic "tmDefinition"
     else
       let name = unquote_ident (reduce_all env evm name) in
       let evm,body = denote_term evm body in
@@ -261,7 +264,7 @@ let rec run_template_program_rec ?(intactic=false) (k : Environ.env * Evd.evar_m
       (fun env evm kn -> k (env, evm, quote_kn kn))
   | TmAxiom (name,s,typ) ->
     if intactic
-    then not_in_tactic "TmAxiom"
+    then not_in_tactic "tmAxiom"
     else
       let name = reduce_all env evm name in
       let evm, typ =
@@ -276,7 +279,7 @@ let rec run_template_program_rec ?(intactic=false) (k : Environ.env * Evd.evar_m
       k (env, evm, Constr.mkConst n)
   | TmAxiomTerm (name,typ) ->
     if intactic
-    then not_in_tactic "TmAxiom"
+    then not_in_tactic "tmAxiom"
     else
       let name = unquote_ident (reduce_all env evm name) in
       let evm,typ = denote_term evm (reduce_all env evm typ) in

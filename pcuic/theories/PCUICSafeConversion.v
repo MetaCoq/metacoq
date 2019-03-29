@@ -37,6 +37,20 @@ Section Conversion.
 
   Definition nodelta_flags := RedFlags.mk true true true false true true.
 
+  Lemma red_welltyped :
+    forall {Σ Γ u v},
+      welltyped Σ Γ u ->
+      ∥ red (fst Σ) Γ u v ∥ ->
+      welltyped Σ Γ v.
+  Proof.
+    intros Σ' Γ u v h [r].
+    revert h. induction r ; intros h.
+    - assumption.
+    - specialize IHr with (1 := ltac:(eassumption)).
+      destruct IHr as [A ?]. exists A.
+      eapply subject_reduction ; eassumption.
+  Qed.
+
   Set Equations With UIP.
 
   Notation no := (exist _ false I).
@@ -49,24 +63,26 @@ Section Conversion.
             (t2 : term) (π2 : stack) (h2 : welltyped Σ Γ (zip (t2, π2)))
     : { b : bool | if b then conv leq Σ Γ (zipc t1 π1) (zipc t2 π2) else True } :=
     isconv leq Γ t1 π1 h1 t2 π2 h2 :=
-      let '(t1,π1) := reduce_stack nodelta_flags Σ Γ t1 π1 h1 in
-      let '(t2,π2) := reduce_stack nodelta_flags Σ Γ t2 π2 h2 in
+      let '(exist _ (t1,π1) eq1) :=
+          inspect (reduce_stack nodelta_flags Σ Γ t1 π1 h1)
+      in
+      let '(exist _ (t2,π2) eq2) :=
+          inspect (reduce_stack nodelta_flags Σ Γ t2 π2 h2)
+      in
       rec isconv_prog leq Γ t1 π1 _ t2 π2 _
   where
     isconv_prog leq Γ t1 π1 (h1 : welltyped Σ Γ (zip (t1, π1)))
                       t2 π2 (h2 : welltyped Σ Γ (zip (t2, π2)))
     : { b : bool | if b then conv leq Σ Γ (zipc t1 π1) (zipc t2 π2) else True } :=
 
-    (* Cannot find covering with this... *)
-    (* isconv_prog leq Γ (tLambda na A1 t1) π1 h1 (tLambda _ A2 t2) π2 h2 := *)
-    (*   if isconv leq Γ A1 Empty _ A2 Empty _ *)
-    (*   then isconv Conv Γ (Γ,, vass na A1) t1 Empty _ t2 Empty _ *)
-    (*   else false ; *)
+    (* isconv_prog leq Γ (tLambda na A1 t1) π1 h1 (tLambda _ A2 t2) π2 h2 *)
+    (* with isconv leq Γ A1 Empty _ A2 Empty _ := { *)
+    (* | @exist true h => rec isconv Conv (Γ,, vass na A1) t1 Empty _ t2 Empty _ ; *)
+    (* | @exist false _ => no *)
+    (* } ; *)
 
     isconv_prog leq Γ t1 π1 h1 t2 π2 h2 := no.
   Next Obligation.
-    (* We need to do the let propery to keep the information. *)
-    admit.
   Admitted.
   Next Obligation.
   Admitted.

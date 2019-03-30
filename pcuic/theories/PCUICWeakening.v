@@ -408,11 +408,11 @@ Qed.
 
 Hint Rewrite <- lift_fix_context : lift.
 
-Lemma All_local_env_lift `{checker_flags} (P Q : global_context -> context -> term -> option term -> Type) Σ c n k :
-  All_local_env Q Σ c ->
+Lemma All_local_env_lift `{checker_flags} (P Q : context -> term -> option term -> Type) c n k :
+  All_local_env Q c ->
   (forall Γ t T,
-      Q Σ Γ t T -> P Σ (lift_context n k Γ) (lift n (#|Γ| + k) t) (option_map (lift n (#|Γ| + k)) T)) ->
-  All_local_env P Σ (lift_context n k c).
+      Q Γ t T -> P (lift_context n k Γ) (lift n (#|Γ| + k) t) (option_map (lift n (#|Γ| + k)) T)) ->
+  All_local_env P (lift_context n k c).
 Proof.
   intros Hq Hf. induction Hq in |- *; try econstructor; eauto;
                   simpl; rewrite lift_context_snoc; econstructor; eauto.

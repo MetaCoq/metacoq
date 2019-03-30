@@ -54,7 +54,7 @@ Section Conversion.
   Set Equations With UIP.
 
   Derive Subterm for term.
-  (* Derive Subterm for stack. *)
+  Derive NoConfusion NoConfusionHom Subterm for stack.
 
   Notation no := (exist _ false I).
   Notation yes := (exist _ true _).

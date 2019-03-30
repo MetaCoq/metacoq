@@ -53,6 +53,9 @@ Section Conversion.
 
   Set Equations With UIP.
 
+  Derive Subterm for term.
+  (* Derive Subterm for stack. *)
+
   Notation no := (exist _ false I).
   Notation yes := (exist _ true _).
   Notation rec isconv_prog leq Γ t1 π1 h1 t2 π2 h2 :=

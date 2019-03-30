@@ -77,6 +77,13 @@ Section Conversion.
 
      A different point, we might need to update reduce in some way to assert
      that it cannot return an application, they must reside on the stack.
+
+     Maybe implement a naive version first that reduces both sides (with delta
+     or rather with provided flags).
+     When two sides are equal, go to subterms (meaning stacks are empty by
+     typing). When two sides are constants/variables, compare the stacks.
+     This is fine for a lex order on subterm for the term and then subterm
+     for the stack.
    *)
 
   Equations isconv (leq : conv_pb) (Γ : context)

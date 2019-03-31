@@ -756,6 +756,131 @@ Section ParallelReduction.
     - eapply (All2_local_env_impl a). intros. apply (aux _ _ _ _ X20).
   Defined.
 
+  Lemma pred1_ind_all_ctx :
+    forall (P : forall (Γ : context) (t t0 : term), Type)
+           (Pctx : forall (Γ Δ Δ' : context), Type),
+      let P' Γ x y := ((pred1 Γ x y) * P Γ x y)%type in
+      (forall Γ Δ Δ', All2_local_env (on_decl (fun Γ' => P' (Γ ,,, Γ'))) Δ Δ' -> Pctx Γ Δ Δ') ->
+      (forall (Γ : context) (na : name) (t b0 b1 a0 a1 : term),
+          pred1 (Γ ,, vass na t) b0 b1 -> P (Γ ,, vass na t) b0 b1 -> pred1 Γ a0 a1 -> P Γ a0 a1 -> P Γ (tApp (tLambda na t b0) a0) (b1 {0 := a1})) ->
+      (forall (Γ : context) (na : name) (d0 d1 t b0 b1 : term),
+          pred1 Γ d0 d1 -> P Γ d0 d1 -> pred1 (Γ ,, vdef na d0 t) b0 b1 -> P (Γ ,, vdef na d0 t) b0 b1 -> P Γ (tLetIn na d0 t b0) (b1 {0 := d1})) ->
+      (forall (Γ : context) (i : nat) Γ' (body : term),
+          Pctx [] Γ Γ' ->
+          option_map decl_body (nth_error Γ' i) = Some (Some body) ->
+          P Γ (tRel i) (lift0 (S i) body)) ->
+      (forall (Γ : context) (i : nat) Γ',
+          Pctx [] Γ Γ' ->
+          P Γ (tRel i) (tRel i)) ->
+      (forall (Γ : context) (ind : inductive) (pars c : nat) (u : universe_instance) (args0 args1 : list term)
+              (p : term) (brs0 brs1 : list (nat * term)),
+          All2_prop Γ P' args0 args1 ->
+          All2_prop_eq Γ snd fst P' brs0 brs1 ->
+          P Γ (tCase (ind, pars) p (mkApps (tConstruct ind c u) args0) brs0) (iota_red pars c args1 brs1)) ->
+      (forall (Γ : context) (mfix : mfixpoint term) (idx : nat) (args0 args1 : list term) (narg : nat) (fn0 fn1 : term),
+          unfold_fix mfix idx = Some (narg, fn0) ->
+          is_constructor narg args1 = true ->
+          All2_prop Γ P' args0 args1 ->
+          pred1 Γ fn0 fn1 -> P Γ fn0 fn1 -> P Γ (mkApps (tFix mfix idx) args0) (mkApps fn1 args1)) ->
+      (forall (Γ : context) (ip : inductive * nat) (p0 p1 : term) (mfix : mfixpoint term) (idx : nat)
+              (args0 args1 : list term) (narg : nat) (fn0 fn1 : term) (brs0 brs1 : list (nat * term)),
+          unfold_cofix mfix idx = Some (narg, fn0) ->
+          All2_prop Γ P' args0 args1 ->
+          pred1 Γ fn0 fn1 ->
+          P Γ fn0 fn1 ->
+          pred1 Γ p0 p1 ->
+          P Γ p0 p1 ->
+          All2_prop_eq Γ snd fst P' brs0 brs1 ->
+          P Γ (tCase ip p0 (mkApps (tCoFix mfix idx) args0) brs0) (tCase ip p1 (mkApps fn1 args1) brs1)) ->
+      (forall (Γ : context) (p : projection) (mfix : mfixpoint term) (idx : nat) (args0 args1 : list term)
+              (narg : nat) (fn0 fn1 : term),
+          unfold_cofix mfix idx = Some (narg, fn0) ->
+          All2_prop Γ P' args0 args1 ->
+          pred1 Γ fn0 fn1 -> P Γ fn0 fn1 -> P Γ (tProj p (mkApps (tCoFix mfix idx) args0)) (tProj p (mkApps fn1 args1))) ->
+      (forall (Γ : context) (c : ident) (decl : constant_body) (body : term),
+          declared_constant Σ c decl ->
+          forall u : universe_instance, cst_body decl = Some body ->
+                                        P Γ (tConst c u) (subst_instance_constr u body)) ->
+      (forall (Γ : context) (c : ident) (u : universe_instance),
+                                        P Γ (tConst c u) (tConst c u)) ->
+      (forall (Γ : context) (i : inductive) (pars narg : nat) (k : nat) (u : universe_instance)
+              (args0 args1 : list term) (arg1 : term),
+          All2_prop Γ P' args0 args1 ->
+          nth_error args1 (pars + narg) = Some arg1 ->
+          P Γ (tProj (i, pars, narg) (mkApps (tConstruct i k u) args0)) arg1) ->
+      (forall (Γ : context) (na : name) (M M' N N' : term),
+          pred1 Γ M M' ->
+          P Γ M M' -> pred1 (Γ,, vass na M) N N' -> P (Γ,, vass na M) N N' -> P Γ (tLambda na M N) (tLambda na M' N')) ->
+      (forall (Γ : context) (M0 M1 N0 N1 : term),
+          pred1 Γ M0 M1 -> P Γ M0 M1 -> pred1 Γ N0 N1 -> P Γ N0 N1 -> P Γ (tApp M0 N0) (tApp M1 N1)) ->
+      (forall (Γ : context) (na : name) (d0 d1 t0 t1 b0 b1 : term),
+          pred1 Γ d0 d1 ->
+          P Γ d0 d1 ->
+          pred1 Γ t0 t1 ->
+          P Γ t0 t1 ->
+          pred1 (Γ,, vdef na d0 t0) b0 b1 -> P (Γ,, vdef na d0 t0) b0 b1 -> P Γ (tLetIn na d0 t0 b0) (tLetIn na d1 t1 b1)) ->
+      (forall (Γ : context) (ind : inductive * nat) (p0 p1 c0 c1 : term) (brs0 brs1 : list (nat * term)),
+          pred1 Γ p0 p1 ->
+          P Γ p0 p1 ->
+          pred1 Γ c0 c1 ->
+          P Γ c0 c1 -> All2_prop_eq Γ snd fst P' brs0 brs1 -> P Γ (tCase ind p0 c0 brs0) (tCase ind p1 c1 brs1)) ->
+      (forall (Γ : context) (p : projection) (c c' : term), pred1 Γ c c' -> P Γ c c' -> P Γ (tProj p c) (tProj p c')) ->
+      (forall (Γ : context) (mfix0 : mfixpoint term) (mfix1 : list (def term)) (idx : nat),
+          All2_local_env (on_decl (fun Γ' => P' (Γ ,,, Γ'))) (fix_context mfix0) (fix_context mfix1) ->
+          All2_prop2_eq Γ (Γ ,,, fix_context mfix0) dtype dbody (fun x => (dname x, rarg x)) P' mfix0 mfix1 ->
+          P Γ (tFix mfix0 idx) (tFix mfix1 idx)) ->
+      (forall (Γ : context) (mfix0 : mfixpoint term) (mfix1 : list (def term)) (idx : nat),
+          All2_local_env (on_decl (fun Γ' => P' (Γ ,,, Γ'))) (fix_context mfix0) (fix_context mfix1) ->
+          All2_prop2_eq Γ (Γ ,,, fix_context mfix0) dtype dbody (fun x => (dname x, rarg x)) P' mfix0 mfix1 ->
+          P Γ (tCoFix mfix0 idx) (tCoFix mfix1 idx)) ->
+      (forall (Γ : context) (na : name) (M0 M1 N0 N1 : term),
+          pred1 Γ M0 M1 ->
+          P Γ M0 M1 -> pred1 (Γ,, vass na M0) N0 N1 -> P (Γ,, vass na M0) N0 N1 -> P Γ (tProd na M0 N0) (tProd na M1 N1)) ->
+      (forall (Γ : context) (ev : nat) (l l' : list term), All2_prop Γ P' l l' -> P Γ (tEvar ev l) (tEvar ev l')) ->
+      (forall (Γ : context) (t : term), pred_atom t -> P Γ t t) ->
+      forall (Γ : context) (t t0 : term), pred1 Γ t t0 -> P Γ t t0.
+  Proof.
+    intros P Pctx P' Hctx. intros. revert Γ t t0 X20.
+    fix aux 4. intros Γ t t'.
+    move aux at top.
+    destruct 1; match goal with
+                | |- P _ (tFix _ _) (tFix _ _) => idtac
+                | |- P _ (tCoFix _ _) (tCoFix _ _) => idtac
+                | |- P _ (mkApps (tFix _ _) _) _ => idtac
+                | |- P _ (tCase _ _ (mkApps (tCoFix _ _) _) _) _ => idtac
+                | |- P _ (tProj _ (mkApps (tCoFix _ _) _)) _ => idtac
+                | |- P _ (tRel _) _ => idtac
+                | |- P _ (tConst _ _) _ => idtac
+                | H : _ |- _ => eapply H; eauto
+                end.
+    - simpl. eapply X1; eauto. eapply Hctx.
+      apply (All2_local_env_impl a). intros. red. rewrite app_context_nil_l. split. exact X20. apply (aux _ _ _ X20).
+    - simpl. eapply X2; eauto. eapply Hctx.
+      apply (All2_local_env_impl a). intros. red. rewrite app_context_nil_l. split. exact X20. apply (aux _ _ _ X20).
+    - eapply (All2_All2_prop (P:=pred1) (Q:=P') a ((extendP aux) Γ)).
+    - eapply (All2_All2_prop_eq (P:=pred1) (Q:=P') (f:=snd) (g:=fst) a0 (extendP aux Γ)).
+    - eapply X4; eauto.
+      eapply (All2_All2_prop (P:=pred1) (Q:=P') a (extendP aux Γ)).
+    - eapply X5; eauto.
+      eapply (All2_All2_prop (P:=pred1) (Q:=P') a (extendP aux Γ)).
+      eapply (All2_All2_prop_eq (P:=pred1) (Q:=P') (f:=snd) a0 (extendP aux Γ)).
+    - eapply X6; eauto.
+      eapply (All2_All2_prop (P:=pred1) (Q:=P') a (extendP aux Γ)).
+    - eapply X7; eauto.
+    - eapply X8; eauto.
+    - eapply (All2_All2_prop (P:=pred1) (Q:=P') a (extendP aux Γ)).
+    - eapply (All2_All2_prop_eq (P:=pred1) (Q:=P') (f:=snd) a (extendP aux Γ)).
+    - eapply X15.
+      eapply (All2_local_env_impl a). intros. red. split. exact X20. apply (aux _ _ _ X20).
+      eapply (All2_All2_prop2_eq (Q:=P') (f:=dtype) (g:=dbody) a0 (extendP aux)).
+    - eapply X16.
+      eapply (All2_local_env_impl a). intros. red. split. exact X20. apply (aux _ _ _ X20).
+      eapply (All2_All2_prop2_eq (Q:=P') (f:=dtype) (g:=dbody) a0 (extendP aux)).
+    - eapply (All2_All2_prop (P:=pred1) (Q:=P') a (extendP aux Γ)).
+  Defined.
+
+
+
   Lemma All2_local_env_app_inv :
     forall P (Γ Γ' Γl Γr : context),
       All2_local_env (on_decl P) Γ Γl ->

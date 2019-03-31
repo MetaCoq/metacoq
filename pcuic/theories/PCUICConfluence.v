@@ -1813,11 +1813,6 @@ Section ParallelSubstitution.
     intros. apply (@mkApps_eq_decompose_app_rec f args t []); auto.
   Qed.
 
-  Ltac apply_hyp :=
-    match reverse goal with
-    | [ H : forall r, pred1 _ _ ?s _ -> _, H' : pred1 _ _ ?s _, H'' : pred1_ctx _ _ _, H''' : pred1_ctx _ _ _ |- _ ] =>
-      let target := fresh "v" in specialize (H _ H' _ _ H''' H'') as [target [? ?]]
-    end.
 
   Hint Constructors pred1 : pcuic.
 
@@ -1966,10 +1961,16 @@ Section ParallelSubstitution.
     rewrite [skipn _ _]IHl. reflexivity.
   Qed.
 
+  Ltac apply_hyp :=
+    match reverse goal with
+    | [ H : forall r, pred1 _ _ ?s _ -> _, H' : pred1 _ _ ?s _, H'' : pred1_ctx _ _ _(* , H''' : pred1_ctx _ _ _ *) |- _ ] =>
+      let target := fresh "v" in specialize (H _ H' _ (* H'''  *)H'') as [target [? ?]]
+    end.
+
   Theorem confluence Σ Γ t l r : wf Σ ->
     pred1 Σ Γ t l -> forall (Hr : pred1 Σ Γ t r),
-        forall Δ Δ', pred1_ctx Σ Γ Δ -> pred1_ctx Σ Γ Δ' ->
-                  { v & (pred1 Σ Δ l v) * (pred1 Σ Δ' r v) }%type.
+        forall Δ, pred1_ctx Σ Γ Δ ->
+                  { v & (pred1 Σ Δ l v) * (pred1 Σ Δ r v) }%type.
   Proof with solve_discr.
     intros wfΣ H; revert Γ t l H r.
     refine (pred1_ind_all Σ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _); intros *.
@@ -1980,22 +1981,20 @@ Section ParallelSubstitution.
   - (* Beta *)
     depelim Hr...
     + clear X1 X. repeat unshelve apply_hyp.
-      specialize (forall_r _ Hr1 (Δ ,, vass na t) (Δ' ,, vass na t)) as [b' [lb' rb']].
-      constructor; eauto. red. eapply pred1_refl.
+      specialize (forall_r _ Hr1 (Δ ,, vass na t)) as [b' [lb' rb']].
       constructor; eauto. red. eapply pred1_refl.
       eexists. intuition eauto using substitution0_pred1.
     + clear X1 X; repeat apply_hyp.
       depelim Hr1...
-      specialize (forall_r _ Hr1_2 (Δ ,, vass na M') (Δ' ,, vass na M')) as [b' [lb' rb']].
+      specialize (forall_r _ Hr1_2 (Δ ,, vass na M') (* (Δ' ,, vass na M') *)) as [b' [lb' rb']].
       constructor. auto with pcuic. simpl. auto.
-      constructor. auto. simpl. auto.
       exists (b' {0:=v}). intuition eauto using substitution0_pred1.
       constructor; eauto.
 
   - (* Zeta *)
     depelim Hr...
     + (* Zeta / Zeta *)
-      specialize (forall_r _ Hr1 _ _ predΔ predΔ') as [v [? ?]].
+      specialize (forall_r _ Hr1 _ predΔ) as [v [? ?]].
       specialize (forall_r0 _ Hr2 (Δ ,, vdef na d1 t) (Δ' ,, vdef na d3 t)) as [v0 [? ?]].
       constructor; auto with pcuic.
       constructor; auto with pcuic.
@@ -2023,12 +2022,18 @@ Section ParallelSubstitution.
       econstructor; eauto.
 
   - (* Zeta in context *)
+    eapply nth_error_pred1_ctx in X; eauto.
+    destruct X as [b [? ?]]; intuition; rename_all_hyps.
     depelim Hr...
     -- (* Zeta in context / Zeta in context *)
-      eapply nth_error_pred1_ctx in X; eauto.
-      destruct X; intuition.
-      (* rewrite heq_option_map in e. noconf e.
-       clear X; apply_hyp. exists v; auto. *) admit.
+      pose proof predΔ'.
+      eapply nth_error_pred1_ctx_l in X; eauto.
+      destruct X as [body' [Heqbody' Hredbody']].
+      specialize (forall_r _ Hredbody' (skipn (S i) Δ) (skipn (S i) Δ')).
+      forward forall_r. now apply All2_local_env_skipn.
+      forward forall_r. now apply All2_local_env_skipn.
+      destruct forall_r.
+
     -- (* Zeta in context / reflexivity *)
       eapply nth_error_pred1_ctx in X; eauto.
       destruct X; intuition.

@@ -1941,17 +1941,30 @@ Section ParallelSubstitution.
     eauto.
   Qed.
 
-  (* Lemma All2_app_inv {A} {P : A -> A -> Type} {l l' r r'} : *)
-  (*   All2 P (l ++ r) (l' ++ r') -> #|r| = #|r'| -> *)
-  (*   All2 P l l' * All2 P r r'. *)
-  (* Proof. *)
-  (*   induction r in l, l', r' |- *; simpl. *)
-  (*   intros. simpl. destruct r'; try discriminate. intuition auto. *)
-  (*   now rewrite !app_nil_r in X. *)
-  (*   intros. *)
-  (*   destruct r'; try discriminate. *)
-  (*   simpl in H. *)
-  (* Admitted. *)
+  Lemma All2_local_env_skipn P l l' n :
+    All2_local_env P l l' ->
+    All2_local_env P (skipn n l) (skipn n l').
+  Proof.
+    induction n in l, l' |- *. auto.
+    intros.
+    destruct l; depelim X.
+    - constructor.
+    - apply IHn; auto.
+    - apply IHn; auto.
+  Qed.
+
+  Lemma skipn_nth_error {A} (l : list A) i :
+     match nth_error l i with
+     | Some a => skipn i l = a :: skipn (S i) l
+     | None => skipn i l = []
+     end.
+  Proof.
+    induction l in i |- *. destruct i. reflexivity. reflexivity.
+    destruct i. simpl. reflexivity.
+    simpl. specialize (IHl i). destruct nth_error.
+    rewrite [skipn _ _]IHl. reflexivity.
+    rewrite [skipn _ _]IHl. reflexivity.
+  Qed.
 
   Theorem confluence Σ Γ t l r : wf Σ ->
     pred1 Σ Γ t l -> forall (Hr : pred1 Σ Γ t r),
@@ -2033,19 +2046,46 @@ Section ParallelSubstitution.
   - (* Refl *)
     depelim Hr...
     -- (* Refl , Zeta in context *)
+      clear X.
       pose proof e.
       eapply nth_error_pred1_ctx in H; eauto.
       destruct H; intuition.
       eapply nth_error_pred1_ctx_l in X; eauto.
       destruct X; intuition; rename_all_hyps.
-      specialize (forall_r body b).
+      pose proof heq_option_map0.
+      eapply nth_error_pred1_ctx_l in H. 2:eapply predΔ.
+      destruct H as [b' [eqn Hpred]].
+      pose proof heq_option_map0.
+      eapply nth_error_pred1_ctx_l in H. 2:eapply predΔ'.
+      destruct H as [b'' [eqn' Hpred']].
+      remember (nth_error Δ i) as Hnth.
+      destruct Hnth as [[na [b'''|] ty]|]; noconf eqn.
+      specialize (forall_r x0 a2).
       specialize (forall_r (skipn (S i) Δ) (skipn (S i) Δ')).
-      forward forall_r. admit.
-      forward forall_r. admit.
+      forward forall_r. now apply All2_local_env_skipn.
+      forward forall_r. now apply All2_local_env_skipn.
       destruct forall_r as [v [vl vr]].
       exists (lift0 (S i) v).
-      split. econstructor; eauto. eapply pred1_ctx_refl.
-
+      split.
+      ++ eapply (pred_rel_def_unfold Σ Δ i (skipn (S i) Δ ,, vdef na v ty ,,, firstn i Δ)).
+         rewrite -{1}(firstn_skipn i Δ). eapply All2_local_env_app_inv.
+         move:(skipn_nth_error Δ i). rewrite -HeqHnth => ->.
+         constructor. apply pred1_ctx_refl.
+         red. split. apply vr. eapply pred1_refl.
+         generalize (firstn i Δ). intros.
+         clear. induction l. constructor.
+         destruct a as [na [b|] ty]; constructor; try red; auto using pred1_refl.
+         symmetry in HeqHnth. eapply nth_error_Some_length in HeqHnth.
+         rewrite nth_error_app_ge firstn_length_le; try lia.
+         rewrite (minus_diag). reflexivity.
+      ++ epose proof (weakening_pred1_0 Σ _ (firstn (S i) Δ) _ _ _ vr).
+         unfold app_context in X. rewrite firstn_skipn firstn_length_le in X; eauto.
+         pose proof (All2_local_env_length predΔ').
+         pose proof (All2_local_env_length predΔ).
+         lia.
+         destruct (nth_error Γ i) eqn:Heq; noconf heq_option_map0. simpl in H.
+         pose proof (All2_local_env_length predΔ').
+         eapply nth_error_Some_length in Heq. lia.
     -- exists (tRel i). intuition auto with pcuic.
 
   - (* Iota reduction *)
@@ -2345,9 +2385,48 @@ Section ParallelSubstitution.
       clear X X1. repeat apply_hyp.
       exists (tCase ind v v0 brs'). split; intuition eauto with pcuic.
 
-  - (* Proj *)
+  - (* Proj Congruence *)
     depelim Hr...
-    all:admit.
+    + (* CoFix unfolding *)
+      eapply pred1_mkApps_tCoFix_inv in X as [mfix' [args' [[-> Hmfix'] ?]]].
+      unfold unfold_cofix in e. destruct (nth_error mfix idx) eqn:Heq.
+      noconf e. red in Hmfix'.
+      eapply All2_nth_error_Some in Hmfix' as [d' [? [? [? ?]]]]; eauto.
+      unfold on_Trel_eq, on_Trel in *.
+      (* exists (tProj p (subst0 (cofix_subst mfix') (dbody d'))). *)
+      (* split. econstructor. *)
+      (* specialize (forall_r (mkApps (tCoFix mfix idx) args1)). *)
+      (* forward forall_r. eapply pred_mkApps; auto with pcuic. *)
+      (* specialize (forall_r _ _ predΔ predΔ') as [v [vl vr]]. *)
+      (* specialize (forall_r (mkApps (tCoFix mfix' idx) args')). *)
+      (* forward forall_r. eapply pred_mkApps; auto with pcuic. *)
+      (* constructor; eauto with pcuic. *)
+      (* specialize (forall_r _ _ predΔ predΔ') as [v [vl vr]]. *)
+      pose (substitution_let_pred1 Σ Γ (fix_context mfix) [] (cofix_subst mfix) (cofix_subst mfix')
+                                   (dbody d) (dbody d') wfΣ).
+      forward p0. admit.
+      forward p0. apply o0.
+      simpl in p0.
+      (* If only we could join thoses two, but we don't have
+         an hypothesis for joining the substituted bodies of the
+         cofixpoints, only for something which is an application
+         of the fixpoint.  *)
+      all:admit.
+
+    + (* / Constructor Reduction *)
+      eapply pred1_mkApps_tConstruct in X as [args' [-> Hargs']].
+      specialize (forall_r (mkApps (tConstruct i k u) args1)).
+      forward forall_r. eapply pred_mkApps; eauto with pcuic.
+      specialize (forall_r _ _ predΔ predΔ') as [j [jl jr]].
+      eapply pred1_mkApps_tConstruct in jl as [args'' [-> Hargs'']].
+      eapply pred1_mkApps_tConstruct in jr as [args''' [Heq Hargsj]].
+      eapply mkApps_eq_inj in Heq; eauto. destruct Heq. noconf H0.
+      eapply All2_nth_error_Some in Hargsj as [t' [heq' ?]]; eauto.
+      exists t'. split; eauto with pcuic.
+
+    + (* / Congruence *)
+      clear X; apply_hyp.
+      exists (tProj p v). intuition auto with pcuic.
 
   - (* Fix *)
     depelim Hr...

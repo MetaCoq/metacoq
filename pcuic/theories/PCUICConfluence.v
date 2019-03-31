@@ -20,6 +20,8 @@ Notation "'∃' x .. y , P" := (sigT (fun x => .. (sigT (fun y => P%type)) ..))
 
 Existing Instance config.default_checker_flags.
 
+Section Confluence.
+
   Lemma mkApps_eq_decompose {f args t} :
     mkApps f args = t ->
     isApp f = false ->
@@ -526,27 +528,76 @@ Existing Instance config.default_checker_flags.
       forward forall_r. now apply All2_local_env_skipn.
       destruct forall_r. destruct p.
       exists (lift0 (S i) x).
+      assert (S i <= #|Γ|).
+      destruct nth_error eqn:Heq; noconf heq_option_map0.
+      eapply nth_error_Some_length in Heq. lia.
+      pose proof (All2_local_env_length predΔ).
+      pose proof (All2_local_env_length predΔ').
       split.
-
-      eapply weakening_pred1_0 in p.
-
-
-      eapply weakening_pred1_0 in Hred; eauto.
-      unfold app_context in Hred.
-      erewrite (firstn_skipn (S i) Γ) in Hred.
-      rewrite firstn_length_le in Hred.
-      destruct (nth_error Γ i) eqn:Heq; noconf heq_option_map0.
-      eauto using nth_error_Some_length with arith.
-      specialize (forall_r _ Hred _ _ predΔ predΔ') as [v [? ?]].
-      exists v. intuition eauto with pcuic.
+      { eapply weakening_pred1_0 in p; eauto.
+        unfold app_context in p. erewrite firstn_skipn in p.
+        now rewrite firstn_length_le in p; try lia. }
+      { destruct (nth_error Δ' i) eqn:Heq'; noconf Hb.
+        destruct c as [na [b'|] ty]; noconf H.
+        eapply (pred_rel_def_unfold _ _ _ (skipn (S i) Δ' ,, vdef na x ty ,,, firstn i Δ')).
+        rewrite -{1}(firstn_skipn i Δ'). eapply All2_local_env_app_inv.
+         move:(skipn_nth_error Δ' i). rewrite Heq' => ->.
+         constructor. apply pred1_ctx_refl.
+         red. split. apply p0. eapply pred1_refl.
+         generalize (firstn i Δ'). intros.
+         clear. induction l. constructor.
+         destruct a as [na [b|] ty]; constructor; try red; auto using pred1_refl.
+         rewrite nth_error_app_ge firstn_length_le; try lia.
+         rewrite (minus_diag). reflexivity. }
 
   - (* Refl *)
     depelim Hr...
     -- (* Refl , Zeta in context *)
       pose proof e.
-      eapply nth_error_pred1_ctx in H; eauto.
+      eapply nth_error_pred1_ctx in H. 2:eauto.
       destruct H; intuition.
-      eapply nth_error_pred1_ctx_l in X; eauto.
+      specialize (nth_error_pred1_ctx_l i x predΔ) as [body'' [Hb Hred]]; eauto.
+      destruct (nth_error_pred1_ctx_l i x X a0). destruct p as [HΓ' [predxx0 IH]].
+      pose proof (IH _ Hred (skipn (S i) Δ') (skipn (S i) Δ')).
+      forward X0 by now apply All2_local_env_skipn.
+      forward X0 by now apply All2_local_env_skipn.
+      destruct X0 as [v [vl vr]].
+      pose proof (All2_local_env_length predΔ).
+      pose proof (All2_local_env_length predΔ').
+      assert (S i <= #|Γ|).
+      destruct (nth_error Γ _) eqn:Heq; noconf a0.
+      eapply nth_error_Some_length in Heq. lia.
+      pose proof (IH _ b (skipn (S i) Δ') (skipn (S i) Δ')).
+      forward X0 by now apply All2_local_env_skipn.
+      forward X0 by now apply All2_local_env_skipn.
+      destruct X0 as [v' [vl' vr']].
+
+
+
+      exists (lift0 (S i) v).
+      split.
+      2:{ eapply weakening_pred1_0 in vr; eauto.
+          unfold app_context in vr. erewrite firstn_skipn in vr.
+          rewrite firstn_length_le in vr; try lia. }
+      { destruct (nth_error Δ i) eqn:Heq'; noconf Hb.
+        destruct c as [na [b'|] ty]; noconf H.
+        eapply (pred_rel_def_unfold _ _ _ (skipn (S i) Δ ,, vdef na v ty ,,, firstn i Δ)).
+        rewrite -{1}(firstn_skipn i Δ). eapply All2_local_env_app_inv.
+         move:(skipn_nth_error Δ i). rewrite Heq' => ->.
+         constructor. apply pred1_ctx_refl.
+         red. split. apply p0. eapply pred1_refl.
+         generalize (firstn i Δ'). intros.
+         clear. induction l. constructor.
+         destruct a as [na [b|] ty]; constructor; try red; auto using pred1_refl.
+         rewrite nth_error_app_ge firstn_length_le; try lia.
+         rewrite (minus_diag). reflexivity. }
+      {
+
+
+
+      specialize (forall_r _ Hred (skipn (S i) Δ) (skipn (S i) Δ')).
+
+      eapply nth_error_pred1_ctx_l in X. 2:eapply a0.
       destruct X; intuition; rename_all_hyps.
       pose proof heq_option_map0.
       eapply nth_error_pred1_ctx_l in H. 2:eapply predΔ.

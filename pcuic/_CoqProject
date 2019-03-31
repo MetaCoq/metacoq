@@ -13,6 +13,7 @@ theories/PCUICClosed.v
 theories/PCUICWeakening.v
 theories/PCUICSubstitution.v
 theories/PCUICReduction.v
+theories/PCUICParallelReduction.v
 theories/PCUICConfluence.v
 theories/PCUICCumulativity.v
 theories/PCUICGeneration.v

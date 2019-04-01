@@ -757,129 +757,173 @@ Section ParallelReduction.
   Defined.
 
   Lemma pred1_ind_all_ctx :
-    forall (P : forall (Γ : context) (t t0 : term), Type)
-           (Pctx : forall (Γ Δ Δ' : context), Type),
-      let P' Γ x y := ((pred1 Γ x y) * P Γ x y)%type in
-      (forall Γ Δ Δ', All2_local_env (on_decl (fun Γ' => P' (Γ ,,, Γ'))) Δ Δ' -> Pctx Γ Δ Δ') ->
-      (forall (Γ : context) (na : name) (t b0 b1 a0 a1 : term),
-          pred1 (Γ ,, vass na t) b0 b1 -> P (Γ ,, vass na t) b0 b1 -> pred1 Γ a0 a1 -> P Γ a0 a1 -> P Γ (tApp (tLambda na t b0) a0) (b1 {0 := a1})) ->
-      (forall (Γ : context) (na : name) (d0 d1 t b0 b1 : term),
-          pred1 Γ d0 d1 -> P Γ d0 d1 -> pred1 (Γ ,, vdef na d0 t) b0 b1 -> P (Γ ,, vdef na d0 t) b0 b1 -> P Γ (tLetIn na d0 t b0) (b1 {0 := d1})) ->
-      (forall (Γ : context) (i : nat) Γ' (body : term),
-          Pctx [] Γ Γ' ->
+    forall (P : forall (Γ Γ' : context) (t t0 : term), Type)
+           (Pctx : forall (Γ Γ' : context), Type),
+      let P' Γ Γ' x y := ((pred1 Γ Γ' x y) * P Γ Γ' x y)%type in
+      (forall Γ Γ', All2_local_env (on_decl P) Γ Γ' -> Pctx Γ Γ') ->
+      (forall (Γ Γ' : context) (na : name) (t0 t1 b0 b1 a0 a1 : term),
+          pred1 (Γ ,, vass na t0) (Γ' ,, vass na t1) b0 b1 -> P (Γ ,, vass na t0) (Γ' ,, vass na t1) b0 b1 ->
+          pred1 Γ Γ' t0 t1 -> P Γ Γ' t0 t1 ->
+          pred1 Γ Γ' a0 a1 -> P Γ Γ' a0 a1 -> P Γ Γ' (tApp (tLambda na t0 b0) a0) (b1 {0 := a1})) ->
+      (forall (Γ Γ' : context) (na : name) (d0 d1 t0 t1 b0 b1 : term),
+          pred1 Γ Γ' t0 t1 -> P Γ Γ' t0 t1 ->
+          pred1 Γ Γ' d0 d1 -> P Γ Γ' d0 d1 ->
+          pred1 (Γ ,, vdef na d0 t0) (Γ' ,, vdef na d1 t1) b0 b1 ->
+          P (Γ ,, vdef na d0 t0) (Γ' ,, vdef na d1 t1) b0 b1 -> P Γ Γ' (tLetIn na d0 t0 b0) (b1 {0 := d1})) ->
+      (forall (Γ Γ' : context) (i : nat) (body : term),
+          All2_local_env (on_decl pred1) Γ Γ' ->
+          Pctx Γ Γ' ->
           option_map decl_body (nth_error Γ' i) = Some (Some body) ->
-          P Γ (tRel i) (lift0 (S i) body)) ->
-      (forall (Γ : context) (i : nat) Γ',
-          Pctx [] Γ Γ' ->
-          P Γ (tRel i) (tRel i)) ->
-      (forall (Γ : context) (ind : inductive) (pars c : nat) (u : universe_instance) (args0 args1 : list term)
+          P Γ Γ' (tRel i) (lift0 (S i) body)) ->
+      (forall (Γ Γ' : context) (i : nat),
+          All2_local_env (on_decl pred1) Γ Γ' ->
+          Pctx Γ Γ' ->
+          P Γ Γ' (tRel i) (tRel i)) ->
+      (forall (Γ Γ' : context) (ind : inductive) (pars c : nat) (u : universe_instance) (args0 args1 : list term)
               (p : term) (brs0 brs1 : list (nat * term)),
-          All2_prop Γ P' args0 args1 ->
-          All2_prop_eq Γ snd fst P' brs0 brs1 ->
-          P Γ (tCase (ind, pars) p (mkApps (tConstruct ind c u) args0) brs0) (iota_red pars c args1 brs1)) ->
-      (forall (Γ : context) (mfix : mfixpoint term) (idx : nat) (args0 args1 : list term) (narg : nat) (fn0 fn1 : term),
+          All2_local_env (on_decl pred1) Γ Γ' ->
+          Pctx Γ Γ' ->
+          All2 (P' Γ Γ') args0 args1 ->
+          All2_prop_eq Γ Γ' snd fst P' brs0 brs1 ->
+          P Γ Γ' (tCase (ind, pars) p (mkApps (tConstruct ind c u) args0) brs0) (iota_red pars c args1 brs1)) ->
+      (forall (Γ Γ' : context) (mfix : mfixpoint term) (idx : nat) (args0 args1 : list term) (narg : nat) (fn0 fn1 : term),
           unfold_fix mfix idx = Some (narg, fn0) ->
           is_constructor narg args1 = true ->
-          All2_prop Γ P' args0 args1 ->
-          pred1 Γ fn0 fn1 -> P Γ fn0 fn1 -> P Γ (mkApps (tFix mfix idx) args0) (mkApps fn1 args1)) ->
-      (forall (Γ : context) (ip : inductive * nat) (p0 p1 : term) (mfix : mfixpoint term) (idx : nat)
+          All2 (P' Γ Γ') args0 args1 ->
+          pred1 Γ Γ' fn0 fn1 -> P Γ Γ' fn0 fn1 -> P Γ Γ' (mkApps (tFix mfix idx) args0) (mkApps fn1 args1)) ->
+      (forall (Γ Γ' : context) (ip : inductive * nat) (p0 p1 : term) (mfix : mfixpoint term) (idx : nat)
               (args0 args1 : list term) (narg : nat) (fn0 fn1 : term) (brs0 brs1 : list (nat * term)),
           unfold_cofix mfix idx = Some (narg, fn0) ->
-          All2_prop Γ P' args0 args1 ->
-          pred1 Γ fn0 fn1 ->
-          P Γ fn0 fn1 ->
-          pred1 Γ p0 p1 ->
-          P Γ p0 p1 ->
-          All2_prop_eq Γ snd fst P' brs0 brs1 ->
-          P Γ (tCase ip p0 (mkApps (tCoFix mfix idx) args0) brs0) (tCase ip p1 (mkApps fn1 args1) brs1)) ->
-      (forall (Γ : context) (p : projection) (mfix : mfixpoint term) (idx : nat) (args0 args1 : list term)
+          All2 (P' Γ Γ') args0 args1 ->
+          pred1 Γ Γ' fn0 fn1 ->
+          P Γ Γ' fn0 fn1 ->
+          pred1 Γ Γ' p0 p1 ->
+          P Γ Γ' p0 p1 ->
+          All2_prop_eq Γ Γ' snd fst P' brs0 brs1 ->
+          P Γ Γ' (tCase ip p0 (mkApps (tCoFix mfix idx) args0) brs0) (tCase ip p1 (mkApps fn1 args1) brs1)) ->
+      (forall (Γ Γ' : context) (p : projection) (mfix : mfixpoint term) (idx : nat) (args0 args1 : list term)
               (narg : nat) (fn0 fn1 : term),
           unfold_cofix mfix idx = Some (narg, fn0) ->
-          All2_prop Γ P' args0 args1 ->
-          pred1 Γ fn0 fn1 -> P Γ fn0 fn1 -> P Γ (tProj p (mkApps (tCoFix mfix idx) args0)) (tProj p (mkApps fn1 args1))) ->
-      (forall (Γ : context) (c : ident) (decl : constant_body) (body : term),
+          All2 (P' Γ Γ') args0 args1 ->
+          pred1 Γ Γ' fn0 fn1 -> P Γ Γ' fn0 fn1 ->
+          P Γ Γ' (tProj p (mkApps (tCoFix mfix idx) args0)) (tProj p (mkApps fn1 args1))) ->
+      (forall (Γ Γ' : context) (c : ident) (decl : constant_body) (body : term),
+          All2_local_env (on_decl pred1) Γ Γ' ->
+          Pctx Γ Γ' ->
           declared_constant Σ c decl ->
           forall u : universe_instance, cst_body decl = Some body ->
-                                        P Γ (tConst c u) (subst_instance_constr u body)) ->
-      (forall (Γ : context) (c : ident) (u : universe_instance),
-                                        P Γ (tConst c u) (tConst c u)) ->
-      (forall (Γ : context) (i : inductive) (pars narg : nat) (k : nat) (u : universe_instance)
+                                        P Γ Γ' (tConst c u) (subst_instance_constr u body)) ->
+      (forall (Γ Γ' : context) (c : ident) (u : universe_instance),
+          All2_local_env (on_decl pred1) Γ Γ' ->
+          Pctx Γ Γ' ->
+          P Γ Γ' (tConst c u) (tConst c u)) ->
+      (forall (Γ Γ' : context) (i : inductive) (pars narg : nat) (k : nat) (u : universe_instance)
               (args0 args1 : list term) (arg1 : term),
-          All2_prop Γ P' args0 args1 ->
+          All2 (pred1 Γ Γ') args0 args1 ->
+          All2 (P Γ Γ') args0 args1 ->
           nth_error args1 (pars + narg) = Some arg1 ->
-          P Γ (tProj (i, pars, narg) (mkApps (tConstruct i k u) args0)) arg1) ->
-      (forall (Γ : context) (na : name) (M M' N N' : term),
-          pred1 Γ M M' ->
-          P Γ M M' -> pred1 (Γ,, vass na M) N N' -> P (Γ,, vass na M) N N' -> P Γ (tLambda na M N) (tLambda na M' N')) ->
-      (forall (Γ : context) (M0 M1 N0 N1 : term),
-          pred1 Γ M0 M1 -> P Γ M0 M1 -> pred1 Γ N0 N1 -> P Γ N0 N1 -> P Γ (tApp M0 N0) (tApp M1 N1)) ->
-      (forall (Γ : context) (na : name) (d0 d1 t0 t1 b0 b1 : term),
-          pred1 Γ d0 d1 ->
-          P Γ d0 d1 ->
-          pred1 Γ t0 t1 ->
-          P Γ t0 t1 ->
-          pred1 (Γ,, vdef na d0 t0) b0 b1 -> P (Γ,, vdef na d0 t0) b0 b1 -> P Γ (tLetIn na d0 t0 b0) (tLetIn na d1 t1 b1)) ->
-      (forall (Γ : context) (ind : inductive * nat) (p0 p1 c0 c1 : term) (brs0 brs1 : list (nat * term)),
-          pred1 Γ p0 p1 ->
-          P Γ p0 p1 ->
-          pred1 Γ c0 c1 ->
-          P Γ c0 c1 -> All2_prop_eq Γ snd fst P' brs0 brs1 -> P Γ (tCase ind p0 c0 brs0) (tCase ind p1 c1 brs1)) ->
-      (forall (Γ : context) (p : projection) (c c' : term), pred1 Γ c c' -> P Γ c c' -> P Γ (tProj p c) (tProj p c')) ->
-      (forall (Γ : context) (mfix0 : mfixpoint term) (mfix1 : list (def term)) (idx : nat),
-          All2_local_env (on_decl (fun Γ' => P' (Γ ,,, Γ'))) (fix_context mfix0) (fix_context mfix1) ->
-          All2_prop2_eq Γ (Γ ,,, fix_context mfix0) dtype dbody (fun x => (dname x, rarg x)) P' mfix0 mfix1 ->
-          P Γ (tFix mfix0 idx) (tFix mfix1 idx)) ->
-      (forall (Γ : context) (mfix0 : mfixpoint term) (mfix1 : list (def term)) (idx : nat),
-          All2_local_env (on_decl (fun Γ' => P' (Γ ,,, Γ'))) (fix_context mfix0) (fix_context mfix1) ->
-          All2_prop2_eq Γ (Γ ,,, fix_context mfix0) dtype dbody (fun x => (dname x, rarg x)) P' mfix0 mfix1 ->
-          P Γ (tCoFix mfix0 idx) (tCoFix mfix1 idx)) ->
-      (forall (Γ : context) (na : name) (M0 M1 N0 N1 : term),
-          pred1 Γ M0 M1 ->
-          P Γ M0 M1 -> pred1 (Γ,, vass na M0) N0 N1 -> P (Γ,, vass na M0) N0 N1 -> P Γ (tProd na M0 N0) (tProd na M1 N1)) ->
-      (forall (Γ : context) (ev : nat) (l l' : list term), All2_prop Γ P' l l' -> P Γ (tEvar ev l) (tEvar ev l')) ->
-      (forall (Γ : context) (t : term), pred_atom t -> P Γ t t) ->
-      forall (Γ : context) (t t0 : term), pred1 Γ t t0 -> P Γ t t0.
+          P Γ Γ' (tProj (i, pars, narg) (mkApps (tConstruct i k u) args0)) arg1) ->
+      (forall (Γ Γ' : context) (na : name) (M M' N N' : term),
+          pred1 Γ Γ' M M' ->
+          P Γ Γ' M M' -> pred1 (Γ,, vass na M) (Γ' ,, vass na M') N N' ->
+          P (Γ,, vass na M) (Γ' ,, vass na M') N N' -> P Γ Γ' (tLambda na M N) (tLambda na M' N')) ->
+      (forall (Γ Γ' : context) (M0 M1 N0 N1 : term),
+          pred1 Γ Γ' M0 M1 -> P Γ Γ' M0 M1 -> pred1 Γ Γ' N0 N1 ->
+          P Γ Γ' N0 N1 -> P Γ Γ' (tApp M0 N0) (tApp M1 N1)) ->
+      (forall (Γ Γ' : context) (na : name) (d0 d1 t0 t1 b0 b1 : term),
+          pred1 Γ Γ' d0 d1 ->
+          P Γ Γ' d0 d1 ->
+          pred1 Γ Γ' t0 t1 ->
+          P Γ Γ' t0 t1 ->
+          pred1 (Γ,, vdef na d0 t0) (Γ',,vdef na d1 t1) b0 b1 ->
+          P (Γ,, vdef na d0 t0) (Γ',,vdef na d1 t1) b0 b1 -> P Γ Γ' (tLetIn na d0 t0 b0) (tLetIn na d1 t1 b1)) ->
+      (forall (Γ Γ' : context) (ind : inductive * nat) (p0 p1 c0 c1 : term) (brs0 brs1 : list (nat * term)),
+          pred1 Γ Γ' p0 p1 ->
+          P Γ Γ' p0 p1 ->
+          pred1 Γ Γ' c0 c1 ->
+          P Γ Γ' c0 c1 -> All2_prop_eq Γ Γ' snd fst P' brs0 brs1 ->
+          P Γ Γ' (tCase ind p0 c0 brs0) (tCase ind p1 c1 brs1)) ->
+      (forall (Γ Γ' : context) (p : projection) (c c' : term), pred1 Γ Γ' c c' -> P Γ Γ' c c' -> P Γ Γ' (tProj p c) (tProj p c')) ->
+
+      (forall (Γ Γ' : context) (mfix0 : mfixpoint term) (mfix1 : list (def term)) (idx : nat),
+          All2_local_env (on_decl pred1) Γ Γ' ->
+          Pctx Γ Γ' ->
+          All2_local_env (on_decl (on_decl_over pred1 Γ Γ')) (fix_context mfix0) (fix_context mfix1) ->
+          All2_local_env (on_decl (on_decl_over P Γ Γ')) (fix_context mfix0) (fix_context mfix1) ->
+          All2_prop2_eq Γ Γ' (Γ ,,, fix_context mfix0) (Γ' ,,, fix_context mfix1)
+                        dtype dbody (fun x => (dname x, rarg x)) P' mfix0 mfix1 ->
+          P Γ Γ' (tFix mfix0 idx) (tFix mfix1 idx)) ->
+
+      (forall (Γ Γ' : context) (mfix0 : mfixpoint term) (mfix1 : list (def term)) (idx : nat),
+          All2_local_env (on_decl pred1) Γ Γ' ->
+          Pctx Γ Γ' ->
+          All2_local_env (on_decl (on_decl_over pred1 Γ Γ')) (fix_context mfix0) (fix_context mfix1) ->
+          All2_local_env (on_decl (on_decl_over P Γ Γ')) (fix_context mfix0) (fix_context mfix1) ->
+          All2_prop2_eq Γ Γ' (Γ ,,, fix_context mfix0) (Γ' ,,, fix_context mfix1) dtype dbody (fun x => (dname x, rarg x)) P' mfix0 mfix1 ->
+          P Γ Γ' (tCoFix mfix0 idx) (tCoFix mfix1 idx)) ->
+      (forall (Γ Γ' : context) (na : name) (M0 M1 N0 N1 : term),
+          pred1 Γ Γ' M0 M1 ->
+          P Γ Γ' M0 M1 -> pred1 (Γ,, vass na M0) (Γ' ,, vass na M1) N0 N1 ->
+          P (Γ,, vass na M0) (Γ' ,, vass na M1) N0 N1 -> P Γ Γ' (tProd na M0 N0) (tProd na M1 N1)) ->
+      (forall (Γ Γ' : context) (ev : nat) (l l' : list term),
+          All2_local_env (on_decl pred1) Γ Γ' ->
+          Pctx Γ Γ' ->
+          All2 (P' Γ Γ') l l' -> P Γ Γ' (tEvar ev l) (tEvar ev l')) ->
+      (forall (Γ Γ' : context) (t : term),
+          All2_local_env (on_decl pred1) Γ Γ' ->
+          Pctx Γ Γ' ->
+          pred_atom t -> P Γ Γ' t t) ->
+      forall (Γ Γ' : context) (t t0 : term), pred1 Γ Γ' t t0 -> P Γ Γ' t t0.
   Proof.
-    intros P Pctx P' Hctx. intros. revert Γ t t0 X20.
-    fix aux 4. intros Γ t t'.
+    intros P Pctx P' Hctx. intros. revert Γ Γ' t t0 X20.
+    fix aux 5. intros Γ Γ' t t'.
     move aux at top.
     destruct 1; match goal with
-                | |- P _ (tFix _ _) (tFix _ _) => idtac
-                | |- P _ (tCoFix _ _) (tCoFix _ _) => idtac
-                | |- P _ (mkApps (tFix _ _) _) _ => idtac
-                | |- P _ (tCase _ _ (mkApps (tCoFix _ _) _) _) _ => idtac
-                | |- P _ (tProj _ (mkApps (tCoFix _ _) _)) _ => idtac
-                | |- P _ (tRel _) _ => idtac
-                | |- P _ (tConst _ _) _ => idtac
+                | |- P _ _ (tFix _ _) (tFix _ _) => idtac
+                | |- P _ _ (tCoFix _ _) (tCoFix _ _) => idtac
+                | |- P _ _ (mkApps (tFix _ _) _) _ => idtac
+                | |- P _ _ (tCase _ _ (mkApps (tCoFix _ _) _) _) _ => idtac
+                | |- P _ _ (tProj _ (mkApps (tCoFix _ _) _)) _ => idtac
+                | |- P _ _ (tRel _) _ => idtac
+                | |- P _ _ (tConst _ _) _ => idtac
                 | H : _ |- _ => eapply H; eauto
                 end.
-    - simpl. eapply X1; eauto. eapply Hctx.
-      apply (All2_local_env_impl a). intros. red. rewrite app_context_nil_l. split. exact X20. apply (aux _ _ _ X20).
-    - simpl. eapply X2; eauto. eapply Hctx.
-      apply (All2_local_env_impl a). intros. red. rewrite app_context_nil_l. split. exact X20. apply (aux _ _ _ X20).
-    - eapply (All2_All2_prop (P:=pred1) (Q:=P') a ((extendP aux) Γ)).
-    - eapply (All2_All2_prop_eq (P:=pred1) (Q:=P') (f:=snd) (g:=fst) a0 (extendP aux Γ)).
+    - simpl. apply X1; auto. apply Hctx.
+      apply (All2_local_env_impl a). intros. apply (aux _ _ _ _ X20).
+    - simpl. apply X2; auto.
+      apply Hctx, (All2_local_env_impl a). intros. apply (aux _ _ _ _ X20).
+    - apply Hctx, (All2_local_env_impl a). intros. apply (aux _ _ _ _ X20).
+    - eapply (All2_All2_prop (P:=pred1) (Q:=P') a0 ((extendP aux) Γ Γ')).
+    - eapply (All2_All2_prop_eq (P:=pred1) (Q:=P') (f:=snd) (g:=fst) a1 (extendP aux Γ Γ')).
     - eapply X4; eauto.
-      eapply (All2_All2_prop (P:=pred1) (Q:=P') a (extendP aux Γ)).
+      eapply (All2_All2_prop (P:=pred1) (Q:=P') a (extendP aux Γ Γ')).
     - eapply X5; eauto.
-      eapply (All2_All2_prop (P:=pred1) (Q:=P') a (extendP aux Γ)).
-      eapply (All2_All2_prop_eq (P:=pred1) (Q:=P') (f:=snd) a0 (extendP aux Γ)).
+      eapply (All2_All2_prop (P:=pred1) (Q:=P') a (extendP aux Γ Γ')).
+      eapply (All2_All2_prop_eq (P:=pred1) (Q:=P') (f:=snd) a0 (extendP aux Γ Γ')).
     - eapply X6; eauto.
-      eapply (All2_All2_prop (P:=pred1) (Q:=P') a (extendP aux Γ)).
+      eapply (All2_All2_prop (P:=pred1) (Q:=P') a (extendP aux Γ Γ')).
     - eapply X7; eauto.
+      apply Hctx, (All2_local_env_impl a). intros. apply (aux _ _ _ _ X20).
     - eapply X8; eauto.
-    - eapply (All2_All2_prop (P:=pred1) (Q:=P') a (extendP aux Γ)).
-    - eapply (All2_All2_prop_eq (P:=pred1) (Q:=P') (f:=snd) a (extendP aux Γ)).
+      apply Hctx, (All2_local_env_impl a). intros. apply (aux _ _ _ _ X20).
+    - eapply (All2_All2_prop (P:=pred1) (Q:=P) a). intros. apply (aux _ _ _ _ X20).
+    - eapply (All2_All2_prop_eq (P:=pred1) (Q:=P') (f:=snd) a (extendP aux Γ Γ')).
     - eapply X15.
-      eapply (All2_local_env_impl a). intros. red. split. exact X20. apply (aux _ _ _ X20).
-      eapply (All2_All2_prop2_eq (Q:=P') (f:=dtype) (g:=dbody) a0 (extendP aux)).
+      eapply (All2_local_env_impl a). intros. apply X20.
+      eapply Hctx, (All2_local_env_impl a). intros. apply (aux _ _ _ _ X20).
+      eapply (All2_local_env_impl a0). intros. red. exact X20.
+      eapply (All2_local_env_impl a0). intros. red. apply (aux _ _ _ _ X20).
+      eapply (All2_All2_prop2_eq (Q:=P') (f:=dtype) (g:=dbody) a1 (extendP aux)).
     - eapply X16.
-      eapply (All2_local_env_impl a). intros. red. split. exact X20. apply (aux _ _ _ X20).
-      eapply (All2_All2_prop2_eq (Q:=P') (f:=dtype) (g:=dbody) a0 (extendP aux)).
-    - eapply (All2_All2_prop (P:=pred1) (Q:=P') a (extendP aux Γ)).
+      eapply (All2_local_env_impl a). intros. apply X20.
+      eapply Hctx, (All2_local_env_impl a). intros. apply (aux _ _ _ _ X20).
+      eapply (All2_local_env_impl a0). intros. red. exact X20.
+      eapply (All2_local_env_impl a0). intros. red. apply (aux _ _ _ _ X20).
+      eapply (All2_All2_prop2_eq (Q:=P') (f:=dtype) (g:=dbody) a1 (extendP aux)).
+    - eapply Hctx, (All2_local_env_impl a). intros. apply (aux _ _ _ _ X20).
+    - eapply (All2_All2_prop (P:=pred1) (Q:=P') a0 (extendP aux Γ Γ')).
+    - eapply Hctx, (All2_local_env_impl a). intros. apply (aux _ _ _ _ X20).
   Defined.
-
-
 
   Lemma All2_local_env_app_inv :
     forall P (Γ Γ' Γl Γr : context),
@@ -1466,87 +1510,113 @@ Hint Resolve pred1_pred1_ctx : pcuic.
         Qed.
         Hint Resolve All2_local_env_over_pred1_ctx : pcuic.
 
+  Lemma nth_error_pred1_ctx_all_defs {P} {Γ Δ} :
+    All2_local_env (on_decl P) Γ Δ ->
+    forall i body body', option_map decl_body (nth_error Γ i) = Some (Some body) ->
+              option_map decl_body (nth_error Δ i) = Some (Some body') ->
+              P (skipn (S i) Γ) (skipn (S i) Δ) body body'.
+  Proof.
+    induction 1; destruct i; simpl; try discriminate.
+    intros. apply IHX; auto.
+    intros ? ? [= ->] [= ->]. apply p.
+    intros ? ? ? ?. apply IHX; auto.
+  Qed.
 
+  Lemma All2_local_env_over_firstn_skipn:
+    forall (Σ : global_context) (i : nat) (Δ' R : context),
+      pred1_ctx Σ Δ' R ->
+      All2_local_env_over (pred1 Σ) (skipn i Δ') (skipn i R) (firstn i Δ') (firstn i R).
+  Proof.
+    intros Σ i Δ' R redr.
+    induction redr in i |- *; simpl.
+    destruct i; constructor; pcuic.
+    destruct i; simpl; constructor; pcuic. apply IHredr.
+    repeat red. red in p. now rewrite /app_context !firstn_skipn.
+    repeat red. red in p.
+    destruct i; simpl; constructor; pcuic. apply IHredr.
+    repeat red. destruct p.
+    split; red; now rewrite /app_context !firstn_skipn.
+  Qed.
+
+  (* Checked that we can prove confluence in presence of let-reductions in the context *)
+  (*
   Theorem confluence Σ Γ Δ t l : wf Σ ->
     pred1 Σ Γ Δ t l -> forall Δ' r (Hr : pred1 Σ Γ Δ' t r),
     ∃ Δ'' v, (pred1 Σ Δ Δ'' l v) * (pred1 Σ Δ' Δ'' r v).
   Proof.
     intros wfΣ H; revert Γ Δ t l H.
-    refine (pred1_ind_all Σ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _); intros *.
+    (* refine (pred1_ind_all Σ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _); intros *. *)
+    (* all:try intros **; rename_all_hyps; *)
+    (*   try solve [specialize (forall_Γ _ X3); eauto]; eauto; *)
+    (*     try solve [eexists; split; constructor; eauto]. *)
+    (* intros. *)
+
+    set(P' :=
+          fun (Δ Δ' : context) =>
+            forall Δ'', pred1_ctx Σ Δ Δ'' ->
+                        ∃ R, pred1_ctx Σ Δ' R * pred1_ctx Σ Δ'' R).
+                (* (forall i b b', option_map decl_body (nth_error (Γ ,,, Δ) i) = Some (Some b) -> *)
+                (*                 option_map decl_body (nth_error (Γ ,,, Δ') i) = Some (Some b') -> *)
+                (*                 (∃ v, (pred1 Σ (skipn (S i) (Γ ,,, Δ)) b v) * (pred1 Σ (skipn (S i) (Γ ,,, Δ')) b'v)))). *)
+    refine (pred1_ind_all_ctx Σ _ P' _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _); subst P'; intros *.
     all:try intros **; rename_all_hyps;
       try solve [specialize (forall_Γ _ X3); eauto]; eauto;
         try solve [eexists; split; constructor; eauto].
     intros.
 
+    - simpl.
+      induction X; simpl; pcuic.
+      ++ intros. depelim X0. simpl in o.
+         specialize (IHX _ X0) as [Δf [Δfl Δfr]].
+         red in p. pose proof (p _ _ o) as [Δ'' [tf [tfl tfr]]].
+         exists (Δ'' ,, vass na tf).
+         split. constructor. auto. eapply pred1_pred1_ctx in tfl. auto. red. auto.
+         constructor. eapply pred1_pred1_ctx in tfr. auto. red. auto.
+      ++ intros. depelim X0. simpl in o.
+         specialize (IHX _ X0) as [Δf [Δfl Δfr]]. destruct p, o; rename_all_hyps.
+         pose proof (forall_Δ' _ _ p) as [Δ''' [bf [bfl bfr]]].
+         pose proof (forall_Δ'0 _ _ p0) as [Δ'' [tf [tfl tfr]]].
+         exists (Δ''' ,, vdef na bf tf).
+         split. constructor. auto. eapply pred1_pred1_ctx in bfl. auto. red. split.
+         auto. (* Admit type annotation and both reduced in different contexts: need
+                  to use "All2_local_env" to force a common target context *)
+         admit.
+         constructor. auto. eapply pred1_pred1_ctx in bfr. auto. red. split. auto.
+         admit.
+
     - depelim Hr.
       all:admit.
     - all:admit.
     - all:admit.
-    - (* Refl / Zeta in context: the hard case *)
-      depelim Hr.
-      pose proof e.
-      pose proof (All2_local_env_length X0).
-      eapply nth_error_pred1_ctx in H. 2:eauto.
-      destruct H; intuition.
-      specialize (nth_error_pred1_ctx_l i x a) as [body'' [Hb Hred]]; eauto.
-      destruct (nth_error_pred1_ctx_l i x X0 a0).
-      destruct p as [HΓ' IH].
-      pose proof (IH (skipn (S i) Δ') _ Hred).
-      destruct X as [Δbody'' [v [vl vr]]].
-      pose proof (All2_local_env_length a).
-      destruct (nth_error Γ' _) eqn:Heq; noconf Hb. noconf HΓ'. simpl in H.
-      destruct c as [na [bo|] ty]. simpl in *. noconf H.
-      assert (S i <= #|Γ|).
-      eapply nth_error_Some_length in Heq. lia.
-      pose proof (IH (skipn (S i) Δ') _ b).
-      destruct X as [Δbody [v' [vl' vr']]].
-      rewrite e in Hb. noconf Hb.
-
-      exists (Δbody ,, vdef na v' ty ,,, firstn i Δ').
-      exists (lift0 (S i) v'). split.
-      { econstructor.
-        rewrite -{1}(firstn_skipn i Γ').
-        eapply All2_local_env_app_inv.
-        move:(skipn_nth_error Γ' i).
-        destruct (nth_error Γ' _) eqn:Heq'; noconf Heq. move=> ->.
-        constructor. pcuic.
-        red. split; pcuic.
-        apply All2_local_env_over_refl; auto.
-        move:(skipn_nth_error Γ' i).
-        destruct (nth_error Γ' _) eqn:Heq'; noconf Heq. move=> ->.
-        constructor. pcuic. pcuic.
-        rewrite nth_error_app_ge firstn_length_le; try lia.
-        rewrite (minus_diag). reflexivity. }
-
-      { epose proof (weakening_pred1_0 _ (skipn (S i) Δ') Δbody (firstn (S i) Δ') _ _ wfΣ vr').
-        revert X.
-        rewrite /app_context firstn_skipn.
+    - depelim Hr.
+      + (* Refl / Zeta in context: the hard case. We allow reducing the whole contexts on both sides *)
+        specialize (X0 _ a). destruct X0 as [R [redl redr]].
+        exists R.
+        eapply nth_error_pred1_ctx_l in e. 2:eapply redr.
+        destruct e.
+        destruct p. exists (lift0 (S i) x).
+        split. pcuic.
+        rewrite -{1}(firstn_skipn (S i) Δ').
+        rewrite -{1}(firstn_skipn (S i) R).
+        pose proof (All2_local_env_length redr).
+        destruct nth_error eqn:Heq; noconf e; eapply nth_error_Some_length in Heq. simpl in H.
+        assert (S i = #|firstn (S i) Δ'|).
         rewrite !firstn_length_le; try lia.
-        rewrite Nat.add_1_r firstn_skipn.
-        move:(skipn_nth_error Δ' (S i)).
-        rewrite -{1}(firstn_skipn i Δ').
-        eapply All2_local_env_app_inv.
-
-
-        simpl. constructor.
-
-
-
-      }
-      { destruct (nth_error Δ i) eqn:Heq'; noconf Hb.
-        destruct c as [na [b'|] ty]; noconf H.
-        eapply (pred_rel_def_unfold _ _ _ (skipn (S i) Δ ,, vdef na v' ty ,,, firstn i Δ)).
-        rewrite -{1}(firstn_skipn i Δ). eapply All2_local_env_app_inv.
-         move:(skipn_nth_error Δ i). rewrite Heq' => ->.
-         constructor. apply pred1_ctx_refl.
-         red. split. apply vr. eapply pred1_refl.
-         generalize (firstn i Δ). intros.
-         clear. induction l. constructor.
-         destruct a as [na [b|] ty]; constructor; try red; auto using pred1_refl.
-         rewrite nth_error_app_ge firstn_length_le; try lia.
-         rewrite (minus_diag). reflexivity. }
-      {
-      destruct (nth_error
+        rewrite {5 6}H1.
+        assert (#|firstn (S i) Δ'| = #|firstn (S i) R|).
+        rewrite !firstn_length_le; try lia.
+        rewrite {2}H2.
+        apply (weakening_pred1_pred1 Σ (skipn (S i) Δ') (skipn (S i) R) (firstn (S i) Δ') (firstn (S i) R)); auto.
+        now eapply All2_local_env_over_firstn_skipn.
+      + specialize (X0 _ a) as [R [rl rr]].
+        exists R. exists (tRel i). split; pcuic.
+      + admit.
+      + specialize (X0 _ a) as [R [rl rr]].
+        exists R. exists (tRel i). split; pcuic.
+    - simpl in *. pose (pred1_pred1_ctx _ _ _ _ _ Hr).
+      specialize (X0 _ a). destruct X0 as [R [Rl Rr]]. exists R.
+      depelim Hr.
+   *)
 
 End ParallelWeakening.
 
@@ -1556,11 +1626,11 @@ Section ParallelSubstitution.
   | emptyslet : psubst Σ Γ [] [] []
   | cons_let_ass Δ s s' na t t' T :
       psubst Σ Γ s s' Δ ->
-      pred1 Σ Γ t t' ->
+      pred1 Σ Γ Δ t t' ->
       psubst Σ Γ (t :: s) (t' :: s') (Δ ,, vass na T)
   | cons_let_def Δ s s' na t t' T :
       psubst Σ Γ s s' Δ ->
-      pred1 Σ Γ (subst0 s t) (subst0 s' t') ->
+      pred1 Σ Γ Δ (subst0 s t) (subst0 s' t') ->
       psubst Σ Γ (subst0 s t :: s) (subst0 s' t' :: s') (Δ ,, vdef na t T).
 
   Lemma psubst_length {Σ Γ s s' Γ'} : psubst Σ Γ s s' Γ' -> #|s| = #|Γ'|.
@@ -1587,8 +1657,8 @@ Section ParallelSubstitution.
       let b := subst0 s2 d in
       let b' := subst0 s2' u in
       psubst Σ Γ s2 s2' (skipn (S n) Δ) *
-      (t = b) * (t' = b') * pred1 Σ Γ t t' }%type
-    | None => pred1 Σ Γ t t'
+      (t = b) * (t' = b') * pred1 Σ Γ (skipn (S n) Δ) t t' }%type
+    | None => pred1 Σ Γ (skipn (S n) Δ) t t'
     end.
   Proof.
     induction 1 in n, t |- *; simpl; auto; destruct n; simpl; try congruence.
@@ -1612,88 +1682,88 @@ Section ParallelSubstitution.
     - specialize (IHX _ H). intuition congruence.
   Qed.
 
-  Lemma All2_local_env_subst_pred {Σ Γ Γ'} :
-    All2_local_env
-        (on_decl
-           (λ (Γ Γ' : context) (x y : term), (pred1 Σ Γ x y *
-                                           (∀ Γ0 Δ Γ' : context, Γ = Γ0 ,,, Δ ,,, Γ'
-                                                                 → ∀ s s' : list term,
-                                                                 psubst Σ Γ0 s s' Δ
-                                                                 → pred1 Σ (Γ0 ,,, subst_context s 0 Γ')
-                                                                     (subst s #|Γ'| x)
-                                                                     (subst s' #|Γ'| y)))%type))
-        Γ Γ' ->
-   pred1_ctx Σ Γ Γ'.
-  Proof.
-    intros.
-    induction X; constructor; auto. red. apply p. red. split; apply p.
-  Qed.
+  (* Lemma All2_local_env_subst_pred {Σ Γ Γ'} : *)
+  (*   All2_local_env *)
+  (*       (on_decl *)
+  (*          (fun (Γ Γ' : context) (x y : term)=> (pred1 Σ Γ Γ' x y * *)
+  (*                                          (fun Γ0 Δ Γ' : context => Γ = Γ0 ,,, Δ ,,, Γ' *)
+  (*                                                                -> forall s s' : list term, *)
+  (*                                                                psubst Σ Γ0 s s' Δ *)
+  (*                                                                -> pred1 Σ (Γ0 ,,, subst_context s 0 Γ') *)
+  (*                                                                    (subst s #|Γ'| x) *)
+  (*                                                                    (subst s' #|Γ'| y)))%type)) *)
+  (*       Γ Γ' -> *)
+  (*  pred1_ctx Σ Γ Γ'. *)
+  (* Proof. *)
+  (*   intros. *)
+  (*   induction X; constructor; auto. red. apply p. red. split; apply p. *)
+  (* Qed. *)
 
-  Lemma All2_local_env_subst_IH {Σ Γ Γ'} :
-    All2_local_env
-        (on_decl
-           (λ (Γ Γ' : context) (x y : term), (pred1 Σ Γ x y *
-                                           (∀ Γ0 Δ Γ' : context, Γ = Γ0 ,,, Δ ,,, Γ'
-                                                                 → ∀ s s' : list term,
-                                                                 psubst Σ Γ0 s s' Δ
-                                                                 → pred1 Σ (Γ0 ,,, subst_context s 0 Γ')
-                                                                     (subst s #|Γ'| x)
-                                                                     (subst s' #|Γ'| y)))%type))
-        Γ Γ' ->
-    (∀ Γ0 Δ Γ0' : context, Γ = Γ0 ,,, Δ ,,, Γ0' ->
-                          (∃ Γ1 Δ' Γ1',
-                              (Γ' = Γ1 ,,, Δ' ,,, Γ1') *
-                              (#|Γ0| = #|Γ1|) * (#|Δ| = #|Δ'|) * (#|Γ0'| = #|Γ1'|) *
-                               ∀ s s' : list term, psubst Σ Γ0 s s' Δ ->
-                                                   pred1_ctx Σ (Γ0 ,,, subst_context s 0 Γ0')
-                                                             (Γ1 ,,, subst_context s' 0 Γ1'))).
-  Proof.
-    intros. subst Γ.
-    eapply All2_local_env_app in X as [Γl' [Δr'' [[Hctx Heq'] Heq''']]]. subst.
-    pose proof (All2_local_env_length Heq').
-    pose proof (All2_local_env_length Heq''').
-    eapply All2_local_env_app in Heq' as [Γl0' [Δr0'' [[Hctx0 Heq0'] Heq0''']]]. subst.
-    pose proof (All2_local_env_length Heq0').
-    pose proof (All2_local_env_length Heq0''').
-    eexists _, _, _. intuition eauto.
-    rewrite app_length in H.
-    eapply All2_local_env_subst_pred in Heq0'.
-    induction Heq'''. apply Heq0'.
-    - simpl.
-      rewrite !subst_context_snoc. simpl.
-      constructor; auto.
-      red. red in p. destruct p.
-      specialize (p0 _ _ _ eq_refl). rewrite !Nat.add_0_r. simpl.
-      simpl in H0. noconf H0. simpl in H. rewrite <- H. apply p0; auto.
-    - simpl.
-      rewrite !subst_context_snoc !Nat.add_0_r. simpl.
-      constructor; auto. red in p. intuition; rename_all_hyps.
-      specialize (forall_Γ0 _ _ _ eq_refl). simpl.
-      specialize (forall_Γ1 _ _ _ eq_refl).
-      noconf heq_length. rewrite <- H. intuition eauto.
-  Qed.
+  (* Lemma All2_local_env_subst_IH {Σ Γ Γ'} : *)
+  (*   All2_local_env *)
+  (*       (on_decl *)
+  (*          (λ (Γ Γ' : context) (x y : term), (pred1 Σ Γ x y * *)
+  (*                                          (∀ Γ0 Δ Γ' : context, Γ = Γ0 ,,, Δ ,,, Γ' *)
+  (*                                                                → ∀ s s' : list term, *)
+  (*                                                                psubst Σ Γ0 s s' Δ *)
+  (*                                                                → pred1 Σ (Γ0 ,,, subst_context s 0 Γ') *)
+  (*                                                                    (subst s #|Γ'| x) *)
+  (*                                                                    (subst s' #|Γ'| y)))%type)) *)
+  (*       Γ Γ' -> *)
+  (*   (∀ Γ0 Δ Γ0' : context, Γ = Γ0 ,,, Δ ,,, Γ0' -> *)
+  (*                         (∃ Γ1 Δ' Γ1', *)
+  (*                             (Γ' = Γ1 ,,, Δ' ,,, Γ1') * *)
+  (*                             (#|Γ0| = #|Γ1|) * (#|Δ| = #|Δ'|) * (#|Γ0'| = #|Γ1'|) * *)
+  (*                              ∀ s s' : list term, psubst Σ Γ0 s s' Δ -> *)
+  (*                                                  pred1_ctx Σ (Γ0 ,,, subst_context s 0 Γ0') *)
+  (*                                                            (Γ1 ,,, subst_context s' 0 Γ1'))). *)
+  (* Proof. *)
+  (*   intros. subst Γ. *)
+  (*   eapply All2_local_env_app in X as [Γl' [Δr'' [[Hctx Heq'] Heq''']]]. subst. *)
+  (*   pose proof (All2_local_env_length Heq'). *)
+  (*   pose proof (All2_local_env_length Heq'''). *)
+  (*   eapply All2_local_env_app in Heq' as [Γl0' [Δr0'' [[Hctx0 Heq0'] Heq0''']]]. subst. *)
+  (*   pose proof (All2_local_env_length Heq0'). *)
+  (*   pose proof (All2_local_env_length Heq0'''). *)
+  (*   eexists _, _, _. intuition eauto. *)
+  (*   rewrite app_length in H. *)
+  (*   eapply All2_local_env_subst_pred in Heq0'. *)
+  (*   induction Heq'''. apply Heq0'. *)
+  (*   - simpl. *)
+  (*     rewrite !subst_context_snoc. simpl. *)
+  (*     constructor; auto. *)
+  (*     red. red in p. destruct p. *)
+  (*     specialize (p0 _ _ _ eq_refl). rewrite !Nat.add_0_r. simpl. *)
+  (*     simpl in H0. noconf H0. simpl in H. rewrite <- H. apply p0; auto. *)
+  (*   - simpl. *)
+  (*     rewrite !subst_context_snoc !Nat.add_0_r. simpl. *)
+  (*     constructor; auto. red in p. intuition; rename_all_hyps. *)
+  (*     specialize (forall_Γ0 _ _ _ eq_refl). simpl. *)
+  (*     specialize (forall_Γ1 _ _ _ eq_refl). *)
+  (*     noconf heq_length. rewrite <- H. intuition eauto. *)
+  (* Qed. *)
 
-  Lemma All2_local_env_subst {Σ Γ Δ Γ' Γ''} :
-    All2_local_env
-        (on_decl
-           (λ (Γ Γ' : context) (x y : term),
-            (pred1 Σ Γ x y *
-             (∀ Γ0 Δ Γ' : context, Γ = Γ0 ,,, Δ ,,, Γ'
-                                   → ∀ s s' : list term,
-                   psubst Σ Γ0 s s' Δ
-                   → pred1 Σ (Γ0 ,,, subst_context s 0 Γ')
-                           (subst s #|Γ'| x)
-                           (subst s' #|Γ'| y)))%type))
-        (Γ ,,, Δ ,,, Γ') Γ'' ->
-    ∃ Γl Δ' Γr,
-      (Γ'' = Γl ,,, Δ' ,,, Γr) *
-      (#|Γ| = #|Γl|) * (#|Δ| = #|Δ'|) * (#|Γ'| = #|Γr|) *
-   forall s s', psubst Σ Γ s s' Δ ->
-   pred1_ctx Σ (Γ ,,, subst_context s 0 Γ') (Γl ,,, subst_context s' 0 Γr).
-  Proof.
-    intros H.
-    eapply All2_local_env_subst_IH in H. 2:reflexivity. apply H.
-  Qed.
+  (* Lemma All2_local_env_subst {Σ Γ Δ Γ' Γ''} : *)
+  (*   All2_local_env *)
+  (*       (on_decl *)
+  (*          (λ (Γ Γ' : context) (x y : term), *)
+  (*           (pred1 Σ Γ x y * *)
+  (*            (∀ Γ0 Δ Γ' : context, Γ = Γ0 ,,, Δ ,,, Γ' *)
+  (*                                  → ∀ s s' : list term, *)
+  (*                  psubst Σ Γ0 s s' Δ *)
+  (*                  → pred1 Σ (Γ0 ,,, subst_context s 0 Γ') *)
+  (*                          (subst s #|Γ'| x) *)
+  (*                          (subst s' #|Γ'| y)))%type)) *)
+  (*       (Γ ,,, Δ ,,, Γ') Γ'' -> *)
+  (*   ∃ Γl Δ' Γr, *)
+  (*     (Γ'' = Γl ,,, Δ' ,,, Γr) * *)
+  (*     (#|Γ| = #|Γl|) * (#|Δ| = #|Δ'|) * (#|Γ'| = #|Γr|) * *)
+  (*  forall s s', psubst Σ Γ s s' Δ -> *)
+  (*  pred1_ctx Σ (Γ ,,, subst_context s 0 Γ') (Γl ,,, subst_context s' 0 Γr). *)
+  (* Proof. *)
+  (*   intros H. *)
+  (*   eapply All2_local_env_subst_IH in H. 2:reflexivity. apply H. *)
+  (* Qed. *)
   (*   destruct H as [Γ1 [Δ1 [Γ1' [Heq IH]]]]. *)
   (*   intuition. *)
   (*   unfold app_context in a. eapply app_inj_length_r in a as [Hl Hr]. *)
@@ -1741,51 +1811,70 @@ Section ParallelSubstitution.
     eapply app_inj_length_l in Hr as [Hl' Hr]; auto.
   Qed.
 
-  Lemma All2_local_env_subst_ctx:
-    ∀ (Σ : global_context) (Γ0 Δ Γ' : context) (s s' : list term) (c c0 : context),
-      All2_local_env
-        (on_decl (λ (Γ'0 : context) (x y : term),
-                  (pred1 Σ (Γ0 ,,, Δ ,,, Γ' ,,, Γ'0) x y *
-                   (∀ Γ Δ0 Γ'1 : context, Γ0 ,,, Δ ,,, Γ' ,,, Γ'0 =
-                                          Γ ,,, Δ0 ,,, Γ'1
-                                          → ∀ s0 s'0 : list term,
-                         psubst Σ Γ s0 s'0 Δ0
-                         → pred1 Σ
-                                 (Γ ,,, subst_context s0 0 Γ'1)
-                                 (subst s0 #|Γ'1| x)
-                                 (subst s'0 #|Γ'1| y)))%type))
-        c c0 ->
-      psubst Σ Γ0 s s' Δ ->
+  (* Lemma All2_local_env_subst_ctx: *)
+  (*   ∀ (Σ : global_context) (Γ0 Δ Γ' : context) (s s' : list term) (c c0 : context), *)
+  (*     All2_local_env *)
+  (*       (on_decl (λ (Γ'0 : context) (x y : term), *)
+  (*                 (pred1 Σ (Γ0 ,,, Δ ,,, Γ' ,,, Γ'0) x y * *)
+  (*                  (∀ Γ Δ0 Γ'1 : context, Γ0 ,,, Δ ,,, Γ' ,,, Γ'0 = *)
+  (*                                         Γ ,,, Δ0 ,,, Γ'1 *)
+  (*                                         → ∀ s0 s'0 : list term, *)
+  (*                        psubst Σ Γ s0 s'0 Δ0 *)
+  (*                        → pred1 Σ *)
+  (*                                (Γ ,,, subst_context s0 0 Γ'1) *)
+  (*                                (subst s0 #|Γ'1| x) *)
+  (*                                (subst s'0 #|Γ'1| y)))%type)) *)
+  (*       c c0 -> *)
+  (*     psubst Σ Γ0 s s' Δ -> *)
 
-      All2_local_env (on_decl (λ Γ'0 : context, pred1 Σ (Γ0 ,,, subst_context s 0 Γ' ,,, Γ'0)))
-        (subst_context s #|Γ'| c)
-        (subst_context s' #|Γ'| c0).
-  Proof.
-    intros Σ Γ0 Δ Γ' s s' c c0.
-    intros X Hs. induction X; rewrite ?subst_context_snoc; constructor; auto; rename_all_hyps.
-    - simpl in *. !destruct p.
-      specialize (forall_Γ Γ0 Δ (Γ' ,,, Γ)).
-      rewrite app_context_assoc in forall_Γ. specialize (forall_Γ eq_refl).
-      pose proof (All2_local_env_length IHX). rewrite !subst_context_length in H.
-      rewrite <- H. specialize (forall_Γ _ _ Hs).
-      now rewrite subst_context_app !app_context_length !app_context_assoc Nat.add_0_r in forall_Γ.
-    - simpl in *. !destruct p. !destruct p; !destruct p0.
-      specialize (forall_Γ Γ0 Δ (Γ' ,,, Γ)).
-      rewrite app_context_assoc in forall_Γ. specialize (forall_Γ eq_refl).
-      specialize (forall_Γ0 Γ0 Δ (Γ' ,,, Γ)).
-      rewrite app_context_assoc in forall_Γ0. specialize (forall_Γ0 eq_refl).
-      pose proof (All2_local_env_length IHX). rewrite !subst_context_length in H.
-      rewrite <- H. specialize (forall_Γ _ _ Hs). specialize (forall_Γ0 _ _ Hs).
-      now rewrite subst_context_app !app_context_length !app_context_assoc Nat.add_0_r in forall_Γ forall_Γ0.
-  Qed.
+  (*     All2_local_env (on_decl (λ Γ'0 : context, pred1 Σ (Γ0 ,,, subst_context s 0 Γ' ,,, Γ'0))) *)
+  (*       (subst_context s #|Γ'| c) *)
+  (*       (subst_context s' #|Γ'| c0). *)
+  (* Proof. *)
+  (*   intros Σ Γ0 Δ Γ' s s' c c0. *)
+  (*   intros X Hs. induction X; rewrite ?subst_context_snoc; constructor; auto; rename_all_hyps. *)
+  (*   - simpl in *. !destruct p. *)
+  (*     specialize (forall_Γ Γ0 Δ (Γ' ,,, Γ)). *)
+  (*     rewrite app_context_assoc in forall_Γ. specialize (forall_Γ eq_refl). *)
+  (*     pose proof (All2_local_env_length IHX). rewrite !subst_context_length in H. *)
+  (*     rewrite <- H. specialize (forall_Γ _ _ Hs). *)
+  (*     now rewrite subst_context_app !app_context_length !app_context_assoc Nat.add_0_r in forall_Γ. *)
+  (*   - simpl in *. !destruct p. !destruct p; !destruct p0. *)
+  (*     specialize (forall_Γ Γ0 Δ (Γ' ,,, Γ)). *)
+  (*     rewrite app_context_assoc in forall_Γ. specialize (forall_Γ eq_refl). *)
+  (*     specialize (forall_Γ0 Γ0 Δ (Γ' ,,, Γ)). *)
+  (*     rewrite app_context_assoc in forall_Γ0. specialize (forall_Γ0 eq_refl). *)
+  (*     pose proof (All2_local_env_length IHX). rewrite !subst_context_length in H. *)
+  (*     rewrite <- H. specialize (forall_Γ _ _ Hs). specialize (forall_Γ0 _ _ Hs). *)
+  (*     now rewrite subst_context_app !app_context_length !app_context_assoc Nat.add_0_r in forall_Γ forall_Γ0. *)
+  (* Qed. *)
 
   (** Parallel reduction is substitutive. *)
-  Lemma substitution_let_pred1 Σ Γ Δ Γ' s s' M N : wf Σ ->
+  Lemma substitution_let_pred1 Σ Γ Δ Γ' Δ1 Γ'1 s s' M N : wf Σ ->
     psubst Σ Γ s s' Δ ->
-    pred1 Σ (Γ ,,, Δ ,,, Γ') M N ->
-    pred1 Σ (Γ ,,, subst_context s 0 Γ') (subst s #|Γ'| M) (subst s' #|Γ'| N).
+    pred1 Σ (Γ ,,, Δ ,,, Γ') (Γ ,,, Δ1 ,,, Γ'1) M N ->
+    pred1 Σ (Γ ,,, subst_context s 0 Γ') (Γ ,,, subst_context s' 0 Γ'1) (subst s #|Γ'| M) (subst s' #|Γ'| N).
   Proof.
-    intros wfΣ Hs H.
+    intros wfΣ Hs.
+    remember (Γ ,,, Δ ,,, Γ') as Γ0.
+    remember (Γ ,,, Δ1 ,,, Γ'1) as Γ1.
+    intros HΓ.
+    revert Γ Γ' HeqΓ0 Δ Δ' HeqΔ0 HΓ Γ'' Δ''.
+    revert Γ0 Δ0 M N H.
+    refine (pred1_ind_all Σ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _); intros *; intros;
+      rename_all_hyps; try subst Γ Γ'; simplify_IH_hyps; cbn -[iota_red];
+      match goal with
+        |- context [iota_red _ _ _ _] => idtac
+      | |- _ => autorewrite with lift
+      end;
+      try specialize (forall_Γ _ _ Γ'' eq_refl _ _ Δ'' eq_refl heq_length);
+      try specialize (forall_Γ0 _ _ Γ'' eq_refl _ _ Δ'' eq_refl heq_length);
+      try pose proof (All2_local_env_length X0);
+      try (eapply (All2_local_env_weaken_pred_ctx (Γ'0:=Γ'0) (Δ':=Δ') heq_length) in X0; pcuic);
+      simpl; try solve [ econstructor; eauto; try apply All2_map;
+                         unfold All2_prop_eq, All2_prop, on_Trel_eq, on_Trel, id in *; solve_all];
+        unfold All2_prop_eq, All2_prop, on_Trel_eq, on_Trel, id in *.
+
     remember (Γ ,,, Δ ,,, Γ') as Γ0. revert Γ0 M N H Γ Δ Γ' HeqΓ0 s s' Hs.
     refine (pred1_ind_all Σ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _); intros *; intros;
       rename_all_hyps; try subst Γ; cbn -[iota_red];

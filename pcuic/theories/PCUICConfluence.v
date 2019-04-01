@@ -35,6 +35,7 @@ Section Confluence.
     match goal with
     | [ H : mkApps _ _ = mkApps _ _ |- _ ] =>
       let H0 := fresh in let H1 := fresh in
+
       specialize (mkApps_eq_inj H eq_refl eq_refl) as [H0 H1]; try (congruence || (noconf H0; noconf H1))
     | [ H : mkApps _ _ = _ |- _ ] => apply mkApps_eq_head in H
     end.
@@ -438,7 +439,7 @@ Section Confluence.
 
   Theorem confluence Σ Γ t l r : wf Σ ->
     pred1 Σ Γ t l -> forall (Hr : pred1 Σ Γ t r),
-        forall Δ Δ', pred1_ctx Σ Γ Δ -> pred1_ctx Σ Γ Δ' ->
+        forall Δ Δ', pred1_ ctx Σ Γ Δ -> pred1_ctx Σ Γ Δ' ->
                   { v & (pred1 Σ Δ l v) * (pred1 Σ Δ' r v) }%type.
   Proof with solve_discr.
     intros wfΣ H; revert Γ t l H r.
@@ -551,6 +552,22 @@ Section Confluence.
          rewrite (minus_diag). reflexivity. }
 
   - (* Refl *)
+
+  (* Lemma pred1_tRel_inv (Σ : global_context) (Γ : context) i r : *)
+  (*   pred1 Σ Γ (tRel i) r -> *)
+  (*   (r = tRel i) + *)
+  (*   (∃ body body', (option_map decl_body (nth_error Γ i) = Some (Some body)) * *)
+  (*            (r = lift0 (S i) body') * *)
+  (*            pred1 Σ (skipn (S i) Γ) body body')%type. *)
+  (* Proof with solve_discr. *)
+  (*   intros pred. *)
+  (*   depelim pred... *)
+  (*   - right. eapply nth_error_pred1_ctx in a; eauto. destruct a. *)
+  (*     exists x, body. intuition eauto. *)
+  (*   - left. reflexivity. *)
+  (* Qed. *)
+  (* eapply pred1_tRel_inv in Hr. destruct Hr. subst. exists (tRel i); split; auto with pcuic. *)
+
     depelim Hr...
     -- (* Refl , Zeta in context *)
       pose proof e.
@@ -558,7 +575,7 @@ Section Confluence.
       destruct H; intuition.
       specialize (nth_error_pred1_ctx_l i x predΔ) as [body'' [Hb Hred]]; eauto.
       destruct (nth_error_pred1_ctx_l i x X a0). destruct p as [HΓ' [predxx0 IH]].
-      pose proof (IH _ Hred (skipn (S i) Δ') (skipn (S i) Δ')).
+      pose proof (IH _ Hred (skipn (S i) Δ') (skipn (S i) Δ)).
       forward X0 by now apply All2_local_env_skipn.
       forward X0 by now apply All2_local_env_skipn.
       destruct X0 as [v [vl vr]].
@@ -571,22 +588,19 @@ Section Confluence.
       forward X0 by now apply All2_local_env_skipn.
       forward X0 by now apply All2_local_env_skipn.
       destruct X0 as [v' [vl' vr']].
-
-
-
-      exists (lift0 (S i) v).
+      exists (lift0 (S i) v').
       split.
-      2:{ eapply weakening_pred1_0 in vr; eauto.
-          unfold app_context in vr. erewrite firstn_skipn in vr.
-          rewrite firstn_length_le in vr; try lia. }
+      2:{ eapply weakening_pred1_0 in vr'; eauto.
+          unfold app_context in vr'. erewrite firstn_skipn in vr'.
+          now rewrite firstn_length_le in vr'; try lia. }
       { destruct (nth_error Δ i) eqn:Heq'; noconf Hb.
         destruct c as [na [b'|] ty]; noconf H.
-        eapply (pred_rel_def_unfold _ _ _ (skipn (S i) Δ ,, vdef na v ty ,,, firstn i Δ)).
+        eapply (pred_rel_def_unfold _ _ _ (skipn (S i) Δ ,, vdef na v' ty ,,, firstn i Γ')).
         rewrite -{1}(firstn_skipn i Δ). eapply All2_local_env_app_inv.
          move:(skipn_nth_error Δ i). rewrite Heq' => ->.
-         constructor. apply pred1_ctx_refl.
-         red. split. apply p0. eapply pred1_refl.
-         generalize (firstn i Δ'). intros.
+         constructor.  apply pred1_ctx_refl. (* No idea how to relate them *)
+         red. split. apply vr. eapply pred1_refl.
+         generalize (firstn i Δ). intros.
          clear. induction l. constructor.
          destruct a as [na [b|] ty]; constructor; try red; auto using pred1_refl.
          rewrite nth_error_app_ge firstn_length_le; try lia.

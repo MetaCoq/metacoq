@@ -71,12 +71,6 @@ Section Conversion.
 
   Definition position := list choice.
 
-  (* Fixpoint validpos t (p : position) {struct t} := *)
-  (*   match t with *)
-  (*   | tApp u v => *)
-  (*     match p with *)
-  (*     |  *)
-
   Fixpoint validpos t (p : position) {struct p} :=
     match p with
     | [] => true
@@ -247,6 +241,91 @@ Section Conversion.
         eapply Acc_case_c with (p := exist q e).
         eapply IHt2.
   Qed.
+
+  (* Equations atpos (t : term) (p : position) : term := *)
+  (*   atpos t [] := t ; *)
+  (*   atpos (tApp u v) (app_l :: p) := atpos u p ; *)
+  (*   atpos (tApp u v) (app_r :: p) := atpos v p ; *)
+  (*   atpos (tCase indn pr c brs) (case_c :: p) := atpos c p ; *)
+  (*   atpos (tLambda na A t) (lam_ty :: p) := atpos A p ; *)
+  (*   atpos (tLambda na A t) (lam_tm :: p) := atpos t p ; *)
+  (*   atpos (tProd na A B) (prod_l :: p) := atpos A p ; *)
+  (*   atpos (tProd na A B) (prod_r :: p) := atpos B p ; *)
+  (*   atpos _ _ := tRel 0. *)
+
+  Fixpoint atpos t (p : position) {struct p} : term :=
+    match p with
+    | [] => t
+    | c :: p =>
+      match c, t with
+      | app_l, tApp u v => atpos u p
+      | app_r, tApp u v => atpos v p
+      | case_c, tCase indn pr c brs => atpos c p
+      | lam_ty, tLambda na A t => atpos A p
+      | lam_tm, tLambda na A t => atpos t p
+      | prod_l, tProd na A B => atpos A p
+      | prod_r, tProd na A B => atpos B p
+      | _, _ => tRel 0
+      end
+    end.
+
+  Lemma poscat_atpos :
+    forall t p q, atpos t (p ++ q) = atpos (atpos t p) q.
+  Proof.
+  Admitted.
+
+  Lemma poscat_valid :
+    forall t p q,
+      validpos t p ->
+      validpos (atpos t p) q ->
+      validpos t (p ++ q).
+  Proof.
+    intros t p q hp hq.
+    revert t q hp hq.
+    induction p ; intros t q hp hq.
+    - assumption.
+    -
+  Admitted.
+
+  Fixpoint stack_position π : position :=
+    match π with
+    | Empty => []
+    | App u ρ => stack_position ρ ++ [ app_l ]
+    | Fix f n args ρ => stack_position ρ ++ [ app_r ]
+    | Case indn pred brs ρ => stack_position ρ ++ [ case_c ]
+    end.
+
+  Lemma stack_position_atpos :
+    forall t π, atpos (zipc t π) (stack_position π) = t.
+  Proof.
+    intros t π. revert t. induction π ; intros u.
+    - reflexivity.
+    - cbn. rewrite poscat_atpos. rewrite IHπ. reflexivity.
+    - cbn. rewrite poscat_atpos. rewrite IHπ. reflexivity.
+    - cbn. rewrite poscat_atpos. rewrite IHπ. reflexivity.
+  Qed.
+
+  Lemma stack_position_valid :
+    forall t π, validpos (zipc t π) (stack_position π).
+  Proof.
+    intros t π. revert t. induction π ; intros u.
+    - reflexivity.
+    - cbn. eapply poscat_valid.
+      + eapply IHπ.
+      + rewrite stack_position_atpos. reflexivity.
+    - cbn. eapply poscat_valid.
+      + eapply IHπ.
+      + rewrite stack_position_atpos. reflexivity.
+    - cbn. eapply poscat_valid.
+      + eapply IHπ.
+      + rewrite stack_position_atpos. reflexivity.
+  Qed.
+
+  (* The idea is that when comparing two terms, we first reduce on both sides.
+     We then go deeper inside the term, and sometimes recurse on the stacks
+     themselves. That is why we use position instead of the subterm order.
+   *)
+  Definition R (u v : term * stack) : Prop :=
 
   Notation no := (exist _ false I).
   Notation yes := (exist _ true _).

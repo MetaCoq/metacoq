@@ -775,8 +775,8 @@ Section Normalisation.
 
   Definition R Σ Γ u v :=
     dlexprod (cored Σ Γ) (@posR)
-             (zip u; proj1_sig (stack_position (fst u) (snd u)))
-             (zip v; proj1_sig (stack_position (fst v) (snd v))).
+             (zip u; ` (stack_position (fst u) (snd u)))
+             (zip v; ` (stack_position (fst v) (snd v))).
 
   Inductive welltyped Σ Γ t : Prop :=
   | iswelltyped A : Σ ;;; Γ |- t : A -> welltyped Σ Γ t.

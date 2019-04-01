@@ -346,15 +346,24 @@ Section Conversion.
 
   Definition R (u v : state * term * stack) := False.
 
-  (* Definition Ret s t π := *)
-  (*   match s with *)
-  (*   | Reduction => forall t' π', *)
+  Definition Ret Γ leq s t π :=
+    match s with
+    | Reduction =>
+      forall t' π' (h' : welltyped Σ Γ (zipc t' π')),
+        { b : bool | if b then conv leq Σ Γ (zipc t π) (zipc t' π') else True }
+    | Term =>
+      forall t' π' (h' : welltyped Σ Γ (zipc t' π')),
+        { b : bool | if b then conv leq Σ Γ (zipc t π) (zipc t' π') else True }
+    | Args =>
+      forall π' (h' : welltyped Σ Γ (zipc t π')),
+        { b : bool | if b then conv leq Σ Γ (zipc t π) (zipc t π') else True }
+    end.
 
-  (* Definition _isconv (leq : conv_pb) (Γ : context) (s : state) *)
-  (*           (t1 : term) (π1 : stack) (h1 : welltyped Σ Γ (zipc t1 π1)) *)
-  (*           (t2 : term) (π2 : stack) (h2 : welltyped Σ Γ (zipc t2 π2)) *)
-  (*           (aux : forall s' t' π', R (s', t', π') (s, t, π) -> Ret s' t' π') *)
-  (* : Ret s t π. *)
+  Definition _isconv (Γ : context) (leq : conv_pb) (s : state)
+            (t : term) (π : stack) (h : welltyped Σ Γ (zipc t π))
+            (aux : forall s' t' π', R (s', t', π') (s, t, π) -> Ret Γ leq s' t' π')
+  : Ret Γ leq s t π.
+  Abort.
 
   (* The idea is that when comparing two terms, we first reduce on both sides.
      We then go deeper inside the term, and sometimes recurse on the stacks

@@ -1,5 +1,4 @@
 -I src
--I gen-src
 -R theories Template
 
 # the MetaCoq plugin

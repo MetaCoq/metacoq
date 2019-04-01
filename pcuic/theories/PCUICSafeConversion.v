@@ -54,7 +54,7 @@ Section Conversion.
   Set Equations With UIP.
 
   Derive Subterm for term.
-  Derive NoConfusion NoConfusionHom Subterm for stack.
+  Derive NoConfusion NoConfusionHom Subterm EqDec for stack.
 
   Notation no := (exist _ false I).
   Notation yes := (exist _ true _).
@@ -87,6 +87,10 @@ Section Conversion.
      typing). When two sides are constants/variables, compare the stacks.
      This is fine for a lex order on subterm for the term and then subterm
      for the stack.
+
+     This order is actually not ok. Because we want to convert on the stack.
+     This means we have to use positions again.
+     But this time with more constructors.
    *)
 
   Equations isconv (leq : conv_pb) (Γ : context)

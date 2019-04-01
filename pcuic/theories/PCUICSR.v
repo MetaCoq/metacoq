@@ -204,6 +204,21 @@ Proof.
   eapply cumul_trans; eauto.
 Qed.
 
+Lemma type_proj_inv Σ Γ p c U :
+  Σ;;; Γ |- tProj p c : U ->
+  { '(args, mdecl, idecl, pdecl, u) : _ & let ty := snd pdecl in
+                                          (Σ;;; Γ |- c : mkApps (tInd (fst (fst p)) u) args) *
+                                          (declared_projection (fst Σ) mdecl idecl p pdecl) *
+                                          (#|args| = ind_npars mdecl) *
+                                          (Σ ;;; Γ |- ((subst0 (c :: List.rev args)) (subst_instance_constr u ty)) <= U) }%type.
+Proof.
+  intros H; depind H.
+  - exists (args, mdecl, idecl, pdecl, u). intuition eauto.
+  - destruct (IHtyping _ _ eq_refl) as [ [ [ [ [] ] ] ] [ [ [] ] ]].     
+    exists (l, m, o, p0, u). intuition eauto.
+    all: eapply cumul_trans; eauto.
+Qed.
+
 Lemma type_tLetIn_inv Σ Γ na A b U a :
   Σ ;;; Γ |- tLetIn na a A b : U ->
   { s1 & { B &

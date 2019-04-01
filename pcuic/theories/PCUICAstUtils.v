@@ -559,10 +559,10 @@ Proof.
   eauto.
 Qed.
 
-Lemma All2_nth_error_Some {A} {P : A -> A -> Type} {l l'} n t :
+Lemma All2_nth_error_Some {A B} {P : A -> B -> Type} {l l'} n t :
   All2 P l l' ->
   nth_error l n = Some t ->
-  { t' : A & (nth_error l' n = Some t') * P t t'}%type.
+  { t' : B & (nth_error l' n = Some t') * P t t'}%type.
 Proof.
   intros Hall. revert n.
   induction Hall; destruct n; simpl; try congruence. intros [= ->]. exists y. intuition auto.

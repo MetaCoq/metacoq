@@ -339,6 +339,23 @@ Section Conversion.
   Definition stack_pos t π : pos (zipc t π) :=
     exist (stack_position π) (stack_position_valid t π).
 
+  Inductive state :=
+  | Reduction
+  | Term
+  | Args.
+
+  Definition R (u v : state * term * stack) := False.
+
+  (* Definition Ret s t π := *)
+  (*   match s with *)
+  (*   | Reduction => forall t' π', *)
+
+  (* Definition _isconv (leq : conv_pb) (Γ : context) (s : state) *)
+  (*           (t1 : term) (π1 : stack) (h1 : welltyped Σ Γ (zipc t1 π1)) *)
+  (*           (t2 : term) (π2 : stack) (h2 : welltyped Σ Γ (zipc t2 π2)) *)
+  (*           (aux : forall s' t' π', R (s', t', π') (s, t, π) -> Ret s' t' π') *)
+  (* : Ret s t π. *)
+
   (* The idea is that when comparing two terms, we first reduce on both sides.
      We then go deeper inside the term, and sometimes recurse on the stacks
      themselves. That is why we use position instead of the subterm order.

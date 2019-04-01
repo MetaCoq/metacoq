@@ -240,9 +240,14 @@ let rec run_template_program_rec ?(intactic=false) (k : Environ.env * Evd.evar_m
           (evm, Some t)
       in
       let poly = Flags.is_universe_polymorphism () in
-      PluginCore.run (PluginCore.tmDefinition name ~poly typ body) env evm
+      Plugin_core.run (Plugin_core.tmDefinition name ~poly typ body) env evm
         (fun env evm res -> k (env, evm, quote_kn res))
-
+  | TmLemmaTerm (name, typ) ->
+    let ident = unquote_ident (reduce_all env evm name) in
+    let evm,typ = denote_term evm (reduce_all env evm typ) in
+    let poly = Flags.is_universe_polymorphism () in
+    Plugin_core.run (Plugin_core.tmLemma ident ~poly typ) env evm
+      (fun env evm kn -> k (env, evm, quote_kn kn))
   | TmAxiom (name,typ) ->
     if intactic
     then not_in_tactic "tmAxiom"
@@ -259,7 +264,7 @@ let rec run_template_program_rec ?(intactic=false) (k : Environ.env * Evd.evar_m
       let name = unquote_ident (reduce_all env evm name) in
       let evm,typ = denote_term evm (reduce_all env evm typ) in
       let poly = Flags.is_universe_polymorphism () in
-      PluginCore.run (PluginCore.tmAxiom name ~poly typ) env evm
+      Plugin_core.run (Plugin_core.tmAxiom name ~poly typ) env evm
         (fun a b c -> k (a,b,quote_kn c))
 
   | TmLemma (name,typ) ->
@@ -283,12 +288,6 @@ let rec run_template_program_rec ?(intactic=false) (k : Environ.env * Evd.evar_m
     (* let evm, t = Evd.fresh_global env evm gr in k (env, evm, t) *)
     (* k (env, evm, unit_tt) *)
     (* )); *)
-  | TmLemmaTerm (name, typ) ->
-    let ident = unquote_ident (reduce_all env evm name) in
-    let evm,typ = denote_term evm (reduce_all env evm typ) in
-    let poly = Flags.is_universe_polymorphism () in
-    PluginCore.run (PluginCore.tmLemma ident ~poly typ) env evm
-      (fun env evm kn -> k (env, evm, quote_kn kn))
 
   | TmQuote (false, trm) ->
     (* user should do the reduction (using tmEval) if they want *)
@@ -331,14 +330,14 @@ let rec run_template_program_rec ?(intactic=false) (k : Environ.env * Evd.evar_m
     k (env, evm, unit_tt)
   | TmMsg msg ->
      let msg = unquote_string (reduce_all env evm msg) in
-     PluginCore.run (PluginCore.tmMsg msg) env evm
+     Plugin_core.run (Plugin_core.tmMsg msg) env evm
       (fun env evm _ -> k (env, evm, unit_tt))
   | TmFail trm ->
     let err = unquote_string (reduce_all env evm trm) in
     CErrors.user_err (str err)
   | TmAbout id ->
     let id = Libnames.qualid_of_string (unquote_string id) in
-    PluginCore.run (PluginCore.tmAbout id) env evm
+    Plugin_core.run (Plugin_core.tmAbout id) env evm
       (fun env evm -> function
            None -> k (env, evm, Constr.mkApp (cNone, [|tglobal_reference|]))
          | Some gr ->
@@ -357,7 +356,7 @@ let rec run_template_program_rec ?(intactic=false) (k : Environ.env * Evd.evar_m
   | TmEvalTerm (s,trm) ->
     let red = unquote_reduction_strategy env evm (reduce_all env evm s) in
     let evm,trm = denote_term evm (reduce_all env evm trm) in
-    PluginCore.run (PluginCore.tmEval red trm) env evm
+    Plugin_core.run (Plugin_core.tmEval red trm) env evm
       (fun env evm trm -> k (env, evm, TermReify.quote_term env trm))
   | TmMkInductive mind ->
     declare_inductive env evm mind;
@@ -412,7 +411,7 @@ let rec run_template_program_rec ?(intactic=false) (k : Environ.env * Evd.evar_m
     end
   | TmInferInstanceTerm typ ->
     let evm,typ = denote_term evm (reduce_all env evm typ) in
-    PluginCore.run (PluginCore.tmInferInstance typ) env evm
+    Plugin_core.run (Plugin_core.tmInferInstance typ) env evm
       (fun env evm -> function
            None -> k (env, evm, Constr.mkApp (cNone, [| tTerm|]))
          | Some trm ->
@@ -420,5 +419,5 @@ let rec run_template_program_rec ?(intactic=false) (k : Environ.env * Evd.evar_m
            k (env, evm, Constr.mkApp (cSome, [| tTerm; qtrm |])))
   | TmPrintTerm trm ->
     let evm,trm = denote_term evm (reduce_all env evm trm) in
-    PluginCore.run (PluginCore.tmPrint trm) env evm
+    Plugin_core.run (Plugin_core.tmPrint trm) env evm
       (fun env evm _ -> k (env, evm, unit_tt))

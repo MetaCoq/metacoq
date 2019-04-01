@@ -1,6 +1,8 @@
 -I src
+-I gen-src
 -R theories Template
 
+# the MetaCoq plugin
 src/tm_util.ml
 # src/quoter.mli
 src/quoter.ml
@@ -15,8 +17,8 @@ src/template_monad.mli
 src/template_monad.ml
 src/run_template_monad.mli
 src/run_template_monad.ml
-src/pluginCore.mli
-src/pluginCore.ml
+src/plugin_core.mli
+src/plugin_core.ml
 
 theories/LibHypsNaming.v
 theories/utils.v theories/config.v
@@ -28,7 +30,7 @@ theories/LiftSubst.v theories/UnivSubst.v theories/Typing.v
 theories/TypingWf.v theories/Generation.v theories/WeakeningEnv.v
 theories/Closed.v theories/Weakening.v theories/Substitution.v
 theories/MetaTheory.v theories/kernel/Checker.v theories/WcbvEval.v
-theories/Retyping.v theories/All.v theories/Extraction.v
+theories/Retyping.v theories/All.v
 
 # the Template monad
 theories/TemplateMonad.v
@@ -37,3 +39,7 @@ theories/TemplateMonad/Core.v
 theories/TemplateMonad/Extractable.v
 theories/TemplateMonad/Monad.v
 theories/monad_utils.v
+
+# for Extraction
+gen-src/Extraction.v
+gen-src/extracted.mlpack

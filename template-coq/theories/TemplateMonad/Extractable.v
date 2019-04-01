@@ -14,7 +14,6 @@ Set Printing Universes.
 
  *)
 
-
 Cumulative Inductive TM@{t} : Type@{t} -> Type :=
 (* Monadic operations *)
 | tmReturn {A:Type@{t}}

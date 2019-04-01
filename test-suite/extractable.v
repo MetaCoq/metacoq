@@ -7,7 +7,8 @@ From Template.TemplateMonad Require Import
 
 Local Open Scope string_scope.
 
-Notation "<% x %>" := (ltac:(let p y := exact y in quote_term x p)).
+Notation "<% x %>" := (ltac:(let p y := exact y in quote_term x p))
+   (only parsing).
 
 Run TemplateProgram
     (tmBind (tmReturn 1) (fun x => tmMsg (utils.string_of_nat x))).

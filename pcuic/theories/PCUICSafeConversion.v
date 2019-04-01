@@ -352,10 +352,10 @@ Section Conversion.
   (*   let '(v, ρ) := reduce_stack RedFlags.default Σ Γ (fst v) (snd v) in *)
   (*   posR (stack_pos u π) (stack_pos v ρ). *)
 
-  Notation no := (exist _ false I).
-  Notation yes := (exist _ true _).
+  Notation no := (exist false I).
+  Notation yes := (exist true _).
   Notation rec isconv_prog leq Γ t1 π1 h1 t2 π2 h2 :=
-    (let '(exist _ b h) := isconv_prog leq Γ t1 π1 h1 t2 π2 h2 in exist _ b _).
+    (let '(exist b h) := isconv_prog leq Γ t1 π1 h1 t2 π2 h2 in exist b _).
 
   (* We have to devise an order for termination.
      It seems that we could somehow use the R from before, except that we would

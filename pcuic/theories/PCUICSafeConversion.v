@@ -269,10 +269,23 @@ Section Conversion.
       end
     end.
 
+  (* Derive NoConfusion NoConfusionHom for list. *)
+
   Lemma poscat_atpos :
     forall t p q, atpos t (p ++ q) = atpos (atpos t p) q.
   Proof.
-  Admitted.
+    assert (forall p, atpos (tRel 0) p = tRel 0) as hh.
+    { intros p. destruct p.
+      - reflexivity.
+      - destruct c ; reflexivity.
+    }
+    intros t p q.
+    revert t q. induction p ; intros t q.
+    - cbn. reflexivity.
+    - destruct t ; destruct a.
+      all: try solve [ rewrite hh ; reflexivity ].
+      all: apply IHp.
+  Qed.
 
   Lemma poscat_valid :
     forall t p q,
@@ -284,8 +297,10 @@ Section Conversion.
     revert t q hp hq.
     induction p ; intros t q hp hq.
     - assumption.
-    -
-  Admitted.
+    - destruct t ; destruct a.
+      all: try noconf hp.
+      all: apply IHp ; assumption.
+  Qed.
 
   Fixpoint stack_position π : position :=
     match π with
@@ -321,11 +336,21 @@ Section Conversion.
       + rewrite stack_position_atpos. reflexivity.
   Qed.
 
+  Definition stack_pos t π : pos (zipc t π) :=
+    exist (stack_position π) (stack_position_valid t π).
+
   (* The idea is that when comparing two terms, we first reduce on both sides.
      We then go deeper inside the term, and sometimes recurse on the stacks
      themselves. That is why we use position instead of the subterm order.
+
+     To define it we need more information. We need welltypedness for reduction.
+     That is not all however. Indeed as of now, the two compared positions
+     are not in the same term. This suggests yet another lexicographic order.
    *)
-  Definition R (u v : term * stack) : Prop :=
+  (* Definition R Σ Γ (u v : term * stack) : Prop := *)
+  (*   let '(u, π) := reduce_stack RedFlags.default Σ Γ (fst u) (snd u) in *)
+  (*   let '(v, ρ) := reduce_stack RedFlags.default Σ Γ (fst v) (snd v) in *)
+  (*   posR (stack_pos u π) (stack_pos v ρ). *)
 
   Notation no := (exist _ false I).
   Notation yes := (exist _ true _).

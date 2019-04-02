@@ -1,6 +1,6 @@
 (* Distributed under the terms of the MIT license.   *)
 
-From Template Require Import univ BasicAst.
+From Template Require Import univ utils BasicAst.
 From PCUIC Require Import PCUICAst PCUICAstUtils.
 Require Import List Program.
 Require Import BinPos.
@@ -17,11 +17,11 @@ Set Asymmetric Patterns.
 (** Custom induction principle on syntax, dealing with the various lists appearing in terms. *)
 
 Lemma term_forall_list_ind :
-  forall P : term -> Prop,
+  forall P : term -> Type,
     (forall n : nat, P (tRel n)) ->
     (forall i : ident, P (tVar i)) ->
     (forall n : nat, P (tMeta n)) ->
-    (forall (n : nat) (l : list term), Forall P l -> P (tEvar n l)) ->
+    (forall (n : nat) (l : list term), All P l -> P (tEvar n l)) ->
     (forall s, P (tSort s)) ->
     (forall (n : name) (t : term), P t -> forall t0 : term, P t0 -> P (tProd n t t0)) ->
     (forall (n : name) (t : term), P t -> forall t0 : term, P t0 -> P (tLambda n t t0)) ->
@@ -63,3 +63,4 @@ Proof.
   destruct m; constructor; [|apply auxm].
   split; apply auxt.
 Defined.
+

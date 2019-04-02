@@ -25,6 +25,25 @@ Existing Instance default_checker_flags.
 
   TODO: CoFixpoints *)
 
+(* We define a notion of atom for terms that reduce to themselves, when
+   they are not applied.
+
+   We do not include [Rel] which is handled specially, [Var] and [Meta]
+   which are out of scope. We assume no axioms either, that is constants
+   with no bodies.
+ 
+*)
+
+Definition atom t :=
+  match t with
+  | tSort _
+  | tInd _ _
+  | tConstruct _ _ _
+  | tFix _ _
+  | tCoFix _ _ => true
+  | _ => false
+  end.
+
 Section Wcbv.
   Context (Σ : global_declarations) (Γ : context).
   (* The local context is fixed: we are only doing weak reductions *)
@@ -83,23 +102,19 @@ Section Wcbv.
   (* TODO CoFix *)
   | eval_abs na M N : eval (tLambda na M N) (tLambda na M N)
 
-  | eval_prod na b t b' t' :
-      eval b b' -> eval t t' -> eval (tProd na b t) (tProd na b' t')
-
-  | eval_ind_ i u : eval (tInd i u) (tInd i u)
+  | eval_prod na b t : eval (tProd na b t) (tProd na b t)
 
   | eval_app_ind t i u l l' : l <> nil ->
       eval t (tInd i u) ->
       All2 eval l l' ->
       eval (tApp t l) (tApp (tInd i u) l')
 
-  | eval_constr i k u :
-      eval (tConstruct i k u) (tConstruct i k u)
-
   | eval_app_constr f i k u l l' : l <> nil ->
       eval f (tConstruct i k u) ->
       All2 eval l l' ->
       eval (tApp f l) (tApp (tConstruct i k u) l')
+
+  | eval_atom t : atom t -> eval t t
 
   (* | evar ev l l' : evals l l' -> eval (tEvar ev l) (tEvar ev l') *)
   | eval_evar ev l : eval (tEvar ev l) (tEvar ev l) (* Lets say it is a value for now *)
@@ -155,21 +170,17 @@ Section Wcbv.
 
       (forall (na : name) (M N : term), P (tLambda na M N) (tLambda na M N)) ->
 
-      (forall (na : name) (M M' N N' : term),
-          eval M M' -> eval N N' -> P M M' -> P N N' ->
-          P (tProd na M N) (tProd na M' N')) ->
-
-      (forall i u, P (tInd i u) (tInd i u)) ->
+      (forall (na : name) (M N : term), P (tProd na M N) (tProd na M N)) ->
 
       (forall (f8 : term) (i : inductive) (u : universe_instance) (l l' : list term),
           l <> nil -> eval f8 (tInd i u) ->
           P f8 (tInd i u) -> All2 eval l l' -> All2 P l l' -> P (tApp f8 l) (tApp (tInd i u) l')) ->
 
-      (forall i k u, P (tConstruct i k u) (tConstruct i k u)) ->
-
       (forall (f8 : term) (i : inductive) (k : nat) (u : universe_instance) (l l' : list term),
           l <> nil -> eval f8 (tConstruct i k u) ->
           P f8 (tConstruct i k u) -> All2 eval l l' -> All2 P l l' -> P (tApp f8 l) (tApp (tConstruct i k u) l')) ->
+
+      (forall (t : term), atom t -> P t t) ->
 
       (forall (ev : nat) (l : list term), P (tEvar ev l) (tEvar ev l)) ->
 
@@ -177,11 +188,12 @@ Section Wcbv.
 
       forall t t0 : term, eval t t0 -> P t t0.
   Proof.
-    intros P Hbeta Hlet Hreldef Hrelvar Hcase Hfix Hconst Hproj Hlam Hprod Hind Hindapp Hcstr Hcstrapp Hevar Hcast.
+    intros P Hbeta Hlet Hreldef Hrelvar Hcase Hfix Hconst Hproj Hlam Hprod Hindapp Hcstrapp Hatom Hevar Hcast.
     fix eval_evals_ind 3. destruct 1;
              try match goal with [ H : _ |- _ ] =>
                              match type of H with
-                               forall t t0, eval t t0 -> _ => fail 1
+                             | forall t t0, eval t t0 -> _ => fail 1
+                             | context [ atom _ ] => fail 1
                              | _ => eapply H
                              end end; eauto.
     clear e0 X.
@@ -205,26 +217,32 @@ Section Wcbv.
   | value_tEvar ev l : value (tEvar ev l)
   | value_tLam na t b : value (tLambda na t b)
   | value_tProd na t u : value (tProd na t u)
-  | value_tInd i k l : List.Forall value l -> value (mkApps (tInd i k) l)
-  | value_tConstruct i k u l : List.Forall value l -> value (mkApps (tConstruct i k u) l).
+  | value_tInd i k l : All value l -> value (mkApps (tInd i k) l)
+  | value_tConstruct i k u l : All value l -> value (mkApps (tConstruct i k u) l)
+  | value_atom t : atom t -> value t.
 
   Lemma value_values_ind : forall P : term -> Prop,
        (forall i : nat, P (tRel i)) ->
        (forall (ev : nat) (l : list term), P (tEvar ev l)) ->
        (forall (na : name) (t b : term), P (tLambda na t b)) ->
        (forall (na : name) (t u : term), P (tProd na t u)) ->
-       (forall (i : inductive) (k : universe_instance) l, List.Forall value l -> List.Forall P l -> P (mkApps (tInd i k) l)) ->
+       (forall (i : inductive) (k : universe_instance) l,
+           All value l ->
+           All P l -> P (mkApps (tInd i k) l)) ->
        (forall (i : inductive) (k : nat) (u : universe_instance) (l : list term),
-        List.Forall value l -> List.Forall P l -> P (mkApps (tConstruct i k u) l)) -> forall t : term, value t -> P t.
+        All value l -> All P l -> P (mkApps (tConstruct i k u) l)) ->
+       (forall t, atom t -> P t) ->
+       forall t : term, value t -> P t.
   Proof.
-    intros P ??????.
+    intros P ???????.
     fix value_values_ind 2. destruct 1. 1-4:clear value_values_ind; auto.
-    apply H3. apply H5.
-    revert l H5. fix aux 2. destruct 1. constructor; auto.
+    apply H3. auto.
+    revert l H6. fix aux 2. destruct 1. constructor; auto.
     constructor. now apply value_values_ind. now apply aux.
-    apply H4. apply H5.
-    revert l H5. fix aux 2. destruct 1. constructor; auto.
+    apply H4. apply H6.
+    revert l H6. fix aux 2. destruct 1. constructor; auto.
     constructor. now apply value_values_ind. now apply aux.
+    now apply H5.
   Defined.
 
   (** The codomain of evaluation is only values:
@@ -233,22 +251,19 @@ Section Wcbv.
   Lemma eval_to_value e e' : eval e e' -> value e'.
   Proof.
     induction 1 using eval_evals_ind; simpl; auto using value.
-    eapply (value_tInd i u []); try constructor.
-    pose proof (value_tInd i u l'). forward H1. solve_all.
-  Admitted. (* change in All representation *)
-    (*   apply (All2_right H2). *)
-  (*   rewrite mkApps_tApp in H3; auto. simpl; auto. eauto using Forall2_non_nil. *)
-  (*   eapply (value_tConstruct i k u []); try constructor. *)
-  (*   pose proof (value_tConstruct i k u l'). forward H3. *)
-  (*   apply (Forall2_right H2). *)
-  (*   rewrite mkApps_tApp in H3; auto. simpl; auto. eauto using Forall2_non_nil. *)
-  (* Qed. *)
+    pose (value_tInd i u l'). apply All2_right in H0.
+    rewrite mkApps_tApp in v; auto. simpl; auto. eauto using All2_non_nil.
+    pose proof (value_tConstruct i k u l'). forward H1.
+    apply (All2_right H0).
+    rewrite mkApps_tApp in H1; auto. simpl; auto. eauto using All2_non_nil.
+  Qed.
 
   (** Evaluation preserves closedness: *)
   Lemma eval_closed : forall n t u, closedn n t = true -> eval t u -> closedn n u = true.
   Proof.
     induction 2 using eval_evals_ind; simpl in *; eauto 2. eapply IHX3.
     admit.
+    eapply IHX2.
   Admitted. (* FIXME complete *)
 
 End Wcbv.

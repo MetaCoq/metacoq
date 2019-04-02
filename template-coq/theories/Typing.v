@@ -201,6 +201,7 @@ Inductive red1 (Σ : global_declarations) (Γ : context) : term -> term -> Type 
 | letin_red_ty na b t b' r : red1 Σ Γ t r -> red1 Σ Γ (tLetIn na b t b') (tLetIn na b r b')
 | letin_red_body na b t b' r : red1 Σ (Γ ,, vdef na b t) b' r -> red1 Σ Γ (tLetIn na b t b') (tLetIn na b t r)
 
+| case_red_pred ind p p' c brs : red1 Σ Γ p p' -> red1 Σ Γ (tCase ind p c brs) (tCase ind p' c brs)
 | case_red_discr ind p c c' brs : red1 Σ Γ c c' -> red1 Σ Γ (tCase ind p c brs) (tCase ind p c' brs)
 | case_red_brs ind p c brs brs' : OnOne2 (fun x y => red1 Σ Γ (snd x) (snd y)) brs brs' -> red1 Σ Γ (tCase ind p c brs) (tCase ind p c brs')
 
@@ -234,7 +235,6 @@ Inductive red1 (Σ : global_declarations) (Γ : context) : term -> term -> Type 
 | cofix_red_body mfix0 mfix1 idx :
     OnOne2 (fun d0 d1 => red1 Σ (Γ ,,, fix_context mfix0) (dbody d0) (dbody d1) * (dtype d0 = dtype d1))%type mfix0 mfix1 ->
     red1 Σ Γ (tCoFix mfix0 idx) (tCoFix mfix1 idx).
-
 
 Lemma red1_ind_all :
   forall (Σ : global_declarations) (P : context -> term -> term -> Type),
@@ -273,6 +273,8 @@ Lemma red1_ind_all :
         red1 Σ Γ t r -> P Γ t r -> P Γ (tLetIn na b t b') (tLetIn na b r b')) ->
        (forall (Γ : context) (na : name) (b t b' r : term),
         red1 Σ (Γ,, vdef na b t) b' r -> P (Γ,, vdef na b t) b' r -> P Γ (tLetIn na b t b') (tLetIn na b t r)) ->
+       (forall (Γ : context) (ind : inductive * nat) (p p' c : term) (brs : list (nat * term)),
+        red1 Σ Γ p p' -> P Γ p p' -> P Γ (tCase ind p c brs) (tCase ind p' c brs)) ->
        (forall (Γ : context) (ind : inductive * nat) (p c c' : term) (brs : list (nat * term)),
         red1 Σ Γ c c' -> P Γ c c' -> P Γ (tCase ind p c brs) (tCase ind p c' brs)) ->
        (forall (Γ : context) (ind : inductive * nat) (p c : term) (brs brs' : list (nat * term)),
@@ -306,7 +308,7 @@ Lemma red1_ind_all :
         P Γ (tCoFix mfix0 idx) (tCoFix mfix1 idx)) ->
        forall (Γ : context) (t t0 : term), red1 Σ Γ t t0 -> P Γ t t0.
 Proof.
-  intros. revert Γ t t0 X28.
+  intros. rename X29 into Xlast. revert Γ t t0 Xlast.
   fix aux 4. intros Γ t T.
   move aux at top.
   destruct 1; match goal with
@@ -339,20 +341,20 @@ Proof.
     constructor. split; auto.
     constructor. auto.
 
-  - eapply X24.
+  - eapply X25.
     revert mfix0 mfix1 o; fix auxl 3; intros l l' Hl; destruct Hl;
       constructor; try split; auto; intuition.
 
-  - eapply X25.
+  - eapply X26.
     revert o. generalize (fix_context mfix0). intros c H28.
     revert mfix0 mfix1 H28; fix auxl 3; intros l l' Hl;
     destruct Hl; constructor; try split; auto; intuition.
 
-  - eapply X26.
+  - eapply X27.
     revert mfix0 mfix1 o; fix auxl 3; intros l l' Hl; destruct Hl;
       constructor; try split; auto; intuition.
 
-  - eapply X27.
+  - eapply X28.
     revert o. generalize (fix_context mfix0). intros c H28.
     revert mfix0 mfix1 H28; fix auxl 3; intros l l' Hl; destruct Hl;
       constructor; try split; auto; intuition.

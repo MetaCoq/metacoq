@@ -228,7 +228,7 @@ Hint Extern 10 => all_simpl : all.
 
 Ltac solve_all :=
   unfold tCaseBrsProp, tFixProp in *;
-  repeat toAll; try All_map; try close_Forall;
+  repeat toAll; try All_map; try close_All;
   change_Sk; auto with all;
   intuition eauto 4 with all.
 
@@ -433,7 +433,6 @@ Proof.
 
   - unfold subst at 2.
     elim (leb_spec p n); intros; try easy.
-
     + destruct (nth_error_spec N (n - p)).
       ++ rewrite -> subst_rel_lt by lia.
          erewrite subst_rel_eq; try easy.
@@ -560,3 +559,55 @@ Proof.
   intros. unfold map_decl, vass; simpl; f_equal.
   rewrite permute_lift. f_equal; lia. lia.
 Qed.
+
+Definition fix_context (m : mfixpoint term) : context :=
+  List.rev (mapi (fun i d => vass d.(dname) (lift0 i d.(dtype))) m).
+
+Lemma term_forall_ctx_list_ind :
+  forall P : context -> term -> Type,
+    (forall Γ (n : nat), P Γ (tRel n)) ->
+    (forall Γ (i : ident), P Γ (tVar i)) ->
+    (forall Γ (n : nat), P Γ (tMeta n)) ->
+    (forall Γ (n : nat) (l : list term), All (P Γ) l -> P Γ (tEvar n l)) ->
+    (forall Γ s, P Γ (tSort s)) ->
+    (forall Γ (n : name) (t : term), P Γ t -> forall t0 : term, P (vass n t :: Γ) t0 -> P Γ (tProd n t t0)) ->
+    (forall Γ (n : name) (t : term), P Γ t -> forall t0 : term, P (vass n t :: Γ) t0 -> P Γ (tLambda n t t0)) ->
+    (forall Γ (n : name) (t : term),
+        P Γ t -> forall t0 : term, P Γ t0 -> forall t1 : term, P (vdef n t t0 :: Γ) t1 -> P Γ (tLetIn n t t0 t1)) ->
+    (forall Γ (t u : term), P Γ t -> P Γ u -> P Γ (tApp t u)) ->
+    (forall Γ (s : String.string) (u : list Level.t), P Γ (tConst s u)) ->
+    (forall Γ (i : inductive) (u : list Level.t), P Γ (tInd i u)) ->
+    (forall Γ (i : inductive) (n : nat) (u : list Level.t), P Γ (tConstruct i n u)) ->
+    (forall Γ (p : inductive * nat) (t : term),
+        P Γ t -> forall t0 : term, P Γ t0 -> forall l : list (nat * term),
+            tCaseBrsProp (P Γ) l -> P Γ (tCase p t t0 l)) ->
+    (forall Γ (s : projection) (t : term), P Γ t -> P Γ (tProj s t)) ->
+    (forall Γ (m : mfixpoint term) (n : nat), tFixProp (P Γ) (P (Γ ,,, fix_context m)) m -> P Γ (tFix m n)) ->
+    (forall Γ (m : mfixpoint term) (n : nat), tFixProp (P Γ) (P (Γ ,,, fix_context m)) m -> P Γ (tCoFix m n)) ->
+    forall Γ (t : term), P Γ t.
+Proof.
+  intros. revert Γ t0.
+  fix auxt 2.
+  move auxt at top.
+  destruct t0; match goal with
+                 H : _ |- _ => apply H
+               end; auto.
+  revert l.
+  fix auxl' 1.
+  destruct l; constructor; [|apply auxl'].
+  apply auxt.
+  revert l.
+  fix auxl' 1.
+  destruct l; constructor; [|apply auxl'].
+  apply auxt.
+
+  generalize (fix_context m). revert m.
+  fix auxm 1.
+  destruct m; constructor.
+  split. apply auxt. apply auxt. apply auxm.
+
+  generalize (fix_context m). revert m.
+  fix auxm 1.
+  destruct m; constructor.
+  split. apply auxt. apply auxt. apply auxm.
+Defined.

@@ -1,5 +1,8 @@
+Tm_util
 Quoter
 Constr_quoter
 Template_monad
 Denote
+PluginCore
+Run_template_monad
 G_template_coq

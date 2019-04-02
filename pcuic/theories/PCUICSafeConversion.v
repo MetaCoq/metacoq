@@ -449,12 +449,18 @@ Section Conversion.
   Notation no := (exist false I) (only parsing).
   Notation yes := (exist true _) (only parsing).
   Notation repack e := (let '(exist b h) := e in exist b _) (only parsing).
+  Notation isconv_red_raw Γ leq t1 π1 h1 t2 π2 h2 aux :=
+    (aux leq Reduction t1 π1 h1 _ t2 π2 h2) (only parsing).
+  Notation isconv_prog_raw Γ leq t1 π1 h1 t2 π2 h2 aux :=
+    (aux leq Term t1 π1 h1 _ t2 π2 h2) (only parsing).
+  Notation isconv_args_raw Γ leq t π1 h1 π2 h2 aux :=
+    (aux leq Args t π1 h1 _ π2 h2) (only parsing).
   Notation isconv_red Γ leq t1 π1 h1 t2 π2 h2 aux :=
-    (repack (aux leq Reduction t1 π1 h1 _ t2 π2 h2)) (only parsing).
+    (repack (isconv_red_raw Γ leq t1 π1 h1 t2 π2 h2 aux)) (only parsing).
   Notation isconv_prog Γ leq t1 π1 h1 t2 π2 h2 aux :=
-    (repack (aux leq Term t1 π1 h1 _ t2 π2 h2)) (only parsing).
+    (repack (isconv_prog_raw Γ leq t1 π1 h1 t2 π2 h2 aux)) (only parsing).
   Notation isconv_args Γ leq t π1 h1 π2 h2 aux :=
-    (repack (aux leq Args t π1 h1 _ π2 h2)) (only parsing).
+    (repack (isconv_args_raw Γ leq t π1 h1 π2 h2 aux)) (only parsing).
 
   Equations(noeqns) _isconv_red (Γ : context) (leq : conv_pb)
             (t1 : term) (π1 : stack) (h1 : welltyped Σ Γ (zipc t1 π1))
@@ -517,7 +523,7 @@ Section Conversion.
     : { b : bool | if b then conv leq Σ Γ (zipc t π1) (zipc t π2) else True } :=
 
     _isconv_args Γ leq t (App u1 ρ1) h1 (App u2 ρ2) h2 aux
-    with isconv_red Γ leq u1 Empty _ u2 Empty _ aux := {
+    with isconv_red_raw Γ leq u1 Empty _ u2 Empty _ aux := {
     | @exist true h1 := isconv_args Γ leq (tApp t u1) ρ1 _ ρ2 _ aux ;
     | @exist false _ := no
     } ;
@@ -546,20 +552,17 @@ Section Conversion.
     exists A. assumption.
   Qed.
   Next Obligation.
-  Admitted.
-  Next Obligation.
-  Admitted.
-  Next Obligation.
     (* R (Args, tApp t u1, ρ1) (Args, t, App u1 ρ1) *)
   Admitted.
   Next Obligation.
-    (* Here I need obligation 5, but it shouldn't exist!
-       Maybe the notation isconv_red is broken.
+    (* Here it is a bit unclear. Maybe things would be better if a common
+       type was assumed.
      *)
   Admitted.
   Next Obligation.
     destruct b ; auto.
-    (* Similar, we're missing one hypothesis, hidden in h1 *)
+    eapply conv_trans ; try eassumption.
+    (* We need some lemma for congruence of zip. *)
   Admitted.
 
   Equations _isconv (s : state) (Γ : context) (leq : conv_pb)

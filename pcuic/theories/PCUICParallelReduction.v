@@ -1631,60 +1631,80 @@ Hint Resolve pred1_pred1_ctx : pcuic.
 
 Section ParallelSubstitution.
 
-  Inductive psubst Σ (Γ : context) : list term -> list term -> context -> Type :=
-  | emptyslet : psubst Σ Γ [] [] []
-  | cons_let_ass Δ s s' na t t' T :
-      psubst Σ Γ s s' Δ ->
+  Inductive psubst Σ (Γ Δ : context) : list term -> list term -> context -> context -> Type :=
+  | emptyslet : psubst Σ Γ Δ [] [] [] []
+  | cons_let_ass Γ' Δ' s s' na t t' T :
+      psubst Σ Γ Δ s s' Γ' Δ' ->
       pred1 Σ Γ Δ t t' ->
-      psubst Σ Γ (t :: s) (t' :: s') (Δ ,, vass na T)
-  | cons_let_def Δ s s' na t t' T :
-      psubst Σ Γ s s' Δ ->
+      psubst Σ Γ Δ (t :: s) (t' :: s') (Γ' ,, vass na T) (Δ' ,, vass na T)
+  | cons_let_def Γ' Δ' s s' na t t' T :
+      psubst Σ Γ Δ s s' Γ' Δ' ->
       pred1 Σ Γ Δ (subst0 s t) (subst0 s' t') ->
-      psubst Σ Γ (subst0 s t :: s) (subst0 s' t' :: s') (Δ ,, vdef na t T).
+      psubst Σ Γ Δ (subst0 s t :: s) (subst0 s' t' :: s') (Γ' ,, vdef na t T) (Δ' ,, vdef na t' T).
 
-  Lemma psubst_length {Σ Γ s s' Γ'} : psubst Σ Γ s s' Γ' -> #|s| = #|Γ'|.
+  Lemma psubst_length {Σ Γ Δ Γ' Δ' s s'} : psubst Σ Γ Δ s s' Γ' Δ' ->
+                                           #|s| = #|Γ'| /\ #|s'| = #|Δ'| /\ #|s| = #|s'|.
+  Proof.
+    induction 1; simpl; intuition auto with arith.
+  Qed.
+
+  Lemma psubst_length' {Σ Γ Δ Γ' Δ' s s'} : psubst Σ Γ Δ s s' Γ' Δ' -> #|s'| = #|Γ'|.
   Proof.
     induction 1; simpl; auto with arith.
   Qed.
 
-  Lemma psubst_length' {Σ Γ s s' Γ'} : psubst Σ Γ s s' Γ' -> #|s'| = #|Γ'|.
-  Proof.
-    induction 1; simpl; auto with arith.
-  Qed.
-
-  Lemma psubst_nth_error  Σ Γ s s' Δ n t :
-    psubst Σ Γ s s' Δ ->
+  Lemma psubst_nth_error Σ Γ Δ Γ' Δ' s s' n t :
+    psubst Σ Γ Δ s s' Γ' Δ' ->
     nth_error s n = Some t ->
-    ∃ decl t',
-      (nth_error Δ n = Some decl) *
+    ∃ decl decl' t',
+      (nth_error Γ' n = Some decl) *
+      (nth_error Δ' n = Some decl') *
       (nth_error s' n = Some t') *
-    match decl_body decl return Type with
-    | Some d =>
-      { u &
+    match decl_body decl, decl_body decl' with
+    | Some d, Some d' =>
         let s2 := (skipn (S n) s) in
         let s2' := (skipn (S n) s') in
       let b := subst0 s2 d in
-      let b' := subst0 s2' u in
-      psubst Σ Γ s2 s2' (skipn (S n) Δ) *
-      (t = b) * (t' = b') * pred1 Σ Γ (skipn (S n) Δ) t t' }%type
-    | None => pred1 Σ Γ (skipn (S n) Δ) t t'
+      let b' := subst0 s2' d' in
+      psubst Σ Γ Δ s2 s2' (skipn (S n) Γ') (skipn (S n) Δ') *
+      (t = b) * (t' = b') * pred1 Σ Γ Δ t t'
+    | None, None => pred1 Σ Γ Δ t t'
+    | _, _ => False
     end.
   Proof.
     induction 1 in n, t |- *; simpl; auto; destruct n; simpl; try congruence.
-    - intros [= <-]. exists (vass na T), t'. intuition auto.
+    - intros [= <-]. exists (vass na T), (vass na T), t'. intuition auto.
     - intros.
       specialize (IHX _ _ H). intuition eauto.
-    - intros [= <-]. exists (vdef na t0 T), (subst0 s' t'). intuition auto.
-      simpl. exists t'. intuition simpl; auto.
+    - intros [= <-]. exists (vdef na t0 T), (vdef na t' T), (subst0 s' t'). intuition auto.
+      simpl. intuition simpl; auto.
     - apply IHX.
   Qed.
 
-  Lemma psubst_nth_error_None Σ Γ s s' Δ n :
-    psubst Σ Γ s s' Δ ->
+
+  Lemma psubst_nth_error' Σ Γ Δ Γ' Δ' s s' n t :
+    psubst Σ Γ Δ s s' Γ' Δ' ->
+    nth_error s n = Some t ->
+    ∃ t',
+      (nth_error s' n = Some t') *
+      pred1 Σ Γ Δ t t'.
+  Proof.
+    induction 1 in n, t |- *; simpl; auto; destruct n; simpl; try congruence.
+    - intros [= <-]. exists t'; intuition auto.
+    - intros.
+      specialize (IHX _ _ H). intuition eauto.
+    - intros [= <-]. exists (subst0 s' t'). intuition auto.
+    - apply IHX.
+  Qed.
+
+  Lemma psubst_nth_error_None Σ Γ Δ Γ' Δ' s s' n :
+    psubst Σ Γ Δ s s' Γ' Δ' ->
     nth_error s n = None ->
-    (nth_error Δ n = None) * (nth_error s' n = None).
+    (nth_error Γ' n = None) * (nth_error Δ' n = None)* (nth_error s' n = None).
   Proof.
     induction 1 in n |- *; simpl; auto; destruct n; simpl; intros; intuition try congruence.
+    - specialize (IHX _ H). intuition congruence.
+    - specialize (IHX _ H). intuition congruence.
     - specialize (IHX _ H). intuition congruence.
     - specialize (IHX _ H). intuition congruence.
     - specialize (IHX _ H). intuition congruence.
@@ -1732,7 +1752,7 @@ Section ParallelSubstitution.
 
   (** Parallel reduction is substitutive. *)
   Lemma substitution_let_pred1 Σ Γ Δ Γ' Γ1 Δ1 Γ'1 s s' M N : wf Σ ->
-    psubst Σ Γ s s' Δ ->
+    psubst Σ Γ Γ1 s s' Δ Δ1 ->
     #|Γ| = #|Γ1| -> #|Γ'| = #|Γ'1| ->
     All2_local_env_over (pred1 Σ) Γ Γ1 Δ Δ1 ->
     pred1 Σ (Γ ,,, Δ ,,, Γ') (Γ1 ,,, Δ1 ,,, Γ'1) M N ->
@@ -1742,21 +1762,19 @@ Section ParallelSubstitution.
     remember (Γ ,,, Δ ,,, Γ') as Γl.
     remember (Γ1 ,,, Δ1 ,,, Γ'1) as Γr.
     intros Hlen Hlen' HΔ HΓ.
-    revert HeqΓl Γ1 Δ1 Γ'1 HeqΓr Hlen Hlen' HΔ.
-    revert Γ Δ s s' Hs Γ'.
+    revert HeqΓl Γ1 Δ1 Γ'1 s s' Hs HeqΓr Hlen Hlen' HΔ.
+    revert Γ Δ Γ'.
     revert Γl Γr M N HΓ.
     set(P' :=
           fun (Γl Γr : context) =>
-            forall (Γ Δ : context) (s s' : list term),
-              psubst Σ Γ s s' Δ ->
-              forall Γ' : context,
-                Γl = Γ ,,, Δ ,,, Γ' ->
-                forall (Γ1 : list context_decl) (Δ1 Γ'1 : context),
-                  Γr = Γ1 ,,, Δ1 ,,, Γ'1 ->
-                  #|Γ| = #|Γ1| ->
-                  All2_local_env_over (pred1 Σ) Γ Γ1 Δ Δ1 ->
-                  pred1_ctx Σ (Γ ,,, subst_context s 0 Γ') (Γ1 ,,, subst_context s' 0 Γ'1)).
-
+            forall (Γ Δ : context) (Γ' : list context_decl),
+              Γl = Γ ,,, Δ ,,, Γ' ->
+              forall (Γ1 : list context_decl) (Δ1 : context) (Γ'1 : list context_decl) (s s' : list term),
+                psubst Σ Γ Γ1 s s' Δ Δ1 ->
+                Γr = Γ1 ,,, Δ1 ,,, Γ'1 ->
+                #|Γ| = #|Γ1| ->
+               All2_local_env_over (pred1 Σ) Γ Γ1 Δ Δ1 ->
+               pred1_ctx Σ (Γ ,,, subst_context s 0 Γ') (Γ1 ,,, subst_context s' 0 Γ'1)).
     refine (pred1_ind_all_ctx Σ _ P' _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _); intros *; !intros;
       try subst Γ Γ'; simplify_IH_hyps; cbn -[iota_red];
       match goal with
@@ -1795,120 +1813,99 @@ Section ParallelSubstitution.
         rewrite !Nat.add_0_r. simpl. eapply p1; eauto.
 
     - (* Beta *)
-      specialize (forall_Γ _ _ _ _ Hs (_ ,, _) eq_refl _ _ (_ ,, _)
-                           eq_refl heq_length (f_equal S heq_length0) HΔ).
-      specialize (forall_Γ0 _ _ _ _ Hs _ eq_refl _ _ _
-                           eq_refl heq_length heq_length0 HΔ).
-      specialize (forall_Γ1 _ _ _ _ Hs _ eq_refl _ _ _
-                           eq_refl heq_length heq_length0 HΔ).
+      specialize (forall_Γ _ _ (_ ,, _) eq_refl _ _ (_ ,, _)
+                           _ _ Hs eq_refl heq_length (f_equal S heq_length0) HΔ).
+      specialize (forall_Γ0 _ _ _ eq_refl _ _ _
+                            _ _ Hs eq_refl heq_length heq_length0 HΔ).
+      specialize (forall_Γ1 _ _ _ eq_refl _ _ _
+                           _ _ Hs eq_refl heq_length heq_length0 HΔ).
       rewrite distr_subst. simpl.
       econstructor; now rewrite !subst_context_snoc0 in forall_Γ.
 
     - (* Zeta *)
-      specialize (forall_Γ1 _ _ _ _ Hs (_ ,, _) eq_refl _ _ (_ ,, _)
-                           eq_refl heq_length (f_equal S heq_length0) HΔ).
-      specialize (forall_Γ _ _ _ _ Hs _ eq_refl _ _ _
-                           eq_refl heq_length heq_length0 HΔ).
-      specialize (forall_Γ0 _ _ _ _ Hs _ eq_refl _ _ _
-                           eq_refl heq_length heq_length0 HΔ).
+      specialize (forall_Γ1 _ _  (_ ,, _) eq_refl _ _ (_ ,, _)
+                            _ _ Hs eq_refl heq_length (f_equal S heq_length0) HΔ).
+      specialize (forall_Γ _ _ _ eq_refl _ _ _
+                            _ _ Hs eq_refl heq_length heq_length0 HΔ).
+      specialize (forall_Γ0 _ _ _ eq_refl _ _ _
+                             _ _ Hs eq_refl heq_length heq_length0 HΔ).
       simpl. rewrite distr_subst.
       econstructor; now rewrite !subst_context_snoc0 in forall_Γ1.
 
     - (* Rel *)
       pose proof (psubst_length Hs) as Hlens.
-      pose proof (psubst_length' Hs) as Hlens'. rewrite <- Hlens in Hlens'.
       elim (leb_spec_Set); intros Hn.
+      red in X0. specialize (X0 _ _ _ eq_refl _ _ _ _ _ Hs eq_refl heq_length HΔ).
       destruct (nth_error s) eqn:Heq.
-      ++ (* Let-bound variable 1in the substitution *)
+      ++ (* Let-bound variable in the substitution *)
          pose proof (nth_error_Some_length Heq).
          pose proof predΓ' as X.
-         eapply nth_error_pred1_ctx in X as [body' [Hnth Hred]]; eauto.
-         rewrite <- commut_lift_subst_rec.
-         rewrite distr_subst_lift.
-         pose proof X as X'.
-         eapply All2_local_env_app' in X' as [Δl [Δr [Heq' Heq'']]]; subst.
-         pose proof X as X'. rewrite <- app_context_assoc in X'.
-         eapply All2_local_env_app in X' as [Γl' [Δr'' [[Hctx Heq'] Heq''']]].
-         rewrite Hctx in X.
-         eapply All2_local_env_app' in Heq''' as [Δ' [Δr' [Hctx' Heq4]]].
-         subst. clear Heq'. rewrite app_context_assoc in X.
-         destruct Heq4. intuition. rewrite app_context_assoc in Hctx.
-         unfold app_context in Hctx; apply app_inj_length_l in Hctx. 2:lia.
-         destruct Hctx; subst. rewrite !app_length in H3. rewrite H1 in H3. assert(#|Γ0| = #|Γl'|) by lia.
-         clear H3.
-         eapply nth_error_pred1_ctx in X as [body' [Hnth [Hred IH]]]; eauto.
-         rewrite -> nth_error_app_context_ge in Hnth by lia.
-         rewrite -> nth_error_app_context_lt in Hnth by lia.
-         eapply psubst_nth_error in Heq as [decl [t' [[Heq'' Heq'''] Heq]]]; eauto.
-         rewrite Heq'' in Hnth. noconf Hnth. simpl in H3. rewrite H3 in Heq. simpl in Heq.
-         destruct Heq as [u [[[Hsub ->] ->] Hred']]. clear Hred'.
-         specialize (IH Γ0 (skipn (S (i - #|Γ'0|)) Δ) []).
-         forward IH. simpl. rewrite skipn_app_ge; try lia.
-         rewrite skipn_app_lt; try lia. now replace (S i - #|Γ'0|) with (S (i - #|Γ'0|)) by lia.
-         specialize (IH _ _ Hsub).
-         simpl in IH. rewrite <- subst_skipn'; try lia.
-         rewrite <- (subst_context_length s 0 Γ'0).
-         eapply weakening_pred1_0; auto.
-         rewrite (subst_context_length s 0 Γ'0).
-         replace (S i - #|Γ'0|) with (S (i - #|Γ'0|)) by lia.
-         apply IH.
+         eapply psubst_nth_error in Heq as [decl [decl' [t' ?]]]; eauto.
+         intuition; rename_all_hyps.
+         destruct decl as [? [?|] ?]; destruct decl' as [? [?|] ?]; simpl in b; try contradiction.
+         intuition subst.
+         revert heq_option_map.
+         rewrite -> nth_error_app_context_ge by lia.
+         pose proof (nth_error_Some_length heq_nth_error1).
+         rewrite -> nth_error_app_context_lt by lia.
+         rewrite - heq_length0 heq_nth_error1 => [= <-].
+         eapply weakening_pred1_pred1 in b0. 2:eauto. 2:eapply All2_local_env_app. 2:eapply X0.
+         rewrite !subst_context_length in b0.
+         rewrite <- subst_skipn'; try lia.
+         now replace (S i - #|Γ'0|) with (S (i - #|Γ'0|)) by lia. lia.
+         revert heq_option_map.
+         rewrite -> nth_error_app_context_ge by lia.
+         pose proof (nth_error_Some_length heq_nth_error1).
+         rewrite -> nth_error_app_context_lt by lia.
+         rewrite - heq_length0 heq_nth_error1. simpl. congruence.
 
-      ++ destruct (nth_error Γ' _) eqn:HΓ'; noconf heq_option_map. simpl in H.
-         destruct c as [na [b|] ty]; noconf H.
+      ++ pose proof (psubst_length Hs).
+         assert (#|Δ1| = #|s|).
+         eapply psubst_nth_error_None in Hs; eauto. lia.
+         eapply nth_error_None in Heq.
+         subst P'.
+         intuition; rename_all_hyps.
          (* Rel is a let-bound variable in Γ0, only weakening needed *)
-         pose proof (All2_local_env_subst_pred X).
-         eapply All2_local_env_subst in X as [Γl' [Δr'' [H]]]. intuition; subst; rename_all_hyps.
-         specialize (forall_s _ _ Hs).
-         eapply nth_error_None in heq_nth_error0.
-         assert(eq:S i = #|s| + (S (i - #|s|))) by lia. rewrite eq.
+         assert(eq:S i = #|s| + (S (i - #|s|))) by (lia). rewrite eq.
          rewrite simpl_subst'; try lia.
-         econstructor; eauto.
-         rewrite nth_error_app_context_ge /= in heq_nth_error; try lia.
-         rewrite nth_error_app_context_ge /= in heq_nth_error; try lia.
+         econstructor. eauto.
          rewrite nth_error_app_context_ge !subst_context_length /=; try lia.
-         eapply (f_equal (option_map decl_body)) in heq_nth_error.
-         simpl in heq_nth_error. rewrite <- heq_nth_error.
-         f_equal. f_equal. lia.
+         rewrite <- heq_option_map. f_equal.
+         rewrite nth_error_app_context_ge /=; try lia.
+         rewrite nth_error_app_context_ge /=; try lia.
+         f_equal. lia.
 
       ++ (* Local variable from Γ'0 *)
-         pose proof (All2_local_env_subst_pred X).
-         eapply All2_local_env_subst in X as [Γl' [Δr'' [H]]]. intuition; subst; rename_all_hyps.
-         specialize (forall_s _ _ Hs).
-         assert(eq: #|Γ'0| = #|Γ'0| - S i + S i) by lia. rewrite eq.
-         rewrite <- (commut_lift_subst_rec body s' (S i) (#|Γ'0| - S i) 0); try lia.
+         assert(eq: #|Γ'1| = #|Γ'1| - S i + S i) by lia. rewrite eq.
+         rewrite <- (commut_lift_subst_rec body s' (S i) (#|Γ'1| - S i) 0); try lia.
          econstructor. eauto.
          rewrite nth_error_app_context_lt /= in heq_option_map. autorewrite with wf; lia.
          rewrite nth_error_app_context_lt; try (autorewrite with wf; lia).
          rewrite nth_error_subst_context. rewrite option_map_decl_body_map_decl heq_option_map.
          simpl. do 3 f_equal. lia.
 
-    - elim (leb_spec_Set); intros Hn.
-      + pose proof (All2_local_env_subst_pred X).
-        eapply All2_local_env_subst in X as [Γl' [Δr'' [H]]]. intuition; subst; rename_all_hyps.
-        specialize (forall_s _ _ Hs).
+    - specialize (X0 _ _ _ eq_refl _ _ _ _ _ Hs eq_refl heq_length HΔ).
+      rewrite {1}heq_length0. elim (leb_spec_Set); intros Hn.
+      + subst P'. intuition; subst; rename_all_hyps.
         pose proof (psubst_length Hs).
         destruct nth_error eqn:Heq.
-        ++ eapply psubst_nth_error in Heq as [decl [t' [[Heq'' Heq'''] Heq]]]; eauto.
-           eapply psubst_length' in Hs.
-           destruct decl as [na [b|] ty]; simpl in *.
-           destruct Heq as [u ?]; intuition; rename_all_hyps.
-           rewrite heq_nth_error0. subst t t'.
-           replace (S (i - #|Γ'0|)) with (S i - #|Γ'0|) by lia.
-           eapply nth_error_Some_length in heq_nth_error.
-           unshelve epose proof (weakening_pred1 Σ Γ0 [] (subst_context s 0 Γ'0) _ _ _ b0); eauto.
-           simpl in X. rewrite !subst_context_length in X.
-           now replace (S (i - #|Γ'0|)) with (S i - #|Γ'0|) in X by lia.
-           rewrite Heq'''.
-           unshelve epose proof (weakening_pred1 Σ Γ0 [] (subst_context s 0 Γ'0) _ _ _ Heq); eauto.
-           simpl in X. now rewrite !subst_context_length in X.
+        ++ eapply psubst_nth_error' in Heq as [t' [? ?]]; eauto.
+           rewrite - heq_length0 e.
+           rewrite - {1}(subst_context_length s 0 Γ'0).
+           rewrite {1}heq_length0 -(subst_context_length s' 0 Γ'1).
+           eapply weakening_pred1_pred1; auto. eapply All2_local_env_over_pred1_ctx.
+           now rewrite !subst_context_length. auto.
         ++ eapply psubst_nth_error_None in Heq; eauto.
-           intuition; rename_all_hyps. rewrite heq_nth_error0.
+           intuition; rename_all_hyps.
+           rewrite - heq_length0 heq_nth_error.
            eapply psubst_length' in Hs.
            assert(#|s| = #|s'|) as -> by lia.
            eauto with pcuic.
-      + eapply pred1_refl.
+      + constructor. auto.
 
-    - rewrite subst_iota_red.
+    -
+
+      rewrite subst_iota_red.
       autorewrite with subst.
       econstructor.
       apply All2_map. solve_all. unfold on_Trel_eq, on_Trel. solve_all.

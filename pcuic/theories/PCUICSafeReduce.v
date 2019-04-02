@@ -1057,7 +1057,7 @@ Section Reduce.
       + constructor. assumption.
       + constructor. assumption.
       + constructor. apply cumul_refl'.
-    - destruct IHh1 as [na [A' [B' [? [? [?]]]]]].
+    - destruct IHh as [na [A' [B' [? [? [?]]]]]].
       exists na, A', B'. split ; [| split].
       + assumption.
       + assumption.
@@ -1078,7 +1078,7 @@ Section Reduce.
       + constructor. assumption.
       + assumption.
       + constructor. apply cumul_refl'.
-    - destruct IHh1 as [decl [? [? [?]]]].
+    - destruct IHh as [decl [? [? [?]]]].
       exists decl. split ; [| split].
       + assumption.
       + assumption.
@@ -1095,7 +1095,7 @@ Section Reduce.
     intros Σ' Γ ind npar pred c brs T h.
     dependent induction h.
     - exists args, u. constructor. assumption.
-    - destruct IHh1 as [args [u ?]].
+    - destruct IHh as [args [u ?]].
       exists args, u. assumption.
   Qed.
 
@@ -1678,6 +1678,7 @@ Section Reduce.
         rewrite nth_error_app2 by eauto.
         replace (#|args| - #|args|) with 0 by auto with arith.
         cbn.
+        unfold isConstruct_app.
         rewrite decompose_app_mkApps by reflexivity.
         reflexivity.
     - destruct r.

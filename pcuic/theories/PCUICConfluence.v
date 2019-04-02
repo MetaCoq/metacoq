@@ -544,7 +544,21 @@ Section Confluence.
       let target := fresh "v" in specialize (H _ _ H') as [target [? ?]]
     end.
 
-  Theorem confluence Σ Γ Δ t u : wf Σ ->
+  Lemma substitution0_pred1 {Σ : global_context} Γ Δ M M' na A A' N N' : wf Σ ->
+    pred1 Σ Γ Δ M M' -> pred1 Σ Γ Δ A A' ->
+    pred1 Σ (Γ ,, vass na A) (Δ ,, vass na A') N N' ->
+    pred1 Σ Γ Δ (subst1 M 0 N) (subst1 M' 0 N').
+  Admitted.
+      (* FIXME reflexivity of subst *)
+
+  Lemma substitution0_let_pred1 {Σ Γ Δ na M M' A A' N N'} : wf Σ ->
+    pred1 Σ Γ Δ M M' -> pred1 Σ Γ Δ A A' ->
+    pred1 Σ (Γ ,, vdef na M A) (Δ ,, vdef na M' A') N N' ->
+    pred1 Σ Γ Δ (subst1 M 0 N) (subst1 M' 0 N').
+  Proof.
+  Admitted.
+
+  Lemma triangle Σ Γ Δ t u : wf Σ ->
     let Pctx :=
         fun (Γ Δ : context) => pred1_ctx Σ Δ (rho_ctx Γ) in
     pred1 Σ Γ Δ t u -> pred1 Σ Δ (rho_ctx Γ) u (rho (rho_ctx Γ) t).
@@ -559,484 +573,77 @@ Section Confluence.
     refine (pred1_ind_all_ctx Σ _ Pctx _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _); subst Pctx; intros *.
     all:try intros **; rename_all_hyps;
       try solve [specialize (forall_Γ _ X3); eauto]; eauto;
-        try solve [eexists; split; constructor; eauto].
+        try solve [simpl; econstructor; simpl; eauto].
 
     simpl.
     - induction X0; simpl; depelim predΓ'; constructor; eauto.
 
     - simpl.
-      epose proof (substitution_let_pred1 Σ Γ' [vass na _] [] (rho_ctx Γ) [vass na _] []
-                                          [a1] [rho (rho_ctx Γ) a0] b1 _ wfΣ) as H.
-      simpl in H. forward H.
+      eapply (substitution0_pred1); simpl in *. eauto. eauto. eapply X2.
+      eapply X0.
+    - simpl.
+      eapply (substitution0_let_pred1); simpl in *. eauto. eauto. eapply X0.
+      eapply X4.
 
-      constructor. constructor. auto. eapply H.
-      apply pred1_pred1_ctx, All2_local_env_length in X3. rewrite - rho_ctx_length. lia. lia.
-      constructor. constructor. red. red. unfold app_context. cbn. eapply X2.
+    - simpl.
+      destruct nth_error eqn:Heq.
+      pose proof Heq. apply nth_error_Some_length in Heq.
+      destruct c as [na [?|] ?]; noconf heq_option_map.
+      simpl in X0.
+      eapply (f_equal (option_map decl_body)) in H.
+      eapply nth_error_pred1_ctx_l in H; eauto.
+      destruct H. intuition. rewrite a.
+      rewrite -{1}(firstn_skipn (S i) Γ').
+      rewrite -{1}(firstn_skipn (S i) (rho_ctx Γ)).
+      pose proof (All2_local_env_length X0).
+      assert (S i = #|firstn (S i) Γ'|).
+      rewrite !firstn_length_le; try lia.
+      assert (S i = #|firstn (S i) (rho_ctx Γ)|).
+      rewrite !firstn_length_le; try lia.
+      rewrite {5}H0 {6}H1.
+      eapply weakening_pred1_pred1; eauto.
+      eapply All2_local_env_over_firstn_skipn. auto.
+      noconf heq_option_map.
 
-      eapply substitution_let_pred1.
+    - simpl. simpl in *.
+      destruct option_map eqn:Heq.
+      destruct o. constructor; auto.
+      constructor. auto.
+      constructor. auto.
 
-    intros.
-    14:{ depelim Hr. depelim X...
-         specialize (forall_pctx pctx).
-         specialize (forall_pctx0 pctx).
-         specialize (forall_pctx Δ' (tLambda na t1 b1) ltac:(constructor; auto)).
-         destruct forall_pctx. destruct p.
-         specialize (forall_pctx0 Δ' a1 ltac:(auto)).
-         destruct forall_pctx0.
-         depelim p...
-         depelim p0... solve_discr. admit.
-         exists (N'0 {0 := x0}).
-         split. econstructor.
+    - admit.
+    - admit.
+    - admit.
+    - admit.
+    - admit.
+    - admit.
+    - simpl. destruct M0; (try solve [ constructor; auto ]).
+      depelim X. solve_discr. simpl in *.
+      depelim X0... clear -x0. solve_discr.
+      econstructor; eauto.
+      simpl in i. discriminate.
+
+    - admit.
+    - simpl. admit.
+    - admit.
+    - admit.
+    - admit.
+    - destruct t; noconf H; simpl; constructor; eauto.
+  Admitted.
 
   (* Checked that we can prove confluence in presence of let-reductions in the context *)
 
-  Ltac apply_hyp :=
-    match reverse goal with
-    | [ H : forall _ r, pred1 _ _ _ ?s _ -> _, H' : pred1 _ _ _ ?s _ |- _ ] =>
-      let target := fresh "v" in specialize (H _ _ H') as [target [? ?]]
-    end.
-
-  Theorem confluence Σ Γ Δ t l :
-    wf Σ ->
-    let Pctx :=
-        fun (Γ Γ' : context) =>
-          forall Δ, pred1_ctx Σ Γ Δ ->
-                    ∃ R, pred1_ctx Σ Γ' R * pred1_ctx Σ Δ R in
-    forall Hl : pred1 Σ Γ Δ t l,
-    forall pctx : Pctx Γ Δ,
-    forall Δ' r (Hr : pred1 Σ Γ Δ' t r),
-      let R := projT1 (pctx Δ' (pred1_pred1_ctx _ _ _ _ _ Hr)) in
-      ∃ v, (pred1 Σ Δ R l v) * (pred1 Σ Δ' R r v).
-    (* pred1 Σ Γ Δ t l -> forall Δ' r (Hr : pred1 Σ Γ Δ' t r), *)
-    (* ∃ Δ'' v, (pred1 Σ Δ Δ'' l v) * (pred1 Σ Δ' Δ'' r v). *)
-  Proof with solve_discr.
-    intros wfΣ Pctx H. revert Γ Δ t l H.
-    (* refine (pred1_ind_all Σ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _); intros *. *)
-    (* all:try intros **; rename_all_hyps; *)
-    (*   try solve [specialize (forall_Γ _ X3); eauto]; eauto; *)
-    (*     try solve [eexists; split; constructor; eauto]. *)
-    (* intros. *)
-
-    refine (pred1_ind_all_ctx Σ _ Pctx _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _); subst Pctx; intros *.
-    all:try intros **; rename_all_hyps;
-      try solve [specialize (forall_Γ _ X3); eauto]; eauto;
-        try solve [eexists; split; constructor; eauto].
+  Corollary confluence : forall Σ Γ Δ Δ' t u v, wf Σ ->
+    pred1 Σ Γ Δ t u ->
+    pred1 Σ Γ Δ' t v ->
+    pred1 Σ Δ (rho_ctx Γ) u (rho (rho_ctx Γ) t) *
+    pred1 Σ Δ' (rho_ctx Γ) v (rho (rho_ctx Γ) t).
+  Proof.
     intros.
-    14:{ depelim Hr. depelim X...
-         specialize (forall_pctx pctx).
-         specialize (forall_pctx0 pctx).
-         specialize (forall_pctx Δ' (tLambda na t1 b1) ltac:(constructor; auto)).
-         destruct forall_pctx. destruct p.
-         specialize (forall_pctx0 Δ' a1 ltac:(auto)).
-         destruct forall_pctx0.
-         depelim p...
-         depelim p0... solve_discr. admit.
-         exists (N'0 {0 := x0}).
-         split. econstructor.
+    split; eapply triangle; auto.
+  Qed.
 
-
-
-    - simpl.
-      induction X0; simpl.
-      ++ intros. depelim X. exists []; intuition pcuic.
-      ++ intros. red in p. depelim X. simpl in o, p. depelim predΓ'. simpl in *.
-         pose proof (p0 (IHX0 predΓ') _ _ o) as [tf [tfl tfr]].
-         eexists.
-         split. constructor. auto. eapply pred1_pred1_ctx in tfl. eauto. red. eauto.
-         constructor. eapply pred1_pred1_ctx in tfr. auto. red. auto.
-      ++ intros. depelim X. simpl in o.
-         red in p.
-         destruct p, o. rename_all_hyps.
-         depelim predΓ'.
-         pose proof (forall_pctx (impl_forall_Δ predΓ') _ _ p0) as [bf [bfl bfr]].
-         pose proof (forall_pctx0 (impl_forall_Δ predΓ') _ _ p1) as [tf [tfl tfr]].
-         assert ((pred1_pred1_ctx Σ Γ Γ'0 b b'0 p0) = (pred1_pred1_ctx Σ Γ Γ'0 t t'0 p1)).
-         clear.
-         admit.
-         all:admit.
-
-         (* exists ((projT1 (impl_forall_Δ predΓ' Γ'0 (pred1_pred1_ctx Σ Γ Γ'0 b b'0 p0)),, vdef na bf tf)). *)
-         (* split. *)
-         (* --- constructor. *)
-         (*     eapply pred1_pred1_ctx in bfl. auto. red. split. auto. auto. *)
-
-         (* specialize (forall_Δ'' _ X) as [Δf [Δfl Δfr]].          exists (Δ''' ,, vdef na bf tf). *)
-         (* split. constructor. auto. eapply pred1_pred1_ctx in bfl. auto. red. split. *)
-         (* auto. (* Admit type annotation and both reduced in different contexts: need *)
-         (*          to use "All2_local_env" to force a common target context *) *)
-         (* admit. *)
-         (* constructor. auto. eapply pred1_pred1_ctx in bfr. auto. red. split. auto. *)
-         (* admit. *)
-
-    - (* Beta *)
-      all:admit.
-      (* assert (∀ Δ'' : context, pred1_ctx Σ Γ Δ'' → ∃ R : context, pred1_ctx Σ Γ' R * pred1_ctx Σ Δ'' R). admit. *)
-      (* depelim Hr... *)
-      (* + clear X1 X X3. repeat unshelve apply_hyp. destruct p. *)
-      (*   exists (b' {0 := a'}). *)
-      (*   split. *)
-      (*   eapply substitution0_pred1_pred1. auto. apply a4. *)
-      (*   pose proof (@substitution0_pred1 Σ Γ' Δ'). *)
-      (*   eapply substitution0_pred1. auto. apply a4. *)
-      (* + clear X1 X; repeat apply_hyp. *)
-      (*   depelim Hr1... *)
-      (*   specialize (forall_r _ Hr1_2 (Δ ,, vass na M') (Δ' ,, vass na M')) as [b' [lb' rb']]. *)
-      (*   constructor. auto with pcuic. simpl. auto. *)
-      (*   constructor. auto. simpl. auto. *)
-      (*   exists (b' {0:=v}). intuition eauto using substitution0_pred1. *)
-      (*   constructor; eauto. *)
-  - (* Zeta *)
-    depelim Hr...
-    (* + (* Zeta / Zeta *) *)
-    (*   specialize (forall_r _ Hr1 _ _ predΔ predΔ') as [v [? ?]]. *)
-    (*   specialize (forall_r0 _ Hr2 (Δ ,, vdef na d1 t) (Δ' ,, vdef na d3 t)) as [v0 [? ?]]. *)
-    (*   constructor; auto with pcuic. *)
-    (*   constructor; auto with pcuic. *)
-    (*   constructor. auto. constructor. auto. apply pred1_refl. *)
-    (*   pose proof (substitution_let_pred1 Σ Δ [vdef na d1 t] [] [d1] [v] b1 v0 wfΣ) as H. *)
-    (*   simpl in H. forward H. *)
-    (*   pose proof (cons_let_def Σ Δ [] [] [] na d1 v t). *)
-    (*   rewrite -> !subst_empty in *. *)
-    (*   forward X0 by constructor. *)
-    (*   apply X0, p. *)
-    (*   pose proof (substitution_let_pred1 Σ Δ' [vdef na d3 t] [] [d3] [v] b3 v0 wfΣ) as H'. *)
-    (*   simpl in H'. forward H'. *)
-    (*   pose proof (cons_let_def Σ Δ' [] [] [] na d3 v t). *)
-    (*   rewrite !subst_empty in X0. *)
-    (*   forward X0 by constructor. *)
-    (*   apply X0, p0. *)
-    (*   eexists. split; eauto. *)
-
-    (* + (* Zeta / Congruence *) *)
-    (*   specialize (forall_r _ Hr1 _ _ predΔ predΔ') as [v [? ?]]. *)
-    (*   specialize (forall_r0 _ Hr3 (Δ ,, vdef na d1 t) (Δ' ,, vdef na d3 t1)) as [v0 [? ?]]. *)
-    (*   1-2:constructor; auto with pcuic; red; intuition eauto with pcuic. *)
-    (*   exists (v0 { 0 := v }). *)
-    (*   intuition eauto using substitution0_let_pred1. *)
-    (*   econstructor; eauto. *)
-    all:admit.
-
-  (* - (* Zeta in context *) *)
-  (*   eapply nth_error_pred1_ctx in X; eauto. *)
-  (*   destruct X as [b [? ?]]; intuition; rename_all_hyps. *)
-  (*   depelim Hr... *)
-  (*   -- (* Zeta in context / Zeta in context *) *)
-  (*     pose proof heq_option_map0. *)
-  (*     eapply nth_error_pred1_ctx_l in H. 2:eapply a. *)
-  (*     destruct H as [body' [Heqbody' Hredbody']]. *)
-  (*     rewrite e in Heqbody'. noconf Heqbody'. *)
-  (*     specialize (forall_r _ Hredbody' (skipn (S i) Δ) (skipn (S i) Δ')). *)
-  (*     forward forall_r. now apply All2_local_env_skipn. *)
-  (*     forward forall_r. now apply All2_local_env_skipn. *)
-  (*     destruct forall_r. destruct p. *)
-  (*     exists (lift0 (S i) x). *)
-  (*     split. *)
-  (*     ++ pose proof (weakening_pred1_0 Σ (skipn (S i) Δ) (firstn (S i) Δ) body x wfΣ p). *)
-  (*        unfold app_context in X; rewrite firstn_skipn in X. *)
-  (*        pose proof (All2_local_env_length predΔ). *)
-  (*        destruct (nth_error Γ i) eqn:Heq; noconf heq_option_map0. *)
-  (*        apply nth_error_Some_length in Heq. *)
-  (*        now rewrite firstn_length_le in X. *)
-  (*     ++ pose proof (weakening_pred1_0 Σ (skipn (S i) Δ') (firstn (S i) Δ') body0 x wfΣ p0). *)
-  (*        unfold app_context in X; rewrite firstn_skipn in X. *)
-  (*        pose proof (All2_local_env_length predΔ'). *)
-  (*        destruct (nth_error Γ i) eqn:Heq; noconf heq_option_map0. *)
-  (*        apply nth_error_Some_length in Heq. *)
-  (*        now rewrite firstn_length_le in X. *)
-
-
-
-  - depelim Hr.
-    + (* Refl / Zeta in context: the hard case. We allow reducing the whole contexts on both sides *)
-      specialize (X0 _ a). destruct X0 as [R [redl redr]].
-      exists R.
-
-      Lemma nth_error_body_length {Γ i b} : option_map decl_body (nth_error Γ i) = Some (Some b) ->
-                                               i < #|Γ|.
-      Proof. intros. destruct nth_error eqn:Heq; try discriminate. now apply nth_error_Some_length in Heq. Qed.
-      pose proof (nth_error_body_length e).
-      pose proof (nth_error_body_length heq_option_map).
-      eapply nth_error_pred1_ctx_l in e. 2:eapply redr.
-      eapply nth_error_pred1_ctx_l in heq_option_map. 2:eapply redl.
-      destruct e. destruct heq_option_map. intuition.
-      rewrite a0 in a1. noconf a1.
-      exists (lift0 (S i) x).
-      rewrite -{1}(firstn_skipn (S i) Γ').
-      rewrite -{1}(firstn_skipn (S i) Δ').
-      rewrite -{1 2}(firstn_skipn (S i) R).
-      pose proof (All2_local_env_length redl).
-      assert (S i = #|firstn (S i) Γ'|).
-      rewrite !firstn_length_le; try lia.
-      assert (S i = #|firstn (S i) Δ'|).
-      rewrite !firstn_length_le; try lia.
-      assert (S i = #|firstn (S i) R|).
-      rewrite !firstn_length_le; try lia.
-      rewrite {5}H2 {11}H3. rewrite {6 12}H4.
-      split.
-      eapply weakening_pred1_pred1; auto.
-      now eapply All2_local_env_over_firstn_skipn.
-      eapply weakening_pred1_pred1; auto.
-      now eapply All2_local_env_over_firstn_skipn.
-    + (* Refl / Zeta in context: the hard case. We allow reducing the whole contexts on both sides *)
-      specialize (X0 _ a). destruct X0 as [R [redl redr]].
-      exists R.
-      pose proof (nth_error_body_length heq_option_map).
-      eapply nth_error_pred1_ctx_l in heq_option_map. 2:eapply redl.
-      destruct heq_option_map. intuition.
-      exists (lift0 (S i) x).
-      econstructor.
-      rewrite -{1}(firstn_skipn (S i) Γ').
-      rewrite -{1}(firstn_skipn (S i) R).
-      pose proof (All2_local_env_length redl).
-      assert (S i = #|firstn (S i) Γ'|).
-      rewrite !firstn_length_le; try lia.
-      assert (S i = #|firstn (S i) R|).
-      rewrite !firstn_length_le; try lia.
-      rewrite {6}H2 {5}H1.
-      eapply weakening_pred1_pred1; auto.
-      now eapply All2_local_env_over_firstn_skipn.
-      constructor. auto. auto.
-
-    + solve_discr.
-    + red in i0. simpl in i0. discriminate.
-
-  - depelim Hr...
-    + (* Refl / Zeta in context: the hard case. We allow reducing the whole contexts on both sides *)
-      specialize (X0 _ a). destruct X0 as [R [redl redr]].
-      exists R.
-      pose proof (nth_error_body_length e).
-      pose proof (All2_local_env_length redr).
-      pose proof (nth_error_body_length e).
-      eapply nth_error_pred1_ctx_l in e. 2:eapply redr.
-      destruct e. intuition.
-      exists (lift0 (S i) x).
-      split. constructor. eauto. eauto.
-      rewrite -{1}(firstn_skipn (S i) Δ').
-      rewrite -{1}(firstn_skipn (S i) R).
-      assert (S i = #|firstn (S i) Δ'|).
-      rewrite !firstn_length_le; try lia.
-      assert (S i = #|firstn (S i) R|).
-      rewrite !firstn_length_le; try lia.
-      rewrite {5}H2 {6}H3.
-      eapply weakening_pred1_pred1; auto.
-      now eapply All2_local_env_over_firstn_skipn.
-
-    + specialize (X0 _ a) as [R [redl redr]].
-      exists R, (tRel i). split; pcuic.
-
-  - (* Case *)
-
-(*  Theorem confluence Σ Γ t l r : wf Σ ->
-    pred1 Σ Γ t l -> forall (Hr : pred1 Σ Γ t r),
-        forall Δ Δ', pred1_ ctx Σ Γ Δ -> pred1_ctx Σ Γ Δ' ->
-                  { v & (pred1 Σ Δ l v) * (pred1 Σ Δ' r v) }%type.
-  Proof with solve_discr.
-    intros wfΣ H; revert Γ t l H r.
-    refine (pred1_ind_all Σ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _); intros *.
-    all:try intros **; rename_all_hyps;
-      try solve [specialize (forall_Γ _ X3); eauto]; eauto;
-        try solve [eexists; split; constructor; eauto].
-
-  - (* Beta *)
-    depelim Hr...
-    + clear X1 X. repeat unshelve apply_hyp.
-      specialize (forall_r _ Hr1 (Δ ,, vass na t) (Δ' ,, vass na t)) as [b' [lb' rb']].
-      constructor; eauto. red. eapply pred1_refl.
-      constructor; eauto. red. eapply pred1_refl.
-      eexists. intuition eauto using substitution0_pred1.
-    + clear X1 X; repeat apply_hyp.
-      depelim Hr1...
-      specialize (forall_r _ Hr1_2 (Δ ,, vass na M') (Δ' ,, vass na M')) as [b' [lb' rb']].
-      constructor. auto with pcuic. simpl. auto.
-      constructor. auto. simpl. auto.
-      exists (b' {0:=v}). intuition eauto using substitution0_pred1.
-      constructor; eauto.
-
-  - (* Zeta *)
-    depelim Hr...
-    + (* Zeta / Zeta *)
-      specialize (forall_r _ Hr1 _ _ predΔ predΔ') as [v [? ?]].
-      specialize (forall_r0 _ Hr2 (Δ ,, vdef na d1 t) (Δ' ,, vdef na d3 t)) as [v0 [? ?]].
-      constructor; auto with pcuic.
-      constructor; auto with pcuic.
-      constructor. auto. constructor. auto. apply pred1_refl.
-      pose proof (substitution_let_pred1 Σ Δ [vdef na d1 t] [] [d1] [v] b1 v0 wfΣ) as H.
-      simpl in H. forward H.
-      pose proof (cons_let_def Σ Δ [] [] [] na d1 v t).
-      rewrite -> !subst_empty in *.
-      forward X0 by constructor.
-      apply X0, p.
-      pose proof (substitution_let_pred1 Σ Δ' [vdef na d3 t] [] [d3] [v] b3 v0 wfΣ) as H'.
-      simpl in H'. forward H'.
-      pose proof (cons_let_def Σ Δ' [] [] [] na d3 v t).
-      rewrite !subst_empty in X0.
-      forward X0 by constructor.
-      apply X0, p0.
-      eexists. split; eauto.
-
-    + (* Zeta / Congruence *)
-      specialize (forall_r _ Hr1 _ _ predΔ predΔ') as [v [? ?]].
-      specialize (forall_r0 _ Hr3 (Δ ,, vdef na d1 t) (Δ' ,, vdef na d3 t1)) as [v0 [? ?]].
-      1-2:constructor; auto with pcuic; red; intuition eauto with pcuic.
-      exists (v0 { 0 := v }).
-      intuition eauto using substitution0_let_pred1.
-      econstructor; eauto.
-
-  - (* Zeta in context *)
-    eapply nth_error_pred1_ctx in X; eauto.
-    destruct X as [b [? ?]]; intuition; rename_all_hyps.
-    depelim Hr...
-    -- (* Zeta in context / Zeta in context *)
-      pose proof heq_option_map0.
-      eapply nth_error_pred1_ctx_l in H. 2:eapply a.
-      destruct H as [body' [Heqbody' Hredbody']].
-      rewrite e in Heqbody'. noconf Heqbody'.
-      specialize (forall_r _ Hredbody' (skipn (S i) Δ) (skipn (S i) Δ')).
-      forward forall_r. now apply All2_local_env_skipn.
-      forward forall_r. now apply All2_local_env_skipn.
-      destruct forall_r. destruct p.
-      exists (lift0 (S i) x).
-      split.
-      ++ pose proof (weakening_pred1_0 Σ (skipn (S i) Δ) (firstn (S i) Δ) body x wfΣ p).
-         unfold app_context in X; rewrite firstn_skipn in X.
-         pose proof (All2_local_env_length predΔ).
-         destruct (nth_error Γ i) eqn:Heq; noconf heq_option_map0.
-         apply nth_error_Some_length in Heq.
-         now rewrite firstn_length_le in X.
-      ++ pose proof (weakening_pred1_0 Σ (skipn (S i) Δ') (firstn (S i) Δ') body0 x wfΣ p0).
-         unfold app_context in X; rewrite firstn_skipn in X.
-         pose proof (All2_local_env_length predΔ').
-         destruct (nth_error Γ i) eqn:Heq; noconf heq_option_map0.
-         apply nth_error_Some_length in Heq.
-         now rewrite firstn_length_le in X.
-
-    -- (* Zeta in context / reflexivity *)
-      clear heq_option_map.
-      specialize (nth_error_pred1_ctx_l i b predΔ') as [body'' [Hb Hred]]; eauto.
-      specialize (forall_r _ Hred (skipn (S i) Δ) (skipn (S i) Δ')).
-      forward forall_r. now apply All2_local_env_skipn.
-      forward forall_r. now apply All2_local_env_skipn.
-      destruct forall_r. destruct p.
-      exists (lift0 (S i) x).
-      assert (S i <= #|Γ|).
-      destruct nth_error eqn:Heq; noconf heq_option_map0.
-      eapply nth_error_Some_length in Heq. lia.
-      pose proof (All2_local_env_length predΔ).
-      pose proof (All2_local_env_length predΔ').
-      split.
-      { eapply weakening_pred1_0 in p; eauto.
-        unfold app_context in p. erewrite firstn_skipn in p.
-        now rewrite firstn_length_le in p; try lia. }
-      { destruct (nth_error Δ' i) eqn:Heq'; noconf Hb.
-        destruct c as [na [b'|] ty]; noconf H.
-        eapply (pred_rel_def_unfold _ _ _ (skipn (S i) Δ' ,, vdef na x ty ,,, firstn i Δ')).
-        rewrite -{1}(firstn_skipn i Δ'). eapply All2_local_env_app_inv.
-         move:(skipn_nth_error Δ' i). rewrite Heq' => ->.
-         constructor. apply pred1_ctx_refl.
-         red. split. apply p0. eapply pred1_refl.
-         generalize (firstn i Δ'). intros.
-         clear. induction l. constructor.
-         destruct a as [na [b|] ty]; constructor; try red; auto using pred1_refl.
-         rewrite nth_error_app_ge firstn_length_le; try lia.
-         rewrite (minus_diag). reflexivity. }
-
-  - (* Refl *)
-
-  (* Lemma pred1_tRel_inv (Σ : global_context) (Γ : context) i r : *)
-  (*   pred1 Σ Γ (tRel i) r -> *)
-  (*   (r = tRel i) + *)
-  (*   (∃ body body', (option_map decl_body (nth_error Γ i) = Some (Some body)) * *)
-  (*            (r = lift0 (S i) body') * *)
-  (*            pred1 Σ (skipn (S i) Γ) body body')%type. *)
-  (* Proof with solve_discr. *)
-  (*   intros pred. *)
-  (*   depelim pred... *)
-  (*   - right. eapply nth_error_pred1_ctx in a; eauto. destruct a. *)
-  (*     exists x, body. intuition eauto. *)
-  (*   - left. reflexivity. *)
-  (* Qed. *)
-  (* eapply pred1_tRel_inv in Hr. destruct Hr. subst. exists (tRel i); split; auto with pcuic. *)
-
-    depelim Hr...
-    -- (* Refl , Zeta in context *)
-      pose proof e.
-      eapply nth_error_pred1_ctx in H. 2:eauto.
-      destruct H; intuition.
-      specialize (nth_error_pred1_ctx_l i x predΔ) as [body'' [Hb Hred]]; eauto.
-      destruct (nth_error_pred1_ctx_l i x X a0). destruct p as [HΓ' [predxx0 IH]].
-      pose proof (IH _ Hred (skipn (S i) Δ') (skipn (S i) Δ)).
-      forward X0 by now apply All2_local_env_skipn.
-      forward X0 by now apply All2_local_env_skipn.
-      destruct X0 as [v [vl vr]].
-      pose proof (All2_local_env_length predΔ).
-      pose proof (All2_local_env_length predΔ').
-      assert (S i <= #|Γ|).
-      destruct (nth_error Γ _) eqn:Heq; noconf a0.
-      eapply nth_error_Some_length in Heq. lia.
-      pose proof (IH _ b (skipn (S i) Δ') (skipn (S i) Δ')).
-      forward X0 by now apply All2_local_env_skipn.
-      forward X0 by now apply All2_local_env_skipn.
-      destruct X0 as [v' [vl' vr']].
-      exists (lift0 (S i) v').
-      split.
-      2:{ eapply weakening_pred1_0 in vr'; eauto.
-          unfold app_context in vr'. erewrite firstn_skipn in vr'.
-          now rewrite firstn_length_le in vr'; try lia. }
-      { destruct (nth_error Δ i) eqn:Heq'; noconf Hb.
-        destruct c as [na [b'|] ty]; noconf H.
-        eapply (pred_rel_def_unfold _ _ _ (skipn (S i) Δ ,, vdef na v' ty ,,, firstn i Γ')).
-        rewrite -{1}(firstn_skipn i Δ). eapply All2_local_env_app_inv.
-         move:(skipn_nth_error Δ i). rewrite Heq' => ->.
-         constructor.  apply pred1_ctx_refl. (* No idea how to relate them *)
-         red. split. apply vr. eapply pred1_refl.
-         generalize (firstn i Δ). intros.
-         clear. induction l. constructor.
-         destruct a as [na [b|] ty]; constructor; try red; auto using pred1_refl.
-         rewrite nth_error_app_ge firstn_length_le; try lia.
-         rewrite (minus_diag). reflexivity. }
-      {
-
-
-
-      specialize (forall_r _ Hred (skipn (S i) Δ) (skipn (S i) Δ')).
-
-      eapply nth_error_pred1_ctx_l in X. 2:eapply a0.
-      destruct X; intuition; rename_all_hyps.
-      pose proof heq_option_map0.
-      eapply nth_error_pred1_ctx_l in H. 2:eapply predΔ.
-      destruct H as [b' [eqn Hpred]].
-      pose proof heq_option_map0.
-      eapply nth_error_pred1_ctx_l in H. 2:eapply predΔ'.
-      destruct H as [b'' [eqn' Hpred']].
-      remember (nth_error Δ i) as Hnth.
-      destruct Hnth as [[na [b'''|] ty]|]; noconf eqn.
-      specialize (forall_r x0 a2).
-      specialize (forall_r (skipn (S i) Δ) (skipn (S i) Δ')).
-      forward forall_r. now apply All2_local_env_skipn.
-      forward forall_r. now apply All2_local_env_skipn.
-      destruct forall_r as [v [vl vr]].
-      exists (lift0 (S i) v).
-      split.
-      ++ eapply (pred_rel_def_unfold Σ Δ i (skipn (S i) Δ ,, vdef na v ty ,,, firstn i Δ)).
-         rewrite -{1}(firstn_skipn i Δ). eapply All2_local_env_app_inv.
-         move:(skipn_nth_error Δ i). rewrite -HeqHnth => ->.
-         constructor. apply pred1_ctx_refl.
-         red. split. apply vr. eapply pred1_refl.
-         generalize (firstn i Δ). intros.
-         clear. induction l. constructor.
-         destruct a as [na [b|] ty]; constructor; try red; auto using pred1_refl.
-         symmetry in HeqHnth. eapply nth_error_Some_length in HeqHnth.
-         rewrite nth_error_app_ge firstn_length_le; try lia.
-         rewrite (minus_diag). reflexivity.
-      ++ epose proof (weakening_pred1_0 Σ _ (firstn (S i) Δ) _ _ _ vr).
-         unfold app_context in X. rewrite firstn_skipn firstn_length_le in X; eauto.
-         pose proof (All2_local_env_length predΔ').
-         pose proof (All2_local_env_length predΔ).
-         lia.
-         destruct (nth_error Γ i) eqn:Heq; noconf heq_option_map0. simpl in H.
-         pose proof (All2_local_env_length predΔ').
-         eapply nth_error_Some_length in Heq. lia.
-    -- exists (tRel i). intuition auto with pcuic.
+  (*
 
   - (* Iota reduction *)
     depelim Hr...
@@ -1410,6 +1017,6 @@ Section Confluence.
   - (* Atom *)
     depelim Hr...
     + exists t. split; eapply pred1_refl.
-Admitted.
+    *)
 
-End ParallelSubstitution.
+End Confluence.

@@ -565,42 +565,4 @@ Section Conversion.
      But this time with more constructors.
    *)
 
-  Equations isconv (leq : conv_pb) (Γ : context)
-            (t1 : term) (π1 : stack) (h1 : welltyped Σ Γ (zip (t1, π1)))
-            (t2 : term) (π2 : stack) (h2 : welltyped Σ Γ (zip (t2, π2)))
-    : { b : bool | if b then conv leq Σ Γ (zipc t1 π1) (zipc t2 π2) else True }
-    by struct :=
-    isconv leq Γ t1 π1 h1 t2 π2 h2
-    with inspect (reduce_stack nodelta_flags Σ Γ t1 π1 h1) := {
-    | @exist (t1',π1') eq1
-      with inspect (reduce_stack nodelta_flags Σ Γ t2 π2 h2) := {
-      | @exist (t2',π2') eq2 => rec isconv_prog leq Γ t1' π1' _ t2' π2' _
-      }
-    }
-
-  where
-    isconv_prog leq Γ t1 π1 (h1 : welltyped Σ Γ (zip (t1, π1)))
-                      t2 π2 (h2 : welltyped Σ Γ (zip (t2, π2)))
-    : { b : bool | if b then conv leq Σ Γ (zipc t1 π1) (zipc t2 π2) else True } :=
-
-    isconv_prog leq Γ (tLambda na A1 t1) π1 h1 (tLambda _ A2 t2) π2 h2
-    with isconv leq Γ A1 Empty _ A2 Empty _ := {
-    | @exist true h => rec isconv Conv (Γ,, vass na A1) t1 Empty _ t2 Empty _ ;
-    | @exist false _ => no
-    } ;
-
-    isconv_prog leq Γ t1 π1 h1 t2 π2 h2 := no.
-  Next Obligation.
-    eapply red_welltyped ; try eassumption.
-    rewrite eq1.
-    eapply reduce_stack_sound.
-  Qed.
-  Next Obligation.
-    eapply red_welltyped.
-    - eapply h2.
-    - rewrite eq2.
-      eapply reduce_stack_sound.
-  Qed.
-  Admit Obligations.
-
 End Conversion.

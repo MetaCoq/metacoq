@@ -29,6 +29,13 @@ Section Conversion.
   Context `{checker_flags}.
   Context (Σ : global_context).
 
+  Tactic Notation "zip" "fold" :=
+    lazymatch goal with
+    | |- context C[ zipc ?t ?π ] =>
+      let C' := context C[ zip (t,π) ] in
+      change C'
+    end.
+
   Definition conv leq Σ Γ u v :=
     match leq with
     | Conv => ∥ Σ ;;; Γ |- u = v ∥
@@ -339,6 +346,75 @@ Section Conversion.
   Definition stack_pos t π : pos (zipc t π) :=
     exist (stack_position π) (stack_position_valid t π).
 
+  Lemma conv_refl' :
+    forall leq Γ t,
+      conv leq Σ Γ t t.
+  Proof.
+    intros leq Γ t.
+    destruct leq.
+    - cbn. constructor. apply conv_refl.
+    - cbn. constructor. apply cumul_refl'.
+  Qed.
+
+  Lemma conv_trans :
+    forall leq Γ u v w,
+      conv leq Σ Γ u v ->
+      conv leq Σ Γ v w ->
+      conv leq Σ Γ u w.
+  Proof.
+    intros leq Γ u v w h1 h2.
+    destruct leq.
+    - cbn in *. destruct h1 as [[h1 h1']]. destruct h2 as [[h2 h2']].
+      constructor. constructor ; eapply cumul_trans ; eassumption.
+    - cbn in *. destruct h1, h2. constructor. eapply cumul_trans ; eassumption.
+  Qed.
+
+  Lemma red_conv_l :
+    forall leq Γ u v,
+      red (fst Σ) Γ u v ->
+      conv leq Σ Γ u v.
+  Proof.
+    intros leq Γ u v h.
+    induction h.
+    - apply conv_refl'.
+    - eapply conv_trans ; try eassumption.
+      destruct leq.
+      + simpl. constructor. constructor.
+        * eapply cumul_red_l.
+          -- eassumption.
+          -- eapply cumul_refl'.
+        * eapply cumul_red_r.
+          -- eapply cumul_refl'.
+          -- assumption.
+      + simpl. constructor.
+        eapply cumul_red_l.
+        * eassumption.
+        * eapply cumul_refl'.
+  Qed.
+
+  Lemma red_conv_r :
+    forall leq Γ u v,
+      red (fst Σ) Γ u v ->
+      conv leq Σ Γ v u.
+  Proof.
+    intros leq Γ u v h.
+    induction h.
+    - apply conv_refl'.
+    - eapply conv_trans ; try eassumption.
+      destruct leq.
+      + simpl. constructor. constructor.
+        * eapply cumul_red_r.
+          -- eapply cumul_refl'.
+          -- assumption.
+        * eapply cumul_red_l.
+          -- eassumption.
+          -- eapply cumul_refl'.
+      + simpl. constructor.
+        eapply cumul_red_r.
+        * eapply cumul_refl'.
+        * assumption.
+  Qed.
+
   Inductive state :=
   | Reduction
   | Term
@@ -359,23 +435,66 @@ Section Conversion.
         { b : bool | if b then conv leq Σ Γ (zipc t π) (zipc t π') else True }
     end.
 
-  Notation no := (exist false I).
-  Notation yes := (exist true _).
-  Notation rec isconv_prog leq Γ t1 π1 h1 t2 π2 h2 :=
-    (let '(exist b h) := isconv_prog leq Γ t1 π1 h1 t2 π2 h2 in exist b _).
+  Definition Aux s Γ leq t π :=
+     forall s' t' π' (h' : welltyped Σ Γ (zipc t' π')),
+       R (s', t', π') (s, t, π) -> Ret s' Γ leq t' π'.
 
-  Equations _isconv_red (Γ : context) (leq : conv_pb)
+  Notation no := (exist false I) (only parsing).
+  Notation yes := (exist true _) (only parsing).
+  Notation repack e := (let '(exist b h) := e in exist b _) (only parsing).
+  Notation isconv_red Γ leq t1 π1 h1 t2 π2 h2 aux :=
+    (repack (aux Reduction t1 π1 h1 _ t2 π2 h2)) (only parsing).
+  Notation isconv_prog Γ leq t1 π1 h1 t2 π2 h2 aux :=
+    (repack (aux Term t1 π1 h1 _ t2 π2 h2)) (only parsing).
+  Notation isconv_args Γ leq t π1 h1 π2 h2 aux :=
+    (repack (aux Args t π1 h1 _ π2 h2)) (only parsing).
+
+  Equations(noeqns) _isconv_red (Γ : context) (leq : conv_pb)
             (t1 : term) (π1 : stack) (h1 : welltyped Σ Γ (zipc t1 π1))
             (t2 : term) (π2 : stack) (h2 : welltyped Σ Γ (zipc t2 π2))
-            (aux : forall s' t' π', R (s', t', π') (Reduction, t1, π1) -> Ret s' Γ leq t' π')
+            (aux : Aux Reduction Γ leq t1 π1)
     : { b : bool | if b then conv leq Σ Γ (zipc t1 π1) (zipc t2 π2) else True } :=
 
-    _isconv_red Γ leq t1 π1 h1 t2 π2 h2 aux := no.
+    _isconv_red Γ leq t1 π1 h1 t2 π2 h2 aux
+    with inspect (reduce_stack nodelta_flags Σ Γ t1 π1 h1) := {
+    | @exist (t1',π1') eq1
+      with inspect (reduce_stack nodelta_flags Σ Γ t2 π2 h2) := {
+      | @exist (t2',π2') eq2 => isconv_prog Γ leq t1' π1' _ t2' π2' _ aux
+      }
+    }.
+  Next Obligation.
+    eapply red_welltyped.
+    - eapply h1.
+    - do 2 zip fold. rewrite eq1.
+      eapply reduce_stack_sound.
+  Qed.
+  Next Obligation.
+    (* (t1', π1') = reduce_stack nodelta_flags Σ Γ t1 π1 h1 *)
+    (* ---------------------------------------------------- *)
+    (*        R (Term, t1', π1') (Reduction, t1, π1)        *)
+  Admitted.
+  Next Obligation.
+    eapply red_welltyped.
+    - eapply h2.
+    - repeat zip fold. rewrite eq2.
+      eapply reduce_stack_sound.
+  Qed.
+  Next Obligation.
+    destruct b ; auto.
+    destruct (reduce_stack_sound nodelta_flags _ _ _ _ h1).
+    destruct (reduce_stack_sound nodelta_flags _ _ _ _ h2).
+    eapply conv_trans.
+    - eapply red_conv_l. eassumption.
+    - eapply conv_trans.
+      + rewrite <- eq1. eassumption.
+      + zip fold. rewrite eq2.
+        eapply red_conv_r. assumption.
+  Qed.
 
   Equations _isconv_prog (Γ : context) (leq : conv_pb)
             (t1 : term) (π1 : stack) (h1 : welltyped Σ Γ (zipc t1 π1))
             (t2 : term) (π2 : stack) (h2 : welltyped Σ Γ (zipc t2 π2))
-            (aux : forall s' t' π', R (s', t', π') (Term, t1, π1) -> Ret s' Γ leq t' π')
+            (aux : Aux Term Γ leq t1 π1)
     : { b : bool | if b then conv leq Σ Γ (zipc t1 π1) (zipc t2 π2) else True } :=
 
     _isconv_prog Γ leq t1 π1 h1 t2 π2 h2 aux := no.
@@ -383,14 +502,14 @@ Section Conversion.
   Equations _isconv_args (Γ : context) (leq : conv_pb) (t : term)
             (π1 : stack) (h1 : welltyped Σ Γ (zipc t π1))
             (π2 : stack) (h2 : welltyped Σ Γ (zipc t π2))
-            (aux : forall s' t' π', R (s', t', π') (Args, t, π1) -> Ret s' Γ leq t' π')
+            (aux : Aux Args Γ leq t π1)
     : { b : bool | if b then conv leq Σ Γ (zipc t π1) (zipc t π2) else True } :=
 
     _isconv_args Γ leq t π1 h1 π2 h2 aux := no.
 
   Equations _isconv (s : state) (Γ : context) (leq : conv_pb)
             (t : term) (π : stack) (h : welltyped Σ Γ (zipc t π))
-            (aux : forall s' t' π', R (s', t', π') (s, t, π) -> Ret s' Γ leq t' π')
+            (aux : Aux s Γ leq t π)
   : Ret s Γ leq t π :=
     _isconv Reduction Γ leq t π h aux :=
       λ { | t' | π' | h' := _isconv_red Γ leq t π h t' π' h' aux } ;

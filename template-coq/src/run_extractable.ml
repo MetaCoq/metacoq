@@ -1,5 +1,5 @@
 open Extractable
-open PluginCore
+open Plugin_core
 
 let rec interp_tm (t : 'a coq_TM) : 'a tm =
   match t with

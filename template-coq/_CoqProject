@@ -1,4 +1,5 @@
 -I src
+-I gen-src
 -R theories Template
 
 # the MetaCoq plugin
@@ -17,10 +18,6 @@ src/run_template_monad.mli
 src/run_template_monad.ml
 src/plugin_core.mli
 src/plugin_core.ml
-
-# the MetaCoq plugin-extraction code
-src/run_extractable.ml
-src/meta_coq_plugin.mlpack
 
 theories/LibHypsNaming.v
 theories/utils.v theories/config.v theories/kernel/univ.v
@@ -42,4 +39,5 @@ theories/TemplateMonad/Monad.v
 theories/monad_utils.v
 
 # for Extraction
-theories/Extraction.v
+gen-src/Extraction.v
+gen-src/extracted.mlpack

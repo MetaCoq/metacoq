@@ -346,7 +346,7 @@ Section Conversion.
 
   Definition R (u v : state * term * stack) := False.
 
-  Definition Ret Γ leq s t π :=
+  Definition Ret s Γ leq t π :=
     match s with
     | Reduction =>
       forall t' π' (h' : welltyped Σ Γ (zipc t' π')),
@@ -359,11 +359,23 @@ Section Conversion.
         { b : bool | if b then conv leq Σ Γ (zipc t π) (zipc t π') else True }
     end.
 
-  Definition _isconv (Γ : context) (leq : conv_pb) (s : state)
+  Notation no := (exist false I).
+  Notation yes := (exist true _).
+  Notation rec isconv_prog leq Γ t1 π1 h1 t2 π2 h2 :=
+    (let '(exist b h) := isconv_prog leq Γ t1 π1 h1 t2 π2 h2 in exist b _).
+
+  Equations _isconv (s : state) (Γ : context) (leq : conv_pb)
             (t : term) (π : stack) (h : welltyped Σ Γ (zipc t π))
-            (aux : forall s' t' π', R (s', t', π') (s, t, π) -> Ret Γ leq s' t' π')
-  : Ret Γ leq s t π.
-  Abort.
+            (aux : forall s' t' π', R (s', t', π') (s, t, π) -> Ret s' Γ leq t' π')
+  : Ret s Γ leq t π :=
+    (* Corresponds to isconv *)
+    _isconv Reduction Γ leq t π h aux t' π' h' := no ;
+
+    (* Corresponds to isconv_prog *)
+    _isconv Term Γ leq t π h aux t' π' h' := no ;
+
+    (* Corresponds to isconv_stacks *)
+    _isconv Args Γ leq t π h aux π' h' := no.
 
   (* The idea is that when comparing two terms, we first reduce on both sides.
      We then go deeper inside the term, and sometimes recurse on the stacks
@@ -377,11 +389,6 @@ Section Conversion.
   (*   let '(u, π) := reduce_stack RedFlags.default Σ Γ (fst u) (snd u) in *)
   (*   let '(v, ρ) := reduce_stack RedFlags.default Σ Γ (fst v) (snd v) in *)
   (*   posR (stack_pos u π) (stack_pos v ρ). *)
-
-  Notation no := (exist false I).
-  Notation yes := (exist true _).
-  Notation rec isconv_prog leq Γ t1 π1 h1 t2 π2 h2 :=
-    (let '(exist b h) := isconv_prog leq Γ t1 π1 h1 t2 π2 h2 in exist b _).
 
   (* We have to devise an order for termination.
      It seems that we could somehow use the R from before, except that we would

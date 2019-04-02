@@ -29,6 +29,13 @@ Section Conversion.
   Context `{checker_flags}.
   Context (Σ : global_context).
 
+  Tactic Notation "zip" "fold" "in" hyp(h) :=
+    lazymatch type of h with
+    | context C[ zipc ?t ?π ] =>
+      let C' := context C[ zip (t,π) ] in
+      change C' in h
+    end.
+
   Tactic Notation "zip" "fold" :=
     lazymatch goal with
     | |- context C[ zipc ?t ?π ] =>
@@ -499,13 +506,61 @@ Section Conversion.
 
     _isconv_prog Γ leq t1 π1 h1 t2 π2 h2 aux := no.
 
-  Equations _isconv_args (Γ : context) (leq : conv_pb) (t : term)
+
+  (* TODO Replace by Conv, perhaps it should even be global to iscong_args.
+     In any case, leq should be quantified over in Aux.
+   *)
+  Equations(noeqns) _isconv_args (Γ : context) (leq : conv_pb) (t : term)
             (π1 : stack) (h1 : welltyped Σ Γ (zipc t π1))
             (π2 : stack) (h2 : welltyped Σ Γ (zipc t π2))
             (aux : Aux Args Γ leq t π1)
     : { b : bool | if b then conv leq Σ Γ (zipc t π1) (zipc t π2) else True } :=
 
+    _isconv_args Γ leq t (App u1 ρ1) h1 (App u2 ρ2) h2 aux
+    with isconv_red Γ leq u1 Empty _ u2 Empty _ aux := {
+    | @exist true h1 := isconv_args Γ leq (tApp t u1) ρ1 _ ρ2 _ aux ;
+    | @exist false _ := no
+    } ;
+
+    _isconv_args Γ leq t Empty h1 Empty h2 aux := yes ;
+
     _isconv_args Γ leq t π1 h1 π2 h2 aux := no.
+  Next Obligation.
+    apply conv_refl'.
+  Qed.
+  Next Obligation.
+    zip fold in h1.
+    apply welltyped_context in h1. cbn in h1.
+    destruct h1 as [T h1].
+    destruct (inversion_App h1) as [na [A [B [[?] [[?] [?]]]]]].
+    exists A. assumption.
+  Qed.
+  Next Obligation.
+    (* R (Reduction, u1, Empty) (Args, t, App u1 ρ1) *)
+  Admitted.
+  Next Obligation.
+    zip fold in h2.
+    apply welltyped_context in h2. cbn in h2.
+    destruct h2 as [T h2].
+    destruct (inversion_App h2) as [na [A [B [[?] [[?] [?]]]]]].
+    exists A. assumption.
+  Qed.
+  Next Obligation.
+  Admitted.
+  Next Obligation.
+  Admitted.
+  Next Obligation.
+    (* R (Args, tApp t u1, ρ1) (Args, t, App u1 ρ1) *)
+  Admitted.
+  Next Obligation.
+    (* Here I need obligation 5, but it shouldn't exist!
+       Maybe the notation isconv_red is broken.
+     *)
+  Admitted.
+  Next Obligation.
+    destruct b ; auto.
+    (* Similar, we're missing one hypothesis, hidden in h1 *)
+  Admitted.
 
   Equations _isconv (s : state) (Γ : context) (leq : conv_pb)
             (t : term) (π : stack) (h : welltyped Σ Γ (zipc t π))

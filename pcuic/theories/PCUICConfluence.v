@@ -92,10 +92,10 @@ Section Confluence.
             destruct (application_atom_mkApps H); subst; try discriminate
           end)).
 
-  Lemma pred_mkApps Σ Γ M0 M1 N0 N1 :
-    pred1 Σ Γ M0 M1 ->
-    All2 (pred1 Σ Γ) N0 N1 ->
-    pred1 Σ Γ (mkApps M0 N0) (mkApps M1 N1).
+  Lemma pred_mkApps Σ Γ Δ M0 M1 N0 N1 :
+    pred1 Σ Γ Δ M0 M1 ->
+    All2 (pred1 Σ Γ Δ) N0 N1 ->
+    pred1 Σ Γ Δ (mkApps M0 N0) (mkApps M1 N1).
   Proof.
     intros.
     induction X0 in M0, M1, X |- *. auto.
@@ -103,16 +103,17 @@ Section Confluence.
   Qed.
 
   Lemma pred_snd_nth:
-    ∀ (Σ : global_context) (Γ : context) (c : nat) (brs1 brs' : list (nat * term)),
+    ∀ (Σ : global_context) (Γ Δ : context) (c : nat) (brs1 brs' : list (nat * term)),
       All2
-        (on_Trel (pred1 Σ Γ) snd) brs1
-        brs'
-      → pred1 Σ Γ
+        (on_Trel (pred1 Σ Γ Δ) snd) brs1
+        brs' ->
+        pred1_ctx Σ Γ Δ ->
+      pred1 Σ Γ Δ
               (snd (nth c brs1 (0, tDummy)))
               (snd (nth c brs' (0, tDummy))).
   Proof.
-    intros Σ Γ c brs1 brs' brsl.
-    induction brsl in c |- *; simpl. apply pred1_refl.
+    intros Σ Γ Δ c brs1 brs' brsl. intros.
+    induction brsl in c |- *; simpl. destruct c; now apply pred1_refl_gen.
     destruct c; auto.
   Qed.
 
@@ -126,10 +127,10 @@ Section Confluence.
     - intros H. apply (IHl _ _ _ H).
   Qed.
 
-  Lemma pred1_mkApps_tConstruct (Σ : global_context) (Γ : context)
+  Lemma pred1_mkApps_tConstruct (Σ : global_context) (Γ Δ : context)
         ind pars k (args : list term) c :
-    pred1 Σ Γ (mkApps (tConstruct ind pars k) args) c ->
-    {args' : list term & (c = mkApps (tConstruct ind pars k) args') * (All2 (pred1 Σ Γ) args args') }%type.
+    pred1 Σ Γ Δ (mkApps (tConstruct ind pars k) args) c ->
+    {args' : list term & (c = mkApps (tConstruct ind pars k) args') * (All2 (pred1 Σ Γ Δ) args args') }%type.
   Proof with solve_discr.
     revert c. induction args using rev_ind; intros; simpl in *.
     depelim X... exists []. intuition auto.
@@ -142,18 +143,20 @@ Section Confluence.
     eapply All2_app; auto. 
   Qed.
 
-  Lemma pred1_mkApps_refl_tConstruct (Σ : global_context) Γ i k u l l' :
-    pred1 Σ Γ (mkApps (tConstruct i k u) l) (mkApps (tConstruct i k u) l') ->
-    All2 (pred1 Σ Γ) l l'.
+  Lemma pred1_mkApps_refl_tConstruct (Σ : global_context) Γ Δ i k u l l' :
+    pred1 Σ Γ Δ (mkApps (tConstruct i k u) l) (mkApps (tConstruct i k u) l') ->
+    All2 (pred1 Σ Γ Δ) l l'.
   Proof.
     intros.
     eapply pred1_mkApps_tConstruct in X. destruct X.
     destruct p. now eapply mkApps_eq_inj in e as [_ <-].
   Qed.
 
-  Lemma pred1_mkApps_tFix_inv (Σ : global_context) (Γ : context)
+  (*
+
+  Lemma pred1_mkApps_tFix_inv (Σ : global_context) (Γ Δ : context)
         mfix0 idx (args0 : list term) c :
-    pred1 Σ Γ (mkApps (tFix mfix0 idx) args0) c ->
+    pred1 Σ Γ Δ (mkApps (tFix mfix0 idx) args0) c ->
     ({ mfix1 & { args1 : list term &
                          (c = mkApps (tFix mfix1 idx) args1) *
                          All2_prop2_eq Γ (Γ ,,, fix_context mfix0) dtype dbody
@@ -165,6 +168,7 @@ Section Confluence.
       (is_constructor narg args1 = true) *
       (All2 (pred1 Σ Γ) args0 args1) *
       (pred1 Σ Γ fn0 fn1) * (c = mkApps fn1 args1)) } } } })%type.
+
   Proof with solve_discr.
     intros pred. remember (mkApps _ _) as fixt. revert mfix0 idx args0 Heqfixt.
     induction pred; intros; solve_discr.
@@ -1024,3 +1028,6 @@ Section Confluence.
 Admitted.
 
 End ParallelSubstitution.
+*)
+
+End Confluence.

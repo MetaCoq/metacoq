@@ -364,18 +364,42 @@ Section Conversion.
   Notation rec isconv_prog leq Γ t1 π1 h1 t2 π2 h2 :=
     (let '(exist b h) := isconv_prog leq Γ t1 π1 h1 t2 π2 h2 in exist b _).
 
+  Equations _isconv_red (Γ : context) (leq : conv_pb)
+            (t1 : term) (π1 : stack) (h1 : welltyped Σ Γ (zipc t1 π1))
+            (t2 : term) (π2 : stack) (h2 : welltyped Σ Γ (zipc t2 π2))
+            (aux : forall s' t' π', R (s', t', π') (Reduction, t1, π1) -> Ret s' Γ leq t' π')
+    : { b : bool | if b then conv leq Σ Γ (zipc t1 π1) (zipc t2 π2) else True } :=
+
+    _isconv_red Γ leq t1 π1 h1 t2 π2 h2 aux := no.
+
+  Equations _isconv_prog (Γ : context) (leq : conv_pb)
+            (t1 : term) (π1 : stack) (h1 : welltyped Σ Γ (zipc t1 π1))
+            (t2 : term) (π2 : stack) (h2 : welltyped Σ Γ (zipc t2 π2))
+            (aux : forall s' t' π', R (s', t', π') (Term, t1, π1) -> Ret s' Γ leq t' π')
+    : { b : bool | if b then conv leq Σ Γ (zipc t1 π1) (zipc t2 π2) else True } :=
+
+    _isconv_prog Γ leq t1 π1 h1 t2 π2 h2 aux := no.
+
+  Equations _isconv_args (Γ : context) (leq : conv_pb) (t : term)
+            (π1 : stack) (h1 : welltyped Σ Γ (zipc t π1))
+            (π2 : stack) (h2 : welltyped Σ Γ (zipc t π2))
+            (aux : forall s' t' π', R (s', t', π') (Args, t, π1) -> Ret s' Γ leq t' π')
+    : { b : bool | if b then conv leq Σ Γ (zipc t π1) (zipc t π2) else True } :=
+
+    _isconv_args Γ leq t π1 h1 π2 h2 aux := no.
+
   Equations _isconv (s : state) (Γ : context) (leq : conv_pb)
             (t : term) (π : stack) (h : welltyped Σ Γ (zipc t π))
             (aux : forall s' t' π', R (s', t', π') (s, t, π) -> Ret s' Γ leq t' π')
   : Ret s Γ leq t π :=
-    (* Corresponds to isconv *)
-    _isconv Reduction Γ leq t π h aux t' π' h' := no ;
+    _isconv Reduction Γ leq t π h aux :=
+      λ { | t' | π' | h' := _isconv_red Γ leq t π h t' π' h' aux } ;
 
-    (* Corresponds to isconv_prog *)
-    _isconv Term Γ leq t π h aux t' π' h' := no ;
+    _isconv Term Γ leq t π h aux :=
+      λ { | t' | π' | h' := _isconv_prog Γ leq t π h t' π' h' aux } ;
 
-    (* Corresponds to isconv_stacks *)
-    _isconv Args Γ leq t π h aux π' h' := no.
+    _isconv Args Γ leq t π h aux :=
+      λ { | π' | h' := _isconv_args Γ leq t π h π' h' aux }.
 
   (* The idea is that when comparing two terms, we first reduce on both sides.
      We then go deeper inside the term, and sometimes recurse on the stacks

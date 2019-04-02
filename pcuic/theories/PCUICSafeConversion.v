@@ -442,24 +442,24 @@ Section Conversion.
         { b : bool | if b then conv leq Σ Γ (zipc t π) (zipc t π') else True }
     end.
 
-  Definition Aux s Γ leq t π :=
-     forall s' t' π' (h' : welltyped Σ Γ (zipc t' π')),
+  Definition Aux s Γ t π :=
+     forall leq s' t' π' (h' : welltyped Σ Γ (zipc t' π')),
        R (s', t', π') (s, t, π) -> Ret s' Γ leq t' π'.
 
   Notation no := (exist false I) (only parsing).
   Notation yes := (exist true _) (only parsing).
   Notation repack e := (let '(exist b h) := e in exist b _) (only parsing).
   Notation isconv_red Γ leq t1 π1 h1 t2 π2 h2 aux :=
-    (repack (aux Reduction t1 π1 h1 _ t2 π2 h2)) (only parsing).
+    (repack (aux leq Reduction t1 π1 h1 _ t2 π2 h2)) (only parsing).
   Notation isconv_prog Γ leq t1 π1 h1 t2 π2 h2 aux :=
-    (repack (aux Term t1 π1 h1 _ t2 π2 h2)) (only parsing).
+    (repack (aux leq Term t1 π1 h1 _ t2 π2 h2)) (only parsing).
   Notation isconv_args Γ leq t π1 h1 π2 h2 aux :=
-    (repack (aux Args t π1 h1 _ π2 h2)) (only parsing).
+    (repack (aux leq Args t π1 h1 _ π2 h2)) (only parsing).
 
   Equations(noeqns) _isconv_red (Γ : context) (leq : conv_pb)
             (t1 : term) (π1 : stack) (h1 : welltyped Σ Γ (zipc t1 π1))
             (t2 : term) (π2 : stack) (h2 : welltyped Σ Γ (zipc t2 π2))
-            (aux : Aux Reduction Γ leq t1 π1)
+            (aux : Aux Reduction Γ t1 π1)
     : { b : bool | if b then conv leq Σ Γ (zipc t1 π1) (zipc t2 π2) else True } :=
 
     _isconv_red Γ leq t1 π1 h1 t2 π2 h2 aux
@@ -501,7 +501,7 @@ Section Conversion.
   Equations _isconv_prog (Γ : context) (leq : conv_pb)
             (t1 : term) (π1 : stack) (h1 : welltyped Σ Γ (zipc t1 π1))
             (t2 : term) (π2 : stack) (h2 : welltyped Σ Γ (zipc t2 π2))
-            (aux : Aux Term Γ leq t1 π1)
+            (aux : Aux Term Γ t1 π1)
     : { b : bool | if b then conv leq Σ Γ (zipc t1 π1) (zipc t2 π2) else True } :=
 
     _isconv_prog Γ leq t1 π1 h1 t2 π2 h2 aux := no.
@@ -513,7 +513,7 @@ Section Conversion.
   Equations(noeqns) _isconv_args (Γ : context) (leq : conv_pb) (t : term)
             (π1 : stack) (h1 : welltyped Σ Γ (zipc t π1))
             (π2 : stack) (h2 : welltyped Σ Γ (zipc t π2))
-            (aux : Aux Args Γ leq t π1)
+            (aux : Aux Args Γ t π1)
     : { b : bool | if b then conv leq Σ Γ (zipc t π1) (zipc t π2) else True } :=
 
     _isconv_args Γ leq t (App u1 ρ1) h1 (App u2 ρ2) h2 aux
@@ -564,7 +564,7 @@ Section Conversion.
 
   Equations _isconv (s : state) (Γ : context) (leq : conv_pb)
             (t : term) (π : stack) (h : welltyped Σ Γ (zipc t π))
-            (aux : Aux s Γ leq t π)
+            (aux : Aux s Γ t π)
   : Ret s Γ leq t π :=
     _isconv Reduction Γ leq t π h aux :=
       λ { | t' | π' | h' := _isconv_red Γ leq t π h t' π' h' aux } ;

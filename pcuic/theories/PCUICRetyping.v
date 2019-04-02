@@ -101,4 +101,14 @@ Section TypeOf.
     ty <- type_of Γ t;;
     type_of_as_sort type_of Γ ty.
 
+
+  Theorem type_of_sound :
+    forall {Γ t A},
+      Σ ;;; Γ |- t : A ->
+                    { B : term & (type_of Γ t = Checked B)
+                                 * (Σ ;;; Γ |- t : B)
+                                 * (cumul Σ Γ B A) }%type.
+  Proof.
+  Admitted.
+  
 End TypeOf.

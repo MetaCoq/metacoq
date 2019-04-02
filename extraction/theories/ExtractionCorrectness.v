@@ -50,43 +50,67 @@ Tactic Notation "destruct" "?" :=
   | [ H : context[match ?X with _ => _ end] |- _] => destruct X eqn:E
   end.
 
-Lemma eval_is_type `{Fuel} (Σ : PCUICAst.global_context) (t v : PCUICAst.term) :
-  PCUICWcbvEval.eval Σ [] t v -> Extract.is_type_or_proof Σ [] t = Checked true -> Extract.is_type_or_proof Σ [] v = Checked true.
-Proof.
-  unfold Extract.is_type_or_proof.
-Admitted.
-
-
-Lemma eval_is_type_backwards `{Fuel} (Σ : PCUICAst.global_context) (t v : PCUICAst.term) :
-  PCUICWcbvEval.eval Σ [] t v -> Extract.is_type_or_proof Σ [] v = Checked true -> Extract.is_type_or_proof Σ [] t = Checked true.
-Proof.
-  unfold Extract.is_type_or_proof.
-Admitted.
-
-
-Lemma is_type_extract `{Fuel} (Σ : PCUICAst.global_context) Γ (t : PCUICAst.term) :
-  Extract.is_type_or_proof Σ Γ t = Checked true -> extract Σ Γ t = Checked E.tBox.
-Proof.
-  intros H1.
-  destruct t; simpl; try rewrite H1; try reflexivity.
-  all: inversion H1.  
-Qed.
-
-(* Lemma is_proof_app `{Fuel} Σ f a : *)
-(*   Extract.is_type_or_proof Σ [] f = Extract.is_type_or_proof Σ [] (PCUICAst.tApp f a). *)
-(* Proof. *)
-(*   unfold Extract.is_type_or_proof. cbn [type_of]. destruct type_of as [T|]; try reflexivity. *)
-(*   unfold bind at 1 4. cbn -[bind]. *)
-(*   unfold is_arity at 1.  *)
-  
-(* Admitted. *)
-
-
 Theorem subject_reduction_eval : forall (Σ : PCUICAst.global_context) Γ t u T,
   wf Σ -> Σ ;;; Γ |- t : T -> PCUICWcbvEval.eval Σ Γ t u -> Σ ;;; Γ |- u : T.
 Proof.
   intros * wfΣ Hty Hred % wcbeval_red. eapply subject_reduction; eauto.
 Qed.
+
+Lemma cumul_is_arity:
+  forall (H : Fuel) (Σ : PCUICAst.global_context) (T' T'' : PCUICAst.term),
+    Σ;;; [] |- T'' <= T' -> forall a : bool, is_arity Σ [] H T' = Checked a <-> is_arity Σ [] H T'' = Checked a.
+Proof.
+  intros H Σ T' T''.
+
+Admitted.
+
+Lemma eval_is_type `{Fuel} (Σ : PCUICAst.global_context) (t v : PCUICAst.term) (* T : *)
+  (* wf Σ -> Σ ;;; [] |- t : T -> *) :
+  PCUICWcbvEval.eval Σ [] t v -> Extract.is_type_or_proof Σ [] t = Checked true -> Extract.is_type_or_proof Σ [] v = Checked true.
+Proof. 
+  (* intros. *)
+  (* destruct (type_of_sound _ X0) as (T' & [] & ?). *)
+  (* eapply subject_reduction_eval in t0; eauto. *)
+  (* destruct (type_of_sound _ t0) as (T'' & [] & ?). *)
+  (* unfold is_type_or_proof in *. rewrite e, e0 in *. *)
+  (* simpl in *.  *)
+
+  (* destruct (is_arity _ _ _ T') eqn:E1. *)
+  (* eapply (cumul_is_arity H Σ T' T'' c0) in E1 as ->. reflexivity. *)
+  (* destruct ?; eauto.  *)
+Admitted.
+
+Lemma eval_is_type_backwards `{Fuel} (Σ : PCUICAst.global_context) (t v : PCUICAst.term) (* T : *)
+  (* wf Σ -> Σ ;;; [] |- t : T -> *) :
+  PCUICWcbvEval.eval Σ [] t v -> Extract.is_type_or_proof Σ [] v = Checked true -> Extract.is_type_or_proof Σ [] t = Checked true.
+Proof.
+  intros.
+  (* destruct (type_of_sound _ X0) as (T' & [] & ?). *)
+  (* eapply subject_reduction_eval in t0; eauto. *)
+  (* destruct (type_of_sound _ t0) as (T'' & [] & ?). *)
+  (* unfold is_type_or_proof in *. rewrite e, e0 in *. *)
+  (* simpl in *. *)
+
+  (* destruct (is_arity _ _ _ T') eqn:E1. reflexivity. *)
+    
+Admitted.
+  
+Lemma is_type_extract `{Fuel} (Σ : PCUICAst.global_context) Γ (t : PCUICAst.term) (* T : *)
+  (* Σ ;;; Γ |- t : T -> *) :
+  Extract.is_type_or_proof Σ Γ t = Checked true <-> extract Σ Γ t = Checked E.tBox.
+Proof.
+  split.
+  - intros H1.
+    destruct t; simpl; try rewrite H1; try reflexivity.
+    all: try inversion H1.
+  (* - intros. induction X. *)
+  (*   all: simpl in H0; try destruct ?; try destruct a0. all: try congruence. *)
+  (*   cbn in E. destruct is_arity eqn:EE. inv E. *)
+  (*   all: try now destruct ?; congruence. *)
+  (*   cbn in E. destruct H. cbn in E. inv E. *)
+
+    
+Admitted.
 
 Lemma extract_subst1 
   (Σ : PCUICAst.global_context) (na : name) (t b a' : PCUICAst.term) (fuel : Fuel) (a0 : E.term) :
@@ -115,7 +139,7 @@ Admitted.
 
 
 Lemma is_type_or_proof_mkApps `{Fuel} Σ Γ a l :
-  Extract.is_type_or_proof Σ Γ a = Checked true ->
+  Extract.is_type_or_proof Σ Γ a = Checked true <->
   Extract.is_type_or_proof Σ Γ (PCUICAst.mkApps a l) = Checked true.
 Admitted.
 
@@ -132,13 +156,87 @@ Proof.
 Qed.
 
 
+Lemma emkApps_snoc a l b :
+  mkApps a (l ++ [b]) = tApp (mkApps a l) b.
+Proof.
+  revert a; induction l; cbn; congruence.
+Qed.
+
+Lemma All2_app_inv : forall (A B : Type) (R : A -> B -> Type),
+    forall l l1 l2, All2 R (l1 ++ l2) l -> { '(l1',l2') : _ & (l = l1' ++ l2')%list * (All2 R l1 l1') * (All2 R l2 l2')}%type.
+Proof.
+  intros. revert l2 l X. induction l1; intros; cbn in *.
+  - exists ([], l). eauto.
+  - inversion X. subst.
+    eapply IHl1 in X1 as ( [] & ? & ?). destruct p.  subst.
+    eexists (y :: l, l0). repeat split; eauto.
+Qed.
+
+Lemma All2_ind_rev : forall (A B : Type) (R : A -> B -> Type) (P : forall (l : list A) (l0 : list B), Prop),
+    P [] [] ->
+    (forall (x : A) (y : B) (l : list A) (l' : list B) (r : R x y) (a : All2 R l l'),
+        P l l' -> P (l ++ [x])%list (l' ++ [y]))%list ->
+    forall (l : list A) (l0 : list B) (a : All2 R l l0), P l l0.
+Proof.
+  intros. revert l0 a. induction l using rev_ind; cbn; intros.
+  - inv a. eauto.
+  - eapply All2_app_inv in a as ([] & [[]]). subst.
+    inv a0. inv X0. eauto.
+Qed.
+
+Lemma last_inv A (l1 l2 : list A) x y :
+  (l1 ++ [x] = l2 ++ [y] -> l1 = l2 /\ x = y)%list.
+Proof.
+  revert l2. induction l1; cbn; intros.
+  - destruct l2; inv H. eauto. destruct l2; inv H2.
+  - destruct l2; inv H. destruct l1; inv H2.
+    eapply IHl1 in H2 as []. split; congruence.
+Qed.
+
+Lemma All2_app : forall (A B : Type) (R : A -> B -> Type),
+    forall l1 l2 l1' l2', All2 R l1 l1' -> All2 R l2 l2' -> All2 R (l1 ++ l2) (l1' ++ l2').
+Proof.
+  induction 1; cbn; eauto.
+Qed.
+
 Lemma extract_Apps `{Fuel} Σ Γ a args x :
   extract Σ Γ (PCUICAst.mkApps a args) = Checked x -> {e : _ & (extract Σ Γ a = Checked e) *
                                                               { l : list E.term & (All2 (fun a e => extract Σ Γ a = Checked e) args l) *
-                                                                                  (x = mkApps e l)
-                                                                                  (* match e with tBox => x = tBox | _ => (x = mkApps e l) end *) }}%type.
+                                                                                  (* (x = mkApps e l) *)
+                                                                                  match e with tBox => x = tBox | _ => (x = mkApps e l) end }}%type.
+Proof.
+  revert a x. induction args using rev_ind; intros.
+  - cbn in H0. repeat eexists; eauto. destruct x; eauto.
+  - rewrite mkApps_snoc in H0. assert (H17 := H0). simpl in H0.
+    destruct ?. destruct a0. all:try congruence.
+    + inv H0. exists tBox. split. eapply is_type_extract. admit. 
+      eapply is_type_or_proof_mkApps with (l := [x]) in E. 
+      eapply is_type_extract in E. eapply IHargs in E as (? & ?  & ? & ? &?).
+      Lemma mkApps_tbox:
+        forall x0 (x1 : list E.term), E.tBox = mkApps x0 x1 -> x0 = tBox.
+      Proof.
+        intros.
+        induction x1 using rev_ind; rewrite ?emkApps_snoc in *. cbn in H. inv H. eauto.
+        inv H.
+      Qed.
+      destruct x0; try eapply mkApps_tbox in y; inv y.
+      destruct (extract Σ Γ x) eqn:EE.
+      * repeat eexists; eauto. eapply All2_app. eauto. 
+        repeat econstructor. eauto.
+      * admit.
+    + destruct ?. destruct ?. all:try congruence. inv H0.
+      eapply IHargs in E0 as (? & ? & ? & ? & ?).
+      exists x0. split. eauto. exists (x1 ++ [a1])%list.
+      split. eapply All2_app. eauto. repeat econstructor. eauto.
+      rewrite emkApps_snoc. destruct x0; subst; eauto.
+      admit.      
+Admitted.
+
+Lemma extract_Apps2 `{Fuel} Σ Γ a args e l :
+  extract Σ Γ a = Checked e -> Forall2 (fun a e => extract Σ Γ a = Checked e) args l ->                                                                                  extract Σ Γ (PCUICAst.mkApps a args) = Checked (mkApps e l).
 Proof.
 Admitted.
+
 
 Lemma is_type_App `{Fuel} Σ a l T :
   Σ ;;; [] |- PCUICAst.mkApps a l : T -> 
@@ -169,60 +267,72 @@ Proof.
   intros Σ' e x H2.
 Admitted.
 
-Lemma All2_ind_rev : forall (A B : Type) (R : A -> B -> Type) (P : forall (l : list A) (l0 : list B), Prop),
-    P [] [] ->
-    (forall (x : A) (y : B) (l : list A) (l' : list B) (r : R x y) (a : All2 R l l'),
-        P l l' -> P (l ++ [x])%list (l' ++ [y]))%list ->
-    forall (l : list A) (l0 : list B) (a : All2 R l l0), P l l0.
+Lemma extract_constant:
+  forall (Σ : PCUICAst.global_context) (c : ident) (decl : PCUICAst.constant_body) (body : PCUICAst.term)
+    (u : universe_instance) (fuel : Fuel) (Σ' : list E.global_decl),
+    wf Σ ->
+    PCUICTyping.declared_constant Σ c decl ->
+    extract_global Σ = Checked Σ' ->
+    PCUICAst.cst_body decl = Some body ->
+    exists decl' : constant_body, exists ebody,
+        declared_constant Σ' c decl' /\
+        extract Σ [] (PCUICUnivSubst.subst_instance_constr u body) = Checked ebody /\ cst_body decl' = Some ebody.
+Proof.
+  intros (decls, Σ) c decl body u fuel Σ'. intros. 
+  induction decls using rev_ind.
+  - inv H0. inv H.
+  - simpl in H0. rewrite rev_app_distr in *. simpl in H0. destruct x.
+    + unfold PCUICTyping.declared_constant in H.
+      
 Admitted.
 
-Lemma All2_app : forall (A B : Type) (R : A -> B -> Type),
-    forall l1 l2 l1' l2', All2 R l1 l1' -> All2 R l2 l2' -> All2 R (l1 ++ l2) (l1' ++ l2').
+Lemma is_type_ind:
+  forall (Σ : PCUICAst.global_context) (i : inductive) (u : universe_instance) (T : PCUICAst.term) (fuel : Fuel),
+    Σ;;; [] |- tInd i u : T -> is_type_or_proof Σ [] (tInd i u) = Checked true.
 Proof.
+  
 Admitted.
 
-Lemma All2_app_inv : forall (A B : Type) (R : A -> B -> Type),
-    forall l l1 l2, All2 R (l1 ++ l2) l -> { '(l1',l2') : _ & (l = l1' ++ l2')%list * (All2 R l1 l1') * (All2 R l2 l2')}%type.
+Lemma eval_tBox_inv Σ' x2 :
+  eval Σ' E.tBox x2 -> x2 = tBox.
 Proof.
-  intros. revert l2 l X. induction l1; intros; cbn in *.
-  - exists ([], l). eauto.
-  - inversion X. subst.
-    eapply IHl1 in X1 as ( [] & ? & ?). destruct p.  subst.
-    eexists (y :: l, l0). repeat split; eauto.
+  intros. depind H.
+  - induction args using rev_ind. inv x. rewrite emkApps_snoc in x. inv x.
+  - induction l using rev_ind. cbn in x. inv x. inv H0. eapply IHeval. eauto.
+    rewrite emkApps_snoc in x. inv x.
+  - reflexivity.
 Qed.
-
+    
 Theorem erasure_correct : erasure_correctness.
 Proof.
   intros Σ t T pre v H. revert T pre.
   induction H using PCUICWcbvEval.eval_evals_ind; intros T pre fuel Σ' t' Ht' HΣ'.
-
   - simpl in Ht'.
-    destruct Extract.is_type_or_proof eqn:Heq.
+    destruct Extract.is_type_or_proof eqn:Heq. inv pre.
     destruct a0.
     + inv Ht'.
       exists tBox. split. 2:repeat econstructor.
-      eapply is_type_extract. eapply eval_is_type. 2:eauto. econstructor;eauto.
+      eapply is_type_extract. eapply eval_is_type. econstructor. 3:eauto. all: eauto. 
     + destruct (extract Σ [] f) as [ ef | ] eqn:Ef ; try congruence.
       destruct (extract Σ [] a) as [ ea | ] eqn:Ea; try congruence.
       inv Ht'. 
-      inv pre. edestruct (type_mkApps_inv Σ [] f [a] T) as (? & U & [? ?] & ?); eauto. 
+      edestruct (type_mkApps_inv Σ [] f [a] T) as (? & U & [? ?] & ?); eauto. 
       inv t1. inv X2. pose proof (subject_reduction_eval _ [] _ _ _ extr_env_wf t0 H).
       eapply type_Lambda_inv in X2 as (? & ? & [? ?] & ?).
       
       eapply IHeval1 in Ef as (vef & ? & ?) ; eauto.
       eapply IHeval2 in Ea as (vea & ? & ?) ; eauto.
-
+      
       simpl in H2. destruct ?; try now cbn in *; congruence.
       destruct a0.
       * inv H2. eapply is_type_or_proof_lambda in E.
         edestruct (IHeval3) as (? & ? & ?).
         -- econstructor; eauto. eapply substitution0. eauto. eauto. eapply subject_reduction_eval; try eapply H0; eauto. 
            eapply cumul_trans in X0. 2:eauto. eapply cumul_Prod_inv in X0 as []. econstructor. eauto. eauto. eapply c1.
-        -- eapply extract_subst1. eapply is_type_extract. eauto. eauto.
+        -- eapply extract_subst1. eapply is_type_extract. eauto. eauto. 
         -- eauto.
         -- exists tBox. cbn in H6. split. 2: eapply eval_box; eauto.
-           eapply is_type_extract. eapply eval_is_type. eauto.
-           eapply is_type_subst. eauto.
+           now eapply eval_tBox_inv in H6 as ->.
       * destruct ?; try congruence.
         inv H2. edestruct IHeval3 as (? & ? & ?).
         -- econstructor; eauto.
@@ -236,14 +346,14 @@ Proof.
       * econstructor; eauto.
       * econstructor; eauto.
     + congruence.
-  - simpl in Ht'.
+  - simpl in Ht'. inv pre. eapply type_tLetIn_inv in extr_typed0 as (? & U & [[] ?] & ?); eauto.
     destruct Extract.is_type_or_proof eqn:Heq. destruct a; try congruence.
     + inv Ht'.  exists tBox. split. 2: repeat econstructor.
       eapply is_type_extract. eapply eval_is_type. 2:eauto.
       econstructor; eauto.
     + destruct (extract _ _ b0) as [ eb0 | ] eqn:Eb0; try congruence.
       destruct (extract _ _ b1) as [ eb1 | ] eqn:Eb1; try congruence.
-      inv Ht'. inv pre. eapply type_tLetIn_inv in extr_typed0 as (? & U & [[] ?] & ?); eauto.
+      inv Ht'. 
 
       eapply IHeval1 in Eb0 as (veb0 & ? & ?). 3:eauto.
       eapply extract_subst1_vdef in Eb1. 2:eauto. 2:eauto.
@@ -265,24 +375,96 @@ Proof.
     + destruct extract eqn:He; try congruence.
       destruct is_box eqn:Ea.
       * destruct a; inversion Ea; clear Ea.
-        admit.
-             
+        eapply IHeval1 in He as (? & ? & ?); eauto.
+        exists tBox. destruct brs.
+        -- inv Ht'. split. admit. admit.
+        -- destruct p0. destruct ?; inv Ht'. admit.
+        -- admit.
       * destruct monad_map eqn:Em; try congruence.
         inv Ht'.
         econstructor. econstructor. 
         admit.
         admit. (* tCase *)
     + congruence.
-  - admit. (* tFix *)
+  - pose (Ht'' := Ht'). eapply extract_Apps in Ht'' as (e & He & l & Hl & ?).
+    inv pre.
+    simpl in He. destruct is_type_or_proof eqn:Heq. destruct a. inv He. subst.
+    + exists tBox. split. 2:econstructor; eauto.
+      eapply is_type_extract. eapply is_type_App in Heq. eapply eval_is_type.
+      2:exact Heq. econstructor; eauto. eauto.      
+    + destruct extract_mfix eqn:E. inv He. 2:congruence. subst.
+      unfold extract_mfix in E.
+      enough (exists l', Forall2 (eval Σ') l l' /\ Forall2 (fun a e => extract Σ [] a = Checked e) args' l' /\ is_constructor narg l') as (l' & ? & ? & ?).
+      enough (exists efn, extract Σ [] fn = Checked efn /\ unfold_fix a idx = Some (narg, efn)) as (efn & ? & ?).
+      (* exists ( unfold_fix mfix idx *)
+
+      assert (extract Σ [] (PCUICAst.mkApps fn args') = Checked (mkApps efn l')).
+      eapply extract_Apps2; eauto. eapply IHeval in H8 as (? & ? & ?).
+      
+      
+      exists x. split. eauto. econstructor. eauto. eauto. eauto. eauto.
+      all:eauto. econstructor. eapply subject_reduction.
+      eauto. exact extr_typed0. all:eauto.
+      etransitivity. eapply PCUICReduction.red_mkApps.
+      eapply refl_red. eapply All2_impl. exact X. intros. now eapply wcbeval_red.
+
+      eapply PCUICReduction.red_step. econstructor; eauto. eapply refl_red.
+
+      2:{ revert H0  X Hl narg H1 H extr_typed0 extr_env_axiom_free0 extr_env_wf HΣ'. clear.
+          intros H0. intros. revert l Hl. dependent induction H0; intros.
+          - exfalso. destruct narg; inv H1.
+          - inv X. inv Hl.
+            eapply type_mkApps_inv in extr_typed0 as (? & ? & [] & ?) ; eauto.
+            inv t0.             
+            eapply IHAll2 in X1 as (? & ? & ? & ?).  
+            
+            eapply r in H4 as (? & ? & ?); eauto. 
+            eexists (x3 :: x2). repeat split.
+            econstructor. eauto. eauto. econstructor. eauto. eauto.
+            admit. econstructor; eauto. all:eauto.
+            2:{ eapply PCUICGeneration.type_mkApps. eauto. admit. }
+            admit.}
+
+      { revert idx H Ht' Heq extr_typed0 E.  clear. revert a. induction mfix; intros.
+        - destruct idx; inv H.
+        - destruct idx; unfold PCUICTyping.unfold_fix in H.
+          + cbn [nth_error] in H. inv H.
+            simpl in E.
+            destruct (extract _ _ (BasicAst.dbody _)) eqn:HE; try congruence.
+
+            Tactic Notation "destruct" "?" "in" hyp(H) :=
+              let e := fresh "E" in
+              match type of H with context [match ?x with _ => _ end] => destruct x eqn:e
+              end.
+
+            destruct ? in E; inv E.
+            eexists (subst _ 0 a1).
+            repeat split.
+
+            enough ( forall mfix', 
+                monad_map
+                  (fun d : BasicAst.def PCUICAst.term =>
+            match extract Σ (fix_decls mfix)%list (BasicAst.dbody d) with
+            | Checked a => Checked {| E.dname := BasicAst.dname d; E.dbody := a; E.rarg := BasicAst.rarg d |}
+            | TypeError t => TypeError t
+            end) mfix = Checked mfix' ->
+                extract Σ [] (PCUICLiftSubst.subst (PCUICTyping.fix_subst mfix) 0 (BasicAst.dbody a)) = Checked (subst0 (fix_subst mfix') a1)). admit. admit.
+          + admit.
+        }                        
+    + congruence.
   - simpl in Ht'. destruct Extract.is_type_or_proof eqn:Heq. destruct a.
     + inv Ht'. exists tBox. split. 2: repeat econstructor.
       eapply is_type_extract. eapply eval_is_type. 2:eapply Heq.
       econstructor; eauto.
-    + inv Ht'. inv pre. edestruct IHeval as (? & ? & ?).
-      * econstructor; eauto. admit.
-      * shelve.
+    + inv Ht'. inv pre.
+      edestruct (extract_constant _ c decl body u _ _  extr_env_wf H HΣ' H0) as (decl' & ebody & ? & ? & ?); eauto.
+      edestruct IHeval as (? & ? & ?).
+      * econstructor; eauto.
+        eapply subject_reduction. eauto. exact extr_typed0.
+        eapply PCUICReduction.red1_red. econstructor; eauto.
       * eauto.
-      * exists x. split. eauto. econstructor. 3:eauto. admit. admit. (* tConst *)
+      * eauto.
+      * exists x. split. eauto. econstructor. eauto. eauto. eauto. 
     + congruence.
   - simpl in Ht'. destruct Extract.is_type_or_proof eqn:Heq. destruct a0.
     + inv Ht'. exists tBox. split. 2:repeat econstructor.
@@ -298,16 +480,16 @@ Proof.
       eapply IHeval1 in E as (? & ? & ?); eauto. clear IHeval1.
       eapply extract_Apps in H3 as (e' & l & ? & ? & ?).
       eapply (All2_nth_error_Some _ _ a1) in H0 as (? & ? & ?). 
-      eapply IHeval2 in e2 as (? & ? & ?); eauto.
+      eapply IHeval2 in e1 as (? & ? & ?); eauto.
       simpl in l. destruct (Extract.is_type_or_proof _ _ (PCUICAst.tConstruct i k u)) eqn:Hc; inv l.
       destruct a2; inv H6; subst.
-      * assert (forall t, Extract.is_type_or_proof Σ [] (PCUICAst.tProj (i, pars, arg) discr) = Checked t -> Extract.is_type_or_proof Σ [] discr = Checked t).
+      * exfalso. assert (forall t, Extract.is_type_or_proof Σ [] (PCUICAst.tProj (i, pars, arg) discr) = Checked t -> Extract.is_type_or_proof Σ [] discr = Checked t).
         cbn. clear. intros ?. destruct type_of; try eauto.
         destruct reduce_to_ind eqn:E.  eauto. inversion 1.
         eapply H5 in Heq. clear H5. eapply eval_is_type_backwards in H.
-        2: eapply is_type_or_proof_mkApps; eauto. congruence.
+        2: rewrite <- is_type_or_proof_mkApps; eauto. congruence.
       * exists x5. split. eauto. eapply eval_proj. eauto. rewrite <- nth_default_eq.
-        unfold nth_default. rewrite e1. eauto.
+        unfold nth_default. rewrite e0. eauto.
       * econstructor; eauto.
       * econstructor; eauto.
     + congruence.
@@ -338,8 +520,9 @@ Proof.
     exists tBox. split. eapply is_type_extract. eapply is_type_App. eauto. eapply subject_reduction.
     eauto. 2:{ eapply PCUICReduction.red_mkApps. eapply wcbeval_red. eauto.
                eapply All2_impl. exact X. intros. eapply wcbeval_red. eauto. }
-    eauto. (* is_proof of tInd *) admit.
-    eapply eval_box_apps. eauto. econstructor; eauto.
+    eauto. eapply is_type_ind. eapply subject_reduction_eval; eauto.
+    destruct e; subst; eauto; eapply eval_box_apps; eauto.
+    econstructor; eauto.
   - simpl in Ht'. destruct Extract.is_type_or_proof eqn:Heq. destruct a.
     + inv Ht'. exists tBox. split. 2: repeat econstructor.
       simpl. rewrite Heq. reflexivity.
@@ -356,29 +539,37 @@ Proof.
       eauto. 2:{ eapply PCUICReduction.red_mkApps. eapply wcbeval_red. eauto.
                eapply All2_impl. exact X. intros. eapply wcbeval_red. eauto. }
 
-      eauto. eauto. eapply eval_box_apps. eauto.
-    + inv H1. enough (exists x', Forall2 (eval Σ') x x') as [x']. eexists (mkApps (tConstruct i k) x'). split. admit.
-      econstructor; eauto. clear IHeval. clear H10. revert x a X HΣ' extr_env_axiom_free0 extr_typed0 extr_env_wf.
-      clear - H0. intros.
+      eauto. eauto.
+      destruct e; subst; eauto; eapply eval_box_apps; eauto.
+    + inv H1. assert (t' = mkApps e x). destruct e; eauto. eapply eval_tBox_inv in H2. inv H2. subst. clear y.
+      enough (exists x', Forall2 (eval Σ') x x' /\ Forall2 (fun a e => extract Σ [] a = Checked e) l' x') as (x' & H1 & H12).
+      eexists (mkApps (tConstruct i k) x'). split.
+      * eapply extract_Apps2. simpl. now rewrite Heq. eauto.
+      * econstructor; eauto.
+      * clear IHeval. clear H10. revert x a X HΣ' extr_env_axiom_free0 extr_typed0 extr_env_wf.
+        clear - H0. intros.
         
-      dependent induction H0 using All2_ind_rev.
-      * depelim a. exists []. econstructor.
-      * specialize (All2_app_inv _ _ _ _ _ _  a) as ([] & ([->] & ?)).
-        specialize (All2_app_inv _ _ _ _ _ _  X) as ([] & ([] & ?)).
-        inv a1. inv H4. 
-        Lemma last_inv A (l1 l2 : list A) x y :
-          (l1 ++ [x] = l2 ++ [y] -> l1 = l2 /\ x = y)%list.
-        Proof.
-        Admitted.
-        inv a3. inv X1.
-        eapply last_inv in e as [-> ->].
-        eapply IHAll2 in a0 as [].
-        all:auto. 2:eauto.
-        eapply r in H2 as (? & ? & ?).
-        
-        exists (x0 ++ [x1])%list. 
-        2:econstructor; eauto. 3:eauto. eapply Forall2_app; eauto.
-        admit. admit.
+        dependent induction H0 using All2_ind_rev.
+        -- depelim a. exists []. repeat econstructor.
+        -- specialize (All2_app_inv _ _ _ _ _ _  a) as ([] & ([->] & ?)).
+           specialize (All2_app_inv _ _ _ _ _ _  X) as ([] & ([] & ?)).
+           inv a1. inv H4. 
+           inv a3. inv X1.
+           eapply last_inv in e as [-> ->].
+
+           rewrite mkApps_snoc in extr_typed0.
+           edestruct (type_mkApps_inv _ _ _ [x] _ extr_env_wf extr_typed0) as (? & ? & [] & ?) ; eauto. 
+           inv t0.
+           
+           eapply IHAll2 in a0 as (? & ? & ?).
+           all:auto. 2:eauto.
+           eapply r in H2 as (? & ? & ?).
+           
+           exists (x2 ++ [x3])%list. 
+           2:econstructor; eauto. 3:eauto. split.
+           ++ eapply Forall2_app; eauto.
+           ++ eapply Forall2_app; eauto.
+           ++ eauto.
     + congruence.
     + econstructor; eauto.
 Admitted.

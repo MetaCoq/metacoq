@@ -527,20 +527,33 @@ Section Conversion.
 
   Notation repack e := (let '(exist b h) := e in exist b _) (only parsing).
 
-  (* TODO Replace h1 and h2 by _ *)
-  Notation isconv_red_raw Γ leq t1 π1 h1 t2 π2 h2 aux :=
-    (aux Reduction t1 π1 h1 _ leq t2 π2 h2) (only parsing).
-  Notation isconv_prog_raw Γ leq t1 π1 h1 t2 π2 h2 aux :=
-    (aux Term t1 π1 h1 _ leq t2 π2 h2) (only parsing).
-  Notation isconv_args_raw Γ t π1 h1 π2 h2 aux :=
-    (aux Args t π1 h1 _ π2 h2) (only parsing).
+  Notation isconv_red_raw Γ leq t1 π1 t2 π2 aux :=
+    (aux Reduction t1 π1 _ _ leq t2 π2 _) (only parsing).
+  Notation isconv_prog_raw Γ leq t1 π1 t2 π2 aux :=
+    (aux Term t1 π1 _ _ leq t2 π2 _) (only parsing).
+  Notation isconv_args_raw Γ t π1 π2 aux :=
+    (aux Args t π1 _ _ π2 _) (only parsing).
 
-  Notation isconv_red Γ leq t1 π1 h1 t2 π2 h2 aux :=
-    (repack (isconv_red_raw Γ leq t1 π1 h1 t2 π2 h2 aux)) (only parsing).
-  Notation isconv_prog Γ leq t1 π1 h1 t2 π2 h2 aux :=
-    (repack (isconv_prog_raw Γ leq t1 π1 h1 t2 π2 h2 aux)) (only parsing).
-  Notation isconv_args Γ t π1 h1 π2 h2 aux :=
-    (repack (isconv_args_raw Γ t π1 h1 π2 h2 aux)) (only parsing).
+  Notation isconv_red Γ leq t1 π1 t2 π2 aux :=
+    (repack (isconv_red_raw Γ leq t1 π1 t2 π2 aux)) (only parsing).
+  Notation isconv_prog Γ leq t1 π1 t2 π2 aux :=
+    (repack (isconv_prog_raw Γ leq t1 π1 t2 π2 aux)) (only parsing).
+  Notation isconv_args Γ t π1 π2 aux :=
+    (repack (isconv_args_raw Γ t π1 π2 aux)) (only parsing).
+
+  (* Notation isconv_red_raw Γ leq t1 π1 h1 t2 π2 h2 aux := *)
+  (*   (aux Reduction t1 π1 h1 _ leq t2 π2 h2) (only parsing). *)
+  (* Notation isconv_prog_raw Γ leq t1 π1 h1 t2 π2 h2 aux := *)
+  (*   (aux Term t1 π1 h1 _ leq t2 π2 h2) (only parsing). *)
+  (* Notation isconv_args_raw Γ t π1 h1 π2 h2 aux := *)
+  (*   (aux Args t π1 h1 _ π2 h2) (only parsing). *)
+
+  (* Notation isconv_red Γ leq t1 π1 h1 t2 π2 h2 aux := *)
+  (*   (repack (isconv_red_raw Γ leq t1 π1 h1 t2 π2 h2 aux)) (only parsing). *)
+  (* Notation isconv_prog Γ leq t1 π1 h1 t2 π2 h2 aux := *)
+  (*   (repack (isconv_prog_raw Γ leq t1 π1 h1 t2 π2 h2 aux)) (only parsing). *)
+  (* Notation isconv_args Γ t π1 h1 π2 h2 aux := *)
+  (*   (repack (isconv_args_raw Γ t π1 h1 π2 h2 aux)) (only parsing). *)
 
   Equations(noeqns) _isconv_red (Γ : context) (leq : conv_pb)
             (t1 : term) (π1 : stack) (h1 : welltyped Σ Γ (zipc t1 π1))
@@ -552,7 +565,7 @@ Section Conversion.
     with inspect (reduce_stack nodelta_flags Σ Γ t1 π1 h1) := {
     | @exist (t1',π1') eq1
       with inspect (reduce_stack nodelta_flags Σ Γ t2 π2 h2) := {
-      | @exist (t2',π2') eq2 => isconv_prog Γ leq t1' π1' _ t2' π2' _ aux
+      | @exist (t2',π2') eq2 => isconv_prog Γ leq t1' π1' t2' π2' aux
       }
     }.
   Next Obligation.
@@ -597,7 +610,7 @@ Section Conversion.
     (* TODO Check universe instances, we will have to do it to proceed anyway. *)
     _isconv_prog Γ leq (tConst c u) π1 h1 (tConst c' u') π2 h2 aux
     with inspect (eq_constant c c') := {
-    | @exist true eq1 with isconv_args_raw Γ (tConst c u) π1 _ π2 _ aux := {
+    | @exist true eq1 with isconv_args_raw Γ (tConst c u) π1 π2 aux := {
       | @exist true h := yes ;
       | @exist false _ := (* TODO *) no
       } ;
@@ -625,8 +638,8 @@ Section Conversion.
     : { b : bool | if b then ∥ Σ ;;; Γ |- zipc t π1 = zipc t π2 ∥ else True } :=
 
     _isconv_args Γ t (App u1 ρ1) h1 (App u2 ρ2) h2 aux
-    with isconv_red_raw Γ Conv u1 Empty _ u2 Empty _ aux := {
-    | @exist true h1 := isconv_args Γ (tApp t u1) ρ1 _ ρ2 _ aux ;
+    with isconv_red_raw Γ Conv u1 Empty u2 Empty aux := {
+    | @exist true h1 := isconv_args Γ (tApp t u1) ρ1 ρ2 aux ;
     | @exist false _ := no
     } ;
 

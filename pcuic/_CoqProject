@@ -18,6 +18,7 @@ theories/PCUICConfluence.v
 theories/PCUICCumulativity.v
 theories/PCUICGeneration.v
 theories/PCUICValidity.v
+theories/PCUICSR.v
 theories/PCUICMetaTheory.v
 theories/PCUICWcbvEval.v
 theories/PCUICChecker.v

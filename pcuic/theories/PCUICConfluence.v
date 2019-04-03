@@ -20,77 +20,85 @@ Notation "'∃' x .. y , P" := (sigT (fun x => .. (sigT (fun y => P%type)) ..))
 
 Existing Instance config.default_checker_flags.
 
+Lemma mkApps_eq_decompose {f args t} :
+  mkApps f args = t ->
+  isApp f = false ->
+  fst (decompose_app t) = f.
+Proof.
+  intros H Happ; apply (f_equal decompose_app) in H.
+  rewrite decompose_app_mkApps in H. auto. rewrite <- H. reflexivity.
+Qed.
+
+Lemma atom_mkApps {t l} : atom (mkApps t l) -> atom t /\ l = [].
+Proof.
+  induction l in t |- *; simpl; auto.
+  intros. destruct (IHl _ H). discriminate.
+Qed.
+
+Lemma pred_atom_mkApps {t l} : pred_atom (mkApps t l) -> pred_atom t /\ l = [].
+Proof.
+  induction l in t |- *; simpl; auto.
+  intros. destruct (IHl _ H). discriminate.
+Qed.
+
+Ltac finish_discr :=
+  repeat match goal with
+         | [ H : ?x = ?x |- _ ] => clear H
+         | [ H : mkApps _ _ = mkApps _ _ |- _ ] =>
+           let H0 := fresh in let H1 := fresh in
+                              specialize (mkApps_eq_inj H eq_refl eq_refl) as [H0 H1];
+                              try (congruence || (noconf H0; noconf H1))
+         | [ H : atom (mkApps _ _) |- _ ] => apply atom_mkApps in H; intuition subst
+         | [ H : pred_atom (mkApps _ _) |- _ ] => apply pred_atom_mkApps in H; intuition subst
+         | [ H : mkApps _ _ = _ |- _ ] => apply mkApps_eq_head in H
+         end.
+
+Ltac prepare_discr :=
+  repeat match goal with
+         | [ H : mkApps ?f ?l = tApp ?y ?r |- _ ] => change (mkApps f l = mkApps y [r]) in H
+         | [ H : tApp ?f ?l = mkApps ?y ?r |- _ ] => change (mkApps f [l] = mkApps y r) in H
+         | [ H : mkApps ?x ?l = ?y |- _ ] =>
+           match y with
+           | mkApps _ _ => fail 1
+           | _ => change (mkApps x l = mkApps y []) in H
+           end
+         | [ H : ?x = mkApps ?y ?l |- _ ] =>
+           match x with
+           | mkApps _ _ => fail 1
+           | _ => change (mkApps x [] = mkApps y l) in H
+           end
+         end.
+
+Definition application_atom t :=
+  match t with
+  | tVar _
+  | tMeta _
+  | tSort _
+  | tInd _ _
+  | tConstruct _ _ _
+  | tLambda _ _ _ => true
+  | _ => false
+  end.
+
+Lemma application_atom_mkApps {t l} : application_atom (mkApps t l) -> application_atom t /\ l = [].
+Proof.
+  induction l in t |- *; simpl; auto.
+  intros. destruct (IHl _ H). discriminate.
+Qed.
+
+Ltac solve_discr :=
+  (try (progress (prepare_discr; finish_discr; cbn [mkApps] in * )));
+  (try (match goal with
+        | [ H : is_true (application_atom _) |- _ ] => discriminate
+        | [ H : is_true (atom _) |- _ ] => discriminate
+        | [ H : is_true (atom (mkApps _ _)) |- _ ] => destruct (atom_mkApps H); subst; try discriminate
+        | [ H : is_true (pred_atom _) |- _ ] => discriminate
+        | [ H : is_true (pred_atom (mkApps _ _)) |- _ ] => destruct (pred_atom_mkApps H); subst; try discriminate
+        | [ H : is_true (application_atom (mkApps _ _)) |- _ ] =>
+          destruct (application_atom_mkApps H); subst; try discriminate
+        end)).
+
 Section Confluence.
-
-  Lemma mkApps_eq_decompose {f args t} :
-    mkApps f args = t ->
-    isApp f = false ->
-    fst (decompose_app t) = f.
-  Proof.
-    intros H Happ; apply (f_equal decompose_app) in H.
-    rewrite decompose_app_mkApps in H. auto. rewrite <- H. reflexivity.
-  Qed.
-
-  Ltac finish_discr :=
-    match goal with
-    | [ H : mkApps _ _ = mkApps _ _ |- _ ] =>
-      let H0 := fresh in let H1 := fresh in
-
-      specialize (mkApps_eq_inj H eq_refl eq_refl) as [H0 H1]; try (congruence || (noconf H0; noconf H1))
-    | [ H : mkApps _ _ = _ |- _ ] => apply mkApps_eq_head in H
-    end.
-
-  Ltac prepare_discr :=
-    match goal with
-    | [ H : mkApps _ _ = mkApps _ _ |- _ ] => idtac
-    | [ H : mkApps ?f ?l = tApp ?y ?r |- _ ] => change (mkApps f l = mkApps y [r]) in H
-    | [ H : tApp ?f ?l = mkApps ?y ?r |- _ ] => change (mkApps f [l] = mkApps y r) in H
-    | [ H : mkApps ?x ?l = ?y |- _ ] =>
-      change (mkApps x l = mkApps y []) in H
-    | [ H : ?x = mkApps ?y ?l |- _ ] =>
-      change (mkApps x [] = mkApps y l) in H
-    end.
-
-  Lemma atom_mkApps {t l} : atom (mkApps t l) -> atom t /\ l = [].
-  Proof.
-    induction l in t |- *; simpl; auto.
-    intros. destruct (IHl _ H). discriminate.
-  Qed.
-
-  Lemma pred_atom_mkApps {t l} : pred_atom (mkApps t l) -> pred_atom t /\ l = [].
-  Proof.
-    induction l in t |- *; simpl; auto.
-    intros. destruct (IHl _ H). discriminate.
-  Qed.
-
-  Definition application_atom t :=
-    match t with
-    | tVar _
-    | tMeta _
-    | tSort _
-    | tInd _ _
-    | tConstruct _ _ _
-    | tLambda _ _ _ => true
-    | _ => false
-    end.
-
-  Lemma application_atom_mkApps {t l} : application_atom (mkApps t l) -> application_atom t /\ l = [].
-  Proof.
-    induction l in t |- *; simpl; auto.
-    intros. destruct (IHl _ H). discriminate.
-  Qed.
-
-  Ltac solve_discr :=
-    (try (progress (prepare_discr; finish_discr)));
-    (try (match goal with
-          | [ H : is_true (application_atom _) |- _ ] => discriminate
-          | [ H : is_true (atom _) |- _ ] => discriminate
-          | [ H : is_true (atom (mkApps _ _)) |- _ ] => destruct (atom_mkApps H); subst; try discriminate
-          | [ H : is_true (pred_atom _) |- _ ] => discriminate
-          | [ H : is_true (pred_atom (mkApps _ _)) |- _ ] => destruct (pred_atom_mkApps H); subst; try discriminate
-          | [ H : is_true (application_atom (mkApps _ _)) |- _ ] =>
-            destruct (application_atom_mkApps H); subst; try discriminate
-          end)).
 
   Lemma pred_mkApps Σ Γ Δ M0 M1 N0 N1 :
     pred1 Σ Γ Δ M0 M1 ->
@@ -135,7 +143,7 @@ Section Confluence.
     revert c. induction args using rev_ind; intros; simpl in *.
     depelim X... exists []. intuition auto.
     intros. rewrite <- mkApps_nested in X.
-    depelim X... apply mkApps_eq_decompose_app in x.
+    depelim X... prepare_discr. apply mkApps_eq_decompose_app in x.
     rewrite !decompose_app_rec_mkApps in x. noconf x.
     destruct (IHargs _ X1) as [args' [-> Hargs']].
     exists (args' ++ [N1])%list.
@@ -191,7 +199,7 @@ Section Confluence.
 
     - left.
       eexists mfix1, []. intuition auto.
-    - subst t. eapply pred_atom_mkApps in i as [Heq ->]. simpl in Heq. inversion Heq.
+    - subst t. solve_discr.
   Qed.
 
   Lemma pred1_mkApps_tCoFix_inv (Σ : global_context) (Γ Δ : context)
@@ -214,7 +222,7 @@ Section Confluence.
       now rewrite <- mkApps_nested.
       eapply All2_app; eauto.
     - exists mfix1, []; intuition (simpl; auto).
-    - subst t. eapply pred_atom_mkApps in i as [Heq ->]. discriminate.
+    - subst t; solve_discr.
   Qed.
 
   Lemma pred1_mkApps_tCoFix_refl_inv (Σ : global_context) (Γ Δ : context)
@@ -237,10 +245,9 @@ Section Confluence.
       noconf Heqfixt'.
       destruct (IHpred1 _ _ _ _ _ eq_refl eq_refl) as [H H'].
       unfold All2_prop2_eq. split. apply H. apply All2_app; auto.
-    - destruct args1 using rev_ind; simpl in *; try discriminate. noconf Heqfixt'.
+    - repeat finish_discr.
       unfold All2_prop2_eq. intuition (simpl; auto).
-      rewrite <- mkApps_nested in Heqfixt'; noconf Heqfixt'.
-    - subst t. eapply pred_atom_mkApps in i as [Heq ->]. discriminate.
+    - subst t; solve_discr.
   Qed.
 
   Lemma mkApps_eq_decompose_app_rec {f args t l} :
@@ -274,9 +281,7 @@ Section Confluence.
     intros. apply (@mkApps_eq_decompose_app_rec f args t []); auto.
   Qed.
 
-
   Hint Constructors pred1 : pcuic.
-
 
   Lemma All2_prop_eq_All2 {A B} {Σ Γ Δ} {f : A -> term} {g : A -> B} args0 args1 args3 :
     All2_prop_eq Γ Δ f g
@@ -318,38 +323,6 @@ Section Confluence.
 
   Definition on_Trel2 {A B} (R : A -> A -> Type) (f : B -> A) : B -> A -> Type :=
     fun x y => R (f x) y.
-
-  (* Lemma All2_join_eq {A B} (f : A -> term) (g : A -> B) (h : term -> B -> A) {Σ Γ x y} : *)
-  (*   ∀ {Δ Δ' : context}, pred1_ctx Σ Γ Δ → pred1_ctx Σ Γ Δ' → *)
-  (*   (forall x y, f (h x y) = x) -> *)
-  (*   (forall x y, g (h x y) = y) -> *)
-  (*   All2 (fun x y => *)
-  (*           (∃ Δ'' v, (pred1 Σ Δ Δ'' (f x) v * pred1 Σ Δ Δ'' (f y) v)) * (g x = g y))%type x y -> *)
-  (*   { l : list A & (All2 (on_Trel_eq (pred1 Σ Δ (map f l)) f g) x l * All2 (on_Trel_eq (pred1 Σ Δ') f g) y l)%type }. *)
-  (* Proof. *)
-  (*   intros * redΔ redΔ' Hfh Hgh. induction 1. exists []. split; auto. *)
-  (*   destruct (r _ _ redΔ redΔ') as [r' [[rl rr] req]]. *)
-  (*   destruct IHX as [IHl [ll lr]]. *)
-  (*   exists (h r' (g x) :: IHl). intuition auto. constructor; auto. *)
-  (*   red. intuition auto. red. now rewrite Hfh. *)
-  (*   constructor; auto. *)
-  (*   red. intuition auto. red. now rewrite Hfh. *)
-  (*   rewrite <- req. auto. *)
-  (* Qed. *)
-
-  (* Lemma All2_join {Σ Γ Δ x y} : *)
-  (*   ∀ {Δ Δ' : context}, pred1_ctx Σ Γ Δ → pred1_ctx Σ Γ Δ' → *)
-  (*   All2 (λ x y, *)
-  (*         forall Δ'', pred1_ctx Σ Δ Δ'' -> *)
-  (*                     ∃ R, pred1_ctx Σ Δ' R * pred1_ctx Σ Δ'' R). *)
-  (*       {v : term & pred1 Σ Δ x v * pred1 Σ Δ' y v}))%type x y -> *)
-  (*   { l : list term & (All2 (pred1 Σ Δ) x l * All2 (pred1 Σ Δ') y l)%type }. *)
-  (* Proof. *)
-  (*   intros * redΔ redΔ'. induction 1. exists []. split; auto. *)
-  (*   destruct (r _ _ redΔ redΔ') as [r' [rl rr]]. *)
-  (*   destruct IHX as [IHl [ll lr]]. *)
-  (*   exists (r' :: IHl). intuition auto. *)
-  (* Qed. *)
 
   Lemma All2_on_Trel_eq_impl {A B} Σ Γ Δ {f : A -> term} {g : A -> B} {x y} :
     All2 (on_Trel_eq (pred1 Σ Γ Δ) f g) x y ->
@@ -419,7 +392,71 @@ Section Confluence.
     rewrite [skipn _ _]IHl. reflexivity.
   Qed.
 
-  Fixpoint rho Γ t : term :=
+  Equations construct_cofix_discr (t : term) : bool :=
+    construct_cofix_discr (tConstruct _ _ _) => true;
+    construct_cofix_discr (tCoFix _ _) => true;
+    construct_cofix_discr _ => false.
+
+  Lemma decompose_app_rec_inv {t l' f l} :
+    decompose_app_rec t l' = (f, l) ->
+    mkApps t l' = mkApps f l.
+  Proof.
+    induction t in f, l', l |- *; try intros [= <- <-]; try reflexivity.
+    simpl. apply/IHt1.
+  Qed.
+
+  Lemma decompose_app_inv {t f l} :
+    decompose_app t = (f, l) -> t = mkApps f l.
+  Proof. by apply/decompose_app_rec_inv. Qed.
+
+  Lemma eq_ind_spec i i' : reflect (i = i') (AstUtils.eq_ind i i').
+  Proof.
+    unfold AstUtils.eq_ind.
+    destruct i, i'. simpl.
+  Admitted.
+  (* Lemma All2_join_eq {A B} (f : A -> term) (g : A -> B) (h : term -> B -> A) {Σ Γ x y} : *)
+  (*   ∀ {Δ Δ' : context}, pred1_ctx Σ Γ Δ → pred1_ctx Σ Γ Δ' → *)
+  (*   (forall x y, f (h x y) = x) -> *)
+  (*   (forall x y, g (h x y) = y) -> *)
+  (*   All2 (fun x y => *)
+  (*           (∃ Δ'' v, (pred1 Σ Δ Δ'' (f x) v * pred1 Σ Δ Δ'' (f y) v)) * (g x = g y))%type x y -> *)
+  (*   { l : list A & (All2 (on_Trel_eq (pred1 Σ Δ (map f l)) f g) x l * All2 (on_Trel_eq (pred1 Σ Δ') f g) y l)%type }. *)
+  (* Proof. *)
+  (*   intros * redΔ redΔ' Hfh Hgh. induction 1. exists []. split; auto. *)
+  (*   destruct (r _ _ redΔ redΔ') as [r' [[rl rr] req]]. *)
+  (*   destruct IHX as [IHl [ll lr]]. *)
+  (*   exists (h r' (g x) :: IHl). intuition auto. constructor; auto. *)
+  (*   red. intuition auto. red. now rewrite Hfh. *)
+  (*   constructor; auto. *)
+  (*   red. intuition auto. red. now rewrite Hfh. *)
+  (*   rewrite <- req. auto. *)
+  (* Qed. *)
+
+  (* Lemma All2_join {Σ Γ Δ x y} : *)
+  (*   ∀ {Δ Δ' : context}, pred1_ctx Σ Γ Δ → pred1_ctx Σ Γ Δ' → *)
+  (*   All2 (λ x y, *)
+  (*         forall Δ'', pred1_ctx Σ Δ Δ'' -> *)
+  (*                     ∃ R, pred1_ctx Σ Δ' R * pred1_ctx Σ Δ'' R). *)
+  (*       {v : term & pred1 Σ Δ x v * pred1 Σ Δ' y v}))%type x y -> *)
+  (*   { l : list term & (All2 (pred1 Σ Δ) x l * All2 (pred1 Σ Δ') y l)%type }. *)
+  (* Proof. *)
+  (*   intros * redΔ redΔ'. induction 1. exists []. split; auto. *)
+  (*   destruct (r _ _ redΔ redΔ') as [r' [rl rr]]. *)
+  (*   destruct IHX as [IHl [ll lr]]. *)
+  (*   exists (r' :: IHl). intuition auto. *)
+  (* Qed. *)
+  Lemma lookup_env_cst_inv {Σ c k cst} :
+    lookup_env Σ c = Some (ConstantDecl k cst) -> c = k.
+  Proof.
+    induction Σ. simpl. discriminate.
+    simpl. destruct AstUtils.ident_eq eqn:Heq. intros [= ->]. simpl in Heq.
+    now destruct (AstUtils.ident_eq_spec c k). auto.
+  Qed.
+
+  Section TriangleFn.
+    Context (Σ : global_context).
+
+    Fixpoint rho Γ t : term :=
     match t with
     | tApp (tLambda na T b) u => (rho (vass na (rho Γ T) :: Γ) b) {0 := rho Γ u}
     | tLetIn na d t b => (subst10 (rho Γ d) (rho (vdef na (rho Γ d) (rho Γ t) :: Γ) b))
@@ -433,15 +470,18 @@ Section Confluence.
       let p' := rho Γ p in
       let x' := rho Γ x in
       let brs' := List.map (fun x => (fst x, rho Γ (snd x))) brs in
-      match decompose_app x' with
-      | (tConstruct ind c u, args) => iota_red pars c args brs'
-      | (tCoFix mfix idx, args) =>
-        match unfold_cofix mfix idx with
+      match decompose_app x, decompose_app x' with
+      | (tConstruct ind' c u, args), (tConstruct ind'' c' u', args') =>
+        if AstUtils.eq_ind ind ind' then
+          iota_red pars c args' brs'
+        else tCase (ind, pars) p' x' brs'
+      | (tCoFix mfix idx, args), (tCoFix mfix' idx', args') =>
+        match unfold_cofix mfix' idx with
         | Some (narg, fn) =>
-          tCase (ind, pars) p' (mkApps fn args) brs'
-        | None => tCase (ind, pars) p' (mkApps (tCoFix mfix idx) args) brs'
+          tCase (ind, pars) p' (mkApps fn args') brs'
+        | None => tCase (ind, pars) p' (mkApps (tCoFix mfix' idx) args') brs'
         end
-      | _ => tCase (ind, pars) p' (rho Γ x) brs'
+      | _, _ => tCase (ind, pars) p' x' brs'
       end
     | tProj ((i, pars, narg) as p) x =>
       let x' := rho Γ x in
@@ -460,19 +500,18 @@ Section Confluence.
       | _ => tProj p x'
       end
         (* missing Fix + CoFix *)
-    (* | tConst c u => *)
-    (*   match lookup_env Σ id with *)
-    (*   | Some (ConstantDecl id decl) => *)
-    (*     match decl.(cst_body) with *)
-    (*     | Some body => body *)
-    (*     | None => tConst c u *)
-    (*     end *)
-    (*   | _ => tConst c u *)
-    (*   end *)
+    | tConst c u =>
+      match lookup_env Σ c with
+      | Some (ConstantDecl id decl) =>
+        match decl.(cst_body) with
+        | Some body => subst_instance_constr u body
+        | None => tConst c u
+        end
+      | _ => tConst c u
+      end
     | tApp t u => tApp (rho Γ t) (rho Γ u)
     | tLambda na t u => tLambda na (rho Γ t) (rho (vass na (rho Γ t) :: Γ) u)
     | tProd na t u => tProd na (rho Γ t) (rho (vass na (rho Γ t) :: Γ) u)
-    | tConst c u => tConst c u
     | tVar i => tVar i
     | tEvar n l => tEvar n l
     | tMeta n => tMeta n
@@ -481,61 +520,162 @@ Section Confluence.
     | tInd _ _ | tConstruct _ _ _ => t
     end.
 
-  Fixpoint rho_ctx Γ :=
-    match Γ with
-    | [] => []
-    | {| decl_name := na; decl_body := None; decl_type := T |} :: Γ =>
+    Lemma rho_mkApps {Γ f l} : isLambda f = false ->
+                               rho Γ (mkApps f l) = mkApps (rho Γ f) (map (rho Γ) l).
+    Proof.
+      induction l in f |- *; auto. simpl. rewrite IHl. simpl. reflexivity.
+      intros. destruct f; simpl in *; congruence.
+    Qed.
+
+    Fixpoint rho_ctx Γ :=
+      match Γ with
+      | [] => []
+      | {| decl_name := na; decl_body := None; decl_type := T |} :: Γ =>
+        let Γ' := rho_ctx Γ in
+        vass na (rho Γ' T) :: Γ'
+      | {| decl_name := na; decl_body := Some b; decl_type := T |} :: Γ =>
+        let Γ' := rho_ctx Γ in
+        vdef na (rho Γ' b) (rho Γ' T) :: Γ'
+      end.
+
+    Lemma rho_ctx_length Γ : #|Γ| = #|rho_ctx Γ|.
+    Proof.
+      induction Γ; simpl; auto. destruct a. destruct decl_body; simpl; auto with arith.
+    Qed.
+
+    Ltac pcuic := try repeat red; cbn in *;
+                  try solve [eauto with pcuic].
+
+    Lemma rho_triangle (wf : wf Σ) Γ t :
       let Γ' := rho_ctx Γ in
-      vass na (rho Γ' T) :: Γ'
-    | {| decl_name := na; decl_body := Some b; decl_type := T |} :: Γ =>
-      let Γ' := rho_ctx Γ in
-      vdef na (rho Γ' b) (rho Γ' T) :: Γ'
-    end.
+      pred1_ctx Σ Γ Γ' ->
+      pred1 Σ Γ Γ' t (rho Γ' t).
+    Proof.
+      revert Γ t. refine (term_forall_ctx_list_ind _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _);
+                    simpl; !intros; rename_all_hyps.
+      all:pcuic.
 
-  Lemma rho_ctx_length Γ : #|Γ| = #|rho_ctx Γ|.
-  Proof.
-    induction Γ; simpl; auto. destruct a. destruct decl_body; simpl; auto with arith.
-  Qed.
+      - destruct (option_map _ _) eqn:Heq.
+        destruct o; noconf Heq.
+        constructor; auto.
+        constructor; auto.
+        constructor; auto.
 
-  Lemma rho_triangle Σ (wf : wf Σ) Γ t :
-    let Γ' := rho_ctx Γ in
-    pred1_ctx Σ Γ Γ' ->
-    pred1 Σ Γ Γ' t (rho Γ' t).
-  Proof.
-    revert Γ t. refine (term_forall_ctx_list_ind _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _); simpl; !intros; rename_all_hyps.
-    all:pcuic.
+      - econstructor. eauto. eauto. unfold snoc.
+        apply forall_z0; simpl; eauto. constructor; simpl; intuition eauto.
 
-    - destruct (option_map _ _) eqn:Heq.
-      destruct o; noconf Heq.
-      constructor; auto.
-      constructor; auto.
-      constructor; auto.
+      - econstructor. eauto. eauto. unfold snoc.
+        apply forall_z0; simpl; eauto. constructor; simpl; intuition eauto.
 
-    - econstructor. eauto. eauto. unfold snoc.
-      apply forall_z0; simpl; eauto. constructor; simpl; intuition eauto.
+      - eapply pred_zeta; eauto. apply forall_z1.
+        econstructor; simpl; eauto.
 
-    - econstructor. eauto. eauto. unfold snoc.
-      apply forall_z0; simpl; eauto. constructor; simpl; intuition eauto.
+      - destruct t; try constructor; auto.
+        cbn in *. specialize (forall_z X1).
+        depelim forall_z. solve_discr.
+        eapply pred_beta; eauto.
 
-    - eapply pred_zeta; eauto. apply forall_z1.
-      econstructor; simpl; eauto.
+      - destruct lookup_env eqn:Heq; pcuic. destruct g. pose proof (lookup_env_cst_inv Heq). subst k.
+        destruct c as [ty [b|] un]; cbn in *;
+        econstructor; pcuic. simpl. econstructor; pcuic.
 
-    - destruct t; try constructor; auto.
-      cbn in *. specialize (forall_z X1).
-      depelim forall_z. admit.
-      eapply pred_beta; eauto.
+      - destruct p. red in X1.
+        destruct decompose_app eqn:Heq.
 
-    - admit.
-    - admit.
-  Admitted.
 
-  Lemma rho_triangle_ctx Σ (wf : wf Σ) Γ :
-    pred1_ctx Σ Γ (rho_ctx Γ).
-  Proof.
-    induction Γ; simpl; try constructor.
-    destruct a as [? [?|] ?]; simpl; constructor; simpl; eauto using rho_triangle.
-  Qed.
+        destruct (construct_cofix_discr t1) eqn:Heq'.
+        destruct t1; try discriminate. apply decompose_app_inv in Heq.
+        subst t0. simpl.
+        rewrite rho_mkApps; auto.
+        simpl. destruct decompose_app eqn:Heq''.
+        rewrite decompose_app_mkApps in Heq''; auto.
+        injection Heq'' as <- <-.
+        admit.
+        all:admit.
+      - admit.
 
+    Admitted.
+
+    Lemma rho_triangle_ctx (wf : wf Σ) Γ :
+      pred1_ctx Σ Γ (rho_ctx Γ).
+    Proof.
+      induction Γ; simpl; try constructor.
+      destruct a as [? [?|] ?]; simpl; constructor; simpl; eauto using rho_triangle.
+    Qed.
+
+    Lemma triangle Γ Δ t u : wf Σ ->
+                             let Pctx :=
+                                 fun (Γ Δ : context) => pred1_ctx Σ Δ (rho_ctx Γ) in
+                             pred1 Σ Γ Δ t u -> pred1 Σ Δ (rho_ctx Γ) u (rho (rho_ctx Γ) t).
+    Proof with solve_discr.
+      intros wfΣ Pctx H. revert Γ Δ t u H.
+      (* refine (pred1_ind_all Σ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _); intros *. *)
+      (* all:try intros **; rename_all_hyps; *)
+      (*   try solve [specialize (forall_Γ _ X3); eauto]; eauto; *)
+      (*     try solve [eexists; split; constructor; eauto]. *)
+      (* intros. *)
+
+      refine (pred1_ind_all_ctx Σ _ Pctx _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _); subst Pctx; intros *.
+      all:try intros **; rename_all_hyps;
+        try solve [specialize (forall_Γ _ X3); eauto]; eauto;
+          try solve [simpl; econstructor; simpl; eauto].
+
+      simpl.
+      - induction X0; simpl; depelim predΓ'; constructor; eauto.
+
+      - simpl.
+        eapply (substitution0_pred1); simpl in *. eauto. eauto. eapply X0.
+      - simpl.
+        eapply (substitution0_let_pred1); simpl in *. eauto. eauto. eapply X4.
+
+      - simpl.
+        destruct nth_error eqn:Heq.
+        pose proof Heq. apply nth_error_Some_length in Heq.
+        destruct c as [na [?|] ?]; noconf heq_option_map.
+        simpl in X0.
+        eapply (f_equal (option_map decl_body)) in H.
+        eapply nth_error_pred1_ctx_l in H; eauto.
+        destruct H. intuition. rewrite a.
+        rewrite -{1}(firstn_skipn (S i) Γ').
+        rewrite -{1}(firstn_skipn (S i) (rho_ctx Γ)).
+        pose proof (All2_local_env_length X0).
+        assert (S i = #|firstn (S i) Γ'|).
+        rewrite !firstn_length_le; try lia.
+        assert (S i = #|firstn (S i) (rho_ctx Γ)|).
+        rewrite !firstn_length_le; try lia.
+        rewrite {5}H0 {6}H1.
+        eapply weakening_pred1_pred1; eauto.
+        eapply All2_local_env_over_firstn_skipn. auto.
+        noconf heq_option_map.
+
+      - simpl. simpl in *.
+        destruct option_map eqn:Heq.
+        destruct o. constructor; auto.
+        constructor. auto.
+        constructor. auto.
+
+      - admit.
+      - admit.
+      - admit.
+      - admit.
+      - admit.
+      - admit.
+      - admit.
+      - simpl. destruct M0; (try solve [ constructor; auto ]).
+        depelim X. solve_discr. simpl in *.
+        depelim X0...
+        econstructor; eauto.
+        simpl in i. discriminate.
+
+      - admit.
+      - simpl. admit.
+      - admit.
+      - admit.
+      - admit.
+      - destruct t; noconf H; simpl; constructor; eauto.
+    Admitted.
+
+  End TriangleFn.
   (* Checked that we can prove confluence in presence of let-reductions in the context *)
 
   Ltac apply_hyp :=
@@ -544,100 +684,13 @@ Section Confluence.
       let target := fresh "v" in specialize (H _ _ H') as [target [? ?]]
     end.
 
-  Lemma substitution0_pred1 {Σ : global_context} Γ Δ M M' na A A' N N' : wf Σ ->
-    pred1 Σ Γ Δ M M' -> pred1 Σ Γ Δ A A' ->
-    pred1 Σ (Γ ,, vass na A) (Δ ,, vass na A') N N' ->
-    pred1 Σ Γ Δ (subst1 M 0 N) (subst1 M' 0 N').
-  Admitted.
-      (* FIXME reflexivity of subst *)
-
-  Lemma substitution0_let_pred1 {Σ Γ Δ na M M' A A' N N'} : wf Σ ->
-    pred1 Σ Γ Δ M M' -> pred1 Σ Γ Δ A A' ->
-    pred1 Σ (Γ ,, vdef na M A) (Δ ,, vdef na M' A') N N' ->
-    pred1 Σ Γ Δ (subst1 M 0 N) (subst1 M' 0 N').
-  Proof.
-  Admitted.
-
-  Lemma triangle Σ Γ Δ t u : wf Σ ->
-    let Pctx :=
-        fun (Γ Δ : context) => pred1_ctx Σ Δ (rho_ctx Γ) in
-    pred1 Σ Γ Δ t u -> pred1 Σ Δ (rho_ctx Γ) u (rho (rho_ctx Γ) t).
-  Proof with solve_discr.
-    intros wfΣ Pctx H. revert Γ Δ t u H.
-    (* refine (pred1_ind_all Σ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _); intros *. *)
-    (* all:try intros **; rename_all_hyps; *)
-    (*   try solve [specialize (forall_Γ _ X3); eauto]; eauto; *)
-    (*     try solve [eexists; split; constructor; eauto]. *)
-    (* intros. *)
-
-    refine (pred1_ind_all_ctx Σ _ Pctx _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _); subst Pctx; intros *.
-    all:try intros **; rename_all_hyps;
-      try solve [specialize (forall_Γ _ X3); eauto]; eauto;
-        try solve [simpl; econstructor; simpl; eauto].
-
-    simpl.
-    - induction X0; simpl; depelim predΓ'; constructor; eauto.
-
-    - simpl.
-      eapply (substitution0_pred1); simpl in *. eauto. eauto. eapply X2.
-      eapply X0.
-    - simpl.
-      eapply (substitution0_let_pred1); simpl in *. eauto. eauto. eapply X0.
-      eapply X4.
-
-    - simpl.
-      destruct nth_error eqn:Heq.
-      pose proof Heq. apply nth_error_Some_length in Heq.
-      destruct c as [na [?|] ?]; noconf heq_option_map.
-      simpl in X0.
-      eapply (f_equal (option_map decl_body)) in H.
-      eapply nth_error_pred1_ctx_l in H; eauto.
-      destruct H. intuition. rewrite a.
-      rewrite -{1}(firstn_skipn (S i) Γ').
-      rewrite -{1}(firstn_skipn (S i) (rho_ctx Γ)).
-      pose proof (All2_local_env_length X0).
-      assert (S i = #|firstn (S i) Γ'|).
-      rewrite !firstn_length_le; try lia.
-      assert (S i = #|firstn (S i) (rho_ctx Γ)|).
-      rewrite !firstn_length_le; try lia.
-      rewrite {5}H0 {6}H1.
-      eapply weakening_pred1_pred1; eauto.
-      eapply All2_local_env_over_firstn_skipn. auto.
-      noconf heq_option_map.
-
-    - simpl. simpl in *.
-      destruct option_map eqn:Heq.
-      destruct o. constructor; auto.
-      constructor. auto.
-      constructor. auto.
-
-    - admit.
-    - admit.
-    - admit.
-    - admit.
-    - admit.
-    - admit.
-    - simpl. destruct M0; (try solve [ constructor; auto ]).
-      depelim X. solve_discr. simpl in *.
-      depelim X0... clear -x0. solve_discr.
-      econstructor; eauto.
-      simpl in i. discriminate.
-
-    - admit.
-    - simpl. admit.
-    - admit.
-    - admit.
-    - admit.
-    - destruct t; noconf H; simpl; constructor; eauto.
-  Admitted.
-
   (* Checked that we can prove confluence in presence of let-reductions in the context *)
 
   Corollary confluence : forall Σ Γ Δ Δ' t u v, wf Σ ->
     pred1 Σ Γ Δ t u ->
     pred1 Σ Γ Δ' t v ->
-    pred1 Σ Δ (rho_ctx Γ) u (rho (rho_ctx Γ) t) *
-    pred1 Σ Δ' (rho_ctx Γ) v (rho (rho_ctx Γ) t).
+    pred1 Σ Δ (rho_ctx Σ Γ) u (rho Σ (rho_ctx Σ Γ) t) *
+    pred1 Σ Δ' (rho_ctx Σ Γ) v (rho Σ (rho_ctx Σ Γ) t).
   Proof.
     intros.
     split; eapply triangle; auto.

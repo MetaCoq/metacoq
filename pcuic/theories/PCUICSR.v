@@ -439,7 +439,7 @@ Proof.
     constructor. right; auto. exists s1; auto.
     apply conv_conv_alt. auto.
     assert (Σ ;;; Γ |- tLambda n t b : tProd n t bty). econstructor; eauto.
-    edestruct (validity _ wfΣ _ HΓ _ _ X0). apply i.
+    edestruct (validity _ wfΣ _ wfΓ _ _ X0). apply i.
     eapply cumul_red_r.
     apply cumul_refl'. constructor. apply Hu.
 
@@ -448,7 +448,7 @@ Proof.
     apply (substitution_let _ Γ n b b_ty b' b'_ty wfΣ typeb').
     specialize (typing_wf_local typeb') as wfd.
     assert (Σ ;;; Γ |- tLetIn n b b_ty b' : tLetIn n b b_ty b'_ty). econstructor; eauto.
-    edestruct (validity _ wfΣ _ HΓ _ _ X0). apply i.
+    edestruct (validity _ wfΣ _ wfΓ _ _ X0). apply i.
     eapply cumul_red_r.
     apply cumul_refl'. constructor.
 
@@ -459,7 +459,7 @@ Proof.
     constructor. auto with pcuic. constructor; eauto.
     apply conv_conv_alt; auto.
     assert (Σ ;;; Γ |- tLetIn n b b_ty b' : tLetIn n b b_ty b'_ty). econstructor; eauto.
-    edestruct (validity _ wfΣ _ HΓ _ _ X0). apply i.
+    edestruct (validity _ wfΣ _ wfΓ _ _ X0). apply i.
     eapply cumul_red_r.
     apply cumul_refl'. now constructor.
 
@@ -473,7 +473,7 @@ Proof.
     constructor. auto with pcuic. constructor; eauto. right; exists s1; auto.
     apply conv_conv_alt; auto.
     assert (Σ ;;; Γ |- tLetIn n b b_ty b' : tLetIn n b b_ty b'_ty). econstructor; eauto.
-    edestruct (validity _ wfΣ _ HΓ _ _ X0). apply i.
+    edestruct (validity _ wfΣ _ wfΓ _ _ X0). apply i.
     eapply cumul_red_r.
     apply cumul_refl'. now constructor.
 
@@ -486,8 +486,8 @@ Proof.
     eapply type_Conv; eauto.
     unshelve eapply (context_conversion _ wfΣ _ _ _ _ Hb). eauto with wf.
     constructor. auto with pcuic. constructor; eauto.
-    apply (validity _ wfΣ _ HΓ _ _ typeu).
-    destruct (validity _ wfΣ _ HΓ _ _ typet).
+    apply (validity _ wfΣ _ wfΓ _ _ typeu).
+    destruct (validity _ wfΣ _ wfΓ _ _ typet).
     clear -i.
     (** Awfully complicated for a well-formedness condition *)
     { destruct i as [[ctx [s [Hs Hs']]]|[s Hs]].
@@ -517,7 +517,7 @@ Proof.
     epose (last_nonempty_eq H). rewrite <- Hu in e1. rewrite <- e1.
     clear e1.
     specialize (type_mkApps_inv _ _ _ _ _ wfΣ typet) as [T' [U' [[appty spty] Hcumul]]].
-    specialize (validity _ wfΣ _ HΓ _ _ appty) as [_ vT'].
+    specialize (validity _ wfΣ _ wfΓ _ _ appty) as [_ vT'].
     eapply type_tFix_inv in appty as [T [arg [fn' [[Hnth Hty]]]]]; auto.
     rewrite e in Hnth. noconf Hnth.
     eapply type_App.

@@ -35,7 +35,7 @@ Cumulative Inductive TemplateMonad@{t u} : Type@{t} -> Prop :=
 (* Guaranteed to not cause "... already declared" error *)
 | tmFreshName : ident -> TemplateMonad ident
 
-| tmAbout : ident -> TemplateMonad (option global_reference)
+| tmAbout : qualid -> TemplateMonad (option global_reference)
 | tmCurrentModPath : unit -> TemplateMonad string
 
 (* Quoting and unquoting commands *)
@@ -44,9 +44,9 @@ Cumulative Inductive TemplateMonad@{t u} : Type@{t} -> Prop :=
 (* Similar to Quote Recursively Definition ... := ...*)
 | tmQuoteRec : forall {A:Type@{t}}, A  -> TemplateMonad program
 (* Quote the body of a definition or inductive. Its name need not be fully qualified *)
-| tmQuoteInductive : kername -> TemplateMonad mutual_inductive_body
+| tmQuoteInductive : qualid -> TemplateMonad mutual_inductive_body
 | tmQuoteUniverses : TemplateMonad uGraph.t
-| tmQuoteConstant : kername -> bool (* bypass opacity? *) -> TemplateMonad constant_entry
+| tmQuoteConstant : qualid -> bool (* bypass opacity? *) -> TemplateMonad constant_entry
 | tmMkDefinition : ident -> Ast.term -> TemplateMonad unit
 (* unquote before making the definition *)
 (* FIXME take an optional universe context as well *)
@@ -55,7 +55,7 @@ Cumulative Inductive TemplateMonad@{t u} : Type@{t} -> Prop :=
 | tmUnquoteTyped : forall A : Type@{t}, Ast.term -> TemplateMonad A
 
 (* Typeclass registration and querying for an instance *)
-| tmExistingInstance : kername -> TemplateMonad unit
+| tmExistingInstance : qualid -> TemplateMonad unit
 | tmInferInstance : option reductionStrategy -> forall A : Type@{t}, TemplateMonad (option A)
 .
 

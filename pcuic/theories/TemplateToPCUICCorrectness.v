@@ -528,9 +528,10 @@ Proof.
   intros args narg.
   unfold Template.Typing.is_constructor, is_constructor.
   rewrite nth_error_map. destruct nth_error. simpl. intros.
+  destruct t; try discriminate || reflexivity. simpl in H.
   destruct t; try discriminate || reflexivity.
-  destruct t; try discriminate || reflexivity.
-  simpl. unfold decompose_app; now rewrite decompose_app_rec_mkApps.
+  simpl. unfold isConstruct_app.
+  unfold decompose_app. rewrite decompose_app_rec_mkApps. now simpl.
   congruence.
 Qed.
 

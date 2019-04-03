@@ -175,11 +175,11 @@ Proof.
   rewrite commut_lift_subst_rec. lia. f_equal; lia.
 Qed.
 
-Lemma All_local_env_subst  (P Q : global_context -> context -> term -> option term -> Type) Σ c n k :
-  All_local_env Q Σ c ->
+Lemma All_local_env_subst  (P Q : context -> term -> option term -> Type) c n k :
+  All_local_env Q c ->
   (forall Γ t T,
-      Q Σ Γ t T -> P Σ (subst_context n k Γ) (subst n (#|Γ| + k) t) (option_map (subst n (#|Γ| + k)) T)) ->
-  All_local_env P Σ (subst_context n k c).
+      Q Γ t T -> P (subst_context n k Γ) (subst n (#|Γ| + k) t) (option_map (subst n (#|Γ| + k)) T)) ->
+  All_local_env P (subst_context n k c).
 Proof.
   intros Hq Hf. induction Hq in |- *; try econstructor; eauto;
                   simpl; unfold snoc; rewrite subst_context_snoc; econstructor; eauto.
@@ -305,6 +305,7 @@ Proof.
   intros args narg.
   unfold is_constructor; intros.
   rewrite nth_error_map. destruct nth_error; try discriminate. simpl. intros.
+  unfold isConstruct_app in *.
   destruct (decompose_app t) eqn:Heq. eapply decompose_app_subst in Heq as ->.
   destruct t0; try discriminate || reflexivity.
   destruct t0; try discriminate || reflexivity.
@@ -1248,7 +1249,10 @@ Proof.
     apply All2_map, All2_same. intros. red. constructor.
 
   - simplify_IH_hyps. apply red_case; auto.
-    induction X; intuition.
+    eapply OnOne2_All2; eauto. eapply OnOne2_map.
+    eapply OnOne2_impl. eauto. simpl. intuition eauto.
+    red. unfold on_Trel in *. eapply b1; eauto.
+    induction X; intuition. red. simpl. auto.
 
   - apply red_proj_congr. eauto.
 

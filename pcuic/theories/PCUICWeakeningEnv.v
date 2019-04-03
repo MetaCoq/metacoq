@@ -147,12 +147,11 @@ Proof.
 Qed.
 Hint Resolve weakening_env_declared_projection : extends.
 
-Lemma weakening_All_local_env_impl `{checker_flags}
-      (P Q : global_context -> context -> term -> option term -> Type) Σ Σ' l :
-  All_local_env P Σ l ->
-  (forall Γ t T, P Σ Γ t T -> Q Σ' Γ t T) ->
-  All_local_env Q Σ' l.
-Proof. induction 1; intros; simpl; econstructor; eauto. Qed.
+(* Lemma weakening_All_local_env_impl `{checker_flags} (P Q : context -> term -> option term -> Type) l : *)
+(*   All_local_env (P Σ) l -> *)
+(*   (forall Γ t T, P Σ Γ t T -> Q Σ' Γ t T) -> *)
+(*   All_local_env (Q Σ') l. *)
+(* Proof. induction 1; intros; simpl; econstructor; eauto. Qed. *)
 
 Ltac my_rename_hyp h th :=
   match th with
@@ -172,13 +171,13 @@ Proof.
     destruct extΣ as [Σ'' ->]. simpl; auto.
     close_Forall. intros; intuition eauto with extends.
   - econstructor; eauto with extends.
-    eapply weakening_All_local_env_impl. eapply X.
+    eapply All_local_env_impl. eapply X.
     clear -wfΣ' extΣ. simpl; intros.
     unfold lift_typing in *; destruct T; intuition eauto with extends.
     destruct X as [u [tyu Hu]]. exists u. eauto.
     eapply All_impl; eauto; simpl; intuition eauto with extends.
   - econstructor; eauto with extends.
-    eapply weakening_All_local_env_impl. eapply X.
+    eapply All_local_env_impl. eapply X.
     clear -wfΣ' extΣ. simpl; intros.
     unfold lift_typing in *; destruct T; intuition eauto with extends.
     destruct X as [u [tyu Hu]]. exists u. eauto.
@@ -219,7 +218,7 @@ Proof.
     unfold on_projection, on_type; eauto.
     destruct decompose_prod_assum. intuition auto.
     eapply HPΣ; eauto.
-  - red in onP |- *. eapply weakening_All_local_env_impl; eauto.
+  - red in onP |- *. eapply All_local_env_impl; eauto.
 Qed.
 
 Lemma weakening_env_lookup_on_global_env `{checker_flags} P Σ Σ' c decl :

@@ -421,6 +421,7 @@ Proof.
             eapply r in H4 as (? & ? & ?); eauto. 
             eexists (x3 :: x2). repeat split.
             econstructor. eauto. eauto. econstructor. eauto. eauto.
+            
             admit. econstructor; eauto. all:eauto.
             2:{ eapply PCUICGeneration.type_mkApps. eauto. admit. }
             admit.}

@@ -4,7 +4,8 @@
     should use these same directives for consistency.
 *)
 
-From Template Require All.
+From Template Require Import
+     utils Checker Retyping.
 
 Require Import FSets.
 Require Import ExtrOcamlBasic.

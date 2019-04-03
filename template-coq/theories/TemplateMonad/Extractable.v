@@ -31,20 +31,20 @@ Cumulative Inductive TM@{t} : Type@{t} -> Type :=
 
 (* Return the defined constant *)
 | tmDefinition (nm : ident)
-                  (type : option Ast.term) (term : Ast.term)
+               (type : option Ast.term) (term : Ast.term)
   : TM kername
 | tmAxiom (nm : ident)
-             (type : Ast.term)
+          (type : Ast.term)
   : TM kername
 | tmLemma (nm : ident)
-             (type : option Ast.term) (term : Ast.term)
+          (type : Ast.term)
   : TM kername
 
 (* Guaranteed to not cause "... already declared" error *)
 | tmFreshName : ident -> TM ident
 
 | tmAbout : ident -> TM (option global_reference)
-| tmCurrentModPath : unit -> TM string
+| tmCurrentModPath : TM string
 
 (* Quote the body of a definition or inductive. *)
 | tmQuoteInductive (nm : kername)
@@ -55,7 +55,7 @@ Cumulative Inductive TM@{t} : Type@{t} -> Type :=
 
 (* unquote before making the definition *)
 (* FIXME take an optional universe context as well *)
-| tmMkInductive : mutual_inductive_entry -> TM unit
+| tmInductive : mutual_inductive_entry -> TM unit
 
 (* Typeclass registration and querying for an instance *)
 | tmExistingInstance : kername -> TM unit
@@ -70,25 +70,21 @@ Definition TypeInstance : Common.TMInstance :=
    ; Common.tmFail:=@tmFail
    ; Common.tmFreshName:=@tmFreshName
    ; Common.tmAbout:=@tmAbout
-   ; Common.tmCurrentModPath:=@tmCurrentModPath
+   ; Common.tmCurrentModPath:=fun _ => @tmCurrentModPath
    ; Common.tmQuoteInductive:=@tmQuoteInductive
    ; Common.tmQuoteUniverses:=@tmQuoteUniverses
    ; Common.tmQuoteConstant:=@tmQuoteConstant
-   ; Common.tmMkInductive:=@tmMkInductive
+   ; Common.tmMkInductive:=@tmInductive
    ; Common.tmExistingInstance:=@tmExistingInstance
    |}.
 (* Monadic operations *)
 
-Definition tmMkInductive' (mind : mutual_inductive_body) : TM unit
-  := tmMkInductive (mind_body_to_entry mind).
+Definition tmInductive' (mind : mutual_inductive_body) : TM unit
+  := tmInductive (mind_body_to_entry mind).
 
 Definition tmLemmaRed (i : ident) (rd : reductionStrategy)
-           (ty : option Ast.term) (body : Ast.term) :=
-  match ty with
-  | None => tmLemma i None body
-  | Some ty =>
-    tmBind (tmEval rd ty) (fun ty => tmLemma i (Some ty) body)
-  end.
+           (ty : Ast.term) :=
+  tmBind (tmEval rd ty) (fun ty => tmLemma i ty).
 Definition tmAxiomRed (i : ident) (rd : reductionStrategy) (ty : Ast.term)
   :=
     tmBind (tmEval rd ty) (fun ty => tmAxiom i ty).

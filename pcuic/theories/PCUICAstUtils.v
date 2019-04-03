@@ -1,5 +1,5 @@
 From Coq Require Import Ascii String Bool OrderedType Lia List Program Arith.
-From Template Require Import utils.
+From Template Require Import utils AstUtils.
 From Template Require Import BasicAst.
 From PCUIC Require Import PCUICAst.
 Import List.ListNotations.
@@ -733,23 +733,18 @@ Proof.
     subst. constructor. reflexivity.
 Qed.
 
-(* Definition eq_string s s' := *)
-(*   if string_dec s s' then true else false. *)
-
-Definition eq_string s s' :=
-  match string_dec s s' with
-  | left _ => true
-  | right _ => false
-  end.
-
 Instance reflect_string : ReflectEq string := {
   eqb := eq_string
 }.
 Proof.
-  intros s s'. unfold eq_string.
-  destruct string_dec.
-  - constructor. assumption.
-  - constructor. assumption.
+  intros s s'. destruct (string_dec s s').
+  - subst. rewrite eq_string_refl. constructor. reflexivity.
+  - assert (string_compare s s' <> Eq).
+    { intro bot. apply n. apply string_compare_eq. assumption. }
+    unfold eq_string. destruct (string_compare s s').
+    + tauto.
+    + constructor. assumption.
+    + constructor. assumption.
 Qed.
 
 Instance reflect_nat : ReflectEq nat := {

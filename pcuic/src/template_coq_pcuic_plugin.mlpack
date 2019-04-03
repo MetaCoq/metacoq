@@ -4,9 +4,6 @@ PCUICInduction
 PCUICUnivSubst
 PCUICLiftSubst
 PCUICTyping
-PCUICWeakeningEnv
-PCUICWeakening
-PCUICSubstitution
 PCUICChecker
 PCUICRetyping
 PCUICMetaTheory

@@ -7,8 +7,6 @@ open Quoter
 
 module TemplateMonad :
 sig
-  type defn_kind = Definition | Lemma
-
   type template_monad =
       TmReturn of Constr.t
     | TmBind  of Constr.t * Constr.t
@@ -25,8 +23,9 @@ sig
 
       (* creating definitions *)
     | TmDefinition of Constr.t * Constr.t * Constr.t * Constr.t
-    | TmDefinitionTerm of defn_kind * Constr.t * Constr.t * Constr.t
+    | TmDefinitionTerm of Constr.t * Constr.t * Constr.t
     | TmLemma of Constr.t * Constr.t * Constr.t
+    | TmLemmaTerm of Constr.t * Constr.t
     | TmAxiom of Constr.t * Constr.t * Constr.t
     | TmAxiomTerm of Constr.t * Constr.t
     | TmMkDefinition of Constr.t * Constr.t
@@ -52,7 +51,7 @@ sig
     | TmInferInstanceTerm of Constr.t        (* only Extractable *)
 
   val next_action
-    : Environ.env -> Constr.t -> (template_monad * Univ.Instance.t)
+    : Environ.env -> Evd.evar_map -> Constr.t -> (template_monad * Univ.Instance.t)
 
 end =
 struct
@@ -139,16 +138,16 @@ struct
        ttmFail,
        ttmEval,
 
-       ttmDefinitionRed,
-       ttmAxiomRed,
-       ttmLemmaRed,
+       ttmDefinition,
+       ttmAxiom,
+       ttmLemma,
        ttmFreshName,
        ttmAbout,
        ttmCurrentModPath,
        ttmQuoteInductive,
        ttmQuoteConstant,
        ttmQuoteUniverses,
-       ttmMkInductive,
+       ttmInductive,
        ttmInferInstance,
        ttmExistingInstance) =
     (r_template_monad_type_p "tmReturn",
@@ -159,9 +158,9 @@ struct
      r_template_monad_type_p "tmFail",
      r_template_monad_type_p "tmEval",
 
-     r_template_monad_type_p "tmDefinitionRed",
-     r_template_monad_type_p "tmAxiomRed",
-     r_template_monad_type_p "tmLemmaRed",
+     r_template_monad_type_p "tmDefinition",
+     r_template_monad_type_p "tmAxiom",
+     r_template_monad_type_p "tmLemma",
 
      r_template_monad_type_p "tmFreshName",
 
@@ -172,14 +171,12 @@ struct
      r_template_monad_type_p "tmQuoteUniverses",
      r_template_monad_type_p "tmQuoteConstant",
 
-     r_template_monad_type_p "tmMkInductive",
+     r_template_monad_type_p "tmInductive",
 
      r_template_monad_type_p "tmInferInstance",
      r_template_monad_type_p "tmExistingInstance")
 
   type constr = Constr.t
-
-  type defn_kind = Definition | Lemma
 
   type template_monad =
       TmReturn of Constr.t
@@ -197,8 +194,9 @@ struct
 
       (* creating definitions *)
     | TmDefinition of Constr.t * Constr.t * Constr.t * Constr.t
-    | TmDefinitionTerm of defn_kind * Constr.t * Constr.t * Constr.t
+    | TmDefinitionTerm of Constr.t * Constr.t * Constr.t
     | TmLemma of Constr.t * Constr.t * Constr.t
+    | TmLemmaTerm of Constr.t * Constr.t
     | TmAxiom of Constr.t * Constr.t * Constr.t
     | TmAxiomTerm of Constr.t * Constr.t
     | TmMkDefinition of Constr.t * Constr.t
@@ -230,18 +228,11 @@ struct
     | _ -> (trm, acc)
 
   let monad_failure s k =
-    CErrors.user_err  (str (s ^ " must take " ^ (string_of_int k) ^ " argument" ^ (if k > 0 then "s" else "") ^ ".")
-                       ++ str "Please file a bug with Template-Coq.")
+    CErrors.user_err  Pp.(str s ++ str " must take " ++ int k ++
+                          str " argument" ++ str (if k > 0 then "s" else "") ++ str "." ++ fnl () ++
+                          str "Please file a bug with MetaCoq.")
 
-  let print_term (u: Constr.t) : Pp.t = pr_constr u
-
-  let monad_failure_full s k prg =
-    CErrors.user_err
-      (str (s ^ " must take " ^ (string_of_int k) ^ " argument" ^ (if k > 0 then "s" else "") ^ ".") ++
-       str "While trying to run: " ++ fnl () ++ print_term prg ++ fnl () ++
-       str "Please file a bug with Template-Coq.")
-
-  let next_action env (pgm : constr) : template_monad * _ =
+  let next_action env evd (pgm : constr) : template_monad * _ =
     let pgm = Reduction.whd_all env pgm in
     let (coConstr, args) = app_full pgm [] in
     let (glob_ref, universes) =
@@ -254,7 +245,7 @@ struct
         | Var id -> VarRef id, Instance.empty
         | _ -> raise Not_found
       with _ ->
-        CErrors.user_err (str "Invalid argument or not yet implemented. The argument must be a TemplateProgram: " ++ pr_constr coConstr)
+        CErrors.user_err (str "Invalid argument or not yet implemented. The argument must be a TemplateProgram: " ++ Printer.pr_constr_env env evd coConstr)
     in
     if Globnames.eq_gr glob_ref ptmReturn || Globnames.eq_gr glob_ref ttmReturn then
       match args with
@@ -265,7 +256,7 @@ struct
       match args with
       | _::_::a::f::[] ->
         (TmBind (a, f), universes)
-      | _ -> monad_failure_full "tmBind" 4 pgm
+      | _ -> monad_failure "tmBind" 4
     else if Globnames.eq_gr glob_ref ptmPrint then
       match args with
       | _::trm::[] ->
@@ -300,33 +291,33 @@ struct
       | name::s::typ::body::[] ->
         (TmDefinition (name, s, typ, body), universes)
       | _ -> monad_failure "tmDefinitionRed" 4
-    else if Globnames.eq_gr glob_ref ttmDefinitionRed then
+    else if Globnames.eq_gr glob_ref ttmDefinition then
       match args with
       | name::typ::body::[] ->
-        (TmDefinitionTerm (Definition, name, typ, body), universes)
-      | _ -> monad_failure "tmDefinitionRed" 4
+        (TmDefinitionTerm (name, typ, body), universes)
+      | _ -> monad_failure "tmDefinition" 3
 
     else if Globnames.eq_gr glob_ref ptmLemmaRed then
       match args with
       | name::s::typ::[] ->
         (TmLemma (name,s,typ), universes)
       | _ -> monad_failure "tmLemmaRed" 3
-    else if Globnames.eq_gr glob_ref ttmLemmaRed then
+    else if Globnames.eq_gr glob_ref ttmLemma then
       match args with
-      | name::typ::term::[] ->
-        (TmDefinitionTerm (Lemma, name, typ, term), universes)
-      | _ -> monad_failure "tmLemmaRed" 3
+      | name::typ::[] ->
+        (TmLemmaTerm (name, typ), universes)
+      | _ -> monad_failure "tmLemma" 2
 
     else if Globnames.eq_gr glob_ref ptmAxiomRed then
       match args with
       | name::s::typ::[] ->
         (TmAxiom (name,s,typ), universes)
       | _ -> monad_failure "tmAxiomRed" 3
-    else if Globnames.eq_gr glob_ref ttmAxiomRed then
+    else if Globnames.eq_gr glob_ref ttmAxiom then
       match args with
       | name::typ::[] ->
         (TmAxiomTerm (name, typ), universes)
-      | _ -> monad_failure "tmAxiomRed" 3
+      | _ -> monad_failure "tmAxiom" 2
 
     else if Globnames.eq_gr glob_ref ptmFreshName || Globnames.eq_gr glob_ref ttmFreshName then
       match args with
@@ -339,10 +330,13 @@ struct
       | id::[] ->
         (TmAbout id, universes)
       | _ -> monad_failure "tmAbout" 1
-    else if Globnames.eq_gr glob_ref ptmCurrentModPath || Globnames.eq_gr glob_ref ttmCurrentModPath then
+    else if Globnames.eq_gr glob_ref ptmCurrentModPath then
       match args with
-      | _::[] ->
-        (TmCurrentModPath, universes)
+      | _::[] -> (TmCurrentModPath, universes)
+      | _ -> monad_failure "tmCurrentModPath" 1
+    else if Globnames.eq_gr glob_ref ttmCurrentModPath then
+      match args with
+      | [] -> (TmCurrentModPath, universes)
       | _ -> monad_failure "tmCurrentModPath" 1
 
     else if Globnames.eq_gr glob_ref ptmMkDefinition then
@@ -378,11 +372,14 @@ struct
         (TmQuoteConst (name, bypass), universes)
       | _ -> monad_failure "tmQuoteConstant" 2
 
-    else if Globnames.eq_gr glob_ref ptmMkInductive || Globnames.eq_gr glob_ref ttmMkInductive then
+    else if Globnames.eq_gr glob_ref ptmMkInductive then
       match args with
       | mind::[] -> (TmMkInductive mind, universes)
       | _ -> monad_failure "tmMkInductive" 1
-
+    else if Globnames.eq_gr glob_ref ttmInductive then
+      match args with
+      | mind::[] -> (TmMkInductive mind, universes)
+      | _ -> monad_failure "tmInductive" 1
     else if Globnames.eq_gr glob_ref ptmUnquote then
       match args with
       | t::[] ->

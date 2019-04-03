@@ -61,7 +61,6 @@ END;;
 TACTIC EXTEND denote_term
     | [ "denote_term" constr(c) tactic(tac) ] ->
       [ Proofview.Goal.enter (begin fun gl ->
-         let env = Proofview.Goal.env gl in
          let evm = Proofview.Goal.sigma gl in
          let evm, c = Denote.denote_term evm (EConstr.to_constr evm c) in
          Proofview.tclTHEN (Proofview.Unsafe.tclEVARS evm)
@@ -133,14 +132,14 @@ VERNAC COMMAND EXTEND Unquote_inductive CLASSIFIED AS SIDEFF
     | [ "Make" "Inductive" constr(def) ] ->
       [ let (evm,env) = Pfedit.get_current_context () in
 	let (body,uctx) = Constrintern.interp_constr env evm def in
-        Denote.declare_inductive env evm (EConstr.to_constr evm body) ]
+        Run_template_monad.declare_inductive env evm (EConstr.to_constr evm body) ]
 END;;
 
 VERNAC COMMAND EXTEND Run_program CLASSIFIED AS SIDEFF
     | [ "Run" "TemplateProgram" constr(def) ] ->
       [ let (evm, env) = Pfedit.get_current_context () in
         let (evm, def) = Constrintern.interp_open_constr env evm def in
-        Denote.run_template_program_rec (fun _ -> ()) env (evm, (EConstr.to_constr evm def)) ]
+        Run_template_monad.run_template_program_rec (fun _ -> ()) env (evm, (EConstr.to_constr evm def)) ]
 END;;
 
 TACTIC EXTEND run_program
@@ -148,9 +147,8 @@ TACTIC EXTEND run_program
       [ Proofview.Goal.enter (begin fun gl ->
          let env = Proofview.Goal.env gl in
          let evm = Proofview.Goal.sigma gl in
-         let env = Proofview.Goal.env gl in
          let ret = ref None in
-         Denote.run_template_program_rec ~intactic:true (fun x -> ret := Some x) env (evm, EConstr.to_constr evm c);
+         Run_template_monad.run_template_program_rec ~intactic:true (fun x -> ret := Some x) env (evm, EConstr.to_constr evm c);
          match !ret with
            Some (env, evm, t) ->
             Proofview.tclTHEN

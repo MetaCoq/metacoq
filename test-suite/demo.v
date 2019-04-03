@@ -1,4 +1,4 @@
-Require Import List Arith.
+Require Import List Arith String.
 Require Import Template.All.
 Import ListNotations MonadNotation.
 
@@ -386,3 +386,19 @@ Check eq_refl : ones = ones'.
 (* Print universes. *)
 (* Definition tyu := Eval vm_compute in universes. *)
 (* Check (universes : uGraph.t). *)
+
+
+Definition kername_of_qualid (q : qualid) : TemplateMonad kername :=
+  gr <- tmAbout q ;;
+  match gr with
+  | Some (ConstRef kn)  => ret kn
+  | Some (IndRef ind) => ret ind.(inductive_mind)
+  | Some (ConstructRef ind _) => ret ind.(inductive_mind)
+  | None => tmFail  ("tmLocate: " ++ q ++ " not found")
+  end.
+
+Run TemplateProgram (kername_of_qualid "add" >>= tmPrint).
+Run TemplateProgram (kername_of_qualid "BinNat.N.add" >>= tmPrint).
+Run TemplateProgram (kername_of_qualid "Coq.NArith.BinNatDef.N.add" >>= tmPrint).
+Fail Run TemplateProgram (kername_of_qualid "N.add" >>= tmPrint).
+Fail Run TemplateProgram (kername_of_qualid "qlskf" >>= tmPrint).

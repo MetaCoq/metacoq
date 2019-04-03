@@ -364,6 +364,16 @@ Section Conversion.
   Qed.
 
   Lemma conv_trans :
+    forall Γ u v w,
+      Σ ;;; Γ |- u = v ->
+      Σ ;;; Γ |- v = w ->
+      Σ ;;; Γ |- u = w.
+  Proof.
+    intros Γ u v w h1 h2.
+    destruct h1, h2. constructor ; eapply cumul_trans ; eassumption.
+  Qed.
+
+  Lemma conv_trans' :
     forall leq Γ u v w,
       conv leq Σ Γ u v ->
       conv leq Σ Γ v w ->
@@ -371,8 +381,8 @@ Section Conversion.
   Proof.
     intros leq Γ u v w h1 h2.
     destruct leq.
-    - cbn in *. destruct h1 as [[h1 h1']]. destruct h2 as [[h2 h2']].
-      constructor. constructor ; eapply cumul_trans ; eassumption.
+    - cbn in *. destruct h1, h2. constructor.
+      eapply conv_trans ; eassumption.
     - cbn in *. destruct h1, h2. constructor. eapply cumul_trans ; eassumption.
   Qed.
 
@@ -384,7 +394,7 @@ Section Conversion.
     intros leq Γ u v h.
     induction h.
     - apply conv_refl'.
-    - eapply conv_trans ; try eassumption.
+    - eapply conv_trans' ; try eassumption.
       destruct leq.
       + simpl. constructor. constructor.
         * eapply cumul_red_l.
@@ -407,7 +417,7 @@ Section Conversion.
     intros leq Γ u v h.
     induction h.
     - apply conv_refl'.
-    - eapply conv_trans ; try eassumption.
+    - eapply conv_trans' ; try eassumption.
       destruct leq.
       + simpl. constructor. constructor.
         * eapply cumul_red_r.
@@ -466,6 +476,15 @@ Section Conversion.
   Admitted.
 
   Lemma conv_context :
+    forall Γ u v ρ,
+      Σ ;;; Γ |- u = v ->
+      Σ ;;; Γ |- zipc u ρ = zipc v ρ.
+  Proof.
+    intros Γ u v ρ [].
+    constructor ; eapply cumul_context ; assumption.
+  Qed.
+
+  Lemma conv_context' :
     forall Γ leq u v ρ,
       conv leq Σ Γ u v ->
       conv leq Σ Γ (zipc u ρ) (zipc v ρ).
@@ -485,38 +504,43 @@ Section Conversion.
 
   Definition R (u v : state * term * stack) := False.
 
-  Definition Ret s Γ leq t π :=
+  Definition Ret s Γ t π :=
     match s with
     | Reduction =>
-      forall t' π' (h' : welltyped Σ Γ (zipc t' π')),
+      forall leq t' π' (h' : welltyped Σ Γ (zipc t' π')),
         { b : bool | if b then conv leq Σ Γ (zipc t π) (zipc t' π') else True }
     | Term =>
-      forall t' π' (h' : welltyped Σ Γ (zipc t' π')),
+      forall leq t' π' (h' : welltyped Σ Γ (zipc t' π')),
         { b : bool | if b then conv leq Σ Γ (zipc t π) (zipc t' π') else True }
     | Args =>
       forall π' (h' : welltyped Σ Γ (zipc t π')),
-        { b : bool | if b then conv leq Σ Γ (zipc t π) (zipc t π') else True }
+        { b : bool | if b then ∥ Σ ;;; Γ |- zipc t π = zipc t π' ∥ else True }
     end.
 
+  (* Probably have to generalise over Γ as well. *)
   Definition Aux s Γ t π :=
-     forall leq s' t' π' (h' : welltyped Σ Γ (zipc t' π')),
-       R (s', t', π') (s, t, π) -> Ret s' Γ leq t' π'.
+     forall s' t' π' (h' : welltyped Σ Γ (zipc t' π')),
+       R (s', t', π') (s, t, π) -> Ret s' Γ t' π'.
 
   Notation no := (exist false I) (only parsing).
   Notation yes := (exist true _) (only parsing).
+
   Notation repack e := (let '(exist b h) := e in exist b _) (only parsing).
+
+  (* TODO Replace h1 and h2 by _ *)
   Notation isconv_red_raw Γ leq t1 π1 h1 t2 π2 h2 aux :=
-    (aux leq Reduction t1 π1 h1 _ t2 π2 h2) (only parsing).
+    (aux Reduction t1 π1 h1 _ leq t2 π2 h2) (only parsing).
   Notation isconv_prog_raw Γ leq t1 π1 h1 t2 π2 h2 aux :=
-    (aux leq Term t1 π1 h1 _ t2 π2 h2) (only parsing).
-  Notation isconv_args_raw Γ leq t π1 h1 π2 h2 aux :=
-    (aux leq Args t π1 h1 _ π2 h2) (only parsing).
+    (aux Term t1 π1 h1 _ leq t2 π2 h2) (only parsing).
+  Notation isconv_args_raw Γ t π1 h1 π2 h2 aux :=
+    (aux Args t π1 h1 _ π2 h2) (only parsing).
+
   Notation isconv_red Γ leq t1 π1 h1 t2 π2 h2 aux :=
     (repack (isconv_red_raw Γ leq t1 π1 h1 t2 π2 h2 aux)) (only parsing).
   Notation isconv_prog Γ leq t1 π1 h1 t2 π2 h2 aux :=
     (repack (isconv_prog_raw Γ leq t1 π1 h1 t2 π2 h2 aux)) (only parsing).
-  Notation isconv_args Γ leq t π1 h1 π2 h2 aux :=
-    (repack (isconv_args_raw Γ leq t π1 h1 π2 h2 aux)) (only parsing).
+  Notation isconv_args Γ t π1 h1 π2 h2 aux :=
+    (repack (isconv_args_raw Γ t π1 h1 π2 h2 aux)) (only parsing).
 
   Equations(noeqns) _isconv_red (Γ : context) (leq : conv_pb)
             (t1 : term) (π1 : stack) (h1 : welltyped Σ Γ (zipc t1 π1))
@@ -552,9 +576,9 @@ Section Conversion.
     destruct b ; auto.
     destruct (reduce_stack_sound nodelta_flags _ _ _ _ h1).
     destruct (reduce_stack_sound nodelta_flags _ _ _ _ h2).
-    eapply conv_trans.
+    eapply conv_trans'.
     - eapply red_conv_l. eassumption.
-    - eapply conv_trans.
+    - eapply conv_trans'.
       + rewrite <- eq1. eassumption.
       + zip fold. rewrite eq2.
         eapply red_conv_r. assumption.
@@ -573,7 +597,7 @@ Section Conversion.
     (* TODO Check universe instances, we will have to do it to proceed anyway. *)
     _isconv_prog Γ leq (tConst c u) π1 h1 (tConst c' u') π2 h2 aux
     with inspect (eq_constant c c') := {
-    | @exist true eq1 with isconv_args_raw Γ leq (tConst c u) π1 _ π2 _ aux := {
+    | @exist true eq1 with isconv_args_raw Γ (tConst c u) π1 _ π2 _ aux := {
       | @exist true h := yes ;
       | @exist false _ := (* TODO *) no
       } ;
@@ -594,23 +618,24 @@ Section Conversion.
   (* TODO Replace by Conv, perhaps it should even be global to iscong_args.
      In any case, leq should be quantified over in Aux.
    *)
-  Equations(noeqns) _isconv_args (Γ : context) (leq : conv_pb) (t : term)
+  Equations(noeqns) _isconv_args (Γ : context) (t : term)
             (π1 : stack) (h1 : welltyped Σ Γ (zipc t π1))
             (π2 : stack) (h2 : welltyped Σ Γ (zipc t π2))
             (aux : Aux Args Γ t π1)
-    : { b : bool | if b then conv leq Σ Γ (zipc t π1) (zipc t π2) else True } :=
+    : { b : bool | if b then ∥ Σ ;;; Γ |- zipc t π1 = zipc t π2 ∥ else True } :=
 
-    _isconv_args Γ leq t (App u1 ρ1) h1 (App u2 ρ2) h2 aux
-    with isconv_red_raw Γ leq u1 Empty _ u2 Empty _ aux := {
-    | @exist true h1 := isconv_args Γ leq (tApp t u1) ρ1 _ ρ2 _ aux ;
+    _isconv_args Γ t (App u1 ρ1) h1 (App u2 ρ2) h2 aux
+    with isconv_red_raw Γ Conv u1 Empty _ u2 Empty _ aux := {
+    | @exist true h1 := isconv_args Γ (tApp t u1) ρ1 _ ρ2 _ aux ;
     | @exist false _ := no
     } ;
 
-    _isconv_args Γ leq t Empty h1 Empty h2 aux := yes ;
+    _isconv_args Γ t Empty h1 Empty h2 aux := yes ;
 
-    _isconv_args Γ leq t π1 h1 π2 h2 aux := no.
+    _isconv_args Γ t π1 h1 π2 h2 aux := no.
   Next Obligation.
-    apply conv_refl'.
+    constructor.
+    apply conv_refl.
   Qed.
   Next Obligation.
     zip fold in h1.
@@ -639,24 +664,26 @@ Section Conversion.
   Admitted.
   Next Obligation.
     destruct b ; auto.
+    destruct h1 as [h1]. destruct h as [h].
+    constructor.
     eapply conv_trans ; try eassumption.
     eapply conv_context.
     (* We need congruence of application. *)
     admit.
   Admitted.
 
-  Equations _isconv (s : state) (Γ : context) (leq : conv_pb)
+  Equations _isconv (s : state) (Γ : context)
             (t : term) (π : stack) (h : welltyped Σ Γ (zipc t π))
             (aux : Aux s Γ t π)
-  : Ret s Γ leq t π :=
-    _isconv Reduction Γ leq t π h aux :=
-      λ { | t' | π' | h' := _isconv_red Γ leq t π h t' π' h' aux } ;
+  : Ret s Γ t π :=
+    _isconv Reduction Γ t π h aux :=
+      λ { | leq | t' | π' | h' := _isconv_red Γ leq t π h t' π' h' aux } ;
 
-    _isconv Term Γ leq t π h aux :=
-      λ { | t' | π' | h' := _isconv_prog Γ leq t π h t' π' h' aux } ;
+    _isconv Term Γ t π h aux :=
+      λ { | leq | t' | π' | h' := _isconv_prog Γ leq t π h t' π' h' aux } ;
 
-    _isconv Args Γ leq t π h aux :=
-      λ { | π' | h' := _isconv_args Γ leq t π h π' h' aux }.
+    _isconv Args Γ t π h aux :=
+      λ { | π' | h' := _isconv_args Γ t π h π' h' aux }.
 
   (* The idea is that when comparing two terms, we first reduce on both sides.
      We then go deeper inside the term, and sometimes recurse on the stacks

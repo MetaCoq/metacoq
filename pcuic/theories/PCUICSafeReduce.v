@@ -49,27 +49,26 @@ Ltac fcase c :=
 Ltac term_dec_tac term_dec :=
   repeat match goal with
          | t : term, u : term |- _ => fcase (term_dec t u)
-         | u : universe, u' : universe |- _ => fcase (universe_dec u u')
+         | u : universe, u' : universe |- _ => fcase (eq_dec u u')
          | x : universe_instance, y : universe_instance |- _ =>
-           fcase (list_dec level_dec x y)
+           fcase (eq_dec x y)
+         | x : list Level.t, y : universe_instance |- _ =>
+           fcase (eq_dec x y)
          | n : nat, m : nat |- _ => fcase (Nat.eq_dec n m)
          | i : ident, i' : ident |- _ => fcase (string_dec i i')
          | i : kername, i' : kername |- _ => fcase (string_dec i i')
-         | n : name, n' : name |- _ => fcase (name_dec n n')
+         | i : string, i' : kername |- _ => fcase (string_dec i i')
+         | n : name, n' : name |- _ => fcase (eq_dec n n')
          (* | l : list term, l' : list term |- _ => fcase (list_dec term_dec l l') *)
-         | i : inductive, i' : inductive |- _ => fcase (inductive_dec i i')
+         | i : inductive, i' : inductive |- _ => fcase (eq_dec i i')
          | x : inductive * nat, y : inductive * nat |- _ =>
-           fcase (prod_dec inductive_dec Nat.eq_dec x y)
+           fcase (eq_dec x y)
          (* | x : list (nat * term), y : list (nat * term) |- _ => *)
          (*   fcase (list_dec (prod_dec Nat.eq_dec term_dec) x y) *)
-         | x : projection, y : projection |- _ => fcase (projection_dec x y)
+         | x : projection, y : projection |- _ => fcase (eq_dec x y)
          (* | f : mfixpoint term, g : mfixpoint term |- _ => *)
          (*   fcase (mfixpoint_dec term_dec f g) *)
          end.
-
-Tactic Notation "my" "absurd" hyp(n) :=
-  let bot := fresh "bot" in
-  intro bot ; apply n ; inversion bot ; reflexivity.
 
 Derive EqDec for term.
 Next Obligation.
@@ -83,67 +82,39 @@ Next Obligation.
       * right. discriminate.
     + destruct l0.
       * right. discriminate.
-      * destruct (IHForallT l0).
-        -- destruct (p t).
-           ++ subst. left. inversion e. reflexivity.
-           ++ right. my absurd n.
-        -- right. my absurd n.
-  - destruct (IHx1 t1).
-    + subst. destruct (IHx2 t2).
-      * subst. left. reflexivity.
-      * right. my absurd n.
-    + right. my absurd n.
-  - destruct (IHx1 t1).
-    + subst. destruct (IHx2 t2).
-      * subst. left. reflexivity.
-      * right. my absurd n.
-    + right. my absurd n.
-  - destruct (IHx1 t1).
-    + subst. destruct (IHx2 t2).
-      * subst. destruct (IHx3 t3).
-        -- subst. left. reflexivity.
-        -- right. my absurd n.
-      * right. my absurd n.
-    + right. my absurd n.
-  - destruct (IHx1 t1).
-    + subst. destruct (IHx2 t2).
-      * subst. left. reflexivity.
-      * right. my absurd n.
-    + right. my absurd n.
-  - destruct (string_dec s k).
-    + subst. destruct (list_dec level_dec u u0).
-      * subst. left. reflexivity.
-      * right. my absurd n.
-    + right. my absurd n.
-  - destruct (list_dec level_dec u u0).
-    + subst. left. reflexivity.
-    + right. my absurd n.
-  - destruct (list_dec level_dec u u0).
-    + subst. left. reflexivity.
-    + right. my absurd n.
-  - destruct (IHx1 t1).
-    + subst. destruct (IHx2 t2).
-      * subst. revert l0. clear IHx1 IHx2.
-        induction X ; intro l0.
-        -- destruct l0.
-           ++ left. reflexivity.
-           ++ right. discriminate.
-        -- destruct l0.
-           ++ right. discriminate.
-           ++ destruct (IHX l0).
-              ** destruct (p (snd p1)).
-                 --- destruct (Nat.eq_dec (fst x) (fst p1)).
-                     +++ destruct x. destruct p1.
-                         cbn in *. subst.
-                         left. inversion e. reflexivity.
-                     +++ right. my absurd n.
-                 --- right. my absurd n.
-              ** right. my absurd n.
-      * right. my absurd n.
-    + right. my absurd n.
-  - destruct (IHx t).
-    + subst. left. reflexivity.
-    + right. my absurd n.
+      * destruct (IHForallT l0) ; nodec.
+        destruct (p t) ; nodec.
+        subst. left. inversion e. reflexivity.
+  - destruct (IHx1 t1) ; nodec.
+    destruct (IHx2 t2) ; nodec.
+    subst. left. reflexivity.
+  - destruct (IHx1 t1) ; nodec.
+    destruct (IHx2 t2) ; nodec.
+    subst. left. reflexivity.
+  - destruct (IHx1 t1) ; nodec.
+    destruct (IHx2 t2) ; nodec.
+    destruct (IHx3 t3) ; nodec.
+    subst. left. reflexivity.
+  - destruct (IHx1 t1) ; nodec.
+    destruct (IHx2 t2) ; nodec.
+    subst. left. reflexivity.
+  - destruct (IHx1 t1) ; nodec.
+    destruct (IHx2 t2) ; nodec.
+    subst. revert l0. clear IHx1 IHx2.
+    induction X ; intro l0.
+    + destruct l0.
+      * left. reflexivity.
+      * right. discriminate.
+    + destruct l0.
+      * right. discriminate.
+      * destruct (IHX l0) ; nodec.
+        destruct (p (snd p1)) ; nodec.
+        destruct (eq_dec (fst x) (fst p1)) ; nodec.
+        destruct x, p1.
+        left.
+        cbn in *. subst. inversion e. reflexivity.
+  - destruct (IHx t) ; nodec.
+    left. subst. reflexivity.
   - revert m0. induction X ; intro m0.
     + destruct m0.
       * left. reflexivity.
@@ -151,19 +122,14 @@ Next Obligation.
     + destruct p as [p1 p2].
       destruct m0.
       * right. discriminate.
-      * destruct (p1 (dtype d)).
-        -- destruct (p2 (dbody d)).
-           ++ destruct (IHX m0).
-              ** destruct x, d ; subst. cbn in *.
-                 destruct (name_dec dname dname0).
-                 --- subst. inversion e1. subst.
-                     destruct (Nat.eq_dec rarg rarg0).
-                     +++ subst. left. reflexivity.
-                     +++ right. my absurd n.
-                 --- right. my absurd n.
-              ** right. my absurd n.
-           ++ right. my absurd n.
-        -- right. my absurd n.
+      * destruct (p1 (dtype d)) ; nodec.
+        destruct (p2 (dbody d)) ; nodec.
+        destruct (IHX m0) ; nodec.
+        destruct x, d ; subst. cbn in *.
+        destruct (eq_dec dname dname0) ; nodec.
+        subst. inversion e1. subst.
+        destruct (eq_dec rarg rarg0) ; nodec.
+        subst. left. reflexivity.
   - revert m0. induction X ; intro m0.
     + destruct m0.
       * left. reflexivity.
@@ -171,19 +137,14 @@ Next Obligation.
     + destruct p as [p1 p2].
       destruct m0.
       * right. discriminate.
-      * destruct (p1 (dtype d)).
-        -- destruct (p2 (dbody d)).
-           ++ destruct (IHX m0).
-              ** destruct x, d ; subst. cbn in *.
-                 destruct (name_dec dname dname0).
-                 --- subst. inversion e1. subst.
-                     destruct (Nat.eq_dec rarg rarg0).
-                     +++ subst. left. reflexivity.
-                     +++ right. my absurd n.
-                 --- right. my absurd n.
-              ** right. my absurd n.
-           ++ right. my absurd n.
-        -- right. my absurd n.
+      * destruct (p1 (dtype d)) ; nodec.
+        destruct (p2 (dbody d)) ; nodec.
+        destruct (IHX m0) ; nodec.
+        destruct x, d ; subst. cbn in *.
+        destruct (eq_dec dname dname0) ; nodec.
+        subst. inversion e1. subst.
+        destruct (eq_dec rarg rarg0) ; nodec.
+        subst. left. reflexivity.
 Defined.
 
 (* We assume normalisation of the reduction.

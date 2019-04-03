@@ -709,7 +709,7 @@ Qed.
 
 Ltac nodec :=
   let bot := fresh "bot" in
-  try solve [ constructor ; intro bot ; inversion bot ; tauto ].
+  try solve [ constructor ; intro bot ; inversion bot ; subst ; tauto ].
 
 Fixpoint eq_list {A} (eqA : A -> A -> bool) (l l' : list A) : bool :=
   match l, l' with

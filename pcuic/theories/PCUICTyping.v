@@ -2040,7 +2040,6 @@ Proof.
          apply IHa. intros. eapply (X14 _ wfΓ0 _ _ Hty). lia. red. eapply (X14 _ a _ _ t1). lia. }
        auto. right.
        exists u. intuition.
-       eapply (X14 _ wfΓ _ _ Hu); simpl. lia.
 Qed.
 
 Ltac my_rename_hyp h th :=

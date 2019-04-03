@@ -6,6 +6,9 @@ Import List.ListNotations.
 Require Import FunctionalExtensionality.
 Require Import ssreflect.
 
+From Equations Require Import Equations.
+Require Import Equations.Prop.DepElim.
+
 Set Asymmetric Patterns.
 
 Open Scope pcuic.
@@ -674,3 +677,161 @@ Ltac close_All :=
   | H : All2 _ _ _ |- All _ _ =>
     (apply (All2_All_left H) || apply (All2_All_right H)); clear H; simpl
   end.
+
+Lemma mkApps_inj :
+  forall u v l,
+    mkApps u l = mkApps v l ->
+    u = v.
+Proof.
+  intros u v l eq.
+  revert u v eq.
+  induction l ; intros u v eq.
+  - cbn in eq. assumption.
+  - cbn in eq. apply IHl in eq.
+    inversion eq. reflexivity.
+Qed.
+
+(* Some reflection / EqDec lemmata *)
+
+Class Reflect A := {
+  eqb : A -> A -> bool ;
+  eqb_spec : forall x y : A, reflect (x = y) (eqb x y)
+}.
+
+Instance Reflect_EqDec :
+  forall A, Reflect A -> EqDec A.
+Proof.
+  intros A [eqb h] x y.
+  destruct (h x y).
+  - left. assumption.
+  - right. assumption.
+Qed.
+
+Lemma neq_sym : forall {A} {x y : A}, x <> y -> y <> x.
+Proof.
+  intros A x y h.
+  intro. subst. apply h. reflexivity.
+Qed.
+
+Lemma cong_cons : forall {A} {a a' : A} {l l'}, a = a' -> l = l' -> a :: l = a' :: l'.
+Proof.
+  intros A a a' l l' H H0. f_equal ; assumption.
+Qed.
+
+Lemma cons_tail_neq :
+  forall {A} {a a' : A} {l l'},
+    l <> l' ->
+    a :: l <> a' :: l'.
+Proof.
+  intros A a a' l l' H.
+  intro bot. inversion bot. subst. apply H. reflexivity.
+Qed.
+
+Lemma cons_head_neq :
+  forall {A} {a a' : A} {l l'},
+    a <> a' ->
+    a :: l <> a' :: l'.
+Proof.
+  intros A a a' l l' H.
+  intro bot. inversion bot. subst. apply H. reflexivity.
+Qed.
+
+Fixpoint list_dec {A} (f : EqDec A) (l l' : list A) : { l = l' } + { l <> l' } :=
+  match l, l' with
+  | a :: l, a' :: l' =>
+    match f a a' with
+    | left p =>
+      match list_dec f l l' with
+      | left q => left (cong_cons p q)
+      | right q => right (cons_tail_neq q)
+      end
+    | right q => right (cons_head_neq q)
+    end
+  | [], [] => left eq_refl
+  | [], a' :: l' => right (@nil_cons A a' l')
+  | a :: l, [] => right (neq_sym (@nil_cons A a l))
+  end.
+
+Instance list_eqdec : forall A, EqDec A -> EqDec (list A) := @list_dec.
+
+(* Definition eq_string s s' := *)
+(*   if string_dec s s' then true else false. *)
+
+Definition eq_string s s' :=
+  match string_dec s s' with
+  | left _ => true
+  | right _ => false
+  end.
+
+Instance reflect_string : Reflect string := {
+  eqb := eq_string
+}.
+Proof.
+  intros s s'. unfold eq_string.
+  destruct string_dec.
+  - constructor. assumption.
+  - constructor. assumption.
+Qed.
+
+Instance reflect_nat : Reflect nat := {
+  eqb_spec := Nat.eqb_spec
+}.
+
+Instance reflect_level : Reflect Level.t.
+Proof.
+Abort.
+
+Instance level_dec : EqDec Level.t.
+Proof.
+  intros l l'. decide equality.
+  - apply string_dec.
+  - apply Nat.eq_dec.
+Defined.
+
+Instance universe_expr_dec : EqDec Universe.Expr.t.
+Proof.
+  intros x y. decide equality.
+  - decide equality.
+  - apply level_dec.
+Defined.
+
+Instance universe_dec : EqDec universe.
+Proof.
+  intros u v. decide equality.
+  apply universe_expr_dec.
+Defined.
+
+Instance name_dec : EqDec name.
+Proof.
+  intros n m. decide equality. apply string_dec.
+Defined.
+
+Instance inductive_dec : EqDec inductive.
+Proof.
+  intros i i'. decide equality.
+  - apply Nat.eq_dec.
+  - apply string_dec.
+Defined.
+
+Instance prod_dec : forall {A B}, EqDec A -> EqDec B -> EqDec (A * B).
+Proof.
+  intros A B hA hB [x y] [a b].
+  decide equality.
+Defined.
+
+Instance projection_dec : EqDec projection.
+Proof.
+  intros x y. decide equality.
+  - apply Nat.eq_dec.
+  - apply prod_dec.
+    + apply inductive_dec.
+    + exact Nat.eq_dec.
+Defined.
+
+Instance mfixpoint_dec : forall {A : Set}, EqDec A -> EqDec (mfixpoint A).
+Proof.
+  intros A h x y. decide equality.
+  decide equality.
+  - apply Nat.eq_dec.
+  - apply name_dec.
+Defined.

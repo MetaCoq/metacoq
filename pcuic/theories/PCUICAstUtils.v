@@ -707,34 +707,9 @@ Proof.
   - right. assumption.
 Qed.
 
-Lemma neq_sym : forall {A} {x y : A}, x <> y -> y <> x.
-Proof.
-  intros A x y h.
-  intro. subst. apply h. reflexivity.
-Qed.
-
-Lemma cong_cons : forall {A} {a a' : A} {l l'}, a = a' -> l = l' -> a :: l = a' :: l'.
-Proof.
-  intros A a a' l l' H H0. f_equal ; assumption.
-Qed.
-
-Lemma cons_tail_neq :
-  forall {A} {a a' : A} {l l'},
-    l <> l' ->
-    a :: l <> a' :: l'.
-Proof.
-  intros A a a' l l' H.
-  intro bot. inversion bot. subst. apply H. reflexivity.
-Qed.
-
-Lemma cons_head_neq :
-  forall {A} {a a' : A} {l l'},
-    a <> a' ->
-    a :: l <> a' :: l'.
-Proof.
-  intros A a a' l l' H.
-  intro bot. inversion bot. subst. apply H. reflexivity.
-Qed.
+Ltac nodec :=
+  let bot := fresh "bot" in
+  try solve [ constructor ; intro bot ; inversion bot ; tauto ].
 
 Fixpoint eq_list {A} (eqA : A -> A -> bool) (l l' : list A) : bool :=
   match l, l' with
@@ -753,11 +728,9 @@ Proof.
   - cbn. constructor. reflexivity.
   - cbn. constructor. discriminate.
   - cbn. constructor. discriminate.
-  - cbn. destruct (eqb_spec a a0).
-    + destruct (IHx y).
-      * subst. constructor. reflexivity.
-      * constructor. intro bot. inversion bot. tauto.
-    + constructor. intro bot. inversion bot. tauto.
+  - cbn. destruct (eqb_spec a a0) ; nodec.
+    destruct (IHx y) ; nodec.
+    subst. constructor. reflexivity.
 Qed.
 
 (* Definition eq_string s s' := *)
@@ -788,7 +761,7 @@ Definition eq_level l1 l2 :=
   | Level.lProp, Level.lProp => true
   | Level.lSet, Level.lSet => true
   | Level.Level s1, Level.Level s2 => eqb s1 s2
-  | Level.Var n1, Level.Var n2 => n1 =? n2
+  | Level.Var n1, Level.Var n2 => eqb n1 n2
   | _, _ => false
   end.
 
@@ -797,15 +770,13 @@ Instance reflect_level : ReflectEq Level.t := {
 }.
 Proof.
   intros x y. destruct x, y.
-  all: cbn.
+  all: unfold eq_level.
   all: try solve [ constructor ; reflexivity ].
   all: try solve [ constructor ; discriminate ].
-  - destruct (eqb_spec s s0).
-    + constructor. f_equal. assumption.
-    + constructor. intro bot. inversion bot. tauto.
-  - destruct (Nat.eqb_spec n n0).
-    + constructor. subst. reflexivity.
-    + constructor. intro bot. apply n1. inversion bot. reflexivity.
+  - destruct (eqb_spec s s0) ; nodec.
+    constructor. f_equal. assumption.
+  - destruct (eqb_spec n n0) ; nodec.
+    constructor. subst. reflexivity.
 Qed.
 
 Definition eq_prod {A B} (eqA : A -> A -> bool) (eqB : B -> B -> bool) x y :=
@@ -818,14 +789,12 @@ Instance reflect_prod : forall {A B}, ReflectEq A -> ReflectEq B -> ReflectEq (A
   eqb := eq_prod eqb eqb
 }.
 Proof.
-  destruct r as [eqA hA], r0 as [eqB hB].
+  (* destruct r as [eqA hA], r0 as [eqB hB]. *)
   intros [x y] [u v].
-  cbn.
-  destruct (hA x u).
-  - subst. destruct (hB y v).
-    + subst. constructor. reflexivity.
-    + constructor. intro bot. inversion bot. tauto.
-  - constructor. intro bot. inversion bot. tauto.
+  unfold eq_prod.
+  destruct (eqb_spec x u) ; nodec.
+  destruct (eqb_spec y v) ; nodec.
+  subst. constructor. reflexivity.
 Qed.
 
 Definition eq_bool b1 b2 : bool :=
@@ -836,13 +805,10 @@ Instance reflect_bool : ReflectEq bool := {
 }.
 Proof.
   intros x y. unfold eq_bool.
-  destruct x.
-  - destruct y.
-    + constructor. reflexivity.
-    + constructor. discriminate.
-  - destruct y.
-    + constructor. discriminate.
-    + constructor. reflexivity.
+  destruct x, y.
+  all: constructor.
+  all: try reflexivity.
+  all: discriminate.
 Qed.
 
 (* Automatic *)
@@ -864,9 +830,8 @@ Proof.
   - cbn. constructor. reflexivity.
   - cbn. constructor. discriminate.
   - cbn. constructor. discriminate.
-  - cbn. destruct (eqb_spec i i0).
-    + constructor. f_equal. assumption.
-    + constructor. intro bot. inversion bot. tauto.
+  - cbn. destruct (eqb_spec i i0) ; nodec.
+    constructor. f_equal. assumption.
 Qed.
 
 Definition eq_inductive ind ind' :=
@@ -874,10 +839,6 @@ Definition eq_inductive ind ind' :=
   | mkInd m n, mkInd m' n' =>
     eqb m m' && eqb n n'
   end.
-
-Ltac nodec :=
-  let bot := fresh "bot" in
-  try solve [ constructor ; intro bot ; inversion bot ; tauto ].
 
 Instance reflect_inductive : ReflectEq inductive := {
   eqb := eq_inductive

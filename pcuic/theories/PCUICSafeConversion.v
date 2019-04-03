@@ -422,6 +422,62 @@ Section Conversion.
         * assumption.
   Qed.
 
+  (* Shouldn't be here. *)
+  (* Lemma eq_term_refl : *)
+  (*   forall ϕ t, eq_term ϕ t t. *)
+  (* Proof. *)
+  (*   intros ϕ t. induction t. *)
+  (*   all: cbn. *)
+  (*   all: try rewrite IHt. *)
+  (*   all: try rewrite IHt1. *)
+  (*   all: try rewrite IHt2. *)
+  (*   all: try rewrite IHt3. *)
+  (*   all: try rewrite eq_nat_refl. *)
+  (*   all: try rewrite eq_string_refl. *)
+  (*   all: simpl. *)
+  (*   all: auto. *)
+  (* Admitted. *)
+
+  Lemma cumul_context :
+    forall Γ u v ρ,
+      Σ ;;; Γ |- u <= v ->
+      Σ ;;; Γ |- zipc u ρ <= zipc v ρ.
+  Proof.
+    intros Γ u v ρ h.
+    (* induction h. *)
+    (* - eapply cumul_refl. *)
+    (*   revert t u e. *)
+    (*   induction ρ ; intros u v e. *)
+    (*   + cbn. assumption. *)
+    (*   + cbn. apply IHρ. cbn. rewrite e. *)
+    (*     rewrite eq_term_refl. reflexivity. *)
+    (*   + cbn. apply IHρ. cbn.  *)
+    revert u v h. induction ρ ; intros u v h.
+    - cbn. assumption.
+    - cbn. apply IHρ.
+      (* Congruence for application *)
+      admit.
+    - cbn.
+      (* Congruence for application and mkApps *)
+      admit.
+    - cbn.
+      (* Congruence for case *)
+      admit.
+  Admitted.
+
+  Lemma conv_context :
+    forall Γ leq u v ρ,
+      conv leq Σ Γ u v ->
+      conv leq Σ Γ (zipc u ρ) (zipc v ρ).
+  Proof.
+    intros Γ leq u v ρ h.
+    destruct leq.
+    - cbn in *. destruct h as [[h1 h2]]. constructor.
+      constructor ; eapply cumul_context ; assumption.
+    - cbn in *. destruct h. constructor.
+      eapply cumul_context. assumption.
+  Qed.
+
   Inductive state :=
   | Reduction
   | Term
@@ -562,7 +618,9 @@ Section Conversion.
   Next Obligation.
     destruct b ; auto.
     eapply conv_trans ; try eassumption.
-    (* We need some lemma for congruence of zip. *)
+    eapply conv_context.
+    (* We need congruence of application. *)
+    admit.
   Admitted.
 
   Equations _isconv (s : state) (Γ : context) (leq : conv_pb)

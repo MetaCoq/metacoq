@@ -680,6 +680,7 @@ Section ParallelReduction.
 
   (** Proj *)
   | pred_proj i pars narg k u args0 args1 arg1 :
+      All2_local_env (on_decl pred1) Γ Γ' ->
       All2 (pred1 Γ Γ') args0 args1 ->
       nth_error args1 (pars + narg) = Some arg1 ->
       pred1 Γ Γ' (tProj (i, pars, narg) (mkApps (tConstruct i k u) args0)) arg1
@@ -703,7 +704,8 @@ Section ParallelReduction.
       All2 (on_Trel_eq (pred1 Γ Γ') snd fst) brs0 brs1 ->
       pred1 Γ Γ' (tCase ind p0 c0 brs0) (tCase ind p1 c1 brs1)
 
-  | pred_proj_congr p c c' : pred1 Γ Γ' c c' -> pred1 Γ Γ' (tProj p c) (tProj p c')
+  | pred_proj_congr p c c' :
+      pred1 Γ Γ' c c' -> pred1 Γ Γ' (tProj p c) (tProj p c')
 
   | pred_fix_congr mfix0 mfix1 idx :
       All2_local_env (on_decl pred1) Γ Γ' ->
@@ -808,6 +810,8 @@ Section ParallelReduction.
           P Γ Γ' (tConst c u) (tConst c u)) ->
       (forall (Γ Γ' : context) (i : inductive) (pars narg : nat) (k : nat) (u : universe_instance)
               (args0 args1 : list term) (arg1 : term),
+          All2_local_env (on_decl pred1) Γ Γ' ->
+          All2_local_env (on_decl P) Γ Γ' ->
           All2 (pred1 Γ Γ') args0 args1 ->
           All2 (P Γ Γ') args0 args1 ->
           nth_error args1 (pars + narg) = Some arg1 ->
@@ -831,7 +835,8 @@ Section ParallelReduction.
           pred1 Γ Γ' c0 c1 ->
           P Γ Γ' c0 c1 -> All2_prop_eq Γ Γ' snd fst P' brs0 brs1 ->
           P Γ Γ' (tCase ind p0 c0 brs0) (tCase ind p1 c1 brs1)) ->
-      (forall (Γ Γ' : context) (p : projection) (c c' : term), pred1 Γ Γ' c c' -> P Γ Γ' c c' -> P Γ Γ' (tProj p c) (tProj p c')) ->
+      (forall (Γ Γ' : context) (p : projection) (c c' : term),
+          pred1 Γ Γ' c c' -> P Γ Γ' c c' -> P Γ Γ' (tProj p c) (tProj p c')) ->
 
       (forall (Γ Γ' : context) (mfix0 : mfixpoint term) (mfix1 : list (def term)) (idx : nat),
           All2_local_env (on_decl pred1) Γ Γ' ->
@@ -894,7 +899,8 @@ Section ParallelReduction.
       apply (All2_local_env_impl a). intros. apply (aux _ _ _ _ X20).
     - eapply X8; eauto.
       apply (All2_local_env_impl a). intros. apply (aux _ _ _ _ X20).
-    - eapply (All2_All2_prop (P:=pred1) (Q:=P) a). intros. apply (aux _ _ _ _ X20).
+    - apply (All2_local_env_impl a). intros. apply (aux _ _ _ _ X20).
+    - eapply (All2_All2_prop (P:=pred1) (Q:=P) a0). intros. apply (aux _ _ _ _ X20).
     - eapply (All2_All2_prop_eq (P:=pred1) (Q:=P') (f:=snd) a (extendP aux Γ Γ')).
     - eapply X15.
       eapply (All2_local_env_impl a). intros. apply X20.
@@ -916,8 +922,14 @@ Section ParallelReduction.
   Lemma pred1_ind_all_ctx :
     forall (P : forall (Γ Γ' : context) (t t0 : term), Type)
            (Pctx : forall (Γ Γ' : context), Type),
+           (* (Plist : forall {A} (f : A -> term), context -> context -> list A -> list A -> Type), *)
       let P' Γ Γ' x y := ((pred1 Γ Γ' x y) * P Γ Γ' x y)%type in
       (forall Γ Γ', All2_local_env (on_decl pred1) Γ Γ' -> All2_local_env (on_decl P) Γ Γ' -> Pctx Γ Γ') ->
+      (* (forall (f : A -> term) (l l' : list A) (g : A -> B), *)
+      (*     All2 (on_Trel pred1 f) l l' -> *)
+      (*     All2 (on_Trel P f) l l' -> *)
+      (*     All2 (on_Trel eq g) l l' -> *)
+      (*     Plist f Γ Γ' l l') -> *)
       (forall (Γ Γ' : context) (na : name) (t0 t1 b0 b1 a0 a1 : term),
           pred1 (Γ ,, vass na t0) (Γ' ,, vass na t1) b0 b1 -> P (Γ ,, vass na t0) (Γ' ,, vass na t1) b0 b1 ->
           pred1 Γ Γ' t0 t1 -> P Γ Γ' t0 t1 ->
@@ -976,6 +988,8 @@ Section ParallelReduction.
           P Γ Γ' (tConst c u) (tConst c u)) ->
       (forall (Γ Γ' : context) (i : inductive) (pars narg : nat) (k : nat) (u : universe_instance)
               (args0 args1 : list term) (arg1 : term),
+          All2_local_env (on_decl pred1) Γ Γ' ->
+          Pctx Γ Γ' ->
           All2 (pred1 Γ Γ') args0 args1 ->
           All2 (P Γ Γ') args0 args1 ->
           nth_error args1 (pars + narg) = Some arg1 ->
@@ -1064,7 +1078,8 @@ Section ParallelReduction.
       apply Hctx, (All2_local_env_impl a). intros. exact a. intros. apply (aux _ _ _ _ X20).
     - eapply X8; eauto.
       apply Hctx, (All2_local_env_impl a). exact a. intros. apply (aux _ _ _ _ X20).
-    - eapply (All2_All2_prop (P:=pred1) (Q:=P) a). intros. apply (aux _ _ _ _ X20).
+    - apply Hctx, (All2_local_env_impl a). exact a. intros. apply (aux _ _ _ _ X20).
+    - eapply (All2_All2_prop (P:=pred1) (Q:=P) a0). intros. apply (aux _ _ _ _ X20).
     - eapply (All2_All2_prop_eq (P:=pred1) (Q:=P') (f:=snd) a (extendP aux Γ Γ')).
     - eapply X15.
       eapply (All2_local_env_impl a). intros. apply X20.
@@ -1139,7 +1154,6 @@ Section ParallelReduction.
     all:try intros **; rename_all_hyps;
       try solve [specialize (forall_Γ _ X3); eauto]; eauto;
         try solve [eexists; split; constructor; eauto].
-    induction X0. elimtype False. destruct pars, narg; discriminate. apply r.
   Qed.
 
   Hint Constructors pred1 : pcuic.
@@ -1157,7 +1171,7 @@ Section ParallelReduction.
   Proof with eauto with pcuic.
     induction 1 using red1_ind_all; intros; eauto with pcuic;
       try constructor; intuition auto with pcuic.
-    (* FIXNE cofix rule *) admit.
+    (* FIXNE cofix rule in red1 *) admit.
     admit.
 
     (* FIXME red1 allows conversion with differently annotated branches *)
@@ -1428,7 +1442,7 @@ Section ParallelWeakening.
       rewrite H1.
       now rewrite - !map_cst_body heq_cst_body.
 
-    - simpl. eapply pred_proj with (map (lift #|Δ''| #|Δ'|) args1).
+    - simpl. eapply pred_proj with (map (lift #|Δ''| #|Δ'|) args1). auto.
       eapply All2_map; solve_all.
       now rewrite nth_error_map heq_nth_error.
 
@@ -1887,7 +1901,8 @@ Section ParallelSubstitution.
       noconf H0. simpl in H0. rewrite heq_length0 in H0. rewrite H0.
       econstructor; eauto.
 
-    - autorewrite with subst. simpl. econstructor; eauto.
+    - autorewrite with subst. simpl.
+      econstructor; eauto.
       eapply All2_map. solve_all.
       now rewrite nth_error_map heq_nth_error.
 

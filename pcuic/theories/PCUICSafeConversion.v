@@ -566,8 +566,30 @@ Section Conversion.
             (aux : Aux Term Γ t1 π1)
     : { b : bool | if b then conv leq Σ Γ (zipc t1 π1) (zipc t2 π2) else True } :=
 
-    _isconv_prog Γ leq t1 π1 h1 t2 π2 h2 aux := no.
+    (* This case is impossible, but we would need some extra argument to make it
+       truly impossible (namely, only allow results of reduce_stack). *)
+    (* _isconv_prog Γ leq (tApp _ _) π1 h1 (tApp _ _) π2 h2 aux := no ; *)
 
+    (* TODO Check universe instances, we will have to do it to proceed anyway. *)
+    _isconv_prog Γ leq (tConst c u) π1 h1 (tConst c' u') π2 h2 aux
+    with inspect (eq_constant c c') := {
+    | @exist true eq1 with isconv_args_raw Γ leq (tConst c u) π1 _ π2 _ aux := {
+      | @exist true h := yes ;
+      | @exist false _ := (* TODO *) no
+      } ;
+    | @exist false _ := no
+    } ;
+
+    _isconv_prog Γ leq t1 π1 h1 t2 π2 h2 aux := no.
+  Next Obligation.
+    (* R (Args, tConst c u, π1) (Term, tConst c u, π1) *)
+  Admitted.
+  Next Obligation.
+    (* We're missing u = u' to conclude *)
+  Admitted.
+  Next Obligation.
+    (* Same as above. *)
+  Admitted.
 
   (* TODO Replace by Conv, perhaps it should even be global to iscong_args.
      In any case, leq should be quantified over in Aux.

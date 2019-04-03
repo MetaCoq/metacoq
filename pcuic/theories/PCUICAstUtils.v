@@ -693,13 +693,13 @@ Qed.
 
 (* Some reflection / EqDec lemmata *)
 
-Class Reflect A := {
+Class ReflectEq A := {
   eqb : A -> A -> bool ;
   eqb_spec : forall x y : A, reflect (x = y) (eqb x y)
 }.
 
-Instance Reflect_EqDec :
-  forall A, Reflect A -> EqDec A.
+Instance ReflectEq_EqDec :
+  forall A, ReflectEq A -> EqDec A.
 Proof.
   intros A [eqb h] x y.
   destruct (h x y).
@@ -736,23 +736,29 @@ Proof.
   intro bot. inversion bot. subst. apply H. reflexivity.
 Qed.
 
-Fixpoint list_dec {A} (f : EqDec A) (l l' : list A) : { l = l' } + { l <> l' } :=
+Fixpoint eq_list {A} (eqA : A -> A -> bool) (l l' : list A) : bool :=
   match l, l' with
   | a :: l, a' :: l' =>
-    match f a a' with
-    | left p =>
-      match list_dec f l l' with
-      | left q => left (cong_cons p q)
-      | right q => right (cons_tail_neq q)
-      end
-    | right q => right (cons_head_neq q)
-    end
-  | [], [] => left eq_refl
-  | [], a' :: l' => right (@nil_cons A a' l')
-  | a :: l, [] => right (neq_sym (@nil_cons A a l))
+    if eqA a a' then eq_list eqA l l'
+    else false
+  | [], [] => true
+  | _, _ => false
   end.
 
-Instance list_eqdec : forall A, EqDec A -> EqDec (list A) := @list_dec.
+Instance reflect_list : forall {A}, ReflectEq A -> ReflectEq (list A) := {
+  eqb := eq_list eqb
+}.
+Proof.
+  intro x. induction x ; intro y ; destruct y.
+  - cbn. constructor. reflexivity.
+  - cbn. constructor. discriminate.
+  - cbn. constructor. discriminate.
+  - cbn. destruct (eqb_spec a a0).
+    + destruct (IHx y).
+      * subst. constructor. reflexivity.
+      * constructor. intro bot. inversion bot. tauto.
+    + constructor. intro bot. inversion bot. tauto.
+Qed.
 
 (* Definition eq_string s s' := *)
 (*   if string_dec s s' then true else false. *)
@@ -763,7 +769,7 @@ Definition eq_string s s' :=
   | right _ => false
   end.
 
-Instance reflect_string : Reflect string := {
+Instance reflect_string : ReflectEq string := {
   eqb := eq_string
 }.
 Proof.
@@ -773,65 +779,137 @@ Proof.
   - constructor. assumption.
 Qed.
 
-Instance reflect_nat : Reflect nat := {
+Instance reflect_nat : ReflectEq nat := {
   eqb_spec := Nat.eqb_spec
 }.
 
-Instance reflect_level : Reflect Level.t.
-Proof.
-Abort.
+Definition eq_level l1 l2 :=
+  match l1, l2 with
+  | Level.lProp, Level.lProp => true
+  | Level.lSet, Level.lSet => true
+  | Level.Level s1, Level.Level s2 => eqb s1 s2
+  | Level.Var n1, Level.Var n2 => n1 =? n2
+  | _, _ => false
+  end.
 
-Instance level_dec : EqDec Level.t.
+Instance reflect_level : ReflectEq Level.t := {
+  eqb := eq_level
+}.
 Proof.
-  intros l l'. decide equality.
-  - apply string_dec.
-  - apply Nat.eq_dec.
-Defined.
+  intros x y. destruct x, y.
+  all: cbn.
+  all: try solve [ constructor ; reflexivity ].
+  all: try solve [ constructor ; discriminate ].
+  - destruct (eqb_spec s s0).
+    + constructor. f_equal. assumption.
+    + constructor. intro bot. inversion bot. tauto.
+  - destruct (Nat.eqb_spec n n0).
+    + constructor. subst. reflexivity.
+    + constructor. intro bot. apply n1. inversion bot. reflexivity.
+Qed.
 
-Instance universe_expr_dec : EqDec Universe.Expr.t.
-Proof.
-  intros x y. decide equality.
-  - decide equality.
-  - apply level_dec.
-Defined.
+Definition eq_prod {A B} (eqA : A -> A -> bool) (eqB : B -> B -> bool) x y :=
+  let '(a1, b1) := x in
+  let '(a2, b2) := y in
+  if eqA a1 a2 then eqB b1 b2
+  else false.
 
-Instance universe_dec : EqDec universe.
+Instance reflect_prod : forall {A B}, ReflectEq A -> ReflectEq B -> ReflectEq (A * B) := {
+  eqb := eq_prod eqb eqb
+}.
 Proof.
-  intros u v. decide equality.
-  apply universe_expr_dec.
-Defined.
+  destruct r as [eqA hA], r0 as [eqB hB].
+  intros [x y] [u v].
+  cbn.
+  destruct (hA x u).
+  - subst. destruct (hB y v).
+    + subst. constructor. reflexivity.
+    + constructor. intro bot. inversion bot. tauto.
+  - constructor. intro bot. inversion bot. tauto.
+Qed.
 
-Instance name_dec : EqDec name.
-Proof.
-  intros n m. decide equality. apply string_dec.
-Defined.
+Definition eq_bool b1 b2 : bool :=
+  if b1 then b2 else negb b2.
 
-Instance inductive_dec : EqDec inductive.
+Instance reflect_bool : ReflectEq bool := {
+  eqb := eq_bool
+}.
 Proof.
-  intros i i'. decide equality.
-  - apply Nat.eq_dec.
-  - apply string_dec.
-Defined.
+  intros x y. unfold eq_bool.
+  destruct x.
+  - destruct y.
+    + constructor. reflexivity.
+    + constructor. discriminate.
+  - destruct y.
+    + constructor. discriminate.
+    + constructor. reflexivity.
+Qed.
 
-Instance prod_dec : forall {A B}, EqDec A -> EqDec B -> EqDec (A * B).
-Proof.
-  intros A B hA hB [x y] [a b].
-  decide equality.
-Defined.
+(* Automatic *)
+(* Instance reflect_universe : ReflectEq Universe.Expr.t := _. *)
+(* Instance reflect_universe : ReflectEq universe := _. *)
 
-Instance projection_dec : EqDec projection.
-Proof.
-  intros x y. decide equality.
-  - apply Nat.eq_dec.
-  - apply prod_dec.
-    + apply inductive_dec.
-    + exact Nat.eq_dec.
-Defined.
+Definition eq_name na nb :=
+  match na, nb with
+  | nAnon, nAnon => true
+  | nNamed a, nNamed b => eqb a b
+  | _, _ => false
+  end.
 
-Instance mfixpoint_dec : forall {A : Set}, EqDec A -> EqDec (mfixpoint A).
+Instance reflect_name : ReflectEq name := {
+  eqb := eq_name
+}.
 Proof.
-  intros A h x y. decide equality.
-  decide equality.
-  - apply Nat.eq_dec.
-  - apply name_dec.
-Defined.
+  intros x y. destruct x, y.
+  - cbn. constructor. reflexivity.
+  - cbn. constructor. discriminate.
+  - cbn. constructor. discriminate.
+  - cbn. destruct (eqb_spec i i0).
+    + constructor. f_equal. assumption.
+    + constructor. intro bot. inversion bot. tauto.
+Qed.
+
+Definition eq_inductive ind ind' :=
+  match ind, ind' with
+  | mkInd m n, mkInd m' n' =>
+    eqb m m' && eqb n n'
+  end.
+
+Ltac nodec :=
+  let bot := fresh "bot" in
+  try solve [ constructor ; intro bot ; inversion bot ; tauto ].
+
+Instance reflect_inductive : ReflectEq inductive := {
+  eqb := eq_inductive
+}.
+Proof.
+  intros i i'. destruct i as [m n], i' as [m' n'].
+  unfold eq_inductive.
+  destruct (eqb_spec m m') ; nodec.
+  destruct (eqb_spec n n') ; nodec.
+  cbn. constructor. subst. reflexivity.
+Qed.
+
+(* Automatic! *)
+(* Instance projection_dec : EqDec projection := _. *)
+
+Definition eq_def {A : Set} `{ReflectEq A} (d1 d2 : def A) : bool :=
+  match d1, d2 with
+  | mkdef n1 t1 b1 a1, mkdef n2 t2 b2 a2 =>
+    eqb n1 n2 && eqb t1 t2 && eqb b1 b2 && eqb a1 a2
+  end.
+
+Instance reflect_def : forall {A : Set} `{ReflectEq A}, ReflectEq (def A) := {
+  eqb := eq_def
+}.
+Proof.
+  intros x y. destruct x as [n1 t1 b1 a1], y as [n2 t2 b2 a2].
+  unfold eq_def.
+  destruct (eqb_spec n1 n2) ; nodec.
+  destruct (eqb_spec t1 t2) ; nodec.
+  destruct (eqb_spec b1 b2) ; nodec.
+  destruct (eqb_spec a1 a2) ; nodec.
+  cbn. constructor. subst. reflexivity.
+Qed.
+
+(* Instance mfixpoint_dec : forall {A : Set}, ReflectEq A -> EqDec (mfixpoint A) := _. *)

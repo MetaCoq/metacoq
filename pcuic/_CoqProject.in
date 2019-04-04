@@ -33,6 +33,7 @@ theories/PCUICPosition.v
 theories/PCUICSafeLemmata.v
 theories/PCUICSafeReduce.v
 theories/PCUICSafeConversion.v
+theories/PCUICSafeChecker.v
 
 theories/TemplateToPCUIC.v
 theories/TemplateToPCUICCorrectness.v

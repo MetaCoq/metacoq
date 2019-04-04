@@ -3090,7 +3090,8 @@ Section Confluence.
         case e': decompose_app => [hd' args'].
         rewrite (decompose_app_rename e').
         case: (view_construct hd') => [ind' n u'] /=.
-        case: (eqb_spec ind c) => Hind.
+        change (eq_inductive ind c) with (eqb ind c).
+        case: (@eqb_spec _ reflect_inductive ind c) => Hind.
         { (* Reduction *)
           rewrite /iota_red /= -map_skipn rename_mkApps !nth_map //. }
       { simpl. f_equal; auto. }
@@ -3145,6 +3146,7 @@ Section Confluence.
         case: (view_construct hd') => [ind' n u'] /=.
         rewrite nth_error_map.
         case enth : nth_error => [arg|] /= //.
+        change eq_inductive with (@eqb inductive _).
         case: (eqb_spec ind ind') => Hind /= //.
         { intros t1 Ht1.
           rewrite (nisConstruct_elim Ht1).
@@ -4108,8 +4110,9 @@ Section Confluence.
 
     - simpl in X0. cbn. rewrite decompose_app_mkApps; auto.
       rewrite rho_mkApps //.
-      rewrite decompose_app_mkApps; auto.
-      simpl. destruct (eqb_spec ind ind); try discriminate.
+      rewrite decompose_app_mkApps; auto. simpl.
+      change eq_inductive with (@eqb inductive _).
+      destruct (eqb_spec ind ind); try discriminate.
       unfold iota_red. eapply pred_mkApps; eauto.
       eapply pred_snd_nth. red in X2.
       now eapply rho_triangle_All_All2_ind_noeq. auto.
@@ -4221,6 +4224,7 @@ Section Confluence.
       simpl. rewrite nth_error_map.
       eapply All2_nth_error_Some_right in heq_nth_error as [t' [? ?]]; eauto.
       simpl in y. rewrite e. simpl.
+      change eq_inductive with (@eqb inductive _).
       destruct (eqb_spec i i) => //.
 
     - simpl. eapply pred_abs; auto. unfold snoc in *. simpl in X2.
@@ -4335,6 +4339,7 @@ Section Confluence.
         rewrite rho_mkApps; auto.
         rewrite decompose_app_mkApps; auto.
         simpl. rewrite rho_mkApps in X2; auto.
+        change eq_inductive with (@eqb inductive _).
         destruct (eqb_spec i ind). subst ind.
         eapply pred1_mkApps_tConstruct in X1 as [args' [? ?]]. subst c1.
         eapply pred1_mkApps_refl_tConstruct in X2.
@@ -4436,6 +4441,7 @@ Section Confluence.
         eapply pred1_mkApps_tConstruct in X as [args' [? ?]]; subst.
         eapply pred1_mkApps_refl_tConstruct in X0.
         destruct nth_error eqn:Heq.
+        change eq_inductive with (@eqb inductive _).
         destruct (eqb_spec ind c0); subst.
         econstructor; eauto.
         eapply pred_proj_congr, pred_mkApps; auto with pcuic. constructor; auto.

@@ -618,7 +618,7 @@ Section Conversion.
         eapply red_conv_r. assumption.
   Qed.
 
-  Equations _isconv_prog (Γ : context) (leq : conv_pb)
+  Equations(noeqns) _isconv_prog (Γ : context) (leq : conv_pb)
             (t1 : term) (π1 : stack) (h1 : welltyped Σ Γ (zipc t1 π1))
             (t2 : term) (π2 : stack) (h2 : welltyped Σ Γ (zipc t2 π2))
             (aux : Aux Term Γ t1 π1)
@@ -628,15 +628,22 @@ Section Conversion.
        truly impossible (namely, only allow results of reduce_stack). *)
     (* _isconv_prog Γ leq (tApp _ _) π1 h1 (tApp _ _) π2 h2 aux := no ; *)
 
-    (* TODO Check universe instances, we will have to do it to proceed anyway. *)
     _isconv_prog Γ leq (tConst c u) π1 h1 (tConst c' u') π2 h2 aux
     with eq_dec c c' := {
     | left eq1 with eq_dec u u' := {
       | left eq2 with isconv_args_raw Γ (tConst c u) π1 π2 aux := {
         | @exist true h := yes ;
-        | @exist false _ := (* TODO *) no
+        (* Unfold both bodies at once *)
+        | @exist false _ with inspect (lookup_env Σ c) := {
+          | @exist (Some (ConstantDecl n {| cst_body := Some body |})) eq3 :=
+            (* In PCUICChecker, there is no subst but I guess it's just wrong. *)
+            isconv_red Γ leq (subst_instance_constr u body) π1
+                             (subst_instance_constr u body) π2 aux ;
+          (* Inductive or not found *)
+          | @exist _ _ := no
+          }
         } ;
-      | right _ := no
+      | right _ := no (* TODO *)
       } ;
     | right _ := no
     } ;
@@ -648,10 +655,69 @@ Section Conversion.
   Next Obligation.
     destruct h. eapply conv_conv_l. assumption.
   Qed.
+  Next Obligation.
+    eapply red_welltyped.
+    - exact h1.
+    - constructor.
+      Opaque subst_instance_constr.
+      eapply red_context.
+      Transparent subst_instance_constr.
+      symmetry in eq3.
+      assert (c' = n).
+      { destruct Σ as [Σ' ?]. cbn in eq3. clear - eq3.
+        induction Σ'.
+        - cbn in eq3. discriminate.
+        - destruct a.
+          + cbn in eq3. destruct (ident_eq_spec c' k).
+            * subst. inversion eq3. reflexivity.
+            * apply IHΣ'. assumption.
+          + cbn in eq3. destruct (ident_eq_spec c' k).
+            * inversion eq3.
+            * apply IHΣ'. assumption.
+      } subst.
+      econstructor.
+      + econstructor.
+      + econstructor.
+        * exact eq3.
+        * reflexivity.
+  Qed.
+  Next Obligation.
+    (* tConst c' u' reduces to subst_instance_constr u' body *)
+    (* R (Reduction, subst_instance_constr u' body, π1) (Term, tConst c' u', π1) *)
+  Admitted.
+  Next Obligation.
+    eapply red_welltyped.
+    - exact h2.
+    - constructor.
+      Opaque subst_instance_constr.
+      eapply red_context.
+      Transparent subst_instance_constr.
+      symmetry in eq3.
+      assert (c' = n).
+      { destruct Σ as [Σ' ?]. cbn in eq3. clear - eq3.
+        induction Σ'.
+        - cbn in eq3. discriminate.
+        - destruct a.
+          + cbn in eq3. destruct (ident_eq_spec c' k).
+            * subst. inversion eq3. reflexivity.
+            * apply IHΣ'. assumption.
+          + cbn in eq3. destruct (ident_eq_spec c' k).
+            * inversion eq3.
+            * apply IHΣ'. assumption.
+      } subst.
+      econstructor.
+      + econstructor.
+      + econstructor.
+        * exact eq3.
+        * reflexivity.
+  Qed.
+  Next Obligation.
+    destruct b ; auto.
+    (* We need to reuse the previous obligation proofs again.
+       Let's factorise!
+     *)
+  Admitted.
 
-  (* TODO Replace by Conv, perhaps it should even be global to iscong_args.
-     In any case, leq should be quantified over in Aux.
-   *)
   Equations(noeqns) _isconv_args (Γ : context) (t : term)
             (π1 : stack) (h1 : welltyped Σ Γ (zipc t π1))
             (π2 : stack) (h2 : welltyped Σ Γ (zipc t π2))

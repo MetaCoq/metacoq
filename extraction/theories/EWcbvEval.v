@@ -63,6 +63,13 @@ Section Wcbv.
       eval (iota_red pars c args brs) res ->
       eval (tCase (ind, pars) discr brs) res
 
+  (** Singleton case on a proof *)
+  | eval_iota_sing ind pars discr brs n f res :
+      eval discr tBox ->
+      brs = [ (n,f) ] ->
+      eval (mkApps f (repeat tBox n)) res ->
+      eval (tCase (ind, pars) discr brs) res
+           
   (** Fix unfolding, with guard *)
   | eval_fix mfix idx args args' narg fn res :
       unfold_fix mfix idx = Some (narg, fn) ->
@@ -132,6 +139,13 @@ Section Wcbv.
           eval (iota_red pars c args brs) res ->
           P (iota_red pars c args brs) res -> P (tCase (ind, pars) discr brs) res) ->
 
+      (forall (ind : inductive) (pars : nat) (discr : term) (brs : list (nat * term)) (n : nat) (f3 res : term),
+        eval discr tBox ->
+        P discr tBox ->
+        brs = [(n, f3)] ->
+        eval (mkApps f3 (repeat tBox n)) res ->
+        P (mkApps f3 (repeat tBox n)) res -> P (tCase (ind, pars) discr brs) res) ->
+      
       (forall (mfix : mfixpoint term) (idx : nat) (args args' : list term) (narg : nat) (fn res : term),
           unfold_fix mfix idx = Some (narg, fn) ->
           Forall2 eval args args' ->
@@ -174,7 +188,7 @@ Section Wcbv.
 
       forall t t0 : term, eval t t0 -> P t t0.
   Proof.
-    intros P Hbox Hbeta Hlet Hcase Hfix Hcoficase Hcofixproj
+    intros P Hbox Hbeta Hlet Hcase Hscase Hfix Hcoficase Hcofixproj
            Hconst Hproj Hlam Hcstr Hatom Hevar.
     fix eval_evals_ind 3. destruct 1;
              try match goal with [ H : _ |- _ ] =>

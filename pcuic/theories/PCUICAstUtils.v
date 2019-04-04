@@ -707,6 +707,23 @@ Proof.
   - right. assumption.
 Qed.
 
+Definition eq_dec_to_bool {A} `{EqDec A} x y :=
+  match eq_dec x y with
+  | left _ => true
+  | right _ => false
+  end.
+
+(* Not an instance to avoid loops? *)
+Lemma EqDec_ReflectEq : forall A `{EqDec A}, ReflectEq A.
+Proof.
+  intros A h.
+  unshelve econstructor.
+  - eapply eq_dec_to_bool.
+  - unfold eq_dec_to_bool.
+    intros x y. destruct (eq_dec x y).
+    all: constructor ; assumption.
+Qed.
+
 Ltac nodec :=
   let bot := fresh "bot" in
   try solve [ constructor ; intro bot ; inversion bot ; subst ; tauto ].
@@ -869,3 +886,10 @@ Proof.
 Qed.
 
 (* Instance mfixpoint_dec : forall {A : Set}, ReflectEq A -> EqDec (mfixpoint A) := _. *)
+
+Instance mfixpoint_dec : forall {A : Set}, EqDec A -> EqDec (mfixpoint A).
+Proof.
+  intros A h.
+  pose (EqDec_ReflectEq A).
+  exact _.
+Qed.

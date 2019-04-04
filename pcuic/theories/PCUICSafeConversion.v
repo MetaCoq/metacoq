@@ -857,49 +857,4 @@ Section Conversion.
     _isconv Args Γ t π h aux :=
       λ { | π' | h' := _isconv_args Γ t π h π' h' aux }.
 
-  (* The idea is that when comparing two terms, we first reduce on both sides.
-     We then go deeper inside the term, and sometimes recurse on the stacks
-     themselves. That is why we use position instead of the subterm order.
-
-     To define it we need more information. We need welltypedness for reduction.
-     That is not all however. Indeed as of now, the two compared positions
-     are not in the same term. This suggests yet another lexicographic order.
-   *)
-  (* Definition R Σ Γ (u v : term * stack) : Prop := *)
-  (*   let '(u, π) := reduce_stack RedFlags.default Σ Γ (fst u) (snd u) in *)
-  (*   let '(v, ρ) := reduce_stack RedFlags.default Σ Γ (fst v) (snd v) in *)
-  (*   posR (stack_pos u π) (stack_pos v ρ). *)
-
-  (* We have to devise an order for termination.
-     It seems that we could somehow use the R from before, except that we would
-     need to include more positions.
-     So maybe, just lex cored subterm would work.
-
-     Another solution would be to consider (t,π) ≤ (u,θ)
-     when fst (reduce (t,π)) is a subterm of fst (reduce (u,θ)).
-
-     If we need to speak about the stacks for the order, then we probably have
-     to include a lot more stacks as well.
-     That would be unfortunate.
-
-     It seems that this approach is fine, except for a few (important) things:
-     - the fallback terminates because we check reduction progressed
-     - isconv_stacks needs to be able to reduce on the stack, so the order would
-       have to mention it.
-
-     A different point, we might need to update reduce in some way to assert
-     that it cannot return an application, they must reside on the stack.
-
-     Maybe implement a naive version first that reduces both sides (with delta
-     or rather with provided flags).
-     When two sides are equal, go to subterms (meaning stacks are empty by
-     typing). When two sides are constants/variables, compare the stacks.
-     This is fine for a lex order on subterm for the term and then subterm
-     for the stack.
-
-     This order is actually not ok. Because we want to convert on the stack.
-     This means we have to use positions again.
-     But this time with more constructors.
-   *)
-
 End Conversion.

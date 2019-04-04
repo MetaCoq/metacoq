@@ -618,6 +618,24 @@ Section Conversion.
         eapply red_conv_r. assumption.
   Qed.
 
+  Lemma lookup_env_const_name :
+    forall {c c' d},
+      lookup_env Σ c' = Some (ConstantDecl c d) ->
+      c' = c.
+  Proof.
+    intros c c' d e.
+    destruct Σ as [Σ' ?]. cbn in e.
+    induction Σ'.
+    - cbn in e. discriminate.
+    - destruct a.
+      + cbn in e. destruct (ident_eq_spec c' k).
+        * subst. inversion e. reflexivity.
+        * apply IHΣ'. assumption.
+      + cbn in e. destruct (ident_eq_spec c' k).
+        * inversion e.
+        * apply IHΣ'. assumption.
+  Qed.
+
   Equations(noeqns) _isconv_prog (Γ : context) (leq : conv_pb)
             (t1 : term) (π1 : stack) (h1 : welltyped Σ Γ (zipc t1 π1))
             (t2 : term) (π2 : stack) (h2 : welltyped Σ Γ (zipc t2 π2))
@@ -663,18 +681,7 @@ Section Conversion.
       eapply red_context.
       Transparent subst_instance_constr.
       symmetry in eq3.
-      assert (c' = n).
-      { destruct Σ as [Σ' ?]. cbn in eq3. clear - eq3.
-        induction Σ'.
-        - cbn in eq3. discriminate.
-        - destruct a.
-          + cbn in eq3. destruct (ident_eq_spec c' k).
-            * subst. inversion eq3. reflexivity.
-            * apply IHΣ'. assumption.
-          + cbn in eq3. destruct (ident_eq_spec c' k).
-            * inversion eq3.
-            * apply IHΣ'. assumption.
-      } subst.
+      pose proof (lookup_env_const_name eq3). subst.
       econstructor.
       + econstructor.
       + econstructor.
@@ -693,18 +700,7 @@ Section Conversion.
       eapply red_context.
       Transparent subst_instance_constr.
       symmetry in eq3.
-      assert (c' = n).
-      { destruct Σ as [Σ' ?]. cbn in eq3. clear - eq3.
-        induction Σ'.
-        - cbn in eq3. discriminate.
-        - destruct a.
-          + cbn in eq3. destruct (ident_eq_spec c' k).
-            * subst. inversion eq3. reflexivity.
-            * apply IHΣ'. assumption.
-          + cbn in eq3. destruct (ident_eq_spec c' k).
-            * inversion eq3.
-            * apply IHΣ'. assumption.
-      } subst.
+      pose proof (lookup_env_const_name eq3). subst.
       econstructor.
       + econstructor.
       + econstructor.
@@ -713,10 +709,27 @@ Section Conversion.
   Qed.
   Next Obligation.
     destruct b ; auto.
-    (* We need to reuse the previous obligation proofs again.
-       Let's factorise!
-     *)
-  Admitted.
+    eapply conv_trans'.
+    - eapply red_conv_l.
+      eapply red_context.
+      symmetry in eq3.
+      pose proof (lookup_env_const_name eq3). subst.
+      eapply trans_red.
+      + econstructor.
+      + econstructor.
+        * exact eq3.
+        * reflexivity.
+    - eapply conv_trans' ; try eassumption.
+      eapply red_conv_r.
+      eapply red_context.
+      symmetry in eq3.
+      pose proof (lookup_env_const_name eq3). subst.
+      eapply trans_red.
+      + econstructor.
+      + econstructor.
+        * exact eq3.
+        * reflexivity.
+  Qed.
 
   Equations(noeqns) _isconv_args (Γ : context) (t : term)
             (π1 : stack) (h1 : welltyped Σ Γ (zipc t π1))

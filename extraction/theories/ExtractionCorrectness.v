@@ -40,6 +40,15 @@ Proof.
   intros Σ i pars arg args a T args' u' H17 x2 x3 t0 c0.
 Admitted.
 
+Lemma typing_spine_skipn:
+  forall (Σ : PCUICAst.global_context) (args : list PCUICAst.term) (n0 : nat) (t5 x x0 : PCUICAst.term) 
+    (n : nat) (t3 : PCUICGeneration.typing_spine Σ [] x args x0),
+    {T & PCUICGeneration.typing_spine Σ [] (snd (n0, t5)) (skipn n args) T}.
+Proof.
+  intros Σ args n0 t5 x x0.
+Admitted.
+
+
 Tactic Notation "destruct" "?" :=
   let E := fresh "E" in
   match goal with
@@ -325,6 +334,12 @@ Proof.
   revert a; induction l; cbn; congruence.
 Qed.
 
+Lemma mkAppBox_repeat n a :
+  mkAppBox a n = mkApps a (repeat tBox n).
+Proof.
+  revert a; induction n; cbn; firstorder congruence.
+Qed.
+
 (** ** All2 *)
 
 Lemma is_constructor_extract `{Fuel} Σ n L L' :
@@ -385,13 +400,29 @@ Proof.
   induction 1; cbn; eauto.
 Qed.
 
+Lemma Forall2_skipn A B (P : A -> B -> Prop) l l' n:
+  Forall2 P l l' -> Forall2 P (skipn n l) (skipn n l').
+Proof.
+  revert l l'; induction n; intros.
+  - unfold skipn. eauto.
+  - cbv [skipn]. fold (@skipn A n). fold (@skipn B n).
+    inversion H; subst. econstructor.
+    eauto.
+Qed.
+Lemma All2_Forall A B (P : A -> B -> Prop) l l' :
+  All2 P l l' -> Forall2 P l l'.
+Proof.
+  induction 1; eauto.
+Qed.
+
 (** ** extract and mkApps *)
 
 Lemma extract_Apps `{Fuel} Σ Γ a args x :
-  extract Σ Γ (PCUICAst.mkApps a args) = Checked x -> {e : _ & (extract Σ Γ a = Checked e) *
-                                                              { l : list E.term & (All2 (fun a e => extract Σ Γ a = Checked e) args l) *
-                                                                                  (* (x = mkApps e l) *)
-                                                                                  match e with tBox => x = tBox | _ => (x = mkApps e l) end }}%type.
+  extract Σ Γ (PCUICAst.mkApps a args) = Checked x ->
+  {e : _ & (extract Σ Γ a = Checked e) *
+           { l : list E.term & (All2 (fun a e => extract Σ Γ a = Checked e) args l) *
+                               (* (x = mkApps e l) *)
+                               match e with tBox => x = tBox | _ => (x = mkApps e l) end }}%type.
 Proof.
   revert a x. induction args using rev_ind; intros.
   - cbn in H0. repeat eexists; eauto. destruct x; eauto.
@@ -466,7 +497,47 @@ Proof.
   - reflexivity.
 Qed.
 
+Lemma type_Case_inv Σ Γ ind npar p c brs T :
+  Σ;;; Γ |- PCUICAst.tCase (ind, npar) p c brs : T ->
+  { '(u, args, mdecl, idecl, pty, indctx, pctx, ps, btys) : _ &                                                 
+         (PCUICTyping.declared_inductive (fst Σ) mdecl ind idecl) *
+         (PCUICAst.ind_npars mdecl = npar) *
+         let pars := firstn npar args in
+         (Σ;;; Γ |- p : pty) *
+         (types_of_case ind mdecl idecl pars u p pty = Some (indctx, pctx, ps, btys)) *
+         (check_correct_arity (snd Σ) idecl ind u indctx pars pctx = true) *
+         (Exists (fun sf : sort_family => universe_family ps = sf) (PCUICAst.ind_kelim idecl)) *
+         (Σ;;; Γ |- c : PCUICAst.mkApps (tInd ind u) args) *
+         (All2 (fun x y : nat * PCUICAst.term => ((fst x = fst y) * (Σ;;; Γ |- snd x : snd y))) brs btys) *
+         (Σ ;;; Γ |- PCUICAst.mkApps p (skipn npar args ++ [c])  <= T)}%type.
+Proof.
+  intros. depind X.
+  - unshelve eexists.
+    + repeat refine (_,_). all:shelve.
+    + cbn. intuition eauto.
+  - edestruct (IHX _ _ _ _ _ eq_refl) as [ [[[[[[[[]]]]]]]] ].
+    repeat match goal with [ H : _ * _ |- _ ] => destruct H end.
+    unshelve eexists.
+    + repeat refine (_, _). all:shelve.
+    + cbn. intuition eauto.
+      all: eapply cumul_trans; eauto.
+Qed.
 
+Lemma type_Construct_inv Σ Γ ind i u T :
+  Σ;;; Γ |- PCUICAst.tConstruct ind i u : T ->
+  { '(mdecl, idecl, cdecl) : _ & 
+        (wf_local Σ Γ) *
+        (PCUICTyping.declared_constructor (fst Σ) mdecl idecl (ind, i) cdecl) *
+        (consistent_universe_context_instance Σ (ind_universes mdecl) u) *
+        (Σ ;;; Γ |- type_of_constructor mdecl cdecl (ind, i) u <= T)}%type.
+Proof.
+  intros. depind X.
+  - eexists (_, _, _). cbn. intuition eauto.
+  - edestruct IHX. reflexivity. destruct x as []. destruct p.
+    exists (m, o, p0). intuition eauto.
+    all: eapply cumul_trans; eauto.
+Qed.
+  
 Theorem erasure_correct : erasure_correctness.
 Proof.
   intros Σ t T pre v H. revert T pre.
@@ -537,18 +608,104 @@ Proof.
       eapply is_type_extract. eapply eval_is_type. 2:eauto.
       econstructor; eauto.
     + destruct extract eqn:He; try congruence.
+      inv pre. eapply type_Case_inv in extr_typed0 as [ [[[[[[[[]]]]]]]] [[[[]]]] ].
+      destruct p0 as [[[[[]]]]].
+
+      assert (t17 := t0).
+      eapply subject_reduction_eval in t0; eauto.
+      eapply type_mkApps_inv in t0 as (? & ? & [] & ?); eauto.
+           
       destruct is_box eqn:Ea.
-      * destruct a; inversion Ea; clear Ea.
-        eapply IHeval1 in He as (? & ? & ?); eauto.
-        exists tBox. destruct brs.
-        -- inv Ht'. split. admit. admit.
-        -- destruct p0. destruct ?; inv Ht'. admit.
-        -- admit.
+      * destruct a; inversion Ea; clear Ea. 
+
+        destruct brs eqn:Hbrs.
+        -- inv Ht'.
+           
+           eapply type_Construct_inv in t0 as [ [[]] ]. destruct y as [[[]]].
+           destruct d. cbn in H2. subst. destruct p0.
+           unfold types_of_case in e. destruct ? in e; inv e.
+           destruct p0. destruct ? in H5; inv H5. destruct p0. destruct ? in H6; inv H6.
+
+           Lemma map_optinons_out_length A (L : list (option A)) L' :
+             map_option_out L = Some L' -> #|L| = #|L'|.
+           Proof.
+             revert L'; induction L; inversion 1; subst; cbn.
+             - reflexivity.
+             - destruct a; inv H1. destruct ? in H2; inv H2. cbn. f_equal.
+               eauto.
+           Qed.
+           eapply map_optinons_out_length in E1. inv a0.
+           unfold build_branches_type in E1. rewrite mapi_length in E1.
+           destruct o. cbn in E1. destruct ind_ctors; inv E1.
+           cbn in *. clear Heq.
+           destruct l1 ; inv e0.
+
+        (* if there are no branches, ind has no constructors, so discr can not be well-typed *)
+           admit.
+        -- destruct brs.
+           2:admit. assert (c = 0) by admit. (* if the discriminee is a proof there only was one branch... *)
+           inv a0. inv X0.           
+           destruct p0. destruct p1. destruct ? in Ht'; inv Ht'.
+           unfold PCUICTyping.iota_red in IHeval2. simpl in IHeval2.
+           destruct X. destruct y. cbn in e; subst.
+           eapply typing_spine_skipn in t1 as [].  
+           
+           edestruct IHeval2 as (? & ? & ?).
+           ++ econstructor; eauto. eapply PCUICGeneration.type_mkApps; eauto.
+           ++ eapply extract_Apps2. eauto.
+              instantiate (1 := repeat tBox n0). admit. (* ... and all arguments were proofs *)
+           ++ eauto.
+           ++ exists x2. split; eauto. cbn in e2. subst.
+
+              now rewrite mkAppBox_repeat.
       * destruct monad_map eqn:Em; try congruence.
-        inv Ht'.
-        econstructor. econstructor. 
-        admit.
-        admit. (* tCase *)
+        inv Ht'. assert (He' := He). eapply IHeval1 in He as (? & ? & ?); eauto.
+        2:{ econstructor; eauto. }
+        eapply extract_Apps in H2 as (? & ? & ? & ? & ?).
+        simpl in e. destruct ? in e; [ | admit (* goes away with fuel *) ]. destruct a3; inv e.
+        { subst. exfalso. enough (is_box a = true) by congruence.
+          enough (extract Σ [] discr = Checked tBox). rewrite H2 in He'; now inv He'.
+          eapply is_type_extract.
+          eapply eval_is_type_backwards. eauto. rewrite <- is_type_or_proof_mkApps.
+          eauto. }
+
+        eapply type_Construct_inv in t0 as [ [[]] ]. destruct y0 as [[[]]].
+        destruct d. cbn in H4. subst. destruct p0.
+        unfold types_of_case in e. destruct ? in e; inv e.
+        destruct p0. destruct ? in H6; inv H6. destruct p0. destruct ? in H7; inv H7.
+        
+        destruct (nth_error brs c) eqn:E3.
+        2:{  (* if looking up c in (ind.ctors o0) works, looking up c in brs must work *)
+          eapply nth_error_None in E3.
+          Lemma All2_length X Y (P : X -> Y -> Type) x y :
+            All2 P x y -> #|x| = #|y|.
+          Proof.
+            induction 1; cbn; congruence.
+          Qed.
+          eapply All2_length in a0. rewrite a0 in *. clear a0.
+          pose proof (nth_error_Some (PCUICAst.ind_ctors o0) c). rewrite H4 in H5.
+          assert (c < #|PCUICAst.ind_ctors o0|) by (eapply H5; intuition congruence).
+          enough (#|l2| = #|PCUICAst.ind_ctors o0|) by omega.
+          admit.
+        }
+        pose proof (monad_map_All2 _ _ _ _ _ Em) as [[] [] ] % (All2_nth_error_Some c p2); eauto.
+        destruct ?; inv e2.
+        edestruct (All2_nth_error_Some _ _ a0 E3) as ([] & ? & ? & ?).
+        eapply typing_spine_skipn in t1 as (? & ?).
+        subst. cbn in e3. subst. edestruct IHeval2 as (? & ? & ?).
+        -- econstructor; eauto. unfold PCUICTyping.iota_red.
+           eapply PCUICGeneration.type_mkApps.
+           rewrite <- nth_default_eq. unfold nth_default. rewrite E0.
+           eauto. eauto.
+        -- unfold PCUICTyping.iota_red. eapply extract_Apps2.
+           rewrite <- nth_default_eq. unfold nth_default. rewrite E0.
+           eauto. 
+           eapply Forall2_skipn. now eapply All2_Forall.
+        -- eauto.
+        -- exists x2. split. eauto. econstructor.
+           eassumption.
+           unfold iota_red. rewrite <- nth_default_eq.
+           unfold nth_default. rewrite e. cbn. eauto.
     + congruence.
   - pose (Ht'' := Ht'). eapply extract_Apps in Ht'' as (e & He & l & Hl & ?).
     inv pre.
@@ -613,9 +770,6 @@ Proof.
             eapply is_constructor_extract. eauto. eauto.
               
             econstructor; eauto. all:eauto.
-
-            
-
             eapply PCUICGeneration.type_mkApps; eauto. }
     + congruence.
   - simpl in Ht'. destruct Extract.is_type_or_proof eqn:Heq. destruct a.

@@ -67,7 +67,6 @@ Proof.
 
 Admitted.
 
-
 Lemma eval_is_type `{Fuel} (Σ : PCUICAst.global_context) (t v : PCUICAst.term) (* T : *)
   (* wf Σ -> Σ ;;; [] |- t : T -> *) :
   PCUICWcbvEval.eval Σ [] t v -> Extract.is_type_or_proof Σ [] t = Checked true -> Extract.is_type_or_proof Σ [] v = Checked true.
@@ -121,7 +120,7 @@ Admitted.
 Lemma extract_subst `{Fuel} Σ Γ Γ' a a' s s' :
   subslet Σ Γ s Γ' ->
   extract Σ (Γ,,,Γ') a = Checked a' ->
-  Forall2 (fun a b => extract Σ (Γ ,,, Γ') a = Checked b) s s' ->            
+  Forall2 (fun a b => extract Σ Γ a = Checked b) s s' ->            
   extract Σ Γ (PCUICLiftSubst.subst s 0 a) = Checked (subst s' 0 a').
 Proof.
   intros. induction a.
@@ -138,8 +137,7 @@ Proof.
   intros. eapply extract_subst.
   - econstructor. econstructor. admit. (* typing *)
   - cbn. eauto.
-  - econstructor. cbn. admit. (* weakening for extration *)
-    econstructor.
+  - econstructor. eauto. econstructor.
 Admitted.
 
 Lemma extract_subst1_vdef
@@ -149,7 +147,10 @@ Lemma extract_subst1_vdef
     forall vea : E.term,
       extract Σ [] a' = Checked vea -> extract Σ [] (PCUICLiftSubst.subst1 a' 0 b) = Checked (a0 {0 := vea}).
 Proof.
-  intros.  
+  intros. eapply extract_subst.
+  - econstructor. econstructor. admit. (* typing *)
+  - cbn. admit.
+  - econstructor. eauto. econstructor.
 Admitted.
 
 (** ** Concerning fixpoints *)
@@ -258,17 +259,32 @@ Proof.
     do 2 eexists. rewrite H. eauto. inv H.
 Qed.
 
-Lemma map_fix_subst_extract:
-  forall (Σ : PCUICAst.global_context) (fuel : Fuel) (l0 : list (BasicAst.def PCUICAst.term))
-    (mfix : BasicAst.mfixpoint PCUICAst.term) (x : list (E.def E.term)) n,
-    monad_map
-      (fun d : BasicAst.def PCUICAst.term =>
-         dbody' <- extract Σ (fix_decls mfix ++ [])%list (BasicAst.dbody d);;
-                ret {| E.dname := BasicAst.dname d; E.dbody := dbody'; E.rarg := BasicAst.rarg d |}) l0 = 
-    Checked x ->
-    Forall2 (fun (a : PCUICAst.term) (b : E.term) => extract Σ (fix_decls mfix) a = Checked b) (fix_subst' n l0) (efix_subst' n x).
+Lemma Forall2_impl {A B} {P Q : A -> B -> Prop} {l l'} :
+    Forall2 P l l' ->
+    (forall x y, P x y -> Q x y) ->
+    Forall2 Q l l'.
 Proof.
-  intros Σ fuel l0 mfix x H1.
+  induction 1; constructor; auto.
+Qed.
+
+Lemma map_fix_subst_extract:
+  forall (Σ : PCUICAst.global_context) (fuel : Fuel) 
+    (mfix : BasicAst.mfixpoint PCUICAst.term) (x : list (E.def E.term)),
+    extract_mfix (extract Σ) [] mfix = Checked x ->
+    Forall2 (fun (a : PCUICAst.term) (b : E.term) => extract Σ [] a = Checked b) (PCUICTyping.fix_subst mfix) (fix_subst x).
+Proof.
+  intros.
+  pose proof (monad_map_length _ _ _ _ _ H) as HL.
+  (* pose proof (monad_map_Forall2 _ _ (fun d : BasicAst.def PCUICAst.term => *)
+  (*        dbody' <- extract Σ (fix_decls mfix ++ [])%list (BasicAst.dbody d);; *)
+  (*               ret {| E.dname := BasicAst.dname d; E.dbody := dbody'; E.rarg := BasicAst.rarg d |})). *)
+  (* eapply H0 in H. clear H0. *)
+  rewrite <- fix_subst'_subst, <- efix_subst'_subst.
+  rewrite HL. 
+  assert (#|x| <= #|x|) by omega. revert H0. generalize (#|x|) at 1 3 4. induction n; cbn; intros.
+  - econstructor.
+  - econstructor. simpl. destruct ?. destruct a. admit. rewrite H. reflexivity. admit.
+    eapply IHn. omega.
 Admitted.
 
 (** ** Proof inversions *)
@@ -541,9 +557,9 @@ Proof.
       eapply is_type_extract. eapply is_type_App in Heq. eapply eval_is_type.
       2:exact Heq. econstructor; eauto. eauto.      
     + destruct extract_mfix eqn:E. inv He. 2:congruence. subst.
-      unfold extract_mfix in E.
       enough (exists l', Forall2 (eval Σ') l l' /\ Forall2 (fun a e => extract Σ [] a = Checked e) args' l' /\ (PCUICTyping.is_constructor narg args' -> is_constructor narg l')) as (l' & ? & ? & ?).
       enough (exists efn, extract Σ [] fn = Checked efn /\ unfold_fix a idx = Some (narg, efn)) as (efn & ? & ?).
+      (* unfold extract_mfix in E. *)
       (* exists ( unfold_fix mfix idx *)
 
       assert (extract Σ [] (PCUICAst.mkApps fn args') = Checked (mkApps efn l')).
@@ -588,24 +604,17 @@ Proof.
          dbody' <- extract Σ (fix_decls mfix ++ [])%list (BasicAst.dbody d);;
                 ret {| E.dname := BasicAst.dname d; E.dbody := dbody'; E.rarg := BasicAst.rarg d |})).
         eapply H6 in E. clear H6.
-
+        
         unfold PCUICTyping.unfold_fix in H. destruct ? in H; try congruence.
         eapply All2_nth_error_Some in E as (? & ? & ?); eauto.
         inv e0. destruct ? in H7; inv H7. inv H.
         
         eexists. split.
         eapply extract_subst.
-        eapply subslet_fix_subst.
-
-        rewrite app_context_nil_l. rewrite app_nil_r in E. eauto.
-
-        rewrite app_context_nil_l.  
-        rewrite <- fix_subst'_subst. eapply map_fix_subst_extract. exact E'.
-
-        unfold unfold_fix. rewrite e. f_equal.
-        f_equal. cbn. rewrite <- efix_subst'_subst.
-        repeat f_equal.                 
-                symmetry. eapply (monad_map_length _ _ _ _ _ E').   }
+        - eapply subslet_fix_subst.
+        - rewrite app_context_nil_l. rewrite app_nil_r in E. eauto.
+        - (* eapply map_fix_subst_extract. exact E'. *) shelve.
+        - unfold unfold_fix. rewrite e. simpl. f_equal. }
     + congruence.
   - simpl in Ht'. destruct Extract.is_type_or_proof eqn:Heq. destruct a.
     + inv Ht'. exists tBox. split. 2: repeat econstructor.

@@ -267,25 +267,25 @@ Proof.
   induction 1; constructor; auto.
 Qed.
 
-Lemma map_fix_subst_extract:
-  forall (Σ : PCUICAst.global_context) (fuel : Fuel) 
-    (mfix : BasicAst.mfixpoint PCUICAst.term) (x : list (E.def E.term)),
-    extract_mfix (extract Σ) [] mfix = Checked x ->
-    Forall2 (fun (a : PCUICAst.term) (b : E.term) => extract Σ [] a = Checked b) (PCUICTyping.fix_subst mfix) (fix_subst x).
-Proof.
-  intros.
-  pose proof (monad_map_length _ _ _ _ _ H) as HL.
-  (* pose proof (monad_map_Forall2 _ _ (fun d : BasicAst.def PCUICAst.term => *)
-  (*        dbody' <- extract Σ (fix_decls mfix ++ [])%list (BasicAst.dbody d);; *)
-  (*               ret {| E.dname := BasicAst.dname d; E.dbody := dbody'; E.rarg := BasicAst.rarg d |})). *)
-  (* eapply H0 in H. clear H0. *)
-  rewrite <- fix_subst'_subst, <- efix_subst'_subst.
-  rewrite HL. 
-  assert (#|x| <= #|x|) by omega. revert H0. generalize (#|x|) at 1 3 4. induction n; cbn; intros.
-  - econstructor.
-  - econstructor. simpl. destruct ?. destruct a. admit. rewrite H. reflexivity. admit.
-    eapply IHn. omega.
-Admitted.
+(* Lemma map_fix_subst_extract: *)
+(*   forall (Σ : PCUICAst.global_context) (fuel : Fuel)  *)
+(*     (mfix : BasicAst.mfixpoint PCUICAst.term) (x : list (E.def E.term)), *)
+(*     extract_mfix (extract Σ) [] mfix = Checked x -> *)
+(*     Forall2 (fun (a : PCUICAst.term) (b : E.term) => extract Σ [] a = Checked b) (PCUICTyping.fix_subst mfix) (fix_subst x). *)
+(* Proof. *)
+(*   intros. *)
+(*   pose proof (monad_map_length _ _ _ _ _ H) as HL. *)
+(*   (* pose proof (monad_map_Forall2 _ _ (fun d : BasicAst.def PCUICAst.term => *) *)
+(*   (*        dbody' <- extract Σ (fix_decls mfix ++ [])%list (BasicAst.dbody d);; *) *)
+(*   (*               ret {| E.dname := BasicAst.dname d; E.dbody := dbody'; E.rarg := BasicAst.rarg d |})). *) *)
+(*   (* eapply H0 in H. clear H0. *) *)
+(*   rewrite <- fix_subst'_subst, <- efix_subst'_subst. *)
+(*   rewrite HL.  *)
+(*   assert (#|x| <= #|x|) by omega. revert H0. generalize (#|x|) at 1 3 4. induction n; cbn; intros. *)
+(*   - econstructor. *)
+(*   - econstructor. simpl. destruct ?. destruct a. admit. rewrite H. reflexivity. admit. *)
+(*     eapply IHn. omega. *)
+(* Admitted. *)
 
 (** ** Proof inversions *)
 
@@ -558,23 +558,41 @@ Proof.
       2:exact Heq. econstructor; eauto. eauto.      
     + destruct extract_mfix eqn:E. inv He. 2:congruence. subst.
       enough (exists l', Forall2 (eval Σ') l l' /\ Forall2 (fun a e => extract Σ [] a = Checked e) args' l' /\ (PCUICTyping.is_constructor narg args' -> is_constructor narg l')) as (l' & ? & ? & ?).
-      enough (exists efn, extract Σ [] fn = Checked efn /\ unfold_fix a idx = Some (narg, efn)) as (efn & ? & ?).
-      (* unfold extract_mfix in E. *)
-      (* exists ( unfold_fix mfix idx *)
 
-      assert (extract Σ [] (PCUICAst.mkApps fn args') = Checked (mkApps efn l')).
-      eapply extract_Apps2; eauto. eapply IHeval in H8 as (? & ? & ?).
+      assert (E' := E).
+      pose proof (monad_map_All2 _ _ (fun d : BasicAst.def PCUICAst.term =>
+         dbody' <- extract Σ (fix_decls mfix ++ [])%list (BasicAst.dbody d);;
+                ret {| E.dname := BasicAst.dname d; E.dbody := dbody'; E.rarg := BasicAst.rarg d |})).
+      eapply H6 in E. clear H6.
+
+      assert (H'' := H).
+      unfold PCUICTyping.unfold_fix in H. destruct ? in H; try congruence.
+      eapply All2_nth_error_Some in E as (? & ? & ?); eauto.
+      inv e0. destruct ? in H7; inv H7. inv H.
+      assert (exists s', monad_map (extract Σ []) (PCUICTyping.fix_subst mfix) = Checked s') as [s' ?] by admit. (* this goes away without fuel *)
+
+      edestruct IHeval as (? & ? & ?).
       
-      
-      exists x. split. eauto. econstructor. eauto. eauto. eauto. eauto.
-      all:eauto. econstructor. eapply subject_reduction.
+      2:{ eapply extract_Apps2; eauto. eapply extract_subst.
+        - eapply subslet_fix_subst.
+        - rewrite app_context_nil_l. rewrite app_nil_r in E. eauto.
+        - eapply monad_map_Forall2. eauto. }
+
+      econstructor. eapply subject_reduction.
       eauto. exact extr_typed0. all:eauto.
       etransitivity. eapply PCUICReduction.red_mkApps.
       eapply refl_red. eapply All2_impl. exact X. intros. now eapply wcbeval_red.
 
       eapply PCUICReduction.red_step. econstructor; eauto. eapply refl_red.
 
-      2:{ clear H1. revert H0  X Hl narg  H extr_typed0 extr_env_axiom_free0 extr_env_wf HΣ'. clear.
+      exists x. split. eauto. econstructor. 
+
+      unfold unfold_fix. rewrite e. simpl. f_equal. eauto. eauto.
+
+      assert (subst0 (fix_subst a) a0 = subst0 s' a0) by admit. (* substituting with extracted fix_subst is the same as substituing with fix_subst on results of extraction (like a0), since variables where they differ (extracted fix_subst is box where fix_subst is fix ... := box) are replaced by box in a0 already *)
+      rewrite H8. eauto.
+
+      1:{ clear H1. revert H0  X Hl narg  H extr_typed0 extr_env_axiom_free0 extr_env_wf HΣ'. clear.
           intros H0. intros. revert l Hl T extr_typed0. dependent induction H0 using All2_ind_rev; intros.
           - inv Hl. exists []. repeat split; eauto. unfold PCUICTyping.is_constructor, is_constructor.
             destruct narg; cbn; eauto.
@@ -599,24 +617,6 @@ Proof.
             
 
             eapply PCUICGeneration.type_mkApps; eauto. }
-            
-      {
-        assert (E' := E).
-        pose proof (monad_map_All2 _ _ (fun d : BasicAst.def PCUICAst.term =>
-         dbody' <- extract Σ (fix_decls mfix ++ [])%list (BasicAst.dbody d);;
-                ret {| E.dname := BasicAst.dname d; E.dbody := dbody'; E.rarg := BasicAst.rarg d |})).
-        eapply H6 in E. clear H6.
-        
-        unfold PCUICTyping.unfold_fix in H. destruct ? in H; try congruence.
-        eapply All2_nth_error_Some in E as (? & ? & ?); eauto.
-        inv e0. destruct ? in H7; inv H7. inv H.
-        
-        eexists. split.
-        eapply extract_subst.
-        - eapply subslet_fix_subst.
-        - rewrite app_context_nil_l. rewrite app_nil_r in E. eauto.
-        - (* eapply map_fix_subst_extract. exact E'. *) shelve.
-        - unfold unfold_fix. rewrite e. simpl. f_equal. }
     + congruence.
   - simpl in Ht'. destruct Extract.is_type_or_proof eqn:Heq. destruct a.
     + inv Ht'. exists tBox. split. 2: repeat econstructor.

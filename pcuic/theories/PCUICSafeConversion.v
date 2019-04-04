@@ -651,7 +651,7 @@ Section Conversion.
     | left eq1 with eq_dec u u' := {
       | left eq2 with isconv_args_raw Γ (tConst c u) π1 π2 aux := {
         | @exist true h := yes ;
-        (* Unfold both bodies at once *)
+        (* Unfold both constants at once *)
         | @exist false _ with inspect (lookup_env Σ c) := {
           | @exist (Some (ConstantDecl n {| cst_body := Some body |})) eq3 :=
             (* In PCUICChecker, there is no subst but I guess it's just wrong. *)
@@ -661,7 +661,19 @@ Section Conversion.
           | @exist _ _ := no
           }
         } ;
-      | right _ := no (* TODO *)
+      (* If the two constants are different, we unfold one of them *)
+      | right _ with inspect (lookup_env Σ c') := {
+        | @exist (Some (ConstantDecl n {| cst_body := Some b |})) eq1 :=
+          isconv_red Γ leq (tConst c u) π1 (subst_instance_constr u b) π2 aux ;
+        (* Inductive or not found *)
+        | _ with inspect (lookup_env Σ c) := {
+          | @exist (Some (ConstantDecl n {| cst_body := Some b |})) eq1 :=
+            isconv_red Γ leq (subst_instance_constr u b) π1
+                             (tConst c' u') π2 aux ;
+          (* Both Inductive or not found *)
+          | _ := no
+          }
+        }
       } ;
     | right _ := no
     } ;
@@ -730,6 +742,53 @@ Section Conversion.
         * exact eq3.
         * reflexivity.
   Qed.
+  Next Obligation.
+    (* This one is problematic because it seems we get smaller on
+       the second argument, meaning we probably need both of them at top-level
+       and included in the order.
+     *)
+    (* R (Reduction, tConst c' u, π1) (Term, tConst c' u, π1) *)
+  Admitted.
+  Next Obligation.
+    (* Same as above, using reduction, should be a lemma I guess *)
+  Admitted.
+  Next Obligation.
+    destruct b0 ; auto.
+    (* By the same reduction, again... *)
+  Admitted.
+  Next Obligation.
+    (* Same *)
+  Admitted.
+  Next Obligation.
+    (* Fine by reduction *)
+    (* R (Reduction, subst_instance_constr u b, π1) (Term, tConst c' u, π1) *)
+  Admitted.
+  Next Obligation.
+    destruct b0 ; auto.
+    (* Same *)
+  Admitted.
+  Next Obligation.
+    (* Same *)
+  Admitted.
+  Next Obligation.
+    (* Fine by reduction *)
+    (* R (Reduction, subst_instance_constr u b, π1) (Term, tConst c' u, π1) *)
+  Admitted.
+  Next Obligation.
+    destruct b0 ; auto.
+    (* Same *)
+  Admitted.
+  Next Obligation.
+    (* Same *)
+  Admitted.
+  Next Obligation.
+    (* Fine by reduction *)
+    (* R (Reduction, subst_instance_constr u b, π1) (Term, tConst c' u, π1) *)
+  Admitted.
+  Next Obligation.
+    destruct b0 ; auto.
+    (* Same *)
+  Admitted.
 
   Equations(noeqns) _isconv_args (Γ : context) (t : term)
             (π1 : stack) (h1 : welltyped Σ Γ (zipc t π1))

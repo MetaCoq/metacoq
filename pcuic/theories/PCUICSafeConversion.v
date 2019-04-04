@@ -633,6 +633,22 @@ Section Conversion.
         * apply IHΣ'. assumption.
   Qed.
 
+  Lemma red_const :
+    forall {Γ n c u cty cb cu},
+      Some (ConstantDecl n {| cst_type := cty ; cst_body := Some cb ; cst_universes := cu |})
+      = lookup_env Σ c ->
+      red (fst Σ) Γ (tConst c u) (subst_instance_constr u cb).
+  Proof.
+    intros Γ n c u cty cb cu e.
+    symmetry in e.
+    pose proof (lookup_env_const_name e). subst.
+    econstructor.
+    - econstructor.
+    - econstructor.
+      + exact e.
+      + reflexivity.
+  Qed.
+
   Equations(noeqns) _isconv_prog (Γ : context) (leq : conv_pb)
             (t1 : term) (π1 : stack) (h1 : welltyped Σ Γ (zipc t1 π1))
             (t2 : term) (π2 : stack) (h2 : welltyped Σ Γ (zipc t2 π2))
@@ -661,7 +677,7 @@ Section Conversion.
       (* If the two constants are different, we unfold one of them *)
       | right _ with inspect (lookup_env Σ c') := {
         | @exist (Some (ConstantDecl n {| cst_body := Some b |})) eq1 :=
-          isconv_red Γ leq (tConst c u) π1 (subst_instance_constr u b) π2 aux ;
+          isconv_red Γ leq (tConst c u) π1 (subst_instance_constr u' b) π2 aux ;
         (* Inductive or not found *)
         | _ with inspect (lookup_env Σ c) := {
           | @exist (Some (ConstantDecl n {| cst_body := Some b |})) eq1 :=
@@ -689,13 +705,7 @@ Section Conversion.
       Opaque subst_instance_constr.
       eapply red_context.
       Transparent subst_instance_constr.
-      symmetry in eq3.
-      pose proof (lookup_env_const_name eq3). subst.
-      econstructor.
-      + econstructor.
-      + econstructor.
-        * exact eq3.
-        * reflexivity.
+      eapply red_const. eassumption.
   Qed.
   Next Obligation.
     eapply red_welltyped.
@@ -704,13 +714,7 @@ Section Conversion.
       Opaque subst_instance_constr.
       eapply red_context.
       Transparent subst_instance_constr.
-      symmetry in eq3.
-      pose proof (lookup_env_const_name eq3). subst.
-      econstructor.
-      + econstructor.
-      + econstructor.
-        * exact eq3.
-        * reflexivity.
+      eapply red_const. eassumption.
   Qed.
   Next Obligation.
     (* tConst c' u' reduces to subst_instance_constr u' body *)
@@ -722,38 +726,30 @@ Section Conversion.
     eapply conv_trans'.
     - eapply red_conv_l.
       eapply red_context.
-      symmetry in eq3.
-      pose proof (lookup_env_const_name eq3). subst.
-      eapply trans_red.
-      + econstructor.
-      + econstructor.
-        * exact eq3.
-        * reflexivity.
+      eapply red_const. eassumption.
     - eapply conv_trans' ; try eassumption.
       eapply red_conv_r.
       eapply red_context.
-      symmetry in eq3.
-      pose proof (lookup_env_const_name eq3). subst.
-      eapply trans_red.
-      + econstructor.
-      + econstructor.
-        * exact eq3.
-        * reflexivity.
+      eapply red_const. eassumption.
   Qed.
   Next Obligation.
-    (* Same as above, using reduction, should be a lemma I guess *)
-  Admitted.
+    eapply red_welltyped ; [ exact h2 | ].
+    constructor. eapply red_context. eapply red_const. eassumption.
+  Qed.
   Next Obligation.
-    (* R (Reduction (subst_instance_constr u b), tConst c' u, π1, π2) *)
+    (* R (Reduction (subst_instance_constr u' b), tConst c' u, π1, π2) *)
     (*   (Term (tConst c' u'), tConst c' u, π1, π2) *)
   Admitted.
   Next Obligation.
     destruct b0 ; auto.
-    (* By the same reduction, again... *)
-  Admitted.
+    eapply conv_trans' ; try eassumption.
+    eapply red_conv_r.
+    eapply red_context. eapply red_const. eassumption.
+  Qed.
   Next Obligation.
-    (* Same *)
-  Admitted.
+    eapply red_welltyped ; [ exact h1 | ].
+    constructor. eapply red_context. eapply red_const. eassumption.
+  Qed.
   Next Obligation.
     (* Fine by reduction *)
     (* R (Reduction (tConst c' u'), subst_instance_constr u b, π1, π2) *)
@@ -761,23 +757,14 @@ Section Conversion.
   Admitted.
   Next Obligation.
     destruct b0 ; auto.
-    (* Same *)
-  Admitted.
+    eapply conv_trans' ; try eassumption.
+    eapply red_conv_l.
+    eapply red_context. eapply red_const. eassumption.
+  Qed.
   Next Obligation.
-    (* Same *)
-  Admitted.
-  Next Obligation.
-    (* Fine by reduction *)
-    (* R (Reduction (tConst c' u'), subst_instance_constr u b, π1, π2) *)
-    (*   (Term (tConst c' u'), tConst c' u, π1, π2) *)
-  Admitted.
-  Next Obligation.
-    destruct b0 ; auto.
-    (* Same *)
-  Admitted.
-  Next Obligation.
-    (* Same *)
-  Admitted.
+    eapply red_welltyped ; [ exact h1 | ].
+    constructor. eapply red_context. eapply red_const. eassumption.
+  Qed.
   Next Obligation.
     (* Fine by reduction *)
     (* R (Reduction (tConst c' u'), subst_instance_constr u b, π1, π2) *)
@@ -785,8 +772,25 @@ Section Conversion.
   Admitted.
   Next Obligation.
     destruct b0 ; auto.
-    (* Same *)
+    eapply conv_trans' ; try eassumption.
+    eapply red_conv_l.
+    eapply red_context. eapply red_const. eassumption.
+  Qed.
+  Next Obligation.
+    eapply red_welltyped ; [ exact h1 | ].
+    constructor. eapply red_context. eapply red_const. eassumption.
+  Qed.
+  Next Obligation.
+    (* Fine by reduction *)
+    (* R (Reduction (tConst c' u'), subst_instance_constr u b, π1, π2) *)
+    (*   (Term (tConst c' u'), tConst c' u, π1, π2) *)
   Admitted.
+  Next Obligation.
+    destruct b0 ; auto.
+    eapply conv_trans' ; try eassumption.
+    eapply red_conv_l.
+    eapply red_context. eapply red_const. eassumption.
+  Qed.
 
   Equations(noeqns) _isconv_args (Γ : context) (t : term)
             (π1 : stack) (h1 : welltyped Σ Γ (zipc t π1))

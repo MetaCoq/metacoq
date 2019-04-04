@@ -523,7 +523,11 @@ Section Conversion.
   | Term (t : term)
   | Args.
 
+  (* Will definitely depend on Γ (Σ is already here) *)
   Definition R (u v : state * term * stack * stack) := False.
+
+  Lemma R_Acc : forall u, Acc R u.
+  Admitted.
 
   Definition Ret s Γ t π π' :=
     match s with
@@ -851,5 +855,40 @@ Section Conversion.
 
     _isconv Args Γ t π1 h1 π2 h2 aux :=
         _isconv_args Γ t π1 h1 π2 h2 aux.
+
+  Equations(noeqns) isconv_full (s : state) (Γ : context)
+            (t : term) (π1 : stack) (h1 : welltyped Σ Γ (zipc t π1))
+            (π2 : stack) (h2 : wts Γ s t π2)
+    : Ret s Γ t π1 π2 :=
+
+    isconv_full s Γ t π1 h1 π2 h2 :=
+      Fix_F (R := R)
+            (fun '(s', t', π1', π2') => welltyped Σ Γ (zipc t' π1') -> wts Γ s' t' π2' -> Ret s' Γ t' π1' π2')
+            (fun t' f => _)
+            (x := (s, t, π1, π2))
+            _ _ _.
+  Next Obligation.
+    eapply _isconv ; try assumption.
+    intros s' t' π1' π2' h1' h2' hR.
+    specialize (f (s', t', π1', π2') hR). cbn in f.
+    eapply f ; assumption.
+  Qed.
+  Next Obligation.
+    apply R_Acc.
+  Qed.
+
+  Definition isconv Γ leq t1 π1 h1 t2 π2 h2 :=
+    let '(exist b _) := isconv_full (Reduction t2) Γ t1 π1 h1 π2 h2 leq in b.
+
+  Theorem isconv_sound :
+    forall Γ leq t1 π1 h1 t2 π2 h2,
+      isconv Γ leq t1 π1 h1 t2 π2 h2 ->
+      conv leq Σ Γ (zipc t1 π1) (zipc t2 π2).
+  Proof.
+    unfold isconv.
+    intros Γ leq t1 π1 h1 t2 π2 h2.
+    destruct isconv_full as [[]] ; auto.
+    discriminate.
+  Qed.
 
 End Conversion.

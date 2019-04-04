@@ -36,132 +36,6 @@ End RedFlags.
 
 Notation "∥ T ∥" := (squash T) (at level 10).
 
-Lemma mkApps_inj :
-  forall u v l,
-    mkApps u l = mkApps v l ->
-    u = v.
-Proof.
-  intros u v l eq.
-  revert u v eq.
-  induction l ; intros u v eq.
-  - cbn in eq. assumption.
-  - cbn in eq. apply IHl in eq.
-    inversion eq. reflexivity.
-Qed.
-
-Lemma neq_sym : forall {A} {x y : A}, x <> y -> y <> x.
-Proof.
-  intros A x y h.
-  intro. subst. apply h. reflexivity.
-Qed.
-
-Lemma cong_cons : forall {A} {a a' : A} {l l'}, a = a' -> l = l' -> a :: l = a' :: l'.
-Proof.
-  intros A a a' l l' H H0. f_equal ; assumption.
-Qed.
-
-Lemma cons_tail_neq :
-  forall {A} {a a' : A} {l l'},
-    l <> l' ->
-    a :: l <> a' :: l'.
-Proof.
-  intros A a a' l l' H.
-  intro bot. inversion bot. subst. apply H. reflexivity.
-Qed.
-
-Lemma cons_head_neq :
-  forall {A} {a a' : A} {l l'},
-    a <> a' ->
-    a :: l <> a' :: l'.
-Proof.
-  intros A a a' l l' H.
-  intro bot. inversion bot. subst. apply H. reflexivity.
-Qed.
-
-Fixpoint list_dec {A} (f : EqDec A) (l l' : list A) : { l = l' } + { l <> l' } :=
-  match l, l' with
-  | a :: l, a' :: l' =>
-    match f a a' with
-    | left p =>
-      match list_dec f l l' with
-      | left q => left (cong_cons p q)
-      | right q => right (cons_tail_neq q)
-      end
-    | right q => right (cons_head_neq q)
-    end
-  | [], [] => left eq_refl
-  | [], a' :: l' => right (@nil_cons A a' l')
-  | a :: l, [] => right (neq_sym (@nil_cons A a l))
-  end.
-
-Instance list_eqdec : forall A, EqDec A -> EqDec (list A) := @list_dec.
-
-Derive EqDec for nat.
-
-Instance string_eqdec : EqDec string := string_dec.
-
-(* Lemma list_dec : *)
-(*   forall {A}, EqDec A -> EqDec (list A). *)
-(* Proof. *)
-(*   intros A h l l'. *)
-(*   decide equality. *)
-(* Defined. *)
-
-Instance level_dec : EqDec Level.t.
-Proof.
-  intros l l'. decide equality.
-  - apply string_dec.
-  - apply Nat.eq_dec.
-Defined.
-
-Instance universe_expr_dec : EqDec Universe.Expr.t.
-Proof.
-  intros x y. decide equality.
-  - decide equality.
-  - apply level_dec.
-Defined.
-
-Instance universe_dec : EqDec universe.
-Proof.
-  intros u v. decide equality.
-  apply universe_expr_dec.
-Defined.
-
-Instance name_dec : EqDec name.
-Proof.
-  intros n m. decide equality. apply string_dec.
-Defined.
-
-Instance inductive_dec : EqDec inductive.
-Proof.
-  intros i i'. decide equality.
-  - apply Nat.eq_dec.
-  - apply string_dec.
-Defined.
-
-Instance prod_dec : forall {A B}, EqDec A -> EqDec B -> EqDec (A * B).
-Proof.
-  intros A B hA hB [x y] [a b].
-  decide equality.
-Defined.
-
-Instance projection_dec : EqDec projection.
-Proof.
-  intros x y. decide equality.
-  - apply Nat.eq_dec.
-  - apply prod_dec.
-    + apply inductive_dec.
-    + exact Nat.eq_dec.
-Defined.
-
-Instance mfixpoint_dec : forall {A : Set}, EqDec A -> EqDec (mfixpoint A).
-Proof.
-  intros A h x y. decide equality.
-  decide equality.
-  - apply Nat.eq_dec.
-  - apply name_dec.
-Defined.
-
 Ltac finish :=
   let h := fresh "h" in
   right ;
@@ -177,27 +51,26 @@ Ltac fcase c :=
 Ltac term_dec_tac term_dec :=
   repeat match goal with
          | t : term, u : term |- _ => fcase (term_dec t u)
-         | u : universe, u' : universe |- _ => fcase (universe_dec u u')
+         | u : universe, u' : universe |- _ => fcase (eq_dec u u')
          | x : universe_instance, y : universe_instance |- _ =>
-           fcase (list_dec level_dec x y)
+           fcase (eq_dec x y)
+         | x : list Level.t, y : universe_instance |- _ =>
+           fcase (eq_dec x y)
          | n : nat, m : nat |- _ => fcase (Nat.eq_dec n m)
          | i : ident, i' : ident |- _ => fcase (string_dec i i')
          | i : kername, i' : kername |- _ => fcase (string_dec i i')
-         | n : name, n' : name |- _ => fcase (name_dec n n')
+         | i : string, i' : kername |- _ => fcase (string_dec i i')
+         | n : name, n' : name |- _ => fcase (eq_dec n n')
          (* | l : list term, l' : list term |- _ => fcase (list_dec term_dec l l') *)
-         | i : inductive, i' : inductive |- _ => fcase (inductive_dec i i')
+         | i : inductive, i' : inductive |- _ => fcase (eq_dec i i')
          | x : inductive * nat, y : inductive * nat |- _ =>
-           fcase (prod_dec inductive_dec Nat.eq_dec x y)
+           fcase (eq_dec x y)
          (* | x : list (nat * term), y : list (nat * term) |- _ => *)
          (*   fcase (list_dec (prod_dec Nat.eq_dec term_dec) x y) *)
-         | x : projection, y : projection |- _ => fcase (projection_dec x y)
+         | x : projection, y : projection |- _ => fcase (eq_dec x y)
          (* | f : mfixpoint term, g : mfixpoint term |- _ => *)
          (*   fcase (mfixpoint_dec term_dec f g) *)
          end.
-
-Tactic Notation "my" "absurd" hyp(n) :=
-  let bot := fresh "bot" in
-  intro bot ; apply n ; inversion bot ; reflexivity.
 
 Derive EqDec for term.
 Next Obligation.
@@ -211,67 +84,39 @@ Next Obligation.
       * right. discriminate.
     + destruct l0.
       * right. discriminate.
-      * destruct (IHForallT l0).
-        -- destruct (p t).
-           ++ subst. left. inversion e. reflexivity.
-           ++ right. my absurd n.
-        -- right. my absurd n.
-  - destruct (IHx1 t1).
-    + subst. destruct (IHx2 t2).
-      * subst. left. reflexivity.
-      * right. my absurd n.
-    + right. my absurd n.
-  - destruct (IHx1 t1).
-    + subst. destruct (IHx2 t2).
-      * subst. left. reflexivity.
-      * right. my absurd n.
-    + right. my absurd n.
-  - destruct (IHx1 t1).
-    + subst. destruct (IHx2 t2).
-      * subst. destruct (IHx3 t3).
-        -- subst. left. reflexivity.
-        -- right. my absurd n.
-      * right. my absurd n.
-    + right. my absurd n.
-  - destruct (IHx1 t1).
-    + subst. destruct (IHx2 t2).
-      * subst. left. reflexivity.
-      * right. my absurd n.
-    + right. my absurd n.
-  - destruct (string_dec s k).
-    + subst. destruct (list_dec level_dec u u0).
-      * subst. left. reflexivity.
-      * right. my absurd n.
-    + right. my absurd n.
-  - destruct (list_dec level_dec u u0).
-    + subst. left. reflexivity.
-    + right. my absurd n.
-  - destruct (list_dec level_dec u u0).
-    + subst. left. reflexivity.
-    + right. my absurd n.
-  - destruct (IHx1 t1).
-    + subst. destruct (IHx2 t2).
-      * subst. revert l0. clear IHx1 IHx2.
-        induction X ; intro l0.
-        -- destruct l0.
-           ++ left. reflexivity.
-           ++ right. discriminate.
-        -- destruct l0.
-           ++ right. discriminate.
-           ++ destruct (IHX l0).
-              ** destruct (p (snd p1)).
-                 --- destruct (Nat.eq_dec (fst x) (fst p1)).
-                     +++ destruct x. destruct p1.
-                         cbn in *. subst.
-                         left. inversion e. reflexivity.
-                     +++ right. my absurd n.
-                 --- right. my absurd n.
-              ** right. my absurd n.
-      * right. my absurd n.
-    + right. my absurd n.
-  - destruct (IHx t).
-    + subst. left. reflexivity.
-    + right. my absurd n.
+      * destruct (IHForallT l0) ; nodec.
+        destruct (p t) ; nodec.
+        subst. left. inversion e. reflexivity.
+  - destruct (IHx1 t1) ; nodec.
+    destruct (IHx2 t2) ; nodec.
+    subst. left. reflexivity.
+  - destruct (IHx1 t1) ; nodec.
+    destruct (IHx2 t2) ; nodec.
+    subst. left. reflexivity.
+  - destruct (IHx1 t1) ; nodec.
+    destruct (IHx2 t2) ; nodec.
+    destruct (IHx3 t3) ; nodec.
+    subst. left. reflexivity.
+  - destruct (IHx1 t1) ; nodec.
+    destruct (IHx2 t2) ; nodec.
+    subst. left. reflexivity.
+  - destruct (IHx1 t1) ; nodec.
+    destruct (IHx2 t2) ; nodec.
+    subst. revert l0. clear IHx1 IHx2.
+    induction X ; intro l0.
+    + destruct l0.
+      * left. reflexivity.
+      * right. discriminate.
+    + destruct l0.
+      * right. discriminate.
+      * destruct (IHX l0) ; nodec.
+        destruct (p (snd p1)) ; nodec.
+        destruct (eq_dec (fst x) (fst p1)) ; nodec.
+        destruct x, p1.
+        left.
+        cbn in *. subst. inversion e. reflexivity.
+  - destruct (IHx t) ; nodec.
+    left. subst. reflexivity.
   - revert m0. induction X ; intro m0.
     + destruct m0.
       * left. reflexivity.
@@ -279,19 +124,14 @@ Next Obligation.
     + destruct p as [p1 p2].
       destruct m0.
       * right. discriminate.
-      * destruct (p1 (dtype d)).
-        -- destruct (p2 (dbody d)).
-           ++ destruct (IHX m0).
-              ** destruct x, d ; subst. cbn in *.
-                 destruct (name_dec dname dname0).
-                 --- subst. inversion e1. subst.
-                     destruct (Nat.eq_dec rarg rarg0).
-                     +++ subst. left. reflexivity.
-                     +++ right. my absurd n.
-                 --- right. my absurd n.
-              ** right. my absurd n.
-           ++ right. my absurd n.
-        -- right. my absurd n.
+      * destruct (p1 (dtype d)) ; nodec.
+        destruct (p2 (dbody d)) ; nodec.
+        destruct (IHX m0) ; nodec.
+        destruct x, d ; subst. cbn in *.
+        destruct (eq_dec dname dname0) ; nodec.
+        subst. inversion e1. subst.
+        destruct (eq_dec rarg rarg0) ; nodec.
+        subst. left. reflexivity.
   - revert m0. induction X ; intro m0.
     + destruct m0.
       * left. reflexivity.
@@ -299,19 +139,14 @@ Next Obligation.
     + destruct p as [p1 p2].
       destruct m0.
       * right. discriminate.
-      * destruct (p1 (dtype d)).
-        -- destruct (p2 (dbody d)).
-           ++ destruct (IHX m0).
-              ** destruct x, d ; subst. cbn in *.
-                 destruct (name_dec dname dname0).
-                 --- subst. inversion e1. subst.
-                     destruct (Nat.eq_dec rarg rarg0).
-                     +++ subst. left. reflexivity.
-                     +++ right. my absurd n.
-                 --- right. my absurd n.
-              ** right. my absurd n.
-           ++ right. my absurd n.
-        -- right. my absurd n.
+      * destruct (p1 (dtype d)) ; nodec.
+        destruct (p2 (dbody d)) ; nodec.
+        destruct (IHX m0) ; nodec.
+        destruct x, d ; subst. cbn in *.
+        destruct (eq_dec dname dname0) ; nodec.
+        subst. inversion e1. subst.
+        destruct (eq_dec rarg rarg0) ; nodec.
+        subst. left. reflexivity.
 Defined.
 
 (* We assume normalisation of the reduction.

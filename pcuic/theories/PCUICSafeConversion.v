@@ -610,9 +610,12 @@ Section Conversion.
     (* TODO Check universe instances, we will have to do it to proceed anyway. *)
     _isconv_prog Γ leq (tConst c u) π1 h1 (tConst c' u') π2 h2 aux
     with inspect (eq_constant c c') := {
-    | @exist true eq1 with isconv_args_raw Γ (tConst c u) π1 π2 aux := {
-      | @exist true h := yes ;
-      | @exist false _ := (* TODO *) no
+    | @exist true eq1 with inspect (Instance.equal u u') := {
+      | @exist true eq2 with isconv_args_raw Γ (tConst c u) π1 π2 aux := {
+        | @exist true h := yes ;
+        | @exist false _ := (* TODO *) no
+        } ;
+      | @exist false _ := no
       } ;
     | @exist false _ := no
     } ;

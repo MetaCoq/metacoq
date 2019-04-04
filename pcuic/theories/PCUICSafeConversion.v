@@ -432,6 +432,27 @@ Section Conversion.
         * assumption.
   Qed.
 
+  Lemma conv_conv_l :
+    forall leq Γ u v,
+        Σ ;;; Γ |- u = v ->
+        conv leq Σ Γ u v.
+  Proof.
+    intros [] Γ u v [h1 h2].
+    - cbn. constructor. constructor ; assumption.
+    - cbn. constructor. assumption.
+  Qed.
+
+  Lemma conv_conv_r :
+    forall leq Γ u v,
+        Σ ;;; Γ |- u = v ->
+        conv leq Σ Γ v u.
+  Proof.
+    intros [] Γ u v [h1 h2].
+    - cbn. constructor. constructor ; assumption.
+    - cbn. constructor. assumption.
+  Qed.
+
+
   (* Shouldn't be here. *)
   (* Lemma eq_term_refl : *)
   (*   forall ϕ t, eq_term ϕ t t. *)
@@ -625,8 +646,8 @@ Section Conversion.
     (* R (Args, tConst c' u', π1) (Term, tConst c' u', π1) *)
   Admitted.
   Next Obligation.
-
-  Admitted.
+    destruct h. eapply conv_conv_l. assumption.
+  Qed.
 
   (* TODO Replace by Conv, perhaps it should even be global to iscong_args.
      In any case, leq should be quantified over in Aux.

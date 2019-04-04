@@ -609,26 +609,23 @@ Section Conversion.
 
     (* TODO Check universe instances, we will have to do it to proceed anyway. *)
     _isconv_prog Γ leq (tConst c u) π1 h1 (tConst c' u') π2 h2 aux
-    with inspect (eq_constant c c') := {
-    | @exist true eq1 with inspect (Instance.equal u u') := {
-      | @exist true eq2 with isconv_args_raw Γ (tConst c u) π1 π2 aux := {
+    with eq_dec c c' := {
+    | left eq1 with eq_dec u u' := {
+      | left eq2 with isconv_args_raw Γ (tConst c u) π1 π2 aux := {
         | @exist true h := yes ;
         | @exist false _ := (* TODO *) no
         } ;
-      | @exist false _ := no
+      | right _ := no
       } ;
-    | @exist false _ := no
+    | right _ := no
     } ;
 
     _isconv_prog Γ leq t1 π1 h1 t2 π2 h2 aux := no.
   Next Obligation.
-    (* R (Args, tConst c u, π1) (Term, tConst c u, π1) *)
+    (* R (Args, tConst c' u', π1) (Term, tConst c' u', π1) *)
   Admitted.
   Next Obligation.
-    (* We're missing u = u' to conclude *)
-  Admitted.
-  Next Obligation.
-    (* Same as above. *)
+
   Admitted.
 
   (* TODO Replace by Conv, perhaps it should even be global to iscong_args.

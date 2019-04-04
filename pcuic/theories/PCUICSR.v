@@ -554,3 +554,17 @@ Proof.
   induction Hred. auto.
   eapply sr_red1 in IHHred; eauto with wf. now apply IHHred.
 Qed.
+
+
+Lemma red1_red {Σ Γ u v} : red1 Σ Γ u v -> red Σ Γ u v.
+Proof.
+  econstructor. constructor. assumption.
+Defined.
+
+
+Lemma subject_reduction1 {Σ Γ t u T}
+  : wf Σ -> Σ ;;; Γ |- t : T -> red1 Σ Γ t u -> Σ ;;; Γ |- u : T.
+Proof.
+  intros. eapply subject_reduction; try eassumption.
+  now apply red1_red.
+Defined.

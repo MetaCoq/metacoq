@@ -27,7 +27,7 @@ Proof.
   destruct (h x y).
   - left. assumption.
   - right. assumption.
-Qed.
+Defined.
 
 Definition eq_dec_to_bool {A} `{EqDec A} x y :=
   match eq_dec x y with
@@ -44,7 +44,7 @@ Proof.
   - unfold eq_dec_to_bool.
     intros x y. destruct (eq_dec x y).
     all: constructor ; assumption.
-Qed.
+Defined.
 
 Ltac nodec :=
   let bot := fresh "bot" in
@@ -66,7 +66,7 @@ Proof.
   all: try solve [ constructor ; easy ].
   destruct (eqb_spec a a0) ; nodec.
   constructor. f_equal. assumption.
-Qed.
+Defined.
 
 Fixpoint eq_list {A} (eqA : A -> A -> bool) (l l' : list A) : bool :=
   match l, l' with
@@ -88,7 +88,7 @@ Proof.
   - cbn. destruct (eqb_spec a a0) ; nodec.
     destruct (IHx y) ; nodec.
     subst. constructor. reflexivity.
-Qed.
+Defined.
 
 Instance reflect_string : ReflectEq string := {
   eqb := eq_string
@@ -102,7 +102,7 @@ Proof.
     + tauto.
     + constructor. assumption.
     + constructor. assumption.
-Qed.
+Defined.
 
 Instance reflect_nat : ReflectEq nat := {
   eqb_spec := Nat.eqb_spec
@@ -129,7 +129,7 @@ Proof.
     constructor. f_equal. assumption.
   - destruct (eqb_spec n n0) ; nodec.
     constructor. subst. reflexivity.
-Qed.
+Defined.
 
 Definition eq_prod {A B} (eqA : A -> A -> bool) (eqB : B -> B -> bool) x y :=
   let '(a1, b1) := x in
@@ -146,7 +146,7 @@ Proof.
   destruct (eqb_spec x u) ; nodec.
   destruct (eqb_spec y v) ; nodec.
   subst. constructor. reflexivity.
-Qed.
+Defined.
 
 Definition eq_bool b1 b2 : bool :=
   if b1 then b2 else negb b2.
@@ -160,7 +160,7 @@ Proof.
   all: constructor.
   all: try reflexivity.
   all: discriminate.
-Qed.
+Defined.
 
 Definition eq_name na nb :=
   match na, nb with
@@ -177,9 +177,9 @@ Proof.
   - cbn. constructor. reflexivity.
   - cbn. constructor. discriminate.
   - cbn. constructor. discriminate.
-  - cbn. destruct (eqb_spec i i0) ; nodec.
+  - unfold eq_name. destruct (eqb_spec i i0); nodec.
     constructor. f_equal. assumption.
-Qed.
+Defined.
 
 Definition eq_inductive ind ind' :=
   match ind, ind' with
@@ -196,7 +196,13 @@ Proof.
   destruct (eqb_spec m m') ; nodec.
   destruct (eqb_spec n n') ; nodec.
   cbn. constructor. subst. reflexivity.
-Qed.
+Defined.
+
+Lemma eq_inductive_refl i : eq_inductive i i.
+Proof.
+  destruct i as [mind k].
+  unfold eq_inductive, eqb; cbn. now rewrite eq_string_refl Nat.eqb_refl.
+Defined.
 
 Definition eq_def {A : Set} `{ReflectEq A} (d1 d2 : def A) : bool :=
   match d1, d2 with
@@ -215,7 +221,7 @@ Proof.
   destruct (eqb_spec b1 b2) ; nodec.
   destruct (eqb_spec a1 a2) ; nodec.
   cbn. constructor. subst. reflexivity.
-Qed.
+Defined.
 
 Fixpoint eq_non_empty_list {A : Set} (eqA : A -> A -> bool) (l l' : non_empty_list A) : bool :=
   match l, l' with
@@ -234,7 +240,7 @@ Proof.
   constructor; congruence.
   constructor; congruence.
   destruct (eqb_spec a a0), (IHx y); constructor; congruence.
-Qed.
+Defined.
 
 Local Ltac finish :=
   let h := fresh "h" in
@@ -361,7 +367,7 @@ Proof.
   intros [x hx] [y hy]. simpl.
   destruct (eqb_spec x y) ; nodec. subst.
   constructor. pose proof (uip hx hy). subst. reflexivity.
-Qed.
+Defined.
 
 Derive NoConfusion NoConfusionHom for sig.
 Derive NoConfusion NoConfusionHom for prod.

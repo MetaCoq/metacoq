@@ -257,3 +257,10 @@ Proof.
     destruct X2. red in i. left. exact (projT1 i).
     right. destruct s as [u [Hu _]]. now exists u.
 Admitted.
+
+
+Lemma validity_term {Σ Γ t T} :
+  wf Σ -> wf_local Σ Γ -> Σ ;;; Γ |- t : T -> isWfArity_or_Type Σ Γ T.
+Proof.
+  intros. eapply validity; try eassumption.
+Defined.

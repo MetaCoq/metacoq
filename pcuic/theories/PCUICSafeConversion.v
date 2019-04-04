@@ -670,6 +670,62 @@ Section Conversion.
       + constructor. eapply cumul_trans ; eassumption.
   Qed.
 
+  Lemma inversion_Prod :
+    forall {Σ Γ na A B T},
+      Σ ;;; Γ |- tProd na A B : T ->
+      exists s1 s2,
+        ∥ Σ ;;; Γ |- A : tSort s1 ∥ /\
+        ∥ Σ ;;; Γ ,, vass na A |- B : tSort s2 ∥ /\
+        ∥ Σ ;;; Γ |- tSort (Universe.sort_of_product s1 s2) <= T ∥.
+  Proof.
+    intros Σ' Γ na A B T h. dependent induction h.
+    - exists s1, s2. split ; [| split].
+      + constructor. assumption.
+      + constructor. assumption.
+      + constructor. apply cumul_refl'.
+    - destruct IHh as [s1 [s2 [? [? [?]]]]].
+      exists s1, s2. split ; [| split].
+      + assumption.
+      + assumption.
+      + constructor. eapply cumul_trans ; eassumption.
+  Qed.
+
+  Derive Signature for cumul.
+  Derive Signature for red1.
+
+  (* If I do not manage to prove it, it's okay to enfore the stacks to be empty
+     by matching.
+   *)
+  Lemma zip_Prod_Empty :
+    forall {Γ na A B π},
+      welltyped Σ Γ (zipc (tProd na A B) π) ->
+      π = Empty.
+  Proof.
+    intros Γ na A B π h.
+    induction π.
+    - reflexivity.
+    - exfalso.
+      cbn in h.
+      zip fold in h.
+      apply welltyped_context in h.
+      destruct h as [T h]. cbn in h.
+      destruct (inversion_App h) as [na' [A' [B' [[h1] [[?] [?]]]]]].
+      destruct (inversion_Prod h1) as [s1 [s2 [[?] [[?] [bot]]]]].
+      dependent destruction bot.
+      + cbn in e. discriminate.
+      + dependent destruction r.
+        revert H0.
+        set (u := tFix mfix idx).
+        assert (forall s, u <> tSort s) as neq by easy.
+        clearbody u. revert u neq. clear.
+        induction args ; intros u neq e.
+        * destruct u ; try discriminate e.
+          eapply neq. reflexivity.
+        * simpl in e. eapply IHargs ; [ | eassumption ].
+          intro. discriminate.
+      +
+  Admitted.
+
   Equations(noeqns) _isconv_prog (Γ : context) (leq : conv_pb)
             (t1 : term) (π1 : stack) (h1 : welltyped Σ Γ (zipc t1 π1))
             (t2 : term) (π2 : stack) (h2 : welltyped Σ Γ (zipc t2 π2))
@@ -723,7 +779,59 @@ Section Conversion.
     | @exist false _ := no
     } ;
 
+    _isconv_prog Γ leq (tProd na A1 B1) π1 h1 (tProd _ A2 B2) π2 h2 aux
+    with isconv_red_raw Γ Conv A1 Empty A2 Empty aux := {
+    | @exist true h := isconv_red (Γ,, vass na A1) leq B1 Empty B2 Empty aux ;
+    | @exist false _ := no
+    } ;
+
     _isconv_prog Γ leq t1 π1 h1 t2 π2 h2 aux := no.
+  Next Obligation.
+    zip fold in h1. apply welltyped_context in h1. cbn in h1.
+    destruct h1 as [T h1].
+    destruct (inversion_Prod h1) as [s1 [s2 [[?] [[?] [?]]]]].
+    eexists. eassumption.
+  Qed.
+  Next Obligation.
+    zip fold in h2. apply welltyped_context in h2. cbn in h2.
+    destruct h2 as [T h2].
+    destruct (inversion_Prod h2) as [s1 [s2 [[?] [[?] [?]]]]].
+    eexists. eassumption.
+  Qed.
+  Next Obligation.
+    pose proof (zip_Prod_Empty h1). subst.
+    pose proof (zip_Prod_Empty h2). subst.
+    (* R (Reduction A2, A1, Empty, Empty) *)
+    (*   (Term (tProd t2 A2 B2), tProd na A1 B1, Empty, Empty) *)
+  Admitted.
+  Next Obligation.
+    zip fold in h1. apply welltyped_context in h1. cbn in h1.
+    destruct h1 as [T h1].
+    destruct (inversion_Prod h1) as [s1 [s2 [[?] [[?] [?]]]]].
+    (* eexists. eassumption. *)
+    (* Context PROBLEM *)
+  Admitted.
+  Next Obligation.
+    zip fold in h2. apply welltyped_context in h2. cbn in h2.
+    destruct h2 as [T h2].
+    destruct (inversion_Prod h2) as [s1 [s2 [[?] [[?] [?]]]]].
+    (* eexists. eassumption. *)
+    (* Same PROBLEM *)
+  Admitted.
+  Next Obligation.
+    pose proof (zip_Prod_Empty h1). subst.
+    pose proof (zip_Prod_Empty h2). subst.
+    (* R (Reduction B2, B1, Empty, Empty) *)
+    (*   (Term (tProd t2 A2 B2), tProd na A1 B1, Empty, Empty) *)
+  Admitted.
+  Next Obligation.
+    destruct b ; auto.
+    destruct h0 as [h0].
+    pose proof (zip_Prod_Empty h1). subst.
+    pose proof (zip_Prod_Empty h2). subst.
+    cbn.
+    (* Now we need congruence of Prod *)
+  Admitted.
   Next Obligation.
     zip fold in h1. apply welltyped_context in h1. cbn in h1.
     destruct h1 as [T h1].

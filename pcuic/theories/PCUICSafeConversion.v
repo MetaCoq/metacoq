@@ -649,6 +649,27 @@ Section Conversion.
       + reflexivity.
   Qed.
 
+  Lemma inversion_Lambda :
+    forall {Σ Γ na A t T},
+      Σ ;;; Γ |- tLambda na A t : T ->
+      exists s1 B,
+        ∥ Σ ;;; Γ |- A : tSort s1 ∥ /\
+        (* ∥ Σ ;;; Γ ,, vass na A |- B : tSort s2 ∥ /\ *)
+        ∥ Σ ;;; Γ ,, vass na A |- t : B ∥ /\
+        ∥ Σ ;;; Γ |- tProd na A B <= T ∥.
+  Proof.
+    intros Σ' Γ na A t T h. dependent induction h.
+    - exists s1, bty. split ; [| split].
+      + constructor. assumption.
+      + constructor. assumption.
+      + constructor. apply cumul_refl'.
+    - destruct IHh as [s1 [B' [? [? [?]]]]].
+      exists s1, B'. split ; [| split].
+      + assumption.
+      + assumption.
+      + constructor. eapply cumul_trans ; eassumption.
+  Qed.
+
   Equations(noeqns) _isconv_prog (Γ : context) (leq : conv_pb)
             (t1 : term) (π1 : stack) (h1 : welltyped Σ Γ (zipc t1 π1))
             (t2 : term) (π2 : stack) (h2 : welltyped Σ Γ (zipc t2 π2))
@@ -691,9 +712,63 @@ Section Conversion.
     | right _ := no
     } ;
 
+    (* It should be probable that the stacks are empty, but we are missing
+       assumptions.
+       Another option is to leave that for later and only match on empty
+       stacks.
+     *)
+    _isconv_prog Γ leq (tLambda na A1 t1) π1 h1 (tLambda _ A2 t2) π2 h2 aux
+    with isconv_red_raw Γ Conv A1 Empty A2 Empty aux := {
+    | @exist true h := isconv_red (Γ,, vass na A1) leq t1 Empty t2 Empty aux ;
+    | @exist false _ := no
+    } ;
+
     _isconv_prog Γ leq t1 π1 h1 t2 π2 h2 aux := no.
   Next Obligation.
-    (* R (Args, tConst c' u', π1, π2) (Term (tConst c' u'), tConst c' u', π1, π2) *)
+    zip fold in h1. apply welltyped_context in h1. cbn in h1.
+    destruct h1 as [T h1].
+    destruct (inversion_Lambda h1) as [s1 [B [[?] [[?] [?]]]]].
+    eexists. eassumption.
+  Qed.
+  Next Obligation.
+    zip fold in h2. apply welltyped_context in h2. cbn in h2.
+    destruct h2 as [T h2].
+    destruct (inversion_Lambda h2) as [s1 [B [[?] [[?] [?]]]]].
+    eexists. eassumption.
+  Qed.
+  Next Obligation.
+    (* Maybe we'll force π1 and π2 to be Empty *)
+    (* R (Reduction A2, A1, Empty, Empty) *)
+    (*   (Term (tLambda t0 A2 t2), tLambda na A1 t1, π1, π2) *)
+  Admitted.
+  Next Obligation.
+    zip fold in h1. apply welltyped_context in h1. cbn in h1.
+    destruct h1 as [T h1].
+    destruct (inversion_Lambda h1) as [s1 [B [[?] [[?] [?]]]]].
+    (* eexists. eassumption. *)
+    (* New BIG PROBLEM!
+       Things should be general on Γ so that it can be extended!
+     *)
+    give_up.
+  Admitted.
+  Next Obligation.
+    (* SAME PROBLEM *)
+  Admitted.
+  Next Obligation.
+    (* Maybe we'll force π1 and π2 to be Empty *)
+    (* R (Reduction t2, t1, Empty, Empty) *)
+    (*   (Term (tLambda t0 A2 t2), tLambda na A1 t1, π1, π2) *)
+  Admitted.
+  Next Obligation.
+    destruct b ; auto.
+    destruct h0 as [h0].
+    (* Again we need to know π1 = π2, so we might be better off
+       enforcing it.
+     *)
+  Admitted.
+  Next Obligation.
+    (* R (Args, tConst c' u', π1, π2) *)
+    (*   (Term (tConst c' u'), tConst c' u', π1, π2) *)
   Admitted.
   Next Obligation.
     destruct h. eapply conv_conv_l. assumption.

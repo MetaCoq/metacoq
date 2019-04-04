@@ -87,6 +87,11 @@ Notation " Γ  ,,, Γ' " := (app_context Γ Γ') (at level 25, Γ' at next level
 Lemma app_context_assoc Γ Γ' Γ'' : Γ ,,, (Γ' ,,, Γ'') = Γ ,,, Γ' ,,, Γ''.
 Proof. unfold app_context; now rewrite app_assoc. Qed.
 
+Lemma app_context_cons Γ Γ' A : Γ ,,, (Γ' ,, A) = (Γ ,,, Γ') ,, A.
+Proof.
+  now rewrite (app_context_assoc _ _ [A]).
+Qed.
+
 Lemma app_context_length Γ Γ' : #|Γ ,,, Γ'| = #|Γ'| + #|Γ|.
 Proof. unfold app_context. now rewrite app_length. Qed.
 

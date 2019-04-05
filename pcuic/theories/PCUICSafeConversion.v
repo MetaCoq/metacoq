@@ -5,7 +5,7 @@ From Coq Require Import Bool String List Program BinPos Compare_dec Arith Lia
 From Template Require Import config univ monad_utils utils BasicAst AstUtils
      UnivSubst.
 From PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICLiftSubst
-     PCUICUnivSubst PCUICTyping PCUICSafeReduce PCUICSR.
+     PCUICUnivSubst PCUICTyping PCUICSafeReduce PCUICCumulativity PCUICSR.
 From Equations Require Import Equations.
 
 Require Import Equations.Prop.DepElim.
@@ -462,22 +462,58 @@ Section Conversion.
     - cbn. constructor. assumption.
   Qed.
 
+  Lemma cumul_App_l :
+    forall {Γ f g x},
+      Σ ;;; Γ |- f <= g ->
+      Σ ;;; Γ |- tApp f x <= tApp g x.
+  Proof.
+    intros Γ f g x h.
+    induction h.
+    - eapply cumul_refl. cbn.
+      rewrite e. rewrite eq_term_refl.
+      reflexivity.
+    - eapply cumul_red_l ; try eassumption.
+      econstructor. assumption.
+    - eapply cumul_red_r ; try eassumption.
+      econstructor. assumption.
+  Qed.
 
-  (* Shouldn't be here. *)
-  (* Lemma eq_term_refl : *)
-  (*   forall ϕ t, eq_term ϕ t t. *)
-  (* Proof. *)
-  (*   intros ϕ t. induction t. *)
-  (*   all: cbn. *)
-  (*   all: try rewrite IHt. *)
-  (*   all: try rewrite IHt1. *)
-  (*   all: try rewrite IHt2. *)
-  (*   all: try rewrite IHt3. *)
-  (*   all: try rewrite eq_nat_refl. *)
-  (*   all: try rewrite eq_string_refl. *)
-  (*   all: simpl. *)
-  (*   all: auto. *)
-  (* Admitted. *)
+  Lemma conv_App_r :
+    forall {Γ f x y},
+      Σ ;;; Γ |- x = y ->
+      Σ ;;; Γ |- tApp f x = tApp f y.
+  Proof.
+    intros Γ f x y [h1 h2].
+  Admitted.
+
+  Lemma conv_Prod_l :
+    forall {Γ na A1 A2 B},
+      Σ ;;; Γ |- A1 = A2 ->
+      Σ ;;; Γ |- tProd na A1 B = tProd na A2 B.
+  Proof.
+  Admitted.
+
+  Lemma cumul_Prod_r :
+    forall {Γ na A B1 B2},
+      Σ ;;; Γ ,, vass na A |- B1 <= B2 ->
+      Σ ;;; Γ |- tProd na A B1 <= tProd na A B2.
+  Proof.
+    intros Γ na A B1 B2 h.
+    induction h.
+    - eapply cumul_refl. cbn. rewrite e.
+      rewrite eq_term_refl. reflexivity.
+    - eapply cumul_red_l ; try eassumption.
+      econstructor. assumption.
+    - eapply cumul_red_r ; try eassumption.
+      econstructor. assumption.
+  Qed.
+
+  Lemma conv_Prod :
+    forall leq Γ na na' A1 A2 B1 B2,
+      Σ ;;; Γ |- A1 = A2 ->
+      conv leq Σ (Γ,, vass na A1) B1 B2 ->
+      conv leq Σ Γ (tProd na A1 B1) (tProd na' A2 B2).
+  Admitted.
 
   Lemma cumul_context :
     forall Γ u v ρ,
@@ -485,21 +521,13 @@ Section Conversion.
       Σ ;;; Γ |- zipc u ρ <= zipc v ρ.
   Proof.
     intros Γ u v ρ h.
-    (* induction h. *)
-    (* - eapply cumul_refl. *)
-    (*   revert t u e. *)
-    (*   induction ρ ; intros u v e. *)
-    (*   + cbn. assumption. *)
-    (*   + cbn. apply IHρ. cbn. rewrite e. *)
-    (*     rewrite eq_term_refl. reflexivity. *)
-    (*   + cbn. apply IHρ. cbn.  *)
     revert u v h. induction ρ ; intros u v h.
     - cbn. assumption.
     - cbn. apply IHρ.
-      (* Congruence for application *)
-      admit.
-    - cbn.
-      (* Congruence for application and mkApps *)
+      eapply cumul_App_l. assumption.
+    - cbn. eapply IHρ.
+      (* eapply conv_App_r. *)
+      (* Congruence for application on the right *)
       admit.
     - cbn.
       (* Congruence for case *)
@@ -854,9 +882,8 @@ Section Conversion.
     destruct h0 as [h0].
     pose proof (zip_Prod_Empty h1). subst.
     pose proof (zip_Prod_Empty h2). subst.
-    cbn.
-    (* Now we need congruence of Prod *)
-  Admitted.
+    cbn. eapply conv_Prod ; eassumption.
+  Qed.
   Next Obligation.
     zip fold in h1. apply welltyped_context in h1. cbn in h1.
     destruct h1 as [T h1].
@@ -1050,10 +1077,8 @@ Section Conversion.
     destruct h1 as [h1]. destruct h as [h].
     constructor.
     eapply conv_trans ; try eassumption.
-    eapply conv_context.
-    (* We need congruence of application. *)
-    admit.
-  Admitted.
+    eapply conv_context. eapply conv_App_r. assumption.
+  Qed.
 
   Equations _isconv (s : state) (Γ : context)
             (t : term) (π1 : stack) (h1 : welltyped Σ Γ (zipc t π1))

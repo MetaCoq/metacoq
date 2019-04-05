@@ -42,4 +42,3 @@ theories/monad_utils.v
 
 # for Extraction
 gen-src/Extraction.v
-gen-src/extracted.mlpack

@@ -858,7 +858,14 @@ Section Conversion.
     | @exist false _ := no
     } ;
 
-    (* TODO tCase *)
+    (* Hnf did not reduce, maybe delta needed in c *)
+    _isconv_prog Γ leq (tCase (ind, par) p c brs) π1 h1
+                       (tCase (ind',par') p' c' brs') π2 h2 aux
+    with inspect (eq_term (snd Σ) p p' && eq_term (snd Σ) c c'
+        && forallb2 (fun '(a, b) '(a', b') => eq_term (snd Σ) b b') brs brs') := {
+    | @exist true eq1 := isconv_args Γ (tCase (ind, par) p c brs) π1 π2 aux ;
+    | @exist false _ := (* TODO *) no
+    } ;
 
     _isconv_prog Γ leq (tProj p c) π1 h1 (tProj p' c') π2 h2 aux
     with inspect (eq_projection p p' && eq_term (snd Σ) c c') := {
@@ -1078,6 +1085,25 @@ Section Conversion.
     eapply red_conv_l.
     eapply red_context. eapply red_const. eassumption.
   Qed.
+
+  (* tCase *)
+  Next Obligation.
+    (* How do we know ind = ind' and par = par'? *)
+    (* One solution: just ask! *)
+  Admitted.
+  Next Obligation.
+    (* R (Args, Γ, tCase (ind, par) p c brs, π1, π2) *)
+    (*   (Term (tCase (ind', par') p' c' brs'), Γ, tCase (ind, par) p c brs, π1, π2) *)
+  Admitted.
+  Next Obligation.
+    destruct b ; auto.
+    eapply conv_conv.
+    destruct h. constructor.
+    eapply conv_trans ; try eassumption.
+    eapply conv_context.
+    eapply eq_term_conv.
+    (* Missing ind = ind' again. *)
+  Admitted.
 
   (* tProj *)
   Next Obligation.

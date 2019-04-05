@@ -5,7 +5,7 @@ From Coq Require Import Bool String List Program BinPos Compare_dec Arith Lia
 From Template Require Import config univ monad_utils utils BasicAst AstUtils
      UnivSubst.
 From PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICLiftSubst
-     PCUICUnivSubst PCUICTyping PCUICSafeReduce.
+     PCUICUnivSubst PCUICTyping PCUICSafeReduce PCUICSR.
 From Equations Require Import Equations.
 
 Require Import Equations.Prop.DepElim.
@@ -26,8 +26,9 @@ Inductive conv_pb :=
 Section Conversion.
 
   Context (flags : RedFlags.t).
-  Context `{checker_flags}.
+  (* Context `{checker_flags}. *)
   Context (Σ : global_context).
+  Context (hΣ : wf Σ).
 
   Tactic Notation "zip" "fold" "in" hyp(h) :=
     lazymatch type of h with
@@ -52,17 +53,17 @@ Section Conversion.
   Definition nodelta_flags := RedFlags.mk true true true false true true.
 
   Lemma red_welltyped :
-    forall {Σ Γ u v},
+    forall {Γ u v},
       welltyped Σ Γ u ->
       ∥ red (fst Σ) Γ u v ∥ ->
       welltyped Σ Γ v.
   Proof.
-    intros Σ' Γ u v h [r].
+    intros Γ u v h [r].
     revert h. induction r ; intros h.
     - assumption.
     - specialize IHr with (1 := ltac:(eassumption)).
       destruct IHr as [A ?]. exists A.
-      eapply subject_reduction ; eassumption.
+      eapply PCUICSafeReduce.subject_reduction ; eassumption.
   Qed.
 
   Set Equations With UIP.
@@ -363,6 +364,15 @@ Section Conversion.
     - cbn. constructor. apply cumul_refl'.
   Qed.
 
+  Lemma conv_sym :
+    forall Γ u v,
+      Σ ;;; Γ |- u = v ->
+      Σ ;;; Γ |- v = u.
+  Proof.
+    intros Γ u v [h1 h2].
+    econstructor ; assumption.
+  Qed.
+
   Lemma conv_trans :
     forall Γ u v w,
       Σ ;;; Γ |- u = v ->
@@ -524,7 +534,7 @@ Section Conversion.
   | Args.
 
   (* Will definitely depend on Γ (Σ is already here) *)
-  Definition R (u v : state * term * stack * stack) := False.
+  Definition R (u v : state * context * term * stack * stack) := False.
 
   Lemma R_Acc : forall u, Acc R u.
   Admitted.
@@ -548,11 +558,11 @@ Section Conversion.
 
   (* Probably have to generalise over Γ as well. *)
   Definition Aux s Γ t π1 π2 :=
-     forall s' t' π1' π2',
-       welltyped Σ Γ (zipc t' π1') ->
-       wts Γ s' t' π2' ->
-       R (s', t', π1', π2') (s, t, π1, π2) ->
-       Ret s' Γ t' π1' π2'.
+     forall s' Γ' t' π1' π2',
+       welltyped Σ Γ' (zipc t' π1') ->
+       wts Γ' s' t' π2' ->
+       R (s', Γ', t', π1', π2') (s, Γ, t, π1, π2) ->
+       Ret s' Γ' t' π1' π2'.
 
   Notation no := (exist false I) (only parsing).
   Notation yes := (exist true _) (only parsing).
@@ -560,11 +570,11 @@ Section Conversion.
   Notation repack e := (let '(exist b h) := e in exist b _) (only parsing).
 
   Notation isconv_red_raw Γ leq t1 π1 t2 π2 aux :=
-    (aux (Reduction t2) t1 π1 π2 _ _ _ leq) (only parsing).
+    (aux (Reduction t2) Γ t1 π1 π2 _ _ _ leq) (only parsing).
   Notation isconv_prog_raw Γ leq t1 π1 t2 π2 aux :=
-    (aux (Term t2) t1 π1 π2 _ _ _ leq) (only parsing).
+    (aux (Term t2) Γ t1 π1 π2 _ _ _ leq) (only parsing).
   Notation isconv_args_raw Γ t π1 π2 aux :=
-    (aux Args t π1 π2 _ _ _) (only parsing).
+    (aux Args Γ t π1 π2 _ _ _) (only parsing).
 
   Notation isconv_red Γ leq t1 π1 t2 π2 aux :=
     (repack (isconv_red_raw Γ leq t1 π1 t2 π2 aux)) (only parsing).
@@ -601,7 +611,7 @@ Section Conversion.
   Next Obligation.
     (* (t1', π1') = reduce_stack nodelta_flags Σ Γ t1 π1 h1 *)
     (* ---------------------------------------------------- *)
-    (* R (Term t2', t1', π1', π2') (Reduction t2, t1, π1, π2) *)
+    (* R (Term t2', Γ, t1', π1', π2') (Reduction t2, Γ, t1, π1, π2) *)
   Admitted.
   Next Obligation.
     destruct b ; auto.
@@ -620,7 +630,7 @@ Section Conversion.
       lookup_env Σ c' = Some (ConstantDecl c d) ->
       c' = c.
   Proof.
-    intros c c' d e.
+    intros c c' d e. clear hΣ.
     destruct Σ as [Σ' ?]. cbn in e.
     induction Σ'.
     - cbn in e. discriminate.
@@ -654,7 +664,6 @@ Section Conversion.
       Σ ;;; Γ |- tLambda na A t : T ->
       exists s1 B,
         ∥ Σ ;;; Γ |- A : tSort s1 ∥ /\
-        (* ∥ Σ ;;; Γ ,, vass na A |- B : tSort s2 ∥ /\ *)
         ∥ Σ ;;; Γ ,, vass na A |- t : B ∥ /\
         ∥ Σ ;;; Γ |- tProd na A B <= T ∥.
   Proof.
@@ -714,7 +723,7 @@ Section Conversion.
       dependent destruction bot.
       + cbn in e. discriminate.
       + dependent destruction r.
-        revert H0.
+        revert H.
         set (u := tFix mfix idx).
         assert (forall s, u <> tSort s) as neq by easy.
         clearbody u. revert u neq. clear.
@@ -726,6 +735,13 @@ Section Conversion.
       +
   Admitted.
 
+  Lemma context_conversion :
+    forall {Γ t T Γ'},
+      Σ ;;; Γ |- t : T ->
+      PCUICSR.conv_context Σ Γ Γ' ->
+      Σ ;;; Γ' |- t : T.
+  Admitted.
+
   Equations(noeqns) _isconv_prog (Γ : context) (leq : conv_pb)
             (t1 : term) (π1 : stack) (h1 : welltyped Σ Γ (zipc t1 π1))
             (t2 : term) (π2 : stack) (h2 : welltyped Σ Γ (zipc t2 π2))
@@ -733,7 +749,8 @@ Section Conversion.
     : { b : bool | if b then conv leq Σ Γ (zipc t1 π1) (zipc t2 π2) else True } :=
 
     (* This case is impossible, but we would need some extra argument to make it
-       truly impossible (namely, only allow results of reduce_stack). *)
+       truly impossible (namely, only allow results of reduce_stack with the
+       right flags). *)
     (* _isconv_prog Γ leq (tApp _ _) π1 h1 (tApp _ _) π2 h2 aux := no ; *)
 
     _isconv_prog Γ leq (tConst c u) π1 h1 (tConst c' u') π2 h2 aux
@@ -801,28 +818,36 @@ Section Conversion.
   Next Obligation.
     pose proof (zip_Prod_Empty h1). subst.
     pose proof (zip_Prod_Empty h2). subst.
-    (* R (Reduction A2, A1, Empty, Empty) *)
-    (*   (Term (tProd t2 A2 B2), tProd na A1 B1, Empty, Empty) *)
+    (* R (Reduction A2, Γ, A1, Empty, Empty) *)
+    (*   (Term (tProd t2 A2 B2), Γ, tProd na A1 B1, Empty, Empty) *)
   Admitted.
   Next Obligation.
     zip fold in h1. apply welltyped_context in h1. cbn in h1.
     destruct h1 as [T h1].
     destruct (inversion_Prod h1) as [s1 [s2 [[?] [[?] [?]]]]].
-    (* eexists. eassumption. *)
-    (* Context PROBLEM *)
-  Admitted.
+    eexists. eassumption.
+  Qed.
   Next Obligation.
+    destruct h as [h].
     zip fold in h2. apply welltyped_context in h2. cbn in h2.
     destruct h2 as [T h2].
     destruct (inversion_Prod h2) as [s1 [s2 [[?] [[?] [?]]]]].
-    (* eexists. eassumption. *)
-    (* Same PROBLEM *)
-  Admitted.
+    zip fold in h1. apply welltyped_context in h1. cbn in h1.
+    destruct h1 as [T' h1].
+    destruct (inversion_Prod h1) as [s1' [s2' [[?] [[?] [?]]]]].
+    eexists. eapply context_conversion ; try eassumption.
+    econstructor.
+    - eapply conv_context_refl ; try assumption.
+      eapply typing_wf_local. eassumption.
+    - constructor.
+      + right. eexists. eassumption.
+      + apply conv_sym. assumption.
+  Qed.
   Next Obligation.
     pose proof (zip_Prod_Empty h1). subst.
     pose proof (zip_Prod_Empty h2). subst.
-    (* R (Reduction B2, B1, Empty, Empty) *)
-    (*   (Term (tProd t2 A2 B2), tProd na A1 B1, Empty, Empty) *)
+    (* R (Reduction B2, Γ,, vass na A1, B1, Empty, Empty) *)
+    (*   (Term (tProd t2 A2 B2), Γ, tProd na A1 B1, Empty, Empty) *)
   Admitted.
   Next Obligation.
     destruct b ; auto.
@@ -846,26 +871,35 @@ Section Conversion.
   Qed.
   Next Obligation.
     (* Maybe we'll force π1 and π2 to be Empty *)
-    (* R (Reduction A2, A1, Empty, Empty) *)
-    (*   (Term (tLambda t0 A2 t2), tLambda na A1 t1, π1, π2) *)
+    (* R (Reduction A2, Γ, A1, Empty, Empty) *)
+    (*   (Term (tLambda t0 A2 t2), Γ, tLambda na A1 t1, π1, π2) *)
   Admitted.
   Next Obligation.
     zip fold in h1. apply welltyped_context in h1. cbn in h1.
     destruct h1 as [T h1].
     destruct (inversion_Lambda h1) as [s1 [B [[?] [[?] [?]]]]].
-    (* eexists. eassumption. *)
-    (* New BIG PROBLEM!
-       Things should be general on Γ so that it can be extended!
-     *)
-    give_up.
-  Admitted.
+    eexists. eassumption.
+  Qed.
   Next Obligation.
-    (* SAME PROBLEM *)
-  Admitted.
+    destruct h.
+    zip fold in h1. apply welltyped_context in h1. cbn in h1.
+    destruct h1 as [T h1].
+    destruct (inversion_Lambda h1) as [s1 [B [[?] [[?] [?]]]]].
+    zip fold in h2. apply welltyped_context in h2. cbn in h2.
+    destruct h2 as [T' h2].
+    destruct (inversion_Lambda h2) as [s1' [B' [[?] [[?] [?]]]]].
+    eexists. eapply context_conversion ; try eassumption.
+    econstructor.
+    - eapply conv_context_refl ; try assumption.
+      eapply typing_wf_local. eassumption.
+    - constructor.
+      + right. eexists. eassumption.
+      + apply conv_sym. assumption.
+  Qed.
   Next Obligation.
     (* Maybe we'll force π1 and π2 to be Empty *)
-    (* R (Reduction t2, t1, Empty, Empty) *)
-    (*   (Term (tLambda t0 A2 t2), tLambda na A1 t1, π1, π2) *)
+    (* R (Reduction t2, Γ,, vass na A1, t1, Empty, Empty) *)
+    (*   (Term (tLambda t0 A2 t2), Γ, tLambda na A1 t1, π1, π2) *)
   Admitted.
   Next Obligation.
     destruct b ; auto.
@@ -875,8 +909,8 @@ Section Conversion.
      *)
   Admitted.
   Next Obligation.
-    (* R (Args, tConst c' u', π1, π2) *)
-    (*   (Term (tConst c' u'), tConst c' u', π1, π2) *)
+    (* R (Args, Γ, tConst c' u', π1, π2) *)
+    (*   (Term (tConst c' u'), Γ, tConst c' u', π1, π2) *)
   Admitted.
   Next Obligation.
     destruct h. eapply conv_conv_l. assumption.
@@ -884,25 +918,17 @@ Section Conversion.
   Next Obligation.
     eapply red_welltyped.
     - exact h1.
-    - constructor.
-      Opaque subst_instance_constr.
-      eapply red_context.
-      Transparent subst_instance_constr.
-      eapply red_const. eassumption.
+    - constructor. eapply red_context. eapply red_const. eassumption.
   Qed.
   Next Obligation.
     eapply red_welltyped.
     - exact h2.
-    - constructor.
-      Opaque subst_instance_constr.
-      eapply red_context.
-      Transparent subst_instance_constr.
-      eapply red_const. eassumption.
+    - constructor. eapply red_context. eapply red_const. eassumption.
   Qed.
   Next Obligation.
     (* tConst c' u' reduces to subst_instance_constr u' body *)
-    (* R (Reduction (subst_instance_constr u' body), subst_instance_constr u' body, π1, π2) *)
-    (*   (Term (tConst c' u'), tConst c' u', π1, π2) *)
+    (* R (Reduction (subst_instance_constr u' body), Γ, subst_instance_constr u' body, π1, π2) *)
+    (*   (Term (tConst c' u'), Γ, tConst c' u', π1, π2) *)
   Admitted.
   Next Obligation.
     destruct b ; auto.
@@ -920,8 +946,8 @@ Section Conversion.
     constructor. eapply red_context. eapply red_const. eassumption.
   Qed.
   Next Obligation.
-    (* R (Reduction (subst_instance_constr u' b), tConst c' u, π1, π2) *)
-    (*   (Term (tConst c' u'), tConst c' u, π1, π2) *)
+    (* R (Reduction (subst_instance_constr u' b), Γ, tConst c' u, π1, π2) *)
+    (*   (Term (tConst c' u'), Γ, tConst c' u, π1, π2) *)
   Admitted.
   Next Obligation.
     destruct b0 ; auto.
@@ -935,8 +961,8 @@ Section Conversion.
   Qed.
   Next Obligation.
     (* Fine by reduction *)
-    (* R (Reduction (tConst c' u'), subst_instance_constr u b, π1, π2) *)
-    (*   (Term (tConst c' u'), tConst c' u, π1, π2) *)
+    (* R (Reduction (tConst c' u'), Γ, subst_instance_constr u b, π1, π2) *)
+    (*   (Term (tConst c' u'), Γ, tConst c' u, π1, π2) *)
   Admitted.
   Next Obligation.
     destruct b0 ; auto.
@@ -950,8 +976,8 @@ Section Conversion.
   Qed.
   Next Obligation.
     (* Fine by reduction *)
-    (* R (Reduction (tConst c' u'), subst_instance_constr u b, π1, π2) *)
-    (*   (Term (tConst c' u'), tConst c' u, π1, π2) *)
+    (* R (Reduction (tConst c' u'), Γ, subst_instance_constr u b, π1, π2) *)
+    (*   (Term (tConst c' u'), Γ, tConst c' u, π1, π2) *)
   Admitted.
   Next Obligation.
     destruct b0 ; auto.
@@ -965,8 +991,8 @@ Section Conversion.
   Qed.
   Next Obligation.
     (* Fine by reduction *)
-    (* R (Reduction (tConst c' u'), subst_instance_constr u b, π1, π2) *)
-    (*   (Term (tConst c' u'), tConst c' u, π1, π2) *)
+    (* R (Reduction (tConst c' u'), Γ, subst_instance_constr u b, π1, π2) *)
+    (*   (Term (tConst c' u'), Γ, tConst c' u, π1, π2) *)
   Admitted.
   Next Obligation.
     destruct b0 ; auto.
@@ -1009,7 +1035,7 @@ Section Conversion.
     exists A. assumption.
   Qed.
   Next Obligation.
-    (* R (Reduction u2, u1, Empty, Empty) (Args, t, App u1 ρ1, App u2 ρ2) *)
+    (* R (Reduction u2, Γ, u1, Empty, Empty) (Args, Γ, t, App u1 ρ1, App u2 ρ2) *)
   Admitted.
   Next Obligation.
     (* Here it is a bit unclear. Maybe things would be better if a common
@@ -1017,7 +1043,7 @@ Section Conversion.
      *)
   Admitted.
   Next Obligation.
-    (* R (Args, tApp t u1, ρ1, ρ2) (Args, t, App u1 ρ1, App u2 ρ2) *)
+    (* R (Args, Γ, tApp t u1, ρ1, ρ2) (Args, Γ, t, App u1 ρ1, App u2 ρ2) *)
   Admitted.
   Next Obligation.
     destruct b ; auto.
@@ -1050,14 +1076,14 @@ Section Conversion.
 
     isconv_full s Γ t π1 h1 π2 h2 :=
       Fix_F (R := R)
-            (fun '(s', t', π1', π2') => welltyped Σ Γ (zipc t' π1') -> wts Γ s' t' π2' -> Ret s' Γ t' π1' π2')
+            (fun '(s', Γ', t', π1', π2') => welltyped Σ Γ' (zipc t' π1') -> wts Γ' s' t' π2' -> Ret s' Γ' t' π1' π2')
             (fun t' f => _)
-            (x := (s, t, π1, π2))
+            (x := (s, Γ, t, π1, π2))
             _ _ _.
   Next Obligation.
     eapply _isconv ; try assumption.
-    intros s' t' π1' π2' h1' h2' hR.
-    specialize (f (s', t', π1', π2') hR). cbn in f.
+    intros s' Γ' t' π1' π2' h1' h2' hR.
+    specialize (f (s', Γ', t', π1', π2') hR). cbn in f.
     eapply f ; assumption.
   Qed.
   Next Obligation.

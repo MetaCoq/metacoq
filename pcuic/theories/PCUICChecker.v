@@ -254,7 +254,7 @@ Section Conversion.
     let '(t2,l2) := red2 in
     isconv_prog n leq Γ t1 l1 t2 l2
     end
-  with isconv_prog `{checker_flags} (n : nat) (leq : conv_pb) (Γ : context)
+  with isconv_prog (n : nat) (leq : conv_pb) (Γ : context)
                    (t1 : term) (l1 : list term) (t2 : term) (l2 : list term)
                    {struct n} : option bool :=
     match n with 0 => None | S n =>
@@ -296,12 +296,14 @@ Section Conversion.
           match lookup_env c with (* Unfold both bodies at once *)
           | Some (ConstantDecl _ {| cst_body := Some body |}) =>
             isconv n leq Γ body l1 body l2
+          (* If c is an Inductive *)
           | _ => ret false
           end
       else
         match lookup_env c' with
         | Some (ConstantDecl _ {| cst_body := Some body |}) =>
           isconv n leq Γ t1 l1 body l2
+        (* If c' is an Inductive *)
         | _ =>
           match lookup_env c with
           | Some (ConstantDecl _ {| cst_body := Some body |}) =>
@@ -330,10 +332,12 @@ Section Conversion.
       else
         cred <- reduce_stack_term RedFlags.default (fst Σ) Γ n c ;;
         c'red <- reduce_stack_term RedFlags.default (fst Σ) Γ n c' ;;
+        (* FIXME????? ret false? *)
         if eq_term (snd Σ) cred c && eq_term (snd Σ) c'red c' then ret true
         else
           isconv n leq Γ (tCase (ind, par) p cred brs) l1 (tCase (ind, par) p c'red brs') l2
 
+    (* WHY not reduce c with delta? *)
     | tProj p c, tProj p' c' => on_cond (eq_projection p p' && eq_term (snd Σ) c c')
 
     | tFix mfix idx, tFix mfix' idx' =>

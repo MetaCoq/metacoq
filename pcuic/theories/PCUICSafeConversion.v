@@ -587,6 +587,7 @@ Section Conversion.
   | Reduction (t : term)
   | Term (t : term)
   | Args.
+  (* | Fallback *) (* TODO *)
 
   (* Will definitely depend on Γ (Σ is already here) *)
   Definition R (u v : state * context * term * stack * stack) := False.

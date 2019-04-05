@@ -1,26 +1,54 @@
 open Plugin_core
 open Constr
 
-type nat
+type name = Names.Name.t
+type id = Names.Id.t
+type universe = Univ.Universe.t
+type universe_instance = unit
+type projection = Names.Projection.t
+type 'a mfixpoint = 'a BasicAst.mfixpoint
+type nat = int
 
 let tRel (n : nat) =
   failwith "tRel"
-let tVar (i : Names.Id.t) : Constr.t =
+let tVar (i : id) : Constr.t =
   Constr.mkVar i
 
 let tMeta (n : nat) : Constr.t =
   failwith "tMeta"
 
 let tEvar (n : nat) (ls : Constr.t list) : Constr.t =
-(*   Constr.mkEvar n (Array.of_list ls) *)
-  failwith "tEvar"
+  failwith "tEvar is not supported"
 
-let tSort (u : Univ.universe) : Constr.t =
-  Constr.mkSort u
+let tSort (u : Univ.Universe.t) : Constr.t =
+  failwith "tSort"
 
 let tCast (a : Constr.t) (b : Constr.cast_kind) (c : Constr.t) : Constr.t =
   Constr.mkCast (a, b, c)
 
+let tProd (n : name) (a : Constr.t) (b : Constr.t) : Constr.t =
+  Constr.mkProd (n, a, b)
+
+let tLambda (n : name) (a : Constr.t) (b : Constr.t) : Constr.t =
+  Constr.mkLambda (n, a, b)
+
+let tLetIn (n : name) (t : Constr.t) (b : Constr.t) (c : Constr.t) : Constr.t =
+  Constr.mkLetIn (n, t, b, c)
+
+let tApp (f : Constr.t) (ls : Constr.t list) : Constr.t =
+  Constr.mkApp (f, Array.of_list ls)
+
+let tConst (kn : 'a) : 'a =
+  failwith "tConst"
+
+let tConstruct (kn : 'a) : 'a =
+  failwith "tConstruct"
+
+let tCase (_ : 'a) : 'a =
+  failwith "tCase"
+
+let tProj (_ : BasicAst.projection) (_ : Constr.t) : Constr.t =
+  failwith "tProj"
 
 let constr_match
     (rel : nat -> 'a)
@@ -34,8 +62,8 @@ let constr_match
     (letin : name -> term -> term -> term -> 'a)
     (app : term -> term list -> 'a)
     (const : kername -> universe_instance -> 'a)
-    (construct : inductive -> nat -> universe_instance -> 'a)
-    (case : inductive * nat * term -> term -> (nat * term) list -> 'a)
+    (construct : Names.inductive -> nat -> universe_instance -> 'a)
+    (case : Names.inductive * nat * term -> term -> (nat * term) list -> 'a)
     (proj : projection -> term -> 'a)
     (fix : term mfixpoint -> nat -> 'a)
     (cofix : term mfixpoint -> nat -> 'a)
@@ -44,7 +72,7 @@ let constr_match
   | Constr.Rel n -> rel n
   | Constr.Var id -> var id
   | Constr.Meta m -> meta m
-  | Constr.Evar (a,b) -> evar a b
+  | Constr.Evar (a,b) -> evar (Evar.repr a) (Array.to_list b)
   | Constr.Sort s -> sort s
   | Constr.Cast (a,b,c) -> cast a b c
   | Constr.Prod (a,b,c) -> prod a b c

@@ -857,11 +857,15 @@ Section Conversion.
     | @exist false _ := no
     } ;
 
-    (* tCase *)
+    (* TODO tCase *)
 
-    (* tProj *)
+    _isconv_prog Γ leq (tProj p c) π1 h1 (tProj p' c') π2 h2 aux
+    with inspect (eq_projection p p' && eq_term (snd Σ) c c') := {
+    | @exist true eq1 := isconv_args Γ (tProj p c) π1 π2 aux ;
+    | @exist false _ := no
+    } ;
 
-    (* tFix *)
+    (* TODO tFix *)
 
     _isconv_prog Γ leq (tCoFix mfix idx) π1 h1 (tCoFix mfix' idx') π2 h2 aux
     with inspect (eq_term (snd Σ) (tCoFix mfix idx) (tCoFix mfix' idx')) := {
@@ -871,6 +875,8 @@ Section Conversion.
 
     (* TODO Fallback *)
     _isconv_prog Γ leq t1 π1 h1 t2 π2 h2 aux := no.
+
+  (* tProd *)
   Next Obligation.
     zip fold in h1. apply welltyped_context in h1. cbn in h1.
     destruct h1 as [T h1].
@@ -924,6 +930,8 @@ Section Conversion.
     pose proof (zip_Prod_Empty h2). subst.
     cbn. eapply conv_Prod ; eassumption.
   Qed.
+
+  (* tLambda *)
   Next Obligation.
     zip fold in h1. apply welltyped_context in h1. cbn in h1.
     destruct h1 as [T h1].
@@ -975,6 +983,8 @@ Section Conversion.
        enforcing it.
      *)
   Admitted.
+
+  (* tConst *)
   Next Obligation.
     (* R (Args, Γ, tConst c' u', π1, π2) *)
     (*   (Term (tConst c' u'), Γ, tConst c' u', π1, π2) *)
@@ -1067,6 +1077,26 @@ Section Conversion.
     eapply red_conv_l.
     eapply red_context. eapply red_const. eassumption.
   Qed.
+
+  (* tProj *)
+  Next Obligation.
+    (* Some kind of subject conversion *)
+  Admitted.
+  Next Obligation.
+    (* R (Args, Γ, tProj p c, π1, π2) *)
+    (*   (Term (tProj p' c'), Γ, tProj p c, π1, π2) *)
+  Admitted.
+  Next Obligation.
+    destruct b ; auto.
+    eapply conv_conv.
+    destruct h. constructor.
+    eapply conv_trans ; try eassumption.
+    eapply conv_context.
+    eapply eq_term_conv.
+    symmetry. assumption.
+  Qed.
+
+  (* tCoFix *)
   Next Obligation.
     (* Subject conversion? *)
   Admitted.

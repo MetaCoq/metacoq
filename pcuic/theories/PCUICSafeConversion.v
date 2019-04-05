@@ -373,6 +373,33 @@ Section Conversion.
     econstructor ; assumption.
   Qed.
 
+  Lemma conv_conv :
+    forall {Γ leq u v},
+      ∥ Σ ;;; Γ |- u = v ∥ ->
+      conv leq Σ Γ u v.
+  Proof.
+    intros Γ leq u v h.
+    destruct leq.
+    - assumption.
+    - destruct h as [[h1 h2]]. cbn.
+      constructor. assumption.
+  Qed.
+
+  Lemma eq_term_conv :
+    forall {Γ u v},
+      eq_term (snd Σ) u v ->
+      Σ ;;; Γ |- u = v.
+  Proof.
+    intros Γ u v e.
+    constructor.
+    - eapply cumul_refl.
+      eapply eq_term_leq_term. assumption.
+    - eapply cumul_refl.
+      eapply eq_term_leq_term.
+      eapply eq_term_sym.
+      assumption.
+  Qed.
+
   Lemma conv_trans :
     forall Γ u v w,
       Σ ;;; Γ |- u = v ->
@@ -830,6 +857,19 @@ Section Conversion.
     | @exist false _ := no
     } ;
 
+    (* tCase *)
+
+    (* tProj *)
+
+    (* tFix *)
+
+    _isconv_prog Γ leq (tCoFix mfix idx) π1 h1 (tCoFix mfix' idx') π2 h2 aux
+    with inspect (eq_term (snd Σ) (tCoFix mfix idx) (tCoFix mfix' idx')) := {
+    | @exist true eq1 := isconv_args Γ (tCoFix mfix idx) π1 π2 aux ;
+    | @exist false _ := no
+    } ;
+
+    (* TODO Fallback *)
     _isconv_prog Γ leq t1 π1 h1 t2 π2 h2 aux := no.
   Next Obligation.
     zip fold in h1. apply welltyped_context in h1. cbn in h1.
@@ -1026,6 +1066,22 @@ Section Conversion.
     eapply conv_trans' ; try eassumption.
     eapply red_conv_l.
     eapply red_context. eapply red_const. eassumption.
+  Qed.
+  Next Obligation.
+    (* Subject conversion? *)
+  Admitted.
+  Next Obligation.
+    (* R (Args, Γ, tCoFix mfix idx, π1, π2) *)
+    (*   (Term (tCoFix mfix' idx'), Γ, tCoFix mfix idx, π1, π2) *)
+  Admitted.
+  Next Obligation.
+    destruct b ; auto.
+    eapply conv_conv.
+    destruct h. constructor.
+    eapply conv_trans ; try eassumption.
+    eapply conv_context.
+    eapply eq_term_conv.
+    symmetry. assumption.
   Qed.
 
   Equations(noeqns) _isconv_args (Γ : context) (t : term)

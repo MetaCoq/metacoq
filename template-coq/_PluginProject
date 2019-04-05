@@ -82,7 +82,11 @@ gen-src/utils.ml
 gen-src/utils.mli
 gen-src/Wf.ml
 gen-src/Wf.mli
+
+gen-src/coq_basicast.ml
+gen-src/coq_basicast.mli
 gen-src/coq_constr.ml
+
 
 gen-src/run_extractable.ml
 gen-src/meta_coq_plugin.mlpack

@@ -26,6 +26,11 @@ Require Import Template.Ast.
 Extract Inductive BasicAst.cast_kind => "Constr.cast_kind"
   [ "Constr.VMcast" "Constr.NATIVEcast" "Constr.DEFAULTcast" "Constr.REVERTcast" ].
 
+Extract Inductive Template.BasicAst.name => "Names.Name.t"
+             [ "Names.Name.Anonymous"
+               "Coq_basicast.mkName" ]
+             "Coq_basicast.name_match".
+
 Extract Inductive Ast.term =>
   "Constr.t" [ "Coq_constr.tRel"
              "Coq_constr.tVar"
@@ -44,6 +49,9 @@ Extract Inductive Ast.term =>
              "Coq_constr.tProj"
              "Coq_constr.tFix"
              "Coq_constr.tCoFix" ] "Coq_constr.constr_match".
+Print universe.
+
+
 
 Cd "gen-src".
 

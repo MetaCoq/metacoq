@@ -24,6 +24,7 @@ val run : 'a tm -> Environ.env -> Evd.evar_map -> (Environ.env -> Evd.evar_map -
 
 val tmReturn : 'a -> 'a tm
 val tmBind : 'a tm -> ('a -> 'b tm) -> 'b tm
+val tmMap  : ('a -> 'b) -> 'a tm -> 'b tm
 
 val tmPrint : term -> unit tm
 val tmMsg  : string -> unit tm

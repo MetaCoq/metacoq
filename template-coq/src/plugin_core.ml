@@ -38,6 +38,9 @@ let tmReturn (x : 'a) : 'a tm =
 let tmBind (x : 'a tm) (k : 'a -> 'b tm) : 'b tm =
   fun env evd success fail ->
         x env evd (fun env evd v -> k v env evd success fail) fail
+let tmMap (f : 'a -> 'b) (x : 'a tm) : 'b tm =
+  fun env evd success fail ->
+        x env evd (fun env evd v -> success env evd (f v)) fail
 
 let tmPrint (t : term) : unit tm =
   fun env evd success _fail ->

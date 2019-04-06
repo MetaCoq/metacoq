@@ -888,7 +888,19 @@ Section Conversion.
     _isconv_prog Γ leq (tFix mfix idx) π1 h1 (tFix mfix' idx') π2 h2 aux
     with inspect (eq_term (snd Σ) (tFix mfix idx) (tFix mfix' idx')) := {
     | @exist true eq1 := isconv_args Γ (tFix mfix idx) π1 π2 aux ;
-    | @exist false _ := (* TODO *) no
+    (* | @exist false _ with inspect (unfold_fix mfix idx) := { *)
+    (*   | @exist (Some (arg, fn)) eq1 with inspect (decompose_stack_at π1 arg) := { *)
+    (*     | @exist (Some c) eq2 with inspect (reduce_stack RedFlags.default Σ Γ c Empty _) := { *)
+    (*       | @exist (cred, ρ) eq3 with construct_viewc cred := { *)
+    (*         | view_construct ind n ui := (* TODO *) _ ; *)
+    (*         | view_other t h := no ; (* ok? *) *)
+    (*         } *)
+    (*       } ; *)
+    (*     | _ := no ; (* Probably ok? *) *)
+    (*     } ; *)
+    (*   | _ := no (* TODO *) *)
+    (*   } *)
+    | _ := no
     } ;
 
     _isconv_prog Γ leq (tCoFix mfix idx) π1 h1 (tCoFix mfix' idx') π2 h2 aux

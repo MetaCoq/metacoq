@@ -883,7 +883,13 @@ Section Conversion.
     | @exist false _ := no
     } ;
 
-    (* TODO tFix *)
+    (* Subtle difference here with Checker, if the terms are syntactically equal
+       but the stacks are not convertible, then we say no. *)
+    _isconv_prog Γ leq (tFix mfix idx) π1 h1 (tFix mfix' idx') π2 h2 aux
+    with inspect (eq_term (snd Σ) (tFix mfix idx) (tFix mfix' idx')) := {
+    | @exist true eq1 := isconv_args Γ (tFix mfix idx) π1 π2 aux ;
+    | @exist false _ := (* TODO *) no
+    } ;
 
     _isconv_prog Γ leq (tCoFix mfix idx) π1 h1 (tCoFix mfix' idx') π2 h2 aux
     with inspect (eq_term (snd Σ) (tCoFix mfix idx) (tCoFix mfix' idx')) := {
@@ -1223,6 +1229,25 @@ Section Conversion.
     destruct b ; auto.
     eapply conv_conv.
     destruct h. constructor.
+    eapply conv_trans ; try eassumption.
+    eapply conv_context.
+    eapply eq_term_conv.
+    symmetry. assumption.
+  Qed.
+
+  (* tFix *)
+  Next Obligation.
+    (* Subject conversion *)
+  Admitted.
+  Next Obligation.
+    (* R (Args, Γ, tFix mfix idx, π1, π2) *)
+    (*   (Term (tFix mfix' idx'), Γ, tFix mfix idx, π1, π2) *)
+  Admitted.
+  Next Obligation.
+    destruct b ; auto.
+    destruct h as [h].
+    eapply conv_conv.
+    constructor.
     eapply conv_trans ; try eassumption.
     eapply conv_context.
     eapply eq_term_conv.

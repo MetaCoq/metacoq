@@ -714,29 +714,6 @@ Section Confluence.
       intuition red; auto using All2_local_env_app_inv.
     Qed.
 
-    Lemma rho_All2_All_local_env :
-      ∀ Γ : context, pred1_ctx Σ Γ (rho_ctx Γ) → ∀ Δ : context,
-          All2_local_env (on_decl (on_decl_over (pred1 Σ) Γ (rho_ctx Γ))) Δ
-                         (rho_ctx_over (rho_ctx Γ) Δ) ->
-          All_local_env
-            (on_local_decl
-               (λ (Γ' : context) (t : term), pred1_ctx Σ (Γ ,,, Γ') (rho_ctx (Γ ,,, Γ'))
-                                             → pred1 Σ (Γ ,,, Γ')
-                                                     (rho_ctx (Γ ,,, Γ')) t
-                                                     (rho (rho_ctx (Γ ,,, Γ')) t))) Δ.
-    Proof.
-      intros.
-      induction Δ; simpl; try constructor.
-      destruct a as [? [?|] ?]. depelim X0.
-      constructor; auto. red. red in p. destruct p.
-      unfold on_decl_over in *. intuition pcuic.
-      now rewrite rho_ctx_app.
-      now rewrite rho_ctx_app.
-      depelim X0. constructor; eauto.
-      red. do 2 red in p. intros.
-      now rewrite rho_ctx_app.
-    Qed.
-
     Hint Resolve pred_mkApps : pcuic.
 
     Lemma rho_lift Γ Δ Γ' t : lift #|Δ| #|Γ'| (rho (Γ ,,, Γ') t) = rho (Γ ,,, Δ ,,, Γ') (lift #|Δ| #|Γ'| t).
@@ -829,19 +806,18 @@ Section Confluence.
       rewrite fold_fix_context_rev_mapi. simpl.
       now rewrite app_nil_r.
     Qed.
-
-    Lemma rho_fix_context_All2_local_env (Γ : context) (m : mfixpoint term) :
+    Lemma rho_fix_context_All2_local_env (Γ Γ' : context) (m : mfixpoint term) :
       All_local_env
         (on_local_decl
-           (λ (Γ' : context) (t : term), pred1_ctx Σ
-                                                   (Γ ,,, Γ')
-                                                   (rho_ctx (Γ ,,, Γ'))
-                                         → pred1 Σ (Γ ,,, Γ')
-                                                 (rho_ctx (Γ ,,, Γ')) t
-                                                 (rho (rho_ctx (Γ ,,, Γ')) t)))
+           (λ (Δ : context) (t : term), pred1_ctx Σ
+                                                   (Γ' ,,, Δ)
+                                                   (rho_ctx (Γ ,,, Δ))
+                                         → pred1 Σ (Γ' ,,, Δ)
+                                                 (rho_ctx (Γ ,,, Δ)) t
+                                                 (rho (rho_ctx (Γ ,,, Δ)) t)))
         (fix_context m)
-      → pred1_ctx Σ Γ (rho_ctx Γ)
-      → All2_local_env (on_decl (on_decl_over (pred1 Σ) Γ (rho_ctx Γ)))
+      → pred1_ctx Σ Γ' (rho_ctx Γ)
+      → All2_local_env (on_decl (on_decl_over (pred1 Σ) Γ' (rho_ctx Γ)))
                        (fix_context m)
                        (fix_context
                           (map_fix rho (rho_ctx Γ) (fold_fix_context rho (rho_ctx Γ) [] m)
@@ -967,62 +943,154 @@ Section Confluence.
     Lemma mapi_cst_map {A B} (f : A -> B) l : mapi (fun _ => f) l = map f l.
     Proof. unfold mapi. generalize 0. induction l; cbn; auto. intros. now rewrite IHl. Qed.
 
-    Lemma All_All2_telescopei_gen (Γ Γ' : context) (m : mfixpoint term) :
+    (* Lemma All_All2_telescopei_gen (Γ Γ' : context) (m : mfixpoint term) : *)
+    (*   wf Σ -> *)
+    (*   All *)
+    (*     (λ (x : def term), pred1 Σ Γ *)
+    (*                              (rho_ctx Γ) *)
+    (*                              (dtype x) *)
+    (*                              (rho (rho_ctx Γ) (dtype x))) m -> *)
+    (*   All2_local_env_over (pred1 Σ) Γ (rho_ctx Γ) Γ' (rho_ctx_over (rho_ctx Γ) Γ') -> *)
+    (*   All2_telescope_n (on_decl (pred1 Σ)) (λ n : nat, lift0 n) *)
+    (*                    (Γ ,,, Γ') (rho_ctx (Γ ,,, Γ')) *)
+    (*                    #|Γ'| *)
+    (* (map (λ def : def term, vass (dname def) (dtype def)) m) *)
+    (*   (map (λ def : def term, vass (dname def) (rho (rho_ctx Γ) (dtype def))) m). *)
+    (* Proof. *)
+    (*   intro. *)
+    (*   induction 1 in Γ' |- *; cbn; constructor. *)
+    (*   red. rewrite rho_ctx_app. *)
+    (*   assert (#|Γ'| = #|rho_ctx_over (rho_ctx Γ) Γ'|) by now rewrite rho_ctx_over_length. *)
+    (*   rewrite {2}H. eapply weakening_pred1_pred1; eauto. *)
+    (*   specialize (IHX0 (vass (dname x) (lift0 #|Γ'| (dtype x)) :: Γ')%list). *)
+    (*   assert (#|Γ'| = #|rho_ctx_over (rho_ctx Γ) Γ'|) by now rewrite rho_ctx_over_length. *)
+    (*   rewrite {2}H. *)
+    (*   rewrite rho_lift0. *)
+    (*   unfold snoc. forward IHX0. cbn. constructor. apply X1. *)
+    (*   red. red. *)
+    (*   rewrite {2}H. *)
+    (*   rewrite - (rho_lift (rho_ctx Γ) (rho_ctx_over (rho_ctx Γ) Γ') []). simpl. *)
+    (*   eapply weakening_pred1_pred1; eauto. *)
+    (*   rewrite rho_ctx_app in IHX0. *)
+    (*   simpl in IHX0. rewrite -H. *)
+    (*   rewrite rho_ctx_app. apply IHX0. *)
+    (* Qed. *)
+
+
+    Lemma All_All2_telescopei_gen (Γ Γ' Δ : context) (m : mfixpoint term) :
       wf Σ ->
       All
-        (λ (x : def term), pred1 Σ Γ
+        (λ (x : def term), pred1 Σ Γ'
                                  (rho_ctx Γ)
                                  (dtype x)
                                  (rho (rho_ctx Γ) (dtype x))) m ->
-      All2_local_env_over (pred1 Σ) Γ (rho_ctx Γ) Γ' (rho_ctx_over (rho_ctx Γ) Γ') ->
+      All2_local_env_over (pred1 Σ) Γ' (rho_ctx Γ) Δ (rho_ctx_over (rho_ctx Γ) Δ) ->
       All2_telescope_n (on_decl (pred1 Σ)) (λ n : nat, lift0 n)
-                       (Γ ,,, Γ') (rho_ctx (Γ ,,, Γ'))
-                       #|Γ'|
+                       (Γ' ,,, Δ) (rho_ctx (Γ ,,, Δ))
+                       #|Δ|
     (map (λ def : def term, vass (dname def) (dtype def)) m)
       (map (λ def : def term, vass (dname def) (rho (rho_ctx Γ) (dtype def))) m).
     Proof.
       intro.
-      induction 1 in Γ' |- *; cbn; constructor.
+      induction 1 in Δ |- *; cbn; constructor.
       red. rewrite rho_ctx_app.
-      assert (#|Γ'| = #|rho_ctx_over (rho_ctx Γ) Γ'|) by now rewrite rho_ctx_over_length.
+      assert (#|Δ| = #|rho_ctx_over (rho_ctx Γ) Δ|) by now rewrite rho_ctx_over_length.
       rewrite {2}H. eapply weakening_pred1_pred1; eauto.
-      specialize (IHX0 (vass (dname x) (lift0 #|Γ'| (dtype x)) :: Γ')%list).
-      assert (#|Γ'| = #|rho_ctx_over (rho_ctx Γ) Γ'|) by now rewrite rho_ctx_over_length.
+      specialize (IHX0 (vass (dname x) (lift0 #|Δ| (dtype x)) :: Δ)%list).
+      assert (#|Δ| = #|rho_ctx_over (rho_ctx Γ) Δ|) by now rewrite rho_ctx_over_length.
       rewrite {2}H.
       rewrite rho_lift0.
       unfold snoc. forward IHX0. cbn. constructor. apply X1.
       red. red.
       rewrite {2}H.
-      rewrite - (rho_lift (rho_ctx Γ) (rho_ctx_over (rho_ctx Γ) Γ') []). simpl.
+      rewrite - (rho_lift (rho_ctx Γ) (rho_ctx_over (rho_ctx Γ) Δ) []). simpl.
       eapply weakening_pred1_pred1; eauto.
       rewrite rho_ctx_app in IHX0.
       simpl in IHX0. rewrite -H.
       rewrite rho_ctx_app. apply IHX0.
     Qed.
 
-    Lemma All_All2_telescopei (Γ Γ' : context) (m : mfixpoint term) :
+    Lemma All_All2_telescopei (Γ Γ' Δ : context) (m : mfixpoint term) :
       wf Σ ->
-      All (λ (x : def term), pred1 Σ Γ (rho_ctx Γ) (dtype x) (rho (rho_ctx Γ) (dtype x))) m ->
+      All (λ (x : def term), pred1 Σ Γ' (rho_ctx Γ) (dtype x) (rho (rho_ctx Γ) (dtype x))) m ->
       All2_telescope_n (on_decl (pred1 Σ)) (λ n : nat, lift0 n)
-                       Γ (rho_ctx Γ)
+                       Γ' (rho_ctx Γ)
                        0
                        (map (λ def : def term, vass (dname def) (dtype def)) m)
                        (map (λ def : def term, vass (dname def) (rho (rho_ctx Γ) (dtype def))) m).
     Proof.
       intro.
-      specialize (All_All2_telescopei_gen Γ [] m X). simpl.
+      specialize (All_All2_telescopei_gen Γ Γ' [] m X). simpl.
       intros. specialize (X0 X1). forward X0. constructor.
       apply X0.
     Qed.
 
-    Lemma pred1_rho_fix_context (Γ : context) (m : mfixpoint term) :
+    (* Lemma pred1_rho_fix_context (Γ : context) (m : mfixpoint term) : *)
+    (*   wf Σ -> *)
+    (*   pred1_ctx Σ Γ (rho_ctx Γ) -> *)
+    (*   All2 (on_Trel (pred1 Σ Γ (rho_ctx Γ)) dtype) m *)
+    (*        (map_fix rho (rho_ctx Γ) *)
+    (*                 (fold_fix_context rho (rho_ctx Γ) [] m) m) -> *)
+    (*   All2_local_env *)
+    (*     (on_decl (on_decl_over (pred1 Σ) Γ (rho_ctx Γ))) *)
+    (*     (fix_context m) *)
+    (*     (fix_context (map_fix rho (rho_ctx Γ) (fold_fix_context rho (rho_ctx Γ) [] m) m)). *)
+    (* Proof. *)
+    (*   intros wfΣ HΓ a. *)
+    (*   eapply rho_fix_context_All2_local_env; eauto. *)
+    (*   rewrite - fold_fix_context_over in a. *)
+    (*   unfold map_fix in a. *)
+    (*   eapply All2_map_right in a. *)
+    (*   eapply All2_refl_All in a. simpl. *)
+    (*   eapply rho_All2_All_local_env; eauto. *)
+    (*   rewrite fold_fix_context_over. *)
+    (*   rewrite fold_fix_context_rev_mapi. *)
+    (*   unfold fix_context. rewrite app_nil_r. *)
+    (*   eapply local_env_telescope. *)
+    (*   cbn. *)
+    (*   rewrite - (mapi_compose *)
+    (*                (fun n decl => lift_decl n 0 decl) *)
+    (*                (fun n def => vass (dname def) (dtype def))). *)
+    (*   rewrite - (mapi_compose *)
+    (*                (fun n decl => lift_decl n 0 decl) *)
+    (*                (fun n def => vass (dname def) (rho (rho_ctx Γ) (dtype def)))). *)
+    (*   eapply All2_telescope_mapi. *)
+    (*   rewrite !mapi_cst_map. *)
+    (*   eapply All_All2_telescopei; eauto. *)
+    (* Qed. *)
+
+    Lemma rho_All2_All_local_env :
+      ∀ Γ Γ' : context, pred1_ctx Σ Γ (rho_ctx Γ') →
+      ∀ Δ : context,
+          All2_local_env (on_decl (on_decl_over (pred1 Σ) Γ (rho_ctx Γ'))) Δ
+                         (rho_ctx_over (rho_ctx Γ') Δ) ->
+          All_local_env
+            (on_local_decl
+               (λ (Δ : context) (t : term), pred1_ctx Σ (Γ ,,, Δ) (rho_ctx (Γ' ,,, Δ))
+                                             → pred1 Σ (Γ ,,, Δ)
+                                                     (rho_ctx (Γ' ,,, Δ)) t
+                                                     (rho (rho_ctx (Γ' ,,, Δ)) t))) Δ.
+    Proof.
+      intros.
+      induction Δ; simpl; try constructor.
+      destruct a as [? [?|] ?]. depelim X0.
+      constructor; auto. red. red in p. destruct p.
+      unfold on_decl_over in *. intuition pcuic.
+      now rewrite rho_ctx_app.
+      now rewrite rho_ctx_app.
+      depelim X0. constructor; eauto.
+      red. do 2 red in p. intros.
+      now rewrite rho_ctx_app.
+    Qed.
+
+    Lemma pred1_rho_fix_context (Γ Γ' : context) (m : mfixpoint term) :
       wf Σ ->
-      pred1_ctx Σ Γ (rho_ctx Γ) ->
-      All2 (on_Trel (pred1 Σ Γ (rho_ctx Γ)) dtype) m
+      pred1_ctx Σ Γ' (rho_ctx Γ) ->
+      All2 (on_Trel (pred1 Σ Γ' (rho_ctx Γ)) dtype) m
            (map_fix rho (rho_ctx Γ)
                     (fold_fix_context rho (rho_ctx Γ) [] m) m) ->
       All2_local_env
-        (on_decl (on_decl_over (pred1 Σ) Γ (rho_ctx Γ)))
+        (on_decl (on_decl_over (pred1 Σ) Γ' (rho_ctx Γ)))
         (fix_context m)
         (fix_context (map_fix rho (rho_ctx Γ) (fold_fix_context rho (rho_ctx Γ) [] m) m)).
     Proof.
@@ -1048,6 +1116,13 @@ Section Confluence.
       rewrite !mapi_cst_map.
       eapply All_All2_telescopei; eauto.
     Qed.
+
+    Lemma rho_subst Γ Δ Γ' s t :
+      subst s #|Γ'| (rho (Γ ,,, Δ ,,, Γ') t) =
+      rho (Γ ,,, subst_context s 0 Γ') (subst s #|Γ'| t).
+    Proof.
+      induction t; simpl; auto.
+    Admitted.
 
     Lemma rho_triangle (wf : wf Σ) Γ t :
       let Γ' := rho_ctx Γ in
@@ -1206,6 +1281,27 @@ Section Confluence.
         rewrite ?app_context_nil_l; simpl; eauto using rho_triangle.
     Qed.
 
+    Lemma substitution_pred1 Γ Δ Γ' Δ' s s' N N' :
+      wf Σ ->
+      psubst Σ Γ Γ' s s' Δ Δ' ->
+      pred1 Σ (Γ ,,, Δ) (Γ' ,,, Δ') N N' ->
+      pred1 Σ Γ Γ' (subst s 0 N) (subst s' 0 N').
+    Proof.
+      intros wfΣ redM redN.
+      pose proof (substitution_let_pred1 Σ Γ Δ [] Γ' Δ' [] s s' N N' wfΣ) as H.
+      assert (#|Γ| = #|Γ'|).
+      { eapply psubst_length in redM. intuition auto.
+        apply pred1_pred1_ctx in redN. eapply All2_local_env_length in redN.
+        rewrite !app_context_length in redN. lia. }
+      forward H by auto.
+      forward H by pcuic.
+      specialize (H eq_refl). forward H.
+      apply pred1_pred1_ctx in redN; pcuic.
+      eapply All2_local_env_app in redN; auto.
+      destruct redN. apply a0.
+      simpl in H. now apply H.
+  Qed.
+
     Lemma triangle Γ Δ t u : wf Σ ->
                              let Pctx :=
                                  fun (Γ Δ : context) => pred1_ctx Σ Δ (rho_ctx Γ) in
@@ -1272,14 +1368,23 @@ Section Confluence.
         congruence.
 
       - admit. (* fix *)
+
       - simpl. destruct ip.
         rewrite decompose_app_mkApps; auto.
         rewrite rho_mkApps // decompose_app_mkApps; auto.
         simpl. unfold unfold_cofix in heq_unfold_cofix |- *.
         rewrite nth_error_map.
         destruct nth_error eqn:Heq; noconf heq_unfold_cofix. simpl.
+        eapply All2_prop2_eq_split in X3. intuition.
+        eapply All2_nth_error_Some_right in Heq; eauto.
+        destruct Heq as [t' [Ht' Hrel]]. rewrite Ht'. simpl.
         eapply pred_case. eauto. eapply pred_mkApps.
-        now rewrite rho_cofix_subst.
+        rewrite rho_cofix_subst. red in Hrel. destruct Hrel.
+        rewrite rho_ctx_app in p2.
+        rewrite - (rho_subst (rho_ctx Γ) (rho_ctx_over (rho_ctx Γ) (fix_context mfix0)) [] (cofix_subst mfix0) (dbody t')). simpl.
+        eapply substitution_pred1; eauto.
+        admit.
+
         eapply All2_sym, All2_map_left, All2_impl; eauto. simpl. intuition eauto.
         eapply All2_sym, All2_map_left, All2_impl; eauto. simpl. unfold on_Trel_eq, on_Trel in *.
         intuition eauto.
@@ -1290,9 +1395,15 @@ Section Confluence.
         rewrite rho_mkApps // decompose_app_mkApps // /=.
         unfold unfold_cofix in heq_unfold_cofix |- *.
         destruct nth_error eqn:Heq; noconf heq_unfold_cofix.
-        unfold map_fix. rewrite nth_error_map Heq /=.
+        eapply All2_nth_error_Some_right in Heq; eauto.
+        destruct Heq as [t' [Hnth Hrel]]. destruct Hrel as [[Hty Hrhoty] [[Hreleq0 Hreleq1] Heq]].
+        unfold map_fix. rewrite nth_error_map Hnth /=.
         econstructor. eapply pred_mkApps; eauto.
-        now rewrite rho_cofix_subst.
+        rewrite rho_cofix_subst.
+        rewrite rho_ctx_app in Hreleq1.
+        rewrite - (rho_subst (rho_ctx Γ) (rho_ctx_over (rho_ctx Γ) (fix_context mfix0)) [] (cofix_subst mfix0) (dbody t')). simpl.
+        eapply substitution_pred1; eauto.
+        admit.
         eapply All2_sym, All2_map_left, All2_impl; eauto; simpl; intuition eauto.
 
       - simpl. simpl in X0. red in H. rewrite H heq_cst_body. now eapply pred1_refl_gen.
@@ -1354,13 +1465,19 @@ Section Confluence.
           simpl in X2. eapply pred1_mkApps_tCoFix_refl_inv in X2.
           intuition.
           eapply All2_prop2_eq_split in a1. intuition.
-          unfold on_Trel_eq, on_Trel in *.
+          (* unfold on_Trel_eq, on_Trel in *. *)
           unfold unfold_cofix. rewrite nth_error_map.
           destruct nth_error eqn:Heq. simpl.
           * (* CoFix unfolding *)
             eapply All2_nth_error_Some in Heq; eauto. destruct Heq; intuition auto.
-            unfold on_Trel_eq, on_Trel in *.
-            econstructor; eauto. unfold unfold_cofix.
+            econstructor. pcuic.
+            eapply All2_local_env_pred_fix_ctx.
+            eapply All2_prop2_eq_split in a. intuition.
+            eapply (pred1_rho_fix_context Γ Γ' in a1.
+
+
+
+            unfold unfold_cofix.
             rewrite a2. reflexivity.
             rewrite rho_cofix_subst. intuition.
             admit. (* a1 *)

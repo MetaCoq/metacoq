@@ -1579,11 +1579,6 @@ Section Confluence.
     Lemma wf_rho_fix_subst Γ Γ' mfix0 mfix1 : wf Σ ->
       #|mfix0| = #|mfix1| ->
       pred1_ctx Σ Γ' (rho_ctx Γ) ->
-      (* All2_local_env (on_decl (on_decl_over (pred1 Σ) Γ' (rho_ctx Γ))) (fix_context mfix1) *)
-      (*                (fix_context mfix0) -> *)
-      (* All2_prop2_eq Γ' (rho_ctx Γ) (Γ' ,,, fix_context mfix1) (rho_ctx Γ ,,, fix_context mfix0) dtype *)
-      (*               dbody (λ x1 : def term, (dname x1, rarg x1)) (pred1 Σ) mfix1 mfix0 -> *)
-
       All2_local_env
          (on_decl
             (on_decl_over

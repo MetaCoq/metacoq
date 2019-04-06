@@ -359,7 +359,10 @@ Proof.
     clear IHAll. destruct p.
     simpl in Hlen. assert ((Nat.pred #|mfix| - (#|mfix| - S #|l|)) = #|l|) by lia.
     rewrite H0. rewrite simpl_subst_k. clear. induction l; simpl; auto with arith.
+
     eapply type_Fix.
+
+
     admit. admit. apply a0.
   - subst types. rewrite simpl_subst_k. now rewrite fix_context_length fix_subst_length.
     auto.

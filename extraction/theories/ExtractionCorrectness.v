@@ -762,7 +762,34 @@ Proof.
     exists (m, o, p0). intuition eauto.
     all: eapply cumul_trans; eauto.
 Qed.
-  
+
+Require Import PCUIC.PCUICGeneration.
+
+Inductive red_decls Σ Γ Γ' : forall (x y : PCUICAst.context_decl), Type :=
+| conv_vass na na' T T' : isWfArity_or_Type Σ Γ' T' -> red Σ Γ T T' ->
+                      red_decls Σ Γ Γ' (PCUICAst.vass na T) (PCUICAst.vass na' T')
+
+| conv_vdef_type na na' b T T' : isWfArity_or_Type Σ Γ' T' -> red Σ Γ T T' ->
+                             red_decls Σ Γ Γ' (PCUICAst.vdef na b T) (PCUICAst.vdef na' b T')
+
+| conv_vdef_body na na' b b' T : Σ ;;; Γ' |- b' : T -> red Σ Γ b b' ->
+                                                  red_decls Σ Γ Γ' (PCUICAst.vdef na b T) (PCUICAst.vdef na' b' T).
+
+Notation red_context := (context_relation red_decls).
+
+Lemma context_conversion :
+env_prop
+  (fun (Σ : PCUICAst.global_context) (Γ : PCUICAst.context) (t T : PCUICAst.term) =>
+     forall Γ' : PCUICAst.context, red_context Σ Γ Γ' -> Σ;;; Γ' |- t : T).
+Admitted.
+
+Lemma extract_context_conversion `{Fuel} :
+env_prop
+  (fun (Σ : PCUICAst.global_context) (Γ : PCUICAst.context) (t T : PCUICAst.term) =>
+     forall Γ' : PCUICAst.context, conv_context Σ Γ Γ' -> forall a ea, extract Σ Γ a = Checked ea -> extract Σ Γ' a = Checked ea).
+Admitted.
+
+
 Theorem erasure_correct : erasure_correctness.
 Proof.
   intros Σ t T pre v H. revert T pre.
@@ -829,13 +856,17 @@ Proof.
       -- econstructor; eauto. eapply substitution_let; eauto.
          eapply context_conversion. 3: eassumption. all:eauto.
          econstructor. econstructor. econstructor 3. eapply subject_reduction_eval; eauto.
-         admit. (* context subject reduction needed *)
+         eapply wcbeval_red. eauto.
       -- eapply extract_subst1_vdef; eauto.
          eapply context_conversion. eauto. 2:eauto.
          econstructor. eauto. eauto.
          econstructor. econstructor. econstructor. eapply subject_reduction_eval; eauto.
-         admit. (* context subject reduction needed *)
-         admit. (* Huge problem *)
+         eapply wcbeval_red. eauto.
+         eapply extract_context_conversion. eauto.
+         3:{ econstructor. econstructor. econstructor 3.
+             eapply subject_reduction_eval; eauto.
+             eapply wcbeval_red. eauto. }
+         all: eauto. econstructor. eauto. econstructor; eauto.
       -- eauto.
       -- econstructor; eauto. 
     + congruence.

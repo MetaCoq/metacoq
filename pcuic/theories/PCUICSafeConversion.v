@@ -864,7 +864,17 @@ Section Conversion.
     with inspect (eq_term (snd Σ) p p' && eq_term (snd Σ) c c'
         && forallb2 (fun '(a, b) '(a', b') => eq_term (snd Σ) b b') brs brs') := {
     | @exist true eq1 := isconv_args Γ (tCase (ind, par) p c brs) π1 π2 aux ;
-    | @exist false _ := (* TODO *) no
+    | @exist false _ with inspect (reduce_term RedFlags.default Σ Γ c _) := {
+      | @exist cred eq1 with inspect (reduce_term RedFlags.default Σ Γ c' _) := {
+         | @exist cred' eq2 with inspect (eq_term (snd Σ) cred c && eq_term (snd Σ) cred' c') := {
+            | @exist true eq3 := no ; (* In Checker it says yes, but wrong right? *)
+            | @exist false eq3 :=
+              (* In Checker, only ind, par and p are used, not clear why *)
+              isconv_red Γ leq (tCase (ind, par) p cred brs) π1
+                               (tCase (ind', par') p' cred' brs') π2 aux
+            }
+         }
+      }
     } ;
 
     _isconv_prog Γ leq (tProj p c) π1 h1 (tProj p' c') π2 h2 aux
@@ -1104,6 +1114,102 @@ Section Conversion.
     eapply eq_term_conv.
     (* Missing ind = ind' again. *)
   Admitted.
+  Next Obligation.
+    zip fold in h1. apply welltyped_context in h1. cbn in h1.
+    destruct h1 as [T h1].
+    destruct (weak_inversion_Case h1) as [args [u [?]]].
+    eexists. eassumption.
+  Qed.
+  Next Obligation.
+    zip fold in h2. apply welltyped_context in h2. cbn in h2.
+    destruct h2 as [T h2].
+    destruct (weak_inversion_Case h2) as [args [u [?]]].
+    eexists. eassumption.
+  Qed.
+  Next Obligation.
+    eapply red_welltyped.
+    - exact h1.
+    - match goal with
+      | |- context [ reduce_term ?f ?Σ ?Γ ?t ?h ] =>
+        pose proof (reduce_term_sound f Σ Γ t h) as hr
+      end.
+      destruct hr as [hr]. constructor.
+      eapply red_context.
+      eapply PCUICReduction.red_case.
+      + constructor.
+      + assumption.
+      + clear.
+        induction brs ; eauto.
+        constructor.
+        * constructor.
+        * eapply IHbrs.
+  Qed.
+  Next Obligation.
+    eapply red_welltyped.
+    - exact h2.
+    - match goal with
+      | |- context [ reduce_term ?f ?Σ ?Γ ?t ?h ] =>
+        pose proof (reduce_term_sound f Σ Γ t h) as hr
+      end.
+      destruct hr as [hr]. constructor.
+      eapply red_context.
+      eapply PCUICReduction.red_case.
+      + constructor.
+      + assumption.
+      + clear.
+        induction brs' ; eauto.
+        constructor.
+        * constructor.
+        * eapply IHbrs'.
+  Qed.
+  Next Obligation.
+    (* R *)
+    (* (Reduction *)
+    (*    (tCase (ind', par') p' *)
+    (*       (reduce_term RedFlags.default Σ Γ c' *)
+    (*          (_isconv_prog_obligations_obligation_44 p' c' brs' Γ ind' par' π2 h2)) *)
+    (*       brs'), Γ, *)
+    (* tCase (ind, par) p *)
+    (*   (reduce_term RedFlags.default Σ Γ c *)
+    (*      (_isconv_prog_obligations_obligation_43 p c brs Γ ind par π1 h1)) brs, π1, *)
+    (* π2) *)
+    (* (Term (tCase (ind', par') p' c' brs'), Γ, tCase (ind, par) p c brs, π1, π2) *)
+  Admitted.
+  Next Obligation.
+    destruct b ; auto.
+    match type of h with
+    | context [ reduce_term ?f ?Σ ?Γ c ?h ] =>
+      pose proof (reduce_term_sound f Σ Γ c h) as hr
+    end.
+    match type of h with
+    | context [ reduce_term ?f ?Σ ?Γ c' ?h ] =>
+      pose proof (reduce_term_sound f Σ Γ c' h) as hr'
+    end.
+    destruct hr as [hr], hr' as [hr'].
+    eapply conv_trans'.
+    - eapply red_conv_l.
+      eapply red_context.
+      eapply PCUICReduction.red_case.
+      + constructor.
+      + eassumption.
+      + instantiate (1 := brs).
+        clear.
+        induction brs ; eauto.
+        constructor.
+        * constructor.
+        * eapply IHbrs.
+    - eapply conv_trans' ; try eassumption.
+      eapply red_conv_r.
+      eapply red_context.
+      eapply PCUICReduction.red_case.
+      + constructor.
+      + eassumption.
+      + clear.
+        induction brs' ; eauto.
+        constructor.
+        * constructor.
+        * eapply IHbrs'.
+  Qed.
 
   (* tProj *)
   Next Obligation.

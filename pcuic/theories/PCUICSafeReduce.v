@@ -1667,4 +1667,17 @@ Section Reduce.
         constructor. constructor.
   Qed.
 
+  Definition reduce_term Γ t (h : welltyped Σ Γ t) :=
+    zip (reduce_stack Γ t Empty h).
+
+  Theorem reduce_term_sound :
+    forall Γ t h,
+      ∥ red (fst Σ) Γ t (reduce_term Γ t h) ∥.
+  Proof.
+    intros Γ t h.
+    unfold reduce_term.
+    refine (reduce_stack_sound _ _ Empty _).
+  Qed.
+
+
 End Reduce.

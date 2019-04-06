@@ -9,9 +9,114 @@ Local Open Scope string_scope.
 Set Asymmetric Patterns.
 Import MonadNotation.
 
+Require Import Lia.
+Lemma Forall2_length {A B} {P : A -> B -> Prop} l l' : Forall2 P l l' -> #|l| = #|l'|.
+Proof. induction 1; simpl; auto. Qed.
+
+
 Existing Instance config.default_checker_flags.
 Module PA := PCUICAst.
 Module P := PCUICWcbvEval.
+
+
+Ltac inv H := inversion H; subst; clear H.
+
+Theorem type_of_sound `{Fuel} Σ {Γ t A B} :
+      Σ ;;; Γ |- t : A ->
+      type_of Σ Γ t = Checked B ->
+      (Σ ;;; Γ |- t : B) * (Σ ;;; Γ |- B <= A).
+Admitted.
+
+Theorem type_of_complete `{Fuel} Σ {Γ t A} :
+      Σ ;;; Γ |- t : A ->
+                    {B & type_of Σ Γ t = Checked B}.
+Admitted.
+
+(** ** All2 *)
+
+Lemma is_constructor_extract `{Fuel} Σ n L L' :
+  PCUICTyping.is_constructor n L -> Forall2 (fun (a : PCUICAst.term) (e : E.term) => extract Σ [] a = Checked e) L L' -> is_constructor n L'.
+Proof.
+Admitted.
+
+
+Lemma nth_error_app_inv X (x : X) n l1 l2 :
+  nth_error (l1 ++ l2) n = Some x -> (n < #|l1| /\ nth_error l1 n = Some x) \/ (n >= #|l1| /\ nth_error l2 (n - List.length l1) = Some x).
+Admitted.
+
+Lemma mkApps_inj a b l1 l2  :
+  mkApps a l1 = mkApps b l2 -> (~ exists a1 a2, a = tApp a1 a2) -> a = b /\ l1 = l2.
+Admitted.
+
+
+Lemma emkApps_snoc a l b :
+  mkApps a (l ++ [b]) = tApp (mkApps a l) b.
+Proof.
+  revert a; induction l; cbn; congruence.
+Qed.
+
+Lemma All2_app_inv : forall (A B : Type) (R : A -> B -> Type),
+    forall l l1 l2, All2 R (l1 ++ l2) l -> { '(l1',l2') : _ & (l = l1' ++ l2')%list * (All2 R l1 l1') * (All2 R l2 l2')}%type.
+Proof.
+  intros. revert l2 l X. induction l1; intros; cbn in *.
+  - exists ([], l). eauto.
+  - inversion X. subst.
+    eapply IHl1 in X1 as ( [] & ? & ?). destruct p.  subst.
+    eexists (y :: l, l0). repeat split; eauto.
+Qed.
+
+Lemma All2_ind_rev : forall (A B : Type) (R : A -> B -> Type) (P : forall (l : list A) (l0 : list B), Prop),
+    P [] [] ->
+    (forall (x : A) (y : B) (l : list A) (l' : list B) (r : R x y) (a : All2 R l l'),
+        P l l' -> P (l ++ [x])%list (l' ++ [y]))%list ->
+    forall (l : list A) (l0 : list B) (a : All2 R l l0), P l l0.
+Proof.
+  intros. revert l0 a. induction l using rev_ind; cbn; intros.
+  - inv a. eauto.
+  - eapply All2_app_inv in a as ([] & [[]]). subst.
+    inv a0. inv X0. eauto.
+Qed.
+
+Lemma last_inv A (l1 l2 : list A) x y :
+  (l1 ++ [x] = l2 ++ [y] -> l1 = l2 /\ x = y)%list.
+Proof.
+  revert l2. induction l1; cbn; intros.
+  - destruct l2; cbn in H; inv H. eauto. destruct l2; inv H2.
+  - destruct l2; inv H. destruct l1; inv H2.
+    eapply IHl1 in H2 as []. split; congruence.
+Qed.
+
+Lemma All2_app : forall (A B : Type) (R : A -> B -> Type),
+    forall l1 l2 l1' l2', All2 R l1 l1' -> All2 R l2 l2' -> All2 R (l1 ++ l2) (l1' ++ l2').
+Proof.
+  induction 1; cbn; eauto.
+Qed.
+
+Lemma Forall2_skipn A B (P : A -> B -> Prop) l l' n:
+  Forall2 P l l' -> Forall2 P (skipn n l) (skipn n l').
+Proof.
+  revert l l'; induction n; intros.
+  - unfold skipn. eauto.
+  - cbv [skipn]. fold (@skipn A n). fold (@skipn B n).
+    inversion H; subst. econstructor.
+    eauto.
+Qed.
+
+Lemma All2_Forall A B (P : A -> B -> Prop) l l' :
+  All2 P l l' -> Forall2 P l l'.
+Proof.
+  induction 1; eauto.
+Qed.
+
+Lemma Forall2_nth_error_Some {A B} {P : A -> B -> Prop} {l l'} n t :
+  Forall2 P l l' ->
+  nth_error l n = Some t ->
+  exists t' : B, (nth_error l' n = Some t') /\ P t t'.
+Proof.
+  intros Hall. revert n.
+  induction Hall; destruct n; simpl; try congruence. intros [= ->]. exists y. intuition auto.
+  eauto.
+Qed.
 
 
 Lemma no_empty_case_in_empty_context Σ ind npar p c T :
@@ -32,8 +137,6 @@ Admitted.
 Inductive extr_pre (Σ : PA.global_context) t T :=
   { extr_typed : Σ ;;; [] |- t : T;
     extr_env_axiom_free : axiom_free (fst Σ) }.
-
-Ltac inv H := inversion H; subst; clear H.
 
 Lemma typing_spine_inv_app Σ x0 l x x1 :
   PCUICGeneration.typing_spine Σ [] x0 (l ++ [x]) x1 -> { '(x2, x3) : _ & (PCUICGeneration.typing_spine Σ [] x0 l x2) * (Σ ;;; [] |- x : x3)}%type.
@@ -140,121 +243,223 @@ Proof.
 Admitted.
 
 (** ** Substitution *)
-
-Lemma extract_subst `{Fuel} Σ Γ Γ' a a' s s' T :
-  wf Σ ->
-  subslet Σ Γ s Γ' ->
-  Σ ;;; Γ ,,, Γ' |- a : T ->
-  extract Σ (Γ,,,Γ') a = Checked a' ->
-  Forall2 (fun a b => extract Σ Γ a = Checked b) s s' ->            
-  extract Σ Γ (PCUICLiftSubst.subst s 0 a) = Checked (subst s' 0 a').
+Require Import PCUIC.PCUICValidity.
+  
+Lemma is_arity_subst `{Fuel} Σ Γ Γ' Δ a s :
+  wf Σ -> subslet Σ Γ s Γ' ->
+  (* Σ ;;; Γ ,,, Γ' ,,, Δ |- a : T -> *)
+  wf_local Σ (Γ ,,, subst_context s 0 Δ) ->
+  is_arity Σ (Γ ,,, Γ' ,,, Δ) _ a = is_arity Σ (Γ ,,, subst_context s 0 Δ) _ (PCUICLiftSubst.subst s #|Δ| a). 
 Proof.
-  intros HΣ Hs Ha.
-  pose proof (typing_wf_local Ha).
-  generalize_eqs Ha. intros eqw. rewrite <- eqw in X.
-  revert Γ Γ' s Hs eqw.
-  revert Σ HΣ Γ0 X a T Ha.
-  eapply (typing_ind_env (fun Σ Γ0 a T =>
-                            forall (Γ Γ' : PCUICAst.context) (s : list PCUICAst.term),
-                              subslet Σ Γ s Γ' ->
-                              Γ0 = Γ ,,, Γ' ->
-                              extract Σ (Γ ,,, Γ') a = Checked a' ->
-                              Forall2 (fun (a0 : PCUICAst.term) (b : E.term) => extract Σ Γ a0 = Checked b) s s' ->
-                              extract Σ Γ (PCUICLiftSubst.subst s 0 a) = Checked ((subst0 s') a')));
-    intros Σ wfΣ Γ0 wfΓ0; intros; subst Γ0.
-  - simpl in H2.
-    destruct ? in H2.
-    
-
-simpl. rewrite <- minus_n_O.
-    elim nth_error_spec.
-    + intros x Heq Hlt.
-      pose proof (substlet_length X0). rewrite H1 in *.
-      eapply subslet_nth_error in Heq. 2:eauto.
-      2:{ erewrite <- nth_error_app1; eauto. }
-      simpl in H2.
-      destruct ? in H2; try congruence.
-      rewrite PCUICLiftSubst.lift0_p.
-      destruct a.
-      * inv H2. destruct ? in Heq.
-        -- cbn in Heq. destruct Heq. subst.
-           cbn. eapply is_type_extract.
-           admit.
-        -- cbn in Heq. cbn. eapply is_type_extract. admit.
-      * inv H2. cbn. admit.
-    + intros Hs. pose proof (substlet_length X0).
-      rewrite H1 in Hs.
-      simpl.
-      * destruct ?; [ | admit (* correctness of type_of *) ]. destruct a.
-        -- simpl in H2.
-           assert (is_type_or_proof Σ (Γ ,,, Γ') (PCUICAst.tRel n) =
-                   is_type_or_proof Σ Γ (PCUICAst.tRel (n - #|s|))) by admit.
-           rewrite H4, E in *. inv H2.
-           reflexivity.
-        -- simpl in H2.
-           assert (is_type_or_proof Σ (Γ ,,, Γ') (PCUICAst.tRel n) =
-                   is_type_or_proof Σ Γ (PCUICAst.tRel (n - #|s|))) by admit.
-           rewrite H4, E in *. inv H2.
-           Lemma Forall2_length {A B} {P : A -> B -> Prop} l l' : Forall2 P l l' -> #|l| = #|l'|.
-           Proof. induction 1; simpl; auto. Qed.
-           eapply Forall2_length in H3.           
-           cbn. elim nth_error_spec; intros. omega. now rewrite H3.
-  - cbn. admit.
-  - cbn. cbn in H3.
-           
-
-           assert (type_of Σ (Γ ,,, Γ') (PCUICAst.tRel n) = type_of Σ Γ (PCUICAst.tRel (n - #|s|))) by admit.
-           rewrite H4 in *. simpl in E, H2.
-           destruct (nth_error Γ _) eqn:Hn; try congruence.
-           assert (is_arity Σ (Γ ,,, Γ') H (PCUICLiftSubst.lift (S (n - #|s|)) 0 (PCUICAst.decl_type c)) =
-                   
-           destruct is_arity eqn:Ea; try congruence. 
-           now inv H2.
-           assert (is_arity Σ (Γ ,,, Γ') H (PCUICLiftSubst.lift (S n) 0 (PCUICAst.decl_type c)) =
-                   is_arity Σ Γ H (PCUICLiftSubst.lift (S (n - #|Γ'|)) 0 (PCUICAst.decl_type c))) by admit.
-           rewrite <- H5 in *.
-           destruct is_arity eqn:Ea; try congruence.
-           now inv H2.
-           
-           
-           
-           
-
-          
-      eapply subslet_nth_error in Heq; eauto.
-      rewrite -> nth_error_app_context_ge in H by lia.
-      rewrite -> nth_error_app_context_lt in H by lia.
-      eapply subslet_nth_error in Heq; eauto.
-      destruct decl_body;
-      cbn -[skipn] in Heq.
-
-    
 Admitted.
 
+(* this is probably too strict, a might also be an algebraic universe *)
+Lemma type_of_subst `{Fuel} Σ Γ Γ' Δ a T s T' :
+  wf Σ -> subslet Σ Γ s Γ' ->
+  Σ ;;; Γ ,,, Γ' ,,, Δ |- a : T ->
+  wf_local Σ (Γ ,,, subst_context s 0 Δ) ->
+  type_of Σ (Γ ,,, Γ' ,,, Δ) a = Checked T' ->
+  type_of Σ (Γ ,,, subst_context s 0 Δ) (PCUICLiftSubst.subst s #|Δ| a) = Checked (PCUICLiftSubst.subst s #|Δ| T').
+Proof.
+Admitted.
+
+Lemma reduce_to_sort_subst:
+  forall (H : Fuel) (Σ : PCUICAst.global_context) (Γ Γ' Δ : PCUICAst.context)
+    (s : list PCUICAst.term),
+    wf Σ ->
+    subslet Σ Γ s Γ' ->
+    wf_local Σ (Γ ,,, subst_context s 0 Δ) ->
+    forall a0 : PCUICAst.term,
+      reduce_to_sort (fst Σ) (Γ ,,, subst_context s 0 Δ) (PCUICLiftSubst.subst s #|Δ| a0) =
+      reduce_to_sort (fst Σ) (Γ ,,, Γ' ,,, Δ) a0.
+Proof.
+  intros H Σ Γ Γ' Δ s X X0 X2 a0.
+Admitted.
+
+Lemma type_of_as_sort_subst `{Fuel} Σ Γ Γ' Δ a s T :
+  wf Σ -> subslet Σ Γ s Γ' ->
+  Σ ;;; Γ ,,, Γ' ,,, Δ |- a : T ->
+  wf_local Σ (Γ ,,, subst_context s 0 Δ) ->
+  type_of_as_sort Σ (type_of Σ) (Γ ,,, subst_context s 0 Δ)
+      (PCUICLiftSubst.subst s #|Δ| a) = type_of_as_sort Σ (type_of Σ) (Γ ,,, Γ' ,,, Δ) a.
+Proof.
+  intros. unfold type_of_as_sort.
+  destruct type_of eqn:E at 2.
+  eapply type_of_subst in E; eauto.
+  - rewrite E. simpl. eapply reduce_to_sort_subst; eauto.
+  - edestruct type_of_complete; eauto. congruence.
+Qed.
+
+Lemma is_type_subst `{Fuel} Σ Γ Γ' Δ a T s :
+  wf Σ -> subslet Σ Γ s Γ' ->
+  Σ ;;; Γ ,,, Γ' ,,, Δ |- a : T ->
+  wf_local Σ (Γ ,,, subst_context s 0 Δ) ->
+  is_type_or_proof Σ (Γ ,,, subst_context s 0 Δ) (PCUICLiftSubst.subst s #|Δ| a) = is_type_or_proof Σ (Γ ,,, Γ' ,,, Δ) a.
+Proof.
+  intros.
+  unfold is_type_or_proof.
+  destruct type_of eqn:E at 2.
+  - assert (E' := E).
+    eapply type_of_sound in E' as []; eauto.
+    eapply type_of_subst in E; eauto. rewrite E. simpl.
+    destruct is_arity eqn:Ea at 2.
+    + erewrite is_arity_subst in Ea; eauto. rewrite Ea. reflexivity.
+    + erewrite is_arity_subst in Ea; eauto. rewrite Ea.
+      erewrite type_of_as_sort_subst with (Γ'0 := Γ'); eauto. admit. 
+  - edestruct type_of_complete; eauto. congruence.
+Admitted.
+
+Lemma extract_weakening `{Fuel} (Σ : PCUICAst.global_context) (Γ Γ' : PCUICAst.context) (t T : PCUICAst.term) t' :
+    wf Σ ->
+    wf_local Σ (Γ ,,, Γ') ->
+    Σ;;; Γ |- t : T ->
+    extract Σ Γ t = Checked t' -> extract Σ (Γ ,,, Γ') (PCUICLiftSubst.lift #|Γ'| 0 t) = Checked (lift #|Γ'| 0 t').
+Admitted.
+
+Lemma extract_subst `{Fuel} Σ Γ Γ' Δ a a' s s' T :
+  wf Σ ->
+  subslet Σ Γ s Γ' ->
+  wf_local Σ (Γ ,,, subst_context s 0 Δ) ->
+  Σ ;;; Γ ,,, Γ'  ,,, Δ |- a : T ->
+  extract Σ (Γ,,,Γ',,,Δ) a = Checked a' ->
+  Forall2 (fun a b => extract Σ Γ a = Checked b) s s' ->            
+  extract Σ (Γ ,,, subst_context s 0 Δ) (PCUICLiftSubst.subst s #|Δ| a) = Checked (subst s' #|Δ| a').
+Proof.
+  intros HΣ HΔ Hs Ha.
+  pose proof (typing_wf_local Ha).
+  generalize_eqs Ha. intros eqw. rewrite <- eqw in X.
+  revert Γ Γ' Δ s Hs HΔ eqw.
+  revert Σ HΣ Γ0 X a T Ha.
+  eapply (typing_ind_env (fun Σ Γ0 a T =>
+                            forall (Γ Γ' : PCUICAst.context) Δ (s : list PCUICAst.term),
+                              wf_local Σ (Γ ,,, subst_context s 0 Δ) ->
+                              subslet Σ Γ s Γ' ->
+                              Γ0 = Γ ,,, Γ' ,,, Δ ->
+                              extract Σ (Γ ,,, Γ' ,,, Δ) a = Checked a' ->
+                              Forall2 (fun (a0 : PCUICAst.term) (b : E.term) => extract Σ Γ a0 = Checked b) s s' ->
+                              extract Σ (Γ ,,, subst_context s 0 Δ) (PCUICLiftSubst.subst s #|Δ| a) = Checked (subst s' #|Δ| a')));
+  intros Σ wfΣ Γ0 wfΓ0; intros; simpl in * |-; subst Γ0.
+  - destruct ? in H2; try congruence.
+    destruct a.
+    + inv H2. eapply is_type_extract.
+      erewrite is_type_subst; eauto.
+      econstructor; eauto.
+    + inv H2. simpl.
+      elim (leb_spec_Set); intros Hn.
+      elim nth_error_spec.
+      * intros x Heq Hlt.
+        pose proof (substlet_length X1). rewrite H1 in *.
+        rewrite -> nth_error_app_context_ge in H0 by lia.
+        rewrite -> nth_error_app_context_lt in H0 by lia.
+        eapply Forall2_nth_error_Some in H3 as (? & ? & ?); eauto.
+        rewrite H2.
+        eapply subslet_nth_error in Heq; eauto.
+         destruct decl, decl_body;
+           cbn -[skipn] in Heq.
+        -- destruct Heq as [-> ].
+           eapply (extract_weakening _ _ (subst_context s 0 Δ)) in H3; eauto.
+           rewrite subst_context_length in H3; eauto.
+        -- eapply (extract_weakening _ _ (subst_context s 0 Δ)) in H3; eauto.
+           rewrite subst_context_length in H3; eauto.
+      * intros Hs.
+        pose proof (substlet_length X1).
+        eapply Forall2_length in H3. rewrite H3 in *.
+        assert (Hs' := Hs).
+        eapply nth_error_None in Hs. rewrite Hs.
+        simpl.
+        erewrite <- is_type_subst in E; eauto.
+        cbn - [is_type_or_proof] in E.
+        revert E. elim (leb_spec_Set); intros; try lia.
+        2: econstructor; eauto.
+        rewrite <- H3 in Hs'.
+        eapply nth_error_None in Hs'.
+        rewrite Hs' in E.
+        rewrite H3 in *.
+        now rewrite E.
+      * assert (sub := X1).
+        eapply subslet_nth_error_lt in X1; eauto.
+        rewrite H0 in X1. simpl in X1.
+        simpl.
+        erewrite <- is_type_subst in E; eauto.
+        cbn - [is_type_or_proof] in E.
+        revert E. elim (leb_spec_Set); intros; try lia.
+        2: econstructor; eauto.
+        now rewrite E.
+  - 
+Admitted.
+
+Lemma extract_subst_alt `{Fuel} Σ Γ Γ' Δ a a' s s' T :
+  wf Σ ->
+  subslet Σ Γ s Γ' ->
+  Σ ;;; Γ ,,, Γ'  ,,, Δ |- a : T ->
+  extract Σ (Γ,,,Γ',,,Δ) a = Checked a' ->
+  Forall2 (fun a b => extract Σ Γ a = Checked b) s s' ->            
+  extract Σ (Γ ,,, subst_context s 0 Δ) (PCUICLiftSubst.subst s #|Δ| a) = Checked (subst s' #|Δ| a').
+Proof.
+  intros.
+  eapply extract_subst; eauto. clear H0 H1 a' H s'.
+  eapply All_local_env_app_inv.
+  apply typing_wf_local in X1; eauto.
+  apply All_local_env_app in X1 as [X1 X2].
+  apply All_local_env_app in X1. intuition.
+  induction X2; simpl; rewrite ?subst_context_snoc0; econstructor; eauto.
+  destruct t0 as [u tu].
+  eapply substitution in tu; simpl in *; eauto.
+  eapply All_local_env_app_inv; intuition.
+  eapply substitution in t0; simpl in *; eauto.
+  eapply All_local_env_app_inv; intuition.
+Qed.
+
+(* Lemma substitution0  Σ Γ n u U (t : term) T : *)
+(*   wf Σ -> *)
+(*   Σ ;;; Γ ,, vass n U |- t : T -> Σ ;;; Γ |- u : U -> *)
+(*   Σ ;;; Γ |- t {0 := u} : T {0 := u}. *)
+(* Proof. *)
+(*   intros HΣ Ht Hu. *)
+(*   assert (wfΓ : wf_local Σ Γ). *)
+(*   apply typing_wf_local in Hu; eauto. *)
+(*   pose proof (substitution_alt Σ Γ [vass n U] [u] [] t T HΣ) as thm. *)
+(*   forward thm. constructor. constructor. rewrite subst_empty; auto. *)
+(*   now apply (thm Ht). *)
+(* Qed. *)
+
 Lemma extract_subst1 
-  (Σ : PCUICAst.global_context) (na : name) (t b a' : PCUICAst.term) (fuel : Fuel) (a0 : E.term) :
+      (Σ : PCUICAst.global_context) (na : name) (t b a' : PCUICAst.term) (fuel : Fuel) (a0 : E.term) T :
+  wf Σ -> Σ ;;; [] ,, PCUICAst.vass na t |- b : T -> Σ ;;; [] |- a' : t ->
     extract Σ [PCUICAst.vass na t] b = Checked a0 ->
     forall vea : E.term,
       extract Σ [] a' = Checked vea -> extract Σ [] (PCUICLiftSubst.subst1 a' 0 b) = Checked (a0 {0 := vea}).
 Proof.
-  intros. eapply extract_subst.
-  - econstructor. econstructor. admit. (* typing *)
-  - cbn. eauto.
-  - econstructor. eauto. econstructor.
-Admitted.
+  intros HΣ Ht Hu.
+  assert (wfΓ : wf_local Σ []).
+  apply typing_wf_local in Hu; eauto. intros.
+  pose proof (extract_subst_alt Σ [] [PCUICAst.vass na t] [] b a0 [a'] [vea] T) as thm.
+  forward thm. eauto.
+  forward thm. econstructor. econstructor. rewrite PCUICLiftSubst.subst_empty; auto.
+  now apply (thm Ht).
+Qed.
+
+Require Import Equations.Equations.
 
 Lemma extract_subst1_vdef
-      (Σ : PCUICAst.global_context) (na : name) (t b a' : PCUICAst.term) (fuel : Fuel) (a0 : E.term) a'' :
-  PCUICWcbvEval.eval Σ [] a'' a' ->
-    extract Σ [PCUICAst.vdef na a'' t] b = Checked a0 ->
+      (Σ : PCUICAst.global_context) (na : name) (t b a' : PCUICAst.term) (fuel : Fuel) (a0 : E.term) T :
+  (* PCUICWcbvEval.eval Σ [] a'' a' -> *)
+  wf Σ -> Σ ;;; [] ,, PCUICAst.vdef na a' t |- b : T -> (* Σ ;;; [] |- a' : t -> *)
+    extract Σ [PCUICAst.vdef na a' t] b = Checked a0 ->
     forall vea : E.term,
       extract Σ [] a' = Checked vea -> extract Σ [] (PCUICLiftSubst.subst1 a' 0 b) = Checked (a0 {0 := vea}).
 Proof.
-  intros. eapply extract_subst.
-  - econstructor. econstructor. admit. (* typing *)
-  - cbn. admit.
-  - econstructor. eauto. econstructor.
-Admitted.
+  intros HΣ Ht.
+  assert ((wf_local Σ []) * (Σ ;;; [] |- a' : t)%type) as [wfΓ tyu].
+  apply typing_wf_local in Ht; eauto with wf. 
+  now depelim Ht; simpl in *; unfold PCUICAst.vdef, PCUICAst.vass in H; noconf H. 
+  intros.
+  epose proof (extract_subst_alt Σ [] [PCUICAst.vdef na a' t] [] b a0 _ [vea] T HΣ) as thm.
+  forward thm. econstructor. econstructor. rewrite !PCUICLiftSubst.subst_empty in *; auto.
+  rewrite !PCUICLiftSubst.subst_empty in *.
+  cbn in *. 
+  eapply thm; eauto.
+Qed.
 
 (** ** Concerning fixpoints *)
 
@@ -416,7 +621,7 @@ Lemma is_type_or_proof_mkApps `{Fuel} Σ Γ a l :
   Extract.is_type_or_proof Σ Γ (PCUICAst.mkApps a l) = Checked true.
 Admitted.
 
-Lemma is_type_subst `{Fuel} (Σ : PCUICAst.global_context) (na : name) (t b a' : PCUICAst.term) :
+Lemma is_type_subst1 `{Fuel} (Σ : PCUICAst.global_context) (na : name) (t b a' : PCUICAst.term) :
   Extract.is_type_or_proof Σ ([],, PCUICAst.vass na t) b = Checked true ->
   Extract.is_type_or_proof Σ [] (PCUICLiftSubst.subst1 a' 0 b) = Checked true.
 Proof.
@@ -434,80 +639,6 @@ Proof.
   revert a; induction n; cbn; firstorder congruence.
 Qed.
 
-(** ** All2 *)
-
-Lemma is_constructor_extract `{Fuel} Σ n L L' :
-  PCUICTyping.is_constructor n L -> Forall2 (fun (a : PCUICAst.term) (e : E.term) => extract Σ [] a = Checked e) L L' -> is_constructor n L'.
-Proof.
-Admitted.
-
-
-Lemma nth_error_app_inv X (x : X) n l1 l2 :
-  nth_error (l1 ++ l2) n = Some x -> (n < #|l1| /\ nth_error l1 n = Some x) \/ (n >= #|l1| /\ nth_error l2 (n - List.length l1) = Some x).
-Admitted.
-
-Lemma mkApps_inj a b l1 l2  :
-  mkApps a l1 = mkApps b l2 -> (~ exists a1 a2, a = tApp a1 a2) -> a = b /\ l1 = l2.
-Admitted.
-
-
-Lemma emkApps_snoc a l b :
-  mkApps a (l ++ [b]) = tApp (mkApps a l) b.
-Proof.
-  revert a; induction l; cbn; congruence.
-Qed.
-
-Lemma All2_app_inv : forall (A B : Type) (R : A -> B -> Type),
-    forall l l1 l2, All2 R (l1 ++ l2) l -> { '(l1',l2') : _ & (l = l1' ++ l2')%list * (All2 R l1 l1') * (All2 R l2 l2')}%type.
-Proof.
-  intros. revert l2 l X. induction l1; intros; cbn in *.
-  - exists ([], l). eauto.
-  - inversion X. subst.
-    eapply IHl1 in X1 as ( [] & ? & ?). destruct p.  subst.
-    eexists (y :: l, l0). repeat split; eauto.
-Qed.
-
-Lemma All2_ind_rev : forall (A B : Type) (R : A -> B -> Type) (P : forall (l : list A) (l0 : list B), Prop),
-    P [] [] ->
-    (forall (x : A) (y : B) (l : list A) (l' : list B) (r : R x y) (a : All2 R l l'),
-        P l l' -> P (l ++ [x])%list (l' ++ [y]))%list ->
-    forall (l : list A) (l0 : list B) (a : All2 R l l0), P l l0.
-Proof.
-  intros. revert l0 a. induction l using rev_ind; cbn; intros.
-  - inv a. eauto.
-  - eapply All2_app_inv in a as ([] & [[]]). subst.
-    inv a0. inv X0. eauto.
-Qed.
-
-Lemma last_inv A (l1 l2 : list A) x y :
-  (l1 ++ [x] = l2 ++ [y] -> l1 = l2 /\ x = y)%list.
-Proof.
-  revert l2. induction l1; cbn; intros.
-  - destruct l2; inv H. eauto. destruct l2; inv H2.
-  - destruct l2; inv H. destruct l1; inv H2.
-    eapply IHl1 in H2 as []. split; congruence.
-Qed.
-
-Lemma All2_app : forall (A B : Type) (R : A -> B -> Type),
-    forall l1 l2 l1' l2', All2 R l1 l1' -> All2 R l2 l2' -> All2 R (l1 ++ l2) (l1' ++ l2').
-Proof.
-  induction 1; cbn; eauto.
-Qed.
-
-Lemma Forall2_skipn A B (P : A -> B -> Prop) l l' n:
-  Forall2 P l l' -> Forall2 P (skipn n l) (skipn n l').
-Proof.
-  revert l l'; induction n; intros.
-  - unfold skipn. eauto.
-  - cbv [skipn]. fold (@skipn A n). fold (@skipn B n).
-    inversion H; subst. econstructor.
-    eauto.
-Qed.
-Lemma All2_Forall A B (P : A -> B -> Prop) l l' :
-  All2 P l l' -> Forall2 P l l'.
-Proof.
-  induction 1; eauto.
-Qed.
 
 (** ** extract and mkApps *)
 
@@ -584,7 +715,7 @@ Admitted.
 Lemma eval_tBox_inv Σ' x2 :
   eval Σ' E.tBox x2 -> x2 = tBox.
 Proof.
-  intros. depind H.
+  intros. dependent induction H.
   - induction args using rev_ind. inv x. rewrite emkApps_snoc in x. inv x.
   - induction l using rev_ind. cbn in x. inv x. inv H0. eapply IHeval. eauto.
     rewrite emkApps_snoc in x. inv x.
@@ -605,7 +736,7 @@ Lemma type_Case_inv Σ Γ ind npar p c brs T :
          (All2 (fun x y : nat * PCUICAst.term => ((fst x = fst y) * (Σ;;; Γ |- snd x : snd y))) brs btys) *
          (Σ ;;; Γ |- PCUICAst.mkApps p (skipn npar args ++ [c])  <= T)}%type.
 Proof.
-  intros. depind X.
+  intros. dependent induction X.
   - unshelve eexists.
     + repeat refine (_,_). all:shelve.
     + cbn. intuition eauto.
@@ -625,7 +756,7 @@ Lemma type_Construct_inv Σ Γ ind i u T :
         (consistent_universe_context_instance Σ (ind_universes mdecl) u) *
         (Σ ;;; Γ |- type_of_constructor mdecl cdecl (ind, i) u <= T)}%type.
 Proof.
-  intros. depind X.
+  intros. dependent induction X.
   - eexists (_, _, _). cbn. intuition eauto.
   - edestruct IHX. reflexivity. destruct x as []. destruct p.
     exists (m, o, p0). intuition eauto.
@@ -658,7 +789,11 @@ Proof.
         edestruct (IHeval3) as (? & ? & ?).
         -- econstructor; eauto. eapply substitution0. eauto. eauto. eapply subject_reduction_eval; try eapply H0; eauto. 
            eapply cumul_trans in X0. 2:eauto. eapply cumul_Prod_inv in X0 as []. econstructor. eauto. eauto. eapply c1.
-        -- eapply extract_subst1. eapply is_type_extract. eauto. eauto. 
+        -- eapply extract_subst1; eauto. 2:{ eapply is_type_extract. eauto. }
+           eapply subject_reduction_eval; eauto.
+           edestruct cumul_Prod_inv.
+           eapply cumul_trans; eauto.
+           econstructor; eauto. eapply c1.
         -- eauto.
         -- exists tBox. cbn in H6. split. 2: eapply eval_box; eauto.
            now eapply eval_tBox_inv in H6 as ->.
@@ -672,6 +807,10 @@ Proof.
         -- eauto.
         -- exists x2. split. eauto. econstructor. eauto. exact H5. eauto.
            Unshelve. shelve. shelve. eapply extract_subst1; eauto.
+           eapply subject_reduction_eval; eauto.
+           edestruct cumul_Prod_inv.
+           eapply cumul_trans; eauto.
+           econstructor; eauto. eapply c1.
       * econstructor; eauto.
       * econstructor; eauto.
     + congruence.
@@ -685,14 +824,20 @@ Proof.
       inv Ht'. 
 
       eapply IHeval1 in Eb0 as (veb0 & ? & ?). 3:eauto.
-      eapply extract_subst1_vdef in Eb1. 2:eauto. 2:eauto.
-      eapply IHeval2 in Eb1 as (veb1 & ? & ?). 3:eauto.
-      -- exists veb1. split. eauto. econstructor; eauto.
+      edestruct IHeval2 as (veb1 & ? & ?).
+      4:{ exists veb1. split. eauto. econstructor. 2:eauto. eauto. }
       -- econstructor; eauto. eapply substitution_let; eauto.
          eapply context_conversion. 3: eassumption. all:eauto.
          econstructor. econstructor. econstructor 3. eapply subject_reduction_eval; eauto.
-         admit. (* context subject reduction needed *)        
-      -- econstructor; eauto.
+         admit. (* context subject reduction needed *)
+      -- eapply extract_subst1_vdef; eauto.
+         eapply context_conversion. eauto. 2:eauto.
+         econstructor. eauto. eauto.
+         econstructor. econstructor. econstructor. eapply subject_reduction_eval; eauto.
+         admit. (* context subject reduction needed *)
+         admit. (* Huge problem *)
+      -- eauto.
+      -- econstructor; eauto. 
     + congruence.
   - cbn in isdecl. inv isdecl.    
   - cbn in isdecl. inv isdecl.    
@@ -780,44 +925,44 @@ Proof.
       * destruct monad_map eqn:Em; try congruence.
         inv Ht'. assert (He' := He). eapply IHeval1 in He as (? & ? & ?); eauto.
         2:{ econstructor; eauto. }
-        eapply extract_Apps in H2 as (? & ? & ? & ? & ?).
+        eapply extract_Apps in H1 as (? & ? & ? & ? & ?).
         simpl in e. destruct ? in e; [ | admit (* goes away with fuel *) ]. destruct a3; inv e.
         { subst. exfalso. enough (is_box a = true) by congruence.
-          enough (extract Σ [] discr = Checked tBox). rewrite H2 in He'; now inv He'.
+          enough (extract Σ [] discr = Checked tBox). rewrite H1 in He'; now inv He'.
           eapply is_type_extract.
           eapply eval_is_type_backwards. eauto. rewrite <- is_type_or_proof_mkApps.
           eauto. }
 
         eapply type_Construct_inv in t0 as [ [[]] ]. destruct y0 as [[[]]].
-        destruct d. cbn in H4. subst. destruct p0.
+        destruct d. cbn in H3. subst. destruct p0.
         unfold types_of_case in e. destruct ? in e; inv e.
-        destruct p0. destruct ? in H6; inv H6. destruct p0. destruct ? in H7; inv H7.
+        destruct p0. destruct ? in H5; inv H5. destruct p0. destruct ? in H6; inv H6.
         
         destruct (nth_error brs c) eqn:E3.
         2:{  (* if looking up c in (ind.ctors o0) works, looking up c in brs must work *)
-          eapply nth_error_None in E3.
-          Lemma All2_length X Y (P : X -> Y -> Type) x y :
-            All2 P x y -> #|x| = #|y|.
-          Proof.
-            induction 1; cbn; congruence.
-          Qed.
-          eapply All2_length in a0. rewrite a0 in *. clear a0.
-          pose proof (nth_error_Some (PCUICAst.ind_ctors o0) c). rewrite H4 in H5.
-          assert (c < #|PCUICAst.ind_ctors o0|) by (eapply H5; intuition congruence).
-          enough (#|l2| = #|PCUICAst.ind_ctors o0|) by omega.
+          (* eapply nth_error_None in E3. *)
+          (* Lemma All2_length X Y (P : X -> Y -> Type) x y : *)
+          (*   All2 P x y -> #|x| = #|y|. *)
+          (* Proof. *)
+          (*   induction 1; cbn; congruence. *)
+          (* Qed. *)
+          (* eapply All2_length in a0. rewrite a0 in *. clear a0. *)
+          (* pose proof (nth_error_Some (PCUICAst.ind_ctors o0) c). rewrite H4 in H5. *)
+          (* assert (c < #|PCUICAst.ind_ctors o0|) by (eapply H5; intuition congruence). *)
+          (* enough (#|l2| = #|PCUICAst.ind_ctors o0|) by omega. *)
           admit.
         }
-        pose proof (monad_map_All2 _ _ _ _ _ Em) as [[] [] ] % (All2_nth_error_Some c p2); eauto.
+        pose proof (monad_map_All2 _ _ _ _ _ Em) as [[] [] ] % (All2_nth_error_Some c p0); eauto.
         destruct ?; inv e2.
         edestruct (All2_nth_error_Some _ _ a0 E3) as ([] & ? & ? & ?).
         eapply typing_spine_skipn in t1 as (? & ?).
         subst. cbn in e3. subst. edestruct IHeval2 as (? & ? & ?).
         -- econstructor; eauto. unfold PCUICTyping.iota_red.
            eapply PCUICGeneration.type_mkApps.
-           rewrite <- nth_default_eq. unfold nth_default. rewrite E0.
+           rewrite <- nth_default_eq. unfold nth_default. rewrite E3.
            eauto. eauto.
         -- unfold PCUICTyping.iota_red. eapply extract_Apps2.
-           rewrite <- nth_default_eq. unfold nth_default. rewrite E0.
+           rewrite <- nth_default_eq. unfold nth_default. rewrite E3.
            eauto. 
            eapply Forall2_skipn. now eapply All2_Forall.
         -- eauto.
@@ -849,10 +994,13 @@ Proof.
 
       edestruct IHeval as (? & ? & ?).
       
-      2:{ eapply extract_Apps2; eauto. eapply extract_subst.
-        - eapply subslet_fix_subst.
-        - rewrite app_context_nil_l. rewrite app_nil_r in E. eauto.
-        - eapply monad_map_Forall2. eauto. }
+      2:{ eapply extract_Apps2; eauto. eapply (extract_subst Σ [] _ []).
+          - eauto.
+          - eapply subslet_fix_subst.
+          - rewrite app_context_nil_l. rewrite app_nil_r in E. eauto.
+          - admit.
+          - eauto.
+          - eapply monad_map_Forall2. eauto. }
 
       econstructor. eapply subject_reduction.
       eauto. exact extr_typed0. all:eauto.

@@ -2036,7 +2036,8 @@ Section ParallelSubstitution.
     - autorewrite with subst. simpl.
       unfold unfold_cofix in heq_unfold_cofix.
       destruct (nth_error mfix1 idx) eqn:Hnth; noconf heq_unfold_cofix. simpl.
-      econstructor. red in X0. info_eauto with pcuic. unshelve eapply X0. shelve. shelve. eauto. eauto. eauto.
+      econstructor. red in X0. eauto 1 with pcuic. unshelve eapply X0.
+      shelve. shelve. eauto. eauto. eauto.
       eauto. eauto.
       pcuic.
       rewrite !subst_fix_context.

@@ -798,6 +798,32 @@ Section Conversion.
       Σ ;;; Γ' |- t : T.
   Admitted.
 
+  Equations unfold_one_fix (Γ : context) (mfix : mfixpoint term)
+            (idx : nat) (π : stack) (h : welltyped Σ Γ (zipc (tFix mfix idx) π))
+    : option term :=
+
+    unfold_one_fix Γ mfix idx π h with inspect (unfold_fix mfix idx) := {
+    | @exist (Some (arg, fn)) eq1 with inspect (decompose_stack_at π arg) := {
+      | @exist (Some (l, c, θ)) eq2 with inspect (reduce_stack RedFlags.default Σ Γ c Empty _) := {
+        | @exist (cred, ρ) eq3 with construct_viewc cred := {
+          | view_construct ind n ui := Some fn ;
+          | view_other t h := None
+          }
+        } ;
+      | _ := None
+      } ;
+    | _ := None
+    }.
+  Next Obligation.
+    cbn. symmetry in eq2.
+    pose proof (decompose_stack_at_eq _ _ _ _ _ eq2). subst.
+    rewrite zipc_appstack in h. cbn in h.
+    zip fold in h. apply welltyped_context in h. cbn in h.
+    destruct h as [T h].
+    destruct (inversion_App h) as [na [A' [B' [[?] [[?] [?]]]]]].
+    eexists. eassumption.
+  Qed.
+
   Equations(noeqns) _isconv_prog (Γ : context) (leq : conv_pb)
             (t1 : term) (π1 : stack) (h1 : welltyped Σ Γ (zipc t1 π1))
             (t2 : term) (π2 : stack) (h2 : welltyped Σ Γ (zipc t2 π2))

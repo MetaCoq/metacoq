@@ -1579,10 +1579,10 @@ Section Confluence.
     Lemma wf_rho_fix_subst Γ Γ' mfix0 mfix1 : wf Σ ->
       #|mfix0| = #|mfix1| ->
       pred1_ctx Σ Γ' (rho_ctx Γ) ->
-      All2_local_env (on_decl (on_decl_over (pred1 Σ) Γ' (rho_ctx Γ))) (fix_context mfix1)
-                     (fix_context mfix0) ->
-      All2_prop2_eq Γ' (rho_ctx Γ) (Γ' ,,, fix_context mfix1) (rho_ctx Γ ,,, fix_context mfix0) dtype
-                    dbody (λ x1 : def term, (dname x1, rarg x1)) (pred1 Σ) mfix1 mfix0 ->
+      (* All2_local_env (on_decl (on_decl_over (pred1 Σ) Γ' (rho_ctx Γ))) (fix_context mfix1) *)
+      (*                (fix_context mfix0) -> *)
+      (* All2_prop2_eq Γ' (rho_ctx Γ) (Γ' ,,, fix_context mfix1) (rho_ctx Γ ,,, fix_context mfix0) dtype *)
+      (*               dbody (λ x1 : def term, (dname x1, rarg x1)) (pred1 Σ) mfix1 mfix0 -> *)
 
       All2_local_env
          (on_decl
@@ -1594,10 +1594,10 @@ Section Confluence.
          (λ (Γ Γ' : context) (x y : term), (pred1 Σ Γ Γ' x y *
                                             pred1 Σ Γ' (rho_ctx Γ) y (rho (rho_ctx Γ) x))%type)
          mfix0 mfix1 ->
-      psubst Σ Γ' (rho_ctx Γ) (cofix_subst mfix1) (* (map (rho (rho_ctx Γ)) *) (cofix_subst mfix0)
+      psubst Σ Γ' (rho_ctx Γ) (cofix_subst mfix1) (map (rho (rho_ctx Γ)) (cofix_subst mfix0))
              (fix_context mfix1) (rho_ctx_over (rho_ctx Γ) (fix_context mfix0)).
     Proof.
-      intros wfΣ Hlen Hred Hrhofix Hrhomfix Hctxs a0. pose proof Hctxs as Hctxs'.
+      intros wfΣ Hlen Hred Hctxs a0. pose proof Hctxs as Hctxs'.
       pose proof a0 as a0'. apply All2_rev in a0'.
       revert Hctxs.
       unfold cofix_subst, fix_context. simpl.
@@ -1631,7 +1631,24 @@ Section Confluence.
       simpl in *. red in p. noconf Heqlen. simpl in H.
       rewrite H in p |- *. rewrite rho_ctx_app in p. apply p.
       econstructor. eauto. clear Hctxs p IHAll2.
-      apply Hrhofix. auto.
+      rewrite -fold_fix_context_over.
+      eapply All2_local_env_pred_fix_ctx. eapply Hctxs'.
+      eapply All2_mix. rewrite -fold_fix_context_over.
+      all:clear IHAll2 Hctxs H p r.
+      { eapply All2_mix_inv in a0. destruct a0.
+        eapply All2_sym. unfold on_Trel.
+        eapply All2_mix_inv in a. destruct a.
+        eapply All2_map_left. simpl. auto. }
+      { eapply All2_mix_inv in a0. destruct a0.
+        eapply All2_sym. unfold on_Trel.
+        eapply All2_mix_inv in a0. destruct a0.
+        eapply All2_mix_inv in a0. destruct a0.
+        eapply All2_mix.
+        rewrite -fold_fix_context_over.
+        rewrite fix_context_map_fix. simpl.
+        rewrite rho_ctx_app in a2. unfold on_Trel.
+        eapply All2_map_left. simpl. eapply a2.
+        eapply All2_map_left. simpl. solve_all. }
     Qed.
 
     Lemma triangle Γ Δ t u : wf Σ ->
@@ -1736,7 +1753,7 @@ Section Confluence.
         econstructor. eapply pred_mkApps; eauto.
         rewrite rho_cofix_subst.
         rewrite rho_ctx_app in Hreleq1.
-        rewrite - (rho_subst (rho_ctx Γ) (rho_ctx_over (rho_ctx Γ) (fix_context mfix0)) [] (cofix_subst mfix0) (dbody t')). simpl.
+        rewrite (rho_subst (rho_ctx Γ) (rho_ctx_over (rho_ctx Γ) (fix_context mfix0)) [] (cofix_subst mfix0) (dbody t')). simpl.
         eapply substitution_pred1; eauto.
         { eapply wf_rho_fix_subst; eauto.
           now eapply All2_length in X3. }

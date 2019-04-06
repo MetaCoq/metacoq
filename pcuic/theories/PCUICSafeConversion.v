@@ -354,6 +354,21 @@ Section Conversion.
   Definition stack_pos t π : pos (zipc t π) :=
     exist (stack_position π) (stack_position_valid t π).
 
+  Lemma red_trans :
+    forall Γ u v w,
+      red (fst Σ) Γ u v ->
+      red (fst Σ) Γ v w ->
+      red (fst Σ) Γ u w.
+  Proof.
+    intros Γ u v w h1 h2.
+    revert u h1. induction h2 ; intros u h1.
+    - assumption.
+    - specialize IHh2 with (1 := h1).
+      eapply trans_red.
+      + eapply IHh2.
+      + assumption.
+  Qed.
+
   Lemma conv_refl' :
     forall leq Γ t,
       conv leq Σ Γ t t.
@@ -798,6 +813,7 @@ Section Conversion.
       Σ ;;; Γ' |- t : T.
   Admitted.
 
+  (* TODO Inspects are useless *)
   Equations unfold_one_fix (Γ : context) (mfix : mfixpoint term)
             (idx : nat) (π : stack) (h : welltyped Σ Γ (zipc (tFix mfix idx) π))
     : option term :=
@@ -914,19 +930,21 @@ Section Conversion.
     _isconv_prog Γ leq (tFix mfix idx) π1 h1 (tFix mfix' idx') π2 h2 aux
     with inspect (eq_term (snd Σ) (tFix mfix idx) (tFix mfix' idx')) := {
     | @exist true eq1 := isconv_args Γ (tFix mfix idx) π1 π2 aux ;
-    (* | @exist false _ with inspect (unfold_fix mfix idx) := { *)
-    (*   | @exist (Some (arg, fn)) eq1 with inspect (decompose_stack_at π1 arg) := { *)
-    (*     | @exist (Some c) eq2 with inspect (reduce_stack RedFlags.default Σ Γ c Empty _) := { *)
-    (*       | @exist (cred, ρ) eq3 with construct_viewc cred := { *)
-    (*         | view_construct ind n ui := (* TODO *) _ ; *)
-    (*         | view_other t h := no ; (* ok? *) *)
-    (*         } *)
-    (*       } ; *)
-    (*     | _ := no ; (* Probably ok? *) *)
-    (*     } ; *)
-    (*   | _ := no (* TODO *) *)
-    (*   } *)
-    | _ := no
+    | @exist false _ with inspect (unfold_one_fix Γ mfix idx π1 _) := {
+      | @exist (Some fn) eq1
+        with inspect (reduce_stack nodelta_flags Σ Γ fn π1 _) := {
+        | @exist (fn', ρ) eq2 :=
+          isconv_prog Γ leq fn' ρ (tFix mfix' idx') π2 aux
+        } ;
+      | _ with inspect (unfold_one_fix Γ mfix' idx' π2 _) := {
+        | @exist (Some fn) eq1
+          with inspect (reduce_stack nodelta_flags Σ Γ fn π2 _) := {
+          | @exist (fn', ρ) eq2 :=
+            isconv_prog Γ leq (tFix mfix' idx') π2 fn' ρ aux
+          } ;
+        | _ := no
+        }
+      }
     } ;
 
     _isconv_prog Γ leq (tCoFix mfix idx) π1 h1 (tCoFix mfix' idx') π2 h2 aux
@@ -1291,6 +1309,60 @@ Section Conversion.
     eapply eq_term_conv.
     symmetry. assumption.
   Qed.
+  Next Obligation.
+    eapply red_welltyped.
+    - eapply h1.
+    - constructor. eapply red_context.
+      (* Need appropriate lemme on unfold_one_fix. *)
+  Admitted.
+  Next Obligation.
+    match type of eq2 with
+    | context [ reduce_stack ?f ?Σ ?Γ ?c ?π ?h ] =>
+      pose proof (reduce_stack_sound f Σ Γ c π h) as hr
+    end.
+    destruct hr as [hr].
+    rewrite <- eq2 in hr.
+    eapply red_welltyped.
+    - eapply h1.
+    - constructor. eapply red_trans.
+      + admit. (* Need appropriate lemme on unfold_one_fix. *)
+      + eapply hr.
+  Admitted.
+  Next Obligation.
+    (* R (Term (tFix mfix' idx'), Γ, fn', ρ, π2) *)
+    (*   (Term (tFix mfix' idx'), Γ, tFix mfix idx, π1, π2) *)
+  Admitted.
+  Next Obligation.
+    destruct b ; auto.
+    (* Need appropriate lemme on unfold_one_fix. *)
+  Admitted.
+  Next Obligation.
+    eapply red_welltyped.
+    - eapply h2.
+    - constructor. eapply red_context.
+      (* Need appropriate lemme on unfold_one_fix. *)
+  Admitted.
+  Next Obligation.
+    match type of eq2 with
+    | context [ reduce_stack ?f ?Σ ?Γ ?c ?π ?h ] =>
+      pose proof (reduce_stack_sound f Σ Γ c π h) as hr
+    end.
+    destruct hr as [hr].
+    rewrite <- eq2 in hr.
+    eapply red_welltyped.
+    - eapply h2.
+    - constructor. eapply red_trans.
+      + admit. (* Need appropriate lemme on unfold_one_fix. *)
+      + eapply hr.
+  Admitted.
+  Next Obligation.
+    (* R (Term fn', Γ, tFix mfix' idx', π2, ρ) *)
+    (*   (Term (tFix mfix' idx'), Γ, tFix mfix idx, π1, π2) *)
+  Admitted.
+  Next Obligation.
+    destruct b ; auto.
+    (* Need appropriate lemme on unfold_one_fix. *)
+  Admitted.
 
   (* tCoFix *)
   Next Obligation.

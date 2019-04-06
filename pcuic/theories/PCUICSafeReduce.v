@@ -1140,6 +1140,7 @@ Section Reduce.
       case_eq (decompose_stack π) ; intros ; assumption
     end.
 
+  (* TODO It's no longe program_simpl, maybe use the up to date tactic! *)
   Ltac obTac :=
     program_simpl ;
     try reflexivity ;

@@ -845,13 +845,17 @@ Section Conversion.
   Lemma unfold_one_fix_red :
     forall Γ mfix idx π h fn,
       Some fn = unfold_one_fix Γ mfix idx π h ->
-      red (fst Σ) Γ (tFix mfix idx) fn.
+      red (fst Σ) Γ (zipc (tFix mfix idx) π) (zipc fn π).
   Proof.
     intros Γ mfix idx π h fn eq.
     revert eq.
     funelim (unfold_one_fix Γ mfix idx π h).
     all: intro eq ; noconf eq.
-    (* TODO zip with π to make it correct! *)
+    pose proof (eq_sym e0) as eq.
+    pose proof (decompose_stack_at_eq _ _ _ _ _ eq). subst.
+    rewrite !zipc_appstack. cbn.
+    do 2 zip fold. eapply red_context.
+    (* TODO Maybe we can only conclude conversion? *)
   Abort.
 
   Equations(noeqns) _isconv_prog (Γ : context) (leq : conv_pb)

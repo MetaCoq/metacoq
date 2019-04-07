@@ -931,15 +931,6 @@ Section Confluence.
       pcuic. unfold on_Trel_eq, on_Trel. intuition.
     Qed.
 
-    Lemma rho_cofix_subst Γ   mfix d  :
-      (subst0
-         (cofix_subst
-            (map (map_def (rho (rho_ctx Γ)) (rho (rho_ctx Γ ,,, fold_fix_context rho (rho_ctx Γ) [] mfix))) mfix)))
-        (rho (rho_ctx Γ ,,, fold_fix_context rho (rho_ctx Γ) [] mfix) (dbody d)) =
-      (rho (rho_ctx Γ) ((subst0 (cofix_subst mfix)) (dbody d))).
-    Proof.
-    Admitted.
-
     Lemma fix_context_map_fix Γ mfix :
       fix_context (map_fix rho (rho_ctx Γ) (rho_ctx_over (rho_ctx Γ) (fix_context mfix)) mfix) =
       rho_ctx_over (rho_ctx Γ) (fix_context mfix).
@@ -1271,13 +1262,6 @@ Section Confluence.
       rewrite !mapi_cst_map.
       eapply All_All2_telescopei; eauto.
     Qed.
-
-    Lemma rho_subst Γ Δ Γ' s t :
-      rho (Γ ,,, subst_context s 0 Γ') (subst s #|Γ'| t) =
-      subst (map (rho Γ) s) #|Γ'| (rho (Γ ,,, Δ ,,, Γ') t).
-    Proof.
-      induction t; simpl; auto.
-    Admitted.
 
     Lemma rho_triangle (wf : wf Σ) Γ t :
       let Γ' := rho_ctx Γ in
@@ -1646,6 +1630,26 @@ Section Confluence.
         eapply All2_map_left. simpl. solve_all. }
     Qed.
 
+    (* Lemma rho_subst Γ0 Δ Γ1 Γ0' Δ' Γ1' s s' t t' : *)
+    (*   pred1 Σ (Γ0 ,,, Δ ,,, Γ1) (Γ0' ,,, Δ' ,,, Γ1') t t' -> *)
+    (*   psubst Σ Γ0 Γ0' s s' Δ Δ' -> *)
+    (*   pred1 Σ (Γ0 ,,, subst_context s 0 Γ1) *)
+    (*         (Γ0' ,,, subst_context s' 0 Γ1') *)
+    (*         (subst (map (rho Γ0) s) #|Γ1| (rho (Γ0 ,,, Δ ,,, Γ1) t)) *)
+    (*         (rho (Γ0' ,,, subst_context s 0 Γ1') (subst s' #|Γ1'| t')). *)
+    (* Proof. *)
+    (*   induction t; simpl; auto. *)
+    (* Admitted. *)
+
+    Lemma rho_cofix_subst Γ mfix :
+      cofix_subst (map_fix rho (rho_ctx Γ) (rho_ctx_over (rho_ctx Γ) (fix_context mfix)) mfix)
+      = (map (rho (rho_ctx Γ)) (cofix_subst mfix)).
+    Proof.
+      unfold cofix_subst. unfold map_fix at 2. rewrite !map_length.
+      induction #|mfix|. reflexivity. simpl.
+      rewrite - fold_fix_context_over. f_equal. apply IHn.
+    Qed.
+
     Lemma triangle Γ Δ t u : wf Σ ->
                              let Pctx :=
                                  fun (Γ Δ : context) => pred1_ctx Σ Δ (rho_ctx Γ) in
@@ -1723,10 +1727,11 @@ Section Confluence.
         eapply All2_nth_error_Some_right in Heq; eauto.
         destruct Heq as [t' [Ht' Hrel]]. rewrite Ht'. simpl.
         eapply pred_case. eauto. eapply pred_mkApps.
-        rewrite rho_cofix_subst. red in Hrel. destruct Hrel.
+        red in Hrel. destruct Hrel.
         rewrite rho_ctx_app in p2.
-        rewrite (rho_subst (rho_ctx Γ) (rho_ctx_over (rho_ctx Γ) (fix_context mfix0)) [] (cofix_subst mfix0) (dbody t')). simpl.
+        rewrite - fold_fix_context_over.
         eapply substitution_pred1; eauto.
+        rewrite rho_cofix_subst.
         { eapply wf_rho_fix_subst; eauto.
           now eapply All2_length in b.
           eapply All2_mix. eauto.
@@ -1746,10 +1751,10 @@ Section Confluence.
         destruct Heq as [t' [Hnth Hrel]]. destruct Hrel as [[Hty Hrhoty] [[Hreleq0 Hreleq1] Heq]].
         unfold map_fix. rewrite nth_error_map Hnth /=.
         econstructor. eapply pred_mkApps; eauto.
-        rewrite rho_cofix_subst.
+        rewrite - fold_fix_context_over.
         rewrite rho_ctx_app in Hreleq1.
-        rewrite (rho_subst (rho_ctx Γ) (rho_ctx_over (rho_ctx Γ) (fix_context mfix0)) [] (cofix_subst mfix0) (dbody t')). simpl.
         eapply substitution_pred1; eauto.
+        rewrite rho_cofix_subst.
         { eapply wf_rho_fix_subst; eauto.
           now eapply All2_length in X3. }
         eapply All2_sym, All2_map_left, All2_impl; eauto; simpl; intuition eauto.
@@ -1829,7 +1834,6 @@ Section Confluence.
           * (* CoFix unfolding *)
             pose proof Heq.
             eapply All2_nth_error_Some in Heq; eauto. destruct Heq; intuition auto.
-            rewrite !rho_cofix_subst.
 
             eapply pred_cofix_case with (map_fix rho (rho_ctx Γ) (rho_ctx_over (rho_ctx Γ)
                                                                                (fix_context m)) m)
@@ -1848,8 +1852,7 @@ Section Confluence.
                 rewrite nth_error_map.
                 rewrite H. simpl. f_equal. f_equal.
                 unfold map_fix.
-                rewrite fold_fix_context_over.
-                now rewrite rho_cofix_subst.
+                rewrite fold_fix_context_over. auto.
             --- eapply All2_map_right. rewrite map_id. apply All2_sym.
                 eapply All2_map_left. eapply All2_impl; eauto.
                 unfold on_Trel_eq, on_Trel in *.
@@ -1930,7 +1933,6 @@ Section Confluence.
           * (* CoFix unfolding *)
             pose proof Heq.
             eapply All2_nth_error_Some in Heq; eauto. destruct Heq; intuition auto.
-            rewrite !rho_cofix_subst.
 
             eapply pred_cofix_proj with (map_fix rho (rho_ctx Γ) (rho_ctx_over (rho_ctx Γ)
                                                                                (fix_context mfix)) mfix)
@@ -1949,8 +1951,7 @@ Section Confluence.
                 rewrite nth_error_map.
                 rewrite H. simpl. f_equal. f_equal.
                 unfold map_fix.
-                rewrite fold_fix_context_over.
-                now rewrite rho_cofix_subst.
+                rewrite fold_fix_context_over. auto.
 
           * eapply pred_proj_congr; eauto.
 

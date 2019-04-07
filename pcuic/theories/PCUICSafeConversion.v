@@ -840,6 +840,20 @@ Section Conversion.
     eexists. eassumption.
   Qed.
 
+  Derive NoConfusion NoConfusionHom for option.
+
+  Lemma unfold_one_fix_red :
+    forall Γ mfix idx π h fn,
+      Some fn = unfold_one_fix Γ mfix idx π h ->
+      red (fst Σ) Γ (tFix mfix idx) fn.
+  Proof.
+    intros Γ mfix idx π h fn eq.
+    revert eq.
+    funelim (unfold_one_fix Γ mfix idx π h).
+    all: intro eq ; noconf eq.
+    (* TODO zip with π to make it correct! *)
+  Abort.
+
   Equations(noeqns) _isconv_prog (Γ : context) (leq : conv_pb)
             (t1 : term) (π1 : stack) (h1 : welltyped Σ Γ (zipc t1 π1))
             (t2 : term) (π2 : stack) (h2 : welltyped Σ Γ (zipc t2 π2))

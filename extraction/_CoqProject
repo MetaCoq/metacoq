@@ -13,3 +13,7 @@ theories/ETyping.v
 theories/Extract.v
 theories/EAll.v
 theories/Extraction.v
+theories/Prelim.v
+theories/ESubstitution.v
+theories/EInversion.v
+theories/ExtractionCorrectness.v

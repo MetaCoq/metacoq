@@ -10,14 +10,10 @@ Set Asymmetric Patterns.
 Import MonadNotation.
 
 Require Import Lia.
-Lemma Forall2_length {A B} {P : A -> B -> Prop} l l' : Forall2 P l l' -> #|l| = #|l'|.
-Proof. induction 1; simpl; auto. Qed.
-
 
 Existing Instance config.default_checker_flags.
 Module PA := PCUICAst.
 Module P := PCUICWcbvEval.
-
 
 Ltac inv H := inversion H; subst; clear H.
 
@@ -54,6 +50,10 @@ Lemma emkApps_snoc a l b :
 Proof.
   revert a; induction l; cbn; congruence.
 Qed.
+
+Lemma Forall2_length {A B} {P : A -> B -> Prop} l l' : Forall2 P l l' -> #|l| = #|l'|.
+Proof. induction 1; simpl; auto. Qed.
+
 
 Lemma All2_app_inv : forall (A B : Type) (R : A -> B -> Type),
     forall l l1 l2, All2 R (l1 ++ l2) l -> { '(l1',l2') : _ & (l = l1' ++ l2')%list * (All2 R l1 l1') * (All2 R l2 l2')}%type.
@@ -117,7 +117,6 @@ Proof.
   induction Hall; destruct n; simpl; try congruence. intros [= ->]. exists y. intuition auto.
   eauto.
 Qed.
-
 
 Lemma no_empty_case_in_empty_context Σ ind npar p c T :
   Σ;;; [] |- PCUICAst.tCase (ind, npar) p c [] : T -> False.
@@ -687,12 +686,37 @@ Proof.
   intros ?. simpl in *. destruct is_type_or_proof eqn:E1; try destruct a; now inv H0.
 Qed.
 
+(* Hint Constructors eval. *)
+
 Lemma eval_box_apps:
   forall (Σ' : list E.global_decl) (e : E.term) (x : list E.term), eval Σ' e tBox -> eval Σ' (mkApps e x) tBox.
 Proof.
-  intros Σ' e x H2.
-Admitted.
+  intros Σ' e x H2. revert e H2; induction x; cbn; intros; eauto using eval.
+Qed.
 
+Fixpoint extract_global_decls' `{F:Fuel} univs Σ1 Σ : typing_result E.global_declarations :=
+  match Σ, Σ1 with
+  | [], [] => ret []
+  | PCUICAst.ConstantDecl kn cb :: Σ0, _ :: Σ1 =>
+      cb' <- extract_constant_body (Σ1, univs) cb;;
+      Σ' <- extract_global_decls' univs Σ1 Σ0;; ret (E.ConstantDecl kn cb' :: Σ')
+  | PCUICAst.InductiveDecl kn mib :: Σ0, _ :: Σ1 =>
+      mib' <- extract_mutual_inductive_body (Σ1, univs) mib;;
+           Σ' <- extract_global_decls' univs Σ1 Σ0;; ret (E.InductiveDecl kn mib' :: Σ')
+  | _, _ => ret []
+   end.
+
+Lemma extract_global_decls_eq `{Fuel} u Σ :
+  extract_global_decls u Σ = extract_global_decls' u Σ Σ.
+Proof.
+  induction Σ.
+  - reflexivity.
+  - simpl. destruct a.
+    + destruct ?; try congruence. now rewrite IHΣ.
+    + destruct ?; try congruence. now rewrite IHΣ.
+Qed.
+
+Require Import PCUIC.PCUICWeakeningEnv.
 Lemma extract_constant:
   forall (Σ : PCUICAst.global_context) (c : ident) (decl : PCUICAst.constant_body) (body : PCUICAst.term)
     (u : universe_instance) (fuel : Fuel) (Σ' : list E.global_decl),
@@ -704,11 +728,24 @@ Lemma extract_constant:
         declared_constant Σ' c decl' /\
         extract Σ [] (PCUICUnivSubst.subst_instance_constr u body) = Checked ebody /\ cst_body decl' = Some ebody.
 Proof.
-  intros (decls, Σ) c decl body u fuel Σ'. intros. 
-  induction decls using rev_ind.
-  - inv H0. inv H.
-  - simpl in H0. rewrite rev_app_distr in *. simpl in H0. destruct x.
-    + unfold PCUICTyping.declared_constant in H.
+  intros.
+
+  pose (P := fun  Σ (_ : PCUICAst.context) trm (tp : option PCUICAst.term) => match tp with Some tp => { '(t',tp') : _ & (extract Σ [] trm = Checked t') * (extract Σ [] tp = Checked tp')}%type | None => False end).
+  assert (H' := H).
+  eapply weaken_lookup_on_global_env with (P0 := P) in H; subst P; eauto.
+  - unfold on_global_decl, on_constant_decl in H. rewrite H1 in H.
+    destruct H as [[] []].
+    exists (Build_constant_body t0 (Some t)), t. simpl. repeat split.
+    unfold declared_constant. destruct Σ as [decls univ].
+    unfold PCUICTyping.declared_constant in *. simpl in H'.
+    admit. admit.
+  - unfold weaken_env_prop. intros. destruct T; try tauto. admit.
+  - unfold on_global_env. destruct Σ. cbn. revert H0 X. clear.
+    revert t Σ'; induction g; simpl; intros.
+    + inv H0. econstructor. admit.
+    + destruct ? in H0; inv H0. econstructor. eapply IHg; auto. admit. admit. admit.
+      destruct a; simpl.
+      * unfold on_constant_decl. destruct ?.
       
 Admitted.
 
@@ -786,7 +823,7 @@ Admitted.
 Lemma extract_context_conversion `{Fuel} :
 env_prop
   (fun (Σ : PCUICAst.global_context) (Γ : PCUICAst.context) (t T : PCUICAst.term) =>
-     forall Γ' : PCUICAst.context, conv_context Σ Γ Γ' -> forall a ea, extract Σ Γ a = Checked ea -> extract Σ Γ' a = Checked ea).
+     forall Γ' : PCUICAst.context, red_context Σ Γ Γ' -> forall a ea, extract Σ Γ a = Checked ea -> extract Σ Γ' a = Checked ea).
 Admitted.
 
 
@@ -1075,6 +1112,18 @@ Proof.
       eapply is_type_extract. eapply eval_is_type. 2:eapply Heq.
       econstructor; eauto.
     + inv Ht'. inv pre.
+      Require Import PCUIC.PCUICWeakeningEnv.
+
+
+      pose (P := fun  Σ (_ : PCUICAst.context) trm (tp : option PCUICAst.term) => match tp with Some tp => { '(t',tp') : _ & (extract Σ [] trm = Checked t') * (extract Σ [] tp = Checked tp')}%type | None => False end).
+      eapply weaken_lookup_on_global_env with (P0 := P) in H; subst P; eauto.
+      * unfold on_global_decl, on_constant_decl in H. rewrite H0 in H.
+        destruct H as [[] []].
+        
+        
+
+      
+      
       edestruct (extract_constant _ c decl body u _ _  extr_env_wf H HΣ' H0) as (decl' & ebody & ? & ? & ?); eauto.
       edestruct IHeval as (? & ? & ?).
       * econstructor; eauto.

@@ -625,7 +625,7 @@ Section Normalisation.
     forall Σ Γ t,
       welltyped Σ Γ (zip t) ->
       Acc (dlexprod (cored (fst Σ) Γ) (@posR))
-          (zip t ; proj1_sig (stack_position (fst t) (snd t))).
+          (zip t ; ` (stack_position (fst t) (snd t))).
   Proof.
     intros Σ Γ t h.
     eapply acc_dlexprod.

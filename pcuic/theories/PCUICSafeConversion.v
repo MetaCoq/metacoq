@@ -604,10 +604,65 @@ Section Conversion.
   | Args.
   (* | Fallback *) (* TODO *)
 
-  (* Will definitely depend on Γ (Σ is already here) *)
-  Definition R (u v : state * context * term * stack * stack) := False.
+  Definition dumbR (u v : state * context * term * stack * stack) := False.
 
-  Lemma R_Acc : forall u, Acc R u.
+  Notation "( x ; y )" := (existT _ x y).
+
+  (* Unusable without primitive projections *)
+  (* Definition R (x y : state * context * term * stack * stack) := *)
+  (*   let '(s, Γ, u, π1, π2) := x in *)
+  (*   let '(r, Δ, v, θ1, θ2) := y in *)
+  (*   dlexprod (cored Σ Γ) (fun _ => dumbR) *)
+  (*            (zipc u π1 ; x) *)
+  (*            (zipc v θ1 ; y). *)
+
+  Definition ctx (x : state * context * term * stack * stack) :=
+    let '(s, Γ, u, π1, π2) := x in Γ.
+
+  Definition tm (x : state * context * term * stack * stack) :=
+    let '(s, Γ, u, π1, π2) := x in u.
+
+  Definition stk1 (x : state * context * term * stack * stack) :=
+    let '(s, Γ, u, π1, π2) := x in π1.
+
+  Definition stk2 (x : state * context * term * stack * stack) :=
+    let '(s, Γ, u, π1, π2) := x in π2.
+
+  Definition R (x y : state * context * term * stack * stack) :=
+    dlexprod (cored Σ (ctx x)) (fun _ => dumbR)
+             (zipc (tm x) (stk1 x) ; x)
+             (zipc (tm y) (stk1 y) ; y).
+
+  Lemma R_Acc_aux :
+    forall u,
+      welltyped Σ (ctx u) (zipc (tm u) (stk1 u)) ->
+      Acc (dlexprod (cored Σ (ctx u)) (fun _ => dumbR))
+          (zipc (tm u) (stk1 u) ; u).
+  Proof.
+    intros u h.
+    eapply acc_dlexprod.
+    - admit.
+    - eapply normalisation. eassumption.
+    - admit.
+  Admitted.
+
+  Lemma R_Acc :
+    forall u,
+      welltyped Σ (ctx u) (zipc (tm u) (stk1 u)) ->
+      Acc R u.
+  Proof.
+    intros u h.
+    pose proof (R_Acc_aux u h) as hacc.
+    clear - hacc.
+    dependent induction hacc.
+    constructor. intros y hy.
+    eapply H0 ; try assumption.
+    unfold R in hy.
+
+    (* destruct u as [[[[s Γ] u] π1] π2]. *)
+    (* unfold R. cbn. *)
+    (* eapply acc_dlexprod. *)
+
   Admitted.
 
   Definition Ret s Γ t π π' :=
@@ -813,7 +868,6 @@ Section Conversion.
       Σ ;;; Γ' |- t : T.
   Admitted.
 
-  (* TODO Inspects are useless *)
   Equations unfold_one_fix (Γ : context) (mfix : mfixpoint term)
             (idx : nat) (π : stack) (h : welltyped Σ Γ (zipc (tFix mfix idx) π))
     : option term :=

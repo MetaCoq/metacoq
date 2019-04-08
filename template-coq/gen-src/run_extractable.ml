@@ -117,8 +117,20 @@ let of_mib (env : Environ.env) (mib : Plugin_core.mutual_inductive_body) : Ast0.
 let to_mie : _ -> Plugin_core.mutual_inductive_entry =
   failwith "to_mie"
 
-let of_constant_entry : Plugin_core.constant_entry -> Ast0.constant_entry =
-  failwith "of_constant_entry" (* Ast_quoter.quote_constant_entry *)
+(* note(gmm): code taken from quoter.ml (quote_entry_aux) *)
+let of_constant_entry (env : Environ.env) (cd : Plugin_core.constant_entry) : Ast0.constant_entry =
+  let open Declarations in
+  let ty = quote_term env cd.const_type in
+  let body = match cd.const_body with
+    | Undef _ -> None
+    | Def cs -> Some (Ast_quoter.quote_term env (Mod_subst.force_constr cs))
+    | OpaqueDef cs ->
+      if true
+      then Some (Ast_quoter.quote_term env (Opaqueproof.force_proof (Global.opaque_tables ()) cs))
+      else None
+  in
+  let uctx = quote_constant_uctx cd.const_universes in
+  Ast_quoter.quote_constant_entry (ty, body, uctx)
 
 (* what about the overflow?
   efficiency? extract to bigint using Coq directives and convert to int here? *)
@@ -221,6 +233,10 @@ let tmOfMib (t : Plugin_core.mutual_inductive_body) : Ast0.mutual_inductive_body
   fun env evm k _ ->
     k env evm (of_mib env t)
 
+let tmOfConstantEntry (t : Plugin_core.constant_entry) : Ast0.constant_entry tm =
+  fun env evm k _ ->
+    k env evm (of_constant_entry env t)
+
 let rec interp_tm (t : 'a coq_TM) : 'a tm =
   match t with
   | Coq_tmReturn x -> tmReturn x
@@ -264,7 +280,7 @@ let rec interp_tm (t : 'a coq_TM) : 'a tm =
   | Coq_tmQuoteUniverses ->
     tmMap (fun x -> failwith "tmQuoteUniverses") tmQuoteUniverses
   | Coq_tmQuoteConstant (kn, b) ->
-    tmMap (fun x -> Obj.magic (of_constant_entry x))
+    tmMap (fun x -> Obj.magic (tmOfConstantEntry x))
           (tmQuoteConstant (to_kername kn) b)
   | Coq_tmInductive i ->
     tmMap (fun _ -> Obj.magic ()) (tmInductive (to_mie i))

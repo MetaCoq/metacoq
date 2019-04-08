@@ -429,6 +429,7 @@ let denote_term (evm : Evd.evar_map) (trm: D.t) : Evd.evar_map * Constr.t =
 end
 
 open Denoter
+open Constr_quoter
 module CoqLiveDenoter =
 struct
   type t = Constr.t
@@ -487,82 +488,38 @@ struct
 
 
 
-  let mkAnon = nAnon
-  let mkName id = Constr.mkApp (nNamed, [| id |])
-  let quote_kn kn = quote_string (KerName.to_string kn)
-  let mkRel i = Constr.mkApp (tRel, [| i |])
-  let mkVar id = Constr.mkApp (tVar, [| id |])
-  let mkMeta i = Constr.mkApp (tMeta, [| i |])
-  let mkEvar n args = Constr.mkApp (tEvar, [| n; to_coq_list tTerm (Array.to_list args) |])
-  let mkSort s = Constr.mkApp (tSort, [| s |])
-  let mkCast c k t = Constr.mkApp (tCast, [| c ; k ; t |])
-  let mkConst kn u = Constr.mkApp (tConst, [| kn ; u |])
-  let mkProd na t b =
-    Constr.mkApp (tProd, [| na ; t ; b |])
-  let mkLambda na t b =
-    Constr.mkApp (tLambda, [| na ; t ; b |])
-  let mkApp f xs =
-    Constr.mkApp (tApp, [| f ; to_coq_list tTerm (Array.to_list xs) |])
+  let mkAnon = mkAnon
+  let mkName = mkName
+  let quote_kn = quote_kn
+  let mkRel = mkRel
+  let mkVar = mkVar
+  let mkMeta = mkMeta
+  let mkEvar = mkEvar
+  let mkSort = mkSort 
+  let mkCast = mkCast
+  let mkConst = mkConst
+  let mkProd = mkProd
+    
+  let mkLambda = mkLambda
+  let mkApp = mkApp
 
-  let mkLetIn na t t' b =
-    Constr.mkApp (tLetIn, [| na ; t ; t' ; b |])
+  let mkLetIn = mkLetIn
 
-  let rec seq f t =
-    if f < t then f :: seq (f + 1) t
-    else []
+  let mkFix = mkFix
 
-  let mkFix ((a,b),(ns,ts,ds)) =
-    let mk_fun xs i =
-      Constr.mkApp (tmkdef, [| tTerm ; Array.get ns i ;
-                             Array.get ts i ; Array.get ds i ; Array.get a i |]) :: xs
-    in
-    let defs = List.fold_left mk_fun [] (seq 0 (Array.length a)) in
-    let block = to_coq_list (Constr.mkApp (tdef, [| tTerm |])) (List.rev defs) in
-    Constr.mkApp (tFix, [| block ; b |])
+  let mkConstruct = mkConstruct
 
-  let mkConstruct (ind, i) u =
-    Constr.mkApp (tConstructor, [| ind ; i ; u |])
+  let mkCoFix = mkCoFix
 
-  let mkCoFix (a,(ns,ts,ds)) =
-    let mk_fun xs i =
-      Constr.mkApp (tmkdef, [| tTerm ; Array.get ns i ;
-                             Array.get ts i ; Array.get ds i ; tO |]) :: xs
-    in
-    let defs = List.fold_left mk_fun [] (seq 0 (Array.length ns)) in
-    let block = to_coq_list (Constr.mkApp (tdef, [| tTerm |])) (List.rev defs) in
-    Constr.mkApp (tCoFix, [| block ; a |])
+  let mkInd = mkInd
 
-  let mkInd i u = Constr.mkApp (tInd, [| i ; u |])
+  let mkCase = mkCase
 
-  let mkCase (ind, npar) nargs p c brs =
-    let info = pair tIndTy tnat ind npar in
-    let branches = List.map2 (fun br nargs ->  pair tnat tTerm nargs br) brs nargs in
-    let tl = prod tnat tTerm in
-    Constr.mkApp (tCase, [| info ; p ; c ; to_coq_list tl branches |])
+  let quote_proj = quote_proj
 
-  let quote_proj ind pars args =
-    pair (prod tIndTy tnat) tnat (pair tIndTy tnat ind pars) args
-
-  let mkProj kn t =
-    Constr.mkApp (tProj, [| kn; t |])
+  let mkProj = mkProj
 end
 
-(*
-  
-  let unquote_bool : quoted_bool -> bool
-(* val unquote_sort : quoted_sort -> Sorts.t *)
-(* val unquote_sort_family : quoted_sort_family -> Sorts.family *)
-val unquote_cast_kind : quoted_cast_kind -> Constr.cast_kind
-val unquote_kn :  quoted_kernel_name -> Libnames.qualid
-val unquote_inductive :  quoted_inductive -> Names.inductive
-(*val unquote_univ_instance :  quoted_univ_instance -> Univ.Instance.t *)
-val unquote_proj : quoted_proj -> (quoted_inductive * quoted_int * quoted_int)
-val unquote_universe : Evd.evar_map -> quoted_sort -> Evd.evar_map * Univ.Universe.t
-val print_term : t -> Pp.std_ppcmds
-val unquote_universe_instance: Evd.evar_map -> quoted_univ_instance -> Evd.evar_map * Univ.Instance.t
-(* val representsIndConstuctor : quoted_inductive -> Term.constr -> bool *)
-val inspect_term : t -> (t, quoted_int, quoted_ident, quoted_name, quoted_sort, quoted_cast_kind, quoted_kernel_name, quoted_inductive, quoted_univ_instance, quoted_proj) structure_of_term
-*)
 
 
 module CoqLiveDenote = Denote(CoqLiveDenoter)

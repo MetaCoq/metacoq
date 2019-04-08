@@ -19,7 +19,7 @@ sig
   val unquote_proj : quoted_proj -> (quoted_inductive * quoted_int * quoted_int)
   val unquote_universe : Evd.evar_map -> quoted_sort -> Evd.evar_map * Univ.Universe.t
   val print_term : t -> Pp.std_ppcmds
-
+  val unquote_universe_instance: Evd.evar_map -> quoted_univ_instance -> Evd.evar_map * Univ.Instance.t
   (* val representsIndConstuctor : quoted_inductive -> Term.constr -> bool *)
   val inspect_term : t -> (t, quoted_int, quoted_ident, quoted_name, quoted_sort, quoted_cast_kind, quoted_kernel_name, quoted_inductive, quoted_univ_instance, quoted_proj) structure_of_term
 

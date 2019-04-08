@@ -604,11 +604,43 @@ Section Conversion.
   | Args.
   (* | Fallback *) (* TODO *)
 
+  Inductive stateR : state -> state -> Prop :=
+  | stateR_Term_Reduction : forall u v, stateR (Term u) (Reduction v)
+  | stateR_Arg_Term : forall u, stateR Args (Term u).
+
+  Derive Signature for stateR.
+
+  Lemma stateR_Acc :
+    forall s, Acc stateR s.
+  Proof.
+    assert (Acc stateR Args) as hArgs.
+    { constructor. intros s h.
+      dependent induction h.
+      all: try discriminate.
+    }
+    assert (forall t, Acc stateR (Term t)) as hTerm.
+    { intros t. constructor. intros s h.
+      dependent induction h.
+      all: try discriminate.
+      apply hArgs.
+    }
+    assert (forall t, Acc stateR (Reduction t)) as hRed.
+    { intros t. constructor. intros s h.
+      dependent induction h.
+      all: try discriminate.
+      apply hTerm.
+    }
+    intro s. destruct s ; eauto.
+  Qed.
+
   Notation pack := (state * context * term * stack * stack)%type.
 
   Definition dumbR (u v : pack) := False.
 
   Notation "( x ; y )" := (existT _ x y).
+
+  Definition lexprod := Subterm.lexprod.
+  Arguments lexprod {_ _} _ _ _ _.
 
   (* Unusable without primitive projections *)
   (* Definition R (x y : state * context * term * stack * stack) := *)
@@ -630,13 +662,31 @@ Section Conversion.
   Definition stk2 (x : pack) :=
     let '(s, Γ, u, π1, π2) := x in π2.
 
-  Definition R_aux Γ :=
-    dlexprod (cored Σ Γ) (fun _ => dumbR).
+  Definition st (x : pack) :=
+    let '(s, Γ, u, π1, π2) := x in s.
 
-  Notation obpack u := (zipc (tm u) (stk1 u) ; u) (only parsing).
+  Definition R_aux Γ :=
+    dlexprod (cored Σ Γ) (fun t => lexprod (@posR t) stateR).
+
+  Notation obpack u :=
+    (zipc (tm u) (stk1 u) ; (stack_pos (tm u) (stk1 u), st u))
+    (only parsing).
 
   Definition R (u v : pack) :=
     R_aux (ctx u) (obpack u) (obpack v).
+
+  (* TODO Should replace acc_dlexprod *)
+  Lemma dlexprod_Acc :
+    forall A B leA leB,
+      (forall x, well_founded (leB x)) ->
+      forall x y,
+        Acc leA x ->
+        Acc (@dlexprod A B leA leB) (x;y).
+  Proof.
+    intros A B leA leB hB x y hA.
+    eapply acc_dlexprod ; try assumption.
+    apply hB.
+  Qed.
 
   Lemma R_aux_Acc :
     forall u,
@@ -644,25 +694,31 @@ Section Conversion.
       Acc (R_aux (ctx u)) (obpack u).
   Proof.
     intros u h.
-    eapply acc_dlexprod.
-    - admit.
+    eapply dlexprod_Acc.
+    - clear. intro t.
+      eapply Subterm.wf_lexprod.
+      + intro. eapply posR_Acc.
+      + intro. eapply stateR_Acc.
     - eapply normalisation. eassumption.
-    - admit.
-  Admitted.
+  Qed.
+
+  (* Lemma aux_f_acc : *)
+  (*   forall A B C (f : A -> B) (g : A -> C) (R : C -> B -> B -> Prop), *)
+  (*     (forall x, Acc (R (g x)) (f x)) -> *)
+  (*     well_founded (fun x y => R (g x) (f x) (f y)). *)
+  (* Proof. *)
+  (*   intros A B C f g R wfR. *)
+  (*   intro x. constructor. intros y h. *)
+  (*   induction (wfR y). *)
+  (*   eapply H0. *)
+
+  (*   eapply H0 ; try eassumption. *)
 
   Lemma R_Acc :
     forall u,
       welltyped Σ (ctx u) (zipc (tm u) (stk1 u)) ->
       Acc R u.
   Proof.
-    intros u h.
-    unfold R.
-    pose proof (R_aux_Acc u h) as ha.
-    clear  - ha.
-    dependent induction ha.
-    constructor. intros y hy.
-    eapply H0 ; try assumption.
-    (* This should more or less be the same... :( *)
   Admitted.
 
   Definition Ret s Γ t π π' :=

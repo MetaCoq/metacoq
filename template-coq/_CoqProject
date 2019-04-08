@@ -1,5 +1,4 @@
 -I src
--I gen-src
 -R theories Template
 
 # the MetaCoq plugin
@@ -39,6 +38,3 @@ theories/TemplateMonad/Core.v
 theories/TemplateMonad/Extractable.v
 theories/TemplateMonad/Monad.v
 theories/monad_utils.v
-
-# for Extraction
-gen-src/Extraction.v

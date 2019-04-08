@@ -690,8 +690,43 @@ struct
   let mkProj = mkProj
   let print_term (u: t) : Pp.t = Pp.str "printing not implemented"
 
+  let unquote_def (x: 't BasicAst.def) : ('t, name, quoted_int) Quoted.adef =
+    {
+      adname=dname x;
+      adtype=dtype x;
+      adbody=dbody x;
+      rarg=rarg x
+    }
+
   let inspect_term (tt: t):(t, quoted_int, quoted_ident, quoted_name, quoted_sort, quoted_cast_kind, quoted_kernel_name, quoted_inductive, quoted_univ_instance, quoted_proj) structure_of_term=
-    failwith "nyi"
+    match tt with
+    | Coq_tRel n -> ACoq_tRel n
+    | Coq_tVar v -> ACoq_tVar v
+    | Coq_tMeta n -> ACoq_tMeta n
+    | Coq_tEvar (x,l) -> ACoq_tEvar (x,l)
+    | Coq_tSort u -> ACoq_tSort u
+    | Coq_tCast (t,k,tt) -> ACoq_tCast (t,k,tt)
+    | Coq_tProd (a,b,c) -> ACoq_tProd (a,b,c)
+    | Coq_tLambda (a,b,c) -> ACoq_tLambda (a,b,c)
+    | Coq_tLetIn (a,b,c,d) -> ACoq_tLetIn (a,b,c,d)
+    | Coq_tApp (a,b) -> ACoq_tApp (a,b)
+    | Coq_tConst (a,b) -> ACoq_tConst (a,b)
+    | Coq_tInd (a,b) -> ACoq_tInd (a,b)
+    | Coq_tConstruct (a,b,c) -> ACoq_tConstruct (a,b,c)
+    | Coq_tCase (a,b,c,d) -> ACoq_tCase (a,b,c,d)
+    | Coq_tProj (a,b) -> ACoq_tProj (a,b)
+    | Coq_tFix (a,b) -> ACoq_tFix (List.map unquote_def a,b)
+    | Coq_tCoFix (a,b) -> ACoq_tCoFix (List.map unquote_def a,b)
+    (*
+    | Coq_tApp of term * term list
+    | Coq_tConst of kername * universe_instance
+    | Coq_tInd of inductive * universe_instance
+    | Coq_tConstruct of inductive * nat * universe_instance
+    | Coq_tCase of (inductive * nat) * term * term * (nat * term) list
+    | Coq_tProj of projection * term
+    | Coq_tFix of term mfixpoint * nat
+    | Coq_tCoFix of term mfixpoint * nat
+    *)
 
   let unquote_ident (qi: quoted_ident) : Id.t
   = failwith "nyi"

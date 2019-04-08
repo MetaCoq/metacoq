@@ -689,36 +689,36 @@ Section Conversion.
   Qed.
 
   Lemma R_aux_Acc :
-    forall u,
-      welltyped Σ (ctx u) (zipc (tm u) (stk1 u)) ->
-      Acc (R_aux (ctx u)) (obpack u).
+    forall Γ t p s,
+      welltyped Σ Γ t ->
+      Acc (R_aux Γ) (t ; (p, s)).
   Proof.
-    intros u h.
+    intros Γ t p s h.
     eapply dlexprod_Acc.
-    - clear. intro t.
-      eapply Subterm.wf_lexprod.
+    - intro u. eapply Subterm.wf_lexprod.
       + intro. eapply posR_Acc.
       + intro. eapply stateR_Acc.
     - eapply normalisation. eassumption.
   Qed.
-
-  (* Lemma aux_f_acc : *)
-  (*   forall A B C (f : A -> B) (g : A -> C) (R : C -> B -> B -> Prop), *)
-  (*     (forall x, Acc (R (g x)) (f x)) -> *)
-  (*     well_founded (fun x y => R (g x) (f x) (f y)). *)
-  (* Proof. *)
-  (*   intros A B C f g R wfR. *)
-  (*   intro x. constructor. intros y h. *)
-  (*   induction (wfR y). *)
-  (*   eapply H0. *)
-
-  (*   eapply H0 ; try eassumption. *)
 
   Lemma R_Acc :
     forall u,
       welltyped Σ (ctx u) (zipc (tm u) (stk1 u)) ->
       Acc R u.
   Proof.
+    intros [[[[s Γ] t] π1] π2] h.
+    cbn in h.
+    (* pose proof (R_aux_Acc Γ (zipc t π1) (stack_pos t π1) s h) as hacc. *)
+    (* constructor. intros [[[[r Δ] u] θ1] θ2] h'. *)
+    (* pose proof (R_aux_Acc _ _ _ _) as hacc. *)
+    (* clear - hacc h'. *)
+    (* dependent induction hacc. *)
+    (* eapply H0. *)
+
+    (* unfold R. *)
+    (* constructor. intros [[[[r Δ] u] θ1] θ2] h'. *)
+    (* cbn in *. *)
+    (* eapply R_aux_Acc. *)
   Admitted.
 
   Definition Ret s Γ t π π' :=

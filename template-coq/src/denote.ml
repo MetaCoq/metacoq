@@ -14,8 +14,7 @@ open TemplateCoqQuoter
 
 let print_term (u: t) : Pp.t = pr_constr u
 
-module Denote (D : Denoter) =
-struct
+let strict_unquote_universe_mode = ref true
 
 let unquote_pair trm =
   let (h,args) = app_full trm [] in
@@ -101,7 +100,6 @@ let unquote_cast_kind trm =
   else
     not_supported_verb trm "unquote_cast_kind"
 
-
 let unquote_name trm =
   let (h,args) = app_full trm [] in
   if Constr.equal h nAnon then
@@ -113,53 +111,31 @@ let unquote_name trm =
   else
     not_supported_verb trm "unquote_name"
 
-
-(* If strict unquote universe mode is on then fail when unquoting a non *)
-(* declared universe / an empty list of level expressions. *)
-(* Otherwise, add it / a fresh level the global environnment. *)
-
-let strict_unquote_universe_mode = ref true
-
-let _ =
-  let open Goptions in
-  declare_bool_option
-    { optdepr  = false;
-      optname  = "strict unquote universe mode";
-      optkey   = ["Strict"; "Unquote"; "Universe"; "Mode"];
-      optread  = (fun () -> !strict_unquote_universe_mode);
-      optwrite = (fun b -> strict_unquote_universe_mode := b) }
-
-let map_evm (f : 'a -> 'b -> 'a * 'c) (evm : 'a) (l : 'b list) : 'a * ('c list) =
-  let evm, res = List.fold_left (fun (evm, l) b -> let evm, c = f evm b in evm, c :: l) (evm, []) l in
-  evm, List.rev res
-
-
-
 let get_level evm s =
   if CString.string_contains ~where:s ~what:"." then
     match List.rev (CString.split '.' s) with
     | [] -> CErrors.anomaly (str"Invalid universe name " ++ str s ++ str".")
     | n :: dp ->
-       let num = int_of_string n in
-       let dp = DirPath.make (List.map Id.of_string dp) in
-       let l = Univ.Level.make dp num in
-       try
-         let evm = Evd.add_global_univ evm l in
-         if !strict_unquote_universe_mode then
-           CErrors.user_err ~hdr:"unquote_level" (str ("Level "^s^" is not a declared level and you are in Strict Unquote Universe Mode."))
-         else (Feedback.msg_info (str"Fresh universe " ++ Level.pr l ++ str" was added to the context.");
-               evm, l)
-       with
-       | UGraph.AlreadyDeclared -> evm, l
+      let num = int_of_string n in
+      let dp = DirPath.make (List.map Id.of_string dp) in
+      let l = Univ.Level.make dp num in
+      try
+        let evm = Evd.add_global_univ evm l in
+        if !strict_unquote_universe_mode then
+          CErrors.user_err ~hdr:"unquote_level" (str ("Level "^s^" is not a declared level and you are in Strict Unquote Universe Mode."))
+        else (Feedback.msg_info (str"Fresh universe " ++ Level.pr l ++ str" was added to the context.");
+              evm, l)
+      with
+      | UGraph.AlreadyDeclared -> evm, l
   else
     try
       evm, Evd.universe_of_name evm (Id.of_string s)
     with Not_found ->
-         try
-           let univ, k = Nametab.locate_universe (Libnames.qualid_of_string s) in
-           evm, Univ.Level.make univ k
-         with Not_found ->
-           CErrors.user_err ~hdr:"unquote_level" (str ("Level "^s^" is not a declared level."))
+    try
+      let univ, k = Nametab.locate_universe (Libnames.qualid_of_string s) in
+      evm, Univ.Level.make univ k
+    with Not_found ->
+      CErrors.user_err ~hdr:"unquote_level" (str ("Level "^s^" is not a declared level."))
 
 
 
@@ -178,7 +154,7 @@ let unquote_level evm trm (* of type level *) : Evd.evar_map * Univ.Level.t =
   else if Constr.equal h tLevel then
     match args with
     | s :: [] -> debug (fun () -> str "Unquoting level " ++ pr_constr trm);
-                 get_level evm (unquote_string s)
+      get_level evm (unquote_string s)
     | _ -> bad_term_verb trm "unquote_level"
   else if Constr.equal h tLevelVar then
     match args with
@@ -197,15 +173,19 @@ let unquote_universe evm trm (* of type universe *) =
   let levels = List.map unquote_pair (unquote_list trm) in
   match levels with
   | [] -> if !strict_unquote_universe_mode then
-            CErrors.user_err ~hdr:"unquote_universe" (str "It is not possible to unquote an empty universe in Strict Unquote Universe Mode.")
-          else
-            let evm, u = Evd.new_univ_variable (Evd.UnivFlexible false) evm in
-            Feedback.msg_info (str"Fresh universe " ++ Universe.pr u ++ str" was added to the context.");
-            evm, u
+      CErrors.user_err ~hdr:"unquote_universe" (str "It is not possible to unquote an empty universe in Strict Unquote Universe Mode.")
+    else
+      let evm, u = Evd.new_univ_variable (Evd.UnivFlexible false) evm in
+      Feedback.msg_info (str"Fresh universe " ++ Universe.pr u ++ str" was added to the context.");
+      evm, u
   | (l,b)::q -> List.fold_left (fun (evm,u) (l,b) -> let evm, u' = unquote_level_expr evm l b
-                                                     in evm, Univ.Universe.sup u u')
-                               (unquote_level_expr evm l b) q
+                                 in evm, Univ.Universe.sup u u')
+                  (unquote_level_expr evm l b) q
 
+let map_evm (f : 'a -> 'b -> 'a * 'c) (evm : 'a) (l : 'b list) : 'a * ('c list) =
+  let evm, res = List.fold_left (fun (evm, l) b -> let evm, c = f evm b in evm, c :: l) (evm, []) l in
+  evm, List.rev res
+                  
 let unquote_universe_instance evm trm (* of type universe_instance *) =
   let l = unquote_list trm in
   let evm, l = map_evm unquote_level evm l in
@@ -220,10 +200,10 @@ let unquote_proj (qp : quoted_proj) : (quoted_inductive * quoted_int * quoted_in
   let (h,args) = app_full qp [] in
   match args with
   | tyin::tynat::indpars::idx::[] ->
-     let (h',args') = app_full indpars [] in
-     (match args' with
-      | tyind :: tynat :: ind :: n :: [] -> (ind, n, idx)
-      | _ -> bad_term_verb qp "unquote_proj")
+    let (h',args') = app_full indpars [] in
+    (match args' with
+     | tyind :: tynat :: ind :: n :: [] -> (ind, n, idx)
+     | _ -> bad_term_verb qp "unquote_proj")
   | _ -> bad_term_verb qp "unquote_proj"
 
 let unquote_inductive trm =
@@ -244,6 +224,27 @@ let unquote_inductive trm =
     | _ -> assert false
   else
     bad_term_verb trm "non-constructor"
+
+module Denote (D : Denoter) =
+struct
+
+
+
+(* If strict unquote universe mode is on then fail when unquoting a non *)
+(* declared universe / an empty list of level expressions. *)
+(* Otherwise, add it / a fresh level the global environnment. *)
+
+
+let _ =
+  let open Goptions in
+  declare_bool_option
+    { optdepr  = false;
+      optname  = "strict unquote universe mode";
+      optkey   = ["Strict"; "Unquote"; "Universe"; "Mode"];
+      optread  = (fun () -> !strict_unquote_universe_mode);
+      optwrite = (fun b -> strict_unquote_universe_mode := b) }
+
+
 
 
 (* TODO: replace app_full by this abstract version?*)

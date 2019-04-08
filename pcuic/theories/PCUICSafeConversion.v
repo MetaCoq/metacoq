@@ -604,7 +604,9 @@ Section Conversion.
   | Args.
   (* | Fallback *) (* TODO *)
 
-  Definition dumbR (u v : state * context * term * stack * stack) := False.
+  Notation pack := (state * context * term * stack * stack)%type.
+
+  Definition dumbR (u v : pack) := False.
 
   Notation "( x ; y )" := (existT _ x y).
 
@@ -616,28 +618,30 @@ Section Conversion.
   (*            (zipc u π1 ; x) *)
   (*            (zipc v θ1 ; y). *)
 
-  Definition ctx (x : state * context * term * stack * stack) :=
+  Definition ctx (x : pack) :=
     let '(s, Γ, u, π1, π2) := x in Γ.
 
-  Definition tm (x : state * context * term * stack * stack) :=
+  Definition tm (x : pack) :=
     let '(s, Γ, u, π1, π2) := x in u.
 
-  Definition stk1 (x : state * context * term * stack * stack) :=
+  Definition stk1 (x : pack) :=
     let '(s, Γ, u, π1, π2) := x in π1.
 
-  Definition stk2 (x : state * context * term * stack * stack) :=
+  Definition stk2 (x : pack) :=
     let '(s, Γ, u, π1, π2) := x in π2.
 
-  Definition R (x y : state * context * term * stack * stack) :=
-    dlexprod (cored Σ (ctx x)) (fun _ => dumbR)
-             (zipc (tm x) (stk1 x) ; x)
-             (zipc (tm y) (stk1 y) ; y).
+  Definition R_aux Γ :=
+    dlexprod (cored Σ Γ) (fun _ => dumbR).
 
-  Lemma R_Acc_aux :
+  Notation obpack u := (zipc (tm u) (stk1 u) ; u) (only parsing).
+
+  Definition R (u v : pack) :=
+    R_aux (ctx u) (obpack u) (obpack v).
+
+  Lemma R_aux_Acc :
     forall u,
       welltyped Σ (ctx u) (zipc (tm u) (stk1 u)) ->
-      Acc (dlexprod (cored Σ (ctx u)) (fun _ => dumbR))
-          (zipc (tm u) (stk1 u) ; u).
+      Acc (R_aux (ctx u)) (obpack u).
   Proof.
     intros u h.
     eapply acc_dlexprod.
@@ -652,17 +656,13 @@ Section Conversion.
       Acc R u.
   Proof.
     intros u h.
-    pose proof (R_Acc_aux u h) as hacc.
-    clear - hacc.
-    dependent induction hacc.
+    unfold R.
+    pose proof (R_aux_Acc u h) as ha.
+    clear  - ha.
+    dependent induction ha.
     constructor. intros y hy.
     eapply H0 ; try assumption.
-    unfold R in hy.
-
-    (* destruct u as [[[[s Γ] u] π1] π2]. *)
-    (* unfold R. cbn. *)
-    (* eapply acc_dlexprod. *)
-
+    (* This should more or less be the same... :( *)
   Admitted.
 
   Definition Ret s Γ t π π' :=
@@ -1539,6 +1539,7 @@ Section Conversion.
   Qed.
   Next Obligation.
     apply R_Acc.
+    cbn. assumption.
   Qed.
 
   Definition isconv Γ leq t1 π1 h1 t2 π2 h2 :=

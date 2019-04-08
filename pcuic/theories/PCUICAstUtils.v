@@ -728,6 +728,31 @@ Ltac nodec :=
   let bot := fresh "bot" in
   try solve [ constructor ; intro bot ; inversion bot ; subst ; tauto ].
 
+Definition eq_option {A} `{ReflectEq A} (u v : option A) : bool :=
+  match u, v with
+  | Some u, Some v => eqb u v
+  | None, None => true
+  | _, _ => false
+  end.
+
+Instance reflect_option : forall {A}, ReflectEq A -> ReflectEq (option A) := {
+  eqb := eq_option
+}.
+Proof.
+  intros x y. destruct x, y.
+  all: cbn.
+  all: try solve [ constructor ; easy ].
+  destruct (eqb_spec a a0) ; nodec.
+  constructor. f_equal. assumption.
+Qed.
+
+Instance option_dec : forall {A}, EqDec A -> EqDec (option A).
+Proof.
+  intros A h.
+  pose (EqDec_ReflectEq A).
+  exact _.
+Qed.
+
 Fixpoint eq_list {A} (eqA : A -> A -> bool) (l l' : list A) : bool :=
   match l, l' with
   | a :: l, a' :: l' =>

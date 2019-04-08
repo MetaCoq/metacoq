@@ -61,6 +61,7 @@ let of_cast_kind (ck: BasicAst.cast_kind) : Constr.cast_kind =
 
   (* todo(gmm): determine what of these already exist. *)
 let rec to_constr_ev (evm : Evd.evar_map) (t : Ast0.term) : Evd.evar_map * Constr.t =
+  failwith "to_constr_ev" (*
   match t with
   | Coq_tRel x -> evm, Constr.mkRel (of_nat x + 1)
   | Coq_tVar x -> evm, Constr.mkVar (to_ident x)
@@ -134,7 +135,7 @@ let rec to_constr_ev (evm : Evd.evar_map) (t : Ast0.term) : Evd.evar_map * Const
      | Some p -> evm, Constr.mkProj (Names.Projection.make p false, t)
      | None -> bad_term trm)
   | _ ->  not_supported_verb trm "big_case"
-
+*)
 let to_constr (t : Ast0.term) : Constr.t =
   snd (to_constr_ev Evd.empty t)
 

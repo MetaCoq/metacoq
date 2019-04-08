@@ -3,6 +3,7 @@ open Names
 open Pp (* this adds the ++ to the current scope *)
 
 open Tm_util
+open Quoted
 open Quoter
 open Constr_quoter
 open TemplateCoqQuoter

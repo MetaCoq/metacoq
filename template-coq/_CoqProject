@@ -4,6 +4,7 @@
 
 # the MetaCoq plugin
 src/tm_util.ml
+src/quoted.ml
 # src/quoter.mli
 src/quoter.ml
 # src/constr_quoter.mli

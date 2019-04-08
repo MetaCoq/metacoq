@@ -1,6 +1,5 @@
 open Extractable
 open Plugin_core
-open Ast0
 open BasicAst
 
 open Quoter
@@ -40,8 +39,80 @@ let of_kername : Names.KerName.t -> char list =
 let to_kername : char list -> Names.KerName.t =
   failwith "of_kername"
 
-let of_mib (t : Plugin_core.mutual_inductive_body) : Ast0.mutual_inductive_body =
-  failwith "of_mib"
+(* todo(gmm): this definition adapted from quoter.ml *)
+let quote_rel_decl env = function
+  | Context.Rel.Declaration.LocalAssum (na, t) ->
+    let t' = Ast_quoter.quote_term env t in
+    Ast_quoter.quote_context_decl (Ast_quoter.quote_name na) None t'
+  | Context.Rel.Declaration.LocalDef (na, b, t) ->
+    let b' = Ast_quoter.quote_term env b in
+    let t' = Ast_quoter.quote_term env t in
+    Ast_quoter.quote_context_decl (Ast_quoter.quote_name na) (Some b') t'
+
+(* todo(gmm): this definition adapted from quoter.ml *)
+let quote_rel_context env ctx =
+  let decls, env =
+    List.fold_right (fun decl (ds, env) ->
+        let x = quote_rel_decl env decl in
+        (x :: ds, Environ.push_rel decl env))
+      ctx ([],env) in
+  Ast_quoter.quote_context decls
+
+(* todo(gmm): this definition adapted from quoter.ml (the body of quote_minductive_type) *)
+let of_mib (env : Environ.env) (mib : Plugin_core.mutual_inductive_body) : Ast0.mutual_inductive_body =
+  let open Declarations in
+  let uctx = get_abstract_inductive_universes mib.mind_universes in
+  let inst = Univ.UContext.instance uctx in
+  let indtys =
+    (CArray.map_to_list (fun oib ->
+         let ty = Inductive.type_of_inductive env ((mib,oib),inst) in
+         (Context.Rel.Declaration.LocalAssum (Names.Name oib.mind_typename, ty))) mib.mind_packets)
+  in
+  let envind = Environ.push_rel_context (List.rev indtys) env in
+  let (ls,acc) =
+    List.fold_left (fun (ls,acc) oib ->
+	let named_ctors =
+	  CList.combine3
+	    (Array.to_list oib.mind_consnames)
+	    (Array.to_list oib.mind_user_lc)
+	    (Array.to_list oib.mind_consnrealargs)
+	in
+        let indty = Inductive.type_of_inductive env ((mib,oib),inst) in
+        let indty = Ast_quoter.quote_term env indty in
+	let (reified_ctors,acc) =
+	  List.fold_left (fun (ls,acc) (nm,ty,ar) ->
+	      debug (fun () -> Pp.(str "opt_hnf_ctor_types:" ++ spc () ++
+                                   bool !opt_hnf_ctor_types)) ;
+	      let ty = if !opt_hnf_ctor_types then hnf_type envind ty else ty in
+	      let ty = quote_term acc ty in
+	      ((Ast_quoter.quote_ident nm, ty, Ast_quoter.quote_int ar) :: ls, acc))
+	    ([],acc) named_ctors
+	in
+        let projs, acc =
+          match mib.mind_record with
+          | Some (Some (id, csts, ps)) ->
+            let ctxwolet = Termops.smash_rel_context mib.mind_params_ctxt in
+            let indty = Constr.mkApp (Constr.mkIndU ((assert false (* t *),0),inst),
+                                      Context.Rel.to_extended_vect Constr.mkRel 0 ctxwolet) in
+            let indbinder = Context.Rel.Declaration.LocalAssum (Names.Name id,indty) in
+            let envpars = Environ.push_rel_context (indbinder :: ctxwolet) env in
+            let ps, acc = CArray.fold_right2 (fun cst pb (ls,acc) ->
+                let ty = quote_term envpars pb.proj_type in
+                let kn = Names.KerName.label (Names.Constant.canonical cst) in
+                let na = Ast_quoter.quote_ident (Names.Label.to_id kn) in
+                ((na, ty) :: ls, acc)) csts ps ([],acc)
+            in ps, acc
+          | _ -> [], acc
+        in
+        let sf = List.map Ast_quoter.quote_sort_family oib.mind_kelim in
+	(Ast_quoter.quote_ident oib.mind_typename, indty, sf, (List.rev reified_ctors), projs) :: ls, acc)
+      ([],env) (Array.to_list mib.mind_packets)
+  in
+  let nparams = Ast_quoter.quote_int mib.mind_nparams in
+  let paramsctx = quote_rel_context env mib.mind_params_ctxt in
+  let uctx = quote_abstract_inductive_universes mib.mind_universes in
+  let bodies = List.map Ast_quoter.mk_one_inductive_body (List.rev ls) in
+  Ast_quoter.mk_mutual_inductive_body nparams paramsctx bodies uctx
 
 let to_mie : _ -> Plugin_core.mutual_inductive_entry =
   failwith "to_mie"
@@ -146,6 +217,9 @@ let tmOfConstr (t : Constr.t) : Ast0.term tm =
   fun env evm k _ ->
     k env evm (of_constr env t)
 
+let tmOfMib (t : Plugin_core.mutual_inductive_body) : Ast0.mutual_inductive_body tm =
+  fun env evm k _ ->
+    k env evm (of_mib env t)
 
 let rec interp_tm (t : 'a coq_TM) : 'a tm =
   match t with
@@ -185,7 +259,7 @@ let rec interp_tm (t : 'a coq_TM) : 'a tm =
   | Coq_tmQuoteInductive kn ->
     tmMap (function
              None -> Obj.magic None
-           | Some mib -> Obj.magic (Some (of_mib mib)))
+           | Some mib -> Obj.magic (tmMap (fun x -> Some x) (tmOfMib mib)))
           (tmQuoteInductive (to_kername kn))
   | Coq_tmQuoteUniverses ->
     tmMap (fun x -> failwith "tmQuoteUniverses") tmQuoteUniverses

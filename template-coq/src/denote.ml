@@ -3,6 +3,7 @@ open Names
 open Pp (* this adds the ++ to the current scope *)
 
 open Tm_util
+open Quoted
 open Quoter
 open Constr_quoter
 open TemplateCoqQuoter
@@ -41,6 +42,10 @@ let inspect_term (t:Constr.t) :  (Constr.t, quoted_int, quoted_ident, quoted_nam
   else if Constr.equal h tVar then
     match args with
       x :: _ -> ACoq_tVar x
+    | _ -> CErrors.user_err (print_term t ++ Pp.str ("has bad structure"))
+  else if Constr.equal h tMeta then
+    match args with
+      x :: _ -> ACoq_tMeta x
     | _ -> CErrors.user_err (print_term t ++ Pp.str ("has bad structure"))
   else if Constr.equal h tSort then
     match args with

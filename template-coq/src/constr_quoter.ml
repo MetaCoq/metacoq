@@ -3,6 +3,7 @@ open Entries
 open Names
 open Pp
 
+open Quoted
 open Quoter
 
 let contrib_name = "template-coq"

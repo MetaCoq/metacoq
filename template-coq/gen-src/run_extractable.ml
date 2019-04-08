@@ -22,7 +22,7 @@ let to_ident : char list -> Names.Id.t =
 let of_ident : Names.Id.t -> char list =
   failwith "of_ident"
 
-let of_global_reference (t : global_reference) : BasicAst.global_reference =
+let of_global_reference (t : Plugin_core.global_reference) : BasicAst.global_reference =
   failwith "of_global_reference"
 
 let to_qualid (c : char list) : Libnames.qualid =
@@ -46,7 +46,7 @@ let to_mie : _ -> Plugin_core.mutual_inductive_entry =
 let of_constant_entry : _ -> Ast0.constant_entry =
   failwith "of_constant_entry"
 
-(* what about the overflow? 
+(* what about the overflow?
   efficiency? extract to bigint using Coq directives and convert to int here? *)
 let of_nat (t : Datatypes.nat) : int =
   failwith "of_constr"
@@ -58,9 +58,10 @@ let of_cast_kind (ck: BasicAst.cast_kind) : Constr.cast_kind =
   | Cast -> Constr.DEFAULTcast
   | RevertCast -> Constr.REVERTcast
 
-    
+
   (* todo(gmm): determine what of these already exist. *)
 let rec to_constr_ev (evm : Evd.evar_map) (t : Ast0.term) : Evd.evar_map * Constr.t =
+  failwith "to_constr_ev" (*
   match t with
   | Coq_tRel x -> evm, Constr.mkRel (of_nat x + 1)
   | Coq_tVar x -> evm, Constr.mkVar (to_ident x)
@@ -134,12 +135,11 @@ let rec to_constr_ev (evm : Evd.evar_map) (t : Ast0.term) : Evd.evar_map * Const
      | Some p -> evm, Constr.mkProj (Names.Projection.make p false, t)
      | None -> bad_term trm)
   | _ ->  not_supported_verb trm "big_case"
-
-
+*)
 let to_constr (t : Ast0.term) : Constr.t =
   snd (to_constr_ev Evd.empty t)
 
-    
+
 let rec interp_tm (t : 'a coq_TM) : 'a tm =
   match t with
   | Coq_tmReturn x -> tmReturn x

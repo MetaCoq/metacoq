@@ -3,6 +3,8 @@ open Entries
 open Declarations
 open Pp
 
+open Quoted
+
 let cast_prop = ref (false)
 
 (* whether Set Template Cast Propositions is on, as needed for erasure in Certicoq *)
@@ -72,71 +74,9 @@ let split_name s : (Names.DirPath.t * Names.Id.t) =
      let dp = (DirPath.make (List.map Id.of_string rst)) in (dp, Names.Id.of_string nm)
   | [] -> raise (Failure "Empty name cannot be quoted")
 
-
-type ('a,'b) sum =
-  Left of 'a | Right of 'b
-
-type ('term, 'name, 'nat) adef = { adname : 'name; adtype : 'term; adbody : 'term; rarg : 'nat }
-
-type ('term, 'name, 'nat) amfixpoint = ('term, 'name, 'nat) adef list
-
-type ('term, 'nat, 'ident, 'name, 'quoted_sort, 'cast_kind, 'kername, 'inductive, 'universe_instance, 'projection) structure_of_term =
-  | ACoq_tRel of 'nat
-  | ACoq_tVar of 'ident
-  | ACoq_tEvar of 'nat * 'term list
-  | ACoq_tSort of 'quoted_sort
-  | ACoq_tCast of 'term * 'cast_kind * 'term
-  | ACoq_tProd of 'name * 'term * 'term
-  | ACoq_tLambda of 'name * 'term * 'term
-  | ACoq_tLetIn of 'name * 'term * 'term * 'term
-  | ACoq_tApp of 'term * 'term list
-  | ACoq_tConst of 'kername * 'universe_instance
-  | ACoq_tInd of 'inductive * 'universe_instance
-  | ACoq_tConstruct of 'inductive * 'nat * 'universe_instance
-  | ACoq_tCase of ('inductive * 'nat) * 'term * 'term * ('nat * 'term) list
-  | ACoq_tProj of 'projection * 'term
-  | ACoq_tFix of ('term, 'name, 'nat) amfixpoint * 'nat
-  | ACoq_tCoFix of ('term, 'name, 'nat) amfixpoint * 'nat
-
-module type Quoter = sig
-  type t
-
-  type quoted_ident
-  type quoted_int
-  type quoted_bool
-  type quoted_name
-  type quoted_sort
-  type quoted_cast_kind
-  type quoted_kernel_name
-  type quoted_inductive
-  type quoted_proj
-  type quoted_global_reference
-
-  type quoted_sort_family
-  type quoted_constraint_type
-  type quoted_univ_constraint
-  type quoted_univ_instance
-  type quoted_univ_constraints
-  type quoted_univ_context
-  type quoted_inductive_universes
-
-  type quoted_mind_params
-  type quoted_ind_entry = quoted_ident * t * quoted_bool * quoted_ident list * t list
-  type quoted_definition_entry = t * t option * quoted_univ_context
-  type quoted_mind_entry
-  type quoted_mind_finiteness
-  type quoted_entry
-
-  (* Local contexts *)
-  type quoted_context_decl
-  type quoted_context
-
-  type quoted_one_inductive_body
-  type quoted_mutual_inductive_body
-  type quoted_constant_body
-  type quoted_global_decl
-  type quoted_global_declarations
-  type quoted_program  (* the return type of quote_recursively *)
+module type Quoter =
+sig
+  include Quoted
 
   val quote_ident : Id.t -> quoted_ident
   val quote_name : Name.t -> quoted_name
@@ -166,27 +106,6 @@ module type Quoter = sig
     quoted_mind_entry
 
   val quote_entry : (quoted_definition_entry, quoted_mind_entry) sum option -> quoted_entry
-
-  val mkName : quoted_ident -> quoted_name
-  val mkAnon : quoted_name
-
-  val mkRel : quoted_int -> t
-  val mkVar : quoted_ident -> t
-  val mkEvar : quoted_int -> t array -> t
-  val mkSort : quoted_sort -> t
-  val mkCast : t -> quoted_cast_kind -> t -> t
-  val mkProd : quoted_name -> t -> t -> t
-  val mkLambda : quoted_name -> t -> t -> t
-  val mkLetIn : quoted_name -> t -> t -> t -> t
-  val mkApp : t -> t array -> t
-  val mkConst : quoted_kernel_name -> quoted_univ_instance -> t
-  val mkInd : quoted_inductive -> quoted_univ_instance -> t
-  val mkConstruct : quoted_inductive * quoted_int -> quoted_univ_instance -> t
-  val mkCase : (quoted_inductive * quoted_int) -> quoted_int list -> t -> t ->
-               t list -> t
-  val mkProj : quoted_proj -> t -> t
-  val mkFix : (quoted_int array * quoted_int) * (quoted_name array * t array * t array) -> t
-  val mkCoFix : quoted_int * (quoted_name array * t array * t array) -> t
 
   val quote_context_decl : quoted_name -> t option -> t -> quoted_context_decl
   val quote_context : quoted_context_decl list -> quoted_context

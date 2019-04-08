@@ -319,6 +319,102 @@ let unquote_inductive trm =
   else
     bad_term_verb trm "non-constructor"
 
+let inspect_term (t:Constr.t) :  (Constr.t, quoted_int, quoted_ident, quoted_name, quoted_sort, quoted_cast_kind, quoted_kernel_name, quoted_inductive, quoted_univ_instance, quoted_proj) structure_of_term =
+  let (h,args) = app_full t [] in
+  if Constr.equal h tRel then
+    match args with
+      x :: _ -> ACoq_tRel x
+    | _ -> CErrors.user_err (print_term t ++ Pp.str ("has bad structure"))
+  else if Constr.equal h tVar then
+    match args with
+      x :: _ -> ACoq_tVar x
+    | _ -> CErrors.user_err (print_term t ++ Pp.str ("has bad structure"))
+  else if Constr.equal h tMeta then
+    match args with
+      x :: _ -> ACoq_tMeta x
+    | _ -> CErrors.user_err (print_term t ++ Pp.str ("has bad structure"))
+  else if Constr.equal h tSort then
+    match args with
+      x :: _ -> ACoq_tSort x
+    | _ -> CErrors.user_err (print_term t ++ Pp.str ("has bad structure"))
+  else if Constr.equal h tCast then
+    match args with
+      x :: y :: z :: _ -> ACoq_tCast (x, y, z)
+    | _ -> CErrors.user_err (print_term t ++ Pp.str ("has bad structure"))
+  else if Constr.equal h tProd then
+    match args with
+      n :: t :: b :: _ -> ACoq_tProd (n,t,b)
+    | _ -> CErrors.user_err (print_term t ++ Pp.str ("has bad structure"))
+  else if Constr.equal h tLambda then
+    match args with
+      n  :: t :: b :: _ -> ACoq_tLambda (n,t,b)
+    | _ -> CErrors.user_err (print_term t ++ Pp.str ("has bad structure"))
+  else if Constr.equal h tLetIn then
+    match args with
+      n :: e :: t :: b :: _ -> ACoq_tLetIn (n,e,t,b)
+    | _ -> CErrors.user_err (print_term t ++ Pp.str ("has bad structure"))
+  else if Constr.equal h tApp then
+    match args with
+      f::xs::_ -> ACoq_tApp (f, unquote_list xs)
+    | _ -> CErrors.user_err (print_term t ++ Pp.str ("has bad structure"))
+  else if Constr.equal h tConst then
+    match args with
+      s::u::_ -> ACoq_tConst (s, u)
+    | _ -> CErrors.user_err (print_term t ++ Pp.str ("has bad structure"))
+  else if Constr.equal h tInd then
+    match args with
+      i::u::_ -> ACoq_tInd (i,u)
+    | _ -> CErrors.user_err (print_term t ++ Pp.str ("has bad structure"))
+  else if Constr.equal h tConstructor then
+    match args with
+      i::idx::u::_ -> ACoq_tConstruct (i,idx,u)
+    | _ -> CErrors.user_err (print_term t ++ Pp.str ("has bad structure: constructor case"))
+  else if Constr.equal h tCase then
+    match args with
+      info::ty::d::brs::_ -> ACoq_tCase (unquote_pair info, ty, d, List.map unquote_pair (unquote_list brs))
+    | _ -> CErrors.user_err (print_term t ++ Pp.str ("has bad structure"))
+  else if Constr.equal h tFix then
+    match args with
+      bds::i::_ ->
+      let unquoteFbd  b  =
+        let (_,args) = app_full b [] in
+        match args with
+        | _(*type*) :: na :: ty :: body :: rarg :: [] ->
+            { adtype = ty;
+              adname = na;
+              adbody = body;
+              rarg
+            }
+        |_ -> raise (Failure " (mkdef must take exactly 5 arguments)")
+      in
+      let lbd = List.map unquoteFbd (unquote_list bds) in
+      ACoq_tFix (lbd, i)
+    | _ -> CErrors.user_err (print_term t ++ Pp.str ("has bad structure"))
+  else if Constr.equal h tCoFix then
+    match args with
+      bds::i::_ ->
+      let unquoteFbd  b  =
+        let (_,args) = app_full b [] in
+        match args with
+        | _(*type*) :: na :: ty :: body :: rarg :: [] ->
+            { adtype = ty;
+              adname = na;
+              adbody = body;
+              rarg
+            }
+        |_ -> raise (Failure " (mkdef must take exactly 5 arguments)")
+      in
+      let lbd = List.map unquoteFbd (unquote_list bds) in
+      ACoq_tCoFix (lbd, i)
+    | _ -> CErrors.user_err (print_term t ++ Pp.str ("has bad structure"))
+  else if Constr.equal h tProj then
+    match args with
+      proj::t::_ -> ACoq_tProj (proj, t)
+    | _ -> CErrors.user_err (print_term t ++ Pp.str ("has bad structure"))
+
+  else
+    CErrors.user_err (str"inspect_term: cannot recognize " ++ print_term t ++ str" (maybe you forgot to reduce it?)")
+        
 module Denote (D : Denoter) =
 struct
 
@@ -424,3 +520,146 @@ let denote_term (evm : Evd.evar_map) (trm: D.t) : Evd.evar_map * Constr.t =
         | None -> (*bad_term trm *) failwith "tproj case of denote_term")
     | _ -> failwith "big case of denote_term" 
   in aux evm trm
+
+end
+
+open Denoter
+module CoqLiveDenoter =
+struct
+  type t = Constr.t
+
+  type quoted_ident = Constr.t (* of type Ast.ident *)
+  type quoted_int = Constr.t (* of type nat *)
+  type quoted_bool = Constr.t (* of type bool *)
+  type quoted_name = Constr.t (* of type Ast.name *)
+  type quoted_sort = Constr.t (* of type Ast.universe *)
+  type quoted_cast_kind = Constr.t  (* of type Ast.cast_kind *)
+  type quoted_kernel_name = Constr.t (* of type Ast.kername *)
+  type quoted_inductive = Constr.t (* of type Ast.inductive *)
+  type quoted_proj = Constr.t (* of type Ast.projection *)
+  type quoted_global_reference = Constr.t (* of type Ast.global_reference *)
+
+  type quoted_sort_family = Constr.t (* of type Ast.sort_family *)
+  type quoted_constraint_type = Constr.t (* of type univ.constraint_type *)
+  type quoted_univ_constraint = Constr.t (* of type univ.univ_constraint *)
+  type quoted_univ_constraints = Constr.t (* of type univ.constraints *)
+  type quoted_univ_instance = Constr.t (* of type univ.universe_instance *)
+  type quoted_univ_context = Constr.t (* of type univ.universe_context *)
+  type quoted_inductive_universes = Constr.t (* of type univ.universe_context *)
+
+  type quoted_mind_params = Constr.t (* of type list (Ast.ident * list (ident * local_entry)local_entry) *)
+  type quoted_ind_entry = quoted_ident * t * quoted_bool * quoted_ident list * t list
+  type quoted_definition_entry = t * t option * quoted_univ_context
+  type quoted_mind_entry = Constr.t (* of type Ast.mutual_inductive_entry *)
+  type quoted_mind_finiteness = Constr.t (* of type Ast.mutual_inductive_entry ?? *)
+  type quoted_entry = Constr.t (* of type option (constant_entry + mutual_inductive_entry) *)
+
+  type quoted_context_decl = Constr.t (* in Ast *)
+  type quoted_context = Constr.t (* in Ast *)
+
+  type quoted_one_inductive_body = Constr.t (* of type Ast.one_inductive_body *)
+  type quoted_mutual_inductive_body = Constr.t (* of type Ast.mutual_inductive_body *)
+  type quoted_constant_body = Constr.t (* of type Ast.constant_body *)
+  type quoted_global_decl = Constr.t (* of type Ast.global_decl *)
+  type quoted_global_declarations = Constr.t (* of type Ast.global_declarations *)
+  type quoted_program = Constr.t (* of type Ast.program *)
+
+  type quoted_reduction_strategy = Constr.t (* of type Ast.reductionStrategy *)
+
+  let unquote_ident=unquote_ident
+  let unquote_name=unquote_name
+  let unquote_int=unquote_nat
+  let print_term=print_term
+  let inspect_term=inspect_term 
+  let unquote_universe_instance=unquote_universe_instance
+
+  let unquote_universe=unquote_universe
+  let unquote_proj=unquote_proj
+  let unquote_inductive=unquote_inductive
+  let unquote_kn=unquote_kn
+  let unquote_cast_kind=unquote_cast_kind
+  let unquote_bool=unquote_bool
+
+
+
+  let mkAnon = nAnon
+  let mkName id = Constr.mkApp (nNamed, [| id |])
+  let quote_kn kn = quote_string (KerName.to_string kn)
+  let mkRel i = Constr.mkApp (tRel, [| i |])
+  let mkVar id = Constr.mkApp (tVar, [| id |])
+  let mkMeta i = Constr.mkApp (tMeta, [| i |])
+  let mkEvar n args = Constr.mkApp (tEvar, [| n; to_coq_list tTerm (Array.to_list args) |])
+  let mkSort s = Constr.mkApp (tSort, [| s |])
+  let mkCast c k t = Constr.mkApp (tCast, [| c ; k ; t |])
+  let mkConst kn u = Constr.mkApp (tConst, [| kn ; u |])
+  let mkProd na t b =
+    Constr.mkApp (tProd, [| na ; t ; b |])
+  let mkLambda na t b =
+    Constr.mkApp (tLambda, [| na ; t ; b |])
+  let mkApp f xs =
+    Constr.mkApp (tApp, [| f ; to_coq_list tTerm (Array.to_list xs) |])
+
+  let mkLetIn na t t' b =
+    Constr.mkApp (tLetIn, [| na ; t ; t' ; b |])
+
+  let rec seq f t =
+    if f < t then f :: seq (f + 1) t
+    else []
+
+  let mkFix ((a,b),(ns,ts,ds)) =
+    let mk_fun xs i =
+      Constr.mkApp (tmkdef, [| tTerm ; Array.get ns i ;
+                             Array.get ts i ; Array.get ds i ; Array.get a i |]) :: xs
+    in
+    let defs = List.fold_left mk_fun [] (seq 0 (Array.length a)) in
+    let block = to_coq_list (Constr.mkApp (tdef, [| tTerm |])) (List.rev defs) in
+    Constr.mkApp (tFix, [| block ; b |])
+
+  let mkConstruct (ind, i) u =
+    Constr.mkApp (tConstructor, [| ind ; i ; u |])
+
+  let mkCoFix (a,(ns,ts,ds)) =
+    let mk_fun xs i =
+      Constr.mkApp (tmkdef, [| tTerm ; Array.get ns i ;
+                             Array.get ts i ; Array.get ds i ; tO |]) :: xs
+    in
+    let defs = List.fold_left mk_fun [] (seq 0 (Array.length ns)) in
+    let block = to_coq_list (Constr.mkApp (tdef, [| tTerm |])) (List.rev defs) in
+    Constr.mkApp (tCoFix, [| block ; a |])
+
+  let mkInd i u = Constr.mkApp (tInd, [| i ; u |])
+
+  let mkCase (ind, npar) nargs p c brs =
+    let info = pair tIndTy tnat ind npar in
+    let branches = List.map2 (fun br nargs ->  pair tnat tTerm nargs br) brs nargs in
+    let tl = prod tnat tTerm in
+    Constr.mkApp (tCase, [| info ; p ; c ; to_coq_list tl branches |])
+
+  let quote_proj ind pars args =
+    pair (prod tIndTy tnat) tnat (pair tIndTy tnat ind pars) args
+
+  let mkProj kn t =
+    Constr.mkApp (tProj, [| kn; t |])
+end
+
+(*
+  
+  let unquote_bool : quoted_bool -> bool
+(* val unquote_sort : quoted_sort -> Sorts.t *)
+(* val unquote_sort_family : quoted_sort_family -> Sorts.family *)
+val unquote_cast_kind : quoted_cast_kind -> Constr.cast_kind
+val unquote_kn :  quoted_kernel_name -> Libnames.qualid
+val unquote_inductive :  quoted_inductive -> Names.inductive
+(*val unquote_univ_instance :  quoted_univ_instance -> Univ.Instance.t *)
+val unquote_proj : quoted_proj -> (quoted_inductive * quoted_int * quoted_int)
+val unquote_universe : Evd.evar_map -> quoted_sort -> Evd.evar_map * Univ.Universe.t
+val print_term : t -> Pp.std_ppcmds
+val unquote_universe_instance: Evd.evar_map -> quoted_univ_instance -> Evd.evar_map * Univ.Instance.t
+(* val representsIndConstuctor : quoted_inductive -> Term.constr -> bool *)
+val inspect_term : t -> (t, quoted_int, quoted_ident, quoted_name, quoted_sort, quoted_cast_kind, quoted_kernel_name, quoted_inductive, quoted_univ_instance, quoted_proj) structure_of_term
+*)
+
+
+module CoqLiveDenote = Denote(CoqLiveDenoter)
+
+let denote_term=CoqLiveDenote.denote_term

@@ -5,6 +5,7 @@ open Constr
 open BasicAst
 open Ast0
 open Template_coq
+open Quoted
 open Quoter
 
 let quote_string s =

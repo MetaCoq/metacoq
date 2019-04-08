@@ -317,8 +317,8 @@ let rec run_template_program_rec ?(intactic=false) (k : Environ.env * Evd.evar_m
        let entry = TermReify.quote_entry_aux bypass env evm name in
        let entry =
          match entry with
-         | Some (Left cstentry) -> TemplateCoqQuoter.quote_constant_entry cstentry
-         | Some (Right _) -> CErrors.user_err (str name ++ str " refers to an inductive")
+         | Some (Quoted.Left cstentry) -> TemplateCoqQuoter.quote_constant_entry cstentry
+         | Some (Quoted.Right _) -> CErrors.user_err (str name ++ str " refers to an inductive")
          | None -> bad_term_verb pgm "anomaly in QuoteConstant"
        in
        k (env, evm, entry)

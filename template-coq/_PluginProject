@@ -1,6 +1,4 @@
--I src
 -I gen-src
--Q theories Template
 
 gen-src/Ascii.ml
 gen-src/Ascii.mli
@@ -82,6 +80,15 @@ gen-src/utils.ml
 gen-src/utils.mli
 gen-src/Wf.ml
 gen-src/Wf.mli
+
+gen-src/tm_util.ml
+gen-src/quoted.ml
+gen-src/quoter.ml
+gen-src/constr_quoter.ml
+gen-src/template_monad.ml
+gen-src/denoter.ml
+gen-src/denote.ml
+gen-src/plugin_core.ml
 
 gen-src/run_extractable.ml
 gen-src/meta_coq_plugin.mlpack

@@ -5,18 +5,12 @@ open Pp (* this adds the ++ to the current scope *)
 open Tm_util
 open Quoted
 open Quoter
-open Denoter
 open Constr_quoter
 open TemplateCoqQuoter
-
-
 
 (* todo: the recursive call is uneeded provided we call it on well formed terms *)
 
 let print_term (u: t) : Pp.t = pr_constr u
-
-module Denote (D : Denoter) =
-struct
 
 let unquote_pair trm =
   let (h,args) = app_full trm [] in
@@ -38,6 +32,102 @@ let rec unquote_list trm =
   else
     not_supported_verb trm "unquote_list"
 
+
+let inspect_term (t:Constr.t) :  (Constr.t, quoted_int, quoted_ident, quoted_name, quoted_sort, quoted_cast_kind, quoted_kernel_name, quoted_inductive, quoted_univ_instance, quoted_proj) structure_of_term =
+  let (h,args) = app_full t [] in
+  if Constr.equal h tRel then
+    match args with
+      x :: _ -> ACoq_tRel x
+    | _ -> CErrors.user_err (print_term t ++ Pp.str ("has bad structure"))
+  else if Constr.equal h tVar then
+    match args with
+      x :: _ -> ACoq_tVar x
+    | _ -> CErrors.user_err (print_term t ++ Pp.str ("has bad structure"))
+  else if Constr.equal h tMeta then
+    match args with
+      x :: _ -> ACoq_tMeta x
+    | _ -> CErrors.user_err (print_term t ++ Pp.str ("has bad structure"))
+  else if Constr.equal h tSort then
+    match args with
+      x :: _ -> ACoq_tSort x
+    | _ -> CErrors.user_err (print_term t ++ Pp.str ("has bad structure"))
+  else if Constr.equal h tCast then
+    match args with
+      x :: y :: z :: _ -> ACoq_tCast (x, y, z)
+    | _ -> CErrors.user_err (print_term t ++ Pp.str ("has bad structure"))
+  else if Constr.equal h tProd then
+    match args with
+      n :: t :: b :: _ -> ACoq_tProd (n,t,b)
+    | _ -> CErrors.user_err (print_term t ++ Pp.str ("has bad structure"))
+  else if Constr.equal h tLambda then
+    match args with
+      n  :: t :: b :: _ -> ACoq_tLambda (n,t,b)
+    | _ -> CErrors.user_err (print_term t ++ Pp.str ("has bad structure"))
+  else if Constr.equal h tLetIn then
+    match args with
+      n :: e :: t :: b :: _ -> ACoq_tLetIn (n,e,t,b)
+    | _ -> CErrors.user_err (print_term t ++ Pp.str ("has bad structure"))
+  else if Constr.equal h tApp then
+    match args with
+      f::xs::_ -> ACoq_tApp (f, unquote_list xs)
+    | _ -> CErrors.user_err (print_term t ++ Pp.str ("has bad structure"))
+  else if Constr.equal h tConst then
+    match args with
+      s::u::_ -> ACoq_tConst (s, u)
+    | _ -> CErrors.user_err (print_term t ++ Pp.str ("has bad structure"))
+  else if Constr.equal h tInd then
+    match args with
+      i::u::_ -> ACoq_tInd (i,u)
+    | _ -> CErrors.user_err (print_term t ++ Pp.str ("has bad structure"))
+  else if Constr.equal h tConstructor then
+    match args with
+      i::idx::u::_ -> ACoq_tConstruct (i,idx,u)
+    | _ -> CErrors.user_err (print_term t ++ Pp.str ("has bad structure: constructor case"))
+  else if Constr.equal h tCase then
+    match args with
+      info::ty::d::brs::_ -> ACoq_tCase (unquote_pair info, ty, d, List.map unquote_pair (unquote_list brs))
+    | _ -> CErrors.user_err (print_term t ++ Pp.str ("has bad structure"))
+  else if Constr.equal h tFix then
+    match args with
+      bds::i::_ ->
+      let unquoteFbd  b  =
+        let (_,args) = app_full b [] in
+        match args with
+        | _(*type*) :: na :: ty :: body :: rarg :: [] ->
+           { adtype = ty;
+             adname = na;
+             adbody = body;
+             rarg
+           }
+        |_ -> raise (Failure " (mkdef must take exactly 5 arguments)")
+      in
+      let lbd = List.map unquoteFbd (unquote_list bds) in
+      ACoq_tFix (lbd, i)
+    | _ -> CErrors.user_err (print_term t ++ Pp.str ("has bad structure"))
+  else if Constr.equal h tCoFix then
+    match args with
+      bds::i::_ ->
+      let unquoteFbd  b  =
+        let (_,args) = app_full b [] in
+        match args with
+        | _(*type*) :: na :: ty :: body :: rarg :: [] ->
+           { adtype = ty;
+             adname = na;
+             adbody = body;
+             rarg
+           }
+        |_ -> raise (Failure " (mkdef must take exactly 5 arguments)")
+      in
+      let lbd = List.map unquoteFbd (unquote_list bds) in
+      ACoq_tCoFix (lbd, i)
+    | _ -> CErrors.user_err (print_term t ++ Pp.str ("has bad structure"))
+  else if Constr.equal h tProj then
+    match args with
+      proj::t::_ -> ACoq_tProj (proj, t)
+    | _ -> CErrors.user_err (print_term t ++ Pp.str ("has bad structure"))
+
+  else
+    CErrors.user_err (str"inspect_term: cannot recognize " ++ print_term t ++ str" (maybe you forgot to reduce it?)")
 
 (* Unquote Coq nat to OCaml int *)
 let rec unquote_nat trm =
@@ -249,16 +339,16 @@ let unquote_inductive trm =
 
 
 (* TODO: replace app_full by this abstract version?*)
-let rec app_full_abs (trm: D.t) (acc: D.t list) =
-  match D.inspect_term trm with
+let rec app_full_abs (trm: Constr.t) (acc: Constr.t list) =
+  match inspect_term trm with
     ACoq_tApp (f, xs) -> app_full_abs f (xs @ acc)
   | _ -> (trm, acc)
 
 
-let denote_term (evm : Evd.evar_map) (trm: D.t) : Evd.evar_map * Constr.t =
-  let rec aux evm (trm: D.t) : _ * Constr.t =
-(*    debug (fun () -> Pp.(str "denote_term" ++ spc () ++ pr_constr trm)) ; *)
-    match D.inspect_term trm with
+let denote_term evm (trm: Constr.t) : Evd.evar_map * Constr.t =
+  let rec aux evm (trm: Constr.t) : _ * Constr.t =
+    debug (fun () -> Pp.(str "denote_term" ++ spc () ++ pr_constr trm)) ;
+    match inspect_term trm with
     | ACoq_tRel x -> evm, Constr.mkRel (unquote_nat x + 1)
     | ACoq_tVar x -> evm, Constr.mkVar (unquote_ident x)
     | ACoq_tSort x -> let evm, u = unquote_universe evm x in evm, Constr.mkType u
@@ -331,5 +421,3 @@ let denote_term (evm : Evd.evar_map) (trm: D.t) : Evd.evar_map * Constr.t =
         | None -> bad_term trm)
     | _ ->  not_supported_verb trm "big_case"
   in aux evm trm
-
-end

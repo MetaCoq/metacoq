@@ -3,15 +3,18 @@ open Plugin_core
 open Ast0
 open BasicAst
 
+open Quoter
+open Ast_quoter
 
-let of_constr (t : Constr.t) : Ast0.term =
-  failwith "of_constr"
+
+let of_constr (env : Environ.env) (t : Constr.t) : Ast0.term =
+  Ast_quoter.quote_term env t
 
 let to_string (cl : char list) : string =
   failwith "to_string"
 
-let of_string (s : string) : char list =
-  failwith "of_string"
+let of_string : string -> char list =
+  Ast_quoter.quote_string
 
 let to_reduction_strategy (s : Common.reductionStrategy) =
   failwith "to_reduction_strategy"
@@ -19,11 +22,11 @@ let to_reduction_strategy (s : Common.reductionStrategy) =
 let to_ident : char list -> Names.Id.t =
   failwith "to_ident"
 
-let of_ident : Names.Id.t -> char list =
-  failwith "of_ident"
+let of_ident (id : Names.Id.t) : char list =
+  of_string (Names.Id.to_string id)
 
-let of_global_reference (t : Plugin_core.global_reference) : BasicAst.global_reference =
-  failwith "of_global_reference"
+let of_global_reference : Plugin_core.global_reference -> BasicAst.global_reference =
+  Ast_quoter.quote_global_reference
 
 let to_qualid (c : char list) : Libnames.qualid =
   Libnames.qualid_of_string (to_string c)
@@ -32,19 +35,19 @@ let of_qualid (q : Libnames.qualid) : char list =
   of_string (Libnames.string_of_qualid q)
 
 let of_kername : Names.KerName.t -> char list =
-  failwith "of_kername"
+  Ast_quoter.quote_kn
 
 let to_kername : char list -> Names.KerName.t =
   failwith "of_kername"
 
-let of_mib : Plugin_core.mutual_inductive_body -> _ =
+let of_mib (t : Plugin_core.mutual_inductive_body) : Ast0.mutual_inductive_body =
   failwith "of_mib"
 
 let to_mie : _ -> Plugin_core.mutual_inductive_entry =
   failwith "to_mie"
 
-let of_constant_entry : _ -> Ast0.constant_entry =
-  failwith "of_constant_entry"
+let of_constant_entry : Plugin_core.constant_entry -> Ast0.constant_entry =
+  failwith "of_constant_entry" (* Ast_quoter.quote_constant_entry *)
 
 (* what about the overflow?
   efficiency? extract to bigint using Coq directives and convert to int here? *)
@@ -139,6 +142,10 @@ let rec to_constr_ev (evm : Evd.evar_map) (t : Ast0.term) : Evd.evar_map * Const
 let to_constr (t : Ast0.term) : Constr.t =
   snd (to_constr_ev Evd.empty t)
 
+let tmOfConstr (t : Constr.t) : Ast0.term tm =
+  fun env evm k _ ->
+    k env evm (of_constr env t)
+
 
 let rec interp_tm (t : 'a coq_TM) : 'a tm =
   match t with
@@ -148,8 +155,8 @@ let rec interp_tm (t : 'a coq_TM) : 'a tm =
   | Coq_tmMsg msg -> Obj.magic (tmMsg (to_string msg))
   | Coq_tmFail err -> tmFail (to_string err)
   | Coq_tmEval (r,t) ->
-    tmMap (fun x -> Obj.magic (of_constr x))
-          (tmEval (to_reduction_strategy r) (to_constr t))
+    tmBind (tmEval (to_reduction_strategy r) (to_constr t))
+           (fun x -> Obj.magic (tmOfConstr x))
   | Coq_tmDefinition (nm, typ, trm) ->
     let typ =
       match typ with
@@ -190,7 +197,7 @@ let rec interp_tm (t : 'a coq_TM) : 'a tm =
   | Coq_tmExistingInstance k ->
     Obj.magic (tmExistingInstance (to_kername k))
   | Coq_tmInferInstance t ->
-    tmMap (function
-             None -> Obj.magic None
-           | Some inst -> Obj.magic (Some (of_constr inst)))
-          (tmInferInstance (to_constr t))
+    tmBind (tmInferInstance (to_constr t))
+      (function
+          None -> Obj.magic None
+        | Some inst -> Obj.magic (tmMap (fun x -> Some x) (tmOfConstr inst)))

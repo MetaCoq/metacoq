@@ -41,6 +41,7 @@ Constr_quoter
 Template_monad
 Denote
 Plugin_core
+Ast_quoter
 
 Extractable
 

@@ -89,6 +89,7 @@ gen-src/template_monad.ml
 gen-src/denoter.ml
 gen-src/denote.ml
 gen-src/plugin_core.ml
+gen-src/ast_quoter.ml
 
 gen-src/run_extractable.ml
 gen-src/meta_coq_plugin.mlpack

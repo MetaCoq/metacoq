@@ -246,7 +246,6 @@ let unquote_inductive trm =
     bad_term_verb trm "non-constructor"
 
 
-
 (* TODO: replace app_full by this abstract version?*)
 let rec app_full_abs (trm: D.t) (acc: D.t list) =
   match D.inspect_term trm with

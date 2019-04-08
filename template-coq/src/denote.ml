@@ -344,33 +344,32 @@ let rec app_full_abs (trm: Constr.t) (acc: Constr.t list) =
     ACoq_tApp (f, xs) -> app_full_abs f (xs @ acc)
   | _ -> (trm, acc)
 
-
-let denote_term evm (trm: Constr.t) : Evd.evar_map * Constr.t =
-  let rec aux evm (trm: Constr.t) : _ * Constr.t =
-    debug (fun () -> Pp.(str "denote_term" ++ spc () ++ pr_constr trm)) ;
-    match inspect_term trm with
-    | ACoq_tRel x -> evm, Constr.mkRel (unquote_nat x + 1)
-    | ACoq_tVar x -> evm, Constr.mkVar (unquote_ident x)
-    | ACoq_tSort x -> let evm, u = unquote_universe evm x in evm, Constr.mkType u
+let denote_term (evm : Evd.evar_map) (trm: D.t) : Evd.evar_map * Constr.t =
+  let rec aux evm (trm: D.t) : _ * Constr.t =
+(*    debug (fun () -> Pp.(str "denote_term" ++ spc () ++ pr_constr trm)) ; *)
+    match D.inspect_term trm with
+    | ACoq_tRel x -> evm, Constr.mkRel (D.unquote_int x + 1)
+    | ACoq_tVar x -> evm, Constr.mkVar (D.unquote_ident x)
+    | ACoq_tSort x -> let evm, u = D.unquote_universe evm x in evm, Constr.mkType u
     | ACoq_tCast (t,c,ty) -> let evm, t = aux evm t in
                              let evm, ty = aux evm ty in
-                             evm, Constr.mkCast (t, unquote_cast_kind c, ty)
+                             evm, Constr.mkCast (t, D.unquote_cast_kind c, ty)
     | ACoq_tProd (n,t,b) -> let evm, t = aux evm t in
                             let evm, b = aux evm b in
-                            evm, Constr.mkProd (unquote_name n, t, b)
+                            evm, Constr.mkProd (D.unquote_name n, t, b)
     | ACoq_tLambda (n,t,b) -> let evm, t = aux evm t in
                               let evm, b = aux evm b in
-                              evm, Constr.mkLambda (unquote_name n, t, b)
+                              evm, Constr.mkLambda (D.unquote_name n, t, b)
     | ACoq_tLetIn (n,e,t,b) -> let evm, e = aux evm e in
                                let evm, t = aux evm t in
                                let evm, b = aux evm b in
-                               evm, Constr.mkLetIn (unquote_name n, e, t, b)
+                               evm, Constr.mkLetIn (D.unquote_name n, e, t, b)
     | ACoq_tApp (f,xs) -> let evm, f = aux evm f in
                           let evm, xs = map_evm aux evm xs in
                           evm, Constr.mkApp (f, Array.of_list xs)
     | ACoq_tConst (s,u) ->
-       let s = unquote_kn s in
-       let evm, u = unquote_universe_instance evm u in
+       let s = D.unquote_kn s in
+       let evm, u = D.unquote_universe_instance evm u in
        (try
           match Nametab.locate s with
           | Globnames.ConstRef c -> evm, Constr.mkConstU (c, u)
@@ -380,15 +379,15 @@ let denote_term evm (trm: Constr.t) : Evd.evar_map * Constr.t =
         with
           Not_found -> CErrors.user_err (str"Constant not found: " ++ Libnames.pr_qualid s))
     | ACoq_tConstruct (i,idx,u) ->
-       let ind = unquote_inductive i in
-       let evm, u = unquote_universe_instance evm u in
-       evm, Constr.mkConstructU ((ind, unquote_nat idx + 1), u)
+       let ind = D.unquote_inductive i in
+       let evm, u = D.unquote_universe_instance evm u in
+       evm, Constr.mkConstructU ((ind, D.unquote_int idx + 1), u)
     | ACoq_tInd (i, u) ->
-       let i = unquote_inductive i in
-       let evm, u = unquote_universe_instance evm u in
+       let i = D.unquote_inductive i in
+       let evm, u = D.unquote_universe_instance evm u in
        evm, Constr.mkIndU (i, u)
     | ACoq_tCase ((i, _), ty, d, brs) ->
-       let ind = unquote_inductive i in
+       let ind = D.unquote_inductive i in
        let evm, ty = aux evm ty in
        let evm, d = aux evm d in
        let evm, brs = map_evm aux evm (List.map snd brs) in
@@ -400,24 +399,24 @@ let denote_term evm (trm: Constr.t) : Evd.evar_map * Constr.t =
                                          List.map (fun p->p.rarg) lbd) in
        let evm, types = map_evm aux evm types in
        let evm, bodies = map_evm aux evm bodies in
-       let (names,rargs) = (List.map unquote_name names, List.map unquote_nat rargs) in
+       let (names,rargs) = (List.map D.unquote_name names, List.map D.unquote_int rargs) in
        let la = Array.of_list in
-       evm, Constr.mkFix ((la rargs,unquote_nat i), (la names, la types, la bodies))
+       evm, Constr.mkFix ((la rargs, D.unquote_int i), (la names, la types, la bodies))
     | ACoq_tCoFix (lbd, i) ->
        let (names,types,bodies,rargs) = (List.map (fun p->p.adname) lbd,  List.map (fun p->p.adtype) lbd, List.map (fun p->p.adbody) lbd,
                                          List.map (fun p->p.rarg) lbd) in
        let evm, types = map_evm aux evm types in
        let evm, bodies = map_evm aux evm bodies in
-       let (names,rargs) = (List.map unquote_name names, List.map unquote_nat rargs) in
+       let (names,rargs) = (List.map D.unquote_name names, List.map D.unquote_int rargs) in
        let la = Array.of_list in
-       evm, Constr.mkCoFix (unquote_nat i, (la names, la types, la bodies))
+       evm, Constr.mkCoFix (D.unquote_int i, (la names, la types, la bodies))
     | ACoq_tProj (proj,t) ->
-       let (ind, _, narg) = unquote_proj proj in (* todo: is narg the correct projection? *)
-       let ind' = unquote_inductive ind in
+       let (ind, _, narg) = D.unquote_proj proj in (* todo: is narg the correct projection? *)
+       let ind' = D.unquote_inductive ind in
        let projs = Recordops.lookup_projections ind' in
        let evm, t = aux evm t in
-       (match List.nth projs (unquote_nat narg) with
+       (match List.nth projs (D.unquote_int narg) with
         | Some p -> evm, Constr.mkProj (Names.Projection.make p false, t)
-        | None -> bad_term trm)
-    | _ ->  not_supported_verb trm "big_case"
+        | None -> (*bad_term trm *) failwith "tproj case of denote_term")
+    | _ -> failwith "big case of denote_term" 
   in aux evm trm

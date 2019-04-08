@@ -701,6 +701,28 @@ Section Conversion.
     - eapply normalisation. eassumption.
   Qed.
 
+  Lemma Acc_dep :
+    forall A B (R : A -> B -> B -> Prop),
+      (forall x y, Acc (R x) y) ->
+      forall p, Acc (fun p q => R (fst p) (snd p) (snd q)) p.
+  Proof.
+    intros A B R wfR [x y].
+
+    constructor. intros [a b] h. cbn in h.
+    specialize (wfR a y).
+    revert b h.
+    clear - wfR.
+    induction wfR.
+    (* eapply H0. *)
+
+
+    (* specialize (wfR x y). *)
+    (* induction wfR. *)
+    (* constructor. intros [y1 y2] h. *)
+    (* cbn in h. *)
+    (* eapply H0. all: cbn. *)
+  Abort.
+
   Lemma R_Acc :
     forall u,
       welltyped Σ (ctx u) (zipc (tm u) (stk1 u)) ->

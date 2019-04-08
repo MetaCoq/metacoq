@@ -665,6 +665,21 @@ Section Conversion.
   Definition st (x : pack) :=
     let '(s, Γ, u, π1, π2) := x in s.
 
+  (* Definition ecored u v := *)
+  (*   exists Γ, cored Σ Γ u v. *)
+
+  (* Lemma ecored_Acc : *)
+  (*   forall u, *)
+  (*     (exists Γ, welltyped Σ Γ u) -> *)
+  (*     Acc ecored u. *)
+  (* Proof. *)
+  (*   intros u [Γ h]. *)
+  (*   pose proof (normalisation _ _ _ h) as acc. *)
+  (*   clear - acc. *)
+  (*   induction acc. *)
+  (*   constructor. intros y h. *)
+  (*   eapply H0. *)
+
   Definition R_aux Γ :=
     dlexprod (cored Σ Γ) (fun t => lexprod (@posR t) stateR).
 

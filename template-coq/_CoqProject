@@ -38,3 +38,6 @@ theories/TemplateMonad/Core.v
 theories/TemplateMonad/Extractable.v
 theories/TemplateMonad/Monad.v
 theories/monad_utils.v
+
+# Extraction
+theories/Extraction.v

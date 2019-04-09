@@ -1,4 +1,5 @@
 -I gen-src
+-R test-plugin Test
 
 # Generated Code
 gen-src/Ascii.ml
@@ -81,3 +82,5 @@ gen-src/run_extractable.ml
 gen-src/run_extractable.mli
 
 gen-src/meta_coq_plugin_template.mlpack
+
+test-plugin/test.v

@@ -10,8 +10,7 @@ gen-src:
 	$(MAKE) -C gen-src
 
 get-mc:
-	cp -r $(TEMPLATE_LIB)/src/*.ml $(TEMPLATE_LIB)/src/*.mli src
-	(cd src; ./movefiles.sh)
+	cp -r $(TEMPLATE_LIB)/gen-src/*.ml $(TEMPLATE_LIB)/gen-src/*.mli src
 
 .PHONY: get-mc gen-src
 

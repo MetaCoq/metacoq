@@ -125,10 +125,9 @@ Lemma wf_conv_context Σ Γ Δ (wfΓ : wf_local Σ Γ) :
   conv_context Σ Γ Δ -> wf_local Σ Δ.
 Proof.
   intros wfredctx. revert Δ.
-  induction wfredctx; intros Δ wfred; unfold vass, vdef in *; depelim wfred; constructor; eauto.
-  simpl.
-  unfold vass in c; depelim c. destruct i.
-  red in i.
+  induction wfredctx; intros Δ wfred; unfold vass, vdef in *; depelim wfred. constructor; eauto.
+  simpl. constructor. auto. red. depelim c.
+  destruct i. red in i. destruct i as [ctx [s [Hs Hwf]]].
 Admitted.
 
 Lemma conv_context_refl Σ Γ : wf Σ -> wf_local Σ Γ -> conv_context Σ Γ Γ.
@@ -331,7 +330,25 @@ Proof.
   intros. rewrite rev_app_distr. simpl. apply All_app in X as [Alll Allx]. inv Allx.
   constructor; intuition eauto.
 Qed.
+
 Require Import Lia.
+
+Lemma nth_error_rev {A} (l : list A) i : i < #|l| ->
+  nth_error l i = nth_error (List.rev l) (#|l| - S i).
+Proof.
+  revert l. induction i. destruct l; simpl; auto.
+  induction l using rev_ind; simpl. auto.
+  rewrite rev_app_distr. simpl.
+  rewrite app_length. simpl.
+  replace (#|l| + 1 - 0) with (S #|l|) by lia. simpl.
+  rewrite Nat.sub_0_r in IHl. auto with arith.
+
+  destruct l. simpl; auto. simpl. intros. rewrite IHi. lia.
+  assert (#|l| - S i < #|l|) by lia.
+  rewrite nth_error_app_lt. rewrite List.rev_length; auto.
+  reflexivity.
+Qed.
+
 Lemma type_tFix_inv Σ Γ mfix idx T : wf Σ ->
   Σ ;;; Γ |- tFix mfix idx : T ->
   { T' & { rarg & {f & (unfold_fix mfix idx = Some (rarg, f)) * (Σ ;;; Γ |- f : T') * (Σ ;;; Γ |- T' <= T) }}}%type.
@@ -343,7 +360,7 @@ Proof.
   clear e.
   eexists _, _, _. split. split. eauto.
   eapply (substitution _ _ types _ [] _ _ wfΣ); simpl; eauto with wf.
-  - subst types. clear -a0.
+  - subst types. clear -a a0.
     pose proof a0 as a0'. apply All_rev in a0'.
     unfold fix_subst, fix_context. simpl.
     revert a0'. rewrite <- (@List.rev_length _ mfix).
@@ -351,25 +368,28 @@ Proof.
     assert (#|mfix| >= #|List.rev mfix|) by (rewrite List.rev_length; lia).
     assert (He :0 = #|mfix| - #|List.rev mfix|) by (rewrite List.rev_length; auto with arith).
     rewrite {3}He. clear He. revert H.
+    assert (forall i, i < #|List.rev mfix| -> nth_error (List.rev mfix) i = nth_error mfix (#|List.rev mfix| - S i)).
+    { intros. rewrite nth_error_rev. auto.
+      now rewrite List.rev_length List.rev_involutive. }
+    revert H.
     generalize (List.rev mfix).
-    intros l Hlen H. induction H. simpl. constructor.
+    intros l Hi Hlen H.
+    induction H. simpl. constructor.
     simpl. constructor. unfold mapi in IHAll.
     simpl in Hlen. replace (S (#|mfix| - S #|l|)) with (#|mfix| - #|l|) by lia.
-    apply IHAll. lia.
+    apply IHAll. intros. simpl in Hi. specialize (Hi (S i)). apply Hi. lia. lia.
     clear IHAll. destruct p.
     simpl in Hlen. assert ((Nat.pred #|mfix| - (#|mfix| - S #|l|)) = #|l|) by lia.
     rewrite H0. rewrite simpl_subst_k. clear. induction l; simpl; auto with arith.
-
-    eapply type_Fix.
-
-
-    admit. admit. apply a0.
+    eapply type_Fix; auto.
+    simpl in Hi. specialize (Hi 0). forward Hi. lia. simpl in Hi.
+    rewrite Hi. f_equal. lia.
   - subst types. rewrite simpl_subst_k. now rewrite fix_context_length fix_subst_length.
     auto.
   - destruct (IHtyping mfix idx wfΣ eq_refl) as [T' [rarg [f [[unf fty] Hcumul]]]].
     exists T', rarg, f. intuition auto. eapply cumul_trans; eauto.
     destruct b. eapply cumul_trans; eauto.
-Admitted.
+Qed.
 
 (** The subject reduction property of the system: *)
 

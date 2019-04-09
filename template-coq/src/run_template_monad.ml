@@ -8,10 +8,14 @@ open Pp (* this adds the ++ to the current scope *)
 
 open Tm_util
 open Quoter
-open Constr_quoter
-open TemplateCoqQuoter
-open Template_monad
 open Denote
+open Constr_quoted
+open Constr_quoter
+open Template_monad
+open Constr_denoter
+
+open ConstrQuoted
+open CoqLiveDenoter
 
 let unquote_reduction_strategy env evm trm (* of type reductionStrategy *) : Redexpr.red_expr =
   let (trm, args) = app_full trm [] in
@@ -72,7 +76,7 @@ let unquote_map_option f trm =
   else
     not_supported_verb trm "unquote_map_option"
 
-let denote_option = unquote_map_option (fun x -> x)
+let unquote_option = unquote_map_option (fun x -> x)
 
 
 
@@ -222,7 +226,7 @@ let rec run_template_program_rec ?(intactic=false) (k : Environ.env * Evd.evar_m
     then not_in_tactic "tmDefinition"
     else
       let name = unquote_ident (reduce_all env evm name) in
-      let evm, typ = (match denote_option s with Some s -> let red = unquote_reduction_strategy env evm s in reduce env evm red typ | None -> evm, typ) in
+      let evm, typ = (match unquote_option s with Some s -> let red = unquote_reduction_strategy env evm s in reduce env evm red typ | None -> evm, typ) in
       let univs =
         if Flags.is_universe_polymorphism () then Polymorphic_const_entry (Evd.to_universe_context evm)
         else Monomorphic_const_entry (Evd.universe_context_set evm) in
@@ -247,7 +251,7 @@ let rec run_template_program_rec ?(intactic=false) (k : Environ.env * Evd.evar_m
       let name = unquote_ident (reduce_all env evm name) in
       let evm,body = denote_term evm (reduce_all env evm body) in
       let evm,typ =
-        match denote_option typ with
+        match unquote_option typ with
         | None -> (evm, None)
         | Some t ->
           let (evm, t) = denote_term evm (reduce_all env evm t) in
@@ -268,7 +272,7 @@ let rec run_template_program_rec ?(intactic=false) (k : Environ.env * Evd.evar_m
     else
       let name = unquote_ident (reduce_all env evm name) in
       let evm, typ =
-        match denote_option s with
+        match unquote_option s with
           Some s ->
           let red = unquote_reduction_strategy env evm s in
           reduce env evm red typ
@@ -288,7 +292,7 @@ let rec run_template_program_rec ?(intactic=false) (k : Environ.env * Evd.evar_m
         (fun a b c -> k (a,b,quote_kn c))
   | TmLemma (name,s,typ) ->
     let name = reduce_all env evm name in
-    let evm, typ = (match denote_option s with Some s -> let red = unquote_reduction_strategy env evm s in reduce env evm red typ | None -> evm, typ) in
+    let evm, typ = (match unquote_option s with Some s -> let red = unquote_reduction_strategy env evm s in reduce env evm red typ | None -> evm, typ) in
     let poly = Flags.is_universe_polymorphism () in
     let kind = (Decl_kinds.Global, poly, Decl_kinds.Definition) in
     let hole = CAst.make (Constrexpr.CHole (None, Misctypes.IntroAnonymous, None)) in
@@ -317,7 +321,7 @@ let rec run_template_program_rec ?(intactic=false) (k : Environ.env * Evd.evar_m
     k (env, evm, qt)
   | TmQuoteInd name ->
        let name = unquote_string (reduce_all env evm name) in
-       let (dp, nm) = split_name name in
+       let (dp, nm) = Quoted.split_name name in
        (match Nametab.locate (Libnames.make_qualid dp nm) with
         | Globnames.IndRef ni ->
            let t = TermReify.quote_mind_decl env (fst ni) in
@@ -417,7 +421,7 @@ let rec run_template_program_rec ?(intactic=false) (k : Environ.env * Evd.evar_m
   | TmInferInstance (s, typ) ->
     begin
       let evm, typ =
-        match denote_option s with
+        match unquote_option s with
           Some s ->
           let red = unquote_reduction_strategy env evm s in
           reduce env evm red typ

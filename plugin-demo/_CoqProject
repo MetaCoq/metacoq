@@ -1,4 +1,3 @@
--Q ../template-coq/theories Template
 -I src
 -Q theories Demo
 
@@ -24,8 +23,8 @@ src/binPos.ml
 src/binPos.mli
 src/bool.ml
 src/bool.mli
-src/common.ml
-src/common.mli
+src/common0.ml
+src/common0.mli
 src/config0.ml
 src/config0.mli
 src/datatypes.ml
@@ -42,8 +41,8 @@ src/fMapWeakList.ml
 src/fMapWeakList.mli
 src/list0.ml
 src/list0.mli
-src/logic.ml
-src/logic.mli
+src/logic0.ml
+src/logic0.mli
 src/mSetWeakList.ml
 src/mSetWeakList.mli
 src/nat0.ml
@@ -79,7 +78,7 @@ src/denoter.ml
 src/plugin_core.mli
 src/plugin_core.ml
 src/ast_quoter.ml
-src/constr_quoter.ml # this shouldn't be necessary
+src/ast_denoter.ml
 
 src/demo.ml
 src/demo.mli

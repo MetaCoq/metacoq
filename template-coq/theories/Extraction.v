@@ -4,8 +4,8 @@
     should use these same directives for consistency.
 *)
 
-From Template Require All.
-
+(* From Template Require All. *)
+Require Import Template.utils.
 Require Import FSets.
 Require Import ExtrOcamlBasic.
 Require Import ExtrOcamlString ExtrOcamlZInt.
@@ -18,18 +18,15 @@ Extract Constant utils.ascii_compare =>
  "fun x y -> match Char.compare x y with 0 -> Eq | x when x < 0 -> Lt | _ -> Gt".
 
 Extraction Blacklist config uGraph univ Ast String List Nat Int
-           UnivSubst Typing Checker Retyping OrderedType.
+           UnivSubst Typing Checker Retyping OrderedType Logic Common.
 Set Warnings "-extraction-opaque-accessed".
 
 Require Export Template.Ast.
 
-Cd "src".
+Cd "gen-src".
 
 Require Import Template.TemplateMonad.Extractable.
 
-Recursive Extraction Library TypingWf.
-Recursive Extraction Library Checker.
-Recursive Extraction Library Retyping.
 Recursive Extraction Library Extractable.
 
 Cd "..".

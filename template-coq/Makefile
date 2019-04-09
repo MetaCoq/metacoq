@@ -1,10 +1,20 @@
-all: coq
+all: coq plugin
 
-coq: Makefile.coq Makefile.plugin
+coq: Makefile.coq
 	$(MAKE) -f Makefile.coq
+
+plugin: coq Makefile.plugin gen-src/.generate
+	@ echo "Copying from src to gen-src"
+	@ for x in $(TOCOPY); do rm -f gen-src/$$x; cp src/$$x gen-src/$$x; done
+	(cd gen-src; ./to-lower.sh)
 	$(MAKE) -f Makefile.plugin
 
-.PHONY: all install html clean mrproper
+gen-src/.generate: theories/Extraction.vo theories/Extraction.v
+	coqc -Q theories Template theories/Extraction.v
+	@ touch gen-src/.generate
+
+
+.PHONY: all install html clean mrproper plugin coq
 
 install: Makefile.coq
 	$(MAKE) -f Makefile.coq install
@@ -26,3 +36,5 @@ Makefile.plugin: _PluginProject
 
 .merlin: Makefile.coq
 	$(MAKE) -f Makefile.coq .merlin
+
+TOCOPY=ast_denoter.ml ast_quoter.ml denote.ml denoter.ml plugin_core.ml plugin_core.mli quoted.ml quoter.ml run_extractable.ml run_extractable.mli tm_util.ml

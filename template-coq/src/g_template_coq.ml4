@@ -62,7 +62,7 @@ TACTIC EXTEND denote_term
     | [ "denote_term" constr(c) tactic(tac) ] ->
       [ Proofview.Goal.enter (begin fun gl ->
          let evm = Proofview.Goal.sigma gl in
-         let evm, c = Denote.denote_term evm (EConstr.to_constr evm c) in
+         let evm, c = Constr_denoter.denote_term evm (EConstr.to_constr evm c) in
          Proofview.tclTHEN (Proofview.Unsafe.tclEVARS evm)
 	   (ltac_apply tac (List.map to_ltac_val [EConstr.of_constr c]))
       end) ]
@@ -107,7 +107,7 @@ VERNAC COMMAND EXTEND Unquote_vernac CLASSIFIED AS SIDEFF
     | [ "Make" "Definition" ident(name) ":=" constr(def) ] ->
       [ let (evm, env) = Pfedit.get_current_context () in
 	let (trm, uctx) = Constrintern.interp_constr env evm def in
-	let evm, trm = Denote.denote_term evm (EConstr.to_constr evm trm) in
+	let evm, trm = Constr_denoter.denote_term evm (EConstr.to_constr evm trm) in
 	let _ = Declare.declare_definition
                   ~kind:Decl_kinds.Definition
                   name
@@ -122,7 +122,7 @@ VERNAC COMMAND EXTEND Unquote_vernac_red CLASSIFIED AS SIDEFF
         let evm = Evd.from_ctx uctx in
         let (evm,rd) = Tacinterp.interp_redexp env evm rd in
 	let (evm,trm) = Quoter.reduce env evm rd (EConstr.to_constr evm trm) in
-        let evm, trm = Denote.denote_term evm trm in
+        let evm, trm = Constr_denoter.denote_term evm trm in
 	let _ = Declare.declare_definition ~kind:Decl_kinds.Definition name
                   (trm, Monomorphic_const_entry (Evd.universe_context_set evm)) in
         () ]
@@ -163,6 +163,6 @@ VERNAC COMMAND EXTEND Make_tests CLASSIFIED AS QUERY
       [ let (evm,env) = Pfedit.get_current_context () in
 	let c = Constrintern.interp_constr env evm c in
 	let result = Constr_quoter.TermReify.quote_term env (EConstr.to_constr evm (fst c)) in
-        Feedback.msg_notice (Quoter.pr_constr result) ;
+        Feedback.msg_notice (Tm_util.pr_constr result) ;
 	() ]
 END;;

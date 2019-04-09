@@ -4,8 +4,8 @@
     should use these same directives for consistency.
 *)
 
-From Template Require All.
-
+(* From Template Require All. *)
+Require Import Template.utils.
 Require Import FSets.
 Require Import ExtrOcamlBasic.
 Require Import ExtrOcamlString ExtrOcamlZInt.
@@ -23,13 +23,10 @@ Set Warnings "-extraction-opaque-accessed".
 
 Require Export Template.Ast.
 
-Cd "src".
+Cd "gen-src".
 
 Require Import Template.TemplateMonad.Extractable.
 
-Recursive Extraction Library TypingWf.
-Recursive Extraction Library Checker.
-Recursive Extraction Library Retyping.
 Recursive Extraction Library Extractable.
 
 Cd "..".

@@ -7,22 +7,6 @@ open Ast0
 open Quoted
 open Quoter
 
-let quote_string s =
-  let rec aux acc i =
-    if i < 0 then acc
-    else aux (s.[i] :: acc) (i - 1)
-  in aux [] (String.length s - 1)
-
-let unquote_string l =
-  let buf = Bytes.create (List.length l) in
-  let rec aux i = function
-    | [] -> ()
-    | c :: cs ->
-      Bytes.set buf i c; aux (succ i) cs
-  in
-  aux 0 l;
-  Bytes.to_string buf
-
 module TemplateASTQuoter =
 struct
   type t = Ast0.term
@@ -64,7 +48,7 @@ struct
   open Names
 
   let quote_ident id =
-    quote_string (Id.to_string id)
+    string_to_list (Id.to_string id)
 
   let quote_name = function
     | Anonymous -> Coq_nAnon
@@ -83,7 +67,7 @@ struct
     else if Univ.Level.is_set l then Univ0.Level.set
     else match Univ.Level.var_index l with
          | Some x -> Univ0.Level.Var (quote_int x)
-         | None -> Univ0.Level.Level (quote_string (Univ.Level.to_string l))
+         | None -> Univ0.Level.Level (string_to_list (Univ.Level.to_string l))
 
   let quote_universe s : Univ0.universe =
     (* hack because we can't recover the list of level*int *)
@@ -110,7 +94,7 @@ struct
     | NATIVEcast -> NativeCast
     | VMcast -> VmCast
 
-  let quote_kn kn = quote_string (KerName.to_string kn)
+  let quote_kn kn = string_to_list (KerName.to_string kn)
   let quote_inductive (kn, i) = { inductive_mind = kn ; inductive_ind = i }
   let quote_proj ind p a = ((ind,p),a)
 
@@ -301,7 +285,7 @@ struct
 
 
   let unquote_ident (qi: quoted_ident) : Id.t =
-    let s = unquote_string qi in
+    let s = list_to_string qi in
     Id.of_string s
 
   let unquote_name (q: quoted_name) : Name.t =
@@ -326,12 +310,12 @@ struct
     | RevertCast -> REVERTcast
 
   let unquote_kn (q: quoted_kernel_name) : Libnames.qualid =
-    let s = unquote_string q in
+    let s = list_to_string q in
     Libnames.qualid_of_string s
 
   let unquote_inductive (q: quoted_inductive) : Names.inductive =
     let { inductive_mind = na; inductive_ind = i } = q in
-    let comps = CString.split '.' (unquote_string na) in
+    let comps = CString.split '.' (list_to_string na) in
     let comps = List.map Id.of_string comps in
     let id, dp = CList.sep_last comps in
     let dp = DirPath.make dp in
@@ -348,7 +332,7 @@ struct
     | Univ0.Level.Coq_lProp -> Univ.Level.prop
     | Univ0.Level.Coq_lSet -> Univ.Level.set
     | Univ0.Level.Level s ->
-      let s = unquote_string s in
+      let s = list_to_string s in
       let comps = CString.split '.' s in
       let last, dp = CList.sep_last comps in
       let dp = DirPath.make (List.map Id.of_string comps) in

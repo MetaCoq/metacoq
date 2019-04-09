@@ -321,7 +321,7 @@ let rec run_template_program_rec ?(intactic=false) (k : Environ.env * Evd.evar_m
     k (env, evm, qt)
   | TmQuoteInd name ->
        let name = unquote_string (reduce_all env evm name) in
-       let (dp, nm) = split_name name in
+       let (dp, nm) = Quoted.split_name name in
        (match Nametab.locate (Libnames.make_qualid dp nm) with
         | Globnames.IndRef ni ->
            let t = TermReify.quote_mind_decl env (fst ni) in

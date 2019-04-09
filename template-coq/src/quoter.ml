@@ -3,6 +3,7 @@ open Entries
 open Declarations
 open Pp
 
+open Tm_util
 open Quoted
 
 let cast_prop = ref (false)
@@ -10,13 +11,6 @@ let cast_prop = ref (false)
 (* whether Set Template Cast Propositions is on, as needed for erasure in Certicoq *)
 let is_cast_prop () = !cast_prop
 
-let opt_debug = ref false
-
-let debug (m : unit ->Pp.t) =
-  if !opt_debug then
-    Feedback.(msg_debug (m ()))
-  else
-    ()
 
 let toDecl (old: Name.t * ((Constr.constr) option) * Constr.constr) : Context.Rel.Declaration.t =
   let (name,value,typ) = old in
@@ -26,23 +20,6 @@ let toDecl (old: Name.t * ((Constr.constr) option) * Constr.constr) : Context.Re
 
 let getType env (t:Constr.t) : Constr.t =
     EConstr.to_constr Evd.empty (Retyping.get_type_of env Evd.empty (EConstr.of_constr t))
-
-let pr_constr trm =
-  let (evm, env) = Pfedit.get_current_context () in
-  Printer.pr_constr_env env evm trm
-
-let not_supported trm =
-  CErrors.user_err (str "Not Supported:" ++ spc () ++ pr_constr trm)
-
-let not_supported_verb trm rs =
-  CErrors.user_err (str "Not Supported raised at " ++ str rs ++ str ":" ++ spc () ++ pr_constr trm)
-
-let bad_term trm =
-  CErrors.user_err (str "Bad term:" ++ spc () ++ pr_constr trm)
-
-let bad_term_verb trm rs =
-  CErrors.user_err (str "Bad term:" ++ spc () ++ pr_constr trm
-                    ++ spc () ++ str " Error: " ++ str rs)
 
 (* TODO: remove? *)
 let opt_hnf_ctor_types = ref false

@@ -1,9 +1,12 @@
 Tm_util
 Quoted
 Quoter
-Constr_quoter
-Template_monad
 Denote
+Constr_quoted
+Constr_quoter
+Constr_denoter
+Template_monad
+
 Plugin_core
 Run_template_monad
 G_template_coq

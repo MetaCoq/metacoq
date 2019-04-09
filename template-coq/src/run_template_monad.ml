@@ -7,10 +7,14 @@ open Genredexpr
 open Pp (* this adds the ++ to the current scope *)
 
 open Quoter
-open Constr_quoter
-open TemplateCoqQuoter
-open Template_monad
 open Denote
+open Constr_quoted
+open Constr_quoter
+open Template_monad
+open Constr_denoter
+
+open ConstrQuoted
+open CoqLiveDenoter
 
 let unquote_reduction_strategy env evm trm (* of type reductionStrategy *) : Redexpr.red_expr =
   let (trm, args) = app_full trm [] in
@@ -71,7 +75,7 @@ let unquote_map_option f trm =
   else
     not_supported_verb trm "unquote_map_option"
 
-let denote_option = unquote_map_option (fun x -> x)
+let unquote_option = unquote_map_option (fun x -> x)
 
 
 
@@ -233,7 +237,7 @@ let rec run_template_program_rec ?(intactic=false) (k : Environ.env * Evd.evar_m
       let name = unquote_ident (reduce_all env evm name) in
       let evm,body = denote_term evm (reduce_all env evm body) in
       let evm,typ =
-        match denote_option typ with
+        match unquote_option typ with
         | None -> (evm, None)
         | Some t ->
           let (evm, t) = denote_term evm (reduce_all env evm t) in
@@ -398,7 +402,7 @@ let rec run_template_program_rec ?(intactic=false) (k : Environ.env * Evd.evar_m
   | TmInferInstance (s, typ) ->
     begin
       let evm, typ =
-        match denote_option s with
+        match unquote_option s with
           Some s ->
           let red = unquote_reduction_strategy env evm s in
           reduce env evm red typ

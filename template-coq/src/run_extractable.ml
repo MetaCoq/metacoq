@@ -10,10 +10,10 @@ let of_constr (env : Environ.env) (t : Constr.t) : Ast0.term =
   Ast_quoter.quote_term env t
 
 let to_string : char list -> string =
-  Ast_quoter.unquote_string
+  Quoted.list_to_string
 
 let of_string : string -> char list =
-  Ast_quoter.quote_string
+  Quoted.string_to_list
 
 let to_reduction_strategy (s : Common.reductionStrategy) : Plugin_core.reduction_strategy =
   match s with
@@ -92,7 +92,7 @@ let of_mib (env : Environ.env) (mib : Plugin_core.mutual_inductive_body) : Ast0.
         let indty = Ast_quoter.quote_term env indty in
 	let (reified_ctors,acc) =
 	  List.fold_left (fun (ls,acc) (nm,ty,ar) ->
-	      debug (fun () -> Pp.(str "opt_hnf_ctor_types:" ++ spc () ++
+	      Tm_util.debug (fun () -> Pp.(str "opt_hnf_ctor_types:" ++ spc () ++
                                    bool !opt_hnf_ctor_types)) ;
 	      let ty = if !opt_hnf_ctor_types then hnf_type envind ty else ty in
 	      let ty = quote_term acc ty in

@@ -48,6 +48,15 @@ let to_ltac_val c = Tacinterp.Value.of_constr c
 let run_template_program env evm pgm =
   Run_template_monad.run_template_program_rec (fun _ -> ()) env (evm, pgm)
 
+TACTIC EXTEND denote_term
+    | [ "denote_term" constr(c) tactic(tac) ] ->
+      [ Proofview.Goal.enter (begin fun gl ->
+         let evm = Proofview.Goal.sigma gl in
+         let evm, c = Constr_denoter.denote_term evm (EConstr.to_constr evm c) in
+         Proofview.tclTHEN (Proofview.Unsafe.tclEVARS evm)
+	   (ltac_apply tac (List.map to_ltac_val [EConstr.of_constr c]))
+      end) ]
+END;;
 
 (** ********* Commands ********* *)
 
@@ -154,4 +163,13 @@ TACTIC EXTEND run_program
               (ltac_apply tac (List.map to_ltac_val [EConstr.of_constr t]))
          | None -> Proofview.tclUNIT ()
        end) ]
+END;;
+
+VERNAC COMMAND EXTEND Make_tests CLASSIFIED AS QUERY
+    | [ "Test" "Quote" constr(c) ] ->
+      [ let (evm,env) = Pfedit.get_current_context () in
+	let c = Constrintern.interp_constr env evm c in
+	let result = Constr_quoter.TermReify.quote_term env (EConstr.to_constr evm (fst c)) in
+        Feedback.msg_notice (Tm_util.pr_constr result) ;
+	() ]
 END;;

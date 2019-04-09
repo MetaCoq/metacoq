@@ -6,6 +6,7 @@ coq: Makefile.coq
 plugin: coq Makefile.plugin gen-src/.generate
 	@ echo "Copying from src to gen-src"
 	@ for x in $(TOCOPY); do rm -f gen-src/$$x; cp src/$$x gen-src/$$x; done
+	(cd gen-src; ./to-lower.sh)
 	$(MAKE) -f Makefile.plugin
 
 gen-src/.generate: theories/Extraction.vo theories/Extraction.v

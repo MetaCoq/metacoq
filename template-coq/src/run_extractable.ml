@@ -15,14 +15,14 @@ let to_string : char list -> string =
 let of_string : string -> char list =
   Quoted.string_to_list
 
-let to_reduction_strategy (s : Common.reductionStrategy) : Plugin_core.reduction_strategy =
+let to_reduction_strategy (s : Common0.reductionStrategy) : Plugin_core.reduction_strategy =
   match s with
-   | Common.Coq_cbv -> Plugin_core.rs_cbv
-   | Common.Coq_cbn -> Plugin_core.rs_cbn
-   | Common.Coq_hnf -> Plugin_core.rs_hnf
-   | Common.Coq_all -> Plugin_core.rs_all
-   | Common.Coq_lazy -> Plugin_core.rs_lazy
-   | Common.Coq_unfold x -> failwith "not yet implemented: to_reduction_strategy"
+   | Common0.Coq_cbv -> Plugin_core.rs_cbv
+   | Common0.Coq_cbn -> Plugin_core.rs_cbn
+   | Common0.Coq_hnf -> Plugin_core.rs_hnf
+   | Common0.Coq_all -> Plugin_core.rs_all
+   | Common0.Coq_lazy -> Plugin_core.rs_lazy
+   | Common0.Coq_unfold x -> failwith "not yet implemented: to_reduction_strategy"
 
 let to_ident : char list ->  Names.Id.t =
   Ast_quoter.unquote_ident

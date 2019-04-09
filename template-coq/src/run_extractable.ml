@@ -42,8 +42,13 @@ let of_qualid (q : Libnames.qualid) : char list =
 let of_kername : Names.KerName.t -> char list =
   Ast_quoter.quote_kn
 
+(* TODO: check that [s] was fully qualified *)
 let to_kername (s : char list) : Names.KerName.t =
-  (* Ast_quoter.unquote_kn c *) failwith "to_kername"
+  match Nametab.locate (Ast_quoter.unquote_kn s) with
+   | Globnames.VarRef vr -> failwith "not yet implemented"
+   | Globnames.ConstRef c -> Names.Constant.canonical c
+   | Globnames.IndRef i -> Names.MutInd.canonical (fst i)
+   | Globnames.ConstructRef c -> failwith "not yet implemented"
 
 (* todo(gmm): this definition adapted from quoter.ml *)
 let quote_rel_decl env = function

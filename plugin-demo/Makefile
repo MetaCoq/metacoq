@@ -1,6 +1,6 @@
 TEMPLATE_LIB=../template-coq
 
-coq: Makefile.coq
+coq: sources Makefile.coq
 	$(MAKE) -f Makefile.coq
 
 Makefile.coq: _CoqProject gen-src get-mc
@@ -18,3 +18,6 @@ get-mc:
 
 clean:
 	$(MAKE) -f Makefile.coq clean
+
+sources:
+	$(MAKE) -C gen-src

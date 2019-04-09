@@ -729,23 +729,32 @@ struct
     *)
 
   let unquote_ident (qi: quoted_ident) : Id.t
-  = failwith "nyi"
+  = Ast_quoter.unquote_ident qi
+
   let unquote_name (qn: quoted_name) : Name.t
-  = failwith "nyi"
+  = Ast_quoter.unquote_name qn 
+  
   let unquote_int (q:  quoted_int ) : int
-  = failwith "nyi"
+  = Ast_quoter.unquote_int q
+
   let unquote_bool (q: quoted_bool ) : bool
-  = failwith "nyi"
+  = Ast_quoter.unquote_bool q
+  
   let unquote_cast_kind (q: quoted_cast_kind ) : Constr.cast_kind
-  = failwith "nyi"
+  = Ast_quoter.unquote_cast_kind q
+
   let unquote_kn (q:  quoted_kernel_name ) : Libnames.qualid
-  = failwith "nyi"
+  = Ast_quoter.unquote_kn q
+
   let unquote_inductive (q:  quoted_inductive ) : Names.inductive
-  = failwith "nyi"
+  = Ast_quoter.unquote_inductive q
+
   let unquote_proj (q: quoted_proj ) : (quoted_inductive * quoted_int * quoted_int)
-  = failwith "nyi"
+  = Ast_quoter.unquote_proj q
+
   let unquote_universe (q: Evd.evar_map) (qs: quoted_sort): Evd.evar_map * Univ.Universe.t
-  = failwith "nyi"
+  = Ast_quoter.unquote_universe q qs 
+
   let unquote_universe_instance(q: Evd.evar_map) (qu: quoted_univ_instance): Evd.evar_map * Univ.Instance.t
   = failwith "nyi"
   

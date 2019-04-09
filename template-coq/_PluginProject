@@ -1,3 +1,6 @@
+-I src
+-R theories Template
+
 src/Ascii.ml
 src/Ast0.ml
 src/AstUtils.ml
@@ -93,4 +96,6 @@ src/ast_quoter.ml
 src/ast_denoter.ml
 
 src/run_extractable.ml
-src/monad_extraction.mlpack
+src/run_extractable.mli
+
+# src/monad_extraction.mlpack

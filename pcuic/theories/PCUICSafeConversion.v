@@ -68,6 +68,12 @@ Section Conversion.
 
   Set Equations With UIP.
 
+  (* Before we were zipping terms and stacks.
+     Now, we even add the context into the mix.
+   *)
+  Definition zipx (Γ : context) (t : term) (π : stack) : term :=
+    it_mkLambda_or_LetIn Γ (zipc t π).
+
   Derive NoConfusion NoConfusionHom EqDec for stack.
 
   (* A choice is a local position.
@@ -80,7 +86,9 @@ Section Conversion.
   | lam_ty
   | lam_tm
   | prod_l
-  | prod_r.
+  | prod_r
+  (* | let_bd *)
+  | let_in.
 
   Derive NoConfusion NoConfusionHom EqDec for choice.
 
@@ -98,6 +106,8 @@ Section Conversion.
       | lam_tm, tLambda na A t => validpos t p
       | prod_l, tProd na A B => validpos A p
       | prod_r, tProd na A B => validpos B p
+      (* | let_bd, tLetIn na A b t => validpos b p *)
+      | let_in, tLetIn na A b t => validpos t p
       | _, _ => false
       end
     end.
@@ -127,6 +137,9 @@ Section Conversion.
   Definition dprod_r na A B (p : pos B) : pos (tProd na A B) :=
     exist (prod_r :: ` p) (proj2_sig p).
 
+  Definition dlet_in na A b t (p : pos t) : pos (tLetIn na A b t) :=
+    exist (let_in :: ` p) (proj2_sig p).
+
   Inductive positionR : position -> position -> Prop :=
   | positionR_app_lr p q : positionR (app_r :: p) (app_l :: q)
   | positionR_deep c p q : positionR p q -> positionR (c :: p) (c :: q)
@@ -140,6 +153,14 @@ Section Conversion.
   Lemma posR_Acc :
     forall t p, Acc (@posR t) p.
   Proof.
+    assert (forall na A b t p, Acc posR p -> Acc posR (dlet_in na A b t p))
+      as Acc_let_in.
+    { intros na A b t p h.
+      induction h as [p ih1 ih2].
+      constructor. intros [q e] h.
+      dependent destruction h. cbn in e.
+      eapply (ih2 (exist p0 e)). assumption.
+    }
     assert (forall na A B p, Acc posR p -> Acc posR (dprod_l na A B p)) as Acc_prod_l.
     { intros na A B p h.
       induction h as [p ih1 ih2].
@@ -234,6 +255,16 @@ Section Conversion.
         unfold posR in h. cbn in h.
         dependent destruction h.
         destruct c ; noconf e'.
+        eapply Acc_let_in with (p := exist p0 e').
+        eapply IHt3.
+      + destruct c ; noconf e.
+        eapply Acc_let_in with (p := exist q e).
+        eapply IHt3.
+    - destruct q as [q e]. destruct q as [| c q].
+      + constructor. intros [p e'] h.
+        unfold posR in h. cbn in h.
+        dependent destruction h.
+        destruct c ; noconf e'.
         * eapply Acc_app_l with (p := exist p0 e').
           -- eapply IHt1.
           -- assumption.
@@ -280,6 +311,7 @@ Section Conversion.
       | lam_tm, tLambda na A t => atpos t p
       | prod_l, tProd na A B => atpos A p
       | prod_r, tProd na A B => atpos B p
+      | let_in, tLetIn na A b t => atpos t p
       | _, _ => tRel 0
       end
     end.
@@ -317,6 +349,38 @@ Section Conversion.
       all: apply IHp ; assumption.
   Qed.
 
+  Fixpoint context_position Γ : position :=
+    match Γ with
+    | [] => []
+    | {| decl_name := na ; decl_body := None ; decl_type := A |} :: Γ =>
+      context_position Γ ++ [ lam_tm ]
+    | {| decl_name := na ; decl_body := Some b ; decl_type := A |} :: Γ =>
+      context_position Γ ++ [ let_in ]
+    end.
+
+  Lemma context_position_atpos :
+    forall Γ t, atpos (it_mkLambda_or_LetIn Γ t) (context_position Γ) = t.
+  Proof.
+    intros Γ t. revert t. induction Γ as [| d Γ ih ] ; intro t.
+    - reflexivity.
+    - destruct d as [na [b|] A].
+      + simpl. rewrite poscat_atpos. rewrite ih. reflexivity.
+      + simpl. rewrite poscat_atpos. rewrite ih. reflexivity.
+  Qed.
+
+  Lemma context_position_valid :
+    forall Γ t, validpos (it_mkLambda_or_LetIn Γ t) (context_position Γ).
+  Proof.
+    intros Γ t. revert t. induction Γ as [| [na [b|] A] Γ ih ] ; intro t.
+    - reflexivity.
+    - simpl. eapply poscat_valid.
+      + eapply ih.
+      + rewrite context_position_atpos. reflexivity.
+    - simpl. eapply poscat_valid.
+      + eapply ih.
+      + rewrite context_position_atpos. reflexivity.
+  Qed.
+
   Fixpoint stack_position π : position :=
     match π with
     | Empty => []
@@ -351,6 +415,29 @@ Section Conversion.
       + rewrite stack_position_atpos. reflexivity.
   Qed.
 
+  Definition xposition Γ π : position :=
+    context_position Γ ++ stack_position π.
+
+  Lemma xposition_atpos :
+    forall Γ t π, atpos (zipx Γ t π) (xposition Γ π) = t.
+  Proof.
+    intros Γ t π. unfold xposition.
+    rewrite poscat_atpos.
+    rewrite context_position_atpos.
+    apply stack_position_atpos.
+  Qed.
+
+  Lemma xposition_valid :
+    forall Γ t π, validpos (zipx Γ t π) (xposition Γ π).
+  Proof.
+    intros Γ t π. unfold xposition.
+    eapply poscat_valid.
+    - apply context_position_valid.
+    - rewrite context_position_atpos.
+      apply stack_position_valid.
+  Qed.
+
+  (* TODO Define xpos instead! *)
   Definition stack_pos t π : pos (zipc t π) :=
     exist (stack_position π) (stack_position_valid t π).
 

@@ -23,7 +23,7 @@ Set Warnings "-extraction-opaque-accessed".
 
 Require Export Template.Ast.
 
-Cd "gen-src".
+Cd "src".
 
 Require Import Template.TemplateMonad.Extractable.
 

@@ -41,6 +41,21 @@ let list_to_string l =
   aux 0 l;
   Bytes.to_string buf
 
+(* Remove '#' from names *)
+let clean_name s =
+  let l = List.rev (CString.split '#' s) in
+  match l with
+    s :: rst -> s
+  | [] -> raise (Failure "Empty name cannot be quoted")
+
+let split_name s : (Names.DirPath.t * Names.Id.t) =
+  let ss = List.rev (CString.split '.' s) in
+  match ss with
+    nm :: rst ->
+     let nm = clean_name nm in
+     let dp = (Names.DirPath.make (List.map Names.Id.of_string rst)) in (dp, Names.Id.of_string nm)
+  | [] -> raise (Failure "Empty name cannot be quoted")
+
 
 
 module type Quoted =

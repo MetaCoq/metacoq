@@ -33,6 +33,10 @@ type 'a tm =
 let run (c : 'a tm) env evm (k : Environ.env -> Evd.evar_map -> 'a -> unit) : unit =
   c env evm k (fun x -> CErrors.user_err (Pp.str x))
 
+let run_vernac (c : 'a tm) : unit =
+  let (evm,env) = Pfedit.get_current_context () in
+  run c env evm (fun _ _ _ -> ())
+
 let tmReturn (x : 'a) : 'a tm =
   fun env evd k _fail -> k env evd x
 let tmBind (x : 'a tm) (k : 'a -> 'b tm) : 'b tm =
@@ -160,3 +164,4 @@ let tmInferInstance (typ : term) : term option tm =
       success env evm (Some (EConstr.to_constr evm t))
     with
       Not_found -> success env evm None
+

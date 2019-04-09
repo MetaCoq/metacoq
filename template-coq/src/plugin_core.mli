@@ -22,6 +22,8 @@ type 'a tm
 
 val run : 'a tm -> Environ.env -> Evd.evar_map -> (Environ.env -> Evd.evar_map -> 'a -> unit) -> unit
 
+val run_vernac : 'a tm -> unit
+
 val tmReturn : 'a -> 'a tm
 val tmBind : 'a tm -> ('a -> 'b tm) -> 'b tm
 val tmMap  : ('a -> 'b) -> 'a tm -> 'b tm

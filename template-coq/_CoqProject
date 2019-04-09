@@ -8,6 +8,7 @@ src/quoted.ml
 src/quoter.ml
 # src/constr_quoter.mli
 src/constr_quoter.ml
+src/ast_quoter.ml
 src/denoter.ml
 src/denote.mli
 src/denote.ml

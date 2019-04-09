@@ -10,7 +10,7 @@ open TemplateCoqQuoter
 
 (* todo: the recursive call is uneeded provided we call it on well formed terms *)
 
-let print_term (u: t) : Pp.t = pr_constr u
+let print_term (u: Constr.t) : Pp.t = Printer.pr_constr u
 
 let strict_unquote_universe_mode = ref true
 

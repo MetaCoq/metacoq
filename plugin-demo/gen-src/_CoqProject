@@ -1,0 +1,6 @@
+-R ../../template-coq/theories Template
+-I ../../template-coq/src
+-Q . Demo
+
+demo.v
+Extract.v

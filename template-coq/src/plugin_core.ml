@@ -37,6 +37,9 @@ let run_vernac (c : 'a tm) : unit =
   let (evm,env) = Pfedit.get_current_context () in
   run c env evm (fun _ _ _ -> ())
 
+let with_env_evm (c : Environ.env -> Evd.evar_map -> 'a tm) : 'a tm =
+  fun env evm success fail -> c env evm env evm success fail
+
 let tmReturn (x : 'a) : 'a tm =
   fun env evd k _fail -> k env evd x
 let tmBind (x : 'a tm) (k : 'a -> 'b tm) : 'b tm =

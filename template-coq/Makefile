@@ -1,7 +1,8 @@
 all: coq
 
-coq: Makefile.coq
+coq: Makefile.coq Makefile.plugin
 	$(MAKE) -f Makefile.coq
+	$(MAKE) -f Makefile.plugin
 
 .PHONY: all install html clean mrproper
 
@@ -19,6 +20,9 @@ mrproper: clean
 
 Makefile.coq: _CoqProject
 	coq_makefile -f _CoqProject -o Makefile.coq
+
+Makefile.plugin: _PluginProject
+	coq_makefile -f _PluginProject -o Makefile.plugin
 
 .merlin: Makefile.coq
 	$(MAKE) -f Makefile.coq .merlin

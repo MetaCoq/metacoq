@@ -40,8 +40,10 @@ Quoter
 Constr_quoter
 Template_monad
 Denote
+Denoter
 Plugin_core
 Ast_quoter
+Ast_denoter
 
 Extractable
 

@@ -15,7 +15,7 @@ let to_string : char list -> string =
 let of_string : string -> char list =
   Quoted.string_to_list
 
-let to_reduction_strategy (s : Common.reductionStrategy) =
+let to_reduction_strategy (s : Common0.reductionStrategy) =
   failwith "to_reduction_strategy"
 
 let to_ident : char list ->  Names.Id.t =

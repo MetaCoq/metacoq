@@ -437,9 +437,47 @@ Section Conversion.
       apply stack_position_valid.
   Qed.
 
-  (* TODO Define xpos instead! *)
-  Definition stack_pos t π : pos (zipc t π) :=
-    exist (stack_position π) (stack_position_valid t π).
+  Definition xpos Γ t π : pos (zipx Γ t π) :=
+    exist (xposition Γ π) (xposition_valid Γ t π).
+
+  Lemma red1_it_mkLambda_or_LetIn :
+    forall Γ u v,
+      red1 Σ Γ u v ->
+      red1 Σ [] (it_mkLambda_or_LetIn Γ u)
+              (it_mkLambda_or_LetIn Γ v).
+  Proof.
+    intros Γ u v h.
+    revert u v h.
+    induction Γ as [| [na [b|] A] Γ ih ] ; intros u v h.
+    - cbn. assumption.
+    - simpl. eapply ih. cbn. constructor. assumption.
+    - simpl. eapply ih. cbn. constructor. assumption.
+  Qed.
+
+  Lemma cored_it_mkLambda_or_LetIn :
+    forall Γ u v,
+      cored Σ Γ u v ->
+      cored Σ [] (it_mkLambda_or_LetIn Γ u)
+              (it_mkLambda_or_LetIn Γ v).
+  Proof.
+    intros Γ u v h.
+    induction h.
+    - constructor. apply red1_it_mkLambda_or_LetIn. assumption.
+    - eapply cored_trans.
+      + eapply IHh.
+      + apply red1_it_mkLambda_or_LetIn. assumption.
+  Qed.
+
+  Lemma cored_zipx :
+    forall Γ u v π,
+      cored Σ Γ u v ->
+      cored Σ [] (zipx Γ u π) (zipx Γ v π).
+  Proof.
+    intros Γ u v π h.
+    eapply cored_it_mkLambda_or_LetIn.
+    eapply cored_context.
+    assumption.
+  Qed.
 
   Lemma red_trans :
     forall Γ u v w,

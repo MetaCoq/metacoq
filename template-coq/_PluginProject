@@ -1,3 +1,6 @@
+-I src
+-R theories Template
+
 src/Ascii.ml
 src/Ast0.ml
 src/AstUtils.ml

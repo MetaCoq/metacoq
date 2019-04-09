@@ -5,7 +5,7 @@ coq: Makefile.coq
 
 plugin: coq Makefile.plugin gen-src/.generate
 	@ echo "Copying from src to gen-src"
-	@ for x in $(TOCOPY); do rm -f gen-src/$$x; ln -s ../src/$$x gen-src/$$x; done
+	@ for x in $(TOCOPY); do rm -f gen-src/$$x; cp src/$$x gen-src/$$x; done
 	$(MAKE) -f Makefile.plugin
 
 gen-src/.generate: theories/Extraction.vo theories/Extraction.v
@@ -36,4 +36,4 @@ Makefile.plugin: _PluginProject
 .merlin: Makefile.coq
 	$(MAKE) -f Makefile.coq .merlin
 
-TOCOPY=ast_denoter.ml ast_quoter.ml denote.ml denoter.ml plugin_core.ml plugin_core.mli quoted.ml quoter.ml run_extractable.ml run_extractable.mli run_template_monad.mli tm_util.ml 
+TOCOPY=ast_denoter.ml ast_quoter.ml denote.ml denoter.ml plugin_core.ml plugin_core.mli quoted.ml quoter.ml run_extractable.ml run_extractable.mli tm_util.ml

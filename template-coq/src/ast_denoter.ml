@@ -133,8 +133,9 @@ struct
   let unquote_universe (q: Evd.evar_map) (qs: quoted_sort): Evd.evar_map * Univ.Universe.t
   = Ast_quoter.unquote_universe q qs
 
-  let unquote_universe_instance(q: Evd.evar_map) (qu: quoted_univ_instance): Evd.evar_map * Univ.Instance.t
-  = failwith "nyi"
+  let unquote_universe_instance(evm: Evd.evar_map) (l: quoted_univ_instance): Evd.evar_map * Univ.Instance.t
+  = (evm,  Univ.Instance.of_array (Array.of_list (List0.map unquote_level l)))
+
 
 end
 

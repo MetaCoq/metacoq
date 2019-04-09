@@ -12,6 +12,7 @@ gen-src:
 get-mc:
 	cp -r $(TEMPLATE_LIB)/gen-src/to-lower.sh src
 	(cd src; ./to-lower.sh)
+	(cd $(TEMPLATE_LIB)/gen-src/; ./to-lower.sh)
 	cp -r $(TEMPLATE_LIB)/gen-src/*.ml $(TEMPLATE_LIB)/gen-src/*.mli src
 
 .PHONY: get-mc gen-src

@@ -1,3 +1,4 @@
+-Q ../template-coq/theories Template
 -I src
 -Q theories Demo
 

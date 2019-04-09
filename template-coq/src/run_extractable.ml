@@ -9,8 +9,8 @@ open Ast_quoter
 let of_constr (env : Environ.env) (t : Constr.t) : Ast0.term =
   Ast_quoter.quote_term env t
 
-let to_string (cl : char list) : string =
-  failwith "to_string"
+let to_string : char list -> string =
+  Ast_quoter.unquote_string
 
 let of_string : string -> char list =
   Ast_quoter.quote_string
@@ -18,8 +18,8 @@ let of_string : string -> char list =
 let to_reduction_strategy (s : Common.reductionStrategy) =
   failwith "to_reduction_strategy"
 
-let to_ident : char list -> Names.Id.t =
-  failwith "to_ident"
+let to_ident : char list ->  Names.Id.t =
+  Ast_quoter.unquote_ident
 
 let of_ident (id : Names.Id.t) : char list =
   of_string (Names.Id.to_string id)
@@ -36,7 +36,7 @@ let of_qualid (q : Libnames.qualid) : char list =
 let of_kername : Names.KerName.t -> char list =
   Ast_quoter.quote_kn
 
-let to_kername : char list -> Names.KerName.t =
+let to_kername (s : char list) : Names.KerName.t =
   failwith "of_kername"
 
 (* todo(gmm): this definition adapted from quoter.ml *)
@@ -114,7 +114,7 @@ let of_mib (env : Environ.env) (mib : Plugin_core.mutual_inductive_body) : Ast0.
   let bodies = List.map Ast_quoter.mk_one_inductive_body (List.rev ls) in
   Ast_quoter.mk_mutual_inductive_body nparams paramsctx bodies uctx
 
-let to_mie : _ -> Plugin_core.mutual_inductive_entry =
+let to_mie x : Plugin_core.mutual_inductive_entry =
   failwith "to_mie"
 
 (* note(gmm): code taken from quoter.ml (quote_entry_aux) *)

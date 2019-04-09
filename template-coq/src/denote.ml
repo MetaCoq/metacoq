@@ -185,7 +185,7 @@ let unquote_universe evm trm (* of type universe *) =
 let map_evm (f : 'a -> 'b -> 'a * 'c) (evm : 'a) (l : 'b list) : 'a * ('c list) =
   let evm, res = List.fold_left (fun (evm, l) b -> let evm, c = f evm b in evm, c :: l) (evm, []) l in
   evm, List.rev res
-                  
+
 let unquote_universe_instance evm trm (* of type universe_instance *) =
   let l = unquote_list trm in
   let evm, l = map_evm unquote_level evm l in
@@ -423,7 +423,7 @@ let denote_term (evm : Evd.evar_map) (trm: D.t) : Evd.evar_map * Constr.t =
        (match List.nth projs (D.unquote_int narg) with
         | Some p -> evm, Constr.mkProj (Names.Projection.make p false, t)
         | None -> (*bad_term trm *) failwith "tproj case of denote_term")
-    | _ -> failwith "big case of denote_term" 
+    | _ -> failwith "big case of denote_term"
   in aux evm trm
 
 end

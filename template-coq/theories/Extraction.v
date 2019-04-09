@@ -27,6 +27,9 @@ Cd "gen-src".
 
 Require Import Template.TemplateMonad.Extractable.
 
+Recursive Extraction Library TypingWf.
+Recursive Extraction Library Checker.
+Recursive Extraction Library Retyping.
 Recursive Extraction Library Extractable.
 
 Cd "..".

@@ -226,16 +226,13 @@ let to_constr (t : Ast0.term) : Constr.t =
   snd (to_constr_ev Evd.empty t)
 
 let tmOfConstr (t : Constr.t) : Ast0.term tm =
-  fun env evm k _ ->
-    k env evm (of_constr env t)
+  Plugin_core.with_env_evm (fun env _ -> tmReturn (of_constr env t))
 
 let tmOfMib (t : Plugin_core.mutual_inductive_body) : Ast0.mutual_inductive_body tm =
-  fun env evm k _ ->
-    k env evm (of_mib env t)
+  Plugin_core.with_env_evm (fun env _ -> tmReturn (of_mib env t))
 
 let tmOfConstantEntry (t : Plugin_core.constant_entry) : Ast0.constant_entry tm =
-  fun env evm k _ ->
-    k env evm (of_constant_entry env t)
+  Plugin_core.with_env_evm (fun env _ -> tmReturn (of_constant_entry env t))
 
 let rec interp_tm (t : 'a coq_TM) : 'a tm =
   match t with
@@ -291,3 +288,6 @@ let rec interp_tm (t : 'a coq_TM) : 'a tm =
       (function
           None -> Obj.magic None
         | Some inst -> Obj.magic (tmMap (fun x -> Some x) (tmOfConstr inst)))
+
+let run_vernac (c : 'a coq_TM) : unit =
+  Plugin_core.run_vernac (interp_tm (Obj.magic c))

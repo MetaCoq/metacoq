@@ -21,7 +21,7 @@ Extraction Blacklist config uGraph univ Ast String List Nat Int
            UnivSubst Typing Checker Retyping OrderedType.
 Set Warnings "-extraction-opaque-accessed".
 
-Require Import Template.Ast.
+Require Export Template.Ast.
 
 Cd "gen-src".
 

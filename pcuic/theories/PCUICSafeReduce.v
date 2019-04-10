@@ -1668,6 +1668,16 @@ Section Reduce.
         constructor. constructor.
   Qed.
 
+  Lemma reduce_stack_Req :
+    forall Γ t π h,
+      Req (fst Σ) Γ (reduce_stack Γ t π h) (t, π).
+  Proof.
+    intros Γ t π h.
+    unfold reduce_stack.
+    destruct (reduce_stack_full Γ t π h) as [[t' π'] r].
+    assumption.
+  Qed.
+
   Definition eqcored Γ u v :=
     u = v \/ cored (fst Σ) Γ u v.
 

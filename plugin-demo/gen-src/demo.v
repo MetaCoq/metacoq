@@ -156,3 +156,5 @@ Definition genLensN (baseName : String.string) : TM unit :=
       mconcat (map gen (countTo (List.length info.(fields))))
     | None => tmFail "failed to get info"
     end).
+
+Definition genLensNInst  : TM unit := genLensN "Point".

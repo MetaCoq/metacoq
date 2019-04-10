@@ -12,6 +12,8 @@ Require Import Equations.Prop.DepElim.
 
 Import MonadNotation.
 
+Module PSR := PCUICSafeReduce.
+
 (** * Conversion for PCUIC without fuel
 
   Following PCUICSafereduce, we derive a fuel-free implementation of
@@ -63,7 +65,7 @@ Section Conversion.
     - assumption.
     - specialize IHr with (1 := ltac:(eassumption)).
       destruct IHr as [A ?]. exists A.
-      eapply PCUICSafeReduce.subject_reduction ; eassumption.
+      eapply PSR.subject_reduction ; eassumption.
   Qed.
 
   Set Equations With UIP.
@@ -74,7 +76,11 @@ Section Conversion.
   Definition zipx (Γ : context) (t : term) (π : stack) : term :=
     it_mkLambda_or_LetIn Γ (zipc t π).
 
+  (* TODO Move in SafeReduce *)
   Derive NoConfusion NoConfusionHom EqDec for stack.
+
+  Instance reflect_stack : ReflectEq stack :=
+    let h := EqDec_ReflectEq stack in _.
 
   (* A choice is a local position.
      We redefine positions in a non dependent way to make it more practical.
@@ -415,6 +421,9 @@ Section Conversion.
       + rewrite stack_position_atpos. reflexivity.
   Qed.
 
+  Definition stack_pos t π : pos (zipc t π) :=
+    exist (stack_position π) (stack_position_valid t π).
+
   Definition xposition Γ π : position :=
     context_position Γ ++ stack_position π.
 
@@ -439,6 +448,26 @@ Section Conversion.
 
   Definition xpos Γ t π : pos (zipx Γ t π) :=
     exist (xposition Γ π) (xposition_valid Γ t π).
+
+  Lemma positionR_poscat :
+    forall p q1 q2,
+      positionR q1 q2 ->
+      positionR (p ++ q1) (p ++ q2).
+  Proof.
+    intro p. induction p ; intros q1 q2 h.
+    - assumption.
+    - cbn. constructor. eapply IHp. assumption.
+  Qed.
+
+  Lemma positionR_stack_pos_xpos :
+    forall Γ π1 π2,
+      positionR (stack_position π1) (stack_position π2) ->
+      positionR (xposition Γ π1) (xposition Γ π2).
+  Proof.
+    intros Γ π1 π2 h.
+    unfold xposition.
+    eapply positionR_poscat. assumption.
+  Qed.
 
   Lemma red1_it_mkLambda_or_LetIn :
     forall Γ u v,
@@ -886,7 +915,7 @@ Section Conversion.
     subst. cbn in h. right. left. assumption.
   Qed.
 
-  Lemma R_state :
+  Lemma R_stateR :
     forall t1 t2 (p1 : pos t1) (p2 : pos t2) s1 s2 (e : t1 = t2),
       p1 = coe _ e p2 ->
       stateR s1 s2 ->
@@ -939,6 +968,126 @@ Section Conversion.
   Notation isconv_args Γ t π1 π2 aux :=
     (repack (isconv_args_raw Γ t π1 π2 aux)) (only parsing).
 
+  (* TODO Move higher or even in SafeReduce *)
+  Derive NoConfusion NoConfusionHom for sig.
+  Derive NoConfusion NoConfusionHom for prod.
+
+  Lemma positionR_nocoe :
+    forall p t1 t2 (q : pos t1) (e : t2 = t1),
+      positionR p (` q) ->
+      positionR p (` (coe pos e q)).
+  Proof.
+    intros p t1 t2 q e h. subst. cbn in *. assumption.
+  Qed.
+
+  Fixpoint convpos {t} (p : PSR.position t) : position :=
+    match p with
+    | root _ => []
+    | PSR.app_l u p v => app_l :: convpos p
+    | PSR.app_r u v p => app_r :: convpos p
+    | PSR.case_c indn pr c brs p => case_c :: convpos p
+    end.
+
+  Lemma convpos_valid :
+    forall t p,
+      validpos t (@convpos t p).
+  Proof.
+    intros t p. induction p.
+    all: try assumption.
+    reflexivity.
+  Qed.
+
+  Lemma convpos_poscat :
+    forall t p q,
+      convpos (@poscat t p q) = convpos p ++ convpos q.
+  Proof.
+    intros t p q.
+    funelim (poscat t p q).
+    - reflexivity.
+    - cbn. f_equal. assumption.
+    - cbn. f_equal. assumption.
+    - cbn. f_equal. assumption.
+  Qed.
+
+  Lemma convpos_stack_pos :
+    forall t π,
+      convpos (` (PSR.stack_position t π)) = stack_position π.
+  Proof.
+    intros t π. revert t. induction π ; intro u.
+    - simp stack_position. reflexivity.
+    - simp stack_position.
+      replace (stack_position_clause_1 PCUICSafeReduce.stack_position π π (tApp u t))
+        with (PSR.stack_position (tApp u t) π)
+        by (simp stack_position ; reflexivity).
+      case_eq (PSR.stack_position (tApp u t) π).
+      intros p e1 e2. cbn.
+      rewrite convpos_poscat.
+      rewrite <- (IHπ (tApp u t)). rewrite e2. cbn. f_equal.
+      match goal with
+      | |- context [ eq_rec_r ?P ?t ?e ] =>
+        set (eq := e)
+      end. clearbody eq.
+      clear. revert eq.
+      generalize (PSR.atpos (PSR.zipc (tApp u t) π) p). clear.
+      intros t0 eq. subst. cbn. reflexivity.
+    - simp stack_position.
+      replace (stack_position_clause_1 PCUICSafeReduce.stack_position π π (tApp (mkApps (tFix f n) args) u))
+        with (PSR.stack_position (tApp (mkApps (tFix f n) args) u) π)
+        by (simp stack_position ; reflexivity).
+      case_eq (PSR.stack_position (tApp (mkApps (tFix f n) args) u) π).
+      intros p e1 e2. cbn.
+      rewrite convpos_poscat.
+      rewrite <- (IHπ (tApp (mkApps (tFix f n) args) u)). rewrite e2. cbn. f_equal.
+      match goal with
+      | |- context [ eq_rec_r ?P ?t ?e ] =>
+        set (eq := e)
+      end. clearbody eq.
+      clear. revert eq.
+      generalize (PSR.atpos (PSR.zipc (tApp (mkApps (tFix f n) args) u) π) p). clear.
+      intros t0 eq. subst. cbn. reflexivity.
+    - simp stack_position.
+      set (t := (tCase indn pred u brs)).
+      replace (stack_position_clause_1 PCUICSafeReduce.stack_position π π t)
+        with (PSR.stack_position t π)
+        by (simp stack_position ; reflexivity).
+      case_eq (PSR.stack_position t π).
+      intros p e1 e2. cbn.
+      rewrite convpos_poscat.
+      rewrite <- (IHπ t). rewrite e2. cbn. f_equal.
+      match goal with
+      | |- context [ eq_rec_r ?P ?t ?e ] =>
+        set (eq := e)
+      end. clearbody eq.
+      clear. revert eq. subst t.
+      generalize (PSR.atpos (PSR.zipc (tCase indn pred u brs) π) p). clear.
+      intros t0 eq. subst. cbn. reflexivity.
+  Qed.
+
+  Lemma convpos_posR :
+    forall {t p q},
+      @PSR.posR t p q ->
+      positionR (convpos p) (convpos q).
+  Proof.
+    intros t p q h.
+    induction h.
+    - cbn. constructor.
+    - cbn. constructor. assumption.
+    - cbn. constructor. assumption.
+    - cbn. constructor. assumption.
+    - cbn. constructor.
+    - cbn. constructor.
+    - cbn. constructor.
+  Qed.
+
+  Lemma pair_convpos :
+    forall {t1} {p1 : PSR.position t1} {t2} {p2 : PSR.position t2},
+      (t1 ; p1) = (t2 ; p2) ->
+      convpos p1 = convpos p2.
+  Proof.
+    intros t1 p1 t2 p2 e.
+    inversion e. reflexivity.
+  Qed.
+
   Equations(noeqns) _isconv_red (Γ : context) (leq : conv_pb)
             (t1 : term) (π1 : stack) (h1 : welltyped Σ Γ (zipc t1 π1))
             (t2 : term) (π2 : stack) (h2 : welltyped Σ Γ (zipc t2 π2))
@@ -972,33 +1121,17 @@ Section Conversion.
     - rewrite <- eq1 in h.
       dependent destruction h.
       + left. simpl. eapply cored_it_mkLambda_or_LetIn. assumption.
-      + noconf H0.
-
-(*       unshelve eapply R_state. *)
-(*       + simpl. reflexivity. *)
-(*       + cbn. *)
-(* unfold zipx. *)
-(*         do 2 zip fold. rewrite eq1. rewrite <- e. simpl. reflexivity. *)
-(*       + simpl. *)
-(*         match goal with *)
-(*         | |- context [ coe ?P ?e ?t ] => *)
-(*           set (eq := e) *)
-(*         end. cbn in eq. clearbody eq. *)
-(*         zip fold in eq. *)
-
-
-
-    (*     rewrite <- e. *)
-
-    (* left. simpl. eapply cored_it_mkLambda_or_LetIn. *)
-    (* do 2 zip fold. rewrite eq1. *)
-
-    (* - *)
-
-    (* (t1', π1') = reduce_stack nodelta_flags Σ Γ t1 π1 h1 *)
-    (* ---------------------------------------------------- *)
-    (* R (Term t2', Γ, t1', π1', π2') (Reduction t2, Γ, t1, π1, π2) *)
-  Admitted.
+      + cbn in H0. inversion H0. (* Why is noconf failing at this point? *)
+        unshelve eapply R_posR.
+        * simpl. unfold zipx. f_equal. symmetry. assumption.
+        * simpl. unfold posR. eapply positionR_nocoe. cbn.
+          eapply positionR_stack_pos_xpos.
+          pose proof (convpos_posR H) as h.
+          rewrite convpos_stack_pos in h.
+          pose proof (pair_convpos H3) as eq.
+          rewrite <- eq in h. rewrite convpos_stack_pos in h.
+          assumption.
+  Qed.
   Next Obligation.
     destruct b ; auto.
     destruct (reduce_stack_sound nodelta_flags _ _ _ _ h1).

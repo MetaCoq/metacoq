@@ -32,3 +32,8 @@ VERNAC COMMAND EXTEND Unquote_vernac CLASSIFIED AS SIDEFF
 
 END;;
 
+VERNAC COMMAND EXTEND Unquote_vernac CLASSIFIED AS SIDEFF
+| [ "LookupPring" ident(name) ] ->
+     [ Run_extractable.run_vernac (Demo.lookupPrint (quote_string (Names.Id.to_string name))) ]
+
+END;;

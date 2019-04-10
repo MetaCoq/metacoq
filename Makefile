@@ -1,8 +1,8 @@
-all: template-coq checker pcuic extraction
+all: template-coq plugin-demo checker pcuic extraction
 
 .PHONY: all template-coq checker install html clean mrproper .merlin test-suite translations
 
-install: 
+install:
 	$(MAKE) -C template-coq install
 	$(MAKE) -C checker install
 	$(MAKE) -C pcuic install
@@ -41,6 +41,9 @@ template-coq:
 
 pcuic: template-coq
 	$(MAKE) -C pcuic
+
+plugin-demo: template-coq
+	$(MAKE) -C plugin-demo
 
 extraction: checker template-coq pcuic
 	$(MAKE) -C extraction

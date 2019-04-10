@@ -1,6 +1,18 @@
 -I src
 -Q theories Demo
 
+
+src/demo.ml
+src/demo.mli
+
+
+src/g_demo_plugin.ml4
+src/demo_plugin.mlpack
+
+theories/Demo.v
+
+
+# from MetaCoq (include verbatim)
 src/ascii.ml
 src/ascii.mli
 src/ast0.ml
@@ -66,7 +78,7 @@ src/univ0.mli
 src/utils.ml
 src/utils.mli
 
-# copied from MetaCoq
+# From MetaCoq
 src/run_extractable.mli
 src/run_extractable.ml
 src/tm_util.ml
@@ -79,12 +91,3 @@ src/plugin_core.mli
 src/plugin_core.ml
 src/ast_quoter.ml
 src/ast_denoter.ml
-
-src/demo.ml
-src/demo.mli
-
-
-src/g_demo_plugin.ml4
-src/demo_plugin.mlpack
-
-theories/Demo.v

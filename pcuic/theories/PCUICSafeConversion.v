@@ -970,6 +970,12 @@ Section Conversion.
       + unfold zipx.
         do 2 zip fold. rewrite eq1. rewrite <- e. simpl. reflexivity.
       + simpl.
+        match goal with
+        | |- context [ coe ?P ?e ?t ] =>
+          set (eq := e)
+        end. cbn in eq. clearbody eq.
+        zip fold in eq.
+
 
     (*     rewrite <- e. *)
 

@@ -149,6 +149,9 @@ Next Obligation.
         subst. left. reflexivity.
 Defined.
 
+Instance reflect_term : ReflectEq term :=
+  let h := EqDec_ReflectEq term in _.
+
 (* We assume normalisation of the reduction.
 
    We state is as well-foundedness of the reduction.
@@ -1706,6 +1709,5 @@ Section Reduce.
     unfold reduce_term.
     refine (reduce_stack_sound _ _ Empty _).
   Qed.
-
 
 End Reduce.

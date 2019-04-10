@@ -746,13 +746,6 @@ Proof.
   constructor. f_equal. assumption.
 Qed.
 
-Instance option_dec : forall {A}, EqDec A -> EqDec (option A).
-Proof.
-  intros A h.
-  pose (EqDec_ReflectEq A).
-  exact _.
-Qed.
-
 Fixpoint eq_list {A} (eqA : A -> A -> bool) (l l' : list A) : bool :=
   match l, l' with
   | a :: l, a' :: l' =>
@@ -826,7 +819,6 @@ Instance reflect_prod : forall {A B}, ReflectEq A -> ReflectEq B -> ReflectEq (A
   eqb := eq_prod eqb eqb
 }.
 Proof.
-  (* destruct r as [eqA hA], r0 as [eqB hB]. *)
   intros [x y] [u v].
   unfold eq_prod.
   destruct (eqb_spec x u) ; nodec.
@@ -847,10 +839,6 @@ Proof.
   all: try reflexivity.
   all: discriminate.
 Qed.
-
-(* Automatic *)
-(* Instance reflect_universe : ReflectEq Universe.Expr.t := _. *)
-(* Instance reflect_universe : ReflectEq universe := _. *)
 
 Definition eq_name na nb :=
   match na, nb with
@@ -888,9 +876,6 @@ Proof.
   cbn. constructor. subst. reflexivity.
 Qed.
 
-(* Automatic! *)
-(* Instance projection_dec : EqDec projection := _. *)
-
 Definition eq_def {A : Set} `{ReflectEq A} (d1 d2 : def A) : bool :=
   match d1, d2 with
   | mkdef n1 t1 b1 a1, mkdef n2 t2 b2 a2 =>
@@ -908,13 +893,4 @@ Proof.
   destruct (eqb_spec b1 b2) ; nodec.
   destruct (eqb_spec a1 a2) ; nodec.
   cbn. constructor. subst. reflexivity.
-Qed.
-
-(* Instance mfixpoint_dec : forall {A : Set}, ReflectEq A -> EqDec (mfixpoint A) := _. *)
-
-Instance mfixpoint_dec : forall {A : Set}, EqDec A -> EqDec (mfixpoint A).
-Proof.
-  intros A h.
-  pose (EqDec_ReflectEq A).
-  exact _.
 Qed.

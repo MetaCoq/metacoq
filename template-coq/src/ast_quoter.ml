@@ -318,7 +318,7 @@ struct
     let comps = CString.split '.' (list_to_string na) in
     let comps = List.map Id.of_string comps in
     let id, dp = CList.sep_last comps in
-    let dp = DirPath.make dp in
+    let dp = DirPath.make (List.rev dp) in
     let mind = Globnames.encode_mind dp id in
     (mind, unquote_int i)
 

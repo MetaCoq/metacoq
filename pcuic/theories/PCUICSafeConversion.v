@@ -965,16 +965,27 @@ Section Conversion.
       eapply reduce_stack_sound.
   Qed.
   Next Obligation.
-    destruct (reduce_stack_cored nodelta_flags _ Γ t1 π1 h1) as [e | h].
-    - unshelve eapply R_state.
-      + unfold zipx.
-        do 2 zip fold. rewrite eq1. rewrite <- e. simpl. reflexivity.
-      + simpl.
-        match goal with
-        | |- context [ coe ?P ?e ?t ] =>
-          set (eq := e)
-        end. cbn in eq. clearbody eq.
-        zip fold in eq.
+    destruct (reduce_stack_Req nodelta_flags _ Γ t1 π1 h1) as [ e | h ].
+    - rewrite e in eq1. inversion eq1. subst.
+      right. right. simpl.
+      constructor.
+    - rewrite <- eq1 in h.
+      dependent destruction h.
+      + left. simpl. eapply cored_it_mkLambda_or_LetIn. assumption.
+      + noconf H0.
+
+(*       unshelve eapply R_state. *)
+(*       + simpl. reflexivity. *)
+(*       + cbn. *)
+(* unfold zipx. *)
+(*         do 2 zip fold. rewrite eq1. rewrite <- e. simpl. reflexivity. *)
+(*       + simpl. *)
+(*         match goal with *)
+(*         | |- context [ coe ?P ?e ?t ] => *)
+(*           set (eq := e) *)
+(*         end. cbn in eq. clearbody eq. *)
+(*         zip fold in eq. *)
+
 
 
     (*     rewrite <- e. *)

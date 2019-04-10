@@ -9,9 +9,10 @@ Record Point : Set :=
 Definition two:=1+2.
 About plus.
 
+LookupPrint two.
+
+
 Showoff.
 (*
-lookupPrint
- "two".
 (* process coq segmentation fault *)
     *)

@@ -26,6 +26,7 @@ BasicAst
 Common
 Config0
 
+Tm_util
 Denote
 Denoter
 Equalities
@@ -34,7 +35,6 @@ Logic
 Specif
 UGraph0
 
-Tm_util
 Quoted
 Quoter
 Ast_quoter

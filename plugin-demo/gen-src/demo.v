@@ -170,8 +170,13 @@ Definition lookupPrint (baseName : String.string) : TM unit :=
             end
          ).
 
+Definition lookup (baseName : String.string) : TM unit :=
+  tmBind (tmQuoteConstant baseName true)
+         (fun b => tmReturn tt
+         ).
+
 Definition genLensNInst  : TM unit := genLensN "Point".
 
 
 Definition showoff : TM unit :=
-  lookupPrint "Nat.add".
+  lookup "Nat.add".

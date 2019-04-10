@@ -855,6 +855,28 @@ Section Conversion.
     assumption.
   Qed.
 
+  Notation coe P h t := (eq_rect_r P t h).
+
+  Lemma right_dlex_eq :
+    forall {A B} leA (leB : forall x : A, B x -> B x -> Prop) a1 a2 b1 b2 (e : a1 = a2),
+      leB a1 b1 (coe B e b2) ->
+      dlexprod leA leB (a1 ; b1) (a2 ; b2).
+  Proof.
+    intros A B leA leB a1 a2 b1 b2 e h.
+    subst. cbn in h.
+    right. assumption.
+  Qed.
+
+  Lemma right_lex_eq :
+    forall {A B} leA (leB : B -> B -> Prop) a1 a2 b1 b2,
+      a1 = a2 ->
+      leB b1 b2 ->
+      @lexprod A B leA leB (a1, b1) (a2, b2).
+  Proof.
+    intros A B leA leB a1 a2 b1 b2 e h.
+    subst. right. assumption.
+  Qed.
+
   Definition Ret s Γ t π π' :=
     match s with
     | Reduction t' =>
@@ -924,6 +946,20 @@ Section Conversion.
       eapply reduce_stack_sound.
   Qed.
   Next Obligation.
+    destruct (reduce_stack_cored nodelta_flags _ Γ t1 π1 h1) as [e | h].
+    - unshelve eapply right_dlex_eq.
+      + unfold zipx.
+        do 2 zip fold. rewrite eq1. rewrite <- e. simpl. reflexivity.
+      + simpl. (* unshelve eapply right_lex_eq. *)
+
+
+    (*     rewrite <- e. *)
+
+    (* left. simpl. eapply cored_it_mkLambda_or_LetIn. *)
+    (* do 2 zip fold. rewrite eq1. *)
+
+    (* - *)
+
     (* (t1', π1') = reduce_stack nodelta_flags Σ Γ t1 π1 h1 *)
     (* ---------------------------------------------------- *)
     (* R (Term t2', Γ, t1', π1', π2') (Reduction t2, Γ, t1, π1, π2) *)

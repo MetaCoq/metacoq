@@ -6,6 +6,6 @@ Record Point : Set :=
     y:nat
   }.
 
-Make Lens Point.
+Showoff.
 (* process coq segmentation fault *)
     

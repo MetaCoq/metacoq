@@ -17,7 +17,7 @@ DECLARE PLUGIN "demo_plugin"
 
 VERNAC COMMAND EXTEND Make_vernac CLASSIFIED AS QUERY
    | [ "Showoff" ] ->
-     [ Run_extractable.run_vernac Demo.showoff ]
+     [ Run_extractable.run_vernac Demo.genLensNInst ]
 END;;
 
 let quote_string s =

@@ -170,6 +170,12 @@ Definition lookupPrint (baseName : String.string) : TM unit :=
             end
          ).
 
+Definition x :=
+  tConstruct
+  {| inductive_mind := "Coq.Init.Datatypes.nat"; inductive_ind := 0 |}
+  0 nil
+.
+
 Definition lookup (baseName : String.string) : TM unit :=
   tmBind (tmQuoteConstant baseName true)
          (fun b => tmReturn tt
@@ -179,4 +185,7 @@ Definition genLensNInst  : TM unit := genLensN "Point".
 
 
 Definition showoff : TM unit :=
-  lookup "Nat.add".
+  tmBind (tmMsg "showing off tmDefn" )
+         (fun _ =>
+            tmBind (tmDefinition "zeroE" None x)
+                   (fun _ => tmReturn tt)).

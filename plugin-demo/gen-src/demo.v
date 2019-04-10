@@ -4,9 +4,10 @@ From Template Require Import
      TemplateMonad.Extractable.
 
 
+(*
 Definition showoff : TM unit :=
   tmMsg "running from an extracted plugin!".
-
+*)
 
 Require Import ExtLib.Structures.Functor.
 
@@ -157,4 +158,20 @@ Definition genLensN (baseName : String.string) : TM unit :=
     | None => tmFail "failed to get info"
     end).
 
+
+Print definition_entry.
+Definition lookupPrint (baseName : String.string) : TM unit :=
+  tmBind (tmQuoteConstant baseName true)
+         (fun b =>
+            match b with
+            | ParameterEntry _ => tmReturn tt
+            | DefinitionEntry d =>
+              tmPrint (definition_entry_body d)
+            end
+         ).
+
 Definition genLensNInst  : TM unit := genLensN "Point".
+
+
+Definition showoff : TM unit :=
+  lookupPrint "Nat.add".

@@ -6,6 +6,12 @@ Record Point : Set :=
     y:nat
   }.
 
+Definition two:=1+2.
+About plus.
+
 Showoff.
+(*
+lookupPrint
+ "two".
 (* process coq segmentation fault *)
-    
+    *)

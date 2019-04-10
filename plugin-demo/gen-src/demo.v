@@ -9,9 +9,6 @@ Definition showoff : TM unit :=
 
 
 Require Import ExtLib.Structures.Functor.
-Require Import ExtLib.Structures.Monad.
-Require Import ExtLib.Structures.MonadState.
-Require Import ExtLib.Structures.MonadExc.
 
 Set Primitive Projections.
 
@@ -31,14 +28,6 @@ Definition lens_compose {a b c d e f : Type}
 
 Infix "∙" := lens_compose (at level 90, left associativity).
 
-Require Import ExtLib.Core.RelDec.
-Definition lensAt {A C} (x : A) {reqd: RelDec (@eq A)}: Lens (A->C) (A->C) C C.
-  constructor.
-  intros f. exact (f x).
-  intros f g x'.
-  exact (if (rel_dec x' x) then (f (g x)) else (g x')).
-Defined.
-
 Section ops.
   Context {a b c d : Type} (l : Lens a b c d).
 
@@ -47,52 +36,8 @@ Section ops.
 End ops.
 
 
-Section GuardExc.
-  Context {e} {m} {Monad_m : Monad m} {MonadExc_m : MonadExc e m}.
-
-  Definition guard (err : e) (g : bool) : m unit :=
-    if g then ret tt else raise err.
-End GuardExc.
-
-Import MonadNotation.
-
-Local Open Scope monad_scope.
-
-Definition to_bool {P Q} (x : {P} + {Q}) : bool :=
-  match x with
-  | left _ => true
-  | right _ => false
-  end.
-
-Section stateL.
-  Context {m : Type -> Type} {Monad_m : Monad m} {s} {MS : MonadState s m}.
-
-  Definition modifyL
-             {a} (l : Lens s s a a) (f : a -> a) : m a :=
-    x <- get ;;
-    let res := l.(over) f x in
-    put res ;;
-    ret (l.(view) res).
-
-  Definition putL {a} (l : Lens s s a a) (x : a) : m unit :=
-    modifyL l (fun _ => x) ;; ret tt.
-
-  Definition getL {a} (l : Lens s s a a) : m a :=
-    fmap l.(view) get.
-End stateL.
-
-Lemma view_set : forall {A B} (l : Lens A A B B) x,
-    set l (l.(view) x) x = x.
-Admitted.
-Lemma set_view : forall {A B} (l : Lens A A B B) x r,
-    l.(view) (set l x r) = x.
-Admitted.
-
-
 Set Primitive Projections.
 Set Universe Polymorphism.
-
-Import MonadNotation.
 
 Record Info : Set :=
 { type : ident
@@ -116,28 +61,6 @@ Quote Definition cBuild_Lens := Build_Lens.
 Require Import Coq.Lists.List.
 Require Import Coq.Bool.Bool.
 
-Fixpoint boundIn (v : nat) (t : term) : bool.
-refine
-  match t with
-   | tRel n => PeanoNat.Nat.eqb n v
-   | tVar i => _
-   | tMeta n => false
-   | tEvar n l => existsb (boundIn v) l
-   | tSort u => false
-   | tCast t1 c t2 => boundIn v t1 || boundIn v t2
-   | tProd n t1 t2 => boundIn v t1 || boundIn (S v) t2
-   | tLambda n t1 t2 => boundIn v t1 || boundIn (S v) t2
-   | tLetIn n t1 t2 t3 => boundIn v t1 || boundIn v t2 || boundIn (S v) t3
-   | tApp t0 l => boundIn v t0 || existsb (boundIn v) l
-   | tConst k u => false
-   | tInd i u => false
-   | tConstruct i n u => false
-   | tCase p t1 t2 l => _
-   | tProj p t0 => boundIn v t0
-   | tFix m n => _
-   | tCoFix m n => _
-   end.
-Admitted.
 
 (* check to see if Var 0 is referenced in any of the terms *)
 Definition mentions (v : nat) (ls : list (ident * term)) : bool :=
@@ -208,7 +131,6 @@ ensure that F resolves to  A.B.C#D#E#F. Use Locate to check this.
 If the definition of F refers to any other inductive, they should not
 be in the current section(s).
  *)
-Set Printing All.
 
 Definition genLensN (baseName : String.string) : TM unit :=
   let name := baseName in

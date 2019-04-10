@@ -805,15 +805,15 @@ Section Conversion.
   (*   constructor. intros y h. *)
   (*   eapply H0. *)
 
-  Definition R_aux Γ :=
-    dlexprod (cored Σ Γ) (fun t => lexprod (@posR t) stateR).
+  Definition R_aux :=
+    dlexprod (cored Σ []) (fun t => lexprod (@posR t) stateR).
 
   Notation obpack u :=
-    (zipc (tm u) (stk1 u) ; (stack_pos (tm u) (stk1 u), st u))
+    (zipx (ctx u) (tm u) (stk1 u) ; (xpos (ctx u) (tm u) (stk1 u), st u))
     (only parsing).
 
   Definition R (u v : pack) :=
-    R_aux (ctx u) (obpack u) (obpack v).
+    R_aux (obpack u) (obpack v).
 
   (* TODO Should replace acc_dlexprod *)
   Lemma dlexprod_Acc :
@@ -829,11 +829,11 @@ Section Conversion.
   Qed.
 
   Lemma R_aux_Acc :
-    forall Γ t p s,
-      welltyped Σ Γ t ->
-      Acc (R_aux Γ) (t ; (p, s)).
+    forall t p s,
+      welltyped Σ [] t ->
+      Acc R_aux (t ; (p, s)).
   Proof.
-    intros Γ t p s h.
+    intros t p s h.
     eapply dlexprod_Acc.
     - intro u. eapply Subterm.wf_lexprod.
       + intro. eapply posR_Acc.
@@ -841,47 +841,19 @@ Section Conversion.
     - eapply normalisation. eassumption.
   Qed.
 
-  Lemma Acc_dep :
-    forall A B (R : A -> B -> B -> Prop),
-      (forall x y, Acc (R x) y) ->
-      forall p, Acc (fun p q => R (fst p) (snd p) (snd q)) p.
-  Proof.
-    intros A B R wfR [x y].
-
-    constructor. intros [a b] h. cbn in h.
-    specialize (wfR a y).
-    revert b h.
-    clear - wfR.
-    induction wfR.
-    (* eapply H0. *)
-
-
-    (* specialize (wfR x y). *)
-    (* induction wfR. *)
-    (* constructor. intros [y1 y2] h. *)
-    (* cbn in h. *)
-    (* eapply H0. all: cbn. *)
-  Abort.
-
   Lemma R_Acc :
     forall u,
-      welltyped Σ (ctx u) (zipc (tm u) (stk1 u)) ->
+      welltyped Σ [] (zipx (ctx u) (tm u) (stk1 u)) ->
       Acc R u.
   Proof.
     intros [[[[s Γ] t] π1] π2] h.
     cbn in h.
-    (* pose proof (R_aux_Acc Γ (zipc t π1) (stack_pos t π1) s h) as hacc. *)
-    (* constructor. intros [[[[r Δ] u] θ1] θ2] h'. *)
-    (* pose proof (R_aux_Acc _ _ _ _) as hacc. *)
-    (* clear - hacc h'. *)
-    (* dependent induction hacc. *)
-    (* eapply H0. *)
-
-    (* unfold R. *)
-    (* constructor. intros [[[[r Δ] u] θ1] θ2] h'. *)
-    (* cbn in *. *)
-    (* eapply R_aux_Acc. *)
-  Admitted.
+    pose proof (R_aux_Acc (zipx Γ t π1) (xpos Γ t π1) s h) as hacc.
+    clear h. dependent induction hacc.
+    constructor. intros [[[[r Δ] u] θ1] θ2] h'.
+    eapply H0 ; try reflexivity.
+    assumption.
+  Qed.
 
   Definition Ret s Γ t π π' :=
     match s with
@@ -900,7 +872,6 @@ Section Conversion.
     | Args => welltyped Σ Γ (zipc t π)
     end.
 
-  (* Probably have to generalise over Γ as well. *)
   Definition Aux s Γ t π1 π2 :=
      forall s' Γ' t' π1' π2',
        welltyped Σ Γ' (zipc t' π1') ->
@@ -1724,6 +1695,33 @@ Section Conversion.
     eapply conv_context. eapply conv_App_r. assumption.
   Qed.
 
+  Lemma welltyped_it_mkLambda_or_LetIn :
+    forall Γ t,
+      ∥ wf_local Σ Γ ∥ ->
+      welltyped Σ Γ t ->
+      welltyped Σ [] (it_mkLambda_or_LetIn Γ t).
+  Proof.
+    intros Γ t [hΓ] [A h].
+    revert t A h.
+    induction hΓ as [| Γ na B hΓ ih hl | Γ na b B hΓ ih hl] ; intros t A h.
+    - eexists. eassumption.
+    - destruct hl as [s hs].
+      simpl. eapply ih. cbn. eapply type_Lambda ; eassumption.
+    - simpl. eapply ih. cbn. eapply type_LetIn ; try eassumption.
+      (* Again a universe problem! *)
+      (* We don't have enough to conclude as B may only be a sort itself. *)
+  Admitted.
+
+  Lemma welltyped_zipx :
+    forall Γ t π,
+      ∥ wf_local Σ Γ ∥ ->
+      welltyped Σ Γ (zipc t π) ->
+      welltyped Σ [] (zipx Γ t π).
+  Proof.
+    intros Γ t π hΓ h.
+    eapply welltyped_it_mkLambda_or_LetIn ; assumption.
+  Qed.
+
   Equations _isconv (s : state) (Γ : context)
             (t : term) (π1 : stack) (h1 : welltyped Σ Γ (zipc t π1))
             (π2 : stack) (h2 : wts Γ s t π2)
@@ -1738,12 +1736,12 @@ Section Conversion.
     _isconv Args Γ t π1 h1 π2 h2 aux :=
         _isconv_args Γ t π1 h1 π2 h2 aux.
 
-  Equations(noeqns) isconv_full (s : state) (Γ : context)
+  Equations(noeqns) isconv_full (s : state) (Γ : context) (hΓ : ∥ wf_local Σ Γ ∥)
             (t : term) (π1 : stack) (h1 : welltyped Σ Γ (zipc t π1))
             (π2 : stack) (h2 : wts Γ s t π2)
     : Ret s Γ t π1 π2 :=
 
-    isconv_full s Γ t π1 h1 π2 h2 :=
+    isconv_full s Γ hΓ t π1 h1 π2 h2 :=
       Fix_F (R := R)
             (fun '(s', Γ', t', π1', π2') => welltyped Σ Γ' (zipc t' π1') -> wts Γ' s' t' π2' -> Ret s' Γ' t' π1' π2')
             (fun t' f => _)
@@ -1756,20 +1754,20 @@ Section Conversion.
     eapply f ; assumption.
   Qed.
   Next Obligation.
-    apply R_Acc.
-    cbn. assumption.
+    apply R_Acc. simpl.
+    eapply welltyped_zipx ; assumption.
   Qed.
 
-  Definition isconv Γ leq t1 π1 h1 t2 π2 h2 :=
-    let '(exist b _) := isconv_full (Reduction t2) Γ t1 π1 h1 π2 h2 leq in b.
+  Definition isconv Γ hΓ leq t1 π1 h1 t2 π2 h2 :=
+    let '(exist b _) := isconv_full (Reduction t2) Γ hΓ t1 π1 h1 π2 h2 leq in b.
 
   Theorem isconv_sound :
-    forall Γ leq t1 π1 h1 t2 π2 h2,
-      isconv Γ leq t1 π1 h1 t2 π2 h2 ->
+    forall Γ hΓ leq t1 π1 h1 t2 π2 h2,
+      isconv Γ hΓ leq t1 π1 h1 t2 π2 h2 ->
       conv leq Σ Γ (zipc t1 π1) (zipc t2 π2).
   Proof.
     unfold isconv.
-    intros Γ leq t1 π1 h1 t2 π2 h2.
+    intros Γ hΓ leq t1 π1 h1 t2 π2 h2.
     destruct isconv_full as [[]] ; auto.
     discriminate.
   Qed.

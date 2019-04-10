@@ -28,10 +28,10 @@ let rs_unfold (env : Environ.env) (gr : global_reference) =
 type 'a tm =
   Environ.env -> Evd.evar_map ->
   (Environ.env -> Evd.evar_map -> 'a -> unit) ->
-  (string -> unit) -> unit
+  (Pp.t -> unit) -> unit
 
 let run (c : 'a tm) env evm (k : Environ.env -> Evd.evar_map -> 'a -> unit) : unit =
-  c env evm k (fun x -> CErrors.user_err (Pp.str x))
+  c env evm k (fun x -> CErrors.user_err x)
 
 let run_vernac (c : 'a tm) : unit =
   let (evm,env) = Pfedit.get_current_context () in
@@ -59,7 +59,7 @@ let tmMsg  (s : string) : unit tm =
     success env evd ()
 
 let tmFail (s : string) : 'a tm =
-  fun _ _ _ fail -> fail s
+  fun _ _ _ fail -> fail Pp.(str s)
 
 let tmEval (rd : reduction_strategy) (t : term) : term tm =
   fun env evd k _fail ->
@@ -136,7 +136,7 @@ let tmQuoteInductive (kn : kername) : mutual_inductive_body option tm =
       let mind = Environ.lookup_mind (Names.MutInd.make1 kn) env in
       success env evm (Some mind)
     with
-      _ -> success env evm None
+      Not_found -> success env evm None
 
 let tmQuoteUniverses : UGraph.t tm =
   fun env evm success _fail ->
@@ -144,9 +144,13 @@ let tmQuoteUniverses : UGraph.t tm =
 
 (* get the definition associated to a kername *)
 let tmQuoteConstant (kn : kername) (bypass : bool) : constant_entry tm =
-  fun env evd success _fail ->
-    let cnst = Environ.lookup_constant (Names.Constant.make1 kn) env in
-    success env evd cnst
+  fun env evd success fail ->
+    (* todo(gmm): there is a bug here *)
+    try
+      let cnst = Environ.lookup_constant (Names.Constant.make1 kn) env in
+      success env evd cnst
+    with
+      Not_found -> fail Pp.(str "constant not found " ++ Names.KerName.print kn)
 
 let tmInductive (mi : mutual_inductive_entry) : unit tm =
   fun env evd success _fail ->

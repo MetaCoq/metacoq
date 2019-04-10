@@ -157,8 +157,8 @@ Definition genLensN (baseName : String.string) : TM unit :=
       mconcat (map gen (countTo (List.length info.(fields))))
     | None => tmFail "failed to get info"
     end).
-
-
+Notation "<% x %>" := (ltac:(let p y := exact y in quote_term x p))
+  (only parsing).
 Print definition_entry.
 Definition lookupPrint (baseName : String.string) : TM unit :=
   tmBind (tmQuoteConstant baseName true)

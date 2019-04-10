@@ -857,24 +857,43 @@ Section Conversion.
 
   Notation coe P h t := (eq_rect_r P t h).
 
-  Lemma right_dlex_eq :
-    forall {A B} leA (leB : forall x : A, B x -> B x -> Prop) a1 a2 b1 b2 (e : a1 = a2),
-      leB a1 b1 (coe B e b2) ->
-      dlexprod leA leB (a1 ; b1) (a2 ; b2).
+  (* Lemma right_dlex_eq : *)
+  (*   forall {A B} leA (leB : forall x : A, B x -> B x -> Prop) a1 a2 b1 b2 (e : a1 = a2), *)
+  (*     leB a1 b1 (coe B e b2) -> *)
+  (*     dlexprod leA leB (a1 ; b1) (a2 ; b2). *)
+  (* Proof. *)
+  (*   intros A B leA leB a1 a2 b1 b2 e h. *)
+  (*   subst. cbn in h. *)
+  (*   right. assumption. *)
+  (* Qed. *)
+
+  (* Lemma right_lex_eq : *)
+  (*   forall {A B} leA (leB : B -> B -> Prop) a1 a2 b1 b2, *)
+  (*     a1 = a2 -> *)
+  (*     leB b1 b2 -> *)
+  (*     @lexprod A B leA leB (a1, b1) (a2, b2). *)
+  (* Proof. *)
+  (*   intros A B leA leB a1 a2 b1 b2 e h. *)
+  (*   subst. right. assumption. *)
+  (* Qed. *)
+
+  Lemma R_posR :
+    forall t1 t2 (p1 : pos t1) (p2 : pos t2) s1 s2 (e : t1 = t2),
+      posR p1 (coe _ e p2) ->
+      R_aux (t1 ; (p1, s1)) (t2 ; (p2, s2)).
   Proof.
-    intros A B leA leB a1 a2 b1 b2 e h.
-    subst. cbn in h.
-    right. assumption.
+    intros t1 t2 p1 p2 s1 s2 e h.
+    subst. cbn in h. right. left. assumption.
   Qed.
 
-  Lemma right_lex_eq :
-    forall {A B} leA (leB : B -> B -> Prop) a1 a2 b1 b2,
-      a1 = a2 ->
-      leB b1 b2 ->
-      @lexprod A B leA leB (a1, b1) (a2, b2).
+  Lemma R_state :
+    forall t1 t2 (p1 : pos t1) (p2 : pos t2) s1 s2 (e : t1 = t2),
+      p1 = coe _ e p2 ->
+      stateR s1 s2 ->
+      R_aux (t1 ; (p1, s1)) (t2 ; (p2, s2)).
   Proof.
-    intros A B leA leB a1 a2 b1 b2 e h.
-    subst. right. assumption.
+    intros t1 t2 p1 p2 s1 s2 e1 e2 h.
+    subst. cbn. right. right. assumption.
   Qed.
 
   Definition Ret s Γ t π π' :=
@@ -947,11 +966,10 @@ Section Conversion.
   Qed.
   Next Obligation.
     destruct (reduce_stack_cored nodelta_flags _ Γ t1 π1 h1) as [e | h].
-    - unshelve eapply right_dlex_eq.
+    - unshelve eapply R_state.
       + unfold zipx.
         do 2 zip fold. rewrite eq1. rewrite <- e. simpl. reflexivity.
-      + simpl. (* unshelve eapply right_lex_eq. *)
-
+      + simpl.
 
     (*     rewrite <- e. *)
 

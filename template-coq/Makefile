@@ -2,6 +2,7 @@ all: coq plugin
 
 coq: Makefile.coq
 	$(MAKE) -f Makefile.coq
+	mkdir -p build
 	cp src/template_coq.cmx src/template_coq.cmxa src/template_coq.cmxs build
 
 

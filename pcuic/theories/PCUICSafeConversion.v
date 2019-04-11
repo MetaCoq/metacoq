@@ -744,7 +744,7 @@ Section Conversion.
   Lemma zip_Prod_Empty :
     forall {Γ na A B π},
       welltyped Σ Γ (zipc (tProd na A B) π) ->
-      π = Empty.
+      π = ε.
   Proof.
     intros Γ na A B π h.
     induction π.
@@ -784,7 +784,7 @@ Section Conversion.
 
     unfold_one_fix Γ mfix idx π h with inspect (unfold_fix mfix idx) := {
     | @exist (Some (arg, fn)) eq1 with inspect (decompose_stack_at π arg) := {
-      | @exist (Some (l, c, θ)) eq2 with inspect (reduce_stack RedFlags.default Σ Γ c Empty _) := {
+      | @exist (Some (l, c, θ)) eq2 with inspect (reduce_stack RedFlags.default Σ Γ c ε _) := {
         | @exist (cred, ρ) eq3 with construct_viewc cred := {
           | view_construct ind n ui := Some fn ;
           | view_other t h := None
@@ -871,14 +871,14 @@ Section Conversion.
        stacks.
      *)
     _isconv_prog Γ leq (tLambda na A1 t1) π1 h1 (tLambda _ A2 t2) π2 h2 aux
-    with isconv_red_raw Γ Conv A1 Empty A2 Empty aux := {
-    | @exist true h := isconv_red (Γ,, vass na A1) leq t1 Empty t2 Empty aux ;
+    with isconv_red_raw Γ Conv A1 ε A2 ε aux := {
+    | @exist true h := isconv_red (Γ,, vass na A1) leq t1 ε t2 ε aux ;
     | @exist false _ := no
     } ;
 
-    _isconv_prog Γ leq (tProd na A1 B1) π1 h1 (tProd _ A2 B2) π2 h2 aux
-    with isconv_red_raw Γ Conv A1 Empty A2 Empty aux := {
-    | @exist true h := isconv_red (Γ,, vass na A1) leq B1 Empty B2 Empty aux ;
+    _isconv_prog Γ leq (tProd na A1 B1) π1 h1 (tProd na' A2 B2) π2 h2 aux
+    with isconv_red_raw Γ Conv A1 (Prod na B1 ε) A2 (Prod na' B2 ε) aux := {
+    | @exist true h := isconv_red (Γ,, vass na A1) leq B1 ε B2 ε aux ;
     | @exist false _ := no
     } ;
 
@@ -955,27 +955,10 @@ Section Conversion.
     pose proof (zip_Prod_Empty h1). subst.
     pose proof (zip_Prod_Empty h2). subst.
     unshelve eapply R_positionR.
-    - simpl. unfold zipx. f_equal. simpl.
-      (* Really problematic, unfortunately, the context and stack don't hold
-         all of the information to reconstruct the term.
-         One solution would be to extend the stack with constructors for Π and
-         probably other things.
-
-         Another, which would not require changes in the reduction would be to
-         add yet another argument containing the extra information, or having a
-         new stack type erased to the old one...
-
-         In any case, this does not mean the idea to zip the context was not the
-         right one, this is orthogonal as even the zips without context are
-         mismatched.
-       *)
-      give_up.
-    - simpl.
-      (* Again, we lost information and are producing equal positions,
-         which should not be.
-       *)
-      give_up.
-  Admitted.
+    - reflexivity.
+    - simpl. unfold xposition. eapply positionR_poscat.
+      simpl. constructor.
+  Qed.
   Next Obligation.
     zip fold in h1. apply welltyped_context in h1. cbn in h1.
     destruct h1 as [T h1].
@@ -983,6 +966,14 @@ Section Conversion.
     eexists. eassumption.
   Qed.
   Next Obligation.
+    (* PROBLEM AGAIN
+
+       We conclude that the products are equal, meaning, we actually would
+       compare the codomains on the stacks. This is problematic.
+
+       This means that perhaps, having an extra Prod constructor to stacks
+       wasn't the right fix to the previous problem.
+     *)
     destruct h as [h].
     zip fold in h2. apply welltyped_context in h2. cbn in h2.
     destruct h2 as [T h2].
@@ -1001,8 +992,8 @@ Section Conversion.
   Next Obligation.
     pose proof (zip_Prod_Empty h1). subst.
     pose proof (zip_Prod_Empty h2). subst.
-    (* R (Reduction B2, Γ,, vass na A1, B1, Empty, Empty) *)
-    (*   (Term (tProd t2 A2 B2), Γ, tProd na A1 B1, Empty, Empty) *)
+    (* R (Reduction B2, Γ,, vass na A1, B1, ε, ε) *)
+    (*   (Term (tProd t2 A2 B2), Γ, tProd na A1 B1, ε, ε) *)
   Admitted.
   Next Obligation.
     destruct b ; auto.
@@ -1026,8 +1017,8 @@ Section Conversion.
     eexists. eassumption.
   Qed.
   Next Obligation.
-    (* Maybe we'll force π1 and π2 to be Empty *)
-    (* R (Reduction A2, Γ, A1, Empty, Empty) *)
+    (* Maybe we'll force π1 and π2 to be ε *)
+    (* R (Reduction A2, Γ, A1, ε, ε) *)
     (*   (Term (tLambda t0 A2 t2), Γ, tLambda na A1 t1, π1, π2) *)
   Admitted.
   Next Obligation.
@@ -1053,8 +1044,8 @@ Section Conversion.
       + apply conv_sym. assumption.
   Qed.
   Next Obligation.
-    (* Maybe we'll force π1 and π2 to be Empty *)
-    (* R (Reduction t2, Γ,, vass na A1, t1, Empty, Empty) *)
+    (* Maybe we'll force π1 and π2 to be ε *)
+    (* R (Reduction t2, Γ,, vass na A1, t1, ε, ε) *)
     (*   (Term (tLambda t0 A2 t2), Γ, tLambda na A1 t1, π1, π2) *)
   Admitted.
   Next Obligation.
@@ -1390,12 +1381,12 @@ Section Conversion.
     : { b : bool | if b then ∥ Σ ;;; Γ |- zipc t π1 = zipc t π2 ∥ else True } :=
 
     _isconv_args Γ t (App u1 ρ1) h1 (App u2 ρ2) h2 aux
-    with isconv_red_raw Γ Conv u1 Empty u2 Empty aux := {
+    with isconv_red_raw Γ Conv u1 ε u2 ε aux := {
     | @exist true h1 := isconv_args Γ (tApp t u1) ρ1 ρ2 aux ;
     | @exist false _ := no
     } ;
 
-    _isconv_args Γ t Empty h1 Empty h2 aux := yes ;
+    _isconv_args Γ t ε h1 ε h2 aux := yes ;
 
     _isconv_args Γ t π1 h1 π2 h2 aux := no.
   Next Obligation.
@@ -1417,7 +1408,7 @@ Section Conversion.
     exists A. assumption.
   Qed.
   Next Obligation.
-    (* R (Reduction u2, Γ, u1, Empty, Empty) (Args, Γ, t, App u1 ρ1, App u2 ρ2) *)
+    (* R (Reduction u2, Γ, u1, ε, ε) (Args, Γ, t, App u1 ρ1, App u2 ρ2) *)
   Admitted.
   Next Obligation.
     (* Here it is a bit unclear. Maybe things would be better if a common

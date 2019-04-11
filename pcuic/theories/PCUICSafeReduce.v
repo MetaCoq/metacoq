@@ -38,6 +38,145 @@ End RedFlags.
 
 Notation "∥ T ∥" := (squash T) (at level 10).
 
+Inductive stack : Type :=
+| Empty
+| App (t : term) (π : stack)
+| Fix (f : mfixpoint term) (n : nat) (args : list term) (π : stack)
+| Case (indn : inductive * nat) (p : term) (brs : list (nat * term)) (π : stack)
+| Prod (na : name) (B : term) (π : stack).
+
+Notation "'ε'" := (Empty).
+
+Derive NoConfusion NoConfusionHom EqDec for stack.
+
+Instance reflect_stack : ReflectEq stack :=
+  let h := EqDec_ReflectEq stack in _.
+
+Fixpoint zipc t stack :=
+  match stack with
+  | ε => t
+  | App u π => zipc (tApp t u) π
+  | Fix f n args π => zipc (tApp (mkApps (tFix f n) args) t) π
+  | Case indn pred brs π => zipc (tCase indn pred t brs) π
+  | Prod na B π => zipc (tProd na t B) π
+  end.
+
+Definition zip (t : term * stack) := zipc (fst t) (snd t).
+
+(* TODO Tail-rec version *)
+(* Get the arguments out of a stack *)
+Fixpoint decompose_stack π :=
+  match π with
+  | App u π => let '(l,π) := decompose_stack π in (u :: l, π)
+  | _ => ([], π)
+  end.
+
+(* TODO Tail-rec *)
+Fixpoint appstack l π :=
+  match l with
+  | u :: l => App u (appstack l π)
+  | [] => π
+  end.
+
+Lemma decompose_stack_eq :
+  forall π l ρ,
+    decompose_stack π = (l, ρ) ->
+    π = appstack l ρ.
+Proof.
+  intros π l ρ eq.
+  revert l ρ eq. induction π ; intros l ρ eq.
+  all: try solve [ cbn in eq ; inversion eq ; subst ; reflexivity ].
+  destruct l.
+  - cbn in eq. revert eq. case_eq (decompose_stack π).
+    intros. inversion eq.
+  - cbn in eq. revert eq. case_eq (decompose_stack π).
+    intros l0 s H0 eq. inversion eq. subst.
+    cbn. f_equal. eapply IHπ. assumption.
+Qed.
+
+Lemma decompose_stack_not_app :
+  forall π l u ρ,
+    decompose_stack π = (l, App u ρ) -> False.
+Proof.
+  intros π l u ρ eq.
+  revert u l ρ eq. induction π ; intros u l ρ eq.
+  all: try solve [ cbn in eq ; inversion eq ].
+  cbn in eq. revert eq. case_eq (decompose_stack π).
+  intros l0 s H0 eq. inversion eq. subst.
+  eapply IHπ. eassumption.
+Qed.
+
+Lemma zipc_appstack :
+  forall {t args ρ},
+    zipc t (appstack args ρ) = zipc (mkApps t args) ρ.
+Proof.
+  intros t args ρ. revert t ρ. induction args ; intros t ρ.
+  - cbn. reflexivity.
+  - cbn. rewrite IHargs. reflexivity.
+Qed.
+
+Lemma decompose_stack_appstack :
+  forall l ρ,
+    decompose_stack (appstack l ρ) =
+    (l ++ fst (decompose_stack ρ), snd (decompose_stack ρ)).
+Proof.
+  intros l. induction l ; intros ρ.
+  - cbn. destruct (decompose_stack ρ). reflexivity.
+  - cbn. rewrite IHl. reflexivity.
+Qed.
+
+Fixpoint decompose_stack_at π n : option (list term * term * stack) :=
+  match π with
+  | App u π =>
+    match n with
+    | 0 => ret ([], u, π)
+    | S n =>
+      r <- decompose_stack_at π n ;;
+        let '(l, v, π) := r in
+        ret (u :: l, v, π)
+    end
+  | _ => None
+  end.
+
+Lemma decompose_stack_at_eq :
+  forall π n l u ρ,
+    decompose_stack_at π n = Some (l,u,ρ) ->
+    π = appstack l (App u ρ).
+Proof.
+  intros π n l u ρ h. revert n l u ρ h.
+  induction π ; intros m l u ρ h.
+  all: try solve [ cbn in h ; discriminate ].
+  destruct m.
+  - cbn in h. inversion h. subst.
+    cbn. reflexivity.
+  - cbn in h. revert h.
+    case_eq (decompose_stack_at π m).
+    + intros [[l' v] ρ'] e1 e2.
+      inversion e2. subst. clear e2.
+      specialize IHπ with (1 := e1). subst.
+      cbn. reflexivity.
+    + intros H0 h. discriminate.
+Qed.
+
+Lemma decompose_stack_at_length :
+  forall π n l u ρ,
+    decompose_stack_at π n = Some (l,u,ρ) ->
+    #|l| = n.
+Proof.
+  intros π n l u ρ h. revert n l u ρ h.
+  induction π ; intros m l u ρ h.
+  all: try solve [ cbn in h ; discriminate ].
+  destruct m.
+  - cbn in h. inversion h. reflexivity.
+  - cbn in h. revert h.
+    case_eq (decompose_stack_at π m).
+    + intros [[l' v] ρ'] e1 e2.
+      inversion e2. subst. clear e2.
+      specialize IHπ with (1 := e1). subst.
+      cbn. reflexivity.
+    + intros H0 h. discriminate.
+Qed.
+
 (* We assume normalisation of the reduction.
 
    We state is as well-foundedness of the reduction.
@@ -54,148 +193,11 @@ Section Normalisation.
       Σ ;;; Γ |- v : A.
   Admitted.
 
-  Inductive stack : Type :=
-  | Empty
-  | App (t : term) (π : stack)
-  | Fix (f : mfixpoint term) (n : nat) (args : list term) (π : stack)
-  | Case (indn : inductive * nat) (p : term) (brs : list (nat * term)) (π : stack)
-  | Prod (na : name) (B : term) (π : stack).
-
-  Derive NoConfusion NoConfusionHom EqDec for stack.
-
-  Instance reflect_stack : ReflectEq stack :=
-    let h := EqDec_ReflectEq stack in _.
-
-  Fixpoint zipc t stack :=
-    match stack with
-    | Empty => t
-    | App u π => zipc (tApp t u) π
-    | Fix f n args π => zipc (tApp (mkApps (tFix f n) args) t) π
-    | Case indn pred brs π => zipc (tCase indn pred t brs) π
-    | Prod na B π => zipc (tProd na t B) π
-    end.
-
-  Definition zip (t : term * stack) := zipc (fst t) (snd t).
-
-  (* TODO Tail-rec version *)
-  (* Get the arguments out of a stack *)
-  Fixpoint decompose_stack π :=
-    match π with
-    | App u π => let '(l,π) := decompose_stack π in (u :: l, π)
-    | _ => ([], π)
-    end.
-
-  (* TODO Tail-rec *)
-  Fixpoint appstack l π :=
-    match l with
-    | u :: l => App u (appstack l π)
-    | [] => π
-    end.
-
-  Lemma decompose_stack_eq :
-    forall π l ρ,
-      decompose_stack π = (l, ρ) ->
-      π = appstack l ρ.
-  Proof.
-    intros π l ρ eq.
-    revert l ρ eq. induction π ; intros l ρ eq.
-    all: try solve [ cbn in eq ; inversion eq ; subst ; reflexivity ].
-    destruct l.
-    - cbn in eq. revert eq. case_eq (decompose_stack π).
-      intros. inversion eq.
-    - cbn in eq. revert eq. case_eq (decompose_stack π).
-      intros l0 s H0 eq. inversion eq. subst.
-      cbn. f_equal. eapply IHπ. assumption.
-  Qed.
-
-  Lemma decompose_stack_not_app :
-    forall π l u ρ,
-      decompose_stack π = (l, App u ρ) -> False.
-  Proof.
-    intros π l u ρ eq.
-    revert u l ρ eq. induction π ; intros u l ρ eq.
-    all: try solve [ cbn in eq ; inversion eq ].
-    cbn in eq. revert eq. case_eq (decompose_stack π).
-    intros l0 s H0 eq. inversion eq. subst.
-    eapply IHπ. eassumption.
-  Qed.
-
-  Lemma zipc_appstack :
-    forall {t args ρ},
-      zipc t (appstack args ρ) = zipc (mkApps t args) ρ.
-  Proof.
-    intros t args ρ. revert t ρ. induction args ; intros t ρ.
-    - cbn. reflexivity.
-    - cbn. rewrite IHargs. reflexivity.
-  Qed.
-
-  Lemma decompose_stack_appstack :
-    forall l ρ,
-      decompose_stack (appstack l ρ) =
-      (l ++ fst (decompose_stack ρ), snd (decompose_stack ρ)).
-  Proof.
-    intros l. induction l ; intros ρ.
-    - cbn. destruct (decompose_stack ρ). reflexivity.
-    - cbn. rewrite IHl. reflexivity.
-  Qed.
-
-  Fixpoint decompose_stack_at π n : option (list term * term * stack) :=
-    match π with
-    | App u π =>
-      match n with
-      | 0 => ret ([], u, π)
-      | S n =>
-        r <- decompose_stack_at π n ;;
-        let '(l, v, π) := r in
-        ret (u :: l, v, π)
-      end
-    | _ => None
-    end.
-
-  Lemma decompose_stack_at_eq :
-    forall π n l u ρ,
-      decompose_stack_at π n = Some (l,u,ρ) ->
-      π = appstack l (App u ρ).
-  Proof.
-    intros π n l u ρ h. revert n l u ρ h.
-    induction π ; intros m l u ρ h.
-    all: try solve [ cbn in h ; discriminate ].
-    destruct m.
-    - cbn in h. inversion h. subst.
-      cbn. reflexivity.
-    - cbn in h. revert h.
-      case_eq (decompose_stack_at π m).
-      + intros [[l' v] ρ'] e1 e2.
-        inversion e2. subst. clear e2.
-        specialize IHπ with (1 := e1). subst.
-        cbn. reflexivity.
-      + intros H0 h. discriminate.
-  Qed.
-
-  Lemma decompose_stack_at_length :
-    forall π n l u ρ,
-      decompose_stack_at π n = Some (l,u,ρ) ->
-      #|l| = n.
-  Proof.
-    intros π n l u ρ h. revert n l u ρ h.
-    induction π ; intros m l u ρ h.
-    all: try solve [ cbn in h ; discriminate ].
-    destruct m.
-    - cbn in h. inversion h. reflexivity.
-    - cbn in h. revert h.
-      case_eq (decompose_stack_at π m).
-      + intros [[l' v] ρ'] e1 e2.
-        inversion e2. subst. clear e2.
-        specialize IHπ with (1 := e1). subst.
-        cbn. reflexivity.
-      + intros H0 h. discriminate.
-  Qed.
-
   Set Equations With UIP.
 
   Fixpoint stack_position π : position :=
     match π with
-    | Empty => []
+    | ε => []
     | App u ρ => stack_position ρ ++ [ app_l ]
     | Fix f n args ρ => stack_position ρ ++ [ app_r ]
     | Case indn pred brs ρ => stack_position ρ ++ [ case_c ]
@@ -1266,7 +1268,7 @@ Section Reduce.
   Qed.
 
   Definition reduce_term Γ t (h : welltyped Σ Γ t) :=
-    zip (reduce_stack Γ t Empty h).
+    zip (reduce_stack Γ t ε h).
 
   Theorem reduce_term_sound :
     forall Γ t h,
@@ -1274,7 +1276,7 @@ Section Reduce.
   Proof.
     intros Γ t h.
     unfold reduce_term.
-    refine (reduce_stack_sound _ _ Empty _).
+    refine (reduce_stack_sound _ _ ε _).
   Qed.
 
 End Reduce.

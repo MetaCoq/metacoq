@@ -431,7 +431,6 @@ Fixpoint subst_app (t : term) (us : list term) : term :=
 Fixpoint eq_term `{checker_flags} (φ : uGraph.t) (t u : term) {struct t} :=
   match t, u with
   | tRel n, tRel n' => eq_nat n n'
-  | tMeta n, tMeta n' => eq_nat n n'
   | tEvar ev args, tEvar ev' args' => eq_evar ev ev' && forallb2 (eq_term φ) args args'
   | tVar id, tVar id' => eq_string id id'
   | tSort s, tSort s' => eq_universe φ s s'
@@ -467,7 +466,6 @@ Fixpoint eq_term `{checker_flags} (φ : uGraph.t) (t u : term) {struct t} :=
 Fixpoint leq_term `{checker_flags} (φ : uGraph.t) (t u : term) {struct t} :=
   match t, u with
   | tRel n, tRel n' => eq_nat n n'
-  | tMeta n, tMeta n' => eq_nat n n'
   | tEvar ev args, tEvar ev' args' => eq_nat ev ev' && forallb2 (eq_term φ) args args'
   | tVar id, tVar id' => eq_string id id'
   | tSort s, tSort s' => leq_universe φ s s'

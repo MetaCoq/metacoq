@@ -435,7 +435,6 @@ Fixpoint string_of_term (t : term) :=
   match t with
   | tRel n => "Rel(" ++ string_of_nat n ++ ")"
   | tVar n => "Var(" ++ n ++ ")"
-  | tMeta n => "Meta(" ++ string_of_nat n ++ ")"
   | tEvar ev args => "Evar(" ++ string_of_nat ev ++ "[]" (* TODO *)  ++ ")"
   | tSort s => "Sort(" ++ string_of_sort s ++ ")"
   | tCast c k t => "Cast(" ++ string_of_term c ++ (* TODO *) ","
@@ -703,7 +702,6 @@ Section Typecheck2.
       end
 
     | tVar n => raise (UnboundVar n)
-    | tMeta n => raise (UnboundMeta n)
     | tEvar ev args => raise (UnboundEvar ev)
 
     | tSort s => ret (tSort (try_suc s))

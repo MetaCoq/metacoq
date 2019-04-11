@@ -51,7 +51,6 @@ Lemma term_forall_ctx_list_ind :
 
     (forall Γ (n : nat), P Γ (tRel n)) ->
     (forall Γ (i : ident), P Γ (tVar i)) ->
-    (forall Γ (n : nat), P Γ (tMeta n)) ->
     (forall Γ (n : nat) (l : list term), All (P Γ) l -> P Γ (tEvar n l)) ->
     (forall Γ s, P Γ (tSort s)) ->
     (forall Γ (n : name) (t : term), P Γ t -> forall t0 : term, P (vass n (f Γ t) :: Γ) t0 -> P Γ (tProd n t t0)) ->
@@ -123,11 +122,11 @@ Proof.
         | H : _ |- _ => solve [apply H; (eapply aux || eapply auxl); red; simpl; try lia]
         end.
 
-  eapply X13; try (apply aux; red; simpl; lia).
+  eapply X12; try (apply aux; red; simpl; lia).
   apply auxl'. simpl. lia.
   red. apply All_pair. split; apply auxl; simpl; auto.
 
-  eapply X14; try (apply aux; red; simpl; lia).
+  eapply X13; try (apply aux; red; simpl; lia).
   apply auxl''. simpl. lia.
   red. apply All_pair. split; apply auxl; simpl; auto.
 Defined.
@@ -185,7 +184,6 @@ Ltac prepare_discr :=
 Definition application_atom t :=
   match t with
   | tVar _
-  | tMeta _
   | tSort _
   | tInd _ _
   | tConstruct _ _ _
@@ -713,7 +711,6 @@ Section Confluence.
    (*  rho Γ (tProd na t u) => tProd na (rho Γ t) (rho (vass na (rho Γ t) :: Γ) u); *)
    (*  rho Γ (tVar i) => tVar i; *)
    (*  rho Γ (tEvar n l) => tEvar n (map_terms Γ l); *)
-   (*  rho Γ (tMeta n) => tMeta n; *)
    (*  rho Γ (tSort s) => tSort s; *)
    (*  rho Γ (tFix mfix idx) => *)
    (*    let mfixctx := fold_fix_context rho Γ [] mfix in *)
@@ -797,7 +794,6 @@ Section Confluence.
     | tProd na t u => tProd na (rho Γ t) (rho (vass na (rho Γ t) :: Γ) u)
     | tVar i => tVar i
     | tEvar n l => tEvar n (map (rho Γ) l)
-    | tMeta n => tMeta n
     | tSort s => tSort s
     | tFix mfix idx =>
       let mfixctx := fold_fix_context rho Γ [] mfix in
@@ -1230,7 +1226,7 @@ Section Confluence.
     Proof.
       remember (Γ ,,, rho_ctx_over Γ Γ') as ctx. revert Γ Δ Γ' Heqctx.
       revert ctx t.
-      refine (term_forall_ctx_list_ind _ (fun ctx t => rho ctx t) _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _);
+      refine (term_forall_ctx_list_ind _ (fun ctx t => rho ctx t) _ _ _ _ _ _ _ _ _ _ _ _ _ _ _);
         simpl; !intros; try subst Γ; rename Γ0 into Γ; rename_all_hyps.
       all:eauto 2 with pcuic.
       all:(try change_Sk;
@@ -1887,7 +1883,7 @@ Section Confluence.
       pred1_ctx Σ Γ Γ' ->
       pred1 Σ Γ Γ' t (rho Γ' t).
     Proof.
-      revert Γ t. refine (term_forall_ctx_list_ind _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _);
+      revert Γ t. refine (term_forall_ctx_list_ind _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _);
                     simpl; !intros; rename_all_hyps.
       all:eauto 2 with pcuic.
 

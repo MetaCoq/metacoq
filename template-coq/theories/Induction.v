@@ -19,7 +19,6 @@ Lemma term_forall_list_ind :
   forall P : term -> Prop,
     (forall n : nat, P (tRel n)) ->
     (forall i : ident, P (tVar i)) ->
-    (forall n : nat, P (tMeta n)) ->
     (forall (n : nat) (l : list term), Forall P l -> P (tEvar n l)) ->
     (forall s, P (tSort s)) ->
     (forall t : term, P t -> forall (c : cast_kind) (t0 : term), P t0 -> P (tCast t c t0)) ->
@@ -76,7 +75,6 @@ Lemma term_wf_forall_list_ind :
   forall P : term -> Prop,
     (forall n : nat, P (tRel n)) ->
     (forall i : ident, P (tVar i)) ->
-    (forall n : nat, P (tMeta n)) ->
     (forall (n : nat) (l : list term), Forall P l -> P (tEvar n l)) ->
     (forall s, P (tSort s)) ->
     (forall t : term, P t -> forall (c : cast_kind) (t0 : term), P t0 -> P (tCast t c t0)) ->
@@ -97,6 +95,7 @@ Lemma term_wf_forall_list_ind :
     (forall (m : mfixpoint term) (n : nat), tFixProp P P m -> P (tCoFix m n)) ->
     forall t : term, wf t -> P t.
 Proof.
+  pose proof I as H1.  (* can go away, to avoid renaming everything... *)
   intros until t. revert t.
   apply (term_forall_list_ind (fun t => wf t -> P t));
     intros; try solve [match goal with

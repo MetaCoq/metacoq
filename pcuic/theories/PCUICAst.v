@@ -19,7 +19,6 @@ Open Scope pcuic.
 Inductive term : Set :=
 | tRel       : nat -> term
 | tVar       : ident -> term (* For free variables (e.g. in a goal) *)
-| tMeta      : nat -> term   (* NOTE: this will go away *)
 | tEvar      : nat -> list term -> term
 | tSort      : universe -> term
 | tProd      : name -> term (* the type *) -> term -> term

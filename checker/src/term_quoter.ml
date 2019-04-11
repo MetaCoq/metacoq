@@ -180,7 +180,6 @@ struct
 
   let mkRel n = Coq_tRel n
   let mkVar id = Coq_tVar id
-  let mkMeta n = Coq_tMeta n
   let mkEvar n args = Coq_tEvar (n,Array.to_list args)
   let mkSort s = Coq_tSort s
   let mkCast c k t = Coq_tCast (c,k,t)

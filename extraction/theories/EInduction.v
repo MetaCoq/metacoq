@@ -21,7 +21,6 @@ Lemma term_forall_list_ind :
     (P tBox) ->
     (forall n : nat, P (tRel n)) ->
     (forall i : ident, P (tVar i)) ->
-    (forall n : nat, P (tMeta n)) ->
     (forall (n : nat) (l : list term), Forall P l -> P (tEvar n l)) ->
     (forall (n : name) (t : term), P t -> P (tLambda n t)) ->
     (forall (n : name) (t : term),

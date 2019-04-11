@@ -16,7 +16,7 @@ Set Asymmetric Patterns.
 
 Fixpoint subst_instance_constr (u : universe_instance) (c : term) :=
   match c with
-  | tRel _ | tVar _ | tMeta _ => c
+  | tRel _ | tVar _  => c
   | tEvar ev args => tEvar ev (List.map (subst_instance_constr u) args)
   | tSort s => tSort (subst_instance_univ u s)
   | tConst c u' => tConst c (subst_instance_instance u u')

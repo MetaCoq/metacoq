@@ -16,7 +16,6 @@ Inductive term : Set :=
 | tBox (t : term) (* Represents all proofs *)
 | tRel (n : nat)
 | tVar (id : ident) (* For free variables (e.g. in a goal) *)
-| tMeta (meta : nat) (* NOTE: this will go away *)
 | tEvar (ev : nat) (args : list term)
 | tSort (s : universe)
 | tProd (na : name) (ty : term) (body : term)

@@ -110,7 +110,7 @@ Fixpoint tsl_rec1_app (app : option term) (E : tsl_table) (t : term) : term :=
     end
   | tProj _ _ => todo
   | tFix _ _ | tCoFix _ _ => todo
-  | tVar _ | tMeta _ | tEvar _ _ => todo
+  | tVar _ | tEvar _ _ => todo
   | tLambda _ _ _ => tVar "impossible"
   end in
   match app with Some t' => mkApp t1 (t' {3 := tRel 1} {2 := tRel 0})

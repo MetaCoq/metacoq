@@ -51,7 +51,6 @@ Section TypeOf.
       end
 
     | tVar n => raise (UnboundVar n)
-    | tMeta n => raise (UnboundMeta n)
     | tEvar ev args => raise (UnboundEvar ev)
 
     | tSort s => ret (tSort (try_suc s))

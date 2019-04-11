@@ -6,7 +6,6 @@ open Redops
 open Genredexpr
 open Pp (* this adds the ++ to the current scope *)
 
-open Tm_util
 open Quoter
 open Constr_quoter
 open TemplateCoqQuoter
@@ -209,7 +208,6 @@ let not_in_tactic s =
   CErrors.user_err  (str ("You can not use " ^ s ^ " in a tactic."))
 
 let rec run_template_program_rec ?(intactic=false) (k : Environ.env * Evd.evar_map * Constr.t -> unit) env ((evm, pgm) : Evd.evar_map * Constr.t) : unit =
-  let open TemplateMonad in
   let (kind, universes) = next_action env evm pgm in
   match kind with
     TmReturn h ->

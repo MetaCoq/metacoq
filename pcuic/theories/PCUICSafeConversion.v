@@ -735,46 +735,6 @@ Section Conversion.
       + reflexivity.
   Qed.
 
-  Lemma inversion_Lambda :
-    forall {Σ Γ na A t T},
-      Σ ;;; Γ |- tLambda na A t : T ->
-      exists s1 B,
-        ∥ Σ ;;; Γ |- A : tSort s1 ∥ /\
-        ∥ Σ ;;; Γ ,, vass na A |- t : B ∥ /\
-        ∥ Σ ;;; Γ |- tProd na A B <= T ∥.
-  Proof.
-    intros Σ' Γ na A t T h. dependent induction h.
-    - exists s1, bty. split ; [| split].
-      + constructor. assumption.
-      + constructor. assumption.
-      + constructor. apply cumul_refl'.
-    - destruct IHh as [s1 [B' [? [? [?]]]]].
-      exists s1, B'. split ; [| split].
-      + assumption.
-      + assumption.
-      + constructor. eapply cumul_trans ; eassumption.
-  Qed.
-
-  Lemma inversion_Prod :
-    forall {Σ Γ na A B T},
-      Σ ;;; Γ |- tProd na A B : T ->
-      exists s1 s2,
-        ∥ Σ ;;; Γ |- A : tSort s1 ∥ /\
-        ∥ Σ ;;; Γ ,, vass na A |- B : tSort s2 ∥ /\
-        ∥ Σ ;;; Γ |- tSort (Universe.sort_of_product s1 s2) <= T ∥.
-  Proof.
-    intros Σ' Γ na A B T h. dependent induction h.
-    - exists s1, s2. split ; [| split].
-      + constructor. assumption.
-      + constructor. assumption.
-      + constructor. apply cumul_refl'.
-    - destruct IHh as [s1 [s2 [? [? [?]]]]].
-      exists s1, s2. split ; [| split].
-      + assumption.
-      + assumption.
-      + constructor. eapply cumul_trans ; eassumption.
-  Qed.
-
   Derive Signature for cumul.
   Derive Signature for red1.
 

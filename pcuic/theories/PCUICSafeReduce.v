@@ -56,9 +56,10 @@ Section Normalisation.
 
   Inductive stack : Type :=
   | Empty
-  | App (t : term) (e : stack)
-  | Fix (f : mfixpoint term) (n : nat) (args : list term) (e : stack)
-  | Case (indn : inductive * nat) (pred : term) (brs : list (nat * term)) (e : stack).
+  | App (t : term) (π : stack)
+  | Fix (f : mfixpoint term) (n : nat) (args : list term) (π : stack)
+  | Case (indn : inductive * nat) (p : term) (brs : list (nat * term)) (π : stack)
+  | Prod (na : name) (B : term) (π : stack).
 
   Derive NoConfusion NoConfusionHom EqDec for stack.
 
@@ -68,9 +69,10 @@ Section Normalisation.
   Fixpoint zipc t stack :=
     match stack with
     | Empty => t
-    | App u e => zipc (tApp t u) e
-    | Fix f n args e => zipc (tApp (mkApps (tFix f n) args) t) e
-    | Case indn pred brs e => zipc (tCase indn pred t brs) e
+    | App u π => zipc (tApp t u) π
+    | Fix f n args π => zipc (tApp (mkApps (tFix f n) args) t) π
+    | Case indn pred brs π => zipc (tCase indn pred t brs) π
+    | Prod na B π => zipc (tProd na t B) π
     end.
 
   Definition zip (t : term * stack) := zipc (fst t) (snd t).
@@ -97,15 +99,13 @@ Section Normalisation.
   Proof.
     intros π l ρ eq.
     revert l ρ eq. induction π ; intros l ρ eq.
-    - cbn in eq. inversion eq. subst. reflexivity.
-    - destruct l.
-      + cbn in eq. revert eq. case_eq (decompose_stack π).
-        intros. inversion eq.
-      + cbn in eq. revert eq. case_eq (decompose_stack π).
-        intros l0 s H0 eq. inversion eq. subst.
-        cbn. f_equal. eapply IHπ. assumption.
-    - cbn in eq. inversion eq. subst. reflexivity.
-    - cbn in eq. inversion eq. subst. reflexivity.
+    all: try solve [ cbn in eq ; inversion eq ; subst ; reflexivity ].
+    destruct l.
+    - cbn in eq. revert eq. case_eq (decompose_stack π).
+      intros. inversion eq.
+    - cbn in eq. revert eq. case_eq (decompose_stack π).
+      intros l0 s H0 eq. inversion eq. subst.
+      cbn. f_equal. eapply IHπ. assumption.
   Qed.
 
   Lemma decompose_stack_not_app :
@@ -193,43 +193,33 @@ Section Normalisation.
 
   Set Equations With UIP.
 
-  (* TODO Remove? *)
-  (* Notation ex t := (exist t _) (only parsing). *)
-
-  (* Notation coe h t := (eq_rec_r (fun x => pos x) t h). *)
-
   Fixpoint stack_position π : position :=
     match π with
     | Empty => []
     | App u ρ => stack_position ρ ++ [ app_l ]
     | Fix f n args ρ => stack_position ρ ++ [ app_r ]
     | Case indn pred brs ρ => stack_position ρ ++ [ case_c ]
+    | Prod na B ρ => stack_position ρ ++ [ prod_l ]
     end.
 
   Lemma stack_position_atpos :
     forall t π, atpos (zipc t π) (stack_position π) = t.
   Proof.
     intros t π. revert t. induction π ; intros u.
-    - reflexivity.
-    - cbn. rewrite poscat_atpos. rewrite IHπ. reflexivity.
-    - cbn. rewrite poscat_atpos. rewrite IHπ. reflexivity.
-    - cbn. rewrite poscat_atpos. rewrite IHπ. reflexivity.
+    all: solve [ cbn ; rewrite ?poscat_atpos, ?IHπ ; reflexivity ].
   Qed.
 
   Lemma stack_position_valid :
     forall t π, validpos (zipc t π) (stack_position π).
   Proof.
     intros t π. revert t. induction π ; intros u.
-    - reflexivity.
-    - cbn. eapply poscat_valid.
-      + eapply IHπ.
-      + rewrite stack_position_atpos. reflexivity.
-    - cbn. eapply poscat_valid.
-      + eapply IHπ.
-      + rewrite stack_position_atpos. reflexivity.
-    - cbn. eapply poscat_valid.
-      + eapply IHπ.
-      + rewrite stack_position_atpos. reflexivity.
+    all: try solve [
+      cbn ; eapply poscat_valid ; [
+        eapply IHπ
+      | rewrite stack_position_atpos ; reflexivity
+      ]
+    ].
+    reflexivity.
   Qed.
 
   Definition stack_pos t π : pos (zipc t π) :=
@@ -262,14 +252,6 @@ Section Normalisation.
     - cbn. rewrite ih. rewrite <- app_assoc.
       rewrite list_make_app_r. reflexivity.
   Qed.
-
-  (* Lemma coe_coe : *)
-  (*   forall t u v p (e : t = u) (e' : u = v), *)
-  (*     coe e (coe e' p) = coe (eq_trans e e') p. *)
-  (* Proof. *)
-  (*   intros t u v p e e'. *)
-  (*   subst. reflexivity. *)
-  (* Qed. *)
 
   (* red is the reflexive transitive closure of one-step reduction and thus
      can't be used as well order. We thus define the transitive closure,
@@ -505,10 +487,8 @@ Section Reduce.
     intros Σ' Γ t u π h.
     cbn. revert t u h.
     induction π ; intros u v h.
-    - cbn. assumption.
-    - cbn. apply IHπ. constructor. assumption.
-    - cbn. apply IHπ. constructor. assumption.
-    - cbn. apply IHπ. constructor. assumption.
+    all: try solve [ cbn ; apply IHπ ; constructor ; assumption ].
+    cbn. assumption.
   Qed.
 
   Corollary red_context :
@@ -637,6 +617,46 @@ Section Reduce.
       exists args, u. assumption.
   Qed.
 
+  Lemma inversion_Lambda :
+    forall {Σ Γ na A t T},
+      Σ ;;; Γ |- tLambda na A t : T ->
+      exists s1 B,
+        ∥ Σ ;;; Γ |- A : tSort s1 ∥ /\
+        ∥ Σ ;;; Γ ,, vass na A |- t : B ∥ /\
+        ∥ Σ ;;; Γ |- tProd na A B <= T ∥.
+  Proof.
+    intros Σ' Γ na A t T h. dependent induction h.
+    - exists s1, bty. split ; [| split].
+      + constructor. assumption.
+      + constructor. assumption.
+      + constructor. apply cumul_refl'.
+    - destruct IHh as [s1 [B' [? [? [?]]]]].
+      exists s1, B'. split ; [| split].
+      + assumption.
+      + assumption.
+      + constructor. eapply cumul_trans ; eassumption.
+  Qed.
+
+  Lemma inversion_Prod :
+    forall {Σ Γ na A B T},
+      Σ ;;; Γ |- tProd na A B : T ->
+      exists s1 s2,
+        ∥ Σ ;;; Γ |- A : tSort s1 ∥ /\
+        ∥ Σ ;;; Γ ,, vass na A |- B : tSort s2 ∥ /\
+        ∥ Σ ;;; Γ |- tSort (Universe.sort_of_product s1 s2) <= T ∥.
+  Proof.
+    intros Σ' Γ na A B T h. dependent induction h.
+    - exists s1, s2. split ; [| split].
+      + constructor. assumption.
+      + constructor. assumption.
+      + constructor. apply cumul_refl'.
+    - destruct IHh as [s1 [s2 [? [? [?]]]]].
+      exists s1, s2. split ; [| split].
+      + assumption.
+      + assumption.
+      + constructor. eapply cumul_trans ; eassumption.
+  Qed.
+
   Lemma welltyped_context :
     forall Σ Γ t,
       welltyped Σ Γ (zip t) ->
@@ -660,6 +680,10 @@ Section Reduce.
       destruct indn.
       destruct (weak_inversion_Case h) as [? [? [?]]].
       eexists. eassumption.
+    - cbn. cbn in h. cbn in IHπ. apply IHπ in h.
+      destruct h as [T h].
+      destruct (inversion_Prod h) as [s1 [s2 [[?] [[?] [?]]]]].
+      eexists. eassumption.
   Qed.
 
   Lemma Case_Construct_ind_eq :
@@ -682,22 +706,11 @@ Section Reduce.
   Proof.
     intros u v π e. revert u v e.
     induction π ; intros u v e.
-    - cbn in e. assumption.
-    - cbn in e. apply IHπ in e. inversion e. reflexivity.
-    - cbn in e. apply IHπ in e. inversion e. reflexivity.
-    - cbn in e. apply IHπ in e. inversion e. reflexivity.
+    all: try solve [ cbn in e ; apply IHπ in e ; inversion e ; reflexivity ].
+    cbn in e. assumption.
   Qed.
 
   Notation "( x ; y )" := (existT _ x y).
-
-  (* Lemma right_lex_coe : *)
-  (*   forall Σ Γ t t' p p' (e : t = t'), *)
-  (*     posR p (coe e p') -> *)
-  (*     dlexprod (cored Σ Γ) (@posR) (t;p) (t';p'). *)
-  (* Proof. *)
-  (*   intros Σ' Γ t t' p p' e h. subst. *)
-  (*   right. assumption. *)
-  (* Qed. *)
 
   Definition inspect {A} (x : A) : { y : A | y = x } := exist x eq_refl.
 

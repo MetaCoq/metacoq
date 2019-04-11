@@ -4,7 +4,8 @@ From Coq Require Import Bool String List Program BinPos Compare_dec Arith Lia Cl
 From Template
 Require Import config univ monad_utils utils BasicAst AstUtils UnivSubst.
 From PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICReflect
-                          PCUICLiftSubst PCUICUnivSubst PCUICTyping.
+                          PCUICLiftSubst PCUICUnivSubst PCUICTyping
+                          PCUICPosition.
 From Equations Require Import Equations.
 Require Import Equations.Prop.DepElim.
 
@@ -226,7 +227,7 @@ Section Normalisation.
     - rewrite <- IHp. reflexivity.
   Qed.
 
-  Notation ex t := (exist _ t _) (only parsing).
+  Notation ex t := (exist t _) (only parsing).
 
   Notation coe h t := (eq_rec_r (fun x => position x) t h).
 
@@ -966,7 +967,7 @@ Section Reduce.
     right. assumption.
   Qed.
 
-  Definition inspect {A} (x : A) : { y : A | y = x } := exist _ x eq_refl.
+  Definition inspect {A} (x : A) : { y : A | y = x } := exist x eq_refl.
 
   Definition Pr (t' : term * stack) π :=
     forall indn c args ρ,
@@ -988,12 +989,12 @@ Section Reduce.
 
   Notation rec reduce t π :=
     (let smaller := _ in
-     let '(exist _ res (conj prf (conj h h'))) := reduce t π smaller in
-     exist _ res (conj (Req_trans _ _ _ _ (R_to_Req smaller)) (conj givePr givePr'))
+     let '(exist res (conj prf (conj h h'))) := reduce t π smaller in
+     exist res (conj (Req_trans _ _ _ _ (R_to_Req smaller)) (conj givePr givePr'))
     ) (only parsing).
 
   Notation give t π :=
-    (exist _ (t,π) (conj _ (conj givePr givePr'))) (only parsing).
+    (exist (t,π) (conj _ (conj givePr givePr'))) (only parsing).
 
   Tactic Notation "zip" "fold" "in" hyp(h) :=
     lazymatch type of h with
@@ -1500,11 +1501,11 @@ Section Reduce.
   Equations reduce_stack_full (Γ : context) (t : term) (π : stack)
            (h : welltyped Σ Γ (zip (t,π))) : { t' : term * stack | Req (fst Σ) Γ t' (t, π) } :=
     reduce_stack_full Γ t π h :=
-      let '(exist _ ts (conj r _)) :=
+      let '(exist ts (conj r _)) :=
           Fix_F (R := R (fst Σ) Γ)
                 (fun x => welltyped Σ Γ (zip x) -> { t' : term * stack | Req (fst Σ) Γ t' x /\ Pr t' (snd x) /\ Pr' t' (snd x) })
                 (fun t' f => _) (x := (t, π)) _ _
-      in exist _ ts r.
+      in exist ts r.
   Next Obligation.
     eapply _reduce_stack.
     - assumption.
@@ -1525,7 +1526,7 @@ Section Reduce.
   Qed.
 
   Definition reduce_stack Γ t π h :=
-    let '(exist _ ts _) := reduce_stack_full Γ t π h in ts.
+    let '(exist ts _) := reduce_stack_full Γ t π h in ts.
 
   Theorem reduce_stack_sound :
     forall Γ t π h,

@@ -83,8 +83,6 @@ Section Conversion.
   Instance reflect_stack : ReflectEq stack :=
     let h := EqDec_ReflectEq stack in _.
 
-  Arguments exist {_ _} _ _.
-
   Fixpoint context_position Γ : position :=
     match Γ with
     | [] => []

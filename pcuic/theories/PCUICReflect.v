@@ -327,3 +327,17 @@ Defined.
 
 Instance reflect_term : ReflectEq term :=
   let h := EqDec_ReflectEq term in _.
+
+Definition eq_sig_true {A f} `{ReflectEq A} (x y : { z : A | f z = true }) : bool :=
+  let '(exist x hx) := x in
+  let '(exist y hy) := y in
+  eqb x y.
+
+Instance reflect_sig_true {A f} `{ReflectEq A} : ReflectEq ({ z : A | f z = true }) := {
+  eqb := eq_sig_true
+}.
+Proof.
+  intros [x hx] [y hy]. simpl.
+  destruct (eqb_spec x y) ; nodec. subst.
+  constructor. pose proof (uip hx hy). subst. reflexivity.
+Qed.

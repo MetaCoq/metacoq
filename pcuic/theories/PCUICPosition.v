@@ -5,8 +5,7 @@ From Coq Require Import Bool String List Program BinPos Compare_dec Arith Lia
 From Template Require Import config univ monad_utils utils BasicAst AstUtils
      UnivSubst.
 From PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICReflect
-     PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICSafeReduce PCUICCumulativity
-     PCUICSR.
+     PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICCumulativity PCUICSR.
 From Equations Require Import Equations.
 
 Require Import Equations.Prop.DepElim.
@@ -28,6 +27,9 @@ Inductive choice :=
 | let_in.
 
 Derive NoConfusion NoConfusionHom EqDec for choice.
+
+Instance reflect_choice : ReflectEq choice :=
+  let h := EqDec_ReflectEq choice in _.
 
 Definition position := list choice.
 
@@ -225,17 +227,6 @@ Proof.
       eapply IHt2.
 Qed.
 
-(* Equations atpos (t : term) (p : position) : term := *)
-(*   atpos t [] := t ; *)
-(*   atpos (tApp u v) (app_l :: p) := atpos u p ; *)
-(*   atpos (tApp u v) (app_r :: p) := atpos v p ; *)
-(*   atpos (tCase indn pr c brs) (case_c :: p) := atpos c p ; *)
-(*   atpos (tLambda na A t) (lam_ty :: p) := atpos A p ; *)
-(*   atpos (tLambda na A t) (lam_tm :: p) := atpos t p ; *)
-(*   atpos (tProd na A B) (prod_l :: p) := atpos A p ; *)
-(*   atpos (tProd na A B) (prod_r :: p) := atpos B p ; *)
-(*   atpos _ _ := tRel 0. *)
-
 Fixpoint atpos t (p : position) {struct p} : term :=
   match p with
   | [] => t
@@ -252,8 +243,6 @@ Fixpoint atpos t (p : position) {struct p} : term :=
     | _, _ => tRel 0
     end
   end.
-
-(* Derive NoConfusion NoConfusionHom for list. *)
 
 Lemma poscat_atpos :
   forall t p q, atpos t (p ++ q) = atpos (atpos t p) q.

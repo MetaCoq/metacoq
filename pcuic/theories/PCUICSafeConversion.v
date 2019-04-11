@@ -597,14 +597,17 @@ Section Conversion.
     subst. cbn. right. right. assumption.
   Qed.
 
+  Definition zipp t π :=
+    let '(args, ρ) := decompose_stack π in
+    mkApps t args.
+
   Definition Ret s Γ t π π' :=
     match s with
-    | Reduction t' =>
-      forall leq, { b : bool | if b then conv leq Σ Γ (zipc t π) (zipc t' π') else True }
+    | Reduction t'
     | Term t' =>
-      forall leq, { b : bool | if b then conv leq Σ Γ (zipc t π) (zipc t' π') else True }
+      forall leq, { b : bool | if b then conv leq Σ Γ (zipp t π) (zipp t' π') else True }
     | Args =>
-      { b : bool | if b then ∥ Σ ;;; Γ |- zipc t π = zipc t π' ∥ else True }
+      { b : bool | if b then ∥ Σ ;;; Γ |- zipp t π = zipp t π' ∥ else True }
     end.
 
   Definition wts Γ s t π :=
@@ -640,20 +643,11 @@ Section Conversion.
   Notation isconv_args Γ t π1 π2 aux :=
     (repack (isconv_args_raw Γ t π1 π2 aux)) (only parsing).
 
-  (* TODO Remove probably *)
-  (* Lemma positionR_nocoe : *)
-  (*   forall p t1 t2 (q : pos t1) (e : t2 = t1), *)
-  (*     positionR p (` q) -> *)
-  (*     positionR p (` (coe pos e q)). *)
-  (* Proof. *)
-  (*   intros p t1 t2 q e h. subst. cbn in *. assumption. *)
-  (* Qed. *)
-
   Equations(noeqns) _isconv_red (Γ : context) (leq : conv_pb)
             (t1 : term) (π1 : stack) (h1 : welltyped Σ Γ (zipc t1 π1))
             (t2 : term) (π2 : stack) (h2 : welltyped Σ Γ (zipc t2 π2))
             (aux : Aux (Reduction t2) Γ t1 π1 π2)
-    : { b : bool | if b then conv leq Σ Γ (zipc t1 π1) (zipc t2 π2) else True } :=
+    : { b : bool | if b then conv leq Σ Γ (zipp t1 π1) (zipp t2 π2) else True } :=
 
     _isconv_red Γ leq t1 π1 h1 t2 π2 h2 aux
     with inspect (reduce_stack nodelta_flags Σ Γ t1 π1 h1) := {
@@ -693,6 +687,12 @@ Section Conversion.
     destruct b ; auto.
     destruct (reduce_stack_sound nodelta_flags _ _ _ _ h1).
     destruct (reduce_stack_sound nodelta_flags _ _ _ _ h2).
+    (* Maybe we need to use Pr here.
+       We could update it by discrimiating on App,
+       saying everything not App stays the same
+       (it might even not be necessary to discrimiate
+       since we use decompose_stack).
+     *)
     eapply conv_trans'.
     - eapply red_conv_l. eassumption.
     - eapply conv_trans'.

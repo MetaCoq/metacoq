@@ -8,6 +8,8 @@ val unquote_ident : Constr.t -> Names.Id.t
 
 val unquote_string : Constr.t -> string
 
+val unquote_kn : Constr.t -> Libnames.qualid
+
 (* ^^ above this is completely generic *)
 
 val unquote_level : Evd.evar_map -> Constr.constr -> Evd.evar_map * Univ.Level.t

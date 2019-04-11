@@ -915,6 +915,16 @@ Section Conversion.
     subst. cbn in h. right. left. assumption.
   Qed.
 
+  Lemma R_positionR :
+    forall t1 t2 (p1 : pos t1) (p2 : pos t2) s1 s2,
+      t1 = t2 ->
+      positionR (` p1) (` p2) ->
+      R_aux (t1 ; (p1, s1)) (t2 ; (p2, s2)).
+  Proof.
+    intros t1 t2 p1 p2 s1 s2 e h.
+    subst. right. left. assumption.
+  Qed.
+
   Lemma R_stateR :
     forall t1 t2 (p1 : pos t1) (p2 : pos t2) s1 s2 (e : t1 = t2),
       p1 = coe _ e p2 ->
@@ -1122,9 +1132,9 @@ Section Conversion.
       dependent destruction h.
       + left. simpl. eapply cored_it_mkLambda_or_LetIn. assumption.
       + cbn in H0. inversion H0. (* Why is noconf failing at this point? *)
-        unshelve eapply R_posR.
+        unshelve eapply R_positionR.
         * simpl. unfold zipx. f_equal. symmetry. assumption.
-        * simpl. unfold posR. eapply positionR_nocoe. cbn.
+        * simpl.
           eapply positionR_stack_pos_xpos.
           pose proof (convpos_posR H) as h.
           rewrite convpos_stack_pos in h.
@@ -1437,8 +1447,27 @@ Section Conversion.
   Next Obligation.
     pose proof (zip_Prod_Empty h1). subst.
     pose proof (zip_Prod_Empty h2). subst.
-    (* R (Reduction A2, Γ, A1, Empty, Empty) *)
-    (*   (Term (tProd t2 A2 B2), Γ, tProd na A1 B1, Empty, Empty) *)
+    unshelve eapply R_positionR.
+    - simpl. unfold zipx. f_equal. simpl.
+      (* Really problematic, unfortunately, the context and stack don't hold
+         all of the information to reconstruct the term.
+         One solution would be to extend the stack with constructors for Π and
+         probably other things.
+
+         Another, which would not require changes in the reduction would be to
+         add yet another argument containing the extra information, or having a
+         new stack type erased to the old one...
+
+         In any case, this does not mean the idea to zip the context was not the
+         right one, this is orthogonal as even the zips without context are
+         mismatched.
+       *)
+      give_up.
+    - simpl.
+      (* Again, we lost information and are producing equal positions,
+         which should not be.
+       *)
+      give_up.
   Admitted.
   Next Obligation.
     zip fold in h1. apply welltyped_context in h1. cbn in h1.

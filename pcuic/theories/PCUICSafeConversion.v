@@ -649,114 +649,6 @@ Section Conversion.
   (*   intros p t1 t2 q e h. subst. cbn in *. assumption. *)
   (* Qed. *)
 
-  Fixpoint convpos {t} (p : PSR.position t) : position :=
-    match p with
-    | root _ => []
-    | PSR.app_l u p v => app_l :: convpos p
-    | PSR.app_r u v p => app_r :: convpos p
-    | PSR.case_c indn pr c brs p => case_c :: convpos p
-    end.
-
-  Lemma convpos_valid :
-    forall t p,
-      validpos t (@convpos t p).
-  Proof.
-    intros t p. induction p.
-    all: try assumption.
-    reflexivity.
-  Qed.
-
-  Lemma convpos_poscat :
-    forall t p q,
-      convpos (@poscat t p q) = convpos p ++ convpos q.
-  Proof.
-    intros t p q.
-    funelim (poscat t p q).
-    - reflexivity.
-    - cbn. f_equal. assumption.
-    - cbn. f_equal. assumption.
-    - cbn. f_equal. assumption.
-  Qed.
-
-  Lemma convpos_stack_pos :
-    forall t π,
-      convpos (` (PSR.stack_position t π)) = stack_position π.
-  Proof.
-    intros t π. revert t. induction π ; intro u.
-    - simp stack_position. reflexivity.
-    - simp stack_position.
-      replace (stack_position_clause_1 PCUICSafeReduce.stack_position π π (tApp u t))
-        with (PSR.stack_position (tApp u t) π)
-        by (simp stack_position ; reflexivity).
-      case_eq (PSR.stack_position (tApp u t) π).
-      intros p e1 e2. cbn.
-      rewrite convpos_poscat.
-      rewrite <- (IHπ (tApp u t)). rewrite e2. cbn. f_equal.
-      match goal with
-      | |- context [ eq_rec_r ?P ?t ?e ] =>
-        set (eq := e)
-      end. clearbody eq.
-      clear. revert eq.
-      generalize (PSR.atpos (PSR.zipc (tApp u t) π) p). clear.
-      intros t0 eq. subst. cbn. reflexivity.
-    - simp stack_position.
-      replace (stack_position_clause_1 PCUICSafeReduce.stack_position π π (tApp (mkApps (tFix f n) args) u))
-        with (PSR.stack_position (tApp (mkApps (tFix f n) args) u) π)
-        by (simp stack_position ; reflexivity).
-      case_eq (PSR.stack_position (tApp (mkApps (tFix f n) args) u) π).
-      intros p e1 e2. cbn.
-      rewrite convpos_poscat.
-      rewrite <- (IHπ (tApp (mkApps (tFix f n) args) u)). rewrite e2. cbn. f_equal.
-      match goal with
-      | |- context [ eq_rec_r ?P ?t ?e ] =>
-        set (eq := e)
-      end. clearbody eq.
-      clear. revert eq.
-      generalize (PSR.atpos (PSR.zipc (tApp (mkApps (tFix f n) args) u) π) p). clear.
-      intros t0 eq. subst. cbn. reflexivity.
-    - simp stack_position.
-      set (t := (tCase indn pred u brs)).
-      replace (stack_position_clause_1 PCUICSafeReduce.stack_position π π t)
-        with (PSR.stack_position t π)
-        by (simp stack_position ; reflexivity).
-      case_eq (PSR.stack_position t π).
-      intros p e1 e2. cbn.
-      rewrite convpos_poscat.
-      rewrite <- (IHπ t). rewrite e2. cbn. f_equal.
-      match goal with
-      | |- context [ eq_rec_r ?P ?t ?e ] =>
-        set (eq := e)
-      end. clearbody eq.
-      clear. revert eq. subst t.
-      generalize (PSR.atpos (PSR.zipc (tCase indn pred u brs) π) p). clear.
-      intros t0 eq. subst. cbn. reflexivity.
-  Qed.
-
-  Lemma convpos_posR :
-    forall {t p q},
-      @PSR.posR t p q ->
-      positionR (convpos p) (convpos q).
-  Proof.
-    intros t p q h.
-    induction h.
-    - cbn. constructor.
-    - cbn. constructor. assumption.
-    - cbn. constructor. assumption.
-    - cbn. constructor. assumption.
-    - cbn. constructor.
-    - cbn. constructor.
-    - cbn. constructor.
-  Qed.
-
-  Lemma pair_convpos :
-    forall {t1} {p1 : PSR.position t1} {t2} {p2 : PSR.position t2},
-      (t1 ; p1) = (t2 ; p2) ->
-      convpos p1 = convpos p2.
-  Proof.
-    intros t1 p1 t2 p2 e.
-    inversion e. reflexivity.
-  Qed.
-
   Equations(noeqns) _isconv_red (Γ : context) (leq : conv_pb)
             (t1 : term) (π1 : stack) (h1 : welltyped Σ Γ (zipc t1 π1))
             (t2 : term) (π2 : stack) (h2 : welltyped Σ Γ (zipc t2 π2))
@@ -790,16 +682,12 @@ Section Conversion.
     - rewrite <- eq1 in h.
       dependent destruction h.
       + left. simpl. eapply cored_it_mkLambda_or_LetIn. assumption.
-      + cbn in H0. inversion H0. (* Why is noconf failing at this point? *)
+      + destruct y' as [q hq].
+        cbn in H0. inversion H0. (* Why is noconf failing at this point? *)
+        subst.
         unshelve eapply R_positionR.
         * simpl. unfold zipx. f_equal. symmetry. assumption.
-        * simpl.
-          eapply positionR_stack_pos_xpos.
-          pose proof (convpos_posR H) as h.
-          rewrite convpos_stack_pos in h.
-          pose proof (pair_convpos H3) as eq.
-          rewrite <- eq in h. rewrite convpos_stack_pos in h.
-          assumption.
+        * simpl. unfold xposition. eapply positionR_poscat. assumption.
   Qed.
   Next Obligation.
     destruct b ; auto.

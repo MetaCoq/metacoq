@@ -4,8 +4,9 @@ From Coq Require Import Bool String List Program BinPos Compare_dec Arith Lia
      Classes.RelationClasses.
 From Template Require Import config univ monad_utils utils BasicAst AstUtils
      UnivSubst.
-From PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICLiftSubst
-     PCUICUnivSubst PCUICTyping PCUICSafeReduce PCUICCumulativity PCUICSR.
+From PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICReflect
+     PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICSafeReduce PCUICCumulativity
+     PCUICSR.
 From Equations Require Import Equations.
 
 Require Import Equations.Prop.DepElim.

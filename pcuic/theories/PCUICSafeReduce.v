@@ -3,7 +3,8 @@
 From Coq Require Import Bool String List Program BinPos Compare_dec Arith Lia Classes.RelationClasses.
 From Template
 Require Import config univ monad_utils utils BasicAst AstUtils UnivSubst.
-From PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICLiftSubst PCUICUnivSubst PCUICTyping.
+From PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICReflect
+                          PCUICLiftSubst PCUICUnivSubst PCUICTyping.
 From Equations Require Import Equations.
 Require Import Equations.Prop.DepElim.
 
@@ -35,122 +36,6 @@ Module RedFlags.
 End RedFlags.
 
 Notation "∥ T ∥" := (squash T) (at level 10).
-
-Ltac finish :=
-  let h := fresh "h" in
-  right ;
-  match goal with
-  | e : ?t <> ?u |- _ =>
-    intro h ; apply e ; now inversion h
-  end.
-
-Ltac fcase c :=
-  let e := fresh "e" in
-  case c ; intro e ; [ subst ; try (left ; reflexivity) | finish ].
-
-Ltac term_dec_tac term_dec :=
-  repeat match goal with
-         | t : term, u : term |- _ => fcase (term_dec t u)
-         | u : universe, u' : universe |- _ => fcase (eq_dec u u')
-         | x : universe_instance, y : universe_instance |- _ =>
-           fcase (eq_dec x y)
-         | x : list Level.t, y : universe_instance |- _ =>
-           fcase (eq_dec x y)
-         | n : nat, m : nat |- _ => fcase (Nat.eq_dec n m)
-         | i : ident, i' : ident |- _ => fcase (string_dec i i')
-         | i : kername, i' : kername |- _ => fcase (string_dec i i')
-         | i : string, i' : kername |- _ => fcase (string_dec i i')
-         | n : name, n' : name |- _ => fcase (eq_dec n n')
-         (* | l : list term, l' : list term |- _ => fcase (list_dec term_dec l l') *)
-         | i : inductive, i' : inductive |- _ => fcase (eq_dec i i')
-         | x : inductive * nat, y : inductive * nat |- _ =>
-           fcase (eq_dec x y)
-         (* | x : list (nat * term), y : list (nat * term) |- _ => *)
-         (*   fcase (list_dec (prod_dec Nat.eq_dec term_dec) x y) *)
-         | x : projection, y : projection |- _ => fcase (eq_dec x y)
-         (* | f : mfixpoint term, g : mfixpoint term |- _ => *)
-         (*   fcase (mfixpoint_dec term_dec f g) *)
-         end.
-
-Derive EqDec for term.
-Next Obligation.
-  revert y.
-  induction x using term_forall_list_rec ; intro t ;
-    destruct t ; try (right ; discriminate).
-  all: term_dec_tac term_dec.
-  - revert l0. induction H ; intro l0.
-    + destruct l0.
-      * left. reflexivity.
-      * right. discriminate.
-    + destruct l0.
-      * right. discriminate.
-      * destruct (IHForallT l0) ; nodec.
-        destruct (p t) ; nodec.
-        subst. left. inversion e. reflexivity.
-  - destruct (IHx1 t1) ; nodec.
-    destruct (IHx2 t2) ; nodec.
-    subst. left. reflexivity.
-  - destruct (IHx1 t1) ; nodec.
-    destruct (IHx2 t2) ; nodec.
-    subst. left. reflexivity.
-  - destruct (IHx1 t1) ; nodec.
-    destruct (IHx2 t2) ; nodec.
-    destruct (IHx3 t3) ; nodec.
-    subst. left. reflexivity.
-  - destruct (IHx1 t1) ; nodec.
-    destruct (IHx2 t2) ; nodec.
-    subst. left. reflexivity.
-  - destruct (IHx1 t1) ; nodec.
-    destruct (IHx2 t2) ; nodec.
-    subst. revert l0. clear IHx1 IHx2.
-    induction X ; intro l0.
-    + destruct l0.
-      * left. reflexivity.
-      * right. discriminate.
-    + destruct l0.
-      * right. discriminate.
-      * destruct (IHX l0) ; nodec.
-        destruct (p (snd p1)) ; nodec.
-        destruct (eq_dec (fst x) (fst p1)) ; nodec.
-        destruct x, p1.
-        left.
-        cbn in *. subst. inversion e. reflexivity.
-  - destruct (IHx t) ; nodec.
-    left. subst. reflexivity.
-  - revert m0. induction X ; intro m0.
-    + destruct m0.
-      * left. reflexivity.
-      * right. discriminate.
-    + destruct p as [p1 p2].
-      destruct m0.
-      * right. discriminate.
-      * destruct (p1 (dtype d)) ; nodec.
-        destruct (p2 (dbody d)) ; nodec.
-        destruct (IHX m0) ; nodec.
-        destruct x, d ; subst. cbn in *.
-        destruct (eq_dec dname dname0) ; nodec.
-        subst. inversion e1. subst.
-        destruct (eq_dec rarg rarg0) ; nodec.
-        subst. left. reflexivity.
-  - revert m0. induction X ; intro m0.
-    + destruct m0.
-      * left. reflexivity.
-      * right. discriminate.
-    + destruct p as [p1 p2].
-      destruct m0.
-      * right. discriminate.
-      * destruct (p1 (dtype d)) ; nodec.
-        destruct (p2 (dbody d)) ; nodec.
-        destruct (IHX m0) ; nodec.
-        destruct x, d ; subst. cbn in *.
-        destruct (eq_dec dname dname0) ; nodec.
-        subst. inversion e1. subst.
-        destruct (eq_dec rarg rarg0) ; nodec.
-        subst. left. reflexivity.
-Defined.
-
-Instance reflect_term : ReflectEq term :=
-  let h := EqDec_ReflectEq term in _.
 
 (* We assume normalisation of the reduction.
 

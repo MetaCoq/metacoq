@@ -8,7 +8,7 @@ Require Import ssreflect.
 
 Fixpoint wf_Inv (t : term) :=
   match t with
-  | tRel _ | tVar _ | tMeta _ | tSort _ => True
+  | tRel _ | tVar _ | tSort _ => True
   | tEvar n l => Forall wf l
   | tCast t k t' => wf t /\ wf t'
   | tProd na t b => wf t /\ wf b

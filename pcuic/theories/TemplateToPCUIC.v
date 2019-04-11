@@ -15,7 +15,6 @@ Fixpoint trans (t : T.term) : term :=
   match t with
   | T.tRel n => tRel n
   | T.tVar n => tVar n
-  | T.tMeta n => tMeta n
   | T.tEvar ev args => tEvar ev (List.map trans args)
   | T.tSort u => tSort u
   | T.tConst c u => tConst c u

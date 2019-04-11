@@ -180,7 +180,6 @@ Lemma term_forall_ctx_list_ind :
 
     (forall Γ (n : nat), P Γ (tRel n)) ->
     (forall Γ (i : ident), P Γ (tVar i)) ->
-    (forall Γ (n : nat), P Γ (tMeta n)) ->
     (forall Γ (n : nat) (l : list term), All (P Γ) l -> P Γ (tEvar n l)) ->
     (forall Γ s, P Γ (tSort s)) ->
     (forall Γ (n : name) (t : term), P Γ t -> forall t0 : term, P (vass n t :: Γ) t0 -> P Γ (tProd n t t0)) ->
@@ -241,11 +240,11 @@ Proof.
         | H : _ |- _ => solve [apply H; (eapply aux || eapply auxl); red; simpl; try lia]
         end.
 
-  eapply X13; try (apply aux; red; simpl; lia).
+  eapply X12; try (apply aux; red; simpl; lia).
   apply auxl'. simpl. lia.
   red. apply All_pair. split; apply auxl; simpl; auto.
 
-  eapply X14; try (apply aux; red; simpl; lia).
+  eapply X13; try (apply aux; red; simpl; lia).
   apply auxl'. simpl. lia.
   red. apply All_pair. split; apply auxl; simpl; auto.
 Defined.
@@ -589,7 +588,6 @@ Section ParallelReduction.
   Definition pred_atom t :=
     match t with
     | tVar _
-    | tMeta _
     | tSort _
     | tInd _ _
     | tConstruct _ _ _ => true

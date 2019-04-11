@@ -42,10 +42,6 @@ let inspect_term (t:Constr.t) :  (Constr.t, quoted_int, quoted_ident, quoted_nam
     match args with
       x :: _ -> ACoq_tVar x
     | _ -> CErrors.user_err (print_term t ++ Pp.str ("has bad structure"))
-  else if Constr.equal h tMeta then
-    match args with
-      x :: _ -> ACoq_tMeta x
-    | _ -> CErrors.user_err (print_term t ++ Pp.str ("has bad structure"))
   else if Constr.equal h tSort then
     match args with
       x :: _ -> ACoq_tSort x

@@ -38,7 +38,6 @@ Require Export BasicAst.
 Inductive term : Set :=
 | tRel (n : nat)
 | tVar (id : ident) (* For free variables (e.g. in a goal) *)
-| tMeta (meta : nat) (* NOTE: this will go away *)
 | tEvar (ev : nat) (args : list term)
 | tSort (s : universe)
 | tCast (t : term) (kind : cast_kind) (v : term)
@@ -83,7 +82,6 @@ Definition isLambda t :=
 Inductive wf : term -> Prop :=
 | wf_tRel n : wf (tRel n)
 | wf_tVar id : wf (tVar id)
-| wf_tMeta n : wf (tMeta n)
 | wf_tEvar n l : Forall wf l -> wf (tEvar n l)
 | wf_tSort u : wf (tSort u)
 | wf_tCast t k t' : wf t -> wf t' -> wf (tCast t k t')

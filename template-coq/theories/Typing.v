@@ -381,7 +381,6 @@ Inductive red Σ Γ M : term -> Type :=
 Fixpoint eq_term `{checker_flags} (φ : uGraph.t) (t u : term) {struct t} :=
   match t, u with
   | tRel n, tRel n' => eq_nat n n'
-  | tMeta n, tMeta n' => eq_nat n n'
   | tEvar ev args, tEvar ev' args' => eq_evar ev ev' && forallb2 (eq_term φ) args args'
   | tVar id, tVar id' => eq_string id id'
   | tSort s, tSort s' => eq_universe φ s s'
@@ -417,7 +416,6 @@ Fixpoint eq_term `{checker_flags} (φ : uGraph.t) (t u : term) {struct t} :=
 Fixpoint leq_term `{checker_flags} (φ : uGraph.t) (t u : term) {struct t} :=
   match t, u with
   | tRel n, tRel n' => eq_nat n n'
-  | tMeta n, tMeta n' => eq_nat n n'
   | tEvar ev args, tEvar ev' args' => eq_nat ev ev' && forallb2 (eq_term φ) args args'
   | tVar id, tVar id' => eq_string id id'
   | tSort s, tSort s' => leq_universe φ s s'
@@ -464,7 +462,7 @@ Fixpoint strip_casts t :=
   | tCoFix mfix idx =>
     let mfix' := List.map (map_def strip_casts strip_casts) mfix in
     tCoFix mfix' idx
-  | tRel _ | tVar _ | tMeta _ | tSort _ | tConst _ _ | tInd _ _ | tConstruct _ _ _ => t
+  | tRel _ | tVar _ | tSort _ | tConst _ _ | tInd _ _ | tConstruct _ _ _ => t
   end.
 
 Definition eq_term_nocast `{checker_flags} (φ : uGraph.t) (t u : term) :=

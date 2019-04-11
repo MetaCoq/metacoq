@@ -26,7 +26,6 @@ Definition atom t :=
   match t with
   | tRel _
   | tVar _
-  | tMeta _
   | tSort _
   | tConst _ _
   | tInd _ _

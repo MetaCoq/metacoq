@@ -248,6 +248,8 @@ Local Ltac term_dec_tac term_dec :=
          | x : projection, y : projection |- _ => fcase (eq_dec x y)
          end.
 
+Derive NoConfusion NoConfusionHom for term.
+
 Derive EqDec for term.
 Next Obligation.
   revert y.

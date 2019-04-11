@@ -195,7 +195,6 @@ Section Normalisation.
   | case_c : forall indn pr c brs (p : position c), position (tCase indn pr c brs).
 
   Derive Signature for position.
-  Derive NoConfusion NoConfusionHom for term.
   Derive NoConfusion NoConfusionHom for position.
   Derive EqDec for position.
 

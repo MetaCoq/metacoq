@@ -60,6 +60,11 @@ Section Normalisation.
   | Fix (f : mfixpoint term) (n : nat) (args : list term) (e : stack)
   | Case (indn : inductive * nat) (pred : term) (brs : list (nat * term)) (e : stack).
 
+  Derive NoConfusion NoConfusionHom EqDec for stack.
+
+  Instance reflect_stack : ReflectEq stack :=
+    let h := EqDec_ReflectEq stack in _.
+
   Fixpoint zipc t stack :=
     match stack with
     | Empty => t
@@ -186,274 +191,85 @@ Section Normalisation.
       + intros H0 h. discriminate.
   Qed.
 
-  (*! Notion of term positions and an order on them *)
-
-  Inductive position : term -> Type :=
-  | root : forall t, position t
-  | app_l : forall u (p : position u) v, position (tApp u v)
-  | app_r : forall u v (p : position v), position (tApp u v)
-  | case_c : forall indn pr c brs (p : position c), position (tCase indn pr c brs).
-
-  Derive Signature for position.
-  Derive NoConfusion NoConfusionHom for position.
-  Derive EqDec for position.
-
   Set Equations With UIP.
 
-  Equations atpos (t : term) (p : position t) : term :=
-    atpos ?(t) (root t) := t ;
-    atpos ?(tApp u v) (app_l u p v) := atpos u p ;
-    atpos ?(tApp u v) (app_r u v p) := atpos v p ;
-    atpos ?(tCase indn pr c brs) (case_c indn pr c brs p) := atpos c p.
+  (* TODO Remove? *)
+  (* Notation ex t := (exist t _) (only parsing). *)
 
-  Equations poscat t (p : position t) (q : position (atpos t p)) : position t :=
-    poscat _ (root t) q := q ;
-    poscat _ (app_l u p v) q := app_l u (poscat _ p q) v ;
-    poscat _ (app_r u v p) q := app_r u v (poscat _ p q) ;
-    poscat _ (case_c indn pr c brs p) q := case_c indn pr c brs (poscat _ p q).
+  (* Notation coe h t := (eq_rec_r (fun x => pos x) t h). *)
 
-  Arguments root {_}.
-  Arguments poscat {_} _ _.
+  Fixpoint stack_position π : position :=
+    match π with
+    | Empty => []
+    | App u ρ => stack_position ρ ++ [ app_l ]
+    | Fix f n args ρ => stack_position ρ ++ [ app_r ]
+    | Case indn pred brs ρ => stack_position ρ ++ [ case_c ]
+    end.
 
-  Lemma atpos_poscat :
-    forall t p q,
-      atpos t (@poscat t p q) = atpos (atpos t p) q.
+  Lemma stack_position_atpos :
+    forall t π, atpos (zipc t π) (stack_position π) = t.
   Proof.
-    intros t p q. revert q. induction p ; intros q.
+    intros t π. revert t. induction π ; intros u.
     - reflexivity.
-    - rewrite <- IHp. reflexivity.
-    - rewrite <- IHp. reflexivity.
-    - rewrite <- IHp. reflexivity.
+    - cbn. rewrite poscat_atpos. rewrite IHπ. reflexivity.
+    - cbn. rewrite poscat_atpos. rewrite IHπ. reflexivity.
+    - cbn. rewrite poscat_atpos. rewrite IHπ. reflexivity.
   Qed.
 
-  Notation ex t := (exist t _) (only parsing).
-
-  Notation coe h t := (eq_rec_r (fun x => position x) t h).
-
-  Equations(noind) stack_position t π : { p : position (zipc t π) | atpos _ p = t } :=
-    stack_position t π with π := {
-    | Empty => ex root ;
-    | App u ρ with stack_position _ ρ := {
-      | @exist p h => ex (poscat p (coe h (app_l _ root _)))
-      } ;
-    | Fix f n args ρ with stack_position _ ρ := {
-      | @exist p h => ex (poscat p (coe h (app_r _ _ root)))
-      } ;
-    | Case indn pred brs ρ with stack_position _ ρ := {
-      | @exist p h => ex (poscat p (coe h (case_c _ _ _ _ root)))
-      }
-    }.
-  Next Obligation.
-    rewrite atpos_poscat.
-    rewrite h. cbn. reflexivity.
-  Qed.
-  Next Obligation.
-    rewrite atpos_poscat.
-    rewrite h. cbn. reflexivity.
-  Qed.
-  Next Obligation.
-    rewrite atpos_poscat.
-    rewrite h. cbn. reflexivity.
-  Qed.
-
-  Lemma stack_position_fix :
-    forall c mfix idx args ρ,
-      ` (stack_position c (Fix mfix idx args ρ)) =
-      poscat (` (stack_position _ ρ))
-             (coe (proj2_sig (stack_position _ ρ)) (app_r _ _ root)).
+  Lemma stack_position_valid :
+    forall t π, validpos (zipc t π) (stack_position π).
   Proof.
-    intros c mfix idx args ρ.
-    simp stack_position.
-    replace (stack_position_clause_1 stack_position ρ ρ (tApp (mkApps (tFix mfix idx) args) c))
-      with (stack_position (tApp (mkApps (tFix mfix idx) args) c) ρ).
-    - case_eq (stack_position (tApp (mkApps (tFix mfix idx) args) c) ρ).
-      intros x e H0. cbn. reflexivity.
-    - simp stack_position. reflexivity.
-  Qed.
-
-  Lemma stack_position_app :
-    forall t u ρ,
-      ` (stack_position t (App u ρ)) =
-      poscat (` (stack_position _ ρ))
-             (coe (proj2_sig (stack_position _ ρ)) (app_l _ root _)).
-  Proof.
-    intros t u ρ.
-    simp stack_position.
-    replace (stack_position_clause_1 stack_position ρ ρ (tApp t u))
-      with (stack_position (tApp t u) ρ).
-    - case_eq (stack_position (tApp t u) ρ).
-      intros. cbn. reflexivity.
-    - simp stack_position. reflexivity.
-  Qed.
-
-  Lemma poscat_replace :
-    forall t p q t' (e : t = t') p',
-      p = coe e p' ->
-      exists e',
-        @poscat t p q = @poscat t (coe e p') (coe e' q).
-  Proof.
-    intros t p q t' e p' h.
-    subst. cbn in q. cbn.
-    exists eq_refl. cbn. reflexivity.
-  Qed.
-
-  Lemma poscat_replace_coe :
-    forall t p q t' (e : t = t') p',
-      p = coe e p' ->
-      exists e', @poscat t p q = coe e (@poscat t' p' (coe e' q)).
-  Proof.
-    intros t p q t' e p' h.
-    subst. cbn in q. cbn.
-    exists eq_refl. cbn. reflexivity.
-  Qed.
-
-  Lemma atpos_assoc :
-    forall t p q,
-      atpos (atpos t p) q = atpos t (poscat p q).
-  Proof.
-    intros t p q. revert q.
-    induction p ; intros q.
-    all: simp atpos ; reflexivity.
-  Defined.
-
-  Lemma poscat_assoc :
-    forall t p q r,
-      @poscat t (poscat p q) r =
-      poscat p (poscat q (coe (atpos_assoc t p q) r)).
-  Proof.
-    intros t p q r. revert q r.
-    induction p ; intros q r.
-    - cbn. reflexivity.
-    - simp poscat. rewrite <- IHp. reflexivity.
-    - simp poscat. rewrite <- IHp. reflexivity.
-    - simp poscat. rewrite <- IHp. reflexivity.
-  Qed.
-
-  Lemma poscat_root :
-    forall t p, @poscat t p root = p.
-  Proof.
-    intros t p.
-    funelim (poscat p root).
+    intros t π. revert t. induction π ; intros u.
     - reflexivity.
-    - f_equal. assumption.
-    - f_equal. assumption.
-    - f_equal. assumption.
+    - cbn. eapply poscat_valid.
+      + eapply IHπ.
+      + rewrite stack_position_atpos. reflexivity.
+    - cbn. eapply poscat_valid.
+      + eapply IHπ.
+      + rewrite stack_position_atpos. reflexivity.
+    - cbn. eapply poscat_valid.
+      + eapply IHπ.
+      + rewrite stack_position_atpos. reflexivity.
+  Qed.
+
+  Definition stack_pos t π : pos (zipc t π) :=
+    exist (stack_position π) (stack_position_valid t π).
+
+  Fixpoint list_make {A} n x : list A :=
+    match n with
+    | 0 => []
+    | S n => x :: list_make n x
+    end.
+
+  Lemma list_make_app_r :
+    forall A n (x : A),
+      x :: list_make n x = list_make n x ++ [x].
+  Proof.
+    intros A n x. revert x.
+    induction n ; intro x.
+    - reflexivity.
+    - cbn. rewrite IHn. reflexivity.
   Qed.
 
   Lemma stack_position_appstack :
-    forall t args ρ, exists q h,
-        let p := stack_position (mkApps t args) ρ in
-        ` (stack_position t (appstack args ρ)) =
-        coe h (poscat (` p) q).
+    forall args ρ,
+      stack_position (appstack args ρ) =
+      stack_position ρ ++ list_make #|args| app_l.
   Proof.
-    intros t args ρ. revert t ρ.
-    induction args ; intros t ρ.
-    - exists root. exists eq_refl. cbn.
-      rewrite poscat_root. reflexivity.
-    - cbn in IHargs. cbn.
-      rewrite stack_position_app.
-      destruct (IHargs (tApp t a) ρ) as [q [h e]].
-      destruct (poscat_replace_coe _ _ (coe (proj2_sig (stack_position (tApp t a) (appstack args ρ))) (app_l t root a)) _ _ _ e)
-        as [e' hh].
-      rewrite hh.
-      rewrite poscat_assoc.
-      do 2 eexists. reflexivity.
+    intros args ρ. revert ρ.
+    induction args as [| u args ih ] ; intros ρ.
+    - cbn. rewrite app_nil_r. reflexivity.
+    - cbn. rewrite ih. rewrite <- app_assoc.
+      rewrite list_make_app_r. reflexivity.
   Qed.
 
-  Lemma coe_app_l_not_root :
-    forall u v p t (h : t = tApp u v),
-      coe h (app_l u p v) <> root.
-  Proof.
-    intros.
-    subst. cbn. discriminate.
-  Qed.
-
-  Lemma coe_app_r_not_root :
-    forall u v p t (h : t = tApp u v),
-      coe h (app_r u v p) <> root.
-  Proof.
-    intros.
-    subst. cbn. discriminate.
-  Qed.
-
-  Lemma coe_case_c_not_root :
-    forall indn pr c brs p t (h : t = tCase indn pr c brs),
-      coe h (case_c indn pr c brs p) <> root.
-  Proof.
-    intros.
-    subst. cbn. discriminate.
-  Qed.
-
-  Lemma coe_coe :
-    forall t u v p (e : t = u) (e' : u = v),
-      coe e (coe e' p) = coe (eq_trans e e') p.
-  Proof.
-    intros t u v p e e'.
-    subst. reflexivity.
-  Qed.
-
-  Inductive posR : forall {t}, position t -> position t -> Prop :=
-  | posR_app_lr : forall u v pu pv, posR (app_r u v pv) (app_l u pu v)
-  | posR_app_l : forall u v p q, posR p q -> posR (app_l u p v) (app_l u q v)
-  | posR_app_r : forall u v p q, posR p q -> posR (app_r u v p) (app_r u v q)
-  | posR_case_c :
-      forall indn pr c brs p q,
-        posR p q -> posR (case_c indn pr c brs p) (case_c indn pr c brs q)
-  | posR_app_l_root : forall u v p, posR (app_l u p v) root
-  | posR_app_r_root : forall u v p, posR (app_r u v p) root
-  | posR_case_c_root : forall indn pr c brs p, posR (case_c indn pr c brs p) root.
-
-  Derive Signature (* NoConfusion NoConfusionHom *) for posR.
-
-  Lemma posR_Acc :
-    forall t p, Acc (@posR t) p.
-  Proof.
-    intro t. induction t ; intro q.
-    all: try solve [
-      dependent destruction q ;
-      constructor ; intros r h ;
-      dependent destruction h
-    ].
-    - assert (forall u v p, Acc posR p -> Acc posR (app_r u v p)) as hr.
-      { clear. intros u v p h. induction h.
-        constructor. intros p h.
-        dependent destruction h.
-        all: try discriminate.
-        eapply H0. assumption.
-      }
-      assert (forall u v p, Acc posR p -> (forall q : position v, Acc posR q) -> Acc posR (app_l u p v)) as hl.
-      { clear - hr. intros u v p h ih.
-        induction h.
-        constructor. intros p h.
-        dependent destruction h.
-        all: try discriminate.
-        - eapply hr. apply ih.
-        - eapply H0. assumption.
-      }
-      constructor. intros r h.
-      dependent destruction h.
-      + eapply hr. apply IHt2.
-      + eapply hl ; try assumption. apply IHt1.
-      + eapply hr. apply IHt2.
-      + eapply hl ; try assumption. apply IHt1.
-      + eapply hr. apply IHt2.
-    - assert (forall indn pr q, Acc posR (case_c indn pr t2 l q)) as hcase.
-      { clear q. intros indn pr q.
-        specialize (IHt2 q).
-        clear - IHt2.
-        rename IHt2 into h, t2 into c.
-        revert l indn pr.
-        induction h.
-        intros l indn pr.
-        constructor. intros p h.
-        dependent destruction h.
-        eapply H0. assumption.
-      }
-      constructor. intros r h.
-      dependent destruction h.
-      + eapply hcase.
-      + eapply hcase.
-  Qed.
+  (* Lemma coe_coe : *)
+  (*   forall t u v p (e : t = u) (e' : u = v), *)
+  (*     coe e (coe e' p) = coe (eq_trans e e') p. *)
+  (* Proof. *)
+  (*   intros t u v p e e'. *)
+  (*   subst. reflexivity. *)
+  (* Qed. *)
 
   (* red is the reflexive transitive closure of one-step reduction and thus
      can't be used as well order. We thus define the transitive closure,
@@ -465,10 +281,15 @@ Section Normalisation.
 
   Notation "( x ; y )" := (existT _ x y).
 
+  (* TODO Move somewhere else *)
   (* Dependent lexicographic order *)
-  Inductive dlexprod {A} {B : A -> Type} (leA : A -> A -> Prop) (leB : forall x, B x -> B x -> Prop) : sigT B -> sigT B -> Prop :=
+  Inductive dlexprod {A} {B : A -> Type}
+            (leA : A -> A -> Prop) (leB : forall x, B x -> B x -> Prop)
+    : sigT B -> sigT B -> Prop :=
   | left_lex : forall x x' y y', leA x x' -> dlexprod leA leB (x;y) (x';y')
   | right_lex : forall x y y', leB x y y' -> dlexprod leA leB (x;y) (x;y').
+
+  Derive Signature for dlexprod.
 
   Lemma acc_dlexprod :
     forall A B leA leB,
@@ -496,10 +317,40 @@ Section Normalisation.
       eapply ih2. assumption.
   Qed.
 
+  Lemma dlexprod_Acc :
+    forall A B leA leB,
+      (forall x, well_founded (leB x)) ->
+      forall x y,
+        Acc leA x ->
+        Acc (@dlexprod A B leA leB) (x;y).
+  Proof.
+    intros A B leA leB hB x y hA.
+    eapply acc_dlexprod ; try assumption.
+    apply hB.
+  Qed.
+
+  Lemma dlexprod_trans :
+    forall A B RA RB,
+      transitive RA ->
+      (forall x, transitive (RB x)) ->
+      transitive (@dlexprod A B RA RB).
+  Proof.
+    intros A B RA RB hA hB [u1 u2] [v1 v2] [w1 w2] h1 h2.
+    revert w1 w2 h2. induction h1 ; intros w1 w2 h2.
+    - dependent induction h2.
+      + left. eapply hA ; eassumption.
+      + left. assumption.
+    - dependent induction h2.
+      + left. assumption.
+      + right. eapply hB ; eassumption.
+  Qed.
+
+  Definition R_aux Σ Γ :=
+    dlexprod (cored Σ Γ) (@posR).
+
   Definition R Σ Γ u v :=
-    dlexprod (cored Σ Γ) (@posR)
-             (zip u; ` (stack_position (fst u) (snd u)))
-             (zip v; ` (stack_position (fst v) (snd v))).
+    R_aux Σ Γ (zip u ; stack_pos (fst u) (snd u))
+              (zip v ; stack_pos (fst v) (snd v)).
 
   Inductive welltyped Σ Γ t : Prop :=
   | iswelltyped A : Σ ;;; Γ |- t : A -> welltyped Σ Γ t.
@@ -510,17 +361,15 @@ Section Normalisation.
       Acc (cored (fst Σ) Γ) t.
 
   Corollary R_Acc_aux :
-    forall Σ Γ t,
-      welltyped Σ Γ (zip t) ->
-      Acc (dlexprod (cored (fst Σ) Γ) (@posR))
-          (zip t ; ` (stack_position (fst t) (snd t))).
+    forall Σ Γ t p,
+      welltyped Σ Γ t ->
+      Acc (R_aux Σ Γ) (t ; p).
   Proof.
-    intros Σ Γ t h.
-    eapply acc_dlexprod.
+    intros Σ Γ t p h.
+    eapply dlexprod_Acc.
     - intros x. unfold well_founded.
       eapply posR_Acc.
     - eapply normalisation. eassumption.
-    - eapply posR_Acc.
   Qed.
 
   Derive Signature for Acc.
@@ -531,12 +380,22 @@ Section Normalisation.
       Acc (R (fst Σ) Γ) t.
   Proof.
     intros Σ Γ t h.
-    pose proof (R_Acc_aux _ _ _ h) as h'.
+    pose proof (R_Acc_aux _ _ _ (stack_pos (fst t) (snd t)) h) as h'.
     clear h. rename h' into h.
     dependent induction h.
     constructor. intros y hy.
     eapply H1 ; try reflexivity.
     unfold R in hy. assumption.
+  Qed.
+
+  Lemma R_positionR :
+    forall Σ Γ t1 t2 (p1 : pos t1) (p2 : pos t2),
+      t1 = t2 ->
+      positionR (` p1) (` p2) ->
+      R_aux Σ Γ (t1 ; p1) (t2 ; p2).
+  Proof.
+    intros Σ Γ t1 t2 p1 p2 e h.
+    subst. right. assumption.
   Qed.
 
   Lemma cored_welltyped :
@@ -557,8 +416,6 @@ Section Normalisation.
   Definition Req Σ Γ t t' :=
     t = t' \/ R Σ Γ t t'.
 
-  Derive Signature for dlexprod.
-
   Lemma cored_trans' :
     forall {Σ Γ u v w},
       cored Σ Γ u v ->
@@ -571,46 +428,6 @@ Section Normalisation.
     - eapply cored_trans.
       + eapply IHh1. assumption.
       + assumption.
-  Qed.
-
-  Definition transitive {A} (R : A -> A -> Prop) :=
-    forall u v w, R u v -> R v w -> R u w.
-
-  Lemma dlexprod_trans :
-    forall A B RA RB,
-      transitive RA ->
-      (forall x, transitive (RB x)) ->
-      transitive (@dlexprod A B RA RB).
-  Proof.
-    intros A B RA RB hA hB [u1 u2] [v1 v2] [w1 w2] h1 h2.
-    revert w1 w2 h2. induction h1 ; intros w1 w2 h2.
-    - dependent induction h2.
-      + left. eapply hA ; eassumption.
-      + left. assumption.
-    - dependent induction h2.
-      + left. assumption.
-      + right. eapply hB ; eassumption.
-  Qed.
-
-  Lemma posR_trans :
-    forall t, transitive (@posR t).
-  Proof.
-    intros t p q r h1 h2.
-    revert r h2. dependent induction h1 ; intros r h2.
-    all: try (dependent induction h2 ; discriminate).
-    - dependent induction h2.
-      + econstructor.
-      + econstructor.
-    - dependent induction h2.
-      + econstructor. eapply IHh1. assumption.
-      + econstructor.
-    - dependent induction h2.
-      + econstructor.
-      + econstructor. eapply IHh1. assumption.
-      + econstructor.
-    - dependent induction h2.
-      + econstructor. eapply IHh1. assumption.
-      + econstructor.
   Qed.
 
   Lemma Rtrans :
@@ -678,9 +495,7 @@ Section Reduce.
   Derive NoConfusion NoConfusionHom for option.
   Derive NoConfusion NoConfusionHom for context_decl.
 
-  Arguments root {_}.
-  Arguments poscat {_} _ _.
-  Notation coe h t := (eq_rec_r (fun x => position x) t h).
+  (* Notation coe h t := (eq_rec_r (fun x => position x) t h). *)
 
   Lemma red1_context :
     forall Σ Γ t u π,
@@ -873,98 +688,16 @@ Section Reduce.
     - cbn in e. apply IHπ in e. inversion e. reflexivity.
   Qed.
 
-  Lemma posR_poscat :
-    forall t p q, q <> @root (atpos t p) -> posR (poscat p q) p.
-  Proof.
-    clear. intros t p q h.
-    funelim (poscat p q).
-    - rename t0 into t.
-      revert q h.
-      assert (forall q : position t, q <> root -> posR q root) as h.
-      { intros q h.
-        dependent destruction q.
-        - exfalso. apply h. reflexivity.
-        - econstructor.
-        - econstructor.
-        - econstructor.
-      }
-      apply h.
-    - revert u v p q H h.
-      assert (forall u v p (q : position (atpos u p)),
-                 (q <> root -> posR (poscat p q) p) ->
-                 q <> root ->
-                 posR (app_l u (poscat p q) v) (app_l u p v)
-             ).
-      { intros u v p q ih h. specialize (ih h).
-        econstructor. assumption.
-      }
-      assumption.
-    - revert u0 v0 p0 q H h.
-      assert (forall u v p (q : position (atpos v p)),
-                 (q <> root -> posR (poscat p q) p) ->
-                 q <> root ->
-                 posR (app_r u v (poscat p q)) (app_r u v p)
-             ).
-      { intros u v p q ih h. specialize (ih h).
-        econstructor. assumption.
-      }
-      assumption.
-    - revert indn pr c p1 q H h.
-      assert (
-          forall indn pr c p (q : position (atpos c p)),
-            (q <> root -> posR (poscat p q) p) ->
-            q <> root ->
-            posR (case_c indn pr c brs (poscat p q)) (case_c indn pr c brs p)
-        ).
-      { intros indn pr c p q ih h. specialize (ih h).
-        econstructor. assumption.
-      }
-      assumption.
-  Qed.
-
-  Lemma posR_poscat_posR :
-    forall t r p q, posR p q -> @posR t (poscat r p) (poscat r q).
-  Proof.
-    intros t r p q h.
-    funelim (poscat r p).
-    - simp poscat.
-    - simp poscat. constructor.
-      apply H0. assumption.
-    - simp poscat. constructor.
-      apply H0. assumption.
-    - simp poscat. constructor.
-      apply H0. assumption.
-  Qed.
-
-  Lemma posR_coe :
-    forall t t' h p q, @posR t p q -> @posR t' (coe h p) (coe h q).
-  Proof.
-    intros t t' ? p q h.
-    subst. cbn. assumption.
-  Qed.
-
-  Lemma posR_coe_r :
-    forall t h p q,
-      @posR t p q ->
-      @posR t p (coe h q).
-  Proof.
-    intros t e p q h.
-    revert e.
-    eapply Coq.Logic.Eqdep_dec.K_dec_type.
-    - apply term_eqdec.
-    - cbn. assumption.
-  Qed.
-
   Notation "( x ; y )" := (existT _ x y).
 
-  Lemma right_lex_coe :
-    forall Σ Γ t t' p p' (e : t = t'),
-      posR p (coe e p') ->
-      dlexprod (cored Σ Γ) (@posR) (t;p) (t';p').
-  Proof.
-    intros Σ' Γ t t' p p' e h. subst.
-    right. assumption.
-  Qed.
+  (* Lemma right_lex_coe : *)
+  (*   forall Σ Γ t t' p p' (e : t = t'), *)
+  (*     posR p (coe e p') -> *)
+  (*     dlexprod (cored Σ Γ) (@posR) (t;p) (t';p'). *)
+  (* Proof. *)
+  (*   intros Σ' Γ t t' p p' e h. subst. *)
+  (*   right. assumption. *)
+  (* Qed. *)
 
   Definition inspect {A} (x : A) : { y : A | y = x } := exist x eq_refl.
 
@@ -1028,9 +761,13 @@ Section Reduce.
       case_eq (decompose_stack π) ; intros ; assumption
     end.
 
-  (* TODO It's no longe program_simpl, maybe use the up to date tactic! *)
+  (* Show Obligation Tactic. *)
+
   Ltac obTac :=
-    program_simpl ;
+    (* program_simpl ; *)
+    program_simplify ;
+    Tactics.equations_simpl ;
+    try program_solve_wf ;
     try reflexivity ;
     try dealDecompose ;
     try dealPr ;
@@ -1177,11 +914,8 @@ Section Reduce.
   Qed.
   Next Obligation.
     right.
-    cbn.
-    simp stack_position.
-    destruct stack_position_clause_1. cbn.
-    apply posR_poscat.
-    apply coe_app_l_not_root.
+    cbn. unfold posR. cbn.
+    eapply positionR_poscat_nonil. discriminate.
   Qed.
   Next Obligation.
     cbn. case_eq (decompose_stack π).
@@ -1213,10 +947,8 @@ Section Reduce.
     - cbn. reflexivity.
   Qed.
   Next Obligation.
-    right. simp stack_position.
-    destruct stack_position_clause_1. cbn.
-    apply posR_poscat.
-    apply coe_case_c_not_root.
+    right. unfold posR. cbn.
+    eapply positionR_poscat_nonil. discriminate.
   Qed.
   Next Obligation.
     unfold Pr in p0. cbn in p0.
@@ -1302,75 +1034,12 @@ Section Reduce.
   Next Obligation.
     symmetry in eq2.
     pose proof (decompose_stack_at_eq _ _ _ _ _ eq2). subst.
-    unfold R. cbn.
-
-    rewrite stack_position_fix.
-    clear - flags Σ H.
-
-    unshelve eapply right_lex_coe.
-    - apply (eq_sym (@zipc_appstack _ args (App c ρ))).
-    - destruct (stack_position_appstack (tFix mfix idx) args (App c ρ))
-        as [q [h e]].
-      cbn in e.
-      pose proof (stack_position_app (mkApps (tFix mfix idx) args) c ρ) as eq.
-      destruct (poscat_replace _ _ q _ eq_refl _ eq) as [e' h'].
-      rewrite h' in e.
-      rewrite e.
-      cbn.
-      rewrite coe_coe.
-      match goal with
-      | |- posR _ (coe ?hh _) =>
-        generalize hh
-      end.
-      clear - flags Σ H.
-      eapply Coq.Logic.Eqdep_dec.K_dec_type.
-      + apply term_eqdec.
-      + cbn. rewrite poscat_assoc.
-        eapply posR_poscat_posR.
-        set (qq := coe e' q) in *.
-        change (coe e' q) with qq.
-        clearbody qq.
-        clear - flags Σ H.
-        rename qq into q.
-        set (pp := stack_position (tApp (mkApps (tFix mfix idx) args) c) ρ) in *.
-        clearbody pp.
-        set (e := (proj2_sig pp)) in *. clearbody e.
-        set (p := ` pp) in *. clearbody p.
-        clear pp.
-        rename q into q'.
-        match goal with
-        | |- posR _ (poscat _ ?qq) =>
-          set (q := qq) in *
-        end.
-        clearbody q.
-        clear - flags Σ H.
-        revert p e q.
-        match goal with
-        | |- forall p : position ?tt, _ =>
-          generalize tt
-        end.
-        generalize (tFix mfix idx).
-        clear - flags Σ H.
-        intros t.
-        generalize (mkApps t args).
-        clear - flags Σ H.
-        intros u t p e q.
-        revert e q.
-        generalize (atpos t p).
-        clear - flags Σ H.
-        intros t e q. subst.
-        cbn in *.
-        rename c into v.
-        revert v u q.
-        assert (forall u v (q : position u), posR (app_r u v root) (poscat (app_l u root v) q)) as h.
-        { intros u v q.
-          induction q.
-          - simp poscat. econstructor.
-          - simp poscat. econstructor.
-          - simp poscat. econstructor.
-          - simp poscat. econstructor.
-        }
-        intros. apply h.
+    eapply R_positionR.
+    - cbn. rewrite zipc_appstack. cbn. reflexivity.
+    - cbn. rewrite stack_position_appstack. cbn.
+      rewrite <- app_assoc.
+      eapply positionR_poscat.
+      constructor.
   Qed.
   Next Obligation.
     case_eq (decompose_stack π). intros ll π' e.

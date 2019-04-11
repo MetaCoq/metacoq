@@ -343,3 +343,6 @@ Proof.
   destruct (eqb_spec x y) ; nodec. subst.
   constructor. pose proof (uip hx hy). subst. reflexivity.
 Qed.
+
+Derive NoConfusion NoConfusionHom for sig.
+Derive NoConfusion NoConfusionHom for prod.

@@ -274,3 +274,64 @@ Proof.
     all: try noconf hp.
     all: apply IHp ; assumption.
 Qed.
+
+Lemma positionR_poscat :
+  forall p q1 q2,
+    positionR q1 q2 ->
+    positionR (p ++ q1) (p ++ q2).
+Proof.
+  intro p. induction p ; intros q1 q2 h.
+  - assumption.
+  - cbn. constructor. eapply IHp. assumption.
+Qed.
+
+Lemma atpos_assoc :
+  forall t p q,
+    atpos (atpos t p) q = atpos t (p ++ q).
+Proof.
+  intros t p q. revert t q.
+  induction p ; intros t q.
+  - reflexivity.
+  - destruct a, t.
+    all: simpl.
+    all: try apply IHp.
+    all: destruct q ; try reflexivity.
+    all: destruct c ; reflexivity.
+Qed.
+
+(* TODO Move somewhere else or use different definition *)
+Definition transitive {A} (R : A -> A -> Prop) :=
+  forall u v w, R u v -> R v w -> R u w.
+
+Lemma positionR_trans : transitive positionR.
+Proof.
+  intros p q r h1 h2.
+  revert r h2.
+  induction h1 ; intros r h2.
+  - dependent induction h2.
+    + constructor.
+    + constructor.
+  - dependent induction h2.
+    + constructor.
+    + constructor. eapply IHh1. assumption.
+    + constructor.
+  - dependent induction h2.
+Qed.
+
+Lemma posR_trans :
+  forall t, transitive (@posR t).
+Proof.
+  intros t p q r h1 h2.
+  eapply positionR_trans ; eassumption.
+Qed.
+
+Lemma positionR_poscat_nonil :
+  forall p q, q <> [] -> positionR (p ++ q) p.
+Proof.
+  intros p q e.
+  revert q e.
+  induction p ; intros q e.
+  - destruct q ; nodec.
+    exfalso. apply e. reflexivity.
+  - cbn. constructor. apply IHp. assumption.
+Qed.

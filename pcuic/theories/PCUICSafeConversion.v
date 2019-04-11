@@ -77,12 +77,6 @@ Section Conversion.
   Definition zipx (Γ : context) (t : term) (π : stack) : term :=
     it_mkLambda_or_LetIn Γ (zipc t π).
 
-  (* TODO Move in SafeReduce *)
-  Derive NoConfusion NoConfusionHom EqDec for stack.
-
-  Instance reflect_stack : ReflectEq stack :=
-    let h := EqDec_ReflectEq stack in _.
-
   Fixpoint context_position Γ : position :=
     match Γ with
     | [] => []
@@ -115,43 +109,6 @@ Section Conversion.
       + rewrite context_position_atpos. reflexivity.
   Qed.
 
-  Fixpoint stack_position π : position :=
-    match π with
-    | Empty => []
-    | App u ρ => stack_position ρ ++ [ app_l ]
-    | Fix f n args ρ => stack_position ρ ++ [ app_r ]
-    | Case indn pred brs ρ => stack_position ρ ++ [ case_c ]
-    end.
-
-  Lemma stack_position_atpos :
-    forall t π, atpos (zipc t π) (stack_position π) = t.
-  Proof.
-    intros t π. revert t. induction π ; intros u.
-    - reflexivity.
-    - cbn. rewrite poscat_atpos. rewrite IHπ. reflexivity.
-    - cbn. rewrite poscat_atpos. rewrite IHπ. reflexivity.
-    - cbn. rewrite poscat_atpos. rewrite IHπ. reflexivity.
-  Qed.
-
-  Lemma stack_position_valid :
-    forall t π, validpos (zipc t π) (stack_position π).
-  Proof.
-    intros t π. revert t. induction π ; intros u.
-    - reflexivity.
-    - cbn. eapply poscat_valid.
-      + eapply IHπ.
-      + rewrite stack_position_atpos. reflexivity.
-    - cbn. eapply poscat_valid.
-      + eapply IHπ.
-      + rewrite stack_position_atpos. reflexivity.
-    - cbn. eapply poscat_valid.
-      + eapply IHπ.
-      + rewrite stack_position_atpos. reflexivity.
-  Qed.
-
-  Definition stack_pos t π : pos (zipc t π) :=
-    exist (stack_position π) (stack_position_valid t π).
-
   Definition xposition Γ π : position :=
     context_position Γ ++ stack_position π.
 
@@ -176,16 +133,6 @@ Section Conversion.
 
   Definition xpos Γ t π : pos (zipx Γ t π) :=
     exist (xposition Γ π) (xposition_valid Γ t π).
-
-  Lemma positionR_poscat :
-    forall p q1 q2,
-      positionR q1 q2 ->
-      positionR (p ++ q1) (p ++ q2).
-  Proof.
-    intro p. induction p ; intros q1 q2 h.
-    - assumption.
-    - cbn. constructor. eapply IHp. assumption.
-  Qed.
 
   Lemma positionR_stack_pos_xpos :
     forall Γ π1 π2,
@@ -572,19 +519,6 @@ Section Conversion.
   Definition R (u v : pack) :=
     R_aux (obpack u) (obpack v).
 
-  (* TODO Should replace acc_dlexprod *)
-  Lemma dlexprod_Acc :
-    forall A B leA leB,
-      (forall x, well_founded (leB x)) ->
-      forall x y,
-        Acc leA x ->
-        Acc (@dlexprod A B leA leB) (x;y).
-  Proof.
-    intros A B leA leB hB x y hA.
-    eapply acc_dlexprod ; try assumption.
-    apply hB.
-  Qed.
-
   Lemma R_aux_Acc :
     forall t p s,
       welltyped Σ [] t ->
@@ -706,17 +640,14 @@ Section Conversion.
   Notation isconv_args Γ t π1 π2 aux :=
     (repack (isconv_args_raw Γ t π1 π2 aux)) (only parsing).
 
-  (* TODO Move higher or even in SafeReduce *)
-  Derive NoConfusion NoConfusionHom for sig.
-  Derive NoConfusion NoConfusionHom for prod.
-
-  Lemma positionR_nocoe :
-    forall p t1 t2 (q : pos t1) (e : t2 = t1),
-      positionR p (` q) ->
-      positionR p (` (coe pos e q)).
-  Proof.
-    intros p t1 t2 q e h. subst. cbn in *. assumption.
-  Qed.
+  (* TODO Remove probably *)
+  (* Lemma positionR_nocoe : *)
+  (*   forall p t1 t2 (q : pos t1) (e : t2 = t1), *)
+  (*     positionR p (` q) -> *)
+  (*     positionR p (` (coe pos e q)). *)
+  (* Proof. *)
+  (*   intros p t1 t2 q e h. subst. cbn in *. assumption. *)
+  (* Qed. *)
 
   Fixpoint convpos {t} (p : PSR.position t) : position :=
     match p with

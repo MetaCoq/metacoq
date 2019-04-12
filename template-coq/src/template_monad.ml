@@ -159,7 +159,6 @@ type template_monad =
   | TmLemmaTerm of Constr.t * Constr.t
   | TmAxiom of Constr.t * Constr.t * Constr.t
   | TmAxiomTerm of Constr.t * Constr.t
-  | TmMkDefinition of Constr.t * Constr.t
   | TmMkInductive of Constr.t
 
   | TmFreshName of Constr.t
@@ -298,12 +297,6 @@ let next_action env evd (pgm : constr) : template_monad * _ =
     match args with
     | [] -> (TmCurrentModPath, universes)
     | _ -> monad_failure "tmCurrentModPath" 1
-
-  else if Globnames.eq_gr glob_ref ptmMkDefinition then
-    match args with
-    | name::body::[] ->
-      (TmMkDefinition (name, body), universes)
-    | _ -> monad_failure "tmMkDefinition" 2
 
   else if Globnames.eq_gr glob_ref ptmQuote then
     match args with

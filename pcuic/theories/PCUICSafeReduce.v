@@ -1181,13 +1181,11 @@ Section Reduce.
   Qed.
 
   Equations reduce_stack_full (Γ : context) (t : term) (π : stack)
-           (h : welltyped Σ Γ (zip (t,π))) : { t' : term * stack | Req (fst Σ) Γ t' (t, π) } :=
+           (h : welltyped Σ Γ (zip (t,π))) : { t' : term * stack | Req (fst Σ) Γ t' (t, π) /\ Pr t' π /\ Pr' t' π } :=
     reduce_stack_full Γ t π h :=
-      let '(exist ts (conj r _)) :=
-          Fix_F (R := R (fst Σ) Γ)
-                (fun x => welltyped Σ Γ (zip x) -> { t' : term * stack | Req (fst Σ) Γ t' x /\ Pr t' (snd x) /\ Pr' t' (snd x) })
-                (fun t' f => _) (x := (t, π)) _ _
-      in exist ts r.
+      Fix_F (R := R (fst Σ) Γ)
+            (fun x => welltyped Σ Γ (zip x) -> { t' : term * stack | Req (fst Σ) Γ t' x /\ Pr t' (snd x) /\ Pr' t' (snd x) })
+            (fun t' f => _) (x := (t, π)) _ _.
   Next Obligation.
     eapply _reduce_stack.
     - assumption.
@@ -1216,7 +1214,7 @@ Section Reduce.
   Proof.
     intros Γ t π h.
     unfold reduce_stack.
-    destruct (reduce_stack_full Γ t π h) as [[t' π'] r].
+    destruct (reduce_stack_full Γ t π h) as [[t' π'] [r _]].
     dependent destruction r.
     - noconf H0. constructor. constructor.
     - rename H0 into r. clear - flags r.
@@ -1239,32 +1237,43 @@ Section Reduce.
         constructor. constructor.
   Qed.
 
+  Lemma reduce_stack_decompose :
+    forall Γ t π h,
+      snd (decompose_stack (snd (reduce_stack Γ t π h))) =
+      snd (decompose_stack π).
+  Proof.
+    intros Γ t π h.
+    unfold reduce_stack.
+    destruct (reduce_stack_full Γ t π h) as [[t' π'] [r [p p']]].
+    unfold Pr in p. symmetry. assumption.
+  Qed.
+
   Lemma reduce_stack_Req :
     forall Γ t π h,
       Req (fst Σ) Γ (reduce_stack Γ t π h) (t, π).
   Proof.
     intros Γ t π h.
     unfold reduce_stack.
-    destruct (reduce_stack_full Γ t π h) as [[t' π'] r].
+    destruct (reduce_stack_full Γ t π h) as [[t' π'] [r _]].
     assumption.
   Qed.
 
-  Definition eqcored Γ u v :=
-    u = v \/ cored (fst Σ) Γ u v.
+  (* Definition eqcored Γ u v := *)
+  (*   u = v \/ cored (fst Σ) Γ u v. *)
 
-  Lemma reduce_stack_cored :
-    forall Γ t π h,
-      eqcored Γ (zip (reduce_stack Γ t π h)) (zip (t, π)).
-  Proof.
-    intros Γ t π h.
-    unfold reduce_stack.
-    destruct (reduce_stack_full Γ t π h) as [[t' π'] r].
-    destruct r.
-    - left. f_equal. assumption.
-    - dependent destruction H0.
-      + right. assumption.
-      + cbn in H1. inversion H1. left. cbn. eauto.
-  Qed.
+  (* Lemma reduce_stack_cored : *)
+  (*   forall Γ t π h, *)
+  (*     eqcored Γ (zip (reduce_stack Γ t π h)) (zip (t, π)). *)
+  (* Proof. *)
+  (*   intros Γ t π h. *)
+  (*   unfold reduce_stack. *)
+  (*   destruct (reduce_stack_full Γ t π h) as [[t' π'] r]. *)
+  (*   destruct r. *)
+  (*   - left. f_equal. assumption. *)
+  (*   - dependent destruction H0. *)
+  (*     + right. assumption. *)
+  (*     + cbn in H1. inversion H1. left. cbn. eauto. *)
+  (* Qed. *)
 
   Definition reduce_term Γ t (h : welltyped Σ Γ t) :=
     zip (reduce_stack Γ t ε h).

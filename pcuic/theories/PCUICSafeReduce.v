@@ -756,25 +756,6 @@ Section Reduce.
       change C'
     end.
 
-  Ltac dealPr_Pr' P :=
-    lazymatch goal with
-    | h : P (?t,?s) ?π |- let '(_,_) := decompose_stack ?π in _ =>
-      let e := fresh "e" in
-      case_eq (decompose_stack π) ; intros ? ? e ? ; subst ;
-      unfold P in h ; rewrite e in h ;
-      specialize h with (1 := eq_refl) ;
-      cbn in h ; assumption
-    end.
-
-  Ltac dealPr := dealPr_Pr' Pr.
-  Ltac dealPr' := dealPr_Pr' Pr'.
-
-  Ltac dealDecompose :=
-    lazymatch goal with
-    | |- let '(_,_) := decompose_stack ?π in _ =>
-      case_eq (decompose_stack π) ; intros ; assumption
-    end.
-
   (* Show Obligation Tactic. *)
 
   Ltac obTac :=
@@ -782,10 +763,7 @@ Section Reduce.
     program_simplify ;
     Tactics.equations_simpl ;
     try program_solve_wf ;
-    try reflexivity ;
-    try dealDecompose ;
-    try dealPr ;
-    try dealPr'.
+    try reflexivity.
 
   Obligation Tactic := obTac.
 

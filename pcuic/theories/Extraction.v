@@ -39,7 +39,7 @@ From Equations Require Import Equations.
 (* Extraction Inline NoConfusionPackage_All_local_env_over. *)
 (* Extraction Inline NoConfusionPackage_context_decl. *)
 
-(* Extraction Library Classes. *)
+Extraction Library Classes.
 (* Extraction Library CRelationClasses. *)
 
 Extraction Library PCUICAst.

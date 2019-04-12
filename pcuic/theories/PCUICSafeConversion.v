@@ -601,6 +601,45 @@ Section Conversion.
     let '(args, ρ) := decompose_stack π in
     mkApps t args.
 
+  (* Maybe a stack should be a list! *)
+  Fixpoint stack_cat (ρ θ : stack) : stack :=
+    match ρ with
+    | Empty => θ
+    | App u ρ => App u (stack_cat ρ θ)
+    | Fix f n args ρ => Fix f n args (stack_cat ρ θ)
+    | Case indn p brs ρ => Case indn p brs (stack_cat ρ θ)
+    | Prod na B ρ => Prod na B (stack_cat ρ θ)
+    end.
+
+  Notation "ρ +++ θ" := (stack_cat ρ θ) (at level 20).
+
+  Lemma stack_cat_appstack :
+    forall args ρ,
+      appstack args ε +++ ρ = appstack args ρ.
+  Proof.
+    intros args ρ.
+    revert ρ. induction args ; intros ρ.
+    - reflexivity.
+    - simpl. rewrite IHargs. reflexivity.
+  Qed.
+
+  Lemma decompose_stack_twice :
+    forall π args ρ,
+      decompose_stack π = (args, ρ) ->
+      decompose_stack ρ = ([], ρ).
+  Proof.
+    intros π args ρ e.
+    pose proof (decompose_stack_eq _ _ _ e). subst.
+    rewrite decompose_stack_appstack in e.
+    case_eq (decompose_stack ρ). intros l θ eq.
+    rewrite eq in e. cbn in e. inversion e. subst.
+    f_equal. clear - H0.
+    revert l H0.
+    induction args ; intros l h.
+    - assumption.
+    - apply IHargs. cbn in h. inversion h. rewrite H0. assumption.
+  Qed.
+
   Definition Ret s Γ t π π' :=
     match s with
     | Reduction t'
@@ -656,7 +695,7 @@ Section Conversion.
         with inspect (reduce_stack nodelta_flags Σ Γ t1 (appstack args1 ε) _) := {
         | @exist (t1',π1') eq1
           with inspect (reduce_stack nodelta_flags Σ Γ t2 (appstack args2 ε) _) := {
-          | @exist (t2',π2') eq2 => isconv_prog Γ leq t1' π1' t2' π2' aux
+          | @exist (t2',π2') eq2 => isconv_prog Γ leq t1' (π1' +++ ρ1) t2' (π2' +++ ρ2) aux
           }
         }
       }
@@ -688,7 +727,13 @@ Section Conversion.
       rewrite eq in d1. cbn in d1.
       subst.
       rewrite zipc_appstack in r1. cbn in r1.
-      constructor. assumption.
+      constructor.
+      rewrite stack_cat_appstack.
+      rewrite decompose_stack_appstack. cbn.
+      clear eq1. symmetry in e1.
+      pose proof (decompose_stack_twice _ _ _ e1) as e'.
+      rewrite e'. cbn. rewrite app_nil_r.
+      assumption.
   Qed.
   Next Obligation.
     eapply red_welltyped.
@@ -709,7 +754,13 @@ Section Conversion.
       rewrite eq in d2. cbn in d2.
       subst.
       rewrite zipc_appstack in r2. cbn in r2.
-      constructor. assumption.
+      constructor.
+      rewrite stack_cat_appstack.
+      rewrite decompose_stack_appstack. cbn.
+      clear eq2. symmetry in e2.
+      pose proof (decompose_stack_twice _ _ _ e2) as e'.
+      rewrite e'. cbn. rewrite app_nil_r.
+      assumption.
   Qed.
   Next Obligation.
     match type of eq1 with
@@ -717,13 +768,12 @@ Section Conversion.
       pose proof (reduce_stack_Req f _ _ _ _ hh) as [ e | h ]
     end.
     - rewrite e in eq1. inversion eq1. subst.
-      (* There is something wrong here.
-         Indeed, after decomposing, we should somehow recompose
-         the result!
-       *)
-
-      (* unshelve eapply R_stateR. *)
-      (* + simpl. *)
+      unshelve eapply R_stateR.
+      + simpl. rewrite stack_cat_appstack.
+        clear eq1 e. symmetry in e1. pose proof (decompose_stack_eq _ _ _ e1).
+        subst. reflexivity.
+      + simpl.
+        (* TODO Make R_stateR without coe? *)
 
       right. right. simpl.
       constructor.

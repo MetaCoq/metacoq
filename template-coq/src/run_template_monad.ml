@@ -228,16 +228,6 @@ let rec run_template_program_rec ?(intactic=false) (k : Environ.env * Evd.evar_m
       let env = Global.env () in
       k (env, evm, Constr.mkConst n)
 
-  | TmMkDefinition (name, body) ->
-    if intactic
-    then not_in_tactic "tmMkDefinition"
-    else
-      let name = unquote_ident (reduce_all env evm name) in
-      let evm, trm = denote_term evm (reduce_all env evm body) in
-      let (evm, _) = Typing.type_of env evm (EConstr.of_constr trm) in
-      let _ = Declare.declare_definition ~kind:Decl_kinds.Definition name (trm, Monomorphic_const_entry (Evd.universe_context_set evm)) in
-      let env = Global.env () in
-      k (env, evm, unit_tt)
   | TmDefinitionTerm (name, typ, body) ->
     if intactic
     then not_in_tactic "tmDefinition"

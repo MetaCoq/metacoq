@@ -685,14 +685,72 @@ Section Conversion.
   Qed.
   Next Obligation.
     destruct b ; auto.
-    destruct (reduce_stack_sound nodelta_flags _ _ _ _ h1).
-    destruct (reduce_stack_sound nodelta_flags _ _ _ _ h2).
-    (* Maybe we need to use Pr here.
-       We could update it by discrimiating on App,
-       saying everything not App stays the same
-       (it might even not be necessary to discrimiate
-       since we use decompose_stack).
+    destruct (reduce_stack_sound nodelta_flags _ _ _ _ h1) as [r1].
+    destruct (reduce_stack_sound nodelta_flags _ _ _ _ h2) as [r2].
+    rewrite <- eq1 in r1.
+    rewrite <- eq2 in r2.
+    pose proof (reduce_stack_decompose nodelta_flags _ _ _ _ h1) as e1.
+    pose proof (reduce_stack_decompose nodelta_flags _ _ _ _ h2) as e2.
+    rewrite <- eq1 in e1. cbn in e1.
+    rewrite <- eq2 in e2. cbn in e2.
+    case_eq (decompose_stack π1). intros l1 ρ1 d1.
+    case_eq (decompose_stack π2). intros l2 ρ2 d2.
+    case_eq (decompose_stack π1'). intros l1' ρ1' d1'.
+    case_eq (decompose_stack π2'). intros l2' ρ2' d2'.
+    rewrite d1, d1' in e1. cbn in e1. subst.
+    rewrite d2, d2' in e2. cbn in e2. subst.
+    unfold zipp. rewrite d1, d2.
+    unfold zipp in h. rewrite d1', d2' in h.
+    pose proof (decompose_stack_eq _ _ _ d1).
+    pose proof (decompose_stack_eq _ _ _ d2).
+    pose proof (decompose_stack_eq _ _ _ d1').
+    pose proof (decompose_stack_eq _ _ _ d2').
+    subst.
+    cbn in r1. rewrite 2!zipc_appstack in r1.
+    cbn in r2. rewrite 2!zipc_appstack in r2.
+
+    (* Is there any sensible way to proceed from here?
+       It doesn't seem like we could strengthen reduce_stack to only conclude
+       on zipp, because of Fix/Case.
+
+       Maybe we could only call reduce_stack with the appstack?
+       That would give us the wanted result.
+       It might also correspond to what we want anyway...
+       Except for App, we use orthogonal stacks with reduce.
      *)
+
+    (* Derive Signature for red1. *)
+
+    (* Lemma red1_zipc_inj : *)
+    (*   forall Γ u v ρ, *)
+    (*     isStackApp ρ = false -> *)
+    (*     red1 (fst Σ) Γ (zipc u ρ) (zipc v ρ) -> *)
+    (*     red1 (fst Σ) Γ u v. *)
+    (* Proof. *)
+    (*   intros Γ u v ρ h r. *)
+    (*   revert u v h r. *)
+    (*   induction ρ ; intros u v h r. *)
+    (*   - assumption. *)
+    (*   - cbn in h. discriminate h. *)
+    (*   - cbn in r. apply IHρ in r. *)
+    (*     dependent destruction r. *)
+
+    (* Lemma red_zipc_inj : *)
+    (*   forall Γ u v ρ, *)
+    (*     red (fst Σ) Γ (zipc u ρ) (zipc v ρ) -> *)
+    (*     red (fst Σ) Γ u v. *)
+    (* Proof. *)
+    (*   intros Γ u v ρ h. *)
+    (*   revert u v h. *)
+    (*   induction ρ ; intros u v h. *)
+    (*   - assumption. *)
+    (*   - *)
+
+    fail "I do not guarantee it makes sense past this point.".
+
+
+    unfold zipp.
+
     eapply conv_trans'.
     - eapply red_conv_l. eassumption.
     - eapply conv_trans'.

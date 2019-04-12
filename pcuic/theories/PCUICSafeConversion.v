@@ -643,6 +643,33 @@ Section Conversion.
     - apply IHargs. cbn in h. inversion h. rewrite H0. assumption.
   Qed.
 
+  Lemma zipc_stack_cat :
+    forall t π ρ,
+      zipc t (π +++ ρ) = zipc (zipc t π) ρ.
+  Proof.
+    intros t π ρ. revert t ρ.
+    induction π ; intros u ρ.
+    all: (simpl ; rewrite ?IHπ ; reflexivity).
+  Qed.
+
+  Lemma stack_cat_empty :
+    forall ρ, ρ +++ ε = ρ.
+  Proof.
+    intros ρ. induction ρ.
+    all: (simpl ; rewrite ?IHρ ; reflexivity).
+  Qed.
+
+  Lemma stack_position_stack_cat :
+    forall π ρ,
+      stack_position (ρ +++ π) =
+      stack_position π ++ stack_position ρ.
+  Proof.
+    intros π ρ. revert π.
+    induction ρ ; intros π.
+    all: try (simpl ; rewrite IHρ ; rewrite app_assoc ; reflexivity).
+    simpl. rewrite app_nil_r. reflexivity.
+  Qed.
+
   Definition Ret s Γ t π π' :=
     match s with
     | Reduction t'
@@ -780,18 +807,28 @@ Section Conversion.
         subst. reflexivity.
       + simpl. constructor.
     - rewrite <- eq1 in h.
+      clear eq1. symmetry in e1. pose proof (decompose_stack_eq _ _ _ e1).
+      subst.
       dependent destruction h.
       + left. simpl. eapply cored_it_mkLambda_or_LetIn.
-        (* TODO Maybe factorise things a bit because we keep using the same
-           ropes.
-         *)
-        assumption.
+        cbn in H. rewrite zipc_appstack in H. cbn in H.
+        rewrite zipc_appstack.
+        rewrite zipc_stack_cat.
+        repeat zip fold.
+        eapply cored_context. assumption.
       + destruct y' as [q hq].
         cbn in H0. inversion H0. (* Why is noconf failing at this point? *)
         subst.
         unshelve eapply R_positionR.
-        * simpl. unfold zipx. f_equal. symmetry. assumption.
-        * simpl. unfold xposition. eapply positionR_poscat. assumption.
+        * simpl. unfold zipx. f_equal.
+          rewrite zipc_stack_cat. rewrite <- H2.
+          rewrite 2!zipc_appstack. cbn. reflexivity.
+        * simpl. unfold xposition. eapply positionR_poscat.
+          unfold posR in H. cbn in H.
+          rewrite stack_position_appstack in H. cbn in H.
+          rewrite stack_position_stack_cat.
+          rewrite stack_position_appstack.
+          eapply positionR_poscat. assumption.
   Qed.
   Next Obligation.
     destruct b ; auto.

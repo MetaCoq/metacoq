@@ -693,12 +693,38 @@ Section Conversion.
   Next Obligation.
     eapply red_welltyped.
     - eapply h2.
-    - repeat zip fold. rewrite eq2.
-      eapply reduce_stack_sound.
+    - match type of eq2 with
+      | _ = reduce_stack ?f ?Σ ?Γ ?t ?π ?h =>
+        destruct (reduce_stack_sound f Σ Γ t π h) as [r2] ;
+        pose proof (reduce_stack_decompose nodelta_flags _ _ _ _ h) as d2
+      end.
+      cbn in r2.
+      rewrite <- eq2 in r2.
+      rewrite zipc_appstack in r2. cbn in r2.
+      unfold zipp. rewrite <- e2.
+      rewrite <- eq2 in d2. cbn in d2.
+      rewrite decompose_stack_appstack in d2. cbn in d2.
+      case_eq (decompose_stack π2'). intros args' ρ' eq.
+      pose proof (decompose_stack_eq _ _ _ eq).
+      rewrite eq in d2. cbn in d2.
+      subst.
+      rewrite zipc_appstack in r2. cbn in r2.
+      constructor. assumption.
   Qed.
   Next Obligation.
-    destruct (reduce_stack_Req nodelta_flags _ Γ t1 π1 h1) as [ e | h ].
+    match type of eq1 with
+    | _ = reduce_stack ?f ?Σ ?Γ ?t ?π ?hh =>
+      pose proof (reduce_stack_Req f _ _ _ _ hh) as [ e | h ]
+    end.
     - rewrite e in eq1. inversion eq1. subst.
+      (* There is something wrong here.
+         Indeed, after decomposing, we should somehow recompose
+         the result!
+       *)
+
+      (* unshelve eapply R_stateR. *)
+      (* + simpl. *)
+
       right. right. simpl.
       constructor.
     - rewrite <- eq1 in h.

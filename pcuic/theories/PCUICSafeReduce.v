@@ -716,36 +716,26 @@ Section Reduce.
 
   Definition inspect {A} (x : A) : { y : A | y = x } := exist x eq_refl.
 
-  (* Definition Pr (t' : term * stack) π := *)
-  (*   let '(l, θ) := decompose_stack π in *)
-  (*   let '(l', ρ) := decompose_stack (snd t') in *)
-  (*   θ = ρ. *)
-
   Definition Pr (t' : term * stack) π :=
     snd (decompose_stack π) = snd (decompose_stack (snd t')).
 
-  (* Definition Pr (t' : term * stack) π := *)
-  (*   forall indn c args ρ, *)
-  (*     let '(l, θ) := decompose_stack π in *)
-  (*     θ = Case indn c args ρ -> *)
-  (*     let '(args', ρ') := decompose_stack (snd t') in *)
-  (*     ρ' = Case indn c args ρ. *)
-
-  (* Notation givePr := (fun indn c args ρ (* e *) => _) (only parsing). *)
   Notation givePr := (_) (only parsing).
 
-  Definition Pr' (t' : term * stack) π :=
-    forall f n args ρ,
-      let '(l, θ) := decompose_stack π in
-      θ = Fix f n args ρ ->
-      let '(l', θ') := decompose_stack (snd t') in
-      θ' = Fix f n args ρ.
+  Definition isStackApp π :=
+    match π with
+    | App _ _ => true
+    | _ => false
+    end.
 
-  Notation givePr' := (fun f n args ρ => _) (only parsing).
+  Definition Pr' (t' : term * stack) :=
+    isApp (fst t') = false /\
+    (RedFlags.beta flags -> isLambda (fst t') -> isStackApp (snd t') = false).
+
+  Notation givePr' := (conj _ (fun β hl => _)) (only parsing).
 
   Notation rec reduce t π :=
     (let smaller := _ in
-     let '(exist res (conj prf (conj h h'))) := reduce t π smaller in
+     let '(exist res (conj prf (conj h (conj h1 h2)))) := reduce t π smaller in
      exist res (conj (Req_trans _ _ _ _ (R_to_Req smaller)) (conj givePr givePr'))
     ) (only parsing).
 
@@ -813,8 +803,8 @@ Section Reduce.
 
   Equations _reduce_stack (Γ : context) (t : term) (π : stack)
             (h : welltyped Σ Γ (zip (t,π)))
-            (reduce : forall t' π', R (fst Σ) Γ (t',π') (t,π) -> { t'' : term * stack | Req (fst Σ) Γ t'' (t',π') /\ Pr t'' π' /\ Pr' t'' π' })
-    : { t' : term * stack | Req (fst Σ) Γ t' (t,π) /\ Pr t' π /\ Pr' t' π } :=
+            (reduce : forall t' π', R (fst Σ) Γ (t',π') (t,π) -> { t'' : term * stack | Req (fst Σ) Γ t'' (t',π') /\ Pr t'' π' /\ Pr' t'' })
+    : { t' : term * stack | Req (fst Σ) Γ t' (t,π) /\ Pr t' π /\ Pr' t' } :=
 
     _reduce_stack Γ (tRel c) π h reduce with RedFlags.zeta flags := {
     | true with inspect (nth_error Γ c) := {
@@ -845,9 +835,9 @@ Section Reduce.
     _reduce_stack Γ (tApp f a) π h reduce :=
       rec reduce f (App a π) ;
 
-    _reduce_stack Γ (tLambda na A t) (App a args) h reduce with RedFlags.beta flags := {
-    | true := rec reduce (subst10 a t) args ;
-    | false := give (tLambda na A t) (App a args)
+    _reduce_stack Γ (tLambda na A t) (App a args) h reduce with inspect (RedFlags.beta flags) := {
+    | @exist true eq1 := rec reduce (subst10 a t) args ;
+    | @exist false eq1 := give (tLambda na A t) (App a args)
     } ;
 
     _reduce_stack Γ (tFix mfix idx) π h reduce with RedFlags.fix_ flags := {
@@ -916,15 +906,7 @@ Section Reduce.
     assumption.
   Qed.
   Next Obligation.
-    cbn. case_eq (decompose_stack args).
-    intros l θ e1 e2. subst.
-    unfold Pr' in h'.
-    rewrite e1 in h'. specialize h' with (1 := eq_refl).
-    cbn in h'. assumption.
-  Qed.
-  Next Obligation.
-    cbn. case_eq (decompose_stack args).
-    intros. assumption.
+    rewrite β in eq1. discriminate.
   Qed.
   Next Obligation.
     left. econstructor.
@@ -942,12 +924,6 @@ Section Reduce.
     case_eq (decompose_stack π). intros l ρ e.
     cbn. rewrite e in h. cbn in h.
     assumption.
-  Qed.
-  Next Obligation.
-    cbn. case_eq (decompose_stack π).
-    intros l θ e1 e2. subst.
-    unfold Pr' in h'. cbn in h'. rewrite e1 in h'.
-    specialize h' with (1 := eq_refl). assumption.
   Qed.
   Next Obligation.
     left. econstructor. eapply red1_context.
@@ -1110,9 +1086,8 @@ Section Reduce.
              symmetry in ee. subst.
              right. left.
              cbn. rewrite !zipc_appstack.
-             unfold Pr' in p0. cbn in p0.
-             specialize p0 with (1 := eq_refl).
-             rewrite e1 in p0. subst.
+             unfold Pr in p. cbn in p.
+             rewrite e1 in p. cbn in p. subst.
              cbn in H1.
              clear - H1.
 
@@ -1138,9 +1113,8 @@ Section Reduce.
              eapply decompose_stack_not_app. eassumption.
         * cbn in H2. inversion H2.
           rewrite 2!zipc_appstack in H4.
-          unfold Pr' in p0. cbn in p0.
-          specialize p0 with (1 := eq_refl).
-          rewrite e1 in p0. subst.
+          unfold Pr in p. cbn in p.
+          rewrite e1 in p. cbn in p. subst.
           cbn in H4. rewrite zipc_appstack in H4.
           apply zipc_inj in H4.
           apply mkApps_inj in H4.
@@ -1161,30 +1135,12 @@ Section Reduce.
     rewrite decompose_stack_appstack. cbn.
     rewrite e. cbn. reflexivity.
   Qed.
-  Next Obligation.
-    case_eq (decompose_stack π). intros ll π' e1 e2. subst.
-    cbn. unfold Pr' in h'.
-    rewrite decompose_stack_appstack in h'. cbn in h'.
-    case_eq (decompose_stack ρ). intros l' θ' e.
-    rewrite e in h'. cbn in h'.
-    pose proof (decompose_stack_eq _ _ _ e). subst.
-
-    clear eq3. symmetry in eq2.
-    pose proof (decompose_stack_at_eq _ _ _ _ _ eq2).
-    subst.
-    rewrite decompose_stack_appstack in e1. cbn in e1.
-    rewrite e in e1. cbn in e1.
-    inversion e1. subst.
-
-    specialize h' with (1 := eq_refl).
-    assumption.
-  Qed.
 
   Equations reduce_stack_full (Γ : context) (t : term) (π : stack)
-           (h : welltyped Σ Γ (zip (t,π))) : { t' : term * stack | Req (fst Σ) Γ t' (t, π) /\ Pr t' π /\ Pr' t' π } :=
+           (h : welltyped Σ Γ (zip (t,π))) : { t' : term * stack | Req (fst Σ) Γ t' (t, π) /\ Pr t' π /\ Pr' t' } :=
     reduce_stack_full Γ t π h :=
       Fix_F (R := R (fst Σ) Γ)
-            (fun x => welltyped Σ Γ (zip x) -> { t' : term * stack | Req (fst Σ) Γ t' x /\ Pr t' (snd x) /\ Pr' t' (snd x) })
+            (fun x => welltyped Σ Γ (zip x) -> { t' : term * stack | Req (fst Σ) Γ t' x /\ Pr t' (snd x) /\ Pr' t' })
             (fun t' f => _) (x := (t, π)) _ _.
   Next Obligation.
     eapply _reduce_stack.
@@ -1237,6 +1193,16 @@ Section Reduce.
         constructor. constructor.
   Qed.
 
+  Lemma reduce_stack_Req :
+    forall Γ t π h,
+      Req (fst Σ) Γ (reduce_stack Γ t π h) (t, π).
+  Proof.
+    intros Γ t π h.
+    unfold reduce_stack.
+    destruct (reduce_stack_full Γ t π h) as [[t' π'] [r _]].
+    assumption.
+  Qed.
+
   Lemma reduce_stack_decompose :
     forall Γ t π h,
       snd (decompose_stack (snd (reduce_stack Γ t π h))) =
@@ -1248,13 +1214,30 @@ Section Reduce.
     unfold Pr in p. symmetry. assumption.
   Qed.
 
-  Lemma reduce_stack_Req :
+  Lemma reduce_stack_noApp :
     forall Γ t π h,
-      Req (fst Σ) Γ (reduce_stack Γ t π h) (t, π).
+      isApp (fst (reduce_stack Γ t π h)) = false.
   Proof.
     intros Γ t π h.
     unfold reduce_stack.
-    destruct (reduce_stack_full Γ t π h) as [[t' π'] [r _]].
+    destruct (reduce_stack_full Γ t π h) as [[t' π'] [r [p [hApp hLam]]]].
+    assumption.
+  Qed.
+
+  (* I would have liked better a lemma concluding the stack is empty.
+     Unfortunately, it is not correct as we only match on tLambda and
+     App together.
+     Typing might get the better of it though.
+   *)
+  Lemma reduce_stack_noLamApp :
+    forall Γ t π h,
+      RedFlags.beta flags ->
+      isLambda (fst (reduce_stack Γ t π h)) ->
+      isStackApp (snd (reduce_stack Γ t π h)) = false.
+  Proof.
+    intros Γ t π h.
+    unfold reduce_stack.
+    destruct (reduce_stack_full Γ t π h) as [[t' π'] [r [p [hApp hLam]]]].
     assumption.
   Qed.
 

@@ -716,14 +716,23 @@ Section Reduce.
 
   Definition inspect {A} (x : A) : { y : A | y = x } := exist x eq_refl.
 
-  Definition Pr (t' : term * stack) π :=
-    forall indn c args ρ,
-      let '(l, θ) := decompose_stack π in
-      θ = Case indn c args ρ ->
-      let '(args', ρ') := decompose_stack (snd t') in
-      ρ' = Case indn c args ρ.
+  (* Definition Pr (t' : term * stack) π := *)
+  (*   let '(l, θ) := decompose_stack π in *)
+  (*   let '(l', ρ) := decompose_stack (snd t') in *)
+  (*   θ = ρ. *)
 
-  Notation givePr := (fun indn c args ρ (* e *) => _) (only parsing).
+  Definition Pr (t' : term * stack) π :=
+    snd (decompose_stack π) = snd (decompose_stack (snd t')).
+
+  (* Definition Pr (t' : term * stack) π := *)
+  (*   forall indn c args ρ, *)
+  (*     let '(l, θ) := decompose_stack π in *)
+  (*     θ = Case indn c args ρ -> *)
+  (*     let '(args', ρ') := decompose_stack (snd t') in *)
+  (*     ρ' = Case indn c args ρ. *)
+
+  (* Notation givePr := (fun indn c args ρ (* e *) => _) (only parsing). *)
+  Notation givePr := (_) (only parsing).
 
   Definition Pr' (t' : term * stack) π :=
     forall f n args ρ,
@@ -901,11 +910,10 @@ Section Reduce.
     cbn. eapply red1_context. econstructor.
   Qed.
   Next Obligation.
-    cbn. case_eq (decompose_stack args).
-    intros l θ e1 e2. subst.
-    unfold Pr in h.
-    rewrite e1 in h. specialize h with (1 := eq_refl).
-    cbn in h. assumption.
+    unfold Pr. cbn.
+    case_eq (decompose_stack args). intros l ρ e.
+    cbn. unfold Pr in h. rewrite e in h. cbn in h.
+    assumption.
   Qed.
   Next Obligation.
     cbn. case_eq (decompose_stack args).
@@ -913,10 +921,6 @@ Section Reduce.
     unfold Pr' in h'.
     rewrite e1 in h'. specialize h' with (1 := eq_refl).
     cbn in h'. assumption.
-  Qed.
-  Next Obligation.
-    cbn. case_eq (decompose_stack args).
-    intros. assumption.
   Qed.
   Next Obligation.
     cbn. case_eq (decompose_stack args).
@@ -933,10 +937,11 @@ Section Reduce.
     eapply positionR_poscat_nonil. discriminate.
   Qed.
   Next Obligation.
-    cbn. case_eq (decompose_stack π).
-    intros l θ e1 e2. subst.
-    unfold Pr in h. cbn in h. rewrite e1 in h.
-    specialize h with (1 := eq_refl). assumption.
+    unfold Pr. cbn.
+    unfold Pr in h. cbn in h.
+    case_eq (decompose_stack π). intros l ρ e.
+    cbn. rewrite e in h. cbn in h.
+    assumption.
   Qed.
   Next Obligation.
     cbn. case_eq (decompose_stack π).
@@ -967,8 +972,8 @@ Section Reduce.
   Qed.
   Next Obligation.
     unfold Pr in p0. cbn in p0.
-    specialize p0 with (1 := eq_refl) as hh.
-    rewrite <- prf' in hh. subst.
+    pose proof p0 as hh.
+    rewrite <- prf' in hh. cbn in hh. subst.
     eapply R_Req_R.
     - econstructor. econstructor. eapply red1_context.
       eapply red_iota.
@@ -1032,8 +1037,7 @@ Section Reduce.
       clear H0.
       cbn in prf'. inversion prf'. subst. reflexivity.
     - unfold Pr in p0. cbn in p0.
-      specialize p0 with (1 := eq_refl).
-      rewrite <- prf' in p0. subst.
+      rewrite <- prf' in p0. cbn in p0. subst.
       dependent destruction H0.
       + cbn in H0. symmetry in prf'.
         pose proof (decompose_stack_eq _ _ _ prf'). subst.
@@ -1145,22 +1149,17 @@ Section Reduce.
           reflexivity.
   Qed.
   Next Obligation.
-    case_eq (decompose_stack π). intros ll π' e1 e2. subst.
-    cbn. unfold Pr in h.
+    unfold Pr. cbn.
+    unfold Pr in h. cbn in h.
     rewrite decompose_stack_appstack in h. cbn in h.
-    case_eq (decompose_stack ρ). intros l' θ' e.
-    rewrite e in h. cbn in h.
+    case_eq (decompose_stack ρ). intros l1 ρ1 e.
+    rewrite e in h. cbn in h. subst.
     pose proof (decompose_stack_eq _ _ _ e). subst.
-
     clear eq3. symmetry in eq2.
     pose proof (decompose_stack_at_eq _ _ _ _ _ eq2).
     subst.
-    rewrite decompose_stack_appstack in e1. cbn in e1.
-    rewrite e in e1. cbn in e1.
-    inversion e1. subst.
-
-    specialize h with (1 := eq_refl).
-    assumption.
+    rewrite decompose_stack_appstack. cbn.
+    rewrite e. cbn. reflexivity.
   Qed.
   Next Obligation.
     case_eq (decompose_stack π). intros ll π' e1 e2. subst.

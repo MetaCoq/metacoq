@@ -612,14 +612,14 @@ Section Conversion.
 
   Definition wts Γ s t π :=
     match s with
-    | Reduction t' => welltyped Σ Γ (zipc t' π)
-    | Term t' => welltyped Σ Γ (zipc t' π)
-    | Args => welltyped Σ Γ (zipc t π)
+    | Reduction t' => welltyped Σ Γ (zipp t' π)
+    | Term t' => welltyped Σ Γ (zipp t' π)
+    | Args => welltyped Σ Γ (zipp t π)
     end.
 
   Definition Aux s Γ t π1 π2 :=
      forall s' Γ' t' π1' π2',
-       welltyped Σ Γ' (zipc t' π1') ->
+       welltyped Σ Γ' (zipp t' π1') ->
        wts Γ' s' t' π2' ->
        R (s', Γ', t', π1', π2') (s, Γ, t, π1, π2) ->
        Ret s' Γ' t' π1' π2'.
@@ -644,23 +644,51 @@ Section Conversion.
     (repack (isconv_args_raw Γ t π1 π2 aux)) (only parsing).
 
   Equations(noeqns) _isconv_red (Γ : context) (leq : conv_pb)
-            (t1 : term) (π1 : stack) (h1 : welltyped Σ Γ (zipc t1 π1))
-            (t2 : term) (π2 : stack) (h2 : welltyped Σ Γ (zipc t2 π2))
+            (t1 : term) (π1 : stack) (h1 : welltyped Σ Γ (zipp t1 π1))
+            (t2 : term) (π2 : stack) (h2 : welltyped Σ Γ (zipp t2 π2))
             (aux : Aux (Reduction t2) Γ t1 π1 π2)
     : { b : bool | if b then conv leq Σ Γ (zipp t1 π1) (zipp t2 π2) else True } :=
 
     _isconv_red Γ leq t1 π1 h1 t2 π2 h2 aux
-    with inspect (reduce_stack nodelta_flags Σ Γ t1 π1 h1) := {
-    | @exist (t1',π1') eq1
-      with inspect (reduce_stack nodelta_flags Σ Γ t2 π2 h2) := {
-      | @exist (t2',π2') eq2 => isconv_prog Γ leq t1' π1' t2' π2' aux
+    with inspect (decompose_stack π1) := {
+    | @exist (args1, ρ1) e1 with inspect (decompose_stack π2) := {
+      | @exist (args2, ρ2) e2
+        with inspect (reduce_stack nodelta_flags Σ Γ t1 (appstack args1 ε) _) := {
+        | @exist (t1',π1') eq1
+          with inspect (reduce_stack nodelta_flags Σ Γ t2 (appstack args2 ε) _) := {
+          | @exist (t2',π2') eq2 => isconv_prog Γ leq t1' π1' t2' π2' aux
+          }
+        }
       }
     }.
   Next Obligation.
+    unfold zipp in h1. rewrite <- e1 in h1.
+    cbn. rewrite zipc_appstack. assumption.
+  Qed.
+  Next Obligation.
+    unfold zipp in h2. rewrite <- e2 in h2.
+    cbn. rewrite zipc_appstack. assumption.
+  Qed.
+  Next Obligation.
     eapply red_welltyped.
     - eapply h1.
-    - do 2 zip fold. rewrite eq1.
-      eapply reduce_stack_sound.
+    - match type of eq1 with
+      | _ = reduce_stack ?f ?Σ ?Γ ?t ?π ?h =>
+        destruct (reduce_stack_sound f Σ Γ t π h) as [r1] ;
+        pose proof (reduce_stack_decompose nodelta_flags _ _ _ _ h) as d1
+      end.
+      cbn in r1.
+      rewrite <- eq1 in r1.
+      rewrite zipc_appstack in r1. cbn in r1.
+      unfold zipp. rewrite <- e1.
+      rewrite <- eq1 in d1. cbn in d1.
+      rewrite decompose_stack_appstack in d1. cbn in d1.
+      case_eq (decompose_stack π1'). intros args' ρ' eq.
+      pose proof (decompose_stack_eq _ _ _ eq).
+      rewrite eq in d1. cbn in d1.
+      subst.
+      rewrite zipc_appstack in r1. cbn in r1.
+      constructor. assumption.
   Qed.
   Next Obligation.
     eapply red_welltyped.

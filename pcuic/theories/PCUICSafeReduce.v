@@ -1258,23 +1258,6 @@ Section Reduce.
     assumption.
   Qed.
 
-  (* Definition eqcored Γ u v := *)
-  (*   u = v \/ cored (fst Σ) Γ u v. *)
-
-  (* Lemma reduce_stack_cored : *)
-  (*   forall Γ t π h, *)
-  (*     eqcored Γ (zip (reduce_stack Γ t π h)) (zip (t, π)). *)
-  (* Proof. *)
-  (*   intros Γ t π h. *)
-  (*   unfold reduce_stack. *)
-  (*   destruct (reduce_stack_full Γ t π h) as [[t' π'] r]. *)
-  (*   destruct r. *)
-  (*   - left. f_equal. assumption. *)
-  (*   - dependent destruction H0. *)
-  (*     + right. assumption. *)
-  (*     + cbn in H1. inversion H1. left. cbn. eauto. *)
-  (* Qed. *)
-
   Definition reduce_term Γ t (h : welltyped Σ Γ t) :=
     zip (reduce_stack Γ t ε h).
 

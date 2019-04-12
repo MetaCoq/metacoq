@@ -775,14 +775,17 @@ Section Conversion.
       + simpl. rewrite stack_cat_appstack.
         clear eq1 e. symmetry in e1. pose proof (decompose_stack_eq _ _ _ e1).
         subst. reflexivity.
-      + simpl.
-        (* TODO Make R_stateR without coe? *)
-
-      right. right. simpl.
-      constructor.
+      + simpl. rewrite stack_cat_appstack.
+        clear eq1 e. symmetry in e1. pose proof (decompose_stack_eq _ _ _ e1).
+        subst. reflexivity.
+      + simpl. constructor.
     - rewrite <- eq1 in h.
       dependent destruction h.
-      + left. simpl. eapply cored_it_mkLambda_or_LetIn. assumption.
+      + left. simpl. eapply cored_it_mkLambda_or_LetIn.
+        (* TODO Maybe factorise things a bit because we keep using the same
+           ropes.
+         *)
+        assumption.
       + destruct y' as [q hq].
         cbn in H0. inversion H0. (* Why is noconf failing at this point? *)
         subst.

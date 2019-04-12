@@ -588,13 +588,16 @@ Section Conversion.
   Qed.
 
   Lemma R_stateR :
-    forall t1 t2 (p1 : pos t1) (p2 : pos t2) s1 s2 (e : t1 = t2),
-      p1 = coe _ e p2 ->
+    forall t1 t2 (p1 : pos t1) (p2 : pos t2) s1 s2,
+      t1 = t2 ->
+      ` p1 = ` p2 ->
       stateR s1 s2 ->
       R_aux (t1 ; (p1, s1)) (t2 ; (p2, s2)).
   Proof.
-    intros t1 t2 p1 p2 s1 s2 e1 e2 h.
-    subst. cbn. right. right. assumption.
+    intros t1 t2 [p1 hp1] [p2 hp2] s1 s2 e1 e2 h.
+    cbn in e2. subst.
+    pose proof (uip hp1 hp2). subst.
+    right. right. assumption.
   Qed.
 
   Definition zipp t π :=

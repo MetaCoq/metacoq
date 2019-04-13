@@ -1107,7 +1107,7 @@ Section Conversion.
     } ;
 
     _isconv_prog Γ leq (tProd na A1 B1) π1 h1 (tProd na' A2 B2) π2 h2 aux
-    with isconv_red_raw Γ Conv A1 (Prod na B1 ε) A2 (Prod na' B2 ε) aux := {
+    with isconv_red_raw Γ Conv A1 (Prod na B1 π1) A2 (Prod na' B2 π2) aux := {
     | @exist true h := isconv_red (Γ,, vass na A1) leq B1 ε B2 ε aux ;
     | @exist false _ := no
     } ;
@@ -1184,61 +1184,47 @@ Section Conversion.
     eexists. eassumption.
   Qed.
   Next Obligation.
-    pose proof (zipp_Prod_nil h1).
-    pose proof (zipp_Prod_nil h2).
-    (* Is that enough? *)
-    (* Perhaps we should revert to welltyping zipc and proving
-       zipc -> zipp or something.
-       Otherwise, we don't know anything about snd (decompose_stak)
-       to we?
-
-       Maybe not actually, we cannot hope for zip_Prod_Empty
-       to be true, becose of Prod : stack for instance.
-
-       In fact we have to decompose the stack to keep the rhs
-       in the recursive call.
-       Is it necessary though?
-       Why not just keep the whole stack?
-       (Actually now that we can, we just should probably.)
-     *)
     unshelve eapply R_positionR.
     - reflexivity.
     - simpl. unfold xposition. eapply positionR_poscat.
-      simpl. constructor.
+      simpl. rewrite <- app_nil_r. eapply positionR_poscat. constructor.
   Qed.
   Next Obligation.
-    zip fold in h1. apply welltyped_context in h1. cbn in h1.
-    destruct h1 as [T h1].
-    destruct (inversion_Prod h1) as [s1 [s2 [[?] [[?] [?]]]]].
-    eexists. eassumption.
-  Qed.
+    (* Will admit in order to figure out what the stack should be. *)
+  (*   zip fold in h1. apply welltyped_context in h1. cbn in h1. *)
+  (*   destruct h1 as [T h1]. *)
+  (*   destruct (inversion_Prod h1) as [s1 [s2 [[?] [[?] [?]]]]]. *)
+  (*   eexists. eassumption. *)
+  (* Qed. *)
+  Admitted.
   Next Obligation.
-    (* PROBLEM AGAIN
-
-       We conclude that the products are equal, meaning, we actually would
-       compare the codomains on the stacks. This is problematic.
-
-       This means that perhaps, having an extra Prod constructor to stacks
-       wasn't the right fix to the previous problem.
-     *)
-    destruct h as [h].
-    zip fold in h2. apply welltyped_context in h2. cbn in h2.
-    destruct h2 as [T h2].
-    destruct (inversion_Prod h2) as [s1 [s2 [[?] [[?] [?]]]]].
-    zip fold in h1. apply welltyped_context in h1. cbn in h1.
-    destruct h1 as [T' h1].
-    destruct (inversion_Prod h1) as [s1' [s2' [[?] [[?] [?]]]]].
-    eexists. eapply context_conversion ; try eassumption.
-    econstructor.
-    - eapply conv_context_refl ; try assumption.
-      eapply typing_wf_local. eassumption.
-    - constructor.
-      + right. eexists. eassumption.
-      + apply conv_sym. assumption.
-  Qed.
+    (* destruct h as [h]. *)
+  (*   zip fold in h2. apply welltyped_context in h2. cbn in h2. *)
+  (*   destruct h2 as [T h2]. *)
+  (*   destruct (inversion_Prod h2) as [s1 [s2 [[?] [[?] [?]]]]]. *)
+  (*   zip fold in h1. apply welltyped_context in h1. cbn in h1. *)
+  (*   destruct h1 as [T' h1]. *)
+  (*   destruct (inversion_Prod h1) as [s1' [s2' [[?] [[?] [?]]]]]. *)
+  (*   eexists. eapply context_conversion ; try eassumption. *)
+  (*   econstructor. *)
+  (*   - eapply conv_context_refl ; try assumption. *)
+  (*     eapply typing_wf_local. eassumption. *)
+  (*   - constructor. *)
+  (*     + right. eexists. eassumption. *)
+  (*     + apply conv_sym. assumption. *)
+  (* Qed. *)
+  Admitted.
   Next Obligation.
-    pose proof (zip_Prod_Empty h1). subst.
-    pose proof (zip_Prod_Empty h2). subst.
+    unshelve eapply R_positionR.
+    - simpl. fail "oh no".
+      (* It's not even a problem of stacks.
+         On one side we'll have a λ and on the other a Π.
+         This means this approach doesn't work.
+         Maybe we could instead push something on the stack
+         (like an alternate Prod focusing on the other side).
+       *)
+    (* pose proof (zip_Prod_Empty h1). subst. *)
+    (* pose proof (zip_Prod_Empty h2). subst. *)
     (* R (Reduction B2, Γ,, vass na A1, B1, ε, ε) *)
     (*   (Term (tProd t2 A2 B2), Γ, tProd na A1 B1, ε, ε) *)
   Admitted.

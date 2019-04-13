@@ -1187,6 +1187,20 @@ Section Conversion.
     pose proof (zipp_Prod_nil h1).
     pose proof (zipp_Prod_nil h2).
     (* Is that enough? *)
+    (* Perhaps we should revert to welltyping zipc and proving
+       zipc -> zipp or something.
+       Otherwise, we don't know anything about snd (decompose_stak)
+       to we?
+
+       Maybe not actually, we cannot hope for zip_Prod_Empty
+       to be true, becose of Prod : stack for instance.
+
+       In fact we have to decompose the stack to keep the rhs
+       in the recursive call.
+       Is it necessary though?
+       Why not just keep the whole stack?
+       (Actually now that we can, we just should probably.)
+     *)
     unshelve eapply R_positionR.
     - reflexivity.
     - simpl. unfold xposition. eapply positionR_poscat.

@@ -915,6 +915,41 @@ Section Conversion.
   Derive Signature for cumul.
   Derive Signature for red1.
 
+  Lemma zipp_Prod_nil :
+    forall {Γ na A B π},
+      welltyped Σ Γ (zipp (tProd na A B) π) ->
+      fst (decompose_stack π) = [].
+  Proof.
+    intros Γ na A B π h.
+    case_eq (decompose_stack π). intros l s e.
+    unfold zipp in h. rewrite e in h. cbn.
+    clear - h.
+    induction l.
+    - reflexivity.
+    - exfalso. destruct h as [T h].
+      cbn in h.
+      (* erewrite IHl in h. *)
+      (* + cbn in h. *)
+      (*   destruct (inversion_App h) as [na' [A' [B' [[h1] [[?] [?]]]]]]. *)
+      (*   destruct (inversion_Prod h1) as [s1 [s2 [[?] [[?] [bot]]]]]. *)
+      (*   clear - bot. *)
+      (*   dependent destruction bot. *)
+      (*   * cbn in e. discriminate. *)
+      (*   * dependent destruction r. *)
+      (*     revert H. *)
+      (*     set (u := tFix mfix idx). *)
+      (*     assert (forall s, u <> tSort s) as neq by easy. *)
+      (*     clearbody u. revert u neq. clear. *)
+      (*     induction args ; intros u neq e. *)
+      (*     -- destruct u ; try discriminate e. *)
+      (*        eapply neq. reflexivity. *)
+      (*     -- simpl in e. eapply IHargs ; [ | eassumption ]. *)
+      (*        intro. discriminate. *)
+      (*   * (* How do I show it's not possible? *) *)
+      (*     admit. *)
+      (* +  *)
+  Admitted.
+
   (* If I do not manage to prove it, it's okay to enfore the stacks to be empty
      by matching.
    *)
@@ -999,11 +1034,29 @@ Section Conversion.
     (* TODO Maybe we can only conclude conversion? *)
   Abort.
 
+  Lemma welltyped_zipp :
+    forall Γ t ρ,
+      welltyped Σ Γ (zipp t ρ) ->
+      welltyped Σ Γ t.
+  Proof.
+    intros Γ t ρ [A h].
+    unfold zipp in h.
+    case_eq (decompose_stack ρ). intros l π e.
+    rewrite e in h. clear - h.
+    revert t A h.
+    induction l ; intros t A h.
+    - eexists. cbn in h. eassumption.
+    - cbn in h. apply IHl in h.
+      destruct h as [T h].
+      destruct (inversion_App h) as [na [A' [B' [[?] [[?] [?]]]]]].
+      eexists. eassumption.
+  Qed.
+
   Equations(noeqns) _isconv_prog (Γ : context) (leq : conv_pb)
-            (t1 : term) (π1 : stack) (h1 : welltyped Σ Γ (zipc t1 π1))
-            (t2 : term) (π2 : stack) (h2 : welltyped Σ Γ (zipc t2 π2))
+            (t1 : term) (π1 : stack) (h1 : welltyped Σ Γ (zipp t1 π1))
+            (t2 : term) (π2 : stack) (h2 : welltyped Σ Γ (zipp t2 π2))
             (aux : Aux (Term t2) Γ t1 π1 π2)
-    : { b : bool | if b then conv leq Σ Γ (zipc t1 π1) (zipc t2 π2) else True } :=
+    : { b : bool | if b then conv leq Σ Γ (zipp t1 π1) (zipp t2 π2) else True } :=
 
     (* This case is impossible, but we would need some extra argument to make it
        truly impossible (namely, only allow results of reduce_stack with the
@@ -1117,20 +1170,23 @@ Section Conversion.
 
   (* tProd *)
   Next Obligation.
-    zip fold in h1. apply welltyped_context in h1. cbn in h1.
+    cbn.
+    apply welltyped_zipp in h1.
     destruct h1 as [T h1].
     destruct (inversion_Prod h1) as [s1 [s2 [[?] [[?] [?]]]]].
     eexists. eassumption.
   Qed.
   Next Obligation.
-    zip fold in h2. apply welltyped_context in h2. cbn in h2.
+    cbn.
+    apply welltyped_zipp in h2.
     destruct h2 as [T h2].
     destruct (inversion_Prod h2) as [s1 [s2 [[?] [[?] [?]]]]].
     eexists. eassumption.
   Qed.
   Next Obligation.
-    pose proof (zip_Prod_Empty h1). subst.
-    pose proof (zip_Prod_Empty h2). subst.
+    pose proof (zipp_Prod_nil h1).
+    pose proof (zipp_Prod_nil h2).
+    (* Is that enough? *)
     unshelve eapply R_positionR.
     - reflexivity.
     - simpl. unfold xposition. eapply positionR_poscat.

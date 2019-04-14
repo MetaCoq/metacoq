@@ -300,32 +300,49 @@ let rec run_template_program_rec ?(intactic=false) (k : Environ.env * Evd.evar_m
   | TmQuote (true, trm) ->
     let qt = TermReify.quote_term_rec env trm in
     k (env, evm, qt)
-  | TmQuoteInd name ->
+  | TmQuoteInd (name, strict) ->
        let name = unquote_string (reduce_all env evm name) in
        let (dp, nm) = Quoted.split_name name in
        (match Nametab.locate (Libnames.make_qualid dp nm) with
-        | Globnames.IndRef ni ->
-           let t = TermReify.quote_mind_decl env (fst ni) in
-           let _, args = Constr.destApp t in
-           (match args with
-            | [|kn; decl|] ->
-               k (env, evm, decl)
-            | _ -> bad_term_verb t "anomaly in quoting of inductive types")
+        | Globnames.IndRef (ind, _) ->
+          let _ =
+            let kn = Names.KerName.to_string (Names.MutInd.canonical ind) in
+            if strict && kn <> name then
+              CErrors.user_err (str "strict mode not canonical: \"" ++ str name ++ str "\" <> \"" ++ str kn ++ str "\"")
+            else ()
+          in
+          let t = TermReify.quote_mind_decl env ind in
+          let _, args = Constr.destApp t in
+          (match args with
+           | [|kn; decl|] ->
+             k (env, evm, decl)
+           | _ -> bad_term_verb t "anomaly in quoting of inductive types")
         (* quote_mut_ind produce an entry rather than a decl *)
         (* let c = Environ.lookup_mind (fst ni) env in (\* FIX: For efficienctly, we should also export (snd ni)*\) *)
         (* TermReify.quote_mut_ind env c *)
         | _ -> CErrors.user_err (str name ++ str " does not seem to be an inductive."))
-  | TmQuoteConst (name,bypass) ->
+  | TmQuoteConst (name, bypass, strict) ->
+    begin
        let name = unquote_string (reduce_all env evm name) in
        let bypass = unquote_bool (reduce_all env evm bypass) in
-       let entry = TermReify.quote_entry_aux bypass env evm name in
-       let entry =
-         match entry with
-         | Some (Quoted.Left cstentry) -> TemplateCoqQuoter.quote_constant_entry cstentry
-         | Some (Quoted.Right _) -> CErrors.user_err (str name ++ str " refers to an inductive")
-         | None -> bad_term_verb pgm "anomaly in QuoteConstant"
+       let cmd =
+         let open Plugin_core in
+         tmBind (tmAboutString name)
+           (function
+               None -> tmFail (str "not found: " ++ str name)
+             | Some (Globnames.ConstRef cnst) ->
+               let kn = KerName.to_string (Names.Constant.canonical cnst) in
+               if strict && kn <> name then
+                 tmFail (str "strict mode not canonical: \"" ++ str name ++ str "\" <> \"" ++ str kn ++ str "\"")
+               else
+                 with_env_evm (fun env evm ->
+                     let cd = Environ.lookup_constant cnst env in
+                     tmReturn (TermReify.quote_constant_body bypass env evm cd))
+             | Some _ ->
+               tmFail (str "\"" ++ str name ++ str "\" does not refer to a constant"))
        in
-       k (env, evm, entry)
+       Plugin_core.run cmd env evm (fun a b c -> k (a,b, TemplateCoqQuoter.quote_constant_entry c))
+     end
   | TmQuoteUnivs ->
     let univs = Environ.universes env in
     k (env, evm, quote_ugraph univs)

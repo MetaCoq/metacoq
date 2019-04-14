@@ -493,30 +493,33 @@ since  [absrt_info] is a private type *)
    let uctx = Q.quote_inductive_universes t.mind_entry_universes in
     Q.quote_mutual_inductive_entry (mf, mp, is, uctx)
 
+  let quote_constant_body bypass env evm (cd : constant_body) =
+    let ty = quote_term env cd.const_type in
+    let body =
+      match cd.const_body with
+      | Undef _ -> None
+      | Def cs -> Some (quote_term env (Mod_subst.force_constr cs))
+      | OpaqueDef cs ->
+        if bypass
+        then Some (quote_term env (Opaqueproof.force_proof (Global.opaque_tables ()) cs))
+        else None
+    in
+    let uctx = quote_constant_uctx cd.const_universes in
+    (ty, body, uctx)
+
   let quote_entry_aux bypass env evm (name:string) =
     let (dp, nm) = split_name name in
     let entry =
       match Nametab.locate (Libnames.make_qualid dp nm) with
       | Globnames.ConstRef c ->
-         let cd = Environ.lookup_constant c env in
-         (*CHANGE :  template polymorphism for definitions was removed.
-                     See: https://github.com/coq/coq/commit/d9530632321c0b470ece6337cda2cf54d02d61eb *)
-         let ty = quote_term env cd.const_type in
-         let body = match cd.const_body with
-           | Undef _ -> None
-           | Def cs -> Some (quote_term env (Mod_subst.force_constr cs))
-           | OpaqueDef cs ->
-              if bypass
-              then Some (quote_term env (Opaqueproof.force_proof (Global.opaque_tables ()) cs))
-              else None
-         in
-         let uctx = quote_constant_uctx cd.const_universes in
-         Some (Left (ty, body, uctx))
-
+        let cd = Environ.lookup_constant c env in
+        (*CHANGE :  template polymorphism for definitions was removed.
+                    See: https://github.com/coq/coq/commit/d9530632321c0b470ece6337cda2cf54d02d61eb *)
+        Some (Left (quote_constant_body bypass env evm cd))
       | Globnames.IndRef ni ->
-         let c = Environ.lookup_mind (fst ni) env in (* FIX: For efficienctly, we should also export (snd ni)*)
-         let miq = quote_mut_ind env c in
-         Some (Right miq)
+        let c = Environ.lookup_mind (fst ni) env in (* FIX: For efficienctly, we should also export (snd ni)*)
+        let miq = quote_mut_ind env c in
+        Some (Right miq)
       | Globnames.ConstructRef _ -> None (* FIX?: return the enclusing mutual inductive *)
       | Globnames.VarRef _ -> None
     in entry

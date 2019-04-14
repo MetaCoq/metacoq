@@ -34,6 +34,7 @@ END;;
 
 VERNAC COMMAND EXTEND Unquote_vernac CLASSIFIED AS SIDEFF
 | [ "LookupPrint" ident(name) ] ->
-     [ Run_extractable.run_vernac (Demo.lookupPrint (quote_string (Names.Id.to_string name))) ]
+     [ let nstr = Names.Id.to_string name in
+       Run_extractable.run_vernac (Demo.lookupPrint (quote_string nstr)) ]
 
 END;;

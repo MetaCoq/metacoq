@@ -42,15 +42,16 @@ Cumulative Inductive TM@{t} : Type@{t} -> Type :=
 (* Guaranteed to not cause "... already declared" error *)
 | tmFreshName : ident -> TM ident
 
-| tmAbout : ident -> TM (option global_reference)
+| tmAbout : qualid -> TM (option global_reference)
 | tmCurrentModPath : TM string
 
 (* Quote the body of a definition or inductive. *)
-| tmQuoteInductive (nm : kername)
+| tmQuoteInductive (nm : kername) (* nm is the kernel name of the mutind *)
   : TM mutual_inductive_body
-| tmQuoteUniverses : TM uGraph.t
 | tmQuoteConstant (nm : kername) (bypass_opacity : bool)
   : TM constant_entry
+
+| tmQuoteUniverses : TM uGraph.t
 
 (* unquote before making the definition *)
 (* FIXME take an optional universe context as well *)

@@ -58,8 +58,10 @@ let tmMsg  (s : string) : unit tm =
     let _ = Feedback.msg_info (Pp.str s) in
     success env evd ()
 
-let tmFail (s : string) : 'a tm =
-  fun _ _ _ fail -> fail Pp.(str s)
+let tmFail (s : Pp.t) : 'a tm =
+  fun _ _ _ fail -> fail s
+let tmFailString (s : string) : 'a tm =
+  tmFail Pp.(str s)
 
 let tmEval (rd : reduction_strategy) (t : term) : term tm =
   fun env evd k _fail ->
@@ -124,7 +126,13 @@ let tmAbout (qualid : qualid) : global_reference option tm =
       let gr = Smartlocate.locate_global_with_alias (CAst.make qualid) in
       success env evd (Some gr)
     with
-    | Not_found -> success env evd None
+      Not_found -> success env evd None
+
+let tmAboutString (s : string) : global_reference option tm =
+  fun env evd success fail ->
+    let (dp, nm) = Quoted.split_name s in
+    let q = Libnames.make_qualid dp nm in
+    tmAbout q env evd success fail
 
 let tmCurrentModPath : Names.ModPath.t tm =
   fun env evd success _fail ->
@@ -171,4 +179,3 @@ let tmInferInstance (typ : term) : term option tm =
       success env evm (Some (EConstr.to_constr evm t))
     with
       Not_found -> success env evm None
-

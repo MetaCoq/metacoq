@@ -219,7 +219,6 @@ struct
   let quote_kn kn = quote_string (KerName.to_string kn)
   let mkRel i = Constr.mkApp (tRel, [| i |])
   let mkVar id = Constr.mkApp (tVar, [| id |])
-  let mkMeta i = Constr.mkApp (tMeta, [| i |])
   let mkEvar n args = Constr.mkApp (tEvar, [| n; to_coq_list tTerm (Array.to_list args) |])
   let mkSort s = Constr.mkApp (tSort, [| s |])
   let mkCast c k t = Constr.mkApp (tCast, [| c ; k ; t |])

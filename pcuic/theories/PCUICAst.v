@@ -6,6 +6,10 @@ Require Import List. Import ListNotations.
 From Template Require Export univ uGraph.
 From Template Require Import BasicAst.
 
+(* Declare Scope pcuic.*)
+Delimit Scope pcuic with pcuic.
+Open Scope pcuic.
+
 (** * AST of the Polymorphic Cumulative Calculus of Inductive Constructions
 
    This AST is a cleaned-up version of Coq's internal AST better suited for reasoning.
@@ -15,7 +19,6 @@ From Template Require Import BasicAst.
 Inductive term : Set :=
 | tRel       : nat -> term
 | tVar       : ident -> term (* For free variables (e.g. in a goal) *)
-| tMeta      : nat -> term   (* NOTE: this will go away *)
 | tEvar      : nat -> list term -> term
 | tSort      : universe -> term
 | tProd      : name -> term (* the type *) -> term -> term
@@ -148,7 +151,7 @@ Definition context := list context_decl.
 
 Definition snoc {A} (Γ : list A) (d : A) := d :: Γ.
 
-Notation " Γ ,, d " := (snoc Γ d) (at level 20, d at next level).
+Notation " Γ ,, d " := (snoc Γ d) (at level 20, d at next level) : pcuic.
 
 (** *** Environments *)
 

@@ -1,32 +1,39 @@
 From Coq Require Import Ascii String Bool OrderedType Lia List Program Arith.
-From Template Require Import utils.
+From Template Require Import utils AstUtils.
 From Template Require Import BasicAst.
 From PCUIC Require Import PCUICAst.
 Import List.ListNotations.
 Require Import FunctionalExtensionality.
 Require Import ssreflect.
 
+From Equations Require Import Equations.
+Require Import Equations.Prop.DepElim.
+
 Set Asymmetric Patterns.
+
+Open Scope pcuic.
 
 (** Make a lambda/let-in string of abstractions from a context [Γ], ending with term [t]. *)
 
+Definition mkLambda_or_LetIn d t :=
+  match d.(decl_body) with
+  | None => tLambda d.(decl_name) d.(decl_type) t
+  | Some b => tLetIn d.(decl_name) b d.(decl_type) t
+  end.
+
 Definition it_mkLambda_or_LetIn (l : context) (t : term) :=
-  List.fold_left
-    (fun acc d =>
-       match d.(decl_body) with
-       | None => tLambda d.(decl_name) d.(decl_type) acc
-       | Some b => tLetIn d.(decl_name) b d.(decl_type) acc
-       end) l t.
+  List.fold_left (fun acc d => mkLambda_or_LetIn d acc) l t.
 
 (** Make a prod/let-in string of abstractions from a context [Γ], ending with term [t]. *)
 
+Definition mkProd_or_LetIn d t :=
+  match d.(decl_body) with
+  | None => tProd d.(decl_name) d.(decl_type) t
+  | Some b => tLetIn d.(decl_name) b d.(decl_type) t
+  end.
+
 Definition it_mkProd_or_LetIn (l : context) (t : term) :=
-  List.fold_left
-    (fun acc d =>
-       match d.(decl_body) with
-       | None => tProd d.(decl_name) d.(decl_type) acc
-       | Some b => tLetIn d.(decl_name) b d.(decl_type) acc
-       end) l t.
+  List.fold_left (fun acc d => mkProd_or_LetIn d acc) l t.
 
 Definition map_decl f (d : context_decl) :=
   {| decl_name := d.(decl_name);
@@ -75,7 +82,7 @@ Lemma map_dbody {A B : Set} (f : A -> B) (g : A -> B) (d : def A) :
 Proof. destruct d; reflexivity. Qed.
 
 Definition app_context (Γ Γ' : context) : context := (Γ' ++ Γ)%list.
-Notation " Γ  ,,, Γ' " := (app_context Γ Γ') (at level 25, Γ' at next level, left associativity).
+Notation " Γ  ,,, Γ' " := (app_context Γ Γ') (at level 25, Γ' at next level, left associativity) : pcuic.
 
 Lemma app_context_assoc Γ Γ' Γ'' : Γ ,,, (Γ' ,,, Γ'') = Γ ,,, Γ' ,,, Γ''.
 Proof. unfold app_context; now rewrite app_assoc. Qed.
@@ -468,11 +475,11 @@ Proof. destruct oib; simpl. destruct decompose_prod_assum. simpl. reflexivity. Q
 Definition test_def {A : Set} (tyf bodyf : A -> bool) (d : def A) :=
   tyf d.(dtype) && bodyf d.(dbody).
 
-Definition tCaseBrsProp {A} (P : A -> Prop) (l : list (nat * A)) :=
-  Forall (fun x => P (snd x)) l.
+Definition tCaseBrsProp {A} (P : A -> Type) (l : list (nat * A)) :=
+  All (fun x => P (snd x)) l.
 
-Definition tFixProp {A : Set} (P P' : A -> Prop) (m : mfixpoint A) :=
-  Forall (fun x : def A => P x.(dtype) /\ P' x.(dbody)) m.
+Definition tFixProp {A : Set} (P P' : A -> Type) (m : mfixpoint A) :=
+  All (fun x : def A => P x.(dtype) * P' x.(dbody))%type m.
 
 
 Ltac merge_All :=
@@ -494,49 +501,118 @@ Lemma map_def_id {t : Set} : map_def (@id t) (@id t) = id.
 Proof. extensionality p. now destruct p. Qed.
 Hint Rewrite @map_def_id @map_id : map.
 
-Lemma map_def_spec {A B : Set} (P P' : A -> Prop) (f f' g g' : A -> B) (x : def A) :
+Lemma map_def_spec {A B : Set} (P P' : A -> Type) (f f' g g' : A -> B) (x : def A) :
   P' x.(dbody) -> P x.(dtype) -> (forall x, P x -> f x = g x) ->
   (forall x, P' x -> f' x = g' x) ->
   map_def f f' x = map_def g g' x.
 Proof.
   intros. destruct x. unfold map_def. simpl.
-  rewrite !H1 // !H2 //.
+  rewrite !H // !H0 //.
 Qed.
 
-Lemma case_brs_map_spec {A B : Set} {P : A -> Prop} {l} {f g : A -> B} :
+Lemma case_brs_map_spec {A B : Set} {P : A -> Type} {l} {f g : A -> B} :
   tCaseBrsProp P l -> (forall x, P x -> f x = g x) ->
   map (on_snd f) l = map (on_snd g) l.
 Proof.
-  intros. red in H.
-  eapply forall_map_spec. eapply Forall_impl; eauto. simpl; intros.
+  intros. red in X.
+  eapply All_map_eq. eapply All_impl; eauto. simpl; intros.
   apply on_snd_eq_spec; eauto.
 Qed.
 
-Lemma tfix_map_spec {A B : Set} {P P' : A -> Prop} {l} {f f' g g' : A -> B} :
+Lemma tfix_map_spec {A B : Set} {P P' : A -> Type} {l} {f f' g g' : A -> B} :
   tFixProp P P' l -> (forall x, P x -> f x = g x) ->
   (forall x, P' x -> f' x = g' x) ->
   map (map_def f f') l = map (map_def g g') l.
 Proof.
   intros.
-  eapply forall_map_spec. red in H. eapply Forall_impl; eauto. simpl.
-  intros. destruct H2;
+  eapply All_map_eq. red in X. eapply All_impl; eauto. simpl.
+  intros. destruct X0;
   eapply map_def_spec; eauto.
 Qed.
 
 
 Lemma map_def_test_spec {A B : Set}
-      (P P' : A -> Prop) (p p' : pred A) (f f' g g' : A -> B) (x : def A) :
+      (P P' : A -> Type) (p p' : pred A) (f f' g g' : A -> B) (x : def A) :
   P x.(dtype) -> P' x.(dbody) -> (forall x, P x -> p x -> f x = g x) ->
   (forall x, P' x -> p' x -> f' x = g' x) ->
   test_def p p' x ->
   map_def f f' x = map_def g g' x.
 Proof.
   intros. destruct x. unfold map_def. simpl.
-  unfold test_def in H3; simpl in H3. rewrite -> andb_and in H3. intuition.
-  rewrite !H1 // !H2 //; intuition auto.
+  unfold test_def in H1; simpl in H1. rewrite -> andb_and in H1. intuition.
+  rewrite !H // !H0 //; intuition auto.
 Qed.
 
-Lemma case_brs_forallb_map_spec {A B : Set} {P : A -> Prop} {p : A -> bool}
+Lemma All_All2 {A} {P : A -> A -> Type} {Q} {l : list A} :
+  All Q l ->
+  (forall x, Q x -> P x x) ->
+  All2 P l l.
+Proof.
+  induction 1; constructor; auto.
+Qed.
+
+Lemma All2_nth_error {A} {P : A -> A -> Type} {l l'} n t t' :
+  All2 P l l' ->
+  nth_error l n = Some t ->
+  nth_error l' n = Some t' ->
+  P t t'.
+Proof.
+  intros Hall. revert n.
+  induction Hall; destruct n; simpl; try congruence.
+  eauto.
+Qed.
+
+Lemma All2_nth_error_Some {A} {P : A -> A -> Type} {l l'} n t :
+  All2 P l l' ->
+  nth_error l n = Some t ->
+  { t' : A & (nth_error l' n = Some t') * P t t'}%type.
+Proof.
+  intros Hall. revert n.
+  induction Hall; destruct n; simpl; try congruence. intros [= ->]. exists y. intuition auto.
+  eauto.
+Qed.
+
+Lemma All2_nth_error_None {A} {P : A -> A -> Type} {l l'} n :
+  All2 P l l' ->
+  nth_error l n = None ->
+  nth_error l' n = None.
+Proof.
+  intros Hall. revert n.
+  induction Hall; destruct n; simpl; try congruence. auto.
+Qed.
+
+Lemma All2_length {A} {P : A -> A -> Type} l l' : All2 P l l' -> #|l| = #|l'|.
+Proof. induction 1; simpl; auto. Qed.
+
+Lemma All_forallb_map_spec {A B : Type} {P : A -> Type} {p : A -> bool}
+      {l : list A} {f g : A -> B} :
+    All P l -> forallb p l ->
+    (forall x : A, P x -> p x -> f x = g x) -> map f l = map g l.
+Proof.
+  induction 1; simpl; trivial.
+  rewrite andb_and. intros [px pl] Hx.
+  f_equal. now apply Hx. now apply IHX.
+Qed.
+
+Lemma All_forallb_forallb_spec {A : Type} {P : A -> Type} {p : A -> bool}
+      {l : list A} {f : A -> bool} :
+    All P l -> forallb p l ->
+    (forall x : A, P x -> p x -> f x) -> forallb f l.
+Proof.
+  induction 1; simpl; trivial.
+  rewrite !andb_and. intros [px pl] Hx. eauto.
+Qed.
+
+Lemma on_snd_test_spec {A B C} (P : B -> Type) (p : B -> bool) (f g : B -> C) (x : A * B) :
+  P (snd x) -> (forall x, P x -> p x -> f x = g x) ->
+  test_snd p x ->
+  on_snd f x = on_snd g x.
+Proof.
+  intros. destruct x. unfold on_snd. simpl.
+  now rewrite H; auto.
+Qed.
+
+Lemma case_brs_forallb_map_spec {A B : Set} {P : A -> Type} {p : A -> bool}
       {l} {f g : A -> B} :
   tCaseBrsProp P l ->
   forallb (test_snd p) l ->
@@ -544,8 +620,8 @@ Lemma case_brs_forallb_map_spec {A B : Set} {P : A -> Prop} {p : A -> bool}
   map (on_snd f) l = map (on_snd g) l.
 Proof.
   intros.
-  eapply (forall_forallb_map_spec H H0).
-  intros.
+  eapply All_map_eq. red in X. apply forallb_All in H.
+  merge_All. eapply All_impl; eauto. simpl. intros. intuition.
   eapply on_snd_test_spec; eauto.
 Qed.
 
@@ -557,23 +633,23 @@ Lemma tfix_forallb_map_spec {A B : Set} {P P' : A -> Prop} {p p'} {l} {f f' g g'
   map (map_def f f') l = map (map_def g g') l.
 Proof.
   intros.
-  eapply (forall_forallb_map_spec H H0).
-  intros. destruct H3.
+  eapply All_map_eq; red in X. apply forallb_All in H.
+  merge_All. eapply All_impl; eauto. simpl; intros; intuition.
   eapply map_def_test_spec; eauto.
 Qed.
 
 Ltac apply_spec :=
   match goal with
-  | H : Forall _ _, H' : forallb _ _ = _ |- map _ _ = map _ _ =>
-    eapply (forall_forallb_map_spec H H')
-  | H : Forall _ _, H' : forallb _ _ = _ |- forallb _ _ = _ =>
-    eapply (forall_forallb_forallb_spec H H')
+  | H : All _ _, H' : forallb _ _ = _ |- map _ _ = map _ _ =>
+    eapply (All_forallb_map_spec H H')
+  | H : All _ _, H' : forallb _ _ = _ |- forallb _ _ = _ =>
+    eapply (All_forallb_forallb_spec H H')
   | H : tCaseBrsProp _ _, H' : forallb _ _ = _ |- map _ _ = map _ _ =>
     eapply (case_brs_forallb_map_spec H H')
-  | H : Forall _ _, H' : is_true (forallb _ _) |- map _ _ = map _ _ =>
-    eapply (forall_forallb_map_spec H H')
-  | H : Forall _ _, H' : is_true (forallb _ _) |- forallb _ _ = _ =>
-    eapply (forall_forallb_forallb_spec H H')
+  | H : All _ _, H' : is_true (forallb _ _) |- map _ _ = map _ _ =>
+    eapply (All_forallb_map_spec H H')
+  | H : All _ _, H' : is_true (forallb _ _) |- forallb _ _ = _ =>
+    eapply (All_forallb_forallb_spec H H')
   | H : tCaseBrsProp _ _, H' : is_true (forallb _ _) |- map _ _ = map _ _ =>
     eapply (case_brs_forallb_map_spec H H')
   | H : tCaseBrsProp _ _ |- map _ _ = map _ _ =>
@@ -582,10 +658,263 @@ Ltac apply_spec :=
     eapply (tfix_forallb_map_spec H H')
   | H : tFixProp _ _ _ |- map _ _ = map _ _ =>
     eapply (tfix_map_spec H)
-  | H : Forall _ _ |- map _ _ = map _ _ =>
-    eapply (forall_map_spec H)
-  | H : Forall _ _ |- map _ _ = _ =>
-    eapply (forall_map_id_spec H)
-  | H : Forall _ _ |- is_true (forallb _ _) =>
-    eapply (Forall_forallb _ _ _ H); clear H
+  | H : All _ _ |- map _ _ = map _ _ =>
+    eapply (All_map_eq H)
+  | H : All _ _ |- map _ _ = _ =>
+    eapply (All_map_id H)
+  | H : All _ _ |- is_true (forallb _ _) =>
+    eapply (All_forallb _ _ H); clear H
   end.
+
+Ltac close_All :=
+  match goal with
+  | H : Forall _ _ |- Forall _ _ => apply (Forall_impl H); clear H; simpl
+  | H : All _ _ |- All _ _ => apply (All_impl H); clear H; simpl
+  | H : OnOne2 _ _ _ |- OnOne2 _ _ _ => apply (OnOne2_impl H); clear H; simpl
+  | H : All2 _ _ _ |- All2 _ _ _ => apply (All2_impl H); clear H; simpl
+  | H : All _ _ |- All2 _ _ _ =>
+    apply (All_All2 H); clear H; simpl
+  | H : All2 _ _ _ |- All _ _ =>
+    (apply (All2_All_left H) || apply (All2_All_right H)); clear H; simpl
+  end.
+
+Lemma mkApps_inj :
+  forall u v l,
+    mkApps u l = mkApps v l ->
+    u = v.
+Proof.
+  intros u v l eq.
+  revert u v eq.
+  induction l ; intros u v eq.
+  - cbn in eq. assumption.
+  - cbn in eq. apply IHl in eq.
+    inversion eq. reflexivity.
+Qed.
+
+(* Some reflection / EqDec lemmata *)
+
+Class ReflectEq A := {
+  eqb : A -> A -> bool ;
+  eqb_spec : forall x y : A, reflect (x = y) (eqb x y)
+}.
+
+Instance ReflectEq_EqDec :
+  forall A, ReflectEq A -> EqDec A.
+Proof.
+  intros A [eqb h] x y.
+  destruct (h x y).
+  - left. assumption.
+  - right. assumption.
+Qed.
+
+Definition eq_dec_to_bool {A} `{EqDec A} x y :=
+  match eq_dec x y with
+  | left _ => true
+  | right _ => false
+  end.
+
+(* Not an instance to avoid loops? *)
+Lemma EqDec_ReflectEq : forall A `{EqDec A}, ReflectEq A.
+Proof.
+  intros A h.
+  unshelve econstructor.
+  - eapply eq_dec_to_bool.
+  - unfold eq_dec_to_bool.
+    intros x y. destruct (eq_dec x y).
+    all: constructor ; assumption.
+Qed.
+
+Ltac nodec :=
+  let bot := fresh "bot" in
+  try solve [ constructor ; intro bot ; inversion bot ; subst ; tauto ].
+
+Definition eq_option {A} `{ReflectEq A} (u v : option A) : bool :=
+  match u, v with
+  | Some u, Some v => eqb u v
+  | None, None => true
+  | _, _ => false
+  end.
+
+Instance reflect_option : forall {A}, ReflectEq A -> ReflectEq (option A) := {
+  eqb := eq_option
+}.
+Proof.
+  intros x y. destruct x, y.
+  all: cbn.
+  all: try solve [ constructor ; easy ].
+  destruct (eqb_spec a a0) ; nodec.
+  constructor. f_equal. assumption.
+Qed.
+
+Instance option_dec : forall {A}, EqDec A -> EqDec (option A).
+Proof.
+  intros A h.
+  pose (EqDec_ReflectEq A).
+  exact _.
+Qed.
+
+Fixpoint eq_list {A} (eqA : A -> A -> bool) (l l' : list A) : bool :=
+  match l, l' with
+  | a :: l, a' :: l' =>
+    if eqA a a' then eq_list eqA l l'
+    else false
+  | [], [] => true
+  | _, _ => false
+  end.
+
+Instance reflect_list : forall {A}, ReflectEq A -> ReflectEq (list A) := {
+  eqb := eq_list eqb
+}.
+Proof.
+  intro x. induction x ; intro y ; destruct y.
+  - cbn. constructor. reflexivity.
+  - cbn. constructor. discriminate.
+  - cbn. constructor. discriminate.
+  - cbn. destruct (eqb_spec a a0) ; nodec.
+    destruct (IHx y) ; nodec.
+    subst. constructor. reflexivity.
+Qed.
+
+Instance reflect_string : ReflectEq string := {
+  eqb := eq_string
+}.
+Proof.
+  intros s s'. destruct (string_dec s s').
+  - subst. rewrite eq_string_refl. constructor. reflexivity.
+  - assert (string_compare s s' <> Eq).
+    { intro bot. apply n. apply string_compare_eq. assumption. }
+    unfold eq_string. destruct (string_compare s s').
+    + tauto.
+    + constructor. assumption.
+    + constructor. assumption.
+Qed.
+
+Instance reflect_nat : ReflectEq nat := {
+  eqb_spec := Nat.eqb_spec
+}.
+
+Definition eq_level l1 l2 :=
+  match l1, l2 with
+  | Level.lProp, Level.lProp => true
+  | Level.lSet, Level.lSet => true
+  | Level.Level s1, Level.Level s2 => eqb s1 s2
+  | Level.Var n1, Level.Var n2 => eqb n1 n2
+  | _, _ => false
+  end.
+
+Instance reflect_level : ReflectEq Level.t := {
+  eqb := eq_level
+}.
+Proof.
+  intros x y. destruct x, y.
+  all: unfold eq_level.
+  all: try solve [ constructor ; reflexivity ].
+  all: try solve [ constructor ; discriminate ].
+  - destruct (eqb_spec s s0) ; nodec.
+    constructor. f_equal. assumption.
+  - destruct (eqb_spec n n0) ; nodec.
+    constructor. subst. reflexivity.
+Qed.
+
+Definition eq_prod {A B} (eqA : A -> A -> bool) (eqB : B -> B -> bool) x y :=
+  let '(a1, b1) := x in
+  let '(a2, b2) := y in
+  if eqA a1 a2 then eqB b1 b2
+  else false.
+
+Instance reflect_prod : forall {A B}, ReflectEq A -> ReflectEq B -> ReflectEq (A * B) := {
+  eqb := eq_prod eqb eqb
+}.
+Proof.
+  (* destruct r as [eqA hA], r0 as [eqB hB]. *)
+  intros [x y] [u v].
+  unfold eq_prod.
+  destruct (eqb_spec x u) ; nodec.
+  destruct (eqb_spec y v) ; nodec.
+  subst. constructor. reflexivity.
+Qed.
+
+Definition eq_bool b1 b2 : bool :=
+  if b1 then b2 else negb b2.
+
+Instance reflect_bool : ReflectEq bool := {
+  eqb := eq_bool
+}.
+Proof.
+  intros x y. unfold eq_bool.
+  destruct x, y.
+  all: constructor.
+  all: try reflexivity.
+  all: discriminate.
+Qed.
+
+(* Automatic *)
+(* Instance reflect_universe : ReflectEq Universe.Expr.t := _. *)
+(* Instance reflect_universe : ReflectEq universe := _. *)
+
+Definition eq_name na nb :=
+  match na, nb with
+  | nAnon, nAnon => true
+  | nNamed a, nNamed b => eqb a b
+  | _, _ => false
+  end.
+
+Instance reflect_name : ReflectEq name := {
+  eqb := eq_name
+}.
+Proof.
+  intros x y. destruct x, y.
+  - cbn. constructor. reflexivity.
+  - cbn. constructor. discriminate.
+  - cbn. constructor. discriminate.
+  - cbn. destruct (eqb_spec i i0) ; nodec.
+    constructor. f_equal. assumption.
+Qed.
+
+Definition eq_inductive ind ind' :=
+  match ind, ind' with
+  | mkInd m n, mkInd m' n' =>
+    eqb m m' && eqb n n'
+  end.
+
+Instance reflect_inductive : ReflectEq inductive := {
+  eqb := eq_inductive
+}.
+Proof.
+  intros i i'. destruct i as [m n], i' as [m' n'].
+  unfold eq_inductive.
+  destruct (eqb_spec m m') ; nodec.
+  destruct (eqb_spec n n') ; nodec.
+  cbn. constructor. subst. reflexivity.
+Qed.
+
+(* Automatic! *)
+(* Instance projection_dec : EqDec projection := _. *)
+
+Definition eq_def {A : Set} `{ReflectEq A} (d1 d2 : def A) : bool :=
+  match d1, d2 with
+  | mkdef n1 t1 b1 a1, mkdef n2 t2 b2 a2 =>
+    eqb n1 n2 && eqb t1 t2 && eqb b1 b2 && eqb a1 a2
+  end.
+
+Instance reflect_def : forall {A : Set} `{ReflectEq A}, ReflectEq (def A) := {
+  eqb := eq_def
+}.
+Proof.
+  intros x y. destruct x as [n1 t1 b1 a1], y as [n2 t2 b2 a2].
+  unfold eq_def.
+  destruct (eqb_spec n1 n2) ; nodec.
+  destruct (eqb_spec t1 t2) ; nodec.
+  destruct (eqb_spec b1 b2) ; nodec.
+  destruct (eqb_spec a1 a2) ; nodec.
+  cbn. constructor. subst. reflexivity.
+Qed.
+
+(* Instance mfixpoint_dec : forall {A : Set}, ReflectEq A -> EqDec (mfixpoint A) := _. *)
+
+Instance mfixpoint_dec : forall {A : Set}, EqDec A -> EqDec (mfixpoint A).
+Proof.
+  intros A h.
+  pose (EqDec_ReflectEq A).
+  exact _.
+Qed.

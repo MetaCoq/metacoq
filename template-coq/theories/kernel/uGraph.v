@@ -251,3 +251,7 @@ Conjecture eq_universe_refl : forall `{checker_flags} φ u, eq_universe φ u u =
 Conjecture eq_universe_instance_refl : forall `{checker_flags} φ u, eq_universe_instance φ u u = true.
 Conjecture eq_universe_leq_universe : forall `{checker_flags} φ x y,
     eq_universe φ x y = true -> leq_universe φ x y = true.
+Conjecture leq_universe_product_l : forall `{checker_flags} φ s1 s2,
+    leq_universe φ s1 (Universe.sort_of_product s1 s2) = true.
+Conjecture leq_universe_product_r : forall `{checker_flags} φ s1 s2,
+    leq_universe φ s2 (Universe.sort_of_product s1 s2) = true.

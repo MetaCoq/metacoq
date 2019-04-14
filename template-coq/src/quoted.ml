@@ -8,7 +8,6 @@ type ('term, 'name, 'nat) amfixpoint = ('term, 'name, 'nat) adef list
 type ('term, 'nat, 'ident, 'name, 'quoted_sort, 'cast_kind, 'kername, 'inductive, 'universe_instance, 'projection) structure_of_term =
   | ACoq_tRel of 'nat
   | ACoq_tVar of 'ident
-  | ACoq_tMeta of 'nat
   | ACoq_tEvar of 'nat * 'term list
   | ACoq_tSort of 'quoted_sort
   | ACoq_tCast of 'term * 'cast_kind * 'term
@@ -101,7 +100,6 @@ sig
 
   val mkRel : quoted_int -> t
   val mkVar : quoted_ident -> t
-  val mkMeta : quoted_int -> t
   val mkEvar : quoted_int -> t array -> t
   val mkSort : quoted_sort -> t
   val mkCast : t -> quoted_cast_kind -> t -> t

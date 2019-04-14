@@ -30,10 +30,10 @@ let unquote_reduction_strategy env evm trm (* of type reductionStrategy *) : Red
     match args with
     | name (* to unfold *) :: _ ->
        let name = reduce_all env evm name in
-       let name = unquote_ident name in
-       (try Unfold [Locus.AllOccurrences, Tacred.evaluable_of_global_reference env (Nametab.global (CAst.make (Libnames.Qualid (Libnames.qualid_of_ident name))))]
+       let name = unquote_kn name in
+       (try Unfold [Locus.AllOccurrences, Tacred.evaluable_of_global_reference env (Nametab.locate name)]
         with
-        | _ -> CErrors.user_err (str "Constant not found or not a constant: " ++ Pp.str (Names.Id.to_string name)))
+        | _ -> CErrors.user_err (str "Constant not found or not a constant: " ++ Libnames.pr_qualid name))
     | _ -> bad_term_verb trm "unquote_reduction_strategy"
   else not_supported_verb trm "unquote_reduction_strategy"
 

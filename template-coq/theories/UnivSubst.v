@@ -35,7 +35,7 @@ Definition subst_instance_instance (u u' : universe_instance) :=
 
 Fixpoint subst_instance_constr (u : universe_instance) (c : term) :=
   match c with
-  | tRel _ | tVar _ | tMeta _ => c
+  | tRel _ | tVar _ => c
   | tSort s => tSort (subst_instance_univ u s)
   | tConst c u' => tConst c (subst_instance_instance u u')
   | tInd i u' => tInd i (subst_instance_instance u u')

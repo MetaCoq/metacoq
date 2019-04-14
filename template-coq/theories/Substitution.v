@@ -1239,7 +1239,6 @@ Proof.
 
   - apply Nat.eqb_refl.
   - apply eq_string_refl.
-  - apply Nat.eqb_refl.
   - rewrite /eq_evar eq_nat_refl.
     simpl. induction H0; simpl; auto. now rewrite H0 IHForall.
   - apply eq_universe_refl.

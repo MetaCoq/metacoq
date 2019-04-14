@@ -150,7 +150,6 @@ struct
       match Constr.kind trm with
 	Constr.Rel i -> (Q.mkRel (Q.quote_int (i - 1)), acc)
       | Constr.Var v -> (Q.mkVar (Q.quote_ident v), acc)
-      | Constr.Meta n -> (Q.mkMeta (Q.quote_int n), acc)
       | Constr.Evar (n,args) ->
 	let (acc,args') =
 	  CArray.fold_left_map (fun acc x ->
@@ -230,6 +229,7 @@ struct
          let kn = Names.Constant.canonical (Names.Projection.constant p) in
          let t', acc = quote_term acc env c in
          (Q.mkProj p' t', add_constant kn acc)
+      | Constr.Meta _ -> failwith "found a Meta!"
       in
       let in_prop, env' = env in
       if is_cast_prop () && not in_prop then

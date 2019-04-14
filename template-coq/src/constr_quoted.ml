@@ -114,9 +114,9 @@ struct
   let tmkInd = r_base_reify "mkInd"
   let tsort_family = r_base_reify "sort_family"
   let tmkdecl = r_reify "mkdecl"
-  let (tTerm,tRel,tVar,tMeta,tEvar,tSort,tCast,tProd,
+  let (tTerm,tRel,tVar,tEvar,tSort,tCast,tProd,
        tLambda,tLetIn,tApp,tCase,tFix,tConstructor,tConst,tInd,tCoFix,tProj) =
-    (r_reify "term", r_reify "tRel", r_reify "tVar", r_reify "tMeta", r_reify "tEvar",
+    (r_reify "term", r_reify "tRel", r_reify "tVar", r_reify "tEvar",
      r_reify "tSort", r_reify "tCast", r_reify "tProd", r_reify "tLambda",
      r_reify "tLetIn", r_reify "tApp", r_reify "tCase", r_reify "tFix",
      r_reify "tConstruct", r_reify "tConst", r_reify "tInd", r_reify "tCoFix", r_reify "tProj")
@@ -466,7 +466,6 @@ struct
 
   let mkRel i = Constr.mkApp (tRel, [| i |])
   let mkVar id = Constr.mkApp (tVar, [| id |])
-  let mkMeta i = Constr.mkApp (tMeta, [| i |])
   let mkEvar n args = Constr.mkApp (tEvar, [| n; to_coq_list tTerm (Array.to_list args) |])
   let mkSort s = Constr.mkApp (tSort, [| s |])
   let mkCast c k t = Constr.mkApp (tCast, [| c ; k ; t |])

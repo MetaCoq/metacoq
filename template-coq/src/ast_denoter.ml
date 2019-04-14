@@ -49,7 +49,6 @@ struct
   let quote_kn = quote_kn
   let mkRel = mkRel
   let mkVar = mkVar
-  let mkMeta = mkMeta
   let mkEvar = mkEvar
   let mkSort = mkSort
   let mkCast = mkCast
@@ -80,7 +79,6 @@ struct
     match tt with
     | Coq_tRel n -> ACoq_tRel n
     | Coq_tVar v -> ACoq_tVar v
-    | Coq_tMeta n -> ACoq_tMeta n
     | Coq_tEvar (x,l) -> ACoq_tEvar (x,l)
     | Coq_tSort u -> ACoq_tSort u
     | Coq_tCast (t,k,tt) -> ACoq_tCast (t,k,tt)

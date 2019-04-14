@@ -1,15 +1,14 @@
 --- templateToPCUIC.mli.orig	2018-12-13 13:20:58.000000000 +0100
 +++ templateToPCUIC.mli	2018-12-13 13:21:09.000000000 +0100
-@@ -16,246 +16,7 @@
- 
- type __ = Obj.t
+@@ -8,245 +8,7 @@
+ open Univ0
+ open Utils
  
 -module T :
 - sig
 -  type term = Ast0.term =
 -  | Coq_tRel of nat
 -  | Coq_tVar of ident
--  | Coq_tMeta of nat
 -  | Coq_tEvar of nat * term list
 -  | Coq_tSort of universe
 -  | Coq_tCast of term * cast_kind * term
@@ -26,28 +25,28 @@
 -  | Coq_tCoFix of term mfixpoint * nat
 -
 -  val term_rect :
--    (nat -> 'a1) -> (ident -> 'a1) -> (nat -> 'a1) -> (nat -> term list ->
--    'a1) -> (universe -> 'a1) -> (term -> 'a1 -> cast_kind -> term -> 'a1 ->
--    'a1) -> (name -> term -> 'a1 -> term -> 'a1 -> 'a1) -> (name -> term ->
--    'a1 -> term -> 'a1 -> 'a1) -> (name -> term -> 'a1 -> term -> 'a1 -> term
--    -> 'a1 -> 'a1) -> (term -> 'a1 -> term list -> 'a1) -> (kername ->
--    universe_instance -> 'a1) -> (inductive -> universe_instance -> 'a1) ->
--    (inductive -> nat -> universe_instance -> 'a1) -> ((inductive * nat) ->
--    term -> 'a1 -> term -> 'a1 -> (nat * term) list -> 'a1) -> (projection ->
--    term -> 'a1 -> 'a1) -> (term mfixpoint -> nat -> 'a1) -> (term mfixpoint
--    -> nat -> 'a1) -> term -> 'a1
+-    (nat -> 'a1) -> (ident -> 'a1) -> (nat -> term list -> 'a1) -> (universe
+-    -> 'a1) -> (term -> 'a1 -> cast_kind -> term -> 'a1 -> 'a1) -> (name ->
+-    term -> 'a1 -> term -> 'a1 -> 'a1) -> (name -> term -> 'a1 -> term -> 'a1
+-    -> 'a1) -> (name -> term -> 'a1 -> term -> 'a1 -> term -> 'a1 -> 'a1) ->
+-    (term -> 'a1 -> term list -> 'a1) -> (kername -> universe_instance ->
+-    'a1) -> (inductive -> universe_instance -> 'a1) -> (inductive -> nat ->
+-    universe_instance -> 'a1) -> ((inductive * nat) -> term -> 'a1 -> term ->
+-    'a1 -> (nat * term) list -> 'a1) -> (projection -> term -> 'a1 -> 'a1) ->
+-    (term mfixpoint -> nat -> 'a1) -> (term mfixpoint -> nat -> 'a1) -> term
+-    -> 'a1
 -
 -  val term_rec :
--    (nat -> 'a1) -> (ident -> 'a1) -> (nat -> 'a1) -> (nat -> term list ->
--    'a1) -> (universe -> 'a1) -> (term -> 'a1 -> cast_kind -> term -> 'a1 ->
--    'a1) -> (name -> term -> 'a1 -> term -> 'a1 -> 'a1) -> (name -> term ->
--    'a1 -> term -> 'a1 -> 'a1) -> (name -> term -> 'a1 -> term -> 'a1 -> term
--    -> 'a1 -> 'a1) -> (term -> 'a1 -> term list -> 'a1) -> (kername ->
--    universe_instance -> 'a1) -> (inductive -> universe_instance -> 'a1) ->
--    (inductive -> nat -> universe_instance -> 'a1) -> ((inductive * nat) ->
--    term -> 'a1 -> term -> 'a1 -> (nat * term) list -> 'a1) -> (projection ->
--    term -> 'a1 -> 'a1) -> (term mfixpoint -> nat -> 'a1) -> (term mfixpoint
--    -> nat -> 'a1) -> term -> 'a1
+-    (nat -> 'a1) -> (ident -> 'a1) -> (nat -> term list -> 'a1) -> (universe
+-    -> 'a1) -> (term -> 'a1 -> cast_kind -> term -> 'a1 -> 'a1) -> (name ->
+-    term -> 'a1 -> term -> 'a1 -> 'a1) -> (name -> term -> 'a1 -> term -> 'a1
+-    -> 'a1) -> (name -> term -> 'a1 -> term -> 'a1 -> term -> 'a1 -> 'a1) ->
+-    (term -> 'a1 -> term list -> 'a1) -> (kername -> universe_instance ->
+-    'a1) -> (inductive -> universe_instance -> 'a1) -> (inductive -> nat ->
+-    universe_instance -> 'a1) -> ((inductive * nat) -> term -> 'a1 -> term ->
+-    'a1 -> (nat * term) list -> 'a1) -> (projection -> term -> 'a1 -> 'a1) ->
+-    (term mfixpoint -> nat -> 'a1) -> (term mfixpoint -> nat -> 'a1) -> term
+-    -> 'a1
 -
 -  val mkApps : term -> term list -> term
 -

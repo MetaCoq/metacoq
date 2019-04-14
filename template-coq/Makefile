@@ -12,7 +12,9 @@ plugin: coq Makefile.plugin gen-src/.generate
 	(cd gen-src; ./to-lower.sh)
 	$(MAKE) -f Makefile.plugin
 
-gen-src/.generate: theories/Extraction.vo theories/Extraction.v
+theories/Extraction.vo: coq
+
+gen-src/.generate: theories/Extraction.vo
 	coqc -Q theories Template theories/Extraction.v
 	@ touch gen-src/.generate
 

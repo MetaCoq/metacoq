@@ -44,6 +44,7 @@ Inductive stack : Type :=
 | Fix (f : mfixpoint term) (n : nat) (args : list term) (π : stack)
 | Case (indn : inductive * nat) (p : term) (brs : list (nat * term)) (π : stack)
 | Prod_l (na : name) (B : term) (π : stack).
+(* | Prod_r (na : name) (A : term) (π : stack). *)
 
 Notation "'ε'" := (Empty).
 
@@ -59,6 +60,7 @@ Fixpoint zipc t stack :=
   | Fix f n args π => zipc (tApp (mkApps (tFix f n) args) t) π
   | Case indn pred brs π => zipc (tCase indn pred t brs) π
   | Prod_l na B π => zipc (tProd na t B) π
+  (* | Prod_r na A π => zipc (tProd na A t) π *)
   end.
 
 Definition zip (t : term * stack) := zipc (fst t) (snd t).
@@ -202,6 +204,7 @@ Section Normalisation.
     | Fix f n args ρ => stack_position ρ ++ [ app_r ]
     | Case indn pred brs ρ => stack_position ρ ++ [ case_c ]
     | Prod_l na B ρ => stack_position ρ ++ [ prod_l ]
+    (* | Prod_r na A ρ => stack_position ρ ++ [ prod_r ] *)
     end.
 
   Lemma stack_position_atpos :
@@ -490,7 +493,14 @@ Section Reduce.
     cbn. revert t u h.
     induction π ; intros u v h.
     all: try solve [ cbn ; apply IHπ ; constructor ; assumption ].
-    cbn. assumption.
+    - cbn. assumption.
+    (* - cbn. apply IHπ. constructor. *)
+      (* BIG PROBLEM Here.
+         We somehow have to fix this.
+         This will also appear in the Conversion.
+         We want to extend the context but cannot...
+         What should we do??
+       *)
   Qed.
 
   Corollary red_context :

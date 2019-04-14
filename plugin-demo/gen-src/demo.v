@@ -160,15 +160,46 @@ Definition genLensN (baseName : String.string) : TM unit :=
 Notation "<% x %>" := (ltac:(let p y := exact y in quote_term x p))
   (only parsing).
 Print definition_entry.
+
+Definition gr_to_kername (gr : global_reference) : kername :=
+  match gr with
+  | ConstRef kn => kn
+  | IndRef ind => ind.(inductive_mind)
+  | ConstructRef ind _ => ind.(inductive_mind)
+  end.
+
+Definition tmResolve (nm : String.string) : TM (option kername) :=
+  tmBind (tmAbout nm)
+         (fun gr =>
+            match gr with
+            | None => tmReturn None
+            | Some (ConstRef kn) => tmReturn (Some kn)
+            | Some (IndRef ind) => tmReturn (Some ind.(inductive_mind))
+            | Some (ConstructRef ind _) => tmReturn (Some ind.(inductive_mind))
+            end).
+
+Definition tmQuoteConstantR (nm : String.string) (bypass : bool) : TM _ :=
+  tmBind (tmAbout nm)
+         (fun gr =>
+            match gr with
+            | Some (ConstRef kn) =>
+              tmBind (tmQuoteConstant kn bypass)
+                     (fun x => tmReturn (Some x))
+            | _ => tmReturn None
+            end).
+
 Definition lookupPrint (baseName : String.string) : TM unit :=
-  tmBind (tmQuoteConstant baseName true)
+  tmBind (tmQuoteConstantR baseName true)
          (fun b =>
             match b with
-            | ParameterEntry _ => tmReturn tt
-            | DefinitionEntry d =>
-              tmPrint (definition_entry_body d)
-            end
-         ).
+            | None => tmFail "not a constant"
+            | Some b =>
+              match b with
+              | ParameterEntry _ => tmReturn tt
+              | DefinitionEntry d =>
+                tmPrint (definition_entry_body d)
+              end
+            end).
 
 Definition x :=
   tConstruct

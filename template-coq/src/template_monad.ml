@@ -39,8 +39,8 @@ sig
 
       (* quoting *)
     | TmQuote of bool * Constr.t  (* only Prop *)
-    | TmQuoteInd of Constr.t
-    | TmQuoteConst of Constr.t * Constr.t
+    | TmQuoteInd of Constr.t * bool (* strict *)
+    | TmQuoteConst of Constr.t * Constr.t * bool (* strict *)
     | TmQuoteUnivs
 
     | TmUnquote of Constr.t                 (* only Prop *)
@@ -169,8 +169,8 @@ struct
      r_template_monad_type_p "tmCurrentModPath",
 
      r_template_monad_type_p "tmQuoteInductive",
-     r_template_monad_type_p "tmQuoteUniverses",
      r_template_monad_type_p "tmQuoteConstant",
+     r_template_monad_type_p "tmQuoteUniverses",
 
      r_template_monad_type_p "tmInductive",
 
@@ -210,8 +210,8 @@ struct
 
       (* quoting *)
     | TmQuote of bool * Constr.t  (* only Prop *)
-    | TmQuoteInd of Constr.t
-    | TmQuoteConst of Constr.t * Constr.t
+    | TmQuoteInd of Constr.t * bool (* strict *)
+    | TmQuoteConst of Constr.t * Constr.t * bool (* strict *)
     | TmQuoteUnivs
 
     | TmUnquote of Constr.t                   (* only Prop *)
@@ -357,20 +357,31 @@ struct
         (TmQuote (true,trm), universes)
       | _ -> monad_failure "tmQuoteRec" 2
 
-    else if Globnames.eq_gr glob_ref ptmQuoteInductive || Globnames.eq_gr glob_ref ttmQuoteInductive then
+    else if Globnames.eq_gr glob_ref ptmQuoteInductive then
       match args with
       | name::[] ->
-        (TmQuoteInd name, universes)
+        (TmQuoteInd (name, false), universes)
       | _ -> monad_failure "tmQuoteInductive" 1
+    else if Globnames.eq_gr glob_ref ttmQuoteInductive then
+      match args with
+      | name::[] ->
+        (TmQuoteInd (name, true), universes)
+      | _ -> monad_failure "tmQuoteInductive" 1
+
     else if Globnames.eq_gr glob_ref ptmQuoteUniverses || Globnames.eq_gr glob_ref ttmQuoteUniverses then
       match args with
       | [] ->
         (TmQuoteUnivs, universes)
       | _ -> monad_failure "tmQuoteUniverses" 0
-    else if Globnames.eq_gr glob_ref ptmQuoteConstant || Globnames.eq_gr glob_ref ttmQuoteConstant then
+    else if Globnames.eq_gr glob_ref ptmQuoteConstant then
       match args with
       | name::bypass::[] ->
-        (TmQuoteConst (name, bypass), universes)
+        (TmQuoteConst (name, bypass, false), universes)
+      | _ -> monad_failure "tmQuoteConstant" 2
+    else if Globnames.eq_gr glob_ref ttmQuoteConstant then
+      match args with
+      | name::bypass::[] ->
+        (TmQuoteConst (name, bypass, true), universes)
       | _ -> monad_failure "tmQuoteConstant" 2
 
     else if Globnames.eq_gr glob_ref ptmMkInductive then

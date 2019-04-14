@@ -178,7 +178,7 @@ let rec interp_tm (t : 'a coq_TM) : 'a tm =
   | Coq_tmBind (c, k) -> tmBind (interp_tm c) (fun x -> interp_tm (k x))
   | Coq_tmPrint t -> Obj.magic (tmPrint (to_constr t))
   | Coq_tmMsg msg -> Obj.magic (tmMsg (to_string msg))
-  | Coq_tmFail err -> tmFail (to_string err)
+  | Coq_tmFail err -> tmFailString (to_string err)
   | Coq_tmEval (r,t) ->
     tmBind (tmEval (to_reduction_strategy r) (to_constr t))
            (fun x -> Obj.magic (tmOfConstr x))
@@ -215,8 +215,8 @@ let rec interp_tm (t : 'a coq_TM) : 'a tm =
   | Coq_tmQuoteUniverses ->
     tmMap (fun x -> failwith "tmQuoteUniverses") tmQuoteUniverses
   | Coq_tmQuoteConstant (kn, b) ->
-    tmMap (fun x -> Obj.magic (tmOfConstantEntry x))
-          (tmQuoteConstant (to_kername kn) b)
+    tmBind (tmQuoteConstant (to_kername kn) b)
+           (fun x -> Obj.magic (tmOfConstantEntry x))
   | Coq_tmInductive i ->
     tmMap (fun _ -> Obj.magic ()) (tmInductive (to_mie i))
   | Coq_tmExistingInstance k ->

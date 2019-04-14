@@ -74,3 +74,10 @@ Print thing.
 Run TemplateProgram
     (tmBind tmCurrentModPath
             tmMsg).
+
+
+Fail Run TemplateProgram (tmQuoteInductive "nat").
+Run TemplateProgram (tmQuoteInductive "Coq.Init.Datatypes.nat").
+
+Fail Run TemplateProgram (tmQuoteConstant "plus" true).
+Run TemplateProgram (tmQuoteConstant "Coq.Init.Nat.add" true).

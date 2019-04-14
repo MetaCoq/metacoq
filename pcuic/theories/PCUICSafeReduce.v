@@ -43,7 +43,7 @@ Inductive stack : Type :=
 | App (t : term) (π : stack)
 | Fix (f : mfixpoint term) (n : nat) (args : list term) (π : stack)
 | Case (indn : inductive * nat) (p : term) (brs : list (nat * term)) (π : stack)
-| Prod (na : name) (B : term) (π : stack).
+| Prod_l (na : name) (B : term) (π : stack).
 
 Notation "'ε'" := (Empty).
 
@@ -58,7 +58,7 @@ Fixpoint zipc t stack :=
   | App u π => zipc (tApp t u) π
   | Fix f n args π => zipc (tApp (mkApps (tFix f n) args) t) π
   | Case indn pred brs π => zipc (tCase indn pred t brs) π
-  | Prod na B π => zipc (tProd na t B) π
+  | Prod_l na B π => zipc (tProd na t B) π
   end.
 
 Definition zip (t : term * stack) := zipc (fst t) (snd t).
@@ -201,7 +201,7 @@ Section Normalisation.
     | App u ρ => stack_position ρ ++ [ app_l ]
     | Fix f n args ρ => stack_position ρ ++ [ app_r ]
     | Case indn pred brs ρ => stack_position ρ ++ [ case_c ]
-    | Prod na B ρ => stack_position ρ ++ [ prod_l ]
+    | Prod_l na B ρ => stack_position ρ ++ [ prod_l ]
     end.
 
   Lemma stack_position_atpos :

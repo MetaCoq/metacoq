@@ -611,7 +611,7 @@ Section Conversion.
     | App u ρ => App u (stack_cat ρ θ)
     | Fix f n args ρ => Fix f n args (stack_cat ρ θ)
     | Case indn p brs ρ => Case indn p brs (stack_cat ρ θ)
-    | Prod na B ρ => Prod na B (stack_cat ρ θ)
+    | Prod_l na B ρ => Prod_l na B (stack_cat ρ θ)
     end.
 
   Notation "ρ +++ θ" := (stack_cat ρ θ) (at level 20).
@@ -1107,7 +1107,7 @@ Section Conversion.
     } ;
 
     _isconv_prog Γ leq (tProd na A1 B1) π1 h1 (tProd na' A2 B2) π2 h2 aux
-    with isconv_red_raw Γ Conv A1 (Prod na B1 π1) A2 (Prod na' B2 π2) aux := {
+    with isconv_red_raw Γ Conv A1 (Prod_l na B1 π1) A2 (Prod_l na' B2 π2) aux := {
     | @exist true h := isconv_red (Γ,, vass na A1) leq B1 ε B2 ε aux ;
     | @exist false _ := no
     } ;

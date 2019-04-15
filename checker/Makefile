@@ -9,7 +9,7 @@ Makefile.coq: _CoqProject gen-src get-mc
 gen-src:
 	$(MAKE) -C gen-src
 
-get-mc:
+get-mc: gen-src
 	cp -r $(TEMPLATE_LIB)/gen-src/to-lower.sh src
 	(cd src; ./to-lower.sh)
 	cp -r $(TEMPLATE_LIB)/gen-src/*.ml $(TEMPLATE_LIB)/gen-src/*.mli src
@@ -19,5 +19,4 @@ get-mc:
 clean:
 	$(MAKE) -f Makefile.coq clean
 
-sources:
-	$(MAKE) -C gen-src
+sources: gen-src

@@ -9,8 +9,6 @@ Definition showoff : TM unit :=
   tmMsg "running from an extracted plugin!".
 *)
 
-Require Import ExtLib.Structures.Functor.
-
 Set Primitive Projections.
 
 Record Lens (a b c d : Type) : Type :=

@@ -43,8 +43,8 @@ Inductive stack : Type :=
 | App (t : term) (π : stack)
 | Fix (f : mfixpoint term) (n : nat) (args : list term) (π : stack)
 | Case (indn : inductive * nat) (p : term) (brs : list (nat * term)) (π : stack)
-| Prod_l (na : name) (B : term) (π : stack).
-(* | Prod_r (na : name) (A : term) (π : stack). *)
+| Prod_l (na : name) (B : term) (π : stack)
+| Prod_r (na : name) (A : term) (π : stack).
 
 Notation "'ε'" := (Empty).
 
@@ -60,7 +60,7 @@ Fixpoint zipc t stack :=
   | Fix f n args π => zipc (tApp (mkApps (tFix f n) args) t) π
   | Case indn pred brs π => zipc (tCase indn pred t brs) π
   | Prod_l na B π => zipc (tProd na t B) π
-  (* | Prod_r na A π => zipc (tProd na A t) π *)
+  | Prod_r na A π => zipc (tProd na A t) π
   end.
 
 Definition zip (t : term * stack) := zipc (fst t) (snd t).
@@ -179,6 +179,26 @@ Proof.
     + intros H0 h. discriminate.
 Qed.
 
+Fixpoint stack_context π : context :=
+  match π with
+  | ε => []
+  | App u π => stack_context π
+  | Fix f n args π => stack_context π
+  | Case indn pred brs π => stack_context π
+  | Prod_l na B π => stack_context π
+  | Prod_r na A π => stack_context π ,, vass na A
+  end.
+
+Lemma stack_context_appstack :
+  forall {π args},
+    stack_context (appstack args π) = stack_context π.
+Proof.
+  intros π args.
+  revert π. induction args ; intros π.
+  - reflexivity.
+  - simpl. apply IHargs.
+Qed.
+
 (* We assume normalisation of the reduction.
 
    We state is as well-foundedness of the reduction.
@@ -219,7 +239,7 @@ Section Normalisation.
     | Fix f n args ρ => stack_position ρ ++ [ app_r ]
     | Case indn pred brs ρ => stack_position ρ ++ [ case_c ]
     | Prod_l na B ρ => stack_position ρ ++ [ prod_l ]
-    (* | Prod_r na A ρ => stack_position ρ ++ [ prod_r ] *)
+    | Prod_r na A ρ => stack_position ρ ++ [ prod_r ]
     end.
 
   Lemma stack_position_atpos :
@@ -500,30 +520,23 @@ Section Reduce.
   (* Notation coe h t := (eq_rec_r (fun x => position x) t h). *)
 
   Lemma red1_context :
-    forall Σ Γ t u π,
-      red1 Σ Γ t u ->
+    forall Γ t u π,
+      red1 Σ (Γ ,,, stack_context π) t u ->
       red1 Σ Γ (zip (t, π)) (zip (u, π)).
   Proof.
-    intros Σ' Γ t u π h.
+    intros Γ t u π h.
     cbn. revert t u h.
     induction π ; intros u v h.
     all: try solve [ cbn ; apply IHπ ; constructor ; assumption ].
-    - cbn. assumption.
-    (* - cbn. apply IHπ. constructor. *)
-      (* BIG PROBLEM Here.
-         We somehow have to fix this.
-         This will also appear in the Conversion.
-         We want to extend the context but cannot...
-         What should we do??
-       *)
+    cbn. assumption.
   Qed.
 
   Corollary red_context :
-    forall Σ Γ t u stack,
-      red Σ Γ t u ->
-      red Σ Γ (zip (t, stack)) (zip (u, stack)).
+    forall Γ t u π,
+      red Σ (Γ ,,, stack_context π) t u ->
+      red Σ Γ (zip (t, π)) (zip (u, π)).
   Proof.
-    intros Σ' Γ t u stack h. revert stack. induction h ; intro stack.
+    intros Γ t u π h. induction h.
     - constructor.
     - econstructor.
       + eapply IHh.
@@ -531,11 +544,11 @@ Section Reduce.
   Qed.
 
   Corollary cored_context :
-    forall Σ Γ t u stack,
-      cored Σ Γ t u ->
-      cored Σ Γ (zip (t, stack)) (zip (u, stack)).
+    forall Γ t u π,
+      cored Σ (Γ ,,, stack_context π) t u ->
+      cored Σ Γ (zip (t, π)) (zip (u, π)).
   Proof.
-    intros Σ' Γ t u stack h. revert stack. induction h ; intro stack.
+    intros Γ t u π h. induction h.
     - constructor. eapply red1_context. assumption.
     - eapply cored_trans.
       + eapply IHh.
@@ -685,14 +698,14 @@ Section Reduce.
   Qed.
 
   Lemma welltyped_context :
-    forall Σ Γ t,
+    forall Γ t,
       welltyped Σ Γ (zip t) ->
-      welltyped Σ Γ (fst t).
+      welltyped Σ (Γ ,,, stack_context (snd t)) (fst t).
   Proof.
-    intros Σ' Γ [t π] h.
-    destruct h as [A h].
-    revert Γ t A h.
-    induction π ; intros Γ u A h.
+    intros Γ [t π] h.
+    destruct h as [T h].
+    revert Γ t T h.
+    induction π ; intros Γ u T h.
     - cbn. cbn in h. eexists. eassumption.
     - cbn. cbn in h. cbn in IHπ. apply IHπ in h.
       destruct h as [B h].
@@ -708,7 +721,11 @@ Section Reduce.
       destruct (weak_inversion_Case h) as [? [? [?]]].
       eexists. eassumption.
     - cbn. cbn in h. cbn in IHπ. apply IHπ in h.
-      destruct h as [T h].
+      destruct h as [T' h].
+      destruct (inversion_Prod h) as [s1 [s2 [[?] [[?] [?]]]]].
+      eexists. eassumption.
+    - cbn. cbn in h. cbn in IHπ. apply IHπ in h.
+      destruct h as [T' h].
       destruct (inversion_Prod h) as [s1 [s2 [[?] [[?] [?]]]]].
       eexists. eassumption.
   Qed.
@@ -810,7 +827,7 @@ Section Reduce.
     : { t' : term * stack | Req (fst Σ) Γ t' (t,π) /\ Pr t' π /\ Pr' t' } :=
 
     _reduce_stack Γ (tRel c) π h reduce with RedFlags.zeta flags := {
-    | true with inspect (nth_error Γ c) := {
+    | true with inspect (nth_error (Γ ,,, stack_context π) c) := {
       | @exist None eq := False_rect _ _ ;
       | @exist (Some d) eq with inspect d.(decl_body) := {
         | @exist None _ := give (tRel c) π ;
@@ -883,10 +900,12 @@ Section Reduce.
     symmetry. assumption.
   Qed.
   Next Obligation.
-    pose proof (welltyped_context _ _ _ h) as hc.
+    pose proof (welltyped_context _ _ h) as hc.
     simpl in hc.
     (* Should be a lemma! *)
     clear - eq hc. revert c hc eq.
+    generalize (Γ ,,, stack_context π) as Δ. clear Γ π.
+    intro Γ.
     induction Γ ; intros c hc eq.
     - destruct hc as [A h].
       destruct (inversion_Rel h) as [? [[?] [e ?]]].

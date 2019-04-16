@@ -197,6 +197,21 @@ Section Normalisation.
 
   Set Equations With UIP.
 
+  (* IDEA Perhaps we can handle Prod_r if we were to add stack_context.
+
+     red1_context would update to this.
+       Lemma red1_context :
+    forall Σ Γ t u π,
+      red1 Σ (Γ ,,, stack_context π) t u ->
+      red1 Σ Γ (zip (t, π)) (zip (u, π)).
+
+      This is painful as it would probably require some change in reduce_stack.
+      That would mean we could also see stacks a copositions and put them in
+      their own file or Position.
+
+      Careful, stack_context is reversed (rev_map).
+   *)
+
   Fixpoint stack_position π : position :=
     match π with
     | ε => []

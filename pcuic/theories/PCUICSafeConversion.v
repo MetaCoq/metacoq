@@ -174,7 +174,7 @@ Section Conversion.
 
   Lemma cored_zipx :
     forall Γ u v π,
-      cored Σ Γ u v ->
+      cored Σ (Γ ,,, stack_context π) u v ->
       cored Σ [] (zipx Γ u π) (zipx Γ v π).
   Proof.
     intros Γ u v π h.
@@ -612,6 +612,7 @@ Section Conversion.
     | Fix f n args ρ => Fix f n args (stack_cat ρ θ)
     | Case indn p brs ρ => Case indn p brs (stack_cat ρ θ)
     | Prod_l na B ρ => Prod_l na B (stack_cat ρ θ)
+    | Prod_r na A ρ => Prod_r na A (stack_cat ρ θ)
     end.
 
   Notation "ρ +++ θ" := (stack_cat ρ θ) (at level 20).
@@ -816,6 +817,11 @@ Section Conversion.
         rewrite zipc_stack_cat.
         repeat zip fold.
         eapply cored_context. assumption.
+        (* TODO Need stack_context around zipp (in welltyped hyps and
+           conversion result).
+           Of course we also need to add Prod_r around the term in Prod
+           recursive call.
+         *)
       + destruct y' as [q hq].
         cbn in H0. inversion H0. (* Why is noconf failing at this point? *)
         subst.

@@ -71,93 +71,6 @@ Section Conversion.
 
   Set Equations With UIP.
 
-  (* Before we were zipping terms and stacks.
-     Now, we even add the context into the mix.
-   *)
-  Definition zipx (Γ : context) (t : term) (π : stack) : term :=
-    it_mkLambda_or_LetIn Γ (zipc t π).
-
-  Fixpoint context_position Γ : position :=
-    match Γ with
-    | [] => []
-    | {| decl_name := na ; decl_body := None ; decl_type := A |} :: Γ =>
-      context_position Γ ++ [ lam_tm ]
-    | {| decl_name := na ; decl_body := Some b ; decl_type := A |} :: Γ =>
-      context_position Γ ++ [ let_in ]
-    end.
-
-  Lemma context_position_atpos :
-    forall Γ t, atpos (it_mkLambda_or_LetIn Γ t) (context_position Γ) = t.
-  Proof.
-    intros Γ t. revert t. induction Γ as [| d Γ ih ] ; intro t.
-    - reflexivity.
-    - destruct d as [na [b|] A].
-      + simpl. rewrite poscat_atpos. rewrite ih. reflexivity.
-      + simpl. rewrite poscat_atpos. rewrite ih. reflexivity.
-  Qed.
-
-  Lemma context_position_valid :
-    forall Γ t, validpos (it_mkLambda_or_LetIn Γ t) (context_position Γ).
-  Proof.
-    intros Γ t. revert t. induction Γ as [| [na [b|] A] Γ ih ] ; intro t.
-    - reflexivity.
-    - simpl. eapply poscat_valid.
-      + eapply ih.
-      + rewrite context_position_atpos. reflexivity.
-    - simpl. eapply poscat_valid.
-      + eapply ih.
-      + rewrite context_position_atpos. reflexivity.
-  Qed.
-
-  Definition xposition Γ π : position :=
-    context_position Γ ++ stack_position π.
-
-  Lemma xposition_atpos :
-    forall Γ t π, atpos (zipx Γ t π) (xposition Γ π) = t.
-  Proof.
-    intros Γ t π. unfold xposition.
-    rewrite poscat_atpos.
-    rewrite context_position_atpos.
-    apply stack_position_atpos.
-  Qed.
-
-  Lemma xposition_valid :
-    forall Γ t π, validpos (zipx Γ t π) (xposition Γ π).
-  Proof.
-    intros Γ t π. unfold xposition.
-    eapply poscat_valid.
-    - apply context_position_valid.
-    - rewrite context_position_atpos.
-      apply stack_position_valid.
-  Qed.
-
-  Definition xpos Γ t π : pos (zipx Γ t π) :=
-    exist (xposition Γ π) (xposition_valid Γ t π).
-
-  Lemma positionR_stack_pos_xpos :
-    forall Γ π1 π2,
-      positionR (stack_position π1) (stack_position π2) ->
-      positionR (xposition Γ π1) (xposition Γ π2).
-  Proof.
-    intros Γ π1 π2 h.
-    unfold xposition.
-    eapply positionR_poscat. assumption.
-  Qed.
-
-  Lemma red1_it_mkLambda_or_LetIn :
-    forall Γ u v,
-      red1 Σ Γ u v ->
-      red1 Σ [] (it_mkLambda_or_LetIn Γ u)
-              (it_mkLambda_or_LetIn Γ v).
-  Proof.
-    intros Γ u v h.
-    revert u v h.
-    induction Γ as [| [na [b|] A] Γ ih ] ; intros u v h.
-    - cbn. assumption.
-    - simpl. eapply ih. cbn. constructor. assumption.
-    - simpl. eapply ih. cbn. constructor. assumption.
-  Qed.
-
   Lemma cored_it_mkLambda_or_LetIn :
     forall Γ u v,
       cored Σ Γ u v ->
@@ -471,14 +384,6 @@ Section Conversion.
   Definition lexprod := Subterm.lexprod.
   Arguments lexprod {_ _} _ _ _ _.
 
-  (* Unusable without primitive projections *)
-  (* Definition R (x y : state * context * term * stack * stack) := *)
-  (*   let '(s, Γ, u, π1, π2) := x in *)
-  (*   let '(r, Δ, v, θ1, θ2) := y in *)
-  (*   dlexprod (cored Σ Γ) (fun _ => dumbR) *)
-  (*            (zipc u π1 ; x) *)
-  (*            (zipc v θ1 ; y). *)
-
   Definition ctx (x : pack) :=
     let '(s, Γ, u, π1, π2) := x in Γ.
 
@@ -493,21 +398,6 @@ Section Conversion.
 
   Definition st (x : pack) :=
     let '(s, Γ, u, π1, π2) := x in s.
-
-  (* Definition ecored u v := *)
-  (*   exists Γ, cored Σ Γ u v. *)
-
-  (* Lemma ecored_Acc : *)
-  (*   forall u, *)
-  (*     (exists Γ, welltyped Σ Γ u) -> *)
-  (*     Acc ecored u. *)
-  (* Proof. *)
-  (*   intros u [Γ h]. *)
-  (*   pose proof (normalisation _ _ _ h) as acc. *)
-  (*   clear - acc. *)
-  (*   induction acc. *)
-  (*   constructor. intros y h. *)
-  (*   eapply H0. *)
 
   Definition R_aux :=
     dlexprod (cored Σ []) (fun t => lexprod (@posR t) stateR).
@@ -548,26 +438,6 @@ Section Conversion.
 
   Notation coe P h t := (eq_rect_r P t h).
 
-  (* Lemma right_dlex_eq : *)
-  (*   forall {A B} leA (leB : forall x : A, B x -> B x -> Prop) a1 a2 b1 b2 (e : a1 = a2), *)
-  (*     leB a1 b1 (coe B e b2) -> *)
-  (*     dlexprod leA leB (a1 ; b1) (a2 ; b2). *)
-  (* Proof. *)
-  (*   intros A B leA leB a1 a2 b1 b2 e h. *)
-  (*   subst. cbn in h. *)
-  (*   right. assumption. *)
-  (* Qed. *)
-
-  (* Lemma right_lex_eq : *)
-  (*   forall {A B} leA (leB : B -> B -> Prop) a1 a2 b1 b2, *)
-  (*     a1 = a2 -> *)
-  (*     leB b1 b2 -> *)
-  (*     @lexprod A B leA leB (a1, b1) (a2, b2). *)
-  (* Proof. *)
-  (*   intros A B leA leB a1 a2 b1 b2 e h. *)
-  (*   subst. right. assumption. *)
-  (* Qed. *)
-
   Lemma R_posR :
     forall t1 t2 (p1 : pos t1) (p2 : pos t2) s1 s2 (e : t1 = t2),
       posR p1 (coe _ e p2) ->
@@ -598,85 +468,6 @@ Section Conversion.
     cbn in e2. subst.
     pose proof (uip hp1 hp2). subst.
     right. right. assumption.
-  Qed.
-
-  Definition zipp t π :=
-    let '(args, ρ) := decompose_stack π in
-    mkApps t args.
-
-  (* Maybe a stack should be a list! *)
-  Fixpoint stack_cat (ρ θ : stack) : stack :=
-    match ρ with
-    | Empty => θ
-    | App u ρ => App u (stack_cat ρ θ)
-    | Fix f n args ρ => Fix f n args (stack_cat ρ θ)
-    | Case indn p brs ρ => Case indn p brs (stack_cat ρ θ)
-    | Prod_l na B ρ => Prod_l na B (stack_cat ρ θ)
-    | Prod_r na A ρ => Prod_r na A (stack_cat ρ θ)
-    end.
-
-  Notation "ρ +++ θ" := (stack_cat ρ θ) (at level 20).
-
-  Lemma stack_cat_appstack :
-    forall args ρ,
-      appstack args ε +++ ρ = appstack args ρ.
-  Proof.
-    intros args ρ.
-    revert ρ. induction args ; intros ρ.
-    - reflexivity.
-    - simpl. rewrite IHargs. reflexivity.
-  Qed.
-
-  Lemma decompose_stack_twice :
-    forall π args ρ,
-      decompose_stack π = (args, ρ) ->
-      decompose_stack ρ = ([], ρ).
-  Proof.
-    intros π args ρ e.
-    pose proof (decompose_stack_eq _ _ _ e). subst.
-    rewrite decompose_stack_appstack in e.
-    case_eq (decompose_stack ρ). intros l θ eq.
-    rewrite eq in e. cbn in e. inversion e. subst.
-    f_equal. clear - H0.
-    revert l H0.
-    induction args ; intros l h.
-    - assumption.
-    - apply IHargs. cbn in h. inversion h. rewrite H0. assumption.
-  Qed.
-
-  Lemma zipc_stack_cat :
-    forall t π ρ,
-      zipc t (π +++ ρ) = zipc (zipc t π) ρ.
-  Proof.
-    intros t π ρ. revert t ρ.
-    induction π ; intros u ρ.
-    all: (simpl ; rewrite ?IHπ ; reflexivity).
-  Qed.
-
-  Lemma stack_cat_empty :
-    forall ρ, ρ +++ ε = ρ.
-  Proof.
-    intros ρ. induction ρ.
-    all: (simpl ; rewrite ?IHρ ; reflexivity).
-  Qed.
-
-  Lemma stack_position_stack_cat :
-    forall π ρ,
-      stack_position (ρ +++ π) =
-      stack_position π ++ stack_position ρ.
-  Proof.
-    intros π ρ. revert π.
-    induction ρ ; intros π.
-    all: try (simpl ; rewrite IHρ ; rewrite app_assoc ; reflexivity).
-    simpl. rewrite app_nil_r. reflexivity.
-  Qed.
-
-  Lemma stack_context_stack_cat :
-    forall π ρ,
-      stack_context (ρ +++ π) = stack_context π ,,, stack_context ρ.
-  Proof.
-    intros π ρ. revert π. induction ρ ; intros π.
-    all: try (cbn ; rewrite ?IHρ ; reflexivity).
   Qed.
 
   Definition Ret s Γ t π π' :=
@@ -917,6 +708,7 @@ Section Conversion.
            We would do best to zip the stack_context around the term for
            conclusion.
          *)
+        fail "We need to do better!".
         assumption.
   Qed.
 

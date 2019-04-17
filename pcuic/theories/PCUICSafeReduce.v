@@ -38,167 +38,6 @@ End RedFlags.
 
 Notation "∥ T ∥" := (squash T) (at level 10).
 
-Inductive stack : Type :=
-| Empty
-| App (t : term) (π : stack)
-| Fix (f : mfixpoint term) (n : nat) (args : list term) (π : stack)
-| Case (indn : inductive * nat) (p : term) (brs : list (nat * term)) (π : stack)
-| Prod_l (na : name) (B : term) (π : stack)
-| Prod_r (na : name) (A : term) (π : stack).
-
-Notation "'ε'" := (Empty).
-
-Derive NoConfusion NoConfusionHom EqDec for stack.
-
-Instance reflect_stack : ReflectEq stack :=
-  let h := EqDec_ReflectEq stack in _.
-
-Fixpoint zipc t stack :=
-  match stack with
-  | ε => t
-  | App u π => zipc (tApp t u) π
-  | Fix f n args π => zipc (tApp (mkApps (tFix f n) args) t) π
-  | Case indn pred brs π => zipc (tCase indn pred t brs) π
-  | Prod_l na B π => zipc (tProd na t B) π
-  | Prod_r na A π => zipc (tProd na A t) π
-  end.
-
-Definition zip (t : term * stack) := zipc (fst t) (snd t).
-
-(* TODO Tail-rec version *)
-(* Get the arguments out of a stack *)
-Fixpoint decompose_stack π :=
-  match π with
-  | App u π => let '(l,π) := decompose_stack π in (u :: l, π)
-  | _ => ([], π)
-  end.
-
-(* TODO Tail-rec *)
-Fixpoint appstack l π :=
-  match l with
-  | u :: l => App u (appstack l π)
-  | [] => π
-  end.
-
-Lemma decompose_stack_eq :
-  forall π l ρ,
-    decompose_stack π = (l, ρ) ->
-    π = appstack l ρ.
-Proof.
-  intros π l ρ eq.
-  revert l ρ eq. induction π ; intros l ρ eq.
-  all: try solve [ cbn in eq ; inversion eq ; subst ; reflexivity ].
-  destruct l.
-  - cbn in eq. revert eq. case_eq (decompose_stack π).
-    intros. inversion eq.
-  - cbn in eq. revert eq. case_eq (decompose_stack π).
-    intros l0 s H0 eq. inversion eq. subst.
-    cbn. f_equal. eapply IHπ. assumption.
-Qed.
-
-Lemma decompose_stack_not_app :
-  forall π l u ρ,
-    decompose_stack π = (l, App u ρ) -> False.
-Proof.
-  intros π l u ρ eq.
-  revert u l ρ eq. induction π ; intros u l ρ eq.
-  all: try solve [ cbn in eq ; inversion eq ].
-  cbn in eq. revert eq. case_eq (decompose_stack π).
-  intros l0 s H0 eq. inversion eq. subst.
-  eapply IHπ. eassumption.
-Qed.
-
-Lemma zipc_appstack :
-  forall {t args ρ},
-    zipc t (appstack args ρ) = zipc (mkApps t args) ρ.
-Proof.
-  intros t args ρ. revert t ρ. induction args ; intros t ρ.
-  - cbn. reflexivity.
-  - cbn. rewrite IHargs. reflexivity.
-Qed.
-
-Lemma decompose_stack_appstack :
-  forall l ρ,
-    decompose_stack (appstack l ρ) =
-    (l ++ fst (decompose_stack ρ), snd (decompose_stack ρ)).
-Proof.
-  intros l. induction l ; intros ρ.
-  - cbn. destruct (decompose_stack ρ). reflexivity.
-  - cbn. rewrite IHl. reflexivity.
-Qed.
-
-Fixpoint decompose_stack_at π n : option (list term * term * stack) :=
-  match π with
-  | App u π =>
-    match n with
-    | 0 => ret ([], u, π)
-    | S n =>
-      r <- decompose_stack_at π n ;;
-        let '(l, v, π) := r in
-        ret (u :: l, v, π)
-    end
-  | _ => None
-  end.
-
-Lemma decompose_stack_at_eq :
-  forall π n l u ρ,
-    decompose_stack_at π n = Some (l,u,ρ) ->
-    π = appstack l (App u ρ).
-Proof.
-  intros π n l u ρ h. revert n l u ρ h.
-  induction π ; intros m l u ρ h.
-  all: try solve [ cbn in h ; discriminate ].
-  destruct m.
-  - cbn in h. inversion h. subst.
-    cbn. reflexivity.
-  - cbn in h. revert h.
-    case_eq (decompose_stack_at π m).
-    + intros [[l' v] ρ'] e1 e2.
-      inversion e2. subst. clear e2.
-      specialize IHπ with (1 := e1). subst.
-      cbn. reflexivity.
-    + intros H0 h. discriminate.
-Qed.
-
-Lemma decompose_stack_at_length :
-  forall π n l u ρ,
-    decompose_stack_at π n = Some (l,u,ρ) ->
-    #|l| = n.
-Proof.
-  intros π n l u ρ h. revert n l u ρ h.
-  induction π ; intros m l u ρ h.
-  all: try solve [ cbn in h ; discriminate ].
-  destruct m.
-  - cbn in h. inversion h. reflexivity.
-  - cbn in h. revert h.
-    case_eq (decompose_stack_at π m).
-    + intros [[l' v] ρ'] e1 e2.
-      inversion e2. subst. clear e2.
-      specialize IHπ with (1 := e1). subst.
-      cbn. reflexivity.
-    + intros H0 h. discriminate.
-Qed.
-
-Fixpoint stack_context π : context :=
-  match π with
-  | ε => []
-  | App u π => stack_context π
-  | Fix f n args π => stack_context π
-  | Case indn pred brs π => stack_context π
-  | Prod_l na B π => stack_context π
-  | Prod_r na A π => stack_context π ,, vass na A
-  end.
-
-Lemma stack_context_appstack :
-  forall {π args},
-    stack_context (appstack args π) = stack_context π.
-Proof.
-  intros π args.
-  revert π. induction args ; intros π.
-  - reflexivity.
-  - simpl. apply IHargs.
-Qed.
-
 (* We assume normalisation of the reduction.
 
    We state is as well-foundedness of the reduction.
@@ -216,82 +55,6 @@ Section Normalisation.
   Admitted.
 
   Set Equations With UIP.
-
-  (* IDEA Perhaps we can handle Prod_r if we were to add stack_context.
-
-     red1_context would update to this.
-       Lemma red1_context :
-    forall Σ Γ t u π,
-      red1 Σ (Γ ,,, stack_context π) t u ->
-      red1 Σ Γ (zip (t, π)) (zip (u, π)).
-
-      This is painful as it would probably require some change in reduce_stack.
-      That would mean we could also see stacks a copositions and put them in
-      their own file or Position.
-
-      Careful, stack_context is reversed (rev_map).
-   *)
-
-  Fixpoint stack_position π : position :=
-    match π with
-    | ε => []
-    | App u ρ => stack_position ρ ++ [ app_l ]
-    | Fix f n args ρ => stack_position ρ ++ [ app_r ]
-    | Case indn pred brs ρ => stack_position ρ ++ [ case_c ]
-    | Prod_l na B ρ => stack_position ρ ++ [ prod_l ]
-    | Prod_r na A ρ => stack_position ρ ++ [ prod_r ]
-    end.
-
-  Lemma stack_position_atpos :
-    forall t π, atpos (zipc t π) (stack_position π) = t.
-  Proof.
-    intros t π. revert t. induction π ; intros u.
-    all: solve [ cbn ; rewrite ?poscat_atpos, ?IHπ ; reflexivity ].
-  Qed.
-
-  Lemma stack_position_valid :
-    forall t π, validpos (zipc t π) (stack_position π).
-  Proof.
-    intros t π. revert t. induction π ; intros u.
-    all: try solve [
-      cbn ; eapply poscat_valid ; [
-        eapply IHπ
-      | rewrite stack_position_atpos ; reflexivity
-      ]
-    ].
-    reflexivity.
-  Qed.
-
-  Definition stack_pos t π : pos (zipc t π) :=
-    exist (stack_position π) (stack_position_valid t π).
-
-  Fixpoint list_make {A} n x : list A :=
-    match n with
-    | 0 => []
-    | S n => x :: list_make n x
-    end.
-
-  Lemma list_make_app_r :
-    forall A n (x : A),
-      x :: list_make n x = list_make n x ++ [x].
-  Proof.
-    intros A n x. revert x.
-    induction n ; intro x.
-    - reflexivity.
-    - cbn. rewrite IHn. reflexivity.
-  Qed.
-
-  Lemma stack_position_appstack :
-    forall args ρ,
-      stack_position (appstack args ρ) =
-      stack_position ρ ++ list_make #|args| app_l.
-  Proof.
-    intros args ρ. revert ρ.
-    induction args as [| u args ih ] ; intros ρ.
-    - cbn. rewrite app_nil_r. reflexivity.
-    - cbn. rewrite ih. rewrite <- app_assoc.
-      rewrite list_make_app_r. reflexivity.
-  Qed.
 
   (* red is the reflexive transitive closure of one-step reduction and thus
      can't be used as well order. We thus define the transitive closure,
@@ -517,32 +280,6 @@ Section Reduce.
   Derive NoConfusion NoConfusionHom for option.
   Derive NoConfusion NoConfusionHom for context_decl.
 
-  (* Notation coe h t := (eq_rec_r (fun x => position x) t h). *)
-
-  Lemma red1_context :
-    forall Γ t u π,
-      red1 Σ (Γ ,,, stack_context π) t u ->
-      red1 Σ Γ (zip (t, π)) (zip (u, π)).
-  Proof.
-    intros Γ t u π h.
-    cbn. revert t u h.
-    induction π ; intros u v h.
-    all: try solve [ cbn ; apply IHπ ; constructor ; assumption ].
-    cbn. assumption.
-  Qed.
-
-  Corollary red_context :
-    forall Γ t u π,
-      red Σ (Γ ,,, stack_context π) t u ->
-      red Σ Γ (zip (t, π)) (zip (u, π)).
-  Proof.
-    intros Γ t u π h. induction h.
-    - constructor.
-    - econstructor.
-      + eapply IHh.
-      + eapply red1_context. assumption.
-  Qed.
-
   Corollary cored_context :
     forall Γ t u π,
       cored Σ (Γ ,,, stack_context π) t u ->
@@ -745,15 +482,6 @@ Section Reduce.
   (*       * eapply IHargs'. cbn in H0. *)
   Admitted.
 
-  Lemma zipc_inj :
-    forall u v π, zipc u π = zipc v π -> u = v.
-  Proof.
-    intros u v π e. revert u v e.
-    induction π ; intros u v e.
-    all: try solve [ cbn in e ; apply IHπ in e ; inversion e ; reflexivity ].
-    cbn in e. assumption.
-  Qed.
-
   Notation "( x ; y )" := (existT _ x y).
 
   Definition inspect {A} (x : A) : { y : A | y = x } := exist x eq_refl.
@@ -762,12 +490,6 @@ Section Reduce.
     snd (decompose_stack π) = snd (decompose_stack (snd t')).
 
   Notation givePr := (_) (only parsing).
-
-  Definition isStackApp π :=
-    match π with
-    | App _ _ => true
-    | _ => false
-    end.
 
   Definition Pr' (t' : term * stack) :=
     isApp (fst t') = false /\

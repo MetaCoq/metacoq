@@ -675,21 +675,24 @@ Section Conversion.
     match s with
     | Reduction t'
     | Term t' =>
-      forall leq, { b : bool | if b then conv leq Σ Γ (zipp t π) (zipp t' π') else True }
+      forall leq, { b : bool | if b then conv leq Σ (Γ ,,, stack_context π) (zipp t π) (zipp t' π') else True }
     | Args =>
-      { b : bool | if b then ∥ Σ ;;; Γ |- zipp t π = zipp t π' ∥ else True }
+      { b : bool | if b then ∥ Σ ;;; Γ ,,, stack_context π |- zipp t π = zipp t π' ∥ else True }
     end.
+
+  Notation wtp Γ t π :=
+    (welltyped Σ (Γ ,,, stack_context π) (zipp t π)) (only parsing).
 
   Definition wts Γ s t π :=
     match s with
-    | Reduction t' => welltyped Σ Γ (zipp t' π)
-    | Term t' => welltyped Σ Γ (zipp t' π)
-    | Args => welltyped Σ Γ (zipp t π)
+    | Reduction t'
+    | Term t' => wtp Γ t' π
+    | Args => wtp Γ t π
     end.
 
   Definition Aux s Γ t π1 π2 :=
      forall s' Γ' t' π1' π2',
-       welltyped Σ Γ' (zipp t' π1') ->
+       wtp Γ' t' π1' ->
        wts Γ' s' t' π2' ->
        R (s', Γ', t', π1', π2') (s, Γ, t, π1, π2) ->
        Ret s' Γ' t' π1' π2'.
@@ -714,18 +717,18 @@ Section Conversion.
     (repack (isconv_args_raw Γ t π1 π2 aux)) (only parsing).
 
   Equations(noeqns) _isconv_red (Γ : context) (leq : conv_pb)
-            (t1 : term) (π1 : stack) (h1 : welltyped Σ Γ (zipp t1 π1))
-            (t2 : term) (π2 : stack) (h2 : welltyped Σ Γ (zipp t2 π2))
+            (t1 : term) (π1 : stack) (h1 : wtp Γ t1 π1)
+            (t2 : term) (π2 : stack) (h2 : wtp Γ t2 π2)
             (aux : Aux (Reduction t2) Γ t1 π1 π2)
-    : { b : bool | if b then conv leq Σ Γ (zipp t1 π1) (zipp t2 π2) else True } :=
+    : { b : bool | if b then conv leq Σ (Γ ,,, stack_context π1) (zipp t1 π1) (zipp t2 π2) else True } :=
 
     _isconv_red Γ leq t1 π1 h1 t2 π2 h2 aux
     with inspect (decompose_stack π1) := {
     | @exist (args1, ρ1) e1 with inspect (decompose_stack π2) := {
       | @exist (args2, ρ2) e2
-        with inspect (reduce_stack nodelta_flags Σ Γ t1 (appstack args1 ε) _) := {
+        with inspect (reduce_stack nodelta_flags Σ (Γ ,,, stack_context π1) t1 (appstack args1 ε) _) := {
         | @exist (t1',π1') eq1
-          with inspect (reduce_stack nodelta_flags Σ Γ t2 (appstack args2 ε) _) := {
+          with inspect (reduce_stack nodelta_flags Σ (Γ ,,, stack_context π2) t2 (appstack args2 ε) _) := {
           | @exist (t2',π2') eq2 => isconv_prog Γ leq t1' (π1' +++ ρ1) t2' (π2' +++ ρ2) aux
           }
         }
@@ -740,6 +743,9 @@ Section Conversion.
     cbn. rewrite zipc_appstack. assumption.
   Qed.
   Next Obligation.
+    (* TODO Need a corollary of reduce_stack_decompose
+       stating the stack_context is unchanged.
+     *)
     eapply red_welltyped.
     - eapply h1.
     - match type of eq1 with

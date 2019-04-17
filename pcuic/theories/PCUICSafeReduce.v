@@ -1236,6 +1236,22 @@ Section Reduce.
     unfold Pr in p. symmetry. assumption.
   Qed.
 
+  Lemma reduce_stack_context :
+    forall Γ t π h,
+      stack_context (snd (reduce_stack Γ t π h)) =
+      stack_context π.
+  Proof.
+    intros Γ t π h.
+    pose proof (reduce_stack_decompose Γ t π h) as hd.
+    case_eq (decompose_stack π). intros l ρ e1.
+    case_eq (decompose_stack (snd (reduce_stack Γ t π h))). intros l' ρ' e2.
+    rewrite e1 in hd. rewrite e2 in hd. cbn in hd. subst.
+    pose proof (decompose_stack_eq _ _ _ e1).
+    pose proof (decompose_stack_eq _ _ _ e2) as eq.
+    rewrite eq. subst.
+    rewrite 2!stack_context_appstack. reflexivity.
+  Qed.
+
   Lemma reduce_stack_noApp :
     forall Γ t π h,
       isApp (fst (reduce_stack Γ t π h)) = false.

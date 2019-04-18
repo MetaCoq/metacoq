@@ -834,8 +834,11 @@ Section Conversion.
       Σ ;;; Γ' |- t : T.
   Admitted.
 
+  (* Not clear what we want here.
+     Let's figure out the rest first.
+   *)
   Equations unfold_one_fix (Γ : context) (mfix : mfixpoint term)
-            (idx : nat) (π : stack) (h : welltyped Σ Γ (zipc (tFix mfix idx) π))
+            (idx : nat) (π : stack) (h : welltyped Σ Γ (zippx (tFix mfix idx) π))
     : option term :=
 
     unfold_one_fix Γ mfix idx π h with inspect (unfold_fix mfix idx) := {
@@ -853,12 +856,16 @@ Section Conversion.
   Next Obligation.
     cbn. symmetry in eq2.
     pose proof (decompose_stack_at_eq _ _ _ _ _ eq2). subst.
-    rewrite zipc_appstack in h. cbn in h.
-    zip fold in h. apply welltyped_context in h. cbn in h.
-    destruct h as [T h].
-    destruct (inversion_App h) as [na [A' [B' [[?] [[?] [?]]]]]].
-    eexists. eassumption.
-  Qed.
+    unfold zippx in h. rewrite decompose_stack_appstack in h.
+    simpl in h.
+    apply welltyped_it_mkLambda_or_LetIn in h.
+  (*   rewrite zipc_appstack in h. cbn in h. *)
+  (*   zip fold in h. apply welltyped_context in h. cbn in h. *)
+  (*   destruct h as [T h]. *)
+  (*   destruct (inversion_App h) as [na [A' [B' [[?] [[?] [?]]]]]]. *)
+  (*   eexists. eassumption. *)
+  (* Qed. *)
+  Admitted.
 
   Derive NoConfusion NoConfusionHom for option.
 
@@ -896,11 +903,33 @@ Section Conversion.
       eexists. eassumption.
   Qed.
 
+  Lemma welltyped_zippx :
+    forall Γ t ρ,
+      welltyped Σ Γ (zippx t ρ) ->
+      welltyped Σ (Γ ,,, stack_context ρ) t.
+  Proof.
+    intros Γ t ρ h.
+    unfold zippx in h.
+    case_eq (decompose_stack ρ). intros l π e.
+    rewrite e in h.
+    apply welltyped_it_mkLambda_or_LetIn in h.
+    pose proof (decompose_stack_eq _ _ _ e). subst.
+    rewrite stack_context_appstack.
+    clear - h. destruct h as [A h].
+    revert t A h.
+    induction l ; intros t A h.
+    - eexists. eassumption.
+    - cbn in h. apply IHl in h.
+      destruct h as [B h].
+      destruct (inversion_App h) as [na [A' [B' [[?] [[?] [?]]]]]].
+      eexists. eassumption.
+  Qed.
+
   Equations(noeqns) _isconv_prog (Γ : context) (leq : conv_pb)
-            (t1 : term) (π1 : stack) (h1 : welltyped Σ Γ (zipp t1 π1))
-            (t2 : term) (π2 : stack) (h2 : welltyped Σ Γ (zipp t2 π2))
+            (t1 : term) (π1 : stack) (h1 : welltyped Σ Γ (zippx t1 π1))
+            (t2 : term) (π2 : stack) (h2 : welltyped Σ Γ (zippx t2 π2))
             (aux : Aux (Term t2) Γ t1 π1 π2)
-    : { b : bool | if b then conv leq Σ Γ (zipp t1 π1) (zipp t2 π2) else True } :=
+    : { b : bool | if b then conv leq Σ Γ (zippx t1 π1) (zippx t2 π2) else True } :=
 
     (* This case is impossible, but we would need some extra argument to make it
        truly impossible (namely, only allow results of reduce_stack with the
@@ -1014,6 +1043,15 @@ Section Conversion.
 
   (* tProd *)
   Next Obligation.
+    unfold zippx. simpl.
+    apply welltyped_zippx in h1.
+    (* Maybe too much.
+       A weaker welltyped_zippx keeping the it_mk?
+     *)
+    fail "todo".
+
+    unfold zippx in h1.
+
     cbn.
     apply welltyped_zipp in h1.
     destruct h1 as [T h1].

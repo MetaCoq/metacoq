@@ -72,17 +72,31 @@ Section Conversion.
   Set Equations With UIP.
 
   Lemma cored_it_mkLambda_or_LetIn :
-    forall Γ u v,
-      cored Σ Γ u v ->
-      cored Σ [] (it_mkLambda_or_LetIn Γ u)
-              (it_mkLambda_or_LetIn Γ v).
+    forall Γ Δ u v,
+      cored Σ (Γ ,,, Δ) u v ->
+      cored Σ Γ (it_mkLambda_or_LetIn Δ u)
+               (it_mkLambda_or_LetIn Δ v).
   Proof.
-    intros Γ u v h.
+    intros Γ Δ u v h.
     induction h.
     - constructor. apply red1_it_mkLambda_or_LetIn. assumption.
     - eapply cored_trans.
       + eapply IHh.
       + apply red1_it_mkLambda_or_LetIn. assumption.
+  Qed.
+
+  Lemma red_it_mkLambda_or_LetIn :
+    forall Γ Δ u v,
+      red Σ (Γ ,,, Δ) u v ->
+      red Σ Γ (it_mkLambda_or_LetIn Δ u)
+              (it_mkLambda_or_LetIn Δ v).
+  Proof.
+    intros Γ Δ u v h.
+    induction h.
+    - constructor.
+    - econstructor.
+      + eassumption.
+      + eapply red1_it_mkLambda_or_LetIn. assumption.
   Qed.
 
   Lemma cored_zipx :
@@ -93,6 +107,7 @@ Section Conversion.
     intros Γ u v π h.
     eapply cored_it_mkLambda_or_LetIn.
     eapply cored_context.
+    rewrite app_context_nil_l.
     assumption.
   Qed.
 
@@ -599,26 +614,30 @@ Section Conversion.
     rewrite <- eq1 in d1. cbn in d1.
     rewrite <- eq1 in c1. cbn in c1.
     rewrite stack_context_appstack in c1. cbn in c1.
-    rewrite stack_context_stack_cat. rewrite c1. simpl.
+
     pose proof (decompose_stack_eq _ _ _ (eq_sym e1)). subst.
-    clear eq1. rewrite stack_context_appstack in h1.
+    clear eq1 eq2.
+    unfold zippx in h1.
+    rewrite decompose_stack_appstack in h1.
+    rewrite decompose_stack_twice with (1 := eq_sym e1) in h1. simpl in h1.
+    rewrite app_nil_r in h1.
+    (* apply welltyped_it_mkLambda_or_LetIn in h1. *)
     case_eq (decompose_stack π1'). intros args1' ρ1' e1'.
     rewrite e1' in d1. cbn in d1.
     rewrite decompose_stack_appstack in d1. cbn in d1. subst.
     pose proof (decompose_stack_eq _ _ _ e1'). subst.
     rewrite stack_cat_appstack.
-    unfold zipp. rewrite decompose_stack_appstack.
+    unfold zippx.
+    rewrite decompose_stack_appstack.
     rewrite decompose_stack_twice with (1 := eq_sym e1). simpl.
     rewrite app_nil_r.
-    unfold zipp in h1. rewrite decompose_stack_appstack in h1.
-    rewrite decompose_stack_twice with (1 := eq_sym e1) in h1. simpl in h1.
-    rewrite app_nil_r in h1.
+
+    rewrite stack_context_appstack in r1. cbn in r1.
+    rewrite 2!zipc_appstack in r1. cbn in r1.
 
     eapply red_welltyped.
     - exact h1.
-    - rewrite stack_context_appstack in r1.
-      cbn in r1. rewrite 2!zipc_appstack in r1. cbn in r1.
-      constructor. assumption.
+    - constructor. eapply red_it_mkLambda_or_LetIn. assumption.
   Qed.
   Next Obligation.
     match type of eq2 with
@@ -631,26 +650,30 @@ Section Conversion.
     rewrite <- eq2 in d2. cbn in d2.
     rewrite <- eq2 in c2. cbn in c2.
     rewrite stack_context_appstack in c2. cbn in c2.
-    rewrite stack_context_stack_cat. rewrite c2. simpl.
+
     pose proof (decompose_stack_eq _ _ _ (eq_sym e2)). subst.
-    clear eq2. rewrite stack_context_appstack in h2.
+    clear eq1 eq2.
+    unfold zippx in h2.
+    rewrite decompose_stack_appstack in h2.
+    rewrite decompose_stack_twice with (1 := eq_sym e2) in h2. simpl in h2.
+    rewrite app_nil_r in h2.
+    (* apply welltyped_it_mkLambda_or_LetIn in h2. *)
     case_eq (decompose_stack π2'). intros args2' ρ2' e2'.
     rewrite e2' in d2. cbn in d2.
     rewrite decompose_stack_appstack in d2. cbn in d2. subst.
     pose proof (decompose_stack_eq _ _ _ e2'). subst.
     rewrite stack_cat_appstack.
-    unfold zipp. rewrite decompose_stack_appstack.
+    unfold zippx.
+    rewrite decompose_stack_appstack.
     rewrite decompose_stack_twice with (1 := eq_sym e2). simpl.
     rewrite app_nil_r.
-    unfold zipp in h2. rewrite decompose_stack_appstack in h2.
-    rewrite decompose_stack_twice with (1 := eq_sym e2) in h2. simpl in h2.
-    rewrite app_nil_r in h2.
+
+    rewrite stack_context_appstack in r2. cbn in r2.
+    rewrite 2!zipc_appstack in r2. cbn in r2.
 
     eapply red_welltyped.
     - exact h2.
-    - rewrite stack_context_appstack in r2.
-      cbn in r2. rewrite 2!zipc_appstack in r2. cbn in r2.
-      constructor. assumption.
+    - constructor. eapply red_it_mkLambda_or_LetIn. assumption.
   Qed.
   Next Obligation.
     match type of eq1 with
@@ -666,7 +689,7 @@ Section Conversion.
     | _ = reduce_stack ?f ?Σ ?Γ ?t ?π ?hh =>
       pose proof (reduce_stack_Req f _ _ _ _ hh) as [ e | h ]
     end.
-    - rewrite e in eq1. inversion eq1. subst.
+    - clear eq2. rewrite e in eq1. inversion eq1. subst.
       unshelve eapply R_stateR.
       + simpl. rewrite stack_cat_appstack. reflexivity.
       + simpl. rewrite stack_cat_appstack. reflexivity.
@@ -676,6 +699,7 @@ Section Conversion.
       dependent destruction h.
       + cbn in H. rewrite zipc_appstack in H. cbn in H.
         left. simpl. eapply cored_it_mkLambda_or_LetIn.
+        rewrite app_context_nil_l.
         rewrite zipc_appstack. rewrite zipc_stack_cat.
         repeat zip fold. eapply cored_context.
         assumption.
@@ -695,7 +719,7 @@ Section Conversion.
   Qed.
   Next Obligation.
     destruct b ; auto.
-    unfold zipp. rewrite <- e1. rewrite <- e2.
+    unfold zippx. rewrite <- e1. rewrite <- e2.
 
     match type of eq1 with
     | _ = reduce_stack ?f ?Σ ?Γ ?t ?π ?h =>
@@ -706,12 +730,7 @@ Section Conversion.
     rewrite <- eq1 in r1.
     rewrite <- eq1 in d1. cbn in d1.
     rewrite <- eq1 in c1. cbn in c1.
-    rewrite decompose_stack_appstack in d1. cbn in d1.
-    case_eq (decompose_stack π1'). intros l1' ρ1' d1'.
-    rewrite d1' in d1. cbn in d1. subst.
-    pose proof (decompose_stack_eq _ _ _ d1'). subst.
-    cbn in r1. rewrite 2!zipc_appstack in r1. cbn in r1.
-    rewrite stack_cat_appstack in h.
+    rewrite stack_context_appstack in c1. cbn in c1.
 
     match type of eq2 with
     | _ = reduce_stack ?f ?Σ ?Γ ?t ?π ?h =>
@@ -722,40 +741,52 @@ Section Conversion.
     rewrite <- eq2 in r2.
     rewrite <- eq2 in d2. cbn in d2.
     rewrite <- eq2 in c2. cbn in c2.
-    rewrite decompose_stack_appstack in d2. cbn in d2.
-    case_eq (decompose_stack π2'). intros l2' ρ2' d2'.
-    rewrite d2' in d2. cbn in d2. subst.
-    pose proof (decompose_stack_eq _ _ _ d2'). subst.
-    cbn in r2. rewrite 2!zipc_appstack in r2. cbn in r2.
+    rewrite stack_context_appstack in c2. cbn in c2.
 
-    rewrite stack_cat_appstack in h.
-    unfold zipp in h.
-    rewrite 2!decompose_stack_appstack in h.
     clear eq1 eq2.
-    symmetry in e1.
-    pose proof (decompose_stack_twice _ _ _ e1) as eq1.
-    symmetry in e2.
-    pose proof (decompose_stack_twice _ _ _ e2) as eq2.
-    rewrite eq1 in h. rewrite eq2 in h. cbn in h.
+
+    pose proof (decompose_stack_eq _ _ _ (eq_sym e1)). subst.
+    unfold zippx in h1.
+    rewrite decompose_stack_appstack in h1.
+    rewrite decompose_stack_twice with (1 := eq_sym e1) in h1. simpl in h1.
+    rewrite app_nil_r in h1.
+    case_eq (decompose_stack π1'). intros args1' ρ1' e1'.
+    rewrite e1' in d1. cbn in d1.
+    rewrite decompose_stack_appstack in d1. cbn in d1. subst.
+    pose proof (decompose_stack_eq _ _ _ e1'). subst.
+
+    pose proof (decompose_stack_eq _ _ _ (eq_sym e2)). subst.
+    unfold zippx in h2.
+    rewrite decompose_stack_appstack in h2.
+    rewrite decompose_stack_twice with (1 := eq_sym e2) in h2. simpl in h2.
+    rewrite app_nil_r in h2.
+    case_eq (decompose_stack π2'). intros args2' ρ2' e2'.
+    rewrite e2' in d2. cbn in d2.
+    rewrite decompose_stack_appstack in d2. cbn in d2. subst.
+    pose proof (decompose_stack_eq _ _ _ e2'). subst.
+
+    rewrite stack_context_appstack in r1. cbn in r1.
+    rewrite 2!zipc_appstack in r1. cbn in r1.
+
+    rewrite stack_context_appstack in r2. cbn in r2.
+    rewrite 2!zipc_appstack in r2. cbn in r2.
+
+    rewrite 2!stack_cat_appstack in h.
+    unfold zippx in h.
+    rewrite 2!decompose_stack_appstack in h.
+    rewrite decompose_stack_twice with (1 := eq_sym e1) in h.
+    rewrite decompose_stack_twice with (1 := eq_sym e2) in h.
+    simpl in h.
     rewrite 2!app_nil_r in h.
-    rewrite stack_context_appstack in h.
-    pose proof (decompose_stack_eq _ _ _ e1). subst.
-    pose proof (decompose_stack_eq _ _ _ e2). subst.
-    rewrite stack_context_appstack.
-    rewrite stack_context_appstack in r1.
-    rewrite stack_context_appstack in r2.
+
     eapply conv_trans'.
-    - eapply red_conv_l. eassumption.
+    - eapply red_conv_l.
+      eapply red_it_mkLambda_or_LetIn.
+      eassumption.
     - eapply conv_trans'.
       + eassumption.
       + eapply red_conv_r.
-        (* New problems again...
-           Nothing guarantees ρ1 = ρ2.
-           The culprit is probably non symmetric conv.
-           We would do best to zip the stack_context around the term for
-           conclusion.
-         *)
-        fail "We need to do better!".
+        eapply red_it_mkLambda_or_LetIn.
         assumption.
   Qed.
 

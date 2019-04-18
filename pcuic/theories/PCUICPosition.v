@@ -679,14 +679,14 @@ Section Stacks.
   Qed.
 
   Lemma red1_it_mkLambda_or_LetIn :
-    forall Γ u v,
-      red1 Σ Γ u v ->
-      red1 Σ [] (it_mkLambda_or_LetIn Γ u)
-              (it_mkLambda_or_LetIn Γ v).
+    forall Γ Δ u v,
+      red1 Σ (Γ ,,, Δ) u v ->
+      red1 Σ Γ (it_mkLambda_or_LetIn Δ u)
+               (it_mkLambda_or_LetIn Δ v).
   Proof.
-    intros Γ u v h.
-    revert u v h.
-    induction Γ as [| [na [b|] A] Γ ih ] ; intros u v h.
+    intros Γ Δ u v h.
+    revert Γ u v h.
+    induction Δ as [| [na [b|] A] Δ ih ] ; intros Γ u v h.
     - cbn. assumption.
     - simpl. eapply ih. cbn. constructor. assumption.
     - simpl. eapply ih. cbn. constructor. assumption.

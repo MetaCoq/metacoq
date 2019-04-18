@@ -771,6 +771,14 @@ Section Stacks.
     all: try (cbn ; rewrite ?IHρ ; reflexivity).
   Qed.
 
+  Definition zippx t π :=
+    let '(args, ρ) := decompose_stack π in
+    it_mkLambda_or_LetIn (stack_context ρ) (mkApps t args).
+
+  (* Alternatively, we could go for the following definition. *)
+  (* Definition zippx t π := *)
+  (*   it_mkLambda_or_LetIn (stack_context π) (zipp t π). *)
+
 End Stacks.
 
 Notation "ρ +++ θ" := (stack_cat ρ θ) (at level 20).

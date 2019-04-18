@@ -198,7 +198,7 @@ Inductive red1 (Σ : global_declarations) (Γ : context) : term -> term -> Type 
 | red_cofix_case ip p mfix idx args narg fn brs :
     unfold_cofix mfix idx = Some (narg, fn) ->
     red1 Σ Γ (tCase ip p (mkApps (tCoFix mfix idx) args) brs)
-         (tCase ip (mkApps fn args) p brs)
+         (tCase ip p (mkApps fn args) brs)
 
 (** CoFix-proj unfolding *)
 | red_cofix_proj p mfix idx args narg fn :

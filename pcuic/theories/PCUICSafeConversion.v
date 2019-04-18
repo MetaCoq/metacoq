@@ -470,17 +470,58 @@ Section Conversion.
     right. right. assumption.
   Qed.
 
+  Lemma inversion_LetIn :
+    forall {Γ na b B t T},
+      Σ ;;; Γ |- tLetIn na b B t : T ->
+      exists s1 A,
+        ∥ Σ ;;; Γ |- B : tSort s1 ∥ /\
+        ∥ Σ ;;; Γ |- b : B ∥ /\
+        ∥ Σ ;;; Γ ,, vdef na b B |- t : A ∥ /\
+        ∥ Σ ;;; Γ |- tLetIn na b B A <= T ∥.
+  Proof.
+    intros Γ na b B t T h. dependent induction h.
+    - exists s1, b'_ty. split ; [| split ; [| split]].
+      + constructor. assumption.
+      + constructor. assumption.
+      + constructor. assumption.
+      + constructor. apply cumul_refl'.
+    - destruct IHh as [s1 [A' [? [? [? hc]]]]].
+      exists s1, A'. split ; [| split ; [| split]].
+      all: try assumption.
+      destruct hc.
+      constructor. eapply cumul_trans ; eassumption.
+  Qed.
+
+  Lemma welltyped_it_mkLambda_or_LetIn :
+    forall Γ Δ t,
+      welltyped Σ Γ (it_mkLambda_or_LetIn Δ t) ->
+      welltyped Σ (Γ ,,, Δ) t.
+  Proof.
+    intros Γ Δ t h.
+    revert Γ t h.
+    induction Δ as [| [na [b|] A] Δ ih ] ; intros Γ t h.
+    - assumption.
+    - simpl. apply ih in h. cbn in h.
+      destruct h as [T h].
+      pose proof (inversion_LetIn h) as [s1 [A' [[?] [[?] [[?] [?]]]]]].
+      exists A'. assumption.
+    - simpl. apply ih in h. cbn in h.
+      destruct h as [T h].
+      pose proof (inversion_Lambda h) as [s1 [B [[?] [[?] [?]]]]].
+      exists B. assumption.
+  Qed.
+
   Definition Ret s Γ t π π' :=
     match s with
     | Reduction t'
     | Term t' =>
-      forall leq, { b : bool | if b then conv leq Σ (Γ ,,, stack_context π) (zipp t π) (zipp t' π') else True }
+      forall leq, { b : bool | if b then conv leq Σ Γ (zippx t π) (zippx t' π') else True }
     | Args =>
-      { b : bool | if b then ∥ Σ ;;; Γ ,,, stack_context π |- zipp t π = zipp t π' ∥ else True }
+      { b : bool | if b then ∥ Σ ;;; Γ |- zippx t π = zippx t π' ∥ else True }
     end.
 
   Notation wtp Γ t π :=
-    (welltyped Σ (Γ ,,, stack_context π) (zipp t π)) (only parsing).
+    (welltyped Σ Γ (zippx t π)) (only parsing).
 
   Definition wts Γ s t π :=
     match s with
@@ -519,7 +560,7 @@ Section Conversion.
             (t1 : term) (π1 : stack) (h1 : wtp Γ t1 π1)
             (t2 : term) (π2 : stack) (h2 : wtp Γ t2 π2)
             (aux : Aux (Reduction t2) Γ t1 π1 π2)
-    : { b : bool | if b then conv leq Σ (Γ ,,, stack_context π1) (zipp t1 π1) (zipp t2 π2) else True } :=
+    : { b : bool | if b then conv leq Σ Γ (zippx t1 π1) (zippx t2 π2) else True } :=
 
     _isconv_red Γ leq t1 π1 h1 t2 π2 h2 aux
     with inspect (decompose_stack π1) := {
@@ -534,12 +575,18 @@ Section Conversion.
       }
     }.
   Next Obligation.
-    unfold zipp in h1. rewrite <- e1 in h1.
-    cbn. rewrite zipc_appstack. assumption.
+    unfold zippx in h1. rewrite <- e1 in h1.
+    apply welltyped_it_mkLambda_or_LetIn in h1.
+    cbn. rewrite zipc_appstack. cbn.
+    pose proof (decompose_stack_eq _ _ _ (eq_sym e1)). subst.
+    rewrite stack_context_appstack. assumption.
   Qed.
   Next Obligation.
-    unfold zipp in h2. rewrite <- e2 in h2.
-    cbn. rewrite zipc_appstack. assumption.
+    unfold zippx in h2. rewrite <- e2 in h2.
+    apply welltyped_it_mkLambda_or_LetIn in h2.
+    cbn. rewrite zipc_appstack. cbn.
+    pose proof (decompose_stack_eq _ _ _ (eq_sym e2)). subst.
+    rewrite stack_context_appstack. assumption.
   Qed.
   Next Obligation.
     match type of eq1 with

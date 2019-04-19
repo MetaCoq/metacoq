@@ -925,6 +925,42 @@ Section Conversion.
       eexists. eassumption.
   Qed.
 
+  Derive NoConfusion NoConfusionHom for list.
+
+  Lemma it_mkLambda_or_LetIn_welltyped :
+    forall Γ Δ t,
+      welltyped Σ (Γ ,,, Δ) t ->
+      welltyped Σ Γ (it_mkLambda_or_LetIn Δ t).
+  Proof.
+    intros Γ Δ t h.
+    revert Γ t h.
+    induction Δ as [| [na [b|] B] Δ ih ] ; intros Γ t h.
+    - assumption.
+    - simpl. eapply ih. cbn.
+      destruct h as [A h].
+      pose proof (typing_wf_local h) as hc.
+      cbn in hc. dependent destruction hc.
+      + cbn in H. inversion H.
+      + cbn in H. symmetry in H. inversion H. subst. clear H.
+        cbn in l.
+        eexists. econstructor ; try eassumption.
+        (* FIXME We need to sort B, but we only know it's a type.
+           It might be a problem with the way context are wellformed.
+           Let typing asks for the type to be sorted so it should
+           also hold in the context.
+           At least they should be synchronised.
+         *)
+        admit.
+    - simpl. eapply ih. cbn.
+      destruct h as [A h].
+      pose proof (typing_wf_local h) as hc.
+      cbn in hc. dependent destruction hc.
+      + cbn in H. symmetry in H. inversion H. subst. clear H.
+        destruct l as [s hs].
+        eexists. econstructor ; eassumption.
+      + cbn in H. inversion H.
+  Admitted.
+
   Equations(noeqns) _isconv_prog (Γ : context) (leq : conv_pb)
             (t1 : term) (π1 : stack) (h1 : welltyped Σ Γ (zippx t1 π1))
             (t2 : term) (π2 : stack) (h2 : welltyped Σ Γ (zippx t2 π2))
@@ -1045,22 +1081,15 @@ Section Conversion.
   Next Obligation.
     unfold zippx. simpl.
     apply welltyped_zippx in h1.
-    (* Maybe too much.
-       A weaker welltyped_zippx keeping the it_mk?
-     *)
-    fail "todo".
-
-    unfold zippx in h1.
-
-    cbn.
-    apply welltyped_zipp in h1.
+    apply it_mkLambda_or_LetIn_welltyped.
     destruct h1 as [T h1].
     destruct (inversion_Prod h1) as [s1 [s2 [[?] [[?] [?]]]]].
     eexists. eassumption.
   Qed.
   Next Obligation.
-    cbn.
-    apply welltyped_zipp in h2.
+    unfold zippx. simpl.
+    apply welltyped_zippx in h2.
+    apply it_mkLambda_or_LetIn_welltyped.
     destruct h2 as [T h2].
     destruct (inversion_Prod h2) as [s1 [s2 [[?] [[?] [?]]]]].
     eexists. eassumption.

@@ -345,7 +345,9 @@ Inductive stack : Type :=
 | Fix (f : mfixpoint term) (n : nat) (args : list term) (π : stack)
 | Case (indn : inductive * nat) (p : term) (brs : list (nat * term)) (π : stack)
 | Prod_l (na : name) (B : term) (π : stack)
-| Prod_r (na : name) (A : term) (π : stack).
+| Prod_r (na : name) (A : term) (π : stack)
+| Lambda_ty (na : name) (b : term) (π : stack)
+| Lambda_tm (na : name) (A : term) (π : stack).
 
 Notation "'ε'" := (Empty).
 
@@ -362,6 +364,8 @@ Fixpoint zipc t stack :=
   | Case indn pred brs π => zipc (tCase indn pred t brs) π
   | Prod_l na B π => zipc (tProd na t B) π
   | Prod_r na A π => zipc (tProd na A t) π
+  | Lambda_ty na b π => zipc (tLambda na t b) π
+  | Lambda_tm na A π => zipc (tLambda na A t) π
   end.
 
 Definition zip (t : term * stack) := zipc (fst t) (snd t).
@@ -488,6 +492,8 @@ Fixpoint stack_context π : context :=
   | Case indn pred brs π => stack_context π
   | Prod_l na B π => stack_context π
   | Prod_r na A π => stack_context π ,, vass na A
+  | Lambda_ty na u π => stack_context π
+  | Lambda_tm na A π => stack_context π ,, vass na A
   end.
 
 Lemma stack_context_appstack :
@@ -508,6 +514,8 @@ Fixpoint stack_position π : position :=
   | Case indn pred brs ρ => stack_position ρ ++ [ case_c ]
   | Prod_l na B ρ => stack_position ρ ++ [ prod_l ]
   | Prod_r na A ρ => stack_position ρ ++ [ prod_r ]
+  | Lambda_ty na u ρ => stack_position ρ ++ [ lam_ty ]
+  | Lambda_tm na A ρ => stack_position ρ ++ [ lam_tm ]
   end.
 
 Lemma stack_position_atpos :
@@ -705,6 +713,8 @@ Section Stacks.
     | Case indn p brs ρ => Case indn p brs (stack_cat ρ θ)
     | Prod_l na B ρ => Prod_l na B (stack_cat ρ θ)
     | Prod_r na A ρ => Prod_r na A (stack_cat ρ θ)
+    | Lambda_ty na u ρ => Lambda_ty na u (stack_cat ρ θ)
+    | Lambda_tm na A ρ => Lambda_tm na A (stack_cat ρ θ)
     end.
 
   Notation "ρ +++ θ" := (stack_cat ρ θ) (at level 20).

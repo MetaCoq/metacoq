@@ -1124,9 +1124,12 @@ Section Conversion.
        Another option is to leave that for later and only match on empty
        stacks.
      *)
-    _isconv_prog Γ leq (tLambda na A1 t1) π1 h1 (tLambda _ A2 t2) π2 h2 ir1 ir2 aux
-    with isconv_red_raw Γ Conv A1 ε A2 ε aux := {
-    | @exist true h := isconv_red (Γ,, vass na A1) leq t1 ε t2 ε aux ;
+    _isconv_prog Γ leq (tLambda na A1 t1) π1 h1 (tLambda na' A2 t2) π2 h2 ir1 ir2 aux
+    with isconv_red_raw Γ Conv A1 (Lambda_ty na t1 π1) A2 (Lambda_ty na' t2 π2) aux := {
+    | @exist true h :=
+      isconv_red Γ leq
+                 t1 (Lambda_tm na A1 π1)
+                 t2 (Lambda_tm na' A2 π2) aux ;
     | @exist false _ := no
     } ;
 
@@ -1277,70 +1280,93 @@ Section Conversion.
 
   (* tLambda *)
   Next Obligation.
-    fail "Lambda case TODO".
-    zip fold in h1. apply welltyped_context in h1. cbn in h1.
+    unfold zippx. simpl.
+    apply welltyped_zippx in h1.
+    apply it_mkLambda_or_LetIn_welltyped.
     destruct h1 as [T h1].
     destruct (inversion_Lambda h1) as [s1 [B [[?] [[?] [?]]]]].
     eexists. eassumption.
   Qed.
   Next Obligation.
-    zip fold in h2. apply welltyped_context in h2. cbn in h2.
+    unfold zippx. simpl.
+    apply welltyped_zippx in h2.
+    apply it_mkLambda_or_LetIn_welltyped.
     destruct h2 as [T h2].
-    destruct (inversion_Lambda h2) as [s1 [B [[?] [[?] [?]]]]].
+    destruct (inversion_Lambda h2) as [s2 [B [[?] [[?] [?]]]]].
     eexists. eassumption.
   Qed.
   Next Obligation.
-    (* Maybe we'll force π1 and π2 to be ε *)
-    (* R (Reduction A2, Γ, A1, ε, ε) *)
-    (*   (Term (tLambda t0 A2 t2), Γ, tLambda na A1 t1, π1, π2) *)
-  Admitted.
-  Next Obligation.
-    zip fold in h1. apply welltyped_context in h1. cbn in h1.
-    destruct h1 as [T h1].
-    destruct (inversion_Lambda h1) as [s1 [B [[?] [[?] [?]]]]].
-    eexists. eassumption.
+    unshelve eapply R_positionR.
+    - reflexivity.
+    - simpl. unfold xposition. eapply positionR_poscat.
+      simpl. rewrite <- app_nil_r. eapply positionR_poscat. constructor.
   Qed.
   Next Obligation.
-    destruct h.
-    zip fold in h1. apply welltyped_context in h1. cbn in h1.
+    unfold zippx. simpl.
+    apply it_mkLambda_or_LetIn_welltyped. cbn.
+    apply welltyped_zippx in h1.
     destruct h1 as [T h1].
     destruct (inversion_Lambda h1) as [s1 [B [[?] [[?] [?]]]]].
-    zip fold in h2. apply welltyped_context in h2. cbn in h2.
-    destruct h2 as [T' h2].
-    destruct (inversion_Lambda h2) as [s1' [B' [[?] [[?] [?]]]]].
-    eexists. eapply context_conversion ; try eassumption.
-    econstructor.
-    - eapply conv_context_refl ; try assumption.
-      eapply typing_wf_local. eassumption.
-    - constructor.
-      + right. eexists. eassumption.
-      + apply conv_sym. assumption.
+    eexists. econstructor ; eassumption.
   Qed.
   Next Obligation.
-    (* Maybe we'll force π1 and π2 to be ε *)
-    (* R (Reduction t2, Γ,, vass na A1, t1, ε, ε) *)
-    (*   (Term (tLambda t0 A2 t2), Γ, tLambda na A1 t1, π1, π2) *)
-  Admitted.
+    unfold zippx. simpl.
+    apply it_mkLambda_or_LetIn_welltyped. cbn.
+    apply welltyped_zippx in h2.
+    destruct h2 as [T h2].
+    destruct (inversion_Lambda h2) as [s2 [B [[?] [[?] [?]]]]].
+    eexists. econstructor ; eassumption.
+  Qed.
+  Next Obligation.
+    unshelve eapply R_positionR.
+    - reflexivity.
+    - simpl. unfold xposition. eapply positionR_poscat.
+      simpl. rewrite <- app_nil_r. eapply positionR_poscat. constructor.
+  Qed.
   Next Obligation.
     destruct b ; auto.
     destruct h0 as [h0].
-    (* Again we need to know π1 = π2, so we might be better off
-       enforcing it.
-     *)
-  Admitted.
+
+    unfold zippx in h0. simpl in h0.
+    unfold zippx in h. simpl in h. cbn in h.
+    unfold zippx.
+    case_eq (decompose_stack π1). intros l1 ρ1 e1.
+    case_eq (decompose_stack π2). intros l2 ρ2 e2.
+    pose proof (decompose_stack_eq _ _ _ e1). subst.
+    pose proof (decompose_stack_eq _ _ _ e2). subst.
+    rewrite 2!stack_context_appstack in h0.
+    rewrite 2!stack_context_appstack in h.
+
+    destruct ir1 as [_ hl1]. cbn in hl1.
+    specialize (hl1 eq_refl).
+    destruct l1 ; try discriminate hl1. clear hl1.
+
+    destruct ir2 as [_ hl2]. cbn in hl2.
+    specialize (hl2 eq_refl).
+    destruct l2 ; try discriminate hl2. clear hl2.
+
+    cbn. assumption.
+  Qed.
+
+  (* tApp *)
+  Next Obligation.
+    destruct ir1 as [ha1 _]. discriminate ha1.
+  Qed.
 
   (* tConst *)
   Next Obligation.
-    (* R (Args, Γ, tConst c' u', π1, π2) *)
-    (*   (Term (tConst c' u'), Γ, tConst c' u', π1, π2) *)
-  Admitted.
+    unshelve eapply R_stateR.
+    - reflexivity.
+    - reflexivity.
+    - constructor.
+  Qed.
   Next Obligation.
     destruct h. eapply conv_conv_l. assumption.
   Qed.
   Next Obligation.
     eapply red_welltyped.
     - exact h1.
-    - constructor. eapply red_context. eapply red_const. eassumption.
+    - constructor. eapply red_zippx. eapply red_const. eassumption.
   Qed.
   Next Obligation.
     eapply red_welltyped.

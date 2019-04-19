@@ -974,6 +974,23 @@ Section Reduce.
     rewrite 2!stack_context_appstack. reflexivity.
   Qed.
 
+  Definition isred (t : term * stack) :=
+    isApp (fst t) = false /\
+    (isLambda (fst t) -> isStackApp (snd t) = false).
+
+  Lemma reduce_stack_isred :
+    forall Γ t π h,
+      RedFlags.beta flags ->
+      isred (reduce_stack Γ t π h).
+  Proof.
+    intros Γ t π h hr.
+    unfold reduce_stack.
+    destruct (reduce_stack_full Γ t π h) as [[t' π'] [r [p [hApp hLam]]]].
+    split.
+    - assumption.
+    - apply hLam. assumption.
+  Qed.
+
   Lemma reduce_stack_noApp :
     forall Γ t π h,
       isApp (fst (reduce_stack Γ t π h)) = false.
@@ -984,11 +1001,6 @@ Section Reduce.
     assumption.
   Qed.
 
-  (* I would have liked better a lemma concluding the stack is empty.
-     Unfortunately, it is not correct as we only match on tLambda and
-     App together.
-     Typing might get the better of it though.
-   *)
   Lemma reduce_stack_noLamApp :
     forall Γ t π h,
       RedFlags.beta flags ->

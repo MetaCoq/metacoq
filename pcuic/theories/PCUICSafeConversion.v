@@ -528,9 +528,13 @@ Section Conversion.
 
   Definition Ret s Γ t π π' :=
     match s with
-    | Reduction t'
-    | Term t' =>
+    | Reduction t' =>
       forall leq, { b : bool | if b then conv leq Σ Γ (zippx t π) (zippx t' π') else True }
+    | Term t' =>
+      forall leq,
+        isred (t, π) ->
+        isred (t', π') ->
+        { b : bool | if b then conv leq Σ Γ (zippx t π) (zippx t' π') else True }
     | Args =>
       { b : bool | if b then ∥ Σ ;;; Γ |- zippx t π = zippx t π' ∥ else True }
     end.
@@ -560,7 +564,7 @@ Section Conversion.
   Notation isconv_red_raw Γ leq t1 π1 t2 π2 aux :=
     (aux (Reduction t2) Γ t1 π1 π2 _ _ _ leq) (only parsing).
   Notation isconv_prog_raw Γ leq t1 π1 t2 π2 aux :=
-    (aux (Term t2) Γ t1 π1 π2 _ _ _ leq) (only parsing).
+    (aux (Term t2) Γ t1 π1 π2 _ _ _ leq _ _) (only parsing).
   Notation isconv_args_raw Γ t π1 π2 aux :=
     (aux Args Γ t π1 π2 _ _ _) (only parsing).
 
@@ -621,7 +625,6 @@ Section Conversion.
     rewrite decompose_stack_appstack in h1.
     rewrite decompose_stack_twice with (1 := eq_sym e1) in h1. simpl in h1.
     rewrite app_nil_r in h1.
-    (* apply welltyped_it_mkLambda_or_LetIn in h1. *)
     case_eq (decompose_stack π1'). intros args1' ρ1' e1'.
     rewrite e1' in d1. cbn in d1.
     rewrite decompose_stack_appstack in d1. cbn in d1. subst.
@@ -657,7 +660,6 @@ Section Conversion.
     rewrite decompose_stack_appstack in h2.
     rewrite decompose_stack_twice with (1 := eq_sym e2) in h2. simpl in h2.
     rewrite app_nil_r in h2.
-    (* apply welltyped_it_mkLambda_or_LetIn in h2. *)
     case_eq (decompose_stack π2'). intros args2' ρ2' e2'.
     rewrite e2' in d2. cbn in d2.
     rewrite decompose_stack_appstack in d2. cbn in d2. subst.
@@ -716,6 +718,42 @@ Section Conversion.
           rewrite stack_position_stack_cat.
           rewrite stack_position_appstack.
           eapply positionR_poscat. assumption.
+  Qed.
+  Next Obligation.
+    match type of eq1 with
+    | _ = reduce_stack ?f ?Σ ?Γ ?t ?π ?h =>
+      pose proof (reduce_stack_isred f Σ Γ t π h eq_refl) as r1
+    end.
+    rewrite <- eq1 in r1. destruct r1 as [ha hl].
+    split.
+    - assumption.
+    - cbn in hl. cbn. intro h.
+      specialize (hl h).
+      destruct π1'.
+      all: try reflexivity.
+      + cbn. destruct ρ1.
+        all: try reflexivity.
+        exfalso.
+        apply (decompose_stack_not_app _ _ _ _ (eq_sym e1)).
+      + discriminate hl.
+  Qed.
+  Next Obligation.
+    match type of eq2 with
+    | _ = reduce_stack ?f ?Σ ?Γ ?t ?π ?h =>
+      pose proof (reduce_stack_isred f Σ Γ t π h eq_refl) as r2
+    end.
+    rewrite <- eq2 in r2. destruct r2 as [ha hl].
+    split.
+    - assumption.
+    - cbn in hl. cbn. intro h.
+      specialize (hl h).
+      destruct π2'.
+      all: try reflexivity.
+      + cbn. destruct ρ2.
+        all: try reflexivity.
+        exfalso.
+        apply (decompose_stack_not_app _ _ _ _ (eq_sym e2)).
+      + discriminate hl.
   Qed.
   Next Obligation.
     destruct b ; auto.
@@ -1042,15 +1080,14 @@ Section Conversion.
   Equations(noeqns) _isconv_prog (Γ : context) (leq : conv_pb)
             (t1 : term) (π1 : stack) (h1 : welltyped Σ Γ (zippx t1 π1))
             (t2 : term) (π2 : stack) (h2 : welltyped Σ Γ (zippx t2 π2))
+            (ir1 : isred (t1, π1)) (ir2 : isred (t2, π2))
             (aux : Aux (Term t2) Γ t1 π1 π2)
     : { b : bool | if b then conv leq Σ Γ (zippx t1 π1) (zippx t2 π2) else True } :=
 
-    (* This case is impossible, but we would need some extra argument to make it
-       truly impossible (namely, only allow results of reduce_stack with the
-       right flags). *)
-    (* _isconv_prog Γ leq (tApp _ _) π1 h1 (tApp _ _) π2 h2 aux := no ; *)
+    _isconv_prog Γ leq (tApp _ _) π1 h1 (tApp _ _) π2 h2 ir1 ir2 aux :=
+      False_rect _ _ ;
 
-    _isconv_prog Γ leq (tConst c u) π1 h1 (tConst c' u') π2 h2 aux
+    _isconv_prog Γ leq (tConst c u) π1 h1 (tConst c' u') π2 h2 ir1 ir2 aux
     with eq_dec c c' := {
     | left eq1 with eq_dec u u' := {
       | left eq2 with isconv_args_raw Γ (tConst c u) π1 π2 aux := {
@@ -1087,13 +1124,13 @@ Section Conversion.
        Another option is to leave that for later and only match on empty
        stacks.
      *)
-    _isconv_prog Γ leq (tLambda na A1 t1) π1 h1 (tLambda _ A2 t2) π2 h2 aux
+    _isconv_prog Γ leq (tLambda na A1 t1) π1 h1 (tLambda _ A2 t2) π2 h2 ir1 ir2 aux
     with isconv_red_raw Γ Conv A1 ε A2 ε aux := {
     | @exist true h := isconv_red (Γ,, vass na A1) leq t1 ε t2 ε aux ;
     | @exist false _ := no
     } ;
 
-    _isconv_prog Γ leq (tProd na A1 B1) π1 h1 (tProd na' A2 B2) π2 h2 aux
+    _isconv_prog Γ leq (tProd na A1 B1) π1 h1 (tProd na' A2 B2) π2 h2 ir1 ir2 aux
     with isconv_red_raw Γ Conv A1 (Prod_l na B1 π1) A2 (Prod_l na' B2 π2) aux := {
     | @exist true h :=
       isconv_red Γ leq
@@ -1104,7 +1141,8 @@ Section Conversion.
 
     (* Hnf did not reduce, maybe delta needed in c *)
     _isconv_prog Γ leq (tCase (ind, par) p c brs) π1 h1
-                       (tCase (ind',par') p' c' brs') π2 h2 aux
+                       (tCase (ind',par') p' c' brs') π2 h2
+                       ir1 ir2 aux
     with inspect (eq_term (snd Σ) p p' && eq_term (snd Σ) c c'
         && forallb2 (fun '(a, b) '(a', b') => eq_term (snd Σ) b b') brs brs') := {
     | @exist true eq1 := isconv_args Γ (tCase (ind, par) p c brs) π1 π2 aux ;
@@ -1121,7 +1159,7 @@ Section Conversion.
       }
     } ;
 
-    _isconv_prog Γ leq (tProj p c) π1 h1 (tProj p' c') π2 h2 aux
+    _isconv_prog Γ leq (tProj p c) π1 h1 (tProj p' c') π2 h2 ir1 ir2 aux
     with inspect (eq_projection p p' && eq_term (snd Σ) c c') := {
     | @exist true eq1 := isconv_args Γ (tProj p c) π1 π2 aux ;
     | @exist false _ := no
@@ -1129,7 +1167,7 @@ Section Conversion.
 
     (* Subtle difference here with Checker, if the terms are syntactically equal
        but the stacks are not convertible, then we say no. *)
-    _isconv_prog Γ leq (tFix mfix idx) π1 h1 (tFix mfix' idx') π2 h2 aux
+    _isconv_prog Γ leq (tFix mfix idx) π1 h1 (tFix mfix' idx') π2 h2 ir1 ir2 aux
     with inspect (eq_term (snd Σ) (tFix mfix idx) (tFix mfix' idx')) := {
     | @exist true eq1 := isconv_args Γ (tFix mfix idx) π1 π2 aux ;
     | @exist false _ with inspect (unfold_one_fix Γ mfix idx π1 _) := {
@@ -1149,14 +1187,14 @@ Section Conversion.
       }
     } ;
 
-    _isconv_prog Γ leq (tCoFix mfix idx) π1 h1 (tCoFix mfix' idx') π2 h2 aux
+    _isconv_prog Γ leq (tCoFix mfix idx) π1 h1 (tCoFix mfix' idx') π2 h2 ir1 ir2 aux
     with inspect (eq_term (snd Σ) (tCoFix mfix idx) (tCoFix mfix' idx')) := {
     | @exist true eq1 := isconv_args Γ (tCoFix mfix idx) π1 π2 aux ;
     | @exist false _ := no
     } ;
 
     (* TODO Fallback *)
-    _isconv_prog Γ leq t1 π1 h1 t2 π2 h2 aux := no.
+    _isconv_prog Γ leq t1 π1 h1 t2 π2 h2 ir1 ir2 aux := no.
 
   (* tProd *)
   Next Obligation.
@@ -1229,7 +1267,6 @@ Section Conversion.
     apply mkApps_Prod_nil in h2. subst.
 
     cbn.
-    fail "Not clear how to conclude."
 
     (* Not very clear how to conclude yet...
        It seems true enough though.
@@ -1240,6 +1277,7 @@ Section Conversion.
 
   (* tLambda *)
   Next Obligation.
+    fail "Lambda case TODO".
     zip fold in h1. apply welltyped_context in h1. cbn in h1.
     destruct h1 as [T h1].
     destruct (inversion_Lambda h1) as [s1 [B [[?] [[?] [?]]]]].

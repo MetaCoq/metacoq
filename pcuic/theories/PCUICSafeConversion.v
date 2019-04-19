@@ -961,6 +961,84 @@ Section Conversion.
       + cbn in H. inversion H.
   Admitted.
 
+  Fixpoint isAppProd (t : term) : bool :=
+    match t with
+    | tApp t l => isAppProd t
+    | tProd na A B => true
+    | _ => false
+    end.
+
+  Fixpoint isProd t :=
+    match t with
+    | tProd na A B => true
+    | _ => false
+    end.
+
+  Lemma isAppProd_isProd :
+    forall Γ t,
+      isAppProd t ->
+      welltyped Σ Γ t ->
+      isProd t.
+  Proof.
+    intros Γ t hp hw.
+    revert Γ hp hw.
+    induction t ; intros Γ hp hw.
+    all: try discriminate hp.
+    - reflexivity.
+    - simpl in hp.
+      specialize IHt1 with (1 := hp).
+      assert (welltyped Σ Γ t1) as h.
+      { destruct hw as [T h].
+        destruct (inversion_App h) as [na [A' [B' [[?] [[?] [?]]]]]].
+        eexists. eassumption.
+      }
+      specialize IHt1 with (1 := h).
+      destruct t1.
+      all: try discriminate IHt1.
+      destruct hw as [T hw'].
+      destruct (inversion_App hw') as [na [A' [B' [[hP] [[?] [?]]]]]].
+      destruct (inversion_Prod hP) as [s1 [s2 [[?] [[?] [bot]]]]].
+      (* dependent destruction bot. *)
+      (* + discriminate e. *)
+      (* + dependent destruction r. *)
+      admit.
+  Admitted.
+
+  Lemma isAppProd_mkApps :
+    forall t l, isAppProd (mkApps t l) = isAppProd t.
+  Proof.
+    intros t l. revert t.
+    induction l ; intros t.
+    - reflexivity.
+    - cbn. rewrite IHl. reflexivity.
+  Qed.
+
+  Lemma isProdmkApps :
+    forall t l,
+      isProd (mkApps t l) ->
+      l = [].
+  Proof.
+    intros t l h.
+    revert t h.
+    induction l ; intros t h.
+    - reflexivity.
+    - cbn in h. specialize IHl with (1 := h). subst.
+      cbn in h. discriminate h.
+  Qed.
+
+  Lemma mkApps_Prod_nil :
+    forall Γ na A B l,
+      welltyped Σ Γ (mkApps (tProd na A B) l) ->
+      l = [].
+  Proof.
+    intros Γ na A B l h.
+    pose proof (isAppProd_isProd) as hh.
+    specialize hh with (2 := h).
+    rewrite isAppProd_mkApps in hh.
+    specialize hh with (1 := eq_refl).
+    apply isProdmkApps in hh. assumption.
+  Qed.
+
   Equations(noeqns) _isconv_prog (Γ : context) (leq : conv_pb)
             (t1 : term) (π1 : stack) (h1 : welltyped Σ Γ (zippx t1 π1))
             (t2 : term) (π2 : stack) (h2 : welltyped Σ Γ (zippx t2 π2))
@@ -1017,7 +1095,10 @@ Section Conversion.
 
     _isconv_prog Γ leq (tProd na A1 B1) π1 h1 (tProd na' A2 B2) π2 h2 aux
     with isconv_red_raw Γ Conv A1 (Prod_l na B1 π1) A2 (Prod_l na' B2 π2) aux := {
-    | @exist true h := isconv_red (Γ,, vass na A1) leq B1 ε B2 ε aux ;
+    | @exist true h :=
+      isconv_red Γ leq
+                 B1 (Prod_r na A1 π1)
+                 B2 (Prod_r na' A2 π2) aux ;
     | @exist false _ := no
     } ;
 
@@ -1101,51 +1182,61 @@ Section Conversion.
       simpl. rewrite <- app_nil_r. eapply positionR_poscat. constructor.
   Qed.
   Next Obligation.
-    (* Will admit in order to figure out what the stack should be. *)
-  (*   zip fold in h1. apply welltyped_context in h1. cbn in h1. *)
-  (*   destruct h1 as [T h1]. *)
-  (*   destruct (inversion_Prod h1) as [s1 [s2 [[?] [[?] [?]]]]]. *)
-  (*   eexists. eassumption. *)
-  (* Qed. *)
-  Admitted.
+    unfold zippx. simpl.
+    apply it_mkLambda_or_LetIn_welltyped. cbn.
+    apply welltyped_zippx in h1.
+    destruct h1 as [T h1].
+    destruct (inversion_Prod h1) as [s1 [s2 [[?] [[?] [?]]]]].
+    eexists. econstructor ; eassumption.
+  Qed.
   Next Obligation.
-    (* destruct h as [h]. *)
-  (*   zip fold in h2. apply welltyped_context in h2. cbn in h2. *)
-  (*   destruct h2 as [T h2]. *)
-  (*   destruct (inversion_Prod h2) as [s1 [s2 [[?] [[?] [?]]]]]. *)
-  (*   zip fold in h1. apply welltyped_context in h1. cbn in h1. *)
-  (*   destruct h1 as [T' h1]. *)
-  (*   destruct (inversion_Prod h1) as [s1' [s2' [[?] [[?] [?]]]]]. *)
-  (*   eexists. eapply context_conversion ; try eassumption. *)
-  (*   econstructor. *)
-  (*   - eapply conv_context_refl ; try assumption. *)
-  (*     eapply typing_wf_local. eassumption. *)
-  (*   - constructor. *)
-  (*     + right. eexists. eassumption. *)
-  (*     + apply conv_sym. assumption. *)
-  (* Qed. *)
-  Admitted.
+    unfold zippx. simpl.
+    apply it_mkLambda_or_LetIn_welltyped. cbn.
+    apply welltyped_zippx in h2.
+    destruct h2 as [T h2].
+    destruct (inversion_Prod h2) as [s1 [s2 [[?] [[?] [?]]]]].
+    eexists. econstructor ; eassumption.
+  Qed.
   Next Obligation.
     unshelve eapply R_positionR.
-    - simpl. fail "oh no".
-      (* It's not even a problem of stacks.
-         On one side we'll have a λ and on the other a Π.
-         This means this approach doesn't work.
-         Maybe we could instead push something on the stack
-         (like an alternate Prod focusing on the other side).
-       *)
-    (* pose proof (zip_Prod_Empty h1). subst. *)
-    (* pose proof (zip_Prod_Empty h2). subst. *)
-    (* R (Reduction B2, Γ,, vass na A1, B1, ε, ε) *)
-    (*   (Term (tProd t2 A2 B2), Γ, tProd na A1 B1, ε, ε) *)
-  Admitted.
+    - simpl. reflexivity.
+    - simpl. unfold xposition. eapply positionR_poscat.
+      simpl. rewrite <- app_nil_r. eapply positionR_poscat. constructor.
+  Qed.
   Next Obligation.
     destruct b ; auto.
     destruct h0 as [h0].
-    pose proof (zip_Prod_Empty h1). subst.
-    pose proof (zip_Prod_Empty h2). subst.
-    cbn. eapply conv_Prod ; eassumption.
-  Qed.
+    unfold zippx in h0. simpl in h0.
+    unfold zippx in h. simpl in h. cbn in h.
+    unfold zippx.
+    case_eq (decompose_stack π1). intros l1 ρ1 e1.
+    case_eq (decompose_stack π2). intros l2 ρ2 e2.
+    pose proof (decompose_stack_eq _ _ _ e1). subst.
+    pose proof (decompose_stack_eq _ _ _ e2). subst.
+    rewrite 2!stack_context_appstack in h0.
+    rewrite 2!stack_context_appstack in h.
+
+    unfold zippx in h1. rewrite decompose_stack_appstack in h1.
+    rewrite decompose_stack_twice with (1 := e1) in h1.
+    simpl in h1. rewrite app_nil_r in h1.
+    apply welltyped_it_mkLambda_or_LetIn in h1.
+    apply mkApps_Prod_nil in h1. subst.
+
+    unfold zippx in h2. rewrite decompose_stack_appstack in h2.
+    rewrite decompose_stack_twice with (1 := e2) in h2.
+    simpl in h2. rewrite app_nil_r in h2.
+    apply welltyped_it_mkLambda_or_LetIn in h2.
+    apply mkApps_Prod_nil in h2. subst.
+
+    cbn.
+    fail "Not clear how to conclude."
+
+    (* Not very clear how to conclude yet...
+       It seems true enough though.
+     *)
+    (* eapply conv_Prod ; eassumption. *)
+  (* Qed. *)
+  Admitted.
 
   (* tLambda *)
   Next Obligation.

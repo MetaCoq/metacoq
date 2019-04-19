@@ -1345,6 +1345,10 @@ Section Conversion.
     specialize (hl2 eq_refl).
     destruct l2 ; try discriminate hl2. clear hl2.
 
+    (* The fact that we can conclude directly is distrubing!
+       Are we checking too much?
+       TODO CHECK
+     *)
     cbn. assumption.
   Qed.
 

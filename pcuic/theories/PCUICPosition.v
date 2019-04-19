@@ -789,6 +789,57 @@ Section Stacks.
   (* Definition zippx t π := *)
   (*   it_mkLambda_or_LetIn (stack_context π) (zipp t π). *)
 
+  Lemma red1_mkApps :
+    forall Γ t u l,
+      red1 Σ Γ t u ->
+      red1 Σ Γ (mkApps t l) (mkApps u l).
+  Proof.
+    intros Γ t u l h.
+    revert Γ t u h.
+    induction l ; intros Γ t u h.
+    - assumption.
+    - cbn. apply IHl. constructor. assumption.
+  Qed.
+
+  Corollary red_mkApps :
+     forall Γ t u l,
+      red Σ Γ t u ->
+      red Σ Γ (mkApps t l) (mkApps u l).
+  Proof.
+    intros Γ t u π h. induction h.
+    - constructor.
+    - econstructor.
+      + eapply IHh.
+      + eapply red1_mkApps. assumption.
+  Qed.
+
+  Lemma red1_zippx :
+    forall Γ t u π,
+      red1 Σ (Γ ,,, stack_context π) t u ->
+      red1 Σ Γ (zippx t π) (zippx u π).
+  Proof.
+    intros Γ t u π h.
+    unfold zippx.
+    case_eq (decompose_stack π). intros l ρ e.
+    eapply red1_it_mkLambda_or_LetIn.
+    eapply red1_mkApps.
+    pose proof (decompose_stack_eq _ _ _ e). subst.
+    rewrite stack_context_appstack in h.
+    assumption.
+  Qed.
+
+  Corollary red_zippx :
+    forall Γ t u π,
+      red Σ (Γ ,,, stack_context π) t u ->
+      red Σ Γ (zippx t π) (zippx u π).
+  Proof.
+    intros Γ t u π h. induction h.
+    - constructor.
+    - econstructor.
+      + eapply IHh.
+      + eapply red1_zippx. assumption.
+  Qed.
+
 End Stacks.
 
 Notation "ρ +++ θ" := (stack_cat ρ θ) (at level 20).

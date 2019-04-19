@@ -862,6 +862,21 @@ Section Conversion.
       + reflexivity.
   Qed.
 
+  Lemma cored_const :
+    forall {Γ n c u cty cb cu},
+      Some (ConstantDecl n {| cst_type := cty ; cst_body := Some cb ; cst_universes := cu |})
+      = lookup_env Σ c ->
+      cored (fst Σ) Γ (subst_instance_constr u cb) (tConst c u).
+  Proof.
+    intros Γ n c u cty cb cu e.
+    symmetry in e.
+    pose proof (lookup_env_const_name e). subst.
+    econstructor.
+    econstructor.
+    - exact e.
+    - reflexivity.
+  Qed.
+
   Derive Signature for cumul.
   Derive Signature for red1.
 
@@ -1375,31 +1390,33 @@ Section Conversion.
   Next Obligation.
     eapply red_welltyped.
     - exact h2.
-    - constructor. eapply red_context. eapply red_const. eassumption.
+    - constructor. eapply red_zippx. eapply red_const. eassumption.
   Qed.
   Next Obligation.
-    (* tConst c' u' reduces to subst_instance_constr u' body *)
-    (* R (Reduction (subst_instance_constr u' body), Γ, subst_instance_constr u' body, π1, π2) *)
-    (*   (Term (tConst c' u'), Γ, tConst c' u', π1, π2) *)
-  Admitted.
+    left. simpl.
+    eapply cored_zipx. eapply cored_const. eassumption.
+  Qed.
   Next Obligation.
     destruct b ; auto.
     eapply conv_trans'.
     - eapply red_conv_l.
-      eapply red_context.
+      eapply red_zippx.
       eapply red_const. eassumption.
     - eapply conv_trans' ; try eassumption.
       eapply red_conv_r.
-      eapply red_context.
+      eapply red_zippx.
       eapply red_const. eassumption.
   Qed.
   Next Obligation.
     eapply red_welltyped ; [ exact h2 | ].
-    constructor. eapply red_context. eapply red_const. eassumption.
+    constructor. eapply red_zippx. eapply red_const. eassumption.
   Qed.
   Next Obligation.
-    (* R (Reduction (subst_instance_constr u' b), Γ, tConst c' u, π1, π2) *)
-    (*   (Term (tConst c' u'), Γ, tConst c' u, π1, π2) *)
+    (* We reached the point where we need to extend R to account for the second
+       term.
+       In this case it is reduction of the hidden term.
+     *)
+    fail "todo".
   Admitted.
   Next Obligation.
     destruct b0 ; auto.

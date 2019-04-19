@@ -390,7 +390,36 @@ Section Conversion.
     intro s. destruct s ; eauto.
   Qed.
 
-  Notation pack := (state * context * term * stack * stack)%type.
+  Notation wtp Γ t π :=
+    (welltyped Σ Γ (zippx t π)) (only parsing).
+
+  Definition wts Γ s t π :=
+    match s with
+    | Reduction t'
+    | Term t' => wtp Γ t' π
+    | Args => wtp Γ t π
+    end.
+
+  Set Primitive Projections.
+
+    (* Definition tm' (x : pack) := *)
+    (* match st x with *)
+    (* | Reduction t | Term t => t *)
+    (* | Args => tm x *)
+    (* end. *)
+
+  Record pack := {
+    st : state ;
+    ctx : context ;
+    tm : term ;
+    stk1 : stack ;
+    stk2 : stack ;
+    tm' := match st with
+           | Reduction t | Term t => t
+           | Args => tm
+           end ;
+    wth : welltyped Σ [] (zipx ctx tm' stk2)
+  }.
 
   Definition dumbR (u v : pack) := False.
 
@@ -399,42 +428,71 @@ Section Conversion.
   Definition lexprod := Subterm.lexprod.
   Arguments lexprod {_ _} _ _ _ _.
 
-  Definition ctx (x : pack) :=
-    let '(s, Γ, u, π1, π2) := x in Γ.
+  Definition wterm Γ := { t : term | welltyped Σ Γ t }.
 
-  Definition tm (x : pack) :=
-    let '(s, Γ, u, π1, π2) := x in u.
+  Definition wcored Γ (u v : wterm Γ) :=
+    cored Σ Γ (` u) (` v).
 
-  Definition stk1 (x : pack) :=
-    let '(s, Γ, u, π1, π2) := x in π1.
-
-  Definition stk2 (x : pack) :=
-    let '(s, Γ, u, π1, π2) := x in π2.
-
-  Definition st (x : pack) :=
-    let '(s, Γ, u, π1, π2) := x in s.
+  Lemma wcored_wf :
+    forall Γ, well_founded (wcored Γ).
+  Proof.
+    intros Γ [u hu].
+    pose proof (normalisation _ _ _ hu) as h.
+    dependent induction h.
+    constructor. intros [y hy] r.
+    unfold wcored in r. cbn in r.
+    eapply H0. assumption.
+  Qed.
 
   Definition R_aux :=
-    dlexprod (cored Σ []) (fun t => lexprod (@posR t) stateR).
+    dlexprod (cored Σ []) (fun t =>
+      lexprod (@posR t)
+              (lexprod stateR (wcored []))
+    ).
 
   Notation obpack u :=
-    (zipx (ctx u) (tm u) (stk1 u) ; (xpos (ctx u) (tm u) (stk1 u), st u))
+    (zipx (ctx u) (tm u) (stk1 u) ; (xpos (ctx u) (tm u) (stk1 u), (st u, exist _ (wth u))))
     (only parsing).
 
   Definition R (u v : pack) :=
     R_aux (obpack u) (obpack v).
 
   Lemma R_aux_Acc :
-    forall t p s,
+    forall t p s t',
       welltyped Σ [] t ->
-      Acc R_aux (t ; (p, s)).
+      Acc R_aux (t ; (p, (s, t'))).
   Proof.
-    intros t p s h.
+    intros t p s t' ht.
     eapply dlexprod_Acc.
     - intro u. eapply Subterm.wf_lexprod.
       + intro. eapply posR_Acc.
-      + intro. eapply stateR_Acc.
+      + intro. eapply Subterm.wf_lexprod.
+        * intro. eapply stateR_Acc.
+        * eapply wcored_wf.
     - eapply normalisation. eassumption.
+  Qed.
+
+  Lemma wf_fun :
+    forall A (R : A -> A -> Prop) B (f : B -> A),
+      well_founded R ->
+      well_founded (fun x y => R (f x) (f y)).
+  Proof.
+    intros A R B f h x.
+    specialize (h (f x)).
+    dependent induction h.
+    constructor. intros y h.
+    eapply H0 ; try reflexivity. assumption.
+  Qed.
+
+  Lemma Acc_fun :
+    forall A (R : A -> A -> Prop) B (f : B -> A) x,
+      Acc R (f x) ->
+      Acc (fun x y => R (f x) (f y)) x.
+  Proof.
+    intros A R B f x h.
+    dependent induction h.
+    constructor. intros y h.
+    eapply H0 ; try reflexivity. assumption.
   Qed.
 
   Lemma R_Acc :
@@ -442,25 +500,21 @@ Section Conversion.
       welltyped Σ [] (zipx (ctx u) (tm u) (stk1 u)) ->
       Acc R u.
   Proof.
-    intros [[[[s Γ] t] π1] π2] h.
-    cbn in h.
-    pose proof (R_aux_Acc (zipx Γ t π1) (xpos Γ t π1) s h) as hacc.
-    clear h. dependent induction hacc.
-    constructor. intros [[[[r Δ] u] θ1] θ2] h'.
-    eapply H0 ; try reflexivity.
-    assumption.
+    intros u h.
+    eapply Acc_fun with (f := fun x => obpack x).
+    apply R_aux_Acc. assumption.
   Qed.
 
-  Notation coe P h t := (eq_rect_r P t h).
+  (* Notation coe P h t := (eq_rect_r P t h). *)
 
-  Lemma R_posR :
-    forall t1 t2 (p1 : pos t1) (p2 : pos t2) s1 s2 (e : t1 = t2),
-      posR p1 (coe _ e p2) ->
-      R_aux (t1 ; (p1, s1)) (t2 ; (p2, s2)).
-  Proof.
-    intros t1 t2 p1 p2 s1 s2 e h.
-    subst. cbn in h. right. left. assumption.
-  Qed.
+  (* Lemma R_posR : *)
+  (*   forall t1 t2 (p1 : pos t1) (p2 : pos t2) s1 s2 (e : t1 = t2), *)
+  (*     posR p1 (coe _ e p2) -> *)
+  (*     R_aux (t1 ; (p1, s1)) (t2 ; (p2, s2)). *)
+  (* Proof. *)
+  (*   intros t1 t2 p1 p2 s1 s2 e h. *)
+  (*   subst. cbn in h. right. left. assumption. *)
+  (* Qed. *)
 
   Lemma R_positionR :
     forall t1 t2 (p1 : pos t1) (p2 : pos t2) s1 s2,
@@ -484,6 +538,8 @@ Section Conversion.
     pose proof (uip hp1 hp2). subst.
     right. right. assumption.
   Qed.
+
+  Lemma R_cored2
 
   Lemma inversion_LetIn :
     forall {Γ na b B t T},
@@ -537,16 +593,6 @@ Section Conversion.
         { b : bool | if b then conv leq Σ Γ (zippx t π) (zippx t' π') else True }
     | Args =>
       { b : bool | if b then ∥ Σ ;;; Γ |- zippx t π = zippx t π' ∥ else True }
-    end.
-
-  Notation wtp Γ t π :=
-    (welltyped Σ Γ (zippx t π)) (only parsing).
-
-  Definition wts Γ s t π :=
-    match s with
-    | Reduction t'
-    | Term t' => wtp Γ t' π
-    | Args => wtp Γ t π
     end.
 
   Definition Aux s Γ t π1 π2 :=

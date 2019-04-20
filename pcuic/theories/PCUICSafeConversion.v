@@ -527,19 +527,31 @@ Section Conversion.
   Qed.
 
   Lemma R_stateR :
-    forall t1 t2 (p1 : pos t1) (p2 : pos t2) s1 s2,
+    forall t1 t2 (p1 : pos t1) (p2 : pos t2) s1 s2 w1 w2,
       t1 = t2 ->
       ` p1 = ` p2 ->
       stateR s1 s2 ->
-      R_aux (t1 ; (p1, s1)) (t2 ; (p2, s2)).
+      R_aux (t1 ; (p1, (s1, w1))) (t2 ; (p2, (s2, w2))).
   Proof.
-    intros t1 t2 [p1 hp1] [p2 hp2] s1 s2 e1 e2 h.
+    intros t1 t2 [p1 hp1] [p2 hp2] s1 s2 w1 w2 e1 e2 h.
     cbn in e2. subst.
     pose proof (uip hp1 hp2). subst.
-    right. right. assumption.
+    right. right. left. assumption.
   Qed.
 
-  Lemma R_cored2
+  Lemma R_cored2 :
+    forall t1 t2 (p1 : pos t1) (p2 : pos t2) s1 s2 w1 w2,
+      t1 = t2 ->
+      ` p1 = ` p2 ->
+      s1 = s2 ->
+      cored Σ [] (` w1) (` w2) ->
+      R_aux (t1 ; (p1, (s1, w1))) (t2 ; (p2, (s2, w2))).
+  Proof.
+    intros t1 t2 [p1 hp1] [p2 hp2] s1 s2 [t1' h1'] [t2' h2'] e1 e2 e3 h.
+    cbn in e2. cbn in h. subst.
+    pose proof (uip hp1 hp2). subst.
+    right. right. right. assumption.
+  Qed.
 
   Lemma inversion_LetIn :
     forall {Γ na b B t T},

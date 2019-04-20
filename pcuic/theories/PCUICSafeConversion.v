@@ -402,13 +402,7 @@ Section Conversion.
 
   Set Primitive Projections.
 
-    (* Definition tm' (x : pack) := *)
-    (* match st x with *)
-    (* | Reduction t | Term t => t *)
-    (* | Args => tm x *)
-    (* end. *)
-
-  Record pack := {
+  Record pack := mkpack {
     st : state ;
     ctx : context ;
     tm : term ;
@@ -594,6 +588,109 @@ Section Conversion.
       exists B. assumption.
   Qed.
 
+  Lemma welltyped_zipp :
+    forall Γ t ρ,
+      welltyped Σ Γ (zipp t ρ) ->
+      welltyped Σ Γ t.
+  Proof.
+    intros Γ t ρ [A h].
+    unfold zipp in h.
+    case_eq (decompose_stack ρ). intros l π e.
+    rewrite e in h. clear - h.
+    revert t A h.
+    induction l ; intros t A h.
+    - eexists. cbn in h. eassumption.
+    - cbn in h. apply IHl in h.
+      destruct h as [T h].
+      destruct (inversion_App h) as [na [A' [B' [[?] [[?] [?]]]]]].
+      eexists. eassumption.
+  Qed.
+
+  Lemma welltyped_zippx :
+    forall Γ t ρ,
+      welltyped Σ Γ (zippx t ρ) ->
+      welltyped Σ (Γ ,,, stack_context ρ) t.
+  Proof.
+    intros Γ t ρ h.
+    unfold zippx in h.
+    case_eq (decompose_stack ρ). intros l π e.
+    rewrite e in h.
+    apply welltyped_it_mkLambda_or_LetIn in h.
+    pose proof (decompose_stack_eq _ _ _ e). subst.
+    rewrite stack_context_appstack.
+    clear - h. destruct h as [A h].
+    revert t A h.
+    induction l ; intros t A h.
+    - eexists. eassumption.
+    - cbn in h. apply IHl in h.
+      destruct h as [B h].
+      destruct (inversion_App h) as [na [A' [B' [[?] [[?] [?]]]]]].
+      eexists. eassumption.
+  Qed.
+
+  Derive NoConfusion NoConfusionHom for list.
+
+  Lemma it_mkLambda_or_LetIn_welltyped :
+    forall Γ Δ t,
+      welltyped Σ (Γ ,,, Δ) t ->
+      welltyped Σ Γ (it_mkLambda_or_LetIn Δ t).
+  Proof.
+    intros Γ Δ t h.
+    revert Γ t h.
+    induction Δ as [| [na [b|] B] Δ ih ] ; intros Γ t h.
+    - assumption.
+    - simpl. eapply ih. cbn.
+      destruct h as [A h].
+      pose proof (typing_wf_local h) as hc.
+      cbn in hc. dependent destruction hc.
+      + cbn in H. inversion H.
+      + cbn in H. symmetry in H. inversion H. subst. clear H.
+        cbn in l.
+        eexists. econstructor ; try eassumption.
+        (* FIXME We need to sort B, but we only know it's a type.
+           It might be a problem with the way context are wellformed.
+           Let typing asks for the type to be sorted so it should
+           also hold in the context.
+           At least they should be synchronised.
+         *)
+        admit.
+    - simpl. eapply ih. cbn.
+      destruct h as [A h].
+      pose proof (typing_wf_local h) as hc.
+      cbn in hc. dependent destruction hc.
+      + cbn in H. symmetry in H. inversion H. subst. clear H.
+        destruct l as [s hs].
+        eexists. econstructor ; eassumption.
+      + cbn in H. inversion H.
+  Admitted.
+
+  Lemma zipx_welltyped :
+    forall {Γ t π},
+      welltyped Σ Γ (zipc t π) ->
+      welltyped Σ [] (zipx Γ t π).
+  Proof.
+    intros Γ t π h.
+    eapply it_mkLambda_or_LetIn_welltyped.
+    rewrite app_context_nil_l.
+    assumption.
+  Qed.
+
+  Lemma zwts :
+    forall Γ s t π,
+      wts Γ s t π ->
+      welltyped Σ []
+        (zipx Γ match s with Reduction u | Term u => u | Args => t end π).
+  Proof.
+    intros Γ s t π h.
+    destruct s.
+    - cbn in h. eapply zipx_welltyped.
+      apply welltyped_zippx in h.
+      (* We probably should take in different typing assumptions.
+         Indeed, we want zipx to be welltyped for cored to be wellfounded.
+         This means we need again to make serious changes...
+       *)
+      fail "uh oh".
+
   Definition Ret s Γ t π π' :=
     match s with
     | Reduction t' =>
@@ -607,11 +704,12 @@ Section Conversion.
       { b : bool | if b then ∥ Σ ;;; Γ |- zippx t π = zippx t π' ∥ else True }
     end.
 
-  Definition Aux s Γ t π1 π2 :=
-     forall s' Γ' t' π1' π2',
-       wtp Γ' t' π1' ->
-       wts Γ' s' t' π2' ->
-       R (s', Γ', t', π1', π2') (s, Γ, t, π1, π2) ->
+  Definition Aux s Γ t π1 π2 h2 :=
+     forall s' Γ' t' π1' π2'
+       (h1' : wtp Γ' t' π1')
+       (h2' : wts Γ' s' t' π2'),
+       R (mkpack s' Γ' t' π1' π2' (zwts h2'))
+         (mkpack s Γ t π1 π2 (zwts h2)) ->
        Ret s' Γ' t' π1' π2'.
 
   Notation no := (exist false I) (only parsing).
@@ -995,82 +1093,6 @@ Section Conversion.
     do 2 zip fold. eapply red_context.
     (* TODO Maybe we can only conclude conversion? *)
   Abort.
-
-  Lemma welltyped_zipp :
-    forall Γ t ρ,
-      welltyped Σ Γ (zipp t ρ) ->
-      welltyped Σ Γ t.
-  Proof.
-    intros Γ t ρ [A h].
-    unfold zipp in h.
-    case_eq (decompose_stack ρ). intros l π e.
-    rewrite e in h. clear - h.
-    revert t A h.
-    induction l ; intros t A h.
-    - eexists. cbn in h. eassumption.
-    - cbn in h. apply IHl in h.
-      destruct h as [T h].
-      destruct (inversion_App h) as [na [A' [B' [[?] [[?] [?]]]]]].
-      eexists. eassumption.
-  Qed.
-
-  Lemma welltyped_zippx :
-    forall Γ t ρ,
-      welltyped Σ Γ (zippx t ρ) ->
-      welltyped Σ (Γ ,,, stack_context ρ) t.
-  Proof.
-    intros Γ t ρ h.
-    unfold zippx in h.
-    case_eq (decompose_stack ρ). intros l π e.
-    rewrite e in h.
-    apply welltyped_it_mkLambda_or_LetIn in h.
-    pose proof (decompose_stack_eq _ _ _ e). subst.
-    rewrite stack_context_appstack.
-    clear - h. destruct h as [A h].
-    revert t A h.
-    induction l ; intros t A h.
-    - eexists. eassumption.
-    - cbn in h. apply IHl in h.
-      destruct h as [B h].
-      destruct (inversion_App h) as [na [A' [B' [[?] [[?] [?]]]]]].
-      eexists. eassumption.
-  Qed.
-
-  Derive NoConfusion NoConfusionHom for list.
-
-  Lemma it_mkLambda_or_LetIn_welltyped :
-    forall Γ Δ t,
-      welltyped Σ (Γ ,,, Δ) t ->
-      welltyped Σ Γ (it_mkLambda_or_LetIn Δ t).
-  Proof.
-    intros Γ Δ t h.
-    revert Γ t h.
-    induction Δ as [| [na [b|] B] Δ ih ] ; intros Γ t h.
-    - assumption.
-    - simpl. eapply ih. cbn.
-      destruct h as [A h].
-      pose proof (typing_wf_local h) as hc.
-      cbn in hc. dependent destruction hc.
-      + cbn in H. inversion H.
-      + cbn in H. symmetry in H. inversion H. subst. clear H.
-        cbn in l.
-        eexists. econstructor ; try eassumption.
-        (* FIXME We need to sort B, but we only know it's a type.
-           It might be a problem with the way context are wellformed.
-           Let typing asks for the type to be sorted so it should
-           also hold in the context.
-           At least they should be synchronised.
-         *)
-        admit.
-    - simpl. eapply ih. cbn.
-      destruct h as [A h].
-      pose proof (typing_wf_local h) as hc.
-      cbn in hc. dependent destruction hc.
-      + cbn in H. symmetry in H. inversion H. subst. clear H.
-        destruct l as [s hs].
-        eexists. econstructor ; eassumption.
-      + cbn in H. inversion H.
-  Admitted.
 
   Fixpoint isAppProd (t : term) : bool :=
     match t with
@@ -1802,43 +1824,6 @@ Section Conversion.
     constructor.
     eapply conv_trans ; try eassumption.
     eapply conv_context. eapply conv_App_r. assumption.
-  Qed.
-
-  Lemma welltyped_it_mkLambda_or_LetIn' :
-    forall Γ t,
-      ∥ wf_local Σ Γ ∥ ->
-      welltyped Σ Γ t ->
-      welltyped Σ [] (it_mkLambda_or_LetIn Γ t).
-  Proof.
-    intros Γ t [hΓ] [A h].
-    revert t A h.
-    induction hΓ as [| Γ na B hΓ ih hl | Γ na b B hΓ ih hl] ; intros t A h.
-    - eexists. eassumption.
-    - destruct hl as [s hs].
-      simpl. eapply ih. cbn. eapply type_Lambda ; eassumption.
-    - simpl. eapply ih. cbn. eapply type_LetIn ; try eassumption.
-      (* Again a universe problem! *)
-      (* We don't have enough to conclude as B may only be a sort itself. *)
-  Admitted.
-
-  Lemma welltyped_it_mkLambda_or_LetIn :
-    forall Γ t,
-      welltyped Σ Γ t ->
-      welltyped Σ [] (it_mkLambda_or_LetIn Γ t).
-  Proof.
-    intros Γ t h.
-    eapply welltyped_it_mkLambda_or_LetIn' ; try assumption.
-    destruct h as [A h]. constructor.
-    eapply typing_wf_local. eassumption.
-  Qed.
-
-  Lemma welltyped_zipx :
-    forall Γ t π,
-      welltyped Σ Γ (zipc t π) ->
-      welltyped Σ [] (zipx Γ t π).
-  Proof.
-    intros Γ t π h.
-    eapply welltyped_it_mkLambda_or_LetIn. assumption.
   Qed.
 
   Equations _isconv (s : state) (Γ : context)

@@ -172,6 +172,7 @@ let tmOfMib (ti : Names.MutInd.t) (t : Plugin_core.mutual_inductive_body) : Ast0
 let tmOfConstantEntry (t : Plugin_core.constant_entry) : Ast0.constant_entry tm =
   Plugin_core.with_env_evm (fun env _ -> tmReturn (of_constant_entry env t))
 
+(*
 let dbg = function
     Coq_tmReturn _ -> "tmReturn"
   | Coq_tmBind _ -> "tmBind"
@@ -191,9 +192,10 @@ let dbg = function
   | Coq_tmInductive i -> "tmInductive"
   | Coq_tmExistingInstance k -> "tmExistingInstance"
   | Coq_tmInferInstance t -> "tmInferInstance"
+*)
 
 let rec interp_tm (t : 'a coq_TM) : 'a tm =
-  Feedback.msg_debug Pp.(str (dbg t)) ;
+(*  Feedback.msg_debug Pp.(str (dbg t)) ; *)
   match t with
   | Coq_tmReturn x -> tmReturn x
   | Coq_tmBind (c, k) -> tmBind (interp_tm c) (fun x -> interp_tm (k x))

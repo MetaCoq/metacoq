@@ -367,6 +367,79 @@ Section Conversion.
       eapply cumul_context. assumption.
   Qed.
 
+  Lemma cumul_it_mkLambda_or_LetIn :
+    forall Δ Γ u v,
+      Σ ;;; (Δ ,,, Γ) |- u <= v ->
+      Σ ;;; Δ |- it_mkLambda_or_LetIn Γ u <= it_mkLambda_or_LetIn Γ v.
+  Proof.
+    intros Δ Γ u v h. revert Δ u v h.
+    induction Γ as [| [na [b|] A] Γ ih ] ; intros Δ u v h.
+    - assumption.
+    - simpl. cbn. eapply ih.
+      (* Need cumul for LetIn *)
+      admit.
+    - simpl. cbn. eapply ih.
+      (* Need cumul for Lambda *)
+      admit.
+  Admitted.
+
+  Lemma cumul_zippx :
+    forall Γ u v ρ,
+      Σ ;;; (Γ ,,, stack_context ρ) |- u <= v ->
+      Σ ;;; Γ |- zippx u ρ <= zippx v ρ.
+  Proof.
+    intros Γ u v ρ h.
+    revert u v h. induction ρ ; intros u v h.
+    - cbn. assumption.
+    - unfold zippx. simpl.
+      case_eq (decompose_stack ρ). intros l π e.
+      unfold zippx in IHρ. rewrite e in IHρ.
+      apply IHρ.
+      eapply cumul_App_l. assumption.
+    - unfold zippx. simpl.
+      eapply cumul_it_mkLambda_or_LetIn.
+      assumption.
+    - unfold zippx. simpl.
+      eapply cumul_it_mkLambda_or_LetIn.
+      assumption.
+    - unfold zippx. simpl.
+      eapply cumul_it_mkLambda_or_LetIn.
+      assumption.
+    - unfold zippx. simpl.
+      eapply cumul_it_mkLambda_or_LetIn. cbn.
+      (* Need cumul for Lambda again *)
+      admit.
+    - unfold zippx. simpl.
+      eapply cumul_it_mkLambda_or_LetIn.
+      assumption.
+    - unfold zippx. simpl.
+      eapply cumul_it_mkLambda_or_LetIn. cbn.
+      (* cumul lambda *)
+      admit.
+  Admitted.
+
+  Lemma conv_zippx :
+    forall Γ u v ρ,
+      Σ ;;; Γ ,,, stack_context ρ |- u = v ->
+      Σ ;;; Γ |- zippx u ρ = zippx v ρ.
+  Proof.
+    intros Γ u v ρ [].
+    constructor ; eapply cumul_zippx ; assumption.
+  Qed.
+
+  Lemma conv_zippx' :
+    forall Γ leq u v ρ,
+      conv leq Σ (Γ ,,, stack_context ρ) u v ->
+      conv leq Σ Γ (zippx u ρ) (zippx v ρ).
+  Proof.
+    intros Γ leq u v ρ h.
+    destruct leq.
+    - cbn in *. destruct h as [[h1 h2]]. constructor.
+      constructor ; eapply cumul_zippx ; assumption.
+    - cbn in *. destruct h. constructor.
+      eapply cumul_zippx. assumption.
+  Qed.
+
   Inductive state :=
   | Reduction (t : term)
   | Term (t : term)
@@ -1515,9 +1588,8 @@ Section Conversion.
   (* tConst *)
   Next Obligation.
     unshelve eapply R_stateR.
-    - reflexivity.
-    - reflexivity.
-    - constructor.
+    all: try reflexivity.
+    constructor.
   Qed.
   Next Obligation.
     destruct h. eapply conv_conv_l. assumption.
@@ -1554,93 +1626,89 @@ Section Conversion.
   Next Obligation.
     unshelve eapply R_cored2.
     all: try reflexivity.
-    - simpl.
-      (* BIG PROBLEM!
-         It seems that unfortunately we need to have cored2 before stateR.
-       *)
-      fail "order prolem".
-    -
-
-    (* We reached the point where we need to extend R to account for the second
-       term.
-       In this case it is reduction of the hidden term.
-     *)
-    fail "todo".
-  Admitted.
+    simpl. eapply cored_zipx. eapply cored_const. eassumption.
+  Qed.
   Next Obligation.
     destruct b0 ; auto.
     eapply conv_trans' ; try eassumption.
     eapply red_conv_r.
-    eapply red_context. eapply red_const. eassumption.
+    eapply red_zippx. eapply red_const. eassumption.
   Qed.
   Next Obligation.
     eapply red_welltyped ; [ exact h1 | ].
-    constructor. eapply red_context. eapply red_const. eassumption.
+    constructor. eapply red_zipx. eapply red_const. eassumption.
   Qed.
   Next Obligation.
-    (* Fine by reduction *)
-    (* R (Reduction (tConst c' u'), Γ, subst_instance_constr u b, π1, π2) *)
-    (*   (Term (tConst c' u'), Γ, tConst c' u, π1, π2) *)
-  Admitted.
+    left. simpl. eapply cored_zipx. eapply cored_const. eassumption.
+  Qed.
   Next Obligation.
     destruct b0 ; auto.
     eapply conv_trans' ; try eassumption.
     eapply red_conv_l.
-    eapply red_context. eapply red_const. eassumption.
+    eapply red_zippx. eapply red_const. eassumption.
   Qed.
   Next Obligation.
     eapply red_welltyped ; [ exact h1 | ].
-    constructor. eapply red_context. eapply red_const. eassumption.
+    constructor. eapply red_zipx. eapply red_const. eassumption.
   Qed.
   Next Obligation.
-    (* Fine by reduction *)
-    (* R (Reduction (tConst c' u'), Γ, subst_instance_constr u b, π1, π2) *)
-    (*   (Term (tConst c' u'), Γ, tConst c' u, π1, π2) *)
-  Admitted.
+    left. simpl. eapply cored_zipx. eapply cored_const. eassumption.
+  Qed.
   Next Obligation.
     destruct b0 ; auto.
     eapply conv_trans' ; try eassumption.
     eapply red_conv_l.
-    eapply red_context. eapply red_const. eassumption.
+    eapply red_zippx. eapply red_const. eassumption.
   Qed.
   Next Obligation.
     eapply red_welltyped ; [ exact h1 | ].
-    constructor. eapply red_context. eapply red_const. eassumption.
+    constructor. eapply red_zipx. eapply red_const. eassumption.
   Qed.
   Next Obligation.
-    (* Fine by reduction *)
-    (* R (Reduction (tConst c' u'), Γ, subst_instance_constr u b, π1, π2) *)
-    (*   (Term (tConst c' u'), Γ, tConst c' u, π1, π2) *)
-  Admitted.
+    left. simpl. eapply cored_zipx. eapply cored_const. eassumption.
+  Qed.
   Next Obligation.
     destruct b0 ; auto.
     eapply conv_trans' ; try eassumption.
     eapply red_conv_l.
-    eapply red_context. eapply red_const. eassumption.
+    eapply red_zippx. eapply red_const. eassumption.
   Qed.
 
   (* tCase *)
   Next Obligation.
+    symmetry in eq1.
+    apply andP in eq1 as [eq1 ebrs].
+    apply andP in eq1 as [ep ec].
     (* How do we know ind = ind' and par = par'? *)
     (* One solution: just ask! *)
+    (* Anyway we would need to show welltypedness survises renaming *)
   Admitted.
   Next Obligation.
-    (* R (Args, Γ, tCase (ind, par) p c brs, π1, π2) *)
-    (*   (Term (tCase (ind', par') p' c' brs'), Γ, tCase (ind, par) p c brs, π1, π2) *)
+    unshelve eapply R_stateR.
+    all: try reflexivity.
+    - simpl. (* We need the same as above *)
+      admit.
+    - simpl. constructor.
   Admitted.
   Next Obligation.
     destruct b ; auto.
     eapply conv_conv.
     destruct h. constructor.
     eapply conv_trans ; try eassumption.
-    eapply conv_context.
+    eapply conv_zippx.
     eapply eq_term_conv.
     (* Missing ind = ind' again. *)
   Admitted.
   Next Obligation.
-    zip fold in h1. apply welltyped_context in h1. cbn in h1.
+    apply welltyped_zipx in h1.
+    zip fold in h1. apply welltyped_context in h1. simpl in h1.
     destruct h1 as [T h1].
     destruct (weak_inversion_Case h1) as [args [u [?]]].
+    (* NEW PROBLEM
+       The obligation is not in the right context.
+       That should be remedied somehow in the def.
+     *)
+    fail "TODO Update def.".
     eexists. eassumption.
   Qed.
   Next Obligation.

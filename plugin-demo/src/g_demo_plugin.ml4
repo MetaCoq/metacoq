@@ -26,7 +26,7 @@ let quote_string s =
     else aux (s.[i] :: acc) (i - 1)
   in aux [] (String.length s - 1)
 
-VERNAC COMMAND EXTEND Unquote_vernac CLASSIFIED AS SIDEFF
+VERNAC COMMAND EXTEND Make_lens_vernac CLASSIFIED AS SIDEFF
 | [ "Make" "Lens" ident(name) ] ->
      [ Run_extractable.run_vernac (Demo.genLensN (quote_string (Names.Id.to_string name))) ]
 

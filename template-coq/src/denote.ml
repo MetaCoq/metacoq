@@ -2,14 +2,8 @@
  * open Names *)
 open Pp (* this adds the ++ to the current scope *)
 
-open Tm_util
 open Quoted
-open Quoter
 open Denoter
-(* open Constr_quoted
- * open Constr_quoter
- * open TemplateCoqQuoter *)
-
 
 (* todo: the recursive call is uneeded provided we call it on well formed terms *)
 

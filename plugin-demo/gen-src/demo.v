@@ -6,7 +6,6 @@ From Template Require Import
 Import TemplateMonad.Extractable.
 Require Import Template.BasicAst Template.AstUtils Ast.
 
-Require Import Lens.Lens.
 
 Let TemplateMonad := TM.
 Fixpoint mconcat (ls : list (TemplateMonad unit)) : TemplateMonad unit :=
@@ -35,6 +34,32 @@ Fixpoint print_all_kns (t : Ast.term) : TM unit :=
   | _ => tmReturn tt
   end.
 
+Notation "<% x %>" := (ltac:(let p y := exact y in quote_term x p))
+  (only parsing).
+
+
+Definition gr_to_kername (gr : global_reference) : kername :=
+  match gr with
+  | ConstRef kn => kn
+  | IndRef ind => ind.(inductive_mind)
+  | ConstructRef ind _ => ind.(inductive_mind)
+  end.
+
+Definition tmResolve (nm : String.string) : TM (option kername) :=
+  tmBind (tmAbout nm)
+         (fun gr =>
+            match gr with
+            | None => tmReturn None
+            | Some (ConstRef kn) => tmReturn (Some kn)
+            | Some (IndRef ind) => tmReturn (Some ind.(inductive_mind))
+            | Some (ConstructRef ind _) => tmReturn (Some ind.(inductive_mind))
+            end).
+
+
+(* ^^ Everything above here is generic *)
+
+Require Import Lens.Lens.
+
 
 Set Primitive Projections.
 Set Universe Polymorphism.
@@ -56,7 +81,7 @@ Open Scope string_scope.
 Definition prepend (ls : string) (i : ident) : ident :=
   ls ++ i.
 
-Quote Definition cBuild_Lens := Build_Lens.
+Definition cBuild_Lens := <% Build_Lens %>.
 
 Require Import Coq.Lists.List.
 Require Import Coq.Bool.Bool.
@@ -65,6 +90,7 @@ Require Import Coq.Bool.Bool.
 (* check to see if Var 0 is referenced in any of the terms *)
 Definition mentions (v : nat) (ls : list (ident * term)) : bool :=
   false.
+
 
 
 Definition mkLens (At : term) (fields : list (ident * term)) (i : nat)
@@ -114,39 +140,6 @@ Definition getFields (mi : mutual_inductive_body)
   | _ => None
   end.
 
-Definition gr_to_kername (gr : global_reference) : kername :=
-  match gr with
-  | ConstRef kn => kn
-  | IndRef ind => ind.(inductive_mind)
-  | ConstructRef ind _ => ind.(inductive_mind)
-  end.
-
-Definition tmResolve (nm : String.string) : TM (option kername) :=
-  tmBind (tmAbout nm)
-         (fun gr =>
-            match gr with
-            | None => tmReturn None
-            | Some (ConstRef kn) => tmReturn (Some kn)
-            | Some (IndRef ind) => tmReturn (Some ind.(inductive_mind))
-            | Some (ConstructRef ind _) => tmReturn (Some ind.(inductive_mind))
-            end).
-
-
-Definition tmQuoteInductiveR (nm: kername) :
-  TM (option mutual_inductive_body).
-  refine (
-  tmBind (tmAbout nm)
-         (fun gr =>
-            match gr with
-            | Some (IndRef kn) =>
-              tmBind (tmQuoteInductive (inductive_mind kn))
-                     (fun x => tmReturn (Some x))
-            | _ => tmReturn None
-            end)
-    ).
-  Defined.
-
-
 (* baseName should not contain any paths. For example, if the full name
 is A.B.C#D#E#F, baseName should be F. Also, by import ordering,
 ensure that F resolves to  A.B.C#D#E#F. Use Locate to check this.
@@ -161,13 +154,6 @@ Definition opBind {A B} (a: option A) (f: A -> option B) : option B :=
   | None  => None
   end.
 
-Definition printFirstIndName (ind : mutual_inductive_body) : TM unit.
-  destruct ind. destruct ind_bodies.
-  exact (tmReturn tt).
-  destruct o.
-  exact (tmMsg ind_name).
-  Defined.
-
 Definition genLensN (baseName : String.string) : TM unit :=
   tmBind (tmAbout baseName) (fun gr =>
     match gr with
@@ -176,35 +162,24 @@ Definition genLensN (baseName : String.string) : TM unit :=
       let ty := Ast.tInd
         {| BasicAst.inductive_mind := name
          ; BasicAst.inductive_ind := 0 (* TODO: fix for mutual records *) |} List.nil in
-      tmBind (tmQuoteInductiveR name) (fun ind =>
-        match ind with
-        | Some ind =>
-          tmBind (printFirstIndName ind) (* this causes segfault. also, there are unexpectedly multiple constructors in the first inductive *)
-                 (fun _ =>
-                    match getFields ind with
-                    | Some info =>
-                      let gen i :=
-                          match mkLens ty info.(fields) i return TemplateMonad unit with
-                          | None => tmFail "failed to build lens"
-                          | Some x =>
-                            tmBind (tmMsg "dumping kns") (fun _ =>
-                            tmBind (print_all_kns (snd x)) (fun _ =>
-                            tmBind (tmEval Common.cbv (snd x)) (fun d =>
-                            tmBind (tmDefinition (fst x) None d) (fun _ =>
-                            tmReturn tt))))
-                          end
-                      in
-                      mconcat (map gen (countTo (List.length info.(fields))))
-                    | None => tmFail ("failed to get inductive info but quote succeeded")
-                    end )
-        | None => tmFail "failed to quote inductive"
-        end)
+      tmBind (tmQuoteInductive name) (fun ind =>
+          match getFields ind with
+          | Some info =>
+            let gen i :=
+                match mkLens ty info.(fields) i return TemplateMonad unit with
+                | None => tmFail "failed to build lens"
+                | Some x =>
+                  tmBind (tmEval Common.cbv (snd x)) (fun d =>
+                  tmBind (tmDefinition (fst x) None d) (fun _ =>
+                  tmReturn tt))
+                end
+            in
+            mconcat (map gen (countTo (List.length info.(fields))))
+          | None => tmFail ("failed to get inductive info but quote succeeded")
+          end)
     | _ => tmFail "not an inductive"
     end).
 
-Notation "<% x %>" := (ltac:(let p y := exact y in quote_term x p))
-  (only parsing).
-Print definition_entry.
 
 Definition tmQuoteConstantR (nm : String.string) (bypass : bool) : TM _ :=
   tmBind (tmAbout nm)
@@ -229,16 +204,11 @@ Definition lookupPrint (baseName : String.string) : TM unit :=
               end
             end).
 
-Definition x :=
-  tConstruct
-  {| inductive_mind := "Coq.Init.Datatypes.nat"; inductive_ind := 0 |}
-  0 nil
-.
+Definition x := <% 0 %>.
 
 Definition lookup (baseName : String.string) : TM unit :=
   tmBind (tmQuoteConstant baseName true)
-         (fun b => tmReturn tt
-         ).
+         (fun b => tmReturn tt).
 
 Definition genLensNInst  : TM unit := genLensN "Point".
 

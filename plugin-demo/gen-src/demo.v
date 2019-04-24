@@ -122,6 +122,20 @@ Fixpoint mconcat (ls : list (TemplateMonad unit)) : TemplateMonad unit :=
   | m :: ms => tmBind m (fun _ => mconcat ms)
   end.
 
+Definition tmQuoteInductiveR (nm: kername) :
+  TM (option mutual_inductive_body).
+  refine (
+  tmBind (tmAbout nm)
+         (fun gr =>
+            match gr with
+            | Some (IndRef kn) =>
+              tmBind (tmQuoteInductive (inductive_mind kn))
+                     (fun x => tmReturn (Some x))
+            | _ => tmReturn None
+            end)
+    ).
+  Defined.
+
 
 (* baseName should not contain any paths. For example, if the full name
 is A.B.C#D#E#F, baseName should be F. Also, by import ordering,
@@ -131,6 +145,14 @@ If the definition of F refers to any other inductive, they should not
 be in the current section(s).
  *)
 
+Definition opBind {A B} (a: option A) (f: A -> option B) : option B :=
+  match a with
+  | Some a => f a
+  | None  => None
+  end.
+
+  
+  
 Definition genLensN (baseName : String.string) : TM unit :=
   let name := baseName in
   let ty :=
@@ -138,8 +160,8 @@ Definition genLensN (baseName : String.string) : TM unit :=
    {|
    BasicAst.inductive_mind := name;
    BasicAst.inductive_ind := 0 (* TODO: fix for mutual records *) |} List.nil) in
-   tmBind (tmQuoteInductive name) (fun ind =>
-    match getFields ind with
+   tmBind (tmQuoteInductiveR name) (fun ind =>
+    match opBind ind getFields with
     | Some info =>
       let gen i :=
           match mkLens ty info.(fields) i return TemplateMonad unit with
@@ -213,8 +235,10 @@ Definition lookup (baseName : String.string) : TM unit :=
 Definition genLensNInst  : TM unit := genLensN "Point".
 
 
-Definition showoff : TM unit :=
+Definition showoffOld : TM unit :=
   tmBind (tmMsg "showing off tmDefn" )
          (fun _ =>
             tmBind (tmDefinition "zeroE" None x)
                    (fun _ => tmReturn tt)).
+
+Definition showoff : TM unit := genLensNInst.

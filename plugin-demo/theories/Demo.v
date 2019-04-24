@@ -11,8 +11,14 @@ About plus.
 
 LookupPrint two.
 
+LookupPrint Point.
+
+Fail Print zeroE.
 
 Showoff.
+
+Print zeroE.
+
 (*
 (* process coq segmentation fault *)
     *)

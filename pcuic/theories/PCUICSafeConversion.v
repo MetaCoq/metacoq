@@ -492,28 +492,32 @@ Section Conversion.
   Definition R_aux :=
     dlexprod (cored Σ []) (fun t =>
       lexprod (@posR t)
-              (lexprod (wcored []) stateR)
+              (dlexprod (wcored []) (fun w =>
+                 lexprod (@posR (` w)) stateR
+               ))
     ).
 
   Notation obpack u :=
-    (zipx (ctx u) (tm u) (stk1 u) ; (xpos (ctx u) (tm u) (stk1 u), (exist _ (wth u), st u)))
+    (zipx (ctx u) (tm u) (stk1 u) ; (xpos (ctx u) (tm u) (stk1 u), (exist _ (wth u) ; ((xpos (ctx u) (tm' u) (stk2 u)), st u))))
     (only parsing).
 
   Definition R (u v : pack) :=
     R_aux (obpack u) (obpack v).
 
   Lemma R_aux_Acc :
-    forall t p s t',
+    forall t p w q s,
       welltyped Σ [] t ->
-      Acc R_aux (t ; (p, (t', s))).
+      Acc R_aux (t ; (p, (w ; (q, s)))).
   Proof.
-    intros t p s t' ht.
+    intros t p w q s ht.
     eapply dlexprod_Acc.
     - intro u. eapply Subterm.wf_lexprod.
       + intro. eapply posR_Acc.
-      + intro. eapply Subterm.wf_lexprod.
+      + intros [w' q']. eapply dlexprod_Acc.
+        * intros [t' h']. eapply Subterm.wf_lexprod.
+          -- intro. eapply posR_Acc.
+          -- intro. eapply stateR_Acc.
         * eapply wcored_wf.
-        * intro. eapply stateR_Acc.
     - eapply normalisation. eassumption.
   Qed.
 
@@ -561,13 +565,13 @@ Section Conversion.
   Qed.
 
   Lemma R_cored2 :
-    forall t1 t2 (p1 : pos t1) (p2 : pos t2) s1 s2 w1 w2,
+    forall t1 t2 (p1 : pos t1) (p2 : pos t2) w1 w2 q1 q2 s1 s2,
       t1 = t2 ->
       ` p1 = ` p2 ->
       cored Σ [] (` w1) (` w2) ->
-      R_aux (t1 ; (p1, (w1, s1))) (t2 ; (p2, (w2, s2))).
+      R_aux (t1 ; (p1, (w1 ; (q1, s1)))) (t2 ; (p2, (w2 ; (q2, s2)))).
   Proof.
-    intros t1 t2 [p1 hp1] [p2 hp2] s1 s2 [t1' h1'] [t2' h2'] e1 e2 h.
+    intros t1 t2 [p1 hp1] [p2 hp2] [t1' h1'] [t2' h2'] q1 q2 s1 s2 e1 e2 h.
     cbn in e2. cbn in h. subst.
     pose proof (uip hp1 hp2). subst.
     right. right. left. assumption.
@@ -579,19 +583,37 @@ Section Conversion.
   Axiom welltyped_irr :
     forall {Γ t} (h1 h2 : welltyped Σ Γ t), h1 = h2.
 
-  Lemma R_stateR :
-    forall t1 t2 (p1 : pos t1) (p2 : pos t2) s1 s2 w1 w2,
+  Lemma R_positionR2 :
+    forall t1 t2 (p1 : pos t1) (p2 : pos t2) w1 w2 q1 q2 s1 s2,
       t1 = t2 ->
       ` p1 = ` p2 ->
       ` w1 = ` w2 ->
-      stateR s1 s2 ->
-      R_aux (t1 ; (p1, (w1, s1))) (t2 ; (p2, (w2, s2))).
+      positionR (` q1) (` q2) ->
+      R_aux (t1 ; (p1, (w1 ; (q1, s1)))) (t2 ; (p2, (w2 ; (q2, s2)))).
   Proof.
-    intros t1 t2 [p1 hp1] [p2 hp2] s1 s2 [t1' h1'] [t2' h2'] e1 e2 e3 h.
+    intros t1 t2 [p1 hp1] [p2 hp2] [t1' h1'] [t2' h2'] q1 q2 s1 s2 e1 e2 e3 h.
     cbn in e2. cbn in e3. subst.
     pose proof (uip hp1 hp2). subst.
     pose proof (welltyped_irr h1' h2'). subst.
-    right. right. right. assumption.
+    right. right. right. left. assumption.
+  Qed.
+
+  Lemma R_stateR :
+    forall t1 t2 (p1 : pos t1) (p2 : pos t2) w1 w2 q1 q2 s1 s2 ,
+      t1 = t2 ->
+      ` p1 = ` p2 ->
+      ` w1 = ` w2 ->
+      ` q1 = ` q2 ->
+      stateR s1 s2 ->
+      R_aux (t1 ; (p1, (w1 ; (q1, s1)))) (t2 ; (p2, (w2 ; (q2, s2)))).
+  Proof.
+    intros t1 t2 [p1 hp1] [p2 hp2] [t1' h1'] [t2' h2'] [q1 hq1] [q2 hq2] s1 s2
+           e1 e2 e3 e4 h.
+    cbn in e2. cbn in e3. cbn in e4. subst.
+    pose proof (uip hp1 hp2). subst.
+    pose proof (welltyped_irr h1' h2'). subst.
+    pose proof (uip hq1 hq2). subst.
+    right. right. right. right. assumption.
   Qed.
 
   Lemma inversion_LetIn :
@@ -928,6 +950,7 @@ Section Conversion.
         * simpl. rewrite stack_cat_appstack. reflexivity.
         * simpl. rewrite stack_cat_appstack. reflexivity.
         * simpl. rewrite stack_cat_appstack. reflexivity.
+        * simpl. rewrite stack_cat_appstack. reflexivity.
         * simpl. constructor.
       + rewrite <- eq2 in h.
         rewrite stack_context_appstack in h.
@@ -943,18 +966,18 @@ Section Conversion.
              assumption.
         * destruct y' as [q hq].
           cbn in H0. inversion H0. subst.
-          (* Actually, what's needed is a second positionR! *)
-          fail "need posR 2!".
-          unshelve eapply R_positionR.
+          unshelve eapply R_positionR2.
           -- simpl. rewrite stack_cat_appstack. reflexivity.
-          -- simpl. rewrite stack_cat_appstack. unfold xposition.
-             eapply positionR_poscat.
+          -- simpl. rewrite stack_cat_appstack. reflexivity.
+          -- simpl. unfold zipx. f_equal.
+             rewrite zipc_stack_cat. rewrite <- H2.
+             rewrite 2!zipc_appstack. cbn. reflexivity.
+          -- simpl. unfold xposition. eapply positionR_poscat.
              unfold posR in H. cbn in H.
              rewrite stack_position_appstack in H. cbn in H.
              rewrite stack_position_stack_cat.
              rewrite stack_position_appstack.
              eapply positionR_poscat. assumption.
-
     - rewrite <- eq1 in h.
       rewrite stack_context_appstack in h.
       dependent destruction h.

@@ -355,8 +355,6 @@ struct
           let u' = unquote_level_expr l b in Univ.Universe.sup u u')
         (unquote_level_expr l b) q
 
-  let print_term (u: t) : Pp.t = failwith "print_term in term_quoter.ml not yet implemented"
-
   let quote_global_reference : Globnames.global_reference -> quoted_global_reference = function
     | Globnames.VarRef _ -> CErrors.user_err (Pp.str "VarRef unsupported")
     | Globnames.ConstRef c ->

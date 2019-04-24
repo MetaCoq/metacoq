@@ -1,10 +1,8 @@
 open Univ
 open Names
-open Constr_quoter
 open Pp
 
 open Tm_util
-open Quoter
 
 
 let resolve_symbol_p (path : string list) (tm : string) : global_reference =

@@ -11,7 +11,6 @@ About plus.
 
 LookupPrint two.
 
-LookupPrint Point.
 
 Fail Print zeroE.
 

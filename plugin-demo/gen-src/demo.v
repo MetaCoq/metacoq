@@ -152,7 +152,6 @@ Definition opBind {A B} (a: option A) (f: A -> option B) : option B :=
   end.
 
   
-  
 Definition genLensN (baseName : String.string) : TM unit :=
   let name := baseName in
   let ty :=
@@ -160,23 +159,29 @@ Definition genLensN (baseName : String.string) : TM unit :=
    {|
    BasicAst.inductive_mind := name;
    BasicAst.inductive_ind := 0 (* TODO: fix for mutual records *) |} List.nil) in
-   tmBind (tmQuoteInductiveR name) (fun ind =>
-    match opBind ind getFields with
-    | Some info =>
-      let gen i :=
-          match mkLens ty info.(fields) i return TemplateMonad unit with
-          | None => tmFail "failed to build lens"
-          | Some x =>
-            tmBind (tmEval Common.cbv (snd x))
-                   (fun d =>
-                      tmBind
-                        (tmDefinition (fst x) None d)
-                                     (fun _ => tmReturn tt))
+  tmBind (tmQuoteInductiveR name) (fun ind =>
+    match ind with
+    | Some ind =>
+          match getFields ind with
+          | Some info =>
+            let gen i :=
+                match mkLens ty info.(fields) i return TemplateMonad unit with
+                | None => tmFail "failed to build lens"
+                | Some x =>
+                  tmBind (tmEval Common.cbv (snd x))
+                         (fun d =>
+                            tmBind
+                              (tmDefinition (fst x) None d)
+                              (fun _ => tmReturn tt))
+                end
+            in
+            mconcat (map gen (countTo (List.length info.(fields))))
+          | None => tmFail ("failed to get inductive info but quote succeeded")
           end
-      in
-      mconcat (map gen (countTo (List.length info.(fields))))
-    | None => tmFail "failed to get info"
-    end).
+    | None => tmFail "failed to quote inductive"
+    end
+      
+).
 Notation "<% x %>" := (ltac:(let p y := exact y in quote_term x p))
   (only parsing).
 Print definition_entry.

@@ -157,8 +157,9 @@ Definition printFirstIndName (ind : mutual_inductive_body) : TM unit.
   destruct o.
   exact (tmMsg ind_name).
   Defined.
-  
-  
+
+Print printFirstIndName.
+
 Definition genLensN (baseName : String.string) : TM unit :=
   let name := baseName in
   let ty :=
@@ -189,7 +190,7 @@ Definition genLensN (baseName : String.string) : TM unit :=
           end )
     | None => tmFail "failed to quote inductive"
     end
-      
+
 ).
 Notation "<% x %>" := (ltac:(let p y := exact y in quote_term x p))
   (only parsing).

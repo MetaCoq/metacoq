@@ -138,11 +138,12 @@ let tmCurrentModPath : Names.ModPath.t tm =
   fun env evd success _fail ->
     let mp = Lib.current_mp () in success env evd mp
 
-let tmQuoteInductive (kn : kername) : mutual_inductive_body option tm =
+let tmQuoteInductive (kn : kername) : (Names.MutInd.t * mutual_inductive_body) option tm =
   fun env evm success _fail ->
     try
-      let mind = Environ.lookup_mind (Names.MutInd.make1 kn) env in
-      success env evm (Some mind)
+      let mi = Names.MutInd.make1 kn in
+      let mind = Environ.lookup_mind mi env in
+      success env evm (Some (mi, mind))
     with
       Not_found -> success env evm None
 

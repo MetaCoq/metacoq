@@ -70,7 +70,7 @@ let quote_rel_context env ctx =
   Ast_quoter.quote_context decls
 
 (* todo(gmm): this definition adapted from quoter.ml (the body of quote_minductive_type) *)
-let of_mib (env : Environ.env) (mib : Plugin_core.mutual_inductive_body) : Ast0.mutual_inductive_body =
+let of_mib (env : Environ.env) (t : Names.MutInd.t) (mib : Plugin_core.mutual_inductive_body) : Ast0.mutual_inductive_body =
   let open Declarations in
   let uctx = get_abstract_inductive_universes mib.mind_universes in
   let inst = Univ.UContext.instance uctx in
@@ -103,7 +103,7 @@ let of_mib (env : Environ.env) (mib : Plugin_core.mutual_inductive_body) : Ast0.
           match mib.mind_record with
           | Some (Some (id, csts, ps)) ->
             let ctxwolet = Termops.smash_rel_context mib.mind_params_ctxt in
-            let indty = Constr.mkApp (Constr.mkIndU ((assert false (* t *),0),inst),
+            let indty = Constr.mkApp (Constr.mkIndU ((t,0),inst),
                                       Context.Rel.to_extended_vect Constr.mkRel 0 ctxwolet) in
             let indbinder = Context.Rel.Declaration.LocalAssum (Names.Name id,indty) in
             let envpars = Environ.push_rel_context (indbinder :: ctxwolet) env in
@@ -166,13 +166,34 @@ let to_constr (t : Ast0.term) : Constr.t =
 let tmOfConstr (t : Constr.t) : Ast0.term tm =
   Plugin_core.with_env_evm (fun env _ -> tmReturn (of_constr env t))
 
-let tmOfMib (t : Plugin_core.mutual_inductive_body) : Ast0.mutual_inductive_body tm =
-  Plugin_core.with_env_evm (fun env _ -> tmReturn (of_mib env t))
+let tmOfMib (ti : Names.MutInd.t) (t : Plugin_core.mutual_inductive_body) : Ast0.mutual_inductive_body tm =
+  Plugin_core.with_env_evm (fun env _ -> tmReturn (of_mib env ti t))
 
 let tmOfConstantEntry (t : Plugin_core.constant_entry) : Ast0.constant_entry tm =
   Plugin_core.with_env_evm (fun env _ -> tmReturn (of_constant_entry env t))
 
+let dbg = function
+    Coq_tmReturn _ -> "tmReturn"
+  | Coq_tmBind _ -> "tmBind"
+  | Coq_tmPrint _ -> "tmPrint"
+  | Coq_tmMsg msg -> "tmMsg"
+  | Coq_tmFail err -> "tmFail"
+  | Coq_tmEval (r,t) -> "tmEval"
+  | Coq_tmDefinition (nm, typ, trm) -> "tmDefinition"
+  | Coq_tmAxiom (nm, typ) -> "tmAxiom"
+  | Coq_tmLemma (nm, typ) -> "tmLemma"
+  | Coq_tmFreshName nm -> "tmFreshName"
+  | Coq_tmAbout id -> "tmAbout"
+  | Coq_tmCurrentModPath -> "tmCurrentModPath"
+  | Coq_tmQuoteInductive kn -> "tmQuoteInductive"
+  | Coq_tmQuoteUniverses -> "tmQuoteUniverses"
+  | Coq_tmQuoteConstant (kn, b) -> "tmQuoteConstant"
+  | Coq_tmInductive i -> "tmInductive"
+  | Coq_tmExistingInstance k -> "tmExistingInstance"
+  | Coq_tmInferInstance t -> "tmInferInstance"
+
 let rec interp_tm (t : 'a coq_TM) : 'a tm =
+  Feedback.msg_debug Pp.(str (dbg t)) ;
   match t with
   | Coq_tmReturn x -> tmReturn x
   | Coq_tmBind (c, k) -> tmBind (interp_tm c) (fun x -> interp_tm (k x))
@@ -208,10 +229,10 @@ let rec interp_tm (t : 'a coq_TM) : 'a tm =
     tmMap (fun mp -> Obj.magic (of_string (Names.ModPath.to_string mp)))
           tmCurrentModPath
   | Coq_tmQuoteInductive kn ->
-    tmMap (function
-             None -> Obj.magic None
-           | Some mib -> Obj.magic (tmMap (fun x -> Some x) (tmOfMib mib)))
-          (tmQuoteInductive (to_kername kn))
+    tmBind (tmQuoteInductive (to_kername kn))
+           (function
+             None -> Obj.magic (tmFail Pp.(str "inductive does not exist"))
+           | Some (mi, mib) -> Obj.magic (tmOfMib mi mib))
   | Coq_tmQuoteUniverses ->
     tmMap (fun x -> failwith "tmQuoteUniverses") tmQuoteUniverses
   | Coq_tmQuoteConstant (kn, b) ->

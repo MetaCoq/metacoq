@@ -111,6 +111,18 @@ Section Conversion.
     assumption.
   Qed.
 
+  Lemma red_zipx :
+    forall Γ u v π,
+      red Σ (Γ ,,, stack_context π) u v ->
+      red Σ [] (zipx Γ u π) (zipx Γ v π).
+  Proof.
+    intros Γ u v π h.
+    eapply red_it_mkLambda_or_LetIn.
+    eapply red_context.
+    rewrite app_context_nil_l.
+    assumption.
+  Qed.
+
   Lemma red_trans :
     forall Γ u v w,
       red (fst Σ) Γ u v ->
@@ -1359,42 +1371,10 @@ Section Conversion.
 
   (* tLambda *)
   Next Obligation.
-    unfold zippx. simpl.
-    apply welltyped_zippx in h1.
-    apply it_mkLambda_or_LetIn_welltyped.
-    destruct h1 as [T h1].
-    destruct (inversion_Lambda h1) as [s1 [B [[?] [[?] [?]]]]].
-    eexists. eassumption.
-  Qed.
-  Next Obligation.
-    unfold zippx. simpl.
-    apply welltyped_zippx in h2.
-    apply it_mkLambda_or_LetIn_welltyped.
-    destruct h2 as [T h2].
-    destruct (inversion_Lambda h2) as [s2 [B [[?] [[?] [?]]]]].
-    eexists. eassumption.
-  Qed.
-  Next Obligation.
     unshelve eapply R_positionR.
     - reflexivity.
     - simpl. unfold xposition. eapply positionR_poscat.
       simpl. rewrite <- app_nil_r. eapply positionR_poscat. constructor.
-  Qed.
-  Next Obligation.
-    unfold zippx. simpl.
-    apply it_mkLambda_or_LetIn_welltyped. cbn.
-    apply welltyped_zippx in h1.
-    destruct h1 as [T h1].
-    destruct (inversion_Lambda h1) as [s1 [B [[?] [[?] [?]]]]].
-    eexists. econstructor ; eassumption.
-  Qed.
-  Next Obligation.
-    unfold zippx. simpl.
-    apply it_mkLambda_or_LetIn_welltyped. cbn.
-    apply welltyped_zippx in h2.
-    destruct h2 as [T h2].
-    destruct (inversion_Lambda h2) as [s2 [B [[?] [[?] [?]]]]].
-    eexists. econstructor ; eassumption.
   Qed.
   Next Obligation.
     unshelve eapply R_positionR.
@@ -1449,12 +1429,12 @@ Section Conversion.
   Next Obligation.
     eapply red_welltyped.
     - exact h1.
-    - constructor. eapply red_zippx. eapply red_const. eassumption.
+    - constructor. eapply red_zipx. eapply red_const. eassumption.
   Qed.
   Next Obligation.
     eapply red_welltyped.
     - exact h2.
-    - constructor. eapply red_zippx. eapply red_const. eassumption.
+    - constructor. eapply red_zipx. eapply red_const. eassumption.
   Qed.
   Next Obligation.
     left. simpl.
@@ -1473,9 +1453,18 @@ Section Conversion.
   Qed.
   Next Obligation.
     eapply red_welltyped ; [ exact h2 | ].
-    constructor. eapply red_zippx. eapply red_const. eassumption.
+    constructor. eapply red_zipx. eapply red_const. eassumption.
   Qed.
   Next Obligation.
+    unshelve eapply R_cored2.
+    all: try reflexivity.
+    - simpl.
+      (* BIG PROBLEM!
+         It seems that unfortunately we need to have cored2 before stateR.
+       *)
+      fail "order prolem".
+    -
+
     (* We reached the point where we need to extend R to account for the second
        term.
        In this case it is reduction of the hidden term.

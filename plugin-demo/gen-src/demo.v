@@ -151,6 +151,13 @@ Definition opBind {A B} (a: option A) (f: A -> option B) : option B :=
   | None  => None
   end.
 
+Definition printFirstIndName (ind : mutual_inductive_body) : TM unit.
+  destruct ind. destruct ind_bodies.
+  exact (tmReturn tt).
+  destruct o.
+  exact (tmMsg ind_name).
+  Defined.
+  
   
 Definition genLensN (baseName : String.string) : TM unit :=
   let name := baseName in
@@ -162,6 +169,8 @@ Definition genLensN (baseName : String.string) : TM unit :=
   tmBind (tmQuoteInductiveR name) (fun ind =>
     match ind with
     | Some ind =>
+      tmBind (printFirstIndName ind) (* this causes segfault. also, there are unexpectedly multiple constructors in the first inductive *)
+             (fun _ =>
           match getFields ind with
           | Some info =>
             let gen i :=
@@ -177,7 +186,7 @@ Definition genLensN (baseName : String.string) : TM unit :=
             in
             mconcat (map gen (countTo (List.length info.(fields))))
           | None => tmFail ("failed to get inductive info but quote succeeded")
-          end
+          end )
     | None => tmFail "failed to quote inductive"
     end
       

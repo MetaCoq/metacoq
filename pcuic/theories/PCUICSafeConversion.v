@@ -1183,10 +1183,10 @@ Section Conversion.
   Qed.
 
   Equations(noeqns) _isconv_prog (Γ : context) (leq : conv_pb)
-            (t1 : term) (π1 : stack) (h1 : welltyped Σ Γ (zippx t1 π1))
-            (t2 : term) (π2 : stack) (h2 : welltyped Σ Γ (zippx t2 π2))
+            (t1 : term) (π1 : stack) (h1 : wtp Γ t1 π1)
+            (t2 : term) (π2 : stack) (h2 : wtp Γ t2 π2)
             (ir1 : isred (t1, π1)) (ir2 : isred (t2, π2))
-            (aux : Aux (Term t2) Γ t1 π1 π2)
+            (aux : Aux (Term t2) Γ t1 π1 π2 h2)
     : { b : bool | if b then conv leq Σ Γ (zippx t1 π1) (zippx t2 π2) else True } :=
 
     _isconv_prog Γ leq (tApp _ _) π1 h1 (tApp _ _) π2 h2 ir1 ir2 aux :=
@@ -1306,42 +1306,10 @@ Section Conversion.
 
   (* tProd *)
   Next Obligation.
-    unfold zippx. simpl.
-    apply welltyped_zippx in h1.
-    apply it_mkLambda_or_LetIn_welltyped.
-    destruct h1 as [T h1].
-    destruct (inversion_Prod h1) as [s1 [s2 [[?] [[?] [?]]]]].
-    eexists. eassumption.
-  Qed.
-  Next Obligation.
-    unfold zippx. simpl.
-    apply welltyped_zippx in h2.
-    apply it_mkLambda_or_LetIn_welltyped.
-    destruct h2 as [T h2].
-    destruct (inversion_Prod h2) as [s1 [s2 [[?] [[?] [?]]]]].
-    eexists. eassumption.
-  Qed.
-  Next Obligation.
     unshelve eapply R_positionR.
     - reflexivity.
     - simpl. unfold xposition. eapply positionR_poscat.
       simpl. rewrite <- app_nil_r. eapply positionR_poscat. constructor.
-  Qed.
-  Next Obligation.
-    unfold zippx. simpl.
-    apply it_mkLambda_or_LetIn_welltyped. cbn.
-    apply welltyped_zippx in h1.
-    destruct h1 as [T h1].
-    destruct (inversion_Prod h1) as [s1 [s2 [[?] [[?] [?]]]]].
-    eexists. econstructor ; eassumption.
-  Qed.
-  Next Obligation.
-    unfold zippx. simpl.
-    apply it_mkLambda_or_LetIn_welltyped. cbn.
-    apply welltyped_zippx in h2.
-    destruct h2 as [T h2].
-    destruct (inversion_Prod h2) as [s1 [s2 [[?] [[?] [?]]]]].
-    eexists. econstructor ; eassumption.
   Qed.
   Next Obligation.
     unshelve eapply R_positionR.
@@ -1362,12 +1330,17 @@ Section Conversion.
     rewrite 2!stack_context_appstack in h0.
     rewrite 2!stack_context_appstack in h.
 
+    apply welltyped_zipx in h1.
+    apply welltyped_zipc_zippx in h1.
     unfold zippx in h1. rewrite decompose_stack_appstack in h1.
     rewrite decompose_stack_twice with (1 := e1) in h1.
     simpl in h1. rewrite app_nil_r in h1.
     apply welltyped_it_mkLambda_or_LetIn in h1.
     apply mkApps_Prod_nil in h1. subst.
 
+    clear aux.
+    apply welltyped_zipx in h2.
+    apply welltyped_zipc_zippx in h2.
     unfold zippx in h2. rewrite decompose_stack_appstack in h2.
     rewrite decompose_stack_twice with (1 := e2) in h2.
     simpl in h2. rewrite app_nil_r in h2.
@@ -1378,6 +1351,7 @@ Section Conversion.
 
     (* Not very clear how to conclude yet...
        It seems true enough though.
+       We must go on to this if the conclusion assumption is too strong.
      *)
     (* eapply conv_Prod ; eassumption. *)
   (* Qed. *)

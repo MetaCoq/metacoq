@@ -14,9 +14,7 @@ LookupPrint two.
 
 Fail Print zeroE.
 
-Showoff.
-
-Print zeroE.
+Make Lens Point.
 
 (*
 (* process coq segmentation fault *)

@@ -9,12 +9,10 @@ open Pp (* this adds the ++ to the current scope *)
 open Tm_util
 open Quoter
 open Denote
-open Constr_quoted
 open Constr_quoter
 open Template_monad
 open Constr_denoter
 
-open ConstrQuoted
 open CoqLiveDenoter
 
 let unquote_reduction_strategy env evm trm (* of type reductionStrategy *) : Redexpr.red_expr =

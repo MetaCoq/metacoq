@@ -4,9 +4,7 @@ open Univ
 open Tm_util
 open Quoted
 open Denote
-open Denoter
 open Constr_quoted
-open Constr_quoter (* the things in here that are common should be pulled out *)
 
 
 

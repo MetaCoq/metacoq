@@ -1,6 +1,8 @@
 Require Import Coq.Strings.String.
 Declare ML Module "demo_plugin".
 
+Set Primitive Projections.
+
 Record Point : Set :=
   { x: nat;
     y:nat
@@ -15,6 +17,8 @@ LookupPrint two.
 Fail Print zeroE.
 
 Make Lens Point.
+
+SearchAbout Point.
 
 (*
 (* process coq segmentation fault *)

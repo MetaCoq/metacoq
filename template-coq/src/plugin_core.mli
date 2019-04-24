@@ -47,7 +47,7 @@ val tmAbout : qualid -> global_reference option tm
 val tmAboutString : string -> global_reference option tm
 val tmCurrentModPath : Names.ModPath.t tm
 
-val tmQuoteInductive : kername -> mutual_inductive_body option tm
+val tmQuoteInductive : kername -> (Names.MutInd.t * mutual_inductive_body) option tm
 val tmQuoteUniverses : UGraph.t tm
 val tmQuoteConstant : kername -> bool -> constant_entry tm
 

@@ -1,5 +1,5 @@
 -I src
--Q theories Demo
+-Q theories Lens
 
 
 src/demo.ml
@@ -9,6 +9,7 @@ src/demo.mli
 src/g_demo_plugin.ml4
 src/demo_plugin.mlpack
 
+theories/Lens.v
 theories/Demo.v
 
 

@@ -1,38 +1,39 @@
+Require Import Coq.Lists.List.
 From Template Require Import
      Ast
      Loader
      TemplateMonad.Extractable.
+Import TemplateMonad.Extractable.
+Require Import Template.BasicAst Template.AstUtils Ast.
 
+Require Import Lens.Lens.
 
-(*
-Definition showoff : TM unit :=
-  tmMsg "running from an extracted plugin!".
-*)
+Let TemplateMonad := TM.
+Fixpoint mconcat (ls : list (TemplateMonad unit)) : TemplateMonad unit :=
+  match ls with
+  | nil => tmReturn tt
+  | m :: ms => tmBind m (fun _ => mconcat ms)
+  end.
 
-Set Primitive Projections.
-
-Record Lens (a b c d : Type) : Type :=
-{ view : a -> c
-; over : (c -> d) -> a -> b
-}.
-
-Arguments over {_ _ _ _} _ _ _.
-Arguments view {_ _ _ _} _ _.
-
-Definition lens_compose {a b c d e f : Type}
-           (l1 : Lens a b c d) (l2 : Lens c d e f)
-: Lens a b e f :=
-{| view := fun x : a => view l2 (view l1 x)
- ; over := fun f0 : e -> f => over l1 (over l2 f0) |}.
-
-Infix "∙" := lens_compose (at level 90, left associativity).
-
-Section ops.
-  Context {a b c d : Type} (l : Lens a b c d).
-
-  Definition set (new : d) : a -> b :=
-    l.(over) (fun _ => new).
-End ops.
+Fixpoint print_all_kns (t : Ast.term) : TM unit :=
+  match t with
+  | tEvar _ ls =>
+    mconcat (List.map print_all_kns ls)
+  | tCast a _ b
+  | tProd _ a b
+  | tLambda _ a b =>
+    tmBind (print_all_kns a) (fun _ => print_all_kns b)
+  | tApp a b =>
+    tmBind (print_all_kns a) (fun _ => mconcat (List.map print_all_kns b))
+  | tLetIn _ a b c =>
+    tmBind (print_all_kns a) (fun _ => tmBind (print_all_kns b) (fun _ => print_all_kns c))
+  | tConst c _ => tmMsg c
+  | tInd i _ => tmMsg i.(inductive_mind)
+  | tConstruct i _ _ => tmMsg i.(inductive_mind)
+  | tProj (i,_,_) b =>
+    tmBind (tmMsg i.(inductive_mind)) (fun _ => print_all_kns b)
+  | _ => tmReturn tt
+  end.
 
 
 Set Primitive Projections.
@@ -113,14 +114,23 @@ Definition getFields (mi : mutual_inductive_body)
   | _ => None
   end.
 
-Import TemplateMonad.Extractable.
-Require Import Template.BasicAst Template.AstUtils Ast.
-Let TemplateMonad := TM.
-Fixpoint mconcat (ls : list (TemplateMonad unit)) : TemplateMonad unit :=
-  match ls with
-  | nil => tmReturn tt
-  | m :: ms => tmBind m (fun _ => mconcat ms)
+Definition gr_to_kername (gr : global_reference) : kername :=
+  match gr with
+  | ConstRef kn => kn
+  | IndRef ind => ind.(inductive_mind)
+  | ConstructRef ind _ => ind.(inductive_mind)
   end.
+
+Definition tmResolve (nm : String.string) : TM (option kername) :=
+  tmBind (tmAbout nm)
+         (fun gr =>
+            match gr with
+            | None => tmReturn None
+            | Some (ConstRef kn) => tmReturn (Some kn)
+            | Some (IndRef ind) => tmReturn (Some ind.(inductive_mind))
+            | Some (ConstructRef ind _) => tmReturn (Some ind.(inductive_mind))
+            end).
+
 
 Definition tmQuoteInductiveR (nm: kername) :
   TM (option mutual_inductive_body).
@@ -158,60 +168,43 @@ Definition printFirstIndName (ind : mutual_inductive_body) : TM unit.
   exact (tmMsg ind_name).
   Defined.
 
-Print printFirstIndName.
-
 Definition genLensN (baseName : String.string) : TM unit :=
-  let name := baseName in
-  let ty :=
-      (Ast.tInd
-   {|
-   BasicAst.inductive_mind := name;
-   BasicAst.inductive_ind := 0 (* TODO: fix for mutual records *) |} List.nil) in
-  tmBind (tmQuoteInductiveR name) (fun ind =>
-    match ind with
-    | Some ind =>
-      tmBind (printFirstIndName ind) (* this causes segfault. also, there are unexpectedly multiple constructors in the first inductive *)
-             (fun _ =>
-          match getFields ind with
-          | Some info =>
-            let gen i :=
-                match mkLens ty info.(fields) i return TemplateMonad unit with
-                | None => tmFail "failed to build lens"
-                | Some x =>
-                  tmBind (tmEval Common.cbv (snd x))
-                         (fun d =>
-                            tmBind
-                              (tmDefinition (fst x) None d)
-                              (fun _ => tmReturn tt))
-                end
-            in
-            mconcat (map gen (countTo (List.length info.(fields))))
-          | None => tmFail ("failed to get inductive info but quote succeeded")
-          end )
-    | None => tmFail "failed to quote inductive"
-    end
+  tmBind (tmAbout baseName) (fun gr =>
+    match gr with
+    | Some (IndRef kn) =>
+      let name := kn.(inductive_mind) in
+      let ty := Ast.tInd
+        {| BasicAst.inductive_mind := name
+         ; BasicAst.inductive_ind := 0 (* TODO: fix for mutual records *) |} List.nil in
+      tmBind (tmQuoteInductiveR name) (fun ind =>
+        match ind with
+        | Some ind =>
+          tmBind (printFirstIndName ind) (* this causes segfault. also, there are unexpectedly multiple constructors in the first inductive *)
+                 (fun _ =>
+                    match getFields ind with
+                    | Some info =>
+                      let gen i :=
+                          match mkLens ty info.(fields) i return TemplateMonad unit with
+                          | None => tmFail "failed to build lens"
+                          | Some x =>
+                            tmBind (tmMsg "dumping kns") (fun _ =>
+                            tmBind (print_all_kns (snd x)) (fun _ =>
+                            tmBind (tmEval Common.cbv (snd x)) (fun d =>
+                            tmBind (tmDefinition (fst x) None d) (fun _ =>
+                            tmReturn tt))))
+                          end
+                      in
+                      mconcat (map gen (countTo (List.length info.(fields))))
+                    | None => tmFail ("failed to get inductive info but quote succeeded")
+                    end )
+        | None => tmFail "failed to quote inductive"
+        end)
+    | _ => tmFail "not an inductive"
+    end).
 
-).
 Notation "<% x %>" := (ltac:(let p y := exact y in quote_term x p))
   (only parsing).
 Print definition_entry.
-
-Definition gr_to_kername (gr : global_reference) : kername :=
-  match gr with
-  | ConstRef kn => kn
-  | IndRef ind => ind.(inductive_mind)
-  | ConstructRef ind _ => ind.(inductive_mind)
-  end.
-
-Definition tmResolve (nm : String.string) : TM (option kername) :=
-  tmBind (tmAbout nm)
-         (fun gr =>
-            match gr with
-            | None => tmReturn None
-            | Some (ConstRef kn) => tmReturn (Some kn)
-            | Some (IndRef ind) => tmReturn (Some ind.(inductive_mind))
-            | Some (ConstructRef ind _) => tmReturn (Some ind.(inductive_mind))
-            end).
 
 Definition tmQuoteConstantR (nm : String.string) (bypass : bool) : TM _ :=
   tmBind (tmAbout nm)

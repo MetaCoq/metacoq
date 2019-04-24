@@ -1,5 +1,6 @@
 Require Import Coq.Strings.String.
 Declare ML Module "demo_plugin".
+Require Import Lens.Lens.
 
 Set Primitive Projections.
 

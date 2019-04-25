@@ -573,7 +573,7 @@ Inductive cumul `{checker_flags} (Σ : global_context) (Γ : context) : term -> 
 | cumul_red_l t u v : red1 (fst Σ) Γ t v -> Σ ;;; Γ |- v <= u -> Σ ;;; Γ |- t <= u
 | cumul_red_r t u v : Σ ;;; Γ |- t <= v -> red1 (fst Σ) Γ u v -> Σ ;;; Γ |- t <= u
 
-where " Σ ;;; Γ |- t <= u " := (@cumul _ Σ Γ t u) : type_scope.
+where " Σ ;;; Γ |- t <= u " := (cumul Σ Γ t u) : type_scope.
 
 (** *** Conversion
 
@@ -583,7 +583,7 @@ where " Σ ;;; Γ |- t <= u " := (@cumul _ Σ Γ t u) : type_scope.
 Definition conv `{checker_flags} Σ Γ T U :=
   ((Σ ;;; Γ |- T <= U) * (Σ ;;; Γ |- U <= T))%type.
 
-Notation " Σ ;;; Γ |- t = u " := (@conv _ Σ Γ t u) (at level 50, Γ, t, u at next level) : type_scope.
+Notation " Σ ;;; Γ |- t = u " := (conv Σ Γ t u) (at level 50, Γ, t, u at next level) : type_scope.
 
 Axiom todo : string -> forall {A}, A.
 Ltac todo s := exact (todo s).

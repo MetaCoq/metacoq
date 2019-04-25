@@ -106,7 +106,7 @@ Section UGraph.
                   | _, _ => false
                   end) edges.
 
-  (* If enforce l1 l2 = Some n, the graph enforce that l2 is at least l1 + n *)
+  (* If enforce l1 l2 = Some n, the graph enforces that l2 is at least l1 + n *)
   (* i.e. l1 + n <= l2 *)
   (* If None nothing is enforced by the graph between those two levels *)
   Definition enforce (u v : Level.t) : option Z :=
@@ -182,7 +182,7 @@ Section UGraph.
   Definition check_lt (u1 u2 : Universe.t) : bool :=
     Universe.for_all (fun e => exists_strictly_bigger e u2) u1.
 
-  (* true is all is ok *)
+  (* true if all is ok *)
   Definition no_universe_inconsistency : bool :=
     let G := BellmanFord init_pred_graph Level.prop in
     negb (detect_negative_cycle G).

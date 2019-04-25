@@ -28,9 +28,9 @@ Cumulative Inductive TemplateMonad@{t u} : Type@{t} -> Prop :=
 | tmEval : reductionStrategy -> forall {A:Type@{t}}, A -> TemplateMonad A
 
 (* Return the defined constant *)
-| tmDefinitionRed : ident -> option reductionStrategy -> forall {A:Type@{t}}, A -> TemplateMonad A
-| tmAxiomRed : ident -> option reductionStrategy -> forall A : Type@{t}, TemplateMonad A
-| tmLemmaRed : ident -> option reductionStrategy -> forall A : Type@{t}, TemplateMonad A
+| tmDefinition : ident -> forall {A:Type@{t}}, A -> TemplateMonad A
+| tmAxiom : ident -> forall A : Type@{t}, TemplateMonad A
+| tmLemma : ident -> forall A : Type@{t}, TemplateMonad A
 
 (* Guaranteed to not cause "... already declared" error *)
 | tmFreshName : ident -> TemplateMonad ident
@@ -67,15 +67,11 @@ Definition fail_nf {A} (msg : string) : TemplateMonad A
 Definition tmMkInductive' (mind : mutual_inductive_body) : TemplateMonad unit
   := tmMkInductive (mind_body_to_entry mind).
 
-Definition tmLemma id := tmLemmaRed id None.
-Definition tmAxiom id := tmAxiomRed id None.
-Definition tmDefinition id {A} t := @tmDefinitionRed id None A t.
-
 (* Don't remove. Constants used in the implem of the plugin *)
 Definition tmTestQuote {A} (t : A) := tmBind (tmQuote t) tmPrint.
 Definition tmQuoteDefinition id {A} (t : A) := tmBind (tmQuote t) (tmDefinition id).
 Definition tmQuoteDefinitionRed id rd {A} (t : A)
-  := tmBind (tmQuote t) (tmDefinitionRed id (Some rd)).
+  := tmBind (tmEval rd t) (tmQuoteDefinition id).
 Definition tmQuoteRecDefinition id {A} (t : A)
   := tmBind (tmQuoteRec t) (tmDefinition id).
 Definition tmMkDefinition id (tm : term) : TemplateMonad unit

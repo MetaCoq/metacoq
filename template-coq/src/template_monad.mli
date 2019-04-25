@@ -22,11 +22,11 @@ type template_monad =
   | TmEvalTerm of Constr.t * Constr.t  (* only Extractable *)
 
     (* creating definitions *)
-  | TmDefinition of Constr.t * Constr.t * Constr.t * Constr.t
+  | TmDefinition of Constr.t * Constr.t * Constr.t
   | TmDefinitionTerm of Constr.t * Constr.t * Constr.t
-  | TmLemma of Constr.t * Constr.t * Constr.t
+  | TmLemma of Constr.t * Constr.t
   | TmLemmaTerm of Constr.t * Constr.t
-  | TmAxiom of Constr.t * Constr.t * Constr.t
+  | TmAxiom of Constr.t * Constr.t
   | TmAxiomTerm of Constr.t * Constr.t
   | TmMkInductive of Constr.t
 

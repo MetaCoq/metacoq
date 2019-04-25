@@ -125,7 +125,7 @@ let of_mib (env : Environ.env) (t : Names.MutInd.t) (mib : Plugin_core.mutual_in
   let bodies = List.map Ast_quoter.mk_one_inductive_body (List.rev ls) in
   Ast_quoter.mk_mutual_inductive_body nparams paramsctx bodies uctx
 
-let to_mie x : Plugin_core.mutual_inductive_entry =
+let to_mie (x : Ast0.mutual_inductive_entry) : Plugin_core.mutual_inductive_entry =
   failwith "to_mie"
 
 (* note(gmm): code taken from quoter.ml (quote_entry_aux) *)

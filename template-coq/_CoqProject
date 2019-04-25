@@ -11,6 +11,7 @@ src/denote.ml
 # src/g_template_coq.mli
 src/g_template_coq.ml4
 src/template_coq.mlpack
+src/template_monad.mli
 src/template_monad.ml
 src/run_template_monad.mli
 src/run_template_monad.ml

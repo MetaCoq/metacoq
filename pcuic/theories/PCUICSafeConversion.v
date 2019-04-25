@@ -2032,7 +2032,7 @@ Section Conversion.
     : { b : bool | if b then ∥ Σ ;;; Γ |- zippx t π1 = zippx t π2 ∥ else True } :=
 
     _isconv_args Γ t (App u1 ρ1) h1 (App u2 ρ2) h2 aux
-    with isconv_red_raw Γ Conv u1 ε u2 ε aux := {
+    with isconv_red_raw Γ Conv u1 (coApp t ρ1) u2 (coApp t ρ2) aux := {
     | @exist true h1 := isconv_args Γ (tApp t u1) ρ1 ρ2 aux ;
     | @exist false _ := no
     } ;
@@ -2045,36 +2045,31 @@ Section Conversion.
     apply conv_refl.
   Qed.
   Next Obligation.
-    apply welltyped_zipx in h1. cbn in h1.
-    zip fold in h1.
-    apply welltyped_context in h1. cbn in h1.
-    destruct h1 as [T h1].
-    destruct (inversion_App h1) as [na [A [B [[?] [[?] [?]]]]]].
-    apply zipx_welltyped. cbn.
-    fail "Not the right stack".
-    exists A. assumption.
+    unshelve eapply R_positionR.
+    - simpl. reflexivity.
+    - simpl. unfold xposition. eapply positionR_poscat.
+      cbn. eapply positionR_poscat. constructor.
   Qed.
   Next Obligation.
-  (*   zip fold in h2. *)
-  (*   apply welltyped_context in h2. cbn in h2. *)
-  (*   destruct h2 as [T h2]. *)
-  (*   destruct (inversion_App h2) as [na [A [B [[?] [[?] [?]]]]]]. *)
-  (*   exists A. assumption. *)
-  (* Qed. *)
+    destruct h1 as [h1]. unfold zippx in h1.
+    simpl in h1.
+    apply zipx_welltyped.
+    clear aux.
+    apply welltyped_zipx in h2. cbn in h2.
+    (* We need subject conversion here it woud seem *)
+    admit.
   Admitted.
   Next Obligation.
     unshelve eapply R_positionR.
-    - simpl. give_up.
-    - simpl. give_up.
-  Admitted.
-  Next Obligation.
-    destruct h1 as [h1]. cbn in h1.
-    (* Here it is a bit unclear. Maybe things would be better if a common
-       type was assumed.
-     *)
-  Admitted.
-  Next Obligation.
-    (* R (Args, Γ, tApp t u1, ρ1, ρ2) (Args, Γ, t, App u1 ρ1, App u2 ρ2) *)
+    - simpl. reflexivity.
+    - simpl. unfold xposition. eapply positionR_poscat.
+      cbn. rewrite <- app_nil_r at 1. eapply positionR_poscat.
+      (* SERIOUS ISSUE *)
+      (* It is not clear how to get rid of this one!
+         Indeed, the position is not smaller, worse, it is the other way around.
+         Also, it is not entierely clear what gets smaller here!
+       *)
+      fail "Is all hope lost?!".
   Admitted.
   Next Obligation.
     destruct b ; auto.

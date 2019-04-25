@@ -347,7 +347,8 @@ Inductive stack : Type :=
 | Prod_l (na : name) (B : term) (π : stack)
 | Prod_r (na : name) (A : term) (π : stack)
 | Lambda_ty (na : name) (b : term) (π : stack)
-| Lambda_tm (na : name) (A : term) (π : stack).
+| Lambda_tm (na : name) (A : term) (π : stack)
+| coApp (t : term) (π : stack).
 
 Notation "'ε'" := (Empty).
 
@@ -366,6 +367,7 @@ Fixpoint zipc t stack :=
   | Prod_r na A π => zipc (tProd na A t) π
   | Lambda_ty na b π => zipc (tLambda na t b) π
   | Lambda_tm na A π => zipc (tLambda na A t) π
+  | coApp u π => zipc (tApp u t) π
   end.
 
 Definition zip (t : term * stack) := zipc (fst t) (snd t).
@@ -494,6 +496,7 @@ Fixpoint stack_context π : context :=
   | Prod_r na A π => stack_context π ,, vass na A
   | Lambda_ty na u π => stack_context π
   | Lambda_tm na A π => stack_context π ,, vass na A
+  | coApp u π => stack_context π
   end.
 
 Lemma stack_context_appstack :
@@ -516,6 +519,7 @@ Fixpoint stack_position π : position :=
   | Prod_r na A ρ => stack_position ρ ++ [ prod_r ]
   | Lambda_ty na u ρ => stack_position ρ ++ [ lam_ty ]
   | Lambda_tm na A ρ => stack_position ρ ++ [ lam_tm ]
+  | coApp u ρ => stack_position ρ ++ [ app_r ]
   end.
 
 Lemma stack_position_atpos :
@@ -530,11 +534,11 @@ Lemma stack_position_valid :
 Proof.
   intros t π. revert t. induction π ; intros u.
   all: try solve [
-             cbn ; eapply poscat_valid ; [
-               eapply IHπ
-             | rewrite stack_position_atpos ; reflexivity
-             ]
-           ].
+    cbn ; eapply poscat_valid ; [
+      eapply IHπ
+    | rewrite stack_position_atpos ; reflexivity
+    ]
+  ].
   reflexivity.
 Qed.
 
@@ -715,6 +719,7 @@ Section Stacks.
     | Prod_r na A ρ => Prod_r na A (stack_cat ρ θ)
     | Lambda_ty na u ρ => Lambda_ty na u (stack_cat ρ θ)
     | Lambda_tm na A ρ => Lambda_tm na A (stack_cat ρ θ)
+    | coApp u ρ => coApp u (stack_cat ρ θ)
     end.
 
   Notation "ρ +++ θ" := (stack_cat ρ θ) (at level 20).

@@ -473,6 +473,10 @@ Section Reduce.
       destruct h as [T' h].
       destruct (inversion_Lambda h) as [s1 [B [[?] [[?] [?]]]]].
       eexists. eassumption.
+    - cbn. cbn in h. cbn in IHπ. apply IHπ in h.
+      destruct h as [B h].
+      destruct (inversion_App h) as [na [A' [B' [[?] [[?] ?]]]]].
+      eexists. eassumption.
   Qed.
 
   Lemma Case_Construct_ind_eq :

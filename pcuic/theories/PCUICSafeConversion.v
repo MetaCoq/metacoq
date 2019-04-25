@@ -1363,6 +1363,60 @@ Section Conversion.
     apply isProdmkApps in hh. assumption.
   Qed.
 
+  Lemma welltyped_rename :
+    forall Γ u v,
+      welltyped Σ Γ u ->
+      eq_term (snd Σ) u v ->
+      welltyped Σ Γ v.
+  Admitted.
+
+  Lemma eq_term_it_mkLambda_or_LetIn :
+    forall Γ u v,
+      eq_term (snd Σ) (it_mkLambda_or_LetIn Γ u) (it_mkLambda_or_LetIn Γ v) =
+      eq_term (snd Σ) u v.
+  Proof.
+    intros Γ.
+    induction Γ as [| [na [b|] A] Γ ih ] ; intros u v.
+    - reflexivity.
+    - simpl. cbn. rewrite ih. cbn.
+      rewrite !eq_term_refl. reflexivity.
+    - simpl. cbn. rewrite ih. cbn.
+      rewrite !eq_term_refl. reflexivity.
+  Qed.
+
+  Lemma eq_term_zipc :
+    forall u v π,
+      eq_term (snd Σ) (zipc u π) (zipc v π) = eq_term (snd Σ) u v.
+  Proof.
+    intros u v π.
+    revert u v. induction π ; intros u v.
+    all: try solve [
+      simpl ; rewrite ?IHπ ; cbn ;
+      rewrite ?eq_term_refl, ?andb_true_r ;
+      reflexivity
+    ].
+    simpl. rewrite IHπ. cbn.
+    destruct indn.
+    assert (forallb2 (fun '(_, b) '(_, b') => eq_term (snd Σ) b b') brs brs) as e.
+    { clear. induction brs.
+      - reflexivity.
+      - cbn. rewrite IHbrs. destruct a.
+        rewrite eq_term_refl. reflexivity.
+    } rewrite e.
+    rewrite ?eq_term_refl, ?andb_true_r, ?eq_ind_refl, ?eq_nat_refl.
+    reflexivity.
+  Qed.
+
+  Lemma eq_term_zipx :
+    forall Γ u v π,
+      eq_term (snd Σ) (zipx Γ u π) (zipx Γ v π) =
+      eq_term (snd Σ) u v.
+  Proof.
+    intros Γ u v π.
+    unfold zipx. rewrite eq_term_it_mkLambda_or_LetIn.
+    apply eq_term_zipc.
+  Qed.
+
   Equations(noeqns) _isconv_prog (Γ : context) (leq : conv_pb)
             (t1 : term) (π1 : stack) (h1 : wtp Γ t1 π1)
             (t2 : term) (π2 : stack) (h2 : wtp Γ t2 π2)
@@ -1435,8 +1489,8 @@ Section Conversion.
     with inspect (eq_term (snd Σ) p p' && eq_term (snd Σ) c c'
         && forallb2 (fun '(a, b) '(a', b') => eq_term (snd Σ) b b') brs brs') := {
     | @exist true eq1 := isconv_args Γ (tCase (ind, par) p c brs) π1 π2 aux ;
-    | @exist false _ with inspect (reduce_term RedFlags.default Σ Γ c _) := {
-      | @exist cred eq1 with inspect (reduce_term RedFlags.default Σ Γ c' _) := {
+    | @exist false _ with inspect (reduce_term RedFlags.default Σ (Γ ,,, stack_context π1) c _) := {
+      | @exist cred eq1 with inspect (reduce_term RedFlags.default Σ (Γ ,,, stack_context π2) c' _) := {
          | @exist cred' eq2 with inspect (eq_term (snd Σ) cred c && eq_term (snd Σ) cred' c') := {
             | @exist true eq3 := no ; (* In Checker it says yes, but wrong right? *)
             | @exist false eq3 :=
@@ -1704,15 +1758,12 @@ Section Conversion.
     zip fold in h1. apply welltyped_context in h1. simpl in h1.
     destruct h1 as [T h1].
     destruct (weak_inversion_Case h1) as [args [u [?]]].
-    (* NEW PROBLEM
-       The obligation is not in the right context.
-       That should be remedied somehow in the def.
-     *)
-    fail "TODO Update def.".
     eexists. eassumption.
   Qed.
   Next Obligation.
-    zip fold in h2. apply welltyped_context in h2. cbn in h2.
+    clear aux.
+    apply welltyped_zipx in h2.
+    zip fold in h2. apply welltyped_context in h2. simpl in h2.
     destruct h2 as [T h2].
     destruct (weak_inversion_Case h2) as [args [u [?]]].
     eexists. eassumption.
@@ -1722,10 +1773,10 @@ Section Conversion.
     - exact h1.
     - match goal with
       | |- context [ reduce_term ?f ?Σ ?Γ ?t ?h ] =>
-        pose proof (reduce_term_sound f Σ Γ t h) as hr
+        pose proof (reduce_term_sound f Σ Γ t h) as [hr]
       end.
-      destruct hr as [hr]. constructor.
-      eapply red_context.
+      constructor.
+      eapply red_zipx.
       eapply PCUICReduction.red_case.
       + constructor.
       + assumption.
@@ -1740,10 +1791,10 @@ Section Conversion.
     - exact h2.
     - match goal with
       | |- context [ reduce_term ?f ?Σ ?Γ ?t ?h ] =>
-        pose proof (reduce_term_sound f Σ Γ t h) as hr
+        pose proof (reduce_term_sound f Σ Γ t h) as [hr]
       end.
-      destruct hr as [hr]. constructor.
-      eapply red_context.
+      constructor.
+      eapply red_zipx.
       eapply PCUICReduction.red_case.
       + constructor.
       + assumption.
@@ -1754,18 +1805,62 @@ Section Conversion.
         * eapply IHbrs'.
   Qed.
   Next Obligation.
-    (* R *)
-    (* (Reduction *)
-    (*    (tCase (ind', par') p' *)
-    (*       (reduce_term RedFlags.default Σ Γ c' *)
-    (*          (_isconv_prog_obligations_obligation_44 p' c' brs' Γ ind' par' π2 h2)) *)
-    (*       brs'), Γ, *)
-    (* tCase (ind, par) p *)
-    (*   (reduce_term RedFlags.default Σ Γ c *)
-    (*      (_isconv_prog_obligations_obligation_43 p c brs Γ ind par π1 h1)) brs, π1, *)
-    (* π2) *)
-    (* (Term (tCase (ind', par') p' c' brs'), Γ, tCase (ind, par) p c brs, π1, π2) *)
-  Admitted.
+    match goal with
+    | |- context [ reduce_term ?f ?Σ ?Γ c ?h ] =>
+      destruct (reduce_stack_Req f Σ Γ c ε h) as [e | hr]
+    end.
+    - match goal with
+      | |- context [ reduce_term ?f ?Σ ?Γ c' ?h ] =>
+        destruct (reduce_stack_Req f Σ Γ c' ε h) as [e' | hr]
+      end.
+      + exfalso.
+        unfold reduce_term in eq3.
+        rewrite e in eq3.
+        rewrite e' in eq3.
+        cbn in eq3.
+        rewrite 2!eq_term_refl in eq3. discriminate eq3.
+      + dependent destruction hr.
+        * unshelve eapply R_cored2.
+          all: try reflexivity.
+          -- simpl. unfold reduce_term. rewrite e. reflexivity.
+          -- simpl. eapply cored_zipx. eapply cored_case. assumption.
+        * exfalso.
+          destruct y'. simpl in H0. inversion H0. subst.
+          unfold reduce_term in eq3.
+          rewrite e in eq3.
+          rewrite <- H2 in eq3.
+          cbn in eq3.
+          rewrite 2!eq_term_refl in eq3. discriminate eq3.
+    - dependent destruction hr.
+      + left. simpl.
+        eapply cored_zipx. eapply cored_case. assumption.
+      + match goal with
+        | |- context [ reduce_term ?f ?Σ ?Γ c' ?h ] =>
+          destruct (reduce_stack_Req f Σ Γ c' ε h) as [e' | hr]
+        end.
+        * exfalso.
+          destruct y'. simpl in H0. inversion H0. subst.
+          unfold reduce_term in eq3.
+          rewrite e' in eq3.
+          rewrite <- H2 in eq3.
+          cbn in eq3.
+          rewrite 2!eq_term_refl in eq3. discriminate eq3.
+        * dependent destruction hr.
+          -- unshelve eapply R_cored2.
+             all: try reflexivity.
+             ++ simpl. unfold reduce_term.
+                destruct y'. simpl in H0. inversion H0. subst.
+                rewrite <- H3. reflexivity.
+             ++ simpl. eapply cored_zipx. eapply cored_case. assumption.
+          -- exfalso.
+             destruct y'. simpl in H0. inversion H0. subst.
+             destruct y'0. simpl in H2. inversion H2. subst.
+             unfold reduce_term in eq3.
+             rewrite <- H4 in eq3.
+             rewrite <- H5 in eq3.
+             cbn in eq3.
+             rewrite 2!eq_term_refl in eq3. discriminate eq3.
+  Qed.
   Next Obligation.
     destruct b ; auto.
     match type of h with
@@ -1779,7 +1874,7 @@ Section Conversion.
     destruct hr as [hr], hr' as [hr'].
     eapply conv_trans'.
     - eapply red_conv_l.
-      eapply red_context.
+      eapply red_zippx.
       eapply PCUICReduction.red_case.
       + constructor.
       + eassumption.
@@ -1791,7 +1886,7 @@ Section Conversion.
         * eapply IHbrs.
     - eapply conv_trans' ; try eassumption.
       eapply red_conv_r.
-      eapply red_context.
+      eapply red_zippx.
       eapply PCUICReduction.red_case.
       + constructor.
       + eassumption.
@@ -1804,29 +1899,49 @@ Section Conversion.
 
   (* tProj *)
   Next Obligation.
-    (* Some kind of subject conversion *)
-  Admitted.
+    eapply welltyped_rename.
+    - exact h2.
+    - apply eq_term_sym.
+      cbn. rewrite eq_term_zipx. cbn.
+      rewrite <- eq1. reflexivity.
+  Qed.
   Next Obligation.
-    (* R (Args, Γ, tProj p c, π1, π2) *)
-    (*   (Term (tProj p' c'), Γ, tProj p c, π1, π2) *)
+    unshelve eapply R_stateR.
+    all: try reflexivity.
+    - simpl.
+      (* NEW PROBLEM.
+         We have only eq_term, no equality.
+         Damn names!
+       *)
+      admit.
+    - simpl. constructor.
   Admitted.
   Next Obligation.
     destruct b ; auto.
     eapply conv_conv.
     destruct h. constructor.
     eapply conv_trans ; try eassumption.
-    eapply conv_context.
+    eapply conv_zippx.
     eapply eq_term_conv.
     symmetry. assumption.
   Qed.
 
   (* tFix *)
   Next Obligation.
-    (* Subject conversion *)
-  Admitted.
+    eapply welltyped_rename.
+    - exact h2.
+    - apply eq_term_sym. rewrite eq_term_zipx. cbn. rewrite <- eq1. reflexivity.
+  Qed.
   Next Obligation.
-    (* R (Args, Γ, tFix mfix idx, π1, π2) *)
-    (*   (Term (tFix mfix' idx'), Γ, tFix mfix idx, π1, π2) *)
+    unshelve eapply R_stateR.
+    all: try reflexivity.
+    - simpl.
+      (* NEW PROBLEM.
+         We have only eq_term, no equality.
+         Damn names!
+       *)
+      admit.
+    - simpl. constructor.
   Admitted.
   Next Obligation.
     destruct b ; auto.
@@ -1834,79 +1949,78 @@ Section Conversion.
     eapply conv_conv.
     constructor.
     eapply conv_trans ; try eassumption.
-    eapply conv_context.
+    eapply conv_zippx.
     eapply eq_term_conv.
     symmetry. assumption.
   Qed.
   Next Obligation.
-    eapply red_welltyped.
-    - eapply h1.
-    - constructor. eapply red_context.
-      (* Need appropriate lemme on unfold_one_fix. *)
+    apply welltyped_zipx in h1.
+    apply welltyped_zipc_zippx in h1.
+    assumption.
+  Qed.
+  Next Obligation.
+    (* Need appropriate lemma on unfold_one_fix. *)
   Admitted.
   Next Obligation.
-    match type of eq2 with
-    | context [ reduce_stack ?f ?Σ ?Γ ?c ?π ?h ] =>
-      pose proof (reduce_stack_sound f Σ Γ c π h) as hr
-    end.
-    destruct hr as [hr].
-    rewrite <- eq2 in hr.
-    eapply red_welltyped.
-    - eapply h1.
-    - constructor. eapply red_trans.
-      + admit. (* Need appropriate lemme on unfold_one_fix. *)
-      + eapply hr.
+    (* Need appropriate lemma on unfold_one_fix. *)
   Admitted.
   Next Obligation.
-    (* R (Term (tFix mfix' idx'), Γ, fn', ρ, π2) *)
-    (*   (Term (tFix mfix' idx'), Γ, tFix mfix idx, π1, π2) *)
+    (* Need appropriate lemma on unfold_one_fix. *)
   Admitted.
+  Next Obligation.
+    rewrite eq2.
+    eapply reduce_stack_isred.
+    auto.
+  Qed.
   Next Obligation.
     destruct b ; auto.
-    (* Need appropriate lemme on unfold_one_fix. *)
+    (* Need appropriate lemma on unfold_one_fix. *)
   Admitted.
   Next Obligation.
-    eapply red_welltyped.
-    - eapply h2.
-    - constructor. eapply red_context.
-      (* Need appropriate lemme on unfold_one_fix. *)
+    clear aux.
+    apply welltyped_zipx in h2.
+    apply welltyped_zipc_zippx in h2.
+    assumption.
+  Qed.
+  Next Obligation.
+    (* Need lemma on unfold_one_fix *)
   Admitted.
   Next Obligation.
-    match type of eq2 with
-    | context [ reduce_stack ?f ?Σ ?Γ ?c ?π ?h ] =>
-      pose proof (reduce_stack_sound f Σ Γ c π h) as hr
-    end.
-    destruct hr as [hr].
-    rewrite <- eq2 in hr.
-    eapply red_welltyped.
-    - eapply h2.
-    - constructor. eapply red_trans.
-      + admit. (* Need appropriate lemme on unfold_one_fix. *)
-      + eapply hr.
+    (* Need lemma on unfold_one_fix *)
   Admitted.
   Next Obligation.
-    (* R (Term fn', Γ, tFix mfix' idx', π2, ρ) *)
-    (*   (Term (tFix mfix' idx'), Γ, tFix mfix idx, π1, π2) *)
+    (* Need lemma on unfold_one_fix *)
   Admitted.
+  Next Obligation.
+    rewrite eq2.
+    eapply reduce_stack_isred.
+    auto.
+  Qed.
   Next Obligation.
     destruct b ; auto.
-    (* Need appropriate lemme on unfold_one_fix. *)
+    (* Need appropriate lemma on unfold_one_fix. *)
   Admitted.
 
   (* tCoFix *)
   Next Obligation.
-    (* Subject conversion? *)
-  Admitted.
+    eapply welltyped_rename.
+    - exact h2.
+    - apply eq_term_sym. rewrite eq_term_zipx. cbn. rewrite <- eq1. reflexivity.
+  Qed.
   Next Obligation.
-    (* R (Args, Γ, tCoFix mfix idx, π1, π2) *)
-    (*   (Term (tCoFix mfix' idx'), Γ, tCoFix mfix idx, π1, π2) *)
+    unshelve eapply R_stateR.
+    all: try reflexivity.
+    - simpl.
+      (* BIG PROBLEM again where we only have eq_term *)
+      give_up.
+    - simpl. constructor.
   Admitted.
   Next Obligation.
     destruct b ; auto.
     eapply conv_conv.
     destruct h. constructor.
     eapply conv_trans ; try eassumption.
-    eapply conv_context.
+    eapply conv_zippx.
     eapply eq_term_conv.
     symmetry. assumption.
   Qed.

@@ -175,7 +175,7 @@ Inductive red1 (Σ : global_declarations) (Γ : context) : term -> term -> Type 
 | red_cofix_case ip p mfix idx args narg fn brs :
     unfold_cofix mfix idx = Some (narg, fn) ->
     red1 Σ Γ (tCase ip p (mkApps (tCoFix mfix idx) args) brs)
-         (tCase ip (mkApps fn args) p brs)
+         (tCase ip p (mkApps fn args) brs)
 
 (** CoFix-proj unfolding *)
 | red_cofix_proj p mfix idx args narg fn :
@@ -252,7 +252,7 @@ Lemma red1_ind_all :
        (forall (Γ : context) (ip : inductive * nat) (p : term) (mfix : mfixpoint term) (idx : nat)
           (args : list term) (narg : nat) (fn : term) (brs : list (nat * term)),
         unfold_cofix mfix idx = Some (narg, fn) ->
-        P Γ (tCase ip p (mkApps (tCoFix mfix idx) args) brs) (tCase ip (mkApps fn args) p brs)) ->
+        P Γ (tCase ip p (mkApps (tCoFix mfix idx) args) brs) (tCase ip p (mkApps fn args) brs)) ->
        (forall (Γ : context) (p : projection) (mfix : mfixpoint term) (idx : nat) (args : list term)
           (narg : nat) (fn : term),
         unfold_cofix mfix idx = Some (narg, fn) -> P Γ (tProj p (mkApps (tCoFix mfix idx) args)) (tProj p (mkApps fn args))) ->
@@ -573,7 +573,7 @@ Inductive cumul `{checker_flags} (Σ : global_context) (Γ : context) : term -> 
 | cumul_red_l t u v : red1 (fst Σ) Γ t v -> Σ ;;; Γ |- v <= u -> Σ ;;; Γ |- t <= u
 | cumul_red_r t u v : Σ ;;; Γ |- t <= v -> red1 (fst Σ) Γ u v -> Σ ;;; Γ |- t <= u
 
-where " Σ ;;; Γ |- t <= u " := (@cumul _ Σ Γ t u) : type_scope.
+where " Σ ;;; Γ |- t <= u " := (cumul Σ Γ t u) : type_scope.
 
 (** *** Conversion
 
@@ -583,7 +583,7 @@ where " Σ ;;; Γ |- t <= u " := (@cumul _ Σ Γ t u) : type_scope.
 Definition conv `{checker_flags} Σ Γ T U :=
   ((Σ ;;; Γ |- T <= U) * (Σ ;;; Γ |- U <= T))%type.
 
-Notation " Σ ;;; Γ |- t = u " := (@conv _ Σ Γ t u) (at level 50, Γ, t, u at next level) : type_scope.
+Notation " Σ ;;; Γ |- t = u " := (conv Σ Γ t u) (at level 50, Γ, t, u at next level) : type_scope.
 
 Axiom todo : string -> forall {A}, A.
 Ltac todo s := exact (todo s).

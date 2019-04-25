@@ -1177,16 +1177,34 @@ Section ParallelReduction.
   Lemma red1_pred1 Γ : forall M N, red1 Σ Γ M N -> pred1 Γ Γ M N.
   Proof with eauto with pcuic.
     induction 1 using red1_ind_all; intros; eauto with pcuic;
-      try constructor; intuition auto with pcuic.
-    (* FIXNE cofix rule in red1 *) admit.
-    admit.
-
-    (* FIXME red1 allows conversion with differently annotated branches *)
-    admit.
-  (*   (* TODO update red1 to keep extra info equalities (on_Trel_eq) *) *)
-    eapply OnOne2_All2...
-    (* FIXME red1 converts in the wrong contexts, fixpoints and cofixpoints *)
-    all:admit.
+      try solve [ constructor ; intuition auto with pcuic ].
+    - eapply pred_cofix_case ; intuition auto with pcuic ...
+      + admit.
+      + admit.
+    - eapply pred_cofix_proj ; intuition auto with pcuic ...
+      + admit.
+      + admit.
+    - constructor ; intuition auto with pcuic ...
+      (* eapply OnOne2_All2 ... intros x y X0. *)
+      admit.
+    - constructor ; intuition auto with pcuic ...
+      eapply OnOne2_All2 ...
+    - constructor ; intuition auto with pcuic ...
+      + admit.
+      + (* eapply OnOne2_All2 ... *)
+        admit.
+    - constructor ; intuition auto with pcuic ...
+      + admit.
+      + (* eapply OnOne2_All2 ... *)
+        admit.
+    - constructor ; intuition auto with pcuic ...
+      + admit.
+      + (* eapply OnOne2_All2 ... *)
+        admit.
+    - constructor ; intuition auto with pcuic ...
+      + admit.
+      + (* eapply OnOne2_All2 ... *)
+        admit.
   Admitted.
 
 End ParallelReduction.

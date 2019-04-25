@@ -10,7 +10,7 @@ MetaCoq is a project formalizing Coq in Coq and providing tools for
 manipulating Coq terms and developing certified plugins
 (i.e. translations, compilers or tactics) in Coq.
 
-At the center of this project is the Tempate-Coq quoting library for
+At the center of this project is the Template-Coq quoting library for
 Coq. The project currently has a single repository extending
 Template-Coq with additional features:
 

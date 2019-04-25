@@ -31,6 +31,8 @@ Quote Definition d' := (fun x : nat => x).
 Definition id_nat : nat -> nat := fun x => x.
 
 Quote Definition d'' := Eval compute in id_nat.
+Quote Definition d3 := Eval cbn in id_nat.
+Quote Definition d4 := Eval unfold id_nat in id_nat.
 
 
 (** Fixpoints **)
@@ -77,7 +79,7 @@ Make Definition two_from_syntax := (Ast.tApp (Ast.tConstruct (BasicAst.mkInd "Co
    (Ast.tApp (Ast.tConstruct (BasicAst.mkInd "Coq.Init.Datatypes.nat" 0) 1 nil)
       (Ast.tConstruct (BasicAst.mkInd "Coq.Init.Datatypes.nat" 0) 0 nil :: nil) :: nil)).
 
-Quote Recursively Definition plus_synax := plus.
+Quote Recursively Definition plus_syntax := plus.
 
 Quote Recursively Definition mult_syntax := mult.
 
@@ -197,7 +199,8 @@ Inductive demoList (A : Set) : Set :=
 
 
 (** Putting the above commands in monadic program *)
-
+Notation inat :=
+  {| inductive_mind := "Coq.Init.Datatypes.nat"; inductive_ind := 0 |}.
 Run TemplateProgram (tmBind (tmQuote (3 + 3)) tmPrint).
 
 Run TemplateProgram (tmBind (tmQuoteRec add) tmPrint).
@@ -349,10 +352,9 @@ Quote Recursively Definition TT := T.
 
 Unset Strict Unquote Universe Mode.
 Make Definition t := (tSort ([(Level.Level "Top.20000", false)])).
-Make Definition t' := (tSort ([(Level.Level "Top.20000", false); (Level.Level "Top.20001", true)])).
+Make Definition t' := (tSort ([])).
 Make Definition myProp := (tSort [(Level.lProp, false)]).
 Make Definition myProp' := (tSort Universe.type0m).
-Make Definition mySucProp := (tSort [(Level.lProp, true)]).
 Make Definition mySet := (tSort [(Level.lSet, false)]).
 
 (** Cofixpoints *)

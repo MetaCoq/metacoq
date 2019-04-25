@@ -16,7 +16,6 @@ Monomorphic Definition T := Type.
 Unset Strict Unquote Universe Mode.
 Make Definition t2 := (tSort []).
 Make Definition t3 := (tSort [(Level.Level "Top.400", false)]).
-Make Definition t4 := (tSort [(Level.Level "Top.2", false); (Level.Level "Top.2", true); (Level.Level "Top.200", false)]).
 
 
 Monomorphic Universe i j.
@@ -120,7 +119,7 @@ Fail Make Inductive {|
 
 Definition f@{i j k} := fun (E:Type@{i}) => Type@{max(i,j)}.
 Quote Definition qf := Eval cbv in f.
-Make Definition uqf := Eval cbv in qf.
+Make Definition uqf := qf.
 
 
 Inductive foo (A : Type) : Type :=
@@ -200,7 +199,7 @@ Unset Printing Universes.
 Quote Definition qtest := Eval compute in (fun (T : Type@{i}) (T2 : Type@{j}) => T -> T2).
 Print qtest.
 
-Make Definition bla := Eval compute in qtest.
+Make Definition bla := qtest.
 Unset Strict Unquote Universe Mode.
 Make Definition bla' := (tLambda (nNamed "T") (tSort ((Level.Level "Top.2", false) :: nil)%list) (tLambda (nNamed "T2") (tSort ((Level.Level "Top.1", false) :: nil)%list) (tProd nAnon (tRel 1) (tRel 1)))).
 
@@ -229,7 +228,7 @@ Compute (@t Type@{i} Type@{j}).
 Quote Definition qt := Eval compute in t.
 Print qt.
 
-Make Definition t' := Eval compute in qt.
+Make Definition t' := qt.
 
 Polymorphic Definition Funtp@{i} (A B: Type@{i}) := A->B.
 
@@ -237,7 +236,6 @@ Polymorphic Definition F@{i} := Type@{i}.
 
 Quote Definition qT := Eval compute in F.
 Require Import List. Import ListNotations.
-Make Definition T'2 := (tSort [(Level.Var 1, false)]).
 
 Quote Recursively Definition qT' := F.
 

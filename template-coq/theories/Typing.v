@@ -623,11 +623,16 @@ Definition eq_context `{checker_flags} φ (Γ Δ : context) :=
   forallb2 (eq_decl φ) Γ Δ.
 
 Definition check_correct_arity `{checker_flags} φ decl ind u ctx pars pctx :=
-  let inddecl :=
-      {| decl_name := nNamed decl.(ind_name);
-         decl_body := None;
-         decl_type := mkApps (tInd ind u) (map (lift0 #|ctx|) pars ++ to_extended_list ctx) |}
-  in eq_context φ (inddecl :: ctx) pctx.
+  (* We first remove the parameters from the context of the inductive type. *)
+  let ctx := firstn (#|ctx| - #|pars|) ctx in
+  (* We then subsitute the indices with the parameters *)
+  let ctx := mapi_context (subst pars) ctx in
+  let inddecl := {|
+    decl_name := nNamed decl.(ind_name) ;
+    decl_body := None ;
+    decl_type := mkApps (tInd ind u) (map (lift0 #|ctx|) pars ++ to_extended_list ctx)
+  |} in
+  eq_context φ (inddecl :: ctx) pctx.
 
 (** ** Typing relation *)
 

@@ -801,38 +801,127 @@ Proof.
   intuition auto using lift_eq_term.
 Qed.
 
+Lemma to_extended_list_mapi_context f Γ :
+  to_extended_list (mapi_context f Γ) = to_extended_list Γ.
+Proof.
+  unfold to_extended_list, to_extended_list_k.
+  generalize 0. generalize (@nil term) at 1 2.
+  induction Γ in f |- *; simpl; intros.
+  - reflexivity.
+  - destruct a as [na [bo|] ty].
+    + simpl. erewrite <- IHΓ. unfold mapi_context, mapi.
+      rewrite mapi_rec_Sk. reflexivity.
+    + simpl. erewrite <- IHΓ. unfold mapi_context, mapi.
+      rewrite mapi_rec_Sk. reflexivity.
+Qed.
+
+(* Lemma to_extended_list_firstn n Γ : *)
+(*   to_extended_list (firstn n Γ) = firstn n (to_extended_list Γ). *)
+(* Proof. *)
+(*   (* revert n. induction Γ as [| [na [bo|] ty] Γ ih] ; intros n. *) *)
+(*   (* - destruct n ; reflexivity. *) *)
+(*   (* - cbn. unfold to_extended_list, to_extended_list_k in ih. rewrite <- ih. *) *)
+(*   unfold to_extended_list, to_extended_list_k. *)
+(*   generalize 0 as m. (* generalize (@nil term) at 1 2. *) *)
+(*   induction Γ as [| [na [bo|] ty] Γ ih] in n |- *; simpl; intros. *)
+(*   - destruct n ; reflexivity. *)
+(*   - destruct n. *)
+(*     + cbn. reflexivity. *)
+(*     + simpl. rewrite ih. *)
+
+(* erewrite <- ih. *)
+(*   - simpl. erewrite <- IHΓ. unfold mapi_context, mapi. *)
+(*     rewrite mapi_rec_Sk. reflexivity. *)
+(* Qed. *)
+
+Lemma firstn_lift_context :
+  forall n Γ m k,
+    firstn n (lift_context m k Γ) =
+    lift_context m (#|Γ| + k - #|firstn n Γ|) (firstn n Γ).
+Proof.
+  intros n Γ m k.
+  revert n m k.
+  induction Γ as [| [na [bo|] ty] Γ ih] ; intros n m k.
+  - destruct n ; reflexivity.
+  - destruct n.
+    + reflexivity.
+    + rewrite firstn_cons.
+      rewrite 2!lift_context_snoc. simpl.
+      rewrite ih. unfold snoc.
+      replace (#|firstn n Γ| + (#|Γ| + k - #|firstn n Γ|))
+        with (#|Γ| + k) ; revgoals.
+      { rewrite !firstn_length. auto with arith. }
+      reflexivity.
+  - destruct n.
+    + reflexivity.
+    + rewrite firstn_cons.
+      rewrite 2!lift_context_snoc. simpl.
+      rewrite ih. unfold snoc.
+      replace (#|firstn n Γ| + (#|Γ| + k - #|firstn n Γ|))
+        with (#|Γ| + k) ; revgoals.
+      { rewrite !firstn_length. auto with arith. }
+      reflexivity.
+Qed.
+
 Lemma lift_check_correct_arity:
-  forall (cf : checker_flags) (Σ : global_context) (Γ' : context) (ind : inductive) (u : universe_instance)
-         (npar : nat) (args : list term) (idecl : one_inductive_body)
-         (Γ'' : context) (indctx pctx : list context_decl),
+  forall (cf : checker_flags) (Σ : global_context) (Γ' : context) (ind : inductive)
+    (u : universe_instance) (npar : nat) (args : list term)
+    (idecl : one_inductive_body) (Γ'' : context)
+    (indctx pctx : list context_decl),
     check_correct_arity (snd Σ) idecl ind u indctx (firstn npar args) pctx ->
     check_correct_arity
-      (snd Σ) idecl ind u (lift_context #|Γ''| #|Γ'| indctx) (firstn npar (map (lift #|Γ''| #|Γ'|) args))
+      (snd Σ) idecl ind u
+      (lift_context #|Γ''| #|Γ'| indctx)
+      (firstn npar (map (lift #|Γ''| #|Γ'|) args))
       (lift_context #|Γ''| #|Γ'| pctx).
 Proof.
   intros cf Σ Γ' ind u npar args idecl Γ'' indctx pctx.
   unfold check_correct_arity.
-  destruct pctx in indctx |- *. simpl; try congruence. simpl.
-  rewrite -> lift_context_snoc0. simpl.
-  unfold eq_context.
-  unfold UnivSubst.subst_instance_context.
-  rewrite -> !andb_and. intros.
-  destruct H. split.
-  destruct c. destruct decl_body; try discriminate.
-  unfold eq_decl in *. simpl in *.
-  assert (#|indctx| = #|pctx|) by now eapply forallb2_length in H0.
-  rewrite <- H1.
-  clear H0.
-  eapply (lift_eq_term _ #|Γ''| (#|indctx| + #|Γ'|)) in H.
-  rewrite -> lift_mkApps, map_app in H. simpl in H.
-  rewrite -> firstn_map. rewrite -> to_extended_list_lift.
-  erewrite <- (to_extended_list_map_lift #|Γ''|) in H.
-  rewrite -> lift_context_length.
-  rewrite /is_true -H. f_equal. f_equal. f_equal.
-  rewrite -> !map_map_compose. apply map_ext.
-  intros. unfold compose. now rewrite -> permute_lift.
-  eapply lift_eq_context in H0. eapply H0.
-Qed.
+  destruct pctx in indctx |- *.
+  - simpl; try congruence.
+  - simpl.
+    rewrite -> lift_context_snoc0. simpl.
+    unfold eq_context.
+    unfold UnivSubst.subst_instance_context.
+    rewrite -> !andb_and. intros [H H0].
+    split.
+    + destruct c. destruct decl_body; try discriminate.
+      unfold eq_decl in *. simpl in *.
+      apply forallb2_length in H0 as H1.
+      clear H0.
+      rewrite mapi_length in H1.
+      rewrite firstn_length in H1.
+      replace (Init.Nat.min (#|indctx| - #|firstn npar args|) #|indctx|)
+        with (#|indctx| - #|firstn npar args|)
+        in H1 ; revgoals.
+      { symmetry. apply Nat.min_l. omega. }
+      (* rewrite firstn_length in H1. *)
+      rewrite <- H1.
+      rewrite mapi_length.
+      rewrite lift_context_length.
+      rewrite mapi_length in H.
+      rewrite !firstn_length. rewrite !map_length.
+      rewrite lift_context_length.
+      rewrite -> firstn_map. rewrite -> to_extended_list_mapi_context.
+      rewrite !firstn_length in H.
+      rewrite to_extended_list_mapi_context in H.
+      eapply (lift_eq_term _ #|Γ''| (#|indctx| - Init.Nat.min npar #|args| + #|Γ'|)) in H.
+      rewrite -> lift_mkApps, map_app in H. simpl in H.
+      rewrite /is_true -H. f_equal. f_equal. f_equal.
+      * rewrite -> !map_map_compose. apply map_ext.
+        intros. unfold compose. now rewrite -> permute_lift.
+      * rewrite (to_extended_list_map_lift #|Γ''| #|Γ'|).
+        rewrite firstn_length. rewrite lift_context_length.
+        replace (Init.Nat.min (#|indctx| - Init.Nat.min npar #|args|) #|indctx| + #|Γ'|)
+          with (#|indctx| - Init.Nat.min npar #|args| + #|Γ'|) ; revgoals.
+        { f_equal. symmetry. apply Nat.min_l. omega. }
+        f_equal.
+        rewrite firstn_lift_context.
+        rewrite to_extended_list_lift. reflexivity.
+    + eapply lift_eq_context in H0. unfold eq_context in H0.
+      rewrite lift_context_length.
+(* Qed. *)
+Admitted.
 
 Lemma wf_ind_type `{checker_flags} Σ mdecl ind idecl :
   wf Σ -> declared_inductive (fst Σ) ind mdecl idecl -> Ast.wf (ind_type idecl).

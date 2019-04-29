@@ -50,6 +50,9 @@ Proof. destruct x; reflexivity. Qed.
 Definition map_context f c :=
   List.map (map_decl f) c.
 
+Definition mapi_context f c :=
+  mapi (fun i => map_decl (f i)) c.
+
 Definition map_constant_body f decl :=
   {| cst_type := f decl.(cst_type);
      cst_body := option_map f decl.(cst_body);

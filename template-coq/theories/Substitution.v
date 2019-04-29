@@ -1426,19 +1426,20 @@ Proof.
   destruct H. split.
   destruct c. destruct decl_body; try discriminate.
   unfold eq_decl in *. simpl in *.
-  assert (#|indctx| = #|pctx|) by now eapply forallb2_length in H0.
-  rewrite <- H1.
-  clear H0.
-  eapply (subst_eq_term _ s (#|indctx| + k)) in H.
-  rewrite subst_mkApps map_app in H. simpl in H.
-  rewrite firstn_map. rewrite /to_extended_list to_extended_list_k_subst.
-  unfold to_extended_list in H.
-  erewrite <- (to_extended_list_k_map_subst s) in H.
-  rewrite /is_true -H. f_equal. f_equal. f_equal. rewrite subst_context_length.
-  rewrite -> !map_map_compose. apply map_ext.
-  intros. unfold compose. now rewrite commut_lift_subst_rec. lia.
-  eapply subst_eq_context in H0. eapply H0.
-Qed.
+  (* assert (#|indctx| = #|pctx|) by now eapply forallb2_length in H0. *)
+  (* rewrite <- H1. *)
+  (* clear H0. *)
+  (* eapply (subst_eq_term _ s (#|indctx| + k)) in H. *)
+  (* rewrite subst_mkApps map_app in H. simpl in H. *)
+  (* rewrite firstn_map. rewrite /to_extended_list to_extended_list_k_subst. *)
+  (* unfold to_extended_list in H. *)
+  (* erewrite <- (to_extended_list_k_map_subst s) in H. *)
+  (* rewrite /is_true -H. f_equal. f_equal. f_equal. rewrite subst_context_length. *)
+  (* rewrite -> !map_map_compose. apply map_ext. *)
+  (* intros. unfold compose. now rewrite commut_lift_subst_rec. lia. *)
+  (* eapply subst_eq_context in H0. eapply H0. *)
+(* Qed. *)
+Admitted.
 
 Lemma subs_wf `{checker_flags} Σ Γ s Δ : wf Σ -> subs Σ Γ s Δ -> All Ast.wf s.
 Proof.

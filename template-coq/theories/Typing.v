@@ -1168,31 +1168,6 @@ Arguments lexprod [A B].
 
 Notation wf := type_global_env.
 
-Definition wf_type0m : wf_univ Universe.type0m.
-Proof.
-  split. intro e; inversion e.
-  repeat constructor.
-Defined.
-
-Definition wf_type0 : wf_univ Universe.type0.
-Proof.
-  split. intro e; inversion e.
-  repeat constructor.
-Defined.
-
-Definition wf_type1 : wf_univ Universe.type1.
-Proof.
-  split. intro e; inversion e.
-  repeat constructor.
-Defined.
-
-Lemma lt_prop_set : forall φ (H : consistent (snd φ)),
-    lt_universe φ _ wf_type0m _ wf_type1 /\
-    lt_universe φ _ wf_type0 _ wf_type1.
-Proof.
-  split. intros v Hv; reflexivity.
-  intros v Hv; reflexivity.
-Qed.
 
 Definition env_prop `{checker_flags} (P : forall Σ Γ t T, Type) :=
   forall Σ (wfΣ : wf Σ) Γ (wfΓ : wf_local Σ Γ) t T, Σ ;;; Γ |- t : T ->

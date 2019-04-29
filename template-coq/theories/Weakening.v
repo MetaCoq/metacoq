@@ -801,38 +801,19 @@ Proof.
   intuition auto using lift_eq_term.
 Qed.
 
-Lemma to_extended_list_mapi_context f Γ :
-  to_extended_list (mapi_context f Γ) = to_extended_list Γ.
+Lemma to_extended_list_fold_context f Γ :
+  to_extended_list (fold_context f Γ) = to_extended_list Γ.
 Proof.
   unfold to_extended_list, to_extended_list_k.
   generalize 0. generalize (@nil term) at 1 2.
   induction Γ in f |- *; simpl; intros.
   - reflexivity.
   - destruct a as [na [bo|] ty].
-    + simpl. erewrite <- IHΓ. unfold mapi_context, mapi.
-      rewrite mapi_rec_Sk. reflexivity.
-    + simpl. erewrite <- IHΓ. unfold mapi_context, mapi.
-      rewrite mapi_rec_Sk. reflexivity.
+    + rewrite fold_context_snoc0. simpl.
+      apply IHΓ.
+    + rewrite fold_context_snoc0. simpl.
+      apply IHΓ.
 Qed.
-
-(* Lemma to_extended_list_firstn n Γ : *)
-(*   to_extended_list (firstn n Γ) = firstn n (to_extended_list Γ). *)
-(* Proof. *)
-(*   (* revert n. induction Γ as [| [na [bo|] ty] Γ ih] ; intros n. *) *)
-(*   (* - destruct n ; reflexivity. *) *)
-(*   (* - cbn. unfold to_extended_list, to_extended_list_k in ih. rewrite <- ih. *) *)
-(*   unfold to_extended_list, to_extended_list_k. *)
-(*   generalize 0 as m. (* generalize (@nil term) at 1 2. *) *)
-(*   induction Γ as [| [na [bo|] ty] Γ ih] in n |- *; simpl; intros. *)
-(*   - destruct n ; reflexivity. *)
-(*   - destruct n. *)
-(*     + cbn. reflexivity. *)
-(*     + simpl. rewrite ih. *)
-
-(* erewrite <- ih. *)
-(*   - simpl. erewrite <- IHΓ. unfold mapi_context, mapi. *)
-(*     rewrite mapi_rec_Sk. reflexivity. *)
-(* Qed. *)
 
 Lemma firstn_lift_context :
   forall n Γ m k,
@@ -878,33 +859,32 @@ Proof.
   intros cf Σ Γ' ind u npar args idecl Γ'' indctx pctx.
   unfold check_correct_arity.
   destruct pctx in indctx |- *.
-  - simpl; try congruence.
+  - simpl. congruence.
   - simpl.
     rewrite -> lift_context_snoc0. simpl.
     unfold eq_context.
     unfold UnivSubst.subst_instance_context.
     rewrite -> !andb_and. intros [H H0].
     split.
-    + destruct c. destruct decl_body; try discriminate.
+    + destruct c. destruct decl_body ; try discriminate.
       unfold eq_decl in *. simpl in *.
       apply forallb2_length in H0 as H1.
       clear H0.
-      rewrite mapi_length in H1.
+      rewrite fold_context_length in H1.
       rewrite firstn_length in H1.
       replace (Init.Nat.min (#|indctx| - #|firstn npar args|) #|indctx|)
         with (#|indctx| - #|firstn npar args|)
         in H1 ; revgoals.
       { symmetry. apply Nat.min_l. omega. }
-      (* rewrite firstn_length in H1. *)
       rewrite <- H1.
-      rewrite mapi_length.
+      rewrite fold_context_length.
       rewrite lift_context_length.
-      rewrite mapi_length in H.
+      rewrite fold_context_length in H.
       rewrite !firstn_length. rewrite !map_length.
       rewrite lift_context_length.
-      rewrite -> firstn_map. rewrite -> to_extended_list_mapi_context.
+      rewrite -> firstn_map. rewrite -> to_extended_list_fold_context.
       rewrite !firstn_length in H.
-      rewrite to_extended_list_mapi_context in H.
+      rewrite to_extended_list_fold_context in H.
       eapply (lift_eq_term _ #|Γ''| (#|indctx| - Init.Nat.min npar #|args| + #|Γ'|)) in H.
       rewrite -> lift_mkApps, map_app in H. simpl in H.
       rewrite /is_true -H. f_equal. f_equal. f_equal.
@@ -918,8 +898,22 @@ Proof.
         f_equal.
         rewrite firstn_lift_context.
         rewrite to_extended_list_lift. reflexivity.
-    + eapply lift_eq_context in H0. unfold eq_context in H0.
+    + eapply lift_eq_context with (n := #|Γ''|) (k := #|Γ'|) in H0.
+      unfold eq_context in H0.
+      rewrite /is_true -H0. f_equal. clear.
       rewrite lift_context_length.
+      rewrite firstn_lift_context.
+      rewrite !firstn_length.
+      rewrite map_length.
+      replace (Init.Nat.min (#|indctx| - Init.Nat.min npar #|args|) #|indctx|)
+        with (#|indctx| - Init.Nat.min npar #|args|)
+        by (symmetry ; apply Nat.min_l ; omega).
+      rewrite firstn_map.
+      set (x := firstn npar args).
+      set (c := firstn (#|indctx| - Init.Nat.min npar #|args|) indctx).
+      set (k := 0).
+      set (n := #|Γ''|).
+      set (m := #|Γ'|).
 (* Qed. *)
 Admitted.
 

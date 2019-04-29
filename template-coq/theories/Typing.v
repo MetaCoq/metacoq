@@ -625,8 +625,11 @@ Definition eq_context `{checker_flags} φ (Γ Δ : context) :=
 Definition check_correct_arity `{checker_flags} φ decl ind u ctx pars pctx :=
   (* We first remove the parameters from the context of the inductive type. *)
   let ctx := firstn (#|ctx| - #|pars|) ctx in
-  (* We then subsitute the indices with the parameters *)
-  let ctx := mapi_context (subst pars) ctx in
+  (* We then subsitute the indices with the parameters.
+     We inline subst_context for now,
+     hence the odd + 0.
+   *)
+  let ctx := fold_context (fun k' => subst pars (k' + 0)) ctx in
   let inddecl := {|
     decl_name := nNamed decl.(ind_name) ;
     decl_body := None ;

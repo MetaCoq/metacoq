@@ -1,7 +1,7 @@
 (* Distributed under the terms of the MIT license.   *)
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Arith Lia.
-From Template Require Import config utils Ast AstUtils univ Induction LiftSubst UnivSubst.
+From Template Require Import config utils Ast AstUtils univ Induction LiftSubst UnivSubst Universes.
 Require Import String.
 Require Import ssreflect.
 Local Open Scope string_scope.
@@ -378,71 +378,99 @@ Inductive red Σ Γ M : term -> Type :=
   We hence implement first an equality which considers casts and do a stripping
   phase of casts before checking equality. *)
 
-Fixpoint eq_term `{checker_flags} (φ : uGraph.t) (t u : term) {struct t} :=
-  match t, u with
-  | tRel n, tRel n' => eq_nat n n'
-  | tEvar ev args, tEvar ev' args' => eq_evar ev ev' && forallb2 (eq_term φ) args args'
-  | tVar id, tVar id' => eq_string id id'
-  | tSort s, tSort s' => eq_universe φ s s'
-  | tCast f k T, tCast f' k' T' => eq_term φ f f' && eq_term φ T T'
-  | tApp f args, tApp f' args' => eq_term φ f f' && forallb2 (eq_term φ) args args'
-  | tConst c u, tConst c' u' => eq_constant c c' && eq_universe_instance φ u u'
-  | tInd i u, tInd i' u' => eq_ind i i' && eq_universe_instance φ u u'
-  | tConstruct i k u, tConstruct i' k' u' => eq_ind i i' && eq_nat k k'
-                                                    && eq_universe_instance φ u u'
-  | tLambda _ b t, tLambda _ b' t' => eq_term φ b b' && eq_term φ t t'
-  | tProd _ b t, tProd _ b' t' => eq_term φ b b' && eq_term φ t t'
-  | tLetIn _ b t c, tLetIn _ b' t' c' => eq_term φ b b' && eq_term φ t t' && eq_term φ c c'
-  | tCase (ind, par) p c brs,
-    tCase (ind',par') p' c' brs' =>
-    eq_ind ind ind' && eq_nat par par' &&
-    eq_term φ p p' && eq_term φ c c' && forallb2 (fun '(a, b) '(a', b') => eq_term φ b b') brs brs'
-  | tProj p c, tProj p' c' => eq_projection p p' && eq_term φ c c'
-  | tFix mfix idx, tFix mfix' idx' =>
-    forallb2 (fun x y =>
-                eq_term φ x.(dtype) y.(dtype) && eq_term φ x.(dbody) y.(dbody)) mfix mfix' &&
-    eq_nat idx idx'
-  | tCoFix mfix idx, tCoFix mfix' idx' =>
-    forallb2 (fun x y =>
-                eq_term φ x.(dtype) y.(dtype) && eq_term φ x.(dbody) y.(dbody)) mfix mfix' &&
-    Nat.eqb idx idx'
-  | _, _ => false
-  end.
+
+Inductive eq_term_upto_univ (R : universe -> universe -> Prop) : term -> term -> Prop :=
+| eq_Rel n  : eq_term_upto_univ R (tRel n) (tRel n)
+| eq_Evar e args args' : Forall2 (eq_term_upto_univ R) args args' -> eq_term_upto_univ R (tEvar e args) (tEvar e args')
+| eq_Var id : eq_term_upto_univ R (tVar id) (tVar id)
+| eq_Sort s s' : R s s' -> eq_term_upto_univ R (tSort s) (tSort s')
+| eq_Cast f f' k T T' : eq_term_upto_univ R f f' -> eq_term_upto_univ R T T' -> eq_term_upto_univ R (tCast f k T) (tCast f' k T')
+| eq_App t t' args args' : eq_term_upto_univ R t t' -> Forall2 (eq_term_upto_univ R) args args' -> eq_term_upto_univ R (tApp t args) (tApp t' args')
+| eq_Const c u u' : Forall2 R (List.map Universe.make u) (List.map Universe.make u') -> eq_term_upto_univ R (tConst c u) (tConst c u')
+| eq_Ind i u u' : Forall2 R (List.map Universe.make u) (List.map Universe.make u') -> eq_term_upto_univ R (tInd i u) (tInd i u')
+| eq_Construct i k u u' : Forall2 R (List.map Universe.make u) (List.map Universe.make u') -> eq_term_upto_univ R (tConstruct i k u) (tConstruct i k u')
+| eq_Lambda na na' ty ty' t t' : eq_term_upto_univ R ty ty' -> eq_term_upto_univ R t t' -> eq_term_upto_univ R (tLambda na ty t) (tLambda na' ty' t')
+| eq_Prod na na' a a' b b' : eq_term_upto_univ R a a' -> eq_term_upto_univ R b b' -> eq_term_upto_univ R (tProd na a b) (tProd na' a' b')
+| eq_LetIn na na' ty ty' t t' u u' : eq_term_upto_univ R ty ty' -> eq_term_upto_univ R t t' -> eq_term_upto_univ R u u' -> eq_term_upto_univ R (tLetIn na ty t u) (tLetIn na' ty' t' u')
+| eq_Case ind par p p' c c' brs brs' : eq_term_upto_univ R p p' -> eq_term_upto_univ R c c' -> Forall2 (fun x y => eq_term_upto_univ R (snd x) (snd y)) brs brs' -> eq_term_upto_univ R (tCase (ind, par) p c brs) (tCase (ind, par) p' c' brs')
+| eq_Proj p c c' : eq_term_upto_univ R c c' -> eq_term_upto_univ R (tProj p c) (tProj p c')
+| eq_Fix mfix mfix' idx : Forall2 (fun x y => eq_term_upto_univ R x.(dtype) y.(dtype) /\ eq_term_upto_univ R x.(dbody) y.(dbody)) mfix mfix' -> eq_term_upto_univ R (tFix mfix idx) (tFix mfix' idx)
+| eq_CoFix mfix mfix' idx : Forall2 (fun x y => eq_term_upto_univ R x.(dtype) y.(dtype) /\ eq_term_upto_univ R x.(dbody) y.(dbody)) mfix mfix' -> eq_term_upto_univ R (tCoFix mfix idx) (tCoFix mfix' idx).
+
+Definition eq_term (φ : uGraph.t) :=
+  eq_term_upto_univ (fun u u' => exists Hu Hu', eq_universe φ u Hu u' Hu').
 
 (* ** Syntactic cumulativity up-to universes
 
   We shouldn't look at printing annotations *)
 
-Fixpoint leq_term `{checker_flags} (φ : uGraph.t) (t u : term) {struct t} :=
-  match t, u with
-  | tRel n, tRel n' => eq_nat n n'
-  | tEvar ev args, tEvar ev' args' => eq_nat ev ev' && forallb2 (eq_term φ) args args'
-  | tVar id, tVar id' => eq_string id id'
-  | tSort s, tSort s' => leq_universe φ s s'
-  | tApp f args, tApp f' args' => eq_term φ f f' && forallb2 (eq_term φ) args args'
-  | tCast f k T, tCast f' k' T' => eq_term φ f f' && eq_term φ T T'
-  | tConst c u, tConst c' u' => eq_constant c c' && eq_universe_instance φ u u'
-  | tInd i u, tInd i' u' => eq_ind i i' && eq_universe_instance φ u u'
-  | tConstruct i k u, tConstruct i' k' u' => eq_ind i i' && eq_nat k k' &&
-                                                    eq_universe_instance φ u u'
-  | tLambda _ b t, tLambda _ b' t' => eq_term φ b b' && eq_term φ t t'
-  | tProd _ b t, tProd _ b' t' => eq_term φ b b' && leq_term φ t t'
-  | tLetIn _ b t c, tLetIn _ b' t' c' => eq_term φ b b' && eq_term φ t t' && leq_term φ c c'
-  | tCase (ind, par) p c brs,
-    tCase (ind',par') p' c' brs' =>
-    eq_ind ind ind' && eq_nat par par' &&
-    eq_term φ p p' && eq_term φ c c' && forallb2 (fun '(a, b) '(a', b') => eq_term φ b b') brs brs'
-  | tProj p c, tProj p' c' => eq_projection p p' && eq_term φ c c'
-  | tFix mfix idx, tFix mfix' idx' =>
-    forallb2 (fun x y =>
-                eq_term φ x.(dtype) y.(dtype) && eq_term φ x.(dbody) y.(dbody)) mfix mfix' &&
-    eq_nat idx idx'
-  | tCoFix mfix idx, tCoFix mfix' idx' =>
-    forallb2 (fun x y =>
-                eq_term φ x.(dtype) y.(dtype) && eq_term φ x.(dbody) y.(dbody)) mfix mfix' &&
-    eq_nat idx idx'
-  | _, _ => false
-  end.
+
+Definition leq_term (φ : uGraph.t) :=
+  eq_term_upto_univ (fun u u' => exists Hu Hu', leq_universe φ u Hu u' Hu').
+
+
+(* Fixpoint eq_term `{checker_flags} (φ : uGraph.t) (t u : term) {struct t} := *)
+(*   match t, u with *)
+(*   | tRel n, tRel n' => eq_nat n n' *)
+(*   | tEvar ev args, tEvar ev' args' => eq_evar ev ev' && forallb2 (eq_term φ) args args' *)
+(*   | tVar id, tVar id' => eq_string id id' *)
+(*   | tSort s, tSort s' => eq_universe φ s s' *)
+(*   | tCast f k T, tCast f' k' T' => eq_term φ f f' && eq_term φ T T' *)
+(*   | tApp f args, tApp f' args' => eq_term φ f f' && forallb2 (eq_term φ) args args' *)
+(*   | tConst c u, tConst c' u' => eq_constant c c' && eq_universe_instance φ u u' *)
+(*   | tInd i u, tInd i' u' => eq_ind i i' && eq_universe_instance φ u u' *)
+(*   | tConstruct i k u, tConstruct i' k' u' => eq_ind i i' && eq_nat k k' *)
+(*                                                     && eq_universe_instance φ u u' *)
+(*   | tLambda _ b t, tLambda _ b' t' => eq_term φ b b' && eq_term φ t t' *)
+(*   | tProd _ b t, tProd _ b' t' => eq_term φ b b' && eq_term φ t t' *)
+(*   | tLetIn _ b t c, tLetIn _ b' t' c' => eq_term φ b b' && eq_term φ t t' && eq_term φ c c' *)
+(*   | tCase (ind, par) p c brs, *)
+(*     tCase (ind',par') p' c' brs' => *)
+(*     eq_ind ind ind' && eq_nat par par' && *)
+(*     eq_term φ p p' && eq_term φ c c' && forallb2 (fun '(a, b) '(a', b') => eq_term φ b b') brs brs' *)
+(*   | tProj p c, tProj p' c' => eq_projection p p' && eq_term φ c c' *)
+(*   | tFix mfix idx, tFix mfix' idx' => *)
+(*     forallb2 (fun x y => *)
+(*                 eq_term φ x.(dtype) y.(dtype) && eq_term φ x.(dbody) y.(dbody)) mfix mfix' && *)
+(*     eq_nat idx idx' *)
+(*   | tCoFix mfix idx, tCoFix mfix' idx' => *)
+(*     forallb2 (fun x y => *)
+(*                 eq_term φ x.(dtype) y.(dtype) && eq_term φ x.(dbody) y.(dbody)) mfix mfix' && *)
+(*     Nat.eqb idx idx' *)
+(*   | _, _ => false *)
+(*   end. *)
+
+
+(* Fixpoint leq_term `{checker_flags} (φ : uGraph.t) (t u : term) {struct t} := *)
+(*   match t, u with *)
+(*   | tRel n, tRel n' => eq_nat n n' *)
+(*   | tEvar ev args, tEvar ev' args' => eq_nat ev ev' && forallb2 (eq_term φ) args args' *)
+(*   | tVar id, tVar id' => eq_string id id' *)
+(*   | tSort s, tSort s' => leq_universe φ s s' *)
+(*   | tApp f args, tApp f' args' => eq_term φ f f' && forallb2 (eq_term φ) args args' *)
+(*   | tCast f k T, tCast f' k' T' => eq_term φ f f' && eq_term φ T T' *)
+(*   | tConst c u, tConst c' u' => eq_constant c c' && eq_universe_instance φ u u' *)
+(*   | tInd i u, tInd i' u' => eq_ind i i' && eq_universe_instance φ u u' *)
+(*   | tConstruct i k u, tConstruct i' k' u' => eq_ind i i' && eq_nat k k' && *)
+(*                                                     eq_universe_instance φ u u' *)
+(*   | tLambda _ b t, tLambda _ b' t' => eq_term φ b b' && eq_term φ t t' *)
+(*   | tProd _ b t, tProd _ b' t' => eq_term φ b b' && leq_term φ t t' *)
+(*   | tLetIn _ b t c, tLetIn _ b' t' c' => eq_term φ b b' && eq_term φ t t' && leq_term φ c c' *)
+(*   | tCase (ind, par) p c brs, *)
+(*     tCase (ind',par') p' c' brs' => *)
+(*     eq_ind ind ind' && eq_nat par par' && *)
+(*     eq_term φ p p' && eq_term φ c c' && forallb2 (fun '(a, b) '(a', b') => eq_term φ b b') brs brs' *)
+(*   | tProj p c, tProj p' c' => eq_projection p p' && eq_term φ c c' *)
+(*   | tFix mfix idx, tFix mfix' idx' => *)
+(*     forallb2 (fun x y => *)
+(*                 eq_term φ x.(dtype) y.(dtype) && eq_term φ x.(dbody) y.(dbody)) mfix mfix' && *)
+(*     eq_nat idx idx' *)
+(*   | tCoFix mfix idx, tCoFix mfix' idx' => *)
+(*     forallb2 (fun x y => *)
+(*                 eq_term φ x.(dtype) y.(dtype) && eq_term φ x.(dbody) y.(dbody)) mfix mfix' && *)
+(*     eq_nat idx idx' *)
+(*   | _, _ => false *)
+(*   end. *)
 
 Fixpoint strip_casts t :=
   match t with
@@ -546,14 +574,14 @@ Definition universe_family u :=
 
 (** Check that [uctx] instantiated at [u] is consistent with the current universe graph. *)
 
-Definition consistent_universe_context_instance (Σ : global_context) uctx u :=
+Definition consistent_universe_context_instance (φ : uGraph.t) uctx u :=
   match uctx with
   | Monomorphic_ctx c => True
   | Polymorphic_ctx c
   | Cumulative_ctx (c, _) =>
     let '(inst, cstrs) := UContext.dest c in
     List.length inst = List.length u /\
-    check_constraints (snd Σ) (subst_instance_cstrs u cstrs) = true
+    consistent (ConstraintSet.union (subst_instance_cstrs u cstrs) (snd φ))
   end.
 
 (* Definition allowed_elim u (f : sort_family) := *)
@@ -569,7 +597,7 @@ Reserved Notation " Σ ;;; Γ |- t <= u " (at level 50, Γ, t, u at next level).
 (** ** Cumulativity *)
 
 Inductive cumul `{checker_flags} (Σ : global_context) (Γ : context) : term -> term -> Type :=
-| cumul_refl t u : leq_term (snd Σ) t u = true -> Σ ;;; Γ |- t <= u
+| cumul_refl t u : leq_term (snd Σ) t u -> Σ ;;; Γ |- t <= u
 | cumul_red_l t u v : red1 (fst Σ) Γ t v -> Σ ;;; Γ |- v <= u -> Σ ;;; Γ |- t <= u
 | cumul_red_r t u v : Σ ;;; Γ |- t <= v -> red1 (fst Σ) Γ u v -> Σ ;;; Γ |- t <= u
 
@@ -617,10 +645,10 @@ Definition eq_opt_term `{checker_flags} φ (t u : option term) :=
   end.
 
 Definition eq_decl `{checker_flags} φ (d d' : context_decl) :=
-  eq_opt_term φ d.(decl_body) d'.(decl_body) && eq_term φ d.(decl_type) d'.(decl_type).
+  eq_opt_term φ d.(decl_body) d'.(decl_body) /\ eq_term φ d.(decl_type) d'.(decl_type).
 
 Definition eq_context `{checker_flags} φ (Γ Δ : context) :=
-  forallb2 (eq_decl φ) Γ Δ.
+  Forall2 (eq_decl φ) Γ Δ.
 
 Definition check_correct_arity `{checker_flags} φ decl ind u ctx pars pctx :=
   let inddecl :=
@@ -682,19 +710,19 @@ Inductive typing `{checker_flags} (Σ : global_context) (Γ : context) : term ->
 | type_Const cst u :
     All_local_env typing Σ Γ ->
     forall decl (isdecl : declared_constant (fst Σ) cst decl),
-    consistent_universe_context_instance Σ decl.(cst_universes) u ->
+    consistent_universe_context_instance (snd Σ) decl.(cst_universes) u ->
     Σ ;;; Γ |- (tConst cst u) : subst_instance_constr u decl.(cst_type)
 
 | type_Ind ind u :
     All_local_env typing Σ Γ ->
     forall mdecl idecl (isdecl : declared_inductive (fst Σ) mdecl ind idecl),
-    consistent_universe_context_instance Σ mdecl.(ind_universes) u ->
+    consistent_universe_context_instance (snd Σ) mdecl.(ind_universes) u ->
     Σ ;;; Γ |- (tInd ind u) : subst_instance_constr u idecl.(ind_type)
 
 | type_Construct ind i u :
     All_local_env typing Σ Γ ->
     forall mdecl idecl cdecl (isdecl : declared_constructor (fst Σ) mdecl idecl (ind, i) cdecl),
-    consistent_universe_context_instance Σ mdecl.(ind_universes) u ->
+    consistent_universe_context_instance (snd Σ) mdecl.(ind_universes) u ->
     Σ ;;; Γ |- (tConstruct ind i u) : type_of_constructor mdecl cdecl (ind, i) u
 
 | type_Case ind u npar p c brs args :
@@ -885,20 +913,13 @@ Section GlobalMaps.
       All declarations should be typeable and the global
       set of universe constraints should be consistent. *)
 
-  Definition contains_init_graph φ :=
-    LevelSet.In Level.prop (fst φ) /\ LevelSet.In Level.set (fst φ) /\
-    ConstraintSet.In (Level.prop, ConstraintType.Le, Level.set) (snd φ).
-
-  Definition wf_graph φ :=
-    contains_init_graph φ /\ (no_universe_inconsistency φ = true).
-
   (** Well-formed global environments have no name clash. *)
 
   Definition fresh_global (s : string) : global_declarations -> Prop :=
     Forall (fun g => global_decl_ident g <> s).
 
   Inductive on_global_decls φ : global_declarations -> Type :=
-  | globenv_nil : wf_graph φ -> on_global_decls φ []
+  | globenv_nil : consistent (snd φ) -> on_global_decls φ []
   | globenv_decl Σ d :
       on_global_decls φ Σ ->
       fresh_global (global_decl_ident d) Σ ->
@@ -1147,9 +1168,31 @@ Arguments lexprod [A B].
 
 Notation wf := type_global_env.
 
-Conjecture wf_graph_prop_set : forall φ (H : wf_graph φ),
-    check_lt φ Universe.type0m Universe.type1 = true /\
-    check_lt φ Universe.type0 Universe.type1 = true.
+Definition wf_type0m : wf_univ Universe.type0m.
+Proof.
+  split. intro e; inversion e.
+  repeat constructor.
+Defined.
+
+Definition wf_type0 : wf_univ Universe.type0.
+Proof.
+  split. intro e; inversion e.
+  repeat constructor.
+Defined.
+
+Definition wf_type1 : wf_univ Universe.type1.
+Proof.
+  split. intro e; inversion e.
+  repeat constructor.
+Defined.
+
+Lemma lt_prop_set : forall φ (H : consistent (snd φ)),
+    lt_universe φ _ wf_type0m _ wf_type1 /\
+    lt_universe φ _ wf_type0 _ wf_type1.
+Proof.
+  split. intros v Hv; reflexivity.
+  intros v Hv; reflexivity.
+Qed.
 
 Definition env_prop `{checker_flags} (P : forall Σ Γ t T, Type) :=
   forall Σ (wfΣ : wf Σ) Γ (wfΓ : wf_local Σ Γ) t T, Σ ;;; Γ |- t : T ->
@@ -1270,21 +1313,21 @@ Lemma typing_ind_env `{cf : checker_flags} :
         declared_constant (fst Σ) cst decl ->
         Forall_decls_typing P Σ ->
         All_local_env typing Σ Γ -> All_local_env P Σ Γ ->
-        consistent_universe_context_instance Σ decl.(cst_universes) u ->
+        consistent_universe_context_instance (snd Σ) decl.(cst_universes) u ->
         P Σ Γ (tConst cst u) (subst_instance_constr u (cst_type decl))) ->
 
     (forall Σ (wfΣ : wf Σ) (Γ : context) (wfΓ : wf_local Σ Γ) (ind : inductive) u
           mdecl idecl (isdecl : declared_inductive (fst Σ) mdecl ind idecl),
         Forall_decls_typing P Σ ->
         All_local_env typing Σ Γ -> All_local_env P Σ Γ ->
-        consistent_universe_context_instance Σ mdecl.(ind_universes) u ->
+        consistent_universe_context_instance (snd Σ) mdecl.(ind_universes) u ->
         P Σ Γ (tInd ind u) (subst_instance_constr u (ind_type idecl))) ->
 
     (forall Σ (wfΣ : wf Σ) (Γ : context) (wfΓ : wf_local Σ Γ) (ind : inductive) (i : nat) u
             mdecl idecl cdecl (isdecl : declared_constructor (fst Σ) mdecl idecl (ind, i) cdecl),
         Forall_decls_typing P Σ ->
         All_local_env typing Σ Γ -> All_local_env P Σ Γ ->
-        consistent_universe_context_instance Σ mdecl.(ind_universes) u ->
+        consistent_universe_context_instance (snd Σ) mdecl.(ind_universes) u ->
         P Σ Γ (tConstruct ind i u) (type_of_constructor mdecl cdecl (ind, i) u)) ->
 
     (forall Σ (wfΣ : wf Σ) (Γ : context) (wfΓ : wf_local Σ Γ) (ind : inductive) u (npar : nat)

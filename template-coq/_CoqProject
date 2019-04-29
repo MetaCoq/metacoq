@@ -20,6 +20,7 @@ src/pluginCore.ml
 
 theories/LibHypsNaming.v
 theories/utils.v theories/config.v theories/kernel/univ.v
+theories/Universes.v
 theories/kernel/uGraph.v theories/BasicAst.v theories/Ast.v
 theories/WfInv.v
 theories/AstUtils.v theories/Loader.v theories/Induction.v

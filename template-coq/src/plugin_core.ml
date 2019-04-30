@@ -114,6 +114,11 @@ let tmLemma (nm : ident) ?poly:(poly=false)(ty : term) : kername tm =
         | _ -> failwith "Evd.fresh_global did not return a Const") in
     ignore (Obligations.add_definition nm ~term:c cty ctx ~kind ~hook obls)
 
+let tmInductive (mi : mutual_inductive_entry) : unit tm =
+  fun env evd success _fail ->
+    ignore (ComInductive.declare_mutual_inductive_with_eliminations mi Names.Id.Map.empty []) ;
+    success (Global.env ()) evd ()
+
 let tmFreshName (nm : ident) : ident tm =
   fun env evd success _fail ->
     let name' =
@@ -133,6 +138,9 @@ let tmAboutString (s : string) : global_reference option tm =
     let (dp, nm) = Quoted.split_name s in
     let q = Libnames.make_qualid dp nm in
     tmAbout q env evd success fail
+
+let tmDependencies (gr : global_reference) ?bypass : global_reference list tm =
+  failwith "not implemented"
 
 let tmCurrentModPath : Names.ModPath.t tm =
   fun env evd success _fail ->
@@ -160,11 +168,6 @@ let tmQuoteConstant (kn : kername) (bypass : bool) : constant_entry tm =
       success env evd cnst
     with
       Not_found -> fail Pp.(str "constant not found " ++ Names.KerName.print kn)
-
-let tmInductive (mi : mutual_inductive_entry) : unit tm =
-  fun env evd success _fail ->
-    ignore (ComInductive.declare_mutual_inductive_with_eliminations mi Names.Id.Map.empty []) ;
-    success (Global.env ()) evd ()
 
 let tmExistingInstance (kn : kername) : unit tm =
   fun env evd success _fail ->

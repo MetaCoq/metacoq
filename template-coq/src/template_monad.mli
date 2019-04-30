@@ -1,4 +1,3 @@
-
 val ptmTestQuote : Names.global_reference
 val ptmQuoteDefinition : Names.global_reference
 val ptmQuoteDefinitionRed : Names.global_reference
@@ -48,7 +47,7 @@ type template_monad =
   | TmExistingInstance of Constr.t
   | TmInferInstance of Constr.t * Constr.t (* only Prop *)
   | TmInferInstanceTerm of Constr.t        (* only Extractable *)
-
+  | TmDependencies of Constr.t * Constr.t
 
 val app_full
   : Constr.constr -> Constr.constr list -> Constr.constr * Constr.constr list

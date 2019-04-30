@@ -108,7 +108,8 @@ let (ttmReturn,
      ttmQuoteConstant,
      ttmInductive,
      ttmInferInstance,
-     ttmExistingInstance) =
+     ttmExistingInstance,
+     ttmDependencies) =
   (r_template_monad_type_p "tmReturn",
    r_template_monad_type_p "tmBind",
 
@@ -133,7 +134,8 @@ let (ttmReturn,
    r_template_monad_type_p "tmInductive",
 
    r_template_monad_type_p "tmInferInstance",
-   r_template_monad_type_p "tmExistingInstance")
+   r_template_monad_type_p "tmExistingInstance",
+   r_template_monad_type_p "tmDependencies")
 
 type constr = Constr.t
 
@@ -178,6 +180,8 @@ type template_monad =
   | TmExistingInstance of Constr.t
   | TmInferInstance of Constr.t * Constr.t (* only Prop *)
   | TmInferInstanceTerm of Constr.t        (* only Extractable *)
+
+  | TmDependencies of Constr.t * Constr.t
 
 (* todo: the recursive call is uneeded provided we call it on well formed terms *)
 let rec app_full trm acc =
@@ -369,5 +373,12 @@ let next_action env evd (pgm : constr) : template_monad * _ =
     | typ :: [] ->
        (TmInferInstanceTerm typ, universes)
     | _ -> monad_failure "tmInferInstance" 2
+
+  else if Globnames.eq_gr glob_ref ttmDependencies then
+    match args with
+    | trm :: bypass :: [] ->
+      (TmDependencies (trm, bypass), universes)
+    | _ -> monad_failure "tmInferInstance" 2
+
 
   else CErrors.user_err (str "Invalid argument or not yet implemented. The argument must be a TemplateProgram: " ++ pr_constr coConstr)

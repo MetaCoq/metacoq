@@ -52,6 +52,8 @@ Cumulative Inductive TM@{t} : Type@{t} -> Type :=
   : TM constant_entry
 
 | tmQuoteUniverses : TM uGraph.t
+| tmDependencies (gr : global_reference) (bypass : bool)
+  : TM (list global_reference)
 
 (* unquote before making the definition *)
 (* FIXME take an optional universe context as well *)

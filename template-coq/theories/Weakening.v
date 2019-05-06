@@ -631,34 +631,6 @@ Proof.
       constructor ; assumption.
 Qed.
 
-Lemma app_Forall :
-  forall A P (l1 l2 : list A),
-    Forall P l1 ->
-    Forall P l2 ->
-    Forall P (l1 ++ l2).
-Proof.
-  intros A P l1 l2 h1 h2.
-  revert l2 h2.
-  induction h1 ; intros l2 h2.
-  - assumption.
-  - cbn. constructor ; try assumption.
-    eapply IHh1. assumption.
-Qed.
-
-Lemma rev_Forall :
-  forall A P l,
-    Forall P l ->
-    Forall P (@List.rev A l).
-Proof.
-  intros A P l h.
-  induction l.
-  - cbn. constructor.
-  - cbn. dependent destruction h.
-    specialize (IHl ltac:(assumption)).
-    eapply app_Forall ; try assumption.
-    repeat constructor. assumption.
-Qed.
-
 Lemma wf_instantiate_params :
   forall params args t t',
     Forall_bodies Ast.wf params ->
@@ -680,6 +652,8 @@ Qed.
 Lemma lift_types_of_case ind mdecl idecl args u p pty indctx pctx ps btys n k :
   let f k' := lift n (k' + k) in
   let f_ctx := lift_context n k in
+  Forall_bodies Ast.wf mdecl.(ind_params) ->
+  Forall Ast.wf args ->
   Ast.wf pty -> Ast.wf (ind_type idecl) -> closed_ctx mdecl.(ind_params) ->
   types_of_case ind mdecl idecl args u p pty = Some (indctx, pctx, ps, btys) ->
   types_of_case ind mdecl (map_one_inductive_body (inductive_mind ind) (polymorphic_instance mdecl.(ind_universes))
@@ -688,22 +662,19 @@ Lemma lift_types_of_case ind mdecl idecl args u p pty indctx pctx ps btys n k :
                 (map (f 0) args) u (f 0 p) (f 0 pty) =
   Some (f_ctx indctx, f_ctx pctx, ps, map (on_snd (f 0)) btys).
 Proof.
-  simpl. intros wfpty wfdecl closedpars. simpl.
+  simpl. intros wfpars wfargs wfpty wfdecl closedpars. (* simpl. *)
   unfold types_of_case.
-  simpl.
+  (* simpl. *)
   (* pose proof (lift_destArity [] (ind_type idecl) n k wfdecl); trivial. simpl in H. *)
   (* unfold lift_context, fold_context in H. simpl in H. *) rewrite -> ind_type_map. simpl.
-  pose proof (lift_instantiate_params n k (ind_params mdecl) args (ind_type idecl)).
-  erewrite <- H ; trivial.
+  pose proof (lift_instantiate_params n k (ind_params mdecl) args (ind_type idecl)) as H.
+  erewrite <- H ; trivial. clear H.
   case_eq (instantiate_params (ind_params mdecl) args (ind_type idecl)) ; try discriminate.
   intros ity eq. simpl.
-  apply wf_instantiate_params in eq as hh ; trivial.
-  fail "How should I proceed?".
-  pose proof (lift_destArity [] ity n k); trivial.
-
+  apply wf_instantiate_params in eq as wfity ; trivial.
+  pose proof (lift_destArity [] ity n k wfity) as H ; trivial.
   simpl in H.
   unfold lift_context, fold_context in H. simpl in H.
-
   rewrite -> H. clear H.
   destruct destArity as [[ctx s] | ]; try congruence.
   pose proof (lift_destArity [] pty n k wfpty); trivial. simpl in H.

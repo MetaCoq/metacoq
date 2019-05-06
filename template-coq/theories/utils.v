@@ -1388,3 +1388,31 @@ Lemma Forall2_non_nil {A B} (P : A -> B -> Prop) (l : list A) (l' : list B) :
 Proof.
   induction 1; congruence.
 Qed.
+
+Lemma app_Forall :
+  forall A P (l1 l2 : list A),
+    Forall P l1 ->
+    Forall P l2 ->
+    Forall P (l1 ++ l2).
+Proof.
+  intros A P l1 l2 h1 h2.
+  revert l2 h2.
+  induction h1 ; intros l2 h2.
+  - assumption.
+  - cbn. constructor ; try assumption.
+    eapply IHh1. assumption.
+Qed.
+
+Lemma rev_Forall :
+  forall A P l,
+    Forall P l ->
+    Forall P (@List.rev A l).
+Proof.
+  intros A P l h.
+  induction l.
+  - cbn. constructor.
+  - cbn. dependent destruction h.
+    specialize (IHl ltac:(assumption)).
+    eapply app_Forall ; try assumption.
+    repeat constructor. assumption.
+Qed.

@@ -687,32 +687,39 @@ Proof.
             (length (arities_context (ind_bodies mdecl))) (fun k' => lift n (k' + k))
             (inductive_ind ind) idecl) (map (lift n k) args) u (lift n k p)) =
          map (option_map (on_snd (lift n k))) brs).
-  unfold build_branches_type. simpl. intros brs. intros <-.
-  rewrite -> ind_ctors_map.
-  rewrite -> mapi_map, map_mapi. f_equal. extensionality i. extensionality x.
-  destruct x as [[id t] arity]. simpl.
-  rewrite <- UnivSubst.lift_subst_instance_constr.
-  rewrite subst0_inds_lift.
-  rewrite <- lift_instantiate_params.
-  destruct (instantiate_params _ _) eqn:Heqip. simpl.
-  epose proof (lift_decompose_prod_assum t0 n k).
-  destruct (decompose_prod_assum [] t0).
-  rewrite <- H.
-  destruct (decompose_app t1) as [fn arg] eqn:?.
-  rewrite (decompose_app_lift _ _ _ fn arg); auto. simpl.
-  destruct (chop _ arg) eqn:Heqchop.
-  eapply chop_map in Heqchop.
-  rewrite -> Heqchop. clear Heqchop.
-  unfold on_snd. simpl. f_equal.
-  rewrite -> lift_it_mkProd_or_LetIn, !lift_mkApps, map_app; simpl.
-  rewrite -> !lift_mkApps, !map_app, lift_context_length.
-  rewrite -> permute_lift by lia. arith_congr.
-  now rewrite -> to_extended_list_lift, <- to_extended_list_map_lift.
-  simpl. reflexivity. auto.
+  { unfold build_branches_type. simpl. intros brs. intros <-.
+    rewrite -> ind_ctors_map.
+    rewrite -> mapi_map, map_mapi. f_equal. extensionality i. extensionality x.
+    destruct x as [[id t] arity]. simpl.
+    rewrite <- UnivSubst.lift_subst_instance_constr.
+    rewrite subst0_inds_lift.
+    rewrite <- lift_instantiate_params ; trivial.
+    (* destruct (instantiate_params _ _) eqn:Heqip. *)
+    match goal with
+    | |- context [ option_map _ (instantiate_params ?x ?y ?z) ] =>
+      destruct (instantiate_params x y z) eqn:Heqip
+    end.
+    - simpl.
+      epose proof (lift_decompose_prod_assum t0 n k).
+      destruct (decompose_prod_assum [] t0).
+      rewrite <- H.
+      destruct (decompose_app t1) as [fn arg] eqn:?.
+      rewrite (decompose_app_lift _ _ _ fn arg); auto. simpl.
+      destruct (chop _ arg) eqn:Heqchop.
+      eapply chop_map in Heqchop.
+      rewrite -> Heqchop. clear Heqchop.
+      unfold on_snd. simpl. f_equal.
+      rewrite -> lift_it_mkProd_or_LetIn, !lift_mkApps, map_app; simpl.
+      rewrite -> !lift_mkApps, !map_app, lift_context_length.
+      rewrite -> permute_lift by lia. arith_congr.
+      now rewrite -> to_extended_list_lift, <- to_extended_list_map_lift.
+    - simpl. reflexivity.
+  }
   specialize (H _ eq_refl). rewrite -> H. clear H.
   rewrite -> map_option_out_map_option_map.
   destruct (map_option_out (build_branches_type _ _ _ _ _ _)).
-  intros [= -> -> -> <-]. reflexivity. congruence.
+  - intros [= -> -> -> <-]. reflexivity.
+  - congruence.
 Qed.
 
 Lemma weakening_red1 `{CF:checker_flags} Σ Γ Γ' Γ'' M N :

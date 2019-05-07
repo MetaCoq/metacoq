@@ -654,11 +654,9 @@ Lemma lift_types_of_case ind mdecl idecl args u p pty indctx pctx ps btys n k :
                 (map (f 0) args) u (f 0 p) (f 0 pty) =
   Some (f_ctx indctx, f_ctx pctx, ps, map (on_snd (f 0)) btys).
 Proof.
-  simpl. intros wfpars wfargs wfpty wfdecl closedpars. (* simpl. *)
+  simpl. intros wfpars wfargs wfpty wfdecl closedpars.
   unfold types_of_case.
-  (* simpl. *)
-  (* pose proof (lift_destArity [] (ind_type idecl) n k wfdecl); trivial. simpl in H. *)
-  (* unfold lift_context, fold_context in H. simpl in H. *) rewrite -> ind_type_map. simpl.
+  rewrite -> ind_type_map. simpl.
   pose proof (lift_instantiate_params n k (ind_params mdecl) args (ind_type idecl)) as H.
   erewrite <- H ; trivial. clear H.
   case_eq (instantiate_params (ind_params mdecl) args (ind_type idecl)) ; try discriminate.
@@ -686,7 +684,6 @@ Proof.
     rewrite <- UnivSubst.lift_subst_instance_constr.
     rewrite subst0_inds_lift.
     rewrite <- lift_instantiate_params ; trivial.
-    (* destruct (instantiate_params _ _) eqn:Heqip. *)
     match goal with
     | |- context [ option_map _ (instantiate_params ?x ?y ?z) ] =>
       destruct (instantiate_params x y z) eqn:Heqip
@@ -1016,9 +1013,11 @@ Proof.
     specialize (X2 _ _ _ X6 eq_refl).
     specialize (X1 _ _ _ X6 eq_refl).
     simpl. econstructor.
-    4:{ eapply lift_types_of_case in H0.
+    4:{ pose proof (on_declared_inductive wfΣ isdecl) as [onmind onind].
+        apply onParams in onmind as Hparams.
+        eapply lift_types_of_case in H0.
         simpl in H0. subst pars. rewrite -> firstn_map. eapply H0.
-        -- admit.
+        -- eapply typing_all_wf_decl ; eauto.
         -- admit.
         -- eapply typing_wf in X0; wf.
         -- wf.

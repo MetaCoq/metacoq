@@ -5,6 +5,9 @@ From Template Require Import config utils univ AstUtils.
 From Template Require Import BasicAst Ast WfInv Typing.
 From PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICLiftSubst
      PCUICUnivSubst PCUICTyping PCUICGeneration TemplateToPCUIC.
+(* For two lemmata wf_instantiate_params_subst_term and
+   wf_instantiate_params_subst_ctx, maybe they should be moved *)
+From Template Require Import Weakening.
 
 Require Import String.
 Local Open Scope string_scope.
@@ -254,6 +257,37 @@ Proof.
        now inv Hargs. now inv Hargs.
 Qed.
 
+Lemma trans_instantiate_params params args t :
+  T.wf t ->
+  All TypingWf.wf_decl params ->
+  All Ast.wf args ->
+  forall t',
+    TTy.instantiate_params params args t = Some t' ->
+    instantiate_params (map trans_decl params) (map trans args) (trans t) =
+    Some (trans t').
+Proof.
+  intros wft wfpars wfargs t' eq.
+  revert eq.
+  unfold TTy.instantiate_params.
+  case_eq (TTy.instantiate_params_subst (List.rev params) args [] t).
+  all: try discriminate.
+  intros [ctx u] e eq. inversion eq. subst. clear eq.
+  assert (wfargs' : Forall Ast.wf args) by (apply All_Forall ; assumption).
+  assert (wfpars' : Forall wf_decl (List.rev params)).
+  { apply rev_Forall. apply All_Forall. assumption. }
+  assert (wfpars'' : All wf_decl (List.rev params)).
+  { apply Forall_All. assumption. }
+  apply wf_instantiate_params_subst_ctx in e as wfctx ; trivial.
+  apply wf_instantiate_params_subst_term in e as wfu ; trivial.
+  apply trans_instantiate_params_subst in e ; trivial.
+  cbn in e. unfold instantiate_params.
+  rewrite map_rev in e.
+  rewrite e. f_equal. symmetry.
+  apply trans_subst.
+  - apply Forall_All. assumption.
+  - assumption.
+Qed.
+
 Lemma trans_it_mkProd_or_LetIn ctx t :
   trans (Template.AstUtils.it_mkProd_or_LetIn ctx t) =
   it_mkProd_or_LetIn (map trans_decl ctx) (trans t).
@@ -277,15 +311,26 @@ Lemma trans_types_of_case Σ ind mdecl idecl args p u pty indctx pctx ps btys :
   Some (trans_local indctx, trans_local pctx, ps, map (on_snd trans) btys).
 Proof.
   intros wfp wfpty wfdecl wfargs wfsigma Hidecl. simpl.
+  pose proof (on_declared_inductive wfsigma Hidecl) as [onmind onind].
+  apply TTy.onParams in onmind as Hparams.
+  assert (closedparams : Closed.closed_ctx (Ast.ind_params mdecl)).
+  { eapply closed_wf_local ; eauto. }
+  assert (wfparams : All wf_decl (Ast.ind_params mdecl)).
+  { apply Forall_All. eapply typing_all_wf_decl ; eauto. }
   unfold TTy.types_of_case, types_of_case. simpl.
-  pose proof (trans_destArity [] (T.ind_type idecl) wfdecl); trivial.
+  pose proof (trans_instantiate_params (Ast.ind_params mdecl) args (Ast.ind_type idecl)) as ht.
+  case_eq (TTy.instantiate_params (Ast.ind_params mdecl) args (Ast.ind_type idecl)).
+  all: try discriminate. intros ity e.
+  rewrite e in ht. specialize ht with (4 := eq_refl).
+  rewrite ht ; trivial. clear ht.
+  apply wf_instantiate_params in e as wfity ; trivial.
+  all: try apply All_Forall ; trivial.
+  pose proof (trans_destArity [] ity wfity); trivial.
   destruct TTy.destArity as [[ctx s] | ]; try congruence.
   rewrite H.
   pose proof (trans_destArity [] pty wfpty); trivial.
   destruct TTy.destArity as [[ctx' s'] | ]; try congruence.
   rewrite H0.
-  pose proof (Template.WeakeningEnv.on_declared_inductive wfsigma Hidecl) as [onmind onind].
-  apply TTy.onParams in onmind as Hparams.
   apply TTy.onConstructors in onind.
   assert(forall brtys,
             map_option_out (TTy.build_branches_type ind mdecl idecl args u p) = Some brtys ->

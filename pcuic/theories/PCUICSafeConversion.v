@@ -560,9 +560,13 @@ Section Conversion.
   Definition R_aux :=
     t ⊩ cored Σ [] ⨱ @posR t × w ⊩ wcored [] ⨱ @posR (` w) × stateR.
 
+  Notation pzt u := (zipx (ctx u) (tm u) (stk1 u)) (only parsing).
+  Notation pps1 u := (xpos (ctx u) (tm u) (stk1 u)) (only parsing).
+  Notation pwt u := (exist _ (wth u)) (only parsing).
+  Notation pps2 u := (xpos (ctx u) (tm' u) (stk2 u)) (only parsing).
+
   Notation obpack u :=
-    (zipx (ctx u) (tm u) (stk1 u) ; (xpos (ctx u) (tm u) (stk1 u), (exist _ (wth u) ; ((xpos (ctx u) (tm' u) (stk2 u)), st u))))
-    (only parsing).
+    (pzt u ; (pps1 u, (pwt u ; (pps2 u, st u)))) (only parsing).
 
   Definition R (u v : pack) :=
     R_aux (obpack u) (obpack v).

@@ -1018,7 +1018,9 @@ Proof.
         eapply lift_types_of_case in H0.
         simpl in H0. subst pars. rewrite -> firstn_map. eapply H0.
         -- eapply typing_all_wf_decl ; eauto.
-        -- admit.
+        -- subst pars. eapply All_Forall. eapply All_firstn.
+           apply typing_wf in X3 as [_ X3]; eauto.
+           now (apply (Forall_All); apply wf_mkApps_inv in X3).
         -- eapply typing_wf in X0; wf.
         -- wf.
         -- destruct isdecl as [Hmdecl Hidecl].
@@ -1149,8 +1151,7 @@ Proof.
 
   - econstructor; eauto.
     now eapply weakening_cumul.
-(* Qed. *)
-Admitted.
+Qed.
 
 Lemma weakening `{cf : checker_flags} Σ Γ Γ' (t : term) T :
   wf Σ -> wf_local Σ (Γ ,,, Γ') ->

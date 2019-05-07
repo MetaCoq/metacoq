@@ -505,8 +505,6 @@ Section Conversion.
 
   Definition dumbR (u v : pack) := False.
 
-  Notation "( x ; y )" := (existT _ x y).
-
   (* Inductive lexprod_l {A B C} (leS : @sig A B -> sig B -> Prop) (leC : C -> C -> Prop) : sig B * C -> sig B * C -> Prop := *)
   (* | left_lex_l : *)
   (*     forall x x' y y', *)

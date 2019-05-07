@@ -502,8 +502,6 @@ Section Reduce.
   (*       * eapply IHargs'. cbn in H0. *)
   Admitted.
 
-  Notation "( x ; y )" := (existT _ x y).
-
   Definition inspect {A} (x : A) : { y : A | y = x } := exist x eq_refl.
 
   Definition Pr (t' : term * stack) π :=

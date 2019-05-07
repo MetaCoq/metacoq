@@ -596,18 +596,10 @@ Proof.
       dependent destruction h. assumption.
 Qed.
 
-Definition Forall_bodies (P : term -> Prop) (Γ : context) : Prop :=
-  Forall (fun d =>
-    match d.(decl_body) with
-    | Some b => P b
-    | None => (* P d.(decl_type) *) True
-    end
-  ) Γ.
-
 Lemma wf_instantiate_params_subst_ctx :
   forall params args s t ctx t',
     Forall Ast.wf args ->
-    Forall_bodies Ast.wf params ->
+    Forall wf_decl params ->
     Forall Ast.wf s ->
     instantiate_params_subst params args s t = Some (ctx, t') ->
     Forall Ast.wf ctx.
@@ -619,7 +611,7 @@ Proof.
     subst. assumption.
   - destruct a as [na [bo|] ty].
     + cbn in e. destruct t ; try discriminate.
-      dependent destruction hp. simpl in *.
+      dependent destruction hp. destruct H as [h1 h2]. simpl in h1, h2.
       eapply IHparams ; try exact e ; try assumption.
       constructor ; try assumption.
       eapply wf_subst ; assumption.
@@ -633,7 +625,7 @@ Qed.
 
 Lemma wf_instantiate_params :
   forall params args t t',
-    Forall_bodies Ast.wf params ->
+    Forall wf_decl params ->
     Forall Ast.wf args ->
     Ast.wf t ->
     instantiate_params params args t = Some t' ->
@@ -652,7 +644,7 @@ Qed.
 Lemma lift_types_of_case ind mdecl idecl args u p pty indctx pctx ps btys n k :
   let f k' := lift n (k' + k) in
   let f_ctx := lift_context n k in
-  Forall_bodies Ast.wf mdecl.(ind_params) ->
+  Forall wf_decl mdecl.(ind_params) ->
   Forall Ast.wf args ->
   Ast.wf pty -> Ast.wf (ind_type idecl) -> closed_ctx mdecl.(ind_params) ->
   types_of_case ind mdecl idecl args u p pty = Some (indctx, pctx, ps, btys) ->
@@ -1026,6 +1018,8 @@ Proof.
     simpl. econstructor.
     4:{ eapply lift_types_of_case in H0.
         simpl in H0. subst pars. rewrite -> firstn_map. eapply H0.
+        -- admit.
+        -- admit.
         -- eapply typing_wf in X0; wf.
         -- wf.
         -- destruct isdecl as [Hmdecl Hidecl].
@@ -1156,7 +1150,8 @@ Proof.
 
   - econstructor; eauto.
     now eapply weakening_cumul.
-Qed.
+(* Qed. *)
+Admitted.
 
 Lemma weakening `{cf : checker_flags} Σ Γ Γ' (t : term) T :
   wf Σ -> wf_local Σ (Γ ,,, Γ') ->

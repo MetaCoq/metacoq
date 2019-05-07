@@ -507,9 +507,6 @@ Section Conversion.
 
   Notation "( x ; y )" := (existT _ x y).
 
-  Definition lexprod := Subterm.lexprod.
-  Arguments lexprod {_ _} _ _ _ _.
-
   (* Inductive lexprod_l {A B C} (leS : @sig A B -> sig B -> Prop) (leC : C -> C -> Prop) : sig B * C -> sig B * C -> Prop := *)
   (* | left_lex_l : *)
   (*     forall x x' y y', *)
@@ -563,12 +560,7 @@ Section Conversion.
   Qed.
 
   Definition R_aux :=
-    dlexprod (cored Σ []) (fun t =>
-      lexprod (@posR t)
-              (dlexprod (wcored []) (fun w =>
-                 lexprod (@posR (` w)) stateR
-               ))
-    ).
+    t ⊩ cored Σ [] ⨱ @posR t × w ⊩ wcored [] ⨱ @posR (` w) × stateR.
 
   Notation obpack u :=
     (zipx (ctx u) (tm u) (stk1 u) ; (xpos (ctx u) (tm u) (stk1 u), (exist _ (wth u) ; ((xpos (ctx u) (tm' u) (stk2 u)), st u))))

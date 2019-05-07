@@ -38,6 +38,82 @@ End RedFlags.
 
 Notation "∥ T ∥" := (squash T) (at level 10).
 
+Notation "( x ; y )" := (existT _ x y).
+
+Set Equations With UIP.
+
+(* TODO Move somewhere else *)
+(* Dependent lexicographic order *)
+Inductive dlexprod {A} {B : A -> Type}
+          (leA : A -> A -> Prop) (leB : forall x, B x -> B x -> Prop)
+  : sigT B -> sigT B -> Prop :=
+| left_lex : forall x x' y y', leA x x' -> dlexprod leA leB (x;y) (x';y')
+| right_lex : forall x y y', leB x y y' -> dlexprod leA leB (x;y) (x;y').
+
+Derive Signature for dlexprod.
+
+Definition lexprod := Subterm.lexprod.
+Arguments lexprod {_ _} _ _ _ _.
+
+Notation "x ⊩ R1 ⨱ R2" :=
+  (dlexprod R1 (fun x => R2)) (at level 20, right associativity).
+Notation "R1 × R2" :=
+  (lexprod R1 R2) (at level 20, right associativity).
+
+Lemma acc_dlexprod :
+  forall A B leA leB,
+    (forall x, well_founded (leB x)) ->
+    forall x,
+      Acc leA x ->
+      forall y,
+        Acc (leB x) y ->
+        Acc (@dlexprod A B leA leB) (x;y).
+Proof.
+  intros A B leA leB hw.
+  induction 1 as [x hx ih1].
+  intros y.
+  induction 1 as [y hy ih2].
+  constructor.
+  intros [x' y'] h. simple inversion h.
+  - intro hA. inversion H0. inversion H1. subst.
+    eapply ih1.
+    + assumption.
+    + apply hw.
+  - intro hB. rewrite <- H0.
+    pose proof (projT2_eq H1) as p2.
+    set (projT1_eq H1) as p1 in *; cbn in p1.
+    destruct p1; cbn in p2; destruct p2.
+    eapply ih2. assumption.
+Qed.
+
+Lemma dlexprod_Acc :
+  forall A B leA leB,
+    (forall x, well_founded (leB x)) ->
+    forall x y,
+      Acc leA x ->
+      Acc (@dlexprod A B leA leB) (x;y).
+Proof.
+  intros A B leA leB hB x y hA.
+  eapply acc_dlexprod ; try assumption.
+  apply hB.
+Qed.
+
+Lemma dlexprod_trans :
+  forall A B RA RB,
+    transitive RA ->
+    (forall x, transitive (RB x)) ->
+    transitive (@dlexprod A B RA RB).
+Proof.
+  intros A B RA RB hA hB [u1 u2] [v1 v2] [w1 w2] h1 h2.
+  revert w1 w2 h2. induction h1 ; intros w1 w2 h2.
+  - dependent induction h2.
+    + left. eapply hA ; eassumption.
+    + left. assumption.
+  - dependent induction h2.
+    + left. assumption.
+    + right. eapply hB ; eassumption.
+Qed.
+
 (* We assume normalisation of the reduction.
 
    We state is as well-foundedness of the reduction.
@@ -54,8 +130,6 @@ Section Normalisation.
       Σ ;;; Γ |- v : A.
   Admitted.
 
-  Set Equations With UIP.
-
   (* red is the reflexive transitive closure of one-step reduction and thus
      can't be used as well order. We thus define the transitive closure,
      but we take the symmetric version.
@@ -63,72 +137,6 @@ Section Normalisation.
   Inductive cored Σ Γ: term -> term -> Prop :=
   | cored1 : forall u v, red1 Σ Γ u v -> cored Σ Γ v u
   | cored_trans : forall u v w, cored Σ Γ v u -> red1 Σ Γ v w -> cored Σ Γ w u.
-
-  Notation "( x ; y )" := (existT _ x y).
-
-  (* TODO Move somewhere else *)
-  (* Dependent lexicographic order *)
-  Inductive dlexprod {A} {B : A -> Type}
-            (leA : A -> A -> Prop) (leB : forall x, B x -> B x -> Prop)
-    : sigT B -> sigT B -> Prop :=
-  | left_lex : forall x x' y y', leA x x' -> dlexprod leA leB (x;y) (x';y')
-  | right_lex : forall x y y', leB x y y' -> dlexprod leA leB (x;y) (x;y').
-
-  Derive Signature for dlexprod.
-
-  Lemma acc_dlexprod :
-    forall A B leA leB,
-      (forall x, well_founded (leB x)) ->
-      forall x,
-        Acc leA x ->
-        forall y,
-          Acc (leB x) y ->
-          Acc (@dlexprod A B leA leB) (x;y).
-  Proof.
-    intros A B leA leB hw.
-    induction 1 as [x hx ih1].
-    intros y.
-    induction 1 as [y hy ih2].
-    constructor.
-    intros [x' y'] h. simple inversion h.
-    - intro hA. inversion H1. inversion H2. subst.
-      eapply ih1.
-      + assumption.
-      + apply hw.
-    - intro hB. rewrite <- H1.
-      pose proof (projT2_eq H2) as p2.
-      set (projT1_eq H2) as p1 in *; cbn in p1.
-      destruct p1; cbn in p2; destruct p2.
-      eapply ih2. assumption.
-  Qed.
-
-  Lemma dlexprod_Acc :
-    forall A B leA leB,
-      (forall x, well_founded (leB x)) ->
-      forall x y,
-        Acc leA x ->
-        Acc (@dlexprod A B leA leB) (x;y).
-  Proof.
-    intros A B leA leB hB x y hA.
-    eapply acc_dlexprod ; try assumption.
-    apply hB.
-  Qed.
-
-  Lemma dlexprod_trans :
-    forall A B RA RB,
-      transitive RA ->
-      (forall x, transitive (RB x)) ->
-      transitive (@dlexprod A B RA RB).
-  Proof.
-    intros A B RA RB hA hB [u1 u2] [v1 v2] [w1 w2] h1 h2.
-    revert w1 w2 h2. induction h1 ; intros w1 w2 h2.
-    - dependent induction h2.
-      + left. eapply hA ; eassumption.
-      + left. assumption.
-    - dependent induction h2.
-      + left. assumption.
-      + right. eapply hB ; eassumption.
-  Qed.
 
   Definition R_aux Σ Γ :=
     dlexprod (cored Σ Γ) (@posR).

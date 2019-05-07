@@ -553,10 +553,18 @@ Definition build_branches_type ind mdecl idecl params u p :=
 
 Definition types_of_case ind mdecl idecl params u p pty :=
   let brtys := build_branches_type ind mdecl idecl params u p in
-  match destArity [] idecl.(ind_type), destArity [] pty, map_option_out brtys with
-  | Some (args, s), Some (args', s'), Some brtys =>
-    Some (args, args', s', brtys)
-  | _, _, _ => None
+  match instantiate_params mdecl.(ind_params) params idecl.(ind_type) with
+  | Some ity =>
+    match
+      destArity [] ity,
+      destArity [] pty,
+      map_option_out brtys
+    with
+    | Some (args, s), Some (args', s'), Some brtys =>
+      Some (args, args', s', brtys)
+    | _, _, _ => None
+    end
+  | None => None
   end.
 
 (** Family of a universe [u]. *)

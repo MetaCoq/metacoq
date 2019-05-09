@@ -2019,6 +2019,44 @@ Section Conversion.
     symmetry. assumption.
   Qed.
 
+  (* Definition stack_args (t : term) (π : stack) : list (term * stack) := *)
+  (*   let '(args, ρ) := decompose_stack π in *)
+  (*   fold_left (fun l u => (u, coApp ? ρ+++?)) args []. *)
+
+  Fixpoint stack_args (t : term) (π : stack) {struct π} : list (term * stack) :=
+    match π with
+    | App u ρ => (u, coApp t ρ) :: stack_args (tApp t u) ρ
+    | _ => []
+    end.
+
+  Equations stack_args_w Γ (t : term) (π : stack)
+    : list ({ x : term * stack | wtp Γ (fst x) (snd x) }) :=
+    stack_args_w t π := _.
+  Next Obligation.
+  Admitted.
+
+  (* Fixpoint stack_args_w (t : term) (π : stack) {struct π} : list (wterm * stack) := *)
+  (*   match π with *)
+  (*   | App u ρ => (u, coApp t ρ) :: stack_args (tApp t u) ρ *)
+  (*   | _ => [] *)
+  (*   end. *)
+
+  Lemma foo :
+    forall Γ t π1 π2 h2,
+      Forall2 (fun '(u1, ρ1) '(exist (u2, ρ2) h) =>
+        R (mkpack (Reduction u2) Γ u1 ρ1 ρ2 h)
+          (mkpack Args Γ t π1 π2 h2)
+      ) (stack_args t π1) (stack_args_w Γ t π2).
+  Abort.
+
+  (* Idea from Nicolas
+     map all the elements of the stack (or rather from the app part)
+     to terms with a proof that they are smaller with respect to R.
+     From then use map to apply aux to everything.
+     This should be fine as all elements are smaller as far as positions are
+     concerned.
+   *)
+
   Equations(noeqns) _isconv_args (Γ : context) (t : term)
             (π1 : stack) (h1 : wtp Γ t π1)
             (π2 : stack) (h2 : wtp Γ t π2)

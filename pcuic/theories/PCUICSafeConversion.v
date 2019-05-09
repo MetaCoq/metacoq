@@ -2026,28 +2026,44 @@ Section Conversion.
       :: stack_args Γ (tApp t u2) ρ1 ρ2 h2 ;
     stack_args Γ t π1 π2 h2 := [].
 
-  Lemma foo :
-    forall Γ t args π1 π2 h2,
+  Lemma stack_args_R :
+    forall Γ t π1 π2 h2,
       Forall (fun '(u1, ρ1, exist (u2, ρ2) h) =>
         R (mkpack (Reduction u2) Γ u1 ρ1 ρ2 h)
-          (mkpack Args Γ (mkApps t args) π1 π2 h2)
-      ) (stack_args Γ (mkApps t args) π1 π2 h2).
+          (mkpack Args Γ t π1 π2 h2)
+      ) (stack_args Γ t π1 π2 h2).
   Proof.
-    simpl. intros Γ t args π1 π2 h2.
-    funelim (stack_args Γ (mkApps t args) π1 π2 h2).
-    all: try solve [ constructor ].
-    econstructor.
-    - unshelve eapply R_positionR.
-      + simpl. reflexivity.
-      + simpl. unfold xposition. eapply positionR_poscat.
-        cbn. eapply positionR_poscat. constructor.
-    - specialize (H Γ t2 (args ++ [t1]) π π0).
-      assert (h2' : welltyped Σ [] (zipx Γ (mkApps t2 (args ++ [t1])) π0)).
-      { rewrite <- mkApps_nested. assumption. }
-      specialize (H h2').
-      revert h2' H. rewrite <- mkApps_nested. intros h2' H.
-      assert (h2' = h2) by (apply welltyped_irr). subst.
-      specialize (H eq_refl). cbn in H.
+    simpl. intros Γ t π1 π2 h2.
+    case_eq (decompose_stack π1). intros l1 θ1 e1.
+    case_eq (decompose_stack π2). intros l2 θ2 e2.
+    pose proof (decompose_stack_eq _ _ _ e1).
+    pose proof (decompose_stack_eq _ _ _ e2).
+    subst.
+    (* Maybe generalise this with firstn/skipn and do it by induction on n?
+       This way we can have the whole term in R and the n/firstn/skipn in the
+       argument to stack_args.
+     *)
+
+
+(*     funelim (stack_args Γ t π1 π2 h2). *)
+(*     all: try solve [ constructor ]. *)
+(*     econstructor. *)
+(*     - unshelve eapply R_positionR. *)
+(*       + simpl. reflexivity. *)
+(*       + simpl. unfold xposition. eapply positionR_poscat. *)
+(*         cbn. eapply positionR_poscat. constructor. *)
+(*     - *)
+
+(* specialize (H Γ t2 (args ++ [t1]) π π0). *)
+(*       assert (h2' : welltyped Σ [] (zipx Γ (mkApps t2 (args ++ [t1])) π0)). *)
+(*       { rewrite <- mkApps_nested. assumption. } *)
+(*       specialize (H h2'). *)
+(*       revert h2' H. rewrite <- mkApps_nested. intros h2' H. *)
+(*       assert (h2' = h2) by (apply welltyped_irr). subst. *)
+(*       specialize (H eq_refl). cbn in H. *)
+
+
+
       (* apply H. *)
 
 

@@ -2029,11 +2029,11 @@ Section Conversion.
     | _ => []
     end.
 
-  Equations stack_args_w Γ (t : term) (π : stack)
+  Equations stack_args_w Γ (t : term) (π : stack) (h : wtp Γ t π)
     : list ({ x : term * stack | wtp Γ (fst x) (snd x) }) :=
-    stack_args_w t π := _.
-  Next Obligation.
-  Admitted.
+    stack_args_w Γ t (App u ρ) h :=
+      (exist (u, coApp t ρ) h) :: stack_args_w Γ (tApp t u) ρ h ;
+    stack_args_w Γ t ρ h := [].
 
   (* Fixpoint stack_args_w (t : term) (π : stack) {struct π} : list (wterm * stack) := *)
   (*   match π with *)
@@ -2046,7 +2046,19 @@ Section Conversion.
       Forall2 (fun '(u1, ρ1) '(exist (u2, ρ2) h) =>
         R (mkpack (Reduction u2) Γ u1 ρ1 ρ2 h)
           (mkpack Args Γ t π1 π2 h2)
-      ) (stack_args t π1) (stack_args_w Γ t π2).
+      ) (stack_args t π1) (stack_args_w Γ t π2 h2).
+  Proof.
+    simpl. intros Γ t π1 π2 h2.
+    revert Γ t π2 h2.
+    induction π1 ; intros Γ u π2 h2.
+    - simpl. funelim (stack_args_w Γ u π2 h2).
+      all: try solve [ constructor ].
+      (* Maybe do it both at the same time. *)
+(*       econstructor. *)
+
+(* simp stack_args_w. *)
+
+
   Abort.
 
   (* Idea from Nicolas

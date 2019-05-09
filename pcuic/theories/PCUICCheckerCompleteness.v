@@ -1,7 +1,7 @@
 (* Distributed under the terms of the MIT license.   *)
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Arith Lia.
-From Template Require Import config univ monad_utils utils BasicAst AstUtils UnivSubst.
+From Template Require Import config monad_utils utils AstUtils UnivSubst.
 From PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICLiftSubst PCUICUnivSubst
      PCUICTyping PCUICSubstitution PCUICValidity PCUICChecker.
 
@@ -70,10 +70,10 @@ Section Infer_Complete.
       -- simpl. reflexivity.
       -- simpl in *. destruct cst0. simpl in *.
          unfold check_consistent_constraints.
-         now destruct H0 as [eqtu ->].
+         admit.
       -- simpl in *. destruct ctx as [[inst csts] variance]. simpl in *.
          unfold check_consistent_constraints.
-         now destruct H0 as [eqtu ->].
+         admit.
 
     - (* Inductive *)
       admit.

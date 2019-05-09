@@ -1,6 +1,5 @@
 From Coq Require Import Ascii String Bool OrderedType Lia List Program Arith.
 From Template Require Import utils AstUtils.
-From Template Require Import BasicAst.
 From PCUIC Require Import PCUICAst.
 Import List.ListNotations.
 Require Import FunctionalExtensionality.
@@ -666,12 +665,31 @@ Ltac apply_spec :=
     eapply (All_forallb _ _ H); clear H
   end.
 
+(* TODO: move *)
+Lemma Forall2_impl {A B} {P Q : A -> B -> Prop} {l l'} :
+    Forall2 P l l' ->
+    (forall x y, P x y -> Q x y) ->
+    Forall2 Q l l'.
+Proof.
+  induction 1; constructor; auto.
+Qed.
+
+Lemma Forall2_impl' {A B} {P Q : A -> B -> Prop} {l l'} :
+    Forall2 P l l' ->
+    Forall (fun x => forall y, P x y -> Q x y) l ->
+    Forall2 Q l l'.
+Proof.
+  induction 1; constructor;
+    inversion H1; intuition.
+Qed.
+
 Ltac close_All :=
   match goal with
   | H : Forall _ _ |- Forall _ _ => apply (Forall_impl H); clear H; simpl
   | H : All _ _ |- All _ _ => apply (All_impl H); clear H; simpl
   | H : OnOne2 _ _ _ |- OnOne2 _ _ _ => apply (OnOne2_impl H); clear H; simpl
   | H : All2 _ _ _ |- All2 _ _ _ => apply (All2_impl H); clear H; simpl
+  | H : Forall2 _ _ _ |- Forall2 _ _ _ => apply (Forall2_impl H); clear H; simpl
   | H : All _ _ |- All2 _ _ _ =>
     apply (All_All2 H); clear H; simpl
   | H : All2 _ _ _ |- All _ _ =>

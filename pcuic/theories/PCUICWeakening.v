@@ -2,7 +2,7 @@
 From Equations Require Import Equations.
 From Coq Require Import Bool String List BinPos Compare_dec Omega Lia.
 Require Import Coq.Program.Syntax Coq.Program.Basics.
-From Template Require Import config utils BasicAst.
+From Template Require Import config utils.
 From PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICWeakeningEnv PCUICClosed PCUICReduction.
 Require Import ssreflect ssrbool.
 
@@ -750,56 +750,77 @@ Proof.
   eapply red1_red. eapply weakening_red1; auto.
 Qed.
 
-Lemma lift_eq_term `{checker_flags} ϕ n k T U :
-  eq_term ϕ T U ->
-  eq_term ϕ (lift n k T) (lift n k U).
+(* TODO: move *)
+Lemma Forall2_length {A B R l l'} (H : @Forall2 A B R l l')
+  : #|l| = #|l'|.
+Proof.
+  induction H. reflexivity.
+  cbn. now apply f_equal.
+Defined.
+
+Lemma lift_eq_term_upto_univ R n k T U :
+  eq_term_upto_univ R T U ->
+  eq_term_upto_univ R (lift n k T) (lift n k U).
 Proof.
   induction T in n, k, U |- * using term_forall_list_ind;
-    destruct U; simpl;
-    try discriminate;
-  try solve [simpl; auto];
-  simpl in *; try rewrite -> !andb_and in *; intros Hleq; intuition auto;
-  try solve [solve_all; intuition auto].
+    inversion 1; simpl; try (now constructor).
+  - destruct (k <=? n0); constructor.
+  - constructor. clear -H H4.
+    induction l in H, args', H4 |- *.
+    + inversion H4; constructor.
+    + inversion H4; inversion H; subst.
+      now constructor.
+  - constructor; try easy. clear -X H7.
+    induction l in X, brs', H7 |- *.
+    + inversion H7; constructor.
+    + inversion H7; inversion X; subst.
+      constructor. cbn; easy.
+      easy.
+  - constructor; try easy. clear -X H3.
+    assert (XX:forall k k', Forall2
+                         (fun x y  => eq_term_upto_univ R (dtype x) (dtype y) /\
+                                   eq_term_upto_univ R (dbody x) (dbody y))
+                         (map (map_def (lift n k) (lift n (#|m| + k'))) m)
+                         (map (map_def (lift n k) (lift n (#|mfix'| + k'))) mfix'));
+      [|now apply XX]. clear k.
+    induction m in X, mfix', H3 |- *.
+    + inversion H3; constructor.
+    + inversion H3; inversion X; subst.
+      simpl. constructor. split. cbn; easy.
+      cbn; erewrite Forall2_length by eassumption.
+      easy.
+      unfold tFixProp in IHm. cbn.
+      rewrite !plus_n_Sm. now apply IHm.
+  - constructor; try easy. clear -X H3.
+    assert (XX:forall k k', Forall2
+                         (fun x y  => eq_term_upto_univ R (dtype x) (dtype y) /\
+                                   eq_term_upto_univ R (dbody x) (dbody y))
+                         (map (map_def (lift n k) (lift n (#|m| + k'))) m)
+                         (map (map_def (lift n k) (lift n (#|mfix'| + k'))) mfix'));
+      [|now apply XX]. clear k.
+    induction m in X, mfix', H3 |- *.
+    + inversion H3; constructor.
+    + inversion H3; inversion X; subst.
+      simpl. constructor. split. cbn; easy.
+      cbn; erewrite Forall2_length by eassumption.
+      easy.
+      unfold tFixProp in IHm. cbn.
+      rewrite !plus_n_Sm. now apply IHm.
+Qed.
+      
 
-  - simpl.
-    elim leb_spec_Set; simpl.
-    -- apply Nat.eqb_eq in Hleq. subst.
-       intros Hk. apply Nat.leb_le in Hk. rewrite -> Hk. apply Nat.eqb_refl.
-    -- apply Nat.eqb_eq in Hleq. subst.
-       elim leb_spec_Set; intros. lia. apply Nat.eqb_refl.
-  - destruct p. destruct Nat.leb; discriminate.
-  - destruct p, p0. rewrite -> !andb_and in *. intuition auto.
-    solve_all. destruct y. simpl. auto.
-  - assert (#|m| = #|m0|). solve_all. clear -H0. induction H0; simpl; auto. rewrite -> H2.
-    repeat (toProp; solve_all).
-  - assert (#|m| = #|m0|). solve_all. clear -H0. induction H0; simpl; auto. rewrite -> H2.
-    repeat (toProp; solve_all).
+Lemma lift_eq_term `{checker_flags} ϕ n k T U :
+  eq_term ϕ T U -> eq_term ϕ (lift n k T) (lift n k U).
+Proof.
+  apply lift_eq_term_upto_univ.
 Qed.
 
 Lemma lift_leq_term `{checker_flags} ϕ n k T U :
-  leq_term ϕ T U ->
-  leq_term ϕ (lift n k T) (lift n k U).
+  leq_term ϕ T U -> leq_term ϕ (lift n k T) (lift n k U).
 Proof.
-  induction T in n, k, U |- * using term_forall_list_ind;
-    destruct U; simpl;
-    try discriminate;
-  try solve [simpl; auto];
-  simpl in *; try destruct p, p0; try rewrite -> !andb_and in *; intros Hleq;
-    intuition auto using lift_eq_term;
-    try solve [solve_all; intuition eauto using lift_eq_term].
-
-  - elim leb_spec_Set; simpl.
-    -- simpl. apply Nat.eqb_eq in Hleq. subst.
-       intros Hk. apply Nat.leb_le in Hk. rewrite -> Hk. apply Nat.eqb_refl.
-    -- apply Nat.eqb_eq in Hleq. subst.
-       elim leb_spec_Set; intros. lia. apply Nat.eqb_refl.
-  - destruct p. destruct Nat.leb. discriminate. discriminate.
-  - solve_all. destruct y. simpl in *. auto using lift_eq_term.
-  - assert (#|m| = #|m0|) as ->. solve_all. clear -H0. induction H0; simpl; auto.
-    repeat (toProp; solve_all); eauto using lift_eq_term.
-  - assert (#|m| = #|m0|) as ->. solve_all. clear -H0. induction H0; simpl; auto.
-    repeat (toProp; solve_all); eauto using lift_eq_term.
+  apply lift_eq_term_upto_univ.
 Qed.
+
 
 Lemma weakening_cumul `{CF:checker_flags} Σ Γ Γ' Γ'' M N :
   wf Σ ->
@@ -815,20 +836,25 @@ Proof.
     econstructor 3; eauto.
 Qed.
 
+Lemma lift_eq_decl `{checker_flags} ϕ n k d d' :
+  eq_decl ϕ d d' -> eq_decl ϕ (lift_decl n k d) (lift_decl n k d').
+Proof.
+  destruct d, d', decl_body, decl_body0;
+    unfold eq_decl, map_decl; cbn; intuition auto using lift_eq_term.
+Qed.
+
 Lemma lift_eq_context `{checker_flags} φ l l' n k :
   eq_context φ l l' ->
   eq_context φ (lift_context n k l) (lift_context n k l').
 Proof.
-  induction l in l', n, k |- *; intros; destruct l'; rewrite -> ?lift_context_snoc0;
-    try (discriminate || reflexivity).
-  simpl in *. rewrite -> andb_and in *.
-  intuition. unfold eq_context in H2. apply forallb2_length in H2. rewrite <- H2.
-  destruct a, c; try congruence.
-  unfold eq_decl in *. simpl.
-  destruct decl_body, decl_body0; simpl in *; try congruence.
-  simpl in *. rewrite -> andb_and in *.
-  intuition auto using lift_eq_term.
-  intuition auto using lift_eq_term.
+  induction l in l', n, k |- *; intros; destruct l'; rewrite -> ?lift_context_snoc0.
+  - constructor.
+  - inversion H0.
+  - inversion H0.
+  - inversion H0; subst. constructor. 
+    + apply Forall2_length in H6. rewrite H6.
+      now apply lift_eq_decl. 
+    + now apply IHl.
 Qed.
 
 Lemma lift_check_correct_arity:
@@ -841,27 +867,23 @@ Lemma lift_check_correct_arity:
       (lift_context #|Γ''| #|Γ'| pctx).
 Proof.
   intros cf Σ Γ' ind u npar args idecl Γ'' indctx pctx.
-  unfold check_correct_arity.
-  destruct pctx in indctx |- *. simpl; try congruence. simpl.
-  rewrite -> lift_context_snoc0. simpl.
-  unfold eq_context.
-  unfold UnivSubst.subst_instance_context.
-  rewrite -> !andb_and. intros.
-  destruct H. split.
-  destruct c. destruct decl_body; try discriminate.
-  unfold eq_decl in *. simpl in *.
-  assert (#|indctx| = #|pctx|) by now eapply forallb2_length in H0.
-  rewrite <- H1.
-  clear H0.
-  eapply (lift_eq_term _ #|Γ''| (#|indctx| + #|Γ'|)) in H.
-  rewrite -> lift_mkApps, map_app in H. simpl in H.
-  rewrite -> firstn_map. rewrite -> to_extended_list_lift.
-  erewrite <- (to_extended_list_map_lift #|Γ''|) in H.
-  rewrite -> lift_context_length.
-  rewrite /is_true -H. f_equal. f_equal. f_equal.
-  rewrite -> !map_map_compose. apply map_ext.
-  intros. unfold Basics.compose. now rewrite -> permute_lift.
-  eapply lift_eq_context in H0. eapply H0.
+  unfold check_correct_arity. intro H.
+  inversion H; subst. simpl. rewrite lift_context_snoc0.
+  constructor.
+  - apply Forall2_length in H4. destruct H4.
+    clear -H2. apply (lift_eq_decl _ #|Γ''| (#|indctx| + #|Γ'|)) in H2.
+    unfold lift_decl, map_decl in H2; cbn in H2.
+    assert (XX : lift #|Γ''| (#|indctx| + #|Γ'|) (mkApps (tInd ind u) (map (lift0 #|indctx|) (firstn npar args) ++ to_extended_list indctx)) = mkApps (tInd ind u) (map (lift0 #|lift_context #|Γ''| #|Γ'| indctx|) (firstn npar (map (lift #|Γ''| #|Γ'|) args)) ++ to_extended_list (lift_context #|Γ''| #|Γ'| indctx)));
+      [|now rewrite XX in H2].
+
+    rewrite -> lift_mkApps, map_app. 
+    rewrite -> firstn_map. rewrite -> to_extended_list_lift.
+    erewrite <- (to_extended_list_map_lift #|Γ''|).
+    rewrite -> lift_context_length.
+    rewrite -> !map_map_compose. f_equal. f_equal. apply map_ext.
+    intros. unfold compose. rewrite (permute_lift _ _ _ _ 0). omega.
+    f_equal. omega.
+  - now apply lift_eq_context.
 Qed.
 
 Lemma weakening_typing `{cf : checker_flags} Σ Γ Γ' Γ'' (t : term) :
@@ -949,7 +971,7 @@ Proof.
     -- erewrite -> lift_declared_inductive; eauto.
     -- auto.
     -- auto.
-    -- revert heq_check_correct_arity.
+    -- revert H1.
        subst pars.
        erewrite lift_declared_inductive; eauto.
        apply lift_check_correct_arity.

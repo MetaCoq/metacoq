@@ -1,7 +1,7 @@
 (* Distributed under the terms of the MIT license.   *)
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Arith Lia.
-From Template Require Import config utils BasicAst AstUtils.
+From Template Require Import config utils AstUtils.
 From PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICLiftSubst PCUICUnivSubst PCUICTyping.
 Require Import ssreflect ssrbool.
 From Equations Require Import Equations.
@@ -87,9 +87,9 @@ Qed.
 
 Lemma weakening_env_consistent_universe_context_instance:
   forall (Σ : global_context) (u : list Level.t) univs,
-    consistent_universe_context_instance Σ univs u ->
+    consistent_universe_context_instance (snd Σ) univs u ->
     forall Σ' : global_context,
-      extends Σ Σ' -> consistent_universe_context_instance Σ' univs u.
+      extends Σ Σ' -> consistent_universe_context_instance (snd Σ') univs u.
 Proof.
   intros Σ u univs H1 Σ' H2. destruct univs; simpl in *; eauto.
   all:(destruct UContext.dest; destruct H2 as [Σ'' ->]; simpl; auto). exact (fst ctx).

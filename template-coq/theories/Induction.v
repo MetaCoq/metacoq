@@ -1,6 +1,6 @@
 (* Distributed under the terms of the MIT license.   *)
 
-From Template Require Import BasicAst Ast univ AstUtils.
+From Template Require Import BasicAst Ast AstUtils.
 Require Import List Program.
 Require Import BinPos.
 Require Import Coq.Arith.Compare_dec Bool.
@@ -82,7 +82,7 @@ Lemma term_wf_forall_list_ind :
     (forall (n : name) (t : term), P t -> forall t0 : term, P t0 -> P (tLambda n t t0)) ->
     (forall (n : name) (t : term),
         P t -> forall t0 : term, P t0 -> forall t1 : term, P t1 -> P (tLetIn n t t0 t1)) ->
-    (forall t : term, ~ isApp t = true -> wf t -> P t ->
+    (forall t : term, isApp t = false -> wf t -> P t ->
                       forall l : list term, l <> nil -> Forall wf l -> Forall P l -> P (tApp t l)) ->
     (forall (s : String.string) (u : list Level.t), P (tConst s u)) ->
     (forall (i : inductive) (u : list Level.t), P (tInd i u)) ->

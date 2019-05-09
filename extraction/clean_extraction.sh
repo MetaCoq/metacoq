@@ -18,5 +18,5 @@ done
 
 # Remove extracted modules already linked in template_coq_plugin.
 cd src
-rm -f ast0.* specif.* peanoNat.* list0.* datatypes.* decimal.* ascii.* univ0.* binPosDef.* binPos.* binNat.* binNums.* binInt.* binIntDef.* bool.* nat0.* string0.* basics.* liftSubst.*
+rm -f ast0.* specif.* peanoNat.* list0.* datatypes.* decimal.* ascii.* universes0.* binPosDef.* binPos.* binNat.* binNums.* binInt.* binIntDef.* bool.* nat0.* string0.* basics.* liftSubst.*
 cd ..

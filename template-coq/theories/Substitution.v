@@ -1066,6 +1066,18 @@ Proof.
   intros. inv H. auto.
 Defined.
 
+
+Lemma map_not_empty {A B} (f : A -> B) l : map f l <> [] -> l <> [].
+Proof.
+  intro H; destruct l; intro e; now apply H.
+Qed.
+
+Lemma not_empty_map {A B} (f : A -> B) l : l <> [] -> map f l <> [].
+Proof.
+  intro H; destruct l; intro e; now apply H.
+Qed.
+
+
 Lemma substitution_red1 `{CF:checker_flags} Σ Γ Γ' Γ'' s M N :
   wf Σ -> All Ast.wf s -> subs Σ Γ s Γ' -> wf_local Σ Γ -> Ast.wf M ->
   red1 (fst Σ) (Γ ,,, Γ' ,,, Γ'') M N ->
@@ -1118,19 +1130,19 @@ Proof.
     constructor.
 
   - rewrite mkApps_tApp; simpl; auto with wf.
-    inv wfM. auto with wf. rewrite -> mkApps_tApp; simpl; auto with wf.
-    eapply red_fix. erewrite subst_unfold_fix; eauto.
-    now apply subst_is_constructor.
-    inv wfM; auto with wf.
-    inv H3.
+    inv wfM. auto with wf. rewrite -> mkApps_tApp; simpl.
+    + eapply red_fix. erewrite subst_unfold_fix; eauto.
+      now apply subst_is_constructor.
+    + inv wfM. inv H3.
     unfold unfold_fix in H.
     destruct nth_error eqn:Heq.
     injection H. intros <- <-.
     eapply nth_error_forall in H5; eauto.
     destruct d as [na b ty]; simpl in *.
     destruct H5 as [_ [_ Hty]].
-    destruct ty; try discriminate.
-    discriminate. inv wfM; auto with wf.
+    destruct ty; try discriminate. reflexivity.
+    discriminate.
+    + apply not_empty_map. now inv wfM.
 
   - pose proof (subst_declared_constant _ _ _ s #|Γ''| u wfΣ H).
     apply (f_equal cst_body) in H1.
@@ -1232,104 +1244,189 @@ Proof.
     auto.
 Qed.
 
+
+Lemma Forall2_Forall {A R l} : @Forall2 A A R l l -> Forall (fun x => R x x) l.
+Proof.
+  induction l. constructor.
+  inversion 1; now constructor.
+Qed.
+
+Lemma Forall_Forall2 {A R l} : Forall (fun x => R x x) l -> @Forall2 A A R l l.
+Proof.
+  induction l. constructor.
+  inversion 1; now constructor.
+Qed.
+  
+
+Lemma eq_universe_refl φ s : eq_universe φ s s.
+Proof.
+  intros vH; reflexivity.
+Qed.
+
+Lemma eq_universe'_refl `{checker_flags} φ s : eq_universe' φ s s.
+Proof.
+  unfold eq_universe'; destruct check_univs; [apply eq_universe_refl|constructor].
+Qed.
+
+Lemma leq_universe_refl φ s : leq_universe φ s s.
+Proof.
+  intros vH; reflexivity.
+Qed.
+
+Lemma leq_universe'_refl `{checker_flags} φ s : leq_universe' φ s s.
+Proof.
+  unfold leq_universe'; destruct check_univs; [apply leq_universe_refl|constructor].
+Qed.
+
+Lemma Forall_True {A} {P : A -> Prop} l : (forall x, P x) -> Forall P l.
+Proof.
+  intro H. induction l; now constructor.
+Qed.
+
+Lemma Forall2_True {A B} {R : A -> B -> Prop} l l'
+  : (forall x y, R x y) -> #|l| = #|l'| -> Forall2 R l l'.
+Proof.
+  intro H. revert l'; induction l; simpl;
+    intros [] e; try discriminate e; constructor.
+  easy.
+  apply IHl. now apply eq_add_S.
+Qed.
+
+Lemma eq_term_upto_univ_refl R (HR : RelationClasses.Reflexive R) t
+  : eq_term_upto_univ R t t.
+Proof.
+  induction t using term_forall_list_ind; simpl;
+    try constructor; try apply Forall_Forall2; try easy;
+      try now apply Forall_True.
+  destruct p. constructor; try assumption.
+  apply Forall_Forall2. assumption.
+Qed.
+
 Lemma eq_term_refl `{checker_flags} φ t : eq_term φ t t.
 Proof.
-  induction t using term_forall_list_ind; simpl; try reflexivity; try discriminate;
-    try (rewrite -> ?IHt1, ?IHt2, ?IHt3; reflexivity).
-
-  - apply Nat.eqb_refl.
-  - apply eq_string_refl.
-  - rewrite /eq_evar eq_nat_refl.
-    simpl. induction H0; simpl; auto. now rewrite H0 IHForall.
-  - apply eq_universe_refl.
-  - rewrite IHt; simpl.
-    eapply (Forall_forallb _ _ (fun x => eq_term φ x x)) in H0.
-    induction l; simpl; auto.
-    simpl in H0. rewrite -> andb_and in H0. intuition.
-    auto.
-  - unfold eq_constant. rewrite eq_string_refl.
-    apply eq_universe_instance_refl.
-  - rewrite eq_ind_refl. apply eq_universe_instance_refl.
-  - rewrite eq_ind_refl. rewrite /eq_nat Nat.eqb_refl. apply eq_universe_instance_refl.
-  - destruct p. simpl.
-    rewrite eq_ind_refl eq_nat_refl IHt1 IHt2.
-    simpl. induction l.
-    reflexivity.
-    simpl. destruct a. inv H0. simpl in H1. rewrite H1.
-    rewrite IHl; auto.
-  - now rewrite eq_projection_refl IHt.
-  - rewrite eq_nat_refl.
-    induction m. reflexivity.
-    inv H0. intuition.
-    simpl. rewrite H0 H3. simpl. apply H1.
-  - rewrite Nat.eqb_refl.
-    induction m. reflexivity.
-    inv H0. intuition.
-    simpl. rewrite H0 H3. simpl. apply H1.
+  apply eq_term_upto_univ_refl.
+  intro; apply eq_universe'_refl.
 Qed.
 
-Lemma eq_term_leq_term `{checker_flags} φ t u : eq_term φ t u = true -> leq_term φ t u = true.
+
+Lemma leq_term_refl `{checker_flags} φ t : leq_term φ t t.
 Proof.
-  induction t in u |- * using term_forall_list_ind; simpl; intros; auto; try reflexivity; try discriminate;
-    try (merge_All; close_Forall; intuition auto);
-    try (rewrite -> ?IHt1, ?IHt2, ?IHt3; reflexivity).
-
-  - destruct u; auto. now apply eq_universe_leq_universe.
-  - destruct u; try discriminate.
-    rewrite -> andb_true_iff in *. intuition.
-  - destruct u; try discriminate.
-    rewrite -> andb_true_iff in *. intuition.
+  apply eq_term_upto_univ_refl.
+  intro; apply leq_universe'_refl.
 Qed.
+
+
+Lemma eq_universe_leq_universe φ t u : eq_universe φ t u -> leq_universe φ t u.
+Proof.
+  intros H v Hv. rewrite (H v Hv). apply BinInt.Z.le_refl.
+Qed.
+
+Lemma eq_universe'_leq_universe' `{checker_flags} φ t u
+  : eq_universe' φ t u -> leq_universe' φ t u.
+Proof.
+  unfold eq_universe', leq_universe'; destruct check_univs.
+  apply eq_universe_leq_universe. intuition.
+Qed.
+
+Lemma Forall2_impl {A B} {P Q : A -> B -> Prop} {l l'} :
+    Forall2 P l l' ->
+    (forall x y, P x y -> Q x y) ->
+    Forall2 Q l l'.
+Proof.
+  induction 1; constructor; auto.
+Qed.
+
+Lemma Forall2_impl' {A B} {P Q : A -> B -> Prop} {l l'} :
+    Forall2 P l l' ->
+    Forall (fun x => forall y, P x y -> Q x y) l ->
+    Forall2 Q l l'.
+Proof.
+  induction 1; constructor;
+    now inversion H1.
+Qed.
+
+Lemma eq_term_leq_term `{checker_flags} φ t u : eq_term φ t u -> leq_term φ t u.
+Proof.
+  induction t in u |- * using term_forall_list_ind; simpl; inversion 1;
+    subst; constructor; try (now unfold eq_term, leq_term in * ); 
+  try eapply Forall2_impl'; try easy.
+  now apply eq_universe'_leq_universe'.
+  all: try (apply Forall_True, eq_universe'_leq_universe').
+  eapply Forall_impl. exact H0. 
+  intros x HH y; apply HH.
+  eapply Forall_impl. exact H0. 
+  cbn. intros x [HH HH'] y [? ?]. split; [now apply HH|now apply HH'].
+  eapply Forall_impl. exact H0. 
+  cbn. intros x [HH HH'] y [? ?]. split; [now apply HH|now apply HH'].
+Qed.
+
 
 Lemma eq_term_App `{checker_flags} φ f f' :
   eq_term φ f f' ->
   isApp f = isApp f'.
 Proof.
-  destruct f, f'; simpl; try congruence.
-  destruct ind_and_nbparams; congruence.
+  inversion 1; reflexivity.
 Qed.
 
 Lemma eq_term_mkApps `{checker_flags} φ f l f' l' :
   eq_term φ f f' ->
-  forallb2 (eq_term φ) l l' ->
+  Forall2 (eq_term φ) l l' ->
   eq_term φ (mkApps f l) (mkApps f' l').
 Proof.
-  induction l in f, f' |- *; destruct l'; try (simpl; congruence).
-  intros.
-  destruct (isApp f) eqn:Hf.
-  pose (eq_term_App _ _ _ H0). rewrite -> Hf in e.
-  destruct f; try discriminate.
-  destruct f'; try discriminate.
-  simpl in *.
-  rewrite -> andb_and in *. intuition.
-  rewrite forallb2_app; auto.
-  simpl. now rewrite H3 H0 H4.
+  induction l in f, f' |- *; intro e; inversion_clear 1.
+  - assumption.
+  - pose proof (eq_term_App _ _ _ e).
+    case_eq (isApp f).
+    + intro X; rewrite X in H0.
+      destruct f; try discriminate.
+      destruct f'; try discriminate.
+      cbn. inversion_clear e. constructor. assumption.
+      apply Forall2_app. assumption.
+      now constructor.
+    + intro X; rewrite X in H0.
+      rewrite !mkApps_tApp; eauto.
+      intro; discriminate.
+      intro; discriminate.
+      constructor. assumption.
+      now constructor.
+Qed.
 
-  rewrite -> !mkApps_tApp; auto. simpl. rewrite -> H0.
-  apply H1.
-  pose proof (eq_term_App _ _ _ H0). all:congruence.
+Lemma leq_term_App `{checker_flags} φ f f' :
+  leq_term φ f f' ->
+  isApp f = isApp f'.
+Proof.
+  inversion 1; reflexivity.
 Qed.
 
 Lemma leq_term_mkApps `{checker_flags} φ f l f' l' :
-  eq_term φ f f' ->
-  forallb2 (eq_term φ) l l' ->
+  leq_term φ f f' ->
+  Forall2 (leq_term φ) l l' ->
   leq_term φ (mkApps f l) (mkApps f' l').
 Proof.
-  induction l in f, f' |- *; destruct l'; try (simpl; congruence).
-  intros. simpl. apply eq_term_leq_term. auto.
-  intros.
-  destruct (isApp f) eqn:Hf.
-  pose (eq_term_App _ _ _ H0). rewrite -> Hf in e.
-  destruct f; try discriminate.
-  destruct f'; try discriminate.
-  simpl in *.
-  rewrite -> andb_and in *. intuition.
-  rewrite forallb2_app; auto.
-  simpl. now rewrite H3 H0 H4.
+  induction l in f, f' |- *; intro e; inversion_clear 1.
+  - assumption.
+  - pose proof (leq_term_App _ _ _ e).
+    case_eq (isApp f).
+    + intro X; rewrite X in H0.
+      destruct f; try discriminate.
+      destruct f'; try discriminate.
+      cbn. inversion_clear e. constructor. assumption.
+      apply Forall2_app. assumption.
+      now constructor.
+    + intro X; rewrite X in H0.
+      rewrite !mkApps_tApp; eauto.
+      intro; discriminate.
+      intro; discriminate.
+      constructor. assumption.
+      now constructor.
+Qed.
 
-  rewrite -> !mkApps_tApp; auto. simpl. rewrite H0.
-  apply H1.
-  pose (eq_term_App _ _ _ H0). all:congruence.
+
+
+Lemma Forall2_map {A B A' B'} (R : A' -> B' -> Prop) (f : A -> A') (g : B -> B') l l'
+  : Forall2 (fun x y => R (f x) (g y)) l l' -> Forall2 R (map f l) (map g l').
+Proof.
+  induction 1; constructor; auto.
 Qed.
 
 Lemma subst_eq_term `{checker_flags} ϕ n k T U :
@@ -1337,75 +1434,85 @@ Lemma subst_eq_term `{checker_flags} ϕ n k T U :
   eq_term ϕ (subst n k T) (subst n k U).
 Proof.
   intros Hleq.
-  induction T in n, k, U, Hleq |- * using term_forall_list_ind; intros;
-    destruct U; try discriminate;
-  try solve [simpl; auto]; try
-                             (destruct (mkApps_trans_wf _ _ H0) as [U' [V' ->]]; reflexivity);
-  simpl in *; revert Hleq; try rewrite -> !andb_and in *; intuition auto;
-    try solve [solve_all; intuition auto].
-
-  - intros.
-    apply Nat.eqb_eq in Hleq. subst.
-    destruct (leb_spec_Set k n1).
-    destruct nth_error eqn:Heq. apply eq_term_refl.
-    apply eq_term_refl.
-    apply eq_term_refl.
-
-  - apply eq_term_mkApps. eauto. eauto.
-    merge_All. eapply All2_impl; eauto.
-    simpl; intros; intuition auto.
-
-  - destruct p. destruct Nat.leb. discriminate. discriminate.
-  - destruct p. discriminate.
-  - destruct p, ind_and_nbparams. toProp; solve_all. solve_all. simpl. destruct y. simpl. auto.
-  - assert (#|m| = #|mfix|) as <-. solve_all. clear -H2. induction H2; simpl; auto.
-    repeat (toProp; solve_all).
-  - assert (#|m| = #|mfix|) as <-. solve_all. clear -H2. induction H2; simpl; auto.
-    repeat (toProp; solve_all).
+  induction T in n, k, U, Hleq |- * using term_forall_list_ind; simpl;
+    inversion Hleq; simpl. all: try apply eq_term_refl.
+  all: unfold eq_term, leq_term in *; try constructor; try easy.
+  + eapply Forall2_map.
+    eapply Forall2_impl'. eassumption.
+    eapply Forall_impl. eassumption.
+    cbn. intros x HH y HH'; now apply HH.
+  + eapply eq_term_mkApps. now apply IHT.
+    eapply Forall2_map.
+    eapply Forall2_impl'. eassumption.
+    eapply Forall_impl. eassumption.
+    cbn. intros x HH y HH'; now apply HH.
+  + eapply Forall2_map.
+    eapply Forall2_impl'. eassumption.
+    eapply Forall_impl. eassumption.
+    cbn. intros x HH y HH'; now apply HH.
+  + eapply Forall2_map.
+    eapply Forall2_impl'. eassumption.
+    eapply Forall_impl. eassumption.
+    cbn. rewrite (Forall2_length H4).
+    intros x [] y []; now split.
+  + eapply Forall2_map.
+    eapply Forall2_impl'. eassumption.
+    eapply Forall_impl. eassumption.
+    cbn. rewrite (Forall2_length H4).
+    intros x [] y []; now split.
 Qed.
+
 
 Lemma subst_leq_term `{checker_flags} ϕ n k T U :
   leq_term ϕ T U ->
   leq_term ϕ (subst n k T) (subst n k U).
 Proof.
   intros Hleq.
-  induction T in n, k, U, Hleq |- * using term_forall_list_ind; intros;
-    destruct U; try discriminate;
-  try solve [simpl; auto]; try
-                             (destruct (mkApps_trans_wf _ _ H0) as [U' [V' ->]]; reflexivity);
-  simpl in *; revert Hleq; try destruct p, ind_and_nbparams; try rewrite -> !andb_and in *;
-    intuition auto using subst_eq_term;
-    try solve [solve_all; intuition eauto using subst_eq_term].
+  induction T in n, k, U, Hleq |- * using term_forall_list_ind; simpl;
+    inversion Hleq; simpl. all: try apply leq_term_refl.
+  all: unfold eq_term, leq_term in *; try constructor; try easy.
+  + eapply Forall2_map.
+    eapply Forall2_impl'. eassumption.
+    eapply Forall_impl. eassumption.
+    cbn. intros x HH y HH'; now apply HH.
+  + eapply leq_term_mkApps. now apply IHT.
+    eapply Forall2_map.
+    eapply Forall2_impl'. eassumption.
+    eapply Forall_impl. eassumption.
+    cbn. intros x HH y HH'; now apply HH.
+  + eapply Forall2_map.
+    eapply Forall2_impl'. eassumption.
+    eapply Forall_impl. eassumption.
+    cbn. intros x HH y HH'; now apply HH.
+  + eapply Forall2_map.
+    eapply Forall2_impl'. eassumption.
+    eapply Forall_impl. eassumption.
+    cbn. rewrite (Forall2_length H4).
+    intros x [] y []; now split.
+  + eapply Forall2_map.
+    eapply Forall2_impl'. eassumption.
+    eapply Forall_impl. eassumption.
+    cbn. rewrite (Forall2_length H4).
+    intros x [] y []; now split.
+Qed.
 
-  - apply Nat.eqb_eq in Hleq. subst.
-    destruct Nat.leb; simpl. destruct nth_error.
-    eapply eq_term_leq_term. apply eq_term_refl. simpl.
-    apply Nat.eqb_refl. apply Nat.eqb_refl.
-  - apply leq_term_mkApps.
-    now apply subst_eq_term. solve_all. auto using subst_eq_term.
-  - destruct p. discriminate.
-  - destruct p; discriminate.
-  - solve_all. destruct y. simpl. auto using subst_eq_term.
-  - assert (#|m| = #|mfix|) as <-. solve_all. clear -H2. induction H2; simpl; auto.
-    repeat (toProp; solve_all); auto using subst_eq_term.
-  - assert (#|m| = #|mfix|) as <-. solve_all. clear -H2. induction H2; simpl; auto.
-    repeat (toProp; solve_all); auto using subst_eq_term.
+
+Lemma subst_eq_decl `{checker_flags} ϕ l k d d' :
+  eq_decl ϕ d d' -> eq_decl ϕ (subst_decl l k d) (subst_decl l k d').
+Proof.
+  destruct d, d', decl_body, decl_body0;
+    unfold eq_decl, map_decl; cbn; intuition auto using subst_eq_term.
 Qed.
 
 Lemma subst_eq_context `{checker_flags} φ l l' n k :
   eq_context φ l l' ->
   eq_context φ (subst_context n k l) (subst_context n k l').
 Proof.
-  induction l in l', n, k |- *; intros; destruct l'; rewrite ?subst_context_snoc;
-    try (discriminate || reflexivity).
-  simpl in *. rewrite -> andb_and in *.
-  intuition. unfold eq_context in H2. apply forallb2_length in H2. rewrite <- H2.
-  destruct a, c; try congruence.
-  unfold eq_decl in *. simpl.
-  destruct decl_body, decl_body0; simpl in *; try congruence.
-  simpl in *. rewrite -> andb_and in *.
-  intuition auto using subst_eq_term.
-  intuition auto using subst_eq_term.
+  induction l in l', n, k |- *; inversion 1. constructor.
+  rewrite !subst_context_snoc. constructor.
+  rewrite (Forall2_length H5).
+  now apply subst_eq_decl.
+  now apply IHl.
 Qed.
 
 Lemma subst_check_correct_arity:
@@ -1419,25 +1526,23 @@ Lemma subst_check_correct_arity:
 Proof.
   intros cf Σ ind u npar args idecl indctx pctx s k.
   unfold check_correct_arity.
-  destruct pctx in indctx |- *. simpl; try congruence. simpl.
-  rewrite subst_context_snoc. simpl.
-  unfold eq_context.
-  rewrite -> !andb_and. intros.
-  destruct H. split.
-  destruct c. destruct decl_body; try discriminate.
-  unfold eq_decl in *. simpl in *.
-  assert (#|indctx| = #|pctx|) by now eapply forallb2_length in H0.
-  rewrite <- H1.
-  clear H0.
-  eapply (subst_eq_term _ s (#|indctx| + k)) in H.
-  rewrite subst_mkApps map_app in H. simpl in H.
-  rewrite firstn_map. rewrite /to_extended_list to_extended_list_k_subst.
-  unfold to_extended_list in H.
-  erewrite <- (to_extended_list_k_map_subst s) in H.
-  rewrite /is_true -H. f_equal. f_equal. f_equal. rewrite subst_context_length.
-  rewrite -> !map_map_compose. apply map_ext.
-  intros. unfold compose. now rewrite commut_lift_subst_rec. lia.
-  eapply subst_eq_context in H0. eapply H0.
+  inversion_clear 1.
+  rewrite subst_context_snoc. constructor.
+  - apply Forall2_length in H1. destruct H1.
+    apply (subst_eq_decl _ s (#|indctx| + k)) in H0.
+    unfold subst_decl, map_decl in H0; cbn in H0.
+    assert (XX : subst s (#|indctx| + k) (mkApps (tInd ind u) (map (lift0 #|indctx|) (firstn npar args) ++ to_extended_list indctx)) = mkApps (tInd ind u) (map (lift0 #|subst_context s k indctx|) (firstn npar (map (subst s k) args)) ++ to_extended_list (subst_context s k indctx)) );
+      [|now rewrite XX in H0].
+    clear H0.
+    rewrite -> subst_mkApps; simpl. f_equal. rewrite map_app. 
+    rewrite -> firstn_map.
+    rewrite !map_map_compose. cbn. f_equal.
+    + eapply map_ext. 
+      intros. unfold compose. rewrite commut_lift_subst_rec. lia.
+      rewrite subst_context_length. f_equal. lia.
+    + rewrite /to_extended_list to_extended_list_k_subst.
+      rewrite <- (to_extended_list_k_map_subst s). reflexivity. lia.
+  - now apply subst_eq_context.
 Qed.
 
 Lemma subs_wf `{checker_flags} Σ Γ s Δ : wf Σ -> subs Σ Γ s Δ -> All Ast.wf s.

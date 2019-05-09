@@ -20,8 +20,8 @@ src/config0.mli
 src/config0.ml
 src/univSubst0.mli
 src/univSubst0.ml
-src/univ0.mli
-src/univ0.ml
+src/universes0.mli
+src/universes0.ml
 src/nat0.mli
 src/nat0.ml
 src/mSetWeakList.mli

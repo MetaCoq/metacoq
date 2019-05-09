@@ -1,5 +1,5 @@
 From Coq Require Import Strings.String.
-From Template Require Import Ast.
+From Template Require Import Ast uGraph.
 
 Set Universe Polymorphism.
 Set Universe Minimization ToSet.

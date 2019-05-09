@@ -14,7 +14,7 @@ Fixpoint wf_Inv (t : term) :=
   | tProd na t b => wf t /\ wf b
   | tLambda na t b => wf t /\ wf b
   | tLetIn na t b b' => wf t /\ wf b /\ wf b'
-  | tApp t u => ~ isApp t = true /\ u <> nil /\ wf t /\ Forall wf u
+  | tApp t u => isApp t = false /\ u <> nil /\ wf t /\ Forall wf u
   | tConst _ _ | tInd _ _ | tConstruct _ _ _ => True
   | tCase ci p c brs => wf p /\ wf c /\ Forall (Program.Basics.compose wf snd) brs
   | tProj p t => wf t

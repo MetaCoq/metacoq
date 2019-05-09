@@ -2019,26 +2019,75 @@ Section Conversion.
     symmetry. assumption.
   Qed.
 
-  Equations stack_args Γ (t1 t2 : term) (π1 π2 : stack) (h2 : wtp Γ t2 π2)
+  Equations stack_args Γ (t : term) (π1 π2 : stack) (h2 : wtp Γ t π2)
     : list (term * stack * { x : term * stack | wtp Γ (fst x) (snd x) }) :=
-    stack_args Γ t1 t2 (App u1 ρ1) (App u2 ρ2) h2 :=
-      (u1, coApp t1 ρ1, exist (u2, coApp t2 ρ2) h2)
-      :: stack_args Γ (tApp t1 u1) (tApp t2 u2) ρ1 ρ2 h2 ;
-    stack_args Γ t1 t2 π1 π2 h2 := [].
+    stack_args Γ t (App u1 ρ1) (App u2 ρ2) h2 :=
+      (u1, coApp t ρ1, exist (u2, coApp t ρ2) h2)
+      :: stack_args Γ (tApp t u2) ρ1 ρ2 h2 ;
+    stack_args Γ t π1 π2 h2 := [].
+
+  Lemma foo :
+    forall Γ t args π1 π2 h2,
+      Forall (fun '(u1, ρ1, exist (u2, ρ2) h) =>
+        R (mkpack (Reduction u2) Γ u1 ρ1 ρ2 h)
+          (mkpack Args Γ (mkApps t args) π1 π2 h2)
+      ) (stack_args Γ (mkApps t args) π1 π2 h2).
+  Proof.
+    simpl. intros Γ t args π1 π2 h2.
+    funelim (stack_args Γ (mkApps t args) π1 π2 h2).
+    all: try solve [ constructor ].
+    econstructor.
+    - unshelve eapply R_positionR.
+      + simpl. reflexivity.
+      + simpl. unfold xposition. eapply positionR_poscat.
+        cbn. eapply positionR_poscat. constructor.
+    - specialize (H Γ t2 (args ++ [t1]) π π0).
+      assert (h2' : welltyped Σ [] (zipx Γ (mkApps t2 (args ++ [t1])) π0)).
+      { rewrite <- mkApps_nested. assumption. }
+      specialize (H h2').
+      revert h2' H. rewrite <- mkApps_nested. intros h2' H.
+      assert (h2' = h2) by (apply welltyped_irr). subst.
+      specialize (H eq_refl). cbn in H.
+      (* apply H. *)
+
+
+  (*     match goal with *)
+(*       | |- context [ Forall ?Q _ ] => set (P := Q) in * *)
+(*       end. *)
+
+
+(*       eapply H. *)
+(*       specialize H with (t := t2) (args0 := args ++ [t1]). *)
+
+
+(* revert h2 H. *)
+(*       replace (tApp (mkApps t2 args) t1) with (mkApps t2 (args ++ [t1])) *)
+(*       by (rewrite <- mkApps_nested ; reflexivity). *)
+(*       specialize (H Γ _) *)
+  Abort.
+
+
 
   Lemma foo :
     forall Γ t π1 π2 h2,
       Forall (fun '(u1, ρ1, exist (u2, ρ2) h) =>
         R (mkpack (Reduction u2) Γ u1 ρ1 ρ2 h)
           (mkpack Args Γ t π1 π2 h2)
-      ) (stack_args Γ t t π1 π2 h2).
+      ) (stack_args Γ t π1 π2 h2).
   Proof.
     simpl. intros Γ t π1 π2 h2.
-    funelim (stack_args Γ t t π1 π2 h2).
+    funelim (stack_args Γ t π1 π2 h2).
     all: try solve [ constructor ].
+    match goal with
+    | |- context [ Forall ?Q _ ] => set (P := Q) in *
+    end.
+
     econstructor.
     - unshelve eapply R_positionR.
-      + simpl.
+      + simpl. reflexivity.
+      + simpl. unfold xposition. eapply positionR_poscat.
+        cbn. eapply positionR_poscat. constructor.
+    -
 
 
   Abort.

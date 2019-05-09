@@ -1,7 +1,7 @@
 (* Distributed under the terms of the MIT license.   *)
 From Equations Require Import Equations.
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
-From Template Require Import config utils univ.
+From Template Require Import config utils.
 From PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICWeakeningEnv PCUICWeakening
      PCUICSubstitution PCUICClosed.

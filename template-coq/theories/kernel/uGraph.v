@@ -1,5 +1,5 @@
 Require Import BinInt List. Import ListNotations.
-From Template Require Import config univ.
+From Template Require Import config Universes.
 
 
 
@@ -237,15 +237,15 @@ End UGraph.
 Require Import Bool.
 
 Definition eq_universe `{checker_flags} φ s s' :=
-  if univ.Universe.equal s s' then true
+  if Universe.equal s s' then true
   else check_leq φ s s' && check_leq φ s' s.
 
 Definition leq_universe `{checker_flags} φ s s' :=
-  if univ.Universe.equal s s' then true
+  if Universe.equal s s' then true
   else check_leq φ s s'.
 
 Definition eq_universe_instance `{checker_flags} φ u v :=
-  univ.Instance.equal_upto (check_eq_level φ) u v.
+  Instance.equal_upto (check_eq_level φ) u v.
 
 Conjecture eq_universe_refl : forall `{checker_flags} φ u, eq_universe φ u u = true.
 Conjecture eq_universe_instance_refl : forall `{checker_flags} φ u, eq_universe_instance φ u u = true.

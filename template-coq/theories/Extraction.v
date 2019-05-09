@@ -17,7 +17,7 @@ Extract Inductive Decimal.int => unit [ "(fun _ -> ())" "(fun _ -> ())" ] "(fun 
 Extract Constant utils.ascii_compare =>
  "fun x y -> match Char.compare x y with 0 -> Eq | x when x < 0 -> Lt | _ -> Gt".
 
-Extraction Blacklist config uGraph univ Ast String List Nat Int
+Extraction Blacklist config uGraph Universes Ast String List Nat Int
            UnivSubst Typing Checker Retyping OrderedType.
 Set Warnings "-extraction-opaque-accessed".
 

@@ -1,7 +1,7 @@
 (* Distributed under the terms of the MIT license.   *)
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Arith Lia.
-From Template Require Import config utils Ast AstUtils univ Induction LiftSubst UnivSubst Typing.
+From Template Require Import config utils Ast AstUtils Induction LiftSubst UnivSubst Typing.
 Require Import ssreflect.
 
 Set Asymmetric Patterns.
@@ -82,7 +82,7 @@ Lemma unfold_fix_wf:
   forall (mfix : mfixpoint term) (idx : nat) (narg : nat) (fn : term),
     unfold_fix mfix idx = Some (narg, fn) ->
     Ast.wf (tFix mfix idx) ->
-    Ast.wf fn /\ isApp fn <> true.
+    Ast.wf fn /\ isApp fn = false.
 Proof.
   intros mfix idx narg fn Hf Hwf.
   unfold unfold_fix in Hf. inv Hwf.
@@ -249,7 +249,7 @@ Proof.
     intros Hwf; inv Hwf; try constructor; eauto;
       repeat (unfold compose, snd, on_snd in *; simpl in *; solve_all).
 
-  - destruct t; try discriminate. simpl in *. congruence.
+  - destruct t; try reflexivity. discriminate.
   - destruct l; simpl in *; congruence.
   - destruct x; simpl in *; intuition eauto.
     destruct dbody; simpl in *; try discriminate. destruct Nat.leb; auto.

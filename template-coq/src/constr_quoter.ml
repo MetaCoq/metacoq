@@ -64,9 +64,9 @@ struct
   let pkg_base_reify = ["Template";"BasicAst"]
   let pkg_reify = ["Template";"Ast"]
   let pkg_template_monad = ["Template";"TemplateMonad"]
-  let pkg_univ = ["Template";"kernel";"univ"]
-  let pkg_level = ["Template";"kernel";"univ";"Level"]
-  let pkg_variance = ["Template";"kernel";"univ";"Variance"]
+  let pkg_univ = ["Template"; "Universes"]
+  let pkg_level = ["Template";"Universes";"Level"]
+  let pkg_variance = ["Template";"Universes";"Variance"]
   let pkg_ugraph = ["Template";"kernel";"uGraph"]
   let ext_pkg_univ s = List.append pkg_univ [s]
 

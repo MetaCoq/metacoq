@@ -2,7 +2,7 @@
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Arith Lia Classes.RelationClasses.
 From Template
-Require Import config univ monad_utils utils BasicAst AstUtils UnivSubst.
+Require Import config monad_utils utils AstUtils UnivSubst.
 From PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICLiftSubst PCUICUnivSubst PCUICTyping.
 From Equations Require Import Equations.
 Require Import Equations.Prop.DepElim.
@@ -69,6 +69,13 @@ Ltac term_dec_tac term_dec :=
          (* | f : mfixpoint term, g : mfixpoint term |- _ => *)
          (*   fcase (mfixpoint_dec term_dec f g) *)
          end.
+
+Instance dec_universe : EqDec universe.
+Proof.
+  intros [x Hx] [y Hy].
+  fcase (eq_dec x y). left.
+  apply eq_universes; reflexivity.
+Defined.
 
 Derive EqDec for term.
 Next Obligation.

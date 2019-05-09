@@ -1,7 +1,7 @@
 (* Distributed under the terms of the MIT license.   *)
 From Equations Require Import Equations.
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
-From Template Require Import config utils univ.
+From Template Require Import config utils.
 From PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICWeakeningEnv PCUICWeakening
      PCUICSubstitution PCUICClosed PCUICCumulativity PCUICGeneration PCUICValidity
@@ -209,10 +209,11 @@ Lemma cumul_Prod_inv Σ Γ na na' A B A' B' :
   Σ ;;; Γ |- tProd na A B <= tProd na' A' B' ->
    ((Σ ;;; Γ |- A = A') * (Σ ;;; Γ ,, vass na' A' |- B <= B'))%type.
 Proof.
-  intros H; depind H. simpl in e.
-  - move/andP: e => [] eqa leqb.
-    split; auto with pcuic. apply conv_conv_alt; eauto. now constructor.
-    now constructor.
+  intros H; depind H.
+  - admit.
+    (* simpl in e. move/andP: e => [] eqa leqb. *)
+    (* split; auto with pcuic. apply conv_conv_alt; eauto. now constructor. *)
+    (* now constructor. *)
 
   - depelim r. apply mkApps_Fix_spec in x. destruct x.
     specialize (IHcumul _ _ _ _ _ _ eq_refl eq_refl).
@@ -239,6 +240,7 @@ Lemma cumul_Sort_inv Σ Γ s s' :
   Σ ;;; Γ |- tSort s <= tSort s' -> leq_universe (snd Σ) s s'.
 Proof.
   intros H; depind H; auto.
+  - now inversion l.
   - depelim r. solve_discr.
   - depelim r. solve_discr.
 Qed.
@@ -498,8 +500,8 @@ Proof.
       apply cumul_Sort_inv in Hp'.
       eapply cumul_trans with (tSort (Universe.sort_of_product s1 s2)).
       constructor.
-      cbn. apply leq_universe_product_r.
-      constructor; simpl; auto. }
+      cbn. constructor. apply leq_universe_product_r.
+      constructor; constructor ; auto. }
 
   - (* Fixpoint unfolding *)
     simpl in x.

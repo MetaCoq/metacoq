@@ -83,8 +83,8 @@ template-coq/monad_utils.ml
 template-coq/monad_utils.mli
 template-coq/uGraph0.ml
 template-coq/uGraph0.mli
-template-coq/univ0.ml
-template-coq/univ0.mli
+template-coq/universes0.ml
+template-coq/universes0.mli
 template-coq/utils.ml
 template-coq/utils.mli
 
@@ -150,8 +150,8 @@ checker/src/typing0.ml
 checker/src/typing0.mli
 checker/src/uGraph0.ml
 checker/src/uGraph0.mli
-checker/src/univ0.ml
-checker/src/univ0.mli
+checker/src/universes0.ml
+checker/src/universes0.mli
 checker/src/univSubst0.ml
 checker/src/univSubst0.mli
 checker/src/utils.ml

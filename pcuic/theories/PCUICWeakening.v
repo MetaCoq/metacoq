@@ -750,14 +750,6 @@ Proof.
   eapply red1_red. eapply weakening_red1; auto.
 Qed.
 
-(* TODO: move *)
-Lemma Forall2_length {A B R l l'} (H : @Forall2 A B R l l')
-  : #|l| = #|l'|.
-Proof.
-  induction H. reflexivity.
-  cbn. now apply f_equal.
-Defined.
-
 Lemma lift_eq_term_upto_univ R n k T U :
   eq_term_upto_univ R T U ->
   eq_term_upto_univ R (lift n k T) (lift n k U).

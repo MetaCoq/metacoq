@@ -350,34 +350,6 @@ Proof.
   rewrite mkApps_app. simpl. reflexivity.
 Qed.
 
-(* TODO: move *)
-Lemma Forall2_and {A B} (R R' : A -> B -> Prop) l l'
-  : Forall2 R l l' -> Forall2 R' l l' -> Forall2 (fun x y => R x y /\ R' x y) l l'.
-Proof.
-  induction 1.
-  intro; constructor.
-  inversion_clear 1.
-  now constructor.
-Defined.
-
-Lemma Forall_Forall2_and {A B} {R : A -> B -> Prop} {P l l'}
-  : Forall2 R l l' -> Forall P l -> Forall2 (fun x y => P x /\ R x y) l l'.
-Proof.
-  induction 1.
-  intro; constructor.
-  inversion_clear 1.
-  now constructor.
-Defined.
-
-Lemma Forall_Forall2_and' {A B} {R : A -> B -> Prop} {P l l'}
-  : Forall2 R l l' -> Forall P l' -> Forall2 (fun x y => R x y /\ P y) l l'.
-Proof.
-  induction 1.
-  intro; constructor.
-  inversion_clear 1.
-  now constructor.
-Defined.
-
 
 Lemma trans_eq_term ϕ T U :
   T.wf T -> T.wf U -> TTy.eq_term ϕ T U ->

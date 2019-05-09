@@ -313,9 +313,6 @@ Section Conversion.
     | None => false
     end.
 
-  Definition graph_of_constraints (φ : constraints) : uGraph.t
-    := ConstraintSet.fold add_constraint φ init_graph.
-
   Fixpoint isconv (n : nat) (leq : conv_pb) (Γ : context)
            (t1 : term) (l1 : list term) (t2 : term) (l2 : list term) {struct n} : option bool :=
     match n with 0 => None | S n =>
@@ -652,13 +649,6 @@ Ltac unsquash :=
          | [ H : squash _ |- _ ] => destruct H as [H]
          end.
 
-
-Program Definition try_suc (u : universe) : universe :=   (* FIXME suc s *)
-  (map (fun '(l, b) =>  (l, true)) u; _).
-Next Obligation.
-  apply u.2. destruct u as [[] ?].
-  reflexivity. discriminate.
-Qed.
 
 Section Typecheck2.
   Context `{cf : checker_flags}.

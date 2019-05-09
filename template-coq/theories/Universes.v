@@ -149,7 +149,7 @@ Module Universe.
 
   (* val compare : t -> t -> int *)
   (* (** Comparison function *) *)
-Print Coercions.
+
   Definition equal (u1 u2 : t) : bool :=
     forallb2 Expr.equal u1 u2.
   (* Equality function on formal universes *)
@@ -496,3 +496,16 @@ Definition eq_universe' `{checker_flags} φ u u'
 
 Definition leq_universe' `{checker_flags} φ u u'
   := if check_univs then leq_universe φ u u' else True.
+
+
+Program Definition try_suc (u : universe) : universe :=   (* FIXME suc s *)
+  (map (fun '(l, b) =>  (l, true)) u; _).
+Next Obligation.
+  intro. apply u.2. destruct u as [[] ?].
+  reflexivity. discriminate.
+Qed.
+
+Conjecture leq_universe_product_l : forall `{checker_flags} φ s1 s2,
+    leq_universe' φ s1 (Universe.sort_of_product s1 s2).
+Conjecture leq_universe_product_r : forall `{checker_flags} φ s1 s2,
+    leq_universe' φ s2 (Universe.sort_of_product s1 s2).

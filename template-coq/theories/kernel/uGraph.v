@@ -255,3 +255,7 @@ Conjecture leq_universe_product_l : forall `{checker_flags} φ s1 s2,
     leq_universe φ s1 (Universe.sort_of_product s1 s2) = true.
 Conjecture leq_universe_product_r : forall `{checker_flags} φ s1 s2,
     leq_universe φ s2 (Universe.sort_of_product s1 s2) = true.
+
+
+Definition graph_of_constraints (φ : constraints) : t
+  := ConstraintSet.fold add_constraint φ init_graph.

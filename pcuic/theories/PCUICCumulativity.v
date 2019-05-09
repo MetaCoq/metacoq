@@ -47,19 +47,6 @@ Proof.
   induction X. apply cumul_refl'.
   econstructor 3; eauto.
 Qed.
-
-(* TODO: move *)
-Lemma All2_All {A R l} : @All2 A A R l l -> All (fun x => R x x) l.
-Proof.
-  induction l. constructor.
-  inversion 1; now constructor.
-Qed.
-
-Lemma Forall_Forall2 {A R l} : Forall (fun x => R x x) l -> @Forall2 A A R l l.
-Proof.
-  induction l. constructor.
-  inversion 1; now constructor.
-Qed.
   
 
 Lemma eq_universe_refl φ s : eq_universe φ s s.
@@ -80,20 +67,6 @@ Qed.
 Lemma leq_universe'_refl `{checker_flags} φ s : leq_universe' φ s s.
 Proof.
   unfold leq_universe'; destruct check_univs; [apply leq_universe_refl|constructor].
-Qed.
-
-Lemma Forall_True {A} {P : A -> Prop} l : (forall x, P x) -> Forall P l.
-Proof.
-  intro H. induction l; now constructor.
-Qed.
-
-Lemma Forall2_True {A B} {R : A -> B -> Prop} l l'
-  : (forall x y, R x y) -> #|l| = #|l'| -> Forall2 R l l'.
-Proof.
-  intro H. revert l'; induction l; simpl;
-    intros [] e; try discriminate e; constructor.
-  easy.
-  apply IHl. now apply eq_add_S.
 Qed.
 
 Lemma eq_term_upto_univ_refl R (HR : RelationClasses.Reflexive R) t

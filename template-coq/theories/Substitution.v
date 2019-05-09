@@ -1067,16 +1067,6 @@ Proof.
 Defined.
 
 
-Lemma map_not_empty {A B} (f : A -> B) l : map f l <> [] -> l <> [].
-Proof.
-  intro H; destruct l; intro e; now apply H.
-Qed.
-
-Lemma not_empty_map {A B} (f : A -> B) l : l <> [] -> map f l <> [].
-Proof.
-  intro H; destruct l; intro e; now apply H.
-Qed.
-
 
 Lemma substitution_red1 `{CF:checker_flags} Σ Γ Γ' Γ'' s M N :
   wf Σ -> All Ast.wf s -> subs Σ Γ s Γ' -> wf_local Σ Γ -> Ast.wf M ->
@@ -1243,19 +1233,6 @@ Proof.
     rewrite -> app_context_assoc, Nat.add_0_r in *.
     auto.
 Qed.
-
-
-Lemma Forall2_Forall {A R l} : @Forall2 A A R l l -> Forall (fun x => R x x) l.
-Proof.
-  induction l. constructor.
-  inversion 1; now constructor.
-Qed.
-
-Lemma Forall_Forall2 {A R l} : Forall (fun x => R x x) l -> @Forall2 A A R l l.
-Proof.
-  induction l. constructor.
-  inversion 1; now constructor.
-Qed.
   
 
 Lemma eq_universe_refl φ s : eq_universe φ s s.
@@ -1276,20 +1253,6 @@ Qed.
 Lemma leq_universe'_refl `{checker_flags} φ s : leq_universe' φ s s.
 Proof.
   unfold leq_universe'; destruct check_univs; [apply leq_universe_refl|constructor].
-Qed.
-
-Lemma Forall_True {A} {P : A -> Prop} l : (forall x, P x) -> Forall P l.
-Proof.
-  intro H. induction l; now constructor.
-Qed.
-
-Lemma Forall2_True {A B} {R : A -> B -> Prop} l l'
-  : (forall x y, R x y) -> #|l| = #|l'| -> Forall2 R l l'.
-Proof.
-  intro H. revert l'; induction l; simpl;
-    intros [] e; try discriminate e; constructor.
-  easy.
-  apply IHl. now apply eq_add_S.
 Qed.
 
 Lemma eq_term_upto_univ_refl R (HR : RelationClasses.Reflexive R) t
@@ -1326,23 +1289,6 @@ Lemma eq_universe'_leq_universe' `{checker_flags} φ t u
 Proof.
   unfold eq_universe', leq_universe'; destruct check_univs.
   apply eq_universe_leq_universe. intuition.
-Qed.
-
-Lemma Forall2_impl {A B} {P Q : A -> B -> Prop} {l l'} :
-    Forall2 P l l' ->
-    (forall x y, P x y -> Q x y) ->
-    Forall2 Q l l'.
-Proof.
-  induction 1; constructor; auto.
-Qed.
-
-Lemma Forall2_impl' {A B} {P Q : A -> B -> Prop} {l l'} :
-    Forall2 P l l' ->
-    Forall (fun x => forall y, P x y -> Q x y) l ->
-    Forall2 Q l l'.
-Proof.
-  induction 1; constructor;
-    now inversion H1.
 Qed.
 
 Lemma eq_term_leq_term `{checker_flags} φ t u : eq_term φ t u -> leq_term φ t u.
@@ -1422,12 +1368,6 @@ Proof.
 Qed.
 
 
-
-Lemma Forall2_map {A B A' B'} (R : A' -> B' -> Prop) (f : A -> A') (g : B -> B') l l'
-  : Forall2 (fun x y => R (f x) (g y)) l l' -> Forall2 R (map f l) (map g l').
-Proof.
-  induction 1; constructor; auto.
-Qed.
 
 Lemma subst_eq_term `{checker_flags} ϕ n k T U :
   eq_term ϕ T U ->

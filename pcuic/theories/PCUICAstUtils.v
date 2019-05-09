@@ -665,23 +665,6 @@ Ltac apply_spec :=
     eapply (All_forallb _ _ H); clear H
   end.
 
-(* TODO: move *)
-Lemma Forall2_impl {A B} {P Q : A -> B -> Prop} {l l'} :
-    Forall2 P l l' ->
-    (forall x y, P x y -> Q x y) ->
-    Forall2 Q l l'.
-Proof.
-  induction 1; constructor; auto.
-Qed.
-
-Lemma Forall2_impl' {A B} {P Q : A -> B -> Prop} {l l'} :
-    Forall2 P l l' ->
-    Forall (fun x => forall y, P x y -> Q x y) l ->
-    Forall2 Q l l'.
-Proof.
-  induction 1; constructor;
-    inversion H1; intuition.
-Qed.
 
 Ltac close_All :=
   match goal with

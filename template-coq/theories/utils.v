@@ -1410,6 +1410,98 @@ Proof.
   induction 1; congruence.
 Qed.
 
+Lemma Forall2_impl {A B} {P Q : A -> B -> Prop} {l l'} :
+    Forall2 P l l' ->
+    (forall x y, P x y -> Q x y) ->
+    Forall2 Q l l'.
+Proof.
+  induction 1; constructor; auto.
+Qed.
+
+Lemma Forall2_impl' {A B} {P Q : A -> B -> Prop} {l l'} :
+    Forall2 P l l' ->
+    Forall (fun x => forall y, P x y -> Q x y) l ->
+    Forall2 Q l l'.
+Proof.
+  induction 1; constructor;
+    inversion H1; intuition.
+Qed.
+
+Lemma Forall2_Forall {A R l} : @Forall2 A A R l l -> Forall (fun x => R x x) l.
+Proof.
+  induction l. constructor.
+  inversion 1; constructor; intuition.
+Qed.
+
+Lemma All2_All {A R l} : @All2 A A R l l -> All (fun x => R x x) l.
+Proof.
+  induction l. constructor.
+  inversion 1; constructor; intuition.
+Qed.
+
+Lemma Forall_Forall2 {A R l} : Forall (fun x => R x x) l -> @Forall2 A A R l l.
+Proof.
+  induction l. constructor.
+  inversion 1; constructor; intuition.
+Qed.
+
+Lemma Forall_True {A} {P : A -> Prop} l : (forall x, P x) -> Forall P l.
+Proof.
+  intro H. induction l; now constructor.
+Qed.
+
+Lemma Forall2_True {A B} {R : A -> B -> Prop} l l'
+  : (forall x y, R x y) -> #|l| = #|l'| -> Forall2 R l l'.
+Proof.
+  intro H. revert l'; induction l; simpl;
+    intros [] e; try discriminate e; constructor.
+  easy.
+  apply IHl. now apply eq_add_S.
+Qed.
+
+Lemma Forall2_map {A B A' B'} (R : A' -> B' -> Prop) (f : A -> A') (g : B -> B') l l'
+  : Forall2 (fun x y => R (f x) (g y)) l l' -> Forall2 R (map f l) (map g l').
+Proof.
+  induction 1; constructor; auto.
+Qed.
+
+
+Lemma Forall2_length {A B R l l'} (H : @Forall2 A B R l l')
+  : #|l| = #|l'|.
+Proof.
+  induction H. reflexivity.
+  cbn. now apply f_equal.
+Defined.
+
+Lemma Forall2_and {A B} (R R' : A -> B -> Prop) l l'
+  : Forall2 R l l' -> Forall2 R' l l' -> Forall2 (fun x y => R x y /\ R' x y) l l'.
+Proof.
+  induction 1.
+  intro; constructor.
+  inversion_clear 1.
+  constructor; intuition.
+Defined.
+
+Lemma Forall_Forall2_and {A B} {R : A -> B -> Prop} {P l l'}
+  : Forall2 R l l' -> Forall P l -> Forall2 (fun x y => P x /\ R x y) l l'.
+Proof.
+  induction 1.
+  intro; constructor.
+  inversion_clear 1.
+  constructor; intuition.
+Defined.
+
+Lemma Forall_Forall2_and' {A B} {R : A -> B -> Prop} {P l l'}
+  : Forall2 R l l' -> Forall P l' -> Forall2 (fun x y => R x y /\ P y) l l'.
+Proof.
+  induction 1.
+  intro; constructor.
+  inversion_clear 1.
+  constructor; intuition.
+Defined.
+
+
+
 (* Sorted lists without duplicates *)
 Class ComparableType A := { compare : A -> A -> comparison }.
 Arguments compare {A} {_} _ _.
@@ -1437,3 +1529,13 @@ Definition compare_bool b1 b2 :=
 Definition bool_lt' b1 b2 := match compare_bool b1 b2 with Lt => true | _ => false end.
 
 Definition non_empty_list (A : Set) := {l : list A & [] <> l}.
+
+Lemma map_not_empty {A B} (f : A -> B) l : map f l <> [] -> l <> [].
+Proof.
+  intro H; destruct l; intro e; now apply H.
+Qed.
+
+Lemma not_empty_map {A B} (f : A -> B) l : l <> [] -> map f l <> [].
+Proof.
+  intro H; destruct l; intro e; now apply H.
+Qed.

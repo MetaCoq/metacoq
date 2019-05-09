@@ -1312,13 +1312,6 @@ Proof.
     now rewrite H.
 Qed.
 
-(* TODO: move *)
-Lemma Forall2_map {A B A' B'} (R : A' -> B' -> Prop) (f : A -> A') (g : B -> B') l l'
-  : Forall2 (fun x y => R (f x) (g y)) l l' -> Forall2 R (map f l) (map g l').
-Proof.
-  induction 1; constructor; auto.
-Qed.
-
 
 Lemma subst_eq_term `{checker_flags} ϕ n k T U :
   eq_term ϕ T U ->

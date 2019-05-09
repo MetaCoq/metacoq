@@ -310,9 +310,6 @@ Section Conversion.
     | None => false
     end.
 
-  Definition graph_of_constraints (φ : constraints) : uGraph.t
-    := ConstraintSet.fold add_constraint φ init_graph.
-
 
   Fixpoint isconv (n : nat) (leq : conv_pb) (Γ : context)
            (t1 : term) (l1 : list term) (t2 : term) (l2 : list term) {struct n} : option bool :=
@@ -758,13 +755,6 @@ Section Typecheck2.
   Definition check_consistent_constraints cstrs :=
     if check_constraints G cstrs then ret tt
     else raise (UnsatisfiedConstraints cstrs).
-
-  Program Definition try_suc (u : universe) : universe :=   (* FIXME suc s *)
-    (map (fun '(l, b) =>  (l, true)) u; _).
-  Next Obligation.
-    intro e. apply u.2. destruct u as [[] ?].
-    reflexivity. inversion e.
-  Qed.
 
   Fixpoint infer (Γ : context) (t : term) : typing_result term :=
     match t with

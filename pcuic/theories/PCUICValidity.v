@@ -137,12 +137,6 @@ Admitted.
 (*   eapply cumul_trans; eauto. *)
 (* Qed. *)
 
-(* TODO: move *)
-Conjecture leq_universe_product_l : forall φ s1 s2,
-    leq_universe' φ s1 (Universe.sort_of_product s1 s2).
-Conjecture leq_universe_product_r : forall φ s1 s2,
-    leq_universe' φ s2 (Universe.sort_of_product s1 s2).
-
 Theorem validity :
   env_prop (fun Σ Γ t T => isWfArity_or_Type Σ Γ T).
 Proof.

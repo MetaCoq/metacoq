@@ -2088,7 +2088,7 @@ Section Conversion.
   Lemma nat_rev_ind (max : nat) :
     forall (P : nat -> Prop),
       (forall n, n >= max -> P n) ->
-      (forall n, P (S n) -> P n) ->
+      (forall n, n < max -> P (S n) -> P n) ->
       forall n, P n.
   Proof.
     intros P hmax hS.
@@ -2100,12 +2100,20 @@ Section Conversion.
           replace (max - n) with 0 in IHn by omega.
           assumption.
         + replace (max - n) with (S (max - S n)) in IHn by omega.
-          apply hS. assumption.
+          apply hS.
+          * omega.
+          * assumption.
     }
     intro n.
     destruct (Nat.leb_spec0 max n).
     - apply hmax. omega.
     - replace n with (max - (max - n)) by omega. apply h.
+  Qed.
+
+  Lemma skipn_nil :
+    forall {A} n, @skipn A n [] = [].
+  Proof.
+    intros A [| n] ; reflexivity.
   Qed.
 
   Lemma stack_args_R_aux :
@@ -2134,7 +2142,7 @@ Section Conversion.
     - subst. specialize (IHn Γ t l1 θ1 l2 θ2 h2).
       specialize IHn with (1 := n1) (2 := n2) (3 := e) (4 := eq_refl).
       destruct l1 as [|u1 l1], l2 as [|u2 l2] ; try discriminate.
-      + admit.
+      + cbn in H. exfalso. omega.
       + cbn in IHn. destruct n.
         * cbn. cbn in IHn. simp stack_args.
           econstructor.

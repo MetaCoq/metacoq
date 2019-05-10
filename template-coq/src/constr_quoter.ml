@@ -130,6 +130,7 @@ struct
   let tunivLe = resolve_symbol (ext_pkg_univ "ConstraintType") "Le"
   let tunivLt = resolve_symbol (ext_pkg_univ "ConstraintType") "Lt"
   let tunivEq = resolve_symbol (ext_pkg_univ "ConstraintType") "Eq"
+  let tmake_universe = resolve_symbol (ext_pkg_univ "Universe") "make''"
   (* let tunivcontext = resolve_symbol pkg_univ "universe_context" *)
   let tVariance = resolve_symbol pkg_variance "t"
   let cIrrelevant = resolve_symbol pkg_variance "Irrelevant"
@@ -178,8 +179,8 @@ struct
   let (tglobal_reference, tConstRef, tIndRef, tConstructRef) =
     (r_base_reify "global_reference", r_base_reify "ConstRef", r_base_reify "IndRef", r_base_reify "ConstructRef")
 
-  (* let pkg_specif = ["Coq";"Init";"Specif"] *)
-  (* let texistT = resolve_symbol pkg_specif "existT" *)
+  let pkg_specif = ["Coq";"Init";"Specif"]
+  let texistT = resolve_symbol pkg_specif "existT"
   (* let texistT_typed_term = r_template_monad "existT_typed_term" *)
   let texistT_typed_term = r_template_monad_p "existT_typed_term"
 
@@ -275,7 +276,9 @@ struct
 
   let quote_universe s =
     let levels = Universe.map (fun (l,i) -> pair tlevel bool_type (quote_level l) (if i > 0 then ttrue else tfalse)) s in
-    to_coq_list (prod tlevel bool_type) levels
+    let hd = List.hd levels in
+    let tl = to_coq_list (prod tlevel bool_type) (List.tl levels) in
+    Constr.mkApp (tmake_universe, [| hd ; tl |])
 
   (* todo : can be deduced from quote_level, hence shoud be in the Reify module *)
   let quote_univ_instance u =

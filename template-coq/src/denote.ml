@@ -20,6 +20,15 @@ let unquote_pair trm =
   else
     not_supported_verb trm "unquote_pair"
 
+let unquote_existT trm =
+  let (h,args) = app_full trm [] in
+  if Constr.equal h texistT then
+    match args with
+      _ :: _ :: x :: y :: [] -> (x, y)
+    | _ -> bad_term_verb trm "unquote_existT"
+  else
+    not_supported_verb trm "unquote_existT"
+
 let rec unquote_list trm =
   let (h,args) = app_full trm [] in
   if Constr.equal h c_nil then
@@ -280,7 +289,8 @@ let unquote_level_expr evm trm (* of type level *) b (* of type bool *) : Evd.ev
 
 
 let unquote_universe evm trm (* of type universe *) =
-  let levels = List.map unquote_pair (unquote_list trm) in
+  let (u, _) = unquote_existT trm in (* the proof is thrown away *)
+  let levels = List.map unquote_pair (unquote_list u) in
   match levels with
   | [] -> if !strict_unquote_universe_mode then
             CErrors.user_err ~hdr:"unquote_universe" (str "It is not possible to unquote an empty universe in Strict Unquote Universe Mode.")

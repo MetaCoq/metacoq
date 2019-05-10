@@ -157,12 +157,14 @@ Module Universe.
   (* (** Hash function *) *)
 
   Definition make (l : Level.t) : t
-    :=  ([(l, false)]; @nil_cons _ _ _).
+    := make_non_empty_list (l, false) [].
   (** Create a universe representing the given level. *)
 
   Definition make' (e : Expr.t) : t
-    :=  ([e]; @nil_cons _ _ _).
+    := make_non_empty_list e [].
 
+  Definition make'' (e : Expr.t) (u : list Expr.t) : t
+    := make_non_empty_list e u.
   (* val pr : t -> Pp.std_ppcmds *)
   (* (** Pretty-printing *) *)
   (* val pr_with : (Level.t -> Pp.std_ppcmds) -> t -> Pp.std_ppcmds *)

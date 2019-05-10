@@ -1530,6 +1530,9 @@ Definition bool_lt' b1 b2 := match compare_bool b1 b2 with Lt => true | _ => fal
 
 Definition non_empty_list (A : Set) := {l : list A & [] <> l}.
 
+Definition make_non_empty_list {A} x l : non_empty_list A
+  := (x :: l; @nil_cons _ _ _).
+
 Lemma map_not_empty {A B} (f : A -> B) l : map f l <> [] -> l <> [].
 Proof.
   intro H; destruct l; intro e; now apply H.

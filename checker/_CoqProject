@@ -87,8 +87,8 @@ src/string0.ml
 src/string0.mli
 src/uGraph0.ml
 src/uGraph0.mli
-src/univ0.ml
-src/univ0.mli
+src/universes0.ml
+src/universes0.mli
 src/utils.ml
 src/utils.mli
 

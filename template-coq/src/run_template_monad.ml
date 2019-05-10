@@ -6,6 +6,7 @@ open Redops
 open Genredexpr
 open Pp (* this adds the ++ to the current scope *)
 
+open Tm_util
 open Quoter
 open Denote
 open Constr_quoter

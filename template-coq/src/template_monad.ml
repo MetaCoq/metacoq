@@ -152,13 +152,12 @@ type template_monad =
 | TmEvalTerm of Constr.t * Constr.t  (* only Extractable *)
 
 (* creating definitions *)
-| TmDefinition of Constr.t * Constr.t * Constr.t * Constr.t
+| TmDefinition of Constr.t * Constr.t * Constr.t
 | TmDefinitionTerm of Constr.t * Constr.t * Constr.t
-| TmLemma of Constr.t * Constr.t * Constr.t
+| TmLemma of Constr.t * Constr.t
 | TmLemmaTerm of Constr.t * Constr.t
-| TmAxiom of Constr.t * Constr.t * Constr.t
+| TmAxiom of Constr.t * Constr.t
 | TmAxiomTerm of Constr.t * Constr.t
-| TmMkDefinition of Constr.t * Constr.t
 | TmMkInductive of Constr.t
 
 | TmFreshName of Constr.t
@@ -245,33 +244,33 @@ let next_action env evd (pgm : constr) : template_monad * _ =
     | strat::trm::[] -> (TmEvalTerm (strat, trm), universes)
     | _ -> monad_failure "tmEval" 2
 
-  else if Globnames.eq_gr glob_ref ptmDefinitionRed then
+  else if Globnames.eq_gr glob_ref ptmDefinition then
     match args with
-    | name::s::typ::body::[] ->
-       (TmDefinition (name, s, typ, body), universes)
-    | _ -> monad_failure "tmDefinitionRed" 4
+    | name::typ::body::[] ->
+       (TmDefinition (name, typ, body), universes)
+    | _ -> monad_failure "tmDefinition" 3
   else if Globnames.eq_gr glob_ref ttmDefinition then
     match args with
     | name::typ::body::[] ->
        (TmDefinitionTerm (name, typ, body), universes)
     | _ -> monad_failure "tmDefinition" 3
 
-  else if Globnames.eq_gr glob_ref ptmLemmaRed then
+  else if Globnames.eq_gr glob_ref ptmLemma then
     match args with
-    | name::s::typ::[] ->
-       (TmLemma (name,s,typ), universes)
-    | _ -> monad_failure "tmLemmaRed" 3
+    | name::typ::[] ->
+       (TmLemma (name,typ), universes)
+    | _ -> monad_failure "tmLemma" 2
   else if Globnames.eq_gr glob_ref ttmLemma then
     match args with
     | name::typ::[] ->
        (TmLemmaTerm (name, typ), universes)
     | _ -> monad_failure "tmLemma" 2
 
-  else if Globnames.eq_gr glob_ref ptmAxiomRed then
+  else if Globnames.eq_gr glob_ref ptmAxiom then
     match args with
-    | name::s::typ::[] ->
-       (TmAxiom (name,s,typ), universes)
-    | _ -> monad_failure "tmAxiomRed" 3
+    | name::typ::[] ->
+       (TmAxiom (name,typ), universes)
+    | _ -> monad_failure "tmAxiom" 2
   else if Globnames.eq_gr glob_ref ttmAxiom then
     match args with
     | name::typ::[] ->
@@ -297,12 +296,6 @@ let next_action env evd (pgm : constr) : template_monad * _ =
     match args with
     | [] -> (TmCurrentModPath, universes)
     | _ -> monad_failure "tmCurrentModPath" 1
-
-  else if Globnames.eq_gr glob_ref ptmMkDefinition then
-    match args with
-    | name::body::[] ->
-       (TmMkDefinition (name, body), universes)
-    | _ -> monad_failure "tmMkDefinition" 2
 
   else if Globnames.eq_gr glob_ref ptmQuote then
     match args with

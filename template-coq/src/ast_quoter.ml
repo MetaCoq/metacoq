@@ -14,7 +14,7 @@ struct
   type quoted_int = Datatypes.nat
   type quoted_bool = bool
   type quoted_name = name
-  type quoted_sort = Univ0.universe
+  type quoted_sort = Universes0.universe
   type quoted_cast_kind = cast_kind
   type quoted_kernel_name = char list
   type quoted_inductive = inductive
@@ -22,11 +22,11 @@ struct
   type quoted_global_reference = global_reference
 
   type quoted_sort_family = sort_family
-  type quoted_constraint_type = Univ0.constraint_type
-  type quoted_univ_constraint = Univ0.univ_constraint
-  type quoted_univ_instance = Univ0.Instance.t
-  type quoted_univ_constraints = Univ0.constraints
-  type quoted_univ_context = Univ0.universe_context
+  type quoted_constraint_type = Universes0.constraint_type
+  type quoted_univ_constraint = Universes0.univ_constraint
+  type quoted_univ_instance = Universes0.Instance.t
+  type quoted_univ_constraints = Universes0.constraints
+  type quoted_univ_context = Universes0.universe_context
   type quoted_inductive_universes = quoted_univ_context
 
   type quoted_mind_params = (ident * local_entry) list
@@ -63,21 +63,15 @@ struct
   let quote_bool x = x
 
   let quote_level l =
-    if Univ.Level.is_prop l then Univ0.Level.prop
-    else if Univ.Level.is_set l then Univ0.Level.set
+    if Univ.Level.is_prop l then Universes0.Level.prop
+    else if Univ.Level.is_set l then Universes0.Level.set
     else match Univ.Level.var_index l with
-         | Some x -> Univ0.Level.Var (quote_int x)
-         | None -> Univ0.Level.Level (string_to_list (Univ.Level.to_string l))
+         | Some x -> Universes0.Level.Var (quote_int x)
+         | None -> Universes0.Level.Level (string_to_list (Univ.Level.to_string l))
 
-  let quote_universe s : Univ0.universe =
-    (* hack because we can't recover the list of level*int *)
-    (* todo : map on LSet is now exposed in Coq trunk, we should use it to remove this hack *)
-    let levels = Univ.LSet.elements (Univ.Universe.levels s) in
-    List.map (fun l -> let l' = quote_level l in
-                       (* is indeed i always 0 or 1 ? *)
-                       let b' = quote_bool (Univ.Universe.exists (fun (l2,i) -> Univ.Level.equal l l2 && i = 1) s) in
-                       (l', b'))
-             levels
+  let quote_universe s : Universes0.universe =
+    let univs = Univ.Universe.map (fun (l,i) -> Universes0.Universe.make' (quote_level l, i > 0)) s in
+    List.fold_left Universes0.Universe.sup (List.hd univs) (List.tl univs)
 
   let quote_sort s =
     quote_universe (Sorts.univ_of_sort s)
@@ -99,9 +93,9 @@ struct
   let quote_proj ind p a = ((ind,p),a)
 
   let quote_constraint_type = function
-    | Univ.Lt -> Univ0.ConstraintType.Lt
-    | Univ.Le -> Univ0.ConstraintType.Le
-    | Univ.Eq -> Univ0.ConstraintType.Eq
+    | Univ.Lt -> Universes0.ConstraintType.Lt
+    | Univ.Le -> Universes0.ConstraintType.Le
+    | Univ.Eq -> Universes0.ConstraintType.Eq
 
   let quote_univ_constraint ((l, ct, l') : Univ.univ_constraint) : quoted_univ_constraint =
     ((quote_level l, quote_constraint_type ct), quote_level l')
@@ -112,13 +106,13 @@ struct
 
   let quote_univ_constraints (c : Univ.Constraint.t) : quoted_univ_constraints =
     let l = List.map quote_univ_constraint (Univ.Constraint.elements c) in
-    Univ0.ConstraintSet.(List.fold_right add l empty)
+    Universes0.ConstraintSet.(List.fold_right add l empty)
 
   let quote_variance (v : Univ.Variance.t) =
     match v with
-    | Univ.Variance.Irrelevant -> Univ0.Variance.Irrelevant
-    | Univ.Variance.Covariant -> Univ0.Variance.Covariant
-    | Univ.Variance.Invariant -> Univ0.Variance.Invariant
+    | Univ.Variance.Irrelevant -> Universes0.Variance.Irrelevant
+    | Univ.Variance.Covariant -> Universes0.Variance.Covariant
+    | Univ.Variance.Invariant -> Universes0.Variance.Invariant
 
   let quote_cuminfo_variance (var : Univ.Variance.t array) =
     CArray.map_to_list quote_variance var
@@ -126,7 +120,7 @@ struct
   let quote_univ_context (uctx : Univ.UContext.t) : quoted_univ_context =
     let levels = Univ.UContext.instance uctx  in
     let constraints = Univ.UContext.constraints uctx in
-    Univ0.Monomorphic_ctx (quote_univ_instance levels, quote_univ_constraints constraints)
+    Universes0.Monomorphic_ctx (quote_univ_instance levels, quote_univ_constraints constraints)
 
   let quote_cumulative_univ_context (cumi : Univ.CumulativityInfo.t) : quoted_univ_context =
     let uctx = Univ.CumulativityInfo.univ_context cumi in
@@ -135,12 +129,12 @@ struct
     let var = Univ.CumulativityInfo.variance cumi in
     let uctx' = (quote_univ_instance levels, quote_univ_constraints constraints) in
     let var' = quote_cuminfo_variance var in
-    Univ0.Cumulative_ctx (uctx', var')
+    Universes0.Cumulative_ctx (uctx', var')
 
   let quote_abstract_univ_context_aux uctx : quoted_univ_context =
     let levels = Univ.UContext.instance uctx in
     let constraints = Univ.UContext.constraints uctx in
-    Univ0.Polymorphic_ctx (quote_univ_instance levels, quote_univ_constraints constraints)
+    Universes0.Polymorphic_ctx (quote_univ_instance levels, quote_univ_constraints constraints)
 
   let quote_abstract_univ_context (uctx : Univ.AUContext.t) =
     let uctx = Univ.AUContext.repr uctx in
@@ -164,7 +158,6 @@ struct
 
   let mkRel n = Coq_tRel n
   let mkVar id = Coq_tVar id
-  let mkMeta n = Coq_tMeta n
   let mkEvar n args = Coq_tEvar (n,Array.to_list args)
   let mkSort s = Coq_tSort s
   let mkCast c k t = Coq_tCast (c,k,t)
@@ -327,11 +320,11 @@ struct
     let (ind, ps), idx = q in
     (ind, ps, idx)
 
-  let unquote_level (trm : Univ0.Level.t) : Univ.Level.t =
+  let unquote_level (trm : Universes0.Level.t) : Univ.Level.t =
     match trm with
-    | Univ0.Level.Coq_lProp -> Univ.Level.prop
-    | Univ0.Level.Coq_lSet -> Univ.Level.set
-    | Univ0.Level.Level s ->
+    | Universes0.Level.Coq_lProp -> Univ.Level.prop
+    | Universes0.Level.Coq_lSet -> Univ.Level.set
+    | Universes0.Level.Level s ->
       let s = list_to_string s in
       let comps = CString.split '.' s in
       let last, dp = CList.sep_last comps in
@@ -339,16 +332,16 @@ struct
       let idx = int_of_string last in
       Univ.Level.make dp idx
       (* should this level be added to the environment. Denote.unquote_level does that *)
-    | Univ0.Level.Var n -> Univ.Level.var (unquote_int n)
+    | Universes0.Level.Var n -> Univ.Level.var (unquote_int n)
 
-  let unquote_level_expr (trm : Univ0.Level.t) (b : quoted_bool) : Univ.Universe.t =
+  let unquote_level_expr (trm : Universes0.Level.t) (b : quoted_bool) : Univ.Universe.t =
     let l = unquote_level trm in
     let u = Univ.Universe.make l in
     if b then Univ.Universe.super u
     else u
 
-  let unquote_universe evd (trm : Univ0.Universe.t) =
-    match trm with
+  let unquote_universe evd (trm : Universes0.Universe.t) =
+    match Specif.projT1 trm with
     | [] -> Evd.new_univ_variable (Evd.UnivFlexible false) evd
     | (l,b)::q ->
       evd, List.fold_left (fun u (l,b) ->

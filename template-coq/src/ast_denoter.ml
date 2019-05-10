@@ -13,7 +13,7 @@ struct
   type quoted_int = Datatypes.nat
   type quoted_bool = bool
   type quoted_name = name
-  type quoted_sort = Univ0.universe
+  type quoted_sort = Universes0.universe
   type quoted_cast_kind = cast_kind
   type quoted_kernel_name = char list
   type quoted_inductive = inductive
@@ -21,11 +21,11 @@ struct
   type quoted_global_reference = global_reference
 
   type quoted_sort_family = sort_family
-  type quoted_constraint_type = Univ0.constraint_type
-  type quoted_univ_constraint = Univ0.univ_constraint
-  type quoted_univ_instance = Univ0.Instance.t
-  type quoted_univ_constraints = Univ0.constraints
-  type quoted_univ_context = Univ0.universe_context
+  type quoted_constraint_type = Universes0.constraint_type
+  type quoted_univ_constraint = Universes0.univ_constraint
+  type quoted_univ_instance = Universes0.Instance.t
+  type quoted_univ_constraints = Universes0.constraints
+  type quoted_univ_context = Universes0.universe_context
   type quoted_inductive_universes = quoted_univ_context
 
   type quoted_mind_params = (ident * local_entry) list
@@ -49,7 +49,6 @@ struct
   let quote_kn = quote_kn
   let mkRel = mkRel
   let mkVar = mkVar
-  let mkMeta = mkMeta
   let mkEvar = mkEvar
   let mkSort = mkSort
   let mkCast = mkCast
@@ -80,7 +79,6 @@ struct
     match tt with
     | Coq_tRel n -> ACoq_tRel n
     | Coq_tVar v -> ACoq_tVar v
-    | Coq_tMeta n -> ACoq_tMeta n
     | Coq_tEvar (x,l) -> ACoq_tEvar (x,l)
     | Coq_tSort u -> ACoq_tSort u
     | Coq_tCast (t,k,tt) -> ACoq_tCast (t,k,tt)

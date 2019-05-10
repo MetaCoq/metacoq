@@ -4,6 +4,7 @@ Decimal
 Nat0
 List0
 PeanoNat
+Specif
 Utils
 Basics
 BinPosDef
@@ -19,7 +20,7 @@ OrderedType0
 MSetWeakList
 FMapWeakList
 BinNums
-Univ0
+Universes0
 Ast0
 AstUtils
 BasicAst
@@ -31,7 +32,6 @@ Denoter
 Equalities
 Extractable
 Logic
-Specif
 UGraph0
 
 Tm_util

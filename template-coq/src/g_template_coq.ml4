@@ -48,16 +48,6 @@ let to_ltac_val c = Tacinterp.Value.of_constr c
 let run_template_program env evm pgm =
   Run_template_monad.run_template_program_rec (fun _ -> ()) env (evm, pgm)
 
-TACTIC EXTEND denote_term
-    | [ "denote_term" constr(c) tactic(tac) ] ->
-      [ Proofview.Goal.enter (begin fun gl ->
-         let evm = Proofview.Goal.sigma gl in
-         let evm, c = Constr_denoter.denote_term evm (EConstr.to_constr evm c) in
-         Proofview.tclTHEN (Proofview.Unsafe.tclEVARS evm)
-	   (ltac_apply tac (List.map to_ltac_val [EConstr.of_constr c]))
-      end) ]
-END;;
-
 (** ********* Commands ********* *)
 
 VERNAC COMMAND EXTEND Make_tests CLASSIFIED AS QUERY
@@ -143,7 +133,7 @@ TACTIC EXTEND denote_term
     | [ "denote_term" constr(c) tactic(tac) ] ->
       [ Proofview.Goal.enter (begin fun gl ->
          let evm = Proofview.Goal.sigma gl in
-         let evm, c = Denote.denote_term evm (EConstr.to_constr evm c) in
+         let evm, c = Constr_denoter.denote_term evm (EConstr.to_constr evm c) in
          Proofview.tclTHEN (Proofview.Unsafe.tclEVARS evm)
 	   (ltac_apply tac (List.map to_ltac_val [EConstr.of_constr c]))
       end) ]

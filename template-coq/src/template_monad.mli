@@ -37,8 +37,8 @@ type template_monad =
 
     (* quoting *)
   | TmQuote of bool * Constr.t  (* only Prop *)
-  | TmQuoteInd of Constr.t
-  | TmQuoteConst of Constr.t * Constr.t
+  | TmQuoteInd of Constr.t * bool (* strict *)
+  | TmQuoteConst of Constr.t * Constr.t * bool (* strict *)
   | TmQuoteUnivs
 
   | TmUnquote of Constr.t                   (* only Prop *)

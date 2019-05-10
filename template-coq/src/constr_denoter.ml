@@ -183,10 +183,6 @@ struct
       match args with
         x :: _ -> ACoq_tVar x
       | _ -> CErrors.user_err (print_term t ++ Pp.str ("has bad structure"))
-    else if Constr.equal h tMeta then
-      match args with
-        x :: _ -> ACoq_tMeta x
-      | _ -> CErrors.user_err (print_term t ++ Pp.str ("has bad structure"))
     else if Constr.equal h tSort then
       match args with
         x :: _ -> ACoq_tSort x
@@ -285,7 +281,6 @@ struct
   let quote_kn = quote_kn
   let mkRel = mkRel
   let mkVar = mkVar
-  let mkMeta = mkMeta
   let mkEvar = mkEvar
   let mkSort = mkSort
   let mkCast = mkCast

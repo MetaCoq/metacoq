@@ -1,7 +1,7 @@
 (* Distributed under the terms of the MIT license.   *)
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Arith Lia
-     Classes.RelationClasses.
+     Classes.RelationClasses Omega.
 From Template Require Import config univ monad_utils utils BasicAst AstUtils
      UnivSubst.
 From PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICReflect
@@ -2025,6 +2025,153 @@ Section Conversion.
       (u1, coApp t ρ1, exist (u2, coApp t ρ2) h2)
       :: stack_args Γ (tApp t u2) ρ1 ρ2 h2 ;
     stack_args Γ t π1 π2 h2 := [].
+
+  (* TODO MOVE *)
+  Lemma skipn_all2 :
+    forall {A n} (l : list A),
+      #|l| <= n ->
+      skipn n l = [].
+  Proof.
+    intros A n l h. revert l h.
+    induction n ; intros l h.
+    - destruct l.
+      + reflexivity.
+      + cbn in h. inversion h.
+    - destruct l.
+      + reflexivity.
+      + change (skipn n l = []). apply IHn. cbn in h. omega.
+  Qed.
+
+  Lemma stack_args_noApp :
+    forall Γ t θ1 θ2 h,
+      isStackApp θ1 = false ->
+      stack_args Γ t θ1 θ2 h = [].
+  Proof.
+    intros Γ t θ1 θ2 h n1.
+    funelim (stack_args Γ t θ1 θ2 h).
+    all: try reflexivity.
+    cbn in n1. discriminate.
+  Qed.
+
+  Lemma stack_args_R_aux :
+    forall Γ t l1 θ1 l2 θ2 m h2 h2',
+      isStackApp θ1 = false ->
+      isStackApp θ2 = false ->
+      #|l1| = #|l2| ->
+      let n := #|l1| - m in
+      Forall (fun '(u1, ρ1, exist (u2, ρ2) h) =>
+        R (mkpack (Reduction u2) Γ u1 ρ1 ρ2 h)
+          (mkpack Args Γ t (appstack l1 θ1) (appstack l2 θ2) h2)
+      ) (stack_args Γ (mkApps t (firstn n l2))
+                    (appstack (skipn n l1) θ1) (appstack (skipn n l2) θ2) h2').
+  Proof.
+    simpl. intros Γ t l1 θ1 l2 θ2 m h2 h2' n1 n2 e.
+    revert Γ t l1 θ1 l2 θ2 h2 h2' n1 n2 e.
+    induction m ; intros Γ t l1 θ1 l2 θ2 h2 h2' n1 n2 e.
+    - revert h2'.
+      erewrite !firstn_all2 by omega.
+      erewrite !skipn_all2 by omega.
+      cbn. intros h2'.
+      rewrite stack_args_noApp by assumption.
+      constructor.
+    - destruct (Nat.ltb_spec0 #|l1| (S m)).
+      + revert h2'.
+        replace (#|l1| - S m) with 0 by omega.
+        cbn. unfold skipn.
+        intros h2'.
+        destruct l1, l2 ; try discriminate e.
+        * cbn. rewrite stack_args_noApp by assumption. constructor.
+        * cbn.
+          specialize (IHm Γ t (t0 :: l1) θ1 (t1 :: l2) θ2 h2).
+          specialize IHm with (1 := n1) (2 := n2).
+          cbn in l.
+          assert (h : S #|l1| - m = 0) by omega.
+          assert (h' : #|t0 :: l1| - m = 0) by auto with arith.
+          rewrite h' in IHm.
+          cbn in IHm. unfold skipn in IHm. cbn in IHm.
+          eapply IHm. easy.
+      + specialize (IHm Γ t l1 θ1 l2 θ2 h2).
+        specialize IHm with (1 := n1) (2 := n2) (3 := e).
+        destruct l1, l2 ; try discriminate e.
+        * exfalso. cbn in n. omega.
+        * simpl.
+          destruct (Nat.eqb_spec #|l1| m).
+          -- subst. revert h2'. simpl.
+             replace (#|l1| - #|l1|) with 0 by omega.
+             simpl.
+             intros h2'.
+             replace (#|t0 :: l1| - #|l1|) with 1 in IHm
+             by (change (1 = S #|l1| - #|l1|) ; omega).
+             cbn in IHm. unfold skipn in IHm.
+             simp stack_args. econstructor.
+             ++ unshelve eapply R_positionR ; try reflexivity.
+                simpl. unfold xposition. eapply positionR_poscat.
+                cbn. eapply positionR_poscat. constructor.
+             ++ eapply IHm.
+          -- cbn in n.
+             revert h2'. simpl.
+             replace (#|l1| - m) with (S (#|l1| - S m)) by omega.
+             simpl.
+             change (skipn (S (#|l1| - S m)) (t0 :: l1))
+               with (skipn (#|l1| - S m) l1).
+             change (skipn (S (#|l1| - S m)) (t1 :: l2))
+               with (skipn (#|l1| - S m) l2).
+             intros h2'.
+             change (#|t0 :: l1| - m) with (S #|l1| - m) in IHm.
+             replace (S #|l1| - m) with (S (#|l1| - m)) in IHm by omega.
+             simpl in IHm.
+             change (skipn (S (#|l1| - m)) (t1 :: l2))
+               with (skipn (#|l1| - m) l2) in IHm.
+             change (skipn (S (#|l1| - m)) (t0 :: l1))
+               with (skipn (#|l1| - m) l1) in IHm.
+
+
+
+             change (firstn (S #|l1| - m) (t1 :: l2))
+               with (firstn (#|l1| - m) l2) in IHm.
+
+assert (#|l1| - m = S (#|l1| - S m)).
+             { cbn in n. omega. }
+
+
+ by (cbn ; omega).
+
+
+             simp stack_args in IHm.
+
+
+simp stack_args. econstructor.
+          -- unshelve eapply R_positionR.
+             ++ simpl. reflexivity.
+             ++ simpl. unfold xposition. eapply positionR_poscat.
+                cbn. eapply positionR_poscat. constructor.
+          -- specialize (IHm Γ t (t0 :: l1) θ1 (t1 :: l2) θ2 h2).
+             specialize IHm with (1 := n1) (2 := n2).
+             cbn in l.
+             assert (h : S #|l1| - m = 0) by omega.
+             assert (h' : #|t0 :: l1| - m = 0) by auto with arith.
+             rewrite h' in IHm.
+             cbn in IHm. unfold skipn in IHm. cbn in IHm.
+             simp stack_args in IHm.
+
+             eapply IHm.
+
+             replace (#|t0 :: l1| - m) with 0 in IHm by (cbn ; omega).
+             eapply IHm.
+
+  Lemma stack_args_R_aux :
+    forall Γ t l1 θ1 l2 θ2 n h2 h2',
+      Forall (fun '(u1, ρ1, exist (u2, ρ2) h) =>
+        R (mkpack (Reduction u2) Γ u1 ρ1 ρ2 h)
+          (mkpack Args Γ t (appstack l1 θ1) (appstack l2 θ2) h2)
+      ) (stack_args Γ (mkApps t (firstn n l1))
+                    (appstack (skipn n l1) θ1) (appstack (skipn n l2) θ2) h2').
+  Proof.
+    simpl. intros Γ t l1 θ1 l2 θ2 n h2 h2'.
+    revert Γ t l1 θ1 l2 θ2 h2 h2'.
+    induction n ; intros Γ t l1 θ1 l2 θ2 h2 h2'.
+    - cbn. unfold skipn. cbn in h2'. unfold skipn in h2'.
+
 
   Lemma stack_args_R :
     forall Γ t π1 π2 h2,

@@ -2110,6 +2110,59 @@ Section Conversion.
     - replace n with (max - (max - n)) by omega. apply h.
   Qed.
 
+  Lemma strong_nat_ind :
+    forall (P : nat -> Prop),
+      (forall n, (forall m, m < n -> P m) -> P n) ->
+      forall n, P n.
+  Proof.
+    intros P h n.
+    assert (forall m, m < n -> P m).
+    { induction n ; intros m hh.
+      - omega.
+      - destruct (Nat.eqb_spec n m).
+        + subst. eapply h. assumption.
+        + eapply IHn. omega.
+    }
+    eapply h. assumption.
+  Qed.
+
+  Lemma strong_nat_rev_ind (max : nat) :
+    forall (P : nat -> Prop),
+      (forall n, n >= max -> P n) ->
+      (forall n, (forall m, n < m -> m < max -> P m) -> P n) ->
+      forall n, P n.
+  Proof.
+    intros P hmax hS.
+    assert (h : forall n, P (max - n)).
+    { intros n. induction n using strong_nat_ind.
+      destruct (Nat.ltb_spec0 max n).
+      - replace (max - n) with 0 by omega.
+        specialize (H max l).
+        replace (max - max) with 0 in H by omega.
+        assumption.
+      - destruct (Nat.eqb_spec n max).
+        + subst. admit.
+        + assert (n < max) by omega.
+
+      - apply hmax. omega.
+      - destruct (Nat.leb_spec0 max n).
+        + replace (max - S n) with 0 by omega.
+          replace (max - n) with 0 in IHn by omega.
+          assumption.
+        + eapply hS.
+          * omega.
+          * intros m h.
+            assert (max < S n + m) by omega.
+
+
+ ; try eassumption ; omega.
+    }
+    intro n.
+    destruct (Nat.leb_spec0 max n).
+    - apply hmax. omega.
+    - replace n with (max - (max - n)) by omega. apply h.
+  Qed.
+
   Lemma skipn_nil :
     forall {A} n, @skipn A n [] = [].
   Proof.
@@ -2132,15 +2185,15 @@ Section Conversion.
     assert (eq : m = #|l1|) by reflexivity.
     clearbody m.
     revert Γ t l1 θ1 l2 θ2 h2 h2' n1 n2 e eq.
-    induction n using (nat_rev_ind m) ;
-    intros Γ t l1 θ1 l2 θ2 h2 h2' n1 n2 e eq.
+    induction n using (strong_nat_rev_ind m) ;
+    intros Γ t l1 θ1 l2 θ2 h2 h2' hn1 hn2 e eq.
     - subst. revert h2'.
       erewrite !firstn_all2 by omega.
       erewrite !skipn_all2 by omega.
       cbn. intros h2'.
       rewrite stack_args_noApp by assumption. constructor.
-    - subst. specialize (IHn Γ t l1 θ1 l2 θ2 h2).
-      specialize IHn with (1 := n1) (2 := n2) (3 := e) (4 := eq_refl).
+    - subst. specialize (IHn1 Γ t l1 θ1 l2 θ2 h2).
+      specialize IHn1 with (1 := hn1) (2 := hn2) (3 := e) (4 := eq_refl).
       destruct l1 as [|u1 l1], l2 as [|u2 l2] ; try discriminate.
       + cbn in H. exfalso. omega.
       + cbn in IHn. destruct n.

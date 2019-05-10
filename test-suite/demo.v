@@ -351,11 +351,11 @@ Inductive T : Type :=
 Quote Recursively Definition TT := T.
 
 Unset Strict Unquote Universe Mode.
-Make Definition t := (tSort ([(Level.Level "Top.20000", false)])).
-Make Definition t' := (tSort ([])).
-Make Definition myProp := (tSort [(Level.lProp, false)]).
+Make Definition t := (tSort ([(Level.Level "Top.20000", false)]; _)).
+Make Definition t' := (tSort ([]; _)).
+Make Definition myProp := (tSort (Universe.make' (Level.lProp, false))).
 Make Definition myProp' := (tSort Universe.type0m).
-Make Definition mySet := (tSort [(Level.lSet, false)]).
+Make Definition mySet := (tSort (Universe.make Level.lSet)).
 
 (** Cofixpoints *)
 CoInductive streamn : Set :=

@@ -2053,6 +2053,99 @@ Section Conversion.
     cbn in n1. discriminate.
   Qed.
 
+  Arguments skipn : simpl nomatch.
+
+  (* Lemma stack_args_R_aux : *)
+  (*   forall Γ t l1 θ1 l2 θ2 n h2 h2', *)
+  (*     isStackApp θ1 = false -> *)
+  (*     isStackApp θ2 = false -> *)
+  (*     #|l1| = #|l2| -> *)
+  (*     Forall (fun '(u1, ρ1, exist (u2, ρ2) h) => *)
+  (*       R (mkpack (Reduction u2) Γ u1 ρ1 ρ2 h) *)
+  (*         (mkpack Args Γ t (appstack l1 θ1) (appstack l2 θ2) h2) *)
+  (*     ) (stack_args Γ (mkApps t (firstn n l2)) *)
+  (*                   (appstack (skipn n l1) θ1) (appstack (skipn n l2) θ2) h2'). *)
+  (* Proof. *)
+  (*   simpl. intros Γ t l1 θ1 l2 θ2 n h2 h2' n1 n2 e. *)
+  (*   revert Γ t l1 θ1 l2 θ2 h2 h2' n1 n2 e. *)
+  (*   induction n ; intros Γ t l1 θ1 l2 θ2 h2 h2' n1 n2 e. *)
+  (*   - admit. *)
+  (*   - destruct (Nat.leb_spec0 #|l1| (S n)). *)
+  (*     + revert h2'. *)
+  (*       erewrite !firstn_all2 by omega. *)
+  (*       erewrite !skipn_all2 by omega. *)
+  (*       intros h2'. *)
+  (*       cbn. rewrite stack_args_noApp by assumption. *)
+  (*       constructor. *)
+  (*     + destruct l1 as [|u1 l1], l2 as [|u2 l2] ; try discriminate. *)
+  (*       * cbn in *. exfalso. omega. *)
+  (*       * cbn in n0. simpl. *)
+  (*         specialize (IHn Γ t (u1 :: l1) θ1 (u2 :: l2) θ2 h2). *)
+  (*         specialize IHn with (1 := n1) (2 := n2) (3 := e). *)
+  (*         simpl in IHn. *)
+  (*         eapply IHn. *)
+
+  Lemma nat_rev_ind (max : nat) :
+    forall (P : nat -> Prop),
+      (forall n, n >= max -> P n) ->
+      (forall n, P (S n) -> P n) ->
+      forall n, P n.
+  Proof.
+    intros P hmax hS.
+    assert (h : forall n, P (max - n)).
+    { intros n. induction n.
+      - apply hmax. omega.
+      - destruct (Nat.leb_spec0 max n).
+        + replace (max - S n) with 0 by omega.
+          replace (max - n) with 0 in IHn by omega.
+          assumption.
+        + replace (max - n) with (S (max - S n)) in IHn by omega.
+          apply hS. assumption.
+    }
+    intro n.
+    destruct (Nat.leb_spec0 max n).
+    - apply hmax. omega.
+    - replace n with (max - (max - n)) by omega. apply h.
+  Qed.
+
+  Lemma stack_args_R_aux :
+    forall Γ t l1 θ1 l2 θ2 n h2 h2',
+      isStackApp θ1 = false ->
+      isStackApp θ2 = false ->
+      #|l1| = #|l2| ->
+      Forall (fun '(u1, ρ1, exist (u2, ρ2) h) =>
+        R (mkpack (Reduction u2) Γ u1 ρ1 ρ2 h)
+          (mkpack Args Γ t (appstack l1 θ1) (appstack l2 θ2) h2)
+      ) (stack_args Γ (mkApps t (firstn n l2))
+                    (appstack (skipn n l1) θ1) (appstack (skipn n l2) θ2) h2').
+  Proof.
+    simpl. intros Γ t l1 θ1 l2 θ2 n h2 h2' n1 n2 e.
+    pose (m := #|l1|).
+    assert (eq : m = #|l1|) by reflexivity.
+    clearbody m.
+    revert Γ t l1 θ1 l2 θ2 h2 h2' n1 n2 e eq.
+    induction n using (nat_rev_ind m) ;
+    intros Γ t l1 θ1 l2 θ2 h2 h2' n1 n2 e eq.
+    - subst. revert h2'.
+      erewrite !firstn_all2 by omega.
+      erewrite !skipn_all2 by omega.
+      cbn. intros h2'.
+      rewrite stack_args_noApp by assumption. constructor.
+    - subst. specialize (IHn Γ t l1 θ1 l2 θ2 h2).
+      specialize IHn with (1 := n1) (2 := n2) (3 := e) (4 := eq_refl).
+      destruct l1 as [|u1 l1], l2 as [|u2 l2] ; try discriminate.
+      + admit.
+      + cbn in IHn. destruct n.
+        * cbn. cbn in IHn. simp stack_args.
+          econstructor.
+          -- unshelve eapply R_positionR ; try reflexivity.
+             simpl. unfold xposition. eapply positionR_poscat.
+             cbn. eapply positionR_poscat. constructor.
+          -- eapply IHn.
+        * simpl.
+
+
+
   Lemma stack_args_R_aux :
     forall Γ t l1 θ1 l2 θ2 m h2 h2',
       isStackApp θ1 = false ->
@@ -2090,9 +2183,7 @@ Section Conversion.
           rewrite h' in IHm.
           cbn in IHm. unfold skipn in IHm. cbn in IHm.
           eapply IHm. easy.
-      + specialize (IHm Γ t l1 θ1 l2 θ2 h2).
-        specialize IHm with (1 := n1) (2 := n2) (3 := e).
-        destruct l1, l2 ; try discriminate e.
+      + destruct l1, l2 ; try discriminate e.
         * exfalso. cbn in n. omega.
         * simpl.
           destruct (Nat.eqb_spec #|l1| m).
@@ -2100,6 +2191,8 @@ Section Conversion.
              replace (#|l1| - #|l1|) with 0 by omega.
              simpl.
              intros h2'.
+             specialize (IHm Γ t (t0 :: l1) θ1 (t1 :: l2) θ2 h2).
+             specialize IHm with (1 := n1) (2 := n2) (3 := e).
              replace (#|t0 :: l1| - #|l1|) with 1 in IHm
              by (change (1 = S #|l1| - #|l1|) ; omega).
              cbn in IHm. unfold skipn in IHm.

@@ -2126,42 +2126,42 @@ Section Conversion.
     eapply h. assumption.
   Qed.
 
-  Lemma strong_nat_rev_ind (max : nat) :
-    forall (P : nat -> Prop),
-      (forall n, n >= max -> P n) ->
-      (forall n, (forall m, n < m -> m < max -> P m) -> P n) ->
-      forall n, P n.
-  Proof.
-    intros P hmax hS.
-    assert (h : forall n, P (max - n)).
-    { intros n. induction n using strong_nat_ind.
-      destruct (Nat.ltb_spec0 max n).
-      - replace (max - n) with 0 by omega.
-        specialize (H max l).
-        replace (max - max) with 0 in H by omega.
-        assumption.
-      - destruct (Nat.eqb_spec n max).
-        + subst. admit.
-        + assert (n < max) by omega.
+  (* Lemma strong_nat_rev_ind (max : nat) : *)
+  (*   forall (P : nat -> Prop), *)
+  (*     (forall n, n >= max -> P n) -> *)
+  (*     (forall n, (forall m, n < m -> m < max -> P m) -> P n) -> *)
+  (*     forall n, P n. *)
+  (* Proof. *)
+  (*   intros P hmax hS. *)
+  (*   assert (h : forall n, P (max - n)). *)
+  (*   { intros n. induction n using strong_nat_ind. *)
+  (*     destruct (Nat.ltb_spec0 max n). *)
+  (*     - replace (max - n) with 0 by omega. *)
+  (*       specialize (H max l). *)
+  (*       replace (max - max) with 0 in H by omega. *)
+  (*       assumption. *)
+  (*     - destruct (Nat.eqb_spec n max). *)
+  (*       + subst. admit. *)
+  (*       + assert (n < max) by omega. *)
 
-      - apply hmax. omega.
-      - destruct (Nat.leb_spec0 max n).
-        + replace (max - S n) with 0 by omega.
-          replace (max - n) with 0 in IHn by omega.
-          assumption.
-        + eapply hS.
-          * omega.
-          * intros m h.
-            assert (max < S n + m) by omega.
+  (*     - apply hmax. omega. *)
+  (*     - destruct (Nat.leb_spec0 max n). *)
+  (*       + replace (max - S n) with 0 by omega. *)
+  (*         replace (max - n) with 0 in IHn by omega. *)
+  (*         assumption. *)
+  (*       + eapply hS. *)
+  (*         * omega. *)
+  (*         * intros m h. *)
+  (*           assert (max < S n + m) by omega. *)
 
 
- ; try eassumption ; omega.
-    }
-    intro n.
-    destruct (Nat.leb_spec0 max n).
-    - apply hmax. omega.
-    - replace n with (max - (max - n)) by omega. apply h.
-  Qed.
+ (* ; try eassumption ; omega. *)
+ (*    } *)
+ (*    intro n. *)
+ (*    destruct (Nat.leb_spec0 max n). *)
+ (*    - apply hmax. omega. *)
+ (*    - replace n with (max - (max - n)) by omega. apply h. *)
+ (*  Qed. *)
 
   Lemma skipn_nil :
     forall {A} n, @skipn A n [] = [].
@@ -2185,15 +2185,15 @@ Section Conversion.
     assert (eq : m = #|l1|) by reflexivity.
     clearbody m.
     revert Γ t l1 θ1 l2 θ2 h2 h2' n1 n2 e eq.
-    induction n using (strong_nat_rev_ind m) ;
+    induction n using (nat_rev_ind m) ;
     intros Γ t l1 θ1 l2 θ2 h2 h2' hn1 hn2 e eq.
     - subst. revert h2'.
       erewrite !firstn_all2 by omega.
       erewrite !skipn_all2 by omega.
       cbn. intros h2'.
       rewrite stack_args_noApp by assumption. constructor.
-    - subst. specialize (IHn1 Γ t l1 θ1 l2 θ2 h2).
-      specialize IHn1 with (1 := hn1) (2 := hn2) (3 := e) (4 := eq_refl).
+    - subst. specialize (IHn Γ t l1 θ1 l2 θ2 h2).
+      specialize IHn with (1 := hn1) (2 := hn2) (3 := e) (4 := eq_refl).
       destruct l1 as [|u1 l1], l2 as [|u2 l2] ; try discriminate.
       + cbn in H. exfalso. omega.
       + cbn in IHn. destruct n.
@@ -2204,7 +2204,31 @@ Section Conversion.
              cbn. eapply positionR_poscat. constructor.
           -- eapply IHn.
         * simpl.
+  Admitted.
 
+  Lemma stack_args_R :
+    forall Γ t π1 π2 h2,
+      Forall (fun '(u1, ρ1, exist (u2, ρ2) h) =>
+        R (mkpack (Reduction u2) Γ u1 ρ1 ρ2 h)
+          (mkpack Args Γ t π1 π2 h2)
+      ) (stack_args Γ t π1 π2 h2).
+  Proof.
+    simpl. intros Γ t π1 π2 h2.
+    case_eq (decompose_stack π1). intros l1 θ1 e1.
+    case_eq (decompose_stack π2). intros l2 θ2 e2.
+    pose proof (decompose_stack_eq _ _ _ e1).
+    pose proof (decompose_stack_eq _ _ _ e2).
+    subst.
+    destruct (eqb_spec #|l1| #|l2|).
+    - eapply stack_args_R_aux with (n := 0).
+      + destruct θ1 ; try reflexivity. exfalso.
+        eapply decompose_stack_not_app. eassumption.
+      + destruct θ2 ; try reflexivity. exfalso.
+        eapply decompose_stack_not_app. eassumption.
+      + assumption.
+    - (* Unfortunately, having different lengths is not enough to return
+         the empty list, maybe we should synchronise things more...
+       *)
 
 
   Lemma stack_args_R_aux :

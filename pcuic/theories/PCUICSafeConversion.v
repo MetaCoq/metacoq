@@ -2019,6 +2019,32 @@ Section Conversion.
     symmetry. assumption.
   Qed.
 
+  (* View on stack App *)
+  (* Equations discr_App (π : stack) : Prop := *)
+  (*   discr_App (App u ρ) := False ; *)
+  (*   discr_App _ := True. *)
+
+  (* Inductive stack_App_view_t : stack -> Set := *)
+  (* | stack_App u ρ : stack_App_view_t (App u ρ) *)
+  (* | stack_other π : discr_App π -> stack_App_view_t π. *)
+
+  (* Equations stack_App_view π : stack_App_view_t π := *)
+  (*   stack_App_view (App u ρ) := stack_App u ρ ; *)
+  (*   stack_App_view π := stack_other π I. *)
+
+  (* ERROR Cannot guess decreasing argument of fix *)
+  (* Equations stack_args Γ (t : term) (π1 π2 : stack) (h2 : wtp Γ t π2) *)
+  (*   : list (term * stack * { x : term * stack | wtp Γ (fst x) (snd x) }) := *)
+  (*   stack_args Γ t π1 π2 h2 with stack_App_view π1 := { *)
+  (*   | stack_App u1 ρ1 with stack_App_view π2 := { *)
+  (*     | stack_App u2 ρ2 := *)
+  (*       (u1, coApp t ρ1, exist (u2, coApp t ρ2) h2) *)
+  (*       :: stack_args Γ (tApp t u2) ρ1 ρ2 h2 ; *)
+  (*     | _ := [] *)
+  (*     } ; *)
+  (*   | _ := [] *)
+  (*   }. *)
+
   Equations stack_args Γ (t : term) (π1 π2 : stack) (h2 : wtp Γ t π2)
     : list (term * stack * { x : term * stack | wtp Γ (fst x) (snd x) }) :=
     stack_args Γ t (App u1 ρ1) (App u2 ρ2) h2 :=

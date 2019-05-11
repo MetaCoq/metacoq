@@ -2053,6 +2053,8 @@ Section Conversion.
     stack_args Γ t π1 π2 h2 := [].
 
   (* TODO MOVE *)
+  Arguments skipn : simpl nomatch.
+
   Lemma skipn_all2 :
     forall {A n} (l : list A),
       #|l| <= n ->
@@ -2065,7 +2067,7 @@ Section Conversion.
       + cbn in h. inversion h.
     - destruct l.
       + reflexivity.
-      + change (skipn n l = []). apply IHn. cbn in h. omega.
+      + simpl. apply IHn. cbn in h. omega.
   Qed.
 
   Lemma stack_args_noApp :
@@ -2078,8 +2080,6 @@ Section Conversion.
     all: try reflexivity.
     cbn in n1. discriminate.
   Qed.
-
-  Arguments skipn : simpl nomatch.
 
   (* Lemma stack_args_R_aux : *)
   (*   forall Γ t l1 θ1 l2 θ2 n h2 h2', *)

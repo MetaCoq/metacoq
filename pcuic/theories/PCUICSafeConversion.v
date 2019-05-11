@@ -2229,6 +2229,45 @@ Section Conversion.
     - (* Unfortunately, having different lengths is not enough to return
          the empty list, maybe we should synchronise things more...
        *)
+  Abort.
+
+  Lemma stack_args_R :
+    forall Γ t π1 π2 h2,
+      Forall (fun '(u1, ρ1, exist (u2, ρ2) h) =>
+        R (mkpack (Reduction u2) Γ u1 ρ1 ρ2 h)
+          (mkpack Args Γ t π1 π2 h2)
+      ) (stack_args Γ t π1 π2 h2).
+  Proof.
+    simpl. intros Γ t π1 π2 h2.
+    assert (h :
+      Forall (fun '(u1, ρ1, exist (u2, ρ2) h) =>
+        let x := mkpack (Reduction u2) Γ u1 ρ1 ρ2 h in
+        let y := mkpack Args Γ t π1 π2 h2 in
+        pzt x = pzt y /\
+        positionR (` (pps1 x)) (` (pps1 y))
+      ) (stack_args Γ t π1 π2 h2)
+    ).
+    { funelim (stack_args Γ t π1 π2 h2).
+      all: try solve [ constructor ].
+      econstructor.
+      - split ; [ reflexivity |].
+        simpl. unfold xposition. eapply positionR_poscat.
+        cbn. eapply positionR_poscat. constructor.
+      - eapply Forall_impl.
+        + eapply H.
+        + clear H. intros [[u1 ρ1] [[u2 ρ2] h2']] h.
+          simpl. simpl in h.
+fofo
+
+    funelim (stack_args Γ t π1 π2 h2).
+    all: try solve [ constructor ].
+    econstructor.
+    - unshelve eapply R_positionR ; try reflexivity.
+      simpl. unfold xposition. eapply positionR_poscat.
+      cbn. eapply positionR_poscat. constructor.
+    - eapply Forall_impl.
+      + eapply H.
+      + clear. intros [[u1 ρ1] [[u2 ρ2] h2']] h.
 
 
   Lemma stack_args_R_aux :

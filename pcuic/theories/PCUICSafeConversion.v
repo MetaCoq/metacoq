@@ -2481,8 +2481,64 @@ simp stack_args. econstructor.
     admit.
   Admitted.
   Next Obligation.
-    (* I don't understand where it is coming from. *)
-    admit.
+    simpl in H. destruct H as [eq hp].
+    eapply aux.
+    - assumption.
+    - instantiate (1 := h2'). split.
+      + simpl. assumption.
+      + simpl.
+
+        Lemma positionR_context_position_inv :
+          forall Γ p q,
+            positionR (context_position Γ ++ p) (context_position Γ ++ q) ->
+            positionR p q.
+        Proof.
+          intros Γ p q h.
+          revert p q h.
+          induction Γ as [| [na [b|] A] Γ ih ] ; intros p q h.
+          - assumption.
+          - cbn in h. rewrite <- 2!app_assoc in h. apply ih in h.
+            cbn in h. dependent destruction h.
+            assumption.
+          - cbn in h. rewrite <- 2!app_assoc in h. apply ih in h.
+            cbn in h. dependent destruction h.
+            assumption.
+        Qed.
+
+        Lemma positionR_xposition_inv :
+          forall Γ ρ1 ρ2,
+            positionR (xposition Γ ρ1) (xposition Γ ρ2) ->
+            positionR (stack_position ρ1) (stack_position ρ2).
+        Proof.
+          intros Γ ρ1 ρ2 h.
+          eapply positionR_context_position_inv.
+          eassumption.
+        Qed.
+
+        apply positionR_xposition_inv in hp.
+        unfold xposition. cbn. apply positionR_poscat.
+
+        Lemma positionR_stack_app_r :
+          forall ρ1 ρ2,
+            positionR (stack_position ρ1) (stack_position ρ2) ->
+            positionR (stack_position ρ1) (stack_position ρ2 ++ [app_l]).
+        Proof.
+          intros ρ1 ρ2 h.
+          dependent induction h.
+          - rewrite H, H0. constructor.
+          - rewrite H, H0. cbn. constructor.
+            destruct ρ1. all: try discriminate H.
+            + cbn in H.
+            (* eapply IHh. *)
+        Abort.
+
+
+
+(* zipx Γ u0 ρ0 = zipx Γ (tApp t u1) ρ1 *)
+(*   hp : positionR (stack_position ρ0) (stack_position ρ1) *)
+(*   leq : conv_pb *)
+(*   ============================ *)
+(*   positionR (stack_position ρ0) (stack_position ρ1 ++ [app_l]) *)
   Admitted.
   Next Obligation.
     destruct H2 as [H2], H1 as [H1].

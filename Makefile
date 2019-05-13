@@ -42,9 +42,6 @@ template-coq:
 pcuic: template-coq
 	$(MAKE) -C pcuic
 
-plugin-demo: template-coq
-	$(MAKE) -C plugin-demo
-
 extraction: checker template-coq pcuic
 	$(MAKE) -C extraction
 

@@ -28,9 +28,9 @@ Cumulative Inductive TemplateMonad@{t u} : Type@{t} -> Prop :=
 | tmEval : reductionStrategy -> forall {A:Type@{t}}, A -> TemplateMonad A
 
 (* Return the defined constant *)
-| tmDefinition : ident -> forall {A:Type@{t}}, A -> TemplateMonad A
-| tmAxiom : ident -> forall A : Type@{t}, TemplateMonad A
 | tmLemma : ident -> forall A : Type@{t}, TemplateMonad A
+| tmDefinitionRed : ident -> option reductionStrategy -> forall {A:Type@{t}}, A -> TemplateMonad A
+| tmAxiomRed : ident -> option reductionStrategy -> forall A : Type@{t}, TemplateMonad A
 
 (* Guaranteed to not cause "... already declared" error *)
 | tmFreshName : ident -> TemplateMonad ident
@@ -66,6 +66,9 @@ Definition fail_nf {A} (msg : string) : TemplateMonad A
 
 Definition tmMkInductive' (mind : mutual_inductive_body) : TemplateMonad unit
   := tmMkInductive (mind_body_to_entry mind).
+
+Definition tmAxiom id := tmAxiomRed id None.
+Definition tmDefinition id {A} t := @tmDefinitionRed id None A t.
 
 (* Don't remove. Constants used in the implem of the plugin *)
 Definition tmTestQuote {A} (t : A) := tmBind (tmQuote t) tmPrint.

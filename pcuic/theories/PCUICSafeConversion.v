@@ -2045,6 +2045,7 @@ Section Conversion.
   (*   | _ := [] *)
   (*   }. *)
 
+(*
   Equations stack_args Γ (t : term) (π1 π2 : stack) (h2 : wtp Γ t π2)
     : list (term * stack * { x : term * stack | wtp Γ (fst x) (snd x) }) :=
     stack_args Γ t (App u1 ρ1) (App u2 ρ2) h2 :=
@@ -2432,14 +2433,55 @@ simp stack_args. econstructor.
 
 
   Abort.
+*)
 
-  (* Idea from Nicolas
-     map all the elements of the stack (or rather from the app part)
-     to terms with a proof that they are smaller with respect to R.
-     From then use map to apply aux to everything.
-     This should be fine as all elements are smaller as far as positions are
-     concerned.
-   *)
+  Equations(noeqns) _isconv_args (Γ : context) (t : term)
+            (π1 : stack) (h1 : wtp Γ t π1)
+            (π2 : stack) (h2 : wtp Γ t π2)
+            (aux : Aux Args Γ t π1 π2 h2)
+    : { b : bool | if b then ∥ Σ ;;; Γ |- zippx t π1 = zippx t π2 ∥ else True } :=
+
+    _isconv_args Γ t (App u1 ρ1) h1 (App u2 ρ2) h2 aux
+    with isconv_red_raw Γ Conv u1 (coApp t ρ1) u2 (coApp t ρ2) aux := {
+    | @exist true h1 with _isconv_args Γ (tApp t u1) ρ1 _ ρ2 _ _ := {
+      | @exist true h2 := _ ;
+      | @exist false _ := no
+      } ;
+    | @exist false _ := no
+    } ;
+
+    _isconv_args Γ t ε h1 ε h2 aux := yes ;
+
+    _isconv_args Γ t π1 h1 π2 h2 aux := no.
+  Next Obligation.
+    constructor. apply conv_refl.
+  Qed.
+  Next Obligation.
+    unshelve eapply R_positionR.
+    - simpl. reflexivity.
+    - simpl. unfold xposition. eapply positionR_poscat.
+      cbn. eapply positionR_poscat. constructor.
+  Qed.
+  Next Obligation.
+    destruct h1 as [h1]. unfold zippx in h1.
+    simpl in h1.
+    apply zipx_welltyped.
+    clear aux.
+    apply welltyped_zipx in h2. cbn in h2.
+    (* We need subject conversion here it woud seem *)
+    admit.
+  Admitted.
+  Next Obligation.
+    eapply aux.
+    - eassumption.
+    - assert (R_trans : forall x y z, R x y -> R y z -> R x z) by admit.
+      eapply R_trans ; try eassumption.
+      unshelve eapply R_positionR ; try reflexivity.
+      simpl. unfold xposition. eapply positionR_poscat.
+      cbn.
+      (* This doesn't work by transitivity. *)
+      give_up.
+  Abort.
 
   Equations(noeqns) _isconv_args (Γ : context) (t : term)
             (π1 : stack) (h1 : wtp Γ t π1)

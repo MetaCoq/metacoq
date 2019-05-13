@@ -12,6 +12,7 @@ module TemplateCoqQuoter =
 struct
   include ConstrQuoted
 
+
   let to_coq_list typ =
     let the_nil = Constr.mkApp (c_nil, [| typ |]) in
     let rec to_list (ls : Constr.t list) : Constr.t =
@@ -104,7 +105,9 @@ struct
 
   let quote_universe s =
     let levels = Universe.map (fun (l,i) -> pair tlevel bool_type (quote_level l) (if i > 0 then ttrue else tfalse)) s in
-    to_coq_list (prod tlevel bool_type) levels
+    let hd = List.hd levels in
+    let tl = to_coq_list (prod tlevel bool_type) (List.tl levels) in
+    Constr.mkApp (tmake_universe, [| hd ; tl |])
 
   (* todo : can be deduced from quote_level, hence shoud be in the Reify module *)
   let quote_univ_instance u =

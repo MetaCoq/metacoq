@@ -331,7 +331,6 @@ struct
       let dp = DirPath.make (List.map Id.of_string comps) in
       let idx = int_of_string last in
       Univ.Level.make dp idx
-      (* should this level be added to the environment. Denote.unquote_level does that *)
     | Universes0.Level.Var n -> Univ.Level.var (unquote_int n)
 
   let unquote_level_expr (trm : Universes0.Level.t) (b : quoted_bool) : Univ.Universe.t =

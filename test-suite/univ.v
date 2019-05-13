@@ -6,23 +6,25 @@ Open Scope string.
 Set Printing Universes.
 
 Test Quote Type.
+Quote Definition a_random_univ := Type.
+Compute a_random_univ.
 
-Fail Make Definition t1 := (tSort []).
-Fail Make Definition t1 := (tSort [(Level.Level "Top.400", false)]).
+Fail Make Definition t1 := (tSort ([]; _)).
+Fail Make Definition t1 := (tSort (Universe.make (Level.Level "Top.400"))).
 
 Monomorphic Definition T := Type.
-(* Make Definition t1 := (tSort [(Level.Level "Top.2", false)]). *)
+(* Make Definition t1 := (tSort (Universe.make (Level.Level "Top.5"))). *)
 
 Unset Strict Unquote Universe Mode.
-Make Definition t2 := (tSort []).
-Make Definition t3 := (tSort [(Level.Level "Top.400", false)]).
+Make Definition t2 := (tSort ([]; _)).
+Make Definition t3 := (tSort (Universe.make (Level.Level "Top.400"))).
 
 
 Monomorphic Universe i j.
 
 Set Strict Unquote Universe Mode.
 Test Quote (Type@{j} -> Type@{i}).
-Make Definition T'' := (tSort [(Level.Level "j", false)]).
+Make Definition T'' := (tSort (Universe.make' (Level.Level "j", false))).
 Unset Strict Unquote Universe Mode.
 
 
@@ -61,60 +63,9 @@ nil : list A | cons : A -> list A -> list A.
 Module to.
 Run TemplateProgram (t <- tmQuoteInductive "list" ;;
                      t <- tmEval all (mind_body_to_entry t) ;;
+                     tmPrint t ;;
                      tmMkInductive t).
 End to.
-
-Compute (AstUtils.mind_body_to_entry {|
-ind_npars := 0;
-ind_bodies := [{|
-               ind_name := "Category";
-               ind_type := tSort
-                             [(Level.Level "Top.275", true);
-                             (Level.Level "Top.276", true)];
-               ind_kelim := [InProp; InSet; InType];
-               ind_ctors := [("Build_Category",
-                             tProd (nNamed "Obj") (tSort [(Level.Var 0, false)])
-                               (tProd (nNamed "Hom")
-                                  (tProd nAnon (tRel 0)
-                                     (tProd nAnon (tRel 1)
-                                        (tSort [(Level.Var 1, false)]))) 
-                                  (tRel 2)), 2)];
-               ind_projs := [] |}];
-ind_universes := Cumulative_ctx
-                   ([Level.Level "Top.275"; Level.Level "Top.276"],
-                   {|
-                   ConstraintSet.this := [];
-                   ConstraintSet.is_ok := ConstraintSet.Raw.empty_ok |},
-                   [Variance.Covariant; Variance.Covariant]) |}).
-
-Fail Make Inductive {|
-       mind_entry_record := None;
-       mind_entry_finite := Finite;
-       mind_entry_params := [];
-       mind_entry_inds := [{|
-                           mind_entry_typename := "Category";
-                           mind_entry_arity := tSort
-                                                 [(Level.Level "Top.275", true);
-                                                 (Level.Level "Top.276", true)];
-                           mind_entry_template := false;
-                           mind_entry_consnames := ["Build_Category"];
-                           mind_entry_lc := [tProd (nNamed "Obj")
-                                               (tSort [(Level.Var 0, false)])
-                                               (tProd 
-                                                  (nNamed "Hom")
-                                                  (tProd nAnon 
-                                                     (tRel 0)
-                                                     (tProd nAnon 
-                                                     (tRel 1)
-                                                     (tSort [(Level.Var 1, false)])))
-                                                  (tRel 2))] |}];
-       mind_entry_universes := Cumulative_ctx
-                                 ([Level.Level "Top.275"; Level.Level "Top.276"],
-                                 {|
-                                 ConstraintSet.this := [];
-                                 ConstraintSet.is_ok := ConstraintSet.Raw.empty_ok |},
-                                 [Variance.Covariant; Variance.Covariant]);
-       mind_entry_private := None |}.
 
 
 Definition f@{i j k} := fun (E:Type@{i}) => Type@{max(i,j)}.
@@ -201,7 +152,7 @@ Print qtest.
 
 Make Definition bla := qtest.
 Unset Strict Unquote Universe Mode.
-Make Definition bla' := (tLambda (nNamed "T") (tSort ((Level.Level "Top.2", false) :: nil)%list) (tLambda (nNamed "T2") (tSort ((Level.Level "Top.1", false) :: nil)%list) (tProd nAnon (tRel 1) (tRel 1)))).
+Make Definition bla' := (tLambda (nNamed "T") (tSort (Universe.make'' (Level.Level "Top.46", false) [])) (tLambda (nNamed "T2") (tSort (Universe.make'' (Level.Level "Top.477", false) [])) (tProd nAnon (tRel 1) (tRel 1)))).
 
 Set Printing Universes.
 Print bla.
@@ -245,11 +196,6 @@ Print qFuntp.
 there the poly vars actually show up *)
 
 
-Make Definition t22 := (Ast.tLambda (BasicAst.nNamed "T") (Ast.tSort [(Level.Level "Top.10001", false)])
-                                   (Ast.tLambda (BasicAst.nNamed "T2") (Ast.tSort [(Level.Level "Top.10002", false)]) (Ast.tProd BasicAst.nAnon (Ast.tRel 1) (Ast.tRel 1)))).
-Set Printing Universes.
-Print t2.
-(* Print Universes. *)
 
 
 Monomorphic Universe i1 j1.
@@ -257,18 +203,18 @@ Definition f' := (forall (A:Type@{i1}) (B: Type@{j1}), A -> B -> A).
 (* : Type@{i1+1, j1+1} *)
 
 Quote Recursively Definition ff := f'.
-Require Import Template.Checker.
+Require Import Template.kernel.Checker.
 Check (eq_refl :
          true =
          let T := infer (Typing.reconstruct_global_context (fst ff)) [] (snd ff) in
          match T with
-         | Checked (tSort [(Level.Level _, true); (Level.Level _, true)]) => true
+         | Checked (tSort ([(Level.Level _, true); (Level.Level _, true)]; _)) => true
          | _ => false
          end).
 Check (eq_refl :
          true =
-         let T := infer ([], init_graph) [] ((tProd (nNamed "A") (tSort [(Level.Level "Toto.85", false)]) (tProd (nNamed "B") (tSort [(Level.Level "Toto.86", false)]) (tProd nAnon (tRel 1) (tProd nAnon (tRel 1) (tRel 3)))))) in
+         let T := infer ([], ConstraintSet.empty) [] ((tProd (nNamed "A") (tSort (Universe.make' (Level.Level "Toto.85", false))) (tProd (nNamed "B") (tSort (Universe.make' (Level.Level "Toto.86", false))) (tProd nAnon (tRel 1) (tProd nAnon (tRel 1) (tRel 3)))))) in
          match T with
-         | Checked (tSort [(Level.Level _, true); (Level.Level _, true)]) => true
+         | Checked (tSort ([(Level.Level _, true); (Level.Level _, true)]; _)) => true
          | _ => false
          end).

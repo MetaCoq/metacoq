@@ -127,6 +127,8 @@ struct
   let tunivLe = resolve_symbol (ext_pkg_univ "ConstraintType") "Le"
   let tunivLt = resolve_symbol (ext_pkg_univ "ConstraintType") "Lt"
   let tunivEq = resolve_symbol (ext_pkg_univ "ConstraintType") "Eq"
+  let tmake_universe = resolve_symbol (ext_pkg_univ "Universe") "make''"
+
   (* let tunivcontext = resolve_symbol pkg_univ "universe_context" *)
   let tVariance = resolve_symbol pkg_variance "t"
   let cIrrelevant = resolve_symbol pkg_variance "Irrelevant"
@@ -175,10 +177,18 @@ struct
   let (tglobal_reference, tConstRef, tIndRef, tConstructRef) =
     (r_base_reify "global_reference", r_base_reify "ConstRef", r_base_reify "IndRef", r_base_reify "ConstructRef")
 
-  (* let pkg_specif = ["Coq";"Init";"Specif"] *)
-  (* let texistT = resolve_symbol pkg_specif "existT" *)
-  (* let texistT_typed_term = r_template_monad "existT_typed_term" *)
+  let pkg_specif = ["Coq";"Init";"Specif"]
+  let texistT = resolve_symbol pkg_specif "existT"
   let texistT_typed_term = r_template_monad_p "existT_typed_term"
+
+  let unquote_sigt trm =
+    let (h,args) = app_full trm [] in
+    if Constr.equal h texistT then
+      match args with
+        _ :: _ :: x :: y :: [] -> (x, y)
+      | _ -> bad_term_verb trm "unquote_sigt"
+    else
+      not_supported_verb trm "unquote_sigt"
 
   let unquote_pair trm =
     let (h,args) = app_full trm [] in

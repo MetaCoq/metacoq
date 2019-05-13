@@ -1,4 +1,4 @@
-TEMPLATE_LIB=../template-coq
+TEMPLATE_LIB=../../template-coq
 
 coq: sources Makefile.coq
 	$(MAKE) -f Makefile.coq

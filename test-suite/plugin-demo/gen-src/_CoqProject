@@ -1,5 +1,5 @@
--R ../../template-coq/theories Template
--I ../../template-coq/src
+-R ../../../template-coq/theories Template
+-I ../../../template-coq/src
 -Q ../theories Lens
 -Q . Demo
 

@@ -1,4 +1,4 @@
-all: template-coq plugin-demo checker pcuic extraction
+all: template-coq checker pcuic extraction
 
 .PHONY: all template-coq checker install html clean mrproper .merlin test-suite translations
 

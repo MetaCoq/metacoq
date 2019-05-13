@@ -9,5 +9,5 @@ Makefile.coq: Makefile
 clean: Makefile.coq
 	$(MAKE) -f Makefile.coq clean
 
-plugin-demo: template-coq
+plugin-demo:
 	$(MAKE) -C plugin-demo

@@ -2531,11 +2531,15 @@ simp stack_args. econstructor.
     - assumption.
     - instantiate (1 := h2'). split.
       + simpl. assumption.
-      + simpl.
+      + simpl. subst x y.
         unfold zipx in eq.
         apply it_mkLambda_or_LetIn_inj in eq.
         apply positionR_xposition_inv in hp.
         unfold xposition. cbn. apply positionR_poscat.
+        (* Unfortunately, it seems we need something else, more tailored.
+           For instance, we could exploit the fact that we only pop
+           App off the stack (only need to say it for the left stack).
+         *)
 
 
         (* dependent induction hp. *)
@@ -2545,19 +2549,22 @@ simp stack_args. econstructor.
         (*   -- cbn in eq. destruct ρ1. all: try discriminate. *)
         (*      ++ cbn in H, H0. *)
 
-        Lemma positionR_stack_app_r :
-          forall ρ1 ρ2,
-            positionR (stack_position ρ1) (stack_position ρ2) ->
-            positionR (stack_position ρ1) (stack_position ρ2 ++ [app_l]).
-        Proof.
-          intros ρ1 ρ2 h.
-          dependent induction h.
-          - rewrite H, H0. constructor.
-          - rewrite H, H0. cbn. constructor.
-            destruct ρ1. all: try discriminate H.
-            + cbn in H.
-            (* eapply IHh. *)
-        Abort.
+(*         Lemma positionR_stack_app_r : *)
+(*           forall ρ1 ρ2, *)
+(*             positionR (stack_position ρ1) (stack_position ρ2) -> *)
+(*             positionR (stack_position ρ1) (stack_position ρ2 ++ [app_l]). *)
+(*         Proof. *)
+(*           intros ρ1 ρ2 h. *)
+(*           dependent induction h. *)
+(*           - rewrite H, H0. constructor. *)
+(*           - (* rewrite H, H0. cbn. constructor. *) *)
+(*             destruct ρ1. all: try discriminate H. *)
+(*             + destruct ρ2. all: try discriminate H0. *)
+(*               * cbn. *)
+
+(* cbn in H. *)
+(*             (* eapply IHh. *) *)
+(*         Abort. *)
 
 
 

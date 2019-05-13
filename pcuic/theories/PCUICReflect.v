@@ -217,19 +217,24 @@ Proof.
   cbn. constructor. subst. reflexivity.
 Qed.
 
-Definition eq_non_empty_list {A : Set} `{ReflectEq A} (l1 l2 : non_empty_list A)
-  : bool :=
-  eqb (projT1 l1) (projT1 l2).
+Fixpoint eq_non_empty_list {A : Set} (eqA : A -> A -> bool) (l l' : non_empty_list A) : bool :=
+  match l, l' with
+  | NEL.sing a, NEL.sing a' => eqA a a'
+  | NEL.cons a l, NEL.cons a' l' => 
+    eqA a a' && eq_non_empty_list eqA l l'
+  | _, _ => false
+  end.
 
 Instance reflect_non_empty_list :
   forall {A : Set} `{ReflectEq A}, ReflectEq (non_empty_list A) :=
-  { eqb := eq_non_empty_list }.
+  { eqb := eq_non_empty_list eqb }.
 Proof.
-  intros [l1 p1] [l2 p2].
-  unfold eq_non_empty_list. cbn.
-  destruct (eqb_spec l1 l2) ; nodec.
-  constructor. subst. f_equal.
-Admitted.
+  induction x, y; cbn.
+  destruct (eqb_spec a a0); constructor; congruence.
+  constructor; congruence.
+  constructor; congruence.
+  destruct (eqb_spec a a0), (IHx y); constructor; congruence.
+Qed.
 
 Local Ltac finish :=
   let h := fresh "h" in

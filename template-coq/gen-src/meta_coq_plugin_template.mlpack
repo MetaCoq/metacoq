@@ -25,14 +25,12 @@ Ast0
 AstUtils
 BasicAst
 Common
-Config0
 
 Denote
 Denoter
 Equalities
 Extractable
 Logic0
-UGraph0
 
 Tm_util
 Quoted

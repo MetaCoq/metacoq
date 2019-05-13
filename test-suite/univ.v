@@ -16,7 +16,7 @@ Monomorphic Definition T := Type.
 (* Make Definition t1 := (tSort (Universe.make (Level.Level "Top.5"))). *)
 
 Unset Strict Unquote Universe Mode.
-Make Definition t2 := (tSort ([]; _)).
+Make Definition t2 := (tSort fresh_universe).
 Make Definition t3 := (tSort (Universe.make (Level.Level "Top.400"))).
 
 
@@ -204,17 +204,9 @@ Definition f' := (forall (A:Type@{i1}) (B: Type@{j1}), A -> B -> A).
 
 Quote Recursively Definition ff := f'.
 Require Import MetaCoq.Template.kernel.Checker.
-Check (eq_refl :
-         true =
-         let T := infer (Typing.reconstruct_global_context (fst ff)) [] (snd ff) in
-         match T with
-         | Checked (tSort ([(Level.Level _, true); (Level.Level _, true)]; _)) => true
-         | _ => false
-         end).
-Check (eq_refl :
-         true =
-         let T := infer ([], ConstraintSet.empty) [] ((tProd (nNamed "A") (tSort (Universe.make' (Level.Level "Toto.85", false))) (tProd (nNamed "B") (tSort (Universe.make' (Level.Level "Toto.86", false))) (tProd nAnon (tRel 1) (tProd nAnon (tRel 1) (tRel 3)))))) in
-         match T with
-         | Checked (tSort ([(Level.Level _, true); (Level.Level _, true)]; _)) => true
-         | _ => false
-         end).
+Check (eq_refl : infer' (Typing.reconstruct_global_context (fst ff)) [] (snd ff) =
+         Checked (tSort
+                    (NEL.cons (Level.Level _, true)
+                              (NEL.sing (Level.Level _, true))))).
+
+Check (eq_refl : infer [] init_graph [] ((tProd (nNamed "A") (tSort (Universe.make' (Level.Level "Toto.85", false))) (tProd (nNamed "B") (tSort (Universe.make' (Level.Level "Toto.86", false))) (tProd nAnon (tRel 1) (tProd nAnon (tRel 1) (tRel 3)))))) = Checked (tSort _)).

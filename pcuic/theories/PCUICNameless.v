@@ -418,8 +418,8 @@ Corollary eq_term_tm_nl :
 Proof.
   intros flags G u.
   eapply eq_term_upto_univ_tm_nl.
-  - intro. eapply eq_universe'_refl.
-  - intro. eapply eq_universe'_refl.
+  - intro. eapply eq_universe_refl.
+  - intro. eapply eq_universe_refl.
 Qed.
 
 Definition nl_constant_body c :=

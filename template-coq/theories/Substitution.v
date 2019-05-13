@@ -1242,27 +1242,6 @@ Proof.
     auto.
 Qed.
 
-
-Lemma eq_universe_refl φ s : eq_universe φ s s.
-Proof.
-  intros vH; reflexivity.
-Qed.
-
-Lemma eq_universe'_refl `{checker_flags} φ s : eq_universe' φ s s.
-Proof.
-  unfold eq_universe'; destruct check_univs; [apply eq_universe_refl|constructor].
-Qed.
-
-Lemma leq_universe_refl φ s : leq_universe φ s s.
-Proof.
-  intros vH; reflexivity.
-Qed.
-
-Lemma leq_universe'_refl `{checker_flags} φ s : leq_universe' φ s s.
-Proof.
-  unfold leq_universe'; destruct check_univs; [apply leq_universe_refl|constructor].
-Qed.
-
 Lemma eq_term_upto_univ_refl Re Rle :
   RelationClasses.Reflexive Re ->
   RelationClasses.Reflexive Rle ->
@@ -1288,38 +1267,26 @@ Qed.
 Lemma eq_term_refl `{checker_flags} φ t : eq_term φ t t.
 Proof.
   apply eq_term_upto_univ_refl.
-  - intro; apply eq_universe'_refl.
-  - intro; apply eq_universe'_refl.
+  - intro; apply eq_universe_refl.
+  - intro; apply eq_universe_refl.
 Qed.
 
 
 Lemma leq_term_refl `{checker_flags} φ t : leq_term φ t t.
 Proof.
   apply eq_term_upto_univ_refl.
-  - intro; apply eq_universe'_refl.
-  - intro; apply leq_universe'_refl.
+  - intro; apply eq_universe_refl.
+  - intro; apply leq_universe_refl.
 Qed.
 
-
-Lemma eq_universe_leq_universe φ t u : eq_universe φ t u -> leq_universe φ t u.
-Proof.
-  intros H v Hv. rewrite (H v Hv). apply BinInt.Z.le_refl.
-Qed.
-
-Lemma eq_universe'_leq_universe' `{checker_flags} φ t u
-  : eq_universe' φ t u -> leq_universe' φ t u.
-Proof.
-  unfold eq_universe', leq_universe'; destruct check_univs.
-  apply eq_universe_leq_universe. intuition.
-Qed.
 
 Lemma eq_term_leq_term `{checker_flags} φ t u : eq_term φ t u -> leq_term φ t u.
 Proof.
   induction t in u |- * using term_forall_list_ind; simpl; inversion 1;
     subst; constructor; try (now unfold eq_term, leq_term in * );
   try eapply Forall2_impl'; try easy.
-  now apply eq_universe'_leq_universe'.
-  all: try (apply Forall_True, eq_universe'_leq_universe').
+  now apply eq_universe_leq_universe.
+  all: try (apply Forall_True, eq_universe_leq_universe).
 Qed.
 
 Lemma eq_term_upto_univ_App `{checker_flags} Re Rle f f' :
@@ -1418,8 +1385,8 @@ Lemma subst_eq_term `{checker_flags} ϕ n k T U :
 Proof.
   intros Hleq.
   eapply subst_eq_term_upto_univ.
-  - intro. eapply eq_universe'_refl.
-  - intro. eapply eq_universe'_refl.
+  - intro. eapply eq_universe_refl.
+  - intro. eapply eq_universe_refl.
   - assumption.
 Qed.
 
@@ -1429,8 +1396,8 @@ Lemma subst_leq_term `{checker_flags} ϕ n k T U :
 Proof.
   intros Hleq.
   eapply subst_eq_term_upto_univ.
-  - intro. eapply eq_universe'_refl.
-  - intro. eapply leq_universe'_refl.
+  - intro. eapply eq_universe_refl.
+  - intro. eapply leq_universe_refl.
   - assumption.
 Qed.
 

@@ -484,7 +484,7 @@ Proof.
       apply cumul_Sort_inv in Hp'.
       eapply cumul_trans with (tSort (Universe.sort_of_product s1 s2)).
       constructor.
-      cbn. constructor. apply leq_universe_product_r.
+      cbn. constructor. apply leq_universe_product.
       constructor; constructor ; auto. }
 
   - (* Fixpoint unfolding *)

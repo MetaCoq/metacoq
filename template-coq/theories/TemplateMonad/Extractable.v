@@ -1,6 +1,6 @@
 From Coq Require Import Strings.String.
 From MetaCoq.Template Require Import
-     Ast uGraph AstUtils TemplateMonad.Common.
+     Ast AstUtils TemplateMonad.Common.
 
 Set Universe Polymorphism.
 Set Universe Minimization ToSet.
@@ -51,7 +51,7 @@ Cumulative Inductive TM@{t} : Type@{t} -> Type :=
 | tmQuoteConstant (nm : kername) (bypass_opacity : bool)
   : TM constant_entry
 
-| tmQuoteUniverses : TM uGraph.t
+| tmQuoteUniverses : TM constraints
 
 (* unquote before making the definition *)
 (* FIXME take an optional universe context as well *)

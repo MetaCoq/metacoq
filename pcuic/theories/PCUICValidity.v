@@ -201,7 +201,7 @@ Proof.
       eapply type_Conv; pcuic.
       eapply (weakening_cumul Σ Γ [] [vass na A]) in b; pcuic.
       simpl in b. eapply cumul_trans. 2:eauto.
-      constructor. constructor. simpl. apply leq_universe_product_r.
+      constructor. constructor. simpl. apply leq_universe_product.
 
   - eapply declared_constant_inv in H; pcuic.
     destruct decl as [ty [b|] univs]. red in H. simpl in *.

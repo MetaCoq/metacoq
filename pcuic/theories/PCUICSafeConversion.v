@@ -2485,15 +2485,24 @@ simp stack_args. econstructor.
     admit.
   Admitted.
   Next Obligation.
-    destruct H2 as [H2].
+    destruct H2 as [H2], H1 as [H1].
     constructor.
     unfold zippx. simpl.
+    unfold zippx in H1.
     unfold zippx in H2.
     case_eq (decompose_stack ρ1). intros l1 θ1 e1.
     case_eq (decompose_stack ρ2). intros l2 θ2 e2.
+    simpl in H1.
     rewrite e1 in H2. rewrite e2 in H2.
-    cbn. exact H2.
-    rewrite mkApps_nested in H2.
+    cbn.
+    pose proof (decompose_stack_eq _ _ _ e1) as eq1.
+    pose proof (decompose_stack_eq _ _ _ e2) as eq2.
+    rewrite eq1 in H1. rewrite eq2 in H1.
+    rewrite !stack_context_appstack in H1.
+    (* Not clear how to conclude, but it seems fine. *)
+    (* eapply conv_trans ; try eassumption. *)
+    admit.
+  Admitted.
 
 
     eapply aux.

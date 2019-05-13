@@ -2435,36 +2435,45 @@ simp stack_args. econstructor.
   Abort.
 *)
 
-  Equations(noeqns) _isconv_args (Γ : context) (t : term)
+  Definition Aux' Γ t π1 π2 h2 :=
+     forall u1 u2 ρ1 ρ2
+       (h1' : wtp Γ u1 ρ1)
+       (h2' : wtp Γ u2 ρ2),
+       let x := mkpack (Reduction u2) Γ u1 ρ1 ρ2 h2' in
+       let y := mkpack Args Γ t π1 π2 h2 in
+       pzt x = pzt y /\
+       positionR (` (pps1 x)) (` (pps1 y)) ->
+       Ret (Reduction u2) Γ u1 ρ1 ρ2.
+
+  Equations(noeqns) _isconv_args' (Γ : context) (t : term)
             (π1 : stack) (h1 : wtp Γ t π1)
             (π2 : stack) (h2 : wtp Γ t π2)
-            (aux : Aux Args Γ t π1 π2 h2)
+            (aux : Aux' Γ t π1 π2 h2)
     : { b : bool | if b then ∥ Σ ;;; Γ |- zippx t π1 = zippx t π2 ∥ else True } :=
 
-    _isconv_args Γ t (App u1 ρ1) h1 (App u2 ρ2) h2 aux
-    with isconv_red_raw Γ Conv u1 (coApp t ρ1) u2 (coApp t ρ2) aux := {
-    | @exist true h1 with _isconv_args Γ (tApp t u1) ρ1 _ ρ2 _ _ := {
-      | @exist true h2 := _ ;
+    _isconv_args' Γ t (App u1 ρ1) h1 (App u2 ρ2) h2 aux
+    with aux u1 u2 (coApp t ρ1) (coApp t ρ2) _ _ _ Conv := {
+    | @exist true H1 with _isconv_args' Γ (tApp t u1) ρ1 _ ρ2 _ _ := {
+      | @exist true H2 := yes ;
       | @exist false _ := no
       } ;
     | @exist false _ := no
     } ;
 
-    _isconv_args Γ t ε h1 ε h2 aux := yes ;
+    _isconv_args' Γ t ε h1 ε h2 aux := yes ;
 
-    _isconv_args Γ t π1 h1 π2 h2 aux := no.
+    _isconv_args' Γ t π1 h1 π2 h2 aux := no.
   Next Obligation.
     constructor. apply conv_refl.
   Qed.
   Next Obligation.
-    unshelve eapply R_positionR.
-    - simpl. reflexivity.
-    - simpl. unfold xposition. eapply positionR_poscat.
-      cbn. eapply positionR_poscat. constructor.
+    split ; try reflexivity.
+    unfold xposition. eapply positionR_poscat.
+    cbn. eapply positionR_poscat. constructor.
   Qed.
   Next Obligation.
-    destruct h1 as [h1]. unfold zippx in h1.
-    simpl in h1.
+    destruct H1 as [H1]. unfold zippx in H1.
+    simpl in H1.
     apply zipx_welltyped.
     clear aux.
     apply welltyped_zipx in h2. cbn in h2.
@@ -2472,6 +2481,21 @@ simp stack_args. econstructor.
     admit.
   Admitted.
   Next Obligation.
+    (* I don't understand where it is coming from. *)
+    admit.
+  Admitted.
+  Next Obligation.
+    destruct H2 as [H2].
+    constructor.
+    unfold zippx. simpl.
+    unfold zippx in H2.
+    case_eq (decompose_stack ρ1). intros l1 θ1 e1.
+    case_eq (decompose_stack ρ2). intros l2 θ2 e2.
+    rewrite e1 in H2. rewrite e2 in H2.
+    cbn. exact H2.
+    rewrite mkApps_nested in H2.
+
+
     eapply aux.
     - eassumption.
     - assert (R_trans : forall x y z, R x y -> R y z -> R x z) by admit.
@@ -2482,6 +2506,12 @@ simp stack_args. econstructor.
       (* This doesn't work by transitivity. *)
       give_up.
   Abort.
+
+(* Equations(noeqns) _isconv_args (Γ : context) (t : term) *)
+(*             (π1 : stack) (h1 : wtp Γ t π1) *)
+(*             (π2 : stack) (h2 : wtp Γ t π2) *)
+(*             (aux : Aux Args Γ t π1 π2 h2) *)
+(*     : { b : bool | if b then ∥ Σ ;;; Γ |- zippx t π1 = zippx t π2 ∥ else True } := *)
 
   Equations(noeqns) _isconv_args (Γ : context) (t : term)
             (π1 : stack) (h1 : wtp Γ t π1)

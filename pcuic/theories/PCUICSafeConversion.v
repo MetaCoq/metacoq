@@ -2445,6 +2445,51 @@ simp stack_args. econstructor.
        positionR (` (pps1 x)) (` (pps1 y)) ->
        Ret (Reduction u2) Γ u1 ρ1 ρ2.
 
+  Lemma positionR_context_position_inv :
+    forall Γ p q,
+      positionR (context_position Γ ++ p) (context_position Γ ++ q) ->
+      positionR p q.
+  Proof.
+    intros Γ p q h.
+    revert p q h.
+    induction Γ as [| [na [b|] A] Γ ih ] ; intros p q h.
+    - assumption.
+    - cbn in h. rewrite <- 2!app_assoc in h. apply ih in h.
+      cbn in h. dependent destruction h.
+      assumption.
+    - cbn in h. rewrite <- 2!app_assoc in h. apply ih in h.
+      cbn in h. dependent destruction h.
+      assumption.
+  Qed.
+
+  Lemma positionR_xposition_inv :
+    forall Γ ρ1 ρ2,
+      positionR (xposition Γ ρ1) (xposition Γ ρ2) ->
+      positionR (stack_position ρ1) (stack_position ρ2).
+  Proof.
+    intros Γ ρ1 ρ2 h.
+    eapply positionR_context_position_inv.
+    eassumption.
+  Qed.
+
+  Lemma it_mkLambda_or_LetIn_inj :
+    forall Γ u v,
+      it_mkLambda_or_LetIn Γ u =
+      it_mkLambda_or_LetIn Γ v ->
+      u = v.
+  Proof.
+    intros Γ u v e.
+    revert u v e.
+    induction Γ as [| [na [b|] A] Γ ih ] ; intros u v e.
+    - assumption.
+    - simpl in e. cbn in e.
+      apply ih in e.
+      inversion e. reflexivity.
+    - simpl in e. cbn in e.
+      apply ih in e.
+      inversion e. reflexivity.
+  Qed.
+
   Equations(noeqns) _isconv_args' (Γ : context) (t : term)
             (π1 : stack) (h1 : wtp Γ t π1)
             (π2 : stack) (h2 : wtp Γ t π2)
@@ -2487,36 +2532,18 @@ simp stack_args. econstructor.
     - instantiate (1 := h2'). split.
       + simpl. assumption.
       + simpl.
-
-        Lemma positionR_context_position_inv :
-          forall Γ p q,
-            positionR (context_position Γ ++ p) (context_position Γ ++ q) ->
-            positionR p q.
-        Proof.
-          intros Γ p q h.
-          revert p q h.
-          induction Γ as [| [na [b|] A] Γ ih ] ; intros p q h.
-          - assumption.
-          - cbn in h. rewrite <- 2!app_assoc in h. apply ih in h.
-            cbn in h. dependent destruction h.
-            assumption.
-          - cbn in h. rewrite <- 2!app_assoc in h. apply ih in h.
-            cbn in h. dependent destruction h.
-            assumption.
-        Qed.
-
-        Lemma positionR_xposition_inv :
-          forall Γ ρ1 ρ2,
-            positionR (xposition Γ ρ1) (xposition Γ ρ2) ->
-            positionR (stack_position ρ1) (stack_position ρ2).
-        Proof.
-          intros Γ ρ1 ρ2 h.
-          eapply positionR_context_position_inv.
-          eassumption.
-        Qed.
-
+        unfold zipx in eq.
+        apply it_mkLambda_or_LetIn_inj in eq.
         apply positionR_xposition_inv in hp.
         unfold xposition. cbn. apply positionR_poscat.
+
+
+        (* dependent induction hp. *)
+        (* * rewrite H, H0. constructor. *)
+        (* * rewrite H, H0. cbn. constructor. *)
+        (*   destruct ρ0. all: try discriminate. *)
+        (*   -- cbn in eq. destruct ρ1. all: try discriminate. *)
+        (*      ++ cbn in H, H0. *)
 
         Lemma positionR_stack_app_r :
           forall ρ1 ρ2,

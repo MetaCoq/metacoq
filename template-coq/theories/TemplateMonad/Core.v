@@ -1,4 +1,5 @@
 From Coq Require Import Strings.String.
+Open Scope string_scope.
 From Template Require Import
      Ast uGraph AstUtils Common.
 
@@ -79,6 +80,6 @@ Definition tmQuoteRecDefinition id {A} (t : A)
   := tmBind (tmQuoteRec t) (tmDefinition id).
 Definition tmMkDefinition id (tm : term) : TemplateMonad unit
   := tmBind (tmUnquote tm)
-            (fun t' => tmBind (tmEval all (my_projT2 t'))
-            (fun t'' => tmBind (tmDefinition id t'')
+            (fun t' => tmBind (tmEval (unfold "Template.TemplateMonad.Common.my_projT2") (my_projT2 t'))
+            (fun t'' => tmBind (tmDefinitionRed id (Some (unfold "Template.TemplateMonad.Common.my_projT1")) t'')
             (fun _ => tmReturn tt))).

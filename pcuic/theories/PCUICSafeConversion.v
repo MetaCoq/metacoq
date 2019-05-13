@@ -2052,24 +2052,6 @@ Section Conversion.
       :: stack_args Γ (tApp t u2) ρ1 ρ2 h2 ;
     stack_args Γ t π1 π2 h2 := [].
 
-  (* TODO MOVE *)
-  Arguments skipn : simpl nomatch.
-
-  Lemma skipn_all2 :
-    forall {A n} (l : list A),
-      #|l| <= n ->
-      skipn n l = [].
-  Proof.
-    intros A n l h. revert l h.
-    induction n ; intros l h.
-    - destruct l.
-      + reflexivity.
-      + cbn in h. inversion h.
-    - destruct l.
-      + reflexivity.
-      + simpl. apply IHn. cbn in h. omega.
-  Qed.
-
   Lemma stack_args_noApp :
     forall Γ t θ1 θ2 h,
       isStackApp θ1 = false ->
@@ -2111,47 +2093,6 @@ Section Conversion.
   (*         simpl in IHn. *)
   (*         eapply IHn. *)
 
-  Lemma nat_rev_ind (max : nat) :
-    forall (P : nat -> Prop),
-      (forall n, n >= max -> P n) ->
-      (forall n, n < max -> P (S n) -> P n) ->
-      forall n, P n.
-  Proof.
-    intros P hmax hS.
-    assert (h : forall n, P (max - n)).
-    { intros n. induction n.
-      - apply hmax. omega.
-      - destruct (Nat.leb_spec0 max n).
-        + replace (max - S n) with 0 by omega.
-          replace (max - n) with 0 in IHn by omega.
-          assumption.
-        + replace (max - n) with (S (max - S n)) in IHn by omega.
-          apply hS.
-          * omega.
-          * assumption.
-    }
-    intro n.
-    destruct (Nat.leb_spec0 max n).
-    - apply hmax. omega.
-    - replace n with (max - (max - n)) by omega. apply h.
-  Qed.
-
-  Lemma strong_nat_ind :
-    forall (P : nat -> Prop),
-      (forall n, (forall m, m < n -> P m) -> P n) ->
-      forall n, P n.
-  Proof.
-    intros P h n.
-    assert (forall m, m < n -> P m).
-    { induction n ; intros m hh.
-      - omega.
-      - destruct (Nat.eqb_spec n m).
-        + subst. eapply h. assumption.
-        + eapply IHn. omega.
-    }
-    eapply h. assumption.
-  Qed.
-
   (* Lemma strong_nat_rev_ind (max : nat) : *)
   (*   forall (P : nat -> Prop), *)
   (*     (forall n, n >= max -> P n) -> *)
@@ -2188,12 +2129,6 @@ Section Conversion.
  (*    - apply hmax. omega. *)
  (*    - replace n with (max - (max - n)) by omega. apply h. *)
  (*  Qed. *)
-
-  Lemma skipn_nil :
-    forall {A} n, @skipn A n [] = [].
-  Proof.
-    intros A [| n] ; reflexivity.
-  Qed.
 
   Lemma stack_args_R_aux :
     forall Γ t l1 θ1 l2 θ2 n h2 h2',

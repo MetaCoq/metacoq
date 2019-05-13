@@ -1,8 +1,8 @@
-From Coq Require Import Bool Program List Ascii String OrderedType Lia Omega.
+From Coq Require Import Bool Program List Ascii String OrderedType Arith Lia Omega
+     ssreflect.
+Global Set Asymmetric Patterns.
+
 Import ListNotations.
-Require Import ssreflect.
-Set Asymmetric Patterns.
-Require Import Arith.
 
 (* Use \sum to input ∑ in Company Coq (it is not a sigma Σ). *)
 Notation "'∑' x .. y , p" := (sigT (fun x => .. (sigT (fun y => p%type)) ..))
@@ -15,15 +15,16 @@ Notation "( x ; y ; z )" := (x ; ( y ; z)).
 Notation "( x ; y ; z ; t )" := (x ; ( y ; (z ; t))).
 Notation "( x ; y ; z ; t ; u )" := (x ; ( y ; (z ; (t ; u)))).
 Notation "( x ; y ; z ; t ; u ; v )" := (x ; ( y ; (z ; (t ; (u ; v))))).
-Notation "x .1" := (@projT1 _ _ x) (at level 3, format "x '.1'").
-Notation "x .2" := (@projT2 _ _ x) (at level 3, format "x '.2'").
+Notation "x .π1" := (@projT1 _ _ x) (at level 3, format "x '.π1'").
+Notation "x .π2" := (@projT2 _ _ x) (at level 3, format "x '.π2'").
 
 Notation "x × y" := (prod x y )(at level 80, right associativity).
 
 Notation "#| l |" := (List.length l) (at level 0, l at level 99, format "#| l |").
 
+Notation "'eta_compose'" := (fun g f x => g (f x)).
 (* \circ *)
-Notation "g ∘ f" := (fun x => g (f x)).
+Notation "g ∘ f" := (eta_compose g f).
 
 (** We cannot use ssrbool as it breaks extraction. *)
 Coercion is_true : bool >-> Sortclass.
@@ -50,6 +51,14 @@ Record isEquiv (A B : Type) :=
 Infix "<~>" := isEquiv (at level 90).
 
 Record squash (A : Type) : Prop := sq { _ : A }.
+
+Notation "∥ T ∥" := (squash T) (at level 10).
+Arguments sq {_} _.
+
+Ltac sq :=
+  repeat match goal with
+  | H : ∥ _ ∥ |- _ => destruct H
+  end; try eapply sq.
 
 Definition on_snd {A B C} (f : B -> C) (p : A * B) :=
   (fst p, f (snd p)).
@@ -1618,21 +1627,6 @@ Definition compare_bool b1 b2 :=
 
 Definition bool_lt' b1 b2 := match compare_bool b1 b2 with Lt => true | _ => false end.
 
-Definition non_empty_list (A : Set) := {l : list A & [] <> l}.
-
-Definition make_non_empty_list {A} x l : non_empty_list A
-  := (x :: l; @nil_cons _ _ _).
-
-Lemma map_not_empty {A B} (f : A -> B) l : map f l <> [] -> l <> [].
-Proof.
-  intro H; destruct l; intro e; now apply H.
-Qed.
-
-Lemma not_empty_map {A B} (f : A -> B) l : l <> [] -> map f l <> [].
-Proof.
-  intro H; destruct l; intro e; now apply H.
-Qed.
-
 Lemma Forall2_nth :
   forall A B P l l' n (d : A) (d' : B),
     Forall2 P l l' ->
@@ -1681,4 +1675,127 @@ Proof.
   - destruct h.
     + cbn in e. discriminate.
     + cbn in e. apply IHn with (l' := l') in e ; assumption.
+Qed.
+
+
+(** * Non Empty List *)
+Module NEL.
+
+  Inductive t (A : Set) :=
+  | sing : A -> t A
+  | cons : A -> t A -> t A.
+
+  Arguments sing {A} _.
+  Arguments cons {A} _ _.
+
+  Infix "::" := cons : nel_scope.
+  Notation "[ x ]" := (sing x) : nel_scope.
+  Delimit Scope nel_scope with nel.
+  Bind Scope nel_scope with t.
+
+  Local Open Scope nel_scope.
+
+  Fixpoint length {A} (l : t A) : nat :=
+    match l with
+    | [ _ ] => 1
+    | _ :: l' => S (length l')
+    end.
+
+  Notation "[ x ; y ; .. ; z ; e ]" :=
+    (cons x (cons y .. (cons z (sing e)) ..)) : nel_scope.
+
+  Fixpoint to_list {A} (l : t A) : list A :=
+    match l with
+    | [x] => [x]
+    | x :: l => x :: (to_list l)
+    end.
+
+  Fixpoint map {A B : Set} (f : A -> B) (l : t A) : t B :=
+    match l with
+    | [x] => [f x]
+    | x :: l => f x :: map f l
+    end.
+
+  Fixpoint app {A} (l l' : t A) : t A :=
+    match l with
+    | [x] => x :: l'
+    | x :: l => x :: (app l l')
+    end.
+
+  Infix "++" := app : nel_scope.
+
+  Fixpoint app_r {A : Set} (l : list A) (l' : t A) : t A :=
+    match l with
+    | [] => l'
+    | (x :: l)%list => x :: app_r l l'
+    end.
+
+  Fixpoint cons' {A : Set} (x : A) (l : list A) : t A :=
+    match l with
+    | [] => [x]
+    | (y :: l)%list => x :: cons' y l
+    end.
+
+  Lemma cons'_spec {A : Set} (x : A) l
+    : to_list (cons' x l) = (x :: l)%list.
+  Proof.
+    revert x; induction l; simpl.
+    reflexivity.
+    intro x; now rewrite IHl.
+  Qed.
+
+  Fixpoint fold_left {A} {B : Set} (f : A -> B -> A) (l : t B) (a0 : A) : A :=
+    match l with
+    | [b] => f a0 b
+    | b :: l => fold_left f l (f a0 b)
+    end.
+
+  Fixpoint forallb {A : Set} (f : A -> bool) (l : t A) :=
+    match l with
+    | [x] => f x
+    | hd :: tl => f hd && forallb f tl
+    end.
+
+  Fixpoint forallb2 {A : Set} (f : A -> A -> bool) (l l' : t A) :=
+    match l, l' with
+    | [x], [x'] => f x x'
+    | hd :: tl, hd' :: tl' => f hd hd' && forallb2 f tl tl'
+    | _, _ => false
+    end.
+
+  Lemma map_to_list {A B : Set} (f : A -> B) (l : t A)
+    : to_list (map f l) = List.map f (to_list l).
+  Proof.
+    induction l; cbn; congruence.
+  Qed.
+
+End NEL.
+
+Definition non_empty_list := NEL.t.
+
+
+Lemma iff_forall {A} B C (H : forall x : A, B x <-> C x)
+  : (forall x, B x) <-> (forall x, C x).
+  firstorder.
+Defined.
+
+Lemma iff_ex {A} B C (H : forall x : A, B x <-> C x)
+  : (ex B) <-> (ex C).
+  firstorder.
+Defined.
+
+Lemma if_true_false (b : bool) : (if b then true else false) = b.
+  destruct b; reflexivity.
+Qed.
+
+Lemma not_empty_map {A B} (f : A -> B) l : l <> [] -> map f l <> [].
+Proof.
+  intro H; destruct l; intro e; now apply H.
+Qed.
+
+Lemma Z_of_pos_alt p : Z.of_nat (Pos.to_nat p) = Z.pos p.
+Proof.
+  induction p using Pos.peano_ind.
+  rewrite Pos2Nat.inj_1. reflexivity.
+  rewrite Pos2Nat.inj_succ. cbn. f_equal. lia.
 Qed.

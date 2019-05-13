@@ -1,5 +1,5 @@
 From Coq Require Import Strings.String.
-From MetaCoq.Template Require Import Ast uGraph.
+From MetaCoq.Template Require Import Ast.
 
 Set Universe Polymorphism.
 Set Universe Minimization ToSet.
@@ -34,7 +34,7 @@ Record TMInstance@{t u r} :=
 
 (* Quote the body of a definition or inductive. Its name need not be fully quaified *)
 ; tmQuoteInductive : kername -> TemplateMonad mutual_inductive_body
-; tmQuoteUniverses : TemplateMonad uGraph.t
+; tmQuoteUniverses : TemplateMonad constraints
 ; tmQuoteConstant : kername -> bool (* bypass opacity? *) -> TemplateMonad constant_entry
 (* unquote before making the definition *)
 (* FIXME take an optional universe context as well *)

@@ -64,7 +64,7 @@ struct
   let pkg_univ = ["MetaCoq";"Template";"Universes"]
   let pkg_level = ["MetaCoq";"Template";"Universes";"Level"]
   let pkg_variance = ["MetaCoq";"Template";"Universes";"Variance"]
-  let pkg_ugraph = ["MetaCoq";"Template";"kernel";"uGraph"]
+  let pkg_ugraph = ["MetaCoq";"Template";"uGraph"]
   let ext_pkg_univ s = List.append pkg_univ [s]
 
   let r_base_reify = resolve_symbol pkg_base_reify
@@ -86,6 +86,8 @@ struct
   let tlist = resolve_symbol pkg_datatypes "list"
   let c_nil = resolve_symbol pkg_datatypes "nil"
   let c_cons = resolve_symbol pkg_datatypes "cons"
+  let nel_sing = resolve_symbol ["MetaCoq";"Template";"utils";"NEL"] "sing"
+  let nel_cons = resolve_symbol ["MetaCoq";"Template";"utils";"NEL"] "cons"
   let prod_type = resolve_symbol pkg_datatypes "prod"
   let sum_type = resolve_symbol pkg_datatypes "sum"
   let option_type = resolve_symbol pkg_datatypes "option"
@@ -109,14 +111,15 @@ struct
   let kRevertCast = r_base_reify "RevertCast"
   let lProp = resolve_symbol pkg_level "lProp"
   let lSet = resolve_symbol pkg_level "lSet"
-  let sfProp = r_base_reify "InProp"
-  let sfSet = r_base_reify "InSet"
-  let sfType = r_base_reify "InType"
+  let tsort_family = resolve_symbol pkg_univ "sort_family"
+  let lfresh_universe = resolve_symbol pkg_univ "fresh_universe"
+  let sfProp = resolve_symbol pkg_univ "InProp"
+  let sfSet = resolve_symbol pkg_univ "InSet"
+  let sfType = resolve_symbol pkg_univ "InType"
   let tident = r_base_reify "ident"
   let tname = r_base_reify "name"
   let tIndTy = r_base_reify "inductive"
   let tmkInd = r_base_reify "mkInd"
-  let tsort_family = r_base_reify "sort_family"
   let tmkdecl = r_reify "mkdecl"
   let (tTerm,tRel,tVar,tEvar,tSort,tCast,tProd,
        tLambda,tLetIn,tApp,tCase,tFix,tConstructor,tConst,tInd,tCoFix,tProj) =
@@ -147,8 +150,6 @@ struct
   let tConstraintSetempty = lazy (Universes.constr_of_global (Coqlib.find_reference "template coq bug" (ext_pkg_univ "ConstraintSet") "empty"))
   let tConstraintSetadd = lazy (Universes.constr_of_global (Coqlib.find_reference "template coq bug" (ext_pkg_univ "ConstraintSet") "add"))
   let tmake_univ_constraint = resolve_symbol pkg_univ "make_univ_constraint"
-  let tinit_graph = resolve_symbol pkg_ugraph "init_graph"
-  let tadd_global_constraints = resolve_symbol pkg_ugraph  "add_global_constraints"
 
   let (tdef,tmkdef) = (r_base_reify "def", r_base_reify "mkdef")
   let (tLocalDef,tLocalAssum,tlocal_entry) = (r_reify "LocalDef", r_reify "LocalAssum", r_reify "local_entry")
@@ -215,6 +216,19 @@ struct
       | _ -> bad_term_verb trm "unquote_list"
     else
       not_supported_verb trm "unquote_list"
+
+  let rec unquote_non_empty_list trm =
+    let (h,args) = app_full trm [] in
+    if constr_equall h nel_sing then
+      match args with
+        _ :: x :: [] -> [x]
+      | _ -> bad_term_verb trm "unquote_non_empty_list"
+    else if constr_equall h nel_cons then
+      match args with
+        _ :: x :: xs :: [] -> x :: unquote_non_empty_list xs
+      | _ -> bad_term_verb trm "unquote_non_empty_list"
+    else
+      not_supported_verb trm "unquote_non_empty_list"
 
   (* Unquote Coq nat to OCaml int *)
   let rec unquote_nat trm =
@@ -435,10 +449,7 @@ struct
       quote_abstract_univ_context_aux (CumulativityInfo.univ_context info) (* FIXME lossy *)
 
   let quote_ugraph (g : UGraph.t) =
-    let inst' = quote_univ_instance Univ.Instance.empty in
-    let const' = quote_univ_constraints (UGraph.constraints_of_universes g) in
-    let uctx = constr_mkApp (tUContextmake, [|inst' ; const'|]) in
-    constr_mkApp (tadd_global_constraints, [|constr_mkApp (cMonomorphic_ctx, [| uctx |]); Lazy.force tinit_graph|])
+    quote_univ_constraints (UGraph.constraints_of_universes g)
 
   let quote_sort s =
     quote_universe (Sorts.univ_of_sort s)

@@ -115,18 +115,20 @@ struct
 
 
   let unquote_universe evm trm (* of type universe *) =
-    let (trm, _) = unquote_sigt trm in
-    let levels = List.map unquote_pair (unquote_list trm) in
-    match levels with
-    | [] -> if !strict_unquote_universe_mode then
-              CErrors.user_err ~hdr:"unquote_universe" (str "It is not possible to unquote an empty universe in Strict Unquote Universe Mode.")
-            else
-              let evm, u = Evd.new_univ_variable (Evd.UnivFlexible false) evm in
-              Feedback.msg_info (str"Fresh universe " ++ Universe.pr u ++ str" was added to the context.");
-              evm, u
-    | (l,b)::q -> List.fold_left (fun (evm,u) (l,b) -> let evm, u' = unquote_level_expr evm l b
-                                                       in evm, Univ.Universe.sup u u')
-                    (unquote_level_expr evm l b) q
+    if constr_equall trm lfresh_universe then
+      if !strict_unquote_universe_mode then
+        CErrors.user_err ~hdr:"unquote_universe" (str "It is not possible to unquote a fresh universe in Strict Unquote Universe Mode.")
+      else
+        let evm, u = Evd.new_univ_variable (Evd.UnivFlexible false) evm in
+        Feedback.msg_info (str"Fresh universe " ++ Universe.pr u ++ str" was added to the context.");
+        evm, u
+    else
+      let levels = List.map unquote_pair (unquote_non_empty_list trm) in
+      match levels with
+      | [] -> assert false
+      | (l,b)::q -> List.fold_left (fun (evm,u) (l,b) -> let evm, u' = unquote_level_expr evm l b
+                                     in evm, Univ.Universe.sup u u')
+                      (unquote_level_expr evm l b) q
 
   let unquote_universe_instance evm trm (* of type universe_instance *) =
     let l = unquote_list trm in

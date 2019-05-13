@@ -43,7 +43,7 @@ Section TypeOf.
     | tVar n => raise (UnboundVar n)
     | tEvar ev args => raise (UnboundEvar ev)
 
-    | tSort s => ret (tSort (try_suc s))
+    | tSort s => ret (tSort (Universe.try_suc s))
 
     | tProd n t b =>
       s1 <- type_of_as_sort type_of Γ t ;;

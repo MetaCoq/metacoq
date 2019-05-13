@@ -1365,8 +1365,8 @@ Lemma subst_eq_term `{checker_flags} ϕ n k T U :
 Proof.
   intros Hleq.
   eapply subst_eq_term_upto_univ.
-  - intro. eapply eq_universe'_refl.
-  - intro. eapply eq_universe'_refl.
+  - intro. eapply eq_universe_refl.
+  - intro. eapply eq_universe_refl.
   - assumption.
 Qed.
 
@@ -1376,8 +1376,8 @@ Lemma subst_leq_term `{checker_flags} ϕ n k T U :
 Proof.
   intros Hleq.
   eapply subst_eq_term_upto_univ.
-  - intro. eapply eq_universe'_refl.
-  - intro. eapply leq_universe'_refl.
+  - intro. eapply eq_universe_refl.
+  - intro. eapply leq_universe_refl.
   - assumption.
 Qed.
 

@@ -108,17 +108,12 @@ of the TemplateMonad also allow partially qualified names.
 Options
 -------
 
-`Set / Unset Strict Unquote Universe Mode`. When this mode is on (on by default):
+`Set / Unset Strict Unquote Universe Mode`. When this mode is on,
+the unquoting of a universe level fails if this level does not exists.
+Otherwise the level is added to the current context. It is on by default.
 
-- the unquoting of a universe level fails if this level does not exists
-
-- the unquoting of a sort which is an empty list fails
-
-Otherwise:
-
-- the level is added to the current context
-
-- or a fresh level is added.
+There is also an "opaque" universe `fresh_universe` which is unquoted to
+a fresh level when `Strict Unquote Universe Mode` is off.
 
 Examples of plugins
 -------------------

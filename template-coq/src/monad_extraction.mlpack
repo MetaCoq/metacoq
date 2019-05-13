@@ -12,7 +12,6 @@ BinPosDef
 BinPos
 Bool
 Common
-Config0
 Datatypes
 DecidableType
 Decimal
@@ -29,7 +28,6 @@ OrdersTac
 PeanoNat
 Specif
 String0
-UGraph0
 
 
 

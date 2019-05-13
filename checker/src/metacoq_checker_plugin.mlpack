@@ -17,6 +17,14 @@ DecidableType
 Orders
 OrdersTac
 OrderedType0
+OrdersLists
+OrdersFacts
+MSetInterface
+MSetFacts
+MSetList
+MSetDecide
+MSetProperties
+Compare_dec
 MSetWeakList
 FMapWeakList
 BinNums
@@ -34,6 +42,7 @@ Denoter
 Equalities
 Extractable
 Logic0
+WGraph
 UGraph0
 
 Tm_util

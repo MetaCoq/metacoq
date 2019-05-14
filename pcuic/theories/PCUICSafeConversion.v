@@ -2435,16 +2435,6 @@ simp stack_args. econstructor.
   Abort.
 *)
 
-  Definition Aux' Γ t π1 π2 h2 :=
-     forall u1 u2 ρ1 ρ2
-       (h1' : wtp Γ u1 ρ1)
-       (h2' : wtp Γ u2 ρ2),
-       let x := mkpack (Reduction u2) Γ u1 ρ1 ρ2 h2' in
-       let y := mkpack Args Γ t π1 π2 h2 in
-       pzt x = pzt y /\
-       positionR (` (pps1 x)) (` (pps1 y)) ->
-       Ret (Reduction u2) Γ u1 ρ1 ρ2.
-
   Lemma positionR_context_position_inv :
     forall Γ p q,
       positionR (context_position Γ ++ p) (context_position Γ ++ q) ->
@@ -2490,6 +2480,102 @@ simp stack_args. econstructor.
       inversion e. reflexivity.
   Qed.
 
+  (* Maybe not necessary, just one migh suffice! *)
+  Fixpoint coappstack l π :=
+    match l with
+    | [] => π
+    | u :: l => coApp u (coappstack l π)
+    end.
+
+  Lemma stack_position_coappstack :
+    forall args ρ,
+      stack_position (coappstack args ρ) =
+      stack_position ρ ++ list_make #|args| app_r.
+  Proof.
+    intros args ρ. revert ρ.
+    induction args ; intros ρ.
+    - simpl. rewrite app_nil_r. reflexivity.
+    - simpl. rewrite IHargs. rewrite <- app_assoc.
+      rewrite list_make_app_r. reflexivity.
+  Qed.
+
+  (* Lemma zipc_coappstack : *)
+  (*   forall t args ρ, *)
+  (*     zipc t (coappstack args ρ) = *)
+  (*     zipc () ρ *)
+
+  Definition Aux' Γ t l1 π1 π2 h2 :=
+     forall u1 u2 ca1 a1 ρ2
+       (h1' : wtp Γ u1 (coappstack ca1 (appstack a1 π1)))
+       (h2' : wtp Γ u2 ρ2),
+       let x := mkpack (Reduction u2) Γ u1 (coappstack ca1 (appstack a1 π1)) ρ2 h2' in
+       let y := mkpack Args Γ t (appstack l1 π1) π2 h2 in
+       pzt x = pzt y /\
+       positionR (` (pps1 x)) (` (pps1 y)) ->
+       Ret (Reduction u2) Γ u1 (coappstack ca1 (appstack a1 π1)) ρ2.
+
+  Equations(noeqns) _isconv_args' (Γ : context) (t : term)
+            (l1 : list term) (π1 : stack) (h1 : wtp Γ t (appstack l1 π1))
+            (l2 : list term) (π2 : stack) (h2 : wtp Γ t (appstack l2 π2))
+            (aux : Aux' Γ t l1 π1 (appstack l2 π2) h2)
+    : { b : bool | if b then ∥ Σ ;;; Γ |- zippx t (appstack l1 π1) = zippx t (appstack l2 π2) ∥ else True } :=
+    _isconv_args' Γ t (u1 :: l1) π1 h1 (u2 :: l2) π2 h2 aux
+    (* Maybe an extra argument and coappstack? *)
+    (* with aux u1 u2 (coApp t (appstack l1 π1)) (coApp t (appstack l2 π2)) _ _ _ Conv := { *)
+    with aux u1 u2 [t] l1 (coApp t (appstack l2 π2)) _ _ _ Conv := {
+    | @exist true H1 with _isconv_args' Γ (tApp t u1) l1 π1 h1 l2 π2 _ _ := {
+      | @exist true H2 := yes ;
+      | @exist false _ := no
+      } ;
+    | @exist false _ := no
+    } ;
+
+    _isconv_args' Γ t [] ε h1 [] ε h2 aux := yes ;
+
+    _isconv_args' Γ t l1 π1 h1 l2 π2 h2 aux := no.
+  Next Obligation.
+    constructor. apply conv_refl.
+  Qed.
+  Next Obligation.
+    split ; [ reflexivity |].
+    unfold xposition. eapply positionR_poscat.
+    cbn. eapply positionR_poscat. constructor.
+  Qed.
+  Next Obligation.
+    destruct H1 as [H1]. unfold zippx in H1.
+    simpl in H1. rewrite 2!stack_context_appstack in H1.
+    apply zipx_welltyped.
+    clear aux.
+    apply welltyped_zipx in h2. cbn in h2.
+    (* We need subject conversion here it woud seem *)
+    admit.
+  Admitted.
+  Next Obligation.
+    simpl in H. destruct H as [eq hp].
+    eapply aux.
+    - assumption.
+    - instantiate (1 := h2'). simpl. split.
+      + assumption.
+      + subst x y.
+        unfold zipx in eq.
+        apply it_mkLambda_or_LetIn_inj in eq.
+        (* rewrite zipc_coaapstack. *)
+        apply positionR_xposition_inv in hp.
+        unfold xposition. cbn. apply positionR_poscat.
+        rewrite stack_position_coappstack.
+        rewrite 2!stack_position_appstack.
+        rewrite <- !app_assoc.
+
+  Definition Aux' Γ t π1 π2 h2 :=
+     forall u1 u2 ρ1 ρ2
+       (h1' : wtp Γ u1 ρ1)
+       (h2' : wtp Γ u2 ρ2),
+       let x := mkpack (Reduction u2) Γ u1 ρ1 ρ2 h2' in
+       let y := mkpack Args Γ t π1 π2 h2 in
+       pzt x = pzt y /\
+       positionR (` (pps1 x)) (` (pps1 y)) ->
+       Ret (Reduction u2) Γ u1 ρ1 ρ2.
+
   Equations(noeqns) _isconv_args' (Γ : context) (t : term)
             (π1 : stack) (h1 : wtp Γ t π1)
             (π2 : stack) (h2 : wtp Γ t π2)
@@ -2529,9 +2615,9 @@ simp stack_args. econstructor.
     simpl in H. destruct H as [eq hp].
     eapply aux.
     - assumption.
-    - instantiate (1 := h2'). split.
-      + simpl. assumption.
-      + simpl. subst x y.
+    - instantiate (1 := h2'). simpl. split.
+      + assumption.
+      + subst x y.
         unfold zipx in eq.
         apply it_mkLambda_or_LetIn_inj in eq.
         apply positionR_xposition_inv in hp.

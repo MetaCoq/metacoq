@@ -2480,30 +2480,6 @@ simp stack_args. econstructor.
       inversion e. reflexivity.
   Qed.
 
-  (* Maybe not necessary, just one migh suffice! *)
-  Fixpoint coappstack l π :=
-    match l with
-    | [] => π
-    | u :: l => coApp u (coappstack l π)
-    end.
-
-  Lemma stack_position_coappstack :
-    forall args ρ,
-      stack_position (coappstack args ρ) =
-      stack_position ρ ++ list_make #|args| app_r.
-  Proof.
-    intros args ρ. revert ρ.
-    induction args ; intros ρ.
-    - simpl. rewrite app_nil_r. reflexivity.
-    - simpl. rewrite IHargs. rewrite <- app_assoc.
-      rewrite list_make_app_r. reflexivity.
-  Qed.
-
-  (* Lemma zipc_coappstack : *)
-  (*   forall t args ρ, *)
-  (*     zipc t (coappstack args ρ) = *)
-  (*     zipc () ρ *)
-
   Definition Aux' Γ t args l1 π1 π2 h2 :=
      forall u1 u2 ca1 a1 ρ2
        (h1' : wtp Γ u1 (coApp (mkApps t ca1) (appstack a1 π1)))
@@ -2521,8 +2497,6 @@ simp stack_args. econstructor.
             (aux : Aux' Γ t args l1 π1 (appstack l2 π2) h2)
     : { b : bool | if b then ∥ Σ ;;; Γ |- zippx (mkApps t args) (appstack l1 π1) = zippx (mkApps t args) (appstack l2 π2) ∥ else True } :=
     _isconv_args' Γ t args (u1 :: l1) π1 h1 (u2 :: l2) π2 h2 aux
-    (* Maybe an extra argument and coappstack? *)
-    (* with aux u1 u2 (coApp t (appstack l1 π1)) (coApp t (appstack l2 π2)) _ _ _ Conv := { *)
     with aux u1 u2 args l1 (coApp (mkApps t args) (appstack l2 π2)) _ _ _ _ Conv := {
     | @exist true H1 with _isconv_args' Γ t (args ++ [u1]) l1 π1 _ l2 π2 _ _ := {
       | @exist true H2 := yes ;
@@ -2564,16 +2538,9 @@ simp stack_args. econstructor.
     - instantiate (1 := h2'). simpl. split.
       + rewrite <- mkApps_nested in eq. assumption.
       + subst x y.
-        (* unfold zipx in eq. *)
-        (* apply it_mkLambda_or_LetIn_inj in eq. *)
-        (* rewrite zipc_coaapstack. *)
-        apply positionR_xposition_inv in hp.
         unfold xposition. cbn. apply positionR_poscat.
-        (* rewrite stack_position_coappstack. *)
         rewrite 2!stack_position_appstack.
         rewrite <- !app_assoc. apply positionR_poscat.
-        cbn in hp. rewrite 2!stack_position_appstack in hp.
-        rewrite <- !app_assoc in hp.
         assert (h : forall n m, positionR (list_make n app_l ++ [app_r]) (list_make m app_l)).
         { clear. intro n. induction n ; intro m.
           - destruct m ; constructor.
@@ -2605,7 +2572,7 @@ simp stack_args. econstructor.
     (* Not clear how to conclude, but it seems fine. *)
     (* eapply conv_trans ; try eassumption. *)
     admit.
-  Admitted.
+  Fail Admitted.
 
   Definition Aux' Γ t π1 π2 h2 :=
      forall u1 u2 ρ1 ρ2

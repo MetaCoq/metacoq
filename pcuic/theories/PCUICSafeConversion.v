@@ -2504,35 +2504,36 @@ simp stack_args. econstructor.
   (*     zipc t (coappstack args ρ) = *)
   (*     zipc () ρ *)
 
-  Definition Aux' Γ t l1 π1 π2 h2 :=
+  Definition Aux' Γ t args l1 π1 π2 h2 :=
      forall u1 u2 ca1 a1 ρ2
-       (h1' : wtp Γ u1 (coappstack ca1 (appstack a1 π1)))
+       (h1' : wtp Γ u1 (coApp (mkApps t ca1) (appstack a1 π1)))
        (h2' : wtp Γ u2 ρ2),
-       let x := mkpack (Reduction u2) Γ u1 (coappstack ca1 (appstack a1 π1)) ρ2 h2' in
-       let y := mkpack Args Γ t (appstack l1 π1) π2 h2 in
+       let x := mkpack (Reduction u2) Γ u1 (coApp (mkApps t ca1) (appstack a1 π1)) ρ2 h2' in
+       let y := mkpack Args Γ (mkApps t args) (appstack l1 π1) π2 h2 in
+       S #|ca1| + #|a1| = #|args| + #|l1| ->
        pzt x = pzt y /\
        positionR (` (pps1 x)) (` (pps1 y)) ->
-       Ret (Reduction u2) Γ u1 (coappstack ca1 (appstack a1 π1)) ρ2.
+       Ret (Reduction u2) Γ u1 (coApp (mkApps t ca1) (appstack a1 π1)) ρ2.
 
-  Equations(noeqns) _isconv_args' (Γ : context) (t : term)
-            (l1 : list term) (π1 : stack) (h1 : wtp Γ t (appstack l1 π1))
-            (l2 : list term) (π2 : stack) (h2 : wtp Γ t (appstack l2 π2))
-            (aux : Aux' Γ t l1 π1 (appstack l2 π2) h2)
-    : { b : bool | if b then ∥ Σ ;;; Γ |- zippx t (appstack l1 π1) = zippx t (appstack l2 π2) ∥ else True } :=
-    _isconv_args' Γ t (u1 :: l1) π1 h1 (u2 :: l2) π2 h2 aux
+  Equations(noeqns) _isconv_args' (Γ : context) (t : term) (args : list term)
+            (l1 : list term) (π1 : stack) (h1 : wtp Γ (mkApps t args) (appstack l1 π1))
+            (l2 : list term) (π2 : stack) (h2 : wtp Γ (mkApps t args) (appstack l2 π2))
+            (aux : Aux' Γ t args l1 π1 (appstack l2 π2) h2)
+    : { b : bool | if b then ∥ Σ ;;; Γ |- zippx (mkApps t args) (appstack l1 π1) = zippx (mkApps t args) (appstack l2 π2) ∥ else True } :=
+    _isconv_args' Γ t args (u1 :: l1) π1 h1 (u2 :: l2) π2 h2 aux
     (* Maybe an extra argument and coappstack? *)
     (* with aux u1 u2 (coApp t (appstack l1 π1)) (coApp t (appstack l2 π2)) _ _ _ Conv := { *)
-    with aux u1 u2 [t] l1 (coApp t (appstack l2 π2)) _ _ _ Conv := {
-    | @exist true H1 with _isconv_args' Γ (tApp t u1) l1 π1 h1 l2 π2 _ _ := {
+    with aux u1 u2 args l1 (coApp (mkApps t args) (appstack l2 π2)) _ _ _ _ Conv := {
+    | @exist true H1 with _isconv_args' Γ t (args ++ [u1]) l1 π1 _ l2 π2 _ _ := {
       | @exist true H2 := yes ;
       | @exist false _ := no
       } ;
     | @exist false _ := no
     } ;
 
-    _isconv_args' Γ t [] ε h1 [] ε h2 aux := yes ;
+    _isconv_args' Γ t args [] ε h1 [] ε h2 aux := yes ;
 
-    _isconv_args' Γ t l1 π1 h1 l2 π2 h2 aux := no.
+    _isconv_args' Γ t args l1 π1 h1 l2 π2 h2 aux := no.
   Next Obligation.
     constructor. apply conv_refl.
   Qed.
@@ -2542,29 +2543,69 @@ simp stack_args. econstructor.
     cbn. eapply positionR_poscat. constructor.
   Qed.
   Next Obligation.
+    rewrite <- mkApps_nested. assumption.
+  Qed.
+  Next Obligation.
+    rewrite <- mkApps_nested.
     destruct H1 as [H1]. unfold zippx in H1.
     simpl in H1. rewrite 2!stack_context_appstack in H1.
     apply zipx_welltyped.
     clear aux.
-    apply welltyped_zipx in h2. cbn in h2.
+    apply welltyped_zipx in h2. cbn in h2. cbn.
     (* We need subject conversion here it woud seem *)
     admit.
   Admitted.
   Next Obligation.
-    simpl in H. destruct H as [eq hp].
+    simpl in H0. destruct H0 as [eq hp].
+    rewrite app_length in H. cbn in H.
     eapply aux.
     - assumption.
+    - cbn. omega.
     - instantiate (1 := h2'). simpl. split.
-      + assumption.
+      + rewrite <- mkApps_nested in eq. assumption.
       + subst x y.
-        unfold zipx in eq.
-        apply it_mkLambda_or_LetIn_inj in eq.
+        (* unfold zipx in eq. *)
+        (* apply it_mkLambda_or_LetIn_inj in eq. *)
         (* rewrite zipc_coaapstack. *)
         apply positionR_xposition_inv in hp.
         unfold xposition. cbn. apply positionR_poscat.
-        rewrite stack_position_coappstack.
+        (* rewrite stack_position_coappstack. *)
         rewrite 2!stack_position_appstack.
-        rewrite <- !app_assoc.
+        rewrite <- !app_assoc. apply positionR_poscat.
+        cbn in hp. rewrite 2!stack_position_appstack in hp.
+        rewrite <- !app_assoc in hp.
+        assert (h : forall n m, positionR (list_make n app_l ++ [app_r]) (list_make m app_l)).
+        { clear. intro n. induction n ; intro m.
+          - destruct m ; constructor.
+          - destruct m.
+            + constructor.
+            + cbn. constructor. apply IHn.
+        }
+        rewrite <- list_make_app_r.
+        apply (h #|a1| (S #|l1|)).
+  Qed.
+  Next Obligation.
+    destruct H1 as [H1]. destruct H2 as [H2].
+    constructor.
+    unfold zippx. simpl.
+    rewrite 2!decompose_stack_appstack. simpl.
+    unfold zippx in H1. simpl in H1.
+    unfold zippx in H2. rewrite 2!decompose_stack_appstack in H2.
+
+
+    (* case_eq (decompose_stack ρ1). intros l1 θ1 e1. *)
+    (* case_eq (decompose_stack ρ2). intros l2 θ2 e2. *)
+    (* simpl in H1. *)
+    (* rewrite e1 in H2. rewrite e2 in H2. *)
+    (* cbn. *)
+    (* pose proof (decompose_stack_eq _ _ _ e1) as eq1. *)
+    (* pose proof (decompose_stack_eq _ _ _ e2) as eq2. *)
+    (* rewrite eq1 in H1. rewrite eq2 in H1. *)
+    (* rewrite !stack_context_appstack in H1. *)
+    (* Not clear how to conclude, but it seems fine. *)
+    (* eapply conv_trans ; try eassumption. *)
+    admit.
+  Admitted.
 
   Definition Aux' Γ t π1 π2 h2 :=
      forall u1 u2 ρ1 ρ2

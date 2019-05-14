@@ -40,18 +40,19 @@ val tmEval : reduction_strategy -> term -> term tm
 val tmDefinition : ident -> ?poly:bool -> term option -> term -> kername tm
 val tmAxiom : ident -> ?poly:bool -> term -> kername tm
 val tmLemma : ident -> ?poly:bool -> term -> kername tm
+val tmInductive : mutual_inductive_entry -> unit tm
 
 val tmFreshName : ident -> ident tm
 
 val tmAbout : qualid -> global_reference option tm
 val tmAboutString : string -> global_reference option tm
+val tmDependencies : global_reference -> ?bypass:bool -> global_reference list tm
+
 val tmCurrentModPath : Names.ModPath.t tm
 
 val tmQuoteInductive : kername -> (Names.MutInd.t * mutual_inductive_body) option tm
 val tmQuoteUniverses : UGraph.t tm
 val tmQuoteConstant : kername -> bool -> constant_entry tm
-
-val tmInductive : mutual_inductive_entry -> unit tm
 
 val tmExistingInstance : kername -> unit tm
 val tmInferInstance : term -> term option tm

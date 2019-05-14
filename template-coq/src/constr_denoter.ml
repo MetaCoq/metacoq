@@ -82,10 +82,6 @@ struct
       with Not_found ->
         CErrors.user_err ~hdr:"unquote_level" (str ("Level "^s^" is not a declared level."))
 
-
-
-
-
   let unquote_level evm trm (* of type level *) : Evd.evar_map * Univ.Level.t =
     let (h,args) = app_full trm [] in
     if Constr.equal h lProp then

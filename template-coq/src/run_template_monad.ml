@@ -444,3 +444,14 @@ let rec run_template_program_rec ?(intactic=false) (k : Environ.env * Evd.evar_m
     let evm,trm = denote_term evm (reduce_all env evm trm) in
     Plugin_core.run (Plugin_core.tmPrint trm) env evm
       (fun env evm _ -> k (env, evm, unit_tt))
+  | TmDependencies (trm, bypass) ->
+    let trm = Constr_denoter.CoqLiveDenoter.unquote_kn (reduce_all env evm trm) in
+    let bypass = Constr_quoted.ConstrQuoted.unquote_bool (reduce_all env evm bypass) in
+    Plugin_core.run Plugin_core.(tmBind (tmAbout trm) (function
+                                       None -> tmFail Pp.(str "Failed to resolve kernel name " ++ Libnames.pr_qualid trm)
+                                     | Some gr -> tmDependencies gr ~bypass)) env evm
+      (fun env evm result ->
+        let open Constr_quoted.ConstrQuoted in
+        let qresult = List.map quote_global_reference result in
+        let res = quote_list tglobal_reference qresult in
+        k (env, evm, res))

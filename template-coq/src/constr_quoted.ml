@@ -210,6 +210,10 @@ struct
     else
       not_supported_verb trm "unquote_list"
 
+  let rec quote_list ty = function
+      [] -> Constr.mkApp (c_nil, [| ty |])
+    | l::ls -> Constr.mkApp (c_cons, [| ty ; l ; quote_list ty ls |])
+
   (* Unquote Coq nat to OCaml int *)
   let rec unquote_nat trm =
     let (h,args) = app_full trm [] in

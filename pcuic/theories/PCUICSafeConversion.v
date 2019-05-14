@@ -2198,39 +2198,42 @@ Section Conversion.
   Qed.
 
   Equations _isconv (s : state) (Γ : context)
-            (t : term) (π1 : stack) (h1 : welltyped Σ Γ (zipc t π1))
+            (t : term) (π1 : stack) (h1 : wtp Γ t π1)
             (π2 : stack) (h2 : wts Γ s t π2)
-            (aux : Aux s Γ t π1 π2)
+            (aux : Aux s Γ t π1 π2 h2)
   : Ret s Γ t π1 π2 :=
     _isconv (Reduction t2) Γ t1 π1 h1 π2 h2 aux :=
       λ { | leq := _isconv_red Γ leq t1 π1 h1 t2 π2 h2 aux } ;
 
     _isconv (Term t2) Γ t1 π1 h1 π2 h2 aux :=
-      λ { | leq := _isconv_prog Γ leq t1 π1 h1 t2 π2 h2 aux } ;
+      λ { | leq | r1 | r2 := _isconv_prog Γ leq t1 π1 h1 t2 π2 h2 r1 r2 aux } ;
 
     _isconv Args Γ t π1 h1 π2 h2 aux :=
         _isconv_args Γ t π1 h1 π2 h2 aux.
 
   Equations(noeqns) isconv_full (s : state) (Γ : context)
-            (t : term) (π1 : stack) (h1 : welltyped Σ Γ (zipc t π1))
+            (t : term) (π1 : stack) (h1 : wtp Γ t π1)
             (π2 : stack) (h2 : wts Γ s t π2)
     : Ret s Γ t π1 π2 :=
 
     isconv_full s Γ t π1 h1 π2 h2 :=
       Fix_F (R := R)
-            (fun '(s', Γ', t', π1', π2') => welltyped Σ Γ' (zipc t' π1') -> wts Γ' s' t' π2' -> Ret s' Γ' t' π1' π2')
-            (fun t' f => _)
-            (x := (s, Γ, t, π1, π2))
+            (fun '(mkpack s' Γ' t' π1' π2' h2') => wtp Γ' t' π1' -> wts Γ' s' t' π2' -> Ret s' Γ' t' π1' π2')
+            (fun pp f => _)
+            (x := mkpack s Γ t π1 π2 _)
             _ _ _.
   Next Obligation.
-    eapply _isconv ; try assumption.
-    intros s' Γ' t' π1' π2' h1' h2' hR.
-    specialize (f (s', Γ', t', π1', π2') hR). cbn in f.
+    unshelve eapply _isconv ; try assumption.
+    intros s' Γ' t' π1' π2' h1' h2' hR. destruct pp.
+    assert (wth0 = zwts H0) by apply welltyped_irr. subst.
+    specialize (f (mkpack s' Γ' t' π1' π2' (zwts h2')) hR). cbn in f.
     eapply f ; assumption.
   Qed.
   Next Obligation.
-    apply R_Acc. simpl.
-    eapply welltyped_zipx ; assumption.
+    destruct s ; assumption.
+  Qed.
+  Next Obligation.
+    apply R_Acc. simpl. assumption.
   Qed.
 
   Definition isconv Γ leq t1 π1 h1 t2 π2 h2 :=
@@ -2239,7 +2242,7 @@ Section Conversion.
   Theorem isconv_sound :
     forall Γ leq t1 π1 h1 t2 π2 h2,
       isconv Γ leq t1 π1 h1 t2 π2 h2 ->
-      conv leq Σ Γ (zipc t1 π1) (zipc t2 π2).
+      conv leq Σ Γ (zippx t1 π1) (zippx t2 π2).
   Proof.
     unfold isconv.
     intros Γ leq t1 π1 h1 t2 π2 h2.

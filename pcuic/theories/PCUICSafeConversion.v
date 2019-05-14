@@ -2166,7 +2166,36 @@ Section Conversion.
            (π2 : stack) (h2 : wtp Γ t π2)
            (aux : Aux Args Γ t π1 π2 h2)
     : { b : bool | if b then ∥ Σ ;;; Γ |- zippx t π1 = zippx t π2 ∥ else True } :=
-todo.
+    _isconv_args Γ t π1 h1 π2 h2 aux with inspect (decompose_stack π1) := {
+    | @exist (l1, θ1) eq1 with inspect (decompose_stack π2) := {
+      | @exist (l2, θ2) eq2 with _isconv_args' Γ t [] l1 θ1 _ l2 θ2 _ _ := {
+        | @exist true h := yes ;
+        | @exist false _ := no
+        }
+      }
+    }.
+  Next Obligation.
+    pose proof (decompose_stack_eq _ _ _ (eq_sym eq1)). subst.
+    assumption.
+  Qed.
+  Next Obligation.
+    pose proof (decompose_stack_eq _ _ _ (eq_sym eq2)). subst.
+    assumption.
+  Qed.
+  Next Obligation.
+    specialize (aux (Reduction u2)) as h. cbn in h.
+    eapply h.
+    - assumption.
+    - pose proof (decompose_stack_eq _ _ _ (eq_sym eq1)). subst.
+      instantiate (1 := h2').
+      simpl in H0. destruct H0 as [eq hp].
+      unshelve eapply R_positionR ; assumption.
+  Qed.
+  Next Obligation.
+    pose proof (decompose_stack_eq _ _ _ (eq_sym eq1)). subst.
+    pose proof (decompose_stack_eq _ _ _ (eq_sym eq2)). subst.
+    assumption.
+  Qed.
 
   Equations _isconv (s : state) (Γ : context)
             (t : term) (π1 : stack) (h1 : welltyped Σ Γ (zipc t π1))

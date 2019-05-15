@@ -2274,4 +2274,18 @@ Section Conversion.
     discriminate.
   Qed.
 
+  Definition isconv_term Γ leq t1 (h1 : welltyped Σ Γ t1) t2 (h2 : welltyped Σ Γ t2) :=
+    isconv Γ leq t1 ε (zipx_welltyped (π := ε) h1) t2 ε (zipx_welltyped (π := ε) h2).
+
+  Theorem isconv_term_sound :
+    forall Γ leq t1 h1 t2 h2,
+      isconv_term Γ leq t1 h1 t2 h2 ->
+      conv leq Σ Γ t1 t2.
+  Proof.
+    intros Γ leq t1 h1 t2 h2.
+    unfold isconv_term. intro h.
+    apply isconv_sound in h. assumption.
+  Qed.
+
+
 End Conversion.

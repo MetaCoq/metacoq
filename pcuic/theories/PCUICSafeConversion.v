@@ -29,7 +29,6 @@ Inductive conv_pb :=
 Section Conversion.
 
   Context (flags : RedFlags.t).
-  (* Context `{checker_flags}. *)
   Context (Σ : global_context).
   Context (hΣ : wf Σ).
 
@@ -1411,6 +1410,17 @@ Section Conversion.
     apply eq_term_zipc.
   Qed.
 
+  (* This corresponds to a subgoal I don't know how to prove, hence the ax
+     suffix. *)
+  Lemma conv_Prod_ax :
+    forall Γ leq na1 ρ1 A1 B1 na2 ρ2 A2 B2,
+      Σ;;; Γ |- it_mkLambda_or_LetIn (stack_context ρ1) A1 = it_mkLambda_or_LetIn (stack_context ρ2) A2 ->
+     conv leq Σ Γ (it_mkLambda_or_LetIn (stack_context ρ1) (tLambda na1 A1 B1))
+          (it_mkLambda_or_LetIn (stack_context ρ2) (tLambda na2 A2 B2)) ->
+     conv leq Σ Γ (it_mkLambda_or_LetIn (stack_context ρ1) (tProd na1 A1 B1))
+          (it_mkLambda_or_LetIn (stack_context ρ2) (tProd na2 A2 B2)).
+  Admitted.
+
   Equations(noeqns) _isconv_prog (Γ : context) (leq : conv_pb)
             (t1 : term) (π1 : stack) (h1 : wtp Γ t1 π1)
             (t2 : term) (π2 : stack) (h2 : wtp Γ t2 π2)
@@ -1480,7 +1490,10 @@ Section Conversion.
     _isconv_prog Γ leq (tCase (ind, par) p c brs) π1 h1
                        (tCase (ind',par') p' c' brs') π2 h2
                        ir1 ir2 aux
-    with inspect (eq_term (snd Σ) p p' && eq_term (snd Σ) c c'
+    (* In the original we do not check ind = ind' or par = par',
+       maybe it can be optimised. *)
+    with inspect (eq_ind ind ind' && eq_nat par par' && eq_term (snd Σ) p p'
+        && eq_term (snd Σ) c c'
         && forallb2 (fun '(a, b) '(a', b') => eq_term (snd Σ) b b') brs brs') := {
     | @exist true eq1 := isconv_args Γ (tCase (ind, par) p c brs) π1 π2 aux ;
     | @exist false _ with inspect (reduce_term RedFlags.default Σ (Γ ,,, stack_context π1) c _) := {
@@ -1577,14 +1590,8 @@ Section Conversion.
     apply mkApps_Prod_nil in h2. subst.
 
     cbn.
-
-    (* Not very clear how to conclude yet...
-       It seems true enough though.
-       We must go on to this if the conclusion assumption is too strong.
-     *)
-    (* eapply conv_Prod ; eassumption. *)
-  (* Qed. *)
-  Admitted.
+    eapply conv_Prod_ax ; assumption.
+  Qed.
 
   (* tLambda *)
   Next Obligation.
@@ -1725,16 +1732,33 @@ Section Conversion.
   (* tCase *)
   Next Obligation.
     symmetry in eq1.
-    apply andP in eq1 as [eq1 ebrs].
-    apply andP in eq1 as [ep ec].
-    (* How do we know ind = ind' and par = par'? *)
-    (* One solution: just ask! *)
-    (* Anyway we would need to show welltypedness survises renaming *)
-  Admitted.
+    (* apply andP in eq1 as [eq1 ebrs]. *)
+    (* apply andP in eq1 as [eq1 ec]. *)
+    (* apply andP in eq1 as [eq1 ep]. *)
+    (* apply andP in eq1 as [eind epar]. *)
+    eapply welltyped_rename ; [ exact h2 |].
+    eapply eq_term_sym.
+    rewrite eq_term_zipx. simpl. rewrite eq1. reflexivity.
+  Qed.
   Next Obligation.
     unshelve eapply R_stateR.
     all: try reflexivity.
-    - simpl. (* We need the same as above *)
+    - simpl.
+      symmetry in eq1.
+      apply andP in eq1 as [eq1 ebrs].
+      apply andP in eq1 as [eq1 ec].
+      apply andP in eq1 as [eq1 ep].
+      apply andP in eq1 as [eind epar].
+      (* TODO ADD ReflectEq for eq_ind *)
+      revert eind.
+      destruct (PCUICConfluence.eq_ind_spec ind ind') ; try discriminate.
+      (* destruct (eqb_spec eind). *)
+      intros _. subst.
+      change (eqb par par' = true) in epar.
+      revert epar.
+      destruct (eqb_spec par par') ; try discriminate.
+      intros _. subst.
+      (* NEED eq_term instead of eq *)
       admit.
     - simpl. constructor.
   Admitted.
@@ -1745,8 +1769,8 @@ Section Conversion.
     eapply conv_trans ; try eassumption.
     eapply conv_zippx.
     eapply eq_term_conv.
-    (* Missing ind = ind' again. *)
-  Admitted.
+    symmetry in eq1. simpl. rewrite eq1. reflexivity.
+  Qed.
   Next Obligation.
     apply welltyped_zipx in h1.
     zip fold in h1. apply welltyped_context in h1. simpl in h1.

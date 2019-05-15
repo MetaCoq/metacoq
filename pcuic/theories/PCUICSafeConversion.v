@@ -1232,13 +1232,13 @@ Section Conversion.
    *)
   Equations unfold_one_fix (Γ : context) (mfix : mfixpoint term)
             (idx : nat) (π : stack) (h : wtp Γ (tFix mfix idx) π)
-    : option term :=
+    : option (term * stack) :=
 
     unfold_one_fix Γ mfix idx π h with inspect (unfold_fix mfix idx) := {
     | @exist (Some (arg, fn)) eq1 with inspect (decompose_stack_at π arg) := {
       | @exist (Some (l, c, θ)) eq2 with inspect (reduce_stack RedFlags.default Σ (Γ ,,, stack_context θ) c ε _) := {
         | @exist (cred, ρ) eq3 with construct_viewc cred := {
-          | view_construct ind n ui := Some fn ;
+          | view_construct ind n ui := Some (fn, appstack l (App (zipc (tConstruct ind n ui) ρ) θ)) ;
           | view_other t h := None
           }
         } ;
@@ -1272,11 +1272,11 @@ Section Conversion.
   Qed.
 
   Lemma unfold_one_fix_red :
-    forall Γ mfix idx π h fn,
-      Some fn = unfold_one_fix Γ mfix idx π h ->
-      ∥ red (fst Σ) Γ (zipc (tFix mfix idx) π) (zipc fn π) ∥.
+    forall Γ mfix idx π h fn ξ,
+      Some (fn, ξ) = unfold_one_fix Γ mfix idx π h ->
+      ∥ red (fst Σ) Γ (zipc (tFix mfix idx) π) (zipc fn ξ) ∥.
   Proof.
-    intros Γ mfix idx π h fn eq.
+    intros Γ mfix idx π h fn ξ eq.
     revert eq.
     funelim (unfold_one_fix Γ mfix idx π h).
     all: intro eq ; noconf eq.
@@ -1285,9 +1285,11 @@ Section Conversion.
     rewrite !zipc_appstack. cbn.
     match type of e1 with
     | _ = reduce_stack ?flags ?Σ ?Γ ?t ?π ?h =>
-      pose proof (reduce_stack_sound flags Σ Γ t π h) as [r1]
+      pose proof (reduce_stack_sound flags Σ Γ t π h) as [r1] ;
+      pose proof (reduce_stack_decompose flags Σ Γ t π h) as hd
     end.
     rewrite <- e1 in r1. cbn in r1.
+    rewrite <- e1 in hd. cbn in hd.
     do 2 zip fold. constructor. eapply red_context.
     econstructor.
     - eapply app_reds_r. exact r1.
@@ -1296,9 +1298,21 @@ Section Conversion.
         replace (tApp (mkApps t l) u) with (mkApps t (l ++ [u]))
           by (rewrite <- mkApps_nested ; reflexivity)
       end.
-      Fail eapply red_fix.
-    (* TODO The way it is we can only conclude conversion. *)
-  Abort.
+      eapply red_fix.
+      + symmetry. eassumption.
+      + unfold is_constructor.
+        pose proof (eq_sym e0) as eql.
+        apply decompose_stack_at_length in eql. subst.
+        rewrite nth_error_app_ge by auto.
+        replace (#|l| - #|l|) with 0 by omega. cbn.
+        case_eq (decompose_stack s0). intros l0 s1 ee.
+        rewrite ee in hd.
+        pose proof (decompose_stack_eq _ _ _ ee). subst.
+        cbn in hd. subst.
+        rewrite zipc_appstack. cbn.
+        unfold isConstruct_app. rewrite decompose_app_mkApps by auto.
+        reflexivity.
+  Qed.
 
   Fixpoint isAppProd (t : term) : bool :=
     match t with

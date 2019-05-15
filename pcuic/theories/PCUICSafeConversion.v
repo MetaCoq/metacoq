@@ -1557,14 +1557,14 @@ Section Conversion.
     with inspect (eq_term (snd Σ) (tFix mfix idx) (tFix mfix' idx')) := {
     | @exist true eq1 := isconv_args Γ (tFix mfix idx) π1 π2 aux ;
     | @exist false _ with inspect (unfold_one_fix Γ mfix idx π1 _) := {
-      | @exist (Some fn) eq1
-        with inspect (reduce_stack nodelta_flags Σ Γ fn π1 _) := {
+      | @exist (Some (fn, θ)) eq1
+        with inspect (reduce_stack nodelta_flags Σ Γ fn θ _) := {
         | @exist (fn', ρ) eq2 :=
           isconv_prog Γ leq fn' ρ (tFix mfix' idx') π2 aux
         } ;
       | _ with inspect (unfold_one_fix Γ mfix' idx' π2 _) := {
-        | @exist (Some fn) eq1
-          with inspect (reduce_stack nodelta_flags Σ Γ fn π2 _) := {
+        | @exist (Some (fn, θ)) eq1
+          with inspect (reduce_stack nodelta_flags Σ Γ fn θ _) := {
           | @exist (fn', ρ) eq2 :=
             isconv_prog Γ leq (tFix mfix idx) π1 fn' ρ aux
           } ;

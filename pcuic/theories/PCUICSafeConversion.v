@@ -1284,6 +1284,19 @@ Section Conversion.
       + constructor. assumption.
   Qed.
 
+  Lemma app_cored_r :
+    forall Γ u v1 v2,
+      cored Σ Γ v1 v2 ->
+      cored Σ Γ (tApp u v1) (tApp u v2).
+  Proof.
+    intros Γ u v1 v2 h.
+    induction h.
+    - constructor. constructor. assumption.
+    - eapply cored_trans.
+      + eapply IHh.
+      + constructor. assumption.
+  Qed.
+
   Lemma unfold_one_fix_red :
     forall Γ mfix idx π h fn ξ,
       Some (fn, ξ) = unfold_one_fix Γ mfix idx π h ->
@@ -1325,6 +1338,77 @@ Section Conversion.
         rewrite zipc_appstack. cbn.
         unfold isConstruct_app. rewrite decompose_app_mkApps by auto.
         reflexivity.
+  Qed.
+
+  Lemma unfold_one_fix_cored :
+    forall Γ mfix idx π h fn ξ,
+      Some (fn, ξ) = unfold_one_fix Γ mfix idx π h ->
+      cored (fst Σ) Γ (zipc fn ξ) (zipc (tFix mfix idx) π).
+  Proof.
+    intros Γ mfix idx π h fn ξ eq.
+    revert eq.
+    funelim (unfold_one_fix Γ mfix idx π h).
+    all: intro eq ; noconf eq.
+    pose proof (eq_sym e0) as eq.
+    pose proof (decompose_stack_at_eq _ _ _ _ _ eq). subst.
+    rewrite !zipc_appstack. cbn.
+    match type of e1 with
+    | _ = reduce_stack ?flags ?Σ ?Γ ?t ?π ?h =>
+      pose proof (reduce_stack_sound flags Σ Γ t π h) as [r1] ;
+      pose proof (reduce_stack_decompose flags Σ Γ t π h) as hd
+    end.
+    rewrite <- e1 in r1. cbn in r1.
+    rewrite <- e1 in hd. cbn in hd.
+    do 2 zip fold. eapply cored_context.
+    eapply cored_red_trans.
+    - eapply app_reds_r. exact r1.
+    - repeat lazymatch goal with
+      | |- context [ tApp (mkApps ?t ?l) ?u ] =>
+        replace (tApp (mkApps t l) u) with (mkApps t (l ++ [u]))
+          by (rewrite <- mkApps_nested ; reflexivity)
+      end.
+      eapply red_fix.
+      + symmetry. eassumption.
+      + unfold is_constructor.
+        pose proof (eq_sym e0) as eql.
+        apply decompose_stack_at_length in eql. subst.
+        rewrite nth_error_app_ge by auto.
+        replace (#|l| - #|l|) with 0 by omega. cbn.
+        case_eq (decompose_stack s0). intros l0 s1 ee.
+        rewrite ee in hd.
+        pose proof (decompose_stack_eq _ _ _ ee). subst.
+        cbn in hd. subst.
+        rewrite zipc_appstack. cbn.
+        unfold isConstruct_app. rewrite decompose_app_mkApps by auto.
+        reflexivity.
+  Qed.
+
+  Lemma cored_red_cored :
+    forall Γ u v w,
+      cored Σ Γ w v ->
+      red Σ Γ u v ->
+      cored Σ Γ w u.
+  Proof.
+    intros Γ u v w h1 h2.
+    revert u h2. induction h1 ; intros t h2.
+    - eapply cored_red_trans ; eassumption.
+    - eapply cored_trans.
+      + eapply IHh1. assumption.
+      + assumption.
+  Qed.
+
+  Lemma red_cored_cored :
+    forall Γ u v w,
+      red Σ Γ v w ->
+      cored Σ Γ v u ->
+      cored Σ Γ w u.
+  Proof.
+    intros Γ u v w h1 h2.
+    revert u h2. induction h1 ; intros t h2.
+    - assumption.
+    - eapply cored_trans.
+      + eapply IHh1. assumption.
+      + assumption.
   Qed.
 
   Fixpoint isAppProd (t : term) : bool :=
@@ -2041,20 +2125,16 @@ Section Conversion.
     - apply welltyped_zipx in h1 as hh1. assumption.
   Qed.
   Next Obligation.
-    apply unfold_one_fix_red in eq1 as r1.
-    destruct r1 as [r1].
+    apply unfold_one_fix_cored in eq1 as r1.
     match type of eq2 with
     | _ = reduce_stack ?f ?Σ ?Γ ?t ?π ?h =>
       destruct (reduce_stack_sound f Σ Γ t π h) as [r2]
     end.
     rewrite <- eq2 in r2.
-    pose proof (red_trans _ _ _ _ r1 r2) as r.
-    destruct (red_cored_or_eq _ _ _ r) as [cr | e].
-    - left. simpl. eapply cored_it_mkLambda_or_LetIn.
-      rewrite app_context_nil_l. assumption.
-    - unshelve eapply R_stateR. all: simpl.
-      fail "We should prove unfold_one_fix_cored".
-  Admitted.
+    left. simpl. eapply cored_it_mkLambda_or_LetIn.
+    rewrite app_context_nil_l.
+    eapply red_cored_cored ; eassumption.
+  Qed.
   Next Obligation.
     (* Need appropriate lemma on unfold_one_fix. *)
   Admitted.

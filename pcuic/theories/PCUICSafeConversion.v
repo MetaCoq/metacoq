@@ -68,6 +68,19 @@ Section Conversion.
       eapply PSR.subject_reduction ; eassumption.
   Qed.
 
+  Lemma red_cored_or_eq :
+    forall Γ u v,
+      red Σ Γ u v ->
+      cored Σ Γ v u \/ u = v.
+  Proof.
+    intros Γ u v h.
+    induction h.
+    - right. reflexivity.
+    - destruct IHh.
+      + left. eapply cored_trans ; eassumption.
+      + subst. left. constructor. assumption.
+  Qed.
+
   Set Equations With UIP.
 
   Lemma cored_it_mkLambda_or_LetIn :
@@ -2008,15 +2021,39 @@ Section Conversion.
     symmetry. assumption.
   Qed.
   Next Obligation.
-    apply welltyped_zipx in h1.
-    apply welltyped_zipc_zippx in h1.
-    assumption.
+    apply unfold_one_fix_red in eq1 as r.
+    eapply red_welltyped ; [| exact r ].
+    apply welltyped_zipx in h1 as hh1. assumption.
   Qed.
   Next Obligation.
-    (* Need appropriate lemma on unfold_one_fix. *)
-  Admitted.
+    apply unfold_one_fix_red in eq1 as r1.
+    destruct r1 as [r1].
+    match type of eq2 with
+    | _ = reduce_stack ?f ?Σ ?Γ ?t ?π ?h =>
+      destruct (reduce_stack_sound f Σ Γ t π h) as [r2]
+    end.
+    rewrite <- eq2 in r2.
+    eapply zipx_welltyped.
+    eapply red_welltyped ; revgoals.
+    - constructor. eapply red_trans.
+      + exact r1.
+      + exact r2.
+    - apply welltyped_zipx in h1 as hh1. assumption.
+  Qed.
   Next Obligation.
-    (* Need appropriate lemma on unfold_one_fix. *)
+    apply unfold_one_fix_red in eq1 as r1.
+    destruct r1 as [r1].
+    match type of eq2 with
+    | _ = reduce_stack ?f ?Σ ?Γ ?t ?π ?h =>
+      destruct (reduce_stack_sound f Σ Γ t π h) as [r2]
+    end.
+    rewrite <- eq2 in r2.
+    pose proof (red_trans _ _ _ _ r1 r2) as r.
+    destruct (red_cored_or_eq _ _ _ r) as [cr | e].
+    - left. simpl. eapply cored_it_mkLambda_or_LetIn.
+      rewrite app_context_nil_l. assumption.
+    - unshelve eapply R_stateR. all: simpl.
+      fail "We should prove unfold_one_fix_cored".
   Admitted.
   Next Obligation.
     (* Need appropriate lemma on unfold_one_fix. *)

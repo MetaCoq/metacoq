@@ -1,4 +1,5 @@
 Require Import Template.All.
+Require Import Template.TemplateMonad.Extractable Template.monad_utils.
 Require Import Arith.Compare_dec.
 From Translations Require Import translation_utils.
 Import String List Lists.List.ListNotations MonadNotation.
@@ -156,11 +157,11 @@ Definition tsl_mind_body (E : tsl_table) (mp : string) (kn : kername)
 Defined.
 
 
-Run TemplateProgram (typ <- tmQuote (forall A, A -> A) ;;
-                     typ' <- tmEval all (tsl_rec1 [] typ) ;;
-                     tm <- tmQuote (fun A (x : A) => x) ;;
-                     tm' <- tmEval all (tsl_rec1 [] tm) ;;
-                     tmUnquote (tApp typ' [tm]) >>= print_nf).
+Run TemplateProgram (typ <- Core.tmQuote (forall A, A -> A) ;;
+                     typ' <- Core.tmEval all (tsl_rec1 [] typ) ;;
+                     tm <- Core.tmQuote (fun A (x : A) => x) ;;
+                     tm' <- Core.tmEval all (tsl_rec1 [] tm) ;;
+                     Core.tmUnquote (tApp typ' [tm]) >>= print_nf).
 
 
 
@@ -179,15 +180,26 @@ Instance param : Translation :=
 Definition T := forall A, A -> A.
 Run TemplateProgram (Translate emptyTC "T").
 
-
 Definition tm := ((fun A (x:A) => x) (Type -> Type) (fun x => x)).
 Run TemplateProgram (Translate emptyTC "tm").
 
-Run TemplateProgram (TC <- Translate emptyTC "nat" ;;
-                     tmDefinition "nat_TC" TC ).
+Definition nat_TC : tsl_context.
+ run_template_program (Translate emptyTC "Coq.Init.Datatypes.nat")
+                      ltac:(fun tc => let tc := eval simpl in tc in exact tc).
+Defined.
 
-Run TemplateProgram (TC <- Translate nat_TC "bool" ;;
-                     tmDefinition "bool_TC" TC ).
+Definition bool_TC : tsl_context.
+ run_template_program (Translate emptyTC "Coq.Init.Datatypes.bool")
+                      ltac:(fun tc => let tc := eval simpl in tc in exact tc).
+ Print boolᵗ.
+ Definition x := nat.
+ Fail Print boolᵗ.
+Defined.
+
+Fail Print boolᵗ.
+Fail Print boolᵗ_rec.
+Fail Print boolᵗ_rect.
+Fail Print boolᵗ_ind.
 
 Run TemplateProgram (Translate bool_TC "pred").
 

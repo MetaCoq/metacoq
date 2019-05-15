@@ -382,9 +382,12 @@ let rec run_template_program_rec ?(intactic=false) (k : Environ.env * Evd.evar_m
     Plugin_core.run (Plugin_core.tmEval red trm) env evm
       (fun env evm trm -> k (env, evm, TermReify.quote_term env trm))
   | TmMkInductive mind ->
-    declare_inductive env evm mind;
-    let env = Global.env () in
-    k (env, evm, unit_tt)
+    if intactic
+    then not_in_tactic "inductive"
+    else
+      (declare_inductive env evm mind;
+       let env = Global.env () in
+       k (env, evm, unit_tt))
   | TmUnquote t ->
     begin
        try

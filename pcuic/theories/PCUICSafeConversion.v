@@ -1258,10 +1258,23 @@ Section Conversion.
 
   Derive NoConfusion NoConfusionHom for option.
 
+  Lemma app_reds_r :
+    forall Γ u v1 v2,
+      red Σ Γ v1 v2 ->
+      red Σ Γ (tApp u v1) (tApp u v2).
+  Proof.
+    intros Γ u v1 v2 h.
+    revert u. induction h ; intros u.
+    - constructor.
+    - econstructor.
+      + eapply IHh.
+      + constructor. assumption.
+  Qed.
+
   Lemma unfold_one_fix_red :
     forall Γ mfix idx π h fn,
       Some fn = unfold_one_fix Γ mfix idx π h ->
-      red (fst Σ) Γ (zipc (tFix mfix idx) π) (zipc fn π).
+      ∥ red (fst Σ) Γ (zipc (tFix mfix idx) π) (zipc fn π) ∥.
   Proof.
     intros Γ mfix idx π h fn eq.
     revert eq.
@@ -1270,8 +1283,21 @@ Section Conversion.
     pose proof (eq_sym e0) as eq.
     pose proof (decompose_stack_at_eq _ _ _ _ _ eq). subst.
     rewrite !zipc_appstack. cbn.
-    do 2 zip fold. eapply red_context.
-    (* TODO Maybe we can only conclude conversion? *)
+    match type of e1 with
+    | _ = reduce_stack ?flags ?Σ ?Γ ?t ?π ?h =>
+      pose proof (reduce_stack_sound flags Σ Γ t π h) as [r1]
+    end.
+    rewrite <- e1 in r1. cbn in r1.
+    do 2 zip fold. constructor. eapply red_context.
+    econstructor.
+    - eapply app_reds_r. exact r1.
+    - repeat lazymatch goal with
+      | |- context [ tApp (mkApps ?t ?l) ?u ] =>
+        replace (tApp (mkApps t l) u) with (mkApps t (l ++ [u]))
+          by (rewrite <- mkApps_nested ; reflexivity)
+      end.
+      Fail eapply red_fix.
+    (* TODO The way it is we can only conclude conversion. *)
   Abort.
 
   Fixpoint isAppProd (t : term) : bool :=

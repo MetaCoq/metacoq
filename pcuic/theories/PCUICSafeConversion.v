@@ -1411,6 +1411,18 @@ Section Conversion.
       + assumption.
   Qed.
 
+  Lemma red_zipc_zippx :
+    forall Γ u1 π1 u2 π2,
+      red Σ Γ (zipc u1 π1) (zipc u2 π2) ->
+      red Σ Γ (zippx u1 π1) (zippx u2 π2).
+  Proof.
+    intros Γ u1 π1 u2 π2 h.
+    unfold zippx.
+    case_eq (decompose_stack π1). intros l1 ρ1 e1.
+    case_eq (decompose_stack π2). intros l2 ρ2 e2.
+    (* eapply red_it_mkLambda_or_LetIn. *)
+  Abort.
+
   Fixpoint isAppProd (t : term) : bool :=
     match t with
     | tApp t l => isAppProd t
@@ -2136,15 +2148,23 @@ Section Conversion.
     eapply red_cored_cored ; eassumption.
   Qed.
   Next Obligation.
-    (* Need appropriate lemma on unfold_one_fix. *)
-  Admitted.
-  Next Obligation.
-    rewrite eq2.
-    eapply reduce_stack_isred.
-    auto.
+    rewrite eq2. eapply reduce_stack_isred. auto.
   Qed.
   Next Obligation.
     destruct b ; auto.
+    apply unfold_one_fix_red in eq1 as r1.
+    destruct r1 as [r1].
+    match type of eq2 with
+    | _ = reduce_stack ?f ?Σ ?Γ ?t ?π ?h =>
+      destruct (reduce_stack_sound f Σ Γ t π h) as [r2]
+    end.
+    rewrite <- eq2 in r2.
+    pose proof (red_trans _ _ _ _ r1 r2) as r.
+    eapply conv_trans'.
+    - eapply red_conv_l.
+ (*      eapply red_zippx. *)
+ (* exact r. *)
+      fail "Something TODO here.".
     (* Need appropriate lemma on unfold_one_fix. *)
   Admitted.
   Next Obligation.

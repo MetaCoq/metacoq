@@ -1231,12 +1231,12 @@ Section Conversion.
      Let's figure out the rest first.
    *)
   Equations unfold_one_fix (Γ : context) (mfix : mfixpoint term)
-            (idx : nat) (π : stack) (h : welltyped Σ Γ (zippx (tFix mfix idx) π))
+            (idx : nat) (π : stack) (h : wtp Γ (tFix mfix idx) π)
     : option term :=
 
     unfold_one_fix Γ mfix idx π h with inspect (unfold_fix mfix idx) := {
     | @exist (Some (arg, fn)) eq1 with inspect (decompose_stack_at π arg) := {
-      | @exist (Some (l, c, θ)) eq2 with inspect (reduce_stack RedFlags.default Σ Γ c ε _) := {
+      | @exist (Some (l, c, θ)) eq2 with inspect (reduce_stack RedFlags.default Σ (Γ ,,, stack_context θ) c ε _) := {
         | @exist (cred, ρ) eq3 with construct_viewc cred := {
           | view_construct ind n ui := Some fn ;
           | view_other t h := None
@@ -1249,16 +1249,12 @@ Section Conversion.
   Next Obligation.
     cbn. symmetry in eq2.
     pose proof (decompose_stack_at_eq _ _ _ _ _ eq2). subst.
-    unfold zippx in h. rewrite decompose_stack_appstack in h.
-    simpl in h.
-    apply welltyped_it_mkLambda_or_LetIn in h.
-  (*   rewrite zipc_appstack in h. cbn in h. *)
-  (*   zip fold in h. apply welltyped_context in h. cbn in h. *)
-  (*   destruct h as [T h]. *)
-  (*   destruct (inversion_App h) as [na [A' [B' [[?] [[?] [?]]]]]]. *)
-  (*   eexists. eassumption. *)
-  (* Qed. *)
-  Admitted.
+    apply welltyped_zipx in h. rewrite zipc_appstack in h. cbn in h.
+    zip fold in h. apply welltyped_context in h. simpl in h.
+      destruct h as [T h].
+      destruct (inversion_App h) as [na [A' [B' [[?] [[?] [?]]]]]].
+      eexists. eassumption.
+  Qed.
 
   Derive NoConfusion NoConfusionHom for option.
 
@@ -1530,7 +1526,7 @@ Section Conversion.
         | @exist (Some fn) eq1
           with inspect (reduce_stack nodelta_flags Σ Γ fn π2 _) := {
           | @exist (fn', ρ) eq2 :=
-            isconv_prog Γ leq (tFix mfix' idx') π2 fn' ρ aux
+            isconv_prog Γ leq (tFix mfix idx) π1 fn' ρ aux
           } ;
         | _ := no
         }

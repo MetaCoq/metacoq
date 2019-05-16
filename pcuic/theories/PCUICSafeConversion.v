@@ -2572,7 +2572,10 @@ Section Conversion.
     rewrite 2!decompose_stack_appstack. simpl.
     unfold zippx in H1. simpl in H1.
     unfold zippx in H2. rewrite 2!decompose_stack_appstack in H2.
-
+    rewrite <- !mkApps_nested in H2. cbn in H2.
+    rewrite 2!stack_context_decompose in H2.
+    rewrite 2!stack_context_decompose.
+    rewrite <- !mkApps_nested. cbn in H2.
 
     (* case_eq (decompose_stack ρ1). intros l1 θ1 e1. *)
     (* case_eq (decompose_stack ρ2). intros l2 θ2 e2. *)

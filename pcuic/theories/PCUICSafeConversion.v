@@ -2505,6 +2505,23 @@ Section Conversion.
   Axiom cheat : forall {A}, A.
   Tactic Notation "cheat" := exact cheat.
 
+  (* TODO *)
+  Lemma conv_ax :
+    forall {Γ t args ρ1 args1 u1 l1 ρ2 args2 u2 l2},
+      Σ;;; Γ |- it_mkLambda_or_LetIn (stack_context ρ1) u1 =
+               it_mkLambda_or_LetIn (stack_context ρ2) u2 ->
+      Σ ;;; Γ
+      |- it_mkLambda_or_LetIn (stack_context ρ1)
+          (mkApps (mkApps (tApp (mkApps t args) u1) l1) args1) =
+        it_mkLambda_or_LetIn (stack_context ρ2)
+          (mkApps (mkApps (tApp (mkApps t args) u1) l2) args2) ->
+      Σ ;;; Γ
+      |- it_mkLambda_or_LetIn (stack_context ρ1)
+          (mkApps (mkApps (tApp (mkApps t args) u1) l1) args1) =
+        it_mkLambda_or_LetIn (stack_context ρ2)
+          (mkApps (mkApps (tApp (mkApps t args) u2) l2) args2).
+  Admitted.
+
   Equations(noeqns) _isconv_args' (Γ : context) (t : term) (args : list term)
             (l1 : list term) (π1 : stack) (h1 : wtp Γ (mkApps t args) (appstack l1 π1))
             (l2 : list term) (π2 : stack) (h2 : wtp Γ (mkApps t args) (appstack l2 π2))
@@ -2576,6 +2593,18 @@ Section Conversion.
     rewrite 2!stack_context_decompose in H2.
     rewrite 2!stack_context_decompose.
     rewrite <- !mkApps_nested. cbn in H2.
+    rewrite 2!stack_context_appstack in H1.
+    case_eq (decompose_stack π1). intros args1 ρ1 e1.
+    rewrite e1 in H2. cbn in H2. cbn.
+    case_eq (decompose_stack π2). intros args2 ρ2 e2.
+    rewrite e2 in H2. cbn in H2. cbn.
+    pose proof (decompose_stack_eq _ _ _ e1).
+    pose proof (decompose_stack_eq _ _ _ e2).
+    subst.
+    rewrite !stack_context_appstack in H1.
+    rewrite !stack_context_appstack in H2.
+    rewrite !stack_context_appstack.
+    (* eapply conv_trans ; try eassumption. *)
 
     (* case_eq (decompose_stack ρ1). intros l1 θ1 e1. *)
     (* case_eq (decompose_stack ρ2). intros l2 θ2 e2. *)
@@ -2588,7 +2617,8 @@ Section Conversion.
     (* rewrite !stack_context_appstack in H1. *)
     (* Not clear how to conclude, but it seems fine. *)
     (* eapply conv_trans ; try eassumption. *)
-    cheat.
+
+    eapply conv_ax ; assumption.
   Qed.
 
   Equations(noeqns) _isconv_args (Γ : context) (t : term)

@@ -1717,15 +1717,21 @@ Section Conversion.
     | @exist true eq1 := isconv_args Γ (tFix mfix idx) π1 π2 aux ;
     | @exist false _ with inspect (unfold_one_fix Γ mfix idx π1 _) := {
       | @exist (Some (fn, θ)) eq1
-        with inspect (reduce_stack nodelta_flags Σ Γ fn θ _) := {
-        | @exist (fn', ρ) eq2 :=
-          isconv_prog Γ leq fn' ρ (tFix mfix' idx') π2 aux
+        with inspect (decompose_stack θ) := {
+        | @exist (l', θ') eq2
+          with inspect (reduce_stack nodelta_flags Σ (Γ ,,, stack_context θ') fn (appstack l' ε) _) := {
+          | @exist (fn', ρ) eq3 :=
+            isconv_prog Γ leq fn' (ρ +++ θ') (tFix mfix' idx') π2 aux
+          }
         } ;
       | _ with inspect (unfold_one_fix Γ mfix' idx' π2 _) := {
         | @exist (Some (fn, θ)) eq1
-          with inspect (reduce_stack nodelta_flags Σ Γ fn θ _) := {
-          | @exist (fn', ρ) eq2 :=
-            isconv_prog Γ leq (tFix mfix idx) π1 fn' ρ aux
+          with inspect (decompose_stack θ) := {
+          | @exist (l', θ') eq2
+            with inspect (reduce_stack nodelta_flags Σ (Γ ,,, stack_context θ') fn (appstack l' ε) _) := {
+            | @exist (fn', ρ) eq3 :=
+              isconv_prog Γ leq (tFix mfix idx) π1 fn' (ρ +++ θ') aux
+            }
           } ;
         | _ := no
         }
@@ -2167,24 +2173,48 @@ Section Conversion.
     symmetry. assumption.
   Qed.
   Next Obligation.
-    apply unfold_one_fix_red in eq1 as r.
-    eapply red_welltyped ; [| exact r ].
-    apply welltyped_zipx in h1 as hh1. assumption.
+    cbn. rewrite zipc_appstack. cbn.
+    apply unfold_one_fix_red_zippx in eq1 as r.
+    unfold zippx in r.
+    rewrite <- eq2 in r.
+    case_eq (decompose_stack π1). intros l1 ρ1 e1.
+    rewrite e1 in r.
+    apply welltyped_zipx in h1 as hh1.
+    apply welltyped_zipc_zippx in hh1.
+    pose proof (decompose_stack_eq _ _ _ e1). subst.
+    unfold zippx in hh1. rewrite e1 in hh1.
+    pose proof (red_welltyped hh1 r) as hh.
+    apply welltyped_it_mkLambda_or_LetIn in hh.
+    assumption.
   Qed.
   Next Obligation.
-    apply unfold_one_fix_red in eq1 as r1.
-    destruct r1 as [r1].
-    match type of eq2 with
+    apply unfold_one_fix_red_zippx in eq1 as r1.
+    apply unfold_one_fix_decompose in eq1 as d1.
+    match type of eq3 with
     | _ = reduce_stack ?f ?Σ ?Γ ?t ?π ?h =>
-      destruct (reduce_stack_sound f Σ Γ t π h) as [r2]
+      destruct (reduce_stack_sound f Σ Γ t π h) as [r2] ;
+      pose proof (reduce_stack_decompose nodelta_flags _ _ _ _ h) as d2 ;
+      pose proof (reduce_stack_context f Σ Γ t π h) as c2
     end.
-    rewrite <- eq2 in r2.
+    rewrite <- eq3 in r2. cbn in r2. rewrite zipc_appstack in r2. cbn in r2.
+    rewrite <- eq3 in d2. cbn in d2. rewrite decompose_stack_appstack in d2.
+    cbn in d2.
+    rewrite <- eq3 in c2. cbn in c2. rewrite stack_context_appstack in c2.
+    cbn in c2.
+    unfold zippx in r1.
+    rewrite <- eq2 in r1.
+    case_eq (decompose_stack π1). intros l1 ρ1 e1.
+    rewrite e1 in r1.
+    rewrite e1 in d1. cbn in d1. subst.
+    apply welltyped_zipx in h1 as hh1.
+    apply welltyped_zipc_zippx in hh1.
+    pose proof (decompose_stack_eq _ _ _ e1). subst.
+    unfold zippx in hh1. rewrite e1 in hh1.
+    pose proof (red_welltyped hh1 r1) as hh.
+    apply welltyped_it_mkLambda_or_LetIn in hh.
+    pose proof (red_welltyped hh (sq _ r2)) as hh2.
     eapply zipx_welltyped.
-    eapply red_welltyped ; revgoals.
-    - constructor. eapply red_trans.
-      + exact r1.
-      + exact r2.
-    - apply welltyped_zipx in h1 as hh1. assumption.
+    assumption.
   Qed.
   Next Obligation.
     apply unfold_one_fix_cored in eq1 as r1.
@@ -2207,8 +2237,7 @@ Section Conversion.
     match type of eq2 with
     | _ = reduce_stack ?f ?Σ ?Γ ?t ?π ?h =>
       destruct (reduce_stack_sound f Σ Γ t π h) as [r2] ;
-      pose proof (reduce_stack_decompose nodelta_flags _ _ _ _ h) as d2 (* ; *)
-      (* pose proof (reduce_stack_context f Σ Γ t π h) as c2 *)
+      pose proof (reduce_stack_decompose nodelta_flags _ _ _ _ h) as d2
     end.
     rewrite <- eq2 in r2.
     rewrite <- eq2 in d2. cbn in d2.

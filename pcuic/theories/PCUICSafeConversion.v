@@ -1240,9 +1240,6 @@ Section Conversion.
       Σ ;;; Γ' |- t : T.
   Admitted.
 
-  (* Not clear what we want here.
-     Let's figure out the rest first.
-   *)
   Equations unfold_one_fix (Γ : context) (mfix : mfixpoint term)
             (idx : nat) (π : stack) (h : wtp Γ (tFix mfix idx) π)
     : option (term * stack) :=
@@ -1295,6 +1292,55 @@ Section Conversion.
     - eapply cored_trans.
       + eapply IHh.
       + constructor. assumption.
+  Qed.
+
+  Lemma unfold_one_fix_red_zippx :
+    forall Γ mfix idx π h fn ξ,
+      Some (fn, ξ) = unfold_one_fix Γ mfix idx π h ->
+      ∥ red (fst Σ) Γ (zippx (tFix mfix idx) π) (zippx fn ξ) ∥.
+  Proof.
+    intros Γ mfix idx π h fn ξ eq.
+    revert eq.
+    funelim (unfold_one_fix Γ mfix idx π h).
+    all: intro eq ; noconf eq.
+    unfold zippx.
+    pose proof (eq_sym e0) as eq.
+    pose proof (decompose_stack_at_eq _ _ _ _ _ eq). subst.
+    rewrite 2!decompose_stack_appstack. simpl.
+    case_eq (decompose_stack s). intros l' s' e'.
+    simpl.
+    match type of e1 with
+    | _ = reduce_stack ?flags ?Σ ?Γ ?t ?π ?h =>
+      pose proof (reduce_stack_sound flags Σ Γ t π h) as [r1] ;
+      pose proof (reduce_stack_decompose flags Σ Γ t π h) as hd
+    end.
+    rewrite <- e1 in r1. cbn in r1.
+    rewrite <- e1 in hd. cbn in hd.
+    constructor. eapply red_it_mkLambda_or_LetIn.
+    rewrite <- 2!mkApps_nested. cbn. eapply red_mkApps.
+    pose proof (decompose_stack_eq _ _ _ e'). subst.
+    rewrite stack_context_appstack in r1.
+    econstructor.
+    - eapply app_reds_r. exact r1.
+    - repeat lazymatch goal with
+      | |- context [ tApp (mkApps ?t ?l) ?u ] =>
+        replace (tApp (mkApps t l) u) with (mkApps t (l ++ [u]))
+          by (rewrite <- mkApps_nested ; reflexivity)
+      end.
+      eapply red_fix.
+      + symmetry. eassumption.
+      + unfold is_constructor.
+        pose proof (eq_sym e0) as eql.
+        apply decompose_stack_at_length in eql. subst.
+        rewrite nth_error_app_ge by auto.
+        replace (#|l| - #|l|) with 0 by omega. cbn.
+        case_eq (decompose_stack s0). intros l0 s1 ee.
+        rewrite ee in hd.
+        pose proof (decompose_stack_eq _ _ _ ee). subst.
+        cbn in hd. subst.
+        rewrite zipc_appstack. cbn.
+        unfold isConstruct_app. rewrite decompose_app_mkApps by auto.
+        reflexivity.
   Qed.
 
   Lemma unfold_one_fix_red :
@@ -2156,7 +2202,7 @@ Section Conversion.
   Qed.
   Next Obligation.
     destruct b ; auto.
-    apply unfold_one_fix_red in eq1 as r1.
+    apply unfold_one_fix_red_zippx in eq1 as r1.
     destruct r1 as [r1].
     match type of eq2 with
     | _ = reduce_stack ?f ?Σ ?Γ ?t ?π ?h =>
@@ -2166,35 +2212,24 @@ Section Conversion.
     end.
     rewrite <- eq2 in r2.
     rewrite <- eq2 in d2. cbn in d2.
-    (* rewrite <- eq2 in c2. cbn in c2. *)
-    pose proof (red_trans _ _ _ _ r1 r2) as r.
     apply unfold_one_fix_decompose in eq1 as d1.
-    unfold zippx.
-    unfold zippx in h.
-    case_eq (decompose_stack π1). intros l1 ρ1 e1.
-    rewrite e1 in d1. cbn in d1. rewrite <- d2 in d1.
-    case_eq (decompose_stack ρ). intros l ξ e.
-    rewrite e in d1. cbn in d1.
-    rewrite e in h.
-    subst.
-    rewrite e in d2. cbn in d2.
-    case_eq (decompose_stack π2). intros l2 ρ2 e2.
-    rewrite e2 in h.
-    pose proof (decompose_stack_eq _ _ _ e1). subst.
-    pose proof (decompose_stack_eq _ _ _ e2). subst.
-    pose proof (decompose_stack_eq _ _ _ e). subst.
-    case_eq (decompose_stack θ). intros args ρ ee.
-    rewrite ee in h. simpl in h.
-    rewrite ee in r. cbn in r.
-    pose proof (decompose_stack_eq _ _ _ ee). subst.
-    rewrite 2!zipc_appstack in r.
-    simpl.
+    assert (r2' : red (fst Σ) Γ (zippx fn θ) (zippx fn' ρ)).
+    { unfold zippx.
+      case_eq (decompose_stack ρ). intros l ξ e.
+      rewrite e in d2. cbn in d2.
+      pose proof (decompose_stack_eq _ _ _ e). subst.
+      case_eq (decompose_stack θ). intros args ρ ee. simpl.
+      rewrite ee in r2. cbn in r2.
+      eapply red_it_mkLambda_or_LetIn.
+      pose proof (decompose_stack_eq _ _ _ ee). subst.
+      rewrite 2!zipc_appstack in r2.
+      admit.
+    }
+    pose proof (red_trans _ _ _ _ r1 r2') as r.
     eapply conv_trans'.
-    - eapply red_conv_l. eapply red_it_mkLambda_or_LetIn.
- (* exact r. *)
-      (* Some unfold_one_fix_stack_context or so *)
-      fail "Something TODO here.".
-    (* Need appropriate lemma on unfold_one_fix. *)
+    - eapply red_conv_l. eassumption.
+    - assumption.
+      fail "Almost there".
   Admitted.
   Next Obligation.
     clear aux.

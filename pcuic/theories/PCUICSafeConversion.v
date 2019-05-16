@@ -2300,14 +2300,15 @@ Section Conversion.
       (* pose proof eq2 as e2. *)
       (* rewrite e1 in e2. cbn in e2. *)
       pose proof (decompose_stack_eq _ _ _ e1). subst.
-      admit.
+      rewrite decompose_stack_twice with (1 := e1). cbn.
+      rewrite app_nil_r.
+      assumption.
     }
     pose proof (red_trans _ _ _ _ r1 r2') as r.
     eapply conv_trans'.
     - eapply red_conv_l. eassumption.
     - assumption.
-      fail "Almost there".
-  Admitted.
+  Qed.
   Next Obligation.
     clear aux.
     apply welltyped_zipx in h2.

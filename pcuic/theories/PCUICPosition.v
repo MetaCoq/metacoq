@@ -617,6 +617,14 @@ Section Stacks.
     | _ => false
     end.
 
+  Lemma isStackApp_false_appstack :
+    forall l π,
+      isStackApp (appstack l π) = false ->
+      l = [].
+  Proof.
+    intros l π h. destruct l ; try discriminate. reflexivity.
+  Qed.
+
   (* Before we were zipping terms and stacks.
      Now, we even add the context into the mix.
    *)

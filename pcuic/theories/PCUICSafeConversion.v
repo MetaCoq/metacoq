@@ -2557,7 +2557,20 @@ Section Conversion.
     apply zipx_welltyped.
     clear aux.
     apply welltyped_zipx in h2. cbn in h2. cbn.
-    (* We need subject conversion here it woud seem *)
+    (* We get that u2 is well-typed *)
+    zip fold in h2.
+    apply welltyped_context in h2 as hh2. simpl in hh2.
+    rewrite stack_context_appstack in hh2.
+    (* From hh2 we only need inversion.
+       Then we get u2 : A2 and similarly u1 : A1.
+       Hence Γ ⊢ it_mkLambda_or_LetIn (stack_context π1) u1 : Π π1 A1
+       (and same with 2s).
+       From subject conversion, we know they have the same type.
+       Meaning the stack contexts are convertible and A1 = A2.
+       ow we have two convertible terms against the same stack,
+       so we should get the result.
+       It sounds tedious though.
+     *)
     cheat.
   Qed.
   Next Obligation.

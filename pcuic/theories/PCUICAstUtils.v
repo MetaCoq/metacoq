@@ -8,9 +8,15 @@ Require Import ssreflect.
 From Equations Require Import Equations.
 Require Import Equations.Prop.DepElim.
 
+Require Import Name.
+
 Set Asymmetric Patterns.
 
 Open Scope pcuic.
+
+Section ASTUtils.
+
+Context `{naming : Name}.
 
 (** Make a lambda/let-in string of abstractions from a context [Γ], ending with term [t]. *)
 
@@ -150,12 +156,6 @@ Fixpoint decompose_prod (t : term) : (list name) * (list term) * term :=
                   let (ns, As) := nAs in
                   (n :: ns, A :: As, B)
   | _ => ([], [], t)
-  end.
-
-Definition get_ident (n : name) : string :=
-  match n with
-  | nAnon => "XX"
-  | nNamed i => i
   end.
 
 Fixpoint remove_arity (n : nat) (t : term) : term :=
@@ -919,3 +919,7 @@ Proof.
   pose (EqDec_ReflectEq A).
   exact _.
 Qed.
+
+End ASTUtils.
+
+Notation " Γ  ,,, Γ' " := (app_context Γ Γ') (at level 25, Γ' at next level, left associativity) : pcuic.

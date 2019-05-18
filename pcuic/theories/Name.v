@@ -3,6 +3,7 @@
 From Coq Require Import Ascii String Bool OrderedType Lia List Program Arith.
 Import ListNotations.
 From Template Require BasicAst.
+From PCUIC Require Import PCUICutils.
 
 Module B := BasicAst.
 
@@ -14,6 +15,8 @@ Class Name := {
   eq_name : name -> name -> bool ;
   eq_name_spec : forall n1 n2, reflect (n1 = n2) (eq_name n1 n2)
 }.
+
+Instance ReflectName : ReflectEq Name.
 
 Definition basic_get_ident (n : B.name) : string :=
   match n with

@@ -6,7 +6,7 @@ Require Import List. Import ListNotations.
 From Template Require Import BasicAst.
 
 Class Name := {
-  name : Type ;
+  name : Set ;
   nNamed : string -> name ;
   nAnon : name
 }.

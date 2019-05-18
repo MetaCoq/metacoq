@@ -2,7 +2,7 @@
 -R ../template-coq/theories Template
 -R theories PCUIC
 
-theories/Names.v
+theories/Name.v
 theories/PCUICAst.v
 theories/PCUICAstUtils.v
 theories/PCUICInduction.v

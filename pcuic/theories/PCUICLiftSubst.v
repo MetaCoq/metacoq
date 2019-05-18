@@ -4,6 +4,7 @@ From Coq Require Import List Program.
 From Template Require Import utils.
 From PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction.
 From Coq Require Import BinPos Arith.Compare_dec Bool Lia.
+Require Import PCUICutils PCUICBasicAst Name.
 
 (** * Lifting and substitution for the AST
 
@@ -12,6 +13,10 @@ From Coq Require Import BinPos Arith.Compare_dec Bool Lia.
   a term is closed. *)
 
 Set Asymmetric Patterns.
+
+Section Lift1.
+
+Context `{naming : Name}.
 
 Fixpoint lift n k t : term :=
   match t with
@@ -36,8 +41,14 @@ Fixpoint lift n k t : term :=
   | x => x
   end.
 
+End Lift1.
 
 Notation lift0 n := (lift n 0).
+
+Section Lift2.
+
+Context `{naming : Name}.
+
 Definition up := lift 1 0.
 
 (** Parallel substitution: it assumes that all terms in the substitution live in the
@@ -72,13 +83,15 @@ Fixpoint subst s k u :=
   | x => x
   end.
 
+End Lift2.
+
 (** Substitutes [t1 ; .. ; tn] in u for [Rel 0; .. Rel (n-1)] *in parallel* *)
 Notation subst0 t := (subst t 0).
-Definition subst1 t k u := subst [t] k u.
+Definition subst1 `{Name} t k u := subst [t] k u.
 Notation subst10 t := (subst1 t 0).
 Notation "M { j := N }" := (subst1 N j M) (at level 10, right associativity).
 
-Fixpoint closedn k (t : term) : bool :=
+Fixpoint closedn `{Name} k (t : term) : bool :=
   match t with
   | tRel i => Nat.ltb i k
   | tEvar ev args => List.forallb (closedn k) args
@@ -139,6 +152,10 @@ Notation subst_rec N M k := (subst N k M) (only parsing).
 Require Import PeanoNat.
 Import Nat.
 
+Section Lift3.
+
+Context `{naming : Name}.
+
 Lemma lift_rel_ge :
   forall k n p, p <= n -> lift k p (tRel n) = tRel (k + n).
 Proof.
@@ -182,10 +199,12 @@ Proof.
   reflexivity. intros. lia.
 Qed.
 
+End Lift3.
+
 Hint Extern 0 (_ = _) => progress f_equal : all.
 Hint Unfold on_snd snd : all.
 
-Lemma on_snd_eq_id_spec {A B} (f : B -> B) (x : A * B) :
+Lemma on_snd_eq_id_spec `{Name} {A B} (f : B -> B) (x : A * B) :
   f (snd x) = snd x <->
   on_snd f x = x.
 Proof.
@@ -194,7 +213,7 @@ Qed.
 Hint Resolve -> on_snd_eq_id_spec : all.
 Hint Resolve -> on_snd_eq_spec : all.
 
-Lemma map_def_eq_spec {A B : Set} (f f' g g' : A -> B) (x : def A) :
+Lemma map_def_eq_spec `{Name} {A B : Set} (f f' g g' : A -> B) (x : def A) :
   f (dtype x) = g (dtype x) ->
   f' (dbody x) = g' (dbody x) ->
   map_def f f' x = map_def g g' x.
@@ -203,7 +222,7 @@ Proof.
 Qed.
 Hint Resolve map_def_eq_spec : all.
 
-Lemma map_def_id_spec {A : Set} (f f' : A -> A) (x : def A) :
+Lemma map_def_id_spec `{Name} {A : Set} (f f' : A -> A) (x : def A) :
   f (dtype x) = (dtype x) ->
   f' (dbody x) = (dbody x) ->
   map_def f f' x = x.
@@ -245,6 +264,9 @@ Ltac nth_leb_simpl :=
   | _ => lia || congruence || solve [repeat (f_equal; try lia)]
   end.
 
+Section Lift4.
+Context `{naming : Name}.
+
 Lemma lift0_id : forall M k, lift 0 k M = M.
 Proof.
   intros M.
@@ -255,7 +277,7 @@ Proof.
   - now elim (leb k n).
 Qed.
 
-Lemma lift0_p : forall M, lift0 0 M = M.
+Lemma lift0_p  : forall M, lift0 0 M = M.
   intros; unfold lift in |- *.
   apply lift0_id; easy.
 Qed.
@@ -318,10 +340,15 @@ Lemma isLambda_lift n k (bod : term) :
   isLambda bod = true -> isLambda (lift n k bod) = true.
 Proof. destruct bod; simpl; try congruence. Qed.
 
+End Lift4.
+
 Hint Resolve lift_isApp map_non_nil isLambda_lift : all.
 
 Hint Unfold compose.
 Hint Transparent compose.
+
+Section Lift5.
+Context `{naming : Name}.
 
 Lemma simpl_subst_rec :
   forall M N n p k,
@@ -488,14 +515,15 @@ Qed.
 
 Lemma subst_empty k a : subst [] k a = a.
 Proof.
-  induction a in k |- * using term_forall_list_ind; simpl; try congruence;
+  revert k.
+  induction a using term_forall_list_ind ; intro k ; simpl; try congruence;
     try solve [f_equal; eauto; solve_all].
 
-  - elim (Nat.compare_spec k n); destruct (Nat.leb_spec k n); intros; try easy.
-    subst. rewrite Nat.sub_diag. simpl. rewrite Nat.sub_0_r. reflexivity.
-    assert (n - k > 0) by lia.
-    assert (exists n', n - k = S n'). exists (pred (n - k)). lia.
-    destruct H2. rewrite H2. simpl. now rewrite Nat.sub_0_r.
+  elim (Nat.compare_spec k n); destruct (Nat.leb_spec k n); intros; try easy.
+  subst. rewrite Nat.sub_diag. simpl. rewrite Nat.sub_0_r. reflexivity.
+  assert (n - k > 0) by lia.
+  assert (exists n', n - k = S n'). exists (pred (n - k)). lia.
+  destruct H2. rewrite H2. simpl. now rewrite Nat.sub_0_r.
 Qed.
 
 Lemma lift_to_extended_list_k Γ k : forall k',
@@ -519,23 +547,25 @@ Qed.
 Lemma subst_app_decomp l l' k t :
   subst (l ++ l') k t = subst l' k (subst (List.map (lift0 (length l')) l) k t).
 Proof.
-  induction t in k |- * using term_forall_list_ind; simpl; auto;
+  revert k.
+  induction t using term_forall_list_ind ; intro k ; simpl; auto;
     rewrite ?subst_mkApps; try change_Sk;
     try (f_equal; rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length;
          eauto; solve_all).
 
-  - repeat nth_leb_simpl.
-    rewrite nth_error_map in e0. rewrite e in e0.
-    injection e0; intros <-.
-    rewrite -> permute_lift by auto.
-    rewrite <- (Nat.add_0_r #|l'|).
-    rewrite -> simpl_subst_rec, lift0_id; auto with wf; try lia.
+  repeat nth_leb_simpl.
+  rewrite nth_error_map in e0. rewrite e in e0.
+  injection e0; intros <-.
+  rewrite -> permute_lift by auto.
+  rewrite <- (Nat.add_0_r #|l'|).
+  rewrite -> simpl_subst_rec, lift0_id; auto with wf; try lia.
 Qed.
 
 Lemma subst_app_simpl l l' k t :
   subst (l ++ l') k t = subst l k (subst l' (k + length l) t).
 Proof.
-  induction t in k |- * using term_forall_list_ind; simpl; eauto;
+  revert k.
+  induction t using term_forall_list_ind ; intro k ; simpl; eauto;
     rewrite ?subst_mkApps; try change_Sk;
     try (f_equal; rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length, ?Nat.add_assoc;
          eauto; solve_all; eauto).
@@ -610,3 +640,5 @@ Proof.
   destruct m; constructor.
   split. apply auxt. apply auxt. apply auxm.
 Defined.
+
+End Lift5.

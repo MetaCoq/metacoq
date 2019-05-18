@@ -853,13 +853,6 @@ Qed.
 (* Instance reflect_universe : ReflectEq Universe.Expr.t := _. *)
 (* Instance reflect_universe : ReflectEq universe := _. *)
 
-Definition eq_name na nb :=
-  match na, nb with
-  | nAnon, nAnon => true
-  | nNamed a, nNamed b => eqb a b
-  | _, _ => false
-  end.
-
 Instance reflect_name : ReflectEq name := {
   eqb := eq_name
 }.

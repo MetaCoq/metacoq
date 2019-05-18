@@ -8,7 +8,7 @@ Require Import ssreflect.
 From Equations Require Import Equations.
 Require Import Equations.Prop.DepElim.
 
-Require Import Name.
+Require Import Name PCUICBasicAst.
 
 Set Asymmetric Patterns.
 
@@ -803,6 +803,54 @@ Qed.
 
 End ASTUtils.
 
+(* Is dupplication really a solution?? *)
+
 Notation " Γ  ,,, Γ' " := (app_context Γ Γ') (at level 25, Γ' at next level, left associativity) : pcuic.
+
+Ltac merge_All :=
+  unfold tFixProp, tCaseBrsProp in *;
+  repeat toAll.
+
+Ltac apply_spec :=
+  match goal with
+  | H : All _ _, H' : forallb _ _ = _ |- map _ _ = map _ _ =>
+    eapply (All_forallb_map_spec H H')
+  | H : All _ _, H' : forallb _ _ = _ |- forallb _ _ = _ =>
+    eapply (All_forallb_forallb_spec H H')
+  | H : tCaseBrsProp _ _, H' : forallb _ _ = _ |- map _ _ = map _ _ =>
+    eapply (case_brs_forallb_map_spec H H')
+  | H : All _ _, H' : is_true (forallb _ _) |- map _ _ = map _ _ =>
+    eapply (All_forallb_map_spec H H')
+  | H : All _ _, H' : is_true (forallb _ _) |- forallb _ _ = _ =>
+    eapply (All_forallb_forallb_spec H H')
+  | H : tCaseBrsProp _ _, H' : is_true (forallb _ _) |- map _ _ = map _ _ =>
+    eapply (case_brs_forallb_map_spec H H')
+  | H : tCaseBrsProp _ _ |- map _ _ = map _ _ =>
+    eapply (case_brs_map_spec H)
+  | H : tFixProp _ _ _, H' : forallb _ _ = _ |- map _ _ = map _ _ =>
+    eapply (tfix_forallb_map_spec H H')
+  | H : tFixProp _ _ _ |- map _ _ = map _ _ =>
+    eapply (tfix_map_spec H)
+  | H : All _ _ |- map _ _ = map _ _ =>
+    eapply (All_map_eq H)
+  | H : All _ _ |- map _ _ = _ =>
+    eapply (All_map_id H)
+  | H : All _ _ |- is_true (forallb _ _) =>
+    eapply (All_forallb _ _ H); clear H
+  end.
+
+
+Ltac close_All :=
+  match goal with
+  | H : Forall _ _ |- Forall _ _ => apply (Forall_impl H); clear H; simpl
+  | H : All _ _ |- All _ _ => apply (All_impl H); clear H; simpl
+  | H : OnOne2 _ _ _ |- OnOne2 _ _ _ => apply (OnOne2_impl H); clear H; simpl
+  | H : All2 _ _ _ |- All2 _ _ _ => apply (All2_impl H); clear H; simpl
+  | H : Forall2 _ _ _ |- Forall2 _ _ _ => apply (Forall2_impl H); clear H; simpl
+  | H : All _ _ |- All2 _ _ _ =>
+    apply (All_All2 H); clear H; simpl
+  | H : All2 _ _ _ |- All _ _ =>
+    (apply (All2_All_left H) || apply (All2_All_right H)); clear H; simpl
+  end.
 
 (* TODO Check if instances survive sections *)

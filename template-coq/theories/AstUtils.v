@@ -142,9 +142,6 @@ Proof.
   intro Heq; specialize (H0 Heq). discriminate.
 Qed.
 
-Definition eq_string s s' :=
-  if string_compare s s' is Eq then true else false.
-
 Definition eq_ind i i' :=
   let 'mkInd i n := i in
   let 'mkInd i' n' := i' in
@@ -158,12 +155,6 @@ Definition eq_projection p p' :=
   let '(ind, pars, arg) := p in
   let '(ind', pars', arg') := p' in
   eq_ind ind ind' && eq_nat pars pars' && eq_nat arg arg'.
-
-Lemma eq_string_refl x : eq_string x x.
-Proof.
-  unfold eq_string.
-  now rewrite (proj2 (string_compare_eq x x) eq_refl).
-Qed.
 
 Lemma eq_ind_refl i : eq_ind i i.
 Proof.

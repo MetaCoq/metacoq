@@ -753,18 +753,6 @@ Qed.
 (* Instance reflect_universe : ReflectEq Universe.Expr.t := _. *)
 (* Instance reflect_universe : ReflectEq universe := _. *)
 
-Instance reflect_name : ReflectEq name := {
-  eqb := eq_name
-}.
-Proof.
-  intros x y. destruct x, y.
-  - cbn. constructor. reflexivity.
-  - cbn. constructor. discriminate.
-  - cbn. constructor. discriminate.
-  - cbn. destruct (eqb_spec i i0) ; nodec.
-    constructor. f_equal. assumption.
-Qed.
-
 Definition eq_inductive ind ind' :=
   match ind, ind' with
   | mkInd m n, mkInd m' n' =>

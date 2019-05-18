@@ -16,7 +16,10 @@ Class Name := {
   eq_name_spec : forall n1 n2, reflect (n1 = n2) (eq_name n1 n2)
 }.
 
-Instance ReflectName : ReflectEq Name.
+Instance ReflectName `{Name} : ReflectEq name := {
+  eqb := eq_name ;
+  eqb_spec := eq_name_spec
+}.
 
 Definition basic_get_ident (n : B.name) : string :=
   match n with
@@ -39,12 +42,24 @@ Local Instance BasicName : Name := {
   nNamed := BasicAst.nNamed ;
   nAnon := BasicAst.nAnon ;
   get_ident := basic_get_ident ;
-  eq_name :=
+  eq_name := basic_eq_name
 }.
+Proof.
+  intros x y. destruct x, y.
+  - cbn. constructor. reflexivity.
+  - cbn. constructor. discriminate.
+  - cbn. constructor. discriminate.
+  - cbn. destruct (eqb_spec i i0) ; nodec.
+    constructor. f_equal. assumption.
+Qed.
 
 Local Instance Nameless : Name := {
   name := unit ;
   nNamed s := tt ;
   nAnon := tt ;
-  get_ident _ := "XX"%string
+  get_ident _ := "XX"%string ;
+  eq_name _ _ := true
 }.
+Proof.
+  intros [] []. constructor. reflexivity.
+Qed.

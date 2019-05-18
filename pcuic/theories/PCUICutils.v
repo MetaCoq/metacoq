@@ -1,3 +1,6 @@
+From Coq Require Import Ascii String Bool OrderedType Lia List Program Arith.
+Import ListNotations.
+From Template Require Import utils.
 From Equations Require Import Equations.
 Require Import Equations.Prop.DepElim.
 

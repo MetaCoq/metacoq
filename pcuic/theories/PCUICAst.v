@@ -4,6 +4,7 @@ Require Import Coq.Strings.String.
 Require Import Coq.PArith.BinPos.
 Require Import List. Import ListNotations.
 From Template Require Export Universes BasicAst.
+From PCUIC Require Import Name.
 
 (* Declare Scope pcuic.*)
 Delimit Scope pcuic with pcuic.
@@ -14,6 +15,10 @@ Open Scope pcuic.
    This AST is a cleaned-up version of Coq's internal AST better suited for reasoning.
    In particular, it has binary applications and all terms are well-formed.
    Casts are absent as well. *)
+
+Section AST.
+
+Context `{Name}.
 
 Inductive term : Set :=
 | tRel       : nat -> term
@@ -193,3 +198,7 @@ Definition global_context : Type := global_declarations * constraints.
   A set of declarations and a term, as produced by [Quote Recursively]. *)
 
 Definition program : Type := global_declarations * term.
+
+End AST.
+
+Notation " Γ ,, d " := (snoc Γ d) (at level 20, d at next level) : pcuic.

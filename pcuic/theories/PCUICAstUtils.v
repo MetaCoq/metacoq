@@ -1,6 +1,6 @@
 From Coq Require Import Ascii String Bool OrderedType Lia List Program Arith.
 From Template Require Import utils AstUtils.
-From PCUIC Require Import PCUICAst.
+From PCUIC Require Import PCUICutils PCUICBasicAst PCUICAst.
 Import List.ListNotations.
 Require Import FunctionalExtensionality.
 Require Import ssreflect.
@@ -804,3 +804,5 @@ Qed.
 End ASTUtils.
 
 Notation " Γ  ,,, Γ' " := (app_context Γ Γ') (at level 25, Γ' at next level, left associativity) : pcuic.
+
+(* TODO Check if instances survive sections *)

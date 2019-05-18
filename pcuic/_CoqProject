@@ -4,6 +4,7 @@
 
 theories/PCUICutils.v
 theories/Name.v
+theories/PCUICBasicAst.v
 theories/PCUICAst.v
 theories/PCUICAstUtils.v
 theories/PCUICInduction.v

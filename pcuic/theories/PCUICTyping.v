@@ -11,6 +11,8 @@ Require Import ssreflect.
 Local Open Scope string_scope.
 Set Asymmetric Patterns.
 
+Require Import PCUICBasicAst Name.
+
 (** * Typing derivations
 
   *WIP*
@@ -18,6 +20,10 @@ Set Asymmetric Patterns.
   Inductive relations for reduction, conversion and typing of CIC terms.
 
  *)
+
+Section Def.
+
+Context `{naming : Name}.
 
 (** Use a coercion for this common projection of the global context. *)
 Definition fst_ctx : global_context -> global_declarations := fst.
@@ -160,6 +166,7 @@ Definition tDummy := tVar "".
 Definition iota_red npar c args brs :=
   (mkApps (snd (List.nth c brs (0, tDummy))) (List.skipn npar args)).
 
+End Def.
 
 (** *** One step strong beta-zeta-iota-fix-delta reduction
 
@@ -168,6 +175,10 @@ Definition iota_red npar c args brs :=
 
 Local Open Scope type_scope.
 Arguments OnOne2 {A} P%type l l'.
+
+Section Red.
+
+Context `{naming : Name}.
 
 Inductive red1 (Σ : global_declarations) (Γ : context) : term -> term -> Type :=
 (** Reductions *)
@@ -466,10 +477,15 @@ Fixpoint destArity Γ (t : term) :=
   | _ => None
   end.
 
+End Red.
+
 (** Compute the type of a case from the predicate [p], actual parameters [pars] and
     an inductive declaration. *)
 
-Fixpoint instantiate_params_subst params pars s ty :=
+(* BUG If I put it in the section above, I get a segfault in coqtop
+   and stack overflow in coqc!
+ *)
+Fixpoint instantiate_params_subst `{Name} params pars s ty :=
   match params with
   | [] => match pars with
           | [] => Some (s, ty)
@@ -487,6 +503,9 @@ Fixpoint instantiate_params_subst params pars s ty :=
     end
   end.
 
+Section Build.
+
+Context `{naming : Name}.
 
 Definition instantiate_params params pars ty :=
   match instantiate_params_subst (List.rev params) pars [] ty with
@@ -540,53 +559,56 @@ Definition consistent_universe_context_instance (φ : constraints) uctx u :=
     consistent (ConstraintSet.union (subst_instance_cstrs u cstrs) φ)
   end.
 
+End Build.
+
 Reserved Notation " Σ ;;; Γ |- t : T " (at level 50, Γ, t, T at next level).
 Reserved Notation " Σ ;;; Γ |- t <= u " (at level 50, Γ, t, u at next level).
 
 (** ** Cumulativity *)
 
-Inductive cumul `{checker_flags} (Σ : global_context) (Γ : context) : term -> term -> Type :=
+Inductive cumul `{Name} `{checker_flags} (Σ : global_context) (Γ : context) : term -> term -> Type :=
 | cumul_refl t u : leq_term (snd Σ) t u -> Σ ;;; Γ |- t <= u
 | cumul_red_l t u v : red1 (fst Σ) Γ t v -> Σ ;;; Γ |- v <= u -> Σ ;;; Γ |- t <= u
 | cumul_red_r t u v : Σ ;;; Γ |- t <= v -> red1 (fst Σ) Γ u v -> Σ ;;; Γ |- t <= u
 
-where " Σ ;;; Γ |- t <= u " := (@cumul _ Σ Γ t u) : type_scope.
+where " Σ ;;; Γ |- t <= u " := (@cumul _ _ Σ Γ t u) : type_scope.
 
 (** *** Conversion
 
    Defined as cumulativity in both directions.
  *)
 
-Definition conv `{checker_flags} Σ Γ T U : Type :=
+Definition conv `{Name} `{checker_flags} Σ Γ T U : Type :=
   (Σ ;;; Γ |- T <= U) * (Σ ;;; Γ |- U <= T).
 
-Notation " Σ ;;; Γ |- t = u " := (@conv _ Σ Γ t u) (at level 50, Γ, t, u at next level) : type_scope.
+Notation " Σ ;;; Γ |- t = u " := (@conv _ _ Σ Γ t u) (at level 50, Γ, t, u at next level) : type_scope.
 
-Axiom conv_refl : forall `{checker_flags} Σ Γ t, Σ ;;; Γ |- t = t.
-Axiom cumul_refl' : forall `{checker_flags} Σ Γ t, Σ ;;; Γ |- t <= t. (* easy *)
-Axiom cumul_trans : forall `{checker_flags} Σ Γ t u v, Σ ;;; Γ |- t <= u -> Σ ;;; Γ |- u <= v -> Σ ;;; Γ |- t <= v.
+Axiom conv_refl : forall `{Name} `{checker_flags} Σ Γ t, Σ ;;; Γ |- t = t.
+Axiom cumul_refl' : forall `{Name} `{checker_flags} Σ Γ t, Σ ;;; Γ |- t <= t. (* easy *)
+Axiom cumul_trans : forall `{Name} `{checker_flags} Σ Γ t u v, Σ ;;; Γ |- t <= u -> Σ ;;; Γ |- u <= v -> Σ ;;; Γ |- t <= v.
 
 Hint Resolve conv_refl cumul_refl' : typecheck.
 
-Conjecture congr_cumul_prod : forall `{checker_flags} Σ Γ na na' M1 M2 N1 N2,
+Conjecture congr_cumul_prod : forall `{Name} `{checker_flags} Σ Γ na na' M1 M2 N1 N2,
     cumul Σ Γ M1 N1 ->
     cumul Σ (Γ ,, vass na M1) M2 N2 ->
     cumul Σ Γ (tProd na M1 M2) (tProd na' N1 N2).
 
-Definition eq_opt_term `{checker_flags} φ (t u : option term) :=
+Definition eq_opt_term `{Name} `{checker_flags} φ (t u : option term) :=
   match t, u with
   | Some t, Some u => eq_term φ t u
   | None, None => True
   | _, _ => False
   end.
 
-Definition eq_decl `{checker_flags} φ (d d' : context_decl) :=
-  eq_opt_term φ d.(decl_body) d'.(decl_body) /\ eq_term φ d.(decl_type) d'.(decl_type).
+Definition eq_decl `{Name} `{checker_flags} φ (d d' : context_decl) :=
+  eq_opt_term φ d.(decl_body) d'.(decl_body) /\
+  eq_term φ d.(decl_type) d'.(decl_type).
 
-Definition eq_context `{checker_flags} φ (Γ Δ : context) :=
+Definition eq_context `{Name} `{checker_flags} φ (Γ Δ : context) :=
   Forall2 (eq_decl φ) Γ Δ.
 
-Definition check_correct_arity `{checker_flags} φ decl ind u ctx pars pctx :=
+Definition check_correct_arity `{Name} `{checker_flags} φ decl ind u ctx pars pctx :=
   let inddecl :=
       {| decl_name := nNamed decl.(ind_name);
          decl_body := None;
@@ -596,6 +618,7 @@ Definition check_correct_arity `{checker_flags} φ decl ind u ctx pars pctx :=
 (** ** Typing relation *)
 
 Section TypeLocal.
+  Context `{naming : Name}.
   Context (typing : forall (Γ : context), term -> option term -> Type).
 
   Inductive All_local_env : context -> Type :=
@@ -608,7 +631,7 @@ End TypeLocal.
 
 (** Well-formedness of local environments embeds a sorting for each variable *)
 
-Definition lift_typing (P : global_context -> context -> term -> term -> Type) :
+Definition lift_typing `{Name} (P : global_context -> context -> term -> term -> Type) :
   (global_context -> context -> term -> option term -> Type) :=
   fun Σ Γ t T =>
     match T with
@@ -616,13 +639,14 @@ Definition lift_typing (P : global_context -> context -> term -> term -> Type) :
     | None => { s : universe & P Σ Γ t (tSort s) }
     end.
 
-Definition on_local_decl (P : context -> term -> option term -> Type) Γ d :=
+Definition on_local_decl `{Name} (P : context -> term -> option term -> Type) Γ d :=
   match d.(decl_body) with
   | Some b => P Γ b (Some d.(decl_type))
   | None => P Γ d.(decl_type) None
   end.
 
 Section TypeLocalOver.
+  Context `{naming : Name}.
   Context (typing : forall (Σ : global_context) (Γ : context), term -> term -> Type).
   Context (property : forall (Σ : global_context) (Γ : context),
               All_local_env (lift_typing typing Σ) Γ ->
@@ -646,6 +670,7 @@ Section TypeLocalOver.
 End TypeLocalOver.
 
 Section WfArity.
+  Context `{naming : Name}.
   Context (typing : forall (Σ : global_context) (Γ : context), term -> term -> Type).
 
   Definition isWfArity Σ (Γ : context) T :=
@@ -659,7 +684,7 @@ Section WfArity.
     { wfa : isWfArity Σ Γ T & All_local_env_over typing property Σ _ (snd (projT2 (projT2 wfa))) }.
 End WfArity.
 
-Inductive typing `{checker_flags} (Σ : global_context) (Γ : context) : term -> term -> Type :=
+Inductive typing `{Name} `{checker_flags} (Σ : global_context) (Γ : context) : term -> term -> Type :=
 | type_Rel n decl :
     All_local_env (lift_typing typing Σ) Γ ->
     nth_error Γ n = Some decl ->
@@ -756,9 +781,13 @@ Inductive typing `{checker_flags} (Σ : global_context) (Γ : context) : term ->
     (isWfArity typing Σ Γ B + {s & Σ ;;; Γ |- B : tSort s})%type ->
     Σ ;;; Γ |- A <= B -> Σ ;;; Γ |- t : B
 
-where " Σ ;;; Γ |- t : T " := (@typing _ Σ Γ t T) : type_scope.
+where " Σ ;;; Γ |- t : T " := (@typing _ _ Σ Γ t T) : type_scope.
 
 (** ** Typechecking of global environments *)
+
+Section Glob.
+
+Context `{naming : Name}.
 
 Definition add_global_constraints (uctx : universe_context) (G : constraints) : constraints
   := match uctx with
@@ -801,9 +830,12 @@ Definition unlift_opt_pred (P : global_context -> context -> option term -> term
   (global_context -> context -> term -> term -> Type) :=
   fun Σ Γ t T => P Σ Γ (Some t) T.
 
+End Glob.
+
 (** *** Typing of inductive declarations *)
 
 Section GlobalMaps.
+  Context `{naming : Name}.
   Context (P : global_context -> context -> term -> option term -> Type).
 
   Implicit Types (mdecl : mutual_inductive_body) (idecl : one_inductive_body) (cdecl : ident * term * nat).
@@ -905,6 +937,10 @@ Section GlobalMaps.
     on_global_decls (snd g) (fst g).
 
 End GlobalMaps.
+
+Section All.
+
+Context `{naming : Name}.
 
 (* Definition sort_irrelevant (P : global_context -> context -> option term -> term -> Type) := *)
 (*   forall Σ Γ b s s', P Σ Γ b (tSort s) -> P Σ Γ b (tSort s'). *)
@@ -1057,9 +1093,12 @@ Definition Forall_decls `{checker_flags}
 Lemma refine_type `{checker_flags} Σ Γ t T U : Σ ;;; Γ |- t : T -> T = U -> Σ ;;; Γ |- t : U.
 Proof. now intros Ht ->. Qed.
 
+End All.
+
 Notation wf_local Σ Γ := (All_local_env (lift_typing typing Σ) Γ).
 
 Section wf_local_size.
+  Context `{naming : Name}.
   Context `{checker_flags} (Σ : global_context).
   Context (fn : forall (Σ : global_context) (Γ : context) (t T : term), typing Σ Γ t T -> size).
 
@@ -1070,6 +1109,10 @@ Section wf_local_size.
     | localenv_cons_def Γ na b t wfΓ tty => (fn _ _ b t tty + wf_local_size _ wfΓ)%nat
     end.
 End wf_local_size.
+
+Section Size.
+
+Context `{naming : Name}.
 
 Definition typing_size `{checker_flags} {Σ Γ t T} (d : Σ ;;; Γ |- t : T) : size.
 Proof.
@@ -1115,6 +1158,8 @@ Fixpoint globenv_size (Σ : global_declarations) : size :=
   | d :: Σ => S (globenv_size Σ)
   end.
 
+End Size.
+
 (** To get a good induction principle for typing derivations,
      we need:
     - size of the global_context, including size of the global declarations in it
@@ -1129,6 +1174,10 @@ Require Import Relation_Operators Lexicographic_Product Wf_nat.
 Arguments lexprod [A B].
 
 Notation wf := type_global_env.
+
+Section Env.
+
+Context `{naming : Name}.
 
 Definition env_prop `{checker_flags} (P : forall Σ Γ t T, Type) :=
   forall Σ (wfΣ : wf Σ) Γ (wfΓ : wf_local Σ Γ) t T, Σ ;;; Γ |- t : T ->
@@ -1160,8 +1209,8 @@ Defined.
 Hint Resolve typing_wf_local : wf.
 
 Lemma size_wf_local_app `{checker_flags} {Σ} (Γ Γ' : context) (wf : wf_local Σ (Γ ,,, Γ')) :
-  wf_local_size Σ (@typing_size _) _ (wf_local_app _ _ _ wf) <=
-  wf_local_size Σ (@typing_size _) _ wf.
+  wf_local_size Σ (@typing_size _ _) _ (wf_local_app _ _ _ wf) <=
+  wf_local_size Σ (@typing_size _ _) _ wf.
 Proof.
   induction Γ' in Γ, wf |- *; try lia. simpl. lia.
   depelim wf. simpl. unfold eq_rect_r. simpl. specialize (IHΓ' _ wf). lia.
@@ -1170,7 +1219,7 @@ Qed.
 
 Lemma typing_wf_local_size `{checker_flags} {Σ} {Γ t T}
       (d :Σ ;;; Γ |- t : T) :
-  wf_local_size Σ (@typing_size _) _ (typing_wf_local d) < typing_size d.
+  wf_local_size Σ (@typing_size _ _) _ (typing_wf_local d) < typing_size d.
 Proof.
   induction d; simpl; try lia.
   pose proof (size_wf_local_app _ _ a).
@@ -1185,11 +1234,11 @@ Lemma wf_local_inv `{checker_flags} {Σ Γ'} (w : wf_local Σ Γ') :
   { w' : wf_local Σ Γ &
     match d.(decl_body) with
     | Some b => { ty : Σ ;;; Γ |- b : d.(decl_type) |
-                  wf_local_size Σ (@typing_size _) _ w' < wf_local_size _ (@typing_size _) _ w /\
-                  typing_size ty <= wf_local_size _ (@typing_size _) _ w }
+                  wf_local_size Σ (@typing_size _ _) _ w' < wf_local_size _ (@typing_size _ _) _ w /\
+                  typing_size ty <= wf_local_size _ (@typing_size _ _) _ w }
     | None => { u & { ty : Σ ;;; Γ |- d.(decl_type) : tSort u |
-                      wf_local_size Σ (@typing_size _) _ w' < wf_local_size _ (@typing_size _) _ w /\
-                      typing_size ty <= wf_local_size _ (@typing_size _) _ w } }
+                      wf_local_size Σ (@typing_size _ _) _ w' < wf_local_size _ (@typing_size _ _) _ w /\
+                      typing_size ty <= wf_local_size _ (@typing_size _ _) _ w } }
     end }.
 Proof.
   intros d Γ.
@@ -1995,14 +2044,16 @@ Proof.
        exists u. intuition.
 Qed.
 
+End Env.
+
 Ltac my_rename_hyp h th :=
   match th with
   | (type_global_env ?E) => fresh "wf" E
   | (typing _ _ ?t _) => fresh "type" t
-  | (@cumul _ _ _ ?t _) => fresh "cumul" t
+  | (@cumul _ _ _ _ ?t _) => fresh "cumul" t
   | (conv _ _ ?t _) => fresh "conv" t
-  | (All_local_env (lift_typing (@typing _) _) ?G) => fresh "wf" G
-  | (All_local_env (lift_typing (@typing _) _) _) => fresh "wf"
+  | (All_local_env (lift_typing (@typing _ _) _) ?G) => fresh "wf" G
+  | (All_local_env (lift_typing (@typing _ _) _) _) => fresh "wf"
   | (All_local_env _ _ ?G) => fresh "H" G
   | context [typing _ _ (_ ?t) _] => fresh "IH" t
   end.
@@ -2010,6 +2061,10 @@ Ltac my_rename_hyp h th :=
 Ltac rename_hyp h ht ::= my_rename_hyp h ht.
 
 (** * Lemmas about All_local_env *)
+
+Section All_local.
+
+Context `{naming : Name}.
 
 Lemma nth_error_All_local_env {P Γ n} (isdecl : n < #|Γ|) :
   All_local_env P Γ ->
@@ -2127,3 +2182,5 @@ Proof.
   - destruct n. noconf eq. simpl. split; auto.
     apply IHX.
 Defined.
+
+End All_local.

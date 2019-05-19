@@ -6,9 +6,13 @@ From PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICLiftSubst P
 Require Import ssreflect ssrbool.
 From Equations Require Import Equations.
 
+Require Import PCUICBasicAst Name.
+
 (** * Weakening lemmas w.r.t. the global environment *)
 
 Set Asymmetric Patterns.
+
+Context `{naming : Name}.
 
 Generalizable Variables Σ Γ t T.
 
@@ -64,7 +68,7 @@ Lemma weakening_env_red1 `{CF:checker_flags} Σ Σ' Γ M N :
   red1 (fst Σ) Γ M N ->
   red1 (fst Σ') Γ M N.
 Proof.
-  induction 3 using red1_ind_all;
+  induction 3 using @red1_ind_all;
     try solve [econstructor; eauto;
                eapply (OnOne2_impl X1); simpl; intuition eauto].
 

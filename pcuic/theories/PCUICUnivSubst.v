@@ -7,6 +7,12 @@ Require Import String.
 Local Open Scope string_scope.
 Set Asymmetric Patterns.
 
+Require Import PCUICBasicAst Name.
+
+Section Subst.
+
+Context `{naming : Name}.
+
 (** * Universe substitution
 
   *WIP*
@@ -45,7 +51,8 @@ Definition subst_instance_context (u : universe_instance) (c : context) : contex
 Lemma lift_subst_instance_constr u c n k :
   lift n k (subst_instance_constr u c) = subst_instance_constr u (lift n k c).
 Proof.
-  induction c in k |- * using term_forall_list_ind; simpl; auto;
+  revert k.
+  induction c using term_forall_list_ind ; intro k ; simpl; auto;
     rewrite ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length;
     try solve [f_equal; eauto; solve_all; eauto].
 
@@ -76,7 +83,8 @@ Lemma subst_subst_instance_constr u c N k :
   subst (map (subst_instance_constr u) N) k (subst_instance_constr u c) =
   subst_instance_constr u (subst N k c).
 Proof.
-  induction c in k |- * using term_forall_list_ind; simpl; auto;
+  revert k.
+  induction c using term_forall_list_ind; intro k; simpl; auto;
     rewrite ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length;
     try solve [f_equal; eauto; solve_all; eauto].
 
@@ -92,9 +100,12 @@ Proof.
   solve_all. now destruct H as [n [-> _]].
 Qed.
 
+End Subst.
+
 Section Closedu.
   (** Tests that the term is closed over [k] universe variables *)
   Context (k : nat).
+  Context `{naming : Name}.
 
   Definition closedu_level (l : Level.t) :=
     match l with
@@ -141,6 +152,9 @@ Require Import ssreflect ssrbool.
 (** Universe-closed terms are unaffected by universe substitution. *)
 
 Section UniverseClosedSubst.
+
+  Context `{naming : Name}.
+
   Lemma closedu_subst_instance_level u t : closedu_level 0 t -> subst_instance_level u t = t.
   Proof.
     destruct t => /=; auto.
@@ -172,7 +186,7 @@ Section UniverseClosedSubst.
 
   Lemma closedu_subst_instance_constr u t : closedu 0 t -> subst_instance_constr u t = t.
   Proof.
-    induction t in |- * using term_forall_list_ind; simpl; auto; intros H';
+    induction t using term_forall_list_ind; simpl; auto; intros H';
       rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length;
       try f_equal; eauto with terms; unfold test_def in *;
         try solve [f_equal; eauto; repeat (toProp; solve_all)].
@@ -182,6 +196,8 @@ End UniverseClosedSubst.
 Section SubstInstanceClosed.
   (** Substitution of a universe-closed instance of the right size
       produces a universe-closed term. *)
+
+  Context `{naming : Name}.
 
   Context (u : universe_instance) (Hcl : closedu_instance 0 u).
 
@@ -232,7 +248,7 @@ Section SubstInstanceClosed.
   Lemma subst_instance_constr_closedu t :
     closedu #|u| t -> closedu 0 (subst_instance_constr u t).
   Proof.
-    induction t in |- * using term_forall_list_ind; simpl; auto; intros H';
+    induction t using term_forall_list_ind; simpl; auto; intros H';
     rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length, ?forallb_map;
     try f_equal; auto with terms;
     unfold test_def, map_def, compose in *;

@@ -1,7 +1,7 @@
 (* Distributed under the terms of the MIT license.   *)
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Arith Lia.
-From Template Require Import utils univ UnivSubst.
+From Template Require Import utils UnivSubst.
 From PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICLiftSubst.
 Require Import String.
 Local Open Scope string_scope.
@@ -157,6 +157,7 @@ Section UniverseClosedSubst.
   Lemma closedu_subst_instance_univ u t : closedu_universe 0 t -> subst_instance_univ u t = t.
   Proof.
     rewrite /closedu_universe /subst_instance_univ => H.
+    eapply eq_universes; cbn.
     eapply (forallb_Forall (closedu_level_expr 0)) in H; auto. solve_all.
     now apply (closedu_subst_instance_level_expr u).
   Qed.

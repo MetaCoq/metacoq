@@ -22,13 +22,19 @@ type 'a tm
 
 val run : 'a tm -> Environ.env -> Evd.evar_map -> (Environ.env -> Evd.evar_map -> 'a -> unit) -> unit
 
+val with_env_evm : (Environ.env -> Evd.evar_map -> 'a tm) -> 'a tm
+
+val run_vernac : 'a tm -> unit
+
 val tmReturn : 'a -> 'a tm
 val tmBind : 'a tm -> ('a -> 'b tm) -> 'b tm
+val tmMap  : ('a -> 'b) -> 'a tm -> 'b tm
 
 val tmPrint : term -> unit tm
 val tmMsg  : string -> unit tm
 
-val tmFail : string -> 'a tm
+val tmFail : Pp.t -> 'a tm
+val tmFailString : string -> 'a tm
 val tmEval : reduction_strategy -> term -> term tm
 
 val tmDefinition : ident -> ?poly:bool -> term option -> term -> kername tm
@@ -38,9 +44,10 @@ val tmLemma : ident -> ?poly:bool -> term -> kername tm
 val tmFreshName : ident -> ident tm
 
 val tmAbout : qualid -> global_reference option tm
+val tmAboutString : string -> global_reference option tm
 val tmCurrentModPath : Names.ModPath.t tm
 
-val tmQuoteInductive : kername -> mutual_inductive_body option tm
+val tmQuoteInductive : kername -> (Names.MutInd.t * mutual_inductive_body) option tm
 val tmQuoteUniverses : UGraph.t tm
 val tmQuoteConstant : kername -> bool -> constant_entry tm
 

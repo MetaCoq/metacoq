@@ -12,7 +12,7 @@ Require Import ExtrOcamlString ExtrOcamlZInt.
    https://github.com/coq/coq/issues/7017. *)
 Extract Inductive Decimal.int => unit [ "(fun _ -> ())" "(fun _ -> ())" ] "(fun _ _ _ -> assert false)".
 
-Extraction Blacklist config uGraph univ Ast String List Nat Int
+Extraction Blacklist config uGraph universes Ast String List Nat Int
            UnivSubst Typing Checker Retyping OrderedType Classes.
 Set Warnings "-extraction-opaque-accessed".
 

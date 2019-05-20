@@ -84,9 +84,9 @@ Qed.
 
 Lemma weakening_env_consistent_universe_context_instance:
   forall (Σ : global_context) (u : list Level.t) univs,
-    consistent_universe_context_instance Σ univs u ->
+    consistent_universe_context_instance (snd Σ) univs u ->
     forall Σ' : global_context,
-      extends Σ Σ' -> consistent_universe_context_instance Σ' univs u.
+      extends Σ Σ' -> consistent_universe_context_instance (snd Σ') univs u.
 Proof.
   intros Σ u univs H1 Σ' H2. destruct univs; simpl in *; eauto.
   all:(destruct UContext.dest; destruct H2 as [Σ'' ->]; simpl; auto).

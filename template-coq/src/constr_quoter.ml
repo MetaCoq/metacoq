@@ -2,186 +2,16 @@ open Univ
 open Entries
 open Names
 open Pp
-
+open Tm_util
+open Quoted
 open Quoter
-
-let contrib_name = "template-coq"
-
-let gen_constant_in_modules locstr dirs s =
-  Universes.constr_of_global (Coqlib.gen_reference_in_modules locstr dirs s)
+open Constr_quoted
 
 (** The reifier to Coq values *)
 module TemplateCoqQuoter =
 struct
-  type t = Constr.t
+  include ConstrQuoted
 
-  type quoted_ident = Constr.t (* of type Ast.ident *)
-  type quoted_int = Constr.t (* of type nat *)
-  type quoted_bool = Constr.t (* of type bool *)
-  type quoted_name = Constr.t (* of type Ast.name *)
-  type quoted_sort = Constr.t (* of type Ast.universe *)
-  type quoted_cast_kind = Constr.t  (* of type Ast.cast_kind *)
-  type quoted_kernel_name = Constr.t (* of type Ast.kername *)
-  type quoted_inductive = Constr.t (* of type Ast.inductive *)
-  type quoted_proj = Constr.t (* of type Ast.projection *)
-  type quoted_global_reference = Constr.t (* of type Ast.global_reference *)
-
-  type quoted_sort_family = Constr.t (* of type Ast.sort_family *)
-  type quoted_constraint_type = Constr.t (* of type univ.constraint_type *)
-  type quoted_univ_constraint = Constr.t (* of type univ.univ_constraint *)
-  type quoted_univ_constraints = Constr.t (* of type univ.constraints *)
-  type quoted_univ_instance = Constr.t (* of type univ.universe_instance *)
-  type quoted_univ_context = Constr.t (* of type univ.universe_context *)
-  type quoted_inductive_universes = Constr.t (* of type univ.universe_context *)
-
-  type quoted_mind_params = Constr.t (* of type list (Ast.ident * list (ident * local_entry)local_entry) *)
-  type quoted_ind_entry = quoted_ident * t * quoted_bool * quoted_ident list * t list
-  type quoted_definition_entry = t * t option * quoted_univ_context
-  type quoted_mind_entry = Constr.t (* of type Ast.mutual_inductive_entry *)
-  type quoted_mind_finiteness = Constr.t (* of type Ast.mutual_inductive_entry ?? *)
-  type quoted_entry = Constr.t (* of type option (constant_entry + mutual_inductive_entry) *)
-
-  type quoted_context_decl = Constr.t (* in Ast *)
-  type quoted_context = Constr.t (* in Ast *)
-
-  type quoted_one_inductive_body = Constr.t (* of type Ast.one_inductive_body *)
-  type quoted_mutual_inductive_body = Constr.t (* of type Ast.mutual_inductive_body *)
-  type quoted_constant_body = Constr.t (* of type Ast.constant_body *)
-  type quoted_global_decl = Constr.t (* of type Ast.global_decl *)
-  type quoted_global_declarations = Constr.t (* of type Ast.global_declarations *)
-  type quoted_program = Constr.t (* of type Ast.program *)
-
-  type quoted_reduction_strategy = Constr.t (* of type Ast.reductionStrategy *)
-
-  let resolve_symbol (path : string list) (tm : string) : Constr.t =
-    gen_constant_in_modules contrib_name [path] tm
-
-  let resolve_symbol_p (path : string list) (tm : string) : global_reference =
-    Coqlib.gen_reference_in_modules contrib_name [path] tm
-
-  let pkg_datatypes = ["Coq";"Init";"Datatypes"]
-  let pkg_string = ["Coq";"Strings";"String"]
-  let pkg_base_reify = ["Template";"BasicAst"]
-  let pkg_reify = ["Template";"Ast"]
-  let pkg_template_monad = ["Template";"TemplateMonad"]
-  let pkg_univ = ["Template";"kernel";"univ"]
-  let pkg_level = ["Template";"kernel";"univ";"Level"]
-  let pkg_variance = ["Template";"kernel";"univ";"Variance"]
-  let pkg_ugraph = ["Template";"kernel";"uGraph"]
-  let ext_pkg_univ s = List.append pkg_univ [s]
-
-  let r_base_reify = resolve_symbol pkg_base_reify
-  let r_reify = resolve_symbol pkg_reify
-  let r_template_monad = resolve_symbol pkg_template_monad
-  let r_template_monad_p = resolve_symbol_p pkg_template_monad
-
-  let tString = resolve_symbol pkg_string "String"
-  let tEmptyString = resolve_symbol pkg_string "EmptyString"
-  let tO = resolve_symbol pkg_datatypes "O"
-  let tS = resolve_symbol pkg_datatypes "S"
-  let tnat = resolve_symbol pkg_datatypes "nat"
-  let ttrue = resolve_symbol pkg_datatypes "true"
-  let cSome = resolve_symbol pkg_datatypes "Some"
-  let cNone = resolve_symbol pkg_datatypes "None"
-  let tfalse = resolve_symbol pkg_datatypes "false"
-  let unit_tt = resolve_symbol pkg_datatypes "tt"
-  let tAscii = resolve_symbol ["Coq";"Strings";"Ascii"] "Ascii"
-  let tlist = resolve_symbol pkg_datatypes "list"
-  let c_nil = resolve_symbol pkg_datatypes "nil"
-  let c_cons = resolve_symbol pkg_datatypes "cons"
-  let prod_type = resolve_symbol pkg_datatypes "prod"
-  let sum_type = resolve_symbol pkg_datatypes "sum"
-  let option_type = resolve_symbol pkg_datatypes "option"
-  let bool_type = resolve_symbol pkg_datatypes "bool"
-  let cInl = resolve_symbol pkg_datatypes "inl"
-  let cInr = resolve_symbol pkg_datatypes "inr"
-  let prod a b = Constr.mkApp (prod_type, [| a ; b |])
-  let c_pair = resolve_symbol pkg_datatypes "pair"
-  let pair a b f s = Constr.mkApp (c_pair, [| a ; b ; f ; s |])
-
-    (* reify the constructors in Template.Ast.v, which are the building blocks of reified terms *)
-  let nAnon = r_base_reify "nAnon"
-  let nNamed = r_base_reify "nNamed"
-  let kVmCast = r_base_reify "VmCast"
-  let kNative = r_base_reify "NativeCast"
-  let kCast = r_base_reify "Cast"
-  let kRevertCast = r_base_reify "RevertCast"
-  let lProp = resolve_symbol pkg_level "lProp"
-  let lSet = resolve_symbol pkg_level "lSet"
-  let sfProp = r_base_reify "InProp"
-  let sfSet = r_base_reify "InSet"
-  let sfType = r_base_reify "InType"
-  let tident = r_base_reify "ident"
-  let tname = r_base_reify "name"
-  let tIndTy = r_base_reify "inductive"
-  let tmkInd = r_base_reify "mkInd"
-  let tsort_family = r_base_reify "sort_family"
-  let tmkdecl = r_reify "mkdecl"
-  let (tTerm,tRel,tVar,tEvar,tSort,tCast,tProd,
-       tLambda,tLetIn,tApp,tCase,tFix,tConstructor,tConst,tInd,tCoFix,tProj) =
-    (r_reify "term", r_reify "tRel", r_reify "tVar", r_reify "tEvar",
-     r_reify "tSort", r_reify "tCast", r_reify "tProd", r_reify "tLambda",
-     r_reify "tLetIn", r_reify "tApp", r_reify "tCase", r_reify "tFix",
-     r_reify "tConstruct", r_reify "tConst", r_reify "tInd", r_reify "tCoFix", r_reify "tProj")
-
-  let tlevel = resolve_symbol pkg_level "t"
-  let tLevel = resolve_symbol pkg_level "Level"
-  let tLevelVar = resolve_symbol pkg_level "Var"
-  let tunivLe = resolve_symbol (ext_pkg_univ "ConstraintType") "Le"
-  let tunivLt = resolve_symbol (ext_pkg_univ "ConstraintType") "Lt"
-  let tunivEq = resolve_symbol (ext_pkg_univ "ConstraintType") "Eq"
-  (* let tunivcontext = resolve_symbol pkg_univ "universe_context" *)
-  let tVariance = resolve_symbol pkg_variance "t"
-  let cIrrelevant = resolve_symbol pkg_variance "Irrelevant"
-  let cCovariant = resolve_symbol pkg_variance "Covariant"
-  let cInvariant = resolve_symbol pkg_variance "Invariant"
-  let cMonomorphic_ctx = resolve_symbol pkg_univ "Monomorphic_ctx"
-  let cPolymorphic_ctx = resolve_symbol pkg_univ "Polymorphic_ctx"
-  let cCumulative_ctx = resolve_symbol pkg_univ "Cumulative_ctx"
-  let tUContext = resolve_symbol (ext_pkg_univ "UContext") "t"
-  let tUContextmake = resolve_symbol (ext_pkg_univ "UContext") "make"
-  (* let tConstraintSetempty = resolve_symbol (ext_pkg_univ "ConstraintSet") "empty" *)
-  let tConstraintSetempty = Universes.constr_of_global (Coqlib.find_reference "template coq bug" (ext_pkg_univ "ConstraintSet") "empty")
-  let tConstraintSetadd = Universes.constr_of_global (Coqlib.find_reference "template coq bug" (ext_pkg_univ "ConstraintSet") "add")
-  let tmake_univ_constraint = resolve_symbol pkg_univ "make_univ_constraint"
-  let tinit_graph = resolve_symbol pkg_ugraph "init_graph"
-  let tadd_global_constraints = resolve_symbol pkg_ugraph  "add_global_constraints"
-
-  let (tdef,tmkdef) = (r_base_reify "def", r_base_reify "mkdef")
-  let (tLocalDef,tLocalAssum,tlocal_entry) = (r_reify "LocalDef", r_reify "LocalAssum", r_reify "local_entry")
-
-  let (cFinite,cCoFinite,cBiFinite) = (r_reify "Finite", r_reify "CoFinite", r_reify "BiFinite")
-  let tone_inductive_body = r_reify "one_inductive_body"
-  let tBuild_one_inductive_body = r_reify "Build_one_inductive_body"
-  let tBuild_mutual_inductive_body = r_reify "Build_mutual_inductive_body"
-  let tBuild_constant_body = r_reify "Build_constant_body"
-  let tglobal_decl = r_reify "global_decl"
-  let tConstantDecl = r_reify "ConstantDecl"
-  let tInductiveDecl = r_reify "InductiveDecl"
-  let tglobal_declarations = r_reify "global_declarations"
-
-  let tcontext_decl = r_reify "context_decl"
-  let tcontext = r_reify "context"
-
-  let tMutual_inductive_entry = r_reify "mutual_inductive_entry"
-  let tOne_inductive_entry = r_reify "one_inductive_entry"
-  let tBuild_mutual_inductive_entry = r_reify "Build_mutual_inductive_entry"
-  let tBuild_one_inductive_entry = r_reify "Build_one_inductive_entry"
-  let tConstant_entry = r_reify "constant_entry"
-  let cParameterEntry = r_reify "ParameterEntry"
-  let cDefinitionEntry = r_reify "DefinitionEntry"
-  let cParameter_entry = r_reify "Build_parameter_entry"
-  let cDefinition_entry = r_reify "Build_definition_entry"
-
-  let (tcbv, tcbn, thnf, tall, tlazy, tunfold) = (r_template_monad "cbv", r_template_monad "cbn", r_template_monad "hnf", r_template_monad "all", r_template_monad "lazy", r_template_monad "unfold")
-
-  let (tglobal_reference, tConstRef, tIndRef, tConstructRef) =
-    (r_base_reify "global_reference", r_base_reify "ConstRef", r_base_reify "IndRef", r_base_reify "ConstructRef")
-
-  (* let pkg_specif = ["Coq";"Init";"Specif"] *)
-  (* let texistT = resolve_symbol pkg_specif "existT" *)
-  (* let texistT_typed_term = r_template_monad "existT_typed_term" *)
-  let texistT_typed_term = r_template_monad_p "existT_typed_term"
 
   let to_coq_list typ =
     let the_nil = Constr.mkApp (c_nil, [| typ |]) in
@@ -275,7 +105,9 @@ struct
 
   let quote_universe s =
     let levels = Universe.map (fun (l,i) -> pair tlevel bool_type (quote_level l) (if i > 0 then ttrue else tfalse)) s in
-    to_coq_list (prod tlevel bool_type) levels
+    let hd = List.hd levels in
+    let tl = to_coq_list (prod tlevel bool_type) (List.tl levels) in
+    Constr.mkApp (tmake_universe, [| hd ; tl |])
 
   (* todo : can be deduced from quote_level, hence shoud be in the Reify module *)
   let quote_univ_instance u =

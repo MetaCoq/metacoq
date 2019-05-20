@@ -226,7 +226,7 @@ Proof.
       eapply type_Conv; pcuic.
       eapply (weakening_cumul Σ Γ [] [vass na A]) in b; pcuic.
       simpl in b. eapply cumul_trans. 2:eauto.
-      constructor. simpl. apply leq_universe_product_r.
+      constructor. constructor. simpl. apply leq_universe_product_r.
 
   - eapply declared_constant_inv in H; pcuic.
     destruct decl as [ty [b|] univs]. red in H. simpl in *.
@@ -244,7 +244,7 @@ Proof.
     destruct X2.
     + destruct i as [ctx [s [Heq Hs]]].
       exists s.
-      unfold check_correct_arity in heq_check_correct_arity.
+      unfold check_correct_arity in *.
       assert (ctx = pctx). admit. (* WF of cases *)
       subst ctx.
       pose proof (PCUICClosed.destArity_spec [] pty). rewrite Heq in H.

@@ -3,8 +3,7 @@
 Require Import Coq.Strings.String.
 Require Import Coq.PArith.BinPos.
 Require Import List. Import ListNotations.
-From Template Require Export univ uGraph.
-From Template Require Import BasicAst.
+From Template Require Export Universes BasicAst.
 
 (* Declare Scope pcuic.*)
 Delimit Scope pcuic with pcuic.
@@ -187,7 +186,7 @@ Definition global_declarations := list global_decl.
 (** A context of global declarations + global universe constraints,
     i.e. a global environment *)
 
-Definition global_context : Type := global_declarations * uGraph.t.
+Definition global_context : Type := global_declarations * constraints.
 
 (** *** Programs
 

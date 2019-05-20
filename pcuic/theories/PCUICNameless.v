@@ -214,6 +214,13 @@ Proof.
         eapply IHm. assumption.
 Qed.
 
+Local Ltac ih2 :=
+  lazymatch goal with
+  | ih : forall v : term, eq_term_upto_univ _ ?u _ -> _
+    |- eq_term_upto_univ _ (nl ?u) _ =>
+    eapply ih ; assumption
+  end.
+
 Corollary eq_term_nl_eq :
   forall `{checker_flags} u v,
     eq_term_upto_univ eq u v ->
@@ -223,5 +230,41 @@ Proof.
   eapply nameless_eq_term_spec.
   - eapply nl_spec.
   - eapply nl_spec.
-  - admit.
-Admitted.
+  - revert v h.
+    induction u using term_forall_list_ind ; intros v h.
+    all: dependent destruction h.
+    all: try (simpl ; constructor ; try ih2 ; assumption).
+    + cbn. constructor.
+      eapply Forall2_map.
+      eapply Forall2_impl' ; try eassumption.
+      eapply All_Forall. assumption.
+    + cbn. constructor ; try ih2.
+      eapply Forall2_map.
+      eapply Forall2_impl' ; try eassumption.
+      clear - X. induction X.
+      * constructor.
+      * constructor ; try assumption.
+        intros [n t] [hn ht].
+        split ; try assumption.
+        eapply p. assumption.
+    + cbn. constructor ; try ih2.
+      eapply Forall2_map.
+      eapply Forall2_impl' ; try eassumption.
+      clear - X. induction X.
+      * constructor.
+      * constructor ; try assumption.
+        intros y [? [? ?]]. repeat split.
+        -- eapply p. assumption.
+        -- eapply p. assumption.
+        -- assumption.
+    + cbn. constructor ; try ih2.
+      eapply Forall2_map.
+      eapply Forall2_impl' ; try eassumption.
+      clear - X. induction X.
+      * constructor.
+      * constructor ; try assumption.
+        intros y [? [? ?]]. repeat split.
+        -- eapply p. assumption.
+        -- eapply p. assumption.
+        -- assumption.
+Qed.

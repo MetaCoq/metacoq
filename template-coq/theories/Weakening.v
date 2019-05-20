@@ -575,9 +575,77 @@ Proof.
   destruct (leb_spec_Set (#|c| + k) x'). f_equal. lia. reflexivity.
 Qed.
 
+Lemma wf_instantiate_params_subst_term :
+  forall params args s t ctx t',
+    Ast.wf t ->
+    instantiate_params_subst params args s t = Some (ctx, t') ->
+    Ast.wf t'.
+Proof.
+  intros params args s t ctx t' h e.
+  revert args s t ctx t' h e.
+  induction params ; intros args s t ctx t' h e.
+  - destruct args ; try discriminate. cbn in e. inversion e.
+    subst. assumption.
+  - destruct a as [na [bo|] ty].
+    + cbn in e. destruct t ; try discriminate.
+      eapply IHparams ; try exact e.
+      dependent destruction h. assumption.
+    + cbn in e. destruct t ; try discriminate.
+      destruct args ; try discriminate.
+      eapply IHparams ; try exact e.
+      dependent destruction h. assumption.
+Qed.
+
+Lemma wf_instantiate_params_subst_ctx :
+  forall params args s t ctx t',
+    Forall Ast.wf args ->
+    Forall wf_decl params ->
+    Forall Ast.wf s ->
+    instantiate_params_subst params args s t = Some (ctx, t') ->
+    Forall Ast.wf ctx.
+Proof.
+  intros params args s t ctx t' ha hp hx e.
+  revert args s t ctx t' ha hp hx e.
+  induction params ; intros args s t ctx t' ha hp hx e.
+  - destruct args ; try discriminate. cbn in e. inversion e.
+    subst. assumption.
+  - destruct a as [na [bo|] ty].
+    + cbn in e. destruct t ; try discriminate.
+      dependent destruction hp. destruct H as [h1 h2]. simpl in h1, h2.
+      eapply IHparams ; try exact e ; try assumption.
+      constructor ; try assumption.
+      eapply wf_subst ; assumption.
+    + cbn in e. destruct t ; try discriminate.
+      destruct args ; try discriminate.
+      dependent destruction hp. simpl in *.
+      dependent destruction ha.
+      eapply IHparams ; try exact e ; try assumption.
+      constructor ; assumption.
+Qed.
+
+Lemma wf_instantiate_params :
+  forall params args t t',
+    Forall wf_decl params ->
+    Forall Ast.wf args ->
+    Ast.wf t ->
+    instantiate_params params args t = Some t' ->
+    Ast.wf t'.
+Proof.
+  intros params args t t' hparamas hargs ht e.
+  unfold instantiate_params in e. revert e.
+  case_eq (instantiate_params_subst (List.rev params) args [] t) ; try discriminate.
+  intros [ctx u] eq e. inversion e. subst. clear e.
+  apply wf_instantiate_params_subst_term in eq as h1 ; trivial.
+  apply wf_instantiate_params_subst_ctx in eq as h2 ; trivial.
+  - eapply wf_subst ; trivial.
+  - eapply rev_Forall. assumption.
+Qed.
+
 Lemma lift_types_of_case ind mdecl idecl args u p pty indctx pctx ps btys n k :
   let f k' := lift n (k' + k) in
   let f_ctx := lift_context n k in
+  Forall wf_decl mdecl.(ind_params) ->
+  Forall Ast.wf args ->
   Ast.wf pty -> Ast.wf (ind_type idecl) -> closed_ctx mdecl.(ind_params) ->
   types_of_case ind mdecl idecl args u p pty = Some (indctx, pctx, ps, btys) ->
   types_of_case ind mdecl (map_one_inductive_body (inductive_mind ind) (polymorphic_instance mdecl.(ind_universes))
@@ -586,10 +654,18 @@ Lemma lift_types_of_case ind mdecl idecl args u p pty indctx pctx ps btys n k :
                 (map (f 0) args) u (f 0 p) (f 0 pty) =
   Some (f_ctx indctx, f_ctx pctx, ps, map (on_snd (f 0)) btys).
 Proof.
-  simpl. intros wfpty wfdecl closedpars. simpl.
-  unfold types_of_case. simpl.
-  pose proof (lift_destArity [] (ind_type idecl) n k wfdecl); trivial. simpl in H.
-  unfold lift_context, fold_context in H. simpl in H. rewrite -> ind_type_map. simpl. rewrite -> H. clear H.
+  simpl. intros wfpars wfargs wfpty wfdecl closedpars.
+  unfold types_of_case.
+  rewrite -> ind_type_map. simpl.
+  pose proof (lift_instantiate_params n k (ind_params mdecl) args (ind_type idecl)) as H.
+  erewrite <- H ; trivial. clear H.
+  case_eq (instantiate_params (ind_params mdecl) args (ind_type idecl)) ; try discriminate.
+  intros ity eq. simpl.
+  apply wf_instantiate_params in eq as wfity ; trivial.
+  pose proof (lift_destArity [] ity n k wfity) as H ; trivial.
+  simpl in H.
+  unfold lift_context, fold_context in H. simpl in H.
+  rewrite -> H. clear H.
   destruct destArity as [[ctx s] | ]; try congruence.
   pose proof (lift_destArity [] pty n k wfpty); trivial. simpl in H.
   unfold lift_context, fold_context in H. simpl in H. rewrite -> H. clear H.
@@ -601,32 +677,38 @@ Proof.
             (length (arities_context (ind_bodies mdecl))) (fun k' => lift n (k' + k))
             (inductive_ind ind) idecl) (map (lift n k) args) u (lift n k p)) =
          map (option_map (on_snd (lift n k))) brs).
-  unfold build_branches_type. simpl. intros brs. intros <-.
-  rewrite -> ind_ctors_map.
-  rewrite -> mapi_map, map_mapi. f_equal. extensionality i. extensionality x.
-  destruct x as [[id t] arity]. simpl.
-  rewrite <- UnivSubst.lift_subst_instance_constr.
-  rewrite subst0_inds_lift.
-  rewrite <- lift_instantiate_params.
-  destruct (instantiate_params _ _) eqn:Heqip. simpl.
-  epose proof (lift_decompose_prod_assum t0 n k).
-  destruct (decompose_prod_assum [] t0).
-  rewrite <- H.
-  destruct (decompose_app t1) as [fn arg] eqn:?.
-  rewrite (decompose_app_lift _ _ _ fn arg); auto. simpl.
-  destruct (chop _ arg) eqn:Heqchop.
-  eapply chop_map in Heqchop.
-  rewrite -> Heqchop. clear Heqchop.
-  unfold on_snd. simpl. f_equal.
-  rewrite -> lift_it_mkProd_or_LetIn, !lift_mkApps, map_app; simpl.
-  rewrite -> !lift_mkApps, !map_app, lift_context_length.
-  rewrite -> permute_lift by lia. arith_congr.
-  now rewrite -> to_extended_list_lift, <- to_extended_list_map_lift.
-  simpl. reflexivity. auto.
+  { unfold build_branches_type. simpl. intros brs. intros <-.
+    rewrite -> ind_ctors_map.
+    rewrite -> mapi_map, map_mapi. f_equal. extensionality i. extensionality x.
+    destruct x as [[id t] arity]. simpl.
+    rewrite <- UnivSubst.lift_subst_instance_constr.
+    rewrite subst0_inds_lift.
+    rewrite <- lift_instantiate_params ; trivial.
+    match goal with
+    | |- context [ option_map _ (instantiate_params ?x ?y ?z) ] =>
+      destruct (instantiate_params x y z) eqn:Heqip
+    end.
+    - simpl.
+      epose proof (lift_decompose_prod_assum t0 n k).
+      destruct (decompose_prod_assum [] t0).
+      rewrite <- H.
+      destruct (decompose_app t1) as [fn arg] eqn:?.
+      rewrite (decompose_app_lift _ _ _ fn arg); auto. simpl.
+      destruct (chop _ arg) eqn:Heqchop.
+      eapply chop_map in Heqchop.
+      rewrite -> Heqchop. clear Heqchop.
+      unfold on_snd. simpl. f_equal.
+      rewrite -> lift_it_mkProd_or_LetIn, !lift_mkApps, map_app; simpl.
+      rewrite -> !lift_mkApps, !map_app, lift_context_length.
+      rewrite -> permute_lift by lia. arith_congr.
+      now rewrite -> to_extended_list_lift, <- to_extended_list_map_lift.
+    - simpl. reflexivity.
+  }
   specialize (H _ eq_refl). rewrite -> H. clear H.
   rewrite -> map_option_out_map_option_map.
   destruct (map_option_out (build_branches_type _ _ _ _ _ _)).
-  intros [= -> -> -> <-]. reflexivity. congruence.
+  - intros [= -> -> -> <-]. reflexivity.
+  - congruence.
 Qed.
 
 Lemma weakening_red1 `{CF:checker_flags} Σ Γ Γ' Γ'' M N :
@@ -950,8 +1032,14 @@ Proof.
     specialize (X2 _ _ _ X6 eq_refl).
     specialize (X1 _ _ _ X6 eq_refl).
     simpl. econstructor.
-    4:{ eapply lift_types_of_case in H0.
+    4:{ pose proof (on_declared_inductive wfΣ isdecl) as [onmind onind].
+        apply onParams in onmind as Hparams.
+        eapply lift_types_of_case in H0.
         simpl in H0. subst pars. rewrite -> firstn_map. eapply H0.
+        -- eapply typing_all_wf_decl ; eauto.
+        -- subst pars. eapply All_Forall. eapply All_firstn.
+           apply typing_wf in X3 as [_ X3]; eauto.
+           now (apply (Forall_All); apply wf_mkApps_inv in X3).
         -- eapply typing_wf in X0; wf.
         -- wf.
         -- destruct isdecl as [Hmdecl Hidecl].

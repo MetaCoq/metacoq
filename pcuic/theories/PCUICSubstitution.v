@@ -874,24 +874,29 @@ Lemma subst_types_of_case Σ ind mdecl idecl args u p pty indctx pctx ps btys n 
   types_of_case ind mdecl idecl (map (f []) args) u (f [] p) (f [] pty) =
   Some (f_ctx indctx, f_ctx pctx, ps, map (on_snd (f [])) btys).
 Proof.
-  simpl. intros wfΣ wfidecl. simpl.
-  epose proof (subst_declared_inductive _ ind mdecl idecl n k wfΣ).
-  forward H. auto. rewrite <- H at 2.
-  unfold types_of_case.
-  pose proof (subst_destArity [] (ind_type idecl) n k); trivial. simpl in H.
-  unfold subst_context, fold_context in H0. simpl in H0. rewrite ind_type_map. simpl.
-  destruct destArity as [[ctx s] | ]; try congruence.
-  rewrite H0. clear H0.
-  pose proof (subst_destArity [] pty n k); trivial. simpl in H.
-  destruct (destArity [] pty) as [[ctx' s'] | ]; try congruence.
-  unfold subst_context at 1 in H0. unfold fold_context in H0. simpl in H0.
-  rewrite H0; clear H0.
-  destruct map_option_out eqn:Hbrs; try congruence.
-  intros [= -> -> -> ->].
+  simpl. intros wfΣ wfidecl.
   pose proof (on_declared_inductive wfΣ wfidecl) as [onmind onind].
   apply onParams in onmind as Hparams.
   assert(closedparams : closed_ctx (ind_params mdecl)).
-  eapply closed_wf_local; eauto.
+  { eapply closed_wf_local; eauto. }
+  epose proof (subst_declared_inductive _ ind mdecl idecl n k wfΣ).
+  forward H ; auto. rewrite <- H at 2.
+  unfold types_of_case.
+  pose proof (subst_instantiate_params n k (ind_params mdecl) args (ind_type idecl)) as hs.
+  rewrite -> ind_type_map. simpl.
+  case_eq (instantiate_params (ind_params mdecl) args (ind_type idecl)) ; try discriminate.
+  intros ity eq. rewrite eq in hs. erewrite hs ; trivial.
+  clear hs.
+  pose proof (subst_destArity [] ity n k) ; trivial. simpl in H0.
+  unfold subst_context, fold_context in H0. simpl in H0.
+  destruct (destArity [] ity) as [[ctx'' s''] | ] ; try congruence.
+  rewrite H0. clear H0.
+  pose proof (subst_destArity [] pty n k); trivial. simpl in H0.
+  unfold subst_context, fold_context in H0. simpl in H0.
+  destruct (destArity [] pty) as [[ctx' s'] | ]; try congruence.
+  rewrite H0. clear H0.
+  destruct map_option_out eqn:Hbrs; try congruence.
+  intros [= -> -> -> ->].
   assert(forall brs,
          map_option_out (build_branches_type ind mdecl idecl args u p) = Some brs ->
          map_option_out (build_branches_type ind mdecl

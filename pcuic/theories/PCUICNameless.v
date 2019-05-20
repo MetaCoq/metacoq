@@ -213,3 +213,15 @@ Proof.
         all: try assumption.
         eapply IHm. assumption.
 Qed.
+
+Corollary eq_term_nl_eq :
+  forall `{checker_flags} u v,
+    eq_term_upto_univ eq u v ->
+    nl u = nl v.
+Proof.
+  intros flags u v h.
+  eapply nameless_eq_term_spec.
+  - eapply nl_spec.
+  - eapply nl_spec.
+  - admit.
+Admitted.

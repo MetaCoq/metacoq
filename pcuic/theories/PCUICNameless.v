@@ -186,5 +186,37 @@ Proof.
       * eapply IHm ; assumption.
 Abort.
 
-Conjecture nl_spec :
+Lemma nl_spec :
   forall u, nameless (nl u).
+Proof.
+  intros u. induction u using term_forall_list_ind.
+  all: try reflexivity.
+  all: try (simpl ; repeat (eapply andb_true_intro ; split) ; assumption).
+  - cbn. eapply All_forallb. eapply All_map. assumption.
+  - simpl ; repeat (eapply andb_true_intro ; split) ; try assumption.
+    induction l.
+    + reflexivity.
+    + cbn. inversion X. subst.
+      repeat (eapply andb_true_intro ; split) ; try assumption.
+      eapply IHl. assumption.
+  - simpl ; repeat (eapply andb_true_intro ; split) ; try assumption.
+    + induction m.
+      * reflexivity.
+      * cbn. eapply IHm. inversion X. subst. assumption.
+    + induction m.
+      * reflexivity.
+      * cbn. inversion X. subst. destruct H1.
+        repeat (eapply andb_true_intro ; split).
+        all: try assumption.
+        eapply IHm. assumption.
+  - simpl ; repeat (eapply andb_true_intro ; split) ; try assumption.
+    + induction m.
+      * reflexivity.
+      * cbn. eapply IHm. inversion X. subst. assumption.
+    + induction m.
+      * reflexivity.
+      * cbn. inversion X. subst. destruct H1.
+        repeat (eapply andb_true_intro ; split).
+        all: try assumption.
+        eapply IHm. assumption.
+Qed.

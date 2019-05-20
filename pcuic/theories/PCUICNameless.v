@@ -30,9 +30,19 @@ Fixpoint nameless (t : term) : bool :=
   | tCase indn p c brs =>
     nameless p && nameless c && forallb (test_snd nameless) brs
   | tProj p c => nameless c
-  | tFix mfix idx => true
-  | tCoFix mfix idx => true
+  | tFix mfix idx =>
+    forallb (fun d => anon d.(dname)) mfix &&
+    forallb (test_def nameless nameless) mfix
+  | tCoFix mfix idx =>
+    forallb (fun d => anon d.(dname)) mfix &&
+    forallb (test_def nameless nameless) mfix
   end.
+
+Definition map_def_anon {A B : Set} (tyf bodyf : A -> B) (d : def A) :=
+  {| dname := nAnon ;
+     dtype := tyf d.(dtype) ;
+     dbody := bodyf d.(dbody) ;
+     rarg := d.(rarg) |}.
 
 Fixpoint nl (t : term) : term :=
   match t with
@@ -49,8 +59,8 @@ Fixpoint nl (t : term) : term :=
   | tConstruct i n u => tConstruct i n u
   | tCase indn p c brs => tCase indn (nl p) (nl c) (map (on_snd nl )brs)
   | tProj p c => tProj p (nl c)
-  | tFix mfix idx => tFix mfix idx
-  | tCoFix mfix idx => tCoFix mfix idx
+  | tFix mfix idx => tFix (map (map_def_anon nl nl) mfix) idx
+  | tCoFix mfix idx => tCoFix (map (map_def_anon nl nl) mfix) idx
   end.
 
 Derive Signature for eq_term_upto_univ.
@@ -139,26 +149,41 @@ Proof.
   - cbn in hu, hv. destruct_andb.
     anonify.
     f_equal ; try solve [ ih ].
-    revert mfix' H.
-    induction m ; intros m' h.
+    revert mfix' H2 H3 H0 H1 H.
+    induction m ; intros m' h1 h2 h3 h4 h.
     + destruct m' ; inversion h. reflexivity.
     + destruct m' ; inversion h. subst.
       inversion X. subst.
+      cbn in h1, h2, h3, h4. destruct_andb.
       f_equal.
       * destruct a, d. cbn in *. destruct H2.
+        unfold test_def in H7, H. cbn in H7, H.
+        destruct_andb. anonify.
         f_equal.
-        -- (* maybe should be erased *) give_up.
-        -- eapply H1 ; try assumption.
-           (* NEED Strengthen nameless to check inside mfixpoints *)
-           all: give_up.
-        -- eapply H1 ; try assumption.
-           (* NEED Strengthen nameless to check inside mfixpoints *)
-           all: give_up.
-        -- (* PROBLEM here as well *)
+        -- eapply H1 ; assumption.
+        -- eapply H1 ; assumption.
+        -- (* PROBLEM not checked! *)
            give_up.
       * eapply IHm ; assumption.
-  - (* SAME *)
-    admit.
+  - cbn in hu, hv. destruct_andb.
+    anonify.
+    f_equal ; try solve [ ih ].
+    revert mfix' H2 H3 H0 H1 H.
+    induction m ; intros m' h1 h2 h3 h4 h.
+    + destruct m' ; inversion h. reflexivity.
+    + destruct m' ; inversion h. subst.
+      inversion X. subst.
+      cbn in h1, h2, h3, h4. destruct_andb.
+      f_equal.
+      * destruct a, d. cbn in *. destruct H2.
+        unfold test_def in H7, H. cbn in H7, H.
+        destruct_andb. anonify.
+        f_equal.
+        -- eapply H1 ; assumption.
+        -- eapply H1 ; assumption.
+        -- (* PROBLEM not checked! *)
+           give_up.
+      * eapply IHm ; assumption.
 Abort.
 
 Conjecture nl_spec :

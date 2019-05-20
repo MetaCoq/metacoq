@@ -479,7 +479,10 @@ Inductive eq_term_upto_univ (R : universe -> universe -> Prop) : term -> term ->
 | eq_Case ind par p p' c c' brs brs' :
     eq_term_upto_univ R p p' ->
     eq_term_upto_univ R c c' ->
-    Forall2 (fun x y => eq_term_upto_univ R (snd x) (snd y)) brs brs' ->
+    Forall2 (fun x y =>
+      fst x = fst y /\
+      eq_term_upto_univ R (snd x) (snd y)
+    ) brs brs' ->
     eq_term_upto_univ R (tCase (ind, par) p c brs) (tCase (ind, par) p' c' brs')
 
 | eq_Proj p c c' :
@@ -488,17 +491,17 @@ Inductive eq_term_upto_univ (R : universe -> universe -> Prop) : term -> term ->
 
 | eq_Fix mfix mfix' idx :
     Forall2 (fun x y =>
-      eq_term_upto_univ R x.(dtype) y.(dtype)
-      /\ eq_term_upto_univ R x.(dbody) y.(dbody)
-      /\ x.(rarg) = y.(rarg)
+      eq_term_upto_univ R x.(dtype) y.(dtype) /\
+      eq_term_upto_univ R x.(dbody) y.(dbody) /\
+      x.(rarg) = y.(rarg)
     ) mfix mfix' ->
     eq_term_upto_univ R (tFix mfix idx) (tFix mfix' idx)
 
 | eq_CoFix mfix mfix' idx :
     Forall2 (fun x y =>
-      eq_term_upto_univ R x.(dtype) y.(dtype)
-      /\ eq_term_upto_univ R x.(dbody) y.(dbody)
-      /\ x.(rarg) = y.(rarg)
+      eq_term_upto_univ R x.(dtype) y.(dtype) /\
+      eq_term_upto_univ R x.(dbody) y.(dbody) /\
+      x.(rarg) = y.(rarg)
     ) mfix mfix' ->
     eq_term_upto_univ R (tCoFix mfix idx) (tCoFix mfix' idx).
 

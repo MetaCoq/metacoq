@@ -140,12 +140,11 @@ Proof.
     + destruct brs' ; inversion h. reflexivity.
     + destruct brs' ; inversion h. subst.
       cbn in h1, h2. destruct_andb.
+      inversion X. subst.
       f_equal.
-      * destruct a, p. cbn in *.
-        (* Problem: the natural numbers aren't checked *)
-        admit.
-      * inversion X. subst.
-        eapply IHl ; assumption.
+      * destruct a, p. cbn in *. destruct H6. subst.
+        f_equal. eapply H11 ; assumption.
+      * eapply IHl ; assumption.
   - f_equal ; try solve [ ih ].
     revert mfix' H2 H3 H0 H1 H.
     induction m ; intros m' h1 h2 h3 h4 h.
@@ -178,7 +177,7 @@ Proof.
         -- eapply H1 ; assumption.
         -- assumption.
       * eapply IHm ; assumption.
-Abort.
+Qed.
 
 Lemma nl_spec :
   forall u, nameless (nl u).

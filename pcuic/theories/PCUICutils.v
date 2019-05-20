@@ -103,3 +103,34 @@ Qed.
 Instance reflect_nat : ReflectEq nat := {
   eqb_spec := Nat.eqb_spec
 }.
+
+Definition eq_prod {A B} (eqA : A -> A -> bool) (eqB : B -> B -> bool) x y :=
+  let '(a1, b1) := x in
+  let '(a2, b2) := y in
+  if eqA a1 a2 then eqB b1 b2
+  else false.
+
+Instance reflect_prod : forall {A B}, ReflectEq A -> ReflectEq B -> ReflectEq (A * B) := {
+  eqb := eq_prod eqb eqb
+}.
+Proof.
+  intros [x y] [u v].
+  unfold eq_prod.
+  destruct (eqb_spec x u) ; nodec.
+  destruct (eqb_spec y v) ; nodec.
+  subst. constructor. reflexivity.
+Qed.
+
+Definition eq_bool (b1 b2 : bool) : bool :=
+  if b1 then b2 else negb b2.
+
+Instance reflect_bool : ReflectEq bool := {
+  eqb := eq_bool
+}.
+Proof.
+  intros x y. unfold eq_bool.
+  destruct x, y.
+  all: constructor.
+  all: try reflexivity.
+  all: discriminate.
+Qed.

@@ -83,24 +83,40 @@ Local Ltac anonify :=
 
 Local Ltac ih :=
   lazymatch goal with
-  | ih : forall v : term, _ -> _ -> eq_term _ _ _ -> ?u = _
+  | ih : forall v : term, _ -> _ -> eq_term_upto_univ _ _ _ -> ?u = _
     |- ?u = ?v =>
     eapply ih ; assumption
   end.
 
+Lemma eq_univ_make :
+  forall u u',
+    Forall2 eq (map Universe.make u) (map Universe.make u') ->
+    u = u'.
+Proof.
+  intros u u' h.
+  revert u' h.
+  induction u ; intros u' h.
+  - destruct u' ; inversion h. reflexivity.
+  - destruct u' ; inversion h. subst.
+    f_equal.
+    + inversion H2. reflexivity.
+    + eapply IHu. assumption.
+Qed.
+
 Lemma nameless_eq_term_spec :
-  forall `{checker_flags} φ u v,
+  forall `{checker_flags} u v,
     nameless u ->
     nameless v ->
-    eq_term φ u v ->
+    eq_term_upto_univ eq u v ->
     u = v.
 Proof.
-  intros flags φ u v hu hv eq.
-  revert v hu hv eq.
-  induction u using term_forall_list_ind ; intros v hu hv eq.
-  all: dependent destruction eq.
+  intros flags u v hu hv e.
+  revert v hu hv e.
+  induction u using term_forall_list_ind ; intros v hu hv e.
+  all: dependent destruction e.
+  all: cbn in hu, hv ; destruct_andb ; anonify.
   all: try reflexivity.
-  all: try solve [ cbn in hu, hv ; destruct_andb ; anonify ; f_equal ; ih ].
+  all: try solve [ f_equal ; try ih ; try assumption ].
   - f_equal. cbn in hu, hv.
     revert args' hu hv H0. induction l ; intros args' hu hv h.
     + destruct args' ; try solve [ inversion h ].
@@ -112,33 +128,17 @@ Proof.
       f_equal.
       * eapply H2 ; assumption.
       * eapply IHl ; assumption.
-  - (* Problem indeed, must not be general on checker_flags
-       IDEA: Erase universes depending on the flag??
-     *)
-    give_up.
-  - cbn in hu, hv. destruct_andb.
-    anonify.
-    f_equal ; try solve [ ih ].
-    (* Universe problem again... *)
-    give_up.
-  - cbn in hu, hv. destruct_andb.
-    anonify.
-    f_equal ; try solve [ ih ].
-    (* Universe problem again... *)
-    give_up.
-  - cbn in hu, hv. destruct_andb.
-    anonify.
-    f_equal ; try solve [ ih ].
-    (* Universe problem again... *)
-    give_up.
-  - cbn in hu, hv. destruct_andb.
-    anonify.
-    f_equal ; try solve [ ih ].
+  - f_equal ; try solve [ ih ].
+    eapply eq_univ_make. assumption.
+  - f_equal ; try solve [ ih ].
+    eapply eq_univ_make. assumption.
+  - f_equal ; try solve [ ih ].
+    eapply eq_univ_make. assumption.
+  - f_equal ; try solve [ ih ].
     revert brs' H4 H1 H.
     induction l ; intros brs' h1 h2 h.
-    + destruct brs' ; try solve [ inversion h ]. reflexivity.
-    + destruct brs' ; try solve [ inversion h ].
-      inversion h. subst.
+    + destruct brs' ; inversion h. reflexivity.
+    + destruct brs' ; inversion h. subst.
       cbn in h1, h2. destruct_andb.
       f_equal.
       * destruct a, p. cbn in *.
@@ -146,9 +146,7 @@ Proof.
         admit.
       * inversion X. subst.
         eapply IHl ; assumption.
-  - cbn in hu, hv. destruct_andb.
-    anonify.
-    f_equal ; try solve [ ih ].
+  - f_equal ; try solve [ ih ].
     revert mfix' H2 H3 H0 H1 H.
     induction m ; intros m' h1 h2 h3 h4 h.
     + destruct m' ; inversion h. reflexivity.
@@ -165,9 +163,7 @@ Proof.
         -- (* PROBLEM not checked! *)
            give_up.
       * eapply IHm ; assumption.
-  - cbn in hu, hv. destruct_andb.
-    anonify.
-    f_equal ; try solve [ ih ].
+  - f_equal ; try solve [ ih ].
     revert mfix' H2 H3 H0 H1 H.
     induction m ; intros m' h1 h2 h3 h4 h.
     + destruct m' ; inversion h. reflexivity.

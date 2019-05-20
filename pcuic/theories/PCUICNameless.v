@@ -154,14 +154,13 @@ Proof.
       inversion X. subst.
       cbn in h1, h2, h3, h4. destruct_andb.
       f_equal.
-      * destruct a, d. cbn in *. destruct H2.
+      * destruct a, d. cbn in *. destruct H2 as [? [? ?]].
         unfold test_def in H7, H. cbn in H7, H.
         destruct_andb. anonify.
         f_equal.
         -- eapply H1 ; assumption.
         -- eapply H1 ; assumption.
-        -- (* PROBLEM not checked! *)
-           give_up.
+        -- assumption.
       * eapply IHm ; assumption.
   - f_equal ; try solve [ ih ].
     revert mfix' H2 H3 H0 H1 H.
@@ -171,14 +170,13 @@ Proof.
       inversion X. subst.
       cbn in h1, h2, h3, h4. destruct_andb.
       f_equal.
-      * destruct a, d. cbn in *. destruct H2.
+      * destruct a, d. cbn in *. destruct H2 as [? [? ?]].
         unfold test_def in H7, H. cbn in H7, H.
         destruct_andb. anonify.
         f_equal.
         -- eapply H1 ; assumption.
         -- eapply H1 ; assumption.
-        -- (* PROBLEM not checked! *)
-           give_up.
+        -- assumption.
       * eapply IHm ; assumption.
 Abort.
 

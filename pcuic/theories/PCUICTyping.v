@@ -429,21 +429,78 @@ Fixpoint subst_app (t : term) (us : list term) : term :=
   We shouldn't look at printing annotations *)
 
 Inductive eq_term_upto_univ (R : universe -> universe -> Prop) : term -> term -> Prop :=
-| eq_Rel n  : eq_term_upto_univ R (tRel n) (tRel n)
-| eq_Evar e args args' : Forall2 (eq_term_upto_univ R) args args' -> eq_term_upto_univ R (tEvar e args) (tEvar e args')
-| eq_Var id : eq_term_upto_univ R (tVar id) (tVar id)
-| eq_Sort s s' : R s s' -> eq_term_upto_univ R (tSort s) (tSort s')
-| eq_App t t' u u' : eq_term_upto_univ R t t' -> eq_term_upto_univ R u u' -> eq_term_upto_univ R (tApp t u) (tApp t' u')
-| eq_Const c u u' : Forall2 R (List.map Universe.make u) (List.map Universe.make u') -> eq_term_upto_univ R (tConst c u) (tConst c u')
-| eq_Ind i u u' : Forall2 R (List.map Universe.make u) (List.map Universe.make u') -> eq_term_upto_univ R (tInd i u) (tInd i u')
-| eq_Construct i k u u' : Forall2 R (List.map Universe.make u) (List.map Universe.make u') -> eq_term_upto_univ R (tConstruct i k u) (tConstruct i k u')
-| eq_Lambda na na' ty ty' t t' : eq_term_upto_univ R ty ty' -> eq_term_upto_univ R t t' -> eq_term_upto_univ R (tLambda na ty t) (tLambda na' ty' t')
-| eq_Prod na na' a a' b b' : eq_term_upto_univ R a a' -> eq_term_upto_univ R b b' -> eq_term_upto_univ R (tProd na a b) (tProd na' a' b')
-| eq_LetIn na na' ty ty' t t' u u' : eq_term_upto_univ R ty ty' -> eq_term_upto_univ R t t' -> eq_term_upto_univ R u u' -> eq_term_upto_univ R (tLetIn na ty t u) (tLetIn na' ty' t' u')
-| eq_Case ind par p p' c c' brs brs' : eq_term_upto_univ R p p' -> eq_term_upto_univ R c c' -> Forall2 (fun x y => eq_term_upto_univ R (snd x) (snd y)) brs brs' -> eq_term_upto_univ R (tCase (ind, par) p c brs) (tCase (ind, par) p' c' brs')
-| eq_Proj p c c' : eq_term_upto_univ R c c' -> eq_term_upto_univ R (tProj p c) (tProj p c')
-| eq_Fix mfix mfix' idx : Forall2 (fun x y => eq_term_upto_univ R x.(dtype) y.(dtype) /\ eq_term_upto_univ R x.(dbody) y.(dbody)) mfix mfix' -> eq_term_upto_univ R (tFix mfix idx) (tFix mfix' idx)
-| eq_CoFix mfix mfix' idx : Forall2 (fun x y => eq_term_upto_univ R x.(dtype) y.(dtype) /\ eq_term_upto_univ R x.(dbody) y.(dbody)) mfix mfix' -> eq_term_upto_univ R (tCoFix mfix idx) (tCoFix mfix' idx).
+| eq_Rel n  :
+    eq_term_upto_univ R (tRel n) (tRel n)
+
+| eq_Evar e args args' :
+    Forall2 (eq_term_upto_univ R) args args' ->
+    eq_term_upto_univ R (tEvar e args) (tEvar e args')
+
+| eq_Var id :
+    eq_term_upto_univ R (tVar id) (tVar id)
+
+| eq_Sort s s' :
+    R s s' ->
+    eq_term_upto_univ R (tSort s) (tSort s')
+
+| eq_App t t' u u' :
+    eq_term_upto_univ R t t' ->
+    eq_term_upto_univ R u u' ->
+    eq_term_upto_univ R (tApp t u) (tApp t' u')
+
+| eq_Const c u u' :
+    Forall2 R (List.map Universe.make u) (List.map Universe.make u') ->
+    eq_term_upto_univ R (tConst c u) (tConst c u')
+
+| eq_Ind i u u' :
+    Forall2 R (List.map Universe.make u) (List.map Universe.make u') ->
+    eq_term_upto_univ R (tInd i u) (tInd i u')
+
+| eq_Construct i k u u' :
+    Forall2 R (List.map Universe.make u) (List.map Universe.make u') ->
+    eq_term_upto_univ R (tConstruct i k u) (tConstruct i k u')
+
+| eq_Lambda na na' ty ty' t t' :
+    eq_term_upto_univ R ty ty' ->
+    eq_term_upto_univ R t t' ->
+    eq_term_upto_univ R (tLambda na ty t) (tLambda na' ty' t')
+
+| eq_Prod na na' a a' b b' :
+    eq_term_upto_univ R a a' ->
+    eq_term_upto_univ R b b' ->
+    eq_term_upto_univ R (tProd na a b) (tProd na' a' b')
+
+| eq_LetIn na na' ty ty' t t' u u' :
+    eq_term_upto_univ R ty ty' ->
+    eq_term_upto_univ R t t' ->
+    eq_term_upto_univ R u u' ->
+    eq_term_upto_univ R (tLetIn na ty t u) (tLetIn na' ty' t' u')
+
+| eq_Case ind par p p' c c' brs brs' :
+    eq_term_upto_univ R p p' ->
+    eq_term_upto_univ R c c' ->
+    Forall2 (fun x y => eq_term_upto_univ R (snd x) (snd y)) brs brs' ->
+    eq_term_upto_univ R (tCase (ind, par) p c brs) (tCase (ind, par) p' c' brs')
+
+| eq_Proj p c c' :
+    eq_term_upto_univ R c c' ->
+    eq_term_upto_univ R (tProj p c) (tProj p c')
+
+| eq_Fix mfix mfix' idx :
+    Forall2 (fun x y =>
+      eq_term_upto_univ R x.(dtype) y.(dtype)
+      /\ eq_term_upto_univ R x.(dbody) y.(dbody)
+      /\ x.(rarg) = y.(rarg)
+    ) mfix mfix' ->
+    eq_term_upto_univ R (tFix mfix idx) (tFix mfix' idx)
+
+| eq_CoFix mfix mfix' idx :
+    Forall2 (fun x y =>
+      eq_term_upto_univ R x.(dtype) y.(dtype)
+      /\ eq_term_upto_univ R x.(dbody) y.(dbody)
+      /\ x.(rarg) = y.(rarg)
+    ) mfix mfix' ->
+    eq_term_upto_univ R (tCoFix mfix idx) (tCoFix mfix' idx).
 
 Definition eq_term `{checker_flags} φ := eq_term_upto_univ (eq_universe' φ).
 

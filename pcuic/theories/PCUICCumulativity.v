@@ -47,7 +47,7 @@ Proof.
   induction X. apply cumul_refl'.
   econstructor 3; eauto.
 Qed.
-  
+
 
 Lemma eq_universe_refl φ s : eq_universe φ s s.
 Proof.
@@ -75,10 +75,12 @@ Proof.
   induction t using term_forall_list_ind; simpl;
     try constructor; try apply Forall_Forall2, All_Forall; try easy;
       try now apply Forall_All, Forall_True.
-  destruct p. constructor; try assumption.
-  apply Forall_Forall2, All_Forall. assumption.
-  eapply All_impl. eassumption. now intros x [? ?]. 
-  eapply All_impl. eassumption. now intros x [? ?]. 
+  - destruct p. constructor; try assumption.
+    apply Forall_Forall2, All_Forall.
+    eapply All_impl ; try eassumption.
+    intros. split ; auto.
+  - eapply All_impl. eassumption. now intros x [? ?].
+  - eapply All_impl. eassumption. now intros x [? ?].
 Qed.
 
 Lemma eq_term_refl `{checker_flags} φ t : eq_term φ t t.
@@ -117,11 +119,13 @@ Proof.
   now apply eq_universe'_leq_universe'.
   all: try (apply Forall_True, eq_universe'_leq_universe').
   eapply Forall_impl. eapply All_Forall. eassumption.
-  intros x HH y; apply HH.
+  intros x HH y [? ?]. split ; auto. apply HH. assumption.
   eapply Forall_impl. eapply All_Forall. eassumption.
-  cbn. intros x [HH HH'] y [? ?]. split; [now apply HH|now apply HH'].
+  cbn. intros x [HH HH'] y [? [? ?]].
+  repeat split ; [now apply HH|now apply HH' | assumption].
   eapply Forall_impl. eapply All_Forall. eassumption.
-  cbn. intros x [HH HH'] y [? ?]. split; [now apply HH|now apply HH'].
+  cbn. intros x [HH HH'] y [? [? ?]].
+  repeat split; [now apply HH|now apply HH'|assumption].
 Qed.
 
 Lemma eq_term_App `{checker_flags} φ f f' :

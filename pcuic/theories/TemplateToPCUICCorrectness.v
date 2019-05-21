@@ -400,7 +400,7 @@ Lemma trans_eq_term ϕ T U :
   T.wf T -> T.wf U -> TTy.eq_term ϕ T U ->
   eq_term ϕ (trans T) (trans U).
 Proof.
-  intros HT HU H. 
+  intros HT HU H.
   revert U HU H; induction HT using Template.Induction.term_wf_forall_list_ind; intros U HU HH; inversion HH; subst; simpl; repeat constructor; unfold eq_term in *;
     inversion_clear HU; try easy.
   - eapply Forall2_map. eapply Forall2_impl.
@@ -415,7 +415,7 @@ Proof.
   - eapply Forall2_map. eapply Forall2_impl.
     eapply Forall_Forall2_and. 2: eassumption.
     eapply Forall_Forall2_and'; eassumption.
-    cbn. now intros x y [? [? ?]].
+    cbn. intros x y [? [? ?]]. split ; easy.
   - eapply Forall2_map. eapply Forall2_impl.
     eapply Forall_Forall2_and. 2: exact H.
     eapply Forall_Forall2_and. 2: exact H0.
@@ -457,7 +457,7 @@ Lemma trans_leq_term ϕ T U :
   T.wf T -> T.wf U -> TTy.leq_term ϕ T U ->
   leq_term ϕ (trans T) (trans U).
 Proof.
-  intros HT HU H. 
+  intros HT HU H.
   revert U HU H; induction HT using Template.Induction.term_wf_forall_list_ind; intros U HU HH; inversion HH; subst; simpl; repeat constructor; unfold leq_term in *;
     inversion_clear HU; try easy.
   - eapply Forall2_map. eapply Forall2_impl.

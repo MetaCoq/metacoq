@@ -783,7 +783,8 @@ Proof.
   - constructor; try easy. clear -X H3.
     assert (XX:forall k k', Forall2
                          (fun x y  => eq_term_upto_univ R (dtype x) (dtype y) /\
-                                   eq_term_upto_univ R (dbody x) (dbody y))
+                                   eq_term_upto_univ R (dbody x) (dbody y) /\
+                                   rarg x = rarg y)
                          (map (map_def (lift n k) (lift n (#|m| + k'))) m)
                          (map (map_def (lift n k) (lift n (#|mfix'| + k'))) mfix'));
       [|now apply XX]. clear k.
@@ -798,7 +799,8 @@ Proof.
   - constructor; try easy. clear -X H3.
     assert (XX:forall k k', Forall2
                          (fun x y  => eq_term_upto_univ R (dtype x) (dtype y) /\
-                                   eq_term_upto_univ R (dbody x) (dbody y))
+                                   eq_term_upto_univ R (dbody x) (dbody y) /\
+                                   rarg x = rarg y)
                          (map (map_def (lift n k) (lift n (#|m| + k'))) m)
                          (map (map_def (lift n k) (lift n (#|mfix'| + k'))) mfix'));
       [|now apply XX]. clear k.
@@ -811,7 +813,7 @@ Proof.
       unfold tFixProp in IHm. cbn.
       rewrite !plus_n_Sm. now apply IHm.
 Qed.
-      
+
 
 Lemma lift_eq_term `{checker_flags} ϕ n k T U :
   eq_term ϕ T U -> eq_term ϕ (lift n k T) (lift n k U).
@@ -855,9 +857,9 @@ Proof.
   - constructor.
   - inversion H0.
   - inversion H0.
-  - inversion H0; subst. constructor. 
+  - inversion H0; subst. constructor.
     + apply Forall2_length in H6. rewrite H6.
-      now apply lift_eq_decl. 
+      now apply lift_eq_decl.
     + now apply IHl.
 Qed.
 
@@ -880,7 +882,7 @@ Proof.
     assert (XX : lift #|Γ''| (#|indctx| + #|Γ'|) (mkApps (tInd ind u) (map (lift0 #|indctx|) (firstn npar args) ++ to_extended_list indctx)) = mkApps (tInd ind u) (map (lift0 #|lift_context #|Γ''| #|Γ'| indctx|) (firstn npar (map (lift #|Γ''| #|Γ'|) args)) ++ to_extended_list (lift_context #|Γ''| #|Γ'| indctx)));
       [|now rewrite XX in H2].
 
-    rewrite -> lift_mkApps, map_app. 
+    rewrite -> lift_mkApps, map_app.
     rewrite -> firstn_map. rewrite -> to_extended_list_lift.
     erewrite <- (to_extended_list_map_lift #|Γ''|).
     rewrite -> lift_context_length.

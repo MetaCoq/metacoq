@@ -850,25 +850,33 @@ Lemma subst_types_of_case `{cf:checker_flags} Σ ind mdecl idecl args u p pty in
   Some (f_ctx indctx, f_ctx pctx, ps, map (on_snd (f [])) btys).
 Proof.
   simpl. intros wfΣ wfn wfargs wfpty wfdecl wfidecl. simpl.
-  epose proof (subst_declared_inductive _ ind mdecl idecl n k wfΣ).
-  forward H. auto. rewrite <- H at 2.
-  unfold types_of_case.
-  pose proof (subst_destArity [] (ind_type idecl) n k wfdecl); trivial. simpl in H.
-  unfold subst_context, fold_context in H0. simpl in H0. rewrite ind_type_map. simpl.
-  destruct destArity as [[ctx s] | ]; try congruence.
-  rewrite H0. clear H0.
-  pose proof (subst_destArity [] pty n k wfpty); trivial. simpl in H.
-  destruct (destArity [] pty) as [[ctx' s'] | ]; try congruence.
-  unfold subst_context at 1 in H0. unfold fold_context in H0. simpl in H0.
-  rewrite H0; clear H0.
-  destruct map_option_out eqn:Hbrs; try congruence.
-  intros [= -> -> -> ->].
   pose proof (on_declared_inductive wfΣ wfidecl) as [onmind onind].
   apply onParams in onmind as Hparams.
-  assert(closedparams : closed_ctx (ind_params mdecl)).
-  eapply closed_wf_local; eauto.
-  assert(wfparams : All wf_decl (ind_params mdecl)).
-  apply Forall_All. eapply typing_all_wf_decl; eauto.
+  assert (closedparams : closed_ctx (ind_params mdecl)).
+  { eapply closed_wf_local ; eauto. }
+  assert (wfparams : All wf_decl (ind_params mdecl)).
+  { apply Forall_All. eapply typing_all_wf_decl ; eauto. }
+  epose proof (subst_declared_inductive _ ind mdecl idecl n k wfΣ).
+  forward H ; auto. rewrite <- H at 2.
+  unfold types_of_case.
+  pose proof (subst_instantiate_params n k (ind_params mdecl) args (ind_type idecl)) as hs.
+  rewrite -> ind_type_map. simpl.
+  case_eq (instantiate_params (ind_params mdecl) args (ind_type idecl)) ; try discriminate.
+  intros ity eq. rewrite eq in hs. erewrite hs ; trivial.
+  clear hs.
+  apply wf_instantiate_params in eq as wfity ; trivial.
+  2: eapply All_Forall ; trivial.
+  2: eapply All_Forall ; trivial.
+  pose proof (subst_destArity [] ity n k wfity) ; trivial. simpl in H0.
+  unfold subst_context, fold_context in H0. simpl in H0.
+  destruct (destArity [] ity) as [[ctx'' s''] | ] ; try congruence.
+  rewrite H0. clear H0.
+  pose proof (subst_destArity [] pty n k wfpty) ; trivial. simpl in H0.
+  unfold subst_context, fold_context in H0. simpl in H0.
+  destruct destArity as [[ctx s] | ]; try congruence.
+  rewrite H0. clear H0.
+  destruct map_option_out eqn:Hbrs; try congruence.
+  intros [= -> -> -> ->].
   assert(forall brs,
          map_option_out (build_branches_type ind mdecl idecl args u p) = Some brs ->
          map_option_out (build_branches_type ind mdecl

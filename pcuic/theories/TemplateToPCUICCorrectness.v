@@ -1,7 +1,7 @@
 (* Distributed under the terms of the MIT license.   *)
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
-From Template Require Import config utils univ AstUtils.
+From Template Require Import config utils AstUtils.
 From Template Require Import BasicAst Ast WfInv Typing.
 From PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICLiftSubst
      PCUICUnivSubst PCUICTyping PCUICGeneration TemplateToPCUIC.
@@ -350,96 +350,95 @@ Proof.
   rewrite mkApps_app. simpl. reflexivity.
 Qed.
 
-Lemma eq_term_mkApps ϕ t u t' u' :
-  eq_term ϕ t t' -> forallb2 (eq_term ϕ) u u' ->
-  eq_term ϕ (mkApps t u) (mkApps t' u').
-Proof.
-  intros Ht Hu.
-  revert t t' Ht; induction u in u', Hu |- *; intros.
-
-  destruct u'; try discriminate.
-  apply Ht.
-
-  destruct u'; try discriminate.
-  simpl in Hu.
-  simpl. toProp. apply IHu; simpl; auto. simpl.
-  now rewrite Ht H.
-Qed.
 
 Lemma trans_eq_term ϕ T U :
   T.wf T -> T.wf U -> TTy.eq_term ϕ T U ->
   eq_term ϕ (trans T) (trans U).
 Proof.
-  intros.
-  revert U H0 H1; induction H using Template.Induction.term_wf_forall_list_ind; intros U Hwf; intros; destruct U; try discriminate;
-  try solve [simpl; auto]; try
-                             (destruct (mkApps_trans_wf _ _ H0) as [U' [V' ->]]; reflexivity);
-  try solve[inv Hwf; auto; simpl in *; toProp; solve_all; eauto].
-
-  - simpl in *. inv Hwf. toProp; solve_all. solve_all.
-  - simpl in *. inv Hwf. toProp; solve_all.
-    apply eq_term_mkApps; auto. solve_all.
-  - simpl. destruct p. simpl in *. discriminate.
-  - simpl in *. inv Hwf. destruct p, ind_and_nbparams; red in H; toProp; solve_all.
-    solve_all. destruct y; red in b0; simpl in *. eauto.
-  - red in H. simpl in *. inv Hwf. toProp. solve_all.
-    solve_all. toProp. auto.
-  - red in H. simpl in *. inv Hwf. toProp. solve_all.
-    solve_all. toProp. auto.
+  intros HT HU H.
+  revert U HU H; induction HT using Template.Induction.term_wf_forall_list_ind; intros U HU HH; inversion HH; subst; simpl; repeat constructor; unfold eq_term in *;
+    inversion_clear HU; try easy.
+  - eapply Forall2_map. eapply Forall2_impl.
+    eapply Forall_Forall2_and. 2: eassumption.
+    eapply Forall_Forall2_and'; eassumption.
+    cbn. now intros x y [? [? ?]].
+  - eapply PCUICCumulativity.eq_term_mkApps; unfold eq_term. easy.
+    eapply Forall2_map. eapply Forall2_impl.
+    eapply Forall_Forall2_and. 2: eassumption.
+    eapply Forall_Forall2_and'; eassumption.
+    cbn. now intros x y [? [? ?]].
+  - eapply Forall2_map. eapply Forall2_impl.
+    eapply Forall_Forall2_and. 2: eassumption.
+    eapply Forall_Forall2_and'; eassumption.
+    cbn. intros x y [? [? ?]]. split ; easy.
+  - eapply Forall2_map. eapply Forall2_impl.
+    eapply Forall_Forall2_and. 2: exact H.
+    eapply Forall_Forall2_and. 2: exact H0.
+    eapply Forall_Forall2_and'; eassumption.
+    cbn. now intros x y [? [? ?]].
+  - eapply Forall2_map. eapply Forall2_impl.
+    eapply Forall_Forall2_and. 2: exact H.
+    eapply Forall_Forall2_and'; eassumption.
+    cbn. now intros x y [? [? ?]].
 Qed.
+
 
 Lemma trans_eq_term_list ϕ T U :
-  List.Forall T.wf T -> List.Forall T.wf U -> forallb2 (TTy.eq_term ϕ) T U ->
-  forallb2 (eq_term ϕ) (List.map trans T) (List.map trans U).
+  List.Forall T.wf T -> List.Forall T.wf U -> Forall2 (TTy.eq_term ϕ) T U ->
+  Forall2 (eq_term ϕ) (List.map trans T) (List.map trans U).
 Proof.
-  intros. solve_all. intuition auto using trans_eq_term.
+  intros H H0 H1. eapply Forall2_map.
+  pose proof (Forall_Forall2_and H1 H) as H2.
+  pose proof (Forall_Forall2_and' H2 H0) as H3.
+  apply (Forall2_impl H3).
+  intuition auto using trans_eq_term.
 Qed.
 
-Lemma leq_term_mkApps ϕ t u t' u' : (* u <> nil -> *)
-  eq_term ϕ t t' -> forallb2 (eq_term ϕ) u u' ->
+Lemma leq_term_mkApps ϕ t u t' u' :
+  eq_term ϕ t t' -> Forall2 (eq_term ϕ) u u' ->
   leq_term ϕ (mkApps t u) (mkApps t' u').
 Proof.
   intros Hn Ht.
   revert t t' Ht Hn; induction u in u' |- *; intros.
 
-  destruct u'; try discriminate.
-  simpl. apply PCUICCumulativity.eq_term_leq_term. auto.
+  inversion_clear Ht.
+  simpl. apply PCUICCumulativity.eq_term_leq_term. assumption.
 
-  destruct u'; try discriminate.
-  simpl in *. apply IHu. toProp; auto. simpl; toProp; auto.
+  inversion_clear Ht.
+  simpl in *. apply IHu. assumption. constructor; assumption.
 Qed.
 
 Lemma trans_leq_term ϕ T U :
   T.wf T -> T.wf U -> TTy.leq_term ϕ T U ->
   leq_term ϕ (trans T) (trans U).
 Proof.
-  intros HwfT HwfU Hleq.
-  pose proof HwfT.
-  revert U HwfU Hleq H; induction HwfT using Template.Induction.term_wf_forall_list_ind; intros U HwfU Hleq HwfT';
-    destruct U; try discriminate;
-  try solve [simpl; auto]; try
-                             (destruct (mkApps_trans_wf _ _ H0) as [U' [V' ->]]; reflexivity);
-  simpl in *; revert Hleq; try rewrite !andb_true_iff; inv HwfU; inv HwfT'.
-  - intuition auto using trans_eq_term_list.
-    toProp; solve_all. solve_all.
-    intuition auto using trans_eq_term.
-  - toProp; intuition auto using trans_eq_term, Template.Substitution.eq_term_leq_term.
-  - toProp; intuition auto using trans_eq_term, Template.Substitution.eq_term_leq_term.
-  - toProp; intuition auto using trans_eq_term, Template.Substitution.eq_term_leq_term.
-  - toProp; intuition auto using trans_eq_term, Template.Substitution.eq_term_leq_term.
-  - toProp; intuition auto using trans_eq_term, Template.Substitution.eq_term_leq_term.
-    apply leq_term_mkApps; auto using map_nil, trans_eq_term, trans_eq_term_list.
-  - destruct p; congruence.
-  - destruct p, ind_and_nbparams.
-    red in H; toProp; solve_all; eauto using trans_eq_term.
-    solve_all. destruct y; simpl in *. red in b0, b2.
-    simpl in *; eauto using trans_eq_term.
-  - toProp; intuition auto using trans_eq_term.
-  - red in H; toProp; solve_all. solve_all.
-    toProp; intuition eauto using trans_eq_term.
-  - red in H; toProp; solve_all. solve_all.
-    toProp; intuition eauto using trans_eq_term.
+  intros HT HU H.
+  revert U HU H; induction HT using Template.Induction.term_wf_forall_list_ind; intros U HU HH; inversion HH; subst; simpl; repeat constructor; unfold leq_term in *;
+    inversion_clear HU; try easy.
+  - eapply Forall2_map. eapply Forall2_impl.
+    eapply Forall_Forall2_and. 2: eassumption.
+    eapply Forall_Forall2_and'; eassumption.
+    cbn. now intros x y [? [? ?]].
+  - eapply PCUICCumulativity.leq_term_mkApps; unfold leq_term. easy.
+    eapply Forall2_map. eapply Forall2_impl.
+    eapply Forall_Forall2_and. 2: eassumption.
+    eapply Forall_Forall2_and'; eassumption.
+    cbn. now intros x y [? [? ?]].
+  - eapply Forall2_map. eapply Forall2_impl.
+    eapply Forall_Forall2_and. 2: eassumption.
+    eapply Forall_Forall2_and'; eassumption.
+    cbn. now intros x y [? [? ?]].
+  - eapply Forall2_map. eapply Forall2_impl.
+    eapply Forall_Forall2_and. 2: exact H.
+    eapply Forall_Forall2_and. 2: exact H0.
+    eapply Forall_Forall2_and'; eassumption.
+    cbn. now intros x y [? [? ?]].
+  - eapply Forall2_map. eapply Forall2_impl.
+    eapply Forall_Forall2_and. 2: exact H.
+    eapply Forall_Forall2_and'; eassumption.
+    cbn. now intros x y [? [? ?]].
 Qed.
+
 
 (* Lemma wf_mkApps t u : T.wf (T.mkApps t u) -> List.Forall T.wf u. *)
 (* Proof. *)
@@ -680,7 +679,7 @@ Lemma trans_cumul Σ Γ T U :
 Proof.
   intros wfΣ wfΓ.
   induction 3. constructor; auto.
-  apply trans_leq_term in e; auto.
+  apply trans_leq_term in l; auto.
 
   pose proof r as H3. apply wf_red1 in H3; auto.
   apply trans_red1 in r; auto. econstructor 2; eauto.
@@ -724,10 +723,10 @@ Qed.
 Hint Resolve trans_wf_local : trans.
 
 Lemma check_correct_arity_trans Σ idecl ind u indctx npar args pctx :
-  TTy.check_correct_arity (snd Σ) idecl ind u indctx (firstn npar args) pctx = true ->
+  TTy.check_correct_arity (snd Σ) idecl ind u indctx (firstn npar args) pctx ->
   check_correct_arity (snd (trans_global Σ)) (trans_one_ind_body idecl) ind u
                       (trans_local indctx) (firstn npar (map trans args))
-                      (trans_local pctx) = true.
+                      (trans_local pctx).
 Proof.
   destruct idecl; simpl in *. unfold TTy.check_correct_arity, check_correct_arity in *.
 Admitted.

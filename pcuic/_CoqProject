@@ -9,6 +9,7 @@ theories/PCUICReflect.v
 theories/PCUICLiftSubst.v
 theories/PCUICUnivSubst.v
 theories/PCUICTyping.v
+theories/PCUICNameless.v
 theories/PCUICWeakeningEnv.v
 theories/PCUICClosed.v
 theories/PCUICWeakening.v

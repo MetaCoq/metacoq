@@ -1,7 +1,7 @@
 (* Distributed under the terms of the MIT license.   *)
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
-From Template Require Import utils Ast AstUtils univ Induction LiftSubst.
+From Template Require Import utils Ast AstUtils Induction LiftSubst.
 Require Import String Lia.
 Local Open Scope string_scope.
 Set Asymmetric Patterns.
@@ -13,29 +13,33 @@ Set Asymmetric Patterns.
   Substitution of universe levels for universe level variables, used to
   implement universe polymorphism. *)
 
-Definition subst_instance_level u l :=
+Definition subst_instance_level (u : universe_instance) (l : Level.t) : Level.t :=
   match l with
-  | univ.Level.lProp | univ.Level.lSet | univ.Level.Level _ => l
-  | univ.Level.Var n => List.nth n u univ.Level.lProp
+  | Level.lProp | Level.lSet | Level.Level _ => l
+  | Level.Var n => List.nth n u Level.lProp
   end.
 
-Definition subst_instance_cstrs u cstrs :=
+Definition subst_instance_cstrs u (cstrs : constraints) : constraints :=
   ConstraintSet.fold (fun '(l,d,r) =>
                      ConstraintSet.add (subst_instance_level u l, d, subst_instance_level u r))
                   cstrs ConstraintSet.empty.
 
-Definition subst_instance_level_expr (u : universe_instance) (s : Universe.Expr.t) :=
+Definition subst_instance_level_expr u (s : Universe.Expr.t) : Universe.Expr.t :=
   let '(l, b) := s in (subst_instance_level u l, b).
 
-Definition subst_instance_univ (u : universe_instance) (s : universe) :=
-  List.map (subst_instance_level_expr u) s.
+Program Definition subst_instance_univ u (s : universe) : universe :=
+  (List.map (subst_instance_level_expr u) s; _).
+Next Obligation.
+ intro. apply s.2. destruct s as [[] e].
+ reflexivity. inversion H.
+Qed.
 
-Definition subst_instance_instance (u u' : universe_instance) :=
+Definition subst_instance_instance (u u' : universe_instance) : universe_instance :=
   List.map (subst_instance_level u) u'.
 
-Fixpoint subst_instance_constr (u : universe_instance) (c : term) :=
+Fixpoint subst_instance_constr (u : universe_instance) (c : term) : term :=
   match c with
-  | tRel _ | tVar _ | tMeta _ => c
+  | tRel _ | tVar _ => c
   | tSort s => tSort (subst_instance_univ u s)
   | tConst c u' => tConst c (subst_instance_instance u u')
   | tInd i u' => tInd i (subst_instance_instance u u')
@@ -159,6 +163,12 @@ Section Closedu.
 
 End Closedu.
 
+Lemma eq_universes (t u : universe) : t = u :> list _ -> t = u.
+Proof.
+  intro e; apply (eq_sigT _ _ e).
+Admitted. (* TODO *)
+
+
 Require Import ssreflect ssrbool.
 
 (** Universe-closed terms are unaffected by universe substitution. *)
@@ -180,6 +190,7 @@ Section UniverseClosedSubst.
   Lemma closedu_subst_instance_univ u t : closedu_universe 0 t -> subst_instance_univ u t = t.
   Proof.
     rewrite /closedu_universe /subst_instance_univ => H.
+    apply eq_universes; cbn.
     eapply (forallb_Forall (closedu_level_expr 0)) in H; auto. solve_all.
     now apply (closedu_subst_instance_level_expr u).
   Qed.

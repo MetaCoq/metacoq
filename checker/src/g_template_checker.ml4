@@ -12,7 +12,7 @@ let pr_char_list = prlist_with_sep mt pr_char
 
 let check env evm c =
   (* Feedback.msg_debug (str"Quoting"); *)
-  let term = Term_quoter.quote_term_rec env (EConstr.to_constr evm c) in
+  let term = Ast_quoter.quote_term_rec env (EConstr.to_constr evm c) in
   (* Feedback.msg_debug (str"Finished quoting.. checking."); *)
   let fuel = pow two (pow two (pow two two)) in
   let checker_flags = true in

@@ -1,6 +1,6 @@
 (* Distributed under the terms of the MIT license.   *)
 
-From Template Require Import univ utils BasicAst.
+From Template Require Import utils.
 From PCUIC Require Import PCUICAst PCUICAstUtils.
 Require Import List Program.
 Require Import BinPos.
@@ -20,7 +20,6 @@ Lemma term_forall_list_ind :
   forall P : term -> Type,
     (forall n : nat, P (tRel n)) ->
     (forall i : ident, P (tVar i)) ->
-    (forall n : nat, P (tMeta n)) ->
     (forall (n : nat) (l : list term), All P l -> P (tEvar n l)) ->
     (forall s, P (tSort s)) ->
     (forall (n : name) (t : term), P t -> forall t0 : term, P t0 -> P (tProd n t t0)) ->
@@ -78,7 +77,6 @@ Lemma term_forall_list_rec :
   forall P : term -> Type,
     (forall n : nat, P (tRel n)) ->
     (forall i : ident, P (tVar i)) ->
-    (forall n : nat, P (tMeta n)) ->
     (forall (n : nat) (l : list term), ForallT P l -> P (tEvar n l)) ->
     (forall s, P (tSort s)) ->
     (forall (n : name) (t : term), P t -> forall t0 : term, P t0 -> P (tProd n t t0)) ->

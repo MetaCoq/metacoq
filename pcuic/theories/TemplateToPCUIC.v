@@ -1,8 +1,8 @@
 (* Distributed under the terms of the MIT license.   *)
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
-From Template Require Import config utils univ AstUtils.
-From Template Require Import BasicAst Ast WfInv Typing.
+From Template Require Import config utils AstUtils.
+From Template Require Import Ast WfInv Typing.
 From PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICLiftSubst
      PCUICUnivSubst PCUICTyping PCUICGeneration.
 Require Import String.
@@ -15,7 +15,6 @@ Fixpoint trans (t : T.term) : term :=
   match t with
   | T.tRel n => tRel n
   | T.tVar n => tVar n
-  | T.tMeta n => tMeta n
   | T.tEvar ev args => tEvar ev (List.map trans args)
   | T.tSort u => tSort u
   | T.tConst c u => tConst c u

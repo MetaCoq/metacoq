@@ -9,9 +9,6 @@ Existing Instance config.default_checker_flags.
 Derive NoConfusion for term.
 Derive Signature for typing cumul.
 
-(* Definition isWfArity Σ (Γ : context) T := *)
-(*   forall ctx s, destArity [] T = Some (ctx, s) -> All_local_env (lift_typing typing) Σ (Γ ,,, ctx). *)
-
 Lemma isWfArity_or_Type_lift Σ n Γ ty (isdecl : n <= #|Γ|):
   wf Σ -> wf_local Σ Γ ->
   isWfArity_or_Type Σ (skipn n Γ) ty ->
@@ -129,6 +126,9 @@ Proof.
   induction u in f, fty, T |- *. simpl. intros. exists T, T. intuition auto. constructor.
   intros Hf Hty. simpl in Hty.
   specialize (IHu _ fty _ Hf) as [T' [U' [[H' H''] H''']]].
+  simpl in Hf.
+  econstructor.
+
 Admitted.
 (*   eapply invert_type_App in H' as (fA & fB & fna & Hf). intuition. *)
 (*   exists (tProd fna fA fB), U'. intuition auto. *)
@@ -226,7 +226,7 @@ Proof.
       eapply type_Conv; pcuic.
       eapply (weakening_cumul Σ Γ [] [vass na A]) in b; pcuic.
       simpl in b. eapply cumul_trans. 2:eauto.
-      constructor. simpl. apply leq_universe_product_r.
+      constructor. constructor. simpl. apply leq_universe_product_r.
 
   - eapply declared_constant_inv in H; pcuic.
     destruct decl as [ty [b|] univs]. red in H. simpl in *.
@@ -244,7 +244,7 @@ Proof.
     destruct X2.
     + destruct i as [ctx [s [Heq Hs]]].
       exists s.
-      unfold check_correct_arity in heq_check_correct_arity.
+      unfold check_correct_arity in *.
       assert (ctx = pctx). admit. (* WF of cases *)
       subst ctx.
       pose proof (PCUICClosed.destArity_spec [] pty). rewrite Heq in H.

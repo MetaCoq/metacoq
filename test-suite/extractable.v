@@ -7,7 +7,8 @@ From Template.TemplateMonad Require Import
 
 Local Open Scope string_scope.
 
-Notation "<% x %>" := (ltac:(let p y := exact y in quote_term x p)).
+Notation "<% x %>" := (ltac:(let p y := exact y in quote_term x p))
+   (only parsing).
 
 Run TemplateProgram
     (tmBind (tmReturn 1) (fun x => tmMsg (utils.string_of_nat x))).
@@ -73,3 +74,10 @@ Print thing.
 Run TemplateProgram
     (tmBind tmCurrentModPath
             tmMsg).
+
+
+Fail Run TemplateProgram (tmQuoteInductive "nat").
+Run TemplateProgram (tmQuoteInductive "Coq.Init.Datatypes.nat").
+
+Fail Run TemplateProgram (tmQuoteConstant "plus" true).
+Run TemplateProgram (tmQuoteConstant "Coq.Init.Nat.add" true).

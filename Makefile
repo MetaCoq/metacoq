@@ -2,7 +2,7 @@ all: template-coq checker pcuic extraction
 
 .PHONY: all template-coq checker install html clean mrproper .merlin test-suite translations
 
-install: 
+install:
 	$(MAKE) -C template-coq install
 	$(MAKE) -C checker install
 	$(MAKE) -C pcuic install

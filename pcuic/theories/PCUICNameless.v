@@ -221,6 +221,52 @@ Local Ltac ih2 :=
     eapply ih ; assumption
   end.
 
+(* TODO Instead prove eq_term t (nl t) + symmetry and transitivity *)
+Lemma eq_term_upto_univ_nl :
+  forall `{checker_flags} u v,
+    eq_term_upto_univ eq u v ->
+    eq_term_upto_univ eq (nl u) (nl v).
+Proof.
+  intros flags u v h.
+  revert v h.
+  induction u using term_forall_list_ind ; intros v h.
+  all: dependent destruction h.
+  all: try (simpl ; constructor ; try ih2 ; assumption).
+  + cbn. constructor.
+    eapply Forall2_map.
+    eapply Forall2_impl' ; try eassumption.
+    eapply All_Forall. assumption.
+  + cbn. constructor ; try ih2.
+    eapply Forall2_map.
+    eapply Forall2_impl' ; try eassumption.
+    clear - X. induction X.
+    * constructor.
+    * constructor ; try assumption.
+      intros [n t] [hn ht].
+      split ; try assumption.
+      eapply p. assumption.
+  + cbn. constructor ; try ih2.
+    eapply Forall2_map.
+    eapply Forall2_impl' ; try eassumption.
+    clear - X. induction X.
+    * constructor.
+    * constructor ; try assumption.
+      intros y [? [? ?]]. repeat split.
+      -- eapply p. assumption.
+      -- eapply p. assumption.
+      -- assumption.
+  + cbn. constructor ; try ih2.
+    eapply Forall2_map.
+    eapply Forall2_impl' ; try eassumption.
+    clear - X. induction X.
+    * constructor.
+    * constructor ; try assumption.
+      intros y [? [? ?]]. repeat split.
+      -- eapply p. assumption.
+      -- eapply p. assumption.
+      -- assumption.
+Qed.
+
 Corollary eq_term_nl_eq :
   forall `{checker_flags} u v,
     eq_term_upto_univ eq u v ->
@@ -230,41 +276,68 @@ Proof.
   eapply nameless_eq_term_spec.
   - eapply nl_spec.
   - eapply nl_spec.
-  - revert v h.
-    induction u using term_forall_list_ind ; intros v h.
-    all: dependent destruction h.
-    all: try (simpl ; constructor ; try ih2 ; assumption).
-    + cbn. constructor.
-      eapply Forall2_map.
-      eapply Forall2_impl' ; try eassumption.
-      eapply All_Forall. assumption.
-    + cbn. constructor ; try ih2.
-      eapply Forall2_map.
-      eapply Forall2_impl' ; try eassumption.
-      clear - X. induction X.
-      * constructor.
-      * constructor ; try assumption.
-        intros [n t] [hn ht].
-        split ; try assumption.
-        eapply p. assumption.
-    + cbn. constructor ; try ih2.
-      eapply Forall2_map.
-      eapply Forall2_impl' ; try eassumption.
-      clear - X. induction X.
-      * constructor.
-      * constructor ; try assumption.
-        intros y [? [? ?]]. repeat split.
-        -- eapply p. assumption.
-        -- eapply p. assumption.
-        -- assumption.
-    + cbn. constructor ; try ih2.
-      eapply Forall2_map.
-      eapply Forall2_impl' ; try eassumption.
-      clear - X. induction X.
-      * constructor.
-      * constructor ; try assumption.
-        intros y [? [? ?]]. repeat split.
-        -- eapply p. assumption.
-        -- eapply p. assumption.
-        -- assumption.
+  - eapply eq_term_upto_univ_nl. assumption.
+Qed.
+
+Local Ltac ih3 :=
+  lazymatch goal with
+  | ih : forall v : term, eq_term_upto_univ _ (nl ?u) _ -> _
+    |- eq_term_upto_univ _ ?u _ =>
+    eapply ih ; assumption
+  end.
+
+(* TODO Move *)
+Lemma Forall2_map_inv :
+  forall {A B A' B'} (R : A' -> B' -> Prop) (f : A -> A')
+    (g : B -> B') (l : list A) (l' : list B),
+    Forall2 R (map f l) (map g l') ->
+    Forall2 (fun x => R (f x) ∘ g) l l'.
+Proof.
+  intros A B A' B' R f g l l' h.
+  induction l in l', h |- * ; destruct l' ; try solve [ inversion h ].
+  - constructor.
+  - constructor.
+    + inversion h. subst. assumption.
+    + eapply IHl. inversion h. assumption.
+Qed.
+
+Lemma eq_term_upto_univ_nl_inv :
+  forall `{checker_flags} u v,
+    eq_term_upto_univ eq (nl u) (nl v) ->
+    eq_term_upto_univ eq u v.
+Proof.
+  intros flags u v h.
+  revert v h.
+  induction u using term_forall_list_ind ; intros v h.
+  all: dependent destruction h.
+  all: destruct v ; try discriminate.
+  all: try solve [
+    try lazymatch goal with
+    | h : nl _ = _ |- _ =>
+      simpl in h ; inversion h ; subst
+    end ;
+    constructor ;
+    try ih3 ;
+    assumption
+  ].
+  - cbn in H1. inversion H1. subst. constructor.
+    apply Forall2_map_inv in H0.
+    eapply Forall2_impl' ; try eassumption.
+    eapply All_Forall. assumption.
+  - cbn in H0. inversion H0.  subst. constructor. reflexivity.
+  - cbn in H0. inversion H0. subst. constructor ; try ih3.
+    apply Forall2_map_inv in H.
+    eapply Forall2_impl' ; try eassumption.
+    eapply All_Forall. eapply All_impl ; [ exact X |].
+    intros x H1 y [? ?]. split ; auto.
+  - cbn in H0. inversion H0. subst. constructor.
+    apply Forall2_map_inv in H.
+    eapply Forall2_impl' ; try eassumption.
+    eapply All_Forall. eapply All_impl ; [ exact X |].
+    intros x [? ?] y [? [? ?]]. repeat split ; auto.
+  - cbn in H0. inversion H0. subst. constructor.
+    apply Forall2_map_inv in H.
+    eapply Forall2_impl' ; try eassumption.
+    eapply All_Forall. eapply All_impl ; [ exact X |].
+    intros x [? ?] y [? [? ?]]. repeat split ; auto.
 Qed.

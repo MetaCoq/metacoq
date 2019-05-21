@@ -1,8 +1,9 @@
 (* Distributed under the terms of the MIT license.   *)
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Arith Lia.
-From Template Require Import config utils AstUtils UnivSubst.
-From PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICLiftSubst PCUICUnivSubst.
+From Template Require Import config utils Universes BasicAst AstUtils UnivSubst.
+From PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICReflect
+                          PCUICLiftSubst PCUICUnivSubst.
 
 Require Export LibHypsNaming.
 

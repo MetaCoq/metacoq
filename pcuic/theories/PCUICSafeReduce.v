@@ -1,9 +1,12 @@
 (* Distributed under the terms of the MIT license.   *)
 
-From Coq Require Import Bool String List Program BinPos Compare_dec Arith Lia Classes.RelationClasses.
+From Coq Require Import Bool String List Program BinPos Compare_dec Arith Lia
+     Classes.RelationClasses.
 From Template
-Require Import config monad_utils utils AstUtils UnivSubst.
-From PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICLiftSubst PCUICUnivSubst PCUICTyping.
+Require Import config Universes monad_utils utils BasicAst AstUtils UnivSubst.
+From PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICReflect
+                          PCUICLiftSubst PCUICUnivSubst PCUICTyping
+                          PCUICPosition.
 From Equations Require Import Equations.
 Require Import Equations.Prop.DepElim.
 
@@ -34,125 +37,83 @@ Module RedFlags.
 
 End RedFlags.
 
-Ltac finish :=
-  let h := fresh "h" in
-  right ;
-  match goal with
-  | e : ?t <> ?u |- _ =>
-    intro h ; apply e ; now inversion h
-  end.
+Notation "∥ T ∥" := (squash T) (at level 10).
 
-Ltac fcase c :=
-  let e := fresh "e" in
-  case c ; intro e ; [ subst ; try (left ; reflexivity) | finish ].
+Notation "( x ; y )" := (existT _ x y).
 
-Ltac term_dec_tac term_dec :=
-  repeat match goal with
-         | t : term, u : term |- _ => fcase (term_dec t u)
-         | u : universe, u' : universe |- _ => fcase (eq_dec u u')
-         | x : universe_instance, y : universe_instance |- _ =>
-           fcase (eq_dec x y)
-         | x : list Level.t, y : universe_instance |- _ =>
-           fcase (eq_dec x y)
-         | n : nat, m : nat |- _ => fcase (Nat.eq_dec n m)
-         | i : ident, i' : ident |- _ => fcase (string_dec i i')
-         | i : kername, i' : kername |- _ => fcase (string_dec i i')
-         | i : string, i' : kername |- _ => fcase (string_dec i i')
-         | n : name, n' : name |- _ => fcase (eq_dec n n')
-         (* | l : list term, l' : list term |- _ => fcase (list_dec term_dec l l') *)
-         | i : inductive, i' : inductive |- _ => fcase (eq_dec i i')
-         | x : inductive * nat, y : inductive * nat |- _ =>
-           fcase (eq_dec x y)
-         (* | x : list (nat * term), y : list (nat * term) |- _ => *)
-         (*   fcase (list_dec (prod_dec Nat.eq_dec term_dec) x y) *)
-         | x : projection, y : projection |- _ => fcase (eq_dec x y)
-         (* | f : mfixpoint term, g : mfixpoint term |- _ => *)
-         (*   fcase (mfixpoint_dec term_dec f g) *)
-         end.
+Set Equations With UIP.
 
-Instance dec_universe : EqDec universe.
+(* TODO Move somewhere else *)
+(* Dependent lexicographic order *)
+Inductive dlexprod {A} {B : A -> Type}
+          (leA : A -> A -> Prop) (leB : forall x, B x -> B x -> Prop)
+  : sigT B -> sigT B -> Prop :=
+| left_lex : forall x x' y y', leA x x' -> dlexprod leA leB (x;y) (x';y')
+| right_lex : forall x y y', leB x y y' -> dlexprod leA leB (x;y) (x;y').
+
+Derive Signature for dlexprod.
+
+Definition lexprod := Subterm.lexprod.
+Arguments lexprod {_ _} _ _ _ _.
+
+Notation "x ⊩ R1 ⨶ R2" :=
+  (dlexprod R1 (fun x => R2)) (at level 20, right associativity).
+Notation "R1 ⊗ R2" :=
+  (lexprod R1 R2) (at level 20, right associativity).
+
+Lemma acc_dlexprod :
+  forall A B leA leB,
+    (forall x, well_founded (leB x)) ->
+    forall x,
+      Acc leA x ->
+      forall y,
+        Acc (leB x) y ->
+        Acc (@dlexprod A B leA leB) (x;y).
 Proof.
-  intros [x Hx] [y Hy].
-  fcase (eq_dec x y). left.
-  apply eq_universes; reflexivity.
-Defined.
+  intros A B leA leB hw.
+  induction 1 as [x hx ih1].
+  intros y.
+  induction 1 as [y hy ih2].
+  constructor.
+  intros [x' y'] h. simple inversion h.
+  - intro hA. inversion H0. inversion H1. subst.
+    eapply ih1.
+    + assumption.
+    + apply hw.
+  - intro hB. rewrite <- H0.
+    pose proof (projT2_eq H1) as p2.
+    set (projT1_eq H1) as p1 in *; cbn in p1.
+    destruct p1; cbn in p2; destruct p2.
+    eapply ih2. assumption.
+Qed.
 
-Derive EqDec for term.
-Next Obligation.
-  revert y.
-  induction x using term_forall_list_rec ; intro t ;
-    destruct t ; try (right ; discriminate).
-  all: term_dec_tac term_dec.
-  - revert l0. induction H ; intro l0.
-    + destruct l0.
-      * left. reflexivity.
-      * right. discriminate.
-    + destruct l0.
-      * right. discriminate.
-      * destruct (IHForallT l0) ; nodec.
-        destruct (p t) ; nodec.
-        subst. left. inversion e. reflexivity.
-  - destruct (IHx1 t1) ; nodec.
-    destruct (IHx2 t2) ; nodec.
-    subst. left. reflexivity.
-  - destruct (IHx1 t1) ; nodec.
-    destruct (IHx2 t2) ; nodec.
-    subst. left. reflexivity.
-  - destruct (IHx1 t1) ; nodec.
-    destruct (IHx2 t2) ; nodec.
-    destruct (IHx3 t3) ; nodec.
-    subst. left. reflexivity.
-  - destruct (IHx1 t1) ; nodec.
-    destruct (IHx2 t2) ; nodec.
-    subst. left. reflexivity.
-  - destruct (IHx1 t1) ; nodec.
-    destruct (IHx2 t2) ; nodec.
-    subst. revert l0. clear IHx1 IHx2.
-    induction X ; intro l0.
-    + destruct l0.
-      * left. reflexivity.
-      * right. discriminate.
-    + destruct l0.
-      * right. discriminate.
-      * destruct (IHX l0) ; nodec.
-        destruct (p (snd p1)) ; nodec.
-        destruct (eq_dec (fst x) (fst p1)) ; nodec.
-        destruct x, p1.
-        left.
-        cbn in *. subst. inversion e. reflexivity.
-  - destruct (IHx t) ; nodec.
-    left. subst. reflexivity.
-  - revert m0. induction X ; intro m0.
-    + destruct m0.
-      * left. reflexivity.
-      * right. discriminate.
-    + destruct p as [p1 p2].
-      destruct m0.
-      * right. discriminate.
-      * destruct (p1 (dtype d)) ; nodec.
-        destruct (p2 (dbody d)) ; nodec.
-        destruct (IHX m0) ; nodec.
-        destruct x, d ; subst. cbn in *.
-        destruct (eq_dec dname dname0) ; nodec.
-        subst. inversion e1. subst.
-        destruct (eq_dec rarg rarg0) ; nodec.
-        subst. left. reflexivity.
-  - revert m0. induction X ; intro m0.
-    + destruct m0.
-      * left. reflexivity.
-      * right. discriminate.
-    + destruct p as [p1 p2].
-      destruct m0.
-      * right. discriminate.
-      * destruct (p1 (dtype d)) ; nodec.
-        destruct (p2 (dbody d)) ; nodec.
-        destruct (IHX m0) ; nodec.
-        destruct x, d ; subst. cbn in *.
-        destruct (eq_dec dname dname0) ; nodec.
-        subst. inversion e1. subst.
-        destruct (eq_dec rarg rarg0) ; nodec.
-        subst. left. reflexivity.
-Defined.
+Lemma dlexprod_Acc :
+  forall A B leA leB,
+    (forall x, well_founded (leB x)) ->
+    forall x y,
+      Acc leA x ->
+      Acc (@dlexprod A B leA leB) (x;y).
+Proof.
+  intros A B leA leB hB x y hA.
+  eapply acc_dlexprod ; try assumption.
+  apply hB.
+Qed.
+
+Lemma dlexprod_trans :
+  forall A B RA RB,
+    transitive RA ->
+    (forall x, transitive (RB x)) ->
+    transitive (@dlexprod A B RA RB).
+Proof.
+  intros A B RA RB hA hB [u1 u2] [v1 v2] [w1 w2] h1 h2.
+  revert w1 w2 h2. induction h1 ; intros w1 w2 h2.
+  - dependent induction h2.
+    + left. eapply hA ; eassumption.
+    + left. assumption.
+  - dependent induction h2.
+    + left. assumption.
+    + right. eapply hB ; eassumption.
+Qed.
 
 (* We assume normalisation of the reduction.
 
@@ -170,408 +131,6 @@ Section Normalisation.
       Σ ;;; Γ |- v : A.
   Admitted.
 
-  Inductive stack : Type :=
-  | Empty
-  | App (t : term) (e : stack)
-  | Fix (f : mfixpoint term) (n : nat) (args : list term) (e : stack)
-  | Case (indn : inductive * nat) (pred : term) (brs : list (nat * term)) (e : stack).
-
-  Fixpoint zipc t stack :=
-    match stack with
-    | Empty => t
-    | App u e => zipc (tApp t u) e
-    | Fix f n args e => zipc (tApp (mkApps (tFix f n) args) t) e
-    | Case indn pred brs e => zipc (tCase indn pred t brs) e
-    end.
-
-  Definition zip (t : term * stack) := zipc (fst t) (snd t).
-
-  (* TODO Tail-rec version *)
-  (* Get the arguments out of a stack *)
-  Fixpoint decompose_stack π :=
-    match π with
-    | App u π => let '(l,π) := decompose_stack π in (u :: l, π)
-    | _ => ([], π)
-    end.
-
-  (* TODO Tail-rec *)
-  Fixpoint appstack l π :=
-    match l with
-    | u :: l => App u (appstack l π)
-    | [] => π
-    end.
-
-  Lemma decompose_stack_eq :
-    forall π l ρ,
-      decompose_stack π = (l, ρ) ->
-      π = appstack l ρ.
-  Proof.
-    intros π l ρ eq.
-    revert l ρ eq. induction π ; intros l ρ eq.
-    - cbn in eq. inversion eq. subst. reflexivity.
-    - destruct l.
-      + cbn in eq. revert eq. case_eq (decompose_stack π).
-        intros. inversion eq.
-      + cbn in eq. revert eq. case_eq (decompose_stack π).
-        intros l0 s H0 eq. inversion eq. subst.
-        cbn. f_equal. eapply IHπ. assumption.
-    - cbn in eq. inversion eq. subst. reflexivity.
-    - cbn in eq. inversion eq. subst. reflexivity.
-  Qed.
-
-  Lemma decompose_stack_not_app :
-    forall π l u ρ,
-      decompose_stack π = (l, App u ρ) -> False.
-  Proof.
-    intros π l u ρ eq.
-    revert u l ρ eq. induction π ; intros u l ρ eq.
-    all: try solve [ cbn in eq ; inversion eq ].
-    cbn in eq. revert eq. case_eq (decompose_stack π).
-    intros l0 s H0 eq. inversion eq. subst.
-    eapply IHπ. eassumption.
-  Qed.
-
-  Lemma zipc_appstack :
-    forall {t args ρ},
-      zipc t (appstack args ρ) = zipc (mkApps t args) ρ.
-  Proof.
-    intros t args ρ. revert t ρ. induction args ; intros t ρ.
-    - cbn. reflexivity.
-    - cbn. rewrite IHargs. reflexivity.
-  Qed.
-
-  Lemma decompose_stack_appstack :
-    forall l ρ,
-      decompose_stack (appstack l ρ) =
-      (l ++ fst (decompose_stack ρ), snd (decompose_stack ρ)).
-  Proof.
-    intros l. induction l ; intros ρ.
-    - cbn. destruct (decompose_stack ρ). reflexivity.
-    - cbn. rewrite IHl. reflexivity.
-  Qed.
-
-  Fixpoint decompose_stack_at π n : option (list term * term * stack) :=
-    match π with
-    | App u π =>
-      match n with
-      | 0 => ret ([], u, π)
-      | S n =>
-        r <- decompose_stack_at π n ;;
-        let '(l, v, π) := r in
-        ret (u :: l, v, π)
-      end
-    | _ => None
-    end.
-
-  Lemma decompose_stack_at_eq :
-    forall π n l u ρ,
-      decompose_stack_at π n = Some (l,u,ρ) ->
-      π = appstack l (App u ρ).
-  Proof.
-    intros π n l u ρ h. revert n l u ρ h.
-    induction π ; intros m l u ρ h.
-    all: try solve [ cbn in h ; discriminate ].
-    destruct m.
-    - cbn in h. inversion h. subst.
-      cbn. reflexivity.
-    - cbn in h. revert h.
-      case_eq (decompose_stack_at π m).
-      + intros [[l' v] ρ'] e1 e2.
-        inversion e2. subst. clear e2.
-        specialize IHπ with (1 := e1). subst.
-        cbn. reflexivity.
-      + intros H0 h. discriminate.
-  Qed.
-
-  Lemma decompose_stack_at_length :
-    forall π n l u ρ,
-      decompose_stack_at π n = Some (l,u,ρ) ->
-      #|l| = n.
-  Proof.
-    intros π n l u ρ h. revert n l u ρ h.
-    induction π ; intros m l u ρ h.
-    all: try solve [ cbn in h ; discriminate ].
-    destruct m.
-    - cbn in h. inversion h. reflexivity.
-    - cbn in h. revert h.
-      case_eq (decompose_stack_at π m).
-      + intros [[l' v] ρ'] e1 e2.
-        inversion e2. subst. clear e2.
-        specialize IHπ with (1 := e1). subst.
-        cbn. reflexivity.
-      + intros H0 h. discriminate.
-  Qed.
-
-  (*! Notion of term positions and an order on them *)
-
-  Inductive position : term -> Type :=
-  | root : forall t, position t
-  | app_l : forall u (p : position u) v, position (tApp u v)
-  | app_r : forall u v (p : position v), position (tApp u v)
-  | case_c : forall indn pr c brs (p : position c), position (tCase indn pr c brs).
-
-  Derive Signature for position.
-  Derive NoConfusion NoConfusionHom for term.
-  Derive NoConfusion NoConfusionHom for position.
-  Derive EqDec for position.
-
-  Set Equations With UIP.
-
-  Equations atpos (t : term) (p : position t) : term :=
-    atpos ?(t) (root t) := t ;
-    atpos ?(tApp u v) (app_l u p v) := atpos u p ;
-    atpos ?(tApp u v) (app_r u v p) := atpos v p ;
-    atpos ?(tCase indn pr c brs) (case_c indn pr c brs p) := atpos c p.
-
-  Equations poscat t (p : position t) (q : position (atpos t p)) : position t :=
-    poscat _ (root t) q := q ;
-    poscat _ (app_l u p v) q := app_l u (poscat _ p q) v ;
-    poscat _ (app_r u v p) q := app_r u v (poscat _ p q) ;
-    poscat _ (case_c indn pr c brs p) q := case_c indn pr c brs (poscat _ p q).
-
-  Arguments root {_}.
-  Arguments poscat {_} _ _.
-
-  Lemma atpos_poscat :
-    forall t p q,
-      atpos t (@poscat t p q) = atpos (atpos t p) q.
-  Proof.
-    intros t p q. revert q. induction p ; intros q.
-    - reflexivity.
-    - rewrite <- IHp. reflexivity.
-    - rewrite <- IHp. reflexivity.
-    - rewrite <- IHp. reflexivity.
-  Qed.
-
-  Notation ex t := (exist _ t _) (only parsing).
-
-  Notation coe h t := (eq_rec_r (fun x => position x) t h).
-
-  Equations(noind) stack_position t π : { p : position (zipc t π) | atpos _ p = t } :=
-    stack_position t π with π := {
-    | Empty => ex root ;
-    | App u ρ with stack_position _ ρ := {
-      | @exist p h => ex (poscat p (coe h (app_l _ root _)))
-      } ;
-    | Fix f n args ρ with stack_position _ ρ := {
-      | @exist p h => ex (poscat p (coe h (app_r _ _ root)))
-      } ;
-    | Case indn pred brs ρ with stack_position _ ρ := {
-      | @exist p h => ex (poscat p (coe h (case_c _ _ _ _ root)))
-      }
-    }.
-  Next Obligation.
-    rewrite atpos_poscat.
-    rewrite h. cbn. reflexivity.
-  Qed.
-  Next Obligation.
-    rewrite atpos_poscat.
-    rewrite h. cbn. reflexivity.
-  Qed.
-  Next Obligation.
-    rewrite atpos_poscat.
-    rewrite h. cbn. reflexivity.
-  Qed.
-
-  Lemma stack_position_fix :
-    forall c mfix idx args ρ,
-      ` (stack_position c (Fix mfix idx args ρ)) =
-      poscat (` (stack_position _ ρ))
-             (coe (proj2_sig (stack_position _ ρ)) (app_r _ _ root)).
-  Proof.
-    intros c mfix idx args ρ.
-    simp stack_position.
-    replace (stack_position_clause_1 stack_position ρ ρ (tApp (mkApps (tFix mfix idx) args) c))
-      with (stack_position (tApp (mkApps (tFix mfix idx) args) c) ρ).
-    - case_eq (stack_position (tApp (mkApps (tFix mfix idx) args) c) ρ).
-      intros x e H0. cbn. reflexivity.
-    - simp stack_position. reflexivity.
-  Qed.
-
-  Lemma stack_position_app :
-    forall t u ρ,
-      ` (stack_position t (App u ρ)) =
-      poscat (` (stack_position _ ρ))
-             (coe (proj2_sig (stack_position _ ρ)) (app_l _ root _)).
-  Proof.
-    intros t u ρ.
-    simp stack_position.
-    replace (stack_position_clause_1 stack_position ρ ρ (tApp t u))
-      with (stack_position (tApp t u) ρ).
-    - case_eq (stack_position (tApp t u) ρ).
-      intros. cbn. reflexivity.
-    - simp stack_position. reflexivity.
-  Qed.
-
-  Lemma poscat_replace :
-    forall t p q t' (e : t = t') p',
-      p = coe e p' ->
-      exists e',
-        @poscat t p q = @poscat t (coe e p') (coe e' q).
-  Proof.
-    intros t p q t' e p' h.
-    subst. cbn in q. cbn.
-    exists eq_refl. cbn. reflexivity.
-  Qed.
-
-  Lemma poscat_replace_coe :
-    forall t p q t' (e : t = t') p',
-      p = coe e p' ->
-      exists e', @poscat t p q = coe e (@poscat t' p' (coe e' q)).
-  Proof.
-    intros t p q t' e p' h.
-    subst. cbn in q. cbn.
-    exists eq_refl. cbn. reflexivity.
-  Qed.
-
-  Lemma atpos_assoc :
-    forall t p q,
-      atpos (atpos t p) q = atpos t (poscat p q).
-  Proof.
-    intros t p q. revert q.
-    induction p ; intros q.
-    all: simp atpos ; reflexivity.
-  Defined.
-
-  Lemma poscat_assoc :
-    forall t p q r,
-      @poscat t (poscat p q) r =
-      poscat p (poscat q (coe (atpos_assoc t p q) r)).
-  Proof.
-    intros t p q r. revert q r.
-    induction p ; intros q r.
-    - cbn. reflexivity.
-    - simp poscat. rewrite <- IHp. reflexivity.
-    - simp poscat. rewrite <- IHp. reflexivity.
-    - simp poscat. rewrite <- IHp. reflexivity.
-  Qed.
-
-  Lemma poscat_root :
-    forall t p, @poscat t p root = p.
-  Proof.
-    intros t p.
-    funelim (poscat p root).
-    - reflexivity.
-    - f_equal. assumption.
-    - f_equal. assumption.
-    - f_equal. assumption.
-  Qed.
-
-  Lemma stack_position_appstack :
-    forall t args ρ, exists q h,
-        let p := stack_position (mkApps t args) ρ in
-        ` (stack_position t (appstack args ρ)) =
-        coe h (poscat (` p) q).
-  Proof.
-    intros t args ρ. revert t ρ.
-    induction args ; intros t ρ.
-    - exists root. exists eq_refl. cbn.
-      rewrite poscat_root. reflexivity.
-    - cbn in IHargs. cbn.
-      rewrite stack_position_app.
-      destruct (IHargs (tApp t a) ρ) as [q [h e]].
-      destruct (poscat_replace_coe _ _ (coe (proj2_sig (stack_position (tApp t a) (appstack args ρ))) (app_l t root a)) _ _ _ e)
-        as [e' hh].
-      rewrite hh.
-      rewrite poscat_assoc.
-      do 2 eexists. reflexivity.
-  Qed.
-
-  Lemma coe_app_l_not_root :
-    forall u v p t (h : t = tApp u v),
-      coe h (app_l u p v) <> root.
-  Proof.
-    intros.
-    subst. cbn. discriminate.
-  Qed.
-
-  Lemma coe_app_r_not_root :
-    forall u v p t (h : t = tApp u v),
-      coe h (app_r u v p) <> root.
-  Proof.
-    intros.
-    subst. cbn. discriminate.
-  Qed.
-
-  Lemma coe_case_c_not_root :
-    forall indn pr c brs p t (h : t = tCase indn pr c brs),
-      coe h (case_c indn pr c brs p) <> root.
-  Proof.
-    intros.
-    subst. cbn. discriminate.
-  Qed.
-
-  Lemma coe_coe :
-    forall t u v p (e : t = u) (e' : u = v),
-      coe e (coe e' p) = coe (eq_trans e e') p.
-  Proof.
-    intros t u v p e e'.
-    subst. reflexivity.
-  Qed.
-
-  Inductive posR : forall {t}, position t -> position t -> Prop :=
-  | posR_app_lr : forall u v pu pv, posR (app_r u v pv) (app_l u pu v)
-  | posR_app_l : forall u v p q, posR p q -> posR (app_l u p v) (app_l u q v)
-  | posR_app_r : forall u v p q, posR p q -> posR (app_r u v p) (app_r u v q)
-  | posR_case_c :
-      forall indn pr c brs p q,
-        posR p q -> posR (case_c indn pr c brs p) (case_c indn pr c brs q)
-  | posR_app_l_root : forall u v p, posR (app_l u p v) root
-  | posR_app_r_root : forall u v p, posR (app_r u v p) root
-  | posR_case_c_root : forall indn pr c brs p, posR (case_c indn pr c brs p) root.
-
-  Derive Signature (* NoConfusion NoConfusionHom *) for posR.
-
-  Lemma posR_Acc :
-    forall t p, Acc (@posR t) p.
-  Proof.
-    intro t. induction t ; intro q.
-    all: try solve [
-      dependent destruction q ;
-      constructor ; intros r h ;
-      dependent destruction h
-    ].
-    - assert (forall u v p, Acc posR p -> Acc posR (app_r u v p)) as hr.
-      { clear. intros u v p h. induction h.
-        constructor. intros p h.
-        dependent destruction h.
-        all: try discriminate.
-        eapply H0. assumption.
-      }
-      assert (forall u v p, Acc posR p -> (forall q : position v, Acc posR q) -> Acc posR (app_l u p v)) as hl.
-      { clear - hr. intros u v p h ih.
-        induction h.
-        constructor. intros p h.
-        dependent destruction h.
-        all: try discriminate.
-        - eapply hr. apply ih.
-        - eapply H0. assumption.
-      }
-      constructor. intros r h.
-      dependent destruction h.
-      + eapply hr. apply IHt2.
-      + eapply hl ; try assumption. apply IHt1.
-      + eapply hr. apply IHt2.
-      + eapply hl ; try assumption. apply IHt1.
-      + eapply hr. apply IHt2.
-    - assert (forall indn pr q, Acc posR (case_c indn pr t2 l q)) as hcase.
-      { clear q. intros indn pr q.
-        specialize (IHt2 q).
-        clear - IHt2.
-        rename IHt2 into h, t2 into c.
-        revert l indn pr.
-        induction h.
-        intros l indn pr.
-        constructor. intros p h.
-        dependent destruction h.
-        eapply H0. assumption.
-      }
-      constructor. intros r h.
-      dependent destruction h.
-      + eapply hcase.
-      + eapply hcase.
-  Qed.
-
   (* red is the reflexive transitive closure of one-step reduction and thus
      can't be used as well order. We thus define the transitive closure,
      but we take the symmetric version.
@@ -580,43 +139,12 @@ Section Normalisation.
   | cored1 : forall u v, red1 Σ Γ u v -> cored Σ Γ v u
   | cored_trans : forall u v w, cored Σ Γ v u -> red1 Σ Γ v w -> cored Σ Γ w u.
 
-  Notation "( x ; y )" := (existT _ x y).
-
-  (* Dependent lexicographic order *)
-  Inductive dlexprod {A} {B : A -> Type} (leA : A -> A -> Prop) (leB : forall x, B x -> B x -> Prop) : sigT B -> sigT B -> Prop :=
-  | left_lex : forall x x' y y', leA x x' -> dlexprod leA leB (x;y) (x';y')
-  | right_lex : forall x y y', leB x y y' -> dlexprod leA leB (x;y) (x;y').
-
-  Lemma acc_dlexprod :
-    forall A B leA leB,
-      (forall x, well_founded (leB x)) ->
-      forall x,
-        Acc leA x ->
-        forall y,
-          Acc (leB x) y ->
-          Acc (@dlexprod A B leA leB) (x;y).
-  Proof.
-    intros A B leA leB hw.
-    induction 1 as [x hx ih1].
-    intros y.
-    induction 1 as [y hy ih2].
-    constructor.
-    intros [x' y'] h. simple inversion h.
-    - intro hA. inversion H1. inversion H2. subst.
-      eapply ih1.
-      + assumption.
-      + apply hw.
-    - intro hB. rewrite <- H1.
-      pose proof (projT2_eq H2) as p2.
-      set (projT1_eq H2) as p1 in *; cbn in p1.
-      destruct p1; cbn in p2; destruct p2.
-      eapply ih2. assumption.
-  Qed.
+  Definition R_aux Σ Γ :=
+    dlexprod (cored Σ Γ) (@posR).
 
   Definition R Σ Γ u v :=
-    dlexprod (cored Σ Γ) (@posR)
-             (zip u; proj1_sig (stack_position (fst u) (snd u)))
-             (zip v; proj1_sig (stack_position (fst v) (snd v))).
+    R_aux Σ Γ (zip u ; stack_pos (fst u) (snd u))
+              (zip v ; stack_pos (fst v) (snd v)).
 
   Inductive welltyped Σ Γ t : Prop :=
   | iswelltyped A : Σ ;;; Γ |- t : A -> welltyped Σ Γ t.
@@ -627,17 +155,15 @@ Section Normalisation.
       Acc (cored (fst Σ) Γ) t.
 
   Corollary R_Acc_aux :
-    forall Σ Γ t,
-      welltyped Σ Γ (zip t) ->
-      Acc (dlexprod (cored (fst Σ) Γ) (@posR))
-          (zip t ; proj1_sig (stack_position (fst t) (snd t))).
+    forall Σ Γ t p,
+      welltyped Σ Γ t ->
+      Acc (R_aux Σ Γ) (t ; p).
   Proof.
-    intros Σ Γ t h.
-    eapply acc_dlexprod.
+    intros Σ Γ t p h.
+    eapply dlexprod_Acc.
     - intros x. unfold well_founded.
       eapply posR_Acc.
     - eapply normalisation. eassumption.
-    - eapply posR_Acc.
   Qed.
 
   Derive Signature for Acc.
@@ -648,12 +174,22 @@ Section Normalisation.
       Acc (R (fst Σ) Γ) t.
   Proof.
     intros Σ Γ t h.
-    pose proof (R_Acc_aux _ _ _ h) as h'.
+    pose proof (R_Acc_aux _ _ _ (stack_pos (fst t) (snd t)) h) as h'.
     clear h. rename h' into h.
     dependent induction h.
     constructor. intros y hy.
     eapply H1 ; try reflexivity.
     unfold R in hy. assumption.
+  Qed.
+
+  Lemma R_positionR :
+    forall Σ Γ t1 t2 (p1 : pos t1) (p2 : pos t2),
+      t1 = t2 ->
+      positionR (` p1) (` p2) ->
+      R_aux Σ Γ (t1 ; p1) (t2 ; p2).
+  Proof.
+    intros Σ Γ t1 t2 p1 p2 e h.
+    subst. right. assumption.
   Qed.
 
   Lemma cored_welltyped :
@@ -674,8 +210,6 @@ Section Normalisation.
   Definition Req Σ Γ t t' :=
     t = t' \/ R Σ Γ t t'.
 
-  Derive Signature for dlexprod.
-
   Lemma cored_trans' :
     forall {Σ Γ u v w},
       cored Σ Γ u v ->
@@ -688,46 +222,6 @@ Section Normalisation.
     - eapply cored_trans.
       + eapply IHh1. assumption.
       + assumption.
-  Qed.
-
-  Definition transitive {A} (R : A -> A -> Prop) :=
-    forall u v w, R u v -> R v w -> R u w.
-
-  Lemma dlexprod_trans :
-    forall A B RA RB,
-      transitive RA ->
-      (forall x, transitive (RB x)) ->
-      transitive (@dlexprod A B RA RB).
-  Proof.
-    intros A B RA RB hA hB [u1 u2] [v1 v2] [w1 w2] h1 h2.
-    revert w1 w2 h2. induction h1 ; intros w1 w2 h2.
-    - dependent induction h2.
-      + left. eapply hA ; eassumption.
-      + left. assumption.
-    - dependent induction h2.
-      + left. assumption.
-      + right. eapply hB ; eassumption.
-  Qed.
-
-  Lemma posR_trans :
-    forall t, transitive (@posR t).
-  Proof.
-    intros t p q r h1 h2.
-    revert r h2. dependent induction h1 ; intros r h2.
-    all: try (dependent induction h2 ; discriminate).
-    - dependent induction h2.
-      + econstructor.
-      + econstructor.
-    - dependent induction h2.
-      + econstructor. eapply IHh1. assumption.
-      + econstructor.
-    - dependent induction h2.
-      + econstructor.
-      + econstructor. eapply IHh1. assumption.
-      + econstructor.
-    - dependent induction h2.
-      + econstructor. eapply IHh1. assumption.
-      + econstructor.
   Qed.
 
   Lemma Rtrans :
@@ -795,42 +289,12 @@ Section Reduce.
   Derive NoConfusion NoConfusionHom for option.
   Derive NoConfusion NoConfusionHom for context_decl.
 
-  Arguments root {_}.
-  Arguments poscat {_} _ _.
-  Notation coe h t := (eq_rec_r (fun x => position x) t h).
-
-  Lemma red1_context :
-    forall Σ Γ t u π,
-      red1 Σ Γ t u ->
-      red1 Σ Γ (zip (t, π)) (zip (u, π)).
-  Proof.
-    intros Σ' Γ t u π h.
-    cbn. revert t u h.
-    induction π ; intros u v h.
-    - cbn. assumption.
-    - cbn. apply IHπ. constructor. assumption.
-    - cbn. apply IHπ. constructor. assumption.
-    - cbn. apply IHπ. constructor. assumption.
-  Qed.
-
-  Corollary red_context :
-    forall Σ Γ t u stack,
-      red Σ Γ t u ->
-      red Σ Γ (zip (t, stack)) (zip (u, stack)).
-  Proof.
-    intros Σ' Γ t u stack h. revert stack. induction h ; intro stack.
-    - constructor.
-    - econstructor.
-      + eapply IHh.
-      + eapply red1_context. assumption.
-  Qed.
-
   Corollary cored_context :
-    forall Σ Γ t u stack,
-      cored Σ Γ t u ->
-      cored Σ Γ (zip (t, stack)) (zip (u, stack)).
+    forall Γ t u π,
+      cored Σ (Γ ,,, stack_context π) t u ->
+      cored Σ Γ (zip (t, π)) (zip (u, π)).
   Proof.
-    intros Σ' Γ t u stack h. revert stack. induction h ; intro stack.
+    intros Γ t u π h. induction h.
     - constructor. eapply red1_context. assumption.
     - eapply cored_trans.
       + eapply IHh.
@@ -881,8 +345,6 @@ Section Reduce.
       + eapply IHh.
       + econstructor. assumption.
   Qed.
-
-  Notation "∥ T ∥" := (squash T) (at level 10).
 
   Derive Signature for typing.
 
@@ -941,15 +403,55 @@ Section Reduce.
       exists args, u. assumption.
   Qed.
 
-  Lemma welltyped_context :
-    forall Σ Γ t,
-      welltyped Σ Γ (zip t) ->
-      welltyped Σ Γ (fst t).
+  Lemma inversion_Lambda :
+    forall {Σ Γ na A t T},
+      Σ ;;; Γ |- tLambda na A t : T ->
+      exists s1 B,
+        ∥ Σ ;;; Γ |- A : tSort s1 ∥ /\
+        ∥ Σ ;;; Γ ,, vass na A |- t : B ∥ /\
+        ∥ Σ ;;; Γ |- tProd na A B <= T ∥.
   Proof.
-    intros Σ' Γ [t π] h.
-    destruct h as [A h].
-    revert Γ t A h.
-    induction π ; intros Γ u A h.
+    intros Σ' Γ na A t T h. dependent induction h.
+    - exists s1, bty. split ; [| split].
+      + constructor. assumption.
+      + constructor. assumption.
+      + constructor. apply cumul_refl'.
+    - destruct IHh as [s1 [B' [? [? [?]]]]].
+      exists s1, B'. split ; [| split].
+      + assumption.
+      + assumption.
+      + constructor. eapply cumul_trans ; eassumption.
+  Qed.
+
+  Lemma inversion_Prod :
+    forall {Σ Γ na A B T},
+      Σ ;;; Γ |- tProd na A B : T ->
+      exists s1 s2,
+        ∥ Σ ;;; Γ |- A : tSort s1 ∥ /\
+        ∥ Σ ;;; Γ ,, vass na A |- B : tSort s2 ∥ /\
+        ∥ Σ ;;; Γ |- tSort (Universe.sort_of_product s1 s2) <= T ∥.
+  Proof.
+    intros Σ' Γ na A B T h. dependent induction h.
+    - exists s1, s2. split ; [| split].
+      + constructor. assumption.
+      + constructor. assumption.
+      + constructor. apply cumul_refl'.
+    - destruct IHh as [s1 [s2 [? [? [?]]]]].
+      exists s1, s2. split ; [| split].
+      + assumption.
+      + assumption.
+      + constructor. eapply cumul_trans ; eassumption.
+  Qed.
+
+  Lemma welltyped_context :
+    forall Γ t,
+      welltyped Σ Γ (zip t) ->
+      welltyped Σ (Γ ,,, stack_context (snd t)) (fst t).
+  Proof.
+    intros Γ [t π] h.
+    destruct h as [T h].
+    revert Γ t T h.
+    induction π ; intros Γ u T h.
     - cbn. cbn in h. eexists. eassumption.
     - cbn. cbn in h. cbn in IHπ. apply IHπ in h.
       destruct h as [B h].
@@ -963,6 +465,26 @@ Section Reduce.
       destruct h as [B h].
       destruct indn.
       destruct (weak_inversion_Case h) as [? [? [?]]].
+      eexists. eassumption.
+    - cbn. cbn in h. cbn in IHπ. apply IHπ in h.
+      destruct h as [T' h].
+      destruct (inversion_Prod h) as [s1 [s2 [[?] [[?] [?]]]]].
+      eexists. eassumption.
+    - cbn. cbn in h. cbn in IHπ. apply IHπ in h.
+      destruct h as [T' h].
+      destruct (inversion_Prod h) as [s1 [s2 [[?] [[?] [?]]]]].
+      eexists. eassumption.
+    - cbn. cbn in h. cbn in IHπ. apply IHπ in h.
+      destruct h as [T' h].
+      destruct (inversion_Lambda h) as [s1 [B [[?] [[?] [?]]]]].
+      eexists. eassumption.
+    - cbn. cbn in h. cbn in IHπ. apply IHπ in h.
+      destruct h as [T' h].
+      destruct (inversion_Lambda h) as [s1 [B [[?] [[?] [?]]]]].
+      eexists. eassumption.
+    - cbn. cbn in h. cbn in IHπ. apply IHπ in h.
+      destruct h as [B h].
+      destruct (inversion_App h) as [na [A' [B' [[?] [[?] ?]]]]].
       eexists. eassumption.
   Qed.
 
@@ -981,138 +503,27 @@ Section Reduce.
   (*       * eapply IHargs'. cbn in H0. *)
   Admitted.
 
-  Lemma zipc_inj :
-    forall u v π, zipc u π = zipc v π -> u = v.
-  Proof.
-    intros u v π e. revert u v e.
-    induction π ; intros u v e.
-    - cbn in e. assumption.
-    - cbn in e. apply IHπ in e. inversion e. reflexivity.
-    - cbn in e. apply IHπ in e. inversion e. reflexivity.
-    - cbn in e. apply IHπ in e. inversion e. reflexivity.
-  Qed.
-
-  Lemma posR_poscat :
-    forall t p q, q <> @root (atpos t p) -> posR (poscat p q) p.
-  Proof.
-    clear. intros t p q h.
-    funelim (poscat p q).
-    - rename t0 into t.
-      revert q h.
-      assert (forall q : position t, q <> root -> posR q root) as h.
-      { intros q h.
-        dependent destruction q.
-        - exfalso. apply h. reflexivity.
-        - econstructor.
-        - econstructor.
-        - econstructor.
-      }
-      apply h.
-    - revert u v p q H h.
-      assert (forall u v p (q : position (atpos u p)),
-                 (q <> root -> posR (poscat p q) p) ->
-                 q <> root ->
-                 posR (app_l u (poscat p q) v) (app_l u p v)
-             ).
-      { intros u v p q ih h. specialize (ih h).
-        econstructor. assumption.
-      }
-      assumption.
-    - revert u0 v0 p0 q H h.
-      assert (forall u v p (q : position (atpos v p)),
-                 (q <> root -> posR (poscat p q) p) ->
-                 q <> root ->
-                 posR (app_r u v (poscat p q)) (app_r u v p)
-             ).
-      { intros u v p q ih h. specialize (ih h).
-        econstructor. assumption.
-      }
-      assumption.
-    - revert indn pr c p1 q H h.
-      assert (
-          forall indn pr c p (q : position (atpos c p)),
-            (q <> root -> posR (poscat p q) p) ->
-            q <> root ->
-            posR (case_c indn pr c brs (poscat p q)) (case_c indn pr c brs p)
-        ).
-      { intros indn pr c p q ih h. specialize (ih h).
-        econstructor. assumption.
-      }
-      assumption.
-  Qed.
-
-  Lemma posR_poscat_posR :
-    forall t r p q, posR p q -> @posR t (poscat r p) (poscat r q).
-  Proof.
-    intros t r p q h.
-    funelim (poscat r p).
-    - simp poscat.
-    - simp poscat. constructor.
-      apply H0. assumption.
-    - simp poscat. constructor.
-      apply H0. assumption.
-    - simp poscat. constructor.
-      apply H0. assumption.
-  Qed.
-
-  Lemma posR_coe :
-    forall t t' h p q, @posR t p q -> @posR t' (coe h p) (coe h q).
-  Proof.
-    intros t t' ? p q h.
-    subst. cbn. assumption.
-  Qed.
-
-  Lemma posR_coe_r :
-    forall t h p q,
-      @posR t p q ->
-      @posR t p (coe h q).
-  Proof.
-    intros t e p q h.
-    revert e.
-    eapply Coq.Logic.Eqdep_dec.K_dec_type.
-    - apply term_eqdec.
-    - cbn. assumption.
-  Qed.
-
-  Notation "( x ; y )" := (existT _ x y).
-
-  Lemma right_lex_coe :
-    forall Σ Γ t t' p p' (e : t = t'),
-      posR p (coe e p') ->
-      dlexprod (cored Σ Γ) (@posR) (t;p) (t';p').
-  Proof.
-    intros Σ' Γ t t' p p' e h. subst.
-    right. assumption.
-  Qed.
-
-  Definition inspect {A} (x : A) : { y : A | y = x } := exist _ x eq_refl.
+  Definition inspect {A} (x : A) : { y : A | y = x } := exist x eq_refl.
 
   Definition Pr (t' : term * stack) π :=
-    forall indn c args ρ,
-      let '(l, θ) := decompose_stack π in
-      θ = Case indn c args ρ ->
-      let '(args', ρ') := decompose_stack (snd t') in
-      ρ' = Case indn c args ρ.
+    snd (decompose_stack π) = snd (decompose_stack (snd t')).
 
-  Notation givePr := (fun indn c args ρ (* e *) => _) (only parsing).
+  Notation givePr := (_) (only parsing).
 
-  Definition Pr' (t' : term * stack) π :=
-    forall f n args ρ,
-      let '(l, θ) := decompose_stack π in
-      θ = Fix f n args ρ ->
-      let '(l', θ') := decompose_stack (snd t') in
-      θ' = Fix f n args ρ.
+  Definition Pr' (t' : term * stack) :=
+    isApp (fst t') = false /\
+    (RedFlags.beta flags -> isLambda (fst t') -> isStackApp (snd t') = false).
 
-  Notation givePr' := (fun f n args ρ => _) (only parsing).
+  Notation givePr' := (conj _ (fun β hl => _)) (only parsing).
 
   Notation rec reduce t π :=
     (let smaller := _ in
-     let '(exist _ res (conj prf (conj h h'))) := reduce t π smaller in
-     exist _ res (conj (Req_trans _ _ _ _ (R_to_Req smaller)) (conj givePr givePr'))
+     let '(exist res (conj prf (conj h (conj h1 h2)))) := reduce t π smaller in
+     exist res (conj (Req_trans _ _ _ _ (R_to_Req smaller)) (conj givePr givePr'))
     ) (only parsing).
 
   Notation give t π :=
-    (exist _ (t,π) (conj _ (conj givePr givePr'))) (only parsing).
+    (exist (t,π) (conj _ (conj givePr givePr'))) (only parsing).
 
   Tactic Notation "zip" "fold" "in" hyp(h) :=
     lazymatch type of h with
@@ -1128,31 +539,14 @@ Section Reduce.
       change C'
     end.
 
-  Ltac dealPr_Pr' P :=
-    lazymatch goal with
-    | h : P (?t,?s) ?π |- let '(_,_) := decompose_stack ?π in _ =>
-      let e := fresh "e" in
-      case_eq (decompose_stack π) ; intros ? ? e ? ; subst ;
-      unfold P in h ; rewrite e in h ;
-      specialize h with (1 := eq_refl) ;
-      cbn in h ; assumption
-    end.
-
-  Ltac dealPr := dealPr_Pr' Pr.
-  Ltac dealPr' := dealPr_Pr' Pr'.
-
-  Ltac dealDecompose :=
-    lazymatch goal with
-    | |- let '(_,_) := decompose_stack ?π in _ =>
-      case_eq (decompose_stack π) ; intros ; assumption
-    end.
+  (* Show Obligation Tactic. *)
 
   Ltac obTac :=
-    program_simpl ;
-    try reflexivity ;
-    try dealDecompose ;
-    try dealPr ;
-    try dealPr'.
+    (* program_simpl ; *)
+    program_simplify ;
+    Tactics.equations_simpl ;
+    try program_solve_wf ;
+    try reflexivity.
 
   Obligation Tactic := obTac.
 
@@ -1170,11 +564,11 @@ Section Reduce.
 
   Equations _reduce_stack (Γ : context) (t : term) (π : stack)
             (h : welltyped Σ Γ (zip (t,π)))
-            (reduce : forall t' π', R (fst Σ) Γ (t',π') (t,π) -> { t'' : term * stack | Req (fst Σ) Γ t'' (t',π') /\ Pr t'' π' /\ Pr' t'' π' })
-    : { t' : term * stack | Req (fst Σ) Γ t' (t,π) /\ Pr t' π /\ Pr' t' π } :=
+            (reduce : forall t' π', R (fst Σ) Γ (t',π') (t,π) -> { t'' : term * stack | Req (fst Σ) Γ t'' (t',π') /\ Pr t'' π' /\ Pr' t'' })
+    : { t' : term * stack | Req (fst Σ) Γ t' (t,π) /\ Pr t' π /\ Pr' t' } :=
 
     _reduce_stack Γ (tRel c) π h reduce with RedFlags.zeta flags := {
-    | true with inspect (nth_error Γ c) := {
+    | true with inspect (nth_error (Γ ,,, stack_context π) c) := {
       | @exist None eq := False_rect _ _ ;
       | @exist (Some d) eq with inspect d.(decl_body) := {
         | @exist None _ := give (tRel c) π ;
@@ -1202,9 +596,9 @@ Section Reduce.
     _reduce_stack Γ (tApp f a) π h reduce :=
       rec reduce f (App a π) ;
 
-    _reduce_stack Γ (tLambda na A t) (App a args) h reduce with RedFlags.beta flags := {
-    | true := rec reduce (subst10 a t) args ;
-    | false := give (tLambda na A t) (App a args)
+    _reduce_stack Γ (tLambda na A t) (App a args) h reduce with inspect (RedFlags.beta flags) := {
+    | @exist true eq1 := rec reduce (subst10 a t) args ;
+    | @exist false eq1 := give (tLambda na A t) (App a args)
     } ;
 
     _reduce_stack Γ (tFix mfix idx) π h reduce with RedFlags.fix_ flags := {
@@ -1247,10 +641,12 @@ Section Reduce.
     symmetry. assumption.
   Qed.
   Next Obligation.
-    pose proof (welltyped_context _ _ _ h) as hc.
+    pose proof (welltyped_context _ _ h) as hc.
     simpl in hc.
     (* Should be a lemma! *)
     clear - eq hc. revert c hc eq.
+    generalize (Γ ,,, stack_context π) as Δ. clear Γ π.
+    intro Γ.
     induction Γ ; intros c hc eq.
     - destruct hc as [A h].
       destruct (inversion_Rel h) as [? [[?] [e ?]]].
@@ -1267,26 +663,13 @@ Section Reduce.
     cbn. eapply red1_context. econstructor.
   Qed.
   Next Obligation.
-    cbn. case_eq (decompose_stack args).
-    intros l θ e1 e2. subst.
-    unfold Pr in h.
-    rewrite e1 in h. specialize h with (1 := eq_refl).
-    cbn in h. assumption.
+    unfold Pr. cbn.
+    case_eq (decompose_stack args). intros l ρ e.
+    cbn. unfold Pr in h. rewrite e in h. cbn in h.
+    assumption.
   Qed.
   Next Obligation.
-    cbn. case_eq (decompose_stack args).
-    intros l θ e1 e2. subst.
-    unfold Pr' in h'.
-    rewrite e1 in h'. specialize h' with (1 := eq_refl).
-    cbn in h'. assumption.
-  Qed.
-  Next Obligation.
-    cbn. case_eq (decompose_stack args).
-    intros. assumption.
-  Qed.
-  Next Obligation.
-    cbn. case_eq (decompose_stack args).
-    intros. assumption.
+    rewrite β in eq1. discriminate.
   Qed.
   Next Obligation.
     left. econstructor.
@@ -1295,23 +678,15 @@ Section Reduce.
   Qed.
   Next Obligation.
     right.
-    cbn.
-    simp stack_position.
-    destruct stack_position_clause_1. cbn.
-    apply posR_poscat.
-    apply coe_app_l_not_root.
+    cbn. unfold posR. cbn.
+    eapply positionR_poscat_nonil. discriminate.
   Qed.
   Next Obligation.
-    cbn. case_eq (decompose_stack π).
-    intros l θ e1 e2. subst.
-    unfold Pr in h. cbn in h. rewrite e1 in h.
-    specialize h with (1 := eq_refl). assumption.
-  Qed.
-  Next Obligation.
-    cbn. case_eq (decompose_stack π).
-    intros l θ e1 e2. subst.
-    unfold Pr' in h'. cbn in h'. rewrite e1 in h'.
-    specialize h' with (1 := eq_refl). assumption.
+    unfold Pr. cbn.
+    unfold Pr in h. cbn in h.
+    case_eq (decompose_stack π). intros l ρ e.
+    cbn. rewrite e in h. cbn in h.
+    assumption.
   Qed.
   Next Obligation.
     left. econstructor. eapply red1_context.
@@ -1331,15 +706,13 @@ Section Reduce.
     - cbn. reflexivity.
   Qed.
   Next Obligation.
-    right. simp stack_position.
-    destruct stack_position_clause_1. cbn.
-    apply posR_poscat.
-    apply coe_case_c_not_root.
+    right. unfold posR. cbn.
+    eapply positionR_poscat_nonil. discriminate.
   Qed.
   Next Obligation.
     unfold Pr in p0. cbn in p0.
-    specialize p0 with (1 := eq_refl) as hh.
-    rewrite <- prf' in hh. subst.
+    pose proof p0 as hh.
+    rewrite <- prf' in hh. cbn in hh. subst.
     eapply R_Req_R.
     - econstructor. econstructor. eapply red1_context.
       eapply red_iota.
@@ -1403,8 +776,7 @@ Section Reduce.
       clear H0.
       cbn in prf'. inversion prf'. subst. reflexivity.
     - unfold Pr in p0. cbn in p0.
-      specialize p0 with (1 := eq_refl).
-      rewrite <- prf' in p0. subst.
+      rewrite <- prf' in p0. cbn in p0. subst.
       dependent destruction H0.
       + cbn in H0. symmetry in prf'.
         pose proof (decompose_stack_eq _ _ _ prf'). subst.
@@ -1420,75 +792,12 @@ Section Reduce.
   Next Obligation.
     symmetry in eq2.
     pose proof (decompose_stack_at_eq _ _ _ _ _ eq2). subst.
-    unfold R. cbn.
-
-    rewrite stack_position_fix.
-    clear - flags Σ H.
-
-    unshelve eapply right_lex_coe.
-    - apply (eq_sym (@zipc_appstack _ args (App c ρ))).
-    - destruct (stack_position_appstack (tFix mfix idx) args (App c ρ))
-        as [q [h e]].
-      cbn in e.
-      pose proof (stack_position_app (mkApps (tFix mfix idx) args) c ρ) as eq.
-      destruct (poscat_replace _ _ q _ eq_refl _ eq) as [e' h'].
-      rewrite h' in e.
-      rewrite e.
-      cbn.
-      rewrite coe_coe.
-      match goal with
-      | |- posR _ (coe ?hh _) =>
-        generalize hh
-      end.
-      clear - flags Σ H.
-      eapply Coq.Logic.Eqdep_dec.K_dec_type.
-      + apply term_eqdec.
-      + cbn. rewrite poscat_assoc.
-        eapply posR_poscat_posR.
-        set (qq := coe e' q) in *.
-        change (coe e' q) with qq.
-        clearbody qq.
-        clear - flags Σ H.
-        rename qq into q.
-        set (pp := stack_position (tApp (mkApps (tFix mfix idx) args) c) ρ) in *.
-        clearbody pp.
-        set (e := (proj2_sig pp)) in *. clearbody e.
-        set (p := ` pp) in *. clearbody p.
-        clear pp.
-        rename q into q'.
-        match goal with
-        | |- posR _ (poscat _ ?qq) =>
-          set (q := qq) in *
-        end.
-        clearbody q.
-        clear - flags Σ H.
-        revert p e q.
-        match goal with
-        | |- forall p : position ?tt, _ =>
-          generalize tt
-        end.
-        generalize (tFix mfix idx).
-        clear - flags Σ H.
-        intros t.
-        generalize (mkApps t args).
-        clear - flags Σ H.
-        intros u t p e q.
-        revert e q.
-        generalize (atpos t p).
-        clear - flags Σ H.
-        intros t e q. subst.
-        cbn in *.
-        rename c into v.
-        revert v u q.
-        assert (forall u v (q : position u), posR (app_r u v root) (poscat (app_l u root v) q)) as h.
-        { intros u v q.
-          induction q.
-          - simp poscat. econstructor.
-          - simp poscat. econstructor.
-          - simp poscat. econstructor.
-          - simp poscat. econstructor.
-        }
-        intros. apply h.
+    eapply R_positionR.
+    - cbn. rewrite zipc_appstack. cbn. reflexivity.
+    - cbn. rewrite stack_position_appstack. cbn.
+      rewrite <- app_assoc.
+      eapply positionR_poscat.
+      constructor.
   Qed.
   Next Obligation.
     case_eq (decompose_stack π). intros ll π' e.
@@ -1540,9 +849,8 @@ Section Reduce.
              symmetry in ee. subst.
              right. left.
              cbn. rewrite !zipc_appstack.
-             unfold Pr' in p0. cbn in p0.
-             specialize p0 with (1 := eq_refl).
-             rewrite e1 in p0. subst.
+             unfold Pr in p. cbn in p.
+             rewrite e1 in p. cbn in p. subst.
              cbn in H1.
              clear - H1.
 
@@ -1568,9 +876,8 @@ Section Reduce.
              eapply decompose_stack_not_app. eassumption.
         * cbn in H2. inversion H2.
           rewrite 2!zipc_appstack in H4.
-          unfold Pr' in p0. cbn in p0.
-          specialize p0 with (1 := eq_refl).
-          rewrite e1 in p0. subst.
+          unfold Pr in p. cbn in p.
+          rewrite e1 in p. cbn in p. subst.
           cbn in H4. rewrite zipc_appstack in H4.
           apply zipc_inj in H4.
           apply mkApps_inj in H4.
@@ -1579,50 +886,25 @@ Section Reduce.
           reflexivity.
   Qed.
   Next Obligation.
-    case_eq (decompose_stack π). intros ll π' e1 e2. subst.
-    cbn. unfold Pr in h.
+    unfold Pr. cbn.
+    unfold Pr in h. cbn in h.
     rewrite decompose_stack_appstack in h. cbn in h.
-    case_eq (decompose_stack ρ). intros l' θ' e.
-    rewrite e in h. cbn in h.
+    case_eq (decompose_stack ρ). intros l1 ρ1 e.
+    rewrite e in h. cbn in h. subst.
     pose proof (decompose_stack_eq _ _ _ e). subst.
-
     clear eq3. symmetry in eq2.
     pose proof (decompose_stack_at_eq _ _ _ _ _ eq2).
     subst.
-    rewrite decompose_stack_appstack in e1. cbn in e1.
-    rewrite e in e1. cbn in e1.
-    inversion e1. subst.
-
-    specialize h with (1 := eq_refl).
-    assumption.
-  Qed.
-  Next Obligation.
-    case_eq (decompose_stack π). intros ll π' e1 e2. subst.
-    cbn. unfold Pr' in h'.
-    rewrite decompose_stack_appstack in h'. cbn in h'.
-    case_eq (decompose_stack ρ). intros l' θ' e.
-    rewrite e in h'. cbn in h'.
-    pose proof (decompose_stack_eq _ _ _ e). subst.
-
-    clear eq3. symmetry in eq2.
-    pose proof (decompose_stack_at_eq _ _ _ _ _ eq2).
-    subst.
-    rewrite decompose_stack_appstack in e1. cbn in e1.
-    rewrite e in e1. cbn in e1.
-    inversion e1. subst.
-
-    specialize h' with (1 := eq_refl).
-    assumption.
+    rewrite decompose_stack_appstack. cbn.
+    rewrite e. cbn. reflexivity.
   Qed.
 
   Equations reduce_stack_full (Γ : context) (t : term) (π : stack)
-           (h : welltyped Σ Γ (zip (t,π))) : { t' : term * stack | Req (fst Σ) Γ t' (t, π) } :=
+           (h : welltyped Σ Γ (zip (t,π))) : { t' : term * stack | Req (fst Σ) Γ t' (t, π) /\ Pr t' π /\ Pr' t' } :=
     reduce_stack_full Γ t π h :=
-      let '(exist _ ts (conj r _)) :=
-          Fix_F (R := R (fst Σ) Γ)
-                (fun x => welltyped Σ Γ (zip x) -> { t' : term * stack | Req (fst Σ) Γ t' x /\ Pr t' (snd x) /\ Pr' t' (snd x) })
-                (fun t' f => _) (x := (t, π)) _ _
-      in exist _ ts r.
+      Fix_F (R := R (fst Σ) Γ)
+            (fun x => welltyped Σ Γ (zip x) -> { t' : term * stack | Req (fst Σ) Γ t' x /\ Pr t' (snd x) /\ Pr' t' })
+            (fun t' f => _) (x := (t, π)) _ _.
   Next Obligation.
     eapply _reduce_stack.
     - assumption.
@@ -1643,7 +925,7 @@ Section Reduce.
   Qed.
 
   Definition reduce_stack Γ t π h :=
-    let '(exist _ ts _) := reduce_stack_full Γ t π h in ts.
+    let '(exist ts _) := reduce_stack_full Γ t π h in ts.
 
   Theorem reduce_stack_sound :
     forall Γ t π h,
@@ -1651,7 +933,7 @@ Section Reduce.
   Proof.
     intros Γ t π h.
     unfold reduce_stack.
-    destruct (reduce_stack_full Γ t π h) as [[t' π'] r].
+    destruct (reduce_stack_full Γ t π h) as [[t' π'] [r _]].
     dependent destruction r.
     - noconf H0. constructor. constructor.
     - rename H0 into r. clear - flags r.
@@ -1672,6 +954,94 @@ Section Reduce.
       + cbn in H0, H1. inversion H0. inversion H1.
         subst. cbn. rewrite H5.
         constructor. constructor.
+  Qed.
+
+  Lemma reduce_stack_Req :
+    forall Γ t π h,
+      Req (fst Σ) Γ (reduce_stack Γ t π h) (t, π).
+  Proof.
+    intros Γ t π h.
+    unfold reduce_stack.
+    destruct (reduce_stack_full Γ t π h) as [[t' π'] [r _]].
+    assumption.
+  Qed.
+
+  Lemma reduce_stack_decompose :
+    forall Γ t π h,
+      snd (decompose_stack (snd (reduce_stack Γ t π h))) =
+      snd (decompose_stack π).
+  Proof.
+    intros Γ t π h.
+    unfold reduce_stack.
+    destruct (reduce_stack_full Γ t π h) as [[t' π'] [r [p p']]].
+    unfold Pr in p. symmetry. assumption.
+  Qed.
+
+  Lemma reduce_stack_context :
+    forall Γ t π h,
+      stack_context (snd (reduce_stack Γ t π h)) =
+      stack_context π.
+  Proof.
+    intros Γ t π h.
+    pose proof (reduce_stack_decompose Γ t π h) as hd.
+    case_eq (decompose_stack π). intros l ρ e1.
+    case_eq (decompose_stack (snd (reduce_stack Γ t π h))). intros l' ρ' e2.
+    rewrite e1 in hd. rewrite e2 in hd. cbn in hd. subst.
+    pose proof (decompose_stack_eq _ _ _ e1).
+    pose proof (decompose_stack_eq _ _ _ e2) as eq.
+    rewrite eq. subst.
+    rewrite 2!stack_context_appstack. reflexivity.
+  Qed.
+
+  Definition isred (t : term * stack) :=
+    isApp (fst t) = false /\
+    (isLambda (fst t) -> isStackApp (snd t) = false).
+
+  Lemma reduce_stack_isred :
+    forall Γ t π h,
+      RedFlags.beta flags ->
+      isred (reduce_stack Γ t π h).
+  Proof.
+    intros Γ t π h hr.
+    unfold reduce_stack.
+    destruct (reduce_stack_full Γ t π h) as [[t' π'] [r [p [hApp hLam]]]].
+    split.
+    - assumption.
+    - apply hLam. assumption.
+  Qed.
+
+  Lemma reduce_stack_noApp :
+    forall Γ t π h,
+      isApp (fst (reduce_stack Γ t π h)) = false.
+  Proof.
+    intros Γ t π h.
+    unfold reduce_stack.
+    destruct (reduce_stack_full Γ t π h) as [[t' π'] [r [p [hApp hLam]]]].
+    assumption.
+  Qed.
+
+  Lemma reduce_stack_noLamApp :
+    forall Γ t π h,
+      RedFlags.beta flags ->
+      isLambda (fst (reduce_stack Γ t π h)) ->
+      isStackApp (snd (reduce_stack Γ t π h)) = false.
+  Proof.
+    intros Γ t π h.
+    unfold reduce_stack.
+    destruct (reduce_stack_full Γ t π h) as [[t' π'] [r [p [hApp hLam]]]].
+    assumption.
+  Qed.
+
+  Definition reduce_term Γ t (h : welltyped Σ Γ t) :=
+    zip (reduce_stack Γ t ε h).
+
+  Theorem reduce_term_sound :
+    forall Γ t h,
+      ∥ red (fst Σ) Γ t (reduce_term Γ t h) ∥.
+  Proof.
+    intros Γ t h.
+    unfold reduce_term.
+    refine (reduce_stack_sound _ _ ε _).
   Qed.
 
 End Reduce.

@@ -1,4 +1,4 @@
-From Coq Require Import Bool Program List Ascii String OrderedType Lia.
+From Coq Require Import Bool Program List Ascii String OrderedType Lia Omega.
 Import ListNotations.
 Require Import ssreflect.
 Set Asymmetric Patterns.
@@ -1410,6 +1410,69 @@ Proof.
   induction 1; congruence.
 Qed.
 
+Arguments skipn : simpl nomatch.
+
+Lemma skipn_all2 :
+  forall {A n} (l : list A),
+    #|l| <= n ->
+         skipn n l = [].
+Proof.
+  intros A n l h. revert l h.
+  induction n ; intros l h.
+  - destruct l.
+    + reflexivity.
+    + cbn in h. inversion h.
+  - destruct l.
+    + reflexivity.
+    + simpl. apply IHn. cbn in h. omega.
+Qed.
+
+Lemma skipn_nil :
+  forall {A} n, @skipn A n [] = [].
+Proof.
+  intros A [| n] ; reflexivity.
+Qed.
+
+Lemma nat_rev_ind (max : nat) :
+  forall (P : nat -> Prop),
+    (forall n, n >= max -> P n) ->
+    (forall n, n < max -> P (S n) -> P n) ->
+    forall n, P n.
+Proof.
+  intros P hmax hS.
+  assert (h : forall n, P (max - n)).
+  { intros n. induction n.
+    - apply hmax. omega.
+    - destruct (Nat.leb_spec0 max n).
+      + replace (max - S n) with 0 by omega.
+        replace (max - n) with 0 in IHn by omega.
+        assumption.
+      + replace (max - n) with (S (max - S n)) in IHn by omega.
+        apply hS.
+        * omega.
+        * assumption.
+  }
+  intro n.
+  destruct (Nat.leb_spec0 max n).
+  - apply hmax. omega.
+  - replace n with (max - (max - n)) by omega. apply h.
+Qed.
+
+Lemma strong_nat_ind :
+  forall (P : nat -> Prop),
+    (forall n, (forall m, m < n -> P m) -> P n) ->
+    forall n, P n.
+Proof.
+  intros P h n.
+  assert (forall m, m < n -> P m).
+  { induction n ; intros m hh.
+    - omega.
+    - destruct (Nat.eqb_spec n m).
+      + subst. eapply h. assumption.
+      + eapply IHn. omega.
+  }
+  eapply h. assumption.
+Qed.
 Lemma app_Forall :
   forall A P (l1 l2 : list A),
     Forall P l1 ->

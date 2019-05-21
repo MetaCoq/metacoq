@@ -6,7 +6,7 @@ From Template Require Import config Universes monad_utils utils BasicAst
      AstUtils UnivSubst.
 From PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICReflect
      PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICSafeReduce PCUICCumulativity
-     PCUICSR PCUICPosition.
+     PCUICSR PCUICPosition PCUICEquality.
 From Equations Require Import Equations.
 
 Require Import Equations.Prop.DepElim.
@@ -517,42 +517,6 @@ Section Conversion.
   }.
 
   Definition dumbR (u v : pack) := False.
-
-  (* Inductive lexprod_l {A B C} (leS : @sig A B -> sig B -> Prop) (leC : C -> C -> Prop) : sig B * C -> sig B * C -> Prop := *)
-  (* | left_lex_l : *)
-  (*     forall x x' y y', *)
-  (*       leS x x' -> *)
-  (*       lexprod_l leS leC (x,y) (x',y') *)
-  (* | right_lex_l : *)
-  (*     forall a b1 b2 c1 c2, *)
-  (*       leC c1 c2 -> *)
-  (*       lexprod_l leS leC (exist a b1, c1) (exist a b2, c2). *)
-
-  (* Derive Signature for lexprod_l. *)
-
-  (* Lemma acc_lexprod_l : *)
-  (*   forall A B C leS leC, *)
-  (*     well_founded leC -> *)
-  (*     forall x, *)
-  (*       Acc leS x -> *)
-  (*       forall y, *)
-  (*         Acc leC y -> *)
-  (*         Acc (@lexprod_l A B C leS leC) (x,y). *)
-  (* Proof. *)
-  (*   intros A B C leS leC hw. *)
-  (*   induction 1 as [[a b] h1 ih1]. *)
-  (*   intro c. *)
-  (*   induction 1 as [c h2 ih2]. *)
-  (*   constructor. *)
-  (*   intros [[a' b'] c'] h. simple inversion h. *)
-  (*   - intro hx. inversion H0. inversion H1. subst. *)
-  (*     eapply ih1. *)
-  (*     + assumption. *)
-  (*     + apply hw. *)
-  (*   - intro hc. inversion H0. inversion H1. subst. *)
-  (*     specialize (ih2 _ hc). *)
-  (*     (* Mismatch, need b = b' *) *)
-  (* Abort. *)
 
   Definition wterm Γ := { t : term | welltyped Σ Γ t }.
 
@@ -1559,7 +1523,7 @@ Section Conversion.
       welltyped Σ Γ v.
   Admitted.
 
-  Lemma eq_term_it_mkLambda_or_LetIn :
+  Lemma eq_term_it_mkLambda_or_LetIn_inv :
     forall Γ u v,
       eq_term (snd Σ) (it_mkLambda_or_LetIn Γ u) (it_mkLambda_or_LetIn Γ v) ->
       eq_term (snd Σ) u v.
@@ -1573,7 +1537,7 @@ Section Conversion.
       assumption.
   Qed.
 
-  Lemma eq_term_zipc :
+  Lemma eq_term_zipc_inv :
     forall u v π,
       eq_term (snd Σ) (zipc u π) (zipc v π) ->
       eq_term (snd Σ) u v.
@@ -1586,14 +1550,57 @@ Section Conversion.
     ].
   Qed.
 
-  Lemma eq_term_zipx :
+  Lemma eq_term_zipx_inv :
     forall Γ u v π,
       eq_term (snd Σ) (zipx Γ u π) (zipx Γ v π) ->
       eq_term (snd Σ) u v.
   Proof.
     intros Γ u v π h.
-    eapply eq_term_zipc.
+    eapply eq_term_zipc_inv.
+    eapply eq_term_it_mkLambda_or_LetIn_inv.
+    eassumption.
+  Qed.
+
+  Lemma eq_term_it_mkLambda_or_LetIn :
+    forall Γ u v,
+      eq_term (snd Σ) u v ->
+      eq_term (snd Σ) (it_mkLambda_or_LetIn Γ u) (it_mkLambda_or_LetIn Γ v).
+  Proof.
+    intros Γ.
+    induction Γ as [| [na [b|] A] Γ ih ] ; intros u v h.
+    - assumption.
+    - simpl. cbn. apply ih. constructor ; try apply eq_term_refl. assumption.
+    - simpl. cbn. apply ih. constructor ; try apply eq_term_refl. assumption.
+  Qed.
+
+  Lemma eq_term_zipc :
+    forall u v π,
+      eq_term (snd Σ) u v ->
+      eq_term (snd Σ) (zipc u π) (zipc v π).
+  Proof.
+    intros u v π h.
+    revert u v h. induction π ; intros u v h.
+    all: try solve [
+      simpl ; try apply IHπ ;
+      cbn ; constructor ; try apply eq_term_refl ; assumption
+    ].
+    - assumption.
+    - simpl. apply IHπ. destruct indn as [i n].
+      constructor.
+      + apply eq_term_refl.
+      + assumption.
+      + eapply Forall_Forall2. eapply Forall_True.
+        intros. split ; auto. apply eq_term_refl.
+  Qed.
+
+  Lemma eq_term_zipx :
+    forall Γ u v π,
+      eq_term (snd Σ) u v ->
+      eq_term (snd Σ) (zipx Γ u π) (zipx Γ v π).
+  Proof.
+    intros Γ u v π h.
     eapply eq_term_it_mkLambda_or_LetIn.
+    eapply eq_term_zipc.
     eassumption.
   Qed.
 
@@ -1629,6 +1636,13 @@ Section Conversion.
     cbn. pose proof (decompose_stack_eq _ _ _ e). subst.
     rewrite stack_context_appstack. reflexivity.
   Qed.
+
+  Lemma eq_term_trans :
+    forall G u v w,
+      eq_term G u v ->
+      eq_term G v w ->
+      eq_term G u w.
+  Admitted.
 
   Equations(noeqns) _isconv_prog (Γ : context) (leq : conv_pb)
             (t1 : term) (π1 : stack) (h1 : wtp Γ t1 π1)
@@ -1701,13 +1715,13 @@ Section Conversion.
                        ir1 ir2 aux
     (* In the original we do not check ind = ind' or par = par',
        maybe it can be optimised. *)
-    with inspect (eq_ind ind ind' && eq_nat par par' && eq_term (snd Σ) p p'
-        && eq_term (snd Σ) c c'
-        && forallb2 (fun '(a, b) '(a', b') => eq_term (snd Σ) b b') brs brs') := {
+    with inspect (eq_ind ind ind' && eq_nat par par' && nleq_term p p'
+        && nleq_term c c'
+        && forallb2 (fun '(a, b) '(a', b') => nleq_term b b') brs brs') := {
     | @exist true eq1 := isconv_args Γ (tCase (ind, par) p c brs) π1 π2 aux ;
     | @exist false _ with inspect (reduce_term RedFlags.default Σ (Γ ,,, stack_context π1) c _) := {
       | @exist cred eq1 with inspect (reduce_term RedFlags.default Σ (Γ ,,, stack_context π2) c' _) := {
-         | @exist cred' eq2 with inspect (eq_term (snd Σ) cred c && eq_term (snd Σ) cred' c') := {
+         | @exist cred' eq2 with inspect (nleq_term cred c && nleq_term cred' c') := {
             | @exist true eq3 := no ; (* In Checker it says yes, but wrong right? *)
             | @exist false eq3 :=
               (* In Checker, only ind, par and p are used, not clear why *)
@@ -1719,7 +1733,7 @@ Section Conversion.
     } ;
 
     _isconv_prog Γ leq (tProj p c) π1 h1 (tProj p' c') π2 h2 ir1 ir2 aux
-    with inspect (eq_projection p p' && eq_term (snd Σ) c c') := {
+    with inspect (eq_projection p p' && nleq_term c c') := {
     | @exist true eq1 := isconv_args Γ (tProj p c) π1 π2 aux ;
     | @exist false _ := no
     } ;
@@ -1727,7 +1741,7 @@ Section Conversion.
     (* Subtle difference here with Checker, if the terms are syntactically equal
        but the stacks are not convertible, then we say no. *)
     _isconv_prog Γ leq (tFix mfix idx) π1 h1 (tFix mfix' idx') π2 h2 ir1 ir2 aux
-    with inspect (eq_term (snd Σ) (tFix mfix idx) (tFix mfix' idx')) := {
+    with inspect (nleq_term (tFix mfix idx) (tFix mfix' idx')) := {
     | @exist true eq1 := isconv_args Γ (tFix mfix idx) π1 π2 aux ;
     | @exist false _ with inspect (unfold_one_fix Γ mfix idx π1 _) := {
       | @exist (Some (fn, θ)) eq1
@@ -1753,7 +1767,7 @@ Section Conversion.
     } ;
 
     _isconv_prog Γ leq (tCoFix mfix idx) π1 h1 (tCoFix mfix' idx') π2 h2 ir1 ir2 aux
-    with inspect (eq_term (snd Σ) (tCoFix mfix idx) (tCoFix mfix' idx')) := {
+    with inspect (nleq_term (tCoFix mfix idx) (tCoFix mfix' idx')) := {
     | @exist true eq1 := isconv_args Γ (tCoFix mfix idx) π1 π2 aux ;
     | @exist false _ := no
     } ;
@@ -1953,8 +1967,10 @@ Section Conversion.
     (* apply andP in eq1 as [eind epar]. *)
     eapply welltyped_rename ; [ exact h2 |].
     eapply eq_term_sym.
-    rewrite eq_term_zipx. simpl. rewrite eq1. reflexivity.
-  Qed.
+    eapply eq_term_zipx.
+    (* rewrite eq1. reflexivity. *)
+  (* Qed. *)
+  Admitted.
   Next Obligation.
     unshelve eapply R_stateR.
     all: try reflexivity.
@@ -1984,8 +2000,9 @@ Section Conversion.
     eapply conv_trans ; try eassumption.
     eapply conv_zippx.
     eapply eq_term_conv.
-    symmetry in eq1. simpl. rewrite eq1. reflexivity.
-  Qed.
+    symmetry in eq1. (* simpl. rewrite eq1. reflexivity. *)
+  (* Qed. *)
+  Admitted.
   Next Obligation.
     apply welltyped_zipx in h1.
     zip fold in h1. apply welltyped_context in h1. simpl in h1.
@@ -2051,7 +2068,8 @@ Section Conversion.
         rewrite e in eq3.
         rewrite e' in eq3.
         cbn in eq3.
-        rewrite 2!eq_term_refl in eq3. discriminate eq3.
+        (* rewrite 2!eq_term_upto_univ_refl in eq3. discriminate eq3. *)
+        admit.
       + dependent destruction hr.
         * unshelve eapply R_cored2.
           all: try reflexivity.
@@ -2063,7 +2081,8 @@ Section Conversion.
           rewrite e in eq3.
           rewrite <- H2 in eq3.
           cbn in eq3.
-          rewrite 2!eq_term_refl in eq3. discriminate eq3.
+          (* rewrite 2!eq_term_refl in eq3. discriminate eq3. *)
+          admit.
     - dependent destruction hr.
       + left. simpl.
         eapply cored_zipx. eapply cored_case. assumption.
@@ -2077,7 +2096,8 @@ Section Conversion.
           rewrite e' in eq3.
           rewrite <- H2 in eq3.
           cbn in eq3.
-          rewrite 2!eq_term_refl in eq3. discriminate eq3.
+          (* rewrite 2!eq_term_refl in eq3. discriminate eq3. *)
+          admit.
         * dependent destruction hr.
           -- unshelve eapply R_cored2.
              all: try reflexivity.
@@ -2092,8 +2112,10 @@ Section Conversion.
              rewrite <- H4 in eq3.
              rewrite <- H5 in eq3.
              cbn in eq3.
-             rewrite 2!eq_term_refl in eq3. discriminate eq3.
-  Qed.
+             (* rewrite 2!eq_term_refl in eq3. discriminate eq3. *)
+             admit.
+  (* Qed. *)
+  Admitted.
   Next Obligation.
     destruct b ; auto.
     match type of h with
@@ -2135,9 +2157,11 @@ Section Conversion.
     eapply welltyped_rename.
     - exact h2.
     - apply eq_term_sym.
-      cbn. rewrite eq_term_zipx. cbn.
-      rewrite <- eq1. reflexivity.
-  Qed.
+      cbn. (* rewrite eq_term_zipx. cbn. *)
+      (* rewrite <- eq1. reflexivity. *)
+      admit.
+  (* Qed. *)
+  Admitted.
   Next Obligation.
     unshelve eapply R_stateR.
     all: try reflexivity.
@@ -2156,15 +2180,18 @@ Section Conversion.
     eapply conv_trans ; try eassumption.
     eapply conv_zippx.
     eapply eq_term_conv.
-    symmetry. assumption.
-  Qed.
+    (* symmetry. assumption. *)
+    admit.
+  (* Qed. *)
+  Admitted.
 
   (* tFix *)
   Next Obligation.
     eapply welltyped_rename.
     - exact h2.
-    - apply eq_term_sym. rewrite eq_term_zipx. cbn. rewrite <- eq1. reflexivity.
-  Qed.
+    - apply eq_term_sym. (* rewrite eq_term_zipx. cbn. rewrite <- eq1. reflexivity. *)
+  (* Qed. *)
+  Admitted.
   Next Obligation.
     unshelve eapply R_stateR.
     all: try reflexivity.
@@ -2184,8 +2211,9 @@ Section Conversion.
     eapply conv_trans ; try eassumption.
     eapply conv_zippx.
     eapply eq_term_conv.
-    symmetry. assumption.
-  Qed.
+    (* symmetry. assumption. *)
+  (* Qed. *)
+  Admitted.
   Next Obligation.
     cbn. rewrite zipc_appstack. cbn.
     apply unfold_one_fix_red_zippx in eq1 as r.
@@ -2418,8 +2446,10 @@ Section Conversion.
   Next Obligation.
     eapply welltyped_rename.
     - exact h2.
-    - apply eq_term_sym. rewrite eq_term_zipx. cbn. rewrite <- eq1. reflexivity.
-  Qed.
+    - apply eq_term_sym. (* rewrite eq_term_zipx. cbn. rewrite <- eq1. reflexivity. *)
+      admit.
+  (* Qed. *)
+  Admitted.
   Next Obligation.
     unshelve eapply R_stateR.
     all: try reflexivity.
@@ -2435,8 +2465,9 @@ Section Conversion.
     eapply conv_trans ; try eassumption.
     eapply conv_zippx.
     eapply eq_term_conv.
-    symmetry. assumption.
-  Qed.
+    (* symmetry. assumption. *)
+  (* Qed. *)
+  Admitted.
 
   Lemma positionR_context_position_inv :
     forall Γ p q,

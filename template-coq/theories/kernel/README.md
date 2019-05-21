@@ -1,1 +1,1 @@
-The files of this directory are intented to follow the same scheme as those of the kernel directory of Coq's source code.
+The files of this directory are implementations of some algorithms of Coq kernel.

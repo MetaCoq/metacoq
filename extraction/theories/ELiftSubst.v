@@ -34,7 +34,6 @@ Fixpoint lift n k t : term :=
     tCoFix mfix' idx
   | tBox => t
   | tVar _ => t
-  | tMeta _ => t
   | tConst _ => t
   | tConstruct _ _ => t
   end.

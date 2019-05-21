@@ -35,6 +35,7 @@ Polymorphic Definition add_ctor (mind : mutual_inductive_body) (ind0 : inductive
   := let i0 := inductive_ind ind0 in
      {| ind_npars := mind.(ind_npars) ;
         ind_universes := mind.(ind_universes) ;
+        ind_params := mind.(ind_params);
         ind_bodies := map_i (fun (i : nat) (ind : one_inductive_body) =>
                          {| ind_name := tsl_ident ind.(ind_name) ;
                             ind_type  := ind.(ind_type) ;
@@ -48,28 +49,27 @@ Polymorphic Definition add_ctor (mind : mutual_inductive_body) (ind0 : inductive
                             ind_projs := ind.(ind_projs) |})
                             mind.(ind_bodies) |}.
 
+
 (* [add_constructor] is a new command (in Template Coq style) *)
 (* which do what we want *)
 
-Polymorphic Definition add_constructor {A} (ind : A) (idc : ident) {B} (ctor : B)
+Polymorphic Definition add_constructor (tm : Ast.term)
+            (idc : ident) (type : Ast.term)
   : TemplateMonad unit
-  := tm <- tmQuote ind ;;
-     match tm with
+  := match tm with
      | tInd ind0 _ =>
        decl <- tmQuoteInductive (inductive_mind ind0) ;;
-       ctor <- tmQuote ctor ;;
-       ind' <- tmEval lazy (add_ctor decl ind0 idc ctor) ;;
+       let ind' := add_ctor decl ind0 idc type in
        tmMkInductive' ind'
-     | _ => tmPrint ind ;; tmFail " is not an inductive"
+     | _ => tmPrint tm ;; tmFail " is not an inductive"
      end.
 
 
 (** * Examples *)
-
+Local Open Scope string.
 (** Here we add a silly constructor to bool. *)
-Run TemplateProgram (add_constructor bool "foo" (fun bool' => nat -> bool' -> bool -> bool')).
-
-Print bool'.
+Run TemplateProgram (
+    add_constructor <% bool %> "foo" <% (fun x : Type => nat -> x -> bool -> x) %>).
 (* Inductive bool' : Set := *)
 (*     true' : bool' *)
 (*   | false' : bool' *)
@@ -82,7 +82,7 @@ Inductive tm :=
 | lam : tm -> tm
 | app : tm -> tm -> tm.
 
-Run TemplateProgram (add_constructor tm "letin" (fun tm' => tm' -> tm' -> tm')).
+Run TemplateProgram (add_constructor <%tm%> "letin" <% (fun tm' => tm' -> tm' -> tm') %>).
 
 Print tm'.
 (* Inductive tm' : Type := *)
@@ -92,14 +92,14 @@ Print tm'.
 (*   | letin : tm' -> tm' -> tm' *)
 
 
-Run TemplateProgram (add_constructor (@eq) "foo'"
-                    (fun (eq':forall A, A -> A -> Type) => forall A x y, nat -> eq' A x x -> bool -> eq' A x y)).
+Run TemplateProgram (add_constructor <%@eq%> "foo'"
+                    <% (fun (eq':forall A, A -> A -> Type) => forall A x y, nat -> eq' A x x -> bool -> eq' A x y) %>).
 
 Require Import Even.
-Run TemplateProgram (add_constructor (@odd) "foo''"
-                    (fun (even' odd':nat -> Prop) => odd' 0)).
+Run TemplateProgram (add_constructor <%@odd%> "foo''"
+                    <%(fun (even' odd':nat -> Prop) => odd' 0)%>).
 
 Module A.
-Run TemplateProgram (add_constructor even "foo'"
-                    (fun (even' odd':nat -> Prop) => even' 0)).
+Run TemplateProgram (add_constructor <%even%> "foo'"
+                    <%(fun (even' odd':nat -> Prop) => even' 0)%>).
 End A.

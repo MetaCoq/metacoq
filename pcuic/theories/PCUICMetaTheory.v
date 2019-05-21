@@ -1,7 +1,7 @@
 (* Distributed under the terms of the MIT license.   *)
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
-From Template Require Import config utils univ.
+From Template Require Import config utils.
 From PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICLiftSubst PCUICUnivSubst PCUICTyping.
 Require Import String.
 Local Open Scope string_scope.
@@ -22,7 +22,7 @@ Coercion fst_ctx : global_context >-> global_declarations.
 
 (** Weak Normalization: every term has a normal form *)
 
-Definition normal (Σ : global_context) Γ t := ~ exists u, red1 Σ Γ t u.
+Definition normal (Σ : global_context) Γ t := { u : _ & red1 Σ Γ t u } -> False.
 
 Conjecture weak_normalization : forall (Σ : global_context) Γ t T,
-    Σ ;;; Γ |- t : T -> exists u, red Σ Γ t u /\ normal Σ Γ u.
+    Σ ;;; Γ |- t : T -> { u & (red Σ Γ t u * normal Σ Γ u)%type }.

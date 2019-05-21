@@ -63,7 +63,7 @@ Lemma weakening_env_red1 `{CF:checker_flags} Σ Σ' Γ M N :
 Proof.
   induction 3 using red1_ind_all;
     try solve [econstructor; eauto;
-               eapply (OnOne2_impl H); simpl; intuition eauto].
+               eapply (OnOne2_impl X1); simpl; intuition eauto].
 
   eapply extends_lookup in X0; eauto.
   econstructor; eauto.
@@ -84,12 +84,13 @@ Qed.
 
 Lemma weakening_env_consistent_universe_context_instance:
   forall (Σ : global_context) (u : list Level.t) univs,
-    consistent_universe_context_instance Σ univs u ->
+    consistent_universe_context_instance (snd Σ) univs u ->
     forall Σ' : global_context,
-      extends Σ Σ' -> consistent_universe_context_instance Σ' univs u.
+      extends Σ Σ' -> consistent_universe_context_instance (snd Σ') univs u.
 Proof.
   intros Σ u univs H1 Σ' H2. destruct univs; simpl in *; eauto.
-  destruct UContext.dest. destruct H2 as [Σ'' ->]. simpl. auto.
+  all:(destruct UContext.dest; destruct H2 as [Σ'' ->]; simpl; auto).
+  exact (fst ctx).
 Qed.
 Hint Resolve weakening_env_consistent_universe_context_instance : extends.
 
@@ -172,7 +173,7 @@ Proof.
     eapply weakening_All_local_env_impl. eapply X.
     clear -X1 X2. simpl; intros. intuition eauto with extends.
     eapply All_impl; eauto; simpl; intuition eauto with extends.
-  - eapply weakening_env_cumul in H0; eauto. econstructor; eauto.
+  - eapply weakening_env_cumul in X3; eauto. econstructor; eauto.
 Qed.
 
 

@@ -1,9 +1,76 @@
-From Template Require Import Ast TemplateMonad Loader.
-Require Import String.
-
+From Template Require Import All.
+Require Import String List Arith.
+Import ListNotations MonadNotation.
 Open Scope string.
 
 Set Printing Universes.
+
+Test Quote Type.
+Quote Definition a_random_univ := Type.
+Compute a_random_univ.
+
+Fail Make Definition t1 := (tSort ([]; _)).
+Fail Make Definition t1 := (tSort (Universe.make (Level.Level "Top.400"))).
+
+Monomorphic Definition T := Type.
+(* Make Definition t1 := (tSort (Universe.make (Level.Level "Top.5"))). *)
+
+Unset Strict Unquote Universe Mode.
+Make Definition t2 := (tSort ([]; _)).
+Make Definition t3 := (tSort (Universe.make (Level.Level "Top.400"))).
+
+
+Monomorphic Universe i j.
+
+Set Strict Unquote Universe Mode.
+Test Quote (Type@{j} -> Type@{i}).
+Make Definition T'' := (tSort (Universe.make' (Level.Level "j", false))).
+Unset Strict Unquote Universe Mode.
+
+
+Polymorphic Definition pidentity {A : Type} (a : A) := a.
+Test Quote @pidentity.
+Polymorphic Definition selfpid := pidentity (@pidentity).
+Test Quote @selfpid.
+
+Constraint i < j.
+Make Definition yuyu := (tConst "selfpid" [Level.Level "j"; Level.Level "i"]).
+
+
+Quote Definition t0 := nat.
+Run TemplateProgram (tmUnquoteTyped Type t0).
+Definition ty : Type := Type.
+Run TemplateProgram (tmUnquoteTyped ty t0).
+
+Polymorphic Cumulative Inductive test := .
+Polymorphic Cumulative Record packType := {pk : Type}.
+Run TemplateProgram (α <- tmQuoteInductive "test" ;; tmPrint α).
+Run TemplateProgram (tmQuoteInductive "packType" >>= tmEval all >>= tmPrint).
+Polymorphic Cumulative Record Category@{i j} :=
+{ Obj : Type@{i}; Hom : Obj -> Obj -> Type@{j} }.
+Polymorphic  Record Functor@{i j} (C D : Category@{i j}):=
+{ ObjF : C.(Obj) -> D.(Obj) }.
+Polymorphic Definition Cat@{i j k l} : Category@{i j}
+ := Build_Category@{i j} Category@{k l} Functor@{k l}.
+
+Run TemplateProgram (tmQuoteInductive "Category" >>= tmEval all >>= tmPrint).
+Run TemplateProgram (tmQuoteConstant "Cat" false >>= tmEval all >>= tmPrint).
+
+
+Polymorphic Cumulative Inductive list (A : Type) : Type :=
+nil : list A | cons : A -> list A -> list A.
+
+Module to.
+Run TemplateProgram (t <- tmQuoteInductive "list" ;;
+                     t <- tmEval all (mind_body_to_entry t) ;;
+                     tmPrint t ;;
+                     tmMkInductive t).
+End to.
+
+
+Definition f@{i j k} := fun (E:Type@{i}) => Type@{max(i,j)}.
+Quote Definition qf := Eval cbv in f.
+Make Definition uqf := qf.
 
 
 Inductive foo (A : Type) : Type :=
@@ -38,6 +105,8 @@ Quote Recursively Definition qfoo3 := foo3.
 Compute qfoo3.
 
 Require Import Template.monad_utils. Import MonadNotation.
+Require Import Template.TemplateMonad.Core.
+
 Run TemplateProgram (tmQuoteInductive "foo" >>= tmPrint).
 Run TemplateProgram (tmQuoteInductive "foo2" >>= tmPrint).
 Run TemplateProgram (tmQuoteInductive "foo3" >>= tmPrint).
@@ -71,8 +140,8 @@ End toto.
 
 (* Set Universe Polymorphism. *)
 
-Monomorphic Universe i j.
-Definition test := (fun (T : Type@{i}) (T2 : Type@{j}) => T -> T2).
+
+Definition test2 := (fun (T : Type@{i}) (T2 : Type@{j}) => T -> T2).
 Set Printing Universes.
 Print test.
 (* Print Universes. *)
@@ -81,8 +150,9 @@ Unset Printing Universes.
 Quote Definition qtest := Eval compute in (fun (T : Type@{i}) (T2 : Type@{j}) => T -> T2).
 Print qtest.
 
-Make Definition bla := Eval compute in qtest.
-Make Definition bla' := (tLambda (nNamed "T") (tSort ((Level.Level "Top.2", false) :: nil)%list) (tLambda (nNamed "T2") (tSort ((Level.Level "Top.1", false) :: nil)%list) (tProd nAnon (tRel 1) (tRel 1)))).
+Make Definition bla := qtest.
+Unset Strict Unquote Universe Mode.
+Make Definition bla' := (tLambda (nNamed "T") (tSort (Universe.make'' (Level.Level "Top.46", false) [])) (tLambda (nNamed "T2") (tSort (Universe.make'' (Level.Level "Top.477", false) [])) (tProd nAnon (tRel 1) (tRel 1)))).
 
 Set Printing Universes.
 Print bla.
@@ -109,7 +179,7 @@ Compute (@t Type@{i} Type@{j}).
 Quote Definition qt := Eval compute in t.
 Print qt.
 
-Make Definition t' := Eval compute in qt.
+Make Definition t' := qt.
 
 Polymorphic Definition Funtp@{i} (A B: Type@{i}) := A->B.
 
@@ -117,7 +187,6 @@ Polymorphic Definition F@{i} := Type@{i}.
 
 Quote Definition qT := Eval compute in F.
 Require Import List. Import ListNotations.
-Make Definition T' := (tSort [(Level.Var 1, false)]).
 
 Quote Recursively Definition qT' := F.
 
@@ -127,30 +196,25 @@ Print qFuntp.
 there the poly vars actually show up *)
 
 
-Make Definition t2 := (Ast.tLambda (Ast.nNamed "T") (Ast.tSort [(Level.Level "Top.10001", false)])
-                                   (Ast.tLambda (Ast.nNamed "T2") (Ast.tSort [(Level.Level "Top.10002", false)]) (Ast.tProd Ast.nAnon (Ast.tRel 1) (Ast.tRel 1)))).
-Set Printing Universes.
-Print t2.
-(* Print Universes. *)
 
 
 Monomorphic Universe i1 j1.
-Definition f := (forall (A:Type@{i1}) (B: Type@{j1}), A -> B -> A).
+Definition f' := (forall (A:Type@{i1}) (B: Type@{j1}), A -> B -> A).
 (* : Type@{i1+1, j1+1} *)
 
-Quote Recursively Definition ff := f.
-Require Import Template.Checker.
+Quote Recursively Definition ff := f'.
+Require Import Template.kernel.Checker.
 Check (eq_refl :
          true =
          let T := infer (Typing.reconstruct_global_context (fst ff)) [] (snd ff) in
          match T with
-         | Checked (tSort [(Level.Level _, true); (Level.Level _, true)]) => true
+         | Checked (tSort ([(Level.Level _, true); (Level.Level _, true)]; _)) => true
          | _ => false
          end).
 Check (eq_refl :
          true =
-         let T := infer ([], init_graph) [] ((tProd (nNamed "A") (tSort [(Level.Level "Toto.85", false)]) (tProd (nNamed "B") (tSort [(Level.Level "Toto.86", false)]) (tProd nAnon (tRel 1) (tProd nAnon (tRel 1) (tRel 3)))))) in
+         let T := infer ([], ConstraintSet.empty) [] ((tProd (nNamed "A") (tSort (Universe.make' (Level.Level "Toto.85", false))) (tProd (nNamed "B") (tSort (Universe.make' (Level.Level "Toto.86", false))) (tProd nAnon (tRel 1) (tProd nAnon (tRel 1) (tRel 3)))))) in
          match T with
-         | Checked (tSort [(Level.Level _, true); (Level.Level _, true)]) => true
+         | Checked (tSort ([(Level.Level _, true); (Level.Level _, true)]; _)) => true
          | _ => false
          end).

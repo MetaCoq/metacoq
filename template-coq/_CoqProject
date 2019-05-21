@@ -1,27 +1,46 @@
 -I src
 -R theories Template
 
-# src/quoter.mli
+# the MetaCoq plugin
+src/tm_util.ml
+
+src/quoted.ml
 src/quoter.ml
-# src/constr_quoter.mli
+src/constr_quoted.ml
 src/constr_quoter.ml
-# src/denote.mli
+
+src/denoter.ml
 src/denote.ml
-# src/g_template_coq.mli
+src/constr_denoter.ml
+
 src/g_template_coq.ml4
 src/template_coq.mlpack
+src/template_monad.mli
+src/template_monad.ml
+src/run_template_monad.mli
+src/run_template_monad.ml
+src/plugin_core.mli
+src/plugin_core.ml
 
-theories/utils.v theories/config.v theories/kernel/univ.v
+theories/LibHypsNaming.v
+theories/utils.v theories/config.v
+theories/Universes.v
 theories/kernel/uGraph.v theories/BasicAst.v theories/Ast.v
+theories/WfInv.v
 theories/AstUtils.v theories/Loader.v theories/Induction.v
 theories/LiftSubst.v theories/UnivSubst.v theories/Typing.v
 theories/TypingWf.v theories/Generation.v theories/WeakeningEnv.v
 theories/Closed.v theories/Weakening.v theories/Substitution.v
-theories/MetaTheory.v theories/Checker.v theories/WcbvEval.v
-theories/Retyping.v theories/All.v theories/Extraction.v
+theories/MetaTheory.v theories/kernel/Checker.v theories/WcbvEval.v
+theories/Retyping.v theories/All.v
 
 # the Template monad
 theories/TemplateMonad.v
+theories/TemplateMonad/Common.v
 theories/TemplateMonad/Core.v
+theories/TemplateMonad/Extractable.v
 theories/TemplateMonad/Monad.v
 theories/monad_utils.v
+
+# Extraction
+theories/Extraction.v

@@ -30,7 +30,6 @@ Inductive term : Set :=
 | tBox       : term (* Represents all proofs *)
 | tRel       : nat -> term
 | tVar       : ident -> term (* For free variables (e.g. in a goal) *)
-| tMeta      : nat -> term   (* NOTE: this will go away *)
 | tEvar      : nat -> list term -> term
 | tLambda    : name -> term -> term
 | tLetIn     : name -> term (* the term *) -> term -> term

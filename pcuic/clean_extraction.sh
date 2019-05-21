@@ -20,15 +20,11 @@ then
 
     # Remove extracted modules already linked in template_coq_plugin.
     cd src
-    rm -f ast0.* specif.* peanoNat.* list0.* datatypes.* decimal.* ascii.* univ0.* binPosDef.* binPos.* binNat.* binNums.* binInt.* binIntDef.* bool.* nat0.* string0.* basics.* liftSubst.*
+    rm -f ast0.* specif.* peanoNat.* list0.* datatypes.* decimal.* ascii.* universes0.* binPosDef.* binPos.* binNat.* binNums.* binInt.* binIntDef.* bool.* nat0.* string0.* basics.* liftSubst.*
 
     # We have to patch templateToPCUIC because a module path equality fails
     # to be recognized by the OCaml compiler
-    patch -N -p0 < ../templateToPCUIC.patch
-    rm -f templateToPCUIC.ml.orig
-    patch -N -p0 < ../templateToPCUICmli.patch
-    rm -f templateToPCUIC.mli.orig
-    cd ..
+    cp ../templateToPCUIC.hack templateToPCUIC.mli
 else
     echo "No files to extract"
 fi

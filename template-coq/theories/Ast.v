@@ -3,7 +3,7 @@
 Require Import Coq.Strings.String.
 Require Import Coq.PArith.BinPos.
 Require Import List. Import ListNotations.
-From Template Require Export univ uGraph.
+From Template Require Export Universes.
 
 (** * AST of Coq kernel terms and kernel data structures
 
@@ -31,36 +31,28 @@ From Template Require Export univ uGraph.
     ** Environments of declarations
 
       The global environment [global_context]: a list of [global_decl] and
-    a universe graph [uGraph.t].
-
-    ** The Template Monad
-
-      A monad for programming with template-coq operations. Use [Run
-    TemplateProgram] on a monad action to produce its side-effects.
-    Uses a reduction strategy specifier [reductionStrategy].  *)
+    a universe graph [constraints].  *)
 
 Require Export BasicAst.
 
 Inductive term : Set :=
-| tRel       : nat -> term
-| tVar       : ident -> term (* For free variables (e.g. in a goal) *)
-| tMeta      : nat -> term   (* NOTE: this will go away *)
-| tEvar      : nat -> list term -> term
-| tSort      : universe -> term
-| tCast      : term -> cast_kind -> term -> term
-| tProd      : name -> term (* the type *) -> term -> term
-| tLambda    : name -> term (* the type *) -> term -> term
-| tLetIn     : name -> term (* the term *) -> term (* the type *) -> term -> term
-| tApp       : term -> list term -> term
-| tConst     : kername -> universe_instance -> term
-| tInd       : inductive -> universe_instance -> term
-| tConstruct : inductive -> nat -> universe_instance -> term
-| tCase      : (inductive * nat) (* # of parameters *) -> term (* type info *)
-               -> term (* discriminee *) -> list (nat * term) (* branches *) -> term
-| tProj      : projection -> term -> term
-| tFix       : mfixpoint term -> nat -> term
-| tCoFix     : mfixpoint term -> nat -> term.
-
+| tRel (n : nat)
+| tVar (id : ident) (* For free variables (e.g. in a goal) *)
+| tEvar (ev : nat) (args : list term)
+| tSort (s : universe)
+| tCast (t : term) (kind : cast_kind) (v : term)
+| tProd (na : name) (ty : term) (body : term)
+| tLambda (na : name) (ty : term) (body : term)
+| tLetIn (na : name) (def : term) (def_ty : term) (body : term)
+| tApp (f : term) (args : list term)
+| tConst (c : kername) (u : universe_instance)
+| tInd (ind : inductive) (u : universe_instance)
+| tConstruct (ind : inductive) (idx : nat) (u : universe_instance)
+| tCase (ind_and_nbparams: inductive*nat) (type_info:term)
+        (discr:term) (branches : list (nat * term))
+| tProj (proj : projection) (t : term)
+| tFix (mfix : mfixpoint term) (idx : nat)
+| tCoFix (mfix : mfixpoint term) (idx : nat).
 
 Definition mkApps t us :=
   match us with
@@ -90,14 +82,13 @@ Definition isLambda t :=
 Inductive wf : term -> Prop :=
 | wf_tRel n : wf (tRel n)
 | wf_tVar id : wf (tVar id)
-| wf_tMeta n : wf (tMeta n)
 | wf_tEvar n l : Forall wf l -> wf (tEvar n l)
 | wf_tSort u : wf (tSort u)
 | wf_tCast t k t' : wf t -> wf t' -> wf (tCast t k t')
 | wf_tProd na t b : wf t -> wf b -> wf (tProd na t b)
 | wf_tLambda na t b : wf t -> wf b -> wf (tLambda na t b)
 | wf_tLetIn na t b b' : wf t -> wf b -> wf b' -> wf (tLetIn na t b b')
-| wf_tApp t u : ~ isApp t = true -> u <> nil -> wf t -> Forall wf u -> wf (tApp t u)
+| wf_tApp t u : isApp t = false -> u <> nil -> wf t -> Forall wf u -> wf (tApp t u)
 | wf_tConst k u : wf (tConst k u)
 | wf_tInd i u : wf (tInd i u)
 | wf_tConstruct i k u : wf (tConstruct i k u)
@@ -242,7 +233,7 @@ Definition global_declarations := list global_decl.
 (** A context of global declarations + global universe constraints,
     i.e. a global environment *)
 
-Definition global_context : Type := global_declarations * uGraph.t.
+Definition global_context : Type := global_declarations * constraints.
 
 (** *** Programs
 

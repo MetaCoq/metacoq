@@ -1,7 +1,7 @@
 (* Distributed under the terms of the MIT license.   *)
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
-From Template Require Import config monad_utils utils BasicAst univ.
+From Template Require Import config monad_utils utils.
 From PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICChecker.
 Require Import String.
 Local Open Scope string_scope.
@@ -41,7 +41,6 @@ Section TypeOf.
       end
 
     | tVar n => raise (UnboundVar n)
-    | tMeta n => raise (UnboundMeta n)
     | tEvar ev args => raise (UnboundEvar ev)
 
     | tSort s => ret (tSort (try_suc s))

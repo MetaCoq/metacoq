@@ -45,7 +45,7 @@ Fixpoint pocc_term (n:nat) (t:term): bool :=
                     fold_left orb (map (fun x => pocc_term n (snd x)) brs) false
         | tFix ds _ =>
           fold_left
-            orb (map (fun x => pocc_term n (dtype _ x) || pocc_term n (dbody _ x)) ds) false
+            orb (map (fun x => pocc_term n (dtype x) || pocc_term n (dbody x)) ds) false
         | _ => false
       end
   end.

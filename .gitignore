@@ -83,8 +83,8 @@ template-coq/monad_utils.ml
 template-coq/monad_utils.mli
 template-coq/uGraph0.ml
 template-coq/uGraph0.mli
-template-coq/univ0.ml
-template-coq/univ0.mli
+template-coq/universes0.ml
+template-coq/universes0.mli
 template-coq/utils.ml
 template-coq/utils.mli
 
@@ -150,8 +150,8 @@ checker/src/typing0.ml
 checker/src/typing0.mli
 checker/src/uGraph0.ml
 checker/src/uGraph0.mli
-checker/src/univ0.ml
-checker/src/univ0.mli
+checker/src/universes0.ml
+checker/src/universes0.mli
 checker/src/univSubst0.ml
 checker/src/univSubst0.mli
 checker/src/utils.ml
@@ -216,3 +216,22 @@ checker/src/wf.mli
 /pcuic/src/pCUICMetaTheory.mli
 /checker/src/basicAst.ml
 /checker/src/basicAst.mli
+/checker/src/typingWf.ml
+/checker/src/typingWf.mli
+/pcuic/src/pCUICSubstitution.ml
+/pcuic/src/pCUICSubstitution.mli
+/pcuic/src/pCUICWeakening.ml
+/pcuic/src/pCUICWeakening.mli
+/pcuic/src/pCUICWeakeningEnv.ml
+/pcuic/src/pCUICWeakeningEnv.mli
+/template-coq/theories/*.vio
+/template-coq/theories/kernel/*.vio
+/template-coq/theories/TemplateMonad/*.vio
+/pcuic/src/logic0.mli
+/pcuic/src/logic0.ml
+/pcuic/src/logic.mli
+/pcuic/src/logic.ml
+/pcuic/src/init.mli
+/pcuic/src/init.ml
+/pcuic/src/classes0.mli
+/pcuic/src/classes0.ml

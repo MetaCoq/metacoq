@@ -1,5 +1,5 @@
 Require Import BinInt List. Import ListNotations.
-From Template Require Import config univ.
+From Template Require Import config Universes.
 
 
 
@@ -52,6 +52,7 @@ Definition repr (uctx : universe_context) : UContext.t :=
   match uctx with
   | Monomorphic_ctx c => c
   | Polymorphic_ctx c => c
+  | Cumulative_ctx c => CumulativityInfo.univ_context c
   end.
 
 Definition add_global_constraints (uctx : universe_context) (G : t) : t
@@ -60,6 +61,7 @@ Definition add_global_constraints (uctx : universe_context) (G : t) : t
        let G := List.fold_left (fun s l => add_node l s) inst G in
        ConstraintSet.fold add_constraint cstrs G
      | Polymorphic_ctx _ => G
+     | Cumulative_ctx _ => G
      end.
 
 Section UGraph.
@@ -104,7 +106,7 @@ Section UGraph.
                   | _, _ => false
                   end) edges.
 
-  (* If enforce l1 l2 = Some n, the graph enforce that l2 is at least l1 + n *)
+  (* If enforce l1 l2 = Some n, the graph enforces that l2 is at least l1 + n *)
   (* i.e. l1 + n <= l2 *)
   (* If None nothing is enforced by the graph between those two levels *)
   Definition enforce (u v : Level.t) : option Z :=
@@ -180,7 +182,7 @@ Section UGraph.
   Definition check_lt (u1 u2 : Universe.t) : bool :=
     Universe.for_all (fun e => exists_strictly_bigger e u2) u1.
 
-  (* true is all is ok *)
+  (* true if all is ok *)
   Definition no_universe_inconsistency : bool :=
     let G := BellmanFord init_pred_graph Level.prop in
     negb (detect_negative_cycle G).
@@ -235,17 +237,25 @@ End UGraph.
 Require Import Bool.
 
 Definition eq_universe `{checker_flags} φ s s' :=
-  if univ.Universe.equal s s' then true
+  if Universe.equal s s' then true
   else check_leq φ s s' && check_leq φ s' s.
 
 Definition leq_universe `{checker_flags} φ s s' :=
-  if univ.Universe.equal s s' then true
+  if Universe.equal s s' then true
   else check_leq φ s s'.
 
 Definition eq_universe_instance `{checker_flags} φ u v :=
-  univ.Instance.equal_upto (check_eq_level φ) u v.
+  Instance.equal_upto (check_eq_level φ) u v.
 
 Conjecture eq_universe_refl : forall `{checker_flags} φ u, eq_universe φ u u = true.
 Conjecture eq_universe_instance_refl : forall `{checker_flags} φ u, eq_universe_instance φ u u = true.
 Conjecture eq_universe_leq_universe : forall `{checker_flags} φ x y,
     eq_universe φ x y = true -> leq_universe φ x y = true.
+Conjecture leq_universe_product_l : forall `{checker_flags} φ s1 s2,
+    leq_universe φ s1 (Universe.sort_of_product s1 s2) = true.
+Conjecture leq_universe_product_r : forall `{checker_flags} φ s1 s2,
+    leq_universe φ s2 (Universe.sort_of_product s1 s2) = true.
+
+
+Definition graph_of_constraints (φ : constraints) : t
+  := ConstraintSet.fold add_constraint φ init_graph.

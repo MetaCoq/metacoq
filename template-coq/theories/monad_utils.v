@@ -86,3 +86,7 @@ Section MonadOperations.
 
   Definition monad_map_i := @monad_map_i_aux 0.
 End MonadOperations.
+
+
+Definition monad_iter {T : Type -> Type} {M A} (f : A -> T unit) (l : list A) : T unit
+  := @monad_fold_left T M _ _ (fun _ => f) l tt.

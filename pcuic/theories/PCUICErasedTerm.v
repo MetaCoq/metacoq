@@ -12,23 +12,21 @@ From Template Require Export univ uGraph Ast.
   compared to kernel terms, all proofs are translated to [tBox] and
   casts are removed.
 *)
-
 Inductive term : Set :=
-| tBox       : term (* Represents all proofs *)
-| tRel       : nat -> term
-| tVar       : ident -> term (* For free variables (e.g. in a goal) *)
-| tMeta      : nat -> term   (* NOTE: this will go away *)
-| tEvar      : nat -> list term -> term
-| tSort      : universe -> term
-| tProd      : name -> term (* the type *) -> term -> term
-| tLambda    : name -> term -> term -> term
-| tLetIn     : name -> term (* the term *) -> term -> term -> term
-| tApp       : term -> list term -> term
-| tConst     : kername -> universe_instance -> term
-| tInd       : inductive -> universe_instance -> term
-| tConstruct : inductive -> nat -> universe_instance -> term
-| tCase      : (inductive * nat) (* # of parameters *) -> term (* type info *)
-               -> term (* discriminee *) -> list (nat * term) (* branches *) -> term
-| tProj      : projection -> term -> term
-| tFix       : mfixpoint term -> nat -> term
-| tCoFix     : mfixpoint term -> nat -> term.
+| tBox (t : term) (* Represents all proofs *)
+| tRel (n : nat)
+| tVar (id : ident) (* For free variables (e.g. in a goal) *)
+| tEvar (ev : nat) (args : list term)
+| tSort (s : universe)
+| tProd (na : name) (ty : term) (body : term)
+| tLambda (na : name) (ty : term) (body : term)
+| tLetIn (na : name) (def : term) (def_ty : term) (body : term)
+| tApp (f : term) (args : list term)
+| tConst (c : kername) (u : universe_instance)
+| tInd (ind : inductive) (u : universe_instance)
+| tConstruct (ind : inductive) (idx : nat) (u : universe_instance)
+| tCase (ind_and_nbparams: inductive*nat) (type_info:term)
+        (discr:term) (branches : list (nat * term))
+| tProj (proj : projection) (t : term)
+| tFix (mfix : mfixpoint term) (idx : nat)
+| tCoFix (mfix : mfixpoint term) (idx : nat).

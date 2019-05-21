@@ -1,7 +1,7 @@
 (* Distributed under the terms of the MIT license.   *)
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Arith Lia.
-From Template Require Import utils univ UnivSubst.
+From Template Require Import utils UnivSubst.
 From PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICLiftSubst.
 Require Import String.
 Local Open Scope string_scope.
@@ -16,7 +16,7 @@ Set Asymmetric Patterns.
 
 Fixpoint subst_instance_constr (u : universe_instance) (c : term) :=
   match c with
-  | tRel _ | tVar _ | tMeta _ => c
+  | tRel _ | tVar _  => c
   | tEvar ev args => tEvar ev (List.map (subst_instance_constr u) args)
   | tSort s => tSort (subst_instance_univ u s)
   | tConst c u' => tConst c (subst_instance_instance u u')
@@ -64,8 +64,9 @@ Lemma subst_instance_constr_it_mkProd_or_LetIn u ctx t :
   subst_instance_constr u (it_mkProd_or_LetIn ctx t) =
   it_mkProd_or_LetIn (subst_instance_context u ctx) (subst_instance_constr u t).
 Proof.
-  induction ctx in u, t |- *; simpl; try congruence.
-  rewrite IHctx. f_equal. destruct (decl_body a); eauto.
+  induction ctx in u, t |- *; simpl; unfold mkProd_or_LetIn; try congruence.
+  rewrite IHctx.  f_equal; unfold mkProd_or_LetIn.
+  destruct a as [na [b|] ty]; simpl; eauto.
 Qed.
 
 Lemma subst_instance_context_length u ctx : #|subst_instance_context u ctx| = #|ctx|.
@@ -156,6 +157,7 @@ Section UniverseClosedSubst.
   Lemma closedu_subst_instance_univ u t : closedu_universe 0 t -> subst_instance_univ u t = t.
   Proof.
     rewrite /closedu_universe /subst_instance_univ => H.
+    eapply eq_universes; cbn.
     eapply (forallb_Forall (closedu_level_expr 0)) in H; auto. solve_all.
     now apply (closedu_subst_instance_level_expr u).
   Qed.

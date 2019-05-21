@@ -13,7 +13,6 @@ addons:
     packages:
     - opam
     - aspcud
-    - gcc-multilib
 
 env:
   global:
@@ -21,16 +20,17 @@ env:
   - COMPILER="4.06.1"
   - CAMLP5_VER="7.05"
   - FINDLIB_VER="1.8.0"
-  - NATIVE_COMP="yes"
-  - COQ_VER="8.8.0"
+  - COQ_VER="8.8.2"
+  - EQUATIONS_VER="1.2~beta2+8.8"
 
 install:
-- opam init -j ${NJOBS} -n -y
+- opam init -j ${NJOBS} -n -y --compiler=$COMPILER
 - opam switch set ${COMPILER}
 - eval $(opam config env)
 - opam config list
 - opam update
-- opam install -j ${NJOBS} -y camlp5.${CAMLP5_VER} ocamlfind.${FINDLIB_VER} coq.${COQ_VER}
+- opam repo add coq-released https://coq.inria.fr/opam/released || echo "coq-released registered"
+- opam install -j ${NJOBS} -y camlp5.${CAMLP5_VER} ocamlfind.${FINDLIB_VER} coq.${COQ_VER} coq-equations.${EQUATIONS_VER}
 - opam list
 
 script:

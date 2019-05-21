@@ -302,7 +302,7 @@ Lemma permute_lift0 :
   rewrite permute_lift; easy.
 Qed.
 
-Lemma lift_isApp n k t : ~ isApp t = true -> ~ isApp (lift n k t) = true.
+Lemma lift_isApp n k t : isApp t = false -> isApp (lift n k t) = false.
 Proof.
   induction t; auto.
   intros.
@@ -333,12 +333,12 @@ Proof.
 Qed.
 
 Lemma mkApps_tApp t l :
-  ~ isApp t = true -> l <> nil -> mkApps t l = tApp t l.
+  isApp t = false -> l <> nil -> mkApps t l = tApp t l.
 Proof.
   intros.
   destruct l. simpl. contradiction.
   destruct t; simpl; try reflexivity.
-  simpl in H. contradiction.
+  simpl in H. discriminate.
 Qed.
 
 Hint Unfold compose.

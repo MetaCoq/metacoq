@@ -15,3 +15,7 @@ From Template Require Export
      Weakening     (* Weakening lemmas *)
      Checker       (* Partial typechecker implementation *)
      Retyping      (* Fast retyping judgment *).
+
+(* note(gmm): i'm not exactly sure where this should go. *)
+Notation "<% x %>" := (ltac:(let p y := exact y in quote_term x p))
+  (only parsing).

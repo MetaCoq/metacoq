@@ -100,4 +100,150 @@ Section TypeOf.
     ty <- type_of Γ t;;
     type_of_as_sort type_of Γ ty.
 
+  Open Scope type_scope.
+
+  Notation "'∑'  x .. y , P" := (sigT (fun x => .. (sigT (fun y => P)) ..))
+    (at level 200, x binder, y binder, right associativity) : type_scope.
+
+  Notation "( x ; .. ; y ; z )" :=
+    (existT x (.. (existT y z) ..)) : type_scope.
+
+  Conjecture cumul_reduce_to_sort : forall {Γ T s},
+    reduce_to_sort (fst Σ) Γ T = Checked s ->
+    Σ ;;; Γ |- T <= tSort s.
+
+  Conjecture cumul_reduce_to_prod : forall {Γ T A B},
+    reduce_to_prod (fst Σ) Γ T = Checked (A, B) ->
+    forall n, Σ ;;; Γ |- T <= tProd n A B.
+
+  Conjecture congr_cumul_letin : forall {Γ n a A t n' a' A' t'},
+    Σ ;;; Γ |- a <= a' ->
+    Σ ;;; Γ |- A <= A' ->
+    Σ ;;; Γ ,, vdef n a A' |- t <= t' ->
+    Σ ;;; Γ |- tLetIn n a A t <= tLetIn n' a' A' t'.
+
+  Ltac case_eq_match :=
+    lazymatch goal with
+    | |- context [ match ?t with _ => _ end ] =>
+      case_eq t ; try solve [ intros ; discriminate ]
+    | h : context [ match ?t with _ => _ end ] |- _ =>
+      revert h ;
+      case_eq t ; try solve [ intros ; discriminate ]
+    end.
+
+  Ltac deal_as_sort :=
+    lazymatch goal with
+    | h : type_of_as_sort _ _ _ = _ |- _ =>
+      unfold type_of_as_sort in h ;
+      simpl in h
+    end.
+
+  Ltac deal_reduce_to_sort :=
+    lazymatch goal with
+    | h : reduce_to_sort _ _ _ = Checked _ |- _ =>
+      pose proof (cumul_reduce_to_sort h) ;
+      clear h
+    end.
+
+  Ltac deal_reduce_to_prod :=
+    lazymatch goal with
+    | h : reduce_to_prod _ _ _ = Checked _ |- _ =>
+      let hh := fresh h in
+      pose proof (cumul_reduce_to_prod h) as hh ;
+      clear h ;
+      lazymatch goal with
+      | na : name |- _ => specialize (hh na)
+      | |- _ => specialize (hh nAnon)
+      end
+    end.
+
+  Ltac deal_Checked :=
+    match goal with
+    | h : Checked _ = Checked _ |- _ =>
+      inversion h ; subst ; clear h
+    end.
+
+  Ltac go eq :=
+    simpl in eq ; revert eq ;
+    repeat (case_eq_match ; intros) ;
+    repeat deal_as_sort ;
+    repeat (case_eq_match ; intros) ;
+    repeat deal_Checked ;
+    repeat deal_reduce_to_sort ;
+    repeat deal_reduce_to_prod.
+
+  Ltac one_ih :=
+    lazymatch goal with
+    | h : _ -> _ -> (_ ;;; _ |- ?t : _) * _ |- _ ;;; _ |- ?t : _ =>
+      eapply h
+    | h : _ -> _ -> _ * (_ ;;; _ |- _ <= ?A) |- _ ;;; _ |- _ <= ?A =>
+      eapply h
+    end.
+
+  Ltac ih :=
+    one_ih ; eassumption.
+
+  Ltac cih :=
+    eapply type_Conv ; [
+      ih
+    | try eassumption
+    | try eassumption
+    ].
+
+  Theorem type_of_sound :
+    forall {Γ t A B},
+      Σ ;;; Γ |- t : A ->
+      type_of Γ t = Checked B ->
+      (Σ ;;; Γ |- t : B) * (Σ ;;; Γ |- B <= A).
+  Proof.
+    intros Γ t A B h eq. revert B eq.
+    induction h ; intros T eq.
+    - cbn in eq. rewrite e in eq.
+      inversion eq. subst. clear eq.
+      split.
+      + econstructor ; eassumption.
+      + eapply cumul_refl'.
+    - cbn in eq. inversion eq. subst. clear eq.
+      split.
+      + (* Proving Typeᵢ : Typeᵢ₊₁ shouldn't be hard... *)
+        admit.
+      + (* destruct l. all: cbn. all: econstructor. all: cbn. all: try reflexivity. *)
+        admit.
+    - go eq.
+      split.
+      + econstructor ; try eassumption ; try ih ; try cih.
+        (* Again we're missing result on how to type sorts... *)
+        all: admit.
+      + (* Sorts again *)
+        admit.
+    - go eq. split.
+      + econstructor ; try eassumption ; try ih ; try cih.
+      + eapply congr_cumul_prod.
+        * eapply cumul_refl'.
+        * ih.
+    - go eq. split.
+      + econstructor ; try eassumption ; try ih ; try cih.
+      + eapply congr_cumul_letin. all: try eapply cumul_refl'.
+        ih.
+    - go eq. split.
+      + econstructor ; try eassumption ; try ih ; try cih.
+        all: admit.
+      + (* eapply cumul_subst. *)
+        admit.
+    - simpl in eq. split.
+      + admit.
+      + admit.
+    - admit.
+    - admit.
+    - admit.
+    - admit.
+    - admit.
+    - admit.
+    - split.
+      + ih.
+      + eapply cumul_trans ; try eassumption. ih.
+  Admitted.
+
+
+
 End TypeOf.

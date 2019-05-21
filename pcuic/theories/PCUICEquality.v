@@ -3,7 +3,8 @@
 From Coq Require Import Bool String List Program BinPos Compare_dec Arith Lia.
 From Template Require Import config utils Universes BasicAst AstUtils UnivSubst.
 From PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICReflect
-                          PCUICLiftSubst PCUICUnivSubst PCUICTyping.
+                          PCUICLiftSubst PCUICUnivSubst PCUICTyping
+                          PCUICNameless.
 
 Fixpoint eqb_term_upto_univ (equ : universe -> universe -> bool) (u v : term) : bool :=
   match u, v with
@@ -301,3 +302,29 @@ Proof.
         -- constructor. intro bot. apply n.
            inversion bot. subst. inversion H0. subst. apply H4.
 Qed.
+
+(* Syntactical equality *)
+Definition nleq_term t t' :=
+  eqb_term_upto_univ eqb t t'.
+
+Corollary reflect_eq_term_upto_univ_eqb :
+  forall t t',
+    reflect (eq_term_upto_univ eq t t') (nleq_term t t').
+Proof.
+  intros t t'. eapply reflect_eq_term_upto_univ.
+  eapply eqb_spec.
+Qed.
+
+Corollary reflect_nleq_term :
+  forall `{checker_flags} t t',
+    reflect (nl t = nl t') (nleq_term t t').
+Proof.
+  intros flags t t'.
+  destruct (reflect_eq_term_upto_univ_eqb t t').
+  - constructor. eapply eq_term_nl_eq. assumption.
+  - constructor. intro bot. apply n.
+    apply eq_term_upto_univ_nl_inv.
+    rewrite bot.
+    (* Missing eq_term_refl or something *)
+    admit.
+Admitted.

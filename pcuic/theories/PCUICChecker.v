@@ -402,12 +402,12 @@ Section Conversion.
         cred <- reduce_stack_term RedFlags.default (fst Σ) Γ n c ;;
         c'red <- reduce_stack_term RedFlags.default (fst Σ) Γ n c' ;;
         (* FIXME????? ret false? *)
-        if eq_term (snd Σ) cred c && eq_term (snd Σ) c'red c' then ret true
+        if eq_term G cred c && eq_term G c'red c' then ret true
         else
           isconv n leq Γ (tCase (ind, par) p cred brs) l1 (tCase (ind, par) p c'red brs') l2
 
     (* WHY not reduce c with delta? *)
-    | tProj p c, tProj p' c' => on_cond (eq_projection p p' && eq_term (snd Σ) c c')
+    | tProj p c, tProj p' c' => on_cond (eq_projection p p' && eq_term G c c')
 
     | tFix mfix idx, tFix mfix' idx' =>
       (* Hnf did not reduce, maybe delta needed *)

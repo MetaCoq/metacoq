@@ -292,9 +292,9 @@ Section Conversion.
   Proof.
     intros Γ f g x h.
     induction h.
-    - eapply cumul_refl. cbn.
-      rewrite e. rewrite eq_term_refl.
-      reflexivity.
+    - eapply cumul_refl. constructor.
+      + assumption.
+      + apply leq_term_refl.
     - eapply cumul_red_l ; try eassumption.
       econstructor. assumption.
     - eapply cumul_red_r ; try eassumption.
@@ -323,8 +323,9 @@ Section Conversion.
   Proof.
     intros Γ na A B1 B2 h.
     induction h.
-    - eapply cumul_refl. cbn. rewrite e.
-      rewrite eq_term_refl. reflexivity.
+    - eapply cumul_refl. constructor.
+      + apply leq_term_refl.
+      + assumption.
     - eapply cumul_red_l ; try eassumption.
       econstructor. assumption.
     - eapply cumul_red_r ; try eassumption.
@@ -570,7 +571,7 @@ Section Conversion.
   Qed.
 
   Definition R_aux :=
-    t ⊩ cored Σ [] ⨱ @posR t × w ⊩ wcored [] ⨱ @posR (` w) × stateR.
+    t ⊩ cored Σ [] ⨶ @posR t ⊗ w ⊩ wcored [] ⨶ @posR (` w) ⊗ stateR.
 
   Notation pzt u := (zipx (ctx u) (tm u) (stk1 u)) (only parsing).
   Notation pps1 u := (xpos (ctx u) (tm u) (stk1 u)) (only parsing).
@@ -1560,49 +1561,40 @@ Section Conversion.
 
   Lemma eq_term_it_mkLambda_or_LetIn :
     forall Γ u v,
-      eq_term (snd Σ) (it_mkLambda_or_LetIn Γ u) (it_mkLambda_or_LetIn Γ v) =
+      eq_term (snd Σ) (it_mkLambda_or_LetIn Γ u) (it_mkLambda_or_LetIn Γ v) ->
       eq_term (snd Σ) u v.
   Proof.
     intros Γ.
-    induction Γ as [| [na [b|] A] Γ ih ] ; intros u v.
-    - reflexivity.
-    - simpl. cbn. rewrite ih. cbn.
-      rewrite !eq_term_refl. reflexivity.
-    - simpl. cbn. rewrite ih. cbn.
-      rewrite !eq_term_refl. reflexivity.
+    induction Γ as [| [na [b|] A] Γ ih ] ; intros u v h.
+    - assumption.
+    - simpl in h. cbn in h. apply ih in h. inversion h. subst.
+      assumption.
+    - simpl in h. cbn in h. apply ih in h. inversion h. subst.
+      assumption.
   Qed.
 
   Lemma eq_term_zipc :
     forall u v π,
-      eq_term (snd Σ) (zipc u π) (zipc v π) = eq_term (snd Σ) u v.
+      eq_term (snd Σ) (zipc u π) (zipc v π) ->
+      eq_term (snd Σ) u v.
   Proof.
-    intros u v π.
-    revert u v. induction π ; intros u v.
-    all: try solve [
-      simpl ; rewrite ?IHπ ; cbn ;
-      rewrite ?eq_term_refl, ?andb_true_r ;
-      reflexivity
+    intros u v π h.
+    revert u v h. induction π ; intros u v h.
+    all: solve [
+      simpl in h ; try apply IHπ in h ;
+      cbn in h ; inversion h ; subst ; assumption
     ].
-    simpl. rewrite IHπ. cbn.
-    destruct indn.
-    assert (forallb2 (fun '(_, b) '(_, b') => eq_term (snd Σ) b b') brs brs) as e.
-    { clear. induction brs.
-      - reflexivity.
-      - cbn. rewrite IHbrs. destruct a.
-        rewrite eq_term_refl. reflexivity.
-    } rewrite e.
-    rewrite ?eq_term_refl, ?andb_true_r, ?eq_ind_refl, ?eq_nat_refl.
-    reflexivity.
   Qed.
 
   Lemma eq_term_zipx :
     forall Γ u v π,
-      eq_term (snd Σ) (zipx Γ u π) (zipx Γ v π) =
+      eq_term (snd Σ) (zipx Γ u π) (zipx Γ v π) ->
       eq_term (snd Σ) u v.
   Proof.
-    intros Γ u v π.
-    unfold zipx. rewrite eq_term_it_mkLambda_or_LetIn.
-    apply eq_term_zipc.
+    intros Γ u v π h.
+    eapply eq_term_zipc.
+    eapply eq_term_it_mkLambda_or_LetIn.
+    eassumption.
   Qed.
 
   (* This corresponds to a subgoal I don't know how to prove, hence the ax

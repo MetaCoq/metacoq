@@ -56,9 +56,9 @@ Derive Signature for dlexprod.
 Definition lexprod := Subterm.lexprod.
 Arguments lexprod {_ _} _ _ _ _.
 
-Notation "x ⊩ R1 ⨱ R2" :=
+Notation "x ⊩ R1 ⨶ R2" :=
   (dlexprod R1 (fun x => R2)) (at level 20, right associativity).
-Notation "R1 × R2" :=
+Notation "R1 ⊗ R2" :=
   (lexprod R1 R2) (at level 20, right associativity).
 
 Lemma acc_dlexprod :

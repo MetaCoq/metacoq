@@ -1328,7 +1328,7 @@ Proof.
   + eapply Forall2_map.
     eapply Forall2_impl'. eassumption.
     eapply Forall_impl. eapply All_Forall. eassumption.
-    cbn. intros x HH y HH'; now apply HH.
+    cbn. intros x HH y [? HH']. split ; [assumption | now apply HH].
   + eapply Forall2_map.
     eapply Forall2_impl'. eassumption.
     eapply Forall_impl. eapply All_Forall. eassumption.
@@ -1357,7 +1357,7 @@ Proof.
   + eapply Forall2_map.
     eapply Forall2_impl'. eassumption.
     eapply Forall_impl. eapply All_Forall. eassumption.
-    cbn. intros x HH y HH'; now apply HH.
+    cbn. intros x HH y [? HH']. split ; [assumption | now apply HH].
   + eapply Forall2_map.
     eapply Forall2_impl'. eassumption.
     eapply Forall_impl. eapply All_Forall. eassumption.
@@ -1407,10 +1407,10 @@ Proof.
     assert (XX : subst s (#|indctx| + k) (mkApps (tInd ind u) (map (lift0 #|indctx|) (firstn npar args) ++ to_extended_list indctx)) = mkApps (tInd ind u) (map (lift0 #|subst_context s k indctx|) (firstn npar (map (subst s k) args)) ++ to_extended_list (subst_context s k indctx)) );
       [|now rewrite XX in H0].
     clear H0.
-    rewrite -> subst_mkApps; simpl. f_equal. rewrite map_app. 
+    rewrite -> subst_mkApps; simpl. f_equal. rewrite map_app.
     rewrite -> firstn_map.
     rewrite !map_map_compose. cbn. f_equal.
-    + eapply map_ext. 
+    + eapply map_ext.
       intros. unfold compose. rewrite commut_lift_subst_rec. lia.
       rewrite subst_context_length. f_equal. lia.
     + rewrite /to_extended_list to_extended_list_k_subst.

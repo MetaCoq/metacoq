@@ -1233,7 +1233,7 @@ Proof.
     rewrite -> app_context_assoc, Nat.add_0_r in *.
     auto.
 Qed.
-  
+
 
 Lemma eq_universe_refl φ s : eq_universe φ s s.
 Proof.
@@ -1261,8 +1261,13 @@ Proof.
   induction t using term_forall_list_ind; simpl;
     try constructor; try apply Forall_Forall2; try easy;
       try now apply Forall_True.
-  destruct p. constructor; try assumption.
-  apply Forall_Forall2. assumption.
+  - destruct p. constructor; try assumption.
+    apply Forall_Forall2. eapply Forall_impl ; try eassumption.
+    intros. split ; auto.
+  - eapply Forall_impl ; try eassumption.
+    intros x [? ?]. repeat split ; auto.
+  - eapply Forall_impl ; try eassumption.
+    intros x [? ?]. repeat split ; auto.
 Qed.
 
 Lemma eq_term_refl `{checker_flags} φ t : eq_term φ t t.
@@ -1294,16 +1299,18 @@ Qed.
 Lemma eq_term_leq_term `{checker_flags} φ t u : eq_term φ t u -> leq_term φ t u.
 Proof.
   induction t in u |- * using term_forall_list_ind; simpl; inversion 1;
-    subst; constructor; try (now unfold eq_term, leq_term in * ); 
+    subst; constructor; try (now unfold eq_term, leq_term in * );
   try eapply Forall2_impl'; try easy.
   now apply eq_universe'_leq_universe'.
   all: try (apply Forall_True, eq_universe'_leq_universe').
-  eapply Forall_impl. exact H0. 
-  intros x HH y; apply HH.
-  eapply Forall_impl. exact H0. 
-  cbn. intros x [HH HH'] y [? ?]. split; [now apply HH|now apply HH'].
-  eapply Forall_impl. exact H0. 
-  cbn. intros x [HH HH'] y [? ?]. split; [now apply HH|now apply HH'].
+  eapply Forall_impl. exact H0.
+  intros x HH y [? ?]. split ; auto. apply HH. assumption.
+  eapply Forall_impl. exact H0.
+  cbn. intros x [HH HH'] y [? [? ?]].
+  repeat split; [now apply HH|now apply HH'|assumption].
+  eapply Forall_impl. exact H0.
+  cbn. intros x [HH HH'] y [? [? ?]].
+  repeat split; [now apply HH|now apply HH'|assumption].
 Qed.
 
 
@@ -1389,7 +1396,7 @@ Proof.
   + eapply Forall2_map.
     eapply Forall2_impl'. eassumption.
     eapply Forall_impl. eassumption.
-    cbn. intros x HH y HH'; now apply HH.
+    cbn. intros x HH y [? HH']. split ; auto.
   + eapply Forall2_map.
     eapply Forall2_impl'. eassumption.
     eapply Forall_impl. eassumption.
@@ -1423,7 +1430,7 @@ Proof.
   + eapply Forall2_map.
     eapply Forall2_impl'. eassumption.
     eapply Forall_impl. eassumption.
-    cbn. intros x HH y HH'; now apply HH.
+    cbn. intros x HH y [? HH']. split ; auto.
   + eapply Forall2_map.
     eapply Forall2_impl'. eassumption.
     eapply Forall_impl. eassumption.
@@ -1474,10 +1481,10 @@ Proof.
     assert (XX : subst s (#|indctx| + k) (mkApps (tInd ind u) (map (lift0 #|indctx|) (firstn npar args) ++ to_extended_list indctx)) = mkApps (tInd ind u) (map (lift0 #|subst_context s k indctx|) (firstn npar (map (subst s k) args)) ++ to_extended_list (subst_context s k indctx)) );
       [|now rewrite XX in H0].
     clear H0.
-    rewrite -> subst_mkApps; simpl. f_equal. rewrite map_app. 
+    rewrite -> subst_mkApps; simpl. f_equal. rewrite map_app.
     rewrite -> firstn_map.
     rewrite !map_map_compose. cbn. f_equal.
-    + eapply map_ext. 
+    + eapply map_ext.
       intros. unfold compose. rewrite commut_lift_subst_rec. lia.
       rewrite subst_context_length. f_equal. lia.
     + rewrite /to_extended_list to_extended_list_k_subst.

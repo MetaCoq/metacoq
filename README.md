@@ -177,17 +177,12 @@ Requirements through opam
 The easiest way to get all is through [opam](http://opam.ocaml.org):
 
 You might want to create a "switch" (an environment of `opam` packages) for `Coq` if
-you don't have one yet. If you are using opam2 this works as follows:
+you don't have one yet. You need to use **opam 2** to obtain the right version of `Equations`.
 
     # opam switch create coq.8.8.2 4.04.1 
     # eval $(opam env)
     
-Or if you are still using opam 1:    
-    
-    # opam switch -A 4.04.1 coq.8.8.2
-    # eval `opam config env`
-    
-This creates the `coq.8.8.1` switch which initially contains only the
+This creates the `coq.8.8.2` switch which initially contains only the
 basic `OCaml` `4.04.1` compiler, and puts you in the right environment
 (check with `ocamlc -v`).
 

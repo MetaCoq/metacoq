@@ -1,22 +1,22 @@
-all: Makefile.coq
+TEMPLATE_LIB=../template-coq
+
+coq: sources Makefile.coq
 	$(MAKE) -f Makefile.coq
 
-.PHONY: all install html clean mrproper
-
-install: Makefile.coq
-	$(MAKE) -f Makefile.coq install
-
-html: all
-	$(MAKE) -f Makefile.coq html
-
-clean: Makefile.coq
-	$(MAKE) -f Makefile.coq clean
-
-mrproper: clean
-	rm -f Makefile.coq
-
-Makefile.coq: _CoqProject
+Makefile.coq: _CoqProject gen-src get-mc
 	coq_makefile -f _CoqProject -o Makefile.coq
 
-.merlin: Makefile.coq
-	$(MAKE) -f Makefile.coq .merlin
+gen-src:
+	$(MAKE) -C gen-src
+
+get-mc: gen-src
+	cp -r $(TEMPLATE_LIB)/gen-src/to-lower.sh src
+	(cd src; ./to-lower.sh)
+	cp -r $(TEMPLATE_LIB)/gen-src/*.ml $(TEMPLATE_LIB)/gen-src/*.mli src
+
+.PHONY: get-mc gen-src
+
+clean:
+	$(MAKE) -f Makefile.coq clean
+
+sources: gen-src

@@ -1,7 +1,7 @@
 (* Distributed under the terms of the MIT license.   *)
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
-From Template Require Import config utils Ast univ Induction LiftSubst UnivSubst Typing.
+From Template Require Import config utils Ast Induction LiftSubst UnivSubst Typing.
 From Template Require Import AstUtils.
 Require Import String.
 Local Open Scope string_scope.

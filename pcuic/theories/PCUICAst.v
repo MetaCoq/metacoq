@@ -3,8 +3,7 @@
 Require Import Coq.Strings.String.
 Require Import Coq.PArith.BinPos.
 Require Import List. Import ListNotations.
-From Template Require Export univ uGraph.
-From Template Require Import BasicAst.
+From Template Require Export Universes BasicAst.
 
 (* Declare Scope pcuic.*)
 Delimit Scope pcuic with pcuic.
@@ -19,7 +18,6 @@ Open Scope pcuic.
 Inductive term : Set :=
 | tRel       : nat -> term
 | tVar       : ident -> term (* For free variables (e.g. in a goal) *)
-| tMeta      : nat -> term   (* NOTE: this will go away *)
 | tEvar      : nat -> list term -> term
 | tSort      : universe -> term
 | tProd      : name -> term (* the type *) -> term -> term
@@ -188,7 +186,7 @@ Definition global_declarations := list global_decl.
 (** A context of global declarations + global universe constraints,
     i.e. a global environment *)
 
-Definition global_context : Type := global_declarations * uGraph.t.
+Definition global_context : Type := global_declarations * constraints.
 
 (** *** Programs
 

@@ -1,7 +1,7 @@
 (* Distributed under the terms of the MIT license.   *)
 
 From Coq Require Import List Program.
-From Template Require Import utils BasicAst.
+From Template Require Import utils.
 From PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction.
 From Coq Require Import BinPos Arith.Compare_dec Bool Lia.
 
@@ -567,7 +567,6 @@ Lemma term_forall_ctx_list_ind :
   forall P : context -> term -> Type,
     (forall Γ (n : nat), P Γ (tRel n)) ->
     (forall Γ (i : ident), P Γ (tVar i)) ->
-    (forall Γ (n : nat), P Γ (tMeta n)) ->
     (forall Γ (n : nat) (l : list term), All (P Γ) l -> P Γ (tEvar n l)) ->
     (forall Γ s, P Γ (tSort s)) ->
     (forall Γ (n : name) (t : term), P Γ t -> forall t0 : term, P (vass n t :: Γ) t0 -> P Γ (tProd n t t0)) ->

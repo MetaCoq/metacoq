@@ -1,7 +1,7 @@
 (* Distributed under the terms of the MIT license.   *)
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Arith Lia.
-From Template Require Import config univ monad_utils utils BasicAst AstUtils UnivSubst.
+From Template Require Import config monad_utils utils AstUtils UnivSubst uGraph.
 From PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICLiftSubst PCUICUnivSubst
      PCUICTyping PCUICSubstitution PCUICValidity.
 
@@ -22,6 +22,74 @@ Open Scope pcuic.
   conversion/cumulativity with the first-order fast-path heuristic [isconv]
   that are used to type-check terms in reasonable time. *)
 Set Asymmetric Patterns.
+
+
+Fixpoint eq_term `{checker_flags} (φ : uGraph.t) (t u : term) {struct t} :=
+  match t, u with
+  | tRel n, tRel n' => eq_nat n n'
+  | tEvar ev args, tEvar ev' args' => eq_evar ev ev' && forallb2 (eq_term φ) args args'
+  | tVar id, tVar id' => eq_string id id'
+  | tSort s, tSort s' => uGraph.eq_universe φ s s'
+  (* | tCast f k T, tCast f' k' T' => eq_term φ f f' && eq_term φ T T' *)
+  | tApp f a, tApp f' a' => eq_term φ f f' && eq_term φ a a'
+  | tConst c u, tConst c' u' => eq_constant c c' && eq_universe_instance φ u u'
+  | tInd i u, tInd i' u' => eq_ind i i' && eq_universe_instance φ u u'
+  | tConstruct i k u, tConstruct i' k' u' => eq_ind i i' && eq_nat k k'
+                                                    && eq_universe_instance φ u u'
+  | tLambda _ b t, tLambda _ b' t' => eq_term φ b b' && eq_term φ t t'
+  | tProd _ b t, tProd _ b' t' => eq_term φ b b' && eq_term φ t t'
+  | tLetIn _ b t c, tLetIn _ b' t' c' => eq_term φ b b' && eq_term φ t t' && eq_term φ c c'
+  | tCase (ind, par) p c brs,
+    tCase (ind',par') p' c' brs' =>
+    eq_ind ind ind' && eq_nat par par' &&
+    eq_term φ p p' && eq_term φ c c' && forallb2 (fun '(a, b) '(a', b') => eq_term φ b b') brs brs'
+  | tProj p c, tProj p' c' => eq_projection p p' && eq_term φ c c'
+  | tFix mfix idx, tFix mfix' idx' =>
+    forallb2 (fun x y =>
+                eq_term φ x.(dtype) y.(dtype) && eq_term φ x.(dbody) y.(dbody)) mfix mfix' &&
+    eq_nat idx idx'
+  | tCoFix mfix idx, tCoFix mfix' idx' =>
+    forallb2 (fun x y =>
+                eq_term φ x.(dtype) y.(dtype) && eq_term φ x.(dbody) y.(dbody)) mfix mfix' &&
+    Nat.eqb idx idx'
+  | _, _ => false
+  end.
+
+(* (* ** Syntactic cumulativity up-to universes *)
+
+(*   We shouldn't look at printing annotations *) *)
+
+Fixpoint leq_term `{checker_flags} (φ : uGraph.t) (t u : term) {struct t} :=
+  match t, u with
+  | tRel n, tRel n' => eq_nat n n'
+  | tEvar ev args, tEvar ev' args' => eq_nat ev ev' && forallb2 (eq_term φ) args args'
+  | tVar id, tVar id' => eq_string id id'
+  | tSort s, tSort s' => uGraph.leq_universe φ s s'
+  | tApp f a, tApp f' a' => leq_term φ f f' && eq_term φ a a'
+  (* | tCast f k T, tCast f' k' T' => eq_term φ f f' && eq_term φ T T' *)
+  | tConst c u, tConst c' u' => eq_constant c c' && eq_universe_instance φ u u'
+  | tInd i u, tInd i' u' => eq_ind i i' && eq_universe_instance φ u u'
+  | tConstruct i k u, tConstruct i' k' u' => eq_ind i i' && eq_nat k k' &&
+                                                    eq_universe_instance φ u u'
+  | tLambda _ b t, tLambda _ b' t' => eq_term φ b b' && eq_term φ t t'
+  | tProd _ b t, tProd _ b' t' => eq_term φ b b' && leq_term φ t t'
+  | tLetIn _ b t c, tLetIn _ b' t' c' => eq_term φ b b' && eq_term φ t t' && leq_term φ c c'
+  | tCase (ind, par) p c brs,
+    tCase (ind',par') p' c' brs' =>
+    eq_ind ind ind' && eq_nat par par' &&
+    eq_term φ p p' && eq_term φ c c' && forallb2 (fun '(a, b) '(a', b') => eq_term φ b b') brs brs'
+  | tProj p c, tProj p' c' => eq_projection p p' && eq_term φ c c'
+  | tFix mfix idx, tFix mfix' idx' =>
+    forallb2 (fun x y =>
+                eq_term φ x.(dtype) y.(dtype) && eq_term φ x.(dbody) y.(dbody)) mfix mfix' &&
+    eq_nat idx idx'
+  | tCoFix mfix idx, tCoFix mfix' idx' =>
+    forallb2 (fun x y =>
+                eq_term φ x.(dtype) y.(dtype) && eq_term φ x.(dbody) y.(dbody)) mfix mfix' &&
+    eq_nat idx idx'
+  | _, _ => false
+  end.
+
 
 Module RedFlags.
 
@@ -254,7 +322,7 @@ Section Conversion.
     let '(t2,l2) := red2 in
     isconv_prog n leq Γ t1 l1 t2 l2
     end
-  with isconv_prog `{checker_flags} (n : nat) (leq : conv_pb) (Γ : context)
+  with isconv_prog (n : nat) (leq : conv_pb) (Γ : context)
                    (t1 : term) (l1 : list term) (t2 : term) (l2 : list term)
                    {struct n} : option bool :=
     match n with 0 => None | S n =>
@@ -265,6 +333,7 @@ Section Conversion.
     (** Test equality at each step ?? *)
     (* if eq_term t1 t2 && (match isconv_stacks l1 l2 with Some true => true | _ => false) *)
     (* then ret true else *)
+    let G := graph_of_constraints (snd Σ) in
     let fallback (x : unit) :=
       match reducible_head n Γ t1 l1 with
       | Some t1 =>
@@ -279,8 +348,8 @@ Section Conversion.
           isconv_prog n leq Γ t1 l1 t2 l2
         | None =>
           on_cond (match leq with
-                   | Conv => eq_term (snd Σ) t1 t2
-                   | Cumul => leq_term (snd Σ) t1 t2 end)
+                   | Conv => eq_term G t1 t2
+                   | Cumul => leq_term G t1 t2 end)
         end
       end
     in
@@ -296,12 +365,14 @@ Section Conversion.
           match lookup_env c with (* Unfold both bodies at once *)
           | Some (ConstantDecl _ {| cst_body := Some body |}) =>
             isconv n leq Γ body l1 body l2
+          (* If c is an Inductive *)
           | _ => ret false
           end
       else
         match lookup_env c' with
         | Some (ConstantDecl _ {| cst_body := Some body |}) =>
           isconv n leq Γ t1 l1 body l2
+        (* If c' is an Inductive *)
         | _ =>
           match lookup_env c with
           | Some (ConstantDecl _ {| cst_body := Some body |}) =>
@@ -324,21 +395,23 @@ Section Conversion.
 
     | tCase (ind, par) p c brs,
       tCase (ind',par') p' c' brs' => (* Hnf did not reduce, maybe delta needed in c *)
-      if eq_term (snd Σ) p p' && eq_term (snd Σ) c c'
-      && forallb2 (fun '(a, b) '(a', b') => eq_term (snd Σ) b b') brs brs' then
+      if eq_term G p p' && eq_term G c c'
+      && forallb2 (fun '(a, b) '(a', b') => eq_term G b b') brs brs' then
         ret true
       else
         cred <- reduce_stack_term RedFlags.default (fst Σ) Γ n c ;;
         c'red <- reduce_stack_term RedFlags.default (fst Σ) Γ n c' ;;
-        if eq_term (snd Σ) cred c && eq_term (snd Σ) c'red c' then ret true
+        (* FIXME????? ret false? *)
+        if eq_term G cred c && eq_term G c'red c' then ret true
         else
           isconv n leq Γ (tCase (ind, par) p cred brs) l1 (tCase (ind, par) p c'red brs') l2
 
-    | tProj p c, tProj p' c' => on_cond (eq_projection p p' && eq_term (snd Σ) c c')
+    (* WHY not reduce c with delta? *)
+    | tProj p c, tProj p' c' => on_cond (eq_projection p p' && eq_term G c c')
 
     | tFix mfix idx, tFix mfix' idx' =>
       (* Hnf did not reduce, maybe delta needed *)
-      if eq_term (snd Σ) t1 t2 && opt_bool_to_bool (isconv_stacks l1 l2) then ret true
+      if eq_term G t1 t2 && opt_bool_to_bool (isconv_stacks l1 l2) then ret true
       else
         match unfold_one_fix n Γ mfix idx l1 with
         | Some t1 =>
@@ -356,7 +429,7 @@ Section Conversion.
         end
 
     | tCoFix mfix idx, tCoFix mfix' idx' =>
-      on_cond (eq_term (snd Σ) t1 t2)
+      on_cond (eq_term G t1 t2)
 
     | _, _ => fallback ()
     end
@@ -433,7 +506,6 @@ Fixpoint string_of_term (t : term) :=
   match t with
   | tRel n => "Rel(" ++ string_of_nat n ++ ")"
   | tVar n => "Var(" ++ n ++ ")"
-  | tMeta n => "Meta(" ++ string_of_nat n ++ ")"
   | tEvar ev args => "Evar(" ++ string_of_nat ev ++ "[]" (* TODO *)  ++ ")"
   | tSort s => "Sort(" ++ string_of_sort s ++ ")"
   | tProd na b t => "Prod(" ++ string_of_name na ++ "," ++
@@ -581,13 +653,14 @@ Ltac unsquash :=
          | [ H : squash _ |- _ ] => destruct H as [H]
          end.
 
+
 Section Typecheck2.
   Context `{cf : checker_flags}.
   Context `{F : Fuel}.
-  Context (Σ : global_context).
+  Context (Σ : global_context) (G := graph_of_constraints (snd Σ)).
 
   Definition convert_leq Γ (t u : term) : typing_result unit :=
-    if eq_term (snd Σ) t u then ret ()
+    if eq_term G t u then ret ()
     else
       match isconv Σ fuel Cumul Γ t [] u [] with
       | Some b =>
@@ -596,12 +669,12 @@ Section Typecheck2.
       | None => (* fallback *)
         t' <- reduce (fst Σ) Γ t ;;
         u' <- reduce (fst Σ) Γ u ;;
-        if leq_term (snd Σ) t' u' then ret ()
+        if leq_term G t' u' then ret ()
         else raise (NotConvertible Γ t u t' u')
       end.
 
   Definition convert_eq Γ (t u : term) : typing_result unit :=
-    if eq_term (snd Σ) t u then ret ()
+    if eq_term G t u then ret ()
     else
       match isconv Σ fuel Conv Γ t [] u [] with
       | Some b =>
@@ -610,7 +683,7 @@ Section Typecheck2.
       | None => (* fallback *)
         t' <- reduce (fst Σ) Γ t ;;
         u' <- reduce (fst Σ) Γ u ;;
-        if eq_term (snd Σ) t' u' then ret ()
+        if eq_term G t' u' then ret ()
         else raise (NotConvertible Γ t u t' u')
       end.
 
@@ -690,11 +763,8 @@ Section Typecheck2.
          subst_instance_cstrs u cstrs).
 
   Definition check_consistent_constraints cstrs :=
-    if check_constraints (snd Σ) cstrs then ret tt
+    if check_constraints G cstrs then ret tt
     else raise (UnsatisfiedConstraints cstrs).
-
-  Definition try_suc (u : Universe.t) : Universe.t :=   (* FIXME suc s *)
-    map (fun '(l, b) =>  (l, true)) u.
 
   Fixpoint infer (Γ : context) (t : term) : typing_result term :=
     match t with
@@ -705,10 +775,9 @@ Section Typecheck2.
       end
 
     | tVar n => raise (UnboundVar n)
-    | tMeta n => raise (UnboundMeta n)
     | tEvar ev args => raise (UnboundEvar ev)
 
-    | tSort [(l, false)] => ret (tSort (Universe.super l))
+    | tSort ([(l, false)]; _) => ret (tSort (Universe.super l))
 
     | tSort u => raise (CannotTakeSuccessor u)
 
@@ -807,7 +876,7 @@ Section Typecheck2.
   Conjecture cumul_reduce_to_sort : forall Γ t s',
       Σ ;;; Γ |- t <= tSort s' <~>
       exists s'', reduce_to_sort (fst Σ) Γ t = Checked s''
-             /\ check_leq (snd Σ) s'' s' = true.
+             /\ check_leq G s'' s' = true.
 
   Conjecture conv_reduce_to_sort : forall Γ t s',
       Σ ;;; Γ |- t = tSort s' <~>
@@ -872,7 +941,7 @@ Section Typecheck2.
         destruct (convert_leq Γ t t2) eqn:?; [ simpl | simpl; intro; discriminate ]
       end; try intros [= <-].
 
-  Lemma leq_universe_refl `{config.checker_flags} x : check_leq (snd Σ) x x = true. (* FIXME condition on φ? *)
+  Lemma leq_universe_refl `{config.checker_flags} x : check_leq G x x = true. (* FIXME condition on φ? *)
   Proof. induction x. unfold check_leq. cbn. auto with bool. unfold check_leq. simpl. Admitted.
   Hint Resolve leq_universe_refl : typecheck.
 
@@ -922,9 +991,10 @@ Section Typecheck2.
     - destruct nth_error eqn:Heq; try discriminate.
       intros [= <-]. constructor; auto.
 
-    - destruct u; intros Hu; try discriminate.
-      destruct t as [l [|]]; try discriminate. destruct u; try discriminate.
-      injection Hu. intros <-. pose (type_Sort _ _ l X). econstructor. admit.
+    - destruct u as [[]]; intros Hu; try discriminate.
+      (* destruct t as [l' [|]]; try discriminate. destruct u; try discriminate. *)
+      (* injection Hu. intros <-. pose (type_Sort _ _ l X). econstructor. *)
+      admit.
     - admit.
 
     - admit.
@@ -1052,7 +1122,7 @@ Section Checker.
       else ret ()
     end.
 
-  Fixpoint check_wf_declarations (φ : uGraph.t) (g : global_declarations) :=
+  Fixpoint check_wf_declarations (φ : constraints) (g : global_declarations) :=
     match g with
     | [] => ret ()
     | g :: env =>
@@ -1062,7 +1132,8 @@ Section Checker.
     end.
 
   Definition check_wf_env (Σ : global_context) :=
-    if negb (no_universe_inconsistency (snd Σ)) then
+    let G := graph_of_constraints (snd Σ) in
+    if negb (no_universe_inconsistency G) then
       EnvError (AlreadyDeclared "univ inconsistency") (* todo better error *)
     else check_wf_declarations (snd Σ) (fst Σ).
 

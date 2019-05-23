@@ -78,7 +78,6 @@ Section Erase.
     match t with
     | tRel i => ret (E.tRel i)
     | tVar n => ret (E.tVar n)
-    | tMeta m => ret (E.tMeta m)
     | tEvar m l =>
       l' <- monad_map (extract Σ Γ) l;;
       ret (E.tEvar m l')

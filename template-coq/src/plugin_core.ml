@@ -28,16 +28,26 @@ let rs_unfold (env : Environ.env) (gr : global_reference) =
 type 'a tm =
   Environ.env -> Evd.evar_map ->
   (Environ.env -> Evd.evar_map -> 'a -> unit) ->
-  (string -> unit) -> unit
+  (Pp.t -> unit) -> unit
 
 let run (c : 'a tm) env evm (k : Environ.env -> Evd.evar_map -> 'a -> unit) : unit =
-  c env evm k (fun x -> CErrors.user_err (Pp.str x))
+  c env evm k (fun x -> CErrors.user_err x)
+
+let run_vernac (c : 'a tm) : unit =
+  let (evm,env) = Pfedit.get_current_context () in
+  run c env evm (fun _ _ _ -> ())
+
+let with_env_evm (c : Environ.env -> Evd.evar_map -> 'a tm) : 'a tm =
+  fun env evm success fail -> c env evm env evm success fail
 
 let tmReturn (x : 'a) : 'a tm =
   fun env evd k _fail -> k env evd x
 let tmBind (x : 'a tm) (k : 'a -> 'b tm) : 'b tm =
   fun env evd success fail ->
         x env evd (fun env evd v -> k v env evd success fail) fail
+let tmMap (f : 'a -> 'b) (x : 'a tm) : 'b tm =
+  fun env evd success fail ->
+        x env evd (fun env evd v -> success env evd (f v)) fail
 
 let tmPrint (t : term) : unit tm =
   fun env evd success _fail ->
@@ -48,8 +58,10 @@ let tmMsg  (s : string) : unit tm =
     let _ = Feedback.msg_info (Pp.str s) in
     success env evd ()
 
-let tmFail (s : string) : 'a tm =
+let tmFail (s : Pp.t) : 'a tm =
   fun _ _ _ fail -> fail s
+let tmFailString (s : string) : 'a tm =
+  tmFail Pp.(str s)
 
 let tmEval (rd : reduction_strategy) (t : term) : term tm =
   fun env evd k _fail ->
@@ -114,19 +126,26 @@ let tmAbout (qualid : qualid) : global_reference option tm =
       let gr = Smartlocate.locate_global_with_alias (CAst.make qualid) in
       success env evd (Some gr)
     with
-    | Not_found -> success env evd None
+      Not_found -> success env evd None
+
+let tmAboutString (s : string) : global_reference option tm =
+  fun env evd success fail ->
+    let (dp, nm) = Quoted.split_name s in
+    let q = Libnames.make_qualid dp nm in
+    tmAbout q env evd success fail
 
 let tmCurrentModPath : Names.ModPath.t tm =
   fun env evd success _fail ->
     let mp = Lib.current_mp () in success env evd mp
 
-let tmQuoteInductive (kn : kername) : mutual_inductive_body option tm =
+let tmQuoteInductive (kn : kername) : (Names.MutInd.t * mutual_inductive_body) option tm =
   fun env evm success _fail ->
     try
-      let mind = Environ.lookup_mind (Names.MutInd.make1 kn) env in
-      success env evm (Some mind)
+      let mi = Names.MutInd.make1 kn in
+      let mind = Environ.lookup_mind mi env in
+      success env evm (Some (mi, mind))
     with
-      _ -> success env evm None
+      Not_found -> success env evm None
 
 let tmQuoteUniverses : UGraph.t tm =
   fun env evm success _fail ->
@@ -134,9 +153,13 @@ let tmQuoteUniverses : UGraph.t tm =
 
 (* get the definition associated to a kername *)
 let tmQuoteConstant (kn : kername) (bypass : bool) : constant_entry tm =
-  fun env evd success _fail ->
-    let cnst = Environ.lookup_constant (Names.Constant.make1 kn) env in
-    success env evd cnst
+  fun env evd success fail ->
+    (* todo(gmm): there is a bug here *)
+    try
+      let cnst = Environ.lookup_constant (Names.Constant.make1 kn) env in
+      success env evd cnst
+    with
+      Not_found -> fail Pp.(str "constant not found " ++ Names.KerName.print kn)
 
 let tmInductive (mi : mutual_inductive_entry) : unit tm =
   fun env evd success _fail ->

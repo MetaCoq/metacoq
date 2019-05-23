@@ -1,8 +1,24 @@
-From Coq Require Import Bool Program List Ascii String OrderedType Lia.
+From Coq Require Import Bool Program List Ascii String OrderedType Lia Omega.
 Import ListNotations.
 Require Import ssreflect.
 Set Asymmetric Patterns.
 Require Import Arith.
+
+(* Use \sum to input ∑ in Company Coq (it is not a sigma Σ). *)
+Notation "'∑' x .. y , p" := (sigT (fun x => .. (sigT (fun y => p%type)) ..))
+  (at level 200, x binder, right associativity,
+   format "'[' '∑'  '/  ' x  ..  y ,  '/  ' p ']'")
+  : type_scope.
+
+Notation "( x ; y )" := (@existT _ _ x y).
+Notation "( x ; y ; z )" := (x ; ( y ; z)).
+Notation "( x ; y ; z ; t )" := (x ; ( y ; (z ; t))).
+Notation "( x ; y ; z ; t ; u )" := (x ; ( y ; (z ; (t ; u)))).
+Notation "( x ; y ; z ; t ; u ; v )" := (x ; ( y ; (z ; (t ; (u ; v))))).
+Notation "x .1" := (@projT1 _ _ x) (at level 3, format "x '.1'").
+Notation "x .2" := (@projT2 _ _ x) (at level 3, format "x '.2'").
+
+Notation "x × y" := (prod x y )(at level 80, right associativity).
 
 Notation "#| l |" := (List.length l) (at level 0, l at level 99, format "#| l |").
 
@@ -18,15 +34,18 @@ Tactic Notation "destruct" "?" "in" hyp(H) :=
   match type of H with context [match ?x with _ => _ end] => destruct x eqn:e
   end.
 
+(* \circ *)
+Notation "g ∘ f" := (fun x => g (f x)).
+
 (** We cannot use ssrbool as it breaks extraction. *)
 Coercion is_true : bool >-> Sortclass.
 
 Definition pred (A : Type) := A -> bool.
 
-Lemma andb_and b b' : b && b' <-> b /\ b'.
+Lemma andb_and b b' : is_true (b && b') <-> is_true b /\ is_true b'.
 Proof. apply andb_true_iff. Qed.
 
-Lemma andP {b b'} : b && b' -> b /\ b'.
+Lemma andP {b b'} : is_true (b && b') -> is_true b /\ is_true b'.
 Proof. apply andb_and. Qed.
 
 Ltac toProp :=
@@ -569,7 +588,8 @@ Section Reverse_Induction.
 
 End Reverse_Induction.
 
-Lemma forallb_Forall {A} (p : pred A) l : Forall p l <-> forallb p l.
+Lemma forallb_Forall {A} (p : pred A) l
+  : Forall (is_true ∘ p) l <-> is_true (forallb p l).
 Proof.
   split.
   induction 1; rewrite /= // H IHForall //.
@@ -592,7 +612,7 @@ Qed.
 
 Lemma forallb2_All2 {A : Type} {p : A -> A -> bool}
       {l l' : list A} :
-  forallb2 p l l' -> All2 (fun x y => p x y) l l'.
+  is_true (forallb2 p l l') -> All2 (fun x y => is_true (p x y)) l l'.
 Proof.
   induction l in l' |- *; destruct l'; simpl; intros; try congruence.
   - constructor.
@@ -602,14 +622,15 @@ Qed.
 
 Lemma All2_forallb2 {A : Type} {p : A -> A -> bool}
       {l l' : list A} :
-  All2 (fun x y => p x y) l l' -> forallb2 p l l'.
+  All2 (fun x y => is_true (p x y)) l l' -> is_true (forallb2 p l l').
 Proof.
   induction 1; simpl; intros; try congruence.
   rewrite andb_and. intuition auto.
 Qed.
 
 Lemma forallb2_app {A} (p : A -> A -> bool) l l' q q' :
-  forallb2 p l l' && forallb2 p q q' -> forallb2 p (l ++ q) (l' ++ q').
+  is_true (forallb2 p l l' && forallb2 p q q')
+  -> is_true (forallb2 p (l ++ q) (l' ++ q')).
 Proof.
   induction l in l' |- *; destruct l'; simpl; try congruence.
   move=> /andP[/andP[pa pl] pq]. now rewrite pa IHl // pl pq.
@@ -672,12 +693,12 @@ Lemma All_Forall {A : Type} (P : A -> Prop) l :
   All P l -> Forall P l.
 Proof. induction 1; constructor; auto. Qed.
 
-Lemma forallb_All {A} (p : pred A) l : forallb p l -> All p l.
+Lemma forallb_All {A} (p : pred A) l : is_true (forallb p l) -> All (is_true ∘ p) l.
 Proof.
   move/forallb_Forall. apply Forall_All.
 Qed.
 
-Lemma All_forallb {A} (p : pred A) l : All p l -> forallb p l.
+Lemma All_forallb {A} (p : pred A) l : All (is_true ∘ p) l -> is_true (forallb p l).
 Proof.
   move/All_Forall. apply forallb_Forall.
 Qed.
@@ -866,8 +887,8 @@ Ltac All_map :=
 
 Lemma forall_forallb_map_spec {A B : Type} {P : A -> Prop} {p : A -> bool}
       {l : list A} {f g : A -> B} :
-    Forall P l -> forallb p l ->
-    (forall x : A, P x -> p x -> f x = g x) -> map f l = map g l.
+    Forall P l -> is_true (forallb p l) ->
+    (forall x : A, P x -> is_true (p x) -> f x = g x) -> map f l = map g l.
 Proof.
   induction 1; simpl; trivial.
   rewrite andb_and. intros [px pl] Hx.
@@ -876,16 +897,16 @@ Qed.
 
 Lemma forall_forallb_forallb_spec {A : Type} {P : A -> Prop} {p : A -> bool}
       {l : list A} {f : A -> bool} :
-    Forall P l -> forallb p l ->
-    (forall x : A, P x -> p x -> f x) -> forallb f l.
+    Forall P l -> is_true (forallb p l) ->
+    (forall x : A, P x -> is_true (p x) -> is_true (f x)) -> is_true (forallb f l).
 Proof.
   induction 1; simpl; trivial.
   rewrite !andb_and. intros [px pl] Hx. eauto.
 Qed.
 
 Lemma on_snd_test_spec {A B C} (P : B -> Prop) (p : B -> bool) (f g : B -> C) (x : A * B) :
-  P (snd x) -> (forall x, P x -> p x -> f x = g x) ->
-  test_snd p x ->
+  P (snd x) -> (forall x, P x -> is_true (p x) -> f x = g x) ->
+  is_true (test_snd p x) ->
   on_snd f x = on_snd g x.
 Proof.
   intros. destruct x. unfold on_snd. simpl.
@@ -1290,16 +1311,16 @@ Qed.
 
 Lemma All_forallb' {A} P (l : list A) (p : pred A) :
   All P l ->
-  (forall x, P x -> p x) ->
-  forallb p l.
+  (forall x, P x -> is_true (p x)) ->
+  is_true (forallb p l).
 Proof.
   induction 1 in p |- *; unfold compose; simpl; rewrite ?andb_and;
     intuition auto.
 Qed.
 
 Lemma forallb_Forall' {A} (P : A -> Prop) (l : list A) p :
-  forallb p l ->
-  (forall x, p x -> P x) ->
+  is_true (forallb p l) ->
+  (forall x, is_true (p x) -> P x) ->
   Forall P l.
 Proof.
   induction l in p |- *; unfold compose; simpl. constructor.
@@ -1307,8 +1328,8 @@ Proof.
 Qed.
 
 Lemma forallb_skipn {A} (p : A -> bool) n l :
-  forallb p l ->
-  forallb p (skipn n l).
+  is_true (forallb p l) ->
+  is_true (forallb p (skipn n l)).
 Proof.
   induction l in n |- *; destruct n; simpl; try congruence.
   intros. apply IHl. rewrite -> andb_and in H; intuition.
@@ -1330,7 +1351,7 @@ Proof.
   induction 1; simpl; intuition (f_equal; auto).
 Qed.
 
-Lemma forallb2_length {A} (p : A -> A -> bool) l l' : forallb2 p l l' -> length l = length l'.
+Lemma forallb2_length {A} (p : A -> A -> bool) l l' : is_true (forallb2 p l l') -> length l = length l'.
 Proof.
   induction l in l' |- *; destruct l'; simpl; try congruence.
   rewrite !andb_and. intros [Hp Hl]. erewrite IHl; eauto.
@@ -1382,8 +1403,8 @@ Qed.
 
 Lemma Forall_forallb {A} P (l : list A) (p : pred A) :
   Forall P l ->
-  (forall x, P x -> p x) ->
-  forallb p l.
+  (forall x, P x -> is_true (p x)) ->
+  is_true (forallb p l).
 Proof.
   induction 1 in p |- *; unfold compose; simpl; rewrite ?andb_and;
     intuition auto.
@@ -1401,6 +1422,7 @@ Proof.
   induction 1; congruence.
 Qed.
 
+<<<<<<< HEAD
 Lemma Forall2_length {A B} {P : A -> B -> Prop} l l' : Forall2 P l l' -> #|l| = #|l'|.
 Proof. induction 1; simpl; auto. Qed.
 
@@ -1477,3 +1499,227 @@ Lemma Forall2_impl {A B} {P Q : A -> B -> Prop} {l l'} :
 Proof.
   induction 1; constructor; auto.
 Qed.
+=======
+Arguments skipn : simpl nomatch.
+
+Lemma skipn_all2 :
+  forall {A n} (l : list A),
+    #|l| <= n ->
+         skipn n l = [].
+Proof.
+  intros A n l h. revert l h.
+  induction n ; intros l h.
+  - destruct l.
+    + reflexivity.
+    + cbn in h. inversion h.
+  - destruct l.
+    + reflexivity.
+    + simpl. apply IHn. cbn in h. omega.
+Qed.
+
+Lemma skipn_nil :
+  forall {A} n, @skipn A n [] = [].
+Proof.
+  intros A [| n] ; reflexivity.
+Qed.
+
+Lemma nat_rev_ind (max : nat) :
+  forall (P : nat -> Prop),
+    (forall n, n >= max -> P n) ->
+    (forall n, n < max -> P (S n) -> P n) ->
+    forall n, P n.
+Proof.
+  intros P hmax hS.
+  assert (h : forall n, P (max - n)).
+  { intros n. induction n.
+    - apply hmax. omega.
+    - destruct (Nat.leb_spec0 max n).
+      + replace (max - S n) with 0 by omega.
+        replace (max - n) with 0 in IHn by omega.
+        assumption.
+      + replace (max - n) with (S (max - S n)) in IHn by omega.
+        apply hS.
+        * omega.
+        * assumption.
+  }
+  intro n.
+  destruct (Nat.leb_spec0 max n).
+  - apply hmax. omega.
+  - replace n with (max - (max - n)) by omega. apply h.
+Qed.
+
+Lemma strong_nat_ind :
+  forall (P : nat -> Prop),
+    (forall n, (forall m, m < n -> P m) -> P n) ->
+    forall n, P n.
+Proof.
+  intros P h n.
+  assert (forall m, m < n -> P m).
+  { induction n ; intros m hh.
+    - omega.
+    - destruct (Nat.eqb_spec n m).
+      + subst. eapply h. assumption.
+      + eapply IHn. omega.
+  }
+  eapply h. assumption.
+Qed.
+Lemma app_Forall :
+  forall A P (l1 l2 : list A),
+    Forall P l1 ->
+    Forall P l2 ->
+    Forall P (l1 ++ l2).
+Proof.
+  intros A P l1 l2 h1 h2.
+  revert l2 h2.
+  induction h1 ; intros l2 h2.
+  - assumption.
+  - cbn. constructor ; try assumption.
+    eapply IHh1. assumption.
+Qed.
+
+Lemma rev_Forall :
+  forall A P l,
+    Forall P l ->
+    Forall P (@List.rev A l).
+Proof.
+  intros A P l h.
+  induction l.
+  - cbn. constructor.
+  - cbn. dependent destruction h.
+    specialize (IHl ltac:(assumption)).
+    eapply app_Forall ; try assumption.
+    repeat constructor. assumption.
+Qed.
+Lemma Forall2_impl {A B} {P Q : A -> B -> Prop} {l l'} :
+    Forall2 P l l' ->
+    (forall x y, P x y -> Q x y) ->
+    Forall2 Q l l'.
+Proof.
+  induction 1; constructor; auto.
+Qed.
+
+Lemma Forall2_impl' {A B} {P Q : A -> B -> Prop} {l l'} :
+    Forall2 P l l' ->
+    Forall (fun x => forall y, P x y -> Q x y) l ->
+    Forall2 Q l l'.
+Proof.
+  induction 1; constructor;
+    inversion H1; intuition.
+Qed.
+
+Lemma Forall2_Forall {A R l} : @Forall2 A A R l l -> Forall (fun x => R x x) l.
+Proof.
+  induction l. constructor.
+  inversion 1; constructor; intuition.
+Qed.
+
+Lemma All2_All {A R l} : @All2 A A R l l -> All (fun x => R x x) l.
+Proof.
+  induction l. constructor.
+  inversion 1; constructor; intuition.
+Qed.
+
+Lemma Forall_Forall2 {A R l} : Forall (fun x => R x x) l -> @Forall2 A A R l l.
+Proof.
+  induction l. constructor.
+  inversion 1; constructor; intuition.
+Qed.
+
+Lemma Forall_True {A} {P : A -> Prop} l : (forall x, P x) -> Forall P l.
+Proof.
+  intro H. induction l; now constructor.
+Qed.
+
+Lemma Forall2_True {A B} {R : A -> B -> Prop} l l'
+  : (forall x y, R x y) -> #|l| = #|l'| -> Forall2 R l l'.
+Proof.
+  intro H. revert l'; induction l; simpl;
+    intros [] e; try discriminate e; constructor.
+  easy.
+  apply IHl. now apply eq_add_S.
+Qed.
+
+Lemma Forall2_map {A B A' B'} (R : A' -> B' -> Prop) (f : A -> A') (g : B -> B') l l'
+  : Forall2 (fun x y => R (f x) (g y)) l l' -> Forall2 R (map f l) (map g l').
+Proof.
+  induction 1; constructor; auto.
+Qed.
+
+
+Lemma Forall2_length {A B R l l'} (H : @Forall2 A B R l l')
+  : #|l| = #|l'|.
+Proof.
+  induction H. reflexivity.
+  cbn. now apply f_equal.
+Defined.
+
+Lemma Forall2_and {A B} (R R' : A -> B -> Prop) l l'
+  : Forall2 R l l' -> Forall2 R' l l' -> Forall2 (fun x y => R x y /\ R' x y) l l'.
+Proof.
+  induction 1.
+  intro; constructor.
+  inversion_clear 1.
+  constructor; intuition.
+Defined.
+
+Lemma Forall_Forall2_and {A B} {R : A -> B -> Prop} {P l l'}
+  : Forall2 R l l' -> Forall P l -> Forall2 (fun x y => P x /\ R x y) l l'.
+Proof.
+  induction 1.
+  intro; constructor.
+  inversion_clear 1.
+  constructor; intuition.
+Defined.
+
+Lemma Forall_Forall2_and' {A B} {R : A -> B -> Prop} {P l l'}
+  : Forall2 R l l' -> Forall P l' -> Forall2 (fun x y => R x y /\ P y) l l'.
+Proof.
+  induction 1.
+  intro; constructor.
+  inversion_clear 1.
+  constructor; intuition.
+Defined.
+
+
+
+(* Sorted lists without duplicates *)
+Class ComparableType A := { compare : A -> A -> comparison }.
+Arguments compare {A} {_} _ _.
+
+Fixpoint insert {A} `{ComparableType A} (x : A) (l : list A) :=
+  match l with
+  | [] => [x]
+  | y :: l' =>  match compare x y with
+               | Eq => l
+               | Lt => x :: l
+               | Gt => y :: (insert x l')
+               end
+  end.
+
+Definition list_union {A} `{ComparableType A} (l l' : list A) : list A
+  := fold_left (fun l' x => insert x l') l l'.
+
+Definition compare_bool b1 b2 :=
+  match b1, b2 with
+  | false, true => Lt
+  | true, false => Gt
+  | _, _ => Eq
+  end.
+
+Definition bool_lt' b1 b2 := match compare_bool b1 b2 with Lt => true | _ => false end.
+
+Definition non_empty_list (A : Set) := {l : list A & [] <> l}.
+
+Definition make_non_empty_list {A} x l : non_empty_list A
+  := (x :: l; @nil_cons _ _ _).
+
+Lemma map_not_empty {A B} (f : A -> B) l : map f l <> [] -> l <> [].
+Proof.
+  intro H; destruct l; intro e; now apply H.
+Qed.
+
+Lemma not_empty_map {A B} (f : A -> B) l : l <> [] -> map f l <> [].
+Proof.
+  intro H; destruct l; intro e; now apply H.
+Qed.
+>>>>>>> coq-8.8

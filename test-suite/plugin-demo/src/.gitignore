@@ -1,0 +1,6 @@
+*.ml
+*.mli
+*.cm*
+*.o
+*.a
+to-lower.sh

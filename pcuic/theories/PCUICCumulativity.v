@@ -1,7 +1,7 @@
 (* Distributed under the terms of the MIT license.   *)
 From Equations Require Import Equations.
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
-From Template Require Import config utils AstUtils univ.
+From Template Require Import config utils AstUtils.
 From PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICWeakeningEnv PCUICWeakening
      PCUICClosed PCUICReduction.
@@ -48,100 +48,130 @@ Proof.
   econstructor 3; eauto.
 Qed.
 
-Lemma eq_term_refl `{checker_flags} φ t : eq_term φ t t.
-Proof.
-  induction t using term_forall_list_ind; simpl; try reflexivity; try discriminate;
-    try (rewrite -> ?IHt1, ?IHt2, ?IHt3; reflexivity).
 
-  - apply Nat.eqb_refl.
-  - apply eq_string_refl.
-  - apply Nat.eqb_refl.
-  - rewrite /eq_evar eq_nat_refl.
-    simpl. induction H0; simpl; auto. now rewrite p IHAll.
-  - apply eq_universe_refl.
-  - unfold eq_constant. rewrite eq_string_refl.
-    apply eq_universe_instance_refl.
-  - rewrite eq_ind_refl. apply eq_universe_instance_refl.
-  - rewrite eq_ind_refl. rewrite /eq_nat Nat.eqb_refl. apply eq_universe_instance_refl.
-  - destruct p. simpl.
-    rewrite eq_ind_refl eq_nat_refl IHt1 IHt2.
-    simpl. induction l.
-    reflexivity.
-    simpl. destruct a. inv X. simpl in H0. rewrite H0.
-    rewrite IHl; auto.
-  - now rewrite eq_projection_refl IHt.
-  - rewrite eq_nat_refl.
-    induction m. reflexivity.
-    inv X. intuition.
-    simpl. rewrite a0 b. simpl. apply H0.
-  - rewrite Nat.eqb_refl.
-    induction m. reflexivity.
-    inv X. intuition.
-    simpl. rewrite a0 b. simpl. apply H0.
+Lemma eq_universe_refl φ s : eq_universe φ s s.
+Proof.
+  intros vH; reflexivity.
 Qed.
 
-Lemma eq_term_leq_term `{checker_flags} φ t u : eq_term φ t u = true -> leq_term φ t u = true.
+Lemma eq_universe'_refl `{checker_flags} φ s : eq_universe' φ s s.
 Proof.
-  induction t in u |- * using term_forall_list_ind; simpl; intros; auto; try reflexivity; try discriminate;
-    try (merge_All; close_Forall; intuition auto);
-    try (rewrite -> ?IHt1, ?IHt2, ?IHt3; reflexivity).
+  unfold eq_universe'; destruct check_univs; [apply eq_universe_refl|constructor].
+Qed.
 
-  - destruct u; auto. now apply eq_universe_leq_universe.
-  - destruct u; try discriminate.
-    rewrite -> andb_true_iff in *. intuition.
-  - destruct u; try discriminate.
-    rewrite -> andb_true_iff in *. intuition.
-  - destruct u; try discriminate.
-    rewrite -> andb_true_iff in *. intuition.
+Lemma leq_universe_refl φ s : leq_universe φ s s.
+Proof.
+  intros vH; reflexivity.
+Qed.
+
+Lemma leq_universe'_refl `{checker_flags} φ s : leq_universe' φ s s.
+Proof.
+  unfold leq_universe'; destruct check_univs; [apply leq_universe_refl|constructor].
+Qed.
+
+Lemma eq_term_upto_univ_refl R (HR : RelationClasses.Reflexive R) t
+  : eq_term_upto_univ R t t.
+Proof.
+  induction t using term_forall_list_ind; simpl;
+    try constructor; try apply Forall_Forall2, All_Forall; try easy;
+      try now apply Forall_All, Forall_True.
+  - destruct p. constructor; try assumption.
+    apply Forall_Forall2, All_Forall.
+    eapply All_impl ; try eassumption.
+    intros. split ; auto.
+  - eapply All_impl. eassumption. now intros x [? ?].
+  - eapply All_impl. eassumption. now intros x [? ?].
+Qed.
+
+Lemma eq_term_refl `{checker_flags} φ t : eq_term φ t t.
+Proof.
+  apply eq_term_upto_univ_refl.
+  intro; apply eq_universe'_refl.
+Qed.
+
+
+Lemma leq_term_refl `{checker_flags} φ t : leq_term φ t t.
+Proof.
+  apply eq_term_upto_univ_refl.
+  intro; apply leq_universe'_refl.
+Qed.
+
+
+Lemma eq_universe_leq_universe φ t u : eq_universe φ t u -> leq_universe φ t u.
+Proof.
+  intros H v Hv. rewrite (H v Hv). apply BinInt.Z.le_refl.
+Qed.
+
+Lemma eq_universe'_leq_universe' `{checker_flags} φ t u
+  : eq_universe' φ t u -> leq_universe' φ t u.
+Proof.
+  unfold eq_universe', leq_universe'; destruct check_univs.
+  apply eq_universe_leq_universe. intuition.
+Qed.
+
+
+Lemma eq_term_leq_term `{checker_flags} φ t u : eq_term φ t u -> leq_term φ t u.
+Proof.
+  induction t in u |- * using term_forall_list_ind; simpl; inversion 1;
+    subst; constructor; try (now unfold eq_term, leq_term in * );
+  try eapply Forall2_impl'. all: try easy.
+  now apply All_Forall.
+  now apply eq_universe'_leq_universe'.
+  all: try (apply Forall_True, eq_universe'_leq_universe').
+  eapply Forall_impl. eapply All_Forall. eassumption.
+  intros x HH y [? ?]. split ; auto. apply HH. assumption.
+  eapply Forall_impl. eapply All_Forall. eassumption.
+  cbn. intros x [HH HH'] y [? [? ?]].
+  repeat split ; [now apply HH|now apply HH' | assumption].
+  eapply Forall_impl. eapply All_Forall. eassumption.
+  cbn. intros x [HH HH'] y [? [? ?]].
+  repeat split; [now apply HH|now apply HH'|assumption].
 Qed.
 
 Lemma eq_term_App `{checker_flags} φ f f' :
   eq_term φ f f' ->
   isApp f = isApp f'.
 Proof.
-  destruct f, f'; simpl; try congruence.
-  destruct p; congruence.
+  inversion 1; reflexivity.
 Qed.
 
 Lemma eq_term_mkApps `{checker_flags} φ f l f' l' :
   eq_term φ f f' ->
-  forallb2 (eq_term φ) l l' ->
+  Forall2 (eq_term φ) l l' ->
   eq_term φ (mkApps f l) (mkApps f' l').
 Proof.
-  induction l in f, f', l' |- *; destruct l'; try (simpl; congruence).
-  intros.
-  apply andb_and in H1 as [Ht Hl].
-  apply (IHl (tApp f a) (tApp f' t) l').
-  simpl; now rewrite H0 Ht.
-  apply Hl.
+  induction l in l', f, f' |- *; intro e; inversion_clear 1.
+  - assumption.
+  - cbn. eapply IHl. constructor; assumption. assumption.
+Qed.
+
+Lemma leq_term_App `{checker_flags} φ f f' :
+  leq_term φ f f' ->
+  isApp f = isApp f'.
+Proof.
+  inversion 1; reflexivity.
 Qed.
 
 Lemma leq_term_mkApps `{checker_flags} φ f l f' l' :
-  eq_term φ f f' ->
-  forallb2 (eq_term φ) l l' ->
+  leq_term φ f f' ->
+  Forall2 (leq_term φ) l l' ->
   leq_term φ (mkApps f l) (mkApps f' l').
 Proof.
-  induction l in f, f', l' |- *; destruct l'; try (simpl; congruence).
-  intros. simpl. now apply eq_term_leq_term.
-  intros H0 H1. apply andb_and in H1 as [Ht Hl].
-  apply (IHl (tApp f a) (tApp f' t) l').
-  simpl; now rewrite H0 Ht.
-  apply Hl.
+  induction l in l', f, f' |- *; intro e; inversion_clear 1.
+  - assumption.
+  - cbn. apply IHl. constructor; assumption. assumption.
 Qed.
 
 Lemma leq_term_antisym Σ t u : leq_term Σ t u -> leq_term Σ u t -> eq_term Σ t u.
 Proof.
 Admitted.
 
-Lemma leq_term_refl Σ t : leq_term Σ t t.
-Proof. apply eq_term_leq_term, eq_term_refl. Qed.
-
 Lemma eq_term_sym Σ t u : eq_term Σ t u -> eq_term Σ u t.
 Proof.
 Admitted.
 
 Inductive conv_alt `{checker_flags} (Σ : global_context) (Γ : context) : term -> term -> Type :=
-| conv_alt_refl t u : eq_term (snd Σ) t u = true -> Σ ;;; Γ |- t == u
+| conv_alt_refl t u : eq_term (snd Σ) t u -> Σ ;;; Γ |- t == u
 | conv_alt_red_l t u v : red1 (fst Σ) Γ t v -> Σ ;;; Γ |- v == u -> Σ ;;; Γ |- t == u
 | conv_alt_red_r t u v : Σ ;;; Γ |- t == v -> red1 (fst Σ) Γ u v -> Σ ;;; Γ |- t == u
 where " Σ ;;; Γ |- t == u " := (@conv_alt _ Σ Γ t u) : type_scope.

@@ -1,37 +1,5 @@
-Require Import Ascii String List utils.
+Require Import Ascii String ZArith List utils.
 Import ListNotations.
-
-(* Sorted lists without duplicates *)
-Class ComparableType A := { compare : A -> A -> comparison }.
-Arguments compare {A} {_} _ _.
-
-Fixpoint insert {A} `{ComparableType A} (x : A) (l : list A) :=
-  match l with
-  | [] => [x]
-  | y :: l' =>  match compare x y with
-               | Eq => l
-               | Lt => x :: l
-               | Gt => y :: (insert x l')
-               end
-  end.
-
-Definition list_union {A} `{ComparableType A} (l l' : list A) : list A
-  := fold_left (fun l' x => insert x l') l l'.
-
-Infix "<?" := Nat.ltb (at level 70) : nat_scope.
-
-Definition compare_bool b1 b2 :=
-  match b1, b2 with
-  | false, true => Lt
-  | true, false => Gt
-  | _, _ => Eq
-  end.
-
-Definition bool_lt b1 b2 := match compare_bool b1 b2 with Lt => true | _ => false end.
-
-
-
-
 
 Module Level.
   Inductive t : Set :=
@@ -117,7 +85,6 @@ Module LevelMap := FSets.FMapWeakList.Make LevelDecidableType.
 Definition universe_level := Level.t.
 
 
-
 Module Universe.
   Module Expr.
     Definition t : Set := Level.t * bool. (* level+1 if true *)
@@ -142,7 +109,7 @@ Module Universe.
        left expression is "smaller" than the right one in both cases. *)
     Definition super (x y : t) : super_result :=
       match Level.compare (fst x) (fst y) with
-      | Eq => SuperSame (bool_lt (snd x) (snd y))
+      | Eq => SuperSame (bool_lt' (snd x) (snd y))
       | cmp =>
 	  match x, y with
 	  | (l, false), (l', false) =>
@@ -174,7 +141,11 @@ Module Universe.
   End Expr.
 
   (** INVARIANTS: not empty, sorted ??, no duplicate *)
-  Definition t : Set := list Expr.t.
+  Definition t : Set := non_empty_list Expr.t.
+
+  Definition universe_coercion : t -> list Expr.t := @projT1 _ _.
+  Coercion universe_coercion : t >-> list.
+
 
   (* val compare : t -> t -> int *)
   (* (** Comparison function *) *)
@@ -185,15 +156,21 @@ Module Universe.
   (* val hash : t -> int *)
   (* (** Hash function *) *)
 
-  Definition make (l : Level.t) : t := [(l, false)].
+  Definition make (l : Level.t) : t
+    := make_non_empty_list (l, false) [].
   (** Create a universe representing the given level. *)
 
+  Definition make' (e : Expr.t) : t
+    := make_non_empty_list e [].
+
+  Definition make'' (e : Expr.t) (u : list Expr.t) : t
+    := make_non_empty_list e u.
   (* val pr : t -> Pp.std_ppcmds *)
   (* (** Pretty-printing *) *)
   (* val pr_with : (Level.t -> Pp.std_ppcmds) -> t -> Pp.std_ppcmds *)
 
   Definition is_level (u : t) : bool :=
-    match u with
+    match (u : list _) with
     | [(_, false)] => true
     | _ => false
     end.
@@ -204,7 +181,7 @@ Module Universe.
   (** Test if the universe is a lub of levels or contains +n's. *)
 
   Definition level (u : t) : option Level.t :=
-    match u with
+    match (u : list _) with
     | [(l, false)] => Some l
     | _ => None
     end.
@@ -217,18 +194,18 @@ Module Universe.
   (** Get the levels inside the universe, forgetting about increments *)
 
   Definition is_small (u : t) : bool :=
-    match u with
+    match (u : list _) with
     | [e] => Expr.is_small e
     | _ => false
     end.
 
-  Definition type0m := [Expr.prop].
-  Definition type0 := [Expr.set].
-  Definition type1 := [Expr.type1].
+  Definition type0m : t := make Level.prop.
+  Definition type0 : t := make Level.set.
+  Definition type1  :t := make' Expr.type1.
 
   Definition super (u : Level.t) : t :=
     if Level.is_small u then type1
-    else [(u, true)].
+    else make' (u, true).
   (** The universe strictly above *)
 
   Fixpoint insert {A} `{ComparableType A} (x : A) (l : list A) :=
@@ -241,7 +218,7 @@ Module Universe.
                  end
     end.
 
-  Fixpoint merge_univs (fuel : nat) (l1 l2 : t) : t :=
+  Fixpoint merge_univs (fuel : nat) (l1 l2 : list Expr.t) : list Expr.t :=
     match fuel with
     | O => l1
     | S fuel => match l1, l2 with
@@ -258,8 +235,10 @@ Module Universe.
                end
     end.
 
-  Definition sup (u1 u2 : t) : t :=
-    merge_univs (length u1 + length u2 + 1) u1 u2.
+  Program Definition sup (u1 u2 : t) : t :=
+    (merge_univs (length u1 + length u2 + 1) u1 u2; _).
+  Next Obligation.
+  Admitted. (* TODO *)
   (** The l.u.b. of 2 universes *)
 
   Definition existsb : (Expr.t -> bool) -> t -> bool := @existsb _.
@@ -270,7 +249,7 @@ Module Universe.
   Definition sort_of_product (domsort rangsort:t) :=
   match (domsort, rangsort) with
   (* Product rule (s,Prop,Prop) *)
-    | (_,[(Level.lProp,false)])  => rangsort
+    | (_,([(Level.lProp,false)]; _))  => rangsort
     (* (* Product rule (Type_i,Type_i,Type_i) *) *)
     | (u1,u2) => Universe.sup u1 u2
   end.
@@ -279,6 +258,8 @@ Module Universe.
 End Universe.
 
 Definition universe := Universe.t.
+Definition universe_coercion : universe -> list Universe.Expr.t := @projT1 _ _.
+Coercion universe_coercion : universe >-> list.
 
 Module ConstraintType.
   Inductive t : Set := Lt | Le | Eq.
@@ -459,3 +440,74 @@ Inductive universe_context : Type :=
 | Polymorphic_ctx (cst : UContext.t)
 | Cumulative_ctx (ctx : CumulativityInfo.t).
 
+
+(** * Valuations *)
+
+Import Level ConstraintType.
+
+Record valuation := 
+  { valuation_mono : string -> positive ;
+    valuation_poly : nat -> nat }.
+
+Fixpoint val0 (v : valuation) (l : Level.t) : Z :=
+  match l with
+  | lProp => -1
+  | lSet => 0
+  | Level s => Zpos (v.(valuation_mono) s)
+  | Var x => Z.of_nat (v.(valuation_poly) x)
+  end.
+
+Definition val1 v (e : Universe.Expr.t) : Z :=
+  let n := val0 v (fst e) in
+  if snd e then n + 1 else n.
+
+Program Definition val (v : valuation) (u : universe) : Z :=
+  match u : list _ with
+  | [] => _
+  | e :: u => List.fold_left (fun n e => Z.max (val1 v e) n) u (val1 v e)
+  end.
+Next Obligation.
+  apply False_rect.
+  apply u.2; assumption.
+Defined.
+
+Inductive satisfies0 (v : valuation) : univ_constraint -> Prop :=
+| satisfies0_Lt l l' : (val0 v l < val0 v l')%Z -> satisfies0 v (l, Lt, l')
+| satisfies0_Le l l' : (val0 v l <= val0 v l')%Z -> satisfies0 v (l, Le, l')
+| satisfies0_Eq l l' : val0 v l = val0 v l' -> satisfies0 v (l, Eq, l').
+
+Definition satisfies v : constraints -> Prop := 
+  ConstraintSet.For_all (satisfies0 v).
+
+Definition consistent ctrs := exists v, satisfies v ctrs.
+
+Definition eq_universe (φ : constraints) u u' :=
+  forall v : valuation, satisfies v φ -> val v u = val v u'.
+
+Definition leq_universe (φ : constraints) u u' :=
+  forall v : valuation, satisfies v φ -> (val v u <= val v u')%Z.
+
+Definition lt_universe (φ : constraints) u u' :=
+  forall v : valuation, satisfies v φ -> (val v u < val v u')%Z.
+
+
+Require Import config.
+
+Definition eq_universe' `{checker_flags} φ u u'
+  := if check_univs then eq_universe φ u u' else True.
+
+Definition leq_universe' `{checker_flags} φ u u'
+  := if check_univs then leq_universe φ u u' else True.
+
+
+Program Definition try_suc (u : universe) : universe :=   (* FIXME suc s *)
+  (map (fun '(l, b) =>  (l, true)) u; _).
+Next Obligation.
+  intro. apply u.2. destruct u as [[] ?].
+  reflexivity. discriminate.
+Qed.
+
+Conjecture leq_universe_product_l : forall `{checker_flags} φ s1 s2,
+    leq_universe' φ s1 (Universe.sort_of_product s1 s2).
+Conjecture leq_universe_product_r : forall `{checker_flags} φ s1 s2,
+    leq_universe' φ s2 (Universe.sort_of_product s1 s2).

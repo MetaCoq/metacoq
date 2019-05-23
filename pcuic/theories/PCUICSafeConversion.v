@@ -6,7 +6,7 @@ From Template Require Import config Universes monad_utils utils BasicAst
      AstUtils UnivSubst.
 From PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICReflect
      PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICSafeReduce PCUICCumulativity
-     PCUICSR PCUICPosition PCUICEquality.
+     PCUICSR PCUICPosition PCUICEquality PCUICNameless.
 From Equations Require Import Equations.
 
 Require Import Equations.Prop.DepElim.
@@ -516,7 +516,97 @@ Section Conversion.
     wth : welltyped Σ [] (zipx ctx tm' stk2)
   }.
 
-  Definition dumbR (u v : pack) := False.
+  Definition nlstate (s : state) :=
+    match s with
+    | Reduction t => Reduction (nl t)
+    | Term t => Term (nl t)
+    | Args => Args
+    end.
+
+  Fixpoint nlstack (π : stack) : stack :=
+    match π with
+    | ε => ε
+
+    | App u ρ =>
+      App (nl u) (nlstack ρ)
+
+    | Fix f n args ρ =>
+      Fix (map (map_def_anon nl nl) f) n (map nl args) (nlstack ρ)
+
+    | Case indn p brs ρ =>
+      Case indn (nl p) (map (on_snd nl) brs) (nlstack ρ)
+
+    | Prod_l na B ρ =>
+      Prod_l nAnon (nl B) (nlstack ρ)
+
+    | Prod_r na A ρ =>
+      Prod_r nAnon (nl A) (nlstack ρ)
+
+    | Lambda_ty na b ρ =>
+      Lambda_ty nAnon (nl b) (nlstack ρ)
+
+    | Lambda_tm na A ρ =>
+      Lambda_tm nAnon (nl A) (nlstack ρ)
+
+    | coApp t ρ =>
+      coApp (nl t) (nlstack ρ)
+    end.
+
+  Lemma nl_it_mkLambda_or_LetIn :
+    forall Γ t,
+      nl (it_mkLambda_or_LetIn Γ t) =
+      it_mkLambda_or_LetIn (nlctx Γ) (nl t).
+  Proof.
+    intros Γ t.
+    induction Γ as [| [na [b|] B] Γ ih] in t |- *.
+    - reflexivity.
+    - simpl. cbn. rewrite ih. reflexivity.
+    - simpl. cbn. rewrite ih. reflexivity.
+  Qed.
+
+  Lemma nl_mkApps :
+    forall t l,
+      nl (mkApps t l) = mkApps (nl t) (map nl l).
+  Proof.
+    intros t l.
+    induction l in t |- *.
+    - reflexivity.
+    - simpl. rewrite IHl. reflexivity.
+  Qed.
+
+  Lemma nl_zipc :
+    forall t π,
+      nl (zipc t π) = zipc (nl t) (nlstack π).
+  Proof.
+    intros t π.
+    induction π in t |- *.
+    all: try solve [ simpl ; rewrite ?IHπ ; reflexivity ].
+    simpl. rewrite IHπ. cbn. f_equal.
+    rewrite nl_mkApps. reflexivity.
+  Qed.
+
+  Lemma nl_zipx :
+    forall Γ t π,
+      nl (zipx Γ t π) = zipx (nlctx Γ) (nl t) (nlstack π).
+  Proof.
+    intros Γ t π.
+    unfold zipx. rewrite nl_it_mkLambda_or_LetIn. f_equal.
+    apply nl_zipc.
+  Qed.
+
+  (* Lemma nl_wth : *)
+  (*   forall Γ s t π2, *)
+  (*     let t' := *)
+  (*       match s with *)
+  (*       | Reduction t' | Term t' => t' *)
+  (*       | Args => t *)
+  (*       end *)
+  (*     in *)
+  (*     welltyped Σ [] (zipx Γ t' π2) -> *)
+  (*     welltyped Σ [] (zipx (nlctx Γ) (nl t') (nlstack π2)). *)
+
+  (* Definition nlmkpack s Γ t π1 π2 h := *)
+  (*   mkpack (nlstate s) (nlctx Γ) (nl t) (nlstack π1) (nlstack π2) (nlw w). *)
 
   Definition wterm Γ := { t : term | welltyped Σ Γ t }.
 

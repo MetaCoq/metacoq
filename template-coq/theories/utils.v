@@ -1422,7 +1422,83 @@ Proof.
   induction 1; congruence.
 Qed.
 
-<<<<<<< HEAD
+Lemma Forall2_length {A B} {P : A -> B -> Prop} l l' : Forall2 P l l' -> #|l| = #|l'|.
+Proof. induction 1; simpl; auto. Qed.
+
+
+Lemma All2_app_inv : forall (A B : Type) (R : A -> B -> Type),
+    forall l l1 l2, All2 R (l1 ++ l2) l -> { '(l1',l2') : _ & (l = l1' ++ l2')%list * (All2 R l1 l1') * (All2 R l2 l2')}%type.
+Proof.
+  intros. revert l2 l X. induction l1; intros; cbn in *.
+  - exists ([], l). eauto.
+  - inversion X. subst.
+    eapply IHl1 in X1 as ( [] & ? & ?). destruct p.  subst.
+    eexists (y :: l, l0). repeat split; eauto.
+Qed.
+
+Lemma All2_ind_rev : forall (A B : Type) (R : A -> B -> Type) (P : forall (l : list A) (l0 : list B), Prop),
+    P [] [] ->
+    (forall (x : A) (y : B) (l : list A) (l' : list B) (r : R x y) (a : All2 R l l'),
+        P l l' -> P (l ++ [x])%list (l' ++ [y]))%list ->
+    forall (l : list A) (l0 : list B) (a : All2 R l l0), P l l0.
+Proof.
+  intros. revert l0 a. induction l using rev_ind; cbn; intros.
+  - inv a. eauto.
+  - eapply All2_app_inv in a as ([] & [[]]). subst.
+    inv a0. inv X0. eauto.
+Qed.
+
+Ltac invs H := inversion H; subst; clear H.
+
+Lemma last_inv A (l1 l2 : list A) x y :
+  (l1 ++ [x] = l2 ++ [y] -> l1 = l2 /\ x = y)%list.
+Proof.
+  revert l2. induction l1; cbn; intros.
+  - destruct l2; cbn in H; invs H. eauto. destruct l2; invs H2.
+  - destruct l2; invs H. destruct l1; invs H2.
+    eapply IHl1 in H2 as []. split; congruence.
+Qed.
+
+Lemma All2_app : forall (A B : Type) (R : A -> B -> Type),
+    forall l1 l2 l1' l2', All2 R l1 l1' -> All2 R l2 l2' -> All2 R (l1 ++ l2) (l1' ++ l2').
+Proof.
+  induction 1; cbn; eauto.
+Qed.
+
+Lemma Forall2_skipn A B (P : A -> B -> Prop) l l' n:
+  Forall2 P l l' -> Forall2 P (skipn n l) (skipn n l').
+Proof.
+  revert l l'; induction n; intros.
+  - unfold skipn. eauto.
+  - cbv [skipn]. fold (@skipn A n). fold (@skipn B n).
+    inversion H; subst. econstructor.
+    eauto.
+Qed.
+
+Lemma All2_Forall A B (P : A -> B -> Prop) l l' :
+  All2 P l l' -> Forall2 P l l'.
+Proof.
+  induction 1; eauto.
+Qed.
+
+Lemma Forall2_nth_error_Some {A B} {P : A -> B -> Prop} {l l'} n t :
+  Forall2 P l l' ->
+  nth_error l n = Some t ->
+  exists t' : B, (nth_error l' n = Some t') /\ P t t'.
+Proof.
+  intros Hall. revert n.
+  induction Hall; destruct n; simpl; try congruence. intros [= ->]. exists y. intuition auto.
+  eauto.
+Qed.
+
+Lemma Forall2_impl {A B} {P Q : A -> B -> Prop} {l l'} :
+    Forall2 P l l' ->
+    (forall x y, P x y -> Q x y) ->
+    Forall2 Q l l'.
+Proof.
+  induction 1; constructor; auto.
+Qed.
+
 Arguments skipn : simpl nomatch.
 
 Lemma skipn_all2 :
@@ -1513,13 +1589,6 @@ Proof.
     eapply app_Forall ; try assumption.
     repeat constructor. assumption.
 Qed.
-Lemma Forall2_impl {A B} {P Q : A -> B -> Prop} {l l'} :
-    Forall2 P l l' ->
-    (forall x y, P x y -> Q x y) ->
-    Forall2 Q l l'.
-Proof.
-  induction 1; constructor; auto.
-Qed.
 
 Lemma Forall2_impl' {A B} {P Q : A -> B -> Prop} {l l'} :
     Forall2 P l l' ->
@@ -1568,13 +1637,6 @@ Proof.
   induction 1; constructor; auto.
 Qed.
 
-
-Lemma Forall2_length {A B R l l'} (H : @Forall2 A B R l l')
-  : #|l| = #|l'|.
-Proof.
-  induction H. reflexivity.
-  cbn. now apply f_equal.
-Defined.
 
 Lemma Forall2_and {A B} (R R' : A -> B -> Prop) l l'
   : Forall2 R l l' -> Forall2 R' l l' -> Forall2 (fun x y => R x y /\ R' x y) l l'.
@@ -1645,6 +1707,7 @@ Lemma not_empty_map {A B} (f : A -> B) l : l <> [] -> map f l <> [].
 Proof.
   intro H; destruct l; intro e; now apply H.
 Qed.
+<<<<<<< HEAD
 =======
 Lemma Forall2_length {A B} {P : A -> B -> Prop} l l' : Forall2 P l l' -> #|l| = #|l'|.
 Proof. induction 1; simpl; auto. Qed.
@@ -1723,3 +1786,5 @@ Proof.
   induction 1; constructor; auto.
 Qed.
 >>>>>>> Refactored into different files
+=======
+>>>>>>> finish merge

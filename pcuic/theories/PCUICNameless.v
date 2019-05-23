@@ -224,11 +224,12 @@ Local Ltac ih2 :=
 
 (* TODO Instead prove eq_term t (nl t) + symmetry and transitivity *)
 Lemma eq_term_upto_univ_nl :
-  forall `{checker_flags} u v,
-    eq_term_upto_univ eq u v ->
-    eq_term_upto_univ eq (nl u) (nl v).
+  forall `{checker_flags} R u v,
+    Reflexive R ->
+    eq_term_upto_univ R u v ->
+    eq_term_upto_univ R (nl u) (nl v).
 Proof.
-  intros flags u v h.
+  intros flags R u v hR h.
   revert v h.
   induction u using term_forall_list_ind ; intros v h.
   all: dependent destruction h.
@@ -277,7 +278,9 @@ Proof.
   eapply nameless_eq_term_spec.
   - eapply nl_spec.
   - eapply nl_spec.
-  - eapply eq_term_upto_univ_nl. assumption.
+  - eapply eq_term_upto_univ_nl.
+    + intro. reflexivity.
+    + assumption.
 Qed.
 
 Local Ltac ih3 :=
@@ -407,9 +410,11 @@ Proof.
       all: apply H1.
 Qed.
 
-(* Corollary eq_term_tm_nl : *)
-(*   forall `{checker_flags} G u, *)
-(*     eq_term G u (nl u). *)
-(* Proof. *)
-(*   intros flags G u. *)
-(*   unfold eq_term. *)
+Corollary eq_term_tm_nl :
+  forall `{checker_flags} G u,
+    eq_term G u (nl u).
+Proof.
+  intros flags G u.
+  eapply eq_term_upto_univ_tm_nl.
+  intro. eapply eq_universe'_refl.
+Qed.

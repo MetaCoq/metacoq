@@ -17,11 +17,11 @@ Module P := PCUICWcbvEval.
 
 Ltac inv H := inversion H; subst; clear H.
 
-Lemma is_constructor_extract `{Fuel} Σ n L L' :
-  PCUICTyping.is_constructor n L -> Forall2 (fun (a : PCUICAst.term) (e : E.term) => extract Σ [] a = Checked e) L L' -> is_constructor n L'.
+Lemma is_constructor_extract Σ n L :
+  PCUICTyping.is_constructor n L ->
+  is_constructor n (map (extract Σ []) L).
 Proof.
 Admitted.
-
 
 (* Lemma mkApps_inj a b l1 l2  : *)
 (*   mkApps a l1 = mkApps b l2 -> (~ exists a1 a2, a = tApp a1 a2) -> (~ exists b1 b2, b = tApp b1 b2) -> *)
@@ -56,9 +56,9 @@ Admitted.
 Lemma prop_case_is_singleton `{Fuel} Σ ind npar p T i u args brs mdecl idecl :
   PCUICTyping.declared_inductive (fst Σ) mdecl ind idecl ->
   PCUICAst.ind_npars mdecl = npar ->
-  is_type_or_proof Σ [] (PCUICAst.tConstruct ind i u) = Checked true ->
+  is_type_or_proof Σ [] (PCUICAst.tConstruct ind i u) = true ->
   Σ;;; [] |- PCUICAst.tCase (ind, npar) p (PCUICAst.mkApps (PCUICAst.tConstruct ind i u) args) brs : T -> #|brs| = 1 /\ i = 0 /\
-                                                                                                              Forall (fun a => is_type_or_proof Σ [] a = Checked true) (skipn (npar) args).
+                                                                                                              Forall (fun a => is_type_or_proof Σ [] a = true) (skipn (npar) args).
 Proof.
 Admitted.
 
@@ -72,16 +72,16 @@ Proof.
   intros * wfΣ Hty Hred % wcbeval_red. eapply subject_reduction; eauto.
 Qed.
 
-Lemma cumul_is_arity:
-  forall (H : Fuel) (Σ : PCUICAst.global_context) (T' T'' : PCUICAst.term),
-    Σ;;; [] |- T'' <= T' -> is_arity Σ [] H T'' = is_arity Σ [] H T'.
-Proof.
-  intros H Σ T' T''.
-Admitted.
+(* Lemma cumul_is_arity: *)
+(*   forall (H : Fuel) (Σ : PCUICAst.global_context) (T' T'' : PCUICAst.term), *)
+(*     Σ;;; [] |- T'' <= T' -> is_arity Σ [] H T'' = is_arity Σ [] H T'. *)
+(* Proof. *)
+(*   intros H Σ T' T''. *)
+(* Admitted. *)
 
 Lemma eval_is_type `{Fuel} (Σ : PCUICAst.global_context) (t v : PCUICAst.term) (* T : *)
   (* wf Σ -> Σ ;;; [] |- t : T ->  *) :
-  PCUICWcbvEval.eval Σ [] t v -> Extract.is_type_or_proof Σ [] t = Checked true -> Extract.is_type_or_proof Σ [] v = Checked true.
+  PCUICWcbvEval.eval Σ [] t v -> Extract.is_type_or_proof Σ [] t = Extract.is_type_or_proof Σ [] v.
 Proof. 
   (* intros. *)
   (* unfold is_type_or_proof in *. *)
@@ -98,20 +98,20 @@ Proof.
   (* - edestruct type_of_complete; eauto. congruence. *)
 Admitted.
 
-Lemma eval_is_type_backwards `{Fuel} (Σ : PCUICAst.global_context) (t v : PCUICAst.term) (* T : *)
-  (* wf Σ -> Σ ;;; [] |- t : T -> *) :
-  PCUICWcbvEval.eval Σ [] t v -> Extract.is_type_or_proof Σ [] v = Checked true -> Extract.is_type_or_proof Σ [] t = Checked true.
-Proof.
-  intros.
-  (* destruct (type_of_sound _ X0) as (T' & [] & ?). *)
-  (* eapply subject_reduction_eval in t0; eauto. *)
-  (* destruct (type_of_sound _ t0) as (T'' & [] & ?). *)
-  (* unfold is_type_or_proof in *. rewrite e, e0 in *. *)
-  (* simpl in *. *)
+(* Lemma eval_is_type_backwards `{Fuel} (Σ : PCUICAst.global_context) (t v : PCUICAst.term) (* T : *) *)
+(*   (* wf Σ -> Σ ;;; [] |- t : T -> *) : *)
+(*   PCUICWcbvEval.eval Σ [] t v -> Extract.is_type_or_proof Σ [] v = Checked true -> Extract.is_type_or_proof Σ [] t = Checked true. *)
+(* Proof. *)
+(*   intros. *)
+(*   (* destruct (type_of_sound _ X0) as (T' & [] & ?). *) *)
+(*   (* eapply subject_reduction_eval in t0; eauto. *) *)
+(*   (* destruct (type_of_sound _ t0) as (T'' & [] & ?). *) *)
+(*   (* unfold is_type_or_proof in *. rewrite e, e0 in *. *) *)
+(*   (* simpl in *. *) *)
 
-  (* destruct (is_arity _ _ _ T') eqn:E1. reflexivity. *)
+(*   (* destruct (is_arity _ _ _ T') eqn:E1. reflexivity. *) *)
     
-Admitted.
+(* Admitted. *)
   
 (** ** Concerning fixpoints *)
 
@@ -183,93 +183,88 @@ Admitted.
 
 Lemma is_type_ind:
   forall (Σ : PCUICAst.global_context) (i : inductive) (u : universe_instance) (T : PCUICAst.term) (fuel : Fuel),
-    Σ;;; [] |- tInd i u : T -> is_type_or_proof Σ [] (tInd i u) = Checked true.
+    Σ;;; [] |- tInd i u : T -> is_type_or_proof Σ [] (tInd i u).
 Proof.
   
 Admitted.
 
 Lemma is_type_App `{Fuel} Σ a l T :
   Σ ;;; [] |- PCUICAst.mkApps a l : T -> 
-  is_type_or_proof Σ [] a = Checked true ->
-  is_type_or_proof Σ [] (PCUICAst.mkApps a l) = Checked true.
+  is_type_or_proof Σ [] a = is_type_or_proof Σ [] (PCUICAst.mkApps a l).
 Proof.
 Admitted.
   
 Lemma is_type_or_proof_lambda `{Fuel} Σ Γ na t b :
-  Extract.is_type_or_proof Σ Γ (PCUICAst.tLambda na t b) = Checked true ->
-  Extract.is_type_or_proof Σ (Γ ,, PCUICAst.vass na t) b = Checked true.
+  Extract.is_type_or_proof Σ Γ (PCUICAst.tLambda na t b) =  
+  Extract.is_type_or_proof Σ (Γ ,, PCUICAst.vass na t) b. 
 Admitted.
 
-Lemma is_type_or_proof_mkApps `{Fuel} Σ Γ a l :
-  Extract.is_type_or_proof Σ Γ a = Checked true <->
-  Extract.is_type_or_proof Σ Γ (PCUICAst.mkApps a l) = Checked true.
-Admitted.
+(* Lemma is_type_or_proof_mkApps `{Fuel} Σ Γ a l : *)
+(*   Extract.is_type_or_proof Σ Γ a = Checked true <-> *)
+(*   Extract.is_type_or_proof Σ Γ (PCUICAst.mkApps a l) = Checked true. *)
+(* Admitted. *)
 
 Lemma is_type_subst1 `{Fuel} (Σ : PCUICAst.global_context) (na : name) (t b a' : PCUICAst.term) :
-  Extract.is_type_or_proof Σ ([],, PCUICAst.vass na t) b = Checked true ->
-  Extract.is_type_or_proof Σ [] (PCUICLiftSubst.subst1 a' 0 b) = Checked true.
+  Extract.is_type_or_proof Σ ([],, PCUICAst.vass na t) b = 
+  Extract.is_type_or_proof Σ [] (PCUICLiftSubst.subst1 a' 0 b).
 Proof.
 Admitted.
 
 (** ** extract and mkApps *)
 
-Lemma extract_Apps `{Fuel} Σ Γ a args x :
-  extract Σ Γ (PCUICAst.mkApps a args) = Checked x ->
-  {e : _ & (extract Σ Γ a = Checked e) *
-           { l : list E.term & (All2 (fun a e => extract Σ Γ a = Checked e) args l) *
-                               (* (x = mkApps e l) *)
-                               match e with tBox => x = tBox | _ => (x = mkApps e l) end }}%type.
+Lemma extract_Apps `{Fuel} Σ Γ a args :
+  extract Σ Γ (PCUICAst.mkApps a args) = mkApps (extract Σ Γ a) (map (extract Σ Γ) args).
 Proof.
-  revert a x. induction args using rev_ind; intros.
-  - cbn in H0. repeat eexists; eauto. destruct x; eauto.
-  - rewrite mkApps_snoc in H0. assert (H17 := H0). simpl in H0.
-    destruct ?. destruct a0. all:try congruence.
-    + inv H0. exists tBox. split. eapply is_type_extract. admit. 
-      eapply is_type_or_proof_mkApps with (l := [x]) in E. 
-      eapply is_type_extract in E. eapply IHargs in E as (? & ?  & ? & ? &?).
-      Lemma mkApps_tbox:
-        forall x0 (x1 : list E.term), E.tBox = mkApps x0 x1 -> x0 = tBox.
-      Proof.
-        intros.
-        induction x1 using rev_ind; rewrite ?emkApps_snoc in *. cbn in H. inv H. eauto.
-        inv H.
-      Qed.
-      destruct x0; try eapply mkApps_tbox in y; inv y.
-      destruct (extract Σ Γ x) eqn:EE.
-      * repeat eexists; eauto. eapply All2_app. eauto. 
-        repeat econstructor. eauto.
-      * admit.
-    + destruct ?. destruct ?. all:try congruence. inv H0.
-      eapply IHargs in E0 as (? & ? & ? & ? & ?).
-      exists x0. split. eauto. exists (x1 ++ [a1])%list.
-      split. eapply All2_app. eauto. repeat econstructor. eauto.
-      rewrite emkApps_snoc. destruct x0; subst; eauto.
-      admit.      
+  (* revert a x. induction args using rev_ind; intros. *)
+  (* - cbn in H0. repeat eexists; eauto. destruct x; eauto. *)
+  (* - rewrite mkApps_snoc in H0. assert (H17 := H0). simpl in H0. *)
+  (*   destruct ?. destruct a0. all:try congruence. *)
+  (*   + inv H0. exists tBox. split. eapply is_type_extract. admit.  *)
+  (*     eapply is_type_or_proof_mkApps with (l := [x]) in E.  *)
+  (*     eapply is_type_extract in E. eapply IHargs in E as (? & ?  & ? & ? &?). *)
+  (*     Lemma mkApps_tbox: *)
+  (*       forall x0 (x1 : list E.term), E.tBox = mkApps x0 x1 -> x0 = tBox. *)
+  (*     Proof. *)
+  (*       intros. *)
+  (*       induction x1 using rev_ind; rewrite ?emkApps_snoc in *. cbn in H. inv H. eauto. *)
+  (*       inv H. *)
+  (*     Qed. *)
+  (*     destruct x0; try eapply mkApps_tbox in y; inv y. *)
+  (*     destruct (extract Σ Γ x) eqn:EE. *)
+  (*     * repeat eexists; eauto. eapply All2_app. eauto.  *)
+  (*       repeat econstructor. eauto. *)
+  (*     * admit. *)
+  (*   + destruct ?. destruct ?. all:try congruence. inv H0. *)
+  (*     eapply IHargs in E0 as (? & ? & ? & ? & ?). *)
+  (*     exists x0. split. eauto. exists (x1 ++ [a1])%list. *)
+  (*     split. eapply All2_app. eauto. repeat econstructor. eauto. *)
+  (*     rewrite emkApps_snoc. destruct x0; subst; eauto. *)
+  (*     admit.       *)
 Admitted.
 
-Lemma extract_Apps2 `{Fuel} Σ Γ a args e l :
-  extract Σ Γ a = Checked e -> Forall2 (fun a e => extract Σ Γ a = Checked e) args l ->                                                                                  extract Σ Γ (PCUICAst.mkApps a args) = Checked (mkApps e l).
-Proof.
-Admitted.
+(* Lemma extract_Apps2 `{Fuel} Σ Γ a args e l : *)
+(*    = Checked e -> Forall2 (fun a e => extract Σ Γ a = Checked e) args l ->                                                                                  extract Σ Γ (PCUICAst.mkApps a args) = Checked (mkApps e l). *)
+(* Proof. *)
+(* Admitted. *)
 
-Lemma extract_tInd `{Fuel} Σ i u t :
-  extract Σ [] (tInd i u) = Checked t -> t = tBox.
+Lemma extract_tInd Σ i u :
+  extract Σ [] (tInd i u) = tBox.
 Proof.
-  intros ?. simpl in *. destruct is_type_or_proof eqn:E1; try destruct a; now inv H0.
+  cbn. destruct is_type_or_proof eqn:E1; try destruct a; reflexivity. 
 Qed.
 
 (** ** Concerning extraction of constants *)
 
-Fixpoint extract_global_decls' `{F:Fuel} univs Σ1 Σ : typing_result E.global_declarations :=
+Fixpoint extract_global_decls' `{F:Fuel} univs Σ1 Σ : E.global_declarations :=
   match Σ, Σ1 with
-  | [], [] => ret []
+  | [], [] => []
   | PCUICAst.ConstantDecl kn cb :: Σ0, _ :: Σ1 =>
-      cb' <- extract_constant_body (Σ1, univs) cb;;
-      Σ' <- extract_global_decls' univs Σ1 Σ0;; ret (E.ConstantDecl kn cb' :: Σ')
+      let cb' := extract_constant_body (Σ1, univs) cb in
+      let Σ' := extract_global_decls' univs Σ1 Σ0 in (E.ConstantDecl kn cb' :: Σ')
   | PCUICAst.InductiveDecl kn mib :: Σ0, _ :: Σ1 =>
-      mib' <- extract_mutual_inductive_body (Σ1, univs) mib;;
-           Σ' <- extract_global_decls' univs Σ1 Σ0;; ret (E.InductiveDecl kn mib' :: Σ')
-  | _, _ => ret []
+    let mib' := extract_mutual_inductive_body (Σ1, univs) mib in
+    let Σ' := extract_global_decls' univs Σ1 Σ0 in (E.InductiveDecl kn mib' :: Σ')
+  | _, _ => []
    end.
 
 Lemma extract_global_decls_eq `{Fuel} u Σ :
@@ -277,9 +272,7 @@ Lemma extract_global_decls_eq `{Fuel} u Σ :
 Proof.
   induction Σ.
   - reflexivity.
-  - simpl. destruct a.
-    + destruct ?; try congruence. now rewrite IHΣ.
-    + destruct ?; try congruence. now rewrite IHΣ.
+  - simpl. destruct a; congruence.
 Qed.
 
 Require Import PCUIC.PCUICWeakeningEnv.
@@ -288,30 +281,29 @@ Lemma extract_constant:
     (u : universe_instance) (fuel : Fuel) (Σ' : list E.global_decl),
     wf Σ ->
     PCUICTyping.declared_constant Σ c decl ->
-    extract_global Σ = Checked Σ' ->
     PCUICAst.cst_body decl = Some body ->
-    exists decl' : constant_body, exists ebody,
-        declared_constant Σ' c decl' /\
-        extract Σ [] (PCUICUnivSubst.subst_instance_constr u body) = Checked ebody /\ cst_body decl' = Some ebody.
+    exists decl' : constant_body, 
+        declared_constant (extract_global Σ) c decl' /\
+        cst_body decl' = Some (extract Σ [] (PCUICUnivSubst.subst_instance_constr u body)).
 Proof.
   intros.
 
-  pose (P := fun  Σ (_ : PCUICAst.context) trm (tp : option PCUICAst.term) => match tp with Some tp => { '(t',tp') : _ & (extract Σ [] trm = Checked t') * (extract Σ [] tp = Checked tp')}%type | None => False end).
-  assert (H' := H).
-  eapply weaken_lookup_on_global_env with (P0 := P) in H; subst P; eauto.
-  - unfold on_global_decl, on_constant_decl in H. rewrite H1 in H.
-    destruct H as [[] []].
-    exists (Build_constant_body t0 (Some t)), t. simpl. repeat split.
-    unfold declared_constant. destruct Σ as [decls univ].
-    unfold PCUICTyping.declared_constant in *. simpl in H'.
-    admit. admit.
-  - unfold weaken_env_prop. intros. destruct T; try tauto. admit.
-  - unfold on_global_env. destruct Σ. cbn. revert H0 X. clear.
-    (* revert t Σ'; induction g; simpl; intros. *)
-    (* + inv H0. econstructor. admit. *)
-    (* + destruct ? in H0; inv H0. econstructor. eapply IHg; auto. admit. admit. admit. *)
-    (*   destruct a; simpl. *)
-    (*   * unfold on_constant_decl. destruct ?. *)
+  (* pose (P := fun  Σ (_ : PCUICAst.context) trm (tp : option PCUICAst.term) => match tp with Some tp => { '(t',tp') : _ & (extract Σ [] trm = Checked t') * (extract Σ [] tp = Checked tp')}%type | None => False end). *)
+  (* assert (H' := H). *)
+  (* eapply weaken_lookup_on_global_env with (P0 := P) in H; subst P; eauto. *)
+  (* - unfold on_global_decl, on_constant_decl in H. rewrite H1 in H. *)
+  (*   destruct H as [[] []]. *)
+  (*   exists (Build_constant_body t0 (Some t)), t. simpl. repeat split. *)
+  (*   unfold declared_constant. destruct Σ as [decls univ]. *)
+  (*   unfold PCUICTyping.declared_constant in *. simpl in H'. *)
+  (*   admit. admit. *)
+  (* - unfold weaken_env_prop. intros. destruct T; try tauto. admit. *)
+  (* - unfold on_global_env. destruct Σ. cbn. revert H0 X. clear. *)
+  (*   (* revert t Σ'; induction g; simpl; intros. *) *)
+  (*   (* + inv H0. econstructor. admit. *) *)
+  (*   (* + destruct ? in H0; inv H0. econstructor. eapply IHg; auto. admit. admit. admit. *) *)
+  (*   (*   destruct a; simpl. *) *)
+  (*   (*   * unfold on_constant_decl. destruct ?. *) *)
       
 Admitted.
 
@@ -337,10 +329,10 @@ env_prop
      forall Γ' : PCUICAst.context, red_context Σ Γ Γ' -> Σ;;; Γ' |- t : T).
 Admitted.
 
-Lemma extract_context_conversion `{Fuel} :
+Lemma extract_context_conversion :
 env_prop
   (fun (Σ : PCUICAst.global_context) (Γ : PCUICAst.context) (t T : PCUICAst.term) =>
-     forall Γ' : PCUICAst.context, red_context Σ Γ Γ' -> forall a ea, extract Σ Γ a = Checked ea -> extract Σ Γ' a = Checked ea).
+     forall Γ' : PCUICAst.context, red_context Σ Γ Γ' -> forall a, extract Σ Γ a = extract Σ Γ' a).
 Admitted.
 
 (** ** Corrcectness of erasure *)
@@ -348,7 +340,7 @@ Admitted.
 Theorem erasure_correct : erasure_correctness.
 Proof.
   intros Σ t T pre v H. revert T pre.
-  induction H using PCUICWcbvEval.eval_evals_ind; intros T pre fuel Σ' t' Ht' HΣ'.
+  induction H using PCUICWcbvEval.eval_evals_ind; intros T pre.
   - simpl in Ht'.
     destruct Extract.is_type_or_proof eqn:Heq. inv pre.
     destruct a0.

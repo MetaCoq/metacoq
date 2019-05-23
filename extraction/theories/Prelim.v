@@ -132,9 +132,9 @@ Qed.
 
 (* TODO: move *)
 
-Lemma is_type_extract `{Fuel} (Σ : PCUICAst.global_context) Γ (t : PCUICAst.term) (* T : *)
+Lemma is_type_extract (Σ : PCUICAst.global_context) Γ (t : PCUICAst.term) (* T : *)
   (* Σ ;;; Γ |- t : T -> *) :
-  Extract.is_type_or_proof Σ Γ t = Checked true <-> extract Σ Γ t = Checked E.tBox.
+  Extract.is_type_or_proof Σ Γ t = true <-> extract Σ Γ t = E.tBox.
 Proof.
   split.
   - intros H1.
@@ -148,13 +148,13 @@ Proof.
   (*   cbn in E. destruct H. cbn in E. inv E. *)
 Admitted.
 
-Theorem type_of_sound `{Fuel} Σ {Γ t A B} :
-      Σ ;;; Γ |- t : A ->
-      type_of Σ Γ t = Checked B ->
-      (Σ ;;; Γ |- t : B) * (Σ ;;; Γ |- B <= A).
-Admitted.
+(* Theorem type_of_sound `{Fuel} Σ {Γ t A B} : *)
+(*       Σ ;;; Γ |- t : A -> *)
+(*       type_of Σ Γ t = Checked B -> *)
+(*       (Σ ;;; Γ |- t : B) * (Σ ;;; Γ |- B <= A). *)
+(* Admitted. *)
 
-Theorem type_of_complete `{Fuel} Σ {Γ t A} :
-      Σ ;;; Γ |- t : A ->
-                    {B & type_of Σ Γ t = Checked B}.
-Admitted.
+(* Theorem type_of_complete `{Fuel} Σ {Γ t A} : *)
+(*       Σ ;;; Γ |- t : A -> *)
+(*                     {B & type_of Σ Γ t = Checked B}. *)
+(* Admitted. *)

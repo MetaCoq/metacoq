@@ -42,7 +42,7 @@ Lemma type_Case_inv Σ Γ ind npar p c brs T :
          let pars := firstn npar args in
          (Σ;;; Γ |- p : pty) *
          (types_of_case ind mdecl idecl pars u p pty = Some (indctx, pctx, ps, btys)) *
-         (check_correct_arity (snd Σ) idecl ind u indctx pars pctx = true) *
+         (check_correct_arity (snd Σ) idecl ind u indctx pars pctx) *
          (Exists (fun sf : sort_family => universe_family ps = sf) (PCUICAst.ind_kelim idecl)) *
          (Σ;;; Γ |- c : PCUICAst.mkApps (tInd ind u) args) *
          (All2 (fun x y : nat * PCUICAst.term => ((fst x = fst y) * (Σ;;; Γ |- snd x : snd y))) brs btys) *
@@ -51,7 +51,7 @@ Proof.
   intros. dependent induction X.
   - unshelve eexists.
     + repeat refine (_,_). all:shelve.
-    + cbn. intuition eauto.
+    + cbn. subst pars. intuition eauto.
   - edestruct (IHX _ _ _ _ _ eq_refl) as [ [[[[[[[[]]]]]]]] ].
     repeat match goal with [ H : _ * _ |- _ ] => destruct H end.
     unshelve eexists.
@@ -65,7 +65,7 @@ Lemma type_Construct_inv Σ Γ ind i u T :
   { '(mdecl, idecl, cdecl) : _ & 
         (wf_local Σ Γ) *
         (PCUICTyping.declared_constructor (fst Σ) mdecl idecl (ind, i) cdecl) *
-        (consistent_universe_context_instance Σ (ind_universes mdecl) u) *
+        (consistent_universe_context_instance (snd Σ) (ind_universes mdecl) u) *
         (Σ ;;; Γ |- type_of_constructor mdecl cdecl (ind, i) u <= T)}%type.
 Proof.
   intros. dependent induction X.

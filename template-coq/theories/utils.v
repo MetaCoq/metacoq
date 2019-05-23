@@ -1422,7 +1422,7 @@ Proof.
   induction 1; congruence.
 Qed.
 
-Lemma Forall2_length {A B} {P : A -> B -> Prop} l l' : Forall2 P l l' -> #|l| = #|l'|.
+Lemma Forall2_length {A B} {P : A -> B -> Prop} {l l'} : Forall2 P l l' -> #|l| = #|l'|.
 Proof. induction 1; simpl; auto. Qed.
 
 

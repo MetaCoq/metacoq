@@ -307,11 +307,11 @@ Proof.
     admit. admit.
   - unfold weaken_env_prop. intros. destruct T; try tauto. admit.
   - unfold on_global_env. destruct Σ. cbn. revert H0 X. clear.
-    revert t Σ'; induction g; simpl; intros.
-    + inv H0. econstructor. admit.
-    + destruct ? in H0; inv H0. econstructor. eapply IHg; auto. admit. admit. admit.
-      destruct a; simpl.
-      * unfold on_constant_decl. destruct ?.
+    (* revert t Σ'; induction g; simpl; intros. *)
+    (* + inv H0. econstructor. admit. *)
+    (* + destruct ? in H0; inv H0. econstructor. eapply IHg; auto. admit. admit. admit. *)
+    (*   destruct a; simpl. *)
+    (*   * unfold on_constant_decl. destruct ?. *)
       
 Admitted.
 
@@ -489,7 +489,7 @@ Proof.
            edestruct IHeval2 as (? & ? & ?).
            ++ econstructor; eauto. eapply PCUICGeneration.type_mkApps; eauto.
            ++ eapply extract_Apps2. eauto.
-              instantiate (1 := repeat tBox n0). cbn in e2. subst.
+              instantiate (1 := repeat tBox n0). 
               (* unfold types_of_case in *. destruct ? in e; inv e. *)
              (*  destruct p0. destruct ? in H4; inv H4. destruct p0. *)
              (*  destruct ? in H5; inv H5. *)
@@ -506,7 +506,7 @@ Proof.
            (*  cbn in *. destruct l1; inv e0.  *)
               (* should follow from H3 *) admit.
            ++ eauto.
-           ++ exists x2. split; eauto. cbn in e2. subst.
+           ++ exists x2. split; eauto. subst. cbn in e1.
               now rewrite mkAppBox_repeat.
       * destruct monad_map eqn:Em; try congruence.
         inv Ht'. assert (He' := He). eapply IHeval1 in He as (? & ? & ?); eauto.
@@ -522,41 +522,43 @@ Proof.
         eapply type_Construct_inv in t0 as [ [[]] ]. destruct y0 as [[[]]].
         destruct d. cbn in H3. subst. destruct p0.
         unfold types_of_case in e. destruct ? in e; inv e.
-        destruct p0. destruct ? in H5; inv H5. destruct p0. destruct ? in H6; inv H6.
+        destruct ? in H5; inv H5. destruct p0. destruct ? in H6; inv H6. destruct p0.
+        destruct ? in H5; inv H5.
         
-        destruct (nth_error brs c) eqn:E3.
-        2:{  (* if looking up c in (ind.ctors o0) works, looking up c in brs must work *)
-          (* eapply nth_error_None in E3. *)
-          (* Lemma All2_length X Y (P : X -> Y -> Type) x y : *)
-          (*   All2 P x y -> #|x| = #|y|. *)
-          (* Proof. *)
-          (*   induction 1; cbn; congruence. *)
-          (* Qed. *)
-          (* eapply All2_length in a0. rewrite a0 in *. clear a0. *)
-          (* pose proof (nth_error_Some (PCUICAst.ind_ctors o0) c). rewrite H4 in H5. *)
-          (* assert (c < #|PCUICAst.ind_ctors o0|) by (eapply H5; intuition congruence). *)
-          (* enough (#|l2| = #|PCUICAst.ind_ctors o0|) by omega. *)
-          admit.
-        }
-        pose proof (monad_map_All2 _ _ _ _ _ Em) as [[] [] ] % (All2_nth_error_Some c p0); eauto.
-        destruct ?; inv e2.
-        edestruct (All2_nth_error_Some _ _ a0 E3) as ([] & ? & ? & ?).
-        eapply typing_spine_skipn in t1 as (? & ?).
-        subst. cbn in e3. subst. edestruct IHeval2 as (? & ? & ?).
-        -- econstructor; eauto. unfold PCUICTyping.iota_red.
-           eapply PCUICGeneration.type_mkApps.
-           rewrite <- nth_default_eq. unfold nth_default. rewrite E3.
-           eauto. eauto.
-        -- unfold PCUICTyping.iota_red. eapply extract_Apps2.
-           rewrite <- nth_default_eq. unfold nth_default. rewrite E3.
-           eauto. 
-           eapply Forall2_skipn. now eapply All2_Forall.
-        -- eauto.
-        -- exists x2. split. eauto. econstructor.
-           eassumption.
-           unfold iota_red. rewrite <- nth_default_eq.
-           unfold nth_default. rewrite e. cbn. eauto.
-    + congruence.
+    (*     destruct (nth_error brs c) eqn:E3. *)
+    (*     2:{  (* if looking up c in (ind.ctors o0) works, looking up c in brs must work *) *)
+    (*       (* eapply nth_error_None in E3. *) *)
+    (*       (* Lemma All2_length X Y (P : X -> Y -> Type) x y : *) *)
+    (*       (*   All2 P x y -> #|x| = #|y|. *) *)
+    (*       (* Proof. *) *)
+    (*       (*   induction 1; cbn; congruence. *) *)
+    (*       (* Qed. *) *)
+    (*       (* eapply All2_length in a0. rewrite a0 in *. clear a0. *) *)
+    (*       (* pose proof (nth_error_Some (PCUICAst.ind_ctors o0) c). rewrite H4 in H5. *) *)
+    (*       (* assert (c < #|PCUICAst.ind_ctors o0|) by (eapply H5; intuition congruence). *) *)
+    (*       (* enough (#|l2| = #|PCUICAst.ind_ctors o0|) by omega. *) *)
+    (*       admit. *)
+    (*     } *)
+    (*     pose proof (monad_map_All2 _ _ _ _ _ Em) as [[] [] ] % (All2_nth_error_Some c p0); eauto. *)
+    (*     destruct ?; inv e2. *)
+    (*     edestruct (All2_nth_error_Some _ _ a0 E3) as ([] & ? & ? & ?). *)
+    (*     eapply typing_spine_skipn in t1 as (? & ?). *)
+    (*     subst. cbn in e3. subst. edestruct IHeval2 as (? & ? & ?). *)
+    (*     -- econstructor; eauto. unfold PCUICTyping.iota_red. *)
+    (*        eapply PCUICGeneration.type_mkApps. *)
+    (*        rewrite <- nth_default_eq. unfold nth_default. rewrite E3. *)
+    (*        eauto. eauto. *)
+    (*     -- unfold PCUICTyping.iota_red. eapply extract_Apps2. *)
+    (*        rewrite <- nth_default_eq. unfold nth_default. rewrite E3. *)
+    (*        eauto.  *)
+    (*        eapply Forall2_skipn. now eapply All2_Forall. *)
+    (*     -- eauto. *)
+    (*     -- exists x2. split. eauto. econstructor. *)
+    (*        eassumption. *)
+    (*        unfold iota_red. rewrite <- nth_default_eq. *)
+    (*        unfold nth_default. rewrite e. cbn. eauto. *)
+        (* + congruence. *) admit.
+    + admit.
   - pose (Ht'' := Ht'). eapply extract_Apps in Ht'' as (e & He & l & Hl & ?).
     inv pre.
     simpl in He. destruct is_type_or_proof eqn:Heq. destruct a. inv He. subst.

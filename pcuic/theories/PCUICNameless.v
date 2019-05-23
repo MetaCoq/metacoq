@@ -341,3 +341,34 @@ Proof.
     eapply All_Forall. eapply All_impl ; [ exact X |].
     intros x [? ?] y [? [? ?]]. repeat split ; auto.
 Qed.
+
+Definition map_decl_anon f (d : context_decl) :=
+  {| decl_name := nAnon ;
+     decl_body := option_map f d.(decl_body) ;
+     decl_type := f d.(decl_type)
+  |}.
+
+Definition nlctx (Γ : context) : context :=
+  map (map_decl_anon nl) Γ.
+
+Definition test_option {A} f (o : option A) : bool :=
+  match o with
+  | None => true
+  | Some x => f x
+  end.
+
+Definition nameless_ctx (Γ : context) : bool :=
+  forallb (fun d =>
+    anon d.(decl_name) &&
+    test_option nameless d.(decl_body) &&
+    nameless d.(decl_type)
+  ) Γ.
+
+Lemma nlctx_spec :
+  forall Γ, nameless_ctx (nlctx Γ).
+Proof.
+  intros Γ. induction Γ as [| [na [b|] B] Γ ih].
+  - reflexivity.
+  - simpl. rewrite 2!nl_spec, ih. reflexivity.
+  - simpl. rewrite nl_spec, ih. reflexivity.
+Qed.

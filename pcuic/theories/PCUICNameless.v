@@ -303,11 +303,12 @@ Proof.
 Qed.
 
 Lemma eq_term_upto_univ_nl_inv :
-  forall `{checker_flags} u v,
-    eq_term_upto_univ eq (nl u) (nl v) ->
-    eq_term_upto_univ eq u v.
+  forall `{checker_flags} R u v,
+    Reflexive R ->
+    eq_term_upto_univ R (nl u) (nl v) ->
+    eq_term_upto_univ R u v.
 Proof.
-  intros flags u v h.
+  intros flags R u v hR h.
   revert v h.
   induction u using term_forall_list_ind ; intros v h.
   all: dependent destruction h.
@@ -325,7 +326,6 @@ Proof.
     apply Forall2_map_inv in H0.
     eapply Forall2_impl' ; try eassumption.
     eapply All_Forall. assumption.
-  - cbn in H0. inversion H0.  subst. constructor. reflexivity.
   - cbn in H0. inversion H0. subst. constructor ; try ih3.
     apply Forall2_map_inv in H.
     eapply Forall2_impl' ; try eassumption.
@@ -375,10 +375,11 @@ Proof.
 Qed.
 
 Lemma eq_term_upto_univ_tm_nl :
-  forall `{checker_flags} u,
-    eq_term_upto_univ eq u (nl u).
+  forall `{checker_flags} R u,
+    Reflexive R ->
+    eq_term_upto_univ R u (nl u).
 Proof.
-  intros flags u.
+  intros flags R u hR.
   induction u using term_forall_list_ind.
   all: try solve [
     simpl ; try apply eq_term_upto_univ_refl ; auto ; constructor ; assumption
@@ -405,3 +406,10 @@ Proof.
       repeat split ; auto.
       all: apply H1.
 Qed.
+
+(* Corollary eq_term_tm_nl : *)
+(*   forall `{checker_flags} G u, *)
+(*     eq_term G u (nl u). *)
+(* Proof. *)
+(*   intros flags G u. *)
+(*   unfold eq_term. *)

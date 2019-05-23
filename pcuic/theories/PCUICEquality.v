@@ -323,8 +323,7 @@ Proof.
   destruct (reflect_eq_term_upto_univ_eqb t t').
   - constructor. eapply eq_term_nl_eq. assumption.
   - constructor. intro bot. apply n.
-    apply eq_term_upto_univ_nl_inv.
+    apply eq_term_upto_univ_nl_inv ; auto.
     rewrite bot.
-    apply eq_term_upto_univ_refl.
-    intro x. reflexivity.
+    apply eq_term_upto_univ_refl ; auto.
 Qed.

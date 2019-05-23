@@ -18,34 +18,42 @@ Definition is_prop_sort s :=
   | None => false
   end.
 
-Section IsType.
-  Context {F : Fuel}.
-  Variables (Σ : global_context) (Γ : context).
+Parameter is_type_or_proof : forall (Sigma : global_context) (Gamma : context) (t : PCUICAst.term), bool.
+From PCUIC Require Import PCUICTyping.
 
-  Fixpoint is_arity (F : Fuel) t : typing_result bool :=
-    match F with
-    | 0 => raise (NotEnoughFuel F)
-    | S F =>
-      match reduce_to_sort Σ Γ t with
-      | Checked u => ret true
-      | TypeError _ =>
-        p <- reduce_to_prod Σ Γ t ;;
-        is_arity F (snd p)
-      end
-    end.
+Hypothesis is_type_or_proof_spec : forall (Sigma : global_context) (Gamma : context) (t : PCUICAst.term) T,
+    Sigma ;;; Gamma |- t : T -> (is_type_or_proof Sigma Gamma t = true) <~> (isArity T + (∑ u, (Sigma ;;; Gamma |- T : tSort u) * is_prop_sort u)). 
 
-  Definition is_type_or_proof t :=
-    ty <- type_of Σ Γ t ;;
-     if is_arity F ty then ret true
-     else
-       s <- type_of_as_sort Σ (type_of Σ) Γ ty ;;
-       ret (is_prop_sort s).
-End IsType.
+(* Section IsType. *)
+(*   (* Context {F : Fuel}. *) *)
+(*   Variables (Σ : global_context) (Γ : context). *)
+
+(*   Fixpoint is_arity (F : Fuel) t : typing_result bool := *)
+(*     match F with *)
+(*     | 0 => raise (NotEnoughFuel F) *)
+(*     | S F => *)
+(*       match reduce_to_sort Σ Γ t with *)
+(*       | Checked u => ret true *)
+(*       | TypeError _ => *)
+(*         p <- reduce_to_prod Σ Γ t ;; *)
+(*         is_arity F (snd p) *)
+(*       end *)
+(*     end. *)
+
+(*   Definition is_type_or_proof t := *)
+(*     ty <- type_of Σ Γ t ;; *)
+(*      if is_arity F ty then ret true *)
+(*      else *)
+(*        s <- type_of_as_sort Σ (type_of Σ) Γ ty ;; *)
+(*        ret (is_prop_sort s). *)
+(* End IsType. *)
 
 Module E := EAst.
 
+Local Notation Ret t := t.
+
 Section Erase.
-  Context `{F : Fuel}.
+  (* Context `{F : Fuel}. *)
 
   Definition is_box c :=
     match c with
@@ -63,123 +71,128 @@ Section Erase.
     (fst p, f (snd p)).
 
   Section EraseMfix.
-    Context (extract : forall (Γ : context) (t : term), typing_result E.term).
+    Context (extract : forall (Γ : context) (t : term), E.term).
 
-    Definition extract_mfix Γ (defs : mfixpoint term) : typing_result (EAst.mfixpoint E.term) :=
+    Definition extract_mfix Γ (defs : mfixpoint term) : (EAst.mfixpoint E.term) :=
       let Γ' := (fix_decls defs ++ Γ)%list in
-      monad_map (fun d => dbody' <- extract Γ' d.(dbody);;
-                          ret ({| E.dname := d.(dname); E.rarg := d.(rarg);
+      map (fun d => let dbody' := extract Γ' d.(dbody) in
+                          Ret ({| E.dname := d.(dname); E.rarg := d.(rarg);
                                   E.dbody := dbody' |})) defs.
   End EraseMfix.
   
-  Fixpoint extract (Σ : global_context) (Γ : context) (t : term) : typing_result E.term :=
-    b <- is_type_or_proof Σ Γ t ;;
-    if (b : bool) then ret E.tBox else
+  Fixpoint extract (Σ : global_context) (Γ : context) (t : term) : E.term :=
+    if is_type_or_proof Σ Γ t then E.tBox else
     match t with
-    | tRel i => ret (E.tRel i)
-    | tVar n => ret (E.tVar n)
+    | tRel i => Ret (E.tRel i)
+    | tVar n => Ret (E.tVar n)
     | tEvar m l =>
-      l' <- monad_map (extract Σ Γ) l;;
-      ret (E.tEvar m l')
-    | tSort u => ret E.tBox
-    | tConst kn u => ret (E.tConst kn)
-    | tInd kn u => ret E.tBox
-    | tConstruct kn k u => ret (E.tConstruct kn k)
-    | tProd na b t => ret E.tBox
+      Ret (E.tEvar m (map (extract Σ Γ) l))
+    | tSort u => Ret E.tBox
+    | tConst kn u => Ret (E.tConst kn)
+    | tInd kn u => Ret E.tBox
+    | tConstruct kn k u => Ret (E.tConstruct kn k)
+    | tProd na b t => Ret E.tBox
     | tLambda na b t =>
-      t' <- extract Σ (vass na b :: Γ) t;;
-      ret (E.tLambda na t')
+      let t' := extract Σ (vass na b :: Γ) t in
+      Ret (E.tLambda na t')
     | tLetIn na b t0 t1 =>
-      b' <- extract Σ Γ b;;
-      t1' <- extract Σ (vdef na b t0 :: Γ) t1;;
-      ret (E.tLetIn na b' t1')
+      let b' := extract Σ Γ b in
+      let t1' := extract Σ (vdef na b t0 :: Γ) t1 in
+      Ret (E.tLetIn na b' t1')
     | tApp f u =>
-      f' <- extract Σ Γ f;;
-      l' <- extract Σ Γ u;;
-      ret (E.tApp f' l') (* if is_dummy f' then ret dummy else *)
+      let f' := extract Σ Γ f in
+      let l' := extract Σ Γ u in
+      Ret (E.tApp f' l') (* if is_dummy f' then Ret dummy else *)
     | tCase ip p c brs =>
-      c' <- extract Σ Γ c;;
+      let c' := extract Σ Γ c in
       if is_box c' then
         match brs with
         | (n, x) :: _ =>
-          x' <- extract Σ Γ x;;
-          ret (mkAppBox x' n) (* Singleton elimination *)
+          let x' := extract Σ Γ x in
+          Ret (mkAppBox x' n) (* Singleton elimination *)
         | nil =>
-          ret (E.tCase ip c' nil) (* Falsity elimination *)
+          Ret (E.tCase ip c' nil) (* Falsity elimination *)
         end
       else
-        brs' <- monad_map (T:=typing_result) (fun x => x' <- extract Σ Γ (snd x);; ret (fst x, x')) brs;;
-        ret (E.tCase ip c' brs')
+        let brs' := map (B := nat * E.term) (fun x => let x' := extract Σ Γ (snd x) in Ret (fst x, x')) brs in
+        Ret (E.tCase ip c' brs')
     | tProj p c =>
-      c' <- extract Σ Γ c;;
-      ret (E.tProj p c')
+      let c' := extract Σ Γ c in
+      Ret (E.tProj p c')
     | tFix mfix n =>
-      mfix' <- extract_mfix (extract Σ) Γ mfix;;
-      ret (E.tFix mfix' n)
+      let mfix' := extract_mfix (extract Σ) Γ mfix in
+      Ret (E.tFix mfix' n)
     | tCoFix mfix n =>
-      mfix' <- extract_mfix (extract Σ) Γ mfix;;
-      ret (E.tCoFix mfix' n)
+      let mfix' := extract_mfix (extract Σ) Γ mfix in
+      Ret (E.tCoFix mfix' n)
     end.
 
 End Erase.
 
-Definition optM {M : Type -> Type} `{Monad M} {A B} (x : option A) (f : A -> M B) : M (option B) :=
-  match x with
-  | Some x => y <- f x ;; ret (Some y)
-  | None => ret None
-  end.
 
-Definition extract_constant_body `{F:Fuel} Σ (cb : constant_body) : typing_result E.constant_body :=
-  ty <- extract Σ [] cb.(cst_type) ;;
-  body <- optM cb.(cst_body) (fun b => extract Σ [] b);;
-  ret {| E.cst_type := ty; E.cst_body := body; |}.
+(* Definition optM {A B} (x : option A) (f : A -> B) : M (option B) := *)
+(*   match x with *)
+(*   | Some x => y <- f x ;; ret (Some y) *)
+(*   | None => ret None *)
+(*   end. *)
 
-Definition lift_opt_typing {A} (a : option A) (e : type_error) : typing_result A :=
+Definition extract_constant_body Σ (cb : constant_body) : E.constant_body :=
+  let ty := extract Σ [] cb.(cst_type) in
+  let body := option_map (fun b => extract Σ [] b) cb.(cst_body)  in
+  Ret {| E.cst_type := ty; E.cst_body := body; |}.
+
+(* Definition lift_opt_typing {A} (a : option A) (e : type_error) : typing_result A := *)
+(*   match a with *)
+(*   | Some x => ret x *)
+(*   | None => raise e *)
+(*   end. *)
+
+Definition opt_def {A} (a : option A) (e : A) : A :=
   match a with
-  | Some x => ret x
-  | None => raise e
+  | Some x => Ret x
+  | None => e
   end.
 
-Definition extract_one_inductive_body `{F:Fuel} Σ npars arities
-           (oib : one_inductive_body) : typing_result E.one_inductive_body :=
-  decty <- lift_opt_typing (decompose_prod_n_assum [] npars oib.(ind_type))
-        (NotAnInductive oib.(ind_type)) ;;
+
+Definition extract_one_inductive_body (Σ : global_context) (npars : nat) (arities : context)
+           (oib : one_inductive_body) : E.one_inductive_body :=
+  let decty := opt_def (decompose_prod_n_assum [] npars oib.(ind_type)) ([], tRel 0) in
   let '(params, arity) := decty in
-  type <- extract Σ [] oib.(ind_type) ;;
-  ctors <- monad_map (fun '(x, y, z) => y' <- extract Σ arities y;; ret (x, y', z)) oib.(ind_ctors);;
+  let type := Ret (extract Σ [] oib.(ind_type)) in
+  let ctors := map (fun '(x, y, z) => let y' := Ret (extract Σ arities y) in Ret (x, y', z)) oib.(ind_ctors) in
   let projctx := arities ,,, params ,, vass nAnon oib.(ind_type) in
-  projs <- monad_map (fun '(x, y) => y' <- extract Σ [] y;; ret (x, y')) oib.(ind_projs);;
-  ret {| E.ind_name := oib.(ind_name);
+  let projs := map (fun '(x, y) => let y' := Ret (extract Σ [] y) in Ret (x, y')) oib.(ind_projs) in
+  Ret {| E.ind_name := oib.(ind_name);
          E.ind_type := type;
          E.ind_kelim := oib.(ind_kelim);
          E.ind_ctors := ctors;
          E.ind_projs := projs |}.
 
-Definition extract_mutual_inductive_body `{F:Fuel} Σ
-           (mib : mutual_inductive_body) : typing_result E.mutual_inductive_body :=
+Definition extract_mutual_inductive_body Σ
+           (mib : mutual_inductive_body) : E.mutual_inductive_body :=
   let bds := mib.(ind_bodies) in
   let arities := arities_context bds in
-  bodies <- monad_map (extract_one_inductive_body Σ mib.(ind_npars) arities) bds ;;
-  ret {| E.ind_npars := mib.(ind_npars);
+  let bodies := map (extract_one_inductive_body Σ mib.(ind_npars) arities) bds in
+  Ret {| E.ind_npars := mib.(ind_npars);
          E.ind_bodies := bodies; |}.
 
-Fixpoint extract_global_decls `{F:Fuel} univs Σ : typing_result E.global_declarations :=
+Fixpoint extract_global_decls univs Σ : E.global_declarations :=
   match Σ with
-  | [] => ret []
+  | [] => Ret []
   | ConstantDecl kn cb :: Σ =>
-    cb' <- extract_constant_body (Σ, univs) cb;;
-    Σ' <- extract_global_decls univs Σ;;
-    ret (E.ConstantDecl kn cb' :: Σ')
+    let cb' := Ret (extract_constant_body (Σ, univs) cb) in
+    let Σ' := extract_global_decls univs Σ in
+    Ret (E.ConstantDecl kn cb' :: Σ')
   | InductiveDecl kn mib :: Σ =>
-    mib' <- extract_mutual_inductive_body (Σ, univs) mib;;
-    Σ' <- extract_global_decls univs Σ;;
-    ret (E.InductiveDecl kn mib' :: Σ')
+    let mib' := extract_mutual_inductive_body (Σ, univs) mib in
+    let Σ' := extract_global_decls univs Σ in
+    Ret (E.InductiveDecl kn mib' :: Σ')
   end.
 
-Definition extract_global `{F : Fuel} Σ :=
+Definition extract_global Σ :=
   let '(Σ, univs) := Σ in
-  Σ' <- extract_global_decls univs (List.rev Σ);;
-  ret (List.rev Σ').
+  let Σ' := extract_global_decls univs (List.rev Σ) in
+  Ret (List.rev Σ').
 
 (** * Erasure correctness
     
@@ -312,9 +325,6 @@ Record extraction_post (Σ : global_context) (Σ' : EAst.global_context) (t : te
 Definition erasure_correctness :=
   forall Σ t T, extraction_pre Σ t T ->
   forall v, eval Σ [] t v ->
-  forall (f : Fuel) Σ' (t' : E.term),
-    extract Σ [] t = Checked t' ->
-    extract_global Σ = Checked Σ' ->
-    exists v', extract Σ [] v = Checked v' /\  EWcbvEval.eval Σ' t' v'.
+     EWcbvEval.eval (extract_global Σ) (extract Σ [] t) (extract Σ [] v).
       
 (* Conjecture erasure_correct : erasure_correctness. *)

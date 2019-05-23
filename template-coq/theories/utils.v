@@ -1422,7 +1422,6 @@ Proof.
   induction 1; congruence.
 Qed.
 
-<<<<<<< HEAD
 Lemma Forall2_length {A B} {P : A -> B -> Prop} l l' : Forall2 P l l' -> #|l| = #|l'|.
 Proof. induction 1; simpl; auto. Qed.
 
@@ -1499,7 +1498,7 @@ Lemma Forall2_impl {A B} {P Q : A -> B -> Prop} {l l'} :
 Proof.
   induction 1; constructor; auto.
 Qed.
-=======
+
 Arguments skipn : simpl nomatch.
 
 Lemma skipn_all2 :
@@ -1590,13 +1589,6 @@ Proof.
     eapply app_Forall ; try assumption.
     repeat constructor. assumption.
 Qed.
-Lemma Forall2_impl {A B} {P Q : A -> B -> Prop} {l l'} :
-    Forall2 P l l' ->
-    (forall x y, P x y -> Q x y) ->
-    Forall2 Q l l'.
-Proof.
-  induction 1; constructor; auto.
-Qed.
 
 Lemma Forall2_impl' {A B} {P Q : A -> B -> Prop} {l l'} :
     Forall2 P l l' ->
@@ -1645,13 +1637,6 @@ Proof.
   induction 1; constructor; auto.
 Qed.
 
-
-Lemma Forall2_length {A B R l l'} (H : @Forall2 A B R l l')
-  : #|l| = #|l'|.
-Proof.
-  induction H. reflexivity.
-  cbn. now apply f_equal.
-Defined.
 
 Lemma Forall2_and {A B} (R R' : A -> B -> Prop) l l'
   : Forall2 R l l' -> Forall2 R' l l' -> Forall2 (fun x y => R x y /\ R' x y) l l'.
@@ -1722,4 +1707,3 @@ Lemma not_empty_map {A B} (f : A -> B) l : l <> [] -> map f l <> [].
 Proof.
   intro H; destruct l; intro e; now apply H.
 Qed.
->>>>>>> coq-8.8

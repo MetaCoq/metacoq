@@ -559,6 +559,25 @@ Section Conversion.
       coApp (nl t) (nlstack ρ)
     end.
 
+  Lemma nlstack_appstack :
+    forall args ρ,
+      nlstack (appstack args ρ) = appstack (map nl args) (nlstack ρ).
+  Proof.
+    intros args ρ.
+    induction args in ρ |- *.
+    - reflexivity.
+    - simpl. f_equal. eapply IHargs.
+  Qed.
+
+  Lemma nlstack_cat :
+    forall ρ θ,
+      nlstack (ρ +++ θ) = nlstack ρ +++ nlstack θ.
+  Proof.
+    intros ρ θ.
+    induction ρ in θ |- *.
+    all: solve [ simpl ; rewrite ?IHρ ; reflexivity ].
+  Qed.
+
   Lemma nl_it_mkLambda_or_LetIn :
     forall Γ t,
       nl (it_mkLambda_or_LetIn Γ t) =
@@ -957,8 +976,8 @@ Section Conversion.
      forall s' Γ' t' π1' π2'
        (h1' : wtp Γ' t' π1')
        (h2' : wts Γ' s' t' π2'),
-       R (mkpack s' Γ' t' π1' π2' (zwts h2'))
-         (mkpack s Γ t π1 π2 (zwts h2)) ->
+       R (nlmkpack s' Γ' t' π1' π2' (zwts h2'))
+         (nlmkpack s Γ t π1 π2 (zwts h2)) ->
        Ret s' Γ' t' π1' π2'.
 
   Notation no := (exist false I) (only parsing).
@@ -1123,8 +1142,17 @@ Section Conversion.
           -- simpl. rewrite stack_cat_appstack. reflexivity.
           -- simpl. eapply cored_it_mkLambda_or_LetIn.
              rewrite app_context_nil_l.
+             rewrite nlstack_appstack. rewrite nlstack_cat.
              rewrite zipc_appstack. rewrite zipc_stack_cat.
              repeat zip fold. eapply cored_context.
+             (* TODO
+                Instead of inlining the necessary properties that
+                cored is insensible to names vevery time,
+                it would be best to incorporate it in R_cored2
+                and add an R_cored as well.
+                Not very clear, we would need to change things
+                at a different level and give up on nlmkpack.
+              *)
              assumption.
         * destruct y' as [q hq].
           cbn in H0. inversion H0. subst.
@@ -2629,8 +2657,8 @@ Section Conversion.
      forall u1 u2 ca1 a1 ρ2
        (h1' : wtp Γ u1 (coApp (mkApps t ca1) (appstack a1 π1)))
        (h2' : wtp Γ u2 ρ2),
-       let x := mkpack (Reduction u2) Γ u1 (coApp (mkApps t ca1) (appstack a1 π1)) ρ2 h2' in
-       let y := mkpack Args Γ (mkApps t args) (appstack l1 π1) π2 h2 in
+       let x := nlmkpack (Reduction u2) Γ u1 (coApp (mkApps t ca1) (appstack a1 π1)) ρ2 h2' in
+       let y := nlmkpack Args Γ (mkApps t args) (appstack l1 π1) π2 h2 in
        S #|ca1| + #|a1| = #|args| + #|l1| ->
        pzt x = pzt y /\
        positionR (` (pps1 x)) (` (pps1 y)) ->
@@ -2825,15 +2853,15 @@ Section Conversion.
 
     isconv_full s Γ t π1 h1 π2 h2 :=
       Fix_F (R := R)
-            (fun '(mkpack s' Γ' t' π1' π2' h2') => wtp Γ' t' π1' -> wts Γ' s' t' π2' -> Ret s' Γ' t' π1' π2')
+            (fun '(nlmkpack s' Γ' t' π1' π2' h2') => wtp Γ' t' π1' -> wts Γ' s' t' π2' -> Ret s' Γ' t' π1' π2')
             (fun pp f => _)
-            (x := mkpack s Γ t π1 π2 _)
+            (x := nlmkpack s Γ t π1 π2 _)
             _ _ _.
   Next Obligation.
     unshelve eapply _isconv ; try assumption.
     intros s' Γ' t' π1' π2' h1' h2' hR. destruct pp.
     assert (wth0 = zwts H0) by apply welltyped_irr. subst.
-    specialize (f (mkpack s' Γ' t' π1' π2' (zwts h2')) hR). cbn in f.
+    specialize (f (nlmkpack s' Γ' t' π1' π2' (zwts h2')) hR). cbn in f.
     eapply f ; assumption.
   Qed.
   Next Obligation.

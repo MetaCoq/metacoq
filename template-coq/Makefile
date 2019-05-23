@@ -15,7 +15,7 @@ plugin: coq Makefile.plugin gen-src/.generate
 theories/Extraction.vo: coq
 
 gen-src/.generate: theories/Extraction.vo
-	coqc -Q theories Template theories/Extraction.v
+	coqc -Q theories MetaCoq.Template theories/Extraction.v
 	@ touch gen-src/.generate
 
 

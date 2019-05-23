@@ -1,4 +1,4 @@
 Require Import String.
-From Template Require Loader.
+From MetaCoq.Template Require Loader.
 
-Declare ML Module "template_coq_checker_plugin".
+Declare ML Module "metacoq_checker_plugin".

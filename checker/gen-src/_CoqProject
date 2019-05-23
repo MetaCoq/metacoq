@@ -1,5 +1,5 @@
--R ../../template-coq/theories Template
+-R ../../template-coq/theories MetaCoq.Template
 -I ../../template-coq/src
--Q . Checker
+-Q . MetaCoq.Checker
 
 Extract.v

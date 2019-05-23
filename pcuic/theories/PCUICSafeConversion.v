@@ -2,9 +2,9 @@
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Arith Lia
      Classes.RelationClasses Omega.
-From Template Require Import config Universes monad_utils utils BasicAst
+From MetaCoq.Template Require Import config Universes monad_utils utils BasicAst
      AstUtils UnivSubst.
-From PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICReflect
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICReflect
      PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICSafeReduce PCUICCumulativity
      PCUICSR PCUICPosition PCUICEquality.
 From Equations Require Import Equations.

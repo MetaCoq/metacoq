@@ -2,8 +2,8 @@
 From Equations Require Import Equations.
 From Coq Require Import Bool String List BinPos Compare_dec Omega Lia.
 Require Import Coq.Program.Syntax Coq.Program.Basics.
-From Template Require Import config utils.
-From PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICWeakeningEnv PCUICClosed PCUICReduction.
+From MetaCoq.Template Require Import config utils.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICWeakeningEnv PCUICClosed PCUICReduction.
 Require Import ssreflect ssrbool.
 
 (** * Weakening lemmas for typing derivations.

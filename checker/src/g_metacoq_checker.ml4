@@ -1,6 +1,6 @@
 (*i camlp4deps: "grammar/grammar.cma" i*)
 
-DECLARE PLUGIN "template_coq_checker"
+DECLARE PLUGIN "metacoq_checker"
 
 open Stdarg
 open Pp
@@ -20,12 +20,12 @@ let check env evm c =
   | CorrectDecl t ->
      Feedback.msg_info (str "Successfully checked of type: " ++ pr_char_list (Checker0.string_of_term t))
   | EnvError (AlreadyDeclared id) ->
-     CErrors.user_err ~hdr:"template-coq" (str "Already declared: " ++ pr_char_list id)
+     CErrors.user_err ~hdr:"metacoq" (str "Already declared: " ++ pr_char_list id)
   | EnvError (IllFormedDecl (id, e)) ->
-     CErrors.user_err ~hdr:"template-coq" (pr_char_list (Checker0.string_of_type_error e) ++ str ", while checking " ++ pr_char_list id)
+     CErrors.user_err ~hdr:"metacoq" (pr_char_list (Checker0.string_of_type_error e) ++ str ", while checking " ++ pr_char_list id)
 
-VERNAC COMMAND EXTEND TemplateCheck CLASSIFIED AS QUERY
-| [ "Template" "Check" constr(c) ] -> [
+VERNAC COMMAND EXTEND MetaCoqCheck CLASSIFIED AS QUERY
+| [ "MetaCoq" "Check" constr(c) ] -> [
     let (evm,env) = Pfedit.get_current_context () in
     let (c, _) = Constrintern.interp_constr env evm c in
     check env evm c

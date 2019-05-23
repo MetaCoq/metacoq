@@ -1,4 +1,4 @@
-Require Import Template.Loader.
+Require Import MetaCoq.Template.Loader.
 
 Goal True.
   evar (n : nat).

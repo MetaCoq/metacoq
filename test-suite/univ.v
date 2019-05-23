@@ -1,4 +1,4 @@
-From Template Require Import All.
+From MetaCoq.Template Require Import All.
 Require Import String List Arith.
 Import ListNotations MonadNotation.
 Open Scope string.
@@ -104,8 +104,8 @@ Polymorphic Inductive foo3@{i j k l} (A : Type@{i}) (B : Type@{j}) : Type@{k} :=
 Quote Recursively Definition qfoo3 := foo3.
 Compute qfoo3.
 
-Require Import Template.monad_utils. Import MonadNotation.
-Require Import Template.TemplateMonad.Core.
+Require Import MetaCoq.Template.monad_utils. Import MonadNotation.
+Require Import MetaCoq.Template.TemplateMonad.Core.
 
 Run TemplateProgram (tmQuoteInductive "foo" >>= tmPrint).
 Run TemplateProgram (tmQuoteInductive "foo2" >>= tmPrint).
@@ -117,7 +117,7 @@ Quote Recursively Definition qTT := TT.
 Polymorphic Inductive TT2@{i j} : Type@{j} := tt2 : Type@{i} -> TT2.
 Quote Recursively Definition qTT2 := TT2.
 
-Require Import Template.utils.
+Require Import MetaCoq.Template.utils.
 Require Import List. Import ListNotations.
 
 Module toto.
@@ -203,7 +203,7 @@ Definition f' := (forall (A:Type@{i1}) (B: Type@{j1}), A -> B -> A).
 (* : Type@{i1+1, j1+1} *)
 
 Quote Recursively Definition ff := f'.
-Require Import Template.kernel.Checker.
+Require Import MetaCoq.Template.kernel.Checker.
 Check (eq_refl :
          true =
          let T := infer (Typing.reconstruct_global_context (fst ff)) [] (snd ff) in

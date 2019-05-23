@@ -8,8 +8,8 @@ open Tm_util
 let resolve_symbol_p (path : string list) (tm : string) : global_reference =
   Coqlib.gen_reference_in_modules contrib_name [path] tm
 
-let pkg_template_monad_prop = ["Template";"TemplateMonad";"Core"]
-let pkg_template_monad_type = ["Template";"TemplateMonad";"Extractable"]
+let pkg_template_monad_prop = ["MetaCoq";"Template";"TemplateMonad";"Core"]
+let pkg_template_monad_type = ["MetaCoq";"Template";"TemplateMonad";"Extractable"]
 
 let r_template_monad_prop_p = resolve_symbol_p pkg_template_monad_prop
 let r_template_monad_type_p = resolve_symbol_p pkg_template_monad_type

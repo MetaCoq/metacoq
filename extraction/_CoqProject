@@ -1,6 +1,6 @@
--Q ../template-coq/theories Template
--Q ../pcuic/theories PCUIC
--R theories TemplateExtraction
+-Q ../template-coq/theories MetaCoq.Template
+-Q ../pcuic/theories MetaCoq.PCUIC
+-R theories MetaCoq.Extraction
 -I ../template-coq/src
 
 theories/EAst.v

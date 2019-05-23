@@ -3,7 +3,7 @@
 Require Import Coq.Strings.String.
 Require Import Coq.PArith.BinPos.
 Require Import List. Import ListNotations.
-From Template Require Export Universes.
+Require Export Template.Universes.
 
 (** * AST of Coq kernel terms and kernel data structures
 

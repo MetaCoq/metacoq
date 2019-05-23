@@ -27,6 +27,8 @@ BasicAst
 Common
 Config0
 
+Wf
+
 Denote
 Denoter
 Equalities
@@ -41,10 +43,6 @@ Ast_quoter
 Ast_denoter
 Plugin_core
 Run_extractable
-
-
-
-FSetWeakList
 
 Utils
 Config0
@@ -63,4 +61,4 @@ Retyping0
 TypingWf
 
 Term_quoter
-G_template_checker
+G_metacoq_checker

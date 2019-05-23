@@ -1,6 +1,6 @@
-Require Import TemplateChecker.Loader.
+Require Import MetaCoq.Checker.Loader.
 
-Template Check (3 + 9).
+MetaCoq Check (3 + 9).
 
 Require Import Reals.
-Template Check Rplus.
+MetaCoq Check Rplus.

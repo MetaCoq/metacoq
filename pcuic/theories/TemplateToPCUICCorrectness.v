@@ -1,13 +1,13 @@
 (* Distributed under the terms of the MIT license.   *)
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
-From Template Require Import config utils AstUtils.
-From Template Require Import BasicAst Ast WfInv Typing.
-From PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICLiftSubst
+From MetaCoq.Template Require Import config utils AstUtils.
+From MetaCoq.Template Require Import BasicAst Ast WfInv Typing.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICLiftSubst
      PCUICUnivSubst PCUICTyping PCUICGeneration TemplateToPCUIC.
 (* For two lemmata wf_instantiate_params_subst_term and
    wf_instantiate_params_subst_ctx, maybe they should be moved *)
-From Template Require Import Weakening.
+From MetaCoq.Template Require Import Weakening.
 
 Require Import String.
 Local Open Scope string_scope.
@@ -298,7 +298,7 @@ Proof.
   now rewrite IHctx.
 Qed.
 
-From Template Require Import WeakeningEnv Substitution.
+From MetaCoq.Template Require Import WeakeningEnv Substitution.
 
 Lemma trans_types_of_case Σ ind mdecl idecl args p u pty indctx pctx ps btys :
   T.wf p -> T.wf pty -> T.wf (T.ind_type idecl) ->

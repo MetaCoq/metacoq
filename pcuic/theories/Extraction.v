@@ -16,7 +16,7 @@ Extraction Blacklist config uGraph universes Ast String List Nat Int
            UnivSubst Typing Checker Retyping OrderedType Classes.
 Set Warnings "-extraction-opaque-accessed".
 
-From PCUIC Require Import PCUICAst PCUICAstUtils PCUICUnivSubst PCUICInduction PCUICLiftSubst PCUICTyping
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICUnivSubst PCUICInduction PCUICLiftSubst PCUICTyping
      (* PCUICWeakeningEnv *)
      (* PCUICWeakening *)
      (* PCUICSubstitution *)

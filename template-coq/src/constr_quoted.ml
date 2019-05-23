@@ -58,13 +58,13 @@ struct
 
   let pkg_datatypes = ["Coq";"Init";"Datatypes"]
   let pkg_string = ["Coq";"Strings";"String"]
-  let pkg_base_reify = ["Template";"BasicAst"]
-  let pkg_reify = ["Template";"Ast"]
-  let pkg_template_monad = ["Template";"TemplateMonad"]
-  let pkg_univ = ["Template";"Universes"]
-  let pkg_level = ["Template";"Universes";"Level"]
-  let pkg_variance = ["Template";"Universes";"Variance"]
-  let pkg_ugraph = ["Template";"kernel";"uGraph"]
+  let pkg_base_reify = ["MetaCoq";"Template";"BasicAst"]
+  let pkg_reify = ["MetaCoq";"Template";"Ast"]
+  let pkg_template_monad = ["MetaCoq";"Template";"TemplateMonad"]
+  let pkg_univ = ["MetaCoq";"Template";"Universes"]
+  let pkg_level = ["MetaCoq";"Template";"Universes";"Level"]
+  let pkg_variance = ["MetaCoq";"Template";"Universes";"Variance"]
+  let pkg_ugraph = ["MetaCoq";"Template";"kernel";"uGraph"]
   let ext_pkg_univ s = List.append pkg_univ [s]
 
   let r_base_reify = resolve_symbol pkg_base_reify

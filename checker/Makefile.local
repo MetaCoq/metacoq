@@ -1,3 +1,3 @@
 COQDOCFLAGS=--no-index --interpolate --parse-comments --utf8 $(COQLIBS_NOML)
-INSTALLDEFAULTROOT=TemplateChecker
+INSTALLDEFAULTROOT=MetaCoq/Checker
 CAMLFLAGS+=-w -33 # Unused opens

@@ -4,7 +4,8 @@ From Coq Require Import Bool String List Program BinPos Compare_dec Arith Lia
      Classes.RelationClasses.
 From Template
 Require Import config monad_utils utils AstUtils UnivSubst.
-From PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICTyping.
+From PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICTyping
+     PCUICCumulativity.
 From Equations Require Import Equations.
 Require Import Equations.Prop.DepElim.
 
@@ -371,4 +372,36 @@ Proof.
   - reflexivity.
   - simpl. rewrite 2!nl_spec, ih. reflexivity.
   - simpl. rewrite nl_spec, ih. reflexivity.
+Qed.
+
+Lemma eq_term_upto_univ_tm_nl :
+  forall `{checker_flags} u,
+    eq_term_upto_univ eq u (nl u).
+Proof.
+  intros flags u.
+  induction u using term_forall_list_ind.
+  all: try solve [
+    simpl ; try apply eq_term_upto_univ_refl ; auto ; constructor ; assumption
+  ].
+  - simpl. constructor.
+    induction l.
+    + constructor.
+    + simpl. inversion H. subst. constructor ; try assumption.
+      eapply IHl. assumption.
+  - simpl. destruct p. constructor ; try assumption.
+    induction l.
+    + constructor.
+    + simpl. inversion X. subst. constructor.
+      * split ; auto.
+      * eapply IHl. assumption.
+  - simpl. constructor. induction m.
+    + constructor.
+    + simpl. inversion X. subst. constructor ; auto.
+      repeat split ; auto.
+      all: apply H1.
+  - simpl. constructor. induction m.
+    + constructor.
+    + simpl. inversion X. subst. constructor ; auto.
+      repeat split ; auto.
+      all: apply H1.
 Qed.

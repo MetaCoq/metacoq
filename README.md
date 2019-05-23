@@ -119,12 +119,18 @@ Examples of plugins
 Papers
 ======
 
-- The system was presented at 
-  [Coq'PL 2018](https://popl18.sigplan.org/event/coqpl-2018-typed-template-coq)
+- ["The MetaCoq Project"](https://www.irif.fr/~sozeau/research/publications/drafts/The_MetaCoq_Project.pdf)
+  Matthieu Sozeau, Abhishek Anand, Simon Boulier, Cyril Cohen, Yannick Forster, Fabian Kunze,
+  Gregory Malecha, Nicolas Tabareau, Théo Winterhalter.
+  Extended version of the ITP 2018 paper. Submitted.
+
+  This includes a full documentation of the Template Monad.
 
 - ["Towards Certified Meta-Programming with Typed Template-Coq"](https://hal.archives-ouvertes.fr/hal-01809681/document)
-  A. Anand, S. Boulier, C. Cohen, M. Sozeau and N. Tabareau.
+  Abhishek Anand, Simon Boulier, Cyril Cohen, Matthieu Sozeau and Nicolas Tabareau.
   ITP 2018.
+
+- The system was presented at [Coq'PL 2018](https://popl18.sigplan.org/event/coqpl-2018-typed-template-coq)
 
 Credits
 =======

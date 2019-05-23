@@ -54,6 +54,13 @@ Section Conversion.
 
   Definition nodelta_flags := RedFlags.mk true true true false true true.
 
+  Lemma welltyped_rename :
+    forall Γ u v,
+      welltyped Σ Γ u ->
+      eq_term (snd Σ) u v ->
+      welltyped Σ Γ v.
+  Admitted.
+
   Lemma red_welltyped :
     forall {Γ u v},
       welltyped Σ Γ u ->
@@ -594,19 +601,40 @@ Section Conversion.
     apply nl_zipc.
   Qed.
 
-  (* Lemma nl_wth : *)
-  (*   forall Γ s t π2, *)
-  (*     let t' := *)
-  (*       match s with *)
-  (*       | Reduction t' | Term t' => t' *)
-  (*       | Args => t *)
-  (*       end *)
-  (*     in *)
-  (*     welltyped Σ [] (zipx Γ t' π2) -> *)
-  (*     welltyped Σ [] (zipx (nlctx Γ) (nl t') (nlstack π2)). *)
+  Lemma nl_wth :
+    forall {Γ s t π2},
+      let t' :=
+        match s with
+        | Reduction t' | Term t' => t'
+        | Args => t
+        end
+      in
+      let nlt' :=
+        match nlstate s with
+        | Reduction t' | Term t' => t'
+        | Args => nl t
+        end
+      in
+      welltyped Σ [] (zipx Γ t' π2) ->
+      welltyped Σ [] (zipx (nlctx Γ) nlt' (nlstack π2)).
+  Proof.
+    intros Γ s t π2 t' nlt' h.
+    eapply welltyped_rename.
+    - exact h.
+    - destruct s.
+      + cbn in nlt'.
+        rewrite <- nl_zipx.
+        eapply eq_term_tm_nl.
+      + cbn in nlt'.
+        rewrite <- nl_zipx.
+        eapply eq_term_tm_nl.
+      + cbn in nlt'.
+        rewrite <- nl_zipx.
+        eapply eq_term_tm_nl.
+  Qed.
 
-  (* Definition nlmkpack s Γ t π1 π2 h := *)
-  (*   mkpack (nlstate s) (nlctx Γ) (nl t) (nlstack π1) (nlstack π2) (nlw w). *)
+  Definition nlmkpack s Γ t π1 π2 h :=
+    mkpack (nlstate s) (nlctx Γ) (nl t) (nlstack π1) (nlstack π2) (nl_wth h).
 
   Definition wterm Γ := { t : term | welltyped Σ Γ t }.
 
@@ -1605,13 +1633,6 @@ Section Conversion.
     specialize hh with (1 := eq_refl).
     apply isProdmkApps in hh. assumption.
   Qed.
-
-  Lemma welltyped_rename :
-    forall Γ u v,
-      welltyped Σ Γ u ->
-      eq_term (snd Σ) u v ->
-      welltyped Σ Γ v.
-  Admitted.
 
   Lemma eq_term_it_mkLambda_or_LetIn_inv :
     forall Γ u v,

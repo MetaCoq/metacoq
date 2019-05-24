@@ -45,15 +45,9 @@ Plugin_core
 Run_extractable
 
 Utils
-Config0
 Monad_utils
-Universes0
-BasicAst
-Ast0
 TemplateMonad
-AstUtils
 UnivSubst0
-UGraph0
 LiftSubst
 Typing0
 Checker0

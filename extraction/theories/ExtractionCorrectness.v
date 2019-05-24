@@ -188,23 +188,23 @@ Proof.
   
 Admitted.
 
-Lemma is_type_App `{Fuel} Σ a l T :
+Lemma is_type_App  Σ a l T :
   Σ ;;; [] |- PCUICAst.mkApps a l : T -> 
   is_type_or_proof Σ [] a = is_type_or_proof Σ [] (PCUICAst.mkApps a l).
 Proof.
 Admitted.
   
-Lemma is_type_or_proof_lambda `{Fuel} Σ Γ na t b :
+Lemma is_type_or_proof_lambda  Σ Γ na t b :
   Extract.is_type_or_proof Σ Γ (PCUICAst.tLambda na t b) =  
   Extract.is_type_or_proof Σ (Γ ,, PCUICAst.vass na t) b. 
 Admitted.
 
-(* Lemma is_type_or_proof_mkApps `{Fuel} Σ Γ a l : *)
+(* Lemma is_type_or_proof_mkApps  Σ Γ a l : *)
 (*   Extract.is_type_or_proof Σ Γ a = Checked true <-> *)
 (*   Extract.is_type_or_proof Σ Γ (PCUICAst.mkApps a l) = Checked true. *)
 (* Admitted. *)
 
-Lemma is_type_subst1 `{Fuel} (Σ : PCUICAst.global_context) (na : name) (t b a' : PCUICAst.term) :
+Lemma is_type_subst1  (Σ : PCUICAst.global_context) (na : name) (t b a' : PCUICAst.term) :
   Extract.is_type_or_proof Σ ([],, PCUICAst.vass na t) b = 
   Extract.is_type_or_proof Σ [] (PCUICLiftSubst.subst1 a' 0 b).
 Proof.
@@ -212,7 +212,7 @@ Admitted.
 
 (** ** extract and mkApps *)
 
-Lemma extract_Apps `{Fuel} Σ Γ a args :
+Lemma extract_Apps  Σ Γ a args :
   extract Σ Γ (PCUICAst.mkApps a args) = mkApps (extract Σ Γ a) (map (extract Σ Γ) args).
 Proof.
   (* revert a x. induction args using rev_ind; intros. *)
@@ -242,7 +242,7 @@ Proof.
   (*     admit.       *)
 Admitted.
 
-(* Lemma extract_Apps2 `{Fuel} Σ Γ a args e l : *)
+(* Lemma extract_Apps2  Σ Γ a args e l : *)
 (*    = Checked e -> Forall2 (fun a e => extract Σ Γ a = Checked e) args l ->                                                                                  extract Σ Γ (PCUICAst.mkApps a args) = Checked (mkApps e l). *)
 (* Proof. *)
 (* Admitted. *)
@@ -255,7 +255,7 @@ Qed.
 
 (** ** Concerning extraction of constants *)
 
-Fixpoint extract_global_decls' `{F:Fuel} univs Σ1 Σ : E.global_declarations :=
+Fixpoint extract_global_decls' univs Σ1 Σ : E.global_declarations :=
   match Σ, Σ1 with
   | [], [] => []
   | PCUICAst.ConstantDecl kn cb :: Σ0, _ :: Σ1 =>
@@ -267,7 +267,7 @@ Fixpoint extract_global_decls' `{F:Fuel} univs Σ1 Σ : E.global_declarations :=
   | _, _ => []
    end.
 
-Lemma extract_global_decls_eq `{Fuel} u Σ :
+Lemma extract_global_decls_eq  u Σ :
   extract_global_decls u Σ = extract_global_decls' u Σ Σ.
 Proof.
   induction Σ.
@@ -336,87 +336,65 @@ env_prop
 Admitted.
 
 (** ** Corrcectness of erasure *)
+Hint Constructors PCUICWcbvEval.eval.
 
 Theorem erasure_correct : erasure_correctness.
 Proof.
   intros Σ t T pre v H. revert T pre.
   induction H using PCUICWcbvEval.eval_evals_ind; intros T pre.
-  - simpl in Ht'.
-    destruct Extract.is_type_or_proof eqn:Heq. inv pre.
-    destruct a0.
-    + inv Ht'.
-      exists tBox. split. 2:repeat econstructor.
-      eapply is_type_extract. eapply eval_is_type. econstructor. 3:eauto. all: eauto. 
-    + destruct (extract Σ [] f) as [ ef | ] eqn:Ef ; try congruence.
-      destruct (extract Σ [] a) as [ ea | ] eqn:Ea; try congruence.
-      inv Ht'. 
-      edestruct (type_mkApps_inv Σ [] f [a] T) as (? & U & [? ?] & ?); eauto. 
+  - cbn.
+    destruct Extract.is_type_or_proof eqn:Heq.
+    + rewrite is_type_extract. econstructor. econstructor.
+      erewrite <- eval_is_type. eauto. eauto.
+    + inv pre. edestruct (type_mkApps_inv Σ [] f [a] T) as (? & U & [? ?] & ?); eauto. 
       inv t1. inv X2. pose proof (subject_reduction_eval _ [] _ _ _ extr_env_wf t0 H).
       eapply type_Lambda_inv in X2 as (? & ? & [? ?] & ?).
-      
-      eapply IHeval1 in Ef as (vef & ? & ?) ; eauto.
-      eapply IHeval2 in Ea as (vea & ? & ?) ; eauto.
-      
-      simpl in H2. destruct ?; try now cbn in *; congruence.
-      destruct a0.
-      * inv H2. eapply is_type_or_proof_lambda in E.
-        edestruct (IHeval3) as (? & ? & ?).
-        -- econstructor; eauto. eapply substitution0. eauto. eauto. eapply subject_reduction_eval; try eapply H0; eauto. 
-           eapply cumul_trans in X0. 2:eauto. eapply cumul_Prod_inv in X0 as []. econstructor. eauto. eauto. eapply c1.
-        -- eapply extract_subst1; eauto. 2:{ eapply is_type_extract. eauto. }
-           eapply subject_reduction_eval; eauto.
-           edestruct cumul_Prod_inv.
-           eapply cumul_trans; eauto.
-           econstructor; eauto. eapply c1.
-        -- eauto.
-        -- exists tBox. cbn in H6. split. 2: eapply eval_box; eauto.
-           now eapply eval_tBox_inv in H6 as ->.
-      * destruct ?; try congruence.
-        inv H2. edestruct IHeval3 as (? & ? & ?).
-        -- econstructor; eauto.
-           eapply substitution0. eauto. eauto. eapply subject_reduction_eval; try eapply H0; eauto. 
-           eapply cumul_trans in X0. 2:eauto. eapply cumul_Prod_inv in X0 as []. 
-           econstructor. eauto. eauto. eapply c1. 
-        -- shelve.
-        -- eauto.
-        -- exists x2. split. eauto. econstructor. eauto. exact H5. eauto.
-           Unshelve. shelve. shelve. eapply extract_subst1; eauto.
-           eapply subject_reduction_eval; eauto.
-           edestruct cumul_Prod_inv.
-           eapply cumul_trans; eauto.
-           econstructor; eauto. eapply c1.
-      * econstructor; eauto.
-      * econstructor; eauto.
-    + congruence.
-  - simpl in Ht'. inv pre. eapply type_tLetIn_inv in extr_typed0 as (? & U & [[] ?] & ?); eauto.
-    destruct Extract.is_type_or_proof eqn:Heq. destruct a; try congruence.
-    + inv Ht'.  exists tBox. split. 2: repeat econstructor.
-      eapply is_type_extract. eapply eval_is_type. 2:eauto.
-      econstructor; eauto.
-    + destruct (extract _ _ b0) as [ eb0 | ] eqn:Eb0; try congruence.
-      destruct (extract _ _ b1) as [ eb1 | ] eqn:Eb1; try congruence.
-      inv Ht'. 
 
-      eapply IHeval1 in Eb0 as (veb0 & ? & ?). 3:eauto.
-      edestruct IHeval2 as (veb1 & ? & ?).
-      4:{ exists veb1. split. eauto. econstructor. 2:eauto. eauto. }
-      -- econstructor; eauto. eapply substitution_let; eauto.
-         eapply context_conversion. 3: eassumption. all:eauto.
-         econstructor. econstructor. econstructor 3. eapply subject_reduction_eval; eauto.
-         eapply wcbeval_red. eauto.
-      -- eapply extract_subst1_vdef; eauto.
-         eapply context_conversion. eauto. 2:eauto.
-         econstructor. eauto. eauto.
-         econstructor. econstructor. econstructor. eapply subject_reduction_eval; eauto.
-         eapply wcbeval_red. eauto.
-         eapply extract_context_conversion. eauto.
-         3:{ econstructor. econstructor. econstructor 3.
-             eapply subject_reduction_eval; eauto.
-             eapply wcbeval_red. eauto. }
-         all: eauto. econstructor. eauto. econstructor; eauto.
-      -- eauto.
-      -- econstructor; eauto. 
-    + congruence.
+      cbn in IHeval1. 
+      erewrite <- is_type_App with (l := [a]) in Heq; eauto.
+      erewrite eval_is_type in Heq; try exact H.
+      rewrite Heq in IHeval1.
+      econstructor. eapply IHeval1. econstructor; eauto.
+      eapply IHeval2. econstructor; eauto.
+
+      assert (Σ ;;; [] |- a' : t). {
+        eapply subject_reduction_eval; try eapply H0; eauto. 
+        eapply cumul_trans in X0. 2:eauto. eapply cumul_Prod_inv in X0 as []. econstructor. eauto. eauto. eapply c1.
+      }
+
+      erewrite <- extract_subst1; eauto.
+      eapply IHeval3. econstructor; eauto.
+
+      eapply substitution0; eauto.
+  - inv pre. eapply type_tLetIn_inv in extr_typed0 as (? & U & [[] ?] & ?); eauto. cbn.
+    destruct Extract.is_type_or_proof eqn:Heq. 
+    + rewrite is_type_extract. now econstructor.
+      erewrite <- eval_is_type. eassumption.
+      eauto.
+    + econstructor.
+      * eapply IHeval1. econstructor; eauto.
+      * assert (extract Σ [PCUICAst.vdef na b0 t] b1 = extract Σ [PCUICAst.vdef na b0' t] b1) as ->. {
+          eapply extract_context_conversion. 3: eassumption. all:eauto.
+          econstructor. econstructor. cbn. eauto. econstructor 3. econstructor.
+          econstructor. eapply subject_reduction_eval; eauto.
+          eapply wcbeval_red. eauto.
+        }
+        assert (Σ ;;; [] |- b0' : t). {
+          eapply subject_reduction_eval; eauto.
+        }
+        
+        erewrite <- extract_subst1_vdef; eauto.
+        eapply IHeval2. econstructor; eauto.
+        eapply substitution_let; eauto.
+        
+        eapply (context_conversion _ _ _ _ _ _ t2).
+        
+        Hint Constructors context_relation red_decls.
+        Hint Resolve wcbeval_red.
+        econstructor; eauto.
+
+        eapply (context_conversion _ _ _ _ _ _ t2).
+        econstructor; eauto.
   - cbn in isdecl. inv isdecl.    
   - cbn in isdecl. inv isdecl.    
   - simpl in Ht'. destruct Extract.is_type_or_proof eqn:Heq.

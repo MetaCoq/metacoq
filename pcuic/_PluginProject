@@ -1,5 +1,4 @@
 -I src
--I ../checker/src
 -R theories PCUIC
 
 # From Equations

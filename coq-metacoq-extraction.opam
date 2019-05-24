@@ -19,7 +19,7 @@ build: [
   [make "-j%{jobs}%" "-C" "extraction"]
 ]
 install: [
-  [make "-C" "checker" "install"]
+  [make "-C" "extraction" "install"]
 ]
 # remove: [
 #   ["rm" "-R" "%{lib}%/coq/user-contrib/Template"]

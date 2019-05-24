@@ -1,5 +1,3 @@
--I ../template-coq/src
--R ../template-coq/theories MetaCoq.Template
 -R theories MetaCoq.PCUIC
 
 theories/PCUICAst.v

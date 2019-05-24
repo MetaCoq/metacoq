@@ -4,6 +4,8 @@ From Coq Require Import List Program.
 From MetaCoq.Template Require Import utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction.
 From Coq Require Import BinPos Arith.Compare_dec Bool Lia.
+Require Import PeanoNat.
+Import Nat.
 
 (** * Lifting and substitution for the AST
 
@@ -12,6 +14,31 @@ From Coq Require Import BinPos Arith.Compare_dec Bool Lia.
   a term is closed. *)
 
 Set Asymmetric Patterns.
+
+(** Shift a renaming [f] by [k]. *)
+Definition shift k f :=
+  fun n => if Nat.ltb n k then n else k + (f (n - k)).
+
+Fixpoint rename f t : term :=
+  match t with
+  | tRel i => tRel (f i)
+  | tEvar ev args => tEvar ev (List.map (rename f) args)
+  | tLambda na T M => tLambda na (rename f T) (rename (shift 1 f) M)
+  | tApp u v => tApp (rename f u) (rename f v)
+  | tProd na A B => tProd na (rename f A) (rename (shift 1 f) B)
+  | tLetIn na b t b' => tLetIn na (rename f b) (rename f t) (rename (shift 1 f) b')
+  | tCase ind p c brs =>
+    let brs' := List.map (on_snd (rename f)) brs in
+    tCase ind (rename f p) (rename f c) brs'
+  | tProj p c => tProj p (rename f c)
+  | tFix mfix idx =>
+    let mfix' := List.map (map_def (rename f) (rename (shift (List.length mfix) f))) mfix in
+    tFix mfix' idx
+  | tCoFix mfix idx =>
+    let mfix' := List.map (map_def (rename f) (rename (shift (List.length mfix) f))) mfix in
+    tCoFix mfix' idx
+  | x => x
+  end.
 
 Fixpoint lift n k t : term :=
   match t with
@@ -36,9 +63,7 @@ Fixpoint lift n k t : term :=
   | x => x
   end.
 
-
 Notation lift0 n := (lift n 0).
-Definition up := lift 1 0.
 
 (** Parallel substitution: it assumes that all terms in the substitution live in the
     same context *)
@@ -135,9 +160,6 @@ Hint Extern 10 (@eq nat _ _) => lia : terms.
 Ltac easy ::= easy0 || solve [intuition eauto 3 with core terms].
 
 Notation subst_rec N M k := (subst N k M) (only parsing).
-
-Require Import PeanoNat.
-Import Nat.
 
 Lemma lift_rel_ge :
   forall k n p, p <= n -> lift k p (tRel n) = tRel (k + n).
@@ -562,6 +584,211 @@ Qed.
 
 Definition fix_context (m : mfixpoint term) : context :=
   List.rev (mapi (fun i d => vass d.(dname) (lift0 i d.(dtype))) m).
+
+Lemma shift_ext n f f' : (forall i, f i = f' i) -> forall t, shift n f t = shift n f' t.
+Proof.
+  intros.
+  unfold shift. destruct Nat.ltb; congruence.
+Qed.
+
+Lemma rename_ext f f' : (forall i, f i = f' i) -> (forall t, rename f t = rename f' t).
+Proof.
+  intros. revert f f' H.
+  elim t0 using term_forall_list_ind; simpl in |- *; intros; try easy ;
+    try (try rewrite H; try rewrite H0 ; try rewrite H1 ; easy);
+    try solve [f_equal; solve_all].
+  - f_equal; auto. apply H0. intros.
+    now apply shift_ext.
+  - f_equal; auto. now apply H0, shift_ext.
+  - f_equal; auto. now apply H1, shift_ext.
+  - f_equal; auto. red in X. solve_all.
+    eapply map_def_eq_spec; auto. now apply b, shift_ext.
+  - f_equal; auto. red in X. solve_all.
+    eapply map_def_eq_spec; auto. now apply b, shift_ext.
+Qed.
+
+Definition lift_renaming n k :=
+  fun i =>
+    if Nat.leb k i then (* Lifted *) n + i
+    else i.
+
+Lemma shift_lift_renaming n m k : forall i, shift m (lift_renaming n k) i = lift_renaming n (m + k) i.
+Proof.
+  unfold lift_renaming, shift. intros i.
+  destruct (ltb_spec i m).
+  destruct (ltb_spec (m + k) i). lia.
+  destruct (leb_spec (m + k) i). lia. lia.
+  destruct (leb_spec (m + k) i).
+  destruct (leb_spec k (i - m)). lia. lia.
+  destruct (leb_spec k (i - m)). lia. lia.
+Qed.
+
+Lemma lift_rename n k t : lift n k t = rename (lift_renaming n k) t.
+Proof.
+  revert n k.
+  elim t using term_forall_list_ind; simpl in |- *; intros; try easy ;
+    try (try rewrite H; try rewrite H0 ; try rewrite H1 ; easy);
+    try solve [f_equal; solve_all].
+
+  - unfold lift_renaming.
+    elim (leb_spec k n); reflexivity.
+
+  - f_equal; eauto.
+    rewrite H0. eapply rename_ext. intros i. now rewrite shift_lift_renaming.
+  - f_equal; eauto.
+    rewrite H0. eapply rename_ext. intros i. now rewrite shift_lift_renaming.
+  - f_equal; eauto.
+    rewrite H1. eapply rename_ext. intros i. now rewrite shift_lift_renaming.
+  - f_equal; auto.
+    red in X. solve_all. apply map_def_eq_spec; auto.
+    rewrite b. apply rename_ext => i; now rewrite shift_lift_renaming.
+  - f_equal; auto.
+    red in X. solve_all. apply map_def_eq_spec; auto.
+    rewrite b. apply rename_ext => i; now rewrite shift_lift_renaming.
+Qed.
+
+Definition up k (s : nat -> term) :=
+  fun i =>
+    if k <=? i then rename (add k) (s (i - k))
+    else tRel i.
+
+Definition ext_eq {A B} (f g : A -> B) := forall x, f x = g x.
+Infix "=1" := ext_eq (at level 90).
+
+Lemma shift_compose n f f' : shift n f ∘ shift n f' =1 shift n (f ∘ f').
+Proof.
+  unfold shift. intros x.
+  elim (Nat.ltb_spec x n) => H.
+  - now rewrite (proj2 (Nat.ltb_lt x n)).
+  - destruct (Nat.ltb_spec (n + f' (x - n)) n).
+    lia.
+    assert (n + f' (x - n) - n = f' (x - n)) as ->. lia.
+    reflexivity.
+Qed.
+
+Lemma rename_compose f f' : rename f ∘ rename f' =1 rename (f ∘ f').
+Proof.
+  intros x.
+  induction x in f, f' |- * using term_forall_list_ind; simpl; f_equal; auto; solve_all.
+
+  - rewrite map_map_compose. apply All_map_eq. solve_all.
+  - rewrite IHx2. apply rename_ext, shift_compose.
+  - rewrite IHx2. apply rename_ext, shift_compose.
+  - rewrite IHx3. apply rename_ext, shift_compose.
+  - rewrite map_map_compose; apply All_map_eq. solve_all.
+    unfold compose; rewrite on_snd_on_snd.
+    apply on_snd_eq_spec, H.
+  - rewrite map_map_compose; apply All_map_eq. solve_all.
+    unfold compose; rewrite map_def_map_def, map_length.
+    apply map_def_eq_spec; auto.
+    rewrite b. apply rename_ext, shift_compose.
+  - rewrite map_map_compose; apply All_map_eq. solve_all.
+    unfold compose; rewrite map_def_map_def, map_length.
+    apply map_def_eq_spec; auto.
+    rewrite b. apply rename_ext, shift_compose.
+Qed.
+
+Lemma up_up k k' s : up k (up k' s) =1 up (k + k') s.
+Proof.
+  red. intros x. unfold up.
+  elim (Nat.leb_spec k x) => H.
+  - elim (Nat.leb_spec (k + k') x) => H'.
+    + elim (Nat.leb_spec k' (x - k)) => H''.
+      ++ rewrite Nat.sub_add_distr.
+         rewrite rename_compose. apply rename_ext. intros. lia.
+      ++ simpl. lia.
+    + edestruct (Nat.leb_spec k' (x - k)). lia.
+      simpl. f_equal. lia.
+  - elim (Nat.leb_spec (k + k') x) => H'; try f_equal; lia.
+Qed.
+
+Fixpoint inst s u :=
+  match u with
+  | tRel n => s n
+  | tEvar ev args => tEvar ev (List.map (inst s) args)
+  | tLambda na T M => tLambda na (inst s T) (inst (up 1 s) M)
+  | tApp u v => tApp (inst s u) (inst s v)
+  | tProd na A B => tProd na (inst s A) (inst (up 1 s) B)
+  | tLetIn na b ty b' => tLetIn na (inst s b) (inst s ty) (inst (up 1 s) b')
+  | tCase ind p c brs =>
+    let brs' := List.map (on_snd (inst s)) brs in
+    tCase ind (inst s p) (inst s c) brs'
+  | tProj p c => tProj p (inst s c)
+  | tFix mfix idx =>
+    let mfix' := List.map (map_def (inst s) (inst (up (List.length mfix) s))) mfix in
+    tFix mfix' idx
+  | tCoFix mfix idx =>
+    let mfix' := List.map (map_def (inst s) (inst (up (List.length mfix) s))) mfix in
+    tCoFix mfix' idx
+  | x => x
+  end.
+
+(* Lemma shift_up n m k : forall i, shift m (up n s) i = lift_renaming n (m + k) i. *)
+(* Proof. *)
+(*   unfold lift_renaming, shift. intros i. *)
+(*   destruct (ltb_spec i m). *)
+(*   destruct (ltb_spec (m + k) i). lia. *)
+(*   destruct (leb_spec (m + k) i). lia. lia. *)
+(*   destruct (leb_spec (m + k) i). *)
+(*   destruct (leb_spec k (i - m)). lia. lia. *)
+(*   destruct (leb_spec k (i - m)). lia. lia. *)
+(* Qed. *)
+
+Definition subst_fn (l : list term) :=
+  fun i =>
+    match List.nth_error l i with
+    | None => tRel (i - List.length l)
+    | Some t => t
+    end.
+
+Lemma up_ext k s s' : s =1 s' -> up k s =1 up k s'.
+Proof.
+  unfold up. intros Hs t. elim (Nat.leb_spec k t) => H; auto.
+  f_equal. apply Hs.
+Qed.
+
+Lemma inst_ext s s' : s =1 s' -> inst s =1 inst s'.
+Proof.
+  intros Hs t. revert s s' Hs.
+  elim t using term_forall_list_ind; simpl in |- *; intros; try easy ;
+    try (try rewrite H; try rewrite H0 ; try rewrite H1 ; easy);
+    try solve [f_equal; solve_all].
+  - f_equal; eauto. apply H0. now apply up_ext.
+  - f_equal; eauto. now apply H0, up_ext.
+  - f_equal; eauto. now apply H1, up_ext.
+  - f_equal; eauto. red in X. solve_all.
+    apply map_def_eq_spec; auto. now apply b, up_ext.
+  - f_equal; eauto. red in X. solve_all.
+    apply map_def_eq_spec; auto. now apply b, up_ext.
+Qed.
+
+Lemma subst_inst s k t : subst s k t = inst (up k (subst_fn s)) t.
+Proof.
+  revert s k.
+  elim t using term_forall_list_ind; simpl in |- *; intros; try easy ;
+    try (try rewrite H; try rewrite H0 ; try rewrite H1 ; easy);
+    try solve [f_equal; solve_all].
+
+  - unfold subst_fn, up.
+    elim (leb_spec k n). intros H.
+    destruct nth_error eqn:Heq.
+    apply lift_rename.
+    simpl. eapply nth_error_None in Heq. f_equal. lia.
+    reflexivity.
+
+  - f_equal; eauto.
+    rewrite H0. apply inst_ext. intros t'; now rewrite (up_up 1 k).
+  - f_equal; eauto.
+    rewrite H0. apply inst_ext. intros t'; now rewrite (up_up 1 k).
+  - f_equal; eauto.
+    rewrite H1. apply inst_ext. intros t'; now rewrite (up_up 1 k).
+  - f_equal; eauto.
+    solve_all; auto. apply map_def_eq_spec; auto.
+    rewrite b. apply inst_ext. intros t'; now rewrite (up_up #|m| k).
+  - f_equal; eauto.
+    solve_all; auto. apply map_def_eq_spec; auto.
+    rewrite b. apply inst_ext. intros t'; now rewrite (up_up #|m| k).
+Qed.
 
 Lemma term_forall_ctx_list_ind :
   forall P : context -> term -> Type,

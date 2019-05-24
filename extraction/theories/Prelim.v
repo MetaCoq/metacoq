@@ -134,18 +134,18 @@ Qed.
 
 Lemma is_type_extract (Σ : PCUICAst.global_context) Γ (t : PCUICAst.term) (* T : *)
   (* Σ ;;; Γ |- t : T -> *) :
-  Extract.is_type_or_proof Σ Γ t = true <-> extract Σ Γ t = E.tBox.
+  Extract.is_type_or_proof Σ Γ t = true -> extract Σ Γ t = E.tBox.
 Proof.
-  split.
-  - intros H1.
-    destruct t; simpl; try rewrite H1; try reflexivity.
-    all: try inversion H1.
-  - intros.
-  (* - intros. induction X. *)
-  (*   all: simpl in H0; try destruct ?; try destruct a0. all: try congruence. *)
-  (*   cbn in E. destruct is_arity eqn:EE. inv E. *)
-  (*   all: try now destruct ?; congruence. *)
-  (*   cbn in E. destruct H. cbn in E. inv E. *)
+  (* split. *)
+  (* - intros H1. *)
+  (*   destruct t; simpl; try rewrite H1; try reflexivity. *)
+  (*   all: try inversion H1. *)
+  (* - intros. *)
+  (* (* - intros. induction X. *) *)
+  (* (*   all: simpl in H0; try destruct ?; try destruct a0. all: try congruence. *) *)
+  (* (*   cbn in E. destruct is_arity eqn:EE. inv E. *) *)
+  (* (*   all: try now destruct ?; congruence. *) *)
+  (* (*   cbn in E. destruct H. cbn in E. inv E. *) *)
 Admitted.
 
 (* Theorem type_of_sound `{Fuel} Σ {Γ t A B} : *)

@@ -614,21 +614,314 @@ Section Conversion.
   Qed.
 
   (* TODO MOVE *)
-  (* Lemma red1_eq_term_upto_univ_l : *)
-  (*   forall R Γ u v u', *)
-  (*     eq_term_upto_univ R u u' -> *)
-  (*     red1 Σ Γ u v -> *)
-  (*     exists v', *)
-  (*       ∥ red1 Σ Γ u' v' ∥ /\ *)
-  (*       eq_term_upto_univ R v v'. *)
-  (* Proof. *)
-  (*   intros R Γ u v u' e h. *)
-  (*   induction h in u', e |- *. *)
-  (*   - dependent destruction e. dependent destruction e1. *)
-  (*     eexists. split. *)
-  (*     + constructor. constructor. *)
-  (*     + *)
+  Lemma eq_term_upto_univ_mkApps_l_inv :
+    forall R u l t,
+      eq_term_upto_univ R (mkApps u l) t ->
+      exists u' l',
+        eq_term_upto_univ R u u' /\
+        Forall2 (eq_term_upto_univ R) l l' /\
+        t = mkApps u' l'.
+  Proof.
+    intros R u l t h.
+    induction l in u, t, h |- *.
+    - cbn in h. exists t, []. split ; auto.
+    - cbn in h. apply IHl in h as [u' [l' [h1 [h2 h3]]]].
+      dependent destruction h1. subst.
+      eexists. eexists. split ; [ | split ].
+      + eassumption.
+      + constructor.
+        * eassumption.
+        * eassumption.
+      + cbn. reflexivity.
+  Qed.
 
+  (* TODO MOVE *)
+  Lemma eq_term_upto_univ_mkApps :
+    forall R u1 l1 u2 l2,
+      eq_term_upto_univ R u1 u2 ->
+      Forall2 (eq_term_upto_univ R) l1 l2 ->
+      eq_term_upto_univ R (mkApps u1 l1) (mkApps u2 l2).
+  Proof.
+    intros R u1 l1 u2 l2 hu hl.
+    induction l1 in u1, u2, l2, hu, hl |- *.
+    - inversion hl. subst. assumption.
+    - inversion hl. subst. simpl.
+      eapply IHl1.
+      + constructor. all: assumption.
+      + assumption.
+  Qed.
+
+  (* TODO MOVE *)
+  Lemma Forall2_nth :
+    forall A B P l l' n (d : A) (d' : B),
+      Forall2 P l l' ->
+      P d d' ->
+      P (nth n l d) (nth n l' d').
+  Proof.
+    intros A B P l l' n d d' h hd.
+    induction n in l, l', h |- *.
+    - destruct h.
+      + assumption.
+      + assumption.
+    - destruct h.
+      + assumption.
+      + simpl. apply IHn. assumption.
+  Qed.
+
+  Arguments skipn : simpl nomatch.
+
+  (* TODO MOVE *)
+  Lemma Forall2_skipn :
+    forall A B P l l' n,
+      @Forall2 A B P l l' ->
+      Forall2 P (skipn n l) (skipn n l').
+  Proof.
+    intros A B P l l' n h.
+    induction n in l, l', h |- *.
+    - assumption.
+    - destruct h.
+      + constructor.
+      + simpl. apply IHn. assumption.
+  Qed.
+
+  Lemma Forall2_nth_error_Some_l :
+    forall A B (P : A -> B -> Prop) l l' n t,
+      nth_error l n = Some t ->
+      Forall2 P l l' ->
+      exists t',
+        nth_error l' n = Some t' /\
+        P t t'.
+  Proof.
+    intros A B P l l' n t e h.
+    induction n in l, l', t, e, h |- *.
+    - destruct h.
+      + cbn in e. discriminate.
+      + cbn in e. inversion e. subst.
+        exists y. split ; auto.
+    - destruct h.
+      + cbn in e. discriminate.
+      + cbn in e. apply IHn with (l' := l') in e ; assumption.
+  Qed.
+
+  (* TODO MOVE *)
+  Lemma eq_term_upto_univ_isApp :
+    forall R u v,
+      eq_term_upto_univ R u v ->
+      isApp u = isApp v.
+  Proof.
+    intros R u v h.
+    induction h.
+    all: reflexivity.
+  Qed.
+
+  (* TODO MOVE *)
+  Lemma isApp_mkApps :
+    forall u l,
+      isApp u ->
+      isApp (mkApps u l).
+  Proof.
+    intros u l h.
+    induction l in u, h |- *.
+    - cbn. assumption.
+    - cbn. apply IHl. reflexivity.
+  Qed.
+
+  (* TODO MOVE *)
+  Fixpoint nApp t :=
+    match t with
+    | tApp u _ => S (nApp u)
+    | _ => 0
+    end.
+
+  (* TODO MOVE *)
+  Lemma nApp_mkApps :
+    forall t l,
+      nApp (mkApps t l) = nApp t + #|l|.
+  Proof.
+    intros t l.
+    induction l in t |- *.
+    - simpl. omega.
+    - simpl. rewrite IHl. cbn. omega.
+  Qed.
+
+  (* TODO MOVE *)
+  Lemma mkApps_nApp_inj :
+    forall u u' l l',
+      nApp u = nApp u' ->
+      mkApps u l = mkApps u' l' ->
+      u = u' /\ l = l'.
+  Proof.
+    intros u u' l l' h e.
+    induction l in u, u', l', h, e |- *.
+    - cbn in e. subst.
+      destruct l' ; auto.
+      exfalso.
+      rewrite nApp_mkApps in h. cbn in h. omega.
+    - destruct l'.
+      + cbn in e. subst. exfalso.
+        rewrite nApp_mkApps in h. cbn in h. omega.
+      + cbn in e. apply IHl in e.
+        * destruct e as [e1 e2].
+          inversion e1. subst. auto.
+        * cbn. f_equal. auto.
+  Qed.
+
+  (* TODO MOVE *)
+  Lemma isApp_false_nApp :
+    forall u,
+      isApp u = false ->
+      nApp u = 0.
+  Proof.
+    intros u h.
+    destruct u.
+    all: try reflexivity.
+    discriminate.
+  Qed.
+
+  (* TODO MOVE *)
+  Lemma mkApps_notApp_inj :
+    forall u u' l l',
+      isApp u = false ->
+      isApp u' = false ->
+      mkApps u l = mkApps u' l' ->
+      u = u' /\ l = l'.
+  Proof.
+    intros u u' l l' h h' e.
+    eapply mkApps_nApp_inj.
+    - rewrite 2!isApp_false_nApp by assumption. reflexivity.
+    - assumption.
+  Qed.
+
+  (* TODO MOVE *)
+  Lemma eq_term_upto_univ_mkApps_inv :
+    forall R u l u' l',
+      isApp u = false ->
+      isApp u' = false ->
+      eq_term_upto_univ R (mkApps u l) (mkApps u' l') ->
+      eq_term_upto_univ R u u' /\ Forall2 (eq_term_upto_univ R) l l'.
+  Proof.
+    intros R u l u' l' hu hu' h.
+    apply eq_term_upto_univ_mkApps_l_inv in h as hh.
+    destruct hh as [v [args [h1 [h2 h3]]]].
+    apply eq_term_upto_univ_isApp in h1 as hh1. rewrite hu in hh1.
+    apply mkApps_notApp_inj in h3 ; auto.
+    destruct h3 as [? ?]. subst. split ; auto.
+  Qed.
+
+  (* TODO MOVE *)
+  Lemma decompose_app_rec_notApp :
+    forall t l u l',
+      decompose_app_rec t l = (u, l') ->
+      isApp u = false.
+  Proof.
+    intros t l u l' e.
+    induction t in l, u, l', e |- *.
+    all: try (cbn in e ; inversion e ; reflexivity).
+    cbn in e. eapply IHt1. eassumption.
+  Qed.
+
+  (* TODO MOVE *)
+  Lemma decompose_app_notApp :
+    forall t u l,
+      decompose_app t = (u, l) ->
+      isApp u = false.
+  Proof.
+    intros t u l e.
+    eapply decompose_app_rec_notApp. eassumption.
+  Qed.
+
+  (* TODO MOVE? *)
+  Lemma isConstruct_app_eq_term_l :
+    forall R u v,
+      isConstruct_app u ->
+      eq_term_upto_univ R u v ->
+      isConstruct_app v.
+  Proof.
+    intros R u v h e.
+    case_eq (decompose_app u). intros t1 l1 e1.
+    case_eq (decompose_app v). intros t2 l2 e2.
+    unfold isConstruct_app in *.
+    rewrite e1 in h. cbn in h.
+    rewrite e2. cbn.
+    destruct t1 ; try discriminate.
+    apply PCUICConfluence.decompose_app_inv in e1 as ?. subst.
+    apply PCUICConfluence.decompose_app_inv in e2 as ?. subst.
+    apply eq_term_upto_univ_mkApps_inv in e as hh.
+    - destruct hh as [h1 h2].
+      dependent destruction h1. reflexivity.
+    - reflexivity.
+    - eapply decompose_app_notApp. eassumption.
+  Qed.
+
+  Lemma eq_term_upto_univ_substs :
+    forall R l1 l2 n u1 u2,
+      eq_term_upto_univ R u1 u2 ->
+      Forall2 (eq_term_upto_univ R) l1 l2 ->
+      eq_term_upto_univ R (subst l1 n u1) (subst l2 n u2).
+  Proof.
+    intros R l1 l2 n u1 u2 hu hl.
+    induction hl in u1, u2, hu |- *.
+    - rewrite 2!subst_empty. assumption.
+    -
+  Admitted.
+
+  (* TODO MOVE *)
+  Lemma red1_eq_term_upto_univ_l :
+    forall R Γ u v u',
+      Reflexive R ->
+      eq_term_upto_univ R u u' ->
+      red1 Σ Γ u v ->
+      exists v',
+        ∥ red1 Σ Γ u' v' ∥ /\
+        eq_term_upto_univ R v v'.
+  Proof.
+    intros R Γ u v u' hR e h.
+    induction h in u', e |- *.
+    - dependent destruction e. dependent destruction e1.
+      eexists. split.
+      + constructor. constructor.
+      + eapply eq_term_upto_univ_subst ; assumption.
+    - dependent destruction e.
+      eexists. split.
+      + constructor. constructor.
+      + eapply eq_term_upto_univ_subst ; assumption.
+    - dependent destruction e.
+      eexists. split.
+      + constructor. constructor. eassumption.
+      + eapply eq_term_upto_univ_refl. assumption.
+    - dependent destruction e.
+      apply eq_term_upto_univ_mkApps_l_inv in e2 as [? [? [h1 [h2 h3]]]]. subst.
+      dependent destruction h1.
+      eexists. split.
+      + constructor. constructor.
+      + eapply eq_term_upto_univ_mkApps.
+        * eapply Forall2_nth with (P := fun x y => eq_term_upto_univ R (snd x) (snd y)).
+          -- eapply Forall2_impl ; [ eassumption |].
+             intros x y [? ?]. assumption.
+          -- cbn. eapply eq_term_upto_univ_refl. assumption.
+        * eapply Forall2_skipn. assumption.
+    - apply eq_term_upto_univ_mkApps_l_inv in e as [? [? [h1 [h2 h3]]]]. subst.
+      dependent destruction h1.
+      unfold unfold_fix in e0.
+      case_eq (nth_error mfix idx) ;
+        try (intros e ; rewrite e in e0 ; discriminate e0).
+      intros d e. rewrite e in e0. inversion e0. subst. clear e0.
+      eapply Forall2_nth_error_Some_l in H as hh ; try eassumption.
+      destruct hh as [d' [e' [? [? erarg]]]].
+      unfold is_constructor in e1.
+      case_eq (nth_error args (rarg d)) ;
+        try (intros bot ; rewrite bot in e1 ; discriminate e1).
+      intros a ea. rewrite ea in e1.
+      eapply Forall2_nth_error_Some_l in h2 as hh ; try eassumption.
+      destruct hh as [a' [ea' ?]].
+      eexists. split.
+      + constructor. eapply red_fix.
+        * unfold unfold_fix. rewrite e'. reflexivity.
+        * unfold is_constructor. rewrite <- erarg. rewrite ea'.
+          eapply isConstruct_app_eq_term_l ; eassumption.
+      + eapply eq_term_upto_univ_mkApps.
+        *
+  Admitted.
 
   Set Primitive Projections.
 

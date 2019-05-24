@@ -508,6 +508,128 @@ Section Conversion.
     | Args => wtp Γ t π
     end.
 
+  (* TODO MOVE *)
+  Local Ltac lih :=
+    lazymatch goal with
+    | ih : forall v n k, eq_term_upto_univ _ ?u _ -> _
+      |- eq_term_upto_univ _ (lift _ _ ?u) _ =>
+      eapply ih
+    end.
+
+  Lemma eq_term_upto_univ_lift :
+    forall R u v n k,
+      eq_term_upto_univ R u v ->
+      eq_term_upto_univ R (lift n k u) (lift n k v).
+  Proof.
+    intros R u v n k e.
+    induction u in v, n, k, e |- * using term_forall_list_ind.
+    all: dependent destruction e.
+    all: try (cbn ; constructor ; try lih ; assumption).
+    - cbn. destruct (Nat.leb_spec0 k n0).
+      + constructor.
+      + constructor.
+    - cbn. constructor.
+      eapply Forall2_map.
+      eapply Forall2_impl'.
+      + eassumption.
+      + eapply All_Forall.
+        eapply All_impl ; [ eassumption |].
+        intros x H1 y H2. cbn in H1.
+        eapply H1. assumption.
+    - cbn. constructor ; try lih ; try assumption.
+      eapply Forall2_map. eapply Forall2_impl' ; [ eassumption |].
+      eapply All_Forall. eapply All_impl ; [ eassumption |].
+      intros x H0 y [? ?]. cbn in H0. repeat split ; auto.
+      eapply H0. assumption.
+    - cbn. constructor.
+      eapply Forall2_map. eapply Forall2_impl' ; [ eassumption |].
+      eapply All_Forall. eapply All_impl ; [ eassumption |].
+      intros x [h1 h2] y [? [? ?]].
+      repeat split ; auto.
+      + eapply h1. assumption.
+      + apply Forall2_length in H. rewrite H.
+        eapply h2. assumption.
+    - cbn. constructor.
+      eapply Forall2_map. eapply Forall2_impl' ; [ eassumption |].
+      eapply All_Forall. eapply All_impl ; [ eassumption |].
+      intros x [h1 h2] y [? [? ?]].
+      repeat split ; auto.
+      + eapply h1. assumption.
+      + apply Forall2_length in H. rewrite H.
+        eapply h2. assumption.
+  Qed.
+
+  (* TODO MOVE *)
+  Local Ltac sih :=
+    lazymatch goal with
+    | ih : forall v n x y, eq_term_upto_univ _ ?u _ -> _ -> _
+      |- eq_term_upto_univ _ (subst _ _ ?u) _ => eapply ih
+    end.
+
+  (* TODO MOVE *)
+  Lemma eq_term_upto_univ_subst :
+    forall R u v n x y,
+      eq_term_upto_univ R u v ->
+      eq_term_upto_univ R x y ->
+      eq_term_upto_univ R (u{n := x}) (v{n := y}).
+  Proof.
+    intros R u v n x y e1 e2.
+    induction u in v, n, x, y, e1, e2 |- * using term_forall_list_ind.
+    all: dependent destruction e1.
+    all: try (cbn ; constructor ; try sih ; assumption).
+    - cbn. destruct (Nat.leb_spec0 n n0).
+      + destruct (eqb_spec n0 n).
+        * subst. replace (n - n) with 0 by omega. cbn.
+          eapply eq_term_upto_univ_lift. assumption.
+        * replace (n0 - n) with (S (n0 - (S n))) by omega. cbn.
+          rewrite nth_error_nil. constructor.
+      + constructor.
+    - cbn. constructor.
+      eapply Forall2_map. eapply Forall2_impl' ; [ eassumption |].
+      eapply All_Forall.
+      eapply All_impl ; [ eassumption |].
+      intros x0 H1 y0 H2. cbn in H1.
+      eapply H1. all: assumption.
+    - cbn. constructor ; try sih ; try assumption.
+      eapply Forall2_map. eapply Forall2_impl' ; [ eassumption |].
+      eapply All_Forall. eapply All_impl ; [ eassumption |].
+      intros ? H0 ? [? ?]. cbn in H0. repeat split ; auto.
+      eapply H0. all: assumption.
+    - cbn. constructor.
+      eapply Forall2_map. eapply Forall2_impl' ; [ eassumption |].
+      eapply All_Forall. eapply All_impl ; [ eassumption |].
+      intros ? [h1 h2] ? [? [? ?]].
+      repeat split ; auto.
+      + eapply h1. all: assumption.
+      + apply Forall2_length in H. rewrite H.
+        eapply h2. all: assumption.
+    - cbn. constructor.
+      eapply Forall2_map. eapply Forall2_impl' ; [ eassumption |].
+      eapply All_Forall. eapply All_impl ; [ eassumption |].
+      intros ? [h1 h2] ? [? [? ?]].
+      repeat split ; auto.
+      + eapply h1. all: assumption.
+      + apply Forall2_length in H. rewrite H.
+        eapply h2. all: assumption.
+  Qed.
+
+  (* TODO MOVE *)
+  (* Lemma red1_eq_term_upto_univ_l : *)
+  (*   forall R Γ u v u', *)
+  (*     eq_term_upto_univ R u u' -> *)
+  (*     red1 Σ Γ u v -> *)
+  (*     exists v', *)
+  (*       ∥ red1 Σ Γ u' v' ∥ /\ *)
+  (*       eq_term_upto_univ R v v'. *)
+  (* Proof. *)
+  (*   intros R Γ u v u' e h. *)
+  (*   induction h in u', e |- *. *)
+  (*   - dependent destruction e. dependent destruction e1. *)
+  (*     eexists. split. *)
+  (*     + constructor. constructor. *)
+  (*     + *)
+
+
   Set Primitive Projections.
 
   Record pack := mkpack {

@@ -853,16 +853,89 @@ Section Conversion.
     - eapply decompose_app_notApp. eassumption.
   Qed.
 
+  (* TODO MOVE *)
+  (* Subsumes the other lemma? *)
   Lemma eq_term_upto_univ_substs :
-    forall R l1 l2 n u1 u2,
-      eq_term_upto_univ R u1 u2 ->
-      Forall2 (eq_term_upto_univ R) l1 l2 ->
-      eq_term_upto_univ R (subst l1 n u1) (subst l2 n u2).
+    forall R u v n l l',
+      eq_term_upto_univ R u v ->
+      Forall2 (eq_term_upto_univ R) l l' ->
+      eq_term_upto_univ R (subst l n u) (subst l' n v).
   Proof.
-    intros R l1 l2 n u1 u2 hu hl.
-    induction hl in u1, u2, hu |- *.
-    - rewrite 2!subst_empty. assumption.
-    -
+    intros R u v n l l' hu hl.
+    induction u in v, n, l, l', hu, hl |- * using term_forall_list_ind.
+    all: dependent destruction hu.
+    all: try (cbn ; constructor ; try sih ; assumption).
+(*     - cbn. destruct (Nat.leb_spec0 n n0). *)
+(*       + destruct (eqb_spec n0 n). *)
+(*         * subst. replace (n - n) with 0 by omega. *)
+(*           destruct hl. *)
+(*           -- cbn. constructor. *)
+(*           -- cbn. eapply eq_term_upto_univ_lift. assumption. *)
+(*         * replace (n0 - n) with (S (n0 - (S n))) by omega. *)
+(*           destruct hl. *)
+(*           -- cbn. constructor. *)
+(*           -- cbn.  *)
+
+(* induction hl in n |- *. *)
+(*       + rewrite subst_empty. constructor. *)
+(*       + cbn. destruct (Nat.leb_spec0 n n0). *)
+(*         * destruct (eqb_spec n0 n). *)
+(*           -- subst. replace (n - n) with 0 by omega. cbn. *)
+(*              eapply eq_term_upto_univ_lift. assumption. *)
+(*           -- replace (n0 - n) with (S (n0 - (S n))) by omega. cbn. *)
+(*              cbn in IHhl. specialize (IHhl (S n)). *)
+(*              revert IHhl. *)
+(*              destruct (Nat.leb_spec0 (S n) n0) ; try (exfalso ; omega). *)
+(*              case_eq (nth_error l (n0 - S n)). *)
+(*              ++ intros b e. *)
+(*                 case_eq (nth_error l' (n0 - S n)). *)
+(*                 ** intros b' e' ih. *)
+
+
+
+(* cbn. destruct (Nat.leb_spec0 n n0). *)
+(*       + destruct (eqb_spec n0 n). *)
+(*         * subst. replace (n - n) with 0 by omega. *)
+(*           destruct hl. *)
+(*           -- cbn. constructor. *)
+(*           -- cbn. eapply eq_term_upto_univ_lift. assumption. *)
+(*         * replace (n0 - n) with (S (n0 - (S n))) by omega. *)
+(*           destruct hl. *)
+(*           -- cbn. constructor. *)
+(*           -- cbn. *)
+
+(*           eapply eq_term_upto_univ_lift. assumption. *)
+(*         * replace (n0 - n) with (S (n0 - (S n))) by omega. cbn. *)
+(*           rewrite nth_error_nil. constructor. *)
+(*       + constructor. *)
+    - admit.
+    - cbn. constructor.
+      eapply Forall2_map. eapply Forall2_impl' ; [ eassumption |].
+      eapply All_Forall.
+      eapply All_impl ; [ eassumption |].
+      intros x0 H1 y0 H2. cbn in H1.
+      eapply H1. all: assumption.
+    - cbn. constructor ; try sih ; try assumption.
+      eapply Forall2_map. eapply Forall2_impl' ; [ eassumption |].
+      eapply All_Forall. eapply All_impl ; [ eassumption |].
+      intros ? H0 ? [? ?]. cbn in H0. repeat split ; auto.
+      eapply H0. all: assumption.
+    - cbn. constructor.
+      eapply Forall2_map. eapply Forall2_impl' ; [ eassumption |].
+      eapply All_Forall. eapply All_impl ; [ eassumption |].
+      intros ? [h1 h2] ? [? [? ?]].
+      repeat split ; auto.
+      + eapply h1. all: assumption.
+      + apply Forall2_length in H. rewrite H.
+        eapply h2. all: assumption.
+    - cbn. constructor.
+      eapply Forall2_map. eapply Forall2_impl' ; [ eassumption |].
+      eapply All_Forall. eapply All_impl ; [ eassumption |].
+      intros ? [h1 h2] ? [? [? ?]].
+      repeat split ; auto.
+      + eapply h1. all: assumption.
+      + apply Forall2_length in H. rewrite H.
+        eapply h2. all: assumption.
   Admitted.
 
   (* TODO MOVE *)

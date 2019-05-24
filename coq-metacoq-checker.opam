@@ -22,32 +22,20 @@ build: [
 install: [
   [make "-C" "checker" "install"]
 ]
-# remove: [
-#   ["rm" "-R" "%{lib}%/coq/user-contrib/Template"]
-#   ["rm" "-R" "%{lib}%/coq/user-contrib/TemplateChecker"]
-#   ["rm" "-R" "%{lib}%/coq/user-contrib/TemplateExtraction"]
-# ]
 depends: [
   "ocaml" {> "4.02.3"}
   "coq" {>= "8.8" & < "8.9~"}
   "coq-metacoq-template" {= "2.2"}
 ]
-synopsis: "A quoting and unquoting library for Coq in Coq"
+synopsis: "Specification of Coq's type theory and reference checker implementation."
 description: """
 MetaCoq is a meta-programming framework for Coq.
 
-Template Coq is a quoting library for Coq. It takes Coq terms and
-constructs a representation of their syntax tree as a Coq inductive data
-type. The representation is based on the kernel's term representation.
+The Checker module provides a complete specification of Coq's typing and conversion
+relation along with a reference type-checker that is extracted to a pluging.
 
-In addition to a complete reification and denotation of CIC terms,
-Template Coq includes:
-
-- Reification of the environment structures, for constant and inductive declarations.
-- Denotation of terms and global declarations
-- A monad for manipulating global declarations, calling the type
-  checker, and inserting them in the global environment, in the style of
-  MetaCoq/MTac.
+This provides a command: `MetaCoq Check [global_reference]` that can be used
+to typecheck a Coq definition using the verified type-checker.
 """
 flags: light-uninstall
 # url {

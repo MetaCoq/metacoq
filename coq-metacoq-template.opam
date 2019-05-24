@@ -21,11 +21,6 @@ build: [
 install: [
   [make "-C" "template-coq" "install"]
 ]
-# remove: [
-#   ["rm" "-R" "%{lib}%/coq/user-contrib/Template"]
-#   ["rm" "-R" "%{lib}%/coq/user-contrib/TemplateChecker"]
-#   ["rm" "-R" "%{lib}%/coq/user-contrib/TemplateExtraction"]
-# ]
 depends: [
   "ocaml" {> "4.02.3"}
   "coq" {>= "8.8" & < "8.9~"}

@@ -21,11 +21,6 @@ build: [
 install: [
   [make "-C" "extraction" "install"]
 ]
-# remove: [
-#   ["rm" "-R" "%{lib}%/coq/user-contrib/Template"]
-#   ["rm" "-R" "%{lib}%/coq/user-contrib/TemplateChecker"]
-#   ["rm" "-R" "%{lib}%/coq/user-contrib/TemplateExtraction"]
-# ]
 depends: [
   "ocaml" {> "4.02.3"}
   "coq" {>= "8.8" & < "8.9~"}
@@ -33,22 +28,17 @@ depends: [
   "coq-metacoq-checker" {= "2.2"}
   "coq-metacoq-pcuic" {= "2.2"}
 ]
-synopsis: "A quoting and unquoting library for Coq in Coq"
+synopsis: "Implementation and verification of Coq's \"extraction\" procedure."
 description: """
 MetaCoq is a meta-programming framework for Coq.
 
-Template Coq is a quoting library for Coq. It takes Coq terms and
-constructs a representation of their syntax tree as a Coq inductive data
-type. The representation is based on the kernel's term representation.
+The Extraction module provides a complete specification of Coq's so-called
+\"extraction\" procedure, starting from the PCUIC calculus and targeting
+untyped call-by-value lambda-calculus.
 
-In addition to a complete reification and denotation of CIC terms,
-Template Coq includes:
-
-- Reification of the environment structures, for constant and inductive declarations.
-- Denotation of terms and global declarations
-- A monad for manipulating global declarations, calling the type
-  checker, and inserting them in the global environment, in the style of
-  MetaCoq/MTac.
+The `erasure` function translates types and proofs in well-typed terms
+into a dummy `tBox` constructor, following closely P. Letouzey's PhD
+thesis.
 """
 flags: light-uninstall
 # url {

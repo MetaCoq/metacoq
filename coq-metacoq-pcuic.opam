@@ -31,6 +31,7 @@ depends: [
   "coq" {>= "8.8" & < "8.9~"}
   "coq-equations" {>= "1.2"}
   "coq-metacoq-template" {= "2.2"}
+  "coq-metacoq-checker" {= "2.2"}
 ]
 synopsis: "A quoting and unquoting library for Coq in Coq"
 description: """

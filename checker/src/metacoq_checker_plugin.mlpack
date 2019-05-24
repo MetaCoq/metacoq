@@ -21,9 +21,9 @@ MSetWeakList
 FMapWeakList
 BinNums
 Universes0
+BasicAst
 Ast0
 AstUtils
-BasicAst
 Common
 Config0
 

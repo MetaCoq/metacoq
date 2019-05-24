@@ -1,5 +1,5 @@
 -I src
--R theories Template
+-R theories MetaCoq.Template
 
 # the MetaCoq plugin
 src/tm_util.ml

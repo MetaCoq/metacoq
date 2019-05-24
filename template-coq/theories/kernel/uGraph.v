@@ -1,5 +1,5 @@
 Require Import BinInt List. Import ListNotations.
-From Template Require Import config Universes.
+From MetaCoq.Template Require Import config Universes.
 
 
 

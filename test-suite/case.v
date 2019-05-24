@@ -1,4 +1,4 @@
-Require Import Template.Loader.
+Require Import MetaCoq.Template.Loader.
 
 Definition f := fun (n : nat) =>
   match n with

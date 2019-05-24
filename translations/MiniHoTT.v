@@ -248,7 +248,7 @@ Arguments equiv_isequiv {A B} _.
 
 Bind Scope equiv_scope with Equiv.
 
-Notation "A <~> B" := (Equiv A B) (at level 85) : type_scope.
+Notation "A <~> B" := (Equiv A B) (at level 90) : type_scope.
 
 Notation "f ^-1" := (@equiv_inv _ _ f _) (at level 3, format "f '^-1'") : function_scope.
 

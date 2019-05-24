@@ -3,8 +3,8 @@
 Require Import Coq.Strings.String.
 Require Import Coq.PArith.BinPos.
 Require Import List. Import ListNotations.
-From Template Require Import monad_utils.
-From Template Require Export uGraph Ast.
+From MetaCoq.Template Require Import monad_utils.
+From MetaCoq.Template Require Export uGraph Ast.
 
 (** Erased terms
 

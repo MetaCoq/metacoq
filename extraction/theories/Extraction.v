@@ -16,7 +16,7 @@ Extraction Blacklist config uGraph Universes Ast String List Nat UnivSubst
            LiftSubst Induction Typing Retyping Checker.
 Set Warnings "-extraction-opaque-accessed".
 
-From TemplateExtraction Require Import EAst EAstUtils EInduction ELiftSubst ETyping Extract.
+From MetaCoq.Extraction Require Import EAst EAstUtils EInduction ELiftSubst ETyping Extract.
 
 Extraction Library EAst.
 Extraction Library EAstUtils.

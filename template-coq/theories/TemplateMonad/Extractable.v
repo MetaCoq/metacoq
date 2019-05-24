@@ -1,5 +1,5 @@
 From Coq Require Import Strings.String.
-From Template Require Import
+From MetaCoq.Template Require Import
      Ast uGraph AstUtils TemplateMonad.Common.
 
 Set Universe Polymorphism.

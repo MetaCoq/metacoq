@@ -1,5 +1,5 @@
 Require Import List Arith String.
-Require Import Template.All.
+Require Import MetaCoq.Template.All.
 Import ListNotations MonadNotation.
 
 Local Open Scope string_scope.

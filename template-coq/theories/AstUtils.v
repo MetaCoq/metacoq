@@ -1,5 +1,5 @@
 From Coq Require Import Ascii String Bool OrderedType Lia List Program Arith.
-From Template Require Import BasicAst Ast utils.
+From MetaCoq.Template Require Import BasicAst Ast utils.
 Import List.ListNotations.
 Require Import FunctionalExtensionality.
 Require Import ssreflect.

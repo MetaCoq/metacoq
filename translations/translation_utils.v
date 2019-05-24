@@ -1,4 +1,4 @@
-From Template Require Import All TemplateMonad.Core Monad monad_utils.
+From MetaCoq.Template Require Import All TemplateMonad.Core Monad monad_utils.
 Require Import List.
 Import ListNotations MonadNotation String.
 Open Scope string_scope.
@@ -20,7 +20,7 @@ Fixpoint lookup_tsl_table (E : tsl_table) (gr : global_reference)
 
 Definition tsl_context := (global_context * tsl_table)%type.
 
-Definition emptyTC : tsl_context := (([], uGraph.init_graph), []).
+Definition emptyTC : tsl_context := (([], ConstraintSet.empty), []).
 
 Inductive tsl_error :=
 | NotEnoughFuel

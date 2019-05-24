@@ -1,7 +1,7 @@
--Q ../template-coq/theories Template
--I  ../template-coq/build
+-Q ../template-coq/theories MetaCoq.Template
+-I ../template-coq/build
 -I src
--Q theories TemplateChecker
+-R theories MetaCoq.Checker
 
 src/checker0.ml
 src/checker0.mli
@@ -19,12 +19,6 @@ src/univSubst0.ml
 src/univSubst0.mli
 src/wf.ml
 src/wf.mli
-
-src/term_quoter.ml
-src/g_template_checker.ml4
-src/template_coq_checker_plugin.mlpack
-
-theories/Loader.v
 
 # from MetaCoq (include verbatim)
 src/ascii.ml
@@ -105,3 +99,8 @@ src/plugin_core.mli
 src/plugin_core.ml
 src/ast_quoter.ml
 src/ast_denoter.ml
+
+src/g_metacoq_checker.ml4
+src/metacoq_checker_plugin.mlpack
+
+theories/Loader.v

@@ -1,6 +1,6 @@
 (** Reported by Randy Pollack **)
 
-Require Import Template.Loader.
+Require Import MetaCoq.Template.Loader.
 Require Import List.
 Fixpoint fibrec (n:nat) (fs:list nat) {struct n} : nat :=
   match n with

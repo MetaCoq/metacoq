@@ -25,7 +25,7 @@ install: [
 depends: [
   "ocaml" {> "4.02.3"}
   "coq" {>= "8.8" & < "8.9~"}
-  "coq-metacoq-template" {= "2.2"}
+  "coq-metacoq-template" {= version}
 ]
 synopsis: "Specification of Coq's type theory and reference checker implementation."
 description: """

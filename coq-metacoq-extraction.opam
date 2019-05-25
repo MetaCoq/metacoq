@@ -24,9 +24,9 @@ install: [
 depends: [
   "ocaml" {> "4.02.3"}
   "coq" {>= "8.8" & < "8.9~"}
-  "coq-metacoq-template" {= "2.2"}
-  "coq-metacoq-checker" {= "2.2"}
-  "coq-metacoq-pcuic" {= "2.2"}
+  "coq-metacoq-template" {= version}
+  "coq-metacoq-checker" {= version}
+  "coq-metacoq-pcuic" {= version}
 ]
 synopsis: "Implementation and verification of Coq's \"extraction\" procedure."
 description: """

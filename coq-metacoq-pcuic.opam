@@ -25,8 +25,8 @@ depends: [
   "ocaml" {> "4.02.3"}
   "coq" {>= "8.8" & < "8.9~"}
   "coq-equations" {>= "1.2"}
-  "coq-metacoq-template" {= "2.2"}
-  "coq-metacoq-checker" {= "2.2"}
+  "coq-metacoq-template" {= version}
+  "coq-metacoq-checker" {= version}
 ]
 synopsis: "A type system equivalent to Coq's and its metatheory"
 description: """

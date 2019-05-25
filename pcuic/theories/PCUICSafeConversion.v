@@ -993,8 +993,32 @@ Section Conversion.
         * unfold is_constructor. rewrite <- erarg. rewrite ea'.
           eapply isConstruct_app_eq_term_l ; eassumption.
       + eapply eq_term_upto_univ_mkApps.
-        *
+        * eapply eq_term_upto_univ_substs.
+          -- assumption.
+          --
   Admitted.
+
+  Lemma cored_eq_term_upto_univ_r :
+    forall R Γ u v u',
+      Reflexive R ->
+      eq_term_upto_univ R u u' ->
+      cored Σ Γ v u ->
+      exists v',
+        cored Σ Γ v' u' /\
+        eq_term_upto_univ R v v'.
+  Proof.
+    intros R Γ u v u' hR e h.
+    induction h.
+    - eapply red1_eq_term_upto_univ_l in X ; try eassumption.
+      destruct X as [v' [[r] e']].
+      exists v'. split ; auto.
+      constructor. assumption.
+    - specialize (IHh e). destruct IHh as [v' [c ev]].
+      eapply red1_eq_term_upto_univ_l in X ; try eassumption.
+      destruct X as [w' [[?] ?]].
+      exists w'. split ; auto.
+      eapply cored_trans ; eauto.
+  Qed.
 
   Set Primitive Projections.
 

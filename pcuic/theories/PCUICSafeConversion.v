@@ -1026,6 +1026,12 @@ Section Conversion.
       cored Σ (nlctx Γ) (nl u) (nl v).
   Admitted.
 
+  Lemma red_nl :
+    forall Γ u v,
+      red Σ Γ u v ->
+      red Σ (nlctx Γ) (nl u) (nl v).
+  Admitted.
+
   Set Primitive Projections.
 
   Record pack := mkpack {
@@ -3031,12 +3037,16 @@ Section Conversion.
     rewrite 2!nl_zipc in r1. cbn in r1.
     eapply red_cored_cored ; try eassumption.
     apply red_context in r2. cbn in r2.
+    apply red_nl in r2.
+    rewrite 4!nl_zipc in r2. rewrite nlstack_appstack in r2.
+    cbn in r2.
     rewrite nlstack_cat.
     rewrite zipc_stack_cat.
     pose proof (decompose_stack_eq _ _ _ (eq_sym eq2)). subst.
     rewrite nlstack_appstack.
     rewrite zipc_appstack in r2. cbn in r2.
-    rewrite zipc_appstack. assumption.
+    rewrite zipc_appstack.
+    assumption.
   Qed.
   Next Obligation.
     match type of eq3 with
@@ -3145,10 +3155,17 @@ Section Conversion.
     eapply R_cored2. all: try reflexivity. simpl.
     eapply cored_it_mkLambda_or_LetIn.
     rewrite app_context_nil_l.
+    apply cored_nl in r1.
+    rewrite 2!nl_zipc in r1. cbn in r1.
     eapply red_cored_cored ; try eassumption.
     apply red_context in r2. cbn in r2.
+    apply red_nl in r2.
+    rewrite 4!nl_zipc in r2. rewrite nlstack_appstack in r2.
+    cbn in r2.
+    rewrite nlstack_cat.
     rewrite zipc_stack_cat.
     pose proof (decompose_stack_eq _ _ _ (eq_sym eq2)). subst.
+    rewrite nlstack_appstack.
     rewrite zipc_appstack in r2. cbn in r2.
     rewrite zipc_appstack. assumption.
   Qed.
@@ -3372,6 +3389,7 @@ Section Conversion.
       + rewrite <- mkApps_nested in eq. assumption.
       + subst x y.
         unfold xposition. cbn. apply positionR_poscat.
+        rewrite 2!stack_position_nlstack.
         rewrite 2!stack_position_appstack.
         rewrite <- !app_assoc. apply positionR_poscat.
         assert (h : forall n m, positionR (list_make n app_l ++ [app_r]) (list_make m app_l)).
@@ -3480,17 +3498,18 @@ Section Conversion.
 
     isconv_full s Γ t π1 h1 π2 h2 :=
       Fix_F (R := R)
-            (fun '(nlmkpack s' Γ' t' π1' π2' h2') => wtp Γ' t' π1' -> wts Γ' s' t' π2' -> Ret s' Γ' t' π1' π2')
+            (fun '(mkpack s' Γ' t' π1' π2' h2') => wtp Γ' t' π1' -> wts Γ' s' t' π2' -> Ret s' Γ' t' π1' π2')
             (fun pp f => _)
-            (x := nlmkpack s Γ t π1 π2 _)
+            (x := mkpack s Γ t π1 π2 _)
             _ _ _.
   Next Obligation.
     unshelve eapply _isconv ; try assumption.
     intros s' Γ' t' π1' π2' h1' h2' hR. destruct pp.
     assert (wth0 = zwts H0) by apply welltyped_irr. subst.
-    specialize (f (nlmkpack s' Γ' t' π1' π2' (zwts h2')) hR). cbn in f.
-    eapply f ; assumption.
-  Qed.
+    (* specialize (f (nlmkpack s' Γ' t' π1' π2' (zwts h2')) hR). cbn in f. *)
+  (*   eapply f ; assumption. *)
+  (* Qed. *)
+  Admitted.
   Next Obligation.
     destruct s ; assumption.
   Qed.

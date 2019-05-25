@@ -1096,6 +1096,15 @@ Section Conversion.
     all: solve [ simpl ; rewrite ?IHρ ; reflexivity ].
   Qed.
 
+  Lemma stack_position_nlstack :
+    forall ρ,
+      stack_position (nlstack ρ) = stack_position ρ.
+  Proof.
+    intros ρ.
+    induction ρ.
+    all: (simpl ; rewrite ?IHρ ; reflexivity).
+  Qed.
+
   Lemma nl_it_mkLambda_or_LetIn :
     forall Γ t,
       nl (it_mkLambda_or_LetIn Γ t) =
@@ -1693,14 +1702,21 @@ Section Conversion.
           -- simpl. rewrite stack_cat_appstack. reflexivity.
           -- simpl. rewrite stack_cat_appstack. reflexivity.
           -- simpl. unfold zipx. f_equal.
-             rewrite zipc_stack_cat. rewrite <- H2.
+             rewrite nlstack_appstack. rewrite nlstack_cat.
+             rewrite zipc_stack_cat.
+             apply (f_equal nl) in H2. rewrite 2!nl_zipc in H2.
+             rewrite <- H2. rewrite nlstack_appstack.
              rewrite 2!zipc_appstack. cbn. reflexivity.
           -- simpl. unfold xposition. eapply positionR_poscat.
              unfold posR in H. cbn in H.
              rewrite stack_position_appstack in H. cbn in H.
+             rewrite nlstack_appstack. rewrite nlstack_cat.
              rewrite stack_position_stack_cat.
              rewrite stack_position_appstack.
-             eapply positionR_poscat. assumption.
+             eapply positionR_poscat.
+             rewrite stack_position_nlstack.
+             rewrite map_length.
+             assumption.
     - rewrite <- eq1 in h.
       rewrite stack_context_appstack in h.
       dependent destruction h.

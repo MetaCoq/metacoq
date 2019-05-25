@@ -37,7 +37,6 @@ relation along with a reference type-checker that is extracted to a pluging.
 This provides a command: `MetaCoq Check [global_reference]` that can be used
 to typecheck a Coq definition using the verified type-checker.
 """
-flags: light-uninstall
 # url {
 #   src: "https://github.com/MetaCoq/metacoq/archive/v2.1-beta3.tar.gz"
 #   checksum: "md5=e81b8ecabef788a10337a39b095d54f3"

@@ -1723,22 +1723,33 @@ Section Conversion.
       + cbn in H. rewrite zipc_appstack in H. cbn in H.
         left. simpl. eapply cored_it_mkLambda_or_LetIn.
         rewrite app_context_nil_l.
+        rewrite nlstack_cat. rewrite nlstack_appstack.
         rewrite zipc_appstack. rewrite zipc_stack_cat.
         repeat zip fold. eapply cored_context.
+        apply cored_nl in H. rewrite nlctx_app_context in H.
+        rewrite nlctx_stack_context in H. rewrite nl_zipc in H.
+        rewrite nl_mkApps in H.
         assumption.
       + destruct y' as [q hq].
         cbn in H0. inversion H0. (* Why is noconf failing at this point? *)
         subst.
         unshelve eapply R_positionR.
         * simpl. unfold zipx. f_equal.
-          rewrite zipc_stack_cat. rewrite <- H2.
+          rewrite nlstack_cat. rewrite nlstack_appstack.
+          rewrite zipc_stack_cat.
+          apply (f_equal nl) in H2. rewrite 2!nl_zipc in H2.
+          rewrite <- H2. rewrite nlstack_appstack.
           rewrite 2!zipc_appstack. cbn. reflexivity.
         * simpl. unfold xposition. eapply positionR_poscat.
           unfold posR in H. cbn in H.
           rewrite stack_position_appstack in H. cbn in H.
+          rewrite nlstack_cat. rewrite nlstack_appstack.
           rewrite stack_position_stack_cat.
           rewrite stack_position_appstack.
-          eapply positionR_poscat. assumption.
+          eapply positionR_poscat.
+          rewrite stack_position_nlstack.
+          rewrite map_length.
+          assumption.
   Qed.
   Next Obligation.
     match type of eq1 with

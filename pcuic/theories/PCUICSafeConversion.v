@@ -1020,6 +1020,12 @@ Section Conversion.
       eapply cored_trans ; eauto.
   Qed.
 
+  Lemma cored_nl :
+    forall Γ u v,
+      cored Σ Γ u v ->
+      cored Σ (nlctx Γ) (nl u) (nl v).
+  Admitted.
+
   Set Primitive Projections.
 
   Record pack := mkpack {
@@ -1162,6 +1168,25 @@ Section Conversion.
       + cbn in nlt'.
         rewrite <- nl_zipx.
         eapply eq_term_tm_nl.
+  Qed.
+
+  Lemma nlctx_app_context :
+    forall Γ Δ,
+      nlctx (Γ ,,, Δ) = nlctx Γ ,,, nlctx Δ.
+  Proof.
+    intros Γ Δ.
+    induction Δ as [| [na [b|] B] Δ ih] in Γ |- *.
+    - reflexivity.
+    - simpl. f_equal. apply ih.
+    - simpl. f_equal. apply ih.
+  Qed.
+
+  Lemma nlctx_stack_context :
+    forall ρ,
+      nlctx (stack_context ρ) = stack_context (nlstack ρ).
+  Proof.
+    intro ρ. induction ρ.
+    all: (simpl ; rewrite ?IHρ ; reflexivity).
   Qed.
 
   Definition nlmkpack s Γ t π1 π2 h :=
@@ -1652,19 +1677,15 @@ Section Conversion.
           unshelve eapply R_cored2.
           -- simpl. rewrite stack_cat_appstack. reflexivity.
           -- simpl. rewrite stack_cat_appstack. reflexivity.
-          -- simpl. eapply cored_it_mkLambda_or_LetIn.
+          -- simpl.
+             eapply cored_it_mkLambda_or_LetIn.
              rewrite app_context_nil_l.
              rewrite nlstack_appstack. rewrite nlstack_cat.
              rewrite zipc_appstack. rewrite zipc_stack_cat.
              repeat zip fold. eapply cored_context.
-             (* TODO
-                Instead of inlining the necessary properties that
-                cored is insensible to names vevery time,
-                it would be best to incorporate it in R_cored2
-                and add an R_cored as well.
-                Not very clear, we would need to change things
-                at a different level and give up on nlmkpack.
-              *)
+             apply cored_nl in H. rewrite nlctx_app_context in H.
+             rewrite nlctx_stack_context in H.
+             rewrite nl_zipc in H. rewrite nl_mkApps in H.
              assumption.
         * destruct y' as [q hq].
           cbn in H0. inversion H0. subst.

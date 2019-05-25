@@ -2343,6 +2343,37 @@ Section Conversion.
       eq_term G u w.
   Admitted.
 
+  Lemma nl_subst_instance_constr :
+    forall u b,
+      nl (subst_instance_constr u b) = subst_instance_constr u (nl b).
+  Proof.
+    intros u b.
+    induction b using term_forall_list_ind.
+    all: try (simpl ; rewrite ?IHb, ?IHb1, ?IHb2, ?IHb3 ; reflexivity).
+    - simpl. f_equal. induction H.
+      + reflexivity.
+      + simpl. rewrite p, IHAll. reflexivity.
+    - simpl. rewrite IHb1, IHb2. f_equal.
+      induction X.
+      + reflexivity.
+      + simpl. f_equal.
+        * unfold on_snd. destruct p, x. simpl in *.
+          rewrite p0. reflexivity.
+        * apply IHX.
+    - simpl. f_equal. induction X ; try reflexivity.
+      simpl. rewrite IHX. f_equal.
+      destruct p as [h1 h2].
+      destruct x. simpl in *.
+      unfold map_def, map_def_anon. cbn.
+      rewrite h1, h2. reflexivity.
+    - simpl. f_equal. induction X ; try reflexivity.
+      simpl. rewrite IHX. f_equal.
+      destruct p as [h1 h2].
+      destruct x. simpl in *.
+      unfold map_def, map_def_anon. cbn.
+      rewrite h1, h2. reflexivity.
+  Qed.
+
   Equations(noeqns) _isconv_prog (Γ : context) (leq : conv_pb)
             (t1 : term) (π1 : stack) (h1 : wtp Γ t1 π1)
             (t2 : term) (π2 : stack) (h2 : wtp Γ t2 π2)
@@ -2589,7 +2620,14 @@ Section Conversion.
   Qed.
   Next Obligation.
     left. simpl.
-    eapply cored_zipx. eapply cored_const. eassumption.
+    eapply cored_zipx.
+    (* rewrite nl_subst_instance_constr. *)
+    (* TODO!! Perhaps cored_nl is not true after all... *)
+    change (tConst c' u') with (nl (tConst c' u')).
+    rewrite <- nlctx_stack_context. rewrite <- nlctx_app_context.
+    eapply cored_nl.
+    eapply cored_const.
+    eassumption.
   Qed.
   Next Obligation.
     destruct b ; auto.
@@ -2609,7 +2647,11 @@ Section Conversion.
   Next Obligation.
     unshelve eapply R_cored2.
     all: try reflexivity.
-    simpl. eapply cored_zipx. eapply cored_const. eassumption.
+    simpl. eapply cored_zipx.
+    change (tConst c' u') with (nl (tConst c' u')).
+    rewrite <- nlctx_stack_context. rewrite <- nlctx_app_context.
+    eapply cored_nl.
+    eapply cored_const. eassumption.
   Qed.
   Next Obligation.
     destruct b0 ; auto.
@@ -2622,7 +2664,11 @@ Section Conversion.
     constructor. eapply red_zipx. eapply red_const. eassumption.
   Qed.
   Next Obligation.
-    left. simpl. eapply cored_zipx. eapply cored_const. eassumption.
+    left. simpl. eapply cored_zipx.
+    rewrite <- nlctx_stack_context. rewrite <- nlctx_app_context.
+    change (tConst c' u) with (nl (tConst c' u)).
+    eapply cored_nl.
+    eapply cored_const. eassumption.
   Qed.
   Next Obligation.
     destruct b0 ; auto.
@@ -2635,7 +2681,11 @@ Section Conversion.
     constructor. eapply red_zipx. eapply red_const. eassumption.
   Qed.
   Next Obligation.
-    left. simpl. eapply cored_zipx. eapply cored_const. eassumption.
+    left. simpl. eapply cored_zipx.
+    rewrite <- nlctx_stack_context. rewrite <- nlctx_app_context.
+    change (tConst c' u) with (nl (tConst c' u)).
+    eapply cored_nl.
+    eapply cored_const. eassumption.
   Qed.
   Next Obligation.
     destruct b0 ; auto.
@@ -2648,7 +2698,11 @@ Section Conversion.
     constructor. eapply red_zipx. eapply red_const. eassumption.
   Qed.
   Next Obligation.
-    left. simpl. eapply cored_zipx. eapply cored_const. eassumption.
+    left. simpl. eapply cored_zipx.
+    rewrite <- nlctx_stack_context. rewrite <- nlctx_app_context.
+    change (tConst c' u) with (nl (tConst c' u)).
+    eapply cored_nl.
+    eapply cored_const. eassumption.
   Qed.
   Next Obligation.
     destruct b0 ; auto.
@@ -2773,7 +2827,10 @@ Section Conversion.
         * unshelve eapply R_cored2.
           all: try reflexivity.
           -- simpl. unfold reduce_term. rewrite e. reflexivity.
-          -- simpl. eapply cored_zipx. eapply cored_case. assumption.
+          -- simpl. eapply cored_zipx. eapply cored_case.
+             rewrite <- nlctx_stack_context. rewrite <- nlctx_app_context.
+             eapply cored_nl.
+             assumption.
         * exfalso.
           destruct y'. simpl in H0. inversion H0. subst.
           unfold reduce_term in eq3.
@@ -2784,7 +2841,10 @@ Section Conversion.
           admit.
     - dependent destruction hr.
       + left. simpl.
-        eapply cored_zipx. eapply cored_case. assumption.
+        eapply cored_zipx. eapply cored_case.
+        rewrite <- nlctx_stack_context. rewrite <- nlctx_app_context.
+        eapply cored_nl.
+        assumption.
       + match goal with
         | |- context [ reduce_term ?f ?Σ ?Γ c' ?h ] =>
           destruct (reduce_stack_Req f Σ Γ c' ε h) as [e' | hr]
@@ -2803,7 +2863,10 @@ Section Conversion.
              ++ simpl. unfold reduce_term.
                 destruct y'. simpl in H0. inversion H0. subst.
                 rewrite <- H3. reflexivity.
-             ++ simpl. eapply cored_zipx. eapply cored_case. assumption.
+             ++ simpl. eapply cored_zipx. eapply cored_case.
+                rewrite <- nlctx_stack_context. rewrite <- nlctx_app_context.
+                eapply cored_nl.
+                assumption.
           -- exfalso.
              destruct y'. simpl in H0. inversion H0. subst.
              destruct y'0. simpl in H2. inversion H2. subst.
@@ -2964,10 +3027,14 @@ Section Conversion.
     rewrite <- eq3 in r2.
     left. simpl. eapply cored_it_mkLambda_or_LetIn.
     rewrite app_context_nil_l.
+    apply cored_nl in r1.
+    rewrite 2!nl_zipc in r1. cbn in r1.
     eapply red_cored_cored ; try eassumption.
     apply red_context in r2. cbn in r2.
+    rewrite nlstack_cat.
     rewrite zipc_stack_cat.
     pose proof (decompose_stack_eq _ _ _ (eq_sym eq2)). subst.
+    rewrite nlstack_appstack.
     rewrite zipc_appstack in r2. cbn in r2.
     rewrite zipc_appstack. assumption.
   Qed.

@@ -1424,7 +1424,7 @@ Qed.
 
 Hint Rewrite cons_0s_shifts : sigma.
 
-Print Rewrite HintDb sigma.
+(* Print Rewrite HintDb sigma. *)
 
 Lemma subst_inst s k t : subst s k t = inst (up k (subst_fn s)) t.
 Proof.

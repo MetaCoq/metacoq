@@ -92,6 +92,18 @@ Definition is_constructor n ts :=
   | None => false
   end.
 
+Definition is_constructor_or_box n ts :=
+  match List.nth_error ts n with
+  | Some tBox => true
+  | Some a =>
+    let (f, a) := decompose_app a in
+    match f with
+    | tConstruct _ _ => true
+    | _ => false
+    end
+  | None => false
+  end.
+
 Lemma fix_subst_length mfix : #|fix_subst mfix| = #|mfix|.
 Proof.
   unfold fix_subst. generalize (tFix mfix). intros.

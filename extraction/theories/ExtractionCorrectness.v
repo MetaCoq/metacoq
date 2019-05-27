@@ -417,77 +417,30 @@ Proof.
 
         destruct brs eqn:Hbrs.
         -- edestruct (no_empty_case_in_empty_context); eauto.
-           
-           
-          (*  econstructor; eauto. *)
-
-          (* inv Ht'. *)
-           
-          (*  eapply type_Construct_inv in t0 as [ [[]] ]. destruct y as [[[]]]. *)
-          (*  destruct d. cbn in H2. subst. destruct p0. *)
-          (*  unfold types_of_case in e. destruct ? in e; inv e. *)
-          (*  destruct p0. destruct ? in H5; inv H5. destruct p0. destruct ? in H6; inv H6. *)
-
-          (*  Lemma map_optinons_out_length A (L : list (option A)) L' : *)
-          (*    map_option_out L = Some L' -> #|L| = #|L'|. *)
-          (*  Proof. *)
-          (*    revert L'; induction L; inversion 1; subst; cbn. *)
-          (*    - reflexivity. *)
-          (*    - destruct a; inv H1. destruct ? in H2; inv H2. cbn. f_equal. *)
-          (*      eauto. *)
-          (*  Qed. *)
-          (*  eapply map_optinons_out_length in E1. inv a0. *)
-          (*  unfold build_branches_type in E1. rewrite mapi_length in E1. *)
-          (*  destruct o. cbn in E1. destruct ind_ctors; inv E1. *)
-          (*  cbn in *. clear Heq. *)
-          (*  destruct l1 ; inv e0. *)
         -- destruct p1.
-           (* eapply is_type_extract in He. *)
-           (* edestruct prop_case_is_singleton as (? & ? & ?). eauto. eauto.  *)
-           (* unfold PCUICTyping.declared_inductive. *)
-           (* eapply is_type_or_proof_mkApps. *)
-           (* eapply eval_is_type. eauto. eauto. *)
-           (* eapply subject_reduction. eauto. eapply HT. *)
-           (* eapply PCUICReduction.red_case. eapply refl_red. *)
-           (* eapply wcbeval_red. eauto. *)
-           (* eapply All_All2. 2:{ intros []. unfold on_Trel. cbn. intros. eapply refl_red. } instantiate (1 := fun _ => True). *)
-           (* econstructor; eauto. clear. induction l3; econstructor; eauto.  *)
-           
-           (* inv a0. destruct l3; inv H1. inv X0.  *)
-           (* destruct p0. destruct p1. destruct ? in Ht'; inv Ht'. *)
-           (* unfold PCUICTyping.iota_red in IHeval2. simpl in IHeval2. *)
-           (* destruct X. destruct y. cbn in e; subst. *)
-           (* eapply typing_spine_skipn in t1 as [].   *)
-           
-           (* edestruct IHeval2 as (? & ? & ?). *)
-           (* ++ econstructor; eauto. eapply PCUICGeneration.type_mkApps; eauto. *)
-           (* ++ eapply extract_Apps2. eauto. *)
-           (*    instantiate (1 := repeat tBox n0).  *)
-
-
-           (* unfold types_of_case in *. destruct ? in e; inv e. *)
-             (*  destruct p0. destruct ? in H4; inv H4. destruct p0. *)
-             (*  destruct ? in H5; inv H5. *)
-             (*  unfold build_branches_type in E2. destruct o. destruct ind_ctors. cbn in *. congruence. *)
-             (*  destruct ind_ctors; cbn in E2. 2:{  destruct p0. destruct p0. destruct ? in E2. destruct p1. destruct p1. *)
-             (*                                      destruct ? in E3. destruct ? in E3. destruct ? in E3. inv E3. *)
-             (*                                      destruct ? in E2. inv E2. destruct ? in E3. destruct ? in E2. destruct ? in E2. *)
-             (*                                      destruct ? in E2. inv E2. destruct ? in E3. inv E3. inv E3. *)
-             (*                                      all: try congruence. } *)
-             (*  destruct p0. destruct p0. destruct (instantiate_params (ind_params m) (firstn (PCUICAst.ind_npars m) l) *)
-             (* (PCUICLiftSubst.subst (inds (inductive_mind ind) u0 (PCUICAst.ind_bodies m)) 0 *)
-             (*                       (PCUICUnivSubst.subst_instance_constr u0 t6))); inv E2. *)
-             (*  destruct ? in H4; inv H4. destruct ? in E2. destruct ? in E2. inv E2. *)
-           (*  cbn in *. destruct l1; inv e0.  *)
-              (* should follow from H3 *) admit.
-      * cbn in IHeval1. econstructor.
-        rewrite extract_Apps in IHeval1. (* this needs to use Ea *)
+           admit.
+           (*  this is the case where the discriminee extract to a box *)
+      * rewrite extract_Apps in IHeval1. 
         cbn in IHeval1. destruct is_type_or_proof eqn:He.
-        -- admit.
-        -- eapply IHeval1. econstructor; eauto.
+        -- eapply eval_iota_sing. eapply IHeval1. econstructor; eauto.
+           (* if the discriminee reduces to a constructor of a proof, there was only one branch, TODO *) admit.
+           admit.
+        (* -- econstructor. eapply IHeval1. econstructor; eauto. *)
         -- cbn in IHeval2.
            unfold PCUICTyping.iota_red in *. unfold iota_red.
            rewrite extract_Apps in IHeval2.
+           destruct is_type_or_proof eqn: Hee in IHeval2.
+           ++ econstructor. eapply IHeval1. econstructor; eauto.
+              unfold iota_red.
+              assert (extract Σ [] res = tBox) as ->.
+              eapply eval_tBox_inv. eapply IHeval2.
+              econstructor; eauto. admit.
+
+              admit.
+           ++ 
+              
+              
+              
            destruct (nth_error brs c) eqn:Hnth.
            2:{  (* Branches can't be too few, ensured by typing *)
              admit. }
@@ -498,83 +451,21 @@ Proof.
              induction n in l |- *; destruct l; simpl; auto.
            Admitted.
 
-           erewrite nth_map in *.
-           rewrite <- nth_default_eq in *.
-           unfold nth_default in *.
+           econstructor. eapply IHeval1. econstructor; eauto.
+
+
+           unfold iota_red.
+           rewrite <- nth_default_eq in *. unfold nth_default in *.
            rewrite Hnth in *.
-           rewrite <- map_skipn. cbn.
-           erewrite eval_is_type  in IHeval2.
-           destruct is_type_or_proof in IHeval2.
+           epose proof (map_nth_error _ _ _ Hnth).
+           rewrite H1 in *. cbn.
            
-           (* eapply IHeval2. econstructor; eauto. *)
+           rewrite <- map_skipn. eapply IHeval2.
+           econstructor; eauto.
+           eapply type_mkApps.
 
-           admit.
-           admit.
-           admit.
-           admit.
-    (*        eapply PCUICGeneration.type_mkApps. *)
-    (*        rewrite <- nth_default_eq. unfold nth_default. rewrite E3. *)
-    (*        eauto. eauto. *)
-           
-    (*        cbn. *)
-
-           
-           
-    (*        epose (bla := @nth_map _ (fun x1 : nat × PCUICAst.term => (fst x1, extract Σ [] (snd x1))) c). *)
-    (*        rewrite nth_error_map. *)
-           
-    (*     eapply IHeval1. *)
-
-    (*     assert (He' := He). eapply IHeval1 in He as (? & ? & ?); eauto. *)
-    (*     2:{ econstructor; eauto. } *)
-    (*     eapply extract_Apps in H1 as (? & ? & ? & ? & ?). *)
-    (*     simpl in e. destruct ? in e; [ | admit (* goes away with fuel *) ]. destruct a3; inv e. *)
-    (*     { subst. exfalso. enough (is_box a = true) by congruence. *)
-    (*       enough (extract Σ [] discr = Checked tBox). rewrite H1 in He'; now inv He'. *)
-    (*       eapply is_type_extract. *)
-    (*       eapply eval_is_type_backwards. eauto. rewrite <- is_type_or_proof_mkApps. *)
-    (*       eauto. } *)
-
-    (*     eapply type_Construct_inv in t0 as [ [[]] ]. destruct y0 as [[[]]]. *)
-    (*     destruct d. cbn in H3. subst. destruct p0. *)
-    (*     unfold types_of_case in e. destruct ? in e; inv e. *)
-    (*     destruct ? in H5; inv H5. destruct p0. destruct ? in H6; inv H6. destruct p0. *)
-    (*     destruct ? in H5; inv H5. *)
-        
-    (* (*     destruct (nth_error brs c) eqn:E3. *) *)
-    (* (*     2:{  (* if looking up c in (ind.ctors o0) works, looking up c in brs must work *) *) *)
-    (* (*       (* eapply nth_error_None in E3. *) *) *)
-    (* (*       (* Lemma All2_length X Y (P : X -> Y -> Type) x y : *) *) *)
-    (* (*       (*   All2 P x y -> #|x| = #|y|. *) *) *)
-    (* (*       (* Proof. *) *) *)
-    (* (*       (*   induction 1; cbn; congruence. *) *) *)
-    (* (*       (* Qed. *) *) *)
-    (* (*       (* eapply All2_length in a0. rewrite a0 in *. clear a0. *) *) *)
-    (* (*       (* pose proof (nth_error_Some (PCUICAst.ind_ctors o0) c). rewrite H4 in H5. *) *) *)
-    (* (*       (* assert (c < #|PCUICAst.ind_ctors o0|) by (eapply H5; intuition congruence). *) *) *)
-    (* (*       (* enough (#|l2| = #|PCUICAst.ind_ctors o0|) by omega. *) *) *)
-    (* (*       admit. *) *)
-    (* (*     } *) *)
-    (* (*     pose proof (monad_map_All2 _ _ _ _ _ Em) as [[] [] ] % (All2_nth_error_Some c p0); eauto. *) *)
-    (* (*     destruct ?; inv e2. *) *)
-    (* (*     edestruct (All2_nth_error_Some _ _ a0 E3) as ([] & ? & ? & ?). *) *)
-    (* (*     eapply typing_spine_skipn in t1 as (? & ?). *) *)
-    (* (*     subst. cbn in e3. subst. edestruct IHeval2 as (? & ? & ?). *) *)
-    (* (*     -- econstructor; eauto. unfold PCUICTyping.iota_red. *) *)
-    (* (*        eapply PCUICGeneration.type_mkApps. *) *)
-    (* (*        rewrite <- nth_default_eq. unfold nth_default. rewrite E3. *) *)
-    (* (*        eauto. eauto. *) *)
-    (* (*     -- unfold PCUICTyping.iota_red. eapply extract_Apps2. *) *)
-    (* (*        rewrite <- nth_default_eq. unfold nth_default. rewrite E3. *) *)
-    (* (*        eauto.  *) *)
-    (* (*        eapply Forall2_skipn. now eapply All2_Forall. *) *)
-    (* (*     -- eauto. *) *)
-    (* (*     -- exists x2. split. eauto. econstructor. *) *)
-    (* (*        eassumption. *) *)
-    (* (*        unfold iota_red. rewrite <- nth_default_eq. *) *)
-    (* (*        unfold nth_default. rewrite e. cbn. eauto. *) *)
-    (*     (* + congruence. *) admit. *)
-    (* + admit. *)
+           (* branches of case are typed *) admit.
+           (* after taking away things in a spine, it's still typed *)  admit.
   - (** fix case *) rewrite extract_Apps.
     cbn. destruct is_type_or_proof eqn:Heq.
     + inv pre. rewrite is_type_extract.
@@ -583,10 +474,13 @@ Proof.
       erewrite is_type_App in Heq.
       eassumption. eauto.
       econstructor; eauto.
-    + unfold unfold_fix, PCUICTyping.unfold_fix in *.
+    + inv pre.
+      eapply type_mkApps_inv in extr_typed0 as (? & ? & [] & ?); eauto.
+
+      unfold unfold_fix, PCUICTyping.unfold_fix in *.
       destruct nth_error eqn:En in H; try now inv H.
       inv H. unfold extract_mfix.
-
+      
       econstructor.
       * unfold unfold_fix. erewrite map_nth_error.  reflexivity.
         eauto.
@@ -595,19 +489,72 @@ Proof.
         Proof. induction 1; simpl; constructor; try congruence. Qed.
         eapply Forall2_map.
         eapply All2_Forall.
+        Lemma All2_impl {A B} {P Q : A -> B -> Type} {l l'} :
+          All2 P l l' ->
+          (forall x y, In x l -> In y l' -> P x y -> Q x y) ->
+          All2 Q l l'.
+        Proof.
+          revert l'. induction l; intros; inversion X.
+          - econstructor.
+          - subst. econstructor.  eapply X0. firstorder. firstorder. eauto.
+            eapply IHl. eauto. intros.
+            eapply X0. now right. now right. eauto.
+        Qed.
+        
         eapply All2_impl. eassumption.
         intros; cbn in *.
-        eapply H. admit.
-      * unfold PCUICTyping.is_constructor, is_constructor in *.
+        eapply H4. econstructor ; eauto. (* follows with typing_spine_inv *) admit.
+      * unfold PCUICTyping.is_constructor, is_constructor_or_box in *.
         destruct nth_error eqn:He in H1; try now inv H1.
         erewrite map_nth_error. 2:eassumption.
         unfold isConstruct_app in H1.
-        admit.
-      * cbn. admit.
-         
-        
-        
-    (*   destruct extract_mfix eqn:E. inv He. 2:congruence. subst. *)
+        destruct decompose_app eqn:Ha in H1.
+        cbn in H1. destruct t2; try now inv H1.
+        eapply PCUICConfluence.decompose_app_inv in Ha.
+        subst.
+        rewrite extract_Apps.
+        destruct (is_type_or_proof _ _ (PCUICAst.tConstruct _ _ _)) eqn:Hp.
+        -- eauto.
+        -- cbn. rewrite Hp.
+           Lemma decompose_app_mkApps f l :
+             isApp f = false -> EAstUtils.decompose_app (mkApps f l) = (f, l).
+           Proof. Admitted.
+           rewrite decompose_app_mkApps. destruct ?; eauto.
+           cbn. reflexivity.
+      * cbn.
+        eapply type_tFix_inv in t as (? & ? & ? & [] & ?).
+        rewrite extract_Apps in IHeval.
+        destruct is_type_or_proof eqn:He.
+        -- admit.
+        -- erewrite (extract_subst Σ [] (fix_decls mfix) []) in IHeval.
+           cbn in IHeval.
+           
+
+           enough ((map (extract Σ []) (PCUICTyping.fix_subst mfix)) = fix_subst
+              (map
+                 (fun d0 : BasicAst.def PCUICAst.term =>
+                  {|
+                  E.dname := BasicAst.dname d0;
+                  E.dbody := extract Σ (fix_decls mfix ++ [])%list (BasicAst.dbody d0);
+                  E.rarg := BasicAst.rarg d0 |}) mfix)).
+           rewrite <- H. eapply IHeval.
+           econstructor. eapply type_mkApps.
+           all:cbn; eauto.
+           ++ admit (* typing of fix_subst *).
+           ++ admit (* typing_spine and eval *).
+           ++ rewrite <- efix_subst'_subst.
+              rewrite map_length.
+              rewrite <- fix_subst'_subst.
+              generalize (#|mfix|). intros n.
+              induction n; cbn.
+              ** reflexivity.
+              ** rewrite IHn.
+
+              (*  Substituting with the two substitutions is the same. The points where they differ are boxes in the term to be substituted in anyways! *) admit. 
+           ++ eapply subslet_fix_subst.
+           ++ admit.
+        -- eauto.
+  (*   destruct extract_mfix eqn:E. inv He. 2:congruence. subst. *)
     (*   enough (exists l', Forall2 (eval Σ') l l' /\ Forall2 (fun a e => extract Σ [] a = Checked e) args' l' /\ (PCUICTyping.is_constructor narg args' -> is_constructor narg l')) as (l' & ? & ? & ?). *)
 
     (*   assert (E' := E). *)
@@ -726,5 +673,6 @@ Proof.
       * econstructor. eapply IHeval. econstructor; eauto.
         eapply Forall2_map. eapply All2_Forall.
         eapply All2_impl. eassumption.
-        intros. cbn in *. eapply H1. admit.
+        intros. cbn in *. eapply H3.
+        (* follows with typing_spine_inv *) admit.
 Admitted.

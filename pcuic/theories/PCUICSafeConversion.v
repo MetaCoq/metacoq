@@ -942,9 +942,7 @@ Section Conversion.
                        ir1 ir2 aux
     (* In the original we do not check ind = ind' or par = par',
        maybe it can be optimised. *)
-    with inspect (eq_ind ind ind' && eq_nat par par' && nleq_term p p'
-        && nleq_term c c'
-        && forallb2 (fun '(a, b) '(a', b') => nleq_term b b') brs brs') := {
+    with inspect (nleq_term (tCase (ind, par) p c brs) (tCase (ind', par') p' c' brs')) := {
     | @exist true eq1 := isconv_args Γ (tCase (ind, par) p c brs) π1 π2 aux ;
     | @exist false _ with inspect (reduce_term RedFlags.default Σ (Γ ,,, stack_context π1) c _) := {
       | @exist cred eq1 with inspect (reduce_term RedFlags.default Σ (Γ ,,, stack_context π2) c' _) := {
@@ -960,7 +958,7 @@ Section Conversion.
     } ;
 
     _isconv_prog Γ leq (tProj p c) π1 h1 (tProj p' c') π2 h2 ir1 ir2 aux
-    with inspect (eq_projection p p' && nleq_term c c') := {
+    with inspect (nleq_term (tProj p c) (tProj p' c')) := {
     | @exist true eq1 := isconv_args Γ (tProj p c) π1 π2 aux ;
     | @exist false _ := no
     } ;
@@ -1201,31 +1199,21 @@ Section Conversion.
     eapply welltyped_rename ; auto ; [ exact h2 |].
     eapply eq_term_sym.
     eapply eq_term_zipx.
-    (* rewrite eq1. reflexivity. *)
-  (* Qed. *)
-  Admitted.
+    eapply eq_term_upto_univ_eq_eq_term.
+    eapply ssrbool.elimT.
+    - eapply reflect_eq_term_upto_univ_eqb.
+    - assumption.
+  Qed.
   Next Obligation.
     unshelve eapply R_stateR.
     all: try reflexivity.
     - simpl.
       symmetry in eq1.
-      apply andP in eq1 as [eq1 ebrs].
-      apply andP in eq1 as [eq1 ec].
-      apply andP in eq1 as [eq1 ep].
-      apply andP in eq1 as [eind epar].
-      (* TODO ADD ReflectEq for eq_ind *)
-      revert eind.
-      destruct (PCUICConfluence.eq_ind_spec ind ind') ; try discriminate.
-      (* destruct (eqb_spec eind). *)
-      intros _. subst.
-      change (eqb par par' = true) in epar.
-      revert epar.
-      destruct (eqb_spec par par') ; try discriminate.
-      intros _. subst.
-      (* NEED eq_term instead of eq *)
-      admit.
+      eapply ssrbool.elimT.
+      + eapply reflect_nleq_term.
+      + eapply nleq_term_zipx. assumption.
     - simpl. constructor.
-  Admitted.
+  Qed.
   Next Obligation.
     destruct b ; auto.
     eapply conv_conv.
@@ -1233,9 +1221,12 @@ Section Conversion.
     eapply conv_trans ; try eassumption.
     eapply conv_zippx ; auto.
     eapply eq_term_conv.
-    symmetry in eq1. (* simpl. rewrite eq1. reflexivity. *)
-  (* Qed. *)
-  Admitted.
+    symmetry in eq1.
+    eapply eq_term_upto_univ_eq_eq_term.
+    eapply ssrbool.elimT.
+    - eapply reflect_eq_term_upto_univ_eqb.
+    - assumption.
+  Qed.
   Next Obligation.
     apply welltyped_zipx in h1.
     zip fold in h1. apply welltyped_context in h1. simpl in h1.
@@ -1300,9 +1291,17 @@ Section Conversion.
         unfold reduce_term in eq3.
         rewrite e in eq3.
         rewrite e' in eq3.
-        cbn in eq3.
-        (* rewrite 2!eq_term_upto_univ_refl in eq3. discriminate eq3. *)
-        admit.
+        cbn in eq3. symmetry in eq3.
+        assert (bot : eqb_term_upto_univ eqb c c && eqb_term_upto_univ eqb c' c').
+        { apply andb_and. split.
+          - eapply ssrbool.introT.
+            + eapply reflect_eq_term_upto_univ_eqb.
+            + eapply eq_term_upto_univ_refl. intro. reflexivity.
+          - eapply ssrbool.introT.
+            + eapply reflect_eq_term_upto_univ_eqb.
+            + eapply eq_term_upto_univ_refl. intro. reflexivity.
+        }
+        rewrite bot in eq3. discriminate.
       + dependent destruction hr.
         * unshelve eapply R_cored2.
           all: try reflexivity.
@@ -1313,9 +1312,17 @@ Section Conversion.
           unfold reduce_term in eq3.
           rewrite e in eq3.
           rewrite <- H2 in eq3.
-          cbn in eq3.
-          (* rewrite 2!eq_term_refl in eq3. discriminate eq3. *)
-          admit.
+          cbn in eq3. symmetry in eq3.
+          assert (bot : eqb_term_upto_univ eqb c c && eqb_term_upto_univ eqb c' c').
+          { apply andb_and. split.
+            - eapply ssrbool.introT.
+              + eapply reflect_eq_term_upto_univ_eqb.
+              + eapply eq_term_upto_univ_refl. intro. reflexivity.
+            - eapply ssrbool.introT.
+              + eapply reflect_eq_term_upto_univ_eqb.
+              + eapply eq_term_upto_univ_refl. intro. reflexivity.
+          }
+          rewrite bot in eq3. discriminate.
     - dependent destruction hr.
       + eapply R_cored. simpl.
         eapply cored_zipx. eapply cored_case. assumption.
@@ -1328,9 +1335,17 @@ Section Conversion.
           unfold reduce_term in eq3.
           rewrite e' in eq3.
           rewrite <- H2 in eq3.
-          cbn in eq3.
-          (* rewrite 2!eq_term_refl in eq3. discriminate eq3. *)
-          admit.
+          cbn in eq3. symmetry in eq3.
+          assert (bot : eqb_term_upto_univ eqb c c && eqb_term_upto_univ eqb c' c').
+          { apply andb_and. split.
+            - eapply ssrbool.introT.
+              + eapply reflect_eq_term_upto_univ_eqb.
+              + eapply eq_term_upto_univ_refl. intro. reflexivity.
+            - eapply ssrbool.introT.
+              + eapply reflect_eq_term_upto_univ_eqb.
+              + eapply eq_term_upto_univ_refl. intro. reflexivity.
+          }
+          rewrite bot in eq3. discriminate.
         * dependent destruction hr.
           -- unshelve eapply R_cored2.
              all: try reflexivity.
@@ -1344,11 +1359,18 @@ Section Conversion.
              unfold reduce_term in eq3.
              rewrite <- H4 in eq3.
              rewrite <- H5 in eq3.
-             cbn in eq3.
-             (* rewrite 2!eq_term_refl in eq3. discriminate eq3. *)
-             admit.
-  (* Qed. *)
-  Admitted.
+             cbn in eq3. symmetry in eq3.
+             assert (bot : eqb_term_upto_univ eqb c c && eqb_term_upto_univ eqb c' c').
+             { apply andb_and. split.
+               - eapply ssrbool.introT.
+                 + eapply reflect_eq_term_upto_univ_eqb.
+                 + eapply eq_term_upto_univ_refl. intro. reflexivity.
+               - eapply ssrbool.introT.
+                 + eapply reflect_eq_term_upto_univ_eqb.
+                 + eapply eq_term_upto_univ_refl. intro. reflexivity.
+             }
+             rewrite bot in eq3. discriminate.
+  Qed.
   Next Obligation.
     destruct b ; auto.
     match type of h with
@@ -1390,22 +1412,22 @@ Section Conversion.
     eapply welltyped_rename ; auto.
     - exact h2.
     - apply eq_term_sym.
-      cbn. (* rewrite eq_term_zipx. cbn. *)
-      (* rewrite <- eq1. reflexivity. *)
-      admit.
-  (* Qed. *)
-  Admitted.
+      cbn. eapply eq_term_zipx.
+      eapply eq_term_upto_univ_eq_eq_term.
+      eapply ssrbool.elimT.
+      + eapply reflect_eq_term_upto_univ_eqb.
+      + symmetry. assumption.
+  Qed.
   Next Obligation.
     unshelve eapply R_stateR.
     all: try reflexivity.
     - simpl.
-      (* NEW PROBLEM.
-         We have only eq_term, no equality.
-         Damn names!
-       *)
-      admit.
+      eapply ssrbool.elimT.
+      + eapply reflect_nleq_term.
+      + eapply nleq_term_zipx.
+        symmetry. assumption.
     - simpl. constructor.
-  Admitted.
+  Qed.
   Next Obligation.
     destruct b ; auto.
     eapply conv_conv.
@@ -1413,29 +1435,32 @@ Section Conversion.
     eapply conv_trans ; try eassumption.
     eapply conv_zippx ; auto.
     eapply eq_term_conv.
-    (* symmetry. assumption. *)
-    admit.
-  (* Qed. *)
-  Admitted.
+    eapply eq_term_upto_univ_eq_eq_term.
+    eapply ssrbool.elimT.
+    - eapply reflect_eq_term_upto_univ_eqb.
+    - symmetry. assumption.
+  Qed.
 
   (* tFix *)
   Next Obligation.
     eapply welltyped_rename ; auto.
     - exact h2.
-    - apply eq_term_sym. (* rewrite eq_term_zipx. cbn. rewrite <- eq1. reflexivity. *)
-  (* Qed. *)
-  Admitted.
+    - apply eq_term_sym. eapply eq_term_zipx.
+      eapply eq_term_upto_univ_eq_eq_term.
+      eapply ssrbool.elimT.
+      + eapply reflect_eq_term_upto_univ_eqb.
+      + symmetry. assumption.
+  Qed.
   Next Obligation.
     unshelve eapply R_stateR.
     all: try reflexivity.
     - simpl.
-      (* NEW PROBLEM.
-         We have only eq_term, no equality.
-         Damn names!
-       *)
-      admit.
+      eapply ssrbool.elimT.
+      + eapply reflect_nleq_term.
+      + eapply nleq_term_zipx.
+        symmetry. assumption.
     - simpl. constructor.
-  Admitted.
+  Qed.
   Next Obligation.
     destruct b ; auto.
     destruct h as [h].
@@ -1444,9 +1469,12 @@ Section Conversion.
     eapply conv_trans ; try eassumption.
     eapply conv_zippx ; auto.
     eapply eq_term_conv.
-    (* symmetry. assumption. *)
-  (* Qed. *)
-  Admitted.
+    symmetry in eq1.
+    eapply eq_term_upto_univ_eq_eq_term.
+    eapply ssrbool.elimT.
+    - eapply reflect_eq_term_upto_univ_eqb.
+    - assumption.
+  Qed.
   Next Obligation.
     cbn. rewrite zipc_appstack. cbn.
     apply unfold_one_fix_red_zippx in eq1 as r.
@@ -1682,18 +1710,22 @@ Section Conversion.
   Next Obligation.
     eapply welltyped_rename ; auto.
     - exact h2.
-    - apply eq_term_sym. (* rewrite eq_term_zipx. cbn. rewrite <- eq1. reflexivity. *)
-      admit.
-  (* Qed. *)
-  Admitted.
+    - apply eq_term_sym. eapply eq_term_zipx.
+      eapply eq_term_upto_univ_eq_eq_term.
+      eapply ssrbool.elimT.
+      + eapply reflect_eq_term_upto_univ_eqb.
+      + symmetry. assumption.
+  Qed.
   Next Obligation.
     unshelve eapply R_stateR.
     all: try reflexivity.
     - simpl.
-      (* BIG PROBLEM again where we only have eq_term *)
-      give_up.
+      eapply ssrbool.elimT.
+      + eapply reflect_nleq_term.
+      + eapply nleq_term_zipx.
+        symmetry. assumption.
     - simpl. constructor.
-  Admitted.
+  Qed.
   Next Obligation.
     destruct b ; auto.
     eapply conv_conv.
@@ -1701,9 +1733,12 @@ Section Conversion.
     eapply conv_trans ; try eassumption.
     eapply conv_zippx ; auto.
     eapply eq_term_conv.
-    (* symmetry. assumption. *)
-  (* Qed. *)
-  Admitted.
+    symmetry in eq1.
+    eapply eq_term_upto_univ_eq_eq_term.
+    eapply ssrbool.elimT.
+    - eapply reflect_eq_term_upto_univ_eqb.
+    - assumption.
+  Qed.
 
   Definition Aux' Γ t args l1 π1 π2 h2 :=
      forall u1 u2 ca1 a1 ρ2

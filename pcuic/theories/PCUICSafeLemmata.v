@@ -1688,4 +1688,54 @@ Section Lemmata.
     reflexivity.
   Qed.
 
+  Lemma nleq_term_it_mkLambda_or_LetIn :
+    forall Γ u v,
+      nleq_term u v ->
+      nleq_term (it_mkLambda_or_LetIn Γ u) (it_mkLambda_or_LetIn Γ v).
+  Proof.
+    intros Γ u v h.
+    induction Γ as [| [na [b|] A] Γ ih ] in u, v, h |- *.
+    - assumption.
+    - simpl. cbn. apply ih.
+      eapply ssrbool.introT.
+      + eapply reflect_nleq_term.
+      + cbn. f_equal.
+        eapply ssrbool.elimT.
+        * eapply reflect_nleq_term.
+        * assumption.
+    - simpl. cbn. apply ih.
+      eapply ssrbool.introT.
+      + eapply reflect_nleq_term.
+      + cbn. f_equal.
+        eapply ssrbool.elimT.
+        * eapply reflect_nleq_term.
+        * assumption.
+  Qed.
+
+  Lemma nleq_term_zipc :
+    forall u v π,
+      nleq_term u v ->
+      nleq_term (zipc u π) (zipc v π).
+  Proof.
+    intros u v π h.
+    eapply ssrbool.introT.
+    - eapply reflect_nleq_term.
+    - cbn. rewrite 2!nl_zipc. f_equal.
+      eapply ssrbool.elimT.
+      + eapply reflect_nleq_term.
+      + assumption.
+  Qed.
+
+  Lemma nleq_term_zipx :
+    forall Γ u v π,
+      nleq_term u v ->
+      nleq_term (zipx Γ u π) (zipx Γ v π).
+  Proof.
+    intros Γ u v π h.
+    unfold zipx.
+    eapply nleq_term_it_mkLambda_or_LetIn.
+    eapply nleq_term_zipc.
+    assumption.
+  Qed.
+
 End Lemmata.

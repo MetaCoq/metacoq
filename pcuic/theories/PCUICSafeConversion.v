@@ -90,6 +90,19 @@ Section Conversion.
     wth : welltyped Σ [] (zipx ctx tm' stk2)
   }.
 
+  Record nlpack := mknlpack {
+    nl_st : state ;
+    nl_ctx : context ;
+    nl_tm : term ;
+    nl_stk1 : stack ;
+    nl_stk2 : stack ;
+    nl_tm' := match nl_st with
+           | Reduction t | Term t => t
+           | Args => nl_tm
+           end ;
+    nl_wth : welltyped (nlg Σ) [] (zipx nl_ctx nl_tm' nl_stk2)
+  }.
+
   Definition nlstate (s : state) :=
     match s with
     | Reduction t => Reduction (nl t)
@@ -97,49 +110,31 @@ Section Conversion.
     | Args => Args
     end.
 
-  Lemma nl_wth :
-    forall {Γ s t π2},
-      let t' :=
-        match s with
-        | Reduction t' | Term t' => t'
-        | Args => t
-        end
-      in
-      let nlt' :=
-        match nlstate s with
-        | Reduction t' | Term t' => t'
-        | Args => nl t
-        end
-      in
-      welltyped Σ [] (zipx Γ t' π2) ->
-      welltyped Σ [] (zipx (nlctx Γ) nlt' (nlstack π2)).
+  Definition nl_pack (p : pack) : nlpack.
   Proof.
-    intros Γ s t π2 t' nlt' h.
-    eapply welltyped_rename ; try assumption.
-    - exact h.
-    - destruct s.
-      + cbn in nlt'.
-        rewrite <- nl_zipx.
-        eapply eq_term_tm_nl.
-      + cbn in nlt'.
-        rewrite <- nl_zipx.
-        eapply eq_term_tm_nl.
-      + cbn in nlt'.
-        rewrite <- nl_zipx.
-        eapply eq_term_tm_nl.
-  Qed.
+    destruct p as [s Γ t π1 π2 t' h].
+    unshelve eexists.
+    - exact (nlstate s).
+    - exact (nlctx Γ).
+    - exact (nl t).
+    - exact (nlstack π2).
+    - exact (nlstack π1).
+    - eapply welltyped_nlg ; auto.
+      eapply welltyped_rename ; auto.
+      + exact h.
+      + destruct s.
+        * cbn. rewrite <- nl_zipx.
+          eapply eq_term_tm_nl.
+        * cbn. rewrite <- nl_zipx.
+          eapply eq_term_tm_nl.
+        * cbn. rewrite <- nl_zipx.
+          eapply eq_term_tm_nl.
+  Defined.
 
-  (* TODO Maybe have a type of pack and an R that already operates on namless
-     stuff.
-     Then have R x y defined as "R_nl (nl x) (nl y)".
-   *)
-  Definition nlmkpack s Γ t π1 π2 h :=
-    mkpack (nlstate s) (nlctx Γ) (nl t) (nlstack π1) (nlstack π2) (nl_wth h).
-
-  Definition wterm Γ := { t : term | welltyped Σ Γ t }.
+  Definition wterm Γ := { t : term | welltyped (nlg Σ) Γ t }.
 
   Definition wcored Γ (u v : wterm Γ) :=
-    cored Σ Γ (` u) (` v).
+    cored (nlg Σ) Γ (` u) (` v).
 
   Lemma wcored_wf :
     forall Γ, well_founded (wcored Γ).
@@ -153,22 +148,30 @@ Section Conversion.
   Qed.
 
   Definition R_aux :=
-    t ⊩ cored Σ [] ⨶ @posR t ⊗ w ⊩ wcored [] ⨶ @posR (` w) ⊗ stateR.
+    t ⊩ cored (nlg Σ) [] ⨶ @posR t ⊗ w ⊩ wcored [] ⨶ @posR (` w) ⊗ stateR.
+
+  Notation nl_pzt u := (zipx (nl_ctx u) (nl_tm u) (nl_stk1 u)) (only parsing).
+  Notation nl_pps1 u := (xpos (nl_ctx u) (nl_tm u) (nl_stk1 u)) (only parsing).
+  Notation nl_pwt u := (exist _ (nl_wth u)) (only parsing).
+  Notation nl_pps2 u := (xpos (nl_ctx u) (nl_tm' u) (nl_stk2 u)) (only parsing).
+
+  Notation obpack u :=
+    (nl_pzt u ; (nl_pps1 u, (nl_pwt u ; (nl_pps2 u, nl_st u)))) (only parsing).
+
+  Definition R_nl (u v : nlpack) :=
+    R_aux (obpack u) (obpack v).
+
+  Definition R (u v : pack) :=
+    R_nl (nl_pack u) (nl_pack v).
 
   Notation pzt u := (zipx (ctx u) (tm u) (stk1 u)) (only parsing).
   Notation pps1 u := (xpos (ctx u) (tm u) (stk1 u)) (only parsing).
   Notation pwt u := (exist _ (wth u)) (only parsing).
   Notation pps2 u := (xpos (ctx u) (tm' u) (stk2 u)) (only parsing).
 
-  Notation obpack u :=
-    (pzt u ; (pps1 u, (pwt u ; (pps2 u, st u)))) (only parsing).
-
-  Definition R (u v : pack) :=
-    R_aux (obpack u) (obpack v).
-
   Lemma R_aux_Acc :
     forall t p w q s,
-      welltyped Σ [] t ->
+      welltyped (nlg Σ) [] t ->
       Acc R_aux (t ; (p, (w ; (q, s)))).
   Proof.
     intros t p w q s ht.
@@ -185,15 +188,31 @@ Section Conversion.
 
   Lemma R_Acc :
     forall u,
-      welltyped Σ [] (zipx (ctx u) (tm u) (stk1 u)) ->
+      welltyped (nlg Σ) [] (zipx (ctx u) (tm u) (stk1 u)) ->
       Acc R u.
   Proof.
     intros u h.
-    eapply Acc_fun with (f := fun x => obpack x).
-    apply R_aux_Acc. assumption.
+    eapply Acc_fun with (f := fun x => obpack (nl_pack x)).
+    apply R_aux_Acc.
+    rewrite <- nl_zipx.
+    eapply welltyped_rename ; auto.
+    - eapply wf_nlg ; auto.
+    - eassumption.
+    - eapply eq_term_tm_nl.
   Qed.
 
-  Lemma R_positionR :
+  Lemma R_cored :
+    forall p1 p2,
+      cored Σ [] (pzt p1) (pzt p2) ->
+      R p1 p2.
+  Proof.
+    intros p1 p2 h.
+    left. rewrite <- 2!nl_zipx.
+    change [] with (nlctx []).
+    eapply cored_nl ; auto.
+  Qed.
+
+  Lemma R_aux_positionR :
     forall t1 t2 (p1 : pos t1) (p2 : pos t2) s1 s2,
       t1 = t2 ->
       positionR (` p1) (` p2) ->
@@ -203,11 +222,24 @@ Section Conversion.
     subst. right. left. assumption.
   Qed.
 
-  Lemma R_cored2 :
+  Lemma R_positionR :
+    forall p1 p2,
+      nl (pzt p1) = nl (pzt p2) ->
+      positionR (` (pps1 p1)) (` (pps1 p2)) ->
+      R p1 p2.
+  Proof.
+    intros [s1 Γ1 t1 π1 ρ1 t1' h1] [s2 Γ2 t2 π2 ρ2 t2' h2] e h. simpl in *.
+    eapply R_aux_positionR ; simpl.
+    - rewrite <- 2!nl_zipx. assumption.
+    - rewrite 2!xposition_nlctx, 2!xposition_nlstack.
+      assumption.
+  Qed.
+
+  Lemma R_aux_cored2 :
     forall t1 t2 (p1 : pos t1) (p2 : pos t2) w1 w2 q1 q2 s1 s2,
       t1 = t2 ->
       ` p1 = ` p2 ->
-      cored Σ [] (` w1) (` w2) ->
+      cored (nlg Σ) [] (` w1) (` w2) ->
       R_aux (t1 ; (p1, (w1 ; (q1, s1)))) (t2 ; (p2, (w2 ; (q2, s2)))).
   Proof.
     intros t1 t2 [p1 hp1] [p2 hp2] [t1' h1'] [t2' h2'] q1 q2 s1 s2 e1 e2 h.
@@ -216,13 +248,31 @@ Section Conversion.
     right. right. left. assumption.
   Qed.
 
+  Lemma R_cored2 :
+    forall p1 p2,
+      nl (pzt p1) = nl (pzt p2) ->
+      ` (pps1 p1) = ` (pps1 p2) ->
+      cored Σ [] (` (pwt p1)) (` (pwt p2)) ->
+      R p1 p2.
+  Proof.
+    intros [s1 Γ1 t1 π1 ρ1 t1' h1] [s2 Γ2 t2 π2 ρ2 t2' h2] e1 e2 h. simpl in *.
+    eapply R_aux_cored2 ; simpl.
+    - rewrite <- 2!nl_zipx. assumption.
+    - rewrite 2!xposition_nlctx, 2!xposition_nlstack. assumption.
+    - destruct s1, s2 ; simpl.
+      all: rewrite <- 2!nl_zipx.
+      all: change [] with (nlctx []).
+      all: eapply cored_nl ; auto.
+  Qed.
+
   (* TODO Here we assume that welltyped is really squashed, which should be ok
      if we defined it in SProp probably.
+     NOTE We will have to put the squash in SProp as well, but that's not too big a deal.
    *)
   Axiom welltyped_irr :
-    forall {Γ t} (h1 h2 : welltyped Σ Γ t), h1 = h2.
+    forall {Σ Γ t} (h1 h2 : welltyped Σ Γ t), h1 = h2.
 
-  Lemma R_positionR2 :
+  Lemma R_aux_positionR2 :
     forall t1 t2 (p1 : pos t1) (p2 : pos t2) w1 w2 q1 q2 s1 s2,
       t1 = t2 ->
       ` p1 = ` p2 ->
@@ -237,7 +287,25 @@ Section Conversion.
     right. right. right. left. assumption.
   Qed.
 
-  Lemma R_stateR :
+  Lemma R_positionR2 :
+    forall p1 p2,
+      nl (pzt p1) = nl (pzt p2) ->
+      ` (pps1 p1) = ` (pps1 p2) ->
+      nl (` (pwt p1)) = nl (` (pwt p2)) ->
+      positionR (` (pps2 p1)) (` (pps2 p2)) ->
+      R p1 p2.
+  Proof.
+    intros [s1 Γ1 t1 π1 ρ1 t1' h1] [s2 Γ2 t2 π2 ρ2 t2' h2] e1 e2 e3 h.
+    simpl in *.
+    eapply R_aux_positionR2 ; simpl.
+    - rewrite <- 2!nl_zipx. assumption.
+    - rewrite 2!xposition_nlctx, 2!xposition_nlstack. assumption.
+    - destruct s1, s2 ; simpl.
+      all: rewrite <- 2!nl_zipx. all: assumption.
+    - rewrite 2!xposition_nlctx, 2!xposition_nlstack. assumption.
+  Qed.
+
+  Lemma R_aux_stateR :
     forall t1 t2 (p1 : pos t1) (p2 : pos t2) w1 w2 q1 q2 s1 s2 ,
       t1 = t2 ->
       ` p1 = ` p2 ->
@@ -253,6 +321,26 @@ Section Conversion.
     pose proof (welltyped_irr h1' h2'). subst.
     pose proof (uip hq1 hq2). subst.
     right. right. right. right. assumption.
+  Qed.
+
+  Lemma R_stateR :
+    forall p1 p2,
+      nl (pzt p1) = nl (pzt p2) ->
+      ` (pps1 p1) = ` (pps1 p2) ->
+      nl (` (pwt p1)) = nl (` (pwt p2)) ->
+      ` (pps2 p1) = ` (pps2 p2) ->
+      stateR (st p1) (st p2) ->
+      R p1 p2.
+  Proof.
+    intros [s1 Γ1 t1 π1 ρ1 t1' h1] [s2 Γ2 t2 π2 ρ2 t2' h2] e1 e2 e3 e4 h.
+    simpl in *.
+    eapply R_aux_stateR ; simpl.
+    - rewrite <- 2!nl_zipx. assumption.
+    - rewrite 2!xposition_nlctx, 2!xposition_nlstack. assumption.
+    - destruct s1, s2 ; simpl.
+      all: rewrite <- 2!nl_zipx. all: assumption.
+    - rewrite 2!xposition_nlctx, 2!xposition_nlstack. assumption.
+    - induction h ; constructor.
   Qed.
 
   Lemma zwts :
@@ -281,8 +369,8 @@ Section Conversion.
      forall s' Γ' t' π1' π2'
        (h1' : wtp Γ' t' π1')
        (h2' : wts Γ' s' t' π2'),
-       R (nlmkpack s' Γ' t' π1' π2' (zwts h2'))
-         (nlmkpack s Γ t π1 π2 (zwts h2)) ->
+       R (mkpack s' Γ' t' π1' π2' (zwts h2'))
+         (mkpack s Γ t π1 π2 (zwts h2)) ->
        Ret s' Γ' t' π1' π2'.
 
   Notation no := (exist false I) (only parsing).
@@ -448,67 +536,48 @@ Section Conversion.
           -- simpl.
              eapply cored_it_mkLambda_or_LetIn.
              rewrite app_context_nil_l.
-             rewrite nlstack_appstack. rewrite nlstack_cat.
              rewrite zipc_appstack. rewrite zipc_stack_cat.
              repeat zip fold. eapply cored_context.
-             apply cored_nl in H ; try assumption.
-             rewrite nlctx_app_context in H.
-             rewrite nlctx_stack_context in H.
-             rewrite nl_zipc in H. rewrite nl_mkApps in H.
              assumption.
         * destruct y' as [q hq].
           cbn in H0. inversion H0. subst.
           unshelve eapply R_positionR2.
           -- simpl. rewrite stack_cat_appstack. reflexivity.
           -- simpl. rewrite stack_cat_appstack. reflexivity.
-          -- simpl. unfold zipx. f_equal.
-             rewrite nlstack_appstack. rewrite nlstack_cat.
+          -- simpl. unfold zipx. f_equal. f_equal.
              rewrite zipc_stack_cat.
-             apply (f_equal nl) in H2. rewrite 2!nl_zipc in H2.
-             rewrite <- H2. rewrite nlstack_appstack.
+             rewrite <- H2.
              rewrite 2!zipc_appstack. cbn. reflexivity.
           -- simpl. unfold xposition. eapply positionR_poscat.
              unfold posR in H. cbn in H.
              rewrite stack_position_appstack in H. cbn in H.
-             rewrite nlstack_appstack. rewrite nlstack_cat.
              rewrite stack_position_stack_cat.
              rewrite stack_position_appstack.
              eapply positionR_poscat.
-             rewrite stack_position_nlstack.
-             rewrite map_length.
              assumption.
     - rewrite <- eq1 in h.
       rewrite stack_context_appstack in h.
       dependent destruction h.
       + cbn in H. rewrite zipc_appstack in H. cbn in H.
-        left. simpl. eapply cored_it_mkLambda_or_LetIn.
+        eapply R_cored. simpl. eapply cored_it_mkLambda_or_LetIn.
         rewrite app_context_nil_l.
-        rewrite nlstack_cat. rewrite nlstack_appstack.
         rewrite zipc_appstack. rewrite zipc_stack_cat.
         repeat zip fold. eapply cored_context.
-        apply cored_nl in H ; try assumption. rewrite nlctx_app_context in H.
-        rewrite nlctx_stack_context in H. rewrite nl_zipc in H.
-        rewrite nl_mkApps in H.
         assumption.
       + destruct y' as [q hq].
         cbn in H0. inversion H0. (* Why is noconf failing at this point? *)
         subst.
-        unshelve eapply R_positionR.
-        * simpl. unfold zipx. f_equal.
-          rewrite nlstack_cat. rewrite nlstack_appstack.
+        unshelve eapply R_positionR ; simpl.
+        * unfold zipx. f_equal. f_equal.
           rewrite zipc_stack_cat.
-          apply (f_equal nl) in H2. rewrite 2!nl_zipc in H2.
-          rewrite <- H2. rewrite nlstack_appstack.
+          rewrite <- H2.
           rewrite 2!zipc_appstack. cbn. reflexivity.
-        * simpl. unfold xposition. eapply positionR_poscat.
+        * unfold xposition. eapply positionR_poscat.
           unfold posR in H. cbn in H.
           rewrite stack_position_appstack in H. cbn in H.
-          rewrite nlstack_cat. rewrite nlstack_appstack.
           rewrite stack_position_stack_cat.
           rewrite stack_position_appstack.
           eapply positionR_poscat.
-          rewrite stack_position_nlstack.
-          rewrite map_length.
           assumption.
   Qed.
   Next Obligation.
@@ -1047,13 +1116,8 @@ Section Conversion.
     - constructor. eapply red_zipx. eapply red_const. eassumption.
   Qed.
   Next Obligation.
-    left. simpl.
+    eapply R_cored. simpl.
     eapply cored_zipx.
-    (* rewrite nl_subst_instance_constr. *)
-    (* TODO!! Perhaps cored_nl is not true after all... *)
-    change (tConst c' u') with (nl (tConst c' u')).
-    rewrite <- nlctx_stack_context. rewrite <- nlctx_app_context.
-    eapply cored_nl ; auto.
     eapply cored_const.
     eassumption.
   Qed.
@@ -1076,9 +1140,6 @@ Section Conversion.
     unshelve eapply R_cored2.
     all: try reflexivity.
     simpl. eapply cored_zipx.
-    change (tConst c' u') with (nl (tConst c' u')).
-    rewrite <- nlctx_stack_context. rewrite <- nlctx_app_context.
-    eapply cored_nl ; auto.
     eapply cored_const. eassumption.
   Qed.
   Next Obligation.
@@ -1092,10 +1153,7 @@ Section Conversion.
     constructor. eapply red_zipx. eapply red_const. eassumption.
   Qed.
   Next Obligation.
-    left. simpl. eapply cored_zipx.
-    rewrite <- nlctx_stack_context. rewrite <- nlctx_app_context.
-    change (tConst c' u) with (nl (tConst c' u)).
-    eapply cored_nl ; auto.
+    eapply R_cored. simpl. eapply cored_zipx.
     eapply cored_const. eassumption.
   Qed.
   Next Obligation.
@@ -1109,10 +1167,7 @@ Section Conversion.
     constructor. eapply red_zipx. eapply red_const. eassumption.
   Qed.
   Next Obligation.
-    left. simpl. eapply cored_zipx.
-    rewrite <- nlctx_stack_context. rewrite <- nlctx_app_context.
-    change (tConst c' u) with (nl (tConst c' u)).
-    eapply cored_nl ; auto.
+    eapply R_cored. simpl. eapply cored_zipx.
     eapply cored_const. eassumption.
   Qed.
   Next Obligation.
@@ -1126,10 +1181,7 @@ Section Conversion.
     constructor. eapply red_zipx. eapply red_const. eassumption.
   Qed.
   Next Obligation.
-    left. simpl. eapply cored_zipx.
-    rewrite <- nlctx_stack_context. rewrite <- nlctx_app_context.
-    change (tConst c' u) with (nl (tConst c' u)).
-    eapply cored_nl ; auto.
+    eapply R_cored. simpl. eapply cored_zipx.
     eapply cored_const. eassumption.
   Qed.
   Next Obligation.
@@ -1255,9 +1307,7 @@ Section Conversion.
         * unshelve eapply R_cored2.
           all: try reflexivity.
           -- simpl. unfold reduce_term. rewrite e. reflexivity.
-          -- simpl. eapply cored_zipx. eapply cored_case.
-             rewrite <- nlctx_stack_context. rewrite <- nlctx_app_context.
-             eapply cored_nl ; auto.
+          -- simpl. eapply cored_zipx. eapply cored_case. assumption.
         * exfalso.
           destruct y'. simpl in H0. inversion H0. subst.
           unfold reduce_term in eq3.
@@ -1267,10 +1317,8 @@ Section Conversion.
           (* rewrite 2!eq_term_refl in eq3. discriminate eq3. *)
           admit.
     - dependent destruction hr.
-      + left. simpl.
-        eapply cored_zipx. eapply cored_case.
-        rewrite <- nlctx_stack_context. rewrite <- nlctx_app_context.
-        eapply cored_nl ; auto.
+      + eapply R_cored. simpl.
+        eapply cored_zipx. eapply cored_case. assumption.
       + match goal with
         | |- context [ reduce_term ?f ?Σ ?Γ c' ?h ] =>
           destruct (reduce_stack_Req f Σ Γ c' ε h) as [e' | hr]
@@ -1289,9 +1337,7 @@ Section Conversion.
              ++ simpl. unfold reduce_term.
                 destruct y'. simpl in H0. inversion H0. subst.
                 rewrite <- H3. reflexivity.
-             ++ simpl. eapply cored_zipx. eapply cored_case.
-                rewrite <- nlctx_stack_context. rewrite <- nlctx_app_context.
-                eapply cored_nl ; auto.
+             ++ simpl. eapply cored_zipx. eapply cored_case. assumption.
           -- exfalso.
              destruct y'. simpl in H0. inversion H0. subst.
              destruct y'0. simpl in H2. inversion H2. subst.
@@ -1450,19 +1496,12 @@ Section Conversion.
       destruct (reduce_stack_sound f Σ Γ t π h) as [r2]
     end.
     rewrite <- eq3 in r2.
-    left. simpl. eapply cored_it_mkLambda_or_LetIn.
+    eapply R_cored. simpl. eapply cored_it_mkLambda_or_LetIn.
     rewrite app_context_nil_l.
-    apply cored_nl in r1 ; auto.
-    rewrite 2!nl_zipc in r1. cbn in r1.
     eapply red_cored_cored ; try eassumption.
     apply red_context in r2. cbn in r2.
-    apply red_nl in r2 ; auto.
-    rewrite 4!nl_zipc in r2. rewrite nlstack_appstack in r2.
-    cbn in r2.
-    rewrite nlstack_cat.
     rewrite zipc_stack_cat.
     pose proof (decompose_stack_eq _ _ _ (eq_sym eq2)). subst.
-    rewrite nlstack_appstack.
     rewrite zipc_appstack in r2. cbn in r2.
     rewrite zipc_appstack.
     assumption.
@@ -1574,19 +1613,14 @@ Section Conversion.
     eapply R_cored2. all: try reflexivity. simpl.
     eapply cored_it_mkLambda_or_LetIn.
     rewrite app_context_nil_l.
-    apply cored_nl in r1 ; auto.
-    rewrite 2!nl_zipc in r1. cbn in r1.
     eapply red_cored_cored ; try eassumption.
-    apply red_context in r2. cbn in r2.
-    apply red_nl in r2 ; auto.
-    rewrite 4!nl_zipc in r2. rewrite nlstack_appstack in r2.
     cbn in r2.
-    rewrite nlstack_cat.
     rewrite zipc_stack_cat.
     pose proof (decompose_stack_eq _ _ _ (eq_sym eq2)). subst.
-    rewrite nlstack_appstack.
     rewrite zipc_appstack in r2. cbn in r2.
-    rewrite zipc_appstack. assumption.
+    rewrite zipc_appstack.
+    zip fold. eapply red_context.
+    assumption.
   Qed.
   Next Obligation.
     match type of eq3 with
@@ -1675,8 +1709,8 @@ Section Conversion.
      forall u1 u2 ca1 a1 ρ2
        (h1' : wtp Γ u1 (coApp (mkApps t ca1) (appstack a1 π1)))
        (h2' : wtp Γ u2 ρ2),
-       let x := nlmkpack (Reduction u2) Γ u1 (coApp (mkApps t ca1) (appstack a1 π1)) ρ2 h2' in
-       let y := nlmkpack Args Γ (mkApps t args) (appstack l1 π1) π2 h2 in
+       let x := mkpack (Reduction u2) Γ u1 (coApp (mkApps t ca1) (appstack a1 π1)) ρ2 h2' in
+       let y := mkpack Args Γ (mkApps t args) (appstack l1 π1) π2 h2 in
        S #|ca1| + #|a1| = #|args| + #|l1| ->
        pzt x = pzt y /\
        positionR (` (pps1 x)) (` (pps1 y)) ->
@@ -1763,7 +1797,6 @@ Section Conversion.
       + rewrite <- mkApps_nested in eq. assumption.
       + subst x y.
         unfold xposition. cbn. apply positionR_poscat.
-        rewrite 2!stack_position_nlstack.
         rewrite 2!stack_position_appstack.
         rewrite <- !app_assoc. apply positionR_poscat.
         assert (h : forall n m, positionR (list_make n app_l ++ [app_r]) (list_make m app_l)).
@@ -1843,7 +1876,8 @@ Section Conversion.
     - pose proof (decompose_stack_eq _ _ _ (eq_sym eq1)). subst.
       instantiate (1 := h2').
       simpl in H0. destruct H0 as [eq hp].
-      unshelve eapply R_positionR ; assumption.
+      unshelve eapply R_positionR ; try assumption.
+      simpl. f_equal. assumption.
   Qed.
   Next Obligation.
     pose proof (decompose_stack_eq _ _ _ (eq_sym eq1)). subst.
@@ -1880,7 +1914,7 @@ Section Conversion.
     unshelve eapply _isconv ; try assumption.
     intros s' Γ' t' π1' π2' h1' h2' hR. destruct pp.
     assert (wth0 = zwts H0) by apply welltyped_irr. subst.
-    (* specialize (f (nlmkpack s' Γ' t' π1' π2' (zwts h2')) hR). cbn in f. *)
+    (* specialize (f (mkpack s' Γ' t' π1' π2' (zwts h2')) hR). cbn in f. *)
   (*   eapply f ; assumption. *)
   (* Qed. *)
   Admitted.
@@ -1888,7 +1922,7 @@ Section Conversion.
     destruct s ; assumption.
   Qed.
   Next Obligation.
-    apply R_Acc. simpl. assumption.
+    apply R_Acc. simpl. eapply welltyped_nlg ; assumption.
   Qed.
 
   Definition isconv Γ leq t1 π1 h1 t2 π2 h2 :=

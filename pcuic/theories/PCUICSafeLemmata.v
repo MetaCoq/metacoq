@@ -47,6 +47,16 @@ Section Lemmata.
   Context (Σ : global_context).
   Context (hΣ : wf Σ).
 
+  Lemma wf_nlg :
+    wf (nlg Σ).
+  Admitted.
+
+  Lemma welltyped_nlg :
+    forall Γ t,
+      welltyped Σ Γ t ->
+      welltyped (nlg Σ) Γ t.
+  Admitted.
+
   Lemma welltyped_rename :
     forall Γ u v,
       welltyped Σ Γ u ->
@@ -968,13 +978,13 @@ Section Lemmata.
   Lemma cored_nl :
     forall Γ u v,
       cored Σ Γ u v ->
-      cored Σ (nlctx Γ) (nl u) (nl v).
+      cored (nlg Σ) (nlctx Γ) (nl u) (nl v).
   Admitted.
 
   Lemma red_nl :
     forall Γ u v,
       red Σ Γ u v ->
-      red Σ (nlctx Γ) (nl u) (nl v).
+      red (nlg Σ) (nlctx Γ) (nl u) (nl v).
   Admitted.
 
   Fixpoint nlstack (π : stack) : stack :=
@@ -1646,6 +1656,36 @@ Section Lemmata.
     - simpl in e. cbn in e.
       apply ih in e.
       inversion e. reflexivity.
+  Qed.
+
+  Lemma context_position_nlctx :
+    forall Γ,
+      context_position (nlctx Γ) = context_position Γ.
+  Proof.
+    intros Γ. induction Γ as [| [na [b|] A] Γ ih ].
+    - reflexivity.
+    - simpl. rewrite ih. reflexivity.
+    - simpl. rewrite ih. reflexivity.
+  Qed.
+
+  Lemma xposition_nlctx :
+    forall Γ π,
+      xposition (nlctx Γ) π = xposition Γ π.
+  Proof.
+    intros Γ π.
+    unfold xposition.
+    rewrite context_position_nlctx.
+    reflexivity.
+  Qed.
+
+  Lemma xposition_nlstack :
+    forall Γ π,
+      xposition Γ (nlstack π) = xposition Γ π.
+  Proof.
+    intros Γ π.
+    unfold xposition.
+    rewrite stack_position_nlstack.
+    reflexivity.
   Qed.
 
 End Lemmata.

@@ -418,3 +418,32 @@ Proof.
   eapply eq_term_upto_univ_tm_nl.
   intro. eapply eq_universe'_refl.
 Qed.
+
+Definition nl_constant_body c :=
+  Build_constant_body
+    (nl c.(cst_type)) (option_map nl c.(cst_body)) c.(cst_universes).
+
+Definition nl_one_inductive_body o :=
+  Build_one_inductive_body
+    o.(ind_name)
+    (nl o.(ind_type))
+    o.(ind_kelim)
+    (map (fun '((x,y),n) => ((x, nl y), n)) o.(ind_ctors))
+    (map (fun '(x,y) => (x, nl y)) o.(ind_projs)).
+
+Definition nl_mutual_inductive_body m :=
+  Build_mutual_inductive_body
+    m.(ind_npars)
+    (nlctx m.(ind_params))
+    (map nl_one_inductive_body m.(ind_bodies))
+    m.(ind_universes).
+
+Definition nl_global_decl (d : global_decl) : global_decl :=
+  match d with
+  | ConstantDecl kn cb => ConstantDecl kn (nl_constant_body cb)
+  | InductiveDecl kn mib => InductiveDecl kn (nl_mutual_inductive_body mib)
+  end.
+
+Definition nlg (Σ : global_context) : global_context :=
+  let '(Σ, φ) := Σ in
+  (map nl_global_decl Σ, φ).

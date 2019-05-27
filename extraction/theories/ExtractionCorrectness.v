@@ -53,7 +53,7 @@ Proof.
 Admitted.
 
 
-Lemma prop_case_is_singleton `{Fuel} Σ ind npar p T i u args brs mdecl idecl :
+Lemma prop_case_is_singleton  Σ ind npar p T i u args brs mdecl idecl :
   PCUICTyping.declared_inductive (fst Σ) mdecl ind idecl ->
   PCUICAst.ind_npars mdecl = npar ->
   is_type_or_proof Σ [] (PCUICAst.tConstruct ind i u) = true ->
@@ -79,7 +79,7 @@ Qed.
 (*   intros H Σ T' T''. *)
 (* Admitted. *)
 
-Lemma eval_is_type `{Fuel} (Σ : PCUICAst.global_context) (t v : PCUICAst.term) (* T : *)
+Lemma eval_is_type (Σ : PCUICAst.global_context) (t v : PCUICAst.term) (* T : *)
   (* wf Σ -> Σ ;;; [] |- t : T ->  *) :
   PCUICWcbvEval.eval Σ [] t v -> Extract.is_type_or_proof Σ [] t = Extract.is_type_or_proof Σ [] v.
 Proof. 
@@ -182,7 +182,7 @@ Admitted.
 (** ** Proof inversions *)
 
 Lemma is_type_ind:
-  forall (Σ : PCUICAst.global_context) (i : inductive) (u : universe_instance) (T : PCUICAst.term) (fuel : Fuel),
+  forall (Σ : PCUICAst.global_context) (i : inductive) (u : universe_instance) (T : PCUICAst.term),
     Σ;;; [] |- tInd i u : T -> is_type_or_proof Σ [] (tInd i u).
 Proof.
   
@@ -344,7 +344,7 @@ Theorem erasure_correct : erasure_correctness.
 Proof.
   intros Σ t T pre v H. revert T pre.
   induction H using PCUICWcbvEval.eval_evals_ind; intros T pre.
-  - cbn.
+  - (** beta case, done *) cbn.
     destruct Extract.is_type_or_proof eqn:Heq.
     + rewrite is_type_extract. econstructor. econstructor.
       erewrite <- eval_is_type. eauto. eauto.
@@ -368,7 +368,8 @@ Proof.
       eapply IHeval3. econstructor; eauto.
 
       eapply substitution0; eauto.
-  - inv pre. eapply type_tLetIn_inv in extr_typed0 as (? & U & [[] ?] & ?); eauto. cbn.
+  - (** zeta case, done *)
+    inv pre. eapply type_tLetIn_inv in extr_typed0 as (? & U & [[] ?] & ?); eauto. cbn.
     destruct Extract.is_type_or_proof eqn:Heq. 
     + rewrite is_type_extract. now econstructor.
       erewrite <- eval_is_type. eassumption.
@@ -397,9 +398,10 @@ Proof.
 
         eapply (context_conversion _ _ _ _ _ _ t2).
         econstructor; eauto.
-  - cbn in isdecl. inv isdecl.    
-  - cbn in isdecl. inv isdecl.    
-  - cbn. destruct Extract.is_type_or_proof eqn:Heq.
+  - (** rel_def, trivial *) cbn in isdecl. inv isdecl.    
+  - (** rel_undef, trivial *) cbn in isdecl. inv isdecl.    
+  - (** iota case (tCase) *)
+    cbn. destruct Extract.is_type_or_proof eqn:Heq.
     + rewrite is_type_extract. econstructor; eauto.
       erewrite <- eval_is_type. eassumption.
       econstructor; eauto.
@@ -500,13 +502,16 @@ Proof.
            rewrite <- nth_default_eq in *.
            unfold nth_default in *.
            rewrite Hnth in *.
-           rewrite <- map_skipn.
-           eapply IHeval2. econstructor; eauto.
+           rewrite <- map_skipn. cbn.
+           erewrite eval_is_type  in IHeval2.
+           destruct is_type_or_proof in IHeval2.
+           
+           (* eapply IHeval2. econstructor; eauto. *)
 
            admit.
            admit.
-
-          
+           admit.
+           admit.
     (*        eapply PCUICGeneration.type_mkApps. *)
     (*        rewrite <- nth_default_eq. unfold nth_default. rewrite E3. *)
     (*        eauto. eauto. *)
@@ -570,10 +575,10 @@ Proof.
     (* (*        unfold nth_default. rewrite e. cbn. eauto. *) *)
     (*     (* + congruence. *) admit. *)
     (* + admit. *)
-  - rewrite extract_Apps.
+  - (** fix case *) rewrite extract_Apps.
     cbn. destruct is_type_or_proof eqn:Heq.
     + inv pre. rewrite is_type_extract.
-      eapply eval_box_apps. econstructor; eauto.
+      econstructor. eauto.
       erewrite <- eval_is_type.
       erewrite is_type_App in Heq.
       eassumption. eauto.
@@ -664,7 +669,7 @@ Proof.
     (*         econstructor; eauto. all:eauto. *)
     (*         eapply PCUICGeneration.type_mkApps; eauto. } *)
     (* + congruence. *)
-  - cbn. destruct Extract.is_type_or_proof eqn:Heq. 
+  - (** delta case, done up to lemma*) cbn. destruct Extract.is_type_or_proof eqn:Heq. 
     + erewrite is_type_extract. econstructor; eauto.
       erewrite <- eval_is_type. eassumption. eauto.
     + inv pre.
@@ -675,7 +680,7 @@ Proof.
       * eapply IHeval. econstructor; eauto.
         eapply subject_reduction. eauto. exact extr_typed0.
         eapply PCUICReduction.red1_red. econstructor; eauto.
-  - cbn. destruct Extract.is_type_or_proof eqn:Heq. 
+  - (** proj case, needs check in typing *) cbn. destruct Extract.is_type_or_proof eqn:Heq. 
     + rewrite is_type_extract. econstructor; eauto.
       erewrite <- eval_is_type. eassumption. eauto.
     + inv pre.
@@ -692,67 +697,34 @@ Proof.
         eapply map_nth_error in H17.
         rewrite <- nth_default_eq. unfold nth_default.
         rewrite H17. eapply IHeval2. econstructor; eauto.
-  - cbn. destruct Extract.is_type_or_proof eqn:Heq. 
+  - (** abs case, trivial *) cbn. destruct Extract.is_type_or_proof eqn:Heq. 
     + econstructor; eauto. 
     + econstructor.
-  - cbn. destruct Extract.is_type_or_proof eqn:Heq. 
+  - (** prod case, trivial *) cbn. destruct Extract.is_type_or_proof eqn:Heq. 
     + econstructor; eauto. 
     + econstructor; eauto.
-  - cbn. destruct Extract.is_type_or_proof eqn:Heq; econstructor; eauto.
-  - inv pre. edestruct (type_mkApps_inv _ _ _ _ _ extr_env_wf extr_typed0) as (? & ? & [] & ?) ; eauto. 
+  - (** app_ind nil case, trivial *) cbn. destruct Extract.is_type_or_proof eqn:Heq; econstructor; eauto.
+  - (* app_ind non-nil case *) inv pre. edestruct (type_mkApps_inv _ _ _ _ _ extr_env_wf extr_typed0) as (? & ? & [] & ?) ; eauto. 
     rewrite !is_type_extract.
     + econstructor; eauto.
-    + erewrite <- is_type_App. admit.
+    + erewrite <- is_type_App. eapply is_type_ind. eapply subject_reduction_eval; eauto.
       eapply subject_reduction_eval. eauto. 2:eauto.
       eapply type_mkApps; eauto.
-    + admit.
-  - cbn. destruct Extract.is_type_or_proof eqn:Heq. 
+    + admit. (* if you reduce to tInd, you are a type *)
+  - (** app_constr nil case *)cbn. destruct Extract.is_type_or_proof eqn:Heq. 
     + econstructor; eauto. 
     + econstructor; eauto.
-  - inv pre. edestruct (type_mkApps_inv _ _ _ _ _ extr_env_wf extr_typed0) as (? & ? & [] & ?) ; eauto.
+  - (** app_constr nonnil case *) inv pre. edestruct (type_mkApps_inv _ _ _ _ _ extr_env_wf extr_typed0) as (? & ? & [] & ?) ; eauto.
 
     rewrite !extract_Apps.
     cbn.
-    
-
-    eapply IHeval in e0 as (? & ? & ?); eauto.
-    simpl in H1. destruct is_type_or_proof eqn:Heq. destruct a0.
-    + inv H1. exists tBox.
-      split. eapply is_type_extract. eapply is_type_App. eapply subject_reduction.
-      eauto. 2:{ eapply PCUICReduction.red_mkApps. eapply wcbeval_red. eauto.
-               eapply All2_impl. exact X. intros. eapply wcbeval_red. eauto. }
-
-      eauto. eauto.
-      destruct e; subst; eauto; eapply eval_box_apps; eauto.
-    + inv H1. assert (t' = mkApps e x). destruct e; eauto. eapply eval_tBox_inv in H2. inv H2. subst. clear y.
-      enough (exists x', Forall2 (eval Σ') x x' /\ Forall2 (fun a e => extract Σ [] a = Checked e) l' x') as (x' & H1 & H12).
-      eexists (mkApps (tConstruct i k) x'). split.
-      * eapply extract_Apps2. simpl. now rewrite Heq. eauto.
-      * econstructor; eauto.
-      * clear IHeval. clear H10. revert x a X HΣ' extr_env_axiom_free0 extr_typed0 extr_env_wf.
-        clear - H0. intros.
-        
-        dependent induction H0 using All2_ind_rev.
-        -- depelim a. exists []. repeat econstructor.
-        -- specialize (All2_app_inv _ _ _ _ _ _  a) as ([] & ([->] & ?)).
-           specialize (All2_app_inv _ _ _ _ _ _  X) as ([] & ([] & ?)).
-           inv a1. inv H4. 
-           inv a3. inv X1.
-           eapply last_inv in e as [-> ->].
-
-           rewrite mkApps_snoc in extr_typed0.
-           edestruct (type_mkApps_inv _ _ _ [x] _ extr_env_wf extr_typed0) as (? & ? & [] & ?) ; eauto. 
-           inv t0.
-           
-           eapply IHAll2 in a0 as (? & ? & ?).
-           all:auto. 2:eauto.
-           eapply r in H2 as (? & ? & ?).
-           
-           exists (x2 ++ [x3])%list. 
-           2:econstructor; eauto. 3:eauto. split.
-           ++ eapply Forall2_app; eauto.
-           ++ eapply Forall2_app; eauto.
-           ++ eauto.
-    + congruence.
-    + econstructor; eauto.
+    destruct is_type_or_proof eqn:Heq.
+    + erewrite <- eval_is_type, Heq.
+      2: eauto. econstructor; eauto.
+    + cbn in *. destruct (is_type_or_proof Σ [] (PCUICAst.tConstruct _ _ _)).
+      * eapply eval_box_apps. eapply IHeval. econstructor; eauto.
+      * econstructor. eapply IHeval. econstructor; eauto.
+        eapply Forall2_map. eapply All2_Forall.
+        eapply All2_impl. eassumption.
+        intros. cbn in *. eapply H1. admit.
 Admitted.

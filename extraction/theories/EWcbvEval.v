@@ -74,7 +74,7 @@ Section Wcbv.
   | eval_fix mfix idx args args' narg fn res :
       unfold_fix mfix idx = Some (narg, fn) ->
       Forall2 eval args args' -> (* QUESTION should we reduce the args after the recursive arg here? *)
-      is_constructor narg args' ->
+      is_constructor_or_box narg args' ->
       eval (mkApps fn args') res ->
       eval (mkApps (tFix mfix idx) args) res
 
@@ -150,7 +150,7 @@ Section Wcbv.
           unfold_fix mfix idx = Some (narg, fn) ->
           Forall2 eval args args' ->
           Forall2 P args args' ->
-          is_constructor narg args' = true ->
+          is_constructor_or_box narg args' = true ->
           eval (mkApps fn args') res -> P (mkApps fn args') res -> P (mkApps (tFix mfix idx) args) res) ->
 
       (forall (ip : inductive * nat)  (mfix : mfixpoint term) (idx : nat) (args : list term)

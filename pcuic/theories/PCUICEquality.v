@@ -1,6 +1,7 @@
 (* Distributed under the terms of the MIT license.   *)
 
-From Coq Require Import Bool String List Program BinPos Compare_dec Arith Lia.
+From Coq Require Import Bool String List Program BinPos Compare_dec Arith Lia
+     Classes.RelationClasses.
 From Template Require Import config utils Universes BasicAst AstUtils UnivSubst.
 From PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICReflect
                           PCUICLiftSubst PCUICUnivSubst PCUICTyping
@@ -326,4 +327,50 @@ Proof.
     apply eq_term_upto_univ_nl_inv ; auto.
     rewrite bot.
     apply eq_term_upto_univ_refl ; auto.
+Qed.
+
+Local Ltac ih2 :=
+  lazymatch goal with
+  | ih : forall v, _ -> eq_term_upto_univ _ ?u _ |- eq_term_upto_univ _ ?u _ =>
+    eapply ih
+  end.
+
+Lemma eq_term_upto_univ_eq_eq_term_upto_univ :
+  forall R u v,
+    Reflexive R ->
+    eq_term_upto_univ eq u v ->
+    eq_term_upto_univ R u v.
+Proof.
+  intros R u v hR h.
+  induction u using term_forall_list_ind in v, h |- *.
+  all: dependent destruction h.
+  all: try solve [ constructor ; try ih2 ; try assumption ; try reflexivity ].
+  - constructor. eapply Forall2_impl' ; try eassumption.
+    eapply All_Forall. assumption.
+  - constructor. eapply Forall2_impl ; try eassumption.
+    intros x y []. reflexivity.
+  - constructor. eapply Forall2_impl ; try eassumption.
+    intros x y []. reflexivity.
+  - constructor. eapply Forall2_impl ; try eassumption.
+    intros x y []. reflexivity.
+  - constructor ; try ih2 ; try assumption.
+    eapply Forall2_impl' ; try eassumption.
+    apply All_Forall. eapply All_impl ; try eassumption.
+    intros [? ?] ? [? ?] [? ?]. split ; auto.
+  - constructor. eapply Forall2_impl' ; try eassumption.
+    eapply All_Forall. eapply All_impl ; try eassumption.
+    intros x [? ?] y [? [? ?]]. repeat split ; auto.
+  - constructor. eapply Forall2_impl' ; try eassumption.
+    eapply All_Forall. eapply All_impl ; try eassumption.
+    intros x [? ?] y [? [? ?]]. repeat split ; auto.
+Qed.
+
+Lemma eq_term_upto_univ_eq_eq_term :
+  forall φ u v,
+    eq_term_upto_univ eq u v ->
+    eq_term φ u v.
+Proof.
+  intros φ u v h.
+  eapply eq_term_upto_univ_eq_eq_term_upto_univ ; auto.
+  intro x. eapply eq_universe'_refl.
 Qed.

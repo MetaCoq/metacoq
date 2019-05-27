@@ -4,7 +4,8 @@ From Coq Require Import Bool String List Program BinPos Compare_dec Arith Lia
      Classes.RelationClasses.
 From MetaCoq.Template
 Require Import config monad_utils utils AstUtils UnivSubst.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICTyping.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
+     PCUICTyping PCUICCumulativity.
 From Equations Require Import Equations.
 Require Import Equations.Prop.DepElim.
 
@@ -57,7 +58,7 @@ Fixpoint nl (t : term) : term :=
   | tConst c u => tConst c u
   | tInd i u => tInd i u
   | tConstruct i n u => tConstruct i n u
-  | tCase indn p c brs => tCase indn (nl p) (nl c) (map (on_snd nl )brs)
+  | tCase indn p c brs => tCase indn (nl p) (nl c) (map (on_snd nl) brs)
   | tProj p c => tProj p (nl c)
   | tFix mfix idx => tFix (map (map_def_anon nl nl) mfix) idx
   | tCoFix mfix idx => tCoFix (map (map_def_anon nl nl) mfix) idx
@@ -223,11 +224,12 @@ Local Ltac ih2 :=
 
 (* TODO Instead prove eq_term t (nl t) + symmetry and transitivity *)
 Lemma eq_term_upto_univ_nl :
-  forall `{checker_flags} u v,
-    eq_term_upto_univ eq u v ->
-    eq_term_upto_univ eq (nl u) (nl v).
+  forall `{checker_flags} R u v,
+    Reflexive R ->
+    eq_term_upto_univ R u v ->
+    eq_term_upto_univ R (nl u) (nl v).
 Proof.
-  intros flags u v h.
+  intros flags R u v hR h.
   revert v h.
   induction u using term_forall_list_ind ; intros v h.
   all: dependent destruction h.
@@ -276,7 +278,9 @@ Proof.
   eapply nameless_eq_term_spec.
   - eapply nl_spec.
   - eapply nl_spec.
-  - eapply eq_term_upto_univ_nl. assumption.
+  - eapply eq_term_upto_univ_nl.
+    + intro. reflexivity.
+    + assumption.
 Qed.
 
 Local Ltac ih3 :=
@@ -302,11 +306,12 @@ Proof.
 Qed.
 
 Lemma eq_term_upto_univ_nl_inv :
-  forall `{checker_flags} u v,
-    eq_term_upto_univ eq (nl u) (nl v) ->
-    eq_term_upto_univ eq u v.
+  forall `{checker_flags} R u v,
+    Reflexive R ->
+    eq_term_upto_univ R (nl u) (nl v) ->
+    eq_term_upto_univ R u v.
 Proof.
-  intros flags u v h.
+  intros flags R u v hR h.
   revert v h.
   induction u using term_forall_list_ind ; intros v h.
   all: dependent destruction h.
@@ -324,7 +329,6 @@ Proof.
     apply Forall2_map_inv in H0.
     eapply Forall2_impl' ; try eassumption.
     eapply All_Forall. assumption.
-  - cbn in H0. inversion H0.  subst. constructor. reflexivity.
   - cbn in H0. inversion H0. subst. constructor ; try ih3.
     apply Forall2_map_inv in H.
     eapply Forall2_impl' ; try eassumption.
@@ -341,3 +345,105 @@ Proof.
     eapply All_Forall. eapply All_impl ; [ exact X |].
     intros x [? ?] y [? [? ?]]. repeat split ; auto.
 Qed.
+
+Definition map_decl_anon f (d : context_decl) :=
+  {| decl_name := nAnon ;
+     decl_body := option_map f d.(decl_body) ;
+     decl_type := f d.(decl_type)
+  |}.
+
+Definition nlctx (Γ : context) : context :=
+  map (map_decl_anon nl) Γ.
+
+Definition test_option {A} f (o : option A) : bool :=
+  match o with
+  | None => true
+  | Some x => f x
+  end.
+
+Definition nameless_ctx (Γ : context) : bool :=
+  forallb (fun d =>
+    anon d.(decl_name) &&
+    test_option nameless d.(decl_body) &&
+    nameless d.(decl_type)
+  ) Γ.
+
+Lemma nlctx_spec :
+  forall Γ, nameless_ctx (nlctx Γ).
+Proof.
+  intros Γ. induction Γ as [| [na [b|] B] Γ ih].
+  - reflexivity.
+  - simpl. rewrite 2!nl_spec, ih. reflexivity.
+  - simpl. rewrite nl_spec, ih. reflexivity.
+Qed.
+
+Lemma eq_term_upto_univ_tm_nl :
+  forall `{checker_flags} R u,
+    Reflexive R ->
+    eq_term_upto_univ R u (nl u).
+Proof.
+  intros flags R u hR.
+  induction u using term_forall_list_ind.
+  all: try solve [
+    simpl ; try apply eq_term_upto_univ_refl ; auto ; constructor ; assumption
+  ].
+  - simpl. constructor.
+    induction l.
+    + constructor.
+    + simpl. inversion H. subst. constructor ; try assumption.
+      eapply IHl. assumption.
+  - simpl. destruct p. constructor ; try assumption.
+    induction l.
+    + constructor.
+    + simpl. inversion X. subst. constructor.
+      * split ; auto.
+      * eapply IHl. assumption.
+  - simpl. constructor. induction m.
+    + constructor.
+    + simpl. inversion X. subst. constructor ; auto.
+      repeat split ; auto.
+      all: apply H1.
+  - simpl. constructor. induction m.
+    + constructor.
+    + simpl. inversion X. subst. constructor ; auto.
+      repeat split ; auto.
+      all: apply H1.
+Qed.
+
+Corollary eq_term_tm_nl :
+  forall `{checker_flags} G u,
+    eq_term G u (nl u).
+Proof.
+  intros flags G u.
+  eapply eq_term_upto_univ_tm_nl.
+  intro. eapply eq_universe'_refl.
+Qed.
+
+Definition nl_constant_body c :=
+  Build_constant_body
+    (nl c.(cst_type)) (option_map nl c.(cst_body)) c.(cst_universes).
+
+Definition nl_one_inductive_body o :=
+  Build_one_inductive_body
+    o.(ind_name)
+    (nl o.(ind_type))
+    o.(ind_kelim)
+    (map (fun '((x,y),n) => ((x, nl y), n)) o.(ind_ctors))
+    (map (fun '(x,y) => (x, nl y)) o.(ind_projs)).
+
+Definition nl_mutual_inductive_body m :=
+  Build_mutual_inductive_body
+    m.(ind_npars)
+    (nlctx m.(ind_params))
+    (map nl_one_inductive_body m.(ind_bodies))
+    m.(ind_universes).
+
+Definition nl_global_decl (d : global_decl) : global_decl :=
+  match d with
+  | ConstantDecl kn cb => ConstantDecl kn (nl_constant_body cb)
+  | InductiveDecl kn mib => InductiveDecl kn (nl_mutual_inductive_body mib)
+  end.
+
+Definition nlg (Σ : global_context) : global_context :=
+  let '(Σ, φ) := Σ in
+  (map nl_global_decl Σ, φ).

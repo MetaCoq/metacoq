@@ -1,4 +1,4 @@
-Require Import Template.Ast Template.Loader.
+From MetaCoq Require Import Template.Ast Template.Loader.
 Require Import List String. Import ListNotations.
 
 Set Primitive Projections.
@@ -20,7 +20,7 @@ Notation "'∃' x .. y , p" := (sigma _ (fun x => .. (sigma _ (fun y => p)) ..))
    format "'[' '∃'  '/  ' x  ..  y ,  '/  ' p ']'")
                                   : type_scope.
 
-Notation " A × B " := (sigma A (fun _ => B)) (at level 30) : type_scope.
+Notation " A × B " := (sigma A (fun _ => B)) (at level 80, right associativity) : type_scope.
 
 
 Quote Definition tSigma := sigma.

@@ -1,7 +1,7 @@
 (* Distributed under the terms of the MIT license.   *)
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega Lia.
-From Template Require Import config utils Ast AstUtils Induction utils LiftSubst Typing.
+From MetaCoq.Template Require Import config utils Ast AstUtils Induction utils LiftSubst Typing.
 
 (** * Weakening lemmas w.r.t. the global environment *)
 

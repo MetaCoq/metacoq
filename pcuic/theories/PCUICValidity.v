@@ -1,6 +1,6 @@
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
-From Template Require Import utils.
-From PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICLiftSubst PCUICTyping
+From MetaCoq.Template Require Import utils.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICLiftSubst PCUICTyping
      PCUICWeakeningEnv PCUICWeakening PCUICSubstitution PCUICReduction PCUICCumulativity PCUICGeneration.
 From Equations Require Import Equations.
 Require Import ssreflect.

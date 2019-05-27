@@ -1,6 +1,6 @@
 (* Distributed under the terms of the MIT license.   *)
 
-From Template Require Export
+From MetaCoq.Template Require Export
      utils         (* Utility functions *)
      monad_utils   (* Monadic notations *)
      Ast           (* The term AST *)

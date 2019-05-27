@@ -2,10 +2,11 @@
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Arith Lia
      Classes.RelationClasses.
-From Template Require Import config utils Universes BasicAst AstUtils UnivSubst.
-From PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICReflect
-                          PCUICLiftSubst PCUICUnivSubst PCUICTyping
-                          PCUICNameless PCUICCumulativity.
+From MetaCoq.Template Require Import config utils Universes BasicAst AstUtils
+     UnivSubst.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
+     PCUICReflect PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICNameless
+     PCUICCumulativity.
 
 Fixpoint eqb_term_upto_univ (equ : universe -> universe -> bool) (u v : term) : bool :=
   match u, v with

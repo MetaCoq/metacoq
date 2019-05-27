@@ -1,6 +1,6 @@
 -I ../template-coq/src
--R ../template-coq/theories Template
--R theories PCUIC
+-R ../template-coq/theories MetaCoq.Template
+-R theories MetaCoq.PCUIC
 
 theories/PCUICAst.v
 theories/PCUICAstUtils.v

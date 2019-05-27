@@ -119,12 +119,18 @@ Examples of plugins
 Papers
 ======
 
-- The system was presented at 
-  [Coq'PL 2018](https://popl18.sigplan.org/event/coqpl-2018-typed-template-coq)
+- ["The MetaCoq Project"](https://www.irif.fr/~sozeau/research/publications/drafts/The_MetaCoq_Project.pdf)
+  Matthieu Sozeau, Abhishek Anand, Simon Boulier, Cyril Cohen, Yannick Forster, Fabian Kunze,
+  Gregory Malecha, Nicolas Tabareau, Théo Winterhalter.
+  Extended version of the ITP 2018 paper. Submitted.
+
+  This includes a full documentation of the Template Monad.
 
 - ["Towards Certified Meta-Programming with Typed Template-Coq"](https://hal.archives-ouvertes.fr/hal-01809681/document)
-  A. Anand, S. Boulier, C. Cohen, M. Sozeau and N. Tabareau.
+  Abhishek Anand, Simon Boulier, Cyril Cohen, Matthieu Sozeau and Nicolas Tabareau.
   ITP 2018.
+
+- The system was presented at [Coq'PL 2018](https://popl18.sigplan.org/event/coqpl-2018-typed-template-coq)
 
 Credits
 =======
@@ -166,31 +172,33 @@ Requirements
 
 To compile the library, you need:
 
-- `Coq 8.8.1`
+- `Coq 8.8.2` (older versions of `8.8` might also work)
 - `OCaml` (tested with `4.04.1`, beware that `OCaml 4.06.0` can 
-  produce linking errors on some platforms).
+  produce linking errors on some platforms)
+- [`Equations 1.2`](http://mattam82.github.io/Coq-Equations/)
 
 Requirements through opam
 -------------------------
 
-The easiest way to get both is through [opam](http://opam.ocaml.org):
+The easiest way to get all is through [opam](http://opam.ocaml.org):
 
 You might want to create a "switch" (an environment of `opam` packages) for `Coq` if
-you don't have one yet:
+you don't have one yet. You need to use **opam 2** to obtain the right version of `Equations`.
+
+    # opam switch create coq.8.8.2 4.04.1 
+    # eval $(opam env)
     
-    # opam switch -A 4.04.1 coq.8.8.1
-    # eval `opam config env`
-    
-This creates the `coq.8.8.1` switch which initially contains only the
+This creates the `coq.8.8.2` switch which initially contains only the
 basic `OCaml` `4.04.1` compiler, and puts you in the right environment
 (check with `ocamlc -v`).
 
-Once in the right switch, you can install `Coq` using:
+Once in the right switch, you can install `Coq` and the `Equations` package using:
     
-    # opam pin add coq 8.8.1 
+    # opam pin add coq 8.8.2
+    # opam pin add coq-equations 1.2+8.8
     
-Pinning `coq` prevents opam from trying to upgrade it afterwards, in
-this switch. If the command is successful you should have `coq`
+Pinning the packages prevents opam from trying to upgrade it afterwards, in
+this switch. If the commands are successful you should have `coq`
 available (check with `coqc -v`).
 
 Compile

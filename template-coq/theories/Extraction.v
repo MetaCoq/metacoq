@@ -4,8 +4,8 @@
     should use these same directives for consistency.
 *)
 
-(* From Template Require All. *)
-Require Import Template.utils.
+(* From MetaCoq.Template Require All. *)
+Require Import MetaCoq.Template.utils.
 Require Import FSets.
 Require Import ExtrOcamlBasic.
 Require Import ExtrOcamlString ExtrOcamlZInt.
@@ -21,11 +21,11 @@ Extraction Blacklist config uGraph Universes Ast String List Nat Int
            UnivSubst Typing Checker Retyping OrderedType Logic Common.
 Set Warnings "-extraction-opaque-accessed".
 
-Require Export Template.Ast.
+Require Export MetaCoq.Template.Ast.
 
 Cd "gen-src".
 
-Require Import Template.TemplateMonad.Extractable.
+Require Import MetaCoq.Template.TemplateMonad.Extractable.
 
 Recursive Extraction Library Extractable.
 

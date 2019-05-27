@@ -14,6 +14,9 @@ get-mc: gen-src
 	(cd src; ./to-lower.sh)
 	cp -r $(TEMPLATE_LIB)/gen-src/*.ml $(TEMPLATE_LIB)/gen-src/*.mli src
 
+install:
+	$(MAKE) -f Makefile.coq install
+
 .PHONY: get-mc gen-src
 
 clean:

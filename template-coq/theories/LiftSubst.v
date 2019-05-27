@@ -1,7 +1,7 @@
 (* Distributed under the terms of the MIT license.   *)
 
 From Coq Require Import List Program.
-From Template Require Import utils Ast AstUtils Induction.
+From MetaCoq.Template Require Import utils Ast AstUtils Induction.
 From Coq Require Import BinPos Arith.Compare_dec Bool Lia.
 
 (** * Lifting and substitution for the AST

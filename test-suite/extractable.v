@@ -1,8 +1,8 @@
 Require Import Coq.Strings.String.
 Require Import Coq.Lists.List.
-From Template Require Import
+From MetaCoq.Template Require Import
      Ast Loader.
-From Template.TemplateMonad Require Import
+From MetaCoq.Template.TemplateMonad Require Import
      Common Extractable.
 
 Local Open Scope string_scope.

@@ -1,7 +1,7 @@
 (* Distributed under the terms of the MIT license.   *)
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
-From Template Require Import utils Ast AstUtils Induction LiftSubst.
+From MetaCoq.Template Require Import utils Ast AstUtils Induction LiftSubst.
 Require Import String Lia.
 Local Open Scope string_scope.
 Set Asymmetric Patterns.

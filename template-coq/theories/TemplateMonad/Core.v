@@ -1,6 +1,6 @@
 From Coq Require Import Strings.String.
 Open Scope string_scope.
-From Template Require Import
+From MetaCoq.Template Require Import
      Ast uGraph AstUtils Common.
 
 Set Universe Polymorphism.

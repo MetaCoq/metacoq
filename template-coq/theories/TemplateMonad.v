@@ -1,2 +1,2 @@
-From Template.TemplateMonad Require Export
+From MetaCoq.Template.TemplateMonad Require Export
      Common Core Monad.

@@ -1914,10 +1914,9 @@ Section Conversion.
     unshelve eapply _isconv ; try assumption.
     intros s' Γ' t' π1' π2' h1' h2' hR. destruct pp.
     assert (wth0 = zwts H0) by apply welltyped_irr. subst.
-    (* specialize (f (mkpack s' Γ' t' π1' π2' (zwts h2')) hR). cbn in f. *)
-  (*   eapply f ; assumption. *)
-  (* Qed. *)
-  Admitted.
+    specialize (f (mkpack s' Γ' t' π1' π2' (zwts h2')) hR). cbn in f.
+    eapply f ; assumption.
+  Qed.
   Next Obligation.
     destruct s ; assumption.
   Qed.

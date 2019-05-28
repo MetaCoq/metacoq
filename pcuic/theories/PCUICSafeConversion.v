@@ -1805,20 +1805,32 @@ Section Conversion.
     simpl in H1. rewrite 2!stack_context_appstack in H1.
     apply zipx_welltyped ; auto.
     clear aux.
-    apply welltyped_zipx in h2. cbn in h2. cbn.
     (* We get that u2 is well-typed *)
+    apply welltyped_zipx in h2. cbn in h2. cbn.
     zip fold in h2.
     apply welltyped_context in h2 as hh2. simpl in hh2.
     rewrite stack_context_appstack in hh2.
-    (* From hh2 we only need inversion.
-       Then we get u2 : A2 and similarly u1 : A1.
-       Hence Γ ⊢ it_mkLambda_or_LetIn (stack_context π1) u1 : Π π1 A1
-       (and same with 2s).
-       From subject conversion, we know they have the same type.
-       Meaning the stack contexts are convertible and A1 = A2.
-       ow we have two convertible terms against the same stack,
+    destruct hh2 as [A2 hh2].
+    destruct (inversion_App hh2) as [na2 [A2' [B2' [[?] [[hu2] [?]]]]]].
+    (* We get that u1 is well-typed *)
+    apply welltyped_zipx in h1. cbn in h1. cbn.
+    zip fold in h1.
+    apply welltyped_context in h1 as hh1. simpl in hh1.
+    rewrite stack_context_appstack in hh1.
+    destruct hh1 as [A1 hh1].
+    destruct (inversion_App hh1) as [na1 [A1' [B1' [[?] [[hu1] [?]]]]]].
+    apply type_it_mkLambda_or_LetIn in hu1 ; auto.
+    apply type_it_mkLambda_or_LetIn in hu2 ; auto.
+    pose proof (subj_conv flags _ hΣ H1 hu1 hu2) as heq.
+    (* Now we would like to invert heq to get equality of contexts and
+       codomains.
+       We would have two convertible terms against the same stack,
        so we should get the result.
-       It sounds tedious though.
+
+       The problem is that let bindings are not injective!
+       Perhaps our invariant should be to only close lambdas
+       and avoid let bindings.
+       Is it possible?
      *)
     cheat.
   Qed.

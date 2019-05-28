@@ -1738,4 +1738,34 @@ Section Lemmata.
     assumption.
   Qed.
 
+  Lemma type_it_mkLambda_or_LetIn :
+    forall Γ Δ t A,
+      Σ ;;; Γ ,,, Δ |- t : A ->
+      Σ ;;; Γ |- it_mkLambda_or_LetIn Δ t : it_mkProd_or_LetIn Δ A.
+  Proof.
+    intros Γ Δ t A h.
+    induction Δ as [| [na [b|] B] Δ ih ] in t, A, h |- *.
+    - assumption.
+    - simpl. cbn. eapply ih.
+      simpl in h. pose proof (typing_wf_local h) as hc.
+      dependent induction hc ; inversion H. subst.
+      econstructor ; try eassumption.
+      (* FIXME *)
+      admit.
+    - simpl. cbn. eapply ih.
+      pose proof (typing_wf_local h) as hc. cbn in hc.
+      dependent induction hc ; inversion H. subst.
+      econstructor ; try eassumption.
+      (* FIXME *)
+      admit.
+  Admitted.
+
+  Lemma subj_conv :
+    forall {Γ u v U V},
+      Σ ;;; Γ |- u = v ->
+      Σ ;;; Γ |- u : U ->
+      Σ ;;; Γ |- v : V ->
+      Σ ;;; Γ |- U = V.
+  Admitted.
+
 End Lemmata.

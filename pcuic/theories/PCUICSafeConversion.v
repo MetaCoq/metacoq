@@ -1747,6 +1747,26 @@ Section Conversion.
   Axiom cheat : forall {A}, A.
   Tactic Notation "cheat" := exact cheat.
 
+  Lemma it_mkLambda_or_LetIn_conv'' :
+    forall Γ Δ1 Δ2 t1 t2,
+      PCUICSR.conv_context Σ (Γ ,,, Δ1) (Γ ,,, Δ2) ->
+      Σ ;;; Γ ,,, Δ1 |- t1 = t2 ->
+      Σ ;;; Γ |- it_mkLambda_or_LetIn Δ1 t1 = it_mkLambda_or_LetIn Δ2 t2.
+  Admitted.
+
+  Lemma App_conv :
+    forall Γ t1 t2 u1 u2,
+      Σ ;;; Γ |- t1 = t2 ->
+      Σ ;;; Γ |- u1 = u2 ->
+      Σ ;;; Γ |- tApp t1 u1 = tApp t2 u2.
+  Admitted.
+
+  Lemma mkApps_conv_weak :
+    forall Γ u1 u2 l,
+      Σ ;;; Γ |- u1 = u2 ->
+      Σ ;;; Γ |- mkApps u1 l = mkApps u2 l.
+  Admitted.
+
   (* TODO Subgoal *)
   Lemma conv_ax :
     forall {Γ t args ρ1 args1 u1 l1 ρ2 args2 u2 l2},
@@ -1762,7 +1782,18 @@ Section Conversion.
           (mkApps (mkApps (tApp (mkApps t args) u1) l1) args1) =
         it_mkLambda_or_LetIn (stack_context ρ2)
           (mkApps (mkApps (tApp (mkApps t args) u2) l2) args2).
-  Admitted.
+  Proof.
+    intros Γ t args ρ1 args1 u1 l1 ρ2 args2 u2 l2 e1 e2.
+    apply it_mkLambda_or_LetIn_stack_context_conv_inv in e1 as [? ?] ; auto.
+    apply it_mkLambda_or_LetIn_stack_context_conv_inv in e2 as [? ?] ; auto.
+    eapply it_mkLambda_or_LetIn_conv'' ; auto.
+    eapply conv_trans ; eauto.
+    eapply mkApps_conv_weak.
+    eapply mkApps_conv_weak.
+    eapply App_conv.
+    - eapply conv_refl.
+    - assumption.
+  Qed.
 
   Equations(noeqns) _isconv_args' (Γ : context) (t : term) (args : list term)
             (l1 : list term) (π1 : stack) (h1 : wtp Γ (mkApps t args) (appstack l1 π1))

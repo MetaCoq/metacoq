@@ -432,7 +432,7 @@ struct
       (x,y)
     in
     let (tm, _) = quote_rem () env trm in
-    let decls =  List.fold_left (fun acc d -> Q.add_global_decl d acc) Q.empty_global_declartions !constants in
+    let decls =  List.fold_right (fun d acc -> Q.add_global_decl d acc)  !constants Q.empty_global_declartions in
     Q.mk_program decls tm
 
   let quote_one_ind envA envC (mi:Entries.one_inductive_entry) =

@@ -921,18 +921,20 @@ Definition subst_consn {A} (l : list A) (σ : nat -> A) :=
     | Some t => t
     end.
 
-Lemma subst_consn_nil {A} (σ : nat -> A) : subst_consn nil σ =1 σ.
+Notation " t ⋅n s " := (subst_consn t s) (at level 40) : sigma_scope.
+
+Lemma subst_consn_nil {A} (σ : nat -> A) : nil ⋅n σ =1 σ.
 Proof.
   intros i. unfold subst_consn. rewrite nth_error_nil.
   now rewrite Nat.sub_0_r.
 Qed.
 
-Lemma subst_consn_subst_cons t l σ : subst_consn (t :: l) σ =1 (t ⋅ subst_consn l σ).
+Lemma subst_consn_subst_cons t l σ : (t :: l) ⋅n σ =1 (t ⋅ subst_consn l σ).
 Proof.
   intros i. unfold subst_consn. induction i; simpl; trivial.
 Qed.
 
-Lemma subst_consn_tip t σ : subst_consn (t :: nil) σ =1 (t ⋅ σ).
+Lemma subst_consn_tip t σ : [t] ⋅n σ =1 (t ⋅ σ).
 Proof. now rewrite subst_consn_subst_cons subst_consn_nil. Qed.
 
 Instance subst_consn_proper {A} : Proper (Logic.eq ==> `=1` ==> `=1`) (@subst_consn A).
@@ -953,8 +955,14 @@ Fixpoint idsn n : list term :=
   | S n => idsn n ++ [tRel n]
   end.
 
-Definition Upn n σ := (subst_consn (idsn n) (σ ∘ ↑^n)).
+Definition Upn n σ := idsn n ⋅n (σ ∘ ↑^n).
 Notation "⇑^ n σ" := (Upn n σ) (at level 30, n at level 2, format "⇑^ n  σ") : sigma_scope.
+
+Lemma Upn_eq n σ : Upn n σ = idsn n ⋅n (σ ∘ ↑^n).
+Proof. reflexivity. Qed.
+
+Lemma Upn_proper : Proper (Logic.eq ==> `=1` ==> `=1`) Upn.
+Proof. intros ? ? -> f g Hfg. unfold Upn. now rewrite Hfg. Qed.
 
 Definition subst_cons_gen {A} (t : A) (f : nat -> A) :=
   fun i =>
@@ -966,19 +974,19 @@ Definition subst_cons_gen {A} (t : A) (f : nat -> A) :=
 Instance subst_cons_gen_proper {A} : Proper (Logic.eq ==> `=1` ==> `=1`) (@subst_cons_gen A).
 Proof. intros x y <- f g Hfg i. destruct i; simpl; auto. Qed.
 
-Lemma subst_consn_subst_cons_gen {A} (t : A) l σ : subst_consn (t :: l) σ =1 (subst_cons_gen t (subst_consn l σ)).
+Lemma subst_consn_subst_cons_gen {A} (t : A) l σ : subst_consn (t :: l) σ =1 (subst_cons_gen t (l ⋅n σ)).
 Proof.
   intros i. unfold subst_consn. induction i; simpl; trivial.
 Qed.
 
-Lemma subst_consn_app {A} {l l' : list A} {σ} : subst_consn (l ++ l') σ =1 subst_consn l (subst_consn l' σ).
+Lemma subst_consn_app {A} {l l' : list A} {σ} : (l ++ l') ⋅n σ =1 l ⋅n (l' ⋅n σ).
 Proof.
   induction l; simpl; auto.
   - now rewrite subst_consn_nil.
   - now rewrite !subst_consn_subst_cons_gen IHl.
 Qed.
 
-Lemma subst_consn_ge {A} {l : list A} {i σ} : #|l| <= i -> subst_consn l σ i = σ (i - #|l|).
+Lemma subst_consn_ge {A} {l : list A} {i σ} : #|l| <= i -> (l ⋅n σ) i = σ (i - #|l|).
 Proof.
   induction l in i, σ |- *; simpl.
   - now rewrite subst_consn_nil.
@@ -991,7 +999,7 @@ Qed.
 
 Lemma subst_consn_lt {A} {l : list A} {i} :
   i < #|l| ->
-  { x : _ & (List.nth_error l i = Some x) * (forall σ, subst_consn l σ i = x) }%type.
+  { x : _ & (List.nth_error l i = Some x) /\ (forall σ, (l ⋅n σ) i = x) }%type.
 Proof.
   induction l in i |- *; simpl.
   - intros H; elimtype False; depelim H.
@@ -1142,7 +1150,7 @@ Proof. red.
   intros x y <-. apply subst_consn_subst_cons_gen.
 Qed.
 
-Lemma subst_consn_ids_ren n f : (subst_consn (idsn n) (ren f)) =1 ren (subst_consn (ren_ids n) f).
+Lemma subst_consn_ids_ren n f : (idsn n ⋅n ren f) =1 ren (ren_ids n ⋅n f).
 Proof.
   intros i.
   destruct (Nat.leb_spec n i).
@@ -1196,7 +1204,7 @@ Proof.
   - f_equal. rewrite map_map_compose; solve_all.
   - f_equal; auto. autorewrite with sigma.
     unfold Up.
-    rewrite ren_shift. rewrite compose_ren subst_cons_ren H0.
+    simpl. rewrite ren_shift. rewrite compose_ren subst_cons_ren H0.
     apply inst_ext. intros i. destruct i; auto.
   - f_equal; auto. autorewrite with sigma.
     unfold Up.
@@ -1426,7 +1434,7 @@ Hint Rewrite subst_cons_0s_shifts : sigma.
 
 (* Print Rewrite HintDb sigma. *)
 
-Lemma subst_inst s k t : subst s k t = inst (up k (subst_fn s)) t.
+Lemma subst_inst_aux s k t : subst s k t = inst (up k (subst_fn s)) t.
 Proof.
   revert s k.
   elim t using term_forall_list_ind; simpl in |- *; intros; try easy ;
@@ -1454,8 +1462,20 @@ Proof.
     rewrite b. apply inst_ext. intros t'; now rewrite (up_up #|m| k).
 Qed.
 
+Lemma subst_fn_subst_consn s : subst_fn s =1 subst_consn s ids.
+Proof. reflexivity. Qed.
+
+Theorem subst_inst s k t : subst s k t = inst (⇑^k (subst_consn s ids)) t.
+Proof.
+  rewrite subst_inst_aux up_Upn. apply inst_ext.
+  unfold Upn. now rewrite subst_fn_subst_consn.
+Qed.
+
 (** Simplify away [subst] to the σ-calculus [inst] primitive. *)
 Hint Rewrite @subst_inst : sigma.
+
+Hint Rewrite shiftk_shift_l shiftk_shift : sigma.
+(* Hint Rewrite Upn_eq : sigma. *)
 
 Lemma term_forall_ctx_list_ind :
   forall P : context -> term -> Type,

@@ -1234,14 +1234,111 @@ Section Confluence.
       simpl. rewrite IHacc. reflexivity.
     Qed.
 
-    Lemma rho_lift Γ Δ Γ' t :
-      lift #|Δ| #|Γ'| (rho (Γ ,,, rho_ctx_over Γ Γ') t) =
-      rho (Γ ,,, Δ ,,, lift_context #|Δ| 0 (rho_ctx_over Γ Γ')) (lift #|Δ| #|Γ'| t).
+    Local Open Scope sigma_scope.
+
+    Definition ctxmap (Γ Δ : context) (s : nat -> term) :=
+      forall x d, nth_error Γ x = Some d ->
+                  match decl_body d return Type with
+                  | Some b => s x = b.[↑^(S x) ∘ s]
+                  | None => Σ ;;; Δ |- s x : d.(decl_type).[↑^(S x) ∘ s]
+                  end.
+
+    Lemma simpl_pred Γ Γ' t t' u u' : t = t' -> u = u' -> pred1 Σ Γ Γ' t' u' -> pred1 Σ Γ Γ' t u.
+    Proof. now intros -> ->. Qed.
+
+    Hint Rewrite @subst_consn_nil @subst_consn_tip : sigma.
+
+    Ltac simpl_pred :=
+      eapply simpl_pred;
+      rewrite ?up_Upn;
+      unfold Upn, Up, idsn;
+      [autorewrite with sigma; reflexivity|
+                          autorewrite with sigma; reflexivity|].
+
+    Lemma subst10_inst a b τ : b {0 := a}.[τ] = (b.[⇑ τ] {0 := a.[τ]}).
     Proof.
-      remember (Γ ,,, rho_ctx_over Γ Γ') as ctx. revert Γ Δ Γ' Heqctx.
-      revert ctx t.
+      unfold subst10. simpl. rewrite !subst_inst.
+      now unfold Upn, Up; autorewrite with sigma.
+    Qed.
+
+    Lemma lift_renaming_0 k : ren (lift_renaming k 0) = ren (Nat.add k).
+    Proof. reflexivity. Qed.
+
+    Lemma pred_atom_inst t σ : pred_atom t -> t.[σ] = t.
+    Proof.
+      destruct t; simpl; intros; try discriminate; auto.
+    Qed.
+
+    Lemma strong_substitutivity Γ Γ' Δ Δ' s t σ τ :
+      pred1 Σ Γ Γ' s t ->
+      ctxmap Γ Δ σ ->
+      ctxmap Γ' Δ' τ ->
+      (forall x, pred1 Σ Δ Δ' (σ x) (τ x)) ->
+      pred1 Σ Δ Δ' s.[σ] t.[τ].
+    Proof.
+      intros redst.
+      revert Δ Δ' σ τ.
+      induction redst; autorewrite with sigma; intros.
+      all:eauto 2 with pcuic.
+
+      1:{ autorewrite with sigma.
+          specialize (IHredst1 _ _ _ _ X X0 X1).
+          specialize (IHredst2 (Δ ,, vass na t0.[σ]) (Δ' ,, vass na t1.[τ]) (⇑ σ) (⇑ τ)).
+          forward IHredst2. admit.
+          forward IHredst2. admit.
+          forward IHredst2.
+          intros. simpl_pred.
+          destruct x; simpl. eapply pred1_refl_gen. constructor; eauto with pcuic.
+          unfold subst_compose. admit. (* Closure under renaming *)
+          specialize (IHredst3 _ _ _ _ X X0 X1).
+          pose proof (pred_beta _ _ _ _ _ _ _ _ _ _ IHredst1 IHredst2 IHredst3).
+          now rewrite subst10_inst. }
+
+      2:{ rewrite lift_rename rename_inst.
+          simpl. rewrite lift_renaming_0. red in X0.
+          destruct (nth_error Γ' i) eqn:Heq; noconf e. simpl in H.
+          specialize (X0 _ _ Heq). rewrite H in X0.
+          specialize (X1 i). rewrite X0 in X1.
+          now simpl_pred. }
+
+      18:{ rewrite !pred_atom_inst; auto. eapply pred1_refl_gen; auto with pcuic.
+           specialize (X1 0). auto with pcuic. }
+    Admitted.
+
+    Lemma All2_prop2_eq_split (Γ Γ' Γ2 Γ2' : context) (A B : Type) (f g : A → term)
+          (h : A → B) (rel : context → context → term → term → Type) x y :
+      All2_prop2_eq Γ Γ' Γ2 Γ2' f g h rel x y ->
+      All2 (on_Trel (rel Γ Γ') f) x y *
+      All2 (on_Trel (rel Γ2 Γ2') g) x y *
+      All2 (on_Trel eq h) x y.
+    Proof.
+      induction 1; intuition.
+    Qed.
+
+    Lemma All2_sym {A} (P : A -> A -> Type) l l' :
+      All2 P l l' -> All2 (fun x y => P y x) l' l.
+    Proof.
+      induction 1; constructor; auto.
+    Qed.
+
+    Definition rho_ctxmap (Γ Δ : context) (s : nat -> term) :=
+      forall x d, nth_error Γ x = Some d ->
+                  match decl_body d return Type with
+                  | Some b => { i : _ & (s x = tRel i) *
+                                        (option_map decl_body (nth_error Δ i) = Some (Some b.[↑^(S x) ∘ s])) }%type
+                  | None => Σ ;;; Δ |- s x : d.(decl_type).[↑^(S x) ∘ s]
+                  end.
+
+    Lemma lift0_inst n t : lift0 n t = t.[↑^n].
+    Proof. by rewrite lift_rename rename_inst lift_renaming_0 -ren_shiftk. Qed.
+
+    Lemma rho_inst Γ Δ s t :
+      forall (Hs : rho_ctxmap Γ Δ s),
+      (rho Γ t).[s] = rho Δ t.[s].
+    Proof.
+      revert Γ t Δ s.
       refine (term_forall_ctx_list_ind _ (fun ctx t => rho ctx t) _ _ _ _ _ _ _ _ _ _ _ _ _ _ _);
-        simpl; !intros; try subst Γ; rename Γ0 into Γ; rename_all_hyps.
+        simpl; intros; try subst Γ; try rename Γ0 into Γ(* ; rename_all_hyps *).
       all:eauto 2 with pcuic.
       all:(try change_Sk;
            try solve [f_equal;
@@ -1249,315 +1346,383 @@ Section Confluence.
                     ?map_length, ?Nat.add_assoc;
              eauto; solve_all; eauto]).
 
-      - destruct (nth_error (Γ ,,, (rho_ctx_over Γ Γ')) n) as [c|] eqn:Heq.
+      - destruct (nth_error Γ n) as [c|] eqn:Heq.
         -- pose proof Heq as Heq'.
            eapply nth_error_Some_length in Heq'.
-           rewrite app_context_length rho_ctx_over_length in Heq'. simpl.
-           elim (leb_spec_Set). intros. simpl.
-           --- rewrite nth_error_app_ge. rewrite lift_context_length rho_ctx_over_length; lia.
-               simpl.
-               rewrite nth_error_app_ge in Heq; rewrite ?rho_ctx_over_length; try lia.
-               rewrite rho_ctx_over_length in Heq.
-               rewrite nth_error_app_ge ?lift_context_length ?rho_ctx_over_length. lia.
-               assert ((#|Δ| + n - #|Γ'| - #|Δ|) = n - #|Γ'|) as -> by lia.
-               rewrite Heq. simpl.
-               destruct c as [? [?|] ?]; simpl.
-               rewrite simpl_lift; try f_equal; lia.
-               elim leb_spec_Set; intros; auto; elimtype False; try lia.
-           --- intros.
-               simpl.
-               rewrite nth_error_app_lt in Heq |- *; rewrite ?rho_ctx_over_length; try lia.
-               rewrite nth_error_app_lt // ?lift_context_length ?rho_ctx_over_length //.
-               erewrite nth_error_lift_context; eauto.
-               rewrite ?rho_ctx_over_length; eauto. simpl.
-               rewrite Nat.add_0_r.
-               destruct c as [? [?|] ?]; simpl.
-               rewrite (permute_lift _ #|Δ| (#|Γ'| - S n) (S n) 0). lia.
-               f_equal. lia.
-               elim leb_spec_Set; intros; auto; elimtype False; try lia.
-               now rewrite rho_ctx_over_length.
-        -- simpl.
-           pose proof Heq as Heq'.
-           eapply nth_error_None in Heq'.
-           rewrite app_context_length in Heq'.
-           elim (leb_spec_Set). intros. simpl.
-           --- rewrite nth_error_app_ge. rewrite !lift_context_length; lia. simpl.
-               rewrite nth_error_app_ge rho_ctx_over_length in Heq; try lia.
-               rewrite nth_error_app_ge ?lift_context_length ?rho_ctx_over_length. lia.
-               assert ((#|Δ| + n - #|Γ'| - #|Δ|) = n - #|Γ'|) as -> by lia.
-               rewrite Heq. simpl. reflexivity.
-           --- intros.
-               simpl.
-               rewrite rho_ctx_over_length in Heq'.
-               rewrite nth_error_app_lt in Heq |- *; try lia.
+           simpl. destruct decl_body eqn:Heq''.
+           rewrite lift0_inst.
+           specialize (Hs _ _ Heq). rewrite Heq'' in Hs.
+           destruct Hs as [i [sni Hb']]. rewrite sni. simpl. rewrite Hb'.
+           rewrite lift0_inst. autorewrite with sigma.
 
-      - specialize (h_forall_Γ Γ Δ Γ' eq_refl).
-        specialize (h_forall_Γ0 Γ Δ (Γ' ,, vass n t) eq_refl).
-        simpl in *.
-        now rewrite h_forall_Γ0 -h_forall_Γ lift_context_snoc Nat.add_0_r rho_ctx_over_length.
 
-      - specialize (h_forall_Γ Γ Δ Γ' eq_refl).
-        specialize (h_forall_Γ0 Γ Δ (Γ' ,, vass n t) eq_refl).
-        simpl in *.
-        now rewrite h_forall_Γ0 -h_forall_Γ lift_context_snoc Nat.add_0_r rho_ctx_over_length.
 
-      - specialize (h_forall_Γ Γ Δ Γ' eq_refl).
-        specialize (h_forall_Γ0 Γ Δ Γ' eq_refl).
-        specialize (h_forall_Γ1 Γ Δ (Γ' ,, vdef n t t0) eq_refl).
-        simpl in *.
-        rewrite - !h_forall_Γ - !h_forall_Γ0.
-        rewrite !distr_lift_subst h_forall_Γ1. simpl.
-        unfold subst10. f_equal.
-        now rewrite lift_context_snoc Nat.add_0_r rho_ctx_over_length.
+  (*          rewrite app_context_length rho_ctx_over_length in Heq'. simpl. *)
+  (*          elim (leb_spec_Set). intros. simpl. *)
+  (*          --- rewrite nth_error_app_ge. rewrite lift_context_length rho_ctx_over_length; lia. *)
+  (*              simpl. *)
+  (*              rewrite nth_error_app_ge in Heq; rewrite ?rho_ctx_over_length; try lia. *)
+  (*              rewrite rho_ctx_over_length in Heq. *)
+  (*              rewrite nth_error_app_ge ?lift_context_length ?rho_ctx_over_length. lia. *)
+  (*              assert ((#|Δ| + n - #|Γ'| - #|Δ|) = n - #|Γ'|) as -> by lia. *)
+  (*              rewrite Heq. simpl. *)
+  (*              destruct c as [? [?|] ?]; simpl. *)
+  (*              rewrite simpl_lift; try f_equal; lia. *)
+  (*              elim leb_spec_Set; intros; auto; elimtype False; try lia. *)
+  (*          --- intros. *)
+  (*              simpl. *)
+  (*              rewrite nth_error_app_lt in Heq |- *; rewrite ?rho_ctx_over_length; try lia. *)
+  (*              rewrite nth_error_app_lt // ?lift_context_length ?rho_ctx_over_length //. *)
+  (*              erewrite nth_error_lift_context; eauto. *)
+  (*              rewrite ?rho_ctx_over_length; eauto. simpl. *)
+  (*              rewrite Nat.add_0_r. *)
+  (*              destruct c as [? [?|] ?]; simpl. *)
+  (*              rewrite (permute_lift _ #|Δ| (#|Γ'| - S n) (S n) 0). lia. *)
+  (*              f_equal. lia. *)
+  (*              elim leb_spec_Set; intros; auto; elimtype False; try lia. *)
+  (*              now rewrite rho_ctx_over_length. *)
+  (*       -- simpl. *)
+  (*          pose proof Heq as Heq'. *)
+  (*          eapply nth_error_None in Heq'. *)
+  (*          rewrite app_context_length in Heq'. *)
+  (*          elim (leb_spec_Set). intros. simpl. *)
+  (*          --- rewrite nth_error_app_ge. rewrite !lift_context_length; lia. simpl. *)
+  (*              rewrite nth_error_app_ge rho_ctx_over_length in Heq; try lia. *)
+  (*              rewrite nth_error_app_ge ?lift_context_length ?rho_ctx_over_length. lia. *)
+  (*              assert ((#|Δ| + n - #|Γ'| - #|Δ|) = n - #|Γ'|) as -> by lia. *)
+  (*              rewrite Heq. simpl. reflexivity. *)
+  (*          --- intros. *)
+  (*              simpl. *)
+  (*              rewrite rho_ctx_over_length in Heq'. *)
+  (*              rewrite nth_error_app_lt in Heq |- *; try lia. *)
 
-      - specialize (h_forall_Γ Γ Δ Γ' eq_refl).
-        specialize (h_forall_Γ0 Γ Δ Γ' eq_refl).
-        rewrite -h_forall_Γ0 -h_forall_Γ.
-        destruct t; try reflexivity.
-        simpl.
-        elim leb_spec_Set; reflexivity.
-        simpl.
-        rewrite distr_lift_subst.
-        unfold subst10. simpl. f_equal.
-        simpl in h_forall_Γ. noconf h_forall_Γ.
-        auto.
 
-      - destruct lookup_env eqn:Heq. destruct g as [? [? [?|] ?]|]; simpl in *; auto.
-        rewrite lift_subst_instance_constr.
-        pose proof (lookup_env_cst_inv Heq). subst s.
-        eapply lift_declared_constant in Heq.
-        unfold map_constant_body in Heq. injection Heq. intros <-; auto.
-        auto.
-        simpl. auto.
 
-      - specialize (h_forall_Γ Γ Δ Γ' eq_refl).
-        specialize (h_forall_Γ0 Γ Δ Γ' eq_refl).
-        assert (Hl :map (on_snd (lift #|Δ| #|Γ'|))
-                    (map (λ x : nat * term, (fst x, rho (Γ ,,, rho_ctx_over Γ Γ') (snd x))) l) =
-                map (fun x => (fst x, rho (Γ ,,, Δ ,,, lift_context #|Δ| 0
-                      (rho_ctx_over Γ Γ')) (snd x)))
-                      (map (on_snd (lift #|Δ| #|Γ'|)) l)).
-        { rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def,
-          ?map_length, ?Nat.add_assoc. solve_all. }
-        destruct decompose_app eqn:Heq.
-        destruct (view_construct_cofix t1).
-        red in X.
-        + apply decompose_app_inv in Heq.
-          subst t0. simpl.
-          rewrite rho_mkApps; auto.
-          rewrite decompose_app_mkApps; auto.
-          simpl. rewrite lift_mkApps rho_mkApps in h_forall_Γ0. auto.
-          rewrite lift_mkApps decompose_app_mkApps. auto. simpl.
-          rewrite rho_mkApps // decompose_app_mkApps // /=.
-          rewrite lift_mkApps rho_mkApps in h_forall_Γ0; auto.
-          simpl in h_forall_Γ0.
-          eapply mkApps_eq_inj in h_forall_Γ0; intuition eauto.
-          destruct (AstUtils.eq_ind a c).
-          -- rewrite lift_iota_red.
-             f_equal. auto.
-             rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def,
-             ?map_length, ?Nat.add_assoc. solve_all.
-          -- simpl. f_equal; auto.
-             rewrite lift_mkApps. simpl. f_equal; auto.
 
-        + apply decompose_app_inv in Heq.
-          subst t0. simpl.
-          rewrite rho_mkApps; auto.
-          rewrite decompose_app_mkApps; auto.
-          simpl. rewrite lift_mkApps rho_mkApps in h_forall_Γ0. auto.
-          rewrite lift_mkApps decompose_app_mkApps. auto. simpl.
-          rewrite rho_mkApps // decompose_app_mkApps // /=.
-          rewrite lift_mkApps rho_mkApps in h_forall_Γ0; auto.
-          simpl in h_forall_Γ0.
-          eapply mkApps_eq_inj in h_forall_Γ0; intuition eauto.
-          noconf H. simpl in H. revert H; simplify *.
-          intros.
-          unfold unfold_cofix. rewrite !nth_error_map_fix !nth_error_map.
-          destruct nth_error eqn:Heq.
-          -- simpl. f_equal; auto.
-             rewrite lift_mkApps. simpl. f_equal; auto.
-             rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def,
-             ?map_length, ?Nat.add_assoc.
-             unfold map_fix in H.
-             rewrite !map_length !map_map_compose /compose /= /map_def in H.
-             eapply map_eq_inj in H.
-             simpl.
-             rewrite (map_cofix_subst (fun Γ => rho Γ) (fun Γ Γ' => rho (Γ ,,, Γ'))).
-             { intros. simpl. f_equal. }
-             rewrite distr_lift_subst !/map_fix !map_length !map_map_compose !/compose.
-             erewrite <-
-                      (map_cofix_subst
-                         (fun Γ x => lift #|Δ| #|Γ'| (rho (Γ ,,, rho_ctx_over Γ Γ') x))
-                         (fun Γ Γ'' x => lift #|Δ| (#|Γ''| + _)
-                                                 (rho (Γ ,,, _ ,,, fold_fix_context rho (Γ ,,, rho_ctx_over Γ Γ') [] mfix) x))
-                         mfix Γ
-                         (fix_context mfix)).
-             simpl in *.
+  (*   Lemma rho_lift Γ Δ Γ' t : *)
+  (*     lift #|Δ| #|Γ'| (rho (Γ ,,, rho_ctx_over Γ Γ') t) = *)
+  (*     rho (Γ ,,, Δ ,,, lift_context #|Δ| 0 (rho_ctx_over Γ Γ')) (lift #|Δ| #|Γ'| t). *)
+  (*   Proof. *)
+  (*     remember (Γ ,,, rho_ctx_over Γ Γ') as ctx. revert Γ Δ Γ' Heqctx. *)
+  (*     revert ctx t. *)
+  (*     refine (term_forall_ctx_list_ind _ (fun ctx t => rho ctx t) _ _ _ _ _ _ _ _ _ _ _ _ _ _ _); *)
+  (*       simpl; !intros; try subst Γ; rename Γ0 into Γ; rename_all_hyps. *)
+  (*     all:eauto 2 with pcuic. *)
+  (*     all:(try change_Sk; *)
+  (*          try solve [f_equal; *)
+  (*          rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, *)
+  (*                   ?map_length, ?Nat.add_assoc; *)
+  (*            eauto; solve_all; eauto]). *)
 
-             f_equal. f_equal.
-             { solve_all. noconf H.
-               unfold map_def; destruct x; simpl in *. f_equal; auto. rewrite - H2.
-               rewrite fix_context_length. eauto. }
+  (*     - destruct (nth_error (Γ ,,, (rho_ctx_over Γ Γ')) n) as [c|] eqn:Heq. *)
+  (*       -- pose proof Heq as Heq'. *)
+  (*          eapply nth_error_Some_length in Heq'. *)
+  (*          rewrite app_context_length rho_ctx_over_length in Heq'. simpl. *)
+  (*          elim (leb_spec_Set). intros. simpl. *)
+  (*          --- rewrite nth_error_app_ge. rewrite lift_context_length rho_ctx_over_length; lia. *)
+  (*              simpl. *)
+  (*              rewrite nth_error_app_ge in Heq; rewrite ?rho_ctx_over_length; try lia. *)
+  (*              rewrite rho_ctx_over_length in Heq. *)
+  (*              rewrite nth_error_app_ge ?lift_context_length ?rho_ctx_over_length. lia. *)
+  (*              assert ((#|Δ| + n - #|Γ'| - #|Δ|) = n - #|Γ'|) as -> by lia. *)
+  (*              rewrite Heq. simpl. *)
+  (*              destruct c as [? [?|] ?]; simpl. *)
+  (*              rewrite simpl_lift; try f_equal; lia. *)
+  (*              elim leb_spec_Set; intros; auto; elimtype False; try lia. *)
+  (*          --- intros. *)
+  (*              simpl. *)
+  (*              rewrite nth_error_app_lt in Heq |- *; rewrite ?rho_ctx_over_length; try lia. *)
+  (*              rewrite nth_error_app_lt // ?lift_context_length ?rho_ctx_over_length //. *)
+  (*              erewrite nth_error_lift_context; eauto. *)
+  (*              rewrite ?rho_ctx_over_length; eauto. simpl. *)
+  (*              rewrite Nat.add_0_r. *)
+  (*              destruct c as [? [?|] ?]; simpl. *)
+  (*              rewrite (permute_lift _ #|Δ| (#|Γ'| - S n) (S n) 0). lia. *)
+  (*              f_equal. lia. *)
+  (*              elim leb_spec_Set; intros; auto; elimtype False; try lia. *)
+  (*              now rewrite rho_ctx_over_length. *)
+  (*       -- simpl. *)
+  (*          pose proof Heq as Heq'. *)
+  (*          eapply nth_error_None in Heq'. *)
+  (*          rewrite app_context_length in Heq'. *)
+  (*          elim (leb_spec_Set). intros. simpl. *)
+  (*          --- rewrite nth_error_app_ge. rewrite !lift_context_length; lia. simpl. *)
+  (*              rewrite nth_error_app_ge rho_ctx_over_length in Heq; try lia. *)
+  (*              rewrite nth_error_app_ge ?lift_context_length ?rho_ctx_over_length. lia. *)
+  (*              assert ((#|Δ| + n - #|Γ'| - #|Δ|) = n - #|Γ'|) as -> by lia. *)
+  (*              rewrite Heq. simpl. reflexivity. *)
+  (*          --- intros. *)
+  (*              simpl. *)
+  (*              rewrite rho_ctx_over_length in Heq'. *)
+  (*              rewrite nth_error_app_lt in Heq |- *; try lia. *)
 
-             rewrite cofix_subst_length.
-             eapply nth_error_all in Heq. 2:eapply H. simpl in Heq.
-             noconf Heq. rewrite H3. reflexivity.
-             intros. simpl. f_equal. unfold map_fix.
-             rewrite !map_map_compose. solve_all. noconf H.
-             unfold compose.
-             unfold map_def; simpl; f_equal; simpl. now rewrite map_length fix_context_length.
-          -- simpl. f_equal; eauto.
-             rewrite !lift_mkApps. simpl.
-             f_equal; eauto. f_equal. eauto.
+  (*     - specialize (h_forall_Γ Γ Δ Γ' eq_refl). *)
+  (*       specialize (h_forall_Γ0 Γ Δ (Γ' ,, vass n t) eq_refl). *)
+  (*       simpl in *. *)
+  (*       now rewrite h_forall_Γ0 -h_forall_Γ lift_context_snoc Nat.add_0_r rho_ctx_over_length. *)
 
-        + destruct p. epose proof (decompose_app_lift #|Δ| #|Γ'| _ _ _ Heq).
-          apply decompose_app_inv in Heq. subst t0. rewrite H.
-          destruct t1; simpl in *; try discriminate; try contradiction; try congruence.
-          elim leb_spec_Set; intros; auto; try congruence.
+  (*     - specialize (h_forall_Γ Γ Δ Γ' eq_refl). *)
+  (*       specialize (h_forall_Γ0 Γ Δ (Γ' ,, vass n t) eq_refl). *)
+  (*       simpl in *. *)
+  (*       now rewrite h_forall_Γ0 -h_forall_Γ lift_context_snoc Nat.add_0_r rho_ctx_over_length. *)
 
-      - destruct s. destruct p.
-        specialize (h_forall_Γ Γ Δ Γ' eq_refl).
-        destruct decompose_app eqn:Heq.
-        destruct (view_construct_cofix t0).
-        + apply decompose_app_inv in Heq.
-          subst t. simpl.
-          rewrite rho_mkApps; auto.
-          rewrite decompose_app_mkApps; auto.
-          simpl. rewrite lift_mkApps rho_mkApps in h_forall_Γ. auto.
-          rewrite lift_mkApps decompose_app_mkApps. auto. simpl.
-          rewrite rho_mkApps // decompose_app_mkApps // /=.
-          rewrite lift_mkApps rho_mkApps in h_forall_Γ; auto.
-          simpl in h_forall_Γ.
-          eapply mkApps_eq_inj in h_forall_Γ; intuition eauto.
-          rewrite !nth_error_map. destruct nth_error eqn:Heq; simpl.
-          -- destruct (eq_ind_spec i c); subst.
-             rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def,
-             ?map_length, ?Nat.add_assoc in H0.
-             apply map_eq_inj in H0.
-             now eapply nth_error_all in Heq; eauto.
-             simpl. f_equal. rewrite lift_mkApps. f_equal.
-             now rewrite !map_map_compose in H0 |- *.
-          -- simpl. f_equal; auto.
-             rewrite lift_mkApps. simpl. f_equal; auto.
+  (*     - specialize (h_forall_Γ Γ Δ Γ' eq_refl). *)
+  (*       specialize (h_forall_Γ0 Γ Δ Γ' eq_refl). *)
+  (*       specialize (h_forall_Γ1 Γ Δ (Γ' ,, vdef n t t0) eq_refl). *)
+  (*       simpl in *. *)
+  (*       rewrite - !h_forall_Γ - !h_forall_Γ0. *)
+  (*       rewrite !distr_lift_subst h_forall_Γ1. simpl. *)
+  (*       unfold subst10. f_equal. *)
+  (*       now rewrite lift_context_snoc Nat.add_0_r rho_ctx_over_length. *)
 
-        + apply decompose_app_inv in Heq.
-          subst t. simpl.
-          rewrite rho_mkApps; auto.
-          rewrite decompose_app_mkApps; auto.
-          simpl. rewrite lift_mkApps rho_mkApps in h_forall_Γ. auto.
-          rewrite lift_mkApps decompose_app_mkApps. auto. simpl.
-          rewrite rho_mkApps // decompose_app_mkApps // /=.
-          rewrite lift_mkApps rho_mkApps in h_forall_Γ; auto.
-          simpl in h_forall_Γ.
-          eapply mkApps_eq_inj in h_forall_Γ; intuition eauto.
-          noconf H. simpl in H. revert H; simplify *.
-          intros.
-          unfold unfold_cofix, map_fix.
-          rewrite !nth_error_map. destruct nth_error eqn:Heq.
-          -- simpl. f_equal; auto.
-             rewrite lift_mkApps. simpl. f_equal; auto.
-             rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def,
-             ?map_length, ?Nat.add_assoc. solve_all.
-             simpl.
-             unfold map_fix in H.
-             rewrite !map_length !map_map_compose /compose /= /map_def in H.
-             eapply map_eq_inj in H.
-             simpl.
-             rewrite (map_cofix_subst (fun Γ => rho Γ) (fun Γ Γ' => rho (Γ ,,, Γ'))).
-             { intros. simpl. f_equal. }
-             rewrite distr_lift_subst !/map_fix !map_length !map_map_compose !/compose.
-             erewrite <-
-                      (map_cofix_subst
-                         (fun Γ x => lift #|Δ| #|Γ'| (rho (Γ ,,, rho_ctx_over Γ Γ') x))
-                         (fun Γ Γ'' x => lift #|Δ| (#|Γ''| + _)
-                                                 (rho (Γ ,,, _ ,,, fold_fix_context rho (Γ ,,, rho_ctx_over Γ Γ') [] mfix) x))
-                         mfix Γ
-                         (fix_context mfix)).
-             simpl in *.
+  (*     - specialize (h_forall_Γ Γ Δ Γ' eq_refl). *)
+  (*       specialize (h_forall_Γ0 Γ Δ Γ' eq_refl). *)
+  (*       rewrite -h_forall_Γ0 -h_forall_Γ. *)
+  (*       destruct t; try reflexivity. *)
+  (*       simpl. *)
+  (*       elim leb_spec_Set; reflexivity. *)
+  (*       simpl. *)
+  (*       rewrite distr_lift_subst. *)
+  (*       unfold subst10. simpl. f_equal. *)
+  (*       simpl in h_forall_Γ. noconf h_forall_Γ. *)
+  (*       auto. *)
 
-             f_equal. f_equal.
-             { solve_all. noconf H.
-               unfold map_def; destruct x; simpl in *. f_equal; auto. rewrite - H2.
-               rewrite fix_context_length. eauto. }
+  (*     - destruct lookup_env eqn:Heq. destruct g as [? [? [?|] ?]|]; simpl in *; auto. *)
+  (*       rewrite lift_subst_instance_constr. *)
+  (*       pose proof (lookup_env_cst_inv Heq). subst s. *)
+  (*       eapply lift_declared_constant in Heq. *)
+  (*       unfold map_constant_body in Heq. injection Heq. intros <-; auto. *)
+  (*       auto. *)
+  (*       simpl. auto. *)
 
-             rewrite cofix_subst_length.
-             eapply nth_error_all in Heq. 2:eapply H. simpl in Heq.
-             noconf Heq. rewrite H3. reflexivity.
-             intros. simpl. f_equal. unfold map_fix.
-             rewrite !map_map_compose. solve_all. noconf H.
-             unfold compose.
-             unfold map_def; simpl; f_equal; simpl. now rewrite map_length fix_context_length.
-          -- simpl. f_equal; eauto.
-             rewrite !lift_mkApps. simpl.
-             f_equal; eauto. f_equal. eauto.
+  (*     - specialize (h_forall_Γ Γ Δ Γ' eq_refl). *)
+  (*       specialize (h_forall_Γ0 Γ Δ Γ' eq_refl). *)
+  (*       assert (Hl :map (on_snd (lift #|Δ| #|Γ'|)) *)
+  (*                   (map (λ x : nat * term, (fst x, rho (Γ ,,, rho_ctx_over Γ Γ') (snd x))) l) = *)
+  (*               map (fun x => (fst x, rho (Γ ,,, Δ ,,, lift_context #|Δ| 0 *)
+  (*                     (rho_ctx_over Γ Γ')) (snd x))) *)
+  (*                     (map (on_snd (lift #|Δ| #|Γ'|)) l)). *)
+  (*       { rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, *)
+  (*         ?map_length, ?Nat.add_assoc. solve_all. } *)
+  (*       destruct decompose_app eqn:Heq. *)
+  (*       destruct (view_construct_cofix t1). *)
+  (*       red in X. *)
+  (*       + apply decompose_app_inv in Heq. *)
+  (*         subst t0. simpl. *)
+  (*         rewrite rho_mkApps; auto. *)
+  (*         rewrite decompose_app_mkApps; auto. *)
+  (*         simpl. rewrite lift_mkApps rho_mkApps in h_forall_Γ0. auto. *)
+  (*         rewrite lift_mkApps decompose_app_mkApps. auto. simpl. *)
+  (*         rewrite rho_mkApps // decompose_app_mkApps // /=. *)
+  (*         rewrite lift_mkApps rho_mkApps in h_forall_Γ0; auto. *)
+  (*         simpl in h_forall_Γ0. *)
+  (*         eapply mkApps_eq_inj in h_forall_Γ0; intuition eauto. *)
+  (*         destruct (AstUtils.eq_ind a c). *)
+  (*         -- rewrite lift_iota_red. *)
+  (*            f_equal. auto. *)
+  (*            rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, *)
+  (*            ?map_length, ?Nat.add_assoc. solve_all. *)
+  (*         -- simpl. f_equal; auto. *)
+  (*            rewrite lift_mkApps. simpl. f_equal; auto. *)
 
-        + epose proof (decompose_app_lift #|Δ| #|Γ'| _ _ _ Heq).
-          apply decompose_app_inv in Heq. subst t. rewrite H.
-          destruct t0; simpl in *; try discriminate; try contradiction; try congruence.
-          elim leb_spec_Set; intros; auto; try congruence.
+  (*       + apply decompose_app_inv in Heq. *)
+  (*         subst t0. simpl. *)
+  (*         rewrite rho_mkApps; auto. *)
+  (*         rewrite decompose_app_mkApps; auto. *)
+  (*         simpl. rewrite lift_mkApps rho_mkApps in h_forall_Γ0. auto. *)
+  (*         rewrite lift_mkApps decompose_app_mkApps. auto. simpl. *)
+  (*         rewrite rho_mkApps // decompose_app_mkApps // /=. *)
+  (*         rewrite lift_mkApps rho_mkApps in h_forall_Γ0; auto. *)
+  (*         simpl in h_forall_Γ0. *)
+  (*         eapply mkApps_eq_inj in h_forall_Γ0; intuition eauto. *)
+  (*         noconf H. simpl in H. revert H; simplify *. *)
+  (*         intros. *)
+  (*         unfold unfold_cofix. rewrite !nth_error_map_fix !nth_error_map. *)
+  (*         destruct nth_error eqn:Heq. *)
+  (*         -- simpl. f_equal; auto. *)
+  (*            rewrite lift_mkApps. simpl. f_equal; auto. *)
+  (*            rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, *)
+  (*            ?map_length, ?Nat.add_assoc. *)
+  (*            unfold map_fix in H. *)
+  (*            rewrite !map_length !map_map_compose /compose /= /map_def in H. *)
+  (*            eapply map_eq_inj in H. *)
+  (*            simpl. *)
+  (*            rewrite (map_cofix_subst (fun Γ => rho Γ) (fun Γ Γ' => rho (Γ ,,, Γ'))). *)
+  (*            { intros. simpl. f_equal. } *)
+  (*            rewrite distr_lift_subst !/map_fix !map_length !map_map_compose !/compose. *)
+  (*            erewrite <- *)
+  (*                     (map_cofix_subst *)
+  (*                        (fun Γ x => lift #|Δ| #|Γ'| (rho (Γ ,,, rho_ctx_over Γ Γ') x)) *)
+  (*                        (fun Γ Γ'' x => lift #|Δ| (#|Γ''| + _) *)
+  (*                                                (rho (Γ ,,, _ ,,, fold_fix_context rho (Γ ,,, rho_ctx_over Γ Γ') [] mfix) x)) *)
+  (*                        mfix Γ *)
+  (*                        (fix_context mfix)). *)
+  (*            simpl in *. *)
 
-      - todo. (* Fix *)
-      - f_equal. unfold map_fix.
-        rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def,
-        ?map_length, ?Nat.add_assoc. cbn in *.
-        assert (All (fun x =>
-                       (∀ Δ, lift #|Δ| #|Γ'| (rho (Γ ,,, rho_ctx_over Γ Γ') (dtype x)) =
-                  rho (Γ ,,, Δ ,,, lift_context #|Δ| 0 (rho_ctx_over Γ Γ'))
-                      (lift #|Δ| #|Γ'| (dtype x)))) m).
-        { solve_all. }
-        assert (rho_ctx_over (Γ ,,, rho_ctx_over Γ Γ') (fix_context m) =
-                fold_fix_context rho (Γ ,,, rho_ctx_over Γ Γ') [] m).
-        { rewrite - fold_fix_context_over'.
-          solve_all.
-          specialize (a0 (Γ ,,, rho_ctx_over Γ Γ') Δ0 [] eq_refl).
-          simpl in a0. now rewrite a0. reflexivity. }
-        rewrite - H0.
+  (*            f_equal. f_equal. *)
+  (*            { solve_all. noconf H. *)
+  (*              unfold map_def; destruct x; simpl in *. f_equal; auto. rewrite - H2. *)
+  (*              rewrite fix_context_length. eauto. } *)
 
-        eapply tfix_map_spec. eauto. simpl; intros.
-        apply (H1 Γ Δ Γ' eq_refl).
-        intros. simpl in *.
+  (*            rewrite cofix_subst_length. *)
+  (*            eapply nth_error_all in Heq. 2:eapply H. simpl in Heq. *)
+  (*            noconf Heq. rewrite H3. reflexivity. *)
+  (*            intros. simpl. f_equal. unfold map_fix. *)
+  (*            rewrite !map_map_compose. solve_all. noconf H. *)
+  (*            unfold compose. *)
+  (*            unfold map_def; simpl; f_equal; simpl. now rewrite map_length fix_context_length. *)
+  (*         -- simpl. f_equal; eauto. *)
+  (*            rewrite !lift_mkApps. simpl. *)
+  (*            f_equal; eauto. f_equal. eauto. *)
 
-        specialize (H1 Γ Δ (Γ' ,,, fix_context m)) as H'.
-        rewrite rho_ctx_over_app app_context_assoc in H'.
-        rewrite -H0 in H'.
-        specialize (H' eq_refl).
-        rewrite app_context_length fix_context_length in H'.
-        rewrite lift_context_app app_context_assoc in H'. unfold compose.
-        rewrite H'. rewrite rho_ctx_over_length Nat.add_0_r.
-        f_equal. f_equal.
+  (*       + destruct p. epose proof (decompose_app_lift #|Δ| #|Γ'| _ _ _ Heq). *)
+  (*         apply decompose_app_inv in Heq. subst t0. rewrite H. *)
+  (*         destruct t1; simpl in *; try discriminate; try contradiction; try congruence. *)
+  (*         elim leb_spec_Set; intros; auto; try congruence. *)
 
-        (* The use of [lift0 n] in fix_context renders the commutation
-           with lifting unclear. *)
-        assert (lift_context #|Δ| #|Γ'| (rho_ctx_over (Γ ,,, rho_ctx_over Γ Γ') (fix_context m)) =
-  rho_ctx_over (Γ ,,, Δ ,,, lift_context #|Δ| 0 (rho_ctx_over Γ Γ'))
-    (lift_context #|Δ| #|Γ'| (fix_context m))).
-        { clear -X.
-          induction X. simpl. reflexivity.
-          red in t0.
-          rewrite lift_context_snoc. simpl.
-          specialize (t0 Γ Δ (Γ' ,,, Γ0)).
-          rewrite -fold_ctx_over_eq in t0.
-          rewrite rho_ctx_over_app app_context_assoc in t0. specialize (t0 eq_refl).
-          rewrite -IHX. rewrite lift_context_snoc0.
-          unfold snoc. f_equal. unfold vass, lift_decl, map_decl. simpl.
-          rewrite rho_ctx_over_length. rewrite app_context_length in t0.
-          rewrite t0. rewrite lift_context_app Nat.add_0_r app_context_assoc
-                              rho_ctx_over_length. reflexivity. admit. }
+  (*     - destruct s. destruct p. *)
+  (*       specialize (h_forall_Γ Γ Δ Γ' eq_refl). *)
+  (*       destruct decompose_app eqn:Heq. *)
+  (*       destruct (view_construct_cofix t0). *)
+  (*       + apply decompose_app_inv in Heq. *)
+  (*         subst t. simpl. *)
+  (*         rewrite rho_mkApps; auto. *)
+  (*         rewrite decompose_app_mkApps; auto. *)
+  (*         simpl. rewrite lift_mkApps rho_mkApps in h_forall_Γ. auto. *)
+  (*         rewrite lift_mkApps decompose_app_mkApps. auto. simpl. *)
+  (*         rewrite rho_mkApps // decompose_app_mkApps // /=. *)
+  (*         rewrite lift_mkApps rho_mkApps in h_forall_Γ; auto. *)
+  (*         simpl in h_forall_Γ. *)
+  (*         eapply mkApps_eq_inj in h_forall_Γ; intuition eauto. *)
+  (*         rewrite !nth_error_map. destruct nth_error eqn:Heq; simpl. *)
+  (*         -- destruct (eq_ind_spec i c); subst. *)
+  (*            rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, *)
+  (*            ?map_length, ?Nat.add_assoc in H0. *)
+  (*            apply map_eq_inj in H0. *)
+  (*            now eapply nth_error_all in Heq; eauto. *)
+  (*            simpl. f_equal. rewrite lift_mkApps. f_equal. *)
+  (*            now rewrite !map_map_compose in H0 |- *. *)
+  (*         -- simpl. f_equal; auto. *)
+  (*            rewrite lift_mkApps. simpl. f_equal; auto. *)
 
-        rewrite H2.
-        clear x H1 H'.
+  (*       + apply decompose_app_inv in Heq. *)
+  (*         subst t. simpl. *)
+  (*         rewrite rho_mkApps; auto. *)
+  (*         rewrite decompose_app_mkApps; auto. *)
+  (*         simpl. rewrite lift_mkApps rho_mkApps in h_forall_Γ. auto. *)
+  (*         rewrite lift_mkApps decompose_app_mkApps. auto. simpl. *)
+  (*         rewrite rho_mkApps // decompose_app_mkApps // /=. *)
+  (*         rewrite lift_mkApps rho_mkApps in h_forall_Γ; auto. *)
+  (*         simpl in h_forall_Γ. *)
+  (*         eapply mkApps_eq_inj in h_forall_Γ; intuition eauto. *)
+  (*         noconf H. simpl in H. revert H; simplify *. *)
+  (*         intros. *)
+  (*         unfold unfold_cofix, map_fix. *)
+  (*         rewrite !nth_error_map. destruct nth_error eqn:Heq. *)
+  (*         -- simpl. f_equal; auto. *)
+  (*            rewrite lift_mkApps. simpl. f_equal; auto. *)
+  (*            rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, *)
+  (*            ?map_length, ?Nat.add_assoc. solve_all. *)
+  (*            simpl. *)
+  (*            unfold map_fix in H. *)
+  (*            rewrite !map_length !map_map_compose /compose /= /map_def in H. *)
+  (*            eapply map_eq_inj in H. *)
+  (*            simpl. *)
+  (*            rewrite (map_cofix_subst (fun Γ => rho Γ) (fun Γ Γ' => rho (Γ ,,, Γ'))). *)
+  (*            { intros. simpl. f_equal. } *)
+  (*            rewrite distr_lift_subst !/map_fix !map_length !map_map_compose !/compose. *)
+  (*            erewrite <- *)
+  (*                     (map_cofix_subst *)
+  (*                        (fun Γ x => lift #|Δ| #|Γ'| (rho (Γ ,,, rho_ctx_over Γ Γ') x)) *)
+  (*                        (fun Γ Γ'' x => lift #|Δ| (#|Γ''| + _) *)
+  (*                                                (rho (Γ ,,, _ ,,, fold_fix_context rho (Γ ,,, rho_ctx_over Γ Γ') [] mfix) x)) *)
+  (*                        mfix Γ *)
+  (*                        (fix_context mfix)). *)
+  (*            simpl in *. *)
 
-        rewrite - fold_fix_context_over'.
-        { eapply All_map. red in X0.
-          solve_all. unfold compose. simpl. intros.
-          specialize (a0 Γ Δ Γ' eq_refl) as a0'.
-          rewrite -a0'.
-          rewrite b. unfold app_context in *. admit. }
-        now rewrite lift_fix_context.
-    Admitted.
+  (*            f_equal. f_equal. *)
+  (*            { solve_all. noconf H. *)
+  (*              unfold map_def; destruct x; simpl in *. f_equal; auto. rewrite - H2. *)
+  (*              rewrite fix_context_length. eauto. } *)
 
-    Lemma rho_lift0 Γ Δ t : lift0 #|Δ| (rho Γ t) = rho (Γ ,,, Δ) (lift0 #|Δ| t).
-    Proof. apply (rho_lift Γ Δ []). Qed.
+  (*            rewrite cofix_subst_length. *)
+  (*            eapply nth_error_all in Heq. 2:eapply H. simpl in Heq. *)
+  (*            noconf Heq. rewrite H3. reflexivity. *)
+  (*            intros. simpl. f_equal. unfold map_fix. *)
+  (*            rewrite !map_map_compose. solve_all. noconf H. *)
+  (*            unfold compose. *)
+  (*            unfold map_def; simpl; f_equal; simpl. now rewrite map_length fix_context_length. *)
+  (*         -- simpl. f_equal; eauto. *)
+  (*            rewrite !lift_mkApps. simpl. *)
+  (*            f_equal; eauto. f_equal. eauto. *)
+
+  (*       + epose proof (decompose_app_lift #|Δ| #|Γ'| _ _ _ Heq). *)
+  (*         apply decompose_app_inv in Heq. subst t. rewrite H. *)
+  (*         destruct t0; simpl in *; try discriminate; try contradiction; try congruence. *)
+  (*         elim leb_spec_Set; intros; auto; try congruence. *)
+
+  (*     - todo. (* Fix *) *)
+  (*     - f_equal. unfold map_fix. *)
+  (*       rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, *)
+  (*       ?map_length, ?Nat.add_assoc. cbn in *. *)
+  (*       assert (All (fun x => *)
+  (*                      (∀ Δ, lift #|Δ| #|Γ'| (rho (Γ ,,, rho_ctx_over Γ Γ') (dtype x)) = *)
+  (*                 rho (Γ ,,, Δ ,,, lift_context #|Δ| 0 (rho_ctx_over Γ Γ')) *)
+  (*                     (lift #|Δ| #|Γ'| (dtype x)))) m). *)
+  (*       { solve_all. } *)
+  (*       assert (rho_ctx_over (Γ ,,, rho_ctx_over Γ Γ') (fix_context m) = *)
+  (*               fold_fix_context rho (Γ ,,, rho_ctx_over Γ Γ') [] m). *)
+  (*       { rewrite - fold_fix_context_over'. *)
+  (*         solve_all. *)
+  (*         specialize (a0 (Γ ,,, rho_ctx_over Γ Γ') Δ0 [] eq_refl). *)
+  (*         simpl in a0. now rewrite a0. reflexivity. } *)
+  (*       rewrite - H0. *)
+
+  (*       eapply tfix_map_spec. eauto. simpl; intros. *)
+  (*       apply (H1 Γ Δ Γ' eq_refl). *)
+  (*       intros. simpl in *. *)
+
+  (*       specialize (H1 Γ Δ (Γ' ,,, fix_context m)) as H'. *)
+  (*       rewrite rho_ctx_over_app app_context_assoc in H'. *)
+  (*       rewrite -H0 in H'. *)
+  (*       specialize (H' eq_refl). *)
+  (*       rewrite app_context_length fix_context_length in H'. *)
+  (*       rewrite lift_context_app app_context_assoc in H'. unfold compose. *)
+  (*       rewrite H'. rewrite rho_ctx_over_length Nat.add_0_r. *)
+  (*       f_equal. f_equal. *)
+
+  (*       (* The use of [lift0 n] in fix_context renders the commutation *)
+  (*          with lifting unclear. *) *)
+  (*       assert (lift_context #|Δ| #|Γ'| (rho_ctx_over (Γ ,,, rho_ctx_over Γ Γ') (fix_context m)) = *)
+  (* rho_ctx_over (Γ ,,, Δ ,,, lift_context #|Δ| 0 (rho_ctx_over Γ Γ')) *)
+  (*   (lift_context #|Δ| #|Γ'| (fix_context m))). *)
+  (*       { clear -X. *)
+  (*         induction X. simpl. reflexivity. *)
+  (*         red in t0. *)
+  (*         rewrite lift_context_snoc. simpl. *)
+  (*         specialize (t0 Γ Δ (Γ' ,,, Γ0)). *)
+  (*         rewrite -fold_ctx_over_eq in t0. *)
+  (*         rewrite rho_ctx_over_app app_context_assoc in t0. specialize (t0 eq_refl). *)
+  (*         rewrite -IHX. rewrite lift_context_snoc0. *)
+  (*         unfold snoc. f_equal. unfold vass, lift_decl, map_decl. simpl. *)
+  (*         rewrite rho_ctx_over_length. rewrite app_context_length in t0. *)
+  (*         rewrite t0. rewrite lift_context_app Nat.add_0_r app_context_assoc *)
+  (*                             rho_ctx_over_length. reflexivity. admit. } *)
+
+  (*       rewrite H2. *)
+  (*       clear x H1 H'. *)
+
+  (*       rewrite - fold_fix_context_over'. *)
+  (*       { eapply All_map. red in X0. *)
+  (*         solve_all. unfold compose. simpl. intros. *)
+  (*         specialize (a0 Γ Δ Γ' eq_refl) as a0'. *)
+  (*         rewrite -a0'. *)
+  (*         rewrite b. unfold app_context in *. admit. } *)
+  (*       now rewrite lift_fix_context. *)
+  (*   Admitted. *)
+
+    (* Lemma rho_lift0 Γ Δ t : lift0 #|Δ| (rho Γ t) = rho (Γ ,,, Δ) (lift0 #|Δ| t). *)
+    (* Proof. apply (rho_lift Γ Δ []). Qed. *)
 
     Lemma fold_fix_context_over_acc Γ m acc :
       rho_ctx_over (rho_ctx Γ ,,, acc)
@@ -1570,17 +1735,17 @@ Section Confluence.
       unfold app_context. unfold app_context in IHm.
       erewrite <- IHm.
       rewrite - app_assoc. cbn. f_equal. f_equal.
-      f_equal. f_equal.
+      f_equal. f_equal. rewrite !lift_rename !rename_inst. lift_renaming.
       rewrite rho_lift0. auto.
       repeat f_equal. rewrite rho_lift0; auto.
     Qed.
 
-    Lemma fold_fix_context_rho_ctx Γ m :
-      rho_ctx_over (rho_ctx Γ) (fix_context m) =
-      fold_fix_context rho (rho_ctx Γ) [] m.
-    Proof.
-      rewrite <- fold_fix_context_over_acc; now rewrite ?app_nil_r.
-    Qed.
+    (* Lemma fold_fix_context_rho_ctx Γ m : *)
+    (*   rho_ctx_over (rho_ctx Γ) (fix_context m) = *)
+    (*   fold_fix_context rho (rho_ctx Γ) [] m. *)
+    (* Proof. *)
+    (*   rewrite <- fold_fix_context_over_acc; now rewrite ?app_nil_r. *)
+    (* Qed. *)
 
     Definition fold_fix_context_alt Γ m :=
       mapi (fun k def => vass def.(dname) (lift0 k (rho Γ def.(dtype)))) m.
@@ -1648,22 +1813,6 @@ Section Confluence.
           rewrite rho_ctx_app in a, b0. red. split; eauto.
           * red. apply a. now apply All2_local_env_app_inv.
           * apply b0. now apply All2_local_env_app_inv.
-    Qed.
-
-    Lemma All2_prop2_eq_split (Γ Γ' Γ2 Γ2' : context) (A B : Type) (f g : A → term)
-          (h : A → B) (rel : context → context → term → term → Type) x y :
-      All2_prop2_eq Γ Γ' Γ2 Γ2' f g h rel x y ->
-      All2 (on_Trel (rel Γ Γ') f) x y *
-      All2 (on_Trel (rel Γ2 Γ2') g) x y *
-      All2 (on_Trel eq h) x y.
-    Proof.
-      induction 1; intuition.
-    Qed.
-
-    Lemma All2_sym {A} (P : A -> A -> Type) l l' :
-      All2 P l l' -> All2 (fun x y => P y x) l' l.
-    Proof.
-      induction 1; constructor; auto.
     Qed.
 
     Derive NoConfusion for bool.

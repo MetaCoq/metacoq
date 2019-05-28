@@ -1831,7 +1831,7 @@ Section Lemmata.
     - assumption.
   Qed.
 
-  Lemma it_mkLambda_or_LetIn_conv :
+  Lemma it_mkLambda_or_LetIn_conv' :
     forall leq Γ Δ1 Δ2 t1 t2,
       PCUICSR.conv_context Σ (Γ ,,, Δ1) (Γ ,,, Δ2) ->
       conv leq Σ (Γ ,,, Δ1) t1 t2 ->
@@ -1843,6 +1843,26 @@ Section Lemmata.
       Σ ;;; Γ |- A1 = A2 ->
       conv leq Σ (Γ ,, vass na1 A1) B1 B2 ->
       conv leq Σ Γ (tProd na1 A1 B1) (tProd na2 A2 B2).
+  Admitted.
+
+  Lemma it_mkLambda_or_LetIn_conv :
+    forall Γ Δ1 Δ2 t1 t2,
+      PCUICSR.conv_context Σ (Γ ,,, Δ1) (Γ ,,, Δ2) ->
+      Σ ;;; Γ ,,, Δ1 |- t1 = t2 ->
+      Σ ;;; Γ |- it_mkLambda_or_LetIn Δ1 t1 = it_mkLambda_or_LetIn Δ2 t2.
+  Admitted.
+
+  Lemma App_conv :
+    forall Γ t1 t2 u1 u2,
+      Σ ;;; Γ |- t1 = t2 ->
+      Σ ;;; Γ |- u1 = u2 ->
+      Σ ;;; Γ |- tApp t1 u1 = tApp t2 u2.
+  Admitted.
+
+  Lemma mkApps_conv_weak :
+    forall Γ u1 u2 l,
+      Σ ;;; Γ |- u1 = u2 ->
+      Σ ;;; Γ |- mkApps u1 l = mkApps u2 l.
   Admitted.
 
   (* Lemma principle_typing : *)

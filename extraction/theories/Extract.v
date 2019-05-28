@@ -178,21 +178,20 @@ Definition extract_mutual_inductive_body Σ
 
 Fixpoint extract_global_decls univs Σ : E.global_declarations :=
   match Σ with
-  | [] => Ret []
+  | [] => []
   | ConstantDecl kn cb :: Σ =>
-    let cb' := Ret (extract_constant_body (Σ, univs) cb) in
+    let cb' := extract_constant_body (Σ, univs) cb in
     let Σ' := extract_global_decls univs Σ in
-    Ret (E.ConstantDecl kn cb' :: Σ')
+    E.ConstantDecl kn cb' :: Σ'
   | InductiveDecl kn mib :: Σ =>
     let mib' := extract_mutual_inductive_body (Σ, univs) mib in
     let Σ' := extract_global_decls univs Σ in
-    Ret (E.InductiveDecl kn mib' :: Σ')
+    E.InductiveDecl kn mib' :: Σ'
   end.
 
 Definition extract_global Σ :=
   let '(Σ, univs) := Σ in
-  let Σ' := extract_global_decls univs (List.rev Σ) in
-  Ret (List.rev Σ').
+  extract_global_decls univs Σ.
 
 (** * Erasure correctness
     

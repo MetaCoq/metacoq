@@ -302,15 +302,17 @@ Proof.
     destruct (decompose_prod_assum [] (lift n k ind_type)) eqn:Heq'.
     destruct X. simpl in *.
     assert (lift n k ind_type = ind_type).
-    destruct onArity as [[s Hs] Hpars].
+    destruct onArity as [Hisa [s Hs] Hpars].
     eapply typed_liftn; eauto. constructor. simpl; lia.
     rewrite H0 in Heq'. rewrite Heq in Heq'. revert Heq'; intros [= <- <-].
     f_equal; auto.
     apply (Alli_map_id onConstructors).
-    intros n1 [[x p] n']. intros [[s Hty] Hpars].
+    intros n1 [[x p] n']. intros [[s Hty] [cs Hargs]].
     unfold on_pi2; f_equal; f_equal.
     simpl in Hty.
     eapply typed_liftn. 4:eapply Hty. eauto. apply typing_wf_local in Hty; eauto. lia.
+    destruct(eq_dec ind_projs []) as [Hp|Hp]. subst; auto. specialize (onProjections Hp).
+    destruct onProjections as [_ _ onProjections].
     apply (Alli_map_id onProjections).
     intros n1 [x p].
     unfold on_projection. simpl. rewrite Heq.
@@ -385,14 +387,16 @@ Proof.
   simpl in Hmdecl.
   apply onInductives in Hmdecl.
   eapply nth_error_alli in Hmdecl; eauto.
-  eapply onProjections in Hmdecl; eauto.
+  eapply onProjections, on_projs in Hmdecl; eauto.
   eapply nth_error_alli in Hmdecl; eauto.
   red in Hmdecl.
   destruct decompose_prod_assum eqn:Heq.
   case: Hmdecl => /= [/andb_and[Hd Hp] Hpars]. simpl in *.
   intuition auto. destruct pdecl as [id ty]. unfold on_snd; simpl in *.
   f_equal. eapply lift_closed. rewrite <- Hpars.
-  eapply closed_upwards; eauto. lia. auto.
+  eapply closed_upwards; eauto. lia.
+  destruct (ind_projs idecl). destruct (snd c); discriminate. congruence.
+  auto.
 Qed.
 
 Lemma lift_fix_context:

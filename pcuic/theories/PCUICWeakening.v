@@ -253,8 +253,8 @@ Proof.
   rewrite ccst. reflexivity. lia. auto. constructor.
 Qed.
 
-Definition lift_mutual_inductive_body n k mind m :=
-  map_mutual_inductive_body mind (fun k' => lift n (k' + k)) m.
+Definition lift_mutual_inductive_body n k m :=
+  map_mutual_inductive_body (fun k' => lift n (k' + k)) m.
 
 Lemma lift_wf_local `{checker_flags} Σ Γ n k : wf Σ -> wf_local Σ Γ -> lift_context n k Γ = Γ.
 Proof.
@@ -283,10 +283,17 @@ Proof.
   rewrite List.rev_length. lia.
 Qed.
 
+Lemma context_assumptions_fold Γ f : context_assumptions (fold_context f Γ) = context_assumptions Γ.
+Proof.
+  rewrite fold_context_alt.
+  unfold mapi. generalize 0 (Nat.pred #|Γ|).
+  induction Γ as [|[na [body|] ty] tl]; cbn; intros; eauto.
+Qed.
+
 Lemma lift_declared_minductive `{checker_flags} Σ cst decl n k :
   wf Σ ->
   declared_minductive (fst Σ) cst decl ->
-  lift_mutual_inductive_body n k cst decl = decl.
+  lift_mutual_inductive_body n k decl = decl.
 Proof.
   intros wfΣ Hdecl. eapply on_declared_minductive in Hdecl; eauto.
   destruct decl. simpl in *. f_equal.
@@ -301,8 +308,8 @@ Proof.
     destruct (decompose_prod_assum [] ind_type) eqn:Heq.
     destruct (decompose_prod_assum [] (lift n k ind_type)) eqn:Heq'.
     destruct X. simpl in *.
-    assert (lift n k ind_type = ind_type).
-    destruct onArity as [Hisa [s Hs] Hpars].
+    assert (lift n k ind_type = ind_type). repeat red in onArity.
+    destruct onArity as [s Hs].
     eapply typed_liftn; eauto. constructor. simpl; lia.
     rewrite H0 in Heq'. rewrite Heq in Heq'. revert Heq'; intros [= <- <-].
     f_equal; auto.
@@ -312,19 +319,21 @@ Proof.
     simpl in Hty.
     eapply typed_liftn. 4:eapply Hty. eauto. apply typing_wf_local in Hty; eauto. lia.
     destruct(eq_dec ind_projs []) as [Hp|Hp]. subst; auto. specialize (onProjections Hp).
-    destruct onProjections as [_ _ onProjections].
+    destruct onProjections as [_ _ _ onProjections].
     apply (Alli_map_id onProjections).
     intros n1 [x p].
-    unfold on_projection. simpl. rewrite Heq.
-    intros [[s Hty] Hpars].
+    unfold on_projection. simpl.
+    intros [s Hty].
     unfold on_snd; f_equal; f_equal.
-    eapply typed_liftn. 4:eapply Hty. all:eauto. eapply typing_wf_local in Hty; eauto. simpl. lia.
+    eapply typed_liftn. 4:eapply Hty. all:eauto. eapply typing_wf_local in Hty; eauto. simpl.
+    rewrite smash_context_length. simpl.
+    rewrite context_assumptions_fold. lia.
 Qed.
 
 Lemma lift_declared_inductive `{checker_flags} Σ ind mdecl idecl n k :
   wf Σ ->
   declared_inductive (fst Σ) mdecl ind idecl ->
-  map_one_inductive_body (inductive_mind ind) (polymorphic_instance (mdecl.(ind_universes)))
+  map_one_inductive_body (context_assumptions mdecl.(ind_params))
                          (length (arities_context mdecl.(ind_bodies))) (fun k' => lift n (k' + k))
                          (inductive_ind ind) idecl = idecl.
 Proof.
@@ -363,7 +372,6 @@ Proof.
   destruct Σ. eapply (lift_declared_inductive _ _ _ _ n k) in Hidecl; eauto.
   unfold type_of_constructor. destruct cdecl as [[id t'] arity].
   destruct idecl; simpl in *.
-  destruct (decompose_prod_assum [] _) eqn:Heq.
   injection Hidecl.
   intros.
   pose Hcdecl as Hcdecl'.
@@ -376,6 +384,11 @@ Proof.
   now rewrite subst0_inds_lift.
 Qed.
 
+Lemma nth_error_Some_non_nil {A} (l : list A) (n : nat) (x : A) : nth_error l n = Some x -> l <> [].
+Proof.
+  destruct l, n; simpl; congruence.
+Qed.
+
 Lemma lift_declared_projection `{checker_flags} Σ c mdecl idecl pdecl n k :
   wf Σ ->
   declared_projection (fst Σ) mdecl idecl c pdecl ->
@@ -383,20 +396,19 @@ Lemma lift_declared_projection `{checker_flags} Σ c mdecl idecl pdecl n k :
 Proof.
   intros.
   destruct H0 as [[Hmdecl Hidecl] [Hpdecl Hnpar]].
-  eapply declared_decl_closed in Hmdecl.
+  eapply declared_decl_closed in Hmdecl; auto.
   simpl in Hmdecl.
+  pose proof (onNpars _ _ _ _ Hmdecl).
   apply onInductives in Hmdecl.
   eapply nth_error_alli in Hmdecl; eauto.
-  eapply onProjections, on_projs in Hmdecl; eauto.
-  eapply nth_error_alli in Hmdecl; eauto.
-  red in Hmdecl.
-  destruct decompose_prod_assum eqn:Heq.
-  case: Hmdecl => /= [/andb_and[Hd Hp] Hpars]. simpl in *.
-  intuition auto. destruct pdecl as [id ty]. unfold on_snd; simpl in *.
-  f_equal. eapply lift_closed. rewrite <- Hpars.
+  pose proof (onProjections Hmdecl) as onp; eauto. forward onp.
+  now eapply nth_error_Some_non_nil in Hpdecl.
+  eapply on_projs, nth_error_alli in onp; eauto.
+  move: onp => /= /andb_and[Hd _]. simpl in Hd.
+  rewrite smash_context_length in Hd. simpl in *. rewrite H0 in Hd.
+  destruct pdecl as [id ty]. unfold on_snd; simpl in *.
+  f_equal. eapply lift_closed.
   eapply closed_upwards; eauto. lia.
-  destruct (ind_projs idecl). destruct (snd c); discriminate. congruence.
-  auto.
 Qed.
 
 Lemma lift_fix_context:
@@ -608,7 +620,7 @@ Lemma lift_types_of_case ind mdecl idecl args u p pty indctx pctx ps btys n k :
   let f_ctx := lift_context n k in
   closed_ctx mdecl.(ind_params) ->
   types_of_case ind mdecl idecl args u p pty = Some (indctx, pctx, ps, btys) ->
-  types_of_case ind mdecl (map_one_inductive_body (inductive_mind ind) (polymorphic_instance mdecl.(ind_universes))
+  types_of_case ind mdecl (map_one_inductive_body (context_assumptions mdecl.(ind_params))
                                                   (length (arities_context mdecl.(ind_bodies)))
                                                   f (inductive_ind ind) idecl)
                 (map (f 0) args) u (f 0 p) (f 0 pty) =
@@ -630,7 +642,7 @@ Proof.
   assert(forall brs,
          build_branches_type ind mdecl idecl args u p = brs ->
          (build_branches_type ind mdecl
-         (map_one_inductive_body (inductive_mind ind) (polymorphic_instance (ind_universes mdecl))
+         (map_one_inductive_body (context_assumptions mdecl.(ind_params))
             (length (arities_context (ind_bodies mdecl))) (fun k' => lift n (k' + k))
             (inductive_ind ind) idecl) (map (lift n k) args) u (lift n k p)) =
          map (option_map (on_snd (lift n k))) brs).
@@ -818,7 +830,6 @@ Proof.
       rewrite !plus_n_Sm. now apply IHm.
 Qed.
 
-
 Lemma lift_eq_term `{checker_flags} ϕ n k T U :
   eq_term ϕ T U -> eq_term ϕ (lift n k T) (lift n k U).
 Proof.
@@ -830,7 +841,6 @@ Lemma lift_leq_term `{checker_flags} ϕ n k T U :
 Proof.
   apply lift_eq_term_upto_univ.
 Qed.
-
 
 Lemma weakening_cumul `{CF:checker_flags} Σ Γ Γ' Γ'' M N :
   wf Σ ->
@@ -986,7 +996,6 @@ Proof.
        erewrite lift_declared_inductive; eauto.
        apply lift_check_correct_arity.
     -- destruct idecl; simpl in *; auto.
-       destruct decompose_prod_assum. auto.
     -- now rewrite -> !lift_mkApps in IHc.
     -- solve_all.
 

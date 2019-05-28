@@ -209,29 +209,31 @@ Proof.
   simpl in *.
   destruct Hdecl as [onI onP onnP]; constructor; eauto.
   - eapply Alli_impl; eauto. intros.
-    destruct X. unshelve econstructor.
+    destruct X. unshelve econstructor; eauto.
     unfold on_constructors in *. eapply Alli_impl_trans; eauto.
     intros ik [[id t] ar]. unfold on_constructor, on_type in *; intuition eauto.
     destruct b. exists x0.
     -- induction (cshape_args x0); simpl in *; auto.
        destruct a0 as [na [b|] ty]; simpl in *; intuition eauto.
-    -- destruct onArity; constructor; unfold on_type in *; intuition eauto.
+    -- unfold on_type in *; intuition eauto.
     -- intros Hprojs; destruct onProjections; try constructor; auto.
        eapply Alli_impl; eauto. intros ip [id trm].
        unfold on_projection, on_type; eauto.
-       destruct decompose_prod_assum. intuition auto.
-       eapply HPΣ; eauto.
     -- unfold Alli_impl_trans. simpl.
-       destruct onkelim as [sf [Hsf Hsfle]].
-       exists sf; intuition eauto. rewrite -{}Hsf.
-       unfold elimination_topsort.
-       destruct destArity as [[ctx s]|]; simpl; auto.
-       destruct universe_family; auto.
-       revert onConstructors. generalize (ind_ctors x).
+       revert onConstructors ind_sorts. generalize (ind_ctors x).
        unfold Alli_rect.
-       intros ? onCs. depelim onCs; auto. depelim onCs; simpl; auto.
-       destruct hd as [[? ?] ?]. unfold prod_rect; simpl.
-       destruct o as [? [? ?]]. simpl. reflexivity.
+       unfold check_ind_sorts. destruct universe_family; auto.
+       --- intros ? onCs. depelim onCs; simpl; auto. depelim onCs; simpl; auto.
+           destruct hd as [[? ?] ?]. unfold prod_rect; simpl.
+           destruct o as [? [? ?]]. simpl. auto.
+       --- intros ? onCs. clear onI. induction onCs; simpl; intuition auto.
+           destruct hd as [[? ?] ?]. unfold prod_rect; simpl.
+           destruct p as [? [? ?]]. simpl in *. auto.
+           destruct Hext; subst; simpl; auto.
+       --- intros ? onCs. clear onI. induction onCs; simpl; intuition auto.
+           destruct hd as [[? ?] ?]. unfold prod_rect; simpl.
+           destruct p as [? [? ?]]. simpl in *. auto.
+           destruct Hext; subst; simpl; auto.
   - red in onP |- *. eapply All_local_env_impl; eauto.
 Qed.
 
@@ -323,8 +325,8 @@ Proof.
   intros.
   destruct H0 as [Hidecl [Hcdecl Hnpar]].
   eapply declared_inductive_inv in Hidecl; eauto.
-  apply onProjections, on_projs in Hidecl.
-  eapply nth_error_alli in Hidecl; eauto.
+  pose proof (onProjections Hidecl). apply on_projs in X2.
+  eapply nth_error_alli in X2; eauto.
   eapply nth_error_Some_length in Hcdecl.
   destruct (ind_projs idecl); simpl in *. lia. congruence.
 Qed.

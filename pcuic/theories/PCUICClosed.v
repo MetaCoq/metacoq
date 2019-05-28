@@ -235,6 +235,22 @@ Proof.
     eapply closedn_mkLambda_or_LetIn;
       now rewrite app_length // plus_n_Sm.
 Qed.
+(* TODO move *)
+Lemma subst_context_length s n Γ : #|subst_context s n Γ| = #|Γ|.
+Proof.
+  induction Γ as [|[na [body|] ty] tl] in Γ |- *; cbn; eauto.
+  - rewrite !List.rev_length !mapi_length !app_length !List.rev_length. simpl.
+    lia.
+  - rewrite !List.rev_length !mapi_length !app_length !List.rev_length. simpl.
+    lia.
+Qed.
+
+Lemma smash_context_length Γ Γ' : #|smash_context Γ Γ'| = #|Γ| + context_assumptions Γ'.
+Proof.
+  induction Γ' as [|[na [body|] ty] tl] in Γ |- *; cbn; eauto.
+  - now rewrite IHtl subst_context_length.
+  - rewrite IHtl app_length. simpl. lia.
+Qed.
 
 Lemma typecheck_closed `{cf : checker_flags} :
   env_prop (fun Σ Γ t T =>
@@ -279,7 +295,7 @@ Proof.
   - rewrite closedn_subst_instance_constr.
     eapply declared_inductive_inv in X0; eauto.
     apply onArity in X0. repeat red in X0.
-    destruct X0 as [Hisa [s Hs] _]. rewrite -> andb_and in Hs.
+    destruct X0 as [s Hs]. rewrite -> andb_and in Hs.
     intuition eauto using closed_upwards with arith.
 
   - destruct isdecl as [Hidecl Hcdecl].
@@ -310,13 +326,17 @@ Proof.
     simpl. apply closedn_mkApps_inv in H2.
     rewrite forallb_rev H1. apply H2.
     rewrite closedn_subst_instance_constr.
-    eapply declared_projection_inv in isdecl; eauto.
-    red in isdecl.
-    destruct decompose_prod_assum eqn:Heq.
-    destruct isdecl as [[s Hs] Hc]. simpl in *.
-    rewrite <- Hc in H0. rewrite List.rev_length H0.
-    rewrite andb_true_r in Hs.
-    eauto using closed_upwards with arith.
+    eapply declared_projection_inv in isdecl as H'; eauto.
+    apply on_declared_projection in isdecl as [[Hmdecl Hidecl] Hpdecl]; auto.
+    red in Hpdecl.
+    destruct Hpdecl as [s Hs]. simpl in *.
+    apply onNpars in Hmdecl.
+    cbn in H'; destruct H'.
+    simpl in *.
+    rewrite List.rev_length H0.
+    rewrite andb_true_r in i. rewrite <- Hmdecl.
+    rewrite smash_context_length in i. simpl in i.
+    eapply closed_upwards; eauto. lia.
 
   - split. solve_all.
     destruct x; simpl in *.

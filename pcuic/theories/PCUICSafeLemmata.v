@@ -1760,6 +1760,91 @@ Section Lemmata.
       admit.
   Admitted.
 
+  Lemma Lambda_conv_inv :
+    forall leq Γ na1 na2 A1 A2 b1 b2,
+      conv leq Σ Γ (tLambda na1 A1 b1) (tLambda na2 A2 b2) ->
+      ∥ Σ ;;; Γ |- A1 = A2 ∥ /\ conv leq Σ (Γ ,, vass na1 A1) b1 b2.
+  Admitted.
+
+  (* Let bindings are not injective, so it_mkLambda_or_LetIn is not either.
+     However, when they are all lambdas they become injective for conversion.
+     stack_contexts only produce lambdas so we can use this property on them.
+   *)
+  Fixpoint let_free_context (Γ : context) :=
+    match Γ with
+    | [] => true
+    | {| decl_name := na ; decl_body := Some b ; decl_type := B |} :: Γ => false
+    | {| decl_name := na ; decl_body := None ; decl_type := B |} :: Γ =>
+      let_free_context Γ
+    end.
+
+  Lemma it_mkLambda_or_LetIn_let_free_conv_inv :
+    forall Γ Δ1 Δ2 t1 t2,
+      let_free_context Δ1 ->
+      let_free_context Δ2 ->
+      Σ ;;; Γ |- it_mkLambda_or_LetIn Δ1 t1 = it_mkLambda_or_LetIn Δ2 t2 ->
+      PCUICSR.conv_context Σ (Γ ,,, Δ1) (Γ ,,, Δ2) × Σ ;;; Γ ,,, Δ1 |- t1 = t2.
+  Admitted.
+
+  Lemma let_free_stack_context :
+    forall π,
+      let_free_context (stack_context π).
+  Proof.
+    intros π.
+    induction π.
+    all: (simpl ; rewrite ?IHπ ; reflexivity).
+  Qed.
+
+  Lemma it_mkLambda_or_LetIn_stack_context_conv_inv :
+    forall Γ π1 π2 t1 t2,
+      Σ ;;; Γ |- it_mkLambda_or_LetIn (stack_context π1) t1
+              = it_mkLambda_or_LetIn (stack_context π2) t2 ->
+      PCUICSR.conv_context Σ (Γ ,,, stack_context π1) (Γ ,,, stack_context π2) ×
+      Σ ;;; Γ ,,, stack_context π1 |- t1 = t2.
+  Proof.
+    intros Γ π1 π2 t1 t2 h.
+    eapply it_mkLambda_or_LetIn_let_free_conv_inv.
+    - eapply let_free_stack_context.
+    - eapply let_free_stack_context.
+    - assumption.
+  Qed.
+
+  Lemma it_mkLambda_or_LetIn_let_free_conv'_inv :
+    forall leq Γ Δ1 Δ2 t1 t2,
+      let_free_context Δ1 ->
+      let_free_context Δ2 ->
+      conv leq Σ Γ (it_mkLambda_or_LetIn Δ1 t1) (it_mkLambda_or_LetIn Δ2 t2) ->
+      ∥ PCUICSR.conv_context Σ (Γ ,,, Δ1) (Γ ,,, Δ2) ∥ /\ conv leq Σ (Γ ,,, Δ1) t1 t2.
+  Admitted.
+
+  Lemma it_mkLambda_or_LetIn_stack_context_conv'_inv :
+    forall leq Γ π1 π2 t1 t2,
+      conv leq Σ Γ (it_mkLambda_or_LetIn (stack_context π1) t1)
+                   (it_mkLambda_or_LetIn (stack_context π2) t2) ->
+      ∥ PCUICSR.conv_context Σ (Γ ,,, stack_context π1) (Γ ,,, stack_context π2) ∥ /\
+      conv leq Σ (Γ ,,, stack_context π1) t1 t2.
+  Proof.
+    intros leq Γ π1 π2 t1 t2 h.
+    eapply it_mkLambda_or_LetIn_let_free_conv'_inv.
+    - eapply let_free_stack_context.
+    - eapply let_free_stack_context.
+    - assumption.
+  Qed.
+
+  Lemma it_mkLambda_or_LetIn_conv :
+    forall leq Γ Δ1 Δ2 t1 t2,
+      PCUICSR.conv_context Σ (Γ ,,, Δ1) (Γ ,,, Δ2) ->
+      conv leq Σ (Γ ,,, Δ1) t1 t2 ->
+      conv leq Σ Γ (it_mkLambda_or_LetIn Δ1 t1) (it_mkLambda_or_LetIn Δ2 t2).
+  Admitted.
+
+  Lemma Prod_conv :
+    forall leq Γ na1 A1 B1 na2 A2 B2,
+      Σ ;;; Γ |- A1 = A2 ->
+      conv leq Σ (Γ ,, vass na1 A1) B1 B2 ->
+      conv leq Σ Γ (tProd na1 A1 B1) (tProd na2 A2 B2).
+  Admitted.
+
   (* Lemma principle_typing : *)
   (*   forall {Γ u A B}, *)
   (*     Σ ;;; Γ |- u : A -> *)

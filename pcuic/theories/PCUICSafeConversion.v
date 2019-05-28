@@ -869,7 +869,14 @@ Section Conversion.
           (it_mkLambda_or_LetIn (stack_context ρ2) (tLambda na2 A2 B2)) ->
      conv leq Σ Γ (it_mkLambda_or_LetIn (stack_context ρ1) (tProd na1 A1 B1))
           (it_mkLambda_or_LetIn (stack_context ρ2) (tProd na2 A2 B2)).
-  Admitted.
+  Proof.
+    intros Γ leq na1 ρ1 A1 B1 na2 ρ2 A2 B2 e h.
+    apply it_mkLambda_or_LetIn_stack_context_conv_inv in e as [hc hA] ; auto.
+    eapply it_mkLambda_or_LetIn_conv ; auto.
+    apply it_mkLambda_or_LetIn_stack_context_conv'_inv in h as [[?] hl] ; auto.
+    apply Lambda_conv_inv in hl as [[?] ?] ; auto.
+    eapply Prod_conv ; auto.
+  Qed.
 
   Equations(noeqns) _isconv_prog (Γ : context) (leq : conv_pb)
             (t1 : term) (π1 : stack) (h1 : wtp Γ t1 π1)

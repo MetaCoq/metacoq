@@ -1821,7 +1821,7 @@ Section Conversion.
     destruct (inversion_App hh1) as [na1 [A1' [B1' [[?] [[hu1] [?]]]]]].
     apply type_it_mkLambda_or_LetIn in hu1 ; auto.
     apply type_it_mkLambda_or_LetIn in hu2 ; auto.
-    pose proof (subj_conv flags _ hΣ H1 hu1 hu2) as heq.
+    (* pose proof (subj_conv flags _ hΣ H1 hu1 hu2) as heq. *)
     (* Now we would like to invert heq to get equality of contexts and
        codomains.
        We would have two convertible terms against the same stack,

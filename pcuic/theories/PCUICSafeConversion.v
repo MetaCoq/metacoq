@@ -860,24 +860,6 @@ Section Conversion.
     reflexivity.
   Qed.
 
-  (* This corresponds to a subgoal I don't know how to prove, hence the ax
-     suffix. *)
-  Lemma conv_Prod_ax :
-    forall Γ leq na1 ρ1 A1 B1 na2 ρ2 A2 B2,
-      Σ;;; Γ |- it_mkLambda_or_LetIn (stack_context ρ1) A1 = it_mkLambda_or_LetIn (stack_context ρ2) A2 ->
-     conv leq Σ Γ (it_mkLambda_or_LetIn (stack_context ρ1) (tLambda na1 A1 B1))
-          (it_mkLambda_or_LetIn (stack_context ρ2) (tLambda na2 A2 B2)) ->
-     conv leq Σ Γ (it_mkLambda_or_LetIn (stack_context ρ1) (tProd na1 A1 B1))
-          (it_mkLambda_or_LetIn (stack_context ρ2) (tProd na2 A2 B2)).
-  Proof.
-    intros Γ leq na1 ρ1 A1 B1 na2 ρ2 A2 B2 e h.
-    apply it_mkLambda_or_LetIn_stack_context_conv_inv in e as [hc hA] ; auto.
-    eapply it_mkLambda_or_LetIn_conv ; auto.
-    apply it_mkLambda_or_LetIn_stack_context_conv'_inv in h as [[?] hl] ; auto.
-    apply Lambda_conv_inv in hl as [[?] ?] ; auto.
-    eapply Prod_conv ; auto.
-  Qed.
-
   Equations(noeqns) _isconv_prog (Γ : context) (leq : conv_pb)
             (t1 : term) (π1 : stack) (h1 : wtp Γ t1 π1)
             (t2 : term) (π2 : stack) (h2 : wtp Γ t2 π2)
@@ -1051,7 +1033,11 @@ Section Conversion.
     apply mkApps_Prod_nil in h2 ; auto. subst.
 
     cbn.
-    eapply conv_Prod_ax ; assumption.
+    apply it_mkLambda_or_LetIn_stack_context_conv_inv in h0 as [? ?] ; auto.
+    eapply it_mkLambda_or_LetIn_conv ; auto.
+    apply it_mkLambda_or_LetIn_stack_context_conv'_inv in h as [[?] hl] ; auto.
+    apply Lambda_conv_inv in hl as [[?] ?] ; auto.
+    eapply Prod_conv ; auto.
   Qed.
 
   (* tLambda *)

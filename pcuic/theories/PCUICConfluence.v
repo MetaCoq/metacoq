@@ -1528,26 +1528,7 @@ Section Confluence.
           unfold snoc. f_equal. unfold vass, lift_decl, map_decl. simpl.
           rewrite rho_ctx_over_length. rewrite app_context_length in t0.
           rewrite t0. rewrite lift_context_app Nat.add_0_r app_context_assoc
-                              rho_ctx_over_length. reflexivity.
-          change (Γ0,, vdef na b t) with ((Γ0,,, [ vdef na b t])).
-          rewrite !rho_ctx_over_app.
-          assert (rho_ctx_over (Γ ,,, rho_ctx_over Γ Γ' ,,, rho_ctx_over (Γ ,,, rho_ctx_over Γ Γ') Γ0) [vdef na b t] = [vdef na (rho (Γ ,,, rho_ctx_over Γ Γ' ,,, rho_ctx_over (Γ ,,, rho_ctx_over Γ Γ') Γ0) b)
-                                                                                                                             (rho (Γ ,,, rho_ctx_over Γ Γ' ,,, rho_ctx_over (Γ ,,, rho_ctx_over Γ Γ') Γ0) t)]) as -> by reflexivity.
-          rewrite !lift_context_app. rewrite IHX.
-          rewrite !rho_ctx_over_app.
-          f_equal.
-          cbn.
-          f_equal.
-          unfold map_decl, vdef. cbn.
-          f_equal. f_equal.
-
-          cbn.
-          unfold rho_ctx_over at 4. cbn cbn - [rho_ctx_over].
-          fold (rho_ctx_over Γ').
-          
-          cbn. 
-
-          admit. }
+                              rho_ctx_over_length. reflexivity. admit. }
 
         rewrite H2.
         clear x H1 H'.

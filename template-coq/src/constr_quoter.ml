@@ -274,7 +274,6 @@ struct
          | None -> Constr.mkApp (Lazy.force tLevel, [| string_of_level l|])
 
   let quote_universe s =
-    print_endline "Calling quote_universe";
     let levels = Universe.map (fun (l,i) -> pair (Lazy.force tlevel) (Lazy.force bool_type) (quote_level l) (Lazy.force (if i > 0 then ttrue else tfalse))) s in
     to_coq_list (prod (Lazy.force tlevel) (Lazy.force bool_type)) levels
 

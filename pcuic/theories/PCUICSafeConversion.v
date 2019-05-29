@@ -2803,16 +2803,41 @@ Section Conversion.
       eapply red_context.
       rewrite stack_context_appstack in r2. cbn.
       assumption.
-  (*   - apply unfold_one_case_red in e as r. destruct r as [r]. *)
-  (*     apply unfold_one_case_stack in e as d. *)
-  (*     case_eq (decompose_stack s). intros l s0 ee. *)
-  (*     rewrite ee in d. cbn in d. subst. *)
-  (*     constructor. *)
-  (*     eapply red_context. *)
-  (*     induction r. *)
-  (*     + constructor. *)
-  (*     + econstructor ; eauto. *)
-  (*       constructor. assumption. *)
+    - apply unfold_one_case_red in e as r1. destruct r1 as [r1].
+      apply unfold_one_case_stack in e as d1.
+      case_eq (decompose_stack s). intros l' s0 ee.
+      rewrite ee in d1. cbn in d1. subst.
+      match type of e3 with
+      | _ = reduce_stack ?f ?Σ ?Γ ?t ?π ?h =>
+        destruct (reduce_stack_sound f Σ Γ t π h) as [r2] ;
+        pose proof (reduce_stack_decompose f Σ Γ t π h) as d2
+      end.
+      rewrite <- e3 in r2. cbn in r2.
+      rewrite <- e3 in d2. cbn in d2.
+      rewrite zipc_appstack in r2. cbn in r2.
+      rewrite decompose_stack_appstack in d2. cbn in d2.
+      case_eq (decompose_stack ρ). intros l1 s0 e'.
+      rewrite e' in d2. cbn in d2. subst.
+      apply decompose_stack_eq in e' as ?. subst.
+      rewrite stack_cat_appstack.
+      pose proof (decompose_stack_eq _ _ _ (eq_sym e2)). subst.
+      rewrite 2!zipc_appstack.
+      apply decompose_stack_eq in ee as ?. subst.
+      rewrite zipc_appstack in r1. cbn in r1.
+      rewrite stack_context_appstack in r1.
+      rewrite stack_context_appstack in r2.
+      rewrite 2!zipc_appstack in r2. cbn in r2.
+      repeat zip fold. eapply cored_context.
+      (* eapply red_cored_cored ; try eassumption. *)
+
+      (* Actually we need to use reduce_stack_Req
+         to exploit the fact that we indeed reduce.
+         One could also say that some extra property on whnf
+         would allow us to conclude that case on a constructor
+         necessarilly reduces.
+         Maybe we will have to do so.
+       *)
+
   (*   - apply unfold_one_case_red in e as r. destruct r as [r]. *)
   (*     apply unfold_one_case_stack in e as d. *)
   (*     case_eq (decompose_stack s). intros l s0 ee. *)

@@ -22,7 +22,7 @@ let print_term (u: t) : Pp.t = pr_constr u
 
 let unquote_pair trm =
   let (h,args) = app_full trm [] in
-  if Constr.equal h c_pair then
+  if Constr.equal h (Lazy.force c_pair) then
     match args with
       _ :: _ :: x :: y :: [] -> (x, y)
     | _ -> bad_term_verb trm "unquote_pair"
@@ -31,9 +31,9 @@ let unquote_pair trm =
 
 let rec unquote_list trm =
   let (h,args) = app_full trm [] in
-  if Constr.equal h c_nil then
+  if Constr.equal h (Lazy.force c_nil) then
     []
-  else if Constr.equal h c_cons then
+  else if Constr.equal h (Lazy.force c_cons) then
     match args with
       _ :: x :: xs :: [] -> x :: unquote_list xs
     | _ -> bad_term_verb trm "unquote_list"
@@ -43,59 +43,59 @@ let rec unquote_list trm =
 
 let inspectTerm (t:Constr.t) :  (Constr.t, quoted_int, quoted_ident, quoted_name, quoted_sort, quoted_cast_kind, quoted_kernel_name, quoted_inductive, quoted_univ_instance, quoted_proj) structure_of_term =
   let (h,args) = app_full t [] in
-  if Constr.equal h tRel then
+  if Constr.equal h (Lazy.force tRel) then
     match args with
       x :: _ -> ACoq_tRel x
     | _ -> CErrors.user_err (print_term t ++ Pp.str ("has bad structure"))
-  else if Constr.equal h tVar then
+  else if Constr.equal h (Lazy.force tVar) then
     match args with
       x :: _ -> ACoq_tVar x
     | _ -> CErrors.user_err (print_term t ++ Pp.str ("has bad structure"))
-  else if Constr.equal h tMeta then
+  else if Constr.equal h (Lazy.force tMeta) then
     match args with
       x :: _ -> ACoq_tMeta x
     | _ -> CErrors.user_err (print_term t ++ Pp.str ("has bad structure"))
-  else if Constr.equal h tSort then
+  else if Constr.equal h (Lazy.force tSort) then
     match args with
       x :: _ -> ACoq_tSort x
     | _ -> CErrors.user_err (print_term t ++ Pp.str ("has bad structure"))
-  else if Constr.equal h tCast then
+  else if Constr.equal h (Lazy.force tCast) then
     match args with
       x :: y :: z :: _ -> ACoq_tCast (x, y, z)
     | _ -> CErrors.user_err (print_term t ++ Pp.str ("has bad structure"))
-  else if Constr.equal h tProd then
+  else if Constr.equal h (Lazy.force tProd) then
     match args with
       n :: t :: b :: _ -> ACoq_tProd (n,t,b)
     | _ -> CErrors.user_err (print_term t ++ Pp.str ("has bad structure"))
-  else if Constr.equal h tLambda then
+  else if Constr.equal h (Lazy.force tLambda) then
     match args with
       n  :: t :: b :: _ -> ACoq_tLambda (n,t,b)
     | _ -> CErrors.user_err (print_term t ++ Pp.str ("has bad structure"))
-  else if Constr.equal h tLetIn then
+  else if Constr.equal h (Lazy.force tLetIn) then
     match args with
       n :: e :: t :: b :: _ -> ACoq_tLetIn (n,e,t,b)
     | _ -> CErrors.user_err (print_term t ++ Pp.str ("has bad structure"))
-  else if Constr.equal h tApp then
+  else if Constr.equal h (Lazy.force tApp) then
     match args with
       f::xs::_ -> ACoq_tApp (f, unquote_list xs)
     | _ -> CErrors.user_err (print_term t ++ Pp.str ("has bad structure"))
-  else if Constr.equal h tConst then
+  else if Constr.equal h (Lazy.force tConst) then
     match args with
       s::u::_ -> ACoq_tConst (s, u)
     | _ -> CErrors.user_err (print_term t ++ Pp.str ("has bad structure"))
-  else if Constr.equal h tInd then
+  else if Constr.equal h (Lazy.force tInd) then
     match args with
       i::u::_ -> ACoq_tInd (i,u)
     | _ -> CErrors.user_err (print_term t ++ Pp.str ("has bad structure"))
-  else if Constr.equal h tConstructor then
+  else if Constr.equal h (Lazy.force tConstructor) then
     match args with
       i::idx::u::_ -> ACoq_tConstruct (i,idx,u)
     | _ -> CErrors.user_err (print_term t ++ Pp.str ("has bad structure: constructor case"))
-  else if Constr.equal h tCase then
+  else if Constr.equal h (Lazy.force tCase) then
     match args with
       info::ty::d::brs::_ -> ACoq_tCase (unquote_pair info, ty, d, List.map unquote_pair (unquote_list brs))
     | _ -> CErrors.user_err (print_term t ++ Pp.str ("has bad structure"))
-  else if Constr.equal h tFix then
+  else if Constr.equal h (Lazy.force tFix) then
     match args with
       bds::i::_ ->
       let unquoteFbd  b  =
@@ -112,7 +112,7 @@ let inspectTerm (t:Constr.t) :  (Constr.t, quoted_int, quoted_ident, quoted_name
       let lbd = List.map unquoteFbd (unquote_list bds) in
       ACoq_tFix (lbd, i)
     | _ -> CErrors.user_err (print_term t ++ Pp.str ("has bad structure"))
-  else if Constr.equal h tCoFix then
+  else if Constr.equal h (Lazy.force tCoFix) then
     match args with
       bds::i::_ ->
       let unquoteFbd  b  =
@@ -129,7 +129,7 @@ let inspectTerm (t:Constr.t) :  (Constr.t, quoted_int, quoted_ident, quoted_name
       let lbd = List.map unquoteFbd (unquote_list bds) in
       ACoq_tCoFix (lbd, i)
     | _ -> CErrors.user_err (print_term t ++ Pp.str ("has bad structure"))
-  else if Constr.equal h tProj then
+  else if Constr.equal h (Lazy.force tProj) then
     match args with
       proj::t::_ -> ACoq_tProj (proj, t)
     | _ -> CErrors.user_err (print_term t ++ Pp.str ("has bad structure"))
@@ -140,9 +140,9 @@ let inspectTerm (t:Constr.t) :  (Constr.t, quoted_int, quoted_ident, quoted_name
 (* Unquote Coq nat to OCaml int *)
 let rec unquote_nat trm =
   let (h,args) = app_full trm [] in
-  if Constr.equal h tO then
+  if Constr.equal h (Lazy.force tO) then
     0
-  else if Constr.equal h tS then
+  else if Constr.equal h (Lazy.force tS) then
     match args with
       n :: [] -> 1 + unquote_nat n
     | _ -> bad_term_verb trm "unquote_nat"
@@ -150,15 +150,15 @@ let rec unquote_nat trm =
     not_supported_verb trm "unquote_nat"
 
 let unquote_bool trm =
-  if Constr.equal trm ttrue then
+  if Constr.equal trm (Lazy.force ttrue) then
     true
-  else if Constr.equal trm tfalse then
+  else if Constr.equal trm (Lazy.force tfalse) then
     false
   else not_supported_verb trm "from_bool"
 
 let unquote_char trm =
   let (h,args) = app_full trm [] in
-  if Constr.equal h tAscii then
+  if Constr.equal h (Lazy.force tAscii) then
     match args with
       a :: b :: c :: d :: e :: f :: g :: h :: [] ->
       let bits = List.rev [a;b;c;d;e;f;g;h] in
@@ -171,9 +171,9 @@ let unquote_char trm =
 let unquote_string trm =
   let rec go n trm =
     let (h,args) = app_full trm [] in
-    if Constr.equal h tEmptyString then
+    if Constr.equal h (Lazy.force tEmptyString) then
       Bytes.create n
-    else if Constr.equal h tString then
+    else if Constr.equal h (Lazy.force tString) then
       match args with
         c :: s :: [] ->
         let res = go (n + 1) s in
@@ -189,13 +189,13 @@ let unquote_ident trm =
   Id.of_string (unquote_string trm)
 
 let unquote_cast_kind trm =
-  if Constr.equal trm kVmCast then
+  if Constr.equal trm (Lazy.force kVmCast) then
     Constr.VMcast
-  else if Constr.equal trm kCast then
+  else if Constr.equal trm (Lazy.force kCast) then
     Constr.DEFAULTcast
-  else if Constr.equal trm kRevertCast then
+  else if Constr.equal trm (Lazy.force kRevertCast) then
     Constr.REVERTcast
-  else if Constr.equal trm kNative then
+  else if Constr.equal trm (Lazy.force kNative) then
     Constr.VMcast
   else
     not_supported_verb trm "unquote_cast_kind"
@@ -203,9 +203,9 @@ let unquote_cast_kind trm =
 
 let unquote_name trm =
   let (h,args) = app_full trm [] in
-  if Constr.equal h nAnon then
+  if Constr.equal h (Lazy.force nAnon) then
     Names.Anonymous
-  else if Constr.equal h nNamed then
+  else if Constr.equal h (Lazy.force nNamed) then
     match args with
       n :: [] -> Names.Name (unquote_ident n)
     | _ -> bad_term_verb trm "unquote_name"
@@ -266,20 +266,20 @@ let get_level evm s =
 
 let unquote_level evm trm (* of type level *) : Evd.evar_map * Univ.Level.t =
   let (h,args) = app_full trm [] in
-  if Constr.equal h lProp then
+  if Constr.equal h (Lazy.force lProp) then
     match args with
     | [] -> evm, Univ.Level.prop
     | _ -> bad_term_verb trm "unquote_level"
-  else if Constr.equal h lSet then
+  else if Constr.equal h (Lazy.force lSet) then
     match args with
     | [] -> evm, Univ.Level.set
     | _ -> bad_term_verb trm "unquote_level"
-  else if Constr.equal h tLevel then
+  else if Constr.equal h (Lazy.force tLevel) then
     match args with
     | s :: [] -> debug (fun () -> str "Unquoting level " ++ pr_constr trm);
                  get_level evm (unquote_string s)
     | _ -> bad_term_verb trm "unquote_level"
-  else if Constr.equal h tLevelVar then
+  else if Constr.equal h (Lazy.force tLevelVar) then
     match args with
     | l :: [] -> evm, Univ.Level.var (unquote_nat l)
     | _ -> bad_term_verb trm "unquote_level"
@@ -327,7 +327,7 @@ let unquote_proj (qp : quoted_proj) : (quoted_inductive * quoted_int * quoted_in
 
 let unquote_inductive trm =
   let (h,args) = app_full trm [] in
-  if Constr.equal h tmkInd then
+  if Constr.equal h (Lazy.force tmkInd) then
     match args with
       nm :: num :: _ ->
       let s = (unquote_string nm) in
@@ -439,12 +439,12 @@ let unquote_reduction_strategy env evm trm (* of type reductionStrategy *) : Red
   let (trm, args) = app_full trm [] in
   (* from g_tactic.ml4 *)
   let default_flags = Redops.make_red_flag [FBeta;FMatch;FFix;FCofix;FZeta;FDeltaBut []] in
-  if Constr.equal trm tcbv then Cbv default_flags
-  else if Constr.equal trm tcbn then Cbn default_flags
-  else if Constr.equal trm thnf then Hnf
-  else if Constr.equal trm tall then Cbv all_flags
-  else if Constr.equal trm tlazy then Lazy all_flags
-  else if Constr.equal trm tunfold then
+  if Constr.equal trm (Lazy.force tcbv) then Cbv default_flags
+  else if Constr.equal trm (Lazy.force tcbn) then Cbn default_flags
+  else if Constr.equal trm (Lazy.force thnf) then Hnf
+  else if Constr.equal trm (Lazy.force tall) then Cbv all_flags
+  else if Constr.equal trm (Lazy.force tlazy) then Lazy all_flags
+  else if Constr.equal trm (Lazy.force tunfold) then
     match args with
     | name (* to unfold *) :: _ ->
        let name = reduce_all env evm name in
@@ -461,10 +461,10 @@ let denote_local_entry evm trm =
   let (h,args) = app_full trm [] in
   match args with
     x :: [] ->
-    if Constr.equal h tLocalDef then
+    if Constr.equal h (Lazy.force tLocalDef) then
       let evm, x = denote_term evm x in
       evm, Entries.LocalDefEntry x
-    else if  Constr.equal h tLocalAssum then
+    else if Constr.equal h (Lazy.force tLocalAssum) then
       let evm, x = denote_term evm x in
       evm, Entries.LocalAssumEntry x
     else
@@ -475,9 +475,9 @@ let denote_mind_entry_finite trm =
   let (h,args) = app_full trm [] in
   match args with
     [] ->
-    if Constr.equal h cFinite then Declarations.Finite
-    else if  Constr.equal h cCoFinite then Declarations.CoFinite
-    else if  Constr.equal h cBiFinite then Declarations.BiFinite
+    if Constr.equal h (Lazy.force cFinite) then Declarations.Finite
+    else if Constr.equal h (Lazy.force cCoFinite) then Declarations.CoFinite
+    else if Constr.equal h (Lazy.force cBiFinite) then Declarations.BiFinite
     else not_supported_verb trm "denote_mind_entry_finite"
   | _ -> bad_term_verb trm "denote_mind_entry_finite"
 
@@ -485,11 +485,11 @@ let denote_mind_entry_finite trm =
 
 let unquote_map_option f trm =
   let (h,args) = app_full trm [] in
-  if Constr.equal h cSome then
+  if Constr.equal h (Lazy.force cSome) then
     match args with
       _ :: x :: [] -> Some (f x)
     | _ -> bad_term trm
-  else if Constr.equal h cNone then
+  else if Constr.equal h (Lazy.force cNone) then
     match args with
       _ :: [] -> None
     | _ -> bad_term trm
@@ -504,9 +504,9 @@ let unquote_constraint_type trm (* of type constraint_type *) : constraint_type 
   let (h,args) = app_full trm [] in
   match args with
     [] ->
-    if Constr.equal h tunivLt then Univ.Lt
-    else if Constr.equal h tunivLe then Univ.Le
-    else if Constr.equal h tunivEq then Univ.Eq
+    if Constr.equal h (Lazy.force tunivLt) then Univ.Lt
+    else if Constr.equal h (Lazy.force tunivLe) then Univ.Le
+    else if Constr.equal h (Lazy.force tunivEq) then Univ.Eq
     else not_supported_verb trm "unquote_constraint_type"
   | _ -> bad_term_verb trm "unquote_constraint_type"
 
@@ -533,9 +533,9 @@ let unquote_constraints evm c (* of type constraints *) : _ * Constraint.t =
 
 
 let denote_variance trm (* of type Variance *) : Variance.t =
-  if Constr.equal trm cIrrelevant then Variance.Irrelevant
-  else if Constr.equal trm cCovariant then Variance.Covariant
-  else if Constr.equal trm cInvariant then Variance.Invariant
+  if Constr.equal trm (Lazy.force cIrrelevant) then Variance.Irrelevant
+  else if Constr.equal trm (Lazy.force cCovariant) then Variance.Covariant
+  else if Constr.equal trm (Lazy.force cInvariant) then Variance.Invariant
   else not_supported_verb trm "denote_variance"
 
 let denote_ucontext evm trm (* of type UContext.t *) : _ * UContext.t =
@@ -565,13 +565,13 @@ let to_entry_inductive_universes = function
 let denote_universe_context evm trm (* of type universe_context *) : _ * universe_context_type =
   let (h, args) = app_full trm [] in
   match args with
-  | ctx :: [] -> if Constr.equal h cMonomorphic_ctx then
+  | ctx :: [] -> if Constr.equal h (Lazy.force cMonomorphic_ctx) then
                    let evm, ctx = denote_ucontext evm ctx in
                    evm, Monomorphic_uctx ctx
-                 else if Constr.equal h cPolymorphic_ctx then
+                 else if Constr.equal h (Lazy.force cPolymorphic_ctx) then
                    let evm, ctx = denote_ucontext evm ctx in
                    evm, Polymorphic_uctx ctx
-                 else if Constr.equal h cCumulative_ctx then
+                 else if Constr.equal h (Lazy.force cCumulative_ctx) then
                    let evm, ctx = denote_cumulativity_info evm ctx in
                    evm, Cumulative_uctx ctx
                  else
@@ -582,7 +582,7 @@ let denote_universe_context evm trm (* of type universe_context *) : _ * univers
 
 let unquote_one_inductive_entry evm trm (* of type one_inductive_entry *) : _ * Entries.one_inductive_entry =
   let (h,args) = app_full trm [] in
-  if Constr.equal h tBuild_one_inductive_entry then
+  if Constr.equal h (Lazy.force tBuild_one_inductive_entry) then
     match args with
     | id::ar::template::cnames::ctms::[] ->
        let id = unquote_ident id in
@@ -601,7 +601,7 @@ let unquote_one_inductive_entry evm trm (* of type one_inductive_entry *) : _ * 
 
 let unquote_mutual_inductive_entry evm trm (* of type mutual_inductive_entry *) : _ * Entries.mutual_inductive_entry =
   let (h,args) = app_full trm [] in
-  if Constr.equal h tBuild_mutual_inductive_entry then
+  if Constr.equal h (Lazy.force tBuild_mutual_inductive_entry) then
     match args with
     | record::finite::params::inds::univs::priv::[] ->
        let record = unquote_map_option (unquote_map_option unquote_ident) record in
@@ -691,7 +691,7 @@ let rec run_template_program_rec ?(intactic=false) (k : Environ.env * Evd.evar_m
     let (evm, _) = Typing.type_of env evm (EConstr.of_constr trm) in
     let _ = Declare.declare_definition ~kind:Decl_kinds.Definition (unquote_ident name) (trm, Monomorphic_const_entry (Evd.universe_context_set evm)) in
     let env = Global.env () in
-    k (env, evm, unit_tt)
+    k (env, evm, Lazy.force unit_tt)
   | TmQuote trm ->
     let qt = TermReify.quote_term env trm (* user should do the reduction (using tmEval) if they want *)
     in k (env, evm, qt)
@@ -731,7 +731,7 @@ let rec run_template_program_rec ?(intactic=false) (k : Environ.env * Evd.evar_m
     let univs = Environ.universes env in
     k (env, evm, quote_ugraph univs)
   | TmPrint trm -> Feedback.msg_info (pr_constr trm);
-    k (env, evm, unit_tt)
+    k (env, evm, Lazy.force unit_tt)
   | TmFail trm ->
     CErrors.user_err (str (unquote_string trm))
   | TmAbout id ->
@@ -739,10 +739,10 @@ let rec run_template_program_rec ?(intactic=false) (k : Environ.env * Evd.evar_m
       let id = unquote_string id in
       try
         let gr = Smartlocate.locate_global_with_alias (Libnames.qualid_of_string id) in
-        let opt = Constr.mkApp (cSome , [|tglobal_reference ; quote_global_reference gr|]) in
+        let opt = Constr.mkApp (Lazy.force cSome , [|Lazy.force tglobal_reference ; quote_global_reference gr|]) in
         k (env, evm, opt)
       with
-      | Not_found -> k (env, evm, Constr.mkApp (cNone, [|tglobal_reference|]))
+      | Not_found -> k (env, evm, Constr.mkApp (Lazy.force cNone, [|Lazy.force tglobal_reference|]))
     end
   | TmCurrentModPath ->
     let mp = Lib.current_mp () in
@@ -756,7 +756,7 @@ let rec run_template_program_rec ?(intactic=false) (k : Environ.env * Evd.evar_m
   | TmMkInductive mind ->
     declare_inductive env evm mind;
     let env = Global.env () in
-    k (env, evm, unit_tt)
+    k (env, evm, Lazy.force unit_tt)
   | TmUnquote t ->
        (try
          let t = reduce_all env evm t in
@@ -764,7 +764,7 @@ let rec run_template_program_rec ?(intactic=false) (k : Environ.env * Evd.evar_m
          let typ = Retyping.get_type_of env evm (EConstr.of_constr t') in
          let evm, typ = Evarsolve.refresh_universes (Some false) env evm typ in
          let make_typed_term typ term evm =
-           match texistT_typed_term with
+           match Lazy.force texistT_typed_term with
            | ConstructRef ctor ->
              let u = (Univ.Instance.to_array universes).(1) in
              let term = Constr.mkApp
@@ -793,7 +793,7 @@ let rec run_template_program_rec ?(intactic=false) (k : Environ.env * Evd.evar_m
        let evm, typ = (match denote_option s with Some s -> let red = unquote_reduction_strategy env evm s in reduce env evm red typ | None -> evm, typ) in
        (try
           let (evm,t) = Typeclasses.resolve_one_typeclass env evm (EConstr.of_constr typ) in
-          k (env, evm, Constr.mkApp (cSome, [| typ; EConstr.to_constr evm t|]))
+          k (env, evm, Constr.mkApp (Lazy.force cSome, [| typ; EConstr.to_constr evm t|]))
         with
-          Not_found -> k (env, evm, Constr.mkApp (cNone, [|typ|]))
+          Not_found -> k (env, evm, Constr.mkApp (Lazy.force cNone, [|typ|]))
        )

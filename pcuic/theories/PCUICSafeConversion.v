@@ -2786,31 +2786,48 @@ Section Conversion.
     revert e1.
     funelim (reducible_head Γ t π h).
     all: intro e1 ; noconf e1.
-    - apply unfold_one_fix_cored in e1 as c1.
+    - apply unfold_one_fix_cored in e1 as r1.
+      apply unfold_one_fix_decompose in e1 as d1.
       match goal with
-      | |- cored _ _ (zip (reduce_stack ?fl ?s ?g ?t ?p ?h)) _ =>
-        destruct (reduce_stack_sound fl s g t p h) as [r2] ;
-        pose proof (reduce_stack_decompose fl s g t p h) as d2 ;
-        case_eq (reduce_stack fl s g t p h) ; intros args ρ e
+      | |- cored _ _ (zip (reduce_stack ?f ?Σ ?Γ ?t ?π ?h)) _ =>
+        destruct (reduce_stack_sound f Σ Γ t π h) as [r2] ;
+        case_eq (reduce_stack f Σ Γ t π h) ; intros args ρ e
       end.
+      rewrite e in r2.
       eapply red_cored_cored ; try eassumption.
-      symmetry in e2. apply decompose_stack_eq in e2 as ?. subst.
-      cbn in r2. rewrite zipc_appstack in r2. cbn in r2.
-      rewrite zipc_appstack.
-      rewrite decompose_stack_appstack in d2. cbn in d2.
-      rewrite e in d2. rewrite e in r2.
-      cbn in d2. cbn in r2.
-      case_eq (decompose_stack ρ). intros l' s ee.
-      apply decompose_stack_eq in ee as ?. subst.
-      cbn. rewrite zipc_appstack.
-      rewrite ee in d2. cbn in d2. subst.
-      cbn. rewrite zipc_appstack in r2. cbn in r2.
-      apply unfold_one_fix_decompose in e1 as d.
-      rewrite e2 in d.
-      case_eq (decompose_stack π). intros l0 s e'.
-      rewrite e' in d. cbn in d. subst.
-      apply decompose_stack_eq in e' as ?. subst.
-      rewrite stack_context_appstack in r2.
+      apply red_context in r2. cbn in r2.
+      (* We're proving the wrong goal! *)
+      (* rewrite zipc_stack_cat. *)
+      (* pose proof (decompose_stack_eq _ _ _ (eq_sym e2)). subst. *)
+      (* rewrite !zipc_appstack in r2. cbn in r2. *)
+      (* rewrite zipc_appstack. *)
+      (* assumption. *)
+
+(* apply unfold_one_fix_cored in e1 as c1. *)
+(*       match goal with *)
+(*       | |- cored _ _ (zip (reduce_stack ?fl ?s ?g ?t ?p ?h)) _ => *)
+(*         destruct (reduce_stack_sound fl s g t p h) as [r2] ; *)
+(*         pose proof (reduce_stack_decompose fl s g t p h) as d2 ; *)
+(*         case_eq (reduce_stack fl s g t p h) ; intros args ρ e *)
+(*       end. *)
+(*       eapply red_cored_cored ; try eassumption. *)
+(*       symmetry in e2. apply decompose_stack_eq in e2 as ?. subst. *)
+(*       cbn in r2. rewrite zipc_appstack in r2. cbn in r2. *)
+(*       rewrite zipc_appstack. *)
+(*       rewrite decompose_stack_appstack in d2. cbn in d2. *)
+(*       rewrite e in d2. rewrite e in r2. *)
+(*       cbn in d2. cbn in r2. *)
+(*       case_eq (decompose_stack ρ). intros l' s ee. *)
+(*       apply decompose_stack_eq in ee as ?. subst. *)
+(*       cbn. rewrite zipc_appstack. *)
+(*       rewrite ee in d2. cbn in d2. subst. *)
+(*       cbn. rewrite zipc_appstack in r2. cbn in r2. *)
+(*       apply unfold_one_fix_decompose in e1 as d. *)
+(*       rewrite e2 in d. *)
+(*       case_eq (decompose_stack π). intros l0 s e'. *)
+(*       rewrite e' in d. cbn in d. subst. *)
+(*       apply decompose_stack_eq in e' as ?. subst. *)
+(*       rewrite stack_context_appstack in r2. *)
 
   (*   - apply unfold_one_case_red in e as r. destruct r as [r]. *)
   (*     apply unfold_one_case_stack in e as d. *)
@@ -2900,6 +2917,7 @@ Section Conversion.
   Qed.
   Next Obligation.
     eapply R_cored. simpl.
+    eapply cored_it_mkLambda_or_LetIn.
   Admitted.
   Next Obligation.
   Admitted.

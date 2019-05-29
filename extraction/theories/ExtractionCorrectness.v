@@ -2,8 +2,8 @@
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
 From Template Require Import config utils monad_utils BasicAst AstUtils.
-From PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICTyping PCUICWeakening PCUICSubstitution PCUICChecker PCUICRetyping PCUICMetaTheory PCUICWcbvEval PCUICSR.
-From TemplateExtraction Require Import EAst ELiftSubst ETyping EWcbvEval Extract Prelim ESubstitution EInversion.
+From PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICTyping PCUICWeakening PCUICSubstitution PCUICChecker PCUICRetyping PCUICMetaTheory PCUICWcbvEval PCUICSR  PCUICClosed.
+From TemplateExtraction Require Import EAst ELiftSubst ETyping EWcbvEval Extract Prelim ESubstitution EInversion EWeakening.
 Require Import String.
 Local Open Scope string_scope.
 Set Asymmetric Patterns.
@@ -252,8 +252,9 @@ Qed.
 Require Import PCUIC.PCUICWeakeningEnv.
 Lemma extract_constant:
   forall (Σ : PCUICAst.global_context) (c : ident) (decl : PCUICAst.constant_body) (body : PCUICAst.term)
-    (u : universe_instance),
+    (u : universe_instance) T,
     wf Σ ->
+    Σ;;; [] |- PCUICAst.tConst c u : T ->
     PCUICTyping.declared_constant Σ c decl ->
     PCUICAst.cst_body decl = Some body ->
     exists decl' : constant_body, 
@@ -261,48 +262,49 @@ Lemma extract_constant:
         cst_body decl' = Some (extract Σ [] (PCUICUnivSubst.subst_instance_constr u body)).
 Proof.
   intros.
-  unfold PCUICTyping.declared_constant, declared_constant in *.
-  destruct Σ as [Σ ?]. induction Σ.
+  (* eapply lookup_on_global_env in H as (? & ? & ?); eauto. cbn in *. *)
+  (* unfold on_constant_decl in o. rewrite H0 in o. cbn in o. *)
+  (* unfold on_global_env in x0. destruct x. cbn in *. *)
+  destruct Σ as [Σ C]. induction Σ.
   - cbn in *. inv H.
-  - cbn in *. destruct ? in H.
-    * inv H. cbn. destruct (ident_eq_spec c c).
+  - cbn in *. inv H.
+    destruct ? in H2.
+    + inv H2.
+      unfold declared_constant. cbn.
+      destruct (ident_eq_spec c c); try congruence.
       eexists. split. reflexivity.
-      cbn. rewrite H0. cbn. admit.
-      firstorder.
-    * eapply IHΣ in H as (? & ? & ?).
-      2:{ eapply wf_extends; eauto.
-          exists [a]. reflexivity. }
-      exists x. destruct a.
-      -- cbn. cbn in E. rewrite E. split; eauto.
-         rewrite H1. admit.
-      -- cbn. rewrite E. split; eauto.
-         rewrite H1. f_equal. 
-      
-
-      
-  eapply weaken_lookup_on_global_env with (decl0 := PCUICAst.ConstantDecl c decl) in X.
-  
-  
-                    .
-  pose (P := fun  Σ (_ : PCUICAst.context) trm (tp : option PCUICAst.term) => match tp with Some tp => { '(t',tp') : _ & (extract Σ [] trm =  t') * (extract Σ [] tp = Checked tp')}%type | None => False end).
-  assert (H' := H).
-  eapply weaken_lookup_on_global_env with (P0 := P) in H; subst P; eauto.
-  - unfold on_global_decl, on_constant_decl in H. rewrite H1 in H.
-    destruct H as [[] []].
-    exists (Build_constant_body t0 (Some t)), t. simpl. repeat split.
-    unfold declared_constant. destruct Σ as [decls univ].
-    unfold PCUICTyping.declared_constant in *. simpl in H'.
-    admit. admit.
-  - unfold weaken_env_prop. intros. destruct T; try tauto. admit.
-  - unfold on_global_env. destruct Σ. cbn. revert H0 X. clear.
-    (* revert t Σ'; induction g; simpl; intros. *)
-    (* + inv H0. econstructor. admit. *)
-    (* + destruct ? in H0; inv H0. econstructor. eapply IHg; auto. admit. admit. admit. *)
-    (*   destruct a; simpl. *)
-    (*   * unfold on_constant_decl. destruct ?. *)
-      
+      cbn.
+      rewrite H0. cbn. inv X.
+      cbn in *. f_equal.
+      admit.
+    + edestruct IHΣ.
+      * eapply wf_extends. eauto. eexists [ _ ]; cbn; eauto.
+      * admit.
+      * eapply H2.
+      * destruct H.
+        destruct a.
+        -- eexists. split.
+           unfold declared_constant. cbn. cbn in *. rewrite E.
+           eapply H.
+           rewrite H1. f_equal.
+           eapply extract_extends.
+           ++ eapply wf_extends. eauto. eexists [ _ ]; cbn; eauto.
+           ++ econstructor.
+           ++ admit.
+           ++ eauto.
+           ++ eexists [ _ ]; cbn; eauto.
+        -- eexists. split.
+           unfold declared_constant. cbn. cbn in *. rewrite E.
+           eapply H.
+           rewrite H1. f_equal.
+           eapply extract_extends.
+           ++ eapply wf_extends. eauto. eexists [ _ ]; cbn; eauto.
+           ++ econstructor.
+           ++ admit.
+           ++ eauto.
+           ++ eexists [ _ ]; cbn; eauto.
 Admitted.
-
+  
 (** ** Concerning context conversion *)
 
 Require Import PCUIC.PCUICGeneration.
@@ -492,8 +494,8 @@ Proof.
               econstructor; eauto.
               eapply type_mkApps.
 
-              (* branches of case are typed *) admit.
-              eapply t1.
+              (* branches of case are typed *) admit. admit.
+              (* eapply t1. *)
   - (** fix case *) rewrite extract_Apps.
     cbn. destruct is_type_or_proof eqn:Heq.
     + inv pre. rewrite is_type_extract.
@@ -562,7 +564,9 @@ Proof.
         eapply type_tFix_inv in t as (? & ? & ? & [] & ?).
         rewrite extract_Apps in IHeval.
         destruct is_type_or_proof eqn:He.
-        -- admit.
+        -- (* contradictory case *)
+           (* if a fixpoint is not a proof (Heq), its body won't be a proof, even after substitution of arguments *)
+           admit.          
         -- erewrite (extract_subst Σ [] (fix_decls mfix) []) in IHeval.
            cbn in IHeval.
            
@@ -577,8 +581,39 @@ Proof.
            rewrite <- H. eapply IHeval.
            econstructor. eapply type_mkApps.
            all:cbn; eauto.
-           ++ admit (* typing of fix_subst *).
-           ++ admit (* typing_spine and eval *).
+           ++ unfold PCUICTyping.unfold_fix in *.
+              rewrite En in e. inv e. eapply t.                                          
+           ++ 
+
+                 Lemma typing_spine_cumul:
+                   forall (Σ : PCUICAst.global_context) (T x1 : PCUICAst.term), Σ;;; [] |- x1 <= T -> typing_spine Σ [] x1 [] T.
+                 Proof.
+                   intros Σ T x1 X.
+                 Admitted.
+              
+             Lemma typing_spine_eval:
+               forall (Σ : PCUICAst.global_context) (args args' : list PCUICAst.term) (X : All2 (PCUICWcbvEval.eval Σ []) args args') (bla : wf Σ)
+                      (T x x0 : PCUICAst.term) (t0 : typing_spine Σ [] x args x0) (c : Σ;;; [] |- x0 <= T) (x1 : PCUICAst.term)
+                      (c0 : Σ;;; [] |- x1 <= x), typing_spine Σ [] x1 args' T.
+             Proof.
+               intros Σ args args' X wf T x x0 t0 c x1 c0. revert args' X.
+               dependent induction t0; intros.
+               - inv X. assert (cumul Σ [] x1 T). eapply cumul_trans; eauto.
+                 clear - wf X.
+                 eapply typing_spine_cumul.  eauto.
+               - inv X. econstructor.
+                 + eauto.
+                 + eapply cumul_trans; eauto.
+                 + eapply subject_reduction_eval; eauto.
+                 + eapply IHt0; eauto.
+                   eapply PCUICCumulativity.red_cumul_inv.
+                   unfold PCUICLiftSubst.subst1.
+                   eapply (red_red Σ [] [_] [] [_] [_]).
+                   eauto. econstructor. eapply wcbeval_red. eauto.
+                   econstructor. econstructor. econstructor. now rewrite parsubst_empty.
+                   Grab Existential Variables. econstructor.
+             Qed.
+             eapply typing_spine_eval; eauto.
            ++ rewrite <- efix_subst'_subst.
               rewrite map_length.
               rewrite <- fix_subst'_subst.
@@ -595,7 +630,7 @@ Proof.
     + erewrite is_type_extract. econstructor; eauto.
       erewrite <- eval_is_type. eassumption. eauto.
     + inv pre.
-      destruct (extract_constant _ c decl body u extr_env_wf H H0) as (decl' & ? & ?); eauto.
+      destruct (@extract_constant _ c decl body u T extr_env_wf extr_typed0 H H0) as (decl' & ? & ?); eauto.
       econstructor.
       * eauto.
       * eauto.

@@ -33,12 +33,13 @@ Section Conversion.
   Inductive state :=
   | Reduction (t : term)
   | Term (t : term)
-  | Args.
-  (* | Fallback *) (* TODO *)
+  | Args
+  | Fallback (t : term).
 
   Inductive stateR : state -> state -> Prop :=
   | stateR_Term_Reduction : forall u v, stateR (Term u) (Reduction v)
-  | stateR_Arg_Term : forall u, stateR Args (Term u).
+  | stateR_Arg_Term : forall u, stateR Args (Term u)
+  | stateR_Fallback_Term : forall u v, stateR (Fallback u) (Term v).
 
   Derive Signature for stateR.
 
@@ -48,13 +49,19 @@ Section Conversion.
     assert (Acc stateR Args) as hArgs.
     { constructor. intros s h.
       dependent induction h.
-      all: try discriminate.
+      all: discriminate.
+    }
+    assert (forall t, Acc stateR (Fallback t)) as hFall.
+    { intros t. constructor. intros s h.
+      dependent induction h.
+      all: discriminate.
     }
     assert (forall t, Acc stateR (Term t)) as hTerm.
     { intros t. constructor. intros s h.
       dependent induction h.
       all: try discriminate.
-      apply hArgs.
+      - apply hArgs.
+      - apply hFall.
     }
     assert (forall t, Acc stateR (Reduction t)) as hRed.
     { intros t. constructor. intros s h.
@@ -71,6 +78,7 @@ Section Conversion.
   Definition wts Γ s t π :=
     match s with
     | Reduction t'
+    | Fallback t'
     | Term t' => wtp Γ t' π
     | Args => wtp Γ t π
     end.
@@ -84,7 +92,7 @@ Section Conversion.
     stk1 : stack ;
     stk2 : stack ;
     tm' := match st with
-           | Reduction t | Term t => t
+           | Reduction t | Fallback t | Term t => t
            | Args => tm
            end ;
     wth : welltyped Σ [] (zipx ctx tm' stk2)
@@ -97,7 +105,7 @@ Section Conversion.
     nl_stk1 : stack ;
     nl_stk2 : stack ;
     nl_tm' := match nl_st with
-           | Reduction t | Term t => t
+           | Reduction t | Fallback t | Term t => t
            | Args => nl_tm
            end ;
     nl_wth : welltyped (nlg Σ) [] (zipx nl_ctx nl_tm' nl_stk2)
@@ -108,6 +116,7 @@ Section Conversion.
     | Reduction t => Reduction (nl t)
     | Term t => Term (nl t)
     | Args => Args
+    | Fallback t => Fallback (nl t)
     end.
 
   Definition nl_pack (p : pack) : nlpack.
@@ -123,6 +132,8 @@ Section Conversion.
       eapply welltyped_rename ; auto.
       + exact h.
       + destruct s.
+        * cbn. rewrite <- nl_zipx.
+          eapply eq_term_tm_nl.
         * cbn. rewrite <- nl_zipx.
           eapply eq_term_tm_nl.
         * cbn. rewrite <- nl_zipx.
@@ -346,7 +357,7 @@ Section Conversion.
   Lemma zwts :
     forall {Γ s t π},
       wts Γ s t π ->
-      welltyped Σ [] (zipx Γ match s with Reduction u | Term u => u | Args => t end π).
+      welltyped Σ [] (zipx Γ match s with Reduction u | Fallback u | Term u => u | Args => t end π).
   Proof.
     intros Γ s t π h.
     destruct s ; assumption.
@@ -356,6 +367,7 @@ Section Conversion.
     match s with
     | Reduction t' =>
       forall leq, { b : bool | if b then conv leq Σ Γ (zippx t π) (zippx t' π') else True }
+    | Fallback t'
     | Term t' =>
       forall leq,
         isred (t, π) ->
@@ -384,6 +396,8 @@ Section Conversion.
     (aux (Term t2) Γ t1 π1 π2 _ _ _ leq _ _) (only parsing).
   Notation isconv_args_raw Γ t π1 π2 aux :=
     (aux Args Γ t π1 π2 _ _ _) (only parsing).
+  Notation isconv_fallback_raw Γ leq t1 π1 t2 π2 aux :=
+    (aux (Fallback t2) Γ t1 π1 π2 _ _ _ leq _ _) (only parsing).
 
   Notation isconv_red Γ leq t1 π1 t2 π2 aux :=
     (repack (isconv_red_raw Γ leq t1 π1 t2 π2 aux)) (only parsing).
@@ -391,6 +405,8 @@ Section Conversion.
     (repack (isconv_prog_raw Γ leq t1 π1 t2 π2 aux)) (only parsing).
   Notation isconv_args Γ t π1 π2 aux :=
     (repack (isconv_args_raw Γ t π1 π2 aux)) (only parsing).
+  Notation isconv_fallback Γ leq t1 π1 t2 π2 aux :=
+    (repack (isconv_fallback_raw Γ leq t1 π1 t2 π2 aux)) (only parsing).
 
   Equations(noeqns) _isconv_red (Γ : context) (leq : conv_pb)
             (t1 : term) (π1 : stack) (h1 : wtp Γ t1 π1)
@@ -1902,6 +1918,14 @@ Section Conversion.
     assumption.
   Qed.
 
+  Equations(noeqns) _isconv_fallback (Γ : context) (leq : conv_pb)
+            (t1 : term) (π1 : stack) (h1 : wtp Γ t1 π1)
+            (t2 : term) (π2 : stack) (h2 : wtp Γ t2 π2)
+            (ir1 : isred (t1, π1)) (ir2 : isred (t2, π2))
+            (aux : Aux (Fallback t2) Γ t1 π1 π2 h2)
+    : { b : bool | if b then conv leq Σ Γ (zippx t1 π1) (zippx t2 π2) else True } :=
+    _isconv_fallback Γ leq t1 π1 h1 t2 π2 h2 ir1 ir2 aux := no.
+
   Equations _isconv (s : state) (Γ : context)
             (t : term) (π1 : stack) (h1 : wtp Γ t π1)
             (π2 : stack) (h2 : wts Γ s t π2)
@@ -1914,7 +1938,10 @@ Section Conversion.
       λ { | leq | r1 | r2 := _isconv_prog Γ leq t1 π1 h1 t2 π2 h2 r1 r2 aux } ;
 
     _isconv Args Γ t π1 h1 π2 h2 aux :=
-        _isconv_args Γ t π1 h1 π2 h2 aux.
+        _isconv_args Γ t π1 h1 π2 h2 aux ;
+
+    _isconv (Fallback t2) Γ t1 π1 h1 π2 h2 aux :=
+      λ { | leq | r1 | r2 := _isconv_fallback Γ leq t1 π1 h1 t2 π2 h2 r1 r2 aux }.
 
   Equations(noeqns) isconv_full (s : state) (Γ : context)
             (t : term) (π1 : stack) (h1 : wtp Γ t π1)

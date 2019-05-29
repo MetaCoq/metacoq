@@ -2524,13 +2524,108 @@ Section Conversion.
     assumption.
   Qed.
 
+  Equations discr_construct_cofix (t : term) : Prop :=
+    discr_construct_cofix (tConstruct ind n ui) := False ;
+    discr_construct_cofix (tCoFix mfix idx) := False ;
+    discr_construct_cofix _ := True.
+
+  Inductive construct_cofix_view : term -> Set :=
+  | ccview_construct : forall ind n ui, construct_cofix_view (tConstruct ind n ui)
+  | ccview_cofix : forall mfix idx, construct_cofix_view (tCoFix mfix idx)
+  | ccview_other : forall t, discr_construct_cofix t -> construct_cofix_view t.
+
+  Equations cc_viewc t : construct_cofix_view t :=
+    cc_viewc (tConstruct ind n ui) := ccview_construct ind n ui ;
+    cc_viewc (tCoFix mfix idx) := ccview_cofix mfix idx ;
+    cc_viewc t := ccview_other t I.
+
+  Equations unfold_one_case (Γ : context) (c : term) (h : welltyped Σ Γ c) : option (term * stack) :=
+    unfold_one_case Γ c h with inspect (reduce_stack RedFlags.default Σ Γ c ε _) := {
+    | @exist (cred, ρ) eq with cc_viewc cred := {
+      | ccview_construct ind n ui := Some (tConstruct ind n ui, ρ) ;
+      | ccview_cofix mfix idx := Some (tCoFix mfix idx, ρ) ;
+      | ccview_other t _ := None
+      }
+    }.
+
+  (* Lemma unfold_one_case_cored : *)
+  (*   forall Γ c h cred ρ, *)
+  (*     Some (cred, ρ) = unfold_one_case Γ c h -> *)
+  (*     cored Σ Γ (zipc cred ρ) c. *)
+  (* Proof. *)
+  (*   intros Γ c h cred ρ e. *)
+  (*   revert e. *)
+  (*   funelim (unfold_one_case Γ c h). *)
+  (*   all: intro ee ; noconf ee. *)
+  (*   - match type of e with *)
+  (*     | _ = reduce_stack ?flags ?Σ ?Γ ?t ?π ?h => *)
+  (*       pose proof (reduce_stack_sound flags Σ Γ t π h) as [r1] *)
+  (*     end. *)
+  (*     rewrite <- e in r1. cbn in r1. *)
+
+  Equations reducible_head (Γ : context) (t : term) (π : stack)
+            (h : wtp Γ t π)
+    : option (term * stack) :=
+
+    reducible_head Γ (tFix mfix idx) π h := unfold_one_fix Γ mfix idx π h ;
+
+    reducible_head Γ (tCase ind p c brs) π h
+    with inspect (unfold_one_case (Γ ,,, stack_context π) c _) := {
+    | @exist (Some (cred, ρ)) eq := Some (tCase ind p (zipc cred ρ) brs, π) ;
+    | @exist None _ := None
+    } ;
+
+    reducible_head Γ (tProj p c) π h
+    with inspect (unfold_one_case (Γ ,,, stack_context π) c _) := {
+    | @exist (Some (cred, ρ)) eq := Some (tProj p (zipc cred ρ), π) ;
+    | @exist None _ := None
+    } ;
+
+    (* TODO tConst *)
+
+    reducible_head Γ _ π h := None.
+  Next Obligation.
+    apply welltyped_zipx in h. zip fold in h.
+    apply welltyped_context in h. simpl in h.
+    (* Need inversion on Case *)
+  Admitted.
+  Next Obligation.
+    apply welltyped_zipx in h. zip fold in h.
+    apply welltyped_context in h. simpl in h.
+    (* Need inversion on Proj *)
+  Admitted.
+
   Equations(noeqns) _isconv_fallback (Γ : context) (leq : conv_pb)
             (t1 : term) (π1 : stack) (h1 : wtp Γ t1 π1)
             (t2 : term) (π2 : stack) (h2 : wtp Γ t2 π2)
             (ir1 : isred (t1, π1)) (ir2 : isred (t2, π2))
             (aux : Aux (Fallback t2) Γ t1 π1 π2 h2)
     : { b : bool | if b then conv leq Σ Γ (zippx t1 π1) (zippx t2 π2) else True } :=
-    _isconv_fallback Γ leq t1 π1 h1 t2 π2 h2 ir1 ir2 aux := no.
+    _isconv_fallback Γ leq t1 π1 h1 t2 π2 h2 ir1 ir2 aux
+    with inspect (reducible_head Γ t1 π1 h1) := {
+    | @exist (Some (rt1, ρ1)) eq1 with inspect (decompose_stack ρ1) := {
+      | @exist (l1, θ1) eq2
+        with inspect (reduce_stack nodelta_flags Σ (Γ ,,, stack_context ρ1) rt1 (appstack l1 ε) _) := {
+        | @exist (rt1', θ1') eq3 :=
+          isconv_prog Γ leq rt1' (θ1' +++ θ1) t2 π2 aux
+        }
+      } ;
+    | @exist None _ := no (* TODO *)
+    }.
+  Next Obligation.
+    cbn. rewrite zipc_appstack. cbn.
+    apply welltyped_zipx in h1 as hh1.
+  Admitted.
+  Next Obligation.
+  Admitted.
+  Next Obligation.
+    eapply R_cored. simpl.
+  Admitted.
+  Next Obligation.
+  Admitted.
+  Next Obligation.
+    destruct b ; auto.
+  Admitted.
 
   Equations _isconv (s : state) (Γ : context)
             (t : term) (π1 : stack) (h1 : wtp Γ t π1)

@@ -1002,8 +1002,51 @@ Section Conversion.
     | @exist false _ := no
     } ;
 
-    (* TODO Fallback *)
-    _isconv_prog Γ leq t1 π1 h1 t2 π2 h2 ir1 ir2 aux := no.
+    _isconv_prog Γ leq t1 π1 h1 t2 π2 h2 ir1 ir2 aux :=
+      isconv_fallback Γ leq t1 π1 t2 π2 aux.
+
+  (* Fallback *)
+  (* All this duplication suggests a view is needed *)
+  Next Obligation.
+    unshelve eapply R_stateR.
+    all: try reflexivity.
+    simpl. constructor.
+  Qed.
+  Next Obligation.
+    unshelve eapply R_stateR.
+    all: try reflexivity.
+    simpl. constructor.
+  Qed.
+  Next Obligation.
+    unshelve eapply R_stateR.
+    all: try reflexivity.
+    simpl. constructor.
+  Qed.
+  Next Obligation.
+    unshelve eapply R_stateR.
+    all: try reflexivity.
+    simpl. constructor.
+  Qed.
+  Next Obligation.
+    unshelve eapply R_stateR.
+    all: try reflexivity.
+    simpl. constructor.
+  Qed.
+  Next Obligation.
+    unshelve eapply R_stateR.
+    all: try reflexivity.
+    simpl. constructor.
+  Qed.
+  Next Obligation.
+    unshelve eapply R_stateR.
+    all: try reflexivity.
+    simpl. constructor.
+  Qed.
+  Next Obligation.
+    unshelve eapply R_stateR.
+    all: try reflexivity.
+    simpl. constructor.
+  Qed.
 
   (* tProd *)
   Next Obligation.
@@ -1056,6 +1099,83 @@ Section Conversion.
     eapply Prod_conv ; auto.
   Qed.
 
+  (* More Fallback *)
+  Next Obligation.
+    unshelve eapply R_stateR.
+    all: try reflexivity.
+    simpl. constructor.
+  Qed.
+  Next Obligation.
+    unshelve eapply R_stateR.
+    all: try reflexivity.
+    simpl. constructor.
+  Qed.
+  Next Obligation.
+    unshelve eapply R_stateR.
+    all: try reflexivity.
+    simpl. constructor.
+  Qed.
+  Next Obligation.
+    unshelve eapply R_stateR.
+    all: try reflexivity.
+    simpl. constructor.
+  Qed.
+  Next Obligation.
+    unshelve eapply R_stateR.
+    all: try reflexivity.
+    simpl. constructor.
+  Qed.
+  Next Obligation.
+    unshelve eapply R_stateR.
+    all: try reflexivity.
+    simpl. constructor.
+  Qed.
+  Next Obligation.
+    unshelve eapply R_stateR.
+    all: try reflexivity.
+    simpl. constructor.
+  Qed.
+  Next Obligation.
+    unshelve eapply R_stateR.
+    all: try reflexivity.
+    simpl. constructor.
+  Qed.
+  Next Obligation.
+    unshelve eapply R_stateR.
+    all: try reflexivity.
+    simpl. constructor.
+  Qed.
+  Next Obligation.
+    unshelve eapply R_stateR.
+    all: try reflexivity.
+    simpl. constructor.
+  Qed.
+  Next Obligation.
+    unshelve eapply R_stateR.
+    all: try reflexivity.
+    simpl. constructor.
+  Qed.
+  Next Obligation.
+    unshelve eapply R_stateR.
+    all: try reflexivity.
+    simpl. constructor.
+  Qed.
+  Next Obligation.
+    unshelve eapply R_stateR.
+    all: try reflexivity.
+    simpl. constructor.
+  Qed.
+  Next Obligation.
+    unshelve eapply R_stateR.
+    all: try reflexivity.
+    simpl. constructor.
+  Qed.
+  Next Obligation.
+    unshelve eapply R_stateR.
+    all: try reflexivity.
+    simpl. constructor.
+  Qed.
+
   (* tLambda *)
   Next Obligation.
     unshelve eapply R_positionR.
@@ -1098,9 +1218,171 @@ Section Conversion.
     cbn. assumption.
   Qed.
 
+  (* More Fallback *)
+  Next Obligation.
+    unshelve eapply R_stateR.
+    all: try reflexivity.
+    simpl. constructor.
+  Qed.
+  Next Obligation.
+    unshelve eapply R_stateR.
+    all: try reflexivity.
+    simpl. constructor.
+  Qed.
+  Next Obligation.
+    unshelve eapply R_stateR.
+    all: try reflexivity.
+    simpl. constructor.
+  Qed.
+  Next Obligation.
+    unshelve eapply R_stateR.
+    all: try reflexivity.
+    simpl. constructor.
+  Qed.
+  Next Obligation.
+    unshelve eapply R_stateR.
+    all: try reflexivity.
+    simpl. constructor.
+  Qed.
+  Next Obligation.
+    unshelve eapply R_stateR.
+    all: try reflexivity.
+    simpl. constructor.
+  Qed.
+  Next Obligation.
+    unshelve eapply R_stateR.
+    all: try reflexivity.
+    simpl. constructor.
+  Qed.
+  Next Obligation.
+    unshelve eapply R_stateR.
+    all: try reflexivity.
+    simpl. constructor.
+  Qed.
+  Next Obligation.
+    unshelve eapply R_stateR.
+    all: try reflexivity.
+    simpl. constructor.
+  Qed.
+  Next Obligation.
+    unshelve eapply R_stateR.
+    all: try reflexivity.
+    simpl. constructor.
+  Qed.
+  Next Obligation.
+    unshelve eapply R_stateR.
+    all: try reflexivity.
+    simpl. constructor.
+  Qed.
+  Next Obligation.
+    unshelve eapply R_stateR.
+    all: try reflexivity.
+    simpl. constructor.
+  Qed.
+  Next Obligation.
+    unshelve eapply R_stateR.
+    all: try reflexivity.
+    simpl. constructor.
+  Qed.
+  Next Obligation.
+    unshelve eapply R_stateR.
+    all: try reflexivity.
+    simpl. constructor.
+  Qed.
+  Next Obligation.
+    unshelve eapply R_stateR.
+    all: try reflexivity.
+    simpl. constructor.
+  Qed.
+
   (* tApp *)
   Next Obligation.
     destruct ir1 as [ha1 _]. discriminate ha1.
+  Qed.
+
+  (* More Fallback *)
+  Next Obligation.
+    unshelve eapply R_stateR.
+    all: try reflexivity.
+    simpl. constructor.
+  Qed.
+  Next Obligation.
+    (* What is this?? *)
+  Admitted.
+  Next Obligation.
+    unshelve eapply R_stateR.
+    all: try reflexivity.
+    simpl. constructor.
+  Qed.
+  Next Obligation.
+    unshelve eapply R_stateR.
+    all: try reflexivity.
+    simpl. constructor.
+  Qed.
+  Next Obligation.
+    unshelve eapply R_stateR.
+    all: try reflexivity.
+    simpl. constructor.
+  Qed.
+  Next Obligation.
+    unshelve eapply R_stateR.
+    all: try reflexivity.
+    simpl. constructor.
+  Qed.
+  Next Obligation.
+    unshelve eapply R_stateR.
+    all: try reflexivity.
+    simpl. constructor.
+  Qed.
+  Next Obligation.
+    unshelve eapply R_stateR.
+    all: try reflexivity.
+    simpl. constructor.
+  Qed.
+  Next Obligation.
+    unshelve eapply R_stateR.
+    all: try reflexivity.
+    simpl. constructor.
+  Qed.
+  Next Obligation.
+    unshelve eapply R_stateR.
+    all: try reflexivity.
+    simpl. constructor.
+  Qed.
+  Next Obligation.
+    unshelve eapply R_stateR.
+    all: try reflexivity.
+    simpl. constructor.
+  Qed.
+  Next Obligation.
+    unshelve eapply R_stateR.
+    all: try reflexivity.
+    simpl. constructor.
+  Qed.
+  Next Obligation.
+    unshelve eapply R_stateR.
+    all: try reflexivity.
+    simpl. constructor.
+  Qed.
+  Next Obligation.
+    unshelve eapply R_stateR.
+    all: try reflexivity.
+    simpl. constructor.
+  Qed.
+  Next Obligation.
+    unshelve eapply R_stateR.
+    all: try reflexivity.
+    simpl. constructor.
+  Qed.
+  Next Obligation.
+    unshelve eapply R_stateR.
+    all: try reflexivity.
+    simpl. constructor.
+  Qed.
+  Next Obligation.
+    unshelve eapply R_stateR.
+    all: try reflexivity.
+    simpl. constructor.
   Qed.
 
   (* tConst *)
@@ -1198,13 +1480,106 @@ Section Conversion.
     eapply red_zippx. eapply red_const. eassumption.
   Qed.
 
+  (* More Fallback *)
+  Next Obligation.
+    unshelve eapply R_stateR.
+    all: try reflexivity.
+    simpl. constructor.
+  Qed.
+  Next Obligation.
+    unshelve eapply R_stateR.
+    all: try reflexivity.
+    simpl. constructor.
+  Qed.
+  Next Obligation.
+    unshelve eapply R_stateR.
+    all: try reflexivity.
+    simpl. constructor.
+  Qed.
+  Next Obligation.
+    unshelve eapply R_stateR.
+    all: try reflexivity.
+    simpl. constructor.
+  Qed.
+  Next Obligation.
+    unshelve eapply R_stateR.
+    all: try reflexivity.
+    simpl. constructor.
+  Qed.
+  Next Obligation.
+    unshelve eapply R_stateR.
+    all: try reflexivity.
+    simpl. constructor.
+  Qed.
+  Next Obligation.
+    unshelve eapply R_stateR.
+    all: try reflexivity.
+    simpl. constructor.
+  Qed.
+  Next Obligation.
+    unshelve eapply R_stateR.
+    all: try reflexivity.
+    simpl. constructor.
+  Qed.
+  Next Obligation.
+    unshelve eapply R_stateR.
+    all: try reflexivity.
+    simpl. constructor.
+  Qed.
+  Next Obligation.
+    unshelve eapply R_stateR.
+    all: try reflexivity.
+    simpl. constructor.
+  Qed.
+  Next Obligation.
+    unshelve eapply R_stateR.
+    all: try reflexivity.
+    simpl. constructor.
+  Qed.
+  Next Obligation.
+    unshelve eapply R_stateR.
+    all: try reflexivity.
+    simpl. constructor.
+  Qed.
+  Next Obligation.
+    unshelve eapply R_stateR.
+    all: try reflexivity.
+    simpl. constructor.
+  Qed.
+  Next Obligation.
+    unshelve eapply R_stateR.
+    all: try reflexivity.
+    simpl. constructor.
+  Qed.
+  Next Obligation.
+    unshelve eapply R_stateR.
+    all: try reflexivity.
+    simpl. constructor.
+  Qed.
+  Next Obligation.
+    unshelve eapply R_stateR.
+    all: try reflexivity.
+    simpl. constructor.
+  Qed.
+  Next Obligation.
+    unshelve eapply R_stateR.
+    all: try reflexivity.
+    simpl. constructor.
+  Qed.
+  Next Obligation.
+    unshelve eapply R_stateR.
+    all: try reflexivity.
+    simpl. constructor.
+  Qed.
+  Next Obligation.
+    unshelve eapply R_stateR.
+    all: try reflexivity.
+    simpl. constructor.
+  Qed.
+
   (* tCase *)
   Next Obligation.
     symmetry in eq1.
-    (* apply andP in eq1 as [eq1 ebrs]. *)
-    (* apply andP in eq1 as [eq1 ec]. *)
-    (* apply andP in eq1 as [eq1 ep]. *)
-    (* apply andP in eq1 as [eind epar]. *)
     eapply welltyped_rename ; auto ; [ exact h2 |].
     eapply eq_term_sym.
     eapply eq_term_zipx.
@@ -1416,6 +1791,83 @@ Section Conversion.
         * eapply IHbrs'.
   Qed.
 
+  (* More Fallback *)
+  Next Obligation.
+    unshelve eapply R_stateR.
+    all: try reflexivity.
+    simpl. constructor.
+  Qed.
+  Next Obligation.
+    unshelve eapply R_stateR.
+    all: try reflexivity.
+    simpl. constructor.
+  Qed.
+  Next Obligation.
+    unshelve eapply R_stateR.
+    all: try reflexivity.
+    simpl. constructor.
+  Qed.
+  Next Obligation.
+    unshelve eapply R_stateR.
+    all: try reflexivity.
+    simpl. constructor.
+  Qed.
+  Next Obligation.
+    unshelve eapply R_stateR.
+    all: try reflexivity.
+    simpl. constructor.
+  Qed.
+  Next Obligation.
+    unshelve eapply R_stateR.
+    all: try reflexivity.
+    simpl. constructor.
+  Qed.
+  Next Obligation.
+    unshelve eapply R_stateR.
+    all: try reflexivity.
+    simpl. constructor.
+  Qed.
+  Next Obligation.
+    unshelve eapply R_stateR.
+    all: try reflexivity.
+    simpl. constructor.
+  Qed.
+  Next Obligation.
+    unshelve eapply R_stateR.
+    all: try reflexivity.
+    simpl. constructor.
+  Qed.
+  Next Obligation.
+    unshelve eapply R_stateR.
+    all: try reflexivity.
+    simpl. constructor.
+  Qed.
+  Next Obligation.
+    unshelve eapply R_stateR.
+    all: try reflexivity.
+    simpl. constructor.
+  Qed.
+  Next Obligation.
+    unshelve eapply R_stateR.
+    all: try reflexivity.
+    simpl. constructor.
+  Qed.
+  Next Obligation.
+    unshelve eapply R_stateR.
+    all: try reflexivity.
+    simpl. constructor.
+  Qed.
+  Next Obligation.
+    unshelve eapply R_stateR.
+    all: try reflexivity.
+    simpl. constructor.
+  Qed.
+  Next Obligation.
+    unshelve eapply R_stateR.
+    all: try reflexivity.
+    simpl. constructor.
+  Qed.
+
   (* tProj *)
   Next Obligation.
     eapply welltyped_rename ; auto.
@@ -1448,6 +1900,83 @@ Section Conversion.
     eapply ssrbool.elimT.
     - eapply reflect_eq_term_upto_univ_eqb.
     - symmetry. assumption.
+  Qed.
+
+  (* More Fallback *)
+  Next Obligation.
+    unshelve eapply R_stateR.
+    all: try reflexivity.
+    simpl. constructor.
+  Qed.
+  Next Obligation.
+    unshelve eapply R_stateR.
+    all: try reflexivity.
+    simpl. constructor.
+  Qed.
+  Next Obligation.
+    unshelve eapply R_stateR.
+    all: try reflexivity.
+    simpl. constructor.
+  Qed.
+  Next Obligation.
+    unshelve eapply R_stateR.
+    all: try reflexivity.
+    simpl. constructor.
+  Qed.
+  Next Obligation.
+    unshelve eapply R_stateR.
+    all: try reflexivity.
+    simpl. constructor.
+  Qed.
+  Next Obligation.
+    unshelve eapply R_stateR.
+    all: try reflexivity.
+    simpl. constructor.
+  Qed.
+  Next Obligation.
+    unshelve eapply R_stateR.
+    all: try reflexivity.
+    simpl. constructor.
+  Qed.
+  Next Obligation.
+    unshelve eapply R_stateR.
+    all: try reflexivity.
+    simpl. constructor.
+  Qed.
+  Next Obligation.
+    unshelve eapply R_stateR.
+    all: try reflexivity.
+    simpl. constructor.
+  Qed.
+  Next Obligation.
+    unshelve eapply R_stateR.
+    all: try reflexivity.
+    simpl. constructor.
+  Qed.
+  Next Obligation.
+    unshelve eapply R_stateR.
+    all: try reflexivity.
+    simpl. constructor.
+  Qed.
+  Next Obligation.
+    unshelve eapply R_stateR.
+    all: try reflexivity.
+    simpl. constructor.
+  Qed.
+  Next Obligation.
+    unshelve eapply R_stateR.
+    all: try reflexivity.
+    simpl. constructor.
+  Qed.
+  Next Obligation.
+    unshelve eapply R_stateR.
+    all: try reflexivity.
+    simpl. constructor.
+  Qed.
+  Next Obligation.
+    unshelve eapply R_stateR.
+    all: try reflexivity.
+    simpl. constructor.
   Qed.
 
   (* tFix *)
@@ -1713,6 +2242,83 @@ Section Conversion.
     eapply conv_trans' ; revgoals.
     - eapply red_conv_r. eassumption.
     - assumption.
+  Qed.
+
+  (* More Fallback *)
+  Next Obligation.
+    unshelve eapply R_stateR.
+    all: try reflexivity.
+    simpl. constructor.
+  Qed.
+  Next Obligation.
+    unshelve eapply R_stateR.
+    all: try reflexivity.
+    simpl. constructor.
+  Qed.
+  Next Obligation.
+    unshelve eapply R_stateR.
+    all: try reflexivity.
+    simpl. constructor.
+  Qed.
+  Next Obligation.
+    unshelve eapply R_stateR.
+    all: try reflexivity.
+    simpl. constructor.
+  Qed.
+  Next Obligation.
+    unshelve eapply R_stateR.
+    all: try reflexivity.
+    simpl. constructor.
+  Qed.
+  Next Obligation.
+    unshelve eapply R_stateR.
+    all: try reflexivity.
+    simpl. constructor.
+  Qed.
+  Next Obligation.
+    unshelve eapply R_stateR.
+    all: try reflexivity.
+    simpl. constructor.
+  Qed.
+  Next Obligation.
+    unshelve eapply R_stateR.
+    all: try reflexivity.
+    simpl. constructor.
+  Qed.
+  Next Obligation.
+    unshelve eapply R_stateR.
+    all: try reflexivity.
+    simpl. constructor.
+  Qed.
+  Next Obligation.
+    unshelve eapply R_stateR.
+    all: try reflexivity.
+    simpl. constructor.
+  Qed.
+  Next Obligation.
+    unshelve eapply R_stateR.
+    all: try reflexivity.
+    simpl. constructor.
+  Qed.
+  Next Obligation.
+    unshelve eapply R_stateR.
+    all: try reflexivity.
+    simpl. constructor.
+  Qed.
+  Next Obligation.
+    unshelve eapply R_stateR.
+    all: try reflexivity.
+    simpl. constructor.
+  Qed.
+  Next Obligation.
+    unshelve eapply R_stateR.
+    all: try reflexivity.
+    simpl. constructor.
+  Qed.
+  Next Obligation.
+    unshelve eapply R_stateR.
+    all: try reflexivity.
+    simpl. constructor.
   Qed.
 
   (* tCoFix *)

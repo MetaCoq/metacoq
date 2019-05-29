@@ -371,13 +371,13 @@ struct
 
   let mk_ctor_list =
     let ctor_list =
-      let ctor_info_typ = prod (prod (Lazy.force tident) (Lazy.force tTerm)) (Lazy.force tnat) in
-      to_coq_list ctor_info_typ
+      lazy (let ctor_info_typ = prod (prod (Lazy.force tident) (Lazy.force tTerm)) (Lazy.force tnat) in
+      to_coq_list ctor_info_typ)
     in
     fun ls ->
     let ctors = List.map (fun (a,b,c) -> pair (prod (Lazy.force tident) (Lazy.force tTerm)) (Lazy.force tnat)
 				              (pair (Lazy.force tident) (Lazy.force tTerm) a b) c) ls in
-    ctor_list ctors
+    Lazy.force ctor_list ctors
 
   let mk_proj_list d =
     to_coq_list (prod (Lazy.force tident) (Lazy.force tTerm))
@@ -386,7 +386,7 @@ struct
   let quote_inductive (kn, i) =
     Constr.mkApp (Lazy.force tmkInd, [| kn; i |])
 
-  let mkAnon = Lazy.force nAnon
+  let mkAnon () = Lazy.force nAnon
   let mkName id = Constr.mkApp (Lazy.force nNamed, [| id |])
   let quote_kn kn = quote_string (KerName.to_string kn)
   let mkRel i = Constr.mkApp (Lazy.force tRel, [| i |])
@@ -465,13 +465,13 @@ struct
   let mk_constant_decl kn bdy =
     Constr.mkApp (Lazy.force tConstantDecl, [|kn; bdy|])
 
-  let empty_global_declartions =
+  let empty_global_declartions () =
     Constr.mkApp (Lazy.force c_nil, [| Lazy.force tglobal_decl |])
 
   let add_global_decl d l =
     Constr.mkApp (Lazy.force c_cons, [|Lazy.force tglobal_decl; d; l|])
 
-  let mk_program = pair (Lazy.force tglobal_declarations) (Lazy.force tTerm)
+  let mk_program a b = pair (Lazy.force tglobal_declarations) (Lazy.force tTerm) a b
 
   let quote_mind_finiteness (f: Declarations.recursivity_kind) =
     match f with

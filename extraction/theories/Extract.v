@@ -21,7 +21,7 @@ Definition is_prop_sort s :=
 Parameter is_type_or_proof : forall (Sigma : global_context) (Gamma : context) (t : PCUICAst.term), bool.
 From PCUIC Require Import PCUICTyping.
 
-Hypothesis is_type_or_proof_spec : forall (Sigma : global_context) (Gamma : context) (t : PCUICAst.term) T,
+Axiom is_type_or_proof_spec : forall (Sigma : global_context) (Gamma : context) (t : PCUICAst.term) T,
     Sigma ;;; Gamma |- t : T -> (is_type_or_proof Sigma Gamma t = true) <~> (isArity T + (∑ u, (Sigma ;;; Gamma |- T : tSort u) * is_prop_sort u)). 
 
 (* Section IsType. *)

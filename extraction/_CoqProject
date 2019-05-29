@@ -13,4 +13,5 @@ theories/Extraction.v
 theories/Prelim.v
 theories/ESubstitution.v
 theories/EInversion.v
+theories/EWeakening.v
 theories/ExtractionCorrectness.v

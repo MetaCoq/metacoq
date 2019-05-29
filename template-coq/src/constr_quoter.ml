@@ -224,9 +224,9 @@ struct
     Constr.mkApp (Lazy.force tAscii, Array.of_list (List.map (fun m -> quote_bool ((i land m) = m))
 					 (List.rev [128;64;32;16;8;4;2;1])))
 
-  let chars = Array.init 255 quote_char
+  let chars = lazy (Array.init 255 quote_char)
 
-  let quote_char c = chars.(int_of_char c)
+  let quote_char c = (Lazy.force chars).(int_of_char c)
 
   let string_hash = Hashtbl.create 420
 

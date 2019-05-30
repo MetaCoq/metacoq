@@ -876,6 +876,73 @@ Section Conversion.
     reflexivity.
   Qed.
 
+  (* Tailored view for isconv_prog *)
+  Equations prog_discr (t1 t2 : term) : Prop :=
+    prog_discr (tApp _ _) (tApp _ _) := False ;
+    prog_discr (tConst _ _) (tConst _ _) := False ;
+    prog_discr (tLambda _ _ _) (tLambda _ _ _) := False ;
+    prog_discr (tProd _ _ _) (tProd _ _ _) := False ;
+    prog_discr (tCase _ _ _ _) (tCase _ _ _ _) := False ;
+    prog_discr (tProj _ _) (tProj _ _) := False ;
+    prog_discr (tFix _ _) (tFix _ _) := False ;
+    prog_discr (tCoFix _ _) (tCoFix _ _) := False ;
+    prog_discr _ _ := True.
+
+  Inductive prog_view : term -> term -> Set :=
+  | prog_view_App u1 v1 u2 v2 :
+      prog_view (tApp u1 v1) (tApp u2 v2)
+
+  | prog_view_Const c1 u1 c2 u2 :
+      prog_view (tConst c1 u1) (tConst c2 u2)
+
+  | prog_view_Lambda na1 A1 b1 na2 A2 b2 :
+      prog_view (tLambda na1 A1 b1) (tLambda na2 A2 b2)
+
+  | prog_view_Prod na1 A1 B1 na2 A2 B2 :
+      prog_view (tProd na1 A1 B1) (tProd na2 A2 B2)
+
+  | prog_view_Case ind par p c brs ind' par' p' c' brs' :
+      prog_view (tCase (ind, par) p c brs) (tCase (ind', par') p' c' brs')
+
+  | prog_view_Proj p c p' c' :
+      prog_view (tProj p c) (tProj p' c')
+
+  | prog_view_Fix mfix idx mfix' idx' :
+      prog_view (tFix mfix idx) (tFix mfix' idx')
+
+  | prog_view_CoFix mfix idx mfix' idx' :
+      prog_view (tCoFix mfix idx) (tCoFix mfix' idx')
+
+  | prog_view_other :
+      forall u v, prog_discr u v -> prog_view u v.
+
+  Equations prog_viewc u v : prog_view u v :=
+    prog_viewc (tApp u1 v1) (tApp u2 v2) :=
+      prog_view_App u1 v1 u2 v2 ;
+
+    prog_viewc (tConst c1 u1) (tConst c2 u2) :=
+      prog_view_Const c1 u1 c2 u2 ;
+
+    prog_viewc (tLambda na1 A1 b1) (tLambda na2 A2 b2) :=
+      prog_view_Lambda na1 A1 b1 na2 A2 b2 ;
+
+    prog_viewc (tProd na1 A1 B1) (tProd na2 A2 B2) :=
+      prog_view_Prod na1 A1 B1 na2 A2 B2 ;
+
+    prog_viewc (tCase (ind, par) p c brs) (tCase (ind', par') p' c' brs') :=
+      prog_view_Case ind par p c brs ind' par' p' c' brs' ;
+
+    prog_viewc (tProj p c) (tProj p' c') :=
+      prog_view_Proj p c p' c' ;
+
+    prog_viewc (tFix mfix idx) (tFix mfix' idx') :=
+      prog_view_Fix mfix idx mfix' idx' ;
+
+    prog_viewc (tCoFix mfix idx) (tCoFix mfix' idx') :=
+      prog_view_CoFix mfix idx mfix' idx' ;
+
+    prog_viewc u v := prog_view_other u v I.
+
   Equations(noeqns) _isconv_prog (Γ : context) (leq : conv_pb)
             (t1 : term) (π1 : stack) (h1 : wtp Γ t1 π1)
             (t2 : term) (π2 : stack) (h2 : wtp Γ t2 π2)
@@ -918,11 +985,6 @@ Section Conversion.
     | right _ := no
     } ;
 
-    (* It should be probable that the stacks are empty, but we are missing
-       assumptions.
-       Another option is to leave that for later and only match on empty
-       stacks.
-     *)
     _isconv_prog Γ leq (tLambda na A1 t1) π1 h1 (tLambda na' A2 t2) π2 h2 ir1 ir2 aux
     with isconv_red_raw Γ Conv A1 (Lambda_ty na t1 π1) A2 (Lambda_ty na' t2 π2) aux := {
     | @exist true h :=

@@ -1,6 +1,4 @@
 -I src
--I ../pcuic/src
--I ../checker/src
 -R theories MetaCoq.Extraction
 
 src/eAst.ml

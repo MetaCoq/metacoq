@@ -22,4 +22,7 @@ install:
 clean:
 	$(MAKE) -f Makefile.coq clean
 
+mrproper: clean
+	rm -f Makefile.coq
+
 sources: gen-src

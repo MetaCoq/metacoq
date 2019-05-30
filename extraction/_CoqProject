@@ -1,7 +1,4 @@
--Q ../template-coq/theories MetaCoq.Template
--Q ../pcuic/theories MetaCoq.PCUIC
 -R theories MetaCoq.Extraction
--I ../template-coq/src
 
 theories/EAst.v
 theories/EAstUtils.v

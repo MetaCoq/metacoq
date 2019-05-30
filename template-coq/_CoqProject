@@ -32,7 +32,7 @@ theories/LiftSubst.v theories/UnivSubst.v theories/Typing.v
 theories/TypingWf.v theories/Generation.v theories/WeakeningEnv.v
 theories/Closed.v theories/Weakening.v theories/Substitution.v
 theories/MetaTheory.v theories/kernel/Checker.v theories/WcbvEval.v
-theories/Retyping.v theories/All.v
+theories/Retyping.v theories/Normal.v theories/All.v
 
 # the Template monad
 theories/TemplateMonad.v

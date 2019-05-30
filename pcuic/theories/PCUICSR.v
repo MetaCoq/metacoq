@@ -8,7 +8,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICConfluence.
 Require Import ssreflect ssrbool.
 Require Import String.
-Require Import LibHypsNaming.
+From MetaCoq.Template Require Import LibHypsNaming.
 Set Asymmetric Patterns.
 
 Existing Instance config.default_checker_flags.

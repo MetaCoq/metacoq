@@ -32,6 +32,7 @@ clean: Makefile.coq
 
 mrproper: clean
 	rm -f Makefile.coq
+	rm -f Makefile.plugin
 
 Makefile.coq: _CoqProject
 	coq_makefile -f _CoqProject -o Makefile.coq

@@ -950,501 +950,119 @@ Section Conversion.
             (aux : Aux (Term t2) Γ t1 π1 π2 h2)
     : { b : bool | if b then conv leq Σ Γ (zippx t1 π1) (zippx t2 π2) else True } :=
 
-    _isconv_prog Γ leq (tApp _ _) π1 h1 (tApp _ _) π2 h2 ir1 ir2 aux :=
+    _isconv_prog Γ leq t1 π1 h1 t2 π2 h2 ir1 ir2 aux with prog_viewc t1 t2 := {
+    | prog_view_App _ _ _ _ :=
       False_rect _ _ ;
 
-    _isconv_prog Γ leq (tConst c u) π1 h1 (tConst c' u') π2 h2 ir1 ir2 aux
-    with eq_dec c c' := {
-    | left eq1 with eq_dec u u' := {
-      | left eq2 with isconv_args_raw Γ (tConst c u) π1 π2 aux := {
-        | @exist true h := yes ;
-        (* Unfold both constants at once *)
-        | @exist false _ with inspect (lookup_env Σ c) := {
-          | @exist (Some (ConstantDecl n {| cst_body := Some body |})) eq3 :=
-            (* In PCUICChecker, there is no subst but I guess it's just wrong. *)
-            isconv_red Γ leq (subst_instance_constr u body) π1
-                             (subst_instance_constr u body) π2 aux ;
+    | prog_view_Const c u c' u' with eq_dec c c' := {
+      | left eq1 with eq_dec u u' := {
+        | left eq2 with isconv_args_raw Γ (tConst c u) π1 π2 aux := {
+          | @exist true h := yes ;
+          (* Unfold both constants at once *)
+          | @exist false _ with inspect (lookup_env Σ c) := {
+            | @exist (Some (ConstantDecl n {| cst_body := Some body |})) eq3 :=
+              (* In PCUICChecker, there is no subst but I guess it's just wrong. *)
+              isconv_red Γ leq (subst_instance_constr u body) π1
+                               (subst_instance_constr u body) π2 aux ;
+            (* Inductive or not found *)
+            | @exist _ _ := no
+            }
+          } ;
+        (* If the two constants are different, we unfold one of them *)
+        | right _ with inspect (lookup_env Σ c') := {
+          | @exist (Some (ConstantDecl n {| cst_body := Some b |})) eq1 :=
+            isconv_red Γ leq (tConst c u) π1 (subst_instance_constr u' b) π2 aux ;
           (* Inductive or not found *)
-          | @exist _ _ := no
+          | _ with inspect (lookup_env Σ c) := {
+            | @exist (Some (ConstantDecl n {| cst_body := Some b |})) eq1 :=
+              isconv_red Γ leq (subst_instance_constr u b) π1
+                               (tConst c' u') π2 aux ;
+            (* Both Inductive or not found *)
+            | _ := no
+            }
           }
         } ;
-      (* If the two constants are different, we unfold one of them *)
-      | right _ with inspect (lookup_env Σ c') := {
-        | @exist (Some (ConstantDecl n {| cst_body := Some b |})) eq1 :=
-          isconv_red Γ leq (tConst c u) π1 (subst_instance_constr u' b) π2 aux ;
-        (* Inductive or not found *)
-        | _ with inspect (lookup_env Σ c) := {
-          | @exist (Some (ConstantDecl n {| cst_body := Some b |})) eq1 :=
-            isconv_red Γ leq (subst_instance_constr u b) π1
-                             (tConst c' u') π2 aux ;
-          (* Both Inductive or not found *)
-          | _ := no
-          }
+      | right _ := no
+      } ;
+
+    | prog_view_Lambda na A1 t1 na' A2 t2
+      with isconv_red_raw Γ Conv A1 (Lambda_ty na t1 π1)
+                                 A2 (Lambda_ty na' t2 π2) aux := {
+      | @exist true h :=
+        isconv_red Γ leq
+                   t1 (Lambda_tm na A1 π1)
+                   t2 (Lambda_tm na' A2 π2) aux ;
+      | @exist false _ := no
+      } ;
+
+    | prog_view_Prod na A1 B1 na' A2 B2
+      with isconv_red_raw Γ Conv A1 (Prod_l na B1 π1) A2 (Prod_l na' B2 π2) aux := {
+      | @exist true h :=
+        isconv_red Γ leq
+                   B1 (Prod_r na A1 π1)
+                   B2 (Prod_r na' A2 π2) aux ;
+      | @exist false _ := no
+      } ;
+
+    | prog_view_Case ind par p c brs ind' par' p' c' brs'
+      with inspect (nleq_term (tCase (ind, par) p c brs) (tCase (ind', par') p' c' brs')) := {
+      | @exist true eq1 := isconv_args Γ (tCase (ind, par) p c brs) π1 π2 aux ;
+      | @exist false _ with inspect (reduce_term RedFlags.default Σ (Γ ,,, stack_context π1) c _) := {
+        | @exist cred eq1 with inspect (reduce_term RedFlags.default Σ (Γ ,,, stack_context π2) c' _) := {
+           | @exist cred' eq2 with inspect (nleq_term cred c && nleq_term cred' c') := {
+              | @exist true eq3 := no ;
+              | @exist false eq3 :=
+                isconv_red Γ leq (tCase (ind, par) p cred brs) π1
+                                 (tCase (ind', par') p' cred' brs') π2 aux
+              }
+           }
         }
       } ;
-    | right _ := no
-    } ;
 
-    _isconv_prog Γ leq (tLambda na A1 t1) π1 h1 (tLambda na' A2 t2) π2 h2 ir1 ir2 aux
-    with isconv_red_raw Γ Conv A1 (Lambda_ty na t1 π1) A2 (Lambda_ty na' t2 π2) aux := {
-    | @exist true h :=
-      isconv_red Γ leq
-                 t1 (Lambda_tm na A1 π1)
-                 t2 (Lambda_tm na' A2 π2) aux ;
-    | @exist false _ := no
-    } ;
+    | prog_view_Proj p c p' c' with inspect (nleq_term (tProj p c) (tProj p' c')) := {
+      | @exist true eq1 := isconv_args Γ (tProj p c) π1 π2 aux ;
+      | @exist false _ := no
+      } ;
 
-    _isconv_prog Γ leq (tProd na A1 B1) π1 h1 (tProd na' A2 B2) π2 h2 ir1 ir2 aux
-    with isconv_red_raw Γ Conv A1 (Prod_l na B1 π1) A2 (Prod_l na' B2 π2) aux := {
-    | @exist true h :=
-      isconv_red Γ leq
-                 B1 (Prod_r na A1 π1)
-                 B2 (Prod_r na' A2 π2) aux ;
-    | @exist false _ := no
-    } ;
-
-    (* Hnf did not reduce, maybe delta needed in c *)
-    _isconv_prog Γ leq (tCase (ind, par) p c brs) π1 h1
-                       (tCase (ind',par') p' c' brs') π2 h2
-                       ir1 ir2 aux
-    (* In the original we do not check ind = ind' or par = par',
-       maybe it can be optimised. *)
-    with inspect (nleq_term (tCase (ind, par) p c brs) (tCase (ind', par') p' c' brs')) := {
-    | @exist true eq1 := isconv_args Γ (tCase (ind, par) p c brs) π1 π2 aux ;
-    | @exist false _ with inspect (reduce_term RedFlags.default Σ (Γ ,,, stack_context π1) c _) := {
-      | @exist cred eq1 with inspect (reduce_term RedFlags.default Σ (Γ ,,, stack_context π2) c' _) := {
-         | @exist cred' eq2 with inspect (nleq_term cred c && nleq_term cred' c') := {
-            | @exist true eq3 := no ; (* In Checker it says yes, but wrong right? *)
-            | @exist false eq3 :=
-              (* In Checker, only ind, par and p are used, not clear why *)
-              isconv_red Γ leq (tCase (ind, par) p cred brs) π1
-                               (tCase (ind', par') p' cred' brs') π2 aux
-            }
-         }
-      }
-    } ;
-
-    _isconv_prog Γ leq (tProj p c) π1 h1 (tProj p' c') π2 h2 ir1 ir2 aux
-    with inspect (nleq_term (tProj p c) (tProj p' c')) := {
-    | @exist true eq1 := isconv_args Γ (tProj p c) π1 π2 aux ;
-    | @exist false _ := no
-    } ;
-
-    (* Subtle difference here with Checker, if the terms are syntactically equal
-       but the stacks are not convertible, then we say no. *)
-    _isconv_prog Γ leq (tFix mfix idx) π1 h1 (tFix mfix' idx') π2 h2 ir1 ir2 aux
-    with inspect (nleq_term (tFix mfix idx) (tFix mfix' idx')) := {
-    | @exist true eq1 := isconv_args Γ (tFix mfix idx) π1 π2 aux ;
-    | @exist false _ with inspect (unfold_one_fix Γ mfix idx π1 _) := {
-      | @exist (Some (fn, θ)) eq1
-        with inspect (decompose_stack θ) := {
-        | @exist (l', θ') eq2
-          with inspect (reduce_stack nodelta_flags Σ (Γ ,,, stack_context θ') fn (appstack l' ε) _) := {
-          | @exist (fn', ρ) eq3 :=
-            isconv_prog Γ leq fn' (ρ +++ θ') (tFix mfix' idx') π2 aux
-          }
-        } ;
-      | _ with inspect (unfold_one_fix Γ mfix' idx' π2 _) := {
+    | prog_view_Fix mfix idx mfix' idx'
+      with inspect (nleq_term (tFix mfix idx) (tFix mfix' idx')) := {
+      | @exist true eq1 := isconv_args Γ (tFix mfix idx) π1 π2 aux ;
+      | @exist false _ with inspect (unfold_one_fix Γ mfix idx π1 _) := {
         | @exist (Some (fn, θ)) eq1
           with inspect (decompose_stack θ) := {
           | @exist (l', θ') eq2
             with inspect (reduce_stack nodelta_flags Σ (Γ ,,, stack_context θ') fn (appstack l' ε) _) := {
             | @exist (fn', ρ) eq3 :=
-              isconv_prog Γ leq (tFix mfix idx) π1 fn' (ρ +++ θ') aux
+              isconv_prog Γ leq fn' (ρ +++ θ') (tFix mfix' idx') π2 aux
             }
           } ;
-        | _ := no
+        | _ with inspect (unfold_one_fix Γ mfix' idx' π2 _) := {
+          | @exist (Some (fn, θ)) eq1
+            with inspect (decompose_stack θ) := {
+            | @exist (l', θ') eq2
+              with inspect (reduce_stack nodelta_flags Σ (Γ ,,, stack_context θ') fn (appstack l' ε) _) := {
+              | @exist (fn', ρ) eq3 :=
+                isconv_prog Γ leq (tFix mfix idx) π1 fn' (ρ +++ θ') aux
+              }
+            } ;
+          | _ := no
+          }
         }
-      }
-    } ;
+      } ;
 
-    _isconv_prog Γ leq (tCoFix mfix idx) π1 h1 (tCoFix mfix' idx') π2 h2 ir1 ir2 aux
-    with inspect (nleq_term (tCoFix mfix idx) (tCoFix mfix' idx')) := {
-    | @exist true eq1 := isconv_args Γ (tCoFix mfix idx) π1 π2 aux ;
-    | @exist false _ := no
-    } ;
+    | prog_view_CoFix mfix idx mfix' idx'
+      with inspect (nleq_term (tCoFix mfix idx) (tCoFix mfix' idx')) := {
+      | @exist true eq1 := isconv_args Γ (tCoFix mfix idx) π1 π2 aux ;
+      | @exist false _ := no
+      } ;
 
-    _isconv_prog Γ leq t1 π1 h1 t2 π2 h2 ir1 ir2 aux :=
-      isconv_fallback Γ leq t1 π1 t2 π2 aux.
-
-  (* Fallback *)
-  (* All this duplication suggests a view is needed *)
-  Next Obligation.
-    unshelve eapply R_stateR.
-    all: try reflexivity.
-    simpl. constructor.
-  Qed.
-  Next Obligation.
-    unshelve eapply R_stateR.
-    all: try reflexivity.
-    simpl. constructor.
-  Qed.
-  Next Obligation.
-    unshelve eapply R_stateR.
-    all: try reflexivity.
-    simpl. constructor.
-  Qed.
-  Next Obligation.
-    unshelve eapply R_stateR.
-    all: try reflexivity.
-    simpl. constructor.
-  Qed.
-  Next Obligation.
-    unshelve eapply R_stateR.
-    all: try reflexivity.
-    simpl. constructor.
-  Qed.
-  Next Obligation.
-    unshelve eapply R_stateR.
-    all: try reflexivity.
-    simpl. constructor.
-  Qed.
-  Next Obligation.
-    unshelve eapply R_stateR.
-    all: try reflexivity.
-    simpl. constructor.
-  Qed.
-  Next Obligation.
-    unshelve eapply R_stateR.
-    all: try reflexivity.
-    simpl. constructor.
-  Qed.
-
-  (* tProd *)
-  Next Obligation.
-    unshelve eapply R_positionR.
-    - reflexivity.
-    - simpl. unfold xposition. eapply positionR_poscat.
-      simpl. rewrite <- app_nil_r. eapply positionR_poscat. constructor.
-  Qed.
-  Next Obligation.
-    unshelve eapply R_positionR.
-    - simpl. reflexivity.
-    - simpl. unfold xposition. eapply positionR_poscat.
-      simpl. rewrite <- app_nil_r. eapply positionR_poscat. constructor.
-  Qed.
-  Next Obligation.
-    destruct b ; auto.
-    destruct h0 as [h0].
-    unfold zippx in h0. simpl in h0.
-    unfold zippx in h. simpl in h. cbn in h.
-    unfold zippx.
-    case_eq (decompose_stack π1). intros l1 ρ1 e1.
-    case_eq (decompose_stack π2). intros l2 ρ2 e2.
-    pose proof (decompose_stack_eq _ _ _ e1). subst.
-    pose proof (decompose_stack_eq _ _ _ e2). subst.
-    rewrite 2!stack_context_appstack in h0.
-    rewrite 2!stack_context_appstack in h.
-
-    apply welltyped_zipx in h1.
-    apply welltyped_zipc_zippx in h1 ; auto.
-    unfold zippx in h1. rewrite decompose_stack_appstack in h1.
-    rewrite decompose_stack_twice with (1 := e1) in h1.
-    simpl in h1. rewrite app_nil_r in h1.
-    apply welltyped_it_mkLambda_or_LetIn in h1.
-    apply mkApps_Prod_nil in h1 ; auto. subst.
-
-    clear aux.
-    apply welltyped_zipx in h2.
-    apply welltyped_zipc_zippx in h2 ; auto.
-    unfold zippx in h2. rewrite decompose_stack_appstack in h2.
-    rewrite decompose_stack_twice with (1 := e2) in h2.
-    simpl in h2. rewrite app_nil_r in h2.
-    apply welltyped_it_mkLambda_or_LetIn in h2.
-    apply mkApps_Prod_nil in h2 ; auto. subst.
-
-    cbn.
-    apply it_mkLambda_or_LetIn_stack_context_conv_inv in h0 as [? ?] ; auto.
-    eapply it_mkLambda_or_LetIn_conv' ; auto.
-    apply it_mkLambda_or_LetIn_stack_context_conv'_inv in h as [[?] hl] ; auto.
-    apply Lambda_conv_inv in hl as [[?] ?] ; auto.
-    eapply Prod_conv ; auto.
-  Qed.
-
-  (* More Fallback *)
-  Next Obligation.
-    unshelve eapply R_stateR.
-    all: try reflexivity.
-    simpl. constructor.
-  Qed.
-  Next Obligation.
-    unshelve eapply R_stateR.
-    all: try reflexivity.
-    simpl. constructor.
-  Qed.
-  Next Obligation.
-    unshelve eapply R_stateR.
-    all: try reflexivity.
-    simpl. constructor.
-  Qed.
-  Next Obligation.
-    unshelve eapply R_stateR.
-    all: try reflexivity.
-    simpl. constructor.
-  Qed.
-  Next Obligation.
-    unshelve eapply R_stateR.
-    all: try reflexivity.
-    simpl. constructor.
-  Qed.
-  Next Obligation.
-    unshelve eapply R_stateR.
-    all: try reflexivity.
-    simpl. constructor.
-  Qed.
-  Next Obligation.
-    unshelve eapply R_stateR.
-    all: try reflexivity.
-    simpl. constructor.
-  Qed.
-  Next Obligation.
-    unshelve eapply R_stateR.
-    all: try reflexivity.
-    simpl. constructor.
-  Qed.
-  Next Obligation.
-    unshelve eapply R_stateR.
-    all: try reflexivity.
-    simpl. constructor.
-  Qed.
-  Next Obligation.
-    unshelve eapply R_stateR.
-    all: try reflexivity.
-    simpl. constructor.
-  Qed.
-  Next Obligation.
-    unshelve eapply R_stateR.
-    all: try reflexivity.
-    simpl. constructor.
-  Qed.
-  Next Obligation.
-    unshelve eapply R_stateR.
-    all: try reflexivity.
-    simpl. constructor.
-  Qed.
-  Next Obligation.
-    unshelve eapply R_stateR.
-    all: try reflexivity.
-    simpl. constructor.
-  Qed.
-  Next Obligation.
-    unshelve eapply R_stateR.
-    all: try reflexivity.
-    simpl. constructor.
-  Qed.
-  Next Obligation.
-    unshelve eapply R_stateR.
-    all: try reflexivity.
-    simpl. constructor.
-  Qed.
-
-  (* tLambda *)
-  Next Obligation.
-    unshelve eapply R_positionR.
-    - reflexivity.
-    - simpl. unfold xposition. eapply positionR_poscat.
-      simpl. rewrite <- app_nil_r. eapply positionR_poscat. constructor.
-  Qed.
-  Next Obligation.
-    unshelve eapply R_positionR.
-    - reflexivity.
-    - simpl. unfold xposition. eapply positionR_poscat.
-      simpl. rewrite <- app_nil_r. eapply positionR_poscat. constructor.
-  Qed.
-  Next Obligation.
-    destruct b ; auto.
-    destruct h0 as [h0].
-
-    unfold zippx in h0. simpl in h0.
-    unfold zippx in h. simpl in h. cbn in h.
-    unfold zippx.
-    case_eq (decompose_stack π1). intros l1 ρ1 e1.
-    case_eq (decompose_stack π2). intros l2 ρ2 e2.
-    pose proof (decompose_stack_eq _ _ _ e1). subst.
-    pose proof (decompose_stack_eq _ _ _ e2). subst.
-    rewrite 2!stack_context_appstack in h0.
-    rewrite 2!stack_context_appstack in h.
-
-    destruct ir1 as [_ hl1]. cbn in hl1.
-    specialize (hl1 eq_refl).
-    destruct l1 ; try discriminate hl1. clear hl1.
-
-    destruct ir2 as [_ hl2]. cbn in hl2.
-    specialize (hl2 eq_refl).
-    destruct l2 ; try discriminate hl2. clear hl2.
-
-    (* The fact that we can conclude directly is distrubing!
-       Are we checking too much?
-       TODO CHECK
-     *)
-    cbn. assumption.
-  Qed.
-
-  (* More Fallback *)
-  Next Obligation.
-    unshelve eapply R_stateR.
-    all: try reflexivity.
-    simpl. constructor.
-  Qed.
-  Next Obligation.
-    unshelve eapply R_stateR.
-    all: try reflexivity.
-    simpl. constructor.
-  Qed.
-  Next Obligation.
-    unshelve eapply R_stateR.
-    all: try reflexivity.
-    simpl. constructor.
-  Qed.
-  Next Obligation.
-    unshelve eapply R_stateR.
-    all: try reflexivity.
-    simpl. constructor.
-  Qed.
-  Next Obligation.
-    unshelve eapply R_stateR.
-    all: try reflexivity.
-    simpl. constructor.
-  Qed.
-  Next Obligation.
-    unshelve eapply R_stateR.
-    all: try reflexivity.
-    simpl. constructor.
-  Qed.
-  Next Obligation.
-    unshelve eapply R_stateR.
-    all: try reflexivity.
-    simpl. constructor.
-  Qed.
-  Next Obligation.
-    unshelve eapply R_stateR.
-    all: try reflexivity.
-    simpl. constructor.
-  Qed.
-  Next Obligation.
-    unshelve eapply R_stateR.
-    all: try reflexivity.
-    simpl. constructor.
-  Qed.
-  Next Obligation.
-    unshelve eapply R_stateR.
-    all: try reflexivity.
-    simpl. constructor.
-  Qed.
-  Next Obligation.
-    unshelve eapply R_stateR.
-    all: try reflexivity.
-    simpl. constructor.
-  Qed.
-  Next Obligation.
-    unshelve eapply R_stateR.
-    all: try reflexivity.
-    simpl. constructor.
-  Qed.
-  Next Obligation.
-    unshelve eapply R_stateR.
-    all: try reflexivity.
-    simpl. constructor.
-  Qed.
-  Next Obligation.
-    unshelve eapply R_stateR.
-    all: try reflexivity.
-    simpl. constructor.
-  Qed.
-  Next Obligation.
-    unshelve eapply R_stateR.
-    all: try reflexivity.
-    simpl. constructor.
-  Qed.
+    | prog_view_other t1 t2 h :=
+      isconv_fallback Γ leq t1 π1 t2 π2 aux
+    }.
 
   (* tApp *)
   Next Obligation.
     destruct ir1 as [ha1 _]. discriminate ha1.
-  Qed.
-
-  (* More Fallback *)
-  Next Obligation.
-    unshelve eapply R_stateR.
-    all: try reflexivity.
-    simpl. constructor.
-  Qed.
-  Next Obligation.
-    (* What is this?? *)
-  Admitted.
-  Next Obligation.
-    unshelve eapply R_stateR.
-    all: try reflexivity.
-    simpl. constructor.
-  Qed.
-  Next Obligation.
-    unshelve eapply R_stateR.
-    all: try reflexivity.
-    simpl. constructor.
-  Qed.
-  Next Obligation.
-    unshelve eapply R_stateR.
-    all: try reflexivity.
-    simpl. constructor.
-  Qed.
-  Next Obligation.
-    unshelve eapply R_stateR.
-    all: try reflexivity.
-    simpl. constructor.
-  Qed.
-  Next Obligation.
-    unshelve eapply R_stateR.
-    all: try reflexivity.
-    simpl. constructor.
-  Qed.
-  Next Obligation.
-    unshelve eapply R_stateR.
-    all: try reflexivity.
-    simpl. constructor.
-  Qed.
-  Next Obligation.
-    unshelve eapply R_stateR.
-    all: try reflexivity.
-    simpl. constructor.
-  Qed.
-  Next Obligation.
-    unshelve eapply R_stateR.
-    all: try reflexivity.
-    simpl. constructor.
-  Qed.
-  Next Obligation.
-    unshelve eapply R_stateR.
-    all: try reflexivity.
-    simpl. constructor.
-  Qed.
-  Next Obligation.
-    unshelve eapply R_stateR.
-    all: try reflexivity.
-    simpl. constructor.
-  Qed.
-  Next Obligation.
-    unshelve eapply R_stateR.
-    all: try reflexivity.
-    simpl. constructor.
-  Qed.
-  Next Obligation.
-    unshelve eapply R_stateR.
-    all: try reflexivity.
-    simpl. constructor.
-  Qed.
-  Next Obligation.
-    unshelve eapply R_stateR.
-    all: try reflexivity.
-    simpl. constructor.
-  Qed.
-  Next Obligation.
-    unshelve eapply R_stateR.
-    all: try reflexivity.
-    simpl. constructor.
-  Qed.
-  Next Obligation.
-    unshelve eapply R_stateR.
-    all: try reflexivity.
-    simpl. constructor.
   Qed.
 
   (* tConst *)
@@ -1542,101 +1160,97 @@ Section Conversion.
     eapply red_zippx. eapply red_const. eassumption.
   Qed.
 
-  (* More Fallback *)
+  (* tLambda *)
   Next Obligation.
-    unshelve eapply R_stateR.
-    all: try reflexivity.
-    simpl. constructor.
+    unshelve eapply R_positionR.
+    - reflexivity.
+    - simpl. unfold xposition. eapply positionR_poscat.
+      simpl. rewrite <- app_nil_r. eapply positionR_poscat. constructor.
   Qed.
   Next Obligation.
-    unshelve eapply R_stateR.
-    all: try reflexivity.
-    simpl. constructor.
+    unshelve eapply R_positionR.
+    - reflexivity.
+    - simpl. unfold xposition. eapply positionR_poscat.
+      simpl. rewrite <- app_nil_r. eapply positionR_poscat. constructor.
   Qed.
   Next Obligation.
-    unshelve eapply R_stateR.
-    all: try reflexivity.
-    simpl. constructor.
+    destruct b ; auto.
+    destruct h0 as [h0].
+
+    unfold zippx in h0. simpl in h0.
+    unfold zippx in h. simpl in h. cbn in h.
+    unfold zippx.
+    case_eq (decompose_stack π1). intros l1 ρ1 e1.
+    case_eq (decompose_stack π2). intros l2 ρ2 e2.
+    pose proof (decompose_stack_eq _ _ _ e1). subst.
+    pose proof (decompose_stack_eq _ _ _ e2). subst.
+    rewrite 2!stack_context_appstack in h0.
+    rewrite 2!stack_context_appstack in h.
+
+    destruct ir1 as [_ hl1]. cbn in hl1.
+    specialize (hl1 eq_refl).
+    destruct l1 ; try discriminate hl1. clear hl1.
+
+    destruct ir2 as [_ hl2]. cbn in hl2.
+    specialize (hl2 eq_refl).
+    destruct l2 ; try discriminate hl2. clear hl2.
+
+    (* The fact that we can conclude directly is distrubing!
+       Are we checking too much?
+       TODO CHECK
+     *)
+    cbn. assumption.
+  Qed.
+
+  (* tProd *)
+  Next Obligation.
+    unshelve eapply R_positionR.
+    - reflexivity.
+    - simpl. unfold xposition. eapply positionR_poscat.
+      simpl. rewrite <- app_nil_r. eapply positionR_poscat. constructor.
   Qed.
   Next Obligation.
-    unshelve eapply R_stateR.
-    all: try reflexivity.
-    simpl. constructor.
+    unshelve eapply R_positionR.
+    - simpl. reflexivity.
+    - simpl. unfold xposition. eapply positionR_poscat.
+      simpl. rewrite <- app_nil_r. eapply positionR_poscat. constructor.
   Qed.
   Next Obligation.
-    unshelve eapply R_stateR.
-    all: try reflexivity.
-    simpl. constructor.
-  Qed.
-  Next Obligation.
-    unshelve eapply R_stateR.
-    all: try reflexivity.
-    simpl. constructor.
-  Qed.
-  Next Obligation.
-    unshelve eapply R_stateR.
-    all: try reflexivity.
-    simpl. constructor.
-  Qed.
-  Next Obligation.
-    unshelve eapply R_stateR.
-    all: try reflexivity.
-    simpl. constructor.
-  Qed.
-  Next Obligation.
-    unshelve eapply R_stateR.
-    all: try reflexivity.
-    simpl. constructor.
-  Qed.
-  Next Obligation.
-    unshelve eapply R_stateR.
-    all: try reflexivity.
-    simpl. constructor.
-  Qed.
-  Next Obligation.
-    unshelve eapply R_stateR.
-    all: try reflexivity.
-    simpl. constructor.
-  Qed.
-  Next Obligation.
-    unshelve eapply R_stateR.
-    all: try reflexivity.
-    simpl. constructor.
-  Qed.
-  Next Obligation.
-    unshelve eapply R_stateR.
-    all: try reflexivity.
-    simpl. constructor.
-  Qed.
-  Next Obligation.
-    unshelve eapply R_stateR.
-    all: try reflexivity.
-    simpl. constructor.
-  Qed.
-  Next Obligation.
-    unshelve eapply R_stateR.
-    all: try reflexivity.
-    simpl. constructor.
-  Qed.
-  Next Obligation.
-    unshelve eapply R_stateR.
-    all: try reflexivity.
-    simpl. constructor.
-  Qed.
-  Next Obligation.
-    unshelve eapply R_stateR.
-    all: try reflexivity.
-    simpl. constructor.
-  Qed.
-  Next Obligation.
-    unshelve eapply R_stateR.
-    all: try reflexivity.
-    simpl. constructor.
-  Qed.
-  Next Obligation.
-    unshelve eapply R_stateR.
-    all: try reflexivity.
-    simpl. constructor.
+    destruct b ; auto.
+    destruct h0 as [h0].
+    unfold zippx in h0. simpl in h0.
+    unfold zippx in h. simpl in h. cbn in h.
+    unfold zippx.
+    case_eq (decompose_stack π1). intros l1 ρ1 e1.
+    case_eq (decompose_stack π2). intros l2 ρ2 e2.
+    pose proof (decompose_stack_eq _ _ _ e1). subst.
+    pose proof (decompose_stack_eq _ _ _ e2). subst.
+    rewrite 2!stack_context_appstack in h0.
+    rewrite 2!stack_context_appstack in h.
+
+    apply welltyped_zipx in h1.
+    apply welltyped_zipc_zippx in h1 ; auto.
+    unfold zippx in h1. rewrite decompose_stack_appstack in h1.
+    rewrite decompose_stack_twice with (1 := e1) in h1.
+    simpl in h1. rewrite app_nil_r in h1.
+    apply welltyped_it_mkLambda_or_LetIn in h1.
+    apply mkApps_Prod_nil in h1 ; auto. subst.
+
+    clear aux.
+    apply welltyped_zipx in h2.
+    apply welltyped_zipc_zippx in h2 ; auto.
+    unfold zippx in h2. rewrite decompose_stack_appstack in h2.
+    rewrite decompose_stack_twice with (1 := e2) in h2.
+    simpl in h2. rewrite app_nil_r in h2.
+    apply welltyped_it_mkLambda_or_LetIn in h2.
+    apply mkApps_Prod_nil in h2 ; auto. subst.
+
+    cbn.
+    apply it_mkLambda_or_LetIn_stack_context_conv_inv in h0 as [? ?] ; auto.
+    eapply it_mkLambda_or_LetIn_conv' ; auto.
+    apply it_mkLambda_or_LetIn_stack_context_conv'_inv in h as [[?] hl] ; auto.
+    apply Lambda_conv_inv in hl as [[?] ?] ; auto.
+    eapply Prod_conv ; auto.
   Qed.
 
   (* tCase *)
@@ -1853,83 +1467,6 @@ Section Conversion.
         * eapply IHbrs'.
   Qed.
 
-  (* More Fallback *)
-  Next Obligation.
-    unshelve eapply R_stateR.
-    all: try reflexivity.
-    simpl. constructor.
-  Qed.
-  Next Obligation.
-    unshelve eapply R_stateR.
-    all: try reflexivity.
-    simpl. constructor.
-  Qed.
-  Next Obligation.
-    unshelve eapply R_stateR.
-    all: try reflexivity.
-    simpl. constructor.
-  Qed.
-  Next Obligation.
-    unshelve eapply R_stateR.
-    all: try reflexivity.
-    simpl. constructor.
-  Qed.
-  Next Obligation.
-    unshelve eapply R_stateR.
-    all: try reflexivity.
-    simpl. constructor.
-  Qed.
-  Next Obligation.
-    unshelve eapply R_stateR.
-    all: try reflexivity.
-    simpl. constructor.
-  Qed.
-  Next Obligation.
-    unshelve eapply R_stateR.
-    all: try reflexivity.
-    simpl. constructor.
-  Qed.
-  Next Obligation.
-    unshelve eapply R_stateR.
-    all: try reflexivity.
-    simpl. constructor.
-  Qed.
-  Next Obligation.
-    unshelve eapply R_stateR.
-    all: try reflexivity.
-    simpl. constructor.
-  Qed.
-  Next Obligation.
-    unshelve eapply R_stateR.
-    all: try reflexivity.
-    simpl. constructor.
-  Qed.
-  Next Obligation.
-    unshelve eapply R_stateR.
-    all: try reflexivity.
-    simpl. constructor.
-  Qed.
-  Next Obligation.
-    unshelve eapply R_stateR.
-    all: try reflexivity.
-    simpl. constructor.
-  Qed.
-  Next Obligation.
-    unshelve eapply R_stateR.
-    all: try reflexivity.
-    simpl. constructor.
-  Qed.
-  Next Obligation.
-    unshelve eapply R_stateR.
-    all: try reflexivity.
-    simpl. constructor.
-  Qed.
-  Next Obligation.
-    unshelve eapply R_stateR.
-    all: try reflexivity.
-    simpl. constructor.
-  Qed.
-
   (* tProj *)
   Next Obligation.
     eapply welltyped_rename ; auto.
@@ -1962,83 +1499,6 @@ Section Conversion.
     eapply ssrbool.elimT.
     - eapply reflect_eq_term_upto_univ_eqb.
     - symmetry. assumption.
-  Qed.
-
-  (* More Fallback *)
-  Next Obligation.
-    unshelve eapply R_stateR.
-    all: try reflexivity.
-    simpl. constructor.
-  Qed.
-  Next Obligation.
-    unshelve eapply R_stateR.
-    all: try reflexivity.
-    simpl. constructor.
-  Qed.
-  Next Obligation.
-    unshelve eapply R_stateR.
-    all: try reflexivity.
-    simpl. constructor.
-  Qed.
-  Next Obligation.
-    unshelve eapply R_stateR.
-    all: try reflexivity.
-    simpl. constructor.
-  Qed.
-  Next Obligation.
-    unshelve eapply R_stateR.
-    all: try reflexivity.
-    simpl. constructor.
-  Qed.
-  Next Obligation.
-    unshelve eapply R_stateR.
-    all: try reflexivity.
-    simpl. constructor.
-  Qed.
-  Next Obligation.
-    unshelve eapply R_stateR.
-    all: try reflexivity.
-    simpl. constructor.
-  Qed.
-  Next Obligation.
-    unshelve eapply R_stateR.
-    all: try reflexivity.
-    simpl. constructor.
-  Qed.
-  Next Obligation.
-    unshelve eapply R_stateR.
-    all: try reflexivity.
-    simpl. constructor.
-  Qed.
-  Next Obligation.
-    unshelve eapply R_stateR.
-    all: try reflexivity.
-    simpl. constructor.
-  Qed.
-  Next Obligation.
-    unshelve eapply R_stateR.
-    all: try reflexivity.
-    simpl. constructor.
-  Qed.
-  Next Obligation.
-    unshelve eapply R_stateR.
-    all: try reflexivity.
-    simpl. constructor.
-  Qed.
-  Next Obligation.
-    unshelve eapply R_stateR.
-    all: try reflexivity.
-    simpl. constructor.
-  Qed.
-  Next Obligation.
-    unshelve eapply R_stateR.
-    all: try reflexivity.
-    simpl. constructor.
-  Qed.
-  Next Obligation.
-    unshelve eapply R_stateR.
-    all: try reflexivity.
-    simpl. constructor.
   Qed.
 
   (* tFix *)
@@ -2306,83 +1766,6 @@ Section Conversion.
     - assumption.
   Qed.
 
-  (* More Fallback *)
-  Next Obligation.
-    unshelve eapply R_stateR.
-    all: try reflexivity.
-    simpl. constructor.
-  Qed.
-  Next Obligation.
-    unshelve eapply R_stateR.
-    all: try reflexivity.
-    simpl. constructor.
-  Qed.
-  Next Obligation.
-    unshelve eapply R_stateR.
-    all: try reflexivity.
-    simpl. constructor.
-  Qed.
-  Next Obligation.
-    unshelve eapply R_stateR.
-    all: try reflexivity.
-    simpl. constructor.
-  Qed.
-  Next Obligation.
-    unshelve eapply R_stateR.
-    all: try reflexivity.
-    simpl. constructor.
-  Qed.
-  Next Obligation.
-    unshelve eapply R_stateR.
-    all: try reflexivity.
-    simpl. constructor.
-  Qed.
-  Next Obligation.
-    unshelve eapply R_stateR.
-    all: try reflexivity.
-    simpl. constructor.
-  Qed.
-  Next Obligation.
-    unshelve eapply R_stateR.
-    all: try reflexivity.
-    simpl. constructor.
-  Qed.
-  Next Obligation.
-    unshelve eapply R_stateR.
-    all: try reflexivity.
-    simpl. constructor.
-  Qed.
-  Next Obligation.
-    unshelve eapply R_stateR.
-    all: try reflexivity.
-    simpl. constructor.
-  Qed.
-  Next Obligation.
-    unshelve eapply R_stateR.
-    all: try reflexivity.
-    simpl. constructor.
-  Qed.
-  Next Obligation.
-    unshelve eapply R_stateR.
-    all: try reflexivity.
-    simpl. constructor.
-  Qed.
-  Next Obligation.
-    unshelve eapply R_stateR.
-    all: try reflexivity.
-    simpl. constructor.
-  Qed.
-  Next Obligation.
-    unshelve eapply R_stateR.
-    all: try reflexivity.
-    simpl. constructor.
-  Qed.
-  Next Obligation.
-    unshelve eapply R_stateR.
-    all: try reflexivity.
-    simpl. constructor.
-  Qed.
-
   (* tCoFix *)
   Next Obligation.
     eapply welltyped_rename ; auto.
@@ -2415,6 +1798,13 @@ Section Conversion.
     eapply ssrbool.elimT.
     - eapply reflect_eq_term_upto_univ_eqb.
     - assumption.
+  Qed.
+
+  (* Fallback *)
+  Next Obligation.
+    unshelve eapply R_stateR.
+    all: try reflexivity.
+    simpl. constructor.
   Qed.
 
   Definition Aux' Γ t args l1 π1 π2 h2 :=

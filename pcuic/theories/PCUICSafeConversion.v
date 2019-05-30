@@ -2684,13 +2684,19 @@ Section Conversion.
   Next Obligation.
     apply welltyped_zipx in h. zip fold in h.
     apply welltyped_context in h. simpl in h.
-    (* Need inversion on Case *)
-  Admitted.
+    destruct h as [T h].
+    apply inversion_Case in h as X ; auto.
+    destruct X as [u [npar [args [mdecl [idecl [pty [indctx [pctx [ps [btys [? [? [? [? [? [? [? [? ?]]]]]]]]]]]]]]]]]].
+    eexists. eassumption.
+  Qed.
   Next Obligation.
     apply welltyped_zipx in h. zip fold in h.
     apply welltyped_context in h. simpl in h.
-    (* Need inversion on Proj *)
-  Admitted.
+    destruct h as [T h].
+    apply inversion_Proj in h as X ; auto.
+    destruct X as [u [mdecl [idecl [pdecl [args [? [? [? ?]]]]]]]].
+    eexists. eassumption.
+  Qed.
 
   Lemma reducible_head_red_zippx :
     forall Γ t π h fn ξ,

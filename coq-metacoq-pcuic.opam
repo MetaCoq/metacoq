@@ -16,31 +16,25 @@ authors: ["Abhishek Anand <aa755@cs.cornell.edu>"
 ]
 license: "MIT"
 build: [
-  [make "-j%{jobs}%" "template-coq"]
+  [make "-j%{jobs}%" "-C" "pcuic"]
 ]
 install: [
-  [make "-C" "template-coq" "install"]
+  [make "-C" "pcuic" "install"]
 ]
 depends: [
   "ocaml" {> "4.02.3"}
   "coq" {>= "8.8" & < "8.9~"}
+  "coq-equations" {>= "1.2"}
+  "coq-metacoq-template" {= version}
+  "coq-metacoq-checker" {= version}
 ]
-synopsis: "A quoting and unquoting library for Coq in Coq"
+synopsis: "A type system equivalent to Coq's and its metatheory"
 description: """
 MetaCoq is a meta-programming framework for Coq.
 
-Template Coq is a quoting library for Coq. It takes Coq terms and
-constructs a representation of their syntax tree as a Coq inductive data
-type. The representation is based on the kernel's term representation.
-
-In addition to a complete reification and denotation of CIC terms,
-Template Coq includes:
-
-- Reification of the environment structures, for constant and inductive declarations.
-- Denotation of terms and global declarations
-- A monad for manipulating global declarations, calling the type
-  checker, and inserting them in the global environment, in the style of
-  MetaCoq/MTac.
+The PCUIC module provides a cleaned-up specification of Coq's typing algorithm along
+with a certified typechecker for it. This module includes the standard metatheory of
+PCUIC: Weakening, Substitution, Confluence and Subject Reduction are proven here.
 """
 # url {
 #   src: "https://github.com/MetaCoq/metacoq/archive/v2.1-beta3.tar.gz"

@@ -7,7 +7,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICLif
      PCUICUnivSubst PCUICTyping PCUICGeneration TemplateToPCUIC.
 (* For two lemmata wf_instantiate_params_subst_term and
    wf_instantiate_params_subst_ctx, maybe they should be moved *)
-From MetaCoq.Template Require Import Weakening.
+From MetaCoq.Template Require Import Weakening TypingWf.
 
 Require Import String.
 Local Open Scope string_scope.
@@ -224,8 +224,6 @@ Proof.
   induction bodies. simpl. reflexivity. simpl; f_equal. auto.
 Qed.
 
-Require Import TypingWf.
-
 Lemma trans_instantiate_params_subst params args s t :
   All TypingWf.wf_decl params -> All Ast.wf s ->
   All Ast.wf args ->
@@ -383,7 +381,6 @@ Admitted.
 
 Hint Constructors T.wf : wf.
 
-Require Import Template.TypingWf.
 Hint Resolve Template.TypingWf.typing_wf : wf.
 
 Lemma mkApps_trans_wf U l : T.wf (T.tApp U l) -> exists U' V', trans (T.tApp U l) = tApp U' V'.

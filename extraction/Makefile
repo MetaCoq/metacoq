@@ -2,10 +2,10 @@
 all: theory plugin
 
 Makefile.plugin:
-	coq_makefile -f _PluginProject -o Makefile.plugin
+	coq_makefile -f _PluginProject -o Makefile.plugin $(DEPS)
 
 Makefile.extraction:
-	coq_makefile -f _CoqProject -o Makefile.extraction
+	coq_makefile -f _CoqProject -o Makefile.extraction $(DEPS)
 
 theory: Makefile.extraction
 	$(MAKE) -f Makefile.extraction

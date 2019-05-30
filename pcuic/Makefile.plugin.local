@@ -1,2 +1,2 @@
-# CAMLFLAGS+=-open Template_coq_checker_plugin
+CAMLFLAGS+=-I $(COQMF_COQLIB)/user-contrib/MetaCoq/Checker -open Metacoq_checker_plugin
 CAMLFLAGS+=-w -33 # Unused opens

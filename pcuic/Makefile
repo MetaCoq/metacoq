@@ -2,10 +2,10 @@
 all: theory plugin
 
 Makefile.plugin:
-	coq_makefile -f _PluginProject -o Makefile.plugin
+	coq_makefile -f _PluginProject -o Makefile.plugin $(DEPS)
 
 Makefile.pcuic:
-	coq_makefile -f _CoqProject -o Makefile.pcuic
+	coq_makefile -f _CoqProject -o Makefile.pcuic $(DEPS)
 
 theory: Makefile.pcuic
 	$(MAKE) -f Makefile.pcuic

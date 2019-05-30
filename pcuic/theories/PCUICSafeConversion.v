@@ -2836,7 +2836,12 @@ Section Conversion.
       repeat zip fold. eapply cored_context.
       eapply cored_red_cored.
       + eapply red_neq_cored ; try eassumption.
-        admit.
+        intro bot.
+        (* Maybe we should show Req instead of cored!
+           Or go for the whnf thing!
+           We also shuold exploit the fact that unfold_one_case unsures we have
+           a constructor!
+         *)
       + eapply red_mkApps.
         eapply red_Case_c. assumption.
 

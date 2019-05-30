@@ -1865,6 +1865,48 @@ Section Lemmata.
       Σ ;;; Γ |- mkApps u1 l = mkApps u2 l.
   Admitted.
 
+  Lemma inversion_Proj :
+    forall {Γ p c T},
+      Σ ;;; Γ |- tProj p c : T ->
+      ∑ u mdecl idecl pdecl args,
+        declared_projection Σ mdecl idecl p pdecl ×
+        Σ ;;; Γ |- c : mkApps (tInd (fst (fst p)) u) args ×
+        #|args| = ind_npars mdecl ×
+        let ty := snd pdecl in
+        Σ ;;; Γ |- (subst0 (c :: List.rev args)) (subst_instance_constr u ty)
+                <= T.
+  Admitted.
+
+  Lemma inversion_Case :
+    forall {Γ ind npar p c brs T},
+      Σ ;;; Γ |- tCase (ind, npar) p c brs : T ->
+      ∑ u npar args mdecl idecl pty indctx pctx ps btys,
+        declared_inductive Σ mdecl ind idecl ×
+        ind_npars mdecl = npar ×
+        let pars := firstn npar args in
+        Σ ;;; Γ |- p : pty ×
+        types_of_case ind mdecl idecl pars u p pty =
+        Some (indctx, pctx, ps, btys) ×
+        check_correct_arity (snd Σ) idecl ind u indctx pars pctx ×
+        Exists (fun sf => universe_family ps = sf) (ind_kelim idecl) ×
+        Σ ;;; Γ |- c : mkApps (tInd ind u) args ×
+        All2 (fun x y => fst x = fst y × Σ ;;; Γ |- snd x : snd y) brs btys ×
+        Σ ;;; Γ |- mkApps p (skipn npar args ++ [c]) <= T.
+  Admitted.
+
+  Lemma red_neq_cored :
+    forall Γ u v,
+      red Σ Γ u v ->
+      u <> v ->
+      cored Σ Γ v u.
+  Proof.
+    intros Γ u v r n.
+    destruct r.
+    - exfalso. apply n. reflexivity.
+    - eapply cored_red_cored ; try eassumption.
+      constructor. assumption.
+  Qed.
+
   (* Lemma principle_typing : *)
   (*   forall {Γ u A B}, *)
   (*     Σ ;;; Γ |- u : A -> *)

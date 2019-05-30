@@ -2836,6 +2836,9 @@ Section Conversion.
          would allow us to conclude that case on a constructor
          necessarilly reduces.
          Maybe we will have to do so.
+
+         OTHER SOLUTION: Simply say that red means cored or =
+         and show that = is not possible when the lhs is case of cosntr.
        *)
 
   (*   - apply unfold_one_case_red in e as r. destruct r as [r]. *)

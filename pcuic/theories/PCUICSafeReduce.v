@@ -5,7 +5,8 @@ From Coq Require Import Bool String List Program BinPos Compare_dec Arith Lia
 From MetaCoq.Template
 Require Import config Universes monad_utils utils BasicAst AstUtils UnivSubst.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
-     PCUICReflect PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICPosition.
+     PCUICReflect PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICPosition
+     PCUICNormal.
 From Equations Require Import Equations.
 Require Import Equations.Prop.DepElim.
 
@@ -1042,5 +1043,55 @@ Section Reduce.
     unfold reduce_term.
     refine (reduce_stack_sound _ _ ε _).
   Qed.
+
+  Lemma Fix_F_prop :
+    forall A R P f pred x hx,
+      (forall x aux, pred x (f x aux)) ->
+      pred x (@Fix_F A R P f x hx).
+  Proof.
+    intros A R P f pred x hx h.
+    destruct hx. cbn.
+    eapply h.
+  Qed.
+
+  Lemma reduce_stack_prop :
+    forall Γ t π h P,
+      (forall t π h aux, P (t, π) (` (_reduce_stack Γ t π h aux))) ->
+      P (t, π) (reduce_stack Γ t π h).
+  Proof.
+    intros Γ t π h P hP.
+    unfold reduce_stack.
+    case_eq (reduce_stack_full Γ t π h).
+    funelim (reduce_stack_full Γ t π h).
+    intros [t' ρ] ? e.
+    match type of e with
+    | _ = ?u =>
+      change (P (t, π) (` u))
+    end.
+    rewrite <- e.
+    (* eapply Fix_F_prop with (pred := fun x y => P x (` y)). *)
+    (* eapply Fix_F_prop with (hx := (reduce_stack_full_obligations_obligation_2 Γ t π h)). *)
+  Abort.
+
+  Lemma reduce_stack_whnf :
+    forall Γ t π h,
+      whnf Σ Γ (zip (reduce_stack Γ t π h)).
+  Proof.
+    intros Γ t π h.
+    unfold reduce_stack.
+    case_eq (reduce_stack_full Γ t π h).
+    funelim (reduce_stack_full Γ t π h).
+    intros [t' ρ] ? e.
+    match type of e with
+    | _ = ?u =>
+      change (whnf Σ Γ (zip (` u)))
+    end.
+    rewrite <- e.
+    eapply Fix_F_prop.
+
+
+ (* with (pred := fun x p => whnf Σ Γ (zip (` p))). *)
+    (* Maybe prove it on _reduce_stack before? *)
+  Abort.
 
 End Reduce.

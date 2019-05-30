@@ -26,7 +26,7 @@ depends: [
   "coq" {>= "8.8" & < "8.9~"}
   "coq-metacoq-template" {= version}
 ]
-synopsis: "Specification of Coq's type theory and reference checker implementation."
+synopsis: "Specification of Coq's type theory and reference checker implementation"
 description: """
 MetaCoq is a meta-programming framework for Coq.
 

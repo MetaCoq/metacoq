@@ -2834,6 +2834,13 @@ Section Conversion.
       rewrite stack_context_appstack in r2.
       rewrite 2!zipc_appstack in r2. cbn in r2.
       repeat zip fold. eapply cored_context.
+      eapply cored_red_cored.
+      + eapply red_neq_cored ; try eassumption.
+        admit.
+      + eapply red_mkApps.
+        eapply red_Case_c. assumption.
+
+
       (* eapply red_cored_cored ; try eassumption. *)
 
       (* Actually we need to use reduce_stack_Req

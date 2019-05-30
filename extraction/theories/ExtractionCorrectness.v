@@ -333,6 +333,7 @@ env_prop
      forall Γ' : PCUICAst.context, red_context Σ Γ Γ' -> forall a, extract Σ Γ a = extract Σ Γ' a).
 Admitted.
 
+
 (** ** Corrcectness of erasure *)
 Hint Constructors PCUICWcbvEval.eval.
 
@@ -569,16 +570,17 @@ Proof.
            admit.          
         -- erewrite (extract_subst Σ [] (fix_decls mfix) []) in IHeval.
            cbn in IHeval.
-           
 
-           enough ((map (extract Σ []) (PCUICTyping.fix_subst mfix)) = fix_subst
+           rewrite app_nil_r.
+
+           enough (subst0 (map (extract Σ []) (PCUICTyping.fix_subst mfix)) (extract Σ (fix_decls mfix) (BasicAst.dbody d)) = subst0 (fix_subst
               (map
                  (fun d0 : BasicAst.def PCUICAst.term =>
                   {|
                   E.dname := BasicAst.dname d0;
-                  E.dbody := extract Σ (fix_decls mfix ++ [])%list (BasicAst.dbody d0);
-                  E.rarg := BasicAst.rarg d0 |}) mfix)).
-           rewrite <- H. eapply IHeval.
+                  E.dbody := extract Σ (fix_decls mfix)%list (BasicAst.dbody d0);
+                  E.rarg := BasicAst.rarg d0 |}) mfix)) (extract Σ (fix_decls mfix) (BasicAst.dbody d))).
+           rewrite <- H. unfold app_context in IHeval. rewrite app_nil_r in IHeval. eapply IHeval.
            econstructor. eapply type_mkApps.
            all:cbn; eauto.
            ++ unfold PCUICTyping.unfold_fix in *.
@@ -614,14 +616,25 @@ Proof.
                    Grab Existential Variables. econstructor.
              Qed.
              eapply typing_spine_eval; eauto.
-           ++ rewrite <- efix_subst'_subst.
-              rewrite map_length.
-              rewrite <- fix_subst'_subst.
-              generalize (#|mfix|). intros n.
-              induction n; cbn.
-              ** reflexivity.
-              ** rewrite IHn.
+           ++ 
+             Inductive free : nat -> term -> Prop :=
+             | free_tRel x : free x (tRel x)
+             | free_tApp1 x s t : free x s -> free x (tApp s t)
+             | free_tApp2 x s t : free x t -> free x (tApp s t)
+             | free_tLambda x na s : free (S x) s -> free x (tLambda na s)
+             | free_tProj x p s : free x s -> free x (tProj p s)
+             | free_tFix x mfix n d : free (#|mfix| + x) (d.(dbody)) -> In d mfix -> free x (tFix mfix n)
+             (* | free_tCoFix x m n : free x (tCoFix m n) *)
+             | free_tCase1 x p s brs : free x s -> free x (tCase p s brs)
+             | free_tCase2 x p s brs n b : free x b -> In (n, b) brs -> free x (tCase p s brs).
 
+
+             Lemma subst_free_ext sigma tau t :
+               (forall x, free x t -> nth_error sigma x = nth_error tau x) -> subst sigma 0 t = subst tau 0 t.
+             Admitted.
+
+             eapply subst_free_ext. intros.
+                          
               (*  Substituting with the two substitutions is the same. The points where they differ are boxes in the term to be substituted in anyways! *) admit. 
            ++ eapply subslet_fix_subst.
            ++ admit.

@@ -803,8 +803,6 @@ Proof.
     eapply typing_wf_local. eauto. eauto. simpl. exists s; auto. reflexivity. eauto.
     simpl. unfold subst1. rewrite simpl_subst; auto. now rewrite lift0_p.
 
-  - admit. (* FIX Typing  alhpa-equiv *)
-
   - (* The interesting application case *)
     eapply type_mkApps; eauto.
     eapply typing_wf in X; eauto. destruct X.
@@ -938,4 +936,4 @@ Proof.
     apply typing_all_wf_decl in wfΓ; auto. solve_all.
     destruct x as [na [body|] ty']; simpl in *; intuition auto.
     destruct H0. auto.
-Admitted.
+Qed.

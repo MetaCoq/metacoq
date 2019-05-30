@@ -2294,6 +2294,7 @@ Section Conversion.
            We also shuold exploit the fact that unfold_one_case unsures we have
            a constructor!
          *)
+        admit.
       + eapply red_mkApps.
         eapply red_Case_c. assumption.
 

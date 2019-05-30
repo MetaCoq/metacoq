@@ -15,6 +15,23 @@ Module PA := PCUICAst.
 Module P := PCUICWcbvEval.
 
 
+Inductive free : nat -> term -> Prop :=
+| free_tRel x : free x (tRel x)
+| free_tApp1 x s t : free x s -> free x (tApp s t)
+| free_tApp2 x s t : free x t -> free x (tApp s t)
+| free_tLambda x na s : free (S x) s -> free x (tLambda na s)
+| free_tProj x p s : free x s -> free x (tProj p s)
+| free_tFix x mfix n d : free (#|mfix| + x) (d.(dbody)) -> In d mfix -> free x (tFix mfix n)
+(* | free_tCoFix x m n : free x (tCoFix m n) *)
+| free_tCase1 x p s brs : free x s -> free x (tCase p s brs)
+| free_tCase2 x p s brs n b : free x b -> In (n, b) brs -> free x (tCase p s brs).
+
+
+Lemma subst_free_ext sigma tau t :
+  (forall x, free x t -> nth_error sigma x = nth_error tau x) -> subst sigma 0 t = subst tau 0 t.
+Admitted.
+
+
 
 (** ** Weakening *)
 

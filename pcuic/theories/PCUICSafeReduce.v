@@ -1044,34 +1044,84 @@ Section Reduce.
     refine (reduce_stack_sound _ _ ε _).
   Qed.
 
-  Lemma Fix_F_prop :
-    forall A R P f pred x hx,
-      (forall x aux, pred x (f x aux)) ->
-      pred x (@Fix_F A R P f x hx).
+  (* TODO MOVE *)
+  Lemma whne_mkApps :
+    forall Γ t args,
+      whne Σ Γ t ->
+      whne Σ Γ (mkApps t args).
   Proof.
-    intros A R P f pred x hx h.
-    destruct hx. cbn.
-    eapply h.
+    intros Γ t args h.
+    induction args in t, h |- *.
+    - assumption.
+    - simpl. eapply IHargs. econstructor. assumption.
   Qed.
 
-  Lemma reduce_stack_prop :
-    forall Γ t π h P,
-      (forall t π h aux, P (t, π) (` (_reduce_stack Γ t π h aux))) ->
-      P (t, π) (reduce_stack Γ t π h).
+  Lemma whnf_zipc :
+    forall Γ t π,
+      whne Σ (Γ ,,, stack_context π) t ->
+      whnf Σ Γ (zipc t π).
   Proof.
-    intros Γ t π h P hP.
-    unfold reduce_stack.
-    case_eq (reduce_stack_full Γ t π h).
-    funelim (reduce_stack_full Γ t π h).
-    intros [t' ρ] ? e.
-    match type of e with
-    | _ = ?u =>
-      change (P (t, π) (` u))
-    end.
-    rewrite <- e.
-    (* eapply Fix_F_prop with (pred := fun x y => P x (` y)). *)
-    (* eapply Fix_F_prop with (hx := (reduce_stack_full_obligations_obligation_2 Γ t π h)). *)
+    intros Γ t π h.
+    induction π in Γ, t, h |- *.
+    - constructor. assumption.
+    - cbn. eapply IHπ.
+      econstructor. assumption.
+    - cbn. eapply IHπ.
+      econstructor. eapply whne_mkApps.
+      (* Maybe, we should instead show that the term, without
+         its stack is a weak head normal form?
+       *)
   Abort.
+
+  (* Lemma _reduce_stack_whnf : *)
+  (*   forall Γ t π h aux, *)
+  (*     whnf Σ Γ (zip (` (_reduce_stack Γ t π h aux))). *)
+  (* Proof. *)
+  (*   intros Γ t π h aux. *)
+  (*   funelim (_reduce_stack Γ t π h aux). *)
+  (*   all: simpl. *)
+
+  Lemma _reduce_stack_whnf :
+    forall Γ t π h aux,
+      whnf Σ Γ (fst (` (_reduce_stack Γ t π h aux))).
+  Proof.
+    intros Γ t π h aux.
+    funelim (_reduce_stack Γ t π h aux).
+    all: simpl.
+    all: try solve [ constructor ].
+    - constructor. constructor.
+    - constructor. constructor.
+    - (* We need to ask that aux has the same property! *)
+  Abort.
+
+  (* Lemma Fix_F_prop : *)
+  (*   forall A R P f pred x hx, *)
+  (*     (forall x aux, pred x (f x aux)) -> *)
+  (*     pred x (@Fix_F A R P f x hx). *)
+  (* Proof. *)
+  (*   intros A R P f pred x hx h. *)
+  (*   destruct hx. cbn. *)
+  (*   eapply h. *)
+  (* Qed. *)
+
+  (* Lemma reduce_stack_prop : *)
+  (*   forall Γ t π h P, *)
+  (*     (forall t π h aux, P (t, π) (` (_reduce_stack Γ t π h aux))) -> *)
+  (*     P (t, π) (reduce_stack Γ t π h). *)
+  (* Proof. *)
+  (*   intros Γ t π h P hP. *)
+  (*   unfold reduce_stack. *)
+  (*   case_eq (reduce_stack_full Γ t π h). *)
+  (*   funelim (reduce_stack_full Γ t π h). *)
+  (*   intros [t' ρ] ? e. *)
+  (*   match type of e with *)
+  (*   | _ = ?u => *)
+  (*     change (P (t, π) (` u)) *)
+  (*   end. *)
+  (*   rewrite <- e. *)
+  (*   (* eapply Fix_F_prop with (pred := fun x y => P x (` y)). *) *)
+  (*   (* eapply Fix_F_prop with (hx := (reduce_stack_full_obligations_obligation_2 Γ t π h)). *) *)
+  (* Abort. *)
 
   Lemma reduce_stack_whnf :
     forall Γ t π h,
@@ -1079,15 +1129,19 @@ Section Reduce.
   Proof.
     intros Γ t π h.
     unfold reduce_stack.
-    case_eq (reduce_stack_full Γ t π h).
     funelim (reduce_stack_full Γ t π h).
-    intros [t' ρ] ? e.
-    match type of e with
-    | _ = ?u =>
-      change (whnf Σ Γ (zip (` u)))
-    end.
-    rewrite <- e.
-    eapply Fix_F_prop.
+    destruct (reduce_stack_full_obligations_obligation_2 Γ t π h).
+    simpl.
+
+    (* case_eq (reduce_stack_full Γ t π h). *)
+    (* funelim (reduce_stack_full Γ t π h). *)
+    (* intros [t' ρ] ? e. *)
+    (* match type of e with *)
+    (* | _ = ?u => *)
+    (*   change (whnf Σ Γ (zip (` u))) *)
+    (* end. *)
+    (* rewrite <- e. *)
+    (* eapply Fix_F_prop. *)
 
 
  (* with (pred := fun x p => whnf Σ Γ (zip (` p))). *)

@@ -962,32 +962,32 @@ Section Reduce.
   Definition reduce_stack Γ t π h :=
     let '(exist ts _) := reduce_stack_full Γ t π h in ts.
 
-  Theorem reduce_stack_sound :
-    forall Γ t π h,
-      ∥ red (fst Σ) Γ (zip (t, π)) (zip (reduce_stack Γ t π h)) ∥.
+  Lemma cored_red :
+    forall Γ u v,
+      cored Σ Γ v u ->
+      ∥ red Σ Γ u v ∥.
   Proof.
-    intros Γ t π h.
-    unfold reduce_stack.
-    destruct (reduce_stack_full Γ t π h) as [[t' π'] [r _]].
-    dependent destruction r.
-    - noconf H0. constructor. constructor.
-    - rename H0 into r. clear - flags r.
-      dependent destruction r.
-      + cbn in H0. cbn in H1.
-        inversion H0. subst. inversion H1. subst.
-        noconf H4. noconf H5. subst. clear H0 H1.
-        revert H. cbn.
-        generalize (zipc t' π').
-        generalize (zipc t π).
-        intros u v. clear - flags.
-        intro r.
-        induction r.
-        * constructor. econstructor ; try eassumption.
-          constructor.
-        * destruct IHr as [ih].
-          constructor. econstructor ; eassumption.
-      + cbn in H0, H1. inversion H0. inversion H1.
-        subst. cbn. rewrite H5.
+    intros Γ u v h.
+    induction h.
+    - constructor. econstructor.
+      + constructor.
+      + assumption.
+    - destruct IHh as [r].
+      constructor. econstructor ; eassumption.
+  Qed.
+
+  Lemma Req_red :
+    forall Γ x y,
+      Req Σ Γ y x ->
+      ∥ red Σ Γ (zip x) (zip y) ∥.
+  Proof.
+    intros Γ [t π] [t' π'] h. cbn.
+    dependent destruction h.
+    - repeat zip fold. rewrite H0.
+      constructor. constructor.
+    - dependent destruction H0.
+      + eapply cored_red. assumption.
+      + cbn in H1. inversion H1.
         constructor. constructor.
   Qed.
 
@@ -999,6 +999,15 @@ Section Reduce.
     unfold reduce_stack.
     destruct (reduce_stack_full Γ t π h) as [[t' π'] [r _]].
     assumption.
+  Qed.
+
+  Theorem reduce_stack_sound :
+    forall Γ t π h,
+      ∥ red (fst Σ) Γ (zip (t, π)) (zip (reduce_stack Γ t π h)) ∥.
+  Proof.
+    intros Γ t π h.
+    eapply Req_red.
+    eapply reduce_stack_Req.
   Qed.
 
   Lemma reduce_stack_decompose :
@@ -1079,31 +1088,6 @@ Section Reduce.
     refine (reduce_stack_sound _ _ ε _).
   Qed.
 
-  Lemma whnf_zipc :
-    forall Γ t π,
-      whne Σ (Γ ,,, stack_context π) t ->
-      whnf Σ Γ (zipc t π).
-  Proof.
-    intros Γ t π h.
-    induction π in Γ, t, h |- *.
-    - constructor. assumption.
-    - cbn. eapply IHπ.
-      econstructor. assumption.
-    - cbn. eapply IHπ.
-      econstructor. eapply whne_mkApps.
-      (* Maybe, we should instead show that the term, without
-         its stack is a weak head normal form?
-       *)
-  Abort.
-
-  (* Lemma _reduce_stack_whnf : *)
-  (*   forall Γ t π h aux, *)
-  (*     whnf Σ Γ (zip (` (_reduce_stack Γ t π h aux))). *)
-  (* Proof. *)
-  (*   intros Γ t π h aux. *)
-  (*   funelim (_reduce_stack Γ t π h aux). *)
-  (*   all: simpl. *)
-
   Lemma _reduce_stack_whnf :
     forall Γ t π h aux,
       RedFlags.zeta flags ->
@@ -1119,18 +1103,6 @@ Section Reduce.
     funelim (_reduce_stack Γ t π h aux).
     all: simpl.
     all: try solve [ constructor ; constructor ].
-    (* all: try solve [ *)
-    (*   match goal with *)
-    (*   | reduce : forall t' π', R _ _ _ _ -> _, *)
-    (*     haux : forall t' π' hR, whnf _ _ _ *)
-    (*     |- context [ reduce ?x ?y ?z ] => *)
-    (*     case_eq (reduce x y z) ; *)
-    (*     specialize (haux x y z) *)
-    (*   end ; *)
-    (*   intros [? ?] [? [? [? ?]]] eq ; cbn ; *)
-    (*   rewrite eq in haux ; cbn in haux ; *)
-    (*   assumption *)
-    (* ]. *)
     - match goal with
       | |- context [ reduce ?x ?y ?z ] =>
         case_eq (reduce x y z) ;
@@ -1214,6 +1186,7 @@ Section Reduce.
       pose proof (eq_sym e0) as e1. apply decompose_stack_eq in e1.
       subst.
       rewrite stack_context_appstack in haux'. simpl in haux'.
+
       (* We are almost there!
          t0 is a normal form of inductive type,
          plus it is not a constructor,

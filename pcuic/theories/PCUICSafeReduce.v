@@ -1177,8 +1177,7 @@ Section Reduce.
       intros [t' π'] [? [? [? ?]]] eq. cbn.
       rewrite eq in haux. cbn in haux.
       assumption.
-    - (* PROBLEM LetIn is never normal, but it also is never reduced *)
-      give_up.
+    - rewrite hzeta in Heq. discriminate.
     - rewrite hdelta in Heq. discriminate.
     - match goal with
       | |- context [ reduce ?x ?y ?z ] =>

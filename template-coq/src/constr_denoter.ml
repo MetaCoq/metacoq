@@ -34,22 +34,22 @@ struct
     Names.Id.of_string (unquote_string trm)
 
   let unquote_cast_kind trm =
-    if Constr.equal trm kVmCast then
+    if constr_equall trm kVmCast then
       Constr.VMcast
-    else if Constr.equal trm kCast then
+    else if constr_equall trm kCast then
       Constr.DEFAULTcast
-    else if Constr.equal trm kRevertCast then
+    else if constr_equall trm kRevertCast then
       Constr.REVERTcast
-    else if Constr.equal trm kNative then
+    else if constr_equall trm kNative then
       Constr.VMcast
     else
       not_supported_verb trm "unquote_cast_kind"
 
   let unquote_name trm =
     let (h,args) = app_full trm [] in
-    if Constr.equal h nAnon then
+    if constr_equall h nAnon then
       Names.Anonymous
-    else if Constr.equal h nNamed then
+    else if constr_equall h nNamed then
       match args with
         n :: [] -> Names.Name (unquote_ident n)
       | _ -> bad_term_verb trm "unquote_name"
@@ -88,20 +88,20 @@ struct
 
   let unquote_level evm trm (* of type level *) : Evd.evar_map * Univ.Level.t =
     let (h,args) = app_full trm [] in
-    if Constr.equal h lProp then
+    if constr_equall h lProp then
       match args with
       | [] -> evm, Univ.Level.prop
       | _ -> bad_term_verb trm "unquote_level"
-    else if Constr.equal h lSet then
+    else if constr_equall h lSet then
       match args with
       | [] -> evm, Univ.Level.set
       | _ -> bad_term_verb trm "unquote_level"
-    else if Constr.equal h tLevel then
+    else if constr_equall h tLevel then
       match args with
       | s :: [] -> debug (fun () -> str "Unquoting level " ++ pr_constr trm);
         get_level evm (unquote_string s)
       | _ -> bad_term_verb trm "unquote_level"
-    else if Constr.equal h tLevelVar then
+    else if constr_equall h tLevelVar then
       match args with
       | l :: [] -> evm, Univ.Level.var (unquote_nat l)
       | _ -> bad_term_verb trm "unquote_level"
@@ -149,7 +149,7 @@ struct
 
   let unquote_inductive trm =
     let (h,args) = app_full trm [] in
-    if Constr.equal h tmkInd then
+    if constr_equall h tmkInd then
       match args with
         nm :: num :: _ ->
         let s = unquote_string nm in
@@ -175,55 +175,55 @@ struct
   let inspect_term (t:Constr.t)
   : (Constr.t, quoted_int, quoted_ident, quoted_name, quoted_sort, quoted_cast_kind, quoted_kernel_name, quoted_inductive, quoted_univ_instance, quoted_proj) structure_of_term =
     let (h,args) = app_full t [] in
-    if Constr.equal h tRel then
+    if constr_equall h tRel then
       match args with
         x :: _ -> ACoq_tRel x
       | _ -> CErrors.user_err (print_term t ++ Pp.str ("has bad structure"))
-    else if Constr.equal h tVar then
+    else if constr_equall h tVar then
       match args with
         x :: _ -> ACoq_tVar x
       | _ -> CErrors.user_err (print_term t ++ Pp.str ("has bad structure"))
-    else if Constr.equal h tSort then
+    else if constr_equall h tSort then
       match args with
         x :: _ -> ACoq_tSort x
       | _ -> CErrors.user_err (print_term t ++ Pp.str ("has bad structure"))
-    else if Constr.equal h tCast then
+    else if constr_equall h tCast then
       match args with
         x :: y :: z :: _ -> ACoq_tCast (x, y, z)
       | _ -> CErrors.user_err (print_term t ++ Pp.str ("has bad structure"))
-    else if Constr.equal h tProd then
+    else if constr_equall h tProd then
       match args with
         n :: t :: b :: _ -> ACoq_tProd (n,t,b)
       | _ -> CErrors.user_err (print_term t ++ Pp.str ("has bad structure"))
-    else if Constr.equal h tLambda then
+    else if constr_equall h tLambda then
       match args with
         n  :: t :: b :: _ -> ACoq_tLambda (n,t,b)
       | _ -> CErrors.user_err (print_term t ++ Pp.str ("has bad structure"))
-    else if Constr.equal h tLetIn then
+    else if constr_equall h tLetIn then
       match args with
         n :: e :: t :: b :: _ -> ACoq_tLetIn (n,e,t,b)
       | _ -> CErrors.user_err (print_term t ++ Pp.str ("has bad structure"))
-    else if Constr.equal h tApp then
+    else if constr_equall h tApp then
       match args with
         f::xs::_ -> ACoq_tApp (f, unquote_list xs)
       | _ -> CErrors.user_err (print_term t ++ Pp.str ("has bad structure"))
-    else if Constr.equal h tConst then
+    else if constr_equall h tConst then
       match args with
         s::u::_ -> ACoq_tConst (s, u)
       | _ -> CErrors.user_err (print_term t ++ Pp.str ("has bad structure"))
-    else if Constr.equal h tInd then
+    else if constr_equall h tInd then
       match args with
         i::u::_ -> ACoq_tInd (i,u)
       | _ -> CErrors.user_err (print_term t ++ Pp.str ("has bad structure"))
-    else if Constr.equal h tConstructor then
+    else if constr_equall h tConstructor then
       match args with
         i::idx::u::_ -> ACoq_tConstruct (i,idx,u)
       | _ -> CErrors.user_err (print_term t ++ Pp.str ("has bad structure: constructor case"))
-    else if Constr.equal h tCase then
+    else if constr_equall h tCase then
       match args with
         info::ty::d::brs::_ -> ACoq_tCase (unquote_pair info, ty, d, List.map unquote_pair (unquote_list brs))
       | _ -> CErrors.user_err (print_term t ++ Pp.str ("has bad structure"))
-    else if Constr.equal h tFix then
+    else if constr_equall h tFix then
       match args with
         bds::i::_ ->
         let unquoteFbd  b  =
@@ -240,7 +240,7 @@ struct
         let lbd = List.map unquoteFbd (unquote_list bds) in
         ACoq_tFix (lbd, i)
       | _ -> CErrors.user_err (print_term t ++ Pp.str ("has bad structure"))
-    else if Constr.equal h tCoFix then
+    else if constr_equall h tCoFix then
       match args with
         bds::i::_ ->
         let unquoteFbd  b  =
@@ -257,7 +257,7 @@ struct
         let lbd = List.map unquoteFbd (unquote_list bds) in
         ACoq_tCoFix (lbd, i)
       | _ -> CErrors.user_err (print_term t ++ Pp.str ("has bad structure"))
-    else if Constr.equal h tProj then
+    else if constr_equall h tProj then
       match args with
         proj::t::_ -> ACoq_tProj (proj, t)
       | _ -> CErrors.user_err (print_term t ++ Pp.str ("has bad structure"))

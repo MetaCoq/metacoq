@@ -91,7 +91,7 @@ sig
 
   val mk_constant_decl : quoted_kernel_name -> quoted_constant_body -> quoted_global_decl
 
-  val empty_global_declartions : quoted_global_declarations
+  val empty_global_declartions : unit -> quoted_global_declarations
   val add_global_decl : quoted_global_decl -> quoted_global_declarations -> quoted_global_declarations
 
   val mk_program : quoted_global_declarations -> t -> quoted_program
@@ -435,7 +435,7 @@ struct
       (x,y)
     in
     let (tm, _) = quote_rem () env trm in
-    let decls =  List.fold_left (fun acc d -> Q.add_global_decl d acc) Q.empty_global_declartions !constants in
+    let decls =  List.fold_left (fun acc d -> Q.add_global_decl d acc) (Q.empty_global_declartions ()) !constants in
     Q.mk_program decls tm
 
   let quote_one_ind envA envC (mi:Entries.one_inductive_entry) =

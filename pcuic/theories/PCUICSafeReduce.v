@@ -687,9 +687,26 @@ Section Reduce.
     | false := give (tCase (ind, par) p c brs) π
     } ;
 
-                                                                                      (* TODO tProj *)
+    _reduce_stack Γ (tProj p c) π h reduce with RedFlags.iota flags := {
+    | true with inspect (reduce c (Proj p π) _) := {
+      | @exist (@exist (t,π') prf) eq with inspect (decompose_stack π') := {
+        | @exist (args, ρ) prf' with construct_viewc t := {
+          | view_construct ind' c' _ with p := {
+            | (i, pars, narg) with inspect (nth_error args (pars + narg)) := {
+              | @exist (Some arg) eqa := rec reduce arg π ;
+              | @exist None eqa := False_rect _ _
+              }
+            } ;
+          | view_other t ht := give (tProj p (mkApps t args)) π
+          }
+        }
+      } ;
+    | false := give (tProj p c) π
+    } ;
 
     _reduce_stack Γ t π h reduce := give t π.
+
+  (* tRel *)
   Next Obligation.
     left.
     econstructor.
@@ -715,6 +732,8 @@ Section Reduce.
         destruct (inversion_Rel h) as [? [[?] [e ?]]].
         cbn in e. rewrite e in eq. discriminate.
   Qed.
+
+  (* tLambda *)
   Next Obligation.
     left. econstructor.
     cbn. eapply red1_context. econstructor.
@@ -728,11 +747,15 @@ Section Reduce.
   Next Obligation.
     rewrite β in eq1. discriminate.
   Qed.
+
+  (* tLetIn *)
   Next Obligation.
     left. econstructor.
     eapply red1_context.
     econstructor.
   Qed.
+
+  (* tApp *)
   Next Obligation.
     right.
     cbn. unfold posR. cbn.
@@ -745,6 +768,8 @@ Section Reduce.
     cbn. rewrite e in h. cbn in h.
     assumption.
   Qed.
+
+  (* tConst *)
   Next Obligation.
     left. econstructor. eapply red1_context.
     econstructor.
@@ -776,6 +801,8 @@ Section Reduce.
     unfold declared_constant in d. rewrite <- eq in d.
     discriminate.
   Qed.
+
+  (* tCase *)
   Next Obligation.
     right. unfold posR. cbn.
     eapply positionR_poscat_nonil. discriminate.
@@ -860,6 +887,23 @@ Section Reduce.
         apply zipc_inj in H3. inversion H3. subst.
         reflexivity.
   Qed.
+
+  (* tProj *)
+  Next Obligation.
+    right. unfold posR. cbn.
+    rewrite <- app_nil_r.
+    eapply positionR_poscat.
+    constructor.
+  Qed.
+  Next Obligation.
+  Admitted.
+  Next Obligation.
+    apply welltyped_context in h as hh.
+  Admitted.
+  Next Obligation.
+  Admitted.
+
+  (* tFix *)
   Next Obligation.
     symmetry in eq2.
     pose proof (decompose_stack_at_eq _ _ _ _ _ eq2). subst.

@@ -539,6 +539,25 @@ Section Reduce.
       change C'
     end.
 
+  (* TODO MOVE *)
+  Lemma inversion_Const :
+    forall {Γ c u T},
+      Σ ;;; Γ |- tConst c u : T ->
+      ∑ decl,
+        wf_local Σ Γ ×
+        declared_constant Σ c decl ×
+        consistent_universe_context_instance (snd Σ) (cst_universes decl) u ×
+        Σ ;;; Γ |- subst_instance_constr u (cst_type decl) <= T.
+  Proof.
+    intros Γ c u T h.
+    dependent induction h.
+    - exists decl. repeat split ; auto.
+      apply cumul_refl'.
+    - destruct IHh as [decl [? [? [? ?]]]].
+      exists decl. repeat split ; auto.
+      eapply cumul_trans ; eauto.
+  Qed.
+
   (* Show Obligation Tactic. *)
 
   Ltac obTac :=
@@ -588,7 +607,9 @@ Section Reduce.
       | @exist (Some (ConstantDecl _ {| cst_body := Some body |})) eq :=
         let body' := subst_instance_constr u body in
         rec reduce body' π ;
-      | @exist _ eq := give (tConst c u) π
+      | @exist (Some (InductiveDecl _ _)) eq := False_rect _ _ ;
+      | @exist (Some _) eq := give (tConst c u) π ;
+      | @exist None eq := False_rect _ _
       } ;
     | _ := give (tConst c u) π
     } ;
@@ -704,6 +725,20 @@ Section Reduce.
           cbn in e. revert e. destruct (ident_eq_spec c na) ; easy.
         * intros e eq. eapply IHg. eassumption.
     - cbn. reflexivity.
+  Qed.
+  Next Obligation.
+    eapply welltyped_context in h. simpl in h.
+    destruct h as [T h].
+    apply inversion_Const in h as [decl [? [d [? ?]]]].
+    unfold declared_constant in d. rewrite <- eq in d.
+    discriminate.
+  Qed.
+  Next Obligation.
+    eapply welltyped_context in h. simpl in h.
+    destruct h as [T h].
+    apply inversion_Const in h as [decl [? [d [? ?]]]].
+    unfold declared_constant in d. rewrite <- eq in d.
+    discriminate.
   Qed.
   Next Obligation.
     right. unfold posR. cbn.
@@ -1155,17 +1190,8 @@ Section Reduce.
       constructor. econstructor.
       + symmetry. exact e.
       + reflexivity.
-    - (* Constants corresponding to inductive declarations are never unfolded
-         is that ok?
-       *)
-      give_up.
-    - (* TODO Mark this case as impossible in reduce_stack! *)
-      apply welltyped_context in h. simpl in h.
-      destruct h as [T h].
-      (* NEED inversion lemma for Const, but better to do it
-         in reduce_stack.
-       *)
-      admit.
+    - bang.
+    - bang.
     - rewrite hiota in Heq. discriminate.
     - match goal with
       | |- context [ reduce ?x ?y ?z ] =>

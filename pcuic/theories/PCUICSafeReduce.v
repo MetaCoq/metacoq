@@ -460,6 +460,18 @@ Section Reduce.
       + constructor. eapply cumul_trans ; eassumption.
   Qed.
 
+  Lemma inversion_Proj :
+    forall {Γ p c T},
+      Σ ;;; Γ |- tProj p c : T ->
+      ∑ u mdecl idecl pdecl args,
+        declared_projection Σ mdecl idecl p pdecl ×
+        Σ ;;; Γ |- c : mkApps (tInd (fst (fst p)) u) args ×
+        #|args| = ind_npars mdecl ×
+        let ty := snd pdecl in
+        Σ ;;; Γ |- (subst0 (c :: List.rev args)) (subst_instance_constr u ty)
+                <= T.
+  Admitted.
+
   Lemma welltyped_context :
     forall Γ t,
       welltyped Σ Γ (zip t) ->
@@ -482,6 +494,11 @@ Section Reduce.
       destruct h as [B h].
       destruct indn.
       destruct (weak_inversion_Case h) as [? [? [?]]].
+      eexists. eassumption.
+    - cbn. cbn in h. cbn in IHπ. apply IHπ in h.
+      destruct h as [T' h].
+      apply inversion_Proj in h
+        as [uni [mdecl [idecl [pdecl [args [? [? [? ?]]]]]]]].
       eexists. eassumption.
     - cbn. cbn in h. cbn in IHπ. apply IHπ in h.
       destruct h as [T' h].
@@ -669,6 +686,8 @@ Section Reduce.
       } ;
     | false := give (tCase (ind, par) p c brs) π
     } ;
+
+                                                                                      (* TODO tProj *)
 
     _reduce_stack Γ t π h reduce := give t π.
   Next Obligation.

@@ -717,10 +717,10 @@ Section Conversion.
     cbn. symmetry in eq2.
     pose proof (decompose_stack_at_eq _ _ _ _ _ eq2). subst.
     apply welltyped_zipx in h. rewrite zipc_appstack in h. cbn in h.
-    zip fold in h. apply welltyped_context in h. simpl in h.
-      destruct h as [T h].
-      destruct (inversion_App h) as [na [A' [B' [[?] [[?] [?]]]]]].
-      eexists. eassumption.
+    zip fold in h. apply welltyped_context in h ; auto. simpl in h.
+    destruct h as [T h].
+    destruct (inversion_App h) as [na [A' [B' [[?] [[?] [?]]]]]].
+    eexists. eassumption.
   Qed.
 
   Derive NoConfusion NoConfusionHom for option.
@@ -1289,7 +1289,7 @@ Section Conversion.
   Qed.
   Next Obligation.
     apply welltyped_zipx in h1.
-    zip fold in h1. apply welltyped_context in h1. simpl in h1.
+    zip fold in h1. apply welltyped_context in h1 ; auto. simpl in h1.
     destruct h1 as [T h1].
     destruct (weak_inversion_Case h1) as [args [u [?]]].
     eexists. eassumption.
@@ -1297,7 +1297,7 @@ Section Conversion.
   Next Obligation.
     clear aux.
     apply welltyped_zipx in h2.
-    zip fold in h2. apply welltyped_context in h2. simpl in h2.
+    zip fold in h2. apply welltyped_context in h2 ; auto. simpl in h2.
     destruct h2 as [T h2].
     destruct (weak_inversion_Case h2) as [args [u [?]]].
     eexists. eassumption.
@@ -1858,14 +1858,14 @@ Section Conversion.
     (* We get that u2 is well-typed *)
     apply welltyped_zipx in h2. cbn in h2. cbn.
     zip fold in h2.
-    apply welltyped_context in h2 as hh2. simpl in hh2.
+    apply welltyped_context in h2 as hh2 ; auto. simpl in hh2.
     rewrite stack_context_appstack in hh2.
     destruct hh2 as [A2 hh2].
     destruct (inversion_App hh2) as [na2 [A2' [B2' [[?] [[hu2] [?]]]]]].
     (* We get that u1 is well-typed *)
     apply welltyped_zipx in h1. cbn in h1. cbn.
     zip fold in h1.
-    apply welltyped_context in h1 as hh1. simpl in hh1.
+    apply welltyped_context in h1 as hh1 ; auto. simpl in hh1.
     rewrite stack_context_appstack in hh1.
     destruct hh1 as [A1 hh1].
     destruct (inversion_App hh1) as [na1 [A1' [B1' [[?] [[hu1] [?]]]]]].
@@ -2135,7 +2135,7 @@ Section Conversion.
     reducible_head Γ _ π h := None.
   Next Obligation.
     apply welltyped_zipx in h. zip fold in h.
-    apply welltyped_context in h. simpl in h.
+    apply welltyped_context in h ; auto. simpl in h.
     destruct h as [T h].
     apply inversion_Case in h as X ; auto.
     destruct X as [u [npar [args [mdecl [idecl [pty [indctx [pctx [ps [btys [? [? [? [? [? [? [? [? ?]]]]]]]]]]]]]]]]]].
@@ -2143,7 +2143,7 @@ Section Conversion.
   Qed.
   Next Obligation.
     apply welltyped_zipx in h. zip fold in h.
-    apply welltyped_context in h. simpl in h.
+    apply welltyped_context in h ; auto. simpl in h.
     destruct h as [T h].
     apply inversion_Proj in h as X ; auto.
     destruct X as [u [mdecl [idecl [pdecl [args [? [? [? ?]]]]]]]].

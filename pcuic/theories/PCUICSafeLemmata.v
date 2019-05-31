@@ -415,6 +415,9 @@ Section Lemmata.
       eapply cumul_it_mkLambda_or_LetIn.
       assumption.
     - unfold zippx. simpl.
+      eapply cumul_it_mkLambda_or_LetIn.
+      assumption.
+    - unfold zippx. simpl.
       eapply cumul_it_mkLambda_or_LetIn. cbn.
       (* Need cumul for Lambda again *)
       admit.
@@ -986,6 +989,9 @@ Section Lemmata.
     | Case indn p brs ρ =>
       Case indn (nl p) (map (on_snd nl) brs) (nlstack ρ)
 
+    | Proj p ρ =>
+      Proj p (nlstack ρ)
+
     | Prod_l na B ρ =>
       Prod_l nAnon (nl B) (nlstack ρ)
 
@@ -1264,7 +1270,7 @@ Section Lemmata.
     pose proof (decompose_stack_eq _ _ _ e). subst.
     eapply it_mkLambda_or_LetIn_welltyped.
     rewrite zipc_appstack in h. zip fold in h.
-    apply welltyped_context in h. assumption.
+    apply welltyped_context in h ; auto.
   Qed.
 
   Lemma lookup_env_const_name :
@@ -1849,18 +1855,6 @@ Section Lemmata.
     forall Γ u1 u2 l,
       Σ ;;; Γ |- u1 = u2 ->
       Σ ;;; Γ |- mkApps u1 l = mkApps u2 l.
-  Admitted.
-
-  Lemma inversion_Proj :
-    forall {Γ p c T},
-      Σ ;;; Γ |- tProj p c : T ->
-      ∑ u mdecl idecl pdecl args,
-        declared_projection Σ mdecl idecl p pdecl ×
-        Σ ;;; Γ |- c : mkApps (tInd (fst (fst p)) u) args ×
-        #|args| = ind_npars mdecl ×
-        let ty := snd pdecl in
-        Σ ;;; Γ |- (subst0 (c :: List.rev args)) (subst_instance_constr u ty)
-                <= T.
   Admitted.
 
   Lemma red_neq_cored :

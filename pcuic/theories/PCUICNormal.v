@@ -63,4 +63,15 @@ Section Normal.
   | whne_case i p c brs : whne Γ c -> whne Γ (tCase i p c brs)
   | whne_proj p c : whne Γ c -> whne Γ (tProj p c).
 
+  Lemma whne_mkApps :
+    forall Γ t args,
+      whne Γ t ->
+      whne Γ (mkApps t args).
+  Proof.
+    intros Γ t args h.
+    induction args in t, h |- *.
+    - assumption.
+    - simpl. eapply IHargs. econstructor. assumption.
+  Qed.
+
 End Normal.

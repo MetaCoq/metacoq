@@ -1044,18 +1044,6 @@ Section Reduce.
     refine (reduce_stack_sound _ _ ε _).
   Qed.
 
-  (* TODO MOVE *)
-  Lemma whne_mkApps :
-    forall Γ t args,
-      whne Σ Γ t ->
-      whne Σ Γ (mkApps t args).
-  Proof.
-    intros Γ t args h.
-    induction args in t, h |- *.
-    - assumption.
-    - simpl. eapply IHargs. econstructor. assumption.
-  Qed.
-
   Lemma whnf_zipc :
     forall Γ t π,
       whne Σ (Γ ,,, stack_context π) t ->

@@ -403,6 +403,23 @@ Section Reduce.
       exists args, u. assumption.
   Qed.
 
+  Lemma inversion_Case :
+    forall {Γ ind npar p c brs T},
+      Σ ;;; Γ |- tCase (ind, npar) p c brs : T ->
+      ∑ u npar args mdecl idecl pty indctx pctx ps btys,
+        declared_inductive Σ mdecl ind idecl ×
+        ind_npars mdecl = npar ×
+        let pars := firstn npar args in
+        Σ ;;; Γ |- p : pty ×
+        types_of_case ind mdecl idecl pars u p pty =
+        Some (indctx, pctx, ps, btys) ×
+        check_correct_arity (snd Σ) idecl ind u indctx pars pctx ×
+        Exists (fun sf => universe_family ps = sf) (ind_kelim idecl) ×
+        Σ ;;; Γ |- c : mkApps (tInd ind u) args ×
+        All2 (fun x y => fst x = fst y × Σ ;;; Γ |- snd x : snd y) brs btys ×
+        Σ ;;; Γ |- mkApps p (skipn npar args ++ [c]) <= T.
+  Admitted.
+
   Lemma inversion_Lambda :
     forall {Σ Γ na A t T},
       Σ ;;; Γ |- tLambda na A t : T ->
@@ -1088,6 +1105,21 @@ Section Reduce.
     refine (reduce_stack_sound _ _ ε _).
   Qed.
 
+  (* TODO MOVE *)
+  Lemma red_welltyped :
+    forall {Γ u v},
+      welltyped Σ Γ u ->
+      ∥ red (fst Σ) Γ u v ∥ ->
+      welltyped Σ Γ v.
+  Proof.
+    intros Γ u v h [r].
+    revert h. induction r ; intros h.
+    - assumption.
+    - specialize IHr with (1 := ltac:(eassumption)).
+      destruct IHr as [A ?]. exists A.
+      eapply subject_reduction ; eassumption.
+  Qed.
+
   Lemma _reduce_stack_whnf :
     forall Γ t π h aux,
       RedFlags.zeta flags ->
@@ -1186,10 +1218,17 @@ Section Reduce.
       pose proof (eq_sym e0) as e1. apply decompose_stack_eq in e1.
       subst.
       rewrite stack_context_appstack in haux'. simpl in haux'.
-
+      apply Req_red in r as hr.
+      pose proof (red_welltyped h hr) as hh.
+      cbn in hh. rewrite zipc_appstack in hh. cbn in hh.
+      zip fold in hh.
+      apply welltyped_context in hh. simpl in hh.
+      destruct hh as [T hh].
+      apply inversion_Case in hh
+        as [u [npar [args [mdecl [idecl [pty [indctx [pctx [ps [btys [? [? [? [? [? [? [ht0 [? ?]]]]]]]]]]]]]]]]]].
       (* We are almost there!
-         t0 is a normal form of inductive type,
-         plus it is not a constructor,
+         t0 is a normal form (haux') of inductive type (ht0),
+         plus it is not a constructor (Heq),
          we want to conclude it is necessarily neutral
        *)
       admit.

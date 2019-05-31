@@ -64,20 +64,6 @@ Section Lemmata.
       welltyped Σ Γ v.
   Admitted.
 
-  Lemma red_welltyped :
-    forall {Γ u v},
-      welltyped Σ Γ u ->
-      ∥ red (fst Σ) Γ u v ∥ ->
-      welltyped Σ Γ v.
-  Proof.
-    intros Γ u v h [r].
-    revert h. induction r ; intros h.
-    - assumption.
-    - specialize IHr with (1 := ltac:(eassumption)).
-      destruct IHr as [A ?]. exists A.
-      eapply PSR.subject_reduction ; eassumption.
-  Qed.
-
   Lemma red_cored_or_eq :
     forall Γ u v,
       red Σ Γ u v ->
@@ -1875,23 +1861,6 @@ Section Lemmata.
         let ty := snd pdecl in
         Σ ;;; Γ |- (subst0 (c :: List.rev args)) (subst_instance_constr u ty)
                 <= T.
-  Admitted.
-
-  Lemma inversion_Case :
-    forall {Γ ind npar p c brs T},
-      Σ ;;; Γ |- tCase (ind, npar) p c brs : T ->
-      ∑ u npar args mdecl idecl pty indctx pctx ps btys,
-        declared_inductive Σ mdecl ind idecl ×
-        ind_npars mdecl = npar ×
-        let pars := firstn npar args in
-        Σ ;;; Γ |- p : pty ×
-        types_of_case ind mdecl idecl pars u p pty =
-        Some (indctx, pctx, ps, btys) ×
-        check_correct_arity (snd Σ) idecl ind u indctx pars pctx ×
-        Exists (fun sf => universe_family ps = sf) (ind_kelim idecl) ×
-        Σ ;;; Γ |- c : mkApps (tInd ind u) args ×
-        All2 (fun x y => fst x = fst y × Σ ;;; Γ |- snd x : snd y) brs btys ×
-        Σ ;;; Γ |- mkApps p (skipn npar args ++ [c]) <= T.
   Admitted.
 
   Lemma red_neq_cored :

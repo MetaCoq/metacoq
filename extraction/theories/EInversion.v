@@ -3,7 +3,7 @@
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega Lia.
 From Template Require Import config utils monad_utils BasicAst AstUtils.
 From PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICTyping PCUICWeakening PCUICSubstitution PCUICChecker PCUICRetyping PCUICMetaTheory PCUICWcbvEval PCUICSR PCUICValidity.
-From TemplateExtraction Require Import EAst ELiftSubst ETyping EWcbvEval Extract Prelim.
+
 From Equations Require Import Equations.
 Require Import String.
 Local Open Scope list_scope.
@@ -16,23 +16,6 @@ Module PA := PCUICAst.
 Module P := PCUICWcbvEval.
 
 (** ** Inversion on eval *)
-
-
-Lemma eval_tBox_inv Σ' x2 :
-  eval Σ' E.tBox x2 -> x2 = tBox.
-Proof.
-  intros. dependent induction H.
-  - induction args using rev_ind. inv x. rewrite emkApps_snoc in x. inv x.
-  - induction l using rev_ind. cbn in x. invs H0. cbn. eapply IHeval. eauto.
-    rewrite emkApps_snoc in x. inv x.
-  - reflexivity.
-Qed.
-
-Lemma eval_box_apps:
-  forall (Σ' : list E.global_decl) (e : E.term) (x : list E.term), eval Σ' e tBox -> eval Σ' (mkApps e x) tBox.
-Proof.
-  intros Σ' e x H2. revert e H2; induction x; cbn; intros; eauto using eval.
-Qed.
 
 Lemma type_Case_inv Σ Γ ind npar p c brs T :
   Σ;;; Γ |- PCUICAst.tCase (ind, npar) p c brs : T ->
@@ -73,4 +56,42 @@ Proof.
   - edestruct IHX. reflexivity. destruct x as []. destruct p.
     exists (m, o, p0). intuition eauto.
     all: eapply cumul_trans; eauto.
+Qed.
+
+Lemma type_tFix_inv Σ Γ mfix n T : wf Σ ->
+  Σ ;;; Γ |- tFix mfix n : T ->
+  ∑ decl, let types := PCUICLiftSubst.fix_context mfix in
+               (nth_error mfix n = Some decl) *
+               (wf_local Σ (Γ ,,, types)) *
+               (All
+                 (fun d : BasicAst.def PCUICAst.term =>
+                  Σ;;; Γ ,,, types |- BasicAst.dbody d : PCUICLiftSubst.lift #|types| 0 (dtype d)
+                  × PCUICAst.isLambda (BasicAst.dbody d) = true) mfix) *
+               (Σ;;; Γ |- dtype decl <= T).
+Proof.
+  intros. dependent induction X0.
+  - eexists.  intuition eauto.
+  - edestruct (IHX0 _ _ X eq_refl) as []. destruct p as [[[]]].
+    (* repeat match goal with [ H : _ * _ |- _ ] => destruct H end. *)
+    eexists.
+    cbn. intuition eauto.
+    all: eapply cumul_trans; eauto.
+Qed.
+  
+From TemplateExtraction Require Import EAst ELiftSubst ETyping EWcbvEval Extract Prelim.
+
+Lemma eval_tBox_inv Σ' x2 :
+  eval Σ' E.tBox x2 -> x2 = tBox.
+Proof.
+  intros. dependent induction H.
+  - induction args using rev_ind. inv x. rewrite emkApps_snoc in x. inv x.
+  - induction l using rev_ind. cbn in x. invs H0. cbn. eapply IHeval. eauto.
+    rewrite emkApps_snoc in x. inv x.
+  - reflexivity.
+Qed.
+
+Lemma eval_box_apps:
+  forall (Σ' : list E.global_decl) (e : E.term) (x : list E.term), eval Σ' e tBox -> eval Σ' (mkApps e x) tBox.
+Proof.
+  intros Σ' e x H2. revert e H2; induction x; cbn; intros; eauto using eval.
 Qed.

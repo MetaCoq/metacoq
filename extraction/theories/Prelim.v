@@ -2,7 +2,7 @@
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega Lia.
 From Template Require Import config utils monad_utils BasicAst AstUtils.
-From PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICTyping PCUICWeakening PCUICSubstitution PCUICChecker PCUICRetyping PCUICMetaTheory PCUICWcbvEval PCUICSR PCUICValidity.
+From PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICTyping PCUICWeakening PCUICSubstitution PCUICChecker PCUICRetyping PCUICMetaTheory PCUICWcbvEval PCUICSR  PCUICClosed PCUICGeneration.
 From TemplateExtraction Require Import EAst ELiftSubst ETyping EWcbvEval Extract.
 From Equations Require Import Equations.
 Require Import String.
@@ -94,21 +94,56 @@ Proof.
       eauto. instantiate (2 := 0). eassumption.
 Qed.
 
-Lemma typing_spine_skipn:
-  forall (Σ : PCUICAst.global_context) (args : list PCUICAst.term) (n0 : nat) (t5 x x0 : PCUICAst.term) 
-    (n : nat) (t3 : PCUICGeneration.typing_spine Σ [] x args x0),
-    {T & PCUICGeneration.typing_spine Σ [] (snd (n0, t5)) (skipn n args) T}.
+Lemma typing_spine_cumul:
+  forall (Σ : PCUICAst.global_context) (T x1 : PCUICAst.term), Σ;;; [] |- x1 <= T -> typing_spine Σ [] x1 [] T.
 Proof.
-  intros Σ args n0 t5 x x0. intros.
-  revert n. dependent induction t3; intros.
-  - cbn. destruct n; unfold skipn; repeat econstructor.
-  - cbn in *. destruct n.
-    + unfold skipn. econstructor. econstructor; eauto.
-      destruct (IHt3 0).
-      assert (skipn 0 tl = tl) by now destruct tl.
-      admit.
-    + unfold skipn. fold (skipn n tl). eauto.      
+  intros Σ T x1 X.
 Admitted.
+
+Theorem subject_reduction_eval : forall (Σ : PCUICAst.global_context) Γ t u T,
+  wf Σ -> Σ ;;; Γ |- t : T -> PCUICWcbvEval.eval Σ Γ t u -> Σ ;;; Γ |- u : T.
+Proof.
+  intros * wfΣ Hty Hred % wcbeval_red. eapply subject_reduction; eauto.
+Qed.
+
+Lemma typing_spine_eval:
+  forall (Σ : PCUICAst.global_context) (args args' : list PCUICAst.term) (X : All2 (PCUICWcbvEval.eval Σ []) args args') (bla : wf Σ)
+    (T x x0 : PCUICAst.term) (t0 : typing_spine Σ [] x args x0) (c : Σ;;; [] |- x0 <= T) (x1 : PCUICAst.term)
+    (c0 : Σ;;; [] |- x1 <= x), typing_spine Σ [] x1 args' T.
+Proof.
+  intros Σ args args' X wf T x x0 t0 c x1 c0. revert args' X.
+  dependent induction t0; intros.
+  - inv X.
+    eapply (typing_spine_cumul). eapply cumul_trans; eauto.
+  - inv X. econstructor.
+    + eauto.
+    + eapply cumul_trans; eauto.
+    + eapply subject_reduction_eval; eauto.
+    + eapply IHt0; eauto.
+      eapply PCUICCumulativity.red_cumul_inv.
+      unfold PCUICLiftSubst.subst1.
+      eapply (red_red Σ [] [_] [] [_] [_]).
+      eauto. econstructor. eapply wcbeval_red. eauto.
+      econstructor. econstructor. econstructor. now rewrite parsubst_empty.
+      Grab Existential Variables. econstructor.
+Qed.
+
+
+(* Lemma typing_spine_skipn: *)
+(*   forall (Σ : PCUICAst.global_context) (args : list PCUICAst.term) (n0 : nat) (t5 x x0 : PCUICAst.term)  *)
+(*     (n : nat) (t3 : PCUICGeneration.typing_spine Σ [] x args x0), *)
+(*     {T & PCUICGeneration.typing_spine Σ [] (snd (n0, t5)) (skipn n args) T}. *)
+(* Proof. *)
+(*   intros Σ args n0 t5 x x0. intros. *)
+(*   revert n. dependent induction t3; intros. *)
+(*   - cbn. destruct n; unfold skipn; repeat econstructor. *)
+(*   - cbn in *. destruct n. *)
+(*     + unfold skipn. econstructor. econstructor; eauto. *)
+(*       destruct (IHt3 0). *)
+(*       assert (skipn 0 tl = tl) by now destruct tl. *)
+(*       admit. *)
+(*     + unfold skipn. fold (skipn n tl). eauto.       *)
+(* Admitted. *)
 
 (** ** on mkApps *)
 
@@ -158,3 +193,39 @@ Admitted.
 (*       Σ ;;; Γ |- t : A -> *)
 (*                     {B & type_of Σ Γ t = Checked B}. *)
 (* Admitted. *)
+
+
+Lemma decompose_app_rec_mkApps f l l' : EAstUtils.decompose_app_rec (mkApps f l) l' =
+                                    EAstUtils.decompose_app_rec f (l ++ l').
+Proof.
+  induction l in f, l' |- *; simpl; auto; rewrite IHl, ?app_nil_r; auto.
+Qed.
+
+Lemma decompose_app_mkApps f l :
+  isApp f = false -> EAstUtils.decompose_app (mkApps f l) = (f, l).
+Proof.
+  intros Hf. unfold EAstUtils.decompose_app. rewrite decompose_app_rec_mkApps. rewrite app_nil_r.
+  destruct f; simpl in *; (discriminate || reflexivity).
+Qed.
+
+Lemma typing_spine_In:
+  forall (Σ : PCUICAst.global_context) (args : list PCUICAst.term) 
+    (x x0 : PCUICAst.term) (t0 : typing_spine Σ [] x args x0) 
+    (x1 : PCUICAst.term) (H : In x1 args), ∑ T1, Σ;;; [] |- x1 : T1.
+Proof.
+  intros Σ args x x0 t0 x1 H.
+Admitted.
+
+
+Lemma fix_subst_length mfix :
+  #|PCUICTyping.fix_subst mfix| = #|mfix|.
+Proof.
+Admitted.
+Lemma fix_context_length mfix :
+  #|PCUICLiftSubst.fix_context mfix| = #|mfix|.
+Proof.
+Admitted.
+Lemma fix_subst_length' mfix :
+  #|fix_subst mfix| = #|mfix|.
+Proof.
+Admitted.

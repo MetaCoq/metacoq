@@ -31,7 +31,7 @@ Proof.
         3:eauto. all:eauto. eapply wf_extends; eauto. }
     destruct E2 as [ | [u]]; eauto.
     right. exists u. intuition.
-    admit.
+    admit.    
 Admitted.
   
 
@@ -96,16 +96,22 @@ Proof.
     unfold extract_mfix. f_equal.
     eapply map_ext_in.
     intros. f_equal.
-    2: { eapply is_type_extends; eauto. admit. }
+    2: { eapply is_type_extends; eauto.  admit. }
 
     eapply All_impl in X0.
     2:{ intros; cbn in *. destruct X1. exact e. }
     eapply All_Forall in X0.
     eapply Forall_forall in X0; eauto.
-    subst types.
-    admit.
   - cbn. helper.
     destruct ?; try reflexivity.
-    f_equal. admit. admit.
+    unfold extract_mfix. f_equal.
+    eapply map_ext_in.
+    intros. f_equal.
+    2: { eapply is_type_extends; eauto.  admit. }
+
+    eapply All_impl in X0.
+    2:{ intros; cbn in *. destruct X1. exact e. }
+    eapply All_Forall in X0.
+    eapply Forall_forall in X0; eauto.
   - erewrite h_forall_Σ'; eauto.
 Admitted.

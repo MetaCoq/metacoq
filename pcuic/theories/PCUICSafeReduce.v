@@ -1071,16 +1071,24 @@ Section Reduce.
 
   Lemma _reduce_stack_whnf :
     forall Γ t π h aux,
-      (forall t' π' hR, whnf Σ Γ (fst (` (aux t' π' hR)))) ->
-      whnf Σ Γ (fst (` (_reduce_stack Γ t π h aux))).
+      RedFlags.zeta flags ->
+      RedFlags.delta flags ->
+      RedFlags.iota flags ->
+      (forall t' π' hR,
+          whnf Σ (Γ ,,, stack_context (snd (` (aux t' π' hR))))
+               (fst (` (aux t' π' hR)))) ->
+      whnf Σ (Γ ,,, stack_context (snd (` (_reduce_stack Γ t π h aux))))
+           (fst (` (_reduce_stack Γ t π h aux))).
   Proof.
-    intros Γ t π h aux haux.
+    intros Γ t π h aux hzeta hdelta hiota haux.
     funelim (_reduce_stack Γ t π h aux).
     all: simpl.
     all: try solve [ constructor ; constructor ].
     (* all: try solve [ *)
     (*   match goal with *)
-    (*   | |- context [ reduce ?x ?y ?z ] => *)
+    (*   | reduce : forall t' π', R _ _ _ _ -> _, *)
+    (*     haux : forall t' π' hR, whnf _ _ _ *)
+    (*     |- context [ reduce ?x ?y ?z ] => *)
     (*     case_eq (reduce x y z) ; *)
     (*     specialize (haux x y z) *)
     (*   end ; *)
@@ -1101,8 +1109,7 @@ Section Reduce.
     - constructor. econstructor.
       give_up.
       (* It seems we are not complete for projections *)
-    - (* We need to ask zeta flag to complete the proof *)
-      give_up.
+    - rewrite hzeta in Heq. discriminate.
     - bang.
     - match goal with
       | |- context [ reduce ?x ?y ?z ] =>
@@ -1113,11 +1120,8 @@ Section Reduce.
       rewrite eq in haux. cbn in haux.
       assumption.
     - constructor. constructor.
-      (* cbn in H0. inversion H0. rewrite H3. *)
-      (* PROBLEM of conctext? We probably should add
-         stack_context to the conclusion.
-       *)
-      give_up.
+      rewrite <- e. cbn.
+      cbn in H0. inversion H0. reflexivity.
     - match goal with
       | |- context [ reduce ?x ?y ?z ] =>
         case_eq (reduce x y z) ;
@@ -1136,8 +1140,7 @@ Section Reduce.
       assumption.
     - (* PROBLEM LetIn is never normal, but it also is never reduced *)
       give_up.
-    - (* We should ask for delta as well, otherwise we get non whnf *)
-      give_up.
+    - rewrite hdelta in Heq. discriminate.
     - match goal with
       | |- context [ reduce ?x ?y ?z ] =>
         case_eq (reduce x y z) ;
@@ -1146,16 +1149,46 @@ Section Reduce.
       intros [t' π'] [? [? [? ?]]] eq. cbn.
       rewrite eq in haux. cbn in haux.
       assumption.
-    - (* constructor. econstructor. *)
-      (* + symmetry. exact e. *)
-      (* NEED the annoying property that k = k0 from e,
-         I think we proved it before
+    - pose proof (eq_sym e) as e'.
+      apply PCUICConfluence.lookup_env_cst_inv in e'.
+      symmetry in e'. subst.
+      constructor. econstructor.
+      + symmetry. exact e.
+      + reflexivity.
+    - (* Constants corresponding to inductive declarations are never unfolded
+         is that ok?
+       *)
+      give_up.
+    - (* What to do when a constant is not declared? *)
+      give_up.
+    - rewrite hiota in Heq. discriminate.
+    - match goal with
+      | |- context [ reduce ?x ?y ?z ] =>
+        case_eq (reduce x y z) ;
+        specialize (haux x y z)
+      end.
+      intros [t' π'] [? [? [? ?]]] eq. cbn.
+      rewrite eq in haux. cbn in haux.
+      assumption.
+    - constructor. constructor.
+      eapply whne_mkApps.
+      match type of e with
+      | _ = reduce ?x ?y ?z =>
+        specialize (haux x y z) as haux'
+      end.
+      rewrite <- e in haux'. simpl in haux'.
+      destruct a as [? [a ?]]. unfold Pr in a. cbn in a.
+      pose proof a as a'.
+      rewrite <- e0 in a'. cbn in a'. subst.
+      pose proof (eq_sym e0) as e1. apply decompose_stack_eq in e1.
+      subst.
+      rewrite stack_context_appstack in haux'. simpl in haux'.
+      (* We are almost there!
+         t0 is a normal form of inductive type,
+         plus it is not a constructor,
+         we want to conclude it is necessarily neutral
        *)
       admit.
-    - give_up.
-    - give_up.
-    - (* Ask for iota? *)
-      give_up.
     - match goal with
       | |- context [ reduce ?x ?y ?z ] =>
         case_eq (reduce x y z) ;
@@ -1164,16 +1197,7 @@ Section Reduce.
       intros [t' π'] [? [? [? ?]]] eq. cbn.
       rewrite eq in haux. cbn in haux.
       assumption.
-    - admit.
-    - match goal with
-      | |- context [ reduce ?x ?y ?z ] =>
-        case_eq (reduce x y z) ;
-        specialize (haux x y z)
-      end.
-      intros [t' π'] [? [? [? ?]]] eq. cbn.
-      rewrite eq in haux. cbn in haux.
-      assumption.
-  Abort.
+  Admitted.
 
   (* Lemma Fix_F_prop : *)
   (*   forall A R P f pred x hx, *)

@@ -1159,8 +1159,13 @@ Section Reduce.
          is that ok?
        *)
       give_up.
-    - (* What to do when a constant is not declared? *)
-      give_up.
+    - (* TODO Mark this case as impossible in reduce_stack! *)
+      apply welltyped_context in h. simpl in h.
+      destruct h as [T h].
+      (* NEED inversion lemma for Const, but better to do it
+         in reduce_stack.
+       *)
+      admit.
     - rewrite hiota in Heq. discriminate.
     - match goal with
       | |- context [ reduce ?x ?y ?z ] =>

@@ -1071,15 +1071,108 @@ Section Reduce.
 
   Lemma _reduce_stack_whnf :
     forall Γ t π h aux,
+      (forall t' π' hR, whnf Σ Γ (fst (` (aux t' π' hR)))) ->
       whnf Σ Γ (fst (` (_reduce_stack Γ t π h aux))).
   Proof.
-    intros Γ t π h aux.
+    intros Γ t π h aux haux.
     funelim (_reduce_stack Γ t π h aux).
     all: simpl.
-    all: try solve [ constructor ].
+    all: try solve [ constructor ; constructor ].
+    (* all: try solve [ *)
+    (*   match goal with *)
+    (*   | |- context [ reduce ?x ?y ?z ] => *)
+    (*     case_eq (reduce x y z) ; *)
+    (*     specialize (haux x y z) *)
+    (*   end ; *)
+    (*   intros [? ?] [? [? [? ?]]] eq ; cbn ; *)
+    (*   rewrite eq in haux ; cbn in haux ; *)
+    (*   assumption *)
+    (* ]. *)
+    - match goal with
+      | |- context [ reduce ?x ?y ?z ] =>
+        case_eq (reduce x y z) ;
+        specialize (haux x y z)
+      end.
+      intros [t' π'] [? [? [? ?]]] eq. cbn.
+      rewrite eq in haux. cbn in haux.
+      assumption.
+    - eapply whnf_indapp with (v := []).
+    - eapply whnf_cstrapp with (v := []).
+    - constructor. econstructor.
+      give_up.
+      (* It seems we are not complete for projections *)
+    - (* We need to ask zeta flag to complete the proof *)
+      give_up.
+    - bang.
+    - match goal with
+      | |- context [ reduce ?x ?y ?z ] =>
+        case_eq (reduce x y z) ;
+        specialize (haux x y z)
+      end.
+      intros [t' π'] [? [? [? ?]]] eq. cbn.
+      rewrite eq in haux. cbn in haux.
+      assumption.
     - constructor. constructor.
-    - constructor. constructor.
-    - (* We need to ask that aux has the same property! *)
+      (* cbn in H0. inversion H0. rewrite H3. *)
+      (* PROBLEM of conctext? We probably should add
+         stack_context to the conclusion.
+       *)
+      give_up.
+    - match goal with
+      | |- context [ reduce ?x ?y ?z ] =>
+        case_eq (reduce x y z) ;
+        specialize (haux x y z)
+      end.
+      intros [t' π'] [? [? [? ?]]] eq. cbn.
+      rewrite eq in haux. cbn in haux.
+      assumption.
+    - match goal with
+      | |- context [ reduce ?x ?y ?z ] =>
+        case_eq (reduce x y z) ;
+        specialize (haux x y z)
+      end.
+      intros [t' π'] [? [? [? ?]]] eq. cbn.
+      rewrite eq in haux. cbn in haux.
+      assumption.
+    - (* PROBLEM LetIn is never normal, but it also is never reduced *)
+      give_up.
+    - (* We should ask for delta as well, otherwise we get non whnf *)
+      give_up.
+    - match goal with
+      | |- context [ reduce ?x ?y ?z ] =>
+        case_eq (reduce x y z) ;
+        specialize (haux x y z)
+      end.
+      intros [t' π'] [? [? [? ?]]] eq. cbn.
+      rewrite eq in haux. cbn in haux.
+      assumption.
+    - (* constructor. econstructor. *)
+      (* + symmetry. exact e. *)
+      (* NEED the annoying property that k = k0 from e,
+         I think we proved it before
+       *)
+      admit.
+    - give_up.
+    - give_up.
+    - (* Ask for iota? *)
+      give_up.
+    - match goal with
+      | |- context [ reduce ?x ?y ?z ] =>
+        case_eq (reduce x y z) ;
+        specialize (haux x y z)
+      end.
+      intros [t' π'] [? [? [? ?]]] eq. cbn.
+      rewrite eq in haux. cbn in haux.
+      assumption.
+    - admit.
+    - match goal with
+      | |- context [ reduce ?x ?y ?z ] =>
+        case_eq (reduce x y z) ;
+        specialize (haux x y z)
+      end.
+      intros [t' π'] [? [? [? ?]]] eq. cbn.
+      rewrite eq in haux. cbn in haux.
+      assumption.
   Abort.
 
   (* Lemma Fix_F_prop : *)

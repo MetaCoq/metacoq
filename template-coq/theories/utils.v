@@ -1465,6 +1465,18 @@ Proof.
   induction 1; cbn; eauto.
 Qed.
 
+Lemma All2_impl_In {A B} {P Q : A -> B -> Type} {l l'} :
+  All2 P l l' ->
+  (forall x y, In x l -> In y l' -> P x y -> Q x y) ->
+  All2 Q l l'.
+Proof.
+  revert l'. induction l; intros; inversion X.
+  - econstructor.
+  - subst. econstructor.  eapply X0. firstorder. firstorder. eauto.
+    eapply IHl. eauto. intros.
+    eapply X0. now right. now right. eauto.
+Qed.
+
 Lemma Forall2_skipn A B (P : A -> B -> Prop) l l' n:
   Forall2 P l l' -> Forall2 P (skipn n l) (skipn n l').
 Proof.
@@ -1664,8 +1676,6 @@ Proof.
   inversion_clear 1.
   constructor; intuition.
 Defined.
-
-
 
 (* Sorted lists without duplicates *)
 Class ComparableType A := { compare : A -> A -> comparison }.

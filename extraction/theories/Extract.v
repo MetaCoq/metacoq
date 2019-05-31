@@ -74,7 +74,7 @@ Section Erase.
     Context (extract : forall (Γ : context) (t : term), E.term).
 
     Definition extract_mfix Γ (defs : mfixpoint term) : (EAst.mfixpoint E.term) :=
-      let Γ' := (fix_decls defs ++ Γ)%list in
+      let Γ' := (PCUICLiftSubst.fix_context defs ++ Γ)%list in
       map (fun d => let dbody' := extract Γ' d.(dbody) in
                           Ret ({| E.dname := d.(dname); E.rarg := d.(rarg);
                                   E.dbody := dbody' |})) defs.

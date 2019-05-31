@@ -66,12 +66,6 @@ Inductive extr_pre (Σ : PA.global_context) t T :=
   { extr_typed : Σ ;;; [] |- t : T;
     extr_env_axiom_free : axiom_free (fst Σ) }.
 
-Theorem subject_reduction_eval : forall (Σ : PCUICAst.global_context) Γ t u T,
-  wf Σ -> Σ ;;; Γ |- t : T -> PCUICWcbvEval.eval Σ Γ t u -> Σ ;;; Γ |- u : T.
-Proof.
-  intros * wfΣ Hty Hred % wcbeval_red. eapply subject_reduction; eauto.
-Qed.
-
 (* Lemma cumul_is_arity: *)
 (*   forall (H : Fuel) (Σ : PCUICAst.global_context) (T' T'' : PCUICAst.term), *)
 (*     Σ;;; [] |- T'' <= T' -> is_arity Σ [] H T'' = is_arity Σ [] H T'. *)
@@ -142,8 +136,8 @@ Proof.
     admit (* typing *).
 Admitted.
 
-Lemma subslet_fix_subst Σ mfix1 mfix2 :
-  subslet Σ [] (PCUICTyping.fix_subst mfix2) (fix_decls mfix1).
+Lemma subslet_fix_subst Σ mfix1 :
+  subslet Σ [] (PCUICTyping.fix_subst mfix1) (PCUICLiftSubst.fix_context mfix1).
 Proof.
 Admitted.
 
@@ -474,22 +468,6 @@ Proof.
               rewrite H1 in *. cbn.
               
               rewrite <- map_skipn.
-
-              (* Lemma typing_spine_skipn: *)
-              (*   forall (Σ : PCUICAst.global_context) (pars : nat) (args : list PCUICAst.term) *)
-              (*     (x x0 : PCUICAst.term) (t1 : typing_spine Σ [] x args x0), *)
-              (*     ∑ t_ty T0, typing_spine Σ [] t_ty (skipn pars args) T0. *)
-              (* Proof. *)
-              (*   intros Σ pars args x x0 t1. *)
-              (*   revert pars. induction t1; cbn; intros. *)
-              (*   - do 2 eexists. rewrite skipn_nil. econstructor. *)
-              (*   - destruct pars. cbv. *)
-              (*     + do 2 eexists. econstructor. eassumption. eassumption. eassumption. *)
-              (*       specialize (IHt1 0). cbv [skipn] in IHt1. *)
-
-              (* Admitted. *)
-              (* eapply typing_spine_skipn in t1 as (? & ? & ?). *)
-
               eapply IHeval2.
               
               econstructor; eauto.
@@ -510,39 +488,17 @@ Proof.
 
       unfold unfold_fix, PCUICTyping.unfold_fix in *.
       destruct nth_error eqn:En in H; try now inv H.
-      inv H. unfold extract_mfix.
+      inv H. (* unfold extract_mfix. *)
       
       econstructor.
       * unfold unfold_fix. erewrite map_nth_error.  reflexivity.
         eauto.
-      * Lemma Forall2_map {A B C D} (R : C -> D -> Prop) (f : A -> C) (g : B -> D) l l' :
-          Forall2 (fun x y => R (f x) (g y)) l l' -> Forall2 R (map f l) (map g l').
-        Proof. induction 1; simpl; constructor; try congruence. Qed.
-        eapply Forall2_map.
+      * eapply Forall2_map.
         eapply All2_Forall.
-        Lemma All2_impl {A B} {P Q : A -> B -> Type} {l l'} :
-          All2 P l l' ->
-          (forall x y, In x l -> In y l' -> P x y -> Q x y) ->
-          All2 Q l l'.
-        Proof.
-          revert l'. induction l; intros; inversion X.
-          - econstructor.
-          - subst. econstructor.  eapply X0. firstorder. firstorder. eauto.
-            eapply IHl. eauto. intros.
-            eapply X0. now right. now right. eauto.
-        Qed.
+        eapply All2_impl_In. eassumption.
+        intros; cbn in *.  
         
-        eapply All2_impl. eassumption.
-        intros; cbn in *.
-        
-        Lemma typing_spine_In:
-          forall (Σ : PCUICAst.global_context) (args : list PCUICAst.term) 
-                 (x x0 : PCUICAst.term) (t0 : typing_spine Σ [] x args x0) 
-                 (x1 : PCUICAst.term) (H : In x1 args), ∑ T1, Σ;;; [] |- x1 : T1.
-        Proof.
-          intros Σ args x x0 t0 x1 H.
-        Admitted.
-        eapply typing_spine_In in H as []; eauto.
+        eapply typing_spine_In in t0 as []; eauto.
         eapply H4. econstructor ; eauto.
       * unfold PCUICTyping.is_constructor, is_constructor_or_box in *.
         destruct nth_error eqn:He in H1; try now inv H1.
@@ -556,90 +512,61 @@ Proof.
         destruct (is_type_or_proof _ _ (PCUICAst.tConstruct _ _ _)) eqn:Hp.
         -- eauto.
         -- cbn. rewrite Hp.
-           Lemma decompose_app_mkApps f l :
-             isApp f = false -> EAstUtils.decompose_app (mkApps f l) = (f, l).
-           Proof. Admitted.
            rewrite decompose_app_mkApps. destruct ?; eauto.
            cbn. reflexivity.
       * cbn.
-        eapply type_tFix_inv in t as (? & ? & ? & [] & ?).
+        eapply type_tFix_inv in t as [? [[[]]]].
         rewrite extract_Apps in IHeval.
         destruct is_type_or_proof eqn:He.
         -- (* contradictory case *)
            (* if a fixpoint is not a proof (Heq), its body won't be a proof, even after substitution of arguments *)
            admit.          
-        -- erewrite (extract_subst Σ [] (fix_decls mfix) []) in IHeval.
+        -- erewrite (extract_subst Σ [] (PCUICLiftSubst.fix_context mfix) []) in IHeval.
            cbn in IHeval.
 
-           rewrite app_nil_r.
+           rewrite app_nil_r in *. 
 
-           enough (subst0 (map (extract Σ []) (PCUICTyping.fix_subst mfix)) (extract Σ (fix_decls mfix) (BasicAst.dbody d)) = subst0 (fix_subst
-              (map
-                 (fun d0 : BasicAst.def PCUICAst.term =>
-                  {|
-                  E.dname := BasicAst.dname d0;
-                  E.dbody := extract Σ (fix_decls mfix)%list (BasicAst.dbody d0);
-                  E.rarg := BasicAst.rarg d0 |}) mfix)) (extract Σ (fix_decls mfix) (BasicAst.dbody d))).
+           enough (subst0 (map (extract Σ []) (PCUICTyping.fix_subst mfix)) (extract Σ (PCUICLiftSubst.fix_context mfix) (BasicAst.dbody d)) = subst0 (fix_subst (extract_mfix (extract Σ) [] mfix)) (extract Σ (PCUICLiftSubst.fix_context mfix) (BasicAst.dbody d))).
            rewrite <- H. unfold app_context in IHeval. rewrite app_nil_r in IHeval. eapply IHeval.
            econstructor. eapply type_mkApps.
            all:cbn; eauto.
-           ++ unfold PCUICTyping.unfold_fix in *.
-              rewrite En in e. inv e. eapply t.                                          
-           ++ 
-
-                 Lemma typing_spine_cumul:
-                   forall (Σ : PCUICAst.global_context) (T x1 : PCUICAst.term), Σ;;; [] |- x1 <= T -> typing_spine Σ [] x1 [] T.
-                 Proof.
-                   intros Σ T x1 X.
-                 Admitted.
-              
-             Lemma typing_spine_eval:
-               forall (Σ : PCUICAst.global_context) (args args' : list PCUICAst.term) (X : All2 (PCUICWcbvEval.eval Σ []) args args') (bla : wf Σ)
-                      (T x x0 : PCUICAst.term) (t0 : typing_spine Σ [] x args x0) (c : Σ;;; [] |- x0 <= T) (x1 : PCUICAst.term)
-                      (c0 : Σ;;; [] |- x1 <= x), typing_spine Σ [] x1 args' T.
-             Proof.
-               intros Σ args args' X wf T x x0 t0 c x1 c0. revert args' X.
-               dependent induction t0; intros.
-               - inv X. assert (cumul Σ [] x1 T). eapply cumul_trans; eauto.
-                 clear - wf X.
-                 eapply typing_spine_cumul.  eauto.
-               - inv X. econstructor.
-                 + eauto.
-                 + eapply cumul_trans; eauto.
-                 + eapply subject_reduction_eval; eauto.
-                 + eapply IHt0; eauto.
-                   eapply PCUICCumulativity.red_cumul_inv.
-                   unfold PCUICLiftSubst.subst1.
-                   eapply (red_red Σ [] [_] [] [_] [_]).
-                   eauto. econstructor. eapply wcbeval_red. eauto.
-                   econstructor. econstructor. econstructor. now rewrite parsubst_empty.
-                   Grab Existential Variables. econstructor.
-             Qed.
-             eapply typing_spine_eval; eauto.
-           ++ 
-             Inductive free : nat -> term -> Prop :=
-             | free_tRel x : free x (tRel x)
-             | free_tApp1 x s t : free x s -> free x (tApp s t)
-             | free_tApp2 x s t : free x t -> free x (tApp s t)
-             | free_tLambda x na s : free (S x) s -> free x (tLambda na s)
-             | free_tProj x p s : free x s -> free x (tProj p s)
-             | free_tFix x mfix n d : free (#|mfix| + x) (d.(dbody)) -> In d mfix -> free x (tFix mfix n)
-             (* | free_tCoFix x m n : free x (tCoFix m n) *)
-             | free_tCase1 x p s brs : free x s -> free x (tCase p s brs)
-             | free_tCase2 x p s brs n b : free x b -> In (n, b) brs -> free x (tCase p s brs).
-
-
-             Lemma subst_free_ext sigma tau t :
-               (forall x, free x t -> nth_error sigma x = nth_error tau x) -> subst sigma 0 t = subst tau 0 t.
-             Admitted.
-
-             eapply subst_free_ext. intros.
-                          
-              (*  Substituting with the two substitutions is the same. The points where they differ are boxes in the term to be substituted in anyways! *) admit. 
+           ++ eapply nth_error_all in En; eauto.
+              destruct En.
+              eapply (substitution Σ [] (PCUICLiftSubst.fix_context mfix) (PCUICTyping.fix_subst mfix) []); eauto.
+              eapply subslet_fix_subst.
+           ++ rewrite PCUICLiftSubst.simpl_subst_k.
+              eapply typing_spine_eval; eauto.
+              rewrite e in En. inv En. eauto.
+              now rewrite fix_subst_length, fix_context_length.
+           ++ eapply subst_free_ext. 
+              intros.
+              destruct (le_lt_dec (#|mfix|) n).
+              ** assert (l' := l).
+                 rewrite <- fix_subst_length in l.
+                 eapply nth_error_None in l.
+                 rewrite nth_error_map.
+                 rewrite l.
+                 erewrite <- map_length in l'.
+                 rewrite <- fix_subst_length' in l'.
+                 eapply nth_error_None in l.
+                 unfold extract_mfix.
+                 eapply nth_error_None in l'.
+                 rewrite l'. reflexivity.
+              ** enough (nth_error (map (extract Σ []) (PCUICTyping.fix_subst mfix)) n =
+                         Some (extract Σ [] (PCUICAst.tFix mfix (#|mfix| - n)))) as ->.
+                 enough (nth_error (fix_subst (extract_mfix (extract Σ) [] mfix)) n =
+                         Some (tFix (extract_mfix (extract Σ) [] mfix) (#|mfix| - n))) as ->.
+                 f_equal. cbn. destruct ?.
+                 --- (* n has the same type as the fixpoint, it's thus a proof and will not be free *)
+                   admit.
+                 --- reflexivity.
+                 --- clear - l. admit. (* easy proof by induction on mfix, using fix_subst' *)
+                 --- clear - l. admit. (* easy proof by induction on mfix, using fix_subst' *)
            ++ eapply subslet_fix_subst.
-           ++ admit.
+           ++ eapply nth_error_all in a0. 2: exact En.
+              cbn in a0. eapply a0.
         -- eauto.
-    - (** delta case, done up to lemma*) cbn. destruct Extract.is_type_or_proof eqn:Heq. 
+  - (** delta case, done up to lemma*) cbn. destruct Extract.is_type_or_proof eqn:Heq. 
     + erewrite is_type_extract. econstructor; eauto.
       erewrite <- eval_is_type. eassumption. eauto.
     + inv pre.

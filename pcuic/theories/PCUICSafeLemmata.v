@@ -1358,34 +1358,6 @@ Section Lemmata.
       + constructor. assumption.
   Qed.
 
-  Lemma cored_red_cored :
-    forall Γ u v w,
-      cored Σ Γ w v ->
-      red Σ Γ u v ->
-      cored Σ Γ w u.
-  Proof.
-    intros Γ u v w h1 h2.
-    revert u h2. induction h1 ; intros t h2.
-    - eapply cored_red_trans ; eassumption.
-    - eapply cored_trans.
-      + eapply IHh1. assumption.
-      + assumption.
-  Qed.
-
-  Lemma red_cored_cored :
-    forall Γ u v w,
-      red Σ Γ v w ->
-      cored Σ Γ v u ->
-      cored Σ Γ w u.
-  Proof.
-    intros Γ u v w h1 h2.
-    revert u h2. induction h1 ; intros t h2.
-    - assumption.
-    - eapply cored_trans.
-      + eapply IHh1. assumption.
-      + assumption.
-  Qed.
-
   Fixpoint isAppProd (t : term) : bool :=
     match t with
     | tApp t l => isAppProd t

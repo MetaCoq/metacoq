@@ -573,6 +573,35 @@ Section Reduce.
       change C'
     end.
 
+  Lemma cored_red :
+    forall Γ u v,
+      cored Σ Γ v u ->
+      ∥ red Σ Γ u v ∥.
+  Proof.
+    intros Γ u v h.
+    induction h.
+    - constructor. econstructor.
+      + constructor.
+      + assumption.
+    - destruct IHh as [r].
+      constructor. econstructor ; eassumption.
+  Qed.
+
+  Lemma Req_red :
+    forall Γ x y,
+      Req Σ Γ y x ->
+      ∥ red Σ Γ (zip x) (zip y) ∥.
+  Proof.
+    intros Γ [t π] [t' π'] h. cbn.
+    dependent destruction h.
+    - repeat zip fold. rewrite H0.
+      constructor. constructor.
+    - dependent destruction H0.
+      + eapply cored_red. assumption.
+      + cbn in H1. inversion H1.
+        constructor. constructor.
+  Qed.
+
   (* TODO MOVE *)
   Lemma inversion_Const :
     forall {Γ c u T},
@@ -590,6 +619,49 @@ Section Reduce.
     - destruct IHh as [decl [? [? [? ?]]]].
       exists decl. repeat split ; auto.
       eapply cumul_trans ; eauto.
+  Qed.
+
+  (* TODO MOVE *)
+  Lemma red_welltyped :
+    forall {Γ u v},
+      welltyped Σ Γ u ->
+      ∥ red (fst Σ) Γ u v ∥ ->
+      welltyped Σ Γ v.
+  Proof.
+    intros Γ u v h [r].
+    revert h. induction r ; intros h.
+    - assumption.
+    - specialize IHr with (1 := ltac:(eassumption)).
+      destruct IHr as [A ?]. exists A.
+      eapply subject_reduction ; eassumption.
+  Qed.
+
+  Lemma cored_red_cored :
+    forall Γ u v w,
+      cored Σ Γ w v ->
+      red Σ Γ u v ->
+      cored Σ Γ w u.
+  Proof.
+    intros Γ u v w h1 h2.
+    revert u h2. induction h1 ; intros t h2.
+    - eapply cored_red_trans ; eassumption.
+    - eapply cored_trans.
+      + eapply IHh1. assumption.
+      + assumption.
+  Qed.
+
+  Lemma red_cored_cored :
+    forall Γ u v w,
+      red Σ Γ v w ->
+      cored Σ Γ v u ->
+      cored Σ Γ w u.
+  Proof.
+    intros Γ u v w h1 h2.
+    revert u h2. induction h1 ; intros t h2.
+    - assumption.
+    - eapply cored_trans.
+      + eapply IHh1. assumption.
+      + assumption.
   Qed.
 
   (* Show Obligation Tactic. *)
@@ -896,12 +968,54 @@ Section Reduce.
     constructor.
   Qed.
   Next Obligation.
+    left.
+    apply Req_red in r as hr. destruct hr as [hr].
+    eapply cored_red_cored ; try eassumption.
+    unfold Pr in p0. simpl in p0. pose proof p0 as p0'.
+    rewrite <- prf' in p0'. simpl in p0'. subst.
+    symmetry in prf'. apply decompose_stack_eq in prf' as ?.
+    subst. cbn. rewrite zipc_appstack. cbn.
+    do 2 zip fold. eapply cored_context.
+    constructor.
+    (* Once again, we need to conclude i = ind' from welltypedness *)
+    admit.
   Admitted.
   Next Obligation.
-    apply welltyped_context in h as hh.
+    unfold Pr in p0. simpl in p0.
+    pose proof p0 as p0'.
+    rewrite <- prf' in p0'. simpl in p0'. subst.
+    symmetry in prf'. apply decompose_stack_eq in prf' as ?.
+    subst.
+    apply Req_red in r as hr.
+    pose proof (red_welltyped h hr) as hh.
+    cbn in hh. rewrite zipc_appstack in hh. cbn in hh.
+    zip fold in hh.
+    apply welltyped_context in hh. simpl in hh.
+    destruct hh as [T hh].
+    apply inversion_Proj in hh
+      as [uni [mdecl [idecl [pdecl [args' [? [? [? ?]]]]]]]].
+    unfold declared_projection in d. cbn in d. simpl in c0. simpl in t.
+    (* Is there any way to say it is impossible?? *)
   Admitted.
   Next Obligation.
-  Admitted.
+    clear eq.
+    dependent destruction r.
+    - inversion H0. subst. cbn in prf'. inversion prf'. subst.
+      cbn. reflexivity.
+    - unfold Pr in p0. cbn in p0.
+      rewrite <- prf' in p0. cbn in p0. subst.
+      dependent destruction H0.
+      + cbn in H0. symmetry in prf'.
+        pose proof (decompose_stack_eq _ _ _ prf'). subst.
+        rewrite zipc_appstack in H0. cbn in H0.
+        right. econstructor. assumption.
+      + cbn in H1. inversion H1. subst. clear H1.
+        symmetry in prf'.
+        pose proof (decompose_stack_eq _ _ _ prf'). subst.
+        rewrite zipc_appstack in H3. cbn in H3.
+        apply zipc_inj in H3. inversion H3. subst.
+        reflexivity.
+  Qed.
 
   (* tFix *)
   Next Obligation.
@@ -1042,35 +1156,6 @@ Section Reduce.
   Definition reduce_stack Γ t π h :=
     let '(exist ts _) := reduce_stack_full Γ t π h in ts.
 
-  Lemma cored_red :
-    forall Γ u v,
-      cored Σ Γ v u ->
-      ∥ red Σ Γ u v ∥.
-  Proof.
-    intros Γ u v h.
-    induction h.
-    - constructor. econstructor.
-      + constructor.
-      + assumption.
-    - destruct IHh as [r].
-      constructor. econstructor ; eassumption.
-  Qed.
-
-  Lemma Req_red :
-    forall Γ x y,
-      Req Σ Γ y x ->
-      ∥ red Σ Γ (zip x) (zip y) ∥.
-  Proof.
-    intros Γ [t π] [t' π'] h. cbn.
-    dependent destruction h.
-    - repeat zip fold. rewrite H0.
-      constructor. constructor.
-    - dependent destruction H0.
-      + eapply cored_red. assumption.
-      + cbn in H1. inversion H1.
-        constructor. constructor.
-  Qed.
-
   Lemma reduce_stack_Req :
     forall Γ t π h,
       Req (fst Σ) Γ (reduce_stack Γ t π h) (t, π).
@@ -1166,21 +1251,6 @@ Section Reduce.
     intros Γ t h.
     unfold reduce_term.
     refine (reduce_stack_sound _ _ ε _).
-  Qed.
-
-  (* TODO MOVE *)
-  Lemma red_welltyped :
-    forall {Γ u v},
-      welltyped Σ Γ u ->
-      ∥ red (fst Σ) Γ u v ∥ ->
-      welltyped Σ Γ v.
-  Proof.
-    intros Γ u v h [r].
-    revert h. induction r ; intros h.
-    - assumption.
-    - specialize IHr with (1 := ltac:(eassumption)).
-      destruct IHr as [A ?]. exists A.
-      eapply subject_reduction ; eassumption.
   Qed.
 
   Lemma _reduce_stack_whnf :

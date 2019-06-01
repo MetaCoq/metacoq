@@ -537,6 +537,12 @@ Section Reduce.
   (*       * eapply IHargs'. cbn in H0. *)
   Admitted.
 
+  Lemma Proj_Constuct_ind_eq :
+    forall Γ i i' pars narg c u l,
+      welltyped Σ Γ (tProj (i, pars, narg) (mkApps (tConstruct i' c u) l)) ->
+      i = i'.
+  Admitted.
+
   Definition inspect {A} (x : A) : { y : A | y = x } := exist x eq_refl.
 
   Definition Pr (t' : term * stack) π :=
@@ -969,7 +975,9 @@ Section Reduce.
   Qed.
   Next Obligation.
     left.
-    apply Req_red in r as hr. destruct hr as [hr].
+    apply Req_red in r as hr.
+    pose proof (red_welltyped h hr) as hh.
+    destruct hr as [hr].
     eapply cored_red_cored ; try eassumption.
     unfold Pr in p0. simpl in p0. pose proof p0 as p0'.
     rewrite <- prf' in p0'. simpl in p0'. subst.
@@ -977,9 +985,11 @@ Section Reduce.
     subst. cbn. rewrite zipc_appstack. cbn.
     do 2 zip fold. eapply cored_context.
     constructor.
-    (* Once again, we need to conclude i = ind' from welltypedness *)
-    admit.
-  Admitted.
+    cbn in hh. rewrite zipc_appstack in hh. cbn in hh.
+    zip fold in hh. apply welltyped_context in hh.
+    simpl in hh. apply Proj_Constuct_ind_eq in hh. subst.
+    constructor. eauto.
+  Qed.
   Next Obligation.
     unfold Pr in p0. simpl in p0.
     pose proof p0 as p0'.

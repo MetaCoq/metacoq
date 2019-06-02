@@ -543,6 +543,12 @@ Section Reduce.
       i = i'.
   Admitted.
 
+  Lemma Proj_red_cond :
+    forall Γ i pars narg i' c u l,
+      welltyped Σ Γ (tProj (i, pars, narg) (mkApps (tConstruct i' c u) l)) ->
+      nth_error l (pars + narg) <> None.
+  Admitted.
+
   Definition inspect {A} (x : A) : { y : A | y = x } := exist x eq_refl.
 
   Definition Pr (t' : term * stack) π :=
@@ -1001,12 +1007,12 @@ Section Reduce.
     cbn in hh. rewrite zipc_appstack in hh. cbn in hh.
     zip fold in hh.
     apply welltyped_context in hh. simpl in hh.
-    destruct hh as [T hh].
-    apply inversion_Proj in hh
-      as [uni [mdecl [idecl [pdecl [args' [? [? [? ?]]]]]]]].
-    unfold declared_projection in d. cbn in d. simpl in c0. simpl in t.
-    (* Is there any way to say it is impossible?? *)
-  Admitted.
+    (* destruct hh as [T hh]. *)
+    (* apply inversion_Proj in hh *)
+    (*   as [uni [mdecl [idecl [pdecl [args' [? [? [? ?]]]]]]]]. *)
+    (* unfold declared_projection in d. cbn in d. simpl in c0. simpl in t. *)
+    apply Proj_red_cond in hh. eapply hh. eauto.
+  Qed.
   Next Obligation.
     clear eq.
     dependent destruction r.

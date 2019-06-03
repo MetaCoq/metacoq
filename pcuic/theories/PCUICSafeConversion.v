@@ -2276,6 +2276,7 @@ Section Conversion.
       assumption.
     - apply unfold_one_case_red in e as r1. destruct r1 as [r1].
       apply unfold_one_case_stack in e as d1.
+      apply unfold_one_case_construct_cofix in e as hh1.
       case_eq (decompose_stack s). intros l' s0 ee.
       rewrite ee in d1. cbn in d1. subst.
       match type of e3 with
@@ -2305,12 +2306,20 @@ Section Conversion.
       + eapply red_neq_cored ; try eassumption.
         intro bot.
         rewrite 2!stack_context_appstack in w2. simpl in w2.
+        revert hh1.
+        funelim (discr_construct_cofix t).
+        all: auto.
+        all: intros _.
+        * (* Not only do we not have delta, and thus not whnf,
+             but we do not even have whne.
+           *)
+          admit.
         (* Maybe we should show Req instead of cored!
            Or go for the whnf thing!
            We also shuold exploit the fact that unfold_one_case unsures we have
            a constructor!
          *)
-        admit.
+        * admit.
       + eapply red_mkApps.
         eapply red_Case_c. assumption.
 

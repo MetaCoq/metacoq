@@ -127,4 +127,15 @@ Section Normal.
     - simpl. eapply IHargs. econstructor. assumption.
   Qed.
 
+  Lemma whne_mkApps_inv :
+    forall Γ t l,
+      whne Γ (mkApps t l) ->
+      whne Γ t.
+  Proof.
+    intros Γ t l h.
+    induction l in t, h |- *.
+    - assumption.
+    - simpl in h. apply IHl in h. inversion h. assumption.
+  Qed.
+
 End Normal.

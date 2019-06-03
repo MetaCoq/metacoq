@@ -2322,18 +2322,7 @@ Section Conversion.
         all: intros _.
         * dependent destruction w2.
           -- dependent destruction H0.
-             ++
-Lemma whne_mkApps_inv :
-  forall flags Γ t l,
-    whne flags Σ Γ (mkApps t l) ->
-    whne flags Σ Γ t.
-Proof.
-  intros flags0 Γ t l h.
-  induction l in t, h |- *.
-  - assumption.
-  - simpl in h. apply IHl in h. inversion h. assumption.
-Qed.
-apply whne_mkApps_inv in H0. dependent destruction H0.
+             ++ apply whne_mkApps_inv in H0. dependent destruction H0.
              ++ cbn in H0. discriminate.
           -- (* Pretty clear *)
              admit.

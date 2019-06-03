@@ -2246,6 +2246,9 @@ Section Conversion.
         constructor. assumption.
   Qed.
 
+  Derive Signature for whnf.
+  Derive Signature for whne.
+
   Lemma reducible_head_reduce_cored :
     forall Γ t π fn ξ l θ t' ρ h h',
       Some (fn, ξ) = reducible_head Γ t π h ->
@@ -2317,10 +2320,25 @@ Section Conversion.
         funelim (discr_construct_cofix t).
         all: auto.
         all: intros _.
-        * (* This would be all good if only we had delta...
-             Or a stronger whnf theorem.
-           *)
-          admit.
+        * dependent destruction w2.
+          -- dependent destruction H0.
+             ++
+Lemma whne_mkApps_inv :
+  forall flags Γ t l,
+    whne flags Σ Γ (mkApps t l) ->
+    whne flags Σ Γ t.
+Proof.
+  intros flags0 Γ t l h.
+  induction l in t, h |- *.
+  - assumption.
+  - simpl in h. apply IHl in h. inversion h. assumption.
+Qed.
+apply whne_mkApps_inv in H0. dependent destruction H0.
+             ++ cbn in H0. discriminate.
+          -- (* Pretty clear *)
+             admit.
+          -- (* Pretty clear *)
+             admit.
         (* Maybe we should show Req instead of cored!
            Or go for the whnf thing!
            We also should exploit the fact that unfold_one_case unsures we have

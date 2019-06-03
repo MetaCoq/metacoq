@@ -2000,6 +2000,19 @@ Section Conversion.
       }
     }.
 
+  Lemma unfold_one_case_construct_cofix :
+    forall Γ t h fn ξ,
+      Some (fn, ξ) = unfold_one_case Γ t h ->
+      ~ (discr_construct_cofix fn).
+  Proof.
+    intros Γ t h fn ξ e.
+    revert e.
+    funelim (unfold_one_case Γ t h).
+    all: intro ee. all: noconf ee.
+    all: simp discr_construct_cofix.
+    all: auto.
+  Qed.
+
   Lemma unfold_one_case_stack :
     forall Γ t h fn ξ,
       Some (fn, ξ) = unfold_one_case Γ t h ->
@@ -2268,10 +2281,12 @@ Section Conversion.
       match type of e3 with
       | _ = reduce_stack ?f ?Σ ?Γ ?t ?π ?h =>
         destruct (reduce_stack_sound f Σ Γ t π h) as [r2] ;
-        pose proof (reduce_stack_decompose f Σ Γ t π h) as d2
+        pose proof (reduce_stack_decompose f Σ Γ t π h) as d2 ;
+        pose proof (reduce_stack_whnf f Σ Γ t π h) as w2
       end.
       rewrite <- e3 in r2. cbn in r2.
       rewrite <- e3 in d2. cbn in d2.
+      rewrite <- e3 in w2. simpl in w2.
       rewrite zipc_appstack in r2. cbn in r2.
       rewrite decompose_stack_appstack in d2. cbn in d2.
       case_eq (decompose_stack ρ). intros l1 s0 e'.
@@ -2289,6 +2304,7 @@ Section Conversion.
       eapply cored_red_cored.
       + eapply red_neq_cored ; try eassumption.
         intro bot.
+        rewrite 2!stack_context_appstack in w2. simpl in w2.
         (* Maybe we should show Req instead of cored!
            Or go for the whnf thing!
            We also shuold exploit the fact that unfold_one_case unsures we have

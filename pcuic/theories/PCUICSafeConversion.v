@@ -2283,11 +2283,13 @@ Section Conversion.
       | _ = reduce_stack ?f ?Σ ?Γ ?t ?π ?h =>
         destruct (reduce_stack_sound f Σ Γ t π h) as [r2] ;
         pose proof (reduce_stack_decompose f Σ Γ t π h) as d2 ;
-        pose proof (reduce_stack_whnf f Σ Γ t π h) as w2
+        pose proof (reduce_stack_whnf f Σ Γ t π h) as w2 ;
+        pose proof (reduce_stack_isred f Σ Γ t π h) as ir2
       end.
       rewrite <- e3 in r2. cbn in r2.
       rewrite <- e3 in d2. cbn in d2.
       rewrite <- e3 in w2. simpl in w2.
+      rewrite <- e3 in ir2. simpl in ir2. specialize (ir2 eq_refl).
       rewrite zipc_appstack in r2. cbn in r2.
       rewrite decompose_stack_appstack in d2. cbn in d2.
       case_eq (decompose_stack ρ). intros l1 s0 e'.
@@ -2306,20 +2308,30 @@ Section Conversion.
       + eapply red_neq_cored ; try eassumption.
         intro bot.
         rewrite 2!stack_context_appstack in w2. simpl in w2.
+        destruct ir2 as [nap2 _].
+        simpl in nap2.
+        apply mkApps_notApp_inj in bot as eq ; auto.
+        destruct eq as [? ?]. subst. clear bot nap2.
         revert hh1.
         funelim (discr_construct_cofix t).
         all: auto.
         all: intros _.
-        * (* Not only do we not have delta, and thus not whnf,
-             but we do not even have whne.
+        * (* This would be all good if only we had delta...
+             Or a stronger whnf theorem.
            *)
           admit.
         (* Maybe we should show Req instead of cored!
            Or go for the whnf thing!
-           We also shuold exploit the fact that unfold_one_case unsures we have
+           We also should exploit the fact that unfold_one_case unsures we have
            a constructor!
          *)
-        * admit.
+        * (* Here it is less clear, we probably need to conclude form h'
+             that we cannot match on CoFix? Might not even be true...
+             Or maybe we should exploit unfold_one_stack in a better way.
+             We should know that we are in a case where we matched on a
+             constructor.
+           *)
+          admit.
       + eapply red_mkApps.
         eapply red_Case_c. assumption.
 

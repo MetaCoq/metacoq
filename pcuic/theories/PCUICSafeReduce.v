@@ -1421,13 +1421,22 @@ Section Reduce.
 
   Lemma reduce_stack_whnf :
     forall Γ t π h,
-      whnf Σ Γ (zip (reduce_stack Γ t π h)).
-  Proof.
-    intros Γ t π h.
-    unfold reduce_stack.
-    funelim (reduce_stack_full Γ t π h).
-    destruct (reduce_stack_full_obligations_obligation_2 Γ t π h).
-    simpl.
+      RedFlags.zeta flags ->
+      RedFlags.delta flags ->
+      RedFlags.iota flags ->
+      whnf Σ (Γ ,,, stack_context (snd (reduce_stack Γ t π h)))
+           (fst (reduce_stack Γ t π h)).
+  Admitted.
+
+  (* Lemma reduce_stack_whnf : *)
+  (*   forall Γ t π h, *)
+  (*     whnf Σ Γ (zip (reduce_stack Γ t π h)). *)
+  (* Proof. *)
+  (*   intros Γ t π h. *)
+  (*   unfold reduce_stack. *)
+  (*   funelim (reduce_stack_full Γ t π h). *)
+  (*   destruct (reduce_stack_full_obligations_obligation_2 Γ t π h). *)
+  (*   simpl. *)
 
     (* case_eq (reduce_stack_full Γ t π h). *)
     (* funelim (reduce_stack_full Γ t π h). *)
@@ -1442,6 +1451,6 @@ Section Reduce.
 
  (* with (pred := fun x p => whnf Σ Γ (zip (` p))). *)
     (* Maybe prove it on _reduce_stack before? *)
-  Abort.
+  (* Abort. *)
 
 End Reduce.

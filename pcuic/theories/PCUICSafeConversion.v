@@ -2324,15 +2324,14 @@ Section Conversion.
           -- dependent destruction H0.
              ++ apply whne_mkApps_inv in H0. dependent destruction H0.
              ++ cbn in H0. discriminate.
-          -- (* Pretty clear *)
-             admit.
-          -- (* Pretty clear *)
-             admit.
-        (* Maybe we should show Req instead of cored!
-           Or go for the whnf thing!
-           We also should exploit the fact that unfold_one_case unsures we have
-           a constructor!
-         *)
+          -- destruct v.
+             ++ discriminate.
+             ++ apply (f_equal isApp) in H0. cbn in H0.
+                rewrite isApp_mkApps in H0 ; auto.
+          -- destruct v.
+             ++ discriminate.
+             ++ apply (f_equal isApp) in H0. cbn in H0.
+                rewrite isApp_mkApps in H0 ; auto.
         * (* Here it is less clear, we probably need to conclude form h'
              that we cannot match on CoFix? Might not even be true...
              Or maybe we should exploit unfold_one_stack in a better way.

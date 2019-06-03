@@ -22,21 +22,6 @@ Import MonadNotation.
 
  *)
 
-Module RedFlags.
-
-  Record t := mk {
-    beta   : bool ;
-    iota   : bool ;
-    zeta   : bool ;
-    delta  : bool ;
-    fix_   : bool ;
-    cofix_ : bool
-  }.
-
-  Definition default := mk true true true true true true.
-
-End RedFlags.
-
 Notation "∥ T ∥" := (squash T) (at level 10).
 
 Notation "( x ; y )" := (existT _ x y).
@@ -1271,13 +1256,10 @@ Section Reduce.
 
   Lemma _reduce_stack_whnf :
     forall Γ t π h aux,
-      RedFlags.zeta flags ->
-      RedFlags.delta flags ->
-      RedFlags.iota flags ->
       (forall t' π' hR,
-          whnf Σ (Γ ,,, stack_context (snd (` (aux t' π' hR))))
+          whnf flags Σ (Γ ,,, stack_context (snd (` (aux t' π' hR))))
                (fst (` (aux t' π' hR)))) ->
-      whnf Σ (Γ ,,, stack_context (snd (` (_reduce_stack Γ t π h aux))))
+      whnf flags Σ (Γ ,,, stack_context (snd (` (_reduce_stack Γ t π h aux))))
            (fst (` (_reduce_stack Γ t π h aux))).
   (* Proof. *)
   (*   intros Γ t π h aux hzeta hdelta hiota haux. *)
@@ -1421,10 +1403,7 @@ Section Reduce.
 
   Lemma reduce_stack_whnf :
     forall Γ t π h,
-      RedFlags.zeta flags ->
-      RedFlags.delta flags ->
-      RedFlags.iota flags ->
-      whnf Σ (Γ ,,, stack_context (snd (reduce_stack Γ t π h)))
+      whnf flags Σ (Γ ,,, stack_context (snd (reduce_stack Γ t π h)))
            (fst (reduce_stack Γ t π h)).
   Admitted.
 

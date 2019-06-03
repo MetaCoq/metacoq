@@ -9,7 +9,24 @@ Require Import ssreflect.
 Local Open Scope string_scope.
 Set Asymmetric Patterns.
 
+Module RedFlags.
+
+  Record t := mk {
+    beta   : bool ;
+    iota   : bool ;
+    zeta   : bool ;
+    delta  : bool ;
+    fix_   : bool ;
+    cofix_ : bool
+  }.
+
+  Definition default := mk true true true true true true.
+
+End RedFlags.
+
 Section Normal.
+
+  Context (flags : RedFlags.t).
   Context (Σ : global_declarations).
 
   Inductive normal (Γ : context) : term -> Prop :=
@@ -40,6 +57,7 @@ Section Normal.
                         neutral Γ (tCase i p c brs)
   | ne_proj p c : neutral Γ c -> neutral Γ (tProj p c).
 
+  (* Relative to reduction flags *)
   Inductive whnf (Γ : context) : term -> Prop :=
   | whnf_ne t : whne Γ t -> whnf Γ t
   | whnf_sort s : whnf Γ (tSort s)
@@ -54,14 +72,49 @@ Section Normal.
   | whne_rel i :
       option_map decl_body (nth_error Γ i) = Some None ->
       whne Γ (tRel i)
-  | whne_var v : whne Γ (tVar v)
-  | whne_evar n l : whne Γ (tEvar n l)
+
+  | whne_rel_nodelta i :
+      RedFlags.delta flags = false ->
+      whne Γ (tRel i)
+
+  | whne_var v :
+      whne Γ (tVar v)
+
+  | whne_evar n l :
+      whne Γ (tEvar n l)
+
+  | whne_letin_nozeta na B b t :
+      RedFlags.zeta flags = false ->
+      whne Γ (tLetIn na B b t)
+
   | whne_const c u decl :
-      lookup_env Σ c = Some (ConstantDecl c decl) -> decl.(cst_body) = None ->
+      lookup_env Σ c = Some (ConstantDecl c decl) ->
+      decl.(cst_body) = None ->
       whne Γ (tConst c u)
-  | whne_app f v : whne Γ f -> whne Γ (tApp f v)
-  | whne_case i p c brs : whne Γ c -> whne Γ (tCase i p c brs)
-  | whne_proj p c : whne Γ c -> whne Γ (tProj p c).
+
+  | whne_const_nodelta c u :
+      RedFlags.delta flags = false ->
+      whne Γ (tConst c u)
+
+  | whne_app f v :
+      whne Γ f ->
+      whne Γ (tApp f v)
+
+  | whne_case i p c brs :
+      whne Γ c ->
+      whne Γ (tCase i p c brs)
+
+  | whne_case_noiota i p c brs :
+      RedFlags.iota flags = false ->
+      whne Γ (tCase i p c brs)
+
+  | whne_proj p c :
+      whne Γ c ->
+      whne Γ (tProj p c)
+
+  | whne_proj_noiota p c :
+      RedFlags.iota flags = false ->
+      whne Γ (tProj p c).
 
   Lemma whne_mkApps :
     forall Γ t args,

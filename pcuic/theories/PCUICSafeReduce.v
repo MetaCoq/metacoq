@@ -1309,115 +1309,128 @@ Section Reduce.
                (fst (` (aux t' π' hR)))) ->
       whnf flags Σ (Γ ,,, stack_context (snd (` (_reduce_stack Γ t π h aux))))
            (fst (` (_reduce_stack Γ t π h aux))).
-  (* Proof. *)
-  (*   intros Γ t π h aux hzeta hdelta hiota haux. *)
-  (*   funelim (_reduce_stack Γ t π h aux). *)
-  (*   all: simpl. *)
-  (*   all: try solve [ constructor ; constructor ]. *)
-  (*   - match goal with *)
-  (*     | |- context [ reduce ?x ?y ?z ] => *)
-  (*       case_eq (reduce x y z) ; *)
-  (*       specialize (haux x y z) *)
-  (*     end. *)
-  (*     intros [t' π'] [? [? [? ?]]] eq. cbn. *)
-  (*     rewrite eq in haux. cbn in haux. *)
-  (*     assumption. *)
-  (*   - eapply whnf_indapp with (v := []). *)
-  (*   - eapply whnf_cstrapp with (v := []). *)
-  (*   - constructor. econstructor. *)
-  (*     give_up. *)
-  (*     (* It seems we are not complete for projections *) *)
-  (*   - rewrite hzeta in Heq. discriminate. *)
-  (*   - bang. *)
-  (*   - match goal with *)
-  (*     | |- context [ reduce ?x ?y ?z ] => *)
-  (*       case_eq (reduce x y z) ; *)
-  (*       specialize (haux x y z) *)
-  (*     end. *)
-  (*     intros [t' π'] [? [? [? ?]]] eq. cbn. *)
-  (*     rewrite eq in haux. cbn in haux. *)
-  (*     assumption. *)
-  (*   - constructor. constructor. *)
-  (*     rewrite <- e. cbn. *)
-  (*     cbn in H0. inversion H0. reflexivity. *)
-  (*   - match goal with *)
-  (*     | |- context [ reduce ?x ?y ?z ] => *)
-  (*       case_eq (reduce x y z) ; *)
-  (*       specialize (haux x y z) *)
-  (*     end. *)
-  (*     intros [t' π'] [? [? [? ?]]] eq. cbn. *)
-  (*     rewrite eq in haux. cbn in haux. *)
-  (*     assumption. *)
-  (*   - match goal with *)
-  (*     | |- context [ reduce ?x ?y ?z ] => *)
-  (*       case_eq (reduce x y z) ; *)
-  (*       specialize (haux x y z) *)
-  (*     end. *)
-  (*     intros [t' π'] [? [? [? ?]]] eq. cbn. *)
-  (*     rewrite eq in haux. cbn in haux. *)
-  (*     assumption. *)
-  (*   - rewrite hzeta in Heq. discriminate. *)
-  (*   - rewrite hdelta in Heq. discriminate. *)
-  (*   - match goal with *)
-  (*     | |- context [ reduce ?x ?y ?z ] => *)
-  (*       case_eq (reduce x y z) ; *)
-  (*       specialize (haux x y z) *)
-  (*     end. *)
-  (*     intros [t' π'] [? [? [? ?]]] eq. cbn. *)
-  (*     rewrite eq in haux. cbn in haux. *)
-  (*     assumption. *)
-  (*   - pose proof (eq_sym e) as e'. *)
-  (*     apply PCUICConfluence.lookup_env_cst_inv in e'. *)
-  (*     symmetry in e'. subst. *)
-  (*     constructor. econstructor. *)
-  (*     + symmetry. exact e. *)
-  (*     + reflexivity. *)
-  (*   - bang. *)
-  (*   - bang. *)
-  (*   - rewrite hiota in Heq. discriminate. *)
-  (*   - match goal with *)
-  (*     | |- context [ reduce ?x ?y ?z ] => *)
-  (*       case_eq (reduce x y z) ; *)
-  (*       specialize (haux x y z) *)
-  (*     end. *)
-  (*     intros [t' π'] [? [? [? ?]]] eq. cbn. *)
-  (*     rewrite eq in haux. cbn in haux. *)
-  (*     assumption. *)
-  (*   - constructor. constructor. *)
-  (*     eapply whne_mkApps. *)
-  (*     match type of e with *)
-  (*     | _ = reduce ?x ?y ?z => *)
-  (*       specialize (haux x y z) as haux' *)
-  (*     end. *)
-  (*     rewrite <- e in haux'. simpl in haux'. *)
-  (*     destruct a as [? [a ?]]. unfold Pr in a. cbn in a. *)
-  (*     pose proof a as a'. *)
-  (*     rewrite <- e0 in a'. cbn in a'. subst. *)
-  (*     pose proof (eq_sym e0) as e1. apply decompose_stack_eq in e1. *)
-  (*     subst. *)
-  (*     rewrite stack_context_appstack in haux'. simpl in haux'. *)
-  (*     apply Req_red in r as hr. *)
-  (*     pose proof (red_welltyped h hr) as hh. *)
-  (*     cbn in hh. rewrite zipc_appstack in hh. cbn in hh. *)
-  (*     zip fold in hh. *)
-  (*     apply welltyped_context in hh. simpl in hh. *)
-  (*     destruct hh as [T hh]. *)
-  (*     apply inversion_Case in hh *)
-  (*       as [u [npar [args [mdecl [idecl [pty [indctx [pctx [ps [btys [? [? [? [? [? [? [ht0 [? ?]]]]]]]]]]]]]]]]]]. *)
-  (*     (* We are almost there! *)
+  Proof.
+    intros Γ t π h aux haux.
+    funelim (_reduce_stack Γ t π h aux).
+    all: simpl.
+    all: try solve [ constructor ; constructor ].
+    - match goal with
+      | |- context [ reduce ?x ?y ?z ] =>
+        case_eq (reduce x y z) ;
+        specialize (haux x y z)
+      end.
+      intros [t' π'] [? [? [? ?]]] eq. cbn.
+      rewrite eq in haux. cbn in haux.
+      assumption.
+    - clear Heq.
+      revert r.
+      funelim (red_discr t1 π7). all: try easy. all: intros _.
+      all: try solve [ constructor ; constructor ].
+      + eapply whnf_indapp with (v := []).
+      + eapply whnf_cstrapp with (v := []).
+    - constructor. eapply whne_rel_nozeta. assumption.
+    - bang.
+    - match goal with
+      | |- context [ reduce ?x ?y ?z ] =>
+        case_eq (reduce x y z) ;
+        specialize (haux x y z)
+      end.
+      intros [t' π'] [? [? [? ?]]] eq. cbn.
+      rewrite eq in haux. cbn in haux.
+      assumption.
+    - constructor. econstructor.
+      rewrite <- e. cbn.
+      cbn in H0. inversion H0. reflexivity.
+    - match goal with
+      | |- context [ reduce ?x ?y ?z ] =>
+        case_eq (reduce x y z) ;
+        specialize (haux x y z)
+      end.
+      intros [t' π'] [? [? [? ?]]] eq. cbn.
+      rewrite eq in haux. cbn in haux.
+      assumption.
+    - constructor. eapply whne_letin_nozeta. assumption.
+    - constructor. eapply whne_const_nodelta. assumption.
+    - match goal with
+      | |- context [ reduce ?x ?y ?z ] =>
+        case_eq (reduce x y z) ;
+        specialize (haux x y z)
+      end.
+      intros [t' π'] [? [? [? ?]]] eq. cbn.
+      rewrite eq in haux. cbn in haux.
+      assumption.
+    - pose proof (eq_sym e) as e'.
+      apply PCUICConfluence.lookup_env_cst_inv in e'.
+      symmetry in e'. subst.
+      constructor. econstructor.
+      + symmetry. exact e.
+      + reflexivity.
+    - bang.
+    - bang.
+    - match goal with
+      | |- context [ reduce ?x ?y ?z ] =>
+        case_eq (reduce x y z) ;
+        specialize (haux x y z)
+      end.
+      intros [t' π'] [? [? [? ?]]] eq. cbn.
+      rewrite eq in haux. cbn in haux.
+      assumption.
+    - match goal with
+      | |- context [ reduce ?x ?y ?z ] =>
+        case_eq (reduce x y z) ;
+        specialize (haux x y z)
+      end.
+      intros [t' π'] [? [? [? ?]]] eq. cbn.
+      rewrite eq in haux. cbn in haux.
+      assumption.
+    - constructor. eapply whne_case_noiota. assumption.
+    - match goal with
+      | |- context [ reduce ?x ?y ?z ] =>
+        case_eq (reduce x y z) ;
+        specialize (haux x y z)
+      end.
+      intros [t' π'] [? [? [? ?]]] eq. cbn.
+      rewrite eq in haux. cbn in haux.
+      assumption.
+    - constructor. constructor.
+      eapply whne_mkApps.
+      match type of e with
+      | _ = reduce ?x ?y ?z =>
+        specialize (haux x y z) as haux'
+      end.
+      rewrite <- e in haux'. simpl in haux'.
+      destruct a as [? [a ?]]. unfold Pr in a. cbn in a.
+      pose proof a as a'.
+      rewrite <- e0 in a'. cbn in a'. subst.
+      pose proof (eq_sym e0) as e1. apply decompose_stack_eq in e1.
+      subst.
+      rewrite stack_context_appstack in haux'. simpl in haux'.
+      apply Req_red in r as hr.
+      pose proof (red_welltyped h hr) as hh.
+      cbn in hh. rewrite zipc_appstack in hh. cbn in hh.
+      zip fold in hh.
+      apply welltyped_context in hh. simpl in hh.
+      destruct hh as [T hh].
+      apply inversion_Case in hh
+        as [u [npar [args [mdecl [idecl [pty [indctx [pctx [ps [btys [? [? [? [? [? [? [ht0 [? ?]]]]]]]]]]]]]]]]]].
+      (* We are almost there! *)
   (*        t0 is a normal form (haux') of inductive type (ht0), *)
   (*        plus it is not a constructor (Heq), *)
   (*        we want to conclude it is necessarily neutral *)
-  (*      *) *)
-  (*     admit. *)
-  (*   - match goal with *)
-  (*     | |- context [ reduce ?x ?y ?z ] => *)
-  (*       case_eq (reduce x y z) ; *)
-  (*       specialize (haux x y z) *)
-  (*     end. *)
-  (*     intros [t' π'] [? [? [? ?]]] eq. cbn. *)
-  (*     rewrite eq in haux. cbn in haux. *)
-  (*     assumption. *)
+  (*      *)
+      admit.
+    - constructor. eapply whne_proj_noiota. assumption.
+    - (* Like case *)
+      admit.
+    - match goal with
+      | |- context [ reduce ?x ?y ?z ] =>
+        case_eq (reduce x y z) ;
+        specialize (haux x y z)
+      end.
+      intros [t' π'] [? [? [? ?]]] eq. cbn.
+      rewrite eq in haux. cbn in haux.
+      assumption.
+    - bang.
   Admitted.
 
   (* Lemma Fix_F_prop : *)

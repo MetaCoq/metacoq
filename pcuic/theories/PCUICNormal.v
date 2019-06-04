@@ -73,8 +73,8 @@ Section Normal.
       option_map decl_body (nth_error Γ i) = Some None ->
       whne Γ (tRel i)
 
-  | whne_rel_nodelta i :
-      RedFlags.delta flags = false ->
+  | whne_rel_nozeta i :
+      RedFlags.zeta flags = false ->
       whne Γ (tRel i)
 
   | whne_var v :

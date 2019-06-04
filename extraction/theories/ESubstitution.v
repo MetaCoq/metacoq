@@ -39,6 +39,7 @@ Lemma extract_weakening (Σ : PCUICAst.global_context) (Γ Γ' : PCUICAst.contex
     wf_local Σ (Γ ,,, Γ') ->
     Σ;;; Γ |- t : T ->
     extract Σ (Γ ,,, Γ') (PCUICLiftSubst.lift #|Γ'| 0 t) = lift #|Γ'| 0 (extract Σ Γ t).
+Proof.
 Admitted.
 
 (* (** ** Substitution *) *)
@@ -88,104 +89,108 @@ Admitted.
 (*   - edestruct type_of_complete; eauto. congruence. *)
 (* Qed. *)
 
+Lemma bool_equiv b1 b2 T1 T2 : 
+(b1 = true <~> T1) -> (b2 = true <~> T2) -> T1 <~> T2 -> b1 = b2.
+Proof.
+Admitted.
+  
 Lemma is_type_subst Σ Γ Γ' Δ a T s :
   wf Σ -> subslet Σ Γ s Γ' ->
   Σ ;;; Γ ,,, Γ' ,,, Δ |- a : T ->
   wf_local Σ (Γ ,,, subst_context s 0 Δ) ->
-  is_type_or_proof Σ (Γ ,,, subst_context s 0 Δ) (PCUICLiftSubst.subst s #|Δ| a) = Extract.is_type_or_proof Σ (Γ ,,, Γ' ,,, Δ) a.
+  (isArity (PCUICLiftSubst.subst s #|Δ| T) <-> isArity T) ->
+  is_type_or_proof Σ (Γ ,,, Γ' ,,, Δ) a =
+  is_type_or_proof Σ (Γ ,,, subst_context s 0 Δ) (PCUICLiftSubst.subst s #|Δ| a).
 Proof.
   intros.
-  (* unfold is_type_or_proof. *)
-  (* destruct type_of eqn:E at 2. *)
-  (* - assert (E' := E). *)
-  (*   eapply type_of_sound in E' as []; eauto. *)
-  (*   eapply type_of_subst in E; eauto. rewrite E. simpl. *)
-  (*   destruct is_arity eqn:Ea at 2. *)
-  (*   + erewrite is_arity_subst in Ea; eauto. rewrite Ea. reflexivity. *)
-  (*   + erewrite is_arity_subst in Ea; eauto. rewrite Ea. *)
-  (*     erewrite type_of_as_sort_subst with (Γ'0 := Γ'); eauto. admit.  *)
-  (* - edestruct type_of_complete; eauto. congruence. *)
+  eapply bool_equiv.
+  eapply is_type_or_proof_spec.
+  eauto.
+  eapply is_type_or_proof_spec.
+  eapply substitution; eauto.
+  split.
+  - intros [ | (u & ? & ?) ].
+    + left. generalize (#|Δ|). intros n.
+      induction T in n, i |- *; (try now inv i); cbn in *; eauto.
+    + right. exists u. split; eauto. eapply substitution in t; eauto.
+  -  eapply validity in X1 as [_ X1]; eauto.
+     intros [ | (u & ? & ?) ].
+     + left. now rewrite H in i.
+     + destruct X1.
+       * left. admit.
+       * right. exists u.
+         split; eauto.
 Admitted.
-
 
 Lemma extract_subst Σ Γ Γ' Δ a s T :
   wf Σ ->
   subslet Σ Γ s Γ' ->
   wf_local Σ (Γ ,,, subst_context s 0 Δ) ->
   Σ ;;; Γ ,,, Γ'  ,,, Δ |- a : T ->
+  is_type_or_proof Σ (Γ ,,, Γ' ,,, Δ) a =
+  is_type_or_proof Σ (Γ ,,, subst_context s 0 Δ) (PCUICLiftSubst.subst s #|Δ| a) ->
   extract Σ (Γ ,,, subst_context s 0 Δ) (PCUICLiftSubst.subst s #|Δ| a) = subst  (map (extract Σ Γ) s) #|Δ| (extract Σ (Γ,,,Γ',,,Δ) a).
 Proof.
-  (* intros HΣ HΔ Hs Ha. *)
-  (* pose proof (typing_wf_local Ha). *)
-  (* generalize_eqs Ha. intros eqw. rewrite <- eqw in X. *)
-  (* revert Γ Γ' Δ s Hs HΔ eqw. *)
-  (* revert Σ HΣ Γ0 X a T Ha. *)
-  (* eapply (typing_ind_env (fun Σ Γ0 a T => *)
-  (*                           forall (Γ Γ' : PCUICAst.context) Δ (s : list PCUICAst.term), *)
-  (*                             wf_local Σ (Γ ,,, subst_context s 0 Δ) -> *)
-  (*                             subslet Σ Γ s Γ' -> *)
-  (*                             Γ0 = Γ ,,, Γ' ,,, Δ -> *)
-  (*                             extract Σ (Γ ,,, Γ' ,,, Δ) a = Checked a' -> *)
-  (*                             Forall2 (fun (a0 : PCUICAst.term) (b : E.term) => extract Σ Γ a0 = Checked b) s s' -> *)
-  (*                             extract Σ (Γ ,,, subst_context s 0 Δ) (PCUICLiftSubst.subst s #|Δ| a) = Checked (subst s' #|Δ| a'))); *)
-  (* intros Σ wfΣ Γ0 wfΓ0; intros; simpl in * |-; subst Γ0. *)
-  (* - destruct ? in H2; try congruence. *)
-  (*   destruct a. *)
-  (*   + inv H2. eapply is_type_extract. *)
-  (*     erewrite is_type_subst; eauto. *)
-  (*     econstructor; eauto. *)
-  (*   + inv H2. simpl. *)
-  (*     elim (leb_spec_Set); intros Hn. *)
-  (*     elim nth_error_spec. *)
-  (*     * intros x Heq Hlt. *)
-  (*       pose proof (substlet_length X1). rewrite H1 in *. *)
-  (*       rewrite -> nth_error_app_context_ge in H0 by lia. *)
-  (*       rewrite -> nth_error_app_context_lt in H0 by lia. *)
-  (*       eapply Forall2_nth_error_Some in H3 as (? & ? & ?); eauto. *)
-  (*       rewrite H2. *)
-  (*       eapply subslet_nth_error in Heq; eauto. *)
-  (*        destruct decl, decl_body; *)
-  (*          cbn -[skipn] in Heq. *)
-  (*       -- destruct Heq as [-> ]. *)
-  (*          eapply (extract_weakening _ _ (subst_context s 0 Δ)) in H3; eauto. *)
-  (*          rewrite subst_context_length in H3; eauto. *)
-  (*       -- eapply (extract_weakening _ _ (subst_context s 0 Δ)) in H3; eauto. *)
-  (*          rewrite subst_context_length in H3; eauto. *)
-  (*     * intros Hs. *)
-  (*       pose proof (substlet_length X1). *)
-  (*       eapply Forall2_length in H3. rewrite H3 in *. *)
-  (*       assert (Hs' := Hs). *)
-  (*       eapply nth_error_None in Hs. rewrite Hs. *)
-  (*       simpl. *)
-  (*       erewrite <- is_type_subst in E; eauto. *)
-  (*       cbn - [is_type_or_proof] in E. *)
-  (*       revert E. elim (leb_spec_Set); intros; try lia. *)
-  (*       2: econstructor; eauto. *)
-  (*       rewrite <- H3 in Hs'. *)
-  (*       eapply nth_error_None in Hs'. *)
-  (*       rewrite Hs' in E. *)
-  (*       rewrite H3 in *. *)
-  (*       now rewrite E. *)
-  (*     * assert (sub := X1). *)
-  (*       eapply subslet_nth_error_lt in X1; eauto. *)
-  (*       rewrite H0 in X1. simpl in X1. *)
-  (*       simpl. *)
-  (*       erewrite <- is_type_subst in E; eauto. *)
-  (*       cbn - [is_type_or_proof] in E. *)
-  (*       revert E. elim (leb_spec_Set); intros; try lia. *)
-  (*       2: econstructor; eauto. *)
-  (*       now rewrite E. *)
-  (* -  *)
+  intros HΣ HΔ Hs Ha He.
+  pose proof (typing_wf_local Ha).
+  generalize_eqs Ha. intros eqw. rewrite <- eqw in X.
+  revert Γ Γ' Δ s Hs HΔ He eqw.
+  revert Σ HΣ Γ0 X a T Ha.
+  eapply (typing_ind_env (fun Σ Γ0 a T =>
+                            forall (Γ Γ' : PCUICAst.context) Δ (s : list PCUICAst.term),
+                              wf_local Σ (Γ ,,, subst_context s 0 Δ) ->
+                              subslet Σ Γ s Γ' ->
+                              _ ->
+                                Γ0 = Γ ,,, Γ' ,,, Δ ->
+                                extract Σ (Γ ,,, subst_context s 0 Δ) (PCUICLiftSubst.subst s #|Δ| a) =
+                                subst (map (extract Σ Γ) s) #|Δ| (extract Σ (Γ ,,, Γ' ,,, Δ) a)
+));
+  intros Σ wfΣ Γ0 wfΓ0; intros; simpl in * |-; subst Γ0.
+  - cbn. destruct (_ <=? _) eqn:E1.
+    * destruct (nth_error s (n- #|_|)) eqn:E2.
+      -- rewrite H0.
+         destruct ?.
+         ++ cbn. now rewrite is_type_extract.
+         ++ cbn. rewrite E1.
+            rewrite nth_error_map. rewrite E2. cbn.
+            erewrite <- subst_context_length.
+            erewrite extract_weakening; eauto. admit.
+      -- cbn. rewrite H0.
+         destruct ?.
+         ++ reflexivity.
+         ++ cbn. rewrite E1. rewrite nth_error_map, E2. cbn.
+            now rewrite map_length.
+    * cbn. rewrite H0.
+      destruct ?. reflexivity.
+      cbn. rewrite E1. reflexivity.
+  - cbn. rewrite <- H.
+    destruct ?; reflexivity.
+  - cbn. rewrite <- H1.
+    destruct ?; reflexivity.
+  - cbn. rewrite <- H1.
+    destruct ?.
+    + reflexivity.
+    + cbn. f_equal.
+      specialize (H0 Γ Γ' (PCUICAst.vass n t :: Δ) s).
+      cbn [app length] in H0.
+      rewrite <- H0; eauto.
+      f_equal. f_equal.
+      now rewrite subst_context_snoc0.
+      admit.
+      admit (* is_type_or_proof is stable under going into lambdas *).
+  - 
 Admitted.
 
 Lemma extract_subst_alt Σ Γ Γ' Δ a s T :
   wf Σ ->
   subslet Σ Γ s Γ' ->
   Σ ;;; Γ ,,, Γ'  ,,, Δ |- a : T ->
+  is_type_or_proof Σ (Γ ,,, Γ' ,,, Δ) a =
+  is_type_or_proof Σ (Γ ,,, subst_context s 0 Δ) (PCUICLiftSubst.subst s #|Δ| a) ->
   extract Σ (Γ ,,, subst_context s 0 Δ) (PCUICLiftSubst.subst s #|Δ| a) = subst  (map (extract Σ Γ) s) #|Δ| (extract Σ (Γ,,,Γ',,,Δ) a).
 Proof.
-  intros.
-  eapply extract_subst; eauto. (* clear H0 H1 a' H s'. *)
+  intros. 
+  eapply extract_subst; eauto. clear H. (* clear H0 H1 a' H s'. *)
   eapply All_local_env_app_inv.
   apply typing_wf_local in X1; eauto.
   apply All_local_env_app in X1 as [X1 X2].
@@ -201,9 +206,10 @@ Qed.
 Lemma extract_subst1 
       (Σ : PCUICAst.global_context) (na : name) (t b a' : PCUICAst.term) T :
   wf Σ -> Σ ;;; [] ,, PCUICAst.vass na t |- b : T -> Σ ;;; [] |- a' : t ->
-      extract Σ [] (PCUICLiftSubst.subst1 a' 0 b) = (extract Σ [PCUICAst.vass na t] b) {0 := extract Σ [] a'}.
+  is_type_or_proof Σ [] (PCUICLiftSubst.subst1 a' 0 b) = is_type_or_proof Σ  [PCUICAst.vass na t] b ->
+  extract Σ [] (PCUICLiftSubst.subst1 a' 0 b) = (extract Σ [PCUICAst.vass na t] b) {0 := extract Σ [] a'}.
 Proof.
-  intros HΣ Ht Hu.
+  intros HΣ Ht Hu He.
   assert (wfΓ : wf_local Σ []).
   apply typing_wf_local in Hu; eauto. intros.
   pose proof (extract_subst_alt Σ [] [PCUICAst.vass na t] [] b [a'] T) as thm.
@@ -215,6 +221,7 @@ Qed.
 Lemma extract_subst1_vdef
       (Σ : PCUICAst.global_context) (na : name) (t b a' : PCUICAst.term) T :
   wf Σ -> Σ ;;; [] ,, PCUICAst.vdef na a' t |- b : T -> Σ ;;; [] |- a' : t ->
+is_type_or_proof Σ [] (PCUICLiftSubst.subst1 a' 0 b) = is_type_or_proof Σ  [PCUICAst.vdef na a' t] b ->
       extract Σ [] (PCUICLiftSubst.subst1 a' 0 b) = (extract Σ [PCUICAst.vdef na a' t] b) {0 := extract Σ [] a'}.
 Proof.
   intros HΣ Ht.

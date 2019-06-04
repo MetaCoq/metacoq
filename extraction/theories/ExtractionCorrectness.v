@@ -73,6 +73,13 @@ Inductive extr_pre (Σ : PA.global_context) t T :=
 (*   intros H Σ T' T''. *)
 (* Admitted. *)
 
+
+Lemma red_is_type (Σ : PCUICAst.global_context) (t v : PCUICAst.term) (* T : *)
+  (* wf Σ -> Σ ;;; [] |- t : T ->  *) :
+  red Σ [] t v -> Extract.is_type_or_proof Σ [] t = Extract.is_type_or_proof Σ [] v.
+Proof.
+Admitted.
+  
 Lemma eval_is_type (Σ : PCUICAst.global_context) (t v : PCUICAst.term) (* T : *)
   (* wf Σ -> Σ ;;; [] |- t : T ->  *) :
   PCUICWcbvEval.eval Σ [] t v -> Extract.is_type_or_proof Σ [] t = Extract.is_type_or_proof Σ [] v.
@@ -173,10 +180,10 @@ Lemma is_type_App  Σ Γ a l T :
 Proof.
 Admitted.
   
-(* Lemma is_type_or_proof_lambda  Σ Γ na t b : *)
-(*   Extract.is_type_or_proof Σ Γ (PCUICAst.tLambda na t b) =   *)
-(*   Extract.is_type_or_proof Σ (Γ ,, PCUICAst.vass na t) b.  *)
-(* Admitted. *)
+Lemma is_type_or_proof_lambda  Σ Γ na t b :
+  Extract.is_type_or_proof Σ Γ (PCUICAst.tLambda na t b) =
+  Extract.is_type_or_proof Σ (Γ ,, PCUICAst.vass na t) b.
+Admitted.
 
 (* Lemma is_type_or_proof_mkApps  Σ Γ a l : *)
 (*   Extract.is_type_or_proof Σ Γ a = Checked true <-> *)
@@ -343,7 +350,8 @@ Proof.
       inv t1. inv X2. pose proof (subject_reduction_eval _ [] _ _ _ extr_env_wf t0 H).
       eapply type_Lambda_inv in X2 as (? & ? & [? ?] & ?).
 
-      cbn in IHeval1. 
+      cbn in IHeval1.
+      assert (Heq' := Heq).
       erewrite <- is_type_App with (l := [a]) in Heq; eauto.
       erewrite eval_is_type in Heq; try exact H.
       rewrite Heq in IHeval1.
@@ -359,6 +367,16 @@ Proof.
       eapply IHeval3. econstructor; eauto.
 
       eapply substitution0; eauto.
+
+      rewrite is_type_or_proof_lambda in Heq.
+      rewrite Heq.
+      erewrite <- red_is_type.
+      exact Heq'.
+      econstructor. 
+      eapply PCUICReduction.red_app.
+      now eapply wcbeval_red.
+      now eapply wcbeval_red.
+      econstructor.
   - (** zeta case, done *)
     inv pre. eapply type_tLetIn_inv in extr_typed0 as (? & U & [[] ?] & ?); eauto. cbn.
     destruct Extract.is_type_or_proof eqn:Heq. 
@@ -389,6 +407,8 @@ Proof.
 
         eapply (context_conversion _ _ _ _ _ _ t2).
         econstructor; eauto.
+
+        admit.
   - (** rel_def, trivial *) cbn in isdecl. inv isdecl.    
   - (** rel_undef, trivial *) cbn in isdecl. inv isdecl.    
   - (** iota case (tCase) *)
@@ -565,6 +585,7 @@ Proof.
            ++ eapply subslet_fix_subst.
            ++ eapply nth_error_all in a0. 2: exact En.
               cbn in a0. eapply a0.
+           ++ admit.
         -- eauto.
   - (** delta case, done up to lemma*) cbn. destruct Extract.is_type_or_proof eqn:Heq. 
     + erewrite is_type_extract. econstructor; eauto.
@@ -612,7 +633,6 @@ Proof.
     + econstructor; eauto. 
     + econstructor; eauto.
   - (** app_constr nonnil case *) inv pre. edestruct (type_mkApps_inv _ _ _ _ _ extr_env_wf extr_typed0) as (? & ? & [] & ?) ; eauto.
-
     rewrite !extract_Apps.
     cbn.
     destruct is_type_or_proof eqn:Heq.
@@ -622,7 +642,7 @@ Proof.
       * eapply eval_box_apps. eapply IHeval. econstructor; eauto.
       * econstructor. eapply IHeval. econstructor; eauto.
         eapply Forall2_map. eapply All2_Forall.
-        eapply All2_impl. eassumption.
+        eapply All2_impl_In. eassumption.
         intros. cbn in *.
         eapply typing_spine_In in H1 as []; eauto.
 

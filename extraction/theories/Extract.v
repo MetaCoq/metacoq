@@ -24,6 +24,24 @@ From PCUIC Require Import PCUICTyping.
 Axiom is_type_or_proof_spec : forall (Sigma : global_context) (Gamma : context) (t : PCUICAst.term) T,
     Sigma ;;; Gamma |- t : T -> (is_type_or_proof Sigma Gamma t = true) <~> (isArity T + (∑ u, (Sigma ;;; Gamma |- T : tSort u) * is_prop_sort u)). 
 
+
+(* 
+
+   X : Type, x : X |- x : X ~> is_type_or_proof x = false
+
+   Type : Type, x : Type |- x : Type ~> is_type_or_proof x = true
+
+*)
+
+(* 
+
+
+(λ X (x : X). X) Type nat ~> is_type_or_proof x = true
+
+
+ *)
+
+
 (* Section IsType. *)
 (*   (* Context {F : Fuel}. *) *)
 (*   Variables (Σ : global_context) (Γ : context). *)

@@ -718,7 +718,7 @@ Section Reduce.
     red_viewc (tProj p c) π := red_view_Proj p c π ;
     red_viewc t π := red_view_other t π I.
 
-  Equations(noind) _reduce_stack (Γ : context) (t : term) (π : stack)
+  Equations _reduce_stack (Γ : context) (t : term) (π : stack)
             (h : welltyped Σ Γ (zip (t,π)))
             (reduce : forall t' π', R (fst Σ) Γ (t',π') (t,π) ->
                                { t'' : term * stack | Req (fst Σ) Γ t'' (t',π') /\ Pr t'' π' /\ Pr' t'' })
@@ -792,21 +792,20 @@ Section Reduce.
       | false := give (tCase (ind, par) p c brs) π
       } ;
 
-    | red_view_Proj p c π with RedFlags.iota flags := {
-      | true with inspect (reduce c (Proj p π) _) := {
+    | red_view_Proj (i, pars, narg) c π with RedFlags.iota flags := {
+      | true with inspect (reduce c (Proj (i, pars, narg) π) _) := {
         | @exist (@exist (t,π') prf) eq with inspect (decompose_stack π') := {
           | @exist (args, ρ) prf' with construct_viewc t := {
-            | view_construct ind' c' _ with p := {
-              | (i, pars, narg) with inspect (nth_error args (pars + narg)) := {
-                | @exist (Some arg) eqa := rec reduce arg π ;
-                | @exist None eqa := False_rect _ _
-                }
+            | view_construct ind' c' _
+              with inspect (nth_error args (pars + narg)) := {
+              | @exist (Some arg) eqa := rec reduce arg π ;
+              | @exist None eqa := False_rect _ _
               } ;
-            | view_other t ht := give (tProj p (mkApps t args)) π
+            | view_other t ht := give (tProj (i, pars, narg) (mkApps t args)) π
             }
           }
         } ;
-      | false := give (tProj p c) π
+      | false := give (tProj (i, pars, narg) c) π
       } ;
 
     | red_view_other t π discr := give t π
@@ -1119,8 +1118,8 @@ Section Reduce.
     pose proof (red_welltyped h hr) as hh.
     destruct hr as [hr].
     eapply cored_red_cored ; try eassumption.
-    unfold Pr in p0. simpl in p0. pose proof p0 as p0'.
-    rewrite <- prf' in p0'. simpl in p0'. subst.
+    unfold Pr in p. simpl in p. pose proof p as p'.
+    rewrite <- prf' in p'. simpl in p'. subst.
     symmetry in prf'. apply decompose_stack_eq in prf' as ?.
     subst. cbn. rewrite zipc_appstack. cbn.
     do 2 zip fold. eapply cored_context.
@@ -1131,9 +1130,9 @@ Section Reduce.
     constructor. eauto.
   Qed.
   Next Obligation.
-    unfold Pr in p0. simpl in p0.
-    pose proof p0 as p0'.
-    rewrite <- prf' in p0'. simpl in p0'. subst.
+    unfold Pr in p. simpl in p.
+    pose proof p as p'.
+    rewrite <- prf' in p'. simpl in p'. subst.
     symmetry in prf'. apply decompose_stack_eq in prf' as ?.
     subst.
     apply Req_red in r as hr.
@@ -1152,8 +1151,8 @@ Section Reduce.
     dependent destruction r.
     - inversion H0. subst. cbn in prf'. inversion prf'. subst.
       cbn. reflexivity.
-    - unfold Pr in p0. cbn in p0.
-      rewrite <- prf' in p0. cbn in p0. subst.
+    - unfold Pr in p. cbn in p.
+      rewrite <- prf' in p. cbn in p. subst.
       dependent destruction H0.
       + cbn in H0. symmetry in prf'.
         pose proof (decompose_stack_eq _ _ _ prf'). subst.

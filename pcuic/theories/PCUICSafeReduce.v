@@ -684,6 +684,40 @@ Section Reduce.
     construct_viewc (tConstruct ind n ui) := view_construct ind n ui ;
     construct_viewc t := view_other t I.
 
+  (* Tailored view for _reduce_stack *)
+  Equations red_discr (t : term) (π : stack) : Prop :=
+    red_discr (tRel _) _ := False ;
+    red_discr (tLetIn _ _ _ _) _ := False ;
+    red_discr (tConst _ _) _ := False ;
+    red_discr (tApp _ _) _ := False ;
+    red_discr (tLambda _ _ _) (App _ _) := False ;
+    red_discr (tFix _ _) _ := False ;
+    red_discr (tCase _ _ _ _) _ := False ;
+    red_discr (tProj _ _) _ := False ;
+    red_discr _ _ := True.
+
+  Inductive red_view : term -> stack -> Prop :=
+  | red_view_Rel c π : red_view (tRel c) π
+  | red_view_LetIn A b B c π : red_view (tLetIn A b B c) π
+  | red_view_Const c u π : red_view (tConst c u) π
+  | red_view_App f a π : red_view (tApp f a) π
+  | red_view_Lambda na A t a args : red_view (tLambda na A t) (App a args)
+  | red_view_Fix mfix idx π : red_view (tFix mfix idx) π
+  | red_view_Case ind par p c brs π : red_view (tCase (ind, par) p c brs) π
+  | red_view_Proj p c π : red_view (tProj p c) π
+  | red_view_other t π : red_discr t π -> red_view t π.
+
+  Equations red_viewc t π : red_view t π :=
+    red_viewc (tRel c) π := red_view_Rel c π ;
+    red_viewc (tLetIn A b B c) π := red_view_LetIn A b B c π ;
+    red_viewc (tConst c u) π := red_view_Const c u π ;
+    red_viewc (tApp f a) π := red_view_App f a π ;
+    red_viewc (tLambda na A t) (App a args) := red_view_Lambda na A t a args ;
+    red_viewc (tFix mfix idx) π := red_view_Fix mfix idx π ;
+    red_viewc (tCase (ind, par) p c brs) π := red_view_Case ind par p c brs π ;
+    red_viewc (tProj p c) π := red_view_Proj p c π ;
+    red_viewc t π := red_view_other t π I.
+
   Equations(noind) _reduce_stack (Γ : context) (t : term) (π : stack)
             (h : welltyped Σ Γ (zip (t,π)))
             (reduce : forall t' π', R (fst Σ) Γ (t',π') (t,π) -> { t'' : term * stack | Req (fst Σ) Γ t'' (t',π') /\ Pr t'' π' /\ Pr' t'' })

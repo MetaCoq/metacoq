@@ -718,96 +718,100 @@ Section Reduce.
     red_viewc (tProj p c) π := red_view_Proj p c π ;
     red_viewc t π := red_view_other t π I.
 
-  Equations(noind) _reduce_stack (Γ : context) (t : term) (π : stack)
+  Equations _reduce_stack (Γ : context) (t : term) (π : stack)
             (h : welltyped Σ Γ (zip (t,π)))
-            (reduce : forall t' π', R (fst Σ) Γ (t',π') (t,π) -> { t'' : term * stack | Req (fst Σ) Γ t'' (t',π') /\ Pr t'' π' /\ Pr' t'' })
+            (reduce : forall t' π', R (fst Σ) Γ (t',π') (t,π) ->
+                               { t'' : term * stack | Req (fst Σ) Γ t'' (t',π') /\ Pr t'' π' /\ Pr' t'' })
     : { t' : term * stack | Req (fst Σ) Γ t' (t,π) /\ Pr t' π /\ Pr' t' } :=
 
-    _reduce_stack Γ (tRel c) π h reduce with RedFlags.zeta flags := {
-    | true with inspect (nth_error (Γ ,,, stack_context π) c) := {
-      | @exist None eq := False_rect _ _ ;
-      | @exist (Some d) eq with inspect d.(decl_body) := {
-        | @exist None _ := give (tRel c) π ;
-        | @exist (Some b) H := rec reduce (lift0 (S c) b) π
-        }
+    _reduce_stack Γ t π h reduce with red_viewc t π := {
+
+    | red_view_Rel c π with RedFlags.zeta flags := {
+      | true with inspect (nth_error (Γ ,,, stack_context π) c) := {
+        | @exist None eq := False_rect _ _ ;
+        | @exist (Some d) eq with inspect d.(decl_body) := {
+          | @exist None _ := give (tRel c) π ;
+          | @exist (Some b) H := rec reduce (lift0 (S c) b) π
+          }
+        } ;
+      | false := give (tRel c) π
       } ;
-    | false := give (tRel c) π
-    } ;
 
-    _reduce_stack Γ (tLetIn A b B c) π h reduce with RedFlags.zeta flags := {
-    | true := rec reduce (subst10 b c) π ;
-    | false := give (tLetIn A b B c) π
-    } ;
-
-    _reduce_stack Γ (tConst c u) π h reduce with RedFlags.delta flags := {
-    | true with inspect (lookup_env (fst Σ) c) := {
-      | @exist (Some (ConstantDecl _ {| cst_body := Some body |})) eq :=
-        let body' := subst_instance_constr u body in
-        rec reduce body' π ;
-      | @exist (Some (InductiveDecl _ _)) eq := False_rect _ _ ;
-      | @exist (Some _) eq := give (tConst c u) π ;
-      | @exist None eq := False_rect _ _
+    | red_view_LetIn A b B c π with RedFlags.zeta flags := {
+      | true := rec reduce (subst10 b c) π ;
+      | false := give (tLetIn A b B c) π
       } ;
-    | _ := give (tConst c u) π
-    } ;
 
-    _reduce_stack Γ (tApp f a) π h reduce :=
-      rec reduce f (App a π) ;
+    | red_view_Const c u π with RedFlags.delta flags := {
+      | true with inspect (lookup_env (fst Σ) c) := {
+        | @exist (Some (ConstantDecl _ {| cst_body := Some body |})) eq :=
+          let body' := subst_instance_constr u body in
+          rec reduce body' π ;
+        | @exist (Some (InductiveDecl _ _)) eq := False_rect _ _ ;
+        | @exist (Some _) eq := give (tConst c u) π ;
+        | @exist None eq := False_rect _ _
+        } ;
+      | _ := give (tConst c u) π
+      } ;
 
-    _reduce_stack Γ (tLambda na A t) (App a args) h reduce with inspect (RedFlags.beta flags) := {
-    | @exist true eq1 := rec reduce (subst10 a t) args ;
-    | @exist false eq1 := give (tLambda na A t) (App a args)
-    } ;
+    | red_view_App f a π := rec reduce f (App a π) ;
 
-    _reduce_stack Γ (tFix mfix idx) π h reduce with RedFlags.fix_ flags := {
-    | true with inspect (unfold_fix mfix idx) := {
-      | @exist (Some (narg, fn)) eq1 with inspect (decompose_stack_at π narg) := {
-        | @exist (Some (args, c, ρ)) eq2 with inspect (reduce c (Fix mfix idx args ρ) _) := {
-          | @exist (@exist (t, ρ') prf) eq3 with construct_viewc t := {
-            | view_construct ind n ui with inspect (decompose_stack ρ') := {
-              | @exist (l, θ) eq4 :=
-                rec reduce fn (appstack args (App (mkApps (tConstruct ind n ui) l) ρ))
-              } ;
-            | view_other t ht := give (tFix mfix idx) π
-            }
+    | red_view_Lambda na A t a args with inspect (RedFlags.beta flags) := {
+      | @exist true eq1 := rec reduce (subst10 a t) args ;
+      | @exist false eq1 := give (tLambda na A t) (App a args)
+      } ;
+
+    | red_view_Fix mfix idx π with RedFlags.fix_ flags := {
+      | true with inspect (unfold_fix mfix idx) := {
+        | @exist (Some (narg, fn)) eq1 with inspect (decompose_stack_at π narg) := {
+          | @exist (Some (args, c, ρ)) eq2 with inspect (reduce c (Fix mfix idx args ρ) _) := {
+            | @exist (@exist (t, ρ') prf) eq3 with construct_viewc t := {
+              | view_construct ind n ui with inspect (decompose_stack ρ') := {
+                | @exist (l, θ) eq4 :=
+                  rec reduce fn (appstack args (App (mkApps (tConstruct ind n ui) l) ρ))
+                } ;
+              | view_other t ht := give (tFix mfix idx) π
+              }
+            } ;
+          | _ := give (tFix mfix idx) π
           } ;
         | _ := give (tFix mfix idx) π
         } ;
-      | _ := give (tFix mfix idx) π
+      | false := give (tFix mfix idx) π
       } ;
-    | false := give (tFix mfix idx) π
-    } ;
 
-    _reduce_stack Γ (tCase (ind, par) p c brs) π h reduce with RedFlags.iota flags := {
-    | true with inspect (reduce c (Case (ind, par) p brs π) _) := {
-      | @exist (@exist (t,π') prf) eq with inspect (decompose_stack π') := {
-        | @exist (args, ρ) prf' with construct_viewc t := {
-          | view_construct ind' c' _ := rec reduce (iota_red par c' args brs) π ;
-          | view_other t ht := give (tCase (ind, par) p (mkApps t args) brs) π
+    | red_view_Case ind par p c brs π with RedFlags.iota flags := {
+      | true with inspect (reduce c (Case (ind, par) p brs π) _) := {
+        | @exist (@exist (t,π') prf) eq with inspect (decompose_stack π') := {
+          | @exist (args, ρ) prf' with construct_viewc t := {
+            | view_construct ind' c' _ := rec reduce (iota_red par c' args brs) π ;
+            | view_other t ht := give (tCase (ind, par) p (mkApps t args) brs) π
+            }
           }
-        }
+        } ;
+      | false := give (tCase (ind, par) p c brs) π
       } ;
-    | false := give (tCase (ind, par) p c brs) π
-    } ;
 
-    _reduce_stack Γ (tProj p c) π h reduce with RedFlags.iota flags := {
-    | true with inspect (reduce c (Proj p π) _) := {
-      | @exist (@exist (t,π') prf) eq with inspect (decompose_stack π') := {
-        | @exist (args, ρ) prf' with construct_viewc t := {
-          | view_construct ind' c' _ with p := {
-            | (i, pars, narg) with inspect (nth_error args (pars + narg)) := {
-              | @exist (Some arg) eqa := rec reduce arg π ;
-              | @exist None eqa := False_rect _ _
-              }
-            } ;
-          | view_other t ht := give (tProj p (mkApps t args)) π
+    | red_view_Proj p c π with RedFlags.iota flags := {
+      | true with inspect (reduce c (Proj p π) _) := {
+        | @exist (@exist (t,π') prf) eq with inspect (decompose_stack π') := {
+          | @exist (args, ρ) prf' with construct_viewc t := {
+            | view_construct ind' c' _ with p := {
+              | (i, pars, narg) with inspect (nth_error args (pars + narg)) := {
+                | @exist (Some arg) eqa := rec reduce arg π ;
+                | @exist None eqa := False_rect _ _
+                }
+              } ;
+            | view_other t ht := give (tProj p (mkApps t args)) π
+            }
           }
-        }
+        } ;
+      | false := give (tProj p c) π
       } ;
-    | false := give (tProj p c) π
-    } ;
 
-    _reduce_stack Γ t π h reduce := give t π.
+    | red_view_other t π _ := give t π
+
+    }.
 
   (* tRel *)
   Next Obligation.

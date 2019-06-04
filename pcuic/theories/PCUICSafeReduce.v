@@ -696,7 +696,7 @@ Section Reduce.
     red_discr (tProj _ _) _ := False ;
     red_discr _ _ := True.
 
-  Inductive red_view : term -> stack -> Prop :=
+  Inductive red_view : term -> stack -> Set :=
   | red_view_Rel c π : red_view (tRel c) π
   | red_view_LetIn A b B c π : red_view (tLetIn A b B c) π
   | red_view_Const c u π : red_view (tConst c u) π
@@ -718,7 +718,7 @@ Section Reduce.
     red_viewc (tProj p c) π := red_view_Proj p c π ;
     red_viewc t π := red_view_other t π I.
 
-  Equations _reduce_stack (Γ : context) (t : term) (π : stack)
+  Equations(noind) _reduce_stack (Γ : context) (t : term) (π : stack)
             (h : welltyped Σ Γ (zip (t,π)))
             (reduce : forall t' π', R (fst Σ) Γ (t',π') (t,π) ->
                                { t'' : term * stack | Req (fst Σ) Γ t'' (t',π') /\ Pr t'' π' /\ Pr' t'' })
@@ -809,7 +809,7 @@ Section Reduce.
       | false := give (tProj p c) π
       } ;
 
-    | red_view_other t π _ := give t π
+    | red_view_other t π discr := give t π
 
     }.
 
@@ -840,40 +840,11 @@ Section Reduce.
         cbn in e. rewrite e in eq. discriminate.
   Qed.
 
-  (* tLambda *)
-  Next Obligation.
-    left. econstructor.
-    cbn. eapply red1_context. econstructor.
-  Qed.
-  Next Obligation.
-    unfold Pr. cbn.
-    case_eq (decompose_stack args). intros l ρ e.
-    cbn. unfold Pr in h. rewrite e in h. cbn in h.
-    assumption.
-  Qed.
-  Next Obligation.
-    rewrite β in eq1. discriminate.
-  Qed.
-
   (* tLetIn *)
   Next Obligation.
     left. econstructor.
     eapply red1_context.
     econstructor.
-  Qed.
-
-  (* tApp *)
-  Next Obligation.
-    right.
-    cbn. unfold posR. cbn.
-    eapply positionR_poscat_nonil. discriminate.
-  Qed.
-  Next Obligation.
-    unfold Pr. cbn.
-    unfold Pr in h. cbn in h.
-    case_eq (decompose_stack π). intros l ρ e.
-    cbn. rewrite e in h. cbn in h.
-    assumption.
   Qed.
 
   (* tConst *)
@@ -883,7 +854,7 @@ Section Reduce.
     (* Should be a lemma! *)
     - unfold declared_constant. rewrite <- eq. f_equal.
       f_equal. clear - eq.
-      revert c wildcard wildcard0 body wildcard1 eq.
+      revert c wildcard0 body wildcard1 wildcard2 eq.
       set (Σ' := fst Σ). clearbody Σ'. clear Σ. rename Σ' into Σ.
       induction Σ ; intros c na t body univ eq.
       + cbn in eq. discriminate.
@@ -909,6 +880,146 @@ Section Reduce.
     discriminate.
   Qed.
 
+  (* tApp *)
+  Next Obligation.
+    right.
+    cbn. unfold posR. cbn.
+    eapply positionR_poscat_nonil. discriminate.
+  Qed.
+  Next Obligation.
+    unfold Pr. cbn.
+    unfold Pr in h. cbn in h.
+    case_eq (decompose_stack π). intros l ρ e.
+    cbn. rewrite e in h. cbn in h.
+    assumption.
+  Qed.
+
+  (* tLambda *)
+  Next Obligation.
+    left. econstructor.
+    cbn. eapply red1_context. econstructor.
+  Qed.
+  Next Obligation.
+    unfold Pr. cbn.
+    case_eq (decompose_stack args). intros l ρ e.
+    cbn. unfold Pr in h. rewrite e in h. cbn in h.
+    assumption.
+  Qed.
+  Next Obligation.
+    rewrite β in eq1. discriminate.
+  Qed.
+
+    (* tFix *)
+  Next Obligation.
+    symmetry in eq2.
+    pose proof (decompose_stack_at_eq _ _ _ _ _ eq2). subst.
+    eapply R_positionR.
+    - cbn. rewrite zipc_appstack. cbn. reflexivity.
+    - cbn. rewrite stack_position_appstack. cbn.
+      rewrite <- app_assoc.
+      eapply positionR_poscat.
+      constructor.
+  Qed.
+  Next Obligation.
+    case_eq (decompose_stack π). intros ll π' e.
+    pose proof (decompose_stack_eq _ _ _ e). subst.
+    clear eq3. symmetry in eq2.
+    pose proof (decompose_stack_at_eq _ _ _ _ _ eq2).
+    pose proof (decompose_stack_at_length _ _ _ _ _ eq2).
+    case_eq (decompose_stack ρ). intros l' θ' e'.
+    pose proof (decompose_stack_eq _ _ _ e'). subst.
+    rewrite H0 in e. rewrite decompose_stack_appstack in e.
+    cbn in e. rewrite e' in e. inversion e. subst. clear e.
+
+    case_eq (decompose_stack ρ'). intros ll s e1.
+    pose proof (decompose_stack_eq _ _ _ e1). subst.
+
+    eapply R_Req_R.
+    - instantiate (1 := (tFix mfix idx, appstack (args ++ (mkApps (tConstruct ind n ui) l) :: l') π')).
+      left. cbn. rewrite 2!zipc_appstack. cbn. rewrite zipc_appstack.
+      repeat zip fold. eapply cored_context.
+      assert (forall args l u v, mkApps (tApp (mkApps u args) v) l = mkApps u (args ++ v :: l)) as thm.
+      { clear. intro args. induction args ; intros l u v.
+        - reflexivity.
+        - cbn. rewrite IHargs. reflexivity.
+      }
+      rewrite thm.
+      left. eapply red_fix.
+      + eauto.
+      + unfold is_constructor.
+        rewrite nth_error_app2 by eauto.
+        replace (#|args| - #|args|) with 0 by auto with arith.
+        cbn.
+        unfold isConstruct_app.
+        rewrite decompose_app_mkApps by reflexivity.
+        reflexivity.
+    - destruct r.
+      + inversion H1. subst.
+        destruct ll.
+        * cbn in H4. subst. cbn in eq4. inversion eq4. subst.
+          reflexivity.
+        * cbn in H4. discriminate H4.
+      + dependent destruction H1.
+        * cbn in H1. rewrite 2!zipc_appstack in H1.
+          rewrite decompose_stack_appstack in eq4.
+          case_eq (decompose_stack s). intros l0 s0 e2.
+          rewrite e2 in eq4. cbn in eq4.
+          destruct l0.
+          -- rewrite app_nil_r in eq4. inversion eq4. subst. clear eq4.
+             pose proof (decompose_stack_eq _ _ _ e2) as ee. cbn in ee.
+             symmetry in ee. subst.
+             right. left.
+             cbn. rewrite !zipc_appstack.
+             unfold Pr in p. cbn in p.
+             rewrite e1 in p. cbn in p. subst.
+             cbn in H1.
+             clear - H1.
+
+             match goal with
+             | |- ?A =>
+               let e := fresh "e" in
+               let B := type of H1 in
+               assert (A = B) as e ; [| rewrite e ; assumption ]
+             end.
+             set (t := tConstruct ind n ui). clearbody t.
+             set (f := tFix mfix idx). clearbody f.
+             f_equal.
+             ++ clear. revert ll π' l' t f.
+                induction args ; intros ll π' l' t f.
+                ** cbn. rewrite zipc_appstack. reflexivity.
+                ** cbn. rewrite IHargs. reflexivity.
+             ++ clear. revert π' l' c f.
+                induction args ; intros π' l' c f.
+                ** cbn. reflexivity.
+                ** cbn. rewrite IHargs. reflexivity.
+          -- pose proof (decompose_stack_eq _ _ _ e2) as ee. cbn in ee.
+             subst. exfalso.
+             eapply decompose_stack_not_app. eassumption.
+        * cbn in H2. inversion H2.
+          rewrite 2!zipc_appstack in H4.
+          unfold Pr in p. cbn in p.
+          rewrite e1 in p. cbn in p. subst.
+          cbn in H4. rewrite zipc_appstack in H4.
+          apply zipc_inj in H4.
+          apply mkApps_inj in H4.
+          inversion H4. subst.
+          rewrite e1 in eq4. inversion eq4. subst.
+          reflexivity.
+  Qed.
+  Next Obligation.
+    unfold Pr. cbn.
+    unfold Pr in h. cbn in h.
+    rewrite decompose_stack_appstack in h. cbn in h.
+    case_eq (decompose_stack ρ). intros l1 ρ1 e.
+    rewrite e in h. cbn in h. subst.
+    pose proof (decompose_stack_eq _ _ _ e). subst.
+    clear eq3. symmetry in eq2.
+    pose proof (decompose_stack_at_eq _ _ _ _ _ eq2).
+    subst.
+    rewrite decompose_stack_appstack. cbn.
+    rewrite e. cbn. reflexivity.
+  Qed.
+
   (* tCase *)
   Next Obligation.
     right. unfold posR. cbn.
@@ -922,7 +1033,7 @@ Section Reduce.
     - econstructor. econstructor. eapply red1_context.
       eapply red_iota.
     - instantiate (4 := ind'). instantiate (2 := p).
-      instantiate (1 := wildcard).
+      instantiate (1 := wildcard9).
       destruct r.
       + inversion e.
         subst.
@@ -1056,115 +1167,15 @@ Section Reduce.
         reflexivity.
   Qed.
 
-  (* tFix *)
+  (* Other *)
   Next Obligation.
-    symmetry in eq2.
-    pose proof (decompose_stack_at_eq _ _ _ _ _ eq2). subst.
-    eapply R_positionR.
-    - cbn. rewrite zipc_appstack. cbn. reflexivity.
-    - cbn. rewrite stack_position_appstack. cbn.
-      rewrite <- app_assoc.
-      eapply positionR_poscat.
-      constructor.
+    revert discr.
+    funelim (red_discr t π). all: auto.
+    easy.
   Qed.
   Next Obligation.
-    case_eq (decompose_stack π). intros ll π' e.
-    pose proof (decompose_stack_eq _ _ _ e). subst.
-    clear eq3. symmetry in eq2.
-    pose proof (decompose_stack_at_eq _ _ _ _ _ eq2).
-    pose proof (decompose_stack_at_length _ _ _ _ _ eq2).
-    case_eq (decompose_stack ρ). intros l' θ' e'.
-    pose proof (decompose_stack_eq _ _ _ e'). subst.
-    rewrite H0 in e. rewrite decompose_stack_appstack in e.
-    cbn in e. rewrite e' in e. inversion e. subst. clear e.
-
-    case_eq (decompose_stack ρ'). intros ll s e1.
-    pose proof (decompose_stack_eq _ _ _ e1). subst.
-
-    eapply R_Req_R.
-    - instantiate (1 := (tFix mfix idx, appstack (args ++ (mkApps (tConstruct ind n ui) l) :: l') π')).
-      left. cbn. rewrite 2!zipc_appstack. cbn. rewrite zipc_appstack.
-      repeat zip fold. eapply cored_context.
-      assert (forall args l u v, mkApps (tApp (mkApps u args) v) l = mkApps u (args ++ v :: l)) as thm.
-      { clear. intro args. induction args ; intros l u v.
-        - reflexivity.
-        - cbn. rewrite IHargs. reflexivity.
-      }
-      rewrite thm.
-      left. eapply red_fix.
-      + eauto.
-      + unfold is_constructor.
-        rewrite nth_error_app2 by eauto.
-        replace (#|args| - #|args|) with 0 by auto with arith.
-        cbn.
-        unfold isConstruct_app.
-        rewrite decompose_app_mkApps by reflexivity.
-        reflexivity.
-    - destruct r.
-      + inversion H1. subst.
-        destruct ll.
-        * cbn in H4. subst. cbn in eq4. inversion eq4. subst.
-          reflexivity.
-        * cbn in H4. discriminate H4.
-      + dependent destruction H1.
-        * cbn in H1. rewrite 2!zipc_appstack in H1.
-          rewrite decompose_stack_appstack in eq4.
-          case_eq (decompose_stack s). intros l0 s0 e2.
-          rewrite e2 in eq4. cbn in eq4.
-          destruct l0.
-          -- rewrite app_nil_r in eq4. inversion eq4. subst. clear eq4.
-             pose proof (decompose_stack_eq _ _ _ e2) as ee. cbn in ee.
-             symmetry in ee. subst.
-             right. left.
-             cbn. rewrite !zipc_appstack.
-             unfold Pr in p. cbn in p.
-             rewrite e1 in p. cbn in p. subst.
-             cbn in H1.
-             clear - H1.
-
-             match goal with
-             | |- ?A =>
-               let e := fresh "e" in
-               let B := type of H1 in
-               assert (A = B) as e ; [| rewrite e ; assumption ]
-             end.
-             set (t := tConstruct ind n ui). clearbody t.
-             set (f := tFix mfix idx). clearbody f.
-             f_equal.
-             ++ clear. revert ll π' l' t f.
-                induction args ; intros ll π' l' t f.
-                ** cbn. rewrite zipc_appstack. reflexivity.
-                ** cbn. rewrite IHargs. reflexivity.
-             ++ clear. revert π' l' c f.
-                induction args ; intros π' l' c f.
-                ** cbn. reflexivity.
-                ** cbn. rewrite IHargs. reflexivity.
-          -- pose proof (decompose_stack_eq _ _ _ e2) as ee. cbn in ee.
-             subst. exfalso.
-             eapply decompose_stack_not_app. eassumption.
-        * cbn in H2. inversion H2.
-          rewrite 2!zipc_appstack in H4.
-          unfold Pr in p. cbn in p.
-          rewrite e1 in p. cbn in p. subst.
-          cbn in H4. rewrite zipc_appstack in H4.
-          apply zipc_inj in H4.
-          apply mkApps_inj in H4.
-          inversion H4. subst.
-          rewrite e1 in eq4. inversion eq4. subst.
-          reflexivity.
-  Qed.
-  Next Obligation.
-    unfold Pr. cbn.
-    unfold Pr in h. cbn in h.
-    rewrite decompose_stack_appstack in h. cbn in h.
-    case_eq (decompose_stack ρ). intros l1 ρ1 e.
-    rewrite e in h. cbn in h. subst.
-    pose proof (decompose_stack_eq _ _ _ e). subst.
-    clear eq3. symmetry in eq2.
-    pose proof (decompose_stack_at_eq _ _ _ _ _ eq2).
-    subst.
-    rewrite decompose_stack_appstack. cbn.
-    rewrite e. cbn. reflexivity.
+    revert discr hl.
+    funelim (red_discr t π). all: easy.
   Qed.
 
   Equations reduce_stack_full (Γ : context) (t : term) (π : stack)

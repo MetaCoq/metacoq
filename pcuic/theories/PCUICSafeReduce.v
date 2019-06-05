@@ -1302,6 +1302,17 @@ Section Reduce.
     refine (reduce_stack_sound _ _ ε _).
   Qed.
 
+  (* Potentially hard? Ok with SN? *)
+  Lemma Ind_canonicity :
+    forall Γ ind u args t,
+      Σ ;;; Γ |- t : mkApps (tInd ind u) args ->
+      RedFlags.iota flags ->
+      whnf flags Σ Γ t ->
+      let '(u,l) := decompose_app t in
+      discr_construct u ->
+      whne flags Σ Γ u.
+  Admitted.
+
   Lemma _reduce_stack_whnf :
     forall Γ t π h aux,
       (forall t' π' hR,
@@ -1413,9 +1424,16 @@ Section Reduce.
       destruct hh as [T hh].
       apply inversion_Case in hh
         as [u [npar [args [mdecl [idecl [pty [indctx [pctx [ps [btys [? [? [? [? [? [? [ht0 [? ?]]]]]]]]]]]]]]]]]].
+      apply Ind_canonicity in ht0 ; auto.
+      + rewrite decompose_app_mkApps in ht0 ; auto.
+        destruct p0 as [? ?]. assumption.
+      + (* That is kinda stupid now...
+           Back to where we started.
+         *)
+
       (* We are almost there! *)
   (*        t0 is a normal form (haux') of inductive type (ht0), *)
-  (*        plus it is not a constructor (Heq), *)
+  (*        plus it is not a constructor (d), *)
   (*        we want to conclude it is necessarily neutral *)
   (*      *)
       admit.

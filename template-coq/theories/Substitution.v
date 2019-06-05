@@ -3,7 +3,7 @@
 From Coq Require Import Bool String List Program BinPos Compare_dec Arith Lia.
 From MetaCoq.Template Require Import config utils Ast AstUtils Induction utils LiftSubst UnivSubst Typing TypingWf.
 From MetaCoq.Template Require Import Generation WeakeningEnv Closed Weakening.
-Require Import ssreflect.
+From Coq Require Import ssreflect ssrbool. (* FIXME From mathcomp *)
 
 (** * Substitution lemmas for typing derivations. *)
 

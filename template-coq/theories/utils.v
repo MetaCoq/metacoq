@@ -1,22 +1,31 @@
 From Coq Require Import Bool Program List Ascii String OrderedType Lia Omega.
 Import ListNotations.
-Require Import ssreflect.
+Require Import ssreflect ssrbool ssrfun.
 Set Asymmetric Patterns.
 Require Import Arith.
 
-(* Use \sum to input ∑ in Company Coq (it is not a sigma Σ). *)
-Notation "'∑' x .. y , p" := (sigT (fun x => .. (sigT (fun y => p%type)) ..))
-  (at level 200, x binder, right associativity,
-   format "'[' '∑'  '/  ' x  ..  y ,  '/  ' p ']'")
+Module SigmaNotations.
+  (* Declare Scope sigma_scope. *)
+  Delimit Scope sigma_scope with sigma.
+
+  (* Use \sum to input ∑ in Company Coq (it is not a sigma Σ). *)
+  Notation "'∑' x .. y , p" := (sigT (fun x => .. (sigT (fun y => p%type)) ..))
+    (at level 200, x binder, right associativity,
+     format "'[' '∑'  '/  ' x  ..  y ,  '/  ' p ']'")
   : type_scope.
 
-Notation "( x ; y )" := (@existT _ _ x y).
-Notation "( x ; y ; z )" := (x ; ( y ; z)).
-Notation "( x ; y ; z ; t )" := (x ; ( y ; (z ; t))).
-Notation "( x ; y ; z ; t ; u )" := (x ; ( y ; (z ; (t ; u)))).
-Notation "( x ; y ; z ; t ; u ; v )" := (x ; ( y ; (z ; (t ; (u ; v))))).
-Notation "x .1" := (@projT1 _ _ x) (at level 3, format "x '.1'").
-Notation "x .2" := (@projT2 _ _ x) (at level 3, format "x '.2'").
+  Notation "( x ; .. ; y ; z )" :=
+    (@existT _ _ x .. (@existT _ _ y z) ..)
+      (right associativity, at level 0,
+       format "( x ;  .. ;  y ;  z )") : sigma_scope.
+
+  Notation "x .1" := (@projT1 _ _ x) : sigma_scope.
+  Notation "x .2" := (@projT2 _ _ x) : sigma_scope.
+
+End SigmaNotations.
+
+Import SigmaNotations.
+Local Open Scope sigma_scope.
 
 Notation "x × y" := (prod x y )(at level 80, right associativity).
 
@@ -25,14 +34,10 @@ Notation "#| l |" := (List.length l) (at level 0, l at level 99, format "#| l |"
 (* \circ *)
 Notation "g ∘ f" := (fun x => g (f x)).
 
-(** We cannot use ssrbool as it breaks extraction. *)
-Coercion is_true : bool >-> Sortclass.
-
-Definition pred (A : Type) := A -> bool.
-
 Lemma andb_and b b' : is_true (b && b') <-> is_true b /\ is_true b'.
 Proof. apply andb_true_iff. Qed.
 
+(* FIXME: shaddows ssr's andP *)
 Lemma andP {b b'} : is_true (b && b') -> is_true b /\ is_true b'.
 Proof. apply andb_and. Qed.
 

@@ -1,5 +1,7 @@
 Require Import Ascii String ZArith List utils.
 Import ListNotations.
+Import SigmaNotations.
+Local Open Scope sigma_scope.
 
 Module Level.
   Inductive t : Set :=

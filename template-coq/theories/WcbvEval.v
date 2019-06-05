@@ -3,6 +3,7 @@
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
 From MetaCoq.Template Require Import config utils Ast Induction LiftSubst UnivSubst Typing.
 From MetaCoq.Template Require Import AstUtils.
+From Coq Require Import ssreflect ssrbool ssrfun.
 Require Import String.
 Local Open Scope string_scope.
 Set Asymmetric Patterns.
@@ -252,7 +253,7 @@ Section Wcbv.
   Proof.
     induction 1 using eval_evals_ind; simpl; auto using value.
     pose (value_tInd i u l'). apply All2_right in H0.
-    rewrite mkApps_tApp in v; auto. simpl; auto. eauto using All2_non_nil.
+    rewrite -> mkApps_tApp in v; auto. simpl; auto. eauto using All2_non_nil.
     pose proof (value_tConstruct i k u l'). forward H1.
     apply (All2_right H0).
     rewrite mkApps_tApp in H1; auto. simpl; auto. eauto using All2_non_nil.

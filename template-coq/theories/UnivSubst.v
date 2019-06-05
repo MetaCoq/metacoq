@@ -6,6 +6,9 @@ Require Import String Lia.
 Local Open Scope string_scope.
 Set Asymmetric Patterns.
 
+Import SigmaNotations.
+Local Open Scope sigma_scope.
+
 (** * Universe substitution
 
   *WIP*

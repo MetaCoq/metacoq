@@ -27,6 +27,6 @@ Cd "gen-src".
 
 Require Import MetaCoq.Template.TemplateMonad.Extractable.
 
-Recursive Extraction Library Extractable.
+Separate Extraction BasicAst Ast Universes Extractable.
 
 Cd "..".

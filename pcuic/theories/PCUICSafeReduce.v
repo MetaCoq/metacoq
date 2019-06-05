@@ -1,7 +1,7 @@
 (* Distributed under the terms of the MIT license.   *)
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Arith Lia
-     Classes.RelationClasses.
+     Classes.RelationClasses Omega.
 From MetaCoq.Template
 Require Import config Universes monad_utils utils BasicAst AstUtils UnivSubst.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
@@ -1302,16 +1302,108 @@ Section Reduce.
     refine (reduce_stack_sound _ _ ε _).
   Qed.
 
+  (* TODO MOVE *)
+  Lemma decompose_app_rec_notApp :
+    forall t l u l',
+      decompose_app_rec t l = (u, l') ->
+      isApp u = false.
+  Proof.
+    intros t l u l' e.
+    induction t in l, u, l', e |- *.
+    all: try (cbn in e ; inversion e ; reflexivity).
+    cbn in e. eapply IHt1. eassumption.
+  Qed.
+
+  (* TODO MOVE *)
+  Lemma decompose_app_notApp :
+    forall t u l,
+      decompose_app t = (u, l) ->
+      isApp u = false.
+  Proof.
+    intros t u l e.
+    eapply decompose_app_rec_notApp. eassumption.
+  Qed.
+
+  (* TODO MOVE *)
+  Fixpoint nApp t :=
+    match t with
+    | tApp u _ => S (nApp u)
+    | _ => 0
+    end.
+
+  (* TODO MOVE *)
+  Lemma isApp_false_nApp :
+    forall u,
+      isApp u = false ->
+      nApp u = 0.
+  Proof.
+    intros u h.
+    destruct u.
+    all: try reflexivity.
+    discriminate.
+  Qed.
+
+  (* TODO MOVE *)
+  Lemma nApp_mkApps :
+    forall t l,
+      nApp (mkApps t l) = nApp t + #|l|.
+  Proof.
+    intros t l.
+    induction l in t |- *.
+    - simpl. omega.
+    - simpl. rewrite IHl. cbn. omega.
+  Qed.
+
+  Lemma decompose_app_eq_mkApps :
+    forall t u l l',
+      decompose_app t = (mkApps u l', l) ->
+      l' = [].
+  Proof.
+    intros t u l l' e.
+    apply decompose_app_notApp in e.
+    apply isApp_false_nApp in e.
+    rewrite nApp_mkApps in e.
+    destruct l' ; cbn in e ; try omega.
+    reflexivity.
+  Qed.
+
   (* Potentially hard? Ok with SN? *)
   Lemma Ind_canonicity :
-    forall Γ ind u args t,
-      Σ ;;; Γ |- t : mkApps (tInd ind u) args ->
+    forall Γ ind uni args t,
+      Σ ;;; Γ |- t : mkApps (tInd ind uni) args ->
       RedFlags.iota flags ->
-      whnf flags Σ Γ t ->
       let '(u,l) := decompose_app t in
+      (isLambda u -> l = []) ->
+      whnf flags Σ Γ u ->
       discr_construct u ->
       whne flags Σ Γ u.
-  Admitted.
+  Proof.
+    intros Γ ind uni args t ht hiota.
+    case_eq (decompose_app t).
+    intros u l e hl h d.
+    induction h.
+    - assumption.
+    - apply PCUICConfluence.decompose_app_inv in e. subst.
+      (* Inversion on ht *)
+      admit.
+    - apply PCUICConfluence.decompose_app_inv in e. subst.
+      (* Inversion on ht *)
+      admit.
+    - cbn in hl. specialize (hl eq_refl). subst.
+      apply PCUICConfluence.decompose_app_inv in e. subst. cbn in ht.
+      (* Inversion on ht *)
+      admit.
+    - apply decompose_app_eq_mkApps in e. subst.
+      cbn in d. simp discr_construct in d. easy.
+    - apply PCUICConfluence.decompose_app_inv in e. subst.
+      (* Inversion on ht *)
+      admit.
+    - apply PCUICConfluence.decompose_app_inv in e. subst.
+      (* Not very clear now.
+         Perhaps we ought to show whnf of the mkApps entirely.
+         And have a special whne case for Fix that don't reduce?
+       *)
+  Abort.
 
   Lemma _reduce_stack_whnf :
     forall Γ t π h aux,
@@ -1424,12 +1516,12 @@ Section Reduce.
       destruct hh as [T hh].
       apply inversion_Case in hh
         as [u [npar [args [mdecl [idecl [pty [indctx [pctx [ps [btys [? [? [? [? [? [? [ht0 [? ?]]]]]]]]]]]]]]]]]].
-      apply Ind_canonicity in ht0 ; auto.
-      + rewrite decompose_app_mkApps in ht0 ; auto.
-        destruct p0 as [? ?]. assumption.
-      + (* That is kinda stupid now...
-           Back to where we started.
-         *)
+      (* apply Ind_canonicity in ht0 ; auto. *)
+      (* + rewrite decompose_app_mkApps in ht0 ; auto. *)
+      (*   destruct p0 as [? ?]. assumption. *)
+      (* + (* That is kinda stupid now... *)
+      (*      Back to where we started. *)
+      (*    *) *)
 
       (* We are almost there! *)
   (*        t0 is a normal form (haux') of inductive type (ht0), *)

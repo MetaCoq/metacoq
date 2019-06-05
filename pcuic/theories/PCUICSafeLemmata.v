@@ -672,24 +672,6 @@ Section Lemmata.
   Qed.
 
   (* TODO MOVE *)
-  Fixpoint nApp t :=
-    match t with
-    | tApp u _ => S (nApp u)
-    | _ => 0
-    end.
-
-  (* TODO MOVE *)
-  Lemma nApp_mkApps :
-    forall t l,
-      nApp (mkApps t l) = nApp t + #|l|.
-  Proof.
-    intros t l.
-    induction l in t |- *.
-    - simpl. omega.
-    - simpl. rewrite IHl. cbn. omega.
-  Qed.
-
-  (* TODO MOVE *)
   Lemma mkApps_nApp_inj :
     forall u u' l l',
       nApp u = nApp u' ->
@@ -709,18 +691,6 @@ Section Lemmata.
         * destruct e as [e1 e2].
           inversion e1. subst. auto.
         * cbn. f_equal. auto.
-  Qed.
-
-  (* TODO MOVE *)
-  Lemma isApp_false_nApp :
-    forall u,
-      isApp u = false ->
-      nApp u = 0.
-  Proof.
-    intros u h.
-    destruct u.
-    all: try reflexivity.
-    discriminate.
   Qed.
 
   (* TODO MOVE *)
@@ -751,28 +721,6 @@ Section Lemmata.
     apply eq_term_upto_univ_isApp in h1 as hh1. rewrite hu in hh1.
     apply mkApps_notApp_inj in h3 ; auto.
     destruct h3 as [? ?]. subst. split ; auto.
-  Qed.
-
-  (* TODO MOVE *)
-  Lemma decompose_app_rec_notApp :
-    forall t l u l',
-      decompose_app_rec t l = (u, l') ->
-      isApp u = false.
-  Proof.
-    intros t l u l' e.
-    induction t in l, u, l', e |- *.
-    all: try (cbn in e ; inversion e ; reflexivity).
-    cbn in e. eapply IHt1. eassumption.
-  Qed.
-
-  (* TODO MOVE *)
-  Lemma decompose_app_notApp :
-    forall t u l,
-      decompose_app t = (u, l) ->
-      isApp u = false.
-  Proof.
-    intros t u l e.
-    eapply decompose_app_rec_notApp. eassumption.
   Qed.
 
   (* TODO MOVE? *)

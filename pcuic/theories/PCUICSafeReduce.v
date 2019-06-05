@@ -1197,7 +1197,7 @@ Section Reduce.
         * cbn in H2. cbn in H3.
           inversion H2. subst. inversion H3. subst. clear H2 H3.
           intros. cbn. rewrite H4. assumption.
-  Qed.
+  Defined.
   Next Obligation.
     eapply R_Acc. eassumption.
   Qed.
@@ -1433,64 +1433,61 @@ Section Reduce.
     - bang.
   Admitted.
 
-  (* Lemma Fix_F_prop : *)
-  (*   forall A R P f pred x hx, *)
-  (*     (forall x aux, pred x (f x aux)) -> *)
-  (*     pred x (@Fix_F A R P f x hx). *)
-  (* Proof. *)
-  (*   intros A R P f pred x hx h. *)
-  (*   destruct hx. cbn. *)
-  (*   eapply h. *)
-  (* Qed. *)
+  Scheme Acc_ind' := Induction for Acc Sort Prop.
 
-  (* Lemma reduce_stack_prop : *)
-  (*   forall Γ t π h P, *)
-  (*     (forall t π h aux, P (t, π) (` (_reduce_stack Γ t π h aux))) -> *)
-  (*     P (t, π) (reduce_stack Γ t π h). *)
-  (* Proof. *)
-  (*   intros Γ t π h P hP. *)
-  (*   unfold reduce_stack. *)
-  (*   case_eq (reduce_stack_full Γ t π h). *)
-  (*   funelim (reduce_stack_full Γ t π h). *)
-  (*   intros [t' ρ] ? e. *)
-  (*   match type of e with *)
-  (*   | _ = ?u => *)
-  (*     change (P (t, π) (` u)) *)
-  (*   end. *)
-  (*   rewrite <- e. *)
-  (*   (* eapply Fix_F_prop with (pred := fun x y => P x (` y)). *) *)
-  (*   (* eapply Fix_F_prop with (hx := (reduce_stack_full_obligations_obligation_2 Γ t π h)). *) *)
-  (* Abort. *)
+  Lemma Fix_F_prop :
+    forall A R P f (pred : forall x : A, P x -> Prop) x hx,
+      (forall x aux, (forall y hy, pred y (aux y hy)) -> pred x (f x aux)) ->
+      pred x (@Fix_F A R P f x hx).
+  Proof.
+    intros A R P f pred x hx h.
+    induction hx using Acc_ind'.
+    cbn. eapply h. assumption.
+  Qed.
+
+  Lemma reduce_stack_prop :
+    forall Γ t π h (P : term × stack -> term × stack -> Prop),
+      (forall t π h aux, P (t, π) (` (_reduce_stack Γ t π h aux))) ->
+      P (t, π) (reduce_stack Γ t π h).
+  Proof.
+    intros Γ t π h P hP.
+    unfold reduce_stack.
+    case_eq (reduce_stack_full Γ t π h).
+    funelim (reduce_stack_full Γ t π h).
+    intros [t' ρ] ? e.
+    match type of e with
+    | _ = ?u =>
+      change (P (t, π) (` u))
+    end.
+    rewrite <- e.
+    set ((reduce_stack_full_obligations_obligation_2 Γ t π h)).
+    set ((reduce_stack_full_obligations_obligation_3 Γ t π h)).
+    match goal with
+    | |- P ?p (` (@Fix_F ?A ?R ?rt ?f ?t ?ht ?w)) =>
+      set (Q := fun x (y : rt x) => forall (w : welltyped Σ Γ (zip x)), P x (` (y w))) ;
+      set (fn := @Fix_F A R rt f t ht)
+    end.
+    clearbody w.
+    revert w.
+    change (Q (t, π) fn).
+    subst fn.
+    eapply Fix_F_prop.
+    intros [? ?] aux H0. subst Q. simpl. intros w.
+    eapply hP.
+  Qed.
 
   Lemma reduce_stack_whnf :
     forall Γ t π h,
       whnf flags Σ (Γ ,,, stack_context (snd (reduce_stack Γ t π h)))
            (fst (reduce_stack Γ t π h)).
+  Proof.
+    intros Γ t π h.
+    eapply reduce_stack_prop
+      with (P := fun x y => whnf flags Σ (Γ ,,, stack_context (snd y)) (fst y)).
+    intros t0 π0 h0 aux.
+    eapply _reduce_stack_whnf.
+    intros t' π' hR.
+    (* Actually missing hyp in reduce_stack_prop *)
   Admitted.
-
-  (* Lemma reduce_stack_whnf : *)
-  (*   forall Γ t π h, *)
-  (*     whnf Σ Γ (zip (reduce_stack Γ t π h)). *)
-  (* Proof. *)
-  (*   intros Γ t π h. *)
-  (*   unfold reduce_stack. *)
-  (*   funelim (reduce_stack_full Γ t π h). *)
-  (*   destruct (reduce_stack_full_obligations_obligation_2 Γ t π h). *)
-  (*   simpl. *)
-
-    (* case_eq (reduce_stack_full Γ t π h). *)
-    (* funelim (reduce_stack_full Γ t π h). *)
-    (* intros [t' ρ] ? e. *)
-    (* match type of e with *)
-    (* | _ = ?u => *)
-    (*   change (whnf Σ Γ (zip (` u))) *)
-    (* end. *)
-    (* rewrite <- e. *)
-    (* eapply Fix_F_prop. *)
-
-
- (* with (pred := fun x p => whnf Σ Γ (zip (` p))). *)
-    (* Maybe prove it on _reduce_stack before? *)
-  (* Abort. *)
 
 End Reduce.

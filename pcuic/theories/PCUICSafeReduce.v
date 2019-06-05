@@ -1447,7 +1447,9 @@ Section Reduce.
 
   Lemma reduce_stack_prop :
     forall Γ t π h (P : term × stack -> term × stack -> Prop),
-      (forall t π h aux, P (t, π) (` (_reduce_stack Γ t π h aux))) ->
+      (forall t π h aux,
+          (forall t' π' hR, P (t', π') (` (aux t' π' hR))) ->
+          P (t, π) (` (_reduce_stack Γ t π h aux))) ->
       P (t, π) (reduce_stack Γ t π h).
   Proof.
     intros Γ t π h P hP.
@@ -1473,7 +1475,8 @@ Section Reduce.
     subst fn.
     eapply Fix_F_prop.
     intros [? ?] aux H0. subst Q. simpl. intros w.
-    eapply hP.
+    eapply hP. intros t'0 π' hR.
+    eapply H0.
   Qed.
 
   Lemma reduce_stack_whnf :
@@ -1484,10 +1487,10 @@ Section Reduce.
     intros Γ t π h.
     eapply reduce_stack_prop
       with (P := fun x y => whnf flags Σ (Γ ,,, stack_context (snd y)) (fst y)).
-    intros t0 π0 h0 aux.
+    clear. intros t π h aux haux.
     eapply _reduce_stack_whnf.
     intros t' π' hR.
-    (* Actually missing hyp in reduce_stack_prop *)
-  Admitted.
+    eapply haux.
+  Qed.
 
 End Reduce.

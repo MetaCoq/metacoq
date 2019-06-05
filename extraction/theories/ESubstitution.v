@@ -92,33 +92,26 @@ Lemma bool_equiv b1 b2 T1 T2 :
 Proof.
 Admitted.
   
-(* Lemma is_type_subst Σ Γ Γ' Δ a T s : *)
-(*   wf Σ -> subslet Σ Γ s Γ' -> *)
-(*   Σ ;;; Γ ,,, Γ' ,,, Δ |- a : T -> *)
-(*   wf_local Σ (Γ ,,, subst_context s 0 Δ) -> *)
-(*   (isArity (PCUICLiftSubst.subst s #|Δ| T) <-> isArity T) -> *)
-(*   is_type_or_proof Σ (Γ ,,, Γ' ,,, Δ) a = *)
-(*   is_type_or_proof Σ (Γ ,,, subst_context s 0 Δ) (PCUICLiftSubst.subst s #|Δ| a). *)
-(* Proof. *)
-(*   intros. *)
-(*   eapply bool_equiv. *)
-(*   eapply is_type_or_proof_spec. *)
-(*   eauto. *)
-(*   eapply is_type_or_proof_spec. *)
-(*   eapply substitution; eauto. *)
-(*   split. *)
-(*   - intros [ | (u & ? & ?) ]. *)
-(*     + left. generalize (#|Δ|). intros n. *)
-(*       induction T in n, i |- *; (try now inv i); cbn in *; eauto. *)
-(*     + right. exists u. split; eauto. eapply substitution in t; eauto. *)
-(*   -  eapply validity in X1 as [_ X1]; eauto. *)
-(*      intros [ | (u & ? & ?) ]. *)
-(*      + left. now rewrite H in i. *)
-(*      + destruct X1. *)
-(*        * left. admit. *)
-(*        * right. exists u. *)
-(*          split; eauto. *)
-(* Admitted. *)
+
+Lemma is_type_subst Σ Γ Γ' Δ a T s :
+  wf Σ -> subslet Σ Γ s Γ' ->
+  Σ ;;; Γ ,,, Γ' ,,, Δ |- a : T ->
+  wf_local Σ (Γ ,,, subst_context s 0 Δ) ->
+  is_type_or_proof Σ (Γ ,,, Γ' ,,, Δ) a ->
+  is_type_or_proof Σ (Γ ,,, subst_context s 0 Δ) (PCUICLiftSubst.subst s #|Δ| a).
+Proof.
+  intros.
+  eapply is_type_or_proof_spec in H; eauto.
+  eapply is_type_or_proof_spec.
+  eapply substitution; eauto.
+  destruct H as [ | (u & ? & ?) ].
+  - left. generalize (#|Δ|). intros n.
+    induction T in n, i |- *; (try now inv i); cbn in *; eauto.
+  - right. exists u. split; eauto.
+    pose proof (substitution Σ Γ Γ' s Δ).
+    eapply X3 in t; eauto.
+Qed.
+
 
 Lemma extract_subst Σ Γ Γ' Δ a s T :
   wf Σ ->

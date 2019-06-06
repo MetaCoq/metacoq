@@ -2144,7 +2144,12 @@ Section Conversion.
     | @exist None _ := None
     } ;
 
-    (* TODO tConst *)
+    reducible_head Γ (tConst c u) π h
+    with inspect (lookup_env Σ c) := {
+    | @exist (Some (ConstantDecl _ {| cst_body := Some body |})) eq :=
+      Some (subst_instance_constr u body, π) ;
+    | @exist _ _ := None
+    } ;
 
     reducible_head Γ _ π h := None.
   Next Obligation.
@@ -2164,6 +2169,21 @@ Section Conversion.
     eexists. eassumption.
   Qed.
 
+  Lemma lookup_env_ConstantDecl_inv :
+    forall k k' ty bo uni,
+      Some (ConstantDecl k' {| cst_type := ty ; cst_body := bo; cst_universes := uni |})
+      = lookup_env Σ k ->
+      k = k'.
+  Proof.
+    intros k k' ty bo uni h.
+    destruct Σ as [Σ' φ].
+    induction Σ' in h |- *.
+    - cbn in h. discriminate.
+    - cbn in h. destruct (ident_eq_spec k (global_decl_ident a)).
+      + subst. inversion h. reflexivity.
+      + apply IHΣ' in h. assumption.
+  Qed.
+
   Lemma reducible_head_red_zippx :
     forall Γ t π h fn ξ,
       Some (fn, ξ) = reducible_head Γ t π h ->
@@ -2174,6 +2194,15 @@ Section Conversion.
     funelim (reducible_head Γ t π h).
     all: intro ee ; noconf ee.
     - eapply unfold_one_fix_red_zippx. eassumption.
+    - constructor. unfold zippx.
+      case_eq (decompose_stack π). intros l s eq.
+      eapply red_it_mkLambda_or_LetIn. eapply red_mkApps.
+      apply lookup_env_ConstantDecl_inv in e as ?. subst.
+      eapply trans_red.
+      + constructor.
+      + eapply red_delta.
+        * unfold declared_constant. eauto.
+        * reflexivity.
     - apply unfold_one_case_red_zippx in e as r. destruct r as [r].
       apply unfold_one_case_stack in e as d.
       case_eq (decompose_stack s). intros l s0 ee.
@@ -2224,6 +2253,13 @@ Section Conversion.
     funelim (reducible_head Γ t π h).
     all: intro ee ; noconf ee.
     - eapply unfold_one_fix_red. eassumption.
+    - constructor. repeat zip fold. eapply red_context.
+      apply lookup_env_ConstantDecl_inv in e as ?. subst.
+      eapply trans_red.
+      + constructor.
+      + eapply red_delta.
+        * unfold declared_constant. eauto.
+        * reflexivity.
     - apply unfold_one_case_red in e as r. destruct r as [r].
       apply unfold_one_case_stack in e as d.
       case_eq (decompose_stack s). intros l s0 ee.
@@ -2278,6 +2314,7 @@ Section Conversion.
       eapply red_context.
       rewrite stack_context_appstack in r2. cbn.
       assumption.
+    - admit.
     - apply unfold_one_case_red in e as r1. destruct r1 as [r1].
       apply unfold_one_case_stack in e as d1.
       apply unfold_one_case_construct_cofix in e as hh1.

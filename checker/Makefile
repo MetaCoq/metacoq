@@ -3,8 +3,20 @@ TEMPLATE_LIB=../template-coq
 coq: sources Makefile.coq
 	$(MAKE) -f Makefile.coq
 
-Makefile.coq: _CoqProject gen-src get-mc
+Makefile.coq: _CoqProject
 	coq_makefile -f _CoqProject -o Makefile.coq
+
+_CoqProject: get-mc
+	echo "-Q ../template-coq/theories MetaCoq.Template" > _CoqProject
+	echo "-I ../template-coq/build" >> _CoqProject
+	echo "-I src" >> _CoqProject
+	echo "-R theories MetaCoq.Checker" >> _CoqProject
+	echo "" >> _CoqProject
+	ocamldep -sort src/*.ml | sed -e "s+ +\n+g" | sed -e "s+\(src/.*.ml\)+\1\n\1i+g" >> _CoqProject
+	echo "src/metacoq_checker_plugin.mlpack" >> _CoqProject
+	echo "src/g_metacoq_checker.ml4" >> _CoqProject
+	echo "" >> _CoqProject
+	echo "theories/Loader.v" >> _CoqProject
 
 gen-src:
 	$(MAKE) -C gen-src
@@ -12,7 +24,6 @@ gen-src:
 get-mc: gen-src
 	cp -r $(TEMPLATE_LIB)/gen-src/to-lower.sh src
 	(cd src; ./to-lower.sh)
-	cp -r $(TEMPLATE_LIB)/gen-src/*.ml $(TEMPLATE_LIB)/gen-src/*.mli src
 
 install:
 	$(MAKE) -f Makefile.coq install

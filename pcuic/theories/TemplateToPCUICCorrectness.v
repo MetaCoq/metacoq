@@ -169,7 +169,7 @@ Lemma forall_decls_declared_projection Σ cst mdecl idecl decl :
                     cst ((fun '(x, y) => (x, trans y)) decl).
 Proof.
   unfold declared_constructor, TTy.declared_constructor.
-  move=> [decl' Hnth].
+  move=> [decl' [Hnth Hnpar]].
   pose proof (forall_decls_declared_inductive _ _ _ _ decl'). split; auto.
   destruct idecl; simpl.
   by rewrite nth_error_map Hnth.

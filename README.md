@@ -150,9 +150,8 @@ Credits
 Template-Coq was originally developed by
 [Gregory Malecha](https://github.com/gmalecha).
 
-MetqCoq and is now developed by [Abhishek
-Anand](https://github.com/aa755), [Simon
-Boulier](https://github.com/simonboulier),
+MetaCoq is now developed by [Abhishek Anand](https://github.com/aa755), 
+[Simon Boulier](https://github.com/simonboulier),
 [Cyril Cohen](https://github.com/CohenCyril)
 [Gregory Malecha](https://github.com/gmalecha),
 [Yannick Forster](https://github.com/yforster),

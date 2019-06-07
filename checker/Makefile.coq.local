@@ -1,1 +1,1 @@
-CAMLFLAGS+=-w -33 # Unused opens
+CAMLFLAGS+=-w -33 -open Metacoq_monad_plugin # Unused opens

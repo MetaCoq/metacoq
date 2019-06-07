@@ -2,9 +2,6 @@ all: coq plugin
 
 coq: Makefile.coq
 	$(MAKE) -f Makefile.coq
-	mkdir -p build
-	cp src/template_coq.cmx src/template_coq.cmxa src/template_coq.cmxs build
-
 
 plugin: coq Makefile.plugin gen-src/.generate
 	@ echo "Copying from src to gen-src"

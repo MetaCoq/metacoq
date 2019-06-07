@@ -1,1 +1,1 @@
-Declare ML Module "meta_coq_plugin_template".
+Declare ML Module "metacoq_monad_plugin".

@@ -1,3 +1,5 @@
+# Explicitly use GNU sed on OS X
+SED=`which gsed || which sed`
 TEMPLATE_LIB=../template-coq
 
 coq: sources Makefile.coq
@@ -8,11 +10,11 @@ Makefile.coq: _CoqProject
 
 _CoqProject: get-mc
 	echo "-Q ../template-coq/theories MetaCoq.Template" > _CoqProject
-	echo "-I ../template-coq/build" >> _CoqProject
+	echo "-I ../template-coq/gen-src" >> _CoqProject
 	echo "-I src" >> _CoqProject
 	echo "-R theories MetaCoq.Checker" >> _CoqProject
 	echo "" >> _CoqProject
-	ocamldep -sort src/*.ml | sed -e "s+ +\n+g" | sed -e "s+\(src/.*.ml\)+\1\n\1i+g" >> _CoqProject
+	ocamldep -sort src/*.ml | $(SED) -e "s+ +\n+g" | $(SED) -e "s+\(src/.*.ml\)+\1\n\1i+g" >> _CoqProject
 	echo "src/metacoq_checker_plugin.mlpack" >> _CoqProject
 	echo "src/g_metacoq_checker.ml4" >> _CoqProject
 	echo "" >> _CoqProject

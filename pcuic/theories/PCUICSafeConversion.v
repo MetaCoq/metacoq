@@ -1992,157 +1992,95 @@ Section Conversion.
     cc_viewc (tCoFix mfix idx) := ccview_cofix mfix idx ;
     cc_viewc t := ccview_other t I.
 
-  Equations unfold_one_case (Γ : context) (c : term) (h : welltyped Σ Γ c) : option (term * stack) :=
-    unfold_one_case Γ c h with inspect (reduce_stack RedFlags.default Σ Γ c ε _) := {
-    | @exist (cred, ρ) eq with cc_viewc cred := {
-      | ccview_construct ind n ui := Some (tConstruct ind n ui, ρ) ;
-      | ccview_cofix mfix idx := Some (tCoFix mfix idx, ρ) ;
-      | ccview_other t _ := None
+  (* Let's do one reduction step by hand as we did for unfold_one_fix
+     It means doing one unfold_one_proj as well, but at least we won't
+     have to deal with whnf or completeness of reduction.
+   *)
+  Equations unfold_one_case (Γ : context) (ind : inductive) (par : nat)
+            (p c : term) (brs : list (nat × term))
+            (h : welltyped Σ Γ (tCase (ind, par) p c brs)) : option term :=
+    unfold_one_case Γ ind par p c brs h
+    with inspect (reduce_stack RedFlags.default Σ Γ c ε _) := {
+    | @exist (cred, ρ) eq with inspect (decompose_stack ρ) := {
+      | @exist (args, ξ) eq' with cc_viewc cred := {
+        | ccview_construct ind' n ui := Some (iota_red par n args brs) ;
+        (* | ccview_cofix mfix idx with inspect (unfold_fix mfix idx) := { *)
+        (*   | @exist (Some (narg, fn)) with inspect (is_constructor ) *)
+        (*   } ; *)
+        | ccview_cofix mfix idx := None ; (* TODO We need to reduce on the stack
+                                           as well to do this properly. *)
+        | ccview_other t _ := None
+        }
       }
     }.
-
-  Lemma unfold_one_case_construct_cofix :
-    forall Γ t h fn ξ,
-      Some (fn, ξ) = unfold_one_case Γ t h ->
-      ~ (discr_construct_cofix fn).
-  Proof.
-    intros Γ t h fn ξ e.
-    revert e.
-    funelim (unfold_one_case Γ t h).
-    all: intro ee. all: noconf ee.
-    all: simp discr_construct_cofix.
-    all: auto.
+  Next Obligation.
+    cbn. destruct h as [T h].
+    apply inversion_Case in h ; auto.
+    destruct h as
+        [u [npar [args [mdecl [idecl [pty [indctx [pctx [ps [btys [? [? [? [? [? [? [? [? ?]]]]]]]]]]]]]]]]]].
+    eexists. eassumption.
   Qed.
 
-  Lemma unfold_one_case_stack :
-    forall Γ t h fn ξ,
-      Some (fn, ξ) = unfold_one_case Γ t h ->
-      snd (decompose_stack ξ) = ε.
+  (* TODO MOVE *)
+  Lemma red_case :
+    forall Γ ind p c c' brs,
+      red Σ Γ c c' ->
+      red Σ Γ (tCase ind p c brs) (tCase ind p c' brs).
   Proof.
-    intros Γ t h fn ξ e.
-    revert e.
-    funelim (unfold_one_case Γ t h).
-    all: intro ee. all: noconf ee.
-    - match type of e with
-      | _ = reduce_stack ?flags ?Σ ?Γ ?t ?π ?h =>
-        pose proof (reduce_stack_decompose flags Σ Γ t π h) as d
-      end.
-      rewrite <- e in d. cbn in d.
-      assumption.
-    - match type of e with
-      | _ = reduce_stack ?flags ?Σ ?Γ ?t ?π ?h =>
-        pose proof (reduce_stack_decompose flags Σ Γ t π h) as d
-      end.
-      rewrite <- e in d. cbn in d.
-      assumption.
+    intros Γ ind p c c' brs h.
+    revert ind p brs. induction h ; intros ind p brs.
+    - constructor.
+    - econstructor.
+      + eapply IHh.
+      + econstructor. assumption.
   Qed.
 
-  Lemma unfold_one_case_red_zippx :
-    forall Γ t h fn ξ,
-      Some (fn, ξ) = unfold_one_case Γ t h ->
-      ∥ red (fst Σ) Γ t (zippx fn ξ) ∥.
+  Lemma unfold_one_case_cored :
+    forall Γ ind par p c brs h t,
+      Some t = unfold_one_case Γ ind par p c brs h ->
+      cored Σ Γ t (tCase (ind, par) p c brs).
   Proof.
-    intros Γ t h fn ξ e.
+    intros Γ ind par p c brs h t e.
     revert e.
-    funelim (unfold_one_case Γ t h).
-    all: intro ee. all: noconf ee.
-    - match type of e with
-      | _ = reduce_stack ?flags ?Σ ?Γ ?t ?π ?h =>
-        pose proof (reduce_stack_sound flags Σ Γ t π h) as [r1] ;
-        pose proof (reduce_stack_decompose flags Σ Γ t π h) as d
-      end.
-      rewrite <- e in r1. cbn in r1.
-      rewrite <- e in d. cbn in d.
-      case_eq (decompose_stack s). intros l ρ e'.
-      rewrite e' in d. cbn in d. subst.
-      unfold zippx. rewrite e'. cbn.
-      apply decompose_stack_eq in e' as ?. subst.
-      rewrite zipc_appstack in r1. cbn in r1.
-      constructor. assumption.
-    - match type of e with
-      | _ = reduce_stack ?flags ?Σ ?Γ ?t ?π ?h =>
-        pose proof (reduce_stack_sound flags Σ Γ t π h) as [r1] ;
-        pose proof (reduce_stack_decompose flags Σ Γ t π h) as d
-      end.
-      rewrite <- e in r1. cbn in r1.
-      rewrite <- e in d. cbn in d.
-      case_eq (decompose_stack s). intros l ρ e'.
-      rewrite e' in d. cbn in d. subst.
-      unfold zippx. rewrite e'. cbn.
-      apply decompose_stack_eq in e' as ?. subst.
-      rewrite zipc_appstack in r1. cbn in r1.
-      constructor. assumption.
+    funelim (unfold_one_case Γ ind par p c brs h).
+    all: intros eq ; noconf eq.
+    match type of e with
+    | _ = reduce_stack ?f ?Σ ?Γ ?t ?π ?h =>
+      pose proof (reduce_stack_sound f Σ Γ t π h) as [r] ;
+      pose proof (reduce_stack_decompose f Σ Γ t π h) as d
+    end.
+    rewrite <- e in r.
+    rewrite <- e in d. cbn in d. rewrite <- e0 in d. cbn in d. subst.
+    cbn in r.
+    clear H. symmetry in e0. apply decompose_stack_eq in e0. subst.
+    rewrite zipc_appstack in r. cbn in r.
+    assert (r' : ∥ red Σ Γ (tCase (ind, par) p c brs) (tCase (ind, par) p (mkApps (tConstruct ind0 n ui) l) brs) ∥).
+    { constructor. eapply red_case. eassumption. }
+    pose proof (red_welltyped flags _ h r') as h'.
+    apply Case_Construct_ind_eq in h' ; auto. subst.
+    eapply cored_red_cored.
+    - constructor. eapply red_iota.
+    - eapply red_case. eassumption.
   Qed.
-
-  Lemma unfold_one_case_red :
-    forall Γ t h fn ξ,
-      Some (fn, ξ) = unfold_one_case Γ t h ->
-      ∥ red (fst Σ) Γ t (zipc fn ξ) ∥.
-  Proof.
-    intros Γ t h fn ξ e.
-    revert e.
-    funelim (unfold_one_case Γ t h).
-    all: intro ee. all: noconf ee.
-    - match type of e with
-      | _ = reduce_stack ?flags ?Σ ?Γ ?t ?π ?h =>
-        pose proof (reduce_stack_sound flags Σ Γ t π h) as [r1] ;
-        pose proof (reduce_stack_decompose flags Σ Γ t π h) as d
-      end.
-      rewrite <- e in r1. cbn in r1.
-      rewrite <- e in d. cbn in d.
-      case_eq (decompose_stack s). intros l ρ e'.
-      rewrite e' in d. cbn in d. subst.
-      apply decompose_stack_eq in e' as ?. subst.
-      rewrite zipc_appstack in r1. cbn in r1.
-      rewrite zipc_appstack. cbn.
-      constructor. assumption.
-    - match type of e with
-      | _ = reduce_stack ?flags ?Σ ?Γ ?t ?π ?h =>
-        pose proof (reduce_stack_sound flags Σ Γ t π h) as [r1] ;
-        pose proof (reduce_stack_decompose flags Σ Γ t π h) as d
-      end.
-      rewrite <- e in r1. cbn in r1.
-      rewrite <- e in d. cbn in d.
-      case_eq (decompose_stack s). intros l ρ e'.
-      rewrite e' in d. cbn in d. subst.
-      apply decompose_stack_eq in e' as ?. subst.
-      rewrite zipc_appstack in r1. cbn in r1.
-      rewrite zipc_appstack. cbn.
-      constructor. assumption.
-  Qed.
-
-  (* Lemma unfold_one_case_cored : *)
-  (*   forall Γ c h cred ρ, *)
-  (*     Some (cred, ρ) = unfold_one_case Γ c h -> *)
-  (*     cored Σ Γ (zipc cred ρ) c. *)
-  (* Proof. *)
-  (*   intros Γ c h cred ρ e. *)
-  (*   revert e. *)
-  (*   funelim (unfold_one_case Γ c h). *)
-  (*   all: intro ee ; noconf ee. *)
-  (*   - match type of e with *)
-  (*     | _ = reduce_stack ?flags ?Σ ?Γ ?t ?π ?h => *)
-  (*       pose proof (reduce_stack_sound flags Σ Γ t π h) as [r1] *)
-  (*     end. *)
-  (*     rewrite <- e in r1. cbn in r1. *)
 
   Equations reducible_head (Γ : context) (t : term) (π : stack)
             (h : wtp Γ t π)
-    : option (term * stack) :=
+    : option (term × stack) :=
 
     reducible_head Γ (tFix mfix idx) π h := unfold_one_fix Γ mfix idx π h ;
 
-    reducible_head Γ (tCase ind p c brs) π h
-    with inspect (unfold_one_case (Γ ,,, stack_context π) c _) := {
-    | @exist (Some (cred, ρ)) eq := Some (tCase ind p (zipc cred ρ) brs, π) ;
+    reducible_head Γ (tCase (ind, par) p c brs) π h
+    with inspect (unfold_one_case (Γ ,,, stack_context π) ind par p c brs _) := {
+    | @exist (Some t) eq :=Some (t, π) ;
     | @exist None _ := None
     } ;
 
-    reducible_head Γ (tProj p c) π h
-    with inspect (unfold_one_case (Γ ,,, stack_context π) c _) := {
-    | @exist (Some (cred, ρ)) eq := Some (tProj p (zipc cred ρ), π) ;
-    | @exist None _ := None
-    } ;
+    (* TODO Proj the same way as Case *)
+    (* reducible_head Γ (tProj p c) π h *)
+    (* with inspect (unfold_one_case (Γ ,,, stack_context π) c _) := { *)
+    (* | @exist (Some (cred, ρ)) eq := Some (tProj p (zipc cred ρ), π) ; *)
+    (* | @exist None _ := None *)
+    (* } ; *)
 
     reducible_head Γ (tConst c u) π h
     with inspect (lookup_env Σ c) := {
@@ -2154,19 +2092,7 @@ Section Conversion.
     reducible_head Γ _ π h := None.
   Next Obligation.
     apply welltyped_zipx in h. zip fold in h.
-    apply welltyped_context in h ; auto. simpl in h.
-    destruct h as [T h].
-    apply inversion_Case in h as X ; auto.
-    destruct X as [u [npar [args [mdecl [idecl [pty [indctx [pctx [ps [btys [? [? [? [? [? [? [? [? ?]]]]]]]]]]]]]]]]]].
-    eexists. eassumption.
-  Qed.
-  Next Obligation.
-    apply welltyped_zipx in h. zip fold in h.
-    apply welltyped_context in h ; auto. simpl in h.
-    destruct h as [T h].
-    apply inversion_Proj in h as X ; auto.
-    destruct X as [u [mdecl [idecl [pdecl [args [? [? [? ?]]]]]]]].
-    eexists. eassumption.
+    apply welltyped_context in h ; auto.
   Qed.
 
   Lemma lookup_env_ConstantDecl_inv :
@@ -2203,208 +2129,47 @@ Section Conversion.
       + eapply red_delta.
         * unfold declared_constant. eauto.
         * reflexivity.
-    - apply unfold_one_case_red_zippx in e as r. destruct r as [r].
-      apply unfold_one_case_stack in e as d.
-      case_eq (decompose_stack s). intros l s0 ee.
-      unfold zippx in r. rewrite ee in r.
-      rewrite ee in d. cbn in d. subst.
-      apply decompose_stack_eq in ee. subst.
-      cbn in r.
-      constructor.
-      unfold zippx.
-      case_eq (decompose_stack π). intros l1 ρ ee.
-      rewrite zipc_appstack. cbn.
-      eapply red_it_mkLambda_or_LetIn.
-      eapply red_mkApps.
-      apply decompose_stack_eq in ee. subst.
-      rewrite stack_context_appstack in r.
-      induction r.
-      + constructor.
-      + econstructor ; eauto.
-        constructor. assumption.
-    - apply unfold_one_case_red_zippx in e as r. destruct r as [r].
-      apply unfold_one_case_stack in e as d.
-      case_eq (decompose_stack s). intros l s0 ee.
-      unfold zippx in r. rewrite ee in r.
-      rewrite ee in d. cbn in d. subst.
-      apply decompose_stack_eq in ee. subst.
-      cbn in r.
-      constructor.
-      unfold zippx.
-      case_eq (decompose_stack π). intros l1 ρ ee.
-      rewrite zipc_appstack. cbn.
-      eapply red_it_mkLambda_or_LetIn.
-      eapply red_mkApps.
-      apply decompose_stack_eq in ee. subst.
-      rewrite stack_context_appstack in r.
-      induction r.
-      + constructor.
-      + econstructor ; eauto.
-        constructor. assumption.
+    - apply unfold_one_case_cored in e as r. apply cored_red in r.
+      destruct r as [r].
+      constructor. unfold zippx.
+      case_eq (decompose_stack π). intros l s e'.
+      eapply red_it_mkLambda_or_LetIn. eapply red_mkApps.
+      apply decompose_stack_eq in e'. subst.
+      rewrite stack_context_appstack in r. assumption.
   Qed.
 
-  Lemma reducible_head_red :
+  Lemma reducible_head_cored :
     forall Γ t π h fn ξ,
       Some (fn, ξ) = reducible_head Γ t π h ->
-      ∥ red (fst Σ) Γ (zipc t π) (zipc fn ξ) ∥.
+      cored Σ Γ (zipc fn ξ) (zipc t π).
   Proof.
     intros Γ t π h fn ξ e.
     revert e.
     funelim (reducible_head Γ t π h).
     all: intro ee ; noconf ee.
-    - eapply unfold_one_fix_red. eassumption.
-    - constructor. repeat zip fold. eapply red_context.
+    - eapply unfold_one_fix_cored. eassumption.
+    - repeat zip fold. eapply cored_context.
       apply lookup_env_ConstantDecl_inv in e as ?. subst.
-      eapply trans_red.
-      + constructor.
-      + eapply red_delta.
-        * unfold declared_constant. eauto.
-        * reflexivity.
-    - apply unfold_one_case_red in e as r. destruct r as [r].
-      apply unfold_one_case_stack in e as d.
-      case_eq (decompose_stack s). intros l s0 ee.
-      rewrite ee in d. cbn in d. subst.
-      constructor.
-      eapply red_context.
-      induction r.
-      + constructor.
-      + econstructor ; eauto.
-        constructor. assumption.
-    - apply unfold_one_case_red in e as r. destruct r as [r].
-      apply unfold_one_case_stack in e as d.
-      case_eq (decompose_stack s). intros l s0 ee.
-      rewrite ee in d. cbn in d. subst.
-      constructor.
-      eapply red_context.
-      induction r.
-      + constructor.
-      + econstructor ; eauto.
-        constructor. assumption.
+      constructor. eapply red_delta.
+      + unfold declared_constant. eauto.
+      + reflexivity.
+    - repeat zip fold. eapply cored_context.
+      eapply unfold_one_case_cored. eassumption.
   Qed.
 
-  Derive Signature for whnf.
-  Derive Signature for whne.
-
-  Lemma reducible_head_reduce_cored :
-    forall Γ t π fn ξ l θ t' ρ h h',
+  Lemma reducible_head_decompose :
+    forall Γ t π h fn ξ,
       Some (fn, ξ) = reducible_head Γ t π h ->
-      (l, θ) = decompose_stack ξ ->
-      (t', ρ) = reduce_stack nodelta_flags Σ (Γ ,,, stack_context ξ)
-                            fn (appstack l ε) h' ->
-      cored Σ Γ (zipc t' (ρ +++ θ)) (zipc t π).
+      snd (decompose_stack π) = snd (decompose_stack ξ).
   Proof.
-    intros Γ t π fn ξ l θ t' ρ h h' e1 e2 e3.
-    revert e1.
+    intros Γ t π h fn ξ e.
+    revert e.
     funelim (reducible_head Γ t π h).
-    all: intro e1 ; noconf e1.
-    - apply unfold_one_fix_cored in e1 as r1.
-      apply unfold_one_fix_decompose in e1 as d1.
-      match type of e3 with
-      | _ = reduce_stack ?f ?Σ ?Γ ?t ?π ?h =>
-        destruct (reduce_stack_sound f Σ Γ t π h) as [r2]
-      end.
-      rewrite <- e3 in r2.
-      eapply red_cored_cored ; try eassumption.
-      cbn in r2.
-      rewrite zipc_stack_cat.
-      pose proof (decompose_stack_eq _ _ _ (eq_sym e2)). subst.
-      rewrite !zipc_appstack in r2. cbn in r2.
-      rewrite zipc_appstack.
-      repeat zip fold.
-      eapply red_context.
-      rewrite stack_context_appstack in r2. cbn.
-      assumption.
-    - admit.
-    - apply unfold_one_case_red in e as r1. destruct r1 as [r1].
-      apply unfold_one_case_stack in e as d1.
-      apply unfold_one_case_construct_cofix in e as hh1.
-      case_eq (decompose_stack s). intros l' s0 ee.
-      rewrite ee in d1. cbn in d1. subst.
-      match type of e3 with
-      | _ = reduce_stack ?f ?Σ ?Γ ?t ?π ?h =>
-        destruct (reduce_stack_sound f Σ Γ t π h) as [r2] ;
-        pose proof (reduce_stack_decompose f Σ Γ t π h) as d2 ;
-        pose proof (reduce_stack_whnf f Σ Γ t π h) as w2 ;
-        pose proof (reduce_stack_isred f Σ Γ t π h) as ir2
-      end.
-      rewrite <- e3 in r2. cbn in r2.
-      rewrite <- e3 in d2. cbn in d2.
-      rewrite <- e3 in w2. simpl in w2.
-      rewrite <- e3 in ir2. simpl in ir2. specialize (ir2 eq_refl).
-      rewrite zipc_appstack in r2. cbn in r2.
-      rewrite decompose_stack_appstack in d2. cbn in d2.
-      case_eq (decompose_stack ρ). intros l1 s0 e'.
-      rewrite e' in d2. cbn in d2. subst.
-      apply decompose_stack_eq in e' as ?. subst.
-      rewrite stack_cat_appstack.
-      pose proof (decompose_stack_eq _ _ _ (eq_sym e2)). subst.
-      rewrite 2!zipc_appstack.
-      apply decompose_stack_eq in ee as ?. subst.
-      rewrite zipc_appstack in r1. cbn in r1.
-      rewrite stack_context_appstack in r1.
-      rewrite stack_context_appstack in r2.
-      rewrite 2!zipc_appstack in r2. cbn in r2.
-      repeat zip fold. eapply cored_context.
-      eapply cored_red_cored.
-      + eapply red_neq_cored ; try eassumption.
-        intro bot.
-        rewrite 2!stack_context_appstack in w2. simpl in w2.
-        destruct ir2 as [nap2 _].
-        simpl in nap2.
-        apply mkApps_notApp_inj in bot as eq ; auto.
-        destruct eq as [? ?]. subst. clear bot nap2.
-        revert hh1.
-        funelim (discr_construct_cofix t).
-        all: auto.
-        all: intros _.
-        * dependent destruction w2.
-          -- dependent destruction H0.
-             ++ apply whne_mkApps_inv in H0. dependent destruction H0.
-             ++ cbn in H0. discriminate.
-          -- destruct v.
-             ++ discriminate.
-             ++ apply (f_equal isApp) in H0. cbn in H0.
-                rewrite isApp_mkApps in H0 ; auto.
-          -- destruct v.
-             ++ discriminate.
-             ++ apply (f_equal isApp) in H0. cbn in H0.
-                rewrite isApp_mkApps in H0 ; auto.
-        * (* Here it is less clear, we probably need to conclude form h'
-             that we cannot match on CoFix? Might not even be true...
-             Or maybe we should exploit unfold_one_stack in a better way.
-             We should know that we are in a case where we matched on a
-             constructor.
-           *)
-          admit.
-      + eapply red_mkApps.
-        eapply red_Case_c. assumption.
-
-
-      (* eapply red_cored_cored ; try eassumption. *)
-
-      (* Actually we need to use reduce_stack_Req
-         to exploit the fact that we indeed reduce.
-         One could also say that some extra property on whnf
-         would allow us to conclude that case on a constructor
-         necessarilly reduces.
-         Maybe we will have to do so.
-
-         OTHER SOLUTION: Simply say that red means cored or =
-         and show that = is not possible when the lhs is case of cosntr.
-       *)
-
-  (*   - apply unfold_one_case_red in e as r. destruct r as [r]. *)
-  (*     apply unfold_one_case_stack in e as d. *)
-  (*     case_eq (decompose_stack s). intros l s0 ee. *)
-  (*     rewrite ee in d. cbn in d. subst. *)
-  (*     constructor. *)
-  (*     eapply red_context. *)
-  (*     induction r. *)
-  (*     + constructor. *)
-  (*     + econstructor ; eauto. *)
-  (*       constructor. assumption. *)
-  (* Qed. *)
-  Admitted.
+    all: intro ee ; noconf ee.
+    - eapply unfold_one_fix_decompose. eassumption.
+    - reflexivity.
+    - reflexivity.
+  Qed.
 
   Equations(noeqns) _isconv_fallback (Γ : context) (leq : conv_pb)
             (t1 : term) (π1 : stack) (h1 : wtp Γ t1 π1)
@@ -2442,7 +2207,8 @@ Section Conversion.
     assumption.
   Qed.
   Next Obligation.
-    apply reducible_head_red in eq1 as r1. destruct r1 as [r1].
+    apply reducible_head_cored in eq1 as r1. apply cored_red in r1.
+    destruct r1 as [r1].
     match type of eq3 with
     | _ = reduce_stack ?f ?Σ ?Γ ?t ?π ?h =>
       destruct (reduce_stack_sound f Σ Γ t π h) as [r2] ;
@@ -2473,7 +2239,31 @@ Section Conversion.
     eapply R_cored. simpl.
     eapply cored_it_mkLambda_or_LetIn.
     rewrite app_context_nil_l.
-    eapply reducible_head_reduce_cored ; eassumption.
+    apply reducible_head_cored in eq1 as r1.
+    apply reducible_head_decompose in eq1 as d1.
+    rewrite <- eq2 in d1. cbn in d1.
+    case_eq (decompose_stack π1). intros l' s' e'.
+    rewrite e' in d1. cbn in d1. subst.
+    match type of eq3 with
+    | _ = reduce_stack ?f ?Σ ?Γ ?t ?π ?h =>
+      destruct (reduce_stack_sound f Σ Γ t π h) as [r2] ;
+      pose proof (reduce_stack_decompose nodelta_flags _ _ _ _ h) as d2
+    end.
+    rewrite <- eq3 in r2. cbn in r2.
+    rewrite <- eq3 in d2. cbn in d2.
+    rewrite decompose_stack_appstack in d2. cbn in d2.
+    rewrite zipc_appstack in r2. cbn in r2.
+    case_eq (decompose_stack θ1'). intros l s e.
+    rewrite e in d2. cbn in d2. subst.
+    apply decompose_stack_eq in e as ?. subst.
+    apply decompose_stack_eq in e' as ?. subst.
+    rewrite stack_cat_appstack. rewrite 2!zipc_appstack.
+    rewrite zipc_appstack in r2. simpl in r2.
+    clear eq3. symmetry in eq2. apply decompose_stack_eq in eq2. subst.
+    rewrite 2!zipc_appstack in r1.
+    rewrite stack_context_appstack in r2.
+    eapply red_cored_cored ; try eassumption.
+    repeat zip fold. eapply red_context. assumption.
   Qed.
   Next Obligation.
   Admitted.

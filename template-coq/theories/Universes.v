@@ -470,7 +470,7 @@ Program Definition val (v : valuation) (u : universe) : Z :=
   end.
 Next Obligation.
   apply False_rect.
-  apply u.2; assumption.
+  apply u.π2; assumption.
 Defined.
 
 Inductive satisfies0 (v : valuation) : univ_constraint -> Prop :=
@@ -505,7 +505,7 @@ Definition leq_universe' `{checker_flags} φ u u'
 Program Definition try_suc (u : universe) : universe :=   (* FIXME suc s *)
   (map (fun '(l, b) =>  (l, true)) u; _).
 Next Obligation.
-  intro. apply u.2. destruct u as [[] ?].
+  intro. apply u.π2. destruct u as [[] ?].
   reflexivity. discriminate.
 Qed.
 

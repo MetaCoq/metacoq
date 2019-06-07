@@ -19,8 +19,8 @@ Module SigmaNotations.
       (right associativity, at level 0,
        format "( x ;  .. ;  y ;  z )") : sigma_scope.
 
-  Notation "x .1" := (@projT1 _ _ x) : sigma_scope.
-  Notation "x .2" := (@projT2 _ _ x) : sigma_scope.
+  Notation "x .π1" := (@projT1 _ _ x) (at level 3) : sigma_scope.
+  Notation "x .π2" := (@projT2 _ _ x) (at level 3) : sigma_scope.
 
 End SigmaNotations.
 
@@ -605,20 +605,18 @@ Qed.
 
 Lemma forallb2_All2 {A : Type} {p : A -> A -> bool}
       {l l' : list A} :
-  is_true (forallb2 p l l') -> All2 (fun x y => is_true (p x y)) l l'.
+  forallb2 p l l' -> All2 p l l'.
 Proof.
-  induction l in l' |- *; destruct l'; simpl; intros; try congruence.
-  - constructor.
-  - constructor. revert H; rewrite andb_and; intros [px pl]. auto.
-    apply IHl. revert H; rewrite andb_and; intros [px pl]. auto.
+  elim: l l' => [|x l IHl] [|x' l']//=; first by constructor.
+  by move=> /andP [pxx' /IHl]; constructor.
 Qed.
 
 Lemma All2_forallb2 {A : Type} {p : A -> A -> bool}
       {l l' : list A} :
-  All2 (fun x y => is_true (p x y)) l l' -> is_true (forallb2 p l l').
+  All2 p l l' -> forallb2 p l l'.
 Proof.
-  induction 1; simpl; intros; try congruence.
-  rewrite andb_and. intuition auto.
+  elim: l l' => [|x l IHl] [|x' l']//; do ?by inversion 1.
+  by move=> pxlx'l'/=; rewrite IHl ?andbT; inversion pxlx'l'; subst.
 Qed.
 
 Lemma forallb2_app {A} (p : A -> A -> bool) l l' q q' :
@@ -884,7 +882,7 @@ Lemma forall_forallb_map_spec {A B : Type} {P : A -> Prop} {p : A -> bool}
     (forall x : A, P x -> is_true (p x) -> f x = g x) -> map f l = map g l.
 Proof.
   induction 1; simpl; trivial.
-  rewrite andb_and. intros [px pl] Hx.
+  move=> /andP. intros [px pl] Hx.
   f_equal. now apply Hx. now apply IHForall.
 Qed.
 

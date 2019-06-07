@@ -33,7 +33,7 @@ Definition subst_instance_level_expr u (s : Universe.Expr.t) : Universe.Expr.t :
 Program Definition subst_instance_univ u (s : universe) : universe :=
   (List.map (subst_instance_level_expr u) s; _).
 Next Obligation.
- intro. apply s.2. destruct s as [[] e].
+ intro. apply s.π2. destruct s as [[] e].
  reflexivity. inversion H.
 Qed.
 

@@ -172,34 +172,17 @@ Instance param : Translation :=
      tsl_ty := None ;
      tsl_ind := fun ΣE mp kn mind => ret (tsl_mind_body (snd ΣE) mp kn mind) |}.
 
-
-
-
-
-
 Definition T := forall A, A -> A.
 Run TemplateProgram (Translate emptyTC "T").
 
 Definition tm := ((fun A (x:A) => x) (Type -> Type) (fun x => x)).
 Run TemplateProgram (Translate emptyTC "tm").
 
-Definition nat_TC : tsl_context.
- run_template_program (Translate emptyTC "Coq.Init.Datatypes.nat")
-                      ltac:(fun tc => let tc := eval simpl in tc in exact tc).
-Defined.
+Generate Definition nat_TC :=
+  (Translate emptyTC "Coq.Init.Datatypes.nat").
 
-Definition bool_TC : tsl_context.
- run_template_program (Translate emptyTC "Coq.Init.Datatypes.bool")
-                      ltac:(fun tc => let tc := eval simpl in tc in exact tc).
- Print boolᵗ.
- Definition x := nat.
- Fail Print boolᵗ.
-Defined.
-
-Fail Print boolᵗ.
-Fail Print boolᵗ_rec.
-Fail Print boolᵗ_rect.
-Fail Print boolᵗ_ind.
+Generate Definition bool_TC :=
+  (Translate emptyTC "Coq.Init.Datatypes.bool").
 
 Run TemplateProgram (Translate bool_TC "pred").
 
@@ -230,13 +213,12 @@ Module Id1.
     := param_ID_identity my_id my_idᵗ.
 End Id1.
 
-
+(*
 Module Id2.
   Definition ID := forall A x y (p : x = y :> A), x = y.
 
   Run TemplateProgram (TC <- TranslateRec emptyTC ID ;;
                        tmDefinition "TC" TC).
-
 
   Lemma param_ID_identity (f : ID)
     : IDᵗ f -> forall A x y p, f A x y p = p.
@@ -256,26 +238,25 @@ Module Id2.
   Definition free_thm_myf : forall A x y p, myf A x y p = p
     := param_ID_identity myf myfᵗ.
 End Id2.
-
+*)
 
 
 
 
 Module Vectors.
   Import Vector.
-  Run TemplateProgram (Translate nat_TC "t").
+  Run TemplateProgram (Translate nat_TC "Coq.Vectors.VectorDef.t").
 End Vectors.
 
 Require Import Even.
-Run TemplateProgram (Translate nat_TC "even").
+Run TemplateProgram (Translate nat_TC "Coq.Arith.Even.even").
 
 Definition rev_type := forall A, list A -> list A.
-Run TemplateProgram (TC <- Translate emptyTC "list" ;;
-                     TC <- Translate TC "rev_type" ;;
-                     tmDefinition "list_TC" TC ).
+Generate Definition list_TC :=
+  (TC <- Translate emptyTC "Coq.Init.Datatypes.list" ;;
+   Translate TC "rev_type").
 
-
-
+(*
 Require Import MiniHoTT.
 Module Axioms.
 
@@ -318,17 +299,15 @@ Module Axioms.
     apply h.
   Defined.
 
-  
   Definition wFunext
     := forall A (B : A -> Type) (f g : forall x, B x), (forall x, f x = g x) -> f = g.
- 
 
   Run TemplateProgram (Translate eqTC "wFunext").
 
   Theorem wFunext_provably_parametric : forall h : wFunext, wFunextᵗ h.
   Proof.
     unfold wFunext, wFunextᵗ.
-    intros h A Aᵗ B Bᵗ f fᵗ g gᵗ X H. 
+    intros h A Aᵗ B Bᵗ f fᵗ g gᵗ X H.
     apply eq_eqᵗ.
     apply h; intro x.
     apply h; intro xᵗ.
@@ -465,7 +444,7 @@ Module Axioms.
     apply X; intros []. reflexivity.
   Defined.
 End Axioms.
-
+*)
 
 
 

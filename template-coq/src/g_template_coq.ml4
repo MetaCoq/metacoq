@@ -115,6 +115,35 @@ VERNAC COMMAND EXTEND Run_program CLASSIFIED AS SIDEFF
         run_template_program env evm pgm ]
 END;;
 
+VERNAC COMMAND EXTEND Reduce_defn CLASSIFIED AS SIDEFF
+     | [ "Generate" "Definition" ident(name) ":=" constr(def) ] ->
+       [ let (evm, env) = Pfedit.get_current_context () in
+         let (evm, def) = Constrintern.interp_open_constr env evm def in
+         let pgm = EConstr.to_constr evm def in
+         let kont (env,evm,body) =
+           let univs =
+             if Flags.is_universe_polymorphism ()
+             then Entries.Polymorphic_const_entry (Evd.to_universe_context evm)
+             else Entries.Monomorphic_const_entry (Evd.universe_context_set evm)
+           in
+           ignore (Declare.declare_definition ~kind:Decl_kinds.Definition name
+             (body, univs))
+         in
+         Run_template_monad.run_template_program_rec kont env (evm, pgm) ]
+     | [ "Generate" "Polymorphic" "Definition" ident(name) ":=" constr(def) ] ->
+       [ let (evm, env) = Pfedit.get_current_context () in
+         let (evm, def) = Constrintern.interp_open_constr env evm def in
+         let pgm = EConstr.to_constr evm def in
+         let kont (env,evm,body) =
+           let univs =
+             Entries.Polymorphic_const_entry (Evd.to_universe_context evm)
+           in
+           ignore (Declare.declare_definition ~kind:Decl_kinds.Definition name
+             (body, univs))
+         in
+         Run_template_monad.run_template_program_rec kont env (evm, pgm) ]
+END;;
+
 
 (** ********* Tactics ********* *)
 

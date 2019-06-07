@@ -21,10 +21,10 @@ Definition is_prop_sort s :=
 Parameter is_type_or_proof : forall (Sigma : global_context) (Gamma : context) (t : PCUICAst.term), bool.
 From PCUIC Require Import PCUICTyping.
 
+Definition Is_Type_or_Proof Σ Γ t := ∑ T, Σ ;;; Γ |- t : T × (isArity T + (∑ u, (Σ ;;; Γ |- T : tSort u) * is_prop_sort u))%type.
+
 Axiom is_type_or_proof_spec : forall (Sigma : global_context) (Gamma : context) (t : PCUICAst.term) T,
-    Sigma ;;; Gamma |- t : T -> (is_type_or_proof Sigma Gamma t = true) <~> (isArity T + (∑ u, (Sigma ;;; Gamma |- T : tSort u) * is_prop_sort u)). 
-
-
+    Sigma ;;; Gamma |- t : T -> (is_type_or_proof Sigma Gamma t = true) <~> Is_Type_or_Proof Sigma Gamma t.
 (* 
 
    X : Type, x : X |- x : X ~> is_type_or_proof x = false
@@ -171,7 +171,6 @@ Definition opt_def {A} (a : option A) (e : A) : A :=
   | None => e
   end.
 
-
 Definition extract_one_inductive_body (Σ : global_context) (npars : nat) (arities : context)
            (oib : one_inductive_body) : E.one_inductive_body :=
   let decty := opt_def (decompose_prod_n_assum [] npars oib.(ind_type)) ([], tRel 0) in
@@ -211,6 +210,64 @@ Definition extract_global Σ :=
   let '(Σ, univs) := Σ in
   extract_global_decls univs Σ.
 
+Inductive erases (Σ : global_context) (Γ : context) : term -> E.term -> Prop :=
+| erases_tRel i :
+    erases Σ Γ (tRel i) (E.tRel i)
+| erases_tVar n :
+    erases Σ Γ (tVar n) (E.tVar n)
+| erases_tEvar m m' l l' :
+    All2 (erases Σ Γ) l l' ->
+    erases Σ Γ (tEvar m l) (E.tEvar m' l')
+| erases_tLambda na b t t' :
+    erases Σ (vass na b :: Γ) t t' ->
+    erases Σ Γ (tLambda na b t) (E.tLambda na t')
+| erases_tLetIn na t1 t1' T t2 t2'  :
+    erases Σ Γ t1 t1' ->
+    erases Σ (vdef na t1 T :: Γ) t2 t2' ->
+    erases Σ Γ (tLetIn na t1 T t2) (E.tLetIn na t1' t2')
+| erases_tApp f u f' u' :
+    erases Σ Γ f f' ->
+    erases Σ Γ u u' ->
+    erases Σ Γ (tApp f u) (E.tApp f' u') 
+| erases_tConst kn u :
+    erases Σ Γ (tConst kn u) (E.tConst kn)
+| erases_tConstruct kn k n :
+    erases Σ Γ (tConstruct kn k n) (E.tConstruct kn k)
+| erases_tCase1 ip T c brs c' brs' :
+    erases Σ Γ c c' ->
+    All2 (fun x x' => erases Σ Γ (snd x) (snd x') × fst x = fst x') brs brs' ->
+    erases Σ Γ (tCase ip T c brs) (E.tCase ip c' brs')
+| erases_tCase2 ip T c :
+    erases Σ Γ c E.tBox ->
+    erases Σ Γ (tCase ip T c []) (E.tCase ip E.tBox [])
+| erases_tCase3 ip T c brs n x x' :
+    erases Σ Γ c E.tBox ->
+    erases Σ Γ x x' ->
+    erases Σ Γ (tCase ip T c ((n, x) :: brs)) (mkAppBox x' n)
+| erases_tProj p c c' :
+    erases Σ Γ c c' ->
+    erases Σ Γ (tProj p c) (E.tProj p c')
+| erases_tFix mfix n mfix' :
+    All2 (fun d d' => dname d = E.dname d' ×
+                   rarg d = E.rarg d' ×
+                   erases Σ (Γ ,,, PCUICLiftSubst.fix_context mfix) (dbody d) (E.dbody d')) mfix mfix' ->
+    erases Σ Γ (tFix mfix n) (E.tFix mfix' n)
+| erases_tCoFix mfix n mfix' :
+    All2 (fun d d' => dname d = E.dname d' ×
+                   rarg d = E.rarg d' ×
+                   erases Σ (Γ ,,, PCUICLiftSubst.fix_context mfix) (dbody d) (E.dbody d')) mfix mfix' ->
+    erases Σ Γ (tCoFix mfix n) (E.tCoFix mfix' n)
+(* | erases_tSort u : erases Σ Γ (tSort u) E.tBox *)
+(* | erases_tInd i u : erases Σ Γ (tInd i u) (E.tBox) *)
+| erases_box t T :
+    Σ ;;; Γ |- t : T ->
+    Is_Type_or_Proof Σ Γ t ->              
+    erases Σ Γ t E.tBox
+.
+
+Notation "Σ ;;; Γ |- s ⇝ℇ t" := (erases Σ Γ s t) (at level 50, Γ, s, t at next level) : type_scope.
+
+
 (** * Erasure correctness
     
     The statement below expresses that any well-typed term's
@@ -223,8 +280,6 @@ Definition extract_global Σ :=
     - The object is of inductive type, or more generally a function resulting 
       ultimately in an inductive value when applied.
 
-   We use an observational equality relation to relate the two values, 
-   which is indifferent to the extractd parts.
  *)
 
 Fixpoint inductive_arity (t : term) :=
@@ -235,10 +290,6 @@ Fixpoint inductive_arity (t : term) :=
     | _ => None
     end
   end.
-
-(* Inductive inductive_arity : term -> Prop := *)
-(* | inductive_arity_concl ind u args : inductive_arity (mkApps (tInd ind u) args) *)
-(* | inductive_arity_arrow na b t : inductive_arity t -> inductive_arity (tProd na b t). *)
 
 Definition option_is_none {A} (o : option A) :=
   match o with
@@ -274,74 +325,19 @@ Definition computational_ind Σ ind :=
 Definition computational_type Σ T :=
   exists ind, inductive_arity T = Some ind /\ computational_ind Σ ind.
 
-(** The precondition on the extraction theorem. *)
+(* (** The precondition on the extraction theorem. *) *)
 
-Record extraction_pre (Σ : global_context) t T :=
-  { extr_typed : Σ ;;; [] |- t : T;
-    extr_env_axiom_free : axiom_free (fst Σ);
-    extr_env_wf : wf Σ ;
-    (* extr_computational_type : computational_type Σ T *) }.
+(* Record extraction_pre (Σ : global_context) t T := *)
+(*   { extr_typed : Σ ;;; [] |- t : T; *)
+(*     extr_env_axiom_free : axiom_free (fst Σ); *)
+(*     extr_env_wf : wf Σ ; *)
+(*     (* extr_computational_type : computational_type Σ T *) }. *)
 
-(** The observational equivalence relation between source and extractd values. *)
+(* (** The extraction correctness theorem we conjecture. *) *)
 
-Inductive Question : Set  := 
-| Cnstr : inductive -> nat -> Question
-| Abs : Question.
-
-Definition observe (q : Question) (v : E.term) : bool :=
-  match q with
-  | Cnstr i k =>
-    match v with
-    | E.tConstruct i' k' =>
-      eq_ind i i' && eq_nat k k'
-    | _ => false
-    end
-  | Abs =>
-    match v with
-    | E.tLambda _ _ => true
-    | E.tFix _ _ => true
-    | _ => false
-    end
-  end.
-             
-
-
-(* Fixpoint obs_eq (Σ : global_context) (v v' : term) (T : term) (s : universe) : Prop := *)
-(*   if is_prop_sort s then is_dummy v' *)
-(*   else *)
-(*     match T with *)
-(*     | tInd ind u => *)
-(*       (* Canonical inductive value *) *)
-(*       let '(hd, args) := destApp v in *)
-(*       let '(hd', args') := destApp v' in *)
-(*       eq_term Σ hd hd' /\ obs_eq  *)
+(* Definition erasure_correctness := *)
+(*   forall Σ t T, extraction_pre Σ t T -> *)
+(*   forall v, eval Σ [] t v -> *)
+(*      EWcbvEval.eval (extract_global Σ) (extract Σ [] t) (extract Σ [] v). *)
       
-(*  | obs_eq_prf v T s : Σ ;;; [] |- v : T -> *)
-(*   Σ ;;; [] |- T : tSort s -> *)
-(*   is_prop_sort s -> *)
-(*   obs_eq Σ v dummy *)
-
-(* | obs_eq_cstr ind k u args args' T : Σ ;;; [] |- mkApps (tConstruct ind k u) args : T -> *)
-(*   computational_type Σ T -> *)
-(*   Forall2 (obs_eq Σ) args args' -> *)
-(*   obs_eq Σ (mkApps (tConstruct ind k u) args) (mkApps (tConstruct ind k u) args') *)
-
-(* | obs_eq_arrow na f f' T T' : *)
-(*     Σ ;;; [] |- f : tProd na T T' -> *)
-(*     (forall arg arg', obs_eq Σ arg arg' ->  *)
-    
-(*     obs_eq Σ f f'.                                                            *)
-
-Record extraction_post (Σ : global_context) (Σ' : EAst.global_context) (t : term) (t' : E.term) (v : term) : Prop :=
-  { extr_value : E.term;
-    extr_eval : EWcbvEval.eval Σ' t' extr_value
-    (* extr_equiv : obs_eq Σ v extr_value *) }.
-
-(** The extraction correctness theorem we conjecture. *)
-
-Definition erasure_correctness :=
-  forall Σ t T, extraction_pre Σ t T ->
-  forall v, eval Σ [] t v ->
-     EWcbvEval.eval (extract_global Σ) (extract Σ [] t) (extract Σ [] v).
-      
-(* Conjecture erasure_correct : erasure_correctness. *)
+(* (* Conjecture erasure_correct : erasure_correctness. *) *)

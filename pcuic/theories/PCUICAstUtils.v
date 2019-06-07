@@ -572,7 +572,7 @@ Proof.
   eauto.
 Qed.
 
-Lemma All2_nth_error_None {A} {P : A -> A -> Type} {l l'} n :
+Lemma All2_nth_error_None {A B} {P : A -> B -> Type} {l l'} n :
   All2 P l l' ->
   nth_error l n = None ->
   nth_error l' n = None.
@@ -581,7 +581,7 @@ Proof.
   induction Hall; destruct n; simpl; try congruence. auto.
 Qed.
 
-Lemma All2_length {A} {P : A -> A -> Type} l l' : All2 P l l' -> #|l| = #|l'|.
+Lemma All2_length {A B} {P : A -> B -> Type} l l' : All2 P l l' -> #|l| = #|l'|.
 Proof. induction 1; simpl; auto. Qed.
 
 Lemma All_forallb_map_spec {A B : Type} {P : A -> Type} {p : A -> bool}

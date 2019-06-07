@@ -1195,11 +1195,6 @@ Section Conversion.
     destruct ir2 as [_ hl2]. cbn in hl2.
     specialize (hl2 eq_refl).
     destruct l2 ; try discriminate hl2. clear hl2.
-
-    (* The fact that we can conclude directly is distrubing!
-       Are we checking too much?
-       TODO CHECK
-     *)
     cbn. assumption.
   Qed.
 
@@ -1992,25 +1987,26 @@ Section Conversion.
     cc_viewc (tCoFix mfix idx) := ccview_cofix mfix idx ;
     cc_viewc t := ccview_other t I.
 
-  (* Let's do one reduction step by hand as we did for unfold_one_fix
-     It means doing one unfold_one_proj as well, but at least we won't
-     have to deal with whnf or completeness of reduction.
-   *)
   Equations unfold_one_case (Γ : context) (ind : inductive) (par : nat)
             (p c : term) (brs : list (nat × term))
             (h : welltyped Σ Γ (tCase (ind, par) p c brs)) : option term :=
     unfold_one_case Γ ind par p c brs h
     with inspect (reduce_stack RedFlags.default Σ Γ c ε _) := {
-    | @exist (cred, ρ) eq with inspect (decompose_stack ρ) := {
-      | @exist (args, ξ) eq' with cc_viewc cred := {
-        | ccview_construct ind' n ui := Some (iota_red par n args brs) ;
-        (* | ccview_cofix mfix idx with inspect (unfold_fix mfix idx) := { *)
-        (*   | @exist (Some (narg, fn)) with inspect (is_constructor ) *)
-        (*   } ; *)
-        | ccview_cofix mfix idx := None ; (* TODO We need to reduce on the stack
-                                           as well to do this properly. *)
-        | ccview_other t _ := None
-        }
+    | @exist (cred, ρ) eq with cc_viewc cred := {
+      | ccview_construct ind' n ui with inspect (decompose_stack ρ) := {
+        | @exist (args, ξ) eq' := Some (iota_red par n args brs)
+        } ;
+      (* | ccview_cofix mfix idx with inspect (unfold_fix mfix idx) := { *)
+      (*   | @exist (Some (narg, fn)) eq2 with inspect (decompose_stack_at ρ narg) := { *)
+      (*     | @exist (Some (args, c', ξ)) eq3 with inspect (reduce_stack RedFlags.default Σ Γ c' ε _) := { *)
+      (*       | @exist (c'red, ρ') eq4 *)
+      (*       } ; *)
+      (*     | @exist None _ := None *)
+      (*     } ; *)
+      (*   | @exist None _ := None *)
+      (*   } *)
+      | ccview_cofix mfix idx := None ;
+      | ccview_other t _ := None
       }
     }.
   Next Obligation.

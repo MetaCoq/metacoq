@@ -2059,6 +2059,71 @@ Section Conversion.
     - eapply red_case. eassumption.
   Qed.
 
+  Equations unfold_one_proj (Γ : context) (p : projection) (c : term)
+            (h : welltyped Σ Γ (tProj p c)) : option term :=
+
+    unfold_one_proj Γ p c h with p := {
+    | (i, pars, narg) with inspect (reduce_stack RedFlags.default Σ Γ c ε _) := {
+      | @exist (cred, ρ) eq with cc_viewc cred := {
+        | ccview_construct ind' n ui with inspect (decompose_stack ρ) := {
+          | @exist (args, ξ) eq' with inspect (nth_error args (pars + narg)) := {
+            | @exist (Some arg) eq2 := Some arg ;
+            | @exist None _ := None
+            }
+          } ;
+        | ccview_cofix mfix idx := None ;
+        | ccview_other t _ := None
+        }
+      }
+    }.
+  Next Obligation.
+    cbn. destruct h as [T h].
+    apply inversion_Proj in h ; auto.
+    destruct h as [uni [mdecl [idecl [pdecl [args' [? [? [? ?]]]]]]]].
+    eexists. eassumption.
+  Qed.
+
+  (* TODO MOVE *)
+  Lemma red_proj :
+    forall Γ p c c',
+      red Σ Γ c c' ->
+      red Σ Γ (tProj p c) (tProj p c').
+  Proof.
+    intros Γ p c c' h.
+    induction h in p |- *.
+    - constructor.
+    - econstructor.
+      + eapply IHh.
+      + econstructor. assumption.
+  Qed.
+
+  Lemma unfold_one_proj_cored :
+    forall Γ p c h t,
+      Some t = unfold_one_proj Γ p c h ->
+      cored Σ Γ t (tProj p c).
+  Proof.
+    intros Γ p c h t e.
+    revert e.
+    funelim (unfold_one_proj Γ p c h).
+    all: intros eq ; noconf eq.
+    match type of e with
+    | _ = reduce_stack ?f ?Σ ?Γ ?t ?π ?h =>
+      pose proof (reduce_stack_sound f Σ Γ t π h) as [r] ;
+      pose proof (reduce_stack_decompose f Σ Γ t π h) as d
+    end.
+    rewrite <- e in r.
+    rewrite <- e in d. cbn in d. rewrite <- e0 in d. cbn in d. subst.
+    cbn in r.
+    clear H0. symmetry in e0. apply decompose_stack_eq in e0. subst.
+    rewrite zipc_appstack in r. cbn in r.
+    pose proof (red_proj _ (i, n0, n) _ _ r) as r'.
+    pose proof (red_welltyped flags _ h (sq _ r')) as h'.
+    apply Proj_Constuct_ind_eq in h' ; auto. subst.
+    eapply cored_red_cored.
+    - constructor. eapply PCUICTyping.red_proj. eauto.
+    - eapply red_proj. eassumption.
+  Qed.
+
   Equations reducible_head (Γ : context) (t : term) (π : stack)
             (h : wtp Γ t π)
     : option (term × stack) :=
@@ -2071,12 +2136,11 @@ Section Conversion.
     | @exist None _ := None
     } ;
 
-    (* TODO Proj the same way as Case *)
-    (* reducible_head Γ (tProj p c) π h *)
-    (* with inspect (unfold_one_case (Γ ,,, stack_context π) c _) := { *)
-    (* | @exist (Some (cred, ρ)) eq := Some (tProj p (zipc cred ρ), π) ; *)
-    (* | @exist None _ := None *)
-    (* } ; *)
+    reducible_head Γ (tProj p c) π h
+    with inspect (unfold_one_proj (Γ ,,, stack_context π) p c _) := {
+    | @exist (Some t) eq := Some (t, π) ;
+    | @exist None _ := None
+    } ;
 
     reducible_head Γ (tConst c u) π h
     with inspect (lookup_env Σ c) := {
@@ -2086,6 +2150,10 @@ Section Conversion.
     } ;
 
     reducible_head Γ _ π h := None.
+  Next Obligation.
+    apply welltyped_zipx in h. zip fold in h.
+    apply welltyped_context in h ; auto.
+  Qed.
   Next Obligation.
     apply welltyped_zipx in h. zip fold in h.
     apply welltyped_context in h ; auto.
@@ -2132,6 +2200,13 @@ Section Conversion.
       eapply red_it_mkLambda_or_LetIn. eapply red_mkApps.
       apply decompose_stack_eq in e'. subst.
       rewrite stack_context_appstack in r. assumption.
+    - apply unfold_one_proj_cored in e as r. apply cored_red in r.
+      destruct r as [r].
+      constructor. unfold zippx.
+      case_eq (decompose_stack π). intros l s e'.
+      eapply red_it_mkLambda_or_LetIn. eapply red_mkApps.
+      apply decompose_stack_eq in e'. subst.
+      rewrite stack_context_appstack in r. assumption.
   Qed.
 
   Lemma reducible_head_cored :
@@ -2151,6 +2226,8 @@ Section Conversion.
       + reflexivity.
     - repeat zip fold. eapply cored_context.
       eapply unfold_one_case_cored. eassumption.
+    - repeat zip fold. eapply cored_context.
+      eapply unfold_one_proj_cored. eassumption.
   Qed.
 
   Lemma reducible_head_decompose :
@@ -2163,6 +2240,7 @@ Section Conversion.
     funelim (reducible_head Γ t π h).
     all: intro ee ; noconf ee.
     - eapply unfold_one_fix_decompose. eassumption.
+    - reflexivity.
     - reflexivity.
     - reflexivity.
   Qed.

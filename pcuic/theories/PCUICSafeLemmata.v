@@ -1803,6 +1803,32 @@ Section Lemmata.
       constructor. assumption.
   Qed.
 
+  Lemma red_case_c :
+    forall Γ ind p c c' brs,
+      red Σ Γ c c' ->
+      red Σ Γ (tCase ind p c brs) (tCase ind p c' brs).
+  Proof.
+    intros Γ ind p c c' brs h.
+    revert ind p brs. induction h ; intros ind p brs.
+    - constructor.
+    - econstructor.
+      + eapply IHh.
+      + econstructor. assumption.
+  Qed.
+
+  Lemma red_proj_c :
+    forall Γ p c c',
+      red Σ Γ c c' ->
+      red Σ Γ (tProj p c) (tProj p c').
+  Proof.
+    intros Γ p c c' h.
+    induction h in p |- *.
+    - constructor.
+    - econstructor.
+      + eapply IHh.
+      + econstructor. assumption.
+  Qed.
+
   (* Lemma principle_typing : *)
   (*   forall {Γ u A B}, *)
   (*     Σ ;;; Γ |- u : A -> *)

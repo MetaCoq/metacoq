@@ -2017,20 +2017,6 @@ Section Conversion.
     eexists. eassumption.
   Qed.
 
-  (* TODO MOVE *)
-  Lemma red_case :
-    forall Γ ind p c c' brs,
-      red Σ Γ c c' ->
-      red Σ Γ (tCase ind p c brs) (tCase ind p c' brs).
-  Proof.
-    intros Γ ind p c c' brs h.
-    revert ind p brs. induction h ; intros ind p brs.
-    - constructor.
-    - econstructor.
-      + eapply IHh.
-      + econstructor. assumption.
-  Qed.
-
   Lemma unfold_one_case_cored :
     forall Γ ind par p c brs h t,
       Some t = unfold_one_case Γ ind par p c brs h ->
@@ -2051,12 +2037,12 @@ Section Conversion.
     clear H. symmetry in e0. apply decompose_stack_eq in e0. subst.
     rewrite zipc_appstack in r. cbn in r.
     assert (r' : ∥ red Σ Γ (tCase (ind, par) p c brs) (tCase (ind, par) p (mkApps (tConstruct ind0 n ui) l) brs) ∥).
-    { constructor. eapply red_case. eassumption. }
+    { constructor. eapply red_case_c. eassumption. }
     pose proof (red_welltyped flags _ h r') as h'.
     apply Case_Construct_ind_eq in h' ; auto. subst.
     eapply cored_red_cored.
     - constructor. eapply red_iota.
-    - eapply red_case. eassumption.
+    - eapply red_case_c. eassumption.
   Qed.
 
   Equations unfold_one_proj (Γ : context) (p : projection) (c : term)
@@ -2083,20 +2069,6 @@ Section Conversion.
     eexists. eassumption.
   Qed.
 
-  (* TODO MOVE *)
-  Lemma red_proj :
-    forall Γ p c c',
-      red Σ Γ c c' ->
-      red Σ Γ (tProj p c) (tProj p c').
-  Proof.
-    intros Γ p c c' h.
-    induction h in p |- *.
-    - constructor.
-    - econstructor.
-      + eapply IHh.
-      + econstructor. assumption.
-  Qed.
-
   Lemma unfold_one_proj_cored :
     forall Γ p c h t,
       Some t = unfold_one_proj Γ p c h ->
@@ -2116,12 +2088,12 @@ Section Conversion.
     cbn in r.
     clear H0. symmetry in e0. apply decompose_stack_eq in e0. subst.
     rewrite zipc_appstack in r. cbn in r.
-    pose proof (red_proj _ (i, n0, n) _ _ r) as r'.
+    pose proof (red_proj_c _ _ (i, n0, n) _ _ r) as r'.
     pose proof (red_welltyped flags _ h (sq _ r')) as h'.
     apply Proj_Constuct_ind_eq in h' ; auto. subst.
     eapply cored_red_cored.
-    - constructor. eapply PCUICTyping.red_proj. eauto.
-    - eapply red_proj. eassumption.
+    - constructor. eapply red_proj. eauto.
+    - eapply red_proj_c. eassumption.
   Qed.
 
   Equations reducible_head (Γ : context) (t : term) (π : stack)

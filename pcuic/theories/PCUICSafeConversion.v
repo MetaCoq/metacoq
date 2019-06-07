@@ -2266,10 +2266,50 @@ Section Conversion.
     repeat zip fold. eapply red_context. assumption.
   Qed.
   Next Obligation.
-  Admitted.
+    match type of eq3 with
+    | _ = reduce_stack ?f ?Σ ?Γ ?t ?π ?h =>
+      pose proof (reduce_stack_isred nodelta_flags _ _ _ _ h eq_refl) as ir
+    end.
+    rewrite <- eq3 in ir. destruct ir as [ia il]. simpl in ia, il.
+    split.
+    - cbn. assumption.
+    - simpl. intro hl. specialize (il hl).
+      destruct θ1'. all: simpl. all: try reflexivity. all: try discriminate.
+      eapply decompose_stack_noStackApp. eauto.
+  Qed.
   Next Obligation.
     destruct b ; auto.
-  Admitted.
+    apply reducible_head_red_zippx in eq1 as r1. destruct r1 as [r1].
+    eapply conv_trans' ; try eassumption.
+    apply reducible_head_decompose in eq1 as d1.
+    rewrite <- eq2 in d1. cbn in d1.
+    case_eq (decompose_stack π1). intros l' s' e'.
+    rewrite e' in d1. cbn in d1. subst.
+    match type of eq3 with
+    | _ = reduce_stack ?f ?Σ ?Γ ?t ?π ?h =>
+      destruct (reduce_stack_sound f Σ Γ t π h) as [r2] ;
+      pose proof (reduce_stack_decompose nodelta_flags _ _ _ _ h) as d2
+    end.
+    rewrite <- eq3 in r2. cbn in r2.
+    rewrite <- eq3 in d2. cbn in d2.
+    rewrite decompose_stack_appstack in d2. cbn in d2.
+    rewrite zipc_appstack in r2. cbn in r2.
+    case_eq (decompose_stack θ1'). intros l s e.
+    rewrite e in d2. cbn in d2. subst.
+    unfold zippx. rewrite e'.
+    unfold zippx in r1. rewrite e' in r1. rewrite <- eq2 in r1.
+    apply decompose_stack_eq in e as ?. subst.
+    apply decompose_stack_eq in e' as ?. subst.
+    rewrite stack_cat_appstack. rewrite decompose_stack_appstack.
+    erewrite decompose_stack_twice ; eauto. simpl.
+    rewrite app_nil_r.
+    eapply red_conv_l.
+    eapply red_trans ; try eassumption.
+    clear eq3. symmetry in eq2. apply decompose_stack_eq in eq2. subst.
+    rewrite stack_context_appstack in r2.
+    rewrite zipc_appstack in r2. cbn in r2.
+    eapply red_it_mkLambda_or_LetIn. assumption.
+  Qed.
 
   Equations _isconv (s : state) (Γ : context)
             (t : term) (π1 : stack) (h1 : wtp Γ t π1)

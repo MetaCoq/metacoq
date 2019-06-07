@@ -17,11 +17,11 @@ Module P := PCUICWcbvEval.
 
 Ltac inv H := inversion H; subst; clear H.
 
-Lemma is_constructor_extract Σ n L :
-  PCUICTyping.is_constructor n L ->
-  is_constructor n (map (extract Σ []) L).
-Proof.
-Admitted.
+(* Lemma is_constructor_extract Σ n L : *)
+(*   PCUICTyping.is_constructor n L -> *)
+(*   is_constructor n (map (extract Σ []) L). *)
+(* Proof. *)
+(* Admitted. (* this is probably wrong *) *) 
 
 (* Lemma mkApps_inj a b l1 l2  : *)
 (*   mkApps a l1 = mkApps b l2 -> (~ exists a1 a2, a = tApp a1 a2) -> (~ exists b1 b2, b = tApp b1 b2) -> *)
@@ -344,16 +344,36 @@ Admitted.
 (** ** Corrcectness of erasure *)
 Hint Constructors PCUICWcbvEval.eval.
 
-Theorem erasure_correct : erasure_correctness.
+Definition tpo_stable Σ Γ (t : PCUICAst.term) (sigma : list PCUICAst.term)  :=
+  is_type_or_proof Σ Γ t = is_type_or_proof Σ [] (PCUICLiftSubst.subst sigma 0 t).                                                                              
+Record extraction_pre (Σ : PCUICAst.global_context) : Type
+  := Build_extraction_pre
+  { extr_env_axiom_free' : is_true (axiom_free (fst Σ));
+    extr_env_wf' : wf Σ }.
+
+Theorem erasure_correct : forall Σ t T sigma Γ,
+    Σ;;; Γ |- t : T ->
+    extraction_pre Σ ->
+    subslet Σ [] sigma Γ ->
+    forall v : PCUICAst.term,
+      PCUICWcbvEval.eval Σ [] (PCUICLiftSubst.subst sigma 0 t) v ->
+      eval (extract_global Σ) (extract Σ [] (PCUICLiftSubst.subst sigma 0 t)) (extract Σ [] v)
+      /\ (tpo_stable Σ Γ t sigma -> eval (extract_global Σ) (subst (map (extract Σ []) sigma) 0 (extract Σ Γ t)) (extract Σ [] v)).
 Proof.
-  intros Σ t T pre v H. revert T pre.
-  induction H using PCUICWcbvEval.eval_evals_ind; intros T pre.
-  - (** beta case, done *) cbn.
-    destruct Extract.is_type_or_proof eqn:Heq.
-    + rewrite is_type_extract. econstructor. econstructor.
-      erewrite <- eval_is_type. eauto. eauto.
-    + inv pre. edestruct (type_mkApps_inv Σ [] f [a] T) as (? & U & [? ?] & ?); eauto. 
-      inv t1. inv X2. pose proof (subject_reduction_eval _ [] _ _ _ extr_env_wf t0 H).
+  intros Σ t T sigma Γ Hty pre Hσ v H.
+  generalize_eqs H. revert T sigma Hty Hσ. 
+  induction H using PCUICWcbvEval.eval_evals_ind; intros T sigma Hty Hσ EQ.
+  - (** beta case, done *)
+    destruct t; inv EQ. admit.
+    cbn. destruct Extract.is_type_or_proof eqn:Heq.
+    + rewrite is_type_extract. split. econstructor. econstructor.
+      intros. rewrite H2, Heq. econstructor. eauto.
+      erewrite <- eval_is_type. exact Heq.
+      econstructor; eauto. 
+    + inv pre.
+      pose (f := PCUICLiftSubst.subst sigma 0 t1). pose (a := PCUICLiftSubst.subst sigma 0 t2).
+      edestruct (type_mkApps_inv Σ [] f [a] T) as (? & U & [? ?] & ?); eauto. 
+      pose proof (subject_reduction_eval _ [] _ _ _ extr_env_wf'0 _ H).
       eapply type_Lambda_inv in X2 as (? & ? & [? ?] & ?).
 
       cbn in IHeval1.

@@ -87,6 +87,50 @@ Admitted.
 (*   - edestruct type_of_complete; eauto. congruence. *)
 (* Qed. *)
 
+Inductive subslet Σ (Γ : PCUICAst.context) : list PCUICAst.term -> PCUICAst.context -> Type :=
+| emptyslet : subslet Σ Γ [] []
+| cons_let_ass Δ s na t T : subslet Σ Γ s Δ ->
+              Σ ;;; Γ |- t : PCUICLiftSubst.subst0 s T ->
+              is_type_or_proof Σ Γ t = false ->
+              subslet Σ Γ (t :: s) (Δ ,, PCUICAst.vass na T)
+| cons_let_def Δ s na t T :
+    subslet Σ Γ s Δ ->
+    Σ ;;; Γ |- PCUICLiftSubst.subst0 s t : PCUICLiftSubst.subst0 s T ->
+    is_type_or_proof Σ Γ (PCUICLiftSubst.subst0 s t) = false ->
+    subslet Σ Γ (PCUICLiftSubst.subst0 s t :: s) (Δ ,, PCUICAst.vdef na t T).
+
+Lemma subslet_implies Σ Γ s Γ' :
+  subslet Σ Γ s Γ' -> PCUICSubstitution.subslet Σ Γ s Γ'.
+Proof.
+  induction 1; try econstructor; eauto.
+Qed.
+Hint Resolve subslet_implies.
+
+Lemma subslet_nth_error  Σ Γ s Δ decl n t :
+  subslet Σ Γ s Δ ->
+  nth_error Δ n = Some decl ->
+  nth_error s n = Some t ->
+  match PCUICAst.decl_body decl with
+  | Some t' =>
+    let b := PCUICLiftSubst.subst (skipn (S n) s) 0 t' in
+    let ty := PCUICLiftSubst.subst (skipn (S n) s) 0 (PCUICAst.decl_type decl) in
+    is_type_or_proof Σ Γ t = false  × t = b × Σ;;; Γ |- b : ty
+  | None =>
+    let ty := PCUICLiftSubst.subst (skipn (S n) s) 0 (PCUICAst.decl_type decl) in
+    is_type_or_proof Σ Γ t = false × Σ;;; Γ |- t : ty
+  end.
+Proof.
+  induction 1 in n |- *; simpl; auto; destruct n; simpl; try congruence.
+  - intros [= <-]. intros [= ->].
+    simpl. split. eassumption. exact t1.
+  - intros. destruct decl as [na' [b|] ty]; cbn in *.
+    specialize (IHX _ H H0). intuition auto.
+    now apply IHX.
+  - intros [= <-]. intros [= <-].
+    simpl. split; auto.
+  - apply IHX.
+Qed.
+
 Lemma bool_equiv b1 b2 T1 T2 : 
 (b1 = true <~> T1) -> (b2 = true <~> T2) -> T1 <~> T2 -> b1 = b2.
 Proof.
@@ -97,41 +141,55 @@ Lemma is_type_subst Σ Γ Γ' Δ a T s :
   wf Σ -> subslet Σ Γ s Γ' ->
   Σ ;;; Γ ,,, Γ' ,,, Δ |- a : T ->
   wf_local Σ (Γ ,,, subst_context s 0 Δ) ->
-  is_type_or_proof Σ (Γ ,,, Γ' ,,, Δ) a ->
+  is_type_or_proof Σ (Γ ,,, Γ' ,,, Δ) a =
   is_type_or_proof Σ (Γ ,,, subst_context s 0 Δ) (PCUICLiftSubst.subst s #|Δ| a).
 Proof.
   intros.
-  eapply is_type_or_proof_spec in H; eauto.
-  eapply is_type_or_proof_spec.
-  eapply substitution; eauto.
-  destruct H as [ | (u & ? & ?) ].
-  - left. generalize (#|Δ|). intros n.
-    induction T in n, i |- *; (try now inv i); cbn in *; eauto.
-  - right. exists u. split; eauto.
-    pose proof (substitution Σ Γ Γ' s Δ).
-    eapply X3 in t; eauto.
+  eapply bool_equiv.
+  - eapply is_type_or_proof_spec. eauto.
+  - eapply is_type_or_proof_spec. eapply substitution; eauto.
+  - split.
+    + intros [ | (u & ? & ?) ].
+      * left. generalize (#|Δ|). intros n.
+        induction T in n, i |- *; (try now inv i); cbn in *; eauto.
+      * right. exists u. split; eauto.
+        pose proof (substitution Σ Γ Γ' s Δ).
+        eapply X3 in t; eauto.
+    + intros [ | (u & ? & ?) ].
+      * left. induction T in s, Δ, i |- *; (try now inv i); cbn in *; eauto.
+        -- destruct ?. destruct ?. all:eauto.
+           Lemma isArity_lift n k t :
+             isArity
+               (PCUICLiftSubst.lift n k t) <-> isArity t.
+           Proof.
+             revert n k; induction t; cbn; intros; try tauto; eauto.
+             destruct ?; cbn; tauto.
+           Qed.
+           rewrite isArity_lift in i.
+           (* the type of an arity is an arity, but that's contradictory with subslet *) admit.
+        -- eapply IHT2 with (Δ := _ :: Δ). cbn. eapply i.
+        -- eapply IHT3 with (Δ := _ :: Δ). cbn. eapply i.
+      * right. exists u. split; eauto.
 Qed.
-
 
 Lemma extract_subst Σ Γ Γ' Δ a s T :
   wf Σ ->
   subslet Σ Γ s Γ' ->
   wf_local Σ (Γ ,,, subst_context s 0 Δ) ->
   Σ ;;; Γ ,,, Γ'  ,,, Δ |- a : T ->
-  is_type_or_proof Σ (Γ ,,, Γ' ,,, Δ) a =
-  is_type_or_proof Σ (Γ ,,, subst_context s 0 Δ) (PCUICLiftSubst.subst s #|Δ| a) ->
+  (* is_type_or_proof Σ (Γ ,,, Γ' ,,, Δ) a = *)
+  (* is_type_or_proof Σ (Γ ,,, subst_context s 0 Δ) (PCUICLiftSubst.subst s #|Δ| a) -> *)
   extract Σ (Γ ,,, subst_context s 0 Δ) (PCUICLiftSubst.subst s #|Δ| a) = subst  (map (extract Σ Γ) s) #|Δ| (extract Σ (Γ,,,Γ',,,Δ) a).
 Proof.
-  intros HΣ HΔ Hs Ha He.
+  intros HΣ HΔ Hs Ha.
   pose proof (typing_wf_local Ha).
   generalize_eqs Ha. intros eqw. rewrite <- eqw in X.
-  revert Γ Γ' Δ s Hs HΔ He eqw.
+  revert Γ Γ' Δ s Hs HΔ eqw.
   revert Σ HΣ Γ0 X a T Ha.
   eapply (typing_ind_env (fun Σ Γ0 a T =>
                             forall (Γ Γ' : PCUICAst.context) Δ (s : list PCUICAst.term),
                               wf_local Σ (Γ ,,, subst_context s 0 Δ) ->
                               subslet Σ Γ s Γ' ->
-                              _ ->
                                 Γ0 = Γ ,,, Γ' ,,, Δ ->
                                 extract Σ (Γ ,,, subst_context s 0 Δ) (PCUICLiftSubst.subst s #|Δ| a) =
                                 subst (map (extract Σ Γ) s) #|Δ| (extract Σ (Γ ,,, Γ' ,,, Δ) a)
@@ -140,12 +198,28 @@ Proof.
   - cbn. destruct (_ <=? _) eqn:E1.
     * destruct (nth_error s (n- #|_|)) eqn:E2.
       -- destruct ?. 
-         ++ cbn. now rewrite is_type_extract.
+         ++ cbn. eapply is_type_subst in E.
+            rewrite is_type_extract. reflexivity.
+            cbn in E. rewrite E1, E2 in E. eassumption. eauto. eauto.
+            econstructor; eauto.
+            eauto.
          ++ cbn. rewrite E1.
             rewrite nth_error_map. rewrite E2. cbn.
             erewrite <- subst_context_length.
             erewrite extract_weakening; eauto. admit.
-      -- cbn. destruct ?.
+      -- cbn. symmetry. destruct ?.
+         eapply is_type_subst in E. cbn in E.
+         rewrite E1, E2 in E. rewrite E. reflexivity.
+         all:eauto.
+         econstructor; eauto.
+
+         destruct ?.
+         ++ cbn. exfalso.            
+            
+         ++ cbn. rewrite E1. rewrite nth_error_map, E2. cbn.
+            now rewrite map_length.
+         
+         
          destruct ?. reflexivity. 
          destruct ?.
          ++ reflexivity.

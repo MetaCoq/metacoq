@@ -6,7 +6,7 @@ From MetaCoq.Template
 Require Import config Universes monad_utils utils BasicAst AstUtils UnivSubst.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICReflect PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICPosition
-     PCUICNormal.
+     PCUICNormal PCUICInversion.
 From Equations Require Import Equations.
 Require Import Equations.Prop.DepElim.
 
@@ -333,130 +333,6 @@ Section Reduce.
 
   Derive Signature for typing.
 
-  Lemma inversion_App :
-    forall {Σ Γ u v T},
-      Σ ;;; Γ |- tApp u v : T ->
-      exists na A B,
-        ∥ Σ ;;; Γ |- u : tProd na A B ∥ /\
-        ∥ Σ ;;; Γ |- v : A ∥ /\
-        ∥ Σ ;;; Γ |- B{ 0 := v } <= T ∥.
-  Proof.
-    intros Σ' Γ u v T h. dependent induction h.
-    - exists na, A, B. split ; [| split].
-      + constructor. assumption.
-      + constructor. assumption.
-      + constructor. apply cumul_refl'.
-    - destruct IHh as [na [A' [B' [? [? [?]]]]]].
-      exists na, A', B'. split ; [| split].
-      + assumption.
-      + assumption.
-      + constructor. eapply cumul_trans ; eassumption.
-  Qed.
-
-  Lemma inversion_Rel :
-    forall {Σ Γ n T},
-      Σ ;;; Γ |- tRel n : T ->
-      exists decl,
-        ∥ wf_local Σ Γ ∥ /\
-        (nth_error Γ n = Some decl) /\
-        ∥ Σ ;;; Γ |- lift0 (S n) (decl_type decl) <= T ∥.
-  Proof.
-    intros Σ' Γ n T h.
-    dependent induction h.
-    - exists decl. split ; [| split].
-      + constructor. assumption.
-      + assumption.
-      + constructor. apply cumul_refl'.
-    - destruct IHh as [decl [? [? [?]]]].
-      exists decl. split ; [| split].
-      + assumption.
-      + assumption.
-      + constructor. eapply cumul_trans ; eassumption.
-  Qed.
-
-  (* Weaker inversion lemma *)
-  Lemma weak_inversion_Case :
-    forall {Σ Γ ind npar pred c brs T},
-      Σ ;;; Γ |- tCase (ind, npar) pred c brs : T ->
-      exists args u,
-        ∥ Σ ;;; Γ |- c : mkApps (tInd ind u) args ∥.
-  Proof.
-    intros Σ' Γ ind npar pred c brs T h.
-    dependent induction h.
-    - exists args, u. constructor. assumption.
-    - destruct IHh as [args [u ?]].
-      exists args, u. assumption.
-  Qed.
-
-  Lemma inversion_Case :
-    forall {Γ ind npar p c brs T},
-      Σ ;;; Γ |- tCase (ind, npar) p c brs : T ->
-      ∑ u npar args mdecl idecl pty indctx pctx ps btys,
-        declared_inductive Σ mdecl ind idecl ×
-        ind_npars mdecl = npar ×
-        let pars := firstn npar args in
-        Σ ;;; Γ |- p : pty ×
-        types_of_case ind mdecl idecl pars u p pty =
-        Some (indctx, pctx, ps, btys) ×
-        check_correct_arity (snd Σ) idecl ind u indctx pars pctx ×
-        Exists (fun sf => universe_family ps = sf) (ind_kelim idecl) ×
-        Σ ;;; Γ |- c : mkApps (tInd ind u) args ×
-        All2 (fun x y => fst x = fst y × Σ ;;; Γ |- snd x : snd y) brs btys ×
-        Σ ;;; Γ |- mkApps p (skipn npar args ++ [c]) <= T.
-  Admitted.
-
-  Lemma inversion_Lambda :
-    forall {Σ Γ na A t T},
-      Σ ;;; Γ |- tLambda na A t : T ->
-      exists s1 B,
-        ∥ Σ ;;; Γ |- A : tSort s1 ∥ /\
-        ∥ Σ ;;; Γ ,, vass na A |- t : B ∥ /\
-        ∥ Σ ;;; Γ |- tProd na A B <= T ∥.
-  Proof.
-    intros Σ' Γ na A t T h. dependent induction h.
-    - exists s1, bty. split ; [| split].
-      + constructor. assumption.
-      + constructor. assumption.
-      + constructor. apply cumul_refl'.
-    - destruct IHh as [s1 [B' [? [? [?]]]]].
-      exists s1, B'. split ; [| split].
-      + assumption.
-      + assumption.
-      + constructor. eapply cumul_trans ; eassumption.
-  Qed.
-
-  Lemma inversion_Prod :
-    forall {Σ Γ na A B T},
-      Σ ;;; Γ |- tProd na A B : T ->
-      exists s1 s2,
-        ∥ Σ ;;; Γ |- A : tSort s1 ∥ /\
-        ∥ Σ ;;; Γ ,, vass na A |- B : tSort s2 ∥ /\
-        ∥ Σ ;;; Γ |- tSort (Universe.sort_of_product s1 s2) <= T ∥.
-  Proof.
-    intros Σ' Γ na A B T h. dependent induction h.
-    - exists s1, s2. split ; [| split].
-      + constructor. assumption.
-      + constructor. assumption.
-      + constructor. apply cumul_refl'.
-    - destruct IHh as [s1 [s2 [? [? [?]]]]].
-      exists s1, s2. split ; [| split].
-      + assumption.
-      + assumption.
-      + constructor. eapply cumul_trans ; eassumption.
-  Qed.
-
-  Lemma inversion_Proj :
-    forall {Γ p c T},
-      Σ ;;; Γ |- tProj p c : T ->
-      ∑ u mdecl idecl pdecl args,
-        declared_projection Σ mdecl idecl p pdecl ×
-        Σ ;;; Γ |- c : mkApps (tInd (fst (fst p)) u) args ×
-        #|args| = ind_npars mdecl ×
-        let ty := snd pdecl in
-        Σ ;;; Γ |- (subst0 (c :: List.rev args)) (subst_instance_constr u ty)
-                <= T.
-  Admitted.
-
   Lemma welltyped_context :
     forall Γ t,
       welltyped Σ Γ (zip t) ->
@@ -469,16 +345,20 @@ Section Reduce.
     - cbn. cbn in h. eexists. eassumption.
     - cbn. cbn in h. cbn in IHπ. apply IHπ in h.
       destruct h as [B h].
-      destruct (inversion_App h) as [na [A' [B' [[?] [[?] ?]]]]].
+      apply inversion_App in h as hh.
+      destruct hh as [na [A' [B' [? [? ?]]]]].
       eexists. eassumption.
     - cbn. cbn in h. cbn in IHπ. apply IHπ in h.
       destruct h as [B h].
-      destruct (inversion_App h) as [na [A' [B' [[?] [[?] ?]]]]].
+            apply inversion_App in h as hh.
+      destruct hh as [na [A' [B' [? [? ?]]]]].
       eexists. eassumption.
     - cbn. cbn in h. cbn in IHπ. apply IHπ in h.
       destruct h as [B h].
       destruct indn.
-      destruct (weak_inversion_Case h) as [? [? [?]]].
+      apply inversion_Case in h as hh.
+      destruct hh
+        as [uni [npar [args [mdecl [idecl [pty [indctx [pctx [ps [btys [? [? [? [? [? [? [ht0 [? ?]]]]]]]]]]]]]]]]]].
       eexists. eassumption.
     - cbn. cbn in h. cbn in IHπ. apply IHπ in h.
       destruct h as [T' h].
@@ -487,23 +367,28 @@ Section Reduce.
       eexists. eassumption.
     - cbn. cbn in h. cbn in IHπ. apply IHπ in h.
       destruct h as [T' h].
-      destruct (inversion_Prod h) as [s1 [s2 [[?] [[?] [?]]]]].
+      apply inversion_Prod in h as hh.
+      destruct hh as [s1 [s2 [? [? ?]]]].
       eexists. eassumption.
     - cbn. cbn in h. cbn in IHπ. apply IHπ in h.
       destruct h as [T' h].
-      destruct (inversion_Prod h) as [s1 [s2 [[?] [[?] [?]]]]].
+      apply inversion_Prod in h as hh.
+      destruct hh as [s1 [s2 [? [? ?]]]].
       eexists. eassumption.
     - cbn. cbn in h. cbn in IHπ. apply IHπ in h.
       destruct h as [T' h].
-      destruct (inversion_Lambda h) as [s1 [B [[?] [[?] [?]]]]].
+      apply inversion_Lambda in h as hh.
+      destruct hh as [s1 [B [? [? ?]]]].
       eexists. eassumption.
     - cbn. cbn in h. cbn in IHπ. apply IHπ in h.
       destruct h as [T' h].
-      destruct (inversion_Lambda h) as [s1 [B [[?] [[?] [?]]]]].
+      apply inversion_Lambda in h as hh.
+      destruct hh as [s1 [B [? [? ?]]]].
       eexists. eassumption.
     - cbn. cbn in h. cbn in IHπ. apply IHπ in h.
       destruct h as [B h].
-      destruct (inversion_App h) as [na [A' [B' [[?] [[?] ?]]]]].
+      apply inversion_App in h as hh.
+      destruct hh as [na [A' [B' [? [? ?]]]]].
       eexists. eassumption.
   Qed.
 
@@ -513,7 +398,7 @@ Section Reduce.
       ind = ind'.
   (* Proof. *)
   (*   intros Σ' Γ ind ind' npar pred i u brs args [A h]. *)
-  (*   destruct (weak_inversion_Case h) as [args' [ui [hh]]]. *)
+  (*   destruct (inversion_Case h) as [args' [ui [hh]]]. *)
   (*   clear - hh. induction args. *)
   (*   - cbn in hh. dependent induction hh. *)
   (*     + unfold type_of_constructor in H0. *)
@@ -597,25 +482,6 @@ Section Reduce.
       + eapply cored_red. assumption.
       + cbn in H1. inversion H1.
         constructor. constructor.
-  Qed.
-
-  (* TODO MOVE *)
-  Lemma inversion_Const :
-    forall {Γ c u T},
-      Σ ;;; Γ |- tConst c u : T ->
-      ∑ decl,
-        wf_local Σ Γ ×
-        declared_constant Σ c decl ×
-        consistent_universe_context_instance (snd Σ) (cst_universes decl) u ×
-        Σ ;;; Γ |- subst_instance_constr u (cst_type decl) <= T.
-  Proof.
-    intros Γ c u T h.
-    dependent induction h.
-    - exists decl. repeat split ; auto.
-      apply cumul_refl'.
-    - destruct IHh as [decl [? [? [? ?]]]].
-      exists decl. repeat split ; auto.
-      eapply cumul_trans ; eauto.
   Qed.
 
   (* TODO MOVE *)
@@ -829,13 +695,15 @@ Section Reduce.
     intro Γ.
     induction Γ ; intros c hc eq.
     - destruct hc as [A h].
-      destruct (inversion_Rel h) as [? [[?] [e ?]]].
+      apply inversion_Rel in h as hh.
+      destruct hh as [? [? [e ?]]].
       rewrite e in eq. discriminate eq.
     - destruct c.
       + cbn in eq. discriminate.
       + cbn in eq. eapply IHΓ ; try eassumption.
         destruct hc as [A h].
-        destruct (inversion_Rel h) as [? [[?] [e ?]]].
+        apply inversion_Rel in h as hh.
+        destruct hh as [? [? [e ?]]].
         cbn in e. rewrite e in eq. discriminate.
   Qed.
 
@@ -1442,7 +1310,7 @@ Section Reduce.
           simpl in h. rewrite stack_context_appstack in h.
           destruct h as [T h].
           apply inversion_App in h as hh.
-          destruct hh as [na [A [B [[hs] [? ?]]]]].
+          destruct hh as [na [A [B [hs [? ?]]]]].
           (* We need proper inversion here *)
           admit.
       + unfold zipp.
@@ -1455,7 +1323,7 @@ Section Reduce.
           simpl in h. rewrite stack_context_appstack in h.
           destruct h as [T h].
           apply inversion_App in h as hh.
-          destruct hh as [na [A [B [[hs] [? ?]]]]].
+          destruct hh as [na [A [B [hs [? ?]]]]].
           (* We need proper inversion here *)
           admit.
       + (* Is this one ok? *)

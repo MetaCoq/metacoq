@@ -7,7 +7,7 @@ From MetaCoq.Template Require Import config Universes monad_utils utils BasicAst
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICReflect PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICSafeReduce
      PCUICCumulativity PCUICSR PCUICPosition PCUICEquality PCUICNameless
-     PCUICNormal.
+     PCUICNormal PCUICInversion.
 From Equations Require Import Equations.
 
 Require Import Equations.Prop.DepElim.
@@ -1069,28 +1069,6 @@ Section Lemmata.
     eapply H0 ; try reflexivity. assumption.
   Qed.
 
-    Lemma inversion_LetIn :
-    forall {Γ na b B t T},
-      Σ ;;; Γ |- tLetIn na b B t : T ->
-      exists s1 A,
-        ∥ Σ ;;; Γ |- B : tSort s1 ∥ /\
-        ∥ Σ ;;; Γ |- b : B ∥ /\
-        ∥ Σ ;;; Γ ,, vdef na b B |- t : A ∥ /\
-        ∥ Σ ;;; Γ |- tLetIn na b B A <= T ∥.
-  Proof.
-    intros Γ na b B t T h. dependent induction h.
-    - exists s1, b'_ty. split ; [| split ; [| split]].
-      + constructor. assumption.
-      + constructor. assumption.
-      + constructor. assumption.
-      + constructor. apply cumul_refl'.
-    - destruct IHh as [s1 [A' [? [? [? hc]]]]].
-      exists s1, A'. split ; [| split ; [| split]].
-      all: try assumption.
-      destruct hc.
-      constructor. eapply cumul_trans ; eassumption.
-  Qed.
-
   Lemma welltyped_it_mkLambda_or_LetIn :
     forall Γ Δ t,
       welltyped Σ Γ (it_mkLambda_or_LetIn Δ t) ->
@@ -1102,11 +1080,13 @@ Section Lemmata.
     - assumption.
     - simpl. apply ih in h. cbn in h.
       destruct h as [T h].
-      pose proof (inversion_LetIn h) as [s1 [A' [[?] [[?] [[?] [?]]]]]].
+      apply inversion_LetIn in h as hh.
+      destruct hh as [s1 [A' [? [? [? ?]]]]].
       exists A'. assumption.
     - simpl. apply ih in h. cbn in h.
       destruct h as [T h].
-      pose proof (inversion_Lambda h) as [s1 [B [[?] [[?] [?]]]]].
+      apply inversion_Lambda in h as hh.
+      pose proof hh as [s1 [B [? [? ?]]]].
       exists B. assumption.
   Qed.
 
@@ -1124,7 +1104,8 @@ Section Lemmata.
     - eexists. cbn in h. eassumption.
     - cbn in h. apply IHl in h.
       destruct h as [T h].
-      destruct (inversion_App h) as [na [A' [B' [[?] [[?] [?]]]]]].
+      apply inversion_App in h as hh.
+      destruct hh as [na [A' [B' [? [? ?]]]]].
       eexists. eassumption.
   Qed.
 
@@ -1146,7 +1127,8 @@ Section Lemmata.
     - eexists. eassumption.
     - cbn in h. apply IHl in h.
       destruct h as [B h].
-      destruct (inversion_App h) as [na [A' [B' [[?] [[?] [?]]]]]].
+      apply inversion_App in h as hh.
+      destruct hh as [na [A' [B' [? [? ?]]]]].
       eexists. eassumption.
   Qed.
 
@@ -1335,15 +1317,17 @@ Section Lemmata.
       specialize IHt1 with (1 := hp).
       assert (welltyped Σ Γ t1) as h.
       { destruct hw as [T h].
-        destruct (inversion_App h) as [na [A' [B' [[?] [[?] [?]]]]]].
+        apply inversion_App in h as hh.
+        destruct hh as [na [A' [B' [? [? ?]]]]].
         eexists. eassumption.
       }
       specialize IHt1 with (1 := h).
       destruct t1.
       all: try discriminate IHt1.
       destruct hw as [T hw'].
-      destruct (inversion_App hw') as [na [A' [B' [[hP] [[?] [?]]]]]].
-      destruct (inversion_Prod hP) as [s1 [s2 [[?] [[?] [bot]]]]].
+      apply inversion_App in hw' as ihw'.
+      destruct ihw' as [na [A' [B' [hP [? ?]]]]].
+      apply inversion_Prod in hP as [s1 [s2 [? [? bot]]]].
       (* dependent destruction bot. *)
       (* + discriminate e. *)
       (* + dependent destruction r. *)

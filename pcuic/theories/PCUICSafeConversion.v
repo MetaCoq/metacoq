@@ -7,7 +7,7 @@ From MetaCoq.Template Require Import config Universes monad_utils utils BasicAst
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICReflect PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICSafeReduce
      PCUICCumulativity PCUICSR PCUICPosition PCUICEquality PCUICNameless
-     PCUICSafeLemmata PCUICNormal.
+     PCUICSafeLemmata PCUICNormal PCUICInversion.
 From Equations Require Import Equations.
 
 Require Import Equations.Prop.DepElim.
@@ -720,7 +720,8 @@ Section Conversion.
     apply welltyped_zipx in h. rewrite zipc_appstack in h. cbn in h.
     zip fold in h. apply welltyped_context in h ; auto. simpl in h.
     destruct h as [T h].
-    destruct (inversion_App h) as [na [A' [B' [[?] [[?] [?]]]]]].
+    apply inversion_App in h as hh.
+    destruct hh as [na [A' [B' [? [? ?]]]]].
     eexists. eassumption.
   Qed.
 
@@ -1287,7 +1288,9 @@ Section Conversion.
     apply welltyped_zipx in h1.
     zip fold in h1. apply welltyped_context in h1 ; auto. simpl in h1.
     destruct h1 as [T h1].
-    destruct (weak_inversion_Case h1) as [args [u [?]]].
+    apply inversion_Case in h1 as hh.
+    destruct hh
+      as [uni [npar [args [mdecl [idecl [pty [indctx [pctx [ps [btys [? [? [? [? [? [? [ht0 [? ?]]]]]]]]]]]]]]]]]].
     eexists. eassumption.
   Qed.
   Next Obligation.
@@ -1295,7 +1298,9 @@ Section Conversion.
     apply welltyped_zipx in h2.
     zip fold in h2. apply welltyped_context in h2 ; auto. simpl in h2.
     destruct h2 as [T h2].
-    destruct (weak_inversion_Case h2) as [args [u [?]]].
+    apply inversion_Case in h2 as hh.
+    destruct hh
+      as [uni [npar [args [mdecl [idecl [pty [indctx [pctx [ps [btys [? [? [? [? [? [? [ht0 [? ?]]]]]]]]]]]]]]]]]].
     eexists. eassumption.
   Qed.
   Next Obligation.
@@ -1857,14 +1862,16 @@ Section Conversion.
     apply welltyped_context in h2 as hh2 ; auto. simpl in hh2.
     rewrite stack_context_appstack in hh2.
     destruct hh2 as [A2 hh2].
-    destruct (inversion_App hh2) as [na2 [A2' [B2' [[?] [[hu2] [?]]]]]].
+    apply inversion_App in hh2 as ihh2.
+    destruct ihh2 as [na2 [A2' [B2' [? [hu2 ?]]]]].
     (* We get that u1 is well-typed *)
     apply welltyped_zipx in h1. cbn in h1. cbn.
     zip fold in h1.
     apply welltyped_context in h1 as hh1 ; auto. simpl in hh1.
     rewrite stack_context_appstack in hh1.
     destruct hh1 as [A1 hh1].
-    destruct (inversion_App hh1) as [na1 [A1' [B1' [[?] [[hu1] [?]]]]]].
+    apply inversion_App in hh1 as ihh1.
+    destruct ihh1 as [na1 [A1' [B1' [? [hu1 ?]]]]].
     apply type_it_mkLambda_or_LetIn in hu1 ; auto.
     apply type_it_mkLambda_or_LetIn in hu2 ; auto.
     (* pose proof (subj_conv flags _ hΣ H1 hu1 hu2) as heq. *)

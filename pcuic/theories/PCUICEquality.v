@@ -1,7 +1,7 @@
 (* Distributed under the terms of the MIT license.   *)
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Arith Lia
-     Classes.RelationClasses.
+     Classes.RelationClasses Omega.
 From MetaCoq.Template Require Import config utils Universes BasicAst AstUtils
      UnivSubst.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
@@ -374,4 +374,142 @@ Proof.
   intros φ u v h.
   eapply eq_term_upto_univ_eq_eq_term_upto_univ ; auto.
   intro x. eapply eq_universe'_refl.
+Qed.
+
+Local Ltac lih :=
+  lazymatch goal with
+  | ih : forall v n k, eq_term_upto_univ _ ?u _ -> _
+    |- eq_term_upto_univ _ (lift _ _ ?u) _ =>
+    eapply ih
+  end.
+
+Lemma eq_term_upto_univ_lift :
+  forall R u v n k,
+    eq_term_upto_univ R u v ->
+    eq_term_upto_univ R (lift n k u) (lift n k v).
+Proof.
+  intros R u v n k e.
+  induction u in v, n, k, e |- * using term_forall_list_ind.
+  all: dependent destruction e.
+  all: try (cbn ; constructor ; try lih ; assumption).
+  - cbn. destruct (Nat.leb_spec0 k n0).
+    + constructor.
+    + constructor.
+  - cbn. constructor.
+    eapply Forall2_map.
+    eapply Forall2_impl'.
+    + eassumption.
+    + eapply All_Forall.
+      eapply All_impl ; [ eassumption |].
+      intros x H1 y H2. cbn in H1.
+      eapply H1. assumption.
+  - cbn. constructor ; try lih ; try assumption.
+    eapply Forall2_map. eapply Forall2_impl' ; [ eassumption |].
+    eapply All_Forall. eapply All_impl ; [ eassumption |].
+    intros x H0 y [? ?]. cbn in H0. repeat split ; auto.
+    eapply H0. assumption.
+  - cbn. constructor.
+    eapply Forall2_map. eapply Forall2_impl' ; [ eassumption |].
+    eapply All_Forall. eapply All_impl ; [ eassumption |].
+    intros x [h1 h2] y [? [? ?]].
+    repeat split ; auto.
+    + eapply h1. assumption.
+    + apply Forall2_length in H. rewrite H.
+      eapply h2. assumption.
+  - cbn. constructor.
+    eapply Forall2_map. eapply Forall2_impl' ; [ eassumption |].
+    eapply All_Forall. eapply All_impl ; [ eassumption |].
+    intros x [h1 h2] y [? [? ?]].
+    repeat split ; auto.
+    + eapply h1. assumption.
+    + apply Forall2_length in H. rewrite H.
+      eapply h2. assumption.
+Qed.
+
+Local Ltac sih :=
+  lazymatch goal with
+  | ih : forall v n x y, eq_term_upto_univ _ ?u _ -> _ -> _
+    |- eq_term_upto_univ _ (subst _ _ ?u) _ => eapply ih
+  end.
+
+Lemma eq_term_upto_univ_subst :
+  forall R u v n x y,
+    eq_term_upto_univ R u v ->
+    eq_term_upto_univ R x y ->
+    eq_term_upto_univ R (u{n := x}) (v{n := y}).
+Proof.
+  intros R u v n x y e1 e2.
+  induction u in v, n, x, y, e1, e2 |- * using term_forall_list_ind.
+  all: dependent destruction e1.
+  all: try (cbn ; constructor ; try sih ; assumption).
+  - cbn. destruct (Nat.leb_spec0 n n0).
+    + destruct (eqb_spec n0 n).
+      * subst. replace (n - n) with 0 by omega. cbn.
+        eapply eq_term_upto_univ_lift. assumption.
+      * replace (n0 - n) with (S (n0 - (S n))) by omega. cbn.
+        rewrite nth_error_nil. constructor.
+    + constructor.
+  - cbn. constructor.
+    eapply Forall2_map. eapply Forall2_impl' ; [ eassumption |].
+    eapply All_Forall.
+    eapply All_impl ; [ eassumption |].
+    intros x0 H1 y0 H2. cbn in H1.
+    eapply H1. all: assumption.
+  - cbn. constructor ; try sih ; try assumption.
+    eapply Forall2_map. eapply Forall2_impl' ; [ eassumption |].
+    eapply All_Forall. eapply All_impl ; [ eassumption |].
+    intros ? H0 ? [? ?]. cbn in H0. repeat split ; auto.
+    eapply H0. all: assumption.
+  - cbn. constructor.
+    eapply Forall2_map. eapply Forall2_impl' ; [ eassumption |].
+    eapply All_Forall. eapply All_impl ; [ eassumption |].
+    intros ? [h1 h2] ? [? [? ?]].
+    repeat split ; auto.
+    + eapply h1. all: assumption.
+    + apply Forall2_length in H. rewrite H.
+      eapply h2. all: assumption.
+  - cbn. constructor.
+    eapply Forall2_map. eapply Forall2_impl' ; [ eassumption |].
+    eapply All_Forall. eapply All_impl ; [ eassumption |].
+    intros ? [h1 h2] ? [? [? ?]].
+    repeat split ; auto.
+    + eapply h1. all: assumption.
+    + apply Forall2_length in H. rewrite H.
+      eapply h2. all: assumption.
+Qed.
+
+Lemma eq_term_upto_univ_mkApps_l_inv :
+  forall R u l t,
+    eq_term_upto_univ R (mkApps u l) t ->
+    exists u' l',
+      eq_term_upto_univ R u u' /\
+      Forall2 (eq_term_upto_univ R) l l' /\
+      t = mkApps u' l'.
+Proof.
+  intros R u l t h.
+  induction l in u, t, h |- *.
+  - cbn in h. exists t, []. split ; auto.
+  - cbn in h. apply IHl in h as [u' [l' [h1 [h2 h3]]]].
+    dependent destruction h1. subst.
+    eexists. eexists. split ; [ | split ].
+    + eassumption.
+    + constructor.
+      * eassumption.
+      * eassumption.
+    + cbn. reflexivity.
+Qed.
+
+Lemma eq_term_upto_univ_mkApps :
+  forall R u1 l1 u2 l2,
+    eq_term_upto_univ R u1 u2 ->
+    Forall2 (eq_term_upto_univ R) l1 l2 ->
+    eq_term_upto_univ R (mkApps u1 l1) (mkApps u2 l2).
+Proof.
+  intros R u1 l1 u2 l2 hu hl.
+  induction l1 in u1, u2, l2, hu, hl |- *.
+  - inversion hl. subst. assumption.
+  - inversion hl. subst. simpl.
+    eapply IHl1.
+    + constructor. all: assumption.
+    + assumption.
 Qed.

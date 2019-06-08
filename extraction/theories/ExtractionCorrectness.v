@@ -17,6 +17,197 @@ Module P := PCUICWcbvEval.
 
 Ltac inv H := inversion H; subst; clear H.
 
+Lemma erases_extract Σ Γ t T :
+  wf Σ ->
+  Σ ;;; Γ |- t : T ->
+  erases Σ Γ t (extract Σ Γ t).
+Proof.
+  Hint Constructors typing erases.
+  Hint Resolve is_type_or_proof_spec.
+  intros.
+  pose proof (typing_wf_local X0).
+  revert Σ X Γ X1 t T X0.  
+  eapply typing_ind_env; intros.
+  all: try now cbn; destruct ?; [ 
+    econstructor; eauto;
+    eapply is_type_or_proof_spec; eauto | eauto ].
+  all: try now cbn; destruct ?;
+    econstructor; eauto;
+    eapply is_type_or_proof_spec; eauto;
+    match goal with [H : is_type_or_proof ?Σ ?Γ ?t = false |- _] =>
+                    enough (is_type_or_proof Σ Γ t = true) by congruence;
+                      eapply is_type_or_proof_spec; eauto;
+                        eexists; split; eauto; now left
+    end.
+  - cbn.  destruct ?.
+    econstructor; eauto.
+    eapply is_type_or_proof_spec; eauto.
+    enough (is_type_or_proof Σ Γ (tInd ind u) = true) by congruence.
+    eapply is_type_or_proof_spec. eauto.
+    eexists; split; eauto. left.
+    assert (Σ;;; Γ |- tInd ind u : PCUICUnivSubst.subst_instance_constr u (PCUICAst.ind_type idecl)). econstructor; eauto.
+    eapply PCUICValidity.validity in X1 as [_ ?]; eauto.
+    Lemma WfArity_Arity Σ Γ t :
+      PCUICGeneration.isWfArity_or_Type Σ Γ t -> isArity t.
+    Proof.
+      intros [].
+      - destruct i as (? & ? & ? & _).
+        revert e. generalize (@nil PCUICAst.context_decl).
+        revert x x0. induction t; cbn; intros; try now inv e.
+      - admit.
+    Admitted.
+    now eapply WfArity_Arity.
+  - cbn. destruct ?.
+    econstructor. econstructor; eauto.
+    eapply All2_impl; eauto. firstorder.
+    eapply is_type_or_proof_spec; eauto.
+    econstructor; eauto.
+    eapply All2_impl; eauto. firstorder.
+    destruct ?.
+    + destruct ?.
+      * eauto.
+      * destruct p0. econstructor.
+        destruct (extract Σ Γ c); inv E0. eauto.
+        inv X3. eapply X4.
+    + econstructor. eauto.
+      Lemma All2_map_right {A B C} (P : A -> C -> Type) l l' (f : B -> C) :
+        All2 (fun x y => P x (f y)) l l' -> All2 P  l (map f l').
+      Proof. intros. rewrite <- (map_id l). eapply All2_map; eauto. Qed.
+      eapply All2_map_right.
+      cbn.
+      eapply All_All2.
+      2:{ intros. eapply X4. }
+      eapply All2_All_left. eassumption.
+      firstorder.
+  - cbn.
+    assert (wf_local Σ (Γ ,,, PCUICLiftSubst.fix_context mfix)).
+    {  destruct mfix. eauto. inv X0.
+       eapply typing_wf_local. eapply X1. }
+    destruct ?.
+    + econstructor.
+      econstructor; eauto.
+      2:{  eapply is_type_or_proof_spec. econstructor; eauto. 
+           eapply All_impl. eauto. firstorder. eassumption. }
+      eapply All_impl; firstorder.
+    + econstructor.
+      unfold extract_mfix.
+      eapply All2_map_right.
+      eapply All_All2. eauto.
+      firstorder.
+  - cbn.
+    assert (wf_local Σ (Γ ,,, PCUICLiftSubst.fix_context mfix)).
+    {  destruct mfix. eauto. inv X0.
+       eapply typing_wf_local. eapply X1. }
+    destruct ?.
+    + econstructor.
+      econstructor; eauto.
+      2:{  eapply is_type_or_proof_spec. econstructor; eauto. 
+           eapply All_impl. eauto. firstorder. eassumption. }
+      eapply All_impl; firstorder.
+    + econstructor.
+      unfold extract_mfix.
+      eapply All2_map_right.
+      eapply All_All2. eauto.
+      firstorder.
+  - eauto.
+Qed.
+    
+Lemma extract_erases_ind Σ t T t' :
+  wf Σ ->
+  Σ ;;; [] |- t : T ->
+  computational_type Σ T ->              
+  PCUICWcbvEval.value t ->
+  erases Σ [] t t' ->
+  t' = extract Σ [] t.
+Proof.
+  intros. destruct T; destruct H as (? & ? & ?); cbn in *; try congruence.
+  - destruct T1; inv H.
+    admit.
+  - inv H. admit.
+Admitted.
+
+Record extraction_pre (Σ : PCUICAst.global_context) : Type
+  := Build_extraction_pre
+  { extr_env_axiom_free' : is_true (axiom_free (fst Σ));
+    extr_env_wf' : wf Σ }.
+
+Definition erases_global (Σ : PCUICAst.global_declarations) (Σ' : global_declarations) := True.
+
+Lemma Is_type_eval Σ Γ t v:
+  wf Σ ->
+  PCUICWcbvEval.eval Σ Γ t v ->
+  Is_Type_or_Proof Σ Γ t ->
+  Is_Type_or_Proof Σ Γ v.
+Proof.
+  intros ? ? (T & ? & ?).
+  exists T. split.
+  - eapply subject_reduction_eval; eauto.
+  - eauto.
+Qed.
+
+Lemma Is_type_lambda Σ Γ na T1 t :
+  wf Σ ->
+  Is_Type_or_Proof Σ Γ (PCUICAst.tLambda na T1 t) ->
+  Is_Type_or_Proof Σ (PCUICAst.vass na T1 :: Γ) t.
+Proof.
+  intros ? (T & ? & ?).
+  eapply type_Lambda_inv in t0 as (? & ? & [] & ?).
+  exists x0. split; eauto. destruct s as [ | (u & ? & ?)].
+  - left. admit.
+  - right. exists u. split; eauto.
+Admitted.
+
+Lemma erases_correct Σ t T t' v Σ' :
+  extraction_pre Σ ->
+  Σ ;;; [] |- t : T ->
+  erases Σ [] t t' ->
+  erases_global Σ Σ' ->
+  PCUICWcbvEval.eval Σ [] t v ->
+  exists v', erases Σ [] v v' /\ eval Σ' t' v'.
+Proof.
+  intros pre Hty He Heg H.
+  revert T Hty t' He.
+  induction H using PCUICWcbvEval.eval_evals_ind; intros T Hty t' He.
+  - inv pre.
+    assert (Hty' := Hty).
+    Hint Constructors PCUICWcbvEval.eval.
+    assert (PCUICWcbvEval.eval Σ [] (PCUICAst.tApp f a) res) by eauto.
+    eapply PCUICValidity.invert_type_App in Hty as (? & ? & ? & [] & ?).
+        
+    inv He.
+    + eapply IHeval1 in H4 as (vf' & Hvf' & He_vf'); eauto.
+      eapply IHeval2 in H6 as (vu' & Hvu' & He_vu'); eauto.
+      pose proof (subject_reduction_eval Σ [] _ _ _ extr_env_wf'0 t0 H).
+        eapply type_Lambda_inv in X0 as (? & ? & [] & ?).
+        assert (Σ ;;; [] |- a' : t). {
+          eapply subject_reduction_eval; eauto.
+          eapply cumul_Prod_inv in c0 as [].
+          econstructor. eassumption. eauto. eapply c0. }
+      inv Hvf'.
+      * assert (Σ;;; [] |- PCUICLiftSubst.subst1 a' 0 b ⇝ℇ subst1 vu' 0 t').
+        eapply (erases_subst Σ [] [PCUICAst.vass na t] [] b [a'] t'); eauto.
+        econstructor. econstructor. rewrite parsubst_empty. eassumption.
+        eapply IHeval3 in H2 as (v' & Hv' & He_v').
+        -- exists v'. split; eauto.
+           econstructor; eauto.
+        -- eapply substitution0; eauto. 
+      * exists tBox. split. econstructor.
+        eapply subject_reduction_eval with (t := PCUICAst.tApp f a); eauto.
+        eapply Is_type_lambda in X2; eauto.
+        eapply (is_type_subst Σ [] [PCUICAst.vass na _] [] _ [a']) in X2.
+        cbn in X2.
+        eapply Is_type_eval.
+        eauto. eapply H1. eassumption.
+        all: eauto. econstructor. econstructor. rewrite parsubst_empty.
+        eauto. econstructor. eauto.
+    + exists tBox. split. 2:econstructor; eauto.
+      econstructor.
+      eapply subject_reduction_eval with (t := PCUICAst.tApp f a); eauto.
+      eapply Is_type_eval; eauto.
+  - 
+Admitted.        
+      
+                 
 (* Lemma is_constructor_extract Σ n L : *)
 (*   PCUICTyping.is_constructor n L -> *)
 (*   is_constructor n (map (extract Σ []) L). *)
@@ -62,19 +253,63 @@ Admitted.
 (* Proof. *)
 (* Admitted. *)
 
-Inductive extr_pre (Σ : PA.global_context) t T :=
-  { extr_typed : Σ ;;; [] |- t : T;
-    extr_env_axiom_free : axiom_free (fst Σ) }.
+(* Inductive extr_pre (Σ : PA.global_context) t T := *)
+(*   { extr_typed : Σ ;;; [] |- t : T; *)
+(*     extr_env_axiom_free : axiom_free (fst Σ) }. *)
 
-(* Lemma cumul_is_arity: *)
-(*   forall (H : Fuel) (Σ : PCUICAst.global_context) (T' T'' : PCUICAst.term), *)
-(*     Σ;;; [] |- T'' <= T' -> is_arity Σ [] H T'' = is_arity Σ [] H T'. *)
+(* Lemma cumul_is_arity: *)t' v'.
+  
+                 
+(* Lemma is_constructor_extract Σ n L : *)
+(*   PCUICTyping.is_constructor n L -> *)
+(*   is_constructor n (map (extract Σ []) L). *)
 (* Proof. *)
-(*   intros H Σ T' T''. *)
+(* Admitted. (* this is probably wrong *) *) 
+
+(* Lemma mkApps_inj a b l1 l2  : *)
+(*   mkApps a l1 = mkApps b l2 -> (~ exists a1 a2, a = tApp a1 a2) -> (~ exists b1 b2, b = tApp b1 b2) -> *)
+(*   a = b /\ l1 = l2. *)
+(* Proof. *)
+(* (*   induction l1 in a, b, l2 |- *; cbn; intros. *) *)
+(* (*   - destruct l2; eauto. cbn in H. subst. destruct H0. clear H1. *) *)
+(* (*     revert b t; induction l2; cbn. *) *)
+(* (*     + eauto. *) *)
+(* (*     + intros. edestruct IHl2 as (? & ? & ?). eauto. *) *)
+(* (*   - destruct l2; eauto. cbn in H. *) *)
+(* (*     + subst. edestruct H1. *) *)
+(* (*       clear. revert a a0; induction l1; cbn. *) *)
+(* (*       * eauto. *) *)
+(* (*       * intros. edestruct IHl1 as (? & ? & ?). eauto. *) *)
+(* (*     + cbn in H. *) *)
+    
+
+(* (*     epose proof (IHl1 _ _ _ eq_refl). *) *)
+(* (* Qed. *)     *)
 (* Admitted. *)
 
 
-Lemma red_is_type (Σ : PCUICAst.global_context) (t v : PCUICAst.term) (* T : *)
+(** ** Assumptions on typing of tCase *)
+
+Lemma no_empty_case_in_empty_context Σ ind npar p c T :
+  Σ;;; [] |- PCUICAst.tCase (ind, npar) p c [] : T -> False.
+Proof.
+Admitted.
+
+
+(* Lemma prop_case_is_singleton  Σ ind npar p T i u args brs mdecl idecl : *)
+(*   PCUICTyping.declared_inductive (fst Σ) mdecl ind idecl -> *)
+(*   PCUICAst.ind_npars mdecl = npar -> *)
+(*   is_type_or_proof Σ [] (PCUICAst.tConstruct ind i u) = true -> *)
+(*   Σ;;; [] |- PCUICAst.tCase (ind, npar) p (PCUICAst.mkApps (PCUICAst.tConstruct ind i u) args) brs : T -> #|brs| = 1 /\ i = 0 /\ *)
+(*                                                                                                               Forall (fun a => is_type_or_proof Σ [] a = true) (skipn (npar) args). *)
+(* Proof. *)
+(* Admitted. *)
+
+(* Inductive extr_pre (Σ : PA.global_context) t T := *)
+(*   { extr_typed : Σ ;;; [] |- t : T; *)
+(*     extr_env_axiom_free : axiom_free (fst Σ) }. *)
+
+(* Lemma cumul_is_arity: *)Lemma red_is_type (Σ : PCUICAst.global_context) (t v : PCUICAst.term) (* T : *)
   (* wf Σ -> Σ ;;; [] |- t : T ->  *) :
   red Σ [] t v -> Extract.is_type_or_proof Σ [] t = Extract.is_type_or_proof Σ [] v.
 Proof.

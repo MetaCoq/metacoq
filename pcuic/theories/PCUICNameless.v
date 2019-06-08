@@ -5,7 +5,7 @@ From Coq Require Import Bool String List Program BinPos Compare_dec Arith Lia
 From MetaCoq.Template
 Require Import config monad_utils utils AstUtils UnivSubst.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
-     PCUICTyping PCUICCumulativity PCUICPosition.
+     PCUICTyping PCUICCumulativity PCUICPosition PCUICUnivSubst.
 From Equations Require Import Equations.
 Require Import Equations.Prop.DepElim.
 
@@ -547,4 +547,35 @@ Lemma nlctx_stack_context :
 Proof.
   intro ρ. induction ρ.
   all: (simpl ; rewrite ?IHρ ; reflexivity).
+Qed.
+
+Lemma nl_subst_instance_constr :
+  forall u b,
+    nl (subst_instance_constr u b) = subst_instance_constr u (nl b).
+Proof.
+  intros u b.
+  induction b using term_forall_list_ind.
+  all: try (simpl ; rewrite ?IHb, ?IHb1, ?IHb2, ?IHb3 ; reflexivity).
+  - simpl. f_equal. induction H.
+    + reflexivity.
+    + simpl. rewrite p, IHAll. reflexivity.
+  - simpl. rewrite IHb1, IHb2. f_equal.
+    induction X.
+    + reflexivity.
+    + simpl. f_equal.
+      * unfold on_snd. destruct p, x. simpl in *.
+        rewrite p0. reflexivity.
+      * apply IHX.
+  - simpl. f_equal. induction X ; try reflexivity.
+    simpl. rewrite IHX. f_equal.
+    destruct p as [h1 h2].
+    destruct x. simpl in *.
+    unfold map_def, map_def_anon. cbn.
+    rewrite h1, h2. reflexivity.
+  - simpl. f_equal. induction X ; try reflexivity.
+    simpl. rewrite IHX. f_equal.
+    destruct p as [h1 h2].
+    destruct x. simpl in *.
+    unfold map_def, map_def_anon. cbn.
+    rewrite h1, h2. reflexivity.
 Qed.

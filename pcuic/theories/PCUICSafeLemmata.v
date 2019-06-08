@@ -1565,37 +1565,6 @@ Section Lemmata.
       eq_term G u w.
   Admitted.
 
-  Lemma nl_subst_instance_constr :
-    forall u b,
-      nl (subst_instance_constr u b) = subst_instance_constr u (nl b).
-  Proof.
-    intros u b.
-    induction b using term_forall_list_ind.
-    all: try (simpl ; rewrite ?IHb, ?IHb1, ?IHb2, ?IHb3 ; reflexivity).
-    - simpl. f_equal. induction H.
-      + reflexivity.
-      + simpl. rewrite p, IHAll. reflexivity.
-    - simpl. rewrite IHb1, IHb2. f_equal.
-      induction X.
-      + reflexivity.
-      + simpl. f_equal.
-        * unfold on_snd. destruct p, x. simpl in *.
-          rewrite p0. reflexivity.
-        * apply IHX.
-    - simpl. f_equal. induction X ; try reflexivity.
-      simpl. rewrite IHX. f_equal.
-      destruct p as [h1 h2].
-      destruct x. simpl in *.
-      unfold map_def, map_def_anon. cbn.
-      rewrite h1, h2. reflexivity.
-    - simpl. f_equal. induction X ; try reflexivity.
-      simpl. rewrite IHX. f_equal.
-      destruct p as [h1 h2].
-      destruct x. simpl in *.
-      unfold map_def, map_def_anon. cbn.
-      rewrite h1, h2. reflexivity.
-  Qed.
-
   Lemma positionR_context_position_inv :
     forall Γ p q,
       positionR (context_position Γ ++ p) (context_position Γ ++ q) ->

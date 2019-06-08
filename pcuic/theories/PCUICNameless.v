@@ -5,7 +5,7 @@ From Coq Require Import Bool String List Program BinPos Compare_dec Arith Lia
 From MetaCoq.Template
 Require Import config monad_utils utils AstUtils UnivSubst.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
-     PCUICTyping PCUICCumulativity.
+     PCUICTyping PCUICCumulativity PCUICPosition.
 From Equations Require Import Equations.
 Require Import Equations.Prop.DepElim.
 
@@ -447,3 +447,104 @@ Definition nl_global_decl (d : global_decl) : global_decl :=
 Definition nlg (Σ : global_context) : global_context :=
   let '(Σ, φ) := Σ in
   (map nl_global_decl Σ, φ).
+
+Fixpoint nlstack (π : stack) : stack :=
+  match π with
+  | ε => ε
+
+  | App u ρ =>
+    App (nl u) (nlstack ρ)
+
+  | Fix f n args ρ =>
+    Fix (map (map_def_anon nl nl) f) n (map nl args) (nlstack ρ)
+
+  | Case indn p brs ρ =>
+    Case indn (nl p) (map (on_snd nl) brs) (nlstack ρ)
+
+  | Proj p ρ =>
+    Proj p (nlstack ρ)
+
+  | Prod_l na B ρ =>
+    Prod_l nAnon (nl B) (nlstack ρ)
+
+  | Prod_r na A ρ =>
+    Prod_r nAnon (nl A) (nlstack ρ)
+
+  | Lambda_ty na b ρ =>
+    Lambda_ty nAnon (nl b) (nlstack ρ)
+
+  | Lambda_tm na A ρ =>
+    Lambda_tm nAnon (nl A) (nlstack ρ)
+
+  | coApp t ρ =>
+    coApp (nl t) (nlstack ρ)
+  end.
+
+Lemma nlstack_appstack :
+  forall args ρ,
+    nlstack (appstack args ρ) = appstack (map nl args) (nlstack ρ).
+Proof.
+  intros args ρ.
+  induction args in ρ |- *.
+  - reflexivity.
+  - simpl. f_equal. eapply IHargs.
+Qed.
+
+Lemma nlstack_cat :
+  forall ρ θ,
+    nlstack (ρ +++ θ) = nlstack ρ +++ nlstack θ.
+Proof.
+  intros ρ θ.
+  induction ρ in θ |- *.
+  all: solve [ simpl ; rewrite ?IHρ ; reflexivity ].
+Qed.
+
+Lemma stack_position_nlstack :
+  forall ρ,
+    stack_position (nlstack ρ) = stack_position ρ.
+Proof.
+  intros ρ.
+  induction ρ.
+  all: (simpl ; rewrite ?IHρ ; reflexivity).
+Qed.
+
+Lemma nl_it_mkLambda_or_LetIn :
+  forall Γ t,
+    nl (it_mkLambda_or_LetIn Γ t) =
+    it_mkLambda_or_LetIn (nlctx Γ) (nl t).
+Proof.
+  intros Γ t.
+  induction Γ as [| [na [b|] B] Γ ih] in t |- *.
+  - reflexivity.
+  - simpl. cbn. rewrite ih. reflexivity.
+  - simpl. cbn. rewrite ih. reflexivity.
+Qed.
+
+Lemma nl_mkApps :
+  forall t l,
+    nl (mkApps t l) = mkApps (nl t) (map nl l).
+Proof.
+  intros t l.
+  induction l in t |- *.
+  - reflexivity.
+  - simpl. rewrite IHl. reflexivity.
+Qed.
+
+Lemma nlctx_app_context :
+  forall Γ Δ,
+    nlctx (Γ ,,, Δ) = nlctx Γ ,,, nlctx Δ.
+Proof.
+  intros Γ Δ.
+  induction Δ as [| [na [b|] B] Δ ih] in Γ |- *.
+  - reflexivity.
+  - simpl. f_equal. apply ih.
+  - simpl. f_equal. apply ih.
+Qed.
+
+Lemma nlctx_stack_context :
+  forall ρ,
+    nlctx (stack_context ρ) = stack_context (nlstack ρ).
+Proof.
+  intro ρ. induction ρ.
+  all: (simpl ; rewrite ?IHρ ; reflexivity).
+Qed.

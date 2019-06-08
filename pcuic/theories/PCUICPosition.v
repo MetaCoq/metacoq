@@ -19,6 +19,7 @@ Inductive choice :=
 | app_l
 | app_r
 | case_c
+| proj_c
 | lam_ty
 | lam_tm
 | prod_l
@@ -41,6 +42,7 @@ Fixpoint validpos t (p : position) {struct p} :=
     | app_l, tApp u v => validpos u p
     | app_r, tApp u v => validpos v p
     | case_c, tCase indn pr c brs => validpos c p
+    | proj_c, tProj pr c => validpos c p
     | lam_ty, tLambda na A t => validpos A p
     | lam_tm, tLambda na A t => validpos t p
     | prod_l, tProd na A B => validpos A p
@@ -63,6 +65,9 @@ Definition dapp_r u v (p : pos v) : pos (tApp u v) :=
 
 Definition dcase_c indn pr c brs (p : pos c) : pos (tCase indn pr c brs) :=
   exist (case_c :: ` p) (proj2_sig p).
+
+Definition dproj_c pr c (p : pos c) : pos (tProj pr c) :=
+  exist (proj_c :: ` p) (proj2_sig p).
 
 Definition dlam_ty na A t (p : pos A) : pos (tLambda na A t) :=
   exist (lam_ty :: ` p) (proj2_sig p).
@@ -92,6 +97,14 @@ Definition posR {t} (p q : pos t) : Prop :=
 Lemma posR_Acc :
   forall t p, Acc (@posR t) p.
 Proof.
+  assert (forall pr c p, Acc posR p -> Acc posR (dproj_c pr c p))
+    as Acc_proj_c.
+  { intros pr c p h.
+    induction h as [p ih1 ih2].
+    constructor. intros [q e] h.
+    dependent destruction h. cbn in e.
+    eapply (ih2 (exist p0 e)). assumption.
+  }
   assert (forall na A b t p, Acc posR p -> Acc posR (dlet_in na A b t p))
     as Acc_let_in.
   { intros na A b t p h.
@@ -225,6 +238,16 @@ Proof.
     + destruct c ; noconf e.
       eapply Acc_case_c with (p := exist q e).
       eapply IHt2.
+  - destruct q as [q e]. destruct q as [| c q].
+    + constructor. intros [p' e'] h.
+      unfold posR in h. cbn in h.
+      dependent destruction h.
+      destruct c ; noconf e'.
+      eapply Acc_proj_c with (p := exist p0 e').
+      eapply IHt.
+    + destruct c ; noconf e.
+      eapply Acc_proj_c with (p := exist q e).
+      eapply IHt.
 Qed.
 
 Fixpoint atpos t (p : position) {struct p} : term :=
@@ -235,6 +258,7 @@ Fixpoint atpos t (p : position) {struct p} : term :=
     | app_l, tApp u v => atpos u p
     | app_r, tApp u v => atpos v p
     | case_c, tCase indn pr c brs => atpos c p
+    | proj_c, tProj pr c => atpos c p
     | lam_ty, tLambda na A t => atpos A p
     | lam_tm, tLambda na A t => atpos t p
     | prod_l, tProd na A B => atpos A p
@@ -344,6 +368,7 @@ Inductive stack : Type :=
 | App (t : term) (π : stack)
 | Fix (f : mfixpoint term) (n : nat) (args : list term) (π : stack)
 | Case (indn : inductive * nat) (p : term) (brs : list (nat * term)) (π : stack)
+| Proj (p : projection) (π : stack)
 | Prod_l (na : name) (B : term) (π : stack)
 | Prod_r (na : name) (A : term) (π : stack)
 | Lambda_ty (na : name) (b : term) (π : stack)
@@ -363,6 +388,7 @@ Fixpoint zipc t stack :=
   | App u π => zipc (tApp t u) π
   | Fix f n args π => zipc (tApp (mkApps (tFix f n) args) t) π
   | Case indn pred brs π => zipc (tCase indn pred t brs) π
+  | Proj p π => zipc (tProj p t) π
   | Prod_l na B π => zipc (tProd na t B) π
   | Prod_r na A π => zipc (tProd na A t) π
   | Lambda_ty na b π => zipc (tLambda na t b) π
@@ -492,6 +518,7 @@ Fixpoint stack_context π : context :=
   | App u π => stack_context π
   | Fix f n args π => stack_context π
   | Case indn pred brs π => stack_context π
+  | Proj p π => stack_context π
   | Prod_l na B π => stack_context π
   | Prod_r na A π => stack_context π ,, vass na A
   | Lambda_ty na u π => stack_context π
@@ -515,6 +542,7 @@ Fixpoint stack_position π : position :=
   | App u ρ => stack_position ρ ++ [ app_l ]
   | Fix f n args ρ => stack_position ρ ++ [ app_r ]
   | Case indn pred brs ρ => stack_position ρ ++ [ case_c ]
+  | Proj pr ρ => stack_position ρ ++ [ proj_c ]
   | Prod_l na B ρ => stack_position ρ ++ [ prod_l ]
   | Prod_r na A ρ => stack_position ρ ++ [ prod_r ]
   | Lambda_ty na u ρ => stack_position ρ ++ [ lam_ty ]
@@ -723,6 +751,7 @@ Section Stacks.
     | App u ρ => App u (stack_cat ρ θ)
     | Fix f n args ρ => Fix f n args (stack_cat ρ θ)
     | Case indn p brs ρ => Case indn p brs (stack_cat ρ θ)
+    | Proj p ρ => Proj p (stack_cat ρ θ)
     | Prod_l na B ρ => Prod_l na B (stack_cat ρ θ)
     | Prod_r na A ρ => Prod_r na A (stack_cat ρ θ)
     | Lambda_ty na u ρ => Lambda_ty na u (stack_cat ρ θ)

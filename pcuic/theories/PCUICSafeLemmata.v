@@ -6,7 +6,8 @@ From MetaCoq.Template Require Import config Universes monad_utils utils BasicAst
      AstUtils UnivSubst.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICReflect PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICSafeReduce
-     PCUICCumulativity PCUICSR PCUICPosition PCUICEquality PCUICNameless.
+     PCUICCumulativity PCUICSR PCUICPosition PCUICEquality PCUICNameless
+     PCUICNormal.
 From Equations Require Import Equations.
 
 Require Import Equations.Prop.DepElim.
@@ -63,20 +64,6 @@ Section Lemmata.
       eq_term (snd Σ) u v ->
       welltyped Σ Γ v.
   Admitted.
-
-  Lemma red_welltyped :
-    forall {Γ u v},
-      welltyped Σ Γ u ->
-      ∥ red (fst Σ) Γ u v ∥ ->
-      welltyped Σ Γ v.
-  Proof.
-    intros Γ u v h [r].
-    revert h. induction r ; intros h.
-    - assumption.
-    - specialize IHr with (1 := ltac:(eassumption)).
-      destruct IHr as [A ?]. exists A.
-      eapply PSR.subject_reduction ; eassumption.
-  Qed.
 
   Lemma red_cored_or_eq :
     forall Γ u v,
@@ -429,6 +416,9 @@ Section Lemmata.
       eapply cumul_it_mkLambda_or_LetIn.
       assumption.
     - unfold zippx. simpl.
+      eapply cumul_it_mkLambda_or_LetIn.
+      assumption.
+    - unfold zippx. simpl.
       eapply cumul_it_mkLambda_or_LetIn. cbn.
       (* Need cumul for Lambda again *)
       admit.
@@ -682,24 +672,6 @@ Section Lemmata.
   Qed.
 
   (* TODO MOVE *)
-  Fixpoint nApp t :=
-    match t with
-    | tApp u _ => S (nApp u)
-    | _ => 0
-    end.
-
-  (* TODO MOVE *)
-  Lemma nApp_mkApps :
-    forall t l,
-      nApp (mkApps t l) = nApp t + #|l|.
-  Proof.
-    intros t l.
-    induction l in t |- *.
-    - simpl. omega.
-    - simpl. rewrite IHl. cbn. omega.
-  Qed.
-
-  (* TODO MOVE *)
   Lemma mkApps_nApp_inj :
     forall u u' l l',
       nApp u = nApp u' ->
@@ -719,18 +691,6 @@ Section Lemmata.
         * destruct e as [e1 e2].
           inversion e1. subst. auto.
         * cbn. f_equal. auto.
-  Qed.
-
-  (* TODO MOVE *)
-  Lemma isApp_false_nApp :
-    forall u,
-      isApp u = false ->
-      nApp u = 0.
-  Proof.
-    intros u h.
-    destruct u.
-    all: try reflexivity.
-    discriminate.
   Qed.
 
   (* TODO MOVE *)
@@ -761,28 +721,6 @@ Section Lemmata.
     apply eq_term_upto_univ_isApp in h1 as hh1. rewrite hu in hh1.
     apply mkApps_notApp_inj in h3 ; auto.
     destruct h3 as [? ?]. subst. split ; auto.
-  Qed.
-
-  (* TODO MOVE *)
-  Lemma decompose_app_rec_notApp :
-    forall t l u l',
-      decompose_app_rec t l = (u, l') ->
-      isApp u = false.
-  Proof.
-    intros t l u l' e.
-    induction t in l, u, l', e |- *.
-    all: try (cbn in e ; inversion e ; reflexivity).
-    cbn in e. eapply IHt1. eassumption.
-  Qed.
-
-  (* TODO MOVE *)
-  Lemma decompose_app_notApp :
-    forall t u l,
-      decompose_app t = (u, l) ->
-      isApp u = false.
-  Proof.
-    intros t u l e.
-    eapply decompose_app_rec_notApp. eassumption.
   Qed.
 
   (* TODO MOVE? *)
@@ -999,6 +937,9 @@ Section Lemmata.
 
     | Case indn p brs ρ =>
       Case indn (nl p) (map (on_snd nl) brs) (nlstack ρ)
+
+    | Proj p ρ =>
+      Proj p (nlstack ρ)
 
     | Prod_l na B ρ =>
       Prod_l nAnon (nl B) (nlstack ρ)
@@ -1278,7 +1219,7 @@ Section Lemmata.
     pose proof (decompose_stack_eq _ _ _ e). subst.
     eapply it_mkLambda_or_LetIn_welltyped.
     rewrite zipc_appstack in h. zip fold in h.
-    apply welltyped_context in h. assumption.
+    apply welltyped_context in h ; auto.
   Qed.
 
   Lemma lookup_env_const_name :
@@ -1364,34 +1305,6 @@ Section Lemmata.
     - eapply cored_trans.
       + eapply IHh.
       + constructor. assumption.
-  Qed.
-
-  Lemma cored_red_cored :
-    forall Γ u v w,
-      cored Σ Γ w v ->
-      red Σ Γ u v ->
-      cored Σ Γ w u.
-  Proof.
-    intros Γ u v w h1 h2.
-    revert u h2. induction h1 ; intros t h2.
-    - eapply cored_red_trans ; eassumption.
-    - eapply cored_trans.
-      + eapply IHh1. assumption.
-      + assumption.
-  Qed.
-
-  Lemma red_cored_cored :
-    forall Γ u v w,
-      red Σ Γ v w ->
-      cored Σ Γ v u ->
-      cored Σ Γ w u.
-  Proof.
-    intros Γ u v w h1 h2.
-    revert u h2. induction h1 ; intros t h2.
-    - assumption.
-    - eapply cored_trans.
-      + eapply IHh1. assumption.
-      + assumption.
   Qed.
 
   Fixpoint isAppProd (t : term) : bool :=
@@ -1737,5 +1650,249 @@ Section Lemmata.
     eapply nleq_term_zipc.
     assumption.
   Qed.
+
+  Lemma type_it_mkLambda_or_LetIn :
+    forall Γ Δ t A,
+      Σ ;;; Γ ,,, Δ |- t : A ->
+      Σ ;;; Γ |- it_mkLambda_or_LetIn Δ t : it_mkProd_or_LetIn Δ A.
+  Proof.
+    intros Γ Δ t A h.
+    induction Δ as [| [na [b|] B] Δ ih ] in t, A, h |- *.
+    - assumption.
+    - simpl. cbn. eapply ih.
+      simpl in h. pose proof (typing_wf_local h) as hc.
+      dependent induction hc ; inversion H. subst.
+      econstructor ; try eassumption.
+      (* FIXME *)
+      admit.
+    - simpl. cbn. eapply ih.
+      pose proof (typing_wf_local h) as hc. cbn in hc.
+      dependent induction hc ; inversion H. subst.
+      econstructor ; try eassumption.
+      (* FIXME *)
+      admit.
+  Admitted.
+
+  Lemma Lambda_conv_inv :
+    forall leq Γ na1 na2 A1 A2 b1 b2,
+      conv leq Σ Γ (tLambda na1 A1 b1) (tLambda na2 A2 b2) ->
+      ∥ Σ ;;; Γ |- A1 = A2 ∥ /\ conv leq Σ (Γ ,, vass na1 A1) b1 b2.
+  Admitted.
+
+  (* Let bindings are not injective, so it_mkLambda_or_LetIn is not either.
+     However, when they are all lambdas they become injective for conversion.
+     stack_contexts only produce lambdas so we can use this property on them.
+   *)
+  Fixpoint let_free_context (Γ : context) :=
+    match Γ with
+    | [] => true
+    | {| decl_name := na ; decl_body := Some b ; decl_type := B |} :: Γ => false
+    | {| decl_name := na ; decl_body := None ; decl_type := B |} :: Γ =>
+      let_free_context Γ
+    end.
+
+  Lemma it_mkLambda_or_LetIn_let_free_conv_inv :
+    forall Γ Δ1 Δ2 t1 t2,
+      let_free_context Δ1 ->
+      let_free_context Δ2 ->
+      Σ ;;; Γ |- it_mkLambda_or_LetIn Δ1 t1 = it_mkLambda_or_LetIn Δ2 t2 ->
+      PCUICSR.conv_context Σ (Γ ,,, Δ1) (Γ ,,, Δ2) × Σ ;;; Γ ,,, Δ1 |- t1 = t2.
+  Admitted.
+
+  Lemma let_free_stack_context :
+    forall π,
+      let_free_context (stack_context π).
+  Proof.
+    intros π.
+    induction π.
+    all: (simpl ; rewrite ?IHπ ; reflexivity).
+  Qed.
+
+  Lemma it_mkLambda_or_LetIn_stack_context_conv_inv :
+    forall Γ π1 π2 t1 t2,
+      Σ ;;; Γ |- it_mkLambda_or_LetIn (stack_context π1) t1
+              = it_mkLambda_or_LetIn (stack_context π2) t2 ->
+      PCUICSR.conv_context Σ (Γ ,,, stack_context π1) (Γ ,,, stack_context π2) ×
+      Σ ;;; Γ ,,, stack_context π1 |- t1 = t2.
+  Proof.
+    intros Γ π1 π2 t1 t2 h.
+    eapply it_mkLambda_or_LetIn_let_free_conv_inv.
+    - eapply let_free_stack_context.
+    - eapply let_free_stack_context.
+    - assumption.
+  Qed.
+
+  Lemma it_mkLambda_or_LetIn_let_free_conv'_inv :
+    forall leq Γ Δ1 Δ2 t1 t2,
+      let_free_context Δ1 ->
+      let_free_context Δ2 ->
+      conv leq Σ Γ (it_mkLambda_or_LetIn Δ1 t1) (it_mkLambda_or_LetIn Δ2 t2) ->
+      ∥ PCUICSR.conv_context Σ (Γ ,,, Δ1) (Γ ,,, Δ2) ∥ /\ conv leq Σ (Γ ,,, Δ1) t1 t2.
+  Admitted.
+
+  Lemma it_mkLambda_or_LetIn_stack_context_conv'_inv :
+    forall leq Γ π1 π2 t1 t2,
+      conv leq Σ Γ (it_mkLambda_or_LetIn (stack_context π1) t1)
+                   (it_mkLambda_or_LetIn (stack_context π2) t2) ->
+      ∥ PCUICSR.conv_context Σ (Γ ,,, stack_context π1) (Γ ,,, stack_context π2) ∥ /\
+      conv leq Σ (Γ ,,, stack_context π1) t1 t2.
+  Proof.
+    intros leq Γ π1 π2 t1 t2 h.
+    eapply it_mkLambda_or_LetIn_let_free_conv'_inv.
+    - eapply let_free_stack_context.
+    - eapply let_free_stack_context.
+    - assumption.
+  Qed.
+
+  Lemma it_mkLambda_or_LetIn_conv' :
+    forall leq Γ Δ1 Δ2 t1 t2,
+      PCUICSR.conv_context Σ (Γ ,,, Δ1) (Γ ,,, Δ2) ->
+      conv leq Σ (Γ ,,, Δ1) t1 t2 ->
+      conv leq Σ Γ (it_mkLambda_or_LetIn Δ1 t1) (it_mkLambda_or_LetIn Δ2 t2).
+  Admitted.
+
+  Lemma Prod_conv :
+    forall leq Γ na1 A1 B1 na2 A2 B2,
+      Σ ;;; Γ |- A1 = A2 ->
+      conv leq Σ (Γ ,, vass na1 A1) B1 B2 ->
+      conv leq Σ Γ (tProd na1 A1 B1) (tProd na2 A2 B2).
+  Admitted.
+
+  Lemma it_mkLambda_or_LetIn_conv :
+    forall Γ Δ1 Δ2 t1 t2,
+      PCUICSR.conv_context Σ (Γ ,,, Δ1) (Γ ,,, Δ2) ->
+      Σ ;;; Γ ,,, Δ1 |- t1 = t2 ->
+      Σ ;;; Γ |- it_mkLambda_or_LetIn Δ1 t1 = it_mkLambda_or_LetIn Δ2 t2.
+  Admitted.
+
+  Lemma App_conv :
+    forall Γ t1 t2 u1 u2,
+      Σ ;;; Γ |- t1 = t2 ->
+      Σ ;;; Γ |- u1 = u2 ->
+      Σ ;;; Γ |- tApp t1 u1 = tApp t2 u2.
+  Admitted.
+
+  Lemma mkApps_conv_weak :
+    forall Γ u1 u2 l,
+      Σ ;;; Γ |- u1 = u2 ->
+      Σ ;;; Γ |- mkApps u1 l = mkApps u2 l.
+  Admitted.
+
+  Lemma red_neq_cored :
+    forall Γ u v,
+      red Σ Γ u v ->
+      u <> v ->
+      cored Σ Γ v u.
+  Proof.
+    intros Γ u v r n.
+    destruct r.
+    - exfalso. apply n. reflexivity.
+    - eapply cored_red_cored ; try eassumption.
+      constructor. assumption.
+  Qed.
+
+  Lemma red_Case_c :
+    forall Γ indn p c brs c',
+      red Σ Γ c c' ->
+      red Σ Γ (tCase indn p c brs) (tCase indn p c' brs).
+  Proof.
+    intros Γ indn p c brs c' h.
+    induction h.
+    - constructor.
+    - econstructor ; try eassumption.
+      constructor. assumption.
+  Qed.
+
+  Lemma red_case_c :
+    forall Γ ind p c c' brs,
+      red Σ Γ c c' ->
+      red Σ Γ (tCase ind p c brs) (tCase ind p c' brs).
+  Proof.
+    intros Γ ind p c c' brs h.
+    revert ind p brs. induction h ; intros ind p brs.
+    - constructor.
+    - econstructor.
+      + eapply IHh.
+      + econstructor. assumption.
+  Qed.
+
+  Lemma red_proj_c :
+    forall Γ p c c',
+      red Σ Γ c c' ->
+      red Σ Γ (tProj p c) (tProj p c').
+  Proof.
+    intros Γ p c c' h.
+    induction h in p |- *.
+    - constructor.
+    - econstructor.
+      + eapply IHh.
+      + econstructor. assumption.
+  Qed.
+
+  (* Lemma principle_typing : *)
+  (*   forall {Γ u A B}, *)
+  (*     Σ ;;; Γ |- u : A -> *)
+  (*     Σ ;;; Γ |- u : B -> *)
+  (*     { C & (Σ ;;; Γ |- C <= A) * (Σ ;;; Γ |- C <= B) * (Σ ;;; Γ |- u : C) }%type. *)
+  (* Admitted. *)
+
+  (* Lemma subj_cumul : *)
+  (*   forall {Γ u v A B}, *)
+  (*     Σ ;;; Γ |- u <= v -> *)
+  (*     Σ ;;; Γ |- u : A -> *)
+  (*     Σ ;;; Γ |- v : B -> *)
+  (*     Σ ;;; Γ |- u : B. *)
+  (* Proof. *)
+  (*   intros Γ u v A B h hu hv. *)
+  (*   induction h in A, hu, B, hv |- *. *)
+  (*   - admit. *)
+  (*   -  *)
+
+  (* Maybe this one is wrong *)
+  (* Lemma subj_conv : *)
+  (*   forall {Γ u v U V}, *)
+  (*     Σ ;;; Γ |- u = v -> *)
+  (*     Σ ;;; Γ |- u : U -> *)
+  (*     Σ ;;; Γ |- v : V -> *)
+  (*     Σ ;;; Γ |- U = V. *)
+  (* Admitted. *)
+
+  (* Lemma welltyped_zipc_change_hole : *)
+  (*   forall Γ u v π, *)
+  (*     welltyped Σ Γ (zipc u π) -> *)
+  (*     welltyped Σ (Γ ,,, stack_context π) v -> *)
+  (*     Σ ;;; Γ ,,, stack_context π |- u = v -> *)
+  (*     welltyped Σ Γ (zipc v π). *)
+  (* Proof. *)
+  (*   intros Γ u v π h hv e. *)
+  (*   induction π in u, v, h, hv, e |- *. *)
+  (*   - assumption. *)
+  (*   - cbn. *)
+  (*     eapply IHπ. *)
+  (*     + exact h. *)
+  (*     + *)
+
+  (* Lemma welltyped_zipc_change_hole : *)
+  (*   forall Γ u v π A, *)
+  (*     welltyped Σ Γ (zipc u π) -> *)
+  (*     Σ ;;; Γ ,,, stack_context π |- u : A -> *)
+  (*     Σ ;;; Γ ,,, stack_context π |- v : A -> *)
+  (*     welltyped Σ Γ (zipc v π). *)
+  (* Proof. *)
+  (*   intros Γ u v π A h hu hv. *)
+  (*   induction π in u, v, A, h, hu, hv |- *. *)
+  (*   - econstructor. eassumption. *)
+  (*   - cbn. *)
+  (*     pose proof h as h'. cbn in h'. zip fold in h'. *)
+  (*     apply welltyped_context in h'. simpl in h'. *)
+  (*     destruct h' as [B h']. *)
+  (*     destruct (inversion_App h') as [na [A' [B' [[hu'] [[?] [?]]]]]]. *)
+  (*     simpl in hu, hv. *)
+  (*     destruct (principle_typing hu hu') as [C [[? ?] ?]]. *)
+  (*     eapply IHπ. *)
+  (*     + exact h. *)
+  (*     + eassumption. *)
+  (*     + econstructor. all: try eassumption. *)
+  (*       * econstructor ; try eassumption. *)
 
 End Lemmata.

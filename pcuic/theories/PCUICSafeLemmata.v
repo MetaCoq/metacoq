@@ -5,7 +5,7 @@ From Coq Require Import Bool String List Program BinPos Compare_dec Arith Lia
 From MetaCoq.Template Require Import config Universes monad_utils utils BasicAst
      AstUtils UnivSubst.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
-     PCUICReflect PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICSafeReduce
+     PCUICReflect PCUICLiftSubst PCUICUnivSubst PCUICTyping
      PCUICCumulativity PCUICSR PCUICPosition PCUICEquality PCUICNameless
      PCUICNormal PCUICInversion.
 From Equations Require Import Equations.
@@ -14,7 +14,7 @@ Require Import Equations.Prop.DepElim.
 
 Import MonadNotation.
 
-Module PSR := PCUICSafeReduce.
+Set Equations With UIP.
 
 Tactic Notation "zip" "fold" "in" hyp(h) :=
   lazymatch type of h with
@@ -34,6 +34,11 @@ Inductive conv_pb :=
 | Conv
 | Cumul.
 
+Notation "∥ T ∥" := (squash T) (at level 10).
+Arguments sq {_} _.
+
+Notation "( x ; y )" := (existT _ x y).
+
 Definition conv leq Σ Γ u v :=
   match leq with
   | Conv => ∥ Σ ;;; Γ |- u = v ∥
@@ -42,11 +47,114 @@ Definition conv leq Σ Γ u v :=
 
 Definition nodelta_flags := RedFlags.mk true true true false true true.
 
+Inductive dlexprod {A} {B : A -> Type}
+          (leA : A -> A -> Prop) (leB : forall x, B x -> B x -> Prop)
+  : sigT B -> sigT B -> Prop :=
+| left_lex : forall x x' y y', leA x x' -> dlexprod leA leB (x;y) (x';y')
+| right_lex : forall x y y', leB x y y' -> dlexprod leA leB (x;y) (x;y').
+
+Derive Signature for dlexprod.
+
+Definition lexprod := Subterm.lexprod.
+Arguments lexprod {_ _} _ _ _ _.
+
+Notation "x ⊩ R1 ⨶ R2" :=
+  (dlexprod R1 (fun x => R2)) (at level 20, right associativity).
+Notation "R1 ⊗ R2" :=
+  (lexprod R1 R2) (at level 20, right associativity).
+
+Lemma acc_dlexprod :
+  forall A B leA leB,
+    (forall x, well_founded (leB x)) ->
+    forall x,
+      Acc leA x ->
+      forall y,
+        Acc (leB x) y ->
+        Acc (@dlexprod A B leA leB) (x;y).
+Proof.
+  intros A B leA leB hw.
+  induction 1 as [x hx ih1].
+  intros y.
+  induction 1 as [y hy ih2].
+  constructor.
+  intros [x' y'] h. simple inversion h.
+  - intro hA. inversion H0. inversion H1. subst.
+    eapply ih1.
+    + assumption.
+    + apply hw.
+  - intro hB. rewrite <- H0.
+    pose proof (projT2_eq H1) as p2.
+    set (projT1_eq H1) as p1 in *; cbn in p1.
+    destruct p1; cbn in p2; destruct p2.
+    eapply ih2. assumption.
+Qed.
+
+Lemma dlexprod_Acc :
+  forall A B leA leB,
+    (forall x, well_founded (leB x)) ->
+    forall x y,
+      Acc leA x ->
+      Acc (@dlexprod A B leA leB) (x;y).
+Proof.
+  intros A B leA leB hB x y hA.
+  eapply acc_dlexprod ; try assumption.
+  apply hB.
+Qed.
+
+Lemma dlexprod_trans :
+  forall A B RA RB,
+    transitive RA ->
+    (forall x, transitive (RB x)) ->
+    transitive (@dlexprod A B RA RB).
+Proof.
+  intros A B RA RB hA hB [u1 u2] [v1 v2] [w1 w2] h1 h2.
+  revert w1 w2 h2. induction h1 ; intros w1 w2 h2.
+  - dependent induction h2.
+    + left. eapply hA ; eassumption.
+    + left. assumption.
+  - dependent induction h2.
+    + left. assumption.
+    + right. eapply hB ; eassumption.
+Qed.
+
 Section Lemmata.
 
   Context (flags : RedFlags.t).
   Context (Σ : global_context).
   Context (hΣ : wf Σ).
+
+  Lemma subject_reduction :
+    forall {Σ Γ u v A},
+      Σ ;;; Γ |- u : A ->
+      red1 (fst Σ) Γ u v ->
+      Σ ;;; Γ |- v : A.
+  Admitted.
+
+  (* red is the reflexive transitive closure of one-step reduction and thus
+     can't be used as well order. We thus define the transitive closure,
+     but we take the symmetric version.
+   *)
+  Inductive cored Σ Γ: term -> term -> Prop :=
+  | cored1 : forall u v, red1 Σ Γ u v -> cored Σ Γ v u
+  | cored_trans : forall u v w, cored Σ Γ v u -> red1 Σ Γ v w -> cored Σ Γ w u.
+
+  Inductive welltyped Σ Γ t : Prop :=
+  | iswelltyped A : Σ ;;; Γ |- t : A -> welltyped Σ Γ t.
+
+  Lemma lookup_env_ConstantDecl_inv :
+    forall k k' ty bo uni,
+      Some (ConstantDecl k' {| cst_type := ty ; cst_body := bo; cst_universes := uni |})
+      = lookup_env Σ k ->
+      k = k'.
+  Proof.
+    intros k k' ty bo uni h.
+    destruct Σ as [Σ' φ].
+    induction Σ' in h |- *.
+    - cbn in h. discriminate.
+    - cbn in h. destruct (ident_eq_spec k (global_decl_ident a)).
+      + subst. inversion h. reflexivity.
+      + apply IHΣ' in h. assumption.
+  Qed.
 
   Lemma wf_nlg :
     wf (nlg Σ).
@@ -78,8 +186,6 @@ Section Lemmata.
       + subst. left. constructor. assumption.
   Qed.
 
-  Set Equations With UIP.
-
   Lemma cored_it_mkLambda_or_LetIn :
     forall Γ Δ u v,
       cored Σ (Γ ,,, Δ) u v ->
@@ -106,6 +212,163 @@ Section Lemmata.
     - econstructor.
       + eassumption.
       + eapply red1_it_mkLambda_or_LetIn. assumption.
+  Qed.
+
+  Lemma cored_welltyped :
+    forall {Γ u v},
+      welltyped Σ Γ u ->
+      cored (fst Σ) Γ v u ->
+      welltyped Σ Γ v.
+  Proof.
+    intros Γ u v h r.
+    revert h. induction r ; intros h.
+    - destruct h as [A h]. exists A.
+      eapply subject_reduction ; eassumption.
+    - specialize IHr with (1 := ltac:(eassumption)).
+      destruct IHr as [A ?]. exists A.
+      eapply subject_reduction ; eassumption.
+  Qed.
+
+  Lemma cored_trans' :
+    forall {Γ u v w},
+      cored Σ Γ u v ->
+      cored Σ Γ v w ->
+      cored Σ Γ u w.
+  Proof.
+    intros Γ u v w h1 h2. revert w h2.
+    induction h1 ; intros z h2.
+    - eapply cored_trans ; eassumption.
+    - eapply cored_trans.
+      + eapply IHh1. assumption.
+      + assumption.
+  Qed.
+
+  (* This suggests that this should be the actual definition.
+     ->+ = ->*.->
+   *)
+  Lemma cored_red_trans :
+    forall Γ u v w,
+      red Σ Γ u v ->
+      red1 Σ Γ v w ->
+      cored Σ Γ w u.
+  Proof.
+    intros Γ u v w h1 h2.
+    revert w h2. induction h1 ; intros w h2.
+    - constructor. assumption.
+    - eapply cored_trans.
+      + eapply IHh1. eassumption.
+      + assumption.
+  Qed.
+
+  Lemma case_reds_discr :
+    forall Γ ind p c c' brs,
+      red Σ Γ c c' ->
+      red Σ Γ (tCase ind p c brs) (tCase ind p c' brs).
+  Proof.
+    intros Γ ind p c c' brs h.
+    revert ind p brs. induction h ; intros ind p brs.
+    - constructor.
+    - econstructor.
+      + eapply IHh.
+      + econstructor. assumption.
+  Qed.
+
+  Lemma cored_case :
+    forall Γ ind p c c' brs,
+      cored Σ Γ c c' ->
+      cored Σ Γ (tCase ind p c brs) (tCase ind p c' brs).
+  Proof.
+    intros Γ ind p c c' brs h.
+    revert ind p brs. induction h ; intros ind p brs.
+    - constructor. constructor. assumption.
+    - eapply cored_trans.
+      + eapply IHh.
+      + econstructor. assumption.
+  Qed.
+
+  Lemma welltyped_context :
+    forall Γ t,
+      welltyped Σ Γ (zip t) ->
+      welltyped Σ (Γ ,,, stack_context (snd t)) (fst t).
+  Proof.
+    intros Γ [t π] h.
+    destruct h as [T h].
+    revert Γ t T h.
+    induction π ; intros Γ u T h.
+    - cbn. cbn in h. eexists. eassumption.
+    - cbn. cbn in h. cbn in IHπ. apply IHπ in h.
+      destruct h as [B h].
+      apply inversion_App in h as hh.
+      destruct hh as [na [A' [B' [? [? ?]]]]].
+      eexists. eassumption.
+    - cbn. cbn in h. cbn in IHπ. apply IHπ in h.
+      destruct h as [B h].
+            apply inversion_App in h as hh.
+      destruct hh as [na [A' [B' [? [? ?]]]]].
+      eexists. eassumption.
+    - cbn. cbn in h. cbn in IHπ. apply IHπ in h.
+      destruct h as [B h].
+      destruct indn.
+      apply inversion_Case in h as hh.
+      destruct hh
+        as [uni [npar [args [mdecl [idecl [pty [indctx [pctx [ps [btys [? [? [? [? [? [? [ht0 [? ?]]]]]]]]]]]]]]]]]].
+      eexists. eassumption.
+    - cbn. cbn in h. cbn in IHπ. apply IHπ in h.
+      destruct h as [T' h].
+      apply inversion_Proj in h
+        as [uni [mdecl [idecl [pdecl [args [? [? [? ?]]]]]]]].
+      eexists. eassumption.
+    - cbn. cbn in h. cbn in IHπ. apply IHπ in h.
+      destruct h as [T' h].
+      apply inversion_Prod in h as hh.
+      destruct hh as [s1 [s2 [? [? ?]]]].
+      eexists. eassumption.
+    - cbn. cbn in h. cbn in IHπ. apply IHπ in h.
+      destruct h as [T' h].
+      apply inversion_Prod in h as hh.
+      destruct hh as [s1 [s2 [? [? ?]]]].
+      eexists. eassumption.
+    - cbn. cbn in h. cbn in IHπ. apply IHπ in h.
+      destruct h as [T' h].
+      apply inversion_Lambda in h as hh.
+      destruct hh as [s1 [B [? [? ?]]]].
+      eexists. eassumption.
+    - cbn. cbn in h. cbn in IHπ. apply IHπ in h.
+      destruct h as [T' h].
+      apply inversion_Lambda in h as hh.
+      destruct hh as [s1 [B [? [? ?]]]].
+      eexists. eassumption.
+    - cbn. cbn in h. cbn in IHπ. apply IHπ in h.
+      destruct h as [B h].
+      apply inversion_App in h as hh.
+      destruct hh as [na [A' [B' [? [? ?]]]]].
+      eexists. eassumption.
+  Qed.
+
+  Lemma cored_red :
+    forall Γ u v,
+      cored Σ Γ v u ->
+      ∥ red Σ Γ u v ∥.
+  Proof.
+    intros Γ u v h.
+    induction h.
+    - constructor. econstructor.
+      + constructor.
+      + assumption.
+    - destruct IHh as [r].
+      constructor. econstructor ; eassumption.
+  Qed.
+
+  Lemma cored_context :
+    forall Γ t u π,
+      cored Σ (Γ ,,, stack_context π) t u ->
+      cored Σ Γ (zip (t, π)) (zip (u, π)).
+  Proof.
+    intros Γ t u π h. induction h.
+    - constructor. eapply red1_context. assumption.
+    - eapply cored_trans.
+      + eapply IHh.
+      + eapply red1_context. assumption.
   Qed.
 
   Lemma cored_zipx :
@@ -671,7 +934,66 @@ Section Lemmata.
     - cbn. apply IHl. reflexivity.
   Qed.
 
-  (* TODO MOVE *)
+  Lemma decompose_app_rec_notApp :
+    forall t l u l',
+      decompose_app_rec t l = (u, l') ->
+      isApp u = false.
+  Proof.
+    intros t l u l' e.
+    induction t in l, u, l', e |- *.
+    all: try (cbn in e ; inversion e ; reflexivity).
+    cbn in e. eapply IHt1. eassumption.
+  Qed.
+
+  Lemma decompose_app_notApp :
+    forall t u l,
+      decompose_app t = (u, l) ->
+      isApp u = false.
+  Proof.
+    intros t u l e.
+    eapply decompose_app_rec_notApp. eassumption.
+  Qed.
+
+  Fixpoint nApp t :=
+    match t with
+    | tApp u _ => S (nApp u)
+    | _ => 0
+    end.
+
+  Lemma isApp_false_nApp :
+    forall u,
+      isApp u = false ->
+      nApp u = 0.
+  Proof.
+    intros u h.
+    destruct u.
+    all: try reflexivity.
+    discriminate.
+  Qed.
+
+  Lemma nApp_mkApps :
+    forall t l,
+      nApp (mkApps t l) = nApp t + #|l|.
+  Proof.
+    intros t l.
+    induction l in t |- *.
+    - simpl. omega.
+    - simpl. rewrite IHl. cbn. omega.
+  Qed.
+
+  Lemma decompose_app_eq_mkApps :
+    forall t u l l',
+      decompose_app t = (mkApps u l', l) ->
+      l' = [].
+  Proof.
+    intros t u l l' e.
+    apply decompose_app_notApp in e.
+    apply isApp_false_nApp in e.
+    rewrite nApp_mkApps in e.
+    destruct l' ; cbn in e ; try omega.
+    reflexivity.
+  Qed.
+
   Lemma mkApps_nApp_inj :
     forall u u' l l',
       nApp u = nApp u' ->
@@ -1045,6 +1367,8 @@ Section Lemmata.
     intro ρ. induction ρ.
     all: (simpl ; rewrite ?IHρ ; reflexivity).
   Qed.
+
+  Derive Signature for Acc.
 
   Lemma wf_fun :
     forall A (R : A -> A -> Prop) B (f : B -> A),
@@ -1762,6 +2086,20 @@ Section Lemmata.
       Σ ;;; Γ |- mkApps u1 l = mkApps u2 l.
   Admitted.
 
+  Lemma cored_red_cored :
+    forall Γ u v w,
+      cored Σ Γ w v ->
+      red Σ Γ u v ->
+      cored Σ Γ w u.
+  Proof.
+    intros Γ u v w h1 h2.
+    revert u h2. induction h1 ; intros t h2.
+    - eapply cored_red_trans ; eassumption.
+    - eapply cored_trans.
+      + eapply IHh1. assumption.
+      + assumption.
+  Qed.
+
   Lemma red_neq_cored :
     forall Γ u v,
       red Σ Γ u v ->
@@ -1787,6 +2125,7 @@ Section Lemmata.
       constructor. assumption.
   Qed.
 
+  (* TODO duplicate? *)
   Lemma red_case_c :
     forall Γ ind p c c' brs,
       red Σ Γ c c' ->
@@ -1811,6 +2150,34 @@ Section Lemmata.
     - econstructor.
       + eapply IHh.
       + econstructor. assumption.
+  Qed.
+
+  Lemma red_welltyped :
+    forall {Γ u v},
+      welltyped Σ Γ u ->
+      ∥ red (fst Σ) Γ u v ∥ ->
+      welltyped Σ Γ v.
+  Proof.
+    intros Γ u v h [r].
+    revert h. induction r ; intros h.
+    - assumption.
+    - specialize IHr with (1 := ltac:(eassumption)).
+      destruct IHr as [A ?]. exists A.
+      eapply subject_reduction ; eassumption.
+  Qed.
+
+  Lemma red_cored_cored :
+    forall Γ u v w,
+      red Σ Γ v w ->
+      cored Σ Γ v u ->
+      cored Σ Γ w u.
+  Proof.
+    intros Γ u v w h1 h2.
+    revert u h2. induction h1 ; intros t h2.
+    - assumption.
+    - eapply cored_trans.
+      + eapply IHh1. assumption.
+      + assumption.
   Qed.
 
   (* Lemma principle_typing : *)

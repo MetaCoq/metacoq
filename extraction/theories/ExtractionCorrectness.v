@@ -2,12 +2,15 @@
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
 From Template Require Import config utils monad_utils BasicAst AstUtils.
-From PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICTyping PCUICWeakening PCUICSubstitution PCUICChecker PCUICRetyping PCUICMetaTheory PCUICWcbvEval PCUICSR  PCUICClosed.
 From TemplateExtraction Require Import EAst ELiftSubst ETyping EWcbvEval Extract Prelim ESubstitution EInversion EWeakening.
+From PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICTyping PCUICWeakening PCUICSubstitution PCUICChecker PCUICRetyping PCUICMetaTheory PCUICWcbvEval PCUICSR  PCUICClosed.
+
 Require Import String.
 Local Open Scope string_scope.
 Set Asymmetric Patterns.
 Import MonadNotation.
+
+Module E := EAst.
 
 Require Import Lia.
 
@@ -116,7 +119,7 @@ Lemma extract_erases_ind Σ t T t' :
   wf Σ ->
   Σ ;;; [] |- t : T ->
   computational_type Σ T ->              
-  PCUICWcbvEval.value t ->
+  value t ->
   erases Σ [] t t' ->
   t' = extract Σ [] t.
 Proof.
@@ -126,16 +129,16 @@ Proof.
   - inv H. admit.
 Admitted.
 
-Record extraction_pre (Σ : PCUICAst.global_context) : Type
+Record extraction_pre (Σ : global_context) : Type
   := Build_extraction_pre
   { extr_env_axiom_free' : is_true (axiom_free (fst Σ));
     extr_env_wf' : wf Σ }.
 
-Definition erases_global (Σ : PCUICAst.global_declarations) (Σ' : global_declarations) := True.
+Definition erases_global (Σ : global_declarations) (Σ' : E.global_declarations) := True.
 
 Lemma Is_type_eval Σ Γ t v:
   wf Σ ->
-  PCUICWcbvEval.eval Σ Γ t v ->
+  eval Σ Γ t v ->
   Is_Type_or_Proof Σ Γ t ->
   Is_Type_or_Proof Σ Γ v.
 Proof.
@@ -147,8 +150,8 @@ Qed.
 
 Lemma Is_type_lambda Σ Γ na T1 t :
   wf Σ ->
-  Is_Type_or_Proof Σ Γ (PCUICAst.tLambda na T1 t) ->
-  Is_Type_or_Proof Σ (PCUICAst.vass na T1 :: Γ) t.
+  Is_Type_or_Proof Σ Γ (tLambda na T1 t) ->
+  Is_Type_or_Proof Σ (vass na T1 :: Γ) t.
 Proof.
   intros ? (T & ? & ?).
   eapply type_Lambda_inv in t0 as (? & ? & [] & ?).
@@ -157,21 +160,26 @@ Proof.
   - right. exists u. split; eauto.
 Admitted.
 
+Module Ee := EWcbvEval.
+
+Notation "Σ ;;; Γ |- s ▷ t" := (eval Σ Γ s t) (at level 50, Γ, s, t at next level) : type_scope.
+Notation "Σ |- s ▷ t" := (Ee.eval Σ s t) (at level 50, s, t at next level) : type_scope.
+
+
 Lemma erases_correct Σ t T t' v Σ' :
   extraction_pre Σ ->
-  Σ ;;; [] |- t : T ->
-  erases Σ [] t t' ->
+  Σ;;; [] |- t : T ->
+  Σ;;; [] |- t ⇝ℇ t' ->
   erases_global Σ Σ' ->
-  PCUICWcbvEval.eval Σ [] t v ->
-  exists v', erases Σ [] v v' /\ eval Σ' t' v'.
+  Σ;;; [] |- t ▷ v ->
+  exists v', Σ;;; [] |- v ⇝ℇ v' /\ Σ' |- t' ▷ v'.
 Proof.
   intros pre Hty He Heg H.
   revert T Hty t' He.
-  induction H using PCUICWcbvEval.eval_evals_ind; intros T Hty t' He.
-  - inv pre.
-    assert (Hty' := Hty).
+  induction H using PCUICWcbvEval.eval_evals_ind; intros T Hty t' He; inv pre.
+  - assert (Hty' := Hty).
     Hint Constructors PCUICWcbvEval.eval.
-    assert (PCUICWcbvEval.eval Σ [] (PCUICAst.tApp f a) res) by eauto.
+    assert (eval Σ [] (PCUICAst.tApp f a) res) by eauto.
     eapply PCUICValidity.invert_type_App in Hty as (? & ? & ? & [] & ?).
         
     inv He.
@@ -204,7 +212,12 @@ Proof.
       econstructor.
       eapply subject_reduction_eval with (t := PCUICAst.tApp f a); eauto.
       eapply Is_type_eval; eauto.
-  - 
+  - assert (Hty' := Hty).
+    assert (Σ ;;; [] |- tLetIn na b0 t b1 ▷ res) by eauto.
+    eapply type_tLetIn_inv in Hty' as (? & ? & [] & ?).
+
+    
+    
 Admitted.        
       
                  

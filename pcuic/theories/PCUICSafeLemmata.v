@@ -260,17 +260,16 @@ Section Lemmata.
       + assumption.
   Qed.
 
-  Lemma case_reds_discr :
-    forall Γ ind p c c' brs,
+  Lemma red_case_c :
+    forall Γ indn p c brs c',
       red Σ Γ c c' ->
-      red Σ Γ (tCase ind p c brs) (tCase ind p c' brs).
+      red Σ Γ (tCase indn p c brs) (tCase indn p c' brs).
   Proof.
-    intros Γ ind p c c' brs h.
-    revert ind p brs. induction h ; intros ind p brs.
+    intros Γ indn p c brs c' h.
+    induction h.
     - constructor.
-    - econstructor.
-      + eapply IHh.
-      + econstructor. assumption.
+    - econstructor ; try eassumption.
+      constructor. assumption.
   Qed.
 
   Lemma cored_case :
@@ -2111,32 +2110,6 @@ Section Lemmata.
     - exfalso. apply n. reflexivity.
     - eapply cored_red_cored ; try eassumption.
       constructor. assumption.
-  Qed.
-
-  Lemma red_Case_c :
-    forall Γ indn p c brs c',
-      red Σ Γ c c' ->
-      red Σ Γ (tCase indn p c brs) (tCase indn p c' brs).
-  Proof.
-    intros Γ indn p c brs c' h.
-    induction h.
-    - constructor.
-    - econstructor ; try eassumption.
-      constructor. assumption.
-  Qed.
-
-  (* TODO duplicate? *)
-  Lemma red_case_c :
-    forall Γ ind p c c' brs,
-      red Σ Γ c c' ->
-      red Σ Γ (tCase ind p c brs) (tCase ind p c' brs).
-  Proof.
-    intros Γ ind p c c' brs h.
-    revert ind p brs. induction h ; intros ind p brs.
-    - constructor.
-    - econstructor.
-      + eapply IHh.
-      + econstructor. assumption.
   Qed.
 
   Lemma red_proj_c :

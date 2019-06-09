@@ -691,6 +691,23 @@ Section Stacks.
       + rewrite context_position_atpos. reflexivity.
   Qed.
 
+  Lemma positionR_context_position_inv :
+    forall Γ p q,
+      positionR (context_position Γ ++ p) (context_position Γ ++ q) ->
+      positionR p q.
+  Proof.
+    intros Γ p q h.
+    revert p q h.
+    induction Γ as [| [na [b|] A] Γ ih ] ; intros p q h.
+    - assumption.
+    - cbn in h. rewrite <- 2!app_assoc in h. apply ih in h.
+      cbn in h. dependent destruction h.
+      assumption.
+    - cbn in h. rewrite <- 2!app_assoc in h. apply ih in h.
+      cbn in h. dependent destruction h.
+      assumption.
+  Qed.
+
   Definition xposition Γ π : position :=
     context_position Γ ++ stack_position π.
 
@@ -711,6 +728,16 @@ Section Stacks.
     - apply context_position_valid.
     - rewrite context_position_atpos.
       apply stack_position_valid.
+  Qed.
+
+  Lemma positionR_xposition_inv :
+    forall Γ ρ1 ρ2,
+      positionR (xposition Γ ρ1) (xposition Γ ρ2) ->
+      positionR (stack_position ρ1) (stack_position ρ2).
+  Proof.
+    intros Γ ρ1 ρ2 h.
+    eapply positionR_context_position_inv.
+    eassumption.
   Qed.
 
   Definition xpos Γ t π : pos (zipx Γ t π) :=

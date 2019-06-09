@@ -513,3 +513,27 @@ Proof.
     + constructor. all: assumption.
     + assumption.
 Qed.
+
+Lemma nleq_term_it_mkLambda_or_LetIn :
+  forall Γ u v,
+    nleq_term u v ->
+    nleq_term (it_mkLambda_or_LetIn Γ u) (it_mkLambda_or_LetIn Γ v).
+Proof.
+  intros Γ u v h.
+  induction Γ as [| [na [b|] A] Γ ih ] in u, v, h |- *.
+  - assumption.
+  - simpl. cbn. apply ih.
+    eapply ssrbool.introT.
+    + eapply reflect_nleq_term.
+    + cbn. f_equal.
+      eapply ssrbool.elimT.
+      * eapply reflect_nleq_term.
+      * assumption.
+  - simpl. cbn. apply ih.
+    eapply ssrbool.introT.
+    + eapply reflect_nleq_term.
+    + cbn. f_equal.
+      eapply ssrbool.elimT.
+      * eapply reflect_nleq_term.
+      * assumption.
+Qed.

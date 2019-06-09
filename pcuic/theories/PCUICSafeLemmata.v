@@ -1565,33 +1565,6 @@ Section Lemmata.
       eq_term G u w.
   Admitted.
 
-  Lemma positionR_context_position_inv :
-    forall Γ p q,
-      positionR (context_position Γ ++ p) (context_position Γ ++ q) ->
-      positionR p q.
-  Proof.
-    intros Γ p q h.
-    revert p q h.
-    induction Γ as [| [na [b|] A] Γ ih ] ; intros p q h.
-    - assumption.
-    - cbn in h. rewrite <- 2!app_assoc in h. apply ih in h.
-      cbn in h. dependent destruction h.
-      assumption.
-    - cbn in h. rewrite <- 2!app_assoc in h. apply ih in h.
-      cbn in h. dependent destruction h.
-      assumption.
-  Qed.
-
-  Lemma positionR_xposition_inv :
-    forall Γ ρ1 ρ2,
-      positionR (xposition Γ ρ1) (xposition Γ ρ2) ->
-      positionR (stack_position ρ1) (stack_position ρ2).
-  Proof.
-    intros Γ ρ1 ρ2 h.
-    eapply positionR_context_position_inv.
-    eassumption.
-  Qed.
-
   Lemma it_mkLambda_or_LetIn_inj :
     forall Γ u v,
       it_mkLambda_or_LetIn Γ u =
@@ -1608,60 +1581,6 @@ Section Lemmata.
     - simpl in e. cbn in e.
       apply ih in e.
       inversion e. reflexivity.
-  Qed.
-
-  Lemma context_position_nlctx :
-    forall Γ,
-      context_position (nlctx Γ) = context_position Γ.
-  Proof.
-    intros Γ. induction Γ as [| [na [b|] A] Γ ih ].
-    - reflexivity.
-    - simpl. rewrite ih. reflexivity.
-    - simpl. rewrite ih. reflexivity.
-  Qed.
-
-  Lemma xposition_nlctx :
-    forall Γ π,
-      xposition (nlctx Γ) π = xposition Γ π.
-  Proof.
-    intros Γ π.
-    unfold xposition.
-    rewrite context_position_nlctx.
-    reflexivity.
-  Qed.
-
-  Lemma xposition_nlstack :
-    forall Γ π,
-      xposition Γ (nlstack π) = xposition Γ π.
-  Proof.
-    intros Γ π.
-    unfold xposition.
-    rewrite stack_position_nlstack.
-    reflexivity.
-  Qed.
-
-  Lemma nleq_term_it_mkLambda_or_LetIn :
-    forall Γ u v,
-      nleq_term u v ->
-      nleq_term (it_mkLambda_or_LetIn Γ u) (it_mkLambda_or_LetIn Γ v).
-  Proof.
-    intros Γ u v h.
-    induction Γ as [| [na [b|] A] Γ ih ] in u, v, h |- *.
-    - assumption.
-    - simpl. cbn. apply ih.
-      eapply ssrbool.introT.
-      + eapply reflect_nleq_term.
-      + cbn. f_equal.
-        eapply ssrbool.elimT.
-        * eapply reflect_nleq_term.
-        * assumption.
-    - simpl. cbn. apply ih.
-      eapply ssrbool.introT.
-      + eapply reflect_nleq_term.
-      + cbn. f_equal.
-        eapply ssrbool.elimT.
-        * eapply reflect_nleq_term.
-        * assumption.
   Qed.
 
   Lemma nleq_term_zipc :

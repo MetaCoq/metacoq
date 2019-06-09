@@ -579,3 +579,33 @@ Proof.
     unfold map_def, map_def_anon. cbn.
     rewrite h1, h2. reflexivity.
 Qed.
+
+Lemma context_position_nlctx :
+  forall Γ,
+    context_position (nlctx Γ) = context_position Γ.
+Proof.
+  intros Γ. induction Γ as [| [na [b|] A] Γ ih ].
+  - reflexivity.
+  - simpl. rewrite ih. reflexivity.
+  - simpl. rewrite ih. reflexivity.
+Qed.
+
+Lemma xposition_nlctx :
+  forall Γ π,
+    xposition (nlctx Γ) π = xposition Γ π.
+Proof.
+  intros Γ π.
+  unfold xposition.
+  rewrite context_position_nlctx.
+  reflexivity.
+Qed.
+
+Lemma xposition_nlstack :
+  forall Γ π,
+    xposition Γ (nlstack π) = xposition Γ π.
+Proof.
+  intros Γ π.
+  unfold xposition.
+  rewrite stack_position_nlstack.
+  reflexivity.
+Qed.

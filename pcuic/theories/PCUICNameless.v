@@ -458,6 +458,9 @@ Fixpoint nlstack (π : stack) : stack :=
   | Fix f n args ρ =>
     Fix (map (map_def_anon nl nl) f) n (map nl args) (nlstack ρ)
 
+  | CoFix f n args ρ =>
+    CoFix (map (map_def_anon nl nl) f) n (map nl args) (nlstack ρ)
+
   | Case indn p brs ρ =>
     Case indn (nl p) (map (on_snd nl) brs) (nlstack ρ)
 
@@ -617,8 +620,10 @@ Proof.
   intros t π.
   induction π in t |- *.
   all: try solve [ simpl ; rewrite ?IHπ ; reflexivity ].
-  simpl. rewrite IHπ. cbn. f_equal.
-  rewrite nl_mkApps. reflexivity.
+  all: solve [
+    simpl ; rewrite IHπ ; cbn ; f_equal ;
+    rewrite nl_mkApps ; reflexivity
+  ].
 Qed.
 
 Lemma nl_zipx :

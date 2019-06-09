@@ -367,6 +367,7 @@ Inductive stack : Type :=
 | Empty
 | App (t : term) (π : stack)
 | Fix (f : mfixpoint term) (n : nat) (args : list term) (π : stack)
+| CoFix (f : mfixpoint term) (n : nat) (args : list term) (π : stack)
 | Case (indn : inductive * nat) (p : term) (brs : list (nat * term)) (π : stack)
 | Proj (p : projection) (π : stack)
 | Prod_l (na : name) (B : term) (π : stack)
@@ -387,6 +388,7 @@ Fixpoint zipc t stack :=
   | ε => t
   | App u π => zipc (tApp t u) π
   | Fix f n args π => zipc (tApp (mkApps (tFix f n) args) t) π
+  | CoFix f n args π => zipc (tApp (mkApps (tCoFix f n) args) t) π
   | Case indn pred brs π => zipc (tCase indn pred t brs) π
   | Proj p π => zipc (tProj p t) π
   | Prod_l na B π => zipc (tProd na t B) π
@@ -531,6 +533,7 @@ Fixpoint stack_context π : context :=
   | ε => []
   | App u π => stack_context π
   | Fix f n args π => stack_context π
+  | CoFix f n args π => stack_context π
   | Case indn pred brs π => stack_context π
   | Proj p π => stack_context π
   | Prod_l na B π => stack_context π
@@ -555,6 +558,7 @@ Fixpoint stack_position π : position :=
   | ε => []
   | App u ρ => stack_position ρ ++ [ app_l ]
   | Fix f n args ρ => stack_position ρ ++ [ app_r ]
+  | CoFix f n args ρ => stack_position ρ ++ [ app_r ]
   | Case indn pred brs ρ => stack_position ρ ++ [ case_c ]
   | Proj pr ρ => stack_position ρ ++ [ proj_c ]
   | Prod_l na B ρ => stack_position ρ ++ [ prod_l ]
@@ -791,6 +795,7 @@ Section Stacks.
     | Empty => θ
     | App u ρ => App u (stack_cat ρ θ)
     | Fix f n args ρ => Fix f n args (stack_cat ρ θ)
+    | CoFix f n args ρ => CoFix f n args (stack_cat ρ θ)
     | Case indn p brs ρ => Case indn p brs (stack_cat ρ θ)
     | Proj p ρ => Proj p (stack_cat ρ θ)
     | Prod_l na B ρ => Prod_l na B (stack_cat ρ θ)

@@ -16,20 +16,6 @@ Import MonadNotation.
 
 Set Equations With UIP.
 
-Tactic Notation "zip" "fold" "in" hyp(h) :=
-  lazymatch type of h with
-  | context C[ zipc ?t ?π ] =>
-    let C' := context C[ zip (t,π) ] in
-    change C' in h
-  end.
-
-Tactic Notation "zip" "fold" :=
-  lazymatch goal with
-  | |- context C[ zipc ?t ?π ] =>
-    let C' := context C[ zip (t,π) ] in
-    change C'
-  end.
-
 Inductive conv_pb :=
 | Conv
 | Cumul.
@@ -1110,26 +1096,6 @@ Section Lemmata.
       red (nlg Σ) (nlctx Γ) (nl u) (nl v).
   Admitted.
 
-  Lemma nl_zipc :
-    forall t π,
-      nl (zipc t π) = zipc (nl t) (nlstack π).
-  Proof.
-    intros t π.
-    induction π in t |- *.
-    all: try solve [ simpl ; rewrite ?IHπ ; reflexivity ].
-    simpl. rewrite IHπ. cbn. f_equal.
-    rewrite nl_mkApps. reflexivity.
-  Qed.
-
-  Lemma nl_zipx :
-    forall Γ t π,
-      nl (zipx Γ t π) = zipx (nlctx Γ) (nl t) (nlstack π).
-  Proof.
-    intros Γ t π.
-    unfold zipx. rewrite nl_it_mkLambda_or_LetIn. f_equal.
-    apply nl_zipc.
-  Qed.
-
   Derive Signature for Acc.
 
   Lemma wf_fun :
@@ -1453,87 +1419,6 @@ Section Lemmata.
     rewrite isAppProd_mkApps in hh.
     specialize hh with (1 := eq_refl).
     apply isProdmkApps in hh. assumption.
-  Qed.
-
-  Lemma eq_term_it_mkLambda_or_LetIn_inv :
-    forall Γ u v,
-      eq_term (snd Σ) (it_mkLambda_or_LetIn Γ u) (it_mkLambda_or_LetIn Γ v) ->
-      eq_term (snd Σ) u v.
-  Proof.
-    intros Γ.
-    induction Γ as [| [na [b|] A] Γ ih ] ; intros u v h.
-    - assumption.
-    - simpl in h. cbn in h. apply ih in h. inversion h. subst.
-      assumption.
-    - simpl in h. cbn in h. apply ih in h. inversion h. subst.
-      assumption.
-  Qed.
-
-  Lemma eq_term_zipc_inv :
-    forall u v π,
-      eq_term (snd Σ) (zipc u π) (zipc v π) ->
-      eq_term (snd Σ) u v.
-  Proof.
-    intros u v π h.
-    revert u v h. induction π ; intros u v h.
-    all: solve [
-      simpl in h ; try apply IHπ in h ;
-      cbn in h ; inversion h ; subst ; assumption
-    ].
-  Qed.
-
-  Lemma eq_term_zipx_inv :
-    forall Γ u v π,
-      eq_term (snd Σ) (zipx Γ u π) (zipx Γ v π) ->
-      eq_term (snd Σ) u v.
-  Proof.
-    intros Γ u v π h.
-    eapply eq_term_zipc_inv.
-    eapply eq_term_it_mkLambda_or_LetIn_inv.
-    eassumption.
-  Qed.
-
-  Lemma eq_term_it_mkLambda_or_LetIn :
-    forall Γ u v,
-      eq_term (snd Σ) u v ->
-      eq_term (snd Σ) (it_mkLambda_or_LetIn Γ u) (it_mkLambda_or_LetIn Γ v).
-  Proof.
-    intros Γ.
-    induction Γ as [| [na [b|] A] Γ ih ] ; intros u v h.
-    - assumption.
-    - simpl. cbn. apply ih. constructor ; try apply eq_term_refl. assumption.
-    - simpl. cbn. apply ih. constructor ; try apply eq_term_refl. assumption.
-  Qed.
-
-  Lemma eq_term_zipc :
-    forall u v π,
-      eq_term (snd Σ) u v ->
-      eq_term (snd Σ) (zipc u π) (zipc v π).
-  Proof.
-    intros u v π h.
-    revert u v h. induction π ; intros u v h.
-    all: try solve [
-      simpl ; try apply IHπ ;
-      cbn ; constructor ; try apply eq_term_refl ; assumption
-    ].
-    - assumption.
-    - simpl. apply IHπ. destruct indn as [i n].
-      constructor.
-      + apply eq_term_refl.
-      + assumption.
-      + eapply Forall_Forall2. eapply Forall_True.
-        intros. split ; auto. apply eq_term_refl.
-  Qed.
-
-  Lemma eq_term_zipx :
-    forall Γ u v π,
-      eq_term (snd Σ) u v ->
-      eq_term (snd Σ) (zipx Γ u π) (zipx Γ v π).
-  Proof.
-    intros Γ u v π h.
-    eapply eq_term_it_mkLambda_or_LetIn.
-    eapply eq_term_zipc.
-    eassumption.
   Qed.
 
   (* TODO MOVE or even replace old lemma *)

@@ -398,6 +398,20 @@ Fixpoint zipc t stack :=
 
 Definition zip (t : term * stack) := zipc (fst t) (snd t).
 
+Tactic Notation "zip" "fold" "in" hyp(h) :=
+  lazymatch type of h with
+  | context C[ zipc ?t ?π ] =>
+    let C' := context C[ zip (t,π) ] in
+    change C' in h
+  end.
+
+Tactic Notation "zip" "fold" :=
+  lazymatch goal with
+  | |- context C[ zipc ?t ?π ] =>
+    let C' := context C[ zip (t,π) ] in
+    change C'
+  end.
+
 (* TODO Tail-rec version *)
 (* Get the arguments out of a stack *)
 Fixpoint decompose_stack π :=

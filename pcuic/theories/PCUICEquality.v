@@ -6,7 +6,7 @@ From MetaCoq.Template Require Import config utils Universes BasicAst AstUtils
      UnivSubst.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICReflect PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICNameless
-     PCUICCumulativity.
+     PCUICCumulativity PCUICPosition.
 
 Fixpoint eqb_term_upto_univ (equ : universe -> universe -> bool) (u v : term) : bool :=
   match u, v with
@@ -536,4 +536,85 @@ Proof.
       eapply ssrbool.elimT.
       * eapply reflect_nleq_term.
       * assumption.
+Qed.
+
+Lemma eq_term_it_mkLambda_or_LetIn_inv :
+  forall (Σ : global_context) Γ u v,
+    eq_term (snd Σ) (it_mkLambda_or_LetIn Γ u) (it_mkLambda_or_LetIn Γ v) ->
+    eq_term (snd Σ) u v.
+Proof.
+  intros Σ Γ.
+  induction Γ as [| [na [b|] A] Γ ih ] ; intros u v h.
+  - assumption.
+  - simpl in h. cbn in h. apply ih in h. inversion h. subst.
+    assumption.
+  - simpl in h. cbn in h. apply ih in h. inversion h. subst.
+    assumption.
+Qed.
+
+Lemma eq_term_zipc_inv :
+  forall (Σ : global_context) u v π,
+    eq_term (snd Σ) (zipc u π) (zipc v π) ->
+    eq_term (snd Σ) u v.
+Proof.
+  intros Σ u v π h.
+  revert u v h. induction π ; intros u v h.
+  all: solve [
+           simpl in h ; try apply IHπ in h ;
+           cbn in h ; inversion h ; subst ; assumption
+         ].
+Qed.
+
+Lemma eq_term_zipx_inv :
+  forall (Σ : global_context) Γ u v π,
+    eq_term (snd Σ) (zipx Γ u π) (zipx Γ v π) ->
+    eq_term (snd Σ) u v.
+Proof.
+  intros Σ Γ u v π h.
+  eapply eq_term_zipc_inv.
+  eapply eq_term_it_mkLambda_or_LetIn_inv.
+  eassumption.
+Qed.
+
+Lemma eq_term_it_mkLambda_or_LetIn :
+  forall (Σ : global_context) Γ u v,
+    eq_term (snd Σ) u v ->
+    eq_term (snd Σ) (it_mkLambda_or_LetIn Γ u) (it_mkLambda_or_LetIn Γ v).
+Proof.
+  intros Σ Γ.
+  induction Γ as [| [na [b|] A] Γ ih ] ; intros u v h.
+  - assumption.
+  - simpl. cbn. apply ih. constructor ; try apply eq_term_refl. assumption.
+  - simpl. cbn. apply ih. constructor ; try apply eq_term_refl. assumption.
+Qed.
+
+Lemma eq_term_zipc :
+  forall (Σ : global_context) u v π,
+    eq_term (snd Σ) u v ->
+    eq_term (snd Σ) (zipc u π) (zipc v π).
+Proof.
+  intros Σ u v π h.
+  revert u v h. induction π ; intros u v h.
+  all: try solve [
+             simpl ; try apply IHπ ;
+             cbn ; constructor ; try apply eq_term_refl ; assumption
+           ].
+  - assumption.
+  - simpl. apply IHπ. destruct indn as [i n].
+    constructor.
+    + apply eq_term_refl.
+    + assumption.
+    + eapply Forall_Forall2. eapply Forall_True.
+      intros. split ; auto. apply eq_term_refl.
+Qed.
+
+Lemma eq_term_zipx :
+  forall (Σ : global_context) Γ u v π,
+    eq_term (snd Σ) u v ->
+    eq_term (snd Σ) (zipx Γ u π) (zipx Γ v π).
+Proof.
+  intros Σ Γ u v π h.
+  eapply eq_term_it_mkLambda_or_LetIn.
+  eapply eq_term_zipc.
+  eassumption.
 Qed.

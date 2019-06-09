@@ -609,3 +609,23 @@ Proof.
   rewrite stack_position_nlstack.
   reflexivity.
 Qed.
+
+Lemma nl_zipc :
+  forall t π,
+    nl (zipc t π) = zipc (nl t) (nlstack π).
+Proof.
+  intros t π.
+  induction π in t |- *.
+  all: try solve [ simpl ; rewrite ?IHπ ; reflexivity ].
+  simpl. rewrite IHπ. cbn. f_equal.
+  rewrite nl_mkApps. reflexivity.
+Qed.
+
+Lemma nl_zipx :
+  forall Γ t π,
+    nl (zipx Γ t π) = zipx (nlctx Γ) (nl t) (nlstack π).
+Proof.
+  intros Γ t π.
+  unfold zipx. rewrite nl_it_mkLambda_or_LetIn. f_equal.
+  apply nl_zipc.
+Qed.

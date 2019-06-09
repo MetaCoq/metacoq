@@ -289,6 +289,21 @@ Section Reduce.
     red_viewc (tProj p c) π := red_view_Proj p c π ;
     red_viewc t π := red_view_other t π I.
 
+  Equations discr_construct_cofix (t : term) : Prop :=
+    discr_construct_cofix (tConstruct ind n ui) := False ;
+    discr_construct_cofix (tCoFix mfix idx) := False ;
+    discr_construct_cofix _ := True.
+
+  Inductive construct_cofix_view : term -> Set :=
+  | ccview_construct : forall ind n ui, construct_cofix_view (tConstruct ind n ui)
+  | ccview_cofix : forall mfix idx, construct_cofix_view (tCoFix mfix idx)
+  | ccview_other : forall t, discr_construct_cofix t -> construct_cofix_view t.
+
+  Equations cc_viewc t : construct_cofix_view t :=
+    cc_viewc (tConstruct ind n ui) := ccview_construct ind n ui ;
+    cc_viewc (tCoFix mfix idx) := ccview_cofix mfix idx ;
+    cc_viewc t := ccview_other t I.
+
   Equations _reduce_stack (Γ : context) (t : term) (π : stack)
             (h : welltyped Σ Γ (zip (t,π)))
             (reduce : forall t' π', R Σ Γ (t',π') (t,π) ->

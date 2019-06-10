@@ -159,4 +159,19 @@ Section Inversion.
     intros Γ na b B t T h. invtac h.
   Qed.
 
+  Lemma inversion_CoFix :
+    forall {Γ mfix idx T},
+      Σ ;;; Γ |- tCoFix mfix idx : T ->
+      ∑ decl,
+        let types := fix_context mfix in
+        nth_error mfix idx = Some decl ×
+        wf_local Σ (Γ ,,, types) ×
+        All (fun d =>
+          Σ ;;; Γ ,,, types |- d.(dbody) : lift0 #|types| d.(dtype)
+        ) mfix ×
+        Σ ;;; Γ |- decl.(dtype) <= T.
+  Proof.
+    intros Γ mfix idx T h. invtac h.
+  Qed.
+
 End Inversion.

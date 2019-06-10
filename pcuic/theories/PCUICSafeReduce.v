@@ -369,9 +369,14 @@ Section Reduce.
     | red_view_Case ind par p c brs π with RedFlags.iota flags := {
       | true with inspect (reduce c (Case (ind, par) p brs π) _) := {
         | @exist (@exist (t,π') prf) eq with inspect (decompose_stack π') := {
-          | @exist (args, ρ) prf' with construct_viewc t := {
-            | view_construct ind' c' _ := rec reduce (iota_red par c' args brs) π ;
-            | view_other t ht := give (tCase (ind, par) p (mkApps t args) brs) π
+          | @exist (args, ρ) prf' with cc_viewc t := {
+            | ccview_construct ind' c' _ := rec reduce (iota_red par c' args brs) π ;
+            | ccview_cofix mfix idx with inspect (unfold_cofix mfix idx) := {
+              | @exist (Some (narg, fn)) eq' :=
+                give (tCase (ind, par) p (mkApps fn args) brs) π ;
+              | @exist None bot := False_rect _ _
+              } ;
+            | ccview_other t ht := give (tCase (ind, par) p (mkApps t args) brs) π
             }
           }
         } ;
@@ -671,6 +676,64 @@ Section Reduce.
             assumption.
           } subst.
           reflexivity.
+  Qed.
+  Next Obligation.
+    unfold Pr in p0. cbn in p0.
+    pose proof p0 as hh.
+    rewrite <- prf' in hh. cbn in hh. subst.
+    dependent destruction r.
+    - inversion e. subst.
+      right. left. eapply cored_context.
+      constructor.
+      simpl in prf'. inversion prf'. subst.
+      eapply red_cofix_case with (args := []). eauto.
+    - clear eq.
+      dependent destruction r.
+      + right. left.
+        symmetry in prf'. apply decompose_stack_eq in prf' as ?. subst.
+        cbn in H. rewrite zipc_appstack in H. cbn in H.
+        eapply cored_trans' ; try eassumption.
+        zip fold. eapply cored_context.
+        constructor. eapply red_cofix_case. eauto.
+      + right. left.
+        cbn in H0. destruct y'. inversion H0. subst. clear H0.
+        symmetry in prf'. apply decompose_stack_eq in prf' as ?. subst.
+        rewrite zipc_appstack in H2. cbn in H2.
+        cbn. rewrite H2.
+        zip fold. eapply cored_context.
+        constructor. eapply red_cofix_case. eauto.
+  Qed.
+  Next Obligation.
+    unfold Pr in p0. cbn in p0.
+    pose proof p0 as hh.
+    rewrite <- prf' in hh. cbn in hh. subst.
+    assert (h' : welltyped Σ Γ (zip (tCase (ind, par) p (mkApps (tCoFix mfix idx) args) brs, π))).
+    { dependent destruction r.
+      - inversion e. subst.
+        simpl in prf'. inversion prf'. subst.
+        assumption.
+      - clear eq. dependent destruction r.
+        + apply cored_red in H. destruct H as [r].
+          eapply red_welltyped ; eauto.
+          constructor.
+          symmetry in prf'. apply decompose_stack_eq in prf'. subst.
+          cbn in r. rewrite zipc_appstack in r. cbn in r.
+          assumption.
+        + cbn in H0. destruct y'. inversion H0. subst. clear H0.
+          symmetry in prf'. apply decompose_stack_eq in prf'. subst.
+          rewrite zipc_appstack in H2. cbn in H2.
+          cbn. rewrite <- H2. assumption.
+    }
+    replace (zip (tCase (ind, par) p (mkApps (tCoFix mfix idx) args) brs, π))
+      with (zip (tCoFix mfix idx, appstack args (Case (ind, par) p brs π)))
+      in h'.
+    - apply welltyped_context in h'. simpl in h'.
+      destruct h' as [T h'].
+      apply inversion_CoFix in h'.
+      destruct h' as [decl [e [? [? ?]]]].
+      unfold unfold_cofix in bot.
+      rewrite e in bot. discriminate.
+    - cbn. rewrite zipc_appstack. reflexivity.
   Qed.
   Next Obligation.
     clear eq reduce h.
@@ -1092,6 +1155,8 @@ Section Reduce.
       (* constructor. eapply whne_mkApps. constructor. *)
       (* eapply whne_mkApps. *)
       admit.
+    - admit.
+    - bang.
     - unfold zipp. case_eq (decompose_stack π6). intros.
       constructor. eapply whne_mkApps. eapply whne_proj_noiota. assumption.
     - (* Like case *)
@@ -1231,6 +1296,8 @@ Section Reduce.
   (*        we want to conclude it is necessarily neutral *)
   (*      *)
       admit.
+    - admit.
+    - bang.
     - constructor. eapply whne_proj_noiota. assumption.
     - (* Like case *)
       admit.

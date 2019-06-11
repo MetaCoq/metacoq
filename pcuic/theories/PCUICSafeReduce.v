@@ -373,6 +373,7 @@ Section Reduce.
             | ccview_construct ind' c' _ := rec reduce (iota_red par c' args brs) π ;
             | ccview_cofix mfix idx with inspect (unfold_cofix mfix idx) := {
               | @exist (Some (narg, fn)) eq' :=
+                (* TODO rec reduce! *)
                 give (tCase (ind, par) p (mkApps fn args) brs) π ;
               | @exist None bot := False_rect _ _
               } ;
@@ -394,6 +395,7 @@ Section Reduce.
               } ;
             | ccview_cofix mfix idx with inspect (unfold_cofix mfix idx) := {
               | @exist (Some (narg, fn)) eq' :=
+                (* TODO rec reduce! *)
                 give (tProj (i, pars, narg) (mkApps fn args)) π ;
               | @exist None bot := False_rect _ _
               } ;

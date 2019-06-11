@@ -1988,16 +1988,12 @@ Section Conversion.
       | ccview_construct ind' n ui with inspect (decompose_stack ρ) := {
         | @exist (args, ξ) eq' := Some (iota_red par n args brs)
         } ;
-      (* | ccview_cofix mfix idx with inspect (unfold_fix mfix idx) := { *)
-      (*   | @exist (Some (narg, fn)) eq2 with inspect (decompose_stack_at ρ narg) := { *)
-      (*     | @exist (Some (args, c', ξ)) eq3 with inspect (reduce_stack RedFlags.default Σ Γ c' ε _) := { *)
-      (*       | @exist (c'red, ρ') eq4 *)
-      (*       } ; *)
-      (*     | @exist None _ := None *)
-      (*     } ; *)
-      (*   | @exist None _ := None *)
-      (*   } *)
-      | ccview_cofix mfix idx := None ;
+      | ccview_cofix mfix idx with inspect (unfold_cofix mfix idx) := {
+        | @exist (Some (narg, fn)) eq2 with inspect (decompose_stack ρ) := {
+          | @exist (args, ξ) eq' := Some (tCase (ind, par) p (mkApps fn args) brs)
+          } ;
+        | @exist None eq2 := None
+        } ;
       | ccview_other t _ := None
       }
     }.
@@ -2018,23 +2014,39 @@ Section Conversion.
     revert e.
     funelim (unfold_one_case Γ ind par p c brs h).
     all: intros eq ; noconf eq.
-    match type of e with
-    | _ = reduce_stack ?f ?Σ ?hΣ ?Γ ?t ?π ?h =>
-      pose proof (reduce_stack_sound f Σ hΣ Γ t π h) as [r] ;
-      pose proof (reduce_stack_decompose f Σ hΣ Γ t π h) as d
-    end.
-    rewrite <- e in r.
-    rewrite <- e in d. cbn in d. rewrite <- e0 in d. cbn in d. subst.
-    cbn in r.
-    clear H. symmetry in e0. apply decompose_stack_eq in e0. subst.
-    rewrite zipc_appstack in r. cbn in r.
-    assert (r' : ∥ red Σ Γ (tCase (ind, par) p c brs) (tCase (ind, par) p (mkApps (tConstruct ind0 n ui) l) brs) ∥).
-    { constructor. eapply red_case_c. eassumption. }
-    pose proof (red_welltyped flags _ hΣ h r') as h'.
-    eapply Case_Construct_ind_eq in h' ; eauto. subst.
-    eapply cored_red_cored.
-    - constructor. eapply red_iota.
-    - eapply red_case_c. eassumption.
+    - match type of e with
+      | _ = reduce_stack ?f ?Σ ?hΣ ?Γ ?t ?π ?h =>
+        pose proof (reduce_stack_sound f Σ hΣ Γ t π h) as [r] ;
+        pose proof (reduce_stack_decompose f Σ hΣ Γ t π h) as d
+      end.
+      rewrite <- e in r.
+      rewrite <- e in d. cbn in d. rewrite <- e0 in d. cbn in d. subst.
+      cbn in r.
+      clear H. symmetry in e0. apply decompose_stack_eq in e0. subst.
+      rewrite zipc_appstack in r. cbn in r.
+      assert (r' : ∥ red Σ Γ (tCase (ind, par) p c brs) (tCase (ind, par) p (mkApps (tConstruct ind0 n ui) l) brs) ∥).
+      { constructor. eapply red_case_c. eassumption. }
+      pose proof (red_welltyped flags _ hΣ h r') as h'.
+      eapply Case_Construct_ind_eq in h' ; eauto. subst.
+      eapply cored_red_cored.
+      + constructor. eapply red_iota.
+      + eapply red_case_c. eassumption.
+    - match type of e with
+      | _ = reduce_stack ?f ?Σ ?hΣ ?Γ ?t ?π ?h =>
+        pose proof (reduce_stack_sound f Σ hΣ Γ t π h) as [r] ;
+        pose proof (reduce_stack_decompose f Σ hΣ Γ t π h) as d
+      end.
+      rewrite <- e in r.
+      rewrite <- e in d. cbn in d. rewrite <- e1 in d. cbn in d. subst.
+      cbn in r.
+      clear H. symmetry in e1. apply decompose_stack_eq in e1. subst.
+      rewrite zipc_appstack in r. cbn in r.
+      assert (r' : ∥ red Σ Γ (tCase (ind, par) p c brs) (tCase (ind, par) p (mkApps (tCoFix mfix idx) l) brs) ∥).
+      { constructor. eapply red_case_c. eassumption. }
+      pose proof (red_welltyped flags _ hΣ h r') as h'.
+      eapply cored_red_cored.
+      + constructor. eapply red_cofix_case. eauto.
+      + eapply red_case_c. eassumption.
   Qed.
 
   Equations unfold_one_proj (Γ : context) (p : projection) (c : term)
@@ -2049,7 +2061,13 @@ Section Conversion.
             | @exist None _ := None
             }
           } ;
-        | ccview_cofix mfix idx := None ;
+        | ccview_cofix mfix idx with inspect (decompose_stack ρ) := {
+          | @exist (args, ξ) eq' with inspect (unfold_cofix mfix idx) := {
+            | @exist (Some (narg, fn)) eq2 :=
+              Some (tProj (i, pars, narg) (mkApps fn args)) ;
+            | @exist None eq2 := None
+            }
+          } ;
         | ccview_other t _ := None
         }
       }
@@ -2070,22 +2088,37 @@ Section Conversion.
     revert e.
     funelim (unfold_one_proj Γ p c h).
     all: intros eq ; noconf eq.
-    match type of e with
-    | _ = reduce_stack ?f ?Σ ?hΣ ?Γ ?t ?π ?h =>
-      pose proof (reduce_stack_sound f Σ hΣ Γ t π h) as [r] ;
-      pose proof (reduce_stack_decompose f Σ hΣ Γ t π h) as d
-    end.
-    rewrite <- e in r.
-    rewrite <- e in d. cbn in d. rewrite <- e0 in d. cbn in d. subst.
-    cbn in r.
-    clear H0. symmetry in e0. apply decompose_stack_eq in e0. subst.
-    rewrite zipc_appstack in r. cbn in r.
-    pose proof (red_proj_c _ _ (i, n0, n) _ _ r) as r'.
-    pose proof (red_welltyped flags _ hΣ h (sq r')) as h'.
-    apply Proj_Constuct_ind_eq in h' ; auto. subst.
-    eapply cored_red_cored.
-    - constructor. eapply red_proj. eauto.
-    - eapply red_proj_c. eassumption.
+    - match type of e with
+      | _ = reduce_stack ?f ?Σ ?hΣ ?Γ ?t ?π ?h =>
+        pose proof (reduce_stack_sound f Σ hΣ Γ t π h) as [r] ;
+        pose proof (reduce_stack_decompose f Σ hΣ Γ t π h) as d
+      end.
+      rewrite <- e in r.
+      rewrite <- e in d. cbn in d. rewrite <- e0 in d. cbn in d. subst.
+      cbn in r.
+      clear H0. symmetry in e0. apply decompose_stack_eq in e0. subst.
+      rewrite zipc_appstack in r. cbn in r.
+      pose proof (red_proj_c _ _ (i, n0, n) _ _ r) as r'.
+      pose proof (red_welltyped flags _ hΣ h (sq r')) as h'.
+      apply Proj_Constuct_ind_eq in h' ; auto. subst.
+      eapply cored_red_cored.
+      + constructor. eapply red_proj. eauto.
+      + eapply red_proj_c. eassumption.
+    - match type of e with
+      | _ = reduce_stack ?f ?Σ ?hΣ ?Γ ?t ?π ?h =>
+        pose proof (reduce_stack_sound f Σ hΣ Γ t π h) as [r] ;
+        pose proof (reduce_stack_decompose f Σ hΣ Γ t π h) as d
+      end.
+      rewrite <- e in r.
+      rewrite <- e in d. cbn in d. rewrite <- e0 in d. cbn in d. subst.
+      cbn in r.
+      clear H0. symmetry in e0. apply decompose_stack_eq in e0. subst.
+      rewrite zipc_appstack in r. cbn in r.
+      pose proof (red_proj_c _ _ (i, n0, n) _ _ r) as r'.
+      pose proof (red_welltyped flags _ hΣ h (sq r')) as h'.
+      eapply cored_red_cored.
+      + constructor. eapply red_cofix_proj. eauto.
+      + eapply red_proj_c. eassumption.
   Qed.
 
   Equations reducible_head (Γ : context) (t : term) (π : stack)

@@ -373,8 +373,7 @@ Section Reduce.
             | ccview_construct ind' c' _ := rec reduce (iota_red par c' args brs) π ;
             | ccview_cofix mfix idx with inspect (unfold_cofix mfix idx) := {
               | @exist (Some (narg, fn)) eq' :=
-                (* TODO rec reduce! *)
-                give (tCase (ind, par) p (mkApps fn args) brs) π ;
+                rec reduce (tCase (ind, par) p (mkApps fn args) brs) π ;
               | @exist None bot := False_rect _ _
               } ;
             | ccview_other t ht := give (tCase (ind, par) p (mkApps t args) brs) π
@@ -395,8 +394,7 @@ Section Reduce.
               } ;
             | ccview_cofix mfix idx with inspect (unfold_cofix mfix idx) := {
               | @exist (Some (narg, fn)) eq' :=
-                (* TODO rec reduce! *)
-                give (tProj (i, pars, narg) (mkApps fn args)) π ;
+                rec reduce (tProj (i, pars, narg) (mkApps fn args)) π ;
               | @exist None bot := False_rect _ _
               } ;
             | ccview_other t ht := give (tProj (i, pars, narg) (mkApps t args)) π
@@ -508,7 +506,7 @@ Section Reduce.
     rewrite β in eq1. discriminate.
   Qed.
 
-    (* tFix *)
+  (* tFix *)
   Next Obligation.
     symmetry in eq2.
     pose proof (decompose_stack_at_eq _ _ _ _ _ eq2). subst.
@@ -690,19 +688,19 @@ Section Reduce.
     rewrite <- prf' in hh. cbn in hh. subst.
     dependent destruction r.
     - inversion e. subst.
-      right. left. eapply cored_context.
+      left. eapply cored_context.
       constructor.
       simpl in prf'. inversion prf'. subst.
       eapply red_cofix_case with (args := []). eauto.
     - clear eq.
       dependent destruction r.
-      + right. left.
+      + left.
         symmetry in prf'. apply decompose_stack_eq in prf' as ?. subst.
         cbn in H. rewrite zipc_appstack in H. cbn in H.
         eapply cored_trans' ; try eassumption.
         zip fold. eapply cored_context.
         constructor. eapply red_cofix_case. eauto.
-      + right. left.
+      + left.
         cbn in H0. destruct y'. inversion H0. subst. clear H0.
         symmetry in prf'. apply decompose_stack_eq in prf' as ?. subst.
         rewrite zipc_appstack in H2. cbn in H2.
@@ -806,19 +804,19 @@ Section Reduce.
     rewrite <- prf' in p'. simpl in p'. subst.
     dependent destruction r.
     - inversion e. subst.
-      right. left. eapply cored_context.
+      left. eapply cored_context.
       constructor.
       simpl in prf'. inversion prf'. subst.
       eapply red_cofix_proj with (args := []). eauto.
     - clear eq.
       dependent destruction r.
-      + right. left.
+      + left.
         symmetry in prf'. apply decompose_stack_eq in prf' as ?. subst.
         cbn in H. rewrite zipc_appstack in H. cbn in H.
         eapply cored_trans' ; try eassumption.
         zip fold. eapply cored_context.
         constructor. eapply red_cofix_proj. eauto.
-      + right. left.
+      + left.
         cbn in H0. destruct y'. inversion H0. subst. clear H0.
         symmetry in prf'. apply decompose_stack_eq in prf' as ?. subst.
         rewrite zipc_appstack in H2. cbn in H2.

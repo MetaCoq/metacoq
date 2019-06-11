@@ -1939,16 +1939,32 @@ Section Conversion.
             (π2 : stack) (h2 : wts Γ s t π2)
     : Ret s Γ t π1 π2 :=
 
+    (* isconv_full s Γ t π1 h1 π2 h2 := *)
+    (*   Fix_F (R := R) *)
+    (*         (fun '(mkpack s' Γ' t' π1' π2' h2') => wtp Γ' t' π1' -> wts Γ' s' t' π2' -> Ret s' Γ' t' π1' π2') *)
+    (*         (fun pp f => _) *)
+    (*         (x := mkpack s Γ t π1 π2 _) *)
+    (*         _ _ _. *)
+
     isconv_full s Γ t π1 h1 π2 h2 :=
       Fix_F (R := R)
-            (fun '(mkpack s' Γ' t' π1' π2' h2') => wtp Γ' t' π1' -> wts Γ' s' t' π2' -> Ret s' Γ' t' π1' π2')
+            (fun x =>
+               let s' := st x in
+               let Γ' := ctx x in
+               let t' := tm x in
+               let π1' := stk1 x in
+               let π2' := stk2 x in
+               let tm' := tm x in
+               let h2' := wth x in
+               wtp Γ' t' π1' -> wts Γ' s' t' π2' -> Ret s' Γ' t' π1' π2')
             (fun pp f => _)
             (x := mkpack s Γ t π1 π2 _)
             _ _ _.
   Next Obligation.
     unshelve eapply _isconv ; try assumption.
     intros s' Γ' t' π1' π2' h1' h2' hR. destruct pp.
-    assert (wth0 = zwts H0) by apply welltyped_irr. subst.
+    assert (wth0 = zwts H0) by apply welltyped_irr. simpl in hR, H, H0, f.
+    rewrite H1 in f.
     specialize (f (mkpack s' Γ' t' π1' π2' (zwts h2')) hR). cbn in f.
     eapply f ; assumption.
   Qed.

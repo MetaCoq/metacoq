@@ -392,7 +392,7 @@ Lemma subst_declared_projection `{checker_flags} Σ c mdecl idecl pdecl n k :
   on_snd (subst n (S (ind_npars mdecl + k))) pdecl = pdecl.
 Proof.
   intros wfΣ wfn Hd.
-  destruct Hd as [[Hmdecl Hidecl] Hpdecl].
+  destruct Hd as [[Hmdecl Hidecl] [Hpdecl Hnpar]].
   eapply declared_decl_closed in Hmdecl.
   simpl in Hmdecl.
   apply onInductives in Hmdecl.

@@ -16,7 +16,6 @@ authors: ["Abhishek Anand <aa755@cs.cornell.edu>"
 ]
 license: "MIT"
 build: [
-  [make "-j%{jobs}%" "template-coq"]
   [make "-j%{jobs}%" "checker"]
 ]
 install: [

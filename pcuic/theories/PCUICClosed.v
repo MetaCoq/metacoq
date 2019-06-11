@@ -310,7 +310,7 @@ Proof.
     simpl. apply closedn_mkApps_inv in H2.
     rewrite forallb_rev H1. apply H2.
     rewrite closedn_subst_instance_constr.
-    destruct isdecl as [isdecl Hpdecl].
+    destruct isdecl as [isdecl [Hpdecl Hnpar]].
     eapply declared_inductive_inv in isdecl; eauto.
     apply onProjections in isdecl.
     eapply nth_error_alli in isdecl; eauto.

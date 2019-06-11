@@ -307,7 +307,7 @@ Lemma declared_projection_inv `{checker_flags} Σ P mdecl idecl ref pdecl :
                 (inductive_ind (fst (fst ref))) idecl (snd ref) pdecl.
 Proof.
   intros.
-  destruct H0 as [Hidecl Hcdecl].
+  destruct H0 as [Hidecl [Hcdecl Hnpar]].
   eapply declared_inductive_inv in Hidecl; eauto.
   apply onProjections in Hidecl.
   eapply nth_error_alli in Hidecl; eauto.

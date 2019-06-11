@@ -354,7 +354,7 @@ Lemma lift_declared_projection `{checker_flags} Σ c mdecl idecl pdecl n k :
   on_snd (lift n (S (ind_npars mdecl + k))) pdecl = pdecl.
 Proof.
   intros.
-  destruct H0 as [[Hmdecl Hidecl] Hpdecl].
+  destruct H0 as [[Hmdecl Hidecl] [Hpdecl Hnpar]].
   eapply declared_decl_closed in Hmdecl.
   simpl in Hmdecl.
   apply onInductives in Hmdecl.
@@ -1069,9 +1069,10 @@ Proof.
       with (snd (on_snd (lift #|Γ''| (S (#|args| + #|Γ'|))) pdecl)) by now destruct pdecl.
     econstructor.
     red. split. apply (proj1 isdecl).
-    rewrite -> (proj2 isdecl). f_equal.
+    split. rewrite -> (proj1 (proj2 isdecl)). f_equal.
     rewrite -> H.
     symmetry; eapply lift_declared_projection; eauto.
+    apply (proj2 (proj2 isdecl)).
     specialize (X1 _ _ _ X2 eq_refl).
     rewrite -> lift_mkApps in X1. eapply X1.
     now rewrite -> map_length.

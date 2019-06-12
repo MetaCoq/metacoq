@@ -1103,8 +1103,10 @@ Section Reduce.
           destruct hh as [na [A [B [hs [? ?]]]]].
           (* We need proper inversion here *)
           admit.
-      + (* Is this one ok? *)
-        give_up.
+      + (* Here, we need to show some isred property stating that under iota,
+           not CoFix can be returned against Case/Proj.
+         *)
+        admit.
     - unfold zipp. case_eq (decompose_stack π0). intros l ρ e.
       constructor. eapply whne_mkApps.
       eapply whne_rel_nozeta. assumption.
@@ -1203,23 +1205,40 @@ Section Reduce.
       pose proof (eq_sym e0) as e1. apply decompose_stack_eq in e1.
       subst.
       rewrite stack_context_appstack in haux'. simpl in haux'.
-      (* apply Req_red in r as hr. *)
-      (* pose proof (red_welltyped h hr) as hh. *)
-      (* cbn in hh. rewrite zipc_appstack in hh. cbn in hh. *)
-      (* zip fold in hh. *)
-      (* apply welltyped_context in hh. simpl in hh. *)
-      (* destruct hh as [T hh]. *)
-      (* apply inversion_Case in hh *)
-      (*   as [u [npar [args [mdecl [idecl [pty [indctx [pctx [ps [btys [? [? [? [? [? [? [ht0 [? ?]]]]]]]]]]]]]]]]]]. *)
-      (* constructor. eapply whne_mkApps. constructor. *)
-      (* eapply whne_mkApps. *)
+      apply Req_red in r as hr.
+      pose proof (red_welltyped _ hΣ h hr) as hh.
+      cbn in hh. rewrite zipc_appstack in hh. cbn in hh.
+      zip fold in hh.
+      apply welltyped_context in hh. simpl in hh.
+      destruct hh as [T hh].
+      apply inversion_Case in hh
+        as [u [npar [args [mdecl [idecl [pty [indctx [pctx [ps [btys [? [? [? [? [? [? [ht0 [? ?]]]]]]]]]]]]]]]]]].
+      constructor. eapply whne_mkApps. constructor.
+      eapply whne_mkApps.
+      (* Need storng inversion lemma *)
       admit.
-    - admit.
+    - match goal with
+      | |- context [ reduce ?x ?y ?z ] =>
+        case_eq (reduce x y z) ;
+        specialize (haux x y z)
+      end.
+      intros [t' π'] [? [? [? ?]]] eq. cbn.
+      rewrite eq in haux. cbn in haux.
+      assumption.
     - bang.
     - unfold zipp. case_eq (decompose_stack π6). intros.
       constructor. eapply whne_mkApps. eapply whne_proj_noiota. assumption.
     - (* Like case *)
       admit.
+    - match goal with
+      | |- context [ reduce ?x ?y ?z ] =>
+        case_eq (reduce x y z) ;
+        specialize (haux x y z)
+      end.
+      intros [t' π'] [? [? [? ?]]] eq. cbn.
+      rewrite eq in haux. cbn in haux.
+      assumption.
+    - bang.
     - match goal with
       | |- context [ reduce ?x ?y ?z ] =>
         case_eq (reduce x y z) ;
@@ -1355,11 +1374,27 @@ Section Reduce.
   (*        we want to conclude it is necessarily neutral *)
   (*      *)
       admit.
-    - admit.
+    - match goal with
+      | |- context [ reduce ?x ?y ?z ] =>
+        case_eq (reduce x y z) ;
+        specialize (haux x y z)
+      end.
+      intros [t' π'] [? [? [? ?]]] eq. cbn.
+      rewrite eq in haux. cbn in haux.
+      assumption.
     - bang.
     - constructor. eapply whne_proj_noiota. assumption.
     - (* Like case *)
       admit.
+    - match goal with
+      | |- context [ reduce ?x ?y ?z ] =>
+        case_eq (reduce x y z) ;
+        specialize (haux x y z)
+      end.
+      intros [t' π'] [? [? [? ?]]] eq. cbn.
+      rewrite eq in haux. cbn in haux.
+      assumption.
+    - bang.
     - match goal with
       | |- context [ reduce ?x ?y ?z ] =>
         case_eq (reduce x y z) ;

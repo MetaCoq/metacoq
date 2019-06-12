@@ -1726,6 +1726,37 @@ Section Lemmata.
       + assumption.
   Qed.
 
+  Lemma welltyped_zipc_replace :
+    forall Γ u v π,
+      welltyped Σ Γ (zipc v π) ->
+      welltyped Σ (Γ ,,, stack_context π) u ->
+      Σ ;;; Γ ,,, stack_context π |- u = v ->
+      welltyped Σ Γ (zipc u π).
+  Proof.
+    intros Γ u v π hv hu heq.
+    induction π in u, v, hu, hv, heq |- *.
+    - simpl in *. assumption.
+    - simpl in *. eapply IHπ.
+      + eassumption.
+      + zip fold in hv. apply welltyped_context in hv.
+        simpl in hv.
+        destruct hv as [Tv hv].
+        destruct hu as [Tu hu].
+        apply inversion_App in hv as ihv.
+        destruct ihv as [na [A' [B' [hv' [ht ?]]]]].
+        (* Seems to be derivable (tediously) from some principle type lemma. *)
+        admit.
+      + (* Congruence *)
+        admit.
+  Admitted.
+
+  Lemma conv_context_conversion :
+    forall {Γ u v Γ'},
+      Σ ;;; Γ |- u = v ->
+      PCUICSR.conv_context Σ Γ Γ' ->
+      Σ ;;; Γ' |- u = v.
+  Admitted.
+
   (* Lemma principle_typing : *)
   (*   forall {Γ u A B}, *)
   (*     Σ ;;; Γ |- u : A -> *)

@@ -771,7 +771,7 @@ Section Reduce.
   Next Obligation.
     left.
     apply Req_red in r as hr.
-    pose proof (red_welltyped flags _ hΣ h hr) as hh.
+    pose proof (red_welltyped _ hΣ h hr) as hh.
     destruct hr as [hr].
     eapply cored_red_cored ; try eassumption.
     unfold Pr in p. simpl in p. pose proof p as p'.
@@ -792,7 +792,7 @@ Section Reduce.
     symmetry in prf'. apply decompose_stack_eq in prf' as ?.
     subst.
     apply Req_red in r as hr.
-    pose proof (red_welltyped flags _ hΣ h hr) as hh.
+    pose proof (red_welltyped _ hΣ h hr) as hh.
     cbn in hh. rewrite zipc_appstack in hh. cbn in hh.
     zip fold in hh.
     apply welltyped_context in hh. simpl in hh.
@@ -1335,7 +1335,7 @@ Section Reduce.
       subst.
       rewrite stack_context_appstack in haux'. simpl in haux'.
       apply Req_red in r as hr.
-      pose proof (red_welltyped flags _ hΣ h hr) as hh.
+      pose proof (red_welltyped _ hΣ h hr) as hh.
       cbn in hh. rewrite zipc_appstack in hh. cbn in hh.
       zip fold in hh.
       apply welltyped_context in hh. simpl in hh.

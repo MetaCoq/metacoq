@@ -1547,7 +1547,7 @@ Section Conversion.
     apply welltyped_zipc_zippx in hh1 ; auto.
     pose proof (decompose_stack_eq _ _ _ e1). subst.
     unfold zippx in hh1. rewrite e1 in hh1.
-    pose proof (red_welltyped flags _ hΣ hh1 r) as hh.
+    pose proof (red_welltyped _ hΣ hh1 r) as hh.
     apply welltyped_it_mkLambda_or_LetIn in hh.
     assumption.
   Qed.
@@ -1568,11 +1568,11 @@ Section Conversion.
     case_eq (decompose_stack ρ). intros l ξ e.
     rewrite e in d2. cbn in d2. subst.
     apply welltyped_zipx in h1 as hh1.
-    pose proof (red_welltyped flags _ hΣ hh1 r1) as hh.
+    pose proof (red_welltyped _ hΣ hh1 r1) as hh.
     apply red_context in r2.
     pose proof (decompose_stack_eq _ _ _ (eq_sym eq2)). subst.
     rewrite zipc_appstack in hh. cbn in r2.
-    pose proof (red_welltyped flags _ hΣ hh (sq r2)) as hh2.
+    pose proof (red_welltyped _ hΣ hh (sq r2)) as hh2.
     eapply zipx_welltyped ; auto.
     rewrite zipc_stack_cat.
     assumption.
@@ -1661,7 +1661,7 @@ Section Conversion.
     apply welltyped_zipc_zippx in hh2 ; auto.
     pose proof (decompose_stack_eq _ _ _ e2). subst.
     unfold zippx in hh2. rewrite e2 in hh2.
-    pose proof (red_welltyped flags _ hΣ hh2 r) as hh.
+    pose proof (red_welltyped _ hΣ hh2 r) as hh.
     apply welltyped_it_mkLambda_or_LetIn in hh.
     assumption.
   Qed.
@@ -1682,11 +1682,11 @@ Section Conversion.
     case_eq (decompose_stack ρ). intros l ξ e.
     rewrite e in d2. cbn in d2. subst.
     apply welltyped_zipx in h2 as hh2.
-    pose proof (red_welltyped flags _ hΣ hh2 r1) as hh.
+    pose proof (red_welltyped _ hΣ hh2 r1) as hh.
     apply red_context in r2.
     pose proof (decompose_stack_eq _ _ _ (eq_sym eq2)). subst.
     rewrite zipc_appstack in hh. cbn in r2.
-    pose proof (red_welltyped flags _ hΣ hh (sq r2)) as hh'.
+    pose proof (red_welltyped _ hΣ hh (sq r2)) as hh'.
     eapply zipx_welltyped ; auto.
     rewrite zipc_stack_cat.
     assumption.
@@ -2026,7 +2026,7 @@ Section Conversion.
       rewrite zipc_appstack in r. cbn in r.
       assert (r' : ∥ red Σ Γ (tCase (ind, par) p c brs) (tCase (ind, par) p (mkApps (tConstruct ind0 n ui) l) brs) ∥).
       { constructor. eapply red_case_c. eassumption. }
-      pose proof (red_welltyped flags _ hΣ h r') as h'.
+      pose proof (red_welltyped _ hΣ h r') as h'.
       eapply Case_Construct_ind_eq in h' ; eauto. subst.
       eapply cored_red_cored.
       + constructor. eapply red_iota.
@@ -2043,7 +2043,7 @@ Section Conversion.
       rewrite zipc_appstack in r. cbn in r.
       assert (r' : ∥ red Σ Γ (tCase (ind, par) p c brs) (tCase (ind, par) p (mkApps (tCoFix mfix idx) l) brs) ∥).
       { constructor. eapply red_case_c. eassumption. }
-      pose proof (red_welltyped flags _ hΣ h r') as h'.
+      pose proof (red_welltyped _ hΣ h r') as h'.
       eapply cored_red_cored.
       + constructor. eapply red_cofix_case. eauto.
       + eapply red_case_c. eassumption.
@@ -2099,7 +2099,7 @@ Section Conversion.
       clear H0. symmetry in e0. apply decompose_stack_eq in e0. subst.
       rewrite zipc_appstack in r. cbn in r.
       pose proof (red_proj_c _ _ (i, n0, n) _ _ r) as r'.
-      pose proof (red_welltyped flags _ hΣ h (sq r')) as h'.
+      pose proof (red_welltyped _ hΣ h (sq r')) as h'.
       apply Proj_Constuct_ind_eq in h' ; auto. subst.
       eapply cored_red_cored.
       + constructor. eapply red_proj. eauto.
@@ -2115,7 +2115,7 @@ Section Conversion.
       clear H0. symmetry in e0. apply decompose_stack_eq in e0. subst.
       rewrite zipc_appstack in r. cbn in r.
       pose proof (red_proj_c _ _ (i, n0, n) _ _ r) as r'.
-      pose proof (red_welltyped flags _ hΣ h (sq r')) as h'.
+      pose proof (red_welltyped _ hΣ h (sq r')) as h'.
       eapply cored_red_cored.
       + constructor. eapply red_cofix_proj. eauto.
       + eapply red_proj_c. eassumption.
@@ -2266,7 +2266,7 @@ Section Conversion.
     apply welltyped_zipc_zippx in hh1 ; auto.
     apply decompose_stack_eq in e1 as ?. subst.
     unfold zippx in hh1. rewrite e1 in hh1.
-    pose proof (red_welltyped flags _ hΣ hh1 r) as hh.
+    pose proof (red_welltyped _ hΣ hh1 r) as hh.
     apply welltyped_it_mkLambda_or_LetIn in hh.
     symmetry in eq2.
     apply decompose_stack_eq in eq2. subst.
@@ -2388,7 +2388,7 @@ Section Conversion.
     apply welltyped_zipc_zippx in hh2 ; auto.
     apply decompose_stack_eq in e2 as ?. subst.
     unfold zippx in hh2. rewrite e2 in hh2.
-    pose proof (red_welltyped flags _ hΣ hh2 r) as hh.
+    pose proof (red_welltyped _ hΣ hh2 r) as hh.
     apply welltyped_it_mkLambda_or_LetIn in hh.
     symmetry in eq2.
     apply decompose_stack_eq in eq2. subst.

@@ -109,13 +109,6 @@ Section Lemmata.
   Context (Σ : global_context).
   Context (hΣ : wf Σ).
 
-  Lemma subject_reduction :
-    forall {Σ Γ u v A},
-      Σ ;;; Γ |- u : A ->
-      red1 (fst Σ) Γ u v ->
-      Σ ;;; Γ |- v : A.
-  Admitted.
-
   (* red is the reflexive transitive closure of one-step reduction and thus
      can't be used as well order. We thus define the transitive closure,
      but we take the symmetric version.
@@ -209,10 +202,10 @@ Section Lemmata.
     intros Γ u v h r.
     revert h. induction r ; intros h.
     - destruct h as [A h]. exists A.
-      eapply subject_reduction ; eassumption.
+      eapply sr_red1 ; eauto with wf.
     - specialize IHr with (1 := ltac:(eassumption)).
       destruct IHr as [A ?]. exists A.
-      eapply subject_reduction ; eassumption.
+      eapply sr_red1 ; eauto with wf.
   Qed.
 
   Lemma cored_trans' :
@@ -1630,7 +1623,7 @@ Section Lemmata.
     - assumption.
     - specialize IHr with (1 := ltac:(eassumption)).
       destruct IHr as [A ?]. exists A.
-      eapply subject_reduction ; eassumption.
+      eapply sr_red1 ; eauto with wf.
   Qed.
 
   Lemma red_cored_cored :

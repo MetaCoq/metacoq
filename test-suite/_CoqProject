@@ -1,8 +1,8 @@
 -I ../template-coq/src
 -I ../checker/src
--Q ../template-coq/theories Template
--Q ../checker/theories TemplateChecker
--R . TemplateTestSuite
+-Q ../template-coq/theories MetaCoq.Template
+-Q ../checker/theories MetaCoq.Checker
+-R . MetaCoq.TestSuite
 
 demo.v
 add_constructor.v
@@ -28,3 +28,4 @@ univ.v
 tmInferInstance.v
 issue27.v
 issue28.v
+extractable.v

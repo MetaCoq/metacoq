@@ -1,9 +1,9 @@
 (* Distributed under the terms of the MIT license.   *)
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
-From Template Require Import config utils Ast.
-From TemplateExtraction Require Import EAst EInduction ELiftSubst ETyping.
-From Template Require AstUtils.
+From MetaCoq.Template Require Import config utils Ast.
+From MetaCoq.Extraction Require Import EAst EInduction ELiftSubst ETyping.
+From MetaCoq.Template Require AstUtils.
 Require Import String.
 Local Open Scope string_scope.
 Set Asymmetric Patterns.
@@ -23,9 +23,16 @@ Existing Instance config.default_checker_flags.
   the extraction conjecture that can be applied to Coq terms to produce
   (untyped) terms where all proofs are erased to a dummy value. *)
 
-(** ** Big step version of weak cbv beta-zeta-iota-fix-delta reduction.
+(** ** Big step version of weak cbv beta-zeta-iota-fix-delta reduction. *)
 
-  TODO: CoFixpoints *)
+Definition atom t :=
+  match t with
+  | tBox
+  | tConstruct _ _
+  | tFix _ _
+  | tCoFix _ _ => true
+  | _ => false
+  end.
 
 Section Wcbv.
   Context (Σ : global_declarations).
@@ -33,7 +40,9 @@ Section Wcbv.
 
   Inductive eval : term -> term -> Prop :=
   (** Reductions *)
-  | eval_box l : eval (mkApps tBox l) tBox
+  | eval_box a l :
+      eval a tBox ->
+      eval (tApp a l) tBox
 
   (** Beta *)
   | eval_beta f na b a a' res :
@@ -68,7 +77,6 @@ Section Wcbv.
       eval (tCase ip (mkApps fn args) brs) res ->
       eval (tCase ip (mkApps (tCoFix mfix idx) args) brs) res
 
-
   (** CoFix-proj unfolding *)
   | red_cofix_proj p mfix idx args narg fn res :
       unfold_cofix mfix idx = Some (narg, fn) ->
@@ -96,14 +104,17 @@ Section Wcbv.
       Forall2 eval l l' ->
       eval (mkApps f l) (mkApps (tConstruct i k) l')
 
-  (* | evar ev l l' : evals l l' -> eval (tEvar ev l) (tEvar ev l') *)
+  (** Atoms are values *)
+  | eval_atom t : atom t -> eval t t
+
   | eval_evar ev l : eval (tEvar ev l) (tEvar ev l) (* Lets say it is a value for now *).
 
   (** The right induction principle for the nested [Forall] cases: *)
 
   Lemma eval_evals_ind :
     forall P : term -> term -> Prop,
-      (forall l, P (mkApps tBox l) tBox) ->
+      (forall a l, eval a tBox ->
+                   P (tApp a l) tBox) ->
       (forall (f : term) (na : name) (b a a' : term) (res : term),
           eval f (tLambda na b) ->
           P f (tLambda na b) ->
@@ -157,22 +168,26 @@ Section Wcbv.
       (forall (f8 : term) (i : inductive) (k : nat) (l l' : list term),
           eval f8 (tConstruct i k) ->
           P f8 (tConstruct i k) -> Forall2 eval l l' -> Forall2 P l l' -> P (mkApps f8 l) (mkApps (tConstruct i k) l')) ->
+      (forall t, atom t -> P t t) ->
 
       (forall (ev : nat) (l : list term), P (tEvar ev l) (tEvar ev l)) ->
 
       forall t t0 : term, eval t t0 -> P t t0.
   Proof.
     intros P Hbox Hbeta Hlet Hcase Hfix Hcoficase Hcofixproj
-           Hconst Hproj Hlam Hcstr Hevar.
+           Hconst Hproj Hlam Hcstr Hatom Hevar.
     fix eval_evals_ind 3. destruct 1;
              try match goal with [ H : _ |- _ ] =>
                              match type of H with
                                forall t t0, eval t t0 -> _ => fail 1
-                             | _ => eapply H
+                             | context [ atom _ ] => fail
+                             | _ => try solve [eapply H; eauto]
                              end end; eauto.
+    eapply Hfix. eauto. eauto.
     clear H1 H2.
     revert args args' H0. fix aux 3. destruct 1. constructor; auto.
-    constructor. now apply eval_evals_ind. now apply aux.
+    constructor. now apply eval_evals_ind. now apply aux. all:eauto.
+    eapply Hcstr; eauto.
     revert l l' H0. fix aux 3. destruct 1; constructor.
     now apply eval_evals_ind. apply aux. auto.
   Defined.
@@ -183,24 +198,23 @@ Section Wcbv.
       de Bruijn variables. *)
 
   Inductive value : term -> Prop :=
-  | value_tBox : value tBox
+  | value_atom t : atom t -> value t
   | value_tEvar ev l : value (tEvar ev l)
   | value_tLam na b : value (tLambda na b)
-  | value_tConstruct i k l : List.Forall value l -> value (mkApps (tConstruct i k) l).
+  | value_tConstructApp i k l : Forall value l -> value (mkApps (tConstruct i k) l).
 
   Lemma value_values_ind : forall P : term -> Prop,
-      (P tBox) ->
-       (forall i : nat, P (tRel i)) ->
-       (forall (ev : nat) (l : list term), P (tEvar ev l)) ->
-       (forall (na : name) (b : term), P (tLambda na b)) ->
-       (forall (i : inductive) (k : nat) (l : list term),
-           List.Forall value l -> List.Forall P l -> P (mkApps (tConstruct i k) l)) ->
-       forall t : term, value t -> P t.
+      (forall t, atom t -> P t) ->
+      (forall (ev : nat) (l : list term), P (tEvar ev l)) ->
+      (forall (na : name) (b : term), P (tLambda na b)) ->
+      (forall (i : inductive) (k : nat) (l : list term),
+          Forall value l -> Forall P l -> P (mkApps (tConstruct i k) l)) ->
+      forall t : term, value t -> P t.
   Proof.
-    intros P ?????.
+    intros P ????.
     fix value_values_ind 2. destruct 1. 1-3:clear value_values_ind; auto.
-    apply H3. apply H4.
-    revert l H4. fix aux 2. destruct 1. constructor; auto.
+    apply H2; auto.
+    revert l H3. fix aux 2. destruct 1. constructor; auto.
     constructor. now apply value_values_ind. now apply aux.
   Defined.
 
@@ -210,14 +224,14 @@ Section Wcbv.
   Lemma eval_to_value e e' : eval e e' -> value e'.
   Proof.
     induction 1 using eval_evals_ind; simpl; auto using value.
-    eapply (value_tConstruct i k).
+    eapply (value_tConstructApp i k).
     apply (Forall2_right _ _ _ H1).
   Qed.
 
   (** Evaluation preserves closedness: *)
   Lemma eval_closed : forall n t u, closedn n t = true -> eval t u -> closedn n u = true.
   Proof.
-    induction 2 using eval_evals_ind; simpl in *; eauto. eapply IHeval3.
+    induction 2 using eval_evals_ind; simpl in *; auto. eapply IHeval3.
     admit.
   Admitted. (* FIXME complete *)
 

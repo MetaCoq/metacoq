@@ -3,19 +3,21 @@
 Require Import Coq.Strings.String.
 Require Import Coq.PArith.BinPos.
 Require Import List. Import ListNotations.
-From Template Require Export univ uGraph.
-From Template Require Import BasicAst.
+From MetaCoq.Template Require Export Universes BasicAst.
+
+(* Declare Scope pcuic.*)
+Delimit Scope pcuic with pcuic.
+Open Scope pcuic.
 
 (** * AST of the Polymorphic Cumulative Calculus of Inductive Constructions
 
-   This AST is a cleaned-up version of Coq's internal AST better fitted for reasoning.
+   This AST is a cleaned-up version of Coq's internal AST better suited for reasoning.
    In particular, it has binary applications and all terms are well-formed.
    Casts are absent as well. *)
 
 Inductive term : Set :=
 | tRel       : nat -> term
 | tVar       : ident -> term (* For free variables (e.g. in a goal) *)
-| tMeta      : nat -> term   (* NOTE: this will go away *)
 | tEvar      : nat -> list term -> term
 | tSort      : universe -> term
 | tProd      : name -> term (* the type *) -> term -> term
@@ -148,7 +150,7 @@ Definition context := list context_decl.
 
 Definition snoc {A} (Γ : list A) (d : A) := d :: Γ.
 
-Notation " Γ ,, d " := (snoc Γ d) (at level 20, d at next level).
+Notation " Γ ,, d " := (snoc Γ d) (at level 20, d at next level) : pcuic.
 
 (** *** Environments *)
 
@@ -184,7 +186,7 @@ Definition global_declarations := list global_decl.
 (** A context of global declarations + global universe constraints,
     i.e. a global environment *)
 
-Definition global_context : Type := global_declarations * uGraph.t.
+Definition global_context : Type := global_declarations * constraints.
 
 (** *** Programs
 

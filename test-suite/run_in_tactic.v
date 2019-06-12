@@ -1,4 +1,4 @@
-Require Import Template.All.
+Require Import MetaCoq.Template.All.
 Require Import List String.
 Import ListNotations MonadNotation.
 

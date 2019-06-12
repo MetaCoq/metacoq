@@ -1,2 +1,2 @@
-Require Export Template.TemplateMonad.Core.
-Require Export Template.TemplateMonad.Monad.
+From MetaCoq.Template.TemplateMonad Require Export
+     Common Core Monad.

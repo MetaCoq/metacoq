@@ -3,18 +3,14 @@ open Entries
 open Declarations
 open Pp
 
+open Tm_util
+open Quoted
+
 let cast_prop = ref (false)
 
 (* whether Set Template Cast Propositions is on, as needed for erasure in Certicoq *)
 let is_cast_prop () = !cast_prop
 
-let opt_debug = ref false
-
-let debug (m : unit ->Pp.t) =
-  if !opt_debug then
-    Feedback.(msg_debug (m ()))
-  else
-    ()
 
 let toDecl (old: Name.t * ((Constr.constr) option) * Constr.constr) : Constr.rel_declaration =
   let (name,value,typ) = old in
@@ -24,23 +20,6 @@ let toDecl (old: Name.t * ((Constr.constr) option) * Constr.constr) : Constr.rel
 
 let getType env (t:Constr.t) : Constr.t =
     EConstr.to_constr Evd.empty (Retyping.get_type_of env Evd.empty (EConstr.of_constr t))
-
-let pr_constr trm =
-  let (evm, env) = Pfedit.get_current_context () in
-  Printer.pr_constr_env env evm trm
-
-let not_supported trm =
-  CErrors.user_err (str "Not Supported:" ++ spc () ++ pr_constr trm)
-
-let not_supported_verb trm rs =
-  CErrors.user_err (str "Not Supported raised at " ++ str rs ++ str ":" ++ spc () ++ pr_constr trm)
-
-let bad_term trm =
-  CErrors.user_err (str "Bad term:" ++ spc () ++ pr_constr trm)
-
-let bad_term_verb trm rs =
-  CErrors.user_err (str "Bad term:" ++ spc () ++ pr_constr trm
-                    ++ spc () ++ str " Error: " ++ str rs)
 
 (* TODO: remove? *)
 let opt_hnf_ctor_types = ref false
@@ -57,87 +36,9 @@ let hnf_type env ty =
   in
   hnf_type true ty
 
-(* Remove '#' from names *)
-let clean_name s =
-  let l = List.rev (CString.split '#' s) in
-  match l with
-    s :: rst -> s
-  | [] -> raise (Failure "Empty name cannot be quoted")
-
-let split_name s : (Names.DirPath.t * Names.Id.t) =
-  let ss = List.rev (CString.split '.' s) in
-  match ss with
-    nm :: rst ->
-     let nm = clean_name nm in
-     let dp = (DirPath.make (List.map Id.of_string rst)) in (dp, Names.Id.of_string nm)
-  | [] -> raise (Failure "Empty name cannot be quoted")
-
-
-type ('a,'b) sum =
-  Left of 'a | Right of 'b
-
-type ('term, 'name, 'nat) adef = { adname : 'name; adtype : 'term; adbody : 'term; rarg : 'nat }
-
-type ('term, 'name, 'nat) amfixpoint = ('term, 'name, 'nat) adef list
-
-type ('term, 'nat, 'ident, 'name, 'quoted_sort, 'cast_kind, 'kername, 'inductive, 'universe_instance, 'projection) structure_of_term =
-  | ACoq_tRel of 'nat
-  | ACoq_tVar of 'ident
-  | ACoq_tMeta of 'nat
-  | ACoq_tEvar of 'nat * 'term list
-  | ACoq_tSort of 'quoted_sort
-  | ACoq_tCast of 'term * 'cast_kind * 'term
-  | ACoq_tProd of 'name * 'term * 'term
-  | ACoq_tLambda of 'name * 'term * 'term
-  | ACoq_tLetIn of 'name * 'term * 'term * 'term
-  | ACoq_tApp of 'term * 'term list
-  | ACoq_tConst of 'kername * 'universe_instance
-  | ACoq_tInd of 'inductive * 'universe_instance
-  | ACoq_tConstruct of 'inductive * 'nat * 'universe_instance
-  | ACoq_tCase of ('inductive * 'nat) * 'term * 'term * ('nat * 'term) list
-  | ACoq_tProj of 'projection * 'term
-  | ACoq_tFix of ('term, 'name, 'nat) amfixpoint * 'nat
-  | ACoq_tCoFix of ('term, 'name, 'nat) amfixpoint * 'nat
-
-module type Quoter = sig
-  type t
-
-  type quoted_ident
-  type quoted_int
-  type quoted_bool
-  type quoted_name
-  type quoted_sort
-  type quoted_cast_kind
-  type quoted_kernel_name
-  type quoted_inductive
-  type quoted_proj
-  type quoted_global_reference
-
-  type quoted_sort_family
-  type quoted_constraint_type
-  type quoted_univ_constraint
-  type quoted_univ_instance
-  type quoted_univ_constraints
-  type quoted_univ_context
-  type quoted_inductive_universes
-
-  type quoted_mind_params
-  type quoted_ind_entry = quoted_ident * t * quoted_bool * quoted_ident list * t list
-  type quoted_definition_entry = t * t option * quoted_univ_context
-  type quoted_mind_entry
-  type quoted_mind_finiteness
-  type quoted_entry
-
-  (* Local contexts *)
-  type quoted_context_decl
-  type quoted_context
-
-  type quoted_one_inductive_body
-  type quoted_mutual_inductive_body
-  type quoted_constant_body
-  type quoted_global_decl
-  type quoted_global_declarations
-  type quoted_program  (* the return type of quote_recursively *)
+module type Quoter =
+sig
+  include Quoted
 
   val quote_ident : Id.t -> quoted_ident
   val quote_name : Name.t -> quoted_name
@@ -167,28 +68,6 @@ module type Quoter = sig
     quoted_mind_entry
 
   val quote_entry : (quoted_definition_entry, quoted_mind_entry) sum option -> quoted_entry
-
-  val mkName : quoted_ident -> quoted_name
-  val mkAnon : quoted_name
-
-  val mkRel : quoted_int -> t
-  val mkVar : quoted_ident -> t
-  val mkMeta : quoted_int -> t
-  val mkEvar : quoted_int -> t array -> t
-  val mkSort : quoted_sort -> t
-  val mkCast : t -> quoted_cast_kind -> t -> t
-  val mkProd : quoted_name -> t -> t -> t
-  val mkLambda : quoted_name -> t -> t -> t
-  val mkLetIn : quoted_name -> t -> t -> t -> t
-  val mkApp : t -> t array -> t
-  val mkConst : quoted_kernel_name -> quoted_univ_instance -> t
-  val mkInd : quoted_inductive -> quoted_univ_instance -> t
-  val mkConstruct : quoted_inductive * quoted_int -> quoted_univ_instance -> t
-  val mkCase : (quoted_inductive * quoted_int) -> quoted_int list -> t -> t ->
-               t list -> t
-  val mkProj : quoted_proj -> t -> t
-  val mkFix : (quoted_int array * quoted_int) * (quoted_name array * t array * t array) -> t
-  val mkCoFix : quoted_int * (quoted_name array * t array * t array) -> t
 
   val quote_context_decl : quoted_name -> t option -> t -> quoted_context_decl
   val quote_context : quoted_context_decl list -> quoted_context
@@ -274,7 +153,6 @@ struct
       match Constr.kind trm with
 	Constr.Rel i -> (Q.mkRel (Q.quote_int (i - 1)), acc)
       | Constr.Var v -> (Q.mkVar (Q.quote_ident v), acc)
-      | Constr.Meta n -> (Q.mkMeta (Q.quote_int n), acc)
       | Constr.Evar (n,args) ->
 	let (acc,args') =
 	  CArray.fold_left_map (fun acc x ->
@@ -611,30 +489,33 @@ since  [absrt_info] is a private type *)
    let uctx = Q.quote_inductive_universes t.mind_entry_universes in
     Q.quote_mutual_inductive_entry (mf, mp, is, uctx)
 
+  let quote_constant_body bypass env evm (cd : constant_body) =
+    let ty = quote_term env cd.const_type in
+    let body =
+      match cd.const_body with
+      | Undef _ -> None
+      | Def cs -> Some (quote_term env (Mod_subst.force_constr cs))
+      | OpaqueDef cs ->
+        if bypass
+        then Some (quote_term env (Opaqueproof.force_proof (Global.opaque_tables ()) cs))
+        else None
+    in
+    let uctx = quote_constant_uctx cd.const_universes in
+    (ty, body, uctx)
+
   let quote_entry_aux bypass env evm (name:string) =
     let (dp, nm) = split_name name in
     let entry =
       match Nametab.locate (Libnames.make_qualid dp nm) with
       | Globnames.ConstRef c ->
-         let cd = Environ.lookup_constant c env in
-         (*CHANGE :  template polymorphism for definitions was removed.
-                     See: https://github.com/coq/coq/commit/d9530632321c0b470ece6337cda2cf54d02d61eb *)
-         let ty = quote_term env cd.const_type in
-         let body = match cd.const_body with
-           | Undef _ -> None
-           | Def cs -> Some (quote_term env (Mod_subst.force_constr cs))
-           | OpaqueDef cs ->
-              if bypass
-              then Some (quote_term env (Opaqueproof.force_proof (Global.opaque_tables ()) cs))
-              else None
-         in
-         let uctx = quote_constant_uctx cd.const_universes in
-         Some (Left (ty, body, uctx))
-
+        let cd = Environ.lookup_constant c env in
+        (*CHANGE :  template polymorphism for definitions was removed.
+                    See: https://github.com/coq/coq/commit/d9530632321c0b470ece6337cda2cf54d02d61eb *)
+        Some (Left (quote_constant_body bypass env evm cd))
       | Globnames.IndRef ni ->
-         let c = Environ.lookup_mind (fst ni) env in (* FIX: For efficienctly, we should also export (snd ni)*)
-         let miq = quote_mut_ind env c in
-         Some (Right miq)
+        let c = Environ.lookup_mind (fst ni) env in (* FIX: For efficienctly, we should also export (snd ni)*)
+        let miq = quote_mut_ind env c in
+        Some (Right miq)
       | Globnames.ConstructRef _ -> None (* FIX?: return the enclusing mutual inductive *)
       | Globnames.VarRef _ -> None
     in entry

@@ -1,6 +1,6 @@
 (* Distributed under the terms of the MIT license.   *)
 
-From Template Require Export
+From MetaCoq.Template Require Export
      utils         (* Utility functions *)
      monad_utils   (* Monadic notations *)
      BasicAst      (* The basic AST structures *)
@@ -15,3 +15,7 @@ From Template Require Export
      Weakening     (* Weakening lemmas *)
      Checker       (* Partial typechecker implementation *)
      Retyping      (* Fast retyping judgment *).
+
+(* note(gmm): i'm not exactly sure where this should go. *)
+Notation "<% x %>" := (ltac:(let p y := exact y in quote_term x p))
+  (only parsing).

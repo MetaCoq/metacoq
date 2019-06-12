@@ -1,7 +1,8 @@
 (* Distributed under the terms of the MIT license.   *)
 Require Import Coq.Strings.String.
 
-Definition ident := string. (* e.g. nat *)
+Definition ident   := string. (* e.g. nat *)
+Definition qualid  := string. (* e.g. Datatypes.nat *)
 Definition kername := string. (* e.g. Coq.Init.Datatypes.nat *)
 
 Inductive name : Set :=

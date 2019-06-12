@@ -1,8 +1,8 @@
-Require Import Template.All.
+(* -*- coq-prog-args : ("-debug" "-type-in-type") -*-  *)
+
+From MetaCoq Require Import Template.All.
 Require Import Arith.Compare_dec.
 From Translations Require Import translation_utils sigma.
-
-(* -*- coq-prog-args : ("-debug" "-type-in-type") -*-  *)
 Import String Lists.List.ListNotations MonadNotation.
 Open Scope string_scope.
 Open Scope list_scope.

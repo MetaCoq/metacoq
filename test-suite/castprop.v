@@ -1,4 +1,4 @@
-Require Import Template.Loader.
+Require Import MetaCoq.Template.Loader MetaCoq.Template.utils.
 Require Import String.
 Set Template Cast Propositions.
 
@@ -17,4 +17,4 @@ Definition setprop : { x : nat | x = 0 } := exist _ 0 eq_refl.
 Quote Recursively Definition q_setprop := setprop.
 
 Notation proof t :=
-  (Ast.tCast t BasicAst.Cast (Ast.tCast _ BasicAst.Cast (Ast.tSort (((univ.Level.lProp, false) :: nil)%list)))).
+  (Ast.tCast t BasicAst.Cast (Ast.tCast _ BasicAst.Cast (Ast.tSort (((Universes.Level.lProp, false) :: nil)%list; _)))).

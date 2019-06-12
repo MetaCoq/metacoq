@@ -1,0 +1,5 @@
+-R ../../template-coq/theories MetaCoq.Template
+-I ../../template-coq/src
+-Q . MetaCoq.Checker
+
+Extract.v

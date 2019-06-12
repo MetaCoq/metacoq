@@ -1,4 +1,4 @@
-Require Import Template.All.
+From MetaCoq Require Import Template.All.
 Require Import Arith.Compare_dec.
 From Translations Require Import translation_utils.
 Import String List Lists.List.ListNotations MonadNotation.
@@ -110,7 +110,7 @@ Fixpoint tsl_rec1_app (app : option term) (E : tsl_table) (t : term) : term :=
     end
   | tProj _ _ => todo
   | tFix _ _ | tCoFix _ _ => todo
-  | tVar _ | tMeta _ | tEvar _ _ => todo
+  | tVar _ | tEvar _ _ => todo
   | tLambda _ _ _ => tVar "impossible"
   end in
   match app with Some t' => mkApp t1 (t' {3 := tRel 1} {2 := tRel 0})
@@ -156,11 +156,11 @@ Definition tsl_mind_body (E : tsl_table) (mp : string) (kn : kername)
 Defined.
 
 
-(* Run TemplateProgram (typ <- tmQuote (forall A, A -> A) ;; *)
-(*                      typ' <- tmEval all (tsl_rec1 [] typ) ;; *)
-(*                      tm <- tmQuote (fun A (x : A) => x) ;; *)
-(*                      tm' <- tmEval all (tsl_rec1 [] tm) ;; *)
-(*                      tmUnquote (tApp typ' [tm]) >>= print_nf). *)
+Run TemplateProgram (typ <- tmQuote (forall A, A -> A) ;;
+                     typ' <- tmEval all (tsl_rec1 [] typ) ;;
+                     tm <- tmQuote (fun A (x : A) => x) ;;
+                     tm' <- tmEval all (tsl_rec1 [] tm) ;;
+                     tmUnquote (tApp typ' [tm]) >>= print_nf).
 
 
 

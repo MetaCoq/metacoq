@@ -1,5 +1,5 @@
 Require Import List Arith String.
-Require Import Template.All.
+Require Import MetaCoq.Template.All.
 Import ListNotations MonadNotation.
 
 Local Open Scope string_scope.
@@ -31,6 +31,8 @@ Quote Definition d' := (fun x : nat => x).
 Definition id_nat : nat -> nat := fun x => x.
 
 Quote Definition d'' := Eval compute in id_nat.
+Quote Definition d3 := Eval cbn in id_nat.
+Quote Definition d4 := Eval unfold id_nat in id_nat.
 
 
 (** Fixpoints **)
@@ -68,21 +70,20 @@ Quote Definition add'_syntax := Eval compute in add'.
 Make Definition zero_from_syntax := (Ast.tConstruct (mkInd "Coq.Init.Datatypes.nat" 0) 0 []).
 
 (* the function unquote_kn in reify.ml4 is not yet implemented *)
-Make Definition add_from_syntax := ltac:(let t:= eval compute in add_syntax in exact t).
+Make Definition add_from_syntax := add_syntax.
 
-Make Definition eo_from_syntax :=
-ltac:(let t:= eval compute in eo_syntax in exact t).
+Make Definition eo_from_syntax := eo_syntax.
 Print eo_from_syntax.
 
 Make Definition two_from_syntax := (Ast.tApp (Ast.tConstruct (BasicAst.mkInd "Coq.Init.Datatypes.nat" 0) 1 nil)
    (Ast.tApp (Ast.tConstruct (BasicAst.mkInd "Coq.Init.Datatypes.nat" 0) 1 nil)
       (Ast.tConstruct (BasicAst.mkInd "Coq.Init.Datatypes.nat" 0) 0 nil :: nil) :: nil)).
 
-Quote Recursively Definition plus_synax := plus.
+Quote Recursively Definition plus_syntax := plus.
 
 Quote Recursively Definition mult_syntax := mult.
 
-Make Definition d''_from_syntax := ltac:(let t:= eval compute in d'' in exact t).
+Make Definition d''_from_syntax := d''.
 
 
 (** Primitive Projections. *)
@@ -198,7 +199,8 @@ Inductive demoList (A : Set) : Set :=
 
 
 (** Putting the above commands in monadic program *)
-
+Notation inat :=
+  {| inductive_mind := "Coq.Init.Datatypes.nat"; inductive_ind := 0 |}.
 Run TemplateProgram (tmBind (tmQuote (3 + 3)) tmPrint).
 
 Run TemplateProgram (tmBind (tmQuoteRec add) tmPrint).
@@ -221,14 +223,12 @@ Qed.
 Run TemplateProgram ((tmQuoteConstant "six" true) >>= tmPrint).
 Run TemplateProgram ((tmQuoteConstant "six" false) >>= tmPrint).
 
-
 Run TemplateProgram (t <- tmLemma "foo4" nat ;;
                      tmDefinition "foo5" (t + t + 2)).
 Next Obligation.
   exact 3.
 Defined.
 Print foo5.
-Fail Definition tttt : _ := _.
 
 
 Run TemplateProgram (t <- tmLemma "foo44" nat ;;
@@ -303,23 +303,12 @@ Polymorphic Definition Funtp2@{i j}
    (A: Type@{i}) (B: Type@{j}) := A->B.
 (* Run TemplateProgram (printConstant "Top.demo.Funtp2"). *) (* TODOO *)
 
-
-Definition tmDefinition' : ident -> forall {A}, A -> TemplateMonad unit
-  := fun id A t => tmDefinition id t ;; tmReturn tt.
-
-(** A bit less efficient, but does the same job as tmMkDefinition *)
-Definition tmMkDefinition' : ident -> term -> TemplateMonad unit
-  := fun id t => x <- tmUnquote t ;;
-              x' <- tmEval all (my_projT2 x) ;;
-              tmDefinition' id x'.
-
-Run TemplateProgram (tmMkDefinition' "foo" add_syntax).
-Run TemplateProgram (tmEval all add_syntax >>= tmMkDefinition "foo1").
+Run TemplateProgram (tmEval cbn add_syntax >>= tmMkDefinition "foo1").
 
 Run TemplateProgram ((tmFreshName "foo") >>= tmPrint).
 Run TemplateProgram (tmAxiom "foo0" (nat -> nat) >>= tmPrint).
 Run TemplateProgram (tmAxiom "foo0'" (nat -> nat) >>=
-                     fun t => tmDefinition' "foo0''" t).
+                     fun t => tmDefinition "foo0''" t).
 Run TemplateProgram (tmFreshName "foo" >>= tmPrint).
 
 Run TemplateProgram (tmBind (tmAbout "foo") tmPrint).
@@ -362,12 +351,11 @@ Inductive T : Type :=
 Quote Recursively Definition TT := T.
 
 Unset Strict Unquote Universe Mode.
-Make Definition t := (tSort ([(Level.Level "Top.20000", false)])).
-Make Definition t' := (tSort ([(Level.Level "Top.20000", false); (Level.Level "Top.20001", true)])).
-Make Definition myProp := (tSort [(Level.lProp, false)]).
-Make Definition myProp' := Eval compute in (tSort Universe.type0m).
-Make Definition mySucProp := (tSort [(Level.lProp, true)]).
-Make Definition mySet := (tSort [(Level.lSet, false)]).
+Make Definition t := (tSort ([(Level.Level "Top.20000", false)]; _)).
+Make Definition t' := (tSort ([]; _)).
+Make Definition myProp := (tSort (Universe.make' (Level.lProp, false))).
+Make Definition myProp' := (tSort Universe.type0m).
+Make Definition mySet := (tSort (Universe.make Level.lSet)).
 
 (** Cofixpoints *)
 CoInductive streamn : Set :=
@@ -377,7 +365,7 @@ CoFixpoint ones : streamn := scons 1 ones.
 
 Quote Definition ones_syntax := Eval compute in ones.
 
-Make Definition ones' := Eval compute in ones_syntax.
+Make Definition ones' := ones_syntax.
 
 Check eq_refl : ones = ones'.
 
@@ -387,3 +375,19 @@ Check eq_refl : ones = ones'.
 (* Print universes. *)
 (* Definition tyu := Eval vm_compute in universes. *)
 (* Check (universes : uGraph.t). *)
+
+
+Definition kername_of_qualid (q : qualid) : TemplateMonad kername :=
+  gr <- tmAbout q ;;
+  match gr with
+  | Some (ConstRef kn)  => ret kn
+  | Some (IndRef ind) => ret ind.(inductive_mind)
+  | Some (ConstructRef ind _) => ret ind.(inductive_mind)
+  | None => tmFail  ("tmLocate: " ++ q ++ " not found")
+  end.
+
+Run TemplateProgram (kername_of_qualid "add" >>= tmPrint).
+Run TemplateProgram (kername_of_qualid "BinNat.N.add" >>= tmPrint).
+Run TemplateProgram (kername_of_qualid "Coq.NArith.BinNatDef.N.add" >>= tmPrint).
+Fail Run TemplateProgram (kername_of_qualid "N.add" >>= tmPrint).
+Fail Run TemplateProgram (kername_of_qualid "qlskf" >>= tmPrint).

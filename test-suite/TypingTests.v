@@ -7,12 +7,12 @@ Require Import Coq.Strings.Ascii.
 Require Import Coq.Bool.Bool.
 Import ListNotations.
 
-Require Import TemplateChecker.Loader.
-Require Import Template.Typing.
-Require Import Template.Checker.
-Require Import Template.Ast.
-Require Import Template.Loader.
-Require Import Template.utils.
+Require Import MetaCoq.Checker.Loader.
+Require Import MetaCoq.Template.Typing.
+Require Import MetaCoq.Template.kernel.Checker.
+Require Import MetaCoq.Template.Ast.
+Require Import MetaCoq.Template.Loader.
+Require Import MetaCoq.Template.utils.
 
 Unset Template Cast Propositions.
 
@@ -106,8 +106,8 @@ Module Test2.
 End Test2.
 
 Module Test3.
-  Definition term := (id 0).
-  Load "test_term.v".
+  (* Definition term := (id 0). *)
+  (* Load "test_term.v". *)
 End Test3.
 
 Module Test4.
@@ -159,11 +159,11 @@ Definition f2 := (forall (A:Type@{i}) (B: Prop), A -> B -> B).
 
 Quote Definition f1' := (forall (A:Type@{i}) (B: Prop), A -> B -> A). 
 
-Eval lazy in infer (nil, uGraph.init_graph) nil f1'.
+Eval lazy in infer (nil, ConstraintSet.empty) nil f1'.
 
 Quote Definition f2' := (forall (A:Type@{i}) (B: Prop), A -> B -> B). 
 
-Eval lazy in infer (nil, uGraph.init_graph) nil f2'.
+Eval lazy in infer (nil, ConstraintSet.empty) nil f2'.
 
 Definition f := (forall (A:Type@{i}) (B: Type@{j}), A -> B -> A).
 (* : Type@{i+1, j+1} *)
@@ -172,4 +172,4 @@ Quote Definition f' := (forall (A:Type@{i}) (B:Type@{j}), A -> B -> A).
 
 Quote Definition f'' := (forall (B: Type@{j}), B -> B). 
 
-Eval lazy in infer (nil, uGraph.init_graph) nil f'.
+Eval lazy in infer (nil, ConstraintSet.empty) nil f'.

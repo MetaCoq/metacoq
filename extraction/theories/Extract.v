@@ -2,9 +2,9 @@
 (* Distributed under the terms of the MIT license.   *)
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
-From Template Require Import config utils monad_utils BasicAst AstUtils.
-From PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICTyping PCUICChecker PCUICRetyping PCUICMetaTheory PCUICWcbvEval.
-From TemplateExtraction Require EAst ELiftSubst ETyping EWcbvEval.
+From MetaCoq.Template Require Import config utils monad_utils BasicAst AstUtils.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICTyping PCUICChecker PCUICRetyping PCUICMetaTheory PCUICWcbvEval.
+From MetaCoq.Extraction Require EAst ELiftSubst ETyping EWcbvEval.
 Require Import String.
 Local Open Scope string_scope.
 Set Asymmetric Patterns.
@@ -78,7 +78,6 @@ Section Erase.
     match t with
     | tRel i => ret (E.tRel i)
     | tVar n => ret (E.tVar n)
-    | tMeta m => ret (E.tMeta m)
     | tEvar m l =>
       l' <- monad_map (extract Σ Γ) l;;
       ret (E.tEvar m l')

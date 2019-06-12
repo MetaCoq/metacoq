@@ -1,4 +1,4 @@
-From Template Require Import All.
+From MetaCoq.Template Require Import All TemplateMonad.Core Monad monad_utils.
 Require Import List.
 Import ListNotations MonadNotation String.
 Open Scope string_scope.
@@ -20,7 +20,7 @@ Fixpoint lookup_tsl_table (E : tsl_table) (gr : global_reference)
 
 Definition tsl_context := (global_context * tsl_table)%type.
 
-Definition emptyTC : tsl_context := (([], uGraph.init_graph), []).
+Definition emptyTC : tsl_context := (([], ConstraintSet.empty), []).
 
 Inductive tsl_error :=
 | NotEnoughFuel
@@ -90,7 +90,7 @@ Definition Translate {tsl : Translation} (ΣE : tsl_context) (id : ident)
   : TemplateMonad tsl_context :=
   tmDebug ("Translate" ++ id);;
   gr <- tmAbout id ;;
-  tmDebug gr ;;
+  tmDebug gr;;
   match gr with
   | None => fail_nf (id ++ " not found")
   | Some (ConstructRef (mkInd kn n) _)
@@ -108,7 +108,7 @@ Definition Translate {tsl : Translation} (ΣE : tsl_context) (id : ident)
       let E' := (E ++ (snd ΣE))%list in
       Σ' <- tmEval lazy Σ' ;;
       E' <- tmEval lazy E' ;;
-      print_nf  (kn ++ " has been translated.") ;;
+      tmMsg (kn ++ " has been translated.") ;;
       ret (Σ', E')
     end
     
@@ -140,7 +140,7 @@ Definition Translate {tsl : Translation} (ΣE : tsl_context) (id : ident)
         let E' := (ConstRef kn, tConst id' []) :: (snd ΣE) in
         Σ' <- tmEval lazy Σ' ;;
         E' <- tmEval lazy E' ;;
-        print_nf  (id ++ " has been translated as " ++ id') ;;
+        print_nf (id ++ " has been translated as " ++ id') ;;
         ret (Σ', E')
       end
     end

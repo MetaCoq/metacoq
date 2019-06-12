@@ -1,7 +1,7 @@
 (* Distributed under the terms of the MIT license.   *)
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Arith Lia.
-From Template Require Import config utils Ast AstUtils univ Induction LiftSubst UnivSubst Typing.
+From MetaCoq.Template Require Import config utils Ast AstUtils Induction LiftSubst UnivSubst Typing.
 Require Import ssreflect.
 
 Set Asymmetric Patterns.
@@ -82,7 +82,7 @@ Lemma unfold_fix_wf:
   forall (mfix : mfixpoint term) (idx : nat) (narg : nat) (fn : term),
     unfold_fix mfix idx = Some (narg, fn) ->
     Ast.wf (tFix mfix idx) ->
-    Ast.wf fn /\ isApp fn <> true.
+    Ast.wf fn /\ isApp fn = false.
 Proof.
   intros mfix idx narg fn Hf Hwf.
   unfold unfold_fix in Hf. inv Hwf.
@@ -193,29 +193,29 @@ Proof.
     eapply nth_error_forall in H0; eauto.
   - constructor; auto. apply IHred1; auto. constructor; simpl; auto.
   - constructor; auto. apply IHred1; auto. constructor; simpl; auto.
-  - constructor; auto. induction H; constructor; inv H2; intuition auto.
+  - constructor; auto. induction X; constructor; inv H1; intuition auto.
   - apply wf_mkApps; auto.
-  - constructor; auto. induction H; congruence.
-    clear H1. induction H; inv H3; constructor; intuition auto.
+  - constructor; auto. induction X; congruence.
+    clear H0. induction X; inv H2; constructor; intuition auto.
   - constructor; auto. apply IHred1; auto. constructor; simpl; auto.
-  - constructor; auto. induction H; inv H0; constructor; intuition auto.
+  - constructor; auto. induction X; inv H; constructor; intuition auto.
   - auto.
   - constructor; auto.
-    induction H; inv H0; constructor; intuition auto; congruence.
+    induction X; inv H; constructor; intuition auto; congruence.
   - constructor; auto. solve_all.
-    revert H0.
-    apply (OnOne2_All_All H). clear H.
-    intros. destruct H as [Hred [<- Hwf]].
+    revert H.
+    apply (OnOne2_All_All X). clear X.
+    intros. destruct X as [[Hred <-] Hwf].
     intuition. apply Hwf. solve_all. apply All_app_inv; auto. unfold fix_context.
     apply All_rev.
     eapply All_mapi. simpl. apply Alli_id. intros; exact I.
     auto.
     apply red1_isLambda in Hred; auto.
   - constructor; auto.
-    induction H; inv H0; constructor; intuition auto; congruence.
-  - constructor; auto. solve_all. revert H0.
-    apply (OnOne2_All_All H). clear H.
-    intros. destruct H as [Hred [<- Hwf]].
+    induction X; inv H; constructor; intuition auto; congruence.
+  - constructor; auto. solve_all. revert H.
+    apply (OnOne2_All_All X). clear X.
+    intros. destruct X as [[Hred <-] Hwf].
     intuition. apply Hwf. solve_all. apply All_app_inv; auto. unfold fix_context.
     apply All_rev.
     eapply All_mapi. simpl. apply Alli_id. intros; exact I.
@@ -249,7 +249,7 @@ Proof.
     intros Hwf; inv Hwf; try constructor; eauto;
       repeat (unfold compose, snd, on_snd in *; simpl in *; solve_all).
 
-  - destruct t; try discriminate. simpl in *. congruence.
+  - destruct t; try reflexivity. discriminate.
   - destruct l; simpl in *; congruence.
   - destruct x; simpl in *; intuition eauto.
     destruct dbody; simpl in *; try discriminate. destruct Nat.leb; auto.

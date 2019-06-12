@@ -1,7 +1,7 @@
 (* Distributed under the terms of the MIT license.   *)
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega Lia.
-From Template Require Import config utils Ast AstUtils Induction utils LiftSubst UnivSubst Typing.
+From MetaCoq.Template Require Import config utils Ast AstUtils Induction utils LiftSubst UnivSubst Typing.
 Require Import ssreflect ssrbool.
 
 (** * Substitution lemmas for typing derivations. *)
@@ -12,7 +12,7 @@ Close Scope string_scope.
 Lemma invert_type_App `{checker_flags} Σ Γ f u T :
   Σ ;;; Γ |- tApp f u : T ->
   { T' : term & { U' & ((Σ ;;; Γ |- f : T') * typing_spine Σ Γ T' u U' *
-                        (isApp f <> true) * (u <> []) *
+                        (isApp f = false) * (u <> []) *
                         (Σ ;;; Γ |- U' <= T))%type } }.
 Proof.
   intros Hty.
@@ -34,7 +34,7 @@ Proof.
   eapply invert_type_App in Hf.
   destruct Hf as (T'' & U' & (((Hf & HU) & Happf) & Hunil) & Hcumul).
   eapply type_App; eauto. intro. destruct args; discriminate.
-  inv X1. clear Happ Hf Hunil.
+  inv X2. clear Happ Hf Hunil.
   induction HU. simpl. econstructor; eauto.
   eapply cumul_trans; eauto.
   econstructor. econstructor. eapply t. eauto. eauto.

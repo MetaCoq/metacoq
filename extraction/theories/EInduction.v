@@ -1,7 +1,7 @@
 (* Distributed under the terms of the MIT license.   *)
 
-From Template Require Import utils Ast AstUtils.
-From TemplateExtraction Require Import EAst.
+From MetaCoq.Template Require Import utils Ast AstUtils.
+From MetaCoq.Extraction Require Import EAst.
 Require Import List Program.
 Require Import BinPos.
 Require Import Coq.Arith.Compare_dec Bool.
@@ -21,7 +21,6 @@ Lemma term_forall_list_ind :
     (P tBox) ->
     (forall n : nat, P (tRel n)) ->
     (forall i : ident, P (tVar i)) ->
-    (forall n : nat, P (tMeta n)) ->
     (forall (n : nat) (l : list term), Forall P l -> P (tEvar n l)) ->
     (forall (n : name) (t : term), P t -> P (tLambda n t)) ->
     (forall (n : name) (t : term),

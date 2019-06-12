@@ -1,4 +1,4 @@
-Require Import Template.All.
+From MetaCoq Require Import Template.All.
 From Translations Require Import translation_utils MiniHoTT.
 Import String Lists.List.ListNotations MonadNotation.
 Open Scope list_scope. Open Scope string_scope.
@@ -191,8 +191,8 @@ Definition tsl_mind_body (ΣE : tsl_context) (mp : string) (kn : kername)
   + (* table *)
     refine (IndRef (mkInd kn i), pouet (tInd (mkInd kn' i) []) ind_type').
   + (* parameters *)
-    simple refine (List.fold_left _ (mind.(ind_params)) []).
-    exact (fun Γ' A => Γ' ,, vass (decl_name A) (tsl Γ' (decl_type A))).
+    simple refine (List.fold_right _ [] (mind.(ind_params))).
+    exact (fun A Γ' => Γ' ,, vass (decl_name A) (tsl Γ' (decl_type A))).
 Defined.
 
 

@@ -289,6 +289,21 @@ Section Reduce.
     red_viewc (tProj p c) π := red_view_Proj p c π ;
     red_viewc t π := red_view_other t π I.
 
+  Equations discr_construct_cofix (t : term) : Prop :=
+    discr_construct_cofix (tConstruct ind n ui) := False ;
+    discr_construct_cofix (tCoFix mfix idx) := False ;
+    discr_construct_cofix _ := True.
+
+  Inductive construct_cofix_view : term -> Set :=
+  | ccview_construct : forall ind n ui, construct_cofix_view (tConstruct ind n ui)
+  | ccview_cofix : forall mfix idx, construct_cofix_view (tCoFix mfix idx)
+  | ccview_other : forall t, discr_construct_cofix t -> construct_cofix_view t.
+
+  Equations cc_viewc t : construct_cofix_view t :=
+    cc_viewc (tConstruct ind n ui) := ccview_construct ind n ui ;
+    cc_viewc (tCoFix mfix idx) := ccview_cofix mfix idx ;
+    cc_viewc t := ccview_other t I.
+
   Equations _reduce_stack (Γ : context) (t : term) (π : stack)
             (h : welltyped Σ Γ (zip (t,π)))
             (reduce : forall t' π', R Σ Γ (t',π') (t,π) ->
@@ -354,9 +369,14 @@ Section Reduce.
     | red_view_Case ind par p c brs π with RedFlags.iota flags := {
       | true with inspect (reduce c (Case (ind, par) p brs π) _) := {
         | @exist (@exist (t,π') prf) eq with inspect (decompose_stack π') := {
-          | @exist (args, ρ) prf' with construct_viewc t := {
-            | view_construct ind' c' _ := rec reduce (iota_red par c' args brs) π ;
-            | view_other t ht := give (tCase (ind, par) p (mkApps t args) brs) π
+          | @exist (args, ρ) prf' with cc_viewc t := {
+            | ccview_construct ind' c' _ := rec reduce (iota_red par c' args brs) π ;
+            | ccview_cofix mfix idx with inspect (unfold_cofix mfix idx) := {
+              | @exist (Some (narg, fn)) eq' :=
+                rec reduce (tCase (ind, par) p (mkApps fn args) brs) π ;
+              | @exist None bot := False_rect _ _
+              } ;
+            | ccview_other t ht := give (tCase (ind, par) p (mkApps t args) brs) π
             }
           }
         } ;
@@ -366,13 +386,18 @@ Section Reduce.
     | red_view_Proj (i, pars, narg) c π with RedFlags.iota flags := {
       | true with inspect (reduce c (Proj (i, pars, narg) π) _) := {
         | @exist (@exist (t,π') prf) eq with inspect (decompose_stack π') := {
-          | @exist (args, ρ) prf' with construct_viewc t := {
-            | view_construct ind' c' _
+          | @exist (args, ρ) prf' with cc_viewc t := {
+            | ccview_construct ind' c' _
               with inspect (nth_error args (pars + narg)) := {
               | @exist (Some arg) eqa := rec reduce arg π ;
               | @exist None eqa := False_rect _ _
               } ;
-            | view_other t ht := give (tProj (i, pars, narg) (mkApps t args)) π
+            | ccview_cofix mfix idx with inspect (unfold_cofix mfix idx) := {
+              | @exist (Some (narg, fn)) eq' :=
+                rec reduce (tProj (i, pars, narg) (mkApps fn args)) π ;
+              | @exist None bot := False_rect _ _
+              } ;
+            | ccview_other t ht := give (tProj (i, pars, narg) (mkApps t args)) π
             }
           }
         } ;
@@ -481,7 +506,7 @@ Section Reduce.
     rewrite β in eq1. discriminate.
   Qed.
 
-    (* tFix *)
+  (* tFix *)
   Next Obligation.
     symmetry in eq2.
     pose proof (decompose_stack_at_eq _ _ _ _ _ eq2). subst.
@@ -658,6 +683,64 @@ Section Reduce.
           reflexivity.
   Qed.
   Next Obligation.
+    unfold Pr in p0. cbn in p0.
+    pose proof p0 as hh.
+    rewrite <- prf' in hh. cbn in hh. subst.
+    dependent destruction r.
+    - inversion e. subst.
+      left. eapply cored_context.
+      constructor.
+      simpl in prf'. inversion prf'. subst.
+      eapply red_cofix_case with (args := []). eauto.
+    - clear eq.
+      dependent destruction r.
+      + left.
+        symmetry in prf'. apply decompose_stack_eq in prf' as ?. subst.
+        cbn in H. rewrite zipc_appstack in H. cbn in H.
+        eapply cored_trans' ; try eassumption.
+        zip fold. eapply cored_context.
+        constructor. eapply red_cofix_case. eauto.
+      + left.
+        cbn in H0. destruct y'. inversion H0. subst. clear H0.
+        symmetry in prf'. apply decompose_stack_eq in prf' as ?. subst.
+        rewrite zipc_appstack in H2. cbn in H2.
+        cbn. rewrite H2.
+        zip fold. eapply cored_context.
+        constructor. eapply red_cofix_case. eauto.
+  Qed.
+  Next Obligation.
+    unfold Pr in p0. cbn in p0.
+    pose proof p0 as hh.
+    rewrite <- prf' in hh. cbn in hh. subst.
+    assert (h' : welltyped Σ Γ (zip (tCase (ind, par) p (mkApps (tCoFix mfix idx) args) brs, π))).
+    { dependent destruction r.
+      - inversion e. subst.
+        simpl in prf'. inversion prf'. subst.
+        assumption.
+      - clear eq. dependent destruction r.
+        + apply cored_red in H. destruct H as [r].
+          eapply red_welltyped ; eauto.
+          constructor.
+          symmetry in prf'. apply decompose_stack_eq in prf'. subst.
+          cbn in r. rewrite zipc_appstack in r. cbn in r.
+          assumption.
+        + cbn in H0. destruct y'. inversion H0. subst. clear H0.
+          symmetry in prf'. apply decompose_stack_eq in prf'. subst.
+          rewrite zipc_appstack in H2. cbn in H2.
+          cbn. rewrite <- H2. assumption.
+    }
+    replace (zip (tCase (ind, par) p (mkApps (tCoFix mfix idx) args) brs, π))
+      with (zip (tCoFix mfix idx, appstack args (Case (ind, par) p brs π)))
+      in h'.
+    - apply welltyped_context in h'. simpl in h'.
+      destruct h' as [T h'].
+      apply inversion_CoFix in h'.
+      destruct h' as [decl [e [? [? ?]]]].
+      unfold unfold_cofix in bot.
+      rewrite e in bot. discriminate.
+    - cbn. rewrite zipc_appstack. reflexivity.
+  Qed.
+  Next Obligation.
     clear eq reduce h.
     destruct r.
     - inversion H. subst.
@@ -713,11 +796,65 @@ Section Reduce.
     cbn in hh. rewrite zipc_appstack in hh. cbn in hh.
     zip fold in hh.
     apply welltyped_context in hh. simpl in hh.
-    (* destruct hh as [T hh]. *)
-    (* apply inversion_Proj in hh *)
-    (*   as [uni [mdecl [idecl [pdecl [args' [? [? [? ?]]]]]]]]. *)
-    (* unfold declared_projection in d. cbn in d. simpl in c0. simpl in t. *)
     apply Proj_red_cond in hh. eapply hh. eauto.
+  Qed.
+  Next Obligation.
+    unfold Pr in p. simpl in p.
+    pose proof p as p'.
+    rewrite <- prf' in p'. simpl in p'. subst.
+    dependent destruction r.
+    - inversion e. subst.
+      left. eapply cored_context.
+      constructor.
+      simpl in prf'. inversion prf'. subst.
+      eapply red_cofix_proj with (args := []). eauto.
+    - clear eq.
+      dependent destruction r.
+      + left.
+        symmetry in prf'. apply decompose_stack_eq in prf' as ?. subst.
+        cbn in H. rewrite zipc_appstack in H. cbn in H.
+        eapply cored_trans' ; try eassumption.
+        zip fold. eapply cored_context.
+        constructor. eapply red_cofix_proj. eauto.
+      + left.
+        cbn in H0. destruct y'. inversion H0. subst. clear H0.
+        symmetry in prf'. apply decompose_stack_eq in prf' as ?. subst.
+        rewrite zipc_appstack in H2. cbn in H2.
+        cbn. rewrite H2.
+        zip fold. eapply cored_context.
+        constructor. eapply red_cofix_proj. eauto.
+  Qed.
+  Next Obligation.
+    unfold Pr in p. simpl in p.
+    pose proof p as p'.
+    rewrite <- prf' in p'. simpl in p'. subst.
+    assert (h' : welltyped Σ Γ (zip (tProj (i, pars, narg) (mkApps (tCoFix mfix idx) args), π))).
+    { dependent destruction r.
+      - inversion e. subst.
+        simpl in prf'. inversion prf'. subst.
+        assumption.
+      - clear eq. dependent destruction r.
+        + apply cored_red in H. destruct H as [r].
+          eapply red_welltyped ; eauto.
+          constructor.
+          symmetry in prf'. apply decompose_stack_eq in prf'. subst.
+          cbn in r. rewrite zipc_appstack in r. cbn in r.
+          assumption.
+        + cbn in H0. destruct y'. inversion H0. subst. clear H0.
+          symmetry in prf'. apply decompose_stack_eq in prf'. subst.
+          rewrite zipc_appstack in H2. cbn in H2.
+          cbn. rewrite <- H2. assumption.
+    }
+    replace (zip (tProj (i, pars, narg) (mkApps (tCoFix mfix idx) args), π))
+      with (zip (tCoFix mfix idx, appstack args (Proj (i, pars, narg) π)))
+      in h'.
+    - apply welltyped_context in h'. simpl in h'.
+      destruct h' as [T h'].
+      apply inversion_CoFix in h'.
+      destruct h' as [decl [e [? [? ?]]]].
+      unfold unfold_cofix in bot.
+      rewrite e in bot. discriminate.
+    - cbn. rewrite zipc_appstack. reflexivity.
   Qed.
   Next Obligation.
     clear eq.
@@ -1077,6 +1214,8 @@ Section Reduce.
       (* constructor. eapply whne_mkApps. constructor. *)
       (* eapply whne_mkApps. *)
       admit.
+    - admit.
+    - bang.
     - unfold zipp. case_eq (decompose_stack π6). intros.
       constructor. eapply whne_mkApps. eapply whne_proj_noiota. assumption.
     - (* Like case *)
@@ -1216,6 +1355,8 @@ Section Reduce.
   (*        we want to conclude it is necessarily neutral *)
   (*      *)
       admit.
+    - admit.
+    - bang.
     - constructor. eapply whne_proj_noiota. assumption.
     - (* Like case *)
       admit.

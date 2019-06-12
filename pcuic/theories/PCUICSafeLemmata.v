@@ -293,6 +293,11 @@ Section Lemmata.
       eexists. eassumption.
     - cbn. cbn in h. cbn in IHπ. apply IHπ in h.
       destruct h as [B h].
+            apply inversion_App in h as hh.
+      destruct hh as [na [A' [B' [? [? ?]]]]].
+      eexists. eassumption.
+    - cbn. cbn in h. cbn in IHπ. apply IHπ in h.
+      destruct h as [B h].
       destruct indn.
       apply inversion_Case in h as hh.
       destruct hh
@@ -667,6 +672,9 @@ Section Lemmata.
       eapply cumul_it_mkLambda_or_LetIn.
       assumption.
     - unfold zippx. simpl.
+      eapply cumul_it_mkLambda_or_LetIn.
+      assumption.
+    - unfold zippx. simpl.
       eapply cumul_it_mkLambda_or_LetIn. cbn.
       (* Need cumul for Lambda again *)
       admit.
@@ -677,6 +685,8 @@ Section Lemmata.
       eapply cumul_it_mkLambda_or_LetIn. cbn.
       (* cumul lambda *)
       admit.
+    - unfold zippx. simpl.
+      eapply cumul_it_mkLambda_or_LetIn. assumption.
   Admitted.
 
   Lemma conv_zippx :

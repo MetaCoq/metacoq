@@ -135,8 +135,38 @@ Section Lemmata.
       + apply IHΣ' in h. assumption.
   Qed.
 
+  Lemma fresh_global_nl :
+    forall Σ' k,
+      fresh_global k Σ' ->
+      fresh_global k (map nl_global_decl Σ').
+  Proof.
+    intros Σ' k h. eapply Forall_map.
+    eapply Forall_impl ; try eassumption.
+    intros x hh. cbn in hh.
+    destruct x ; assumption.
+  Qed.
+
   Lemma wf_nlg :
     wf (nlg Σ).
+  Proof.
+    destruct Σ as [Σ' φ].
+    unfold nlg. unfold wf in *. unfold on_global_env in *. simpl in *.
+    induction Σ'.
+    - assumption.
+    - simpl. inversion hΣ. subst.
+      constructor.
+      + eapply IHΣ'. assumption.
+      + destruct a.
+        * simpl in *. eapply fresh_global_nl. assumption.
+        * simpl in *. eapply fresh_global_nl. assumption.
+      + destruct a.
+        * simpl in *. destruct c as [ty [bo |] uni].
+          -- cbn in *.
+             (* Need type_nl or something *)
+             admit.
+          -- cbn in *. (* same *)
+             admit.
+        * simpl in *. destruct m. admit.
   Admitted.
 
   Lemma welltyped_nlg :

@@ -574,6 +574,22 @@ Section Lemmata.
       econstructor. assumption.
   Qed.
 
+  Lemma cumul_App_r :
+    forall {Γ f u v},
+      Σ ;;; Γ |- u <= v ->
+      Σ ;;; Γ |- tApp f u <= tApp f v.
+  Proof.
+    intros Γ f u v h.
+    induction h.
+    - eapply cumul_refl. constructor.
+      + apply leq_term_refl.
+      + assumption.
+    - eapply cumul_red_l ; try eassumption.
+      econstructor. assumption.
+    - eapply cumul_red_r ; try eassumption.
+      econstructor. assumption.
+  Qed.
+
   Lemma conv_App_r :
     forall {Γ f x y},
       Σ ;;; Γ |- x = y ->
@@ -612,6 +628,42 @@ Section Lemmata.
       conv leq Σ Γ (tProd na A1 B1) (tProd na' A2 B2).
   Admitted.
 
+  Lemma cumul_Case_c :
+    forall Γ indn p brs u v,
+      Σ ;;; Γ |- u <= v ->
+      Σ ;;; Γ |- tCase indn p u brs <= tCase indn p v brs.
+  Proof.
+    intros Γ indn p brs u v h.
+    induction h.
+    - eapply cumul_refl. destruct indn. constructor.
+      + eapply leq_term_refl.
+      + assumption.
+      + eapply Forall_Forall2. eapply Forall_True.
+        intros x. split ; auto.
+        eapply leq_term_refl.
+    - eapply cumul_red_l ; try eassumption.
+      econstructor. assumption.
+    - eapply cumul_red_r ; try eassumption.
+      econstructor. assumption.
+  Qed.
+
+  Lemma cumul_Proj_c :
+    forall Γ p u v,
+      Σ ;;; Γ |- u <= v ->
+      Σ ;;; Γ |- tProj p u <= tProj p v.
+  Proof.
+    intros Γ p u v h.
+    induction h.
+    - eapply cumul_refl. constructor. assumption.
+    - eapply cumul_red_l ; try eassumption.
+      econstructor. assumption.
+    - eapply cumul_red_r ; try eassumption.
+      econstructor. assumption.
+  Qed.
+
+  (* TODO We only use this to prove conv_context, the latter seems to be true,
+     but not this one. FIXME.
+   *)
   Lemma cumul_context :
     forall Γ u v ρ,
       Σ ;;; Γ |- u <= v ->
@@ -623,12 +675,16 @@ Section Lemmata.
     - cbn. apply IHρ.
       eapply cumul_App_l. assumption.
     - cbn. eapply IHρ.
-      (* eapply conv_App_r. *)
-      (* Congruence for application on the right *)
-      admit.
-    - cbn.
-      (* Congruence for case *)
-      admit.
+      eapply cumul_App_r. assumption.
+    - cbn. eapply IHρ.
+      eapply cumul_App_r. assumption.
+    - cbn. eapply IHρ.
+      eapply cumul_Case_c. assumption.
+    - cbn. eapply IHρ.
+      eapply cumul_Proj_c. assumption.
+    - cbn. eapply IHρ.
+      (* eapply cumul_Prod_l. assumption. *)
+      (* This is WRONG isn't it?? *)
   Admitted.
 
   Lemma conv_context :

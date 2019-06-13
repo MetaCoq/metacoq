@@ -286,6 +286,13 @@ Section Inversion.
       (* repeat insum. repeat intimes. *)
       (* all: try eassumption. *)
       (* constructor ; assumption. *)
+      admit.
+    - apply inversion_Lambda in hA as iA.
+      apply inversion_Lambda in hB as iB.
+      repeat outsum. repeat outtimes.
+      repeat pih.
+      repeat outsum. repeat outtimes.
+      (* Not very clear how to do *)
   Abort.
 
 End Inversion.

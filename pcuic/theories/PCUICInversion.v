@@ -240,6 +240,15 @@ Section Inversion.
     intros Γ mfix idx T h. invtac h.
   Qed.
 
+  Ltac pih :=
+    lazymatch goal with
+    | ih : forall _ _ _, _ -> _ ;;; _ |- ?u : _ -> _,
+      h1 : _ ;;; _ |- ?u : _,
+      h2 : _ ;;; _ |- ?u : _
+      |- _ =>
+        specialize (ih _ _ _ h1 h2)
+    end.
+
   Lemma principal_typing :
     forall {Γ u A B},
       Σ ;;; Γ |- u : A ->
@@ -250,7 +259,7 @@ Section Inversion.
        (Σ ;;; Γ |- u : C).
   Proof.
     intros Γ u A B hA hB.
-    induction u.
+    induction u in Γ, A, B, hA, hB |- *.
     - apply inversion_Rel in hA as iA.
       destruct iA as [decl [? [e ?]]].
       apply inversion_Rel in hB as iB.
@@ -259,7 +268,24 @@ Section Inversion.
       repeat insum. repeat intimes.
       all: try eassumption.
       constructor ; assumption.
-    -
+    - apply inversion_Var in hA. destruct hA.
+    - apply inversion_Evar in hA. destruct hA.
+    - apply inversion_Sort in hA as iA.
+      apply inversion_Sort in hB as iB.
+      repeat outsum. repeat outtimes. subst.
+      inversion e. subst.
+      repeat insum. repeat intimes.
+      all: try eassumption.
+      constructor ; assumption.
+    - apply inversion_Prod in hA as iA.
+      apply inversion_Prod in hB as iB.
+      repeat outsum. repeat outtimes.
+      repeat pih.
+      repeat outsum. repeat outtimes.
+      (* We would like to know x4 and x3 are sorts... *)
+      (* repeat insum. repeat intimes. *)
+      (* all: try eassumption. *)
+      (* constructor ; assumption. *)
   Abort.
 
 End Inversion.

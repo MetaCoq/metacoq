@@ -208,8 +208,9 @@ struct
     { ind_name = id; ind_type = ty;
       ind_kelim = kel; ind_ctors = ctr; ind_projs = proj }
 
-  let mk_mutual_inductive_body npars params inds uctx =
-    {ind_npars = npars; ind_params = params; ind_bodies = inds; ind_universes = uctx}
+  let mk_mutual_inductive_body finite npars params inds uctx =
+    {ind_finite = finite;
+     ind_npars = npars; ind_params = params; ind_bodies = inds; ind_universes = uctx}
 
   let mk_constant_body ty tm uctx =
     {cst_type = ty; cst_body = tm; cst_universes = uctx}

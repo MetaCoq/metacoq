@@ -33,7 +33,8 @@ Fixpoint try_remove_n_lambdas (n : nat) (t : term) {struct n} : term :=
 Polymorphic Definition add_ctor (mind : mutual_inductive_body) (ind0 : inductive) (idc : ident) (ctor : term)
   : mutual_inductive_body
   := let i0 := inductive_ind ind0 in
-     {| ind_npars := mind.(ind_npars) ;
+     {| ind_finite := mind.(ind_finite);
+        ind_npars := mind.(ind_npars) ;
         ind_universes := mind.(ind_universes) ;
         ind_params := mind.(ind_params);
         ind_bodies := map_i (fun (i : nat) (ind : one_inductive_body) =>

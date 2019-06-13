@@ -77,7 +77,9 @@ sig
                                  * (quoted_ident * t (* projection type *)) list
                                  -> quoted_one_inductive_body
 
-  val mk_mutual_inductive_body : quoted_int (* number of params (no lets) *)
+  val mk_mutual_inductive_body :
+    quoted_mind_finiteness
+    -> quoted_int (* number of params (no lets) *)
     -> quoted_context (* parameters context with lets *)
     -> quoted_one_inductive_body list
     -> quoted_univ_context
@@ -342,7 +344,8 @@ struct
       let paramsctx, acc = quote_rel_context acc env mib.Declarations.mind_params_ctxt in
       let uctx = quote_abstract_inductive_universes mib.Declarations.mind_universes in
       let bodies = List.map Q.mk_one_inductive_body (List.rev ls) in
-      let mind = Q.mk_mutual_inductive_body nparams paramsctx bodies uctx in
+      let finite = Q.quote_mind_finiteness mib.Declarations.mind_finite in
+      let mind = Q.mk_mutual_inductive_body finite nparams paramsctx bodies uctx in
       Q.mk_inductive_decl ref_name mind, acc
     in ((fun acc env -> quote_term acc (false, env)),
         (fun acc env -> quote_minductive_type acc (false, env)))

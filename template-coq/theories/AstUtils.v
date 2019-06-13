@@ -513,10 +513,10 @@ Qed.
 
 Definition map_mutual_inductive_body mind f m :=
   match m with
-  | Build_mutual_inductive_body ind_npars ind_pars ind_bodies ind_universes =>
+  | Build_mutual_inductive_body ind_npars ind_finite ind_pars ind_bodies ind_universes =>
     let arities := arities_context ind_bodies in
     let u := polymorphic_instance ind_universes in
-    Build_mutual_inductive_body ind_npars (fold_context f ind_pars)
+    Build_mutual_inductive_body ind_npars ind_finite (fold_context f ind_pars)
       (mapi (map_one_inductive_body mind u (length arities) f) ind_bodies)
       ind_universes
   end.

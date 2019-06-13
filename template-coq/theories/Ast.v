@@ -213,6 +213,7 @@ Record one_inductive_body := {
 
 (** See [mutual_inductive_body] from [declarations.ml]. *)
 Record mutual_inductive_body := {
+  ind_finite : recursivity_kind;
   ind_npars : nat;
   ind_params : context;
   ind_bodies : list one_inductive_body ;

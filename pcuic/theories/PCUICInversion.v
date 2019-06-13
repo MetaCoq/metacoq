@@ -293,6 +293,6 @@ Section Inversion.
       repeat pih.
       repeat outsum. repeat outtimes.
       (* Not very clear how to do *)
-  Abort.
+  Admitted.
 
 End Inversion.

@@ -1726,6 +1726,39 @@ Section Lemmata.
       + assumption.
   Qed.
 
+  Lemma conversion_reduction :
+    forall Γ u v,
+      Σ ;;; Γ |- u = v ->
+      ∑ u' v',
+        red Σ Γ u u' ×
+        red Σ Γ v v' ×
+        eq_term (snd Σ) u' v'.
+  (* Proof. *)
+  (*   intros Γ u v [h1 h2]. *)
+  (*   induction h1 ; dependent induction h2. *)
+  (*   - exists u, t. repeat split. *)
+  (*     + constructor. *)
+  (*     + constructor. *)
+  (*     + eapply leq_term_antisym ; eassumption. *)
+  (*   -  *)
+  Admitted.
+
+  Lemma subject_conversion :
+    forall Γ u v A B,
+      Σ ;;; Γ |- u : A ->
+      Σ ;;; Γ |- v : B ->
+      Σ ;;; Γ |- u = v ->
+      ∑ C,
+        Σ ;;; Γ |- u : C ×
+        Σ ;;; Γ |- v : C.
+  Proof.
+    intros Γ u v A B hu hv h.
+    apply conversion_reduction in h as [u' [v' [? [? ?]]]].
+    pose proof (subject_reduction _ Γ _ _ _ hΣ hu r) as hu'.
+    pose proof (subject_reduction _ Γ _ _ _ hΣ hv r0) as hv'.
+    (* Not clear.*)
+  Abort.
+
   Lemma welltyped_zipc_replace :
     forall Γ u v π,
       welltyped Σ Γ (zipc v π) ->

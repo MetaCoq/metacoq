@@ -345,7 +345,7 @@ Record extraction_pre (Σ : global_context) : Type
   { extr_env_axiom_free' : is_true (axiom_free (fst Σ));
     extr_env_wf' : wf Σ }.
 
-Definition erases_global (Σ : global_declarations) (Σ' : E.global_declarations) := True.
+
 
 Lemma Is_type_app Σ Γ t L T :
   wf Σ ->
@@ -446,11 +446,14 @@ Proof.
       * eauto.
 Qed.
 
+
+Definition erases_global (Σ : global_declarations) (Σ' : E.global_declarations) := True.
+
 Lemma erases_correct Σ t T t' v Σ' :
   extraction_pre Σ ->
   Σ;;; [] |- t : T ->
   Σ;;; [] |- t ⇝ℇ t' ->
-  erases_global Σ Σ' ->
+   erases_global Σ Σ' ->
   Σ;;; [] |- t ▷ v ->
   exists v', Σ;;; [] |- v ⇝ℇ v' /\ Σ' |- t' ▷ v'.
 Proof.
@@ -524,7 +527,37 @@ Proof.
       eapply Is_type_eval; eauto.
   - inv isdecl.
   - inv isdecl.
-  - admit. (* tCase *)
+  - assert (Hty' := Hty).
+    assert (Σ ;;; [] |- tCase (ind, pars) p discr brs ▷ res) by eauto.
+    eapply type_Case_inv in Hty' as [[[[[[[[[]]]]]]]] [[[[]]]] ]; repeat destruct p0.
+    inv He.
+    + eapply IHeval1 in H7 as (v' & Hv' & He_v'); eauto.
+      eapply erases_mkApps_inv in Hv' as [(? & ? & ? & ? & [] & ? & ? & ?) | (? & ? & ? & ? & ?)]; eauto.
+      3: eapply subject_reduction_eval; eauto.
+      * admit.
+      * subst. inv H3.
+        -- unfold iota_red in *.
+           destruct (nth_error brs c) eqn:Hnth.
+           2:{  (* Branches can't be too few, ensured by typing *)
+             admit. }
+           rewrite <- nth_default_eq in *. unfold nth_default in *.
+           rewrite Hnth in *.
+
+           destruct (All2_nth_error_Some _ _ H8 Hnth) as (? & ? & ? & ?).
+           destruct (All2_nth_error_Some _ _ a Hnth) as (? & ? & ? & ?).
+           destruct p0, x. cbn in *. subst.
+           edestruct IHeval2 as (? & ? & ?).
+           eapply type_mkApps. eauto. admit (* typing_spine skip *).
+           eapply erases_mkApps. eauto.
+           eapply Forall2_skipn. eauto.
+           exists x. split; eauto.
+           econstructor; eauto. unfold ETyping.iota_red.
+           rewrite <- nth_default_eq. unfold nth_default. rewrite e. cbn. eauto.
+        -- admit.
+    + admit. (* this case is not needed in erases_extract, hinting that it is actually unnecessary *)
+      (* check erases_subst before removing *)
+    + assert (Is_Type_or_Proof Σ [] discr) by admit.
+      admit.      
   - assert (Hty' := Hty). 
     assert (Σ ;;; [] |- mkApps (tFix mfix idx) args ▷ res) by eauto.
     eapply type_mkApps_inv in Hty' as (? & ? & [] & ?); eauto.
@@ -629,7 +662,35 @@ Proof.
         eapply Is_type_app. eauto. eauto. eauto.
         eapply eval_box_apps. econstructor. eauto.
   - admit. (* tConst *)
-  - admit. (* tProj *)
+  - pose (Hty' := Hty).
+    eapply type_proj_inv in Hty' as [[[[[]]]] [[[]]]].
+    inv He.
+    + eapply IHeval1 in H6 as (vc' & Hvc' & Hty_vc'); eauto.
+      eapply erases_mkApps_inv in Hvc'; eauto.
+      2: eapply subject_reduction_eval; eauto.
+      destruct Hvc' as [ (? & ? & ? & ? & [] & ? & ? & ?) | (? & ? & ? & ? & ?)]; subst.
+      * exists tBox. split.
+        econstructor. eapply subject_reduction_eval. eauto. exact Hty. eauto.
+        eapply Is_type_eval. eauto. eauto. admit (* kelim restrictions *).
+        eapply eval_proj_box.
+        pose proof (Ee.eval_to_value _ _ _ Hty_vc').
+        eapply value_app_inv in H3. subst. eassumption.        
+      * eapply Forall2_nth_error_Some in H5 as (? & ? & ?); eauto.
+        assert (Σ ;;; [] |- mkApps (tConstruct i k u) args : mkApps (tInd (fst (fst (i, pars, arg))) u0) l).
+        eapply subject_reduction_eval; eauto.
+        eapply type_mkApps_inv in X as (? & ? & [] & ?); eauto.
+        eapply typing_spine_In in t1 as [].
+        2: eapply nth_error_In; eauto.
+        eapply IHeval2 in H5 as (? & ? & ?); eauto. 
+        inv H4.
+        -- exists x5. split; eauto. econstructor. eauto.
+           rewrite <- nth_default_eq. unfold nth_default. now rewrite H3.
+        -- exists tBox. split. econstructor.
+           eapply subject_reduction_eval. eauto. exact Hty. eauto. 
+           eapply Is_type_eval; eauto. admit (* kelim restrictions *).
+           eapply eval_proj_box.
+           pose proof (Ee.eval_to_value _ _ _ Hty_vc').
+           eapply value_app_inv in H4. subst. eassumption.
   - inv He.
     + eexists. split; eauto. econstructor.
     + eexists. split; eauto. now econstructor.
@@ -709,6 +770,7 @@ Proof.
            eapply r in H2 as (? & ? & ?); eauto. 
            eauto.
 Admitted.
+
 
 DONTPASS
                  

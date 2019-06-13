@@ -102,6 +102,11 @@ Section Wcbv.
       eval (List.nth (pars + arg) args tDummy) res ->
       eval (tProj (i, pars, arg) discr) res
 
+  (** Proj *)
+  | eval_proj_box i pars arg discr :
+      eval discr tBox ->
+      eval (tProj (i, pars, arg) discr) tBox
+           
   (** Abstractions are values *)
   | eval_abs na N : eval (tLambda na N) (tLambda na N)
 
@@ -116,7 +121,7 @@ Section Wcbv.
 
   | eval_evar ev l : eval (tEvar ev l) (tEvar ev l) (* Lets say it is a value for now *).
 
-  (** The right induction principle for the nested [Forall] cases: *)
+  (* (** The right induction principle for the nested [Forall] cases: *) *)
 
   Lemma eval_evals_ind :
     forall P : term -> term -> Prop,
@@ -177,6 +182,11 @@ Section Wcbv.
           eval (nth (pars + arg) args tDummy) res ->
           P (nth (pars + arg) args tDummy) res -> P (tProj (i, pars, arg) discr) res) ->
 
+      (forall (i : inductive) (pars arg : nat) (discr : term),
+          eval discr tBox ->
+          P discr tBox ->
+          P (tProj (i, pars, arg) discr) tBox) ->
+      
       (forall (na : name) (M N : term), P (tLambda na N) (tLambda na N)) ->
 
       (forall (f8 : term) (i : inductive) (k : nat) (l l' : list term),
@@ -189,7 +199,7 @@ Section Wcbv.
       forall t t0 : term, eval t t0 -> P t t0.
   Proof.
     intros P Hbox Hbeta Hlet Hcase Hscase Hfix Hcoficase Hcofixproj
-           Hconst Hproj Hlam Hcstr Hatom Hevar.
+           Hconst Hproj Hproj2 Hlam Hcstr Hatom Hevar.
     fix eval_evals_ind 3. destruct 1;
              try match goal with [ H : _ |- _ ] =>
                              match type of H with
@@ -206,10 +216,10 @@ Section Wcbv.
     now apply eval_evals_ind. apply aux. auto.
   Defined.
 
-  (** Characterization of values for this reduction relation:
-      Basically atoms (constructors, inductives, products (FIXME sorts missing))
-      and de Bruijn variables and lambda abstractions. Closed values disallow
-      de Bruijn variables. *)
+  (** Characterization of values for this reduction relation: *)
+  (*     Basically atoms (constructors, inductives, products (FIXME sorts missing)) *)
+  (*     and de Bruijn variables and lambda abstractions. Closed values disallow *)
+  (*     de Bruijn variables. *)
 
   Inductive value : term -> Prop :=
   | value_atom t : atom t -> value t
@@ -232,8 +242,8 @@ Section Wcbv.
     constructor. now apply value_values_ind. now apply aux.
   Defined.
 
-  (** The codomain of evaluation is only values:
-      It means no redex can remain at the head of an evaluated term. *)
+  (** The codomain of evaluation is only values: *)
+  (*     It means no redex can remain at the head of an evaluated term. *)
 
   Lemma eval_to_value e e' : eval e e' -> value e'.
   Proof.

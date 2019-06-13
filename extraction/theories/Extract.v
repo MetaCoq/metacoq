@@ -267,6 +267,18 @@ Inductive erases (Σ : global_context) (Γ : context) : term -> E.term -> Prop :
 
 Notation "Σ ;;; Γ |- s ⇝ℇ t" := (erases Σ Γ s t) (at level 50, Γ, s, t at next level) : type_scope.
 
+(* Definition erases_constant_body (Σ : global_context) (cb : constant_body) (cb' : E.constant_body) := *)
+(*   E.cst *)
+  
+
+(* Inductive erases_global : global_declarations -> E.global_declarations -> Prop :=  *)
+(* | erases_global_nil : erases_global [] [] *)
+(* | erases_global_cnst Σ univs cb cb' kn Σ' : *)
+(*     erases_constant_body (Σ, univs) cb cb' -> erases_global (ConstantDecl kn cb :: Σ, univs) (E.ConstantDecl kn cb' :: Σ') *)
+(* | erases_global_ind Σ unis mib mib' kn Σ' : *)
+(*     erases_mutual_inductive_body (Σ, univs) mib mib' -> *)
+(*     erases_global (InductiveDecl kn mib :: Σ, univs) (E.InductiveDecl kn mib' :: Σ'). *)
+
 
 (** * Erasure correctness
     

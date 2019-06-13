@@ -1757,13 +1757,6 @@ Section Lemmata.
       Σ ;;; Γ' |- u = v.
   Admitted.
 
-  (* Lemma principle_typing : *)
-  (*   forall {Γ u A B}, *)
-  (*     Σ ;;; Γ |- u : A -> *)
-  (*     Σ ;;; Γ |- u : B -> *)
-  (*     { C & (Σ ;;; Γ |- C <= A) * (Σ ;;; Γ |- C <= B) * (Σ ;;; Γ |- u : C) }%type. *)
-  (* Admitted. *)
-
   (* Lemma subj_cumul : *)
   (*   forall {Γ u v A B}, *)
   (*     Σ ;;; Γ |- u <= v -> *)

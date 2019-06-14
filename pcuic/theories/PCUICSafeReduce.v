@@ -6,7 +6,7 @@ From MetaCoq.Template
 Require Import config Universes monad_utils utils BasicAst AstUtils UnivSubst.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICReflect PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICPosition
-     PCUICNormal PCUICInversion PCUICSafeLemmata.
+     PCUICNormal PCUICInversion PCUICCumulativity PCUICSafeLemmata.
 From Equations Require Import Equations.
 Require Import Equations.Prop.DepElim.
 
@@ -154,30 +154,52 @@ Section Reduce.
 
   Derive Signature for typing.
 
+  Lemma Construct_Ind_ind_eq :
+    forall {Γ n i args u i' args' u'},
+      Σ ;;; Γ |- mkApps (tConstruct i n u) args : mkApps (tInd i' u') args' ->
+      i = i'.
+  Proof.
+    intros Γ n i args u i' args' u' h.
+    induction args.
+    - simpl in h. apply inversion_Construct in h as ih.
+      destruct ih as [mdecl [idecl [cdecl [? [d [? hc]]]]]].
+      destruct i as [mind nind].
+      destruct i' as [mind' nind'].
+      unfold type_of_constructor in hc. cbn in hc.
+      destruct cdecl as [[cna ct] cn]. cbn in hc.
+      destruct mdecl as [mnpars mpars mbod muni]. simpl in *.
+      destruct idecl as [ina ity ike ict iprj].
+      apply cumul_alt in hc as [v [v' [[? ?] ?]]].
+      unfold declared_constructor in d. cbn in d.
+      destruct d as [[dm hin] hn]. simpl in *.
+      unfold declared_minductive in dm.
+      (* I have no idea how to do it. *)
+      admit.
+    - eapply IHargs. (* Induction on args was a wrong idea! *)
+  Admitted.
+
   Lemma Case_Construct_ind_eq :
     forall {Γ ind ind' npar pred i u brs args},
       welltyped Σ Γ (tCase (ind, npar) pred (mkApps (tConstruct ind' i u) args) brs) ->
       ind = ind'.
-  (* Proof. *)
-  (*   intros Γ ind ind' npar pred i u brs args [A h]. *)
-  (*   apply inversion_Case in h as ih. *)
-  (*   destruct ih *)
-  (*     as [uni [npar' [args' [mdecl [idecl [pty [indctx [pctx [ps [btys [? [? [? [? [? [? [ht0 [? ?]]]]]]]]]]]]]]]]]]. *)
-
-  (*   destruct (inversion_Case h) as [args' [ui [hh]]]. *)
-  (*   clear - hh. induction args. *)
-  (*   - cbn in hh. dependent induction hh. *)
-  (*     + unfold type_of_constructor in H0. *)
-  (*       cbn in H0. (* clear - H0. *) induction args'. *)
-  (*       * cbn in H0. admit. *)
-  (*       * eapply IHargs'. cbn in H0. *)
-  Admitted.
+  Proof.
+    intros Γ ind ind' npar pred i u brs args [A h].
+    apply inversion_Case in h as ih.
+    destruct ih
+      as [uni [args' [mdecl [idecl [pty [indctx [pctx [ps [btys [? [? [? [? [? [? [ht0 [? ?]]]]]]]]]]]]]]]]].
+    apply Construct_Ind_ind_eq in ht0. eauto.
+  Qed.
 
   Lemma Proj_Constuct_ind_eq :
     forall Γ i i' pars narg c u l,
       welltyped Σ Γ (tProj (i, pars, narg) (mkApps (tConstruct i' c u) l)) ->
       i = i'.
-  Admitted.
+  Proof.
+    intros Γ i i' pars narg c u l [T h].
+    apply inversion_Proj in h.
+    destruct h as [uni [mdecl [idecl [pdecl [args' [? [hc [? ?]]]]]]]].
+    apply Construct_Ind_ind_eq in hc. eauto.
+  Qed.
 
   Lemma Proj_red_cond :
     forall Γ i pars narg i' c u l,

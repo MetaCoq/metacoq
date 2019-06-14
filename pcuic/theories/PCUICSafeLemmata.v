@@ -7,7 +7,7 @@ From MetaCoq.Template Require Import config Universes monad_utils utils BasicAst
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICReflect PCUICLiftSubst PCUICUnivSubst PCUICTyping
      PCUICCumulativity PCUICSR PCUICPosition PCUICEquality PCUICNameless
-     PCUICNormal PCUICInversion.
+     PCUICNormal PCUICInversion PCUICCumulativity.
 From Equations Require Import Equations.
 
 Require Import Equations.Prop.DepElim.
@@ -109,13 +109,6 @@ Section Lemmata.
   Context (Σ : global_context).
   Context (hΣ : wf Σ).
 
-  Lemma subject_reduction :
-    forall {Σ Γ u v A},
-      Σ ;;; Γ |- u : A ->
-      red1 (fst Σ) Γ u v ->
-      Σ ;;; Γ |- v : A.
-  Admitted.
-
   (* red is the reflexive transitive closure of one-step reduction and thus
      can't be used as well order. We thus define the transitive closure,
      but we take the symmetric version.
@@ -142,8 +135,38 @@ Section Lemmata.
       + apply IHΣ' in h. assumption.
   Qed.
 
+  Lemma fresh_global_nl :
+    forall Σ' k,
+      fresh_global k Σ' ->
+      fresh_global k (map nl_global_decl Σ').
+  Proof.
+    intros Σ' k h. eapply Forall_map.
+    eapply Forall_impl ; try eassumption.
+    intros x hh. cbn in hh.
+    destruct x ; assumption.
+  Qed.
+
   Lemma wf_nlg :
     wf (nlg Σ).
+  Proof.
+    destruct Σ as [Σ' φ].
+    unfold nlg. unfold wf in *. unfold on_global_env in *. simpl in *.
+    induction Σ'.
+    - assumption.
+    - simpl. inversion hΣ. subst.
+      constructor.
+      + eapply IHΣ'. assumption.
+      + destruct a.
+        * simpl in *. eapply fresh_global_nl. assumption.
+        * simpl in *. eapply fresh_global_nl. assumption.
+      + destruct a.
+        * simpl in *. destruct c as [ty [bo |] uni].
+          -- cbn in *.
+             (* Need type_nl or something *)
+             admit.
+          -- cbn in *. (* same *)
+             admit.
+        * simpl in *. destruct m. admit.
   Admitted.
 
   Lemma welltyped_nlg :
@@ -152,12 +175,22 @@ Section Lemmata.
       welltyped (nlg Σ) Γ t.
   Admitted.
 
+  Lemma type_rename :
+    forall Γ u v A,
+      Σ ;;; Γ |- u : A ->
+      eq_term (snd Σ) u v ->
+      Σ ;;; Γ |- v : A.
+  Admitted.
+
   Lemma welltyped_rename :
     forall Γ u v,
       welltyped Σ Γ u ->
       eq_term (snd Σ) u v ->
       welltyped Σ Γ v.
-  Admitted.
+  Proof.
+    intros Γ u v [A h] e.
+    exists A. eapply type_rename ; eauto.
+  Qed.
 
   Lemma red_cored_or_eq :
     forall Γ u v,
@@ -209,10 +242,10 @@ Section Lemmata.
     intros Γ u v h r.
     revert h. induction r ; intros h.
     - destruct h as [A h]. exists A.
-      eapply subject_reduction ; eassumption.
+      eapply sr_red1 ; eauto with wf.
     - specialize IHr with (1 := ltac:(eassumption)).
       destruct IHr as [A ?]. exists A.
-      eapply subject_reduction ; eassumption.
+      eapply sr_red1 ; eauto with wf.
   Qed.
 
   Lemma cored_trans' :
@@ -301,7 +334,7 @@ Section Lemmata.
       destruct indn.
       apply inversion_Case in h as hh.
       destruct hh
-        as [uni [npar [args [mdecl [idecl [pty [indctx [pctx [ps [btys [? [? [? [? [? [? [ht0 [? ?]]]]]]]]]]]]]]]]]].
+        as [uni [args [mdecl [idecl [pty [indctx [pctx [ps [btys [? [? [? [? [? [? [ht0 [? ?]]]]]]]]]]]]]]]]].
       eexists. eassumption.
     - cbn. cbn in h. cbn in IHπ. apply IHπ in h.
       destruct h as [T' h].
@@ -551,6 +584,22 @@ Section Lemmata.
       econstructor. assumption.
   Qed.
 
+  Lemma cumul_App_r :
+    forall {Γ f u v},
+      Σ ;;; Γ |- u <= v ->
+      Σ ;;; Γ |- tApp f u <= tApp f v.
+  Proof.
+    intros Γ f u v h.
+    induction h.
+    - eapply cumul_refl. constructor.
+      + apply leq_term_refl.
+      + assumption.
+    - eapply cumul_red_l ; try eassumption.
+      econstructor. assumption.
+    - eapply cumul_red_r ; try eassumption.
+      econstructor. assumption.
+  Qed.
+
   Lemma conv_App_r :
     forall {Γ f x y},
       Σ ;;; Γ |- x = y ->
@@ -589,6 +638,42 @@ Section Lemmata.
       conv leq Σ Γ (tProd na A1 B1) (tProd na' A2 B2).
   Admitted.
 
+  Lemma cumul_Case_c :
+    forall Γ indn p brs u v,
+      Σ ;;; Γ |- u <= v ->
+      Σ ;;; Γ |- tCase indn p u brs <= tCase indn p v brs.
+  Proof.
+    intros Γ indn p brs u v h.
+    induction h.
+    - eapply cumul_refl. destruct indn. constructor.
+      + eapply leq_term_refl.
+      + assumption.
+      + eapply Forall_Forall2. eapply Forall_True.
+        intros x. split ; auto.
+        eapply leq_term_refl.
+    - eapply cumul_red_l ; try eassumption.
+      econstructor. assumption.
+    - eapply cumul_red_r ; try eassumption.
+      econstructor. assumption.
+  Qed.
+
+  Lemma cumul_Proj_c :
+    forall Γ p u v,
+      Σ ;;; Γ |- u <= v ->
+      Σ ;;; Γ |- tProj p u <= tProj p v.
+  Proof.
+    intros Γ p u v h.
+    induction h.
+    - eapply cumul_refl. constructor. assumption.
+    - eapply cumul_red_l ; try eassumption.
+      econstructor. assumption.
+    - eapply cumul_red_r ; try eassumption.
+      econstructor. assumption.
+  Qed.
+
+  (* TODO We only use this to prove conv_context, the latter seems to be true,
+     but not this one. FIXME.
+   *)
   Lemma cumul_context :
     forall Γ u v ρ,
       Σ ;;; Γ |- u <= v ->
@@ -600,12 +685,16 @@ Section Lemmata.
     - cbn. apply IHρ.
       eapply cumul_App_l. assumption.
     - cbn. eapply IHρ.
-      (* eapply conv_App_r. *)
-      (* Congruence for application on the right *)
-      admit.
-    - cbn.
-      (* Congruence for case *)
-      admit.
+      eapply cumul_App_r. assumption.
+    - cbn. eapply IHρ.
+      eapply cumul_App_r. assumption.
+    - cbn. eapply IHρ.
+      eapply cumul_Case_c. assumption.
+    - cbn. eapply IHρ.
+      eapply cumul_Proj_c. assumption.
+    - cbn. eapply IHρ.
+      (* eapply cumul_Prod_l. assumption. *)
+      (* This is WRONG isn't it?? *)
   Admitted.
 
   Lemma conv_context :
@@ -1630,7 +1719,7 @@ Section Lemmata.
     - assumption.
     - specialize IHr with (1 := ltac:(eassumption)).
       destruct IHr as [A ?]. exists A.
-      eapply subject_reduction ; eassumption.
+      eapply sr_red1 ; eauto with wf.
   Qed.
 
   Lemma red_cored_cored :
@@ -1647,12 +1736,57 @@ Section Lemmata.
       + assumption.
   Qed.
 
-  (* Lemma principle_typing : *)
-  (*   forall {Γ u A B}, *)
-  (*     Σ ;;; Γ |- u : A -> *)
-  (*     Σ ;;; Γ |- u : B -> *)
-  (*     { C & (Σ ;;; Γ |- C <= A) * (Σ ;;; Γ |- C <= B) * (Σ ;;; Γ |- u : C) }%type. *)
-  (* Admitted. *)
+  Lemma subject_conversion :
+    forall Γ u v A B,
+      Σ ;;; Γ |- u : A ->
+      Σ ;;; Γ |- v : B ->
+      Σ ;;; Γ |- u = v ->
+      ∑ C,
+        Σ ;;; Γ |- u : C ×
+        Σ ;;; Γ |- v : C.
+  Proof.
+    intros Γ u v A B hu hv h.
+    apply conv_conv_alt in h.
+    apply conv_alt_red in h as [u' [v' [? [? ?]]]].
+    pose proof (subject_reduction _ Γ _ _ _ hΣ hu r) as hu'.
+    pose proof (subject_reduction _ Γ _ _ _ hΣ hv r0) as hv'.
+    pose proof (type_rename _ _ _ _ hu' e) as hv''.
+    pose proof (principal_typing _ hv' hv'') as [C [? [? hvC]]].
+    apply eq_term_sym in e as e'.
+    pose proof (type_rename _ _ _ _ hvC e') as huC.
+    (* Not clear.*)
+  Abort.
+
+  Lemma welltyped_zipc_replace :
+    forall Γ u v π,
+      welltyped Σ Γ (zipc v π) ->
+      welltyped Σ (Γ ,,, stack_context π) u ->
+      Σ ;;; Γ ,,, stack_context π |- u = v ->
+      welltyped Σ Γ (zipc u π).
+  Proof.
+    intros Γ u v π hv hu heq.
+    induction π in u, v, hu, hv, heq |- *.
+    - simpl in *. assumption.
+    - simpl in *. eapply IHπ.
+      + eassumption.
+      + zip fold in hv. apply welltyped_context in hv.
+        simpl in hv.
+        destruct hv as [Tv hv].
+        destruct hu as [Tu hu].
+        apply inversion_App in hv as ihv.
+        destruct ihv as [na [A' [B' [hv' [ht ?]]]]].
+        (* Seems to be derivable (tediously) from some principal type lemma. *)
+        admit.
+      + (* Congruence *)
+        admit.
+  Admitted.
+
+  Lemma conv_context_conversion :
+    forall {Γ u v Γ'},
+      Σ ;;; Γ |- u = v ->
+      PCUICSR.conv_context Σ Γ Γ' ->
+      Σ ;;; Γ' |- u = v.
+  Admitted.
 
   (* Lemma subj_cumul : *)
   (*   forall {Γ u v A B}, *)

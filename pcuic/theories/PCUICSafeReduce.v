@@ -6,7 +6,7 @@ From MetaCoq.Template
 Require Import config Universes monad_utils utils BasicAst AstUtils UnivSubst.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICReflect PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICPosition
-     PCUICNormal PCUICInversion PCUICSafeLemmata.
+     PCUICNormal PCUICInversion PCUICCumulativity PCUICSafeLemmata.
 From Equations Require Import Equations.
 Require Import Equations.Prop.DepElim.
 
@@ -154,31 +154,62 @@ Section Reduce.
 
   Derive Signature for typing.
 
+  Lemma Construct_Ind_ind_eq :
+    forall {Γ n i args u i' args' u'},
+      Σ ;;; Γ |- mkApps (tConstruct i n u) args : mkApps (tInd i' u') args' ->
+      i = i'.
+  Proof.
+    intros Γ n i args u i' args' u' h.
+    induction args.
+    - simpl in h. apply inversion_Construct in h as ih.
+      destruct ih as [mdecl [idecl [cdecl [? [d [? hc]]]]]].
+      destruct i as [mind nind].
+      destruct i' as [mind' nind'].
+      unfold type_of_constructor in hc. cbn in hc.
+      destruct cdecl as [[cna ct] cn]. cbn in hc.
+      destruct mdecl as [mnpars mpars mbod muni]. simpl in *.
+      destruct idecl as [ina ity ike ict iprj].
+      apply cumul_alt in hc as [v [v' [[? ?] ?]]].
+      unfold declared_constructor in d. cbn in d.
+      destruct d as [[dm hin] hn]. simpl in *.
+      unfold declared_minductive in dm.
+      (* I have no idea how to do it. *)
+      admit.
+    - eapply IHargs. (* Induction on args was a wrong idea! *)
+  Admitted.
+
   Lemma Case_Construct_ind_eq :
-    forall {Σ Γ ind ind' npar pred i u brs args},
+    forall {Γ ind ind' npar pred i u brs args},
       welltyped Σ Γ (tCase (ind, npar) pred (mkApps (tConstruct ind' i u) args) brs) ->
       ind = ind'.
-  (* Proof. *)
-  (*   intros Σ' Γ ind ind' npar pred i u brs args [A h]. *)
-  (*   destruct (inversion_Case h) as [args' [ui [hh]]]. *)
-  (*   clear - hh. induction args. *)
-  (*   - cbn in hh. dependent induction hh. *)
-  (*     + unfold type_of_constructor in H0. *)
-  (*       cbn in H0. (* clear - H0. *) induction args'. *)
-  (*       * cbn in H0. admit. *)
-  (*       * eapply IHargs'. cbn in H0. *)
-  Admitted.
+  Proof.
+    intros Γ ind ind' npar pred i u brs args [A h].
+    apply inversion_Case in h as ih.
+    destruct ih
+      as [uni [args' [mdecl [idecl [pty [indctx [pctx [ps [btys [? [? [? [? [? [? [ht0 [? ?]]]]]]]]]]]]]]]]].
+    apply Construct_Ind_ind_eq in ht0. eauto.
+  Qed.
 
   Lemma Proj_Constuct_ind_eq :
     forall Γ i i' pars narg c u l,
       welltyped Σ Γ (tProj (i, pars, narg) (mkApps (tConstruct i' c u) l)) ->
       i = i'.
-  Admitted.
+  Proof.
+    intros Γ i i' pars narg c u l [T h].
+    apply inversion_Proj in h.
+    destruct h as [uni [mdecl [idecl [pdecl [args' [? [hc [? ?]]]]]]]].
+    apply Construct_Ind_ind_eq in hc. eauto.
+  Qed.
 
   Lemma Proj_red_cond :
     forall Γ i pars narg i' c u l,
       welltyped Σ Γ (tProj (i, pars, narg) (mkApps (tConstruct i' c u) l)) ->
       nth_error l (pars + narg) <> None.
+  Proof.
+    intros Γ i pars narg i' c u l [T h].
+    apply inversion_Proj in h.
+    destruct h as [uni [mdecl [idecl [pdecl [args' [d [hc [? ?]]]]]]]].
+    destruct d as [di [? ?]]. simpl in *. subst.
   Admitted.
 
   Definition inspect {A} (x : A) : { y : A | y = x } := exist x eq_refl.
@@ -771,7 +802,7 @@ Section Reduce.
   Next Obligation.
     left.
     apply Req_red in r as hr.
-    pose proof (red_welltyped flags _ hΣ h hr) as hh.
+    pose proof (red_welltyped _ hΣ h hr) as hh.
     destruct hr as [hr].
     eapply cored_red_cored ; try eassumption.
     unfold Pr in p. simpl in p. pose proof p as p'.
@@ -792,7 +823,7 @@ Section Reduce.
     symmetry in prf'. apply decompose_stack_eq in prf' as ?.
     subst.
     apply Req_red in r as hr.
-    pose proof (red_welltyped flags _ hΣ h hr) as hh.
+    pose proof (red_welltyped _ hΣ h hr) as hh.
     cbn in hh. rewrite zipc_appstack in hh. cbn in hh.
     zip fold in hh.
     apply welltyped_context in hh. simpl in hh.
@@ -1050,15 +1081,65 @@ Section Reduce.
        *)
   Abort.
 
-  Lemma _reduce_stack_whnf :
-    forall Γ t π h aux,
-      (forall t' π' hR,
-          let '(u, ρ) := ` (aux t' π' hR) in
-          whnf flags Σ (Γ ,,, stack_context ρ) (zipp u ρ)) ->
-      let '(u, ρ) := ` (_reduce_stack Γ t π h aux) in
+  Scheme Acc_ind' := Induction for Acc Sort Prop.
+
+  Lemma Fix_F_prop :
+    forall A R P f (pred : forall x : A, P x -> Prop) x hx,
+      (forall x aux, (forall y hy, pred y (aux y hy)) -> pred x (f x aux)) ->
+      pred x (@Fix_F A R P f x hx).
+  Proof.
+    intros A R P f pred x hx h.
+    induction hx using Acc_ind'.
+    cbn. eapply h. assumption.
+  Qed.
+
+  Lemma reduce_stack_prop :
+    forall Γ t π h (P : term × stack -> term × stack -> Prop),
+      (forall t π h aux,
+          (forall t' π' hR, P (t', π') (` (aux t' π' hR))) ->
+          P (t, π) (` (_reduce_stack Γ t π h aux))) ->
+      P (t, π) (reduce_stack Γ t π h).
+  Proof.
+    intros Γ t π h P hP.
+    unfold reduce_stack.
+    case_eq (reduce_stack_full Γ t π h).
+    funelim (reduce_stack_full Γ t π h).
+    intros [t' ρ] ? e.
+    match type of e with
+    | _ = ?u =>
+      change (P (t, π) (` u))
+    end.
+    rewrite <- e.
+    set ((reduce_stack_full_obligations_obligation_2 Γ t π h)).
+    set ((reduce_stack_full_obligations_obligation_3 Γ t π h)).
+    match goal with
+    | |- P ?p (` (@Fix_F ?A ?R ?rt ?f ?t ?ht ?w)) =>
+      set (Q := fun x (y : rt x) => forall (w : welltyped Σ Γ (zip x)), P x (` (y w))) ;
+      set (fn := @Fix_F A R rt f t ht)
+    end.
+    clearbody w.
+    revert w.
+    change (Q (t, π) fn).
+    subst fn.
+    eapply Fix_F_prop.
+    intros [? ?] aux H. subst Q. simpl. intros w.
+    eapply hP. intros t'0 π' hR.
+    eapply H.
+  Qed.
+
+  Lemma reduce_stack_whnf :
+    forall Γ t π h,
+      let '(u, ρ) := reduce_stack Γ t π h in
       whnf flags Σ (Γ ,,, stack_context ρ) (zipp u ρ).
   Proof.
-    intros Γ t π h aux haux.
+    intros Γ t π h.
+    eapply reduce_stack_prop
+      with (P := fun x y =>
+        let '(u, ρ) := y in
+        whnf flags Σ (Γ ,,, stack_context ρ) (zipp u ρ)
+      ).
+    clear.
+    intros t π h aux haux.
     funelim (_reduce_stack Γ t π h aux).
     all: simpl.
     - match goal with
@@ -1103,8 +1184,10 @@ Section Reduce.
           destruct hh as [na [A [B [hs [? ?]]]]].
           (* We need proper inversion here *)
           admit.
-      + (* Is this one ok? *)
-        give_up.
+      + (* Here, we need to show some isred property stating that under iota,
+           not CoFix can be returned against Case/Proj.
+         *)
+        admit.
     - unfold zipp. case_eq (decompose_stack π0). intros l ρ e.
       constructor. eapply whne_mkApps.
       eapply whne_rel_nozeta. assumption.
@@ -1203,18 +1286,26 @@ Section Reduce.
       pose proof (eq_sym e0) as e1. apply decompose_stack_eq in e1.
       subst.
       rewrite stack_context_appstack in haux'. simpl in haux'.
-      (* apply Req_red in r as hr. *)
-      (* pose proof (red_welltyped h hr) as hh. *)
-      (* cbn in hh. rewrite zipc_appstack in hh. cbn in hh. *)
-      (* zip fold in hh. *)
-      (* apply welltyped_context in hh. simpl in hh. *)
-      (* destruct hh as [T hh]. *)
-      (* apply inversion_Case in hh *)
-      (*   as [u [npar [args [mdecl [idecl [pty [indctx [pctx [ps [btys [? [? [? [? [? [? [ht0 [? ?]]]]]]]]]]]]]]]]]]. *)
-      (* constructor. eapply whne_mkApps. constructor. *)
-      (* eapply whne_mkApps. *)
+      apply Req_red in r as hr.
+      pose proof (red_welltyped _ hΣ h hr) as hh.
+      cbn in hh. rewrite zipc_appstack in hh. cbn in hh.
+      zip fold in hh.
+      apply welltyped_context in hh. simpl in hh.
+      destruct hh as [T hh].
+      apply inversion_Case in hh
+        as [u [args [mdecl [idecl [pty [indctx [pctx [ps [btys [? [? [? [? [? [? [ht0 [? ?]]]]]]]]]]]]]]]]].
+      constructor. eapply whne_mkApps. constructor.
+      eapply whne_mkApps.
+      (* Need storng inversion lemma *)
       admit.
-    - admit.
+    - match goal with
+      | |- context [ reduce ?x ?y ?z ] =>
+        case_eq (reduce x y z) ;
+        specialize (haux x y z)
+      end.
+      intros [t' π'] [? [? [? ?]]] eq. cbn.
+      rewrite eq in haux. cbn in haux.
+      assumption.
     - bang.
     - unfold zipp. case_eq (decompose_stack π6). intros.
       constructor. eapply whne_mkApps. eapply whne_proj_noiota. assumption.
@@ -1229,17 +1320,26 @@ Section Reduce.
       rewrite eq in haux. cbn in haux.
       assumption.
     - bang.
+    - match goal with
+      | |- context [ reduce ?x ?y ?z ] =>
+        case_eq (reduce x y z) ;
+        specialize (haux x y z)
+      end.
+      intros [t' π'] [? [? [? ?]]] eq. cbn.
+      rewrite eq in haux. cbn in haux.
+      assumption.
+    - bang.
   Abort.
 
-  Lemma _reduce_stack_whnf :
-    forall Γ t π h aux,
-      (forall t' π' hR,
-          whnf flags Σ (Γ ,,, stack_context (snd (` (aux t' π' hR))))
-               (fst (` (aux t' π' hR)))) ->
-      whnf flags Σ (Γ ,,, stack_context (snd (` (_reduce_stack Γ t π h aux))))
-           (fst (` (_reduce_stack Γ t π h aux))).
+  Lemma reduce_stack_whnf :
+    forall Γ t π h,
+      whnf flags Σ (Γ ,,, stack_context (snd (reduce_stack Γ t π h)))
+           (fst (reduce_stack Γ t π h)).
   Proof.
-    intros Γ t π h aux haux.
+    intros Γ t π h.
+    eapply reduce_stack_prop
+      with (P := fun x y => whnf flags Σ (Γ ,,, stack_context (snd y)) (fst y)).
+    clear. intros t π h aux haux.
     funelim (_reduce_stack Γ t π h aux).
     all: simpl.
     all: try solve [ constructor ; constructor ].
@@ -1335,13 +1435,13 @@ Section Reduce.
       subst.
       rewrite stack_context_appstack in haux'. simpl in haux'.
       apply Req_red in r as hr.
-      pose proof (red_welltyped flags _ hΣ h hr) as hh.
+      pose proof (red_welltyped _ hΣ h hr) as hh.
       cbn in hh. rewrite zipc_appstack in hh. cbn in hh.
       zip fold in hh.
       apply welltyped_context in hh. simpl in hh.
       destruct hh as [T hh].
       apply inversion_Case in hh
-        as [u [npar [args [mdecl [idecl [pty [indctx [pctx [ps [btys [? [? [? [? [? [? [ht0 [? ?]]]]]]]]]]]]]]]]]].
+        as [u [args [mdecl [idecl [pty [indctx [pctx [ps [btys [? [? [? [? [? [? [ht0 [? ?]]]]]]]]]]]]]]]]].
       (* apply Ind_canonicity in ht0 ; auto. *)
       (* + rewrite decompose_app_mkApps in ht0 ; auto. *)
       (*   destruct p0 as [? ?]. assumption. *)
@@ -1355,7 +1455,14 @@ Section Reduce.
   (*        we want to conclude it is necessarily neutral *)
   (*      *)
       admit.
-    - admit.
+    - match goal with
+      | |- context [ reduce ?x ?y ?z ] =>
+        case_eq (reduce x y z) ;
+        specialize (haux x y z)
+      end.
+      intros [t' π'] [? [? [? ?]]] eq. cbn.
+      rewrite eq in haux. cbn in haux.
+      assumption.
     - bang.
     - constructor. eapply whne_proj_noiota. assumption.
     - (* Like case *)
@@ -1369,66 +1476,15 @@ Section Reduce.
       rewrite eq in haux. cbn in haux.
       assumption.
     - bang.
-  Admitted.
-
-  Scheme Acc_ind' := Induction for Acc Sort Prop.
-
-  Lemma Fix_F_prop :
-    forall A R P f (pred : forall x : A, P x -> Prop) x hx,
-      (forall x aux, (forall y hy, pred y (aux y hy)) -> pred x (f x aux)) ->
-      pred x (@Fix_F A R P f x hx).
-  Proof.
-    intros A R P f pred x hx h.
-    induction hx using Acc_ind'.
-    cbn. eapply h. assumption.
-  Qed.
-
-  Lemma reduce_stack_prop :
-    forall Γ t π h (P : term × stack -> term × stack -> Prop),
-      (forall t π h aux,
-          (forall t' π' hR, P (t', π') (` (aux t' π' hR))) ->
-          P (t, π) (` (_reduce_stack Γ t π h aux))) ->
-      P (t, π) (reduce_stack Γ t π h).
-  Proof.
-    intros Γ t π h P hP.
-    unfold reduce_stack.
-    case_eq (reduce_stack_full Γ t π h).
-    funelim (reduce_stack_full Γ t π h).
-    intros [t' ρ] ? e.
-    match type of e with
-    | _ = ?u =>
-      change (P (t, π) (` u))
-    end.
-    rewrite <- e.
-    set ((reduce_stack_full_obligations_obligation_2 Γ t π h)).
-    set ((reduce_stack_full_obligations_obligation_3 Γ t π h)).
-    match goal with
-    | |- P ?p (` (@Fix_F ?A ?R ?rt ?f ?t ?ht ?w)) =>
-      set (Q := fun x (y : rt x) => forall (w : welltyped Σ Γ (zip x)), P x (` (y w))) ;
-      set (fn := @Fix_F A R rt f t ht)
-    end.
-    clearbody w.
-    revert w.
-    change (Q (t, π) fn).
-    subst fn.
-    eapply Fix_F_prop.
-    intros [? ?] aux H. subst Q. simpl. intros w.
-    eapply hP. intros t'0 π' hR.
-    eapply H.
-  Qed.
-
-  Lemma reduce_stack_whnf :
-    forall Γ t π h,
-      whnf flags Σ (Γ ,,, stack_context (snd (reduce_stack Γ t π h)))
-           (fst (reduce_stack Γ t π h)).
-  Proof.
-    intros Γ t π h.
-    eapply reduce_stack_prop
-      with (P := fun x y => whnf flags Σ (Γ ,,, stack_context (snd y)) (fst y)).
-    clear. intros t π h aux haux.
-    eapply _reduce_stack_whnf.
-    intros t' π' hR.
-    eapply haux.
-  Qed.
+    - match goal with
+      | |- context [ reduce ?x ?y ?z ] =>
+        case_eq (reduce x y z) ;
+        specialize (haux x y z)
+      end.
+      intros [t' π'] [? [? [? ?]]] eq. cbn.
+      rewrite eq in haux. cbn in haux.
+      assumption.
+    - bang.
+  Abort.
 
 End Reduce.

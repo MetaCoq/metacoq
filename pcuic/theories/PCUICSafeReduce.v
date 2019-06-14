@@ -1181,7 +1181,7 @@ Section Reduce.
           simpl in h. rewrite stack_context_appstack in h.
           destruct h as [T h].
           apply inversion_App in h as hh.
-          destruct hh as [na [A [B [hs [? ?]]]]].
+          destruct hh as [na' [A' [B' [hs [? ?]]]]].
           (* We need proper inversion here *)
           admit.
       + (* Here, we need to show some isred property stating that under iota,

@@ -733,32 +733,32 @@ Inductive typing `{checker_flags} (Σ : global_context) (Γ : context) : term ->
 | type_Rel n decl :
     All_local_env (lift_typing typing Σ) Γ ->
     nth_error Γ n = Some decl ->
-    Σ ;;; Γ |- (tRel n) : lift0 (S n) decl.(decl_type)
+    Σ ;;; Γ |- tRel n : lift0 (S n) decl.(decl_type)
 
 | type_Sort l :
     All_local_env (lift_typing typing Σ) Γ ->
-    Σ ;;; Γ |- (tSort (Universe.make l)) : tSort (Universe.super l)
+    Σ ;;; Γ |- tSort (Universe.make l) : tSort (Universe.super l)
 
 (* | type_Cast c k t s : *)
 (*     Σ ;;; Γ |- t : tSort s -> *)
 (*     Σ ;;; Γ |- c : t -> *)
 (*     Σ ;;; Γ |- (tCast c k t) : t *)
 
-| type_Prod n t b s1 s2 :
-    Σ ;;; Γ |- t : tSort s1 ->
-    Σ ;;; Γ ,, vass n t |- b : tSort s2 ->
-    Σ ;;; Γ |- (tProd n t b) : tSort (Universe.sort_of_product s1 s2)
+| type_Prod na A B s1 s2 :
+    Σ ;;; Γ |- A : tSort s1 ->
+    Σ ;;; Γ ,, vass na A |- B : tSort s2 ->
+    Σ ;;; Γ |- tProd na A B : tSort (Universe.sort_of_product s1 s2)
 
-| type_Lambda n t b s1 bty :
-    Σ ;;; Γ |- t : tSort s1 ->
-    Σ ;;; Γ ,, vass n t |- b : bty ->
-    Σ ;;; Γ |- (tLambda n t b) : tProd n t bty
+| type_Lambda na A t s1 B :
+    Σ ;;; Γ |- A : tSort s1 ->
+    Σ ;;; Γ ,, vass na A |- t : B ->
+    Σ ;;; Γ |- (tLambda na A t) : tProd na A B
 
-| type_LetIn n b b_ty b' s1 b'_ty :
-    Σ ;;; Γ |- b_ty : tSort s1 ->
-    Σ ;;; Γ |- b : b_ty ->
-    Σ ;;; Γ ,, vdef n b b_ty |- b' : b'_ty ->
-    Σ ;;; Γ |- (tLetIn n b b_ty b') : tLetIn n b b_ty b'_ty
+| type_LetIn na b B t s1 A :
+    Σ ;;; Γ |- B : tSort s1 ->
+    Σ ;;; Γ |- b : B ->
+    Σ ;;; Γ ,, vdef na b B |- t : A ->
+    Σ ;;; Γ |- tLetIn na b B t : tLetIn na b B A
 
 | type_App t na A B u :
     Σ ;;; Γ |- t : tProd na A B ->

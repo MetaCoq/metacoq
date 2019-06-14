@@ -233,7 +233,7 @@ Proof.
       unfold posR in h. cbn in h.
       dependent destruction h.
       destruct c ; noconf e'.
-      eapply Acc_case_c with (p := exist p0 e').
+      eapply Acc_case_c with (p := exist p e').
       eapply IHt2.
     + destruct c ; noconf e.
       eapply Acc_case_c with (p := exist q e).

@@ -790,12 +790,12 @@ Proof.
   case: a => [na [body|] ty''] /=.
   - destruct ty; try congruence.
     intros. move: (IHctx _ _ _ _ H) => [ctx'' [Hmake Hdecomp]].
-    eapply (decompose_prod_n_assum_extend_ctx [vdef n ty1 ty2]) in Hdecomp.
+    eapply (decompose_prod_n_assum_extend_ctx [vdef na0 ty1 ty2]) in Hdecomp.
     unfold snoc. eexists; intuition eauto.
   - destruct ty; try congruence.
     case: args => [|a args']; try congruence.
     move=> H. move: (IHctx _ _ _ _ H) => [ctx'' [Hmake Hdecomp]].
-    eapply (decompose_prod_n_assum_extend_ctx [vass n ty1]) in Hdecomp.
+    eapply (decompose_prod_n_assum_extend_ctx [vass na0 ty1]) in Hdecomp.
     unfold snoc. eexists; intuition eauto.
 Qed.
 

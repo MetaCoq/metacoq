@@ -205,6 +205,11 @@ Section Reduce.
     forall Γ i pars narg i' c u l,
       welltyped Σ Γ (tProj (i, pars, narg) (mkApps (tConstruct i' c u) l)) ->
       nth_error l (pars + narg) <> None.
+  Proof.
+    intros Γ i pars narg i' c u l [T h].
+    apply inversion_Proj in h.
+    destruct h as [uni [mdecl [idecl [pdecl [args' [d [hc [? ?]]]]]]]].
+    destruct d as [di [? ?]]. simpl in *. subst.
   Admitted.
 
   Definition inspect {A} (x : A) : { y : A | y = x } := exist x eq_refl.

@@ -664,7 +664,7 @@ Qed.
 (*   apply IHX. inv H; intuition auto. *)
 (* Qed. *)
 
-Lemma All2_All_mix_left {A} {P : A -> Type} {Q : A -> A -> Type}
+Lemma All2_All_mix_left {A B} {P : A -> Type} {Q : A -> B -> Type}
       {l l' : list A} :
   All P l -> All2 Q l l' -> All2 (fun x y => (P x * Q x y)%type) l l'.
 Proof.

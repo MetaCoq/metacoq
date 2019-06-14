@@ -70,10 +70,10 @@ Definition isLambda t :=
 
 (** *** Constant and axiom entries *)
 
-Record parameter_entry := { parameter_entry_type : term }.
+Record parameter_entry := { (* parameter_entry_type : term *) }.
 
 Record definition_entry := {
-  definition_entry_type      : term;
+  (* definition_entry_type      : term; *)
   definition_entry_body      : term;
   definition_entry_opaque    : bool }.
 
@@ -139,15 +139,15 @@ Record mutual_inductive_entry := {
 Record context_decl := {
   decl_name : name ;
   decl_body : option term ;
-  decl_type : term }.
+  (* decl_type : term *) }.
 
 (** Local (de Bruijn) variable binding *)
 
-Definition vass x A := {| decl_name := x; decl_body := None; decl_type := A |}.
+Definition vass x := {| decl_name := x; decl_body := None |}.
 
 (** Local (de Bruijn) let-binding *)
 
-Definition vdef x t A := {| decl_name := x; decl_body := Some t; decl_type := A |}.
+Definition vdef x t := {| decl_name := x; decl_body := Some t |}.
 
 (** Local (de Bruijn) context *)
 
@@ -158,7 +158,7 @@ Definition context := list context_decl.
 Definition map_decl f (d : context_decl) :=
   {| decl_name := d.(decl_name);
      decl_body := option_map f d.(decl_body);
-     decl_type := f d.(decl_type) |}.
+     (* decl_type := f d.(decl_type) *) |}.
 
 Definition map_context f c :=
   List.map (map_decl f) c.
@@ -174,7 +174,7 @@ Notation " Γ ,, d " := (snoc Γ d) (at level 20, d at next level).
 (** See [one_inductive_body] from [declarations.ml]. *)
 Record one_inductive_body : Set := {
   ind_name : ident;
-  ind_type : term; (* Closed arity *)
+  (* ind_type : term; (* Closed arity *) *)
   ind_kelim : list sort_family; (* Allowed elimination sorts *)
   ind_ctors : list (ident * term (* Under context of arities of the mutual inductive *)
                     * nat (* arity, w/o lets, w/o parameters *));
@@ -188,7 +188,7 @@ Record mutual_inductive_body := {
 
 (** See [constant_body] from [declarations.ml] *)
 Record constant_body := {
-    cst_type : term;
+    (* cst_type : term; *)
     cst_body : option term }.
 
 Inductive global_decl :=

@@ -67,7 +67,6 @@ Axiom is_type_or_proof_spec : forall (Sigma : global_context) (Gamma : context) 
 (* End IsType. *)
 
 Module E := EAst.
-
 Local Notation Ret t := t.
 
 Section Erase.
@@ -123,15 +122,15 @@ Section Erase.
       Ret (E.tApp f' l') (* if is_dummy f' then Ret dummy else *)
     | tCase ip p c brs =>
       let c' := extract Σ Γ c in
-      if is_box c' then
-        match brs with
-        | (n, x) :: _ =>
-          let x' := extract Σ Γ x in
-          Ret (mkAppBox x' n) (* Singleton elimination *)
-        | nil =>
-          Ret (E.tCase ip c' nil) (* Falsity elimination *)
-        end
-      else
+      (* if is_box c' then *)
+      (*   match brs with *)
+      (*   | (n, x) :: _ => *)
+      (*     let x' := extract Σ Γ x in *)
+      (*     Ret (mkAppBox x' n) (* Singleton elimination *) *)
+      (*   | nil => *)
+      (*     Ret (E.tCase ip c' nil) (* Falsity elimination *) *)
+      (*   end *)
+      (* else *)
         let brs' := map (B := nat * E.term) (fun x => let x' := extract Σ Γ (snd x) in Ret (fst x, x')) brs in
         Ret (E.tCase ip c' brs')
     | tProj p c =>
@@ -157,7 +156,7 @@ End Erase.
 Definition extract_constant_body Σ (cb : constant_body) : E.constant_body :=
   let ty := extract Σ [] cb.(cst_type) in
   let body := option_map (fun b => extract Σ [] b) cb.(cst_body)  in
-  Ret {| E.cst_type := ty; E.cst_body := body; |}.
+  Ret {| E.cst_body := body; |}.
 
 (* Definition lift_opt_typing {A} (a : option A) (e : type_error) : typing_result A := *)
 (*   match a with *)
@@ -175,12 +174,10 @@ Definition extract_one_inductive_body (Σ : global_context) (npars : nat) (ariti
            (oib : one_inductive_body) : E.one_inductive_body :=
   let decty := opt_def (decompose_prod_n_assum [] npars oib.(ind_type)) ([], tRel 0) in
   let '(params, arity) := decty in
-  let type := Ret (extract Σ [] oib.(ind_type)) in
   let ctors := map (fun '(x, y, z) => let y' := Ret (extract Σ arities y) in Ret (x, y', z)) oib.(ind_ctors) in
   let projctx := arities ,,, params ,, vass nAnon oib.(ind_type) in
   let projs := map (fun '(x, y) => let y' := Ret (extract Σ [] y) in Ret (x, y')) oib.(ind_projs) in
   Ret {| E.ind_name := oib.(ind_name);
-         E.ind_type := type;
          E.ind_kelim := oib.(ind_kelim);
          E.ind_ctors := ctors;
          E.ind_projs := projs |}.
@@ -237,13 +234,13 @@ Inductive erases (Σ : global_context) (Γ : context) : term -> E.term -> Prop :
     erases Σ Γ c c' ->
     All2 (fun x x' => erases Σ Γ (snd x) (snd x') × fst x = fst x') brs brs' ->
     erases Σ Γ (tCase ip T c brs) (E.tCase ip c' brs')
-| erases_tCase2 ip T c :
-    erases Σ Γ c E.tBox ->
-    erases Σ Γ (tCase ip T c []) (E.tCase ip E.tBox [])
-| erases_tCase3 ip T c brs n x x' :
-    erases Σ Γ c E.tBox ->
-    erases Σ Γ x x' ->
-    erases Σ Γ (tCase ip T c ((n, x) :: brs)) (mkAppBox x' n)
+(* | erases_tCase2 ip T c : *)
+(*     erases Σ Γ c E.tBox -> *)
+(*     erases Σ Γ (tCase ip T c []) (E.tCase ip E.tBox []) *)
+(* | erases_tCase3 ip T c brs n x x' : *)
+(*     erases Σ Γ c E.tBox -> *)
+(*     erases Σ Γ x x' -> *)
+(*     erases Σ Γ (tCase ip T c ((n, x) :: brs)) (mkAppBox x' n) *)
 | erases_tProj p c c' :
     erases Σ Γ c c' ->
     erases Σ Γ (tProj p c) (E.tProj p c')
@@ -259,26 +256,44 @@ Inductive erases (Σ : global_context) (Γ : context) : term -> E.term -> Prop :
     erases Σ Γ (tCoFix mfix n) (E.tCoFix mfix' n)
 (* | erases_tSort u : erases Σ Γ (tSort u) E.tBox *)
 (* | erases_tInd i u : erases Σ Γ (tInd i u) (E.tBox) *)
-| erases_box t T :
-    Σ ;;; Γ |- t : T ->
+| erases_box t :
     Is_Type_or_Proof Σ Γ t ->              
     erases Σ Γ t E.tBox
 .
 
 Notation "Σ ;;; Γ |- s ⇝ℇ t" := (erases Σ Γ s t) (at level 50, Γ, s, t at next level) : type_scope.
 
-(* Definition erases_constant_body (Σ : global_context) (cb : constant_body) (cb' : E.constant_body) := *)
-(*   E.cst *)
+Definition erases_constant_body (Σ : global_context) (cb : constant_body) (cb' : E.constant_body) :=
+  match cst_body cb, E.cst_body cb' with
+  | Some b, Some b' => erases Σ [] b b'
+  | None, None => True
+  | _, _ => False
+  end.
+
+Definition erases_one_inductive_body (Σ : global_context) (npars : nat) (arities : context) (oib : one_inductive_body) (oib' : E.one_inductive_body) :=
+  let decty := opt_def (decompose_prod_n_assum [] npars oib.(ind_type)) ([], tRel 0) in
+  let '(params, arity) := decty in
+  let projctx := arities ,,, params ,, vass nAnon oib.(ind_type) in
+  Forall2 (fun '((i,t), n) '((i',t'), n') => erases Σ arities t t' /\ n = n' /\ i = i') oib.(ind_ctors) oib'.(E.ind_ctors) /\
+  Forall2 (fun '(i,t) '(i',t') => erases Σ [] t t' /\ i = i') oib.(ind_projs) oib'.(E.ind_projs) /\
+  oib'.(E.ind_name) = oib.(ind_name) /\
+  oib'.(E.ind_kelim) = oib.(ind_kelim).
+
+Definition erases_mutual_inductive_body (Σ : global_context) (mib : mutual_inductive_body) (mib' : E.mutual_inductive_body) :=
+  let bds := mib.(ind_bodies) in
+  let arities := arities_context bds in
+  Forall2 (erases_one_inductive_body Σ mib.(ind_npars) arities) bds (mib'.(E.ind_bodies)) /\
+  mib.(ind_npars) = mib'.(E.ind_npars).
   
+Inductive erases_global_decls : constraints -> global_declarations -> E.global_declarations -> Prop :=
+| erases_global_nil univ : erases_global_decls univ [] []
+| erases_global_cnst Σ univs cb cb' kn Σ' :
+    erases_constant_body (Σ, univs) cb cb' -> erases_global_decls univs (ConstantDecl kn cb :: Σ) (E.ConstantDecl kn cb' :: Σ')
+| erases_global_ind Σ univs mib mib' kn Σ' :
+    erases_mutual_inductive_body (Σ, univs) mib mib' ->
+    erases_global_decls univs (InductiveDecl kn mib :: Σ) (E.InductiveDecl kn mib' :: Σ').
 
-(* Inductive erases_global : global_declarations -> E.global_declarations -> Prop :=  *)
-(* | erases_global_nil : erases_global [] [] *)
-(* | erases_global_cnst Σ univs cb cb' kn Σ' : *)
-(*     erases_constant_body (Σ, univs) cb cb' -> erases_global (ConstantDecl kn cb :: Σ, univs) (E.ConstantDecl kn cb' :: Σ') *)
-(* | erases_global_ind Σ unis mib mib' kn Σ' : *)
-(*     erases_mutual_inductive_body (Σ, univs) mib mib' -> *)
-(*     erases_global (InductiveDecl kn mib :: Σ, univs) (E.InductiveDecl kn mib' :: Σ'). *)
-
+Definition erases_global '(Σ, univs) Σ' := erases_global_decls univs Σ Σ'.
 
 (** * Erasure correctness
     

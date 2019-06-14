@@ -1425,7 +1425,7 @@ Section Lemmata.
       all: try discriminate IHt1.
       destruct hw as [T hw'].
       apply inversion_App in hw' as ihw'.
-      destruct ihw' as [na [A' [B' [hP [? ?]]]]].
+      destruct ihw' as [na' [A' [B' [hP [? ?]]]]].
       apply inversion_Prod in hP as [s1 [s2 [? [? bot]]]].
       (* dependent destruction bot. *)
       (* + discriminate e. *)

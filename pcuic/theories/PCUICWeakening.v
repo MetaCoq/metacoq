@@ -551,10 +551,10 @@ Proof.
   induction t in n, k, ctx |- *; simpl;
     try rewrite -> Nat.sub_diag, Nat.add_0_r; try (eauto; congruence).
   - now destruct (Nat.leb (#|ctx| + k) n0).
-  - specialize (IHt2 (ctx ,, vass n0 t1) n k).
+  - specialize (IHt2 (ctx ,, vass na t1) n k).
     destruct decompose_prod_assum. rewrite IHt2. simpl.
     rewrite lift_context_snoc. reflexivity.
-  - specialize (IHt3 (ctx ,, vdef n0 t1 t2) n k).
+  - specialize (IHt3 (ctx ,, vdef na t1 t2) n k).
     destruct decompose_prod_assum. rewrite IHt3. simpl.
     rewrite lift_context_snoc. reflexivity.
 Qed.

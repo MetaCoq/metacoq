@@ -196,7 +196,7 @@ Lemma type_Lambda_inv Σ Γ na A b U :
            (Σ ;;; Γ |- tProd na A B <= U) } }%type.
 Proof.
   intros H; depind H.
-  exists s1, bty; intuition auto.
+  exists s1, B; intuition auto.
   specialize (IHtyping _ _ _ eq_refl).
   destruct IHtyping as [s1 [s2 Hs]].
   eexists _, _; intuition eauto.
@@ -304,7 +304,7 @@ Proof.
 Qed.
 
 (** Requires Validity *)
-Lemma type_mkApps_inv Σ Γ f u T : wf Σ -> 
+Lemma type_mkApps_inv Σ Γ f u T : wf Σ ->
   Σ ;;; Γ |- mkApps f u : T ->
   { T' & { U & ((Σ ;;; Γ |- f : T') * (typing_spine Σ Γ T' u U) * (Σ ;;; Γ |- U <= T))%type } }.
 Proof.

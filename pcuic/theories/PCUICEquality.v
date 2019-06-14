@@ -169,14 +169,14 @@ Proof.
     end.
     destruct H ; nodec. subst.
     equspec equ h. ih.
-    cbn. induction u in u0 |- *.
-    + destruct u0.
+    cbn. induction u in ui |- *.
+    + destruct ui.
       * constructor. constructor. constructor.
       * constructor. intro bot. inversion bot. subst. inversion H0.
-    + destruct u0.
+    + destruct ui.
       * constructor. intro bot. inversion bot. subst. inversion H0.
       * cbn. equspec equ h.
-        -- cbn. destruct (IHu u0).
+        -- cbn. destruct (IHu ui).
            ++ constructor. constructor.
               inversion e. subst.
               constructor ; assumption.
@@ -187,14 +187,14 @@ Proof.
            inversion bot. subst. inversion H0. subst.
            assumption.
   - cbn - [eqb]. eqspecs. equspec equ h. ih.
-    simpl. induction u in u0 |- *.
-    + destruct u0.
+    simpl. induction u in ui |- *.
+    + destruct ui.
       * constructor. constructor. constructor.
       * constructor. intro bot. inversion bot. subst. inversion H0.
-    + destruct u0.
+    + destruct ui.
       * constructor. intro bot. inversion bot. subst. inversion H0.
       * cbn. equspec equ h.
-        -- cbn. destruct (IHu u0).
+        -- cbn. destruct (IHu ui).
            ++ constructor. constructor.
               inversion e. subst.
               constructor ; assumption.
@@ -205,14 +205,14 @@ Proof.
            inversion bot. subst. inversion H0. subst.
            assumption.
   - cbn - [eqb]. eqspecs. equspec equ h. ih.
-    simpl. induction u in u0 |- *.
-    + destruct u0.
+    simpl. induction u in ui |- *.
+    + destruct ui.
       * constructor. constructor. constructor.
       * constructor. intro bot. inversion bot. subst. inversion H0.
-    + destruct u0.
+    + destruct ui.
       * constructor. intro bot. inversion bot. subst. inversion H0.
       * cbn. equspec equ h.
-        -- cbn. destruct (IHu u0).
+        -- cbn. destruct (IHu ui).
            ++ constructor. constructor.
               inversion e. subst.
               constructor ; assumption.
@@ -224,20 +224,20 @@ Proof.
            assumption.
   - cbn - [eqb]. eqspecs. equspec equ h. ih.
     cbn - [eqb].
-    destruct p0 as [i n].
-    induction l in l0, X |- *.
-    + destruct l0.
+    destruct indn as [i n].
+    induction l in brs, X |- *.
+    + destruct brs.
       * constructor. constructor ; try assumption.
         constructor.
       * constructor. intro bot. inversion bot. subst. inversion H9.
-    + destruct l0.
+    + destruct brs.
       * constructor. intro bot. inversion bot. subst. inversion H9.
       * cbn - [eqb]. inversion X. subst.
         destruct a, p. cbn - [eqb]. eqspecs.
         -- cbn - [eqb]. pose proof (H1 t0) as hh. cbn in hh.
            destruct hh.
            ++ cbn - [eqb].
-              destruct (IHl H2 l0).
+              destruct (IHl H2 brs).
               ** constructor. constructor ; try assumption.
                  constructor ; try easy.
                  inversion e2. subst. assumption.
@@ -252,18 +252,18 @@ Proof.
   - cbn - [eqb]. eqspecs. equspec equ h. ih.
     constructor. constructor ; assumption.
   - cbn - [eqb]. eqspecs. equspec equ h. ih.
-    cbn - [eqb]. induction m in X, m0 |- *.
-    + destruct m0.
+    cbn - [eqb]. induction m in X, mfix |- *.
+    + destruct mfix.
       * constructor. constructor. constructor.
       * constructor. intro bot. inversion bot. subst. inversion H0.
-    + destruct m0.
+    + destruct mfix.
       * constructor. intro bot. inversion bot. subst. inversion H0.
       * cbn - [eqb]. inversion X. subst.
         destruct H1 as [h1 h2].
         destruct (h1 (dtype d)).
         -- destruct (h2 (dbody d)).
            ++ cbn - [eqb]. eqspecs.
-              ** cbn - [eqb]. destruct (IHm H2 m0).
+              ** cbn - [eqb]. destruct (IHm H2 mfix).
                  --- constructor. constructor. constructor ; try easy.
                      inversion e2. assumption.
                  --- constructor. intro bot. apply n.
@@ -278,18 +278,18 @@ Proof.
         -- constructor. intro bot. apply n.
            inversion bot. subst. inversion H0. subst. apply H4.
   - cbn - [eqb]. eqspecs. equspec equ h. ih.
-    cbn - [eqb]. induction m in X, m0 |- *.
-    + destruct m0.
+    cbn - [eqb]. induction m in X, mfix |- *.
+    + destruct mfix.
       * constructor. constructor. constructor.
       * constructor. intro bot. inversion bot. subst. inversion H0.
-    + destruct m0.
+    + destruct mfix.
       * constructor. intro bot. inversion bot. subst. inversion H0.
       * cbn - [eqb]. inversion X. subst.
         destruct H1 as [h1 h2].
         destruct (h1 (dtype d)).
         -- destruct (h2 (dbody d)).
            ++ cbn - [eqb]. eqspecs.
-              ** cbn - [eqb]. destruct (IHm H2 m0).
+              ** cbn - [eqb]. destruct (IHm H2 mfix).
                  --- constructor. constructor. constructor ; try easy.
                      inversion e2. assumption.
                  --- constructor. intro bot. apply n.

@@ -164,8 +164,8 @@ Lemma destArity_spec ctx T :
   end.
 Proof.
   induction T in ctx |- *; simpl; simplify_dep_elim; try easy.
-  specialize (IHT2 (ctx,, vass n T1)). now destruct destArity.
-  specialize (IHT3 (ctx,, vdef n T1 T2)). now destruct destArity.
+  specialize (IHT2 (ctx,, vass na T1)). now destruct destArity.
+  specialize (IHT3 (ctx,, vdef na T1 T2)). now destruct destArity.
 Qed.
 
 Lemma closedn_All_local_closed:

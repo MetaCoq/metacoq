@@ -294,7 +294,7 @@ Next Obligation.
     subst. left. reflexivity.
   - destruct (IHx1 t1) ; nodec.
     destruct (IHx2 t2) ; nodec.
-    subst. revert l0. clear IHx1 IHx2.
+    subst. revert brs. clear IHx1 IHx2.
     induction X ; intro l0.
     + destruct l0.
       * left. reflexivity.
@@ -302,14 +302,14 @@ Next Obligation.
     + destruct l0.
       * right. discriminate.
       * destruct (IHX l0) ; nodec.
-        destruct (p (snd p1)) ; nodec.
-        destruct (eq_dec (fst x) (fst p1)) ; nodec.
-        destruct x, p1.
+        destruct (p (snd p0)) ; nodec.
+        destruct (eq_dec (fst x) (fst p0)) ; nodec.
+        destruct x, p0.
         left.
         cbn in *. subst. inversion e. reflexivity.
   - destruct (IHx t) ; nodec.
     left. subst. reflexivity.
-  - revert m0. induction X ; intro m0.
+  - revert mfix. induction X ; intro m0.
     + destruct m0.
       * left. reflexivity.
       * right. discriminate.
@@ -324,7 +324,7 @@ Next Obligation.
         subst. inversion e1. subst.
         destruct (eq_dec rarg rarg0) ; nodec.
         subst. left. reflexivity.
-  - revert m0. induction X ; intro m0.
+  - revert mfix. induction X ; intro m0.
     + destruct m0.
       * left. reflexivity.
       * right. discriminate.

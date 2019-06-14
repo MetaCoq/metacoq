@@ -72,7 +72,7 @@ Import MonadNotation.
 
 Definition type_set := tSort Universe.type0.
 
-Fixpoint arb (Σ : global_context) (Γ : context) (ty : term) (n : nat) : G term :=
+Fixpoint arb (Σ : global_context) (Γ : context) (ty : term) (n : nat) {struct n} : G term :=
   match n with
   | 0 =>
     let vars :=
@@ -82,9 +82,25 @@ Fixpoint arb (Σ : global_context) (Γ : context) (ty : term) (n : nat) : G term
         filter (fun '(i, decl) => eq_term (LevelSet.empty, snd Σ) (lift0 i decl.(decl_type)) ty) (combine nums Γ) in
       map (tRel ∘ fst) valid_vars
     in
-    let sorts :=
-        (* Prop + Set + Type(1) *)
-        map tSort [Universe.type0m; Universe.type0; Universe.type1]
+    let inverted :=
+      (* What should be well-typed by inversion on the type *)
+      let (hd, args) := decompose_app ty in
+      match hd with
+      | tSort u =>
+        let sorts :=
+          if Universe.equal u Universe.type1 then
+            (* Prop + Set + Type(1) *)
+            map tSort [Universe.type0m; Universe.type0]
+          else
+            if Universe.equal u Universe.type0m then
+              (** Propositions *)
+              map tSort []
+            else if Universe.equal u Universe.type0 (* Set *) then
+             [tInd (mkInd "Coq.Init.Datatypes.nat" 0) []]
+          else [] in
+        elems_ sorts
+      | _ => oneOf_ []
+      end
     in
     let globals :=
        (* Valid global references *)
@@ -95,9 +111,27 @@ Fixpoint arb (Σ : global_context) (Γ : context) (ty : term) (n : nat) : G term
               end) (* Not checking types! *)
            (fst Σ)
     in
-    oneOf_ [elems_ vars; elems_ sorts; elems_ globals]
+    oneOf_ [elems_ vars; inverted; elems_ globals]
 
   | S n =>
+    (** Generate an application headed by [acc] of type [ty], applying it to [arity] arguments. *)
+    let fix arb_app acc ty arity : G term :=
+        match arity with
+        | 0 => cand <- arb Σ Γ ty n;;
+                    ret (mkApp acc cand)
+        | S arity' =>
+          match ty with
+          | tProd na ty b =>
+            cand <- arb Σ Γ ty n ;;
+                 arb_app (mkApp acc cand) (subst10 cand b) arity'
+          (* FIXME wrong! Arity doesn't count let-ins *)
+          (*| tLetIn na def def_ty body =>
+        arb_app acc (subst  10 def body) ari      ty'
+        | tCast c _ _ => arb   _app acc c arity *)
+          | _ => oneOf_ []
+          end
+        end
+    in
     let lambdas : G term :=
       let '(ctx, ty') := decompose_prod_assum Γ ty in
       body <- arb Σ ctx ty' n ;;
@@ -109,8 +143,35 @@ Fixpoint arb (Σ : global_context) (Γ : context) (ty : term) (n : nat) : G term
       a <- arb Σ Γ dom n;;
       ret (tApp f [a])
     in
-
-    oneOf_ [ lambdas ; apps ]
+    let inverted :=
+      (* What should be well-typed by inversion on the type *)
+      let (hd, args) := decompose_app ty in
+      match hd with
+      | tInd (mkInd ind k) u =>
+        match lookup_env Σ ind with
+        | Some (InductiveDecl mind mib) =>
+          match nth_error mib.(ind_bodies) k with
+          | Some oib =>
+            let ctors :=
+             mapi (fun i decl =>
+                     let cstrty := type_of_constructor mib decl (mkInd ind k, i) u in
+                     match instantiate_params mib.(ind_params) (List.firstn mib.(ind_npars) args) cstrty with
+                     | Some cstrty =>
+                       let cstrapp := mkApps (tConstruct (mkInd ind k) i u) args in
+                       arb_app cstrapp cstrty (snd decl) (* Number of actual arguments *)
+                     | None => oneOf_ []
+                     end)
+                  oib.(ind_ctors)
+            in
+            oneOf_ ctors
+          | None => oneOf_ [] (* Ill-formed global environment *)
+          end
+        | _ => oneOf_ [] (* Ill-formed global environment  *)
+        end
+      | _ => oneOf_ [] (* Many more possibilities *)
+      end
+    in
+    oneOf_ [ arb Σ Γ ty n; lambdas ; inverted; apps ]
   end.
 
 Instance check_result {A} : Checkable (typing_result A) :=
@@ -129,3 +190,10 @@ Definition prop_arb_wt :=
   forAll (arb Σ [] type_set 1) (infer Σ []).
 
 QuickChick prop_arb_wt.
+
+Definition type_nat := tInd (mkInd "Coq.Init.Datatypes.nat"%string 0) [].
+
+Definition prop_arb_wt_in_nat :=
+  forAll (arb Σ [] type_nat 1) (infer Σ []).
+
+QuickChick prop_arb_wt_in_nat.

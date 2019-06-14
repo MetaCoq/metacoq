@@ -7,7 +7,7 @@ From MetaCoq.Template Require Import config Universes monad_utils utils BasicAst
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICReflect PCUICLiftSubst PCUICUnivSubst PCUICTyping
      PCUICCumulativity PCUICSR PCUICPosition PCUICEquality PCUICNameless
-     PCUICNormal PCUICInversion.
+     PCUICNormal PCUICInversion PCUICCumulativity.
 From Equations Require Import Equations.
 
 Require Import Equations.Prop.DepElim.
@@ -175,12 +175,22 @@ Section Lemmata.
       welltyped (nlg Σ) Γ t.
   Admitted.
 
+  Lemma type_rename :
+    forall Γ u v A,
+      Σ ;;; Γ |- u : A ->
+      eq_term (snd Σ) u v ->
+      Σ ;;; Γ |- v : A.
+  Admitted.
+
   Lemma welltyped_rename :
     forall Γ u v,
       welltyped Σ Γ u ->
       eq_term (snd Σ) u v ->
       welltyped Σ Γ v.
-  Admitted.
+  Proof.
+    intros Γ u v [A h] e.
+    exists A. eapply type_rename ; eauto.
+  Qed.
 
   Lemma red_cored_or_eq :
     forall Γ u v,
@@ -1726,23 +1736,6 @@ Section Lemmata.
       + assumption.
   Qed.
 
-  Lemma conversion_reduction :
-    forall Γ u v,
-      Σ ;;; Γ |- u = v ->
-      ∑ u' v',
-        red Σ Γ u u' ×
-        red Σ Γ v v' ×
-        eq_term (snd Σ) u' v'.
-  (* Proof. *)
-  (*   intros Γ u v [h1 h2]. *)
-  (*   induction h1 ; dependent induction h2. *)
-  (*   - exists u, t. repeat split. *)
-  (*     + constructor. *)
-  (*     + constructor. *)
-  (*     + eapply leq_term_antisym ; eassumption. *)
-  (*   -  *)
-  Admitted.
-
   Lemma subject_conversion :
     forall Γ u v A B,
       Σ ;;; Γ |- u : A ->
@@ -1753,9 +1746,14 @@ Section Lemmata.
         Σ ;;; Γ |- v : C.
   Proof.
     intros Γ u v A B hu hv h.
-    apply conversion_reduction in h as [u' [v' [? [? ?]]]].
+    apply conv_conv_alt in h.
+    apply conv_alt_red in h as [u' [v' [? [? ?]]]].
     pose proof (subject_reduction _ Γ _ _ _ hΣ hu r) as hu'.
     pose proof (subject_reduction _ Γ _ _ _ hΣ hv r0) as hv'.
+    pose proof (type_rename _ _ _ _ hu' e) as hv''.
+    pose proof (principal_typing _ hv' hv'') as [C [? [? hvC]]].
+    apply eq_term_sym in e as e'.
+    pose proof (type_rename _ _ _ _ hvC e') as huC.
     (* Not clear.*)
   Abort.
 
@@ -1777,7 +1775,7 @@ Section Lemmata.
         destruct hu as [Tu hu].
         apply inversion_App in hv as ihv.
         destruct ihv as [na [A' [B' [hv' [ht ?]]]]].
-        (* Seems to be derivable (tediously) from some principle type lemma. *)
+        (* Seems to be derivable (tediously) from some principal type lemma. *)
         admit.
       + (* Congruence *)
         admit.

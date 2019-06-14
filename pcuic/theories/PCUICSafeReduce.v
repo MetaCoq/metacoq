@@ -155,11 +155,15 @@ Section Reduce.
   Derive Signature for typing.
 
   Lemma Case_Construct_ind_eq :
-    forall {Σ Γ ind ind' npar pred i u brs args},
+    forall {Γ ind ind' npar pred i u brs args},
       welltyped Σ Γ (tCase (ind, npar) pred (mkApps (tConstruct ind' i u) args) brs) ->
       ind = ind'.
   (* Proof. *)
-  (*   intros Σ' Γ ind ind' npar pred i u brs args [A h]. *)
+  (*   intros Γ ind ind' npar pred i u brs args [A h]. *)
+  (*   apply inversion_Case in h as ih. *)
+  (*   destruct ih *)
+  (*     as [uni [npar' [args' [mdecl [idecl [pty [indctx [pctx [ps [btys [? [? [? [? [? [? [ht0 [? ?]]]]]]]]]]]]]]]]]]. *)
+
   (*   destruct (inversion_Case h) as [args' [ui [hh]]]. *)
   (*   clear - hh. induction args. *)
   (*   - cbn in hh. dependent induction hh. *)
@@ -1262,7 +1266,7 @@ Section Reduce.
       apply welltyped_context in hh. simpl in hh.
       destruct hh as [T hh].
       apply inversion_Case in hh
-        as [u [npar [args [mdecl [idecl [pty [indctx [pctx [ps [btys [? [? [? [? [? [? [ht0 [? ?]]]]]]]]]]]]]]]]]].
+        as [u [args [mdecl [idecl [pty [indctx [pctx [ps [btys [? [? [? [? [? [? [ht0 [? ?]]]]]]]]]]]]]]]]].
       constructor. eapply whne_mkApps. constructor.
       eapply whne_mkApps.
       (* Need storng inversion lemma *)
@@ -1410,7 +1414,7 @@ Section Reduce.
       apply welltyped_context in hh. simpl in hh.
       destruct hh as [T hh].
       apply inversion_Case in hh
-        as [u [npar [args [mdecl [idecl [pty [indctx [pctx [ps [btys [? [? [? [? [? [? [ht0 [? ?]]]]]]]]]]]]]]]]]].
+        as [u [args [mdecl [idecl [pty [indctx [pctx [ps [btys [? [? [? [? [? [? [ht0 [? ?]]]]]]]]]]]]]]]]].
       (* apply Ind_canonicity in ht0 ; auto. *)
       (* + rewrite decompose_app_mkApps in ht0 ; auto. *)
       (*   destruct p0 as [? ?]. assumption. *)

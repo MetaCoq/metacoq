@@ -1290,7 +1290,7 @@ Section Conversion.
     destruct h1 as [T h1].
     apply inversion_Case in h1 as hh.
     destruct hh
-      as [uni [npar [args [mdecl [idecl [pty [indctx [pctx [ps [btys [? [? [? [? [? [? [ht0 [? ?]]]]]]]]]]]]]]]]]].
+      as [uni [args [mdecl [idecl [pty [indctx [pctx [ps [btys [? [? [? [? [? [? [ht0 [? ?]]]]]]]]]]]]]]]]].
     eexists. eassumption.
   Qed.
   Next Obligation.
@@ -1300,7 +1300,7 @@ Section Conversion.
     destruct h2 as [T h2].
     apply inversion_Case in h2 as hh.
     destruct hh
-      as [uni [npar [args [mdecl [idecl [pty [indctx [pctx [ps [btys [? [? [? [? [? [? [ht0 [? ?]]]]]]]]]]]]]]]]]].
+      as [uni [args [mdecl [idecl [pty [indctx [pctx [ps [btys [? [? [? [? [? [? [ht0 [? ?]]]]]]]]]]]]]]]]].
     eexists. eassumption.
   Qed.
   Next Obligation.
@@ -2011,7 +2011,7 @@ Section Conversion.
     cbn. destruct h as [T h].
     apply inversion_Case in h ; auto.
     destruct h as
-        [u [npar [args [mdecl [idecl [pty [indctx [pctx [ps [btys [? [? [? [? [? [? [? [? ?]]]]]]]]]]]]]]]]]].
+        [u [args [mdecl [idecl [pty [indctx [pctx [ps [btys [? [? [? [? [? [? [? [? ?]]]]]]]]]]]]]]]]].
     eexists. eassumption.
   Qed.
 

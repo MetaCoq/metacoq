@@ -179,7 +179,7 @@ Section Inversion.
   Lemma inversion_Case :
     forall {Γ ind npar p c brs T},
       Σ ;;; Γ |- tCase (ind, npar) p c brs : T ->
-      ∑ u npar args mdecl idecl pty indctx pctx ps btys,
+      ∑ u args mdecl idecl pty indctx pctx ps btys,
         declared_inductive Σ mdecl ind idecl ×
         ind_npars mdecl = npar ×
         let pars := firstn npar args in

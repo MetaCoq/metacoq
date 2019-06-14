@@ -334,7 +334,7 @@ Section Lemmata.
       destruct indn.
       apply inversion_Case in h as hh.
       destruct hh
-        as [uni [npar [args [mdecl [idecl [pty [indctx [pctx [ps [btys [? [? [? [? [? [? [ht0 [? ?]]]]]]]]]]]]]]]]]].
+        as [uni [args [mdecl [idecl [pty [indctx [pctx [ps [btys [? [? [? [? [? [? [ht0 [? ?]]]]]]]]]]]]]]]]].
       eexists. eassumption.
     - cbn. cbn in h. cbn in IHπ. apply IHπ in h.
       destruct h as [T' h].

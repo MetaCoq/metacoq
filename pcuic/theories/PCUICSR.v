@@ -4,8 +4,8 @@ From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICWeakeningEnv PCUICWeakening
-     PCUICSubstitution PCUICClosed PCUICCumulativity PCUICGeneration PCUICValidity
-     PCUICConfluence.
+     PCUICSubstitution PCUICClosed PCUICCumulativity PCUICGeneration
+     PCUICValidity PCUICConfluence PCUICInversion.
 Require Import ssreflect ssrbool.
 Require Import String.
 From MetaCoq.Template Require Import LibHypsNaming.
@@ -188,22 +188,6 @@ Admitted.
     eapply All_local_env_impl in HΓ. eapply HΓ.
 *)
 
-Lemma type_Lambda_inv Σ Γ na A b U :
-  Σ ;;; Γ |- tLambda na A b : U ->
-  { s1 & { B &
-           (Σ ;;; Γ |- A : tSort s1) *
-           (Σ ;;; Γ ,, vass na A |- b : B) *
-           (Σ ;;; Γ |- tProd na A B <= U) } }%type.
-Proof.
-  intros H; depind H.
-  exists s1, B; intuition auto.
-  specialize (IHtyping _ _ _ eq_refl).
-  destruct IHtyping as [s1 [s2 Hs]].
-  eexists _, _; intuition eauto.
-  eapply cumul_trans; eauto.
-  eapply cumul_trans; eauto.
-Qed.
-
 (** Injectivity of products, the essential property of cumulativity needed for subject reduction. *)
 Lemma cumul_Prod_inv Σ Γ na na' A B A' B' :
   Σ ;;; Γ |- tProd na A B <= tProd na' A' B' ->
@@ -312,13 +296,13 @@ Proof.
   { exists T, T. intuition auto. constructor. }
   intros Hf. simpl in Hf.
   destruct u. simpl in Hf.
-  - eapply invert_type_App in Hf as [A' [B' [na' [[Hf' Ha] HA''']]]].
+  - eapply inversion_App in Hf as [na' [A' [B' [Hf' [Ha HA''']]]]].
     eexists _, _; intuition eauto.
     econstructor; eauto. eapply validity; eauto with wf.
     constructor.
   - specialize (IHu (tApp f a) T).
     specialize (IHu Hf) as [T' [U' [[H' H''] H''']]].
-    eapply invert_type_App in H' as [A' [B' [na' [[Hf' Ha] HA''']]]].
+    eapply inversion_App in H' as [na' [A' [B' [Hf' [Ha HA''']]]]].
     exists (tProd na' A' B'), U'. intuition; eauto.
     econstructor. eapply validity; eauto with wf.
     eapply cumul_refl'. auto.
@@ -474,7 +458,7 @@ Proof.
   - (* Application *)
     eapply substitution0; eauto.
     pose proof typet as typet'.
-    eapply type_Lambda_inv in typet' as [s1 [B' [[Ht Hb] HU]]].
+    eapply inversion_Lambda in typet' as [s1 [B' [Ht [Hb HU]]]].
     apply cumul_Prod_inv in HU as [eqA leqB].
 
     eapply type_Conv; eauto.
@@ -494,7 +478,7 @@ Proof.
       exists ctx', s.
       intuition auto. rewrite app_context_assoc in Hs'. apply Hs'.
       right. exists s.
-      eapply type_Prod_invert in Hs as [s1 [s2 [[Ha Hp] Hp']]].
+      eapply inversion_Prod in Hs as [s1 [s2 [Ha [Hp Hp']]]].
       eapply type_Conv; eauto.
       left. exists [], s. intuition auto. now apply typing_wf_local in Hp.
       apply cumul_Sort_inv in Hp'.

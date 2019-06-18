@@ -39,6 +39,28 @@ Section print_term.
     let ctx' := fix_context defs in
     print_list (print_def (print_term Γ true) (print_term (ctx' ++ Γ)%list true)) (nl ++ " with ") defs.
 
+  Section Map2.
+    Context {A B C} (f : A -> B -> C).
+    Fixpoint map2  (l : list A) (l' : list B)  : list C :=
+      match l, l' with
+      | nil, nil => nil
+      | cons a l, cons a' l' => cons (f a a') (map2 l l')
+      | _, _ => nil
+      end.
+  End Map2.
+
+  Fixpoint decompose_lam (t : term) (n : nat) : (list name) * (list term) * term :=
+    match n with
+    | 0 => ([], [], t)
+    | S n =>
+      match t with
+      | tLambda na A B => let (nAs, B) := decompose_lam B n in
+                          let (ns, As) := nAs in
+                          (na :: ns, A :: As, B)
+      | _ => ([], [], t)
+      end
+    end.
+
   Fixpoint print_term (Γ : context) (top : bool) (t : term) {struct t} :=
   match t with
   | tRel n =>
@@ -59,7 +81,7 @@ Section print_term.
            ("∀ " ++ string_of_name na ++ " : " ++
                      print_term Γ true b ++ ", " ++ print_term (vass na b :: Γ) true t)
   | tLambda na b t =>
-    parens top ("λ " ++ string_of_name na ++ " : " ++ print_term Γ true b
+    parens top ("fun " ++ string_of_name na ++ " : " ++ print_term Γ true b
                                 ++ " => " ++ print_term (vass na b :: Γ) true t)
   | tLetIn na b t' t =>
     parens top ("let" ++ string_of_name na ++ " : " ++ print_term Γ true t' ++
@@ -90,10 +112,31 @@ Section print_term.
   | tCase (mkInd mind i as ind, pars) p t brs =>
     match lookup_ind_decl Σ mind i with
     | Checked (_, oib) =>
-      let brs := map (fun x => print_term Γ true (snd x)) brs in
-      let brs := combine brs oib.(ind_ctors) in
-      parens top ("match " ++ print_term Γ true t ++ " in " ++ oib.(ind_name) ++ " return " ++ print_term Γ true p ++
-        " with " ++ print_list (fun '(b, (na, _, _)) => na ++ " => " ++ b) (nl ++ " | ") brs)
+      match p with
+      | tLambda na _ty b =>
+        let fix print_branch arity br {struct br} :=
+          match arity with
+            | 0 => " => " ++ print_term Γ true br
+            | S n =>
+              match br with
+              | tLambda na A B =>
+                string_of_name na ++ "  " ++ print_branch n B
+              | _ => ""
+              end
+            end
+        in
+        let brs := map (fun '(arity, br) =>
+                          print_branch arity br) brs in
+        let brs := combine brs oib.(ind_ctors) in
+        parens top ("match " ++ print_term Γ true t ++
+                    " as " ++ string_of_name na ++
+                    " in " ++ oib.(ind_name) ++ " return " ++ print_term Γ true b ++
+                    " with " ++ print_list (fun '(b, (na, _, _)) => na ++ b)
+                   (nl ++ " | ") brs ++ " end" ++ nl)
+      | _ =>
+        "Case(" ++ string_of_inductive ind ++ "," ++ string_of_nat i ++ "," ++ string_of_term t ++ ","
+                ++ string_of_term p ++ "," ++ string_of_list (fun b => string_of_term (snd b)) brs ++ ")"
+      end
     | TypeError _ =>
       "Case(" ++ string_of_inductive ind ++ "," ++ string_of_nat i ++ "," ++ string_of_term t ++ ","
               ++ string_of_term p ++ "," ++ string_of_list (fun b => string_of_term (snd b)) brs ++ ")"
@@ -204,6 +247,14 @@ Definition term_of_global (gr : global_reference) (u : universe_instance) :=
 Definition arb_sort : G universe :=
   elems_ [Universe.type0m; Universe.type0; Universe.type1].
 
+Require Import MetaCoq.Template.Loader.
+Quote Recursively Definition foo := (3 + 4, @nil bool).
+
+(** Has nat, bool, prod and list *)
+Definition Σ := Eval compute in reconstruct_global_context (fst foo).
+
+Instance show_term : Show term := { show := print_term Σ [] true }.
+
 Fixpoint arb (Σ : global_context) (Γ : context) (ty : term) (n : nat) {struct n} : G term :=
   match n with
   | 0 =>
@@ -300,12 +351,7 @@ Fixpoint arb (Σ : global_context) (Γ : context) (ty : term) (n : nat) {struct 
     in
     let fix apps i : list (G term) := (* i controls the number of abstractions *)
       match i with
-      | 0 =>
-        [domu <- arb_sort ;;
-        dom <- arb Σ Γ (tSort domu) n ;; (* Generate some type in the sort *)
-        f <- arb Σ Γ (tProd nAnon dom (lift0 1 ty)) n;;
-        a <- arb Σ Γ dom n;;
-        ret (tApp f [a])]
+      | 0 => []
       | S i =>
         (domu <- arb_sort ;;
         dom <- arb Σ Γ (tSort domu) n ;; (* Generate some type in the sort *)
@@ -355,12 +401,20 @@ Fixpoint arb (Σ : global_context) (Γ : context) (ty : term) (n : nat) {struct 
           match nth_error mib.(ind_bodies) k with
           | Some oib =>
             let params := List.firstn mib.(ind_npars) args in
-            let pred := (tLambda nAnon indty ty) (* Predicate: could be more complicated.
+            let pred := (tLambda nAnon indty (lift0 1 ty)) (* Predicate: could be more complicated.
                                                     FIXME: Ill-formed for inductive families *) in
             let brtys := map_option_out (build_branches_type (mkInd ind k) mib oib params u pred) in
             match brtys with
             | Some tys =>
-              brs <- mapGen (fun '(arity, ty) => t <- arb Σ Γ ty n ;; ret (arity, t)) tys ;;
+              let br '(arity, ty) :=
+                match reduce_opt RedFlags.default (fst Σ) Γ 100 ty with
+                | Some ty =>
+                  t <- arb Σ Γ ty n ;;
+                  (* trace ("built branch body" ++ show arity ++ nl) *) (ret (arity, t))
+                | None => failGen
+                end
+              in
+              brs <- (* trace ("case branches: " ++ show tys ++ nl) *) (mapGen br tys);;
               ret (tCase (mkInd ind k, 0) pred discr brs)
             | None => failGen
             end
@@ -371,7 +425,7 @@ Fixpoint arb (Σ : global_context) (Γ : context) (ty : term) (n : nat) {struct 
       | _ => failGen
       end
     in
-    oneOf_ (arb Σ Γ ty (n - n) :: inverted ++ apps n ++ lambdas ++ [cases])
+    oneOf_ (arb Σ Γ ty (n - n) :: inverted ++ apps (S n) ++ lambdas ++ [cases])
   end.
 
 Instance check_result {A} : Checkable (typing_result A) :=
@@ -380,14 +434,6 @@ Instance check_result {A} : Checkable (typing_result A) :=
                | Checked T => true
                | TypeError _ => false
                end) }.
-
-Require Import MetaCoq.Template.Loader.
-Quote Recursively Definition foo := (3 + 4, @nil bool).
-
-(** Has nat, bool, prod and list *)
-Definition Σ := Eval compute in reconstruct_global_context (fst foo).
-
-Instance show_term : Show term := { show := print_term Σ [] true }.
 
 Definition type_nat := tInd (mkInd "Coq.Init.Datatypes.nat"%string 0) [].
 Definition type_bool := tInd (mkInd "Coq.Init.Datatypes.bool"%string 0) [].
@@ -410,15 +456,23 @@ Definition arrow ty ty' := tProd nAnon ty (lift0 1 ty').
 
 Sample (arb Σ [] type_set 1).
 Sample (arb Σ [] type_bool 1).
-Sample (arb Σ [] (arrow type_nat type_nat) 10).
+
+(* Instance show_term' : Show term := { show := string_of_term }. *)
+Sample (arb Σ [] (arrow type_nat type_nat) 0).
+
+Definition natS := tConstruct (mkInd "Coq.Init.Datatypes.nat"%string 0) 1 [].
+
 Sample (arb Σ [] (arrow type_bool type_bool) 3).
 Sample (arb Σ [] type_nat 2).
 Sample (arb Σ [vass (nNamed "n"%string) type_nat] type_nat 1).
 Sample (arb Σ [] type_bool 4).
 Sample (arb Σ [] type_bool 0).
 
+Require Import Utf8.
+
+
 Definition prop_arb_wt :=
-  forAll (arb Σ [] type_set 1) (infer Σ []).
+  forAll (arb Σ [] (arrow type_nat type_nat) 3) (infer Σ []).
 
 QuickChick prop_arb_wt.
 

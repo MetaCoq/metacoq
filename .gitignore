@@ -235,3 +235,11 @@ checker/src/wf.mli
 /pcuic/src/init.ml
 /pcuic/src/classes0.mli
 /pcuic/src/classes0.ml
+/checker/metacoq-config
+/extraction/_CoqProject
+/extraction/_PluginProject
+/extraction/metacoq-config
+/pcuic/_CoqProject
+/pcuic/_PluginProject
+/pcuic/metacoq-config
+/checker/_CoqProject

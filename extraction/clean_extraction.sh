@@ -7,6 +7,8 @@ then
     mkdir src
 fi
 
+shopt -s nullglob # make the for loop do nothnig when there is no *.ml* files
+
 # Move extracted modules to build the certicoq compiler plugin
 # Uncapitalize modules to circumvent a bug of coqdep with mllib files
 for i in *.ml*

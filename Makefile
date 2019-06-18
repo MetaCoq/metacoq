@@ -1,19 +1,6 @@
-# Local dependencies for local builds.
-# When building the packages separately, DEPS is not used as everything
-# should already be available in $(COQMF_LIB)/user-contrib/MetaCoq/*
-# checker is treated specially: due to code generation, we rebuild the template-coq module locally
-# when building the checker package
-
-DEPS ?= -I ../template-coq/src \
-	-R ../template-coq/theories MetaCoq.Template \
-	-I ../checker/src \
-	-R ../checker/theories MetaCoq.Checker \
-	-I ../pcuic/src \
-	-R ../pcuic/theories MetaCoq.PCUIC
-
 all: template-coq checker pcuic extraction
 
-.PHONY: all template-coq checker install html clean mrproper .merlin test-suite translations
+.PHONY: all template-coq checker pcuic extraction install html clean mrproper .merlin test-suite translations
 
 install:
 	$(MAKE) -C template-coq install
@@ -53,13 +40,12 @@ template-coq:
 	$(MAKE) -C template-coq
 
 pcuic: template-coq
-	$(MAKE) -C pcuic DEPS="$(DEPS)"
+	$(MAKE) -C pcuic
 
 extraction: checker template-coq pcuic
-	$(MAKE) -C extraction DEPS="$(DEPS)"
+	$(MAKE) -C extraction
 
 checker: template-coq
-	./movefiles.sh
 	$(MAKE) -C checker
 
 test-suite: template-coq checker

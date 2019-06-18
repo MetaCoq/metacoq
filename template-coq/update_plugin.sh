@@ -1,10 +1,9 @@
 TOCOPY="ast_denoter.ml ast_quoter.ml denote.ml denoter.ml plugin_core.ml plugin_core.mli quoted.ml quoter.ml run_extractable.ml run_extractable.mli tm_util.ml"
 
-a=`stat -f "%m" gen-src`
-b=`stat -f "%m" src`
-if [ "$b" -gt "$a" ]
+# Test is gen-src is older than src
+if [[ "gen-src" -ot "src" || ! -f "gen-src/denote.ml" ]]
 then
-    echo "src is younger than gen-src"
+    echo "Updating gen-src from src"
     mkdir -p build
     cp src/template_coq.cmx src/template_coq.cmxa src/template_coq.cmxs build
     echo "Copying from src to gen-src"

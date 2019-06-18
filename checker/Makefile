@@ -12,7 +12,7 @@ Makefile.coq: _CoqProject
 
 plugin:
 	$(MAKE) -C gen-src
-	sh update_plugin.sh
+	./update_plugin.sh
 
 install:
 	$(MAKE) -f Makefile.coq install

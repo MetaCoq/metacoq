@@ -17,7 +17,7 @@ Makefile.extraction: _CoqProject
 
 theory: Makefile.extraction
 	$(MAKE) -f Makefile.extraction
-	sh clean_extraction.sh
+	./clean_extraction.sh
 
 plugin: theory Makefile.plugin
 	$(MAKE) -f Makefile.plugin

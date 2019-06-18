@@ -4,7 +4,7 @@ coq: Makefile.coq
 	$(MAKE) -f Makefile.coq
 
 plugin: coq Makefile.plugin
-	sh update_plugin.sh
+	./update_plugin.sh
 	$(MAKE) -f Makefile.plugin
 
 .PHONY: install html clean mrproper all plugin

@@ -3,7 +3,7 @@ all: coq plugin
 coq: Makefile.coq
 	$(MAKE) -f Makefile.coq
 
-plugin: coq Makefile.plugin theories/Extraction.vo
+plugin: coq Makefile.plugin
 	sh update_plugin.sh
 	$(MAKE) -f Makefile.plugin
 

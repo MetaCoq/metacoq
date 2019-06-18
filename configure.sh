@@ -35,7 +35,7 @@ then
     fi
 
     echo ${CHECKER_DEPS} > checker/metacoq-config
-    echo ${PCUIC_DEPS} > pcuic/metacoq-config
+    echo ${CHECKER_DEPS} ${PCUIC_DEPS} > pcuic/metacoq-config
     echo ${CHECKER_DEPS} ${PCUIC_DEPS} ${EXTRACTION_DEPS} > extraction/metacoq-config
 else
     echo "Error: coqc not found in path"

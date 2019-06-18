@@ -1,4 +1,6 @@
-coq: sources Makefile.coq
+all: plugin coq
+
+coq: plugin Makefile.coq
 	$(MAKE) -f Makefile.coq
 
 _CoqProject: _CoqProject.in metacoq-config
@@ -8,19 +10,17 @@ _CoqProject: _CoqProject.in metacoq-config
 Makefile.coq: _CoqProject
 	coq_makefile -f _CoqProject -o Makefile.coq
 
-gen-src:
-	sh update_plugin.sh
+plugin:
 	$(MAKE) -C gen-src
+	sh update_plugin.sh
 
 install:
 	$(MAKE) -f Makefile.coq install
 
-.PHONY: gen-src
+.PHONY: plugin
 
 clean:
 	$(MAKE) -f Makefile.coq clean
 
 mrproper:
 	rm -f Makefile.coq _CoqProject
-
-sources: gen-src

@@ -39,10 +39,10 @@ mrproper:
 template-coq:
 	$(MAKE) -C template-coq
 
-pcuic: template-coq
+pcuic: template-coq checker
 	$(MAKE) -C pcuic
 
-extraction: checker template-coq pcuic
+extraction: template-coq checker pcuic
 	$(MAKE) -C extraction
 
 checker: template-coq

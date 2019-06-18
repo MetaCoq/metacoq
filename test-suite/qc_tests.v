@@ -61,6 +61,51 @@ Section print_term.
       end
     end.
 
+  Fixpoint is_fresh (Γ : context) (id : ident) :=
+    List.forallb
+      (fun decl =>
+         match decl.(decl_name) with
+         | nNamed id' => negb (ident_eq id id')
+         | nAnon => true
+         end) Γ.
+
+  Fixpoint name_from_term (t : term) :=
+    match t with
+    | tRel _ | tVar _ | tEvar _ _ => "H"
+    | tSort s => "X"
+    | tProd na b t => "f"
+    | tLambda na b t => "f"
+    | tLetIn na b _ t' => name_from_term t'
+    | tApp f _ => name_from_term f
+    | tConst c u => "x"
+    | tInd (mkInd i k) u =>
+      match lookup_ind_decl Σ i k with
+      | Checked (_, oib) => substring 0 1 oib.(ind_name)
+      | TypeError _ => "X"
+      end
+    | _ => "U"
+    end.
+
+  Definition fresh_id_from Γ n id :=
+    let fix aux i :=
+      match i with
+      | 0 => id
+      | S i' =>
+        let id' := id ++ string_of_nat (n - i) in
+        if is_fresh Γ id' then id'
+        else aux i'
+      end
+    in aux n.
+
+  Definition fresh_name (Γ : context) (na : name) (t : term) :=
+    let id := match na with
+              | nNamed id => id
+              | nAnon => name_from_term t
+              end
+    in
+    if is_fresh Γ id then nNamed id
+    else nNamed (fresh_id_from Γ 10 id).
+
   Fixpoint print_term (Γ : context) (top : bool) (t : term) {struct t} :=
   match t with
   | tRel n =>
@@ -76,17 +121,20 @@ Section print_term.
   | tEvar ev args => "Evar(" ++ string_of_nat ev ++ "[]" (* TODO *)  ++ ")"
   | tSort s => string_of_sort s
   | tCast c k t => parens top (print_term Γ true c ++ ":"  ++ print_term Γ true t)
-  | tProd na b t =>
+  | tProd na dom codom =>
+    let na' := fresh_name Γ na dom in
     parens top
-           ("∀ " ++ string_of_name na ++ " : " ++
-                     print_term Γ true b ++ ", " ++ print_term (vass na b :: Γ) true t)
-  | tLambda na b t =>
-    parens top ("fun " ++ string_of_name na ++ " : " ++ print_term Γ true b
-                                ++ " => " ++ print_term (vass na b :: Γ) true t)
-  | tLetIn na b t' t =>
-    parens top ("let" ++ string_of_name na ++ " : " ++ print_term Γ true t' ++
-                      " := " ++ print_term Γ true b ++ " in " ++ nl ++
-                      print_term (vdef na b t' :: Γ) true t)
+           ("∀ " ++ string_of_name na' ++ " : " ++
+                     print_term Γ true dom ++ ", " ++ print_term (vass na' dom :: Γ) true codom)
+  | tLambda na dom body =>
+    let na' := fresh_name Γ na dom in
+    parens top ("fun " ++ string_of_name na' ++ " : " ++ print_term Γ true dom
+                                ++ " => " ++ print_term (vass na' dom :: Γ) true body)
+  | tLetIn na def dom body =>
+    let na' := fresh_name Γ na dom in
+    parens top ("let" ++ string_of_name na' ++ " : " ++ print_term Γ true dom ++
+                      " := " ++ print_term Γ true def ++ " in " ++ nl ++
+                      print_term (vdef na' def dom :: Γ) true body)
   | tApp f l =>
     parens top (print_term Γ false f ++ " " ++ print_list (print_term Γ false) " " l)
   | tConst c u => c ++ print_universe_instance u
@@ -116,12 +164,12 @@ Section print_term.
       | tLambda na _ty b =>
         let fix print_branch arity br {struct br} :=
           match arity with
-            | 0 => " => " ++ print_term Γ true br
+            | 0 => "=> " ++ print_term Γ true br
             | S n =>
               match br with
               | tLambda na A B =>
                 string_of_name na ++ "  " ++ print_branch n B
-              | _ => ""
+              | t => "=> " ++ print_term Γ true br
               end
             end
         in
@@ -131,8 +179,9 @@ Section print_term.
         parens top ("match " ++ print_term Γ true t ++
                     " as " ++ string_of_name na ++
                     " in " ++ oib.(ind_name) ++ " return " ++ print_term Γ true b ++
-                    " with " ++ print_list (fun '(b, (na, _, _)) => na ++ b)
-                   (nl ++ " | ") brs ++ " end" ++ nl)
+                    " with " ++ nl ++
+                    print_list (fun '(b, (na, _, _)) => na ++ " " ++ b)
+                    (nl ++ " | ") brs ++ nl ++ "end" ++ nl)
       | _ =>
         "Case(" ++ string_of_inductive ind ++ "," ++ string_of_nat i ++ "," ++ string_of_term t ++ ","
                 ++ string_of_term p ++ "," ++ string_of_list (fun b => string_of_term (snd b)) brs ++ ")"
@@ -468,14 +517,10 @@ Sample (arb Σ [vass (nNamed "n"%string) type_nat] type_nat 1).
 Sample (arb Σ [] type_bool 4).
 Sample (arb Σ [] type_bool 0).
 
-Require Import Utf8.
-
-
 Definition prop_arb_wt :=
   forAll (arb Σ [] (arrow type_nat type_nat) 3) (infer Σ []).
 
 QuickChick prop_arb_wt.
-
 
 Definition prop_arb_wt_in_nat :=
   forAll (arb Σ [] type_nat 1) (infer Σ []).

@@ -1,7 +1,8 @@
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
 From MetaCoq.Template Require Import utils.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICLiftSubst PCUICTyping
-     PCUICWeakeningEnv PCUICWeakening PCUICSubstitution PCUICReduction PCUICCumulativity PCUICGeneration.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
+     PCUICLiftSubst PCUICTyping PCUICWeakeningEnv PCUICWeakening PCUICInversion
+     PCUICSubstitution PCUICReduction PCUICCumulativity PCUICGeneration.
 From Equations Require Import Equations.
 Require Import ssreflect.
 Existing Instance config.default_checker_flags.
@@ -43,21 +44,6 @@ Lemma destArity_it_mkProd_or_LetIn ctx ctx' t :
 Proof.
   induction ctx' in ctx, t |- *; simpl; auto.
   rewrite IHctx'. destruct a as [na [b|] ty]; reflexivity.
-Qed.
-
-Lemma type_Prod_invert Σ Γ na A B U :
-  Σ ;;; Γ |- tProd na A B : U ->
-  { s1 & { s2 &
-           (Σ ;;; Γ |- A : tSort s1) *
-           (Σ ;;; Γ ,, vass na A |- B : tSort s2) *
-           (Σ ;;; Γ |- tSort (Universe.sort_of_product s1 s2) <= U) } }%type.
-Proof.
-  intros H; depind H.
-  exists s1, s2; intuition auto.
-  destruct IHtyping as [s1 [s2 Hs]].
-  eexists _, _; intuition eauto.
-  eapply cumul_trans; eauto.
-  eapply cumul_trans; eauto.
 Qed.
 
 Lemma isWfArity_Sort Σ Γ s : wf_local Σ Γ -> isWfArity typing Σ Γ (tSort s).
@@ -105,17 +91,6 @@ Proof.
   - left.
     exists ctx, s. split; pcuic.
 Admitted.
-
-Lemma invert_type_App Σ Γ f u T :
-  Σ ;;; Γ |- tApp f u : T ->
-  { A & { B & { na & ((Σ ;;; Γ |- f : tProd na A B) * (Σ ;;; Γ |- u : A) * (Σ ;;; Γ |- B {0:=u} <= T))%type } } }.
-Proof.
-  intros Hty.
-  dependent induction Hty. exists A, B, na. intuition auto.
-  specialize (IHHty _ _ eq_refl) as [T' [U' [na' [H' H'']]]].
-  exists T', U', na'. split; auto.
-  eapply cumul_trans; eauto.
-Qed.
 
 Lemma invert_type_mkApps Σ Γ f fty u T :
   Σ ;;; Γ |- mkApps f u : T ->
@@ -222,7 +197,7 @@ Proof.
     + right.
       destruct i as [u' Hu']. exists u'.
       eapply (substitution0 _ _ na _ _ _ (tSort u')); eauto.
-      apply type_Prod_invert in Hu' as [s1 [s2 Hs]]. intuition.
+      apply inversion_Prod in Hu' as [na' [s1 [s2 Hs]]]. intuition.
       eapply type_Conv; pcuic.
       eapply (weakening_cumul Σ Γ [] [vass na A]) in b; pcuic.
       simpl in b. eapply cumul_trans. 2:eauto.
@@ -282,4 +257,3 @@ Proof.
     destruct X2. red in i. left. exact (projT1 i).
     right. destruct s as [u [Hu _]]. now exists u.
 Admitted.
-

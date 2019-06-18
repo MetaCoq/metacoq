@@ -2,8 +2,9 @@
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Arith Lia.
 From MetaCoq.Template Require Import config monad_utils utils AstUtils UnivSubst.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICLiftSubst PCUICUnivSubst
-     PCUICTyping PCUICSubstitution PCUICValidity PCUICChecker.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
+     PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICSubstitution PCUICValidity
+     PCUICChecker PCUICInversion.
 
 Import MonadNotation.
 Open Scope pcuic.
@@ -59,7 +60,7 @@ Section Infer_Complete.
         rewrite app_context_assoc in Hb.
         eapply All_local_env_app in Hb. intuition auto.
         destruct i. constructor; eauto with wf. simpl.
-        now eapply type_Prod_invert in t0 as [? [? [? ?]]]. auto. auto. }
+        now eapply inversion_Prod in t0 as [? [? [? ?]]]. auto. auto. }
       constructor. constructor. rewrite subst_empty. apply typeu.
 
     - (* Constant *)

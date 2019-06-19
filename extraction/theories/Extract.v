@@ -288,9 +288,12 @@ Definition erases_mutual_inductive_body (Σ : global_context) (mib : mutual_indu
 Inductive erases_global_decls : constraints -> global_declarations -> E.global_declarations -> Prop :=
 | erases_global_nil univ : erases_global_decls univ [] []
 | erases_global_cnst Σ univs cb cb' kn Σ' :
-    erases_constant_body (Σ, univs) cb cb' -> erases_global_decls univs (ConstantDecl kn cb :: Σ) (E.ConstantDecl kn cb' :: Σ')
+    erases_constant_body (Σ, univs) cb cb' ->
+    erases_global_decls univs Σ Σ' ->
+    erases_global_decls univs (ConstantDecl kn cb :: Σ) (E.ConstantDecl kn cb' :: Σ')
 | erases_global_ind Σ univs mib mib' kn Σ' :
     erases_mutual_inductive_body (Σ, univs) mib mib' ->
+    erases_global_decls univs Σ Σ' ->
     erases_global_decls univs (InductiveDecl kn mib :: Σ) (E.InductiveDecl kn mib' :: Σ').
 
 Definition erases_global '(Σ, univs) Σ' := erases_global_decls univs Σ Σ'.

@@ -6,6 +6,8 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICLif
 Require Import ssreflect ssrbool.
 From Equations Require Import Equations.
 
+Derive Signature for Alli.
+
 (** * Weakening lemmas w.r.t. the global environment *)
 
 Set Asymmetric Patterns.

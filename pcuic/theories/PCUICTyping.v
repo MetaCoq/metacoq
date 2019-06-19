@@ -2309,5 +2309,3 @@ Proof.
   - destruct n. noconf eq. simpl. split; auto.
     apply IHX.
 Defined.
-
-Derive Signature for Alli.

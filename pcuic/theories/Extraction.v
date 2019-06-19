@@ -1,4 +1,4 @@
-(** Extraction setup for the pcuic phase of template-coq.
+(** Extraction setup for the pcuic phase of MetaCoq.
 
     Any extracted code planning to link with the plugin's OCaml reifier
     should use these same directives for consistency.
@@ -38,8 +38,8 @@ From Equations Require Import Equations.
 
 (* Extraction Inline NoConfusionPackage_All_local_env_over. *)
 (* Extraction Inline NoConfusionPackage_context_decl. *)
-
-Extraction Library Classes.
+(* Extraction Library Signature. *)
+(* Extraction Library Classes. *)
 (* Extraction Library CRelationClasses. *)
 
 Extraction Library PCUICAst.

@@ -910,12 +910,12 @@ Section Reduce.
   (* Other *)
   Next Obligation.
     revert discr.
-    funelim (red_discr t π). all: auto.
+    apply_funelim (red_discr t π). all: auto.
     easy.
   Qed.
   Next Obligation.
     revert discr hl.
-    funelim (red_discr t π). all: easy.
+    apply_funelim (red_discr t π). all: easy.
   Qed.
 
   Equations reduce_stack_full (Γ : context) (t : term) (π : stack)
@@ -1140,7 +1140,7 @@ Section Reduce.
       ).
     clear.
     intros t π h aux haux.
-    funelim (_reduce_stack Γ t π h aux).
+    (* funelim (_reduce_stack Γ t π h aux).
     all: simpl.
     - match goal with
       | |- context [ reduce ?x ?y ?z ] =>
@@ -1328,7 +1328,7 @@ Section Reduce.
       intros [t' π'] [? [? [? ?]]] eq. cbn.
       rewrite eq in haux. cbn in haux.
       assumption.
-    - bang.
+    - bang. *)
   Abort.
 
   Lemma reduce_stack_whnf :
@@ -1340,7 +1340,7 @@ Section Reduce.
     eapply reduce_stack_prop
       with (P := fun x y => whnf flags Σ (Γ ,,, stack_context (snd y)) (fst y)).
     clear. intros t π h aux haux.
-    funelim (_reduce_stack Γ t π h aux).
+    (* )funelim (_reduce_stack Γ t π h aux).
     all: simpl.
     all: try solve [ constructor ; constructor ].
     - match goal with
@@ -1484,7 +1484,7 @@ Section Reduce.
       intros [t' π'] [? [? [? ?]]] eq. cbn.
       rewrite eq in haux. cbn in haux.
       assumption.
-    - bang.
+    - bang. *)
   Abort.
 
 End Reduce.

@@ -301,8 +301,28 @@ Quote Recursively Definition foo := (3 + 4, @nil bool).
 
 (** Has nat, bool, prod and list *)
 Definition Σ := Eval compute in reconstruct_global_context (fst foo).
+Definition type_nat := tInd (mkInd "Coq.Init.Datatypes.nat"%string 0) [].
+Definition type_bool := tInd (mkInd "Coq.Init.Datatypes.bool"%string 0) [].
+Definition type_list := IndRef (mkInd "Coq.Init.Datatypes.list"%string 0).
+Definition type_prod (A B : term) := tApp (tInd (mkInd "Coq.Init.Datatypes.prod"%string 0) []) [A; B].
+Definition add_fn := tConst "Coq.Init.Nat.add"%string [].
 
 Instance show_term : Show term := { show := print_term Σ [] true }.
+
+Eval compute in show (type_of_global Σ type_list).
+
+Definition arb_ind (Σ : global_context) :=
+  filter (fun gr =>
+            match gr with
+            | IndRef gr => true
+            | _ => false
+            end)
+         (map (fun decl =>
+                 match decl with
+                 | ConstantDecl kn cb => ConstRef kn
+                 | InductiveDecl kn mib =>
+                   IndRef (mkInd kn 0) (* FIXME *)
+                 end) (fst Σ)).
 
 Fixpoint arb (Σ : global_context) (Γ : context) (ty : term) (n : nat) {struct n} : G term :=
   match n with
@@ -351,12 +371,14 @@ Fixpoint arb (Σ : global_context) (Γ : context) (ty : term) (n : nat) {struct 
         let globrefs :=
             filter (fun gr =>
                       match type_of_global Σ gr with
-                      | Checked ty' => eq_term (LevelSet.empty, snd Σ) ty' ty
+                      | Checked ty' =>
+                        trace ("trying global of type " ++ show ty' ++ " found for type " ++ show ty ++ nl)
+                              (leq_term (LevelSet.empty, snd Σ) ty' ty)
                       | TypeError _ => false
                       end)
                    globrefs
         in
-        let globals := map (fun gr => term_of_global gr []) globrefs in
+        let globals := (map (fun gr => term_of_global gr []) globrefs) in
         (* let globals := trace ("globals: " ++ show globals ++ nl) globals in *)
         (vars ++ globals ++ inverted)
     in
@@ -386,7 +408,7 @@ Fixpoint arb (Σ : global_context) (Γ : context) (ty : term) (n : nat) {struct 
           (* | tLetIn na def def_ty body => *)
           (*   arb_app acc (subst10 def body) ari      ty' *)
           (* | tCast c _ _ => arb_app acc c arity *)
-          | _ => failGen
+          | _ => trace "failed app"%string failGen
           end
         end
     in
@@ -427,7 +449,8 @@ Fixpoint arb (Σ : global_context) (Γ : context) (ty : term) (n : nat) {struct 
                      | Some cstrty =>
                        let cstrapp := mkApps (tConstruct (mkInd ind k) i u) params in
                        arb_app cstrapp cstrty (snd decl) (* Number of actual arguments *)
-                     | None => failGen
+                     | None => trace ("instantiate_params failed" ++ show args ++
+                     " params " ++ show (length mib.(ind_params)) ++ " inductive " ++ oib.(ind_name) ++ nl) failGen
                      end)
                   oib.(ind_ctors)
             in
@@ -439,42 +462,52 @@ Fixpoint arb (Σ : global_context) (Γ : context) (ty : term) (n : nat) {struct 
       | _ => [] (* Many more possibilities *)
       end
     in
-    let cases : G term :=
-      indty <- arb Σ Γ type_set n;; (** Find some inductive type *)
-      let (indtyhd, args) := decompose_app indty in
-      match indtyhd with
-      | tInd (mkInd ind k) u =>
-        discr <- arb Σ Γ indty n ;;
-        match lookup_mind_decl ind (fst Σ) with
-        | Some mib =>
-          match nth_error mib.(ind_bodies) k with
-          | Some oib =>
-            let params := List.firstn mib.(ind_npars) args in
-            let pred := (tLambda nAnon indty (lift0 1 ty)) (* Predicate: could be more complicated.
-                                                    FIXME: Ill-formed for inductive families *) in
-            let brtys := map_option_out (build_branches_type (mkInd ind k) mib oib params u pred) in
-            match brtys with
-            | Some tys =>
-              let br '(arity, ty) :=
-                match reduce_opt RedFlags.default (fst Σ) Γ 100 ty with
-                | Some ty =>
-                  t <- arb Σ Γ ty n ;;
-                  (* trace ("built branch body" ++ show arity ++ nl) *) (ret (arity, t))
-                | None => failGen
-                end
-              in
-              brs <- (* trace ("case branches: " ++ show tys ++ nl) *) (mapGen br tys);;
-              ret (tCase (mkInd ind k, 0) pred discr brs)
-            | None => failGen
+    let cases : list (G term) :=
+      let indtys := arb_ind Σ in (** Find some inductive type *)
+      match indtys with
+      | [] => []
+      | _ =>
+        [x <- elems_ indtys;;
+      (* let (indtyhd, args) := decompose_app indty in *)
+        match x with
+        | IndRef (mkInd ind k) =>
+          match lookup_mind_decl ind (fst Σ) with
+          | Some mib =>
+            match nth_error mib.(ind_bodies) k with
+            | Some oib =>
+              indty <- arb_app (tInd (mkInd ind k) []) oib.(ind_type) mib.(ind_npars);;
+              let (indhd, args) := decompose_app indty in
+              let params := List.firstn mib.(ind_npars) args in
+              let pred := (tLambda nAnon indty (lift0 1 ty)) (* Predicate: could be more complicated.
+                                                                FIXME: Ill-formed for inductive families *) in
+              let brtys := map_option_out (build_branches_type (mkInd ind k) mib oib params [] pred) in
+              match brtys with
+              | Some tys =>
+                let br '(arity, ty) :=
+                    match reduce_opt RedFlags.default (fst Σ) Γ 100 ty with
+                    | Some ty =>
+                      t <- arb Σ Γ ty n ;;
+                        (* trace ("built branch body" ++ show arity ++ nl) *) (ret (arity, t))
+                    | None => trace "reduction of branch type failed" failGen
+                    end
+                in
+                discr <- arb Σ Γ indty n ;;
+                brs <- (* trace ("case branches: " ++ show tys ++ nl) *) (mapGen br tys);;
+                ret (tCase (mkInd ind k, 0) pred discr brs)
+              | None => trace "branches type failure" failGen
+              end
+            | None => trace "wrong mind index" failGen
             end
-          | None => failGen
+          | None => trace "ind not in the global env" failGen
           end
-        | None => failGen
-        end
-      | _ => failGen
+        | _ => trace "not an IndRef" failGen
+        end]
       end
     in
-    oneOf_ (arb Σ Γ ty (n - n) :: inverted ++ apps (S n) ++ lambdas ++ [cases])
+    freq_ ((1, arb Σ Γ ty (n - n)) :: (map (fun x => (1, x)) inverted) ++
+                                   (map (fun x => (S n, x)) (apps (S n))) ++
+                                   (map (fun x => (S n, x)) lambdas) ++
+                                   (map (fun x => (1, x)) cases))
   end.
 
 Instance check_result {A} : Checkable (typing_result A) :=
@@ -483,12 +516,6 @@ Instance check_result {A} : Checkable (typing_result A) :=
                | Checked T => true
                | TypeError _ => false
                end) }.
-
-Definition type_nat := tInd (mkInd "Coq.Init.Datatypes.nat"%string 0) [].
-Definition type_bool := tInd (mkInd "Coq.Init.Datatypes.bool"%string 0) [].
-Definition type_list (A : term) := tApp (tInd (mkInd "Coq.Init.Datatypes.list"%string 0) []) [A].
-Definition type_prod (A B : term) := tApp (tInd (mkInd "Coq.Init.Datatypes.prod"%string 0) []) [A; B].
-Definition add_fn := tConst "Coq.Init.Nat.add"%string [].
 
 Let add_def := Eval compute in match lookup_env Σ "Coq.Init.Nat.add"%string with
                                | Some (ConstantDecl _ decl) =>
@@ -503,24 +530,45 @@ Eval vm_compute in print_term Σ [] true add_def.
 
 Definition arrow ty ty' := tProd nAnon ty (lift0 1 ty').
 
-Sample (arb Σ [] type_set 1).
-Sample (arb Σ [] type_bool 1).
+(* Sample (arb Σ [] type_set 1). *)
+(* Sample (arb Σ [] type_bool 1). *)
 
 (* Instance show_term' : Show term := { show := string_of_term }. *)
-Sample (arb Σ [] (arrow type_nat type_nat) 0).
+(* Sample (arb Σ [] (arrow type_nat type_nat) 0). *)
 
 Definition natS := tConstruct (mkInd "Coq.Init.Datatypes.nat"%string 0) 1 [].
+(* Fixing up reconstruct_global_context needed for implicit i > / >= Set constraints *)
 
 Sample (arb Σ [] (arrow type_bool type_bool) 3).
 Sample (arb Σ [] type_nat 2).
-Sample (arb Σ [vass (nNamed "n"%string) type_nat] type_nat 1).
-Sample (arb Σ [] type_bool 4).
-Sample (arb Σ [] type_bool 0).
+(* Sample (arb Σ [vass (nNamed "n"%string) type_nat] type_nat 1). *)
+(* Sample (arb Σ [] type_bool 4). *)
+(* Sample (arb Σ [] type_bool 0). *)
 
-Definition prop_arb_wt :=
-  forAll (arb Σ [] (arrow type_nat type_nat) 3) (infer Σ []).
+(* Definition prop_arb_wt := *)
+(*   forAll (arb Σ [] (arrow type_nat type_nat) 3) (infer Σ []). *)
 
-QuickChick prop_arb_wt.
+(* QuickChick prop_arb_wt. *)
+
+Definition reduce (t : term) :=
+  reduce_opt RedFlags.default (fst Σ) [] 100 t.
+
+Definition prop_arb_pres (Γ : context) (ty : term) n :=
+  forAll (arb Σ Γ ty n)
+         (fun t =>
+            match reduce t with
+            | Some t' =>
+              collect (if eq_term (LevelSet.empty, snd Σ) t t' then "unreduced" else "reduced")%string
+                      (match infer Σ [] t' with
+                       | Checked ty' => checker (convert_leq Σ Γ ty' ty)
+                       | TypeError e => checker (@TypeError unit e)
+                       end)
+            | None =>
+              collect "unreduced"%string (Checked tt)
+            end).
+
+Definition prop_arb_pres1 := prop_arb_pres [] (arrow type_nat type_nat) 4.
+QuickChick prop_arb_pres1.
 
 Definition prop_arb_wt_in_nat :=
   forAll (arb Σ [] type_nat 1) (infer Σ []).

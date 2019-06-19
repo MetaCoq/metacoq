@@ -5,6 +5,21 @@ From MetaCoq.Template Require Import config Ast AstUtils Induction LiftSubst Uni
 From ExtLib Require Import Monads.
 From QuickChick Require Import QuickChick.
 
+Definition levelset_of_constraints cstrs :=
+  ConstraintSet.fold (fun '(l, _, l') acc =>
+                        LevelSet.add l (LevelSet.add l' acc))
+                     cstrs LevelSet.empty.
+
+Definition build_global_context (Σ : global_declarations) :=
+  let (decls, cstrs) := reconstruct_global_context Σ in
+  (decls, (levelset_of_constraints cstrs, cstrs)).
+
+Definition new_global_context := (global_declarations * (LevelSet.t * ConstraintSet.t))%type.
+
+Definition global_context_of_new (g : new_global_context) : global_context :=
+  (fst g, snd (snd g)).
+Coercion global_context_of_new : new_global_context >-> global_context.
+
 Section print_term.
   Context (Σ : global_context).
 
@@ -300,7 +315,8 @@ Require Import MetaCoq.Template.Loader.
 Quote Recursively Definition foo := (3 + 4, @nil bool).
 
 (** Has nat, bool, prod and list *)
-Definition Σ := Eval compute in reconstruct_global_context (fst foo).
+Definition Σ : new_global_context := Eval compute in build_global_context (fst foo).
+
 Definition type_nat := tInd (mkInd "Coq.Init.Datatypes.nat"%string 0) [].
 Definition type_bool := tInd (mkInd "Coq.Init.Datatypes.bool"%string 0) [].
 Definition type_list := IndRef (mkInd "Coq.Init.Datatypes.list"%string 0).
@@ -324,7 +340,7 @@ Definition arb_ind (Σ : global_context) :=
                    IndRef (mkInd kn 0) (* FIXME *)
                  end) (fst Σ)).
 
-Fixpoint arb (Σ : global_context) (Γ : context) (ty : term) (n : nat) {struct n} : G term :=
+Fixpoint arb (Σ : new_global_context) (Γ : context) (ty : term) (n : nat) {struct n} : G term :=
   match n with
   | 0 =>
     let consts Γ ty :=
@@ -332,7 +348,7 @@ Fixpoint arb (Σ : global_context) (Γ : context) (ty : term) (n : nat) {struct 
             (* Valid local variables *)
             let nums := seq 0 (length Γ) in
             let valid_vars :=
-                filter (fun '(i, decl) => eq_term (LevelSet.empty, snd Σ) (lift0 i decl.(decl_type)) ty) (combine nums Γ) in
+                filter (fun '(i, decl) => eq_term (snd Σ) (lift0 i decl.(decl_type)) ty) (combine nums Γ) in
             map (tRel ∘ fst) valid_vars
         in
         let inverted :=
@@ -371,9 +387,10 @@ Fixpoint arb (Σ : global_context) (Γ : context) (ty : term) (n : nat) {struct 
         let globrefs :=
             filter (fun gr =>
                       match type_of_global Σ gr with
-                      | Checked ty' =>
-                        trace ("trying global of type " ++ show ty' ++ " found for type " ++ show ty ++ nl)
-                              (leq_term (LevelSet.empty, snd Σ) ty' ty)
+                      | Checked ty' => (leq_term (snd Σ) ty' ty)
+                    (* then *)
+                    (*       trace ("global of type " ++ show ty' ++ " found for type " ++ show ty ++ nl) true *)
+                    (*     else trace ("global of type " ++ show ty' ++ " not ok for type " ++ show ty ++ nl) false *)
                       | TypeError _ => false
                       end)
                    globrefs
@@ -506,7 +523,7 @@ Fixpoint arb (Σ : global_context) (Γ : context) (ty : term) (n : nat) {struct 
     in
     freq_ ((1, arb Σ Γ ty (n - n)) :: (map (fun x => (1, x)) inverted) ++
                                    (map (fun x => (S n, x)) (apps (S n))) ++
-                                   (map (fun x => (S n, x)) lambdas) ++
+                                   (map (fun x => (2, x)) lambdas) ++
                                    (map (fun x => (1, x)) cases))
   end.
 
@@ -545,10 +562,16 @@ Sample (arb Σ [] type_nat 2).
 (* Sample (arb Σ [] type_bool 4). *)
 (* Sample (arb Σ [] type_bool 0). *)
 
-(* Definition prop_arb_wt := *)
-(*   forAll (arb Σ [] (arrow type_nat type_nat) 3) (infer Σ []). *)
+Definition prop_arb_wt :=
+  forAll (arb Σ [] (arrow type_nat type_nat) 3) (infer Σ []).
 
-(* QuickChick prop_arb_wt. *)
+QuickChick prop_arb_wt.
+(* Ill-typed! We assume eta-expanded branches somewhere!
+(fun b : bool => fun n : nat => n) (match nil nat as Anonymous in list return bool with
+nil => true
+ | cons => (fun b : bool => fun n : nat => fun l : list nat => true) true
+end
+)*)
 
 Definition reduce (t : term) :=
   reduce_opt RedFlags.default (fst Σ) [] 100 t.
@@ -558,7 +581,7 @@ Definition prop_arb_pres (Γ : context) (ty : term) n :=
          (fun t =>
             match reduce t with
             | Some t' =>
-              collect (if eq_term (LevelSet.empty, snd Σ) t t' then "unreduced" else "reduced")%string
+              collect (if eq_term (snd Σ) t t' then "unreduced" else "reduced")%string
                       (match infer Σ [] t' with
                        | Checked ty' => checker (convert_leq Σ Γ ty' ty)
                        | TypeError e => checker (@TypeError unit e)
@@ -569,6 +592,12 @@ Definition prop_arb_pres (Γ : context) (ty : term) n :=
 
 Definition prop_arb_pres1 := prop_arb_pres [] (arrow type_nat type_nat) 4.
 QuickChick prop_arb_pres1.
+
+(*
+fun n : nat => S (match pair bool bool false false as Anonymous in prod return nat with
+pair Anonymous  Anonymous  => UnboundRel(2)
+end
+)*)
 
 Definition prop_arb_wt_in_nat :=
   forAll (arb Σ [] type_nat 1) (infer Σ []).

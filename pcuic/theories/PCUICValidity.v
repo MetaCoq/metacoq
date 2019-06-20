@@ -1,4 +1,4 @@
-From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
+From Coq Require Import Bool String List Program BinPos Compare_dec PeanoNat Lia.
 From MetaCoq.Template Require Import utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICLiftSubst PCUICTyping PCUICWeakeningEnv PCUICWeakening PCUICInversion
@@ -94,23 +94,109 @@ Proof.
   - left.
     exists ctx, s. split; pcuic.
 Admitted.
+Derive Signature for subslet.
+  Notation "'∑'  x .. y , P" := (sigT (fun x => .. (sigT (fun y => P%type)) ..))
+    (at level 200, x binder, y binder, right associativity) : type_scope.
+Hint Constructors subslet : pcuic.
 
-Lemma invert_type_mkApps Σ Γ f fty u T :
-  Σ ;;; Γ |- mkApps f u : T ->
-  (* Looks mutual with validity! *)
-  Σ ;;; Γ |- f : fty -> isWfArity_or_Type Σ Γ fty ->
-  { T' & { U & ((Σ ;;; Γ |- f : T') * (typing_spine Σ Γ T' u U) * (Σ ;;; Γ |- U <= T))%type } }.
+Lemma subslet_app Σ Γ args l l' :
+  subslet Σ Γ args (l ++ l') ->
+  ∑ (args' : list term) (args'' : list term),
+  (args = args'' ++ args')
+  * subslet Σ Γ args' l' * subslet Σ Γ args'' (subst_context args' 0 l).
 Proof.
-  induction u in f, fty, T |- *. simpl. intros. exists T, T. intuition auto. constructor.
-  intros Hf Hty. simpl in Hty.
-  specialize (IHu _ fty _ Hf) as [T' [U' [[H' H''] H''']]].
-  simpl in Hf.
-  econstructor.
+  intros Hs. depind Hs.
+  - destruct l; try discriminate. destruct l'; try discriminate.
+    exists [], []. split; auto with pcuic.
+  - destruct l; simpl in *.
+    subst l'.
+    exists (t :: s), []. split; auto with pcuic.
+    noconf H.
+    specialize (IHHs s l l' eq_refl).
+    destruct IHHs as [args' [args'' [[Hs' Hl'] Hsl]]].
+    subst s.
+    exists args', (t :: args''). simpl.
+    split; auto. rewrite subst_context_snoc. simpl. constructor; auto.
+    simpl. rewrite Nat.add_0_r.
+    pose proof (substlet_length Hl').
+    pose proof (substlet_length Hsl). rewrite subst_context_length in H0.
+    rewrite <- H0. rewrite subst_app_simpl in t0. now simpl in t0.
+  - destruct l; simpl in *.
+    + subst l'.
+      exists (subst0 s t :: s), []. split; auto with pcuic.
+    + noconf H.
+      specialize (IHHs s l l' eq_refl).
+      destruct IHHs as [args' [args'' [[Hs' Hl'] Hsl]]].
+      subst s.
+      exists args', (subst0 (args'' ++ args') t :: args''). simpl.
+      split; auto. rewrite subst_context_snoc. simpl.
+      rewrite subst_app_simpl. simpl. rewrite Nat.add_0_r.
+      unfold subst_decl. unfold map_decl. simpl.
+      pose proof (substlet_length Hl').
+      pose proof (substlet_length Hsl). rewrite subst_context_length in H0.
+      rewrite <- H0. constructor; auto. rewrite !subst_app_simpl in t0. now simpl in t0.
+Qed.
 
-Admitted.
-(*   eapply invert_type_App in H' as (fA & fB & fna & Hf). intuition. *)
-(*   exists (tProd fna fA fB), U'. intuition auto. *)
-(*   econstructor. *)
+Lemma typing_spine_arity Σ Γ ctx u args s :
+  wf_local Σ Γ ->
+  context_subst ctx args s ->
+  subslet Σ Γ s ctx ->
+  typing_spine Σ Γ (it_mkProd_or_LetIn ctx (tSort u)) args (tSort u).
+Proof.
+  intros wfΓ Hargss Hs. revert args Hargss Hs; induction ctx using rev_ind; cbn; intros.
+  - depelim Hs. depelim Hargss. constructor; auto. left. exists [], u. intuition auto.
+  - rewrite it_mkProd_or_LetIn_app. simpl.
+    destruct x as [na [b|] ty]; cbn.
+    + eapply subslet_app in Hs as (args' & args'' & (-> & H) & H').
+      depelim H. simpl in H0. noconf H0.
+      hnf in H0. noconf H0. depelim H. rewrite !subst_empty in t0, H', Hargss.
+
+      rewrite subst_empty in H'. simpl in H'.
+
+
+Lemma typing_spine_arity Σ Γ ctx s args :
+  wf_local Σ Γ ->
+  subslet Σ Γ args ctx ->
+  typing_spine Σ Γ (it_mkProd_or_LetIn ctx (tSort s)) args (tSort s).
+Proof.
+  intros wfΓ Hs. revert args Hs; induction ctx using rev_ind; cbn; intros.
+  - depelim Hs. constructor; auto. left. exists [], s. intuition auto.
+  - rewrite it_mkProd_or_LetIn_app. simpl.
+    destruct x as [na [b|] ty]; cbn.
+    eapply subslet_app in Hs as (args' & args'' & (-> & H) & H').
+    depelim H. simpl in H0. noconf H0.
+    hnf in H0. noconf H0. depelim H. rewrite subst_empty.
+    rewrite subst_empty in H'. simpl in H'.
+
+
+
+    depelim Hs. apply (f_equal (@length _)) in H. rewrite app_length in H. simpl in H; elimtype False. lia.
+
+    eapply (type_spine_cons Σ Γ t s0 na T). econstructor. 3:eauto.
+
+
+
+
+(* Lemma invert_type_mkApps Σ Γ f u T fty : *)
+(*   Σ ;;; Γ |- mkApps f u : T -> *)
+(*   isWfArity typing Σ Γ T -> *)
+(*   Σ ;;; Γ |- f : fty -> *)
+(*   typing_spine Σ Γ fty u T. *)
+(* Proof. *)
+(*   induction u in f, T |- *; simpl. *)
+(*   - intros HT HwfT Hf. constructor. left; auto. eapply cumul_refl'. *)
+(*   - intros Hf Hty. *)
+(*     specialize (IHu _ _ Hf Hty) as [T' [Hwfa Hf']]. *)
+(*     red in Hty. destruct Hty as [ctx [s [Hd Hwf]]]. *)
+(*     generalize (PCUICClosed.destArity_spec [] T). rewrite Hd. *)
+(*     simpl. intros ->. clear Hd. *)
+(*     (* red in Hwfa. destruct Hwfa as [ctx' [s' [Hd' Hwf']]]. *) *)
+(*     (* generalize (PCUICClosed.destArity_spec [] T'). rewrite {}Hd'. *) *)
+(*     (* simpl. intros ->. *) *)
+(*     eapply inversion_App in Hwfa as (fna & fA & fB & Hfp & Hfa & Hf''). *)
+(*     exists (tProd fna fA fB). intuition auto. *)
+(*     econstructor. 2:eapply cumul_refl'. admit. *)
+(*     auto. *)
 (*   exists T', U'. split; auto. split; auto. *)
 (*   eapply cumul_trans; eauto. *)
 (* Qed. *)

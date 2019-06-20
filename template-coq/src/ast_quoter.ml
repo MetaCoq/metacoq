@@ -153,7 +153,7 @@ struct
 
   let quote_context l = l
 
-  let mkAnon = Coq_nAnon
+  let mkAnon () = Coq_nAnon
   let mkName i = Coq_nNamed i
 
   let mkRel n = Coq_tRel n
@@ -219,7 +219,7 @@ struct
 
   let mk_constant_decl kn bdy = ConstantDecl (kn, bdy)
 
-  let empty_global_declartions = []
+  let empty_global_declartions () = []
 
   let add_global_decl a b = a :: b
 

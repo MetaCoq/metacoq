@@ -117,6 +117,6 @@ sig
   val mkCoFix : quoted_int * (quoted_name array * t array * t array) -> t
 
   val mkName : quoted_ident -> quoted_name
-  val mkAnon : quoted_name
+  val mkAnon : unit -> quoted_name
 
 end

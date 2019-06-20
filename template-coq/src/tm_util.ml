@@ -3,7 +3,7 @@ open Pp
 let contrib_name = "template-coq"
 
 let gen_constant_in_modules locstr dirs s =
-  Universes.constr_of_global (Coqlib.gen_reference_in_modules locstr dirs s)
+  lazy (Universes.constr_of_global (Coqlib.gen_reference_in_modules locstr dirs s))
 
 
 let opt_debug = ref false

@@ -5,8 +5,8 @@ open Pp
 open Tm_util
 
 
-let resolve_symbol_p (path : string list) (tm : string) : global_reference =
-  Coqlib.gen_reference_in_modules contrib_name [path] tm
+let resolve_symbol_p (path : string list) (tm : string) : global_reference Lazy.t =
+  lazy (Coqlib.gen_reference_in_modules contrib_name [path] tm)
 
 let pkg_template_monad_prop = ["MetaCoq";"Template";"TemplateMonad";"Core"]
 let pkg_template_monad_type = ["MetaCoq";"Template";"TemplateMonad";"Extractable"]
@@ -205,166 +205,167 @@ let next_action env evd (pgm : constr) : template_monad * _ =
     with _ ->
       CErrors.user_err (str "Invalid argument or not yet implemented. The argument must be a TemplateProgram: " ++ Printer.pr_constr_env env evd coConstr)
   in
-  if Globnames.eq_gr glob_ref ptmReturn || Globnames.eq_gr glob_ref ttmReturn then
+  let eq_gr t = Globnames.eq_gr glob_ref (Lazy.force t) in
+  if eq_gr ptmReturn || eq_gr ttmReturn then
     match args with
     | _::h::[] ->
        (TmReturn h, universes)
     | _ -> monad_failure "tmReturn" 2
-  else if Globnames.eq_gr glob_ref ptmBind || Globnames.eq_gr glob_ref ttmBind then
+  else if eq_gr ptmBind || eq_gr ttmBind then
     match args with
     | _::_::a::f::[] ->
        (TmBind (a, f), universes)
     | _ -> monad_failure "tmBind" 4
-  else if Globnames.eq_gr glob_ref ptmPrint then
+  else if eq_gr ptmPrint then
     match args with
     | _::trm::[] ->
        (TmPrint trm, universes)
     | _ -> monad_failure "tmPrint" 2
-  else if Globnames.eq_gr glob_ref ttmPrintTerm then
+  else if eq_gr ttmPrintTerm then
     match args with
     | trm::[] ->
        (TmPrintTerm trm, universes)
     | _ -> monad_failure "tmPrint" 1
-  else if Globnames.eq_gr glob_ref ptmMsg || Globnames.eq_gr glob_ref ttmMsg then
+  else if eq_gr ptmMsg || eq_gr ttmMsg then
     match args with
     | trm::[] ->
        (TmMsg trm, universes)
     | _ -> monad_failure "tmMsg" 2
-  else if Globnames.eq_gr glob_ref ptmFail || Globnames.eq_gr glob_ref ttmFail then
+  else if eq_gr ptmFail || eq_gr ttmFail then
     match args with
     | _::trm::[] ->
        (TmFail trm, universes)
     | _ -> monad_failure "tmFail" 2
-  else if Globnames.eq_gr glob_ref ptmEval then
+  else if eq_gr ptmEval then
     match args with
     | strat::_::trm::[] -> (TmEval (strat, trm), universes)
     | _ -> monad_failure "tmEval" 3
-  else if Globnames.eq_gr glob_ref ttmEval then
+  else if eq_gr ttmEval then
     match args with
     | strat::trm::[] -> (TmEvalTerm (strat, trm), universes)
     | _ -> monad_failure "tmEval" 2
 
-  else if Globnames.eq_gr glob_ref ptmDefinitionRed then
+  else if eq_gr ptmDefinitionRed then
     match args with
     | name::s::typ::body::[] ->
       (TmDefinition (name, s, typ, body), universes)
     | _ -> monad_failure "tmDefinitionRed" 4
-  else if Globnames.eq_gr glob_ref ttmDefinition then
+  else if eq_gr ttmDefinition then
     match args with
     | name::typ::body::[] ->
        (TmDefinitionTerm (name, typ, body), universes)
     | _ -> monad_failure "tmDefinition" 3
 
-  else if Globnames.eq_gr glob_ref ptmLemma then
+  else if eq_gr ptmLemma then
     match args with
     | name::typ::[] ->
        (TmLemma (name,typ), universes)
     | _ -> monad_failure "tmLemma" 2
-  else if Globnames.eq_gr glob_ref ttmLemma then
+  else if eq_gr ttmLemma then
     match args with
     | name::typ::[] ->
        (TmLemmaTerm (name, typ), universes)
     | _ -> monad_failure "tmLemma" 2
 
-  else if Globnames.eq_gr glob_ref ptmAxiomRed then
+  else if eq_gr ptmAxiomRed then
     match args with
     | name::s::typ::[] ->
       (TmAxiom (name,s,typ), universes)
     | _ -> monad_failure "tmAxiomRed" 3
-  else if Globnames.eq_gr glob_ref ttmAxiom then
+  else if eq_gr ttmAxiom then
     match args with
     | name::typ::[] ->
        (TmAxiomTerm (name, typ), universes)
     | _ -> monad_failure "tmAxiom" 2
 
-  else if Globnames.eq_gr glob_ref ptmFreshName || Globnames.eq_gr glob_ref ttmFreshName then
+  else if eq_gr ptmFreshName || eq_gr ttmFreshName then
     match args with
     | name::[] ->
        (TmFreshName name, universes)
     | _ -> monad_failure "tmFreshName" 1
 
-  else if Globnames.eq_gr glob_ref ptmAbout || Globnames.eq_gr glob_ref ttmAbout then
+  else if eq_gr ptmAbout || eq_gr ttmAbout then
     match args with
     | id::[] ->
        (TmAbout id, universes)
     | _ -> monad_failure "tmAbout" 1
-  else if Globnames.eq_gr glob_ref ptmCurrentModPath then
+  else if eq_gr ptmCurrentModPath then
     match args with
     | _::[] -> (TmCurrentModPath, universes)
     | _ -> monad_failure "tmCurrentModPath" 1
-  else if Globnames.eq_gr glob_ref ttmCurrentModPath then
+  else if eq_gr ttmCurrentModPath then
     match args with
     | [] -> (TmCurrentModPath, universes)
     | _ -> monad_failure "tmCurrentModPath" 1
 
-  else if Globnames.eq_gr glob_ref ptmQuote then
+  else if eq_gr ptmQuote then
     match args with
     | _::trm::[] ->
        (TmQuote (false,trm), universes)
     | _ -> monad_failure "tmQuote" 2
-  else if Globnames.eq_gr glob_ref ptmQuoteRec then
+  else if eq_gr ptmQuoteRec then
     match args with
     | _::trm::[] ->
        (TmQuote (true,trm), universes)
     | _ -> monad_failure "tmQuoteRec" 2
 
-  else if Globnames.eq_gr glob_ref ptmQuoteInductive then
+  else if eq_gr ptmQuoteInductive then
     match args with
     | name::[] ->
        (TmQuoteInd (name, false), universes)
     | _ -> monad_failure "tmQuoteInductive" 1
-  else if Globnames.eq_gr glob_ref ttmQuoteInductive then
+  else if eq_gr ttmQuoteInductive then
     match args with
     | name::[] ->
        (TmQuoteInd (name, true), universes)
     | _ -> monad_failure "tmQuoteInductive" 1
 
-  else if Globnames.eq_gr glob_ref ptmQuoteUniverses || Globnames.eq_gr glob_ref ttmQuoteUniverses then
+  else if eq_gr ptmQuoteUniverses || eq_gr ttmQuoteUniverses then
     match args with
     | [] ->
        (TmQuoteUnivs, universes)
     | _ -> monad_failure "tmQuoteUniverses" 0
-  else if Globnames.eq_gr glob_ref ptmQuoteConstant then
+  else if eq_gr ptmQuoteConstant then
     match args with
     | name::bypass::[] ->
        (TmQuoteConst (name, bypass, false), universes)
     | _ -> monad_failure "tmQuoteConstant" 2
-  else if Globnames.eq_gr glob_ref ttmQuoteConstant then
+  else if eq_gr ttmQuoteConstant then
     match args with
     | name::bypass::[] ->
        (TmQuoteConst (name, bypass, true), universes)
     | _ -> monad_failure "tmQuoteConstant" 2
 
-  else if Globnames.eq_gr glob_ref ptmMkInductive then
+  else if eq_gr ptmMkInductive then
     match args with
     | mind::[] -> (TmMkInductive mind, universes)
     | _ -> monad_failure "tmMkInductive" 1
-  else if Globnames.eq_gr glob_ref ttmInductive then
+  else if eq_gr ttmInductive then
     match args with
     | mind::[] -> (TmMkInductive mind, universes)
     | _ -> monad_failure "tmInductive" 1
-  else if Globnames.eq_gr glob_ref ptmUnquote then
+  else if eq_gr ptmUnquote then
     match args with
     | t::[] ->
        (TmUnquote t, universes)
     | _ -> monad_failure "tmUnquote" 1
-  else if Globnames.eq_gr glob_ref ptmUnquoteTyped then
+  else if eq_gr ptmUnquoteTyped then
     match args with
     | typ::t::[] ->
        (TmUnquoteTyped (typ, t), universes)
     | _ -> monad_failure "tmUnquoteTyped" 2
 
-  else if Globnames.eq_gr glob_ref ptmExistingInstance || Globnames.eq_gr glob_ref ttmExistingInstance then
+  else if eq_gr ptmExistingInstance || eq_gr ttmExistingInstance then
     match args with
     | name :: [] ->
        (TmExistingInstance name, universes)
     | _ -> monad_failure "tmExistingInstance" 1
-  else if Globnames.eq_gr glob_ref ptmInferInstance then
+  else if eq_gr ptmInferInstance then
     match args with
     | s :: typ :: [] ->
        (TmInferInstance (s, typ), universes)
     | _ -> monad_failure "tmInferInstance" 2
-  else if Globnames.eq_gr glob_ref ttmInferInstance then
+  else if eq_gr ttmInferInstance then
     match args with
     | typ :: [] ->
        (TmInferInstanceTerm typ, universes)

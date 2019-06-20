@@ -177,19 +177,20 @@ Section print_term.
     | Checked (_, oib) =>
       match p with
       | tLambda na _ty b =>
-        let fix print_branch arity br {struct br} :=
+        let fix print_branch Γ arity br {struct br} :=
           match arity with
             | 0 => "=> " ++ print_term Γ true br
             | S n =>
               match br with
               | tLambda na A B =>
-                string_of_name na ++ "  " ++ print_branch n B
+                let na' := fresh_name Γ na A in
+                string_of_name na' ++ "  " ++ print_branch (vass na' A :: Γ) n B
               | t => "=> " ++ print_term Γ true br
               end
             end
         in
         let brs := map (fun '(arity, br) =>
-                          print_branch arity br) brs in
+                          print_branch Γ arity br) brs in
         let brs := combine brs oib.(ind_ctors) in
         parens top ("match " ++ print_term Γ true t ++
                     " as " ++ string_of_name na ++
@@ -312,7 +313,7 @@ Definition arb_sort : G universe :=
   elems_ [Universe.type0m; Universe.type0; Universe.type1].
 
 Require Import MetaCoq.Template.Loader.
-Quote Recursively Definition foo := (3 + 4, @nil bool).
+Quote Recursively Definition foo := (3 + 4, @nil bool, True).
 
 (** Has nat, bool, prod and list *)
 Definition Σ : new_global_context := Eval compute in build_global_context (fst foo).
@@ -325,6 +326,27 @@ Definition add_fn := tConst "Coq.Init.Nat.add"%string [].
 
 Instance show_term : Show term := { show := print_term Σ [] true }.
 
+Definition print_type_error (Σ : global_context) (e : type_error) : string :=
+  match e with
+  | UnboundRel n => "Unboound rel " ++ string_of_nat n
+  | UnboundVar id => "Unbound var " ++ id
+  | UnboundMeta m => "Unbound meta " ++ string_of_nat m
+  | UnboundEvar ev => "Unbound evar " ++ string_of_nat ev
+  | UndeclaredConstant c => "Undeclared constant " ++ c
+  | UndeclaredInductive c => "Undeclared inductive " ++ (inductive_mind c)
+  | UndeclaredConstructor c i => "Undeclared inductive " ++ (inductive_mind c)
+  | NotConvertible Γ t u t' u' => "Terms are not convertible: " ++
+      print_term Σ [] true t ++ nl ++ " " ++ print_term Σ [] true u ++ nl ++ " after reduction: " ++
+      print_term Σ [] true t' ++ nl ++ " " ++ print_term Σ [] true u' ++ nl
+  | NotASort t => "Not a sort"
+  | NotAProduct t t' => "Not a product"
+  | NotAnInductive t => "Not an inductive"
+  | IllFormedFix m i => "Ill-formed recursive definition"
+  | UnsatisfiedConstraints c => "Unsatisfied constraints"
+  | NotEnoughFuel n => "Not enough fuel"
+  end.
+
+Instance show_type_error : Show type_error := { show := string_of_type_error }.
 Eval compute in show (type_of_global Σ type_list).
 
 Definition arb_ind (Σ : global_context) :=
@@ -340,7 +362,17 @@ Definition arb_ind (Σ : global_context) :=
                    IndRef (mkInd kn 0) (* FIXME *)
                  end) (fst Σ)).
 
-Fixpoint arb (Σ : new_global_context) (Γ : context) (ty : term) (n : nat) {struct n} : G term :=
+Fixpoint string_replicate (n : nat) (s : string) :=
+  match n with
+  | 0 => ""%string
+  | S n => (s ++ string_replicate n s)%string
+  end.
+
+Definition traced (depth : nat) (s : string) :=
+  (* trace (string_replicate depth " " ++ show depth ++ ": " ++ s) (ret tt). *)
+  ret tt.
+
+Fixpoint arb (Σ : new_global_context) (Γ : context) (ty : term) (n : nat) (depth : nat) {struct n} : G term :=
   match n with
   | 0 =>
     let consts Γ ty :=
@@ -419,7 +451,7 @@ Fixpoint arb (Σ : new_global_context) (Γ : context) (ty : term) (n : nat) {str
         | S arity' =>
           match ty with
           | tProd na ty b =>
-            cand <- arb Σ Γ ty n ;;
+            cand <- arb Σ Γ ty n (S depth) ;;
             arb_app (mkApp acc cand) (subst10 cand b) arity'
           (* FIXME wrong! Arity doesn't count let-ins *)
           (* | tLetIn na def def_ty body => *)
@@ -432,7 +464,7 @@ Fixpoint arb (Σ : new_global_context) (Γ : context) (ty : term) (n : nat) {str
     let lambdas : list (G term) :=
         match ty with
         | tProd na ty' b =>
-          [body <- arb Σ (vass na ty' :: Γ) b n ;;
+          [body <- arb Σ (vass na ty' :: Γ) b n (S depth);;
           ret (tLambda na ty' body)]
         | _ => []
         end
@@ -442,9 +474,13 @@ Fixpoint arb (Σ : new_global_context) (Γ : context) (ty : term) (n : nat) {str
       | 0 => []
       | S i =>
         (domu <- arb_sort ;;
-        dom <- arb Σ Γ (tSort domu) n ;; (* Generate some type in the sort *)
-        f <- arb Σ Γ (tProd nAnon dom (lift0 1 ty)) n;;
-        a <- arb Σ Γ dom n;;
+        traced depth ("application domain sort is " ++ show (tSort domu) ++ nl);;
+        dom <- arb Σ Γ (tSort domu) n (S depth) ;; (* Generate some type in the sort *)
+        traced depth ("application domain is " ++ show dom ++ nl);;
+        f <- arb Σ Γ (tProd nAnon dom (lift0 1 ty)) n (S depth);;
+        traced depth ("application abstraction " ++ show f ++ nl);;
+        a <- arb Σ Γ dom n (S depth);;
+        traced depth ("application argument " ++ show a ++ nl);;
         ret (tApp f [a])) :: apps i
       end
 
@@ -503,14 +539,14 @@ Fixpoint arb (Σ : new_global_context) (Γ : context) (ty : term) (n : nat) {str
                 let br '(arity, ty) :=
                     match reduce_opt RedFlags.default (fst Σ) Γ 100 ty with
                     | Some ty =>
-                      t <- arb Σ Γ ty n ;;
+                      t <- arb Σ Γ ty n (S depth) ;;
                         (* trace ("built branch body" ++ show arity ++ nl) *) (ret (arity, t))
                     | None => trace "reduction of branch type failed" failGen
                     end
                 in
-                discr <- arb Σ Γ indty n ;;
+                discr <- arb Σ Γ indty n (S depth);;
                 brs <- (* trace ("case branches: " ++ show tys ++ nl) *) (mapGen br tys);;
-                ret (tCase (mkInd ind k, 0) pred discr brs)
+                ret (tCase (mkInd ind k, mib.(ind_npars)) pred discr brs)
               | None => trace "branches type failure" failGen
               end
             | None => trace "wrong mind index" failGen
@@ -521,18 +557,18 @@ Fixpoint arb (Σ : new_global_context) (Γ : context) (ty : term) (n : nat) {str
         end]
       end
     in
-    freq_ ((1, arb Σ Γ ty (n - n)) :: (map (fun x => (1, x)) inverted) ++
-                                   (map (fun x => (S n, x)) (apps (S n))) ++
-                                   (map (fun x => (2, x)) lambdas) ++
+    freq_ ((1, arb Σ Γ ty (n - n) (S depth)) :: (map (fun x => (1, x)) inverted) ++
+                                   (map (fun x => (10 * n, x)) (apps (S n))) ++
+                                   (map (fun x => (10 * n, x)) lambdas) ++
                                    (map (fun x => (1, x)) cases))
   end.
 
 Instance check_result {A} : Checkable (typing_result A) :=
   { checker r :=
-      checker (match r with
-               | Checked T => true
-               | TypeError _ => false
-               end) }.
+      match r with
+      | Checked T => checker true
+      | TypeError e => whenFail (show e) false
+      end }.
 
 Let add_def := Eval compute in match lookup_env Σ "Coq.Init.Nat.add"%string with
                                | Some (ConstantDecl _ decl) =>
@@ -556,16 +592,16 @@ Definition arrow ty ty' := tProd nAnon ty (lift0 1 ty').
 Definition natS := tConstruct (mkInd "Coq.Init.Datatypes.nat"%string 0) 1 [].
 (* Fixing up reconstruct_global_context needed for implicit i > / >= Set constraints *)
 
-Sample (arb Σ [] (arrow type_bool type_bool) 3).
-Sample (arb Σ [] type_nat 2).
+(* Sample (arb Σ [] (arrow type_bool type_bool) 3). *)
+(* Sample (arb Σ [] type_nat 2). *)
 (* Sample (arb Σ [vass (nNamed "n"%string) type_nat] type_nat 1). *)
 (* Sample (arb Σ [] type_bool 4). *)
 (* Sample (arb Σ [] type_bool 0). *)
 
-Definition prop_arb_wt :=
-  forAll (arb Σ [] (arrow type_nat type_nat) 3) (infer Σ []).
+(* Definition prop_arb_wt := *)
+(*   forAll (arb Σ [] (arrow type_nat type_nat) 3) (infer Σ []). *)
 
-QuickChick prop_arb_wt.
+(* QuickChick prop_arb_wt. *)
 (* Ill-typed! We assume eta-expanded branches somewhere!
 (fun b : bool => fun n : nat => n) (match nil nat as Anonymous in list return bool with
 nil => true
@@ -576,20 +612,25 @@ end
 Definition reduce (t : term) :=
   reduce_opt RedFlags.default (fst Σ) [] 100 t.
 
+Instance sized_term : Sized term := { size := term_size }.
+
 Definition prop_arb_pres (Γ : context) (ty : term) n :=
-  forAll (arb Σ Γ ty n)
+  forAll (arb Σ Γ ty n 0)
          (fun t =>
             match reduce t with
             | Some t' =>
-              collect (if eq_term (snd Σ) t t' then "unreduced" else "reduced")%string
+              collect (show (size t))
+                      (collect (if eq_term (snd Σ) t t' then " unreduced" else " reduced")%string
                       (match infer Σ [] t' with
                        | Checked ty' => checker (convert_leq Σ Γ ty' ty)
                        | TypeError e => checker (@TypeError unit e)
-                       end)
+                       end))
             | None =>
-              collect "unreduced"%string (Checked tt)
+              collect "reduce failed"%string (Checked tt)
             end).
 
+Extract Constant defNumTests => "100".
+Extract Constant defNumDiscards => "10000".
 Definition prop_arb_pres1 := prop_arb_pres [] (arrow type_nat type_nat) 4.
 QuickChick prop_arb_pres1.
 

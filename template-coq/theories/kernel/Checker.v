@@ -819,6 +819,7 @@ Section Typecheck2.
       (** TODO check branches *)
       let '(ind', u, args) := indargs in
       if eq_ind ind ind' then
+        (* FIXME for quickchick *)
         ret (tApp p (List.skipn par args ++ [c]))
       else
         let ind1 := tInd ind u in

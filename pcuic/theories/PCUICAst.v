@@ -16,22 +16,21 @@ Open Scope pcuic.
    Casts are absent as well. *)
 
 Inductive term : Set :=
-| tRel       : nat -> term
-| tVar       : ident -> term (* For free variables (e.g. in a goal) *)
-| tEvar      : nat -> list term -> term
-| tSort      : universe -> term
-| tProd      : name -> term (* the type *) -> term -> term
-| tLambda    : name -> term (* the type *) -> term -> term
-| tLetIn     : name -> term (* the term *) -> term (* the type *) -> term -> term
-| tApp       : term -> term -> term
-| tConst     : kername -> universe_instance -> term
-| tInd       : inductive -> universe_instance -> term
-| tConstruct : inductive -> nat -> universe_instance -> term
-| tCase      : (inductive * nat) (* # of parameters *) -> term (* type info *)
-               -> term (* discriminee *) -> list (nat * term) (* branches *) -> term
-| tProj      : projection -> term -> term
-| tFix       : mfixpoint term -> nat -> term
-| tCoFix     : mfixpoint term -> nat -> term.
+| tRel (n : nat)
+| tVar (i : ident) (* For free variables (e.g. in a goal) *)
+| tEvar (n : nat) (l : list term)
+| tSort (u : universe)
+| tProd (na : name) (A B : term)
+| tLambda (na : name) (A t : term)
+| tLetIn (na : name) (b B t : term) (* let na := b : B in t *)
+| tApp (u v : term)
+| tConst (k : kername) (ui : universe_instance)
+| tInd (ind : inductive) (ui : universe_instance)
+| tConstruct (ind : inductive) (n : nat) (ui : universe_instance)
+| tCase (indn : inductive * nat) (p c : term) (brs : list (nat * term)) (* # of parameters/type info/discriminee/branches *)
+| tProj (p : projection) (c : term)
+| tFix (mfix : mfixpoint term) (idx : nat)
+| tCoFix (mfix : mfixpoint term) (idx : nat).
 
 Fixpoint mkApps t us :=
   match us with

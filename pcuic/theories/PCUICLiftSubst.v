@@ -595,18 +595,18 @@ Proof.
   fix auxl' 1.
   destruct l; constructor; [|apply auxl'].
   apply auxt.
-  revert l.
+  revert brs.
   fix auxl' 1.
-  destruct l; constructor; [|apply auxl'].
+  destruct brs; constructor; [|apply auxl'].
   apply auxt.
 
-  generalize (fix_context m). revert m.
+  generalize (fix_context mfix). revert mfix.
   fix auxm 1.
-  destruct m; constructor.
+  destruct mfix; constructor.
   split. apply auxt. apply auxt. apply auxm.
 
-  generalize (fix_context m). revert m.
+  generalize (fix_context mfix). revert mfix.
   fix auxm 1.
-  destruct m; constructor.
+  destruct mfix; constructor.
   split. apply auxt. apply auxt. apply auxm.
 Defined.

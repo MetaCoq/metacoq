@@ -1729,3 +1729,53 @@ Lemma not_empty_map {A B} (f : A -> B) l : l <> [] -> map f l <> [].
 Proof.
   intro H; destruct l; intro e; now apply H.
 Qed.
+
+Lemma Forall2_nth :
+  forall A B P l l' n (d : A) (d' : B),
+    Forall2 P l l' ->
+    P d d' ->
+    P (nth n l d) (nth n l' d').
+Proof.
+  intros A B P l l' n d d' h hd.
+  induction n in l, l', h |- *.
+  - destruct h.
+    + assumption.
+    + assumption.
+  - destruct h.
+    + assumption.
+    + simpl. apply IHn. assumption.
+Qed.
+
+Arguments skipn : simpl nomatch.
+
+Lemma Forall2_skipn :
+  forall A B P l l' n,
+    @Forall2 A B P l l' ->
+    Forall2 P (skipn n l) (skipn n l').
+Proof.
+  intros A B P l l' n h.
+  induction n in l, l', h |- *.
+  - assumption.
+  - destruct h.
+    + constructor.
+    + simpl. apply IHn. assumption.
+Qed.
+
+Lemma Forall2_nth_error_Some_l :
+  forall A B (P : A -> B -> Prop) l l' n t,
+    nth_error l n = Some t ->
+    Forall2 P l l' ->
+    exists t',
+      nth_error l' n = Some t' /\
+      P t t'.
+Proof.
+  intros A B P l l' n t e h.
+  induction n in l, l', t, e, h |- *.
+  - destruct h.
+    + cbn in e. discriminate.
+    + cbn in e. inversion e. subst.
+      exists y. split ; auto.
+  - destruct h.
+    + cbn in e. discriminate.
+    + cbn in e. apply IHn with (l' := l') in e ; assumption.
+Qed.

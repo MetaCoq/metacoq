@@ -1,2 +1,2 @@
-CAMLFLAGS+=-I $(COQMF_COQLIB)/user-contrib/MetaCoq/Checker -open Metacoq_checker_plugin -open Metacoq_checker_plugin.Typing0 -I $(COQMF_COQLIB)/user-contrib/MetaCoq/PCUIC -open Metacoq_pcuic_plugin
+CAMLFLAGS+=-open Metacoq_checker_plugin -open Metacoq_checker_plugin.Typing0 -open Metacoq_pcuic_plugin
 CAMLFLAGS+=-w -33 # Unused opens

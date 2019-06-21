@@ -2,24 +2,12 @@ all: coq plugin
 
 coq: Makefile.coq
 	$(MAKE) -f Makefile.coq
-	mkdir -p build
-	cp src/template_coq.cmx src/template_coq.cmxa src/template_coq.cmxs build
 
-
-plugin: coq Makefile.plugin gen-src/.generate
-	@ echo "Copying from src to gen-src"
-	@ for x in $(TOCOPY); do rm -f gen-src/$$x; cp src/$$x gen-src/$$x; done
-	(cd gen-src; ./to-lower.sh)
+plugin: coq Makefile.plugin
+	./update_plugin.sh
 	$(MAKE) -f Makefile.plugin
 
-theories/Extraction.vo: coq
-
-gen-src/.generate: theories/Extraction.vo
-	coqc -Q theories MetaCoq.Template theories/Extraction.v
-	@ touch gen-src/.generate
-
-
-.PHONY: all install html clean mrproper plugin coq
+.PHONY: install html clean mrproper all plugin
 
 install: Makefile.coq
 	$(MAKE) -f Makefile.coq install
@@ -30,7 +18,7 @@ html: all
 clean: Makefile.coq
 	$(MAKE) -f Makefile.coq clean
 
-mrproper: clean
+mrproper:
 	rm -f Makefile.coq
 	rm -f Makefile.plugin
 

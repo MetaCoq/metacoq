@@ -48,7 +48,9 @@ Definition declared_constructor Σ mdecl idecl cstr cdecl : Prop :=
 
 Definition declared_projection Σ mdecl idecl (proj : projection) pdecl : Prop :=
   declared_inductive Σ mdecl (fst (fst proj)) idecl /\
-  List.nth_error idecl.(ind_projs) (snd proj) = Some pdecl.
+  List.nth_error idecl.(ind_projs) (snd proj) = Some pdecl /\
+  mdecl.(ind_npars) = snd (fst proj).
+
 
 (** Inductive substitution, to produce a constructors' type *)
 Definition inds ind u (l : list one_inductive_body) :=

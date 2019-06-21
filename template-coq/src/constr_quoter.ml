@@ -281,9 +281,9 @@ struct
     let e = mk_proj_list e in
     Constr.mkApp (tBuild_one_inductive_body, [| a; b; c; d; e |])
 
-  let mk_mutual_inductive_body npars params inds uctx =
+  let mk_mutual_inductive_body finite npars params inds uctx =
     let inds = to_coq_list tone_inductive_body inds in
-    Constr.mkApp (tBuild_mutual_inductive_body, [|npars; params; inds; uctx|])
+    Constr.mkApp (tBuild_mutual_inductive_body, [|finite; npars; params; inds; uctx|])
 
   let mk_constant_body ty tm uctx =
     let tm = quote_option tTerm tm in

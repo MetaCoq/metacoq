@@ -12,6 +12,7 @@ Import MonadNotation.
 
 Existing Instance config.default_checker_flags.
 
+<<<<<<< HEAD
 Definition is_prop_sort s :=
   match Universe.level s with
   | Some l => Level.is_prop l
@@ -25,25 +26,9 @@ Definition Is_Type_or_Proof Σ Γ t := ∑ T, Σ ;;; Γ |- t : T × (isArity T +
 
 Axiom is_type_or_proof_spec : forall (Sigma : global_context) (Gamma : context) (t : PCUICAst.term) T,
     Sigma ;;; Gamma |- t : T -> (is_type_or_proof Sigma Gamma t = true) <~> Is_Type_or_Proof Sigma Gamma t.
-(* 
-
-   X : Type, x : X |- x : X ~> is_type_or_proof x = false
-
-   Type : Type, x : Type |- x : Type ~> is_type_or_proof x = true
-
-*)
-
-(* 
-
-
-(λ X (x : X). X) Type nat ~> is_type_or_proof x = true
-
-
- *)
-
 
 (* Section IsType. *)
-(*   (* Context {F : Fuel}. *) *)
+(*   Context {F : Fuel}. *)
 (*   Variables (Σ : global_context) (Γ : context). *)
 
 (*   Fixpoint is_arity (F : Fuel) t : typing_result bool := *)
@@ -63,7 +48,7 @@ Axiom is_type_or_proof_spec : forall (Sigma : global_context) (Gamma : context) 
 (*      if is_arity F ty then ret true *)
 (*      else *)
 (*        s <- type_of_as_sort Σ (type_of Σ) Γ ty ;; *)
-(*        ret (is_prop_sort s). *)
+(*        ret (Universe.is_prop s). *)
 (* End IsType. *)
 
 Module E := EAst.
@@ -344,7 +329,7 @@ Definition computational_ind Σ ind :=
     match List.nth_error decl.(ind_bodies) n with
     | Some body =>
       match destArity [] body.(ind_type) with
-      | Some arity => negb (is_prop_sort (snd arity))
+      | Some arity => negb (Universe.is_prop (snd arity))
       | None => false
       end
     | None => false

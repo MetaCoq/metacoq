@@ -1,4 +1,6 @@
-#env /bin/sh
+#!/bin/bash
+
+shopt -s nullglob # make the for loop do nothnig when there is no *.ml* files
 
 echo "Cleaning result of extraction"
 

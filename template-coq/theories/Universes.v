@@ -199,6 +199,12 @@ Module Universe.
     | _ => false
     end.
 
+  Definition is_prop s :=
+    match Universe.level s with
+    | Some l => Level.is_prop l
+    | None => false
+    end.
+
   Definition type0m : t := make Level.prop.
   Definition type0 : t := make Level.set.
   Definition type1  :t := make' Expr.type1.

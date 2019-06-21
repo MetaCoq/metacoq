@@ -169,7 +169,7 @@ Lemma forall_decls_declared_projection Σ cst mdecl idecl decl :
                     cst ((fun '(x, y) => (x, trans y)) decl).
 Proof.
   unfold declared_constructor, TTy.declared_constructor.
-  move=> [decl' Hnth].
+  move=> [decl' [Hnth Hnpar]].
   pose proof (forall_decls_declared_inductive _ _ _ _ decl'). split; auto.
   destruct idecl; simpl.
   by rewrite nth_error_map Hnth.
@@ -363,7 +363,7 @@ Proof.
   rewrite !Template.UnivSubst.subst_instance_constr_it_mkProd_or_LetIn in Hdecomp.
   rewrite !trans_it_mkProd_or_LetIn in Hdecomp.
   assert (#|Template.Ast.ind_params mdecl| =
-    #|PCUICSubstitution.subst_context
+    #|PCUICTyping.subst_context
       (inds (inductive_mind ind) u (map trans_one_ind_body (Template.Ast.ind_bodies mdecl))) 0
       (map trans_decl (Template.UnivSubst.subst_instance_context u (Template.Ast.ind_params mdecl)))|).
   now rewrite PCUICSubstitution.subst_context_length map_length Template.UnivSubst.subst_instance_context_length.

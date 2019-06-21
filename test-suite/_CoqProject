@@ -1,4 +1,4 @@
--I ../template-coq/src
+-I ../template-coq/build
 -I ../checker/src
 -Q ../template-coq/theories MetaCoq.Template
 -Q ../checker/theories MetaCoq.Checker

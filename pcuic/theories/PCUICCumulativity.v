@@ -213,3 +213,19 @@ Proof.
   constructor. econstructor 3. 2:eauto. apply IHX.
   econstructor 2; eauto. apply IHX.
 Qed.
+
+Lemma conv_alt_red :
+  forall Σ Γ t u,
+    Σ ;;; Γ |- t == u ->
+    ∑ t' u',
+      red Σ Γ t t' ×
+      red Σ Γ u u' ×
+      eq_term (snd Σ) t' u'.
+Proof.
+  intros Σ Γ t u h. induction h.
+  - exists t, u. intuition auto.
+  - destruct IHh as [t' [u' [? [? ?]]]].
+    exists t', u'. intuition auto. now eapply red_step.
+  - destruct IHh as [t' [u' [? [? ?]]]].
+    exists t', u'. intuition auto. now eapply red_step.
+Qed.

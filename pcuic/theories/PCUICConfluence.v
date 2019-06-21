@@ -259,7 +259,7 @@ Section Confluence.
     destruct (IHargs _ X1) as [args' [-> Hargs']].
     exists (args' ++ [N1])%list.
     rewrite <- mkApps_nested. intuition auto.
-    eapply All2_app; auto. 
+    eapply All2_app; auto.
   Qed.
 
   Lemma pred1_mkApps_refl_tConstruct (Σ : global_context) Γ Δ i k u l l' :
@@ -461,7 +461,7 @@ Section Confluence.
       exists ind, k, u, (args ++ [t2])%list.
       now rewrite <- mkApps_nested.
     - intros H.
-      now exists i, n, u, [].
+      now exists ind, n, ui, [].
   Qed.
 
   Derive NoConfusion for global_decl.
@@ -724,7 +724,7 @@ Section Confluence.
    (*          { map_terms Γ nil := nil; *)
    (*            map_terms Γ (cons p l) := cons (rho Γ p) (map_terms Γ l) } *)
 
-        
+
    (*  where map_brs (Γ : context) (l : list (nat * term)) : list (nat * term) by struct l := *)
    (*          { map_brs Γ nil := nil; *)
    (*            map_brs Γ (cons p l) := (fst p, rho Γ (snd p)) :: map_brs Γ l }. *)
@@ -1194,7 +1194,7 @@ Section Confluence.
       rewrite - app_assoc.
       f_equal. now depelim H.
     Qed.
-    
+
     Lemma fold_fix_context_over' Γ m :
       (* (forall Γ t acc', rho (acc' ++ acc ++ Γ) ((lift0 #|acc' ++ acc|) t) = *)
       (*       (lift0 #|acc' ++ acc|) (rho Γ t)) -> *)
@@ -1931,7 +1931,7 @@ Section Confluence.
           eapply pred1_mkApps_refl_tConstruct in forall_z0.
           simpl. destruct decompose_app eqn:Heq''.
           rewrite decompose_app_mkApps in Heq''; auto.
-          injection Heq'' as <- <-. destruct (eq_ind_spec i i0). subst i0.
+          injection Heq'' as <- <-. destruct (eq_ind_spec i ind). subst i.
           econstructor; auto.
           constructor; pcuic.
         -- (* Case CoFix *)
@@ -1943,7 +1943,7 @@ Section Confluence.
           rewrite decompose_app_mkApps; auto.
           simpl. unfold unfold_cofix.
           rewrite nth_error_map.
-          destruct (nth_error m n0) eqn:Heq.
+          destruct (nth_error mfix idx) eqn:Heq.
           simpl.
           econstructor; eauto.
           --- eapply All2_prop2_eq_split in a. intuition.
@@ -1971,7 +1971,7 @@ Section Confluence.
           rewrite rho_mkApps in forall_z; auto.
           eapply pred1_mkApps_refl_tConstruct in forall_z.
           destruct nth_error eqn:Hnth.
-          destruct (eq_ind_spec ind i). subst i.
+          destruct (eq_ind_spec ind ind0). subst ind.
           eapply pred_proj; pcuic.
           pcuic. pcuic.
 
@@ -1983,7 +1983,7 @@ Section Confluence.
           solve_discr.
           unfold unfold_cofix.
           rewrite nth_error_map.
-          destruct (nth_error m n) eqn:Hnth; simpl.
+          destruct (nth_error mfix idx) eqn:Hnth; simpl.
           econstructor; eauto.
           --- eapply All2_prop2_eq_split in a. intuition.
               now eapply pred1_rho_fix_context.
@@ -2141,7 +2141,7 @@ Section Confluence.
       intros -> ->. now eapply weakening_pred1_pred1.
     Qed.
 
-    
+
     Lemma wf_fix_subst Γ Γ' mfix0 mfix1 :
       #|mfix0| = #|mfix1| ->
       pred1_ctx Σ Γ Γ' ->
@@ -2411,7 +2411,7 @@ Section Confluence.
           rewrite rho_mkApps; auto.
           rewrite decompose_app_mkApps; auto.
           simpl. rewrite rho_mkApps in X2; auto.
-          destruct (eq_ind_spec i i0). subst i0.
+          destruct (eq_ind_spec i ind). subst ind.
           eapply pred1_mkApps_tConstruct in X1 as [args' [? ?]]. subst c1.
           eapply pred1_mkApps_refl_tConstruct in X2.
           econstructor; eauto. pcuic.
@@ -2435,7 +2435,7 @@ Section Confluence.
           eapply All2_prop2_eq_split in a1. intuition.
           unfold unfold_cofix. rewrite nth_error_map.
           assert (All2 (on_Trel eq dname) mfix'
-                       (map_fix rho (rho_ctx Γ) (fold_fix_context rho (rho_ctx Γ) [] m) m)).
+                       (map_fix rho (rho_ctx Γ) (fold_fix_context rho (rho_ctx Γ) [] mfix) mfix)).
           { eapply All2_impl; [eapply b0|]; pcuic. intros.
             red in X1. now noconf X1. }
           pose proof (All2_mix a1 X1).
@@ -2451,7 +2451,7 @@ Section Confluence.
             eapply All2_nth_error_Some in Heq; eauto. destruct Heq; intuition auto.
 
             eapply pred_cofix_case with (map_fix rho (rho_ctx Γ) (rho_ctx_over (rho_ctx Γ)
-                                                                               (fix_context m)) m)
+                                                                               (fix_context mfix)) mfix)
                                         (rarg d); pcuic.
 
             --- eapply All2_local_env_pred_fix_ctx; eauto.

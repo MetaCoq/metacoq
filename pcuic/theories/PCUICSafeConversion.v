@@ -954,6 +954,16 @@ Section Conversion.
 
     prog_viewc u v := prog_view_other u v I.
 
+  Lemma elimT (P : Type) (b : bool) : reflectT P b -> b -> P.
+  Proof.
+    intros []; auto. discriminate.
+  Defined.
+
+  Lemma introT (P : Type) (b : bool) : reflectT P b -> P -> b.
+  Proof.
+    intros []; auto.
+  Defined.
+
   Equations(noeqns) _isconv_prog (Γ : context) (leq : conv_pb)
             (t1 : term) (π1 : stack) (h1 : wtp Γ t1 π1)
             (t2 : term) (π2 : stack) (h2 : wtp Γ t2 π2)
@@ -1266,7 +1276,7 @@ Section Conversion.
     eapply eq_term_sym.
     eapply eq_term_zipx.
     eapply eq_term_upto_univ_eq_eq_term.
-    eapply ssrbool.elimT.
+    eapply elimT.
     - eapply reflect_eq_term_upto_univ_eqb.
     - assumption.
   Qed.
@@ -1289,7 +1299,7 @@ Section Conversion.
     eapply eq_term_conv.
     symmetry in eq1.
     eapply eq_term_upto_univ_eq_eq_term.
-    eapply ssrbool.elimT.
+    eapply elimT.
     - eapply reflect_eq_term_upto_univ_eqb.
     - assumption.
   Qed.
@@ -1358,10 +1368,10 @@ Section Conversion.
         cbn in eq3. symmetry in eq3.
         assert (bot : eqb_term_upto_univ eqb eqb c c && eqb_term_upto_univ eqb eqb c' c').
         { apply andb_and. split.
-          - eapply ssrbool.introT.
+          - eapply introT.
             + eapply reflect_eq_term_upto_univ_eqb.
             + eapply eq_term_upto_univ_refl. all: intro ; reflexivity.
-          - eapply ssrbool.introT.
+          - eapply introT.
             + eapply reflect_eq_term_upto_univ_eqb.
             + eapply eq_term_upto_univ_refl. all: intro ; reflexivity.
         }
@@ -1379,10 +1389,10 @@ Section Conversion.
           cbn in eq3. symmetry in eq3.
           assert (bot : eqb_term_upto_univ eqb eqb c c && eqb_term_upto_univ eqb eqb c' c').
           { apply andb_and. split.
-            - eapply ssrbool.introT.
+            - eapply introT.
               + eapply reflect_eq_term_upto_univ_eqb.
               + eapply eq_term_upto_univ_refl. all: intro ; reflexivity.
-            - eapply ssrbool.introT.
+            - eapply introT.
               + eapply reflect_eq_term_upto_univ_eqb.
               + eapply eq_term_upto_univ_refl. all: intro ; reflexivity.
           }
@@ -1402,10 +1412,10 @@ Section Conversion.
           cbn in eq3. symmetry in eq3.
           assert (bot : eqb_term_upto_univ eqb eqb c c && eqb_term_upto_univ eqb eqb c' c').
           { apply andb_and. split.
-            - eapply ssrbool.introT.
+            - eapply introT.
               + eapply reflect_eq_term_upto_univ_eqb.
               + eapply eq_term_upto_univ_refl. all: intro ; reflexivity.
-            - eapply ssrbool.introT.
+            - eapply introT.
               + eapply reflect_eq_term_upto_univ_eqb.
               + eapply eq_term_upto_univ_refl. all: intro ; reflexivity.
           }
@@ -1426,10 +1436,10 @@ Section Conversion.
              cbn in eq3. symmetry in eq3.
              assert (bot : eqb_term_upto_univ eqb eqb c c && eqb_term_upto_univ eqb eqb c' c').
              { apply andb_and. split.
-               - eapply ssrbool.introT.
+               - eapply introT.
                  + eapply reflect_eq_term_upto_univ_eqb.
                  + eapply eq_term_upto_univ_refl. all: intro ; reflexivity.
-               - eapply ssrbool.introT.
+               - eapply introT.
                  + eapply reflect_eq_term_upto_univ_eqb.
                  + eapply eq_term_upto_univ_refl. all: intro ; reflexivity.
              }
@@ -1472,7 +1482,7 @@ Section Conversion.
     - apply eq_term_sym.
       cbn. eapply eq_term_zipx.
       eapply eq_term_upto_univ_eq_eq_term.
-      eapply ssrbool.elimT.
+      eapply elimT.
       + eapply reflect_eq_term_upto_univ_eqb.
       + symmetry. assumption.
   Qed.
@@ -1494,7 +1504,7 @@ Section Conversion.
     eapply conv_zippx ; auto.
     eapply eq_term_conv.
     eapply eq_term_upto_univ_eq_eq_term.
-    eapply ssrbool.elimT.
+    eapply elimT.
     - eapply reflect_eq_term_upto_univ_eqb.
     - symmetry. assumption.
   Qed.
@@ -1505,7 +1515,7 @@ Section Conversion.
     - exact h2.
     - apply eq_term_sym. eapply eq_term_zipx.
       eapply eq_term_upto_univ_eq_eq_term.
-      eapply ssrbool.elimT.
+      eapply elimT.
       + eapply reflect_eq_term_upto_univ_eqb.
       + symmetry. assumption.
   Qed.
@@ -1529,7 +1539,7 @@ Section Conversion.
     eapply eq_term_conv.
     symmetry in eq1.
     eapply eq_term_upto_univ_eq_eq_term.
-    eapply ssrbool.elimT.
+    eapply elimT.
     - eapply reflect_eq_term_upto_univ_eqb.
     - assumption.
   Qed.
@@ -1767,7 +1777,7 @@ Section Conversion.
     - exact h2.
     - apply eq_term_sym. eapply eq_term_zipx.
       eapply eq_term_upto_univ_eq_eq_term.
-      eapply ssrbool.elimT.
+      eapply elimT.
       + eapply reflect_eq_term_upto_univ_eqb.
       + symmetry. assumption.
   Qed.
@@ -1790,7 +1800,7 @@ Section Conversion.
     eapply eq_term_conv.
     symmetry in eq1.
     eapply eq_term_upto_univ_eq_eq_term.
-    eapply ssrbool.elimT.
+    eapply elimT.
     - eapply reflect_eq_term_upto_univ_eqb.
     - assumption.
   Qed.

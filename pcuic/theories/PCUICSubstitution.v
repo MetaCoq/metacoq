@@ -800,7 +800,7 @@ Qed.
 
 Lemma instantiate_params_subst_make_context_subst ctx args s ty s' ty' :
   instantiate_params_subst ctx args s ty = Some (s', ty') ->
-  exists ctx'',
+  ∑ ctx'',
   make_context_subst ctx args s = Some s' /\
   decompose_prod_n_assum [] (length ctx) ty = Some (ctx'', ty').
 Proof.
@@ -820,7 +820,7 @@ Qed.
 
 Lemma instantiate_params_make_context_subst ctx args ty ty' :
   instantiate_params ctx args ty = Some ty' ->
-  exists ctx' ty'' s',
+  ∑ ctx' ty'' s',
     decompose_prod_n_assum [] (length ctx) ty = Some (ctx', ty'') /\
     make_context_subst (List.rev ctx) args [] = Some s' /\ ty' = subst0 s' ty''.
 Proof.

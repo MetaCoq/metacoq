@@ -1019,4 +1019,5 @@ Proof.
     apply typing_all_wf_decl in wfΓ; auto. solve_all.
     destruct x as [na [body|] ty']; simpl in *; intuition auto.
     destruct H0. auto.
+(* Qed. *)
 Admitted.

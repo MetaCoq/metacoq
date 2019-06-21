@@ -412,7 +412,8 @@ Proof.
     dependent induction t1; intros.
     + cbn. exists ty. split; eauto.
     + cbn. eapply IHt1. admit.
-      eauto. eauto. 
+      eauto. eauto.
+  - destruct p. 
 Admitted.
 
 Lemma Is_type_red Σ Γ t v:

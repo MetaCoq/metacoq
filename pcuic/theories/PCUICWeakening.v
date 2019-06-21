@@ -813,49 +813,16 @@ Proof.
   induction T in n, k, U, Rle |- * using term_forall_list_ind;
     inversion 1; simpl; try (now constructor).
   - destruct (k <=? n0); constructor.
-  - constructor. clear -H H4.
-    induction l in H, args', H4 |- *.
-    + inversion H4; constructor.
-    + inversion H4; inversion H; subst.
-      now constructor.
-  - constructor; try easy. clear -X H7.
-    induction l in X, brs', H7 |- *.
-    + inversion H7; constructor.
-    + inversion H7; inversion X; subst.
-      constructor. cbn; easy.
-      easy.
-  - constructor; try easy. clear -X H3.
-    assert (XX:forall k k', Forall2
-                         (fun x y  => eq_term_upto_univ Re Re (dtype x) (dtype y) /\
-                                   eq_term_upto_univ Re Re (dbody x) (dbody y) /\
-                                   rarg x = rarg y)
-                         (map (map_def (lift n k) (lift n (#|m| + k'))) m)
-                         (map (map_def (lift n k) (lift n (#|mfix'| + k'))) mfix'));
-      [|now apply XX]. clear k.
-    induction m in X, mfix', H3 |- *.
-    + inversion H3; constructor.
-    + inversion H3; inversion X; subst.
-      simpl. constructor. split. cbn; easy.
-      cbn; erewrite Forall2_length by eassumption.
-      easy.
-      unfold tFixProp in IHm. cbn.
-      rewrite !plus_n_Sm. now apply IHm.
-  - constructor; try easy. clear -X H3.
-    assert (XX:forall k k', Forall2
-                         (fun x y  => eq_term_upto_univ Re Re (dtype x) (dtype y) /\
-                                   eq_term_upto_univ Re Re (dbody x) (dbody y) /\
-                                   rarg x = rarg y)
-                         (map (map_def (lift n k) (lift n (#|m| + k'))) m)
-                         (map (map_def (lift n k) (lift n (#|mfix'| + k'))) mfix'));
-      [|now apply XX]. clear k.
-    induction m in X, mfix', H3 |- *.
-    + inversion H3; constructor.
-    + inversion H3; inversion X; subst.
-      simpl. constructor. split. cbn; easy.
-      cbn; erewrite Forall2_length by eassumption.
-      easy.
-      unfold tFixProp in IHm. cbn.
-      rewrite !plus_n_Sm. now apply IHm.
+  - constructor. solve_all.
+  - constructor; try easy. solve_all.
+  - constructor; try easy.
+    subst. pose proof (All2_length _ _ X1). clear -X X1 H.
+    solve_all.
+    specialize (b0 Re n (#|mfix'| + k) _ b). now rewrite H.
+  - constructor; try easy.
+    subst. pose proof (All2_length _ _ X1). clear -X X1 H.
+    solve_all.
+    specialize (b0 Re n (#|mfix'| + k) _ b). now rewrite H.
 Qed.
 
 Lemma lift_eq_term `{checker_flags} ϕ n k T U :
@@ -900,7 +867,7 @@ Proof.
   - inversion H0.
   - inversion H0.
   - inversion H0; subst. constructor.
-    + apply Forall2_length in H6. rewrite H6.
+    + apply All2_length in H6. rewrite H6.
       now apply lift_eq_decl.
     + now apply IHl.
 Qed.
@@ -918,7 +885,7 @@ Proof.
   unfold check_correct_arity. intro H.
   inversion H; subst. simpl. rewrite lift_context_snoc0.
   constructor.
-  - apply Forall2_length in H4. destruct H4.
+  - apply All2_length in H4. destruct H4.
     clear -H2. apply (lift_eq_decl _ #|Γ''| (#|indctx| + #|Γ'|)) in H2.
     unfold lift_decl, map_decl in H2; cbn in H2.
     assert (XX : lift #|Γ''| (#|indctx| + #|Γ'|) (mkApps (tInd ind u) (map (lift0 #|indctx|) (firstn npar args) ++ to_extended_list indctx)) = mkApps (tInd ind u) (map (lift0 #|lift_context #|Γ''| #|Γ'| indctx|) (firstn npar (map (lift #|Γ''| #|Γ'|) args)) ++ to_extended_list (lift_context #|Γ''| #|Γ'| indctx)));

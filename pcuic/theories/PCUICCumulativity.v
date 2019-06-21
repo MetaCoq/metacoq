@@ -52,22 +52,23 @@ Qed.
 
 
 Lemma eq_term_upto_univ_refl `{cf : checker_flags} Re Rle :
-  RelationClasses.Reflexive Re ->
-  RelationClasses.Reflexive Rle ->
+  CRelationClasses.Reflexive Re ->
+  CRelationClasses.Reflexive Rle ->
   forall t, eq_term_upto_univ Re Rle t t.
 Proof.
   intros hRe hRle.
   induction t in Rle, hRle |- * using term_forall_list_ind; simpl;
-    try constructor; try apply Forall_Forall2, All_Forall; try easy;
-      try now apply Forall_All, Forall_True.
-  - eapply All_impl ; try eassumption.
-    intros. easy.
+    try constructor; try solve [eapply All_All2; eauto]; try easy;
+      try now apply All2_same.
   - destruct p. constructor; try easy.
-    apply Forall_Forall2, All_Forall.
-    eapply All_impl ; try eassumption.
-    intros. split ; auto.
-  - eapply All_impl. eassumption. now intros x [? ?].
-  - eapply All_impl. eassumption. now intros x [? ?].
+    red in X. eapply All_All2; eauto.
+  - eapply All_All2; eauto. simpl. intuition eauto.
+  - eapply All_All2; eauto. simpl. intuition eauto.
+Qed.
+
+Lemma All_All2_refl {A : Type} {R} {l : list A} : All (fun x : A => R x x) l -> All2 R l l.
+Proof.
+  induction 1; constructor; auto.
 Qed.
 
 Lemma eq_term_refl `{checker_flags} φ t : eq_term φ t t.
@@ -82,9 +83,8 @@ Proof.
   - intro ; apply leq_universe_refl.
 Qed.
 
-
 Lemma eq_term_upto_univ_leq `{cf : checker_flags} :
-  forall (Re Rle : universe -> universe -> Prop) u v,
+  forall (Re Rle : universe -> universe -> Type) u v,
     (forall u u', Re u u' -> Rle u u') ->
     eq_term_upto_univ Re Re u v ->
     eq_term_upto_univ Re Rle u v.
@@ -93,7 +93,7 @@ Proof.
   induction u in v, h |- * using term_forall_list_ind.
   all: simpl ; inversion h ;
        subst ; constructor ; try easy.
-  all: eapply Forall2_impl ; eauto.
+  all: eapply All2_impl ; eauto.
 Qed.
 
 Lemma eq_term_leq_term `{checker_flags} φ t u : eq_term φ t u -> leq_term φ t u.
@@ -111,7 +111,7 @@ Qed.
 
 Lemma eq_term_mkApps `{checker_flags} φ f l f' l' :
   eq_term φ f f' ->
-  Forall2 (eq_term φ) l l' ->
+  All2 (eq_term φ) l l' ->
   eq_term φ (mkApps f l) (mkApps f' l').
 Proof.
   induction l in l', f, f' |- *; intro e; inversion_clear 1.
@@ -128,7 +128,7 @@ Qed.
 
 Lemma leq_term_mkApps `{checker_flags} φ f l f' l' :
   leq_term φ f f' ->
-  Forall2 (eq_term φ) l l' ->
+  All2 (eq_term φ) l l' ->
   leq_term φ (mkApps f l) (mkApps f' l').
 Proof.
   induction l in l', f, f' |- *; intro e; inversion_clear 1.
@@ -216,9 +216,6 @@ Lemma congr_cumul_prod : forall `{checker_flags} Σ Γ na na' M1 M2 N1 N2,
     cumul Σ Γ (tProd na M1 M2) (tProd na' N1 N2).
 Proof.
   intros.
-
-
-
 Admitted.
 
 Inductive conv_pb :=
@@ -502,7 +499,7 @@ Proof.
   - constructor. constructor.
     + eapply eq_term_refl.
     + assumption.
-    + eapply Forall_Forall2. eapply Forall_True.
+    + eapply All2_same.
       intros. split ; eauto. eapply eq_term_refl.
   - eapply cumul_red_l ; eauto.
     constructor. assumption.
@@ -554,7 +551,7 @@ Proof.
   - constructor. constructor.
     + eapply eq_term_refl.
     + assumption.
-    + eapply Forall_Forall2. eapply Forall_True.
+    + eapply All2_same.
       intros. split ; eauto. eapply eq_term_refl.
   - eapply conv_alt_red_l ; eauto.
     constructor. assumption.

@@ -150,32 +150,7 @@ Proof.
     + eapply subslet_app in Hs as (args' & args'' & (-> & H) & H').
       depelim H. simpl in H0. noconf H0.
       hnf in H0. noconf H0. depelim H. rewrite !subst_empty in t0, H', Hargss.
-
-      rewrite subst_empty in H'. simpl in H'.
-
-
-Lemma typing_spine_arity Σ Γ ctx s args :
-  wf_local Σ Γ ->
-  subslet Σ Γ args ctx ->
-  typing_spine Σ Γ (it_mkProd_or_LetIn ctx (tSort s)) args (tSort s).
-Proof.
-  intros wfΓ Hs. revert args Hs; induction ctx using rev_ind; cbn; intros.
-  - depelim Hs. constructor; auto. left. exists [], s. intuition auto.
-  - rewrite it_mkProd_or_LetIn_app. simpl.
-    destruct x as [na [b|] ty]; cbn.
-    eapply subslet_app in Hs as (args' & args'' & (-> & H) & H').
-    depelim H. simpl in H0. noconf H0.
-    hnf in H0. noconf H0. depelim H. rewrite subst_empty.
-    rewrite subst_empty in H'. simpl in H'.
-
-
-
-    depelim Hs. apply (f_equal (@length _)) in H. rewrite app_length in H. simpl in H; elimtype False. lia.
-
-    eapply (type_spine_cons Σ Γ t s0 na T). econstructor. 3:eauto.
-
-
-
+Admitted.
 
 (* Lemma invert_type_mkApps Σ Γ f u T fty : *)
 (*   Σ ;;; Γ |- mkApps f u : T -> *)
@@ -329,11 +304,12 @@ Proof.
         intros. unshelve eapply (IHargs _ _ Heq').
         reflexivity. }
       destruct i as [si Hi].
-      eapply (invert_type_mkApps _ _ (tInd ind u)) in Hi; pcuic.
-      2:{ econstructor; eauto. admit. (* universes *) }
-      2:{ admit. }
-      (* Looks ok *)
       admit.
+      (* eapply (invert_type_mkApps _ _ (tInd ind u)) in Hi; pcuic. *)
+      (* 2:{ econstructor; eauto. admit. (* universes *) } *)
+      (* 2:{ admit. } *)
+      (* (* Looks ok *) *)
+      (* admit. *)
 
     + destruct i as [ui Hi]. exists ui.
       admit. (* Same idea *)

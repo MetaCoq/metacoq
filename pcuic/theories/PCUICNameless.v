@@ -4,7 +4,7 @@ From Coq Require Import Bool String List Program BinPos Compare_dec Arith Lia
      Classes.RelationClasses.
 From MetaCoq.Template
 Require Import config monad_utils utils AstUtils UnivSubst.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICLiftSubst
      PCUICTyping PCUICCumulativity PCUICPosition PCUICUnivSubst.
 From Equations Require Import Equations.
 Require Import Equations.Prop.DepElim.
@@ -104,6 +104,10 @@ Proof.
     + eapply IHu. assumption.
 Qed.
 
+Lemma All2_Forall2 {A} (P : A -> A -> Prop) l l' :
+  All2 P l l' -> Forall2 P l l'.
+Proof. induction 1; constructor; auto. Qed.
+
 Lemma nameless_eq_term_spec :
   forall `{checker_flags} u v,
     nameless u ->
@@ -119,7 +123,7 @@ Proof.
   all: try reflexivity.
   all: try solve [ f_equal ; try ih ; try assumption ].
   - f_equal. cbn in hu, hv.
-    revert args' hu hv H0. induction l ; intros args' hu hv h.
+    revert args' hu hv a. induction l ; intros args' hu hv h.
     + destruct args' ; try solve [ inversion h ].
       reflexivity.
     + destruct args' ; try solve [ inversion h ].
@@ -130,13 +134,13 @@ Proof.
       * eapply H2 ; assumption.
       * eapply IHl ; assumption.
   - f_equal ; try solve [ ih ].
-    eapply eq_univ_make. assumption.
+    eapply eq_univ_make. eapply All2_Forall2. assumption.
   - f_equal ; try solve [ ih ].
-    eapply eq_univ_make. assumption.
+    eapply eq_univ_make. apply All2_Forall2; assumption.
   - f_equal ; try solve [ ih ].
-    eapply eq_univ_make. assumption.
+    eapply eq_univ_make. apply All2_Forall2; assumption.
   - f_equal ; try solve [ ih ].
-    revert brs' H4 H1 H.
+    revert brs' H3 H0 a.
     induction l ; intros brs' h1 h2 h.
     + destruct brs' ; inversion h. reflexivity.
     + destruct brs' ; inversion h. subst.
@@ -147,35 +151,37 @@ Proof.
         f_equal. eapply H11 ; assumption.
       * eapply IHl ; assumption.
   - f_equal ; try solve [ ih ].
-    revert mfix' H2 H3 H0 H1 H.
+    revert mfix' H1 H2 H H0 a.
     induction m ; intros m' h1 h2 h3 h4 h.
     + destruct m' ; inversion h. reflexivity.
     + destruct m' ; inversion h. subst.
       inversion X. subst.
       cbn in h1, h2, h3, h4. destruct_andb.
       f_equal.
-      * destruct a, d. cbn in *. destruct H2 as [? [? ?]].
+      * destruct a, d. cbn in *. destruct H2 as [[? ?] ?].
+        destruct H1 as [Hty Hbod].
         unfold test_def in H7, H. cbn in H7, H.
         destruct_andb. anonify.
         f_equal.
-        -- eapply H1 ; assumption.
-        -- eapply H1 ; assumption.
+        -- eapply Hty; assumption.
+        -- eapply Hbod ; assumption.
         -- assumption.
       * eapply IHm ; assumption.
   - f_equal ; try solve [ ih ].
-    revert mfix' H2 H3 H0 H1 H.
+    revert mfix' H1 H2 H H0 a.
     induction m ; intros m' h1 h2 h3 h4 h.
     + destruct m' ; inversion h. reflexivity.
     + destruct m' ; inversion h. subst.
       inversion X. subst.
       cbn in h1, h2, h3, h4. destruct_andb.
       f_equal.
-      * destruct a, d. cbn in *. destruct H2 as [? [? ?]].
+      * destruct a, d. cbn in *. destruct H2 as [[? ?] ?].
+        destruct H1 as [Hty Hbod].
         unfold test_def in H7, H. cbn in H7, H.
         destruct_andb. anonify.
         f_equal.
-        -- eapply H1 ; assumption.
-        -- eapply H1 ; assumption.
+        -- eapply Hty; assumption.
+        -- eapply Hbod ; assumption.
         -- assumption.
       * eapply IHm ; assumption.
 Qed.
@@ -235,39 +241,10 @@ Proof.
   all: dependent destruction h.
   all: try (simpl ; constructor ; try ih2 ; assumption).
   + cbn. constructor.
-    eapply Forall2_map.
-    eapply Forall2_impl' ; try eassumption.
-    eapply All_Forall. eapply All_impl ; try eassumption.
-    cbn. intros x H1 y H2. eapply H1 ; eauto.
-  + cbn. constructor ; try ih2.
-    eapply Forall2_map.
-    eapply Forall2_impl' ; try eassumption.
-    clear - X hRe. induction X.
-    * constructor.
-    * constructor ; try assumption.
-      intros [n t] [hn ht].
-      split ; try assumption.
-      eapply p ; eauto.
-  + cbn. constructor ; try ih2.
-    eapply Forall2_map.
-    eapply Forall2_impl' ; try eassumption.
-    clear - X hRe. induction X.
-    * constructor.
-    * constructor ; try assumption.
-      intros y [? [? ?]]. repeat split.
-      -- eapply p ; eauto.
-      -- eapply p ; eauto.
-      -- assumption.
-  + cbn. constructor ; try ih2.
-    eapply Forall2_map.
-    eapply Forall2_impl' ; try eassumption.
-    clear - X hRe. induction X.
-    * constructor.
-    * constructor ; try assumption.
-      intros y [? [? ?]]. repeat split.
-      -- eapply p ; eauto.
-      -- eapply p ; eauto.
-      -- assumption.
+    eapply All2_map. solve_all.
+  + cbn. constructor ; try ih2. solve_all.
+  + cbn. constructor ; try ih2. solve_all.
+  + cbn. constructor ; try ih2. solve_all.
 Qed.
 
 Corollary eq_term_nl_eq :
@@ -327,25 +304,14 @@ Proof.
     try ih3 ;
     assumption
   ].
-  - cbn in H1. inversion H1. subst. constructor.
-    apply Forall2_map_inv in H0.
-    eapply Forall2_impl' ; try eassumption.
-    eapply All_Forall. eapply All_impl ; eauto.
-  - cbn in H0. inversion H0. subst. constructor ; try ih3.
-    apply Forall2_map_inv in H.
-    eapply Forall2_impl' ; try eassumption.
-    eapply All_Forall. eapply All_impl ; [ exact X |].
-    intros x H1 y [? ?]. split ; auto.
-  - cbn in H0. inversion H0. subst. constructor.
-    apply Forall2_map_inv in H.
-    eapply Forall2_impl' ; try eassumption.
-    eapply All_Forall. eapply All_impl ; [ exact X |].
-    intros x [? ?] y [? [? ?]]. repeat split ; auto.
-  - cbn in H0. inversion H0. subst. constructor.
-    apply Forall2_map_inv in H.
-    eapply Forall2_impl' ; try eassumption.
-    eapply All_Forall. eapply All_impl ; [ exact X |].
-    intros x [? ?] y [? [? ?]]. repeat split ; auto.
+  - cbn in H. inversion H. subst. constructor.
+    apply All2_map_inv in a. solve_all.
+  - cbn in H. inversion H. subst. constructor ; try ih3.
+    apply All2_map_inv in a. solve_all.
+  - cbn in H. inversion H. subst. constructor ; try ih3.
+    apply All2_map_inv in a. solve_all.
+  - cbn in H. inversion H. subst. constructor ; try ih3.
+    apply All2_map_inv in a. solve_all.
 Qed.
 
 Definition map_decl_anon f (d : context_decl) :=
@@ -393,7 +359,7 @@ Proof.
   - simpl. constructor.
     induction l.
     + constructor.
-    + simpl. inversion H. subst. constructor ; eauto.
+    + simpl. inversion X. subst. constructor ; eauto.
   - simpl. destruct p. constructor ; eauto.
     induction l.
     + constructor.
@@ -404,12 +370,12 @@ Proof.
     + constructor.
     + simpl. inversion X. subst. constructor ; auto.
       repeat split ; auto.
-      all: apply H1 ; eauto.
+      all: apply X0 ; eauto.
   - simpl. constructor. induction m.
     + constructor.
     + simpl. inversion X. subst. constructor ; auto.
       repeat split ; auto.
-      all: apply H1 ; eauto.
+      all: apply X0 ; eauto.
 Qed.
 
 Corollary eq_term_tm_nl :

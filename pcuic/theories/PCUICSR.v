@@ -260,15 +260,7 @@ Proof.
     specialize (IHcumul _ _ _ _ _ _ eq_refl eq_refl).
     intuition auto. apply conv_conv_alt.
     econstructor 3. apply conv_conv_alt. apply a. apply r.
-    (* red conversion *) admit.
-  - depelim r. (* apply mkApps_Fix_eq in x. discriminate. *)
-    (* specialize (IHcumul _ _ _ _ _ _ eq_refl eq_refl). *)
-    (* intuition auto. apply conv_conv_alt. *)
-    (* econstructor 3. apply conv_conv_alt. apply a. apply r. *)
-    (* (* red conversion *) admit. *)
-    (* specialize (IHcumul _ _ _ _ _ _ eq_refl eq_refl). *)
-    (* intuition auto. apply cumul_trans with N2. auto. *)
-    (* eapply cumul_red_r; eauto. *)
+    (* red conversion *) admit. admit.
 Admitted.
 
 Lemma cumul_Sort_inv Σ Γ s s' :

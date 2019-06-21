@@ -1,9 +1,9 @@
 (* Distributed under the terms of the MIT license.   *)
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega Lia.
-From Template Require Import config utils monad_utils BasicAst AstUtils.
-From PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICTyping PCUICWeakening PCUICSubstitution PCUICChecker PCUICRetyping PCUICMetaTheory PCUICWcbvEval PCUICSR  PCUICClosed PCUICGeneration.
-From TemplateExtraction Require Import EAst ELiftSubst ETyping EWcbvEval Extract.
+From MetaCoq.Template Require Import config utils monad_utils BasicAst AstUtils.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICTyping PCUICWeakening PCUICSubstitution PCUICChecker PCUICRetyping PCUICMetaTheory PCUICWcbvEval PCUICSR  PCUICClosed PCUICGeneration.
+From MetaCoq.Extraction Require Import EAst ELiftSubst ETyping EWcbvEval Extract.
 From Equations Require Import Equations.
 Require Import String.
 Local Open Scope list_scope.

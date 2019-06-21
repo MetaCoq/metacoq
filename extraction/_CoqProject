@@ -1,4 +1,6 @@
 -R theories MetaCoq.Extraction
+-R ../pcuic/theories MetaCoq.PCUIC
+-R ../template-coq/theories MetaCoq.Template
 
 theories/EAst.v
 theories/EAstUtils.v
@@ -13,5 +15,4 @@ theories/Extraction.v
 theories/Prelim.v
 theories/ESubstitution.v
 theories/EInversion.v
-theories/EWeakening.v
 theories/ExtractionCorrectness.v

@@ -19,7 +19,7 @@ Definition is_prop_sort s :=
   end.
 
 Parameter is_type_or_proof : forall (Sigma : global_context) (Gamma : context) (t : PCUICAst.term), bool.
-From PCUIC Require Import PCUICTyping.
+From MetaCoq.PCUIC Require Import PCUICTyping.
 
 Definition Is_Type_or_Proof Σ Γ t := ∑ T, Σ ;;; Γ |- t : T × (isArity T + (∑ u, (Σ ;;; Γ |- T : tSort u) * is_prop_sort u))%type.
 

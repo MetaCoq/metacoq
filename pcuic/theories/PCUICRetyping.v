@@ -99,7 +99,6 @@ Section TypeOf.
   Definition sort_of (Γ : context) (t : term) : typing_result universe :=
     ty <- type_of Γ t;;
     type_of_as_sort type_of Γ ty.
-
   Open Scope type_scope.
 
   Notation "'∑'  x .. y , P" := (sigT (fun x => .. (sigT (fun y => P)) ..))

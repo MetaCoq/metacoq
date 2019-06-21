@@ -25,7 +25,7 @@ theories/PCUICWcbvEval.v
 theories/PCUICChecker.v
 theories/PCUICCheckerCompleteness.v
 theories/PCUICRetyping.v
-
+theories/PCUICSR.v
 theories/PCUICPosition.v
 theories/PCUICSafeReduce.v
 theories/PCUICSafeLemmata.v

@@ -256,21 +256,16 @@ Proof.
     intuition auto. apply cumul_trans with N2.
     econstructor 2; eauto. admit. (* Red conversion *)
     auto.
-
-<<<<<<< HEAD
   - depelim r. solve_discr.
     specialize (IHcumul _ _ _ _ _ _ eq_refl eq_refl).
     intuition auto. apply conv_conv_alt.
     econstructor 3. apply conv_conv_alt. apply a. apply r.
     (* red conversion *) admit.
-=======
   - depelim r. (* apply mkApps_Fix_eq in x. discriminate. *)
     (* specialize (IHcumul _ _ _ _ _ _ eq_refl eq_refl). *)
     (* intuition auto. apply conv_conv_alt. *)
     (* econstructor 3. apply conv_conv_alt. apply a. apply r. *)
     (* (* red conversion *) admit. *)
->>>>>>> Prelim state
-
     (* specialize (IHcumul _ _ _ _ _ _ eq_refl eq_refl). *)
     (* intuition auto. apply cumul_trans with N2. auto. *)
     (* eapply cumul_red_r; eauto. *)
@@ -280,16 +275,10 @@ Lemma cumul_Sort_inv Σ Γ s s' :
   Σ ;;; Γ |- tSort s <= tSort s' -> leq_universe (snd Σ) s s'.
 Proof.
   intros H; depind H; auto.
-<<<<<<< HEAD
   - now inversion l.
   - depelim r. solve_discr.
   - depelim r. solve_discr.
 Qed.
-=======
-  - depelim r. admit. 
-  - depelim r. admit.
-Admitted.
->>>>>>> Prelim state
 
 Lemma tProd_it_mkProd_or_LetIn na A B ctx s :
   tProd na A B = it_mkProd_or_LetIn ctx (tSort s) ->

@@ -1748,19 +1748,6 @@ Qed.
 
 Arguments skipn : simpl nomatch.
 
-Lemma Forall2_skipn :
-  forall A B P l l' n,
-    @Forall2 A B P l l' ->
-    Forall2 P (skipn n l) (skipn n l').
-Proof.
-  intros A B P l l' n h.
-  induction n in l, l', h |- *.
-  - assumption.
-  - destruct h.
-    + constructor.
-    + simpl. apply IHn. assumption.
-Qed.
-
 Lemma Forall2_nth_error_Some_l :
   forall A B (P : A -> B -> Prop) l l' n t,
     nth_error l n = Some t ->

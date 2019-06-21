@@ -450,37 +450,97 @@ Proof.
   simpl in *. apply IHu. assumption. constructor; assumption.
 Qed.
 
-Lemma trans_leq_term ϕ T U :
-  T.wf T -> T.wf U -> TTy.leq_term ϕ T U ->
-  leq_term ϕ (trans T) (trans U).
+Lemma eq_term_upto_univ_App `{checker_flags} Re Rle f f' :
+  eq_term_upto_univ Re Rle f f' ->
+  isApp f = isApp f'.
+Proof.
+  inversion 1; reflexivity.
+Qed.
+
+Lemma eq_term_upto_univ_mkApps `{checker_flags} Re Rle f l f' l' :
+  eq_term_upto_univ Re Rle f f' ->
+  Forall2 (eq_term_upto_univ Re Re) l l' ->
+  eq_term_upto_univ Re Rle (mkApps f l) (mkApps f' l').
+Proof.
+  induction l in f, f', l' |- *; intro e; inversion_clear 1.
+  - assumption.
+  - pose proof (eq_term_upto_univ_App _ _ _ _ e).
+    case_eq (isApp f).
+    + intro X; rewrite X in H0.
+      destruct f; try discriminate.
+      destruct f'; try discriminate.
+      cbn. inversion_clear e. eapply IHl.
+      * repeat constructor ; eauto.
+      * assumption.
+    + intro X; rewrite X in H0. simpl.
+      eapply IHl.
+      * constructor. all: eauto.
+      * assumption.
+Qed.
+
+Lemma trans_eq_term_upto_univ Re Rle T U :
+  T.wf T -> T.wf U -> TTy.eq_term_upto_univ Re Rle T U ->
+  eq_term_upto_univ Re Rle (trans T) (trans U).
 Proof.
   intros HT HU H.
-  revert U HU H; induction HT using Template.Induction.term_wf_forall_list_ind; intros U HU HH; inversion HH; subst; simpl; repeat constructor; unfold leq_term in *;
-    inversion_clear HU; try easy.
-  - eapply Forall2_map. eapply Forall2_impl.
-    eapply Forall_Forall2_and. 2: eassumption.
-    eapply Forall_Forall2_and'; eassumption.
-    cbn. now intros x y [? [? ?]].
-  - eapply PCUICCumulativity.leq_term_mkApps; unfold leq_term. easy.
+  revert U HU H.
+  induction HT in Rle |- * using Template.Induction.term_wf_forall_list_ind.
+  all: intros U HU HH.
+  all: try solve [
+    inversion HH ; subst ; simpl ;
+    repeat constructor ;
+    inversion_clear HU ; try easy
+  ].
+  - dependent destruction HH. simpl.
+    dependent destruction HU.
+    econstructor.
     eapply Forall2_map. eapply Forall2_impl.
-    eapply Forall_Forall2_and. 2: eassumption.
-    eapply Forall_Forall2_and'; eassumption.
-    cbn. now intros x y [? [? ?]].
-  - eapply Forall2_map. eapply Forall2_impl.
-    eapply Forall_Forall2_and. 2: eassumption.
-    eapply Forall_Forall2_and'; eassumption.
-    cbn. now intros x y [? [? ?]].
-  - eapply Forall2_map. eapply Forall2_impl.
+    + eapply Forall_Forall2_and. 2: eassumption.
+      eapply Forall_Forall2_and'. all: eassumption.
+    + simpl. intros x y [H2 [HHH H4]].
+      eapply H2 ; eauto.
+  - dependent destruction HH. simpl.
+    dependent destruction HU.
+    eapply eq_term_upto_univ_mkApps.
+    + eapply IHHT ; eauto.
+    + eapply Forall2_map. eapply Forall2_impl.
+      * eapply Forall_Forall2_and. 2: eassumption.
+        eapply Forall_Forall2_and'. all: eassumption.
+      * simpl. intros x y [H7 [? ?]].
+        eapply H7 ; eauto.
+  - dependent destruction HH. simpl.
+    dependent destruction HU.
+    econstructor.
+    all: try solve [ repeat econstructor ; easy ].
+    eapply Forall2_map. eapply Forall2_impl.
+    + eapply Forall_Forall2_and. 2: eassumption.
+      eapply Forall_Forall2_and'. all: eassumption.
+    + simpl. intros x y [H2 [[? ?] ?]].
+      split ; eauto.
+  - dependent destruction HH. simpl.
+    dependent destruction HU.
+    econstructor.
+    eapply Forall2_map. eapply Forall2_impl.
     eapply Forall_Forall2_and. 2: exact H.
     eapply Forall_Forall2_and. 2: exact H0.
     eapply Forall_Forall2_and'; eassumption.
     cbn. now intros x y [? [? ?]].
-  - eapply Forall2_map. eapply Forall2_impl.
+  - dependent destruction HH. simpl.
+    dependent destruction HU.
+    econstructor.
+    eapply Forall2_map. eapply Forall2_impl.
     eapply Forall_Forall2_and. 2: exact H.
     eapply Forall_Forall2_and'; eassumption.
     cbn. now intros x y [? [? ?]].
 Qed.
 
+Lemma trans_leq_term ϕ T U :
+  T.wf T -> T.wf U -> TTy.leq_term ϕ T U ->
+  leq_term ϕ (trans T) (trans U).
+Proof.
+  intros HT HU H.
+  eapply trans_eq_term_upto_univ ; eauto.
+Qed.
 
 (* Lemma wf_mkApps t u : T.wf (T.mkApps t u) -> List.Forall T.wf u. *)
 (* Proof. *)

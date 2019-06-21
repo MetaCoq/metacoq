@@ -84,7 +84,7 @@ Local Ltac anonify :=
 
 Local Ltac ih :=
   lazymatch goal with
-  | ih : forall v : term, _ -> _ -> eq_term_upto_univ _ _ _ -> ?u = _
+  | ih : forall v : term, _ -> _ -> eq_term_upto_univ _ _ _ _ -> ?u = _
     |- ?u = ?v =>
     eapply ih ; assumption
   end.
@@ -108,7 +108,7 @@ Lemma nameless_eq_term_spec :
   forall `{checker_flags} u v,
     nameless u ->
     nameless v ->
-    eq_term_upto_univ eq u v ->
+    eq_term_upto_univ eq eq u v ->
     u = v.
 Proof.
   intros flags u v hu hv e.
@@ -217,61 +217,62 @@ Qed.
 
 Local Ltac ih2 :=
   lazymatch goal with
-  | ih : forall v : term, eq_term_upto_univ _ ?u _ -> _
-    |- eq_term_upto_univ _ (nl ?u) _ =>
+  | ih : forall Rle v, _ -> eq_term_upto_univ _ _ ?u _ -> _
+    |- eq_term_upto_univ _ _ (nl ?u) _ =>
     eapply ih ; assumption
   end.
 
 (* TODO Instead prove eq_term t (nl t) + symmetry and transitivity *)
 Lemma eq_term_upto_univ_nl :
-  forall `{checker_flags} R u v,
-    Reflexive R ->
-    eq_term_upto_univ R u v ->
-    eq_term_upto_univ R (nl u) (nl v).
+  forall `{checker_flags} Re Rle u v,
+    Reflexive Re ->
+    Reflexive Rle ->
+    eq_term_upto_univ Re Rle u v ->
+    eq_term_upto_univ Re Rle (nl u) (nl v).
 Proof.
-  intros flags R u v hR h.
-  revert v h.
-  induction u using term_forall_list_ind ; intros v h.
+  intros flags Re Rle u v hRe hRle h.
+  induction u in v, h, Rle, hRle |- * using term_forall_list_ind.
   all: dependent destruction h.
   all: try (simpl ; constructor ; try ih2 ; assumption).
   + cbn. constructor.
     eapply Forall2_map.
     eapply Forall2_impl' ; try eassumption.
-    eapply All_Forall. assumption.
+    eapply All_Forall. eapply All_impl ; try eassumption.
+    cbn. intros x H1 y H2. eapply H1 ; eauto.
   + cbn. constructor ; try ih2.
     eapply Forall2_map.
     eapply Forall2_impl' ; try eassumption.
-    clear - X. induction X.
+    clear - X hRe. induction X.
     * constructor.
     * constructor ; try assumption.
       intros [n t] [hn ht].
       split ; try assumption.
-      eapply p. assumption.
+      eapply p ; eauto.
   + cbn. constructor ; try ih2.
     eapply Forall2_map.
     eapply Forall2_impl' ; try eassumption.
-    clear - X. induction X.
+    clear - X hRe. induction X.
     * constructor.
     * constructor ; try assumption.
       intros y [? [? ?]]. repeat split.
-      -- eapply p. assumption.
-      -- eapply p. assumption.
+      -- eapply p ; eauto.
+      -- eapply p ; eauto.
       -- assumption.
   + cbn. constructor ; try ih2.
     eapply Forall2_map.
     eapply Forall2_impl' ; try eassumption.
-    clear - X. induction X.
+    clear - X hRe. induction X.
     * constructor.
     * constructor ; try assumption.
       intros y [? [? ?]]. repeat split.
-      -- eapply p. assumption.
-      -- eapply p. assumption.
+      -- eapply p ; eauto.
+      -- eapply p ; eauto.
       -- assumption.
 Qed.
 
 Corollary eq_term_nl_eq :
   forall `{checker_flags} u v,
-    eq_term_upto_univ eq u v ->
+    eq_term_upto_univ eq eq u v ->
     nl u = nl v.
 Proof.
   intros flags u v h.
@@ -280,13 +281,14 @@ Proof.
   - eapply nl_spec.
   - eapply eq_term_upto_univ_nl.
     + intro. reflexivity.
+    + intro. reflexivity.
     + assumption.
 Qed.
 
 Local Ltac ih3 :=
   lazymatch goal with
-  | ih : forall v : term, eq_term_upto_univ _ (nl ?u) _ -> _
-    |- eq_term_upto_univ _ ?u _ =>
+  | ih : forall Rle v, _ -> eq_term_upto_univ _ _ (nl ?u) _ -> _
+    |- eq_term_upto_univ _ _ ?u _ =>
     eapply ih ; assumption
   end.
 
@@ -306,14 +308,14 @@ Proof.
 Qed.
 
 Lemma eq_term_upto_univ_nl_inv :
-  forall `{checker_flags} R u v,
-    Reflexive R ->
-    eq_term_upto_univ R (nl u) (nl v) ->
-    eq_term_upto_univ R u v.
+  forall `{checker_flags} Re Rle u v,
+    Reflexive Re ->
+    Reflexive Rle ->
+    eq_term_upto_univ Re Rle (nl u) (nl v) ->
+    eq_term_upto_univ Re Rle u v.
 Proof.
-  intros flags R u v hR h.
-  revert v h.
-  induction u using term_forall_list_ind ; intros v h.
+  intros flags Re Rle u v hRe hRle h.
+  induction u in v, h, Rle, hRle |- * using term_forall_list_ind.
   all: dependent destruction h.
   all: destruct v ; try discriminate.
   all: try solve [
@@ -328,7 +330,7 @@ Proof.
   - cbn in H1. inversion H1. subst. constructor.
     apply Forall2_map_inv in H0.
     eapply Forall2_impl' ; try eassumption.
-    eapply All_Forall. assumption.
+    eapply All_Forall. eapply All_impl ; eauto.
   - cbn in H0. inversion H0. subst. constructor ; try ih3.
     apply Forall2_map_inv in H.
     eapply Forall2_impl' ; try eassumption.
@@ -378,21 +380,21 @@ Proof.
 Qed.
 
 Lemma eq_term_upto_univ_tm_nl :
-  forall `{checker_flags} R u,
-    Reflexive R ->
-    eq_term_upto_univ R u (nl u).
+  forall `{checker_flags} Re Rle u,
+    Reflexive Re ->
+    Reflexive Rle ->
+    eq_term_upto_univ Re Rle u (nl u).
 Proof.
-  intros flags R u hR.
-  induction u using term_forall_list_ind.
+  intros flags Re Rle u hRe hRle.
+  induction u in Rle, hRle |- * using term_forall_list_ind.
   all: try solve [
-    simpl ; try apply eq_term_upto_univ_refl ; auto ; constructor ; assumption
+    simpl ; try apply eq_term_upto_univ_refl ; auto ; constructor ; eauto
   ].
   - simpl. constructor.
     induction l.
     + constructor.
-    + simpl. inversion H. subst. constructor ; try assumption.
-      eapply IHl. assumption.
-  - simpl. destruct p. constructor ; try assumption.
+    + simpl. inversion H. subst. constructor ; eauto.
+  - simpl. destruct p. constructor ; eauto.
     induction l.
     + constructor.
     + simpl. inversion X. subst. constructor.
@@ -402,12 +404,12 @@ Proof.
     + constructor.
     + simpl. inversion X. subst. constructor ; auto.
       repeat split ; auto.
-      all: apply H1.
+      all: apply H1 ; eauto.
   - simpl. constructor. induction m.
     + constructor.
     + simpl. inversion X. subst. constructor ; auto.
       repeat split ; auto.
-      all: apply H1.
+      all: apply H1 ; eauto.
 Qed.
 
 Corollary eq_term_tm_nl :
@@ -416,7 +418,8 @@ Corollary eq_term_tm_nl :
 Proof.
   intros flags G u.
   eapply eq_term_upto_univ_tm_nl.
-  intro. eapply eq_universe'_refl.
+  - intro. eapply eq_universe'_refl.
+  - intro. eapply eq_universe'_refl.
 Qed.
 
 Definition nl_constant_body c :=

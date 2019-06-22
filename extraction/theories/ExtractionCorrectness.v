@@ -3,7 +3,10 @@
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
 From MetaCoq.Template Require Import config utils monad_utils BasicAst AstUtils.
 From MetaCoq.Extraction Require Import EAst ELiftSubst ETyping EWcbvEval Extract Prelim ESubstitution EInversion.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICTyping PCUICWeakening PCUICSubstitution PCUICChecker PCUICRetyping PCUICMetaTheory PCUICWcbvEval PCUICSR  PCUICClosed.
+From MetaCoq.PCUIC Require Import PCUICTyping PCUICAst PCUICAstUtils PCUICInduction  PCUICWeakening PCUICSubstitution PCUICChecker PCUICRetyping PCUICMetaTheory PCUICWcbvEval PCUICSR  PCUICClosed PCUICInversion.
+
+Lemma Alli_impl {A} {P Q} (l : list A) {n} : Alli P n l -> (forall n x, P n x -> Q n x) -> Alli Q n l.
+Proof. induction 1; try constructor; intuition auto. Defined.
 
 Require Import String.
 Local Open Scope string_scope.
@@ -136,7 +139,8 @@ Inductive red_decls Σ Γ Γ' : forall (x y : PCUICAst.context_decl), Type :=
 
 Notation red_context := (context_relation red_decls).
 
-Lemma env_prop_imp P1 P2 :
+
+Lemma env_prop_imp `{checker_flags} P1 P2 :
   (forall Σ Γ t T, P1 Σ Γ t T -> P2 Σ Γ t T) ->
   env_prop P1 -> env_prop P2.
 Proof.
@@ -155,30 +159,42 @@ Proof.
       eauto.
     + clear IHf. cbv in *.
       inv o. econstructor; eauto.
-      * eapply Alli_impl. eassumption. intros.
+      * eapply Alli_impl. eassumption. intros. 
         inv X0.
-        econstructor. inv onArity.
-        econstructor. inv X0. econstructor.
-        eauto. eauto. cbv in onConstructors.
-        eapply Alli_impl. eauto. intros. cbn in *.
-        destruct X0. cbv. split; eauto.
-        destruct s. eexists. eapply X. eauto.
-        cbv in onProjections.
-        eapply Alli_impl. eassumption.
-        clear - X. intros. cbn in *.
-        cbv. destruct ?. destruct X0. split; eauto.
-        destruct s. eexists; eauto.
+        unshelve epose (_ : (on_constructors
+                               (fun (Σ : list PCUICAst.global_decl × Universes.ConstraintSet.t_) (Γ : list PCUICAst.context_decl) 
+                                  (t : PCUICAst.term) (T : option PCUICAst.term) =>
+                                  match T with
+                                  | Some T0 => P2 Σ Γ t T0
+                                  | None => ∑ s : ∑ l : list (Universes.Level.t × bool), [] = l -> False, P2 Σ Γ t (PCUICAst.tSort s)
+                                  end) (Σ, c) k m n x (PCUICAst.ind_ctors x))
+                       ).
+        {
+          clear - onConstructors X. eapply Alli_impl. eassumption.
+          intros. inv X0. econstructor. inv X1. exists x1. eauto.
+          destruct X2. exists x1. admit.
+        } 
+        
+        econstructor. eassumption. inv onArity.
+        econstructor. eauto. intros. eapply onProjections in H. inv H.
+        econstructor. all:eauto.
+        eapply Alli_impl. eauto. intros. cbn in *. destruct X0. exists x1. eauto.
+        instantiate (1 := o).
+        unfold check_ind_sorts in *.
+        destruct ?. intros. subst. destruct onConstructors. cbn in *. eauto. subst o.
+        cbn. admit. admit. admit.
       * inv onParams.
         -- econstructor.
         -- econstructor. 2:{ destruct X1. eexists; eauto. }
            clear - X X0. induction X0. econstructor.
            econstructor. eauto. destruct t0. eexists; eauto.
-           eauto.
+           econstructor. eauto. eauto.
         -- unfold on_context. econstructor.
            2:{ eauto. } clear - X X0. induction X0. econstructor.
            econstructor. eauto. destruct t0. eexists; eauto.
-           eauto.
-Qed.
+           econstructor; eauto.
+Admitted.
+
 
 Lemma red_context_conversion :
   env_prop
@@ -444,7 +460,7 @@ Lemma Is_type_lambda Σ Γ na T1 t :
   Is_Type_or_Proof Σ (vass na T1 :: Γ) t.
 Proof.
   intros ? (T & ? & ?).
-  eapply type_Lambda_inv in t0 as (? & ? & [] & ?).
+  eapply inversion_Lambda in t0 as (? & ? & ? & ? & ?).
   exists x0. split; eauto. destruct s as [ | (u & ? & ?)].
   - left. admit.
   - right. exists u. split; eauto.
@@ -576,13 +592,13 @@ Proof.
   - assert (Hty' := Hty).
     Hint Constructors PCUICWcbvEval.eval.
     assert (eval Σ [] (PCUICAst.tApp f a) res) by eauto.
-    eapply PCUICValidity.invert_type_App in Hty as (? & ? & ? & [] & ?).
+    eapply inversion_App in Hty as (? & ? & ? & ? & ? & ?).
         
     inv He.
     + eapply IHeval1 in H4 as (vf' & Hvf' & He_vf'); eauto.
       eapply IHeval2 in H6 as (vu' & Hvu' & He_vu'); eauto.
       pose proof (subject_reduction_eval Σ [] _ _ _ extr_env_wf'0 t0 H).
-        eapply type_Lambda_inv in X0 as (? & ? & [] & ?).
+        eapply inversion_Lambda in X0 as (? & ? & ? & ? & ?).
         assert (Σ ;;; [] |- a' : t). {
           eapply subject_reduction_eval; eauto.
           eapply cumul_Prod_inv in c0 as [].
@@ -608,7 +624,7 @@ Proof.
       eapply Is_type_eval; eauto.
   - assert (Hty' := Hty).
     assert (Σ ;;; [] |- tLetIn na b0 t b1 ▷ res) by eauto.
-    eapply type_tLetIn_inv in Hty' as (? & ? & [[]] & ?).
+    eapply inversion_LetIn in Hty' as (? & ? & ? & ? & ? & ?).
 
     inv He.
     + eapply IHeval1 in H6 as (vt1' & Hvt2' & He_vt1'); eauto.
@@ -728,14 +744,14 @@ Proof.
                  
                  unfold isConstruct_app in H8.
                  destruct (decompose_app t) eqn:EE.
-                 assert (E2 : fst (decompose_app t) = t1) by now rewrite EE.
+                 assert (E2 : fst (decompose_app t) = t1) by now rewrite EE. 
                  destruct t1.
                  all:inv H8.
                  (* erewrite <- PCUICConfluence.fst_decompose_app_rec in E2. *)
                  
                  pose proof (PCUICConfluence.decompose_app_rec_inv EE).
                  cbn in H7. subst.
-                 assert (∑ T, Σ ;;; [] |- mkApps (tConstruct i n u) l : T) as [T' HT'].
+                 assert (∑ T, Σ ;;; [] |- mkApps (tConstruct ind n ui) l : T) as [T' HT'].
                  { eapply typing_spine_eval in t0; eauto.
                    eapply typing_spine_In; eauto.
                    eapply nth_error_In; eauto. }
@@ -808,7 +824,7 @@ Proof.
     + exists tBox. split. econstructor.
       eapply Is_type_eval. 3: eassumption. eauto. eauto. econstructor. eauto.
   - pose (Hty' := Hty).
-    eapply type_proj_inv in Hty' as [[[[[]]]] [[[]]]].
+    eapply inversion_Proj in Hty' as (? & ? & ? & [] & ? & ? & ? & ? & ?). 
     inv He.
     + eapply IHeval1 in H6 as (vc' & Hvc' & Hty_vc'); eauto.
       eapply erases_mkApps_inv in Hvc'; eauto.
@@ -821,14 +837,14 @@ Proof.
         pose proof (Ee.eval_to_value _ _ _ Hty_vc').
         eapply value_app_inv in H3. subst. eassumption.        
       * eapply Forall2_nth_error_Some in H5 as (? & ? & ?); eauto.
-        assert (Σ ;;; [] |- mkApps (tConstruct i k u) args : mkApps (tInd (fst (fst (i, pars, arg))) u0) l).
+        assert (Σ ;;; [] |- mkApps (tConstruct i k u) args : mkApps (tInd i x) x2).
         eapply subject_reduction_eval; eauto.
         eapply type_mkApps_inv in X as (? & ? & [] & ?); eauto.
-        eapply typing_spine_In in t1 as [].
+        eapply typing_spine_In in t2 as [].
         2: eapply nth_error_In; eauto.
         eapply IHeval2 in H5 as (? & ? & ?); eauto. 
         inv H4.
-        -- exists x5. split; eauto. econstructor. eauto.
+        -- exists x9. split; eauto. econstructor. eauto.
            rewrite <- nth_default_eq. unfold nth_default. now rewrite H3.
         -- exists tBox. split. econstructor.
            eapply Is_type_eval; eauto. admit (* kelim restrictions *).

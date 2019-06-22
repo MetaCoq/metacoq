@@ -12,7 +12,6 @@ Import MonadNotation.
 
 Existing Instance config.default_checker_flags.
 
-<<<<<<< HEAD
 Definition is_prop_sort s :=
   match Universe.level s with
   | Some l => Level.is_prop l

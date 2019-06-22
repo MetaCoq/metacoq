@@ -262,10 +262,12 @@ Lemma All2_map_right {A B C} (P : A -> C -> Type) l l' (f : B -> C) :
   All2 (fun x y => P x (f y)) l l' -> All2 P  l (map f l').
 Proof. intros. rewrite <- (map_id l). eapply All2_map; eauto. Qed.
 
+Definition Is_proof Σ Γ t := ∑ T u, Σ ;;; Γ |- t : T × Σ ;;; Γ |- T : tSort u × is_prop_sort u.
+
 Lemma erases_extract Σ Γ t T :
   wf Σ ->
   Σ ;;; Γ |- t : T ->
-  erases Σ Γ t (extract Σ Γ t).
+                erases Σ Γ t (extract Σ Γ t).
 Proof.
   Hint Constructors typing erases.
   Hint Resolve is_type_or_proof_spec.
@@ -274,16 +276,16 @@ Proof.
   revert Σ X Γ X1 t T X0.  
   eapply typing_ind_env; intros.
   all: try now cbn; destruct ?; [ 
-    econstructor; eauto;
-    eapply is_type_or_proof_spec; eauto | eauto ].
+                               econstructor; eauto;
+                               eapply is_type_or_proof_spec; eauto | eauto ].
   all: try now cbn; destruct ?;
-    econstructor; eauto;
+                             econstructor; eauto;
     eapply is_type_or_proof_spec; eauto;
-    match goal with [H : is_type_or_proof ?Σ ?Γ ?t = false |- _] =>
-                    enough (is_type_or_proof Σ Γ t = true) by congruence;
-                      eapply is_type_or_proof_spec; eauto;
-                        eexists; split; eauto; now left
-    end.
+      match goal with [H : is_type_or_proof ?Σ ?Γ ?t = false |- _] =>
+                      enough (is_type_or_proof Σ Γ t = true) by congruence;
+                        eapply is_type_or_proof_spec; eauto;
+                          eexists; split; eauto; now left
+      end.
   - cbn.  destruct ?.
     econstructor; eauto.
     eapply is_type_or_proof_spec; eauto.
@@ -294,25 +296,23 @@ Proof.
     eapply PCUICValidity.validity in X1 as [_ ?]; eauto.
     now eapply WfArity_Arity.
   - cbn. destruct ?.
-    econstructor. eapply is_type_or_proof_spec; eauto. econstructor; eauto.
-    eapply All2_impl; eauto. firstorder.
+    econstructor.  eapply is_type_or_proof_spec; eauto. econstructor; eauto.
+    eapply All2_impl; eauto. firstorder. 
     econstructor; eauto.
+    
+    Lemma elim_restriction_works Σ Γ ind npar p c brs u :
+      (Is_proof Σ Γ (tCase (ind, npar) p c brs) -> False) -> Informative Σ ind u.
+    Proof.
+    Admitted.
+    eapply elim_restriction_works. intros.
+    assert (Is_Type_or_Proof Σ Γ (tCase (ind, npar) p c brs)).
+    destruct X4 as (? & ? & ? & ? & ?). exists x. split. eauto. right. eauto.
+    eapply is_type_or_proof_spec in X5. congruence. econstructor; eauto.
+    eapply All2_impl. eassumption. firstorder.
+    
     eapply All2_map_right. cbn. eapply All_All2.
     2:{ intros. eapply X4. }
     eapply All2_All_left. eassumption. firstorder.
-    (* destruct ?. *)
-    (* + destruct ?. *)
-    (*   * eauto. *)
-    (*   * destruct p0. econstructor. *)
-    (*     destruct (extract Σ Γ c); inv E0. eauto. *)
-    (*     inv X3. eapply X4. *)
-    (* + econstructor. eauto. *)
-    (*   eapply All2_map_right. *)
-    (*   cbn. *)
-    (*   eapply All_All2. *)
-    (*   2:{ intros. eapply X4. } *)
-    (*   eapply All2_All_left. eassumption. *)
-    (*   firstorder. *)
   - cbn.
     assert (wf_local Σ (Γ ,,, PCUICLiftSubst.fix_context mfix)).
     {  destruct mfix. eauto. inv X0.
@@ -341,20 +341,20 @@ Proof.
       firstorder.
   - eauto.
 Qed.
-    
-Lemma extract_erases_ind Σ t T t' :
-  wf Σ ->
-  Σ ;;; [] |- t : T ->
-  computational_type Σ T ->              
-  value t ->
-  erases Σ [] t t' ->
-  t' = extract Σ [] t.
-Proof.
-  intros. destruct T; destruct H as (? & ? & ?); cbn in *; try congruence.
-  - destruct T1; inv H.
-    admit.
-  - inv H. admit.
-Admitted.
+
+(* Lemma extract_erases_ind Σ t T' t : *)
+(*   wf Σ -> *)
+(*   Σ ;;; [] |- t : T -> *)
+(*   computational_type Σ T ->               *)
+(*   value t -> *)
+(*   erases Σ [] t t' -> *)
+(*   t' = extract Σ [] t. *)
+(* Proof. *)
+(*   intros. destruct T; destruct H as (? & ? & ?); cbn in *; try congruence. *)
+(*   - destruct T1; inv H. *)
+(*     admit. *)
+(*   - inv H. admit. *)
+(* Admitted. *)
 
 Lemma Is_type_or_proof_instance_constr Σ Γ T u :
   wf Σ ->  wf_local Σ Γ ->
@@ -389,11 +389,12 @@ Proof.
   all:cbn.
   - econstructor. admit.
   - econstructor. eauto. admit.
-  - econstructor. eauto. eapply All2_map_left.
-    eapply All2_impl_In; eauto.
-    intros; cbn in *. destruct H6. split; eauto.
-    eapply All2_All_left in X3. 2:{ intros. destruct X4. exact e1. }
-    eapply All_In in X3; eauto. destruct X3 as []. eapply H6. eauto.    
+  - (* econstructor. eauto. eapply All2_map_left. *)
+    (* eapply All2_impl_In; eauto. *)
+    (* intros; cbn in *. destruct H6. split; eauto. *)
+    (* eapply All2_All_left in X3. 2:{ intros. destruct X4. exact e1. } *)
+  (* eapply All_In in X3; eauto. destruct X3 as []. eapply H6. eauto.     *)
+    admit.
   - econstructor. eauto. eapply All2_map_left.
     eapply All2_impl_In; eauto.
     intros; cbn in *. destruct H2 as (? & ? & ?). repeat split; eauto.
@@ -576,8 +577,6 @@ Proof.
       * eauto.
 Qed.
 
-(* Definition erases_global (Σ : global_declarations) (Σ' : E.global_declarations) := True. *)
-
 Lemma erases_correct Σ t T t' v Σ' :
   extraction_pre Σ ->
   Σ;;; [] |- t : T ->
@@ -654,52 +653,101 @@ Proof.
   - inv isdecl.
   - assert (Hty' := Hty).
     assert (Σ ;;; [] |- tCase (ind, pars) p discr brs ▷ res) by eauto.
-    eapply type_Case_inv in Hty' as [[[[[[[[[]]]]]]]] [[[[]]]] ]; repeat destruct p0.
+    eapply inversion_Case in Hty' as (u' & args' & mdecl & idecl & pty & indctx & pctx & ps & btys & ? & ? & ? & ? & ? & ? & ? & ? & ?).
+    assert (Σ ;;; [] |- mkApps (tConstruct ind c u) args :  mkApps (tInd ind u') args').
+    eapply subject_reduction_eval; eauto.
+    eapply type_mkApps_inv in X0 as (? & ? & [] & ?); eauto.
+    eapply inversion_Construct in t1 as (mdecl' & idecl' & cdecl & ? & ? & ? & ?).
+    assert (d1 := d0).
+    destruct d0.
+
+    Lemma declared_inductive_inj {Σ mdecl mdecl' ind idecl idecl'} :
+      declared_inductive Σ mdecl' ind idecl' ->
+      declared_inductive Σ mdecl ind idecl ->
+      mdecl = mdecl' /\ idecl = idecl'.
+    Proof.
+      intros [] []. unfold declared_minductive in *.
+      rewrite H in H1. inv H1. rewrite H2 in H0. inv H0. eauto.
+    Qed.
+
+    edestruct (declared_inductive_inj H1 d). subst.
+        
+    Lemma length_of_btys {ind mdecl' idecl' args' u' p pty indctx pctx ps btys} :
+      types_of_case ind mdecl' idecl' (firstn (ind_npars mdecl') args') u' p pty = Some (indctx, pctx, ps, btys) ->
+      #|btys| = #|ind_ctors idecl'|.
+    Proof.
+    Admitted.
+
+    pose proof (length_of_btys e0).
+    
     inv He.
-    + eapply IHeval1 in H7 as (v' & Hv' & He_v'); eauto.
+    + eapply IHeval1 in H11 as (v' & Hv' & He_v'); eauto.
       eapply erases_mkApps_inv in Hv' as [(? & ? & ? & ? & [] & ? & ? & ?) | (? & ? & ? & ? & ?)]; eauto.
       3: eapply subject_reduction_eval; eauto.
       * subst.
 
-        Lemma kelim_works_empty_ctx Σ ind pars p c u args brs T :
-          Σ ;;; [] |- tCase (ind, pars) p (mkApps (tConstruct ind c u) args) brs : T ->
-          Is_Type_or_Proof Σ [] ((mkApps (tConstruct ind c u) args)) ->
-          squash (Is_Type_or_Proof Σ [] (tCase (ind, pars) p (mkApps (tConstruct ind c u) args) brs)) \/
-          exists n x, brs = [(n,x)] /\ squash (All (Is_Type_or_Proof Σ []) args).
+        Lemma Informative_tConstruct_proof Σ mib ind ib u u0 args c:
+          declared_inductive (fst Σ) mib ind ib ->
+          Informative Σ ind u0 ->
+          Is_Type_or_Proof Σ [] (mkApps (tConstruct ind c u) args) ->
+          Is_Singleton Σ mib ind ib u0.
         Admitted.
 
-        eapply Is_type_app in X0; eauto.
-        2:{ rewrite mkApps_nested. eapply subject_reduction_eval; eauto. }
-        rewrite mkApps_nested in X0.
+        eapply Informative_tConstruct_proof in H10; eauto. destruct H10.
         
-        eapply kelim_works_empty_ctx in X0.
-        2:{ econstructor. 4:eassumption. all:eauto. admit. (* declared inductive *)
-            eapply subject_reduction_eval; eauto. }
-        destruct X0 as [[] | (? & ? & ? & [])].
-        -- exists tBox. split. econstructor.
-           eapply Is_type_eval. eauto. 2:eassumption.
-           econstructor. eapply eval_app_constr. admit. admit.
-           eassumption. admit.
-        -- admit.
-      * subst. inv H3.
-        -- unfold iota_red in *.
-           destruct (nth_error brs c) eqn:Hnth.
-           2:{  (* Branches can't be too few, ensured by typing *)
-             admit. }
-           rewrite <- nth_default_eq in *. unfold nth_default in *.
-           rewrite Hnth in *.
+        destruct (ind_ctors idecl'). cbn in H2. destruct c; inv H2.
+        destruct l; cbn in *; try omega. destruct c as [ | []]; cbn in H2; inv H2.
 
-           destruct (All2_nth_error_Some _ _ H8 Hnth) as (? & ? & ? & ?).
-           destruct (All2_nth_error_Some _ _ a Hnth) as (? & ? & ? & ?).
-           destruct p0, x. cbn in *. subst.
-           edestruct IHeval2 as (? & ? & ?).
-           eapply type_mkApps. eauto. admit (* typing_spine skip *).
-           eapply erases_mkApps. eauto.
-           eapply Forall2_skipn. eauto.
-           exists x. split; eauto.
-           econstructor; eauto. unfold ETyping.iota_red.
+        destruct btys as [ | ? []]; cbn in H3; try omega. clear H3 H4.
+        eapply H7 in d1. inv a. inv X3. inv H12. inv H9. destruct H4.
+
+        edestruct (IHeval2) as (? & ? & ?).
+        eapply subject_reduction. eauto. exact Hty.
+        etransitivity.
+        eapply PCUICReduction.red_case. econstructor. eapply wcbeval_red. eauto. econstructor. econstructor. econstructor.
+        econstructor. econstructor. econstructor.
+        unfold iota_red. cbn.
+        eapply erases_mkApps. eauto.
+        eapply Forall2_skipn. admit.
+
+        destruct x4; cbn in e2; subst. destruct X2. destruct p0; cbn in e2; subst. cbn in *.  destruct y. 
+        exists x5. split; eauto. eapply eval_iota_sing.  2:eauto.
+        pose proof (Ee.eval_to_value _ _ _ He_v').
+        eapply value_app_inv in H4. subst. eassumption. cbn in H3. admit. (* somehow H3 *)
+      * subst. unfold iota_red in *.
+        destruct (nth_error brs c) eqn:Hnth.
+        2:{ eapply nth_error_None in Hnth. erewrite All2_length in Hnth. 2:exact a. rewrite H3 in Hnth.
+            eapply nth_error_Some_length in H2. cbn in H2. omega.
+        }
+        rewrite <- nth_default_eq in *. unfold nth_default in *.
+        rewrite Hnth in *.
+
+        destruct (All2_nth_error_Some _ _ H12 Hnth) as (? & ? & ? & ?).
+        destruct (All2_nth_error_Some _ _ a Hnth) as (? & ? & ? & ?).
+        destruct p0, x4. cbn in *. subst.
+        edestruct IHeval2 as (? & ? & ?).
+        eapply type_mkApps. eauto. admit (* typing_spine skip *).
+        eapply erases_mkApps. eauto.
+        eapply Forall2_skipn. eauto.
+        inv H5.
+        -- exists x4. split; eauto.
+           econstructor. eauto. unfold ETyping.iota_red.
            rewrite <- nth_default_eq. unfold nth_default. rewrite e. cbn. eauto.
-        -- admit.
+        -- exists x4. split; eauto.
+           eapply Informative_tConstruct_proof with (args := []) in X1.
+           all:eauto. destruct X1.
+           destruct (ind_ctors idecl') as [ | ? []]; cbn in H5; try omega.
+           destruct btys as [ | ? []]; cbn in H3; try omega. destruct c; inv e4.
+           destruct c; inv H2. 2:{ destruct c; inv H11. }
+           destruct btys as [ | ? []]; cbn in H3; try omega. inv a. inv X2.
+           destruct X1. destruct x1, p0. cbn in *; subst.
+           inv H12. inv H14. destruct H11. cbn in *; subst. destruct y. cbn in *.
+           inv Hnth. inv e4. destruct x3. cbn in e. inv e.
+                      
+           eapply eval_iota_sing.
+           pose proof (Ee.eval_to_value _ _ _ He_v').
+           eapply value_app_inv in H2. subst. eassumption. 
+           reflexivity. cbn. cbn in *. (* somehow H8 *) admit.
     + exists tBox. split. econstructor. 
       eapply Is_type_eval; eauto. econstructor; eauto.
   - assert (Hty' := Hty). 

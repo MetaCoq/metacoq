@@ -4,6 +4,11 @@ Import ListNotations MonadNotation.
 
 Local Open Scope string_scope.
 
+Inductive test : nat -> Prop := testC n : test n -> test (S n).
+
+Quote Recursively Definition bla := test.
+
+
 (** This is just printing **)
 Test Quote (fun x : nat => x).
 

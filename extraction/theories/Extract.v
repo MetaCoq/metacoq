@@ -50,6 +50,30 @@ Axiom is_type_or_proof_spec : forall (Sigma : global_context) (Gamma : context) 
 (*        ret (Universe.is_prop s). *)
 (* End IsType. *)
 
+Fixpoint all_args t :=
+  match t with
+  | tProd _ t1 t2 => t1 :: all_args t2
+  | _ => []
+  end.  
+
+Fixpoint target_type t :=
+  match t with
+  | tProd _ t1 t2 => target_type t2
+  | _ => t
+  end.
+
+Definition Is_Singleton (Σ : global_context) mdecl ind idecl univ :=
+    #|ind_ctors idecl| <= 1 /\
+    forall cdecl i,
+      declared_constructor (fst Σ) mdecl idecl (ind, i) cdecl ->
+      Forall (fun t => match t with tSort u => is_prop_sort u | _ => False end) (skipn (ind_npars mdecl) (all_args (type_of_constructor mdecl cdecl (ind, i) univ))).
+
+Definition Informative (Σ : global_context) (ind : inductive) (univ : universe_instance) :=
+  forall mdecl idecl u,
+    declared_inductive (fst Σ) mdecl ind idecl ->
+    target_type (ind_type idecl) = tSort u ->
+    is_prop_sort u -> Is_Singleton Σ mdecl ind idecl univ.
+
 Module E := EAst.
 Local Notation Ret t := t.
 
@@ -214,10 +238,12 @@ Inductive erases (Σ : global_context) (Γ : context) : term -> E.term -> Prop :
     erases Σ Γ (tConst kn u) (E.tConst kn)
 | erases_tConstruct kn k n :
     erases Σ Γ (tConstruct kn k n) (E.tConstruct kn k)
-| erases_tCase1 ip T c brs c' brs' :
+| erases_tCase1 ind npar T c brs c' brs' u args :
+    Σ ;;; Γ |- c : mkApps (tInd ind u) args ->
+    Informative Σ ind u ->
     erases Σ Γ c c' ->
     All2 (fun x x' => erases Σ Γ (snd x) (snd x') × fst x = fst x') brs brs' ->
-    erases Σ Γ (tCase ip T c brs) (E.tCase ip c' brs')
+    erases Σ Γ (tCase (ind, npar) T c brs) (E.tCase (ind, npar) c' brs')
 (* | erases_tCase2 ip T c : *)
 (*     erases Σ Γ c E.tBox -> *)
 (*     erases Σ Γ (tCase ip T c []) (E.tCase ip E.tBox []) *)

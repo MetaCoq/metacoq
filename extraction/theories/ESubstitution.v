@@ -45,12 +45,24 @@ Proof.
   all: match goal with [ H : erases _ _ ?a _ |- _ ] => tryif is_var a then idtac else inv H end.
   all: try now (econstructor; eauto).  
   all: try now (econstructor; eapply Is_type_extends; eauto).
-  - econstructor.  eauto. eapply All2_All_left in X3.
-    2:{ intros ? ? []. exact e. }
-    eapply All2_All_mix_left in H0; eauto.
-    eapply All2_impl. exact H0.
-    intros. destruct H3 as [? []].
-    split; eauto.
+  - econstructor. eapply weakening_env. 3:eauto. all:eauto.
+    2:{ eauto. eapply All2_All_left in X3.
+        2:{ intros ? ? []. exact e. }
+        eapply All2_All_mix_left in H3; eauto.
+        eapply All2_impl. exact H3.
+        intros. destruct H4 as [? []].
+        split; eauto. }
+    assert (isdecl' := isdecl).
+    intros ? ? ? ? ? ?. 
+    destruct isdecl.
+    assert (H7' := H7).
+    eapply extends_lookup in H7; eauto. destruct H4. unfold PCUICTyping.declared_minductive in H4.
+    rewrite H7 in H4. inversion H4. subst. clear H4.
+    rewrite H9 in H8. inversion H8. subst. clear H8.
+    destruct (H _ _ _ isdecl' H5 H6); eauto.
+    split; eauto. intros.
+    destruct H10.
+    eapply H8. econstructor; eauto.
   - econstructor.
     eapply All2_All_mix_left in H; eauto.
     eapply All2_impl. exact H.
@@ -63,7 +75,6 @@ Proof.
     split; eauto.
   - eauto.
 Qed.
-
 
 (** ** Weakening *)
 
@@ -122,13 +133,16 @@ Proof.
       eapply H1; eauto. cbn. econstructor.
       eauto. cbn. eapply weakening_typing; eauto.
   - econstructor.
+    + eapply weakening_typing in X1. rewrite PCUICLiftSubst.lift_mkApps in X1. cbn in X1.
+      all:eauto.
+    + eauto.
     + eapply h_forall_Γ0; eauto.
     + eapply All2_map.
       eapply All2_All_left in X3.
-      2:{ intros. destruct X1. exact e. }
+      2:{ intros. destruct X2. exact e. }
       eapply All2_impl. eapply All2_All_mix_left.
       eassumption. eassumption. intros.
-      destruct H3. destruct p0.
+      destruct H4. destruct p0.
       cbn. destruct x, y; cbn in *; subst.
       split; eauto.
   - econstructor.
@@ -300,16 +314,19 @@ Proof.
       eapply is_type_subst; eauto.
   - depelim H5. 
     + cbn. econstructor.
-      eapply H4; eauto.
-      eapply All2_map.
-      eapply All2_impl_In; eauto.
-      intros. destruct H10, x, y. cbn in *. subst. split; eauto.
-      eapply All2_All_left in X3.
-      2:{ intros ? ? []. exact e0. }
+      * eapply substitution in X6. cbn in X6. rewrite PCUICLiftSubst.subst_mkApps in X6.
+        all:eauto.
+      * eauto.
+      * eapply H4; eauto.
+      * eapply All2_map.
+        eapply All2_impl_In; eauto.
+        intros. destruct H11, x, y. cbn in *. subst. split; eauto.
+        eapply All2_All_left in X3.
+        2:{ intros ? ? []. exact e0. }
 
-      eapply In_nth_error in H8 as [].
-      eapply nth_error_all in X3; eauto.
-      eapply X3; eauto.      
+        eapply In_nth_error in H9 as [].
+        eapply nth_error_all in X3; eauto.
+        eapply X3; eauto.
     (* + cbn. econstructor. *)
     (*   eapply H4 in H5; eauto. *)
     (*   econstructor. *)

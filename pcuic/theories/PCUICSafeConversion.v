@@ -1353,14 +1353,14 @@ Section Conversion.
         rewrite e in eq3.
         rewrite e' in eq3.
         cbn in eq3. symmetry in eq3.
-        assert (bot : eqb_term_upto_univ eqb c c && eqb_term_upto_univ eqb c' c').
+        assert (bot : eqb_term_upto_univ eqb eqb c c && eqb_term_upto_univ eqb eqb c' c').
         { apply andb_and. split.
           - eapply ssrbool.introT.
             + eapply reflect_eq_term_upto_univ_eqb.
-            + eapply eq_term_upto_univ_refl. intro. reflexivity.
+            + eapply eq_term_upto_univ_refl. all: intro ; reflexivity.
           - eapply ssrbool.introT.
             + eapply reflect_eq_term_upto_univ_eqb.
-            + eapply eq_term_upto_univ_refl. intro. reflexivity.
+            + eapply eq_term_upto_univ_refl. all: intro ; reflexivity.
         }
         rewrite bot in eq3. discriminate.
       + dependent destruction hr.
@@ -1374,14 +1374,14 @@ Section Conversion.
           rewrite e in eq3.
           rewrite <- H2 in eq3.
           cbn in eq3. symmetry in eq3.
-          assert (bot : eqb_term_upto_univ eqb c c && eqb_term_upto_univ eqb c' c').
+          assert (bot : eqb_term_upto_univ eqb eqb c c && eqb_term_upto_univ eqb eqb c' c').
           { apply andb_and. split.
             - eapply ssrbool.introT.
               + eapply reflect_eq_term_upto_univ_eqb.
-              + eapply eq_term_upto_univ_refl. intro. reflexivity.
+              + eapply eq_term_upto_univ_refl. all: intro ; reflexivity.
             - eapply ssrbool.introT.
               + eapply reflect_eq_term_upto_univ_eqb.
-              + eapply eq_term_upto_univ_refl. intro. reflexivity.
+              + eapply eq_term_upto_univ_refl. all: intro ; reflexivity.
           }
           rewrite bot in eq3. discriminate.
     - dependent destruction hr.
@@ -1397,14 +1397,14 @@ Section Conversion.
           rewrite e' in eq3.
           rewrite <- H2 in eq3.
           cbn in eq3. symmetry in eq3.
-          assert (bot : eqb_term_upto_univ eqb c c && eqb_term_upto_univ eqb c' c').
+          assert (bot : eqb_term_upto_univ eqb eqb c c && eqb_term_upto_univ eqb eqb c' c').
           { apply andb_and. split.
             - eapply ssrbool.introT.
               + eapply reflect_eq_term_upto_univ_eqb.
-              + eapply eq_term_upto_univ_refl. intro. reflexivity.
+              + eapply eq_term_upto_univ_refl. all: intro ; reflexivity.
             - eapply ssrbool.introT.
               + eapply reflect_eq_term_upto_univ_eqb.
-              + eapply eq_term_upto_univ_refl. intro. reflexivity.
+              + eapply eq_term_upto_univ_refl. all: intro ; reflexivity.
           }
           rewrite bot in eq3. discriminate.
         * dependent destruction hr.
@@ -1421,14 +1421,14 @@ Section Conversion.
              rewrite <- H4 in eq3.
              rewrite <- H5 in eq3.
              cbn in eq3. symmetry in eq3.
-             assert (bot : eqb_term_upto_univ eqb c c && eqb_term_upto_univ eqb c' c').
+             assert (bot : eqb_term_upto_univ eqb eqb c c && eqb_term_upto_univ eqb eqb c' c').
              { apply andb_and. split.
                - eapply ssrbool.introT.
                  + eapply reflect_eq_term_upto_univ_eqb.
-                 + eapply eq_term_upto_univ_refl. intro. reflexivity.
+                 + eapply eq_term_upto_univ_refl. all: intro ; reflexivity.
                - eapply ssrbool.introT.
                  + eapply reflect_eq_term_upto_univ_eqb.
-                 + eapply eq_term_upto_univ_refl. intro. reflexivity.
+                 + eapply eq_term_upto_univ_refl. all: intro ; reflexivity.
              }
              rewrite bot in eq3. discriminate.
   Qed.

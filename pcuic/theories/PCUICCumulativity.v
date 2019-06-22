@@ -69,13 +69,18 @@ Proof.
   unfold leq_universe'; destruct check_univs; [apply leq_universe_refl|constructor].
 Qed.
 
-Lemma eq_term_upto_univ_refl R (HR : RelationClasses.Reflexive R) t
-  : eq_term_upto_univ R t t.
+Lemma eq_term_upto_univ_refl Re Rle :
+  RelationClasses.Reflexive Re ->
+  RelationClasses.Reflexive Rle ->
+  forall t, eq_term_upto_univ Re Rle t t.
 Proof.
-  induction t using term_forall_list_ind; simpl;
+  intros hRe hRle.
+  induction t in Rle, hRle |- * using term_forall_list_ind; simpl;
     try constructor; try apply Forall_Forall2, All_Forall; try easy;
       try now apply Forall_All, Forall_True.
-  - destruct p. constructor; try assumption.
+  - eapply All_impl ; try eassumption.
+    intros. easy.
+  - destruct p. constructor; try easy.
     apply Forall_Forall2, All_Forall.
     eapply All_impl ; try eassumption.
     intros. split ; auto.
@@ -85,15 +90,15 @@ Qed.
 
 Lemma eq_term_refl `{checker_flags} φ t : eq_term φ t t.
 Proof.
-  apply eq_term_upto_univ_refl.
-  intro; apply eq_universe'_refl.
+  apply eq_term_upto_univ_refl ; intro ; apply eq_universe'_refl.
 Qed.
 
 
 Lemma leq_term_refl `{checker_flags} φ t : leq_term φ t t.
 Proof.
   apply eq_term_upto_univ_refl.
-  intro; apply leq_universe'_refl.
+  - intro ; apply eq_universe'_refl.
+  - intro ; apply leq_universe'_refl.
 Qed.
 
 
@@ -109,23 +114,23 @@ Proof.
   apply eq_universe_leq_universe. intuition.
 Qed.
 
+Lemma eq_term_upto_univ_leq :
+  forall (Re Rle : universe -> universe -> Prop) u v,
+    (forall u u', Re u u' -> Rle u u') ->
+    eq_term_upto_univ Re Re u v ->
+    eq_term_upto_univ Re Rle u v.
+Proof.
+  intros Re Rle u v hR h.
+  induction u in v, h |- * using term_forall_list_ind.
+  all: simpl ; inversion h ;
+       subst ; constructor ; try easy.
+  all: eapply Forall2_impl ; eauto.
+Qed.
 
 Lemma eq_term_leq_term `{checker_flags} φ t u : eq_term φ t u -> leq_term φ t u.
 Proof.
-  induction t in u |- * using term_forall_list_ind; simpl; inversion 1;
-    subst; constructor; try (now unfold eq_term, leq_term in * );
-  try eapply Forall2_impl'. all: try easy.
-  now apply All_Forall.
-  now apply eq_universe'_leq_universe'.
-  all: try (apply Forall_True, eq_universe'_leq_universe').
-  eapply Forall_impl. eapply All_Forall. eassumption.
-  intros x HH y [? ?]. split ; auto. apply HH. assumption.
-  eapply Forall_impl. eapply All_Forall. eassumption.
-  cbn. intros x [HH HH'] y [? [? ?]].
-  repeat split ; [now apply HH|now apply HH' | assumption].
-  eapply Forall_impl. eapply All_Forall. eassumption.
-  cbn. intros x [HH HH'] y [? [? ?]].
-  repeat split; [now apply HH|now apply HH'|assumption].
+  intros h. eapply eq_term_upto_univ_leq ; eauto.
+  eapply eq_universe'_leq_universe'.
 Qed.
 
 Lemma eq_term_App `{checker_flags} φ f f' :
@@ -154,12 +159,12 @@ Qed.
 
 Lemma leq_term_mkApps `{checker_flags} φ f l f' l' :
   leq_term φ f f' ->
-  Forall2 (leq_term φ) l l' ->
+  Forall2 (eq_term φ) l l' ->
   leq_term φ (mkApps f l) (mkApps f' l').
 Proof.
   induction l in l', f, f' |- *; intro e; inversion_clear 1.
   - assumption.
-  - cbn. apply IHl. constructor; assumption. assumption.
+  - cbn. apply IHl. constructor; try assumption. assumption.
 Qed.
 
 Lemma leq_term_antisym Σ t u : leq_term Σ t u -> leq_term Σ u t -> eq_term Σ t u.

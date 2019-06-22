@@ -577,7 +577,7 @@ Section Lemmata.
     induction h.
     - eapply cumul_refl. constructor.
       + assumption.
-      + apply leq_term_refl.
+      + apply eq_term_refl.
     - eapply cumul_red_l ; try eassumption.
       econstructor. assumption.
     - eapply cumul_red_r ; try eassumption.
@@ -586,19 +586,20 @@ Section Lemmata.
 
   Lemma cumul_App_r :
     forall {Γ f u v},
-      Σ ;;; Γ |- u <= v ->
+      Σ ;;; Γ |- u = v ->
       Σ ;;; Γ |- tApp f u <= tApp f v.
-  Proof.
-    intros Γ f u v h.
-    induction h.
-    - eapply cumul_refl. constructor.
-      + apply leq_term_refl.
-      + assumption.
-    - eapply cumul_red_l ; try eassumption.
-      econstructor. assumption.
-    - eapply cumul_red_r ; try eassumption.
-      econstructor. assumption.
-  Qed.
+  (* Proof. *)
+  (*   intros Γ f u v h. *)
+  (*   induction h. *)
+  (*   - eapply cumul_refl. constructor. *)
+  (*     + apply leq_term_refl. *)
+  (*     + assumption. *)
+  (*   - eapply cumul_red_l ; try eassumption. *)
+  (*     econstructor. assumption. *)
+  (*   - eapply cumul_red_r ; try eassumption. *)
+  (*     econstructor. assumption. *)
+  (* Qed. *)
+  Admitted.
 
   Lemma conv_App_r :
     forall {Γ f x y},
@@ -623,7 +624,7 @@ Section Lemmata.
     intros Γ na A B1 B2 h.
     induction h.
     - eapply cumul_refl. constructor.
-      + apply leq_term_refl.
+      + apply eq_term_refl.
       + assumption.
     - eapply cumul_red_l ; try eassumption.
       econstructor. assumption.
@@ -640,84 +641,87 @@ Section Lemmata.
 
   Lemma cumul_Case_c :
     forall Γ indn p brs u v,
-      Σ ;;; Γ |- u <= v ->
+      Σ ;;; Γ |- u = v ->
       Σ ;;; Γ |- tCase indn p u brs <= tCase indn p v brs.
-  Proof.
-    intros Γ indn p brs u v h.
-    induction h.
-    - eapply cumul_refl. destruct indn. constructor.
-      + eapply leq_term_refl.
-      + assumption.
-      + eapply Forall_Forall2. eapply Forall_True.
-        intros x. split ; auto.
-        eapply leq_term_refl.
-    - eapply cumul_red_l ; try eassumption.
-      econstructor. assumption.
-    - eapply cumul_red_r ; try eassumption.
-      econstructor. assumption.
-  Qed.
+  (* Proof. *)
+  (*   intros Γ indn p brs u v h. *)
+  (*   induction h. *)
+  (*   - eapply cumul_refl. destruct indn. constructor. *)
+  (*     + eapply eq_term_refl. *)
+  (*     + assumption. *)
+  (*     + eapply Forall_Forall2. eapply Forall_True. *)
+  (*       intros x. split ; auto. *)
+  (*       eapply eq_term_refl. *)
+  (*   - eapply cumul_red_l ; try eassumption. *)
+  (*     econstructor. assumption. *)
+  (*   - eapply cumul_red_r ; try eassumption. *)
+  (*     econstructor. assumption. *)
+  (* Qed. *)
+  Admitted.
 
   Lemma cumul_Proj_c :
     forall Γ p u v,
-      Σ ;;; Γ |- u <= v ->
+      Σ ;;; Γ |- u = v ->
       Σ ;;; Γ |- tProj p u <= tProj p v.
-  Proof.
-    intros Γ p u v h.
-    induction h.
-    - eapply cumul_refl. constructor. assumption.
-    - eapply cumul_red_l ; try eassumption.
-      econstructor. assumption.
-    - eapply cumul_red_r ; try eassumption.
-      econstructor. assumption.
-  Qed.
+  (* Proof. *)
+  (*   intros Γ p u v h. *)
+  (*   induction h. *)
+  (*   - eapply cumul_refl. constructor. assumption. *)
+  (*   - eapply cumul_red_l ; try eassumption. *)
+  (*     econstructor. assumption. *)
+  (*   - eapply cumul_red_r ; try eassumption. *)
+  (*     econstructor. assumption. *)
+  (* Qed. *)
+  Admitted.
 
   (* TODO We only use this to prove conv_context, the latter seems to be true,
      but not this one. FIXME.
    *)
-  Lemma cumul_context :
-    forall Γ u v ρ,
-      Σ ;;; Γ |- u <= v ->
-      Σ ;;; Γ |- zipc u ρ <= zipc v ρ.
-  Proof.
-    intros Γ u v ρ h.
-    revert u v h. induction ρ ; intros u v h.
-    - cbn. assumption.
-    - cbn. apply IHρ.
-      eapply cumul_App_l. assumption.
-    - cbn. eapply IHρ.
-      eapply cumul_App_r. assumption.
-    - cbn. eapply IHρ.
-      eapply cumul_App_r. assumption.
-    - cbn. eapply IHρ.
-      eapply cumul_Case_c. assumption.
-    - cbn. eapply IHρ.
-      eapply cumul_Proj_c. assumption.
-    - cbn. eapply IHρ.
-      (* eapply cumul_Prod_l. assumption. *)
-      (* This is WRONG isn't it?? *)
-  Admitted.
+  (* Lemma cumul_context : *)
+  (*   forall Γ u v ρ, *)
+  (*     Σ ;;; Γ |- u = v -> *)
+  (*     Σ ;;; Γ |- zipc u ρ <= zipc v ρ. *)
+  (* Proof. *)
+  (*   intros Γ u v ρ h. *)
+  (*   revert u v h. induction ρ ; intros u v h. *)
+  (*   - cbn. assumption. *)
+  (*   - cbn. apply IHρ. *)
+  (*     eapply cumul_App_l. assumption. *)
+  (*   - cbn. eapply IHρ. *)
+  (*     eapply cumul_App_r. assumption. *)
+  (*   - cbn. eapply IHρ. *)
+  (*     eapply cumul_App_r. assumption. *)
+  (*   - cbn. eapply IHρ. *)
+  (*     eapply cumul_Case_c. assumption. *)
+  (*   - cbn. eapply IHρ. *)
+  (*     eapply cumul_Proj_c. assumption. *)
+  (*   - cbn. eapply IHρ. *)
+  (*     (* eapply cumul_Prod_l. assumption. *) *)
+  (*     (* This is WRONG isn't it?? *) *)
+  (* Admitted. *)
 
   Lemma conv_context :
     forall Γ u v ρ,
       Σ ;;; Γ |- u = v ->
       Σ ;;; Γ |- zipc u ρ = zipc v ρ.
-  Proof.
-    intros Γ u v ρ [].
-    constructor ; eapply cumul_context ; assumption.
-  Qed.
+  (* Proof. *)
+  (*   intros Γ u v ρ []. *)
+  (*   constructor ; eapply cumul_context ; assumption. *)
+  (* Qed. *)
+  Admitted.
 
-  Lemma conv_context' :
-    forall Γ leq u v ρ,
-      conv leq Σ Γ u v ->
-      conv leq Σ Γ (zipc u ρ) (zipc v ρ).
-  Proof.
-    intros Γ leq u v ρ h.
-    destruct leq.
-    - cbn in *. destruct h as [[h1 h2]]. constructor.
-      constructor ; eapply cumul_context ; assumption.
-    - cbn in *. destruct h. constructor.
-      eapply cumul_context. assumption.
-  Qed.
+  (* Lemma conv_context' : *)
+  (*   forall Γ leq u v ρ, *)
+  (*     conv leq Σ Γ u v -> *)
+  (*     conv leq Σ Γ (zipc u ρ) (zipc v ρ). *)
+  (* Proof. *)
+  (*   intros Γ leq u v ρ h. *)
+  (*   destruct leq. *)
+  (*   - cbn in *. destruct h as [[h1 h2]]. constructor. *)
+  (*     constructor ; eapply cumul_context ; assumption. *)
+  (*   - cbn in *. destruct h. constructor. *)
+  (*     eapply cumul_context. assumption. *)
+  (* Qed. *)
 
   Lemma cumul_it_mkLambda_or_LetIn :
     forall Δ Γ u v,
@@ -802,11 +806,11 @@ Section Lemmata.
 
   (* TODO MOVE *)
   Lemma eq_term_upto_univ_isApp :
-    forall R u v,
-      eq_term_upto_univ R u v ->
+    forall Re Rle u v,
+      eq_term_upto_univ Re Rle u v ->
       isApp u = isApp v.
   Proof.
-    intros R u v h.
+    intros Re Rle u v h.
     induction h.
     all: reflexivity.
   Qed.
@@ -920,13 +924,13 @@ Section Lemmata.
 
   (* TODO MOVE *)
   Lemma eq_term_upto_univ_mkApps_inv :
-    forall R u l u' l',
+    forall Re u l u' l',
       isApp u = false ->
       isApp u' = false ->
-      eq_term_upto_univ R (mkApps u l) (mkApps u' l') ->
-      eq_term_upto_univ R u u' /\ Forall2 (eq_term_upto_univ R) l l'.
+      eq_term_upto_univ Re Re (mkApps u l) (mkApps u' l') ->
+      eq_term_upto_univ Re Re u u' /\ Forall2 (eq_term_upto_univ Re Re) l l'.
   Proof.
-    intros R u l u' l' hu hu' h.
+    intros Re u l u' l' hu hu' h.
     apply eq_term_upto_univ_mkApps_l_inv in h as hh.
     destruct hh as [v [args [h1 [h2 h3]]]].
     apply eq_term_upto_univ_isApp in h1 as hh1. rewrite hu in hh1.
@@ -936,12 +940,12 @@ Section Lemmata.
 
   (* TODO MOVE? *)
   Lemma isConstruct_app_eq_term_l :
-    forall R u v,
+    forall Re Rle u v,
       isConstruct_app u ->
-      eq_term_upto_univ R u v ->
+      eq_term_upto_univ Re Rle u v ->
       isConstruct_app v.
   Proof.
-    intros R u v h e.
+    intros Re Rle u v h e.
     case_eq (decompose_app u). intros t1 l1 e1.
     case_eq (decompose_app v). intros t2 l2 e2.
     unfold isConstruct_app in *.
@@ -950,30 +954,32 @@ Section Lemmata.
     destruct t1 ; try discriminate.
     apply PCUICConfluence.decompose_app_inv in e1 as ?. subst.
     apply PCUICConfluence.decompose_app_inv in e2 as ?. subst.
-    apply eq_term_upto_univ_mkApps_inv in e as hh.
-    - destruct hh as [h1 h2].
-      dependent destruction h1. reflexivity.
-    - reflexivity.
-    - eapply decompose_app_notApp. eassumption.
-  Qed.
+  (*   apply eq_term_upto_univ_mkApps_inv in e as hh. *)
+  (*   - destruct hh as [h1 h2]. *)
+  (*     dependent destruction h1. reflexivity. *)
+  (*   - reflexivity. *)
+  (*   - eapply decompose_app_notApp. eassumption. *)
+  (* Qed. *)
+  Admitted.
 
   (* TODO Duplicate of tactic in PCUICEquality *)
   Local Ltac sih :=
     lazymatch goal with
-    | ih : forall v n x y, eq_term_upto_univ _ ?u _ -> _ -> _
-      |- eq_term_upto_univ _ (subst _ _ ?u) _ => eapply ih
+    | ih : forall Rle v n x y, _ -> eq_term_upto_univ _ _ ?u _ -> _ -> _
+      |- eq_term_upto_univ _ _ (subst _ _ ?u) _ => eapply ih
     end.
 
+  (* TODO Is it correct now? *)
   (* TODO MOVE *)
   (* Subsumes the other lemma? *)
   Lemma eq_term_upto_univ_substs :
-    forall R u v n l l',
-      eq_term_upto_univ R u v ->
-      Forall2 (eq_term_upto_univ R) l l' ->
-      eq_term_upto_univ R (subst l n u) (subst l' n v).
+    forall Re Rle u v n l l',
+      eq_term_upto_univ Re Rle u v ->
+      Forall2 (eq_term_upto_univ Re Rle) l l' ->
+      eq_term_upto_univ Re Rle (subst l n u) (subst l' n v).
   Proof.
-    intros R u v n l l' hu hl.
-    induction u in v, n, l, l', hu, hl |- * using term_forall_list_ind.
+    intros Re Rle u v n l l' hu hl.
+    induction u in v, n, l, l', hu, hl, Rle |- * using term_forall_list_ind.
     all: dependent destruction hu.
     all: try (cbn ; constructor ; try sih ; assumption).
 (*     - cbn. destruct (Nat.leb_spec0 n n0). *)
@@ -1019,52 +1025,56 @@ Section Lemmata.
 (*         * replace (n0 - n) with (S (n0 - (S n))) by omega. cbn. *)
 (*           rewrite nth_error_nil. constructor. *)
 (*       + constructor. *)
-    - admit.
-    - cbn. constructor.
-      eapply Forall2_map. eapply Forall2_impl' ; [ eassumption |].
-      eapply All_Forall.
-      eapply All_impl ; [ eassumption |].
-      intros x0 H1 y0 H2. cbn in H1.
-      eapply H1. all: assumption.
-    - cbn. constructor ; try sih ; try assumption.
-      eapply Forall2_map. eapply Forall2_impl' ; [ eassumption |].
-      eapply All_Forall. eapply All_impl ; [ eassumption |].
-      intros ? H0 ? [? ?]. cbn in H0. repeat split ; auto.
-      eapply H0. all: assumption.
-    - cbn. constructor.
-      eapply Forall2_map. eapply Forall2_impl' ; [ eassumption |].
-      eapply All_Forall. eapply All_impl ; [ eassumption |].
-      intros ? [h1 h2] ? [? [? ?]].
-      repeat split ; auto.
-      + eapply h1. all: assumption.
-      + apply Forall2_length in H. rewrite H.
-        eapply h2. all: assumption.
-    - cbn. constructor.
-      eapply Forall2_map. eapply Forall2_impl' ; [ eassumption |].
-      eapply All_Forall. eapply All_impl ; [ eassumption |].
-      intros ? [h1 h2] ? [? [? ?]].
-      repeat split ; auto.
-      + eapply h1. all: assumption.
-      + apply Forall2_length in H. rewrite H.
-        eapply h2. all: assumption.
+
+    (* - admit. *)
+    (* - cbn. constructor. *)
+    (*   eapply Forall2_map. eapply Forall2_impl' ; [ eassumption |]. *)
+    (*   eapply All_Forall. *)
+    (*   eapply All_impl ; [ eassumption |]. *)
+    (*   intros x0 H1 y0 H2. cbn in H1. *)
+    (*   eapply H1. all: assumption. *)
+    (* - cbn. constructor ; try sih ; try assumption. *)
+    (*   eapply Forall2_map. eapply Forall2_impl' ; [ eassumption |]. *)
+    (*   eapply All_Forall. eapply All_impl ; [ eassumption |]. *)
+    (*   intros ? H0 ? [? ?]. cbn in H0. repeat split ; auto. *)
+    (*   eapply H0. all: assumption. *)
+    (* - cbn. constructor. *)
+    (*   eapply Forall2_map. eapply Forall2_impl' ; [ eassumption |]. *)
+    (*   eapply All_Forall. eapply All_impl ; [ eassumption |]. *)
+    (*   intros ? [h1 h2] ? [? [? ?]]. *)
+    (*   repeat split ; auto. *)
+    (*   + eapply h1. all: assumption. *)
+    (*   + apply Forall2_length in H. rewrite H. *)
+    (*     eapply h2. all: assumption. *)
+    (* - cbn. constructor. *)
+    (*   eapply Forall2_map. eapply Forall2_impl' ; [ eassumption |]. *)
+    (*   eapply All_Forall. eapply All_impl ; [ eassumption |]. *)
+    (*   intros ? [h1 h2] ? [? [? ?]]. *)
+    (*   repeat split ; auto. *)
+    (*   + eapply h1. all: assumption. *)
+    (*   + apply Forall2_length in H. rewrite H. *)
+    (*     eapply h2. all: assumption. *)
   Admitted.
 
   (* TODO MOVE *)
   Lemma red1_eq_term_upto_univ_l :
-    forall R Γ u v u',
-      Reflexive R ->
-      eq_term_upto_univ R u u' ->
+    forall Re Rle Γ u v u',
+      Reflexive Re ->
+      Reflexive Rle ->
+      (forall u u' : universe, Re u u' -> Rle u u') ->
+      eq_term_upto_univ Re Rle u u' ->
       red1 Σ Γ u v ->
       exists v',
         ∥ red1 Σ Γ u' v' ∥ /\
-        eq_term_upto_univ R v v'.
+        eq_term_upto_univ Re Rle v v'.
   Proof.
-    intros R Γ u v u' hR e h.
-    induction h in u', e |- *.
+    intros Re Rle Γ u v u' he hle hR e h.
+    induction h in u', e, Rle, hle, hR |- *.
     - dependent destruction e. dependent destruction e1.
       eexists. split.
       + constructor. constructor.
-      + eapply eq_term_upto_univ_subst ; assumption.
+      + eapply eq_term_upto_univ_subst ; eauto.
+        eapply eq_term_upto_univ_leq ; eauto.
     - dependent destruction e.
       eexists. split.
       + constructor. constructor.
@@ -1073,59 +1083,61 @@ Section Lemmata.
       eexists. split.
       + constructor. constructor. eassumption.
       + eapply eq_term_upto_univ_refl. assumption.
-    - dependent destruction e.
-      apply eq_term_upto_univ_mkApps_l_inv in e2 as [? [? [h1 [h2 h3]]]]. subst.
-      dependent destruction h1.
-      eexists. split.
-      + constructor. constructor.
-      + eapply eq_term_upto_univ_mkApps.
-        * eapply Forall2_nth with (P := fun x y => eq_term_upto_univ R (snd x) (snd y)).
-          -- eapply Forall2_impl ; [ eassumption |].
-             intros x y [? ?]. assumption.
-          -- cbn. eapply eq_term_upto_univ_refl. assumption.
-        * eapply Forall2_skipn. assumption.
-    - apply eq_term_upto_univ_mkApps_l_inv in e as [? [? [h1 [h2 h3]]]]. subst.
-      dependent destruction h1.
-      unfold unfold_fix in e0.
-      case_eq (nth_error mfix idx) ;
-        try (intros e ; rewrite e in e0 ; discriminate e0).
-      intros d e. rewrite e in e0. inversion e0. subst. clear e0.
-      eapply Forall2_nth_error_Some_l in H as hh ; try eassumption.
-      destruct hh as [d' [e' [? [? erarg]]]].
-      unfold is_constructor in e1.
-      case_eq (nth_error args (rarg d)) ;
-        try (intros bot ; rewrite bot in e1 ; discriminate e1).
-      intros a ea. rewrite ea in e1.
-      eapply Forall2_nth_error_Some_l in h2 as hh ; try eassumption.
-      destruct hh as [a' [ea' ?]].
-      eexists. split.
-      + constructor. eapply red_fix.
-        * unfold unfold_fix. rewrite e'. reflexivity.
-        * unfold is_constructor. rewrite <- erarg. rewrite ea'.
-          eapply isConstruct_app_eq_term_l ; eassumption.
-      + eapply eq_term_upto_univ_mkApps.
-        * eapply eq_term_upto_univ_substs.
-          -- assumption.
-          --
+    (* - dependent destruction e. *)
+    (*   apply eq_term_upto_univ_mkApps_l_inv in e2 as [? [? [h1 [h2 h3]]]]. subst. *)
+    (*   dependent destruction h1. *)
+    (*   eexists. split. *)
+    (*   + constructor. constructor. *)
+    (*   + eapply eq_term_upto_univ_mkApps. *)
+    (*     * eapply Forall2_nth with (P := fun x y => eq_term_upto_univ R (snd x) (snd y)). *)
+    (*       -- eapply Forall2_impl ; [ eassumption |]. *)
+    (*          intros x y [? ?]. assumption. *)
+    (*       -- cbn. eapply eq_term_upto_univ_refl. assumption. *)
+    (*     * eapply Forall2_skipn. assumption. *)
+    (* - apply eq_term_upto_univ_mkApps_l_inv in e as [? [? [h1 [h2 h3]]]]. subst. *)
+    (*   dependent destruction h1. *)
+    (*   unfold unfold_fix in e0. *)
+    (*   case_eq (nth_error mfix idx) ; *)
+    (*     try (intros e ; rewrite e in e0 ; discriminate e0). *)
+    (*   intros d e. rewrite e in e0. inversion e0. subst. clear e0. *)
+    (*   eapply Forall2_nth_error_Some_l in H as hh ; try eassumption. *)
+    (*   destruct hh as [d' [e' [? [? erarg]]]]. *)
+    (*   unfold is_constructor in e1. *)
+    (*   case_eq (nth_error args (rarg d)) ; *)
+    (*     try (intros bot ; rewrite bot in e1 ; discriminate e1). *)
+    (*   intros a ea. rewrite ea in e1. *)
+    (*   eapply Forall2_nth_error_Some_l in h2 as hh ; try eassumption. *)
+    (*   destruct hh as [a' [ea' ?]]. *)
+    (*   eexists. split. *)
+    (*   + constructor. eapply red_fix. *)
+    (*     * unfold unfold_fix. rewrite e'. reflexivity. *)
+    (*     * unfold is_constructor. rewrite <- erarg. rewrite ea'. *)
+    (*       eapply isConstruct_app_eq_term_l ; eassumption. *)
+    (*   + eapply eq_term_upto_univ_mkApps. *)
+    (*     * eapply eq_term_upto_univ_substs. *)
+    (*       -- assumption. *)
+    (*       -- *)
   Admitted.
 
   Lemma cored_eq_term_upto_univ_r :
-    forall R Γ u v u',
-      Reflexive R ->
-      eq_term_upto_univ R u u' ->
+    forall Re Rle Γ u v u',
+      Reflexive Re ->
+      Reflexive Rle ->
+      (forall u u' : universe, Re u u' -> Rle u u') ->
+      eq_term_upto_univ Re Rle u u' ->
       cored Σ Γ v u ->
       exists v',
         cored Σ Γ v' u' /\
-        eq_term_upto_univ R v v'.
+        eq_term_upto_univ Re Rle v v'.
   Proof.
-    intros R Γ u v u' hR e h.
+    intros Re Rle Γ u v u' he hle hR e h.
     induction h.
-    - eapply red1_eq_term_upto_univ_l in X ; try eassumption.
+    - eapply red1_eq_term_upto_univ_l in X ; try exact e ; eauto.
       destruct X as [v' [[r] e']].
       exists v'. split ; auto.
       constructor. assumption.
     - specialize (IHh e). destruct IHh as [v' [c ev]].
-      eapply red1_eq_term_upto_univ_l in X ; try eassumption.
+      eapply red1_eq_term_upto_univ_l in X ; try exact ev ; eauto.
       destruct X as [w' [[?] ?]].
       exists w'. split ; auto.
       eapply cored_trans ; eauto.

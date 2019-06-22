@@ -129,7 +129,6 @@ Section Inversion.
     intros Γ na b B t T h. invtac h.
   Qed.
 
->>>>>>> kelim
   Lemma inversion_App :
     forall {Γ u v T},
       Σ ;;; Γ |- tApp u v : T ->
@@ -141,25 +140,14 @@ Section Inversion.
     intros Γ u v T h. invtac h.
   Qed.
 
-<<<<<<< HEAD
-  Lemma inversion_Rel :
-    forall {Γ n T},
-      Σ ;;; Γ |- tRel n : T ->
-      ∑ decl,
-        wf_local Σ Γ ×
-        (nth_error Γ n = Some decl) ×
-        Σ ;;; Γ |- lift0 (S n) (decl_type decl) <= T.
-  Proof.
-    intros Γ n T h. invtac h.
-=======
   Lemma inversion_Const :
     forall {Γ c u T},
       Σ ;;; Γ |- tConst c u : T ->
-      ∑ decl,
-        wf_local Σ Γ ×
-        declared_constant Σ c decl ×
-        consistent_universe_context_instance (snd Σ) (cst_universes decl) u ×
-        Σ ;;; Γ |- subst_instance_constr u (cst_type decl) <= T.
+                             ∑ decl,
+    wf_local Σ Γ ×
+             declared_constant Σ c decl ×
+             consistent_universe_context_instance (snd Σ) (cst_universes decl) u ×
+             Σ ;;; Γ |- subst_instance_constr u (cst_type decl) <= T.
   Proof.
     intros Γ c u T h. invtac h.
   Qed.
@@ -191,6 +179,7 @@ Section Inversion.
   Lemma inversion_Case :
     forall {Γ ind npar p c brs T},
       Σ ;;; Γ |- tCase (ind, npar) p c brs : T ->
+      ∑ u args mdecl idecl pty indctx pctx ps btys,
         declared_inductive Σ mdecl ind idecl ×
         ind_npars mdecl = npar ×
         let pars := firstn npar args in
@@ -206,28 +195,6 @@ Section Inversion.
     intros Γ ind npar p c brs T h. invtac h.
   Qed.
 
-  Lemma inversion_Lambda :
-    forall {Γ na A t T},
-      Σ ;;; Γ |- tLambda na A t : T ->
-      ∑ s1 B,
-        Σ ;;; Γ |- A : tSort s1 ×
-        Σ ;;; Γ ,, vass na A |- t : B ×
-        Σ ;;; Γ |- tProd na A B <= T.
-  Proof.
-    intros Γ na A t T h. invtac h.
-  Qed.
-
-  Lemma inversion_Prod :
-    forall {Γ na A B T},
-      Σ ;;; Γ |- tProd na A B : T ->
-      ∑ s1 s2,
-        Σ ;;; Γ |- A : tSort s1 ×
-        Σ ;;; Γ ,, vass na A |- B : tSort s2 ×
-        Σ ;;; Γ |- tSort (Universe.sort_of_product s1 s2) <= T.
-  Proof.
-    intros Γ na A B T h. invtac h.
-  Qed.
-
   Lemma inversion_Proj :
     forall {Γ p c T},
       Σ ;;; Γ |- tProj p c : T ->
@@ -241,45 +208,8 @@ Section Inversion.
   Proof.
     intros Γ p c T h. invtac h.
   Qed.
-
-  Lemma inversion_Const :
-    forall {Γ c u T},
-      Σ ;;; Γ |- tConst c u : T ->
-      ∑ decl,
-        wf_local Σ Γ ×
-        declared_constant Σ c decl ×
-        consistent_universe_context_instance (snd Σ) (cst_universes decl) u ×
-        Σ ;;; Γ |- subst_instance_constr u (cst_type decl) <= T.
-  Proof.
-    intros Γ c u T h. invtac h.
-  Qed.
-
-  Lemma inversion_LetIn :
-    forall {Γ na b B t T},
-      Σ ;;; Γ |- tLetIn na b B t : T ->
-      ∑ s1 A,
-        Σ ;;; Γ |- B : tSort s1 ×
-        Σ ;;; Γ |- b : B ×
-        Σ ;;; Γ ,, vdef na b B |- t : A ×
-        Σ ;;; Γ |- tLetIn na b B A <= T.
-  Proof.
-    intros Γ na b B t T h. invtac h.
-  Qed.
-
-  Lemma inversion_Ind :
-    forall {Γ ind u T},
-      Σ ;;; Γ |- tInd ind u : T ->
-      ∑ mdecl idecl,
-        wf_local Σ Γ ×
-        declared_inductive (fst Σ) mdecl ind idecl ×
-        consistent_universe_context_instance (snd Σ) (ind_universes mdecl) u ×
-        Σ;;; Γ |- subst_instance_constr u (ind_type idecl) <= T.
-  Proof.
-    intros Γ ind u T h. invtac h.
-  Qed.
     
-
-Lemma inversion_Fix :
+  Lemma inversion_Fix :
     forall {Γ mfix n T},
       Σ ;;; Γ |- tFix mfix n : T ->
       ∑ decl,

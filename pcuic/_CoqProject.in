@@ -1,5 +1,4 @@
 -R theories MetaCoq.PCUIC
--R ../template-coq/theories/ MetaCoq.Template
 
 theories/PCUICAst.v
 theories/PCUICAstUtils.v

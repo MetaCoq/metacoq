@@ -21,9 +21,6 @@ Existing Instance config.default_checker_flags.
 
 Definition subst_decl s k (d : context_decl) := map_decl (subst s k) d.
 
-Definition subst_context n k (Γ : context) : context :=
-  fold_context (fun k' => subst n (k' + k)) Γ.
-
 (** Well-typed substitution into a context with *no* let-ins *)
 
 Inductive subs  Σ (Γ : context) : list term -> context -> Type :=
@@ -361,13 +358,15 @@ Proof.
   eapply subst_closedn; eauto using closed_upwards with arith wf.
 Qed.
 
-Definition subst_mutual_inductive_body n k mind m :=
-  map_mutual_inductive_body mind (fun k' => subst n (k' + k)) m.
+Definition subst_mutual_inductive_body n k m :=
+  map_mutual_inductive_body (fun k' => subst n (k' + k)) m.
+
+From Equations Require Import Equations.
 
 Lemma subst_declared_minductive  Σ cst decl n k :
   wf Σ ->
   declared_minductive (fst Σ) cst decl ->
-  subst_mutual_inductive_body n k cst decl = decl.
+  subst_mutual_inductive_body n k decl = decl.
 Proof.
   unfold declared_minductive.
   intros.
@@ -387,25 +386,28 @@ Proof.
     destruct (decompose_prod_assum [] (subst n k ind_type)) eqn:Heq'.
     destruct X0. simpl in *.
     assert (subst n k ind_type = ind_type).
-    destruct onArity as [[s Hs] Hpars].
+    destruct onArity as [s Hs].
     eapply typed_subst; eauto. simpl; lia.
     rewrite H in Heq'. rewrite Heq in Heq'. revert Heq'; intros [= <- <-].
     f_equal; auto.
     apply (Alli_map_id onConstructors).
     intros n1 [[x p] n']. intros [[s Hty] Hpars].
     unfold on_pi2; f_equal; f_equal. eapply typed_subst. 3:eapply Hty. eauto. simpl. lia.
+    destruct (eq_dec ind_projs []) as [Hp|Hp]; subst; auto.
+    specialize (onProjections Hp).
+    apply on_projs in onProjections.
     apply (Alli_map_id onProjections).
     intros n1 [x p]. unfold on_projection; simpl.
-    destruct decompose_prod_assum.
-    intros [[s Hty] Hpars].
+    intros [s Hty].
     unfold on_snd; f_equal; f_equal.
-    eapply typed_subst. 3:eapply Hty. eauto. simpl. injection Heq. intros -> ->. lia.
+    eapply typed_subst. 3:eapply Hty. eauto. simpl.
+    rewrite smash_context_length context_assumptions_fold. simpl; lia.
 Qed.
 
 Lemma subst_declared_inductive  Σ ind mdecl idecl n k :
   wf Σ ->
   declared_inductive (fst Σ) mdecl ind idecl ->
-  map_one_inductive_body (inductive_mind ind) (polymorphic_instance (mdecl.(ind_universes)))
+  map_one_inductive_body (context_assumptions mdecl.(ind_params))
                          (length (arities_context mdecl.(ind_bodies)))
                          (fun k' => subst n (k' + k)) (inductive_ind ind) idecl = idecl.
 Proof.
@@ -444,9 +446,7 @@ Proof.
   destruct Σ. eapply (subst_declared_inductive _ _ _ _ n k) in Hidecl; eauto.
   unfold type_of_constructor. destruct cdecl as [[id t'] arity].
   destruct idecl; simpl in *.
-  destruct (decompose_prod_assum [] _) eqn:Heq.
-  injection Hidecl.
-  intros.
+  injection Hidecl. intros.
   pose Hcdecl as Hcdecl'.
   rewrite <- H0 in Hcdecl'.
   rewrite nth_error_map in Hcdecl'. rewrite Hcdecl in Hcdecl'.
@@ -464,17 +464,22 @@ Lemma subst_declared_projection  Σ c mdecl idecl pdecl n k :
 Proof.
   intros wfΣ Hd.
   destruct Hd as [[Hmdecl Hidecl] [Hpdecl Hnpar]].
-  eapply declared_decl_closed in Hmdecl.
+  eapply declared_decl_closed in Hmdecl; auto.
   simpl in Hmdecl.
+  pose proof (onNpars _ _ _ _ Hmdecl) as Hnpars.
   apply onInductives in Hmdecl.
   eapply nth_error_alli in Hmdecl; eauto.
-  eapply onProjections in Hmdecl; eauto.
-  eapply nth_error_alli in Hmdecl; eauto.
-  red in Hmdecl.
-  destruct decompose_prod_assum eqn:Heq.
-  case: Hmdecl => [/andb_and[Hb Ht] Hpars].
-  intuition auto. destruct pdecl as [id ty]. unfold on_snd; simpl in *.
-  f_equal. eapply subst_closedn; auto. rewrite <- Hpars. eapply closed_upwards; eauto. lia. auto.
+  assert (Hp : ind_projs idecl <> []).
+  { now apply nth_error_Some_non_nil in Hpdecl. }
+  pose proof (onProjections Hmdecl Hp) as onp.
+  apply on_projs in onp; eauto.
+  eapply nth_error_alli in onp; eauto.
+  hnf in onp. simpl in onp.
+  rewrite smash_context_length in onp. simpl in onp.
+  rewrite Hnpars in onp.
+  move: onp => /andb_and[Hb Ht].
+  destruct pdecl as [id ty]. unfold on_snd; simpl in *.
+  f_equal. eapply subst_closedn; auto. eapply closed_upwards; eauto. lia.
 Qed.
 
 Lemma subst_fix_context:
@@ -669,7 +674,7 @@ Proof.
   rewrite rev_map_app.
   simpl. apply Alli_app in Ha as [Hl Hx].
   inv Hx. clear X0.
-  destruct X as [[[s Hs] _] _ _].
+  apply onArity in X as [s Hs].
   specialize (IHl Hl).
   econstructor; eauto.
   fold (arities_context l) in *.
@@ -703,20 +708,21 @@ Proof.
 Qed.
 
 Lemma on_projection_closed  {Σ mind mdecl u i idecl pdecl} :
-  wf Σ ->
+  wf Σ -> mdecl.(ind_npars) = context_assumptions mdecl.(ind_params) ->
   on_projection (lift_typing typing) Σ (inductive_mind mind) mdecl (inductive_ind mind) idecl i pdecl ->
   let pty := subst_instance_constr u (snd pdecl) in
   closedn (S (ind_npars mdecl)) pty.
 Proof.
-  intros wfΣ. unfold on_projection.
-  destruct decompose_prod_assum.
-  intros [[s Hs] Hparams].
+  intros wfΣ Hpar.
+  unfold on_projection.
+  intros [s Hs].
   pose proof (typing_wf_local Hs).
   destruct pdecl as [id cty].
   eapply (env_prop_typing _ typecheck_closed) in Hs; eauto.
   rewrite -> andb_and in *. simpl in *.
   destruct Hs as [Hs _].
-  rewrite Hparams in Hs. now rewrite -> closedn_subst_instance_constr.
+  rewrite smash_context_length in Hs. simpl in *.
+  rewrite - Hpar in Hs. now rewrite -> closedn_subst_instance_constr.
 Qed.
 
 Lemma context_subst_length Γ a s : context_subst Γ a s -> #|Γ| = #|s|.
@@ -900,7 +906,7 @@ Proof.
   assert(forall brs,
          map_option_out (build_branches_type ind mdecl idecl args u p) = Some brs ->
          map_option_out (build_branches_type ind mdecl
-         (map_one_inductive_body (inductive_mind ind) (polymorphic_instance (ind_universes mdecl))
+         (map_one_inductive_body (context_assumptions (ind_params mdecl))
             (length (arities_context (ind_bodies mdecl))) (fun k' => subst n (k' + k))
             (inductive_ind ind) idecl) (map (subst n k) args) u (subst n k p)) =
          Some (map (on_snd (subst n k)) brs)).
@@ -933,7 +939,7 @@ Proof.
     subst ty. simpl.
 
     rewrite Heqty' in Hty.
-    destruct Honc. destruct c.
+    destruct Honc as [o [c _]]. destruct c.
     simpl in *. rewrite cshape_eq in Hty.
     rewrite -> !subst_instance_constr_it_mkProd_or_LetIn in Hty.
     rewrite !subst_it_mkProd_or_LetIn in Hty.
@@ -946,7 +952,7 @@ Proof.
     intros Heqty'' <-. revert Heqty''.
     rewrite !subst_instance_context_length Nat.add_0_r.
 
-    rewrite (subst_cstr_concl_head ind u mdecl cshape_arity cshape_args).
+    rewrite (subst_cstr_concl_head ind u mdecl cshape_args cshape_indices).
     destruct wfidecl as [Hmdecl Hnth].
     now apply nth_error_Some_length in Hnth.
     intros <-. rewrite !subst_it_mkProd_or_LetIn !subst_mkApps /=.
@@ -966,7 +972,7 @@ Proof.
     rewrite chop_n_app ?map_length.
     rewrite <- H1. apply onNpars in onmind. lia.
     move=> [= <- <-] chopm.
-    move: {chopm}(chopm _ (subst n (#|cshape_arity| + k))).
+    move: {chopm}(chopm _ (subst n (#|cshape_args| + k))).
     rewrite map_app.
     move=> chopm; rewrite {}chopm /=.
     move=> <-. f_equal.
@@ -1829,7 +1835,7 @@ Proof.
 
   - eapply refine_type. econstructor; eauto.
     eapply on_declared_inductive in isdecl as [on_mind on_ind]; auto.
-    apply onArity in on_ind as [[s' Hindty] _].
+    apply onArity in on_ind as [s' Hindty].
     apply typecheck_closed in Hindty as [_ Hindty]; eauto. symmetry.
     move/andP/proj1: Hindty. rewrite -(closedn_subst_instance_constr _ _ u) => Hty.
     apply: (subst_closedn s #|Δ|); auto with wf.
@@ -1867,7 +1873,9 @@ Proof.
     erewrite distr_subst_rec. simpl.
     rewrite map_rev. subst ty.
     f_equal.
-    apply on_declared_projection in isdecl as [_ isdecl]; auto.
+
+    apply on_declared_projection in isdecl as [[Hmdecl _] isdecl]; auto.
+    eapply onNpars in Hmdecl.
     eapply on_projection_closed in isdecl as clty; auto.
     symmetry. apply subst_closedn; eauto.
     rewrite List.rev_length H. eapply closed_upwards; eauto. lia.

@@ -12,12 +12,6 @@ Import MonadNotation.
 
 Existing Instance config.default_checker_flags.
 
-Definition is_prop_sort s :=
-  match Universe.level s with
-  | Some l => Level.is_prop l
-  | None => false
-  end.
-
 Section IsType.
   Context {F : Fuel}.
   Variables (Σ : global_context) (Γ : context).
@@ -39,7 +33,7 @@ Section IsType.
      if is_arity F ty then ret true
      else
        s <- type_of_as_sort Σ (type_of Σ) Γ ty ;;
-       ret (is_prop_sort s).
+       ret (Universe.is_prop s).
 End IsType.
 
 Module E := EAst.
@@ -233,7 +227,7 @@ Definition computational_ind Σ ind :=
     match List.nth_error decl.(ind_bodies) n with
     | Some body =>
       match destArity [] body.(ind_type) with
-      | Some arity => negb (is_prop_sort (snd arity))
+      | Some arity => negb (Universe.is_prop (snd arity))
       | None => false
       end
     | None => false

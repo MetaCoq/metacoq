@@ -351,16 +351,24 @@ Definition polymorphic_instance uctx :=
   | Cumulative_ctx c => fst (UContext.dest (fst c))
   end.
 
-Definition map_one_inductive_body mind u arities f n m :=
+Fixpoint context_assumptions (Γ : context) :=
+  match Γ with
+  | [] => 0
+  | d :: Γ =>
+    match d.(decl_body) with
+    | Some _ => context_assumptions Γ
+    | None => S (context_assumptions Γ)
+    end
+  end.
+
+Definition map_one_inductive_body npars arities f (n : nat) m :=
   match m with
   | Build_one_inductive_body ind_name ind_type ind_kelim ind_ctors ind_projs =>
-    let '(ctx, _) := decompose_prod_assum [] (f 0 ind_type) in
-    let indty := mkApps (tInd (mkInd mind n) u) (to_extended_list ctx) in
     Build_one_inductive_body ind_name
                              (f 0 ind_type)
                              ind_kelim
                              (map (on_pi2 (f arities)) ind_ctors)
-                             (map (on_snd (f (S (length ctx)))) ind_projs)
+                             (map (on_snd (f (S npars))) ind_projs)
   end.
 
 Definition fold_context f (Γ : context) : context :=
@@ -442,35 +450,35 @@ Proof.
   do 2 f_equal. lia. now rewrite fold_context_length.
 Qed.
 
-Definition map_mutual_inductive_body mind f m :=
+Definition map_mutual_inductive_body f m :=
   match m with
   | Build_mutual_inductive_body ind_npars ind_pars ind_bodies ind_universes =>
     let arities := arities_context ind_bodies in
     let u := polymorphic_instance ind_universes in
-    Build_mutual_inductive_body ind_npars (fold_context f ind_pars)
-      (mapi (map_one_inductive_body mind u (length arities) f) ind_bodies)
+    let pars := fold_context f ind_pars in
+    Build_mutual_inductive_body ind_npars pars
+      (mapi (map_one_inductive_body (context_assumptions pars) (length arities) f) ind_bodies)
       ind_universes
   end.
 
-Lemma ind_type_map f arities mind u n oib :
-  ind_type (map_one_inductive_body mind u arities f n oib) = f 0 (ind_type oib).
-Proof. destruct oib. simpl. destruct decompose_prod_assum. reflexivity. Qed.
+Lemma ind_type_map f npars_ass arities n oib :
+  ind_type (map_one_inductive_body npars_ass arities f n oib) = f 0 (ind_type oib).
+Proof. destruct oib. reflexivity. Qed.
 
-Lemma ind_ctors_map f arities mind u n oib :
-  ind_ctors (map_one_inductive_body mind u arities f n oib) =
+Lemma ind_ctors_map f npars_ass arities n oib :
+  ind_ctors (map_one_inductive_body npars_ass arities f n oib) =
   map (on_pi2 (f arities)) (ind_ctors oib).
-Proof. destruct oib; simpl; destruct decompose_prod_assum; reflexivity. Qed.
+Proof. destruct oib; simpl; reflexivity. Qed.
 
-Lemma ind_pars_map mind f m :
-  ind_params (map_mutual_inductive_body mind f m) =
+Lemma ind_pars_map f m :
+  ind_params (map_mutual_inductive_body f m) =
   fold_context f (ind_params m).
 Proof. destruct m; simpl; reflexivity. Qed.
 
-Lemma ind_projs_map f mind u arities n oib :
-  ind_projs (map_one_inductive_body mind u arities f n oib) =
-  let '(ctx, _) := decompose_prod_assum [] (f 0 oib.(ind_type)) in
-  map (on_snd (f (S (length ctx)))) (ind_projs oib).
-Proof. destruct oib; simpl. destruct decompose_prod_assum. simpl. reflexivity. Qed.
+Lemma ind_projs_map f npars_ass arities n oib :
+  ind_projs (map_one_inductive_body npars_ass arities f n oib) =
+  map (on_snd (f (S npars_ass))) (ind_projs oib).
+Proof. destruct oib; simpl. reflexivity. Qed.
 
 Definition test_def {A : Set} (tyf bodyf : A -> bool) (d : def A) :=
   tyf d.(dtype) && bodyf d.(dbody).

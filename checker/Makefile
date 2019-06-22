@@ -19,7 +19,7 @@ install:
 
 .PHONY: plugin
 
-clean:
+clean: Makefile.coq
 	$(MAKE) -f Makefile.coq clean
 
 mrproper:

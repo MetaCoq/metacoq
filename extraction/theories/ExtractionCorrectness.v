@@ -264,12 +264,23 @@ Proof. intros. rewrite <- (map_id l). eapply All2_map; eauto. Qed.
 
 Definition Is_proof Σ Γ t := ∑ T u, Σ ;;; Γ |- t : T × Σ ;;; Γ |- T : tSort u × is_prop_sort u.
 
+(* Lemma Is_proof_extends Σ Γ t : *)
+(*   wf_local Σ Γ -> *)
+(*   forall Σ', wf Σ' -> extends Σ Σ' -> Is_proof Σ Γ t -> Is_proof Σ' Γ t. *)
+(* Proof. *)
+(*   intros. destruct X2 as (? & ? & ? & ? & ?). *)
+(*   exists x, x0. repeat split. *)
+(*   eapply weakening_env; [ | | eauto | | ]; eauto using wf_extends. *)
+(*   eapply weakening_env; [ | | eauto | | ]; eauto using wf_extends. *)
+(*   eauto. *)
+(* Qed. *)
+
 Lemma Is_Type_or_Proof_Proof Σ Γ t :
   Is_proof Σ Γ t -> Is_Type_or_Proof Σ Γ t.
 Proof.
   intros. destruct X as (? & ? & ? & ? & ?). exists x. split. eauto. right. eauto.
 Qed.
-  
+
 Lemma erases_extract Σ Γ t T :
   wf Σ ->
   Σ ;;; Γ |- t : T ->
@@ -598,6 +609,15 @@ Proof.
       * eauto.
 Qed.
 
+Lemma Informative_tConstruct_proofs Σ Γ ind u u' args args' mdecl decl n :
+  Informative Σ ind u ->
+  declared_inductive (fst Σ) mdecl ind decl ->
+  Σ ;;; Γ |- mkApps (tConstruct ind n u') args' : mkApps (tInd ind u) args ->
+  All (Is_proof Σ Γ) (skipn (ind_npars mdecl) args').
+Proof.
+  intros.
+Admitted.
+  
 Lemma erases_correct Σ t T t' v Σ' :
   extraction_pre Σ ->
   Σ;;; [] |- t : T ->
@@ -902,8 +922,29 @@ Proof.
       * exists tBox. split.
         econstructor. 
         eapply Is_type_eval. eauto. eauto.
+        eapply nth_error_all.
 
-        admit (* kelim restrictions *).
+        Lemma nth_error_skipn A l m n (a : A) :
+          nth_error l (m + n) = Some a ->
+          nth_error (skipn m l) n = Some a.
+        Proof.
+          induction m in n, l |- *.
+          - cbn. destruct l; firstorder.
+          - cbn. destruct l.
+            + inversion 1.
+            + eapply IHm.
+        Qed.
+              
+        eapply nth_error_skipn. eassumption.
+        eapply All_impl. assert (pars = ind_npars x0) by admit. subst.
+
+        eapply Informative_tConstruct_proofs. eassumption. eapply d. cbn in t0.
+        assert (u0 = x) as -> by admit.
+
+        2: eapply Is_Type_or_Proof_Proof.
+        eapply subject_reduction_eval. eauto. eapply t0.
+        eauto.
+
         eapply eval_proj_box.
         pose proof (Ee.eval_to_value _ _ _ Hty_vc').
         eapply value_app_inv in H3. subst. eassumption.        
@@ -920,7 +961,18 @@ Proof.
         -- exists x9. split; eauto. econstructor. eauto.
            rewrite <- nth_default_eq. unfold nth_default. now rewrite H3.
         -- exists tBox. split. econstructor.
-           eapply Is_type_eval; eauto. admit (* kelim restrictions *).
+           eapply Is_type_eval; eauto.
+
+           eapply nth_error_all. eapply nth_error_skipn. eassumption.
+           eapply All_impl. assert (pars = ind_npars x0) as -> by admit. 
+
+           eapply Informative_tConstruct_proofs. eassumption. eapply d. cbn in t0.
+           assert (u0 = x) as -> by admit.
+
+           2: eapply Is_Type_or_Proof_Proof.
+           eapply subject_reduction_eval. eauto. eapply t0.
+           eauto.
+           
            eapply eval_proj_box.
            pose proof (Ee.eval_to_value _ _ _ Hty_vc').
            eapply value_app_inv in H4. subst. eassumption.

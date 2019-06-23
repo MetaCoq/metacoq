@@ -264,6 +264,12 @@ Proof. intros. rewrite <- (map_id l). eapply All2_map; eauto. Qed.
 
 Definition Is_proof Σ Γ t := ∑ T u, Σ ;;; Γ |- t : T × Σ ;;; Γ |- T : tSort u × is_prop_sort u.
 
+Lemma Is_Type_or_Proof_Proof Σ Γ t :
+  Is_proof Σ Γ t -> Is_Type_or_Proof Σ Γ t.
+Proof.
+  intros. destruct X as (? & ? & ? & ? & ?). exists x. split. eauto. right. eauto.
+Qed.
+  
 Lemma erases_extract Σ Γ t T :
   wf Σ ->
   Σ ;;; Γ |- t : T ->
@@ -306,13 +312,28 @@ Proof.
     Admitted.
     eapply elim_restriction_works. intros.
     assert (Is_Type_or_Proof Σ Γ (tCase (ind, npar) p c brs)).
-    destruct X4 as (? & ? & ? & ? & ?). exists x. split. eauto. right. eauto.
-    eapply is_type_or_proof_spec in X5. congruence. econstructor; eauto.
+    eapply Is_Type_or_Proof_Proof. eauto.
+    eapply is_type_or_proof_spec in X5. congruence.
+    econstructor; eauto.
+    
     eapply All2_impl. eassumption. firstorder.
     
     eapply All2_map_right. cbn. eapply All_All2.
     2:{ intros. eapply X4. }
     eapply All2_All_left. eassumption. firstorder.
+  - cbn.
+    destruct ?.
+    + econstructor. eapply is_type_or_proof_spec; eauto.
+    + econstructor. eauto.
+      Lemma elim_restriction_works_proj Σ Γ  p c u :
+        (Is_proof Σ Γ (tProj p c) -> False) -> Informative Σ (fst (fst p)) u.
+      Proof.
+      Admitted.
+      eapply elim_restriction_works_proj. intros.
+      eapply Is_Type_or_Proof_Proof in X2.
+      eapply is_type_or_proof_spec in X2. rewrite E in X2. congruence.
+      econstructor; eauto.
+      eauto.      
   - cbn.
     assert (wf_local Σ (Γ ,,, PCUICLiftSubst.fix_context mfix)).
     {  destruct mfix. eauto. inv X0.
@@ -395,11 +416,11 @@ Proof.
     (* eapply All2_All_left in X3. 2:{ intros. destruct X4. exact e1. } *)
   (* eapply All_In in X3; eauto. destruct X3 as []. eapply H6. eauto.     *)
     admit.
-  - econstructor. eauto. eapply All2_map_left.
-    eapply All2_impl_In; eauto.
-    intros; cbn in *. destruct H2 as (? & ? & ?). repeat split; eauto.
-    eapply All_In in X0; eauto. destruct X0 as []. destruct X0 as (? & ?). destruct p.
-    eapply e2 in e1. admit. 
+  - econstructor. eauto. (* eapply All2_map_left. *)
+    (* eapply All2_impl_In; eauto. *)
+    (* intros; cbn in *. destruct H2 as (? & ? & ?). repeat split; eauto. *)
+    (* eapply All_In in X0; eauto. destruct X0 as []. destruct X0 as (? & ?). destruct p. *)
+    (* eapply e2 in e1. admit.  *) admit. admit. admit.
   - econstructor. admit.
 Admitted.
       
@@ -874,20 +895,24 @@ Proof.
   - pose (Hty' := Hty).
     eapply inversion_Proj in Hty' as (? & ? & ? & [] & ? & ? & ? & ? & ?). 
     inv He.
-    + eapply IHeval1 in H6 as (vc' & Hvc' & Hty_vc'); eauto.
+    + rename H7 into H6. eapply IHeval1 in H6 as (vc' & Hvc' & Hty_vc'); eauto.
       eapply erases_mkApps_inv in Hvc'; eauto.
       2: eapply subject_reduction_eval; eauto.
       destruct Hvc' as [ (? & ? & ? & ? & [] & ? & ? & ?) | (? & ? & ? & ? & ?)]; subst.
       * exists tBox. split.
         econstructor. 
-        eapply Is_type_eval. eauto. eauto. admit (* kelim restrictions *).
+        eapply Is_type_eval. eauto. eauto.
+
+        admit (* kelim restrictions *).
         eapply eval_proj_box.
         pose proof (Ee.eval_to_value _ _ _ Hty_vc').
         eapply value_app_inv in H3. subst. eassumption.        
-      * eapply Forall2_nth_error_Some in H5 as (? & ? & ?); eauto.
+      * rename H5 into Hinf.
+        rename H6 into H5.
+        eapply Forall2_nth_error_Some in H5 as (? & ? & ?); eauto.
         assert (Σ ;;; [] |- mkApps (tConstruct i k u) args : mkApps (tInd i x) x2).
         eapply subject_reduction_eval; eauto.
-        eapply type_mkApps_inv in X as (? & ? & [] & ?); eauto.
+        eapply type_mkApps_inv in X0 as (? & ? & [] & ?); eauto.
         eapply typing_spine_In in t2 as [].
         2: eapply nth_error_In; eauto.
         eapply IHeval2 in H5 as (? & ? & ?); eauto. 

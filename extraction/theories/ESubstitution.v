@@ -52,18 +52,38 @@ Proof.
         eapply All2_impl. exact H3.
         intros. destruct H4 as [? []].
         split; eauto. }
-    assert (isdecl' := isdecl).
-    intros ? ? ? ? ? ?. 
+
+
+    Lemma Informative_extends:
+      forall (Σ : PCUICAst.global_context) (ind : inductive)
+        (mdecl : PCUICAst.mutual_inductive_body) (idecl : PCUICAst.one_inductive_body),
+        
+        PCUICTyping.declared_inductive (fst Σ) mdecl ind idecl ->
+        forall (Σ' : PCUICAst.global_context) (u0 : universe_instance),
+          wf Σ' ->
+          extends Σ Σ' ->
+          Informative Σ ind u0 -> Informative Σ' ind u0.
+    Proof.
+      intros Σ ind mdecl idecl isdecl Σ' u0 H1 H2.
+      intros ? ? ? H3 H4 H5 ?.
+
+      assert (isdecl' := isdecl). 
+      
+      destruct isdecl as [H6 H7].
+      assert (H7' := H7).
+      eapply extends_lookup in H6; eauto. destruct H4. unfold PCUICTyping.declared_minductive in H4.
+      rewrite H6 in H4. inversion H4. subst. clear H4.
+      rewrite H8 in H7. inversion H7. subst. clear H7.
+      destruct (H _ _ _ isdecl' H5 H0); eauto.
+      split; eauto. intros.
+      destruct H9. 
+      eapply H7. econstructor; eauto.
+    Qed.
+    eapply Informative_extends; eauto.
+  - econstructor.  eapply weakening_env. 3:eauto. all:eauto.
     destruct isdecl.
-    assert (H7' := H7).
-    eapply extends_lookup in H7; eauto. destruct H4. unfold PCUICTyping.declared_minductive in H4.
-    rewrite H7 in H4. inversion H4. subst. clear H4.
-    rewrite H9 in H8. inversion H8. subst. clear H8.
-    destruct (H _ _ _ isdecl' H5 H6); eauto.
-    split; eauto. intros.
-    destruct H10.
-    eapply H8. econstructor; eauto.
-  - econstructor.
+    eapply Informative_extends; eauto.
+  - econstructor.  
     eapply All2_All_mix_left in H; eauto.
     eapply All2_impl. exact H.
     intros ? ? [[[]] [? []]].
@@ -145,6 +165,9 @@ Proof.
       destruct H4. destruct p0.
       cbn. destruct x, y; cbn in *; subst.
       split; eauto.
+  - econstructor.
+    eapply weakening_typing in X1. rewrite PCUICLiftSubst.lift_mkApps in X1. cbn in X1.
+    all:eauto.
   - econstructor.
     eapply All2_map.
     eapply All2_impl. eapply All2_All_mix_left.
@@ -347,7 +370,10 @@ Proof.
       eapply is_type_subst; eauto.      
   - inv H1.
     + cbn. econstructor.
-      eauto.
+      * eapply substitution in X4. rewrite PCUICLiftSubst.subst_mkApps in X4.
+        all:eauto.
+      * eauto.
+      * eauto.
     + econstructor.
       eapply is_type_subst; eauto.
   - inv H0.

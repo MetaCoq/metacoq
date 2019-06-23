@@ -239,7 +239,7 @@ Inductive erases (Σ : global_context) (Γ : context) : term -> E.term -> Prop :
 | erases_tConstruct kn k n :
     erases Σ Γ (tConstruct kn k n) (E.tConstruct kn k)
 | erases_tCase1 ind npar T c brs c' brs' u args :
-    Σ ;;; Γ |- c : mkApps (tInd ind u) args ->
+    Σ ;;; Γ |- c : mkApps (tInd ind u) args -> (* This is to make sure we have the right u. *)
     Informative Σ ind u ->
     erases Σ Γ c c' ->
     All2 (fun x x' => erases Σ Γ (snd x) (snd x') × fst x = fst x') brs brs' ->
@@ -251,7 +251,10 @@ Inductive erases (Σ : global_context) (Γ : context) : term -> E.term -> Prop :
 (*     erases Σ Γ c E.tBox -> *)
 (*     erases Σ Γ x x' -> *)
 (*     erases Σ Γ (tCase ip T c ((n, x) :: brs)) (mkAppBox x' n) *)
-| erases_tProj p c c' :
+| erases_tProj p c c' u args :
+    let ind := fst (fst p) in
+    Σ ;;; Γ |- c : mkApps (tInd ind u) args ->
+    Informative Σ ind u ->
     erases Σ Γ c c' ->
     erases Σ Γ (tProj p c) (E.tProj p c')
 | erases_tFix mfix n mfix' :

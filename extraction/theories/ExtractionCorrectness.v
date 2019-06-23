@@ -157,7 +157,13 @@ Lemma length_of_btys {ind mdecl' idecl' args' u' p pty indctx pctx ps btys} :
   #|btys| = #|ind_ctors idecl'|.
 Proof.
 Admitted.
- 
+
+Lemma tCase_length_branch_inv Σ Γ ind npar p n u args brs T m t :
+  wf Σ ->
+  Σ ;;; Γ |- tCase (ind, npar) p (mkApps (tConstruct ind n u) args) brs : T ->
+  nth_error brs n = Some (m, t) ->
+  #|args| = npar + m.
+Admitted.
 
 (** ** Concerning fixpoints *)
 
@@ -261,6 +267,12 @@ Proof.
   (*          econstructor; eauto. *)
 Admitted.
 
+Lemma typing_subst_instance Σ Γ t T u :
+  wf Σ ->
+  Σ ;;; Γ |- t : T ->
+  Σ ;;; Γ |- PCUICUnivSubst.subst_instance_constr u t : PCUICUnivSubst.subst_instance_constr u T.
+Proof.
+Admitted.
 
 Lemma red_context_conversion :
   env_prop
@@ -759,7 +771,16 @@ Proof.
         pose proof (Ee.eval_to_value _ _ _ He_v').
         eapply value_app_inv in H4. subst. eassumption.
 
-        enough (#|skipn (ind_npars mdecl') (x1 ++ x2)| = n) as <- by eauto. admit. (* lengths match *)        
+        eapply tCase_length_branch_inv in extr_env_wf'0.
+        2:{ eapply subject_reduction. eauto.
+            exact Hty.
+            eapply PCUICReduction.red_case. econstructor. eapply wcbeval_red. eauto.
+            econstructor. econstructor. econstructor. }
+        2: reflexivity.
+
+        enough (#|skipn (ind_npars mdecl') (x1 ++ x2)| = n) as <- by eauto.
+        rewrite skipn_length. rewrite extr_env_wf'0. omega.
+        rewrite extr_env_wf'0. omega.
       * subst. unfold iota_red in *.
         destruct (nth_error brs c) eqn:Hnth.
         2:{ eapply nth_error_None in Hnth. erewrite All2_length in Hnth. 2:exact a. rewrite H3 in Hnth.
@@ -772,7 +793,14 @@ Proof.
         destruct (All2_nth_error_Some _ _ a Hnth) as (? & ? & ? & ?).
         destruct p0, x4. cbn in *. subst.
         edestruct IHeval2 as (? & ? & ?).
-        eapply type_mkApps. eauto. admit (* typing_spine skip *).
+        eapply subject_reduction. eauto. exact Hty.
+        etransitivity.
+        eapply PCUICReduction.red_case. econstructor. eapply wcbeval_red. eauto.
+        eapply PCUICReduction.All2_same. intros. econstructor.
+        etransitivity. eapply trans_red. econstructor.
+        econstructor. unfold iota_red. rewrite <- nth_default_eq. unfold nth_default.
+        rewrite Hnth. econstructor.
+        
         eapply erases_mkApps. eauto.
         eapply Forall2_skipn. eauto.
         inv H5.
@@ -814,7 +842,18 @@ Proof.
            pose proof (Ee.eval_to_value _ _ _ He_v').
            eapply value_app_inv in H4. subst. eassumption. 
            reflexivity. cbn in *.
-           enough (#|skipn (ind_npars mdecl') args| = n0) as <- by eauto. admit. (* lengths match *)        
+           enough (#|skipn (ind_npars mdecl') args| = n0) as <- by eauto.
+
+           eapply tCase_length_branch_inv in extr_env_wf'0.
+           2:{ eapply subject_reduction. eauto.
+               exact Hty.
+               eapply PCUICReduction.red_case. econstructor. eapply wcbeval_red. eauto.
+               econstructor. econstructor. econstructor. }
+           2: reflexivity.
+
+           enough (#|skipn (ind_npars mdecl') args| = n0) as <- by eauto.
+           rewrite skipn_length. rewrite extr_env_wf'0. omega.
+           rewrite extr_env_wf'0. omega.
     + exists tBox. split. econstructor. 
       eapply Is_type_eval; eauto. econstructor; eauto.
   - assert (Hty' := Hty). 
@@ -930,7 +969,10 @@ Proof.
       unfold erases_constant_body in H2. rewrite H0 in *.
       destruct ?; try tauto.
       edestruct IHeval.
-      * admit. (* Substitutivity of typing w.r.t. universes *)
+      * eapply typing_subst_instance. eauto.
+        eapply PCUICWeakeningEnv.declared_constant_inv in H'; eauto.
+        unfold on_constant_decl in H'. rewrite H0 in H'. eapply H'.
+        eapply PCUICWeakeningEnv.weaken_env_prop_typing.
       * eapply erases_subst_instance_constr; eauto.
         eapply PCUICWeakeningEnv.declared_constant_inv in H'; eauto.
         unfold on_constant_decl in H'. rewrite H0 in H'. eapply H'.
@@ -957,7 +999,7 @@ Proof.
         eapply Is_type_eval. eauto. eauto.
         eapply nth_error_all.
         eapply nth_error_skipn. eassumption.
-        eapply All_impl. assert (pars = ind_npars x0) by admit. subst.
+        eapply All_impl. assert (pars = ind_npars x0). destruct d as (? & ? & ?). now rewrite H9. subst.
         eassumption.
         eapply Is_Type_or_Proof_Proof.
 
@@ -987,7 +1029,7 @@ Proof.
            eapply Is_type_eval. eauto. eauto.
            eapply nth_error_all.
            eapply nth_error_skipn. eassumption.
-           eapply All_impl. assert (pars = ind_npars x0) by admit. subst.
+           eapply All_impl. assert (pars = ind_npars x0). destruct d as (? & ? & ?). now rewrite H9. subst.
            eassumption.
            eapply Is_Type_or_Proof_Proof.
 
@@ -1072,4 +1114,4 @@ Proof.
         -- inv H3. inv t0. eapply IHAll2 in H5 as (? & ? & ?).
            eapply r in H2 as (? & ? & ?); eauto. 
            eauto.
-Admitted.
+Qed.

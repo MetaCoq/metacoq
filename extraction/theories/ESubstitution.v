@@ -37,6 +37,17 @@ Proof.
   eapply weakening_env; [ | | eauto | | ]; eauto using wf_extends.
 Qed.
 
+Lemma Is_proof_extends Σ Γ t :
+  wf_local Σ Γ ->
+  forall Σ', wf Σ' -> extends Σ Σ' -> Is_proof Σ Γ t -> Is_proof Σ' Γ t.
+Proof.
+  intros. destruct X2 as (? & ? & ? & ? & ?).
+  exists x, x0. repeat split.
+  eapply weakening_env; [ | | eauto | | ]; eauto using wf_extends.
+  eapply weakening_env; [ | | eauto | | ]; eauto using wf_extends.
+  eauto.
+Qed.
+
 Lemma erases_extends :
   env_prop (fun Σ Γ t T =>
               forall Σ', wf Σ' -> extends Σ Σ' -> forall t', erases Σ Γ t t' -> erases Σ' Γ t t').
@@ -45,7 +56,7 @@ Proof.
   all: match goal with [ H : erases _ _ ?a _ |- _ ] => tryif is_var a then idtac else inv H end.
   all: try now (econstructor; eauto).  
   all: try now (econstructor; eapply Is_type_extends; eauto).
-  - econstructor. eapply weakening_env. 3:eauto. all:eauto.
+  - econstructor. all:eauto.
     2:{ eauto. eapply All2_All_left in X3.
         2:{ intros ? ? []. exact e. }
         eapply All2_All_mix_left in H3; eauto.
@@ -62,26 +73,24 @@ Proof.
         forall (Σ' : PCUICAst.global_context) (u0 : universe_instance),
           wf Σ' ->
           extends Σ Σ' ->
-          Informative Σ ind u0 -> Informative Σ' ind u0.
+          Informative Σ ind -> Informative Σ' ind.
     Proof.
-      intros Σ ind mdecl idecl isdecl Σ' u0 H1 H2.
-      intros ? ? ? H3 H4 H5 ?.
+      repeat intros ?.
+      assert (extends Σ Σ'0). destruct X0, X2. subst. cbn. exists (x0 ++ x). cbn.
+      now rewrite app_assoc.
+      edestruct H0; eauto. destruct H3.
 
-      assert (isdecl' := isdecl). 
-      
-      destruct isdecl as [H6 H7].
-      assert (H7' := H7).
-      eapply extends_lookup in H6; eauto. destruct H4. unfold PCUICTyping.declared_minductive in H4.
-      rewrite H6 in H4. inversion H4. subst. clear H4.
-      rewrite H8 in H7. inversion H7. subst. clear H7.
-      destruct (H _ _ _ isdecl' H5 H0); eauto.
-      split; eauto. intros.
-      destruct H9. 
-      eapply H7. econstructor; eauto.
+      eapply weakening_env_declared_inductive in H; eauto.
+      destruct H, H1.
+      unfold PCUICTyping.declared_minductive in *.
+
+      eapply extends_lookup in H1; eauto. 
+      rewrite H1 in H. inversion H. subst. clear H.
+      rewrite H3 in H4. inversion H4. subst. clear H4.
+      split. eauto. econstructor. eauto.
     Qed.
     eapply Informative_extends; eauto.
-  - econstructor.  eapply weakening_env. 3:eauto. all:eauto.
-    destruct isdecl.
+  - econstructor. destruct isdecl. 2:eauto.
     eapply Informative_extends; eauto.
   - econstructor.  
     eapply All2_All_mix_left in H; eauto.
@@ -153,21 +162,16 @@ Proof.
       eapply H1; eauto. cbn. econstructor.
       eauto. cbn. eapply weakening_typing; eauto.
   - econstructor.
-    + eapply weakening_typing in X1. rewrite PCUICLiftSubst.lift_mkApps in X1. cbn in X1.
-      all:eauto.
     + eauto.
     + eapply h_forall_Γ0; eauto.
     + eapply All2_map.
       eapply All2_All_left in X3.
-      2:{ intros. destruct X2. exact e. }
+      2:{ intros. destruct X1. exact e. }
       eapply All2_impl. eapply All2_All_mix_left.
       eassumption. eassumption. intros.
       destruct H4. destruct p0.
       cbn. destruct x, y; cbn in *; subst.
       split; eauto.
-  - econstructor.
-    eapply weakening_typing in X1. rewrite PCUICLiftSubst.lift_mkApps in X1. cbn in X1.
-    all:eauto.
   - econstructor.
     eapply All2_map.
     eapply All2_impl. eapply All2_All_mix_left.
@@ -337,8 +341,6 @@ Proof.
       eapply is_type_subst; eauto.
   - depelim H5. 
     + cbn. econstructor.
-      * eapply substitution in X6. cbn in X6. rewrite PCUICLiftSubst.subst_mkApps in X6.
-        all:eauto.
       * eauto.
       * eapply H4; eauto.
       * eapply All2_map.
@@ -370,8 +372,6 @@ Proof.
       eapply is_type_subst; eauto.      
   - inv H1.
     + cbn. econstructor.
-      * eapply substitution in X4. rewrite PCUICLiftSubst.subst_mkApps in X4.
-        all:eauto.
       * eauto.
       * eauto.
     + econstructor.

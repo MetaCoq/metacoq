@@ -609,10 +609,17 @@ Proof.
       * eauto.
 Qed.
 
-Lemma Informative_tConstruct_proofs Σ Γ ind u u' args args' mdecl decl n :
+Lemma Informative_tConstruct_proof Σ mib ind ib u u0 args c:
+  declared_inductive (fst Σ) mib ind ib ->
+  Informative Σ ind u0 ->
+  Is_Type_or_Proof Σ [] (mkApps (tConstruct ind c u) args) ->
+  Is_Singleton Σ mib ind ib u0.
+Admitted.
+
+Lemma Informative_tConstruct_proofs Σ Γ ind u u' args' mdecl decl n :
   Informative Σ ind u ->
   declared_inductive (fst Σ) mdecl ind decl ->
-  Σ ;;; Γ |- mkApps (tConstruct ind n u') args' : mkApps (tInd ind u) args ->
+  Is_Type_or_Proof Σ [] (mkApps (tConstruct ind n u') args') ->  
   All (Is_proof Σ Γ) (skipn (ind_npars mdecl) args').
 Proof.
   intros.
@@ -726,29 +733,24 @@ Proof.
       eapply erases_mkApps_inv in Hv' as [(? & ? & ? & ? & [] & ? & ? & ?) | (? & ? & ? & ? & ?)]; eauto.
       3: eapply subject_reduction_eval; eauto.
       * subst.
-
-        Lemma Informative_tConstruct_proof Σ mib ind ib u u0 args c:
-          declared_inductive (fst Σ) mib ind ib ->
-          Informative Σ ind u0 ->
-          Is_Type_or_Proof Σ [] (mkApps (tConstruct ind c u) args) ->
-          Is_Singleton Σ mib ind ib u0.
-        Admitted.
-
-        eapply Informative_tConstruct_proof in H10; eauto. destruct H10.
         
-        destruct (ind_ctors idecl'). cbn in H2. destruct c; inv H2.
-        destruct l; cbn in *; try omega. destruct c as [ | []]; cbn in H2; inv H2.
+        eapply Informative_tConstruct_proofs in H10; eauto. 
+        
+        (* destruct (ind_ctors idecl'). cbn in H2. destruct c; inv H2. *)
+        (* destruct l; cbn in *; try omega. destruct c as [ | []]; cbn in H2; inv H2. *)
 
-        destruct btys as [ | ? []]; cbn in H3; try omega. clear H3 H4.
-        eapply H7 in d1. inv a. inv X3. inv H12. inv H9. destruct H4.
+        (* destruct btys as [ | ? []]; cbn in H3; try omega. clear H3 H4. *)
+        (* eapply H7 in d1. inv a. inv X3. inv H12. inv H9. destruct H4. *)
 
         edestruct (IHeval2) as (? & ? & ?).
         eapply subject_reduction. eauto. exact Hty.
         etransitivity.
-        eapply PCUICReduction.red_case. econstructor. eapply wcbeval_red. eauto. econstructor. econstructor. econstructor.
-        econstructor. econstructor. econstructor.
+        eapply PCUICReduction.red_case. econstructor. eapply wcbeval_red. eauto.
+        eapply PCUICReduction.All2_same. intros. econstructor. econstructor. econstructor.
+        econstructor.
+        
         unfold iota_red. cbn.
-        eapply erases_mkApps. eauto.
+        eapply erases_mkApps. eauto. 
         eapply Forall2_skipn. admit.
 
         destruct x4; cbn in e2; subst. destruct X2. destruct p0; cbn in e2; subst. cbn in *.  destruct y. 

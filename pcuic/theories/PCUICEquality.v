@@ -507,12 +507,12 @@ Proof.
 Qed.
 
 Lemma eq_term_upto_univ_mkApps :
-  forall Re u1 l1 u2 l2,
-    eq_term_upto_univ Re Re u1 u2 ->
+  forall Re Rle u1 l1 u2 l2,
+    eq_term_upto_univ Re Rle u1 u2 ->
     Forall2 (eq_term_upto_univ Re Re) l1 l2 ->
-    eq_term_upto_univ Re Re (mkApps u1 l1) (mkApps u2 l2).
+    eq_term_upto_univ Re Rle (mkApps u1 l1) (mkApps u2 l2).
 Proof.
-  intros Re u1 l1 u2 l2 hu hl.
+  intros Re Rle u1 l1 u2 l2 hu hl.
   induction l1 in u1, u2, l2, hu, hl |- *.
   - inversion hl. subst. assumption.
   - inversion hl. subst. simpl.

@@ -486,15 +486,15 @@ Proof.
 Qed.
 
 Lemma eq_term_upto_univ_mkApps_l_inv :
-  forall Re u l t,
-    eq_term_upto_univ Re Re (mkApps u l) t ->
+  forall Re Rle u l t,
+    eq_term_upto_univ Re Rle (mkApps u l) t ->
     exists u' l',
-      eq_term_upto_univ Re Re u u' /\
+      eq_term_upto_univ Re Rle u u' /\
       Forall2 (eq_term_upto_univ Re Re) l l' /\
       t = mkApps u' l'.
 Proof.
-  intros Re u l t h.
-  induction l in u, t, h |- *.
+  intros Re Rle u l t h.
+  induction l in u, t, h, Rle |- *.
   - cbn in h. exists t, []. split ; auto.
   - cbn in h. apply IHl in h as [u' [l' [h1 [h2 h3]]]].
     dependent destruction h1. subst.

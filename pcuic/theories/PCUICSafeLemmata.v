@@ -1068,10 +1068,11 @@ Section Lemmata.
       dependent destruction h1.
       eexists. split.
       + constructor. constructor.
-      + (* eapply eq_term_upto_univ_mkApps. *)
-    (*     * eapply Forall2_nth with (P := fun x y => eq_term_upto_univ R (snd x) (snd y)). *)
-    (*       -- eapply Forall2_impl ; [ eassumption |]. *)
-    (*          intros x y [? ?]. assumption. *)
+      + eapply eq_term_upto_univ_mkApps.
+        * eapply Forall2_nth
+            with (P := fun x y => eq_term_upto_univ Re Rle (snd x) (snd y)).
+          -- eapply Forall2_impl ; [ eassumption |].
+             intros x y [? ?]. (* assumption. *)
     (*       -- cbn. eapply eq_term_upto_univ_refl. assumption. *)
     (*     * eapply Forall2_skipn. assumption. *)
     (* - apply eq_term_upto_univ_mkApps_l_inv in e as [? [? [h1 [h2 h3]]]]. subst. *)

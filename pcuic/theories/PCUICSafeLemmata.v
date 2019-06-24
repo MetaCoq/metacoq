@@ -1049,7 +1049,7 @@ Section Lemmata.
         eq_term_upto_univ Re Rle v v'.
   Proof.
     intros Re Rle Γ u v u' he hle hR e h.
-    induction h in u', e, Rle, hle, hR |- *.
+    induction h in u', e, Rle, hle, hR |- * using red1_ind_all.
     - dependent destruction e. dependent destruction e1.
       eexists. split.
       + constructor. constructor.
@@ -1062,13 +1062,13 @@ Section Lemmata.
     - dependent destruction e.
       eexists. split.
       + constructor. constructor. eassumption.
-      + eapply eq_term_upto_univ_refl. assumption.
-    (* - dependent destruction e. *)
-    (*   apply eq_term_upto_univ_mkApps_l_inv in e2 as [? [? [h1 [h2 h3]]]]. subst. *)
-    (*   dependent destruction h1. *)
-    (*   eexists. split. *)
-    (*   + constructor. constructor. *)
-    (*   + eapply eq_term_upto_univ_mkApps. *)
+      + eapply eq_term_upto_univ_refl ; assumption.
+    - dependent destruction e.
+      apply eq_term_upto_univ_mkApps_l_inv in e2 as [? [? [h1 [h2 h3]]]]. subst.
+      dependent destruction h1.
+      eexists. split.
+      + constructor. constructor.
+      + (* eapply eq_term_upto_univ_mkApps. *)
     (*     * eapply Forall2_nth with (P := fun x y => eq_term_upto_univ R (snd x) (snd y)). *)
     (*       -- eapply Forall2_impl ; [ eassumption |]. *)
     (*          intros x y [? ?]. assumption. *)

@@ -940,12 +940,12 @@ Section Lemmata.
 
   (* TODO MOVE? *)
   Lemma isConstruct_app_eq_term_l :
-    forall Re Rle u v,
+    forall Re u v,
       isConstruct_app u ->
-      eq_term_upto_univ Re Rle u v ->
+      eq_term_upto_univ Re Re u v ->
       isConstruct_app v.
   Proof.
-    intros Re Rle u v h e.
+    intros Re u v h e.
     case_eq (decompose_app u). intros t1 l1 e1.
     case_eq (decompose_app v). intros t2 l2 e2.
     unfold isConstruct_app in *.
@@ -954,13 +954,12 @@ Section Lemmata.
     destruct t1 ; try discriminate.
     apply PCUICConfluence.decompose_app_inv in e1 as ?. subst.
     apply PCUICConfluence.decompose_app_inv in e2 as ?. subst.
-  (*   apply eq_term_upto_univ_mkApps_inv in e as hh. *)
-  (*   - destruct hh as [h1 h2]. *)
-  (*     dependent destruction h1. reflexivity. *)
-  (*   - reflexivity. *)
-  (*   - eapply decompose_app_notApp. eassumption. *)
-  (* Qed. *)
-  Admitted.
+    apply eq_term_upto_univ_mkApps_inv in e as hh.
+    - destruct hh as [h1 h2].
+      dependent destruction h1. reflexivity.
+    - reflexivity.
+    - eapply decompose_app_notApp. eassumption.
+  Qed.
 
   (* TODO Duplicate of tactic in PCUICEquality *)
   Local Ltac sih :=
@@ -969,91 +968,72 @@ Section Lemmata.
       |- eq_term_upto_univ _ _ (subst _ _ ?u) _ => eapply ih
     end.
 
-  (* TODO Is it correct now? *)
   (* TODO MOVE *)
-  (* Subsumes the other lemma? *)
   Lemma eq_term_upto_univ_substs :
-    forall Re Rle u v n l l',
+    forall (Re Rle : universe -> universe -> Prop) u v n l l',
+      (forall u u' : universe, Re u u' -> Rle u u') ->
       eq_term_upto_univ Re Rle u v ->
-      Forall2 (eq_term_upto_univ Re Rle) l l' ->
+      Forall2 (eq_term_upto_univ Re Re) l l' ->
       eq_term_upto_univ Re Rle (subst l n u) (subst l' n v).
   Proof.
-    intros Re Rle u v n l l' hu hl.
-    induction u in v, n, l, l', hu, hl, Rle |- * using term_forall_list_ind.
+    intros Re Rle u v n l l' hR hu hl.
+    induction u in v, n, l, l', hu, hl, Rle, hR |- * using term_forall_list_ind.
     all: dependent destruction hu.
-    all: try (cbn ; constructor ; try sih ; assumption).
-(*     - cbn. destruct (Nat.leb_spec0 n n0). *)
-(*       + destruct (eqb_spec n0 n). *)
-(*         * subst. replace (n - n) with 0 by omega. *)
-(*           destruct hl. *)
-(*           -- cbn. constructor. *)
-(*           -- cbn. eapply eq_term_upto_univ_lift. assumption. *)
-(*         * replace (n0 - n) with (S (n0 - (S n))) by omega. *)
-(*           destruct hl. *)
-(*           -- cbn. constructor. *)
-(*           -- cbn.  *)
-
-(* induction hl in n |- *. *)
-(*       + rewrite subst_empty. constructor. *)
-(*       + cbn. destruct (Nat.leb_spec0 n n0). *)
-(*         * destruct (eqb_spec n0 n). *)
-(*           -- subst. replace (n - n) with 0 by omega. cbn. *)
-(*              eapply eq_term_upto_univ_lift. assumption. *)
-(*           -- replace (n0 - n) with (S (n0 - (S n))) by omega. cbn. *)
-(*              cbn in IHhl. specialize (IHhl (S n)). *)
-(*              revert IHhl. *)
-(*              destruct (Nat.leb_spec0 (S n) n0) ; try (exfalso ; omega). *)
-(*              case_eq (nth_error l (n0 - S n)). *)
-(*              ++ intros b e. *)
-(*                 case_eq (nth_error l' (n0 - S n)). *)
-(*                 ** intros b' e' ih. *)
-
-
-
-(* cbn. destruct (Nat.leb_spec0 n n0). *)
-(*       + destruct (eqb_spec n0 n). *)
-(*         * subst. replace (n - n) with 0 by omega. *)
-(*           destruct hl. *)
-(*           -- cbn. constructor. *)
-(*           -- cbn. eapply eq_term_upto_univ_lift. assumption. *)
-(*         * replace (n0 - n) with (S (n0 - (S n))) by omega. *)
-(*           destruct hl. *)
-(*           -- cbn. constructor. *)
-(*           -- cbn. *)
-
-(*           eapply eq_term_upto_univ_lift. assumption. *)
-(*         * replace (n0 - n) with (S (n0 - (S n))) by omega. cbn. *)
-(*           rewrite nth_error_nil. constructor. *)
-(*       + constructor. *)
-
-    (* - admit. *)
-    (* - cbn. constructor. *)
-    (*   eapply Forall2_map. eapply Forall2_impl' ; [ eassumption |]. *)
-    (*   eapply All_Forall. *)
-    (*   eapply All_impl ; [ eassumption |]. *)
-    (*   intros x0 H1 y0 H2. cbn in H1. *)
-    (*   eapply H1. all: assumption. *)
-    (* - cbn. constructor ; try sih ; try assumption. *)
-    (*   eapply Forall2_map. eapply Forall2_impl' ; [ eassumption |]. *)
-    (*   eapply All_Forall. eapply All_impl ; [ eassumption |]. *)
-    (*   intros ? H0 ? [? ?]. cbn in H0. repeat split ; auto. *)
-    (*   eapply H0. all: assumption. *)
-    (* - cbn. constructor. *)
-    (*   eapply Forall2_map. eapply Forall2_impl' ; [ eassumption |]. *)
-    (*   eapply All_Forall. eapply All_impl ; [ eassumption |]. *)
-    (*   intros ? [h1 h2] ? [? [? ?]]. *)
-    (*   repeat split ; auto. *)
-    (*   + eapply h1. all: assumption. *)
-    (*   + apply Forall2_length in H. rewrite H. *)
-    (*     eapply h2. all: assumption. *)
-    (* - cbn. constructor. *)
-    (*   eapply Forall2_map. eapply Forall2_impl' ; [ eassumption |]. *)
-    (*   eapply All_Forall. eapply All_impl ; [ eassumption |]. *)
-    (*   intros ? [h1 h2] ? [? [? ?]]. *)
-    (*   repeat split ; auto. *)
-    (*   + eapply h1. all: assumption. *)
-    (*   + apply Forall2_length in H. rewrite H. *)
-    (*     eapply h2. all: assumption. *)
+    all: try solve [ cbn ; constructor ; try sih ; eauto ].
+    (* - induction hl. *)
+    (*   + simpl. destruct (Nat.leb_spec0 n n0). *)
+    (*     * destruct (eqb_spec n0 n). *)
+    (*       -- subst. replace (n - n) with 0 by omega. cbn. *)
+    (*          constructor. *)
+    (*       -- replace (n0 - n) with (S (n0 - (S n))) by omega. cbn. *)
+    (*          constructor. *)
+    (*     * constructor. *)
+    (*   + revert IHhl. simpl. destruct (Nat.leb_spec0 n n0). *)
+    (*     * destruct (eqb_spec n0 n). *)
+    (*       -- subst. replace (n - n) with 0 by omega. cbn. intro. *)
+    (*          eapply eq_term_upto_univ_lift. *)
+    (*          eapply eq_term_upto_univ_leq ; eauto. *)
+    (*       -- replace (n0 - n) with (S (n0 - (S n))) by omega. simpl. *)
+    (*          intro h. *)
+    - cbn. destruct (Nat.leb_spec0 n n0).
+      + destruct (eqb_spec n0 n).
+        * subst. replace (n - n) with 0 by omega. cbn.
+          destruct hl.
+          -- cbn. constructor.
+          -- cbn. eapply eq_term_upto_univ_lift.
+             eapply eq_term_upto_univ_leq ; eauto.
+        * replace (n0 - n) with (S (n0 - (S n))) by omega. cbn.
+          destruct hl.
+          -- cbn. constructor.
+          -- cbn. admit.
+      + constructor.
+    - cbn. constructor.
+      eapply Forall2_map. eapply Forall2_impl' ; [ eassumption |].
+      eapply All_Forall.
+      eapply All_impl ; [ eassumption |].
+      intros x0 H1 y0 H2. cbn in H1.
+      eapply H1. all: eauto.
+    - cbn. constructor ; try sih ; eauto.
+      eapply Forall2_map. eapply Forall2_impl' ; [ eassumption |].
+      eapply All_Forall. eapply All_impl ; [ eassumption |].
+      intros ? H0 ? [? ?]. cbn in H0. repeat split ; auto.
+      eapply H0. all: eauto.
+    - cbn. constructor.
+      eapply Forall2_map. eapply Forall2_impl' ; [ eassumption |].
+      eapply All_Forall. eapply All_impl ; [ eassumption |].
+      intros ? [h1 h2] ? [? [? ?]].
+      repeat split ; auto.
+      + eapply h1. all: eauto.
+      + apply Forall2_length in H. rewrite H.
+        eapply h2. all: eauto.
+    - cbn. constructor.
+      eapply Forall2_map. eapply Forall2_impl' ; [ eassumption |].
+      eapply All_Forall. eapply All_impl ; [ eassumption |].
+      intros ? [h1 h2] ? [? [? ?]].
+      repeat split ; auto.
+      + eapply h1. all: eauto.
+      + apply Forall2_length in H. rewrite H.
+        eapply h2. all: eauto.
   Admitted.
 
   (* TODO MOVE *)

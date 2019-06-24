@@ -1072,32 +1072,37 @@ Section Lemmata.
         * eapply Forall2_nth
             with (P := fun x y => eq_term_upto_univ Re Rle (snd x) (snd y)).
           -- eapply Forall2_impl ; [ eassumption |].
-             intros x y [? ?]. (* assumption. *)
-    (*       -- cbn. eapply eq_term_upto_univ_refl. assumption. *)
-    (*     * eapply Forall2_skipn. assumption. *)
-    (* - apply eq_term_upto_univ_mkApps_l_inv in e as [? [? [h1 [h2 h3]]]]. subst. *)
-    (*   dependent destruction h1. *)
-    (*   unfold unfold_fix in e0. *)
-    (*   case_eq (nth_error mfix idx) ; *)
-    (*     try (intros e ; rewrite e in e0 ; discriminate e0). *)
-    (*   intros d e. rewrite e in e0. inversion e0. subst. clear e0. *)
-    (*   eapply Forall2_nth_error_Some_l in H as hh ; try eassumption. *)
-    (*   destruct hh as [d' [e' [? [? erarg]]]]. *)
-    (*   unfold is_constructor in e1. *)
-    (*   case_eq (nth_error args (rarg d)) ; *)
-    (*     try (intros bot ; rewrite bot in e1 ; discriminate e1). *)
-    (*   intros a ea. rewrite ea in e1. *)
-    (*   eapply Forall2_nth_error_Some_l in h2 as hh ; try eassumption. *)
-    (*   destruct hh as [a' [ea' ?]]. *)
-    (*   eexists. split. *)
-    (*   + constructor. eapply red_fix. *)
-    (*     * unfold unfold_fix. rewrite e'. reflexivity. *)
-    (*     * unfold is_constructor. rewrite <- erarg. rewrite ea'. *)
-    (*       eapply isConstruct_app_eq_term_l ; eassumption. *)
-    (*   + eapply eq_term_upto_univ_mkApps. *)
-    (*     * eapply eq_term_upto_univ_substs. *)
-    (*       -- assumption. *)
-    (*       -- *)
+             intros x y [? ?].
+             eapply eq_term_upto_univ_leq ; eauto.
+          -- cbn. eapply eq_term_upto_univ_refl ; eauto.
+        * eapply Forall2_skipn. assumption.
+    - apply eq_term_upto_univ_mkApps_l_inv in e as [? [? [h1 [h2 h3]]]]. subst.
+      dependent destruction h1.
+      unfold unfold_fix in H.
+      case_eq (nth_error mfix idx) ;
+        try (intros e ; rewrite e in H ; discriminate H).
+      intros d e. rewrite e in H. inversion H. subst. clear H.
+      eapply Forall2_nth_error_Some_l in H1 as hh ; try eassumption.
+      destruct hh as [d' [e' [? [? erarg]]]].
+      unfold is_constructor in H0.
+      case_eq (nth_error args (rarg d)) ;
+        try (intros bot ; rewrite bot in H0 ; discriminate H0).
+      intros a ea. rewrite ea in H0.
+      eapply Forall2_nth_error_Some_l in h2 as hh ; try eassumption.
+      destruct hh as [a' [ea' ?]].
+      eexists. split.
+      + constructor. eapply red_fix.
+        * unfold unfold_fix. rewrite e'. reflexivity.
+        * unfold is_constructor. rewrite <- erarg. rewrite ea'.
+          eapply isConstruct_app_eq_term_l ; eassumption.
+      + eapply eq_term_upto_univ_mkApps.
+        * eapply eq_term_upto_univ_substs ; eauto.
+          -- eapply eq_term_upto_univ_leq ; eauto.
+          -- induction H1.
+             ++ constructor.
+             ++ admit.
+        * assumption.
+    -
   Admitted.
 
   Lemma cored_eq_term_upto_univ_r :

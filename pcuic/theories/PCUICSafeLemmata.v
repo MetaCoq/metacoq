@@ -1102,7 +1102,12 @@ Section Lemmata.
              ++ constructor.
              ++ admit.
         * assumption.
-    -
+    - admit.
+    - admit.
+    - dependent destruction e.
+      eexists. split.
+      + constructor. econstructor. all: eauto.
+      +
   Admitted.
 
   Lemma cored_eq_term_upto_univ_r :

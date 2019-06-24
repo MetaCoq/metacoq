@@ -521,6 +521,52 @@ Proof.
     + assumption.
 Qed.
 
+Lemma eq_term_upto_univ_subst_instance_constr :
+  forall Re Rle u b u' b',
+    Forall2 Rle (map Universe.make u) (map Universe.make u') ->
+    eq_term_upto_univ Re Rle b b' ->
+    eq_term_upto_univ Re Rle (subst_instance_constr u b)
+                      (subst_instance_constr u' b').
+Proof.
+  intros Re Rle u b u' b' hu hb.
+  induction b in b', hb, Rle |- * using term_forall_list_ind.
+  all: try solve [ dependent destruction hb ; constructor ; eauto ].
+  - dependent destruction hb. cbn. constructor.
+    eapply Forall2_map. eapply Forall2_impl' ; [ eassumption |].
+    eapply All_Forall.
+    eapply All_impl ; [ eassumption |].
+    intros x0 H1 y0 H2. cbn in H1.
+    eapply H1. all: eauto.
+  - dependent destruction hb. constructor.
+    (* We probably have to assume it because we don't know Rle *)
+    give_up.
+  - dependent destruction hb. cbn. constructor.
+    (* Similar I guess *)
+    give_up.
+  - dependent destruction hb. cbn. constructor.
+    give_up.
+  - dependent destruction hb. cbn. constructor.
+    give_up.
+  - dependent destruction hb. cbn. constructor. all: eauto.
+    eapply Forall2_map. eapply Forall2_impl' ; [ eassumption |].
+    eapply All_Forall.
+    eapply All_impl ; [ eassumption |].
+    intros [? ?] H1 [? ?] [H2 H3]. cbn in H1, H2, H3. subst.
+    cbn. split ; eauto.
+  - dependent destruction hb. cbn. constructor.
+    eapply Forall2_map. eapply Forall2_impl' ; [ eassumption |].
+    eapply All_Forall.
+    eapply All_impl ; [ eassumption |].
+    intros ? [? ?] ? [? [? ?]]. cbn in *.
+    repeat split ; eauto.
+  - dependent destruction hb. cbn. constructor.
+    eapply Forall2_map. eapply Forall2_impl' ; [ eassumption |].
+    eapply All_Forall.
+    eapply All_impl ; [ eassumption |].
+    intros ? [? ?] ? [? [? ?]]. cbn in *.
+    repeat split ; eauto.
+Abort.
+
 Lemma nleq_term_it_mkLambda_or_LetIn :
   forall Γ u v,
     nleq_term u v ->

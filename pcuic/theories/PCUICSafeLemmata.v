@@ -1037,6 +1037,47 @@ Section Lemmata.
   Admitted.
 
   (* TODO MOVE *)
+  Inductive eq_context_upto Re : context -> context -> Prop :=
+  | eq_context_nil : eq_context_upto Re [] []
+  | eq_context_vass na A Γ nb B Δ :
+      eq_term_upto_univ Re Re A B ->
+      eq_context_upto Re Γ Δ ->
+      eq_context_upto Re (Γ ,, vass na A) (Δ ,, vass nb B)
+  | eq_context_vdef na u A Γ nb v B Δ :
+      eq_term_upto_univ Re Re u v ->
+      eq_term_upto_univ Re Re A B ->
+      eq_context_upto Re Γ Δ ->
+      eq_context_upto Re (Γ ,, vdef na u A) (Δ ,, vdef nb v B).
+
+  (* TODO MOVE *)
+  Lemma eq_context_upto_refl :
+    forall Re Γ,
+      Reflexive Re ->
+      eq_context_upto Re Γ Γ.
+  Proof.
+    intros Re Γ hRe.
+    induction Γ as [| [na [bo |] ty] Γ ih].
+    - constructor.
+    - constructor ; eauto.
+      all: eapply eq_term_upto_univ_refl ; eauto.
+    - constructor ; eauto.
+      all: eapply eq_term_upto_univ_refl ; eauto.
+  Qed.
+
+  (* TODO MOVE *)
+  Lemma red1_eq_context_upto_l :
+    forall Re Γ Δ u v,
+      red1 Σ Γ u v ->
+      eq_context_upto Re Γ Δ ->
+      exists v',
+        ∥ red1 Σ Δ u v' ∥ /\
+        eq_term_upto_univ Re Re v v'.
+  Proof.
+    intros Re Γ Δ u v h e.
+    induction h in e |- * using red1_ind_all.
+  Admitted.
+
+  (* TODO MOVE *)
   Lemma red1_eq_term_upto_univ_l :
     forall Re Rle Γ u v u',
       Reflexive Re ->
@@ -1181,9 +1222,24 @@ Section Lemmata.
       + eapply eq_term_upto_univ_leq ; eauto.
     - dependent destruction e.
       edestruct IHh as [? [[?] ?]] ; [ .. | eassumption | ] ; eauto.
+      clear h.
+      lazymatch goal with
+      | r : red1 _ (?Γ,, vass ?na ?A) ?u ?v,
+        e : eq_term_upto_univ _ _ ?A ?B
+        |- _ =>
+        let hh := fresh "hh" in
+        eapply red1_eq_context_upto_l in r as hh ; [
+          destruct hh as [? [[?] ?]]
+        | eapply eq_context_vass (* with (nb := na) *) ; [
+            eapply e
+          | eapply eq_context_upto_refl ; eauto
+          ]
+        ]
+      end.
       eexists. split.
-      + constructor. (* solve [ econstructor ; eauto ]. *)
-      (* + constructor ; eauto. *)
+      + constructor. solve [ econstructor ; eauto ].
+      + constructor ; eauto.
+        (* eapply eq_term_upto_univ_trans. *)
   Admitted.
 
   Lemma cored_eq_term_upto_univ_r :

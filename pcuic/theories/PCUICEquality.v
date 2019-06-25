@@ -7,6 +7,9 @@ From MetaCoq.Template Require Import config utils Universes BasicAst AstUtils
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICReflect PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICNameless
      PCUICCumulativity PCUICPosition.
+From Equations Require Import Equations.
+Require Import Equations.Prop.DepElim.
+Set Equations With UIP.
 
 Fixpoint eqb_term_upto_univ (equ lequ : universe -> universe -> bool) (u v : term) : bool :=
   match u, v with
@@ -350,7 +353,8 @@ Proof.
   intros Re Rle u v he hle h.
   induction u using term_forall_list_ind in v, h, Rle, hle |- *.
   all: dependent destruction h.
-  all: try solve [ constructor ; try ih2 ; try assumption ; try reflexivity ].
+  all: try solve [ constructor ; try ih2 ; try assumption ;
+                   try subst ; try reflexivity ].
   - constructor. eapply Forall2_impl' ; try eassumption.
     eapply All_Forall. eapply All_impl ; eauto.
   - constructor. eapply Forall2_impl ; try eassumption.
@@ -521,15 +525,41 @@ Proof.
     + assumption.
 Qed.
 
+(* TODO MOVE *)
+(* Lemma non_empty_dec : *)
+(*   forall A (l : list A), {l = []} + {l <> []}. *)
+(* Proof. *)
+(*   intros A l. destruct l. *)
+(*   - auto. *)
+(*   - right. discriminate. *)
+(* Defined. *)
+
+(* TODO MOVE *)
+Lemma non_empty_eq :
+  forall A (l : list A) (p q : [] <> l),
+    p = q.
+Proof.
+  intros A l p q.
+  (* Is it even possible? *)
+Admitted.
+
 Lemma eq_term_upto_univ_subst_instance_constr :
-  forall Re Rle u b u' b',
+  forall (Re Rle : universe -> universe -> Prop) u b u' b',
+    (forall s s',
+        Re s s' ->
+        Re (subst_instance_univ u s) (subst_instance_univ u' s')
+    ) ->
+    (forall s s',
+        Rle s s' ->
+        Rle (subst_instance_univ u s) (subst_instance_univ u' s')
+    ) ->
     Forall2 Rle (map Universe.make u) (map Universe.make u') ->
     eq_term_upto_univ Re Rle b b' ->
     eq_term_upto_univ Re Rle (subst_instance_constr u b)
                       (subst_instance_constr u' b').
 Proof.
-  intros Re Rle u b u' b' hu hb.
-  induction b in b', hb, Rle |- * using term_forall_list_ind.
+  intros Re Rle u b u' b' hRe hRle hu hb.
+  induction b in b', hb, Rle, hRle |- * using term_forall_list_ind.
   all: try solve [ dependent destruction hb ; constructor ; eauto ].
   - dependent destruction hb. cbn. constructor.
     eapply Forall2_map. eapply Forall2_impl' ; [ eassumption |].
@@ -537,16 +567,66 @@ Proof.
     eapply All_impl ; [ eassumption |].
     intros x0 H1 y0 H2. cbn in H1.
     eapply H1. all: eauto.
-  - dependent destruction hb. constructor.
-    (* We probably have to assume it because we don't know Rle *)
-    give_up.
+  - dependent destruction hb. simpl. constructor.
+    eapply Forall2_map_inv in H.
+    eapply Forall2_map. eapply Forall2_map.
+    eapply Forall2_impl ; [ eassumption |].
+    intros x y h. cbn in h.
+    unfold Universe.make in h.
+    specialize (hRle _ _ h).
+    unfold subst_instance_univ in hRle. simpl in hRle.
+    unfold Universe.make. unfold make_non_empty_list.
+    match goal with
+    | h : Rle (_ ; ?e) _ |- Rle (_ ; ?e') _ =>
+      assert (e1 : e = e')
+    end.
+    { eapply non_empty_eq. }
+    match goal with
+    | h : Rle _ (_ ; ?e) |- Rle _ (_ ; ?e') =>
+      assert (e2 : e = e')
+    end.
+    { eapply non_empty_eq. }
+    rewrite e1, e2 in hRle. assumption.
   - dependent destruction hb. cbn. constructor.
-    (* Similar I guess *)
-    give_up.
+    eapply Forall2_map_inv in H.
+    eapply Forall2_map. eapply Forall2_map.
+    eapply Forall2_impl ; [ eassumption |].
+    intros x y h. cbn in h.
+    unfold Universe.make in h.
+    specialize (hRle _ _ h).
+    unfold subst_instance_univ in hRle. simpl in hRle.
+    unfold Universe.make. unfold make_non_empty_list.
+    match goal with
+    | h : Rle (_ ; ?e) _ |- Rle (_ ; ?e') _ =>
+      assert (e1 : e = e')
+    end.
+    { eapply non_empty_eq. }
+    match goal with
+    | h : Rle _ (_ ; ?e) |- Rle _ (_ ; ?e') =>
+      assert (e2 : e = e')
+    end.
+    { eapply non_empty_eq. }
+    rewrite e1, e2 in hRle. assumption.
   - dependent destruction hb. cbn. constructor.
-    give_up.
-  - dependent destruction hb. cbn. constructor.
-    give_up.
+    eapply Forall2_map_inv in H.
+    eapply Forall2_map. eapply Forall2_map.
+    eapply Forall2_impl ; [ eassumption |].
+    intros x y h. cbn in h.
+    unfold Universe.make in h.
+    specialize (hRle _ _ h).
+    unfold subst_instance_univ in hRle. simpl in hRle.
+    unfold Universe.make. unfold make_non_empty_list.
+    match goal with
+    | h : Rle (_ ; ?e) _ |- Rle (_ ; ?e') _ =>
+      assert (e1 : e = e')
+    end.
+    { eapply non_empty_eq. }
+    match goal with
+    | h : Rle _ (_ ; ?e) |- Rle _ (_ ; ?e') =>
+      assert (e2 : e = e')
+    end.
+    { eapply non_empty_eq. }
+    rewrite e1, e2 in hRle. assumption.
   - dependent destruction hb. cbn. constructor. all: eauto.
     eapply Forall2_map. eapply Forall2_impl' ; [ eassumption |].
     eapply All_Forall.
@@ -565,7 +645,7 @@ Proof.
     eapply All_impl ; [ eassumption |].
     intros ? [? ?] ? [? [? ?]]. cbn in *.
     repeat split ; eauto.
-Abort.
+Qed.
 
 Lemma nleq_term_it_mkLambda_or_LetIn :
   forall Γ u v,

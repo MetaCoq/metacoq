@@ -1048,7 +1048,7 @@ Proof.
   simpl. now rewrite up_Up.
 Qed.
 
-Lemma inst_prod {na t b σ} : (tLambda na t b).[σ] = tLambda na t.[σ] b.[⇑ σ].
+Lemma inst_prod {na t b σ} : (tProd na t b).[σ] = tProd na t.[σ] b.[⇑ σ].
 Proof.
   simpl. now rewrite up_Up.
 Qed.

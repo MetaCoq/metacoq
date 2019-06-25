@@ -1041,6 +1041,14 @@ Section Lemmata.
     forall Re Rle Γ u v u',
       Reflexive Re ->
       Reflexive Rle ->
+      (forall u u' s s',
+          Re s s' ->
+          Re (subst_instance_univ u s) (subst_instance_univ u' s')
+      ) ->
+      (forall u u' s s',
+          Rle s s' ->
+          Rle (subst_instance_univ u s) (subst_instance_univ u' s')
+      ) ->
       (forall u u' : universe, Re u u' -> Rle u u') ->
       eq_term_upto_univ Re Rle u u' ->
       red1 Σ Γ u v ->
@@ -1048,8 +1056,16 @@ Section Lemmata.
         ∥ red1 Σ Γ u' v' ∥ /\
         eq_term_upto_univ Re Rle v v'.
   Proof.
-    intros Re Rle Γ u v u' he hle hR e h.
-    induction h in u', e, Rle, hle, hR |- * using red1_ind_all.
+    intros Re Rle Γ u v u' he hle hRe hRle hR e h.
+    induction h in u', e, Rle, hle, hRle, hR |- * using red1_ind_all.
+    all: try solve [
+      dependent destruction e ;
+      edestruct IHh as [? [[?] ?]] ; [ .. | eassumption | ] ; eauto ;
+      eexists ; split ; [
+        constructor ; solve [ econstructor ; eauto ]
+      | constructor ; eauto
+      ]
+    ].
     - dependent destruction e. dependent destruction e1.
       eexists. split.
       + constructor. constructor.
@@ -1107,13 +1123,28 @@ Section Lemmata.
     - dependent destruction e.
       eexists. split.
       + constructor. econstructor. all: eauto.
-      +
+      + eapply eq_term_upto_univ_subst_instance_constr ; eauto.
+        eapply eq_term_upto_univ_refl ; eauto.
+    - admit.
+    - dependent destruction e.
+      edestruct IHh as [? [[?] ?]] ; [ .. | eassumption | ] ; eauto.
+      eexists. split.
+      + constructor. (* solve [ econstructor ; eauto ]. *)
+      (* + constructor ; eauto. *)
   Admitted.
 
   Lemma cored_eq_term_upto_univ_r :
     forall Re Rle Γ u v u',
       Reflexive Re ->
       Reflexive Rle ->
+      (forall u u' s s',
+          Re s s' ->
+          Re (subst_instance_univ u s) (subst_instance_univ u' s')
+      ) ->
+      (forall u u' s s',
+          Rle s s' ->
+          Rle (subst_instance_univ u s) (subst_instance_univ u' s')
+      ) ->
       (forall u u' : universe, Re u u' -> Rle u u') ->
       eq_term_upto_univ Re Rle u u' ->
       cored Σ Γ v u ->
@@ -1121,7 +1152,7 @@ Section Lemmata.
         cored Σ Γ v' u' /\
         eq_term_upto_univ Re Rle v v'.
   Proof.
-    intros Re Rle Γ u v u' he hle hR e h.
+    intros Re Rle Γ u v u' he hle hRe hRle hR e h.
     induction h.
     - eapply red1_eq_term_upto_univ_l in X ; try exact e ; eauto.
       destruct X as [v' [[r] e']].

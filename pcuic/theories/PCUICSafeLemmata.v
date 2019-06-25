@@ -1077,11 +1077,69 @@ Section Lemmata.
     induction h in e |- * using red1_ind_all.
   Admitted.
 
+  Derive Signature for Forall2.
+
+  (* TODO MOVE *)
+  Lemma Forall2_trans :
+    forall A (P : A -> A -> Prop),
+      Transitive P ->
+      Transitive (Forall2 P).
+  Proof.
+    intros A P hP l1 l2 l3 h1 h2.
+    induction h1 in l3, h2 |- *.
+    - dependent destruction h2. constructor.
+    - dependent destruction h2. constructor.
+      + eapply hP ; eauto.
+      + eapply IHh1 ; eauto.
+  Qed.
+
+  (* TODO MOVE *)
+  Lemma eq_term_upto_univ_trans :
+    forall Re Rle,
+      Transitive Re ->
+      Transitive Rle ->
+      Transitive (eq_term_upto_univ Re Rle).
+  Proof.
+    intros Re Rle he hle u v w e1 e2.
+    induction u in Rle, hle, w, e1, e2 |- * using term_forall_list_ind.
+    all: dependent destruction e1.
+    all: try solve [ eauto ].
+    (* all: try solve [ dependent destruction e2 ; constructor ; eauto ]. *)
+    (* - dependent destruction e2. constructor. *)
+    (*   (* induction H0 in args'0, H1, H |- *. *) *)
+    (*   (* + dependent destruction H1. constructor. *) *)
+    (*   (* + dependent destruction H1. constructor. *) *)
+    (*   (*   *  *) *)
+    (*   apply All_Forall in H. *)
+    (*   eapply Forall_Forall2_and in H as ? ; eauto. *)
+    (*   clear H H0. *)
+    (*   induction H2 in H1, args'0 |- *. *)
+    (*   + assumption. *)
+    (*   + dependent destruction H1. constructor. *)
+    (*     * destruct H as [h1 h2]. *)
+    (*       eapply *)
+  Admitted.
+
+    (* TODO MOVE *)
+  Lemma eq_term_trans :
+    forall G u v w,
+      eq_term G u v ->
+      eq_term G v w ->
+      eq_term G u w.
+  Proof.
+    intros G u v w h1 h2.
+    eapply eq_term_upto_univ_trans ; eauto.
+    all: clear.
+    all: intros x y z h1 h2.
+  Admitted.
+
   (* TODO MOVE *)
   Lemma red1_eq_term_upto_univ_l :
     forall Re Rle Γ u v u',
       Reflexive Re ->
       Reflexive Rle ->
+      Transitive Re ->
+      Transitive Rle ->
       (forall u u' s s',
           Re s s' ->
           Re (subst_instance_univ u s) (subst_instance_univ u' s')
@@ -1097,14 +1155,38 @@ Section Lemmata.
         ∥ red1 Σ Γ u' v' ∥ /\
         eq_term_upto_univ Re Rle v v'.
   Proof.
-    intros Re Rle Γ u v u' he hle hRe hRle hR e h.
-    induction h in u', e, Rle, hle, hRle, hR |- * using red1_ind_all.
+    intros Re Rle Γ u v u' he hle tRe tRle hRe hRle hR e h.
+    induction h in u', e, tRle, Rle, hle, hRle, hR |- * using red1_ind_all.
     all: try solve [
       dependent destruction e ;
       edestruct IHh as [? [[?] ?]] ; [ .. | eassumption | ] ; eauto ;
       eexists ; split ; [
         constructor ; solve [ econstructor ; eauto ]
       | constructor ; eauto
+      ]
+    ].
+    all: try solve [
+      dependent destruction e ;
+      edestruct IHh as [? [[?] ?]] ; [ .. | eassumption | ] ; eauto ;
+      clear h ;
+      lazymatch goal with
+      | r : red1 _ (?Γ,, vass ?na ?A) ?u ?v,
+        e : eq_term_upto_univ _ _ ?A ?B
+        |- _ =>
+        let hh := fresh "hh" in
+        eapply red1_eq_context_upto_l in r as hh ; [
+          destruct hh as [? [[?] ?]]
+        | eapply eq_context_vass (* with (nb := na) *) ; [
+            eapply e
+          | eapply eq_context_upto_refl ; eauto
+          ]
+        ]
+      end ;
+      eexists ; split ; [
+        constructor ; solve [ econstructor ; eauto ]
+      | constructor ; eauto ;
+        eapply eq_term_upto_univ_trans ; eauto ;
+        eapply eq_term_upto_univ_leq ; eauto
       ]
     ].
     - dependent destruction e. dependent destruction e1.
@@ -1224,22 +1306,45 @@ Section Lemmata.
       edestruct IHh as [? [[?] ?]] ; [ .. | eassumption | ] ; eauto.
       clear h.
       lazymatch goal with
-      | r : red1 _ (?Γ,, vass ?na ?A) ?u ?v,
-        e : eq_term_upto_univ _ _ ?A ?B
+      | r : red1 _ (?Γ,, vdef ?na ?a ?A) ?u ?v,
+        e1 : eq_term_upto_univ _ _ ?A ?B,
+        e2 : eq_term_upto_univ _ _ ?a ?b
         |- _ =>
         let hh := fresh "hh" in
         eapply red1_eq_context_upto_l in r as hh ; [
           destruct hh as [? [[?] ?]]
-        | eapply eq_context_vass (* with (nb := na) *) ; [
-            eapply e
+        | eapply eq_context_vdef (* with (nb := na) *) ; [
+            eapply e2
+          | eapply e1
           | eapply eq_context_upto_refl ; eauto
           ]
         ]
       end.
       eexists. split.
-      + constructor. solve [ econstructor ; eauto ].
+      + constructor. eapply letin_red_body ; eauto.
       + constructor ; eauto.
-        (* eapply eq_term_upto_univ_trans. *)
+        eapply eq_term_upto_univ_trans ; eauto.
+        eapply eq_term_upto_univ_leq ; eauto.
+    - dependent destruction e.
+      (* edestruct IHh as [? [[?] ?]] ; [ .. | eassumption | ] ; eauto. *)
+      (* clear h. *)
+      (* lazymatch goal with *)
+      (* | r : red1 _ (?Γ,, vass ?na ?A) ?u ?v, *)
+      (*   e : eq_term_upto_univ _ _ ?A ?B *)
+      (*   |- _ => *)
+      (*   let hh := fresh "hh" in *)
+      (*   eapply red1_eq_context_upto_l in r as hh ; [ *)
+      (*     destruct hh as [? [[?] ?]] *)
+      (*   | eapply eq_context_vass (* with (nb := na) *) ; [ *)
+      (*       eapply e *)
+      (*     | eapply eq_context_upto_refl ; eauto *)
+      (*     ] *)
+      (*   ] *)
+      (* end. *)
+      (* eexists. split. *)
+      (* + constructor. solve [ econstructor ; eauto ]. *)
+      (* + constructor ; eauto. *)
+      (*   eapply eq_term_upto_univ_trans ; eauto. *)
   Admitted.
 
   Lemma cored_eq_term_upto_univ_r :
@@ -1632,13 +1737,6 @@ Section Lemmata.
     cbn. pose proof (decompose_stack_eq _ _ _ e). subst.
     rewrite stack_context_appstack. reflexivity.
   Qed.
-
-  Lemma eq_term_trans :
-    forall G u v w,
-      eq_term G u v ->
-      eq_term G v w ->
-      eq_term G u w.
-  Admitted.
 
   Lemma it_mkLambda_or_LetIn_inj :
     forall Γ u v,

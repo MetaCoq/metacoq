@@ -1114,18 +1114,71 @@ Section Lemmata.
       + eapply eq_term_upto_univ_mkApps.
         * eapply eq_term_upto_univ_substs ; eauto.
           -- eapply eq_term_upto_univ_leq ; eauto.
-          -- induction H1.
+          -- unfold fix_subst.
+             apply Forall2_length in H1 as el. rewrite <- el.
+             generalize #|mfix|. intro n.
+             induction n.
              ++ constructor.
-             ++ admit.
+             ++ constructor ; eauto.
+                constructor. assumption.
         * assumption.
-    - admit.
-    - admit.
+    - dependent destruction e.
+      apply eq_term_upto_univ_mkApps_l_inv in e2 as [? [? [h1 [h2 h3]]]]. subst.
+      dependent destruction h1.
+      unfold unfold_cofix in H.
+      case_eq (nth_error mfix idx) ;
+        try (intros e ; rewrite e in H ; discriminate H).
+      intros d e. rewrite e in H. inversion H. subst. clear H.
+      eapply Forall2_nth_error_Some_l in H1 as hh ; try eassumption.
+      destruct hh as [d' [e' [? [? erarg]]]].
+      eexists. split.
+      + constructor. eapply red_cofix_case.
+        unfold unfold_cofix. rewrite e'. reflexivity.
+      + constructor. all: eauto.
+        eapply eq_term_upto_univ_mkApps. all: eauto.
+        eapply eq_term_upto_univ_substs ; eauto.
+        unfold cofix_subst.
+        apply Forall2_length in H1 as el. rewrite <- el.
+        generalize #|mfix|. intro n.
+        induction n.
+        * constructor.
+        * constructor ; eauto.
+          constructor. assumption.
+    - dependent destruction e.
+      apply eq_term_upto_univ_mkApps_l_inv in e as [? [? [h1 [h2 h3]]]]. subst.
+      dependent destruction h1.
+      unfold unfold_cofix in H.
+      case_eq (nth_error mfix idx) ;
+        try (intros e ; rewrite e in H ; discriminate H).
+      intros d e. rewrite e in H. inversion H. subst. clear H.
+      eapply Forall2_nth_error_Some_l in H0 as hh ; try eassumption.
+      destruct hh as [d' [e' [? [? erarg]]]].
+      eexists. split.
+      + constructor. eapply red_cofix_proj.
+        unfold unfold_cofix. rewrite e'. reflexivity.
+      + constructor.
+        eapply eq_term_upto_univ_mkApps. all: eauto.
+        eapply eq_term_upto_univ_substs ; eauto.
+        unfold cofix_subst.
+        apply Forall2_length in H0 as el. rewrite <- el.
+        generalize #|mfix|. intro n.
+        induction n.
+        * constructor.
+        * constructor ; eauto.
+          constructor. assumption.
     - dependent destruction e.
       eexists. split.
       + constructor. econstructor. all: eauto.
       + eapply eq_term_upto_univ_subst_instance_constr ; eauto.
         eapply eq_term_upto_univ_refl ; eauto.
-    - admit.
+    - dependent destruction e.
+      apply eq_term_upto_univ_mkApps_l_inv in e as [? [? [h1 [h2 h3]]]]. subst.
+      dependent destruction h1.
+      eapply Forall2_nth_error_Some_l in h2 as hh ; try eassumption.
+      destruct hh as [arg' [e' ?]].
+      eexists. split.
+      + constructor. constructor. eassumption.
+      + eapply eq_term_upto_univ_leq ; eauto.
     - dependent destruction e.
       edestruct IHh as [? [[?] ?]] ; [ .. | eassumption | ] ; eauto.
       eexists. split.

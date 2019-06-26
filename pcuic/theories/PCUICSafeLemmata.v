@@ -1065,6 +1065,35 @@ Section Lemmata.
   Qed.
 
   (* TODO MOVE *)
+  Lemma eq_context_upto_cat :
+    forall Re Γ Δ Γ' Δ',
+      eq_context_upto Re Γ Γ' ->
+      eq_context_upto Re Δ Δ' ->
+      eq_context_upto Re (Γ ,,, Δ) (Γ' ,,, Δ').
+  Proof.
+    intros Re Γ Δ Γ' Δ' h1 h2.
+    induction h2 in Γ, Γ', h1 |- *.
+    - assumption.
+    - simpl. constructor ; eauto.
+    - simpl. constructor ; eauto.
+  Qed.
+
+  (* TODO MOVE *)
+  Lemma eq_context_upto_rev :
+    forall Re Γ Δ,
+      eq_context_upto Re Γ Δ ->
+      eq_context_upto Re (rev Γ) (rev Δ).
+  Proof.
+    intros Re Γ Δ h.
+    induction h.
+    - constructor.
+    - rewrite 2!rev_cons. eapply eq_context_upto_cat ; eauto.
+      constructor ; eauto. constructor.
+    - rewrite 2!rev_cons. eapply eq_context_upto_cat ; eauto.
+      constructor ; eauto. constructor.
+  Qed.
+
+  (* TODO MOVE *)
   Lemma red1_eq_context_upto_l :
     forall Re Γ Δ u v,
       red1 Σ Γ u v ->
@@ -1421,14 +1450,27 @@ Section Lemmata.
                    x.(rarg) = y.(rarg)
                  ) mfix1 mfix
              ).
-      { induction X in H, mfix' |- *.
+      { set (Δ := fix_context mfix0) in *.
+        assert (Δe : Δ = fix_context mfix0) by reflexivity.
+        clearbody Δ.
+        induction X in H, mfix', Δe |- *.
         - destruct p as [[p1 p3] p2].
           dependent destruction H.
           destruct H as [h1 [h2 h3]].
           eapply p2 in h2 as hh ; eauto.
           destruct hh as [? [[?] ?]].
           eexists. split.
-          + constructor. constructor.
+          + eapply red1_eq_context_upto_l in X as [? [? ?]] ; revgoals.
+            { instantiate (1 := Γ ,,, fix_context (y :: l')).
+              instantiate (1 := Re).
+              rewrite Δe.
+              eapply eq_context_upto_cat.
+              - eapply eq_context_upto_refl. eauto.
+              - (* eapply eq_context_upto_rev. *)
+                (* fix_context should use the new rev? *)
+                admit.
+            }
+            constructor. constructor.
             instantiate (1 := mkdef _ _ _ x _).
             simpl. split ; eauto.
             (* We probably need context conversion as well,
@@ -1439,6 +1481,7 @@ Section Lemmata.
             simpl. repeat split ; eauto. rewrite <- p3. eauto.
         - dependent destruction H. destruct H as [h1 [h2 h3]].
           destruct (IHX _ H0) as [? [[?] ?]].
+          { give_up. }
           eexists. split.
           + constructor. eapply OnOne2_tl.
             (* SAME PROBLEM *)

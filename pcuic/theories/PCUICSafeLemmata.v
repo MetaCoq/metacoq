@@ -1326,25 +1326,61 @@ Section Lemmata.
         eapply eq_term_upto_univ_trans ; eauto.
         eapply eq_term_upto_univ_leq ; eauto.
     - dependent destruction e.
-      (* edestruct IHh as [? [[?] ?]] ; [ .. | eassumption | ] ; eauto. *)
-      (* clear h. *)
-      (* lazymatch goal with *)
-      (* | r : red1 _ (?Γ,, vass ?na ?A) ?u ?v, *)
-      (*   e : eq_term_upto_univ _ _ ?A ?B *)
-      (*   |- _ => *)
-      (*   let hh := fresh "hh" in *)
-      (*   eapply red1_eq_context_upto_l in r as hh ; [ *)
-      (*     destruct hh as [? [[?] ?]] *)
-      (*   | eapply eq_context_vass (* with (nb := na) *) ; [ *)
-      (*       eapply e *)
-      (*     | eapply eq_context_upto_refl ; eauto *)
-      (*     ] *)
-      (*   ] *)
-      (* end. *)
+      assert (h : exists brs0,
+                 ∥ OnOne2 (fun x => red1 Σ Γ (snd x) ∘ snd) brs'0 brs0 ∥ /\
+                 Forall2 (fun x y =>
+                            fst x = fst y /\
+                            eq_term_upto_univ Re Re (snd x) (snd y)
+                         ) brs' brs0
+             ).
+      { induction X in H, brs'0 |- *.
+        - destruct p0 as [p1 p2].
+          dependent destruction H. destruct H as [h1 h2].
+          eapply p2 in h2 as hh ; eauto.
+          destruct hh as [? [[?] ?]].
+          eexists. split.
+          + constructor. constructor.
+            instantiate (1 := (fst hd', _)). cbn. eassumption.
+          + constructor. all: eauto.
+        - dependent destruction H. (* destruct H as [h1 h2]. *)
+          destruct (IHX _ H0) as [? [[?] ?]].
+          eexists. split.
+          + constructor. eapply OnOne2_tl. eassumption.
+          + constructor. all: eauto.
+      }
+      destruct h as [brs0 [[?] ?]].
+      eexists. split.
+      + constructor. eapply case_red_brs. eassumption.
+      + constructor. all: eauto.
+    - dependent destruction e.
+      eexists. split.
+      (* + constructor. eapply evar_red. *)
+      (* assert (h : exists brs0, *)
+      (*            ∥ OnOne2 (fun x => red1 Σ Γ) brs'0 brs0 ∥ /\ *)
+      (*            Forall2 (fun x y => *)
+      (*                       fst x = fst y /\ *)
+      (*                       eq_term_upto_univ Re Re (snd x) (snd y) *)
+      (*                    ) brs' brs0 *)
+      (*        ). *)
+      (* { induction X in H, brs'0 |- *. *)
+      (*   - destruct p0 as [p1 p2]. *)
+      (*     dependent destruction H. destruct H as [h1 h2]. *)
+      (*     eapply p2 in h2 as hh ; eauto. *)
+      (*     destruct hh as [? [[?] ?]]. *)
+      (*     eexists. split. *)
+      (*     + constructor. constructor. *)
+      (*       instantiate (1 := (fst hd', _)). cbn. eassumption. *)
+      (*     + constructor. all: eauto. *)
+      (*   - dependent destruction H. (* destruct H as [h1 h2]. *) *)
+      (*     destruct (IHX _ H0) as [? [[?] ?]]. *)
+      (*     eexists. split. *)
+      (*     + constructor. eapply OnOne2_tl. eassumption. *)
+      (*     + constructor. all: eauto. *)
+      (* } *)
+      (* destruct h as [brs0 [[?] ?]]. *)
       (* eexists. split. *)
-      (* + constructor. solve [ econstructor ; eauto ]. *)
-      (* + constructor ; eauto. *)
-      (*   eapply eq_term_upto_univ_trans ; eauto. *)
+      (* + constructor. eapply case_red_brs. eassumption. *)
+      (* + constructor. all: eauto. *)
   Admitted.
 
   Lemma cored_eq_term_upto_univ_r :

@@ -17,6 +17,7 @@ Makefile.coq.conf
 .merlin
 html/*.html
 .lia.cache
+.hidden
 _opam/
 template-coq/Ascii.ml
 template-coq/Ascii.mli

@@ -1193,6 +1193,31 @@ Section Lemmata.
   Admitted.
 
   (* TODO MOVE *)
+  Lemma Forall2_rev :
+    forall A B R l l',
+      @Forall2 A B R l l' ->
+      Forall2 R (List.rev l) (List.rev l').
+  Proof.
+    intros A B R l l' h.
+    induction h.
+    - constructor.
+    - cbn. eapply Forall2_app ; eauto.
+  Qed.
+
+  (* TODO MOVE (ALSO WEAK) *)
+  Lemma Forall2_mapi :
+    forall A B A' B' (R : A' -> B' -> Prop) (f : nat -> A -> A') (g : nat -> B -> B') l l',
+      Forall2 (fun x y => forall i, R (f i x) (g i y)) l l' ->
+      Forall2 R (mapi f l) (mapi g l').
+  Proof.
+    intros A B A' B' R f g l l' h.
+    unfold mapi. generalize 0. intro i.
+    induction h in i |- *.
+    - constructor.
+    - cbn. constructor ; eauto.
+  Qed.
+
+  (* TODO MOVE *)
   Lemma red1_eq_term_upto_univ_l :
     forall Re Rle Γ u v u',
       Reflexive Re ->
@@ -1489,26 +1514,33 @@ Section Lemmata.
           destruct H as [h1 [h2 h3]].
           eapply p2 in h2 as hh ; eauto.
           destruct hh as [? [[?] ?]].
+          eapply red1_eq_context_upto_l in X as [x' [[?] ?]] ; revgoals.
+          { instantiate (1 := Γ ,,, fix_context (y :: l')).
+            instantiate (1 := Re).
+            rewrite Δe.
+            eapply eq_context_upto_cat.
+            - eapply eq_context_upto_refl. eauto.
+            - eapply Forall2_eq_context_upto.
+              eapply Forall2_rev.
+              eapply Forall2_mapi.
+              constructor.
+              + intro i. split.
+                * cbn. constructor.
+                * cbn. eapply eq_term_upto_univ_lift. eauto.
+              + eapply Forall2_impl ; eauto.
+                intros ? ? [? [? ?]] i.
+                split.
+                * constructor.
+                * cbn. eapply eq_term_upto_univ_lift. eauto.
+          }
           eexists. split.
-          + eapply red1_eq_context_upto_l in X as [? [? ?]] ; revgoals.
-            { instantiate (1 := Γ ,,, fix_context (y :: l')).
-              instantiate (1 := Re).
-              rewrite Δe.
-              eapply eq_context_upto_cat.
-              - eapply eq_context_upto_refl. eauto.
-              - (* eapply eq_context_upto_rev. *)
-                (* fix_context should use the new rev? *)
-                admit.
-            }
-            constructor. constructor.
-            instantiate (1 := mkdef _ _ _ x _).
+          + constructor. constructor.
+            instantiate (1 := mkdef _ _ _ x' _).
             simpl. split ; eauto.
-            (* We probably need context conversion as well,
-               but how is mfix0 related to y :: l'?
-             *)
-            admit.
           + constructor. all: eauto.
-            simpl. repeat split ; eauto. rewrite <- p3. eauto.
+            simpl. repeat split ; eauto.
+            * rewrite <- p3. eauto.
+            * eapply eq_term_upto_univ_trans ; eauto.
         - dependent destruction H. destruct H as [h1 [h2 h3]].
           destruct (IHX _ H0) as [? [[?] ?]].
           { give_up. }

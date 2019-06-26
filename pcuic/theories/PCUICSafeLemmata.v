@@ -1351,6 +1351,8 @@ Section Lemmata.
     forall Re Rle Γ u v u',
       Reflexive Re ->
       Reflexive Rle ->
+      Transitive Re ->
+      Transitive Rle ->
       (forall u u' s s',
           Re s s' ->
           Re (subst_instance_univ u s) (subst_instance_univ u' s')
@@ -1366,7 +1368,7 @@ Section Lemmata.
         cored Σ Γ v' u' /\
         eq_term_upto_univ Re Rle v v'.
   Proof.
-    intros Re Rle Γ u v u' he hle hRe hRle hR e h.
+    intros Re Rle Γ u v u' he hle tRe tRle hRe hRle hR e h.
     induction h.
     - eapply red1_eq_term_upto_univ_l in X ; try exact e ; eauto.
       destruct X as [v' [[r] e']].

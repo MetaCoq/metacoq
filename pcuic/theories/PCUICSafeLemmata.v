@@ -1049,6 +1049,36 @@ Section Lemmata.
       eq_context_upto Re Γ Δ ->
       eq_context_upto Re (Γ ,, vdef na u A) (Δ ,, vdef nb v B).
 
+  Definition eq_def_upto Re d d' : Prop :=
+    eq_term_upto_univ Re Re d.(dtype) d'.(dtype) /\
+    eq_term_upto_univ Re Re d.(dbody) d'.(dbody) /\
+    d.(rarg) = d'.(rarg).
+
+  Inductive rel_option {A B} (R : A -> B -> Prop) : option A -> option B -> Prop :=
+  | rel_some : forall a b, R a b -> rel_option R (Some a) (Some b)
+  | rel_none : rel_option R None None.
+
+  Definition eq_decl_upto Re d d' : Prop :=
+    rel_option (eq_term_upto_univ Re Re) d.(decl_body) d'.(decl_body) /\
+    eq_term_upto_univ Re Re d.(decl_type) d'.(decl_type).
+
+  (* TODO perhaps should be def *)
+  Lemma Forall2_eq_context_upto :
+    forall Re Γ Δ,
+      Forall2 (eq_decl_upto Re) Γ Δ ->
+      eq_context_upto Re Γ Δ.
+  Proof.
+    intros Re Γ Δ h.
+    induction h.
+    - constructor.
+    - destruct H as [h1 h2].
+      destruct x as [na bo ty], y as [na' bo' ty'].
+      simpl in h1, h2.
+      destruct h1.
+      + constructor ; eauto.
+      + constructor ; eauto.
+  Qed.
+
   (* TODO MOVE *)
   Lemma eq_context_upto_refl :
     forall Re Γ,

@@ -1,4 +1,4 @@
-(* -*- coq-prog-args : ("-debug" "-type-in-type") -*-  *)
+(* -*- coq-prog-args : ("-type-in-type") -*-  *)
 
 From MetaCoq Require Import Template.All.
 Require Import Arith.Compare_dec.
@@ -14,7 +14,7 @@ Local Existing Instance Checker.default_fuel.
 
 Fixpoint refresh_universes (t : term) {struct t} :=
   match t with
-  | tSort s => tSort (if Universe.is_level s then s else [])
+  | tSort s => tSort (if Universe.is_level s then s else fresh_universe)
   | tProd na b t => tProd na b (refresh_universes t)
   | tLetIn na b t' t => tLetIn na b t' (refresh_universes t)
   | _ => t
@@ -41,7 +41,7 @@ Fixpoint tsl_rec1 (n : nat) (t : term) {struct t} : term :=
   end.
     
 
-Fixpoint tsl_rec2 (fuel : nat) (Σ : global_context) (E : tsl_table) (Γ : context) (t : term) {struct fuel}
+Fixpoint tsl_rec2 (fuel : nat) (Σ : global_declarations) (G : universes_graph) (E : tsl_table) (Γ : context) (t : term) {struct fuel}
   : tsl_result term :=
   match fuel with
   | O => raise NotEnoughFuel
@@ -51,61 +51,61 @@ Fixpoint tsl_rec2 (fuel : nat) (Σ : global_context) (E : tsl_table) (Γ : conte
   | tSort s => ret (tLambda (nNamed "A") (tSort s)
                            (tProd nAnon (tRel 0) (tSort s)))
   | tCast t c A => let t1 := tsl_rec1 0 t in
-                  t2 <- tsl_rec2 fuel Σ E Γ t ;;
-                  A2 <- tsl_rec2 fuel Σ E Γ A ;;
+                  t2 <- tsl_rec2 fuel Σ G E Γ t ;;
+                  A2 <- tsl_rec2 fuel Σ G E Γ A ;;
                   ret (tCast t2 c (tApp A2 [t1]))
   | tProd n A B => let ΠAB' := tsl_rec1 0 (tProd n A B) in
                   let B1 := tsl_rec1 0 B in
-                  A' <- tsl_ty_param fuel Σ E Γ A ;;
-                  B2 <- tsl_rec2 fuel Σ E (Γ ,, vass n A) B ;;
+                  A' <- tsl_ty_param fuel Σ G E Γ A ;;
+                  B2 <- tsl_rec2 fuel Σ G E (Γ ,, vass n A) B ;;
                   ret (tLambda (nNamed "f") ΠAB'
                                (tProd n (lift 1 0 A')
                                       (tApp (lift 1 1 B2)
                                             [tApp (tRel 1) [proj1 (tRel 0)]])))
-  | tLambda n A t => A' <- tsl_ty_param fuel Σ E Γ A ;;
-                    t' <- tsl_rec2 fuel Σ E (Γ ,, vass n A) t ;;
+  | tLambda n A t => A' <- tsl_ty_param fuel Σ G E Γ A ;;
+                    t' <- tsl_rec2 fuel Σ G E (Γ ,, vass n A) t ;;
                     ret (tLambda n A' t')
-  | tLetIn n t A u => t' <- tsl_term fuel Σ E Γ t ;;
-                     A' <- tsl_ty_param fuel Σ E Γ A ;;
-                     u' <- tsl_rec2 fuel Σ E (Γ ,, vdef n t A) u ;;
+  | tLetIn n t A u => t' <- tsl_term fuel Σ G E Γ t ;;
+                     A' <- tsl_ty_param fuel Σ G E Γ A ;;
+                     u' <- tsl_rec2 fuel Σ G E (Γ ,, vdef n t A) u ;;
                      ret (tLetIn n t' A' u')
-  | tApp t u => t' <- tsl_rec2 fuel Σ E Γ t ;;
-               u' <- monad_map (tsl_term fuel Σ E Γ) u ;;
+  | tApp t u => t' <- tsl_rec2 fuel Σ G E Γ t ;;
+               u' <- monad_map (tsl_term fuel Σ G E Γ) u ;;
                ret (tApp t' u')
   | tConst _ _ as t
   | tInd _ _ as t
-  | tConstruct _ _ _ as t => t' <- tsl_term fuel Σ E Γ t ;;
+  | tConstruct _ _ _ as t => t' <- tsl_term fuel Σ G E Γ t ;;
                             ret (proj2 t')
   | _ => raise TranslationNotHandeled
   end
   end
-with tsl_term  (fuel : nat) (Σ : global_context) (E : tsl_table) (Γ : context) (t : term) {struct fuel}
+with tsl_term  (fuel : nat) (Σ : global_declarations) (G : universes_graph) (E : tsl_table) (Γ : context) (t : term) {struct fuel}
   : tsl_result term :=
   match fuel with
   | O => raise NotEnoughFuel
   | S fuel =>
   match t with
   | tRel n => ret (tRel n)
-  | tCast t c A => t' <- tsl_term fuel Σ E Γ t ;;
-                  A' <- tsl_ty_param fuel Σ E Γ A ;;
+  | tCast t c A => t' <- tsl_term fuel Σ G E Γ t ;;
+                  A' <- tsl_ty_param fuel Σ G E Γ A ;;
                   ret (tCast t' c A')
   | tConst s univs => lookup_tsl_table' E (ConstRef s)
   | tInd i univs => lookup_tsl_table' E (IndRef i)
   | tConstruct i n univs => lookup_tsl_table' E (ConstructRef i n)
-  | t => match infer Σ Γ t with
+  | t => match infer Σ G Γ t with
         | Checked typ => let typ := refresh_universes typ in
                         let t1 := tsl_rec1 0 t in
-                        t2 <- tsl_rec2 fuel Σ E Γ t ;;
+                        t2 <- tsl_rec2 fuel Σ G E Γ t ;;
                         let typ1 := tsl_rec1 0 typ in
-                        typ2 <- tsl_rec2 fuel Σ E Γ typ ;;
+                        typ2 <- tsl_rec2 fuel Σ G E Γ typ ;;
                         ret (pair typ1 typ2 t1 t2)
         | TypeError t => raise (TypingError t)
         end
   end
   end
-where "'tsl_ty_param'" := (fun fuel Σ E Γ t =>
+where "'tsl_ty_param'" := (fun fuel Σ G E Γ t =>
                         let t1 := tsl_rec1 0 t in
-                        t2 <- tsl_rec2 fuel Σ E Γ t ;;
+                        t2 <- tsl_rec2 fuel Σ G E Γ t ;;
                         ret (pack t1 t2)).
 
 
@@ -142,13 +142,19 @@ Fixpoint replace t k u {struct u} :=
   end.
 
 
-
 Definition tsl_mind_body (ΣE : tsl_context) (mp : string)
            (kn : kername) (mind : mutual_inductive_body)
   : tsl_result (tsl_table * list mutual_inductive_body).
-  refine (let tsl_ty' := tsl_ty_param fuel (fst ΣE) (snd ΣE) [] in _).
-  refine (let tsl2' := tsl_rec2 fuel (fst ΣE) (snd ΣE) [] in
-          let kn' := tsl_kn tsl_ident kn mp in _).
+  refine (
+      let Σ := fst (fst ΣE) in
+      match gc_of_constraints (snd (fst ΣE)) with
+      | None => raise (TypingError (UnsatisfiableConstraints (snd (fst ΣE))))
+      | Some ctrs => 
+        let G := make_graph ctrs in
+        let E := snd ΣE in
+        let tsl_ty' := tsl_ty_param fuel Σ G E [] in
+        let tsl2' := tsl_rec2 fuel Σ G E [] in
+        let kn' := tsl_kn tsl_ident kn mp in _ end).
   simple refine (let arities := List.map ind_type mind.(ind_bodies) in
                  arities2 <- monad_map tsl2' arities ;;
                  bodies <- _ ;;
@@ -195,6 +201,7 @@ Definition tsl_mind_body (ΣE : tsl_context) (mp : string)
       (* refine (fold_left_i (fun E k _ => _ :: E) ind.(ind_ctors) []). *)
       (* exact (ConstructRef (mkInd id i) k, tConstruct (mkInd id' i) k []). *)
       refine [].
+  - exact mind.(ind_finite).
   - (* FIXME don't know what to do *) refine (mind.(ind_params)).
 Defined.
 
@@ -202,8 +209,16 @@ Defined.
 
 Instance tsl_param : Translation
   := {| tsl_id := tsl_ident ;
-        tsl_tm := fun ΣE => tsl_term fuel (fst ΣE) (snd ΣE) [] ;
-        tsl_ty := Some (fun ΣE => tsl_ty_param fuel (fst ΣE) (snd ΣE) []) ;
+        tsl_tm := fun ΣE t =>
+      match gc_of_constraints (snd (fst ΣE)) with
+      | None => raise (TypingError (UnsatisfiableConstraints (snd (fst ΣE))))
+      | Some ctrs => tsl_term fuel (fst (fst ΣE)) (make_graph ctrs) (snd ΣE) [] t
+      end;
+        tsl_ty := Some (fun ΣE t =>
+      match gc_of_constraints (snd (fst ΣE)) with
+      | None => raise (TypingError (UnsatisfiableConstraints (snd (fst ΣE))))
+      | Some ctrs => tsl_ty_param fuel (fst (fst ΣE)) (make_graph ctrs) (snd ΣE) [] t
+      end);
         tsl_ind := tsl_mind_body |}.
 
 

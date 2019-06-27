@@ -464,14 +464,14 @@ Inductive eq_term_upto_univ (Re Rle : universe -> universe -> Prop) : term -> te
     eq_term_upto_univ Re Rle (tCoFix mfix idx) (tCoFix mfix' idx).
 
 Definition eq_term `{checker_flags} φ :=
-  eq_term_upto_univ (eq_universe' φ) (eq_universe' φ).
+  eq_term_upto_univ (eq_universe φ) (eq_universe φ).
 
 (* ** Syntactic cumulativity up-to universes
 
   We shouldn't look at printing annotations *)
 
 Definition leq_term `{checker_flags} φ :=
-  eq_term_upto_univ (eq_universe' φ) (leq_universe' φ).
+  eq_term_upto_univ (eq_universe φ) (leq_universe φ).
 
 Fixpoint strip_casts t :=
   match t with
@@ -570,15 +570,6 @@ Definition types_of_case ind mdecl idecl params u p pty :=
     | _, _, _ => None
     end
   | None => None
-  end.
-
-(** Family of a universe [u]. *)
-
-Definition universe_family u :=
-  match u with
-  | [(Level.lProp, false)] => InProp
-  | [(Level.lSet, false)] => InSet
-  | _ => InType
   end.
 
 (** Check that [uctx] instantiated at [u] is consistent with the current universe graph. *)

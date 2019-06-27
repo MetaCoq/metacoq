@@ -382,7 +382,7 @@ Lemma eq_term_upto_univ_eq_eq_term :
 Proof.
   intros φ u v h.
   eapply eq_term_upto_univ_eq_eq_term_upto_univ ; auto.
-  all: intro x ; eapply eq_universe'_refl.
+  all: intro x ; eapply eq_universe_refl.
 Qed.
 
 Local Ltac lih :=

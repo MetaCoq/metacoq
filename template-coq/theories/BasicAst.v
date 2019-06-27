@@ -31,10 +31,6 @@ Arguments rarg {term} _.
 Definition mfixpoint (term : Set) : Set :=
   list (def term).
 
-(** Sort families *)
-
-Inductive sort_family : Set := InProp | InSet | InType.
-
 (** The kind of a cast *)
 
 Inductive cast_kind : Set :=

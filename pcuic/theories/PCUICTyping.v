@@ -518,14 +518,14 @@ Inductive eq_term_upto_univ (Re Rle : universe -> universe -> Prop) : term -> te
     eq_term_upto_univ Re Rle (tCoFix mfix idx) (tCoFix mfix' idx).
 
 Definition eq_term `{checker_flags} φ :=
-  eq_term_upto_univ (eq_universe' φ) (eq_universe' φ).
+  eq_term_upto_univ (eq_universe φ) (eq_universe φ).
 
 (* ** Syntactic cumulativity up-to universes
 
   We shouldn't look at printing annotations *)
 
 Definition leq_term `{checker_flags} φ :=
-  eq_term_upto_univ (eq_universe' φ) (leq_universe' φ).
+  eq_term_upto_univ (eq_universe φ) (leq_universe φ).
 
 
 (** ** Utilities for typing *)
@@ -599,15 +599,6 @@ Definition types_of_case ind mdecl idecl params u p pty :=
     | _, _, _ => None
     end
   | None => None
-  end.
-
-(** Family of a universe [u]. *)
-
-Definition universe_family (u : universe) :=
-  match u.1 with
-  | [(Level.lProp, false)] => InProp
-  | [(Level.lSet, false)] => InSet
-  | _ => InType
   end.
 
 (** Check that [uctx] instantiated at [u] is consistent with the current universe graph. *)
@@ -877,6 +868,7 @@ Definition unlift_opt_pred (P : global_context -> context -> option term -> term
 (** *** Typing of inductive declarations *)
 
 Section GlobalMaps.
+  Context {cf: checker_flags}.
   Context (P : global_context -> context -> term -> option term -> Type).
 
   Section TypeCtx.
@@ -979,7 +971,7 @@ Section GlobalMaps.
       | Alli_nil => True
       | Alli_cons cstr l onc cstrs =>
         (* The constructor's arguments bounding universe. *)
-        let cstru := cshape_args_univ (snd onc).1 in
+        let cstru := cshape_args_univ (snd onc).π1 in
         (* Just check it is smaller and continue *)
         leq_universe (snd Σ) cstru indu /\ check_constructors_smaller cstrs
       end.
@@ -999,7 +991,7 @@ Section GlobalMaps.
           match onConstructors with
           | Alli_nil => (* Empty inductive proposition: *) InType
           | Alli_cons cstr nil onc Alli_nil =>
-            match universe_family (cshape_args_univ (snd onc).1) with
+            match universe_family (cshape_args_univ (snd onc).π1) with
             | InProp => (* Not squashed: all arguments are in Prop *) InType
             | _ => (* Squashed: some arguments are higher than Prop, restrict to Prop *) InProp
             end
@@ -1085,13 +1077,13 @@ End GlobalMaps.
 
 Arguments cshape_args {mdecl i idecl cdecl}.
 Arguments cshape_args_univ {mdecl i idecl cdecl}.
-Arguments ind_indices {P Σ mind mdecl i idecl}.
-Arguments ind_sort {P Σ mind mdecl i idecl}.
-Arguments ind_arity_eq {P Σ mind mdecl i idecl}.
-Arguments onArity {P Σ mind mdecl i idecl}.
-Arguments onConstructors {P Σ mind mdecl i idecl}.
-Arguments onProjections {P Σ mind mdecl i idecl}.
-Arguments ind_sorts {P Σ mind mdecl i idecl}.
+Arguments ind_indices {_ P Σ mind mdecl i idecl}.
+Arguments ind_sort {_ P Σ mind mdecl i idecl}.
+Arguments ind_arity_eq {_ P Σ mind mdecl i idecl}.
+Arguments onArity {_ P Σ mind mdecl i idecl}.
+Arguments onConstructors {_ P Σ mind mdecl i idecl}.
+Arguments onProjections {_ P Σ mind mdecl i idecl}.
+Arguments ind_sorts {_ P Σ mind mdecl i idecl}.
 
 (* Definition sort_irrelevant (P : global_context -> context -> option term -> term -> Type) := *)
 (*   forall Σ Γ b s s', P Σ Γ b (tSort s) -> P Σ Γ b (tSort s'). *)
@@ -1187,7 +1179,7 @@ Proof.
        unshelve eexists (ind_indices X1) (ind_sort X1) _.
        --- apply onConstructors in X1. red in X1. unfold on_constructor, on_type in *.
            eapply Alli_impl_trans; eauto.
-           simpl; intuition eauto. exists b.1. destruct b.
+           simpl; intuition eauto. exists b.π1. destruct b.
            simpl. eapply type_local_ctx_impl; eauto.
        --- apply (ind_arity_eq X1).
        --- apply onArity in X1. unfold on_type in *; simpl in *; intuition.

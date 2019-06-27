@@ -181,10 +181,7 @@ struct
       quote_abstract_univ_context_aux (CumulativityInfo.univ_context info) (* FIXME lossy *)
 
   let quote_ugraph (g : UGraph.t) =
-    let inst' = quote_univ_instance Univ.Instance.empty in
-    let const' = quote_univ_constraints (UGraph.constraints_of_universes g) in
-    let uctx = constr_mkApp (tUContextmake, [|inst' ; const'|]) in
-    constr_mkApp (tadd_global_constraints, [|constr_mkApp (cMonomorphic_ctx, [| uctx |]); Lazy.force tinit_graph|])
+    quote_univ_constraints (UGraph.constraints_of_universes g)
 
   let quote_sort s =
     quote_universe (Sorts.univ_of_sort s)

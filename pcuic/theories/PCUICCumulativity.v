@@ -49,26 +49,6 @@ Proof.
 Qed.
 
 
-Lemma eq_universe_refl φ s : eq_universe φ s s.
-Proof.
-  intros vH; reflexivity.
-Qed.
-
-Lemma eq_universe'_refl `{checker_flags} φ s : eq_universe' φ s s.
-Proof.
-  unfold eq_universe'; destruct check_univs; [apply eq_universe_refl|constructor].
-Qed.
-
-Lemma leq_universe_refl φ s : leq_universe φ s s.
-Proof.
-  intros vH; reflexivity.
-Qed.
-
-Lemma leq_universe'_refl `{checker_flags} φ s : leq_universe' φ s s.
-Proof.
-  unfold leq_universe'; destruct check_univs; [apply leq_universe_refl|constructor].
-Qed.
-
 Lemma eq_term_upto_univ_refl Re Rle :
   RelationClasses.Reflexive Re ->
   RelationClasses.Reflexive Rle ->
@@ -90,29 +70,16 @@ Qed.
 
 Lemma eq_term_refl `{checker_flags} φ t : eq_term φ t t.
 Proof.
-  apply eq_term_upto_univ_refl ; intro ; apply eq_universe'_refl.
+  apply eq_term_upto_univ_refl ; intro ; apply eq_universe_refl.
 Qed.
-
 
 Lemma leq_term_refl `{checker_flags} φ t : leq_term φ t t.
 Proof.
   apply eq_term_upto_univ_refl.
-  - intro ; apply eq_universe'_refl.
-  - intro ; apply leq_universe'_refl.
+  - intro ; apply eq_universe_refl.
+  - intro ; apply leq_universe_refl.
 Qed.
 
-
-Lemma eq_universe_leq_universe φ t u : eq_universe φ t u -> leq_universe φ t u.
-Proof.
-  intros H v Hv. rewrite (H v Hv). apply BinInt.Z.le_refl.
-Qed.
-
-Lemma eq_universe'_leq_universe' `{checker_flags} φ t u
-  : eq_universe' φ t u -> leq_universe' φ t u.
-Proof.
-  unfold eq_universe', leq_universe'; destruct check_univs.
-  apply eq_universe_leq_universe. intuition.
-Qed.
 
 Lemma eq_term_upto_univ_leq :
   forall (Re Rle : universe -> universe -> Prop) u v,
@@ -130,7 +97,7 @@ Qed.
 Lemma eq_term_leq_term `{checker_flags} φ t u : eq_term φ t u -> leq_term φ t u.
 Proof.
   intros h. eapply eq_term_upto_univ_leq ; eauto.
-  eapply eq_universe'_leq_universe'.
+  eapply eq_universe_leq_universe.
 Qed.
 
 Lemma eq_term_App `{checker_flags} φ f f' :

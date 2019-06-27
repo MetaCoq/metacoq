@@ -1126,14 +1126,8 @@ Section Lemmata.
       Reflexive Rle ->
       Transitive Re ->
       Transitive Rle ->
-      (forall u u' s s',
-          Re s s' ->
-          Re (subst_instance_univ u s) (subst_instance_univ u' s')
-      ) ->
-      (forall u u' s s',
-          Rle s s' ->
-          Rle (subst_instance_univ u s) (subst_instance_univ u' s')
-      ) ->
+      SubstUnivPreserving Re ->
+      SubstUnivPreserving Rle ->
       (forall u u' : universe, Re u u' -> Rle u u') ->
       eq_term_upto_univ Re Rle u u' ->
       red1 Σ Γ u v ->
@@ -1498,14 +1492,8 @@ Section Lemmata.
       Reflexive Rle ->
       Transitive Re ->
       Transitive Rle ->
-      (forall u u' s s',
-          Re s s' ->
-          Re (subst_instance_univ u s) (subst_instance_univ u' s')
-      ) ->
-      (forall u u' s s',
-          Rle s s' ->
-          Rle (subst_instance_univ u s) (subst_instance_univ u' s')
-      ) ->
+      SubstUnivPreserving Re ->
+      SubstUnivPreserving Rle ->
       (forall u u' : universe, Re u u' -> Rle u u') ->
       eq_term_upto_univ Re Rle u u' ->
       cored Σ Γ v u ->

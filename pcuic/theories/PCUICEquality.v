@@ -844,3 +844,8 @@ Proof.
   - rewrite 2!rev_cons. eapply eq_context_upto_cat ; eauto.
     constructor ; eauto. constructor.
 Qed.
+
+Definition SubstUnivPreserving R :=
+  forall u u' s s',
+    R s s' ->
+    R (subst_instance_univ u s) (subst_instance_univ u' s').

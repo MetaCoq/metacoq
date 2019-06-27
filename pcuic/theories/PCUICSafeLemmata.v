@@ -1262,7 +1262,7 @@ Section Lemmata.
         etransitivity ; eauto.
   Qed.
 
-    (* TODO MOVE *)
+  (* TODO MOVE *)
   Lemma eq_term_trans :
     forall G u v w,
       eq_term G u v ->
@@ -1273,7 +1273,23 @@ Section Lemmata.
     eapply eq_term_upto_univ_trans ; eauto.
     all: clear.
     all: intros x y z h1 h2.
-  Admitted.
+    all: eapply eq_universe_trans ; eauto.
+  Qed.
+
+  (* TODO MOVE *)
+  Lemma leq_term_trans :
+    forall G u v w,
+      leq_term G u v ->
+      leq_term G v w ->
+      leq_term G u w.
+  Proof.
+    intros G u v w h1 h2.
+    eapply eq_term_upto_univ_trans ; eauto.
+    all: clear.
+    all: intros x y z h1 h2.
+    - eapply eq_universe_trans ; eauto.
+    - eapply leq_universe_trans ; eauto.
+  Qed.
 
   (* TODO MOVE *)
   Lemma red1_eq_term_upto_univ_l :

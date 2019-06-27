@@ -1208,24 +1208,59 @@ Section Lemmata.
       Transitive (eq_term_upto_univ Re Rle).
   Proof.
     intros Re Rle he hle u v w e1 e2.
-    induction u in Rle, hle, w, e1, e2 |- * using term_forall_list_ind.
+    induction u in Rle, hle, v, w, e1, e2 |- * using term_forall_list_ind.
     all: dependent destruction e1.
     all: try solve [ eauto ].
-    (* all: try solve [ dependent destruction e2 ; constructor ; eauto ]. *)
-    (* - dependent destruction e2. constructor. *)
-    (*   (* induction H0 in args'0, H1, H |- *. *) *)
-    (*   (* + dependent destruction H1. constructor. *) *)
-    (*   (* + dependent destruction H1. constructor. *) *)
-    (*   (*   *  *) *)
-    (*   apply All_Forall in H. *)
-    (*   eapply Forall_Forall2_and in H as ? ; eauto. *)
-    (*   clear H H0. *)
-    (*   induction H2 in H1, args'0 |- *. *)
-    (*   + assumption. *)
-    (*   + dependent destruction H1. constructor. *)
-    (*     * destruct H as [h1 h2]. *)
-    (*       eapply *)
-  Admitted.
+    all: try solve [
+      dependent destruction e2 ; econstructor ; eauto ;
+      try eapply Forall2_trans ; eauto
+    ].
+    - dependent destruction e2.
+      econstructor.
+      apply All_Forall in H.
+      eapply Forall_Forall2_and in H as h ; eauto.
+      clear H H0.
+      induction h in H1, args'0 |- *.
+      + assumption.
+      + dependent destruction H1. constructor ; eauto.
+        destruct H as [h1 h2]. eauto.
+    - dependent destruction e2.
+      econstructor. all: eauto.
+      apply All_Forall in X.
+      eapply Forall_Forall2_and in X as h ; eauto.
+      clear X H.
+      induction h in H0, brs'0 |- *.
+      + assumption.
+      + dependent destruction H0.
+        destruct H0, H as [? [? ?]].
+        constructor. all: eauto.
+        split ; eauto.
+        etransitivity ; eauto.
+    - dependent destruction e2.
+      econstructor.
+      apply All_Forall in X.
+      eapply Forall_Forall2_and in X as h ; eauto.
+      clear X H.
+      induction h in H0, mfix'0 |- *.
+      + assumption.
+      + dependent destruction H0.
+        destruct H0 as [? [? ?]], H as [[? ?] [? [? ?]]].
+        constructor. all: eauto.
+        repeat split ; eauto.
+        etransitivity ; eauto.
+    - dependent destruction e2.
+      econstructor.
+      apply All_Forall in X.
+      eapply Forall_Forall2_and in X as h ; eauto.
+      clear X H.
+      induction h in H0, mfix'0 |- *.
+      + assumption.
+      + dependent destruction H0.
+        destruct H0 as [? [? ?]], H as [[? ?] [? [? ?]]].
+        constructor. all: eauto.
+        repeat split ; eauto.
+        etransitivity ; eauto.
+  Qed.
 
     (* TODO MOVE *)
   Lemma eq_term_trans :

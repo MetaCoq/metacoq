@@ -805,17 +805,6 @@ Section Lemmata.
   Qed.
 
   (* TODO MOVE *)
-  Lemma eq_term_upto_univ_isApp :
-    forall Re Rle u v,
-      eq_term_upto_univ Re Rle u v ->
-      isApp u = isApp v.
-  Proof.
-    intros Re Rle u v h.
-    induction h.
-    all: reflexivity.
-  Qed.
-
-  (* TODO MOVE *)
   Lemma isApp_mkApps :
     forall u l,
       isApp u ->
@@ -940,12 +929,12 @@ Section Lemmata.
 
   (* TODO MOVE? *)
   Lemma isConstruct_app_eq_term_l :
-    forall Re Rle u v,
+    forall Re u v,
       isConstruct_app u ->
-      eq_term_upto_univ Re Rle u v ->
+      eq_term_upto_univ Re Re u v ->
       isConstruct_app v.
   Proof.
-    intros Re Rle u v h e.
+    intros Re u v h e.
     case_eq (decompose_app u). intros t1 l1 e1.
     case_eq (decompose_app v). intros t2 l2 e2.
     unfold isConstruct_app in *.
@@ -954,106 +943,66 @@ Section Lemmata.
     destruct t1 ; try discriminate.
     apply PCUICConfluence.decompose_app_inv in e1 as ?. subst.
     apply PCUICConfluence.decompose_app_inv in e2 as ?. subst.
-  (*   apply eq_term_upto_univ_mkApps_inv in e as hh. *)
-  (*   - destruct hh as [h1 h2]. *)
-  (*     dependent destruction h1. reflexivity. *)
-  (*   - reflexivity. *)
-  (*   - eapply decompose_app_notApp. eassumption. *)
-  (* Qed. *)
+    apply eq_term_upto_univ_mkApps_inv in e as hh.
+    - destruct hh as [h1 h2].
+      dependent destruction h1. reflexivity.
+    - reflexivity.
+    - eapply decompose_app_notApp. eassumption.
+  Qed.
+
+  (* TODO MOVE *)
+  Lemma red1_eq_context_upto_l :
+    forall Re Γ Δ u v,
+      red1 Σ Γ u v ->
+      eq_context_upto Re Γ Δ ->
+      exists v',
+        ∥ red1 Σ Δ u v' ∥ /\
+        eq_term_upto_univ Re Re v v'.
+  Proof.
+    intros Re Γ Δ u v h e.
+    induction h in e |- * using red1_ind_all.
   Admitted.
 
-  (* TODO Duplicate of tactic in PCUICEquality *)
-  Local Ltac sih :=
-    lazymatch goal with
-    | ih : forall Rle v n x y, _ -> eq_term_upto_univ _ _ ?u _ -> _ -> _
-      |- eq_term_upto_univ _ _ (subst _ _ ?u) _ => eapply ih
-    end.
+  Derive Signature for Forall2.
 
-  (* TODO Is it correct now? *)
   (* TODO MOVE *)
-  (* Subsumes the other lemma? *)
-  Lemma eq_term_upto_univ_substs :
-    forall Re Rle u v n l l',
-      eq_term_upto_univ Re Rle u v ->
-      Forall2 (eq_term_upto_univ Re Rle) l l' ->
-      eq_term_upto_univ Re Rle (subst l n u) (subst l' n v).
+  Lemma eq_term_upto_univ_trans :
+    forall Re Rle,
+      Transitive Re ->
+      Transitive Rle ->
+      Transitive (eq_term_upto_univ Re Rle).
   Proof.
-    intros Re Rle u v n l l' hu hl.
-    induction u in v, n, l, l', hu, hl, Rle |- * using term_forall_list_ind.
-    all: dependent destruction hu.
-    all: try (cbn ; constructor ; try sih ; assumption).
-(*     - cbn. destruct (Nat.leb_spec0 n n0). *)
-(*       + destruct (eqb_spec n0 n). *)
-(*         * subst. replace (n - n) with 0 by omega. *)
-(*           destruct hl. *)
-(*           -- cbn. constructor. *)
-(*           -- cbn. eapply eq_term_upto_univ_lift. assumption. *)
-(*         * replace (n0 - n) with (S (n0 - (S n))) by omega. *)
-(*           destruct hl. *)
-(*           -- cbn. constructor. *)
-(*           -- cbn.  *)
+    intros Re Rle he hle u v w e1 e2.
+    induction u in Rle, hle, w, e1, e2 |- * using term_forall_list_ind.
+    all: dependent destruction e1.
+    all: try solve [ eauto ].
+    (* all: try solve [ dependent destruction e2 ; constructor ; eauto ]. *)
+    (* - dependent destruction e2. constructor. *)
+    (*   (* induction H0 in args'0, H1, H |- *. *) *)
+    (*   (* + dependent destruction H1. constructor. *) *)
+    (*   (* + dependent destruction H1. constructor. *) *)
+    (*   (*   *  *) *)
+    (*   apply All_Forall in H. *)
+    (*   eapply Forall_Forall2_and in H as ? ; eauto. *)
+    (*   clear H H0. *)
+    (*   induction H2 in H1, args'0 |- *. *)
+    (*   + assumption. *)
+    (*   + dependent destruction H1. constructor. *)
+    (*     * destruct H as [h1 h2]. *)
+    (*       eapply *)
+  Admitted.
 
-(* induction hl in n |- *. *)
-(*       + rewrite subst_empty. constructor. *)
-(*       + cbn. destruct (Nat.leb_spec0 n n0). *)
-(*         * destruct (eqb_spec n0 n). *)
-(*           -- subst. replace (n - n) with 0 by omega. cbn. *)
-(*              eapply eq_term_upto_univ_lift. assumption. *)
-(*           -- replace (n0 - n) with (S (n0 - (S n))) by omega. cbn. *)
-(*              cbn in IHhl. specialize (IHhl (S n)). *)
-(*              revert IHhl. *)
-(*              destruct (Nat.leb_spec0 (S n) n0) ; try (exfalso ; omega). *)
-(*              case_eq (nth_error l (n0 - S n)). *)
-(*              ++ intros b e. *)
-(*                 case_eq (nth_error l' (n0 - S n)). *)
-(*                 ** intros b' e' ih. *)
-
-
-
-(* cbn. destruct (Nat.leb_spec0 n n0). *)
-(*       + destruct (eqb_spec n0 n). *)
-(*         * subst. replace (n - n) with 0 by omega. *)
-(*           destruct hl. *)
-(*           -- cbn. constructor. *)
-(*           -- cbn. eapply eq_term_upto_univ_lift. assumption. *)
-(*         * replace (n0 - n) with (S (n0 - (S n))) by omega. *)
-(*           destruct hl. *)
-(*           -- cbn. constructor. *)
-(*           -- cbn. *)
-
-(*           eapply eq_term_upto_univ_lift. assumption. *)
-(*         * replace (n0 - n) with (S (n0 - (S n))) by omega. cbn. *)
-(*           rewrite nth_error_nil. constructor. *)
-(*       + constructor. *)
-
-    (* - admit. *)
-    (* - cbn. constructor. *)
-    (*   eapply Forall2_map. eapply Forall2_impl' ; [ eassumption |]. *)
-    (*   eapply All_Forall. *)
-    (*   eapply All_impl ; [ eassumption |]. *)
-    (*   intros x0 H1 y0 H2. cbn in H1. *)
-    (*   eapply H1. all: assumption. *)
-    (* - cbn. constructor ; try sih ; try assumption. *)
-    (*   eapply Forall2_map. eapply Forall2_impl' ; [ eassumption |]. *)
-    (*   eapply All_Forall. eapply All_impl ; [ eassumption |]. *)
-    (*   intros ? H0 ? [? ?]. cbn in H0. repeat split ; auto. *)
-    (*   eapply H0. all: assumption. *)
-    (* - cbn. constructor. *)
-    (*   eapply Forall2_map. eapply Forall2_impl' ; [ eassumption |]. *)
-    (*   eapply All_Forall. eapply All_impl ; [ eassumption |]. *)
-    (*   intros ? [h1 h2] ? [? [? ?]]. *)
-    (*   repeat split ; auto. *)
-    (*   + eapply h1. all: assumption. *)
-    (*   + apply Forall2_length in H. rewrite H. *)
-    (*     eapply h2. all: assumption. *)
-    (* - cbn. constructor. *)
-    (*   eapply Forall2_map. eapply Forall2_impl' ; [ eassumption |]. *)
-    (*   eapply All_Forall. eapply All_impl ; [ eassumption |]. *)
-    (*   intros ? [h1 h2] ? [? [? ?]]. *)
-    (*   repeat split ; auto. *)
-    (*   + eapply h1. all: assumption. *)
-    (*   + apply Forall2_length in H. rewrite H. *)
-    (*     eapply h2. all: assumption. *)
+    (* TODO MOVE *)
+  Lemma eq_term_trans :
+    forall G u v w,
+      eq_term G u v ->
+      eq_term G v w ->
+      eq_term G u w.
+  Proof.
+    intros G u v w h1 h2.
+    eapply eq_term_upto_univ_trans ; eauto.
+    all: clear.
+    all: intros x y z h1 h2.
   Admitted.
 
   (* TODO MOVE *)
@@ -1061,6 +1010,10 @@ Section Lemmata.
     forall Re Rle Γ u v u',
       Reflexive Re ->
       Reflexive Rle ->
+      Transitive Re ->
+      Transitive Rle ->
+      SubstUnivPreserving Re ->
+      SubstUnivPreserving Rle ->
       (forall u u' : universe, Re u u' -> Rle u u') ->
       eq_term_upto_univ Re Rle u u' ->
       red1 Σ Γ u v ->
@@ -1068,8 +1021,40 @@ Section Lemmata.
         ∥ red1 Σ Γ u' v' ∥ /\
         eq_term_upto_univ Re Rle v v'.
   Proof.
-    intros Re Rle Γ u v u' he hle hR e h.
-    induction h in u', e, Rle, hle, hR |- *.
+    intros Re Rle Γ u v u' he hle tRe tRle hRe hRle hR e h.
+    induction h in u', e, tRle, Rle, hle, hRle, hR |- * using red1_ind_all.
+    all: try solve [
+      dependent destruction e ;
+      edestruct IHh as [? [[?] ?]] ; [ .. | eassumption | ] ; eauto ;
+      eexists ; split ; [
+        constructor ; solve [ econstructor ; eauto ]
+      | constructor ; eauto
+      ]
+    ].
+    all: try solve [
+      dependent destruction e ;
+      edestruct IHh as [? [[?] ?]] ; [ .. | eassumption | ] ; eauto ;
+      clear h ;
+      lazymatch goal with
+      | r : red1 _ (?Γ,, vass ?na ?A) ?u ?v,
+        e : eq_term_upto_univ _ _ ?A ?B
+        |- _ =>
+        let hh := fresh "hh" in
+        eapply red1_eq_context_upto_l in r as hh ; [
+          destruct hh as [? [[?] ?]]
+        | eapply eq_context_vass (* with (nb := na) *) ; [
+            eapply e
+          | eapply eq_context_upto_refl ; eauto
+          ]
+        ]
+      end ;
+      eexists ; split ; [
+        constructor ; solve [ econstructor ; eauto ]
+      | constructor ; eauto ;
+        eapply eq_term_upto_univ_trans ; eauto ;
+        eapply eq_term_upto_univ_leq ; eauto
+      ]
+    ].
     - dependent destruction e. dependent destruction e1.
       eexists. split.
       + constructor. constructor.
@@ -1082,47 +1067,319 @@ Section Lemmata.
     - dependent destruction e.
       eexists. split.
       + constructor. constructor. eassumption.
-      + eapply eq_term_upto_univ_refl. assumption.
-    (* - dependent destruction e. *)
-    (*   apply eq_term_upto_univ_mkApps_l_inv in e2 as [? [? [h1 [h2 h3]]]]. subst. *)
-    (*   dependent destruction h1. *)
-    (*   eexists. split. *)
-    (*   + constructor. constructor. *)
-    (*   + eapply eq_term_upto_univ_mkApps. *)
-    (*     * eapply Forall2_nth with (P := fun x y => eq_term_upto_univ R (snd x) (snd y)). *)
-    (*       -- eapply Forall2_impl ; [ eassumption |]. *)
-    (*          intros x y [? ?]. assumption. *)
-    (*       -- cbn. eapply eq_term_upto_univ_refl. assumption. *)
-    (*     * eapply Forall2_skipn. assumption. *)
-    (* - apply eq_term_upto_univ_mkApps_l_inv in e as [? [? [h1 [h2 h3]]]]. subst. *)
-    (*   dependent destruction h1. *)
-    (*   unfold unfold_fix in e0. *)
-    (*   case_eq (nth_error mfix idx) ; *)
-    (*     try (intros e ; rewrite e in e0 ; discriminate e0). *)
-    (*   intros d e. rewrite e in e0. inversion e0. subst. clear e0. *)
-    (*   eapply Forall2_nth_error_Some_l in H as hh ; try eassumption. *)
-    (*   destruct hh as [d' [e' [? [? erarg]]]]. *)
-    (*   unfold is_constructor in e1. *)
-    (*   case_eq (nth_error args (rarg d)) ; *)
-    (*     try (intros bot ; rewrite bot in e1 ; discriminate e1). *)
-    (*   intros a ea. rewrite ea in e1. *)
-    (*   eapply Forall2_nth_error_Some_l in h2 as hh ; try eassumption. *)
-    (*   destruct hh as [a' [ea' ?]]. *)
-    (*   eexists. split. *)
-    (*   + constructor. eapply red_fix. *)
-    (*     * unfold unfold_fix. rewrite e'. reflexivity. *)
-    (*     * unfold is_constructor. rewrite <- erarg. rewrite ea'. *)
-    (*       eapply isConstruct_app_eq_term_l ; eassumption. *)
-    (*   + eapply eq_term_upto_univ_mkApps. *)
-    (*     * eapply eq_term_upto_univ_substs. *)
-    (*       -- assumption. *)
-    (*       -- *)
+      + eapply eq_term_upto_univ_refl ; assumption.
+    - dependent destruction e.
+      apply eq_term_upto_univ_mkApps_l_inv in e2 as [? [? [h1 [h2 h3]]]]. subst.
+      dependent destruction h1.
+      eexists. split.
+      + constructor. constructor.
+      + eapply eq_term_upto_univ_mkApps.
+        * eapply Forall2_nth
+            with (P := fun x y => eq_term_upto_univ Re Rle (snd x) (snd y)).
+          -- eapply Forall2_impl ; [ eassumption |].
+             intros x y [? ?].
+             eapply eq_term_upto_univ_leq ; eauto.
+          -- cbn. eapply eq_term_upto_univ_refl ; eauto.
+        * eapply Forall2_skipn. assumption.
+    - apply eq_term_upto_univ_mkApps_l_inv in e as [? [? [h1 [h2 h3]]]]. subst.
+      dependent destruction h1.
+      unfold unfold_fix in H.
+      case_eq (nth_error mfix idx) ;
+        try (intros e ; rewrite e in H ; discriminate H).
+      intros d e. rewrite e in H. inversion H. subst. clear H.
+      eapply Forall2_nth_error_Some_l in H1 as hh ; try eassumption.
+      destruct hh as [d' [e' [? [? erarg]]]].
+      unfold is_constructor in H0.
+      case_eq (nth_error args (rarg d)) ;
+        try (intros bot ; rewrite bot in H0 ; discriminate H0).
+      intros a ea. rewrite ea in H0.
+      eapply Forall2_nth_error_Some_l in h2 as hh ; try eassumption.
+      destruct hh as [a' [ea' ?]].
+      eexists. split.
+      + constructor. eapply red_fix.
+        * unfold unfold_fix. rewrite e'. reflexivity.
+        * unfold is_constructor. rewrite <- erarg. rewrite ea'.
+          eapply isConstruct_app_eq_term_l ; eassumption.
+      + eapply eq_term_upto_univ_mkApps.
+        * eapply eq_term_upto_univ_substs ; eauto.
+          -- eapply eq_term_upto_univ_leq ; eauto.
+          -- unfold fix_subst.
+             apply Forall2_length in H1 as el. rewrite <- el.
+             generalize #|mfix|. intro n.
+             induction n.
+             ++ constructor.
+             ++ constructor ; eauto.
+                constructor. assumption.
+        * assumption.
+    - dependent destruction e.
+      apply eq_term_upto_univ_mkApps_l_inv in e2 as [? [? [h1 [h2 h3]]]]. subst.
+      dependent destruction h1.
+      unfold unfold_cofix in H.
+      case_eq (nth_error mfix idx) ;
+        try (intros e ; rewrite e in H ; discriminate H).
+      intros d e. rewrite e in H. inversion H. subst. clear H.
+      eapply Forall2_nth_error_Some_l in H1 as hh ; try eassumption.
+      destruct hh as [d' [e' [? [? erarg]]]].
+      eexists. split.
+      + constructor. eapply red_cofix_case.
+        unfold unfold_cofix. rewrite e'. reflexivity.
+      + constructor. all: eauto.
+        eapply eq_term_upto_univ_mkApps. all: eauto.
+        eapply eq_term_upto_univ_substs ; eauto.
+        unfold cofix_subst.
+        apply Forall2_length in H1 as el. rewrite <- el.
+        generalize #|mfix|. intro n.
+        induction n.
+        * constructor.
+        * constructor ; eauto.
+          constructor. assumption.
+    - dependent destruction e.
+      apply eq_term_upto_univ_mkApps_l_inv in e as [? [? [h1 [h2 h3]]]]. subst.
+      dependent destruction h1.
+      unfold unfold_cofix in H.
+      case_eq (nth_error mfix idx) ;
+        try (intros e ; rewrite e in H ; discriminate H).
+      intros d e. rewrite e in H. inversion H. subst. clear H.
+      eapply Forall2_nth_error_Some_l in H0 as hh ; try eassumption.
+      destruct hh as [d' [e' [? [? erarg]]]].
+      eexists. split.
+      + constructor. eapply red_cofix_proj.
+        unfold unfold_cofix. rewrite e'. reflexivity.
+      + constructor.
+        eapply eq_term_upto_univ_mkApps. all: eauto.
+        eapply eq_term_upto_univ_substs ; eauto.
+        unfold cofix_subst.
+        apply Forall2_length in H0 as el. rewrite <- el.
+        generalize #|mfix|. intro n.
+        induction n.
+        * constructor.
+        * constructor ; eauto.
+          constructor. assumption.
+    - dependent destruction e.
+      eexists. split.
+      + constructor. econstructor. all: eauto.
+      + eapply eq_term_upto_univ_subst_instance_constr ; eauto.
+        eapply eq_term_upto_univ_refl ; eauto.
+    - dependent destruction e.
+      apply eq_term_upto_univ_mkApps_l_inv in e as [? [? [h1 [h2 h3]]]]. subst.
+      dependent destruction h1.
+      eapply Forall2_nth_error_Some_l in h2 as hh ; try eassumption.
+      destruct hh as [arg' [e' ?]].
+      eexists. split.
+      + constructor. constructor. eassumption.
+      + eapply eq_term_upto_univ_leq ; eauto.
+    - dependent destruction e.
+      edestruct IHh as [? [[?] ?]] ; [ .. | eassumption | ] ; eauto.
+      clear h.
+      lazymatch goal with
+      | r : red1 _ (?Γ,, vdef ?na ?a ?A) ?u ?v,
+        e1 : eq_term_upto_univ _ _ ?A ?B,
+        e2 : eq_term_upto_univ _ _ ?a ?b
+        |- _ =>
+        let hh := fresh "hh" in
+        eapply red1_eq_context_upto_l in r as hh ; [
+          destruct hh as [? [[?] ?]]
+        | eapply eq_context_vdef (* with (nb := na) *) ; [
+            eapply e2
+          | eapply e1
+          | eapply eq_context_upto_refl ; eauto
+          ]
+        ]
+      end.
+      eexists. split.
+      + constructor. eapply letin_red_body ; eauto.
+      + constructor ; eauto.
+        eapply eq_term_upto_univ_trans ; eauto.
+        eapply eq_term_upto_univ_leq ; eauto.
+    - dependent destruction e.
+      assert (h : exists brs0,
+                 ∥ OnOne2 (fun x => red1 Σ Γ (snd x) ∘ snd) brs'0 brs0 ∥ /\
+                 Forall2 (fun x y =>
+                            fst x = fst y /\
+                            eq_term_upto_univ Re Re (snd x) (snd y)
+                         ) brs' brs0
+             ).
+      { induction X in H, brs'0 |- *.
+        - destruct p0 as [p1 p2].
+          dependent destruction H. destruct H as [h1 h2].
+          eapply p2 in h2 as hh ; eauto.
+          destruct hh as [? [[?] ?]].
+          eexists. split.
+          + constructor. constructor.
+            instantiate (1 := (fst hd', _)). cbn. eassumption.
+          + constructor. all: eauto.
+        - dependent destruction H. (* destruct H as [h1 h2]. *)
+          destruct (IHX _ H0) as [? [[?] ?]].
+          eexists. split.
+          + constructor. eapply OnOne2_tl. eassumption.
+          + constructor. all: eauto.
+      }
+      destruct h as [brs0 [[?] ?]].
+      eexists. split.
+      + constructor. eapply case_red_brs. eassumption.
+      + constructor. all: eauto.
+    - dependent destruction e.
+      assert (h : exists args,
+                 ∥ OnOne2 (red1 Σ Γ) args' args ∥ /\
+                 Forall2 (eq_term_upto_univ Re Re) l' args
+             ).
+      { induction X in H, args' |- *.
+        - destruct p as [p1 p2].
+          dependent destruction H.
+          eapply p2 in H as hh ; eauto.
+          destruct hh as [? [[?] ?]].
+          eexists. split.
+          + constructor. constructor. eassumption.
+          + constructor. all: eauto.
+        - dependent destruction H.
+          destruct (IHX _ H0) as [? [[?] ?]].
+          eexists. split.
+          + constructor. eapply OnOne2_tl. eassumption.
+          + constructor. all: eauto.
+      }
+      destruct h as [? [[?] ?]].
+      eexists. split.
+      + constructor. eapply evar_red. eassumption.
+      + constructor. all: eauto.
+    - dependent destruction e.
+      assert (h : exists mfix,
+                 ∥ OnOne2 (fun d0 d1 =>
+                     red1 Σ Γ d0.(dtype) d1.(dtype) ×
+                     d0.(dbody) = d1.(dbody)
+                   ) mfix' mfix ∥ /\
+                 Forall2 (fun x y =>
+                   eq_term_upto_univ Re Re x.(dtype) y.(dtype) /\
+                   eq_term_upto_univ Re Re x.(dbody) y.(dbody) /\
+                   x.(rarg) = y.(rarg)
+                 ) mfix1 mfix
+             ).
+      { induction X in H, mfix' |- *.
+        - destruct p as [[p1 p3] p2].
+          dependent destruction H.
+          destruct H as [h1 [h2 h3]].
+          eapply p2 in h1 as hh ; eauto.
+          destruct hh as [? [[?] ?]].
+          eexists. split.
+          + constructor. constructor.
+            instantiate (1 := mkdef _ _ x _ _).
+            simpl. eauto.
+          + constructor. all: eauto.
+            simpl. repeat split ; eauto. rewrite <- p3. eauto.
+        - dependent destruction H. destruct H as [h1 [h2 h3]].
+          destruct (IHX _ H0) as [? [[?] ?]].
+          eexists. split.
+          + constructor. eapply OnOne2_tl. eassumption.
+          + constructor. all: eauto.
+      }
+      destruct h as [? [[?] ?]].
+      eexists. split.
+      + constructor. eapply fix_red_ty. eassumption.
+      + constructor. all: eauto.
+    - dependent destruction e.
+      assert (h : exists mfix,
+                 ∥ OnOne2 (fun d0 d1 =>
+                     red1 Σ (Γ ,,, fix_context mfix') d0.(dbody) d1.(dbody) ×
+                     d0.(dtype) = d1.(dtype)
+                   ) mfix' mfix ∥ /\
+                 Forall2 (fun x y =>
+                   eq_term_upto_univ Re Re x.(dtype) y.(dtype) /\
+                   eq_term_upto_univ Re Re x.(dbody) y.(dbody) /\
+                   x.(rarg) = y.(rarg)
+                 ) mfix1 mfix
+             ).
+      { set (Δ := fix_context mfix0) in *.
+        assert (Δe : Δ = fix_context mfix0) by reflexivity.
+        clearbody Δ.
+        induction X in H, mfix', Δe |- *.
+        - destruct p as [[p1 p3] p2].
+          dependent destruction H.
+          destruct H as [h1 [h2 h3]].
+          eapply p2 in h2 as hh ; eauto.
+          destruct hh as [? [[?] ?]].
+          eapply red1_eq_context_upto_l in X as [x' [[?] ?]] ; revgoals.
+          { instantiate (1 := Γ ,,, fix_context (y :: l')).
+            instantiate (1 := Re).
+            rewrite Δe.
+            eapply eq_context_upto_cat.
+            - eapply eq_context_upto_refl. eauto.
+            - eapply Forall2_eq_context_upto.
+              eapply Forall2_rev.
+              eapply Forall2_mapi.
+              constructor.
+              + intro i. split.
+                * cbn. constructor.
+                * cbn. eapply eq_term_upto_univ_lift. eauto.
+              + eapply Forall2_impl ; eauto.
+                intros ? ? [? [? ?]] i.
+                split.
+                * constructor.
+                * cbn. eapply eq_term_upto_univ_lift. eauto.
+          }
+          eexists. split.
+          + constructor. constructor.
+            instantiate (1 := mkdef _ _ _ x' _).
+            simpl. split ; eauto.
+          + constructor. all: eauto.
+            simpl. repeat split ; eauto.
+            * rewrite <- p3. eauto.
+            * eapply eq_term_upto_univ_trans ; eauto.
+        - dependent destruction H. destruct H as [h1 [h2 h3]].
+          destruct (IHX _ H0) as [? [[?] ?]].
+          { give_up. }
+          eexists. split.
+          + constructor. eapply OnOne2_tl.
+            (* SAME PROBLEM *)
+            admit.
+          + constructor. all: eauto.
+      }
+      destruct h as [? [[?] ?]].
+      eexists. split.
+      + constructor. eapply fix_red_body. eassumption.
+      + constructor. all: eauto.
+    - dependent destruction e.
+      assert (h : exists mfix,
+                 ∥ OnOne2 (fun d0 d1 =>
+                     red1 Σ Γ d0.(dtype) d1.(dtype) ×
+                     d0.(dbody) = d1.(dbody)
+                   ) mfix' mfix ∥ /\
+                 Forall2 (fun x y =>
+                   eq_term_upto_univ Re Re x.(dtype) y.(dtype) /\
+                   eq_term_upto_univ Re Re x.(dbody) y.(dbody) /\
+                   x.(rarg) = y.(rarg)
+                 ) mfix1 mfix
+             ).
+      { induction X in H, mfix' |- *.
+        - destruct p as [[p1 p3] p2].
+          dependent destruction H.
+          destruct H as [h1 [h2 h3]].
+          eapply p2 in h1 as hh ; eauto.
+          destruct hh as [? [[?] ?]].
+          eexists. split.
+          + constructor. constructor.
+            instantiate (1 := mkdef _ _ x _ _).
+            simpl. eauto.
+          + constructor. all: eauto.
+            simpl. repeat split ; eauto. rewrite <- p3. eauto.
+        - dependent destruction H. destruct H as [h1 [h2 h3]].
+          destruct (IHX _ H0) as [? [[?] ?]].
+          eexists. split.
+          + constructor. eapply OnOne2_tl. eassumption.
+          + constructor. all: eauto.
+      }
+      destruct h as [? [[?] ?]].
+      eexists. split.
+      + constructor. eapply cofix_red_ty. eassumption.
+      + constructor. all: eauto.
   Admitted.
 
   Lemma cored_eq_term_upto_univ_r :
     forall Re Rle Γ u v u',
       Reflexive Re ->
       Reflexive Rle ->
+      Transitive Re ->
+      Transitive Rle ->
+      SubstUnivPreserving Re ->
+      SubstUnivPreserving Rle ->
       (forall u u' : universe, Re u u' -> Rle u u') ->
       eq_term_upto_univ Re Rle u u' ->
       cored Σ Γ v u ->
@@ -1130,7 +1387,7 @@ Section Lemmata.
         cored Σ Γ v' u' /\
         eq_term_upto_univ Re Rle v v'.
   Proof.
-    intros Re Rle Γ u v u' he hle hR e h.
+    intros Re Rle Γ u v u' he hle tRe tRle hRe hRle hR e h.
     induction h.
     - eapply red1_eq_term_upto_univ_l in X ; try exact e ; eauto.
       destruct X as [v' [[r] e']].
@@ -1502,13 +1759,6 @@ Section Lemmata.
     rewrite stack_context_appstack. reflexivity.
   Qed.
 
-  Lemma eq_term_trans :
-    forall G u v w,
-      eq_term G u v ->
-      eq_term G v w ->
-      eq_term G u w.
-  Admitted.
-
   Lemma it_mkLambda_or_LetIn_inj :
     forall Γ u v,
       it_mkLambda_or_LetIn Γ u =
@@ -1800,63 +2050,64 @@ Section Lemmata.
       Σ ;;; Γ' |- u = v.
   Admitted.
 
-  (* Lemma subj_cumul : *)
-  (*   forall {Γ u v A B}, *)
-  (*     Σ ;;; Γ |- u <= v -> *)
-  (*     Σ ;;; Γ |- u : A -> *)
-  (*     Σ ;;; Γ |- v : B -> *)
-  (*     Σ ;;; Γ |- u : B. *)
-  (* Proof. *)
-  (*   intros Γ u v A B h hu hv. *)
-  (*   induction h in A, hu, B, hv |- *. *)
-  (*   - admit. *)
-  (*   -  *)
+  Derive Signature for typing.
 
-  (* Maybe this one is wrong *)
-  (* Lemma subj_conv : *)
-  (*   forall {Γ u v U V}, *)
-  (*     Σ ;;; Γ |- u = v -> *)
-  (*     Σ ;;; Γ |- u : U -> *)
-  (*     Σ ;;; Γ |- v : V -> *)
-  (*     Σ ;;; Γ |- U = V. *)
-  (* Admitted. *)
+  Lemma Construct_Ind_ind_eq :
+    forall {Γ n i args u i' args' u'},
+      Σ ;;; Γ |- mkApps (tConstruct i n u) args : mkApps (tInd i' u') args' ->
+      i = i'.
+  Proof.
+    intros Γ n i args u i' args' u' h.
+    induction args.
+    - simpl in h. apply inversion_Construct in h as ih.
+      destruct ih as [mdecl [idecl [cdecl [? [d [? hc]]]]]].
+      destruct i as [mind nind].
+      destruct i' as [mind' nind'].
+      unfold type_of_constructor in hc. cbn in hc.
+      destruct cdecl as [[cna ct] cn]. cbn in hc.
+      destruct mdecl as [mnpars mpars mbod muni]. simpl in *.
+      destruct idecl as [ina ity ike ict iprj].
+      apply cumul_alt in hc as [v [v' [[? ?] ?]]].
+      unfold declared_constructor in d. cbn in d.
+      destruct d as [[dm hin] hn]. simpl in *.
+      unfold declared_minductive in dm.
+      (* I have no idea how to do it. *)
+      admit.
+    - eapply IHargs. (* Induction on args was a wrong idea! *)
+  Admitted.
 
-  (* Lemma welltyped_zipc_change_hole : *)
-  (*   forall Γ u v π, *)
-  (*     welltyped Σ Γ (zipc u π) -> *)
-  (*     welltyped Σ (Γ ,,, stack_context π) v -> *)
-  (*     Σ ;;; Γ ,,, stack_context π |- u = v -> *)
-  (*     welltyped Σ Γ (zipc v π). *)
-  (* Proof. *)
-  (*   intros Γ u v π h hv e. *)
-  (*   induction π in u, v, h, hv, e |- *. *)
-  (*   - assumption. *)
-  (*   - cbn. *)
-  (*     eapply IHπ. *)
-  (*     + exact h. *)
-  (*     + *)
+  Lemma Proj_red_cond :
+    forall Γ i pars narg i' c u l,
+      welltyped Σ Γ (tProj (i, pars, narg) (mkApps (tConstruct i' c u) l)) ->
+      nth_error l (pars + narg) <> None.
+  Proof.
+    intros Γ i pars narg i' c u l [T h].
+    apply inversion_Proj in h.
+    destruct h as [uni [mdecl [idecl [pdecl [args' [d [hc [? ?]]]]]]]].
+    destruct d as [di [? ?]]. simpl in *. subst.
+  Admitted.
 
-  (* Lemma welltyped_zipc_change_hole : *)
-  (*   forall Γ u v π A, *)
-  (*     welltyped Σ Γ (zipc u π) -> *)
-  (*     Σ ;;; Γ ,,, stack_context π |- u : A -> *)
-  (*     Σ ;;; Γ ,,, stack_context π |- v : A -> *)
-  (*     welltyped Σ Γ (zipc v π). *)
-  (* Proof. *)
-  (*   intros Γ u v π A h hu hv. *)
-  (*   induction π in u, v, A, h, hu, hv |- *. *)
-  (*   - econstructor. eassumption. *)
-  (*   - cbn. *)
-  (*     pose proof h as h'. cbn in h'. zip fold in h'. *)
-  (*     apply welltyped_context in h'. simpl in h'. *)
-  (*     destruct h' as [B h']. *)
-  (*     destruct (inversion_App h') as [na [A' [B' [[hu'] [[?] [?]]]]]]. *)
-  (*     simpl in hu, hv. *)
-  (*     destruct (principle_typing hu hu') as [C [[? ?] ?]]. *)
-  (*     eapply IHπ. *)
-  (*     + exact h. *)
-  (*     + eassumption. *)
-  (*     + econstructor. all: try eassumption. *)
-  (*       * econstructor ; try eassumption. *)
+  Lemma Case_Construct_ind_eq :
+    forall {Γ ind ind' npar pred i u brs args},
+      welltyped Σ Γ (tCase (ind, npar) pred (mkApps (tConstruct ind' i u) args) brs) ->
+      ind = ind'.
+  Proof.
+    intros Γ ind ind' npar pred i u brs args [A h].
+    apply inversion_Case in h as ih.
+    destruct ih
+      as [uni [args' [mdecl [idecl [pty [indctx [pctx [ps [btys [? [? [? [? [? [? [ht0 [? ?]]]]]]]]]]]]]]]]].
+    apply Construct_Ind_ind_eq in ht0. eauto.
+  Qed.
+
+  Lemma Proj_Constuct_ind_eq :
+    forall Γ i i' pars narg c u l,
+      welltyped Σ Γ (tProj (i, pars, narg) (mkApps (tConstruct i' c u) l)) ->
+      i = i'.
+  Proof.
+    intros Γ i i' pars narg c u l [T h].
+    apply inversion_Proj in h.
+    destruct h as [uni [mdecl [idecl [pdecl [args' [? [hc [? ?]]]]]]]].
+    apply Construct_Ind_ind_eq in hc. eauto.
+  Qed.
 
 End Lemmata.

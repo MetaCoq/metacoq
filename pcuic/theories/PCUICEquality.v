@@ -7,6 +7,9 @@ From MetaCoq.Template Require Import config utils Universes BasicAst AstUtils
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICReflect PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICNameless
      PCUICCumulativity PCUICPosition.
+From Equations Require Import Equations.
+Require Import Equations.Prop.DepElim.
+Set Equations With UIP.
 
 Fixpoint eqb_term_upto_univ (equ lequ : universe -> universe -> bool) (u v : term) : bool :=
   match u, v with
@@ -350,7 +353,8 @@ Proof.
   intros Re Rle u v he hle h.
   induction u using term_forall_list_ind in v, h, Rle, hle |- *.
   all: dependent destruction h.
-  all: try solve [ constructor ; try ih2 ; try assumption ; try reflexivity ].
+  all: try solve [ constructor ; try ih2 ; try assumption ;
+                   try subst ; try reflexivity ].
   - constructor. eapply Forall2_impl' ; try eassumption.
     eapply All_Forall. eapply All_impl ; eauto.
   - constructor. eapply Forall2_impl ; try eassumption.
@@ -486,15 +490,15 @@ Proof.
 Qed.
 
 Lemma eq_term_upto_univ_mkApps_l_inv :
-  forall Re u l t,
-    eq_term_upto_univ Re Re (mkApps u l) t ->
+  forall Re Rle u l t,
+    eq_term_upto_univ Re Rle (mkApps u l) t ->
     exists u' l',
-      eq_term_upto_univ Re Re u u' /\
+      eq_term_upto_univ Re Rle u u' /\
       Forall2 (eq_term_upto_univ Re Re) l l' /\
       t = mkApps u' l'.
 Proof.
-  intros Re u l t h.
-  induction l in u, t, h |- *.
+  intros Re Rle u l t h.
+  induction l in u, t, h, Rle |- *.
   - cbn in h. exists t, []. split ; auto.
   - cbn in h. apply IHl in h as [u' [l' [h1 [h2 h3]]]].
     dependent destruction h1. subst.
@@ -507,18 +511,89 @@ Proof.
 Qed.
 
 Lemma eq_term_upto_univ_mkApps :
-  forall Re u1 l1 u2 l2,
-    eq_term_upto_univ Re Re u1 u2 ->
+  forall Re Rle u1 l1 u2 l2,
+    eq_term_upto_univ Re Rle u1 u2 ->
     Forall2 (eq_term_upto_univ Re Re) l1 l2 ->
-    eq_term_upto_univ Re Re (mkApps u1 l1) (mkApps u2 l2).
+    eq_term_upto_univ Re Rle (mkApps u1 l1) (mkApps u2 l2).
 Proof.
-  intros Re u1 l1 u2 l2 hu hl.
+  intros Re Rle u1 l1 u2 l2 hu hl.
   induction l1 in u1, u2, l2, hu, hl |- *.
   - inversion hl. subst. assumption.
   - inversion hl. subst. simpl.
     eapply IHl1.
     + constructor. all: assumption.
     + assumption.
+Qed.
+
+Lemma eq_term_upto_univ_subst_instance_constr :
+  forall (Re Rle : universe -> universe -> Prop) u b u' b',
+    (forall s s',
+        Re s s' ->
+        Re (subst_instance_univ u s) (subst_instance_univ u' s')
+    ) ->
+    (forall s s',
+        Rle s s' ->
+        Rle (subst_instance_univ u s) (subst_instance_univ u' s')
+    ) ->
+    Forall2 Rle (map Universe.make u) (map Universe.make u') ->
+    eq_term_upto_univ Re Rle b b' ->
+    eq_term_upto_univ Re Rle (subst_instance_constr u b)
+                      (subst_instance_constr u' b').
+Proof.
+  intros Re Rle u b u' b' hRe hRle hu hb.
+  induction b in b', hb, Rle, hRle |- * using term_forall_list_ind.
+  all: try solve [ dependent destruction hb ; constructor ; eauto ].
+  - dependent destruction hb. cbn. constructor.
+    eapply Forall2_map. eapply Forall2_impl' ; [ eassumption |].
+    eapply All_Forall.
+    eapply All_impl ; [ eassumption |].
+    intros x0 H1 y0 H2. cbn in H1.
+    eapply H1. all: eauto.
+  - dependent destruction hb. simpl. constructor.
+    eapply Forall2_map_inv in H.
+    eapply Forall2_map. eapply Forall2_map.
+    eapply Forall2_impl ; [ eassumption |].
+    intros x y h. cbn in h.
+    unfold Universe.make in h.
+    specialize (hRle _ _ h).
+    unfold subst_instance_univ in hRle. simpl in hRle.
+    unfold Universe.make. assumption.
+  - dependent destruction hb. cbn. constructor.
+    eapply Forall2_map_inv in H.
+    eapply Forall2_map. eapply Forall2_map.
+    eapply Forall2_impl ; [ eassumption |].
+    intros x y h. cbn in h.
+    unfold Universe.make in h.
+    specialize (hRle _ _ h).
+    unfold subst_instance_univ in hRle. simpl in hRle.
+    assumption.
+  - dependent destruction hb. cbn. constructor.
+    eapply Forall2_map_inv in H.
+    eapply Forall2_map. eapply Forall2_map.
+    eapply Forall2_impl ; [ eassumption |].
+    intros x y h. cbn in h.
+    unfold Universe.make in h.
+    specialize (hRle _ _ h).
+    unfold subst_instance_univ in hRle. simpl in hRle.
+    unfold Universe.make. assumption.
+  - dependent destruction hb. cbn. constructor. all: eauto.
+    eapply Forall2_map. eapply Forall2_impl' ; [ eassumption |].
+    eapply All_Forall.
+    eapply All_impl ; [ eassumption |].
+    intros [? ?] H1 [? ?] [H2 H3]. cbn in H1, H2, H3. subst.
+    cbn. split ; eauto.
+  - dependent destruction hb. cbn. constructor.
+    eapply Forall2_map. eapply Forall2_impl' ; [ eassumption |].
+    eapply All_Forall.
+    eapply All_impl ; [ eassumption |].
+    intros ? [? ?] ? [? [? ?]]. cbn in *.
+    repeat split ; eauto.
+  - dependent destruction hb. cbn. constructor.
+    eapply Forall2_map. eapply Forall2_impl' ; [ eassumption |].
+    eapply All_Forall.
+    eapply All_impl ; [ eassumption |].
+    intros ? [? ?] ? [? [? ?]]. cbn in *.
+    repeat split ; eauto.
 Qed.
 
 Lemma nleq_term_it_mkLambda_or_LetIn :
@@ -624,4 +699,154 @@ Proof.
   eapply eq_term_it_mkLambda_or_LetIn.
   eapply eq_term_zipc.
   eassumption.
+Qed.
+
+Lemma eq_term_upto_univ_isApp :
+  forall Re Rle u v,
+    eq_term_upto_univ Re Rle u v ->
+    isApp u = isApp v.
+Proof.
+  intros Re Rle u v h.
+  induction h.
+  all: reflexivity.
+Qed.
+
+Inductive eq_context_upto Re : context -> context -> Prop :=
+| eq_context_nil : eq_context_upto Re [] []
+| eq_context_vass na A Γ nb B Δ :
+    eq_term_upto_univ Re Re A B ->
+    eq_context_upto Re Γ Δ ->
+    eq_context_upto Re (Γ ,, vass na A) (Δ ,, vass nb B)
+| eq_context_vdef na u A Γ nb v B Δ :
+    eq_term_upto_univ Re Re u v ->
+    eq_term_upto_univ Re Re A B ->
+    eq_context_upto Re Γ Δ ->
+    eq_context_upto Re (Γ ,, vdef na u A) (Δ ,, vdef nb v B).
+
+Definition eq_def_upto Re d d' : Prop :=
+  eq_term_upto_univ Re Re d.(dtype) d'.(dtype) /\
+  eq_term_upto_univ Re Re d.(dbody) d'.(dbody) /\
+  d.(rarg) = d'.(rarg).
+
+Inductive rel_option {A B} (R : A -> B -> Prop) : option A -> option B -> Prop :=
+| rel_some : forall a b, R a b -> rel_option R (Some a) (Some b)
+| rel_none : rel_option R None None.
+
+Definition eq_decl_upto Re d d' : Prop :=
+  rel_option (eq_term_upto_univ Re Re) d.(decl_body) d'.(decl_body) /\
+  eq_term_upto_univ Re Re d.(decl_type) d'.(decl_type).
+
+(* TODO perhaps should be def *)
+Lemma Forall2_eq_context_upto :
+  forall Re Γ Δ,
+    Forall2 (eq_decl_upto Re) Γ Δ ->
+    eq_context_upto Re Γ Δ.
+Proof.
+  intros Re Γ Δ h.
+  induction h.
+  - constructor.
+  - destruct H as [h1 h2].
+    destruct x as [na bo ty], y as [na' bo' ty'].
+    simpl in h1, h2.
+    destruct h1.
+    + constructor ; eauto.
+    + constructor ; eauto.
+Qed.
+
+Lemma eq_context_upto_refl :
+  forall Re Γ,
+    Reflexive Re ->
+    eq_context_upto Re Γ Γ.
+Proof.
+  intros Re Γ hRe.
+  induction Γ as [| [na [bo |] ty] Γ ih].
+  - constructor.
+  - constructor ; eauto.
+    all: eapply eq_term_upto_univ_refl ; eauto.
+  - constructor ; eauto.
+    all: eapply eq_term_upto_univ_refl ; eauto.
+Qed.
+
+Lemma eq_context_upto_cat :
+  forall Re Γ Δ Γ' Δ',
+    eq_context_upto Re Γ Γ' ->
+    eq_context_upto Re Δ Δ' ->
+    eq_context_upto Re (Γ ,,, Δ) (Γ' ,,, Δ').
+Proof.
+  intros Re Γ Δ Γ' Δ' h1 h2.
+  induction h2 in Γ, Γ', h1 |- *.
+  - assumption.
+  - simpl. constructor ; eauto.
+  - simpl. constructor ; eauto.
+Qed.
+
+Lemma eq_context_upto_rev :
+  forall Re Γ Δ,
+    eq_context_upto Re Γ Δ ->
+    eq_context_upto Re (rev Γ) (rev Δ).
+Proof.
+  intros Re Γ Δ h.
+  induction h.
+  - constructor.
+  - rewrite 2!rev_cons. eapply eq_context_upto_cat ; eauto.
+    constructor ; eauto. constructor.
+  - rewrite 2!rev_cons. eapply eq_context_upto_cat ; eauto.
+    constructor ; eauto. constructor.
+Qed.
+
+Definition SubstUnivPreserving R :=
+  forall u u' s s',
+    R s s' ->
+    R (subst_instance_univ u s) (subst_instance_univ u' s').
+
+Lemma eq_term_upto_univ_substs :
+  forall (Re Rle : universe -> universe -> Prop) u v n l l',
+    (forall u u' : universe, Re u u' -> Rle u u') ->
+    eq_term_upto_univ Re Rle u v ->
+    Forall2 (eq_term_upto_univ Re Re) l l' ->
+    eq_term_upto_univ Re Rle (subst l n u) (subst l' n v).
+Proof.
+  intros Re Rle u v n l l' hR hu hl.
+  induction u in v, n, l, l', hu, hl, Rle, hR |- * using term_forall_list_ind.
+  all: dependent destruction hu.
+  all: try solve [ cbn ; constructor ; try sih ; eauto ].
+  - cbn. destruct (Nat.leb_spec0 n n0).
+    + case_eq (nth_error l (n0 - n)).
+      * intros t e. eapply Forall2_nth_error_Some_l in e as h ; eauto.
+        destruct h as [t' [e' h]].
+        rewrite e'.
+        eapply eq_term_upto_univ_lift.
+        eapply eq_term_upto_univ_leq ; eauto.
+      * intros h. eapply Forall2_nth_error_None_l in h as hh ; eauto.
+        rewrite hh.
+        apply Forall2_length in hl as e. rewrite <- e.
+        constructor.
+    + constructor.
+  - cbn. constructor.
+    eapply Forall2_map. eapply Forall2_impl' ; [ eassumption |].
+    eapply All_Forall.
+    eapply All_impl ; [ eassumption |].
+    intros x0 H1 y0 H2. cbn in H1.
+    eapply H1. all: eauto.
+  - cbn. constructor ; try sih ; eauto.
+    eapply Forall2_map. eapply Forall2_impl' ; [ eassumption |].
+    eapply All_Forall. eapply All_impl ; [ eassumption |].
+    intros ? H0 ? [? ?]. cbn in H0. repeat split ; auto.
+    eapply H0. all: eauto.
+  - cbn. constructor.
+    eapply Forall2_map. eapply Forall2_impl' ; [ eassumption |].
+    eapply All_Forall. eapply All_impl ; [ eassumption |].
+    intros ? [h1 h2] ? [? [? ?]].
+    repeat split ; auto.
+    + eapply h1. all: eauto.
+    + apply Forall2_length in H. rewrite H.
+      eapply h2. all: eauto.
+  - cbn. constructor.
+    eapply Forall2_map. eapply Forall2_impl' ; [ eassumption |].
+    eapply All_Forall. eapply All_impl ; [ eassumption |].
+    intros ? [h1 h2] ? [? [? ?]].
+    repeat split ; auto.
+    + eapply h1. all: eauto.
+    + apply Forall2_length in H. rewrite H.
+      eapply h2. all: eauto.
 Qed.

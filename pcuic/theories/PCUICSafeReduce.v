@@ -152,66 +152,6 @@ Section Reduce.
 
   Existing Instance Req_refl.
 
-  Derive Signature for typing.
-
-  Lemma Construct_Ind_ind_eq :
-    forall {Γ n i args u i' args' u'},
-      Σ ;;; Γ |- mkApps (tConstruct i n u) args : mkApps (tInd i' u') args' ->
-      i = i'.
-  Proof.
-    intros Γ n i args u i' args' u' h.
-    induction args.
-    - simpl in h. apply inversion_Construct in h as ih.
-      destruct ih as [mdecl [idecl [cdecl [? [d [? hc]]]]]].
-      destruct i as [mind nind].
-      destruct i' as [mind' nind'].
-      unfold type_of_constructor in hc. cbn in hc.
-      destruct cdecl as [[cna ct] cn]. cbn in hc.
-      destruct mdecl as [mnpars mpars mbod muni]. simpl in *.
-      destruct idecl as [ina ity ike ict iprj].
-      apply cumul_alt in hc as [v [v' [[? ?] ?]]].
-      unfold declared_constructor in d. cbn in d.
-      destruct d as [[dm hin] hn]. simpl in *.
-      unfold declared_minductive in dm.
-      (* I have no idea how to do it. *)
-      admit.
-    - eapply IHargs. (* Induction on args was a wrong idea! *)
-  Admitted.
-
-  Lemma Case_Construct_ind_eq :
-    forall {Γ ind ind' npar pred i u brs args},
-      welltyped Σ Γ (tCase (ind, npar) pred (mkApps (tConstruct ind' i u) args) brs) ->
-      ind = ind'.
-  Proof.
-    intros Γ ind ind' npar pred i u brs args [A h].
-    apply inversion_Case in h as ih.
-    destruct ih
-      as [uni [args' [mdecl [idecl [pty [indctx [pctx [ps [btys [? [? [? [? [? [? [ht0 [? ?]]]]]]]]]]]]]]]]].
-    apply Construct_Ind_ind_eq in ht0. eauto.
-  Qed.
-
-  Lemma Proj_Constuct_ind_eq :
-    forall Γ i i' pars narg c u l,
-      welltyped Σ Γ (tProj (i, pars, narg) (mkApps (tConstruct i' c u) l)) ->
-      i = i'.
-  Proof.
-    intros Γ i i' pars narg c u l [T h].
-    apply inversion_Proj in h.
-    destruct h as [uni [mdecl [idecl [pdecl [args' [? [hc [? ?]]]]]]]].
-    apply Construct_Ind_ind_eq in hc. eauto.
-  Qed.
-
-  Lemma Proj_red_cond :
-    forall Γ i pars narg i' c u l,
-      welltyped Σ Γ (tProj (i, pars, narg) (mkApps (tConstruct i' c u) l)) ->
-      nth_error l (pars + narg) <> None.
-  Proof.
-    intros Γ i pars narg i' c u l [T h].
-    apply inversion_Proj in h.
-    destruct h as [uni [mdecl [idecl [pdecl [args' [d [hc [? ?]]]]]]]].
-    destruct d as [di [? ?]]. simpl in *. subst.
-  Admitted.
-
   Definition inspect {A} (x : A) : { y : A | y = x } := exist x eq_refl.
 
   Definition Pr (t' : term * stack) π :=
@@ -671,8 +611,7 @@ Section Reduce.
         { clear - h flags hΣ.
           apply welltyped_context in h.
           simpl in h.
-          apply (Case_Construct_ind_eq (args := [])) in h.
-          assumption.
+          eapply Case_Construct_ind_eq with (args := []) ; eauto.
         } subst.
         reflexivity.
       + clear eq. dependent destruction r.
@@ -694,8 +633,7 @@ Section Reduce.
             zip fold in h'.
             apply welltyped_context in h'.
             cbn in h'.
-            apply Case_Construct_ind_eq in h'.
-            assumption.
+            apply Case_Construct_ind_eq in h'. all: eauto.
           } subst.
           exact H.
         * cbn in H0. inversion H0. subst. clear H0.
@@ -708,8 +646,7 @@ Section Reduce.
           { clear - h flags H hΣ.
             apply welltyped_context in h.
             cbn in h.
-            apply Case_Construct_ind_eq in h.
-            assumption.
+            apply Case_Construct_ind_eq in h. all: eauto.
           } subst.
           reflexivity.
   Qed.
@@ -813,8 +750,8 @@ Section Reduce.
     constructor.
     cbn in hh. rewrite zipc_appstack in hh. cbn in hh.
     zip fold in hh. apply welltyped_context in hh.
-    simpl in hh. apply Proj_Constuct_ind_eq in hh. subst.
-    constructor. eauto.
+    simpl in hh. apply Proj_Constuct_ind_eq in hh. all: eauto.
+    subst. constructor. eauto.
   Qed.
   Next Obligation.
     unfold Pr in p. simpl in p.
@@ -827,7 +764,7 @@ Section Reduce.
     cbn in hh. rewrite zipc_appstack in hh. cbn in hh.
     zip fold in hh.
     apply welltyped_context in hh. simpl in hh.
-    apply Proj_red_cond in hh. eapply hh. eauto.
+    apply Proj_red_cond in hh. all: eauto.
   Qed.
   Next Obligation.
     unfold Pr in p. simpl in p.

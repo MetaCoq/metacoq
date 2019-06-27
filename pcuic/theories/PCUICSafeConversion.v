@@ -1819,9 +1819,6 @@ Section Conversion.
        positionR (` (pps1 x)) (` (pps1 y)) ->
        Ret (Reduction u2) Γ u1 (coApp (mkApps t ca1) (appstack a1 π1)) ρ2.
 
-  Axiom cheat : forall {A}, A.
-  Tactic Notation "cheat" := exact cheat.
-
   Equations(noeqns) _isconv_args' (Γ : context) (t : term) (args : list term)
             (l1 : list term) (π1 : stack) (h1 : wtp Γ (mkApps t args) (appstack l1 π1))
             (l2 : list term) (π2 : stack) (h2 : wtp Γ (mkApps t args) (appstack l2 π2))

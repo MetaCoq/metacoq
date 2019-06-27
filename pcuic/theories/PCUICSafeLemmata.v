@@ -950,6 +950,23 @@ Section Lemmata.
     - eapply decompose_app_notApp. eassumption.
   Qed.
 
+  (* TODO MOVE *)
+  Lemma Forall2_nth_error_None_l :
+    forall A B (P : A -> B -> Prop) l l' n,
+      nth_error l n = None ->
+      Forall2 P l l' ->
+      nth_error l' n = None.
+  Proof.
+    intros A B P l l' n e h.
+    induction n in l, l', e, h |- *.
+    - destruct h.
+      + reflexivity.
+      + cbn in e. discriminate e.
+    - destruct h.
+      + reflexivity.
+      + cbn in e. cbn. eapply IHn ; eauto.
+  Qed.
+
   (* TODO Duplicate of tactic in PCUICEquality *)
   Local Ltac sih :=
     lazymatch goal with
@@ -969,32 +986,17 @@ Section Lemmata.
     induction u in v, n, l, l', hu, hl, Rle, hR |- * using term_forall_list_ind.
     all: dependent destruction hu.
     all: try solve [ cbn ; constructor ; try sih ; eauto ].
-    (* - induction hl. *)
-    (*   + simpl. destruct (Nat.leb_spec0 n n0). *)
-    (*     * destruct (eqb_spec n0 n). *)
-    (*       -- subst. replace (n - n) with 0 by omega. cbn. *)
-    (*          constructor. *)
-    (*       -- replace (n0 - n) with (S (n0 - (S n))) by omega. cbn. *)
-    (*          constructor. *)
-    (*     * constructor. *)
-    (*   + revert IHhl. simpl. destruct (Nat.leb_spec0 n n0). *)
-    (*     * destruct (eqb_spec n0 n). *)
-    (*       -- subst. replace (n - n) with 0 by omega. cbn. intro. *)
-    (*          eapply eq_term_upto_univ_lift. *)
-    (*          eapply eq_term_upto_univ_leq ; eauto. *)
-    (*       -- replace (n0 - n) with (S (n0 - (S n))) by omega. simpl. *)
-    (*          intro h. *)
     - cbn. destruct (Nat.leb_spec0 n n0).
-      + destruct (eqb_spec n0 n).
-        * subst. replace (n - n) with 0 by omega. cbn.
-          destruct hl.
-          -- cbn. constructor.
-          -- cbn. eapply eq_term_upto_univ_lift.
-             eapply eq_term_upto_univ_leq ; eauto.
-        * replace (n0 - n) with (S (n0 - (S n))) by omega. cbn.
-          destruct hl.
-          -- cbn. constructor.
-          -- cbn. admit.
+      + case_eq (nth_error l (n0 - n)).
+        * intros t e. eapply Forall2_nth_error_Some_l in e as h ; eauto.
+          destruct h as [t' [e' h]].
+          rewrite e'.
+          eapply eq_term_upto_univ_lift.
+          eapply eq_term_upto_univ_leq ; eauto.
+        * intros h. eapply Forall2_nth_error_None_l in h as hh ; eauto.
+          rewrite hh.
+          apply Forall2_length in hl as e. rewrite <- e.
+          constructor.
       + constructor.
     - cbn. constructor.
       eapply Forall2_map. eapply Forall2_impl' ; [ eassumption |].
@@ -1023,7 +1025,7 @@ Section Lemmata.
       + eapply h1. all: eauto.
       + apply Forall2_length in H. rewrite H.
         eapply h2. all: eauto.
-  Admitted.
+  Qed.
 
   (* TODO MOVE *)
   Lemma red1_eq_context_upto_l :

@@ -953,14 +953,54 @@ Section Lemmata.
   (* TODO MOVE *)
   Lemma red1_eq_context_upto_l :
     forall Re Γ Δ u v,
+      Reflexive Re ->
       red1 Σ Γ u v ->
       eq_context_upto Re Γ Δ ->
       exists v',
         ∥ red1 Σ Δ u v' ∥ /\
         eq_term_upto_univ Re Re v v'.
   Proof.
-    intros Re Γ Δ u v h e.
+    intros Re Γ Δ u v he h e.
     induction h in e |- * using red1_ind_all.
+    all: try solve [
+      eexists ; split ; [
+        constructor ; solve [ econstructor ; eauto ]
+      | eapply eq_term_upto_univ_refl ; eauto
+      ]
+    ].
+    all: try solve [
+      destruct (IHh e) as [? [[?] ?]] ;
+      eexists ; split ; [
+        constructor ; econstructor ; eauto
+      | constructor ; eauto ;
+        eapply eq_term_upto_univ_refl ; eauto
+      ]
+    ].
+    - assert (h : exists b',
+                 option_map decl_body (nth_error Δ i) = Some (Some b') /\
+                 eq_term_upto_univ Re Re body b'
+             ).
+      { induction i in Γ, Δ, H, e |- *.
+        - destruct e.
+          + cbn in *. discriminate.
+          + simpl in *. discriminate.
+          + simpl in *. inversion H. subst. clear H.
+            eexists. split ; eauto.
+        - destruct e.
+          + cbn in *. discriminate.
+          + simpl in *. eapply IHi in H ; eauto.
+          + simpl in *. eapply IHi in H ; eauto.
+      }
+      destruct h as [b' [e1 e2]].
+      eexists. split.
+      + constructor. constructor. eassumption.
+      + eapply eq_term_upto_univ_lift ; eauto.
+    - (* destruct (IHh e) as [? [[?] ?]]. *)
+      (* eexists. split. *)
+      (* + constructor. econstructor ; eauto. *)
+      (* + constructor ; eauto. *)
+      (*   eapply eq_term_upto_univ_refl ; eauto. *)
+      (* HERE NEXT Generalising over Δ *)
   Admitted.
 
   Derive Signature for Forall2.
@@ -1040,12 +1080,13 @@ Section Lemmata.
         e : eq_term_upto_univ _ _ ?A ?B
         |- _ =>
         let hh := fresh "hh" in
-        eapply red1_eq_context_upto_l in r as hh ; [
-          destruct hh as [? [[?] ?]]
-        | eapply eq_context_vass (* with (nb := na) *) ; [
+        eapply red1_eq_context_upto_l in r as hh ; revgoals ; [
+          eapply eq_context_vass (* with (nb := na) *) ; [
             eapply e
           | eapply eq_context_upto_refl ; eauto
           ]
+        | assumption
+        | destruct hh as [? [[?] ?]]
         ]
       end ;
       eexists ; split ; [
@@ -1177,13 +1218,14 @@ Section Lemmata.
         e2 : eq_term_upto_univ _ _ ?a ?b
         |- _ =>
         let hh := fresh "hh" in
-        eapply red1_eq_context_upto_l in r as hh ; [
-          destruct hh as [? [[?] ?]]
-        | eapply eq_context_vdef (* with (nb := na) *) ; [
+        eapply red1_eq_context_upto_l in r as hh ; revgoals ; [
+          eapply eq_context_vdef (* with (nb := na) *) ; [
             eapply e2
           | eapply e1
           | eapply eq_context_upto_refl ; eauto
           ]
+        | assumption
+        | destruct hh as [? [[?] ?]]
         ]
       end.
       eexists. split.
@@ -1315,6 +1357,7 @@ Section Lemmata.
                 * constructor.
                 * cbn. eapply eq_term_upto_univ_lift. eauto.
           }
+          { assumption. }
           eexists. split.
           + constructor. constructor.
             instantiate (1 := mkdef _ _ _ x' _).

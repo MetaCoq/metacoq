@@ -631,8 +631,6 @@ Proof.
   destruct (leb_spec_Set (#|c| + k) x'). f_equal. lia. reflexivity.
 Qed.
 
-Require Import FunctionalExtensionality.
-
 Lemma lift_types_of_case ind mdecl idecl args u p pty indctx pctx ps btys n k :
   let f k' := lift n (k' + k) in
   let f_ctx := lift_context n k in
@@ -666,7 +664,7 @@ Proof.
          map (option_map (on_snd (lift n k))) brs).
   { unfold build_branches_type. simpl. intros brs. intros <-.
     rewrite -> ind_ctors_map.
-    rewrite -> mapi_map, map_mapi. f_equal. extensionality i. extensionality x.
+    rewrite -> mapi_map, map_mapi. eapply mapi_ext. intros i x.
     destruct x as [[id t] arity]. simpl.
     rewrite <- lift_subst_instance_constr.
     rewrite subst0_inds_lift.

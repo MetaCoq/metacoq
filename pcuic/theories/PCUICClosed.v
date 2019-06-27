@@ -124,6 +124,64 @@ Proof.
   rewrite H. now apply lift_closed.
 Qed.
 
+Local Open Scope sigma.
+
+Require Import Morphisms.
+    Instance Upn_ext n : Proper (`=1` ==> `=1`) (Upn n).
+    Proof.
+      unfold Upn. reduce_goal. now rewrite H.
+    Qed.
+
+    Instance Up_ext : Proper (`=1` ==> `=1`) Up.
+    Proof.
+      unfold Up. reduce_goal. unfold subst_compose, subst_cons.
+      destruct a. reflexivity. now rewrite H.
+    Qed.
+
+    Lemma Upn_S σ n : ⇑^(S n) σ =1 ⇑ ⇑^n σ.
+    Proof.
+      rewrite Upn_Up. induction n in σ |- *. rewrite !Upn_0. now eapply Up_ext.
+      rewrite Upn_Up. rewrite IHn. eapply Up_ext. now rewrite Upn_Up.
+    Qed.
+    Hint Rewrite Upn_0 Upn_S : sigma.
+
+    Ltac sigma := autorewrite with sigma.
+
+Instance up_proper k : Proper (`=1` ==> `=1`) (up k).
+Proof. reduce_goal. now apply up_ext. Qed.
+
+Lemma Upn_Upn k k' σ : ⇑^(k + k') σ =1 ⇑^k (⇑^k' σ).
+Proof.
+  setoid_rewrite <- up_Upn. rewrite -(@up_Upn k').
+  symmetry; apply up_up.
+Qed.
+Hint Rewrite Upn_Upn : sigma.
+
+Lemma inst_closed σ k t : closedn k t -> t.[⇑^k σ] = t.
+Proof.
+  intros Hs.
+  induction t in σ, k, Hs |- * using term_forall_list_ind; intros; sigma;
+    simpl in *;
+    rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length, ?Nat.add_assoc in *;
+    simpl closed in *; repeat (toProp; f_equal; solve_all); try change_Sk;
+    unfold compose, test_def, on_snd, test_snd in *; simpl in *; eauto with all.
+
+  - revert Hs.
+    unfold Upn.
+    elim (Nat.ltb_spec n k); intros. simpl in *.
+    destruct (subst_consn_lt (l := idsn k) (i := n)) as [t [Heq Heq']].
+    + now rewrite idsn_length //.
+    + now rewrite idsn_lt in Heq.
+    + discriminate.
+  - specialize (IHt2 σ (S k) H0). rewrite -{2}IHt2. now sigma.
+  - specialize (IHt2 σ (S k) H0). rewrite -{2}IHt2. now sigma.
+  - specialize (IHt3 σ (S k) H0). rewrite -{2}IHt3. now sigma.
+  - toProp. specialize (b0 σ (#|m| + k) H0). eapply map_def_id_spec; auto.
+    revert b0. now sigma.
+  - toProp. specialize (b0 σ (#|m| + k) H0). eapply map_def_id_spec; auto.
+    revert b0. now sigma.
+Qed.
+
 Lemma All_forallb_eq_forallb {A} (P : A -> Type) (p q : A -> bool) l :
   All P l ->
   (forall x, P x -> p x = q x) ->
@@ -177,11 +235,30 @@ Lemma closedn_All_local_closed:
     closedn_ctx 0 Γ && closedn_ctx #|Γ| ctx.
 Proof.
   intros cf Σ Γ ctx wfΓ' al.
-  induction Γ. simpl.
-  induction ctx using rev_ind. constructor.
-  depelim al. destruct ctx; discriminate.
-  unfold app_context in x1.
-Admitted.
+  remember (Γ ,,, ctx) as Γ'. revert Γ' wfΓ' ctx HeqΓ' al.
+  induction Γ. simpl. intros. subst. unfold app_context in *. rewrite app_nil_r in wfΓ' al.
+  induction al; try constructor. unfold closedn_ctx.
+  unfold snoc. simpl. rewrite mapi_app forallb_app. simpl.
+  rewrite Nat.add_0_r. cbn.
+  move/andP: p => [] Ht _. rewrite List.rev_length Ht.
+  unfold closed_ctx in IHal.
+  now rewrite IHal.
+  unfold closed_ctx. simpl.
+  rewrite mapi_app forallb_app /= List.rev_length /closed_decl /= Nat.add_0_r p.
+  unfold closed_ctx in IHal.
+  now rewrite IHal.
+  intros.
+  unfold app_context in *. subst Γ'. simpl.
+  unfold closed_ctx. specialize (IHΓ (ctx ++ a :: Γ) wfΓ' (ctx ++ [a])).
+  rewrite -app_assoc in IHΓ. specialize (IHΓ eq_refl al).
+  simpl. rewrite mapi_app forallb_app.
+  move/andP: IHΓ => []. unfold closed_ctx.
+  simpl. rewrite List.rev_length rev_app_distr mapi_app forallb_app /=.
+  intros ->. move/andP => [/andP [->]] _. simpl.
+  intros. red. red in b. rewrite -b.
+  rewrite !mapi_rev !forallb_rev. f_equal. eapply mapi_ext. intros.
+  f_equal. lia.
+Qed.
 
 Lemma closedn_ctx_cons n d Γ : closedn_ctx n (d :: Γ) -> closedn_ctx n Γ && closed_decl (n + #|Γ|) d.
 Proof.

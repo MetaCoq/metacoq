@@ -3,7 +3,6 @@ From MetaCoq.Template Require Import utils AstUtils.
 From MetaCoq.Template Require Import BasicAst.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction.
 Import List.ListNotations.
-Require Import FunctionalExtensionality.
 Require Import ssreflect.
 
 From Equations Require Import Equations.

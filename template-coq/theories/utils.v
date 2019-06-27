@@ -1277,7 +1277,7 @@ Proof.
   simpl. rewrite rev_unit. f_equal.
   rewrite app_length. simpl. f_equal. lia.
   rewrite app_length. simpl.
-  f_equal. f_equal. extensionality k. extensionality x'.
+  f_equal. eapply mapi_rec_ext. intros.
   f_equal. lia.
 Qed.
 

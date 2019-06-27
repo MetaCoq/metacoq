@@ -955,7 +955,7 @@ Proof.
             trans_local (TTy.fix_context mfix)).
     { unfold trans_local, TTy.fix_context.
       rewrite map_rev map_mapi /fix_context mapi_map.
-      f_equal. f_equal. extensionality i; extensionality x.
+      f_equal. apply mapi_ext; intros i x.
       simpl. rewrite trans_lift. reflexivity. }
     econstructor; eauto.
     now rewrite nth_error_map H.
@@ -978,7 +978,7 @@ Proof.
             trans_local (TTy.fix_context mfix)).
     { unfold trans_local, TTy.fix_context.
       rewrite map_rev map_mapi /fix_context mapi_map.
-      f_equal. f_equal. extensionality i; extensionality x.
+      f_equal. apply mapi_ext => i x.
       simpl. rewrite trans_lift. reflexivity. }
     econstructor; eauto.
     now rewrite nth_error_map H.

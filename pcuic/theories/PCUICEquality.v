@@ -849,3 +849,55 @@ Definition SubstUnivPreserving R :=
   forall u u' s s',
     R s s' ->
     R (subst_instance_univ u s) (subst_instance_univ u' s').
+
+Lemma eq_term_upto_univ_substs :
+  forall (Re Rle : universe -> universe -> Prop) u v n l l',
+    (forall u u' : universe, Re u u' -> Rle u u') ->
+    eq_term_upto_univ Re Rle u v ->
+    Forall2 (eq_term_upto_univ Re Re) l l' ->
+    eq_term_upto_univ Re Rle (subst l n u) (subst l' n v).
+Proof.
+  intros Re Rle u v n l l' hR hu hl.
+  induction u in v, n, l, l', hu, hl, Rle, hR |- * using term_forall_list_ind.
+  all: dependent destruction hu.
+  all: try solve [ cbn ; constructor ; try sih ; eauto ].
+  - cbn. destruct (Nat.leb_spec0 n n0).
+    + case_eq (nth_error l (n0 - n)).
+      * intros t e. eapply Forall2_nth_error_Some_l in e as h ; eauto.
+        destruct h as [t' [e' h]].
+        rewrite e'.
+        eapply eq_term_upto_univ_lift.
+        eapply eq_term_upto_univ_leq ; eauto.
+      * intros h. eapply Forall2_nth_error_None_l in h as hh ; eauto.
+        rewrite hh.
+        apply Forall2_length in hl as e. rewrite <- e.
+        constructor.
+    + constructor.
+  - cbn. constructor.
+    eapply Forall2_map. eapply Forall2_impl' ; [ eassumption |].
+    eapply All_Forall.
+    eapply All_impl ; [ eassumption |].
+    intros x0 H1 y0 H2. cbn in H1.
+    eapply H1. all: eauto.
+  - cbn. constructor ; try sih ; eauto.
+    eapply Forall2_map. eapply Forall2_impl' ; [ eassumption |].
+    eapply All_Forall. eapply All_impl ; [ eassumption |].
+    intros ? H0 ? [? ?]. cbn in H0. repeat split ; auto.
+    eapply H0. all: eauto.
+  - cbn. constructor.
+    eapply Forall2_map. eapply Forall2_impl' ; [ eassumption |].
+    eapply All_Forall. eapply All_impl ; [ eassumption |].
+    intros ? [h1 h2] ? [? [? ?]].
+    repeat split ; auto.
+    + eapply h1. all: eauto.
+    + apply Forall2_length in H. rewrite H.
+      eapply h2. all: eauto.
+  - cbn. constructor.
+    eapply Forall2_map. eapply Forall2_impl' ; [ eassumption |].
+    eapply All_Forall. eapply All_impl ; [ eassumption |].
+    intros ? [h1 h2] ? [? [? ?]].
+    repeat split ; auto.
+    + eapply h1. all: eauto.
+    + apply Forall2_length in H. rewrite H.
+      eapply h2. all: eauto.
+Qed.

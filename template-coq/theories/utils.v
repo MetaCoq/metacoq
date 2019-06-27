@@ -1682,3 +1682,19 @@ Proof.
     + cbn in e. discriminate.
     + cbn in e. apply IHn with (l' := l') in e ; assumption.
 Qed.
+
+Lemma Forall2_nth_error_None_l :
+  forall A B (P : A -> B -> Prop) l l' n,
+    nth_error l n = None ->
+    Forall2 P l l' ->
+    nth_error l' n = None.
+Proof.
+  intros A B P l l' n e h.
+  induction n in l, l', e, h |- *.
+  - destruct h.
+    + reflexivity.
+    + cbn in e. discriminate e.
+  - destruct h.
+    + reflexivity.
+    + cbn in e. cbn. eapply IHn ; eauto.
+Qed.

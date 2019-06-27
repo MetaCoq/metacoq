@@ -805,17 +805,6 @@ Section Lemmata.
   Qed.
 
   (* TODO MOVE *)
-  Lemma eq_term_upto_univ_isApp :
-    forall Re Rle u v,
-      eq_term_upto_univ Re Rle u v ->
-      isApp u = isApp v.
-  Proof.
-    intros Re Rle u v h.
-    induction h.
-    all: reflexivity.
-  Qed.
-
-  (* TODO MOVE *)
   Lemma isApp_mkApps :
     forall u l,
       isApp u ->
@@ -1035,93 +1024,6 @@ Section Lemmata.
       + apply Forall2_length in H. rewrite H.
         eapply h2. all: eauto.
   Admitted.
-
-  (* TODO MOVE *)
-  Inductive eq_context_upto Re : context -> context -> Prop :=
-  | eq_context_nil : eq_context_upto Re [] []
-  | eq_context_vass na A Γ nb B Δ :
-      eq_term_upto_univ Re Re A B ->
-      eq_context_upto Re Γ Δ ->
-      eq_context_upto Re (Γ ,, vass na A) (Δ ,, vass nb B)
-  | eq_context_vdef na u A Γ nb v B Δ :
-      eq_term_upto_univ Re Re u v ->
-      eq_term_upto_univ Re Re A B ->
-      eq_context_upto Re Γ Δ ->
-      eq_context_upto Re (Γ ,, vdef na u A) (Δ ,, vdef nb v B).
-
-  Definition eq_def_upto Re d d' : Prop :=
-    eq_term_upto_univ Re Re d.(dtype) d'.(dtype) /\
-    eq_term_upto_univ Re Re d.(dbody) d'.(dbody) /\
-    d.(rarg) = d'.(rarg).
-
-  Inductive rel_option {A B} (R : A -> B -> Prop) : option A -> option B -> Prop :=
-  | rel_some : forall a b, R a b -> rel_option R (Some a) (Some b)
-  | rel_none : rel_option R None None.
-
-  Definition eq_decl_upto Re d d' : Prop :=
-    rel_option (eq_term_upto_univ Re Re) d.(decl_body) d'.(decl_body) /\
-    eq_term_upto_univ Re Re d.(decl_type) d'.(decl_type).
-
-  (* TODO perhaps should be def *)
-  Lemma Forall2_eq_context_upto :
-    forall Re Γ Δ,
-      Forall2 (eq_decl_upto Re) Γ Δ ->
-      eq_context_upto Re Γ Δ.
-  Proof.
-    intros Re Γ Δ h.
-    induction h.
-    - constructor.
-    - destruct H as [h1 h2].
-      destruct x as [na bo ty], y as [na' bo' ty'].
-      simpl in h1, h2.
-      destruct h1.
-      + constructor ; eauto.
-      + constructor ; eauto.
-  Qed.
-
-  (* TODO MOVE *)
-  Lemma eq_context_upto_refl :
-    forall Re Γ,
-      Reflexive Re ->
-      eq_context_upto Re Γ Γ.
-  Proof.
-    intros Re Γ hRe.
-    induction Γ as [| [na [bo |] ty] Γ ih].
-    - constructor.
-    - constructor ; eauto.
-      all: eapply eq_term_upto_univ_refl ; eauto.
-    - constructor ; eauto.
-      all: eapply eq_term_upto_univ_refl ; eauto.
-  Qed.
-
-  (* TODO MOVE *)
-  Lemma eq_context_upto_cat :
-    forall Re Γ Δ Γ' Δ',
-      eq_context_upto Re Γ Γ' ->
-      eq_context_upto Re Δ Δ' ->
-      eq_context_upto Re (Γ ,,, Δ) (Γ' ,,, Δ').
-  Proof.
-    intros Re Γ Δ Γ' Δ' h1 h2.
-    induction h2 in Γ, Γ', h1 |- *.
-    - assumption.
-    - simpl. constructor ; eauto.
-    - simpl. constructor ; eauto.
-  Qed.
-
-  (* TODO MOVE *)
-  Lemma eq_context_upto_rev :
-    forall Re Γ Δ,
-      eq_context_upto Re Γ Δ ->
-      eq_context_upto Re (rev Γ) (rev Δ).
-  Proof.
-    intros Re Γ Δ h.
-    induction h.
-    - constructor.
-    - rewrite 2!rev_cons. eapply eq_context_upto_cat ; eauto.
-      constructor ; eauto. constructor.
-    - rewrite 2!rev_cons. eapply eq_context_upto_cat ; eauto.
-      constructor ; eauto. constructor.
-  Qed.
 
   (* TODO MOVE *)
   Lemma red1_eq_context_upto_l :

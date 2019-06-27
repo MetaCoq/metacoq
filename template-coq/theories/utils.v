@@ -1698,3 +1698,40 @@ Proof.
     + reflexivity.
     + cbn in e. cbn. eapply IHn ; eauto.
 Qed.
+
+Lemma Forall2_trans :
+  forall A (P : A -> A -> Prop),
+    Transitive P ->
+    Transitive (Forall2 P).
+Proof.
+  intros A P hP l1 l2 l3 h1 h2.
+  induction h1 in l3, h2 |- *.
+  - inversion h2. constructor.
+  - inversion h2. constructor.
+    + eapply hP ; eauto.
+    + eapply IHh1 ; eauto.
+Qed.
+
+Lemma Forall2_rev :
+  forall A B R l l',
+    @Forall2 A B R l l' ->
+    Forall2 R (List.rev l) (List.rev l').
+Proof.
+  intros A B R l l' h.
+  induction h.
+  - constructor.
+  - cbn. eapply Forall2_app ; eauto.
+Qed.
+
+(* Weak, would need some Forall2i *)
+Lemma Forall2_mapi :
+  forall A B A' B' (R : A' -> B' -> Prop) (f : nat -> A -> A') (g : nat -> B -> B') l l',
+    Forall2 (fun x y => forall i, R (f i x) (g i y)) l l' ->
+    Forall2 R (mapi f l) (mapi g l').
+Proof.
+  intros A B A' B' R f g l l' h.
+  unfold mapi. generalize 0. intro i.
+  induction h in i |- *.
+  - constructor.
+  - cbn. constructor ; eauto.
+Qed.

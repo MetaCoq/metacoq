@@ -525,24 +525,6 @@ Proof.
     + assumption.
 Qed.
 
-(* TODO MOVE *)
-(* Lemma non_empty_dec : *)
-(*   forall A (l : list A), {l = []} + {l <> []}. *)
-(* Proof. *)
-(*   intros A l. destruct l. *)
-(*   - auto. *)
-(*   - right. discriminate. *)
-(* Defined. *)
-
-(* TODO MOVE *)
-Lemma non_empty_eq :
-  forall A (l : list A) (p q : [] <> l),
-    p = q.
-Proof.
-  intros A l p q.
-  (* Is it even possible? *)
-Admitted.
-
 Lemma eq_term_upto_univ_subst_instance_constr :
   forall (Re Rle : universe -> universe -> Prop) u b u' b',
     (forall s s',
@@ -575,18 +557,7 @@ Proof.
     unfold Universe.make in h.
     specialize (hRle _ _ h).
     unfold subst_instance_univ in hRle. simpl in hRle.
-    unfold Universe.make. unfold make_non_empty_list.
-    match goal with
-    | h : Rle (_ ; ?e) _ |- Rle (_ ; ?e') _ =>
-      assert (e1 : e = e')
-    end.
-    { eapply non_empty_eq. }
-    match goal with
-    | h : Rle _ (_ ; ?e) |- Rle _ (_ ; ?e') =>
-      assert (e2 : e = e')
-    end.
-    { eapply non_empty_eq. }
-    rewrite e1, e2 in hRle. assumption.
+    unfold Universe.make. assumption.
   - dependent destruction hb. cbn. constructor.
     eapply Forall2_map_inv in H.
     eapply Forall2_map. eapply Forall2_map.
@@ -595,18 +566,7 @@ Proof.
     unfold Universe.make in h.
     specialize (hRle _ _ h).
     unfold subst_instance_univ in hRle. simpl in hRle.
-    unfold Universe.make. unfold make_non_empty_list.
-    match goal with
-    | h : Rle (_ ; ?e) _ |- Rle (_ ; ?e') _ =>
-      assert (e1 : e = e')
-    end.
-    { eapply non_empty_eq. }
-    match goal with
-    | h : Rle _ (_ ; ?e) |- Rle _ (_ ; ?e') =>
-      assert (e2 : e = e')
-    end.
-    { eapply non_empty_eq. }
-    rewrite e1, e2 in hRle. assumption.
+    assumption.
   - dependent destruction hb. cbn. constructor.
     eapply Forall2_map_inv in H.
     eapply Forall2_map. eapply Forall2_map.
@@ -615,18 +575,7 @@ Proof.
     unfold Universe.make in h.
     specialize (hRle _ _ h).
     unfold subst_instance_univ in hRle. simpl in hRle.
-    unfold Universe.make. unfold make_non_empty_list.
-    match goal with
-    | h : Rle (_ ; ?e) _ |- Rle (_ ; ?e') _ =>
-      assert (e1 : e = e')
-    end.
-    { eapply non_empty_eq. }
-    match goal with
-    | h : Rle _ (_ ; ?e) |- Rle _ (_ ; ?e') =>
-      assert (e2 : e = e')
-    end.
-    { eapply non_empty_eq. }
-    rewrite e1, e2 in hRle. assumption.
+    unfold Universe.make. assumption.
   - dependent destruction hb. cbn. constructor. all: eauto.
     eapply Forall2_map. eapply Forall2_impl' ; [ eassumption |].
     eapply All_Forall.

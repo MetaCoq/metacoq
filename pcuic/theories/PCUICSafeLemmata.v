@@ -16,20 +16,10 @@ Import MonadNotation.
 
 Set Equations With UIP.
 
-Inductive conv_pb :=
-| Conv
-| Cumul.
-
 Notation "∥ T ∥" := (squash T) (at level 10).
 Arguments sq {_} _.
 
 Notation "( x ; y )" := (existT _ x y).
-
-Definition conv leq Σ Γ u v :=
-  match leq with
-  | Conv => ∥ Σ ;;; Γ |- u = v ∥
-  | Cumul => ∥ Σ ;;; Γ |- u <= v ∥
-  end.
 
 Definition nodelta_flags := RedFlags.mk true true true false true true.
 
@@ -433,374 +423,25 @@ Section Lemmata.
       + assumption.
   Qed.
 
-  Lemma conv_refl' :
-    forall leq Γ t,
-      conv leq Σ Γ t t.
-  Proof.
-    intros leq Γ t.
-    destruct leq.
-    - cbn. constructor. apply conv_refl.
-    - cbn. constructor. apply cumul_refl'.
-  Qed.
-
-  Lemma conv_sym :
-    forall Γ u v,
-      Σ ;;; Γ |- u = v ->
-      Σ ;;; Γ |- v = u.
-  Proof.
-    intros Γ u v [h1 h2].
-    econstructor ; assumption.
-  Qed.
-
-  Lemma conv_conv :
-    forall {Γ leq u v},
-      ∥ Σ ;;; Γ |- u = v ∥ ->
-      conv leq Σ Γ u v.
-  Proof.
-    intros Γ leq u v h.
-    destruct leq.
-    - assumption.
-    - destruct h as [[h1 h2]]. cbn.
-      constructor. assumption.
-  Qed.
-
-  Lemma eq_term_conv :
-    forall {Γ u v},
-      eq_term (snd Σ) u v ->
-      Σ ;;; Γ |- u = v.
-  Proof.
-    intros Γ u v e.
-    constructor.
-    - eapply cumul_refl.
-      eapply eq_term_leq_term. assumption.
-    - eapply cumul_refl.
-      eapply eq_term_leq_term.
-      eapply eq_term_sym.
-      assumption.
-  Qed.
-
-  Lemma conv_trans :
-    forall Γ u v w,
-      Σ ;;; Γ |- u = v ->
-      Σ ;;; Γ |- v = w ->
-      Σ ;;; Γ |- u = w.
-  Proof.
-    intros Γ u v w h1 h2.
-    destruct h1, h2. constructor ; eapply cumul_trans ; eassumption.
-  Qed.
-
-  Lemma conv_trans' :
-    forall leq Γ u v w,
-      conv leq Σ Γ u v ->
-      conv leq Σ Γ v w ->
-      conv leq Σ Γ u w.
-  Proof.
-    intros leq Γ u v w h1 h2.
-    destruct leq.
-    - cbn in *. destruct h1, h2. constructor.
-      eapply conv_trans ; eassumption.
-    - cbn in *. destruct h1, h2. constructor. eapply cumul_trans ; eassumption.
-  Qed.
-
-  Lemma red_conv_l :
-    forall leq Γ u v,
-      red (fst Σ) Γ u v ->
-      conv leq Σ Γ u v.
-  Proof.
-    intros leq Γ u v h.
-    induction h.
-    - apply conv_refl'.
-    - eapply conv_trans' ; try eassumption.
-      destruct leq.
-      + simpl. constructor. constructor.
-        * eapply cumul_red_l.
-          -- eassumption.
-          -- eapply cumul_refl'.
-        * eapply cumul_red_r.
-          -- eapply cumul_refl'.
-          -- assumption.
-      + simpl. constructor.
-        eapply cumul_red_l.
-        * eassumption.
-        * eapply cumul_refl'.
-  Qed.
-
-  Lemma red_conv_r :
-    forall leq Γ u v,
-      red (fst Σ) Γ u v ->
-      conv leq Σ Γ v u.
-  Proof.
-    intros leq Γ u v h.
-    induction h.
-    - apply conv_refl'.
-    - eapply conv_trans' ; try eassumption.
-      destruct leq.
-      + simpl. constructor. constructor.
-        * eapply cumul_red_r.
-          -- eapply cumul_refl'.
-          -- assumption.
-        * eapply cumul_red_l.
-          -- eassumption.
-          -- eapply cumul_refl'.
-      + simpl. constructor.
-        eapply cumul_red_r.
-        * eapply cumul_refl'.
-        * assumption.
-  Qed.
-
-  Lemma conv_conv_l :
-    forall leq Γ u v,
-        Σ ;;; Γ |- u = v ->
-        conv leq Σ Γ u v.
-  Proof.
-    intros [] Γ u v [h1 h2].
-    - cbn. constructor. constructor ; assumption.
-    - cbn. constructor. assumption.
-  Qed.
-
-  Lemma conv_conv_r :
-    forall leq Γ u v,
-        Σ ;;; Γ |- u = v ->
-        conv leq Σ Γ v u.
-  Proof.
-    intros [] Γ u v [h1 h2].
-    - cbn. constructor. constructor ; assumption.
-    - cbn. constructor. assumption.
-  Qed.
-
-  (* TODO MOVE *)
-  Lemma cumul_App_l :
-    forall {Γ f g x},
-      Σ ;;; Γ |- f <= g ->
-      Σ ;;; Γ |- tApp f x <= tApp g x.
-  Proof.
-    intros Γ f g x h.
-    induction h.
-    - eapply cumul_refl. constructor.
-      + assumption.
-      + apply eq_term_refl.
-    - eapply cumul_red_l ; try eassumption.
-      econstructor. assumption.
-    - eapply cumul_red_r ; try eassumption.
-      econstructor. assumption.
-  Qed.
-
-  (* TODO MOVE *)
-  Lemma cumul_App_r :
-    forall {Γ f u v},
-      Σ ;;; Γ |- u = v ->
-      Σ ;;; Γ |- tApp f u <= tApp f v.
-  Proof.
-    intros Γ f u v h.
-    apply conv_conv_alt in h. induction h.
-    - eapply cumul_refl. constructor.
-      + apply leq_term_refl.
-      + assumption.
-    -  eapply cumul_red_l ; try eassumption.
-      econstructor. assumption.
-    - eapply cumul_red_r ; try eassumption.
-      econstructor. assumption.
-  Qed.
-
-  (* TODO MOVE *)
-  Lemma conv_App_r :
-    forall {Γ f x y},
-      Σ ;;; Γ |- x = y ->
-      Σ ;;; Γ |- tApp f x = tApp f y.
-  Proof.
-    intros Γ f x y h.
-    eapply conv_conv_alt.
-    apply conv_conv_alt in h. induction h.
-    - constructor. constructor.
-      + apply eq_term_refl.
-      + assumption.
-    - eapply conv_alt_red_l ; eauto.
-      econstructor. assumption.
-    - eapply conv_alt_red_r ; eauto.
-      econstructor. assumption.
-  Qed.
-
-  (* TODO MOVE *)
-  Lemma conv_Prod_l :
-    forall {Γ na na' A1 A2 B},
-      Σ ;;; Γ |- A1 = A2 ->
-      Σ ;;; Γ |- tProd na A1 B = tProd na' A2 B.
-  Proof.
-    intros Γ na na' A1 A2 B h.
-    eapply conv_conv_alt.
-    apply conv_conv_alt in h. induction h.
-    - constructor. constructor.
-      + assumption.
-      + apply eq_term_refl.
-    - eapply conv_alt_red_l ; eauto.
-      econstructor. assumption.
-    - eapply conv_alt_red_r ; eauto.
-      econstructor. assumption.
-  Qed.
-
-  (* TODO MOVE *)
-  Lemma conv_Prod_r :
-    forall {Γ na A B1 B2},
-      Σ ;;; Γ ,, vass na A |- B1 = B2 ->
-      Σ ;;; Γ |- tProd na A B1 = tProd na A B2.
-  Proof.
-    intros Γ na A B1 B2 h.
-    eapply conv_conv_alt.
-    apply conv_conv_alt in h. induction h.
-    - constructor. constructor.
-      + apply eq_term_refl.
-      + assumption.
-    - eapply conv_alt_red_l ; eauto.
-      econstructor. assumption.
-    - eapply conv_alt_red_r ; eauto.
-      econstructor. assumption.
-  Qed.
-
-  (* TODO MOVE *)
-  Lemma cumul_Prod_r :
-    forall {Γ na A B1 B2},
-      Σ ;;; Γ ,, vass na A |- B1 <= B2 ->
-      Σ ;;; Γ |- tProd na A B1 <= tProd na A B2.
-  Proof.
-    intros Γ na A B1 B2 h.
-    induction h.
-    - eapply cumul_refl. constructor.
-      + apply eq_term_refl.
-      + assumption.
-    - eapply cumul_red_l ; try eassumption.
-      econstructor. assumption.
-    - eapply cumul_red_r ; try eassumption.
-      econstructor. assumption.
-  Qed.
-
-  (* TODO MOVE *)
-  Lemma conv_cumul :
-    forall Γ u v,
-      Σ ;;; Γ |- u = v ->
-      Σ ;;; Γ |- u <= v.
-  Proof.
-    intros Γ u v [? ?].
-    assumption.
-  Qed.
-
-  (* TODO MOVE *)
-  Lemma conv_Prod :
-    forall leq Γ na A1 A2 B1 B2,
-      Σ ;;; Γ |- A1 = A2 ->
-      conv leq Σ (Γ,, vass na A1) B1 B2 ->
-      conv leq Σ Γ (tProd na A1 B1) (tProd na A2 B2).
-  Proof.
-    intros [] Γ na A1 A2 B1 B2 h1 h2.
-    - simpl in *. destruct h2 as [h2]. constructor.
-      eapply conv_trans.
-      + eapply conv_Prod_r. eassumption.
-      + eapply conv_Prod_l. eassumption.
-    - simpl in *. destruct h2 as [h2]. constructor.
-      eapply cumul_trans.
-      + eapply cumul_Prod_r. eassumption.
-      + eapply conv_cumul. eapply conv_Prod_l. assumption.
-  Qed.
-
-  (* TODO MOVE *)
-  Lemma cumul_Case_c :
-    forall Γ indn p brs u v,
-      Σ ;;; Γ |- u = v ->
-      Σ ;;; Γ |- tCase indn p u brs <= tCase indn p v brs.
-  Proof.
-    intros Γ [ind n] p brs u v h.
-    eapply conv_conv_alt in h.
-    induction h.
-    - constructor. constructor.
-      + eapply eq_term_refl.
-      + assumption.
-      + eapply Forall_Forall2. eapply Forall_True.
-        intros. split ; eauto. eapply eq_term_refl.
-    - eapply cumul_red_l ; eauto.
-      constructor. assumption.
-    - eapply cumul_red_r ; eauto.
-      constructor. assumption.
-  Qed.
-
-  (* TODO MOVE *)
-  Lemma cumul_Proj_c :
-    forall Γ p u v,
-      Σ ;;; Γ |- u = v ->
-      Σ ;;; Γ |- tProj p u <= tProj p v.
-  Proof.
-    intros Γ p u v h.
-    eapply conv_conv_alt in h.
-    induction h.
-    - eapply cumul_refl. constructor. assumption.
-    - eapply cumul_red_l ; try eassumption.
-      econstructor. assumption.
-    - eapply cumul_red_r ; try eassumption.
-      econstructor. assumption.
-  Qed.
-
-  (* TODO We only use this to prove conv_context, the latter seems to be true,
-     but not this one. FIXME.
-   *)
-  (* Lemma cumul_context : *)
-  (*   forall Γ u v ρ, *)
-  (*     Σ ;;; Γ |- u = v -> *)
-  (*     Σ ;;; Γ |- zipc u ρ <= zipc v ρ. *)
-  (* Proof. *)
-  (*   intros Γ u v ρ h. *)
-  (*   revert u v h. induction ρ ; intros u v h. *)
-  (*   - cbn. assumption. *)
-  (*   - cbn. apply IHρ. *)
-  (*     eapply cumul_App_l. assumption. *)
-  (*   - cbn. eapply IHρ. *)
-  (*     eapply cumul_App_r. assumption. *)
-  (*   - cbn. eapply IHρ. *)
-  (*     eapply cumul_App_r. assumption. *)
-  (*   - cbn. eapply IHρ. *)
-  (*     eapply cumul_Case_c. assumption. *)
-  (*   - cbn. eapply IHρ. *)
-  (*     eapply cumul_Proj_c. assumption. *)
-  (*   - cbn. eapply IHρ. *)
-  (*     (* eapply cumul_Prod_l. assumption. *) *)
-  (*     (* This is WRONG isn't it?? *) *)
-  (* Admitted. *)
-
   Lemma conv_context :
     forall Γ u v ρ,
-      Σ ;;; Γ |- u = v ->
+      Σ ;;; Γ ,,, stack_context ρ |- u = v ->
       Σ ;;; Γ |- zipc u ρ = zipc v ρ.
-  (* Proof. *)
-  (*   intros Γ u v ρ []. *)
-  (*   constructor ; eapply cumul_context ; assumption. *)
-  (* Qed. *)
-  Admitted.
-
-  (* Lemma conv_context' : *)
-  (*   forall Γ leq u v ρ, *)
-  (*     conv leq Σ Γ u v -> *)
-  (*     conv leq Σ Γ (zipc u ρ) (zipc v ρ). *)
-  (* Proof. *)
-  (*   intros Γ leq u v ρ h. *)
-  (*   destruct leq. *)
-  (*   - cbn in *. destruct h as [[h1 h2]]. constructor. *)
-  (*     constructor ; eapply cumul_context ; assumption. *)
-  (*   - cbn in *. destruct h. constructor. *)
-  (*     eapply cumul_context. assumption. *)
-  (* Qed. *)
-
-  Lemma cumul_it_mkLambda_or_LetIn :
-    forall Δ Γ u v,
-      Σ ;;; (Δ ,,, Γ) |- u <= v ->
-      Σ ;;; Δ |- it_mkLambda_or_LetIn Γ u <= it_mkLambda_or_LetIn Γ v.
   Proof.
-    intros Δ Γ u v h. revert Δ u v h.
-    induction Γ as [| [na [b|] A] Γ ih ] ; intros Δ u v h.
+    intros Γ u v ρ h.
+    induction ρ in u, v, h |- *.
     - assumption.
-    - simpl. cbn. eapply ih.
-      (* Need cumul for LetIn *)
-      admit.
-    - simpl. cbn. eapply ih.
-      (* Need cumul for Lambda *)
-      admit.
-  Admitted.
+    - simpl. eapply IHρ. eapply conv_App_l. assumption.
+    - simpl. eapply IHρ. eapply conv_App_r. assumption.
+    - simpl. eapply IHρ. eapply conv_App_r. assumption.
+    - simpl. eapply IHρ. eapply conv_Case_c. assumption.
+    - simpl. eapply IHρ. eapply conv_Proj_c. assumption.
+    - simpl. eapply IHρ. eapply conv_Prod_l. assumption.
+    - simpl. eapply IHρ. eapply conv_Prod_r. assumption.
+    - simpl. eapply IHρ. eapply conv_Lambda_l. assumption.
+    - simpl. eapply IHρ. eapply conv_Lambda_r. assumption.
+    - simpl. eapply IHρ. eapply conv_App_r. assumption.
+  Qed.
 
   Lemma cumul_zippx :
     forall Γ u v ρ,
@@ -832,6 +473,7 @@ Section Lemmata.
       assumption.
     - unfold zippx. simpl.
       eapply cumul_it_mkLambda_or_LetIn. cbn.
+      eapply conv_cumul. eapply conv_Lambda_r.
       (* Need cumul for Lambda again *)
       admit.
     - unfold zippx. simpl.

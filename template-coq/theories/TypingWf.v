@@ -23,7 +23,7 @@ Definition wf_decl d :=
 Definition wf_decl_pred : global_context -> context -> term -> term -> Type :=
   (fun _ _ t T => Ast.wf t /\ Ast.wf T).
 
-Lemma All_local_env_wf_decl:
+Lemma All_local_env_wf_decl :
   forall Σ (Γ : context),
     Forall wf_decl Γ -> All_local_env wf_decl_pred Σ Γ.
 Proof.
@@ -33,11 +33,15 @@ Proof.
   - destruct a as [na [body|] ty].
     + econstructor.
       * apply IHΓ. inv X; eauto.
-      * red. inv X. split ; eauto.
+      * red. inv X. split.
+        -- apply H.
+        -- constructor.
       * red. inv X. eauto.
-    eapply (localenv_cons_abs _ _ _ _ _ (Universe.make Level.lProp)).
-    apply IHΓ. inv X; eauto.
-    red. inv X. red in H. intuition eauto. constructor.
+    + eapply (localenv_cons_abs _ _ _ _ _ (Universe.make Level.lProp)).
+      * apply IHΓ. inv X; eauto.
+      * red. inv X. red in H. intuition eauto. constructor.
+  (* That's not normal... *)
+  Unshelve. repeat constructor.
 Qed.
 
 Lemma All_local_env_wf_decl_inv:

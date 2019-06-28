@@ -337,7 +337,7 @@ Import Level ConstraintType.
     universe variable (Level.t).
     It is >= for polymorphic universes and > 0 for monomorphic universes. *)
 
-Record valuation := 
+Record valuation :=
   { valuation_mono : string -> positive ;
     valuation_poly : nat -> nat }.
 
@@ -364,7 +364,7 @@ Inductive satisfies0 (v : valuation) : univ_constraint -> Prop :=
 | satisfies0_Le l l' : (val0 v l <= val0 v l')%Z -> satisfies0 v (l, Le, l')
 | satisfies0_Eq l l' : val0 v l = val0 v l' -> satisfies0 v (l, Eq, l').
 
-Definition satisfies v : constraints -> Prop := 
+Definition satisfies v : constraints -> Prop :=
   ConstraintSet.For_all (satisfies0 v).
 
 Definition consistent ctrs := exists v, satisfies v ctrs.
@@ -408,6 +408,51 @@ Proof.
   unfold leq_universe; destruct check_univs;
     [apply leq_universe0_refl|constructor].
 Qed.
+
+Lemma eq_universe0_trans φ s1 s2 s3 :
+  eq_universe0 φ s1 s2 ->
+  eq_universe0 φ s2 s3 ->
+  eq_universe0 φ s1 s3.
+Proof.
+  intros h1 h2.
+  intros v h. etransitivity ; try eapply h1 ; eauto.
+Qed.
+
+Lemma eq_universe_trans `{checker_flags} φ :
+  forall s1 s2 s3,
+    eq_universe φ s1 s2 ->
+    eq_universe φ s2 s3 ->
+    eq_universe φ s1 s3.
+Proof.
+  intros s1 s2 s3.
+  unfold eq_universe. destruct check_univs ; auto.
+  intros h1 h2.
+  eapply eq_universe0_trans ; eauto.
+Qed.
+
+Lemma leq_universe0_trans φ s1 s2 s3 :
+  leq_universe0 φ s1 s2 ->
+  leq_universe0 φ s2 s3 ->
+  leq_universe0 φ s1 s3.
+Proof.
+  intros h1 h2.
+  intros v h. cbn. etransitivity.
+  - eapply h1. assumption.
+  - eapply h2. assumption.
+Qed.
+
+Lemma leq_universe_trans `{checker_flags} φ :
+  forall s1 s2 s3,
+    leq_universe φ s1 s2 ->
+    leq_universe φ s2 s3 ->
+    leq_universe φ s1 s3.
+Proof.
+  intros s1 s2 s3.
+  unfold leq_universe. destruct check_univs ; auto.
+  intros h1 h2.
+  eapply leq_universe0_trans ; eauto.
+Qed.
+
 
 Lemma val_cons v e s
   : val v (NEL.cons e s) = Z.max (val1 v e) (val v s).

@@ -940,3 +940,18 @@ Proof.
   - eapply eq_universe_trans ; eauto.
   - eapply leq_universe_trans ; eauto.
 Qed.
+
+Lemma eq_term_upto_univ_mkApps_inv :
+  forall Re u l u' l',
+    isApp u = false ->
+    isApp u' = false ->
+    eq_term_upto_univ Re Re (mkApps u l) (mkApps u' l') ->
+    eq_term_upto_univ Re Re u u' /\ Forall2 (eq_term_upto_univ Re Re) l l'.
+Proof.
+  intros Re u l u' l' hu hu' h.
+  apply eq_term_upto_univ_mkApps_l_inv in h as hh.
+  destruct hh as [v [args [h1 [h2 h3]]]].
+  apply eq_term_upto_univ_isApp in h1 as hh1. rewrite hu in hh1.
+  apply mkApps_notApp_inj in h3 ; auto.
+  destruct h3 as [? ?]. subst. split ; auto.
+Qed.

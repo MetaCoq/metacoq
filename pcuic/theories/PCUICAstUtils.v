@@ -1,4 +1,5 @@
-From Coq Require Import Ascii String Bool OrderedType Lia List Program Arith.
+From Coq Require Import Ascii String Bool OrderedType Lia List Program Arith
+     Omega.
 From MetaCoq.Template Require Import utils AstUtils.
 From MetaCoq.Template Require Import BasicAst.
 From MetaCoq.PCUIC Require Import PCUICAst.
@@ -699,4 +700,113 @@ Proof.
   - cbn in eq. assumption.
   - cbn in eq. apply IHl in eq.
     inversion eq. reflexivity.
+Qed.
+
+Lemma isApp_mkApps :
+  forall u l,
+    isApp u ->
+    isApp (mkApps u l).
+Proof.
+  intros u l h.
+  induction l in u, h |- *.
+  - cbn. assumption.
+  - cbn. apply IHl. reflexivity.
+Qed.
+
+Lemma decompose_app_rec_notApp :
+  forall t l u l',
+    decompose_app_rec t l = (u, l') ->
+    isApp u = false.
+Proof.
+  intros t l u l' e.
+  induction t in l, u, l', e |- *.
+  all: try (cbn in e ; inversion e ; reflexivity).
+  cbn in e. eapply IHt1. eassumption.
+Qed.
+
+Lemma decompose_app_notApp :
+  forall t u l,
+    decompose_app t = (u, l) ->
+    isApp u = false.
+Proof.
+  intros t u l e.
+  eapply decompose_app_rec_notApp. eassumption.
+Qed.
+
+Fixpoint nApp t :=
+  match t with
+  | tApp u _ => S (nApp u)
+  | _ => 0
+  end.
+
+Lemma isApp_false_nApp :
+  forall u,
+    isApp u = false ->
+    nApp u = 0.
+Proof.
+  intros u h.
+  destruct u.
+  all: try reflexivity.
+  discriminate.
+Qed.
+
+Lemma nApp_mkApps :
+  forall t l,
+    nApp (mkApps t l) = nApp t + #|l|.
+Proof.
+  intros t l.
+  induction l in t |- *.
+  - simpl. omega.
+  - simpl. rewrite IHl. cbn. omega.
+Qed.
+
+Lemma decompose_app_eq_mkApps :
+  forall t u l l',
+    decompose_app t = (mkApps u l', l) ->
+    l' = [].
+Proof.
+  intros t u l l' e.
+  apply decompose_app_notApp in e.
+  apply isApp_false_nApp in e.
+  rewrite nApp_mkApps in e.
+  destruct l' ; cbn in e ; try omega.
+  reflexivity.
+Qed.
+
+Lemma mkApps_nApp_inj :
+  forall u u' l l',
+    nApp u = nApp u' ->
+    mkApps u l = mkApps u' l' ->
+    u = u' /\ l = l'.
+Proof.
+  intros u u' l l' h e.
+  induction l in u, u', l', h, e |- *.
+  - cbn in e. subst.
+    destruct l' ; auto.
+    exfalso.
+    rewrite nApp_mkApps in h. cbn in h. omega.
+  - destruct l'.
+    + cbn in e. subst. exfalso.
+      rewrite nApp_mkApps in h. cbn in h. omega.
+    + cbn in e. apply IHl in e.
+      * destruct e as [e1 e2].
+        inversion e1. subst. auto.
+      * cbn. f_equal. auto.
+Qed.
+
+Lemma mkApps_notApp_inj :
+  forall u u' l l',
+    isApp u = false ->
+    isApp u' = false ->
+    mkApps u l = mkApps u' l' ->
+    u = u' /\ l = l'.
+Proof.
+  intros u u' l l' h h' e.
+  eapply mkApps_nApp_inj.
+  - (* Below was the proof without ssreflect and now it has to be stupid
+       and not principled!!! :(
+     *)
+    (* rewrite 2!isApp_false_nApp by assumption. reflexivity. *)
+    do 2 (rewrite isApp_false_nApp ; [ assumption |]). reflexivity.
+  - assumption.
 Qed.

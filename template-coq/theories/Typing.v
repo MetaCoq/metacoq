@@ -1241,15 +1241,24 @@ Proof.
 Qed.
 
 Lemma wf_local_inv `{checker_flags} Σ d Γ (w : wf_local Σ (d :: Γ)) :
-  { w' : wf_local Σ Γ &
+  ∑ w' : wf_local Σ Γ,
     match d.(decl_body) with
-    | Some b => { ty : Σ ;;; Γ |- b : d.(decl_type) |
-                  wf_local_size Σ (@typing_size _) _ w' < wf_local_size _ (@typing_size _) _ w /\
-                  typing_size ty <= wf_local_size _ (@typing_size _) _ w }
-    | None => { u & { ty : Σ ;;; Γ |- d.(decl_type) : tSort u |
-                      wf_local_size Σ (@typing_size _) _ w' < wf_local_size _ (@typing_size _) _ w /\
-                      typing_size ty <= wf_local_size _ (@typing_size _) _ w } }
-    end }.
+    | Some b =>
+      ∑ u (ty : Σ ;;; Γ |- b : d.(decl_type)),
+        { ty' : Σ ;;; Γ |- d.(decl_type) : tSort u |
+          wf_local_size Σ (@typing_size _) _ w' <
+          wf_local_size _ (@typing_size _) _ w /\
+          typing_size ty <= wf_local_size _ (@typing_size _) _ w /\
+          typing_size ty' <= wf_local_size _ (@typing_size _) _ w
+        }
+    | None =>
+      ∑ u,
+        { ty : Σ ;;; Γ |- d.(decl_type) : tSort u |
+          wf_local_size Σ (@typing_size _) _ w' <
+          wf_local_size _ (@typing_size _) _ w /\
+          typing_size ty <= wf_local_size _ (@typing_size _) _ w
+        }
+    end.
 Proof.
   remember (d :: Γ) as ctx. revert Heqctx. destruct w.
   - simpl.
@@ -1257,7 +1266,7 @@ Proof.
   - intros [=]. subst d Γ0.
     exists w; simpl. exists u. exists t0. pose (typing_size_pos t0). lia.
   - intros [=]. subst d Γ0.
-    exists w; simpl. exists t1. pose (typing_size_pos t0). lia.
+    exists w; simpl. exists u, t1 , t0. pose (typing_size_pos t0). lia.
 Qed.
 
 (** *** An induction principle ensuring the Σ declarations enjoy the same properties.
@@ -1471,12 +1480,12 @@ Proof.
       induction Γ in t, t0, H, H0, X14 |- *. 1: now constructor.
       destruct a. destruct decl_body.
       - destruct (wf_local_inv _ _ _ (typing_wf_local wfΣ H)).
-        simpl in y. destruct y as [Hty [sizex sizety]].
+        simpl in y. destruct y as [u [Hty [Hty' [sizex [sizety sizety']]]]].
         econstructor.
         + eapply IHΓ with _ _ Hty.
           * eauto. intros. eapply X14 with Hty0; eauto. lia.
           * apply typing_wf_local_size.
-        + admit. (* How?? :( *)
+        + admit. (* Still not done. *)
         + unshelve eapply X14; simpl; auto with arith;
           repeat (rewrite Nat.max_comm -Nat.max_assoc; auto with arith); lia.
       - destruct (wf_local_inv _ _ _ (typing_wf_local wfΣ H)).

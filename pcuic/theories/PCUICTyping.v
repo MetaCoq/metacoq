@@ -672,11 +672,19 @@ Section TypeLocal.
   Context (typing : forall (Γ : context), term -> option term -> Type).
 
   Inductive All_local_env : context -> Type :=
-  | localenv_nil : All_local_env []
-  | localenv_cons_abs Γ na t : All_local_env Γ ->
-      typing Γ t None -> All_local_env (Γ ,, vass na t)
-  | localenv_cons_def Γ na b t : All_local_env Γ ->
-      typing Γ b (Some t) ->  All_local_env (Γ ,, vdef na b t).
+  | localenv_nil :
+      All_local_env []
+
+  | localenv_cons_abs Γ na t :
+      All_local_env Γ ->
+      typing Γ t None ->
+      All_local_env (Γ ,, vass na t)
+
+  | localenv_cons_def Γ na b t :
+      All_local_env Γ ->
+      typing Γ t None ->
+      typing Γ b (Some t) ->
+      All_local_env (Γ ,, vdef na b t).
 End TypeLocal.
 
 (** Well-formedness of local environments embeds a sorting for each variable *)

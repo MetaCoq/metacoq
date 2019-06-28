@@ -14,7 +14,11 @@ Set Asymmetric Patterns.
 *)
 
 
-Definition wf_decl d := match decl_body d with Some b => Ast.wf b | None => True end /\ Ast.wf (decl_type d).
+Definition wf_decl d :=
+  match decl_body d with
+  | Some b => Ast.wf b
+  | None => True
+  end /\ Ast.wf (decl_type d).
 
 Definition wf_decl_pred : global_context -> context -> term -> term -> Type :=
   (fun _ _ t T => Ast.wf t /\ Ast.wf T).
@@ -27,8 +31,10 @@ Proof.
   induction Γ in X |- *.
   - constructor; eauto.
   - destruct a as [na [body|] ty].
-    constructor. apply IHΓ. inv X; eauto.
-    red. inv X. eauto.
+    + econstructor.
+      * apply IHΓ. inv X; eauto.
+      * red. inv X. split ; eauto.
+      * red. inv X. eauto.
     eapply (localenv_cons_abs _ _ _ _ _ (Universe.make Level.lProp)).
     apply IHΓ. inv X; eauto.
     red. inv X. red in H. intuition eauto. constructor.

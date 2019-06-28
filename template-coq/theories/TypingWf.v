@@ -40,7 +40,6 @@ Proof.
     + eapply (localenv_cons_abs _ _ _ _ _ (Universe.make Level.lProp)).
       * apply IHΓ. inv X; eauto.
       * red. inv X. red in H. intuition eauto. constructor.
-  (* That's not normal... *)
   Unshelve. repeat constructor.
 Qed.
 
@@ -377,9 +376,13 @@ Qed.
 Lemma typing_all_wf_decl `{checker_flags} Σ (wfΣ : wf Σ) Γ (wfΓ : wf_local Σ Γ) :
   Forall wf_decl Γ.
 Proof.
-  induction wfΓ. constructor. constructor; auto. red. simpl. split; wf.
-  apply typing_wf_gen in t0; eauto. apply t0; auto.
-  constructor; auto. red; simpl. apply typing_wf_gen in t0; auto. intuition auto.
+  induction wfΓ.
+  - constructor.
+  - constructor; auto. red. simpl. split; wf.
+    apply typing_wf_gen in t0; eauto. apply t0; auto.
+  - constructor; auto. red; simpl. apply typing_wf_gen in t0; auto.
+    intuition auto.
+    apply typing_wf_gen in t1; eauto. apply t1 ; auto.
 Qed.
 Hint Resolve typing_all_wf_decl : wf.
 

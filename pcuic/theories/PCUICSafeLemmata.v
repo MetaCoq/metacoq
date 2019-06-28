@@ -473,19 +473,18 @@ Section Lemmata.
       assumption.
     - unfold zippx. simpl.
       eapply cumul_it_mkLambda_or_LetIn. cbn.
-      eapply conv_cumul. eapply conv_Lambda_r.
-      (* Need cumul for Lambda again *)
-      admit.
+      eapply cumul_Lambda_r.
+      assumption.
     - unfold zippx. simpl.
       eapply cumul_it_mkLambda_or_LetIn.
       assumption.
     - unfold zippx. simpl.
       eapply cumul_it_mkLambda_or_LetIn. cbn.
-      (* cumul lambda *)
-      admit.
+      eapply cumul_Lambda_r.
+      assumption.
     - unfold zippx. simpl.
       eapply cumul_it_mkLambda_or_LetIn. assumption.
-  Admitted.
+  Qed.
 
   Lemma conv_zippx :
     forall Γ u v ρ,

@@ -443,22 +443,6 @@ Section Lemmata.
     - simpl. eapply IHρ. eapply conv_App_r. assumption.
   Qed.
 
-  Lemma cumul_it_mkLambda_or_LetIn :
-    forall Δ Γ u v,
-      Σ ;;; (Δ ,,, Γ) |- u <= v ->
-      Σ ;;; Δ |- it_mkLambda_or_LetIn Γ u <= it_mkLambda_or_LetIn Γ v.
-  Proof.
-    intros Δ Γ u v h. revert Δ u v h.
-    induction Γ as [| [na [b|] A] Γ ih ] ; intros Δ u v h.
-    - assumption.
-    - simpl. cbn. eapply ih.
-      (* Need cumul for LetIn *)
-      admit.
-    - simpl. cbn. eapply ih.
-      (* Need cumul for Lambda *)
-      admit.
-  Admitted.
-
   Lemma cumul_zippx :
     forall Γ u v ρ,
       Σ ;;; (Γ ,,, stack_context ρ) |- u <= v ->
@@ -489,6 +473,7 @@ Section Lemmata.
       assumption.
     - unfold zippx. simpl.
       eapply cumul_it_mkLambda_or_LetIn. cbn.
+      eapply conv_cumul. eapply conv_Lambda_r.
       (* Need cumul for Lambda again *)
       admit.
     - unfold zippx. simpl.

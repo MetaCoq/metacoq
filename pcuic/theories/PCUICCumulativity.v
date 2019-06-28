@@ -611,6 +611,22 @@ Proof.
     econstructor. assumption.
 Qed.
 
+Lemma cumul_Lambda_r :
+  forall Σ Γ na A b b',
+    Σ ;;; Γ,, vass na A |- b <= b' ->
+    Σ ;;; Γ |- tLambda na A b <= tLambda na A b'.
+Proof.
+  intros Σ Γ na A b b' h.
+  induction h.
+  - eapply cumul_refl. constructor.
+    + eapply eq_term_refl.
+    + assumption.
+  - eapply cumul_red_l ; try eassumption.
+    econstructor. assumption.
+  - eapply cumul_red_r ; try eassumption.
+    econstructor. assumption.
+Qed.
+
 Lemma cumul_it_mkLambda_or_LetIn :
   forall Σ Δ Γ u v,
     Σ ;;; (Δ ,,, Γ) |- u <= v ->
@@ -622,6 +638,5 @@ Proof.
   - simpl. cbn. eapply ih.
     eapply cumul_LetIn_bo. assumption.
   - simpl. cbn. eapply ih.
-    (* Need cumul for Lambda *)
-    admit.
-Admitted.
+    eapply cumul_Lambda_r. assumption.
+Qed.

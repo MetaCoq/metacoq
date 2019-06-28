@@ -420,7 +420,7 @@ Inductive eq_term_upto_univ (Re Rle : universe -> universe -> Prop) : term -> te
 
 | eq_Lambda na na' ty ty' t t' :
     eq_term_upto_univ Re Re ty ty' ->
-    eq_term_upto_univ Re Re t t' ->
+    eq_term_upto_univ Re Rle t t' ->
     eq_term_upto_univ Re Rle (tLambda na ty t) (tLambda na' ty' t')
 
 | eq_Prod na na' a a' b b' :

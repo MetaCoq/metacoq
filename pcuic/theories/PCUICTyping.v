@@ -474,7 +474,7 @@ Inductive eq_term_upto_univ (Re Rle : universe -> universe -> Prop) : term -> te
 
 | eq_Lambda na na' ty ty' t t' :
     eq_term_upto_univ Re Re ty ty' ->
-    eq_term_upto_univ Re Re t t' ->
+    eq_term_upto_univ Re Rle t t' ->
     eq_term_upto_univ Re Rle (tLambda na ty t) (tLambda na' ty' t')
 
 | eq_Prod na na' a a' b b' :
@@ -987,7 +987,7 @@ Section GlobalMaps.
     match universe_family u with
     | InProp =>
       (** The inductive is declared in the impredicative sort Prop *)
-      let topsort := 
+      let topsort :=
           match onConstructors with
           | Alli_nil => (* Empty inductive proposition: *) InType
           | Alli_cons cstr nil onc Alli_nil =>

@@ -105,14 +105,20 @@ Qed.
 (* Definition red1_context := context_relation red1_decls. *)
 
 Inductive conv_decls Σ Γ Γ' : forall (x y : context_decl), Type :=
-| conv_vass na na' T T' : isWfArity_or_Type Σ Γ' T' -> conv Σ Γ T T' ->
-                      conv_decls Σ Γ Γ' (vass na T) (vass na' T')
+| conv_vass na na' T T' :
+    isWfArity_or_Type Σ Γ' T' ->
+    Σ ;;; Γ |- T = T' ->
+    conv_decls Σ Γ Γ' (vass na T) (vass na' T')
 
-| conv_vdef_type na na' b T T' : isWfArity_or_Type Σ Γ' T' -> conv Σ Γ T T' ->
-                             conv_decls Σ Γ Γ' (vdef na b T) (vdef na' b T')
+| conv_vdef_type na na' b T T' :
+    isWfArity_or_Type Σ Γ' T' ->
+    Σ ;;; Γ |- T = T' ->
+    conv_decls Σ Γ Γ' (vdef na b T) (vdef na' b T')
 
-| conv_vdef_body na na' b b' T : Σ ;;; Γ' |- b' : T -> conv Σ Γ b b' ->
-                                                  conv_decls Σ Γ Γ' (vdef na b T) (vdef na' b' T).
+| conv_vdef_body na na' b b' T :
+     Σ ;;; Γ' |- b' : T ->
+     Σ ;;; Γ |- b = b' ->
+     conv_decls Σ Γ Γ' (vdef na b T) (vdef na' b' T).
 
 Notation conv_context := (context_relation conv_decls).
 Require Import Equations.Tactics.

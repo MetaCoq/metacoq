@@ -1485,7 +1485,7 @@ Proof.
         + eapply IHΓ with _ _ Hty.
           * eauto. intros. eapply X14 with Hty0; eauto. lia.
           * apply typing_wf_local_size.
-        + admit. (* Still not done. *)
+        + unshelve eapply X14. all: eauto. lia.
         + unshelve eapply X14; simpl; auto with arith;
           repeat (rewrite Nat.max_comm -Nat.max_assoc; auto with arith); lia.
       - destruct (wf_local_inv _ _ _ (typing_wf_local wfΣ H)).
@@ -1656,8 +1656,7 @@ Proof.
           eapply (X _ a _ _ p). simpl. lia.
        ++ eapply IHa0. intros.
          eapply (X _ X0 _ _ Hty). simpl; lia.
-(* Qed. *)
-Admitted.
+Qed.
 
 (** * Lemmas about All_local_env *)
 

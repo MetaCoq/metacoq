@@ -45,7 +45,7 @@ Fixpoint eqb_term_upto_univ (equ lequ : universe -> universe -> bool) (u v : ter
 
   | tLambda na A t, tLambda na' A' t' =>
     eqb_term_upto_univ equ equ A A' &&
-    eqb_term_upto_univ equ equ t t'
+    eqb_term_upto_univ equ lequ t t'
 
   | tProd na A B, tProd na' A' B' =>
     eqb_term_upto_univ equ equ A A' &&

@@ -958,7 +958,6 @@ Section Lemmata.
       eexists. split.
       + constructor. constructor.
       + eapply eq_term_upto_univ_subst ; eauto.
-        eapply eq_term_upto_univ_leq ; eauto.
     - dependent destruction e.
       eexists. split.
       + constructor. constructor.

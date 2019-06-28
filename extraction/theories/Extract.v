@@ -221,64 +221,58 @@ Definition extract_global Σ :=
   let '(Σ, univs) := Σ in
   extract_global_decls univs Σ.
 
-Inductive erases (Σ : global_context) (Γ : context) : term -> E.term -> Prop :=
-| erases_tRel i :
-    erases Σ Γ (tRel i) (E.tRel i)
-| erases_tVar n :
-    erases Σ Γ (tVar n) (E.tVar n)
-| erases_tEvar m m' l l' :
-    All2 (erases Σ Γ) l l' ->
-    erases Σ Γ (tEvar m l) (E.tEvar m' l')
-| erases_tLambda na b t t' :
-    erases Σ (vass na b :: Γ) t t' ->
-    erases Σ Γ (tLambda na b t) (E.tLambda na t')
-| erases_tLetIn na t1 t1' T t2 t2'  :
-    erases Σ Γ t1 t1' ->
-    erases Σ (vdef na t1 T :: Γ) t2 t2' ->
-    erases Σ Γ (tLetIn na t1 T t2) (E.tLetIn na t1' t2')
-| erases_tApp f u f' u' :
-    erases Σ Γ f f' ->
-    erases Σ Γ u u' ->
-    erases Σ Γ (tApp f u) (E.tApp f' u') 
-| erases_tConst kn u :
-    erases Σ Γ (tConst kn u) (E.tConst kn)
-| erases_tConstruct kn k n :
-    erases Σ Γ (tConstruct kn k n) (E.tConstruct kn k)
-| erases_tCase1 ind npar T c brs c' brs' :
-    Informative Σ ind ->
-    erases Σ Γ c c' ->
-    All2 (fun x x' => erases Σ Γ (snd x) (snd x') × fst x = fst x') brs brs' ->
-    erases Σ Γ (tCase (ind, npar) T c brs) (E.tCase (ind, npar) c' brs')
-(* | erases_tCase2 ip T c : *)
-(*     erases Σ Γ c E.tBox -> *)
-(*     erases Σ Γ (tCase ip T c []) (E.tCase ip E.tBox []) *)
-(* | erases_tCase3 ip T c brs n x x' : *)
-(*     erases Σ Γ c E.tBox -> *)
-(*     erases Σ Γ x x' -> *)
-(*     erases Σ Γ (tCase ip T c ((n, x) :: brs)) (mkAppBox x' n) *)
-| erases_tProj p c c' :
-    let ind := fst (fst p) in
-    Informative Σ ind ->
-    erases Σ Γ c c' ->
-    erases Σ Γ (tProj p c) (E.tProj p c')
-| erases_tFix mfix n mfix' :
-    All2 (fun d d' => dname d = E.dname d' ×
-                   rarg d = E.rarg d' ×
-                   erases Σ (Γ ,,, PCUICLiftSubst.fix_context mfix) (dbody d) (E.dbody d')) mfix mfix' ->
-    erases Σ Γ (tFix mfix n) (E.tFix mfix' n)
-| erases_tCoFix mfix n mfix' :
-    All2 (fun d d' => dname d = E.dname d' ×
-                   rarg d = E.rarg d' ×
-                   erases Σ (Γ ,,, PCUICLiftSubst.fix_context mfix) (dbody d) (E.dbody d')) mfix mfix' ->
-    erases Σ Γ (tCoFix mfix n) (E.tCoFix mfix' n)
-(* | erases_tSort u : erases Σ Γ (tSort u) E.tBox *)
-(* | erases_tInd i u : erases Σ Γ (tInd i u) (E.tBox) *)
-| erases_box t :
-    Is_Type_or_Proof Σ Γ t ->              
-    erases Σ Γ t E.tBox
-.
+Reserved Notation "Σ ;;; Γ |- s ⇝ℇ t" (at level 50, Γ, s, t at next level).
 
-Notation "Σ ;;; Γ |- s ⇝ℇ t" := (erases Σ Γ s t) (at level 50, Γ, s, t at next level) : type_scope.
+Inductive erases (Σ : global_context) (Γ : context) : term -> E.term -> Prop :=
+    erases_tRel : forall i : nat, Σ;;; Γ |- tRel i ⇝ℇ E.tRel i
+  | erases_tVar : forall n : ident, Σ;;; Γ |- tVar n ⇝ℇ E.tVar n
+  | erases_tEvar : forall (m m' : nat) (l : list term) (l' : list E.term),
+                   All2 (erases Σ Γ) l l' -> Σ;;; Γ |- tEvar m l ⇝ℇ E.tEvar m' l'
+  | erases_tLambda : forall (na : name) (b t : term) (t' : E.term),
+                     Σ;;; (vass na b :: Γ) |- t ⇝ℇ t' ->
+                     Σ;;; Γ |- tLambda na b t ⇝ℇ E.tLambda na t'
+  | erases_tLetIn : forall (na : name) (t1 : term) (t1' : E.term) 
+                      (T t2 : term) (t2' : E.term),
+                    Σ;;; Γ |- t1 ⇝ℇ t1' ->
+                    Σ;;; (vdef na t1 T :: Γ) |- t2 ⇝ℇ t2' ->
+                    Σ;;; Γ |- tLetIn na t1 T t2 ⇝ℇ E.tLetIn na t1' t2'
+  | erases_tApp : forall (f u : term) (f' u' : E.term),
+                  Σ;;; Γ |- f ⇝ℇ f' ->
+                  Σ;;; Γ |- u ⇝ℇ u' -> Σ;;; Γ |- tApp f u ⇝ℇ E.tApp f' u'
+  | erases_tConst : forall (kn : kername) (u : universe_instance),
+                    Σ;;; Γ |- tConst kn u ⇝ℇ E.tConst kn
+  | erases_tConstruct : forall (kn : inductive) (k : nat) (n : universe_instance),
+                        Σ;;; Γ |- tConstruct kn k n ⇝ℇ E.tConstruct kn k
+  | erases_tCase1 : forall (ind : inductive) (npar : nat) (T c : term)
+                      (brs : list (nat × term)) (c' : E.term) 
+                      (brs' : list (nat × E.term)),
+                    Informative Σ ind ->
+                    Σ;;; Γ |- c ⇝ℇ c' ->
+                    All2
+                      (fun (x : nat × term) (x' : nat × E.term) =>
+                       Σ;;; Γ |- snd x ⇝ℇ snd x' × fst x = fst x') brs brs' ->
+                    Σ;;; Γ |- tCase (ind, npar) T c brs ⇝ℇ E.tCase (ind, npar) c' brs'
+  | erases_tProj : forall (p : (inductive × nat) × nat) (c : term) (c' : E.term),
+                   let ind := fst (fst p) in
+                   Informative Σ ind ->
+                   Σ;;; Γ |- c ⇝ℇ c' -> Σ;;; Γ |- tProj p c ⇝ℇ E.tProj p c'
+  | erases_tFix : forall (mfix : mfixpoint term) (n : nat) (mfix' : list (E.def E.term)),
+                  All2
+                    (fun (d : def term) (d' : E.def E.term) =>
+                     dname d = E.dname d'
+                     × rarg d = E.rarg d'
+                       × Σ;;; Γ ,,, PCUICLiftSubst.fix_context mfix |- 
+                         dbody d ⇝ℇ E.dbody d') mfix mfix' ->
+                  Σ;;; Γ |- tFix mfix n ⇝ℇ E.tFix mfix' n
+  | erases_tCoFix : forall (mfix : mfixpoint term) (n : nat) (mfix' : list (E.def E.term)),
+                    All2
+                      (fun (d : def term) (d' : E.def E.term) =>
+                       dname d = E.dname d'
+                       × rarg d = E.rarg d'
+                         × Σ;;; Γ ,,, PCUICLiftSubst.fix_context mfix |- 
+                           dbody d ⇝ℇ E.dbody d') mfix mfix' ->
+                    Σ;;; Γ |- tCoFix mfix n ⇝ℇ E.tCoFix mfix' n
+  | erases_box : forall t : term, Is_Type_or_Proof Σ Γ t -> Σ;;; Γ |- t ⇝ℇ E.tBox where "Σ ;;; Γ |- s ⇝ℇ t" := (erases Σ Γ s t).
 
 Definition erases_constant_body (Σ : global_context) (cb : constant_body) (cb' : E.constant_body) :=
   match cst_body cb, E.cst_body cb' with

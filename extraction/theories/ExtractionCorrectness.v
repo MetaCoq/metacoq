@@ -361,6 +361,9 @@ Proof.
   (* - destruct p.  *)
 Admitted.
 
+Notation "Σ ;;; Γ |- s ▷ t" := (eval Σ Γ s t) (at level 50, Γ, s, t at next level) : type_scope.
+Notation "Σ ⊢ s ▷ t" := (Ee.eval Σ s t) (at level 50, s, t at next level) : type_scope.
+
 Lemma Is_type_red Σ Γ t v:
   wf Σ ->
   red Σ Γ t v ->
@@ -520,7 +523,7 @@ Qed.
 Lemma erases_mkApps_inv Σ Γ f L T t :
   wf Σ ->
   Σ ;;; Γ |- mkApps f L : T ->
-  erases Σ Γ (mkApps f L) t ->
+  Σ;;; Γ |- mkApps f L ⇝ℇ t ->
   (exists L1 L2 L2', L = (L1 ++ L2)%list /\
                 squash (Is_Type_or_Proof Σ Γ (mkApps f L1)) /\
                 erases Σ Γ (mkApps f L1) tBox /\

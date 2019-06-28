@@ -778,11 +778,11 @@ Proof.
   eapply red1_red. eapply weakening_red1; auto.
 Qed.
 
-Lemma lift_eq_term_upto_univ R n k T U :
-  eq_term_upto_univ R T U ->
-  eq_term_upto_univ R (lift n k T) (lift n k U).
+Lemma lift_eq_term_upto_univ Re Rle n k T U :
+  eq_term_upto_univ Re Rle T U ->
+  eq_term_upto_univ Re Rle (lift n k T) (lift n k U).
 Proof.
-  induction T in n, k, U |- * using term_forall_list_ind;
+  induction T in n, k, U, Rle |- * using term_forall_list_ind;
     inversion 1; simpl; try (now constructor).
   - destruct (k <=? n0); constructor.
   - constructor. clear -H H4.
@@ -798,8 +798,8 @@ Proof.
       easy.
   - constructor; try easy. clear -X H3.
     assert (XX:forall k k', Forall2
-                         (fun x y  => eq_term_upto_univ R (dtype x) (dtype y) /\
-                                   eq_term_upto_univ R (dbody x) (dbody y) /\
+                         (fun x y  => eq_term_upto_univ Re Re (dtype x) (dtype y) /\
+                                   eq_term_upto_univ Re Re (dbody x) (dbody y) /\
                                    rarg x = rarg y)
                          (map (map_def (lift n k) (lift n (#|m| + k'))) m)
                          (map (map_def (lift n k) (lift n (#|mfix'| + k'))) mfix'));
@@ -814,8 +814,8 @@ Proof.
       rewrite !plus_n_Sm. now apply IHm.
   - constructor; try easy. clear -X H3.
     assert (XX:forall k k', Forall2
-                         (fun x y  => eq_term_upto_univ R (dtype x) (dtype y) /\
-                                   eq_term_upto_univ R (dbody x) (dbody y) /\
+                         (fun x y  => eq_term_upto_univ Re Re (dtype x) (dtype y) /\
+                                   eq_term_upto_univ Re Re (dbody x) (dbody y) /\
                                    rarg x = rarg y)
                          (map (map_def (lift n k) (lift n (#|m| + k'))) m)
                          (map (map_def (lift n k) (lift n (#|mfix'| + k'))) mfix'));

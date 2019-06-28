@@ -1,4 +1,4 @@
--R ../template-coq/theories Template
+-R ../template-coq/theories MetaCoq.Template
 -R . Translations
 -I ../template-coq/src
 -arg -type-in-type
@@ -12,5 +12,6 @@ param_cheap_packed.v
 param_generous_packed.v
 #param_generous_unpacked.v
 times_bool_fun.v
+times_bool_fun2.v
 param_cheap_packed_correctness.v
 param_generous_packed_correctness.v

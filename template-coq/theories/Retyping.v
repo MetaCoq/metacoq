@@ -21,14 +21,14 @@ Existing Instance default_checker_flags.
 
 Section TypeOf.
   Context `{F : Fuel}.
-  Context (Σ : global_context).
+  Context (Σ : global_declarations).
 
   Fixpoint infer_spine (Γ : context) (ty : term) (l : list term)
            {struct l} : typing_result term :=
     match l with
     | nil => ret ty
     | cons x xs =>
-      pi <- reduce_to_prod (fst Σ) Γ ty ;;
+      pi <- reduce_to_prod Σ Γ ty ;;
        let '(a1, b1) := pi in
        infer_spine Γ (subst10 x b1) xs
     end.
@@ -38,7 +38,7 @@ Section TypeOf.
 
     Definition type_of_as_sort Γ t :=
       tx <- type_of Γ t ;;
-      reduce_to_sort (fst Σ) Γ tx.
+      reduce_to_sort Σ Γ tx.
 
   End SortOf.
 
@@ -53,7 +53,7 @@ Section TypeOf.
     | tVar n => raise (UnboundVar n)
     | tEvar ev args => raise (UnboundEvar ev)
 
-    | tSort s => ret (tSort (try_suc s))
+    | tSort s => ret (tSort (Universe.try_suc s))
 
     | tCast c k t => ret t
 
@@ -83,13 +83,13 @@ Section TypeOf.
 
     | tCase (ind, par) p c brs =>
       ty <- type_of Γ c ;;
-      indargs <- reduce_to_ind (fst Σ) Γ ty ;;
+      indargs <- reduce_to_ind Σ Γ ty ;;
       let '(ind', u, args) := indargs in
       ret (tApp p (List.skipn par args ++ [c]))
 
     | tProj p c =>
       ty <- type_of Γ c ;;
-      indargs <- reduce_to_ind (fst Σ) Γ ty ;;
+      indargs <- reduce_to_ind Σ Γ ty ;;
       (* FIXME *)
       ret ty
 

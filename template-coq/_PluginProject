@@ -26,8 +26,6 @@ gen-src/bool.ml
 gen-src/bool.mli
 gen-src/common0.ml
 gen-src/common0.mli
-gen-src/config0.ml
-gen-src/config0.mli
 gen-src/datatypes.ml
 gen-src/datatypes.mli
 gen-src/decidableType.ml
@@ -60,8 +58,6 @@ gen-src/specif.ml
 gen-src/specif.mli
 gen-src/string0.ml
 gen-src/string0.mli
-gen-src/uGraph0.ml
-gen-src/uGraph0.mli
 gen-src/universes0.ml
 gen-src/universes0.mli
 gen-src/utils.ml

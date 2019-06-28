@@ -25,7 +25,9 @@ src/plugin_core.ml
 theories/LibHypsNaming.v
 theories/utils.v theories/config.v
 theories/Universes.v
-theories/kernel/uGraph.v theories/BasicAst.v theories/Ast.v
+theories/uGraph.v
+theories/wGraph.v
+theories/BasicAst.v theories/Ast.v
 theories/WfInv.v
 theories/AstUtils.v theories/Loader.v theories/Induction.v
 theories/LiftSubst.v theories/UnivSubst.v theories/Typing.v

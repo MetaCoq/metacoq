@@ -157,9 +157,10 @@ Section UniverseClosedSubst.
   Lemma closedu_subst_instance_univ u t : closedu_universe 0 t -> subst_instance_univ u t = t.
   Proof.
     rewrite /closedu_universe /subst_instance_univ => H.
-    eapply eq_universes; cbn.
-    eapply (forallb_Forall (closedu_level_expr 0)) in H; auto. solve_all.
-    now apply (closedu_subst_instance_level_expr u).
+    pose proof (proj1 (forallb_forall _ t) H) as HH; clear H.
+    induction t; cbn; f_equal.
+    1-2: now apply closedu_subst_instance_level_expr, HH; cbn.
+    apply IHt. intros x Hx; apply HH. now right.
   Qed.
   Hint Resolve closedu_subst_instance_level_expr closedu_subst_instance_level closedu_subst_instance_univ : terms.
 
@@ -214,7 +215,8 @@ Section SubstInstanceClosed.
   Proof.
     rewrite /closedu_universe /subst_instance_univ => H.
     eapply (forallb_Forall (closedu_level_expr #|u|)) in H; auto.
-    rewrite forallb_map. eapply Forall_forallb; eauto.
+    unfold universe_coercion; rewrite NEL.map_to_list forallb_map.
+    eapply Forall_forallb; eauto.
     now move=> x /(subst_instance_level_expr_closedu).
   Qed.
   Hint Resolve subst_instance_level_expr_closedu subst_instance_level_closedu subst_instance_univ_closedu : terms.

@@ -201,7 +201,7 @@ Proof.
       eapply type_Conv; pcuic.
       eapply (weakening_cumul Σ Γ [] [vass na A]) in b; pcuic.
       simpl in b. eapply cumul_trans. 2:eauto.
-      constructor. constructor. simpl. apply leq_universe_product_r.
+      constructor. constructor. simpl. apply leq_universe_product.
 
   - eapply declared_constant_inv in H; pcuic.
     destruct decl as [ty [b|] univs]. red in H. simpl in *.
@@ -257,3 +257,10 @@ Proof.
     destruct X2. red in i. left. exact (projT1 i).
     right. destruct s as [u [Hu _]]. now exists u.
 Admitted.
+
+
+Lemma validity_term {Σ Γ t T} :
+  wf Σ -> wf_local Σ Γ -> Σ ;;; Γ |- t : T -> isWfArity_or_Type Σ Γ T.
+Proof.
+  intros. eapply validity; try eassumption.
+Defined.

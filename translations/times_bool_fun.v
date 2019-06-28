@@ -13,7 +13,7 @@ Arguments π2 {_ _} _.
 Arguments pair {_ _} _ _.
 
 Notation "( x ; y )" := (pair x y) : prod_scope.
-Notation " A × B " := (prod A B) (at level 30) : type_scope.
+Notation " A × B " := (prod A B) : type_scope.
 Open Scope prod_scope.
 
 Quote Definition tprod := prod.
@@ -55,7 +55,7 @@ Fixpoint tsl_rec (fuel : nat) (Σ : global_context) (E : tsl_table) (Γ : contex
 
   | tLambda n A t => A' <- tsl_rec fuel Σ E Γ A ;;
                     t' <- tsl_rec fuel Σ E (Γ ,, vass n A) t ;;
-                    match infer Σ (Γ ,, vass n A) t with
+                    match infer' Σ (Γ ,, vass n A) t with
                     | Checked B =>
                       B' <- tsl_rec fuel Σ E (Γ ,, vass n A) B ;;
                       ret (pairTrue (tProd n A' B') (tLambda n A' t'))
@@ -190,6 +190,7 @@ Definition tsl_mind_body (ΣE : tsl_context) (mp : string) (kn : kername)
                           mind.(ind_bodies) ctor_type').
   + (* table *)
     refine (IndRef (mkInd kn i), pouet (tInd (mkInd kn' i) []) ind_type').
+  + exact mind.(ind_finite).
   + (* parameters *)
     simple refine (List.fold_right _ [] (mind.(ind_params))).
     exact (fun A Γ' => Γ' ,, vass (decl_name A) (tsl Γ' (decl_type A))).
@@ -198,7 +199,7 @@ Defined.
 
 Fixpoint refresh_universes (t : term) {struct t} :=
   match t with
-  | tSort s => tSort (if Universe.is_level s then s else [])
+  | tSort s => tSort (if Universe.is_level s then s else fresh_universe)
   | tProd na b t => tProd na b (refresh_universes t)
   | tLetIn na b t' t => tLetIn na b t' (refresh_universes t)
   | tCast x x0 x1 => tCast (refresh_universes x) x0 (refresh_universes x1)

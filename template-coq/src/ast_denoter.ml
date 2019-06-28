@@ -20,7 +20,7 @@ struct
   type quoted_proj = projection
   type quoted_global_reference = global_reference
 
-  type quoted_sort_family = sort_family
+  type quoted_sort_family = Universes0.sort_family
   type quoted_constraint_type = Universes0.constraint_type
   type quoted_univ_constraint = Universes0.univ_constraint
   type quoted_univ_instance = Universes0.Instance.t

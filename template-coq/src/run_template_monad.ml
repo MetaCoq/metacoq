@@ -19,12 +19,12 @@ let unquote_reduction_strategy env evm trm (* of type reductionStrategy *) : Red
   let (trm, args) = app_full trm [] in
   (* from g_tactic.ml4 *)
   let default_flags = Redops.make_red_flag [FBeta;FMatch;FFix;FCofix;FZeta;FDeltaBut []] in
-  if Constr.equal trm tcbv then Cbv default_flags
-  else if Constr.equal trm tcbn then Cbn default_flags
-  else if Constr.equal trm thnf then Hnf
-  else if Constr.equal trm tall then Cbv all_flags
-  else if Constr.equal trm tlazy then Lazy all_flags
-  else if Constr.equal trm tunfold then
+  if constr_equall trm tcbv then Cbv default_flags
+  else if constr_equall trm tcbn then Cbn default_flags
+  else if constr_equall trm thnf then Hnf
+  else if constr_equall trm tall then Cbv all_flags
+  else if constr_equall trm tlazy then Lazy all_flags
+  else if constr_equall trm tunfold then
     match args with
     | name (* to unfold *) :: _ ->
        let name = reduce_all env evm name in
@@ -39,10 +39,10 @@ let denote_local_entry evm trm =
   let (h,args) = app_full trm [] in
   match args with
     x :: [] ->
-    if Constr.equal h tLocalDef then
+    if constr_equall h tLocalDef then
       let evm, x = denote_term evm x in
       evm, Entries.LocalDefEntry x
-    else if  Constr.equal h tLocalAssum then
+    else if  constr_equall h tLocalAssum then
       let evm, x = denote_term evm x in
       evm, Entries.LocalAssumEntry x
     else
@@ -53,9 +53,9 @@ let denote_mind_entry_finite trm =
   let (h,args) = app_full trm [] in
   match args with
     [] ->
-    if Constr.equal h cFinite then Declarations.Finite
-    else if  Constr.equal h cCoFinite then Declarations.CoFinite
-    else if  Constr.equal h cBiFinite then Declarations.BiFinite
+    if constr_equall h cFinite then Declarations.Finite
+    else if  constr_equall h cCoFinite then Declarations.CoFinite
+    else if  constr_equall h cBiFinite then Declarations.BiFinite
     else not_supported_verb trm "denote_mind_entry_finite"
   | _ -> bad_term_verb trm "denote_mind_entry_finite"
 
@@ -63,11 +63,11 @@ let denote_mind_entry_finite trm =
 
 let unquote_map_option f trm =
   let (h,args) = app_full trm [] in
-  if Constr.equal h cSome then
+  if constr_equall h cSome then
     match args with
       _ :: x :: [] -> Some (f x)
     | _ -> bad_term trm
-  else if Constr.equal h cNone then
+  else if constr_equall h cNone then
     match args with
       _ :: [] -> None
     | _ -> bad_term trm
@@ -82,9 +82,9 @@ let unquote_constraint_type trm (* of type constraint_type *) : constraint_type 
   let (h,args) = app_full trm [] in
   match args with
     [] ->
-    if Constr.equal h tunivLt then Univ.Lt
-    else if Constr.equal h tunivLe then Univ.Le
-    else if Constr.equal h tunivEq then Univ.Eq
+    if constr_equall h tunivLt then Univ.Lt
+    else if constr_equall h tunivLe then Univ.Le
+    else if constr_equall h tunivEq then Univ.Eq
     else not_supported_verb trm "unquote_constraint_type"
   | _ -> bad_term_verb trm "unquote_constraint_type"
 
@@ -111,9 +111,9 @@ let unquote_constraints evm c (* of type constraints *) : _ * Constraint.t =
 
 
 let denote_variance trm (* of type Variance *) : Variance.t =
-  if Constr.equal trm cIrrelevant then Variance.Irrelevant
-  else if Constr.equal trm cCovariant then Variance.Covariant
-  else if Constr.equal trm cInvariant then Variance.Invariant
+  if constr_equall trm cIrrelevant then Variance.Irrelevant
+  else if constr_equall trm cCovariant then Variance.Covariant
+  else if constr_equall trm cInvariant then Variance.Invariant
   else not_supported_verb trm "denote_variance"
 
 let denote_ucontext evm trm (* of type UContext.t *) : _ * UContext.t =
@@ -143,13 +143,13 @@ let to_entry_inductive_universes = function
 let denote_universe_context evm trm (* of type universe_context *) : _ * universe_context_type =
   let (h, args) = app_full trm [] in
   match args with
-  | ctx :: [] -> if Constr.equal h cMonomorphic_ctx then
+  | ctx :: [] -> if constr_equall h cMonomorphic_ctx then
                    let evm, ctx = denote_ucontext evm ctx in
                    evm, Monomorphic_uctx ctx
-                 else if Constr.equal h cPolymorphic_ctx then
+                 else if constr_equall h cPolymorphic_ctx then
                    let evm, ctx = denote_ucontext evm ctx in
                    evm, Polymorphic_uctx ctx
-                 else if Constr.equal h cCumulative_ctx then
+                 else if constr_equall h cCumulative_ctx then
                    let evm, ctx = denote_cumulativity_info evm ctx in
                    evm, Cumulative_uctx ctx
                  else
@@ -160,7 +160,7 @@ let denote_universe_context evm trm (* of type universe_context *) : _ * univers
 
 let unquote_one_inductive_entry evm trm (* of type one_inductive_entry *) : _ * Entries.one_inductive_entry =
   let (h,args) = app_full trm [] in
-  if Constr.equal h tBuild_one_inductive_entry then
+  if constr_equall h tBuild_one_inductive_entry then
     match args with
     | id::ar::template::cnames::ctms::[] ->
        let id = unquote_ident id in
@@ -179,7 +179,7 @@ let unquote_one_inductive_entry evm trm (* of type one_inductive_entry *) : _ * 
 
 let unquote_mutual_inductive_entry evm trm (* of type mutual_inductive_entry *) : _ * Entries.mutual_inductive_entry =
   let (h,args) = app_full trm [] in
-  if Constr.equal h tBuild_mutual_inductive_entry then
+  if constr_equall h tBuild_mutual_inductive_entry then
     match args with
     | record::finite::params::inds::univs::priv::[] ->
        let record = unquote_map_option (unquote_map_option unquote_ident) record in
@@ -350,11 +350,11 @@ let rec run_template_program_rec ?(intactic=false) (k : Environ.env * Evd.evar_m
     k (env, evm, quote_ugraph univs)
   | TmPrint trm ->
     Feedback.msg_info (Printer.pr_constr_env env evm trm);
-    k (env, evm, unit_tt)
+    k (env, evm, Lazy.force unit_tt)
   | TmMsg msg ->
      let msg = unquote_string (reduce_all env evm msg) in
      Plugin_core.run (Plugin_core.tmMsg msg) env evm
-      (fun env evm _ -> k (env, evm, unit_tt))
+      (fun env evm _ -> k (env, evm, Lazy.force unit_tt))
   | TmFail trm ->
     let err = unquote_string (reduce_all env evm trm) in
     CErrors.user_err (str err)
@@ -362,10 +362,10 @@ let rec run_template_program_rec ?(intactic=false) (k : Environ.env * Evd.evar_m
     let id = Libnames.qualid_of_string (unquote_string id) in
     Plugin_core.run (Plugin_core.tmAbout id) env evm
       (fun env evm -> function
-           None -> k (env, evm, Constr.mkApp (cNone, [|tglobal_reference|]))
+           None -> k (env, evm, constr_mkAppl (cNone, [|tglobal_reference|]))
          | Some gr ->
            let qgr = quote_global_reference gr in
-           let opt = Constr.mkApp (cSome , [|tglobal_reference ; qgr|]) in
+           let opt = constr_mkApp (cSome , [|Lazy.force tglobal_reference ; qgr|]) in
            k (env, evm, opt))
   | TmCurrentModPath ->
     let mp = Lib.current_mp () in
@@ -384,7 +384,7 @@ let rec run_template_program_rec ?(intactic=false) (k : Environ.env * Evd.evar_m
   | TmMkInductive mind ->
     declare_inductive env evm mind;
     let env = Global.env () in
-    k (env, evm, unit_tt)
+    k (env, evm, Lazy.force unit_tt)
   | TmUnquote t ->
     begin
        try
@@ -393,9 +393,9 @@ let rec run_template_program_rec ?(intactic=false) (k : Environ.env * Evd.evar_m
          let typ = Retyping.get_type_of env evm (EConstr.of_constr t') in
          let evm, typ = Evarsolve.refresh_universes (Some false) env evm typ in
          let make_typed_term typ term evm =
-           match texistT_typed_term with
+           match Lazy.force texistT_typed_term with
            | ConstructRef ctor ->
-              let (evm,c) = Evarutil.new_global evm texistT_typed_term in
+              let (evm,c) = Evarutil.new_global evm (Lazy.force texistT_typed_term) in
               let term = Constr.mkApp
                (EConstr.to_constr evm c, [|typ; t'|]) in
              let evm, _ = Typing.type_of env evm (EConstr.of_constr term) in
@@ -417,7 +417,7 @@ let rec run_template_program_rec ?(intactic=false) (k : Environ.env * Evd.evar_m
     k (env, evm, quote_ident name')
   | TmExistingInstance name ->
      Classes.existing_instance true (CAst.make (Libnames.Qualid (Libnames.qualid_of_ident (unquote_ident name)))) None;
-     k (env, evm, unit_tt)
+     k (env, evm, Lazy.force unit_tt)
   | TmInferInstance (s, typ) ->
     begin
       let evm, typ =
@@ -428,19 +428,19 @@ let rec run_template_program_rec ?(intactic=false) (k : Environ.env * Evd.evar_m
         | None -> evm, typ in
       try
         let (evm,t) = Typeclasses.resolve_one_typeclass env evm (EConstr.of_constr typ) in
-        k (env, evm, Constr.mkApp (cSome, [| typ; EConstr.to_constr evm t|]))
+        k (env, evm, constr_mkApp (cSome, [| typ; EConstr.to_constr evm t|]))
       with
-        Not_found -> k (env, evm, Constr.mkApp (cNone, [|typ|]))
+        Not_found -> k (env, evm, constr_mkApp (cNone, [|typ|]))
     end
   | TmInferInstanceTerm typ ->
     let evm,typ = denote_term evm (reduce_all env evm typ) in
     Plugin_core.run (Plugin_core.tmInferInstance typ) env evm
       (fun env evm -> function
-           None -> k (env, evm, Constr.mkApp (cNone, [| tTerm|]))
+           None -> k (env, evm, constr_mkAppl (cNone, [| tTerm|]))
          | Some trm ->
            let qtrm = TermReify.quote_term env trm in
-           k (env, evm, Constr.mkApp (cSome, [| tTerm; qtrm |])))
+           k (env, evm, constr_mkApp (cSome, [| Lazy.force tTerm; qtrm |])))
   | TmPrintTerm trm ->
     let evm,trm = denote_term evm (reduce_all env evm trm) in
     Plugin_core.run (Plugin_core.tmPrint trm) env evm
-      (fun env evm _ -> k (env, evm, unit_tt))
+      (fun env evm _ -> k (env, evm, Lazy.force unit_tt))

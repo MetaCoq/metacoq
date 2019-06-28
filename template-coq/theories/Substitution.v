@@ -1242,34 +1242,20 @@ Proof.
     auto.
 Qed.
 
-
-Lemma eq_universe_refl φ s : eq_universe φ s s.
+Lemma eq_term_upto_univ_refl Re Rle :
+  RelationClasses.Reflexive Re ->
+  RelationClasses.Reflexive Rle ->
+  forall t, eq_term_upto_univ Re Rle t t.
 Proof.
-  intros vH; reflexivity.
-Qed.
-
-Lemma eq_universe'_refl `{checker_flags} φ s : eq_universe' φ s s.
-Proof.
-  unfold eq_universe'; destruct check_univs; [apply eq_universe_refl|constructor].
-Qed.
-
-Lemma leq_universe_refl φ s : leq_universe φ s s.
-Proof.
-  intros vH; reflexivity.
-Qed.
-
-Lemma leq_universe'_refl `{checker_flags} φ s : leq_universe' φ s s.
-Proof.
-  unfold leq_universe'; destruct check_univs; [apply leq_universe_refl|constructor].
-Qed.
-
-Lemma eq_term_upto_univ_refl R (HR : RelationClasses.Reflexive R) t
-  : eq_term_upto_univ R t t.
-Proof.
-  induction t using term_forall_list_ind; simpl;
+  intros hRe hRle.
+  induction t in Rle, hRle |- * using term_forall_list_ind; simpl;
     try constructor; try apply Forall_Forall2; try easy;
       try now apply Forall_True.
-  - destruct p. constructor; try assumption.
+  - eapply Forall_impl ; try eassumption.
+    intros. easy.
+  - eapply Forall_impl ; try eassumption.
+    intros. easy.
+  - destruct p. constructor; try easy.
     apply Forall_Forall2. eapply Forall_impl ; try eassumption.
     intros. split ; auto.
   - eapply Forall_impl ; try eassumption.
@@ -1281,46 +1267,34 @@ Qed.
 Lemma eq_term_refl `{checker_flags} φ t : eq_term φ t t.
 Proof.
   apply eq_term_upto_univ_refl.
-  intro; apply eq_universe'_refl.
+  - intro; apply eq_universe_refl.
+  - intro; apply eq_universe_refl.
 Qed.
 
 
 Lemma leq_term_refl `{checker_flags} φ t : leq_term φ t t.
 Proof.
   apply eq_term_upto_univ_refl.
-  intro; apply leq_universe'_refl.
+  - intro; apply eq_universe_refl.
+  - intro; apply leq_universe_refl.
 Qed.
 
-
-Lemma eq_universe_leq_universe φ t u : eq_universe φ t u -> leq_universe φ t u.
-Proof.
-  intros H v Hv. rewrite (H v Hv). apply BinInt.Z.le_refl.
-Qed.
-
-Lemma eq_universe'_leq_universe' `{checker_flags} φ t u
-  : eq_universe' φ t u -> leq_universe' φ t u.
-Proof.
-  unfold eq_universe', leq_universe'; destruct check_univs.
-  apply eq_universe_leq_universe. intuition.
-Qed.
 
 Lemma eq_term_leq_term `{checker_flags} φ t u : eq_term φ t u -> leq_term φ t u.
 Proof.
   induction t in u |- * using term_forall_list_ind; simpl; inversion 1;
     subst; constructor; try (now unfold eq_term, leq_term in * );
   try eapply Forall2_impl'; try easy.
-  now apply eq_universe'_leq_universe'.
-  all: try (apply Forall_True, eq_universe'_leq_universe').
-  eapply Forall_impl. exact H0.
-  intros x HH y [? ?]. split ; auto. apply HH. assumption.
-  eapply Forall_impl. exact H0.
-  cbn. intros x [HH HH'] y [? [? ?]].
-  repeat split; [now apply HH|now apply HH'|assumption].
-  eapply Forall_impl. exact H0.
-  cbn. intros x [HH HH'] y [? [? ?]].
-  repeat split; [now apply HH|now apply HH'|assumption].
+  now apply eq_universe_leq_universe.
+  all: try (apply Forall_True, eq_universe_leq_universe).
 Qed.
 
+Lemma eq_term_upto_univ_App `{checker_flags} Re Rle f f' :
+  eq_term_upto_univ Re Rle f f' ->
+  isApp f = isApp f'.
+Proof.
+  inversion 1; reflexivity.
+Qed.
 
 Lemma eq_term_App `{checker_flags} φ f f' :
   eq_term φ f f' ->
@@ -1329,14 +1303,14 @@ Proof.
   inversion 1; reflexivity.
 Qed.
 
-Lemma eq_term_mkApps `{checker_flags} φ f l f' l' :
-  eq_term φ f f' ->
-  Forall2 (eq_term φ) l l' ->
-  eq_term φ (mkApps f l) (mkApps f' l').
+Lemma eq_term_upto_univ_mkApps `{checker_flags} Re Rle f l f' l' :
+  eq_term_upto_univ Re Rle f f' ->
+  Forall2 (eq_term_upto_univ Re Re) l l' ->
+  eq_term_upto_univ Re Rle (mkApps f l) (mkApps f' l').
 Proof.
   induction l in f, f' |- *; intro e; inversion_clear 1.
   - assumption.
-  - pose proof (eq_term_App _ _ _ e).
+  - pose proof (eq_term_upto_univ_App _ _ _ _ e).
     case_eq (isApp f).
     + intro X; rewrite X in H0.
       destruct f; try discriminate.
@@ -1350,6 +1324,14 @@ Proof.
       intro; discriminate.
       constructor. assumption.
       now constructor.
+Qed.
+
+Lemma leq_term_mkApps `{checker_flags} φ f l f' l' :
+  leq_term φ f f' ->
+  Forall2 (eq_term φ) l l' ->
+  leq_term φ (mkApps f l) (mkApps f' l').
+Proof.
+  eapply eq_term_upto_univ_mkApps.
 Qed.
 
 Lemma leq_term_App `{checker_flags} φ f f' :
@@ -1359,96 +1341,64 @@ Proof.
   inversion 1; reflexivity.
 Qed.
 
-Lemma leq_term_mkApps `{checker_flags} φ f l f' l' :
-  leq_term φ f f' ->
-  Forall2 (leq_term φ) l l' ->
-  leq_term φ (mkApps f l) (mkApps f' l').
+Lemma subst_eq_term_upto_univ `{checker_flags} Re Rle n k T U :
+  RelationClasses.Reflexive Re ->
+  RelationClasses.Reflexive Rle ->
+  eq_term_upto_univ Re Rle T U ->
+  eq_term_upto_univ Re Rle (subst n k T) (subst n k U).
 Proof.
-  induction l in f, f' |- *; intro e; inversion_clear 1.
-  - assumption.
-  - pose proof (leq_term_App _ _ _ e).
-    case_eq (isApp f).
-    + intro X; rewrite X in H0.
-      destruct f; try discriminate.
-      destruct f'; try discriminate.
-      cbn. inversion_clear e. constructor. assumption.
-      apply Forall2_app. assumption.
-      now constructor.
-    + intro X; rewrite X in H0.
-      rewrite !mkApps_tApp; eauto.
-      intro; discriminate.
-      intro; discriminate.
-      constructor. assumption.
-      now constructor.
+  intros hRe hRle h.
+  induction T in n, k, U, h, Rle, hRle |- * using term_forall_list_ind.
+  all: simpl ; inversion h ; simpl.
+  all: try (eapply eq_term_upto_univ_refl ; easy).
+  all: try (constructor ; easy).
+  - constructor.
+    eapply Forall2_map. eapply Forall2_impl' ; try eassumption.
+    eapply Forall_impl ; try eassumption.
+    cbn. intros x HH y HH'. now eapply HH.
+  - subst. eapply eq_term_upto_univ_mkApps. all: try easy.
+    eapply Forall2_map. eapply Forall2_impl' ; try eassumption.
+    eapply Forall_impl ; try eassumption.
+    cbn. intros x HH y HH'. now eapply HH.
+  - constructor ; try easy.
+    eapply Forall2_map.
+    eapply Forall2_impl'. eassumption.
+    eapply Forall_impl. easy.
+    cbn. intros x HH y [? HH']. split ; [assumption | now apply HH].
+  - constructor.
+    eapply Forall2_map.
+    eapply Forall2_impl'. eassumption.
+    eapply Forall_impl. eassumption.
+    cbn. rewrite (Forall2_length H4).
+    intros x [] y []; now split.
+  - constructor.
+    eapply Forall2_map.
+    eapply Forall2_impl'. eassumption.
+    eapply Forall_impl. eassumption.
+    cbn. rewrite (Forall2_length H4).
+    intros x [] y []; now split.
 Qed.
-
-
 
 Lemma subst_eq_term `{checker_flags} ϕ n k T U :
   eq_term ϕ T U ->
   eq_term ϕ (subst n k T) (subst n k U).
 Proof.
   intros Hleq.
-  induction T in n, k, U, Hleq |- * using term_forall_list_ind; simpl;
-    inversion Hleq; simpl. all: try apply eq_term_refl.
-  all: unfold eq_term, leq_term in *; try constructor; try easy.
-  + eapply Forall2_map.
-    eapply Forall2_impl'. eassumption.
-    eapply Forall_impl. eassumption.
-    cbn. intros x HH y HH'; now apply HH.
-  + eapply eq_term_mkApps. now apply IHT.
-    eapply Forall2_map.
-    eapply Forall2_impl'. eassumption.
-    eapply Forall_impl. eassumption.
-    cbn. intros x HH y HH'; now apply HH.
-  + eapply Forall2_map.
-    eapply Forall2_impl'. eassumption.
-    eapply Forall_impl. eassumption.
-    cbn. intros x HH y [? HH']. split ; auto.
-  + eapply Forall2_map.
-    eapply Forall2_impl'. eassumption.
-    eapply Forall_impl. eassumption.
-    cbn. rewrite (Forall2_length H4).
-    intros x [] y []; now split.
-  + eapply Forall2_map.
-    eapply Forall2_impl'. eassumption.
-    eapply Forall_impl. eassumption.
-    cbn. rewrite (Forall2_length H4).
-    intros x [] y []; now split.
+  eapply subst_eq_term_upto_univ.
+  - intro. eapply eq_universe_refl.
+  - intro. eapply eq_universe_refl.
+  - assumption.
 Qed.
-
 
 Lemma subst_leq_term `{checker_flags} ϕ n k T U :
   leq_term ϕ T U ->
   leq_term ϕ (subst n k T) (subst n k U).
 Proof.
   intros Hleq.
-  induction T in n, k, U, Hleq |- * using term_forall_list_ind; simpl;
-    inversion Hleq; simpl. all: try apply leq_term_refl.
-  all: unfold eq_term, leq_term in *; try constructor; try easy.
-  + eapply Forall2_map.
-    eapply Forall2_impl'. eassumption.
-    eapply Forall_impl. eassumption.
-    cbn. intros x HH y HH'; now apply HH.
-  + eapply leq_term_mkApps. now apply IHT.
-    eapply Forall2_map.
-    eapply Forall2_impl'. eassumption.
-    eapply Forall_impl. eassumption.
-    cbn. intros x HH y HH'; now apply HH.
-  + eapply Forall2_map.
-    eapply Forall2_impl'. eassumption.
-    eapply Forall_impl. eassumption.
-    cbn. intros x HH y [? HH']. split ; auto.
-  + eapply Forall2_map.
-    eapply Forall2_impl'. eassumption.
-    eapply Forall_impl. eassumption.
-    cbn. rewrite (Forall2_length H4).
-    intros x [] y []; now split.
-  + eapply Forall2_map.
-    eapply Forall2_impl'. eassumption.
-    eapply Forall_impl. eassumption.
-    cbn. rewrite (Forall2_length H4).
-    intros x [] y []; now split.
+  eapply subst_eq_term_upto_univ.
+  - intro. eapply eq_universe_refl.
+  - intro. eapply leq_universe_refl.
+  - assumption.
 Qed.
 
 

@@ -1,10 +1,10 @@
 
-val ptmTestQuote : Names.global_reference
-val ptmQuoteDefinition : Names.global_reference
-val ptmQuoteDefinitionRed : Names.global_reference
-val ptmQuoteRecDefinition : Names.global_reference
-val ptmMkDefinition : Names.global_reference
-val ptmMkInductive : Names.global_reference
+val ptmTestQuote : Names.global_reference Lazy.t
+val ptmQuoteDefinition : Names.global_reference Lazy.t
+val ptmQuoteDefinitionRed : Names.global_reference Lazy.t
+val ptmQuoteRecDefinition : Names.global_reference Lazy.t
+val ptmMkDefinition : Names.global_reference Lazy.t
+val ptmMkInductive : Names.global_reference Lazy.t
 
 
 type template_monad =

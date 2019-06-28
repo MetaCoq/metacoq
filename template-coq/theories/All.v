@@ -5,6 +5,7 @@ From MetaCoq.Template Require Export
      monad_utils   (* Monadic notations *)
      BasicAst      (* The basic AST structures *)
      Ast           (* The term AST *)
+     uGraph        (* The graph of universes *)
      TemplateMonad (* The TemplateMonad *)
      AstUtils      (* Utilities on the AST *)
      Loader        (* Declaration of the Template Coq plugin *)

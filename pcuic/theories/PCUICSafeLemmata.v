@@ -1292,16 +1292,9 @@ Section Lemmata.
       pose proof (typing_wf_local h) as hc.
       cbn in hc. dependent destruction hc.
       + cbn in H. inversion H.
-      + cbn in H. symmetry in H. inversion H. subst. clear H.
-        cbn in l.
-        eexists. econstructor ; try eassumption.
-        (* FIXME We need to sort B, but we only know it's a type.
-           It might be a problem with the way context are wellformed.
-           Let typing asks for the type to be sorted so it should
-           also hold in the context.
-           At least they should be synchronised.
-         *)
-        admit.
+      + simpl in H. symmetry in H. inversion H. subst. clear H.
+        simpl in l, l0. destruct l as [u hB].
+        eexists. econstructor ; eassumption.
     - simpl. eapply ih. cbn.
       destruct h as [A h].
       pose proof (typing_wf_local h) as hc.
@@ -1310,7 +1303,7 @@ Section Lemmata.
         destruct l as [s hs].
         eexists. econstructor ; eassumption.
       + cbn in H. inversion H.
-  Admitted.
+  Qed.
 
   Lemma zipx_welltyped :
     forall {Γ t π},
@@ -1590,16 +1583,14 @@ Section Lemmata.
     - simpl. cbn. eapply ih.
       simpl in h. pose proof (typing_wf_local h) as hc.
       dependent induction hc ; inversion H. subst.
-      econstructor ; try eassumption.
-      (* FIXME *)
-      admit.
+      cbn in t1, t0. destruct t0.
+      econstructor ; eassumption.
     - simpl. cbn. eapply ih.
       pose proof (typing_wf_local h) as hc. cbn in hc.
       dependent induction hc ; inversion H. subst.
-      econstructor ; try eassumption.
-      (* FIXME *)
-      admit.
-  Admitted.
+      cbn in t0. destruct t0.
+      econstructor ; eassumption.
+  Qed.
 
   Lemma Lambda_conv_inv :
     forall leq Γ na1 na2 A1 A2 b1 b2,

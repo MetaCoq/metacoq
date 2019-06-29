@@ -21,18 +21,21 @@ Proof.
   destruct wfty.
   - red. left. destruct i as [ctx [u [da Hd]]].
     exists (lift_context n 0 ctx), u. split.
-    now rewrite (lift_destArity [] ty n 0) da.
+    1: now rewrite (lift_destArity [] ty n 0) da.
     eapply All_local_env_app_inv.
     eapply All_local_env_app in Hd. intuition eauto.
     rewrite {3}H.
     clear -wfΣ wfΓ isdecl a b.
     induction b; rewrite ?lift_context_snoc; econstructor; simpl; auto.
-    destruct t0 as [u Hu]. exists u. rewrite Nat.add_0_r.
-    unshelve eapply (weakening_typing Σ (skipn n Γ) Γ0 (firstn n Γ) t _ _ _ (tSort u)); eauto with wf.
-    apply All_local_env_app_inv. intuition eauto.
-    rewrite Nat.add_0_r.
-    unshelve eapply (weakening_typing Σ (skipn n Γ) Γ0 (firstn n Γ) b _ _ _ t); eauto with wf.
-    eapply All_local_env_app_inv. intuition eauto.
+    + destruct t0 as [u Hu]. exists u. rewrite Nat.add_0_r.
+      unshelve eapply (weakening_typing Σ (skipn n Γ) Γ0 (firstn n Γ) t _ _ _ (tSort u)); eauto with wf.
+      apply All_local_env_app_inv. intuition eauto.
+    + destruct t0 as [u Hu]. exists u. rewrite Nat.add_0_r.
+      unshelve eapply (weakening_typing Σ (skipn n Γ) Γ0 (firstn n Γ) t _ _ _ (tSort u)); eauto with wf.
+      apply All_local_env_app_inv. intuition eauto.
+    + rewrite Nat.add_0_r.
+      unshelve eapply (weakening_typing Σ (skipn n Γ) Γ0 (firstn n Γ) b _ _ _ t); eauto with wf.
+      eapply All_local_env_app_inv. intuition eauto.
   - right. destruct i as [u Hu]. exists u.
     rewrite {3}H.
     unshelve eapply (weakening_typing Σ (skipn n Γ) [] (firstn n Γ) ty _ _ _ (tSort u)); eauto with wf.
@@ -138,17 +141,20 @@ Proof.
       red. simpl. pose proof (PCUICClosed.destArity_spec [] bty).
       rewrite Heq in H. simpl in H. subst bty. clear Heq.
       eexists _, s. split; auto.
-      rewrite destArity_it_mkProd_or_LetIn. simpl. reflexivity.
-      apply All_local_env_app_inv; split; auto.
-      apply All_local_env_app_inv; split; auto. repeat constructor.
-      simpl. now exists s1.
-      apply All_local_env_app in Hs. unfold snoc.
-      intuition auto. clear -b0.
-      induction b0; constructor; eauto.
-      destruct t1 as [u Hu]. exists u.
-      rewrite app_context_assoc. apply Hu.
-      simpl in t1 |- *.
-      rewrite app_context_assoc. apply t1.
+      * rewrite destArity_it_mkProd_or_LetIn. simpl. reflexivity.
+      * apply All_local_env_app_inv; split; auto.
+        apply All_local_env_app_inv; split; auto.
+        -- repeat constructor.
+           simpl. now exists s1.
+        -- apply All_local_env_app in Hs. unfold snoc.
+           intuition auto. clear -b0.
+           induction b0; constructor; eauto.
+           ++ destruct t1 as [u Hu]. exists u.
+              rewrite app_context_assoc. apply Hu.
+           ++ simpl in t1 |- *.
+              rewrite app_context_assoc. apply t1.
+           ++ simpl in t2.
+              rewrite app_context_assoc. apply t2.
     + destruct i as [u Hu].
       right. exists (Universe.sort_of_product s1 u); constructor; auto.
 

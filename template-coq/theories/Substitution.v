@@ -134,12 +134,16 @@ Qed.
 Lemma All_local_env_subst `{checker_flags} (P Q : global_context -> context -> term -> term -> Type) Σ c n k :
   All_local_env Q Σ c ->
   (forall Γ t T,
-      Q Σ Γ t T -> P Σ (subst_context n k Γ) (subst n (#|Γ| + k) t) (subst n (#|Γ| + k) T)) ->
+      Q Σ Γ t T ->
+      P Σ (subst_context n k Γ) (subst n (#|Γ| + k) t) (subst n (#|Γ| + k) T)
+  ) ->
   All_local_env P Σ (subst_context n k c).
 Proof.
-  intros Hq Hf. induction Hq in |- *; try econstructor; eauto;
-                  simpl; unfold snoc; rewrite subst_context_snoc; econstructor; eauto.
-  simpl. eapply (Hf _ _ (tSort u)). eauto.
+  intros Hq Hf.
+  induction Hq in |- *; try econstructor; eauto;
+    simpl; unfold snoc; rewrite subst_context_snoc; econstructor; eauto.
+  - simpl. eapply (Hf _ _ (tSort u)). eauto.
+  - simpl. eapply (Hf _ _ (tSort u)). eauto.
 Qed.
 
 Lemma nth_error_subst_context (Γ' : context) s (v : nat) k :
@@ -1662,10 +1666,16 @@ Proof.
       unfold snoc; rewrite subst_context_snoc; econstructor; auto;
         apply IHt; apply All_local_env_app_inv; intuition.
     + destruct t0 as [Ht IHt].
-       specialize (IHt Γ Γ' (Δ ,,, Γ0) s sub). forward IHt. now rewrite app_context_assoc.
-       rewrite app_context_length subst_context_app app_context_assoc Nat.add_0_r in IHt.
-       unfold snoc; rewrite subst_context_snoc; econstructor; auto;
-       apply IHt; apply All_local_env_app_inv; intuition.
+      specialize (IHt Γ Γ' (Δ ,,, Γ0) s sub).
+      forward IHt. 1:now rewrite app_context_assoc.
+      rewrite app_context_length subst_context_app app_context_assoc Nat.add_0_r in IHt.
+      destruct t1 as [Ht' IHt'].
+      specialize (IHt' Γ Γ' (Δ ,,, Γ0) s sub).
+      forward IHt'. 1:now rewrite app_context_assoc.
+      rewrite app_context_length subst_context_app app_context_assoc Nat.add_0_r in IHt'.
+       unfold snoc; rewrite subst_context_snoc; econstructor; auto.
+       * apply IHt; apply All_local_env_app_inv; intuition.
+       * apply IHt'; apply All_local_env_app_inv; intuition.
     + erewrite map_dtype. eapply type_Fix.
       * rewrite nth_error_map H0. reflexivity.
       * now rewrite subst_fix_context.
@@ -1696,10 +1706,18 @@ Proof.
       unfold snoc; rewrite subst_context_snoc; econstructor; auto;
         apply IHt; apply All_local_env_app_inv; intuition.
     + destruct t0 as [Ht IHt].
-       specialize (IHt Γ Γ' (Δ ,,, Γ0) s sub). forward IHt. now rewrite app_context_assoc.
-       rewrite app_context_length subst_context_app app_context_assoc Nat.add_0_r in IHt.
-       unfold snoc; rewrite subst_context_snoc; econstructor; auto;
-       apply IHt; apply All_local_env_app_inv; intuition.
+      specialize (IHt Γ Γ' (Δ ,,, Γ0) s sub).
+      forward IHt. 1: now rewrite app_context_assoc.
+      rewrite app_context_length subst_context_app app_context_assoc Nat.add_0_r
+        in IHt.
+      destruct t1 as [Ht' IHt'].
+      specialize (IHt' Γ Γ' (Δ ,,, Γ0) s sub).
+      forward IHt'. 1: now rewrite app_context_assoc.
+      rewrite app_context_length subst_context_app app_context_assoc Nat.add_0_r
+        in IHt'.
+      unfold snoc; rewrite subst_context_snoc; econstructor; auto.
+      * apply IHt; apply All_local_env_app_inv; intuition.
+      * apply IHt'; apply All_local_env_app_inv; intuition.
     + erewrite map_dtype. eapply type_CoFix.
       * rewrite nth_error_map H0. reflexivity.
       * now rewrite subst_fix_context.
@@ -1736,10 +1754,12 @@ Proof.
   apply All_local_env_app in X1 as [X1 X2].
   apply All_local_env_app in X1. intuition.
   induction X2; simpl; rewrite ?subst_context_snoc0; econstructor; eauto.
-  eapply substitution in t1; simpl in *; eauto.
-  eapply All_local_env_app_inv; intuition.
-  eapply substitution in t1; simpl in *; eauto.
-  eapply All_local_env_app_inv; intuition.
+  - eapply substitution in t1; simpl in *; eauto.
+    eapply All_local_env_app_inv; intuition.
+  - eapply substitution in t1; simpl in *; eauto.
+    eapply All_local_env_app_inv; intuition.
+  - eapply substitution in t2; simpl in *; eauto.
+    eapply All_local_env_app_inv; intuition.
 Qed.
 
 Lemma substitution0 `{checker_flags} Σ Γ n u U (t : term) T :

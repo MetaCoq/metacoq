@@ -52,12 +52,17 @@ Lemma extends_wf_local:
          (wfΓ : wf_local Σ Γ),
     All_local_env_over typing
       (fun Σ0 Γ0 wfΓ (t T : term) ty =>
-         forall Σ' : global_context, wf Σ' -> extends Σ0 Σ' -> Σ';;; Γ0 |- t : T) Σ Γ wfΓ ->
+         forall Σ' : global_context,
+           wf Σ' ->
+           extends Σ0 Σ' ->
+           Σ';;; Γ0 |- t : T
+      ) Σ Γ wfΓ ->
     forall Σ' : global_context, wf Σ' -> extends Σ Σ' -> wf_local Σ' Γ.
 Proof.
   intros H Σ Γ X X0 Σ' H0.
   induction X0; try econstructor; simpl in *; auto.
-  destruct tu as [u Hu]; exists u; auto.
+  - destruct tu as [u Hu]; exists u; auto.
+  - destruct tu as [u Hu]; exists u; auto.
 Qed.
 Hint Resolve extends_wf_local : extends.
 

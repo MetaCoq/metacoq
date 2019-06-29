@@ -220,13 +220,18 @@ Proof.
   assert (auxl' : forall Γ mfix,
              mfixpoint_size size mfix < size pr0 ->
              All_local_env (on_local_decl (fun Γ' t => P (Γ ,,, Γ') t)) (fix_context mfix)).
-  { move=> Γ mfix H0. move: (fix_context mfix) {H0} (le_lt_trans _ _ _ (H mfix) H0).
-    induction fix_context; cbn. constructor.
-    case: a => [na [b|] ty] /=; rewrite {1}/decl_size /context_size /= => Hlt; constructor; auto.
-    eapply IHfix_context. unfold context_size. lia.
-    simpl. split. apply aux. red. lia. apply aux; red; lia.
-    apply IHfix_context; unfold context_size; lia.
-    apply aux. red. lia. }
+  { move=> Γ mfix H0.
+    move: (fix_context mfix) {H0} (le_lt_trans _ _ _ (H mfix) H0).
+    induction fix_context; cbn.
+    - constructor.
+    - case: a => [na [b|] ty] /=; rewrite {1}/decl_size /context_size /= => Hlt; constructor; auto.
+      + eapply IHfix_context. unfold context_size. lia.
+      + simpl. apply aux. red. lia.
+      + simpl. split.
+        * apply aux. red. lia.
+        * apply aux; red; lia.
+      + apply IHfix_context; unfold context_size; lia.
+      + apply aux. red. lia. }
   assert (forall m, list_size (fun x : def term => size (dtype x)) m < S (mfixpoint_size size m)).
   { clear. unfold mfixpoint_size, def_size. induction m. simpl. auto. simpl. lia. }
   assert (forall m, list_size (fun x : def term => size (dbody x)) m < S (mfixpoint_size size m)).
@@ -1122,9 +1127,11 @@ Section ParallelReduction.
     - assert (All2_local_env (on_decl (fun Δ Δ' : context => pred1 (Γ0 ,,, Δ) (Γ' ,,, Δ'))) (fix_context m) (fix_context m)).
       { revert X. clear -X1. generalize (fix_context m).
         intros c H1. induction H1; constructor; auto.
-        red in t0. red. eapply t0. eapply All2_local_env_app_inv; auto.
-        red in t0. red. split. eapply t0. eapply All2_local_env_app_inv; auto.
-        eapply t0. eapply All2_local_env_app_inv; auto. }
+        - red in t0. red. eapply t0. eapply All2_local_env_app_inv; auto.
+        - red in t1. red. split.
+          + eapply t1. eapply All2_local_env_app_inv; auto.
+          + eapply t1. eapply All2_local_env_app_inv; auto.
+      }
       constructor; auto. red.
       unfold All2_prop_eq, on_Trel_eq, on_Trel in *.
       eapply All_All2; eauto. simpl; intros.
@@ -1133,9 +1140,11 @@ Section ParallelReduction.
     - assert (All2_local_env (on_decl (fun Δ Δ' : context => pred1 (Γ0 ,,, Δ) (Γ' ,,, Δ'))) (fix_context m) (fix_context m)).
       { revert X. clear -X1. generalize (fix_context m).
         intros c H1. induction H1; constructor; auto.
-        red in t0. red. eapply t0. eapply All2_local_env_app_inv; auto.
-        red in t0. red. split. eapply t0. eapply All2_local_env_app_inv; auto.
-        eapply t0. eapply All2_local_env_app_inv; auto. }
+        - red in t0. red. eapply t0. eapply All2_local_env_app_inv; auto.
+        - red in t1. red. split.
+          + eapply t1. eapply All2_local_env_app_inv; auto.
+          + eapply t1. eapply All2_local_env_app_inv; auto.
+      }
       constructor; auto. red.
       unfold All2_prop_eq, on_Trel_eq, on_Trel in *.
       eapply All_All2; eauto. simpl; intros.

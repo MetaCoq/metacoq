@@ -2564,7 +2564,7 @@ Section Conversion.
   Qed.
 
   Definition isconv_term Γ leq t1 (h1 : welltyped Σ Γ t1) t2 (h2 : welltyped Σ Γ t2) :=
-    isconv Γ leq t1 ε (zipx_welltyped flags _ hΣ (π := ε) h1) t2 ε (zipx_welltyped flags _ hΣ (π := ε) h2).
+    isconv Γ leq t1 ε (zipx_welltyped _ (π := ε) h1) t2 ε (zipx_welltyped _ (π := ε) h2).
 
   Theorem isconv_term_sound :
     forall Γ leq t1 h1 t2 h2,

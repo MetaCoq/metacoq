@@ -1213,6 +1213,7 @@ Section Lemmata.
     eapply H0 ; try reflexivity. assumption.
   Qed.
 
+  (* TODO Put more general lemma in Inversion *)
   Lemma welltyped_it_mkLambda_or_LetIn :
     forall Γ Δ t,
       welltyped Σ Γ (it_mkLambda_or_LetIn Δ t) ->
@@ -1278,6 +1279,7 @@ Section Lemmata.
 
   Derive NoConfusion NoConfusionHom for list.
 
+  (* TODO Derive proberly *)
   Lemma it_mkLambda_or_LetIn_welltyped :
     forall Γ Δ t,
       welltyped Σ (Γ ,,, Δ) t ->
@@ -1570,26 +1572,6 @@ Section Lemmata.
     eapply nleq_term_it_mkLambda_or_LetIn.
     eapply nleq_term_zipc.
     assumption.
-  Qed.
-
-  Lemma type_it_mkLambda_or_LetIn :
-    forall Γ Δ t A,
-      Σ ;;; Γ ,,, Δ |- t : A ->
-      Σ ;;; Γ |- it_mkLambda_or_LetIn Δ t : it_mkProd_or_LetIn Δ A.
-  Proof.
-    intros Γ Δ t A h.
-    induction Δ as [| [na [b|] B] Δ ih ] in t, A, h |- *.
-    - assumption.
-    - simpl. cbn. eapply ih.
-      simpl in h. pose proof (typing_wf_local h) as hc.
-      dependent induction hc ; inversion H. subst.
-      cbn in t1, t0. destruct t0.
-      econstructor ; eassumption.
-    - simpl. cbn. eapply ih.
-      pose proof (typing_wf_local h) as hc. cbn in hc.
-      dependent induction hc ; inversion H. subst.
-      cbn in t0. destruct t0.
-      econstructor ; eassumption.
   Qed.
 
   Lemma Lambda_conv_inv :

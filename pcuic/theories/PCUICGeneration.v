@@ -37,3 +37,23 @@ Proof.
   eapply type_App.
   eapply type_Conv; eauto. eauto.
 Qed.
+
+Lemma type_it_mkLambda_or_LetIn :
+  forall Σ Γ Δ t A,
+    Σ ;;; Γ ,,, Δ |- t : A ->
+    Σ ;;; Γ |- it_mkLambda_or_LetIn Δ t : it_mkProd_or_LetIn Δ A.
+Proof.
+  intros Σ Γ Δ t A h.
+  induction Δ as [| [na [b|] B] Δ ih ] in t, A, h |- *.
+  - assumption.
+  - simpl. cbn. eapply ih.
+    simpl in h. pose proof (typing_wf_local h) as hc.
+    dependent induction hc ; inversion t1. subst.
+    cbn in t1, t2. destruct t1.
+    econstructor ; eassumption.
+  - simpl. cbn. eapply ih.
+    pose proof (typing_wf_local h) as hc. cbn in hc.
+    dependent induction hc ; inversion t1. subst.
+    cbn in t1. destruct t1.
+    econstructor ; eassumption.
+Qed.

@@ -1279,32 +1279,14 @@ Section Lemmata.
 
   Derive NoConfusion NoConfusionHom for list.
 
-  (* TODO Derive proberly *)
   Lemma it_mkLambda_or_LetIn_welltyped :
     forall Γ Δ t,
       welltyped Σ (Γ ,,, Δ) t ->
       welltyped Σ Γ (it_mkLambda_or_LetIn Δ t).
   Proof.
-    intros Γ Δ t h.
-    revert Γ t h.
-    induction Δ as [| [na [b|] B] Δ ih ] ; intros Γ t h.
-    - assumption.
-    - simpl. eapply ih. cbn.
-      destruct h as [A h].
-      pose proof (typing_wf_local h) as hc.
-      cbn in hc. dependent destruction hc.
-      + cbn in H. inversion H.
-      + simpl in H. symmetry in H. inversion H. subst. clear H.
-        simpl in l, l0. destruct l as [u hB].
-        eexists. econstructor ; eassumption.
-    - simpl. eapply ih. cbn.
-      destruct h as [A h].
-      pose proof (typing_wf_local h) as hc.
-      cbn in hc. dependent destruction hc.
-      + cbn in H. symmetry in H. inversion H. subst. clear H.
-        destruct l as [s hs].
-        eexists. econstructor ; eassumption.
-      + cbn in H. inversion H.
+    intros Γ Δ t [T h].
+    eexists. eapply PCUICGeneration.type_it_mkLambda_or_LetIn.
+    eassumption.
   Qed.
 
   Lemma zipx_welltyped :

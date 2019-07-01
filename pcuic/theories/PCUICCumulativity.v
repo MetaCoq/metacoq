@@ -640,3 +640,17 @@ Proof.
   - simpl. cbn. eapply ih.
     eapply cumul_Lambda_r. assumption.
 Qed.
+
+Lemma cumul_it_mkProd_or_LetIn :
+  forall Σ Δ Γ B B',
+    Σ ;;; (Δ ,,, Γ) |- B <= B' ->
+    Σ ;;; Δ |- it_mkProd_or_LetIn Γ B <= it_mkProd_or_LetIn Γ B'.
+Proof.
+  intros Σ Δ Γ B B' h.
+  induction Γ as [| [na [b|] A] Γ ih ] in Δ, B, B', h |- *.
+  - assumption.
+  - simpl. cbn. eapply ih.
+    eapply cumul_LetIn_bo. assumption.
+  - simpl. cbn. eapply ih.
+    eapply cumul_Prod_r. assumption.
+Qed.

@@ -1213,6 +1213,7 @@ Section Lemmata.
     eapply H0 ; try reflexivity. assumption.
   Qed.
 
+  (* TODO Put more general lemma in Inversion *)
   Lemma welltyped_it_mkLambda_or_LetIn :
     forall Γ Δ t,
       welltyped Σ Γ (it_mkLambda_or_LetIn Δ t) ->
@@ -1283,34 +1284,10 @@ Section Lemmata.
       welltyped Σ (Γ ,,, Δ) t ->
       welltyped Σ Γ (it_mkLambda_or_LetIn Δ t).
   Proof.
-    intros Γ Δ t h.
-    revert Γ t h.
-    induction Δ as [| [na [b|] B] Δ ih ] ; intros Γ t h.
-    - assumption.
-    - simpl. eapply ih. cbn.
-      destruct h as [A h].
-      pose proof (typing_wf_local h) as hc.
-      cbn in hc. dependent destruction hc.
-      + cbn in H. inversion H.
-      + cbn in H. symmetry in H. inversion H. subst. clear H.
-        cbn in l.
-        eexists. econstructor ; try eassumption.
-        (* FIXME We need to sort B, but we only know it's a type.
-           It might be a problem with the way context are wellformed.
-           Let typing asks for the type to be sorted so it should
-           also hold in the context.
-           At least they should be synchronised.
-         *)
-        admit.
-    - simpl. eapply ih. cbn.
-      destruct h as [A h].
-      pose proof (typing_wf_local h) as hc.
-      cbn in hc. dependent destruction hc.
-      + cbn in H. symmetry in H. inversion H. subst. clear H.
-        destruct l as [s hs].
-        eexists. econstructor ; eassumption.
-      + cbn in H. inversion H.
-  Admitted.
+    intros Γ Δ t [T h].
+    eexists. eapply PCUICGeneration.type_it_mkLambda_or_LetIn.
+    eassumption.
+  Qed.
 
   Lemma zipx_welltyped :
     forall {Γ t π},
@@ -1578,28 +1555,6 @@ Section Lemmata.
     eapply nleq_term_zipc.
     assumption.
   Qed.
-
-  Lemma type_it_mkLambda_or_LetIn :
-    forall Γ Δ t A,
-      Σ ;;; Γ ,,, Δ |- t : A ->
-      Σ ;;; Γ |- it_mkLambda_or_LetIn Δ t : it_mkProd_or_LetIn Δ A.
-  Proof.
-    intros Γ Δ t A h.
-    induction Δ as [| [na [b|] B] Δ ih ] in t, A, h |- *.
-    - assumption.
-    - simpl. cbn. eapply ih.
-      simpl in h. pose proof (typing_wf_local h) as hc.
-      dependent induction hc ; inversion H. subst.
-      econstructor ; try eassumption.
-      (* FIXME *)
-      admit.
-    - simpl. cbn. eapply ih.
-      pose proof (typing_wf_local h) as hc. cbn in hc.
-      dependent induction hc ; inversion H. subst.
-      econstructor ; try eassumption.
-      (* FIXME *)
-      admit.
-  Admitted.
 
   Lemma Lambda_conv_inv :
     forall leq Γ na1 na2 A1 A2 b1 b2,

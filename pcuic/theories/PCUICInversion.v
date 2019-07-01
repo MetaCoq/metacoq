@@ -240,6 +240,43 @@ Section Inversion.
     intros Γ mfix idx T h. invtac h.
   Qed.
 
+  (* DUPLICATE TODO REMOVE
+     But first, need to make PCUICCumulativity checker_flags aware.
+   *)
+  Lemma cumul_it_mkProd_or_LetIn :
+    forall Δ Γ B B',
+      Σ ;;; (Δ ,,, Γ) |- B <= B' ->
+      Σ ;;; Δ |- it_mkProd_or_LetIn Γ B <= it_mkProd_or_LetIn Γ B'.
+  Admitted.
+
+  Lemma inversion_it_mkLambda_or_LetIn :
+    forall {Γ Δ t T},
+      Σ ;;; Γ |- it_mkLambda_or_LetIn Δ t : T ->
+      ∑ A,
+        Σ ;;; Γ ,,, Δ |- t : A ×
+        Σ ;;; Γ |- it_mkProd_or_LetIn Δ A <= T.
+  Proof.
+    intros Γ Δ t T h.
+    induction Δ as [| [na [b|] A] Δ ih ] in Γ, t, h |- *.
+    - eexists. split ; eauto. apply cumul_refl'.
+    - simpl. apply ih in h. cbn in h.
+      destruct h as [B [h c]].
+      apply inversion_LetIn in h as hh.
+      destruct hh as [s1 [A' [? [? [? ?]]]]].
+      exists A'. split ; eauto.
+      cbn. eapply cumul_trans ; try eassumption.
+      (* eapply PCUICCumulativity.cumul_it_mkProd_or_LetIn. *)
+      eapply cumul_it_mkProd_or_LetIn. assumption.
+    - simpl. apply ih in h. cbn in h.
+      destruct h as [B [h c]].
+      apply inversion_Lambda in h as hh.
+      pose proof hh as [s1 [B' [? [? ?]]]].
+      exists B'. split ; eauto.
+      cbn. eapply cumul_trans ; try eassumption.
+      (* eapply PCUICCumulativity.cumul_it_mkProd_or_LetIn. *)
+      eapply cumul_it_mkProd_or_LetIn. assumption.
+  Qed.
+
   Ltac pih :=
     lazymatch goal with
     | ih : forall _ _ _, _ -> _ ;;; _ |- ?u : _ -> _,

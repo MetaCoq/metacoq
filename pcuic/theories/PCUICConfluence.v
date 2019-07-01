@@ -92,23 +92,35 @@ Proof.
   assert (auxl' : forall Γ mfix,
              mfixpoint_size size mfix < size pr0 ->
              All_local_env (on_local_decl (fun Γ' t => P (Γ ,,, Γ') t)) (fix_context mfix)).
-  { move=> Γ mfix H0. move: (fix_context mfix) {H0} (le_lt_trans _ _ _ (H mfix) H0).
-    induction fix_context; cbn. constructor.
-    case: a => [na [b|] ty] /=; rewrite {1}/decl_size /context_size /= => Hlt; constructor; auto.
-    eapply IHfix_context. unfold context_size. lia.
-    simpl. split. apply aux. red. lia. apply aux; red; lia.
-    apply IHfix_context; unfold context_size; lia.
-    apply aux. red. lia. }
+  { move=> Γ mfix H0.
+    move: (fix_context mfix) {H0} (le_lt_trans _ _ _ (H mfix) H0).
+    induction fix_context; cbn.
+    - constructor.
+    - case: a => [na [b|] ty] /=; rewrite {1}/decl_size /context_size /= => Hlt; constructor; auto.
+      + eapply IHfix_context. unfold context_size. lia.
+      + simpl. eapply aux. red. lia.
+      + simpl. split.
+        * apply aux. red. lia.
+        * apply aux; red; lia.
+      + apply IHfix_context; unfold context_size; lia.
+      + apply aux. red. lia.
+  }
   assert (auxl'' : forall Γ mfix,
              mfixpoint_size size mfix < size pr0 ->
              All_local_env (on_local_decl (fun Γ' t => P (Γ ,,, fold_ctx_over f Γ Γ') t)) (fix_context mfix)).
-  { move=> Γ mfix H0. move: (fix_context mfix) {H0} (le_lt_trans _ _ _ (H mfix) H0).
-    induction fix_context; cbn. constructor.
-    case: a => [na [b|] ty] /=; rewrite {1}/decl_size /context_size /= => Hlt; constructor; auto.
-    eapply IHfix_context. unfold context_size. lia.
-    simpl. split. apply aux. red. lia. apply aux; red; lia.
-    apply IHfix_context; unfold context_size; lia.
-    apply aux. red. lia. }
+  { move=> Γ mfix H0.
+    move: (fix_context mfix) {H0} (le_lt_trans _ _ _ (H mfix) H0).
+    induction fix_context; cbn.
+    - constructor.
+    - case: a => [na [b|] ty] /=; rewrite {1}/decl_size /context_size /= => Hlt; constructor; auto.
+      + eapply IHfix_context. unfold context_size. lia.
+      + simpl. apply aux. red. lia.
+      + simpl. split.
+        * apply aux. red. lia.
+        * apply aux; red; lia.
+      + apply IHfix_context; unfold context_size; lia.
+      + apply aux. red. lia.
+  }
   assert (forall m, list_size (fun x : def term => size (dtype x)) m < S (mfixpoint_size size m)).
   { clear. unfold mfixpoint_size, def_size. induction m. simpl. auto. simpl. lia. }
   assert (forall m, list_size (fun x : def term => size (dbody x)) m < S (mfixpoint_size size m)).
@@ -880,19 +892,21 @@ Section Confluence.
       ∀ Γ : context, pred1_ctx Σ Γ (rho_ctx Γ) → ∀ Δ : context,
           All_local_env
             (on_local_decl
-               (λ (Γ' : context) (t : term), pred1_ctx Σ (Γ ,,, Γ') (rho_ctx (Γ ,,, Γ'))
-                                             → pred1 Σ (Γ ,,, Γ')
-                                                     (rho_ctx (Γ ,,, Γ')) t
-                                                     (rho (rho_ctx (Γ ,,, Γ')) t))) Δ
+               (λ (Γ' : context) (t : term),
+                pred1_ctx Σ (Γ ,,, Γ') (rho_ctx (Γ ,,, Γ')) →
+                pred1 Σ (Γ ,,, Γ')
+                      (rho_ctx (Γ ,,, Γ')) t
+                      (rho (rho_ctx (Γ ,,, Γ')) t))
+            ) Δ
           → All2_local_env (on_decl (on_decl_over (pred1 Σ) Γ (rho_ctx Γ))) Δ
                            (rho_ctx_over (rho_ctx Γ) Δ).
     Proof.
       intros.
       induction X0; simpl; constructor; auto.
-      red in t0 |- *. red. rewrite rho_ctx_app in t0.
-      apply t0. now apply All2_local_env_app_inv.
-      red in t0 |- *. rewrite rho_ctx_app in t0.
-      intuition red; auto using All2_local_env_app_inv.
+      - red in t0 |- *. red. rewrite rho_ctx_app in t0.
+        apply t0. now apply All2_local_env_app_inv.
+      - red in t1 |- *. rewrite rho_ctx_app in t1.
+        intuition red; auto using All2_local_env_app_inv.
     Qed.
 
     Lemma rho_All_All2_local_env' :
@@ -1620,16 +1634,20 @@ Section Confluence.
       intros X X1.
       rewrite - fold_fix_context_rho_ctx.
       rewrite fix_context_fold.
-      revert X. generalize (fix_context m). intros c. induction 1. constructor.
-      simpl. constructor. apply IHX. red. red in t0.
-      red. rewrite rho_ctx_app in t0. apply t0.
-      apply All2_local_env_app_inv; auto.
-      simpl.
-      constructor. apply IHX.
-      red in t0. intuition auto.
-      rewrite rho_ctx_app in a, b0. red. split; eauto.
-      red. apply a. now apply All2_local_env_app_inv.
-      apply b0. now apply All2_local_env_app_inv.
+      revert X. generalize (fix_context m). intros c. induction 1.
+      - constructor.
+      - simpl. constructor.
+        + apply IHX.
+        + red. red in t0.
+          red. rewrite rho_ctx_app in t0. apply t0.
+          apply All2_local_env_app_inv; auto.
+      - simpl.
+        constructor.
+        + apply IHX.
+        + red in t1. intuition auto.
+          rewrite rho_ctx_app in a, b0. red. split; eauto.
+          * red. apply a. now apply All2_local_env_app_inv.
+          * apply b0. now apply All2_local_env_app_inv.
     Qed.
 
     Lemma All2_prop2_eq_split (Γ Γ' Γ2 Γ2' : context) (A B : Type) (f g : A → term)
@@ -1785,14 +1803,19 @@ Section Confluence.
     Proof.
       intros.
       induction Δ; simpl; try constructor.
-      destruct a as [? [?|] ?]. depelim X0.
-      constructor; auto. red. red in p. destruct p.
-      unfold on_decl_over in *. intuition pcuic.
-      now rewrite rho_ctx_app.
-      now rewrite rho_ctx_app.
-      depelim X0. constructor; eauto.
-      red. do 2 red in p. intros.
-      now rewrite rho_ctx_app.
+      destruct a as [? [?|] ?].
+      - depelim X0.
+        constructor; auto.
+        + red. red in p. destruct p.
+          unfold on_decl_over in *. intuition pcuic.
+          now rewrite rho_ctx_app.
+        + red. red in p. destruct p.
+          unfold on_decl_over in *. intuition pcuic.
+          * now rewrite rho_ctx_app.
+          * now rewrite rho_ctx_app.
+      - depelim X0. constructor; eauto.
+        red. do 2 red in p. intros.
+        now rewrite rho_ctx_app.
     Qed.
 
     Lemma pred1_rho_fix_context (Γ Γ' : context) (m : mfixpoint term) :

@@ -799,14 +799,21 @@ Definition Tlift_typing (P : Template.Ast.global_context -> Tcontext -> Tterm ->
 
 Lemma trans_wf_local:
   forall (Σ : Template.Ast.global_context) (Γ : Tcontext),
-    let P := (fun (Σ0 : Template.Ast.global_context) (Γ0 : Tcontext) (t T : Tterm) =>
-         trans_global Σ0;;; trans_local Γ0 |- trans t : trans T) in
+    let P :=
+        (fun (Σ0 : Template.Ast.global_context) (Γ0 : Tcontext) (t T : Tterm) =>
+           trans_global Σ0;;; trans_local Γ0 |- trans t : trans T)
+    in
     TTy.All_local_env P Σ Γ ->
     wf_local (trans_global Σ) (trans_local Γ).
 Proof.
   intros.
-  induction X. simpl. constructor. econstructor.
-  eapply IHX. simpl. exists u. eapply t0. constructor; auto.
+  induction X.
+  - simpl. constructor.
+  - simpl. econstructor.
+    + eapply IHX.
+    + simpl. exists u. eapply t0.
+  - simpl. constructor; auto. simpl.
+    eexists. eassumption.
 Qed.
 
 Lemma typing_wf_wf:

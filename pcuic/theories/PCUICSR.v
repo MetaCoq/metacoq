@@ -141,9 +141,12 @@ Proof.
   induction Γ; try econstructor.
   destruct a as [na [b|] ty]; intros wfΣ wfΓ; depelim wfΓ; econstructor; eauto;
   constructor; auto.
-  unshelve epose (validity _ _ _ _ _ _ l); auto.
-  now destruct p. apply conv_refl. simpl in l.
-  right; auto. apply conv_refl.
+  - unshelve epose (validity _ _ _ _ _ _ l0); auto.
+    now destruct p.
+  - apply conv_refl.
+  - simpl in l.
+    right; auto.
+  - apply conv_refl.
 Defined.
 Hint Resolve conv_context_refl : pcuic.
 (* Lemma wf_red1_context Σ Γ Δ : *)

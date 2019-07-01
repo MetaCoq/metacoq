@@ -14,12 +14,16 @@ Set Asymmetric Patterns.
 *)
 
 
-Definition wf_decl d := match decl_body d with Some b => Ast.wf b | None => True end /\ Ast.wf (decl_type d).
+Definition wf_decl d :=
+  match decl_body d with
+  | Some b => Ast.wf b
+  | None => True
+  end /\ Ast.wf (decl_type d).
 
 Definition wf_decl_pred : global_context -> context -> term -> term -> Type :=
   (fun _ _ t T => Ast.wf t /\ Ast.wf T).
 
-Lemma All_local_env_wf_decl:
+Lemma All_local_env_wf_decl :
   forall Σ (Γ : context),
     Forall wf_decl Γ -> All_local_env wf_decl_pred Σ Γ.
 Proof.
@@ -27,11 +31,16 @@ Proof.
   induction Γ in X |- *.
   - constructor; eauto.
   - destruct a as [na [body|] ty].
-    constructor. apply IHΓ. inv X; eauto.
-    red. inv X. eauto.
-    eapply (localenv_cons_abs _ _ _ _ _ (Universe.make Level.lProp)).
-    apply IHΓ. inv X; eauto.
-    red. inv X. red in H. intuition eauto. constructor.
+    + econstructor.
+      * apply IHΓ. inv X; eauto.
+      * red. inv X. split.
+        -- apply H.
+        -- constructor.
+      * red. inv X. eauto.
+    + eapply (localenv_cons_abs _ _ _ _ _ (Universe.make Level.lProp)).
+      * apply IHΓ. inv X; eauto.
+      * red. inv X. red in H. intuition eauto. constructor.
+  Unshelve. repeat constructor.
 Qed.
 
 Lemma All_local_env_wf_decl_inv:
@@ -367,9 +376,13 @@ Qed.
 Lemma typing_all_wf_decl `{checker_flags} Σ (wfΣ : wf Σ) Γ (wfΓ : wf_local Σ Γ) :
   Forall wf_decl Γ.
 Proof.
-  induction wfΓ. constructor. constructor; auto. red. simpl. split; wf.
-  apply typing_wf_gen in t0; eauto. apply t0; auto.
-  constructor; auto. red; simpl. apply typing_wf_gen in t0; auto. intuition auto.
+  induction wfΓ.
+  - constructor.
+  - constructor; auto. red. simpl. split; wf.
+    apply typing_wf_gen in t0; eauto. apply t0; auto.
+  - constructor; auto. red; simpl. apply typing_wf_gen in t0; auto.
+    intuition auto.
+    apply typing_wf_gen in t1; eauto. apply t1 ; auto.
 Qed.
 Hint Resolve typing_all_wf_decl : wf.
 

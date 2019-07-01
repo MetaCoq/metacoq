@@ -663,11 +663,19 @@ Section TypeLocal.
   Context (typing : forall (Σ : global_context) (Γ : context), term -> term -> Type).
 
   Inductive All_local_env (Σ : global_context) : context -> Type :=
-  | localenv_nil : All_local_env Σ []
-  | localenv_cons_abs Γ na t u : All_local_env Σ Γ ->
-      typing Σ Γ t (tSort u) -> All_local_env Σ (Γ ,, vass na t)
-  | localenv_cons_def Γ na b t : All_local_env Σ Γ ->
-      typing Σ Γ b t ->  All_local_env Σ (Γ ,, vdef na b t).
+  | localenv_nil :
+      All_local_env Σ []
+
+  | localenv_cons_abs Γ na t u :
+      All_local_env Σ Γ ->
+      typing Σ Γ t (tSort u) ->
+      All_local_env Σ (Γ ,, vass na t)
+
+  | localenv_cons_def Γ na b t u :
+      All_local_env Σ Γ ->
+      typing Σ Γ t (tSort u) ->
+      typing Σ Γ b t ->
+      All_local_env Σ (Γ ,, vdef na b t).
 End TypeLocal.
 
 Inductive typing `{checker_flags} (Σ : global_context) (Γ : context) : term -> term -> Type :=
@@ -968,13 +976,15 @@ Proof.
     2:{ red in onParams0, onParams1 |- *.
         revert onParams0 onParams1.
         clear onNpars0 onNpars1.
-        induction (ind_params m). constructor.
+        induction (ind_params m). 1:constructor.
         intros H1. inv H1.
-        intros H2. inv H2.
-        econstructor. eauto. red.
-        red in X2, X4; intuition eauto.
-        intros H1. inv H1.
-        econstructor; eauto. red. intuition eauto. }
+        - intros H2. inv H2.
+          econstructor. eauto. red.
+          red in X2, X4; intuition eauto.
+        - intros H1. inv H1.
+          econstructor; eauto.
+          + red. intuition eauto.
+          + red. intuition eauto. }
     clear onParams0 onParams1 onNpars0 onNpars1.
     solve_all. eapply Alli_impl; eauto. clear onInductives1.
     intros.
@@ -1101,8 +1111,12 @@ Section wf_local_size.
   Fixpoint wf_local_size Γ (w : wf_local Σ Γ) : size :=
   match w with
   | localenv_nil => 0
-  | localenv_cons_abs Γ na t u wfΓ tty => fn _ _ t (tSort u) tty + wf_local_size _ wfΓ
-  | localenv_cons_def Γ na b t wfΓ tty => fn _ _ b t tty + wf_local_size _ wfΓ
+
+  | localenv_cons_abs Γ na t u wfΓ tty =>
+    fn _ _ t (tSort u) tty + wf_local_size _ wfΓ
+
+  | localenv_cons_def Γ na b t u wfΓ tty ttb =>
+    fn _ _ t (tSort u) tty + fn _ _ b t ttb + wf_local_size _ wfΓ
   end.
 End wf_local_size.
 
@@ -1227,22 +1241,32 @@ Proof.
 Qed.
 
 Lemma wf_local_inv `{checker_flags} Σ d Γ (w : wf_local Σ (d :: Γ)) :
-  { w' : wf_local Σ Γ &
+  ∑ w' : wf_local Σ Γ,
     match d.(decl_body) with
-    | Some b => { ty : Σ ;;; Γ |- b : d.(decl_type) |
-                  wf_local_size Σ (@typing_size _) _ w' < wf_local_size _ (@typing_size _) _ w /\
-                  typing_size ty <= wf_local_size _ (@typing_size _) _ w }
-    | None => { u & { ty : Σ ;;; Γ |- d.(decl_type) : tSort u |
-                      wf_local_size Σ (@typing_size _) _ w' < wf_local_size _ (@typing_size _) _ w /\
-                      typing_size ty <= wf_local_size _ (@typing_size _) _ w } }
-    end }.
+    | Some b =>
+      ∑ u (ty : Σ ;;; Γ |- b : d.(decl_type)),
+        { ty' : Σ ;;; Γ |- d.(decl_type) : tSort u |
+          wf_local_size Σ (@typing_size _) _ w' <
+          wf_local_size _ (@typing_size _) _ w /\
+          typing_size ty <= wf_local_size _ (@typing_size _) _ w /\
+          typing_size ty' <= wf_local_size _ (@typing_size _) _ w
+        }
+    | None =>
+      ∑ u,
+        { ty : Σ ;;; Γ |- d.(decl_type) : tSort u |
+          wf_local_size Σ (@typing_size _) _ w' <
+          wf_local_size _ (@typing_size _) _ w /\
+          typing_size ty <= wf_local_size _ (@typing_size _) _ w
+        }
+    end.
 Proof.
-  remember (d :: Γ) as ctx. revert Heqctx. destruct w. simpl.
-  congruence.
-  intros [=]. subst d Γ0.
-  exists w; simpl. exists u. exists t0. pose (typing_size_pos t0). lia.
-  intros [=]. subst d Γ0.
-  exists w; simpl. exists t0. pose (typing_size_pos t0). lia.
+  remember (d :: Γ) as ctx. revert Heqctx. destruct w.
+  - simpl.
+    congruence.
+  - intros [=]. subst d Γ0.
+    exists w; simpl. exists u. exists t0. pose (typing_size_pos t0). lia.
+  - intros [=]. subst d Γ0.
+    exists w; simpl. exists u, t1 , t0. pose (typing_size_pos t0). lia.
 Qed.
 
 (** *** An induction principle ensuring the Σ declarations enjoy the same properties.
@@ -1453,22 +1477,24 @@ Proof.
     assert (All_local_env P Σ Γ).
     { clear -wfΓ wfΣ X14.
       pose proof (typing_wf_local_size wfΣ H). clear wfΓ.
-      induction Γ in t, t0, H, H0, X14 |- *. constructor.
+      induction Γ in t, t0, H, H0, X14 |- *. 1: now constructor.
       destruct a. destruct decl_body.
-      --- destruct (wf_local_inv _ _ _ (typing_wf_local wfΣ H)).
-          simpl in y. destruct y as [Hty [sizex sizety]].
-          constructor.
-          eapply IHΓ with _ _ Hty. eauto. intros. eapply X14 with Hty0; eauto. lia.
-          apply typing_wf_local_size.
-          unshelve eapply X14; simpl; auto with arith;
-            repeat (rewrite Nat.max_comm -Nat.max_assoc; auto with arith); lia.
-      --- destruct (wf_local_inv _ _ _ (typing_wf_local wfΣ H)).
-          simpl in y. destruct y as [s [Hs [sizex sizety]]].
-          econstructor; eauto.
-          eapply IHΓ with _ _ Hs. intros. eapply X14 with Hty; eauto. lia.
-          apply typing_wf_local_size.
-          unshelve eapply X14; simpl; eauto with arith;
-            repeat (rewrite Nat.max_comm -Nat.max_assoc; auto with arith). }
+      - destruct (wf_local_inv _ _ _ (typing_wf_local wfΣ H)).
+        simpl in y. destruct y as [u [Hty [Hty' [sizex [sizety sizety']]]]].
+        econstructor.
+        + eapply IHΓ with _ _ Hty.
+          * eauto. intros. eapply X14 with Hty0; eauto. lia.
+          * apply typing_wf_local_size.
+        + unshelve eapply X14. all: eauto. lia.
+        + unshelve eapply X14; simpl; auto with arith;
+          repeat (rewrite Nat.max_comm -Nat.max_assoc; auto with arith); lia.
+      - destruct (wf_local_inv _ _ _ (typing_wf_local wfΣ H)).
+        simpl in y. destruct y as [s [Hs [sizex sizety]]].
+        econstructor; eauto.
+        eapply IHΓ with _ _ Hs. intros. eapply X14 with Hty; eauto. lia.
+        apply typing_wf_local_size.
+        unshelve eapply X14; simpl; eauto with arith;
+          repeat (rewrite Nat.max_comm -Nat.max_assoc; auto with arith). }
 
     destruct H;
       try solve [  match reverse goal with
@@ -1567,7 +1593,8 @@ Proof.
        --- split; eauto.
            eapply (X _ a _ _ t0); eauto. lia.
        --- eapply IHa. intros. eapply (X _ X0 _ _ Hty) ; eauto. lia. eapply a.
-       --- split; auto. eapply (X _ a _ _ t0); eauto. lia.
+       --- split ; eauto. eapply (X _ a _ _ t0) ; eauto. lia.
+       --- split; auto. unshelve eapply X ; eauto. lia.
        --- simpl in X14.
            assert(forall Γ0 : context,
                 wf_local Σ Γ0 ->
@@ -1610,7 +1637,8 @@ Proof.
        --- split; eauto.
            eapply (X _ a _ _ t0); eauto. lia.
        --- eapply IHa. intros. eapply (X _ X0 _ _ Hty) ; eauto. lia. eapply a.
-       --- split; auto. eapply (X _ a _ _ t0); eauto. lia.
+       --- split; eauto. unshelve eapply X ; eauto. lia.
+       --- split; eauto. unshelve eapply X ; eauto. lia.
        --- simpl in X14.
            assert(forall Γ0 : context,
                      wf_local Σ Γ0 ->
@@ -1664,10 +1692,20 @@ Qed.
 Lemma All_local_env_app `{checker_flags} (P : global_context -> context -> term -> term -> Type) Σ l l' :
   All_local_env P Σ (l ,,, l') -> All_local_env P Σ l * All_local_env (fun Σ Γ t T => P Σ (l ,,, Γ) t T) Σ l'.
 Proof.
-  induction l'; simpl; split; auto. constructor. intros. unfold app_context in X.
-  inv X. intuition auto. auto. apply IHl'. auto.
-  inv X. eapply localenv_cons_abs. apply IHl'. apply X0. apply X1.
-  eapply localenv_cons_def. apply IHl'. apply X0. apply X1.
+  induction l'; simpl; split; auto.
+  - constructor.
+  - intros. unfold app_context in X.
+    inv X.
+    + intuition auto.
+    + auto. apply IHl'. auto.
+  - inv X.
+    + eapply localenv_cons_abs.
+      * apply IHl'. apply X0.
+      * apply X1.
+    + eapply localenv_cons_def.
+      * apply IHl'. apply X0.
+      * apply X1.
+      * eapply X2.
 Qed.
 
 Lemma All_local_env_lookup `{checker_flags} {P Σ Γ n} {decl} :
@@ -1695,5 +1733,6 @@ Lemma All_local_env_map `{checker_flags} (P : global_context -> context -> term 
   All_local_env (fun Σ Γ t T => P Σ (map (map_decl f) Γ) (f t) (f T)) Σ l -> All_local_env P Σ (map (map_decl f) l).
 Proof.
   intros Hf. induction 1; econstructor; eauto.
-  simpl. rewrite Hf in t0. eapply t0.
+  - simpl. rewrite Hf in t0. eapply t0.
+  - simpl. rewrite Hf in t0. eapply t0.
 Qed.

@@ -2,7 +2,7 @@
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega Lia.
 From MetaCoq.Template Require Import config utils monad_utils BasicAst AstUtils.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICTyping PCUICWeakening PCUICSubstitution PCUICChecker PCUICRetyping PCUICMetaTheory PCUICWcbvEval PCUICSR  PCUICClosed PCUICGeneration.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICTyping PCUICWeakening PCUICSubstitution PCUICSafeChecker PCUICRetyping PCUICMetaTheory PCUICWcbvEval PCUICSR  PCUICClosed PCUICGeneration.
 From MetaCoq.Extraction Require Import EAst ELiftSubst ETyping EWcbvEval Extract.
 From Equations Require Import Equations.
 Require Import String.
@@ -88,7 +88,7 @@ Proof.
   revert pars arg H17.
   dependent induction X; intros pars arg H17.
   - rewrite nth_error_nil in H17. congruence.
-  - destruct (pars + arg) eqn:E.
+  - destruct (pars + arg)%nat eqn:E.
     + cbn in H17. invs H17. eauto.
     + cbn in H17. eapply IHX.
       eauto. instantiate (2 := 0). eassumption.
@@ -167,21 +167,21 @@ Qed.
 
 (* TODO: move *)
 
-Lemma is_type_extract (Σ : PCUICAst.global_context) Γ (t : PCUICAst.term) (* T : *)
-  (* Σ ;;; Γ |- t : T -> *) :
-  Extract.is_type_or_proof Σ Γ t = true -> extract Σ Γ t = E.tBox.
-Proof.
-  (* split. *)
-  (* - intros H1. *)
-  (*   destruct t; simpl; try rewrite H1; try reflexivity. *)
-  (*   all: try inversion H1. *)
-  (* - intros. *)
-  (* (* - intros. induction X. *) *)
-  (* (*   all: simpl in H0; try destruct ?; try destruct a0. all: try congruence. *) *)
-  (* (*   cbn in E. destruct is_arity eqn:EE. inv E. *) *)
-  (* (*   all: try now destruct ?; congruence. *) *)
-  (* (*   cbn in E. destruct H. cbn in E. inv E. *) *)
-Admitted.
+(* Lemma is_type_extract (Σ : PCUICAst.global_context) Γ (t : PCUICAst.term) (* T : *) *)
+(*   (* Σ ;;; Γ |- t : T -> *) : *)
+(*   Extract.is_type_or_proof Σ Γ t = true -> extract Σ Γ t = E.tBox. *)
+(* Proof. *)
+(*   (* split. *) *)
+(*   (* - intros H1. *) *)
+(*   (*   destruct t; simpl; try rewrite H1; try reflexivity. *) *)
+(*   (*   all: try inversion H1. *) *)
+(*   (* - intros. *) *)
+(*   (* (* - intros. induction X. *) *) *)
+(*   (* (*   all: simpl in H0; try destruct ?; try destruct a0. all: try congruence. *) *) *)
+(*   (* (*   cbn in E. destruct is_arity eqn:EE. inv E. *) *) *)
+(*   (* (*   all: try now destruct ?; congruence. *) *) *)
+(*   (* (*   cbn in E. destruct H. cbn in E. inv E. *) *) *)
+(* Admitted. *)
 
 (* Theorem type_of_sound `{Fuel} Σ {Γ t A B} : *)
 (*       Σ ;;; Γ |- t : A -> *)

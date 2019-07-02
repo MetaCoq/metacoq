@@ -145,7 +145,7 @@ Section Reduce.
   Context (flags : RedFlags.t).
 
   Context (Σ : global_context).
-  Context (hΣ : wf Σ).
+  Context (hΣ : ∥ wf Σ ∥).
 
   Derive NoConfusion NoConfusionHom for option.
   Derive NoConfusion NoConfusionHom for context_decl.
@@ -594,6 +594,7 @@ Section Reduce.
     eapply positionR_poscat_nonil. discriminate.
   Qed.
   Next Obligation.
+    destruct hΣ as [hΣ'].
     unfold Pr in p0. cbn in p0.
     pose proof p0 as hh.
     rewrite <- prf' in hh. cbn in hh. subst.
@@ -608,7 +609,7 @@ Section Reduce.
         cbn in prf'. inversion prf'. subst. clear prf'.
         cbn.
         assert (ind = ind').
-        { clear - h flags hΣ.
+        { clear - h flags hΣ'.
           apply welltyped_context in h.
           simpl in h.
           eapply Case_Construct_ind_eq with (args := []) ; eauto.
@@ -625,11 +626,11 @@ Section Reduce.
           | h : cored _ _ ?t _ |- _ =>
             assert (welltyped Σ Γ t) as h'
           end.
-          { clear - h H flags hΣ.
+          { clear - h H flags hΣ'.
             eapply cored_welltyped ; eassumption.
           }
           assert (ind = ind').
-          { clear - h' flags hΣ H.
+          { clear - h' flags hΣ' H.
             zip fold in h'.
             apply welltyped_context in h'.
             cbn in h'.
@@ -643,7 +644,7 @@ Section Reduce.
           apply zipc_inj in H2.
           inversion H2. subst.
           assert (ind = ind').
-          { clear - h flags H hΣ.
+          { clear - h flags H hΣ'.
             apply welltyped_context in h.
             cbn in h.
             apply Case_Construct_ind_eq in h. all: eauto.
@@ -677,6 +678,7 @@ Section Reduce.
         constructor. eapply red_cofix_case. eauto.
   Qed.
   Next Obligation.
+    destruct hΣ as [wΣ].
     unfold Pr in p0. cbn in p0.
     pose proof p0 as hh.
     rewrite <- prf' in hh. cbn in hh. subst.
@@ -737,9 +739,10 @@ Section Reduce.
     constructor.
   Qed.
   Next Obligation.
+    destruct hΣ as [wΣ].
     left.
     apply Req_red in r as hr.
-    pose proof (red_welltyped _ hΣ h hr) as hh.
+    pose proof (red_welltyped _ wΣ h hr) as hh.
     destruct hr as [hr].
     eapply cored_red_cored ; try eassumption.
     unfold Pr in p. simpl in p. pose proof p as p'.
@@ -754,13 +757,14 @@ Section Reduce.
     subst. constructor. eauto.
   Qed.
   Next Obligation.
+    destruct hΣ as [wΣ].
     unfold Pr in p. simpl in p.
     pose proof p as p'.
     rewrite <- prf' in p'. simpl in p'. subst.
     symmetry in prf'. apply decompose_stack_eq in prf' as ?.
     subst.
     apply Req_red in r as hr.
-    pose proof (red_welltyped _ hΣ h hr) as hh.
+    pose proof (red_welltyped _ wΣ h hr) as hh.
     cbn in hh. rewrite zipc_appstack in hh. cbn in hh.
     zip fold in hh.
     apply welltyped_context in hh. simpl in hh.
@@ -793,6 +797,7 @@ Section Reduce.
         constructor. eapply red_cofix_proj. eauto.
   Qed.
   Next Obligation.
+    destruct hΣ as [wΣ].
     unfold Pr in p. simpl in p.
     pose proof p as p'.
     rewrite <- prf' in p'. simpl in p'. subst.
@@ -871,6 +876,7 @@ Section Reduce.
         * cbn in H1. cbn in H2.
           inversion H1. subst. inversion H2. subst. clear H1 H2.
           intros.
+          destruct hΣ as [wΣ].
           eapply cored_welltyped ; eassumption.
         * cbn in H1. cbn in H2.
           inversion H1. subst. inversion H2. subst. clear H1 H2.

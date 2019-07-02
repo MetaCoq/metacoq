@@ -13,11 +13,9 @@ Set Asymmetric Patterns.
 Require Import CRelationClasses.
 Require Import Equations.Type.Relation Equations.Type.Relation_Properties.
 
-Existing Instance config.default_checker_flags.
-
 Reserved Notation " Σ ;;; Γ |- t == u " (at level 50, Γ, t, u at next level).
 
-Lemma cumul_alt Σ Γ t u :
+Lemma cumul_alt `{cf : checker_flags} Σ Γ t u :
   Σ ;;; Γ |- t <= u <~> { v & { v' & (red Σ Γ t v * red Σ Γ u v' * leq_term (snd Σ) v v')%type } }.
 Proof.
   split.
@@ -34,14 +32,18 @@ Proof.
     econstructor 2; eauto. }
 Qed.
 
-Lemma red_cumul {Σ : global_context} {Γ t u} : red Σ Γ t u -> Σ ;;; Γ |- t <= u.
+Lemma red_cumul `{cf : checker_flags} {Σ : global_context} {Γ t u} :
+  red Σ Γ t u ->
+  Σ ;;; Γ |- t <= u.
 Proof.
   intros. apply red_alt in X. apply clos_rt_rt1n in X.
   induction X. apply cumul_refl'.
   econstructor 2; eauto.
 Qed.
 
-Lemma red_cumul_inv {Σ : global_context} {Γ t u} : red Σ Γ t u -> Σ ;;; Γ |- u <= t.
+Lemma red_cumul_inv `{cf : checker_flags} {Σ : global_context} {Γ t u} :
+  red Σ Γ t u ->
+  Σ ;;; Γ |- u <= t.
 Proof.
   intros. apply red_alt in X. apply clos_rt_rt1n in X.
   induction X. apply cumul_refl'.
@@ -49,7 +51,7 @@ Proof.
 Qed.
 
 
-Lemma eq_term_upto_univ_refl Re Rle :
+Lemma eq_term_upto_univ_refl `{cf : checker_flags} Re Rle :
   RelationClasses.Reflexive Re ->
   RelationClasses.Reflexive Rle ->
   forall t, eq_term_upto_univ Re Rle t t.
@@ -81,7 +83,7 @@ Proof.
 Qed.
 
 
-Lemma eq_term_upto_univ_leq :
+Lemma eq_term_upto_univ_leq `{cf : checker_flags} :
   forall (Re Rle : universe -> universe -> Prop) u v,
     (forall u u', Re u u' -> Rle u u') ->
     eq_term_upto_univ Re Re u v ->
@@ -134,11 +136,16 @@ Proof.
   - cbn. apply IHl. constructor; try assumption. assumption.
 Qed.
 
-Lemma leq_term_antisym Σ t u : leq_term Σ t u -> leq_term Σ u t -> eq_term Σ t u.
+Lemma leq_term_antisym `{cf : checker_flags} Σ t u :
+  leq_term Σ t u ->
+  leq_term Σ u t ->
+  eq_term Σ t u.
 Proof.
 Admitted.
 
-Lemma eq_term_sym Σ t u : eq_term Σ t u -> eq_term Σ u t.
+Lemma eq_term_sym `{cf : checker_flags} Σ t u :
+  eq_term Σ t u ->
+  eq_term Σ u t.
 Proof.
 Admitted.
 
@@ -148,7 +155,9 @@ Inductive conv_alt `{checker_flags} (Σ : global_context) (Γ : context) : term 
 | conv_alt_red_r t u v : Σ ;;; Γ |- t == v -> red1 (fst Σ) Γ u v -> Σ ;;; Γ |- t == u
 where " Σ ;;; Γ |- t == u " := (@conv_alt _ Σ Γ t u) : type_scope.
 
-Lemma red_conv_alt Σ Γ t u : red (fst Σ) Γ t u -> Σ ;;; Γ |- t == u.
+Lemma red_conv_alt `{cf : checker_flags} Σ Γ t u :
+  red (fst Σ) Γ t u ->
+  Σ ;;; Γ |- t == u.
 Proof.
   intros. apply red_alt in X. apply clos_rt_rt1n_iff in X.
   induction X. constructor. apply eq_term_refl.
@@ -157,12 +166,12 @@ Proof.
 Qed.
 Hint Resolve red_conv_alt.
 
-Lemma cumul_refl' Σ Γ t : cumul Σ Γ t t.
+Lemma cumul_refl' `{cf : checker_flags} Σ Γ t : cumul Σ Γ t t.
 Proof. apply cumul_refl, leq_term_refl. Qed.
 
 Hint Resolve leq_term_refl cumul_refl' : core.
 
-Lemma cumul_conv_alt Σ Γ t u :
+Lemma cumul_conv_alt `{cf : checker_flags} Σ Γ t u :
   Σ ;;; Γ |- t <= u -> Σ ;;; Γ |- u <= t -> Σ ;;; Γ |- t == u.
              (* (forall v, Σ ;;; Γ |- u == v -> Σ ;;; Γ |- t == v). *)
 Proof.
@@ -175,7 +184,8 @@ Admitted.
 
 
 
-Lemma conv_conv_alt Σ Γ t u : Σ ;;; Γ |- t = u <~> Σ ;;; Γ |- t == u.
+Lemma conv_conv_alt `{cf : checker_flags} Σ Γ t u :
+  Σ ;;; Γ |- t = u <~> Σ ;;; Γ |- t == u.
 Proof.
   split; induction 1. apply cumul_conv_alt in b; auto.
   constructor; constructor. now eapply eq_term_leq_term.
@@ -186,7 +196,7 @@ Proof.
   econstructor 2; eauto. apply IHX.
 Qed.
 
-Lemma conv_alt_red :
+Lemma conv_alt_red `{cf : checker_flags} :
   forall Σ Γ t u,
     Σ ;;; Γ |- t == u ->
     ∑ t' u',
@@ -206,13 +216,13 @@ Inductive conv_pb :=
 | Conv
 | Cumul.
 
-Definition conv leq Σ Γ u v :=
+Definition conv `{cf : checker_flags} leq Σ Γ u v :=
   match leq with
   | Conv => ∥ Σ ;;; Γ |- u = v ∥
   | Cumul => ∥ Σ ;;; Γ |- u <= v ∥
   end.
 
-Lemma conv_conv_l :
+Lemma conv_conv_l `{cf : checker_flags} :
   forall Σ leq Γ u v,
       Σ ;;; Γ |- u = v ->
       conv leq Σ Γ u v.
@@ -222,7 +232,7 @@ Proof.
   - cbn. constructor. assumption.
 Qed.
 
-Lemma conv_conv_r :
+Lemma conv_conv_r `{cf : checker_flags} :
   forall Σ leq Γ u v,
       Σ ;;; Γ |- u = v ->
       conv leq Σ Γ v u.
@@ -232,7 +242,7 @@ Proof.
   - cbn. constructor. assumption.
 Qed.
 
-Lemma cumul_App_l :
+Lemma cumul_App_l `{cf : checker_flags} :
   forall {Σ Γ f g x},
     Σ ;;; Γ |- f <= g ->
     Σ ;;; Γ |- tApp f x <= tApp g x.
@@ -248,7 +258,7 @@ Proof.
     econstructor. assumption.
 Qed.
 
-Lemma cumul_App_r :
+Lemma cumul_App_r `{cf : checker_flags} :
   forall {Σ Γ f u v},
     Σ ;;; Γ |- u = v ->
     Σ ;;; Γ |- tApp f u <= tApp f v.
@@ -264,7 +274,7 @@ Proof.
     econstructor. assumption.
 Qed.
 
-Lemma conv_App_r :
+Lemma conv_App_r `{cf : checker_flags} :
   forall {Σ Γ f x y},
     Σ ;;; Γ |- x = y ->
     Σ ;;; Γ |- tApp f x = tApp f y.
@@ -281,7 +291,7 @@ Proof.
     econstructor. assumption.
 Qed.
 
-Lemma conv_Prod_l :
+Lemma conv_Prod_l `{cf : checker_flags} :
   forall {Σ Γ na na' A1 A2 B},
     Σ ;;; Γ |- A1 = A2 ->
     Σ ;;; Γ |- tProd na A1 B = tProd na' A2 B.
@@ -298,7 +308,7 @@ Proof.
     econstructor. assumption.
 Qed.
 
-Lemma conv_Prod_r :
+Lemma conv_Prod_r `{cf : checker_flags} :
   forall {Σ Γ na A B1 B2},
     Σ ;;; Γ ,, vass na A |- B1 = B2 ->
     Σ ;;; Γ |- tProd na A B1 = tProd na A B2.
@@ -315,7 +325,7 @@ Proof.
     econstructor. assumption.
 Qed.
 
-Lemma cumul_Prod_r :
+Lemma cumul_Prod_r `{cf : checker_flags} :
   forall {Σ Γ na A B1 B2},
     Σ ;;; Γ ,, vass na A |- B1 <= B2 ->
     Σ ;;; Γ |- tProd na A B1 <= tProd na A B2.
@@ -331,7 +341,7 @@ Proof.
     econstructor. assumption.
 Qed.
 
-Lemma conv_cumul :
+Lemma conv_cumul `{cf : checker_flags} :
   forall Σ Γ u v,
     Σ ;;; Γ |- u = v ->
     Σ ;;; Γ |- u <= v.
@@ -340,7 +350,7 @@ Proof.
   assumption.
 Qed.
 
-Lemma conv_refl' :
+Lemma conv_refl' `{cf : checker_flags} :
   forall Σ leq Γ t,
     conv leq Σ Γ t t.
 Proof.
@@ -350,7 +360,7 @@ Proof.
   - cbn. constructor. apply cumul_refl'.
 Qed.
 
-Lemma conv_sym :
+Lemma conv_sym `{cf : checker_flags} :
   forall Σ Γ u v,
     Σ ;;; Γ |- u = v ->
     Σ ;;; Γ |- v = u.
@@ -359,7 +369,7 @@ Proof.
   econstructor ; assumption.
 Qed.
 
-Lemma conv_conv :
+Lemma conv_conv `{cf : checker_flags} :
   forall {Σ Γ leq u v},
     ∥ Σ ;;; Γ |- u = v ∥ ->
     conv leq Σ Γ u v.
@@ -371,7 +381,7 @@ Proof.
     constructor. assumption.
 Qed.
 
-Lemma eq_term_conv :
+Lemma eq_term_conv `{cf : checker_flags} :
   forall {Σ Γ u v},
     eq_term (snd Σ) u v ->
     Σ ;;; Γ |- u = v.
@@ -386,7 +396,7 @@ Proof.
     assumption.
 Qed.
 
-Lemma conv_trans :
+Lemma conv_trans `{cf : checker_flags} :
   forall Σ Γ u v w,
     Σ ;;; Γ |- u = v ->
     Σ ;;; Γ |- v = w ->
@@ -396,7 +406,7 @@ Proof.
   destruct h1, h2. constructor ; eapply cumul_trans ; eassumption.
 Qed.
 
-Lemma conv_trans' :
+Lemma conv_trans' `{cf : checker_flags} :
   forall Σ leq Γ u v w,
     conv leq Σ Γ u v ->
     conv leq Σ Γ v w ->
@@ -409,7 +419,7 @@ Proof.
   - cbn in *. destruct h1, h2. constructor. eapply cumul_trans ; eassumption.
 Qed.
 
-Lemma red_conv_l :
+Lemma red_conv_l `{cf : checker_flags} :
   forall Σ leq Γ u v,
     red (fst Σ) Γ u v ->
     conv leq Σ Γ u v.
@@ -432,7 +442,7 @@ Proof.
       * eapply cumul_refl'.
 Qed.
 
-Lemma red_conv_r :
+Lemma red_conv_r `{cf : checker_flags} :
   forall Σ leq Γ u v,
     red (fst Σ) Γ u v ->
     conv leq Σ Γ v u.
@@ -455,7 +465,7 @@ Proof.
       * assumption.
 Qed.
 
-Lemma conv_Prod :
+Lemma conv_Prod `{cf : checker_flags} :
   forall Σ leq Γ na A1 A2 B1 B2,
     Σ ;;; Γ |- A1 = A2 ->
     conv leq Σ (Γ,, vass na A1) B1 B2 ->
@@ -472,7 +482,7 @@ Proof.
     + eapply conv_cumul. eapply conv_Prod_l. assumption.
 Qed.
 
-Lemma cumul_Case_c :
+Lemma cumul_Case_c `{cf : checker_flags} :
   forall Σ Γ indn p brs u v,
     Σ ;;; Γ |- u = v ->
     Σ ;;; Γ |- tCase indn p u brs <= tCase indn p v brs.
@@ -491,7 +501,7 @@ Proof.
     constructor. assumption.
 Qed.
 
-Lemma cumul_Proj_c :
+Lemma cumul_Proj_c `{cf : checker_flags} :
   forall Σ Γ p u v,
     Σ ;;; Γ |- u = v ->
     Σ ;;; Γ |- tProj p u <= tProj p v.
@@ -506,7 +516,7 @@ Proof.
     econstructor. assumption.
 Qed.
 
-Lemma conv_App_l :
+Lemma conv_App_l `{cf : checker_flags} :
   forall {Σ Γ f g x},
     Σ ;;; Γ |- f = g ->
     Σ ;;; Γ |- tApp f x = tApp g x.
@@ -523,7 +533,7 @@ Proof.
     econstructor. assumption.
 Qed.
 
-Lemma conv_Case_c :
+Lemma conv_Case_c `{cf : checker_flags} :
   forall Σ Γ indn p brs u v,
     Σ ;;; Γ |- u = v ->
     Σ ;;; Γ |- tCase indn p u brs = tCase indn p v brs.
@@ -543,7 +553,7 @@ Proof.
     constructor. assumption.
 Qed.
 
-Lemma conv_Proj_c :
+Lemma conv_Proj_c `{cf : checker_flags} :
   forall Σ Γ p u v,
     Σ ;;; Γ |- u = v ->
     Σ ;;; Γ |- tProj p u = tProj p v.
@@ -559,7 +569,7 @@ Proof.
     econstructor. assumption.
 Qed.
 
-Lemma conv_Lambda_l :
+Lemma conv_Lambda_l `{cf : checker_flags} :
   forall Σ Γ na A b na' A',
     Σ ;;; Γ |- A = A' ->
     Σ ;;; Γ |- tLambda na A b = tLambda na' A' b.
@@ -577,7 +587,7 @@ Proof.
     econstructor. assumption.
 Qed.
 
-Lemma conv_Lambda_r :
+Lemma conv_Lambda_r `{cf : checker_flags} :
   forall Σ Γ na A b b',
     Σ ;;; Γ,, vass na A |- b = b' ->
     Σ ;;; Γ |- tLambda na A b = tLambda na A b'.
@@ -595,7 +605,7 @@ Proof.
     econstructor. assumption.
 Qed.
 
-Lemma cumul_LetIn_bo :
+Lemma cumul_LetIn_bo `{cf : checker_flags} :
   forall Σ Γ na ty t u u',
     Σ ;;; Γ ,, vdef na ty t |- u <= u' ->
     Σ ;;; Γ |- tLetIn na ty t u <= tLetIn na ty t u'.
@@ -611,7 +621,7 @@ Proof.
     econstructor. assumption.
 Qed.
 
-Lemma cumul_Lambda_r :
+Lemma cumul_Lambda_r `{cf : checker_flags} :
   forall Σ Γ na A b b',
     Σ ;;; Γ,, vass na A |- b <= b' ->
     Σ ;;; Γ |- tLambda na A b <= tLambda na A b'.
@@ -627,7 +637,7 @@ Proof.
     econstructor. assumption.
 Qed.
 
-Lemma cumul_it_mkLambda_or_LetIn :
+Lemma cumul_it_mkLambda_or_LetIn `{cf : checker_flags} :
   forall Σ Δ Γ u v,
     Σ ;;; (Δ ,,, Γ) |- u <= v ->
     Σ ;;; Δ |- it_mkLambda_or_LetIn Γ u <= it_mkLambda_or_LetIn Γ v.
@@ -641,7 +651,7 @@ Proof.
     eapply cumul_Lambda_r. assumption.
 Qed.
 
-Lemma cumul_it_mkProd_or_LetIn :
+Lemma cumul_it_mkProd_or_LetIn `{cf : checker_flags} :
   forall Σ Δ Γ B B',
     Σ ;;; (Δ ,,, Γ) |- B <= B' ->
     Σ ;;; Δ |- it_mkProd_or_LetIn Γ B <= it_mkProd_or_LetIn Γ B'.

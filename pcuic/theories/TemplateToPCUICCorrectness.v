@@ -586,8 +586,10 @@ Lemma trans_unfold_fix mfix idx narg fn :
   unfold_fix (map (map_def trans trans) mfix) idx = Some (narg, trans fn).
 Proof.
   unfold TTy.unfold_fix, unfold_fix. intros wffix.
-  rewrite nth_error_map. destruct (nth_error mfix idx) eqn:Hdef.
-  intros [= <- <-]. simpl. repeat f_equal.
+  rewrite nth_error_map. destruct (nth_error mfix idx) eqn:Hdef => //.
+  intros [= <- <-]. simpl.
+  destruct isLambda eqn:isl => //.
+  repeat f_equal.
   rewrite trans_subst. clear Hdef.
   unfold TTy.fix_subst. generalize mfix at 2.
   induction mfix0. constructor. simpl. repeat (constructor; auto).
@@ -597,7 +599,11 @@ Proof.
   generalize mfix at 1 3.
   induction wffix; trivial.
   simpl; intros mfix. f_equal.
-  eapply (IHwffix mfix). congruence.
+  eapply (IHwffix mfix).
+
+  apply (nth_error_forall Hdef) in wffix.
+  simpl in wffix. intuition auto.
+  destruct (dbody d); simpl in *; congruence.
 Qed.
 
 Lemma trans_unfold_cofix mfix idx narg fn :

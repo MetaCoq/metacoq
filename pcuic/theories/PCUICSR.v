@@ -350,7 +350,7 @@ Lemma type_tFix_inv Σ Γ mfix idx T : wf Σ ->
 Proof.
   intros wfΣ H. depind H.
   unfold unfold_fix. rewrite e.
-  specialize (nth_error_all e a0) as [Hty Hbody].
+  specialize (nth_error_all e a0) as [Hty ->].
   destruct decl as [name ty body rarg]; simpl in *.
   clear e.
   eexists _, _, _. split. split. eauto.

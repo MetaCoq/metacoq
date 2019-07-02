@@ -161,7 +161,10 @@ Lemma lift_unfold_fix n k mfix idx narg fn :
 Proof.
   unfold unfold_fix.
   rewrite nth_error_map. destruct (nth_error mfix idx) eqn:Hdef; try congruence.
-  intros [= <- <-]. simpl. repeat f_equal.
+  case e: isLambda => //.
+  intros [= <- <-]. simpl.
+  rewrite isLambda_lift //.
+  repeat f_equal.
   rewrite (distr_lift_subst_rec _ _ n 0 k).
   rewrite fix_subst_length. f_equal.
   unfold fix_subst. rewrite !map_length.

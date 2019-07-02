@@ -531,6 +531,18 @@ Section Lemmata.
     - eapply decompose_app_notApp. eassumption.
   Qed.
 
+  (* TODO MOVE? *)
+  Lemma isLambda_eq_term_l :
+    forall R u v,
+      isLambda u ->
+      eq_term_upto_univ R u v ->
+      isLambda v.
+  Proof.
+    intros R u v h e.
+    destruct u; try discriminate.
+    depelim e. auto.
+  Qed.
+
   (* TODO MOVE *)
   Lemma red1_eq_context_upto_l :
     forall Re Γ Δ u v,
@@ -866,12 +878,15 @@ Section Lemmata.
       unfold is_constructor in H0.
       case_eq (nth_error args (rarg d)) ;
         try (intros bot ; rewrite bot in H0 ; discriminate H0).
-      intros a ea. rewrite ea in H0.
+      intros a ea.
+      destruct (isLambda (dbody d)) eqn:isl; noconf H1.
+      rewrite ea in H0.
       eapply Forall2_nth_error_Some_l in h2 as hh ; try eassumption.
       destruct hh as [a' [ea' ?]].
       eexists. split.
       + constructor. eapply red_fix.
-        * unfold unfold_fix. rewrite e'. reflexivity.
+        * unfold unfold_fix. rewrite e'.
+          erewrite isLambda_eq_term_l; eauto.
         * unfold is_constructor. rewrite <- erarg. rewrite ea'.
           eapply isConstruct_app_eq_term_l ; eassumption.
       + eapply eq_term_upto_univ_mkApps.

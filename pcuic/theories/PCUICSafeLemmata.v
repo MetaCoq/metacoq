@@ -533,9 +533,9 @@ Section Lemmata.
 
   (* TODO MOVE? *)
   Lemma isLambda_eq_term_l :
-    forall R u v,
+    forall Re u v,
       isLambda u ->
-      eq_term_upto_univ R u v ->
+      eq_term_upto_univ Re Re u v ->
       isLambda v.
   Proof.
     intros R u v h e.
@@ -876,10 +876,10 @@ Section Lemmata.
       eapply Forall2_nth_error_Some_l in H1 as hh ; try eassumption.
       destruct hh as [d' [e' [? [? erarg]]]].
       unfold is_constructor in H0.
+      destruct (isLambda (dbody d)) eqn:isl; noconf H3.
       case_eq (nth_error args (rarg d)) ;
         try (intros bot ; rewrite bot in H0 ; discriminate H0).
       intros a ea.
-      destruct (isLambda (dbody d)) eqn:isl; noconf H1.
       rewrite ea in H0.
       eapply Forall2_nth_error_Some_l in h2 as hh ; try eassumption.
       destruct hh as [a' [ea' ?]].

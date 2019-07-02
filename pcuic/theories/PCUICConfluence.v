@@ -6,7 +6,7 @@ From Coq Require Import Bool String List Program BinPos Compare_dec Omega Utf8 S
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICReduction PCUICWeakening PCUICSubstitution
-     PCUICClosed PCUICParallelReduction.
+     PCUICReflect PCUICClosed PCUICParallelReduction.
 
 (* Type-valued relations. *)
 Require Import CRelationClasses.
@@ -806,12 +806,6 @@ Section Confluence.
     decompose_app t = (f, l) -> t = mkApps f l.
   Proof. by apply/decompose_app_rec_inv. Qed.
 
-  Lemma eq_ind_spec i i' : reflect (i = i') (AstUtils.eq_ind i i').
-  Proof.
-    unfold AstUtils.eq_ind.
-    destruct i, i'. simpl.
-  Admitted.
-
   Lemma lookup_env_cst_inv {Σ c k cst} :
     lookup_env Σ c = Some (ConstantDecl k cst) -> c = k.
   Proof.
@@ -949,7 +943,7 @@ Section Confluence.
         let brs' := List.map (fun x => (fst x, rho Γ (snd x))) brs in
         match decompose_app x, decompose_app x' with
         | (tConstruct ind' c u, args), (tConstruct ind'' c' u', args') =>
-          if AstUtils.eq_ind ind ind' then
+          if eqb ind ind' then
             iota_red pars c args' brs'
           else tCase (ind, pars) p' x' brs'
         | (tCoFix mfix idx, args), (tCoFix mfix' idx', args') =>
@@ -966,7 +960,7 @@ Section Confluence.
         | (tConstruct ind c u, args), (tConstruct ind' c' u', args') =>
           match nth_error args' (pars + narg) with
           | Some arg1 =>
-            if AstUtils.eq_ind i ind' then arg1
+            if eqb i ind' then arg1
             else tProj p x'
           | None => tProj p x'
           end
@@ -3098,7 +3092,7 @@ Section Confluence.
         case e': decompose_app => [hd' args'].
         rewrite (decompose_app_rename e').
         case: (view_construct hd') => [ind' n u'] /=.
-        case: (eq_ind_spec ind c) => Hind.
+        case: (eqb_spec ind c) => Hind.
         { (* Reduction *)
           rewrite /iota_red /= -map_skipn rename_mkApps !nth_map //. }
       { simpl. f_equal; auto. }
@@ -3153,7 +3147,7 @@ Section Confluence.
         case: (view_construct hd') => [ind' n u'] /=.
         rewrite nth_error_map.
         case enth : nth_error => [arg|] /= //.
-        case: (eq_ind_spec ind ind') => Hind /= //.
+        case: (eqb_spec ind ind') => Hind /= //.
         { intros t1 Ht1.
           rewrite (nisConstruct_elim Ht1).
           rewrite (nisConstruct_elim (isConstruct_rename Ht1)).
@@ -3301,38 +3295,6 @@ Section Confluence.
     now rewrite fold_fix_context_rho_ctx.
   Qed.
 
-  Lemma rho_fix_context_All2_local_env (Γ Γ' : context) (m : mfixpoint term) :
-    All_local_env
-      (on_local_decl
-         (λ (Δ : context) (t : term), pred1_ctx Σ
-                                                (Γ' ,,, Δ)
-                                                (rho_ctx (Γ ,,, Δ))
-                                      → pred1 Σ (Γ' ,,, Δ)
-                                              (rho_ctx (Γ ,,, Δ)) t
-                                              (rho (rho_ctx (Γ ,,, Δ)) t)))
-      (fix_context m)
-    → pred1_ctx Σ Γ' (rho_ctx Γ)
-    → All2_local_env (on_decl (on_decl_over (pred1 Σ) Γ' (rho_ctx Γ)))
-                     (fix_context m)
-                     (fix_context
-                        (map_fix rho (rho_ctx Γ) (fold_fix_context rho (rho_ctx Γ) [] m)
-                                 m)).
-  Proof.
-    intros X X1.
-    rewrite - fold_fix_context_rho_ctx.
-    rewrite fix_context_fold.
-    revert X. generalize (fix_context m). intros c. induction 1. constructor.
-    simpl. constructor. apply IHX. red. red in t0.
-    red. rewrite rho_ctx_app in t0. apply t0.
-    apply All2_local_env_app_inv; auto.
-    simpl.
-    constructor. apply IHX.
-    red in t0. intuition auto.
-    rewrite rho_ctx_app in a, b0. red. split; eauto.
-    red. apply a. now apply All2_local_env_app_inv.
-    apply b0. now apply All2_local_env_app_inv.
-  Qed.
-
   Derive NoConfusion for bool.
 
   Lemma All2_local_env_pred_fix_ctx P (Γ Γ' : context) (mfix0 : mfixpoint term) (mfix1 : list (def term)) :
@@ -3454,30 +3416,6 @@ Section Confluence.
     specialize (All_All2_telescopei_gen Γ Γ' [] [] m m'). simpl.
     intros. specialize (X eq_refl X0). forward X. constructor.
     apply X.
-  Qed.
-
-  Lemma rho_All2_All_local_env :
-    ∀ Γ Γ' : context, pred1_ctx Σ Γ (rho_ctx Γ') →
-                      ∀ Δ : context,
-                        All2_local_env (on_decl (on_decl_over (pred1 Σ) Γ (rho_ctx Γ'))) Δ
-                                       (rho_ctx_over (rho_ctx Γ') Δ) ->
-                        All_local_env
-                          (on_local_decl
-                             (λ (Δ : context) (t : term), pred1_ctx Σ (Γ ,,, Δ) (rho_ctx (Γ' ,,, Δ))
-                                                          → pred1 Σ (Γ ,,, Δ)
-                                                                  (rho_ctx (Γ' ,,, Δ)) t
-                                                                  (rho (rho_ctx (Γ' ,,, Δ)) t))) Δ.
-  Proof.
-    intros.
-    induction Δ; simpl; try constructor.
-    destruct a as [? [?|] ?]. depelim X0.
-    constructor; auto. red. red in p. destruct p.
-    unfold on_decl_over in *. intuition pcuic.
-    now rewrite rho_ctx_app.
-    now rewrite rho_ctx_app.
-    depelim X0. constructor; eauto.
-    red. do 2 red in p. intros.
-    now rewrite rho_ctx_app.
   Qed.
 
   Lemma pred1_rho_fix_context_2 (Γ Γ' : context) (m m' : mfixpoint term) :
@@ -4164,7 +4102,7 @@ Section Confluence.
     - simpl in X0. cbn. rewrite decompose_app_mkApps; auto.
       rewrite rho_mkApps //.
       rewrite decompose_app_mkApps; auto.
-      simpl. destruct (eq_ind_spec ind ind); try discriminate.
+      simpl. destruct (eqb_spec ind ind); try discriminate.
       unfold iota_red. eapply pred_mkApps; eauto.
       eapply pred_snd_nth. red in X2.
       now eapply rho_triangle_All_All2_ind_noeq. auto.
@@ -4276,7 +4214,7 @@ Section Confluence.
       simpl. rewrite nth_error_map.
       eapply All2_nth_error_Some_right in heq_nth_error as [t' [? ?]]; eauto.
       simpl in y. rewrite e. simpl.
-      destruct (eq_ind_spec i i) => //.
+      destruct (eqb_spec i i) => //.
 
     - simpl. eapply pred_abs; auto. unfold snoc in *. simpl in X2.
       rewrite app_context_nil_l in X2. apply X2.
@@ -4390,7 +4328,7 @@ Section Confluence.
         rewrite rho_mkApps; auto.
         rewrite decompose_app_mkApps; auto.
         simpl. rewrite rho_mkApps in X2; auto.
-        destruct (eq_ind_spec i ind). subst ind.
+        destruct (eqb_spec i ind). subst ind.
         eapply pred1_mkApps_tConstruct in X1 as [args' [? ?]]. subst c1.
         eapply pred1_mkApps_refl_tConstruct in X2.
         econstructor; eauto. pcuic.
@@ -4492,7 +4430,7 @@ Section Confluence.
         eapply pred1_mkApps_tConstruct in X as [args' [? ?]]; subst.
         eapply pred1_mkApps_refl_tConstruct in X0.
         destruct nth_error eqn:Heq.
-        destruct (eq_ind_spec ind c0); subst.
+        destruct (eqb_spec ind c0); subst.
         econstructor; eauto.
         eapply pred_proj_congr, pred_mkApps; auto with pcuic. constructor; auto.
         eapply pred_mkApps; auto.

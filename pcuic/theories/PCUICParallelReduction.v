@@ -1185,7 +1185,7 @@ Section ParallelReduction.
   Qed.
 
   Hint Constructors pred1 : pcuic.
-  Hint Resolve pred1_refl : pcuic.
+  Hint Resolve @pred1_refl : pcuic.
   Hint Unfold All2_prop2_eq All2_prop2 on_decl on_decl_over on_rel on_Trel on_Trel_eq snd on_snd : pcuic.
   Hint Resolve All2_same: pcuic.
   Hint Constructors All2_local_env : pcuic.
@@ -1202,45 +1202,7 @@ Section ParallelReduction.
     red. apply pred1_refl.
   Qed.
 
-  Lemma red1_pred1 Γ : forall M N, red1 Σ Γ M N -> pred1 Γ Γ M N.
-  Proof with eauto with pcuic.
-    induction 1 using red1_ind_all; intros; eauto with pcuic;
-      try solve [ constructor ; intuition auto with pcuic ].
-    - eapply pred_fix ; intuition auto with pcuic ...
-      + apply pred1_ctx_over_refl.
-      + clear. red. generalize mfix at 3 4. induction mfix0; constructor; auto.
-        split; unfold on_Trel; auto with pcuic.
-    - eapply pred_cofix_case ; intuition auto with pcuic ...
-      + admit.
-      + admit.
-    - eapply pred_cofix_proj ; intuition auto with pcuic ...
-      + admit.
-      + admit.
-    - constructor ; intuition auto with pcuic ...
-      (* eapply OnOne2_All2 ... intros x y X0. *)
-      admit.
-    - constructor ; intuition auto with pcuic ...
-      eapply OnOne2_All2 ...
-    - constructor ; intuition auto with pcuic ...
-      + admit.
-      + (* eapply OnOne2_All2 ... *)
-        admit.
-    - constructor ; intuition auto with pcuic ...
-      + admit.
-      + (* eapply OnOne2_All2 ... *)
-        admit.
-    - constructor ; intuition auto with pcuic ...
-      + admit.
-      + (* eapply OnOne2_All2 ... *)
-        admit.
-    - constructor ; intuition auto with pcuic ...
-      + admit.
-      + (* eapply OnOne2_All2 ... *)
-        admit.
-  Admitted.
-
 End ParallelReduction.
-
 
 Hint Constructors pred1 : pcuic.
 Hint Unfold All2_prop2_eq All2_prop2 on_decl on_decl_over on_rel on_Trel on_Trel_eq snd on_snd : pcuic.
@@ -1249,15 +1211,15 @@ Hint Constructors All2_local_env : pcuic.
 
 Hint Resolve pred1_ctx_refl : pcuic.
 
-Hint Extern 4 => progress simpl : pcuic.
-Hint Extern 10 => progress split : pcuic.
-Hint Extern 5 => progress destruct_conjs : pcuic.
-Hint Extern 5 => red : pcuic.
+Ltac pcuic_simplify :=
+  simpl || split || destruct_conjs || red.
+
+Hint Extern 10 => progress pcuic_simplify : pcuic.
 
 Notation pred1_ctx Σ Γ Γ' := (All2_local_env (on_decl (pred1 Σ)) Γ Γ').
 
-Hint Extern 4 (pred1 _ _ _ _ ?t) => tryif is_evar t then fail 1 else eapply pred1_refl_gen : pcuic.
-Hint Extern 4 (pred1 _ _ _ _ ?t) => tryif is_evar t then fail 1 else eapply pred1_refl : pcuic.
+Hint Extern 4 (pred1 _ _ _ ?t _) => tryif is_evar t then fail 1 else eapply pred1_refl_gen : pcuic.
+Hint Extern 4 (pred1 _ _ _ ?t _) => tryif is_evar t then fail 1 else eapply pred1_refl : pcuic.
 
 Hint Extern 20 (#|?X| = #|?Y|) =>
 match goal with

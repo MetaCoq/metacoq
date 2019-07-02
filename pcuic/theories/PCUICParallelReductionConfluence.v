@@ -889,7 +889,7 @@ Section Confluence.
    (*      | Some arg1 => *)
    (*        if AstUtils.eq_ind i ind' then arg1 *)
    (*        else tProj (i, pars, narg) (rho Γ x); *)
-   (*      | None => tProj (i, pars, narg) (rho Γ x) }; *)
+(*      | None => tProj (i, pars, narg) (rho Γ x) }; *)
    (*    | (tCoFix mfix idx, args) | (tCoFix mfix' idx', args') with unfold_cofix mfix' idx := { *)
    (*      | Some (narg, fn) => tProj (i, pars, narg) (mkApps fn args'); *)
    (*      | None => tProj (i, pars, narg) (mkApps (tCoFix mfix' idx') args') }; *)

@@ -647,11 +647,6 @@ Axiom cumul_trans : forall `{checker_flags} Σ Γ t u v, Σ ;;; Γ |- t <= u -> 
 
 Hint Resolve conv_refl cumul_refl' : typecheck.
 
-Conjecture congr_cumul_prod : forall `{checker_flags} Σ Γ na na' M1 M2 N1 N2,
-    cumul Σ Γ M1 N1 ->
-    cumul Σ (Γ ,, vass na M1) M2 N2 ->
-    cumul Σ Γ (tProd na M1 M2) (tProd na' N1 N2).
-
 Definition eq_opt_term `{checker_flags} φ (t u : option term) :=
   match t, u with
   | Some t, Some u => eq_term φ t u

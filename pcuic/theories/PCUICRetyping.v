@@ -2,13 +2,11 @@
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
 From MetaCoq.Template Require Import config monad_utils utils.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICChecker.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICChecker PCUICCumulativity.
 Require Import String.
 Local Open Scope string_scope.
 Set Asymmetric Patterns.
 Import monad_utils.MonadNotation.
-
-Existing Instance default_checker_flags.
 
 (** * Retyping
 
@@ -20,6 +18,7 @@ Existing Instance default_checker_flags.
   in particular. *)
 
 Section TypeOf.
+  Context {cf : checker_flags}.
   Context `{F : Fuel}.
   Context (Σ : global_context).
 
@@ -213,13 +212,15 @@ Section TypeOf.
       split.
       + econstructor ; try eassumption ; try ih ; try cih.
         (* Again we're missing result on how to type sorts... *)
-        all: admit.
+        left. red. exists [], a. unfold app_context; simpl; intuition auto with pcuic.
+        left. red. exists [], a0. unfold app_context; simpl; intuition auto with pcuic.
       + (* Sorts again *)
+        simpl.
         admit.
     - go eq. split.
       + econstructor ; try eassumption ; try ih ; try cih.
       + eapply congr_cumul_prod.
-        * eapply cumul_refl'.
+        * eapply conv_refl.
         * ih.
     - go eq. split.
       + econstructor ; try eassumption ; try ih ; try cih.

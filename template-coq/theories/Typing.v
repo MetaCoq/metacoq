@@ -574,7 +574,8 @@ Definition types_of_case ind mdecl idecl params u p pty :=
 
 (** Check that [uctx] instantiated at [u] is consistent with the current universe graph. *)
 
-Definition consistent_universe_context_instance (φ : constraints) uctx u :=
+Definition consistent_universe_context_instance `{checker_flags}
+           (φ : constraints) uctx u :=
   match uctx with
   | Monomorphic_ctx c => True
   | Polymorphic_ctx c
@@ -762,6 +763,7 @@ Inductive typing `{checker_flags} (Σ : global_context) (Γ : context) : term ->
     Σ ;;; Γ |- tFix mfix n : decl.(dtype)
 
 | type_CoFix mfix n decl :
+    allow_cofix ->
     let types := fix_context mfix in
     nth_error mfix n = Some decl ->
     All_local_env typing Σ (Γ ,,, types) ->
@@ -934,7 +936,7 @@ Section GlobalMaps.
   Definition fresh_global (s : string) : global_declarations -> Prop :=
     Forall (fun g => global_decl_ident g <> s).
 
-  Inductive on_global_decls φ : global_declarations -> Type :=
+  Inductive on_global_decls `{checker_flags} φ : global_declarations -> Type :=
   | globenv_nil : consistent φ -> on_global_decls φ []
   | globenv_decl Σ d :
       on_global_decls φ Σ ->
@@ -942,7 +944,7 @@ Section GlobalMaps.
       on_global_decl (Σ, φ) d ->
       on_global_decls φ (d :: Σ).
 
-  Definition on_global_env (g : global_context) :=
+  Definition on_global_env `{checker_flags} (g : global_context) :=
     on_global_decls (snd g) (fst g).
 
 End GlobalMaps.
@@ -958,7 +960,7 @@ Proof.
   induction 1; intros; simpl; econstructor; eauto.
 Qed.
 
-Lemma on_global_decls_mix {Σ P Q} :
+Lemma on_global_decls_mix `{checker_flags} {Σ P Q} :
   sort_irrelevant Q ->
   on_global_env P Σ -> on_global_env Q Σ -> on_global_env (fun Σ Γ t T => (P Σ Γ t T * Q Σ Γ t T)%type) Σ.
 Proof.
@@ -1374,6 +1376,7 @@ Lemma typing_ind_env `{cf : checker_flags} :
         P Σ Γ (tFix mfix n) decl.(dtype)) ->
 
     (forall Σ (wfΣ : wf Σ) (Γ : context) (wfΓ : wf_local Σ Γ) (mfix : list (def term)) (n : nat) decl,
+        allow_cofix ->
         let types := fix_context mfix in
         nth_error mfix n = Some decl ->
         All_local_env (fun Σ Γ b ty => (typing Σ Γ b ty * P Σ Γ b ty)%type) Σ (Γ ,,, types) ->
@@ -1678,7 +1681,7 @@ Proof.
     apply IHX. simpl in *. lia.
 Qed.
 
-Lemma lookup_on_global_env P Σ c decl :
+Lemma lookup_on_global_env `{checker_flags} P Σ c decl :
   on_global_env P Σ ->
   lookup_env (fst Σ) c = Some decl ->
   { Σ' & { wfΣ' : on_global_env P Σ' & on_global_decl P Σ' decl } }.

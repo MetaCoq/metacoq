@@ -261,14 +261,14 @@ Proof.
     unfold test_def. simpl. toProp.
     split.
     rewrite -> app_context_length in *. rewrite -> Nat.add_comm in *.
-    eapply closedn_lift_inv in H1; eauto. lia.
+    eapply closedn_lift_inv in H2; eauto. lia.
     subst types.
-    now rewrite -> app_context_length, fix_context_length in H0.
-    eapply (nth_error_all) in H; eauto. simpl in *.
+    now rewrite -> app_context_length, fix_context_length in H1.
+    eapply (nth_error_all) in H0; eauto. simpl in *.
     intuition. toProp.
-    subst types. rewrite app_context_length in H0.
-    rewrite Nat.add_comm in H0.
-    now eapply closedn_lift_inv in H0.
+    subst types. rewrite app_context_length in H1.
+    rewrite Nat.add_comm in H1.
+    now eapply closedn_lift_inv in H1.
 Qed.
 
 Lemma declared_decl_closed `{checker_flags} Σ cst decl :

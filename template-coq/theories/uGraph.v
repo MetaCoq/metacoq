@@ -87,17 +87,18 @@ Defined.
 (* None -> not satisfiable *)
 (* Some empty -> useless *)
 (* else: singleton or two elements set (l = l' -> {l<=l', l'<=l}) *)
-Definition gc_of_constraint (uc : univ_constraint) : option GoodConstraintSet.t
+Definition gc_of_constraint `{checker_flags} (uc : univ_constraint) : option GoodConstraintSet.t
   := let empty := Some GoodConstraintSet.empty in
      let singleton := fun x => Some (GoodConstraintSet.singleton x) in
      let pair := fun x y => Some (GoodConstraintSet_pair x y) in
      match uc with
      (* Prop _ _ *)
-     | (Level.lProp, Le, _) => empty
+     | (Level.lProp, Le, Level.lProp) => empty
+     | (Level.lProp, Le, _) => if prop_sub_type then empty else None
      | (Level.lProp, Eq, Level.lProp) => empty
      | (Level.lProp, Eq, _) => None
      | (Level.lProp, Lt, Level.lProp) => None
-     | (Level.lProp, Lt, _) => empty
+     | (Level.lProp, Lt, _) => if prop_sub_type then empty else None
 
      (* Set _ _ *)
      | (Level.lSet, Le, Level.lProp) => None
@@ -156,6 +157,7 @@ Ltac gc_of_constraint_tac :=
   | |- is_true (_ =? _) => apply PeanoNat.Nat.eqb_eq
   | |- is_true (gc_satisfies _ (GoodConstraintSet_pair _ _))
                => apply gc_satisfies_pair; cbn -[Nat.leb Nat.eqb]; split
+  (* | H : is_true false |- _ => discriminate H *)
   | H : is_true (if _ then true else false) |- _ => rewrite if_true_false in H
   | H : is_true (_ <? _) |- _ => apply PeanoNat.Nat.ltb_lt in H
   | H : is_true (_ <=? _) |- _ => apply PeanoNat.Nat.leb_le in H
@@ -165,17 +167,38 @@ Ltac gc_of_constraint_tac :=
                  destruct H
   end.
 
+Section GC.
+
+Context `{cf : checker_flags}.
+
 Lemma gc_of_constraint_spec v uc :
   satisfies0 v uc <-> on_Some (gc_satisfies v) (gc_of_constraint uc).
 Proof.
   split.
-  - destruct 1; destruct l, l'; try constructor; try reflexivity.
+  - destruct 1 ; destruct l, l' ; try constructor ; try reflexivity.
     all: cbn -[Nat.leb Nat.eqb GoodConstraintSet_pair] in *.
-    all: repeat gc_of_constraint_tac; lia.
-  - destruct uc as [[[] []] []]; simpl; try (now inversion 1); constructor.
-    all: cbn -[Nat.leb Nat.eqb GoodConstraintSet_pair] in *; try lia.
-    all: repeat gc_of_constraint_tac; lia.
+    all: unfold lle, llt in *.
+    (* all: unfold gc_of_constraint in *. *)
+    all: destruct prop_sub_type.
+    all: try solve [ repeat gc_of_constraint_tac ; lia ].
+    all: try solve [ cbn ; easy ].
+  - destruct uc as [[[] []] []].
+    all: cbn - [Nat.leb Nat.eqb GoodConstraintSet_pair].
+    all: try (now inversion 1).
+    all: constructor.
+    all: unfold lle, llt in *.
+    all: destruct prop_sub_type.
+    all: try solve [
+               cbn - [Nat.leb Nat.eqb GoodConstraintSet_pair] in * ; lia
+             ].
+    all: try solve [
+               cbn - [Nat.leb Nat.eqb GoodConstraintSet_pair] in * ;
+               try lia ;
+                repeat gc_of_constraint_tac ;
+               lia
+             ].
 Qed.
+
 
 Definition add_gc_of_constraint uc (S : option GoodConstraintSet.t)
   := match S with
@@ -272,7 +295,7 @@ Proof.
     + intros ctrs' e. cbn. intros v Hv. apply H. apply gc_of_constraints_spec.
       rewrite e. assumption.
     + intro; exact I.
-  - case_eq (gc_of_constraints ctrs); cbn. 
+  - case_eq (gc_of_constraints ctrs); cbn.
     + intros ctrs' e H.
       intros v Hv. apply H.
       apply gc_of_constraints_spec in Hv.
@@ -282,6 +305,7 @@ Proof.
       rewrite e in Hv; contradiction.
 Defined.
 
+End GC.
 
 
 (* no_prop_levels of the graph are levels which are not Prop *)
@@ -536,7 +560,7 @@ Proof.
       | |- ∥ Paths ?X _ _ ∥ => set (G' := X)
       end.
       simplify_sets.
-      rdestruct H; subst. 
+      rdestruct H; subst.
       2-4: sq; destruct g0; cbn in *; paths.
       1-3: sq; destruct g; cbn in *; paths.
       specialize (H3 _ H); sq; paths.
@@ -554,7 +578,7 @@ Proof.
       | |- ∥ Paths ?X _ _ ∥ => set (G' := X)
       end.
       simplify_sets.
-      rdestruct H; subst. 
+      rdestruct H; subst.
       2-4: sq; destruct g0; cbn in *; paths.
       1-3: sq; destruct g; cbn in *; paths.
       specialize (H3 _ H); sq; paths.
@@ -571,7 +595,7 @@ Proof.
       | |- ∥ Paths ?X _ _ ∥ => set (G' := X)
       end.
       simplify_sets.
-      rdestruct H; subst. 
+      rdestruct H; subst.
       3: specialize (H3 _ H). all: sq; paths.
   - split; [intros e H; split|split]; cbn in *; rewrite HG' in *; clear HG'.
     + simplify_sets.
@@ -586,7 +610,7 @@ Proof.
       | |- ∥ Paths ?X _ _ ∥ => set (G' := X)
       end.
       simplify_sets.
-      rdestruct H; subst. 
+      rdestruct H; subst.
       5: specialize (H3 _ H). all: sq; paths.
 Qed.
 
@@ -654,7 +678,7 @@ Section MakeGraph.
   Proof.
     subst G; apply make_graph_ind; clear ctrs.
     - split. apply init_graph_invariants. reflexivity.
-    - intros G gc HG; split. 
+    - intros G gc HG; split.
       + now apply add_gc_constraint_invariants.
       + destruct HG as [_ HG].
         revert G HG. unfold add_gc_constraint.
@@ -747,7 +771,7 @@ Section MakeGraph.
   Qed.
 
   Lemma edges_make_graph' e :
-    EdgeSet.In e (wGraph.E G) <-> 
+    EdgeSet.In e (wGraph.E G) <->
     (GoodConstraintSet.Exists (fun gc => In e (edges_of_constraint gc)) ctrs).
   Proof.
     rewrite edges_make_graph. clear G.
@@ -782,7 +806,7 @@ Section MakeGraph.
   Proof.
     unfold gc_satisfies, correct_labelling. split; intro H.
     - split. now rewrite source_make_graph.
-      intros e He. 
+      intros e He.
       apply edges_make_graph' in He.
       destruct He as [gc [H0 H1]].
       apply GoodConstraintSet.for_all_spec in H.
@@ -800,7 +824,7 @@ Section MakeGraph.
         destruct H0; subst. rewrite source_edge_of_level.
         destruct g0; cbn; lia.
         destruct H0 as [|[]]; subst. destruct g, g0; cbn in *; lia.
-      + destruct H1 as [|[]]; subst. cbn. assumption. 
+      + destruct H1 as [|[]]; subst. cbn. assumption.
       + destruct H1 as [|[|[]]]; subst; cbn.
         apply PeanoNat.Nat.eqb_eq in H. lia. lia.
     - apply GoodConstraintSet.for_all_spec.
@@ -835,7 +859,7 @@ Section MakeGraph.
     unfold correct_labelling; intuition.
     now rewrite source_make_graph.
     pose proof invariants_make_graph.
-    rewrite !valuation_labelling_eq; firstorder. 
+    rewrite !valuation_labelling_eq; firstorder.
   Qed.
 
   Corollary make_graph_spec2 :
@@ -862,13 +886,13 @@ Existing Instance consistent_no_loop.
 
 (** ** Check of consistency ** *)
 
-Definition is_consistent (ctrs : constraints) :=
+Definition is_consistent `{checker_flags} (ctrs : constraints) :=
   match gc_of_constraints ctrs with
   | Some ctrs => is_acyclic (make_graph ctrs)
   | None => false
   end.
 
-Lemma is_consistent_spec ctrs
+Lemma is_consistent_spec `{checker_flags} ctrs
   : is_consistent ctrs <-> consistent ctrs.
 Proof with try exact _.
   etransitivity. 2: symmetry; apply gc_consistent_iff.
@@ -1016,7 +1040,7 @@ Section CheckLeq.
   (*   : gc_leq_universe_n n ctrs (Universe.make l) (Universe.make l') *)
   (*                       -> constrained l ctrs /\ constrained l' ctrs. *)
   (* Proof. *)
-    
+
   (* Admitted. *)
 
   (* Lemma constrain_iff l gc *)

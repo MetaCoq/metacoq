@@ -366,11 +366,11 @@ Proof.
     clear Hmfix.
     split.
     + revert X0. generalize (fix_context mfix). intros.
-      clear decl H0. constructor. induction mfix. constructor. constructor.
+      clear decl H0 H1. constructor. induction mfix. constructor. constructor.
       2:{ apply IHmfix. inv X0. auto. }
       inv X0. intuition. now apply wf_lift_wf in H1.
     + eapply nth_error_all in X0; eauto. simpl in X0; intuition eauto.
-      now apply wf_lift_wf in H2.
+      now apply wf_lift_wf in H3.
 Qed.
 
 Lemma typing_all_wf_decl `{checker_flags} Σ (wfΣ : wf Σ) Γ (wfΓ : wf_local Σ Γ) :

@@ -1719,7 +1719,8 @@ Proof.
       * apply IHt; apply All_local_env_app_inv; intuition.
       * apply IHt'; apply All_local_env_app_inv; intuition.
     + erewrite map_dtype. eapply type_CoFix.
-      * rewrite nth_error_map H0. reflexivity.
+      * assumption.
+      * rewrite nth_error_map H1. reflexivity.
       * now rewrite subst_fix_context.
       * rewrite subst_fix_context.
         apply All_map.

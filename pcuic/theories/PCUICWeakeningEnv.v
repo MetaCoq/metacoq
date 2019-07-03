@@ -92,7 +92,7 @@ Proof.
   econstructor 3; eauto. eapply weakening_env_red1; eauto. exists Σ''; eauto.
 Qed.
 
-Lemma weakening_env_consistent_universe_context_instance:
+Lemma weakening_env_consistent_universe_context_instance `{checker_flags} :
   forall (Σ : global_context) (u : list Level.t) univs,
     consistent_universe_context_instance (snd Σ) univs u ->
     forall Σ' : global_context,

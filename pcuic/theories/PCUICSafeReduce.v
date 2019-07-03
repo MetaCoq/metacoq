@@ -705,7 +705,7 @@ Section Reduce.
     - apply welltyped_context in h'. simpl in h'.
       destruct h' as [T h'].
       apply inversion_CoFix in h'.
-      destruct h' as [decl [e [? [? ?]]]].
+      destruct h' as [decl [? [e [? [? ?]]]]].
       unfold unfold_cofix in bot.
       rewrite e in bot. discriminate.
     - cbn. rewrite zipc_appstack. reflexivity.
@@ -824,7 +824,7 @@ Section Reduce.
     - apply welltyped_context in h'. simpl in h'.
       destruct h' as [T h'].
       apply inversion_CoFix in h'.
-      destruct h' as [decl [e [? [? ?]]]].
+      destruct h' as [decl [? [e [? [? ?]]]]].
       unfold unfold_cofix in bot.
       rewrite e in bot. discriminate.
     - cbn. rewrite zipc_appstack. reflexivity.

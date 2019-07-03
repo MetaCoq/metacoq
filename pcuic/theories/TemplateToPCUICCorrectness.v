@@ -981,15 +981,15 @@ Proof.
       f_equal. f_equal. extensionality i; extensionality x.
       simpl. rewrite trans_lift. reflexivity. }
     econstructor; eauto.
-    now rewrite nth_error_map H.
+    now rewrite nth_error_map H0.
     -- unfold app_context, trans_local.
-       rewrite H0. unfold trans_local.
+       rewrite H1. unfold trans_local.
        rewrite <- map_app.
        eapply trans_wf_local.
        eapply TTy.All_local_env_impl. eauto. simpl; intuition eauto with wf.
     -- apply All_map. eapply All_impl; eauto.
        unfold compose. simpl. intuition eauto 3 with wf.
-       rewrite H0. rewrite /trans_local map_length.
+       rewrite H1. rewrite /trans_local map_length.
        unfold Template.AstUtils.app_context in b.
        rewrite /trans_local map_app in b.
        rewrite <- trans_lift. apply b.

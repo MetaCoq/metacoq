@@ -603,7 +603,8 @@ Definition types_of_case ind mdecl idecl params u p pty :=
 
 (** Check that [uctx] instantiated at [u] is consistent with the current universe graph. *)
 
-Definition consistent_universe_context_instance (φ : constraints) uctx u :=
+Definition consistent_universe_context_instance `{checker_flags}
+           (φ : constraints) uctx u :=
   match uctx with
   | Monomorphic_ctx c => True
   | Polymorphic_ctx c
@@ -1918,6 +1919,7 @@ Lemma typing_ind_env `{cf : checker_flags} :
         P Σ Γ (tFix mfix n) decl.(dtype)) ->
 
     (forall Σ (wfΣ : wf Σ) (Γ : context) (wfΓ : wf_local Σ Γ) (mfix : list (def term)) (n : nat) decl,
+        allow_cofix ->
         let types := fix_context mfix in
         nth_error mfix n = Some decl ->
         All_local_env (lift_typing (fun Σ Γ b ty => (typing Σ Γ b ty * P Σ Γ b ty)%type) Σ) (Γ ,,, types) ->

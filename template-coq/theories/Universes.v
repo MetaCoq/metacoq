@@ -1,6 +1,6 @@
 Require Import Ascii String ZArith List Bool utils.
-Require FSets.FSetWeakList FSets.FMapWeakList MSets.MSetWeakList.
-Require Import config.
+Require Import MSetWeakList MSetFacts MSetProperties.
+Require Import BasicAst config.
 Import ListNotations.
 
 Module Level.
@@ -65,7 +65,8 @@ Module LevelDecidableType.
    Definition eq_dec : forall x y : t, {eq x y} + {~ eq x y} := Level.eq_dec.
 End LevelDecidableType.
 Module LevelSet <: (MSetInterface.WSetsOn LevelDecidableType) := MSets.MSetWeakList.Make LevelDecidableType.
-Module LevelMap := FSets.FMapWeakList.Make LevelDecidableType.
+Module LevelSetFact := WFactsOn LevelDecidableType LevelSet.
+Module LevelSetProp := WPropertiesOn LevelDecidableType LevelSet.
 
 Definition universe_level := Level.t.
 
@@ -274,12 +275,27 @@ Module UContext.
   Definition constraints : t -> constraints := snd.
 
   Definition dest : t -> Instance.t * ConstraintSet.t := fun x => x.
-
-  (* (** Keeps the order of the instances *) *)
-  (* val union : t -> t -> t *)
-  (* (* the number of universes in the context *) *)
-  (* val size : t -> int *)
 End UContext.
+
+Module AUContext.
+  Definition t := list ident × constraints.
+
+  Definition make (ids : list ident) (ctrs : constraints) : t := (ids, ctrs).
+  Definition repr '((u, cst) : t) : UContext.t :=
+    (map_i (fun i _ => Level.Var i) u, cst).
+
+  Definition levels (uctx : t) : LevelSet.t :=
+    LevelSetProp.of_list (fst (repr uctx)).
+End AUContext.
+
+Module ContextSet.
+  Definition t := LevelSet.t × constraints.
+
+  Definition empty : t := (LevelSet.empty, ConstraintSet.empty).
+
+  Definition is_empty (uctx : t)
+    := LevelSet.is_empty (fst uctx) && ConstraintSet.is_empty (snd uctx).
+End ContextSet.
 
 
 (* Variance info is needed to do full universe polymorphism *)
@@ -304,13 +320,14 @@ End Variance.
 
     This data structure maintains the invariant that the variance
    array has the same length as the universe instance. *)
-Module CumulativityInfo.
-  Definition t := UContext.t × list Variance.t.
+Module ACumulativityInfo.
+  Definition t := AUContext.t × list Variance.t.
 
-  Definition empty : t := (UContext.empty, nil).
+  Definition make ctx var : t := (ctx, var).
+  (* Definition empty : t := (AUContext.empty, nil). *)
   (* val is_empty : t -> bool *)
 
-  Definition univ_context : t -> UContext.t := fst.
+  Definition univ_context : t -> AUContext.t := fst.
   Definition variance : t -> list Variance.t := snd.
 
   (** This function takes a universe context representing constraints
@@ -320,12 +337,12 @@ Module CumulativityInfo.
 
   (* val leq_constraints : t -> Instance.t constraint_function *)
   (* val eq_constraints : t -> Instance.t constraint_function *)
-End CumulativityInfo.
+End ACumulativityInfo.
 
-Inductive universe_context : Type :=
-| Monomorphic_ctx (ctx : UContext.t)
-| Polymorphic_ctx (cst : UContext.t)
-| Cumulative_ctx (ctx : CumulativityInfo.t).
+Inductive universes_decl : Type :=
+| Monomorphic_ctx (ctx : ContextSet.t)
+| Polymorphic_ctx (cst : AUContext.t)
+| Cumulative_ctx (ctx : ACumulativityInfo.t).
 
 
 (** * Valuations *)
@@ -401,6 +418,10 @@ Definition eq_universe φ u u'
 
 Definition leq_universe φ u u'
   := if check_univs then leq_universe0 φ u u' else True.
+
+(* ctrs are "enforced" by φ *)
+Definition valid_constraints φ ctrs
+  := forall v, satisfies v φ -> satisfies v ctrs.
 
 
 (** **** Lemmas about eq and leq **** *)

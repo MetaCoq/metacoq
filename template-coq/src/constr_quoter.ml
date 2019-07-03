@@ -173,13 +173,6 @@ struct
     let uctx = Univ.AUContext.repr uctx in
     quote_abstract_univ_context_aux uctx
 
-  let quote_inductive_universes uctx =
-    match uctx with
-    | Monomorphic_ind_entry uctx -> quote_univ_context (Univ.ContextSet.to_context uctx)
-    | Polymorphic_ind_entry uctx -> quote_abstract_univ_context_aux uctx
-    | Cumulative_ind_entry info ->
-      quote_abstract_univ_context_aux (CumulativityInfo.univ_context info) (* FIXME lossy *)
-
   let quote_ugraph (g : UGraph.t) =
     quote_univ_constraints (UGraph.constraints_of_universes g)
 
@@ -298,7 +291,7 @@ struct
   let add_global_decl d l =
     constr_mkApp (c_cons, [|Lazy.force tglobal_decl; d; l|])
 
-  let mk_program f s = pairl tglobal_declarations tTerm f s
+  let mk_program f s = pairl tglobal_env tTerm f s
 
   let quote_mind_finiteness (f: Declarations.recursivity_kind) =
     match f with

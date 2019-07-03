@@ -28,7 +28,7 @@ Inductive subs `{cf : checker_flags} Σ (Γ : context) : list term -> context ->
 (*               Σ ;;; Γ |- subst0 s t : subst0 s T -> *)
 (*               subs Σ Γ (subst0 s t :: s) (Δ ,, vdef na t T). *)
 
-(** Linking a cantext (with let-ins), an instance (reversed substitution)
+(** Linking a context (with let-ins), an instance (reversed substitution)
     for its assumptions and a well-formed substitution for it. *)
 
 Inductive context_subst : context -> list term -> list term -> Set :=
@@ -131,7 +131,7 @@ Proof.
   rewrite commut_lift_subst_rec. lia. f_equal; lia.
 Qed.
 
-Lemma All_local_env_subst `{checker_flags} (P Q : global_context -> context -> term -> term -> Type) Σ c n k :
+Lemma All_local_env_subst `{checker_flags} (P Q : global_env_ext -> context -> term -> term -> Type) Σ c n k :
   All_local_env Q Σ c ->
   (forall Γ t T,
       Q Σ Γ t T ->
@@ -242,11 +242,11 @@ Hint Resolve subst_is_constructor.
 Hint Constructors All_local_env.
 
 Lemma typed_subst `{checker_flags} Σ Γ t T n k :
-  wf Σ -> k >= #|Γ| ->
+  wf Σ.1 -> k >= #|Γ| ->
   Σ ;;; Γ |- t : T -> subst n k T = T /\ subst n k t = t.
 Proof.
   intros wfΣ Hk Hty.
-  pose proof (typing_wf_local wfΣ Hty).
+  pose proof (typing_wf_local Hty).
   pose proof (typing_wf _ wfΣ _ _ _ Hty) as [wft wfT].
   apply typecheck_closed in Hty; eauto.
   destruct Hty as [_ Hcl].
@@ -258,7 +258,7 @@ Proof.
   apply (subst_closedn n) in H0; apply (subst_closedn n) in H1; auto.
 Qed.
 
-Lemma subst_wf_local `{checker_flags} Σ Γ n k : wf Σ -> wf_local Σ Γ -> subst_context n k Γ = Γ.
+Lemma subst_wf_local `{checker_flags} Σ Γ n k : wf Σ.1 -> wf_local Σ Γ -> subst_context n k Γ = Γ.
 Proof.
   intros wfΣ.
   induction 1; auto; unfold subst_context, snoc; rewrite fold_context_snoc0; auto; unfold snoc;
@@ -270,7 +270,7 @@ Qed.
 
 Lemma subst_declared_constant `{checker_flags} Σ cst decl n k u :
   wf Σ ->
-  declared_constant (fst Σ) cst decl ->
+  declared_constant Σ cst decl ->
   map_constant_body (subst n k) (map_constant_body (UnivSubst.subst_instance_constr u) decl) =
   map_constant_body (UnivSubst.subst_instance_constr u) decl.
 Proof.
@@ -294,7 +294,7 @@ Definition subst_mutual_inductive_body n k mind m :=
 
 Lemma subst_declared_minductive `{checker_flags} Σ cst decl n k :
   wf Σ ->
-  declared_minductive (fst Σ) cst decl ->
+  declared_minductive Σ cst decl ->
   subst_mutual_inductive_body n k cst decl = decl.
 Proof.
   unfold declared_minductive.
@@ -304,7 +304,7 @@ Proof.
   red in decl'.
   destruct decl. simpl in *. f_equal.
   - eapply subst_wf_local; eauto.
-    eapply onParams in decl'. auto.
+    2: eapply onParams in decl'; eauto. apply wfΣ'.
   - apply onInductives in decl'.
     revert decl'. generalize ind_bodies at 2 4 5.
     intros.
@@ -316,29 +316,29 @@ Proof.
     destruct X0. simpl in *.
     assert (subst n k ind_type = ind_type).
     destruct onArity as [[s Hs] Hpars].
-    eapply typed_subst; eauto. simpl; lia.
+    eapply typed_subst; eauto. apply wfΣ'. simpl; lia.
     rewrite H0 in Heq'. rewrite Heq in Heq'. revert Heq'; intros [= <- <-].
     f_equal; auto.
     apply (Alli_map_id onConstructors).
     intros n1 [[x p] n']. intros [[s Hty] Hpars].
-    unfold on_pi2; f_equal; f_equal. eapply typed_subst. 3:eapply Hty. wf. simpl. lia.
+    unfold on_pi2; f_equal; f_equal. eapply typed_subst. 3:eapply Hty. apply wfΣ'. wf. simpl. lia.
     apply (Alli_map_id onProjections).
     intros n1 [x p]. unfold on_projection; simpl.
     destruct decompose_prod_assum.
     intros [[s Hty] Hpars].
     unfold on_snd; f_equal; f_equal.
-    eapply typed_subst. 3:eapply Hty. wf. wf. simpl. injection Heq. intros -> ->. lia.
+    eapply typed_subst. 3:eapply Hty. apply wfΣ'. wf. wf. simpl. injection Heq. intros -> ->. simpl. lia.
 Qed.
 
 Lemma subst_declared_inductive `{checker_flags} Σ ind mdecl idecl n k :
   wf Σ ->
-  declared_inductive (fst Σ) mdecl ind idecl ->
+  declared_inductive Σ mdecl ind idecl ->
   map_one_inductive_body (inductive_mind ind) (polymorphic_instance (mdecl.(ind_universes)))
                          (length (arities_context mdecl.(ind_bodies)))
                          (fun k' => subst n (k' + k)) (inductive_ind ind) idecl = idecl.
 Proof.
   unfold declared_inductive. intros wfΣ [Hmdecl Hidecl].
-  destruct Σ. eapply (subst_declared_minductive _ _ _ n k) in Hmdecl.
+  eapply (subst_declared_minductive _ _ _ n k) in Hmdecl.
   unfold subst_mutual_inductive_body in Hmdecl.
   destruct mdecl. simpl in *.
   injection Hmdecl. intros Heq.
@@ -368,11 +368,11 @@ Qed.
 
 Lemma subst_declared_constructor `{checker_flags} Σ c u mdecl idecl cdecl n k :
   wf Σ -> All Ast.wf n ->
-  declared_constructor (fst Σ) mdecl idecl c cdecl ->
+  declared_constructor Σ mdecl idecl c cdecl ->
   subst (map (UnivSubst.subst_instance_constr u) n) k (type_of_constructor mdecl cdecl c u) = (type_of_constructor mdecl cdecl c u).
 Proof.
   unfold declared_constructor. destruct c as [i ci]. intros wfΣ wfn [Hidecl Hcdecl].
-  destruct Σ. eapply (subst_declared_inductive _ _ _ _ n k) in Hidecl; eauto.
+  eapply (subst_declared_inductive _ _ _ _ n k) in Hidecl; eauto.
   unfold type_of_constructor. destruct cdecl as [[id t'] arity].
   destruct idecl; simpl in *.
   destruct (decompose_prod_assum [] _) eqn:Heq.
@@ -392,7 +392,7 @@ Qed.
 
 Lemma subst_declared_projection `{checker_flags} Σ c mdecl idecl pdecl n k :
   wf Σ -> All Ast.wf n ->
-  declared_projection (fst Σ) mdecl idecl c pdecl ->
+  declared_projection Σ mdecl idecl c pdecl ->
   on_snd (subst n (S (ind_npars mdecl + k))) pdecl = pdecl.
 Proof.
   intros wfΣ wfn Hd.
@@ -597,7 +597,7 @@ Qed.
 Hint Rewrite subst_instantiate_params : lift.
 
 Lemma wf_arities_context `{checker_flags} Σ mind mdecl : wf Σ ->
-  declared_minductive (fst Σ) mind mdecl -> wf_local Σ (arities_context mdecl.(ind_bodies)).
+  declared_minductive Σ mind mdecl -> wf_local (Σ, ind_universes mdecl) (arities_context mdecl.(ind_bodies)).
 Proof.
   intros wfΣ Hdecl.
   eapply declared_minductive_inv in Hdecl. 2:apply weaken_env_prop_typing. all:eauto.
@@ -613,7 +613,7 @@ Proof.
   specialize (IHl Hl).
   econstructor; eauto.
   fold (arities_context l) in *.
-  unshelve epose proof (weakening Σ [] (arities_context l) _ _ wfΣ _ Hs).
+  unshelve epose proof (weakening (Σ, ind_universes mdecl) [] (arities_context l) _ _ wfΣ _ Hs).
   now rewrite app_context_nil_l.
   simpl in X.
   eapply (env_prop_typing _ typecheck_closed) in Hs; eauto.
@@ -625,15 +625,15 @@ Qed.
 
 Lemma on_constructor_closed_wf `{checker_flags} {Σ mind mdecl u i idecl cdecl} :
   wf Σ ->
-  on_constructor (lift_typing typing) Σ (inductive_mind mind) mdecl (inductive_ind mind) idecl i cdecl ->
+  on_constructor (lift_typing typing) (Σ, ind_universes mdecl) (inductive_mind mind) mdecl (inductive_ind mind) idecl i cdecl ->
   let cty := subst0 (inds (inductive_mind mind) u (ind_bodies mdecl))
                     (subst_instance_constr u (snd (fst cdecl)))
   in closed cty = true /\ Ast.wf cty.
 Proof.
   intros wfΣ [[s Hs] Hparams].
-  pose proof (typing_wf_local wfΣ Hs).
+  pose proof (typing_wf_local Hs).
   destruct cdecl as [[id cty] car].
-  pose proof (typing_wf _ wfΣ _ _ _ Hs) as [wfty _].
+  pose proof (typing_wf (Σ, ind_universes mdecl) wfΣ _ _ _ Hs) as [wfty _].
   eapply (env_prop_typing _ typecheck_closed) in Hs; eauto.
   rewrite arities_context_length in Hs.
   rewrite -> andb_and in *. simpl in *.
@@ -646,16 +646,16 @@ Qed.
 
 Lemma on_projection_closed_wf `{checker_flags} {Σ mind mdecl u i idecl pdecl} :
   wf Σ ->
-  on_projection (lift_typing typing) Σ (inductive_mind mind) mdecl (inductive_ind mind) idecl i pdecl ->
+  on_projection (lift_typing typing) (Σ, ind_universes mdecl) (inductive_mind mind) mdecl (inductive_ind mind) idecl i pdecl ->
   let pty := subst_instance_constr u (snd pdecl) in
   closedn (S (ind_npars mdecl)) pty = true /\ Ast.wf pty.
 Proof.
   intros wfΣ. unfold on_projection.
   destruct decompose_prod_assum.
   intros [[s Hs] Hparams].
-  pose proof (typing_wf_local wfΣ Hs).
+  pose proof (typing_wf_local Hs).
   destruct pdecl as [id cty].
-  pose proof (typing_wf _ wfΣ _ _ _ Hs) as [wfty _].
+  pose proof (typing_wf (Σ, ind_universes mdecl) wfΣ _ _ _ Hs) as [wfty _].
   eapply (env_prop_typing _ typecheck_closed) in Hs; eauto.
   rewrite -> andb_and in *. simpl in *.
   destruct Hs as [Hs _]. split; auto.
@@ -848,7 +848,7 @@ Lemma subst_types_of_case `{cf:checker_flags} Σ ind mdecl idecl args u p pty in
   wf Σ ->
   All Ast.wf n -> All Ast.wf args ->
   Ast.wf pty -> Ast.wf (ind_type idecl) ->
-  declared_inductive (fst Σ) mdecl ind idecl ->
+  declared_inductive Σ mdecl ind idecl ->
   types_of_case ind mdecl idecl args u p pty = Some (indctx, pctx, ps, btys) ->
   types_of_case ind mdecl idecl (map (f []) args) u (f [] p) (f [] pty) =
   Some (f_ctx indctx, f_ctx pctx, ps, map (on_snd (f [])) btys).
@@ -857,9 +857,9 @@ Proof.
   pose proof (on_declared_inductive wfΣ wfidecl) as [onmind onind].
   apply onParams in onmind as Hparams.
   assert (closedparams : closed_ctx (ind_params mdecl)).
-  { eapply closed_wf_local ; eauto. }
+  { eapply closed_wf_local ; eauto; tas. }
   assert (wfparams : All wf_decl (ind_params mdecl)).
-  { apply Forall_All. eapply typing_all_wf_decl ; eauto. }
+  { apply Forall_All. eapply typing_all_wf_decl ; eauto; tas. }
   epose proof (subst_declared_inductive _ ind mdecl idecl n k wfΣ).
   forward H ; auto. rewrite <- H at 2.
   unfold types_of_case.
@@ -1081,7 +1081,7 @@ Defined.
 
 
 Lemma substitution_red1 `{CF:checker_flags} Σ Γ Γ' Γ'' s M N :
-  wf Σ -> All Ast.wf s -> subs Σ Γ s Γ' -> wf_local Σ Γ -> Ast.wf M ->
+  wf Σ.1 -> All Ast.wf s -> subs Σ Γ s Γ' -> wf_local Σ Γ -> Ast.wf M ->
   red1 (fst Σ) (Γ ,,, Γ' ,,, Γ'') M N ->
   red1 (fst Σ) (Γ ,,, subst_context s 0 Γ'') (subst s #|Γ''| M) (subst s #|Γ''| N).
 Proof.
@@ -1425,15 +1425,15 @@ Proof.
 Qed.
 
 Lemma subst_check_correct_arity:
-  forall (cf : checker_flags) (Σ : global_context) (ind : inductive) (u : universe_instance)
+  forall (cf : checker_flags) φ (ind : inductive) (u : universe_instance)
          (npar : nat) (args : list term) (idecl : one_inductive_body)
          (indctx pctx : list context_decl) s k,
-    check_correct_arity (snd Σ) idecl ind u indctx (firstn npar args) pctx ->
+    check_correct_arity φ idecl ind u indctx (firstn npar args) pctx ->
     check_correct_arity
-      (snd Σ) idecl ind u (subst_context s k indctx) (firstn npar (map (subst s k) args))
+      φ idecl ind u (subst_context s k indctx) (firstn npar (map (subst s k) args))
       (subst_context s k pctx).
 Proof.
-  intros cf Σ ind u npar args idecl indctx pctx s k.
+  intros cf φ ind u npar args idecl indctx pctx s k.
   unfold check_correct_arity.
   inversion_clear 1.
   rewrite subst_context_snoc. constructor.
@@ -1454,14 +1454,14 @@ Proof.
   - now apply subst_eq_context.
 Qed.
 
-Lemma subs_wf `{checker_flags} Σ Γ s Δ : wf Σ -> subs Σ Γ s Δ -> All Ast.wf s.
+Lemma subs_wf `{checker_flags} Σ Γ s Δ : wf Σ.1 -> subs Σ Γ s Δ -> All Ast.wf s.
 Proof.
   induction 2; constructor.
   apply typing_wf in t0; intuition auto with wf.
   eapply typing_wf_local in t0; eauto.
 Qed.
 
-Lemma wf_red1_wf `{checker_flags} Σ Γ M N : wf Σ -> wf_local Σ Γ -> Ast.wf M -> red1 (fst Σ) Γ M N -> Ast.wf N.
+Lemma wf_red1_wf `{checker_flags} Σ Γ M N : wf Σ.1 -> wf_local Σ Γ -> Ast.wf M -> red1 (fst Σ) Γ M N -> Ast.wf N.
 Proof.
   intros wfΣ wfΓ wfM Hr.
   apply wf_red1 in Hr; eauto.
@@ -1474,7 +1474,7 @@ Qed.
 (** The cumulativity relation is substitutive, yay! *)
 
 Lemma substitution_cumul `{CF:checker_flags} Σ Γ Γ' Γ'' s M N :
-  wf Σ -> wf_local Σ (Γ ,,, Γ' ,,, Γ'') -> subs Σ Γ s Γ' -> Ast.wf M -> Ast.wf N ->
+  wf Σ.1 -> wf_local Σ (Γ ,,, Γ' ,,, Γ'') -> subs Σ Γ s Γ' -> Ast.wf M -> Ast.wf N ->
   Σ ;;; Γ ,,, Γ' ,,, Γ'' |- M <= N ->
   Σ ;;; Γ ,,, subst_context s 0 Γ'' |- subst s #|Γ''| M <= subst s #|Γ''| N.
 Proof.
@@ -1495,13 +1495,13 @@ Proof.
 Qed.
 
 Theorem substitution `{checker_flags} Σ Γ Γ' s Δ (t : term) T :
-  wf Σ -> subs Σ Γ s Γ' ->
+  wf Σ.1 -> subs Σ Γ s Γ' ->
   Σ ;;; Γ ,,, Γ' ,,, Δ |- t : T ->
   wf_local Σ (Γ ,,, subst_context s 0 Δ) ->
   Σ ;;; Γ ,,, subst_context s 0 Δ |- subst s #|Δ| t : subst s #|Δ| T.
 Proof.
   intros HΣ Hs Ht.
-  pose proof (typing_wf_local HΣ Ht).
+  pose proof (typing_wf_local Ht).
   generalize_eqs Ht. intros eqw. rewrite <- eqw in X.
   revert Γ Γ' Δ s Hs eqw.
   revert Σ HΣ Γ0 X t T Ht.
@@ -1602,7 +1602,7 @@ Proof.
   - eapply refine_type. econstructor; eauto.
     eapply on_declared_inductive in isdecl as [on_mind on_ind]; auto.
     apply onArity in on_ind as [[s' Hindty] _].
-    pose proof (typing_wf _ wfΣ _ _ _ Hindty) as [clty _].
+    pose proof (typing_wf (Σ.1, ind_universes mdecl) wfΣ _ _ _ Hindty) as [clty _].
     apply typecheck_closed in Hindty as [_ Hindty]; eauto. symmetry.
     move/andP/proj1: Hindty. rewrite -(closedn_subst_instance_constr _ _ u) => Hty.
     apply: (subst_closedn s #|Δ|); auto with wf.
@@ -1744,7 +1744,7 @@ Proof.
 Qed.
 
 Theorem substitution_alt `{checker_flags} Σ Γ Γ' s Δ (t : term) T :
-  wf Σ -> subs Σ Γ s Γ' ->
+  wf Σ.1 -> subs Σ Γ s Γ' ->
   Σ ;;; Γ ,,, Γ' ,,, Δ |- t : T ->
   Σ ;;; Γ ,,, subst_context s 0 Δ |- subst s #|Δ| t : subst s #|Δ| T.
 Proof.
@@ -1764,7 +1764,7 @@ Proof.
 Qed.
 
 Lemma substitution0 `{checker_flags} Σ Γ n u U (t : term) T :
-  wf Σ ->
+  wf Σ.1 ->
   Σ ;;; Γ ,, vass n U |- t : T -> Σ ;;; Γ |- u : U ->
   Σ ;;; Γ |- t {0 := u} : T {0 := u}.
 Proof.

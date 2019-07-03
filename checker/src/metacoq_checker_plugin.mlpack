@@ -26,7 +26,6 @@ MSetDecide
 MSetProperties
 Compare_dec
 MSetWeakList
-FMapWeakList
 BinNums
 Universes0
 BasicAst

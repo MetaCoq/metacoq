@@ -45,7 +45,7 @@ Definition atom t :=
   end.
 
 Section Wcbv.
-  Context (Σ : global_declarations) (Γ : context).
+  Context (Σ : global_env) (Γ : context).
   (* The local context is fixed: we are only doing weak reductions *)
 
   Inductive eval : term -> term -> Type :=
@@ -270,12 +270,12 @@ End Wcbv.
 
 (** Well-typed closed programs can't go wrong: they always evaluate to a value. *)
 
-Conjecture closed_typed_wcbeval : forall (Σ : global_context) t T,
+Conjecture closed_typed_wcbeval : forall (Σ : global_env_ext) t T,
     Σ ;;; [] |- t : T -> { u & eval (fst Σ) [] t u }.
 
 (** Evaluation is a subrelation of reduction: *)
 
-Lemma wcbeval_red : forall (Σ : global_declarations) Γ t u,
+Lemma wcbeval_red : forall (Σ : global_env) Γ t u,
     eval Σ Γ t u -> red Σ Γ t u.
 Proof.
   induction 1; try constructor; eauto.

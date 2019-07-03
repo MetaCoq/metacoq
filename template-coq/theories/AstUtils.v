@@ -233,7 +233,7 @@ Fixpoint remove_arity (n : nat) (t : term) : term :=
           end
   end.
 
-Fixpoint lookup_mind_decl (id : ident) (decls : global_declarations)
+Fixpoint lookup_mind_decl (id : ident) (decls : global_env)
  := match decls with
     | nil => None
     | InductiveDecl kn d :: tl =>
@@ -416,8 +416,8 @@ Qed.
 Definition polymorphic_instance uctx :=
   match uctx with
   | Monomorphic_ctx c => Instance.empty
-  | Polymorphic_ctx c => fst (UContext.dest c)
-  | Cumulative_ctx c => fst (UContext.dest (fst c))
+  | Polymorphic_ctx c
+  | Cumulative_ctx (c, _) => fst (AUContext.repr c)
   end.
 
 Definition map_one_inductive_body mind u arities f n m :=

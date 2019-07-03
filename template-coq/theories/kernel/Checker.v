@@ -33,7 +33,7 @@ Module RedFlags.
 End RedFlags.
 
 Section Reduce.
-  Context (flags : RedFlags.t) (Σ : global_declarations).
+  Context (flags : RedFlags.t) (Σ : global_env).
 
   Definition zip (t : term * list term) := mkApps (fst t) (snd t).
 
@@ -258,7 +258,7 @@ Fixpoint leq_term `{checker_flags} (φ : universes_graph) (t u : term) {struct t
 Section Conversion.
 
   Context `{checker_flags} (flags : RedFlags.t).
-  Context (Σ : global_declarations) (G : universes_graph).
+  Context (Σ : global_env) (G : universes_graph).
 
   Definition nodelta_flags := RedFlags.mk true true true false true true.
 
@@ -576,21 +576,22 @@ Definition check_conv_leq `{checker_flags} {F:Fuel} := check_conv_gen Cumul.
 Definition check_conv `{checker_flags} {F:Fuel} := check_conv_gen Conv.
 
 
-Definition is_graph_of_contraints `{checker_flags} ctrs G :=
+Definition is_graph_of_global_env_ext `{checker_flags} Σ G :=
+  let ctrs := global_ext_constraints Σ in
   match gc_of_constraints ctrs with
   | Some ctrs => G = make_graph ctrs
   | None => False
   end.
 
 Lemma conv_spec : forall `{checker_flags} {F:Fuel} Σ G Γ t u,
-    is_graph_of_contraints (snd Σ) G ->
+    is_graph_of_global_env_ext Σ G ->
     Σ ;;; Γ |- t = u <~> check_conv (fst Σ) G Γ t u = Checked ().
 Proof.
   intros. todo "Checker.conv_spec".
 Defined.
 
 Lemma cumul_spec : forall `{checker_flags} {F:Fuel} Σ G Γ t u,
-    is_graph_of_contraints (snd Σ) G ->
+    is_graph_of_global_env_ext Σ G ->
     Σ ;;; Γ |- t <= u <~> check_conv_leq (fst Σ) G Γ t u = Checked ().
 Proof.
   intros. todo "Checker.cumul_spec".
@@ -603,7 +604,7 @@ Proof. intros. todo "Checker.reduce_cumul". Defined.
 
 Section Typecheck.
   Context {F : Fuel}.
-  Context (Σ : global_declarations).
+  Context (Σ : global_env).
 
   Definition hnf_stack Γ t :=
     match reduce_stack RedFlags.default Σ Γ fuel t [] with
@@ -653,7 +654,7 @@ End Typecheck.
 
 Section Typecheck2.
   Context {cf : checker_flags} {F : Fuel}.
-  Context (Σ : global_declarations) (G : universes_graph).
+  Context (Σ : global_env) (G : universes_graph).
 
   Definition convert_leq Γ (t u : term) : typing_result unit :=
     if eq_term G t u then ret ()
@@ -694,11 +695,11 @@ Section Typecheck2.
 
   End InferAux.
 
-  Definition polymorphic_constraints (u : universe_context) :=
+  Definition polymorphic_constraints u :=
     match u with
     | Monomorphic_ctx _ => ConstraintSet.empty
-    | Polymorphic_ctx ctx => UContext.constraints ctx
-    | Cumulative_ctx ctx => UContext.constraints (CumulativityInfo.univ_context ctx)
+    | Polymorphic_ctx ctx
+    | Cumulative_ctx (ctx, _) => snd (AUContext.repr ctx)
     end.
 
   Definition lookup_constant_type cst u :=
@@ -861,12 +862,12 @@ Section Typecheck2.
 End Typecheck2.
 
 Lemma cumul_convert_leq : forall `{checker_flags} {F:Fuel} Σ G Γ t t',
-  is_graph_of_contraints (snd Σ) G ->
+  is_graph_of_global_env_ext Σ G ->
   Σ ;;; Γ |- t <= t' <~> convert_leq (fst Σ) G Γ t t' = Checked ().
 Proof. intros. todo "Checker.cumul_convert_leq". Defined.
 
 Lemma cumul_reduce_to_sort : forall `{checker_flags} {F:Fuel} Σ G Γ t s',
-  is_graph_of_contraints (snd Σ) G ->
+  is_graph_of_global_env_ext Σ G ->
     Σ ;;; Γ |- t <= tSort s' <~>
     { s'' & reduce_to_sort (fst Σ) Γ t = Checked s''
             /\ try_is_leq_universe G s'' s' = true }.
@@ -925,8 +926,8 @@ Open Scope monad.
 
 Section InferOk.
   Context {cf : checker_flags} {F : Fuel}.
-  Context (Σ : global_context) (G : universes_graph)
-          (HG : is_graph_of_contraints (snd Σ) G).
+  Context (Σ : global_env_ext) (G : universes_graph)
+          (HG : is_graph_of_global_env_ext Σ G).
 
   Ltac tc := eauto with typecheck.
 
@@ -1190,11 +1191,11 @@ Section Checker.
       else ret ()
     end.
 
-  Definition monomorphic_constraints (u : universe_context) :=
+  Definition monomorphic_constraints u :=
     match u with
     | Monomorphic_ctx ctx => snd ctx
-    | Polymorphic_ctx ctx => ConstraintSet.empty
-    | Cumulative_ctx ctx => ConstraintSet.empty
+    | Polymorphic_ctx ctx
+    | Cumulative_ctx (ctx, _) => ConstraintSet.empty
     end.
 
   (* FIXME : universe polym declarations *)
@@ -1205,7 +1206,7 @@ Section Checker.
     end.
 
 
-  Fixpoint check_wf_env (g : global_declarations)
+  Fixpoint check_wf_env (g : global_env)
     : EnvCheck universes_graph :=
     match g with
     | [] => ret init_graph
@@ -1232,8 +1233,9 @@ Section Checker.
 End Checker.
 
 (* for compatibility, will go away *)
-Definition infer' `{checker_flags} `{Fuel} (Σ : global_context) Γ t
-  := match gc_of_constraints (snd Σ) with
-     | None => raise (UnsatisfiableConstraints (snd Σ))
+Definition infer' `{checker_flags} `{Fuel} (Σ : global_env_ext) Γ t
+  := let ctrs := (global_ext_constraints Σ) in
+    match gc_of_constraints ctrs with
+     | None => raise (UnsatisfiableConstraints ctrs)
      | Some ctrs => infer (fst Σ) (make_graph ctrs) Γ t
      end.

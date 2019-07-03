@@ -157,7 +157,7 @@ Lemma typecheck_closed `{cf : checker_flags} :
   env_prop (fun Σ Γ t T =>
               closedn #|Γ| t && closedn #|Γ| T).
 Proof.
-  assert(weaken_env_prop (lift_typing (fun (_ : global_context) (Γ : context) (t T : term) =>
+  assert(weaken_env_prop (lift_typing (fun (_ : global_env_ext) (Γ : context) (t T : term) =>
                                          closedn #|Γ| t && closedn #|Γ| T))).
   { repeat red. intros. destruct t; red in X0; eauto. }
 
@@ -273,15 +273,15 @@ Qed.
 
 Lemma declared_decl_closed `{checker_flags} Σ cst decl :
   wf Σ ->
-  lookup_env (fst Σ) cst = Some decl ->
+  lookup_env Σ cst = Some decl ->
   on_global_decl (fun Σ Γ b t =>
                     match b with Some b => Ast.wf b | None => True end /\ Ast.wf t /\
-                    option_default (closedn #|Γ|) b true && closedn #|Γ| t) Σ decl.
+                    option_default (closedn #|Γ|) b true && closedn #|Γ| t) (Σ, universes_decl_of_decl decl) decl.
 Proof.
-  intros.
+  intros X H0.
   eapply weaken_lookup_on_global_env; try red; eauto.
-  eapply on_global_decls_impl; cycle 1.
-  eapply on_global_decls_mix.
+  eapply on_global_env_impl; cycle 1.
+  eapply on_global_env_mix.
   2:apply (env_prop_sigma _ typecheck_closed _ X).
   2:apply (env_prop_sigma _ typing_wf_gen _ X).
   red; intros. unfold lift_typing in *. destruct b; intuition auto with wf.

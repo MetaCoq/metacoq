@@ -13,7 +13,7 @@ Set Asymmetric Patterns.
 Generalizable Variables Σ Γ t T.
 
 Lemma typed_liftn `{checker_flags} Σ Γ t T n k :
-  wf Σ -> wf_local Σ Γ -> k >= #|Γ| ->
+  wf Σ.1 -> wf_local Σ Γ -> k >= #|Γ| ->
   Σ ;;; Γ |- t : T -> lift n k T = T /\ lift n k t = t.
 Proof.
   intros wfΣ wfΓ Hk Hty.
@@ -202,7 +202,7 @@ Hint Rewrite lift_iota_red : lift.
 
 Lemma lift_declared_constant `{checker_flags} Σ cst decl n k :
   wf Σ ->
-  declared_constant (fst Σ) cst decl ->
+  declared_constant Σ cst decl ->
   decl = map_constant_body (lift n k) decl.
 Proof.
   unfold declared_constant.
@@ -220,6 +220,7 @@ Proof.
   simpl in *. forward H0 by lia. forward H1 by lia.
   apply (lift_closed n k) in H0.
   apply (lift_closed n k) in H1. rewrite H0 H1. reflexivity.
+  apply wfΣ'.
   constructor.
   red in decl'.
   destruct decl'.
@@ -227,13 +228,13 @@ Proof.
   rewrite -> andb_and in ccst. destruct ccst as [ccst _].
   eapply closed_upwards in ccst; simpl.
   apply (lift_closed n k) in ccst. unfold map_constant_body. simpl.
-  rewrite ccst. reflexivity. lia. auto. constructor.
+  rewrite ccst. reflexivity. lia. apply wfΣ'. constructor.
 Qed.
 
 Definition lift_mutual_inductive_body n k mind m :=
   map_mutual_inductive_body mind (fun k' => lift n (k' + k)) m.
 
-Lemma lift_wf_local `{checker_flags} Σ Γ n k : wf Σ -> wf_local Σ Γ -> lift_context n k Γ = Γ.
+Lemma lift_wf_local `{checker_flags} Σ Γ n k : wf Σ.1 -> wf_local Σ Γ -> lift_context n k Γ = Γ.
 Proof.
   intros wfΣ.
   induction 1; auto; unfold lift_context, snoc; rewrite fold_context_snoc0; auto; unfold snoc;
@@ -243,7 +244,7 @@ Proof.
   eapply typed_liftn in t0 as [Ht HT]; eauto. lia.
 Qed.
 
-Lemma closed_wf_local `{checker_flags} Σ Γ : wf Σ -> wf_local Σ Γ -> closed_ctx Γ.
+Lemma closed_wf_local `{checker_flags} Σ Γ : wf Σ.1 -> wf_local Σ Γ -> closed_ctx Γ.
 Proof.
   intros wfΣ. unfold closed_ctx, mapi. intros wf. generalize 0.
   induction wf; intros n; auto; unfold closed_ctx, snoc; simpl;
@@ -264,13 +265,13 @@ Qed.
 
 Lemma lift_declared_minductive `{checker_flags} Σ cst decl n k :
   wf Σ ->
-  declared_minductive (fst Σ) cst decl ->
+  declared_minductive Σ cst decl ->
   lift_mutual_inductive_body n k cst decl = decl.
 Proof.
-  intros wfΣ Hdecl. eapply on_declared_minductive in Hdecl; eauto.
+  intros wfΣ Hdecl. eapply on_declared_minductive in Hdecl. 2: apply wfΣ.
   destruct decl. simpl in *. f_equal.
   - apply onParams in Hdecl. simpl in *.
-    eapply lift_wf_local; eauto.
+    eapply lift_wf_local; eauto; tas.
   - apply onInductives in Hdecl.
     revert Hdecl. simpl. generalize ind_bodies at 2 4 5.
     intros.
@@ -282,7 +283,7 @@ Proof.
     destruct X. simpl in *.
     assert (lift n k ind_type = ind_type).
     destruct onArity as [[s Hs] Hpars].
-    eapply typed_liftn; eauto. constructor. simpl; lia.
+    eapply typed_liftn; eauto; tas. constructor. simpl; lia.
     rewrite H0 in Heq'. rewrite Heq in Heq'. revert Heq'; intros [= <- <-].
     f_equal; auto.
     apply (Alli_map_id onConstructors).
@@ -298,13 +299,13 @@ Qed.
 
 Lemma lift_declared_inductive `{checker_flags} Σ ind mdecl idecl n k :
   wf Σ ->
-  declared_inductive (fst Σ) mdecl ind idecl ->
+  declared_inductive Σ mdecl ind idecl ->
   map_one_inductive_body (inductive_mind ind) (polymorphic_instance (mdecl.(ind_universes)))
                          (length (arities_context mdecl.(ind_bodies))) (fun k' => lift n (k' + k))
                          (inductive_ind ind) idecl = idecl.
 Proof.
   unfold declared_inductive. intros wfΣ [Hmdecl Hidecl].
-  destruct Σ. eapply (lift_declared_minductive _ _ _ n k) in Hmdecl.
+  eapply (lift_declared_minductive _ _ _ n k) in Hmdecl; tas.
   unfold lift_mutual_inductive_body in Hmdecl.
   destruct mdecl. simpl in *.
   injection Hmdecl. intros Heq.
@@ -314,7 +315,7 @@ Proof.
   rewrite nth_error_mapi in Hidecl'.
   clear Heq.
   unfold option_map in Hidecl'. rewrite Hidecl in Hidecl'.
-  congruence. auto.
+  congruence.
 Qed.
 
 Lemma subst0_inds_lift ind u mdecl n k t :
@@ -331,11 +332,11 @@ Qed.
 
 Lemma lift_declared_constructor `{checker_flags} Σ c u mdecl idecl cdecl n k :
   wf Σ ->
-  declared_constructor (fst Σ) mdecl idecl c cdecl ->
+  declared_constructor Σ mdecl idecl c cdecl ->
   lift n k (type_of_constructor mdecl cdecl c u) = (type_of_constructor mdecl cdecl c u).
 Proof.
   unfold declared_constructor. destruct c as [i ci]. intros wfΣ [Hidecl Hcdecl].
-  destruct Σ. eapply (lift_declared_inductive _ _ _ _ n k) in Hidecl; eauto.
+  eapply (lift_declared_inductive _ _ _ _ n k) in Hidecl; eauto.
   unfold type_of_constructor. destruct cdecl as [[id t'] arity].
   destruct idecl; simpl in *.
   destruct (decompose_prod_assum [] _) eqn:Heq.
@@ -353,7 +354,7 @@ Qed.
 
 Lemma lift_declared_projection `{checker_flags} Σ c mdecl idecl pdecl n k :
   wf Σ ->
-  declared_projection (fst Σ) mdecl idecl c pdecl ->
+  declared_projection Σ mdecl idecl c pdecl ->
   on_snd (lift n (S (ind_npars mdecl + k))) pdecl = pdecl.
 Proof.
   intros.
@@ -385,7 +386,7 @@ Qed.
 Hint Rewrite <- lift_fix_context : lift.
 
 Lemma All_local_env_lift `{checker_flags}
-      (P Q : global_context -> context -> term -> term -> Type) Σ c n k :
+      (P Q : global_env_ext -> context -> term -> term -> Type) Σ c n k :
   All_local_env Q Σ c ->
   (forall Γ t T,
       Q Σ Γ t T ->
@@ -720,8 +721,8 @@ Qed.
 
 Lemma weakening_red1 `{CF:checker_flags} Σ Γ Γ' Γ'' M N :
   wf Σ ->
-  red1 (fst Σ) (Γ ,,, Γ') M N ->
-  red1 (fst Σ) (Γ ,,, Γ'' ,,, lift_context #|Γ''| 0 Γ') (lift #|Γ''| #|Γ'| M) (lift #|Γ''| #|Γ'| N).
+  red1 Σ (Γ ,,, Γ') M N ->
+  red1 Σ (Γ ,,, Γ'' ,,, lift_context #|Γ''| 0 Γ') (lift #|Γ''| #|Γ'| M) (lift #|Γ''| #|Γ'| N).
 Proof.
   intros wfΣ H.
   remember (Γ ,,, Γ') as Γ0. revert Γ Γ' Γ'' HeqΓ0.
@@ -750,7 +751,7 @@ Proof.
     simpl in Hclosed.
     pose proof (closed_upwards #|Γ'| Hclosed).
     forward H by lia.
-    apply (lift_closed #|Γ''| #|Γ'|) in H. auto.
+    apply (lift_closed #|Γ''| #|Γ'|) in H. auto. apply wfΣ'.
     constructor.
 
   - simpl. constructor.
@@ -880,7 +881,7 @@ Proof.
 Qed.
 
 Lemma weakening_cumul `{CF:checker_flags} Σ Γ Γ' Γ'' M N :
-  wf Σ ->
+  wf Σ.1 ->
   Σ ;;; Γ ,,, Γ' |- M <= N ->
   Σ ;;; Γ ,,, Γ'' ,,, lift_context #|Γ''| 0 Γ' |- lift #|Γ''| #|Γ'| M <= lift #|Γ''| #|Γ'| N.
 Proof.
@@ -916,15 +917,15 @@ Qed.
 
 
 Lemma lift_check_correct_arity:
-  forall (cf : checker_flags) (Σ : global_context) (Γ' : context) (ind : inductive) (u : universe_instance)
+  forall (cf : checker_flags) φ (Γ' : context) (ind : inductive) (u : universe_instance)
          (npar : nat) (args : list term) (idecl : one_inductive_body)
          (Γ'' : context) (indctx pctx : list context_decl),
-    check_correct_arity (snd Σ) idecl ind u indctx (firstn npar args) pctx ->
+    check_correct_arity φ idecl ind u indctx (firstn npar args) pctx ->
     check_correct_arity
-      (snd Σ) idecl ind u (lift_context #|Γ''| #|Γ'| indctx) (firstn npar (map (lift #|Γ''| #|Γ'|) args))
+      φ idecl ind u (lift_context #|Γ''| #|Γ'| indctx) (firstn npar (map (lift #|Γ''| #|Γ'|) args))
       (lift_context #|Γ''| #|Γ'| pctx).
 Proof.
-  intros cf Σ Γ' ind u npar args idecl Γ'' indctx pctx.
+  intros cf φ Γ' ind u npar args idecl Γ'' indctx pctx.
   unfold check_correct_arity. intro H.
   inversion H; subst. simpl. rewrite lift_context_snoc0.
   constructor.
@@ -944,8 +945,9 @@ Proof.
   - now apply lift_eq_context.
 Qed.
 
+
 Lemma wf_ind_type `{checker_flags} Σ mdecl ind idecl :
-  wf Σ -> declared_inductive (fst Σ) ind mdecl idecl -> Ast.wf (ind_type idecl).
+  wf Σ -> declared_inductive Σ mdecl ind idecl -> Ast.wf (ind_type idecl).
 Proof.
   intros wfΣ Hidecl.
   eapply typing_wf_sigma in wfΣ.
@@ -957,7 +959,7 @@ Qed.
 Hint Resolve wf_ind_type : wf.
 
 Lemma weakening_typing `{cf : checker_flags} Σ Γ Γ' Γ'' (t : term) :
-  wf Σ ->
+  wf Σ.1 ->
   wf_local Σ (Γ ,,, Γ') ->
   wf_local Σ (Γ ,,, Γ'' ,,, lift_context #|Γ''| 0 Γ') ->
   `(Σ ;;; Γ ,,, Γ' |- t : T ->
@@ -1035,6 +1037,7 @@ Proof.
     econstructor; try red; intuition eauto.
     auto.
 
+
   - rewrite (lift_declared_constructor _ (ind, i) u mdecl idecl cdecl _ _ wfΣ isdecl).
     econstructor; eauto.
 
@@ -1047,7 +1050,7 @@ Proof.
         apply onParams in onmind as Hparams.
         eapply lift_types_of_case in H0.
         simpl in H0. subst pars. rewrite -> firstn_map. eapply H0.
-        -- eapply typing_all_wf_decl ; eauto.
+        -- eapply typing_all_wf_decl. 2: eauto. tas.
         -- subst pars. eapply All_Forall. eapply All_firstn.
            apply typing_wf in X3 as [_ X3]; eauto.
            now (apply (Forall_All); apply wf_mkApps_inv in X3).
@@ -1208,7 +1211,7 @@ Proof.
 Qed.
 
 Lemma weakening `{cf : checker_flags} Σ Γ Γ' (t : term) T :
-  wf Σ -> wf_local Σ (Γ ,,, Γ') ->
+  wf Σ.1 -> wf_local Σ (Γ ,,, Γ') ->
   Σ ;;; Γ |- t : T ->
   Σ ;;; Γ ,,, Γ' |- lift0 #|Γ'| t : lift0 #|Γ'| T.
 Proof.

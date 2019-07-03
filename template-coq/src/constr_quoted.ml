@@ -22,12 +22,14 @@ struct
   type quoted_global_reference = Constr.t (* of type Ast.global_reference *)
 
   type quoted_sort_family = Constr.t (* of type Ast.sort_family *)
-  type quoted_constraint_type = Constr.t (* of type univ.constraint_type *)
-  type quoted_univ_constraint = Constr.t (* of type univ.univ_constraint *)
-  type quoted_univ_constraints = Constr.t (* of type univ.constraints *)
-  type quoted_univ_instance = Constr.t (* of type univ.universe_instance *)
-  type quoted_univ_context = Constr.t (* of type univ.universe_context *)
-  type quoted_inductive_universes = Constr.t (* of type univ.universe_context *)
+  type quoted_constraint_type = Constr.t (* of type Universes.constraint_type *)
+  type quoted_univ_constraint = Constr.t (* of type Universes.univ_constraint *)
+  type quoted_univ_constraints = Constr.t (* of type Universes.constraints *)
+  type quoted_univ_instance = Constr.t (* of type Universes.universe_instance *)
+  type quoted_univ_context = Constr.t (* of type Universes.UContext.t *)
+  type quoted_univ_contextset = Constr.t (* of type Universes.ContextSet.t *)
+  type quoted_abstract_univ_context = Constr.t (* of type Universes.AUContext.t *)
+  type quoted_universes_decl = Constr.t (* of type Universes.universes_decl *)
 
   type quoted_mind_params = Constr.t (* of type list (Ast.ident * list (ident * local_entry)local_entry) *)
   type quoted_ind_entry = quoted_ident * t * quoted_bool * quoted_ident list * t list
@@ -43,7 +45,7 @@ struct
   type quoted_mutual_inductive_body = Constr.t (* of type Ast.mutual_inductive_body *)
   type quoted_constant_body = Constr.t (* of type Ast.constant_body *)
   type quoted_global_decl = Constr.t (* of type Ast.global_decl *)
-  type quoted_global_declarations = Constr.t (* of type Ast.global_declarations *)
+  type quoted_global_env = Constr.t (* of type Ast.global_env *)
   type quoted_program = Constr.t (* of type Ast.program *)
 
 (*
@@ -135,6 +137,7 @@ struct
   let tunivLt = resolve_symbol (ext_pkg_univ "ConstraintType") "Lt"
   let tunivEq = resolve_symbol (ext_pkg_univ "ConstraintType") "Eq"
   let tmake_universe = resolve_symbol (ext_pkg_univ "Universe") "make''"
+  let tLevelSet_of_list = resolve_symbol (ext_pkg_univ "LevelSetProp") "of_list"
 
   (* let tunivcontext = resolve_symbol pkg_univ "universe_context" *)
   let tVariance = resolve_symbol pkg_variance "t"
@@ -146,7 +149,8 @@ struct
   let cCumulative_ctx = resolve_symbol pkg_univ "Cumulative_ctx"
   let tUContext = resolve_symbol (ext_pkg_univ "UContext") "t"
   let tUContextmake = resolve_symbol (ext_pkg_univ "UContext") "make"
-  (* let tConstraintSetempty = resolve_symbol (ext_pkg_univ "ConstraintSet") "empty" *)
+  let tConstraintSet = resolve_symbol (ext_pkg_univ "ConstraintSet") "t"
+  let tLevelSet = resolve_symbol (ext_pkg_univ "LevelSet") "t"
   let tConstraintSetempty = lazy (Universes.constr_of_global (Coqlib.find_reference "template coq bug" (ext_pkg_univ "ConstraintSet") "empty"))
   let tConstraintSetadd = lazy (Universes.constr_of_global (Coqlib.find_reference "template coq bug" (ext_pkg_univ "ConstraintSet") "add"))
   let tmake_univ_constraint = resolve_symbol pkg_univ "make_univ_constraint"
@@ -162,7 +166,7 @@ struct
   let tglobal_decl = r_reify "global_decl"
   let tConstantDecl = r_reify "ConstantDecl"
   let tInductiveDecl = r_reify "InductiveDecl"
-  let tglobal_declarations = r_reify "global_declarations"
+  let tglobal_env = r_reify "global_env"
 
   let tcontext_decl = r_reify "context_decl"
   let tcontext = r_reify "context"
@@ -382,6 +386,11 @@ struct
     let arr = Univ.Instance.to_array u in
     to_coq_listl tlevel (CArray.map_to_list quote_level arr)
 
+  let quote_levelset s =
+    let levels = LSet.elements s in
+    let levels' =  to_coq_listl tlevel (List.map quote_level levels) in
+    constr_mkApp (tLevelSet_of_list, [|levels'|])
+
   let quote_constraint_type (c : Univ.constraint_type) =
     match c with
     | Lt -> Lazy.force tunivLt
@@ -411,42 +420,45 @@ struct
     let var_list = CArray.map_to_list quote_variance var in
     to_coq_listl tVariance var_list
 
-  let quote_ucontext inst const =
-    let inst' = quote_univ_instance inst in
-    let const' = quote_univ_constraints const in
-    constr_mkApp (tUContextmake, [|inst'; const'|])
+  let quote_univ_contextset uctx =
+    let levels' = quote_levelset (ContextSet.levels uctx) in
+    let const' = quote_univ_constraints (ContextSet.constraints uctx) in
+    pairl tLevelSet tConstraintSet levels' const'
 
   let quote_univ_context uctx =
-    let inst = Univ.UContext.instance uctx in
-    let const = Univ.UContext.constraints uctx in
-    constr_mkApp (cMonomorphic_ctx, [| quote_ucontext inst const |])
-
-  let quote_cumulative_univ_context cumi =
-    let uctx = Univ.CumulativityInfo.univ_context cumi in
-    let inst = Univ.UContext.instance uctx in
-    let const = Univ.UContext.constraints uctx in
-    let var = Univ.CumulativityInfo.variance cumi in
-    let uctx' = quote_ucontext inst const in
-    let var' = quote_cuminfo_variance var in
-    let listvar = constr_mkAppl (tlist, [| tVariance |]) in
-    let cumi' = pair (Lazy.force tUContext) listvar uctx' var' in
-    constr_mkApp (cCumulative_ctx, [| cumi' |])
-
-  let quote_abstract_univ_context_aux uctx =
-    let inst = Univ.UContext.instance uctx in
-    let const = Univ.UContext.constraints uctx in
-    constr_mkApp (cPolymorphic_ctx, [| quote_ucontext inst const |])
+    let inst' = quote_univ_instance (UContext.instance uctx) in
+    let const' = quote_univ_constraints (UContext.constraints uctx) in
+    constr_mkApp (tUContextmake, [|inst'; const'|])
 
   let quote_abstract_univ_context uctx =
-    let uctx = Univ.AUContext.repr uctx in
-    quote_abstract_univ_context_aux uctx
+    quote_univ_context (AUContext.repr uctx)
 
-  let quote_inductive_universes uctx =
-    match uctx with
-    | Monomorphic_ind_entry uctx -> quote_univ_context (Univ.ContextSet.to_context uctx)
-    | Polymorphic_ind_entry uctx -> quote_abstract_univ_context_aux uctx
-    | Cumulative_ind_entry info ->
-      quote_abstract_univ_context_aux (CumulativityInfo.univ_context info) (* FIXME lossy *)
+  (* let quote_cumulative_univ_context cumi =
+   *   let uctx = Univ.CumulativityInfo.univ_context cumi in
+   *   let inst = Univ.UContext.instance uctx in
+   *   let const = Univ.UContext.constraints uctx in
+   *   let var = Univ.CumulativityInfo.variance cumi in
+   *   let uctx' = quote_ucontext inst const in
+   *   let var' = quote_cuminfo_variance var in
+   *   let listvar = constr_mkAppl (tlist, [| tVariance |]) in
+   *   let cumi' = pair (Lazy.force tUContext) listvar uctx' var' in
+   *   constr_mkApp (cCumulative_ctx, [| cumi' |]) *)
+
+  (* let quote_abstract_univ_context_aux uctx =
+   *   let inst = Univ.UContext.instance uctx in
+   *   let const = Univ.UContext.constraints uctx in
+   *   constr_mkApp (cPolymorphic_ctx, [| quote_ucontext inst const |])
+   * 
+   * let quote_abstract_univ_context uctx =
+   *   let uctx = Univ.AUContext.repr uctx in
+   *   quote_abstract_univ_context_aux uctx *)
+
+  (* let quote_inductive_universes uctx =
+   *   match uctx with
+   *   | Monomorphic_ind_entry uctx -> quote_univ_context (Univ.ContextSet.to_context uctx)
+   *   | Polymorphic_ind_entry uctx -> quote_abstract_univ_context_aux uctx
+   *   | Cumulative_ind_entry info ->
+   *     quote_abstract_univ_context_aux (CumulativityInfo.univ_context info) (\* FIXME lossy *\) *)
 
   let quote_ugraph (g : UGraph.t) =
     quote_univ_constraints (UGraph.constraints_of_universes g)
@@ -541,6 +553,15 @@ struct
   let mkProj kn t =
     constr_mkApp (tProj, [| kn; t |])
 
+  let mkMonomorphic_ctx t =
+    constr_mkApp (cMonomorphic_ctx, [|t|])
+
+  let mkPolymorphic_ctx t =
+    constr_mkApp (cPolymorphic_ctx, [|t|])
+
+  let mkCumulatice_ctx t =
+    constr_mkApp (cCumulative_ctx, [|t|])
+
   let mk_one_inductive_body (a, b, c, d, e) =
     let c = to_coq_listl tsort_family c in
     let d = mk_ctor_list d in
@@ -567,7 +588,7 @@ struct
   let add_global_decl d l =
     constr_mkApp (c_cons, [| Lazy.force tglobal_decl; d; l|])
 
-  let mk_program () = pairl tglobal_declarations tTerm
+  let mk_program () = pairl tglobal_env tTerm
 
   let quote_mind_finiteness (f: Declarations.recursivity_kind) =
     match f with

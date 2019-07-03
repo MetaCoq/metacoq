@@ -2,7 +2,7 @@
 
 Require Import Coq.Strings.String.
 Require Import Coq.PArith.BinPos.
-Require Import List. Import ListNotations.
+Require Import List utils. Import ListNotations.
 Require Export Template.Universes.
 
 (** * AST of Coq kernel terms and kernel data structures
@@ -30,7 +30,7 @@ Require Export Template.Universes.
 
     ** Environments of declarations
 
-      The global environment [global_context]: a list of [global_decl] and
+      The global environment [global_env_ext]: a list of [global_decl] and
     a universe graph [constraints].  *)
 
 Require Export BasicAst.
@@ -108,12 +108,12 @@ Inductive wf : term -> Prop :=
 
 Record parameter_entry := {
   parameter_entry_type      : term;
-  parameter_entry_universes : universe_context }.
+  parameter_entry_universes : universes_decl }.
 
 Record definition_entry := {
   definition_entry_type      : term;
   definition_entry_body      : term;
-  definition_entry_universes : universe_context;
+  definition_entry_universes : universes_decl;
   definition_entry_opaque    : bool }.
 
 
@@ -165,7 +165,7 @@ Record mutual_inductive_entry := {
   mind_entry_finite    : recursivity_kind;
   mind_entry_params    : list (ident * local_entry);
   mind_entry_inds      : list one_inductive_entry;
-  mind_entry_universes : universe_context;
+  mind_entry_universes : universes_decl;
   mind_entry_private   : option bool
   (* Private flag for sealing an inductive definition in an enclosing
      module. Not handled by Template Coq yet. *) }.
@@ -216,28 +216,25 @@ Record mutual_inductive_body := {
   ind_finite : recursivity_kind;
   ind_npars : nat;
   ind_params : context;
-  ind_bodies : list one_inductive_body ;
-  ind_universes : universe_context }.
+  ind_bodies : list one_inductive_body;
+  ind_universes : universes_decl }.
 
 (** See [constant_body] from [declarations.ml] *)
 Record constant_body := {
     cst_type : term;
     cst_body : option term;
-    cst_universes : universe_context }.
+    cst_universes : universes_decl }.
 
 Inductive global_decl :=
 | ConstantDecl : kername -> constant_body -> global_decl
 | InductiveDecl : kername -> mutual_inductive_body -> global_decl.
 
-Definition global_declarations := list global_decl.
+Definition global_env := list global_decl.
 
-(** A context of global declarations + global universe constraints,
-    i.e. a global environment *)
-
-Definition global_context : Type := global_declarations * constraints.
+Definition global_env_ext := list global_decl × universes_decl.
 
 (** *** Programs
 
   A set of declarations and a term, as produced by [Quote Recursively]. *)
 
-Definition program : Type := global_declarations * term.
+Definition program : Type := global_env * term.

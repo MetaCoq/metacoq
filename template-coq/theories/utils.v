@@ -18,6 +18,12 @@ Notation "( x ; y ; z ; t ; u ; v )" := (x ; ( y ; (z ; (t ; (u ; v))))).
 Notation "x .π1" := (@projT1 _ _ x) (at level 3, format "x '.π1'").
 Notation "x .π2" := (@projT2 _ _ x) (at level 3, format "x '.π2'").
 
+Notation "p .1" := (fst p)
+  (at level 2, left associativity, format "p .1") : pair_scope.
+Notation "p .2" := (snd p)
+  (at level 2, left associativity, format "p .2") : pair_scope.
+Open Scope pair_scope.
+
 Notation "x × y" := (prod x y )(at level 80, right associativity).
 
 Notation "#| l |" := (List.length l) (at level 0, l at level 99, format "#| l |").
@@ -1852,3 +1858,11 @@ Proof.
   rewrite Pos2Nat.inj_1. reflexivity.
   rewrite Pos2Nat.inj_succ. cbn. f_equal. lia.
 Qed.
+
+
+Ltac tas := try assumption.
+Ltac tea := try eassumption.
+
+Axiom todo : string -> forall {A}, A.
+Ltac todo s := exact (todo s).
+Extract Constant todo => "fun s -> failwith (String.concat """" (List.map (String.make 1) s))".

@@ -47,7 +47,7 @@ Qed.
 
 
 Section ParallelReduction.
-  Context (Σ : global_declarations).
+  Context (Σ : global_env).
 
   Inductive pred1 (Γ : context) : term -> term -> Prop :=
   (** Reductions *)

@@ -26,7 +26,7 @@ struct
   type quoted_univ_constraint = Universes0.univ_constraint
   type quoted_univ_instance = Universes0.Instance.t
   type quoted_univ_constraints = Universes0.constraints
-  type quoted_univ_context = Universes0.universe_context
+  type quoted_univ_context = Universes0.universes_decl
   type quoted_inductive_universes = quoted_univ_context
 
   type quoted_mind_params = (ident * local_entry) list
@@ -42,7 +42,7 @@ struct
   type quoted_mutual_inductive_body = mutual_inductive_body
   type quoted_constant_body = constant_body
   type quoted_global_decl = global_decl
-  type quoted_global_declarations = global_declarations
+  type quoted_global_env = global_env
   type quoted_program = program
 
   open Names

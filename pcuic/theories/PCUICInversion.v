@@ -229,6 +229,7 @@ Section Inversion.
     forall {Γ mfix idx T},
       Σ ;;; Γ |- tCoFix mfix idx : T ->
       ∑ decl,
+        allow_cofix ×
         let types := fix_context mfix in
         nth_error mfix idx = Some decl ×
         wf_local Σ (Γ ,,, types) ×

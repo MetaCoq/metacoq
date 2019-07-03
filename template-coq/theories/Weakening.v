@@ -1185,7 +1185,8 @@ Proof.
           specialize (IHt' eq_refl). simpl. apply IHt'.
     -- rewrite -> (map_dtype _ (lift #|Γ''| (#|mfix| + #|Γ'|))).
        eapply type_CoFix.
-       now rewrite -> nth_error_map, H.
+       assumption.
+       now rewrite -> nth_error_map, H0.
        now rewrite -> lift_fix_context.
        rewrite -> lift_fix_context.
        apply All_map.

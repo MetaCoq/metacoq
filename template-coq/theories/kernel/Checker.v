@@ -576,7 +576,7 @@ Definition check_conv_leq `{checker_flags} {F:Fuel} := check_conv_gen Cumul.
 Definition check_conv `{checker_flags} {F:Fuel} := check_conv_gen Conv.
 
 
-Definition is_graph_of_contraints ctrs G :=
+Definition is_graph_of_contraints `{checker_flags} ctrs G :=
   match gc_of_constraints ctrs with
   | Some ctrs => G = make_graph ctrs
   | None => False
@@ -864,28 +864,28 @@ Lemma cumul_convert_leq : forall `{checker_flags} {F:Fuel} Σ G Γ t t',
   is_graph_of_contraints (snd Σ) G ->
   Σ ;;; Γ |- t <= t' <~> convert_leq (fst Σ) G Γ t t' = Checked ().
 Proof. intros. todo "Checker.cumul_convert_leq". Defined.
- 
+
 Lemma cumul_reduce_to_sort : forall `{checker_flags} {F:Fuel} Σ G Γ t s',
   is_graph_of_contraints (snd Σ) G ->
     Σ ;;; Γ |- t <= tSort s' <~>
     { s'' & reduce_to_sort (fst Σ) Γ t = Checked s''
             /\ try_is_leq_universe G s'' s' = true }.
 Proof. intros. todo "Checker.cumul_reduce_to_sort". Defined.
- 
+
 Lemma cumul_reduce_to_product : forall `{checker_flags} {F:Fuel} Σ Γ t na a b,
     Σ ;;; Γ |- t <= tProd na a b ->
                { a' & { b' &
                         ((reduce_to_prod (fst Σ) Γ t = Checked (a', b')) *
                          cumul Σ Γ (tProd na a' b') (tProd na a b))%type } }.
 Proof. intros. todo "Checker.cumul_reduce_to_product". Defined.
- 
+
 Lemma cumul_reduce_to_ind : forall `{checker_flags} {F:Fuel} Σ Γ t i u args,
     Σ ;;; Γ |- t <= mkApps (tInd i u) args <~>
     { args' &
       ((reduce_to_ind (fst Σ) Γ t = Checked (i, u, args')) *
        cumul Σ Γ (mkApps (tInd i u) args') (mkApps (tInd i u) args))%type }.
 Proof. intros. todo "Checker.cumul_reduce_to_ind". Defined.
- 
+
 Lemma lookup_env_id {Σ id decl} : lookup_env Σ id = Some decl -> id = global_decl_ident decl.
 Proof.
   unfold lookup_env.
@@ -893,7 +893,7 @@ Proof.
   revert H. destruct (ident_eq_spec id (global_decl_ident a)). now intros [= ->].
   apply IHΣ.
 Qed.
- 
+
 Lemma lookup_constant_type_declared Σ cst u decl (isdecl : declared_constant Σ cst decl) :
   lookup_constant_type_cstrs Σ cst u =
   Checked (subst_instance_constr u decl.(cst_type),
@@ -902,7 +902,7 @@ Proof.
   unfold lookup_constant_type_cstrs, lookup_env.
   red in isdecl. rewrite isdecl. destruct decl. reflexivity.
 Qed.
- 
+
 Lemma lookup_constant_type_is_declared Σ cst u T :
   lookup_constant_type_cstrs Σ cst u = Checked T ->
   { decl | declared_constant Σ cst decl /\
@@ -914,11 +914,11 @@ Proof.
   injection H as eq. subst T. rewrite (lookup_env_id Hlook). simpl.
   eexists. split; eauto.
 Qed.
- 
+
 Lemma eq_ind_refl i i' : eq_ind i i' = true <-> i = i'.
 Proof. intros. todo "Checker.eq_ind_refl". Defined.
- 
- 
+
+
 Arguments bind _ _ _ _ ! _.
 Open Scope monad.
 
@@ -929,7 +929,7 @@ Section InferOk.
           (HG : is_graph_of_contraints (snd Σ) G).
 
   Ltac tc := eauto with typecheck.
- 
+
 (*
   Lemma infer_complete Γ t T :
     Σ ;;; Γ |- t : T -> { T' & ((infer Γ t = Checked T') /\ squash (cumul Σ Γ T' T)) }.
@@ -1215,7 +1215,7 @@ Section Checker.
       | None =>
         EnvError (IllFormedDecl (global_decl_ident g)
                              (UnsatisfiableConstraints (global_decl_univs g)))
-      | Some ctrs => 
+      | Some ctrs =>
         wrap_error "" (check_consistent_constraints G (global_decl_univs g)) ;;
         let G' := add_gc_constraints ctrs G in
         check_wf_decl env G' g ;;

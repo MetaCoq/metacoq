@@ -1139,6 +1139,7 @@ Proof.
     }
     rewrite -> (map_dtype _ (lift #|Γ''| (#|mfix| + #|Γ'|))).
     eapply type_CoFix.
+    assumption.
     now rewrite -> nth_error_map, heq_nth_error.
     now rewrite -> lift_fix_context.
     rewrite -> lift_fix_context.

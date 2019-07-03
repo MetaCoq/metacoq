@@ -359,9 +359,27 @@ Definition val (v : valuation) (u : universe) : Z :=
   | NEL.cons e u => NEL.fold_left (fun n e => Z.max (val1 v e) n) u (val1 v e)
   end.
 
+Definition llt `{checker_flags} (x y : Z) : Prop :=
+  if prop_sub_type
+  then (x < y)%Z
+  else (0 <= x /\ x < y)%Z.
+
+Notation "x < y" := (llt x y) : univ_scope.
+
+Delimit Scope univ_scope with u.
+
+Definition lle `{checker_flags} (x y : Z) : Prop :=
+  (x < y)%u \/ x = y.
+
+Notation "x <= y" := (lle x y) : univ_scope.
+
+Section Univ.
+
+Context `{cf : checker_flags}.
+
 Inductive satisfies0 (v : valuation) : univ_constraint -> Prop :=
-| satisfies0_Lt l l' : (val0 v l < val0 v l')%Z -> satisfies0 v (l, Lt, l')
-| satisfies0_Le l l' : (val0 v l <= val0 v l')%Z -> satisfies0 v (l, Le, l')
+| satisfies0_Lt l l' : (val0 v l < val0 v l')%u -> satisfies0 v (l, Lt, l')
+| satisfies0_Le l l' : (val0 v l <= val0 v l')%u -> satisfies0 v (l, Le, l')
 | satisfies0_Eq l l' : val0 v l = val0 v l' -> satisfies0 v (l, Eq, l').
 
 Definition satisfies v : constraints -> Prop :=
@@ -378,10 +396,10 @@ Definition leq_universe_n n (φ : constraints) u u' :=
 Definition leq_universe0 := leq_universe_n 0.
 Definition lt_universe := leq_universe_n 1.
 
-Definition eq_universe `{checker_flags} φ u u'
+Definition eq_universe φ u u'
   := if check_univs then eq_universe0 φ u u' else True.
 
-Definition leq_universe `{checker_flags} φ u u'
+Definition leq_universe φ u u'
   := if check_univs then leq_universe0 φ u u' else True.
 
 
@@ -392,7 +410,7 @@ Proof.
   intros vH; reflexivity.
 Qed.
 
-Lemma eq_universe_refl `{checker_flags} φ s : eq_universe φ s s.
+Lemma eq_universe_refl φ s : eq_universe φ s s.
 Proof.
   unfold eq_universe; destruct check_univs;
     [apply eq_universe0_refl|constructor].
@@ -403,7 +421,7 @@ Proof.
   intros vH; reflexivity.
 Qed.
 
-Lemma leq_universe_refl `{checker_flags} φ s : leq_universe φ s s.
+Lemma leq_universe_refl φ s : leq_universe φ s s.
 Proof.
   unfold leq_universe; destruct check_univs;
     [apply leq_universe0_refl|constructor].
@@ -418,7 +436,7 @@ Proof.
   intros v h. etransitivity ; try eapply h1 ; eauto.
 Qed.
 
-Lemma eq_universe_trans `{checker_flags} φ :
+Lemma eq_universe_trans φ :
   forall s1 s2 s3,
     eq_universe φ s1 s2 ->
     eq_universe φ s2 s3 ->
@@ -441,7 +459,7 @@ Proof.
   - eapply h2. assumption.
 Qed.
 
-Lemma leq_universe_trans `{checker_flags} φ :
+Lemma leq_universe_trans φ :
   forall s1 s2 s3,
     leq_universe φ s1 s2 ->
     leq_universe φ s2 s3 ->
@@ -482,7 +500,7 @@ Proof.
   intros v H. rewrite val_sup. Lia.lia.
 Qed.
 
-Lemma leq_universe_product `{checker_flags} φ s1 s2
+Lemma leq_universe_product φ s1 s2
   : leq_universe φ s2 (Universe.sort_of_product s1 s2).
 Proof.
   unfold leq_universe; destruct check_univs; [cbn|constructor].
@@ -491,7 +509,7 @@ Proof.
   apply leq_universe0_sup_r.
 Qed.
 
-Lemma eq_universe_leq_universe `{checker_flags} φ t u
+Lemma eq_universe_leq_universe φ t u
   : eq_universe φ t u -> leq_universe φ t u.
 Proof.
   unfold eq_universe, leq_universe; destruct check_univs.
@@ -504,3 +522,5 @@ Qed.
 
 (* This universe is a hack used in plugings to generate fresh universes *)
 Definition fresh_universe : universe. exact Universe.type0. Qed.
+
+End Univ.

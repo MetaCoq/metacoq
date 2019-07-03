@@ -1,7 +1,7 @@
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
 From MetaCoq.Template Require Import config utils monad_utils BasicAst AstUtils.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICTyping PCUICChecker PCUICMetaTheory PCUICWcbvEval PCUICSafeChecker PCUICLiftSubst.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICTyping PCUICChecker PCUICMetaTheory PCUICWcbvEval PCUICSafeChecker PCUICLiftSubst PCUICInversion.
 From MetaCoq.Extraction Require EAst ELiftSubst ETyping EWcbvEval Extract ExtractionCorrectness.
 Require Import String.
 Local Open Scope string_scope.
@@ -126,7 +126,6 @@ Section Erase.
               end).
       
       + destruct p as [? []]. sq. clear e.
-        Require Import MetaCoq.PCUIC.PCUICInversion. 
         
         eapply inversion_Lambda in t1 as (? & ? & ? & ? & ?).
         econstructor; cbn; eauto.
@@ -147,7 +146,6 @@ Lemma erases_extract Σ Γ t T (wfΣ : ∥wf Σ∥) (wfΓ : ∥wf_local Σ Γ∥
   erases Σ Γ t t'.
 Proof.
   Hint Constructors typing erases.
-  Hint Resolve is_type_or_proof_spec.
   intros. sq.
   (* pose proof (typing_wf_local X0). *)
 
@@ -297,8 +295,9 @@ Program Definition extract_global Σ : ∥wf Σ∥ -> _:=
 Lemma constructors_typed:
   forall (Σ : list global_decl) (univs : constraints) (k : kername)
     (m : mutual_inductive_body) (x : one_inductive_body) (t1 : term) 
-    (i0 : ident) (n0 : nat) (H2 : In (i0, t1, n0) (ind_ctors x))
-    (X0 : on_inductive (fun Σ0 : global_context => lift_typing typing Σ0) (Σ, univs) k m),
+    (i0 : ident) (n0 : nat),
+    In (i0, t1, n0) (ind_ctors x) ->
+    on_inductive (fun Σ0 : global_context => lift_typing typing Σ0) (Σ, univs) k m ->
     ∑ T, (Σ, univs);;; arities_context (ind_bodies m) |- t1 : T.
 Proof.
   intros Σ univs k m x t1 i0 n0 H2 X0.

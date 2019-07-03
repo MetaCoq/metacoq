@@ -18,15 +18,15 @@ Definition is_prop_sort s :=
   | None => false
   end.
 
-Parameter is_type_or_proof : forall (Σ : global_context), wf Σ -> forall (Γ : context), wf_local Σ Γ -> forall (t : PCUICAst.term), typing_result bool.
-From MetaCoq.PCUIC Require Import PCUICTyping.
+(* Parameter is_type_or_proof : forall (Σ : global_context), wf Σ -> forall (Γ : context), wf_local Σ Γ -> forall (t : PCUICAst.term), typing_result bool. *)
+(* From MetaCoq.PCUIC Require Import PCUICTyping. *)
 
 Definition Is_Type_or_Proof Σ Γ t := ∑ T, Σ ;;; Γ |- t : T × (isArity T + (∑ u, (Σ ;;; Γ |- T : tSort u) * is_prop_sort u))%type.
 
-Axiom is_type_or_proof_spec : forall (Sigma : global_context) wfΣ (Gamma : context) wfΓ (t : PCUICAst.term) T b,
-    Sigma ;;; Gamma |- t : T ->
-    is_type_or_proof Sigma wfΣ Gamma wfΓ t = Checked b ->
-    (b = true) <~> Is_Type_or_Proof Sigma Gamma t.
+(* Axiom is_type_or_proof_spec : forall (Sigma : global_context) wfΣ (Gamma : context) wfΓ (t : PCUICAst.term) T b, *)
+(*     Sigma ;;; Gamma |- t : T -> *)
+(*     is_type_or_proof Sigma wfΣ Gamma wfΓ t = Checked b -> *)
+(*     (b = true) <~> Is_Type_or_Proof Sigma Gamma t. *)
 
 (* Section IsType. *)
 (*   Context {F : Fuel}. *)

@@ -14,3 +14,4 @@ theories/Prelim.v
 theories/ESubstitution.v
 theories/EInversion.v
 theories/ExtractionCorrectness.v
+theories/ErasureFunction.v

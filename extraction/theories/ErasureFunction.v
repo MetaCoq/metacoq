@@ -1,8 +1,7 @@
-(* Distributed under the terms of the MIT license.   *)
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
 From MetaCoq.Template Require Import config utils monad_utils BasicAst AstUtils.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICTyping PCUICChecker PCUICRetyping PCUICMetaTheory PCUICWcbvEval PCUICSafeChecker PCUICLiftSubst.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICTyping PCUICChecker PCUICMetaTheory PCUICWcbvEval PCUICSafeChecker PCUICLiftSubst.
 From MetaCoq.Extraction Require EAst ELiftSubst ETyping EWcbvEval Extract ExtractionCorrectness.
 Require Import String.
 Local Open Scope string_scope.
@@ -267,7 +266,7 @@ Program Fixpoint extract_global_decls univs Σ : ∥ wf (Σ, univs) ∥ -> typin
     Σ' <- extract_global_decls univs Σ _;;
     ret (E.ConstantDecl kn cb' :: Σ')
   | InductiveDecl kn mib :: Σ => 
-    mib' <- extract_mutual_inductive_body (InductiveDecl kn mib :: Σ, univs) _ mib _ ;;
+    mib' <- extract_mutual_inductive_body (Σ, univs) _ mib _ ;;
     Σ' <- extract_global_decls univs Σ _;;
     ret (E.InductiveDecl kn mib' :: Σ')
   end.
@@ -279,10 +278,11 @@ Next Obligation.
 Qed.
 Next Obligation.
   Require Import MetaCoq.PCUIC.PCUICWeakeningEnv.
-  sq. eapply PCUICSubstitution.wf_arities_context. eauto.
-  
-  cbn. instantiate (1 := kn). unfold declared_minductive.
-  cbn. destruct (ident_eq_spec kn kn). all:try congruence.
+  sq. eapply wf_extends; eauto. eexists [_]; reflexivity.
+Qed.
+Next Obligation.
+  sq. inv X. cbn in *.
+  eapply PCUICSubstitution.wf_arities_context'; eauto.
 Qed.
 Next Obligation.
   sq. eapply PCUICWeakeningEnv.wf_extends. eauto. eexists [_]; reflexivity.
@@ -293,25 +293,48 @@ Program Definition extract_global Σ : ∥wf Σ∥ -> _:=
   Σ' <- extract_global_decls univs Σ wfΣ ;;
   ret Σ' end.
 
+           
+Lemma constructors_typed:
+  forall (Σ : list global_decl) (univs : constraints) (k : kername)
+    (m : mutual_inductive_body) (x : one_inductive_body) (t1 : term) 
+    (i0 : ident) (n0 : nat) (H2 : In (i0, t1, n0) (ind_ctors x))
+    (X0 : on_inductive (fun Σ0 : global_context => lift_typing typing Σ0) (Σ, univs) k m),
+    ∑ T, (Σ, univs);;; arities_context (ind_bodies m) |- t1 : T.
+Proof.
+  intros Σ univs k m x t1 i0 n0 H2 X0.
+Admitted.
+
+Lemma proj_typed:
+  forall (Σ : list global_decl) (univs : constraints) (k : kername)
+    (m : mutual_inductive_body) (x : one_inductive_body) (t1 : term) 
+    (i0 : ident) (H2 : In (i0, t1) (ind_projs x))
+    (X0 : on_inductive (fun Σ0 : global_context => lift_typing typing Σ0) (Σ, univs) k m),
+    ∑ T, (Σ, univs);;; [] |- t1 : T.
+Proof.
+  
+Admitted.
+
 Lemma extract_global_correct Σ (wfΣ : ∥ wf Σ∥) Σ' :
   extract_global Σ wfΣ = Checked Σ' ->
   erases_global Σ Σ'.
 Proof.
   destruct Σ as (Σ, univs).
-  induction Σ in wfΣ, Σ' |- *; cbn; intros.
+  induction Σ in wfΣ, Σ' |- *; cbn; intros; sq.
   - inv H. econstructor.
   - repeat destruct ?; try congruence.
     + inv H. inv E. inv E1. econstructor.
       * unfold erases_constant_body.
         unfold optM in E4. destruct ?; try congruence.
         -- cbn. cbn in *.
-           destruct (         extract (Σ, univs)
-           (extract_global_decls_obligation_1 univs (ConstantDecl k c :: Σ) wfΣ k c Σ
-              eq_refl) [] wf_local_nil t
-                    ) eqn:E5;
+           destruct ( extract (Σ, univs)
+           (extract_global_decls_obligation_1 univs (ConstantDecl k c :: Σ) 
+              (sq t) k c Σ eq_refl) [] wf_local_nil t0) eqn:E5;
              rewrite E5 in E4; inv E4.
            eapply erases_extract. 2:eauto.
-           admit.
+           instantiate (1 := cst_type c).
+           clear - t E. inv t.
+           cbn in *. unfold on_constant_decl in X0.
+           rewrite E in X0. cbn in X0. eassumption.           
         -- cbn. inv E4. econstructor.
       * eapply IHΣ. unfold extract_global. rewrite E2. reflexivity.
     + inv H. inv E. inv E1.
@@ -328,16 +351,24 @@ Proof.
         pose proof (Prelim.monad_map_All2 _ _ _ _ _ E4). 
         pose proof (Prelim.monad_map_All2 _ _ _ _ _ E5). repeat split; eauto.
         -- eapply All2_Forall.
-           eapply All2_impl. eassumption.
+           eapply All2_impl_In. eassumption.
            intros. destruct x0, p, y, p. cbn in *.
            destruct ?; try congruence.
-           inv H2. split; eauto.
-           eapply erases_extract. 2:eauto. admit. admit.
+           inv H4. split; eauto.
+
+           pose (t' := t). inv t'. cbn in *.
+           edestruct constructors_typed; eauto.
+           eapply erases_extract. 2:eauto. eauto.
         -- eapply All2_Forall.
-           eapply All2_impl. eassumption.
+           eapply All2_impl_In. eassumption.
            intros. cbn in H2. destruct x0, y.
-           destruct ?; try congruence.
-           inv H2. split; eauto.
-           eapply erases_extract. 2:eauto. admit. admit.
-      * eapply IHΣ. unfold extract_global. rewrite E2. reflexivity.
-Admitted.
+           destruct ?; try congruence;
+             inv H4. split; eauto.
+
+           pose (t' := t). inv t'. cbn in *.
+           edestruct proj_typed; eauto.
+           
+           eapply erases_extract.
+           2:{ eauto. } eauto.
+  * eapply IHΣ. unfold extract_global. rewrite E2. reflexivity.
+Qed.

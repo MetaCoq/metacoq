@@ -1297,16 +1297,14 @@ Proof.
     now rewrite subst_context_snoc0 in IHred1.
 
   - simplify_IH_hyps. eapply red_case; auto.
-    apply All2_map, All2_same. intros. red. constructor.
+    apply All2_map, All2_same. intros. split; auto.
 
   - simplify_IH_hyps. eapply red_case; auto.
-    apply All2_map, All2_same. intros. red. constructor.
+    apply All2_map, All2_same. intros. split; auto.
 
   - simplify_IH_hyps. apply red_case; auto.
-    eapply OnOne2_All2; eauto. eapply OnOne2_map.
-    eapply OnOne2_impl. eauto. simpl. intuition eauto.
-    red. unfold on_Trel in *. eapply b2; eauto.
-    induction X; intuition. red. simpl. auto.
+    apply All2_map.
+    eapply OnOne2_All2; eauto. simpl. intuition eauto.
 
   - apply red_proj_congr. eauto.
 
@@ -1454,16 +1452,14 @@ Proof.
     now rewrite subst_context_snoc0 in IHred1.
 
   - simplify_IH_hyps. eapply red_case; auto.
-    apply All2_map, All2_same. intros. red. constructor.
+    apply All2_map, All2_same. intros. split; auto.
 
   - simplify_IH_hyps. eapply red_case; auto.
-    apply All2_map, All2_same. intros. red. constructor.
+    apply All2_map, All2_same. intros. split; auto.
 
   - simplify_IH_hyps. apply red_case; auto.
-    eapply OnOne2_All2; eauto. eapply OnOne2_map.
-    eapply OnOne2_impl. eauto. simpl. intuition eauto.
-    red. unfold on_Trel in *. eapply b2; eauto.
-    induction X; intuition. red. simpl. auto.
+    eapply All2_map.
+    eapply OnOne2_All2; eauto. simpl. intuition eauto.
 
   - apply red_proj_congr. eauto.
 

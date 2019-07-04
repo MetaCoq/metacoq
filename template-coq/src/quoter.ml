@@ -55,13 +55,14 @@ sig
   val quote_univ_constraint : Univ.univ_constraint -> quoted_univ_constraint
   val quote_univ_instance : Univ.Instance.t -> quoted_univ_instance
   val quote_univ_constraints : Univ.Constraint.t -> quoted_univ_constraints
-  val quote_univ_contextset : Univ.ContextSet.t -> quoted_univ_contextset
   val quote_univ_context : Univ.UContext.t -> quoted_univ_context
+  val quote_univ_contextset : Univ.ContextSet.t -> quoted_univ_contextset
+  val quote_variance : Univ.Variance.t -> quoted_variance
   val quote_abstract_univ_context : Univ.AUContext.t -> quoted_abstract_univ_context
 
   val mkMonomorphic_ctx : quoted_univ_contextset -> quoted_universes_decl
   val mkPolymorphic_ctx : quoted_abstract_univ_context -> quoted_universes_decl
-  val mkCumulatice_ctx : quoted_abstract_univ_context -> quoted_universes_decl
+  val mkCumulative_ctx : quoted_abstract_univ_context -> quoted_variance list -> quoted_universes_decl
 
   val quote_mind_params : (quoted_ident * (t,t) sum) list -> quoted_mind_params
   val quote_mind_finiteness : Declarations.recursivity_kind -> quoted_mind_finiteness
@@ -144,8 +145,9 @@ struct
     | Polymorphic_ind ctx -> Q.mkPolymorphic_ctx (Q.quote_abstract_univ_context ctx)
     | Cumulative_ind cumi ->
       (* let cumi = instantiate_cumulativity_info cumi in *)
-      (* FIXME variance is thrown away *)
-       Q.mkCumulatice_ctx (Q.quote_abstract_univ_context (Univ.ACumulativityInfo.univ_context cumi))
+      let ctx = Q.quote_abstract_univ_context (Univ.ACumulativityInfo.univ_context cumi) in
+let var = CArray.map_to_list Q.quote_variance (Univ.ACumulativityInfo.variance cumi) in
+       Q.mkCumulative_ctx ctx var
 
   let quote_entries_inductive_universes iu =
     match iu with
@@ -154,7 +156,7 @@ struct
      * | Cumulative_ind_entry cumi ->
      *   (\* let cumi = instantiate_cumulativity_info cumi in *\)
      *   (\* FIXME variance is thrown away *\)
-     *    Q.mkCumulatice_ctx (Q.quote_abstract_univ_context (Univ.ACumulativityInfo.univ_context cumi)) *)
+     *    Q.mkCumulative_ctx (Q.quote_abstract_univ_context (Univ.ACumulativityInfo.univ_context cumi)) *)
     | _ -> failwith "todo sim"
 
   let quote_term_remember
@@ -545,4 +547,6 @@ since  [absrt_info] is a private type *)
     let entry = quote_entry_aux bypass env evm t in
     Q.quote_entry entry
 
+  let quote_ugraph (g : UGraph.t) =
+    Q.quote_univ_constraints (UGraph.constraints_of_universes g)
 end

@@ -1,5 +1,4 @@
 open Univ
-open Entries
 open Names
 open Pp
 open Tm_util
@@ -25,6 +24,7 @@ struct
   let quote_option ty = function
     | Some tm -> constr_mkApp (cSome, [|ty; tm|])
     | None -> constr_mkApp (cNone, [|ty|])
+  let quote_optionl ty = quote_option (Lazy.force ty)
 
   (* Quote OCaml int to Coq nat *)
   let quote_int =
@@ -109,10 +109,10 @@ struct
     let tl = to_coq_list (prodl tlevel bool_type) (List.tl levels) in
     constr_mkApp (tmake_universe, [| hd ; tl |])
 
-  (* todo : can be deduced from quote_level, hence shoud be in the Reify module *)
-  let quote_univ_instance u =
-    let arr = Univ.Instance.to_array u in
-    to_coq_listl tlevel (CArray.map_to_list quote_level arr)
+  let quote_levelset s =
+    let levels = LSet.elements s in
+    let levels' =  to_coq_listl tlevel (List.map quote_level levels) in
+    constr_mkApp (tLevelSet_of_list, [|levels'|])
 
   let quote_constraint_type (c : Univ.constraint_type) =
     match c with
@@ -125,6 +125,12 @@ struct
     let l2 = quote_level l2 in
     let ct = quote_constraint_type ct in
     constr_mkApp (tmake_univ_constraint, [| l1; ct; l2 |])
+
+  (* todo : can be deduced from quote_level, hence shoud be in the Reify module *)
+  let quote_univ_instance u =
+    let arr = Univ.Instance.to_array u in
+    to_coq_listl tlevel (CArray.map_to_list quote_level arr)
+
 
   let quote_univ_constraints const =
     let const = Univ.Constraint.elements const in
@@ -139,42 +145,33 @@ struct
     | Univ.Variance.Covariant -> Lazy.force cCovariant
     | Univ.Variance.Invariant -> Lazy.force cInvariant
 
-  let quote_cuminfo_variance var =
-    let var_list = CArray.map_to_list quote_variance var in
-    to_coq_listl tVariance var_list
-
-  let quote_ucontext inst const =
-    let inst' = quote_univ_instance inst in
-    let const' = quote_univ_constraints const in
-    constr_mkApp (tUContextmake, [|inst'; const'|])
+  let quote_univ_contextset uctx =
+    let levels' = quote_levelset (ContextSet.levels uctx) in
+    let const' = quote_univ_constraints (ContextSet.constraints uctx) in
+    pairl tLevelSet tConstraintSet levels' const'
 
   let quote_univ_context uctx =
-    let inst = Univ.UContext.instance uctx in
-    let const = Univ.UContext.constraints uctx in
-    constr_mkApp (cMonomorphic_ctx, [| quote_ucontext inst const |])
-
-  let quote_cumulative_univ_context cumi =
-    let uctx = Univ.CumulativityInfo.univ_context cumi in
-    let inst = Univ.UContext.instance uctx in
-    let const = Univ.UContext.constraints uctx in
-    let var = Univ.CumulativityInfo.variance cumi in
-    let uctx' = quote_ucontext inst const in
-    let var' = quote_cuminfo_variance var in
-    let listvar = constr_mkAppl (tlist, [| tVariance |]) in
-    let cumi' = pair (Lazy.force tUContext) listvar uctx' var' in
-    constr_mkApp (cCumulative_ctx, [| cumi' |])
-
-  let quote_abstract_univ_context_aux uctx =
-    let inst = Univ.UContext.instance uctx in
-    let const = Univ.UContext.constraints uctx in
-    constr_mkApp (cPolymorphic_ctx, [| quote_ucontext inst const |])
+    let inst' = quote_univ_instance (UContext.instance uctx) in
+    let const' = quote_univ_constraints (UContext.constraints uctx) in
+    constr_mkApp (tUContextmake, [|inst'; const'|])
 
   let quote_abstract_univ_context uctx =
-    let uctx = Univ.AUContext.repr uctx in
-    quote_abstract_univ_context_aux uctx
+    let uctx = AUContext.repr uctx in
+    let arr = Univ.Instance.to_array (UContext.instance uctx) in
+    let idents = to_coq_listl tident (CArray.map_to_list (fun _ -> quote_string "todo")  arr) in
+    let const' = quote_univ_constraints (UContext.constraints uctx) in
+    constr_mkApp (tAUContextmake, [|idents; const'|])
 
-  let quote_ugraph (g : UGraph.t) =
-    quote_univ_constraints (UGraph.constraints_of_universes g)
+  let mkMonomorphic_ctx t =
+    constr_mkApp (cMonomorphic_ctx, [|t|])
+
+  let mkPolymorphic_ctx t =
+    constr_mkApp (cPolymorphic_ctx, [|t|])
+
+  let mkCumulative_ctx t v =
+    let v = to_coq_listl tVariance v in
+    constr_mkApp (cCumulative_ctx,
+                  [|constr_mkApp (tACumulativityInfomake, [|t; v|])|])
 
   let quote_sort s =
     quote_universe (Sorts.univ_of_sort s)
@@ -207,63 +204,11 @@ struct
   let quote_inductive (kn, i) =
     constr_mkApp (tmkInd, [| kn; i |])
 
-  let mkAnon () = Lazy.force nAnon
-  let mkName id = constr_mkApp (nNamed, [| id |])
   let quote_kn kn = quote_string (KerName.to_string kn)
-  let mkRel i = constr_mkApp (tRel, [| i |])
-  let mkVar id = constr_mkApp (tVar, [| id |])
-  let mkEvar n args = constr_mkApp (tEvar, [| n; to_coq_listl tTerm (Array.to_list args) |])
-  let mkSort s = constr_mkApp (tSort, [| s |])
-  let mkCast c k t = constr_mkApp (tCast, [| c ; k ; t |])
-  let mkConst kn u = constr_mkApp (tConst, [| kn ; u |])
-  let mkProd na t b =
-    constr_mkApp (tProd, [| na ; t ; b |])
-  let mkLambda na t b =
-    constr_mkApp (tLambda, [| na ; t ; b |])
-  let mkApp f xs =
-    constr_mkApp (tApp, [| f ; to_coq_listl tTerm (Array.to_list xs) |])
 
-  let mkLetIn na t t' b =
-    constr_mkApp (tLetIn, [| na ; t ; t' ; b |])
-
-  let rec seq f t =
-    if f < t then f :: seq (f + 1) t
-    else []
-
-  let mkFix ((a,b),(ns,ts,ds)) =
-    let mk_fun xs i =
-      constr_mkApp (tmkdef, [| Lazy.force tTerm ; Array.get ns i ;
-                             Array.get ts i ; Array.get ds i ; Array.get a i |]) :: xs
-    in
-    let defs = List.fold_left mk_fun [] (seq 0 (Array.length a)) in
-    let block = to_coq_list (constr_mkAppl (tdef, [| tTerm |])) (List.rev defs) in
-    constr_mkApp (tFix, [| block ; b |])
-
-  let mkConstruct (ind, i) u =
-    constr_mkApp (tConstructor, [| ind ; i ; u |])
-
-  let mkCoFix (a,(ns,ts,ds)) =
-    let mk_fun xs i =
-      constr_mkApp (tmkdef, [| Lazy.force tTerm ; Array.get ns i ;
-                             Array.get ts i ; Array.get ds i ; Lazy.force tO |]) :: xs
-    in
-    let defs = List.fold_left mk_fun [] (seq 0 (Array.length ns)) in
-    let block = to_coq_list (constr_mkAppl (tdef, [| tTerm |])) (List.rev defs) in
-    constr_mkApp (tCoFix, [| block ; a |])
-
-  let mkInd i u = constr_mkApp (tInd, [| i ; u |])
-
-  let mkCase (ind, npar) nargs p c brs =
-    let info = pairl tIndTy tnat ind npar in
-    let branches = List.map2 (fun br nargs ->  pairl tnat tTerm nargs br) brs nargs in
-    let tl = prodl tnat tTerm in
-    constr_mkApp (tCase, [| info ; p ; c ; to_coq_list tl branches |])
-
+  (* useful? *)
   let quote_proj ind pars args =
     pair (prodl tIndTy tnat) (Lazy.force tnat) (pairl tIndTy tnat ind pars) args
-
-  let mkProj kn t =
-    constr_mkApp (tProj, [| kn; t |])
 
   let mk_one_inductive_body (a, b, c, d, e) =
     let c = to_coq_listl tsort_family c in

@@ -80,6 +80,7 @@ sig
   type quoted_univ_context
   type quoted_univ_contextset
   type quoted_abstract_univ_context
+  type quoted_variance
   type quoted_universes_decl
 
   type quoted_mind_params

@@ -169,12 +169,12 @@ Section Erase.
 
   (* Program Fixpoint erase (Γ : context) (HΓ : ∥wf_local Σ Γ∥) (t : term) {struct t} : typing_result E.term := *)
   (*   match is_type_or_proof Σ HΣ Γ HΓ t with *)
-  (*   | (Checked true ; _) => ret (E.tBox) *)
-  (*   | (TypeError t ; _ ) => TypeError t *)
-  (*   | (Checked false ; _ ) => (match t with *)
+  (*   | (Checked true ; H) => ret (E.tBox) *)
+  (*   | (TypeError t ; H) => TypeError t *)
+  (*   | (Checked false ; H ) => (match t with *)
   (*                             | tRel i => ret (E.tRel i) *)
   (*                             | tVar n =>  ret (E.tVar n) *)
-  (*                             | tEvar m l =>  *)
+  (*                             | tEvar m l => *)
   (*                               l' <- monad_map (erase Γ HΓ) l;; *)
   (*                                  ret (E.tEvar m l') *)
   (*                             | tSort u =>  ret E.tBox *)
@@ -182,28 +182,28 @@ Section Erase.
   (*                             | tInd kn u =>  ret E.tBox *)
   (*                             | tConstruct kn k u =>  ret (E.tConstruct kn k) *)
   (*                             | tProd na b t =>  ret E.tBox *)
-  (*                             | tLambda na b t =>  *)
+  (*                             | tLambda na b t => *)
   (*                               t' <- erase (vass na b :: Γ) _ t;; *)
   (*                                  ret (E.tLambda na t') *)
-  (*                             | tLetIn na b t0 t1 =>  *)
+  (*                             | tLetIn na b t0 t1 => *)
   (*                               b' <- erase Γ HΓ b;; *)
   (*                                  t1' <- erase (vdef na b t0 :: Γ) _ t1;; *)
   (*                                  ret (E.tLetIn na b' t1') *)
-  (*                             | tApp f u =>  *)
+  (*                             | tApp f u => *)
   (*                               f' <- erase Γ HΓ f;; *)
   (*                                  l' <- erase Γ HΓ u;; *)
-  (*                                  ret (E.tApp f' l')  *)
-  (*                             | tCase ip p c brs =>  *)
+  (*                                  ret (E.tApp f' l') *)
+  (*                             | tCase ip p c brs => *)
   (*                               c' <- erase Γ HΓ c;; *)
   (*                                  brs' <- monad_map (T:=typing_result) (fun x => x' <- erase Γ HΓ (snd x);; ret (fst x, x')) brs;; *)
   (*                                  ret (E.tCase ip c' brs') *)
-  (*                             | tProj p c =>  *)
+  (*                             | tProj p c => *)
   (*                               c' <- erase Γ HΓ c;; *)
   (*                                  ret (E.tProj p c') *)
-  (*                             | tFix mfix n =>   *)
+  (*                             | tFix mfix n => *)
   (*                               mfix' <- erase_mfix (erase) Γ HΓ mfix;; *)
   (*                                     ret (E.tFix mfix' n) *)
-  (*                             | tCoFix mfix n =>   *)
+  (*                             | tCoFix mfix n => *)
   (*                               mfix' <- erase_mfix (erase) Γ HΓ mfix;; *)
   (*                                     ret (E.tCoFix mfix' n) *)
   (*                             end) *)
@@ -213,124 +213,123 @@ Section Erase.
         
   (*   eapply inversion_Lambda in t0 as (? & ? & ? & ? & ?). *)
   (*   econstructor; cbn; eauto. *)
-  (* Qed. *)
+  (* Defined. *)
   (* Next Obligation. *)
   (*   destruct w. sq. econstructor; eauto. cbn. clear Heq_anonymous. *)
   (*   eapply inversion_LetIn in t as (? & ? & ? & ? & ? & ?). *)
   (*   econstructor; cbn; eauto. *)
-  (* Qed. *)
+  (* Defined. *)
 
   
-  (* Equations erase (Γ : context) (HΓ : ∥ wf_local Σ Γ ∥) (t : term) : typing_result E.term := *)
-  (*   erase Γ HΓ t with (is_type_or_proof Σ HΣ Γ HΓ t) := *)
-  (*   { *)
-  (*     erase Γ HΓ _ (Checked true ; _) := ret (E.tBox); *)
-  (*     erase Γ HΓ _ (TypeError t ; _) := TypeError t ; *)
-  (*     erase Γ HΓ (tRel i) _ := ret (E.tRel i) ; *)
-  (*     erase Γ HΓ (tVar n) _ := ret (E.tVar n) ; *)
-  (*     erase Γ HΓ (tEvar m l) _ := l' <- monad_map (erase Γ HΓ) l;; ret (E.tEvar m l') ; *)
-  (*     erase Γ HΓ (tSort u) _ := ret E.tBox *)
+  
+  Equations(noind) erase (Γ : context) (HΓ : ∥ wf_local Σ Γ ∥) (t : term) : typing_result E.term :=
+    erase Γ HΓ t with (is_type_or_proof Σ HΣ Γ HΓ t) :=
+    {
+      erase Γ HΓ _ (Checked true ; _) := ret (E.tBox);
+      erase Γ HΓ _ (TypeError t ; _) := TypeError t ;
+      erase Γ HΓ (tRel i) _ := ret (E.tRel i) ;
+      erase Γ HΓ (tVar n) _ := ret (E.tVar n) ;
+      erase Γ HΓ (tEvar m l) _ := l' <- monad_map (erase Γ HΓ) l;; ret (E.tEvar m l') ;
+      erase Γ HΓ (tSort u) _ := ret E.tBox
 
-  (*     ; erase Γ HΓ (tConst kn u) _ := ret (E.tConst kn) *)
-  (*     ; erase Γ HΓ (tInd kn u) _ := ret E.tBox *)
-  (*     ; erase Γ HΓ (tConstruct kn k u) _ := ret (E.tConstruct kn k) *)
-  (*     ; erase Γ HΓ (tProd na b t) _ := ret E.tBox *)
-  (*     ; erase Γ HΓ (tLambda na b t) _ := *)
-  (*                          t' <- erase (vass na b :: Γ) _ t;; *)
-  (*                             ret (E.tLambda na t') *)
-  (*     ; erase Γ HΓ (tLetIn na b t0 t1) _ := *)
-  (*                             b' <- erase Γ HΓ b;; *)
-  (*                                t1' <- erase (vdef na b t0 :: Γ) _ t1;; *)
-  (*                                ret (E.tLetIn na b' t1') *)
-  (*     ; erase Γ HΓ (tApp f u) _ := *)
-  (*                    f' <- erase Γ HΓ f;; *)
-  (*                       l' <- erase Γ HΓ u;; *)
-  (*                       ret (E.tApp f' l')  *)
-  (*     ; erase Γ HΓ (tCase ip p c brs) _ := *)
-  (*                            c' <- erase Γ HΓ c;; *)
-  (*                               brs' <- monad_map (T :=typing_result) (fun x => x' <- erase Γ HΓ (snd x);; ret (fst x, x')) brs;; *)
-  (*                               ret (E.tCase ip c' brs') *)
-  (*     ; erase Γ HΓ (tProj p c) _ := *)
-  (*                     c' <- erase Γ HΓ c;; *)
-  (*                        ret (E.tProj p c') *)
-  (*     ; erase Γ HΓ (tFix mfix n) _ :=  *)
-  (*                       mfix' <- erase_mfix (erase) Γ HΓ mfix;; *)
-  (*                             ret (E.tFix mfix' n) *)
-  (*     ; erase Γ HΓ (tCoFix mfix n) _ :=  *)
-  (*                         mfix' <- erase_mfix (erase) Γ HΓ mfix;; *)
-  (*                               ret (E.tCoFix mfix' n) *)
-  (*   }. *)
-  (* Next Obligation. *)
-  (*   destruct w. sq. econstructor; eauto. cbn.  *)
+      ; erase Γ HΓ (tConst kn u) _ := ret (E.tConst kn)
+      ; erase Γ HΓ (tInd kn u) _ := ret E.tBox
+      ; erase Γ HΓ (tConstruct kn k u) _ := ret (E.tConstruct kn k)
+      ; erase Γ HΓ (tProd na b t) _ := ret E.tBox
+      ; erase Γ HΓ (tLambda na b t) _ :=
+                           t' <- erase (vass na b :: Γ) _ t;;
+                              ret (E.tLambda na t')
+      ; erase Γ HΓ (tLetIn na b t0 t1) _ :=
+                              b' <- erase Γ HΓ b;;
+                                 t1' <- erase (vdef na b t0 :: Γ) _ t1;;
+                                 ret (E.tLetIn na b' t1')
+      ; erase Γ HΓ (tApp f u) _ :=
+                     f' <- erase Γ HΓ f;;
+                        l' <- erase Γ HΓ u;;
+                        ret (E.tApp f' l')
+      ; erase Γ HΓ (tCase ip p c brs) _ :=
+                             c' <- erase Γ HΓ c;;
+                                brs' <- monad_map (T :=typing_result) (fun x => x' <- erase Γ HΓ (snd x);; ret (fst x, x')) brs;;
+                                ret (E.tCase ip c' brs')
+      ; erase Γ HΓ (tProj p c) _ :=
+                      c' <- erase Γ HΓ c;;
+                         ret (E.tProj p c')
+      ; erase Γ HΓ (tFix mfix n) _ :=
+                        mfix' <- erase_mfix (erase) Γ HΓ mfix;;
+                              ret (E.tFix mfix' n)
+      ; erase Γ HΓ (tCoFix mfix n) _ :=
+                          mfix' <- erase_mfix (erase) Γ HΓ mfix;;
+                                ret (E.tCoFix mfix' n)
+    }.
+  Next Obligation.
+    destruct w. sq. econstructor; eauto. cbn.
         
-  (*   eapply inversion_Lambda in X as (? & ? & ? & ? & ?). *)
-  (*   econstructor; cbn; eauto. *)
-  (* Qed. *)
-  (* Next Obligation. *)
-  (*   destruct w. sq. econstructor; eauto. cbn. *)
-  (*   eapply inversion_LetIn in X as (? & ? & ? & ? & ? & ?). *)
-  (*   econstructor; cbn; eauto. *)
-  (* Qed. *)
-  (* Next Obligation. *)
-  (* Admitted.   *)
+    eapply inversion_Lambda in X as (? & ? & ? & ? & ?).
+    econstructor; cbn; eauto.
+  Qed.
+  Next Obligation.
+    destruct w. sq. econstructor; eauto. cbn.
+    eapply inversion_LetIn in X as (? & ? & ? & ? & ? & ?).
+    econstructor; cbn; eauto.
+  Qed.
   
-  Fixpoint erase (Γ : context) (HΓ : ∥wf_local Σ Γ∥) (t : term) {struct t} : typing_result E.term.
-  Proof.
-    destruct (is_type_or_proof Σ HΣ Γ HΓ t) eqn:E1.
-    destruct x as [b | ] eqn:E2.
-    destruct b eqn:E3.
-    - exact (ret (E.tBox)).
-    - revert y E1. refine (match t with
-             | tRel i => fun _ _ => ret (E.tRel i)
-             | tVar n => fun _ _ =>  ret (E.tVar n)
-             | tEvar m l => fun _ _ => 
-               l' <- monad_map (erase Γ HΓ) l;;
-                  ret (E.tEvar m l')
-             | tSort u => fun _ _ =>  ret E.tBox
-             | tConst kn u => fun _ _ =>  ret (E.tConst kn)
-             | tInd kn u => fun _ _ =>  ret E.tBox
-             | tConstruct kn k u => fun _ _ =>  ret (E.tConstruct kn k)
-             | tProd na b t => fun _ _ =>  ret E.tBox
-             | tLambda na b t => fun _ _ => 
-               t' <- erase (vass na b :: Γ) _ t;;
-                  ret (E.tLambda na t')
-             | tLetIn na b t0 t1 => fun _ _ => 
-               b' <- erase Γ HΓ b;;
-                  t1' <- erase (vdef na b t0 :: Γ) _ t1;;
-                  ret (E.tLetIn na b' t1')
-             | tApp f u => fun _ _ => 
-               f' <- erase Γ HΓ f;;
-                  l' <- erase Γ HΓ u;;
-                  ret (E.tApp f' l') 
-             | tCase ip p c brs => fun _ _ => 
-               c' <- erase Γ HΓ c;;
-                  brs' <- monad_map (T:=typing_result) (fun x => x' <- erase Γ HΓ (snd x);; ret (fst x, x')) brs;;
-                  ret (E.tCase ip c' brs')
-             | tProj p c => fun _ _ => 
-               c' <- erase Γ HΓ c;;
-                  ret (E.tProj p c')
-             | tFix mfix n => fun _ _ =>  
-                 mfix' <- erase_mfix (erase) Γ HΓ mfix;;
-                 ret (E.tFix mfix' n)
-             | tCoFix mfix n => fun _ _ =>  
-                 mfix' <- erase_mfix (erase) Γ HΓ mfix;;
-                 ret (E.tCoFix mfix' n)
-              end).
+  (* Fixpoint erase (Γ : context) (HΓ : ∥wf_local Σ Γ∥) (t : term) {struct t} : typing_result E.term. *)
+  (* Proof. *)
+  (*   destruct (is_type_or_proof Σ HΣ Γ HΓ t) eqn:E1. *)
+  (*   destruct x as [b | ] eqn:E2. *)
+  (*   destruct b eqn:E3. *)
+  (*   - exact (ret (E.tBox)). *)
+  (*   - revert y E1. refine (match t with *)
+  (*            | tRel i => fun _ _ => ret (E.tRel i) *)
+  (*            | tVar n => fun _ _ =>  ret (E.tVar n) *)
+  (*            | tEvar m l => fun _ _ => *)
+  (*              l' <- monad_map (erase Γ HΓ) l;; *)
+  (*                 ret (E.tEvar m l') *)
+  (*            | tSort u => fun _ _ =>  ret E.tBox *)
+  (*            | tConst kn u => fun _ _ =>  ret (E.tConst kn) *)
+  (*            | tInd kn u => fun _ _ =>  ret E.tBox *)
+  (*            | tConstruct kn k u => fun _ _ =>  ret (E.tConstruct kn k) *)
+  (*            | tProd na b t => fun _ _ =>  ret E.tBox *)
+  (*            | tLambda na b t => fun _ _ => *)
+  (*              t' <- erase (vass na b :: Γ) _ t;; *)
+  (*                 ret (E.tLambda na t') *)
+  (*            | tLetIn na b t0 t1 => fun _ _ => *)
+  (*              b' <- erase Γ HΓ b;; *)
+  (*                 t1' <- erase (vdef na b t0 :: Γ) _ t1;; *)
+  (*                 ret (E.tLetIn na b' t1') *)
+  (*            | tApp f u => fun _ _ => *)
+  (*              f' <- erase Γ HΓ f;; *)
+  (*                 l' <- erase Γ HΓ u;; *)
+  (*                 ret (E.tApp f' l') *)
+  (*            | tCase ip p c brs => fun _ _ => *)
+  (*              c' <- erase Γ HΓ c;; *)
+  (*                 brs' <- monad_map (T:=typing_result) (fun x => x' <- erase Γ HΓ (snd x);; ret (fst x, x')) brs;; *)
+  (*                 ret (E.tCase ip c' brs') *)
+  (*            | tProj p c => fun _ _ => *)
+  (*              c' <- erase Γ HΓ c;; *)
+  (*                 ret (E.tProj p c') *)
+  (*            | tFix mfix n => fun _ _ => *)
+  (*                mfix' <- erase_mfix (erase) Γ HΓ mfix;; *)
+  (*                ret (E.tFix mfix' n) *)
+  (*            | tCoFix mfix n => fun _ _ => *)
+  (*                mfix' <- erase_mfix (erase) Γ HΓ mfix;; *)
+  (*                ret (E.tCoFix mfix' n) *)
+  (*             end). *)
       
-      + destruct p as [? []]. sq. clear e.
+  (*     + destruct p as [? []]. sq. clear e. *)
         
-        eapply inversion_Lambda in t1 as (? & ? & ? & ? & ?).
-        econstructor; cbn; eauto.
-      + destruct p as [? []]. sq. clear e.
+  (*       eapply inversion_Lambda in t1 as (? & ? & ? & ? & ?). *)
+  (*       econstructor; cbn; eauto. *)
+  (*     + destruct p as [? []]. sq. clear e. *)
                 
-        eapply inversion_LetIn in t2 as (? & ? & ? & ? & ? & ?).
-        econstructor; cbn; eauto.
-    - exact (TypeError t0).
-  Defined.
+  (*       eapply inversion_LetIn in t2 as (? & ? & ? & ? & ? & ?). *)
+  (*       econstructor; cbn; eauto. *)
+  (*   - exact (TypeError t0). *)
+  (* Defined. *)
 
 End Erase.
 
-Require Import Extraction ExtractionCorrectness.
+Require Import ExtractionCorrectness.
 
 Lemma erases_erase Σ Γ t T (wfΣ : ∥wf Σ∥) (wfΓ : ∥wf_local Σ Γ∥) t' :
   Σ ;;; Γ |- t : T ->
@@ -354,18 +353,21 @@ Proof.
   erase Σ wfΣ' Γ wfΓ' t = Checked t' -> Σ;;; Γ |- t ⇝ℇ t'
          )); intros.
 
-  all: (cbn in *; repeat destruct ?;
-                                 repeat match goal with
+  all:eauto.
+  all: simp erase in *.
+  all: unfold erase_clause_1 in *.
+
+  all: cbn in *; repeat (destruct ?;  repeat match goal with
                                           [ H : Checked _ = Checked _ |- _ ] => inv H
                                         | [ H : TypeError _ = Checked _ |- _ ] => inv H
                                         | [ H : _ × PCUICSafeLemmata.welltyped _ _ _ |- _ ] => destruct H as [? []]
-                                        end; eauto); subst.
-
+                                        end; eauto).
+    
   - repeat econstructor; eauto.
   - econstructor. econstructor. clear E.
     eapply inversion_Prod in t0 as (? & ? & ? & ? & ?).
     split. eauto. left. econstructor.
-  - econstructor. econstructor. clear E.
+  - econstructor. eauto. econstructor. clear E.
     eapply inversion_Ind in t as (? & ? & ? & ? & ? & ?).
     split. eauto. left.
     eapply isArity_subst_instance. eapply isArity_ind_type.
@@ -402,7 +404,7 @@ Proof.
 
     intros. destruct X1. cbn in *. repeat destruct ?; inv e.
     cbn. repeat split; eauto. 
-    eapply p. eauto. 
+    eapply p. eauto.
 Qed.
 
 Definition optM {M : Type -> Type} `{Monad M} {A B} (x : option A) (f : A -> M B) : M (option B) :=

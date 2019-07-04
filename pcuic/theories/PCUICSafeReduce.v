@@ -996,22 +996,22 @@ Section Reduce.
     intros u l e hl h d.
     induction h.
     - assumption.
-    - apply PCUICConfluence.decompose_app_inv in e. subst.
+    - apply PCUICParallelReductionConfluence.decompose_app_inv in e. subst.
       (* Inversion on ht *)
       admit.
-    - apply PCUICConfluence.decompose_app_inv in e. subst.
+    - apply PCUICParallelReductionConfluence.decompose_app_inv in e. subst.
       (* Inversion on ht *)
       admit.
     - cbn in hl. specialize (hl eq_refl). subst.
-      apply PCUICConfluence.decompose_app_inv in e. subst. cbn in ht.
+      apply PCUICParallelReductionConfluence.decompose_app_inv in e. subst. cbn in ht.
       (* Inversion on ht *)
       admit.
     - apply decompose_app_eq_mkApps in e. subst.
       cbn in d. simp discr_construct in d. easy.
-    - apply PCUICConfluence.decompose_app_inv in e. subst.
+    - apply PCUICParallelReductionConfluence.decompose_app_inv in e. subst.
       (* Inversion on ht *)
       admit.
-    - apply PCUICConfluence.decompose_app_inv in e. subst.
+    - apply PCUICParallelReductionConfluence.decompose_app_inv in e. subst.
       (* Not very clear now.
          Perhaps we ought to show whnf of the mkApps entirely.
          And have a special whne case for Fix that don't reduce?

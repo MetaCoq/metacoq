@@ -527,9 +527,7 @@ Proof.
     eapply weaken_env_prop_typing.
 
   - (* iota reduction *) admit.
-  - (* Case congruence *)
-
-
+  - (* Case congruence *) admit.
   - (* Case congruence *) admit.
   - (* Case congruence *) admit.
   - (* Case congruence *) admit.

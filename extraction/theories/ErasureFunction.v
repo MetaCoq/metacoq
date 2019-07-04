@@ -3,6 +3,7 @@ From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
 From MetaCoq.Template Require Import config utils monad_utils BasicAst AstUtils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICTyping PCUICChecker PCUICMetaTheory PCUICWcbvEval PCUICSafeChecker PCUICLiftSubst PCUICInversion PCUICSR PCUICNormal PCUICSafeReduce.
 From MetaCoq.Extraction Require EAst ELiftSubst ETyping EWcbvEval Extract ExtractionCorrectness.
+From Equations Require Import Equations.
 Require Import String.
 Local Open Scope string_scope.
 Set Asymmetric Patterns.
@@ -95,7 +96,7 @@ Proof.
         -- exists (Checked true). econstructor. split. admit.
            right. exists x. admit.
         -- exists (Checked false). split.
-           ++ 
+           ++ admit.
            ++ sq. econstructor. eauto.
       * exists (TypeError t0). econstructor.
     + exists (TypeError t0). econstructor.
@@ -119,17 +120,24 @@ Section Erase.
   Definition on_snd_map {A B C} (f : B -> C) (p : A * B) :=
     (fst p, f (snd p)).
 
-  Section EraseMfix.
-    Context (extract : forall (Σ : global_context) (wfΣ : ∥ wf Σ ∥) (Γ : context) (HΓ : ∥ wf_local Σ Γ ∥) (t : term), typing_result E.term).
+  Variable (Σ : global_context)( HΣ :∥ wf Σ ∥).
+      
+  Ltac sq :=
+    repeat match goal with
+           | H : ∥ _ ∥ |- _ => destruct H; try clear H
+           end; try eapply sq.
 
-    Program Definition extract_mfix Σ (wfΣ : ∥wf Σ∥) Γ (HΓ : ∥wf_local Σ Γ∥) (defs : mfixpoint term) : typing_result (EAst.mfixpoint E.term) :=
+  Section EraseMfix.
+    Context (erase : forall  (Γ : context) (HΓ : ∥ wf_local Σ Γ ∥) (t : term), typing_result E.term).
+
+    Program Definition erase_mfix Γ (HΓ : ∥wf_local Σ Γ∥) (defs : mfixpoint term) : typing_result (EAst.mfixpoint E.term) :=
       let Γ' := (PCUICLiftSubst.fix_context defs ++ Γ)%list in
       monad_map (fun d => H <- _ ;;
-                   dbody' <- extract Σ wfΣ Γ' H d.(dbody);;
+                   dbody' <- erase Γ' H d.(dbody);;
                           ret ({| E.dname := d.(dname); E.rarg := d.(rarg);
                                   E.dbody := dbody' |})) defs.
     Next Obligation.
-      clear extract.
+      clear erase.
       
       epose proof ((fix check_types (mfix : mfixpoint term) acc (Hacc : ∥ wf_local_rel Σ Γ acc ∥) {struct mfix}
               : typing_result (∥ wf_local_rel Σ (Γ ,,, acc) (fix_context_i #|acc| mfix) ∥)
@@ -146,7 +154,9 @@ Section Erase.
                           (wf_local_rel_abs_sq (sq wf_local_rel_nil) (W.π1; W')) Z)
                  end)
            defs [] (sq _)).
-      destruct X. econstructor .
+      destruct X. econstructor.
+
+      
       sq. eapply wf_local_local_rel.
       eapply wf_local_rel_app_inv. eapply wf_local_rel_local. eauto.
       change fix_context with (fix_context_i #|@nil context_decl|).
@@ -157,7 +167,114 @@ Section Erase.
       
   End EraseMfix.
 
-  Fixpoint extract (Σ : global_context) (HΣ : ∥wf Σ∥) (Γ : context) (HΓ : ∥wf_local Σ Γ∥) (t : term) {struct t} : typing_result E.term.
+  (* Program Fixpoint erase (Γ : context) (HΓ : ∥wf_local Σ Γ∥) (t : term) {struct t} : typing_result E.term := *)
+  (*   match is_type_or_proof Σ HΣ Γ HΓ t with *)
+  (*   | (Checked true ; _) => ret (E.tBox) *)
+  (*   | (TypeError t ; _ ) => TypeError t *)
+  (*   | (Checked false ; _ ) => (match t with *)
+  (*                             | tRel i => ret (E.tRel i) *)
+  (*                             | tVar n =>  ret (E.tVar n) *)
+  (*                             | tEvar m l =>  *)
+  (*                               l' <- monad_map (erase Γ HΓ) l;; *)
+  (*                                  ret (E.tEvar m l') *)
+  (*                             | tSort u =>  ret E.tBox *)
+  (*                             | tConst kn u =>  ret (E.tConst kn) *)
+  (*                             | tInd kn u =>  ret E.tBox *)
+  (*                             | tConstruct kn k u =>  ret (E.tConstruct kn k) *)
+  (*                             | tProd na b t =>  ret E.tBox *)
+  (*                             | tLambda na b t =>  *)
+  (*                               t' <- erase (vass na b :: Γ) _ t;; *)
+  (*                                  ret (E.tLambda na t') *)
+  (*                             | tLetIn na b t0 t1 =>  *)
+  (*                               b' <- erase Γ HΓ b;; *)
+  (*                                  t1' <- erase (vdef na b t0 :: Γ) _ t1;; *)
+  (*                                  ret (E.tLetIn na b' t1') *)
+  (*                             | tApp f u =>  *)
+  (*                               f' <- erase Γ HΓ f;; *)
+  (*                                  l' <- erase Γ HΓ u;; *)
+  (*                                  ret (E.tApp f' l')  *)
+  (*                             | tCase ip p c brs =>  *)
+  (*                               c' <- erase Γ HΓ c;; *)
+  (*                                  brs' <- monad_map (T:=typing_result) (fun x => x' <- erase Γ HΓ (snd x);; ret (fst x, x')) brs;; *)
+  (*                                  ret (E.tCase ip c' brs') *)
+  (*                             | tProj p c =>  *)
+  (*                               c' <- erase Γ HΓ c;; *)
+  (*                                  ret (E.tProj p c') *)
+  (*                             | tFix mfix n =>   *)
+  (*                               mfix' <- erase_mfix (erase) Γ HΓ mfix;; *)
+  (*                                     ret (E.tFix mfix' n) *)
+  (*                             | tCoFix mfix n =>   *)
+  (*                               mfix' <- erase_mfix (erase) Γ HΓ mfix;; *)
+  (*                                     ret (E.tCoFix mfix' n) *)
+  (*                             end) *)
+  (*   end. *)
+  (* Next Obligation. *)
+  (*   destruct w. sq. econstructor; eauto. cbn. clear Heq_anonymous. *)
+        
+  (*   eapply inversion_Lambda in t0 as (? & ? & ? & ? & ?). *)
+  (*   econstructor; cbn; eauto. *)
+  (* Qed. *)
+  (* Next Obligation. *)
+  (*   destruct w. sq. econstructor; eauto. cbn. clear Heq_anonymous. *)
+  (*   eapply inversion_LetIn in t as (? & ? & ? & ? & ? & ?). *)
+  (*   econstructor; cbn; eauto. *)
+  (* Qed. *)
+
+  
+  (* Equations erase (Γ : context) (HΓ : ∥ wf_local Σ Γ ∥) (t : term) : typing_result E.term := *)
+  (*   erase Γ HΓ t with (is_type_or_proof Σ HΣ Γ HΓ t) := *)
+  (*   { *)
+  (*     erase Γ HΓ _ (Checked true ; _) := ret (E.tBox); *)
+  (*     erase Γ HΓ _ (TypeError t ; _) := TypeError t ; *)
+  (*     erase Γ HΓ (tRel i) _ := ret (E.tRel i) ; *)
+  (*     erase Γ HΓ (tVar n) _ := ret (E.tVar n) ; *)
+  (*     erase Γ HΓ (tEvar m l) _ := l' <- monad_map (erase Γ HΓ) l;; ret (E.tEvar m l') ; *)
+  (*     erase Γ HΓ (tSort u) _ := ret E.tBox *)
+
+  (*     ; erase Γ HΓ (tConst kn u) _ := ret (E.tConst kn) *)
+  (*     ; erase Γ HΓ (tInd kn u) _ := ret E.tBox *)
+  (*     ; erase Γ HΓ (tConstruct kn k u) _ := ret (E.tConstruct kn k) *)
+  (*     ; erase Γ HΓ (tProd na b t) _ := ret E.tBox *)
+  (*     ; erase Γ HΓ (tLambda na b t) _ := *)
+  (*                          t' <- erase (vass na b :: Γ) _ t;; *)
+  (*                             ret (E.tLambda na t') *)
+  (*     ; erase Γ HΓ (tLetIn na b t0 t1) _ := *)
+  (*                             b' <- erase Γ HΓ b;; *)
+  (*                                t1' <- erase (vdef na b t0 :: Γ) _ t1;; *)
+  (*                                ret (E.tLetIn na b' t1') *)
+  (*     ; erase Γ HΓ (tApp f u) _ := *)
+  (*                    f' <- erase Γ HΓ f;; *)
+  (*                       l' <- erase Γ HΓ u;; *)
+  (*                       ret (E.tApp f' l')  *)
+  (*     ; erase Γ HΓ (tCase ip p c brs) _ := *)
+  (*                            c' <- erase Γ HΓ c;; *)
+  (*                               brs' <- monad_map (T :=typing_result) (fun x => x' <- erase Γ HΓ (snd x);; ret (fst x, x')) brs;; *)
+  (*                               ret (E.tCase ip c' brs') *)
+  (*     ; erase Γ HΓ (tProj p c) _ := *)
+  (*                     c' <- erase Γ HΓ c;; *)
+  (*                        ret (E.tProj p c') *)
+  (*     ; erase Γ HΓ (tFix mfix n) _ :=  *)
+  (*                       mfix' <- erase_mfix (erase) Γ HΓ mfix;; *)
+  (*                             ret (E.tFix mfix' n) *)
+  (*     ; erase Γ HΓ (tCoFix mfix n) _ :=  *)
+  (*                         mfix' <- erase_mfix (erase) Γ HΓ mfix;; *)
+  (*                               ret (E.tCoFix mfix' n) *)
+  (*   }. *)
+  (* Next Obligation. *)
+  (*   destruct w. sq. econstructor; eauto. cbn.  *)
+        
+  (*   eapply inversion_Lambda in X as (? & ? & ? & ? & ?). *)
+  (*   econstructor; cbn; eauto. *)
+  (* Qed. *)
+  (* Next Obligation. *)
+  (*   destruct w. sq. econstructor; eauto. cbn. *)
+  (*   eapply inversion_LetIn in X as (? & ? & ? & ? & ? & ?). *)
+  (*   econstructor; cbn; eauto. *)
+  (* Qed. *)
+  (* Next Obligation. *)
+  (* Admitted.   *)
+  
+  Fixpoint erase (Γ : context) (HΓ : ∥wf_local Σ Γ∥) (t : term) {struct t} : typing_result E.term.
   Proof.
     destruct (is_type_or_proof Σ HΣ Γ HΓ t) eqn:E1.
     destruct x as [b | ] eqn:E2.
@@ -167,7 +284,7 @@ Section Erase.
              | tRel i => fun _ _ => ret (E.tRel i)
              | tVar n => fun _ _ =>  ret (E.tVar n)
              | tEvar m l => fun _ _ => 
-               l' <- monad_map (extract Σ HΣ Γ HΓ) l;;
+               l' <- monad_map (erase Γ HΓ) l;;
                   ret (E.tEvar m l')
              | tSort u => fun _ _ =>  ret E.tBox
              | tConst kn u => fun _ _ =>  ret (E.tConst kn)
@@ -175,28 +292,28 @@ Section Erase.
              | tConstruct kn k u => fun _ _ =>  ret (E.tConstruct kn k)
              | tProd na b t => fun _ _ =>  ret E.tBox
              | tLambda na b t => fun _ _ => 
-               t' <- extract Σ HΣ (vass na b :: Γ) _ t;;
+               t' <- erase (vass na b :: Γ) _ t;;
                   ret (E.tLambda na t')
              | tLetIn na b t0 t1 => fun _ _ => 
-               b' <- extract Σ HΣ Γ HΓ b;;
-                  t1' <- extract Σ HΣ (vdef na b t0 :: Γ) _ t1;;
+               b' <- erase Γ HΓ b;;
+                  t1' <- erase (vdef na b t0 :: Γ) _ t1;;
                   ret (E.tLetIn na b' t1')
              | tApp f u => fun _ _ => 
-               f' <- extract Σ HΣ Γ HΓ f;;
-                  l' <- extract Σ HΣ Γ HΓ u;;
+               f' <- erase Γ HΓ f;;
+                  l' <- erase Γ HΓ u;;
                   ret (E.tApp f' l') 
              | tCase ip p c brs => fun _ _ => 
-               c' <- extract Σ HΣ Γ HΓ c;;
-                  brs' <- monad_map (T:=typing_result) (fun x => x' <- extract Σ HΣ Γ HΓ (snd x);; ret (fst x, x')) brs;;
+               c' <- erase Γ HΓ c;;
+                  brs' <- monad_map (T:=typing_result) (fun x => x' <- erase Γ HΓ (snd x);; ret (fst x, x')) brs;;
                   ret (E.tCase ip c' brs')
              | tProj p c => fun _ _ => 
-               c' <- extract Σ HΣ Γ HΓ c;;
+               c' <- erase Γ HΓ c;;
                   ret (E.tProj p c')
              | tFix mfix n => fun _ _ =>  
-                 mfix' <- extract_mfix (extract) Σ HΣ Γ HΓ mfix;;
+                 mfix' <- erase_mfix (erase) Γ HΓ mfix;;
                  ret (E.tFix mfix' n)
              | tCoFix mfix n => fun _ _ =>  
-                 mfix' <- extract_mfix (extract) Σ HΣ Γ HΓ mfix;;
+                 mfix' <- erase_mfix (erase) Γ HΓ mfix;;
                  ret (E.tCoFix mfix' n)
               end).
       
@@ -213,11 +330,11 @@ Section Erase.
 
 End Erase.
 
-Require Import Extract ExtractionCorrectness.
+Require Import Extraction ExtractionCorrectness.
 
-Lemma erases_extract Σ Γ t T (wfΣ : ∥wf Σ∥) (wfΓ : ∥wf_local Σ Γ∥) t' :
+Lemma erases_erase Σ Γ t T (wfΣ : ∥wf Σ∥) (wfΓ : ∥wf_local Σ Γ∥) t' :
   Σ ;;; Γ |- t : T ->
-  extract Σ (wfΣ) Γ (wfΓ) t = Checked t' ->                
+  erase Σ (wfΣ) Γ (wfΓ) t = Checked t' ->                
   erases Σ Γ t t'.
 Proof.
   Hint Constructors typing erases.
@@ -227,14 +344,14 @@ Proof.
     
   pose (wfΣ' := sq t0).
   pose (wfΓ' := sq a).
-  change (extract Σ wfΣ' Γ wfΓ' t = Checked t') in H.
+  change (erase Σ wfΣ' Γ wfΓ' t = Checked t') in H.
 
   revert H.
   generalize wfΣ' wfΓ'. clear wfΣ' wfΓ'.
   
   revert Σ t0 Γ a t T X t'.
   eapply (typing_ind_env (fun Σ Γ t T =>   forall (t' : E.term) (wfΣ' : ∥ wf Σ ∥) (wfΓ' : ∥ wf_local Σ Γ ∥),
-  extract Σ wfΣ' Γ wfΓ' t = Checked t' -> Σ;;; Γ |- t ⇝ℇ t'
+  erase Σ wfΣ' Γ wfΓ' t = Checked t' -> Σ;;; Γ |- t ⇝ℇ t'
          )); intros.
 
   all: (cbn in *; repeat destruct ?;
@@ -271,7 +388,7 @@ Proof.
 
     eauto.
   - econstructor.
-    unfold extract_mfix in *.
+    unfold erase_mfix in *.
     pose proof (Prelim.monad_map_All2 _ _ _ mfix a0 E2).
     eapply All2_impl. eapply All2_All_mix_left. eassumption. eassumption.
 
@@ -279,7 +396,7 @@ Proof.
     cbn. repeat split; eauto. 
     eapply p. eauto. 
   - econstructor.
-    unfold extract_mfix in *.
+    unfold erase_mfix in *.
     pose proof (Prelim.monad_map_All2 _ _ _ mfix a0 E2).
     eapply All2_impl. eapply All2_All_mix_left. eassumption. eassumption.
 
@@ -297,9 +414,9 @@ Definition optM {M : Type -> Type} `{Monad M} {A B} (x : option A) (f : A -> M B
 Lemma wf_local_nil {Σ} : ∥ wf_local Σ [] ∥.
 Proof. repeat econstructor. Qed.
 
-Definition extract_constant_body Σ wfΣ (cb : constant_body) : typing_result E.constant_body :=
-  ty <- extract Σ wfΣ [] wf_local_nil cb.(cst_type) ;;
-  body <- optM cb.(cst_body) (fun b => extract Σ wfΣ [] wf_local_nil b);;
+Definition erase_constant_body Σ wfΣ (cb : constant_body) : typing_result E.constant_body :=
+  ty <- erase Σ wfΣ [] wf_local_nil cb.(cst_type) ;;
+  body <- optM cb.(cst_body) (fun b => erase Σ wfΣ [] wf_local_nil b);;
   ret {| E.cst_body := body; |}.
 
 Definition lift_opt_typing {A} (a : option A) (e : type_error) : typing_result A :=
@@ -308,39 +425,39 @@ Definition lift_opt_typing {A} (a : option A) (e : type_error) : typing_result A
   | None => raise e
   end.
 
-Definition extract_one_inductive_body Σ wfΣ npars arities Har
+Definition erase_one_inductive_body Σ wfΣ npars arities Har
            (oib : one_inductive_body) : typing_result E.one_inductive_body :=
   decty <- lift_opt_typing (decompose_prod_n_assum [] npars oib.(ind_type))
         (NotAnInductive oib.(ind_type)) ;;
   let '(params, arity) := decty in
-  type <- extract Σ wfΣ [] wf_local_nil oib.(ind_type) ;;
-  ctors <- monad_map (fun '(x, y, z) => y' <- extract Σ wfΣ arities Har y;; ret (x, y', z)) oib.(ind_ctors);;
+  type <- erase Σ wfΣ [] wf_local_nil oib.(ind_type) ;;
+  ctors <- monad_map (fun '(x, y, z) => y' <- erase Σ wfΣ arities Har y;; ret (x, y', z)) oib.(ind_ctors);;
   let projctx := arities ,,, params ,, vass nAnon oib.(ind_type) in
-  projs <- monad_map (fun '(x, y) => y' <- extract Σ wfΣ [] wf_local_nil y;; ret (x, y')) oib.(ind_projs);;
+  projs <- monad_map (fun '(x, y) => y' <- erase Σ wfΣ [] wf_local_nil y;; ret (x, y')) oib.(ind_projs);;
   ret {| E.ind_name := oib.(ind_name);
          E.ind_kelim := oib.(ind_kelim);
          E.ind_ctors := ctors;
          E.ind_projs := projs |}.
 
-Program Definition extract_mutual_inductive_body Σ wfΣ
+Program Definition erase_mutual_inductive_body Σ wfΣ
            (mib : mutual_inductive_body) (Hm :   ∥ wf_local Σ (arities_context (ind_bodies mib)) ∥)
 : typing_result E.mutual_inductive_body :=
   let bds := mib.(ind_bodies) in
   let arities := arities_context bds in
-  bodies <- monad_map (extract_one_inductive_body Σ wfΣ mib.(ind_npars) arities _) bds ;;
+  bodies <- monad_map (erase_one_inductive_body Σ wfΣ mib.(ind_npars) arities _) bds ;;
   ret {| E.ind_npars := mib.(ind_npars);
          E.ind_bodies := bodies; |}.
 
-Program Fixpoint extract_global_decls univs Σ : ∥ wf (Σ, univs) ∥ -> typing_result E.global_declarations := fun wfΣ =>
+Program Fixpoint erase_global_decls univs Σ : ∥ wf (Σ, univs) ∥ -> typing_result E.global_declarations := fun wfΣ =>
   match Σ with
   | [] => ret []
   | ConstantDecl kn cb :: Σ => 
-    cb' <- extract_constant_body (Σ, univs) _ cb;;
-    Σ' <- extract_global_decls univs Σ _;;
+    cb' <- erase_constant_body (Σ, univs) _ cb;;
+    Σ' <- erase_global_decls univs Σ _;;
     ret (E.ConstantDecl kn cb' :: Σ')
   | InductiveDecl kn mib :: Σ => 
-    mib' <- extract_mutual_inductive_body (Σ, univs) _ mib _ ;;
-    Σ' <- extract_global_decls univs Σ _;;
+    mib' <- erase_mutual_inductive_body (Σ, univs) _ mib _ ;;
+    Σ' <- erase_global_decls univs Σ _;;
     ret (E.InductiveDecl kn mib' :: Σ')
   end.
 Next Obligation.
@@ -361,9 +478,9 @@ Next Obligation.
   sq. eapply PCUICWeakeningEnv.wf_extends. eauto. eexists [_]; reflexivity.
 Qed.
 
-Program Definition extract_global Σ : ∥wf Σ∥ -> _:=
+Program Definition erase_global Σ : ∥wf Σ∥ -> _:=
   match Σ with (Σ, univs) => fun wfΣ  =>
-  Σ' <- extract_global_decls univs Σ wfΣ ;;
+  Σ' <- erase_global_decls univs Σ wfΣ ;;
   ret Σ' end.
 
            
@@ -388,8 +505,8 @@ Proof.
   
 Admitted.
 
-Lemma extract_global_correct Σ (wfΣ : ∥ wf Σ∥) Σ' :
-  extract_global Σ wfΣ = Checked Σ' ->
+Lemma erase_global_correct Σ (wfΣ : ∥ wf Σ∥) Σ' :
+  erase_global Σ wfΣ = Checked Σ' ->
   erases_global Σ Σ'.
 Proof.
   destruct Σ as (Σ, univs).
@@ -400,17 +517,17 @@ Proof.
       * unfold erases_constant_body.
         unfold optM in E4. destruct ?; try congruence.
         -- cbn. cbn in *.
-           destruct ( extract (Σ, univs)
-           (extract_global_decls_obligation_1 univs (ConstantDecl k c :: Σ) 
+           destruct ( erase (Σ, univs)
+           (erase_global_decls_obligation_1 univs (ConstantDecl k c :: Σ) 
               (sq t) k c Σ eq_refl) [] wf_local_nil t0) eqn:E5;
              rewrite E5 in E4; inv E4.
-           eapply erases_extract. 2:eauto.
+           eapply erases_erase. 2:eauto.
            instantiate (1 := cst_type c).
            clear - t E. inv t.
            cbn in *. unfold on_constant_decl in X0.
            rewrite E in X0. cbn in X0. eassumption.           
         -- cbn. inv E4. econstructor.
-      * eapply IHΣ. unfold extract_global. rewrite E2. reflexivity.
+      * eapply IHΣ. unfold erase_global. rewrite E2. reflexivity.
     + inv H. inv E. inv E1.
       econstructor.
       * econstructor; cbn; eauto.
@@ -432,7 +549,7 @@ Proof.
 
            pose (t' := t). inv t'. cbn in *.
            edestruct constructors_typed; eauto.
-           eapply erases_extract. 2:eauto. eauto.
+           eapply erases_erase. 2:eauto. eauto.
         -- eapply All2_Forall.
            eapply All2_impl_In. eassumption.
            intros. cbn in H2. destruct x0, y.
@@ -442,7 +559,7 @@ Proof.
            pose (t' := t). inv t'. cbn in *.
            edestruct proj_typed; eauto.
            
-           eapply erases_extract.
+           eapply erases_erase.
            2:{ eauto. } eauto.
-  * eapply IHΣ. unfold extract_global. rewrite E2. reflexivity.
+  * eapply IHΣ. unfold erase_global. rewrite E2. reflexivity.
 Qed.

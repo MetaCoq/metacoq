@@ -269,18 +269,6 @@ Section Lemmata.
       + assumption.
   Qed.
 
-  Lemma red_case_c :
-    forall Γ indn p c brs c',
-      red Σ Γ c c' ->
-      red Σ Γ (tCase indn p c brs) (tCase indn p c' brs).
-  Proof.
-    intros Γ indn p c brs c' h.
-    induction h.
-    - constructor.
-    - econstructor ; try eassumption.
-      constructor. assumption.
-  Qed.
-
   Lemma cored_case :
     forall Γ ind p c c' brs,
       cored Σ Γ c c' ->

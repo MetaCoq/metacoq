@@ -305,6 +305,74 @@ Section ReductionCongruence.
       now eapply (red_ctx (tCtxLetIn_r _ _ _ tCtxHole)).
     Qed.
 
+    Lemma red_case_c :
+      forall indn p c brs c',
+        red Σ Γ c c' ->
+        red Σ Γ (tCase indn p c brs) (tCase indn p c' brs).
+    Proof.
+      intros indn p c brs c' h.
+      induction h.
+      - constructor.
+      - econstructor ; try eassumption.
+        constructor. assumption.
+    Qed.
+
+    (* To match red from red1 *)
+    Inductive redl l : list term -> Type :=
+    | refl_redl : redl l l
+    | trans_redl :
+        forall l1 l2,
+          redl l l1 ->
+          OnOne2 (red1 Σ Γ) l1 l2 ->
+          redl l l2.
+
+    Lemma OnOne2_red_redl :
+      forall l l',
+        OnOne2 (red Σ Γ) l l' ->
+        redl l l'.
+    Proof.
+      intros l l' h.
+      induction h.
+      - induction p.
+        + constructor.
+        + econstructor.
+          * eapply IHp.
+          * constructor. auto.
+      - clear h. rename IHh into h.
+        induction h.
+        + constructor.
+        + econstructor ; eauto. constructor ; eauto.
+    Qed.
+
+    Lemma OnOne2_prod_inv :
+      forall A (P : A -> A -> Type) Q l l',
+        OnOne2 (Trel_conj P Q) l l' ->
+        OnOne2 P l l' × OnOne2 Q l l'.
+    Proof.
+      intros A P Q l l' h.
+      induction h.
+      - destruct p.
+        split ; constructor ; auto.
+      - destruct IHh.
+        split ; constructor ; auto.
+    Qed.
+
+    (* Lemma OnOne2_map_inv : *)
+    (*   forall  *)
+
+    Lemma red_case_one_brs :
+      forall indn p c brs brs',
+        OnOne2 (on_Trel_eq (red Σ Γ) snd fst) brs brs' ->
+        red Σ Γ (tCase indn p c brs) (tCase indn p c brs').
+    Proof.
+      intros indn p c brs brs' h.
+      apply OnOne2_prod_inv in h as hh.
+      destruct hh as [h1 h2].
+      apply OnOne2_map in h1.
+      apply OnOne2_red_redl in h1.
+      induction h1.
+    Abort.
+
     (* Fixpoint brs_n_context l := *)
     (*   match l with *)
     (*   | [] => tCtxHole *)

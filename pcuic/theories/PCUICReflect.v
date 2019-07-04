@@ -370,3 +370,18 @@ Defined.
 
 Derive NoConfusion NoConfusionHom for sig.
 Derive NoConfusion NoConfusionHom for prod.
+
+Definition eq_recursivity_kind r r' :=
+  match r, r' with
+  | Finite, Finite => true
+  | CoFinite, CoFinite => true
+  | BiFinite, BiFinite => true
+  | _, _ => false
+  end.
+
+Instance reflect_recursivity_kind : ReflectEq recursivity_kind := {
+  eqb := eq_recursivity_kind
+}.
+Proof.
+  destruct x, y; simpl; constructor; congruence.
+Defined.

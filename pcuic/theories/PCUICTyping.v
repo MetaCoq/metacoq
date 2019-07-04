@@ -839,7 +839,6 @@ Section WfArity.
     { wfa : isWfArity Σ Γ T & All_local_env_over typing property Σ _ (snd (projT2 (projT2 wfa))) }.
 End WfArity.
 
-
 (* AXIOM GUARD CONDITION *)
 Axiom fix_guard : mfixpoint term -> bool.
 
@@ -879,6 +878,79 @@ Axiom fix_guard_subst :
 
 Axiom ind_guard : mutual_inductive_body -> bool.
 
+Definition destInd (t : term) :=
+  match t with
+  | tInd ind u => Some (ind, u)
+  | _ => None
+  end.
+
+Definition isFinite (r : recursivity_kind) :=
+  match r with
+  | Finite => true
+  | _ => false
+  end.
+
+Definition isCoFinite (r : recursivity_kind) :=
+  match r with
+  | Finite => true
+  | _ => false
+  end.
+
+Definition check_recursivity_kind Σ ind r :=
+  match lookup_env Σ ind with
+  | Some (InductiveDecl _ mib) => eqb mib.(ind_finite) r
+  | _ => false
+  end.
+
+Definition check_one_fix Γ d :=
+  let '{| dname := na;
+         dtype := ty;
+         dbody := b;
+         rarg := arg |} := d in
+  let '(ctx, ty) := decompose_prod_assum Γ ty in
+  match nth_error (smash_context Γ ctx) arg with
+  | Some argd =>
+    let (hd, args) := decompose_app argd.(decl_type) in
+    match destInd hd with
+    | Some (mkInd ind _, u) => Some ind
+    | None => None (* Not recursive on an inductive type *)
+    end
+  | None => None (* Recursive argument not found *)
+  end.
+
+Definition check_wf_fix (Σ : global_env) Γ mfix :=
+  let checks := map (check_one_fix Γ) mfix in
+  match map_option_out checks with
+  | Some (ind :: inds) =>
+    (* Check that mutually recursive fixpoints are all on the same mututal
+       inductive block *)
+    forallb (eqb ind) inds &&
+    check_recursivity_kind Σ ind Finite
+  | _ => false
+  end.
+
+Definition check_one_cofix Γ d :=
+  let '{| dname := na;
+         dtype := ty;
+         dbody := b;
+         rarg := arg |} := d in
+  let '(ctx, ty) := decompose_prod_assum Γ ty in
+  let (hd, args) := decompose_app ty in
+  match destInd hd with
+  | Some (mkInd ind _, u) => Some ind
+  | None => None (* Not recursive on an inductive type *)
+  end.
+
+Definition check_wf_cofix (Σ : global_env_ext) Γ mfix :=
+  let checks := map (check_one_fix Γ) mfix in
+  match map_option_out checks with
+  | Some (ind :: inds) =>
+    (* Check that mutually recursive cofixpoints are all producing
+       coinductives in the same mututal coinductive block *)
+    forallb (eqb ind) inds &&
+    check_recursivity_kind Σ ind CoFinite
+  | _ => false
+  end.
 
 Inductive typing `{checker_flags} (Σ : global_env_ext) (Γ : context) : term -> term -> Type :=
 | type_Rel n decl :
@@ -958,8 +1030,7 @@ Inductive typing `{checker_flags} (Σ : global_env_ext) (Γ : context) : term ->
     All_local_env (lift_typing typing Σ) (Γ ,,, types) ->
     All (fun d => (Σ ;;; Γ ,,, types |- d.(dbody) : lift0 #|types| d.(dtype))
     * (isLambda d.(dbody) = true)%type) mfix ->
-    (** TODO check well-formed fix *)
-    (* Missing check on rarg *)
+    check_wf_fix Σ Γ mfix ->
     Σ ;;; Γ |- tFix mfix n : decl.(dtype)
 
 | type_CoFix mfix n decl :
@@ -968,7 +1039,7 @@ Inductive typing `{checker_flags} (Σ : global_env_ext) (Γ : context) : term ->
     nth_error mfix n = Some decl ->
     All_local_env (lift_typing typing Σ) (Γ ,,, types) ->
     All (fun d => Σ ;;; Γ ,,, types |- d.(dbody) : lift0 #|types| d.(dtype)) mfix ->
-    (** TODO check well-formed cofix *)
+    check_wf_cofix Σ Γ mfix ->
     Σ ;;; Γ |- tCoFix mfix n : decl.(dtype)
 
 | type_Conv t A B :
@@ -1042,9 +1113,9 @@ Section GlobalMaps.
              (c : nat) (cdecl : ident * term * nat) : Type :=
     let constructor_type := snd (fst cdecl) in
     on_type Σ (arities_context mdecl.(ind_bodies)) constructor_type *
-    { cs : constructor_shape mdecl i idecl cdecl &
+    ∑ cs : constructor_shape mdecl i idecl cdecl,
            type_local_ctx Σ (arities_context mdecl.(ind_bodies) ,,, mdecl.(ind_params))
-                          cs.(cshape_args) cs.(cshape_args_univ) }.
+                          cs.(cshape_args) cs.(cshape_args_univ).
 
   Definition on_constructors (Σ : global_env_ext) mind mdecl i idecl l :=
     Alli (on_constructor Σ mind mdecl i idecl) 0 l.
@@ -1147,7 +1218,8 @@ Section GlobalMaps.
       (** Constructors are well-typed *)
       onConstructors : on_constructors Σ mind mdecl i idecl idecl.(ind_ctors);
       (** Projections, if any, are well-typed *)
-      onProjections : idecl.(ind_projs) <> [] -> on_projections Σ mind mdecl i idecl ind_indices idecl.(ind_projs);
+      onProjections : idecl.(ind_projs) <> [] ->
+                      on_projections Σ mind mdecl i idecl ind_indices idecl.(ind_projs);
       (** The universes and elimination sorts must be correct w.r.t.
           the universe of the inductive and the universes in its constructors, which
           are declared in [on_constructors]. *)

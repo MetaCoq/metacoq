@@ -96,7 +96,7 @@ Qed.
 Section Lemmata.
 
   Context (flags : RedFlags.t).
-  Context (Σ : global_context).
+  Context (Σ : global_env_ext).
   Context (hΣ : wf Σ).
 
   (* red is the reflexive transitive closure of one-step reduction and thus

@@ -35,7 +35,7 @@ Definition atom t :=
 
 (** Simple lemmas about reduction *)
 
-Lemma red1_red (Σ : global_context) Γ t u : red1 (fst Σ) Γ t u -> red (fst Σ) Γ t u.
+Lemma red1_red (Σ : global_env_ext) Γ t u : red1 (fst Σ) Γ t u -> red (fst Σ) Γ t u.
 Proof. econstructor; eauto. constructor. Qed.
 Hint Resolve red1_red refl_red.
 
@@ -65,7 +65,7 @@ Proof. refine (red_trans _ _). Qed.
     a notion of one-hole context. *)
 
 Section ReductionCongruence.
-  Context {Σ : global_context}.
+  Context {Σ : global_env_ext}.
 
   Inductive term_context : Set :=
   | tCtxHole : term_context

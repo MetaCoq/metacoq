@@ -1412,7 +1412,7 @@ Proof.
 Qed.
 
 Lemma subst_check_correct_arity:
-  forall (Σ : global_context) (ind : inductive) (u : universe_instance)
+  forall (Σ : global_env_ext) (ind : inductive) (u : universe_instance)
          (npar : nat) (args : list term) (idecl : one_inductive_body)
          (indctx pctx : list context_decl) s k,
     check_correct_arity (snd Σ) idecl ind u indctx (firstn npar args) pctx ->

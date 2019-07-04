@@ -18,7 +18,7 @@ Set Equations With UIP.
 Section Inversion.
 
   Context `{checker_flags}.
-  Context (Σ : global_context).
+  Context (Σ : global_env_ext).
 
   Ltac insum :=
     match goal with

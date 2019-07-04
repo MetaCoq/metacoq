@@ -15,7 +15,7 @@ Existing Instance config.default_checker_flags.
 
 Definition isWfArity_or_Type Σ Γ T : Type := (isWfArity typing Σ Γ T + isType Σ Γ T).
 
-Inductive typing_spine `{checker_flags} (Σ : global_context) (Γ : context) : term -> list term -> term -> Type :=
+Inductive typing_spine `{checker_flags} (Σ : global_env_ext) (Γ : context) : term -> list term -> term -> Type :=
 | type_spine_nil ty : typing_spine Σ Γ ty [] ty
 | type_spine_cons hd tl na A B T B' :
     isWfArity_or_Type Σ Γ (tProd na A B) ->

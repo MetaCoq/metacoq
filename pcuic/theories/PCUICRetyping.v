@@ -21,7 +21,7 @@ Existing Instance default_checker_flags.
 
 Section TypeOf.
   Context `{F : Fuel}.
-  Context (Σ : global_context).
+  Context (Σ : global_env_ext).
 
   Section SortOf.
     Context (type_of : context -> term -> typing_result term).

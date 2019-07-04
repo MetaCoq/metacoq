@@ -234,7 +234,7 @@ Section Confluence.
   Qed.
 
   Lemma pred_snd_nth:
-    ∀ (Σ : global_context) (Γ Δ : context) (c : nat) (brs1 brs' : list (nat * term)),
+    ∀ (Σ : global_env_ext) (Γ Δ : context) (c : nat) (brs1 brs' : list (nat * term)),
       All2
         (on_Trel (pred1 Σ Γ Δ) snd) brs1
         brs' ->
@@ -258,7 +258,7 @@ Section Confluence.
     - intros H. apply (IHl _ _ _ H).
   Qed.
 
-  Lemma pred1_mkApps_tConstruct (Σ : global_context) (Γ Δ : context)
+  Lemma pred1_mkApps_tConstruct (Σ : global_env_ext) (Γ Δ : context)
         ind pars k (args : list term) c :
     pred1 Σ Γ Δ (mkApps (tConstruct ind pars k) args) c ->
     {args' : list term & (c = mkApps (tConstruct ind pars k) args') * (All2 (pred1 Σ Γ Δ) args args') }%type.
@@ -274,7 +274,7 @@ Section Confluence.
     eapply All2_app; auto.
   Qed.
 
-  Lemma pred1_mkApps_refl_tConstruct (Σ : global_context) Γ Δ i k u l l' :
+  Lemma pred1_mkApps_refl_tConstruct (Σ : global_env_ext) Γ Δ i k u l l' :
     pred1 Σ Γ Δ (mkApps (tConstruct i k u) l) (mkApps (tConstruct i k u) l') ->
     All2 (pred1 Σ Γ Δ) l l'.
   Proof.
@@ -283,7 +283,7 @@ Section Confluence.
     destruct p. now eapply mkApps_eq_inj in e as [_ <-].
   Qed.
 
-  Lemma pred1_mkApps_tFix_inv (Σ : global_context) (Γ Δ : context)
+  Lemma pred1_mkApps_tFix_inv (Σ : global_env_ext) (Γ Δ : context)
         mfix0 idx (args0 : list term) c :
     pred1 Σ Γ Δ (mkApps (tFix mfix0 idx) args0) c ->
     ({ mfix1 & { args1 : list term &
@@ -325,7 +325,7 @@ Section Confluence.
     - subst t. solve_discr.
   Qed.
 
-  Lemma pred1_mkApps_tCoFix_inv (Σ : global_context) (Γ Δ : context)
+  Lemma pred1_mkApps_tCoFix_inv (Σ : global_env_ext) (Γ Δ : context)
         mfix0 idx (args0 : list term) c :
     pred1 Σ Γ Δ (mkApps (tCoFix mfix0 idx) args0) c ->
     ∃ mfix1 args1,
@@ -348,7 +348,7 @@ Section Confluence.
     - subst t; solve_discr.
   Qed.
 
-  Lemma pred1_mkApps_tCoFix_refl_inv (Σ : global_context) (Γ Δ : context)
+  Lemma pred1_mkApps_tCoFix_refl_inv (Σ : global_env_ext) (Γ Δ : context)
         mfix0 mfix1 idx (args0 args1 : list term) :
     pred1 Σ Γ Δ (mkApps (tCoFix mfix0 idx) args0) (mkApps (tCoFix mfix1 idx) args1) ->
       All2_prop2_eq Γ Δ (Γ ,,, fix_context mfix0) (Δ ,,, fix_context mfix1) dtype dbody
@@ -660,7 +660,7 @@ Section Confluence.
   Qed.
 
   Section TriangleFn.
-    Context (Σ : global_context).
+    Context (Σ : global_env_ext).
 
     Definition map_fix (rho : context -> term -> term) Γ mfixctx (mfix : mfixpoint term) :=
       (map (map_def (rho Γ) (rho (Γ ,,, mfixctx))) mfix).

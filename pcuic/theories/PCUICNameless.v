@@ -447,7 +447,7 @@ Definition nl_global_decl (d : global_decl) : global_decl :=
   | InductiveDecl kn mib => InductiveDecl kn (nl_mutual_inductive_body mib)
   end.
 
-Definition nlg (Σ : global_context) : global_context :=
+Definition nlg (Σ : global_env_ext) : global_env_ext :=
   let '(Σ, φ) := Σ in
   (map nl_global_decl Σ, φ).
 

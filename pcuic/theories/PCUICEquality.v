@@ -621,7 +621,7 @@ Proof.
 Qed.
 
 Lemma eq_term_it_mkLambda_or_LetIn_inv :
-  forall (Σ : global_context) Γ u v,
+  forall (Σ : global_env_ext) Γ u v,
     eq_term (snd Σ) (it_mkLambda_or_LetIn Γ u) (it_mkLambda_or_LetIn Γ v) ->
     eq_term (snd Σ) u v.
 Proof.
@@ -635,7 +635,7 @@ Proof.
 Qed.
 
 Lemma eq_term_zipc_inv :
-  forall (Σ : global_context) u v π,
+  forall (Σ : global_env_ext) u v π,
     eq_term (snd Σ) (zipc u π) (zipc v π) ->
     eq_term (snd Σ) u v.
 Proof.
@@ -648,7 +648,7 @@ Proof.
 Qed.
 
 Lemma eq_term_zipx_inv :
-  forall (Σ : global_context) Γ u v π,
+  forall (Σ : global_env_ext) Γ u v π,
     eq_term (snd Σ) (zipx Γ u π) (zipx Γ v π) ->
     eq_term (snd Σ) u v.
 Proof.
@@ -659,7 +659,7 @@ Proof.
 Qed.
 
 Lemma eq_term_it_mkLambda_or_LetIn :
-  forall (Σ : global_context) Γ u v,
+  forall (Σ : global_env_ext) Γ u v,
     eq_term (snd Σ) u v ->
     eq_term (snd Σ) (it_mkLambda_or_LetIn Γ u) (it_mkLambda_or_LetIn Γ v).
 Proof.
@@ -671,7 +671,7 @@ Proof.
 Qed.
 
 Lemma eq_term_zipc :
-  forall (Σ : global_context) u v π,
+  forall (Σ : global_env_ext) u v π,
     eq_term (snd Σ) u v ->
     eq_term (snd Σ) (zipc u π) (zipc v π).
 Proof.
@@ -691,7 +691,7 @@ Proof.
 Qed.
 
 Lemma eq_term_zipx :
-  forall (Σ : global_context) Γ u v π,
+  forall (Σ : global_env_ext) Γ u v π,
     eq_term (snd Σ) u v ->
     eq_term (snd Σ) (zipx Γ u π) (zipx Γ v π).
 Proof.

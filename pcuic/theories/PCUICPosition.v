@@ -621,7 +621,7 @@ Qed.
 
 Section Stacks.
 
-  Context (Σ : global_context).
+  Context (Σ : global_env_ext).
   Context `{checker_flags}.
 
   Lemma red1_context :

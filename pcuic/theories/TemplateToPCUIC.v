@@ -71,5 +71,5 @@ Definition trans_global_decl (d : T.global_decl) :=
 Definition trans_global_decls d :=
   List.map trans_global_decl d.
 
-Definition trans_global (Σ : T.global_context) :=
+Definition trans_global (Σ : T.global_env_ext) :=
   (trans_global_decls (fst Σ), snd Σ).

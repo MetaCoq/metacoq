@@ -169,7 +169,7 @@ Fixpoint remove_arity (n : nat) (t : term) : term :=
           end
   end.
 
-Fixpoint lookup_mind_decl (id : ident) (decls : global_declarations)
+Fixpoint lookup_mind_decl (id : ident) (decls : global_env)
  := match decls with
     | nil => None
     | InductiveDecl kn d :: tl =>
@@ -344,13 +344,6 @@ Proof.
   simpl. rewrite reln_alt_eq.
   now rewrite -app_assoc !app_nil_r Nat.add_1_r.
 Qed.
-
-Definition polymorphic_instance uctx :=
-  match uctx with
-  | Monomorphic_ctx c => Instance.empty
-  | Polymorphic_ctx c => fst (UContext.dest c)
-  | Cumulative_ctx c => fst (UContext.dest (fst c))
-  end.
 
 Fixpoint context_assumptions (Γ : context) :=
   match Γ with

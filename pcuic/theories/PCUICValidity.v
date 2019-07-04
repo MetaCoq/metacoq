@@ -63,7 +63,7 @@ Hint Extern 30 (wf_local ?Σ ?Γ) =>
 Ltac pcuic := try solve [ intuition typeclasses eauto with pcuic ].
 
 Definition weaken_env_prop_full
-           (P : global_context -> context -> term -> term -> Type) :=
+           (P : global_env_ext -> context -> term -> term -> Type) :=
   forall Σ Σ', wf Σ' -> extends Σ Σ' -> forall Γ t T, P Σ Γ t T -> P Σ' Γ t T.
 
 Lemma isWfArity_or_Type_weaken_full : weaken_env_prop_full (fun Σ Γ t T => isWfArity_or_Type Σ Γ T).
@@ -86,7 +86,7 @@ Hint Resolve isWfArity_or_Type_weaken : pcuic.
 
 (** TODO: Universe instances *)
 Lemma isWfArity_or_Type_subst_instance:
-  forall (Σ : global_context) (Γ : context) (u : list Level.t) (ty : term), wf_local Σ Γ ->
+  forall (Σ : global_env_ext) (Γ : context) (u : list Level.t) (ty : term), wf_local Σ Γ ->
     isWfArity_or_Type Σ [] ty -> isWfArity_or_Type Σ Γ (PCUICUnivSubst.subst_instance_constr u ty).
 Proof.
   intros Σ Γ u ty wfΓ H.

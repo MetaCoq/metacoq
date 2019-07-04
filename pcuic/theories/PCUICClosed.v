@@ -169,10 +169,10 @@ Proof.
 Qed.
 
 Lemma closedn_All_local_closed:
-  forall (cf : checker_flags) (Σ : global_context) (Γ : context) (ctx : list context_decl)
+  forall (cf : checker_flags) (Σ : global_env_ext) (Γ : context) (ctx : list context_decl)
          (wfΓ' : wf_local Σ (Γ ,,, ctx)),
     All_local_env_over typing
-    (fun (Σ0 : global_context) (Γ0 : context) (_ : wf_local Σ0 Γ0) (t T : term) (_ : Σ0;;; Γ0 |- t : T) =>
+    (fun (Σ0 : global_env_ext) (Γ0 : context) (_ : wf_local Σ0 Γ0) (t T : term) (_ : Σ0;;; Γ0 |- t : T) =>
        closedn #|Γ0| t && closedn #|Γ0| T) Σ (Γ ,,, ctx) wfΓ' ->
     closedn_ctx 0 Γ && closedn_ctx #|Γ| ctx.
 Proof.
@@ -256,7 +256,7 @@ Lemma typecheck_closed `{cf : checker_flags} :
   env_prop (fun Σ Γ t T =>
               closedn #|Γ| t && closedn #|Γ| T).
 Proof.
-  assert(weaken_env_prop (lift_typing (fun (_ : global_context) (Γ : context) (t T : term) =>
+  assert(weaken_env_prop (lift_typing (fun (_ : global_env_ext) (Γ : context) (t T : term) =>
                                          closedn #|Γ| t && closedn #|Γ| T))).
   { repeat red. intros. destruct t; red in X0; eauto. }
 

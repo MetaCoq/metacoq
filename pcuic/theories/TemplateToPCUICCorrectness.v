@@ -790,7 +790,7 @@ Proof.
   apply trans_red1 in r; auto.
 Qed.
 
-Definition Tlift_typing (P : Template.Ast.global_context -> Tcontext -> Tterm -> Tterm -> Type) :=
+Definition Tlift_typing (P : Template.Ast.global_env_ext -> Tcontext -> Tterm -> Tterm -> Type) :=
   fun Σ Γ t T =>
     match T with
     | Some T => P Σ Γ t T
@@ -798,9 +798,9 @@ Definition Tlift_typing (P : Template.Ast.global_context -> Tcontext -> Tterm ->
     end.
 
 Lemma trans_wf_local:
-  forall (Σ : Template.Ast.global_context) (Γ : Tcontext),
+  forall (Σ : Template.Ast.global_env_ext) (Γ : Tcontext),
     let P :=
-        (fun (Σ0 : Template.Ast.global_context) (Γ0 : Tcontext) (t T : Tterm) =>
+        (fun (Σ0 : Template.Ast.global_env_ext) (Γ0 : Tcontext) (t T : Tterm) =>
            trans_global Σ0;;; trans_local Γ0 |- trans t : trans T)
     in
     TTy.All_local_env P Σ Γ ->
@@ -817,10 +817,10 @@ Proof.
 Qed.
 
 Lemma typing_wf_wf:
-  forall (Σ : Template.Ast.global_context),
+  forall (Σ : Template.Ast.global_env_ext),
     TTy.wf Σ ->
     Template.Typing.Forall_decls_typing
-      (fun (_ : Template.Ast.global_context) (_ : Tcontext) (t T : Tterm) => Ast.wf t /\ Ast.wf T) Σ.
+      (fun (_ : Template.Ast.global_env_ext) (_ : Tcontext) (t T : Tterm) => Ast.wf t /\ Ast.wf T) Σ.
 Proof.
   intros Σ wf.
   red. unfold TTy.lift_typing.

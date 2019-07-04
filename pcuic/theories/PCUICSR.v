@@ -53,7 +53,7 @@ Lemma decompose_app_tFix mfix idx args t :
   decompose_app t = (tFix mfix idx, args) -> t = mkApps (tFix mfix idx) args.
 Proof. apply decompose_app_rec_tFix. Qed.
 
-Inductive context_relation (P : global_context -> context -> context -> context_decl -> context_decl -> Type)
+Inductive context_relation (P : global_env_ext -> context -> context -> context_decl -> context_decl -> Type)
           {Σ} : forall (Γ Γ' : context), Type :=
 | ctx_rel_nil : context_relation P nil nil
 | ctx_rel_vass na na' T U Γ Γ' :
@@ -126,7 +126,7 @@ Require Import Equations.Tactics.
 (* First needs to show that cumulativity is closed under context conv *)
 Lemma wf_conv_context Σ Γ Δ (wfΓ : wf_local Σ Γ) :
   All_local_env_over typing
-    (fun (Σ : global_context) (Γ : context) wfΓ (t T : term) Ht =>
+    (fun (Σ : global_env_ext) (Γ : context) wfΓ (t T : term) Ht =>
        forall Γ' : context, conv_context Σ Γ Γ' -> Σ;;; Γ' |- t : T) Σ Γ wfΓ ->
   conv_context Σ Γ Δ -> wf_local Σ Δ.
 Proof.
@@ -151,7 +151,7 @@ Defined.
 Hint Resolve conv_context_refl : pcuic.
 (* Lemma wf_red1_context Σ Γ Δ : *)
 (*   All_local_env *)
-(*     (fun (Σ : global_context) (Γ : context) (t T : term) => *)
+(*     (fun (Σ : global_env_ext) (Γ : context) (t T : term) => *)
 (*        forall Γ' : context, red1_context Σ Γ Γ' -> Σ;;; Γ' |- t : T) Σ Γ -> *)
 (*   red1_context Σ Γ Δ -> wf_local Σ Γ -> wf_local Σ Δ. *)
 (* Proof. *)
@@ -388,7 +388,7 @@ Qed.
 
 (** The subject reduction property of the system: *)
 
-Definition SR_red1 (Σ : global_context) Γ t T :=
+Definition SR_red1 (Σ : global_env_ext) Γ t T :=
   forall u (Hu : red1 Σ Γ t u), Σ ;;; Γ |- u : T.
 
 Lemma sr_red1 : env_prop SR_red1.
@@ -553,10 +553,10 @@ Proof.
     now right.
 Admitted.
 
-Definition sr_stmt (Σ : global_context) Γ t T :=
+Definition sr_stmt (Σ : global_env_ext) Γ t T :=
   forall u, red Σ Γ t u -> Σ ;;; Γ |- u : T.
 
-Theorem subject_reduction : forall (Σ : global_context) Γ t u T,
+Theorem subject_reduction : forall (Σ : global_env_ext) Γ t u T,
   wf Σ -> Σ ;;; Γ |- t : T -> red Σ Γ t u -> Σ ;;; Γ |- u : T.
 Proof.
   intros * wfΣ Hty Hred.

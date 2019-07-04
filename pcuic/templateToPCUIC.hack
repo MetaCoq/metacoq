@@ -25,4 +25,4 @@ val trans_global_decl : T.global_decl -> global_decl
 
 val trans_global_decls : T.global_decl list -> global_decl list
 
-val trans_global : T.global_context -> global_decl list * constraints
+val trans_global : T.global_env_ext -> global_decl list * constraints

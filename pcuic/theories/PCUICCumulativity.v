@@ -32,7 +32,7 @@ Proof.
     econstructor 2; eauto. }
 Qed.
 
-Lemma red_cumul `{cf : checker_flags} {Σ : global_context} {Γ t u} :
+Lemma red_cumul `{cf : checker_flags} {Σ : global_env_ext} {Γ t u} :
   red Σ Γ t u ->
   Σ ;;; Γ |- t <= u.
 Proof.
@@ -41,7 +41,7 @@ Proof.
   econstructor 2; eauto.
 Qed.
 
-Lemma red_cumul_inv `{cf : checker_flags} {Σ : global_context} {Γ t u} :
+Lemma red_cumul_inv `{cf : checker_flags} {Σ : global_env_ext} {Γ t u} :
   red Σ Γ t u ->
   Σ ;;; Γ |- u <= t.
 Proof.
@@ -149,7 +149,7 @@ Lemma eq_term_sym `{cf : checker_flags} Σ t u :
 Proof.
 Admitted.
 
-Inductive conv_alt `{checker_flags} (Σ : global_context) (Γ : context) : term -> term -> Type :=
+Inductive conv_alt `{checker_flags} (Σ : global_env_ext) (Γ : context) : term -> term -> Type :=
 | conv_alt_refl t u : eq_term (snd Σ) t u -> Σ ;;; Γ |- t == u
 | conv_alt_red_l t u v : red1 (fst Σ) Γ t v -> Σ ;;; Γ |- v == u -> Σ ;;; Γ |- t == u
 | conv_alt_red_r t u v : Σ ;;; Γ |- t == v -> red1 (fst Σ) Γ u v -> Σ ;;; Γ |- t == u

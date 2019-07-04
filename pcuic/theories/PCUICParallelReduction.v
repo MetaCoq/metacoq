@@ -588,7 +588,7 @@ Section All2_local_env.
 End All2_local_env.
 
 Section ParallelReduction.
-  Context (Σ : global_context).
+  Context (Σ : global_env_ext).
 
   Definition pred_atom t :=
     match t with
@@ -1273,7 +1273,7 @@ Hint Extern 4 (All2_local_env_over _ _ _ ?X) =>
   tryif is_evar X then fail 1 else eapply All2_local_env_over_refl : pcuic.
 
 Section ParallelReduction2.
-  Context {Σ : global_context}.
+  Context {Σ : global_env_ext}.
 
   (** Parallel reduction is included in the reflexive transitive closure of 1-step reduction *)
   Lemma pred1_red Γ Γ' : forall M N, pred1 Σ Γ Γ' M N -> red Σ Γ M N.
@@ -1677,7 +1677,7 @@ Section ParallelWeakening.
   Qed.
 
   Lemma All2_local_env_over_firstn_skipn:
-    forall (Σ : global_context) (i : nat) (Δ' R : context),
+    forall (Σ : global_env_ext) (i : nat) (Δ' R : context),
       pred1_ctx Σ Δ' R ->
       All2_local_env_over (pred1 Σ) (skipn i Δ') (skipn i R) (firstn i Δ') (firstn i R).
   Proof.
@@ -1820,7 +1820,7 @@ Section ParallelSubstitution.
   Qed.
 
   Lemma All2_local_env_subst_ctx :
-    forall (Σ : global_context) c c0 (Γ0 Δ : context)
+    forall (Σ : global_env_ext) c c0 (Γ0 Δ : context)
     (Γ'0 : list context_decl) (Γ1 Δ1 : context) (Γ'1 : list context_decl) (s s' : list term),
       psubst Σ Γ0 Γ1 s s' Δ Δ1 ->
       #|Γ'0| = #|Γ'1| ->
@@ -2159,7 +2159,7 @@ Section ParallelSubstitution.
   Hint Constructors psubst : pcuic.
   Hint Transparent vass vdef : pcuic.
 
-  Lemma substitution0_pred1 {Σ : global_context} Γ Δ M M' na A A' N N' : wf Σ ->
+  Lemma substitution0_pred1 {Σ : global_env_ext} Γ Δ M M' na A A' N N' : wf Σ ->
     pred1 Σ Γ Δ M M' ->
     pred1 Σ (Γ ,, vass na A) (Δ ,, vass na A') N N' ->
     pred1 Σ Γ Δ (subst1 M 0 N) (subst1 M' 0 N').

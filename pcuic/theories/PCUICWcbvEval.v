@@ -26,7 +26,7 @@ Existing Instance default_checker_flags.
   TODO: CoFixpoints *)
 
 Section Wcbv.
-  Context (Σ : global_declarations) (Γ : context).
+  Context (Σ : global_env) (Γ : context).
   (* The local context is fixed: we are only doing weak reductions *)
 
   Inductive eval : term -> term -> Type :=
@@ -245,7 +245,7 @@ End Wcbv.
 
 (** Well-typed closed programs can't go wrong: they always evaluate to a value. *)
 
-Conjecture closed_typed_wcbeval : forall (Σ : global_context) t T,
+Conjecture closed_typed_wcbeval : forall (Σ : global_env_ext) t T,
     Σ ;;; [] |- t : T -> exists u, squash (eval (fst Σ) [] t u).
 
 (** Evaluation is a subrelation of reduction: *)
@@ -255,7 +255,7 @@ Require Import CRelationClasses.
 
 Tactic Notation "redt" uconstr(y) := eapply (transitivity (R:=red _ _) (y:=y)).
 
-Lemma wcbeval_red : forall (Σ : global_context) Γ t u,
+Lemma wcbeval_red : forall (Σ : global_env_ext) Γ t u,
     eval Σ Γ t u -> red Σ Γ t u.
 Proof.
   intros Σ.

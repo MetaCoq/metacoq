@@ -14,7 +14,7 @@ Set Asymmetric Patterns.
 
 Generalizable Variables Σ Γ t T.
 
-Definition extends (Σ Σ' : global_context) :=
+Definition extends (Σ Σ' : global_env_ext) :=
   { Σ'' & Σ' = (Σ'' ++ fst Σ, snd Σ)%list }.
 
 Lemma lookup_env_Some_fresh `{checker_flags} Σ φ c decl :
@@ -48,16 +48,16 @@ Qed.
 Hint Resolve extends_lookup : extends.
 
 Lemma extends_wf_local:
-  forall (H : checker_flags) (Σ : global_context) (Γ : context)
+  forall (H : checker_flags) (Σ : global_env_ext) (Γ : context)
          (wfΓ : wf_local Σ Γ),
     All_local_env_over typing
       (fun Σ0 Γ0 wfΓ (t T : term) ty =>
-         forall Σ' : global_context,
+         forall Σ' : global_env_ext,
            wf Σ' ->
            extends Σ0 Σ' ->
            Σ';;; Γ0 |- t : T
       ) Σ Γ wfΓ ->
-    forall Σ' : global_context, wf Σ' -> extends Σ Σ' -> wf_local Σ' Γ.
+    forall Σ' : global_env_ext, wf Σ' -> extends Σ Σ' -> wf_local Σ' Γ.
 Proof.
   intros H Σ Γ X X0 Σ' H0.
   induction X0; try econstructor; simpl in *; auto.
@@ -93,9 +93,9 @@ Proof.
 Qed.
 
 Lemma weakening_env_consistent_universe_context_instance `{checker_flags} :
-  forall (Σ : global_context) (u : list Level.t) univs,
+  forall (Σ : global_env_ext) (u : list Level.t) univs,
     consistent_universe_context_instance (snd Σ) univs u ->
-    forall Σ' : global_context,
+    forall Σ' : global_env_ext,
       extends Σ Σ' -> consistent_universe_context_instance (snd Σ') univs u.
 Proof.
   intros Σ u univs H1 Σ' H2. destruct univs; simpl in *; eauto.
@@ -104,9 +104,9 @@ Qed.
 Hint Resolve weakening_env_consistent_universe_context_instance : extends.
 
 Lemma weakening_env_declared_constant:
-  forall (H : checker_flags) (Σ : global_context) (cst : ident) (decl : constant_body),
+  forall (H : checker_flags) (Σ : global_env_ext) (cst : ident) (decl : constant_body),
     declared_constant (fst Σ) cst decl ->
-    forall Σ' : global_context, wf Σ' -> extends Σ Σ' -> declared_constant (fst Σ') cst decl.
+    forall Σ' : global_env_ext, wf Σ' -> extends Σ Σ' -> declared_constant (fst Σ') cst decl.
 Proof.
   intros H Σ cst decl H0 Σ' X2 H2.
   eapply extends_lookup; eauto.
@@ -114,9 +114,9 @@ Qed.
 Hint Resolve weakening_env_declared_constant : extends.
 
 Lemma weakening_env_declared_minductive:
-  forall (H : checker_flags) (Σ : global_context) ind decl,
+  forall (H : checker_flags) (Σ : global_env_ext) ind decl,
     declared_minductive (fst Σ) ind decl ->
-    forall Σ' : global_context, wf Σ' -> extends Σ Σ' -> declared_minductive (fst Σ') ind decl.
+    forall Σ' : global_env_ext, wf Σ' -> extends Σ Σ' -> declared_minductive (fst Σ') ind decl.
 Proof.
   intros H Σ cst decl H0 Σ' X2 H2.
   eapply extends_lookup; eauto.
@@ -124,18 +124,18 @@ Qed.
 Hint Resolve weakening_env_declared_minductive : extends.
 
 Lemma weakening_env_declared_inductive:
-  forall (H : checker_flags) (Σ : global_context) ind mdecl decl,
+  forall (H : checker_flags) (Σ : global_env_ext) ind mdecl decl,
     declared_inductive (fst Σ) ind mdecl decl ->
-    forall Σ' : global_context, wf Σ' -> extends Σ Σ' -> declared_inductive (fst Σ') ind mdecl decl.
+    forall Σ' : global_env_ext, wf Σ' -> extends Σ Σ' -> declared_inductive (fst Σ') ind mdecl decl.
 Proof.
   intros H Σ cst decl H0 [Hmdecl Hidecl] Σ' X2 H2. split; eauto with extends.
 Qed.
 Hint Resolve weakening_env_declared_inductive : extends.
 
 Lemma weakening_env_declared_constructor :
-  forall (H : checker_flags) (Σ : global_context) ind mdecl idecl decl,
+  forall (H : checker_flags) (Σ : global_env_ext) ind mdecl idecl decl,
     declared_constructor (fst Σ) ind mdecl idecl decl ->
-    forall Σ' : global_context, wf Σ' -> extends Σ Σ' ->
+    forall Σ' : global_env_ext, wf Σ' -> extends Σ Σ' ->
     declared_constructor (fst Σ') ind mdecl idecl decl.
 Proof.
   intros H Σ cst mdecl idecl cdecl [Hidecl Hcdecl] Σ' X2 H2.
@@ -144,9 +144,9 @@ Qed.
 Hint Resolve weakening_env_declared_constructor : extends.
 
 Lemma weakening_env_declared_projection :
-  forall (H : checker_flags) (Σ : global_context) ind mdecl idecl decl,
+  forall (H : checker_flags) (Σ : global_env_ext) ind mdecl idecl decl,
     declared_projection (fst Σ) ind mdecl idecl decl ->
-    forall Σ' : global_context, wf Σ' -> extends Σ Σ' ->
+    forall Σ' : global_env_ext, wf Σ' -> extends Σ Σ' ->
     declared_projection (fst Σ') ind mdecl idecl decl.
 Proof.
   intros H Σ cst mdecl idecl cdecl [Hidecl Hcdecl] Σ' X2 H2.
@@ -198,7 +198,7 @@ Proof.
 Qed.
 
 Definition weaken_env_prop `{checker_flags}
-           (P : global_context -> context -> term -> option term -> Type) :=
+           (P : global_env_ext -> context -> term -> option term -> Type) :=
   forall Σ Σ', wf Σ' -> extends Σ Σ' -> forall Γ t T, P Σ Γ t T -> P Σ' Γ t T.
 
 Lemma weakening_on_global_decl `{checker_flags} P Σ Σ' decl :

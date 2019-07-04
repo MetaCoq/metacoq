@@ -896,7 +896,7 @@ Proof.
 Qed.
 
 Lemma lift_check_correct_arity:
-  forall (cf : checker_flags) (Σ : global_context) (Γ' : context) (ind : inductive) (u : universe_instance)
+  forall (cf : checker_flags) (Σ : global_env_ext) (Γ' : context) (ind : inductive) (u : universe_instance)
          (npar : nat) (args : list term) (idecl : one_inductive_body)
          (Γ'' : context) (indctx pctx : list context_decl),
     check_correct_arity (snd Σ) idecl ind u indctx (firstn npar args) pctx ->

@@ -9,10 +9,6 @@ Set Asymmetric Patterns.
 
 Existing Instance config.default_checker_flags.
 
-(** Use a coercion for this common projection of the global context. *)
-Definition fst_ctx : global_env_ext -> global_env := fst.
-Coercion fst_ctx : global_env_ext >-> global_env.
-
 (** The subject reduction property of the system.
     We comment this as otherwise extraction can produce "axioms to be realized"
     values that make extracted code useless, as type are in Type.

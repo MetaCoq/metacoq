@@ -665,3 +665,11 @@ Ltac apply_spec :=
   | H : Forall _ _ |- is_true (forallb _ _) =>
     eapply (Forall_forallb _ _ _ H); clear H
   end.
+
+
+(** Use a coercion for this common projection of the global context. *)
+Definition fst_ctx : global_env_ext -> global_env := fst.
+Coercion fst_ctx : global_env_ext >-> global_env.
+
+Definition empty_ext (Σ : global_env) : global_env_ext
+  := (Σ, Monomorphic_ctx ContextSet.empty).

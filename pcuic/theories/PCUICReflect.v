@@ -420,3 +420,17 @@ Proof.
 Qed.
 
 Instance eqb_ctx : ReflectEq context := _.
+
+Definition eqb_recursivity_kind r r' :=
+  match r, r' with
+  | Finite, Finite => true
+  | CoFinite, CoFinite => true
+  | BiFinite, BiFinite => true
+  | _, _ => false
+  end.
+
+Instance reflect_recursivity_kind : ReflectEq recursivity_kind.
+Proof.
+  refine {| eqb := eqb_recursivity_kind |}.
+  destruct x, y; simpl; constructor; congruence.
+Defined.

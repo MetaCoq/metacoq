@@ -1206,7 +1206,6 @@ Proof.
   f_equal. apply IHn.
 Qed.
 
-
 Lemma subst_instance_decompose_prod_assum u Γ t :
   subst_instance u (decompose_prod_assum Γ t)
   = decompose_prod_assum (subst_instance_context u Γ) (subst_instance_constr u t).
@@ -1222,6 +1221,12 @@ Lemma subst_instance_decompose_app_rec u Γ t
 Proof.
   induction t in Γ |- *; cbnr.
   now rewrite IHt1.
+Qed.
+
+Lemma subst_instance_decompose_app u t
+  : subst_instance u (decompose_app t) = decompose_app (subst_instance u t).
+Proof.
+  unfold decompose_app. now rewrite (subst_instance_decompose_app_rec u []).
 Qed.
 
 Lemma subst_instance_to_extended_list u l
@@ -1268,6 +1273,91 @@ Proof.
     apply subst_instance_to_extended_list.
 Qed.
 
+Lemma subst_instance_subst_context u s k Γ : 
+  subst_instance_context u (subst_context s k Γ) =
+  subst_context (map (subst_instance_constr u) s) k (subst_instance_context u Γ).
+Proof.
+  unfold subst_instance_context, map_context.
+  rewrite !subst_context_alt.
+  rewrite map_mapi, mapi_map. apply mapi_rec_ext.
+  intros. unfold subst_decl; rewrite !PCUICAstUtils.compose_map_decl.
+  apply PCUICAstUtils.map_decl_ext; intros decl.
+  rewrite map_length. now rewrite subst_subst_instance_constr.
+Qed.
+
+Lemma subst_instance_context_smash u Γ Δ : 
+  subst_instance_context u (smash_context Δ Γ) = 
+  smash_context (subst_instance_context u Δ) (subst_instance_context u Γ).
+Proof.
+  induction Γ as [|[? [] ?] ?] in Δ |- *; simpl; auto.
+  - rewrite IHΓ. f_equal.
+    now rewrite subst_instance_subst_context.
+  - rewrite IHΓ, subst_instance_context_app; trivial.
+Qed.
+
+Lemma destInd_subst_instance u t : 
+  destInd (subst_instance u t) = option_map (fun '(i, u') => (i, subst_instance u u')) (destInd t).
+Proof.
+  destruct t; simpl; try congruence.
+  f_equal.
+Qed.
+
+Lemma subst_instance_context_assumptions u ctx :
+  context_assumptions (subst_instance_context u ctx)
+  = context_assumptions ctx.
+Proof.
+  induction ctx; cbnr.
+  destruct (decl_body a); cbn; now rewrite IHctx.
+Qed.
+
+Hint Rewrite subst_instance_context_assumptions : len.
+
+
+Lemma subst_instance_check_one_fix u mfix :
+  map
+        (fun x : def term =>
+        check_one_fix (map_def (subst_instance_constr u) (subst_instance_constr u) x)) mfix =
+  map check_one_fix mfix.
+Proof.
+  apply map_ext. intros [na ty def rarg]; simpl.
+  rewrite decompose_prod_assum_ctx.
+  destruct (decompose_prod_assum _ ty) eqn:decomp.
+  rewrite decompose_prod_assum_ctx in decomp.
+  erewrite <-(subst_instance_decompose_prod_assum u []).
+  destruct (decompose_prod_assum [] ty) eqn:decty.
+  rewrite app_context_nil_l in decomp.
+  injection decomp. intros -> ->. clear decomp.
+  simpl. rewrite !app_context_nil_l, <- (subst_instance_context_smash u _ []).
+  unfold subst_instance_context, map_context.
+  rewrite <- map_rev. rewrite nth_error_map.
+  destruct nth_error as [d|] eqn:Hnth; simpl; auto.
+  rewrite <- subst_instance_decompose_app.
+  destruct (decompose_app (decl_type d)) eqn:Happ.
+  simpl.
+  rewrite destInd_subst_instance.
+  destruct destInd as [[i u']|]; simpl; auto.
+Qed.
+
+Lemma subst_instance_check_one_cofix u mfix :
+  map
+        (fun x : def term =>
+        check_one_cofix (map_def (subst_instance_constr u) (subst_instance_constr u) x)) mfix =
+  map check_one_cofix mfix.
+Proof.
+  apply map_ext. intros [na ty def rarg]; simpl.
+  rewrite decompose_prod_assum_ctx.
+  destruct (decompose_prod_assum _ ty) eqn:decomp.
+  rewrite decompose_prod_assum_ctx in decomp.
+  rewrite <- (subst_instance_decompose_prod_assum _ []).
+  destruct (decompose_prod_assum [] ty) eqn:decty.
+  rewrite app_context_nil_l in decomp.
+  injection decomp; intros -> ->; clear decomp.
+  simpl.
+  destruct (decompose_app t) eqn:Happ.
+  rewrite <- subst_instance_decompose_app, Happ. simpl.
+  rewrite destInd_subst_instance.
+  destruct destInd as [[i u']|]; simpl; auto.
+Qed.
 
 Axiom fix_guard_subst_instance :
   forall mfix u,
@@ -1276,6 +1366,13 @@ Axiom fix_guard_subst_instance :
                    mfix).
 
 
+Axiom cofix_guard_subst_instance :
+  forall mfix u,
+  cofix_guard mfix ->
+  cofix_guard (map (map_def (subst_instance_constr u) (subst_instance_constr u))
+                  mfix).
+
+                 
 Lemma All_local_env_over_subst_instance Σ Γ (wfΓ : wf_local Σ Γ) :
   All_local_env_over typing
                      (fun Σ0 Γ0 (_ : wf_local Σ0 Γ0) t T (_ : Σ0;;; Γ0 |- t : T) =>
@@ -1362,7 +1459,7 @@ Proof.
     + symmetry; apply subst_instance_constr_two.
 
   - intros ind u npar p c brs args mdecl idecl isdecl X X0 H ps pty H0 X1
-           X2 H1 X3 X4 btys H2 X5 u0 univs X6 HSub H4.
+           X2 H1 X3 notCoFinite X4 btys H2 X5 u0 univs X6 HSub H4.
     rewrite subst_instance_constr_mkApps in *.
     rewrite map_app. cbn. rewrite map_skipn.
     eapply type_Case with (u1:=subst_instance_instance u0 u)
@@ -1415,7 +1512,7 @@ Proof.
     eapply X2 in H0; tas. rewrite subst_instance_constr_mkApps in H0.
     eassumption.
 
-  - intros mfix n decl H H0 H1 X X0 u univs wfΣ' HSub.
+  - intros mfix n decl H H0 H1 X X0 wffix u univs wfΣ' HSub.
     erewrite map_dtype. econstructor.
     + now apply fix_guard_subst_instance.
     + rewrite nth_error_map, H0. reflexivity.
@@ -1434,9 +1531,14 @@ Proof.
         rewrite <- (fix_context_subst_instance u mfix).
         eapply X3.
       * destruct x as [? ? []]; cbn in *; tea.
+    + red; rewrite <- wffix.
+      unfold wf_fixpoint.
+      rewrite map_map_compose.
+      now rewrite subst_instance_check_one_fix.
 
-  - intros mfix n decl H X X0 X1 H0 u univs wfΣ' HSub H1.
+  - intros mfix n decl guard H X X0 X1 wfcofix u univs wfΣ' HSub H1.
     erewrite map_dtype. econstructor; tas.
+    + now apply cofix_guard_subst_instance.
     + rewrite nth_error_map, H. reflexivity.
     + apply X; eauto.
     + apply All_map, (All_impl X0); simpl; intuition auto.
@@ -1451,7 +1553,11 @@ Proof.
         rewrite map_app in *.
         rewrite <- (fix_context_subst_instance u mfix).
         rewrite <- map_dtype. eapply X3.
-
+    + red; rewrite <- wfcofix.
+      unfold wf_cofixpoint.
+      rewrite map_map_compose.
+      now rewrite subst_instance_check_one_cofix.
+      
   - intros t0 A B X X0 X1 X2 X3 u univs wfΣ' HSub H.
     econstructor.
     + eapply X1; aa.

@@ -1716,7 +1716,7 @@ Proof.
       eapply declared_projection_closed_type in isdecl. 2: auto.
       rewrite List.rev_length. rewrite e. assumption.
 
-  - intros Σ wfΣ Γ wfΓ mfix n decl types H1 hdecl X ihmfixt ihmfixb Δ f hf.
+  - intros Σ wfΣ Γ wfΓ mfix n decl types H1 hdecl X ihmfixt ihmfixb wffix Δ f hf.
     assert (hΔ' : wf_local Σ (Δ ,,, rename_context f (fix_context mfix))).
     { rewrite - rename_fix_context.
       apply PCUICWeakening.All_mfix_wf; auto; try apply hf.
@@ -1744,9 +1744,10 @@ Proof.
            ++ autorewrite with sigma. subst types. rewrite fix_context_length.
               now rewrite -ren_shiftn up_Upn shiftn_consn_idsn.
         -- eapply isLambda_rename. assumption.
+      * admit (* wf_fixpoint renaming *).
     + reflexivity.
 
-  - intros Σ wfΣ Γ wfΓ mfix n decl types hdecl X ihmfixt ihmfixb allow Δ f hf.
+  - intros Σ wfΣ Γ wfΓ mfix n decl types guard hdecl X ihmfixt ihmfixb wfcofix Δ f hf.
     assert (hΔ' : wf_local Σ (Δ ,,, rename_context f (fix_context mfix))).
     { rewrite -rename_fix_context.
       apply PCUICWeakening.All_mfix_wf; auto; try apply hf.
@@ -1755,6 +1756,7 @@ Proof.
       simpl. apply (b _ _ hf). }
     simpl. eapply meta_conv.
     + eapply type_CoFix; auto.
+      * eapply cofix_guard_rename; eauto.
       * rewrite nth_error_map. rewrite hdecl. simpl. reflexivity.
       * apply hf.
       * apply All_map, (All_impl ihmfixt).
@@ -1770,6 +1772,7 @@ Proof.
             apply urenaming_context; auto. apply hf.
         ++ autorewrite with sigma. subst types. rewrite fix_context_length.
            now rewrite -ren_shiftn up_Upn shiftn_consn_idsn.
+      * admit.
     + reflexivity.
 
   - intros Σ wfΣ Γ wfΓ t A B X ht iht hwf hcu Δ f hf.
@@ -2276,7 +2279,7 @@ Proof.
     eapply declared_constructor_closed_type in isdecl; eauto.
     rewrite inst_closed0; eauto.
   - intros Σ wfΣ Γ wfΓ ind u npar p c brs args mdecl idecl isdecl X X0 a pars
-           ps pty htoc X1 ihp H2 X3 ihc btys H3 ihbtys Δ σ hΔ hσ.
+           ps pty htoc X1 ihp H2 X3 notcoind ihc btys H3 ihbtys Δ σ hΔ hσ.
     autorewrite with sigma. simpl.
     rewrite map_app. simpl.
     rewrite map_skipn.
@@ -2291,6 +2294,7 @@ Proof.
       eapply ihc.
     + admit.
     + admit.
+    + admit. 
   - intros Σ wfΣ Γ wfΓ p c u mdecl idecl pdecl isdecl args X X0 hc ihc e ty
            Δ σ hΔ hσ.
     simpl.

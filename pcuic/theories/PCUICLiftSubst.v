@@ -691,6 +691,7 @@ Proof.
   - rewrite !List.rev_length !mapi_length !app_length !List.rev_length. simpl. lia.
 Qed.
 Hint Rewrite subst_context_length : len.
+Hint Rewrite subst_context_length : subst wf.
 
 Lemma subst_context_snoc s k Γ d : subst_context s k (d :: Γ) = subst_context s k Γ ,, subst_decl s (#|Γ| + k) d.
 Proof.
@@ -701,6 +702,76 @@ Proof.
   rewrite app_length !List.rev_length. simpl. f_equal. f_equal. lia.
 Qed.
 Hint Rewrite subst_context_snoc : subst.
+
+
+Lemma subst_decl0 k d : map_decl (subst [] k) d = d.
+Proof.
+  destruct d; destruct decl_body;
+    unfold subst_decl, map_decl; simpl in *;
+    f_equal; simpl; rewrite subst_empty; intuition trivial.
+Qed.
+
+Lemma subst_context_nil s n : subst_context s n [] = [].
+Proof. reflexivity. Qed.
+
+Lemma subst0_context k Γ : subst_context [] k Γ = Γ.
+Proof.
+  unfold subst_context, fold_context.
+  rewrite rev_mapi. rewrite List.rev_involutive.
+  unfold mapi. generalize 0. generalize #|List.rev Γ|.
+  induction Γ; intros; simpl; trivial.
+  erewrite subst_decl0; f_equal; eauto.
+Qed.
+
+Lemma fold_context_length f Γ : #|fold_context f Γ| = #|Γ|.
+Proof.
+  unfold fold_context. now rewrite !List.rev_length mapi_length List.rev_length.
+Qed.
+
+Lemma subst_context_snoc0 s Γ d : subst_context s 0 (Γ ,, d) = subst_context s 0 Γ ,, subst_decl s #|Γ| d.
+Proof.
+  unfold snoc. now rewrite subst_context_snoc Nat.add_0_r.
+Qed.
+Hint Rewrite subst_context_snoc : subst.
+
+Lemma subst_context_alt s k Γ :
+  subst_context s k Γ =
+  mapi (fun k' d => subst_decl s (Nat.pred #|Γ| - k' + k) d) Γ.
+Proof.
+  unfold subst_context, fold_context. rewrite rev_mapi. rewrite List.rev_involutive.
+  apply mapi_ext. intros. f_equal. now rewrite List.rev_length.
+Qed.
+
+Lemma subst_context_app s k Γ Δ :
+  subst_context s k (Γ ,,, Δ) = subst_context s k Γ ,,, subst_context s (#|Γ| + k) Δ.
+Proof.
+  unfold subst_context, fold_context, app_context.
+  rewrite List.rev_app_distr.
+  rewrite mapi_app. rewrite <- List.rev_app_distr. f_equal. f_equal.
+  apply mapi_ext. intros. f_equal. rewrite List.rev_length. f_equal. lia.
+Qed.
+
+Lemma distr_lift_subst_context n k s Γ : lift_context n k (subst_context s 0 Γ) =
+  subst_context (map (lift n k) s) 0 (lift_context n (#|s| + k) Γ).
+Proof.
+  rewrite !lift_context_alt !subst_context_alt.
+  rewrite !mapi_compose.
+  apply mapi_ext.
+  intros n' x.
+  rewrite /lift_decl /subst_decl !compose_map_decl.
+  apply map_decl_ext => y.
+  rewrite !mapi_length Nat.add_0_r; autorewrite with len.
+  rewrite distr_lift_subst_rec; f_equal. f_equal. lia.
+Qed.
+
+Lemma skipn_subst_context n s k Γ : skipn n (subst_context s k Γ) = 
+  subst_context s k (skipn n Γ).
+Proof.
+  rewrite !subst_context_alt.
+  rewrite skipn_mapi_rec. rewrite mapi_rec_add /mapi.
+  apply mapi_rec_ext. intros.
+  f_equal. rewrite List.skipn_length. lia.
+Qed.
 
 (* Sigma calculus*)
 

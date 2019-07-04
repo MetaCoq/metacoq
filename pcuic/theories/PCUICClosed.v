@@ -655,7 +655,7 @@ Proof.
     + apply closedn_mkApps; auto.
       rewrite forallb_app. simpl. rewrite H2.
       rewrite forallb_skipn; auto.
-      now apply closedn_mkApps_inv in H8.
+      now apply closedn_mkApps_inv in H9.
 
   - intuition auto.
     apply closedn_subst0.
@@ -672,7 +672,7 @@ Proof.
     unfold test_def. simpl. rtoProp.
     split.
     rewrite -> app_context_length in *. rewrite -> Nat.add_comm in *.
-    eapply closedn_lift_inv in H2; eauto. lia.
+    eapply closedn_lift_inv in H3; eauto. lia.
     subst types.
     now rewrite app_context_length fix_context_length in H.
     eapply nth_error_all in X0; eauto. simpl in X0. intuition auto. rtoProp.
@@ -684,7 +684,7 @@ Proof.
     destruct a as [s [Hs cl]].
     now rewrite andb_true_r in cl.
     rewrite -> app_context_length in *. rewrite -> Nat.add_comm in *.
-    subst types. now rewrite fix_context_length in H2.
+    subst types. now rewrite fix_context_length in H3.
     eapply nth_error_all in X0; eauto.
     destruct X0 as [s [Hs cl]].
     now rewrite andb_true_r in cl.

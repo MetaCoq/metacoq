@@ -518,7 +518,7 @@ Proof.
     eapply validity. eauto. eauto.
     eapply type_App; eauto. eapply red_cumul_inv.
     eapply (red_red Σ Γ [vass na A] [] [u] [N2]); auto.
-    constructor. constructor. now rewrite subst_empty.
+    constructor. constructor.
 
   - (* Constant unfolding *)
     eapply declared_constant_inv in wfΣ; eauto with pcuic.
@@ -527,7 +527,9 @@ Proof.
     eapply weaken_env_prop_typing.
 
   - (* iota reduction *) admit.
-  - (* Case congruence *) admit.
+  - (* Case congruence *)
+
+
   - (* Case congruence *) admit.
   - (* Case congruence *) admit.
   - (* Case congruence *) admit.

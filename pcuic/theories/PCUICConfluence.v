@@ -333,6 +333,29 @@ Section PredRed.
     now apply (red_ctx (tCtxLetIn_l _ tCtxHole _ _)).
   Qed.
 
+  Lemma red_prod_alt Γ na M M' N N' :
+    red Σ Γ M M' -> red Σ (Γ ,, vass na M') N N' ->
+    red Σ Γ (tProd na M N) (tProd na M' N').
+  Proof.
+    intros. eapply (transitivity (y := tProd na M' N)).
+    now eapply (red_ctx (tCtxProd_l _ tCtxHole _)).
+    now eapply (red_ctx (tCtxProd_r _ _ tCtxHole)).
+  Qed.
+
+  Lemma red_fix_congr_alt Γ mfix0 mfix1 idx :
+    All2 (fun d0 d1 => (red Σ Γ (dtype d0) (dtype d1)) *
+                       (red Σ (Γ ,,, fix_context mfix1) (dbody d0) (dbody d1)))%type mfix0 mfix1 ->
+      red Σ Γ (tFix mfix0 idx) (tFix mfix1 idx).
+  Proof.
+  Admitted.
+
+  Lemma red_cofix_congr_alt Γ mfix0 mfix1 idx :
+    All2 (fun d0 d1 => (red Σ Γ (dtype d0) (dtype d1)) *
+                       (red Σ (Γ ,,, fix_context mfix1) (dbody d0) (dbody d1)))%type mfix0 mfix1 ->
+      red Σ Γ (tCoFix mfix0 idx) (tCoFix mfix1 idx).
+  Proof.
+  Admitted.
+
   (** Parallel reduction is included in the reflexive transitive closure of 1-step reduction *)
   Lemma pred1_red Γ Γ' : forall M N, pred1 Σ Γ Γ' M N -> red Σ Γ M N.
   Proof.
@@ -414,6 +437,81 @@ Section PredRed.
     - eapply red_fix_congr. red in X3; solve_all. eapply a.
     - eapply red_cofix_congr. red in X3; solve_all. eapply a.
     - eapply red_prod; auto.
+    - eapply red_evar; auto. solve_all.
+  Qed.
+
+  Lemma pred1_red_r Γ Γ' : forall M N, pred1 Σ Γ Γ' M N -> red Σ Γ' M N.
+  Proof.
+    revert Γ Γ'. eapply (@pred1_ind_all_ctx Σ _
+                                            (fun Γ Γ' =>
+       All2_local_env (on_decl (fun Γ Γ' M N => pred1 Σ Γ Γ' M N -> red Σ Γ' M N)) Γ Γ')%type);
+                   intros; try constructor; pcuic.
+    eapply All2_local_env_impl; eauto.
+    - (* Contexts *)
+      unfold on_decl => Δ Δ' t T U Hlen.
+      destruct t; auto.
+      destruct p; auto. intuition.
+
+    - (* Beta *)
+      apply red_trans with (tApp (tLambda na t1 b1) a0).
+      eapply (@red_app Σ); [apply red_abs|]; auto with pcuic.
+      apply red_trans with (tApp (tLambda na t1 b1) a1).
+      eapply (@red_app Σ); auto with pcuic.
+      apply red1_red. constructor.
+
+    - (* Zeta *)
+      eapply red_trans with (tLetIn na d1 t1 b0).
+      eapply red_letin; eauto with pcuic.
+      eapply red_trans with (tLetIn na d1 t1 b1).
+      eapply red_letin; eauto with pcuic.
+      eapply red1_red; constructor.
+
+    - (* Rel in context *)
+      eapply nth_error_pred1_ctx in X0; eauto.
+      destruct X0 as [body' [Hnth Hpred]].
+      eapply red1_red; constructor; auto.
+
+    - (* Iota *)
+      transitivity (tCase (ind, pars) p (mkApps (tConstruct ind c u) args1) brs1).
+      eapply red_case; auto.
+      eapply red_mkApps. auto. solve_all. red in X2; solve_all.
+      eapply red1_red. constructor.
+
+    - move: H H0.
+      move => unf isc.
+      transitivity (mkApps (tFix mfix1 idx) args1).
+      eapply red_mkApps. eapply red_fix_congr_alt. red in X3. solve_all. eapply a.
+      solve_all.
+      eapply red_step. econstructor; eauto. eauto.
+
+    - transitivity (tCase ip p1 (mkApps (tCoFix mfix1 idx) args1) brs1).
+      eapply red_case; eauto.
+      eapply red_mkApps; [|solve_all].
+      eapply red_cofix_congr_alt. red in X3; solve_all. eapply a0.
+      red in X7; solve_all.
+      eapply red_step. econstructor; eauto. eauto.
+
+    - transitivity (tProj p (mkApps (tCoFix mfix1 idx) args1)).
+      eapply red_proj_congr; eauto.
+      eapply red_mkApps; [|solve_all].
+      eapply red_cofix_congr_alt. red in X3; solve_all. eapply a.
+      eapply red_step. econstructor; eauto. eauto.
+
+    - eapply red1_red. econstructor; eauto.
+
+    - transitivity (tProj (i, pars, narg) (mkApps (tConstruct i k u) args1)).
+      eapply red_proj_congr; eauto.
+      eapply red_mkApps; [|solve_all]. auto.
+      eapply red1_red. econstructor; eauto.
+
+    - now eapply red_abs.
+    - now eapply red_app.
+    - now eapply red_letin => //.
+    - eapply red_case => //. red in X3; solve_all.
+    - now eapply red_proj_congr.
+    - eapply red_fix_congr_alt. red in X3; solve_all. eapply a.
+    - eapply red_cofix_congr_alt. red in X3; solve_all. eapply a.
+    - eapply red_prod_alt; auto.
     - eapply red_evar; auto. solve_all.
   Qed.
 

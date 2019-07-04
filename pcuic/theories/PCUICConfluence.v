@@ -342,20 +342,6 @@ Section PredRed.
     now eapply (red_ctx (tCtxProd_r _ _ tCtxHole)).
   Qed.
 
-  Lemma red_fix_congr_alt Γ mfix0 mfix1 idx :
-    All2 (fun d0 d1 => (red Σ Γ (dtype d0) (dtype d1)) *
-                       (red Σ (Γ ,,, fix_context mfix1) (dbody d0) (dbody d1)))%type mfix0 mfix1 ->
-      red Σ Γ (tFix mfix0 idx) (tFix mfix1 idx).
-  Proof.
-  Admitted.
-
-  Lemma red_cofix_congr_alt Γ mfix0 mfix1 idx :
-    All2 (fun d0 d1 => (red Σ Γ (dtype d0) (dtype d1)) *
-                       (red Σ (Γ ,,, fix_context mfix1) (dbody d0) (dbody d1)))%type mfix0 mfix1 ->
-      red Σ Γ (tCoFix mfix0 idx) (tCoFix mfix1 idx).
-  Proof.
-  Admitted.
-
   (** Parallel reduction is included in the reflexive transitive closure of 1-step reduction *)
   Lemma pred1_red Γ Γ' : forall M N, pred1 Σ Γ Γ' M N -> red Σ Γ M N.
   Proof.
@@ -440,6 +426,21 @@ Section PredRed.
     - eapply red_evar; auto. solve_all.
   Qed.
 
+(* Unused *)
+(*
+  Lemma red_fix_congr_alt Γ mfix0 mfix1 idx :
+    All2 (fun d0 d1 => (red Σ Γ (dtype d0) (dtype d1)) *
+                       (red Σ (Γ ,,, fix_context mfix1) (dbody d0) (dbody d1)))%type mfix0 mfix1 ->
+      red Σ Γ (tFix mfix0 idx) (tFix mfix1 idx).
+  Proof.
+  Admitted.
+
+  Lemma red_cofix_congr_alt Γ mfix0 mfix1 idx :
+    All2 (fun d0 d1 => (red Σ Γ (dtype d0) (dtype d1)) *
+                       (red Σ (Γ ,,, fix_context mfix1) (dbody d0) (dbody d1)))%type mfix0 mfix1 ->
+      red Σ Γ (tCoFix mfix0 idx) (tCoFix mfix1 idx).
+  Proof.
+  Admitted.
   Lemma pred1_red_r Γ Γ' : forall M N, pred1 Σ Γ Γ' M N -> red Σ Γ' M N.
   Proof.
     revert Γ Γ'. eapply (@pred1_ind_all_ctx Σ _
@@ -514,7 +515,7 @@ Section PredRed.
     - eapply red_prod_alt; auto.
     - eapply red_evar; auto. solve_all.
   Qed.
-
+*)
 End PredRed.
 
 Lemma clos_t_rt {A} {R : A -> A -> Type} x y : trans_clos R x y -> clos_refl_trans R x y.
@@ -732,17 +733,17 @@ Section RedConfluence.
     econstructor 2; eauto.
   Qed.
 
-  Lemma trans_clos_pred1_red Γ Δ t u :
-    trans_clos (pred1 Σ Γ Δ) t u ->
-    red Σ Γ t u.
-  Proof.
-    move=> H.
-    apply trans_clos_t1n_iff in H.
-    depind H.
-    - eapply pred1_red; eauto.
-    - eapply red_trans with y; auto.
-      eapply pred1_red in r; eauto.
-  Qed.
+  (* Lemma trans_clos_pred1_red Γ Δ t u : *)
+  (*   trans_clos (pred1 Σ Γ Δ) t u -> *)
+  (*   red Σ Γ t u. *)
+  (* Proof. *)
+  (*   move=> H. *)
+  (*   apply trans_clos_t1n_iff in H. *)
+  (*   depind H. *)
+  (*   - eapply pred1_red; eauto. *)
+  (*   - eapply red_trans with y; auto. *)
+  (*     eapply pred1_red in r; eauto. *)
+  (* Qed. *)
 
   Definition on_one_decl (P : context → term → term → Type) (Γ : context) (b : option (term × term)) (t t' : term) :=
     match b with
@@ -805,7 +806,7 @@ Section RedConfluence.
   Lemma pred1_red' Γ Γ' : forall M N, pred1 Σ Γ Γ' M N -> red_rel' (Γ, M) (Γ', N).
   Proof.
     intros * Hred.
-    split. apply (pred1_red wfΣ _ _ _ _ Hred).
+    split. apply (pred1_red wfΣ _ _ _ _ Hred). (* apply (pred1_red_r wfΣ _ _ _ _ Hred). *)
     eapply pred1_pred1_ctx in Hred.
     now eapply pred1_ctx_red_ctx.
   Qed.
@@ -945,7 +946,7 @@ Section RedConfluence.
       * eapply clos_rt_disjunction_left.
         eapply clos_refl_trans_prod_r. intros. split; eauto.
         constructor. apply r.
-      * assumption.
+      * apply IHredt.
   Qed.
 
   Lemma pred_rel_confluent : confluent red1_rel.
@@ -978,6 +979,71 @@ Section RedConfluence.
     econstructor 3; eauto.
   Qed.
 
+  Lemma red_red_ctx Γ Δ t u :
+    red Σ Γ t u ->
+    red_ctx Δ Γ ->
+    red Σ Δ t u.
+  Proof.
+    move=> H Hctx. apply red_alt in H.
+    induction H.
+    revert Δ Hctx.
+    induction r using red1_ind_all; intros Δ Hctx; try solve [eapply red_step; repeat (constructor; eauto)].
+    - red in Hctx.
+      eapply nth_error_pred1_ctx in Hctx; eauto.
+      destruct Hctx as [x' [? ?]].
+      eapply red_step. constructor. eauto.
+      rewrite -(firstn_skipn (S i) Δ).
+      eapply weakening_red_0; auto.
+      rewrite firstn_length_le //.
+      destruct (nth_error Δ) eqn:Heq => //.
+      eapply nth_error_Some_length in Heq. lia.
+    - eapply red_step; repeat (econstructor; eauto).
+    - eapply red_step; repeat (econstructor; eauto).
+    - eapply red_step; repeat (econstructor; eauto).
+    - eapply red_step; repeat (econstructor; eauto).
+    - eapply red_abs_alt. eauto. eauto.
+    - eapply red_abs_alt. eauto. apply (IHr (Δ ,, vass na N)).
+      constructor; auto. red. auto.
+    - eapply red_letin; eauto.
+    - eapply red_letin; eauto.
+    - eapply red_letin_alt; eauto.
+      eapply (IHr (Δ ,, vdef na b t)). constructor; eauto.
+      red. split; eauto.
+    - eapply red_case; eauto. unfold on_Trel; pcuic.
+    - eapply red_case; eauto. unfold on_Trel; pcuic.
+    - eapply red_case; eauto. unfold on_Trel; pcuic.
+      eapply OnOne2_All2; eauto. simpl. intuition eauto.
+    - eapply red_proj_congr; eauto.
+    - eapply red_app; eauto.
+    - eapply red_app; eauto.
+    - eapply red_prod_alt; eauto.
+    - eapply red_prod_alt; eauto. apply (IHr (Δ ,, vass na M1)); constructor; auto.
+      red; eauto.
+    - eapply red_evar.
+      eapply OnOne2_All2; simpl; eauto. simpl. intuition eauto.
+    - eapply red_fix_congr; eauto.
+      eapply OnOne2_All2; simpl; eauto. simpl. intuition eauto.
+      noconf b. hnf in H; noconf H. rewrite H0; auto.
+    - eapply red_fix_congr; eauto.
+      eapply OnOne2_All2; simpl; eauto. simpl. intuition eauto.
+      noconf b. hnf in H; noconf H. rewrite H0; auto.
+      eapply b0. eapply All2_local_env_app_inv. auto.
+      clear -Hctx. induction (fix_context mfix0); try constructor; auto.
+      destruct a as [na [b|] ty]; simpl; constructor; firstorder (hnf; auto).
+    - eapply red_cofix_congr; eauto.
+      eapply OnOne2_All2; simpl; eauto. simpl. intuition eauto.
+      noconf b. hnf in H; noconf H. rewrite H0; auto.
+    - eapply red_cofix_congr; eauto.
+      eapply OnOne2_All2; simpl; eauto. simpl. intuition eauto.
+      noconf b. hnf in H; noconf H. rewrite H0; auto.
+      eapply b0. eapply All2_local_env_app_inv. auto.
+      clear -Hctx. induction (fix_context mfix0); try constructor; auto.
+      destruct a as [na [b|] ty]; simpl; constructor; firstorder (hnf; auto).
+    - auto.
+    - eapply red_trans; eauto.
+  Qed.
+
+
   Lemma clos_red_rel_out x y :
     clos_refl_trans red1_rel x y ->
     clos_refl_trans pred1_rel x y.
@@ -991,31 +1057,61 @@ Section RedConfluence.
     eapply pred1_refl_gen. now eapply red1_ctx_pred1_ctx.
   Qed.
 
-  (* Lemma clos_red_rel_out' x y : *)
-  (*   clos_refl_trans red1_rel x y -> *)
-  (*   clos_refl_trans (red1 Σ (fst y)) (snd x) (snd y). *)
-  (* Proof. *)
-  (*   intros H. eapply clos_red_rel_out in H. *)
-  (*   destruct x, y. simpl in *. *)
-  (*   induction H. red in r. *)
+  Lemma clos_red_rel_out_inv x y :
+    clos_refl_trans pred1_rel x y ->
+    clos_refl_trans red1_rel x y.
+  Proof.
+    induction 1.
+    red in r.
+    destruct x as [Γ t], y as [Δ u]; simpl in *.
+    pose proof (pred1_red wfΣ _ _ _ _ r).
+    apply clos_rt_red1_rel_red_rel. red. split; auto.
+    eapply pred1_pred1_ctx in r.
+    now apply pred1_ctx_red_ctx.
+    constructor 2.
+    etransitivity; eauto.
+  Qed.
 
+  Instance red_ctx_trans : Transitive red_ctx.
+  Proof.
+    move=> Γ Γ' Γ'' H1 H2.
+    unfold red_ctx in *.
+    induction H1 in Γ'', H2 |- *; depelim H2; constructor; auto.
+    red in o, p. red.
+    transitivity t'; eauto.
+    eapply red_red_ctx; eauto.
+    destruct p, o. red.
+    split.
+    transitivity b'; eauto.
+    eapply red_red_ctx; eauto.
+    transitivity t'; eauto.
+    eapply red_red_ctx; eauto.
+  Qed.
 
-  (*   eapply clos_rt_red1_rel_red_rel. *)
-
-  (*   eapply clos_rt_rt1n in H. *)
-  (*   induction H; try destruct x as [Γ t]; try destruct y as [Δ u]; simpl in *. *)
-  (*   - constructor 2. *)
-  (*   - destruct z as [? ?]. *)
-  (*     simpl in *. intros <-. *)
-  (*     red in r. *)
-  (*     destruct r. *)
-  (*     * destruct p. subst. *)
-  (*       eapply clos_rt1n_rt. econstructor; eauto. *)
-  (*       eapply clos_rt_rt1n. *)
-  (*       now eapply IHclos_refl_trans_1n. *)
-  (*     * destruct p. *)
-  (*       subst. *)
-  (* Qed. *)
+  Lemma clos_red_rel_out' x y :
+    clos_refl_trans red1_rel x y ->
+    red_ctx (fst x) (fst y) *
+    clos_refl_trans (red1 Σ (fst x)) (snd x) (snd y).
+  Proof.
+    intros H.
+    eapply clos_rt_rt1n_iff in H.
+    induction H.
+    - split. red. induction (fst x) as [|[na [b|] ty] tl]; try constructor; hnf; eauto.
+      constructor 2.
+    - destruct x as [Γ t], y as [Δ u], z as [Δ' u']; simpl in *.
+      destruct IHclos_refl_trans_1n.
+      red in r. destruct r.
+      * destruct p. subst. split. auto.
+        transitivity u; auto. constructor. auto.
+      * destruct p. subst. split.
+        apply red1_ctx_pred1_ctx in r.
+        apply pred1_ctx_red_ctx in r.
+        etransitivity; eauto.
+        apply red_alt in c. apply red_alt.
+        eapply red_red_ctx; eauto.
+        apply red1_ctx_pred1_ctx in r.
+        now apply pred1_ctx_red_ctx in r.
+  Qed.
 
   Lemma red1_confluent Γ : confluent (red1 Σ Γ).
   Proof.
@@ -1025,9 +1121,10 @@ Section RedConfluence.
     forward X1 by now eapply clos_refl_trans_out.
     forward X1 by now eapply clos_refl_trans_out.
     destruct X1 as [[Δ nf] [redl redr]].
-    exists nf. split.
-    eapply clos_red_rel_out in redl.
-    eapply clos_red_rel_out in redr.
-  Abort.
+    exists nf.
+    eapply clos_red_rel_out' in redl.
+    eapply clos_red_rel_out' in redr. simpl in *.
+    intuition auto.
+  Qed.
 
 End RedConfluence.

@@ -5,7 +5,7 @@ From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICWeakeningEnv PCUICWeakening
      PCUICSubstitution PCUICClosed PCUICCumulativity PCUICGeneration
-     PCUICValidity PCUICConfluence PCUICInversion.
+     PCUICValidity PCUICParallelReductionConfluence PCUICConfluence PCUICInversion.
 Require Import ssreflect ssrbool.
 Require Import String.
 From MetaCoq.Template Require Import LibHypsNaming.
@@ -350,7 +350,7 @@ Lemma type_tFix_inv Σ Γ mfix idx T : wf Σ ->
 Proof.
   intros wfΣ H. depind H.
   unfold unfold_fix. rewrite e.
-  specialize (nth_error_all e a0) as [Hty Hbody].
+  specialize (nth_error_all e a0) as [Hty ->].
   destruct decl as [name ty body rarg]; simpl in *.
   clear e.
   eexists _, _, _. split. split. eauto.
@@ -518,7 +518,7 @@ Proof.
     eapply validity. eauto. eauto.
     eapply type_App; eauto. eapply red_cumul_inv.
     eapply (red_red Σ Γ [vass na A] [] [u] [N2]); auto.
-    constructor. constructor. now rewrite subst_empty.
+    constructor. constructor.
 
   - (* Constant unfolding *)
     eapply declared_constant_inv in wfΣ; eauto with pcuic.

@@ -1332,9 +1332,6 @@ Section Conversion.
       + assumption.
       + clear.
         induction brs ; eauto.
-        constructor.
-        * constructor.
-        * eapply IHbrs.
   Qed.
   Next Obligation.
     destruct hΣ as [wΣ].
@@ -1351,9 +1348,6 @@ Section Conversion.
       + assumption.
       + clear.
         induction brs' ; eauto.
-        constructor.
-        * constructor.
-        * eapply IHbrs'.
   Qed.
   Next Obligation.
     match goal with
@@ -1468,9 +1462,6 @@ Section Conversion.
       + instantiate (1 := brs).
         clear.
         induction brs ; eauto.
-        constructor.
-        * constructor.
-        * eapply IHbrs.
     - eapply conv_trans' ; try eassumption.
       eapply red_conv_r.
       eapply red_zippx.
@@ -1479,9 +1470,6 @@ Section Conversion.
       + eassumption.
       + clear.
         induction brs' ; eauto.
-        constructor.
-        * constructor.
-        * eapply IHbrs'.
   Qed.
 
   (* tProj *)

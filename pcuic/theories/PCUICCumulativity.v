@@ -182,8 +182,6 @@ Proof.
   (** Needs confluence to show the two redexes can be joined *)
 Admitted.
 
-
-
 Lemma conv_conv_alt `{cf : checker_flags} Σ Γ t u :
   Σ ;;; Γ |- t = u <~> Σ ;;; Γ |- t == u.
 Proof.
@@ -211,6 +209,17 @@ Proof.
   - destruct IHh as [t' [u' [? [? ?]]]].
     exists t', u'. intuition auto. now eapply red_step.
 Qed.
+
+Lemma congr_cumul_prod : forall `{checker_flags} Σ Γ na na' M1 M2 N1 N2,
+    conv Σ Γ M1 N1 ->
+    cumul Σ (Γ ,, vass na M1) M2 N2 ->
+    cumul Σ Γ (tProd na M1 M2) (tProd na' N1 N2).
+Proof.
+  intros.
+
+
+
+Admitted.
 
 Inductive conv_pb :=
 | Conv

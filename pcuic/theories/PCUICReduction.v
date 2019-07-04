@@ -89,8 +89,8 @@ Section ReductionCongruence.
   | tCtxCase_branch      : (inductive * nat) (* # of parameters *) -> term (* type info *)
                            -> term (* discriminee *) -> list_nat_context (* branches *) -> term_context
   | tCtxProj      : projection -> term_context -> term_context
-  | tCtxFix       : mfixpoint term -> nat -> term_context (* TODO *)
-  | tCtxCoFix     : mfixpoint term -> nat -> term_context (* TODO *)
+  (* | tCtxFix       : mfixpoint_context -> nat -> term_context harder because types of fixpoints are necessary *)
+  (* | tCtxCoFix     : mfixpoint_context -> nat -> term_context *)
 
   with list_context : Set :=
    | tCtxHead : term_context -> list term -> list_context
@@ -99,6 +99,14 @@ Section ReductionCongruence.
   with list_nat_context : Set :=
    | tCtxHead_nat : (nat * term_context) -> list (nat * term) -> list_nat_context
    | tCtxTail_nat : (nat * term) -> list_nat_context -> list_nat_context.
+
+  (* with mfixpoint_context : Set := *)
+  (*  | tCtxHead_mfix : def_context -> list (def term) -> mfixpoint_context *)
+  (*  | tCtxTail_mfix : def term -> mfixpoint_context -> mfixpoint_context *)
+
+  (* with def_context : Set := *)
+  (*  | tCtxType : name -> term_context -> term -> nat -> def_context *)
+  (*  | tCtxDef : name -> term -> term_context -> nat -> def_context. *)
 
   Section FillContext.
     Context (t : term).
@@ -118,15 +126,24 @@ Section ReductionCongruence.
     | tCtxCase_pred par p c brs => tCase par (fill_context p) c brs;
     | tCtxCase_discr par p c brs => tCase par p (fill_context c) brs;
     | tCtxCase_branch par p c brs => tCase par p c (fill_list_nat_context brs);
-    | tCtxProj p c => tProj p (fill_context c);
-    | tCtxFix mfix n => tFix mfix n;
-    | tCtxCoFix mfix n => tCoFix mfix n }
+    | tCtxProj p c => tProj p (fill_context c) }
+    (* | tCtxFix mfix n => tFix (fill_mfix_context mfix) n; *)
+    (* | tCtxCoFix mfix n => tCoFix (fill_mfix_context mfix) n } *)
+
     with fill_list_context (l : list_context) : list term by struct l :=
     { fill_list_context (tCtxHead ctx l) => (fill_context ctx) :: l;
       fill_list_context (tCtxTail hd ctx) => hd :: fill_list_context ctx }
+
     with fill_list_nat_context (l : list_nat_context) : list (nat * term) by struct l :=
     { fill_list_nat_context (tCtxHead_nat (n, ctx) l) => (n, fill_context ctx) :: l;
       fill_list_nat_context (tCtxTail_nat hd ctx) => hd :: fill_list_nat_context ctx }.
+
+    (* with fill_mfix_context (l : mfixpoint_context) : mfixpoint term by struct l := *)
+    (* { fill_mfix_context (tCtxHead_mfix (tCtxType na ty def rarg) l) => *)
+    (*     {| dname := na; dtype := fill_context ty; dbody := def; rarg := rarg |} :: l; *)
+    (*   fill_mfix_context (tCtxHead_mfix (tCtxDef na ty def rarg) l) => *)
+    (*     {| dname := na; dtype := ty; dbody := fill_context def; rarg := rarg |} :: l; *)
+    (*   fill_mfix_context (tCtxTail_mfix hd ctx) => hd :: fill_mfix_context ctx }. *)
     Global Transparent fill_context fill_list_context fill_list_nat_context.
 
     Equations hole_context (ctx : term_context) (Γ : context) : context by struct ctx := {
@@ -144,15 +161,22 @@ Section ReductionCongruence.
     | tCtxCase_pred par p c brs | Γ => hole_context p Γ;
     | tCtxCase_discr par p c brs | Γ => hole_context c Γ;
     | tCtxCase_branch par p c brs | Γ => hole_list_nat_context brs Γ;
-    | tCtxProj p c | Γ => hole_context c Γ;
-    | tCtxFix mfix n | Γ => Γ; (* TODO *)
-    | tCtxCoFix mfix n | Γ => Γ }
+    | tCtxProj p c | Γ => hole_context c Γ }
+    (* | tCtxFix mfix n | Γ => hole_mfix_context mfix Γ ; *)
+    (* | tCtxCoFix mfix n | Γ => hole_mfix_context mfix Γ } *)
+
     with hole_list_context (l : list_context) (Γ : context) : context by struct l :=
     { hole_list_context (tCtxHead ctx l) Γ => hole_context ctx Γ;
       hole_list_context (tCtxTail hd ctx) Γ => hole_list_context ctx Γ }
+
     with hole_list_nat_context (l : list_nat_context) (Γ : context) : context by struct l :=
     { hole_list_nat_context (tCtxHead_nat (n, ctx) l) Γ => hole_context ctx Γ;
       hole_list_nat_context (tCtxTail_nat hd ctx) Γ => hole_list_nat_context ctx Γ }.
+
+    (* with hole_mfix_context (l : mfixpoint_context) (Γ : context) : context by struct l := *)
+    (* { hole_mfix_context (tCtxHead_mfix (tCtxType na ctx def rarg) _) Γ => hole_context ctx Γ; *)
+    (*   hole_mfix_context (tCtxHead_mfix (tCtxDef na ty ctx rarg) _) Γ => hole_context ctx; *)
+    (*   hole_mfix_context (tCtxTail_mfix hd ctx) Γ => hole_mfix_context ctx tys Γ }. *)
     Global Transparent hole_context hole_list_context hole_list_nat_context.
 
   End FillContext.
@@ -182,15 +206,21 @@ Section ReductionCongruence.
                  forall Γ y,
                    red1 Σ (hole_list_context l Γ) x y ->
                    OnOne2 (red1 (fst Σ) Γ) fill_l (fill_list_context y l)).
+    set (P'' := fun l fill_l =>
+                 forall Γ y,
+                   red1 Σ (hole_list_nat_context l Γ) x y ->
+                   OnOne2 (on_Trel_eq (red1 (fst Σ) Γ) snd fst) fill_l (fill_list_nat_context y l)).
+    (* set (Pfix := fun l fixc fill_l => *)
+    (*              forall Γ y, *)
+    (*                red1 Σ (hole_mfix_context l fixc Γ) x y -> *)
+    (*                (OnOne2 (on_Trel_eq (red1 (fst Σ) Γ) dtype (fun d => (dname d, dbody d, rarg d))) *)
+    (*                       fill_l (fill_mfix_context y l fixc)) + *)
+    (*                (OnOne2 (on_Trel_eq (red1 (fst Σ) (Γ ,,, fix_context fill_l)) dbody (fun d => (dname d, dtype d, rarg d))) *)
+    (*                       fill_l (fill_mfix_context y l fixc))). *)
     revert Γ y r.
-    eapply (fill_context_elim x P P' _); subst P P'; cbv beta;
+    eapply (fill_context_elim x P P' P''); subst P P' P''; cbv beta;
       intros **; simp fill_context; cbn in *; auto; try solve [constructor; eauto].
-    - simpl in *. (* FIXME missing case in red1 for predicate *)
-      admit.
-    - admit.
-    - admit.
-    - admit.
-  Admitted.
+  Qed.
 
   Theorem red_contextual_closure_equiv Γ t u : red Σ Γ t u <~> contextual_closure (red Σ) Γ t u.
   Proof.
@@ -275,17 +305,47 @@ Section ReductionCongruence.
       now eapply (red_ctx (tCtxLetIn_r _ _ _ tCtxHole)).
     Qed.
 
+    (* Fixpoint brs_n_context l := *)
+    (*   match l with *)
+    (*   | [] => tCtxHole *)
+    (*   | hd :: tl => tCtxApp_l (mkApps_context tl) hd *)
+    (*   end. *)
+
+    Lemma All2_ind_OnOne2 {A} P (l l' : list A) :
+      All2 P l l' ->
+      forall x a a', nth_error l x = Some a ->
+                     nth_error l' x = Some a' ->
+                     OnOne2 P (firstn x l ++ [a] ++ skipn (S x) l)%list
+                            (firstn x l ++ [a'] ++ skipn (S x) l)%list.
+    Proof.
+      induction 1.
+      simpl. intros x a a' Hnth. now rewrite nth_error_nil in Hnth.
+      intros.
+      destruct x0. simpl. constructor. simpl in H, H0. now noconf H; noconf H0.
+      simpl in H, H0.
+      specialize (IHX _ _ _ H H0).
+      simpl. constructor. auto.
+    Qed.
+
+    (** Fixme: need to think about how to derive this without too much pain.
+        Probably needing a way to fill "list contexts". And start with an OnOne2
+        hyp instead of All2 as well.
+     *)
     Lemma red_case ind p0 p1 c0 c1 brs0 brs1 :
       red Σ Γ p0 p1 ->
       red Σ Γ c0 c1 ->
-      All2 (on_Trel (red Σ Γ) snd) brs0 brs1 ->
+      All2 (on_Trel_eq (red Σ Γ) snd fst) brs0 brs1 ->
       red Σ Γ (tCase ind p0 c0 brs0) (tCase ind p1 c1 brs1).
     Proof.
       intros; eapply (transitivity (y := tCase ind p1 c0 brs0)).
       now apply (red_ctx (tCtxCase_pred _ tCtxHole _ _)).
       eapply (transitivity (y := tCase ind p1 c1 brs0)).
       now eapply (red_ctx (tCtxCase_discr _ _ tCtxHole _)).
-      admit.
+      induction X1. constructor.
+      destruct x, y, r. simpl in *; subst.
+      transitivity (tCase ind p1 c1 ((n0, t0) :: l)).
+      simpl in *.
+      eapply (red_ctx (tCtxCase_branch ind p1 c1 (tCtxHead_nat (n0, tCtxHole) _)) r).
     Admitted.
 
     Lemma red_proj_congr p c c' : red Σ Γ c c' -> red Σ Γ (tProj p c) (tProj p c').

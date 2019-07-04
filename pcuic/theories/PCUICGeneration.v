@@ -22,7 +22,7 @@ Inductive typing_spine `{checker_flags} (Σ : global_context) (Γ : context) : t
     Σ ;;; Γ |- T <= tProd na A B ->
     Σ ;;; Γ |- hd : A ->
     typing_spine Σ Γ (subst10 hd B) tl B' ->
-    typing_spine Σ Γ T (cons hd tl) B'.
+    typing_spine Σ Γ T (hd :: tl) B'.
 
 Lemma type_mkApps Σ Γ t u T t_ty :
   Σ ;;; Γ |- t : t_ty ->

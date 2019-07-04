@@ -320,9 +320,6 @@ Lemma All2_app {A} {P : A -> A -> Type} {l l' r r'} :
   All2 P (l ++ r) (l' ++ r').
 Proof. induction 1; simpl; auto. Qed.
 
-Definition on_Trel_eq {A B C} (R : A -> A -> Type) (f : B -> A) (g : B -> C) (x y : B) :=
-  (on_Trel R f x y * (g x = g y))%type.
-
 Definition All2_prop_eq Γ Γ' {A B} (f : A -> term) (g : A -> B) (rel : forall (Γ Γ' : context) (t t' : term), Type) :=
   All2 (on_Trel_eq (rel Γ Γ') f g).
 
@@ -337,7 +334,7 @@ Lemma All2_All2_prop {P Q : context -> context -> term -> term -> Type} {par par
   All2 (Q par par') l l'.
 Proof.
   intros H aux.
-  induction H; constructor. unfold on_Trel_eq, on_Trel in *.
+  induction H; constructor. unfold on_Trel in *.
   apply aux; apply r. apply IHAll2.
 Defined.
 
@@ -348,7 +345,7 @@ Lemma All2_All2_prop_eq {A B} {P Q : context -> context -> term -> term -> Type}
   All2_prop_eq par par' f g Q l l'.
 Proof.
   intros H aux.
-  induction H; constructor. unfold on_Trel_eq, on_Trel in *.
+  induction H; constructor. unfold on_Trel in *.
   split. apply aux; apply r. apply r. apply IHAll2.
 Defined.
 
@@ -367,7 +364,7 @@ Lemma All2_All2_prop2_eq {A B} {P Q : context -> context -> term -> term -> Type
   All2_prop2_eq par par' par2 par2' f g h Q l l'.
 Proof.
   intros H aux.
-  induction H; constructor. unfold on_Trel_eq, on_Trel in *. split.
+  induction H; constructor. unfold on_Trel in *. split.
   apply aux. destruct r. apply p. split. apply aux. apply r. apply r. apply IHAll2.
 Defined.
 
@@ -378,7 +375,7 @@ Defined.
 (*   All2_prop2 par par' f g Q l l'. *)
 (* Proof. *)
 (*   intros H aux. *)
-(*   induction H; constructor. unfold on_Trel_eq, on_Trel in *. split. *)
+(*   induction H; constructor. unfold on_Trel in *. split. *)
 (*   apply aux. destruct r. apply p. apply aux. apply r. apply IHAll2. *)
 (* Defined. *)
 
@@ -632,12 +629,15 @@ Section ParallelReduction.
             (iota_red pars c args1 brs1)
 
   (** Fix unfolding, with guard *)
-  | pred_fix mfix idx args0 args1 narg fn0 fn1 :
-      unfold_fix mfix idx = Some (narg, fn0) ->
+  | pred_fix mfix0 mfix1 idx args0 args1 narg fn :
+      All2_local_env (on_decl pred1) Γ Γ' ->
+      All2_local_env (on_decl (on_decl_over pred1 Γ Γ')) (fix_context mfix0) (fix_context mfix1) ->
+      All2_prop2_eq Γ Γ' (Γ ,,, fix_context mfix0) (Γ' ,,, fix_context mfix1)
+                    dtype dbody (fun x => (dname x, rarg x)) pred1 mfix0 mfix1 ->
+      unfold_fix mfix1 idx = Some (narg, fn) ->
       is_constructor narg args1 = true ->
       All2 (pred1 Γ Γ') args0 args1 ->
-      pred1 Γ Γ' fn0 fn1 ->
-      pred1 Γ Γ' (mkApps (tFix mfix idx) args0) (mkApps fn1 args1)
+      pred1 Γ Γ' (mkApps (tFix mfix0 idx) args0) (mkApps fn args1)
 
   (** CoFix-case unfolding *)
   | pred_cofix_case ip p0 p1 mfix0 mfix1 idx args0 args1 narg fn brs0 brs1 :
@@ -951,11 +951,17 @@ Section ParallelReduction.
           All2 (P' Γ Γ') args0 args1 ->
           All2_prop_eq Γ Γ' snd fst P' brs0 brs1 ->
           P Γ Γ' (tCase (ind, pars) p (mkApps (tConstruct ind c u) args0) brs0) (iota_red pars c args1 brs1)) ->
-      (forall (Γ Γ' : context) (mfix : mfixpoint term) (idx : nat) (args0 args1 : list term) (narg : nat) (fn0 fn1 : term),
-          unfold_fix mfix idx = Some (narg, fn0) ->
+      (forall (Γ Γ' : context) (mfix0 mfix1 : mfixpoint term) (idx : nat) (args0 args1 : list term) (narg : nat) (fn : term),
+          All2_local_env (on_decl pred1) Γ Γ' ->
+          Pctx Γ Γ' ->
+          All2_local_env (on_decl (on_decl_over pred1 Γ Γ')) (fix_context mfix0) (fix_context mfix1) ->
+          All2_local_env (on_decl (on_decl_over P Γ Γ')) (fix_context mfix0) (fix_context mfix1) ->
+          All2_prop2_eq Γ Γ' (Γ ,,, fix_context mfix0) (Γ' ,,, fix_context mfix1) dtype dbody
+                        (fun x => (dname x, rarg x)) P' mfix0 mfix1 ->
+          unfold_fix mfix1 idx = Some (narg, fn) ->
           is_constructor narg args1 = true ->
           All2 (P' Γ Γ') args0 args1 ->
-          pred1 Γ Γ' fn0 fn1 -> P Γ Γ' fn0 fn1 -> P Γ Γ' (mkApps (tFix mfix idx) args0) (mkApps fn1 args1)) ->
+          P Γ Γ' (mkApps (tFix mfix0 idx) args0) (mkApps fn args1)) ->
       (forall (Γ Γ' : context) (ip : inductive * nat) (p0 p1 : term) (mfix0 mfix1 : mfixpoint term) (idx : nat)
               (args0 args1 : list term) (narg : nat) (fn : term) (brs0 brs1 : list (nat * term)),
           All2_local_env (on_decl pred1) Γ Γ' ->
@@ -1074,7 +1080,10 @@ Section ParallelReduction.
     - eapply (All2_All2_prop (P:=pred1) (Q:=P') a0 ((extendP aux) Γ Γ')).
     - eapply (All2_All2_prop_eq (P:=pred1) (Q:=P') (f:=snd) (g:=fst) a1 (extendP aux Γ Γ')).
     - eapply X4; eauto.
-      eapply (All2_All2_prop (P:=pred1) (Q:=P') a (extendP aux Γ Γ')).
+      apply Hctx, (All2_local_env_impl a). exact a. intros. apply (aux _ _ _ _ X20).
+      eapply (All2_local_env_impl a0). intros. red. red in X20. apply (aux _ _ _ _ X20).
+      eapply (All2_All2_prop2_eq (Q:=P') (f:=dtype) (g:=dbody) a1 (extendP aux)).
+      eapply (All2_All2_prop (P:=pred1) (Q:=P') a2 (extendP aux Γ Γ')).
     - eapply X5; eauto.
       apply Hctx, (All2_local_env_impl a). exact a. intros. apply (aux _ _ _ _ X21).
       eapply (All2_local_env_impl a0). intros. red. red in X21. apply (aux _ _ _ _ X21).
@@ -1116,7 +1125,7 @@ Section ParallelReduction.
     unshelve einduction Γ, t using term_forall_ctx_list_ind;
     intros;
       try solve [(apply pred_atom; reflexivity) || constructor; auto];
-      try solve [try red in X; constructor; unfold All2_prop2_eq, All2_prop2, on_Trel_eq, on_Trel in *; solve_all];
+      try solve [try red in X; constructor; unfold All2_prop2_eq, All2_prop2, on_Trel in *; solve_all];
       intros.
     - constructor; eauto. eapply IHt0_2.
       constructor; try red; eauto with pcuic.
@@ -1124,7 +1133,8 @@ Section ParallelReduction.
       constructor; try red; eauto with pcuic.
     - constructor; eauto. eapply IHt0_3.
       constructor; try red; eauto with pcuic.
-    - assert (All2_local_env (on_decl (fun Δ Δ' : context => pred1 (Γ0 ,,, Δ) (Γ' ,,, Δ'))) (fix_context m) (fix_context m)).
+    - assert (All2_local_env (on_decl (fun Δ Δ' : context => pred1 (Γ0 ,,, Δ) (Γ' ,,, Δ')))
+                             (fix_context m) (fix_context m)).
       { revert X. clear -X1. generalize (fix_context m).
         intros c H1. induction H1; constructor; auto.
         - red in t0. red. eapply t0. eapply All2_local_env_app_inv; auto.
@@ -1133,11 +1143,12 @@ Section ParallelReduction.
           + eapply t1. eapply All2_local_env_app_inv; auto.
       }
       constructor; auto. red.
-      unfold All2_prop_eq, on_Trel_eq, on_Trel in *.
+      unfold All2_prop_eq, on_Trel in *.
       eapply All_All2; eauto. simpl; intros.
       split; eauto. eapply X3; auto.
       split. eapply X3. eapply All2_local_env_app_inv; auto. auto.
-    - assert (All2_local_env (on_decl (fun Δ Δ' : context => pred1 (Γ0 ,,, Δ) (Γ' ,,, Δ'))) (fix_context m) (fix_context m)).
+    - assert (All2_local_env (on_decl (fun Δ Δ' : context => pred1 (Γ0 ,,, Δ) (Γ' ,,, Δ')))
+                             (fix_context m) (fix_context m)).
       { revert X. clear -X1. generalize (fix_context m).
         intros c H1. induction H1; constructor; auto.
         - red in t0. red. eapply t0. eapply All2_local_env_app_inv; auto.
@@ -1146,7 +1157,6 @@ Section ParallelReduction.
           + eapply t1. eapply All2_local_env_app_inv; auto.
       }
       constructor; auto. red.
-      unfold All2_prop_eq, on_Trel_eq, on_Trel in *.
       eapply All_All2; eauto. simpl; intros.
       split; eauto. eapply X3; auto.
       split. eapply X3. eapply All2_local_env_app_inv; auto. auto.
@@ -1172,69 +1182,31 @@ Section ParallelReduction.
         try solve [eexists; split; constructor; eauto].
   Qed.
 
-  Hint Constructors pred1 : pcuic.
-  Hint Resolve pred1_refl : pcuic.
-  Hint Unfold All2_prop2_eq All2_prop2 on_decl on_decl_over on_rel on_Trel on_Trel_eq snd on_snd : pcuic.
-  Hint Resolve All2_same: pcuic.
-  Hint Constructors All2_local_env : pcuic.
-  Hint Resolve pred1_refl_gen : pcuic.
-
-  Hint Extern 4 => progress simpl : pcuic.
-  Hint Extern 10 => progress split : pcuic.
-  Hint Extern 5 => progress destruct_conjs : pcuic.
-
-  Lemma red1_pred1 Γ : forall M N, red1 Σ Γ M N -> pred1 Γ Γ M N.
-  Proof with eauto with pcuic.
-    induction 1 using red1_ind_all; intros; eauto with pcuic;
-      try solve [ constructor ; intuition auto with pcuic ].
-    - eapply pred_cofix_case ; intuition auto with pcuic ...
-      + admit.
-      + admit.
-    - eapply pred_cofix_proj ; intuition auto with pcuic ...
-      + admit.
-      + admit.
-    - constructor ; intuition auto with pcuic ...
-      (* eapply OnOne2_All2 ... intros x y X0. *)
-      admit.
-    - constructor ; intuition auto with pcuic ...
-      eapply OnOne2_All2 ...
-    - constructor ; intuition auto with pcuic ...
-      + admit.
-      + (* eapply OnOne2_All2 ... *)
-        admit.
-    - constructor ; intuition auto with pcuic ...
-      + admit.
-      + (* eapply OnOne2_All2 ... *)
-        admit.
-    - constructor ; intuition auto with pcuic ...
-      + admit.
-      + (* eapply OnOne2_All2 ... *)
-        admit.
-    - constructor ; intuition auto with pcuic ...
-      + admit.
-      + (* eapply OnOne2_All2 ... *)
-        admit.
-  Admitted.
+  Lemma pred1_ctx_over_refl Γ Δ : All2_local_env (on_decl (on_decl_over pred1 Γ Γ)) Δ Δ.
+  Proof.
+    induction Δ as [|[na [b|] ty] Δ]; constructor; auto.
+    red. split; red; apply pred1_refl.
+    red. apply pred1_refl.
+  Qed.
 
 End ParallelReduction.
 
-
 Hint Constructors pred1 : pcuic.
-Hint Unfold All2_prop2_eq All2_prop2 on_decl on_decl_over on_rel on_Trel on_Trel_eq snd on_snd : pcuic.
+Hint Unfold All2_prop2_eq All2_prop2 on_decl on_decl_over on_rel on_Trel snd on_snd : pcuic.
 Hint Resolve All2_same: pcuic.
 Hint Constructors All2_local_env : pcuic.
 
 Hint Resolve pred1_ctx_refl : pcuic.
 
-Hint Extern 4 => progress simpl : pcuic.
-Hint Extern 10 => progress split : pcuic.
-Hint Extern 5 => progress destruct_conjs : pcuic.
-Hint Extern 5 => red : pcuic.
+Ltac pcuic_simplify :=
+  simpl || split || destruct_conjs || red.
+
+Hint Extern 10 => progress pcuic_simplify : pcuic.
 
 Notation pred1_ctx Σ Γ Γ' := (All2_local_env (on_decl (pred1 Σ)) Γ Γ').
 
-Hint Extern 4 (pred1 _ _ _ _ ?t) => tryif is_evar t then fail 1 else eapply pred1_refl_gen : pcuic.
-Hint Extern 4 (pred1 _ _ _ _ ?t) => tryif is_evar t then fail 1 else eapply pred1_refl : pcuic.
+Hint Extern 4 (pred1 _ _ _ ?t _) => tryif is_evar t then fail 1 else eapply pred1_refl_gen : pcuic.
+Hint Extern 4 (pred1 _ _ _ ?t _) => tryif is_evar t then fail 1 else eapply pred1_refl : pcuic.
 
 Hint Extern 20 (#|?X| = #|?Y|) =>
 match goal with
@@ -1271,36 +1243,6 @@ Qed.
 
 Hint Extern 4 (All2_local_env_over _ _ _ ?X) =>
   tryif is_evar X then fail 1 else eapply All2_local_env_over_refl : pcuic.
-
-Section ParallelReduction2.
-  Context {Σ : global_context}.
-
-  (** Parallel reduction is included in the reflexive transitive closure of 1-step reduction *)
-  Lemma pred1_red Γ Γ' : forall M N, pred1 Σ Γ Γ' M N -> red Σ Γ M N.
-  Proof.
-    revert Γ Γ'. eapply (@pred1_ind_all_ctx Σ _
-                                            (fun Γ Γ' => pred1_ctx Σ Γ Γ' * All2_local_env (on_decl (fun Γ Γ' M N => pred1 Σ Γ Γ' M N -> red Σ Γ M N)) Γ Γ')%type); intros; try constructor. pcuic. pcuic.
-    eapply All2_local_env_impl; eauto.
-
-    - (* Beta *)
-      apply red_trans with (tApp (tLambda na t0 b1) a0).
-      eapply (@red_app Σ); [apply red_abs|]; auto with pcuic.
-      apply red_trans with (tApp (tLambda na t0 b1) a1).
-      eapply (@red_app Σ); auto with pcuic.
-      apply red1_red. constructor.
-
-    - (* Zeta *)
-      eapply red_trans with (tLetIn na d0 t0 b1).
-      eapply red_letin; eauto with pcuic.
-      eapply red_trans with (tLetIn na d1 t1 b1).
-      eapply red_letin; eauto with pcuic.
-      eapply red1_red; constructor.
-
-    - (* To be continued :) *)
-
-  Admitted.
-
-End ParallelReduction2.
 
 Section ParallelWeakening.
 
@@ -1453,8 +1395,8 @@ Section ParallelWeakening.
       try pose proof (All2_local_env_length X0);
       try specialize (X0 _ _ eq_refl _ _ eq_refl heq_length _ _ ltac:(eauto));
       simpl; try solve [ econstructor; eauto; try apply All2_map;
-                         unfold All2_prop_eq, All2_prop, on_Trel_eq, on_Trel, id in *; solve_all];
-        unfold All2_prop_eq, All2_prop, on_Trel_eq, on_Trel, id in *.
+                         unfold All2_prop_eq, All2_prop, on_Trel, id in *; solve_all];
+        unfold All2_prop_eq, All2_prop, on_Trel, id in *.
 
     - (* Contexts *)
       intros. subst.
@@ -1520,8 +1462,35 @@ Section ParallelWeakening.
       autorewrite with lift.
       constructor; auto.
       apply All2_map. solve_all.
-      apply All2_map. solve_all. specialize (b1 _ _ eq_refl _ _ eq_refl). forward b1 by pcuic.
-      specialize (b1 _ _ X3). cbn in *. split; simpl. red. subst a. simpl. congruence. auto.
+      apply All2_map. solve_all.
+
+    - assert(#|Γ''| = #|Δ''|) by pcuic.
+      pose proof (All2_local_env_length predΓ').
+      rewrite !app_context_length in H0.
+      assert (#|Γ'0| = #|Δ'|) by lia.
+      unfold unfold_fix in heq_unfold_fix.
+      destruct (nth_error mfix1 idx) eqn:Hnth; noconf heq_unfold_fix. simpl.
+      econstructor; pcuic.
+      rewrite !lift_fix_context.
+      erewrite lift_fix_context.
+      eapply All2_local_env_weaken_pred_ctx'; pcuic.
+      apply All2_map. clear X4. red in X3.
+      unfold on_Trel, id in *.
+      solve_all. rename_all_hyps.
+      specialize (forall_Γ0 Γ0 (Γ'0 ,,, fix_context mfix0)
+                            ltac:(now rewrite app_context_assoc)).
+      specialize (forall_Γ0 Δ (Δ' ,,, fix_context mfix1)
+                            ltac:(now rewrite app_context_assoc) heq_length _ _ ltac:(eauto)).
+      rewrite !lift_context_app !Nat.add_0_r !app_context_length !fix_context_length
+              !app_context_assoc in forall_Γ0.
+      now rewrite !lift_fix_context.
+      unfold unfold_fix. rewrite nth_error_map. rewrite Hnth. simpl.
+      destruct (isLambda (dbody d)) eqn:isl; noconf heq_unfold_fix.
+      rewrite isLambda_lift //.
+      f_equal. f_equal.
+      rewrite distr_lift_subst. rewrite fix_subst_length. f_equal.
+      now rewrite (map_fix_subst (fun k => lift #|Δ''| (k + #|Δ'|))).
+      eapply All2_map. solve_all.
 
     - assert(#|Γ''| = #|Δ''|) by pcuic.
       pose proof (All2_local_env_length predΓ').
@@ -1534,7 +1503,7 @@ Section ParallelWeakening.
       erewrite lift_fix_context.
       eapply All2_local_env_weaken_pred_ctx'; pcuic.
       apply All2_map. clear X2. red in X3.
-      unfold on_Trel_eq, on_Trel, id in *.
+      unfold on_Trel, id in *.
       solve_all. rename_all_hyps.
       specialize (forall_Γ1 Γ0 (Γ'0 ,,, fix_context mfix0)
                             ltac:(now rewrite app_context_assoc)).
@@ -1549,7 +1518,6 @@ Section ParallelWeakening.
       now rewrite (map_cofix_subst (fun k => lift #|Δ''| (k + #|Δ'|))).
       eapply All2_map. solve_all.
       eapply All2_map. solve_all.
-      red. unfold on_Trel. simpl. split; auto.
 
     - assert(#|Γ''| = #|Δ''|) by pcuic.
       pose proof (All2_local_env_length predΓ').
@@ -1562,7 +1530,7 @@ Section ParallelWeakening.
       erewrite lift_fix_context.
       eapply All2_local_env_weaken_pred_ctx'; pcuic.
       apply All2_map. clear X2. red in X3.
-      unfold on_Trel_eq, on_Trel, id in *.
+      unfold on_Trel, id in *.
       solve_all. rename_all_hyps.
       specialize (forall_Γ0 Γ0 (Γ'0 ,,, fix_context mfix0)
                             ltac:(now rewrite app_context_assoc)).
@@ -1599,7 +1567,7 @@ Section ParallelWeakening.
       rewrite !lift_fix_context. revert X2.
       eapply All2_local_env_weaken_pred_ctx'; pcuic.
       apply All2_map. clear X2. red in X3.
-      unfold on_Trel_eq, on_Trel, id in *.
+      unfold on_Trel, id in *.
       solve_all. rename_all_hyps.
       specialize (forall_Γ _ _ eq_refl _ _ eq_refl heq_length _ _ X4).
       specialize (forall_Γ0 Γ0 (Γ'0 ,,, fix_context mfix0)
@@ -1614,7 +1582,7 @@ Section ParallelWeakening.
       rewrite !lift_fix_context. revert X2.
       eapply All2_local_env_weaken_pred_ctx'; pcuic.
       apply All2_map. clear X2. red in X3.
-      unfold on_Trel_eq, on_Trel, id in *.
+      unfold on_Trel, id in *.
       solve_all. rename_all_hyps.
       specialize (forall_Γ _ _ eq_refl _ _ eq_refl heq_length _ _ X4).
       specialize (forall_Γ0 Γ0 (Γ'0 ,,, fix_context mfix0)
@@ -1909,8 +1877,8 @@ Section ParallelSubstitution.
                            _ _ Hs eq_refl heq_length heq_length0 HΔ);
       try pose proof (All2_local_env_length X0);
       simpl; try solve [ econstructor; eauto; try apply All2_map;
-                         unfold All2_prop_eq, All2_prop, on_Trel_eq, on_Trel, id in *; solve_all];
-        unfold All2_prop_eq, All2_prop, on_Trel_eq, on_Trel, id in *.
+                         unfold All2_prop_eq, All2_prop, on_Trel, id in *; solve_all];
+        unfold All2_prop_eq, All2_prop, on_Trel, id in *.
 
     - (* Contexts *)
       red. intros. subst.
@@ -2023,9 +1991,36 @@ Section ParallelSubstitution.
     - rewrite subst_iota_red.
       autorewrite with subst.
       econstructor. eauto.
-      apply All2_map. solve_all. unfold on_Trel_eq, on_Trel. solve_all.
+      apply All2_map. solve_all. unfold on_Trel. solve_all.
 
-    - autorewrite with subst. simpl. econstructor; eauto.
+    - autorewrite with subst. simpl.
+      unfold unfold_fix in heq_unfold_fix.
+      destruct (nth_error mfix1 idx) eqn:Hnth; noconf heq_unfold_fix.
+      destruct (isLambda (dbody d)) eqn:isl; noconf heq_unfold_fix.
+      econstructor; auto with pcuic. eapply X0; eauto with pcuic.
+      rewrite !subst_fix_context.
+      erewrite subst_fix_context.
+      eapply All2_local_env_subst_ctx; pcuic.
+      apply All2_map. clear X2. red in X3.
+      unfold on_Trel, id in *.
+      solve_all. rename_all_hyps.
+      specialize (forall_Γ0 _ _ (Γ'0 ,,, fix_context mfix0)
+                            ltac:(now rewrite app_context_assoc)).
+      specialize (forall_Γ0 _ _ (Γ'1 ,,, fix_context mfix1) _ _ Hs
+                            ltac:(now rewrite app_context_assoc) heq_length).
+      rewrite !app_context_length
+        in forall_Γ0. pose proof (All2_local_env_length X1).
+      forward forall_Γ0. lia. specialize (forall_Γ0 HΔ).
+      rewrite !subst_fix_context.
+      now rewrite !fix_context_length !subst_context_app
+          !Nat.add_0_r !app_context_assoc in forall_Γ0.
+      unfold unfold_fix. rewrite nth_error_map. rewrite Hnth. simpl.
+      rewrite isLambda_subst //.
+      f_equal. f_equal.
+      rewrite (map_fix_subst (fun k => subst s' (k + #|Γ'1|))).
+      intros. reflexivity. simpl.
+      now rewrite (distr_subst_rec _ _ _ _ 0) fix_subst_length.
+      apply subst_is_constructor; auto.
       eapply All2_map. solve_all.
 
     - autorewrite with subst. simpl.
@@ -2036,7 +2031,7 @@ Section ParallelSubstitution.
       erewrite subst_fix_context.
       eapply All2_local_env_subst_ctx; pcuic.
       apply All2_map. clear X2. red in X3.
-      unfold on_Trel_eq, on_Trel, id in *.
+      unfold on_Trel, id in *.
       solve_all. rename_all_hyps.
       specialize (forall_Γ1 _ _ (Γ'0 ,,, fix_context mfix0)
                             ltac:(now rewrite app_context_assoc)).
@@ -2056,7 +2051,6 @@ Section ParallelSubstitution.
 
       eapply All2_map. solve_all.
       eapply All2_map. solve_all.
-      red. unfold on_Trel. simpl. split; eauto.
 
     - autorewrite with subst. simpl.
       unfold unfold_cofix in heq_unfold_cofix.
@@ -2070,7 +2064,7 @@ Section ParallelSubstitution.
       eapply All2_local_env_subst_ctx. eapply Hs. auto. auto. auto.
       eapply X2.
       apply All2_map. clear X2. red in X3.
-      unfold on_Trel_eq, on_Trel, id in *.
+      unfold on_Trel, id in *.
       solve_all. rename_all_hyps.
       specialize (forall_Γ0 _ _ (Γ'0 ,,, fix_context mfix0)
                             ltac:(now rewrite app_context_assoc)).
@@ -2111,10 +2105,10 @@ Section ParallelSubstitution.
 
     - econstructor; eauto.
       { rewrite !subst_fix_context. eapply All2_local_env_subst_ctx; eauto. }
-      apply All2_map. red in X0. unfold on_Trel_eq, on_Trel, id in *.
+      apply All2_map. red in X0. unfold on_Trel, id in *.
       pose proof (All2_length _ _ X3).
       eapply All2_impl; eauto. simpl. intros.
-      destruct X. destruct o, o0. destruct o. rename_all_hyps.
+      destruct X. destruct o, p. destruct p. rename_all_hyps.
       specialize (forall_Γ1 _ _ (_ ,,, fix_context mfix0) ltac:(now rewrite - app_context_assoc)
       _ _ (_ ,,, fix_context mfix1) _ _ Hs ltac:(now rewrite - app_context_assoc) heq_length).
       rewrite !app_context_length !fix_context_length in forall_Γ1. forward forall_Γ1 by lia.
@@ -2130,10 +2124,10 @@ Section ParallelSubstitution.
 
     - econstructor; eauto.
       { rewrite !subst_fix_context. eapply All2_local_env_subst_ctx; eauto. }
-      apply All2_map. red in X0. unfold on_Trel_eq, on_Trel, id in *.
+      apply All2_map. red in X0. unfold on_Trel, id in *.
       pose proof (All2_length _ _ X3).
       eapply All2_impl; eauto. simpl. intros.
-      destruct X. destruct o, o0. destruct o. rename_all_hyps.
+      destruct X. destruct o, p. destruct p. rename_all_hyps.
       specialize (forall_Γ1 _ _ (_ ,,, fix_context mfix0) ltac:(now rewrite - app_context_assoc)
       _ _ (_ ,,, fix_context mfix1) _ _ Hs ltac:(now rewrite - app_context_assoc) heq_length).
       rewrite !app_context_length !fix_context_length in forall_Γ1. forward forall_Γ1 by lia.

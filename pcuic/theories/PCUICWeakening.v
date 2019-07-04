@@ -3,7 +3,8 @@ From Equations Require Import Equations.
 From Coq Require Import Bool String List BinPos Compare_dec Omega Lia.
 Require Import Coq.Program.Syntax Coq.Program.Basics.
 From MetaCoq.Template Require Import config utils.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICWeakeningEnv PCUICClosed PCUICReduction.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICLiftSubst PCUICUnivSubst
+     PCUICTyping PCUICWeakeningEnv PCUICClosed PCUICReduction.
 Require Import ssreflect ssrbool.
 
 (** * Weakening lemmas for typing derivations.
@@ -13,7 +14,13 @@ Require Import ssreflect ssrbool.
 Set Asymmetric Patterns.
 Generalizable Variables Σ Γ t T.
 
-Derive Signature NoConfusion for All_local_env All_local_env_over.
+Derive Signature NoConfusion for All_local_env.
+Derive Signature for All_local_env_over.
+
+(* FIXME inefficiency in equations: using a very slow "pattern_sigma" to simplify an equality between sigma types *)
+Ltac Tactics.destruct_tele_eq H ::= noconf H.
+
+Derive NoConfusion for All_local_env_over.
 Derive NoConfusion for context_decl.
 
 Lemma typed_liftn `{checker_flags} Σ Γ t T n k :
@@ -161,7 +168,10 @@ Lemma lift_unfold_fix n k mfix idx narg fn :
 Proof.
   unfold unfold_fix.
   rewrite nth_error_map. destruct (nth_error mfix idx) eqn:Hdef; try congruence.
-  intros [= <- <-]. simpl. repeat f_equal.
+  case e: isLambda => //.
+  intros [= <- <-]. simpl.
+  rewrite isLambda_lift //.
+  repeat f_equal.
   rewrite (distr_lift_subst_rec _ _ n 0 k).
   rewrite fix_subst_length. f_equal.
   unfold fix_subst. rewrite !map_length.
@@ -631,8 +641,6 @@ Proof.
   destruct (leb_spec_Set (#|c| + k) x'). f_equal. lia. reflexivity.
 Qed.
 
-Require Import FunctionalExtensionality.
-
 Lemma lift_types_of_case ind mdecl idecl args u p pty indctx pctx ps btys n k :
   let f k' := lift n (k' + k) in
   let f_ctx := lift_context n k in
@@ -666,7 +674,7 @@ Proof.
          map (option_map (on_snd (lift n k))) brs).
   { unfold build_branches_type. simpl. intros brs. intros <-.
     rewrite -> ind_ctors_map.
-    rewrite -> mapi_map, map_mapi. f_equal. extensionality i. extensionality x.
+    rewrite -> mapi_map, map_mapi. eapply mapi_ext. intros i x.
     destruct x as [[id t] arity]. simpl.
     rewrite <- lift_subst_instance_constr.
     rewrite subst0_inds_lift.
@@ -759,31 +767,33 @@ Proof.
 
   - constructor.
     rewrite -> (OnOne2_length X). generalize (#|mfix1|).
-    induction X; simpl; constructor; intuition; eauto.
+    induction X; simpl; constructor; simpl; intuition eauto.
+    congruence.
 
   - apply fix_red_body. rewrite !lift_fix_context.
     rewrite <- (OnOne2_length X).
     eapply OnOne2_map. unfold on_Trel; solve_all.
-    specialize (b Γ0 (Γ' ,,, fix_context mfix0)).
-    rewrite app_context_assoc in b. specialize (b Γ'' eq_refl).
+    specialize (b0 Γ0 (Γ' ,,, fix_context mfix0)).
+    rewrite app_context_assoc in b0. specialize (b0 Γ'' eq_refl).
     rewrite -> app_context_length, fix_context_length in *.
     rewrite -> lift_context_app in *.
     rewrite -> app_context_assoc, Nat.add_0_r in *.
-    auto.
+    auto. congruence.
 
   - constructor.
     rewrite -> (OnOne2_length X). generalize (#|mfix1|).
-    induction X; simpl; constructor; intuition; eauto.
+    induction X; simpl; constructor; intuition eauto.
+    simpl; auto. simpl; congruence.
 
   - apply cofix_red_body. rewrite !lift_fix_context.
     rewrite <- (OnOne2_length X).
     eapply OnOne2_map. unfold on_Trel; solve_all.
-    specialize (b Γ0 (Γ' ,,, fix_context mfix0)).
-    rewrite app_context_assoc in b. specialize (b Γ'' eq_refl).
+    specialize (b0 Γ0 (Γ' ,,, fix_context mfix0)).
+    rewrite app_context_assoc in b0. specialize (b0 Γ'' eq_refl).
     rewrite -> app_context_length, fix_context_length in *.
     rewrite -> lift_context_app in *.
     rewrite -> app_context_assoc, Nat.add_0_r in *.
-    auto.
+    auto. congruence.
 Qed.
 
 Lemma weakening_red `{CF:checker_flags} Σ Γ Γ' Γ'' M N :

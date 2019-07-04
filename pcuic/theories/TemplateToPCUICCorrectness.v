@@ -586,8 +586,10 @@ Lemma trans_unfold_fix mfix idx narg fn :
   unfold_fix (map (map_def trans trans) mfix) idx = Some (narg, trans fn).
 Proof.
   unfold TTy.unfold_fix, unfold_fix. intros wffix.
-  rewrite nth_error_map. destruct (nth_error mfix idx) eqn:Hdef.
-  intros [= <- <-]. simpl. repeat f_equal.
+  rewrite nth_error_map. destruct (nth_error mfix idx) eqn:Hdef => //.
+  intros [= <- <-]. simpl.
+  destruct isLambda eqn:isl => //.
+  repeat f_equal.
   rewrite trans_subst. clear Hdef.
   unfold TTy.fix_subst. generalize mfix at 2.
   induction mfix0. constructor. simpl. repeat (constructor; auto).
@@ -597,7 +599,11 @@ Proof.
   generalize mfix at 1 3.
   induction wffix; trivial.
   simpl; intros mfix. f_equal.
-  eapply (IHwffix mfix). congruence.
+  eapply (IHwffix mfix).
+
+  apply (nth_error_forall Hdef) in wffix.
+  simpl in wffix. intuition auto.
+  destruct (dbody d); simpl in *; congruence.
 Qed.
 
 Lemma trans_unfold_cofix mfix idx narg fn :
@@ -703,7 +709,8 @@ Proof.
 
   - constructor. solve_all. solve_all.
     apply OnOne2_map. apply (OnOne2_All_mix_left H1) in X. clear H1.
-    solve_all. red. simpl. apply b1. solve_all. simpl. auto.
+    solve_all. red. simpl. simpl in *. split; auto. apply b1. solve_all. simpl. auto.
+    admit. (* Need to update template-coq's red1 with annotation preservation *)
 
   - rewrite !trans_mkApps; auto with wf. eapply wf_red1 in X; auto.
     apply PCUICSubstitution.red1_mkApps_l. auto.
@@ -726,7 +733,8 @@ Proof.
     apply (OnOne2_All_mix_left Hwf) in X. clear Hwf.
     solve_all.
     red. rewrite <- !map_dtype. rewrite <- !map_dbody. intuition eauto.
-    eapply b0; solve_all; eauto. rewrite b. auto.
+    eapply b0; solve_all; eauto. rewrite b. auto. simpl.
+    admit. (* Annotation preservation *)
 
   - apply fix_red_body. apply OnOne2_map. repeat toAll.
     apply (OnOne2_All_mix_left Hwf) in X. clear Hwf.
@@ -744,14 +752,14 @@ Proof.
     eapply (refine_red1_Γ); [|apply b0].
     f_equal. f_equal. apply mapi_ext; intros [] [].
     rewrite lift0_p. simpl. rewrite LiftSubst.lift0_p. reflexivity.
-    rewrite trans_lift. simpl. reflexivity.
-    now rewrite b.
+    rewrite trans_lift. simpl. reflexivity. simpl.
+    rewrite b. admit.
 
   - constructor. solve_all. apply OnOne2_map. repeat toAll.
     apply (OnOne2_All_mix_left Hwf) in X. clear Hwf.
     solve_all.
     red. rewrite <- !map_dtype. rewrite <- !map_dbody. intuition eauto.
-    apply b0. toAll. auto. auto. rewrite b. auto.
+    apply b0. toAll. auto. auto. rewrite b. auto. simpl. admit.
 
   - apply cofix_red_body. apply OnOne2_map. repeat toAll.
     apply (OnOne2_All_mix_left Hwf) in X. clear Hwf.
@@ -769,9 +777,9 @@ Proof.
     eapply (refine_red1_Γ); [|apply b0].
     f_equal. f_equal. apply mapi_ext; intros [] [].
     rewrite lift0_p. simpl. rewrite LiftSubst.lift0_p. reflexivity.
-    rewrite trans_lift. simpl. reflexivity.
-    now rewrite b.
-Qed.
+    rewrite trans_lift. simpl. reflexivity. simpl.
+    rewrite b. admit.
+Admitted.
 
 Lemma trans_cumul Σ Γ T U :
   TTy.on_global_env (fun Σ Γ t T => match t with Some b => Ast.wf b /\ Ast.wf T | None => Ast.wf T end) Σ ->
@@ -955,7 +963,7 @@ Proof.
             trans_local (TTy.fix_context mfix)).
     { unfold trans_local, TTy.fix_context.
       rewrite map_rev map_mapi /fix_context mapi_map.
-      f_equal. f_equal. extensionality i; extensionality x.
+      f_equal. apply mapi_ext; intros i x.
       simpl. rewrite trans_lift. reflexivity. }
     econstructor; eauto.
     now rewrite nth_error_map H.
@@ -978,7 +986,7 @@ Proof.
             trans_local (TTy.fix_context mfix)).
     { unfold trans_local, TTy.fix_context.
       rewrite map_rev map_mapi /fix_context mapi_map.
-      f_equal. f_equal. extensionality i; extensionality x.
+      f_equal. apply mapi_ext => i x.
       simpl. rewrite trans_lift. reflexivity. }
     econstructor; eauto.
     now rewrite nth_error_map H0.

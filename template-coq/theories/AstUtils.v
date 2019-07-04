@@ -1,7 +1,6 @@
 From Coq Require Import Ascii String Bool OrderedType Lia List Program Arith.
 From MetaCoq.Template Require Import BasicAst Ast utils.
 Import List.ListNotations.
-Require Import FunctionalExtensionality.
 Require Import ssreflect.
 
 Set Asymmetric Patterns.
@@ -566,8 +565,8 @@ Lemma compose_map_def {A B C : Set} (f f' : B -> C) (g g' : A -> B) :
   compose (A:=def A) (map_def f f') (map_def g g') = map_def (compose f g) (compose f' g').
 Proof. reflexivity. Qed.
 
-Lemma map_def_id {t : Set} : map_def (@id t) (@id t) = id.
-Proof. extensionality p. now destruct p. Qed.
+Lemma map_def_id {t : Set} x : map_def (@id t) (@id t) x = id x.
+Proof. now destruct x. Qed.
 Hint Rewrite @map_def_id @map_id : map.
 
 Lemma map_def_spec {A B : Set} (P P' : A -> Prop) (f f' g g' : A -> B) (x : def A) :

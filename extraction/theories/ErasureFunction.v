@@ -1,7 +1,7 @@
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
 From MetaCoq.Template Require Import config utils monad_utils BasicAst AstUtils.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICTyping PCUICChecker PCUICMetaTheory PCUICWcbvEval PCUICSafeChecker PCUICLiftSubst PCUICInversion.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICTyping PCUICChecker PCUICMetaTheory PCUICWcbvEval PCUICSafeChecker PCUICLiftSubst PCUICInversion PCUICSR PCUICNormal PCUICSafeReduce.
 From MetaCoq.Extraction Require EAst ELiftSubst ETyping EWcbvEval Extract ExtractionCorrectness.
 Require Import String.
 Local Open Scope string_scope.
@@ -18,14 +18,89 @@ Definition is_prop_sort s :=
 
 Require Import Extract.
 
-Parameter is_type_or_proof :
+Fixpoint infer' Σ (HΣ : ∥wf Σ∥) (Γ : context) (HΓ : ∥ wf_local Σ Γ ∥) (t : term) {struct t}
+  : typing_result ({ A : term & ∥ Σ ;;; Γ |- t : A ∥ }).
+Admitted.
+
+Definition Is_conv_to_Arity Σ Γ T := exists T', ∥red Σ Γ T T'∥ /\ isArity T'.
+
+Ltac terror := try match goal with [t : type_error |- typing_result _] => exact (TypeError t) end.
+
+Fixpoint is_arity Σ (HΣ : wf Σ) Γ (HΓ : wf_local Σ Γ) T (HT : PCUICSafeLemmata.wellformed Σ Γ T) : typing_result ({Is_conv_to_Arity Σ Γ T} + {~ Is_conv_to_Arity Σ Γ T}).
+Proof.
+  edestruct @reduce_to_sort with (t := T) as [[u] | ]; try eassumption.
+  - left. left. sq. econstructor. split.
+    sq. eassumption. econstructor.
+  - clear t. edestruct @reduce_to_prod with (t := T); try eassumption.
+    + destruct a as (? & ? & ? & ?).
+      edestruct (is_arity Σ HΣ (Γ ,, vass x x0)) with (T := x1).
+      * enough (∥ wf_local Σ (Γ,, vass x x0) ∥) by admit. destruct HT as [ [] | []];  sq.
+        -- econstructor; cbn; eauto.
+           eapply subject_reduction in X; eauto.
+           eapply inversion_Prod in X as (? & ? & ? & ? & ?). eauto.
+        -- econstructor; cbn; eauto.
+           eapply PCUICSafeReduce.isWfArity_red in X; eauto. 
+           2: exact RedFlags.default.
+           destruct X as (? & ? & ? & ?). cbn in *.
+           admit.           
+      * sq. destruct HT as [ [] | [] ].
+        -- eapply subject_reduction in X; eauto.
+           eapply inversion_Prod in X as (? & ? & ? & ? & ?). 
+           do 2 econstructor. eauto.
+        -- econstructor 2. sq.
+           eapply PCUICSafeReduce.isWfArity_red in X; eauto. 2:exact RedFlags.default.
+           admit.           
+      * left. destruct a.
+        -- left. destruct i as (? & ? & ?). exists (tProd x x0 x2). split; sq.
+           etransitivity. eassumption. eapply PCUICReduction.red_prod. econstructor.
+           eassumption. now cbn.
+        -- right. intros (? & ? & ?). sq. 
+Admitted.      
+
+(* Fixpoint is_proposition Σ (HΣ : wf Σ) Γ (HΓ : wf_local Σ Γ) T (HT : PCUICSafeLemmata.wellformed Σ Γ T) : *)
+(*   typing_result *)
+
+Lemma arity_type_inv Σ Γ t T1 T2 :
+  Σ ;;; Γ |- t : T1 -> isArity T1 -> Σ ;;; Γ |- t : T2 -> Is_conv_to_Arity Σ Γ T2.
+Proof.
+Admitted.
+
+Lemma proposition_type_inv Σ Γ t T u :
+  Σ ;;; Γ |- t : tSort u -> is_prop_sort u -> Σ ;;; Γ |- t : T -> red Σ Γ T (tSort u).
+Proof.
+Admitted.
+
+Definition is_type_or_proof :
   forall (Sigma : PCUICAst.global_context) (HΣ : ∥wf Sigma∥) (Gamma : context) (HΓ : ∥wf_local Sigma Gamma∥) (t : PCUICAst.term),
     {r : typing_result bool & match r with
                            | Checked true => Is_Type_or_Proof Sigma Gamma t 
                            | Checked false => (Is_Type_or_Proof Sigma Gamma t -> False) × PCUICSafeLemmata.welltyped Sigma Gamma t
                            | _ => True
                            end}.
-
+Proof.
+  intros. destruct (@infer' _ HΣ Gamma HΓ t) as [ [T] | ].
+  2:{ exists (TypeError t0). eauto. }
+  edestruct is_arity with (Σ := Sigma) (Γ := Gamma)(T := T) as [[ | ] | ].
+  - admit.
+  - admit.
+  - sq. eapply PCUICValidity.validity in X as [_]; eauto.  destruct i.
+    econstructor 2. sq. eauto. destruct i. econstructor. econstructor. eauto.
+  - exists (Checked true). econstructor. split. admit. admit.
+  - destruct (@infer' _ HΣ Gamma HΓ T) as [ [K] | ].
+    + destruct @reduce_to_sort with (Σ := Sigma) ( Γ := Gamma) (t := K).
+      * admit.
+      * sq. eapply PCUICValidity.validity in X as [_]; eauto.  destruct i.
+        econstructor 2. sq. eauto. destruct i. econstructor. econstructor. eauto.
+      * destruct a. destruct (is_prop_sort x) eqn:E.
+        -- exists (Checked true). econstructor. split. admit.
+           right. exists x. admit.
+        -- exists (Checked false). split.
+           ++ 
+           ++ sq. econstructor. eauto.
+      * exists (TypeError t0). econstructor.
+    + exists (TypeError t0). econstructor.
+  - exists (TypeError t0). econstructor.
+Admitted.
 
 Section Erase.
 
@@ -109,7 +184,7 @@ Section Erase.
              | tApp f u => fun _ _ => 
                f' <- extract Σ HΣ Γ HΓ f;;
                   l' <- extract Σ HΣ Γ HΓ u;;
-                  ret (E.tApp f' l') (* if is_dummy f' then ret dummy else *)
+                  ret (E.tApp f' l') 
              | tCase ip p c brs => fun _ _ => 
                c' <- extract Σ HΣ Γ HΓ c;;
                   brs' <- monad_map (T:=typing_result) (fun x => x' <- extract Σ HΣ Γ HΓ (snd x);; ret (fst x, x')) brs;;

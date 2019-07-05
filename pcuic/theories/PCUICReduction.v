@@ -317,27 +317,30 @@ Section ReductionCongruence.
         constructor. assumption.
     Qed.
 
-    (* To match red from red1 *)
-    Inductive redl l : list term -> Type :=
+    Inductive redl {A} l : list (term × A) -> Type :=
     | refl_redl : redl l l
     | trans_redl :
         forall l1 l2,
           redl l l1 ->
-          OnOne2 (red1 Σ Γ) l1 l2 ->
+          OnOne2 (Trel_conj (on_Trel (red1 Σ Γ) fst) (on_Trel eq snd)) l1 l2 ->
           redl l l2.
 
     Lemma OnOne2_red_redl :
-      forall l l',
-        OnOne2 (red Σ Γ) l l' ->
+      forall A (l l' : list (term × A)),
+        OnOne2 (Trel_conj (on_Trel (red Σ Γ) fst) (on_Trel eq snd)) l l' ->
         redl l l'.
     Proof.
-      intros l l' h.
+      intros A l l' h.
       induction h.
-      - induction p.
+      - destruct p as [p1 p2].
+        unfold on_Trel in p1, p2.
+        destruct hd as [t a], hd' as [t' a']. simpl in *. subst.
+        induction p1.
         + constructor.
         + econstructor.
-          * eapply IHp.
-          * constructor. auto.
+          * eapply IHp1.
+          * constructor. split ; eauto.
+            reflexivity.
       - clear h. rename IHh into h.
         induction h.
         + constructor.
@@ -408,20 +411,21 @@ Section ReductionCongruence.
         red Σ Γ (tCase indn p c brs) (tCase indn p c brs').
     Proof.
       intros indn p c brs brs' h.
-      apply OnOne2_prod_inv_refl_r in h as hh ; eauto.
-      destruct hh as [h1 h2].
-      apply OnOne2_map in h1.
-      apply All2_map in h2.
-      apply All2_eq in h2.
-      apply OnOne2_red_redl in h1.
-      revert h2.
-      dependent induction h1 ; intro h2.
-      - assert (brs' = brs).
-        { eapply list_split_eq ; eauto. }
-        subst.
-        constructor.
-      - econstructor.
-        + eapply IHh1 ; eauto.
+      (* Maybe directly on on_Trel_eq since it's basically what we are doing *)
+      (* apply OnOne2_prod_inv_refl_r in h as hh ; eauto. *)
+      (* destruct hh as [h1 h2]. *)
+      (* apply OnOne2_map in h1. *)
+      (* apply All2_map in h2. *)
+      (* apply All2_eq in h2. *)
+      (* apply OnOne2_red_redl in h1. *)
+      (* revert h2. *)
+      (* dependent induction h1 ; intro h2. *)
+      (* - assert (brs' = brs). *)
+      (*   { eapply list_split_eq ; eauto. } *)
+      (*   subst. *)
+      (*   constructor. *)
+      (* - econstructor. *)
+      (*   + eapply IHh1 ; eauto. *)
     Abort.
 
     (* Fixpoint brs_n_context l := *)

@@ -410,32 +410,33 @@ Proof.
     rewrite smash_context_length in i. simpl in i.
     eapply closed_upwards; eauto. lia.
 
-  - clear H0.
-    split. solve_all.
+  - clear H0 H1.
+    split. solve_all. rename_all_hyps.
+    destruct x; simpl in *.
+    unfold test_def. simpl. toProp.
+    split.
+    rewrite -> app_context_length in *. rewrite -> Nat.add_comm in *.
+    eapply closedn_lift_inv in H0; eauto. lia.
+    subst types.
+    now rewrite app_context_length fix_context_length in H.
+    eapply nth_error_all in H; eauto. simpl in H. intuition. toProp.
+    subst types. rewrite app_context_length in H0.
+    rewrite Nat.add_comm in H0.
+    now eapply closedn_lift_inv in H0.
+
+  - split. solve_all. rename_all_hyps.
     destruct x; simpl in *.
     unfold test_def. simpl. toProp.
     split.
     rewrite -> app_context_length in *. rewrite -> Nat.add_comm in *.
     eapply closedn_lift_inv in H1; eauto. lia.
     subst types.
-    now rewrite app_context_length fix_context_length in H0.
-    eapply nth_error_all in H; eauto. simpl in H. intuition. toProp.
-    subst types. rewrite app_context_length in H0.
-    rewrite Nat.add_comm in H0.
-    now eapply closedn_lift_inv in H0.
-
-  - split. solve_all. destruct x; simpl in *.
-    unfold test_def. simpl. toProp.
-    split.
-    rewrite -> app_context_length in *. rewrite -> Nat.add_comm in *.
-    eapply closedn_lift_inv in H2; eauto. lia.
-    subst types.
-    now rewrite -> app_context_length, fix_context_length in H1.
+    now rewrite -> app_context_length, fix_context_length in H.
     eapply (nth_error_all) in H; eauto. simpl in *.
     intuition. toProp.
-    subst types. rewrite app_context_length in H1.
-    rewrite Nat.add_comm in H1.
-    now eapply closedn_lift_inv in H1.
+    subst types. rewrite app_context_length in H2.
+    rewrite Nat.add_comm in H2.
+    now eapply closedn_lift_inv in H2.
 
   - destruct X2; intuition eauto.
     + destruct i as [[u [ctx [Heq Hi]]] Hwfi]. simpl in Hwfi.

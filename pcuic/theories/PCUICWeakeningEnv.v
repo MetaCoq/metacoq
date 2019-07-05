@@ -39,7 +39,7 @@ Proof.
     now inv H2.
 Qed.
 
-Lemma extends_lookup `{checker_flags} Σ Σ' c decl :
+Lemma extends_lookup `{checker_flags} {Σ Σ' c decl} :
   wf Σ' -> extends Σ Σ' -> lookup_env Σ c = Some decl -> lookup_env Σ' c = Some decl.
 Proof.
   intros wfΣ' [Σ'' ->]. simpl.
@@ -236,17 +236,29 @@ Proof.
     apply weakening_env_global_ext_constraints; tas.
     close_Forall. intros; intuition eauto with extends.
   - econstructor; eauto with extends.
-    eapply All_local_env_impl. eapply X.
+    eapply All_local_env_impl. eapply all.
     clear -wfΣ' extΣ. simpl; intros.
     unfold lift_typing in *; destruct T; intuition eauto with extends.
     destruct X as [u [tyu Hu]]. exists u. eauto.
     eapply All_impl; eauto; simpl; intuition eauto with extends.
+    move:wffixmfix. rewrite /check_wf_fix //.
+    case: map_option_out => //. case; auto => /= => a l.
+    rewrite /check_recursivity_kind.
+    case e: lookup_env => [decl'|] //.
+    now rewrite (extends_lookup wfΣ' extΣ e).
+    rewrite andb_false_r //.
   - econstructor; eauto with extends. auto.
-    eapply All_local_env_impl. eapply X.
+    eapply All_local_env_impl. eapply all.
     clear -wfΣ' extΣ. simpl; intros.
     unfold lift_typing in *; destruct T; intuition eauto with extends.
     destruct X as [u [tyu Hu]]. exists u. eauto.
     eapply All_impl; eauto; simpl; intuition eauto with extends.
+    move:wfcofixmfix. rewrite /check_wf_cofix //.
+    case: map_option_out => //. case; auto => /= => a l.
+    rewrite /check_recursivity_kind.
+    case e: lookup_env => [decl'|] //.
+    now rewrite (extends_lookup wfΣ' extΣ e).
+    rewrite andb_false_r //.
   - econstructor. eauto.
     destruct X2 as [isB|[u [Hu Ps]]].
     + left; auto. destruct isB. destruct x as [ctx [u [Heq Hu]]].

@@ -1014,7 +1014,7 @@ Proof.
   - rewrite -> (map_dtype _ (lift #|Γ''| (#|mfix| + #|Γ'|))).
     assert (wf_local Σ (Γ ,,, Γ'' ,,, lift_context #|Γ''| 0 Γ' ,,, lift_context #|Γ''| #|Γ'| (fix_context mfix))).
     subst types.
-    apply All_local_env_app in X as [X Hfixc].
+    apply All_local_env_app in wf as [X Hfixc].
     apply All_local_env_app_inv. intuition.
     revert Hfixc. clear X0 X heq_nth_error.
     induction 1; simpl; auto; try constructor; rewrite -> lift_context_snoc. econstructor; auto.
@@ -1064,7 +1064,7 @@ Proof.
        specialize (IH Γ (Γ' ,,, fix_context mfix) Γ'').
        rewrite -> lift_context_app in IH.
        rewrite -> !app_context_assoc, Nat.add_0_r, !app_context_length, fix_context_length in IH.
-       specialize (IH X1 eq_refl).
+       specialize (IH wf eq_refl).
        rewrite -> permute_lift, lift_context_length, fix_context_length by lia.
        subst types; rewrite -> fix_context_length in IH.
        rewrite (Nat.add_comm #|Γ'|). apply IH.

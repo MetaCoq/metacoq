@@ -1722,6 +1722,7 @@ Lemma typing_ind_env `{cf : checker_flags} :
         All (fun d => (Σ ;;; Γ ,,, types |- d.(dbody) : lift0 #|types| d.(dtype))%type *
                    (isLambda d.(dbody) = true)%type *
             P Σ (Γ ,,, types) d.(dbody) (lift0 #|types| d.(dtype)))%type mfix ->
+        check_wf_fix (fst Σ) Γ mfix ->
         P Σ Γ (tFix mfix n) decl.(dtype)) ->
 
     (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (mfix : list (def term)) (n : nat) decl,
@@ -1731,6 +1732,7 @@ Lemma typing_ind_env `{cf : checker_flags} :
         All (fun d => (Σ ;;; Γ ,,, types |- d.(dbody) : lift0 #|types| d.(dtype))%type *
             P Σ (Γ ,,, types) d.(dbody) (lift0 #|types| d.(dtype)))%type mfix ->
         allow_cofix ->
+        check_wf_cofix Σ Γ mfix ->
         P Σ Γ (tCoFix mfix n) decl.(dtype)) ->
 
     (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (t A B : term),
@@ -1938,7 +1940,7 @@ Proof.
                           typing_size x3) Γ' a)) ->
                    Forall_decls_typing P Σ.1 * P Σ Γ t T).
        intros; eauto. eapply (X14 _ X _ _ Hty); eauto. lia.
-       clear X14 a0.
+       clear X14 a0 i i0.
        clear HeqΓ'. clear X13. revert Γ wfΓ.
        induction a; simpl in *; try econstructor; eauto.
        eapply IHa; eauto. intros. eapply (X _ X0 _ _ Hty); simpl; eauto. lia.
@@ -1963,7 +1965,7 @@ Proof.
            subst types. intros. eapply (X14 _ X _ _ Hty); eauto. lia. clear X14.
            subst types.
            remember (fix_context mfix) as mfixcontext. clear Heqmfixcontext.
-           clear e decl X13. clear i.
+           clear e decl X13 i i0.
            induction a0; econstructor; eauto.
        ++ split; auto.
           eapply (X _ a _ _ (fst p)). simpl. lia.
@@ -1985,7 +1987,7 @@ Proof.
 
                    Forall_decls_typing P Σ.1 * P Σ Γ t T).
        intros; eauto. eapply (X14 _ X _ _ Hty); eauto. lia.
-       clear X14 a0.
+       clear X14 a0 i i0.
        clear HeqΓ'. revert Γ wfΓ.
        induction a; simpl in *; try econstructor; eauto.
        eapply IHa; eauto. intros. eapply (X _ X0 _ _ Hty); simpl; eauto. lia.
@@ -2008,7 +2010,7 @@ Proof.
            intros. eapply (X14 _ X _ _ Hty); eauto. subst types; lia. clear X14.
            subst types.
            remember (fix_context mfix) as mfixcontext. clear Heqmfixcontext.
-           clear e decl.
+           clear e decl i i0.
            induction a0; econstructor; eauto.
        ++ split; auto.
           eapply (X _ a _ _ p). simpl. lia.
@@ -2033,10 +2035,18 @@ Proof.
              exists u. intuition. 
 Qed.
 
+Ltac prefixable_eq_neq h th ::=
+  match th with
+  | eq _ _ => HypH
+  | ~ (eq _ _) => HypH
+  | is_true _ => HypNone
+  | _ => HypH_
+  end.
 
 Ltac my_rename_hyp h th :=
   match th with
   | (wf ?E) => fresh "wf" E
+  | (wf ?E.1) => fresh "wf" E
   | (wf (fst_ctx ?E)) => fresh "wf" E
   | (wf _) => fresh "wf"
   | (typing _ _ ?t _) => fresh "type" t
@@ -2044,8 +2054,13 @@ Ltac my_rename_hyp h th :=
   | (conv _ _ ?t _) => fresh "conv" t
   | (All_local_env (lift_typing (@typing _) _) ?G) => fresh "wf" G
   | (All_local_env (lift_typing (@typing _) _) _) => fresh "wf"
-  | (All_local_env _ _ ?G) => fresh "H" G
+  | (All_local_env _ ?G) => fresh "all" G
+  | (All_local_env _ ?G) => fresh "all"
   | context [typing _ _ (_ ?t) _] => fresh "IH" t
+  | is_true (check_wf_fix _ _ ?t) => fresh "wffix" t
+  | is_true (check_wf_cofix _ _ ?t) => fresh "wfcofix" t
+  | is_true (@eq bool (isLambda ?t) _) => fresh "isl" t
+  | is_true (@eq bool (is_constructor _ ?t) _) => fresh "isc" t
   end.
 
 Ltac rename_hyp h ht ::= my_rename_hyp h ht.

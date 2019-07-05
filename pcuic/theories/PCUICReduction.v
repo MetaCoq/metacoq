@@ -305,6 +305,18 @@ Section ReductionCongruence.
       now eapply (red_ctx (tCtxLetIn_r _ _ _ tCtxHole)).
     Qed.
 
+    Lemma red_case_p :
+      forall indn p c brs p',
+        red Σ Γ p p' ->
+        red Σ Γ (tCase indn p c brs) (tCase indn p' c brs).
+    Proof.
+      intros indn p c brs p' h.
+      induction h.
+      - constructor.
+      - econstructor ; try eassumption.
+        constructor. assumption.
+    Qed.
+
     Lemma red_case_c :
       forall indn p c brs c',
         red Σ Γ c c' ->
@@ -457,6 +469,46 @@ Section ReductionCongruence.
           eapply OnOne2_impl ; eauto.
     Qed.
 
+    Inductive rtrans_clos {A} (R : A -> A -> Type) (x : A) : A -> Type :=
+    | rtrans_clos_refl : rtrans_clos R x x
+    | rtrans_clos_trans :
+        forall y z,
+          rtrans_clos R x y ->
+          R y z ->
+          rtrans_clos R x z.
+
+    Lemma All2_many_OnOne2 :
+      forall A (R : A -> A -> Type) l l',
+        All2 R l l' ->
+        rtrans_clos (OnOne2 R) l l'.
+    Proof.
+      intros A R l l' h.
+      induction h.
+      - constructor.
+      - econstructor ; revgoals.
+        + constructor. eassumption.
+        + clear - IHh. rename IHh into h.
+          induction h.
+          * constructor.
+          * econstructor.
+            -- eassumption.
+            -- econstructor. assumption.
+    Qed.
+
+    Lemma red_case_brs :
+      forall indn p c brs brs',
+        All2 (on_Trel_eq (red Σ Γ) snd fst) brs brs' ->
+        red Σ Γ (tCase indn p c brs) (tCase indn p c brs').
+    Proof.
+      intros indn p c brs brs' h.
+      apply All2_many_OnOne2 in h.
+      induction h.
+      - constructor.
+      - eapply red_trans.
+        + eapply IHh.
+        + eapply red_case_one_brs. assumption.
+    Qed.
+
     (* Fixpoint brs_n_context l := *)
     (*   match l with *)
     (*   | [] => tCtxHole *)
@@ -483,7 +535,7 @@ Section ReductionCongruence.
         Probably needing a way to fill "list contexts". And start with an OnOne2
         hyp instead of All2 as well.
      *)
-    Lemma red_case ind p0 p1 c0 c1 brs0 brs1 :
+    Lemma reds_case ind p0 p1 c0 c1 brs0 brs1 :
       red Σ Γ p0 p1 ->
       red Σ Γ c0 c1 ->
       All2 (on_Trel_eq (red Σ Γ) snd fst) brs0 brs1 ->

@@ -575,17 +575,17 @@ Proof.
   eauto.
 Qed.
 
-Lemma All2_nth_error_Some {A} {P : A -> A -> Type} {l l'} n t :
+Lemma All2_nth_error_Some {A B} {P : A -> B -> Type} {l l'} n t :
   All2 P l l' ->
   nth_error l n = Some t ->
-  { t' : A & (nth_error l' n = Some t') * P t t'}%type.
+  { t' : B & (nth_error l' n = Some t') * P t t'}%type.
 Proof.
   intros Hall. revert n.
   induction Hall; destruct n; simpl; try congruence. intros [= ->]. exists y. intuition auto.
   eauto.
 Qed.
 
-Lemma All2_nth_error_None {A} {P : A -> A -> Type} {l l'} n :
+Lemma All2_nth_error_None {A B} {P : A -> B -> Type} {l l'} n :
   All2 P l l' ->
   nth_error l n = None ->
   nth_error l' n = None.
@@ -594,7 +594,7 @@ Proof.
   induction Hall; destruct n; simpl; try congruence. auto.
 Qed.
 
-Lemma All2_length {A} {P : A -> A -> Type} l l' : All2 P l l' -> #|l| = #|l'|.
+Lemma All2_length {A B} {P : A -> B -> Type} l l' : All2 P l l' -> #|l| = #|l'|.
 Proof. induction 1; simpl; auto. Qed.
 
 Lemma All2_same {A} (P : A -> A -> Type) l : (forall x, P x x) -> All2 P l l.

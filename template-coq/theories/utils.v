@@ -22,9 +22,34 @@ Notation "x × y" := (prod x y )(at level 80, right associativity).
 
 Notation "#| l |" := (List.length l) (at level 0, l at level 99, format "#| l |").
 
+Tactic Notation "destruct" "?" :=
+  let E := fresh "E" in
+  match goal with
+    [ |- context[match ?X with _ => _ end]] => destruct X eqn:E
+  | [ H : context[match ?X with _ => _ end] |- _] => destruct X eqn:E
+  end.
+
+Tactic Notation "destruct" "?" "in" hyp(H) :=
+  let e := fresh "E" in
+  match type of H with context [match ?x with _ => _ end] => destruct x eqn:e
+  end.
+
 Notation "'eta_compose'" := (fun g f x => g (f x)).
+
 (* \circ *)
 Notation "g ∘ f" := (eta_compose g f).
+
+Tactic Notation "destruct" "?" :=
+  let E := fresh "E" in
+  match goal with
+    [ |- context[match ?X with _ => _ end]] => destruct X eqn:E
+  | [ H : context[match ?X with _ => _ end] |- _] => destruct X eqn:E
+  end.
+
+Tactic Notation "destruct" "?" "in" hyp(H) :=
+  let e := fresh "E" in
+  match type of H with context [match ?x with _ => _ end] => destruct x eqn:e
+  end.
 
 (** We cannot use ssrbool as it breaks extraction. *)
 Coercion is_true : bool >-> Sortclass.
@@ -661,8 +686,8 @@ Qed.
 (*   apply IHX. inv H; intuition auto. *)
 (* Qed. *)
 
-Lemma All2_All_mix_left {A} {P : A -> Type} {Q : A -> A -> Type}
-      {l l' : list A} :
+Lemma All2_All_mix_left {A B} {P : A -> Type} {Q : A -> B -> Type}
+      {l : list A} {l' : list B} :
   All P l -> All2 Q l l' -> All2 (fun x y => (P x * Q x y)%type) l l'.
 Proof.
   induction 2; simpl; intros; constructor.
@@ -670,8 +695,8 @@ Proof.
   apply IHX0. inv X; intuition auto.
 Qed.
 
-Lemma All2_All_mix_right {A} {P : A -> Type} {Q : A -> A -> Type}
-      {l l' : list A} :
+Lemma All2_All_mix_right {A B} {P : B -> Type} {Q : A -> B -> Type}
+      {l : list A} {l' : list B} :
   All P l' -> All2 Q l l' -> All2 (fun x y => (Q x y * P y)%type) l l'.
 Proof.
   induction 2; simpl; intros; constructor.
@@ -788,7 +813,7 @@ Lemma All_impl {A} {P Q} {l : list A} : All P l -> (forall x, P x -> Q x) -> All
 Proof. induction 1; try constructor; intuition auto. Qed.
 
 Lemma Alli_impl {A} {P Q} (l : list A) {n} : Alli P n l -> (forall n x, P n x -> Q n x) -> Alli Q n l.
-Proof. induction 1; try constructor; intuition auto. Qed.
+Proof. induction 1; try constructor; intuition auto. Defined.
 
 Lemma All_map {A B} {P : B -> Type} {f : A -> B} {l : list A} :
   All (compose P f) l -> All P (map f l).
@@ -1419,6 +1444,95 @@ Proof.
   induction 1; congruence.
 Qed.
 
+Lemma Forall2_length {A B} {P : A -> B -> Prop} {l l'} : Forall2 P l l' -> #|l| = #|l'|.
+Proof. induction 1; simpl; auto. Qed.
+
+
+Lemma All2_app_inv : forall (A B : Type) (R : A -> B -> Type),
+    forall l l1 l2, All2 R (l1 ++ l2) l -> { '(l1',l2') : _ & (l = l1' ++ l2')%list * (All2 R l1 l1') * (All2 R l2 l2')}%type.
+Proof.
+  intros. revert l2 l X. induction l1; intros; cbn in *.
+  - exists ([], l). eauto.
+  - inversion X. subst.
+    eapply IHl1 in X1 as ( [] & ? & ?). destruct p.  subst.
+    eexists (y :: l, l0). repeat split; eauto.
+Qed.
+
+Lemma All2_ind_rev : forall (A B : Type) (R : A -> B -> Type) (P : forall (l : list A) (l0 : list B), Prop),
+    P [] [] ->
+    (forall (x : A) (y : B) (l : list A) (l' : list B) (r : R x y) (a : All2 R l l'),
+        P l l' -> P (l ++ [x])%list (l' ++ [y]))%list ->
+    forall (l : list A) (l0 : list B) (a : All2 R l l0), P l l0.
+Proof.
+  intros. revert l0 a. induction l using rev_ind; cbn; intros.
+  - inv a. eauto.
+  - eapply All2_app_inv in a as ([] & [[]]). subst.
+    inv a0. inv X0. eauto.
+Qed.
+
+Ltac invs H := inversion H; subst; clear H.
+
+Lemma last_inv A (l1 l2 : list A) x y :
+  (l1 ++ [x] = l2 ++ [y] -> l1 = l2 /\ x = y)%list.
+Proof.
+  revert l2. induction l1; cbn; intros.
+  - destruct l2; cbn in H; invs H. eauto. destruct l2; invs H2.
+  - destruct l2; invs H. destruct l1; invs H2.
+    eapply IHl1 in H2 as []. split; congruence.
+Qed.
+
+Lemma All2_app : forall (A B : Type) (R : A -> B -> Type),
+    forall l1 l2 l1' l2', All2 R l1 l1' -> All2 R l2 l2' -> All2 R (l1 ++ l2) (l1' ++ l2').
+Proof.
+  induction 1; cbn; eauto.
+Qed.
+
+Lemma All2_impl_In {A B} {P Q : A -> B -> Type} {l l'} :
+  All2 P l l' ->
+  (forall x y, In x l -> In y l' -> P x y -> Q x y) ->
+  All2 Q l l'.
+Proof.
+  revert l'. induction l; intros; inversion X.
+  - econstructor.
+  - subst. econstructor.  eapply X0. firstorder. firstorder. eauto.
+    eapply IHl. eauto. intros.
+    eapply X0. now right. now right. eauto.
+Qed.
+
+Lemma Forall2_skipn A B (P : A -> B -> Prop) l l' n:
+  Forall2 P l l' -> Forall2 P (skipn n l) (skipn n l').
+Proof.
+  revert l l'; induction n; intros.
+  - unfold skipn. eauto.
+  - cbv [skipn]. fold (@skipn A n). fold (@skipn B n).
+    inversion H; subst. econstructor.
+    eauto.
+Qed.
+
+Lemma All2_Forall A B (P : A -> B -> Prop) l l' :
+  All2 P l l' -> Forall2 P l l'.
+Proof.
+  induction 1; eauto.
+Qed.
+
+Lemma Forall2_nth_error_Some {A B} {P : A -> B -> Prop} {l l'} n t :
+  Forall2 P l l' ->
+  nth_error l n = Some t ->
+  exists t' : B, (nth_error l' n = Some t') /\ P t t'.
+Proof.
+  intros Hall. revert n.
+  induction Hall; destruct n; simpl; try congruence. intros [= ->]. exists y. intuition auto.
+  eauto.
+Qed.
+
+Lemma Forall2_impl {A B} {P Q : A -> B -> Prop} {l l'} :
+    Forall2 P l l' ->
+    (forall x y, P x y -> Q x y) ->
+    Forall2 Q l l'.
+Proof.
+  induction 1; constructor; auto.
+Qed.
+
 Arguments skipn : simpl nomatch.
 
 Lemma skipn_all2 :
@@ -1509,13 +1623,6 @@ Proof.
     eapply app_Forall ; try assumption.
     repeat constructor. assumption.
 Qed.
-Lemma Forall2_impl {A B} {P Q : A -> B -> Prop} {l l'} :
-    Forall2 P l l' ->
-    (forall x y, P x y -> Q x y) ->
-    Forall2 Q l l'.
-Proof.
-  induction 1; constructor; auto.
-Qed.
 
 Lemma Forall2_impl' {A B} {P Q : A -> B -> Prop} {l l'} :
     Forall2 P l l' ->
@@ -1565,13 +1672,6 @@ Proof.
 Qed.
 
 
-Lemma Forall2_length {A B R l l'} (H : @Forall2 A B R l l')
-  : #|l| = #|l'|.
-Proof.
-  induction H. reflexivity.
-  cbn. now apply f_equal.
-Defined.
-
 Lemma Forall2_and {A B} (R R' : A -> B -> Prop) l l'
   : Forall2 R l l' -> Forall2 R' l l' -> Forall2 (fun x y => R x y /\ R' x y) l l'.
 Proof.
@@ -1598,8 +1698,6 @@ Proof.
   inversion_clear 1.
   constructor; intuition.
 Defined.
-
-
 
 (* Sorted lists without duplicates *)
 Class ComparableType A := { compare : A -> A -> comparison }.
@@ -1644,19 +1742,6 @@ Proof.
 Qed.
 
 Arguments skipn : simpl nomatch.
-
-Lemma Forall2_skipn :
-  forall A B P l l' n,
-    @Forall2 A B P l l' ->
-    Forall2 P (skipn n l) (skipn n l').
-Proof.
-  intros A B P l l' n h.
-  induction n in l, l', h |- *.
-  - assumption.
-  - destruct h.
-    + constructor.
-    + simpl. apply IHn. assumption.
-Qed.
 
 Lemma Forall2_nth_error_Some_l :
   forall A B (P : A -> B -> Prop) l l' n t,
@@ -1851,4 +1936,76 @@ Proof.
   induction p using Pos.peano_ind.
   rewrite Pos2Nat.inj_1. reflexivity.
   rewrite Pos2Nat.inj_succ. cbn. f_equal. lia.
+Qed.
+
+Lemma All2_right_triv {A B} {l : list A} {l' : list B} P :
+  All P l' -> #|l| = #|l'| -> All2 (fun _ b => P b) l l'.
+Proof.
+  induction 1 in l |- *; cbn; intros; destruct l; cbn in *; try omega; econstructor; eauto.
+Qed.
+
+Lemma All_repeat {A} {n P} x :
+  P x -> @All A P (repeat x n).
+Proof.
+  induction n; cbn; econstructor; eauto.
+Qed.
+
+Lemma All2_map_left {A B C} (P : A -> C -> Type) l l' (f : B -> A) :
+  All2 (fun x y => P (f x) y) l l' -> All2 P  (map f l) l'.
+Proof. intros. rewrite <- (map_id l'). eapply All2_map; eauto. Qed.
+
+Lemma All2_map_right {A B C} (P : A -> C -> Type) l l' (f : B -> C) :
+  All2 (fun x y => P x (f y)) l l' -> All2 P  l (map f l').
+Proof. intros. rewrite <- (map_id l). eapply All2_map; eauto. Qed.
+
+Lemma Forall2_Forall_right {A B} {P : A -> B -> Prop} {Q : B -> Prop} {l l'} :
+  Forall2 P l l' ->
+  (forall x y, P x y -> Q y) ->
+  Forall Q l'.
+Proof.
+  intros HF H. induction HF; constructor; eauto.
+Qed.
+
+Lemma All2_from_nth_error A B L1 L2 (P : A -> B -> Type) :
+  #|L1| = #|L2| ->
+                (forall n x1 x2, n < #|L1| -> nth_error L1 n = Some x1
+                                      -> nth_error L2 n = Some x2
+                                      -> P x1 x2) ->
+                All2 P L1 L2.
+Proof.
+  revert L2; induction L1; cbn; intros.
+  - destruct L2; inv H. econstructor.
+  - destruct L2; inversion H. econstructor.
+    eapply (X 0); cbn; eauto. omega.
+    eapply IHL1. eauto.
+    intros. eapply (X (S n)); cbn; eauto. omega.
+Qed.
+
+Lemma All2_nth_error {A B} {P : A -> B -> Type} {l l'} n t t' :
+  All2 P l l' ->
+  nth_error l n = Some t ->
+  nth_error l' n = Some t' ->
+  P t t'.
+Proof.
+  intros Hall. revert n.
+  induction Hall; destruct n; simpl; try congruence.
+  eauto.
+Qed.
+
+Lemma All_In X (P : X -> Type) (l : list X) x : All P l -> In x l -> squash (P x).
+Proof.
+  induction 1; cbn; intros; destruct H.
+  - subst. econstructor. eauto.
+  - eauto.
+Qed.      
+
+Lemma nth_error_skipn A l m n (a : A) :
+  nth_error l (m + n) = Some a ->
+  nth_error (skipn m l) n = Some a.
+Proof.
+  induction m in n, l |- *.
+  - cbn. destruct l; firstorder.
+  - cbn. destruct l.
+    + inversion 1.
+    + eapply IHm.
 Qed.

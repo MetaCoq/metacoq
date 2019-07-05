@@ -21,6 +21,17 @@ Arguments sq {_} _.
 
 Notation "( x ; y )" := (existT _ x y).
 
+Ltac rdestruct H :=
+  match type of H with
+  | _ /\ _ => let H' := fresh H in
+            destruct H as [H H']; rdestruct H; rdestruct H'
+  | _ × _ => let H' := fresh H in
+            destruct H as [H H']; rdestruct H; rdestruct H'
+  | sigT _ => let H' := fresh H in
+             destruct H as [H H']; rdestruct H; rdestruct H'
+  | _ => idtac
+  end.
+
 Definition nodelta_flags := RedFlags.mk true true true false true true.
 
 Inductive dlexprod {A} {B : A -> Type}
@@ -93,11 +104,57 @@ Proof.
     + right. eapply hB ; eassumption.
 Qed.
 
+Section DestArity.
+  Lemma destArity_app_aux {Γ Γ' t}
+    : destArity (Γ ,,, Γ') t = option_map (fun '(ctx, s) => (Γ ,,, ctx, s))
+                                          (destArity Γ' t).
+  Proof.
+    revert Γ'.
+    induction t; cbn; intro Γ'; try reflexivity.
+    - rewrite <- app_context_cons. now eapply IHt2.
+    - rewrite <- app_context_cons. now eapply IHt3.
+  Qed.
+
+  Lemma destArity_app {Γ t}
+    : destArity Γ t = option_map (fun '(ctx, s) => (Γ ,,, ctx, s))
+                                          (destArity [] t).
+  Proof.
+    exact (@destArity_app_aux Γ [] t).
+  Qed.
+
+  Lemma destArity_app_Some {Γ t ctx s}
+    : destArity Γ t = Some (ctx, s)
+      -> ∑ ctx', destArity [] t = Some (ctx', s) /\ ctx = Γ ,,, ctx'.
+  Proof.
+    intros H. rewrite destArity_app in H.
+    destruct (destArity [] t) as [[ctx' s']|]; cbn in *.
+    exists ctx'. inversion H. now subst.
+    discriminate H.
+  Qed.
+
+  Lemma destArity_tFix {mfix idx args} :
+    destArity [] (mkApps (tFix mfix idx) args) = None.
+  Proof.
+    induction args. reflexivity.
+    rewrite mkApps_nonempty. reflexivity.
+    intros e; discriminate e.
+  Qed.
+
+  Lemma destArity_tApp {t u l} :
+    destArity [] (mkApps (tApp t u) l) = None.
+  Proof.
+    induction l. reflexivity.
+    rewrite mkApps_nonempty. reflexivity.
+    intros e; discriminate e.
+  Qed.
+End DestArity.
+
+
 Section Lemmata.
 
   Context (flags : RedFlags.t).
   Context (Σ : global_context).
-  Context (hΣ : wf Σ).
+  Context (hΣ : ∥ wf Σ ∥).
 
   (* red is the reflexive transitive closure of one-step reduction and thus
      can't be used as well order. We thus define the transitive closure,
@@ -107,8 +164,15 @@ Section Lemmata.
   | cored1 : forall u v, red1 Σ Γ u v -> cored Σ Γ v u
   | cored_trans : forall u v w, cored Σ Γ v u -> red1 Σ Γ v w -> cored Σ Γ w u.
 
+  Derive Signature for cored.
+
   Inductive welltyped Σ Γ t : Prop :=
   | iswelltyped A : Σ ;;; Γ |- t : A -> welltyped Σ Γ t.
+
+  Arguments iswelltyped {Σ Γ t A} h.
+
+  Definition wellformed Σ Γ t :=
+    welltyped Σ Γ t \/ ∥ isWfArity typing Σ Γ t ∥.
 
   Lemma lookup_env_ConstantDecl_inv :
     forall k k' ty bo uni,
@@ -137,13 +201,14 @@ Section Lemmata.
   Qed.
 
   Lemma wf_nlg :
-    wf (nlg Σ).
+    ∥ wf (nlg Σ) ∥.
   Proof.
+    destruct hΣ as [wΣ]; clear hΣ. constructor.
     destruct Σ as [Σ' φ].
     unfold nlg. unfold wf in *. unfold on_global_env in *. simpl in *.
     induction Σ'.
     - assumption.
-    - simpl. inversion hΣ. subst.
+    - simpl. inversion wΣ. subst.
       constructor.
       + eapply IHΣ'. assumption.
       + destruct a.
@@ -165,6 +230,12 @@ Section Lemmata.
       welltyped (nlg Σ) Γ t.
   Admitted.
 
+  Lemma wellformed_nlg :
+    forall Γ t,
+      wellformed Σ Γ t ->
+      wellformed (nlg Σ) Γ t.
+  Admitted.
+
   Lemma type_rename :
     forall Γ u v A,
       Σ ;;; Γ |- u : A ->
@@ -181,6 +252,14 @@ Section Lemmata.
     intros Γ u v [A h] e.
     exists A. eapply type_rename ; eauto.
   Qed.
+
+  Lemma wellformed_rename :
+    forall Γ u v,
+      wellformed Σ Γ u ->
+      eq_term (snd Σ) u v ->
+      wellformed Σ Γ v.
+  Proof.
+  Admitted.
 
   Lemma red_cored_or_eq :
     forall Γ u v,
@@ -215,6 +294,7 @@ Section Lemmata.
       cored (fst Σ) Γ v u ->
       welltyped Σ Γ v.
   Proof.
+    destruct hΣ as [wΣ]; clear hΣ.
     intros Γ u v h r.
     revert h. induction r ; intros h.
     - destruct h as [A h]. exists A.
@@ -330,6 +410,38 @@ Section Lemmata.
       apply inversion_App in h as hh.
       destruct hh as [na [A' [B' [? [? ?]]]]].
       eexists. eassumption.
+  Qed.
+
+  Lemma wellformed_context :
+    forall Γ t,
+      wellformed Σ Γ (zip t) ->
+      wellformed Σ (Γ ,,, stack_context (snd t)) (fst t).
+  Proof.
+    intros Γ [t π] [[A h]|h].
+    - destruct (welltyped_context Γ (t, π) (iswelltyped h)) as [A' X].
+      left; econstructor; eassumption.
+    - revert t h; induction π; intros t0 h; (try specialize (IHπ _ h)); cbn in *.
+      now right.
+      all: destruct IHπ as [[AA HA]|[[ctx [s [h1 h2]]]]]; [|try discriminate].
+      all: try (apply inversion_App in HA; rdestruct HA;
+                left; econstructor; eassumption).
+      + destruct indn; apply inversion_Case in HA; cbn in HA; rdestruct HA;
+          left; econstructor; eassumption.
+      + apply inversion_Proj in HA; rdestruct HA; left; econstructor; eassumption. 
+      + apply inversion_Prod in HA; rdestruct HA; left; econstructor; eassumption. 
+      + cbn in h1; apply destArity_app_Some in h1. destruct h1 as [ctx' [h1 h1']].
+        subst. left. rewrite app_context_assoc in h2; cbn in *.
+        apply wf_local_app in h2. inversion h2; subst; cbn in *.
+        destruct X0; econstructor; eassumption.
+      + apply inversion_Prod in HA; rdestruct HA; left; econstructor; eassumption. 
+      + cbn in h1; apply destArity_app_Some in h1. destruct h1 as [ctx' [h1 h1']].
+        subst. right; constructor; exists ctx', s.
+        rewrite app_context_assoc in h2; cbn in h2.
+        now split.
+      + apply inversion_Lambda in HA; rdestruct HA;
+          left; econstructor; eassumption. 
+      + apply inversion_Lambda in HA; rdestruct HA;
+          left; econstructor; eassumption. 
   Qed.
 
   Lemma cored_red :
@@ -1218,47 +1330,47 @@ Section Lemmata.
       exists B. assumption.
   Qed.
 
-  Lemma welltyped_zipp :
-    forall Γ t ρ,
-      welltyped Σ Γ (zipp t ρ) ->
-      welltyped Σ Γ t.
-  Proof.
-    intros Γ t ρ [A h].
-    unfold zipp in h.
-    case_eq (decompose_stack ρ). intros l π e.
-    rewrite e in h. clear - h.
-    revert t A h.
-    induction l ; intros t A h.
-    - eexists. cbn in h. eassumption.
-    - cbn in h. apply IHl in h.
-      destruct h as [T h].
-      apply inversion_App in h as hh.
-      destruct hh as [na [A' [B' [? [? ?]]]]].
-      eexists. eassumption.
-  Qed.
+  (* Lemma welltyped_zipp : *)
+  (*   forall Γ t ρ, *)
+  (*     welltyped Σ Γ (zipp t ρ) -> *)
+  (*     welltyped Σ Γ t. *)
+  (* Proof. *)
+  (*   intros Γ t ρ [A h]. *)
+  (*   unfold zipp in h. *)
+  (*   case_eq (decompose_stack ρ). intros l π e. *)
+  (*   rewrite e in h. clear - h. *)
+  (*   revert t A h. *)
+  (*   induction l ; intros t A h. *)
+  (*   - eexists. cbn in h. eassumption. *)
+  (*   - cbn in h. apply IHl in h. *)
+  (*     destruct h as [T h]. *)
+  (*     apply inversion_App in h as hh. *)
+  (*     destruct hh as [na [A' [B' [? [? ?]]]]]. *)
+  (*     eexists. eassumption. *)
+  (* Qed. *)
 
-  Lemma welltyped_zippx :
-    forall Γ t ρ,
-      welltyped Σ Γ (zippx t ρ) ->
-      welltyped Σ (Γ ,,, stack_context ρ) t.
-  Proof.
-    intros Γ t ρ h.
-    unfold zippx in h.
-    case_eq (decompose_stack ρ). intros l π e.
-    rewrite e in h.
-    apply welltyped_it_mkLambda_or_LetIn in h.
-    pose proof (decompose_stack_eq _ _ _ e). subst.
-    rewrite stack_context_appstack.
-    clear - h. destruct h as [A h].
-    revert t A h.
-    induction l ; intros t A h.
-    - eexists. eassumption.
-    - cbn in h. apply IHl in h.
-      destruct h as [B h].
-      apply inversion_App in h as hh.
-      destruct hh as [na [A' [B' [? [? ?]]]]].
-      eexists. eassumption.
-  Qed.
+  (* Lemma welltyped_zippx : *)
+  (*   forall Γ t ρ, *)
+  (*     welltyped Σ Γ (zippx t ρ) -> *)
+  (*     welltyped Σ (Γ ,,, stack_context ρ) t. *)
+  (* Proof. *)
+  (*   intros Γ t ρ h. *)
+  (*   unfold zippx in h. *)
+  (*   case_eq (decompose_stack ρ). intros l π e. *)
+  (*   rewrite e in h. *)
+  (*   apply welltyped_it_mkLambda_or_LetIn in h. *)
+  (*   pose proof (decompose_stack_eq _ _ _ e). subst. *)
+  (*   rewrite stack_context_appstack. *)
+  (*   clear - h. destruct h as [A h]. *)
+  (*   revert t A h. *)
+  (*   induction l ; intros t A h. *)
+  (*   - eexists. eassumption. *)
+  (*   - cbn in h. apply IHl in h. *)
+  (*     destruct h as [B h]. *)
+  (*     apply inversion_App in h as hh. *)
+  (*     destruct hh as [na [A' [B' [? [? ?]]]]]. *)
+  (*     eexists. eassumption. *)
+  (* Qed. *)
 
   Derive NoConfusion NoConfusionHom for list.
 
@@ -1272,41 +1384,141 @@ Section Lemmata.
     eassumption.
   Qed.
 
-  Lemma zipx_welltyped :
+  (* Lemma zipx_welltyped : *)
+  (*   forall {Γ t π}, *)
+  (*     welltyped Σ Γ (zipc t π) -> *)
+  (*     welltyped Σ [] (zipx Γ t π). *)
+  (* Proof. *)
+  (*   intros Γ t π h. *)
+  (*   eapply it_mkLambda_or_LetIn_welltyped. *)
+  (*   rewrite app_context_nil_l. *)
+  (*   assumption. *)
+  (* Qed. *)
+
+  (* Lemma welltyped_zipx : *)
+  (*   forall {Γ t π}, *)
+  (*     welltyped Σ [] (zipx Γ t π) -> *)
+  (*     welltyped Σ Γ (zipc t π). *)
+  (* Proof. *)
+  (*   intros Γ t π h. *)
+  (*   apply welltyped_it_mkLambda_or_LetIn in h. *)
+  (*   rewrite app_context_nil_l in h. *)
+  (*   assumption. *)
+  (* Qed. *)
+
+  (* Lemma welltyped_zipc_zippx : *)
+  (*   forall Γ t π, *)
+  (*     welltyped Σ Γ (zipc t π) -> *)
+  (*     welltyped Σ Γ (zippx t π). *)
+  (* Proof. *)
+  (*   intros Γ t π h. *)
+  (*   unfold zippx. *)
+  (*   case_eq (decompose_stack π). intros l ρ e. *)
+  (*   pose proof (decompose_stack_eq _ _ _ e). subst. *)
+  (*   eapply it_mkLambda_or_LetIn_welltyped. *)
+  (*   rewrite zipc_appstack in h. zip fold in h. *)
+  (*   apply welltyped_context in h ; auto. *)
+  (* Qed. *)
+
+
+  Lemma wellformed_it_mkLambda_or_LetIn :
+    forall Γ Δ t,
+      wellformed Σ Γ (it_mkLambda_or_LetIn Δ t) ->
+      wellformed Σ (Γ ,,, Δ) t.
+  Proof.
+    intros Γ Δ t h.
+  Admitted.
+
+  Lemma wellformed_zipp :
+    forall Γ t ρ,
+      wellformed Σ Γ (zipp t ρ) ->
+      wellformed Σ Γ t.
+  Proof.
+    intros Γ t ρ h.
+    unfold zipp in h.
+    case_eq (decompose_stack ρ). intros l π e.
+    rewrite e in h. clear - h.
+    destruct h as [[A h]|[h]].
+    - left. revert t A h.
+      induction l ; intros t A h.
+      + eexists. eassumption.
+      + apply IHl in h.
+        destruct h as [T h].
+        apply inversion_App in h as hh.
+        rdestruct hh; econstructor; eassumption.
+    - right; constructor. destruct l. assumption.
+      destruct h as [ctx [s [h1 _]]].
+      rewrite destArity_tApp in h1; discriminate.
+  Qed.
+
+  Lemma wellformed_zippx :
+    forall Γ t ρ,
+      wellformed Σ Γ (zippx t ρ) ->
+      wellformed Σ (Γ ,,, stack_context ρ) t.
+  Proof.
+    intros Γ t ρ h.
+    unfold zippx in h.
+    case_eq (decompose_stack ρ). intros l π e.
+    rewrite e in h.
+    apply wellformed_it_mkLambda_or_LetIn in h.
+    pose proof (decompose_stack_eq _ _ _ e). subst.
+    rewrite stack_context_appstack.
+    clear - h. destruct h as [[A h]|h].
+    - left. revert t A h.
+      induction l ; intros t A h.
+      + rdestruct h; econstructor; eassumption.
+      + cbn in h. apply IHl in h.
+        destruct h as [B h].
+        apply inversion_App in h as hh.
+        destruct hh as [na [A' [B' [? [? ?]]]]].
+        eexists. eassumption.
+    - right. destruct l. assumption.
+      destruct h as [[ctx [s [h1 _]]]].
+      rewrite destArity_tApp in h1; discriminate.
+  Qed.
+
+  Lemma it_mkLambda_or_LetIn_wellformed :
+    forall Γ Δ t,
+      wellformed Σ (Γ ,,, Δ) t ->
+      wellformed Σ Γ (it_mkLambda_or_LetIn Δ t).
+  Admitted.
+
+  Lemma zipx_wellformed :
     forall {Γ t π},
-      welltyped Σ Γ (zipc t π) ->
-      welltyped Σ [] (zipx Γ t π).
+      wellformed Σ Γ (zipc t π) ->
+      wellformed Σ [] (zipx Γ t π).
   Proof.
     intros Γ t π h.
-    eapply it_mkLambda_or_LetIn_welltyped.
+    eapply it_mkLambda_or_LetIn_wellformed.
     rewrite app_context_nil_l.
     assumption.
   Qed.
 
-  Lemma welltyped_zipx :
+  Lemma wellformed_zipx :
     forall {Γ t π},
-      welltyped Σ [] (zipx Γ t π) ->
-      welltyped Σ Γ (zipc t π).
+      wellformed Σ [] (zipx Γ t π) ->
+      wellformed Σ Γ (zipc t π).
   Proof.
     intros Γ t π h.
-    apply welltyped_it_mkLambda_or_LetIn in h.
+    apply wellformed_it_mkLambda_or_LetIn in h.
     rewrite app_context_nil_l in h.
     assumption.
   Qed.
 
-  Lemma welltyped_zipc_zippx :
+  Lemma wellformed_zipc_zippx :
     forall Γ t π,
-      welltyped Σ Γ (zipc t π) ->
-      welltyped Σ Γ (zippx t π).
+      wellformed Σ Γ (zipc t π) ->
+      wellformed Σ Γ (zippx t π).
   Proof.
     intros Γ t π h.
     unfold zippx.
     case_eq (decompose_stack π). intros l ρ e.
     pose proof (decompose_stack_eq _ _ _ e). subst.
-    eapply it_mkLambda_or_LetIn_welltyped.
+    eapply it_mkLambda_or_LetIn_wellformed.
     rewrite zipc_appstack in h. zip fold in h.
-    apply welltyped_context in h ; auto.
+    apply wellformed_context in h ; auto.
   Qed.
+
 
   Lemma lookup_env_const_name :
     forall {c c' d},
@@ -1472,6 +1684,12 @@ Section Lemmata.
     specialize hh with (1 := eq_refl).
     apply isProdmkApps in hh. assumption.
   Qed.
+
+  Lemma mkApps_Prod_nil' :
+    forall Γ na A B l,
+      wellformed Σ Γ (mkApps (tProd na A B) l) ->
+      l = [].
+  Admitted.
 
   (* TODO MOVE or even replace old lemma *)
   Lemma decompose_stack_noStackApp :
@@ -1677,6 +1895,7 @@ Section Lemmata.
       ∥ red (fst Σ) Γ u v ∥ ->
       welltyped Σ Γ v.
   Proof.
+    destruct hΣ as [wΣ]; clear hΣ.
     intros Γ u v h [r].
     revert h. induction r ; intros h.
     - assumption.
@@ -1711,12 +1930,12 @@ Section Lemmata.
     intros Γ u v A B hu hv h.
     apply conv_conv_alt in h.
     apply conv_alt_red in h as [u' [v' [? [? ?]]]].
-    pose proof (subject_reduction _ Γ _ _ _ hΣ hu r) as hu'.
-    pose proof (subject_reduction _ Γ _ _ _ hΣ hv r0) as hv'.
-    pose proof (type_rename _ _ _ _ hu' e) as hv''.
-    pose proof (principal_typing _ hv' hv'') as [C [? [? hvC]]].
-    apply eq_term_sym in e as e'.
-    pose proof (type_rename _ _ _ _ hvC e') as huC.
+    (* pose proof (subject_reduction _ Γ _ _ _ hΣ hu r) as hu'. *)
+    (* pose proof (subject_reduction _ Γ _ _ _ hΣ hv r0) as hv'. *)
+    (* pose proof (type_rename _ _ _ _ hu' e) as hv''. *)
+    (* pose proof (principal_typing _ hv' hv'') as [C [? [? hvC]]]. *)
+    (* apply eq_term_sym in e as e'. *)
+    (* pose proof (type_rename _ _ _ _ hvC e') as huC. *)
     (* Not clear.*)
   Abort.
 
@@ -1742,6 +1961,14 @@ Section Lemmata.
         admit.
       + (* Congruence *)
         admit.
+  Admitted.
+
+  Lemma wellformed_zipc_replace :
+    forall Γ u v π,
+      wellformed Σ Γ (zipc v π) ->
+      wellformed Σ (Γ ,,, stack_context π) u ->
+      Σ ;;; Γ ,,, stack_context π |- u = v ->
+                                    wellformed Σ Γ (zipc u π).
   Admitted.
 
   Lemma conv_context_conversion :
@@ -1779,10 +2006,11 @@ Section Lemmata.
 
   Lemma Proj_red_cond :
     forall Γ i pars narg i' c u l,
-      welltyped Σ Γ (tProj (i, pars, narg) (mkApps (tConstruct i' c u) l)) ->
+      wellformed Σ Γ (tProj (i, pars, narg) (mkApps (tConstruct i' c u) l)) ->
       nth_error l (pars + narg) <> None.
   Proof.
-    intros Γ i pars narg i' c u l [T h].
+    intros Γ i pars narg i' c u l [[T h]|[[ctx [s [e _]]]]];
+      [|discriminate].
     apply inversion_Proj in h.
     destruct h as [uni [mdecl [idecl [pdecl [args' [d [hc [? ?]]]]]]]].
     destruct d as [di [? ?]]. simpl in *. subst.
@@ -1790,10 +2018,11 @@ Section Lemmata.
 
   Lemma Case_Construct_ind_eq :
     forall {Γ ind ind' npar pred i u brs args},
-      welltyped Σ Γ (tCase (ind, npar) pred (mkApps (tConstruct ind' i u) args) brs) ->
+      wellformed Σ Γ (tCase (ind, npar) pred (mkApps (tConstruct ind' i u) args) brs) ->
       ind = ind'.
   Proof.
-    intros Γ ind ind' npar pred i u brs args [A h].
+    intros Γ ind ind' npar pred i u brs args [[A h]|[[ctx [s [e _]]]]];
+      [|discriminate].
     apply inversion_Case in h as ih.
     destruct ih
       as [uni [args' [mdecl [idecl [pty [indctx [pctx [ps [btys [? [? [? [? [? [? [ht0 [? ?]]]]]]]]]]]]]]]]].
@@ -1802,10 +2031,11 @@ Section Lemmata.
 
   Lemma Proj_Constuct_ind_eq :
     forall Γ i i' pars narg c u l,
-      welltyped Σ Γ (tProj (i, pars, narg) (mkApps (tConstruct i' c u) l)) ->
+      wellformed Σ Γ (tProj (i, pars, narg) (mkApps (tConstruct i' c u) l)) ->
       i = i'.
   Proof.
-    intros Γ i i' pars narg c u l [T h].
+    intros Γ i i' pars narg c u l [[T h]|[[ctx [s [e _]]]]];
+      [|discriminate].
     apply inversion_Proj in h.
     destruct h as [uni [mdecl [idecl [pdecl [args' [? [hc [? ?]]]]]]]].
     apply Construct_Ind_ind_eq in hc. eauto.

@@ -347,6 +347,16 @@ Section ReductionCongruence.
         + econstructor ; eauto. constructor ; eauto.
     Qed.
 
+    Lemma OnOne2_on_Trel_eq_red_redl :
+      forall A B (f : A -> term) (g : A -> B) l l',
+        OnOne2 (on_Trel_eq (red Σ Γ) f g) l l' ->
+        redl (map (fun x => (f x, g x)) l) (map (fun x => (f x, g x)) l').
+    Proof.
+      intros A B f g l l' h.
+      eapply OnOne2_red_redl.
+      eapply OnOne2_map. eapply OnOne2_impl ; eauto.
+    Qed.
+
     Lemma OnOne2_prod_inv :
       forall A (P : A -> A -> Type) Q l l',
         OnOne2 (Trel_conj P Q) l l' ->
@@ -405,28 +415,47 @@ Section ReductionCongruence.
         destruct a, p. simpl in *. subst. reflexivity.
     Qed.
 
+    Notation swap := (fun x => (snd x, fst x)).
+
+    Lemma list_map_swap_eq :
+      forall A B (l l' : list (A × B)),
+        map swap l = map swap l' ->
+        l = l'.
+    Proof.
+      intros A B l l' h.
+      induction l in l', h |- *.
+      - destruct l' ; try discriminate. reflexivity.
+      - destruct l' ; try discriminate.
+        cbn in h. inversion h.
+        f_equal ; eauto.
+        destruct a, p. cbn in *. subst. reflexivity.
+    Qed.
+
+    Lemma map_swap_invol :
+      forall A B (l : list (A × B)),
+        l = map swap (map swap l).
+    Proof.
+      intros A B l.
+      induction l.
+      - reflexivity.
+      - cbn. destruct a. rewrite <- IHl. reflexivity.
+    Qed.
+
     Lemma red_case_one_brs :
       forall indn p c brs brs',
         OnOne2 (on_Trel_eq (red Σ Γ) snd fst) brs brs' ->
         red Σ Γ (tCase indn p c brs) (tCase indn p c brs').
     Proof.
       intros indn p c brs brs' h.
-      (* Maybe directly on on_Trel_eq since it's basically what we are doing *)
-      (* apply OnOne2_prod_inv_refl_r in h as hh ; eauto. *)
-      (* destruct hh as [h1 h2]. *)
-      (* apply OnOne2_map in h1. *)
-      (* apply All2_map in h2. *)
-      (* apply All2_eq in h2. *)
-      (* apply OnOne2_red_redl in h1. *)
-      (* revert h2. *)
-      (* dependent induction h1 ; intro h2. *)
-      (* - assert (brs' = brs). *)
-      (*   { eapply list_split_eq ; eauto. } *)
-      (*   subst. *)
-      (*   constructor. *)
-      (* - econstructor. *)
-      (*   + eapply IHh1 ; eauto. *)
-    Abort.
+      apply OnOne2_on_Trel_eq_red_redl in h.
+      dependent induction h.
+      - apply list_map_swap_eq in x. subst. constructor.
+      - econstructor.
+        + eapply IHh. apply map_swap_invol.
+        + constructor. rewrite (map_swap_invol _ _ brs').
+          eapply OnOne2_map.
+          eapply OnOne2_impl ; eauto.
+    Qed.
 
     (* Fixpoint brs_n_context l := *)
     (*   match l with *)

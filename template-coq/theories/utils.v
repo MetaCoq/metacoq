@@ -1762,7 +1762,6 @@ Proof.
     + cbn in e. apply IHn with (l' := l') in e ; assumption.
 Qed.
 
-<<<<<<< HEAD
 Lemma Forall2_nth_error_None_l :
   forall A B (P : A -> B -> Prop) l l' n,
     nth_error l n = None ->
@@ -1817,8 +1816,6 @@ Proof.
 Qed.
 
 
-=======
->>>>>>> personal/erasure-correctness
 (** * Non Empty List *)
 Module NEL.
 

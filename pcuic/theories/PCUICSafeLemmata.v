@@ -1726,6 +1726,12 @@ Section Lemmata.
     apply isProdmkApps in hh. assumption.
   Qed.
 
+  Lemma mkApps_Prod_nil' :
+    forall Γ na A B l,
+      wellformed Σ Γ (mkApps (tProd na A B) l) ->
+      l = [].
+  Admitted.
+
   (* TODO MOVE or even replace old lemma *)
   Lemma decompose_stack_noStackApp :
     forall π l ρ,
@@ -2009,6 +2015,14 @@ Section Lemmata.
         admit.
       + (* Congruence *)
         admit.
+  Admitted.
+
+  Lemma wellformed_zipc_replace :
+    forall Γ u v π,
+      wellformed Σ Γ (zipc v π) ->
+      wellformed Σ (Γ ,,, stack_context π) u ->
+      Σ ;;; Γ ,,, stack_context π |- u = v ->
+                                    wellformed Σ Γ (zipc u π).
   Admitted.
 
   Lemma conv_context_conversion :

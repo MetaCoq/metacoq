@@ -813,7 +813,7 @@ Lemma All_impl {A} {P Q} {l : list A} : All P l -> (forall x, P x -> Q x) -> All
 Proof. induction 1; try constructor; intuition auto. Qed.
 
 Lemma Alli_impl {A} {P Q} (l : list A) {n} : Alli P n l -> (forall n x, P n x -> Q n x) -> Alli Q n l.
-Proof. induction 1; try constructor; intuition auto. Qed.
+Proof. induction 1; try constructor; intuition auto. Defined.
 
 Lemma All_map {A B} {P : B -> Type} {f : A -> B} {l : list A} :
   All (compose P f) l -> All P (map f l).
@@ -1950,9 +1950,6 @@ Proof.
   induction n; cbn; econstructor; eauto.
 Qed.
 
-Lemma Alli_impl {A} {P Q} (l : list A) {n} : Alli P n l -> (forall n x, P n x -> Q n x) -> Alli Q n l.
-Proof. induction 1; try constructor; intuition auto. Defined.
-
 Lemma All2_map_left {A B C} (P : A -> C -> Type) l l' (f : B -> A) :
   All2 (fun x y => P (f x) y) l l' -> All2 P  (map f l) l'.
 Proof. intros. rewrite <- (map_id l'). eapply All2_map; eauto. Qed.
@@ -1978,7 +1975,7 @@ Lemma All2_from_nth_error A B L1 L2 (P : A -> B -> Type) :
 Proof.
   revert L2; induction L1; cbn; intros.
   - destruct L2; inv H. econstructor.
-  - destruct L2; inv H. econstructor.
+  - destruct L2; inversion H. econstructor.
     eapply (X 0); cbn; eauto. omega.
     eapply IHL1. eauto.
     intros. eapply (X (S n)); cbn; eauto. omega.

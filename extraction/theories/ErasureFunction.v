@@ -1,7 +1,7 @@
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
 From MetaCoq.Template Require Import config utils monad_utils BasicAst AstUtils.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICTyping PCUICChecker PCUICMetaTheory PCUICWcbvEval PCUICLiftSubst PCUICInversion PCUICSR PCUICNormal PCUICSafeReduce PCUICSafeLemmata.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICTyping PCUICMetaTheory PCUICWcbvEval PCUICLiftSubst PCUICInversion PCUICSR PCUICNormal PCUICSafeReduce PCUICSafeLemmata PCUICSafeChecker.
 From MetaCoq.Extraction Require EAst ELiftSubst ETyping EWcbvEval Extract ExtractionCorrectness.
 From Equations Require Import Equations.
 Require Import String.
@@ -19,25 +19,25 @@ Definition is_prop_sort s :=
 
 Require Import Extract.
 
-Definition wellformed Σ Γ t :=
-  welltyped Σ Γ t \/ ∥ isWfArity typing Σ Γ t ∥.
+(* Definition wellformed Σ Γ t := *)
+(*   welltyped Σ Γ t \/ ∥ isWfArity typing Σ Γ t ∥. *)
 
-Axiom reduce_to_sort : forall Σ (wfΣ : ∥ wf Σ ∥) Γ t (h : wellformed Σ Γ t),
-    typing_result (∑ u, ∥ red (fst Σ) Γ t (tSort u) ∥).
-
-
-Axiom reduce_to_prod : forall Σ (wfΣ : ∥ wf Σ ∥) Γ t (h : wellformed Σ Γ t),
-    typing_result (∑ na a b, ∥ red (fst Σ) Γ t (tProd na a b) ∥).
+(* Axiom reduce_to_sort : forall Σ (wfΣ : ∥ wf Σ ∥) Γ t (h : wellformed Σ Γ t), *)
+(*     typing_result (∑ u, ∥ red (fst Σ) Γ t (tSort u) ∥). *)
 
 
-Axiom infer : forall Σ (HΣ : ∥wf Σ∥) (Γ : context) (HΓ : ∥ wf_local Σ Γ ∥) (t : term),
-    typing_result ({ A : term & ∥ Σ ;;; Γ |- t : A ∥ }).
+(* Axiom reduce_to_prod : forall Σ (wfΣ : ∥ wf Σ ∥) Γ t (h : wellformed Σ Γ t), *)
+(*     typing_result (∑ na a b, ∥ red (fst Σ) Γ t (tProd na a b) ∥). *)
+
+
+(* Axiom infer : forall Σ (HΣ : ∥wf Σ∥) (Γ : context) (HΓ : ∥ wf_local Σ Γ ∥) (t : term), *)
+(*     typing_result ({ A : term & ∥ Σ ;;; Γ |- t : A ∥ }). *)
 
 Definition Is_conv_to_Arity Σ Γ T := exists T', ∥red Σ Γ T T'∥ /\ isArity T'.
 
 Ltac terror := try match goal with [t : type_error |- typing_result _] => exact (TypeError t) end.
 
-Fixpoint is_arity Σ (HΣ : ∥wf Σ∥) Γ (HΓ : ∥wf_local Σ Γ∥) T (HT : wellformed Σ Γ T) : typing_result ({Is_conv_to_Arity Σ Γ T} + {~ Is_conv_to_Arity Σ Γ T}).
+Fixpoint is_arity Σ (HΣ : ∥wf Σ∥) Γ (* (HΓ : ∥wf_local Σ Γ∥)  *)T (HT : wellformed Σ Γ T) : typing_result ({Is_conv_to_Arity Σ Γ T} + {~ Is_conv_to_Arity Σ Γ T}).
 Proof.
   edestruct @reduce_to_sort with (t := T) as [[u] | ]; try eassumption.
   - sq. left. left. sq. econstructor. split.
@@ -45,72 +45,122 @@ Proof.
   - clear t. edestruct @reduce_to_prod with (t := T); try eassumption.
     + destruct a as (? & ? & ? & ?).
       edestruct (is_arity Σ HΣ (Γ ,, vass x x0)) with (T := x1).
-      * enough (∥ wf_local Σ (Γ,, vass x x0) ∥) by admit. destruct HT as [ [] | []];  sq.
-        -- econstructor; cbn; eauto.
-           eapply subject_reduction in X; eauto.
-           eapply inversion_Prod in X as (? & ? & ? & ? & ?). eauto.
-        -- econstructor; cbn; eauto.
-           eapply PCUICSafeReduce.isWfArity_red in X; eauto. 
-           2: exact RedFlags.default.
-           destruct X as (? & ? & ? & ?). cbn in *.
-           admit.           
+      (* * destruct HT as [ [] | []];  sq. *)
+      (*   -- econstructor; cbn; eauto. *)
+      (*      eapply subject_reduction in X; eauto. *)
+      (*      eapply inversion_Prod in X as (? & ? & ? & ? & ?). eauto. *)
+      (*   -- econstructor; cbn; eauto. *)
+      (*      eapply PCUICSafeReduce.isWfArity_red in X; eauto.  *)
+      (*      2: exact RedFlags.default. *)
+      (*      destruct X as (? & ? & ? & ?). cbn in *. *)
+      (*      induction x1; cbn in e; inv e. *)
+      (*      ++ admit. *)
+      (*      ++ admit. *)
+      (*      ++ admit. *)
+           
       * sq. destruct HT as [ [] | [] ].
         -- eapply subject_reduction in X; eauto.
            eapply inversion_Prod in X as (? & ? & ? & ? & ?). 
            do 2 econstructor. eauto.
         -- econstructor 2. sq.
            eapply PCUICSafeReduce.isWfArity_red in X; eauto. 2:exact RedFlags.default.
-           admit.           
+           destruct X as (? & ? & ? & ?). cbn in e.
+           change (Γ ,, vass x x0) with (Γ ,,, [vass x x0]). unfold ",," in e.
+           revert e.
+           generalize ([vass x x0]). intros.
+           induction x1 in l, e |- *; cbn in *; try now inv e.
+           ++ inv e. repeat econstructor. cbn. eauto.
+           ++ eapply IHx1_2 in e as (? & ? & ? & ?).
+              repeat econstructor. cbn. admit. admit.
+           ++ eapply IHx1_3 in e as (? & ? & ? & ?).
+              repeat econstructor. cbn. admit. admit.
       * left. destruct a.
         -- left. destruct i as (? & ? & ?). exists (tProd x x0 x2). split; sq.
            etransitivity. eassumption. eapply PCUICReduction.red_prod. econstructor.
            eassumption. now cbn.
-        -- right. intros (? & ? & ?). sq. 
+        -- right. intros (? & ? & ?). sq.
+           destruct n. admit.
 Admitted.      
 
 (* Fixpoint is_proposition Σ (HΣ : wf Σ) Γ (HΓ : wf_local Σ Γ) T (HT : PCUICSafeLemmata.wellformed Σ Γ T) : *)
 (*   typing_result *)
 
-Lemma arity_type_inv Σ Γ t T1 T2 :
-  Σ ;;; Γ |- t : T1 -> isArity T1 -> Σ ;;; Γ |- t : T2 -> Is_conv_to_Arity Σ Γ T2.
+
+Lemma cumul_arity1 Σ Γ A B K :
+  wf Σ ->
+  isArity K -> Σ ;;; Γ |- B : K ->
+  Σ ;;; Γ |- A <= B -> Σ ;;; Γ |- A : K.
 Proof.
 Admitted.
 
-Lemma proposition_type_inv Σ Γ t T u :
-  Σ ;;; Γ |- t : tSort u -> is_prop_sort u -> Σ ;;; Γ |- t : T -> red Σ Γ T (tSort u).
+Lemma arity_type_inv Σ Γ t T1 T2 :
+  Σ ;;; Γ |- t : T1 -> isArity T1 -> Σ ;;; Γ |- t : T2 -> Is_conv_to_Arity Σ Γ T2.
+Proof.
+  intros. eapply principal_typing in X as (? & ? & ? & ?). 2:exact X0.
+  induction T1 in x, c, c0, t0, H |- *; cbn in H; try tauto.
+  - admit.                      (* should follow from Matthieu's stuff *)
+  - eapply IHT1_2. eauto.
+  
+Admitted.
+
+Lemma cumul_kind1 Σ Γ A B u :
+  wf Σ -> 
+  is_prop_sort u -> Σ ;;; Γ |- B : tSort u ->
+  Σ ;;; Γ |- A <= B -> Σ ;;; Γ |- A : tSort u.
+Proof.
+Admitted.
+
+Lemma cumul_kind2 Σ Γ A B u :
+  wf Σ ->
+  is_prop_sort u -> Σ ;;; Γ |- A <= B ->
+  Σ ;;; Γ |- A : tSort u -> Σ ;;; Γ |- B : tSort u.
 Proof.
 Admitted.
 
 Definition is_type_or_proof :
   forall (Sigma : PCUICAst.global_context) (HΣ : ∥wf Sigma∥) (Gamma : context) (HΓ : ∥wf_local Sigma Gamma∥) (t : PCUICAst.term),
-    {r : typing_result bool & match r with
+    {r : typing_result bool & ∥ match r with
                            | Checked true => Is_Type_or_Proof Sigma Gamma t 
                            | Checked false => (Is_Type_or_Proof Sigma Gamma t -> False) × PCUICSafeLemmata.welltyped Sigma Gamma t
                            | _ => True
-                           end}.
+                           end ∥}.
 Proof.
-  intros. destruct (@infer' _ HΣ Gamma HΓ t) as [ [T] | ].
-  2:{ exists (TypeError t0). eauto. }
+  intros. destruct (@infer _ HΣ Gamma HΓ t) as [ [T] | ].
+  2:{ exists (TypeError t0). repeat econstructor. }
   edestruct is_arity with (Σ := Sigma) (Γ := Gamma)(T := T) as [[ | ] | ].
-  - admit.
-  - admit.
+  - eauto. 
   - sq. eapply PCUICValidity.validity in X as [_]; eauto.  destruct i.
-    econstructor 2. sq. eauto. destruct i. econstructor. econstructor. eauto.
-  - exists (Checked true). econstructor. split. admit. admit.
-  - destruct (@infer' _ HΣ Gamma HΓ T) as [ [K] | ].
+    right. sq. eauto. destruct i. econstructor. econstructor. eauto.
+  - exists (Checked true). destruct i as (? & ? & ?). sq.
+    eapply type_reduction in X0; eauto. exists x. eauto.    
+  - destruct (@infer _ HΣ Gamma HΓ T) as [ [K] | ].
     + destruct @reduce_to_sort with (Σ := Sigma) ( Γ := Gamma) (t := K).
-      * admit.
+      * eauto.
       * sq. eapply PCUICValidity.validity in X as [_]; eauto.  destruct i.
         econstructor 2. sq. eauto. destruct i. econstructor. econstructor. eauto.
       * destruct a. destruct (is_prop_sort x) eqn:E.
-        -- exists (Checked true). econstructor. split. admit.
-           right. exists x. admit.
-        -- exists (Checked false). split.
-           ++ admit.
+        -- exists (Checked true). sq. econstructor. split. eauto. 
+           right. exists x. split; eauto. eapply type_reduction; eauto.
+        -- exists (Checked false). sq. split.
+           ++ intros (? & ? & ?). sq.
+              destruct s as [ | (? & ? & ?)].
+              ** destruct n. eapply arity_type_inv; eauto.
+              ** eapply principal_typing in t0 as (? & ? & ? &?). 2:exact X1.
+                 
+                 eapply cumul_kind1 in c0; eauto. 
+                 eapply cumul_kind2 in c; eauto.
+
+                 eapply type_reduction in X0; eauto.
+
+                 eapply principal_typing in c as (? & ? & ? & ?). 2:exact X0.
+
+                 eapply cumul_kind1 in c0; eauto.
+
+                 admit.                 
            ++ sq. econstructor. eauto.
-      * exists (TypeError t0). econstructor.
-    + exists (TypeError t0). econstructor.
-  - exists (TypeError t0). econstructor.
+      * exists (TypeError t0). repeat econstructor.
+    + exists (TypeError t0). repeat econstructor.
+  - exists (TypeError t0). repeat econstructor.
 Admitted.
 
 Section Erase.
@@ -149,29 +199,29 @@ Section Erase.
     Next Obligation.
       clear erase.
       
-      epose proof ((fix check_types (mfix : mfixpoint term) acc (Hacc : ∥ wf_local_rel Σ Γ acc ∥) {struct mfix}
-              : typing_result (∥ wf_local_rel Σ (Γ ,,, acc) (fix_context_i #|acc| mfix) ∥)
-              := match mfix with
-                 | [] => ret (sq wf_local_rel_nil)
-                 | def :: mfix =>
-       (* probably not tail recursive but needed so that next line terminates *)
-                   W <- infer_type infer Γ HΓ (dtype def) ;;
-                   let W' := weakening_sq acc _ _ W.π2 in
-                   Z <- check_types mfix
-                     (acc ,, vass (dname def) ((lift0 #|acc|) (dtype def)))
-                     (wf_local_rel_abs_sq Hacc (W.π1; W')) ;;
-                   ret (wf_local_rel_app_inv_sq
-                          (wf_local_rel_abs_sq (sq wf_local_rel_nil) (W.π1; W')) Z)
-                 end)
-           defs [] (sq _)).
-      destruct X. econstructor.
+      (* epose proof ((fix check_types (mfix : mfixpoint term) acc (Hacc : ∥ wf_local_rel Σ Γ acc ∥) {struct mfix} *)
+      (*         : PCUICSafeChecker.typing_result (∥ wf_local_rel Σ (Γ ,,, acc) (fix_context_i #|acc| mfix) ∥) *)
+      (*         := match mfix with *)
+      (*            | [] => ret (sq wf_local_rel_nil) *)
+      (*            | def :: mfix => *)
+      (*  (* probably not tail recursive but needed so that next line terminates *) *)
+      (*              W <- infer_type infer Γ HΓ (dtype def) ;; *)
+      (*              let W' := weakening_sq acc _ _ W.π2 in *)
+      (*              Z <- check_types mfix *)
+      (*                (acc ,, vass (dname def) ((lift0 #|acc|) (dtype def))) *)
+      (*                (wf_local_rel_abs_sq Hacc (W.π1; W')) ;; *)
+      (*              ret (wf_local_rel_app_inv_sq *)
+      (*                     (wf_local_rel_abs_sq (sq wf_local_rel_nil) (W.π1; W')) Z) *)
+      (*            end) *)
+      (*      defs [] (sq _)). *)
+      (* destruct X. econstructor. *)
 
       
-      sq. eapply wf_local_local_rel.
-      eapply wf_local_rel_app_inv. eapply wf_local_rel_local. eauto.
-      change fix_context with (fix_context_i #|@nil context_decl|).
-      now rewrite app_context_nil_l.
-      sq. econstructor 2. exact t.
+      (* sq. eapply wf_local_local_rel. *)
+      (* eapply wf_local_rel_app_inv. eapply wf_local_rel_local. eauto. *)
+      (* change fix_context with (fix_context_i #|@nil context_decl|). *)
+      (* now rewrite app_context_nil_l. *)
+      (* sq. econstructor 2. exact t. *)
       Unshelve. (* I believe those go away once infer works on squashed assumptions *)
     Admitted.
       
@@ -272,15 +322,18 @@ Section Erase.
                                 ret (E.tCoFix mfix' n)
     }.
   Next Obligation.
-    destruct w. sq. econstructor; eauto. cbn.
+    destruct s. destruct H. destruct w.
+    sq. econstructor; eauto. cbn.
         
     eapply inversion_Lambda in X as (? & ? & ? & ? & ?).
     econstructor; cbn; eauto.
   Qed.
   Next Obligation.
-    destruct w. sq. econstructor; eauto. cbn.
-    eapply inversion_LetIn in X as (? & ? & ? & ? & ? & ?).
-    econstructor; cbn; eauto.
+    destruct s. destruct H. destruct w.
+    sq. eapply inversion_LetIn in X as (? & ? & ? & ? & ? & ?).
+
+    econstructor; eauto.
+    cbn. econstructor; eauto.
   Qed.
   
   (* Fixpoint erase (Γ : context) (HΓ : ∥wf_local Σ Γ∥) (t : term) {struct t} : typing_result E.term. *)
@@ -366,26 +419,26 @@ Proof.
   all:eauto.
   all: simp erase in *.
   all: unfold erase_clause_1 in *.
-
+  all:sq.
   all: cbn in *; repeat (destruct ?;  repeat match goal with
                                           [ H : Checked _ = Checked _ |- _ ] => inv H
                                         | [ H : TypeError _ = Checked _ |- _ ] => inv H
-                                        | [ H : _ × PCUICSafeLemmata.welltyped _ _ _ |- _ ] => destruct H as [? []]
-                                        end; eauto).
-    
+                                        | [ H : _ × welltyped _ _ _ |- _ ] => destruct H as [? []]
+                                             end; sq; eauto).
+  
   - repeat econstructor; eauto.
   - econstructor. econstructor. clear E.
-    eapply inversion_Prod in t0 as (? & ? & ? & ? & ?).
+    eapply inversion_Prod in t1 as (? & ? & ? & ? & ?).
     split. eauto. left. econstructor.
   - econstructor. eauto. econstructor. clear E.
-    eapply inversion_Ind in t as (? & ? & ? & ? & ? & ?).
+    eapply inversion_Ind in t0 as (? & ? & ? & ? & ? & ?).
     split. eauto. left.
     eapply isArity_subst_instance. eapply isArity_ind_type.
   - econstructor.
     eapply elim_restriction_works. intros.
     eapply f, Is_Type_or_Proof_Proof. eauto. eauto.
     
-    pose proof (Prelim.monad_map_All2 _ _ _ brs a1 E3).
+    pose proof (Prelim.monad_map_All2 _ _ _ brs a2 E3).
     
     eapply All2_All_left in X3. 2:{ intros. destruct X4. exact e. }
 
@@ -401,7 +454,7 @@ Proof.
     eauto.
   - econstructor.
     unfold erase_mfix in *.
-    pose proof (Prelim.monad_map_All2 _ _ _ mfix a0 E2).
+    pose proof (Prelim.monad_map_All2 _ _ _ mfix a1 E2).
     eapply All2_impl. eapply All2_All_mix_left. eassumption. eassumption.
 
     intros. destruct X1. cbn in *. repeat destruct ?; inv e. 
@@ -409,7 +462,7 @@ Proof.
     eapply p. eauto. 
   - econstructor.
     unfold erase_mfix in *.
-    pose proof (Prelim.monad_map_All2 _ _ _ mfix a0 E2).
+    pose proof (Prelim.monad_map_All2 _ _ _ mfix a1 E2).
     eapply All2_impl. eapply All2_All_mix_left. eassumption. eassumption.
 
     intros. destruct X1. cbn in *. repeat destruct ?; inv e.

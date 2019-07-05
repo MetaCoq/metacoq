@@ -730,11 +730,32 @@ Section ReductionCongruence.
     (* Qed. *)
     Admitted.
 
-    Lemma red_fix_congr mfix0 mfix1 idx :
-      All2 (fun d0 d1 => (red Σ Γ (dtype d0) (dtype d1)) *
-                         (red Σ (Γ ,,, fix_context mfix0) (dbody d0) (dbody d1)))%type mfix0 mfix1 ->
-      red Σ Γ (tFix mfix0 idx) (tFix mfix1 idx).
+    Lemma All2_prod_inv :
+      forall A (P : A -> A -> Type) Q l l',
+        All2 (Trel_conj P Q) l l' ->
+        All2 P l l' × All2 Q l l'.
     Proof.
+      intros A P Q l l' h.
+      induction h.
+      - auto.
+      - destruct IHh. destruct r.
+        split ; constructor ; auto.
+    Qed.
+
+    Lemma red_fix_congr :
+      forall mfix mfix' idx,
+        All2 (fun d0 d1 =>
+                (red Σ Γ (dtype d0) (dtype d1)) ×
+                (red Σ (Γ ,,, fix_context mfix) (dbody d0) (dbody d1))
+        ) mfix mfix' ->
+      red Σ Γ (tFix mfix idx) (tFix mfix' idx).
+    Proof.
+      intros mfix mfix' idx h.
+      apply All2_prod_inv in h as [h1 h2].
+      eapply red_trans.
+      - eapply red_fix_body.
+        (* We need a more precise All2_prod_inv to get an intermediary mfix
+           with equality instead of red on one side. *)
     Admitted.
 
     (*   intros; eapply (transitivity (y := tApp M1 N0)). *)

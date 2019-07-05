@@ -2120,7 +2120,7 @@ Section Conversion.
       cbn in r.
       clear H0. symmetry in e0. apply decompose_stack_eq in e0. subst.
       rewrite zipc_appstack in r. cbn in r.
-      pose proof (red_proj_c _ _ (i, n0, n) _ _ r) as r'.
+      pose proof (red_proj_c (i, n0, n) _ _ r) as r'.
       pose proof (red_welltyped _ wΣ h (sq r')) as h'.
       apply Proj_Constuct_ind_eq in h' ; auto. subst.
       eapply cored_red_cored.
@@ -2136,7 +2136,7 @@ Section Conversion.
       cbn in r.
       clear H0. symmetry in e0. apply decompose_stack_eq in e0. subst.
       rewrite zipc_appstack in r. cbn in r.
-      pose proof (red_proj_c _ _ (i, n0, n) _ _ r) as r'.
+      pose proof (red_proj_c (i, n0, n) _ _ r) as r'.
       pose proof (red_welltyped _ wΣ h (sq r')) as h'.
       eapply cored_red_cored.
       + constructor. eapply red_cofix_proj. eauto.

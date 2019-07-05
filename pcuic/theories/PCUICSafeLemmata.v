@@ -1671,19 +1671,6 @@ Section Lemmata.
       constructor. assumption.
   Qed.
 
-  Lemma red_proj_c :
-    forall Γ p c c',
-      red Σ Γ c c' ->
-      red Σ Γ (tProj p c) (tProj p c').
-  Proof.
-    intros Γ p c c' h.
-    induction h in p |- *.
-    - constructor.
-    - econstructor.
-      + eapply IHh.
-      + econstructor. assumption.
-  Qed.
-
   Lemma red_welltyped :
     forall {Γ u v},
       welltyped Σ Γ u ->

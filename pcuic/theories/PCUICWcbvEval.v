@@ -291,7 +291,7 @@ Proof.
     auto.
 
   - redt _. 2:eauto.
-    redt (tProj _ (mkApps _ _)). eapply red_proj_congr. eauto.
+    redt (tProj _ (mkApps _ _)). eapply red_proj_c. eauto.
     apply red1_red. econstructor; eauto.
 
   - eapply red_mkApps; auto.

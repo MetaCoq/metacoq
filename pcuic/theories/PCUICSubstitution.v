@@ -1306,7 +1306,7 @@ Proof.
     apply All2_map.
     eapply OnOne2_All2; eauto. simpl. intuition eauto.
 
-  - apply red_proj_congr. eauto.
+  - apply red_proj_c. eauto.
 
   - apply red_app; eauto.
 
@@ -1461,7 +1461,7 @@ Proof.
     eapply All2_map.
     eapply OnOne2_All2; eauto. simpl. intuition eauto.
 
-  - apply red_proj_congr. eauto.
+  - apply red_proj_c. eauto.
 
   - apply red_app; eauto.
 
@@ -1675,7 +1675,7 @@ Proof.
   - apply red_app; eauto.
   - apply reds_case; eauto.
     unfold on_Trel in *; solve_all.
-  - apply red_proj_congr; eauto.
+  - apply red_proj_c; eauto.
   - apply red_fix_congr; eauto.
     solve_all.
     rewrite subst_fix_context.

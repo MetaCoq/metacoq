@@ -598,13 +598,18 @@ Section ReductionCongruence.
         + eapply red1_it_mkLambda_or_LetIn. assumption.
     Qed.
 
-    Lemma red_proj_congr p c c' : red Σ Γ c c' -> red Σ Γ (tProj p c) (tProj p c').
+    Lemma red_proj_c :
+      forall p c c',
+        red Σ Γ c c' ->
+        red Σ Γ (tProj p c) (tProj p c').
     Proof.
-    (*   intros; eapply (transitivity (y := tApp M1 N0)). *)
-    (*   now apply (red_ctx (tCtxApp_l tCtxHole _)). *)
-    (*   now eapply (red_ctx (tCtxApp_r _ tCtxHole)). *)
-    (* Qed. *)
-    Admitted.
+      intros p c c' h.
+      induction h in p |- *.
+      - constructor.
+      - econstructor.
+        + eapply IHh.
+        + econstructor. assumption.
+    Qed.
 
     Lemma red_fix_congr mfix0 mfix1 idx :
       All2 (fun d0 d1 => (red Σ Γ (dtype d0) (dtype d1)) *

@@ -403,7 +403,7 @@ Section PredRed.
       eapply red_step. econstructor; eauto. eauto.
 
     - transitivity (tProj p (mkApps (tCoFix mfix1 idx) args1)).
-      eapply red_proj_congr; eauto.
+      eapply red_proj_c; eauto.
       eapply red_mkApps; [|solve_all].
       eapply red_cofix_congr. red in X3; solve_all. eapply a.
       eapply red_step. econstructor; eauto. eauto.
@@ -411,7 +411,7 @@ Section PredRed.
     - eapply red1_red. econstructor; eauto.
 
     - transitivity (tProj (i, pars, narg) (mkApps (tConstruct i k u) args1)).
-      eapply red_proj_congr; eauto.
+      eapply red_proj_c; eauto.
       eapply red_mkApps; [|solve_all]. auto.
       eapply red1_red. econstructor; eauto.
 
@@ -419,7 +419,7 @@ Section PredRed.
     - now eapply red_app.
     - now eapply red_letin_alt => //.
     - eapply reds_case => //. red in X3; solve_all.
-    - now eapply red_proj_congr.
+    - now eapply red_proj_c.
     - eapply red_fix_congr. red in X3; solve_all. eapply a.
     - eapply red_cofix_congr. red in X3; solve_all. eapply a.
     - eapply red_prod; auto.
@@ -493,7 +493,7 @@ Section PredRed.
       eapply red_step. econstructor; eauto. eauto.
 
     - transitivity (tProj p (mkApps (tCoFix mfix1 idx) args1)).
-      eapply red_proj_congr; eauto.
+      eapply red_proj_c; eauto.
       eapply red_mkApps; [|solve_all].
       eapply red_cofix_congr_alt. red in X3; solve_all. eapply a.
       eapply red_step. econstructor; eauto. eauto.
@@ -501,7 +501,7 @@ Section PredRed.
     - eapply red1_red. econstructor; eauto.
 
     - transitivity (tProj (i, pars, narg) (mkApps (tConstruct i k u) args1)).
-      eapply red_proj_congr; eauto.
+      eapply red_proj_c; eauto.
       eapply red_mkApps; [|solve_all]. auto.
       eapply red1_red. econstructor; eauto.
 
@@ -509,7 +509,7 @@ Section PredRed.
     - now eapply red_app.
     - now eapply red_letin => //.
     - eapply reds_case => //. red in X3; solve_all.
-    - now eapply red_proj_congr.
+    - now eapply red_proj_c.
     - eapply red_fix_congr_alt. red in X3; solve_all. eapply a.
     - eapply red_cofix_congr_alt. red in X3; solve_all. eapply a.
     - eapply red_prod_alt; auto.
@@ -1013,7 +1013,7 @@ Section RedConfluence.
     - eapply reds_case; eauto. unfold on_Trel; pcuic.
     - eapply reds_case; eauto. unfold on_Trel; pcuic.
       eapply OnOne2_All2; eauto. simpl. intuition eauto.
-    - eapply red_proj_congr; eauto.
+    - eapply red_proj_c; eauto.
     - eapply red_app; eauto.
     - eapply red_app; eauto.
     - eapply red_prod_alt; eauto.

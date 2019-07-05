@@ -7,7 +7,7 @@ From MetaCoq.Template Require Import config Universes monad_utils utils BasicAst
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICReflect PCUICLiftSubst PCUICUnivSubst PCUICTyping
      PCUICCumulativity PCUICSR PCUICPosition PCUICEquality PCUICNameless
-     PCUICNormal PCUICInversion PCUICCumulativity.
+     PCUICNormal PCUICInversion PCUICCumulativity PCUICReduction.
 From Equations Require Import Equations.
 
 Require Import Equations.Prop.DepElim.
@@ -207,20 +207,6 @@ Section Lemmata.
     - eapply cored_trans.
       + eapply IHh.
       + apply red1_it_mkLambda_or_LetIn. assumption.
-  Qed.
-
-  Lemma red_it_mkLambda_or_LetIn :
-    forall Γ Δ u v,
-      red Σ (Γ ,,, Δ) u v ->
-      red Σ Γ (it_mkLambda_or_LetIn Δ u)
-              (it_mkLambda_or_LetIn Δ v).
-  Proof.
-    intros Γ Δ u v h.
-    induction h.
-    - constructor.
-    - econstructor.
-      + eassumption.
-      + eapply red1_it_mkLambda_or_LetIn. assumption.
   Qed.
 
   Lemma cored_welltyped :

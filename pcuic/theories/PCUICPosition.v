@@ -4,8 +4,9 @@ From Coq Require Import Bool String List Program BinPos Compare_dec Arith Lia
      Classes.RelationClasses.
 From MetaCoq.Template Require Import config Universes monad_utils utils BasicAst
      AstUtils UnivSubst.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICReflect
-     PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICCumulativity PCUICSR.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
+     PCUICReflect PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICCumulativity
+     PCUICSR PCUICReduction.
 From Equations Require Import Equations.
 
 Require Import Equations.Prop.DepElim.
@@ -769,20 +770,6 @@ Section Stacks.
     intros Γ π1 π2 h.
     unfold xposition.
     eapply positionR_poscat. assumption.
-  Qed.
-
-  Lemma red1_it_mkLambda_or_LetIn :
-    forall Γ Δ u v,
-      red1 Σ (Γ ,,, Δ) u v ->
-      red1 Σ Γ (it_mkLambda_or_LetIn Δ u)
-               (it_mkLambda_or_LetIn Δ v).
-  Proof.
-    intros Γ Δ u v h.
-    revert Γ u v h.
-    induction Δ as [| [na [b|] A] Δ ih ] ; intros Γ u v h.
-    - cbn. assumption.
-    - simpl. eapply ih. cbn. constructor. assumption.
-    - simpl. eapply ih. cbn. constructor. assumption.
   Qed.
 
   Definition zipp t π :=

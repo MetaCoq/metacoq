@@ -855,13 +855,19 @@ Section ReductionCongruence.
           unfold on_Trel. cbn. assumption.
     Qed.
 
-    Lemma red_evar ev l l' : All2 (red Σ Γ) l l' -> red Σ Γ (tEvar ev l) (tEvar ev l').
+    Lemma red_evar :
+      forall ev l l',
+        All2 (red Σ Γ) l l' ->
+        red Σ Γ (tEvar ev l) (tEvar ev l').
     Proof.
-    Admitted.
-    (*   intros; eapply (transitivity (y := tApp M1 N0)). *)
-    (*   now apply (red_ctx (tCtxApp_l tCtxHole _)). *)
-    (*   now eapply (red_ctx (tCtxApp_r _ tCtxHole)). *)
-    (* Qed. *)
+      intros ev l l' h.
+      apply All2_many_OnOne2 in h.
+      induction h.
+      - constructor.
+      - eapply red_trans.
+        + eapply IHh.
+        + eapply red_one_evar. assumption.
+    Qed.
 
     Lemma red_atom t : atom t -> red Σ Γ t t.
     Proof.

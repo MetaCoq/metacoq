@@ -810,6 +810,51 @@ Section ReductionCongruence.
       - eapply red_prod_l. assumption.
     Qed.
 
+    Lemma OnOne2_on_Trel_eq_unit :
+      forall A (R : A -> A -> Type) l l',
+        OnOne2 R l l' ->
+        OnOne2 (on_Trel_eq R (fun x => x) (fun x => tt)) l l'.
+    Proof.
+      intros A R l l' h.
+      eapply OnOne2_impl ; eauto.
+    Qed.
+
+    Lemma red_one_evar :
+      forall ev l l',
+        OnOne2 (red Σ Γ) l l' ->
+        red Σ Γ (tEvar ev l) (tEvar ev l').
+    Proof.
+      intros ev l l' h.
+      apply OnOne2_on_Trel_eq_unit in h.
+      apply OnOne2_on_Trel_eq_red_redl in h.
+      dependent induction h.
+      - assert (l = l').
+        { eapply map_inj ; eauto.
+          intros y z e. cbn in e. inversion e. eauto.
+        } subst.
+        constructor.
+      - set (f := fun x : term => (x, ())) in *.
+        set (g := (fun '(x, _) => x) : term × unit -> term).
+        assert (el :  forall l, l = map f (map g l)).
+        { clear. intros l. induction l.
+          - reflexivity.
+          - cbn. destruct a, u. cbn. f_equal. assumption.
+        }
+        assert (el' :  forall l, l = map g (map f l)).
+        { clear. intros l. induction l.
+          - reflexivity.
+          - cbn. f_equal. assumption.
+        }
+        econstructor.
+        + eapply IHh. apply el.
+        + constructor. rewrite (el' l').
+          eapply OnOne2_map.
+          eapply OnOne2_impl ; eauto.
+          intros [? []] [? []] [h1 h2].
+          unfold on_Trel in h1, h2. cbn in *.
+          unfold on_Trel. cbn. assumption.
+    Qed.
+
     Lemma red_evar ev l l' : All2 (red Σ Γ) l l' -> red Σ Γ (tEvar ev l) (tEvar ev l').
     Proof.
     Admitted.

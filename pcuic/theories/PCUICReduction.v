@@ -357,8 +357,50 @@ Section ReductionCongruence.
         split ; constructor ; auto.
     Qed.
 
-    (* Lemma OnOne2_map_inv : *)
-    (*   forall  *)
+    Lemma OnOne2_prod_inv_refl_r :
+      forall A (P Q : A -> A -> Type) l l',
+        (forall x, Q x x) ->
+        OnOne2 (Trel_conj P Q) l l' ->
+        OnOne2 P l l' × All2 Q l l'.
+    Proof.
+      intros A P Q l l' hQ h.
+      induction h.
+      - destruct p. split.
+        + constructor. assumption.
+        + constructor.
+          * assumption.
+          * eapply All_All2.
+            -- instantiate (1 := fun x => True). eapply Forall_All.
+               eapply Forall_True. intro. auto.
+            -- intros x _. eapply hQ.
+      - destruct IHh. split.
+        + constructor. assumption.
+        + constructor ; eauto.
+    Qed.
+
+    Lemma All2_eq :
+      forall A (l l' : list A),
+        All2 eq l l' ->
+        l = l'.
+    Proof.
+      intros A l l' h.
+      induction h ; eauto. subst. reflexivity.
+    Qed.
+
+    Lemma list_split_eq :
+      forall A B (l l' : list (A × B)),
+        map fst l = map fst l' ->
+        map snd l = map snd l' ->
+        l = l'.
+    Proof.
+      intros A B l l' e1 e2.
+      induction l in l', e1, e2 |- *.
+      - destruct l' ; try discriminate. reflexivity.
+      - destruct l' ; try discriminate.
+        simpl in *. inversion e1. inversion e2.
+        f_equal ; eauto.
+        destruct a, p. simpl in *. subst. reflexivity.
+    Qed.
 
     Lemma red_case_one_brs :
       forall indn p c brs brs',
@@ -366,11 +408,20 @@ Section ReductionCongruence.
         red Σ Γ (tCase indn p c brs) (tCase indn p c brs').
     Proof.
       intros indn p c brs brs' h.
-      apply OnOne2_prod_inv in h as hh.
+      apply OnOne2_prod_inv_refl_r in h as hh ; eauto.
       destruct hh as [h1 h2].
       apply OnOne2_map in h1.
+      apply All2_map in h2.
+      apply All2_eq in h2.
       apply OnOne2_red_redl in h1.
-      induction h1.
+      revert h2.
+      dependent induction h1 ; intro h2.
+      - assert (brs' = brs).
+        { eapply list_split_eq ; eauto. }
+        subst.
+        constructor.
+      - econstructor.
+        + eapply IHh1 ; eauto.
     Abort.
 
     (* Fixpoint brs_n_context l := *)

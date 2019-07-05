@@ -674,11 +674,13 @@ Proof.
 Qed.
 Hint Rewrite subst_instantiate_params : lift.
 
-Lemma wf_arities_context  Σ mind mdecl : wf Σ ->
-  declared_minductive (fst Σ) mind mdecl -> wf_local Σ (arities_context mdecl.(ind_bodies)).
+Lemma wf_arities_context':
+  forall (Σ : global_context) (mind : ident) (mdecl : mutual_inductive_body),
+    wf Σ ->
+    on_inductive (lift_typing typing) Σ mind mdecl ->
+    wf_local Σ (arities_context (ind_bodies mdecl)).
 Proof.
-  intros wfΣ Hdecl.
-  eapply declared_minductive_inv in Hdecl. 2:apply weaken_env_prop_typing. all:eauto.
+  intros Σ mind mdecl wfΣ Hdecl.
   apply onInductives in Hdecl.
   unfold arities_context.
   revert Hdecl.
@@ -701,6 +703,14 @@ Proof.
   apply X.
 Qed.
 
+Lemma wf_arities_context  Σ mind mdecl : wf Σ ->
+  declared_minductive (fst Σ) mind mdecl -> wf_local Σ (arities_context mdecl.(ind_bodies)).
+Proof.
+  intros wfΣ Hdecl.
+  eapply declared_minductive_inv in Hdecl. 2:apply weaken_env_prop_typing. all:eauto.
+  eapply wf_arities_context'; eauto.
+Qed.
+  
 Lemma on_constructor_closed  {Σ mind mdecl u i idecl cdecl} :
   wf Σ ->
   on_constructor (lift_typing typing) Σ (inductive_mind mind) mdecl (inductive_ind mind) idecl i cdecl ->

@@ -1763,20 +1763,6 @@ Section ParallelSubstitution.
     now rewrite H H1.
   Qed.
 
-  Lemma skipn_app_ge {A} (l l' : list A) n : #|l| <= n -> skipn n (l ++ l') = skipn (n - #|l|) l'.
-  Proof.
-    induction l in l', n |- *; destruct n; simpl; auto.
-    intros. depelim H.
-    intros H. now rewrite [skipn _ _]IHl.
-  Qed.
-
-  Lemma skipn_app_lt {A} (l l' : list A) n : n <= #|l| -> skipn n (l ++ l') = skipn n l ++ l'.
-  Proof.
-    induction l in l', n |- *; destruct n; simpl; auto.
-    intros. depelim H. intros H.
-    now rewrite [skipn _ _]IHl.
-  Qed.
-
   Lemma split_app3 {A} (l l' l'' : list A) (l1 l1' l1'' : list A) :
     #|l| = #|l1| -> #|l'| = #|l1'| ->
         l ++ l' ++ l'' = l1 ++ l1' ++ l1'' ->

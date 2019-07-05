@@ -16,7 +16,11 @@ Existing Instance config.default_checker_flags.
 Definition isWfArity_or_Type Σ Γ T : Type := (isWfArity typing Σ Γ T + isType Σ Γ T).
 
 Inductive typing_spine `{checker_flags} (Σ : global_context) (Γ : context) : term -> list term -> term -> Type :=
-| type_spine_nil ty : typing_spine Σ Γ ty [] ty
+| type_spine_nil ty ty' :
+    isWfArity_or_Type Σ Γ ty' ->
+    Σ ;;; Γ |- ty <= ty' ->
+    typing_spine Σ Γ ty [] ty'
+
 | type_spine_cons hd tl na A B T B' :
     isWfArity_or_Type Σ Γ (tProd na A B) ->
     Σ ;;; Γ |- T <= tProd na A B ->
@@ -31,6 +35,7 @@ Lemma type_mkApps Σ Γ t u T t_ty :
 Proof.
   intros Ht Hsp.
   revert t Ht. induction Hsp; simpl; auto.
+  intros t Ht. eapply type_Conv; eauto.
 
   intros.
   specialize (IHHsp (tApp t0 hd)). apply IHHsp.

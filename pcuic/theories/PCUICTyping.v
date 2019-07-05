@@ -446,12 +446,12 @@ Fixpoint subst_app (t : term) (us : list term) : term :=
 
   We shouldn't look at printing annotations *)
 
-Inductive eq_term_upto_univ (Re Rle : universe -> universe -> Prop) : term -> term -> Prop :=
+Inductive eq_term_upto_univ (Re Rle : universe -> universe -> Type) : term -> term -> Type :=
 | eq_Rel n  :
     eq_term_upto_univ Re Rle (tRel n) (tRel n)
 
 | eq_Evar e args args' :
-    Forall2 (eq_term_upto_univ Re Re) args args' ->
+    All2 (eq_term_upto_univ Re Re) args args' ->
     eq_term_upto_univ Re Rle (tEvar e args) (tEvar e args')
 
 | eq_Var id :
@@ -467,15 +467,15 @@ Inductive eq_term_upto_univ (Re Rle : universe -> universe -> Prop) : term -> te
     eq_term_upto_univ Re Rle (tApp t u) (tApp t' u')
 
 | eq_Const c u u' :
-    Forall2 Rle (List.map Universe.make u) (List.map Universe.make u') ->
+    All2 Rle (List.map Universe.make u) (List.map Universe.make u') ->
     eq_term_upto_univ Re Rle (tConst c u) (tConst c u')
 
 | eq_Ind i u u' :
-    Forall2 Rle (List.map Universe.make u) (List.map Universe.make u') ->
+    All2 Rle (List.map Universe.make u) (List.map Universe.make u') ->
     eq_term_upto_univ Re Rle (tInd i u) (tInd i u')
 
 | eq_Construct i k u u' :
-    Forall2 Rle (List.map Universe.make u) (List.map Universe.make u') ->
+    All2 Rle (List.map Universe.make u) (List.map Universe.make u') ->
     eq_term_upto_univ Re Rle (tConstruct i k u) (tConstruct i k u')
 
 | eq_Lambda na na' ty ty' t t' :
@@ -497,8 +497,8 @@ Inductive eq_term_upto_univ (Re Rle : universe -> universe -> Prop) : term -> te
 | eq_Case ind par p p' c c' brs brs' :
     eq_term_upto_univ Re Re p p' ->
     eq_term_upto_univ Re Re c c' ->
-    Forall2 (fun x y =>
-      fst x = fst y /\
+    All2 (fun x y =>
+      (fst x = fst y) *
       eq_term_upto_univ Re Re (snd x) (snd y)
     ) brs brs' ->
     eq_term_upto_univ Re Rle (tCase (ind, par) p c brs) (tCase (ind, par) p' c' brs')
@@ -508,18 +508,18 @@ Inductive eq_term_upto_univ (Re Rle : universe -> universe -> Prop) : term -> te
     eq_term_upto_univ Re Rle (tProj p c) (tProj p c')
 
 | eq_Fix mfix mfix' idx :
-    Forall2 (fun x y =>
-      eq_term_upto_univ Re Re x.(dtype) y.(dtype) /\
-      eq_term_upto_univ Re Re x.(dbody) y.(dbody) /\
-      x.(rarg) = y.(rarg)
+    All2 (fun x y =>
+      eq_term_upto_univ Re Re x.(dtype) y.(dtype) *
+      eq_term_upto_univ Re Re x.(dbody) y.(dbody) *
+      (x.(rarg) = y.(rarg))
     ) mfix mfix' ->
     eq_term_upto_univ Re Rle (tFix mfix idx) (tFix mfix' idx)
 
 | eq_CoFix mfix mfix' idx :
-    Forall2 (fun x y =>
-      eq_term_upto_univ Re Re x.(dtype) y.(dtype) /\
-      eq_term_upto_univ Re Re x.(dbody) y.(dbody) /\
-      x.(rarg) = y.(rarg)
+    All2 (fun x y =>
+      eq_term_upto_univ Re Re x.(dtype) y.(dtype) *
+      eq_term_upto_univ Re Re x.(dbody) y.(dbody) *
+      (x.(rarg) = y.(rarg))
     ) mfix mfix' ->
     eq_term_upto_univ Re Rle (tCoFix mfix idx) (tCoFix mfix' idx).
 
@@ -656,10 +656,10 @@ Definition eq_opt_term `{checker_flags} φ (t u : option term) :=
   end.
 
 Definition eq_decl `{checker_flags} φ (d d' : context_decl) :=
-  eq_opt_term φ d.(decl_body) d'.(decl_body) /\ eq_term φ d.(decl_type) d'.(decl_type).
+  eq_opt_term φ d.(decl_body) d'.(decl_body) * eq_term φ d.(decl_type) d'.(decl_type).
 
 Definition eq_context `{checker_flags} φ (Γ Δ : context) :=
-  Forall2 (eq_decl φ) Γ Δ.
+  All2 (eq_decl φ) Γ Δ.
 
 Definition check_correct_arity `{checker_flags} φ decl ind u ctx pars pctx :=
   let inddecl :=

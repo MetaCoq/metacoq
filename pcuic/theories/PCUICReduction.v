@@ -879,9 +879,6 @@ End ReductionCongruence.
 
 Hint Resolve All_All2 : all.
 
-Lemma All2_same {A} (P : A -> A -> Type) l : (forall x, P x x) -> All2 P l l.
-Proof. induction l; constructor; auto. Qed.
-
 Hint Resolve All2_same : pred.
 
 Lemma OnOne2_All2 {A}:

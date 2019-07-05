@@ -475,7 +475,7 @@ Section Typecheck.
                                              (try_is_leq_universe G).
 
   Lemma leqb_term_spec t u :
-    leqb_term t u <-> leq_term (snd Σ) t u.
+    leqb_term t u <~> leq_term (snd Σ) t u.
   Admitted.
 
   Program Definition convert_leq Γ t u

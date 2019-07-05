@@ -531,26 +531,20 @@ Section ReductionCongruence.
       simpl. constructor. auto.
     Qed.
 
-    (** Fixme: need to think about how to derive this without too much pain.
-        Probably needing a way to fill "list contexts". And start with an OnOne2
-        hyp instead of All2 as well.
-     *)
-    Lemma reds_case ind p0 p1 c0 c1 brs0 brs1 :
-      red Σ Γ p0 p1 ->
-      red Σ Γ c0 c1 ->
-      All2 (on_Trel_eq (red Σ Γ) snd fst) brs0 brs1 ->
-      red Σ Γ (tCase ind p0 c0 brs0) (tCase ind p1 c1 brs1).
+    Lemma reds_case :
+      forall indn p c brs p' c' brs',
+        red Σ Γ p p' ->
+        red Σ Γ c c' ->
+        All2 (on_Trel_eq (red Σ Γ) snd fst) brs brs' ->
+        red Σ Γ (tCase indn p c brs) (tCase indn p' c' brs').
     Proof.
-      intros; eapply (transitivity (y := tCase ind p1 c0 brs0)).
-      now apply (red_ctx (tCtxCase_pred _ tCtxHole _ _)).
-      eapply (transitivity (y := tCase ind p1 c1 brs0)).
-      now eapply (red_ctx (tCtxCase_discr _ _ tCtxHole _)).
-      induction X1. constructor.
-      destruct x, y, r. simpl in *; subst.
-      transitivity (tCase ind p1 c1 ((n0, t0) :: l)).
-      simpl in *.
-      eapply (red_ctx (tCtxCase_branch ind p1 c1 (tCtxHead_nat (n0, tCtxHole) _)) r).
-    Admitted.
+      intros indn p c brs p' c' brs' h1 h2 h3.
+      eapply red_trans.
+      - eapply red_case_brs. eassumption.
+      - eapply red_trans.
+        + eapply red_case_c. eassumption.
+        + eapply red_case_p. assumption.
+    Qed.
 
     Lemma red_proj_congr p c c' : red Σ Γ c c' -> red Σ Γ (tProj p c) (tProj p c').
     Proof.

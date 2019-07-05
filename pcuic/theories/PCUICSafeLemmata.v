@@ -382,21 +382,6 @@ Section Lemmata.
     assumption.
   Qed.
 
-  Lemma red_trans :
-    forall Γ u v w,
-      red (fst Σ) Γ u v ->
-      red (fst Σ) Γ v w ->
-      red (fst Σ) Γ u w.
-  Proof.
-    intros Γ u v w h1 h2.
-    revert u h1. induction h2 ; intros u h1.
-    - assumption.
-    - specialize IHh2 with (1 := h1).
-      eapply trans_red.
-      + eapply IHh2.
-      + assumption.
-  Qed.
-
   Lemma conv_context :
     forall Γ u v ρ,
       Σ ;;; Γ ,,, stack_context ρ |- u = v ->

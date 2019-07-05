@@ -756,7 +756,7 @@ Section Conversion.
     rewrite <- e1 in r1. cbn in r1.
     rewrite <- e1 in hd. cbn in hd.
     constructor. eapply red_it_mkLambda_or_LetIn.
-    rewrite <- 2!mkApps_nested. cbn. eapply PCUICPosition.red_mkApps.
+    rewrite <- 2!mkApps_nested. cbn. eapply red_mkApps_f.
     pose proof (decompose_stack_eq _ _ _ e'). subst.
     rewrite stack_context_appstack in r1.
     econstructor.
@@ -2191,7 +2191,7 @@ Section Conversion.
     - eapply unfold_one_fix_red_zippx. eassumption.
     - constructor. unfold zippx.
       case_eq (decompose_stack π). intros l s eq.
-      eapply red_it_mkLambda_or_LetIn. eapply PCUICPosition.red_mkApps.
+      eapply red_it_mkLambda_or_LetIn. eapply red_mkApps_f.
       apply lookup_env_ConstantDecl_inv in e as ?. subst.
       eapply trans_red.
       + constructor.
@@ -2203,14 +2203,14 @@ Section Conversion.
       destruct r as [r].
       constructor. unfold zippx.
       case_eq (decompose_stack π). intros l s e'.
-      eapply red_it_mkLambda_or_LetIn. eapply PCUICPosition.red_mkApps.
+      eapply red_it_mkLambda_or_LetIn. eapply red_mkApps_f.
       apply decompose_stack_eq in e'. subst.
       rewrite stack_context_appstack in r. assumption.
     - apply unfold_one_proj_cored in e as r. apply cored_red in r.
       destruct r as [r].
       constructor. unfold zippx.
       case_eq (decompose_stack π). intros l s e'.
-      eapply red_it_mkLambda_or_LetIn. eapply PCUICPosition.red_mkApps.
+      eapply red_it_mkLambda_or_LetIn. eapply red_mkApps_f.
       apply decompose_stack_eq in e'. subst.
       rewrite stack_context_appstack in r. assumption.
   Qed.

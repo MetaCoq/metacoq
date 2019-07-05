@@ -284,6 +284,30 @@ Section ReductionCongruence.
       rewrite <- mkApps_nested. now rewrite <- IHl'.
     Qed.
 
+    Lemma red1_mkApps_f :
+      forall t u l,
+        red1 Σ Γ t u ->
+        red1 Σ Γ (mkApps t l) (mkApps u l).
+    Proof.
+      intros t u l h.
+      revert t u h.
+      induction l ; intros t u h.
+      - assumption.
+      - cbn. apply IHl. constructor. assumption.
+    Qed.
+
+    Corollary red_mkApps_f :
+      forall t u l,
+        red Σ Γ t u ->
+        red Σ Γ (mkApps t l) (mkApps u l).
+    Proof.
+      intros t u π h. induction h.
+      - constructor.
+      - econstructor.
+        + eapply IHh.
+        + eapply red1_mkApps_f. assumption.
+    Qed.
+
     Lemma red_mkApps M0 M1 N0 N1 :
       red Σ Γ M0 M1 ->
       All2 (red Σ Γ) N0 N1 ->

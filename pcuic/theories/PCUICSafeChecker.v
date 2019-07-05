@@ -273,16 +273,16 @@ Admitted.
 
 Lemma wf_local_rel_inv `{checker_flags} {Σ Γ1 Γ2} (w : wf_local_rel Σ Γ1 Γ2) :
   forall d Γ2', Γ2 = Γ2' ,, d ->
-  { w' : wf_local_rel Σ Γ1 Γ2' &
-    match d.(decl_body) with
-    | Some b => Σ ;;; Γ1 ,,, Γ2' |- b : d.(decl_type)
-    | None => { u & Σ ;;; Γ1 ,,, Γ2' |- d.(decl_type) : tSort u  }
-    end }.
+  wf_local_rel Σ Γ1 Γ2' × (∑ u, Σ ;;; Γ1 ,,, Γ2' |- d.(decl_type) : tSort u) ×
+               match d.(decl_body) with
+               | Some b => Σ ;;; Γ1 ,,, Γ2' |- b : d.(decl_type)
+               | None => True
+               end.
 Proof.
   intros d Γ.
   destruct w; inversion 1; subst; cbn in *.
-  exists w. assumption.
-  exists w. assumption.
+  split; [assumption|]. split; [assumption| trivial].
+  split; [assumption|]. split; [assumption| trivial].
 Defined.
 
 Definition strengthening_wf_local_rel Σ Γ1 Γ2 Γ3 Γ4 :
@@ -297,20 +297,20 @@ Proof.
   intro H. rewrite lift_context_snoc0 in H.
   destruct a as [na [b|] ty].
   - unfold lift_decl, map_decl in H; cbn in H.
-    destruct (wf_local_rel_inv H _ _ eq_refl) as [H1 H2]; cbn in *.
-    rewrite Nat.add_0_r in H2.
-    rewrite app_context_assoc in H2.
+    destruct (wf_local_rel_inv H _ _ eq_refl) as [H1 [H2 H3]]; cbn in *.
+    rewrite Nat.add_0_r in *.
+    rewrite app_context_assoc in *.
     econstructor.
     + easy.
-    + admit.
+    + cbn. exists H2.π1. eapply strengthening. assumption. exact H2.π2.
     + cbn. eapply strengthening; eassumption.
   - unfold lift_decl, map_decl in H; cbn in H.
-    destruct (wf_local_rel_inv H _ _ eq_refl) as [H1 [u H2]]; cbn in *.
+    destruct (wf_local_rel_inv H _ _ eq_refl) as [H1 [[u H2] _]]; cbn in *.
     rewrite Nat.add_0_r in H2.
     rewrite app_context_assoc in H2.
     econstructor. easy.
     exists u. eapply strengthening; eassumption.
-Admitted.
+Qed.
 
 
 Definition wf_local_app_inv {Σ Γ1 Γ2} :
@@ -531,7 +531,7 @@ Section Typecheck.
     (* Next Obligation. eapply validity_wf. right. now eapply typ_to_wf. Qed. *)
     Next Obligation.
       destruct hA as [[s hs]|].
-      - destruct HΣ, HΓ, X, X0. constructor. econstructor; try eassumption. cheat.
+      - destruct HΣ, HΓ, X, X0. constructor. econstructor; try eassumption. exact todo.
       - destruct HΣ, HΓ, X, X0, H. constructor. econstructor; easy.
       (* destruct X1;[|now left]. eapply validity_term in X0; try eassumption. *)
       (* eapply isWfArity_or_Type_cumul; eassumption. *)
@@ -559,7 +559,8 @@ Section Typecheck.
   Defined.
 
   Definition check_consistent_constraints cstrs u
-    : typing_result (consistent_universe_context_instance (snd Σ) cstrs u) :=
+    : typing_result (consistent_universe_context_instance (snd Σ) cstrs u).
+  Admitted.
     (* match cstrs as cstrs' return (cstrs' = cstrs -> typing_result (consistent_universe_context_instance Σ cstrs' u)) with *)
     (* | Monomorphic_ctx ctx => fun _ => ret I *)
     (* | Polymorphic_ctx (t, c) *)
@@ -575,7 +576,6 @@ Section Typecheck.
     (*        fun _ => raise (UnboundVar "wrong length of instance")) *)
     (*       eq_refl *)
     (* end eq_refl. *)
-    cheat.
 
   Ltac sq :=
     repeat match goal with

@@ -774,14 +774,41 @@ Section ReductionCongruence.
     (*   now eapply (red_ctx (tCtxApp_r _ tCtxHole)). *)
     (* Qed. *)
 
-    Lemma red_prod na M0 M1 N0 N1 : red Σ Γ M0 M1 -> red Σ (Γ ,, vass na M0) N0 N1 ->
-                                    red Σ Γ (tProd na M0 N0) (tProd na M1 N1).
+    Lemma red_prod_l :
+      forall na A B A',
+        red Σ Γ A A' ->
+        red Σ Γ (tProd na A B) (tProd na A' B).
     Proof.
-    (*   intros; eapply (transitivity (y := tApp M1 N0)). *)
-    (*   now apply (red_ctx (tCtxApp_l tCtxHole _)). *)
-    (*   now eapply (red_ctx (tCtxApp_r _ tCtxHole)). *)
-    (* Qed. *)
-    Admitted.
+      intros na A B A' h.
+      induction h.
+      - constructor.
+      - econstructor ; try eassumption.
+        constructor. assumption.
+    Qed.
+
+    Lemma red_prod_r :
+      forall na A B B',
+        red Σ (Γ ,, vass na A) B B' ->
+        red Σ Γ (tProd na A B) (tProd na A B').
+    Proof.
+      intros na A B B' h.
+      induction h.
+      - constructor.
+      - econstructor ; try eassumption.
+        constructor. assumption.
+    Qed.
+
+    Lemma red_prod :
+      forall na A B A' B',
+        red Σ Γ A A' ->
+        red Σ (Γ ,, vass na A) B B' ->
+        red Σ Γ (tProd na A B) (tProd na A' B').
+    Proof.
+      intros na A B A' B' h1 h2.
+      eapply red_trans.
+      - eapply red_prod_r. eassumption.
+      - eapply red_prod_l. assumption.
+    Qed.
 
     Lemma red_evar ev l l' : All2 (red Σ Γ) l l' -> red Σ Γ (tEvar ev l) (tEvar ev l').
     Proof.

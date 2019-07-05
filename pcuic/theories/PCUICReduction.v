@@ -611,6 +611,68 @@ Section ReductionCongruence.
         + econstructor. assumption.
     Qed.
 
+    Lemma map_inj :
+      forall A B (f : A -> B) l l',
+        (forall x y, f x = f y -> x = y) ->
+        map f l = map f l' ->
+        l = l'.
+    Proof.
+      intros A B f l l' h e.
+      induction l in l', e |- *.
+      - destruct l' ; try discriminate. reflexivity.
+      - destruct l' ; try discriminate. inversion e.
+        f_equal ; eauto.
+    Qed.
+
+    Lemma red_fix_one_ty :
+      forall mfix idx mfix',
+        OnOne2 (on_Trel_eq (red Σ Γ) dtype (fun x => (dname x, dbody x, rarg x))) mfix mfix' ->
+        red Σ Γ (tFix mfix idx) (tFix mfix' idx).
+    Proof.
+      intros mfix idx mfix' h.
+      apply OnOne2_on_Trel_eq_red_redl in h.
+      dependent induction h.
+      - assert (mfix = mfix').
+        { eapply map_inj ; eauto.
+          intros y z e. cbn in e. destruct y, z. inversion e. eauto.
+        } subst.
+        constructor.
+      - set (f := fun x : def term => (dtype x, (dname x, dbody x, rarg x))) in *.
+        set (g := fun '(ty, (na, bo, ra)) => mkdef term na ty bo ra).
+        assert (el :  forall l, l = map f (map g l)).
+        { clear. intros l. induction l.
+          - reflexivity.
+          - cbn. destruct a as [? [[? ?] ?]]. cbn. f_equal. assumption.
+        }
+        assert (el' :  forall l, l = map g (map f l)).
+        { clear. intros l. induction l.
+          - reflexivity.
+          - cbn. destruct a. cbn. f_equal. assumption.
+        }
+        econstructor.
+        + eapply IHh. apply el.
+        + constructor. rewrite (el' mfix').
+          eapply OnOne2_map.
+          eapply OnOne2_impl ; eauto.
+          intros [? [[? ?] ?]] [? [[? ?] ?]] [h1 h2].
+          unfold on_Trel in h1, h2. cbn in *. inversion h2. subst.
+          unfold on_Trel. split ; eauto.
+    Qed.
+
+    Lemma red_fix_ty :
+      forall mfix idx mfix',
+        All2 (on_Trel_eq (red Σ Γ) dtype (fun x => (dname x, dbody x, rarg x))) mfix mfix' ->
+        red Σ Γ (tFix mfix idx) (tFix mfix' idx).
+    Proof.
+      intros mfix idx mfix' h.
+      apply All2_many_OnOne2 in h.
+      induction h.
+      - constructor.
+      - eapply red_trans.
+        + eapply IHh.
+        + eapply red_fix_one_ty. assumption.
+    Qed.
+
     Lemma red_fix_congr mfix0 mfix1 idx :
       All2 (fun d0 d1 => (red Σ Γ (dtype d0) (dtype d1)) *
                          (red Σ (Γ ,,, fix_context mfix0) (dbody d0) (dbody d1)))%type mfix0 mfix1 ->

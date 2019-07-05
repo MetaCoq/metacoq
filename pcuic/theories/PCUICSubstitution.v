@@ -1296,17 +1296,17 @@ Proof.
     apply red_letin; auto.
     now rewrite subst_context_snoc0 in IHred1.
 
-  - simplify_IH_hyps. eapply red_case; auto.
+  - simplify_IH_hyps. eapply reds_case; auto.
     apply All2_map, All2_same. intros. split; auto.
 
-  - simplify_IH_hyps. eapply red_case; auto.
+  - simplify_IH_hyps. eapply reds_case; auto.
     apply All2_map, All2_same. intros. split; auto.
 
-  - simplify_IH_hyps. apply red_case; auto.
+  - simplify_IH_hyps. apply reds_case; auto.
     apply All2_map.
     eapply OnOne2_All2; eauto. simpl. intuition eauto.
 
-  - apply red_proj_congr. eauto.
+  - apply red_proj_c. eauto.
 
   - apply red_app; eauto.
 
@@ -1451,17 +1451,17 @@ Proof.
     apply red_letin; auto.
     now rewrite subst_context_snoc0 in IHred1.
 
-  - simplify_IH_hyps. eapply red_case; auto.
+  - simplify_IH_hyps. eapply reds_case; auto.
     apply All2_map, All2_same. intros. split; auto.
 
-  - simplify_IH_hyps. eapply red_case; auto.
+  - simplify_IH_hyps. eapply reds_case; auto.
     apply All2_map, All2_same. intros. split; auto.
 
-  - simplify_IH_hyps. apply red_case; auto.
+  - simplify_IH_hyps. apply reds_case; auto.
     eapply All2_map.
     eapply OnOne2_All2; eauto. simpl. intuition eauto.
 
-  - apply red_proj_congr. eauto.
+  - apply red_proj_c. eauto.
 
   - apply red_app; eauto.
 
@@ -1673,9 +1673,9 @@ Proof.
     now eapply (X1 Δ (Γ' ,, _)).
 
   - apply red_app; eauto.
-  - apply red_case; eauto.
+  - apply reds_case; eauto.
     unfold on_Trel in *; solve_all.
-  - apply red_proj_congr; eauto.
+  - apply red_proj_c; eauto.
   - apply red_fix_congr; eauto.
     solve_all.
     rewrite subst_fix_context.

@@ -7,7 +7,7 @@ From MetaCoq.Template Require Import config Universes monad_utils utils BasicAst
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICReflect PCUICLiftSubst PCUICUnivSubst PCUICTyping
      PCUICCumulativity PCUICSR PCUICPosition PCUICEquality PCUICNameless
-     PCUICNormal PCUICInversion PCUICCumulativity.
+     PCUICNormal PCUICInversion PCUICCumulativity PCUICReduction.
 From Equations Require Import Equations.
 
 Require Import Equations.Prop.DepElim.
@@ -288,20 +288,6 @@ Section Lemmata.
       + apply red1_it_mkLambda_or_LetIn. assumption.
   Qed.
 
-  Lemma red_it_mkLambda_or_LetIn :
-    forall Γ Δ u v,
-      red Σ (Γ ,,, Δ) u v ->
-      red Σ Γ (it_mkLambda_or_LetIn Δ u)
-              (it_mkLambda_or_LetIn Δ v).
-  Proof.
-    intros Γ Δ u v h.
-    induction h.
-    - constructor.
-    - econstructor.
-      + eassumption.
-      + eapply red1_it_mkLambda_or_LetIn. assumption.
-  Qed.
-
   Lemma cored_welltyped :
     forall {Γ u v},
       welltyped Σ Γ u ->
@@ -347,18 +333,6 @@ Section Lemmata.
     - eapply cored_trans.
       + eapply IHh1. eassumption.
       + assumption.
-  Qed.
-
-  Lemma red_case_c :
-    forall Γ indn p c brs c',
-      red Σ Γ c c' ->
-      red Σ Γ (tCase indn p c brs) (tCase indn p c' brs).
-  Proof.
-    intros Γ indn p c brs c' h.
-    induction h.
-    - constructor.
-    - econstructor ; try eassumption.
-      constructor. assumption.
   Qed.
 
   Lemma cored_case :
@@ -518,21 +492,6 @@ Section Lemmata.
     eapply red_context.
     rewrite app_context_nil_l.
     assumption.
-  Qed.
-
-  Lemma red_trans :
-    forall Γ u v w,
-      red (fst Σ) Γ u v ->
-      red (fst Σ) Γ v w ->
-      red (fst Σ) Γ u w.
-  Proof.
-    intros Γ u v w h1 h2.
-    revert u h1. induction h2 ; intros u h1.
-    - assumption.
-    - specialize IHh2 with (1 := h1).
-      eapply trans_red.
-      + eapply IHh2.
-      + assumption.
   Qed.
 
   Lemma conv_context :
@@ -1928,19 +1887,6 @@ Section Lemmata.
     - exfalso. apply n. reflexivity.
     - eapply cored_red_cored ; try eassumption.
       constructor. assumption.
-  Qed.
-
-  Lemma red_proj_c :
-    forall Γ p c c',
-      red Σ Γ c c' ->
-      red Σ Γ (tProj p c) (tProj p c').
-  Proof.
-    intros Γ p c c' h.
-    induction h in p |- *.
-    - constructor.
-    - econstructor.
-      + eapply IHh.
-      + econstructor. assumption.
   Qed.
 
   Lemma red_welltyped :

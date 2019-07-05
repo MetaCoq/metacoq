@@ -4,8 +4,9 @@ From Coq Require Import Bool String List Program BinPos Compare_dec Arith Lia
      Classes.RelationClasses.
 From MetaCoq.Template Require Import config Universes monad_utils utils BasicAst
      AstUtils UnivSubst.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICReflect
-     PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICCumulativity PCUICSR.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
+     PCUICReflect PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICCumulativity
+     PCUICSR PCUICReduction.
 From Equations Require Import Equations.
 
 Require Import Equations.Prop.DepElim.
@@ -771,20 +772,6 @@ Section Stacks.
     eapply positionR_poscat. assumption.
   Qed.
 
-  Lemma red1_it_mkLambda_or_LetIn :
-    forall Γ Δ u v,
-      red1 Σ (Γ ,,, Δ) u v ->
-      red1 Σ Γ (it_mkLambda_or_LetIn Δ u)
-               (it_mkLambda_or_LetIn Δ v).
-  Proof.
-    intros Γ Δ u v h.
-    revert Γ u v h.
-    induction Δ as [| [na [b|] A] Δ ih ] ; intros Γ u v h.
-    - cbn. assumption.
-    - simpl. eapply ih. cbn. constructor. assumption.
-    - simpl. eapply ih. cbn. constructor. assumption.
-  Qed.
-
   Definition zipp t π :=
     let '(args, ρ) := decompose_stack π in
     mkApps t args.
@@ -877,30 +864,6 @@ Section Stacks.
   (* Definition zippx t π := *)
   (*   it_mkLambda_or_LetIn (stack_context π) (zipp t π). *)
 
-  Lemma red1_mkApps :
-    forall Γ t u l,
-      red1 Σ Γ t u ->
-      red1 Σ Γ (mkApps t l) (mkApps u l).
-  Proof.
-    intros Γ t u l h.
-    revert Γ t u h.
-    induction l ; intros Γ t u h.
-    - assumption.
-    - cbn. apply IHl. constructor. assumption.
-  Qed.
-
-  Corollary red_mkApps :
-     forall Γ t u l,
-      red Σ Γ t u ->
-      red Σ Γ (mkApps t l) (mkApps u l).
-  Proof.
-    intros Γ t u π h. induction h.
-    - constructor.
-    - econstructor.
-      + eapply IHh.
-      + eapply red1_mkApps. assumption.
-  Qed.
-
   Lemma red1_zippx :
     forall Γ t u π,
       red1 Σ (Γ ,,, stack_context π) t u ->
@@ -910,7 +873,7 @@ Section Stacks.
     unfold zippx.
     case_eq (decompose_stack π). intros l ρ e.
     eapply red1_it_mkLambda_or_LetIn.
-    eapply red1_mkApps.
+    eapply red1_mkApps_f.
     pose proof (decompose_stack_eq _ _ _ e). subst.
     rewrite stack_context_appstack in h.
     assumption.

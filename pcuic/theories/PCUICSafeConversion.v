@@ -7,7 +7,7 @@ From MetaCoq.Template Require Import config Universes monad_utils utils BasicAst
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICReflect PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICSafeReduce
      PCUICCumulativity PCUICSR PCUICPosition PCUICEquality PCUICNameless
-     PCUICSafeLemmata PCUICNormal PCUICInversion.
+     PCUICSafeLemmata PCUICNormal PCUICInversion PCUICReduction.
 From Equations Require Import Equations.
 
 Require Import Equations.Prop.DepElim.
@@ -759,7 +759,7 @@ Section Conversion.
     rewrite <- e1 in r1. cbn in r1.
     rewrite <- e1 in hd. cbn in hd.
     constructor. eapply red_it_mkLambda_or_LetIn.
-    rewrite <- 2!mkApps_nested. cbn. eapply red_mkApps.
+    rewrite <- 2!mkApps_nested. cbn. eapply red_mkApps_f.
     pose proof (decompose_stack_eq _ _ _ e'). subst.
     rewrite stack_context_appstack in r1.
     econstructor.
@@ -1321,7 +1321,7 @@ Section Conversion.
       end.
       constructor.
       eapply red_zipx.
-      eapply PCUICReduction.red_case.
+      eapply reds_case.
       + constructor.
       + assumption.
       + clear.
@@ -1336,7 +1336,7 @@ Section Conversion.
       end.
       constructor.
       eapply red_zipx.
-      eapply PCUICReduction.red_case.
+      eapply reds_case.
       + constructor.
       + assumption.
       + clear.
@@ -1449,7 +1449,7 @@ Section Conversion.
     eapply conv_trans'.
     - eapply red_conv_l.
       eapply red_zippx.
-      eapply PCUICReduction.red_case.
+      eapply reds_case.
       + constructor.
       + eassumption.
       + instantiate (1 := brs).
@@ -1458,7 +1458,7 @@ Section Conversion.
     - eapply conv_trans' ; try eassumption.
       eapply red_conv_r.
       eapply red_zippx.
-      eapply PCUICReduction.red_case.
+      eapply reds_case.
       + constructor.
       + eassumption.
       + clear.
@@ -2099,7 +2099,7 @@ Section Conversion.
       cbn in r.
       clear H0. symmetry in e0. apply decompose_stack_eq in e0. subst.
       rewrite zipc_appstack in r. cbn in r.
-      pose proof (red_proj_c _ _ (i, n0, n) _ _ r) as r'.
+      pose proof (red_proj_c (i, n0, n) _ _ r) as r'.
       pose proof (red_wellformed flags _ hΣ h (sq r')) as h'.
       apply Proj_Constuct_ind_eq in h' ; auto. subst.
       eapply cored_red_cored.
@@ -2115,7 +2115,7 @@ Section Conversion.
       cbn in r.
       clear H0. symmetry in e0. apply decompose_stack_eq in e0. subst.
       rewrite zipc_appstack in r. cbn in r.
-      pose proof (red_proj_c _ _ (i, n0, n) _ _ r) as r'.
+      pose proof (red_proj_c (i, n0, n) _ _ r) as r'.
       pose proof (red_wellformed flags _ hΣ h (sq r')) as h'.
       eapply cored_red_cored.
       + constructor. eapply red_cofix_proj. eauto.
@@ -2169,7 +2169,7 @@ Section Conversion.
     - eapply unfold_one_fix_red_zippx. eassumption.
     - constructor. unfold zippx.
       case_eq (decompose_stack π). intros l s eq.
-      eapply red_it_mkLambda_or_LetIn. eapply red_mkApps.
+      eapply red_it_mkLambda_or_LetIn. eapply red_mkApps_f.
       apply lookup_env_ConstantDecl_inv in e as ?. subst.
       eapply trans_red.
       + constructor.
@@ -2181,14 +2181,14 @@ Section Conversion.
       destruct r as [r].
       constructor. unfold zippx.
       case_eq (decompose_stack π). intros l s e'.
-      eapply red_it_mkLambda_or_LetIn. eapply red_mkApps.
+      eapply red_it_mkLambda_or_LetIn. eapply red_mkApps_f.
       apply decompose_stack_eq in e'. subst.
       rewrite stack_context_appstack in r. assumption.
     - apply unfold_one_proj_cored in e as r. apply cored_red in r.
       destruct r as [r].
       constructor. unfold zippx.
       case_eq (decompose_stack π). intros l s e'.
-      eapply red_it_mkLambda_or_LetIn. eapply red_mkApps.
+      eapply red_it_mkLambda_or_LetIn. eapply red_mkApps_f.
       apply decompose_stack_eq in e'. subst.
       rewrite stack_context_appstack in r. assumption.
   Qed.

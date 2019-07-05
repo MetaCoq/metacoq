@@ -284,6 +284,30 @@ Section ReductionCongruence.
       rewrite <- mkApps_nested. now rewrite <- IHl'.
     Qed.
 
+    Lemma red1_mkApps_f :
+      forall t u l,
+        red1 Σ Γ t u ->
+        red1 Σ Γ (mkApps t l) (mkApps u l).
+    Proof.
+      intros t u l h.
+      revert t u h.
+      induction l ; intros t u h.
+      - assumption.
+      - cbn. apply IHl. constructor. assumption.
+    Qed.
+
+    Corollary red_mkApps_f :
+      forall t u l,
+        red Σ Γ t u ->
+        red Σ Γ (mkApps t l) (mkApps u l).
+    Proof.
+      intros t u π h. induction h.
+      - constructor.
+      - econstructor.
+        + eapply IHh.
+        + eapply red1_mkApps_f. assumption.
+    Qed.
+
     Lemma red_mkApps M0 M1 N0 N1 :
       red Σ Γ M0 M1 ->
       All2 (red Σ Γ) N0 N1 ->
@@ -303,6 +327,210 @@ Section ReductionCongruence.
       eapply (transitivity (y := tLetIn na d1 t1 b0)).
       now eapply (red_ctx (tCtxLetIn_b _ _ tCtxHole _)).
       now eapply (red_ctx (tCtxLetIn_r _ _ _ tCtxHole)).
+    Qed.
+
+    Lemma red_case_p :
+      forall indn p c brs p',
+        red Σ Γ p p' ->
+        red Σ Γ (tCase indn p c brs) (tCase indn p' c brs).
+    Proof.
+      intros indn p c brs p' h.
+      induction h.
+      - constructor.
+      - econstructor ; try eassumption.
+        constructor. assumption.
+    Qed.
+
+    Lemma red_case_c :
+      forall indn p c brs c',
+        red Σ Γ c c' ->
+        red Σ Γ (tCase indn p c brs) (tCase indn p c' brs).
+    Proof.
+      intros indn p c brs c' h.
+      induction h.
+      - constructor.
+      - econstructor ; try eassumption.
+        constructor. assumption.
+    Qed.
+
+    Inductive redl {A} l : list (term × A) -> Type :=
+    | refl_redl : redl l l
+    | trans_redl :
+        forall l1 l2,
+          redl l l1 ->
+          OnOne2 (Trel_conj (on_Trel (red1 Σ Γ) fst) (on_Trel eq snd)) l1 l2 ->
+          redl l l2.
+
+    Lemma OnOne2_red_redl :
+      forall A (l l' : list (term × A)),
+        OnOne2 (Trel_conj (on_Trel (red Σ Γ) fst) (on_Trel eq snd)) l l' ->
+        redl l l'.
+    Proof.
+      intros A l l' h.
+      induction h.
+      - destruct p as [p1 p2].
+        unfold on_Trel in p1, p2.
+        destruct hd as [t a], hd' as [t' a']. simpl in *. subst.
+        induction p1.
+        + constructor.
+        + econstructor.
+          * eapply IHp1.
+          * constructor. split ; eauto.
+            reflexivity.
+      - clear h. rename IHh into h.
+        induction h.
+        + constructor.
+        + econstructor ; eauto. constructor ; eauto.
+    Qed.
+
+    Lemma OnOne2_on_Trel_eq_red_redl :
+      forall A B (f : A -> term) (g : A -> B) l l',
+        OnOne2 (on_Trel_eq (red Σ Γ) f g) l l' ->
+        redl (map (fun x => (f x, g x)) l) (map (fun x => (f x, g x)) l').
+    Proof.
+      intros A B f g l l' h.
+      eapply OnOne2_red_redl.
+      eapply OnOne2_map. eapply OnOne2_impl ; eauto.
+    Qed.
+
+    Lemma OnOne2_prod_inv :
+      forall A (P : A -> A -> Type) Q l l',
+        OnOne2 (Trel_conj P Q) l l' ->
+        OnOne2 P l l' × OnOne2 Q l l'.
+    Proof.
+      intros A P Q l l' h.
+      induction h.
+      - destruct p.
+        split ; constructor ; auto.
+      - destruct IHh.
+        split ; constructor ; auto.
+    Qed.
+
+    Lemma OnOne2_prod_inv_refl_r :
+      forall A (P Q : A -> A -> Type) l l',
+        (forall x, Q x x) ->
+        OnOne2 (Trel_conj P Q) l l' ->
+        OnOne2 P l l' × All2 Q l l'.
+    Proof.
+      intros A P Q l l' hQ h.
+      induction h.
+      - destruct p. split.
+        + constructor. assumption.
+        + constructor.
+          * assumption.
+          * eapply All_All2.
+            -- instantiate (1 := fun x => True). eapply Forall_All.
+               eapply Forall_True. intro. auto.
+            -- intros x _. eapply hQ.
+      - destruct IHh. split.
+        + constructor. assumption.
+        + constructor ; eauto.
+    Qed.
+
+    Lemma All2_eq :
+      forall A (l l' : list A),
+        All2 eq l l' ->
+        l = l'.
+    Proof.
+      intros A l l' h.
+      induction h ; eauto. subst. reflexivity.
+    Qed.
+
+    Lemma list_split_eq :
+      forall A B (l l' : list (A × B)),
+        map fst l = map fst l' ->
+        map snd l = map snd l' ->
+        l = l'.
+    Proof.
+      intros A B l l' e1 e2.
+      induction l in l', e1, e2 |- *.
+      - destruct l' ; try discriminate. reflexivity.
+      - destruct l' ; try discriminate.
+        simpl in *. inversion e1. inversion e2.
+        f_equal ; eauto.
+        destruct a, p. simpl in *. subst. reflexivity.
+    Qed.
+
+    Notation swap := (fun x => (snd x, fst x)).
+
+    Lemma list_map_swap_eq :
+      forall A B (l l' : list (A × B)),
+        map swap l = map swap l' ->
+        l = l'.
+    Proof.
+      intros A B l l' h.
+      induction l in l', h |- *.
+      - destruct l' ; try discriminate. reflexivity.
+      - destruct l' ; try discriminate.
+        cbn in h. inversion h.
+        f_equal ; eauto.
+        destruct a, p. cbn in *. subst. reflexivity.
+    Qed.
+
+    Lemma map_swap_invol :
+      forall A B (l : list (A × B)),
+        l = map swap (map swap l).
+    Proof.
+      intros A B l.
+      induction l.
+      - reflexivity.
+      - cbn. destruct a. rewrite <- IHl. reflexivity.
+    Qed.
+
+    Lemma red_case_one_brs :
+      forall indn p c brs brs',
+        OnOne2 (on_Trel_eq (red Σ Γ) snd fst) brs brs' ->
+        red Σ Γ (tCase indn p c brs) (tCase indn p c brs').
+    Proof.
+      intros indn p c brs brs' h.
+      apply OnOne2_on_Trel_eq_red_redl in h.
+      dependent induction h.
+      - apply list_map_swap_eq in x. subst. constructor.
+      - econstructor.
+        + eapply IHh. apply map_swap_invol.
+        + constructor. rewrite (map_swap_invol _ _ brs').
+          eapply OnOne2_map.
+          eapply OnOne2_impl ; eauto.
+    Qed.
+
+    Inductive rtrans_clos {A} (R : A -> A -> Type) (x : A) : A -> Type :=
+    | rtrans_clos_refl : rtrans_clos R x x
+    | rtrans_clos_trans :
+        forall y z,
+          rtrans_clos R x y ->
+          R y z ->
+          rtrans_clos R x z.
+
+    Lemma All2_many_OnOne2 :
+      forall A (R : A -> A -> Type) l l',
+        All2 R l l' ->
+        rtrans_clos (OnOne2 R) l l'.
+    Proof.
+      intros A R l l' h.
+      induction h.
+      - constructor.
+      - econstructor ; revgoals.
+        + constructor. eassumption.
+        + clear - IHh. rename IHh into h.
+          induction h.
+          * constructor.
+          * econstructor.
+            -- eassumption.
+            -- econstructor. assumption.
+    Qed.
+
+    Lemma red_case_brs :
+      forall indn p c brs brs',
+        All2 (on_Trel_eq (red Σ Γ) snd fst) brs brs' ->
+        red Σ Γ (tCase indn p c brs) (tCase indn p c brs').
+    Proof.
+      intros indn p c brs brs' h.
+      apply All2_many_OnOne2 in h.
+      induction h.
+      - constructor.
+      - eapply red_trans.
+        + eapply IHh.
+        + eapply red_case_one_brs. assumption.
     Qed.
 
     (* Fixpoint brs_n_context l := *)
@@ -327,40 +555,207 @@ Section ReductionCongruence.
       simpl. constructor. auto.
     Qed.
 
-    (** Fixme: need to think about how to derive this without too much pain.
-        Probably needing a way to fill "list contexts". And start with an OnOne2
-        hyp instead of All2 as well.
-     *)
-    Lemma red_case ind p0 p1 c0 c1 brs0 brs1 :
-      red Σ Γ p0 p1 ->
-      red Σ Γ c0 c1 ->
-      All2 (on_Trel_eq (red Σ Γ) snd fst) brs0 brs1 ->
-      red Σ Γ (tCase ind p0 c0 brs0) (tCase ind p1 c1 brs1).
+    Lemma reds_case :
+      forall indn p c brs p' c' brs',
+        red Σ Γ p p' ->
+        red Σ Γ c c' ->
+        All2 (on_Trel_eq (red Σ Γ) snd fst) brs brs' ->
+        red Σ Γ (tCase indn p c brs) (tCase indn p' c' brs').
     Proof.
-      intros; eapply (transitivity (y := tCase ind p1 c0 brs0)).
-      now apply (red_ctx (tCtxCase_pred _ tCtxHole _ _)).
-      eapply (transitivity (y := tCase ind p1 c1 brs0)).
-      now eapply (red_ctx (tCtxCase_discr _ _ tCtxHole _)).
-      induction X1. constructor.
-      destruct x, y, r. simpl in *; subst.
-      transitivity (tCase ind p1 c1 ((n0, t0) :: l)).
-      simpl in *.
-      eapply (red_ctx (tCtxCase_branch ind p1 c1 (tCtxHead_nat (n0, tCtxHole) _)) r).
-    Admitted.
+      intros indn p c brs p' c' brs' h1 h2 h3.
+      eapply red_trans.
+      - eapply red_case_brs. eassumption.
+      - eapply red_trans.
+        + eapply red_case_c. eassumption.
+        + eapply red_case_p. assumption.
+    Qed.
 
-    Lemma red_proj_congr p c c' : red Σ Γ c c' -> red Σ Γ (tProj p c) (tProj p c').
+    Lemma red1_it_mkLambda_or_LetIn :
+      forall Δ u v,
+        red1 Σ (Γ ,,, Δ) u v ->
+        red1 Σ Γ (it_mkLambda_or_LetIn Δ u)
+             (it_mkLambda_or_LetIn Δ v).
     Proof.
-    (*   intros; eapply (transitivity (y := tApp M1 N0)). *)
-    (*   now apply (red_ctx (tCtxApp_l tCtxHole _)). *)
-    (*   now eapply (red_ctx (tCtxApp_r _ tCtxHole)). *)
+      intros Δ u v h.
+      revert u v h.
+      induction Δ as [| [na [b|] A] Δ ih ] ; intros u v h.
+      - cbn. assumption.
+      - simpl. eapply ih. cbn. constructor. assumption.
+      - simpl. eapply ih. cbn. constructor. assumption.
+    Qed.
+
+    Lemma red_it_mkLambda_or_LetIn :
+      forall Δ u v,
+        red Σ (Γ ,,, Δ) u v ->
+        red Σ Γ (it_mkLambda_or_LetIn Δ u)
+            (it_mkLambda_or_LetIn Δ v).
+    Proof.
+      intros Δ u v h.
+      induction h.
+      - constructor.
+      - econstructor.
+        + eassumption.
+        + eapply red1_it_mkLambda_or_LetIn. assumption.
+    Qed.
+
+    Lemma red_proj_c :
+      forall p c c',
+        red Σ Γ c c' ->
+        red Σ Γ (tProj p c) (tProj p c').
+    Proof.
+      intros p c c' h.
+      induction h in p |- *.
+      - constructor.
+      - econstructor.
+        + eapply IHh.
+        + econstructor. assumption.
+    Qed.
+
+    Lemma map_inj :
+      forall A B (f : A -> B) l l',
+        (forall x y, f x = f y -> x = y) ->
+        map f l = map f l' ->
+        l = l'.
+    Proof.
+      intros A B f l l' h e.
+      induction l in l', e |- *.
+      - destruct l' ; try discriminate. reflexivity.
+      - destruct l' ; try discriminate. inversion e.
+        f_equal ; eauto.
+    Qed.
+
+    Lemma red_fix_one_ty :
+      forall mfix idx mfix',
+        OnOne2 (on_Trel_eq (red Σ Γ) dtype (fun x => (dname x, dbody x, rarg x))) mfix mfix' ->
+        red Σ Γ (tFix mfix idx) (tFix mfix' idx).
+    Proof.
+      intros mfix idx mfix' h.
+      apply OnOne2_on_Trel_eq_red_redl in h.
+      dependent induction h.
+      - assert (mfix = mfix').
+        { eapply map_inj ; eauto.
+          intros y z e. cbn in e. destruct y, z. inversion e. eauto.
+        } subst.
+        constructor.
+      - set (f := fun x : def term => (dtype x, (dname x, dbody x, rarg x))) in *.
+        set (g := fun '(ty, (na, bo, ra)) => mkdef term na ty bo ra).
+        assert (el :  forall l, l = map f (map g l)).
+        { clear. intros l. induction l.
+          - reflexivity.
+          - cbn. destruct a as [? [[? ?] ?]]. cbn. f_equal. assumption.
+        }
+        assert (el' :  forall l, l = map g (map f l)).
+        { clear. intros l. induction l.
+          - reflexivity.
+          - cbn. destruct a. cbn. f_equal. assumption.
+        }
+        econstructor.
+        + eapply IHh. apply el.
+        + constructor. rewrite (el' mfix').
+          eapply OnOne2_map.
+          eapply OnOne2_impl ; eauto.
+          intros [? [[? ?] ?]] [? [[? ?] ?]] [h1 h2].
+          unfold on_Trel in h1, h2. cbn in *. inversion h2. subst.
+          unfold on_Trel. split ; eauto.
+    Qed.
+
+    Lemma red_fix_ty :
+      forall mfix idx mfix',
+        All2 (on_Trel_eq (red Σ Γ) dtype (fun x => (dname x, dbody x, rarg x))) mfix mfix' ->
+        red Σ Γ (tFix mfix idx) (tFix mfix' idx).
+    Proof.
+      intros mfix idx mfix' h.
+      apply All2_many_OnOne2 in h.
+      induction h.
+      - constructor.
+      - eapply red_trans.
+        + eapply IHh.
+        + eapply red_fix_one_ty. assumption.
+    Qed.
+
+    Lemma red_fix_one_body :
+      forall mfix idx mfix',
+        OnOne2
+          (on_Trel_eq (red Σ (Γ ,,, fix_context mfix)) dbody (fun x => (dname x, dtype x, rarg x)))
+           mfix mfix' ->
+        red Σ Γ (tFix mfix idx) (tFix mfix' idx).
+    Proof.
+      intros mfix idx mfix' h.
+      (* We need to change the context so we should remove the quantification *)
+      (* apply OnOne2_on_Trel_eq_red_redl in h. *)
+    (*   dependent induction h. *)
+    (*   - assert (mfix = mfix'). *)
+    (*     { eapply map_inj ; eauto. *)
+    (*       intros y z e. cbn in e. destruct y, z. inversion e. eauto. *)
+    (*     } subst. *)
+    (*     constructor. *)
+    (*   - set (f := fun x : def term => (dtype x, (dname x, dbody x, rarg x))) in *. *)
+    (*     set (g := fun '(ty, (na, bo, ra)) => mkdef term na ty bo ra). *)
+    (*     assert (el :  forall l, l = map f (map g l)). *)
+    (*     { clear. intros l. induction l. *)
+    (*       - reflexivity. *)
+    (*       - cbn. destruct a as [? [[? ?] ?]]. cbn. f_equal. assumption. *)
+    (*     } *)
+    (*     assert (el' :  forall l, l = map g (map f l)). *)
+    (*     { clear. intros l. induction l. *)
+    (*       - reflexivity. *)
+    (*       - cbn. destruct a. cbn. f_equal. assumption. *)
+    (*     } *)
+    (*     econstructor. *)
+    (*     + eapply IHh. apply el. *)
+    (*     + constructor. rewrite (el' mfix'). *)
+    (*       eapply OnOne2_map. *)
+    (*       eapply OnOne2_impl ; eauto. *)
+    (*       intros [? [[? ?] ?]] [? [[? ?] ?]] [h1 h2]. *)
+    (*       unfold on_Trel in h1, h2. cbn in *. inversion h2. subst. *)
+    (*       unfold on_Trel. split ; eauto. *)
     (* Qed. *)
     Admitted.
 
-    Lemma red_fix_congr mfix0 mfix1 idx :
-      All2 (fun d0 d1 => (red Σ Γ (dtype d0) (dtype d1)) *
-                         (red Σ (Γ ,,, fix_context mfix0) (dbody d0) (dbody d1)))%type mfix0 mfix1 ->
-      red Σ Γ (tFix mfix0 idx) (tFix mfix1 idx).
+    Lemma red_fix_body :
+      forall mfix idx mfix',
+        All2
+          (on_Trel_eq (red Σ (Γ ,,, fix_context mfix)) dbody (fun x => (dname x, dtype x, rarg x)))
+           mfix mfix' ->
+        red Σ Γ (tFix mfix idx) (tFix mfix' idx).
     Proof.
+      intros mfix idx mfix' h.
+      apply All2_many_OnOne2 in h.
+      induction h.
+      - constructor.
+      - eapply red_trans.
+        + eapply IHh.
+        + eapply red_fix_one_body. (* assumption. *)
+          (* Problem with fix_context again. *)
+    (* Qed. *)
+    Admitted.
+
+    Lemma All2_prod_inv :
+      forall A (P : A -> A -> Type) Q l l',
+        All2 (Trel_conj P Q) l l' ->
+        All2 P l l' × All2 Q l l'.
+    Proof.
+      intros A P Q l l' h.
+      induction h.
+      - auto.
+      - destruct IHh. destruct r.
+        split ; constructor ; auto.
+    Qed.
+
+    Lemma red_fix_congr :
+      forall mfix mfix' idx,
+        All2 (fun d0 d1 =>
+                (red Σ Γ (dtype d0) (dtype d1)) ×
+                (red Σ (Γ ,,, fix_context mfix) (dbody d0) (dbody d1))
+        ) mfix mfix' ->
+      red Σ Γ (tFix mfix idx) (tFix mfix' idx).
+    Proof.
+      intros mfix mfix' idx h.
+      apply All2_prod_inv in h as [h1 h2].
+      eapply red_trans.
+      - eapply red_fix_body.
+        (* We need a more precise All2_prod_inv to get an intermediary mfix
+           with equality instead of red on one side. *)
     Admitted.
 
     (*   intros; eapply (transitivity (y := tApp M1 N0)). *)
@@ -379,22 +774,100 @@ Section ReductionCongruence.
     (*   now eapply (red_ctx (tCtxApp_r _ tCtxHole)). *)
     (* Qed. *)
 
-    Lemma red_prod na M0 M1 N0 N1 : red Σ Γ M0 M1 -> red Σ (Γ ,, vass na M0) N0 N1 ->
-                                    red Σ Γ (tProd na M0 N0) (tProd na M1 N1).
+    Lemma red_prod_l :
+      forall na A B A',
+        red Σ Γ A A' ->
+        red Σ Γ (tProd na A B) (tProd na A' B).
     Proof.
-    (*   intros; eapply (transitivity (y := tApp M1 N0)). *)
-    (*   now apply (red_ctx (tCtxApp_l tCtxHole _)). *)
-    (*   now eapply (red_ctx (tCtxApp_r _ tCtxHole)). *)
-    (* Qed. *)
-    Admitted.
+      intros na A B A' h.
+      induction h.
+      - constructor.
+      - econstructor ; try eassumption.
+        constructor. assumption.
+    Qed.
 
-    Lemma red_evar ev l l' : All2 (red Σ Γ) l l' -> red Σ Γ (tEvar ev l) (tEvar ev l').
+    Lemma red_prod_r :
+      forall na A B B',
+        red Σ (Γ ,, vass na A) B B' ->
+        red Σ Γ (tProd na A B) (tProd na A B').
     Proof.
-    Admitted.
-    (*   intros; eapply (transitivity (y := tApp M1 N0)). *)
-    (*   now apply (red_ctx (tCtxApp_l tCtxHole _)). *)
-    (*   now eapply (red_ctx (tCtxApp_r _ tCtxHole)). *)
-    (* Qed. *)
+      intros na A B B' h.
+      induction h.
+      - constructor.
+      - econstructor ; try eassumption.
+        constructor. assumption.
+    Qed.
+
+    Lemma red_prod :
+      forall na A B A' B',
+        red Σ Γ A A' ->
+        red Σ (Γ ,, vass na A) B B' ->
+        red Σ Γ (tProd na A B) (tProd na A' B').
+    Proof.
+      intros na A B A' B' h1 h2.
+      eapply red_trans.
+      - eapply red_prod_r. eassumption.
+      - eapply red_prod_l. assumption.
+    Qed.
+
+    Lemma OnOne2_on_Trel_eq_unit :
+      forall A (R : A -> A -> Type) l l',
+        OnOne2 R l l' ->
+        OnOne2 (on_Trel_eq R (fun x => x) (fun x => tt)) l l'.
+    Proof.
+      intros A R l l' h.
+      eapply OnOne2_impl ; eauto.
+    Qed.
+
+    Lemma red_one_evar :
+      forall ev l l',
+        OnOne2 (red Σ Γ) l l' ->
+        red Σ Γ (tEvar ev l) (tEvar ev l').
+    Proof.
+      intros ev l l' h.
+      apply OnOne2_on_Trel_eq_unit in h.
+      apply OnOne2_on_Trel_eq_red_redl in h.
+      dependent induction h.
+      - assert (l = l').
+        { eapply map_inj ; eauto.
+          intros y z e. cbn in e. inversion e. eauto.
+        } subst.
+        constructor.
+      - set (f := fun x : term => (x, ())) in *.
+        set (g := (fun '(x, _) => x) : term × unit -> term).
+        assert (el :  forall l, l = map f (map g l)).
+        { clear. intros l. induction l.
+          - reflexivity.
+          - cbn. destruct a, u. cbn. f_equal. assumption.
+        }
+        assert (el' :  forall l, l = map g (map f l)).
+        { clear. intros l. induction l.
+          - reflexivity.
+          - cbn. f_equal. assumption.
+        }
+        econstructor.
+        + eapply IHh. apply el.
+        + constructor. rewrite (el' l').
+          eapply OnOne2_map.
+          eapply OnOne2_impl ; eauto.
+          intros [? []] [? []] [h1 h2].
+          unfold on_Trel in h1, h2. cbn in *.
+          unfold on_Trel. cbn. assumption.
+    Qed.
+
+    Lemma red_evar :
+      forall ev l l',
+        All2 (red Σ Γ) l l' ->
+        red Σ Γ (tEvar ev l) (tEvar ev l').
+    Proof.
+      intros ev l l' h.
+      apply All2_many_OnOne2 in h.
+      induction h.
+      - constructor.
+      - eapply red_trans.
+        + eapply IHh.
+        + eapply red_one_evar. assumption.
+    Qed.
 
     Lemma red_atom t : atom t -> red Σ Γ t t.
     Proof.

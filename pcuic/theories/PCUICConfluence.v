@@ -384,7 +384,7 @@ Section PredRed.
 
     - (* Iota *)
       transitivity (tCase (ind, pars) p (mkApps (tConstruct ind c u) args1) brs1).
-      eapply red_case; auto.
+      eapply reds_case; auto.
       eapply red_mkApps. auto. solve_all. red in X2; solve_all.
       eapply red1_red. constructor.
 
@@ -396,14 +396,14 @@ Section PredRed.
       eapply red_step. econstructor; eauto. eauto.
 
     - transitivity (tCase ip p1 (mkApps (tCoFix mfix1 idx) args1) brs1).
-      eapply red_case; eauto.
+      eapply reds_case; eauto.
       eapply red_mkApps; [|solve_all].
       eapply red_cofix_congr. red in X3; solve_all. eapply a0.
       red in X7; solve_all.
       eapply red_step. econstructor; eauto. eauto.
 
     - transitivity (tProj p (mkApps (tCoFix mfix1 idx) args1)).
-      eapply red_proj_congr; eauto.
+      eapply red_proj_c; eauto.
       eapply red_mkApps; [|solve_all].
       eapply red_cofix_congr. red in X3; solve_all. eapply a.
       eapply red_step. econstructor; eauto. eauto.
@@ -411,15 +411,15 @@ Section PredRed.
     - eapply red1_red. econstructor; eauto.
 
     - transitivity (tProj (i, pars, narg) (mkApps (tConstruct i k u) args1)).
-      eapply red_proj_congr; eauto.
+      eapply red_proj_c; eauto.
       eapply red_mkApps; [|solve_all]. auto.
       eapply red1_red. econstructor; eauto.
 
     - now eapply red_abs_alt.
     - now eapply red_app.
     - now eapply red_letin_alt => //.
-    - eapply red_case => //. red in X3; solve_all.
-    - now eapply red_proj_congr.
+    - eapply reds_case => //. red in X3; solve_all.
+    - now eapply red_proj_c.
     - eapply red_fix_congr. red in X3; solve_all. eapply a.
     - eapply red_cofix_congr. red in X3; solve_all. eapply a.
     - eapply red_prod; auto.
@@ -474,7 +474,7 @@ Section PredRed.
 
     - (* Iota *)
       transitivity (tCase (ind, pars) p (mkApps (tConstruct ind c u) args1) brs1).
-      eapply red_case; auto.
+      eapply reds_case; auto.
       eapply red_mkApps. auto. solve_all. red in X2; solve_all.
       eapply red1_red. constructor.
 
@@ -486,14 +486,14 @@ Section PredRed.
       eapply red_step. econstructor; eauto. eauto.
 
     - transitivity (tCase ip p1 (mkApps (tCoFix mfix1 idx) args1) brs1).
-      eapply red_case; eauto.
+      eapply reds_case; eauto.
       eapply red_mkApps; [|solve_all].
       eapply red_cofix_congr_alt. red in X3; solve_all. eapply a0.
       red in X7; solve_all.
       eapply red_step. econstructor; eauto. eauto.
 
     - transitivity (tProj p (mkApps (tCoFix mfix1 idx) args1)).
-      eapply red_proj_congr; eauto.
+      eapply red_proj_c; eauto.
       eapply red_mkApps; [|solve_all].
       eapply red_cofix_congr_alt. red in X3; solve_all. eapply a.
       eapply red_step. econstructor; eauto. eauto.
@@ -501,15 +501,15 @@ Section PredRed.
     - eapply red1_red. econstructor; eauto.
 
     - transitivity (tProj (i, pars, narg) (mkApps (tConstruct i k u) args1)).
-      eapply red_proj_congr; eauto.
+      eapply red_proj_c; eauto.
       eapply red_mkApps; [|solve_all]. auto.
       eapply red1_red. econstructor; eauto.
 
     - now eapply red_abs.
     - now eapply red_app.
     - now eapply red_letin => //.
-    - eapply red_case => //. red in X3; solve_all.
-    - now eapply red_proj_congr.
+    - eapply reds_case => //. red in X3; solve_all.
+    - now eapply red_proj_c.
     - eapply red_fix_congr_alt. red in X3; solve_all. eapply a.
     - eapply red_cofix_congr_alt. red in X3; solve_all. eapply a.
     - eapply red_prod_alt; auto.
@@ -1009,11 +1009,11 @@ Section RedConfluence.
     - eapply red_letin_alt; eauto.
       eapply (IHr (Δ ,, vdef na b t)). constructor; eauto.
       red. split; eauto.
-    - eapply red_case; eauto. unfold on_Trel; pcuic.
-    - eapply red_case; eauto. unfold on_Trel; pcuic.
-    - eapply red_case; eauto. unfold on_Trel; pcuic.
+    - eapply reds_case; eauto. unfold on_Trel; pcuic.
+    - eapply reds_case; eauto. unfold on_Trel; pcuic.
+    - eapply reds_case; eauto. unfold on_Trel; pcuic.
       eapply OnOne2_All2; eauto. simpl. intuition eauto.
-    - eapply red_proj_congr; eauto.
+    - eapply red_proj_c; eauto.
     - eapply red_app; eauto.
     - eapply red_app; eauto.
     - eapply red_prod_alt; eauto.

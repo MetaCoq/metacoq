@@ -277,7 +277,7 @@ Proof.
     now erewrite H.
 
   - redt (tCase (ind, pars) p _ brs).
-    eapply red_case; eauto.
+    eapply reds_case; eauto.
     eapply All2_same. intros. split; auto.
     redt (iota_red _ _ _ _); eauto.
     eapply red1_red. econstructor.
@@ -291,7 +291,7 @@ Proof.
     auto.
 
   - redt _. 2:eauto.
-    redt (tProj _ (mkApps _ _)). eapply red_proj_congr. eauto.
+    redt (tProj _ (mkApps _ _)). eapply red_proj_c. eauto.
     apply red1_red. econstructor; eauto.
 
   - eapply red_mkApps; auto.

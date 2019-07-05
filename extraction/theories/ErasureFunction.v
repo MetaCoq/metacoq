@@ -1,7 +1,7 @@
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
 From MetaCoq.Template Require Import config utils monad_utils BasicAst AstUtils.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICTyping PCUICChecker PCUICMetaTheory PCUICWcbvEval PCUICSafeChecker PCUICLiftSubst PCUICInversion PCUICSR PCUICNormal PCUICSafeReduce.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICTyping PCUICChecker PCUICMetaTheory PCUICWcbvEval PCUICLiftSubst PCUICInversion PCUICSR PCUICNormal PCUICSafeReduce PCUICSafeLemmata.
 From MetaCoq.Extraction Require EAst ELiftSubst ETyping EWcbvEval Extract ExtractionCorrectness.
 From Equations Require Import Equations.
 Require Import String.
@@ -19,18 +19,28 @@ Definition is_prop_sort s :=
 
 Require Import Extract.
 
-Fixpoint infer' Σ (HΣ : ∥wf Σ∥) (Γ : context) (HΓ : ∥ wf_local Σ Γ ∥) (t : term) {struct t}
-  : typing_result ({ A : term & ∥ Σ ;;; Γ |- t : A ∥ }).
-Admitted.
+Definition wellformed Σ Γ t :=
+  welltyped Σ Γ t \/ ∥ isWfArity typing Σ Γ t ∥.
+
+Axiom reduce_to_sort : forall Σ (wfΣ : ∥ wf Σ ∥) Γ t (h : wellformed Σ Γ t),
+    typing_result (∑ u, ∥ red (fst Σ) Γ t (tSort u) ∥).
+
+
+Axiom reduce_to_prod : forall Σ (wfΣ : ∥ wf Σ ∥) Γ t (h : wellformed Σ Γ t),
+    typing_result (∑ na a b, ∥ red (fst Σ) Γ t (tProd na a b) ∥).
+
+
+Axiom infer : forall Σ (HΣ : ∥wf Σ∥) (Γ : context) (HΓ : ∥ wf_local Σ Γ ∥) (t : term),
+    typing_result ({ A : term & ∥ Σ ;;; Γ |- t : A ∥ }).
 
 Definition Is_conv_to_Arity Σ Γ T := exists T', ∥red Σ Γ T T'∥ /\ isArity T'.
 
 Ltac terror := try match goal with [t : type_error |- typing_result _] => exact (TypeError t) end.
 
-Fixpoint is_arity Σ (HΣ : wf Σ) Γ (HΓ : wf_local Σ Γ) T (HT : PCUICSafeLemmata.wellformed Σ Γ T) : typing_result ({Is_conv_to_Arity Σ Γ T} + {~ Is_conv_to_Arity Σ Γ T}).
+Fixpoint is_arity Σ (HΣ : ∥wf Σ∥) Γ (HΓ : ∥wf_local Σ Γ∥) T (HT : wellformed Σ Γ T) : typing_result ({Is_conv_to_Arity Σ Γ T} + {~ Is_conv_to_Arity Σ Γ T}).
 Proof.
   edestruct @reduce_to_sort with (t := T) as [[u] | ]; try eassumption.
-  - left. left. sq. econstructor. split.
+  - sq. left. left. sq. econstructor. split.
     sq. eassumption. econstructor.
   - clear t. edestruct @reduce_to_prod with (t := T); try eassumption.
     + destruct a as (? & ? & ? & ?).

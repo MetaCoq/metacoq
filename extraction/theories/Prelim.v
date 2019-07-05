@@ -2,7 +2,7 @@
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega Lia.
 From MetaCoq.Template Require Import config utils monad_utils BasicAst AstUtils.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICTyping PCUICWeakening PCUICSubstitution PCUICSafeChecker PCUICRetyping PCUICMetaTheory PCUICWcbvEval PCUICSR  PCUICClosed PCUICGeneration.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICTyping PCUICWeakening PCUICSubstitution PCUICRetyping PCUICMetaTheory PCUICWcbvEval PCUICSR  PCUICClosed PCUICGeneration PCUICChecker.
 From MetaCoq.Extraction Require Import EAst ELiftSubst ETyping EWcbvEval Extract.
 From Equations Require Import Equations.
 Require Import String.
@@ -124,8 +124,8 @@ Proof.
       unfold PCUICLiftSubst.subst1.
       eapply (red_red Σ [] [_] [] [_] [_]).
       eauto. econstructor. eapply wcbeval_red. eauto.
-      econstructor. econstructor. econstructor. now rewrite parsubst_empty.
-      Grab Existential Variables. econstructor.
+      econstructor. econstructor. econstructor. 
+      Grab Existential Variables. all: repeat econstructor.
 Qed.
 
 

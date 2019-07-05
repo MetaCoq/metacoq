@@ -278,6 +278,34 @@ Section Inversion.
         specialize (ih _ _ _ h1 h2)
     end.
 
+  (* TODO MOVE *)
+  Lemma sub_sort_conv_sort :
+    forall Γ A s,
+      Σ ;;; Γ |- A <= tSort s ->
+      ∑ s', Σ ;;; Γ |- A = tSort s' × leq_universe (snd Σ) s' s.
+  Admitted.
+
+  Ltac resort :=
+    lazymatch goal with
+    | h : _ ;;; _ |- ?A <= tSort _ |- _ =>
+      let hh := fresh h in
+      let hc := fresh "hc" in
+      apply sub_sort_conv_sort in h as hh ;
+      destruct hh as [? [hc ?]] ;
+      clear h ;
+      repeat lazymatch goal with
+      | h' : _ ;;; _ |- _ : A |- _ =>
+        eapply type_Conv in h' ; [
+          idtac
+        | left ; unfold isWfArity ; eexists [], _ ; split ; [
+            idtac
+          | eapply typing_wf_local ; eassumption
+          ]
+        | apply hc
+        ] ; try reflexivity
+      end ; clear hc (* A *)
+    end.
+
   Lemma principal_typing :
     forall {Γ u A B},
       Σ ;;; Γ |- u : A ->
@@ -288,7 +316,7 @@ Section Inversion.
        (Σ ;;; Γ |- u : C).
   Proof.
     intros Γ u A B hA hB.
-    induction u in Γ, A, B, hA, hB |- *.
+    induction u in Γ, A, B, hA, hB |- * using term_forall_list_rec.
     - apply inversion_Rel in hA as iA.
       destruct iA as [decl [? [e ?]]].
       apply inversion_Rel in hB as iB.
@@ -311,11 +339,11 @@ Section Inversion.
       repeat outsum. repeat outtimes.
       repeat pih.
       repeat outsum. repeat outtimes.
-      (* We would like to know x4 and x3 are sorts... *)
-      (* repeat insum. repeat intimes. *)
-      (* all: try eassumption. *)
-      (* constructor ; assumption. *)
-      admit.
+      repeat resort.
+      repeat insum. repeat intimes.
+      3: constructor ; eassumption.
+      (* + eapply cumul_trans ; try eassumption. constructor. constructor. *)
+      all: admit.
     - apply inversion_Lambda in hA as iA.
       apply inversion_Lambda in hB as iB.
       repeat outsum. repeat outtimes.

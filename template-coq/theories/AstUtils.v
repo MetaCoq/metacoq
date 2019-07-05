@@ -666,6 +666,16 @@ Ltac apply_spec :=
     eapply (Forall_forallb _ _ _ H); clear H
   end.
 
+Fixpoint context_assumptions (Γ : context) :=
+  match Γ with
+  | [] => 0
+  | d :: Γ =>
+    match d.(decl_body) with
+    | Some _ => context_assumptions Γ
+    | None => S (context_assumptions Γ)
+    end
+  end.
+
 
 (** Use a coercion for this common projection of the global context. *)
 Definition fst_ctx : global_env_ext -> global_env := fst.

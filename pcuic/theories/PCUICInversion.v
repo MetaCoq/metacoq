@@ -285,14 +285,34 @@ Section Inversion.
       ∑ s', Σ ;;; Γ |- A = tSort s' × leq_universe (snd Σ) s' s.
   Admitted.
 
+  Corollary sub_sorts :
+    forall Γ A s1 s2,
+      Σ ;;; Γ |- A <= tSort s1 ->
+      Σ ;;; Γ |- A <= tSort s2 ->
+      ∑ s3,
+        Σ ;;; Γ |- A = tSort s3 ×
+        leq_universe (snd Σ) s3 s1 ×
+        leq_universe (snd Σ) s3 s2.
+  Proof.
+    intros Γ A s1 s2 h1 h2.
+    apply sub_sort_conv_sort in h1 as h1'.
+    destruct h1' as [s3 [hc hl]].
+    assert (h3 : Σ ;;; Γ |- tSort s3 <= tSort s2).
+    { eapply cumul_trans ; try eassumption. apply hc. }
+    apply sub_sort_conv_sort in h3 as h3'.
+    destruct h3' as [s4 [hc' hl']].
+    exists s4. split.
+    - eapply PCUICCumulativity.conv_trans ; eassumption.
+    - split ; eauto.
+      (* Need some inversion *)
+  Admitted.
+
   Ltac resort :=
     lazymatch goal with
-    | h : _ ;;; _ |- ?A <= tSort _ |- _ =>
-      let hh := fresh h in
+    | h : _ ;;; _ |- ?A <= tSort _, h' : _ ;;; _ |- ?A <= tSort _ |- _ =>
       let hc := fresh "hc" in
-      apply sub_sort_conv_sort in h as hh ;
-      destruct hh as [? [hc ?]] ;
-      clear h ;
+      pose proof (sub_sorts _ _ _ _ h h') as [? [hc [? ?]]] ;
+      clear h h' ;
       repeat lazymatch goal with
       | h' : _ ;;; _ |- _ : A |- _ =>
         eapply type_Conv in h' ; [
@@ -342,8 +362,12 @@ Section Inversion.
       repeat resort.
       repeat insum. repeat intimes.
       3: constructor ; eassumption.
-      (* + eapply cumul_trans ; try eassumption. constructor. constructor. *)
-      all: admit.
+      + eapply cumul_trans ; try eassumption. constructor. constructor.
+        (* Need congruence lemma for leq_universe *)
+        admit.
+      + eapply cumul_trans ; try eassumption. constructor. constructor.
+        (* Need congruence lemma for leq_universe *)
+        admit.
     - apply inversion_Lambda in hA as iA.
       apply inversion_Lambda in hB as iB.
       repeat outsum. repeat outtimes.

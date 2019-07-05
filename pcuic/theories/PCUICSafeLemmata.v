@@ -105,6 +105,52 @@ Proof.
 Qed.
 
 
+
+Section DestArity.
+  Lemma destArity_app_aux {Γ Γ' t}
+    : destArity (Γ ,,, Γ') t = option_map (fun '(ctx, s) => (Γ ,,, ctx, s))
+                                          (destArity Γ' t).
+  Proof.
+    revert Γ'.
+    induction t; cbn; intro Γ'; try reflexivity.
+    - rewrite <- app_context_cons. now eapply IHt2.
+    - rewrite <- app_context_cons. now eapply IHt3.
+  Qed.
+
+  Lemma destArity_app {Γ t}
+    : destArity Γ t = option_map (fun '(ctx, s) => (Γ ,,, ctx, s))
+                                          (destArity [] t).
+  Proof.
+    exact (@destArity_app_aux Γ [] t).
+  Qed.
+
+  Lemma destArity_app_Some {Γ t ctx s}
+    : destArity Γ t = Some (ctx, s)
+      -> ∑ ctx', destArity [] t = Some (ctx', s) /\ ctx = Γ ,,, ctx'.
+  Proof.
+    intros H. rewrite destArity_app in H.
+    destruct (destArity [] t) as [[ctx' s']|]; cbn in *.
+    exists ctx'. inversion H. now subst.
+    discriminate H.
+  Qed.
+
+  Lemma destArity_tFix {mfix idx args} :
+    destArity [] (mkApps (tFix mfix idx) args) = None.
+  Proof.
+    induction args. reflexivity.
+    rewrite mkApps_nonempty. reflexivity.
+    intros e; discriminate e.
+  Qed.
+
+  Lemma destArity_tApp {t u l} :
+    destArity [] (mkApps (tApp t u) l) = None.
+  Proof.
+    induction l. reflexivity.
+    rewrite mkApps_nonempty. reflexivity.
+    intros e; discriminate e.
+  Qed.
+End DestArity.
+
 Section Lemmata.
 
   Context (flags : RedFlags.t).

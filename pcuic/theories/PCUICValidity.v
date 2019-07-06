@@ -2,9 +2,9 @@ From Coq Require Import Bool String List Program BinPos Compare_dec PeanoNat Lia
 From MetaCoq.Template Require Import utils UnivSubst.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICLiftSubst PCUICTyping PCUICWeakeningEnv PCUICWeakening PCUICInversion
-     PCUICSubstitution PCUICReduction PCUICCumulativity PCUICGeneration PCUICParallelReductionConfluence
-     PCUICConfluence
-     PCUICUnivSubst.
+     PCUICSubstitution PCUICReduction PCUICCumulativity PCUICGeneration
+     PCUICParallelReductionConfluence PCUICConfluence PCUICUnivSubst
+     PCUICPrincipality.
 
 From Equations Require Import Equations.
 Require Import ssreflect.
@@ -124,7 +124,7 @@ Lemma type_unicity_prod {Σ Γ t na na' A A' B B'} : wf Σ ->
   Σ ;;; Γ |- A = A'.
 Proof.
   intros wfΣ X X0.
-  generalize (principal_typing _ X X0); move=> [C [HC1 [HC2 HtC]]].
+  generalize (principal_typing _ wfΣ X X0); move=> [C [HC1 [HC2 HtC]]].
   eapply invert_cumul_prod_r in HC1 => //.
   eapply invert_cumul_prod_r in HC2 => //.
   destruct HC1 as [na0 [A0 [B0 [[HC0 HA0] HB0]]]].
@@ -145,7 +145,7 @@ Lemma type_unicity_discr_prod_sort {Σ Γ t na A B u} : wf Σ ->
   Σ ;;; Γ |- t : tSort u -> False.
 Proof.
   intros wfΣ X X0.
-  generalize (principal_typing _ X X0); move=> [C [HC1 [HC2 HtC]]].
+  generalize (principal_typing _ wfΣ X X0); move=> [C [HC1 [HC2 HtC]]].
   eapply invert_cumul_prod_r in HC1 => //.
   eapply invert_cumul_sort_r in HC2 => //.
   destruct HC1 as [na0 [A0 [B0 [[HC0 HA0] HB0]]]].

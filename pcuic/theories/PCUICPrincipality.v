@@ -427,7 +427,7 @@ Section Principality.
        (Σ ;;; Γ |- u : C).
   Proof.
     intros Γ u A B hA hB.
-    induction u in Γ, A, B, hA, hB |- *.
+    induction u in Γ, A, B, hA, hB |- * using term_forall_list_rec.
     - apply inversion_Rel in hA as iA.
       destruct iA as [decl [? [e ?]]].
       apply inversion_Rel in hB as iB.
@@ -479,7 +479,7 @@ Section Principality.
       repeat outsum. repeat outtimes.
       apply invert_cumul_prod_l in c0 as [na' [A' [B' [[redA u1eq] ?]]]] => //.
       apply invert_cumul_prod_l in c as [na'' [A'' [B'' [[redA' u1eq'] ?]]]] => //.
-      exists (tProd na u1 x3).
+      exists (tProd n u1 x3).
       repeat split; auto.
       * eapply cumul_trans with (tProd na' A' B'); auto.
         eapply congr_cumul_prod => //.
@@ -507,7 +507,7 @@ Section Principality.
       repeat outtimes.
       specialize (IHu3 _ _ _ t4 t1) as [C' ?].
       repeat outtimes.
-      exists (tLetIn na u1 u2 C'). repeat split.
+      exists (tLetIn n u1 u2 C'). repeat split.
       * clear IHu1 IHu2.
         eapply invert_cumul_letin_l in c0 => //.
         eapply invert_cumul_letin_l in c => //.
@@ -515,11 +515,11 @@ Section Principality.
         eapply red_cumul. eapply red_step.
         econstructor. auto.
         eapply cumul_trans with (bty {0 := u1}) => //.
-        eapply (substitution_cumul Σ Γ [vdef na u1 u2] []) => //.
+        eapply (substitution_cumul Σ Γ [vdef n u1 u2] []) => //.
         constructor; auto.
         now eapply typing_wf_local in t3.
         red. exists tty' => //.
-        pose proof (cons_let_def Σ Γ [] [] na u1 u2).
+        pose proof (cons_let_def Σ Γ [] [] n u1 u2).
         rewrite !subst_empty in X. apply X. constructor.
         auto.
       * clear IHu1 IHu2.
@@ -529,11 +529,11 @@ Section Principality.
         eapply red_cumul. eapply red_step.
         econstructor. auto.
         eapply cumul_trans with (bty' {0 := u1}) => //.
-        eapply (substitution_cumul Σ Γ [vdef na u1 u2] []) => //.
+        eapply (substitution_cumul Σ Γ [vdef n u1 u2] []) => //.
         constructor; auto.
         now eapply typing_wf_local in t3.
         red. exists tty' => //.
-        pose proof (cons_let_def Σ Γ [] [] na u1 u2).
+        pose proof (cons_let_def Σ Γ [] [] n u1 u2).
         rewrite !subst_empty in X. apply X. constructor.
         auto.
       (* * destruct i as [[ctx' [s' [? ?]]]|[s Hs]]. *)
@@ -614,7 +614,7 @@ Section Principality.
     - eapply inversion_Const in hA as [decl ?].
       eapply inversion_Const in hB as [decl' ?].
       repeat outtimes.
-      exists (subst_instance_constr ui (cst_type decl)).
+      exists (subst_instance_constr u (cst_type decl)).
       red in d0, d. rewrite d0 in d. noconf d.
       repeat intimes; eauto.
       eapply type_Const; eauto.
@@ -622,7 +622,7 @@ Section Principality.
     - eapply inversion_Ind in hA as [mdecl [idecl [? [Hdecl ?]]]].
       eapply inversion_Ind in hB as [mdecl' [idecl' [? [Hdecl' ?]]]].
       repeat outtimes.
-      exists (subst_instance_constr ui (ind_type idecl)).
+      exists (subst_instance_constr u (ind_type idecl)).
       red in Hdecl, Hdecl'. destruct Hdecl as [? ?].
       destruct Hdecl' as [? ?]. red in H, H1.
       rewrite H1 in H; noconf H.
@@ -640,11 +640,11 @@ Section Principality.
       red in H, H2. rewrite H2 in H. noconf H.
       rewrite H3 in H0. noconf H0.
       rewrite H4 in H1. noconf H1.
-      exists (type_of_constructor mdecl (i0, t0, n1) (ind, n) ui).
+      exists (type_of_constructor mdecl (i1, t0, n1) (i, n) u).
       repeat split; eauto.
       eapply type_Construct; eauto. repeat split; eauto.
 
-    - destruct indn as [ind n].
+    - destruct p as [ind n].
       eapply inversion_Case in hA.
       eapply inversion_Case in hB.
       repeat outsum. repeat outtimes. simpl in *.
@@ -692,7 +692,7 @@ Section Principality.
 
       admit.
 
-    - destruct p as [[ind k] pars]; simpl in *.
+    - destruct s as [[ind k] pars]; simpl in *.
       eapply inversion_Proj in hA.
       eapply inversion_Proj in hB.
       repeat outsum. repeat outtimes.

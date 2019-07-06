@@ -257,6 +257,6 @@ Section Wcbv.
   Proof.
     induction 2 using eval_evals_ind; simpl in *; auto. eapply IHeval3.
     admit.
-  Admitted. (* FIXME complete *)
+  Admitted. (* closedness of evaluates for Eterms, not needed for verification *)
 
 End Wcbv.

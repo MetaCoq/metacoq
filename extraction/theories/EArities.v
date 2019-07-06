@@ -34,7 +34,7 @@ Lemma constructors_typed:
     ∑ T, (Σ, univs);;; arities_context (ind_bodies m) |- t1 : T.
 Proof.
   intros Σ univs k m x t1 i0 n0 H2 X0.
-Admitted.
+Admitted.                       (* constructors have a type *)
 
 Lemma proj_typed:
   forall (Σ : list global_decl) (univs : constraints) (k : kername)
@@ -44,7 +44,7 @@ Lemma proj_typed:
     ∑ T, (Σ, univs);;; [] |- t1 : T.
 Proof.
   
-Admitted.
+Admitted. (* projections have a type *)
 
 Lemma context_conversion_red Σ Γ Γ' s t : wf Σ -> 
   PCUICSR.conv_context Σ Γ Γ' -> red Σ Γ s t -> red Σ Γ' s t.
@@ -71,7 +71,7 @@ Proof.
 
     econstructor. 2:eauto. 2:econstructor; eauto. 2:cbn. admit. admit.
   -   admit.
-Admitted.
+Admitted.                       (* invert_cumul_arity_r *)
 
 Lemma invert_cumul_arity_l (Σ : global_context) (Γ : context) (C : term) T :
   wf Σ -> wf_local Σ Γ ->
@@ -94,7 +94,7 @@ Proof.
 
     econstructor. 2:eauto. 2:econstructor; eauto. 2:cbn. admit. admit.
   - eapply invert_cumul_letin_l in X; eauto.
-Admitted.
+Admitted.                       (* invert_cumul_arity_l *)
 
 Lemma isWfArity_prod_inv:
   forall (Σ : global_context) (Γ : context) (T : term) (x : name) (x0 x1 : term),
@@ -114,7 +114,7 @@ Proof.
            (* ++ eapply IHx1_3 in e as (? & ? & ? & ?). *)
            (*    repeat econstructor. cbn. admit. admit. (* destArity stuff *) *)
   
-Admitted.
+Admitted.                       (* inversion for isWfarity on products *)
 
 Lemma arity_type_inv Σ Γ t T1 T2 : wf Σ -> wf_local Σ Γ ->
   Σ ;;; Γ |- t : T1 -> isArity T1 -> Σ ;;; Γ |- t : T2 -> Is_conv_to_Arity Σ Γ T2.
@@ -130,20 +130,20 @@ Proof.
   exists x1; split; sq; eauto.
 Qed.
 
-Lemma cumul_kind1 Σ Γ A B u :
+Lemma cumul_prop1 Σ Γ A B u :
   wf Σ -> 
   is_prop_sort u -> Σ ;;; Γ |- B : tSort u ->
   Σ ;;; Γ |- A <= B -> Σ ;;; Γ |- A : tSort u.
 Proof.
   
-Admitted.
+Admitted.                       (* cumul_prop1 *)
 
-Lemma cumul_kind2 Σ Γ A B u :
+Lemma cumul_prop2 Σ Γ A B u :
   wf Σ ->
   is_prop_sort u -> Σ ;;; Γ |- A <= B ->
   Σ ;;; Γ |- A : tSort u -> Σ ;;; Γ |- B : tSort u.
 Proof.
-Admitted.
+Admitted.                       (* cumul_prop2 *)
 
 Lemma leq_universe_prop Σ u1 u2 :
   wf Σ ->
@@ -177,7 +177,7 @@ Proof.
   (*   + cbn. eapply IHt1. admit. *)
   (*     eauto. eauto. *)
   (* - destruct p. *)
-Admitted.
+Admitted.                       (* Is_type_app *)
 
 Lemma Is_type_lambda Σ Γ na T1 t :
   wf Σ ->
@@ -189,7 +189,7 @@ Proof.
   exists x0. split; eauto. destruct s as [ | (u & ? & ?)].
   - left. admit.
   - right. exists u. split; eauto.
-Admitted.
+Admitted.                       (* Is_type_lambda *)
 
 Lemma Is_type_red Σ Γ t v:
   wf Σ ->
@@ -218,7 +218,7 @@ Lemma isArity_ind_type:
   forall idecl : one_inductive_body, isArity (ind_type idecl).
 Proof.
   intros idecl.
-Admitted.
+Admitted.                       (* the type of an inductive is an arity *)
 
 Lemma tConstruct_no_Type Σ ind c u x1 : wf Σ ->
   Is_Type_or_Proof Σ [] (mkApps (tConstruct ind c u) x1) ->
@@ -229,5 +229,5 @@ Proof.
     eapply inversion_Construct in t as (? & ? & ? & ? & ? & ? & ?). destruct x5. destruct p. cbn in *.
     admit.
   - exists x, x0. eauto.
-Admitted.
+Admitted.                       (* if a constructor is a type or proof, it is a proof *)
 

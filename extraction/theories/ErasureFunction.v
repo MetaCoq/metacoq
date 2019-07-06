@@ -109,14 +109,14 @@ Proof.
               ** destruct n. eapply arity_type_inv; eauto.
               ** eapply principal_typing in t0 as (? & ? & ? &?). 2:eauto. 2:exact X1.
                  
-                 eapply cumul_kind1 in c0; eauto. 
-                 eapply cumul_kind2 in c; eauto.
+                 eapply cumul_prop1 in c0; eauto. 
+                 eapply cumul_prop2 in c; eauto.
 
                  eapply type_reduction in X0; eauto.
 
                  eapply principal_typing in c as (? & ? & ? & ?). 2:eauto. 2:exact X0.
 
-                 eapply cumul_kind1 in c0; eauto.
+                 eapply cumul_prop1 in c0; eauto.
 
                  destruct (invert_cumul_sort_r _ _ _ _ c) as (? & ? & ?).
                  destruct (invert_cumul_sort_r _ _ _ _ c1) as (? & ? & ?).

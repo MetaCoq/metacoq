@@ -100,7 +100,7 @@ Lemma typing_spine_cumul:
   forall (Σ : PCUICAst.global_context) (T x1 : PCUICAst.term), Σ;;; [] |- x1 <= T -> typing_spine Σ [] x1 [] T.
 Proof.
   intros Σ T x1 X.
-Admitted.
+Admitted.                       (* typing_spine_cumul, we have to change the def. here! *)
 
 Theorem subject_reduction_eval : forall (Σ : PCUICAst.global_context) Γ t u T,
   wf Σ -> Σ ;;; Γ |- t : T -> PCUICWcbvEval.eval Σ Γ t u -> Σ ;;; Γ |- u : T.
@@ -287,25 +287,45 @@ Qed.
 Lemma elim_restriction_works Σ Γ ind npar p c brs :
   (Is_proof Σ Γ (tCase (ind, npar) p c brs) -> False) -> Informative Σ ind.
 Proof.
-Admitted.
+Admitted.                       (* elim_restriction_works *)
 
 Lemma elim_restriction_works_proj Σ Γ  p c :
   (Is_proof Σ Γ (tProj p c) -> False) -> Informative Σ (fst (fst p)).
 Proof.
-Admitted.
+Admitted.                       (* elim_restriction_works_proj *)
 
 Lemma length_of_btys {ind mdecl' idecl' args' u' p pty indctx pctx ps btys} :
   types_of_case ind mdecl' idecl' (firstn (ind_npars mdecl') args') u' p pty = Some (indctx, pctx, ps, btys) ->
   #|btys| = #|ind_ctors idecl'|.
 Proof.
-Admitted.
+  intros. unfold types_of_case in *.
+  destruct ?; try congruence.
+  destruct ?; try congruence.
+  destruct ?; try congruence.
+  destruct ?; try congruence.
+  destruct ?; try congruence.
+  destruct ?; try congruence. inv H.  unfold build_branches_type in *.
+  unfold mapi in *. 
+  clear - E4. revert btys E4. generalize 0 at 3. induction ((ind_ctors idecl')); cbn; intros.
+  - cbn in E4. inv E4. reflexivity.
+  - cbn in E4.
+    destruct ?; try congruence.
+    destruct ?; try congruence.
+    destruct ?; try congruence.
+    destruct ?; try congruence.
+    destruct ?; try congruence.
+    destruct ?; try congruence.
+    destruct ?; try congruence.
+    subst. inv E4. cbn. f_equal.
+    eapply IHl.  eauto.
+Qed.
 
 Lemma tCase_length_branch_inv Σ Γ ind npar p n u args brs T m t :
   wf Σ ->
   Σ ;;; Γ |- tCase (ind, npar) p (mkApps (tConstruct ind n u) args) brs : T ->
   nth_error brs n = Some (m, t) ->
   (#|args| = npar + m)%nat.
-Admitted.
+Admitted.                       (* tCase_length_branch_inv *)
 
 (** ** Prelim on fixpoints *)
 

@@ -6,6 +6,7 @@ From Coq Require Import Bool String List Program BinPos Compare_dec Omega Utf8 S
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICReduction PCUICWeakening PCUICSubstitution
+     PCUICEquality
      PCUICReflect PCUICClosed PCUICParallelReduction PCUICParallelReductionConfluence.
 
 (* Type-valued relations. *)
@@ -629,6 +630,13 @@ End AbstractConfluence.
 
 Unset Universe Minimization ToSet.
 
+Lemma red_pred {Σ Γ t u} : wf Σ -> clos_refl_trans (red1 Σ Γ) t u -> clos_refl_trans (pred1 Σ Γ Γ) t u.
+Proof.
+  intros wfΣ. eapply clos_rt_monotone.
+  intros x y H.
+  eapply red1_pred1; auto.
+Qed.
+
 Section RedConfluence.
   Context {Σ} (wfΣ : wf Σ).
 
@@ -1127,4 +1135,78 @@ Section RedConfluence.
     intuition auto.
   Qed.
 
+  Lemma pred_red {Γ t u} :
+    clos_refl_trans (pred1 Σ Γ Γ) t u ->
+    clos_refl_trans (red1 Σ Γ) t u.
+  Proof.
+    intros pred.
+    eapply (clos_red_rel_out' (Γ, t) (Γ, u)).
+    eapply clos_red_rel_out_inv.
+    induction pred. constructor; auto. constructor 2.
+    now transitivity (Γ, y).
+  Qed.
+
 End RedConfluence.
+
+Section ConfluenceFacts.
+  Context (Σ : global_context) (wfΣ : wf Σ).
+
+  Lemma red_mkApps_tConstruct (Γ : context)
+        ind pars k (args : list term) c :
+    red Σ Γ (mkApps (tConstruct ind pars k) args) c ->
+    ∑ args' : list term,
+    (c = mkApps (tConstruct ind pars k) args') * (All2 (red Σ Γ) args args').
+  Proof.
+    move => Hred. apply red_alt in Hred.
+    eapply red_pred in Hred.
+    depind Hred.
+    - eapply pred1_mkApps_tConstruct in r as [r' [eq redargs]].
+      subst y. exists r'. intuition auto. solve_all. now apply pred1_red in X.
+    - exists args; split; eauto. apply All2_same; auto.
+    - specialize (IHHred1 wfΣ _ _ _ _ eq_refl) as [? [? ?]]. subst y.
+      specialize (IHHred2 wfΣ _ _ _ _ eq_refl) as [? [? ?]]. subst z.
+      exists x0. intuition auto. eapply All2_trans; eauto.
+      intros ? ? ?; eapply red_trans.
+    - auto.
+  Qed.
+
+  Lemma red_mkApps_tInd (Γ : context)
+        ind u (args : list term) c :
+    red Σ Γ (mkApps (tInd ind u) args) c ->
+    ∑ args' : list term,
+    (c = mkApps (tInd ind u) args') * (All2 (red Σ Γ) args args').
+  Proof.
+    move => Hred. apply red_alt in Hred.
+    eapply red_pred in Hred.
+    depind Hred.
+    - eapply pred1_mkApps_tInd in r as [r' [eq redargs]].
+      subst y. exists r'. intuition auto. solve_all. now apply pred1_red in X.
+    - exists args; split; eauto. apply All2_same; auto.
+    - specialize (IHHred1 wfΣ _ _ _ eq_refl) as [? [? ?]]. subst y.
+      specialize (IHHred2 wfΣ _ _ _ eq_refl) as [? [? ?]]. subst z.
+      exists x0. intuition auto. eapply All2_trans; eauto.
+      intros ? ? ?; eapply red_trans.
+    - auto.
+  Qed.
+
+  Lemma red_mkApps_tConst_axiom (Γ : context)
+        cst u (args : list term) cb c :
+    declared_constant Σ cst cb -> cst_body cb = None ->
+    red Σ Γ (mkApps (tConst cst u) args) c ->
+    ∑ args' : list term,
+    (c = mkApps (tConst cst u) args') * (All2 (red Σ Γ) args args').
+  Proof.
+    move => Hdecl Hbody Hred. apply red_alt in Hred.
+    eapply red_pred in Hred.
+    depind Hred.
+    - eapply pred1_mkApps_tConst_axiom in r as [r' [eq redargs]]; eauto.
+      subst y. exists r'. intuition auto. solve_all. now apply pred1_red in X.
+    - exists args; split; eauto. apply All2_same; auto.
+    - specialize (IHHred1 wfΣ _ _ _ Hdecl Hbody eq_refl) as [? [? ?]]. subst y.
+      specialize (IHHred2 wfΣ _ _ _ Hdecl Hbody eq_refl) as [? [? ?]]. subst z.
+      exists x0. intuition auto. eapply All2_trans; eauto.
+      intros ? ? ?; eapply red_trans.
+    - auto.
+  Qed.
+
+End ConfluenceFacts.

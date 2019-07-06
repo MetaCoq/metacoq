@@ -98,10 +98,10 @@ Admitted.
 
 Lemma isWfArity_prod_inv:
   forall (Σ : global_context) (Γ : context) (T : term) (x : name) (x0 x1 : term),
-    red (fst Σ) Γ T (tProd x x0 x1) -> isWfArity typing Σ Γ (tProd x x0 x1) -> (∑ s : universe, Σ;;; Γ |- x0 : tSort s) ×   isWfArity typing Σ (Γ,, vass x x0) x1
+    isWfArity typing Σ Γ (tProd x x0 x1) -> (∑ s : universe, Σ;;; Γ |- x0 : tSort s) ×   isWfArity typing Σ (Γ,, vass x x0) x1
 .
 Proof.
-  intros Σ Γ T x x0 x1 X0 X.
+  
            
            (* destruct X as (? & ? & ? & ?). cbn in e. *)
            (* change (Γ ,, vass x x0) with (Γ ,,, [vass x x0]). unfold ",," in e. *)
@@ -180,13 +180,13 @@ Proof.
            eassumption. now cbn.
         -- right. intros (? & ? & ?). sq.
            destruct n.
-           eapply red_confluence in X0 as (? & ? & ?); eauto.
-           eapply invert_red_prod in r0 as (? & ? & [] & ?); eauto. subst.
+           edestruct (red_confluence X2 X0 X) as (? & ? & ?); eauto.
+           eapply invert_red_prod in r as (? & ? & [] & ?); eauto. subst.
 
            eapply invert_cumul_arity_l in H0. 2:eauto. 3: eapply PCUICCumulativity.red_cumul. 3:eauto. 2:eauto.
            destruct H0 as (? & ? & ?). sq.           
 
-           eapply invert_red_prod in X0 as (? & ? & [] & ?); eauto. subst. cbn in *.
+           eapply invert_red_prod in X3 as (? & ? & [] & ?); eauto. subst. cbn in *.
            exists x7; split; eauto.
 
            destruct HT as [ [] | [] ].
@@ -200,11 +200,9 @@ Proof.
 
              right.
 
-             eapply subject_reduction in X0. 2:eauto. 2:{
-               etransitivity. eauto. eauto.
-             }
-
-             eapply inversion_Prod in X0 as ( ? & ? & ? & ? & ?). admit.             
+             eapply subject_reduction in X0. 2:eauto. 2: eauto. 
+             
+             eapply inversion_Prod in X0 as ( ? & ? & ? & ? & ?). exists x3. eauto.
              
            ++ sq. etransitivity. eassumption.
 
@@ -212,12 +210,13 @@ Proof.
 
              eapply conv_context_refl; eauto. econstructor.
 
-             2: eapply conv_sym, red_conv; eauto.
-
-             (* isWfArity_red_inv *) admit.
+             2: eapply conv_sym, red_conv; eauto. destruct Σ as [Σ univs]; cbn in *.
+             eapply isWfArity_red in X3. 2:eauto. 2:exact X0.
+             eapply isWfArity_prod_inv in X3 as[]; eauto. 
+             right. eassumption.
       * exact (TypeError t).
     + exact (TypeError t).
-Admitted.      
+Admitted. (* Cannot guess decreasing argument *)
 
 Definition is_type_or_proof :
   forall (Sigma : PCUICAst.global_context) (HΣ : ∥wf Sigma∥) (Gamma : context) (HΓ : ∥wf_local Sigma Gamma∥) (t : PCUICAst.term),

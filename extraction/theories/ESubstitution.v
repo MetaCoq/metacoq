@@ -173,7 +173,11 @@ Proof.
       destruct H. destruct p0.
       cbn. destruct x, y; cbn in *; subst.
       split; eauto.
-  - assert (HT : Σ;;; Γ ,,, Γ' |- PCUICAst.tFix mfix n : (decl.(dtype))) by admit. (* fix typing_ind_env ? *)
+  - assert (HT : Σ;;; Γ ,,, Γ' |- PCUICAst.tFix mfix n : (decl.(dtype))).
+    econstructor; eauto. eapply All_local_env_impl. eassumption. intros.
+    destruct T; cbn in *; firstorder.
+    eapply All_impl. eassumption. firstorder.
+
     eapply weakening_typing in HT; eauto.
     
     Require Import MetaCoq.PCUIC.PCUICInversion. cbn in HT.
@@ -207,7 +211,11 @@ Proof.
     rewrite <- lift_fix_context.
     rewrite <- plus_n_O.
     now rewrite (All2_length _ _ H3).
-  - assert (HT : Σ;;; Γ ,,, Γ' |- PCUICAst.tCoFix mfix n : (decl.(dtype))) by admit. (* fix typing_ind_env ? *)
+  - assert (HT : Σ;;; Γ ,,, Γ' |- PCUICAst.tCoFix mfix n : (decl.(dtype))).
+    econstructor; eauto. eapply All_local_env_impl. eassumption. intros.
+    destruct T; cbn in *; firstorder.
+    eapply All_impl. eassumption. firstorder.
+
     eapply weakening_typing in HT; eauto.
     
     cbn in HT.
@@ -235,7 +243,8 @@ Proof.
     rewrite <- lift_fix_context.
     rewrite <- plus_n_O.
     now rewrite (All2_length _ _ H4).
-Admitted. (* fix typing_ind_env *)
+  - eauto.
+Qed.
 
 Lemma erases_weakening (Σ : PCUICAst.global_context) (Γ Γ' : PCUICAst.context) (t T : PCUICAst.term) t' :
   wf Σ ->

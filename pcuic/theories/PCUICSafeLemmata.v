@@ -427,21 +427,21 @@ Section Lemmata.
                 left; econstructor; eassumption).
       + destruct indn; apply inversion_Case in HA; cbn in HA; rdestruct HA;
           left; econstructor; eassumption.
-      + apply inversion_Proj in HA; rdestruct HA; left; econstructor; eassumption. 
-      + apply inversion_Prod in HA; rdestruct HA; left; econstructor; eassumption. 
+      + apply inversion_Proj in HA; rdestruct HA; left; econstructor; eassumption.
+      + apply inversion_Prod in HA; rdestruct HA; left; econstructor; eassumption.
       + cbn in h1; apply destArity_app_Some in h1. destruct h1 as [ctx' [h1 h1']].
         subst. left. rewrite app_context_assoc in h2; cbn in *.
         apply wf_local_app in h2. inversion h2; subst; cbn in *.
         destruct X0; econstructor; eassumption.
-      + apply inversion_Prod in HA; rdestruct HA; left; econstructor; eassumption. 
+      + apply inversion_Prod in HA; rdestruct HA; left; econstructor; eassumption.
       + cbn in h1; apply destArity_app_Some in h1. destruct h1 as [ctx' [h1 h1']].
         subst. right; constructor; exists ctx', s.
         rewrite app_context_assoc in h2; cbn in h2.
         now split.
       + apply inversion_Lambda in HA; rdestruct HA;
-          left; econstructor; eassumption. 
+          left; econstructor; eassumption.
       + apply inversion_Lambda in HA; rdestruct HA;
-          left; econstructor; eassumption. 
+          left; econstructor; eassumption.
   Qed.
 
   Lemma cored_red :
@@ -613,6 +613,21 @@ Section Lemmata.
     destruct u; try discriminate.
     depelim e. auto.
   Qed.
+
+  (* TODO MOVE *)
+  (* Induction principle on OnOne2 when the relation also depends
+     on one of the lists, and should not change.
+   *)
+  Lemma OnOne2_ind_l :
+    forall A (R : list A -> A -> A -> Type)
+      (P : forall L l l', OnOne2 (R L) l l' -> Prop),
+      (forall L x y l (r : R L x y), P L (x :: l) (y :: l) (OnOne2_hd _ _ _ l r)) ->
+      (forall L x l l' (o : OnOne2 (R L) l l'),
+          P L l l' o ->
+          P L (x :: l) (x :: l') (OnOne2_tl _ x _ _ o)
+      ) ->
+      forall l l' o, P l l l' o.
+  Admitted.
 
   (* TODO MOVE *)
   Lemma red1_eq_context_upto_l :
@@ -792,10 +807,28 @@ Section Lemmata.
             (d'.(dname), d'.(dtype), d'.(rarg))
           ) mfix0 mfix' *
         All2 (fun x y =>
-          eq_term_upto_univ Re Re (dtype x) (dtype y) *
-          eq_term_upto_univ Re Re (dbody x) (dbody y) *
+          eq_term_upto_univ Re Re (dtype x) (dtype y) ×
+          eq_term_upto_univ Re Re (dbody x) (dbody y) ×
           (rarg x = rarg y))%type mfix1 mfix' ∥).
-      { induction X.
+      { (* Maybe we should use a lemma using firstn or skipn to keep
+           fix_context intact. Anything general?
+         *)
+        Fail induction X using OnOne2_ind_l.
+        (* This FAILs because it reduces the type of X before unifying
+           unfortunately...
+         *)
+        (* change ( *)
+        (*   OnOne2 *)
+        (* ((fun L (x y : def term) => *)
+        (*  (red1 Σ (Γ ,,, fix_context L) (dbody x) (dbody y) *)
+        (*   × (forall Δ : context, *)
+        (*      eq_context_upto Re (Γ ,,, fix_context L) Δ -> *)
+        (*      exists v' : term, *)
+        (*        ∥ red1 Σ Δ (dbody x) v' × eq_term_upto_univ Re Re (dbody y) v' ∥)) *)
+        (*  × (dname x, dtype x, rarg x) = (dname y, dtype y, rarg y)) mfix0) mfix0 mfix1 *)
+        (* ) in X. *)
+        (* induction X using OnOne2_ind_l. *)
+        induction X.
         - destruct p as [[p1 p2] p3].
           (* eapply p3 in e as hh. destruct hh as [? [[? ?]]]. *)
           (* eexists. split. *)

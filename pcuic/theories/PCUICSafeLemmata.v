@@ -911,7 +911,81 @@ Section Lemmata.
       eexists. do 2 split.
       + eapply cofix_red_ty. eassumption.
       + constructor. assumption.
-  Admitted.
+    - assert (h : exists mfix',
+        ∥ OnOne2 (fun d d' =>
+            red1 Σ (Δ ,,, fix_context mfix0) d.(dbody) d'.(dbody) ×
+            (d.(dname), d.(dtype), d.(rarg)) =
+            (d'.(dname), d'.(dtype), d'.(rarg))
+          ) mfix0 mfix' *
+        All2 (fun x y =>
+          eq_term_upto_univ Re Re (dtype x) (dtype y) *
+          eq_term_upto_univ Re Re (dbody x) (dbody y) *
+          (rarg x = rarg y))%type mfix1 mfix' ∥).
+      { (* Maybe we should use a lemma using firstn or skipn to keep
+           fix_context intact. Anything general?
+         *)
+        Fail induction X using OnOne2_ind_l.
+        (* This FAILs because it reduces the type of X before unifying
+           unfortunately...
+         *)
+        change (
+          OnOne2
+        ((fun L (x y : def term) =>
+         (red1 Σ (Γ ,,, fix_context L) (dbody x) (dbody y)
+          × (forall Δ : context,
+             eq_context_upto Re (Γ ,,, fix_context L) Δ ->
+             exists v' : term,
+               ∥ red1 Σ Δ (dbody x) v' × eq_term_upto_univ Re Re (dbody y) v' ∥))
+         × (dname x, dtype x, rarg x) = (dname y, dtype y, rarg y)) mfix0) mfix0 mfix1
+        ) in X.
+        Fail induction X using OnOne2_ind_l.
+        revert mfix0 mfix1 X.
+        refine (OnOne2_ind_l _ (fun (L : mfixpoint term) (x y : def term) =>
+      (red1 Σ (Γ ,,, fix_context L) (dbody x) (dbody y)
+       × (forall Δ0 : context,
+          eq_context_upto Re (Γ ,,, fix_context L) Δ0 ->
+          exists v' : term,
+            ∥ red1 Σ Δ0 (dbody x) v' × eq_term_upto_univ Re Re (dbody y) v' ∥))
+      × (dname x, dtype x, rarg x) = (dname y, dtype y, rarg y)) (fun L mfix0 mfix1 o => exists mfix' : list (def term),
+    ∥ OnOne2
+        (fun d d' : def term =>
+         red1 Σ (Δ ,,, fix_context L) (dbody d) (dbody d')
+         × (dname d, dtype d, rarg d) = (dname d', dtype d', rarg d')) mfix0 mfix'
+      × All2
+          (fun x y : def term =>
+           (eq_term_upto_univ Re Re (dtype x) (dtype y)
+            × eq_term_upto_univ Re Re (dbody x) (dbody y)) ×
+           rarg x = rarg y) mfix1 mfix' ∥) _ _).
+        - intros L x y l [[p1 p2] p3].
+          assert (
+             e' : eq_context_upto Re (Γ ,,, fix_context L) (Δ ,,, fix_context L)
+          ).
+          { eapply eq_context_upto_cat ; eauto.
+            eapply eq_context_upto_refl. assumption.
+          }
+          eapply p2 in e' as hh. destruct hh as [? [[? ?]]].
+          eexists. constructor. split.
+          + constructor.
+            instantiate (1 := mkdef _ _ _ _ _).
+            split ; eauto.
+          + constructor.
+            * simpl. repeat split ; eauto.
+              eapply eq_term_upto_univ_refl ; eauto.
+            * eapply All2_same. intros.
+              repeat split ; eauto.
+              all: eapply eq_term_upto_univ_refl ; eauto.
+        - intros L x l l' h [? [[? ?]]].
+          eexists. constructor. split.
+          + eapply OnOne2_tl. eassumption.
+          + constructor ; eauto.
+            repeat split ; eauto.
+            all: eapply eq_term_upto_univ_refl ; eauto.
+      }
+      destruct h as [? [[? ?]]].
+      eexists. do 2 split.
+      + eapply cofix_red_body. eassumption.
+      + constructor. assumption.
+  Qed.
 
 Lemma All2_nth :
   forall A B P l l' n (d : A) (d' : B),

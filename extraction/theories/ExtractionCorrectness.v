@@ -725,9 +725,8 @@ Proof.
         edestruct (IHeval2) as (? & ? & ?).
         eapply subject_reduction. eauto. exact Hty.
         etransitivity.
-        eapply PCUICReduction.red_case. econstructor. eapply wcbeval_red. eauto.
-        eapply PCUICReduction.All2_same. intros. econstructor. econstructor. econstructor.
-        econstructor. econstructor. econstructor.
+        eapply PCUICReduction.red_case_c. eapply wcbeval_red. eauto.
+        econstructor. econstructor. econstructor. 
         
         unfold iota_red. cbn.
         eapply erases_mkApps. eauto.
@@ -750,8 +749,7 @@ Proof.
         eapply tCase_length_branch_inv in extr_env_wf'0.
         2:{ eapply subject_reduction. eauto.
             exact Hty.
-            eapply PCUICReduction.red_case. econstructor. eapply wcbeval_red. eauto.
-            econstructor. econstructor. econstructor.  econstructor.  econstructor. }
+            eapply PCUICReduction.red_case_c. eapply wcbeval_red. eauto.  }
         2: reflexivity.
 
         enough (#|skipn (ind_npars mdecl') (x1 ++ x2)| = n) as <- by eauto.
@@ -771,8 +769,8 @@ Proof.
         edestruct IHeval2 as (? & ? & ?).
         eapply subject_reduction. eauto. exact Hty.
         etransitivity.
-        eapply PCUICReduction.red_case. econstructor. eapply wcbeval_red. eauto.
-        eapply PCUICReduction.All2_same. intros. econstructor. econstructor. econstructor.
+        eapply PCUICReduction.red_case_c. eapply wcbeval_red. eauto.
+        
         etransitivity. eapply trans_red. econstructor.
         econstructor. unfold iota_red. rewrite <- nth_default_eq. unfold nth_default.
         rewrite Hnth. econstructor.
@@ -798,8 +796,7 @@ Proof.
            edestruct (IHeval2) as (? & ? & ?). 
            eapply subject_reduction. eauto. exact Hty.
            etransitivity.
-           eapply PCUICReduction.red_case. econstructor. eapply wcbeval_red. eauto.
-           eapply PCUICReduction.All2_same. intros. econstructor. econstructor. econstructor.
+           eapply PCUICReduction.red_case_c. eapply wcbeval_red. eauto.
            econstructor. econstructor. econstructor.
 
            eapply erases_mkApps. eauto.
@@ -823,8 +820,7 @@ Proof.
            eapply tCase_length_branch_inv in extr_env_wf'0.
            2:{ eapply subject_reduction. eauto.
                exact Hty.
-               eapply PCUICReduction.red_case. econstructor. eapply wcbeval_red. eauto.
-               econstructor. econstructor. econstructor. econstructor. econstructor. }
+               eapply PCUICReduction.red_case_c. eapply wcbeval_red. eauto.  }
            2: reflexivity.
 
            enough (#|skipn (ind_npars mdecl') args| = n0) as <- by eauto.

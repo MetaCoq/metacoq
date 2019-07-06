@@ -72,7 +72,7 @@ Lemma typing_spine_inv_app Σ x0 l x x1 :
 Proof.
   intros. depind X. destruct l; inv H.
   destruct l; invs H.
-  + eexists (_, _). split. econstructor. eauto.
+  + eexists (_, _). split. econstructor; eauto.  eauto.
   + specialize (IHX _ _ _ _ eq_refl) as ([] & []).
     eexists (_, _). split.  econstructor; eauto. eauto.
 Qed.
@@ -114,7 +114,7 @@ Proof.
   intros Σ args args' X wf T x x0 t0 c x1 c0. revert args' X.
   dependent induction t0; intros.
   - inv X.
-    eapply (typing_spine_cumul). eapply cumul_trans; eauto.
+    eapply (typing_spine_cumul). eapply cumul_trans. eauto. eapply cumul_trans. eauto. eauto.
   - inv X. econstructor.
     + eauto.
     + eapply cumul_trans; eauto.

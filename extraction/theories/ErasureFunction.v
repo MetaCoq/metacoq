@@ -45,19 +45,6 @@ Proof.
   - clear t. edestruct @reduce_to_prod with (t := T); try eassumption.
     + destruct a as (? & ? & ? & ?).
       edestruct (is_arity Σ HΣ (Γ ,, vass x x0)) with (T := x1).
-      (* * destruct HT as [ [] | []];  sq. *)
-      (*   -- econstructor; cbn; eauto. *)
-      (*      eapply subject_reduction in X; eauto. *)
-      (*      eapply inversion_Prod in X as (? & ? & ? & ? & ?). eauto. *)
-      (*   -- econstructor; cbn; eauto. *)
-      (*      eapply PCUICSafeReduce.isWfArity_red in X; eauto.  *)
-      (*      2: exact RedFlags.default. *)
-      (*      destruct X as (? & ? & ? & ?). cbn in *. *)
-      (*      induction x1; cbn in e; inv e. *)
-      (*      ++ admit. *)
-      (*      ++ admit. *)
-      (*      ++ admit. *)
-           
       * sq. destruct HT as [ [] | [] ].
         -- eapply subject_reduction in X; eauto.
            eapply inversion_Prod in X as (? & ? & ? & ? & ?). 
@@ -110,9 +97,9 @@ Lemma cumul_kind1 Σ Γ A B u :
 Proof.
 Admitted.
 
-Lemma cumul_kind2 Σ Γ A B u :
+Lemma conv_prop_is_prop Σ Γ A B u :
   wf Σ ->
-  is_prop_sort u -> Σ ;;; Γ |- A <= B ->
+  is_prop_sort u -> Σ ;;; Γ |- A = B ->
   Σ ;;; Γ |- A : tSort u -> Σ ;;; Γ |- B : tSort u.
 Proof.
 Admitted.

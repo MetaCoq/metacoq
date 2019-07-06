@@ -217,15 +217,15 @@ Proof.
 Admitted.
 
 
-Lemma fix_subst_length mfix :
-  #|PCUICTyping.fix_subst mfix| = #|mfix|.
-Proof.
-Admitted.
-Lemma fix_context_length mfix :
-  #|PCUICLiftSubst.fix_context mfix| = #|mfix|.
-Proof.
-Admitted.
-Lemma fix_subst_length' mfix :
-  #|fix_subst mfix| = #|mfix|.
-Proof.
-Admitted.
+(* Lemma fix_subst_length mfix : *)
+(*   #|PCUICTyping.fix_subst mfix| = #|mfix|. *)
+(* Proof. *)
+(* Admitted. *)
+(* Lemma fix_context_length mfix : *)
+(*   #|PCUICLiftSubst.fix_context mfix| = #|mfix|. *)
+(* Proof. *)
+(* Admitted. *)
+(* Lemma fix_subst_length' mfix : *)
+(*   #|fix_subst mfix| = #|mfix|. *)
+(* Proof. *)
+(* Admitted. *)

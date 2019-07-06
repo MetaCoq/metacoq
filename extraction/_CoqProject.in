@@ -13,5 +13,6 @@ theories/Extraction.v
 theories/Prelim.v
 theories/ESubstitution.v
 theories/EInversion.v
+theories/EArities.v
 theories/ExtractionCorrectness.v
 theories/ErasureFunction.v

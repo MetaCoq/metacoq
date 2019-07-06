@@ -9,148 +9,8 @@ Local Open Scope string_scope.
 Set Asymmetric Patterns.
 Import MonadNotation.
 
-Instance extraction_checker_flags : checker_flags := Build_checker_flags true false false.
+Require Import EArities Extract Prelim.
 
-Existing Instance config.default_checker_flags.
-
-Definition is_prop_sort s :=
-  match Universe.level s with
-  | Some l => Level.is_prop l
-  | None => false
-  end.
-
-Require Import Extract.
-
-Definition Is_conv_to_Arity Σ Γ T := exists T', ∥red Σ Γ T T'∥ /\ isArity T'.
-
-Ltac terror := try match goal with [t : type_error |- typing_result _] => exact (TypeError t) end.
-           
-Lemma constructors_typed:
-  forall (Σ : list global_decl) (univs : constraints) (k : kername)
-    (m : mutual_inductive_body) (x : one_inductive_body) (t1 : term) 
-    (i0 : ident) (n0 : nat),
-    In (i0, t1, n0) (ind_ctors x) ->
-    on_inductive (fun Σ0 : global_context => lift_typing typing Σ0) (Σ, univs) k m ->
-    ∑ T, (Σ, univs);;; arities_context (ind_bodies m) |- t1 : T.
-Proof.
-  intros Σ univs k m x t1 i0 n0 H2 X0.
-Admitted.
-
-Lemma proj_typed:
-  forall (Σ : list global_decl) (univs : constraints) (k : kername)
-    (m : mutual_inductive_body) (x : one_inductive_body) (t1 : term) 
-    (i0 : ident) (H2 : In (i0, t1) (ind_projs x))
-    (X0 : on_inductive (fun Σ0 : global_context => lift_typing typing Σ0) (Σ, univs) k m),
-    ∑ T, (Σ, univs);;; [] |- t1 : T.
-Proof.
-  
-Admitted.
-
-Lemma context_conversion_red Σ Γ Γ' s t : wf Σ -> 
-  PCUICSR.conv_context Σ Γ Γ' -> red Σ Γ s t -> red Σ Γ' s t.
-Admitted.
-
-Lemma invert_cumul_arity_r (Σ : global_context) (Γ : context) (C : term) T :
-  wf Σ -> wf_local Σ Γ ->
-  isArity T ->
-  Σ;;; Γ |- C <= T -> Is_conv_to_Arity Σ Γ C.
-Proof.
-  intros wfΣ.
-  revert Γ C; induction T; cbn in *; intros Γ C wfΓ ? ?; try tauto.
-  - eapply invert_cumul_sort_r in X as (? & ? & ?).
-    exists (tSort x). split; sq; eauto.
-  - eapply invert_cumul_prod_r in X as (? & ? & ? & [] & ?); eauto.
-    eapply IHT2 in c0 as (? & ? & ?); eauto. sq.
-
-    exists (tProd x x0 x2). split; sq; cbn; eauto.
-    etransitivity. eauto.
-    eapply PCUICReduction.red_prod_r.
-
-    eapply context_conversion_red. eauto. 2:eauto.
-    econstructor. eapply conv_context_refl; eauto. 
-
-    econstructor. 2:eauto. 2:econstructor; eauto. 2:cbn. admit. admit.
-  -   admit.
-Admitted.
-
-Lemma invert_cumul_arity_l (Σ : global_context) (Γ : context) (C : term) T :
-  wf Σ -> wf_local Σ Γ ->
-  isArity C -> 
-  Σ;;; Γ |- C <= T -> Is_conv_to_Arity Σ Γ T.
-Proof.
-  intros wfΣ.
-  revert Γ T; induction C; cbn in *; intros Γ T wfΓ ? ?; try tauto.
-  - eapply invert_cumul_sort_l in X as (? & ? & ?).
-    exists (tSort x). split; sq; eauto.
-  - eapply invert_cumul_prod_l in X as (? & ? & ? & [] & ?); eauto.
-    eapply IHC2 in c0 as (? & ? & ?); eauto. sq.
-
-    exists (tProd x x0 x2). split; sq; cbn; eauto.
-    etransitivity. eauto.
-    eapply PCUICReduction.red_prod_r.
-
-    eapply context_conversion_red. eauto. 2:eauto.
-    econstructor. eapply conv_context_refl; eauto. 
-
-    econstructor. 2:eauto. 2:econstructor; eauto. 2:cbn. admit. admit.
-  - eapply invert_cumul_letin_l in X; eauto.
-Admitted.
-
-Lemma isWfArity_prod_inv:
-  forall (Σ : global_context) (Γ : context) (T : term) (x : name) (x0 x1 : term),
-    isWfArity typing Σ Γ (tProd x x0 x1) -> (∑ s : universe, Σ;;; Γ |- x0 : tSort s) ×   isWfArity typing Σ (Γ,, vass x x0) x1
-.
-Proof.
-  
-           
-           (* destruct X as (? & ? & ? & ?). cbn in e. *)
-           (* change (Γ ,, vass x x0) with (Γ ,,, [vass x x0]). unfold ",," in e. *)
-           (* revert e. *)
-           (* generalize ([vass x x0]). intros. *)
-           (* induction x1 in l, e |- *; cbn in *; try now inv e. *)
-           (* ++ inv e. repeat econstructor. cbn. eauto. *)
-           (* ++ eapply IHx1_2 in e as (? & ? & ? & ?). *)
-           (*    repeat econstructor. cbn. admit. admit. (* destArity stuff *) *)
-           (* ++ eapply IHx1_3 in e as (? & ? & ? & ?). *)
-           (*    repeat econstructor. cbn. admit. admit. (* destArity stuff *) *)
-  
-Admitted.
-
-Lemma arity_type_inv Σ Γ t T1 T2 : wf Σ -> wf_local Σ Γ ->
-  Σ ;;; Γ |- t : T1 -> isArity T1 -> Σ ;;; Γ |- t : T2 -> Is_conv_to_Arity Σ Γ T2.
-Proof.
-  intros wfΣ wfΓ. intros. eapply principal_typing in X as (? & ? & ? & ?). 2:eauto. 2:exact X0.
-
-
-  eapply invert_cumul_arity_r in c0 as (? & ? & ?); eauto. sq.
-  eapply PCUICCumulativity.red_cumul_inv in X.
-  eapply cumul_trans in c; eauto.  
-  
-  eapply invert_cumul_arity_l in c as (? & ? & ?); eauto. sq.
-  exists x1; split; sq; eauto.
-Qed.
-
-Lemma cumul_kind1 Σ Γ A B u :
-  wf Σ -> 
-  is_prop_sort u -> Σ ;;; Γ |- B : tSort u ->
-  Σ ;;; Γ |- A <= B -> Σ ;;; Γ |- A : tSort u.
-Proof.
-  
-Admitted.
-
-Lemma cumul_kind2 Σ Γ A B u :
-  wf Σ ->
-  is_prop_sort u -> Σ ;;; Γ |- A <= B ->
-  Σ ;;; Γ |- A : tSort u -> Σ ;;; Γ |- B : tSort u.
-Proof.
-Admitted.
-
-Lemma leq_universe_prop Σ u1 u2 :
-  wf Σ ->
-  leq_universe (snd Σ) u1 u2 ->
-  (is_prop_sort u1 \/ is_prop_sort u2) ->
-  (is_prop_sort u1 /\ is_prop_sort u2).
-Admitted.
 
 Fixpoint is_arity Σ (HΣ : ∥wf Σ∥) Γ (HΓ : ∥wf_local Σ Γ∥)T (HT : wellformed Σ Γ T) : typing_result ({Is_conv_to_Arity Σ Γ T} + {~ Is_conv_to_Arity Σ Γ T}).
 Proof.
@@ -216,7 +76,7 @@ Proof.
              right. eassumption.
       * exact (TypeError t).
     + exact (TypeError t).
-Admitted. (* Cannot guess decreasing argument *)
+Admitted. (* termination of is_arity *)
 
 Definition is_type_or_proof :
   forall (Sigma : PCUICAst.global_context) (HΣ : ∥wf Sigma∥) (Gamma : context) (HΓ : ∥wf_local Sigma Gamma∥) (t : PCUICAst.term),
@@ -299,8 +159,6 @@ Section Erase.
 
   Section EraseMfix.
     Context (erase : forall  (Γ : context) (HΓ : ∥ wf_local Σ Γ ∥) (t : term), typing_result E.term).
-
-    Remove Hints PCUICChecker.typing_monad : typeclasses_db.
     
     Program Definition erase_mfix Γ (HΓ : ∥wf_local Σ Γ∥) (defs : mfixpoint term) : typing_result (EAst.mfixpoint E.term) :=
       let Γ' := (PCUICLiftSubst.fix_context defs ++ Γ)%list in

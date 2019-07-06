@@ -59,9 +59,9 @@ Proof.
   - econstructor. all:eauto.
     2:{ eauto. eapply All2_All_left in X3.
         2:{ intros ? ? []. exact e. }
-        eapply All2_All_mix_left in H3; eauto.
-        eapply All2_impl. exact H3.
-        intros. destruct H4 as [? []].
+        eapply All2_All_mix_left in X3; eauto.
+        eapply All2_impl. exact X3.
+        intros. destruct H as [? []].
         split; eauto. }
 
 
@@ -93,13 +93,13 @@ Proof.
   - econstructor. destruct isdecl. 2:eauto.
     eapply Informative_extends; eauto.
   - econstructor.  
-    eapply All2_All_mix_left in H; eauto.
-    eapply All2_impl. exact H.
+    eapply All2_All_mix_left in H3; eauto.
+    eapply All2_impl. exact H3.
     intros ? ? [[[]] [? []]].
     split; eauto.
   - econstructor.
-    eapply All2_All_mix_left in H0; eauto.
-    eapply All2_impl. exact H0.
+    eapply All2_All_mix_left in H4; eauto.
+    eapply All2_impl. exact H4.
     intros ? ? [[] [? []]].
     split; eauto.
   - eauto.
@@ -146,20 +146,20 @@ Proof.
     intros Σ wfΣ Γ0; !!intros; subst Γ0.
   all: match goal with [ H : erases _ _ ?a _ |- _ ] => tryif is_var a then idtac else inv H end.
   all: try now (cbn; econstructor; eauto).
-  all: try now (econstructor; eapply Is_type_weakening; eauto).
+  all: try now (econstructor; eapply Is_type_weakening; eauto). 
   all:cbn.
   - destruct ?; econstructor. 
   - econstructor.
     unfold app_context, PCUICAst.snoc in *.    
     pose proof (h_forall_Γ0 (Γ) (PCUICAst.vass n t :: Γ') Γ'').
     rewrite lift_context_snoc0, <- plus_n_O in *.
-    eapply H0; eauto. cbn. econstructor.
+    eapply H; eauto. cbn. econstructor.
     eauto. cbn. exists s1. eapply weakening_typing with (T := tSort s1); eauto.
   - econstructor.
     + eapply h_forall_Γ0; eauto.
     + pose proof (h_forall_Γ1 Γ (PCUICAst.vdef n b b_ty :: Γ') Γ'').
       rewrite lift_context_snoc0, <- plus_n_O in *.
-      eapply H1; eauto. cbn. econstructor.
+      eapply H; eauto. cbn. econstructor.
       eauto. cbn. 2: cbn; eapply weakening_typing; eauto.
       eapply weakening_typing in typeb_ty; eauto.
   - econstructor.
@@ -170,55 +170,72 @@ Proof.
       2:{ intros. destruct X1. exact e. }
       eapply All2_impl. eapply All2_All_mix_left.
       eassumption. eassumption. intros.
-      destruct H4. destruct p0.
+      destruct H. destruct p0.
       cbn. destruct x, y; cbn in *; subst.
       split; eauto.
-  - econstructor.
+  - assert (HT : Σ;;; Γ ,,, Γ' |- PCUICAst.tFix mfix n : (decl.(dtype))) by admit. (* fix typing_ind_env ? *)
+    eapply weakening_typing in HT; eauto.
+    
+    Require Import MetaCoq.PCUIC.PCUICInversion. cbn in HT.
+    eapply inversion_Fix in HT as (? & ? & ? & ? & ?). clear a0 c.
+    
+    
+    econstructor.
     eapply All2_map.
     eapply All2_impl. eapply All2_All_mix_left.
     eassumption. eassumption. intros.
     destruct X1 as [[[]] [? []]].
     destruct x, y; cbn in *; subst.
     repeat split. unfold app_context in *.
-    eapply (e0 Γ (types ++ Γ') Γ'') in e3.
+    eapply (e1 Γ (types ++ Γ') Γ'') in e4.
     3: now rewrite app_assoc. 
-    2:rewrite lift_context_app.
-    2:{ admit. (* wf_local *) }
+    (* 2:rewrite lift_context_app. *)
+    2:{ rewrite lift_context_app. unfold app_context. rewrite <- !app_assoc. rewrite <- plus_n_O.
+        rewrite lift_fix_context in *.
+        eassumption. }
     rewrite app_length in *.
     subst types. rewrite fix_context_length in *.
-    rewrite (All2_length _ _ H) in *.
+    rewrite (All2_length _ _ H3) in *.
     Lemma erases_ctx_ext Σ Γ Γ' t t' :
       erases Σ Γ t t' -> Γ = Γ' -> erases Σ Γ' t t'.
     Proof.
       intros. now subst.
     Qed.
-    eapply erases_ctx_ext. eapply e3.
+    eapply erases_ctx_ext. eapply e4.
     rewrite lift_context_app. unfold app_context.
     rewrite !app_assoc. repeat f_equal.
     rewrite <- lift_fix_context.
     rewrite <- plus_n_O.
-    now rewrite (All2_length _ _ H).
-  - econstructor.
+    now rewrite (All2_length _ _ H3).
+  - assert (HT : Σ;;; Γ ,,, Γ' |- PCUICAst.tCoFix mfix n : (decl.(dtype))) by admit. (* fix typing_ind_env ? *)
+    eapply weakening_typing in HT; eauto.
+    
+    cbn in HT.
+    eapply inversion_CoFix in HT as (? & ? & ? & ? & ?). clear p.
+
+    econstructor.
     eapply All2_map.
     eapply All2_impl. eapply All2_All_mix_left.
     eassumption. eassumption. intros.
     destruct X1 as [[] [? []]].
     destruct x, y; cbn in *; subst.
     repeat split. unfold app_context in *.
-    eapply (e Γ (types ++ Γ') Γ'') in e2.
-    3: now rewrite app_assoc. 
-    2:rewrite lift_context_app.
-    2: admit. (* wf_local *)
+    eapply (e0 Γ (types ++ Γ') Γ'') in e3.
+    3: now rewrite app_assoc.
+    2:{ rewrite lift_context_app. unfold app_context. rewrite <- !app_assoc. rewrite <- plus_n_O.
+        rewrite lift_fix_context in *.
+        eassumption. }
+    
     rewrite app_length in *.
     subst types. rewrite fix_context_length in *.
-    rewrite (All2_length _ _ H0) in *.
-    eapply erases_ctx_ext. eapply e2.
+    rewrite (All2_length _ _ H4) in *.
+    eapply erases_ctx_ext. eapply e3.
     rewrite lift_context_app. unfold app_context.
     rewrite !app_assoc. repeat f_equal.
     rewrite <- lift_fix_context.
     rewrite <- plus_n_O.
-    now rewrite (All2_length _ _ H0).
-Admitted.
+    now rewrite (All2_length _ _ H4).
+Admitted. (* fix typing_ind_env *)
 
 Lemma erases_weakening (Σ : PCUICAst.global_context) (Γ Γ' : PCUICAst.context) (t T : PCUICAst.term) t' :
   wf Σ ->
@@ -262,6 +279,17 @@ Proof.
     eapply X2 in t; eauto.
 Qed.
 
+Lemma substlet_typable Σ Γ s Γ' n t :
+  subslet Σ Γ s Γ' -> nth_error s n = Some t -> {T & Σ ;;; Γ |- t : T}.
+Proof.
+  induction n in s, t, Γ, Γ' |- *; intros; cbn in *.
+  - destruct s. inv H.
+    inv H. depelim X; eauto.
+  - destruct s; inv H.
+    depelim X. eapply IHn in H1. eauto.  eauto.
+    eauto.
+Qed.
+
 Lemma erases_subst Σ Γ Γ' Δ t s t' s' T :
   wf Σ ->
   subslet Σ Γ s Γ' ->
@@ -292,8 +320,8 @@ Proof.
         destruct H2 as (? & ? & ?).
         rewrite e.
         erewrite <- subst_context_length.
+        eapply substlet_typable in X1 as []. 2:exact E0.
         eapply erases_weakening; eauto.
-        (* subslet and typing *) admit.
       * erewrite All2_length; eauto.                
         eapply All2_nth_error_None in H2; eauto.
         rewrite H2. econstructor.
@@ -384,7 +412,7 @@ Proof.
       eapply All2_map.
       eapply All2_impl_In.
       eassumption.
-      intros. destruct H4 as (? & ? & ?).
+      intros. destruct H3 as (? & ? & ?).
       repeat split; eauto.
       eapply In_nth_error in H0 as [].
       eapply nth_error_all in X0; eauto.
@@ -409,7 +437,10 @@ Proof.
         now rewrite subst_fix_context.
       * cbn. now rewrite app_context_length, fix_context_length.
       * cbn. now erewrite app_context_length, fix_context_length, All2_length.
-      * admit. (* wf_local *)
+      * pose proof (substitution_alt Σ Γ Γ' s (Δ ,,, PCUICLiftSubst.fix_context mfix)).
+        rewrite app_context_assoc in *. destruct p.
+        eapply X0 in t; eauto.
+        eapply typing_wf_local.  eassumption.
     + econstructor.
       eapply is_type_subst; eauto.
   - inv H1.
@@ -417,7 +448,7 @@ Proof.
       eapply All2_map.
       eapply All2_impl_In.
       eassumption.
-      intros. destruct H5 as (? & ? & ?).
+      intros. destruct H4 as (? & ? & ?).
       repeat split; eauto.
       eapply In_nth_error in H1 as [].
       eapply nth_error_all in X0; eauto.
@@ -433,8 +464,11 @@ Proof.
         now rewrite subst_fix_context.
       * cbn. now rewrite app_context_length, fix_context_length.
       * cbn. now erewrite app_context_length, fix_context_length, All2_length.
-      * admit. (* wf_local *)
+      * pose proof (substitution_alt Σ Γ Γ' s (Δ ,,, PCUICLiftSubst.fix_context mfix)).
+        rewrite app_context_assoc in *. 
+        eapply X0 in t; eauto.
+        eapply typing_wf_local.  eassumption.
     + econstructor.
       eapply is_type_subst; eauto.
-  - eapply H; eauto.    
-Admitted.  
+  - eapply H; eauto.
+Qed.

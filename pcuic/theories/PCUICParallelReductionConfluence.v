@@ -390,6 +390,45 @@ Section Confluence.
     destruct p. now eapply mkApps_eq_inj in e as [_ <-].
   Qed.
 
+  Lemma pred1_mkApps_tInd (Σ : global_context) (Γ Δ : context)
+        ind u (args : list term) c :
+    pred1 Σ Γ Δ (mkApps (tInd ind u) args) c ->
+    {args' : list term & (c = mkApps (tInd ind u) args') * (All2 (pred1 Σ Γ Δ) args args') }%type.
+  Proof with solve_discr.
+    revert c. induction args using rev_ind; intros; simpl in *.
+    depelim X... exists []. intuition auto.
+    intros. rewrite <- mkApps_nested in X.
+    depelim X... simpl in H; noconf H. solve_discr.
+    prepare_discr. apply mkApps_eq_decompose_app in H.
+    rewrite !decompose_app_rec_mkApps in H. noconf H.
+    destruct (IHargs _ X1) as [args' [-> Hargs']].
+    exists (args' ++ [N1])%list.
+    rewrite <- mkApps_nested. intuition auto.
+    eapply All2_app; auto.
+  Qed.
+
+  Lemma pred1_mkApps_tConst_axiom (Σ : global_context) (Γ Δ : context)
+        cst u (args : list term) cb c :
+    declared_constant Σ cst cb -> cst_body cb = None ->
+    pred1 Σ Γ Δ (mkApps (tConst cst u) args) c ->
+    {args' : list term & (c = mkApps (tConst cst u) args') * (All2 (pred1 Σ Γ Δ) args args') }%type.
+  Proof with solve_discr.
+    revert c. induction args using rev_ind; intros; simpl in *.
+    depelim X...
+    - red in H, isdecl. rewrite isdecl in H; noconf H.
+      simpl in H. injection H. intros. subst. congruence.
+    - exists []. intuition auto.
+    - rewrite <- mkApps_nested in X.
+      depelim X...
+      * simpl in H1; noconf H1. solve_discr.
+      * prepare_discr. apply mkApps_eq_decompose_app in H1.
+        rewrite !decompose_app_rec_mkApps in H1. noconf H1.
+      * destruct (IHargs _ H H0 X1) as [args' [-> Hargs']].
+        exists (args' ++ [N1])%list.
+        rewrite <- mkApps_nested. intuition auto.
+        eapply All2_app; auto.
+  Qed.
+
   Lemma pred1_mkApps_tFix_inv (Σ : global_context) (Γ Δ : context)
         mfix0 idx (args0 : list term) c :
     pred1 Σ Γ Δ (mkApps (tFix mfix0 idx) args0) c ->

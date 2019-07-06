@@ -1815,6 +1815,38 @@ Proof.
   - cbn. constructor ; eauto.
 Qed.
 
+Lemma All2_nth :
+  forall A B P l l' n (d : A) (d' : B),
+    All2 P l l' ->
+    P d d' ->
+    P (nth n l d) (nth n l' d').
+Proof.
+  intros A B P l l' n d d' h hd.
+  induction n in l, l', h |- *.
+  - destruct h.
+    + assumption.
+    + assumption.
+  - destruct h.
+    + assumption.
+    + simpl. apply IHn. assumption.
+Qed.
+
+(* Induction principle on OnOne2 when the relation also depends
+     on one of the lists, and should not change.
+   *)
+Lemma OnOne2_ind_l :
+  forall A (R : list A -> A -> A -> Type)
+    (P : forall L l l', OnOne2 (R L) l l' -> Prop),
+    (forall L x y l (r : R L x y), P L (x :: l) (y :: l) (OnOne2_hd _ _ _ l r)) ->
+    (forall L x l l' (h : OnOne2 (R L) l l'),
+        P L l l' h ->
+        P L (x :: l) (x :: l') (OnOne2_tl _ x _ _ h)
+    ) ->
+    forall l l' h, P l l l' h.
+Proof.
+  intros A R P hhd htl l l' h. induction h ; eauto.
+Qed.
+
 
 (** * Non Empty List *)
 Module NEL.

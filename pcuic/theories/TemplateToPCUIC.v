@@ -1,5 +1,7 @@
 (* Distributed under the terms of the MIT license.   *)
 
+Set Warnings "-notation-overridden".
+
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
 From MetaCoq.Template Require Import config utils AstUtils.
 From MetaCoq.Template Require Import Ast WfInv Typing.

@@ -130,23 +130,6 @@ Proof.
       Grab Existential Variables. all: repeat econstructor.
 Qed.
 
-
-(* Lemma typing_spine_skipn: *)
-(*   forall (Σ : PCUICAst.global_context) (args : list PCUICAst.term) (n0 : nat) (t5 x x0 : PCUICAst.term)  *)
-(*     (n : nat) (t3 : PCUICGeneration.typing_spine Σ [] x args x0), *)
-(*     {T & PCUICGeneration.typing_spine Σ [] (snd (n0, t5)) (skipn n args) T}. *)
-(* Proof. *)
-(*   intros Σ args n0 t5 x x0. intros. *)
-(*   revert n. dependent induction t3; intros. *)
-(*   - cbn. destruct n; unfold skipn; repeat econstructor. *)
-(*   - cbn in *. destruct n. *)
-(*     + unfold skipn. econstructor. econstructor; eauto. *)
-(*       destruct (IHt3 0). *)
-(*       assert (skipn 0 tl = tl) by now destruct tl. *)
-(*       admit. *)
-(*     + unfold skipn. fold (skipn n tl). eauto.       *)
-(* Admitted. *)
-
 (** ** on mkApps *)
 
 Lemma emkApps_snoc a l b :
@@ -167,36 +150,6 @@ Proof.
   revert a; induction n; cbn; firstorder congruence.
 Qed.
 
-(* TODO: move *)
-
-(* Lemma is_type_extract (Σ : PCUICAst.global_context) Γ (t : PCUICAst.term) (* T : *) *)
-(*   (* Σ ;;; Γ |- t : T -> *) : *)
-(*   Extract.is_type_or_proof Σ Γ t = true -> extract Σ Γ t = E.tBox. *)
-(* Proof. *)
-(*   (* split. *) *)
-(*   (* - intros H1. *) *)
-(*   (*   destruct t; simpl; try rewrite H1; try reflexivity. *) *)
-(*   (*   all: try inversion H1. *) *)
-(*   (* - intros. *) *)
-(*   (* (* - intros. induction X. *) *) *)
-(*   (* (*   all: simpl in H0; try destruct ?; try destruct a0. all: try congruence. *) *) *)
-(*   (* (*   cbn in E. destruct is_arity eqn:EE. inv E. *) *) *)
-(*   (* (*   all: try now destruct ?; congruence. *) *) *)
-(*   (* (*   cbn in E. destruct H. cbn in E. inv E. *) *) *)
-(* Admitted. *)
-
-(* Theorem type_of_sound `{Fuel} Σ {Γ t A B} : *)
-(*       Σ ;;; Γ |- t : A -> *)
-(*       type_of Σ Γ t = Checked B -> *)
-(*       (Σ ;;; Γ |- t : B) * (Σ ;;; Γ |- B <= A). *)
-(* Admitted. *)
-
-(* Theorem type_of_complete `{Fuel} Σ {Γ t A} : *)
-(*       Σ ;;; Γ |- t : A -> *)
-(*                     {B & type_of Σ Γ t = Checked B}. *)
-(* Admitted. *)
-
-
 Lemma decompose_app_rec_mkApps f l l' : EAstUtils.decompose_app_rec (E.mkApps f l) l' =
                                     EAstUtils.decompose_app_rec f (l ++ l').
 Proof.
@@ -209,32 +162,6 @@ Proof.
   intros Hf. unfold EAstUtils.decompose_app. rewrite decompose_app_rec_mkApps. rewrite app_nil_r.
   destruct f; simpl in *; (discriminate || reflexivity).
 Qed.
-
-(* Lemma typing_spine_In: *)
-(*   forall (Σ : PCUICAst.global_context) (args : list PCUICAst.term)  *)
-(*     (x x0 : PCUICAst.term) (t0 : typing_spine Σ [] x args x0)  *)
-(*     (x1 : PCUICAst.term) (H : In x1 args), ∑ T1, Σ;;; [] |- x1 : T1. *)
-(* Proof. *)
-(*   intros. *)
-(*   eapply In_nth_error in H as []. *)
-  
-(*   intros Σ args x x0 t0 x1 H. *)
-(* Admitted. *)
-
-
-(* Lemma fix_subst_length mfix : *)
-(*   #|PCUICTyping.fix_subst mfix| = #|mfix|. *)
-(* Proof. *)
-(* Admitted. *)
-(* Lemma fix_context_length mfix : *)
-(*   #|PCUICLiftSubst.fix_context mfix| = #|mfix|. *)
-(* Proof. *)
-(* Admitted. *)
-(* Lemma fix_subst_length' mfix : *)
-(*   #|fix_subst mfix| = #|mfix|. *)
-(* Proof. *)
-(* Admitted. *)
-
 
 (** ** Prelim stuff, should move *)
 
@@ -409,8 +336,12 @@ Qed.
 Lemma subslet_fix_subst Σ mfix1 :
   subslet Σ [] (PCUICTyping.fix_subst mfix1) (PCUICLiftSubst.fix_context mfix1).
 Proof.
-
-Admitted.
+  unfold fix_subst.
+  induction mfix1 using rev_ind.
+  - econstructor.
+  - unfold PCUICLiftSubst.fix_context.
+    rewrite mapi_app. cbn. rewrite rev_app_distr. cbn.
+Admitted.                       (* subslet_fix_subst *)
 
 (** ** Prelim on typing *)
 
@@ -419,7 +350,7 @@ Lemma typing_subst_instance Σ Γ t T u :
   Σ ;;; Γ |- t : T ->
   Σ ;;; Γ |- PCUICUnivSubst.subst_instance_constr u t : PCUICUnivSubst.subst_instance_constr u T.
 Proof.
-Admitted.
+Admitted.                       (* typing_subst_instance *)
 
 Require Import PCUIC.PCUICGeneration.
 
@@ -488,7 +419,7 @@ Proof.
   (*          2:{ eauto. } clear - X X0. induction X0. econstructor. *)
   (*          econstructor. eauto. destruct t0. eexists; eauto. *)
   (*          econstructor; eauto. *)
-Admitted.
+Admitted. (* env_prop is closed under implication, easy but annoying *)
 
 Lemma red_context_conversion :
   env_prop

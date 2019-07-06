@@ -21,9 +21,9 @@ Require Import Equations.Prop.DepElim.
 
 Set Equations With UIP.
 
-Derive Signature for Relation.clos_refl_trans.
-Derive Signature for red1.
-
+(* Using Derive makes Qed break?? *)
+(* Derive Signature for Relation.clos_refl_trans. *)
+(* Derive Signature for red1. *)
 
 Lemma invert_red_sort Σ Γ u v :
   red Σ Γ (tSort u) v -> v = tSort u.
@@ -248,21 +248,25 @@ Section Principality.
     ∑ D, (Σ ;;; Γ |- D <= A) *
          (Σ ;;; Γ |- D <= B) *
          (Σ ;;; Γ |- D <= C).
+  (* Proof. *)
+  (*   move/(equiv (cumul_alt _ _ _ _)) => [A' [B' [[AA' AB'] A'B']]]. *)
+  (*   move/(equiv (cumul_alt _ _ _ _)) => [A'' [C' [[AA'' CC'] A''C']]]. *)
+  (*   destruct (red_confluence wfΣ AA' AA'') as [Anf [redl redr]]. *)
+  (*   exists Anf; repeat split. *)
+  (*   eapply red_cumul_inv. *)
+  (*   now transitivity A'. *)
+  (*   eapply cumul_trans with A'. *)
+  (*   eapply red_cumul_inv. *)
+  (*   now transitivity A'. *)
+  (*   eapply cumul_alt. exists A', B'. split; auto. *)
+  (*   eapply cumul_trans with A''. *)
+  (*   now eapply red_cumul_inv. *)
+  (*   eapply cumul_alt. *)
+  (*   exists A'', C'. intuition auto. *)
+  (* Qed. *)
   Proof.
-    move/(equiv (cumul_alt _ _ _ _)) => [A' [B' [[AA' AB'] A'B']]].
-    move/(equiv (cumul_alt _ _ _ _)) => [A'' [C' [[AA'' CC'] A''C']]].
-    destruct (red_confluence wfΣ AA' AA'') as [Anf [redl redr]].
-    exists Anf; repeat split.
-    eapply red_cumul_inv.
-    now transitivity A'.
-    eapply cumul_trans with A'.
-    eapply red_cumul_inv.
-    now transitivity A'.
-    eapply cumul_alt. exists A', B'. split; auto.
-    eapply cumul_trans with A''.
-    now eapply red_cumul_inv.
-    eapply cumul_alt.
-    exists A'', C'. intuition auto.
+    intros hB hC.
+    exists A. auto.
   Qed.
 
   Lemma cumul_sort_confluence {Γ A u v} :

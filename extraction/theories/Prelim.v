@@ -387,61 +387,6 @@ Inductive red_decls Σ Γ Γ' : forall (x y : PCUICAst.context_decl), Type :=
 
 Notation red_context Σ := (context_relation (red_decls Σ)).
 
-Lemma env_prop_imp `{checker_flags} P1 P2 :
-  (forall Σ Γ t T, P1 Σ Γ t T -> P2 Σ Γ t T) ->
-  env_prop P1 -> env_prop P2.
-Proof.
-  (* intros. econstructor; *)
-  (*           specialize (X0 Σ wfΣ Γ wfΓ t T). *)
-  (* 2: now eapply X, X0. *)
-  (* destruct X0; eauto. cbv. destruct Σ. cbv in f. *)
-  (* clear - X f. *)
-  (* induction f. *)
-  (* - econstructor. eauto. *)
-  (* - econstructor. eapply IHf; eauto. *)
-  (*   eauto. destruct d. cbn in *. *)
-  (*   + destruct c0. cbv in *. *)
-  (*     destruct cst_body. eapply X. eauto. *)
-  (*     destruct o as []. exists x. *)
-  (*     eauto. *)
-  (*   + clear IHf. cbv in *. *)
-  (*     inv o. econstructor; eauto. *)
-  (*     * eapply Alli_impl. eassumption. intros.  *)
-  (*       inv X0. *)
-  (*       unshelve epose (_ : (on_constructors *)
-  (*                              (fun (Σ : list PCUICAst.global_decl × Universes.ConstraintSet.t_) (Γ : list PCUICAst.context_decl)  *)
-  (*                                 (t : PCUICAst.term) (T : option PCUICAst.term) => *)
-  (*                                 match T with *)
-  (*                                 | Some T0 => P2 Σ Γ t T0 *)
-  (*                                 | None => ∑ s : ∑ l : list (Universes.Level.t × bool), [] = l -> False, P2 Σ Γ t (PCUICAst.tSort s) *)
-  (*                                 end) (Σ, c) k m n x (PCUICAst.ind_ctors x)) *)
-  (*                      ). *)
-  (*       { *)
-  (*         clear - onConstructors X. eapply Alli_impl. eassumption. *)
-  (*         intros. inv X0. econstructor. inv X1. exists x1. eauto. *)
-  (*         destruct X2. exists x1. admit. *)
-  (*       }  *)
-
-  (*       econstructor. eassumption. inv onArity. *)
-  (*       econstructor. eauto. intros. eapply onProjections in H. inv H. *)
-  (*       econstructor. all:eauto. *)
-  (*       eapply Alli_impl. eauto. intros. cbn in *. destruct X0. exists x1. eauto. *)
-  (*       instantiate (1 := o). *)
-  (*       unfold check_ind_sorts in *. *)
-  (*       destruct ?. intros. subst. destruct onConstructors. cbn in *. eauto. subst o. *)
-  (*       cbn. admit. admit. admit. *)
-  (*     * inv onParams. *)
-  (*       -- econstructor. *)
-  (*       -- econstructor. 2:{ destruct X1. eexists; eauto. } *)
-  (*          clear - X X0. induction X0. econstructor. *)
-  (*          econstructor. eauto. destruct t0. eexists; eauto. *)
-  (*          econstructor. eauto. eauto. *)
-  (*       -- unfold on_context. econstructor. *)
-  (*          2:{ eauto. } clear - X X0. induction X0. econstructor. *)
-  (*          econstructor. eauto. destruct t0. eexists; eauto. *)
-  (*          econstructor; eauto. *)
-Admitted. (* env_prop is closed under implication, easy but annoying *)
-
 Lemma red_context_conversion :
   env_prop
     (fun (Σ : PCUICAst.global_env_ext) (Γ : PCUICAst.context) (t T : PCUICAst.term) =>

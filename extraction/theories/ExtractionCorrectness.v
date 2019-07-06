@@ -317,14 +317,13 @@ Proof.
 
     inv He.
     + eapply IHeval1 in H6 as (vt1' & Hvt2' & He_vt1'); eauto.
-      assert (Hc :red_context Σ ([],, vdef na b0 t) [vdef na b0' t]). {
-        econstructor. econstructor. econstructor.
-        exists x; auto.
-        eapply subject_reduction_eval; eauto.
-        eapply wcbeval_red; eauto.
+      assert (Hc :conv_context Σ ([],, vdef na b0 t) [vdef na b0' t]). {
+        econstructor. econstructor. econstructor. eapply subject_reduction_eval; eauto.
+        eapply PCUICValidity.red_conv.
+        eapply wcbeval_red; eauto.         
       }
       assert (Σ;;; [vdef na b0' t] |- b1 : x0). {
-        cbn in *. eapply red_context_conversion. 3:eauto. all:cbn; eauto.
+        cbn in *. eapply context_conversion. 3:eauto. all:cbn; eauto.
         econstructor. all: cbn; eauto.
       }
       assert (Σ;;; [] |- PCUICLiftSubst.subst1 b0' 0 b1 ⇝ℇ subst1 vt1' 0 t2'). {
@@ -334,7 +333,7 @@ Proof.
         econstructor. econstructor.
         rewrite !parsubst_empty.
         eapply subject_reduction_eval; eauto.
-        eapply erases_red_context_conversion. 4: eassumption.
+        eapply erases_context_conversion. 4:eassumption.
         all: cbn; eauto.
         econstructor. all: cbn; eauto.
       }

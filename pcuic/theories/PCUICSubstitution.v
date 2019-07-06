@@ -1683,6 +1683,24 @@ Qed.
 
 (** The cumulativity relation is substitutive, yay! *)
 
+Lemma substitution_untyped_cumul Σ Γ Γ' Γ'' s M N :
+  wf Σ -> untyped_subslet Γ s Γ' ->
+  Σ ;;; Γ ,,, Γ' ,,, Γ'' |- M <= N ->
+  Σ ;;; Γ ,,, subst_context s 0 Γ'' |- subst s #|Γ''| M <= subst s #|Γ''| N.
+Proof.
+  intros wfΣ Hs. induction 1.
+  constructor.
+  - now apply subst_leq_term.
+  - eapply substitution_untyped_let_red in r. 3:eauto. all:eauto with wf.
+    eapply cumul_trans.
+    eapply red_cumul. eapply r. eauto.
+  - eapply substitution_untyped_let_red in r. 3:eauto. all:eauto with wf.
+    eapply cumul_trans. eauto.
+    eapply red_cumul_inv. eapply r.
+Qed.
+
+(** The cumulativity relation is substitutive, yay! *)
+
 Lemma substitution_cumul Σ Γ Γ' Γ'' s M N :
   wf Σ -> wf_local Σ (Γ ,,, Γ' ,,, Γ'') -> subslet Σ Γ s Γ' ->
   Σ ;;; Γ ,,, Γ' ,,, Γ'' |- M <= N ->

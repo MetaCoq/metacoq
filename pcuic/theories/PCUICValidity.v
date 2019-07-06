@@ -13,17 +13,14 @@ Existing Instance config.default_checker_flags.
 Derive NoConfusion for term.
 Derive Signature for typing cumul.
 
+(* Polymorphic Derive Signature for Relation.clos_refl_trans. *)
+Derive Signature for red1.
+
 Lemma context_assumptions_subst_instance_context u Γ :
   context_assumptions (subst_instance_context u Γ) = context_assumptions Γ.
 Proof.
   induction Γ as [|[na [b|] ty] Γ]; simpl; auto.
 Qed.
-
-Lemma red_ctx_red Σ Γ Γ' t u :
-  red Σ Γ t u ->
-  (* red_ctx Σ Γ Γ' -> *)
-  red Σ Γ' t u.
-Proof. Admitted.
 
 Lemma invert_red_sort Σ Γ u v :
   red Σ Γ (tSort u) v -> v = tSort u.
@@ -111,14 +108,14 @@ Proof.
   depelim leqvv'. exists s. intuition eauto.
 Qed.
 
-Lemma red_confluence {Σ Γ t u v} : wf Σ ->
-  red Σ Γ t u -> red Σ Γ t v ->
-  ∃ v', red Σ Γ u v' * red Σ Γ v v'.
+Lemma invert_cumul_sort_l Σ Γ C u :
+  Σ ;;; Γ |- tSort u <= C ->
+  ∑ u', red Σ Γ C (tSort u') * leq_universe (snd Σ) u u'.
 Proof.
-  move=> wfΣ H H'. apply red_alt in H. apply red_alt in H'.
-  destruct (red1_confluent wfΣ _ _ _ _ H H') as [nf [redl redr]].
-  apply red_alt in redl; apply red_alt in redr.
-  exists nf; intuition auto.
+  intros Hcum.
+  eapply cumul_alt in Hcum as [v [v' [[redv redv'] leqvv']]].
+  eapply invert_red_sort in redv as ->.
+  depelim leqvv'. exists s'. intuition eauto.
 Qed.
 
 Lemma type_unicity_prod {Σ Γ t na na' A A' B B'} : wf Σ ->
@@ -188,14 +185,6 @@ Proof.
   - right. destruct i as [u Hu]. exists u.
     rewrite {3}H.
     unshelve eapply (weakening_typing Σ (skipn n Γ) [] (firstn n Γ) ty _ _ _ (tSort u)); eauto with wf.
-Qed.
-
-Lemma destArity_it_mkProd_or_LetIn ctx ctx' t :
-  destArity ctx (it_mkProd_or_LetIn ctx' t) =
-  destArity (ctx ,,, ctx') t.
-Proof.
-  induction ctx' in ctx, t |- *; simpl; auto.
-  rewrite IHctx'. destruct a as [na [b|] ty]; reflexivity.
 Qed.
 
 Lemma isWfArity_Sort Σ Γ s : wf_local Σ Γ -> isWfArity typing Σ Γ (tSort s).

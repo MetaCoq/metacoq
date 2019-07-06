@@ -243,6 +243,10 @@ Lemma it_mkProd_or_LetIn_app l l' t :
   it_mkProd_or_LetIn (l ++ l') t = it_mkProd_or_LetIn l' (it_mkProd_or_LetIn l t).
 Proof. induction l in l', t |- *; simpl; auto. Qed.
 
+Lemma it_mkLambda_or_LetIn_app l l' t :
+  it_mkLambda_or_LetIn (l ++ l') t = it_mkLambda_or_LetIn l' (it_mkLambda_or_LetIn l t).
+Proof. induction l in l', t |- *; simpl; auto. Qed.
+
 Lemma decompose_prod_n_assum_it_mkProd ctx ctx' ty :
   decompose_prod_n_assum ctx #|ctx'| (it_mkProd_or_LetIn ctx' ty) = Some (ctx' ++ ctx, ty).
 Proof.

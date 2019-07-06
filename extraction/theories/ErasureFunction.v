@@ -9,6 +9,8 @@ Local Open Scope string_scope.
 Set Asymmetric Patterns.
 Import MonadNotation.
 
+Instance extraction_checker_flags : checker_flags := Build_checker_flags true false false.
+
 Existing Instance config.default_checker_flags.
 
 Definition is_prop_sort s :=
@@ -143,6 +145,13 @@ Lemma cumul_kind2 Σ Γ A B u :
 Proof.
 Admitted.
 
+Lemma leq_universe_prop Σ u1 u2 :
+  wf Σ ->
+  leq_universe (snd Σ) u1 u2 ->
+  (is_prop_sort u1 \/ is_prop_sort u2) ->
+  (is_prop_sort u1 /\ is_prop_sort u2).
+Admitted.
+
 Fixpoint is_arity Σ (HΣ : ∥wf Σ∥) Γ (HΓ : ∥wf_local Σ Γ∥)T (HT : wellformed Σ Γ T) : typing_result ({Is_conv_to_Arity Σ Γ T} + {~ Is_conv_to_Arity Σ Γ T}).
 Proof.
   edestruct @reduce_to_sort with (t := T) as [[u] | ]; try eassumption.
@@ -257,13 +266,13 @@ Proof.
                  eapply invert_red_sort in r.
                  eapply invert_red_sort in r1. subst. inversion r1; subst; clear r1.
 
-                 eapply PCUICCumulativity.red_cumul_inv in r0.
-                 admit.         (* leq_universe prop *)
+                 eapply leq_universe_prop in l0 as []; eauto.
+                 eapply leq_universe_prop in l as []; eauto.
            ++ sq. econstructor. eauto.
       * exists (TypeError t0). repeat econstructor.
     + exists (TypeError t0). repeat econstructor.
   - exists (TypeError t0). repeat econstructor.
-Admitted.
+Qed.
 
 Section Erase.
 

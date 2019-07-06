@@ -105,8 +105,6 @@ Proof.
     + right. eapply hB ; eassumption.
 Qed.
 
-
-
 Section DestArity.
   Lemma destArity_app_aux {Γ Γ' t}
     : destArity (Γ ,,, Γ') t = option_map (fun '(ctx, s) => (Γ ,,, ctx, s))

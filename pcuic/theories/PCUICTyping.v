@@ -1829,6 +1829,7 @@ Proof.
              exists u. intuition.
 Qed.
 
+
 Ltac my_rename_hyp h th :=
   match th with
   | (type_global_env ?E) => fresh "wf" E

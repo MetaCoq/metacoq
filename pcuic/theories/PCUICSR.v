@@ -5,8 +5,7 @@ From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICWeakeningEnv PCUICWeakening
      PCUICSubstitution PCUICClosed PCUICCumulativity PCUICGeneration
-     PCUICValidity PCUICParallelReductionConfluence PCUICConfluence
-     PCUICInversion PCUICPrincipality.
+     PCUICValidity PCUICParallelReductionConfluence PCUICConfluence PCUICInversion PCUICPrincipality.
 Require Import ssreflect ssrbool.
 Require Import String.
 From MetaCoq.Template Require Import LibHypsNaming.

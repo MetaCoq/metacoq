@@ -63,11 +63,18 @@ Section Wcbv.
       eval (iota_red pars c args brs) res ->
       eval (tCase (ind, pars) discr brs) res
 
+  (** Singleton case on a proof *)
+  | eval_iota_sing ind pars discr brs n f res :
+      eval discr tBox ->
+      brs = [ (n,f) ] ->
+      eval (mkApps f (repeat tBox n)) res ->
+      eval (tCase (ind, pars) discr brs) res
+           
   (** Fix unfolding, with guard *)
   | eval_fix mfix idx args args' narg fn res :
       unfold_fix mfix idx = Some (narg, fn) ->
       Forall2 eval args args' -> (* QUESTION should we reduce the args after the recursive arg here? *)
-      is_constructor narg args' ->
+      is_constructor_or_box narg args' ->
       eval (mkApps fn args') res ->
       eval (mkApps (tFix mfix idx) args) res
 
@@ -95,6 +102,11 @@ Section Wcbv.
       eval (List.nth (pars + arg) args tDummy) res ->
       eval (tProj (i, pars, arg) discr) res
 
+  (** Proj *)
+  | eval_proj_box i pars arg discr :
+      eval discr tBox ->
+      eval (tProj (i, pars, arg) discr) tBox
+           
   (** Abstractions are values *)
   | eval_abs na N : eval (tLambda na N) (tLambda na N)
 
@@ -109,7 +121,7 @@ Section Wcbv.
 
   | eval_evar ev l : eval (tEvar ev l) (tEvar ev l) (* Lets say it is a value for now *).
 
-  (** The right induction principle for the nested [Forall] cases: *)
+  (* (** The right induction principle for the nested [Forall] cases: *) *)
 
   Lemma eval_evals_ind :
     forall P : term -> term -> Prop,
@@ -132,11 +144,18 @@ Section Wcbv.
           eval (iota_red pars c args brs) res ->
           P (iota_red pars c args brs) res -> P (tCase (ind, pars) discr brs) res) ->
 
+      (forall (ind : inductive) (pars : nat) (discr : term) (brs : list (nat * term)) (n : nat) (f3 res : term),
+        eval discr tBox ->
+        P discr tBox ->
+        brs = [(n, f3)] ->
+        eval (mkApps f3 (repeat tBox n)) res ->
+        P (mkApps f3 (repeat tBox n)) res -> P (tCase (ind, pars) discr brs) res) ->
+      
       (forall (mfix : mfixpoint term) (idx : nat) (args args' : list term) (narg : nat) (fn res : term),
           unfold_fix mfix idx = Some (narg, fn) ->
           Forall2 eval args args' ->
           Forall2 P args args' ->
-          is_constructor narg args' = true ->
+          is_constructor_or_box narg args' = true ->
           eval (mkApps fn args') res -> P (mkApps fn args') res -> P (mkApps (tFix mfix idx) args) res) ->
 
       (forall (ip : inductive * nat)  (mfix : mfixpoint term) (idx : nat) (args : list term)
@@ -163,6 +182,11 @@ Section Wcbv.
           eval (nth (pars + arg) args tDummy) res ->
           P (nth (pars + arg) args tDummy) res -> P (tProj (i, pars, arg) discr) res) ->
 
+      (forall (i : inductive) (pars arg : nat) (discr : term),
+          eval discr tBox ->
+          P discr tBox ->
+          P (tProj (i, pars, arg) discr) tBox) ->
+      
       (forall (na : name) (M N : term), P (tLambda na N) (tLambda na N)) ->
 
       (forall (f8 : term) (i : inductive) (k : nat) (l l' : list term),
@@ -174,8 +198,8 @@ Section Wcbv.
 
       forall t t0 : term, eval t t0 -> P t t0.
   Proof.
-    intros P Hbox Hbeta Hlet Hcase Hfix Hcoficase Hcofixproj
-           Hconst Hproj Hlam Hcstr Hatom Hevar.
+    intros P Hbox Hbeta Hlet Hcase Hscase Hfix Hcoficase Hcofixproj
+           Hconst Hproj Hproj2 Hlam Hcstr Hatom Hevar.
     fix eval_evals_ind 3. destruct 1;
              try match goal with [ H : _ |- _ ] =>
                              match type of H with
@@ -192,10 +216,10 @@ Section Wcbv.
     now apply eval_evals_ind. apply aux. auto.
   Defined.
 
-  (** Characterization of values for this reduction relation:
-      Basically atoms (constructors, inductives, products (FIXME sorts missing))
-      and de Bruijn variables and lambda abstractions. Closed values disallow
-      de Bruijn variables. *)
+  (** Characterization of values for this reduction relation: *)
+  (*     Basically atoms (constructors, inductives, products (FIXME sorts missing)) *)
+  (*     and de Bruijn variables and lambda abstractions. Closed values disallow *)
+  (*     de Bruijn variables. *)
 
   Inductive value : term -> Prop :=
   | value_atom t : atom t -> value t
@@ -218,8 +242,8 @@ Section Wcbv.
     constructor. now apply value_values_ind. now apply aux.
   Defined.
 
-  (** The codomain of evaluation is only values:
-      It means no redex can remain at the head of an evaluated term. *)
+  (** The codomain of evaluation is only values: *)
+  (*     It means no redex can remain at the head of an evaluated term. *)
 
   Lemma eval_to_value e e' : eval e e' -> value e'.
   Proof.
@@ -233,6 +257,6 @@ Section Wcbv.
   Proof.
     induction 2 using eval_evals_ind; simpl in *; auto. eapply IHeval3.
     admit.
-  Admitted. (* FIXME complete *)
+  Admitted. (* closedness of evaluates for Eterms, not needed for verification *)
 
 End Wcbv.

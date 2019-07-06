@@ -21,6 +21,9 @@ Require Import Equations.Prop.DepElim.
 
 Set Equations With UIP.
 
+Derive Signature for Relation.clos_refl_trans.
+Derive Signature for red1.
+
 
 Lemma invert_red_sort Σ Γ u v :
   red Σ Γ (tSort u) v -> v = tSort u.

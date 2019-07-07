@@ -11,6 +11,84 @@ Import MonadNotation.
 
 Require Import EArities Extract Prelim.
 
+(* Equations is_arity Σ (HΣ : ∥wf Σ∥) Γ (HΓ : ∥wf_local Σ Γ∥) T (HT : wellformed Σ Γ T) : typing_result ({Is_conv_to_Arity Σ Γ T} + {~ Is_conv_to_Arity Σ Γ T}) := *)
+(*   { *)
+(*     is_arity Σ HΣ Γ HΓ T HT with (@reduce_to_sort Σ HΣ Γ T HT) => { *)
+(*     | Checked H => ret (left _) ; *)
+(*     | TypeError _ => match @reduce_to_prod Σ HΣ Γ T _ with *)
+(*                     | Checked (na; A; B; H) => match is_arity Σ HΣ (Γ,, vass na A) _ B _ with *)
+(*                                               | Checked (left  H) => ret (left _) *)
+(*                                               | Checked (right H) => ret (right _) *)
+(*                                               | TypeError t => TypeError t *)
+(*                                               end *)
+(*                     | TypeError t => TypeError t *)
+(*                     end *)
+(*     } *)
+(*   }. *)
+(* Next Obligation. *)
+(*   sq. econstructor. split. sq. eassumption. econstructor. *)
+(* Qed. *)
+(* Next Obligation. *)
+(*   destruct HT as [ [] | [] ]; sq. *)
+(*   - eapply subject_reduction in X; eauto. *)
+(*     eapply inversion_Prod in X as (? & ? & ? & ? & ?). *)
+(*     econstructor. eauto. cbn. eauto. *)
+(*   - econstructor. eauto. *)
+(*     eapply isWfArity_red in X; eauto. *)
+(*     cbn. eapply isWfArity_prod_inv; eauto. *)
+(* Qed. *)
+(* Next Obligation. *)
+(*   sq. destruct HT as [ [] | [] ]. *)
+(*   - eapply subject_reduction in X5; eauto. *)
+(*     eapply inversion_Prod in X5 as (? & ? & ? & ? & ?). *)
+(*     do 2 econstructor. eauto. *)
+(*   - econstructor 2. sq. *)
+(*     eapply PCUICSafeReduce.isWfArity_red in X5; eauto. 2:exact RedFlags.default. *)
+(*     eapply isWfArity_prod_inv; eauto. *)
+(* Qed. *)
+(* Next Obligation. *)
+(*   destruct H as (? & ? & ?). eexists (tProd _ _ _). split; sq. *)
+(*   etransitivity. eassumption. eapply PCUICReduction.red_prod. econstructor. *)
+(*   eassumption. now cbn. *)
+(* Qed. *)
+(* Next Obligation. *)
+(*   destruct H1 as (? & ? & ?). sq. *)
+(*   destruct H. *)
+(*   edestruct (red_confluence X8 X6 X5) as (? & ? & ?); eauto. *)
+(*   eapply invert_red_prod in r as (? & ? & [] & ?); eauto. subst. *)
+
+(*   eapply invert_cumul_arity_l in H2. 2:eauto. 3: eapply PCUICCumulativity.red_cumul. 3:eauto. 2:eauto. *)
+(*   destruct H2 as (? & ? & ?). sq. *)
+
+(*   eapply invert_red_prod in X9 as (? & ? & [] & ?); eauto. subst. cbn in *. *)
+(*   exists x4; split; eauto. *)
+
+(*   destruct HT as [ [] | [] ]. *)
+(*   ++ sq. etransitivity. eassumption. *)
+
+(*      eapply context_conversion_red; eauto. econstructor. *)
+
+(*      eapply conv_context_refl; eauto. econstructor. *)
+
+(*      2: eapply conv_sym, red_conv; eauto. *)
+
+(*      right. *)
+
+(*      eapply subject_reduction in X9. 2:eauto. 2: exact X. *)
+     
+(*      eapply inversion_Prod in X9 as ( ? & ? & ? & ? & ?). exists x0. eauto. *)
+     
+(*   ++ sq. etransitivity. eassumption. *)
+
+(*      eapply context_conversion_red; eauto. econstructor. *)
+
+(*      eapply conv_context_refl; eauto. econstructor. *)
+
+(*      2: eapply conv_sym, red_conv; eauto. destruct Σ as [Σ univs]; cbn in *. *)
+(*      eapply isWfArity_red in X9. 2:eauto. 2:exact X6. *)
+(*      eapply isWfArity_prod_inv in X9 as[]; eauto. *)
+(*      right. eassumption. *)
+(* Qed. *)
 
 Fixpoint is_arity (Σ : global_env_ext) (HΣ : ∥wf Σ∥) Γ (HΓ : ∥wf_local Σ Γ∥)T (HT : wellformed Σ Γ T) : typing_result ({Is_conv_to_Arity Σ Γ T} + {~ Is_conv_to_Arity Σ Γ T}).
 Proof.
@@ -75,10 +153,84 @@ Proof.
     + exact (TypeError t).
 Admitted. (* termination of is_arity *)
 
-Definition is_erasable :
-  forall (Sigma : PCUICAst.global_env_ext) (HΣ : ∥wf Sigma∥) (Gamma : context) (HΓ : ∥wf_local Sigma Gamma∥) (t : PCUICAst.term),
-    {r : typing_result bool & ∥ match r with
-                           | Checked true => isErasable Sigma Gamma t 
+Program Definition is_erasable (Sigma : PCUICAst.global_env_ext) (HΣ : ∥wf Sigma∥) (Gamma : context) (HΓ : ∥wf_local Sigma Gamma∥) (t : PCUICAst.term) :
+  {r : typing_result bool & ∥ match r with
+                           | Checked true => isErasable Sigma Gamma t
+                           | Checked false => (isErasable Sigma Gamma t -> False) × PCUICSafeLemmata.welltyped Sigma Gamma t
+                           | _ => True
+                           end ∥} :=
+  match @infer _ HΣ Gamma HΓ t with
+  | Checked (T; _) => 
+    match is_arity Sigma _ Gamma _ T _ with
+    | Checked (left H) => (Checked true; _)
+    | Checked (right H) => 
+      match @infer _ HΣ Gamma HΓ T with
+      | Checked (K; _) => match @reduce_to_sort Sigma _ Gamma K _ with
+                         | Checked (u; _) => match is_prop_sort u with
+                                            | true => (Checked true; _)
+                                            | false => (Checked false; _)
+                                            end
+                         | TypeError t => (TypeError t; sq I)
+                         end 
+      | TypeError t => (TypeError t; sq I)
+      end
+    | TypeError t => (TypeError t; sq I)
+    end
+  | TypeError t => (TypeError t; sq I)
+  end.
+Next Obligation.
+  firstorder congruence.
+Qed.
+Next Obligation.
+  sq. clear Heq_anonymous. eapply PCUICValidity.validity in t0 as [_]; eauto.  destruct i.
+  right. sq. eauto. destruct i. econstructor. econstructor. eauto.
+Qed.
+Next Obligation.
+  destruct H as (? & ? & ?).
+  sq. exists x. split. clear Heq_anonymous Heq_anonymous0.
+  eapply type_reduction in t0; eauto. eauto.
+Qed.
+Next Obligation.
+  sq. clear Heq_anonymous. eapply PCUICValidity.validity in t0 as [_]; eauto.  destruct i.
+  econstructor 2. sq. eauto. destruct i. econstructor. econstructor. eauto.
+Qed.
+Next Obligation.
+  sq. econstructor. split. eauto. 
+  right. exists u. split; eauto. eapply type_reduction; eauto.
+Qed.
+Next Obligation.
+  sq. split.
+  - intros (? & ? & ?). sq.
+     destruct s as [ | (? & ? & ?)].
+     + destruct H. eapply arity_type_inv; eauto.
+     + clear Heq_anonymous0 Heq_anonymous1 Heq_anonymous2 Heq_anonymous3.
+
+       eapply principal_typing in t1 as (? & ? & ? &?). 2:eauto. 2:exact t3.
+        
+       eapply cumul_prop1 in c; eauto.
+       eapply cumul_prop2 in c0; eauto.
+
+       eapply type_reduction in t0; eauto.
+       
+       eapply principal_typing in c0 as (? & ? & ? & ?). 2:eauto. 2:{ exact t0. }
+
+       eapply cumul_prop1 in c; eauto.
+
+       destruct (invert_cumul_sort_r _ _ _ _ c0) as (? & ? & ?).
+       destruct (invert_cumul_sort_r _ _ _ _ c1) as (? & ? & ?).
+       eapply red_confluence in r0 as (? & ? & ?); eauto.
+
+       eapply invert_red_sort in r0.
+       eapply invert_red_sort in r2. subst. inversion r2; subst; clear r2.
+
+       eapply leq_universe_prop in l0 as []; eauto.
+       eapply leq_universe_prop in l as []; eauto.
+  - sq. econstructor. eauto.
+Qed.
+
+Definition is_erasable (Sigma : PCUICAst.global_context) (HΣ : ∥wf Sigma∥) (Gamma : context) (HΓ : ∥wf_local Sigma Gamma∥) (t : PCUICAst.term) :
+  {r : typing_result bool & ∥ match r with
+                           | Checked true => isErasable Sigma Gamma t
                            | Checked false => (isErasable Sigma Gamma t -> False) × PCUICSafeLemmata.welltyped Sigma Gamma t
                            | _ => True
                            end ∥}.

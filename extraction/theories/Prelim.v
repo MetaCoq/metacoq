@@ -387,36 +387,6 @@ Inductive red_decls Σ Γ Γ' : forall (x y : PCUICAst.context_decl), Type :=
 
 Notation red_context Σ := (context_relation (red_decls Σ)).
 
-Lemma red_context_conversion :
-  env_prop
-    (fun (Σ : PCUICAst.global_env_ext) (Γ : PCUICAst.context) (t T : PCUICAst.term) =>
-       forall Γ' : PCUICAst.context, red_context Σ Γ Γ' -> Σ;;; Γ' |- t : T).
-Proof.
-  eapply env_prop_imp. 2: eapply context_conversion.
-  intros. eapply X.
-  clear - X0.
-  Lemma red_conv_context:
-    forall (Σ : global_env_ext) (Γ Γ' : context), red_context Σ Γ Γ' -> conv_context Σ Γ Γ'.
-  Proof.
-    intros Σ Γ Γ' X0.
-    induction X0.
-    - econstructor.
-    - econstructor. eauto. econstructor. inv p. eauto.
-      inv p. econstructor. now eapply PCUICCumulativity.red_cumul.
-      now eapply PCUICCumulativity.red_cumul_inv.
-    - econstructor. eauto. inv p.
-      econstructor. eauto. econstructor.
-      now eapply PCUICCumulativity.red_cumul.
-      now eapply PCUICCumulativity.red_cumul_inv.
-      econstructor. eauto. auto.
-      constructor.
-      now eapply PCUICCumulativity.red_cumul.
-      now eapply PCUICCumulativity.red_cumul_inv.
-      apply conv_refl.
-  Qed.
-  now eapply red_conv_context.
-Qed.
-
 Lemma conv_context_app (Σ : global_env_ext) (Γ1 Γ2 Γ1' : context) :
   wf Σ ->
   wf_local Σ (Γ1 ,,, Γ2) ->

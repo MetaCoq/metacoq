@@ -154,33 +154,24 @@ Proof.
 Admitted. (* termination of is_arity *)
 
 Program Definition is_erasable (Sigma : PCUICAst.global_env_ext) (HΣ : ∥wf Sigma∥) (Gamma : context) (HΓ : ∥wf_local Sigma Gamma∥) (t : PCUICAst.term) :
-  {r : typing_result bool & ∥ match r with
-                           | Checked true => isErasable Sigma Gamma t
-                           | Checked false => (isErasable Sigma Gamma t -> False) × PCUICSafeLemmata.welltyped Sigma Gamma t
-                           | _ => True
-                           end ∥} :=
-  match @infer _ HΣ Gamma HΓ t with
-  | Checked (T; _) => 
-    match is_arity Sigma _ Gamma _ T _ with
-    | Checked (left H) => (Checked true; _)
+  typing_result (sumbool (∥isErasable Sigma Gamma t∥) (∥(isErasable Sigma Gamma t -> False) × PCUICSafeLemmata.welltyped Sigma Gamma t∥)) :=
+  (T; _) <- @infer _ HΣ Gamma HΓ t ;;
+      match is_arity Sigma _ Gamma _ T _ with
+    | Checked (left H) => Checked (left _)
     | Checked (right H) => 
       match @infer _ HΣ Gamma HΓ T with
       | Checked (K; _) => match @reduce_to_sort Sigma _ Gamma K _ with
                          | Checked (u; _) => match is_prop_sort u with
-                                            | true => (Checked true; _)
-                                            | false => (Checked false; _)
+                                            | true => Checked (left _)
+                                            | false => Checked (right _)
                                             end
-                         | TypeError t => (TypeError t; sq I)
+                         | TypeError t => TypeError t
                          end 
-      | TypeError t => (TypeError t; sq I)
+      | TypeError t => TypeError t
       end
-    | TypeError t => (TypeError t; sq I)
-    end
-  | TypeError t => (TypeError t; sq I)
-  end.
-Next Obligation.
-  firstorder congruence.
-Qed.
+    | TypeError t => TypeError t
+      end.
+  
 Next Obligation.
   sq. clear Heq_anonymous. eapply PCUICValidity.validity in t0 as [_]; eauto.  destruct i.
   right. sq. eauto. destruct i. econstructor. econstructor. eauto.

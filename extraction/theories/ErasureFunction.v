@@ -155,64 +155,56 @@ Admitted. (* termination of is_arity *)
 
 Program Definition is_erasable (Sigma : PCUICAst.global_env_ext) (HΣ : ∥wf Sigma∥) (Gamma : context) (HΓ : ∥wf_local Sigma Gamma∥) (t : PCUICAst.term) :
   typing_result (sumbool (∥isErasable Sigma Gamma t∥) (∥(isErasable Sigma Gamma t -> False) × PCUICSafeLemmata.welltyped Sigma Gamma t∥)) :=
-  (T; _) <- @infer _ HΣ Gamma HΓ t ;;
-      match is_arity Sigma _ Gamma _ T _ with
-    | Checked (left H) => Checked (left _)
-    | Checked (right H) => 
-      match @infer _ HΣ Gamma HΓ T with
-      | Checked (K; _) => match @reduce_to_sort Sigma _ Gamma K _ with
-                         | Checked (u; _) => match is_prop_sort u with
-                                            | true => Checked (left _)
-                                            | false => Checked (right _)
-                                            end
-                         | TypeError t => TypeError t
-                         end 
-      | TypeError t => TypeError t
-      end
-    | TypeError t => TypeError t
-      end.
-  
+  mlet (T; _) <- @infer _ HΣ Gamma HΓ t ;;
+  mlet b <- is_arity Sigma _ Gamma _ T _ ;;
+  if b : {_} + {_} then
+    ret (left _)
+  else mlet (K; _) <-  @infer _ HΣ Gamma HΓ T ;;
+       mlet (u;_) <- @reduce_to_sort Sigma _ Gamma K _ ;;
+      match is_prop_sort u with true => ret (left _) | false => ret (right _) end
+.  
 Next Obligation.
-  sq. clear Heq_anonymous. eapply PCUICValidity.validity in t0 as [_]; eauto.  destruct i.
+  sq. eapply PCUICValidity.validity in X as [_]; eauto.  destruct i.
   right. sq. eauto. destruct i. econstructor. econstructor. eauto.
 Qed.
 Next Obligation.
   destruct H as (? & ? & ?).
-  sq. exists x. split. clear Heq_anonymous Heq_anonymous0.
-  eapply type_reduction in t0; eauto. eauto.
+  sq. exists x. split. 
+  eapply type_reduction in X; eauto. eauto.
 Qed.
 Next Obligation.
-  sq. clear Heq_anonymous. eapply PCUICValidity.validity in t0 as [_]; eauto.  destruct i.
+  sq. eapply PCUICValidity.validity in X as [_]; eauto.  destruct i.
   econstructor 2. sq. eauto. destruct i. econstructor. econstructor. eauto.
 Qed.
 Next Obligation.
   sq. econstructor. split. eauto. 
-  right. exists u. split; eauto. eapply type_reduction; eauto.
+  right. exists pat. split; eauto. eapply type_reduction; eauto.
 Qed.
 Next Obligation.
+  rename pat0 into T.
+  rename pat1 into K.
+  rename pat into u.
   sq. split.
   - intros (? & ? & ?). sq.
      destruct s as [ | (? & ? & ?)].
      + destruct H. eapply arity_type_inv; eauto.
-     + clear Heq_anonymous0 Heq_anonymous1 Heq_anonymous2 Heq_anonymous3.
-
-       eapply principal_typing in t1 as (? & ? & ? &?). 2:eauto. 2:exact t3.
+     + eapply principal_typing in X2 as (? & ? & ? &?). 2:eauto. 2:exact t0.
         
        eapply cumul_prop1 in c; eauto.
        eapply cumul_prop2 in c0; eauto.
 
-       eapply type_reduction in t0; eauto.
+       eapply type_reduction in X0; eauto.
        
-       eapply principal_typing in c0 as (? & ? & ? & ?). 2:eauto. 2:{ exact t0. }
+       eapply principal_typing in c0 as (? & ? & ? & ?). 2:eauto. 2:{ exact X0. }
 
        eapply cumul_prop1 in c; eauto.
 
        destruct (invert_cumul_sort_r _ _ _ _ c0) as (? & ? & ?).
        destruct (invert_cumul_sort_r _ _ _ _ c1) as (? & ? & ?).
-       eapply red_confluence in r0 as (? & ? & ?); eauto.
+       eapply red_confluence in r as (? & ? & ?); eauto.
 
-       eapply invert_red_sort in r0.
-       eapply invert_red_sort in r2. subst. inversion r2; subst; clear r2.
+       eapply invert_red_sort in r.
+       eapply invert_red_sort in r1. subst. inv r1.
 
        eapply leq_universe_prop in l0 as []; eauto.
        eapply leq_universe_prop in l as []; eauto.

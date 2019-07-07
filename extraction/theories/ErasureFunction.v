@@ -107,19 +107,17 @@ Next Obligation.
 
      eapply conv_context_refl; eauto. econstructor.
 
-     2: eapply conv_sym, red_conv; eauto.
-
-     right. eexists; eauto.     
+     eapply conv_sym, red_conv; eauto.
   ++ sq. etransitivity. eassumption.
      
-     eapply context_conversion_red; eauto. admit. econstructor.
+     eapply context_conversion_red; eauto. econstructor.
 
      eapply conv_context_refl; eauto.
 
-     econstructor. right; eexists; eauto. admit.
+     econstructor. 
 
      eapply conv_sym, red_conv; eauto.
-Admitted.
+Qed.
 
 
 

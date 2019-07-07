@@ -48,10 +48,10 @@ Admitted.                       (* constructors have a type *)
 
 Inductive conv_decls Σ Γ (Γ' : context) : forall (x y : context_decl), Type :=
 | conv_vass : forall (na na' : name) (T T' : term),
-                isWfArity_or_Type Σ Γ' T' ->
+                (* isWfArity_or_Type Σ Γ' T' -> *)
                 Σ;;; Γ |- T = T' -> conv_decls Σ Γ Γ' (vass na T) (vass na' T')
 | conv_vdef_type : forall (na : name) (b T  : term),
-    isWfArity_or_Type Σ Γ' T ->
+    (* isWfArity_or_Type Σ Γ' T -> *)
     conv_decls Σ Γ Γ' (vdef na b T) (vdef na b T).
 
 Lemma conv_context_refl Σ Γ : wf Σ -> wf_local Σ Γ -> context_relation conv_decls Σ Γ Γ.
@@ -59,118 +59,107 @@ Proof.
   induction Γ; try econstructor. 
   intros wfΣ wfΓ; depelim wfΓ; econstructor; eauto;
   constructor; auto.
-  - right. eassumption.
   - apply conv_refl.
-  - right. eassumption.
 Qed.
 
-Lemma context_conversion_red1 Σ Γ Γ' s t T : wf Σ -> Σ ;;; Γ' |- t : T ->
+Lemma context_conversion_red1 Σ Γ Γ' s t : wf Σ -> (* Σ ;;; Γ' |- t : T -> *)
    context_relation conv_decls Σ Γ Γ' -> red1 Σ Γ s t -> red Σ Γ' s t.
 Proof.
-  intros HΣ HT X X0. induction X0 using red1_ind_all in Γ', HΣ, HT, X, T |- *; eauto.
+  intros HΣ HT X0. induction X0 using red1_ind_all in Γ', HΣ, HT |- *; eauto.
   Hint Constructors red red1.
   all:eauto.
   - econstructor. econstructor. econstructor.
     rewrite <- H. 
-    induction X in i |- *; destruct i; eauto.
+    induction HT in i |- *; destruct i; eauto.
     now inv p. 
-  - eapply inversion_Lambda in HT as (? & ? & ? & ? & ?).
+  - 
     eapply PCUICReduction.red_abs. eapply IHX0; eauto.  eauto.
-  - eapply inversion_Lambda in HT as (? & ? & ? & ? & ?).
+  - 
     eapply PCUICReduction.red_abs. eauto. eapply IHX0. eauto. 
-    eauto. econstructor. eauto. econstructor. 2:eapply conv_refl. 
-    right. econstructor. eauto. 
-  - eapply inversion_LetIn in HT as (? & ? & ? & ? & ?).
+    eauto. econstructor. eauto. econstructor. eapply conv_refl. 
+  - 
     eapply PCUICReduction.red_letin. eapply IHX0; eauto. 
     all:eauto. 
-  - eapply inversion_LetIn in HT as (? & ? & ? & ? & ?).
+  - 
     eapply PCUICReduction.red_letin; eauto. 
-  - eapply inversion_LetIn in HT as (? & ? & ? & ? & ? & ?).
+  - 
     eapply PCUICReduction.red_letin; eauto. eapply IHX0; eauto. 
-    econstructor. eauto. econstructor. right; eexists; eauto.
-  - destruct ind. eapply inversion_Case in HT as (? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ?). subst.
-    eapply PCUICReduction.reds_case; eauto. clear.
+    econstructor. eauto. econstructor. 
+  -     eapply PCUICReduction.reds_case; eauto. clear.
     eapply PCUICCumulativity.All_All2_refl. induction brs; eauto.
-  -  destruct ind. eapply inversion_Case in HT as (? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ?). subst.
-     eapply PCUICReduction.reds_case; eauto. clear.
+  -     eapply PCUICReduction.reds_case; eauto. clear.
     eapply PCUICCumulativity.All_All2_refl. induction brs; eauto.
-  - destruct ind. eapply inversion_Case in HT as (? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ?). subst.
+  - destruct ind. 
     eapply PCUICReduction.reds_case; eauto. 
-    clear - HΣ X0 a t X.
-    induction X0 in x7, a |- *.
-    + inv a. econstructor. destruct p0. destruct p0.
-      split; eauto. eapply r0; eauto. firstorder. 
+    clear - HΣ X HT.
+    induction X.
+    + econstructor. destruct p. destruct p.
+      split; eauto. 
       eapply PCUICCumulativity.All_All2_refl. 
-      induction X1; eauto. 
-    + inv a. econstructor.  repeat econstructor.
-      eapply IHX0. eauto.
-  - eapply inversion_Proj in HT as (? & ? & ? & ? & ? & ? & ? & ? & ?).
+      induction tl; eauto. 
+    + econstructor.  repeat econstructor.
+      eassumption.
+  - 
     eapply PCUICReduction.red_proj_c. eauto.
-  - eapply inversion_App in HT as (? & ? & ? & ? & ? & ?).
+  - 
     eapply PCUICReduction.red_app; eauto.
-  - eapply inversion_App in HT as (? & ? & ? & ? & ? & ?).
-    eapply PCUICReduction.red_app; eauto.
-  - eapply inversion_Prod in HT as (? & ? & ? & ? & ?).
+  -     eapply PCUICReduction.red_app; eauto.
+  - 
     eapply PCUICReduction.red_prod; eauto.
-  - eapply inversion_Prod in HT as (? & ? & ? & ? & ?).
+  - 
     eapply PCUICReduction.red_prod; eauto. eapply IHX0. eauto. eauto. 
     econstructor. 
-    eauto. econstructor. right. econstructor. eauto. eapply conv_refl.
-  - now eapply inversion_Evar in HT.
-  - eapply inversion_Fix in HT as ( ? & ? & ? & ? & ?).
+    eauto. econstructor. eapply conv_refl.
+  - eapply PCUICReduction.red_evar; eauto.
+    induction X; eauto. econstructor. eapply p; eauto.
+    induction tl; eauto.
+  - 
     eapply PCUICReduction.red_fix_congr; eauto.
     generalize (fix_context mfix0). intros.
-    induction X0; eauto. 
-    destruct p. inv a0. destruct p.
-    econstructor; eauto. split. inv e0. eapply r0; eauto. admit.
-    inv e0. econstructor. clear.
+    induction X; eauto. 
+    destruct p. destruct p.
+    econstructor; eauto. split. inv e. eapply r0; eauto. 
+    inv e. econstructor. clear.
     eapply PCUICCumulativity.All_All2_refl. induction tl; eauto.
-    econstructor. eauto. admit.
-  - eapply inversion_Fix in HT as ( ? & ? & ? & ? & ?).
+  - 
     eapply PCUICReduction.red_fix_congr; eauto. 
-    remember (fix_context mfix0). intros. (* clear Heqc. *)
-    (* induction X1 in  |- *; eauto.  *)
-    (* destruct p. destruct p. *)
-    (* econstructor; eauto. split. inv e. econstructor. eapply r0.  *)
-    (* inv e. *)
-    (* * clear - X0. induction c. eassumption. cbn. destruct a.  *)
-    (*   destruct decl_body. econstructor. eassumption. econstructor. *)
-    (*   econstructor.  eauto. econstructor. econstructor. *)
-    (* * clear.  *)
-    (*   eapply PCUICCumulativity.All_All2_refl. induction tl; eauto. *)
-  (* - eapply PCUICReduction.red_cofix_congr; eauto.  *)
-  (*   generalize (fix_context mfix0). intros. *)
-  (*   induction X1; eauto.  *)
-  (*   destruct p. destruct p. *)
-  (*   econstructor; eauto. split. eapply r0. eauto. *)
-  (*   inv e. econstructor. *)
-  (*   clear. *)
-  (*   eapply PCUICCumulativity.All_All2_refl. induction tl; eauto. *)
-  (* - eapply PCUICReduction.red_cofix_congr; eauto. *)
-  (*   remember (fix_context mfix0). intros. clear Heqc. *)
-  (*   induction X1 in  |- *; eauto.  *)
-  (*   destruct p. destruct p. *)
-  (*   econstructor; eauto. split. inv e. econstructor. eapply r0.  *)
-  (*   inv e. *)
-  (*   * clear - X0. induction c. eassumption. cbn. destruct a.  *)
-  (*     destruct decl_body. econstructor. eassumption. econstructor. *)
-  (*     econstructor.  eauto. econstructor. econstructor. *)
-  (*   * clear.  *)
-  (*     eapply PCUICCumulativity.All_All2_refl. induction tl; eauto. *)
-Admitted. 
+    remember (fix_context mfix0). intros. clear Heqc.
+    induction X in  |- *; eauto.
+    destruct p. destruct p.
+    econstructor; eauto. split. inv e. econstructor. eapply r0. eauto.
+    inv e. eauto.
+    * clear - HT. induction c. eassumption. cbn. destruct a.
+      destruct decl_body. econstructor. eassumption. econstructor.
+      econstructor.  eauto. econstructor. eapply conv_refl.
+    * clear.
+      eapply PCUICCumulativity.All_All2_refl. induction tl; eauto.
+  - eapply PCUICReduction.red_cofix_congr; eauto.
+    generalize (fix_context mfix0). intros.
+    induction X; eauto.
+    destruct p. destruct p.
+    econstructor; eauto. split. eapply r0. eauto.
+    inv e. eauto. inv e. econstructor.
+    clear.
+    eapply PCUICCumulativity.All_All2_refl. induction tl; eauto.
+  - eapply PCUICReduction.red_cofix_congr; eauto. 
+    remember (fix_context mfix0). intros. clear Heqc.
+    induction X in  |- *; eauto.
+    destruct p. destruct p.
+    econstructor; eauto. split. inv e. econstructor. eapply r0. eauto.
+    inv e. eauto.
+    * clear - HT. induction c. eassumption. cbn. destruct a.
+      destruct decl_body. econstructor. eassumption. econstructor.
+      econstructor.  eauto. econstructor. eapply conv_refl.
+    * clear.
+      eapply PCUICCumulativity.All_All2_refl. induction tl; eauto.
+Qed.
 
-Lemma context_conversion_red Σ Γ Γ' s t T : wf Σ -> Σ ;;; Γ |- s : T ->
+Lemma context_conversion_red Σ Γ Γ' s t : wf Σ -> 
   context_relation conv_decls Σ Γ Γ' -> red Σ Γ s t -> red Σ Γ' s t.
 Proof.
-  intros. induction X2; eauto. 
-  etransitivity. eapply IHX2.
+  intros. induction X1; eauto. 
+  etransitivity. eapply IHX1.
   eapply context_conversion_red1; eauto.
-  eapply context_conversion; sq; eauto. 
-  eapply RedFlags.default. 
-  eapply subject_reduction. eauto. eauto. eauto. 
-  clear - X1. induction X1; try inv p; econstructor; eauto.
-  econstructor; eauto.
-  econstructor. eauto. eapply conv_refl.
 Qed.
 
 Lemma invert_cumul_arity_r (Σ : global_env_ext) (Γ : context) (C : term) T :

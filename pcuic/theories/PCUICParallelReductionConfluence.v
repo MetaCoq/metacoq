@@ -3621,16 +3621,19 @@ Section Confluence.
     assert ((Nat.pred #|mfix0| - (#|mfix0| - S #|l'|)) = #|l'|) by lia.
     rewrite H0 H1.
     intros. depelim Hctxs. red in o. simpl in H2, H3. noconf H2; noconf H3.
-    simpl in H2. noconf H2.
-    rewrite -H2.
-    constructor. unfold mapi in IHAll2.
+    red in o. noconf Heqlen. simpl in H.
+    rewrite -H.
+    econstructor. unfold mapi in IHAll2.
     forward IHAll2 by lia.
     forward IHAll2 by lia.
-    forward IHAll2 by lia. rewrite -Hlen in IHAll2.
-    apply IHAll2; clear IHAll2. apply Hctxs; clear Hctxs.
+    forward IHAll2 by lia. rewrite -H in IHAll2.
+    rewrite -Hlen in IHAll2.
+    apply IHAll2; clear IHAll2.
+    rewrite -H in Hctxs.
+    apply Hctxs; clear Hctxs.
     clear IHAll2 Hctxs. destruct r.
-    destruct o0. destruct p. destruct p. red in o.
-    simpl in *. noconf Heqlen. simpl in H.
+    destruct o0. destruct p. destruct p.
+    simpl in *. simpl in H.
     rewrite H in o |- *.
     rewrite rho_ctx_app in o. apply o.
     econstructor. eauto. clear Hctxs o IHAll2.
@@ -3698,8 +3701,7 @@ Section Confluence.
     rewrite H0 H1.
     intros. depelim Hctxs. red in o.
     simpl in H2. noconf H2.
-    simpl in H3. noconf H3. simpl in H2. noconf H2.
-    rewrite -H2.
+    simpl in H3. noconf H3.
     constructor. unfold mapi in IHAll2.
     forward IHAll2 by lia.
     forward IHAll2 by lia.

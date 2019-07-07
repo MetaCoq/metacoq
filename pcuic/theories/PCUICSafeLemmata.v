@@ -985,8 +985,8 @@ Section Lemmata.
         ∥ OnOne2 (fun x y =>
                     red1 Σ (Γ ,,, fix_context mfix') x.(dbody) y.(dbody) ×
                     (dname x, dtype x, rarg x) = (dname y, dtype y, rarg y)
-                 ) mfix' mfix ∥ /\
-        ∥ All2 (fun x y =>
+                 ) mfix' mfix ×
+          All2 (fun x y =>
                   eq_term_upto_univ Re Re x.(dtype) y.(dtype) *
                   eq_term_upto_univ Re Re x.(dbody) y.(dbody) *
                   (x.(rarg) = y.(rarg))
@@ -1016,27 +1016,20 @@ Section Lemmata.
                 -- cbn. eapply eq_term_upto_univ_lift. eauto.
         }
         clear a.
-        induction X0 in mfix1, hc, X1 |- *.
-        - destruct p as [r e]. inversion e. clear e.
-          dependent destruction X1. destruct p as [[? ?] ?].
-          eapply red1_eq_context_upto_l in r as [? [[? ?]]].
-          3: eassumption.
-          2: assumption.
-          eexists. split.
-          + constructor. constructor.
-            instantiate (1 := mkdef _ _ _ _ _). simpl. split ; eauto.
-          + constructor. constructor. all: eauto.
-            simpl. repeat split ; eauto.
-            * rewrite H1. eauto.
-            * eapply eq_term_upto_univ_trans ; try eassumption.
-            * etransitivity ; eauto.
-        - dependent destruction X1. destruct p as [[? ?] ?].
-          specialize (IHX0 _ X1).
-          (* Wrong IH again *)
-          (* We'll have to do it with OnOne2_ind_l again... *)
-          admit.
+        eapply OnOne2_impl_exist_and_All ; try eassumption.
+        clear X0 X1.
+        intros x x' y [r e] [[? ?] ?].
+        inversion e. clear e.
+        eapply red1_eq_context_upto_l in r as [? [[? ?]]].
+        3: eassumption. 2: assumption.
+        eexists. constructor.
+        instantiate (1 := mkdef _ _ _ _ _). simpl.
+        intuition eauto.
+        - rewrite H1. eauto.
+        - eapply eq_term_upto_univ_trans ; eassumption.
+        - etransitivity ; eauto.
       }
-      destruct h as [? [[?] [?]]].
+      destruct h as [? [[? ?]]].
       eexists. do 2 split.
       +  eapply fix_red_body. eassumption.
       + constructor. all: eauto.
@@ -1075,7 +1068,115 @@ Section Lemmata.
       eexists. do 2 split.
       +  eapply cofix_red_ty. eassumption.
       + constructor. all: eauto.
-  Admitted.
+    - dependent destruction e.
+      assert (h : exists mfix,
+                 ∥ OnOne2 (fun x y =>
+                     red1 Σ (Γ ,,, fix_context mfix0) x.(dbody) y.(dbody) ×
+                     (dname x, dtype x, rarg x) = (dname y, dtype y, rarg y)
+                   ) mfix' mfix ∥ /\
+                 ∥ All2 (fun x y =>
+                   eq_term_upto_univ Re Re x.(dtype) y.(dtype) *
+                   eq_term_upto_univ Re Re x.(dbody) y.(dbody) *
+                   (x.(rarg) = y.(rarg))
+                 ) mfix1 mfix ∥%type
+             ).
+      { revert mfix' a.
+        refine (OnOne2_ind_l _ (fun L x y => (red1 Σ (Γ ,,, fix_context L) (dbody x) (dbody y)
+          × (forall (Rle : crelation universe) (u' : term),
+             Reflexive Rle ->
+             Transitive Rle ->
+             SubstUnivPreserving Rle ->
+             (forall u u'0 : universe, Re u u'0 -> Rle u u'0) ->
+             eq_term_upto_univ Re Rle (dbody x) u' ->
+             exists v' : term,
+               ∥ red1 Σ (Γ ,,, fix_context L) u' v'
+                 × eq_term_upto_univ Re Rle (dbody y) v' ∥))
+         × (dname x, dtype x, rarg x) = (dname y, dtype y, rarg y)) (fun L mfix0 mfix1 o => forall mfix', All2
+        (fun x y : def term =>
+         (eq_term_upto_univ Re Re (dtype x) (dtype y)
+          × eq_term_upto_univ Re Re (dbody x) (dbody y)) ×
+         rarg x = rarg y) mfix0 mfix' -> exists mfix : list (def term),
+    ∥ OnOne2
+        (fun x y : def term =>
+         red1 Σ (Γ ,,, fix_context L) (dbody x) (dbody y)
+         × (dname x, dtype x, rarg x) = (dname y, dtype y, rarg y)) mfix' mfix ∥ /\
+    ∥ All2
+        (fun x y : def term =>
+         (eq_term_upto_univ Re Re (dtype x) (dtype y)
+          × eq_term_upto_univ Re Re (dbody x) (dbody y)) ×
+         rarg x = rarg y) mfix1 mfix ∥) _ _ _ _ X).
+        - clear X. intros L x y l [[p1 p2] p3] mfix' h.
+          dependent destruction h. destruct p as [[h1 h2] h3].
+          eapply p2 in h2 as hh ; eauto.
+          destruct hh as [? [[? ?]]].
+          eexists. split.
+          + constructor. constructor.
+            instantiate (1 := mkdef _ _ _ _ _).
+            simpl. split ; eauto.
+          + constructor. constructor. all: eauto.
+            inversion p3.
+            simpl. repeat split ; eauto.
+        - clear X. intros L x l l' h ih mfix' ha.
+          dependent destruction ha. destruct p as [[h1 h2] h3].
+          destruct (ih _ ha) as [? [[?] [?]]].
+          eexists. split.
+          + constructor. eapply OnOne2_tl. eauto.
+          + constructor. constructor. all: eauto.
+      }
+      destruct h as [mfix [[?] [?]]].
+      assert (h : exists mfix,
+        ∥ OnOne2 (fun x y =>
+                    red1 Σ (Γ ,,, fix_context mfix') x.(dbody) y.(dbody) ×
+                    (dname x, dtype x, rarg x) = (dname y, dtype y, rarg y)
+                 ) mfix' mfix ×
+          All2 (fun x y =>
+                  eq_term_upto_univ Re Re x.(dtype) y.(dtype) *
+                  eq_term_upto_univ Re Re x.(dbody) y.(dbody) *
+                  (x.(rarg) = y.(rarg))
+               ) mfix1 mfix ∥%type
+      ).
+      { clear X.
+        assert (hc : eq_context_upto
+                       Re
+                       (Γ ,,, fix_context mfix0)
+                       (Γ ,,, fix_context mfix')
+               ).
+        { eapply eq_context_upto_cat.
+          - eapply eq_context_upto_refl. assumption.
+          - clear - a. induction a.
+            + constructor.
+            + destruct r as [[? ?] ?].
+              eapply All2_eq_context_upto.
+              eapply PCUICParallelReductionConfluence.All2_rev.
+              eapply All2_mapi.
+              constructor.
+              * intros i. split.
+                -- cbn. constructor.
+                -- cbn. eapply eq_term_upto_univ_lift. eauto.
+              * eapply All2_impl ; eauto.
+                intros ? ? [[? ?] ?] i. split.
+                -- cbn. constructor.
+                -- cbn. eapply eq_term_upto_univ_lift. eauto.
+        }
+        clear a.
+        eapply OnOne2_impl_exist_and_All ; try eassumption.
+        clear X0 X1.
+        intros x x' y [r e] [[? ?] ?].
+        inversion e. clear e.
+        eapply red1_eq_context_upto_l in r as [? [[? ?]]].
+        3: eassumption. 2: assumption.
+        eexists. constructor.
+        instantiate (1 := mkdef _ _ _ _ _). simpl.
+        intuition eauto.
+        - rewrite H1. eauto.
+        - eapply eq_term_upto_univ_trans ; eassumption.
+        - etransitivity ; eauto.
+      }
+      destruct h as [? [[? ?]]].
+      eexists. do 2 split.
+      +  eapply cofix_red_body. eassumption.
+      + constructor. all: eauto.
+  Qed.
 
   Lemma cored_eq_term_upto_univ_r :
     forall Re Rle Γ u v u',

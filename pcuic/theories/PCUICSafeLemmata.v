@@ -905,7 +905,7 @@ Section Lemmata.
     - dependent destruction e.
       assert (h : exists mfix,
                  ∥ OnOne2 (fun x y =>
-                     red1 Σ (Γ ,,, fix_context mfix') x.(dbody) y.(dbody) ×
+                     red1 Σ (Γ ,,, fix_context mfix0) x.(dbody) y.(dbody) ×
                      (dname x, dtype x, rarg x) = (dname y, dtype y, rarg y)
                    ) mfix' mfix ∥ /\
                  ∥ All2 (fun x y =>
@@ -914,7 +914,7 @@ Section Lemmata.
                    (x.(rarg) = y.(rarg))
                  ) mfix1 mfix ∥%type
              ).
-      { revert a.
+      { revert mfix' a.
         refine (OnOne2_ind_l _ (fun L x y => (red1 Σ (Γ ,,, fix_context L) (dbody x) (dbody y)
           × (forall (Rle : crelation universe) (u' : term),
              Reflexive Rle ->
@@ -925,47 +925,24 @@ Section Lemmata.
              exists v' : term,
                ∥ red1 Σ (Γ ,,, fix_context L) u' v'
                  × eq_term_upto_univ Re Rle (dbody y) v' ∥))
-         × (dname x, dtype x, rarg x) = (dname y, dtype y, rarg y)) (fun L mfix0 mfix1 o => All2
+         × (dname x, dtype x, rarg x) = (dname y, dtype y, rarg y)) (fun L mfix0 mfix1 o => forall mfix', All2
         (fun x y : def term =>
          (eq_term_upto_univ Re Re (dtype x) (dtype y)
           × eq_term_upto_univ Re Re (dbody x) (dbody y)) ×
          rarg x = rarg y) mfix0 mfix' -> exists mfix : list (def term),
     ∥ OnOne2
         (fun x y : def term =>
-         red1 Σ (Γ ,,, fix_context mfix') (dbody x) (dbody y)
+         red1 Σ (Γ ,,, fix_context L) (dbody x) (dbody y)
          × (dname x, dtype x, rarg x) = (dname y, dtype y, rarg y)) mfix' mfix ∥ /\
     ∥ All2
         (fun x y : def term =>
          (eq_term_upto_univ Re Re (dtype x) (dtype y)
           × eq_term_upto_univ Re Re (dbody x) (dbody y)) ×
          rarg x = rarg y) mfix1 mfix ∥) _ _ _ _ X).
-        - intros L x y l [[p1 p2] p3] h.
+        - clear X. intros L x y l [[p1 p2] p3] mfix' h.
           dependent destruction h. destruct p as [[h1 h2] h3].
           eapply p2 in h2 as hh ; eauto.
           destruct hh as [? [[? ?]]].
-          eapply red1_eq_context_upto_l in r as [x' [[? ?]]] ; revgoals.
-          { instantiate (1 := Γ ,,, fix_context (y0 :: l')).
-            instantiate (1 := Re).
-            (* eapply eq_context_upto_cat. *)
-            (* - eapply eq_context_upto_refl. eauto. *)
-            (* - eapply All2_eq_context_upto. *)
-            (*   eapply PCUICParallelReductionConfluence.All2_rev. *)
-            (*   eapply All2_mapi. *)
-            (*   constructor. *)
-            (*   + intro i. split. *)
-            (*     * cbn. constructor. *)
-            (*     * cbn. eapply eq_term_upto_univ_lift. eauto. *)
-            (*   + eapply Forall2_impl ; eauto. *)
-            (*     intros ? ? [? [? ?]] i. *)
-            (*     split. *)
-            (*     * constructor. *)
-            (*     * cbn. eapply eq_term_upto_univ_lift. eauto. *)
-            give_up.
-            (* We should also prove that mfix' is related to L
-               with respect to fix_context (eq_context basically).
-             *)
-          }
-          { assumption. }
           eexists. split.
           + constructor. constructor.
             instantiate (1 := mkdef _ _ _ _ _).
@@ -973,21 +950,22 @@ Section Lemmata.
           + constructor. constructor. all: eauto.
             inversion p3.
             simpl. repeat split ; eauto.
-            eapply eq_term_upto_univ_trans ; eauto.
-        - intros L x l l' h ih ha.
+        - clear X. intros L x l l' h ih mfix' ha.
           dependent destruction ha. destruct p as [[h1 h2] h3].
-          (* destruct (ih _ H0) as [? [[? ?]]]. *)
-          (* { give_up. } *)
-          (* eexists. split. *)
-          (* + constructor. eapply OnOne2_tl. *)
-          (*   (* SAME PROBLEM *) *)
-          (*   admit. *)
-          (* + constructor. all: eauto. *)
-          give_up.
+          destruct (ih _ ha) as [? [[?] [?]]].
+          eexists. split.
+          + constructor. eapply OnOne2_tl. eauto.
+          + constructor. constructor. all: eauto.
       }
-      destruct h as [? [[?] [?]]].
+      destruct h as [mfix [[?] [?]]].
       eexists. do 2 split.
-      +  eapply fix_red_body. eassumption.
+      +  eapply fix_red_body.
+         eapply OnOne2_impl ; try eassumption.
+         intros x y [r e]. inversion e. clear e.
+         split ; eauto.
+         Fail eapply red1_eq_context_upto_l.
+         (* We need to produce another mfix again. *)
+         admit.
       + constructor. all: eauto.
     - dependent destruction e.
       assert (h : exists mfix,

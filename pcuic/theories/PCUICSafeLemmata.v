@@ -962,11 +962,19 @@ Section Lemmata.
         ∥ OnOne2 (fun x y =>
                     red1 Σ (Γ ,,, fix_context mfix') x.(dbody) y.(dbody) ×
                     (dname x, dtype x, rarg x) = (dname y, dtype y, rarg y)
-                 ) mfix' mfix ∥
+                 ) mfix' mfix ∥ /\
+        ∥ All2 (fun x y =>
+                  eq_term_upto_univ Re Re x.(dtype) y.(dtype) *
+                  eq_term_upto_univ Re Re x.(dbody) y.(dbody) *
+                  (x.(rarg) = y.(rarg))
+               ) mfix1 mfix ∥%type
       ).
-      { induction X0.
+      { clear X.
+        (* Maybe assert here that the fix_contexts are equal *)
+        induction X0 in mfix1, a, X1 |- *.
         - destruct p as [r e]. inversion e. clear e.
-          dependent destruction X1. destruct p as [[p1 p2] p3].
+          dependent destruction a. destruct p as [[p1 p2] p3].
+          dependent destruction X1. destruct p as [[? ?] ?].
           eapply red1_eq_context_upto_l in r as [? [[? ?]]] ; revgoals.
           2: exact he.
           { instantiate (1 := Γ ,,, fix_context (hd :: tl)).
@@ -975,7 +983,6 @@ Section Lemmata.
             - eapply All2_eq_context_upto.
               eapply PCUICParallelReductionConfluence.All2_rev.
               eapply All2_mapi.
-              dependent destruction a. destruct p as [[? ?] ?].
               constructor.
               + intros i. split.
                 * cbn. constructor.
@@ -985,16 +992,24 @@ Section Lemmata.
                 * cbn. constructor.
                 * cbn. eapply eq_term_upto_univ_lift. eauto.
           }
-          eexists. constructor. constructor.
-          instantiate (1 := mkdef _ _ _ _ _). simpl. split ; eauto.
-        - (* dependent destruction a. *)
-          (* Maybe we have to clear some hypotheses before induction. *)
+          eexists. split.
+          + constructor. constructor.
+            instantiate (1 := mkdef _ _ _ _ _). simpl. split ; eauto.
+          + constructor. constructor. all: eauto.
+            simpl. repeat split ; eauto.
+            * rewrite H1. eauto.
+            * eapply eq_term_upto_univ_trans ; try eassumption.
+            * etransitivity ; eauto.
+        - dependent destruction X1. destruct p as [[? ?] ?].
+          dependent destruction a. destruct p as [[p1 p2] p3].
+          (* specialize (IHX0 _ ) *)
+          (* Wrong IH again *)
           admit.
       }
-      destruct h as [? [?]].
+      destruct h as [? [[?] [?]]].
       eexists. do 2 split.
       +  eapply fix_red_body. eassumption.
-      + constructor. all: eauto. admit.
+      + constructor. all: eauto.
     - dependent destruction e.
       assert (h : exists mfix,
                  ∥ OnOne2 (fun d0 d1 =>

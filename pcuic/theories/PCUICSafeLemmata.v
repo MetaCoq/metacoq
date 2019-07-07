@@ -958,15 +958,43 @@ Section Lemmata.
           + constructor. constructor. all: eauto.
       }
       destruct h as [mfix [[?] [?]]].
+      assert (h : exists mfix,
+        ∥ OnOne2 (fun x y =>
+                    red1 Σ (Γ ,,, fix_context mfix') x.(dbody) y.(dbody) ×
+                    (dname x, dtype x, rarg x) = (dname y, dtype y, rarg y)
+                 ) mfix' mfix ∥
+      ).
+      { induction X0.
+        - destruct p as [r e]. inversion e. clear e.
+          dependent destruction X1. destruct p as [[p1 p2] p3].
+          eapply red1_eq_context_upto_l in r as [? [[? ?]]] ; revgoals.
+          2: exact he.
+          { instantiate (1 := Γ ,,, fix_context (hd :: tl)).
+            eapply eq_context_upto_cat.
+            - eapply eq_context_upto_refl. assumption.
+            - eapply All2_eq_context_upto.
+              eapply PCUICParallelReductionConfluence.All2_rev.
+              eapply All2_mapi.
+              dependent destruction a. destruct p as [[? ?] ?].
+              constructor.
+              + intros i. split.
+                * cbn. constructor.
+                * cbn. eapply eq_term_upto_univ_lift. eauto.
+              + eapply All2_impl ; eauto.
+                intros x1 y [[? ?] ?] i. split.
+                * cbn. constructor.
+                * cbn. eapply eq_term_upto_univ_lift. eauto.
+          }
+          eexists. constructor. constructor.
+          instantiate (1 := mkdef _ _ _ _ _). simpl. split ; eauto.
+        - (* dependent destruction a. *)
+          (* Maybe we have to clear some hypotheses before induction. *)
+          admit.
+      }
+      destruct h as [? [?]].
       eexists. do 2 split.
-      +  eapply fix_red_body.
-         eapply OnOne2_impl ; try eassumption.
-         intros x y [r e]. inversion e. clear e.
-         split ; eauto.
-         Fail eapply red1_eq_context_upto_l.
-         (* We need to produce another mfix again. *)
-         admit.
-      + constructor. all: eauto.
+      +  eapply fix_red_body. eassumption.
+      + constructor. all: eauto. admit.
     - dependent destruction e.
       assert (h : exists mfix,
                  ∥ OnOne2 (fun d0 d1 =>

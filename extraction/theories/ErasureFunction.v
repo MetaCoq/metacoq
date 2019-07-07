@@ -75,11 +75,11 @@ Proof.
     + exact (TypeError t).
 Admitted. (* termination of is_arity *)
 
-Definition is_type_or_proof :
+Definition is_erasable :
   forall (Sigma : PCUICAst.global_env_ext) (HΣ : ∥wf Sigma∥) (Gamma : context) (HΓ : ∥wf_local Sigma Gamma∥) (t : PCUICAst.term),
     {r : typing_result bool & ∥ match r with
-                           | Checked true => Is_Type_or_Proof Sigma Gamma t 
-                           | Checked false => (Is_Type_or_Proof Sigma Gamma t -> False) × PCUICSafeLemmata.welltyped Sigma Gamma t
+                           | Checked true => isErasable Sigma Gamma t 
+                           | Checked false => (isErasable Sigma Gamma t -> False) × PCUICSafeLemmata.welltyped Sigma Gamma t
                            | _ => True
                            end ∥}.
 Proof.
@@ -196,7 +196,7 @@ Section Erase.
   End EraseMfix.
 
   Equations(noind) erase (Γ : context) (HΓ : ∥ wf_local Σ Γ ∥) (t : term) : typing_result E.term :=
-    erase Γ HΓ t with (is_type_or_proof Σ HΣ Γ HΓ t) :=
+    erase Γ HΓ t with (is_erasable Σ HΣ Γ HΓ t) :=
     {
       erase Γ HΓ _ (Checked true ; _) := ret (E.tBox);
       erase Γ HΓ _ (TypeError t ; _) := TypeError t ;
@@ -295,7 +295,7 @@ Proof.
     eapply isArity_subst_instance. eapply isArity_ind_type.
   - econstructor.
     eapply elim_restriction_works. intros.
-    eapply f, Is_Type_or_Proof_Proof. eauto. eauto.
+    eapply f, isErasable_Proof. eauto. eauto.
     
     pose proof (Prelim.monad_map_All2 _ _ _ brs a2 E3).
     
@@ -308,7 +308,7 @@ Proof.
   - econstructor.
 
     eapply elim_restriction_works_proj. intros.
-    eapply Is_Type_or_Proof_Proof in X2. eauto.
+    eapply isErasable_Proof in X2. eauto.
 
     eauto.
   - econstructor.

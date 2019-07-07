@@ -30,8 +30,8 @@ Qed.
 
 Lemma Is_type_or_proof_instance_constr (Σ : global_env_ext) Γ T u :
   wf Σ ->  wf_local Σ Γ ->
-  Is_Type_or_Proof Σ Γ T ->
-  Is_Type_or_Proof Σ Γ (PCUICUnivSubst.subst_instance_constr u T).
+  isErasable Σ Γ T ->
+  isErasable Σ Γ (PCUICUnivSubst.subst_instance_constr u T).
 Proof.
   intros. destruct X1 as (? & ? & [ | (? & ? & ?)]).
   - eapply typing_subst_instance in t; eauto.
@@ -61,7 +61,7 @@ Notation "Σ ⊢ s ▷ t" := (Ee.eval Σ s t) (at level 50, s, t at next level) 
 
 Lemma Is_type_conv_context (Σ : global_env_ext) (Γ : context) t (Γ' : context) :
   wf Σ -> wf_local Σ Γ ->
-    conv_context Σ Γ Γ' -> Is_Type_or_Proof Σ Γ t -> Is_Type_or_Proof Σ Γ' t.
+    conv_context Σ Γ Γ' -> isErasable Σ Γ t -> isErasable Σ Γ' t.
 Proof.
   intros.
   destruct X2 as (? & ? & ?).
@@ -150,7 +150,7 @@ Admitted. (* erasure and universe substitution *)
 Lemma erases_App (Σ : global_env_ext) Γ f L T t :
   Σ ;;; Γ |- tApp f L : T ->
   erases Σ Γ (tApp f L) t ->
-  (t = tBox × squash (Is_Type_or_Proof Σ Γ (tApp f L)))
+  (t = tBox × squash (isErasable Σ Γ (tApp f L)))
   \/ exists f' L', t = E.tApp f' L' /\
              erases Σ Γ f f' /\
              erases Σ Γ L L'.
@@ -176,7 +176,7 @@ Lemma erases_mkApps_inv (Σ : global_env_ext) Γ f L T t :
   Σ ;;; Γ |- mkApps f L : T ->
   Σ;;; Γ |- mkApps f L ⇝ℇ t ->
   (exists L1 L2 L2', L = (L1 ++ L2)%list /\
-                squash (Is_Type_or_Proof Σ Γ (mkApps f L1)) /\
+                squash (isErasable Σ Γ (mkApps f L1)) /\
                 erases Σ Γ (mkApps f L1) tBox /\
                 Forall2 (erases Σ Γ) L2 L2' /\
                 t = E.mkApps tBox L2'
@@ -390,7 +390,7 @@ Proof.
         eapply All2_impl.
         eapply All2_All_mix_left. eassumption.
         2:{ intros. destruct X1. assert (y = tBox). exact y0. subst. econstructor.
-            now eapply Is_Type_or_Proof_Proof. }
+            now eapply isErasable_Proof. }
 
         eapply All2_right_triv. 2: now rewrite repeat_length.
 
@@ -460,7 +460,7 @@ Proof.
            eapply All2_impl.
            eapply All2_All_mix_left. eassumption.
            2:{ intros. destruct X1. assert (y = tBox). exact y0. subst. econstructor.
-               now eapply Is_Type_or_Proof_Proof. }
+               now eapply isErasable_Proof. }
 
            eapply All2_right_triv. 2:now rewrite repeat_length.
            now eapply All_repeat.
@@ -628,7 +628,7 @@ Proof.
         eapply nth_error_skipn. eassumption.
         eapply All_impl. assert (pars = ind_npars x0). destruct d as (? & ? & ?). now rewrite H9. subst.
         eassumption.
-        eapply Is_Type_or_Proof_Proof. eauto.
+        eapply isErasable_Proof. eauto.
 
         eapply eval_proj_box.
         pose proof (Ee.eval_to_value _ _ _ Hty_vc').
@@ -657,7 +657,7 @@ Proof.
            eapply nth_error_skipn. eassumption.
            eapply All_impl. assert (pars = ind_npars x0). destruct d as (? & ? & ?). now rewrite H9. subst.
            eassumption.
-           eapply Is_Type_or_Proof_Proof. eauto.
+           eapply isErasable_Proof. eauto.
 
            eapply eval_proj_box.
            pose proof (Ee.eval_to_value _ _ _ Hty_vc').

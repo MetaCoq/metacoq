@@ -27,7 +27,7 @@ Qed.
 
 Lemma Is_type_extends (Σ : global_env_ext) Γ t :
   wf_local Σ Γ ->
-  forall (Σ' : global_env), wf Σ' -> extends Σ Σ' -> Is_Type_or_Proof Σ Γ t -> Is_Type_or_Proof (Σ', Σ.2) Γ t.
+  forall Σ', wf Σ' -> extends Σ Σ' -> isErasable Σ Γ t -> isErasable Σ' Γ t.
 Proof.
   intros. destruct X2 as [T []].
   exists T. split. eapply weakening_env; [ | | eauto | | ]; eauto using wf_extends.
@@ -113,7 +113,7 @@ Lemma Is_type_weakening:
     wf Σ ->
     wf_local Σ (Γ ,,, Γ'' ,,, lift_context #|Γ''| 0 Γ') ->
     forall t : PCUICAst.term,
-      Is_Type_or_Proof Σ (Γ ,,, Γ') t -> Is_Type_or_Proof Σ (Γ ,,, Γ'' ,,, lift_context #|Γ''| 0 Γ') (PCUICLiftSubst.lift #|Γ''| #|Γ'| t).
+      isErasable Σ (Γ ,,, Γ') t -> isErasable Σ (Γ ,,, Γ'' ,,, lift_context #|Γ''| 0 Γ') (PCUICLiftSubst.lift #|Γ''| #|Γ'| t).
 Proof.
   intros. destruct X2 as (T & ? & ?).
   eexists. split. eapply weakening_typing; eauto.
@@ -274,8 +274,8 @@ Lemma is_type_subst (Σ : global_env_ext) Γ Γ' Δ a s :
   wf Σ -> subslet Σ Γ s Γ' ->
   (* Σ ;;; Γ ,,, Γ' ,,, Δ |- a : T -> *)
   wf_local Σ (Γ ,,, subst_context s 0 Δ) ->
-  Is_Type_or_Proof Σ (Γ ,,, Γ' ,,, Δ) a ->
-  Is_Type_or_Proof Σ (Γ ,,, subst_context s 0 Δ) (PCUICLiftSubst.subst s #|Δ| a).
+  isErasable Σ (Γ ,,, Γ' ,,, Δ) a ->
+  isErasable Σ (Γ ,,, subst_context s 0 Δ) (PCUICLiftSubst.subst s #|Δ| a).
 Proof.
   intros ? ? ? (T & HT & H).
   exists (PCUICLiftSubst.subst s #|Δ| T). split.

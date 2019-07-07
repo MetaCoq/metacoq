@@ -155,8 +155,8 @@ Admitted.
 Lemma Is_type_app (Σ : global_env_ext) Γ t L T :
   wf Σ ->
   Σ ;;; Γ |- mkApps t L : T ->
-  Is_Type_or_Proof Σ Γ t ->
-  Is_Type_or_Proof Σ Γ (mkApps t L).
+  isErasable Σ Γ t ->
+  isErasable Σ Γ (mkApps t L).
 Proof.
   intros. eapply type_mkApps_inv in X0 as (? & ? & [] & ?); try eassumption.
   destruct X1 as (? & ? & [ | [u]]).
@@ -181,8 +181,8 @@ Admitted.                       (* Is_type_app *)
 
 Lemma Is_type_lambda (Σ : global_env_ext) Γ na T1 t :
   wf Σ ->
-  Is_Type_or_Proof Σ Γ (tLambda na T1 t) ->
-  Is_Type_or_Proof Σ (vass na T1 :: Γ) t.
+  isErasable Σ Γ (tLambda na T1 t) ->
+  isErasable Σ (vass na T1 :: Γ) t.
 Proof.
   intros ? (T & ? & ?).
   eapply inversion_Lambda in t0 as (? & ? & ? & ? & ?).
@@ -194,8 +194,8 @@ Admitted.                       (* Is_type_lambda *)
 Lemma Is_type_red (Σ : global_env_ext) Γ t v:
   wf Σ ->
   red Σ Γ t v ->
-  Is_Type_or_Proof Σ Γ t ->
-  Is_Type_or_Proof Σ Γ v.
+  isErasable Σ Γ t ->
+  isErasable Σ Γ v.
 Proof.
   intros ? ? (T & ? & ?).
   exists T. split.
@@ -206,8 +206,8 @@ Qed.
 Lemma Is_type_eval (Σ : global_env_ext) Γ t v:
   wf Σ ->
   eval Σ Γ t v ->
-  Is_Type_or_Proof Σ Γ t ->
-  Is_Type_or_Proof Σ Γ v.
+  isErasable Σ Γ t ->
+  isErasable Σ Γ v.
 Proof.
   intros; eapply Is_type_red. eauto.
   eapply wcbeval_red; eauto. eauto.
@@ -220,8 +220,9 @@ Proof.
   intros idecl.
 Admitted.                       (* the type of an inductive is an arity *)
 
+
 Lemma tConstruct_no_Type (Σ : global_env_ext) ind c u x1 : wf Σ ->
-  Is_Type_or_Proof Σ [] (mkApps (tConstruct ind c u) x1) ->
+  isErasable Σ [] (mkApps (tConstruct ind c u) x1) ->
   Is_proof Σ [] (mkApps (tConstruct ind c u) x1).
 Proof.
   intros wfΣ (? & ? & [ | (? & ? & ?)]).

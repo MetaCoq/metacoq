@@ -28,6 +28,12 @@ Proof.
 
 Admitted.
 
+Lemma isWfArity_prod_inv:
+  forall (Σ : global_context) (Γ : context) (T : term) (x : name) (x0 x1 : term),
+    isWfArity typing Σ Γ (tProd x x0 x1) -> (∑ s : universe, Σ;;; Γ |- x0 : tSort s) ×   isWfArity typing Σ (Γ,, vass x x0) x1
+.
+Admitted.
+
 Equations is_arity Σ (HΣ : ∥wf Σ∥) Γ (HΓ : ∥wf_local Σ Γ∥) T (HT : wellformed Σ Γ T) : typing_result ({Is_conv_to_Arity Σ Γ T} + {~ Is_conv_to_Arity Σ Γ T})
          by wf ((Σ;Γ;T;HT) : (∑ Σ Γ t, wellformed Σ Γ t)) term_rel :=
   {
@@ -87,31 +93,45 @@ Next Obligation.
   exists x4; split; eauto.
 
   destruct HT as [ [] | [] ].
-  ++ sq. etransitivity. eassumption.
+  ++ sq. pose proof (X9). pose proof X9.
 
+     eapply subject_reduction in X10. 2:eauto. 2:{ etransitivity. exact X5. exact r0. }
+     eapply inversion_Prod in X10 as (? & ? & ? & ? & ?).
+     
+     eapply subject_reduction in X11. 2:eauto. 2:{ exact X6. }
+     eapply inversion_Prod in X11 as (? & ? & ? & ? & ?).
+
+     etransitivity. eassumption.
+     
      eapply context_conversion_red; eauto. econstructor.
 
      eapply conv_context_refl; eauto. econstructor.
 
      2: eapply conv_sym, red_conv; eauto.
 
-     right.
-
-     eapply subject_reduction in X9. 2:eauto. 2: exact X.
-     
-     eapply inversion_Prod in X9 as ( ? & ? & ? & ? & ?). exists x0. eauto.
-     
+     right. eexists; eauto.     
   ++ sq. etransitivity. eassumption.
+     
+     eapply context_conversion_red; eauto. admit. econstructor.
 
-     eapply context_conversion_red; eauto. econstructor.
+     eapply conv_context_refl; eauto.
 
-     eapply conv_context_refl; eauto. econstructor.
+     econstructor. right; eexists; eauto. admit.
 
-     2: eapply conv_sym, red_conv; eauto. destruct Σ as [Σ univs]; cbn in *.
-     eapply isWfArity_red in X9. 2:eauto. 2:exact X6.
-     eapply isWfArity_prod_inv in X9 as[]; eauto.
-     right. eassumption.
-Qed.
+     eapply conv_sym, red_conv; eauto.
+Admitted.
+
+
+
+(*      eapply context_conversion_red; eauto. econstructor. *)
+
+(*      eapply conv_context_refl; eauto. econstructor. *)
+
+(*      2: eapply conv_sym, red_conv; eauto. destruct Σ as [Σ univs]; cbn in *. *)
+(*      eapply isWfArity_red in X9. 2:eauto. 2:exact X6. *)
+(*      eapply isWfArity_prod_inv in X9 as[]; eauto. *)
+(*      right. eassumption. *)
+(* Qed. *)
 
 Program Definition is_erasable (Sigma : PCUICAst.global_env_ext) (HΣ : ∥wf Sigma∥) (Gamma : context) (HΓ : ∥wf_local Sigma Gamma∥) (t : PCUICAst.term) :
   typing_result (sumbool (∥isErasable Sigma Gamma t∥) (∥(isErasable Sigma Gamma t -> False) × PCUICSafeLemmata.welltyped Sigma Gamma t∥)) :=

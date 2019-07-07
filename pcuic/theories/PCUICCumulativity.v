@@ -210,6 +210,25 @@ Proof.
     exists t', u'. intuition auto. now eapply red_step.
 Qed.
 
+Lemma red_conv (Σ : global_context) Γ t u : red Σ Γ t u -> Σ ;;; Γ |- t = u.
+Proof.
+  intros. now eapply conv_conv_alt, red_conv_alt.
+Qed.
+
+Lemma conv_cumul Σ Γ t u :
+  Σ ;;; Γ |- t = u -> (Σ ;;; Γ |- t <= u) * (Σ ;;; Γ |- u <= t).
+Proof. trivial. Qed.
+
+Lemma conv_trans_reg :
+  forall Σ Γ u v w,
+    Σ ;;; Γ |- u = v ->
+    Σ ;;; Γ |- v = w ->
+    Σ ;;; Γ |- u = w.
+Proof.
+  intros Σ Γ u v w h1 h2.
+  destruct h1, h2. constructor ; eapply cumul_trans ; eassumption.
+Qed.
+
 Lemma congr_cumul_prod : forall `{checker_flags} Σ Γ na na' M1 M2 N1 N2,
     conv Σ Γ M1 N1 ->
     cumul Σ (Γ ,, vass na M1) M2 N2 ->
@@ -347,7 +366,7 @@ Proof.
     econstructor. assumption.
 Qed.
 
-Lemma conv_cumul `{cf : checker_flags} :
+Lemma conv_cumul_l `{cf : checker_flags} :
   forall Σ Γ u v,
     Σ ;;; Γ |- u = v ->
     Σ ;;; Γ |- u <= v.
@@ -485,7 +504,7 @@ Proof.
   - simpl in *. destruct h2 as [h2]. constructor.
     eapply cumul_trans.
     + eapply cumul_Prod_r. eassumption.
-    + eapply conv_cumul. eapply conv_Prod_l. assumption.
+    + eapply conv_cumul_l. eapply conv_Prod_l. assumption.
 Qed.
 
 Lemma cumul_Case_c `{cf : checker_flags} :

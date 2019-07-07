@@ -54,16 +54,6 @@ Proof.
   depelim leqvv'. exists s'. intuition eauto.
 Qed.
 
-Lemma red_confluence {Σ Γ t u v} : wf Σ ->
-  red Σ Γ t u -> red Σ Γ t v ->
-  ∃ v', red Σ Γ u v' * red Σ Γ v v'.
-Proof.
-  move=> wfΣ H H'. apply red_alt in H. apply red_alt in H'.
-  destruct (red1_confluent wfΣ _ _ _ _ H H') as [nf [redl redr]].
-  apply red_alt in redl; apply red_alt in redr.
-  exists nf; intuition auto.
-Qed.
-
 Lemma invert_red_prod Σ Γ na A B v : wf Σ ->
   red Σ Γ (tProd na A B) v ->
   ∑ A' B', (v = tProd na A' B') *
@@ -87,31 +77,6 @@ Proof.
 Admitted.
 
 Derive Signature for eq_term_upto_univ.
-
-Lemma red_conv (Σ : global_context) Γ t u : red Σ Γ t u -> Σ ;;; Γ |- t = u.
-Proof.
-  intros. now eapply conv_conv_alt, red_conv_alt.
-Qed.
-
-Lemma conv_cumul Σ Γ t u :
-  Σ ;;; Γ |- t = u -> (Σ ;;; Γ |- t <= u) * (Σ ;;; Γ |- u <= t).
-Proof. trivial. Qed.
-
-Lemma conv_sym Σ Γ t u : Σ ;;; Γ |- t = u -> Σ ;;; Γ |- u = t.
-Proof.
-  intros. eapply conv_cumul in X. split; intuition auto.
-Qed.
-
-(* TODO from Inversion *)
-  Lemma conv_trans :
-    forall Σ Γ u v w,
-      Σ ;;; Γ |- u = v ->
-      Σ ;;; Γ |- v = w ->
-      Σ ;;; Γ |- u = w.
-  Proof.
-    intros Σ Γ u v w h1 h2.
-    destruct h1, h2. constructor ; eapply cumul_trans ; eassumption.
-  Qed.
 
 Lemma invert_cumul_prod_r Σ Γ C na A B : wf Σ ->
   Σ ;;; Γ |- C <= tProd na A B ->
@@ -242,33 +207,6 @@ Section Principality.
   Arguments equiv {A B}.
   Arguments equiv_inv {A B}.
 
-  Lemma cumul_confluence {Γ A B C} :
-    Σ ;;; Γ |- A <= B ->
-    Σ ;;; Γ |- A <= C ->
-    ∑ D, (Σ ;;; Γ |- D <= A) *
-         (Σ ;;; Γ |- D <= B) *
-         (Σ ;;; Γ |- D <= C).
-  (* Proof. *)
-  (*   move/(equiv (cumul_alt _ _ _ _)) => [A' [B' [[AA' AB'] A'B']]]. *)
-  (*   move/(equiv (cumul_alt _ _ _ _)) => [A'' [C' [[AA'' CC'] A''C']]]. *)
-  (*   destruct (red_confluence wfΣ AA' AA'') as [Anf [redl redr]]. *)
-  (*   exists Anf; repeat split. *)
-  (*   eapply red_cumul_inv. *)
-  (*   now transitivity A'. *)
-  (*   eapply cumul_trans with A'. *)
-  (*   eapply red_cumul_inv. *)
-  (*   now transitivity A'. *)
-  (*   eapply cumul_alt. exists A', B'. split; auto. *)
-  (*   eapply cumul_trans with A''. *)
-  (*   now eapply red_cumul_inv. *)
-  (*   eapply cumul_alt. *)
-  (*   exists A'', C'. intuition auto. *)
-  (* Qed. *)
-  Proof.
-    intros hB hC.
-    exists A. auto.
-  Qed.
-
   Lemma cumul_sort_confluence {Γ A u v} :
     Σ ;;; Γ |- A <= tSort u ->
     Σ ;;; Γ |- A <= tSort v ->
@@ -301,25 +239,6 @@ Section Principality.
     isWfArity typing Σ Γ (tSort u).
   Proof.
     move=> wfΓ. red. exists [], u. intuition auto.
-  Qed.
-
-  Lemma substitution_cumul0 Γ na t u u' a :
-    Σ ;;; Γ ,, vass na t |- u <= u' ->
-    Σ ;;; Γ |- subst10 a u <= subst10 a u'.
-  Proof.
-    move=> Hu.
-    pose proof (substitution_untyped_cumul Σ Γ [vass na t] [] [a] u u' wfΣ).
-    forward X.
-    { constructor. constructor. }
-    simpl in X. now apply X.
-  Qed.
-
-  Lemma destArity_it_mkProd_or_LetIn ctx ctx' t :
-    destArity ctx (it_mkProd_or_LetIn ctx' t) =
-    destArity (ctx ,,, ctx') t.
-  Proof.
-    induction ctx' in ctx, t |- *; simpl; auto.
-    rewrite IHctx'. destruct a as [na [b|] ty]; reflexivity.
   Qed.
 
   (** Needs subject reduction for converting contexts *)

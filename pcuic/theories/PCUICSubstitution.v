@@ -1709,6 +1709,17 @@ Proof.
     eapply red_cumul_inv. eapply r.
 Qed.
 
+Lemma substitution_cumul0 Σ Γ na t u u' a : wf Σ ->
+  Σ ;;; Γ ,, vass na t |- u <= u' ->
+  Σ ;;; Γ |- subst10 a u <= subst10 a u'.
+Proof.
+  move=> wfΣ Hu.
+  pose proof (substitution_untyped_cumul Σ Γ [vass na t] [] [a] u u' wfΣ).
+  forward X.
+  { constructor. constructor. }
+  simpl in X. now apply X.
+Qed.
+
 (** The cumulativity relation is substitutive, yay! *)
 
 Lemma substitution_cumul Σ Γ Γ' Γ'' s M N :

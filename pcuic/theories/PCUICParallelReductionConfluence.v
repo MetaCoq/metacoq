@@ -15,7 +15,7 @@ Require CMorphisms.
 Require Import Equations.Type.Relation Equations.Type.Relation_Properties.
 Require Import Equations.Prop.DepElim.
 
-Derive Signature for pred1 All All2 All2_local_env.
+Derive Signature for pred1 All2_local_env.
 
 Set Asymmetric Patterns.
 
@@ -589,6 +589,25 @@ Section Confluence.
     intros. apply (@mkApps_eq_decompose_app_rec f args t []); auto.
   Qed.
 
+  Lemma fst_decompose_app_rec t l : fst (decompose_app_rec t l) = fst (decompose_app t).
+  Proof.
+    induction t in l |- *; simpl; auto. rewrite IHt1.
+    unfold decompose_app. simpl. now rewrite (IHt1 [t2]).
+  Qed.
+
+  Lemma skipn_nth_error {A} (l : list A) i :
+     match nth_error l i with
+     | Some a => skipn i l = a :: skipn (S i) l
+     | None => skipn i l = []
+     end.
+  Proof.
+    induction l in i |- *. destruct i. reflexivity. reflexivity.
+    destruct i. simpl. reflexivity.
+    simpl. specialize (IHl i). destruct nth_error.
+    rewrite [skipn _ _]IHl. reflexivity.
+    rewrite [skipn _ _]IHl. reflexivity.
+  Qed.
+
   Hint Constructors pred1 : pcuic.
 
   Lemma All2_prop_eq_All2 {A B} {Σ Γ Δ} {f : A -> term} {g : A -> B} args0 args1 args3 :
@@ -640,12 +659,6 @@ Section Confluence.
   Qed.
   Hint Resolve All2_on_Trel_eq_impl : pcuic.
 
-  Lemma fst_decompose_app_rec t l : fst (decompose_app_rec t l) = fst (decompose_app t).
-  Proof.
-    induction t in l |- *; simpl; auto. rewrite IHt1.
-    unfold decompose_app. simpl. now rewrite (IHt1 [t2]).
-  Qed.
-
   Lemma isConstruct_app_inv t :
     isConstruct_app t = true ->
     ∃ ind k u args, t = mkApps (tConstruct ind k u) args.
@@ -685,19 +698,6 @@ Section Confluence.
     - constructor.
     - apply IHn; auto.
     - apply IHn; auto.
-  Qed.
-
-  Lemma skipn_nth_error {A} (l : list A) i :
-     match nth_error l i with
-     | Some a => skipn i l = a :: skipn (S i) l
-     | None => skipn i l = []
-     end.
-  Proof.
-    induction l in i |- *. destruct i. reflexivity. reflexivity.
-    destruct i. simpl. reflexivity.
-    simpl. specialize (IHl i). destruct nth_error.
-    rewrite [skipn _ _]IHl. reflexivity.
-    rewrite [skipn _ _]IHl. reflexivity.
   Qed.
 
   Equations construct_cofix_discr (t : term) : bool :=
@@ -2077,12 +2077,6 @@ Section Confluence.
     - sigma. simpl. constructor; auto with pcuic. solve_all.
 
     - rewrite !pred_atom_inst; auto. eapply pred1_refl_gen; auto with pcuic.
-  Qed.
-
-  Lemma All2_sym {A} (P : A -> A -> Type) l l' :
-    All2 P l l' -> All2 (fun x y => P y x) l' l.
-  Proof.
-    induction 1; constructor; auto.
   Qed.
 
   Definition rho_ctxmap (Γ Δ : context) (s : nat -> term) :=

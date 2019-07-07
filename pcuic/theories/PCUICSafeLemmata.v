@@ -597,12 +597,12 @@ Section Lemmata.
     intros Re Rle Γ u v u' he hle tRe tRle hRe hRle hR e h.
     induction h.
     - eapply red1_eq_term_upto_univ_l in X ; try exact e ; eauto.
-      destruct X as [v' [[r e']]].
+      destruct X as [v' [r e']].
       exists v'. split ; auto.
       constructor. assumption. now constructor.
     - specialize (IHh e). destruct IHh as [v' [c [ev]]].
       eapply red1_eq_term_upto_univ_l in X ; try exact ev ; eauto.
-      destruct X as [w' [[? ?]]].
+      destruct X as [w' [? ?]].
       exists w'. split ; auto.
       eapply cored_trans ; eauto. now constructor.
   Qed.

@@ -7,6 +7,7 @@ From MetaCoq.Template Require Import config utils Universes BasicAst AstUtils
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICReflect PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICNameless
      PCUICCumulativity PCUICPosition.
+
 From Equations Require Import Equations.
 Require Import Equations.Prop.DepElim.
 Set Equations With UIP.
@@ -831,6 +832,56 @@ Proof.
       transitivity (rarg y); auto.
 Qed.
 
+Section ContextUpTo.
+  Context (Re : universe -> universe -> Type).
+  Context (ReR : Reflexive Re).
+  Context (ReS : Symmetric Re).
+  Context (ReT : Transitive Re).
+
+  Notation eq_ctx := (eq_context_upto Re).
+
+  Global Instance eq_ctx_refl : Reflexive eq_ctx.
+  Proof. now intros ?; apply eq_context_upto_refl. Qed.
+
+  Global Instance eq_term_upto_univ_refl_inst : Reflexive (eq_term_upto_univ Re Re).
+  Proof. intros x. now apply eq_term_upto_univ_refl. Qed.
+
+  Global Instance eq_term_upto_univ_sym : Symmetric (eq_term_upto_univ Re Re).
+  Proof.
+    intros x y e.
+    revert x y e.
+    induction x using term_forall_list_ind; intros y Hy;
+      depelim Hy.
+    all:constructor; auto.
+    all:apply All2_sym; solve_all.
+    - eapply All2_map_inv in a. solve_all.
+    - eapply All2_map_inv in a. solve_all.
+    - eapply All2_map_inv in a. solve_all.
+  Qed.
+
+  Global Instance eq_ctx_sym : Symmetric eq_ctx.
+  Proof.
+    intros Γ Γ' H; induction H; constructor; auto using eq_term_upto_univ_sym.
+  Qed.
+
+  Derive Signature for eq_context_upto.
+
+  Global Instance eq_ctx_trans : Transitive eq_ctx.
+  Proof.
+    intros Γ0 Γ1 Γ2 H. induction H in Γ2 |- *.
+    - intros H2; depelim H2; try econstructor; auto.
+    - intros H2; depelim H2; try econstructor; auto;
+        hnf in H0; noconf H0.
+      eapply eq_term_upto_univ_trans; eauto.
+      now eapply IHeq_context_upto.
+    - intros H2; depelim H2; try econstructor; auto;
+        hnf in H0; noconf H0.
+      eapply eq_term_upto_univ_trans; eauto.
+      eapply eq_term_upto_univ_trans; eauto.
+      now eapply IHeq_context_upto.
+  Qed.
+End ContextUpTo.
+
 Lemma eq_term_trans :
   forall G u v w,
     eq_term G u v ->
@@ -1628,13 +1679,14 @@ Proof.
       }
       clear a.
       eapply OnOne2_impl_exist_and_All ; try eassumption.
-      clear X0 X1.
+      clear o a0.
       intros x x' y [r e] [[? ?] ?].
       inversion e. clear e.
-      eapply red1_eq_context_upto_l in r as [? [[? ?]]].
+      eapply red1_eq_context_upto_l in r as [? [? ?]].
       3: eassumption. 2: assumption.
       eexists. constructor.
       instantiate (1 := mkdef _ _ _ _ _). simpl.
+      intuition eauto.
       intuition eauto.
       - rewrite H1. eauto.
       - eapply eq_term_upto_univ_trans ; eassumption.
@@ -1720,19 +1772,19 @@ Proof.
         dependent destruction h. destruct p as [[h1 h2] h3].
         eapply p2 in h2 as hh ; eauto.
         destruct hh as [? [? ?]].
-        eexists. split.
-        + constructor. constructor.
+        noconf p3. hnf in H. noconf H.
+        eexists. split; simpl.
+        + constructor.
           instantiate (1 := mkdef _ _ _ _ _).
-          simpl. split ; eauto.
-        + constructor. constructor. all: eauto.
-          inversion p3.
-          simpl. repeat split ; eauto.
+          simpl. eauto.
+        + constructor. all: eauto.
+          simpl. repeat split ; eauto; congruence.
       - clear X. intros L x l l' h ih mfix' ha.
         dependent destruction ha. destruct p as [[h1 h2] h3].
         destruct (ih _ ha) as [? [? ?]].
         eexists. split.
-        + constructor. eapply OnOne2_tl. eauto.
-        + constructor. constructor. all: eauto.
+        + eapply OnOne2_tl. eauto.
+        + constructor. all: eauto.
     }
     destruct h as [mfix [? ?]].
     assert (h : ∑ mfix,
@@ -1771,19 +1823,19 @@ Proof.
       }
       clear a.
       eapply OnOne2_impl_exist_and_All ; try eassumption.
-      clear X0 X1.
+      clear o a0.
       intros x x' y [r e] [[? ?] ?].
       inversion e. clear e.
-      eapply red1_eq_context_upto_l in r as [? [[? ?]]].
+      eapply red1_eq_context_upto_l in r as [? [? ?]].
       3: eassumption. 2: assumption.
-      eexists. constructor.
+      eexists.
       instantiate (1 := mkdef _ _ _ _ _). simpl.
       intuition eauto.
       - rewrite H1. eauto.
       - eapply eq_term_upto_univ_trans ; eassumption.
       - etransitivity ; eauto.
     }
-    destruct h as [? [[? ?]]].
+    destruct h as [? [? ?]].
     eexists. split.
     +  eapply cofix_red_body. eassumption.
     + constructor. all: eauto.

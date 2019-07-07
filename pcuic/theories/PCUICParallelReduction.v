@@ -21,6 +21,7 @@ Existing Instance config.default_checker_flags.
 
 Derive NoConfusion for term.
 Derive Subterm for term.
+Derive Signature NoConfusion for All All2.
 
 Section ListSize.
   Context {A} (size : A -> nat).
@@ -309,8 +310,6 @@ Proof.
 Qed.
 
 (** All2 lemmas *)
-
-Derive NoConfusion for All2.
 
 (* Duplicate *)
 Lemma All2_app {A} {P : A -> A -> Type} {l l' r r'} :

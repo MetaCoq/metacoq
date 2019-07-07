@@ -827,6 +827,8 @@ Section RedConfluence.
       eq_context_upto_names Γ Γ' ->
       eq_context_upto_names (Γ ,, x) (Γ' ,, y).
 
+  Derive Signature for eq_context_upto_names.
+
   Global Instance eq_context_upto_names_refl : Reflexive eq_context_upto_names.
   Proof. intros Γ; induction Γ; constructor; auto. Qed.
 
@@ -1296,7 +1298,6 @@ Section RedConfluence.
     apply red_alt. now apply pred1_red in r.
     eapply clos_refl_trans_ctx_t_prod_l. intros. red. right. split; eauto.
     now apply red_ctx_clos_rt_red1_ctx, pred1_ctx_red_ctx.
-
     constructor 2.
     etransitivity; eauto.
   Qed.
@@ -1603,31 +1604,6 @@ Section ConfluenceFacts.
     - auto.
   Qed.
 
-  Lemma red1_red1_ctx_inv Γ Δ Δ' t u :
-    red1 Σ (Γ ,,, Δ) t u ->
-    assumption_context Δ ->
-    @red1_ctx Σ (Γ ,,, Δ) (Γ ,,, Δ') ->
-    red Σ (Γ ,,, Δ') t u.
-  Proof.
-    intros redt assΔ redΔ.
-    apply red1_pred1 in redt => //.
-    eapply red1_ctx_pred1_ctx in redΔ => //.
-    eapply pred1_ctx_pred1 in redt; eauto.
-    now eapply pred1_red_r in redt.
-  Qed.
-
-  Require Import Equations.Prop.DepElim.
-
-  Lemma clos_rt_red1_ctx_red_ctx :
-    inclusion (clos_refl_trans (@red1_ctx Σ)) (@red_ctx Σ).
-  Proof.
-    intros x y H. induction H.
-    - apply red1_ctx_pred1_ctx in r => //.
-      apply pred1_ctx_red_ctx in r => //.
-    - reflexivity.
-    - now eapply (red_ctx_trans wfΣ); eauto.
-  Qed.
-
   (* Lemma red1_red1_ctx_inv Γ Δ Δ' t u : *)
   (*   red1 Σ (Γ ,,, Δ) t u -> *)
   (*   assumption_context Δ -> *)
@@ -1641,9 +1617,18 @@ Section ConfluenceFacts.
   (*   now eapply pred1_red_r in redt. *)
   (* Qed. *)
 
+  Lemma clos_rt_red1_ctx_red_ctx :
+    inclusion (clos_refl_trans (@red1_ctx Σ)) (@red_ctx Σ).
+  Proof.
+    intros x y H. induction H.
+    - apply red1_ctx_pred1_ctx in r => //.
+      apply pred1_ctx_red_ctx in r => //.
+    - reflexivity.
+    - now eapply (red_ctx_trans wfΣ); eauto.
+  Qed.
+
   (* Lemma red_red_ctx_inv Δ Δ' t u : *)
   (*   red Σ Δ t u -> *)
-  (*   assumption_context Δ -> *)
   (*   @red_ctx Σ Δ Δ' -> *)
   (*   red Σ Δ' t u. *)
   (* Proof. *)

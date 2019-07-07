@@ -211,60 +211,6 @@ Next Obligation.
   - sq. econstructor. eauto.
 Qed.
 
-Definition is_erasable (Sigma : PCUICAst.global_context) (HΣ : ∥wf Sigma∥) (Gamma : context) (HΓ : ∥wf_local Sigma Gamma∥) (t : PCUICAst.term) :
-  {r : typing_result bool & ∥ match r with
-                           | Checked true => isErasable Sigma Gamma t
-                           | Checked false => (isErasable Sigma Gamma t -> False) × PCUICSafeLemmata.welltyped Sigma Gamma t
-                           | _ => True
-                           end ∥}.
-Proof.
-  intros. destruct (@infer _ HΣ Gamma HΓ t) as [ [T] | ].
-  2:{ exists (TypeError t0). repeat econstructor. }
-  edestruct is_arity with (Σ := Sigma) (Γ := Gamma)(T := T) as [[ | ] | ].
-  - eauto.
-  - eauto.
-  - sq. eapply PCUICValidity.validity in X as [_]; eauto.  destruct i.
-    right. sq. eauto. destruct i. econstructor. econstructor. eauto.
-  - exists (Checked true). destruct i as (? & ? & ?). sq.
-    eapply type_reduction in X0; eauto. exists x. eauto.    
-  - destruct (@infer _ HΣ Gamma HΓ T) as [ [K] | ].
-    + destruct @reduce_to_sort with (Σ := Sigma) ( Γ := Gamma) (t := K).
-      * eauto.
-      * sq. eapply PCUICValidity.validity in X as [_]; eauto.  destruct i.
-        econstructor 2. sq. eauto. destruct i. econstructor. econstructor. eauto.
-      * destruct a. destruct (is_prop_sort x) eqn:E.
-        -- exists (Checked true). sq. econstructor. split. eauto. 
-           right. exists x. split; eauto. eapply type_reduction; eauto.
-        -- exists (Checked false). sq. split.
-           ++ intros (? & ? & ?). sq.
-              destruct s as [ | (? & ? & ?)].
-              ** destruct n. eapply arity_type_inv; eauto.
-              ** eapply principal_typing in t0 as (? & ? & ? &?). 2:eauto. 2:exact X1.
-                 
-                 eapply cumul_prop1 in c0; eauto. 
-                 eapply cumul_prop2 in c; eauto.
-
-                 eapply type_reduction in X0; eauto.
-
-                 eapply principal_typing in c as (? & ? & ? & ?). 2:eauto. 2:exact X0.
-
-                 eapply cumul_prop1 in c0; eauto.
-
-                 destruct (invert_cumul_sort_r _ _ _ _ c) as (? & ? & ?).
-                 destruct (invert_cumul_sort_r _ _ _ _ c1) as (? & ? & ?).
-                 eapply red_confluence in r as (? & ? & ?); eauto.
-
-                 eapply invert_red_sort in r.
-                 eapply invert_red_sort in r1. subst. inversion r1; subst; clear r1.
-
-                 eapply leq_universe_prop in l0 as []; eauto.
-                 eapply leq_universe_prop in l as []; eauto.
-           ++ sq. econstructor. eauto.
-      * exists (TypeError t0). repeat econstructor.
-    + exists (TypeError t0). repeat econstructor.
-  - exists (TypeError t0). repeat econstructor.
-Qed.
-
 Section Erase.
 
   Definition is_box c :=
@@ -333,8 +279,8 @@ Section Erase.
   Equations(noind) erase (Γ : context) (HΓ : ∥ wf_local Σ Γ ∥) (t : term) : typing_result E.term :=
     erase Γ HΓ t with (is_erasable Σ HΣ Γ HΓ t) :=
     {
-      erase Γ HΓ _ (Checked true ; _) := ret (E.tBox);
-      erase Γ HΓ _ (TypeError t ; _) := TypeError t ;
+      erase Γ HΓ _ (Checked (left _)) := ret (E.tBox);
+      erase Γ HΓ _ (TypeError t) := TypeError t ;
       erase Γ HΓ (tRel i) _ := ret (E.tRel i) ;
       erase Γ HΓ (tVar n) _ := ret (E.tVar n) ;
       erase Γ HΓ (tEvar m l) _ := l' <- monad_map (erase Γ HΓ) l;; ret (E.tEvar m l') ;
@@ -370,14 +316,14 @@ Section Erase.
                                 ret (E.tCoFix mfix' n)
     }.
   Next Obligation.
-    destruct s. destruct H. destruct w.
+    destruct s0. destruct H. destruct w.
     sq. econstructor; eauto. cbn.
         
     eapply inversion_Lambda in X as (? & ? & ? & ? & ?).
     econstructor; cbn; eauto.
   Qed.
   Next Obligation.
-    destruct s. destruct H. destruct w.
+    destruct s0. destruct H. destruct w.
     sq. eapply inversion_LetIn in X as (? & ? & ? & ? & ? & ?).
 
     econstructor; eauto.
@@ -411,6 +357,7 @@ Proof.
          )); intros.
 
   all:eauto.
+  
   all: simp erase in *.
   all: unfold erase_clause_1 in *.
   all:sq.
@@ -432,7 +379,7 @@ Proof.
     eapply elim_restriction_works. intros.
     eapply f, isErasable_Proof. eauto. eauto.
     
-    pose proof (Prelim.monad_map_All2 _ _ _ brs a2 E3).
+    pose proof (Prelim.monad_map_All2 _ _ _ brs a2 E2).
     
     eapply All2_All_left in X3. 2:{ intros. destruct X4. exact e. }
 
@@ -446,18 +393,21 @@ Proof.
     eapply isErasable_Proof in X2. eauto.
 
     eauto.
-  - econstructor.
+  - clear E. econstructor.
     unfold erase_mfix in *.
-    pose proof (Prelim.monad_map_All2 _ _ _ mfix a1 E2).
-    eapply All2_impl. eapply All2_All_mix_left. eassumption. eassumption.
+    repeat destruct ?; try congruence. 
+    pose proof (Prelim.monad_map_All2 _ _ _ mfix a1 E1).
+    eapply All2_impl. eapply All2_All_mix_left. exact X0. eassumption.
 
-    intros. destruct X1. cbn in *. repeat destruct ?; inv e. 
+    intros. destruct X1. cbn in *. 
+    repeat destruct ?; try congruence; inv e.
+    
     cbn. repeat split; eauto. 
     eapply p. eauto. 
   - econstructor.
     unfold erase_mfix in *.
-    pose proof (Prelim.monad_map_All2 _ _ _ mfix a1 E2).
-    eapply All2_impl. eapply All2_All_mix_left. eassumption. eassumption.
+    pose proof (Prelim.monad_map_All2 _ _ _ mfix a1 E1).
+    eapply All2_impl. eapply All2_All_mix_left. exact X0. eassumption. 
 
     intros. destruct X1. cbn in *. repeat destruct ?; inv e.
     cbn. repeat split; eauto. 

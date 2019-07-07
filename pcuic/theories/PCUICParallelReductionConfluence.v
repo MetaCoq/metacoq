@@ -1,4 +1,5 @@
 (* Distributed under the terms of the MIT license.   *)
+Set Warnings "-notation-overridden".
 Require Import ssreflect ssrbool.
 From MetaCoq.Template Require Import LibHypsNaming.
 From Equations Require Import Equations.

@@ -21,10 +21,6 @@ Require Import Equations.Prop.DepElim.
 
 Set Equations With UIP.
 
-(* Using Derive makes Qed break?? *)
-(* Derive Signature for Relation.clos_refl_trans. *)
-(* Derive Signature for red1. *)
-
 Lemma invert_red_sort Σ Γ u v :
   red Σ Γ (tSort u) v -> v = tSort u.
 Proof.
@@ -218,7 +214,7 @@ Section Principality.
     eapply invert_cumul_sort_r in H as [u'u ?].
     eapply invert_cumul_sort_r in H' as [vu ?].
     destruct p, p0.
-    destruct (red_confluence wfΣ r r0).
+    destruct (red_confluence _ wfΣ r r0).
     destruct p.
     eapply invert_red_sort in r1.
     eapply invert_red_sort in r2. subst. noconf r2.
@@ -475,7 +471,7 @@ Section Principality.
       repeat outtimes.
       apply invert_cumul_prod_r in c1 as [? [A' [B' [[redA u1eq] ?]]]] => //.
       apply invert_cumul_prod_r in c2 as [? [A'' [B'' [[redA' u1eq'] ?]]]] => //.
-      destruct (red_confluence wfΣ redA redA') as [nfprod [redl redr]].
+      destruct (red_confluence _ wfΣ redA redA') as [nfprod [redl redr]].
       eapply invert_red_prod in redl as [? [? [[? ?] ?]]] => //. subst.
       eapply invert_red_prod in redr as [? [? [[? ?] ?]]] => //. noconf e.
       assert(Σ ;;; Γ |- A' = A'').
@@ -487,11 +483,11 @@ Section Principality.
       exists (B' {0 := u2}).
       repeat split.
       * eapply cumul_trans with (codom {0 := u2}) => //.
-        eapply substitution_cumul0. eapply c1.
+        eapply substitution_cumul0 => //. eapply c1.
       * eapply cumul_trans with (B'' {0 := u2}); eauto.
-        eapply substitution_cumul0. eapply X0.
+        eapply substitution_cumul0 => //. eapply X0.
         eapply cumul_trans with (codom' {0 := u2}) => //.
-        eapply substitution_cumul0. eauto.
+        eapply substitution_cumul0 => //. eauto.
       (* * destruct i0. *)
       (*   ** pose proof (isWfArity_red _ _ _ i0 redA). *)
       (*      destruct X1 as [ctx' [s' [? ?]]]. *)
@@ -577,7 +573,7 @@ Section Principality.
       eapply invert_cumul_ind_r in c3 as [u' [x0' [[redr redu] ?]]].
       eapply invert_cumul_ind_r in c4 as [u'' [x9' [[redr' redu'] ?]]].
       assert (All2 (fun a a' => Σ ;;; Γ |- a = a') x0 x9).
-      { destruct (red_confluence wfΣ redr redr').
+      { destruct (red_confluence _ wfΣ redr redr').
         destruct p.
         eapply red_mkApps_tInd in r as [args' [? ?]]; auto.
         eapply red_mkApps_tInd in r0 as [args'' [? ?]]; auto.
@@ -593,7 +589,6 @@ Section Principality.
         apply (All2_trans _ (conv_transitive _ _) _ _ _ X0 a2). }
       clear redr redr' a1 a2.
       exists (mkApps u1 (skipn (ind_npars x10) x9 ++ [u2])); repeat split; auto.
-
 
       2:{ revert e3.
           rewrite /types_of_case.

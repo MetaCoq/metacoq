@@ -312,9 +312,7 @@ Qed.
 
 Derive NoConfusion for All2.
 
-Lemma All2_skipn {A} {P : A -> A -> Type} {l l'} {n} : All2 P l l' -> All2 P (skipn n l) (skipn n l').
-Proof. intros HPL; induction HPL in n |- * ; simpl; destruct n; try econstructor; eauto. Qed.
-
+(* Duplicate *)
 Lemma All2_app {A} {P : A -> A -> Type} {l l' r r'} :
   All2 P l l' -> All2 P r r' ->
   All2 P (l ++ r) (l' ++ r').

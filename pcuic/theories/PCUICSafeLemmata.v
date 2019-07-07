@@ -970,28 +970,35 @@ Section Lemmata.
                ) mfix1 mfix ∥%type
       ).
       { clear X.
-        (* Maybe assert here that the fix_contexts are equal *)
-        induction X0 in mfix1, a, X1 |- *.
-        - destruct p as [r e]. inversion e. clear e.
-          dependent destruction a. destruct p as [[p1 p2] p3].
-          dependent destruction X1. destruct p as [[? ?] ?].
-          eapply red1_eq_context_upto_l in r as [? [[? ?]]] ; revgoals.
-          2: exact he.
-          { instantiate (1 := Γ ,,, fix_context (hd :: tl)).
-            eapply eq_context_upto_cat.
-            - eapply eq_context_upto_refl. assumption.
-            - eapply All2_eq_context_upto.
+        assert (hc : eq_context_upto
+                       Re
+                       (Γ ,,, fix_context mfix0)
+                       (Γ ,,, fix_context mfix')
+               ).
+        { eapply eq_context_upto_cat.
+          - eapply eq_context_upto_refl. assumption.
+          - clear - a. induction a.
+            + constructor.
+            + destruct r as [[? ?] ?].
+              eapply All2_eq_context_upto.
               eapply PCUICParallelReductionConfluence.All2_rev.
               eapply All2_mapi.
               constructor.
-              + intros i. split.
-                * cbn. constructor.
-                * cbn. eapply eq_term_upto_univ_lift. eauto.
-              + eapply All2_impl ; eauto.
-                intros x1 y [[? ?] ?] i. split.
-                * cbn. constructor.
-                * cbn. eapply eq_term_upto_univ_lift. eauto.
-          }
+              * intros i. split.
+                -- cbn. constructor.
+                -- cbn. eapply eq_term_upto_univ_lift. eauto.
+              * eapply All2_impl ; eauto.
+                intros ? ? [[? ?] ?] i. split.
+                -- cbn. constructor.
+                -- cbn. eapply eq_term_upto_univ_lift. eauto.
+        }
+        clear a.
+        induction X0 in mfix1, hc, X1 |- *.
+        - destruct p as [r e]. inversion e. clear e.
+          dependent destruction X1. destruct p as [[? ?] ?].
+          eapply red1_eq_context_upto_l in r as [? [[? ?]]].
+          3: eassumption.
+          2: assumption.
           eexists. split.
           + constructor. constructor.
             instantiate (1 := mkdef _ _ _ _ _). simpl. split ; eauto.
@@ -1001,9 +1008,9 @@ Section Lemmata.
             * eapply eq_term_upto_univ_trans ; try eassumption.
             * etransitivity ; eauto.
         - dependent destruction X1. destruct p as [[? ?] ?].
-          dependent destruction a. destruct p as [[p1 p2] p3].
-          (* specialize (IHX0 _ ) *)
+          specialize (IHX0 _ X1).
           (* Wrong IH again *)
+          (* We'll have to do it with OnOne2_ind_l again... *)
           admit.
       }
       destruct h as [? [[?] [?]]].

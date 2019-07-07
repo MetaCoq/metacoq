@@ -164,7 +164,7 @@ Section Normalisation.
   Abort.
 
 
-  Lemma subject_reduction_context {Γ Γ'} : 
+  Lemma subject_reduction_context {Γ Γ'} :
     wf Σ -> red_context Γ Γ' -> wf_local Σ Γ -> wf_local Σ Γ'.
   Proof.
     intro HΣ.
@@ -1199,22 +1199,22 @@ Section Reduce.
     intros u l e hl h d.
     induction h.
     - assumption.
-    - apply PCUICParallelReductionConfluence.decompose_app_inv in e. subst.
+    - apply decompose_app_inv in e. subst.
       (* Inversion on ht *)
       admit.
-    - apply PCUICParallelReductionConfluence.decompose_app_inv in e. subst.
+    - apply decompose_app_inv in e. subst.
       (* Inversion on ht *)
       admit.
     - cbn in hl. specialize (hl eq_refl). subst.
-      apply PCUICParallelReductionConfluence.decompose_app_inv in e. subst. cbn in ht.
+      apply decompose_app_inv in e. subst. cbn in ht.
       (* Inversion on ht *)
       admit.
     - apply decompose_app_eq_mkApps in e. subst.
       cbn in d. simp discr_construct in d. easy.
-    - apply PCUICParallelReductionConfluence.decompose_app_inv in e. subst.
+    - apply decompose_app_inv in e. subst.
       (* Inversion on ht *)
       admit.
-    - apply PCUICParallelReductionConfluence.decompose_app_inv in e. subst.
+    - apply decompose_app_inv in e. subst.
       (* Not very clear now.
          Perhaps we ought to show whnf of the mkApps entirely.
          And have a special whne case for Fix that don't reduce?

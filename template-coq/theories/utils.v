@@ -1481,10 +1481,14 @@ Proof.
     eapply IHl1 in H2 as []. split; congruence.
 Qed.
 
-Lemma All2_app : forall (A B : Type) (R : A -> B -> Type),
-    forall l1 l2 l1' l2', All2 R l1 l1' -> All2 R l2 l2' -> All2 R (l1 ++ l2) (l1' ++ l2').
+Lemma All2_app :
+  forall (A B : Type) (R : A -> B -> Type),
+  forall l1 l2 l1' l2',
+    All2 R l1 l1' ->
+    All2 R l2 l2' ->
+    All2 R (l1 ++ l2) (l1' ++ l2').
 Proof.
-  induction 1; cbn; eauto.
+  induction 1 ; cbn ; eauto.
 Qed.
 
 Lemma All2_impl_In {A B} {P Q : A -> B -> Type} {l l'} :
@@ -1847,6 +1851,56 @@ Proof.
   intros A R P hhd htl l l' h. induction h ; eauto.
 Qed.
 
+Lemma All2_mapi :
+  forall A B A' B' (R : A' -> B' -> Type) (f : nat -> A -> A') (g : nat -> B -> B') l l',
+    All2 (fun x y => forall i, R (f i x) (g i y)) l l' ->
+    All2 R (mapi f l) (mapi g l').
+Proof.
+  intros A B A' B' R f g l l' h.
+  unfold mapi. generalize 0. intro i.
+  induction h in i |- *.
+  - constructor.
+  - cbn. constructor ; eauto.
+Qed.
+
+Lemma OnOne2_impl_exist_and_All :
+  forall A (l1 l2 l3 : list A) R1 R2 R3,
+    OnOne2 R1 l1 l2 ->
+    All2 R2 l3 l2 ->
+    (forall x x' y, R1 x y -> R2 x' y -> exists z : A, ∥ R3 x z × R2 x' z ∥) ->
+    exists l4, ∥ OnOne2 R3 l1 l4 × All2 R2 l3 l4 ∥.
+Proof.
+  intros A l1 l2 l3 R1 R2 R3 h1 h2 h.
+  induction h1 in l3, h2 |- *.
+  - dependent destruction h2.
+    specialize (h _ _ _ p r) as hh.
+    destruct hh as [? [[? ?]]].
+    eexists. constructor. split.
+    + constructor. eassumption.
+    + constructor ; eauto.
+  - dependent destruction h2.
+    specialize (IHh1 _ h2). destruct IHh1 as [? [[? ?]]].
+    eexists. constructor. split.
+    + eapply OnOne2_tl. eassumption.
+    + constructor ; eauto.
+Qed.
+
+Lemma All2_skipn {A} {P : A -> A -> Type} {l l'} {n} :
+  All2 P l l' ->
+  All2 P (skipn n l) (skipn n l').
+Proof.
+  intros HPL ; induction HPL in n |- * ; simpl ;
+  destruct n ; try econstructor ; eauto.
+Qed.
+
+Lemma All2_rev (A : Type) (P : A -> A -> Type) (l l' : list A) :
+  All2 P l l' ->
+  All2 P (List.rev l) (List.rev l').
+Proof.
+  induction 1. constructor.
+  simpl. eapply All2_app; auto.
+Qed.
+
 
 (** * Non Empty List *)
 Module NEL.
@@ -2029,7 +2083,7 @@ Proof.
   induction 1; cbn; intros; destruct H.
   - subst. econstructor. eauto.
   - eauto.
-Qed.      
+Qed.
 
 Lemma nth_error_skipn A l m n (a : A) :
   nth_error l (m + n) = Some a ->

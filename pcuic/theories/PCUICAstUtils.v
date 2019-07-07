@@ -821,3 +821,15 @@ Proof.
     do 2 (rewrite isApp_false_nApp ; [ assumption |]). reflexivity.
   - assumption.
 Qed.
+
+Lemma decompose_app_rec_inv {t l' f l} :
+  decompose_app_rec t l' = (f, l) ->
+  mkApps t l' = mkApps f l.
+Proof.
+  induction t in f, l', l |- *; try intros [= <- <-]; try reflexivity.
+  simpl. apply/IHt1.
+Qed.
+
+Lemma decompose_app_inv {t f l} :
+  decompose_app t = (f, l) -> t = mkApps f l.
+Proof. by apply/decompose_app_rec_inv. Qed.

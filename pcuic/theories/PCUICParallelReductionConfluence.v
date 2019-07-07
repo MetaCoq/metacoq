@@ -772,14 +772,6 @@ Section Confluence.
     destruct t; repeat constructor.
   Qed.
 
-  Lemma decompose_app_rec_inv {t l' f l} :
-    decompose_app_rec t l' = (f, l) ->
-    mkApps t l' = mkApps f l.
-  Proof.
-    induction t in f, l', l |- *; try intros [= <- <-]; try reflexivity.
-    simpl. apply/IHt1.
-  Qed.
-
   Section All2_telescope.
     Context (P : forall (Γ Γ' : context), option (term * term) -> term -> term -> Type).
 
@@ -845,10 +837,6 @@ Section Confluence.
       constructor. auto. destruct p0. unfold on_decl_over in *. simpl.
       rewrite !app_context_assoc. cbn. intuition.
   Qed.
-
-  Lemma decompose_app_inv {t f l} :
-    decompose_app t = (f, l) -> t = mkApps f l.
-  Proof. by apply/decompose_app_rec_inv. Qed.
 
   Lemma lookup_env_cst_inv {Σ c k cst} :
     lookup_env Σ c = Some (ConstantDecl k cst) -> c = k.
@@ -3081,7 +3069,7 @@ Section Confluence.
         2:{ rewrite !map_map_compose. solve_all. }
         f_equal. eapply map_fix_rho_rename; eauto.
 
-        simpl. 
+        simpl.
         move=> -> ->.
         rewrite rename_mkApps /= map_length. f_equal.
         2:{ rewrite !map_map_compose. solve_all. }
@@ -3576,13 +3564,6 @@ Section Confluence.
   Defined.
 
   Hint Extern 40 => progress unfold on_Trel, on_decl, on_decl_over in * : pcuic.
-
-  Lemma All2_rev (A : Type) (P : A -> A → Type) (l l' : list A) :
-    All2 P l l' → All2 P (List.rev l) (List.rev l').
-  Proof.
-    induction 1. constructor.
-    simpl. eapply All2_app; auto.
-  Qed.
 
   Lemma weakening_pred1_lengths (Γ Δ Γ' Δ' : context)
         (M N : term) m n :

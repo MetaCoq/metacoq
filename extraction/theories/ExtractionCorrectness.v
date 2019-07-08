@@ -263,7 +263,7 @@ Qed.
 
 Record extraction_pre (Σ : global_env_ext) : Type
   := Build_extraction_pre
-  { extr_env_axiom_free' : is_true (axiom_free (fst Σ));
+  { (* extr_env_axiom_free' : is_true (axiom_free (fst Σ)); *)
     extr_env_wf' : wf Σ }.
 
 Hint Constructors PCUICWcbvEval.eval erases.

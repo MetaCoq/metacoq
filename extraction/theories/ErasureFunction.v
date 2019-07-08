@@ -11,13 +11,142 @@ Import MonadNotation.
 
 Require Import EArities Extract Prelim.
 
-Definition term_rel : Relation_Definitions.relation (∑ Σ Γ t, wellformed Σ Γ t) :=
-  fun '(Σ2; Γ2; B; H) '(Σ1; Γ1; t1; H2) => 
-    ∥∑ na A, red (fst Σ1) Γ1 t1 (tProd na A B) × Σ1 = Σ2 × (Γ1,, vass na A) = Γ2∥.
+Ltac sq :=
+  repeat match goal with
+         | H : ∥ _ ∥ |- _ => destruct H; try clear H
+         end; try eapply sq.
+
+Section fix_sigma.
+
+Variable Σ : global_context.
+Variable HΣ : ∥wf Σ∥.
+
+Definition term_rel : Relation_Definitions.relation (∑ Γ t, wellformed Σ Γ t) :=
+  fun '(Γ2; B; H) '(Γ1; t1; H2) => 
+    ∥∑ na A, red (fst Σ) Γ1 t1 (tProd na A B) × (Γ1,, vass na A) = Γ2∥.
+
+Definition cod B t := match t with tProd _ _ B' => B = B' | _ => False end.
+
+Lemma wf_cod : WellFounded cod.
+Proof.
+  clear HΣ.
+  sq. intros ?. induction a; econstructor; cbn in *; intros; try tauto; subst. eauto.
+Qed.
+
+Lemma wf_cod' : WellFounded (Relation_Operators.clos_trans _ cod).
+Proof.
+  clear HΣ.
+  eapply Subterm.WellFounded_trans_clos. exact wf_cod.
+Qed.  
+
+Lemma Acc_no_loop X (R : X -> X -> Prop) t : Acc R t -> R t t -> False.
+Proof.
+  induction 1. intros. eapply H0; eauto.
+Qed.
 
 Instance wf_reduction : WellFounded term_rel.
-Proof.
-  intros (Σ & Γ & t & H). (* induction (normalisation Σ Γ t H). *)
+Proof. 
+  intros (Γ & s & H). sq.
+  induction (normalisation' RedFlags.default Σ Γ s X H) as [s _ IH].
+  induction (wf_cod' s) as [s _ IH_sub] in Γ, H, IH |- *.
+  econstructor.
+  intros (Γ' & B & ?) [(na & A & ? & ?)]. subst. 
+    inversion r.
+    + subst. eapply IH_sub. econstructor. cbn. reflexivity. 
+      intros. eapply IH. 
+      inversion H0.
+      * subst. econstructor. eapply prod_red_r. eassumption.
+      * subst. eapply cored_red in H2 as []. 
+        eapply cored_red_trans. 2: eapply prod_red_r. 2:eassumption. 
+        eapply PCUICReduction.red_prod_r. eauto.        
+      * repeat econstructor.
+    + subst. eapply IH. 
+      * eapply red_neq_cored. exact r. intros ?. subst. 
+        eapply cored_red_trans in X0; eauto.
+        eapply Acc_no_loop in X0. eauto.
+        eapply @normalisation'; eauto. exact RedFlags.default.
+      * repeat econstructor.
+Grab Existential Variables.
+- eapply red_wellformed; sq. 3:eauto. all:eauto. exact RedFlags.default. 
+- destruct H as [[] |[]].
+  -- eapply inversion_Prod in X0 as (? & ? & ? & ? & ?).
+     eapply cored_red in H0 as [].
+     econstructor. econstructor. econstructor. eauto. eapply subject_reduction; eauto.
+  -- eapply cored_red in H0 as [].
+     eapply isWfArity_prod_inv in X0 as [_ ?].
+     econstructor 2. sq. 
+     eapply isWfArity_red in i; eauto.
+     destruct i as (? & ? & ? & ?).
+     exists (x ++ [vass na A])%list, x0. cbn; split.
+     2:{ unfold snoc, app_context in *. rewrite <- app_assoc. eassumption. }
+     change ([] ,, vass na A) with ([vass na A] ,,, []).
+     rewrite destArity_app_aux. rewrite e. cbn. reflexivity.
+Qed.
+
+Instance wf_reduction : WellFounded term_rel.
+Proof. 
+  intros (Γ & s & H).
+  unshelve eenough (forall t (H: Relation_Operators.clos_refl_trans _ cod t s), Acc term_rel (Γ ; s; _)). 
+  - cbn. eassumption.
+  - eapply H0. econstructor 2.
+  - sq. 
+    induction (normalisation' RedFlags.default Σ Γ s X H) as [s _ IH].
+    induction (wf_cod' s) as [s _ IH_sub] in Γ, H, IH |- *.
+    intros t Ht. econstructor.
+    intros (Γ' & B & ?) [(na & A & ? & ?)]. subst. 
+    inversion r.
+    + subst. eapply IH_sub. econstructor. cbn. reflexivity. 2:econstructor 2. 
+      intros. eapply IH. 3:repeat econstructor.
+      inversion H0.
+      * subst. econstructor. econstructor. eassumption.
+      * subst. eapply cored_red in H3 as []. 
+        eapply cored_red_trans. 2: eapply prod_red_r. 2:eassumption. 
+        eapply PCUICReduction.red_prod_r. eauto.        
+      * econstructor 2.
+    + subst. eapply IH. 
+      * eapply red_neq_cored. exact r. intros ?. subst. 
+        eapply cored_red_trans in X0; eauto.
+        
+        Lemma Acc_no_loop X (R : X -> X -> Prop) t : Acc R t -> R t t -> False.
+        Proof.
+          induction 1. intros. eapply H0; eauto.
+        Qed.
+        eapply Acc_no_loop in X0. eauto.
+        eapply normalisation'; eauto. exact RedFlags.default.
+      * econstructor 2.
+      * repeat econstructor.
+Grab Existential Variables. eapply red_wellformed; sq. 3:eauto. all:eauto. exact RedFlags.default. admit.
+Qed.
+
+  unshelve epose (R' Γ t H := _ : Prop). exact context. exact term. exact (wellformed Σ Γ t).
+  - destruct t. 
+    5:{ refine (Acc term_rel (Γ,, vass na t1; t2; _)).
+        destruct H as [ [] | []].
+        - eapply inversion_Prod in X as (? & ? & ? & ? & ?). 
+          do 2 econstructor; eauto.
+        - econstructor 2. econstructor. eapply isWfArity_prod_inv in X; firstorder.
+    } all: exact True.
+  - sq. 
+    
+
+
+enough (Acc term_rel (Γ; t; H) /\ R' Γ t H) by intuition.
+    
+    split.
+    + econstructor. intros (Γ' & t' & H') [(? & ? & ? & ?)]. subst.
+      eapply H1.
+      eapply red_neq_cored. eassumption. admit.
+      cbn. repeat econstructor. 
+    + unfold R'. cbn. destruct x; try tauto. econstructor.
+      intros (Γ' & t' & H') [(? & ? & ? & ?)]. subst.
+      eapply H1 with (y := tProd na x1 (tProd x x0 t')).
+      eapply red_neq_cored. eapply PCUICReduction.red_prod. econstructor. eassumption. admit.
+      cbn. repeat econstructor.
+      
+                    
+                          
+
+ (* induction (normalisation Σ Γ t H). *)
   (* econstructor. intros (Σ' & Γ' & t' & H') [(? & ? & ? & ? & ?)]. subst. *)
   (* remember (tProd x0 x1 t') as T. *)
   (* induction (well_founded_term_subterm T) in T, HeqT, r |- *. subst. *)
@@ -28,21 +157,15 @@ Proof.
 
 Admitted.
 
-Lemma isWfArity_prod_inv:
-  forall (Σ : global_context) (Γ : context) (T : term) (x : name) (x0 x1 : term),
-    isWfArity typing Σ Γ (tProd x x0 x1) -> (∑ s : universe, Σ;;; Γ |- x0 : tSort s) ×   isWfArity typing Σ (Γ,, vass x x0) x1
-.
-Admitted.
-
-Equations is_arity Σ (HΣ : ∥wf Σ∥) Γ (HΓ : ∥wf_local Σ Γ∥) T (HT : wellformed Σ Γ T) : typing_result ({Is_conv_to_Arity Σ Γ T} + {~ Is_conv_to_Arity Σ Γ T})
-         by wf ((Σ;Γ;T;HT) : (∑ Σ Γ t, wellformed Σ Γ t)) term_rel :=
-  {
-    is_arity Σ HΣ Γ HΓ T HT with (@reduce_to_sort Σ HΣ Γ T HT) => {
+Equations is_arity Γ (HΓ : ∥wf_local Σ Γ∥) T (HT : wellformed Σ Γ T) : typing_result ({Is_conv_to_Arity Σ Γ T} + {~ Is_conv_to_Arity Σ Γ T})
+         by wf ((Γ;T;HT) : (∑ Γ t, wellformed Σ Γ t)) term_rel :=
+  { 
+    is_arity Γ HΓ T HT with (@reduce_to_sort Σ HΣ Γ T HT) => {
     | Checked H => ret (left _) ;
     | TypeError _ => 
       match @reduce_to_prod Σ HΣ Γ T _ with
       | Checked (na; A; B; H) => 
-        match is_arity Σ HΣ (Γ,, vass na A) _ B _ with
+        match is_arity (Γ,, vass na A) _ B _ with
         | Checked (left  H) => ret (left _)
         | Checked (right H) => ret (right _)
         | TypeError t => TypeError t
@@ -132,7 +255,7 @@ Qed.
 (* Qed. *)
 
 Program Definition is_erasable (Sigma : PCUICAst.global_env_ext) (HΣ : ∥wf Sigma∥) (Gamma : context) (HΓ : ∥wf_local Sigma Gamma∥) (t : PCUICAst.term) :
-  typing_result (sumbool (∥isErasable Sigma Gamma t∥) (∥(isErasable Sigma Gamma t -> False) × PCUICSafeLemmata.welltyped Sigma Gamma t∥)) :=
+  typing_result ({∥isErasable Sigma Gamma t∥} +{∥(isErasable Sigma Gamma t -> False) × welltyped Sigma Gamma t∥}) :=
   mlet (T; _) <- @infer _ HΣ Gamma HΓ t ;;
   mlet b <- is_arity Sigma _ Gamma _ T _ ;;
   if b : {_} + {_} then
@@ -208,11 +331,6 @@ Section Erase.
 
   Variable (Σ : global_env_ext )( HΣ :∥ wf Σ ∥).
       
-  Ltac sq :=
-    repeat match goal with
-           | H : ∥ _ ∥ |- _ => destruct H; try clear H
-           end; try eapply sq.
-
   Section EraseMfix.
     Context (erase : forall  (Γ : context) (HΓ : ∥ wf_local Σ Γ ∥) (t : term), typing_result E.term).
     

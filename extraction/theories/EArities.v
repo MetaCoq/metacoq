@@ -162,6 +162,12 @@ Proof.
   eapply context_conversion_red1; eauto.
 Qed.
 
+Lemma isWfArity_prod_inv:
+  forall (Σ : global_context) (Γ : context) (x : name) (x0 x1 : term),
+    isWfArity typing Σ Γ (tProd x x0 x1) -> (∑ s : universe, Σ;;; Γ |- x0 : tSort s) ×   isWfArity typing Σ (Γ,, vass x x0) x1
+.
+Admitted.
+
 Lemma invert_cumul_arity_r (Σ : global_env_ext) (Γ : context) (C : term) T :
   wf Σ -> wf_local Σ Γ ->
   isArity T ->

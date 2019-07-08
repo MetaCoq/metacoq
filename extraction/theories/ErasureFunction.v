@@ -11,11 +11,6 @@ Import MonadNotation.
 
 Require Import EArities Extract Prelim.
 
-Ltac sq :=
-  repeat match goal with
-         | H : ∥ _ ∥ |- _ => destruct H; try clear H
-         end; try eapply sq.
-
 Section fix_sigma.
 
 Variable Σ : global_context.
@@ -44,9 +39,14 @@ Proof.
   induction 1. intros. eapply H0; eauto.
 Qed.
 
+Ltac sq' := try (destruct HΣ; clear HΣ);
+  repeat match goal with
+         | H : ∥ _ ∥ |- _ => destruct H; try clear H
+         end; try eapply sq.
+
 Instance wf_reduction : WellFounded term_rel.
-Proof. 
-  intros (Γ & s & H). sq.
+Proof.
+  intros (Γ & s & H). sq'.
   induction (normalisation' RedFlags.default Σ Γ s X H) as [s _ IH].
   induction (wf_cod' s) as [s _ IH_sub] in Γ, H, IH |- *.
   econstructor.
@@ -83,79 +83,10 @@ Grab Existential Variables.
      rewrite destArity_app_aux. rewrite e. cbn. reflexivity.
 Qed.
 
-Instance wf_reduction : WellFounded term_rel.
-Proof. 
-  intros (Γ & s & H).
-  unshelve eenough (forall t (H: Relation_Operators.clos_refl_trans _ cod t s), Acc term_rel (Γ ; s; _)). 
-  - cbn. eassumption.
-  - eapply H0. econstructor 2.
-  - sq. 
-    induction (normalisation' RedFlags.default Σ Γ s X H) as [s _ IH].
-    induction (wf_cod' s) as [s _ IH_sub] in Γ, H, IH |- *.
-    intros t Ht. econstructor.
-    intros (Γ' & B & ?) [(na & A & ? & ?)]. subst. 
-    inversion r.
-    + subst. eapply IH_sub. econstructor. cbn. reflexivity. 2:econstructor 2. 
-      intros. eapply IH. 3:repeat econstructor.
-      inversion H0.
-      * subst. econstructor. econstructor. eassumption.
-      * subst. eapply cored_red in H3 as []. 
-        eapply cored_red_trans. 2: eapply prod_red_r. 2:eassumption. 
-        eapply PCUICReduction.red_prod_r. eauto.        
-      * econstructor 2.
-    + subst. eapply IH. 
-      * eapply red_neq_cored. exact r. intros ?. subst. 
-        eapply cored_red_trans in X0; eauto.
-        
-        Lemma Acc_no_loop X (R : X -> X -> Prop) t : Acc R t -> R t t -> False.
-        Proof.
-          induction 1. intros. eapply H0; eauto.
-        Qed.
-        eapply Acc_no_loop in X0. eauto.
-        eapply normalisation'; eauto. exact RedFlags.default.
-      * econstructor 2.
-      * repeat econstructor.
-Grab Existential Variables. eapply red_wellformed; sq. 3:eauto. all:eauto. exact RedFlags.default. admit.
-Qed.
-
-  unshelve epose (R' Γ t H := _ : Prop). exact context. exact term. exact (wellformed Σ Γ t).
-  - destruct t. 
-    5:{ refine (Acc term_rel (Γ,, vass na t1; t2; _)).
-        destruct H as [ [] | []].
-        - eapply inversion_Prod in X as (? & ? & ? & ? & ?). 
-          do 2 econstructor; eauto.
-        - econstructor 2. econstructor. eapply isWfArity_prod_inv in X; firstorder.
-    } all: exact True.
-  - sq. 
-    
-
-
-enough (Acc term_rel (Γ; t; H) /\ R' Γ t H) by intuition.
-    
-    split.
-    + econstructor. intros (Γ' & t' & H') [(? & ? & ? & ?)]. subst.
-      eapply H1.
-      eapply red_neq_cored. eassumption. admit.
-      cbn. repeat econstructor. 
-    + unfold R'. cbn. destruct x; try tauto. econstructor.
-      intros (Γ' & t' & H') [(? & ? & ? & ?)]. subst.
-      eapply H1 with (y := tProd na x1 (tProd x x0 t')).
-      eapply red_neq_cored. eapply PCUICReduction.red_prod. econstructor. eassumption. admit.
-      cbn. repeat econstructor.
-      
-                    
-                          
-
- (* induction (normalisation Σ Γ t H). *)
-  (* econstructor. intros (Σ' & Γ' & t' & H') [(? & ? & ? & ? & ?)]. subst. *)
-  (* remember (tProd x0 x1 t') as T. *)
-  (* induction (well_founded_term_subterm T) in T, HeqT, r |- *. subst. *)
-  (* eapply H3. econstructor. econstructor. *)
-
-
-  (* subterm *)
-
-Admitted.
+Ltac sq := try (destruct HΣ as [wfΣ]; clear HΣ);
+  repeat match goal with
+         | H : ∥ _ ∥ |- _ => destruct H
+         end; try eapply sq.
 
 Equations is_arity Γ (HΓ : ∥wf_local Σ Γ∥) T (HT : wellformed Σ Γ T) : typing_result ({Is_conv_to_Arity Σ Γ T} + {~ Is_conv_to_Arity Σ Γ T})
          by wf ((Γ;T;HT) : (∑ Γ t, wellformed Σ Γ t)) term_rel :=
@@ -206,23 +137,23 @@ Qed.
 Next Obligation.
   destruct H1 as (? & ? & ?). sq.
   destruct H.
-  edestruct (red_confluence X8 X6 X5) as (? & ? & ?); eauto.
+  edestruct (red_confluence wfΣ X6 X5) as (? & ? & ?); eauto.
   eapply invert_red_prod in r as (? & ? & [] & ?); eauto. subst.
 
   eapply invert_cumul_arity_l in H2. 2:eauto. 3: eapply PCUICCumulativity.red_cumul. 3:eauto. 2:eauto.
   destruct H2 as (? & ? & ?). sq.
 
-  eapply invert_red_prod in X9 as (? & ? & [] & ?); eauto. subst. cbn in *.
+  eapply invert_red_prod in X8 as (? & ? & [] & ?); eauto. subst. cbn in *.
   exists x4; split; eauto.
 
   destruct HT as [ [] | [] ].
-  ++ sq. pose proof (X9). pose proof X9.
+  ++ sq. pose proof (X8). pose proof X8.
 
-     eapply subject_reduction in X10. 2:eauto. 2:{ etransitivity. exact X5. exact r0. }
-     eapply inversion_Prod in X10 as (? & ? & ? & ? & ?).
+     eapply subject_reduction in X9. 2:eauto. 2:{ etransitivity. exact X5. exact r0. }
+     eapply inversion_Prod in X9 as (? & ? & ? & ? & ?).
      
-     eapply subject_reduction in X11. 2:eauto. 2:{ exact X6. }
-     eapply inversion_Prod in X11 as (? & ? & ? & ? & ?).
+     eapply subject_reduction in X10. 2:eauto. 2:{ exact X6. }
+     eapply inversion_Prod in X10 as (? & ? & ? & ? & ?).
 
      etransitivity. eassumption.
      
@@ -241,18 +172,7 @@ Next Obligation.
 
      eapply conv_sym, red_conv; eauto.
 Qed.
-
-
-
-(*      eapply context_conversion_red; eauto. econstructor. *)
-
-(*      eapply conv_context_refl; eauto. econstructor. *)
-
-(*      2: eapply conv_sym, red_conv; eauto. destruct Σ as [Σ univs]; cbn in *. *)
-(*      eapply isWfArity_red in X9. 2:eauto. 2:exact X6. *)
-(*      eapply isWfArity_prod_inv in X9 as[]; eauto. *)
-(*      right. eassumption. *)
-(* Qed. *)
+End fix_sigma.
 
 Program Definition is_erasable (Sigma : PCUICAst.global_env_ext) (HΣ : ∥wf Sigma∥) (Gamma : context) (HΓ : ∥wf_local Sigma Gamma∥) (t : PCUICAst.term) :
   typing_result ({∥isErasable Sigma Gamma t∥} +{∥(isErasable Sigma Gamma t -> False) × welltyped Sigma Gamma t∥}) :=
@@ -329,7 +249,12 @@ Section Erase.
   Definition on_snd_map {A B C} (f : B -> C) (p : A * B) :=
     (fst p, f (snd p)).
 
-  Variable (Σ : global_env_ext )( HΣ :∥ wf Σ ∥).
+  Variable (Σ : global_env_ext)( HΣ :∥ wf Σ ∥).
+
+  Ltac sq' := try (destruct HΣ; clear HΣ);
+             repeat match goal with
+                    | H : ∥ _ ∥ |- _ => destruct H; try clear H
+                    end; try eapply sq.
       
   Section EraseMfix.
     Context (erase : forall  (Γ : context) (HΓ : ∥ wf_local Σ Γ ∥) (t : term), typing_result E.term).
@@ -359,14 +284,13 @@ Section Erase.
                  end)
            defs [] (sq wf_local_rel_nil)).
       destruct X. econstructor.
-
-      
-      sq. eapply wf_local_local_rel.
+          
+      sq'. eapply wf_local_local_rel.
       eapply wf_local_rel_app_inv. eapply wf_local_rel_local. eauto.
       change fix_context with (fix_context_i #|@nil context_decl|).
       now rewrite app_context_nil_l.
       sq. econstructor 2. exact t.
-      Unshelve. all:eauto. sq.
+      Unshelve. all:eauto. sq'.
       eapply wf_local_app_inv. eauto. eauto.
     Qed.
       
@@ -413,14 +337,15 @@ Section Erase.
     }.
   Next Obligation.
     destruct s0. destruct H. destruct w.
-    sq. econstructor; eauto. cbn.
+
+    sq'. econstructor; eauto. cbn.
         
     eapply inversion_Lambda in X as (? & ? & ? & ? & ?).
     econstructor; cbn; eauto.
   Qed.
   Next Obligation.
     destruct s0. destruct H. destruct w.
-    sq. eapply inversion_LetIn in X as (? & ? & ? & ? & ? & ?).
+    sq'. eapply inversion_LetIn in X as (? & ? & ? & ? & ? & ?).
 
     econstructor; eauto.
     cbn. econstructor; eauto.

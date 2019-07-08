@@ -299,9 +299,9 @@ Proof.
         eapply IHeval3 in H2 as (v' & Hv' & He_v').
         -- exists v'. split; eauto.
            econstructor; eauto.
-        -- eapply substitution0; eauto.
-      * exists tBox. split. econstructor.
-        eapply Is_type_lambda in X1; eauto.
+        -- eapply substitution0; eauto. 
+      * exists tBox. split.
+        eapply Is_type_lambda in X1; eauto. destruct X1.  econstructor.
         eapply (is_type_subst Σ [] [PCUICAst.vass na _] [] _ [a']) in X1.
         cbn in X1.
         eapply Is_type_eval.
@@ -364,7 +364,7 @@ Proof.
       3: eapply subject_reduction_eval; eauto.
       * subst.
 
-        eapply Is_type_app in X0. 2:eauto. 2:{ rewrite mkApps_nested. eapply subject_reduction_eval; eauto. }
+        eapply Is_type_app in X0. destruct X0. 2:eauto. 2: econstructor. 2:{ rewrite mkApps_nested. eapply subject_reduction_eval; eauto. }
         rewrite mkApps_nested in X0.
 
         eapply tConstruct_no_Type in X0.
@@ -436,8 +436,8 @@ Proof.
         -- exists x4. split; eauto.
            econstructor. eauto. unfold ETyping.iota_red.
            rewrite <- nth_default_eq. unfold nth_default. rewrite e. cbn. eauto.
-        -- eapply Is_type_app in X0. 2:eauto. 2:{ eapply subject_reduction_eval. 3:eassumption. all: eauto. }
-
+        -- eapply Is_type_app in X0 as[]. 2:eauto. 2:econstructor. 2:{ eapply subject_reduction_eval. 3:eassumption. all: eauto. }
+        
            eapply tConstruct_no_Type in X0.
            eapply H10 in X0 as []; eauto. 2: exists []; now destruct Σ.
 
@@ -490,14 +490,12 @@ Proof.
     unfold unfold_fix in H. rewrite e in H. inv H.
 
     eapply erases_mkApps_inv in He as [(? & ? & ? & ? & [] & ? & ? & ?) | (? & ? & ? & ? & ?)]; eauto.
-    + subst.
+    + subst. assert (X100 := X1). eapply Is_type_app in X100 as[].
       exists tBox. split. 2:eapply eval_box_apps; econstructor; eauto.
       econstructor.
       eapply Is_type_eval. eauto. eassumption.
-      rewrite <- mkApps_nested.
-      eapply Is_type_app. eassumption.
+      rewrite <- mkApps_nested.  eassumption. eauto. econstructor.
       rewrite mkApps_nested; eauto.
-      eauto.
     + subst.
       destruct ?; inv H4.
       inv H3.
@@ -535,7 +533,9 @@ Proof.
                  cbn in H7. subst.
                  assert (∑ T, Σ ;;; [] |- mkApps (tConstruct ind n ui) l : T) as [T' HT'].
                  { eapply typing_spine_eval in t0; eauto.
-                   eapply typing_spine_inv in t0; eauto. }
+                   eapply typing_spine_inv in t0; eauto. 
+                   eapply PCUICValidity.validity; eauto.
+                 }
                  eapply erases_mkApps_inv in H1.
                  destruct H1 as [ (? & ? & ? & ? & [] & ? & ? & ?) | (? & ? & ? & ? & ?) ].
                  --- subst.
@@ -565,6 +565,7 @@ Proof.
                      rewrite <- fix_subst_length.
                      rewrite PCUICLiftSubst.simpl_subst.
                      now rewrite PCUICLiftSubst.lift0_id. omega.
+                     eapply PCUICValidity.validity; eauto.
            ++ clear - t0 H0 H5. revert x t0 x3 H5; induction H0; intros.
               ** inv H5. exists []; eauto.
               ** inv H5. inv t0. eapply r in H2 as (? & ? & ?); eauto.
@@ -580,11 +581,12 @@ Proof.
                                              erewrite <- All2_length; eauto. }
            inv H3; inv H4.
            erewrite All2_length; eauto.
-      * exists tBox. split.
-        econstructor.
+      * eapply Is_type_app in X1 as [].
+        exists tBox. split.
+        econstructor. 
         eapply Is_type_eval. eauto. eassumption.
-        eapply Is_type_app. eauto. eauto. eauto.
-        eapply eval_box_apps. econstructor. eauto.
+        eauto. 
+        eapply eval_box_apps. econstructor. eauto. eauto. econstructor. eauto.
   - destruct Σ as (Σ, univs).
     unfold erases_global in Heg.
     assert (Σ ;;; [] |- tConst c u ▷ res) by eauto.
@@ -616,7 +618,7 @@ Proof.
       destruct Hvc' as [ (? & ? & ? & ? & [] & ? & ? & ?) | (? & ? & ? & ? & ?)]; subst.
       * exists tBox. split.
 
-        eapply Is_type_app in X; eauto. 2:{ rewrite mkApps_nested. eapply subject_reduction_eval; eauto. }
+        eapply Is_type_app in X as []; eauto. 2:{ rewrite mkApps_nested. eapply subject_reduction_eval; eauto. }
         rewrite mkApps_nested in X.
 
         eapply tConstruct_no_Type in X. eapply H5 in X as [? []]; eauto.
@@ -646,8 +648,9 @@ Proof.
            rewrite <- nth_default_eq. unfold nth_default. now rewrite H3.
         -- exists tBox. split.
 
-           eapply Is_type_app in X; eauto. 2:{ eapply subject_reduction_eval. 3: eauto. eauto. eauto. }
 
+           eapply Is_type_app in X as []; eauto. 2:{ eapply subject_reduction_eval. 3: eauto. eauto. eauto. }
+           
            eapply tConstruct_no_Type in X. eapply Hinf in X as [? []]; eauto.
            2: now destruct d. 2: now exists []; destruct Σ.
 
@@ -678,22 +681,25 @@ Proof.
     eapply inversion_Ind in t as (? & ? & ? & ? & ? & ?).
     eapply erases_mkApps_inv in Hty; eauto.
     destruct Hty as [ (? & ? & ? & ? & [] & ? & ? & ?) | (? & ? & ? & ? & ?)].
-    + subst. exists tBox.
-      split. 2:{ eapply eval_box_apps. now econstructor. }
-      econstructor. eauto.
+    + subst.
+      assert (∥isErasable Σ [] (mkApps (tInd i u) l')∥).
       eapply All2_app_inv in X as ([] & [] & ?). subst.
-      rewrite <- mkApps_nested.
-      eapply Is_type_app. eauto.
+      rewrite <- mkApps_nested. 
+      eapply Is_type_app. eauto. econstructor.
       rewrite mkApps_nested. eauto.
       eapply Is_type_eval. eauto.
       eapply eval_app_ind. eauto. eauto.
-      eauto.
-    + subst. exists tBox.
+      eauto. destruct H1.
+      exists tBox.
+      split. 2:{ eapply eval_box_apps. now econstructor. }
+      econstructor. eauto.      
+    + subst.  
       eapply IHeval in H2 as (? & ? & ?).
-      inv H1.
-      split. econstructor.
-      eauto. eapply Is_type_app; eauto.
-      eapply eval_box_apps; eauto. eauto.
+      inv H1. eapply Is_type_app in X0 as [].
+      exists tBox.
+      split. econstructor. 
+      eauto. 
+      eapply eval_box_apps; eauto. eauto. econstructor. eauto. eauto.
   - inv He.
     + eexists. split; eauto. now econstructor.
     + eexists. split. 2: now econstructor.
@@ -708,19 +714,19 @@ Proof.
     }
     eapply erases_mkApps_inv in Hty; eauto.
     destruct Hty as [ (? & ? & ? & ? & [] & ? & ? & ?) | (? & ? & ? & ? & ?)].
-    + subst. exists tBox.
-      split. 2:{ eapply eval_box_apps. now econstructor. }
-      eapply All2_app_inv in X as ( [] & [] & ?). subst.
-      econstructor.
-
-      rewrite <- mkApps_nested.
-      eapply Is_type_app. eauto.
+    + subst. eapply All2_app_inv in X as ( [] & [] & ?). subst.
+      assert (∥isErasable Σ [] (mkApps (tConstruct i k u) (l ++ l0))∥).
+      rewrite <- mkApps_nested. 
+      eapply Is_type_app. eauto. econstructor.
       rewrite mkApps_nested. eauto.
       eapply Is_type_red. eauto.
       eapply PCUICReduction.red_mkApps.
       eapply wcbeval_red; eauto.
       eapply All2_impl. exact a. intros.
-      eapply wcbeval_red; eauto. eauto.
+      eapply wcbeval_red; eauto. eauto. destruct H1.
+      exists tBox.
+      split. 2:{ eapply eval_box_apps. now econstructor. }
+      eauto.
     + subst.
       eapply type_mkApps_inv in Hty' as (? & ? & [] & ?); eauto.
       eapply IHeval in H2 as (? & ? & ?); eauto.
@@ -730,9 +736,9 @@ Proof.
         -- exists (E.mkApps (E.tConstruct i k) l''). split.
            eapply erases_mkApps; eauto.
            firstorder. econstructor; firstorder.
-        -- exists tBox.
+        -- eapply Is_type_app in X0 as []; eauto. exists tBox.
            split.
-           econstructor. eauto. eapply Is_type_app; eauto.
+           econstructor. eauto. eauto.
            eapply eval_box_apps. eauto.
       * clear - t0 H0 H3. revert x1 x0 H3 t0. induction H0; intros.
         -- inv H3. eauto.

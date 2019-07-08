@@ -46,6 +46,105 @@ Admitted.                       (* constructors have a type *)
   
 (* Admitted. (* projections have a type *) *)
 
+Lemma isArity_ind_type:
+  forall idecl : one_inductive_body, isArity (ind_type idecl).
+Proof.
+  intros idecl.
+Admitted.                       (* the type of an inductive is an arity *)
+
+Lemma tConstruct_no_Type Σ ind c u x1 : wf Σ ->
+  isErasable Σ [] (mkApps (tConstruct ind c u) x1) ->
+  Is_proof Σ [] (mkApps (tConstruct ind c u) x1).
+Proof.
+  intros wfΣ (? & ? & [ | (? & ? & ?)]).
+  - exfalso. eapply type_mkApps_inv in t as (? & ? & [] & ?); eauto.
+    eapply inversion_Construct in t as (? & ? & ? & ? & ? & ? & ?). destruct x5. destruct p. cbn in *.
+    admit.
+  - exists x, x0. eauto.
+Admitted.                       (* if a constructor is a type or proof, it is a proof *)
+
+
+Lemma isWfArity_prod_inv:
+  forall (Σ : global_context) (Γ : context) (x : name) (x0 x1 : term),
+    isWfArity typing Σ Γ (tProd x x0 x1) -> (∑ s : universe, Σ;;; Γ |- x0 : tSort s) ×   isWfArity typing Σ (Γ,, vass x x0) x1
+.
+Admitted.
+
+Lemma invert_cumul_arity_r (Σ : global_context) (Γ : context) (C : term) T :
+  wf Σ -> wf_local Σ Γ ->
+  isArity T ->
+  Σ;;; Γ |- C <= T -> Is_conv_to_Arity Σ Γ C.
+Proof.
+  intros wfΣ.
+  revert Γ C; induction T; cbn in *; intros Γ C wfΓ ? ?; try tauto.
+  - eapply invert_cumul_sort_r in X as (? & ? & ?).
+    exists (tSort x). split; sq; eauto.
+  - eapply invert_cumul_prod_r in X as (? & ? & ? & [] & ?); eauto.
+    (* eapply IHT2 in c0 as (? & ? & ?); eauto. sq. *)
+
+    (* exists (tProd x x0 x2). split; sq; cbn; eauto. *)
+    (* etransitivity. eauto. *)
+    (* eapply PCUICReduction.red_prod_r. *)
+
+  (*   eapply context_conversion_red. eauto. 2:eauto. *)
+  (*   + econstructor. clear; induction Γ. econstructor. destruct a, decl_body. econstructor. eauto. econstructor. econstructor. eauto. econstructor. eauto. econstructor. *)
+
+  (*   econstructor. 2:eauto. 2:econstructor; eauto. 2:cbn. admit. admit. *)
+  (* -   admit. *)
+Admitted.                       (* invert_cumul_arity_r *)
+
+Lemma invert_cumul_arity_l (Σ : global_context) (Γ : context) (C : term) T :
+  wf Σ -> wf_local Σ Γ ->
+  isArity C -> 
+  Σ;;; Γ |- C <= T -> Is_conv_to_Arity Σ Γ T.
+Proof.
+  intros wfΣ.
+  revert Γ T; induction C; cbn in *; intros Γ T wfΓ ? ?; try tauto.
+  - eapply invert_cumul_sort_l in X as (? & ? & ?).
+    exists (tSort x). split; sq; eauto.
+  - eapply invert_cumul_prod_l in X as (? & ? & ? & [] & ?); eauto.
+    eapply IHC2 in c0 as (? & ? & ?); eauto. sq.
+
+    exists (tProd x x0 x2). split; sq; cbn; eauto.
+    etransitivity. eauto.
+    eapply PCUICReduction.red_prod_r.
+
+  (*   eapply context_conversion_red. eauto. 2:eauto. *)
+  (*   econstructor. eapply conv_context_refl; eauto.  *)
+
+  (*   econstructor. 2:eauto. 2:econstructor; eauto. 2:cbn. admit. admit. *)
+  (* - eapply invert_cumul_letin_l in X; eauto. *)
+Admitted.                       (* invert_cumul_arity_l *)
+
+Lemma cumul_prop1 Σ Γ A B u :
+  wf Σ -> 
+  is_prop_sort u -> Σ ;;; Γ |- B : tSort u ->
+  Σ ;;; Γ |- A <= B -> Σ ;;; Γ |- A : tSort u.
+Proof.
+  
+Admitted.                       (* cumul_prop1 *)
+
+Lemma cumul_prop2 Σ Γ A B u :
+  wf Σ ->
+  is_prop_sort u -> Σ ;;; Γ |- A <= B ->
+  Σ ;;; Γ |- A : tSort u -> Σ ;;; Γ |- B : tSort u.
+Proof.
+Admitted.                       (* cumul_prop2 *)
+
+Lemma leq_universe_prop Σ u1 u2 :
+  wf Σ ->
+  leq_universe (snd Σ) u1 u2 ->
+  (is_prop_sort u1 \/ is_prop_sort u2) ->
+  (is_prop_sort u1 /\ is_prop_sort u2).
+Admitted.
+
+Lemma invert_cumul_prod_r Σ Γ C na A B : wf Σ ->
+          Σ ;;; Γ |- C <= tProd na A B ->
+            ∑ na' A' B', red Σ Γ C (tProd na' A' B') *
+               (Σ ;;; Γ |- A = A') *
+               (Σ ;;; Γ,,vass na' A' |- B <= B').
+Admitted.
+
 Inductive conv_decls Σ Γ (Γ' : context) : forall (x y : context_decl), Type :=
 | conv_vass : forall (na na' : name) (T T' : term),
                 (* isWfArity_or_Type Σ Γ' T' -> *)
@@ -162,58 +261,6 @@ Proof.
   eapply context_conversion_red1; eauto.
 Qed.
 
-Lemma isWfArity_prod_inv:
-  forall (Σ : global_context) (Γ : context) (x : name) (x0 x1 : term),
-    isWfArity typing Σ Γ (tProd x x0 x1) -> (∑ s : universe, Σ;;; Γ |- x0 : tSort s) ×   isWfArity typing Σ (Γ,, vass x x0) x1
-.
-Admitted.
-
-Lemma invert_cumul_arity_r (Σ : global_env_ext) (Γ : context) (C : term) T :
-  wf Σ -> wf_local Σ Γ ->
-  isArity T ->
-  Σ;;; Γ |- C <= T -> Is_conv_to_Arity Σ Γ C.
-Proof.
-  intros wfΣ.
-  revert Γ C; induction T; cbn in *; intros Γ C wfΓ ? ?; try tauto.
-  - eapply invert_cumul_sort_r in X as (? & ? & ?).
-    exists (tSort x). split; sq; eauto.
-  - eapply invert_cumul_prod_r in X as (? & ? & ? & [] & ?); eauto.
-    eapply IHT2 in c0 as (? & ? & ?); eauto. sq.
-
-    exists (tProd x x0 x2). split; sq; cbn; eauto.
-    etransitivity. eauto.
-    eapply PCUICReduction.red_prod_r.
-
-  (*   eapply context_conversion_red. eauto. 2:eauto. *)
-  (*   + econstructor. clear; induction Γ. econstructor. destruct a, decl_body. econstructor. eauto. econstructor. econstructor. eauto. econstructor. eauto. econstructor. *)
-
-  (*   econstructor. 2:eauto. 2:econstructor; eauto. 2:cbn. admit. admit. *)
-  (* -   admit. *)
-Admitted.                       (* invert_cumul_arity_r *)
-
-Lemma invert_cumul_arity_l (Σ : global_env_ext) (Γ : context) (C : term) T :
-  wf Σ -> wf_local Σ Γ ->
-  isArity C -> 
-  Σ;;; Γ |- C <= T -> Is_conv_to_Arity Σ Γ T.
-Proof.
-  intros wfΣ.
-  revert Γ T; induction C; cbn in *; intros Γ T wfΓ ? ?; try tauto.
-  - eapply invert_cumul_sort_l in X as (? & ? & ?).
-    exists (tSort x). split; sq; eauto.
-  - eapply invert_cumul_prod_l in X as (? & ? & ? & [] & ?); eauto.
-    eapply IHC2 in c0 as (? & ? & ?); eauto. sq.
-
-    exists (tProd x x0 x2). split; sq; cbn; eauto.
-    etransitivity. eauto.
-    eapply PCUICReduction.red_prod_r.
-
-  (*   eapply context_conversion_red. eauto. 2:eauto. *)
-  (*   econstructor. eapply conv_context_refl; eauto.  *)
-
-  (*   econstructor. 2:eauto. 2:econstructor; eauto. 2:cbn. admit. admit. *)
-  (* - eapply invert_cumul_letin_l in X; eauto. *)
-Admitted.                       (* invert_cumul_arity_l *)
-
 Lemma arity_type_inv Σ Γ t T1 T2 : wf Σ -> wf_local Σ Γ ->
   Σ ;;; Γ |- t : T1 -> isArity T1 -> Σ ;;; Γ |- t : T2 -> Is_conv_to_Arity Σ Γ T2.
 Proof.
@@ -228,66 +275,141 @@ Proof.
   exists x1; split; sq; eauto.
 Qed.
 
-Lemma cumul_prop1 (Σ : global_env_ext) Γ A B u :
-  wf Σ -> 
-  is_prop_sort u -> Σ ;;; Γ |- B : tSort u ->
-  Σ ;;; Γ |- A <= B -> Σ ;;; Γ |- A : tSort u.
+Lemma is_prop_sort_sup:
+  forall x1 x2 : universe, is_prop_sort (Universe.sup x1 x2) -> is_prop_sort x2.
 Proof.
-  
-Admitted.                       (* cumul_prop1 *)
-
-Lemma cumul_prop2 (Σ : global_env_ext) Γ A B u :
-  wf Σ ->
-  is_prop_sort u -> Σ ;;; Γ |- A <= B ->
-  Σ ;;; Γ |- A : tSort u -> Σ ;;; Γ |- B : tSort u.
-Proof.
-Admitted.                       (* cumul_prop2 *)
-
-Lemma leq_universe_prop (Σ : global_env_ext) u1 u2 :
-  wf Σ ->
-  leq_universe (global_ext_constraints Σ) u1 u2 ->
-  (is_prop_sort u1 \/ is_prop_sort u2) ->
-  (is_prop_sort u1 /\ is_prop_sort u2).
-Admitted.
+  induction x1; cbn; intros.
+  - inv H.
+  - inv H.
+Qed. 
 
 Lemma Is_type_app (Σ : global_env_ext) Γ t L T :
   wf Σ ->
+  wf_local Σ Γ ->
   Σ ;;; Γ |- mkApps t L : T ->
   isErasable Σ Γ t ->
-  isErasable Σ Γ (mkApps t L).
+  ∥isErasable Σ Γ (mkApps t L)∥.
 Proof.
-  intros. eapply type_mkApps_inv in X0 as (? & ? & [] & ?); try eassumption.
-  destruct X1 as (? & ? & [ | [u]]).
+  intros wfΣ wfΓ ? ?. 
+  assert (HW : isWfArity_or_Type Σ Γ T). eapply PCUICValidity.validity; eauto.
+  eapply type_mkApps_inv in X as (? & ? & [] & ?); try eassumption.
+  destruct X0 as (? & ? & [ | [u]]).
   - eapply PCUICPrincipality.principal_typing in t2 as (? & ? & ? & ?). 2:eauto. 2:exact t0.
+    eapply invert_cumul_arity_r in c1; eauto.
+    destruct c1 as (? & ? & ?). destruct H as [].
+    eapply PCUICCumulativity.red_cumul_inv in X.
     
+    eapply invert_cumul_arity_l in H0 as (? & ? & ?). 2:eauto. 2:eauto. 2: eapply cumul_trans; eauto.
+    destruct H.
+    eapply Prelim.typing_spine_red in t1. 2:{ eapply PCUICCumulativity.All_All2_refl. 
+                                                  clear. induction L; eauto. }
+    
+    2:eauto. 2:eauto. 2: eapply PCUICCumulativity.red_cumul_inv. 2:eauto. 2:eauto.
 
+    Lemma isArity_typing_spine:
+      forall (Σ : global_context) (Γ : context) (L : list term) (T x4 : term),
+        wf Σ -> wf_local Σ Γ ->
+        Is_conv_to_Arity Σ Γ x4 -> typing_spine Σ Γ x4 L T -> Is_conv_to_Arity Σ Γ T.
+    Proof.
+      intros.  
+      depind X1. 
+      - destruct H as (? & ? & ?). sq. 
+        eapply PCUICCumulativity.red_cumul_inv in X1.
+        eapply cumul_trans in c.  2:eassumption.
+        eapply invert_cumul_arity_l in c; eauto.
+      - eapply IHX1.
+        destruct H as (? & ? & ?). sq. 
+        eapply PCUICCumulativity.red_cumul_inv in X2.
+        eapply cumul_trans in c.  2:eassumption.
+        eapply invert_cumul_arity_l in c; eauto. 
+        destruct c as (? & ? & ?). sq. 
+        eapply invert_red_prod in X3 as (? & ? & [] & ?); eauto; subst.
+        exists (x2 {0 := hd}). split; sq. 
+        eapply (PCUICSubstitution.substitution_red Σ Γ [_] [] [_]). eauto. econstructor. econstructor. 
+        rewrite subst_empty. eassumption. eauto. cbn. eassumption. cbn in H1.
 
-  (*   Lemma typing_spine_change : *)
-  (*     forall (Σ : global_env_ext) (Γ : context) (t : term) (L : list term) (x1 : term), *)
-  (*       Σ;;; Γ |- t : x1 -> forall x x0 : term, Σ;;; Γ |- t : x -> typing_spine Σ Γ x L x0 -> typing_spine Σ Γ x1 L x0. *)
-  (*   Proof. *)
-  (*     intros Σ Γ t L x1 t2 x x0 t0 t1. *)
-  (*   Admitted. *)
-  (*   eapply typing_spine_change in t1. 3:eapply t0. 2:eapply t2. clear t0. *)
-  (*   revert t t2. *)
-  (*   dependent induction t1; intros. *)
-  (*   + cbn. exists ty. split; eauto. *)
-  (*   + cbn. eapply IHt1. admit. *)
-  (*     eauto. eauto. *)
-  (* - destruct p. *)
-Admitted.                       (* Is_type_app *)
+        Lemma isArity_subst:
+          forall x2 : term, forall s n, isArity x2 -> isArity (subst s n x2).
+        Proof.
+          induction x2; cbn in *; try tauto; intros; eauto.
+        Qed.
+        now eapply isArity_subst.
+    Qed.
+    assert (t11 := t1).
+    eapply isArity_typing_spine in t1 as (? & ? & ?). 2:eauto. 2:eauto. 2:eauto. 
+    sq. exists x5. split. eapply type_mkApps. eapply type_reduction in t0; eauto. 2:eauto.
+    eapply Prelim.typing_spine_red. eapply PCUICCumulativity.All_All2_refl. 
+    clear. induction L; eauto. eauto. eauto. 2:eapply cumul_refl'.
+    eapply PCUICCumulativity.red_cumul. eauto. 
+    Lemma isWfArity_or_Type_red:
+      forall (Σ : global_context) (Γ : context) (T : term), wf Σ -> wf_local Σ Γ ->
+        isWfArity_or_Type Σ Γ T -> forall x5 : term, red Σ Γ T x5 -> isWfArity_or_Type Σ Γ x5.
+    Proof.
+      intros. destruct X1 as [ | []].
+      - left. eapply isWfArity_red; eauto.
+      - right. eexists. eapply subject_reduction; eauto.
+    Qed.
+    eapply isWfArity_or_Type_red; eauto. exists x4; split; sq; eauto.
+  - destruct p.  
+    eapply PCUICPrincipality.principal_typing in t2 as (? & ? & ? & ?). 2:eauto. 2:exact t0.
+    eapply cumul_prop1 in c1; eauto.
+    eapply cumul_prop2 in c0; eauto.
+    econstructor. exists x0. split. eapply type_mkApps. 2:eassumption. eassumption. right.
+    Lemma sort_typing_spine:
+      forall (Σ : global_context) (Γ : context) (L : list term) (u : universe) (x x0 : term),
+        wf Σ ->
+        is_prop_sort u ->
+        typing_spine Σ Γ x L x0 -> Σ;;; Γ |- x : tSort u -> ∑ u', Σ;;; Γ |- x0 : tSort u' × is_prop_sort u'.
+    Proof.
+      intros Σ Γ L u x x0 ? ? t1 c0.
+      revert u H c0.
+      depind t1; intros.
+      - eapply cumul_prop2 in c0; eauto.
+      - eapply invert_cumul_prod_r in c as (? & ? & ? & [] & ?); eauto.
+        eapply subject_reduction in c0. 3:eauto. 2:eauto.
+        eapply inversion_Prod in c0 as (? & ? & ? & ? & ?).
+        eapply cumul_Sort_inv in c0.
+        eapply leq_universe_prop in c0 as []; eauto.
+        Lemma is_prop_sort_prod x2 x3 :
+          is_prop_sort (Universe.sort_of_product x2 x3) -> is_prop_sort x3.
+        Proof.
+          intros. unfold Universe.sort_of_product in *. destruct ?; eauto.
+          eapply is_prop_sort_sup in H. eauto.
+        Qed.
+
+        eapply is_prop_sort_prod in H0. eapply IHt1. exact H0.
+        eapply cumul_prop1 in c1. 4:eassumption. all:eauto.
+        change (tSort x3) with ((tSort x3) {0 := hd}).
+        eapply PCUICSubstitution.substitution0. 2:eauto. eauto. 
+        econstructor. eassumption. 2: now destruct c. right; eauto.
+    Qed.
+    
+    eapply sort_typing_spine in t1; eauto.
+Qed.
 
 Lemma Is_type_lambda (Σ : global_env_ext) Γ na T1 t :
   wf Σ ->
+  wf_local Σ Γ ->
   isErasable Σ Γ (tLambda na T1 t) ->
-  isErasable Σ (vass na T1 :: Γ) t.
+  ∥isErasable Σ (vass na T1 :: Γ) t∥.
 Proof.
-  intros ? (T & ? & ?).
+  intros ? ? (T & ? & ?).
   eapply inversion_Lambda in t0 as (? & ? & ? & ? & ?).
-  exists x0. split; eauto. destruct s as [ | (u & ? & ?)].
-  - left. admit.
-  - right. exists u. split; eauto.
-Admitted.                       (* Is_type_lambda *)
+  destruct s as [ | (u & ? & ?)].
+  - eapply invert_cumul_arity_r in c; eauto. destruct c as (? & [] & ?).
+    eapply invert_red_prod in X1 as (? & ? & [] & ?); eauto; subst. cbn in H.
+    econstructor. exists x3. econstructor. eapply type_reduction; eauto. econstructor; eauto. eexists; eauto.
+    eauto.
+  - sq. eapply cumul_prop1 in c; eauto.
+    eapply inversion_Prod in c as (? & ? & ? & ? & ?).
+    eapply cumul_Sort_inv in c.
+    eapply leq_universe_prop in c as []; eauto.
+    eexists. split. eassumption. right. eexists. split. eassumption.
+    unfold Universe.sort_of_product in H.
+    destruct ?; eauto. 
+
+    eapply is_prop_sort_sup; eauto.
+Qed.
 
 Lemma Is_type_red (Σ : global_env_ext) Γ t v:
   wf Σ ->
@@ -310,23 +432,3 @@ Proof.
   intros; eapply Is_type_red. eauto.
   eapply wcbeval_red; eauto. eauto.
 Qed.
-
-
-Lemma isArity_ind_type:
-  forall idecl : one_inductive_body, isArity (ind_type idecl).
-Proof.
-  intros idecl.
-Admitted.                       (* the type of an inductive is an arity *)
-
-
-Lemma tConstruct_no_Type (Σ : global_env_ext) ind c u x1 : wf Σ ->
-  isErasable Σ [] (mkApps (tConstruct ind c u) x1) ->
-  Is_proof Σ [] (mkApps (tConstruct ind c u) x1).
-Proof.
-  intros wfΣ (? & ? & [ | (? & ? & ?)]).
-  - exfalso. eapply type_mkApps_inv in t as (? & ? & [] & ?); eauto.
-    eapply inversion_Construct in t as (? & ? & ? & ? & ? & ? & ?). destruct x5. destruct p. cbn in *.
-    admit.
-  - exists x, x0. eauto.
-Admitted.                       (* if a constructor is a type or proof, it is a proof *)
-

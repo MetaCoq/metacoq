@@ -96,11 +96,11 @@ Proof.
     + cbn in H17. eauto.
 Qed.
 
-Lemma typing_spine_cumul:
-  forall (Σ : PCUICAst.global_env_ext) (T x1 : PCUICAst.term), Σ;;; [] |- x1 <= T -> typing_spine Σ [] x1 [] T.
-Proof.
-  intros Σ T x1 X.
-Admitted.                       (* typing_spine_cumul, we have to change the def. here! *)
+(* Lemma typing_spine_cumul: *)
+(*   forall (Σ : PCUICAst.global_env_ext) (T x1 : PCUICAst.term), Σ;;; [] |- x1 <= T -> typing_spine Σ [] x1 [] T. *)
+(* Proof. *)
+(*   intros Σ T x1 X. *)
+(* Admitted.                       (* typing_spine_cumul, we have to change the def. here! *) *)
 
 Theorem subject_reduction_eval : forall (Σ : PCUICAst.global_env_ext) Γ t u T,
   wf Σ -> Σ ;;; Γ |- t : T -> PCUICWcbvEval.eval Σ Γ t u -> Σ ;;; Γ |- u : T.
@@ -108,26 +108,34 @@ Proof.
   intros * wfΣ Hty Hred % wcbeval_red. eapply subject_reduction; eauto.
 Qed.
 
-Lemma typing_spine_eval:
-  forall (Σ : PCUICAst.global_env_ext) (args args' : list PCUICAst.term) (X : All2 (PCUICWcbvEval.eval Σ []) args args') (bla : wf Σ)
-    (T x x0 : PCUICAst.term) (t0 : typing_spine Σ [] x args x0) (c : Σ;;; [] |- x0 <= T) (x1 : PCUICAst.term)
-    (c0 : Σ;;; [] |- x1 <= x), typing_spine Σ [] x1 args' T.
+
+Lemma typing_spine_red :
+  forall (Σ : PCUICAst.global_env_ext) Γ (args args' : list PCUICAst.term) (X : All2 (red Σ Γ) args args') (bla : wf Σ)
+    (T x x0 : PCUICAst.term) (t0 : typing_spine Σ Γ x args x0) (c : Σ;;; Γ |- x0 <= T) (x1 : PCUICAst.term)
+    (c0 : Σ;;; Γ |- x1 <= x), isWfArity_or_Type Σ Γ T -> typing_spine Σ Γ x1 args' T.
 Proof.
-  intros Σ args args' X wf T x x0 t0 c x1 c0. revert args' X.
+  intros Σ Γ args args' X wf T x x0 t0 c x1 c0 ?. revert args' X.
   dependent induction t0; intros.
-  - inv X.
-    eapply (typing_spine_cumul). eapply cumul_trans. eauto. eapply cumul_trans. eauto. eauto.
+  - inv X. econstructor. eauto. eapply cumul_trans. eauto. eapply cumul_trans. eauto. eauto.
   - inv X. econstructor.
     + eauto.
     + eapply cumul_trans; eauto.
-    + eapply subject_reduction_eval; eauto.
+    + eapply subject_reduction; eauto.
     + eapply IHt0; eauto.
       eapply PCUICCumulativity.red_cumul_inv.
       unfold PCUICLiftSubst.subst1.
-      eapply (red_red Σ [] [_] [] [_] [_]).
-      eauto. econstructor. eapply wcbeval_red. eauto.
-      econstructor. econstructor. econstructor.
+      eapply (red_red Σ Γ [_] [] [_] [_]).
+      eauto. econstructor. eauto. econstructor. econstructor. econstructor.
       Grab Existential Variables. all: repeat econstructor.
+Qed.
+
+Lemma typing_spine_eval:
+  forall (Σ : PCUICAst.global_context) Γ (args args' : list PCUICAst.term) (X : All2 (PCUICWcbvEval.eval Σ Γ) args args') (bla : wf Σ)
+    (T x x0 : PCUICAst.term) (t0 : typing_spine Σ Γ x args x0) (c : Σ;;; Γ |- x0 <= T) (x1 : PCUICAst.term)
+    (c0 : Σ;;; Γ |- x1 <= x), isWfArity_or_Type Σ Γ T -> typing_spine Σ Γ x1 args' T.
+Proof.
+  intros Σ args args' X wf T x x0 t0 c x1 c0 ?. eapply typing_spine_red; eauto.
+  eapply All2_impl. eassumption. intros. eapply wcbeval_red. eauto.
 Qed.
 
 (** ** on mkApps *)

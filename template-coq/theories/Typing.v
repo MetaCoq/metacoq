@@ -704,6 +704,12 @@ Axiom fix_guard_subst :
 
 Axiom ind_guard : mutual_inductive_body -> bool.
 
+Extract Constant fix_guard => "fun m -> assert false".
+Extract Constant fix_guard_red1 => "fun s g m m' i -> assert false".
+Extract Constant fix_guard_lift => "fun m n k -> assert false".
+Extract Constant fix_guard_subst => "fun m s k -> assert false".
+Extract Constant ind_guard => "fun m -> assert false".
+
 Inductive typing `{checker_flags} (Σ : global_context) (Γ : context) : term -> term -> Type :=
 | type_Rel n decl :
     All_local_env typing Σ Γ ->

@@ -863,6 +863,11 @@ Admitted.
   (* simpl in *. *)
   (* admit. (* destruct idecl; auto. apply H1. *) *)
 
+Axiom fix_guard_trans :
+  forall mfix,
+    TTy.fix_guard mfix ->
+    fix_guard (map (map_def trans trans) mfix).
+
 Theorem template_to_pcuic Σ Γ t T :
   TTy.wf Σ -> TTy.typing Σ Γ t T ->
   typing (trans_global Σ) (trans_local Γ) (trans t) (trans T).
@@ -975,15 +980,16 @@ Proof.
       f_equal. apply mapi_ext; intros i x.
       simpl. rewrite trans_lift. reflexivity. }
     econstructor; eauto.
-    now rewrite nth_error_map H.
+    eapply fix_guard_trans. assumption.
+    now rewrite nth_error_map H0.
     -- unfold app_context, trans_local.
-       rewrite H0. unfold trans_local.
+       rewrite H1. unfold trans_local.
        rewrite <- map_app.
        eapply trans_wf_local.
        eapply TTy.All_local_env_impl. eauto. simpl; intuition eauto with wf.
     -- apply All_map. eapply All_impl; eauto.
        unfold compose. simpl. intuition eauto 3 with wf.
-       rewrite H0. rewrite /trans_local map_length.
+       rewrite H1. rewrite /trans_local map_length.
        unfold Template.AstUtils.app_context in b.
        rewrite /trans_local map_app in b.
        rewrite <- trans_lift. apply b.

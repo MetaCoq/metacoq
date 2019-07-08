@@ -2,9 +2,8 @@
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
 From MetaCoq.Template Require Import config utils monad_utils BasicAst AstUtils.
-From MetaCoq.Extraction Require Import EAst ELiftSubst Extract.
+From MetaCoq.Extraction Require Import EAst ELiftSubst Extract EArities.
 From MetaCoq.PCUIC Require Import PCUICTyping PCUICAst PCUICAstUtils PCUICInduction  PCUICWeakening PCUICSubstitution PCUICRetyping PCUICMetaTheory PCUICWcbvEval PCUICSR  PCUICClosed PCUICInversion PCUICGeneration PCUICSafeChecker.
-
 
 Require Import String.
 Local Open Scope string_scope.
@@ -100,27 +99,6 @@ Theorem subject_reduction_eval : forall (Σ : PCUICAst.global_env_ext) Γ t u T,
   wf Σ -> Σ ;;; Γ |- t : T -> PCUICWcbvEval.eval Σ Γ t u -> Σ ;;; Γ |- u : T.
 Proof.
   intros * wfΣ Hty Hred % wcbeval_red. eapply subject_reduction; eauto.
-Qed.
-
-
-Lemma typing_spine_red :
-  forall (Σ : PCUICAst.global_env_ext) Γ (args args' : list PCUICAst.term) (X : All2 (red Σ Γ) args args') (bla : wf Σ)
-    (T x x0 : PCUICAst.term) (t0 : typing_spine Σ Γ x args x0) (c : Σ;;; Γ |- x0 <= T) (x1 : PCUICAst.term)
-    (c0 : Σ;;; Γ |- x1 <= x), isWfArity_or_Type Σ Γ T -> typing_spine Σ Γ x1 args' T.
-Proof.
-  intros Σ Γ args args' X wf T x x0 t0 c x1 c0 ?. revert args' X.
-  dependent induction t0; intros.
-  - inv X. econstructor. eauto. eapply cumul_trans. eauto. eapply cumul_trans. eauto. eauto.
-  - inv X. econstructor.
-    + eauto.
-    + eapply cumul_trans; eauto.
-    + eapply subject_reduction; eauto.
-    + eapply IHt0; eauto.
-      eapply PCUICCumulativity.red_cumul_inv.
-      unfold PCUICLiftSubst.subst1.
-      eapply (red_red Σ Γ [_] [] [_] [_]).
-      eauto. econstructor. eauto. econstructor. econstructor. econstructor.
-      Grab Existential Variables. all: repeat econstructor.
 Qed.
 
 Lemma typing_spine_eval:
@@ -285,16 +263,32 @@ Proof.
 Qed.
 
 (** ** Prelim on eliminations  *)
+Lemma universe_family_is_prop_sort:
+  forall x6 : universe, universe_family x6 = InProp -> Extract.is_prop_sort x6.
+Proof.
+  intros x6 Eu.
+Admitted.
 
 Lemma elim_restriction_works_kelim1 Σ Γ T ind npar p c brs mind idecl :
   declared_inductive (fst Σ) mind ind idecl ->
   Σ ;;; Γ |- tCase (ind, npar) p c brs : T ->
   (Is_proof Σ Γ (tCase (ind, npar) p c brs) -> False) -> In InType (ind_kelim idecl).
 Proof.
-  intros. eapply inversion_Case in X as (? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ?). 
+  intros.
+  assert (HT := X).
+  eapply inversion_Case in X as (? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ?). 
   unfold types_of_case in e0.
   repeat destruct ?; try congruence. subst. inv e0. 
   eapply declared_inductive_inj in d as []. 2:exact H. subst.
+  enough (universe_family x6 = InType). rewrite H1 in e1.
+  eapply Exists_exists in e1 as (? & ? & ?). subst. eauto.
+
+  destruct (universe_family x6) eqn:Eu.
+  - exfalso. eapply H0. exists T. exists x6. split. eauto.
+    split. 2:{ eapply universe_family_is_prop_sort; eauto. }
+    admit.               
+  - admit. (* no idea what to do for Set *)
+  - reflexivity.  
 Admitted.                       (* elim_restriction_works *)
 
 
@@ -391,6 +385,27 @@ Lemma tCase_length_branch_inv (Σ : global_env_ext) Γ ind npar p n u args brs T
   Σ ;;; Γ |- tCase (ind, npar) p (mkApps (tConstruct ind n u) args) brs : T ->
   nth_error brs n = Some (m, t) ->
   (#|args| = npar + m)%nat.
+Proof.
+  intros. 
+  eapply inversion_Case in X0 as (? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ?). 
+  unfold types_of_case in e0.
+  repeat destruct ?; try congruence. destruct p0, p1; subst. inv E3. inv E1. inv e0.
+  unfold build_branches_type in *.
+  assert (exists t', nth_error x7 n = Some (m, t')).
+  eapply All2_nth_error_Some in H as (? & ?). 2:eassumption. destruct p0.
+  rewrite e. destruct p0. destruct x8. cbn in *. subst. eauto.
+  destruct H0. (* clear - H0 E4. unfold mapi in *. *)
+  (* revert n x7 H0 E4. generalize 0 at 3. induction (ind_ctors x2); intros. *)
+  (* - cbn in E4. inv E4. destruct n0; inv H0. *)
+  (* - cbn in E4. destruct a. destruct ?; try congruence. *)
+  (*   destruct p0. *)
+  (*   destruct ?; try congruence. *)
+  (*   inv E4. destruct ?; try congruence. *)
+  (*   destruct ?; try congruence. *)
+  (*   destruct ?; try congruence. *)
+  (*   inv E. destruct n0; cbn in H0. *)
+  (*   + inversion H0. subst. destruct l. cbn in E0. inv E0. cbn in *. inv H0. *)
+  (*   + eapply IHl in E0. eauto.  *)
 Admitted.                       (* tCase_length_branch_inv *)
 
 (** ** Prelim on fixpoints *)

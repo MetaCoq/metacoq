@@ -814,7 +814,7 @@ Proof.
   clear e.
   eexists _, _, _. split. split. eauto.
   eapply (substitution _ _ types _ [] _ _ wfΣ); simpl; eauto with wf.
-  - subst types. clear -a a0.
+  - subst types. rename i into hguard. clear -a a0 hguard.
     pose proof a0 as a0'. apply All_rev in a0'.
     unfold fix_subst, fix_context. simpl.
     revert a0'. rewrite <- (@List.rev_length _ mfix).

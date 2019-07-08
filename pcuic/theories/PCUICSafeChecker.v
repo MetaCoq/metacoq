@@ -747,6 +747,7 @@ Section Typecheck.
                    Z <- check_bodies mfix' _ ;;
                    ret (All_cons (conj W1 W2) Z)
                  end) mfix _ ;;
+        guarded <- check_eq_true (fix_guard mfix) (Msg "Unguarded fixpoint") ;;
         ret (dtype decl; _)
       end
 

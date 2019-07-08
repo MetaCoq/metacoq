@@ -710,7 +710,7 @@ Proof.
   eapply declared_minductive_inv in Hdecl. 2:apply weaken_env_prop_typing. all:eauto.
   eapply wf_arities_context'; eauto.
 Qed.
-  
+
 Lemma on_constructor_closed  {Σ mind mdecl u i idecl cdecl} :
   wf Σ ->
   on_constructor (lift_typing typing) Σ (inductive_mind mind) mdecl (inductive_ind mind) idecl i cdecl ->
@@ -2142,6 +2142,7 @@ Proof.
       * simpl. eexists. eapply IHt. apply All_local_env_app_inv; intuition.
       * simpl. eapply IHt'. apply All_local_env_app_inv; intuition.
     + erewrite map_dtype. eapply type_Fix.
+      * eapply fix_guard_subst ; eauto.
       * rewrite nth_error_map H. reflexivity.
       * now rewrite subst_fix_context.
       * rewrite subst_fix_context.

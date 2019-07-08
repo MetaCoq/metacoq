@@ -415,7 +415,8 @@ Proof.
     rewrite smash_context_length in i. simpl in i.
     eapply closed_upwards; eauto. lia.
 
-  - split. solve_all.
+  - clear H0.
+    split. solve_all.
     destruct x; simpl in *.
     unfold test_def. simpl. toProp.
     split.

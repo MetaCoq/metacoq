@@ -632,8 +632,8 @@ Section Principality.
       simpl.
       admit.
 
-    - eapply inversion_Fix in hA as [decl [nthe [wfΓ [? ?]]]].
-      eapply inversion_Fix in hB as [decl' [nthe' [wfΓ' [? ?]]]].
+    - eapply inversion_Fix in hA as [decl [hguard [nthe [wfΓ [? ?]]]]].
+      eapply inversion_Fix in hB as [decl' [hguard' [nthe' [wfΓ' [? ?]]]]].
       rewrite nthe' in nthe; noconf nthe.
       exists (dtype decl); repeat split; eauto.
       eapply type_Fix; eauto.

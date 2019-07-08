@@ -1787,3 +1787,21 @@ Proof.
     +  eapply cofix_red_body. eassumption.
     + constructor. all: eauto.
 Qed.
+
+Lemma type_rename :
+  forall Σ Γ u v A,
+    Σ ;;; Γ |- u : A ->
+    eq_term (snd Σ) u v ->
+    Σ ;;; Γ |- v : A.
+Admitted.
+
+Corollary type_nameless :
+  forall Σ Γ u A,
+    Σ ;;; Γ |- u : A ->
+    Σ ;;; Γ |- nl u : A.
+Proof.
+  intros Σ Γ u A h.
+  eapply type_rename.
+  - eassumption.
+  - eapply eq_term_tm_nl.
+Qed.

@@ -395,9 +395,11 @@ Proof.
   - econstructor. eauto. econstructor. clear E.
     eapply inversion_Ind in t as (? & ? & ? & ? & ? & ?).
     split. eauto. left.
-    eapply isArity_subst_instance. eapply isArity_ind_type.
+    eapply isArity_subst_instance.
+    destruct a4 as (? & ? & ?). cbn.
+    eapply isArity_ind_type; eauto.
   - econstructor.
-    eapply elim_restriction_works. intros.
+    eapply elim_restriction_works. eauto. eauto. eauto. intros.
     eapply f, isErasable_Proof. eauto. eauto.
     
     pose proof (Prelim.monad_map_All2 _ _ _ brs a2 E2).
@@ -409,6 +411,7 @@ Proof.
     intros. destruct H5.
     destruct ?; inv e0. cbn. eauto.
   - econstructor.
+    clear E.  
 
     eapply elim_restriction_works_proj. intros.
     eapply isErasable_Proof in X2. eauto.
@@ -433,6 +436,15 @@ Proof.
     intros. destruct X1. cbn in *. repeat destruct ?; inv e.
     cbn. repeat split; eauto. 
     eapply p. eauto.
+Qed.
+
+Lemma erase_Some_typed {Σ wfΣ Γ wfΓ t r} :
+  erase Σ wfΣ Γ wfΓ t = Checked r -> exists T, ∥Σ ;;; Γ |- t : T∥.
+Proof.
+  rewrite erase_equation_1.
+  destruct is_erasable; cbn; intros; try congruence. clear H.
+  destruct a as [ [(? & ? &?)] | []]. exists x; sq; eauto.
+  destruct H as [_ []]. exists A; sq; eauto.
 Qed.
 
 Definition optM {M : Type -> Type} `{Monad M} {A B} (x : option A) (f : A -> M B) : M (option B) :=
@@ -556,8 +568,9 @@ Proof.
            destruct ?; try congruence.
            inv H4. split; eauto.
 
-           pose (t' := w). inv t'. cbn in *.
-           edestruct constructors_typed; eauto.
+           pose (t' := t). inv t'. cbn in *.
+           destruct (erase_Some_typed E) as [? []].
+
            eapply erases_erase. 2:eauto. eauto.
         -- eapply All2_Forall2.
            eapply All2_impl_In. eassumption.
@@ -565,10 +578,10 @@ Proof.
            destruct ?; try congruence;
              inv H4. split; eauto.
 
-           pose (t' := w). inv t'. cbn in *.
-           (* edestruct proj_typed; eauto. *)
-           admit.
-           (* eapply erases_erase. *)
-           (* 2:{ eauto. } eauto. *)
+           pose (t' := t). inv t'. cbn in *.
+           destruct (erase_Some_typed E) as [? []].
+           
+           eapply erases_erase.
+           2:{ eauto. } eauto.
   * eapply IHΣ. unfold erase_global. rewrite E2. reflexivity.
 Admitted.

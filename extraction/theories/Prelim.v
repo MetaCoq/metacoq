@@ -96,12 +96,6 @@ Proof.
     + cbn in H17. eauto.
 Qed.
 
-(* Lemma typing_spine_cumul: *)
-(*   forall (Σ : PCUICAst.global_env_ext) (T x1 : PCUICAst.term), Σ;;; [] |- x1 <= T -> typing_spine Σ [] x1 [] T. *)
-(* Proof. *)
-(*   intros Σ T x1 X. *)
-(* Admitted.                       (* typing_spine_cumul, we have to change the def. here! *) *)
-
 Theorem subject_reduction_eval : forall (Σ : PCUICAst.global_env_ext) Γ t u T,
   wf Σ -> Σ ;;; Γ |- t : T -> PCUICWcbvEval.eval Σ Γ t u -> Σ ;;; Γ |- u : T.
 Proof.
@@ -292,10 +286,38 @@ Qed.
 
 (** ** Prelim on eliminations  *)
 
-Lemma elim_restriction_works Σ Γ ind npar p c brs :
+Lemma elim_restriction_works_kelim1 Σ Γ T ind npar p c brs mind idecl :
+  declared_inductive (fst Σ) mind ind idecl ->
+  Σ ;;; Γ |- tCase (ind, npar) p c brs : T ->
+  (Is_proof Σ Γ (tCase (ind, npar) p c brs) -> False) -> In InType (ind_kelim idecl).
+Proof.
+  intros. eapply inversion_Case in X as (? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ?). 
+  unfold types_of_case in e0.
+  repeat destruct ?; try congruence. subst. inv e0. 
+  eapply declared_inductive_inj in d as []. 2:exact H. subst.
+Admitted.                       (* elim_restriction_works *)
+
+
+Lemma elim_restriction_works_kelim2 Σ ind mind idecl : wf Σ ->
+  declared_inductive (fst Σ) mind ind idecl ->
+  In InType (ind_kelim idecl) -> Informative Σ ind.
+Proof.
+  intros.
+  destruct (PCUICWeakeningEnv.on_declared_inductive X H) as [[]]; eauto.
+  intros ?. intros.
+  eapply declared_inductive_inj in H as []; eauto; subst.
+  
+
+Admitted.                       (* elim_restriction_works *)
+
+Lemma elim_restriction_works Σ Γ T ind npar p c brs mind idecl : wf Σ ->
+  declared_inductive (fst Σ) mind ind idecl ->
+  Σ ;;; Γ |- tCase (ind, npar) p c brs : T ->
   (Is_proof Σ Γ (tCase (ind, npar) p c brs) -> False) -> Informative Σ ind.
 Proof.
-Admitted.                       (* elim_restriction_works *)
+  intros. eapply elim_restriction_works_kelim2; eauto.
+  eapply elim_restriction_works_kelim1; eauto.
+Qed.
 
 Lemma elim_restriction_works_proj Σ Γ  p c :
   (Is_proof Σ Γ (tProj p c) -> False) -> Informative Σ (fst (fst p)).
@@ -364,11 +386,21 @@ Qed.
 Lemma subslet_fix_subst Σ mfix1 :
   subslet Σ [] (PCUICTyping.fix_subst mfix1) (PCUICLiftSubst.fix_context mfix1).
 Proof.
-  unfold fix_subst.
-  induction mfix1 using rev_ind.
+  unfold fix_subst, PCUICLiftSubst.fix_context.
+  generalize mfix1 at 2 3.  intros.
+  induction mfix0 using rev_ind.
   - econstructor.
-  - unfold PCUICLiftSubst.fix_context.
-    rewrite mapi_app. cbn. rewrite rev_app_distr. cbn.
+  - rewrite mapi_app. cbn. rewrite rev_app_distr. cbn.
+    rewrite app_length. cbn. rewrite plus_comm. cbn. econstructor.
+    + admit.
+    + eenough (_ = PCUICLiftSubst.subst
+      ((fix aux (n : nat) : list term :=
+          match n with
+          | 0 => []
+          | S n0 => tFix mfix1 n0 :: aux n0
+          end) #|l|) 0 (PCUICLiftSubst.lift (#|l| + 0) 0 (dtype x))).
+      rewrite <- H. econstructor. admit.
+      admit.
 Admitted.                       (* subslet_fix_subst *)
 
 (** ** Prelim on typing *)

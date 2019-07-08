@@ -46,11 +46,25 @@ Admitted.                       (* constructors have a type *)
   
 (* Admitted. (* projections have a type *) *)
 
-Lemma isArity_ind_type:
-  forall idecl : one_inductive_body, isArity (ind_type idecl).
+Lemma isArity_ind_type (Σ : global_context) mind ind idecl :
+  wf Σ ->
+  declared_inductive (fst Σ) mind ind idecl ->
+  isArity (ind_type idecl).
 Proof.
-  intros idecl.
-Admitted.                       (* the type of an inductive is an arity *)
+  intros. eapply PCUICWeakeningEnv.declared_inductive_inv with (P := typing) in H; eauto.
+  - inv H. rewrite ind_arity_eq. rewrite <- it_mkProd_or_LetIn_app.
+    clear. 
+    Lemma it_mkProd_isArity:
+      forall (l : list context_decl) A,
+        isArity A ->
+        isArity (it_mkProd_or_LetIn l A).
+    Proof.
+      induction l; cbn; intros; eauto.
+      eapply IHl. destruct a, decl_body; cbn; eauto.
+    Qed.
+    eapply it_mkProd_isArity. econstructor.
+  - eapply PCUICWeakeningEnv.weaken_env_prop_typing.
+Qed.
 
 Lemma tConstruct_no_Type Σ ind c u x1 : wf Σ ->
   isErasable Σ [] (mkApps (tConstruct ind c u) x1) ->
@@ -68,7 +82,18 @@ Lemma isWfArity_prod_inv:
   forall (Σ : global_context) (Γ : context) (x : name) (x0 x1 : term),
     isWfArity typing Σ Γ (tProd x x0 x1) -> (∑ s : universe, Σ;;; Γ |- x0 : tSort s) ×   isWfArity typing Σ (Γ,, vass x x0) x1
 .
-Admitted.
+  intros. destruct X as (? & ? & ? & ?). cbn in e.
+  eapply destArity_app_Some in e as (? & ? & ?); subst.
+  split.
+  - unfold snoc, app_context in *. rewrite <- app_assoc in *. 
+    clear H. induction x4.
+    + inv a. eauto.
+    + cbn in a. inv a.
+      * eapply IHx4. eauto.
+      * eapply IHx4. eauto.
+  - eexists. eexists. split; eauto. subst. 
+    unfold snoc, app_context in *. rewrite <- app_assoc in *. eassumption.
+Qed.
 
 Lemma invert_cumul_arity_r (Σ : global_context) (Γ : context) (C : term) T :
   wf Σ -> wf_local Σ Γ ->

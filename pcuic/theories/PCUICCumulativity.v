@@ -143,19 +143,64 @@ Lemma leq_term_antisym `{cf : checker_flags} Σ t u :
 Proof.
 Admitted.
 
+Derive Signature for All2.
+
+Lemma All2_sym {A} (P : A -> A -> Type) :
+  CRelationClasses.Symmetric P ->
+  CRelationClasses.Symmetric (All2 P).
+Proof.
+  intros hP x y h. induction h.
+  - constructor.
+  - constructor ; eauto.
+Qed.
+
 Lemma eq_term_upto_univ_sym :
   forall Re Rle,
     CRelationClasses.Symmetric Re ->
     CRelationClasses.Symmetric Rle ->
     CRelationClasses.Symmetric (eq_term_upto_univ Re Rle).
 Proof.
-Admitted.
+  intros Re Rle he hle u v e.
+  induction u in Rle, hle, v, e |- * using term_forall_list_ind.
+  all: dependent destruction e.
+  all: try solve [
+    econstructor ; eauto ;
+    try eapply All2_sym ; eauto
+  ].
+  - econstructor.
+    eapply All2_All_mix_left in X as h; eauto.
+    clear a X.
+    induction h.
+    + constructor.
+    + destruct r as [h1 h2]. eapply h1 in h2 ; auto.
+  - econstructor; eauto.
+    eapply All2_All_mix_left in X as h; eauto.
+    clear a X.
+    induction h.
+    + constructor.
+    + destruct r as [h1 [h2 h3]]. eapply h1 in h3 ; auto.
+  - econstructor.
+    eapply All2_All_mix_left in X as h; eauto.
+    clear a X.
+    induction h.
+    + constructor.
+    + destruct r as [[h1 h2] [[h3 h4] h5]].
+      eapply h1 in h3 ; auto.
+  - econstructor.
+    eapply All2_All_mix_left in X as h; eauto.
+    clear a X.
+    induction h.
+    + constructor.
+    + destruct r as [[h1 h2] [[h3 h4] h5]]. eapply h1 in h3 ; auto.
+Qed.
 
 Corollary eq_term_sym `{checker_flags} :
   forall G t u,
     eq_term G t u ->
     eq_term G u t.
 Proof.
+  intros G t u h.
+  eapply eq_term_upto_univ_sym ; eauto.
 Admitted.
 
 Inductive conv_alt `{checker_flags} (Σ : global_context) (Γ : context) : term -> term -> Type :=

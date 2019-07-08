@@ -940,6 +940,17 @@ Proof.
   depelim e. auto.
 Qed.
 
+Lemma isLambda_eq_term_r :
+  forall Re u v,
+    isLambda v ->
+    eq_term_upto_univ Re Re u v ->
+    isLambda u.
+Proof.
+  intros R u v h e.
+  destruct v ; try discriminate.
+  depelim e. auto.
+Qed.
+
 Lemma isConstruct_app_eq_term_l :
   forall Re u v,
     isConstruct_app u ->
@@ -1933,15 +1944,15 @@ Proof.
     case_eq (isLambda (dbody d)) ;
       try (intros bot ; rewrite bot in H ; discriminate H).
     intros isl. rewrite isl in H. inversion H. subst. clear H.
-    (* eapply All2_nth_error_Some in a as hh ; try eassumption.
+    eapply All2_nth_error_Some_r in a as hh ; try eassumption.
     destruct hh as [d' [e' [[? ?] erarg]]].
-    eapply All2_nth_error_Some in ea as hh ; try eassumption.
+    eapply All2_nth_error_Some_r in ea as hh ; try eassumption.
     destruct hh as [a'' [ea' ?]].
-    eexists. do 2 split.
+    eexists. constructor. split.
     + eapply red_fix.
       * unfold unfold_fix. rewrite e'.
-        erewrite isLambda_eq_term_l; eauto.
-      * unfold is_constructor. rewrite <- erarg. rewrite ea'.
+        erewrite isLambda_eq_term_r ; eauto.
+      (* * unfold is_constructor. rewrite <- erarg. rewrite ea'.
         eapply isConstruct_app_eq_term_l ; eassumption.
     + eapply eq_term_upto_univ_mkApps.
       * eapply eq_term_upto_univ_substs ; eauto.

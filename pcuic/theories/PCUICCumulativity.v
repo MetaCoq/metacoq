@@ -201,7 +201,8 @@ Corollary eq_term_sym `{checker_flags} :
 Proof.
   intros G t u h.
   eapply eq_term_upto_univ_sym ; eauto.
-Admitted.
+  all: intros ? ? ? ; eapply eq_universe_sym ; eauto.
+Qed.
 
 Inductive conv_alt `{checker_flags} (Σ : global_context) (Γ : context) : term -> term -> Type :=
 | conv_alt_refl t u : eq_term (snd Σ) t u -> Σ ;;; Γ |- t == u

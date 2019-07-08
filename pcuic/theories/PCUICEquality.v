@@ -1976,25 +1976,25 @@ Proof.
         erewrite isLambda_eq_term_r ; eauto.
        * unfold is_constructor. rewrite erarg. rewrite ea'.
         eapply isConstruct_app_eq_term_r ; eassumption.
-(*    + eapply eq_term_upto_univ_mkApps.
+    + eapply eq_term_upto_univ_mkApps.
       * eapply eq_term_upto_univ_substs ; eauto.
         -- eapply eq_term_upto_univ_leq ; eauto.
         -- unfold fix_subst.
            apply All2_length in a as el. rewrite <- el.
-           generalize #|mfix|. intro n.
+           generalize #|mfix0|. intro n.
            induction n.
            ++ constructor.
            ++ constructor ; eauto.
               constructor. assumption.
       * assumption.
   - dependent destruction e.
-    apply eq_term_upto_univ_mkApps_l_inv in e2 as [? [? [[h1 h2] h3]]]. subst.
+    apply eq_term_upto_univ_mkApps_r_inv in e2 as [? [? [[h1 h2] h3]]]. subst.
     dependent destruction h1.
     unfold unfold_cofix in H.
     case_eq (nth_error mfix idx) ;
       try (intros e ; rewrite e in H ; discriminate H).
     intros d e. rewrite e in H. inversion H. subst. clear H.
-    eapply All2_nth_error_Some in e as hh ; try eassumption.
+    eapply All2_nth_error_Some_r in e as hh ; try eassumption.
     destruct hh as [d' [e' [[? ?] erarg]]].
     eexists. do 2 split.
     + eapply red_cofix_case.
@@ -2004,19 +2004,19 @@ Proof.
       eapply eq_term_upto_univ_substs ; eauto.
       unfold cofix_subst.
       apply All2_length in a0 as el. rewrite <- el.
-      generalize #|mfix|. intro n.
+      generalize #|mfix0|. intro n.
       induction n.
       * constructor.
       * constructor ; eauto.
         constructor. assumption.
   - dependent destruction e.
-    apply eq_term_upto_univ_mkApps_l_inv in e as [? [? [[h1 h2] h3]]]. subst.
+    apply eq_term_upto_univ_mkApps_r_inv in e as [? [? [[h1 h2] h3]]]. subst.
     dependent destruction h1.
     unfold unfold_cofix in H.
     case_eq (nth_error mfix idx) ;
       try (intros e ; rewrite e in H ; discriminate H).
     intros d e. rewrite e in H. inversion H. subst. clear H.
-    eapply All2_nth_error_Some in e as hh ; try eassumption.
+    eapply All2_nth_error_Some_r in e as hh ; try eassumption.
     destruct hh as [d' [e' [[? ?] erarg]]].
     eexists. do 2 split.
     + eapply red_cofix_proj.
@@ -2026,7 +2026,7 @@ Proof.
       eapply eq_term_upto_univ_substs ; eauto.
       unfold cofix_subst.
       apply All2_length in a as el. rewrite <- el.
-      generalize #|mfix|. intro n.
+      generalize #|mfix0|. intro n.
       induction n.
       * constructor.
       * constructor ; eauto.
@@ -2037,14 +2037,14 @@ Proof.
     + eapply eq_term_upto_univ_subst_instance_constr ; eauto.
       eapply eq_term_upto_univ_refl ; eauto.
   - dependent destruction e.
-    apply eq_term_upto_univ_mkApps_l_inv in e as [? [? [[h1 h2] h3]]]. subst.
+    apply eq_term_upto_univ_mkApps_r_inv in e as [? [? [[h1 h2] h3]]]. subst.
     dependent destruction h1.
-    eapply All2_nth_error_Some in h2 as hh ; try eassumption.
+    eapply All2_nth_error_Some_r in h2 as hh ; try eassumption.
     destruct hh as [arg' [e' ?]].
     eexists. do 2 split.
     + constructor. eassumption.
     + eapply eq_term_upto_univ_leq ; eauto.
-  - dependent destruction e.
+(*  - dependent destruction e.
     edestruct IHh as [? [[? ?]]] ; [ .. | eassumption | ] ; eauto.
     clear h.
     lazymatch goal with

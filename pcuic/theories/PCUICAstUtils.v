@@ -579,13 +579,26 @@ Proof.
   eauto.
 Qed.
 
+(* Should be All2_nth_error_Some_l *)
 Lemma All2_nth_error_Some {A B} {P : A -> B -> Type} {l l'} n t :
   All2 P l l' ->
   nth_error l n = Some t ->
   { t' : B & (nth_error l' n = Some t') * P t t'}%type.
 Proof.
   intros Hall. revert n.
-  induction Hall; destruct n; simpl; try congruence. intros [= ->]. exists y. intuition auto.
+  induction Hall; destruct n; simpl; try congruence.
+  intros [= ->]. exists y. intuition auto.
+  eauto.
+Qed.
+
+Lemma All2_nth_error_Some_r {A B} {P : A -> B -> Type} {l l'} n t' :
+  All2 P l l' ->
+  nth_error l' n = Some t' ->
+  ∑ t, nth_error l n = Some t × P t t'.
+Proof.
+  intros Hall. revert n.
+  induction Hall; destruct n; simpl; try congruence.
+  intros [= ->]. exists x. intuition auto.
   eauto.
 Qed.
 

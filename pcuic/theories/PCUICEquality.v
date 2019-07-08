@@ -474,6 +474,27 @@ Proof.
     + cbn. reflexivity.
 Qed.
 
+Lemma eq_term_upto_univ_mkApps_r_inv :
+  forall Re Rle u l t,
+    eq_term_upto_univ Re Rle t (mkApps u l) ->
+    ∑ u' l',
+      eq_term_upto_univ Re Rle u' u *
+      All2 (eq_term_upto_univ Re Re) l' l *
+      (t = mkApps u' l').
+Proof.
+  intros Re Rle u l t h.
+  induction l in u, t, h, Rle |- *.
+  - cbn in h. exists t, []. split ; auto.
+  - cbn in h. apply IHl in h as [u' [l' [[h1 h2] h3]]].
+    dependent destruction h1. subst.
+    eexists. eexists. split; [ split | ].
+    + eassumption.
+    + constructor.
+      * eassumption.
+      * eassumption.
+    + cbn. reflexivity.
+Qed.
+
 Lemma eq_term_upto_univ_mkApps :
   forall Re Rle u1 l1 u2 l2,
     eq_term_upto_univ Re Rle u1 u2 ->
@@ -1887,10 +1908,9 @@ Proof.
     + constructor. eassumption.
     + eapply eq_term_upto_univ_refl ; assumption.
   - dependent destruction e.
-    (* Need to define it *)
-    Fail apply eq_term_upto_univ_mkApps_r_inv in e2 as [? [? [[h1 h2] h3]]]. (* subst.
+    apply eq_term_upto_univ_mkApps_r_inv in e2 as [? [? [[h1 h2] h3]]]. subst.
     dependent destruction h1.
-    eexists. do 2 split.
+    eexists. constructor. split.
     + constructor.
     + eapply eq_term_upto_univ_mkApps.
       * eapply All2_nth
@@ -1899,20 +1919,22 @@ Proof.
            eapply eq_term_upto_univ_leq ; eauto.
         -- cbn. eapply eq_term_upto_univ_refl ; eauto.
       * eapply All2_skipn. assumption.
-  - apply eq_term_upto_univ_mkApps_l_inv in e as [? [? [[h1 h2] h3]]]. subst.
+  - apply eq_term_upto_univ_mkApps_r_inv in e as [? [? [[h1 h2] h3]]]. subst.
     dependent destruction h1.
     unfold unfold_fix in H.
     case_eq (nth_error mfix idx) ;
       try (intros e ; rewrite e in H ; discriminate H).
-    intros d e. rewrite e in H. inversion H. subst. clear H.
-    eapply All2_nth_error_Some in a as hh ; try eassumption.
-    destruct hh as [d' [e' [[? ?] erarg]]].
+    intros d e. rewrite e in H.
     unfold is_constructor in H0.
-    destruct (isLambda (dbody d)) eqn:isl; noconf H2.
-    case_eq (nth_error args (rarg d)) ;
+    case_eq (nth_error args narg) ;
       try (intros bot ; rewrite bot in H0 ; discriminate H0).
     intros a' ea.
     rewrite ea in H0.
+    case_eq (isLambda (dbody d)) ;
+      try (intros bot ; rewrite bot in H ; discriminate H).
+    intros isl. rewrite isl in H. inversion H. subst. clear H.
+    (* eapply All2_nth_error_Some in a as hh ; try eassumption.
+    destruct hh as [d' [e' [[? ?] erarg]]].
     eapply All2_nth_error_Some in ea as hh ; try eassumption.
     destruct hh as [a'' [ea' ?]].
     eexists. do 2 split.

@@ -143,9 +143,18 @@ Lemma leq_term_antisym `{cf : checker_flags} Σ t u :
 Proof.
 Admitted.
 
-Lemma eq_term_sym `{cf : checker_flags} Σ t u :
-  eq_term Σ t u ->
-  eq_term Σ u t.
+Lemma eq_term_upto_univ_sym :
+  forall Re Rle,
+    CRelationClasses.Symmetric Re ->
+    CRelationClasses.Symmetric Rle ->
+    CRelationClasses.Symmetric (eq_term_upto_univ Re Rle).
+Proof.
+Admitted.
+
+Corollary eq_term_sym `{checker_flags} :
+  forall G t u,
+    eq_term G t u ->
+    eq_term G u t.
 Proof.
 Admitted.
 

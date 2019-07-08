@@ -135,13 +135,13 @@ Section Conversion.
       + exact h.
       + destruct s.
         * cbn. rewrite <- nl_zipx.
-          eapply eq_term_tm_nl.
+          eapply eq_term_upto_univ_tm_nl. all: auto.
         * cbn. rewrite <- nl_zipx.
-          eapply eq_term_tm_nl.
+          eapply eq_term_upto_univ_tm_nl. all: auto.
         * cbn. rewrite <- nl_zipx.
-          eapply eq_term_tm_nl.
+          eapply eq_term_upto_univ_tm_nl. all: auto.
         * cbn. rewrite <- nl_zipx.
-          eapply eq_term_tm_nl.
+          eapply eq_term_upto_univ_tm_nl. all: auto.
   Defined.
 
   Definition wterm Γ := { t : term | wellformed (nlg Σ) Γ t }.
@@ -213,7 +213,7 @@ Section Conversion.
     eapply wellformed_rename ; auto.
     - now apply wf_nlg.
     - eassumption.
-    - eapply eq_term_tm_nl.
+    - eapply eq_term_upto_univ_tm_nl. all: auto.
   Qed.
 
   Lemma R_cored :
@@ -1273,9 +1273,8 @@ Section Conversion.
   Next Obligation.
     symmetry in eq1.
     eapply wellformed_rename ; auto ; [ exact h2 |].
-    eapply eq_term_sym.
-    eapply eq_term_zipx.
-    eapply eq_term_upto_univ_eq_eq_term.
+    eapply eq_term_upto_univ_sym. all: auto.
+    eapply eq_term_upto_univ_zipx. all: auto.
     eapply elimT.
     - eapply reflect_eq_term_upto_univ_eqb.
     - assumption.
@@ -1479,9 +1478,8 @@ Section Conversion.
   Next Obligation.
     eapply wellformed_rename ; auto.
     - exact h2.
-    - apply eq_term_sym.
-      cbn. eapply eq_term_zipx.
-      eapply eq_term_upto_univ_eq_eq_term.
+    - apply eq_term_upto_univ_sym ; auto.
+      eapply eq_term_upto_univ_zipx ; auto.
       eapply elimT.
       + eapply reflect_eq_term_upto_univ_eqb.
       + symmetry. assumption.
@@ -1513,8 +1511,8 @@ Section Conversion.
   Next Obligation.
     eapply wellformed_rename ; auto.
     - exact h2.
-    - apply eq_term_sym. eapply eq_term_zipx.
-      eapply eq_term_upto_univ_eq_eq_term.
+    - apply eq_term_upto_univ_sym ; auto.
+      eapply eq_term_upto_univ_zipx ; auto.
       eapply elimT.
       + eapply reflect_eq_term_upto_univ_eqb.
       + symmetry. assumption.
@@ -1775,8 +1773,8 @@ Section Conversion.
   Next Obligation.
     eapply wellformed_rename ; auto.
     - exact h2.
-    - apply eq_term_sym. eapply eq_term_zipx.
-      eapply eq_term_upto_univ_eq_eq_term.
+    - apply eq_term_upto_univ_sym ; auto.
+      eapply eq_term_upto_univ_zipx ; auto.
       eapply elimT.
       + eapply reflect_eq_term_upto_univ_eqb.
       + symmetry. assumption.

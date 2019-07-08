@@ -593,16 +593,50 @@ Proof.
   eassumption.
 Qed.
 
+Lemma eq_term_upto_univ_it_mkLambda_or_LetIn :
+  forall Re Rle Γ u v,
+    Reflexive Re ->
+    eq_term_upto_univ Re Rle u v ->
+    eq_term_upto_univ Re Rle (it_mkLambda_or_LetIn Γ u) (it_mkLambda_or_LetIn Γ v).
+Proof.
+  intros Re Rle Γ u v he h.
+  induction Γ as [| [na [b|] A] Γ ih ] in u, v, h |- *.
+  - assumption.
+  - simpl. cbn. apply ih. constructor ; try apply eq_term_upto_univ_refl.
+    all: auto.
+  - simpl. cbn. apply ih. constructor ; try apply eq_term_upto_univ_refl.
+    all: auto.
+Qed.
+
 Lemma eq_term_it_mkLambda_or_LetIn :
   forall (Σ : global_context) Γ u v,
     eq_term (snd Σ) u v ->
     eq_term (snd Σ) (it_mkLambda_or_LetIn Γ u) (it_mkLambda_or_LetIn Γ v).
 Proof.
-  intros Σ Γ.
-  induction Γ as [| [na [b|] A] Γ ih ] ; intros u v h.
+  intros Σ Γ u v h.
+  eapply eq_term_upto_univ_it_mkLambda_or_LetIn ; auto.
+  intro. eapply eq_universe_refl.
+Qed.
+
+Lemma eq_term_upto_univ_zipc :
+  forall Re u v π,
+    Reflexive Re ->
+    eq_term_upto_univ Re Re u v ->
+    eq_term_upto_univ Re Re (zipc u π) (zipc v π).
+Proof.
+  intros Re u v π he h.
+  induction π in u, v, h |- *.
+  all: try solve [
+             simpl ; try apply IHπ ;
+             cbn ; constructor ; try apply eq_term_upto_univ_refl ; assumption
+           ].
   - assumption.
-  - simpl. cbn. apply ih. constructor ; try apply eq_term_refl. assumption.
-  - simpl. cbn. apply ih. constructor ; try apply eq_term_refl. assumption.
+  - simpl. apply IHπ. destruct indn as [i n].
+    constructor.
+    + apply eq_term_upto_univ_refl. all: assumption.
+    + assumption.
+    + eapply All2_same.
+      intros. split ; auto. apply eq_term_upto_univ_refl. all: assumption.
 Qed.
 
 Lemma eq_term_zipc :
@@ -611,18 +645,20 @@ Lemma eq_term_zipc :
     eq_term (snd Σ) (zipc u π) (zipc v π).
 Proof.
   intros Σ u v π h.
-  revert u v h. induction π ; intros u v h.
-  all: try solve [
-             simpl ; try apply IHπ ;
-             cbn ; constructor ; try apply eq_term_refl ; assumption
-           ].
+  eapply eq_term_upto_univ_zipc.
+  - intro. eapply eq_universe_refl.
   - assumption.
-  - simpl. apply IHπ. destruct indn as [i n].
-    constructor.
-    + apply eq_term_refl.
-    + assumption.
-    + eapply All2_same.
-      intros. split ; auto. apply eq_term_refl.
+Qed.
+
+Lemma eq_term_upto_univ_zipx :
+  forall Re Γ u v π,
+    Reflexive Re ->
+    eq_term_upto_univ Re Re u v ->
+    eq_term_upto_univ Re Re (zipx Γ u π) (zipx Γ v π).
+Proof.
+  intros Re Γ u v π he h.
+  eapply eq_term_upto_univ_it_mkLambda_or_LetIn ; auto.
+  eapply eq_term_upto_univ_zipc ; auto.
 Qed.
 
 Lemma eq_term_zipx :
@@ -631,9 +667,8 @@ Lemma eq_term_zipx :
     eq_term (snd Σ) (zipx Γ u π) (zipx Γ v π).
 Proof.
   intros Σ Γ u v π h.
-  eapply eq_term_it_mkLambda_or_LetIn.
-  eapply eq_term_zipc.
-  eassumption.
+  eapply eq_term_upto_univ_zipx ; auto.
+  intro. eapply eq_universe_refl.
 Qed.
 
 Lemma eq_term_upto_univ_isApp :
@@ -1791,8 +1826,29 @@ Qed.
 Lemma type_rename :
   forall Σ Γ u v A,
     Σ ;;; Γ |- u : A ->
-    eq_term (snd Σ) u v ->
+    eq_term_upto_univ eq eq u v ->
     Σ ;;; Γ |- v : A.
+Proof.
+  assert (tm :
+    env_prop (fun Σ Γ u A =>
+                forall v,
+                  eq_term_upto_univ eq eq u v ->
+                  Σ ;;; Γ |- v : A)
+  ).
+  eapply typing_ind_env.
+  all: intros Σ wfΣ Γ wfΓ.
+  - intros n decl hnth ih v e.
+    dependent destruction e.
+    eapply type_Rel ; eassumption.
+  - intros l ih v e.
+    dependent destruction e. subst.
+    eapply type_Sort. assumption.
+  - intros na A B s1 s2 ih hA ihA hB ihB v e.
+    dependent destruction e.
+    econstructor.
+    + eapply ihA. assumption.
+    + (* Need eq_context_upto conversion *)
+      (* eapply ihB. *)
 Admitted.
 
 Corollary type_nameless :
@@ -1803,5 +1859,5 @@ Proof.
   intros Σ Γ u A h.
   eapply type_rename.
   - eassumption.
-  - eapply eq_term_tm_nl.
+  - eapply eq_term_upto_univ_tm_nl. all: auto.
 Qed.

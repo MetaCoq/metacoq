@@ -384,7 +384,7 @@ Inductive red_decls Σ Γ Γ' : forall (x y : PCUICAst.context_decl), Type :=
 | conv_vdef_body na na' b b' T : Σ ;;; Γ' |- b' : T -> red Σ Γ b b' ->
                                                   red_decls Σ Γ Γ' (PCUICAst.vdef na b T) (PCUICAst.vdef na' b' T).
 
-Notation red_context := (context_relation red_decls).
+Notation red_context Σ := (context_relation (red_decls Σ)).
 
 Lemma env_prop_imp `{checker_flags} P1 P2 :
   (forall Σ Γ t T, P1 Σ Γ t T -> P2 Σ Γ t T) ->

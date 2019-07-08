@@ -5,6 +5,7 @@ Nat0
 List0
 Specif
 PeanoNat
+Equality
 Utils
 Basics
 BinPosDef
@@ -53,7 +54,6 @@ Ast_denoter
 Plugin_core
 Run_extractable
 
-Utils
 Monad_utils
 TemplateMonad
 UnivSubst0

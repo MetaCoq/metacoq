@@ -130,7 +130,7 @@ Proof.
   destruct HC1 as [na0 [A0 [B0 [[HC0 HA0] HB0]]]].
   destruct HC2 as [na1 [A1 [B1 [[HC1 HA1] HB1]]]].
   (* Confluence needed *)
-  destruct (red_confluence wfΣ HC0 HC1) as [pitype [redl redr]].
+  destruct (red_confluence _ wfΣ HC0 HC1) as [pitype [redl redr]].
   eapply invert_red_prod in redl as (?&?&(?&?)&?) => //.
   eapply invert_red_prod in redr as (?&?&(?&?)&?) => //.
   subst. noconf e0.
@@ -151,7 +151,7 @@ Proof.
   destruct HC1 as [na0 [A0 [B0 [[HC0 HA0] HB0]]]].
   destruct HC2 as [u' [redu' lequ']].
   (* Confluence needed *)
-  destruct (red_confluence wfΣ HC0 redu') as [reduct [redl redr]].
+  destruct (red_confluence _ wfΣ HC0 redu') as [reduct [redl redr]].
   eapply invert_red_prod in redl as (?&?&(?&?)&?) => //.
   eapply invert_red_sort in redr as ?. subst. discriminate.
 Qed.

@@ -82,11 +82,11 @@ Proof.
   Hint Resolve Is_type_conv_context.
   all: try now (econstructor; eauto).
   - econstructor. eapply h_forall_Γ'0.
-    econstructor. eauto. econstructor. right. exists s1.
+    econstructor. eauto. econstructor. exists s1.
     eapply context_conversion; eauto. eapply conv_refl.
     eassumption.
   - econstructor. eauto. eapply h_forall_Γ'1.
-    econstructor. eauto. econstructor. right. exists s1.
+    econstructor. eauto. econstructor. exists s1.
     eapply context_conversion; eauto. eapply conv_refl.
     eassumption.
   - econstructor. eauto. eauto.
@@ -288,7 +288,7 @@ Proof.
         assert (Σ ;;; [] |- a' : t). {
           eapply subject_reduction_eval; eauto.
           eapply cumul_Prod_inv in c0 as [].
-          econstructor. eassumption. eauto. eapply c0. }
+          econstructor. eassumption. eauto. eapply c0. auto. auto. }
       inv Hvf'.
       * assert (Σ;;; [] |- PCUICLiftSubst.subst1 a' 0 b ⇝ℇ subst1 vu' 0 t').
         eapply (erases_subst Σ [] [PCUICAst.vass na t] [] b [a'] t'); eauto.
@@ -315,7 +315,9 @@ Proof.
     inv He.
     + eapply IHeval1 in H6 as (vt1' & Hvt2' & He_vt1'); eauto.
       assert (Hc :red_context Σ ([],, vdef na b0 t) [vdef na b0' t]). {
-        econstructor. econstructor. econstructor. eapply subject_reduction_eval; eauto.
+        econstructor. econstructor. econstructor.
+        exists x; auto.
+        eapply subject_reduction_eval; eauto.
         eapply wcbeval_red; eauto.
       }
       assert (Σ;;; [vdef na b0' t] |- b1 : x0). {

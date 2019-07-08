@@ -1823,6 +1823,60 @@ Proof.
     + constructor. all: eauto.
 Qed.
 
+Lemma red1_eq_term_upto_univ_r :
+  forall Σ Re Rle Γ u v v',
+    Reflexive Re ->
+    Reflexive Rle ->
+    Transitive Re ->
+    Transitive Rle ->
+    SubstUnivPreserving Re ->
+    SubstUnivPreserving Rle ->
+    (forall u u' : universe, Re u u' -> Rle u u') ->
+    eq_term_upto_univ Re Rle v v' ->
+    red1 Σ Γ u v ->
+    exists u',
+      ∥ red1 Σ Γ u' v' ×
+        eq_term_upto_univ Re Rle u u' ∥.
+Proof.
+  intros Σ Re Rle Γ u v v' he hle tRe tRle hRe hRle hR e h.
+  induction h in v', e, tRle, Rle, hle, hRle, hR |- * using red1_ind_all.
+  all: try solve [
+    dependent destruction e ;
+    edestruct IHh as [? [[? ?]]] ; [ .. | eassumption | ] ; eauto ;
+    eexists ; do 2 split ; [
+      solve [ econstructor ; eauto ]
+    | constructor ; eauto
+    ]
+  ].
+  (* TODO FIX *)
+  (* all: try solve [ *)
+  (*   dependent destruction e ; *)
+  (*   edestruct IHh as [? [[? ?]]] ; [ .. | eassumption | ] ; eauto ; *)
+  (*   clear h ; *)
+  (*   lazymatch goal with *)
+  (*   | r : red1 _ (?Γ,, vass ?na ?A) ?u ?v, *)
+  (*     e : eq_term_upto_univ _ _ ?A ?B *)
+  (*     |- _ => *)
+  (*     let hh := fresh "hh" in *)
+  (*     eapply red1_eq_context_upto_l in r as hh ; revgoals ; [ *)
+  (*       eapply eq_context_vass (* with (nb := na) *) ; [ *)
+  (*         eapply e *)
+  (*       | eapply eq_context_upto_refl ; eauto *)
+  (*       ] *)
+  (*     | assumption *)
+  (*     | destruct hh as [? [[? ?]]] *)
+  (*     ] *)
+  (*   end ; *)
+  (*   eexists ; do 2 split ; [ *)
+  (*     solve [ econstructor ; eauto ] *)
+  (*   | constructor ; eauto ; *)
+  (*     eapply eq_term_upto_univ_trans ; eauto ; *)
+  (*     eapply eq_term_upto_univ_leq ; eauto *)
+  (*   ] *)
+  (* ]. *)
+  - (* Not clear how to do that... *)
+Abort.
+
 Lemma type_rename :
   forall Σ Γ u v A,
     Σ ;;; Γ |- u : A ->

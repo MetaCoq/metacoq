@@ -1664,18 +1664,18 @@ Hint Resolve pred1_pred1_ctx : pcuic.
 
 Section ParallelSubstitution.
 
-  Inductive psubst Σ (Γ Δ : context) : list term -> list term -> context -> context -> Type :=
-  | emptyslet : psubst Σ Γ Δ [] [] [] []
-  | cons_let_ass Γ' Δ' s s' na na' t t' T T' :
-      psubst Σ Γ Δ s s' Γ' Δ' ->
-      pred1 Σ (Γ ,,, Γ') (Δ ,,, Δ') T T' ->
-      pred1 Σ Γ Δ t t' ->
-      psubst Σ Γ Δ (t :: s) (t' :: s') (Γ' ,, vass na T) (Δ' ,, vass na' T')
-  | cons_let_def Γ' Δ' s s' na na' t t' T T' :
-      psubst Σ Γ Δ s s' Γ' Δ' ->
-      pred1 Σ (Γ ,,, Γ') (Δ ,,, Δ') T T' ->
-      pred1 Σ Γ Δ (subst0 s t) (subst0 s' t') ->
-      psubst Σ Γ Δ (subst0 s t :: s) (subst0 s' t' :: s') (Γ' ,, vdef na t T) (Δ' ,, vdef na' t' T').
+  Inductive psubst Σ (Γ Γ' : context) : list term -> list term -> context -> context -> Type :=
+  | psubst_empty : psubst Σ Γ Γ' [] [] [] []
+  | psubst_vass Δ Δ' s s' na na' t t' T T' :
+      psubst Σ Γ Γ' s s' Δ Δ' ->
+      pred1 Σ (Γ ,,, Δ) (Γ' ,,, Δ') T T' ->
+      pred1 Σ Γ Γ' t t' ->
+      psubst Σ Γ Γ' (t :: s) (t' :: s') (Δ ,, vass na T) (Δ' ,, vass na' T')
+  | psubst_vdef Δ Δ' s s' na na' t t' T T' :
+      psubst Σ Γ Γ' s s' Δ Δ' ->
+      pred1 Σ (Γ ,,, Δ) (Γ' ,,, Δ') T T' ->
+      pred1 Σ Γ Γ' (subst0 s t) (subst0 s' t') ->
+      psubst Σ Γ Γ' (subst0 s t :: s) (subst0 s' t' :: s') (Δ ,, vdef na t T) (Δ' ,, vdef na' t' T').
 
   Lemma psubst_length {Σ Γ Δ Γ' Δ' s s'} : psubst Σ Γ Δ s s' Γ' Δ' ->
                                            #|s| = #|Γ'| /\ #|s'| = #|Δ'| /\ #|s| = #|s'|.
@@ -2159,7 +2159,7 @@ Section ParallelSubstitution.
     intros wfΣ redM redN.
     pose proof (substitution_let_pred1 Σ Γ [vdef na M A] [] Δ [vdef na' M' A'] [] [M] [M'] N N' wfΣ) as H.
     pose proof (pred1_pred1_ctx _ redN). depelim X. simpl in o.
-    forward H. pose proof (cons_let_def Σ Γ Δ [] [] [] [] na na' M M' A A').
+    forward H. pose proof (psubst_vdef Σ Γ Δ [] [] [] [] na na' M M' A A').
     rewrite !subst_empty in X0. apply X0; pcuic. apply H; pcuic.
     econstructor; auto with pcuic.
   Qed.

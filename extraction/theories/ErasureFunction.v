@@ -1,7 +1,7 @@
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
 From MetaCoq.Template Require Import config utils monad_utils BasicAst AstUtils.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICTyping PCUICMetaTheory PCUICWcbvEval PCUICLiftSubst PCUICInversion PCUICSR PCUICNormal PCUICSafeReduce PCUICSafeLemmata PCUICSafeChecker PCUICPrincipality.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICTyping PCUICMetaTheory PCUICWcbvEval PCUICLiftSubst PCUICInversion PCUICSR PCUICNormal PCUICSafeReduce PCUICSafeLemmata PCUICSafeChecker PCUICValidity PCUICPrincipality.
 From MetaCoq.Extraction Require EAst ELiftSubst ETyping EWcbvEval Extract ExtractionCorrectness.
 From Equations Require Import Equations.
 Require Import String.
@@ -54,13 +54,11 @@ Proof.
 
              eapply context_conversion_red; eauto. econstructor.
 
-             eapply conv_context_refl; eauto. econstructor.
+             eapply conv_ctx_refl; eauto. econstructor.
 
              2: eapply conv_sym, red_conv; eauto.
 
-             right.
-
-             eapply subject_reduction in X0. 2:eauto. 2: eauto. 
+             eapply subject_reduction in X0. 2:eauto. 2: eauto.
              
              eapply inversion_Prod in X0 as ( ? & ? & ? & ? & ?). exists x3. eauto.
              
@@ -68,12 +66,11 @@ Proof.
 
              eapply context_conversion_red; eauto. econstructor.
 
-             eapply conv_context_refl; eauto. econstructor.
+             eapply conv_ctx_refl; eauto. econstructor.
 
              2: eapply conv_sym, red_conv; eauto. destruct Σ as [Σ univs]; cbn in *.
              eapply isWfArity_red in X3. 2:eauto. 2:exact X0.
              eapply isWfArity_prod_inv in X3 as[]; eauto. 
-             right. eassumption.
       * exact (TypeError t).
     + exact (TypeError t).
 Admitted. (* termination of is_arity *)

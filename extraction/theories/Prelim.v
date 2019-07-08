@@ -375,13 +375,14 @@ Admitted.                       (* typing_subst_instance *)
 Require Import PCUIC.PCUICGeneration.
 
 Inductive red_decls Σ Γ Γ' : forall (x y : PCUICAst.context_decl), Type :=
-| conv_vass na na' T T' : isWfArity_or_Type Σ Γ' T' -> red Σ Γ T T' ->
+| conv_vass na na' T T' : isType Σ Γ' T' -> red Σ Γ T T' ->
                       red_decls Σ Γ Γ' (PCUICAst.vass na T) (PCUICAst.vass na' T')
 
-| conv_vdef_type na na' b T T' : isWfArity_or_Type Σ Γ' T' -> red Σ Γ T T' ->
+| conv_vdef_type na na' b T T' : isType Σ Γ' T' -> red Σ Γ T T' ->
                              red_decls Σ Γ Γ' (PCUICAst.vdef na b T) (PCUICAst.vdef na' b T')
 
-| conv_vdef_body na na' b b' T : Σ ;;; Γ' |- b' : T -> red Σ Γ b b' ->
+| conv_vdef_body na na' b b' T : isType Σ Γ' T ->
+                                 Σ ;;; Γ' |- b' : T -> red Σ Γ b b' ->
                                                   red_decls Σ Γ Γ' (PCUICAst.vdef na b T) (PCUICAst.vdef na' b' T).
 
 Notation red_context Σ := (context_relation (red_decls Σ)).
@@ -462,8 +463,8 @@ Proof.
       econstructor. eauto. econstructor.
       now eapply PCUICCumulativity.red_cumul.
       now eapply PCUICCumulativity.red_cumul_inv.
-      econstructor. eauto.
-      econstructor.
+      econstructor. eauto. auto.
+      constructor.
       now eapply PCUICCumulativity.red_cumul.
       now eapply PCUICCumulativity.red_cumul_inv.
   Qed.
@@ -478,9 +479,11 @@ Proof.
   intros. induction Γ2.
   - cbn; eauto.
   - destruct a. destruct decl_body.
+    + cbn. econstructor. inv X0. eauto. econstructor.
+      depelim X0.
+      2:eapply conv_refl.
+      red in l. destruct l. exists x. eapply context_conversion; eauto.
     + cbn. econstructor. inv X0. eauto. econstructor. 2:eapply conv_refl.
-      inv X0. right. cbn in X3. destruct X3. exists x. eapply context_conversion; eauto.
-    + cbn. econstructor. inv X0. eauto. econstructor. 2:eapply conv_refl.
-      inv X0. right. cbn in X3. destruct X3. exists x. eapply context_conversion; eauto.
+      inv X0. cbn in X3. destruct X3. exists x. eapply context_conversion; eauto.
 Qed.
 

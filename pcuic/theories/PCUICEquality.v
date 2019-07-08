@@ -973,6 +973,28 @@ Proof.
   - eapply decompose_app_notApp. eassumption.
 Qed.
 
+Lemma isConstruct_app_eq_term_r :
+  forall Re u v,
+    isConstruct_app v ->
+    eq_term_upto_univ Re Re u v ->
+    isConstruct_app u.
+Proof.
+  intros Re u v h e.
+  case_eq (decompose_app u). intros t1 l1 e1.
+  case_eq (decompose_app v). intros t2 l2 e2.
+  unfold isConstruct_app in *.
+  rewrite e2 in h. cbn in h.
+  rewrite e1. cbn.
+  destruct t2 ; try discriminate.
+  apply decompose_app_inv in e1 as ?. subst.
+  apply decompose_app_inv in e2 as ?. subst.
+  apply eq_term_upto_univ_mkApps_inv in e as hh.
+  - destruct hh as [h1 h2].
+    dependent destruction h1. reflexivity.
+  - eapply decompose_app_notApp. eassumption.
+  - reflexivity.
+Qed.
+
 Lemma red1_eq_context_upto_l :
   forall Σ Re Γ Δ u v,
     Reflexive Re ->
@@ -1952,9 +1974,9 @@ Proof.
     + eapply red_fix.
       * unfold unfold_fix. rewrite e'.
         erewrite isLambda_eq_term_r ; eauto.
-      (* * unfold is_constructor. rewrite <- erarg. rewrite ea'.
-        eapply isConstruct_app_eq_term_l ; eassumption.
-    + eapply eq_term_upto_univ_mkApps.
+       * unfold is_constructor. rewrite erarg. rewrite ea'.
+        eapply isConstruct_app_eq_term_r ; eassumption.
+(*    + eapply eq_term_upto_univ_mkApps.
       * eapply eq_term_upto_univ_substs ; eauto.
         -- eapply eq_term_upto_univ_leq ; eauto.
         -- unfold fix_subst.

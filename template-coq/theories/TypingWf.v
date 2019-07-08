@@ -353,10 +353,10 @@ Proof.
 
   - subst types.
     apply All_local_env_app in X as [HΓ Hmfix].
-    clear Hmfix.
+    clear Hmfix H0.
     split.
     + revert X0. generalize (fix_context mfix). intros.
-      clear decl H0. constructor. induction mfix. constructor. constructor.
+      clear decl H1. constructor. induction mfix. constructor. constructor.
       2:{ apply IHmfix. inv X0. auto. }
       inv X0. intuition. now apply wf_lift_wf in H1.
     + eapply nth_error_all in X0; eauto. simpl in X0. intuition eauto.

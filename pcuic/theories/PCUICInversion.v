@@ -214,6 +214,7 @@ Section Inversion.
       Σ ;;; Γ |- tFix mfix n : T ->
       ∑ decl,
         let types := fix_context mfix in
+        fix_guard mfix ×
         nth_error mfix n = Some decl ×
         wf_local Σ (Γ ,,, types) ×
         All (fun d =>

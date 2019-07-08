@@ -413,7 +413,8 @@ Proof.
   - econstructor.
     clear E.  
 
-    eapply elim_restriction_works_proj. intros.
+    destruct a5 as (? & ? & ?).
+    eapply elim_restriction_works_proj; eauto. intros.
     eapply isErasable_Proof in X2. eauto.
 
     eauto.

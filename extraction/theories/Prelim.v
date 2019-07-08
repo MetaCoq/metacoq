@@ -306,8 +306,6 @@ Proof.
   destruct (PCUICWeakeningEnv.on_declared_inductive X H) as [[]]; eauto.
   intros ?. intros.
   eapply declared_inductive_inj in H as []; eauto; subst.
-  
-
 Admitted.                       (* elim_restriction_works *)
 
 Lemma elim_restriction_works Σ Γ T ind npar p c brs mind idecl : wf Σ ->
@@ -319,10 +317,48 @@ Proof.
   eapply elim_restriction_works_kelim1; eauto.
 Qed.
 
-Lemma elim_restriction_works_proj Σ Γ  p c :
+Lemma declared_projection_projs_nonempty {Σ mind ind p a} :
+  wf Σ ->
+  declared_projection Σ mind ind p a ->
+  ind_projs ind <> [].
+Proof.
+  intros. destruct H. destruct H0.
+  destruct (ind_projs ind); try congruence. destruct p.
+  cbn in *. destruct n; inv H0.
+Qed.
+
+Lemma elim_restriction_works_proj_kelim1 Σ Γ T p c mind idecl :
+  wf Σ ->
+  declared_inductive (fst Σ) mind (fst (fst p)) idecl ->
+  Σ ;;; Γ |- tProj p c : T ->
+  (Is_proof Σ Γ (tProj p c) -> False) -> In InType (ind_kelim idecl).
+Proof.
+  intros. destruct p. destruct p. cbn in *.
+  eapply inversion_Proj in X0 as (? & ? & ? & ? & ? & ? & ? & ? & ?).
+  destruct x2. cbn in *.
+  pose (d' := d). destruct d' as [? _].
+  eapply declared_inductive_inj in H as []; eauto. subst.
+  pose proof (declared_projection_projs_nonempty X d).
+  eapply PCUICWeakeningEnv.on_declared_projection in d; eauto.
+  destruct d as (? & ? & ?). destruct p.
+  inv o. inv o0.
+  forward onProjections. eauto.
+  inversion onProjections.
+  clear - on_projs_elim. revert on_projs_elim. generalize (ind_kelim x1).
+  intros. induction on_projs_elim; subst.
+  - cbn. eauto.
+  - cbn. right. eauto.  
+Qed. (* elim_restriction_works_proj *)
+
+Lemma elim_restriction_works_proj Σ Γ  p c mind idecl T :
+  wf Σ ->
+  declared_inductive (fst Σ) mind (fst (fst p)) idecl ->
+  Σ ;;; Γ |- tProj p c : T ->
   (Is_proof Σ Γ (tProj p c) -> False) -> Informative Σ (fst (fst p)).
 Proof.
-Admitted.                       (* elim_restriction_works_proj *)
+  intros. eapply elim_restriction_works_kelim2; eauto.
+  eapply elim_restriction_works_proj_kelim1; eauto.
+Qed.                       
 
 Lemma length_of_btys {ind mdecl' idecl' args' u' p pty indctx pctx ps btys} :
   types_of_case ind mdecl' idecl' (firstn (ind_npars mdecl') args') u' p pty = Some (indctx, pctx, ps, btys) ->

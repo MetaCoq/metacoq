@@ -122,11 +122,12 @@ Inductive conv_decls Σ Γ Γ' : forall (x y : context_decl), Type :=
     Σ ;;; Γ |- T = T' ->
     conv_decls Σ Γ Γ' (vdef na b T) (vdef na' b T')
 
-| conv_vdef_body na na' b b' T :
-    isType Σ Γ' T ->
-    Σ ;;; Γ' |- b' : T ->
+| conv_vdef_body na na' b b' T T' :
+    isType Σ Γ' T' ->
+    Σ ;;; Γ' |- b' : T' ->
     Σ ;;; Γ |- b = b' ->
-    conv_decls Σ Γ Γ' (vdef na b T) (vdef na' b' T).
+    Σ ;;; Γ |- T = T' ->
+    conv_decls Σ Γ Γ' (vdef na b T) (vdef na' b' T').
 
 Notation conv_context Σ Γ Γ' := (context_relation (@conv_decls Σ) Γ Γ').
 Require Import Equations.Tactics.
@@ -487,16 +488,26 @@ Proof.
       eapply eq_term_upto_univ_trans with U'; eauto; tc.
     * pose proof (conv_red_ctx wfΣ c r).
       eapply conv_conv_alt, conv_alt_red in X.
-      destruct X as [T' [U' [? [? ?]]]].
+      destruct X as [t' [u' [? [? ?]]]].
       pose proof (PCUICConfluence.red_red_ctx wfΣ _ _ _ _ r1 r).
       pose proof (PCUICConfluence.red_red_ctx wfΣ _ _ _ _ r2 r).
-      destruct (red_eq_context_upto_l wfΣ r1 e). destruct p.
-      destruct (red_eq_context_upto_l wfΣ r2 e). destruct p.
-      exists (Δ ,, vdef na' T' U), (Δ' ,, vdef na' x0 U).
-      split; [split|]; constructor; auto. red. split; auto. red. split; auto.
-      eapply PCUICConfluence.red_red_ctx; eauto.
-      eapply eq_term_upto_univ_trans with U'; eauto; tc.
-      reflexivity.
+      destruct (red_eq_context_upto_l wfΣ r1 e) as [t'' [? ?]].
+      destruct (red_eq_context_upto_l wfΣ r2 e) as [u'' [? ?]].
+      pose proof (conv_red_ctx wfΣ c0 r) as hTU.
+      eapply conv_conv_alt, conv_alt_red in hTU.
+      destruct hTU as [T' [U' [rT [rU eTU']]]].
+      pose proof (PCUICConfluence.red_red_ctx wfΣ _ _ _ _ rT r).
+      pose proof (PCUICConfluence.red_red_ctx wfΣ _ _ _ _ rU r).
+      destruct (red_eq_context_upto_l wfΣ rT e) as [T'' [? ?]].
+      destruct (red_eq_context_upto_l wfΣ rU e) as [U'' [? ?]].
+      exists (Δ ,, vdef na' t' T'), (Δ' ,, vdef na' u'' U'').
+      split; [split|]. all: constructor ; auto.
+      -- red. split; auto.
+      -- red. split.
+         ++ eapply PCUICConfluence.red_red_ctx; eauto.
+         ++ eapply PCUICConfluence.red_red_ctx; eauto.
+      -- eapply eq_term_upto_univ_trans with u'; eauto; tc.
+      -- eapply eq_term_upto_univ_trans with U'; eauto; tc.
 Qed.
 
 Lemma cumul_eq_context_upto {Σ : global_context} {Γ Δ T U} :
@@ -578,6 +589,7 @@ Proof.
   - depelim c; constructor; auto.
     eapply conv_sym, conv_conv_ctx; eauto.
     eapply conv_sym, conv_conv_ctx; eauto.
+    eapply conv_sym, conv_conv_ctx; eauto.
 Qed.
 
 (** Maybe need to prove it later *)
@@ -624,7 +636,7 @@ Proof.
       + simpl in *.
         admit.
       + simpl in *. auto.
-
+        admit.
   - constructor; pcuic.
     eapply forall_Γ'0. repeat (constructor; pcuic).
     eexists; now eapply forall_Γ'.
@@ -906,7 +918,7 @@ Proof.
     eapply (context_conversion _ wfΣ _ _ _ _ typeb').
     constructor. auto with pcuic. constructor; eauto.
     now exists s1.
-    apply conv_conv_alt; auto.
+    apply conv_conv_alt; auto. eapply conv_refl.
     assert (Σ ;;; Γ |- tLetIn n b b_ty b' : tLetIn n b b_ty b'_ty). econstructor; eauto.
     edestruct (validity _ wfΣ _ wfΓ _ _ X0). apply i.
     eapply cumul_red_r.

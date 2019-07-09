@@ -264,7 +264,7 @@ Section Lemmata.
           -- eapply ihA. assumption.
           -- constructor.
              ++ apply conv_ctx_refl ; auto.
-             ++ Fail econstructor.
+             ++ econstructor.
                 (* conv_vdef_body is not general enough, NEED FIX *)
   Admitted.
 

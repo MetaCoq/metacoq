@@ -236,17 +236,10 @@ Section Lemmata.
       wellformed (nlg Σ) Γ t.
   Admitted.
 
-  Lemma type_rename :
-    forall Γ u v A,
-      Σ ;;; Γ |- u : A ->
-      eq_term (snd Σ) u v ->
-      Σ ;;; Γ |- v : A.
-  Admitted.
-
   Lemma welltyped_rename :
     forall Γ u v,
       welltyped Σ Γ u ->
-      eq_term (snd Σ) u v ->
+      eq_term_upto_univ eq eq u v ->
       welltyped Σ Γ v.
   Proof.
     intros Γ u v [A h] e.
@@ -256,7 +249,7 @@ Section Lemmata.
   Lemma wellformed_rename :
     forall Γ u v,
       wellformed Σ Γ u ->
-      eq_term (snd Σ) u v ->
+      eq_term_upto_univ eq eq u v ->
       wellformed Σ Γ v.
   Proof.
   Admitted.

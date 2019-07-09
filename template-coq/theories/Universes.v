@@ -427,6 +427,23 @@ Proof.
     [apply leq_universe0_refl|constructor].
 Qed.
 
+Lemma eq_universe0_sym :
+  forall φ s s',
+    eq_universe0 φ s s' ->
+    eq_universe0 φ s' s.
+Proof.
+  intros φ s s' e vH. symmetry ; eauto.
+Qed.
+
+Lemma eq_universe_sym :
+  forall φ s s',
+    eq_universe φ s s' ->
+    eq_universe φ s' s.
+Proof.
+  unfold eq_universe. destruct check_univs ; eauto.
+  eapply eq_universe0_sym.
+Qed.
+
 Lemma eq_universe0_trans φ s1 s2 s3 :
   eq_universe0 φ s1 s2 ->
   eq_universe0 φ s2 s3 ->

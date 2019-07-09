@@ -1550,17 +1550,16 @@ Section ConfluenceFacts.
   Proof.
     move => Hred. apply red_alt in Hred.
     eapply red_pred in Hred.
-    depind Hred.
+    generalize_eqs Hred. induction Hred in ind, pars, k, args |- * ; simplify *.
     - eapply pred1_mkApps_tConstruct in r as [r' [eq redargs]].
       subst y. exists r'. intuition auto. solve_all. now apply pred1_red in X.
     - exists args; split; eauto. apply All2_same; auto.
-    - specialize IHHred1 as [? [? ?]]. subst y.
-      specialize (IHHred2 _ _ _ _ _ eq_refl) as [? [? ?]]. subst z.
+    - specialize IHHred1 as [? [? ?]]. reflexivity. subst y.
+      specialize (IHHred2 _ _ _ _ eq_refl) as [? [? ?]]. subst z.
       exists x0. intuition auto. eapply All2_trans; eauto.
       intros ? ? ?; eapply red_trans.
     - assumption.
-  (* Qed. *)
-  Admitted. (* bug *)
+  Qed.
 
   Lemma red_mkApps_tInd (Γ : context)
         ind u (args : list term) c :
@@ -1570,17 +1569,16 @@ Section ConfluenceFacts.
   Proof.
     move => Hred. apply red_alt in Hred.
     eapply red_pred in Hred.
-    depind Hred.
+    generalize_eqs Hred. induction Hred in ind, u, args |- * ; simplify *.
     - eapply pred1_mkApps_tInd in r as [r' [eq redargs]].
       subst y. exists r'. intuition auto. solve_all. now apply pred1_red in X.
     - exists args; split; eauto. apply All2_same; auto.
-    - specialize IHHred1 as [? [? ?]]. subst y.
-      specialize (IHHred2 _ _ _ _ eq_refl) as [? [? ?]]. subst z.
+    - specialize IHHred1 as [? [? ?]]. reflexivity. subst y.
+      specialize (IHHred2 _ _ _ eq_refl) as [? [? ?]]. subst z.
       exists x0. intuition auto. eapply All2_trans; eauto.
       intros ? ? ?; eapply red_trans.
     - auto.
-  (* Qed. *)
-  Admitted. (* bug *)
+  Qed.
 
   Lemma red_mkApps_tConst_axiom (Γ : context)
         cst u (args : list term) cb c :
@@ -1591,17 +1589,16 @@ Section ConfluenceFacts.
   Proof.
     move => Hdecl Hbody Hred. apply red_alt in Hred.
     eapply red_pred in Hred.
-    depind Hred.
+    generalize_eqs Hred. induction Hred in cst, u, args, Hdecl |- *; simplify *.
     - eapply pred1_mkApps_tConst_axiom in r as [r' [eq redargs]]; eauto.
       subst y. exists r'. intuition auto. solve_all. now apply pred1_red in X.
     - exists args; split; eauto. apply All2_same; auto.
-    - specialize (IHHred1 _ _ _ _ _ Hdecl Hbody eq_refl) as [? [? ?]]. subst y.
-      specialize (IHHred2 _ _ _ _ _ Hdecl Hbody eq_refl) as [? [? ?]]. subst z.
+    - specialize (IHHred1 _ _ _ Hdecl eq_refl) as [? [? ?]]. subst y.
+      specialize (IHHred2 _ _ _ Hdecl eq_refl) as [? [? ?]]. subst z.
       exists x0. intuition auto. eapply All2_trans; eauto.
       intros ? ? ?; eapply red_trans.
     - auto.
-  (* Qed. *)
-  Admitted. (* bug *)
+  Qed.
 
   (* Lemma red1_red1_ctx_inv Γ Δ Δ' t u : *)
   (*   red1 Σ (Γ ,,, Δ) t u -> *)

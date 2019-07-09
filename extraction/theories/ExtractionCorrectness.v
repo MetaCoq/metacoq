@@ -484,6 +484,8 @@ Proof.
     + exists tBox. split. econstructor.
       eapply Is_type_eval; eauto. econstructor; eauto.
   - assert (Hty' := Hty).
+    assert (Hunf := H).
+    assert (Hcon := H1).
     assert (Σ ;;; [] |- mkApps (tFix mfix idx) args ▷ res) by eauto.
     eapply type_mkApps_inv in Hty' as (? & ? & [] & ?); eauto.
     eapply EInversion.type_tFix_inv in t as (? & ? & ? & ? & ? & ?); eauto.
@@ -502,8 +504,9 @@ Proof.
       * assert (Hmfix' := H7).
         eapply All2_nth_error_Some in H7 as (? & ? & ? & ? & ?); eauto.
         destruct x1. cbn in *. subst.
-        eapply (erases_subst Σ [] (PCUICLiftSubst.fix_context mfix) [] dbody (fix_subst mfix)) in e3; cbn; eauto.
-        -- enough (exists L, Forall2 (erases Σ []) args' L /\ Forall2 (Ee.eval Σ') x3 L).
+
+        enough(Σ;;; [] ,,, subst_context (fix_subst mfix) 0 [] |- PCUICLiftSubst.subst (fix_subst mfix) 0 dbody ⇝ℇ subst (ETyping.fix_subst mfix') 0 (Extract.E.dbody x2)). clear e3. rename H into e3.
+        -- enough (exists L, Forall2 (erases Σ []) args' L /\ Forall2 (Ee.eval Σ') x3 L). 
            ++ cbn in e3. destruct H as (L & ? & ?).
               assert (Hv : Forall Ee.value L).
               { eapply Forall2_Forall_right; eauto.
@@ -552,35 +555,29 @@ Proof.
                          eapply value_app_inv in Hv. subst. eauto.
                  --- eauto.
                  --- eauto.
-              ** eapply PCUICGeneration.type_mkApps.
-                 --- eapply (substitution Σ [] (PCUICLiftSubst.fix_context mfix) (fix_subst mfix) []); eauto.
-
-                     eapply subslet_fix_subst.
-                     eapply nth_error_all in a0; eauto. cbn in a0.
-                     eapply a0.
-                 --- cbn.
-                     eapply typing_spine_eval in t0. 2-5:eauto.
-                     rewrite (plus_n_O #|PCUICLiftSubst.fix_context mfix|).
-                     rewrite fix_context_length.
-                     rewrite <- fix_subst_length.
-                     rewrite PCUICLiftSubst.simpl_subst.
-                     now rewrite PCUICLiftSubst.lift0_id. omega.
-                     eapply PCUICValidity.validity; eauto.
+              ** eapply subject_reduction. eauto. exact Hty.
+                 etransitivity.
+                 eapply PCUICReduction.red_mkApps. econstructor.
+                 eapply All2_impl. exact X. intros. now eapply wcbeval_red. 
+                 econstructor 2. econstructor.
+                 econstructor. exact Hunf. exact Hcon.
            ++ clear - t0 H0 H5. revert x t0 x3 H5; induction H0; intros.
               ** inv H5. exists []; eauto.
               ** inv H5. inv t0. eapply r in H2 as (? & ? & ?); eauto.
                  eapply IHAll2 in X2 as (? & ? & ?); eauto.
-        -- eapply subslet_fix_subst.
-        -- eapply nth_error_all in a0; eauto. cbn in a0.
-           eapply a0.
-        -- eapply All2_from_nth_error.
-           erewrite fix_subst_length, ETyping.fix_subst_length, All2_length; eauto.
-           intros.
-           rewrite fix_subst_nth in H3. 2:{ now rewrite fix_subst_length in H. }
-           rewrite efix_subst_nth in H4. 2:{ rewrite fix_subst_length in H.
-                                             erewrite <- All2_length; eauto. }
-           inv H3; inv H4.
-           erewrite All2_length; eauto.
+        -- cbn.
+           eapply (erases_subst Σ [] (PCUICLiftSubst.fix_context mfix) [] dbody (fix_subst mfix)) in e3; cbn; eauto.
+           ++ eapply subslet_fix_subst.
+           ++ eapply nth_error_all in a0; eauto. cbn in a0.
+              eapply a0.
+           ++ eapply All2_from_nth_error.
+              erewrite fix_subst_length, ETyping.fix_subst_length, All2_length; eauto.
+              intros.
+              rewrite fix_subst_nth in H3. 2:{ now rewrite fix_subst_length in H. }
+              rewrite efix_subst_nth in H4. 2:{ rewrite fix_subst_length in H.
+                                                erewrite <- All2_length; eauto. }
+              inv H3; inv H4.
+              erewrite All2_length; eauto.
       * eapply Is_type_app in X1 as [].
         exists tBox. split.
         econstructor. 

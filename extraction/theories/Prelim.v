@@ -303,8 +303,6 @@ Proof.
   clear - onConstructors ind_sorts. try dependent induction onConstructors.
   (* - cbn. split. omega. econstructor. admit. *)
   (* -  *)
-  
-  
 Admitted.                       (* elim_restriction_works *)
 
 Lemma elim_restriction_works Σ Γ T ind npar p c brs mind idecl : wf Σ ->
@@ -439,25 +437,26 @@ Proof.
     + cbn. rewrite IHm. reflexivity. omega.
 Qed.
 
-Lemma subslet_fix_subst Σ mfix1 :
+Lemma subslet_fix_subst Σ mfix1 T n :
+  Σ ;;; [] |- tFix mfix1 n : T ->
+  (* wf_local Σ (PCUICLiftSubst.fix_context mfix1) -> *)
   subslet Σ [] (PCUICTyping.fix_subst mfix1) (PCUICLiftSubst.fix_context mfix1).
 Proof.
   unfold fix_subst, PCUICLiftSubst.fix_context.
-  generalize mfix1 at 2 3.  intros.
+  assert (exists L, mfix1 = mfix1 ++ L)%list by (exists []; now simpl_list). revert H.
+  generalize mfix1 at 2 5 6.  intros.
   induction mfix0 using rev_ind.
   - econstructor.
-  - rewrite mapi_app. cbn. rewrite rev_app_distr. cbn.
+  - rewrite mapi_app in *. cbn in *. rewrite rev_app_distr in *. cbn in *.
     rewrite app_length. cbn. rewrite plus_comm. cbn. econstructor.
-    + admit.
-    + eenough (_ = PCUICLiftSubst.subst
-      ((fix aux (n : nat) : list term :=
-          match n with
-          | 0 => []
-          | S n0 => tFix mfix1 n0 :: aux n0
-          end) #|l|) 0 (PCUICLiftSubst.lift (#|l| + 0) 0 (dtype x))).
-      rewrite <- H. econstructor. admit.
-      admit.
-Admitted.                       (* subslet_fix_subst *)
+    + eapply IHmfix0. destruct H as [L]. exists (x :: L). subst. now rewrite <- app_assoc.
+    + rewrite <- plus_n_O.
+      rewrite PCUICLiftSubst.simpl_subst_k. 2:{ clear. induction l; cbn; try congruence. }
+      eapply inversion_Fix in X as (? & ? & ? & ? & ?).
+      econstructor; eauto. destruct H. subst.
+      rewrite <- app_assoc. rewrite nth_error_app_ge. 2:omega.
+      rewrite minus_diag. cbn. reflexivity.
+Qed.
 
 (** ** Prelim on typing *)
 

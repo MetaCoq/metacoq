@@ -210,7 +210,7 @@ Proof.
     unfold declared_constant in H.
     eapply lookup_on_global_env in H as [Σ' [onΣ' prf]]; eauto.
     destruct decl; simpl in *.
-    subst cst_body; intuition.
+    subst cst_body; simpl in *; compute in prf; intuition auto.
   - apply wf_mkApps_inv in H0.
     eapply nth_error_forall in H0; eauto.
   - constructor; auto. apply IHred1; auto. constructor; simpl; auto.

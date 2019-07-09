@@ -2165,8 +2165,6 @@ Definition on_wf_local_decl `{checker_flags} {Σ Γ}
   | {| decl_name := na; decl_body := None; decl_type := ty |} => fun H => P Σ Γ wfΓ _ _ (projT2 H)
    end H.
 
-From Equations Require Import Equations.
-
 Lemma nth_error_All_local_env_over `{checker_flags} {P Σ Γ n decl} (eq : nth_error Γ n = Some decl) {wfΓ : All_local_env (lift_typing typing Σ) Γ} :
   All_local_env_over typing P Σ Γ wfΓ ->
   let Γ' := skipn (S n) Γ in
@@ -2175,9 +2173,12 @@ Lemma nth_error_All_local_env_over `{checker_flags} {P Σ Γ n decl} (eq : nth_e
 Proof.
   induction 1 in n, decl, eq |- *. simpl.
   - destruct n; simpl; elimtype False; discriminate eq.
-  - destruct n. cbn [skipn]. noconf eq. split. apply X. simpl. apply p.
+  - destruct n. cbn [skipn]. simpl in eq.
+    revert p.
+    revert eq. intros. depelim eq.
+    split. apply X. simpl. auto.
     simpl. apply IHX.
-  - destruct n. noconf eq. simpl. split; auto.
+  - destruct n. depelim eq. simpl. split; auto.
     apply IHX.
 Defined.
 

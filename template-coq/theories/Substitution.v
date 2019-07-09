@@ -1095,8 +1095,6 @@ Proof.
   intros. inv H. auto.
 Defined.
 
-
-
 Lemma substitution_red1 `{CF:checker_flags} Σ Γ Γ' Γ'' s M N :
   wf Σ.1 -> All Ast.wf s -> subs Σ Γ s Γ' -> wf_local Σ Γ -> Ast.wf M ->
   red1 (fst Σ) (Γ ,,, Γ' ,,, Γ'') M N ->
@@ -1109,12 +1107,17 @@ Proof.
     |- context [iota_red _ _ _ _] => idtac
   | |- _ => autorewrite with subst
   end; auto;
-    try solve [  econstructor; (forward IHred1; try inv wfM; eauto) || eauto ].
+    try solve [  econstructor; ((forward IHred1; try inv wfM; eauto) || eauto) ].
 
   (* remember (Γ ,,, Γ' ,,, Γ'') as Γ0. revert Γ Γ' Γ'' HeqΓ0 wfΓ Hs. *)
   (* induction H using red1_ind_all in |- *; intros Γ0 Γ' Γ'' HeqΓ0 wfΓ Hs; try subst Γ; simpl; *)
   (*   autorewrite with subst; auto; *)
   (*   try solve [  econstructor; try eapply IHred1; try inv wfM; eauto; eauto ]. *)
+  - autorewrite with subst. rewrite distr_subst; auto.
+    eapply red_beta.
+
+  - autorewrite with subst. rewrite distr_subst; auto.
+    eapply red_zeta.
 
   - pose proof (subst_length _ _ _ _ Hs).
     elim (leb_spec_Set); intros Hn.

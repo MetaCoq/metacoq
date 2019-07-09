@@ -11,6 +11,7 @@ Require Import MetaCoq.Checker.Loader.
 Require Import MetaCoq.Template.Typing.
 Require Import MetaCoq.Template.kernel.Checker.
 Require Import MetaCoq.Template.Ast.
+Require Import MetaCoq.Template.AstUtils.
 Require Import MetaCoq.Template.Loader.
 Require Import MetaCoq.Template.utils.
 

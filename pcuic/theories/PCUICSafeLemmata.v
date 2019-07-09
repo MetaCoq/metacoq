@@ -153,7 +153,7 @@ End DestArity.
 Section Lemmata.
 
   Context (flags : RedFlags.t).
-  Context (Σ : global_context).
+  Context (Σ : global_env_ext).
   Context (hΣ : ∥ wf Σ ∥).
 
   (* red is the reflexive transitive closure of one-step reduction and thus
@@ -205,7 +205,7 @@ Section Lemmata.
   Proof.
     destruct hΣ as [wΣ]; clear hΣ. constructor.
     destruct Σ as [Σ' φ].
-    unfold nlg. unfold wf in *. unfold on_global_env in *. simpl in *.
+    unfold nlg. unfold wf in *. simpl in *.
     induction Σ'.
     - assumption.
     - simpl. inversion wΣ. subst.

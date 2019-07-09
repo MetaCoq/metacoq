@@ -173,7 +173,7 @@ Fixpoint remove_arity (n : nat) (t : term) : term :=
           end
   end.
 
-Fixpoint lookup_mind_decl (id : ident) (decls : global_declarations)
+Fixpoint lookup_mind_decl (id : ident) (decls : global_env)
  := match decls with
     | nil => None
     | InductiveDecl kn d :: tl =>
@@ -353,13 +353,6 @@ Proof.
   now rewrite -app_assoc !app_nil_r Nat.add_1_r.
 Qed.
 
-Definition polymorphic_instance uctx :=
-  match uctx with
-  | Monomorphic_ctx c => Instance.empty
-  | Polymorphic_ctx c => fst (UContext.dest c)
-  | Cumulative_ctx c => fst (UContext.dest (fst c))
-  end.
-
 Fixpoint context_assumptions (Γ : context) :=
   match Γ with
   | [] => 0
@@ -414,6 +407,13 @@ Proof.
   apply mapi_ext. intros. f_equal. rewrite List.rev_length. f_equal.
 Qed.
 
+Lemma context_assumptions_fold Γ f : context_assumptions (fold_context f Γ) = context_assumptions Γ.
+Proof.
+  rewrite fold_context_alt.
+  unfold mapi. generalize 0 (Nat.pred #|Γ|).
+  induction Γ as [|[na [body|] ty] tl]; cbn; intros; eauto.
+Qed.
+
 Lemma nth_error_fold_context (f : nat -> term -> term):
   forall (Γ' Γ'' : context) (v : nat),
     v < length Γ' -> forall nth,
@@ -461,11 +461,10 @@ Qed.
 
 Definition map_mutual_inductive_body f m :=
   match m with
-  | Build_mutual_inductive_body ind_npars ind_pars ind_bodies ind_universes =>
+  | Build_mutual_inductive_body finite ind_npars ind_pars ind_bodies ind_universes =>
     let arities := arities_context ind_bodies in
-    let u := polymorphic_instance ind_universes in
     let pars := fold_context f ind_pars in
-    Build_mutual_inductive_body ind_npars pars
+    Build_mutual_inductive_body finite ind_npars pars
       (mapi (map_one_inductive_body (context_assumptions pars) (length arities) f) ind_bodies)
       ind_universes
   end.
@@ -852,3 +851,11 @@ Qed.
 Lemma decompose_app_inv {t f l} :
   decompose_app t = (f, l) -> t = mkApps f l.
 Proof. by apply/decompose_app_rec_inv. Qed.
+
+
+(** Use a coercion for this common projection of the global context. *)
+Definition fst_ctx : global_env_ext -> global_env := fst.
+Coercion fst_ctx : global_env_ext >-> global_env.
+
+Definition empty_ext (Σ : global_env) : global_env_ext
+  := (Σ, Monomorphic_ctx ContextSet.empty).

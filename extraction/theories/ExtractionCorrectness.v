@@ -384,7 +384,7 @@ Proof.
         unfold iota_red. cbn.
         eapply erases_mkApps. eauto.
         instantiate (1 := repeat tBox _).
-        eapply All2_Forall.
+        eapply All2_Forall2.
         eapply All2_impl.
         eapply All2_All_mix_left. eassumption.
         2:{ intros. destruct X1. assert (y = tBox). exact y0. subst. econstructor.
@@ -454,7 +454,7 @@ Proof.
 
            eapply erases_mkApps. eauto.
            instantiate (1 := repeat tBox _).
-           eapply All2_Forall.
+           eapply All2_Forall2.
            eapply All2_impl.
            eapply All2_All_mix_left. eassumption.
            2:{ intros. destruct X1. assert (y = tBox). exact y0. subst. econstructor.

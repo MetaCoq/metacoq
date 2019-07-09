@@ -204,7 +204,7 @@ Definition f' := (forall (A:Type@{i1}) (B: Type@{j1}), A -> B -> A).
 
 Quote Recursively Definition ff := f'.
 Require Import MetaCoq.Template.kernel.Checker.
-Check (eq_refl : infer' (Typing.reconstruct_global_context (fst ff)) [] (snd ff) =
+Check (eq_refl : infer' (empty_ext (fst ff)) [] (snd ff) =
          Checked (tSort
                     (NEL.cons (Level.Level _, true)
                               (NEL.sing (Level.Level _, true))))).

@@ -133,7 +133,7 @@ Require Import Equations.Tactics.
 
 Hint Resolve conv_refl : pcuic.
 
-Lemma conv_ctx_refl Σ Γ : wf Σ -> wf_local Σ Γ -> conv_context Σ Γ Γ.
+Lemma conv_ctx_refl Σ Γ : wf Σ.1 -> wf_local Σ Γ -> conv_context Σ Γ Γ.
 Proof.
   induction Γ; try econstructor.
   destruct a as [na [b|] ty]; intros wfΣ wfΓ; depelim wfΓ; econstructor; eauto;
@@ -148,7 +148,7 @@ Set SimplIsCbn.
 Require Import Lia.
 
 Lemma weakening_cumul0 `{CF:checker_flags} Σ Γ Γ'' M N n :
-  wf Σ -> n = #|Γ''| ->
+  wf Σ.1 -> n = #|Γ''| ->
   Σ ;;; Γ |- M <= N ->
   Σ ;;; Γ ,,, Γ'' |- lift0 n M <= lift0 n N.
 Proof. intros; subst; now apply (weakening_cumul _ _ []). Qed.
@@ -156,7 +156,7 @@ Proof. intros; subst; now apply (weakening_cumul _ _ []). Qed.
 Hint Constructors red1 : pcuic.
 Hint Resolve refl_red : pcuic.
 
-Lemma red1_red_ctx (Σ : global_context) Γ Γ' T U : wf Σ ->
+Lemma red1_red_ctx (Σ : global_env) Γ Γ' T U : wf Σ ->
   red1 Σ Γ T U ->
   @red_ctx Σ Γ Γ' ->
   ∑ t, red Σ Γ' T t * red Σ Γ' U t.
@@ -328,7 +328,7 @@ Section RedCtxProof.
 
 End RedCtxProof.
 
-Lemma red_eq_term_upto_univ_l {Σ : global_context} {Re Rle Γ} u v u' :
+Lemma red_eq_term_upto_univ_l {Σ : global_env} {Re Rle Γ} u v u' :
     Reflexive Re ->
     Reflexive Rle ->
     Transitive Re ->
@@ -354,7 +354,7 @@ Proof.
     auto.
 Qed.
 
-Lemma cumul_red_ctx(Σ : global_context) Γ Γ' T U : wf Σ ->
+Lemma cumul_red_ctx (Σ : global_env_ext) Γ Γ' T U : wf Σ ->
   Σ ;;; Γ |- T <= U ->
   @red_ctx Σ Γ Γ' ->
   Σ ;;; Γ' |- T <= U.
@@ -370,9 +370,11 @@ Proof.
   edestruct (red_red_ctx_upto (eq_universe_leq_incl _) wfΣ e r0) as [lnf' [? ?]].
   exists lnf', x0. intuition auto. now transitivity lnf.
   now transitivity rnf.
-Qed.
+  admit.
+Admitted.
+(* Qed. Simon *)
 
-Lemma cumul_red_ctx_inv (Σ : global_context) Γ Γ' T U : wf Σ ->
+Lemma cumul_red_ctx_inv (Σ : global_env_ext) Γ Γ' T U : wf Σ ->
   Σ ;;; Γ |- T <= U ->
   @red_ctx Σ Γ' Γ ->
   Σ ;;; Γ' |- T <= U.
@@ -386,7 +388,7 @@ Proof.
   split. pcuic. auto.
 Qed.
 
-Lemma conv_red_ctx {Σ : global_context} {Γ Γ' T U} : wf Σ ->
+Lemma conv_red_ctx {Σ : global_env_ext} {Γ Γ' T U} : wf Σ ->
   Σ ;;; Γ |- T = U ->
   @red_ctx Σ Γ Γ' ->
   Σ ;;; Γ' |- T = U.
@@ -395,7 +397,7 @@ Proof.
   split; eapply cumul_red_ctx; eauto; eapply H.
 Qed.
 
-Lemma conv_red_ctx_inv {Σ : global_context} {Γ Γ' T U} : wf Σ ->
+Lemma conv_red_ctx_inv {Σ : global_env_ext} {Γ Γ' T U} : wf Σ ->
   Σ ;;; Γ |- T = U ->
   @red_ctx Σ Γ' Γ ->
   Σ ;;; Γ' |- T = U.
@@ -404,7 +406,7 @@ Proof.
   split; eapply cumul_red_ctx_inv; eauto; eapply H.
 Qed.
 
-Lemma red1_conv_confluent (Σ : global_context) Γ Γ' T v :
+Lemma red1_conv_confluent (Σ : global_env_ext) Γ Γ' T v :
   red1 Σ Γ T v -> conv_context Σ Γ Γ' ->
   ∑ v', red Σ Γ' T v' * red Σ Γ T v'.
 Proof.
@@ -413,7 +415,7 @@ Proof.
   try solve [eexists; intuition eauto].
 Qed.
 
-Lemma red_conv_confluent (Σ : global_context) Γ Γ' T v :
+Lemma red_conv_confluent (Σ : global_env_ext) Γ Γ' T v :
   red Σ Γ T v ->
   conv_context Σ Γ Γ' ->
   ∑ v', red Σ Γ' T v' * red Σ Γ T v'.
@@ -425,7 +427,7 @@ Qed.
 
 Arguments red_ctx : clear implicits.
 
-Lemma red_eq_context_upto_l {Σ : global_context} {Re Γ Δ u v}
+Lemma red_eq_context_upto_l {Σ : global_env_ext} {Re Γ Δ u v}
       `{Reflexive _ Re} `{Transitive _ Re} `{SubstUnivPreserving Re} :
   wf Σ ->
   red Σ Γ u v ->
@@ -439,7 +441,6 @@ Proof.
   induction r.
   - eapply red1_eq_context_upto_l in r; eauto.
     destruct r as [v [? ?]]. exists v. intuition pcuic.
-    now eapply red1_red.
   - exists x. split; auto. reflexivity.
   - destruct IHr1 as [v' [? ?]].
     destruct IHr2 as [v'' [? ?]].
@@ -450,10 +451,10 @@ Proof.
     eapply eq_term_upto_univ_trans with v''; auto.
 Qed.
 
-Lemma conv_context_red_context (Σ : global_context) Γ Γ' :
+Lemma conv_context_red_context (Σ : global_env_ext) Γ Γ' :
   wf Σ ->
   conv_context Σ Γ Γ' ->
-  ∑ Δ Δ', red_ctx Σ Γ Δ * red_ctx Σ Γ' Δ' * eq_context_upto (eq_universe (snd Σ)) Δ Δ'.
+  ∑ Δ Δ', red_ctx Σ Γ Δ * red_ctx Σ Γ' Δ' * eq_context_upto (eq_universe (global_ext_constraints Σ)) Δ Δ'.
 Proof.
   intros wfΣ Hctx.
   induction Hctx.
@@ -499,9 +500,9 @@ Proof.
       reflexivity.
 Qed.
 
-Lemma cumul_eq_context_upto {Σ : global_context} {Γ Δ T U} :
+Lemma cumul_eq_context_upto {Σ : global_env_ext} {Γ Δ T U} :
   wf Σ ->
-  eq_context_upto (eq_universe (snd Σ)) Γ Δ ->
+  eq_context_upto (eq_universe (global_ext_constraints Σ)) Γ Δ ->
   Σ ;;; Γ |- T <= U ->
   Σ ;;; Δ |- T <= U.
 Proof.
@@ -518,7 +519,7 @@ Proof.
   now apply eq_term_leq_term.
 Qed.
 
-Lemma cumul_conv_ctx (Σ : global_context) Γ Γ' T U : wf Σ ->
+Lemma cumul_conv_ctx (Σ : global_env_ext) Γ Γ' T U : wf Σ ->
   Σ ;;; Γ |- T <= U ->
   conv_context Σ Γ Γ' ->
   Σ ;;; Γ' |- T <= U.
@@ -531,7 +532,7 @@ Proof.
   eapply cumul_eq_context_upto; eauto.
 Qed.
 
-Lemma conv_conv_ctx (Σ : global_context) Γ Γ' T U : wf Σ ->
+Lemma conv_conv_ctx (Σ : global_env_ext) Γ Γ' T U : wf Σ ->
   Σ ;;; Γ |- T = U ->
   conv_context Σ Γ Γ' ->
   Σ ;;; Γ' |- T = U.
@@ -553,7 +554,7 @@ Admitted.
 Lemma wf_local_conv_ctx Σ Γ Δ (wfΓ : wf_local Σ Γ) :
   wf Σ ->
   All_local_env_over typing
-    (fun (Σ : global_context) (Γ : context) wfΓ (t T : term) Ht =>
+    (fun (Σ : global_env_ext) (Γ : context) wfΓ (t T : term) Ht =>
        forall Γ' : context, conv_context Σ Γ Γ' -> Σ;;; Γ' |- t : T) Σ Γ wfΓ ->
   conv_context Σ Γ Δ -> wf_local Σ Δ.
 Proof.
@@ -567,7 +568,7 @@ Proof.
 Qed.
 
 Lemma conv_context_sym Σ Γ Γ' :
-  wf Σ -> wf_local Σ Γ -> conv_context Σ Γ Γ' -> conv_context Σ Γ' Γ.
+  wf Σ.1 -> wf_local Σ Γ -> conv_context Σ Γ Γ' -> conv_context Σ Γ' Γ.
 Proof.
   induction Γ in Γ' |- *; try econstructor.
   intros wfΣ wfΓ conv; depelim conv; econstructor; eauto;
@@ -581,7 +582,7 @@ Proof.
 Qed.
 
 (** Maybe need to prove it later *)
-Lemma conv_context_trans Σ : wf Σ -> CRelationClasses.Transitive (fun Γ Γ' => conv_context Σ Γ Γ').
+Lemma conv_context_trans Σ : wf Σ.1 -> CRelationClasses.Transitive (fun Γ Γ' => conv_context Σ Γ Γ').
 Proof.
   intros wfΣ.
   eapply context_relation_trans.
@@ -627,31 +628,33 @@ Proof.
 
   - constructor; pcuic.
     eapply forall_Γ'0. repeat (constructor; pcuic).
-    eexists; now eapply forall_Γ'.
+    (* eexists; now eapply forall_Γ'. *)
   - econstructor; pcuic.
     eapply forall_Γ'0. repeat (constructor; pcuic).
-    eexists; now eapply forall_Γ'.
+    (* eexists; now eapply forall_Γ'. *)
   - econstructor; pcuic.
     eapply forall_Γ'1. repeat (constructor; pcuic).
-    eexists; now eapply forall_Γ'.
-  - econstructor; pcuic. eauto. eauto. solve_all.
+    (* eexists; now eapply forall_Γ'. *)
+  - econstructor; pcuic. eauto.
+    (* eauto. solve_all. *)
   - econstructor; pcuic. admit.
     solve_all.
-    apply b. subst types.
-    admit.
+    (* apply b. subst types. *)
+    (* admit. *)
   - econstructor; pcuic. admit.
     solve_all.
     apply b. subst types.
     admit.
   - econstructor; eauto.
-    destruct X2. destruct i. left. admit.
-    right. destruct s as [s [ty ?]]. exists s. eauto.
-    eapply cumul_conv_ctx; eauto.
+    (* destruct X2. destruct i. left. admit. *)
+    (* right. destruct s as [s [ty ?]]. exists s. eauto. *)
+    (* eapply cumul_conv_ctx; eauto. *)
+    admit.
 Admitted.
 
 (** Injectivity of products, the essential property of cumulativity needed for subject reduction. *)
 Lemma cumul_Prod_inv Σ Γ na na' A B A' B' :
-  wf Σ -> wf_local Σ Γ ->
+  wf Σ.1 -> wf_local Σ Γ ->
   Σ ;;; Γ |- tProd na A B <= tProd na' A' B' ->
    ((Σ ;;; Γ |- A = A') * (Σ ;;; Γ ,, vass na' A' |- B <= B'))%type.
 Proof.
@@ -687,7 +690,7 @@ Proof.
 Admitted.
 
 Lemma cumul_Sort_inv Σ Γ s s' :
-  Σ ;;; Γ |- tSort s <= tSort s' -> leq_universe (snd Σ) s s'.
+  Σ ;;; Γ |- tSort s <= tSort s' -> leq_universe (global_ext_constraints Σ) s s'.
 Proof.
   intros H; depind H; auto.
   - now inversion l.
@@ -754,12 +757,13 @@ Proof.
 Qed.
 
 (** Requires Validity *)
-Lemma type_mkApps_inv Σ Γ f u T : wf Σ ->
+Lemma type_mkApps_inv (Σ : global_env_ext) Γ f u T : wf Σ ->
   Σ ;;; Γ |- mkApps f u : T ->
   { T' & { U & ((Σ ;;; Γ |- f : T') * (typing_spine Σ Γ T' u U) * (Σ ;;; Γ |- U <= T))%type } }.
 Proof.
   intros wfΣ; induction u in f, T |- *. simpl. intros.
-  { exists T, T. intuition auto. constructor. eapply validity; auto. pcuic. eauto. eapply cumul_refl'. }
+  { exists T, T. intuition auto. constructor. eapply validity; auto.
+    now eapply typing_wf_local. eauto. eapply cumul_refl'. }
   intros Hf. simpl in Hf.
   destruct u. simpl in Hf.
   - eapply inversion_App in Hf as [na' [A' [B' [Hf' [Ha HA''']]]]].
@@ -803,7 +807,7 @@ Proof.
   reflexivity.
 Qed.
 
-Lemma type_tFix_inv Σ Γ mfix idx T : wf Σ ->
+Lemma type_tFix_inv (Σ : global_env_ext) Γ mfix idx T : wf Σ ->
   Σ ;;; Γ |- tFix mfix idx : T ->
   { T' & { rarg & {f & (unfold_fix mfix idx = Some (rarg, f)) * (Σ ;;; Γ |- f : T') * (Σ ;;; Γ |- T' <= T) }}}%type.
 Proof.
@@ -847,7 +851,7 @@ Qed.
 
 (** The subject reduction property of the system: *)
 
-Definition SR_red1 (Σ : global_context) Γ t T :=
+Definition SR_red1 (Σ : global_env_ext) Γ t T :=
   forall u (Hu : red1 Σ Γ t u), Σ ;;; Γ |- u : T.
 
 Hint Resolve conv_ctx_refl : pcuic.
@@ -1014,10 +1018,10 @@ Proof.
     now right.
 Admitted.
 
-Definition sr_stmt (Σ : global_context) Γ t T :=
+Definition sr_stmt (Σ : global_env_ext) Γ t T :=
   forall u, red Σ Γ t u -> Σ ;;; Γ |- u : T.
 
-Theorem subject_reduction : forall (Σ : global_context) Γ t u T,
+Theorem subject_reduction : forall (Σ : global_env_ext) Γ t u T,
   wf Σ -> Σ ;;; Γ |- t : T -> red Σ Γ t u -> Σ ;;; Γ |- u : T.
 Proof.
   intros * wfΣ Hty Hred.
@@ -1026,7 +1030,7 @@ Proof.
 Qed.
 
 Lemma subject_reduction1 {Σ Γ t u T}
-  : wf Σ -> Σ ;;; Γ |- t : T -> red1 Σ Γ t u -> Σ ;;; Γ |- u : T.
+  : wf Σ.1 -> Σ ;;; Γ |- t : T -> red1 Σ.1 Γ t u -> Σ ;;; Γ |- u : T.
 Proof.
   intros. eapply subject_reduction; try eassumption.
   now apply red1_red.

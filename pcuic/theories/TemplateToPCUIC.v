@@ -59,7 +59,8 @@ Definition trans_constant_body bd :=
      cst_universes := bd.(T.cst_universes) |}.
 
 Definition trans_minductive_body md :=
-  {| ind_npars := md.(T.ind_npars);
+  {| ind_finite := md.(T.ind_finite);
+     ind_npars := md.(T.ind_npars);
      ind_params := trans_local md.(T.ind_params);
      ind_bodies := map trans_one_ind_body md.(T.ind_bodies);
      ind_universes := md.(T.ind_universes) |}.
@@ -73,5 +74,5 @@ Definition trans_global_decl (d : T.global_decl) :=
 Definition trans_global_decls d :=
   List.map trans_global_decl d.
 
-Definition trans_global (Σ : T.global_context) :=
+Definition trans_global (Σ : T.global_env_ext) :=
   (trans_global_decls (fst Σ), snd Σ).

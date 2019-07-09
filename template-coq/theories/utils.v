@@ -18,6 +18,12 @@ Notation "( x ; y ; z ; t ; u ; v )" := (x ; ( y ; (z ; (t ; (u ; v))))).
 Notation "x .π1" := (@projT1 _ _ x) (at level 3, format "x '.π1'").
 Notation "x .π2" := (@projT2 _ _ x) (at level 3, format "x '.π2'").
 
+Notation "p .1" := (fst p)
+  (at level 2, left associativity, format "p .1") : pair_scope.
+Notation "p .2" := (snd p)
+  (at level 2, left associativity, format "p .2") : pair_scope.
+Open Scope pair_scope.
+
 Notation "x × y" := (prod x y )(at level 80, right associativity).
 
 Notation "#| l |" := (List.length l) (at level 0, l at level 99, format "#| l |").
@@ -1099,6 +1105,11 @@ Qed.
 Lemma nth_error_Some_length {A} {l : list A} {n t} : nth_error l n = Some t -> n < length l.
 Proof. rewrite <- nth_error_Some. destruct (nth_error l n); congruence. Qed.
 
+Lemma nth_error_Some_non_nil {A} (l : list A) (n : nat) (x : A) : nth_error l n = Some x -> l <> [].
+Proof.
+  destruct l, n; simpl; congruence.
+Qed.
+
 Lemma nth_error_spec {A} (l : list A) (n : nat) : nth_error_Spec l n (nth_error l n).
 Proof.
   destruct nth_error eqn:Heq.
@@ -1513,7 +1524,7 @@ Proof.
     eauto.
 Qed.
 
-Lemma All2_Forall A B (P : A -> B -> Prop) l l' :
+Lemma All2_Forall2 {A B} {P : A -> B -> Prop} {l l'} :
   All2 P l l' -> Forall2 P l l'.
 Proof.
   induction 1; eauto.
@@ -2117,3 +2128,11 @@ Proof.
     + inversion 1.
     + eapply IHm.
 Qed.
+
+
+Ltac tas := try assumption.
+Ltac tea := try eassumption.
+
+Axiom todo : string -> forall {A}, A.
+Ltac todo s := exact (todo s).
+Extract Constant todo => "fun s -> failwith (String.concat """" (List.map (String.make 1) s))".

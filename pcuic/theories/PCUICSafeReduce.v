@@ -35,7 +35,7 @@ Set Equations With UIP.
 Section Normalisation.
 
   Context (flags : RedFlags.t).
-  Context (Σ : global_context).
+  Context (Σ : global_env_ext).
 
   Definition R_aux Γ :=
     dlexprod (cored Σ Γ) (@posR).
@@ -342,7 +342,7 @@ Section Reduce.
 
   Context (flags : RedFlags.t).
 
-  Context (Σ : global_context).
+  Context (Σ : global_env_ext).
   Context (hΣ : ∥ wf Σ ∥).
 
   Derive NoConfusion NoConfusionHom for option.

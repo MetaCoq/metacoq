@@ -435,7 +435,7 @@ Proof.
       econstructor.
       * econstructor; cbn; eauto.
         pose proof (Prelim.monad_map_All2 _ _ _ _ _ E3).
-        eapply All2_Forall.
+        eapply All2_Forall2.
         eapply All2_impl. eassumption.
 
         intros. cbn in H0. repeat destruct ?; try congruence.
@@ -444,7 +444,7 @@ Proof.
         destruct decompose_prod_n_assum eqn:E6; inv E. cbn.
         pose proof (Prelim.monad_map_All2 _ _ _ _ _ E4). 
         pose proof (Prelim.monad_map_All2 _ _ _ _ _ E5). repeat split; eauto.
-        -- eapply All2_Forall.
+        -- eapply All2_Forall2.
            eapply All2_impl_In. eassumption.
            intros. destruct x0, p, y, p. cbn in *.
            destruct ?; try congruence.
@@ -453,7 +453,7 @@ Proof.
            pose (t' := t). inv t'. cbn in *.
            edestruct constructors_typed; eauto.
            eapply erases_erase. 2:eauto. eauto.
-        -- eapply All2_Forall.
+        -- eapply All2_Forall2.
            eapply All2_impl_In. eassumption.
            intros. cbn in H2. destruct x0, y.
            destruct ?; try congruence;

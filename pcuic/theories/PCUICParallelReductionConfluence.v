@@ -341,7 +341,7 @@ Section Confluence.
   Qed.
 
   Lemma pred_snd_nth:
-    ∀ (Σ : global_context) (Γ Δ : context) (c : nat) (brs1 brs' : list (nat * term)),
+    ∀ (Σ : global_env) (Γ Δ : context) (c : nat) (brs1 brs' : list (nat * term)),
       All2
         (on_Trel (pred1 Σ Γ Δ) snd) brs1
         brs' ->
@@ -365,7 +365,7 @@ Section Confluence.
     - intros H. apply (IHl _ _ _ H).
   Qed.
 
-  Lemma pred1_mkApps_tConstruct (Σ : global_context) (Γ Δ : context)
+  Lemma pred1_mkApps_tConstruct (Σ : global_env) (Γ Δ : context)
         ind pars k (args : list term) c :
     pred1 Σ Γ Δ (mkApps (tConstruct ind pars k) args) c ->
     {args' : list term & (c = mkApps (tConstruct ind pars k) args') * (All2 (pred1 Σ Γ Δ) args args') }%type.
@@ -382,7 +382,7 @@ Section Confluence.
     eapply All2_app; auto.
   Qed.
 
-  Lemma pred1_mkApps_refl_tConstruct (Σ : global_context) Γ Δ i k u l l' :
+  Lemma pred1_mkApps_refl_tConstruct (Σ : global_env) Γ Δ i k u l l' :
     pred1 Σ Γ Δ (mkApps (tConstruct i k u) l) (mkApps (tConstruct i k u) l') ->
     All2 (pred1 Σ Γ Δ) l l'.
   Proof.
@@ -391,7 +391,7 @@ Section Confluence.
     destruct p. now eapply mkApps_eq_inj in e as [_ <-].
   Qed.
 
-  Lemma pred1_mkApps_tInd (Σ : global_context) (Γ Δ : context)
+  Lemma pred1_mkApps_tInd (Σ : global_env) (Γ Δ : context)
         ind u (args : list term) c :
     pred1 Σ Γ Δ (mkApps (tInd ind u) args) c ->
     {args' : list term & (c = mkApps (tInd ind u) args') * (All2 (pred1 Σ Γ Δ) args args') }%type.
@@ -408,7 +408,7 @@ Section Confluence.
     eapply All2_app; auto.
   Qed.
 
-  Lemma pred1_mkApps_tConst_axiom (Σ : global_context) (Γ Δ : context)
+  Lemma pred1_mkApps_tConst_axiom (Σ : global_env) (Γ Δ : context)
         cst u (args : list term) cb c :
     declared_constant Σ cst cb -> cst_body cb = None ->
     pred1 Σ Γ Δ (mkApps (tConst cst u) args) c ->
@@ -430,7 +430,7 @@ Section Confluence.
         eapply All2_app; auto.
   Qed.
 
-  Lemma pred1_mkApps_tFix_inv (Σ : global_context) (Γ Δ : context)
+  Lemma pred1_mkApps_tFix_inv (Σ : global_env) (Γ Δ : context)
         mfix0 idx (args0 : list term) c :
     pred1 Σ Γ Δ (mkApps (tFix mfix0 idx) args0) c ->
     ({ mfix1 & { args1 : list term &
@@ -477,7 +477,7 @@ Section Confluence.
     - subst t. solve_discr.
   Qed.
 
-  Lemma pred1_mkApps_tFix_refl_inv (Σ : global_context) (Γ Δ : context)
+  Lemma pred1_mkApps_tFix_refl_inv (Σ : global_env) (Γ Δ : context)
         mfix0 mfix1 idx0 idx1 (args0 args1 : list term) :
     pred1 Σ Γ Δ (mkApps (tFix mfix0 idx0) args0) (mkApps (tFix mfix1 idx1) args1) ->
     (All2_prop2_eq Γ Δ (Γ ,,, fix_context mfix0) (Δ ,,, fix_context mfix1)
@@ -510,7 +510,7 @@ Section Confluence.
     - subst. solve_discr.
   Qed.
 
-  Lemma pred1_mkApps_tCoFix_inv (Σ : global_context) (Γ Δ : context)
+  Lemma pred1_mkApps_tCoFix_inv (Σ : global_env) (Γ Δ : context)
         mfix0 idx (args0 : list term) c :
     pred1 Σ Γ Δ (mkApps (tCoFix mfix0 idx) args0) c ->
     ∃ mfix1 args1,
@@ -533,7 +533,7 @@ Section Confluence.
     - subst t; solve_discr.
   Qed.
 
-  Lemma pred1_mkApps_tCoFix_refl_inv (Σ : global_context) (Γ Δ : context)
+  Lemma pred1_mkApps_tCoFix_refl_inv (Σ : global_env) (Γ Δ : context)
         mfix0 mfix1 idx (args0 args1 : list term) :
     pred1 Σ Γ Δ (mkApps (tCoFix mfix0 idx) args0) (mkApps (tCoFix mfix1 idx) args1) ->
       All2_prop2_eq Γ Δ (Γ ,,, fix_context mfix0) (Δ ,,, fix_context mfix1) dtype dbody
@@ -873,7 +873,7 @@ Section Confluence.
   Qed.
 
   Section TriangleFn.
-    Context (Σ : global_context).
+    Context (Σ : global_env).
 
     Definition map_fix (rho : context -> term -> term) Γ mfixctx (mfix : mfixpoint term) :=
       (map (map_def (rho Γ) (rho (Γ ,,, mfixctx))) mfix).
@@ -2079,13 +2079,13 @@ Section Confluence.
     - rewrite !pred_atom_inst; auto. eapply pred1_refl_gen; auto with pcuic.
   Qed.
 
-  Definition rho_ctxmap (Γ Δ : context) (s : nat -> term) :=
+  Definition rho_ctxmap φ (Γ Δ : context) (s : nat -> term) :=
     forall x d, nth_error Γ x = Some d ->
                 match decl_body d return Type with
                 | Some b => ∑ i, (s x = tRel i) * (* The image is a variable i in Δ *)
                                  (option_map decl_body (nth_error Δ i) = Some (Some b.[↑^(S x) ∘ s]))
                 (* whose body is b substituted with the previous variables *)
-                | None => Σ ;;; Δ |- s x : d.(decl_type).[↑^(S x) ∘ s]
+                | None => (Σ, φ) ;;; Δ |- s x : d.(decl_type).[↑^(S x) ∘ s]
                 end.
 
   Definition renaming Γ Δ r :=
@@ -3996,7 +3996,7 @@ Section Confluence.
   Qed.
 
 
-  Lemma pred1_mkApps_tLambda_inv (* (Σ : global_context) *) (Γ Δ : context) na ty b args0 c :
+  Lemma pred1_mkApps_tLambda_inv (* (Σ : global_env) *) (Γ Δ : context) na ty b args0 c :
     pred1 Σ Γ Δ (mkApps (tLambda na ty b) args0) c ->
     ({ ty' & { b' & { args1 &
                (c = mkApps (tLambda na ty' b') args1) *

@@ -75,14 +75,17 @@ sig
   type quoted_sort_family
   type quoted_constraint_type
   type quoted_univ_constraint
-  type quoted_univ_instance
   type quoted_univ_constraints
+  type quoted_univ_instance
   type quoted_univ_context
-  type quoted_inductive_universes
+  type quoted_univ_contextset
+  type quoted_abstract_univ_context
+  type quoted_variance
+  type quoted_universes_decl
 
   type quoted_mind_params
   type quoted_ind_entry = quoted_ident * t * quoted_bool * quoted_ident list * t list
-  type quoted_definition_entry = t * t option * quoted_univ_context
+  type quoted_definition_entry = t * t option * quoted_universes_decl
   type quoted_mind_entry
   type quoted_mind_finiteness
   type quoted_entry
@@ -95,7 +98,7 @@ sig
   type quoted_mutual_inductive_body
   type quoted_constant_body
   type quoted_global_decl
-  type quoted_global_declarations
+  type quoted_global_env
   type quoted_program  (* the return type of quote_recursively *)
 
   val mkRel : quoted_int -> t

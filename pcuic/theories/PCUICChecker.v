@@ -74,7 +74,7 @@ Definition fix_decls (l : mfixpoint term) :=
   in aux [] l.
 
 Section lookups.
-  Context (Σ : global_declarations).
+  Context (Σ : global_env).
 
   Definition lookup_constant_type Σ cst u :=
     match lookup_env Σ cst with
@@ -112,12 +112,12 @@ Section lookups.
 End lookups.
 
 Axiom reduce_to_sort :
-  global_declarations -> context -> term -> typing_result universe.
+  global_env -> context -> term -> typing_result universe.
 Axiom reduce_to_prod :
-  global_declarations -> context -> term -> typing_result (term × term).
+  global_env -> context -> term -> typing_result (term × term).
 
 Axiom reduce_to_ind :
-  global_declarations -> context -> term
+  global_env -> context -> term
   -> typing_result ((inductive × list Level.t) × list term).
 Axiom type_of :
-  global_context -> context -> term -> typing_result term.
+  global_env_ext -> context -> term -> typing_result term.

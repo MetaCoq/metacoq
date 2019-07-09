@@ -39,6 +39,11 @@ Inductive cast_kind : Set :=
 | Cast
 | RevertCast.
 
+Inductive recursivity_kind :=
+  | Finite (* = inductive *)
+  | CoFinite (* = coinductive *)
+  | BiFinite (* = non-recursive, like in "Record" definitions *).
+
 (** Kernel declaration references [global_reference] *)
 
 Inductive global_reference :=

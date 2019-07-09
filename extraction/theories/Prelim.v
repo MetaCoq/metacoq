@@ -42,7 +42,7 @@ Qed.
 Lemma monad_map_Forall2 (X Y : Type) (f : X -> typing_result Y) (l1 : list X) (a1 : list Y) :
   monad_map f l1 = Checked a1 -> Forall2 (fun a b => f a = Checked b) l1 a1.
 Proof.
-  intros. now eapply All2_Forall, monad_map_All2.
+  intros. now eapply All2_Forall2, monad_map_All2.
 Qed.
   
 Lemma monad_map_length X Y (f : X -> typing_result Y) (l1  : list X) a :

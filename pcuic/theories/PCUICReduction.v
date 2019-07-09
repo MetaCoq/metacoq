@@ -14,8 +14,6 @@ Require Import Equations.Type.Relation Equations.Type.Relation_Properties.
 Local Open Scope string_scope.
 Set Asymmetric Patterns.
 
-Existing Instance config.default_checker_flags.
-
 (** * Parallel reduction and confluence *)
 
 (** For this notion of reductions, theses are the atoms that reduce to themselves:
@@ -35,7 +33,7 @@ Definition atom t :=
 
 (** Simple lemmas about reduction *)
 
-Lemma red1_red (Σ : global_context) Γ t u : red1 (fst Σ) Γ t u -> red (fst Σ) Γ t u.
+Lemma red1_red (Σ : global_env) Γ t u : red1 Σ Γ t u -> red Σ Γ t u.
 Proof. econstructor; eauto. constructor. Qed.
 Hint Resolve red1_red refl_red.
 
@@ -65,7 +63,7 @@ Proof. refine (red_trans _ _). Qed.
     a notion of one-hole context. *)
 
 Section ReductionCongruence.
-  Context {Σ : global_context}.
+  Context {Σ : global_env}.
 
   Inductive term_context : Set :=
   | tCtxHole : term_context
@@ -205,11 +203,11 @@ Section ReductionCongruence.
     set (P' := fun l fill_l =>
                  forall Γ y,
                    red1 Σ (hole_list_context l Γ) x y ->
-                   OnOne2 (red1 (fst Σ) Γ) fill_l (fill_list_context y l)).
+                   OnOne2 (red1 Σ Γ) fill_l (fill_list_context y l)).
     set (P'' := fun l fill_l =>
                  forall Γ y,
                    red1 Σ (hole_list_nat_context l Γ) x y ->
-                   OnOne2 (on_Trel_eq (red1 (fst Σ) Γ) snd fst) fill_l (fill_list_nat_context y l)).
+                   OnOne2 (on_Trel_eq (red1 Σ Γ) snd fst) fill_l (fill_list_nat_context y l)).
     (* set (Pfix := fun l fixc fill_l => *)
     (*              forall Γ y, *)
     (*                red1 Σ (hole_mfix_context l fixc Γ) x y -> *)

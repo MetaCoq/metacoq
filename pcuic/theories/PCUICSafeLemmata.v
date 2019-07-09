@@ -196,7 +196,7 @@ Section Lemmata.
       Σ ;;; Γ' |- t : T.
   Admitted.
 
-  Lemma type_rename (hg : wf Σ) :
+  Lemma type_rename :
     forall Γ u v A,
       Σ ;;; Γ |- u : A ->
       eq_term_upto_univ eq eq u v ->
@@ -383,7 +383,9 @@ Section Lemmata.
     - rename wfΓ into A, Γ into v, wfΣ into u, Σ' into Γ.
       intros hu e.
       eapply tm ; eauto.
-      eapply typing_wf_local. eassumption.
+      + give_up. (* This induction principle is really annoying as I don't
+                    really need it... *)
+      + eapply typing_wf_local. eassumption.
   Admitted.
 
   Corollary type_nameless :

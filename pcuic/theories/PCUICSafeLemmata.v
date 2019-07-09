@@ -140,7 +140,7 @@ Section Lemmata.
     wf (nlg Σ).
   Proof.
     destruct Σ as [Σ' φ].
-    unfold nlg. unfold wf in *. unfold on_global_env in *. simpl in *.
+    unfold nlg. unfold wf in *. simpl in *.
     induction Σ'.
     - assumption.
     - simpl. inversion hΣ. subst.
@@ -168,14 +168,14 @@ Section Lemmata.
   Lemma type_rename :
     forall Γ u v A,
       Σ ;;; Γ |- u : A ->
-      eq_term (snd Σ) u v ->
+      eq_term (global_ext_constraints Σ) u v ->
       Σ ;;; Γ |- v : A.
   Admitted.
 
   Lemma welltyped_rename :
     forall Γ u v,
       welltyped Σ Γ u ->
-      eq_term (snd Σ) u v ->
+      eq_term (global_ext_constraints Σ) u v ->
       welltyped Σ Γ v.
   Proof.
     intros Γ u v [A h] e.

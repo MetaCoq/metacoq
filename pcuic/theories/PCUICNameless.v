@@ -436,6 +436,7 @@ Definition nl_one_inductive_body o :=
 
 Definition nl_mutual_inductive_body m :=
   Build_mutual_inductive_body
+    m.(ind_finite)
     m.(ind_npars)
     (nlctx m.(ind_params))
     (map nl_one_inductive_body m.(ind_bodies))

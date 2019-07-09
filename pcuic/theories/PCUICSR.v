@@ -136,7 +136,7 @@ Proof.
   destruct i. red in i. destruct i as [ctx [s [Hs Hwf]]].
 Admitted.
 
-Lemma conv_context_refl Σ Γ : wf Σ -> wf_local Σ Γ -> conv_context Σ Γ Γ.
+Lemma conv_context_refl (Σ : global_env_ext) Γ : wf Σ -> wf_local Σ Γ -> conv_context Σ Γ Γ.
 Proof.
   induction Γ; try econstructor.
   destruct a as [na [b|] ty]; intros wfΣ wfΓ; depelim wfΓ; econstructor; eauto;
@@ -230,7 +230,7 @@ Proof.
 Admitted.
 
 Lemma cumul_Sort_inv Σ Γ s s' :
-  Σ ;;; Γ |- tSort s <= tSort s' -> leq_universe (snd Σ) s s'.
+  Σ ;;; Γ |- tSort s <= tSort s' -> leq_universe (global_ext_constraints Σ) s s'.
 Proof.
   intros H; depind H; auto.
   - now inversion l.
@@ -297,7 +297,7 @@ Proof.
 Qed.
 
 (** Requires Validity *)
-Lemma type_mkApps_inv Σ Γ f u T : wf Σ ->
+Lemma type_mkApps_inv (Σ : global_env_ext) Γ f u T : wf Σ ->
   Σ ;;; Γ |- mkApps f u : T ->
   { T' & { U & ((Σ ;;; Γ |- f : T') * (typing_spine Σ Γ T' u U) * (Σ ;;; Γ |- U <= T))%type } }.
 Proof.
@@ -344,7 +344,7 @@ Proof.
   reflexivity.
 Qed.
 
-Lemma type_tFix_inv Σ Γ mfix idx T : wf Σ ->
+Lemma type_tFix_inv (Σ : global_env_ext) Γ mfix idx T : wf Σ ->
   Σ ;;; Γ |- tFix mfix idx : T ->
   { T' & { rarg & {f & (unfold_fix mfix idx = Some (rarg, f)) * (Σ ;;; Γ |- f : T') * (Σ ;;; Γ |- T' <= T) }}}%type.
 Proof.

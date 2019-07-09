@@ -95,6 +95,8 @@ src/specif.mli
 src/string0.ml
 src/string0.mli
 src/tm_util.ml
+src/equality.mli
+src/equality.ml
 src/typing0.ml
 src/typing0.mli
 src/typingWf.ml

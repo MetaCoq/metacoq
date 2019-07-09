@@ -2,9 +2,9 @@
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Arith Lia.
 From MetaCoq.Template Require Import LibHypsNaming config utils Ast AstUtils Induction LiftSubst UnivSubst.
-Require Import String.
-Require Import Wf Wellfounded Relation_Definitions.
-Require Import Relation_Operators Lexicographic_Product Wf_nat.
+From Coq Require Import String.
+From Coq Require Import Wf Wellfounded Relation_Definitions.
+From Coq Require Import Relation_Operators Lexicographic_Product Wf_nat.
 Require Import ssreflect.
 Local Open Scope string_scope.
 Set Asymmetric Patterns.
@@ -1277,19 +1277,20 @@ Qed.
 Lemma on_global_env_mix `{checker_flags} {Σ P Q} :
   sort_irrelevant Q ->
   on_global_env P Σ -> on_global_env Q Σ -> on_global_env (fun Σ Γ t T => (P Σ Γ t T * Q Σ Γ t T)%type) Σ.
-Proof.
+  todo "simplify onConstructors".
+(*
   intros HQ X X0.
-  simpl in *. induction X in X0 |- *. inv X0. constructor; auto.
+  simpl in *. induction X in X0 | *. inv X0. constructor; auto.
   inv X0. constructor; auto.
   clear IHX.
   destruct d; simpl.
-  - destruct c; simpl. destruct cst_body; simpl in *.
-    red in o, X2 |- *. simpl in *.
+   destruct c; simpl. destruct cst_body; simpl in *.
+    red in o, X2 | *. simpl in *.
     split; auto.
-    red in o, X2 |- *. simpl in *.
+    red in o, X2 | *. simpl in *.
     split; auto.
-  - destruct o0, X2. constructor; intuition.
-    2:{ red in onParams0, onParams1 |- *.
+   destruct o0, X2. constructor; intuition.
+    2:{ red in onParams0, onParams1 | *.
         revert onParams0 onParams1.
         clear onNpars0 onNpars1.
         induction (ind_params m). constructor.
@@ -1321,10 +1322,17 @@ Proof.
       solve_all.
     + admit.
       (* simpl. intuition eauto. *)
-      (* red in a, b |- *. simpl in *. destruct (decompose_prod_assum [] ind_type). *)
+      (* red in a, b | *. simpl in *. destruct (decompose_prod_assum [] ind_type). *)
       (* intuition. unfold on_type in *. eauto. *)
 Admitted.
-(* Qed. *)
+*)
+Qed.
+
+Lemma Alli_impl_trans :  forall (A : Type) (P Q : nat -> A -> Type) (l : list A) (n : nat),
+       Alli P n l -> (forall (n0 : nat) (x : A), P n0 x -> Q n0 x) -> Alli Q n l.
+Proof.
+  induction 1; constructor; auto.
+Defined.
 
 Lemma on_global_env_impl `{checker_flags} Σ P Q :
   (forall Σ Γ t T, on_global_env P Σ.1 -> P Σ Γ t T -> Q Σ Γ t T) ->
@@ -1340,22 +1348,39 @@ Proof.
     destruct o0 as [onI onP onNP].
     constructor; auto.
     -- eapply Alli_impl. exact onI. eauto. intros.
-(*        destruct x; simpl in *. *)
-(*        constructor; red; simpl. *)
-(*        --- apply onArity in X1. unfold on_arity, on_type in *; simpl in *. *)
-(*            split. now eapply X. easy. *)
-(*        --- apply onConstructors in X1. red in X1. unfold on_constructor, on_type in *. eapply Alli_impl; eauto. *)
-(*            simpl. intros. split. now eapply X. easy. *)
-(*        --- apply onProjections in X1. simpl in *. *)
-(*            unfold on_projections in *. eapply Alli_impl; intuition eauto. clear X1. *)
-(*            unfold on_projection in *; simpl in *. *)
-(*            destruct decompose_prod_assum. unfold on_type in *; eauto. *)
-(*            split. now eapply X. easy. *)
-(*     -- red in onP. red. *)
-(*        eapply All_local_env_impl. eauto. *)
-(*        intros. red in X1. red. now apply X. *)
-(* Qed. *)
-Admitted.
+       destruct x; simpl in *.
+       unshelve econstructor. shelve. shelve.
+       --- apply onConstructors in X1. red in X1. unfold on_constructor, on_type in *. eapply Alli_impl_trans; eauto.
+           simpl. intros. split. now eapply X. destruct X2 as (? & ? & ?).
+           exists x0.
+           induction (cshape_args x0); simpl; auto.
+           destruct a as [na [b|] ty]; simpl in *; auto.
+           split; eauto. apply IHc. apply t.
+           apply X. simpl; auto. apply t.
+       --- apply (ind_arity_eq X1).
+       --- apply onArity in X1. unfold on_type in *; simpl in *.
+           now eapply X.
+       --- simpl; intros. pose (onProjections X1 H0). simpl in *.
+           destruct o0. constructor; auto. eapply Alli_impl; intuition eauto.
+           unfold on_projection in *; simpl in *.
+           now apply X.
+       --- generalize (ind_sorts X1).
+           all:todo "simplify constructor shapes".
+           (* clear -X. *)
+           (* destruct (onConstructors X1); auto. *)
+           (* unfold check_ind_sorts. *)
+           (* destruct universe_family eqn:Heq; simpl; auto. *)
+           (* destruct tl; simpl. intros. *)
+           (* specialize (H0 _ H1). destruct o1; simpl in *. *)
+           (* destruct o0; simpl in *. destruct s; simpl in *; auto. *)
+           (* auto. auto. *)
+           (* destruct o0; simpl in *. destruct s; simpl in *. *)
+           (* unfold Alli_impl_trans, Alli_rect. simpl. *)
+           (* simpl. *)
+    -- red in onP. red.
+       eapply All_local_env_impl. eauto.
+       intros. now apply X.
+Qed.
 
 Lemma on_global_env_proj `{checker_flags} {Σ P Q} :
   on_global_env (fun Σ Γ t T => (P Σ Γ t T * Q Σ Γ t T)%type) Σ -> on_global_env P Σ.
@@ -1585,13 +1610,6 @@ Qed.
 Arguments localenv_nil {_}.
 Arguments localenv_cons_abs {_ _ _ _} _ _.
 Arguments localenv_cons_def {_ _ _ _ _} _ _ _.
-
-(* todo: move *)
-Lemma Alli_impl_trans : forall (A : Type) (P Q : nat -> A -> Type) (l : list A) (n : nat),
-Alli P n l -> (forall (n0 : nat) (x : A), P n0 x -> Q n0 x) -> Alli Q n l.
-Proof.
-  intros. induction X; simpl; constructor; auto.
-Defined.
 
 Lemma type_local_ctx_impl (P Q : global_env_ext -> context -> term -> option term -> Type) Σ Γ Δ u :
   type_local_ctx P Σ Γ Δ u ->

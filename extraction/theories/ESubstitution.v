@@ -337,7 +337,7 @@ Proof.
       * econstructor.
     + econstructor.
       eapply is_type_subst; eauto.
-  - admit.
+  - inv H0. econstructor. eapply is_type_subst; eauto.
   - inv H1. econstructor.
     eapply is_type_subst; eauto.
   - inv H1.
@@ -479,4 +479,4 @@ Proof.
     + econstructor.
       eapply is_type_subst; eauto.
   - eapply H; eauto.
-Admitted.
+Qed.

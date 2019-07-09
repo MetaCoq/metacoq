@@ -218,12 +218,11 @@ Proof.
       eassumption. now eexists [_]. eauto.
       exists decl'. split. eauto.
       unfold erases_constant_body in *. clear H. destruct ?. destruct ?.
-Admitted. (*
-      * eapply erases_extends. 6: eassumption.
+      eapply (@erases_extends (_, u)). 6: eassumption.
         eapply PCUICWeakeningEnv.wf_extends.
         eassumption. now eexists [_]. eauto.
-        eapply (PCUICWeakeningEnv.declared_constant_inv (Σ, univs)) in H0; eauto.
-        unfold on_constant_decl in H0. rewrite E0 in H0. unfold lift_typing in H0. eassumption.
+        eapply (PCUICWeakeningEnv.declared_constant_inv Σ) in H0; eauto.
+        unfold on_constant_decl in H0. rewrite E0 in H0. unfold lift_typing in H0. admit. (* exact H0. *) (* eassumption. *)
         eapply PCUICWeakeningEnv.weaken_env_prop_typing. eapply PCUICWeakeningEnv.wf_extends. eauto.
         eexists [_]. reflexivity. eapply PCUICWeakeningEnv.wf_extends. eauto. now eexists [_].
         eauto. now eexists [_].
@@ -236,18 +235,17 @@ Admitted. (*
       eassumption. now eexists [_]. eauto.
       exists decl'. split. eauto.
       unfold erases_constant_body in *. clear H. destruct ?. destruct ?.
-      * eapply erases_extends. 6: eassumption.
+      * eapply (@erases_extends (_,_)). 6: eassumption.
         eapply PCUICWeakeningEnv.wf_extends.
         eassumption. now eexists [_]. eauto.
-        eapply (PCUICWeakeningEnv.declared_constant_inv (Σ, univs)) in H0; eauto.
-        unfold on_constant_decl in H0. rewrite E0 in H0. unfold lift_typing in H0. eassumption.
+        eapply (PCUICWeakeningEnv.declared_constant_inv Σ) in H0; eauto.
+        unfold on_constant_decl in H0. rewrite E0 in H0. unfold lift_typing in H0. (* eassumption. *) admit.
         eapply PCUICWeakeningEnv.weaken_env_prop_typing. eapply PCUICWeakeningEnv.wf_extends. eauto.
         eexists [_]. reflexivity. eapply PCUICWeakeningEnv.wf_extends. eauto. now eexists [_].
         eauto. now eexists [_].
       * tauto.
       * destruct ?; tauto.
-Qed.
-*)
+Admitted.                       (* universes *)
 (** ** The correctness proof  *)
 
 Record extraction_pre (Σ : global_env_ext) : Type
@@ -587,7 +585,7 @@ Proof.
       edestruct IHeval.
       * eapply typing_subst_instance. eauto.
         eapply PCUICWeakeningEnv.declared_constant_inv in H'; eauto.
-        unfold on_constant_decl in H'. rewrite H0 in H'. red in H'. admit. (* eapply H'. *)
+        unfold on_constant_decl in H'. rewrite H0 in H'. red in H'. cbn in *.  admit. (* eapply H'. *)
         eapply PCUICWeakeningEnv.weaken_env_prop_typing.
       * eapply erases_subst_instance_constr; eauto.
         eapply PCUICWeakeningEnv.declared_constant_inv in H'; eauto.

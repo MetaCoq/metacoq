@@ -580,13 +580,16 @@ Section Principality.
         subst. solve_discr.
         clear -a1 a2 a3 a4.
         eapply (All2_impl (Q:=fun x y => Σ ;;; Γ |- x = y)) in a3; auto using red_conv.
-        eapply (All2_impl (Q:=fun x y => Σ ;;; Γ |- y = x)) in a4; auto using conv_sym, red_conv.
+        eapply (All2_impl (Q:=fun x y => Σ ;;; Γ |- x = y)) in a4; auto using conv_sym, red_conv.
         pose proof (All2_trans _ (conv_transitive _ _) _ _ _ a1 a3).
         apply All2_sym in a4.
         pose proof (All2_trans _ (conv_transitive _ _) _ _ _ X a4).
-        eapply (All2_impl (Q:=fun x y => Σ ;;; Γ |- y = x)) in a2; auto using conv_sym, red_conv.
+        eapply (All2_impl (Q:=fun x y => Σ ;;; Γ |- x = y)) in a2; auto using conv_sym, red_conv.
         apply All2_sym in a2.
-        apply (All2_trans _ (conv_transitive _ _) _ _ _ X0 a2). }
+        apply (All2_trans _ (conv_transitive _ _) _ _ _ X0 a2).
+        intros ? ? ?. eapply conv_sym. assumption.
+        intros ? ? ?. eapply conv_sym. assumption.
+      }
       clear redr redr' a1 a2.
       exists (mkApps u1 (skipn (ind_npars x10) x9 ++ [u2])); repeat split; auto.
 

@@ -889,6 +889,7 @@ Proof.
 Qed.
 
 Section ContextUpTo.
+
   Context (Re : universe -> universe -> Type).
   Context (ReR : Reflexive Re).
   Context (ReS : Symmetric Re).
@@ -904,15 +905,7 @@ Section ContextUpTo.
 
   Global Instance eq_term_upto_univ_sym : Symmetric (eq_term_upto_univ Re Re).
   Proof.
-    intros x y e.
-    revert x y e.
-    induction x using term_forall_list_ind; intros y Hy;
-      depelim Hy.
-    all:constructor; auto.
-    all:apply All2_sym; solve_all.
-    - eapply All2_map_inv in a. solve_all.
-    - eapply All2_map_inv in a. solve_all.
-    - eapply All2_map_inv in a. solve_all.
+    intros x y e. eapply eq_term_upto_univ_sym ; auto.
   Qed.
 
   Global Instance eq_ctx_sym : Symmetric eq_ctx.
@@ -936,6 +929,7 @@ Section ContextUpTo.
       eapply eq_term_upto_univ_trans; eauto.
       now eapply IHeq_context_upto.
   Qed.
+
 End ContextUpTo.
 
 Lemma eq_term_trans :

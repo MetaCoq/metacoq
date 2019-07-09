@@ -321,9 +321,9 @@ Module WeightedGraph (V : UsualOrderedType).
 
   Definition t := (VSet.t * EdgeSet.t * V.t)%type.
 
-  Let V (G : t) := fst (fst G).
-  Let E (G : t) := snd (fst G).
-  Let s (G : t) := snd G.
+  Local Definition V (G : t) := fst (fst G).
+  Local Definition E (G : t) := snd (fst G).
+  Local Definition s (G : t) := snd G.
 
   Definition e_source : Edge.t -> V.t := fst ∘ fst.
   Definition e_target : Edge.t -> V.t := snd.

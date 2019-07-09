@@ -27,7 +27,95 @@ module CoqLiveDenoter =
 struct
   include ConstrQuoted
 
-  type quoted_reduction_strategy = Constr.t (* of type Ast.reductionStrategy *)
+  let unquote_sigt trm =
+    let (h,args) = app_full trm [] in
+    if constr_equall h texistT then
+      match args with
+        _ :: _ :: x :: y :: [] -> (x, y)
+      | _ -> bad_term_verb trm "unquote_sigt"
+    else
+      not_supported_verb trm "unquote_sigt"
+
+  let unquote_pair trm =
+    let (h,args) = app_full trm [] in
+    if constr_equall h c_pair then
+      match args with
+        _ :: _ :: x :: y :: [] -> (x, y)
+      | _ -> bad_term_verb trm "unquote_pair"
+    else
+      not_supported_verb trm "unquote_pair"
+
+  let rec unquote_list trm =
+    let (h,args) = app_full trm [] in
+    if constr_equall h c_nil then
+      []
+    else if constr_equall h c_cons then
+      match args with
+        _ :: x :: xs :: [] -> x :: unquote_list xs
+      | _ -> bad_term_verb trm "unquote_list"
+    else
+      not_supported_verb trm "unquote_list"
+
+  let rec unquote_non_empty_list trm =
+    let (h,args) = app_full trm [] in
+    if constr_equall h nel_sing then
+      match args with
+        _ :: x :: [] -> [x]
+      | _ -> bad_term_verb trm "unquote_non_empty_list"
+    else if constr_equall h nel_cons then
+      match args with
+        _ :: x :: xs :: [] -> x :: unquote_non_empty_list xs
+      | _ -> bad_term_verb trm "unquote_non_empty_list"
+    else
+      not_supported_verb trm "unquote_non_empty_list"
+
+  (* Unquote Coq nat to OCaml int *)
+  let rec unquote_nat trm =
+    let (h,args) = app_full trm [] in
+    if constr_equall h tO then
+      0
+    else if constr_equall h tS then
+      match args with
+        n :: [] -> 1 + unquote_nat n
+      | _ -> bad_term_verb trm "unquote_nat"
+    else
+      not_supported_verb trm "unquote_nat"
+
+  let unquote_bool trm =
+    if constr_equall trm ttrue then
+      true
+    else if constr_equall trm tfalse then
+      false
+    else not_supported_verb trm "from_bool"
+
+  let unquote_char trm =
+    let (h,args) = app_full trm [] in
+    if constr_equall h tAscii then
+      match args with
+        a :: b :: c :: d :: e :: f :: g :: h :: [] ->
+        let bits = List.rev [a;b;c;d;e;f;g;h] in
+        let v = List.fold_left (fun a n -> (a lsl 1) lor if unquote_bool n then 1 else 0) 0 bits in
+        char_of_int v
+      | _ -> bad_term_verb trm "unquote_char"
+    else
+      not_supported trm
+
+  let unquote_string trm =
+    let rec go n trm =
+      let (h,args) = app_full trm [] in
+      if constr_equall h tEmptyString then
+        Bytes.create n
+      else if constr_equall h tString then
+        match args with
+          c :: s :: [] ->
+          let res = go (n + 1) s in
+          let _ = Bytes.set res n (unquote_char c) in
+          res
+        | _ -> bad_term_verb trm "unquote_string"
+      else
+        not_supported_verb trm "unquote_string"
+    in
+    Bytes.to_string (go 0 trm)
 
 
   let unquote_ident trm =
@@ -81,10 +169,6 @@ struct
         evm, Univ.Level.make univ k
       with Not_found ->
         CErrors.user_err ~hdr:"unquote_level" (str ("Level "^s^" is not a declared level."))
-
-
-
-
 
   let unquote_level evm trm (* of type level *) : Evd.evar_map * Univ.Level.t =
     let (h,args) = app_full trm [] in
@@ -169,10 +253,8 @@ struct
       bad_term_verb trm "non-constructor"
 
 
-  let unquote_ident=unquote_ident
-  let unquote_name=unquote_name
   let unquote_int=unquote_nat
-  let print_term=print_term
+  let print_term=Printer.pr_constr_env (Global.env ()) Evd.empty
 
   let inspect_term (t:Constr.t)
   : (Constr.t, quoted_int, quoted_ident, quoted_name, quoted_sort, quoted_cast_kind, quoted_kernel_name, quoted_inductive, quoted_univ_instance, quoted_proj) structure_of_term =
@@ -267,46 +349,6 @@ struct
     else
       CErrors.user_err (str"inspect_term: cannot recognize " ++ print_term t ++ str" (maybe you forgot to reduce it?)")
 
-  let unquote_universe_instance=unquote_universe_instance
-
-  let unquote_universe=unquote_universe
-  let unquote_proj=unquote_proj
-  let unquote_inductive=unquote_inductive
-  let unquote_kn=unquote_kn
-  let unquote_cast_kind=unquote_cast_kind
-  let unquote_bool=unquote_bool
-
-
-
-  let mkAnon = mkAnon
-  let mkName = mkName
-  let quote_kn = quote_kn
-  let mkRel = mkRel
-  let mkVar = mkVar
-  let mkEvar = mkEvar
-  let mkSort = mkSort
-  let mkCast = mkCast
-  let mkConst = mkConst
-  let mkProd = mkProd
-
-  let mkLambda = mkLambda
-  let mkApp = mkApp
-
-  let mkLetIn = mkLetIn
-
-  let mkFix = mkFix
-
-  let mkConstruct = mkConstruct
-
-  let mkCoFix = mkCoFix
-
-  let mkInd = mkInd
-
-  let mkCase = mkCase
-
-  let quote_proj = quote_proj
-
-  let mkProj = mkProj
 end
 
 

@@ -12,6 +12,10 @@ From Equations Require Import Equations.
 Require Import Equations.Prop.DepElim.
 Set Equations With UIP.
 
+Section CheckerFlags.
+
+Context {cf:checker_flags}.
+
 Fixpoint eqb_term_upto_univ (equ lequ : universe -> universe -> bool) (u v : term) : bool :=
   match u, v with
   | tRel n, tRel m =>
@@ -89,10 +93,10 @@ Fixpoint eqb_term_upto_univ (equ lequ : universe -> universe -> bool) (u v : ter
   | _, _ => false
   end.
 
-(* Definition eqb_term `{checker_flags} (u v : term) : bool := *)
+(* Definition eqb_term (u v : term) : bool := *)
 (*   eqb_term_upto_univ () *)
 
-(* Definition leqb_term `{checker_flags} (u v : term) : bool := *)
+(* Definition leqb_term (u v : term) : bool := *)
 (*   eqb_term_upto_univ () *)
 
 Inductive reflectT (A : Type) : bool -> Type :=
@@ -338,11 +342,9 @@ Proof.
   all: intros u u'; eapply reflect_reflectT, eqb_spec.
 Qed.
 
-Corollary reflect_nleq_term :
-  forall `{checker_flags} t t',
+Corollary reflect_nleq_term t t' :
     reflect (nl t = nl t') (nleq_term t t').
 Proof.
-  intros flags t t'.
   destruct (reflect_eq_term_upto_univ_eqb t t').
   - constructor. eapply eq_term_nl_eq. assumption.
   - constructor. intro bot. apply f.
@@ -578,9 +580,9 @@ Proof.
 Qed.
 
 Lemma eq_term_it_mkLambda_or_LetIn_inv :
-  forall (Σ : global_context) Γ u v,
-    eq_term (snd Σ) (it_mkLambda_or_LetIn Γ u) (it_mkLambda_or_LetIn Γ v) ->
-    eq_term (snd Σ) u v.
+  forall φ Γ u v,
+    eq_term φ (it_mkLambda_or_LetIn Γ u) (it_mkLambda_or_LetIn Γ v) ->
+    eq_term φ u v.
 Proof.
   intros Σ Γ.
   induction Γ as [| [na [b|] A] Γ ih ] ; intros u v h.
@@ -592,9 +594,9 @@ Proof.
 Qed.
 
 Lemma eq_term_zipc_inv :
-  forall (Σ : global_context) u v π,
-    eq_term (snd Σ) (zipc u π) (zipc v π) ->
-    eq_term (snd Σ) u v.
+  forall φ u v π,
+    eq_term φ (zipc u π) (zipc v π) ->
+    eq_term φ u v.
 Proof.
   intros Σ u v π h.
   revert u v h. induction π ; intros u v h.
@@ -605,9 +607,9 @@ Proof.
 Qed.
 
 Lemma eq_term_zipx_inv :
-  forall (Σ : global_context) Γ u v π,
-    eq_term (snd Σ) (zipx Γ u π) (zipx Γ v π) ->
-    eq_term (snd Σ) u v.
+  forall φ Γ u v π,
+    eq_term φ (zipx Γ u π) (zipx Γ v π) ->
+    eq_term φ u v.
 Proof.
   intros Σ Γ u v π h.
   eapply eq_term_zipc_inv.
@@ -631,9 +633,9 @@ Proof.
 Qed.
 
 Lemma eq_term_it_mkLambda_or_LetIn :
-  forall (Σ : global_context) Γ u v,
-    eq_term (snd Σ) u v ->
-    eq_term (snd Σ) (it_mkLambda_or_LetIn Γ u) (it_mkLambda_or_LetIn Γ v).
+  forall φ Γ u v,
+    eq_term φ u v ->
+    eq_term φ (it_mkLambda_or_LetIn Γ u) (it_mkLambda_or_LetIn Γ v).
 Proof.
   intros Σ Γ u v h.
   eapply eq_term_upto_univ_it_mkLambda_or_LetIn ; auto.
@@ -662,9 +664,9 @@ Proof.
 Qed.
 
 Lemma eq_term_zipc :
-  forall (Σ : global_context) u v π,
-    eq_term (snd Σ) u v ->
-    eq_term (snd Σ) (zipc u π) (zipc v π).
+  forall (Σ : global_env_ext) u v π,
+    eq_term (global_ext_constraints Σ) u v ->
+    eq_term (global_ext_constraints Σ) (zipc u π) (zipc v π).
 Proof.
   intros Σ u v π h.
   eapply eq_term_upto_univ_zipc.
@@ -684,9 +686,9 @@ Proof.
 Qed.
 
 Lemma eq_term_zipx :
-  forall (Σ : global_context) Γ u v π,
-    eq_term (snd Σ) u v ->
-    eq_term (snd Σ) (zipx Γ u π) (zipx Γ v π).
+  forall φ Γ u v π,
+    eq_term φ u v ->
+    eq_term φ (zipx Γ u π) (zipx Γ v π).
 Proof.
   intros Σ Γ u v π h.
   eapply eq_term_upto_univ_zipx ; auto.
@@ -2770,3 +2772,5 @@ Proof.
     +  eapply cofix_red_body. eassumption.
     + constructor. all: eauto.
 Qed.
+
+End CheckerFlags.

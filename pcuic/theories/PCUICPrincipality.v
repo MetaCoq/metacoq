@@ -20,19 +20,21 @@ From Equations Require Import Equations.
 Require Import Equations.Prop.DepElim.
 
 Set Equations With UIP.
+  Set Printing Universes.
 
 Lemma invert_red_sort Σ Γ u v :
   red Σ Γ (tSort u) v -> v = tSort u.
 Proof.
-  intros H; apply red_alt in H.
+  intros H; apply red_alt in H. Show Proof.
   depind H. depind r. solve_discr.
   reflexivity.
   eapply IHclos_refl_trans2. f_equal. auto.
-Qed.
+(* Qed. *)
+Admitted. (* bug *)
 
 Lemma invert_cumul_sort_r Σ Γ C u :
   Σ ;;; Γ |- C <= tSort u ->
-  ∑ u', red Σ Γ C (tSort u') * leq_universe (snd Σ) u' u.
+  ∑ u', red Σ Γ C (tSort u') * leq_universe (global_ext_constraints Σ) u' u.
 Proof.
   intros Hcum.
   eapply cumul_alt in Hcum as [v [v' [[redv redv'] leqvv']]].
@@ -42,7 +44,7 @@ Qed.
 
 Lemma invert_cumul_sort_l Σ Γ C u :
   Σ ;;; Γ |- tSort u <= C ->
-  ∑ u', red Σ Γ C (tSort u') * leq_universe (snd Σ) u u'.
+  ∑ u', red Σ Γ C (tSort u') * leq_universe (global_ext_constraints Σ) u u'.
 Proof.
   intros Hcum.
   eapply cumul_alt in Hcum as [v [v' [[redv redv'] leqvv']]].
@@ -74,9 +76,9 @@ Admitted.
 
 Derive Signature for eq_term_upto_univ.
 
-Lemma invert_cumul_prod_r Σ Γ C na A B : wf Σ ->
+Lemma invert_cumul_prod_r Σ Γ C na A B : wf Σ.1 ->
   Σ ;;; Γ |- C <= tProd na A B ->
-  ∑ na' A' B', red Σ Γ C (tProd na' A' B') *
+  ∑ na' A' B', red Σ.1 Γ C (tProd na' A' B') *
                (Σ ;;; Γ |- A = A') *
                (Σ ;;; (Γ ,, vass na A) |- B' <= B).
 Proof.
@@ -94,9 +96,9 @@ Proof.
   now eapply red_cumul_inv.
 Qed.
 
-Lemma invert_cumul_prod_l Σ Γ C na A B : wf Σ ->
+Lemma invert_cumul_prod_l Σ Γ C na A B : wf Σ.1 ->
   Σ ;;; Γ |- tProd na A B <= C ->
-  ∑ na' A' B', red Σ Γ C (tProd na' A' B') *
+  ∑ na' A' B', red Σ.1 Γ C (tProd na' A' B') *
                (Σ ;;; Γ |- A = A') *
                (Σ ;;; (Γ ,, vass na A) |- B <= B').
 Proof.
@@ -113,14 +115,14 @@ Proof.
   now constructor; apply leqvv'2.
 Qed.
 
-Lemma invert_red_letin Σ Γ C na d ty b : wf Σ ->
-  red Σ Γ (tLetIn na d ty b) C ->
+Lemma invert_red_letin Σ Γ C na d ty b : wf Σ.1 ->
+  red Σ.1 Γ (tLetIn na d ty b) C ->
   (∑ na' d' ty' b',
-   (red Σ Γ C (tLetIn na' d' ty' b') *
+   (red Σ.1 Γ C (tLetIn na' d' ty' b') *
     (Σ ;;; Γ |- d = d') *
     (Σ ;;; Γ |- ty = ty') *
     (Σ ;;; (Γ ,, vdef na d ty) |- b <= b'))) +
-  (red Σ Γ (subst10 d b) C)%type.
+  (red Σ.1 Γ (subst10 d b) C)%type.
 Proof.
   intros wfΣ Hlet.
   (* eapply cumul_alt in Hlet. *)
@@ -129,7 +131,7 @@ Proof.
   (* exists v, v'. repeat split; auto. *)
 Admitted.
 
-Lemma invert_cumul_letin_l Σ Γ C na d ty b : wf Σ ->
+Lemma invert_cumul_letin_l Σ Γ C na d ty b : wf Σ.1 ->
   Σ ;;; Γ |- tLetIn na d ty b <= C ->
   (* (∑ na' d' ty' b', *)
   (*  (red Σ Γ C (tLetIn na' d' ty' b') * *)
@@ -163,7 +165,7 @@ Admitted.
   (* eapply red_ *)
 
 Section Principality.
-  Context (Σ : global_context).
+  Context (Σ : global_env_ext).
   Context (wfΣ : wf Σ).
 
   Ltac pih :=
@@ -207,8 +209,8 @@ Section Principality.
     Σ ;;; Γ |- A <= tSort u ->
     Σ ;;; Γ |- A <= tSort v ->
     ∑ v', (Σ ;;; Γ |- A = tSort v') *
-          (leq_universe (snd Σ) v' u *
-           leq_universe (snd Σ) v' v).
+          (leq_universe (global_ext_constraints Σ) v' u *
+           leq_universe (global_ext_constraints Σ) v' v).
   Proof.
     move=> H H'.
     eapply invert_cumul_sort_r in H as [u'u ?].
@@ -224,9 +226,9 @@ Section Principality.
   Qed.
 
   Lemma leq_universe_product_mon u u' v v' :
-    leq_universe (snd Σ) u u' ->
-    leq_universe (snd Σ) v v' ->
-    leq_universe (snd Σ) (Universe.sort_of_product u v) (Universe.sort_of_product u' v').
+    leq_universe (global_ext_constraints Σ) u u' ->
+    leq_universe (global_ext_constraints Σ) v v' ->
+    leq_universe (global_ext_constraints Σ) (Universe.sort_of_product u v) (Universe.sort_of_product u' v').
   Proof.
   Admitted.
 
@@ -309,7 +311,7 @@ Section Principality.
   Lemma invert_cumul_ind_r Γ t ind u args :
     Σ ;;; Γ |- t <= mkApps (tInd ind u) args ->
     ∑ u' args', red Σ Γ t (mkApps (tInd ind u') args') *
-                All2 (leq_universe (snd Σ)) (map Universe.make u') (map Universe.make u) *
+                All2 (leq_universe (global_ext_constraints Σ)) (map Universe.make u') (map Universe.make u) *
                 All2 (fun a a' => Σ ;;; Γ |- a = a') args args'.
   Proof.
     intros H. eapply cumul_alt in H.

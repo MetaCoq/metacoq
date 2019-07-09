@@ -18,7 +18,7 @@ Proof.
   intros Hty.
   dependent induction Hty.
   exists t_ty, t'. intuition.
-  specialize (IHHty1 _ _ eq_refl) as [T' [U' [H' H'']]].
+  specialize (IHHty _ _ eq_refl) as [T' [U' [H' H'']]].
   exists T', U'. split; auto.
   eapply cumul_trans; eauto.
 Qed.

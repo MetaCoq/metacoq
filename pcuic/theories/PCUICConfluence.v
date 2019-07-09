@@ -18,10 +18,6 @@ Require Import Equations.Type.Relation Equations.Type.Relation_Properties.
 
 Set Asymmetric Patterns.
 
-Notation "'∃' x .. y , P" := (sigT (fun x => .. (sigT (fun y => P%type)) ..))
-  (at level 200, x binder, y binder, right associativity,
-  format "'[  ' '[  ' ∃  x  ..  y ']' ,  '/' P ']'") : type_scope.
-
 Existing Instance config.default_checker_flags.
 
 
@@ -45,18 +41,18 @@ Unset Universe Polymorphism.
 
 (* Derive Signature for red1. *)
 
-Definition red1_sig@{} (Σ : global_declarations) (index : sigma (fun _ : context => sigma (fun _ : term => term))) :=
+Definition red1_sig@{} (Σ : global_env) (index : sigma (fun _ : context => sigma (fun _ : term => term))) :=
   let Γ := pr1 index in let H := pr1 (pr2 index) in let H0 := pr2 (pr2 index) in red1 Σ Γ H H0.
 
 Universe red1u.
 
-Definition red1_sig_pack@{} (Σ : global_declarations) (Γ : context) (H H0 : term) (red1_var : red1 Σ Γ H H0)
+Definition red1_sig_pack@{} (Σ : global_env) (Γ : context) (H H0 : term) (red1_var : red1 Σ Γ H H0)
   : sigma@{red1u} (fun index : sigma (fun _ : context => sigma (fun _ : term => term)) =>
         red1 Σ (pr1 index) (pr1 (pr2 index)) (pr2 (pr2 index)))
   :=
      {| pr1 := {| pr1 := Γ; pr2 := {| pr1 := H; pr2 := H0 |} |}; pr2 := red1_var |}.
 
-Instance red1_Signature@{} (Σ : global_declarations) (Γ : context) (H H0 : term)
+Instance red1_Signature@{} (Σ : global_env) (Γ : context) (H H0 : term)
      : Signature@{red1u} (red1 Σ Γ H H0) (sigma (fun _ : context => sigma (fun _ : term => term))) (red1_sig Σ) :=
   red1_sig_pack Σ Γ H H0.
 (** FIXME Equations *)
@@ -158,7 +154,7 @@ Proof.
 Qed.
 
 Section RedPred.
-  Context {Σ : global_context}.
+  Context {Σ : global_env}.
   Context (wfΣ : wf Σ).
 
   Hint Resolve pred1_ctx_over_refl : pcuic.
@@ -345,7 +341,7 @@ End RedPred.
 Existing Instance default_checker_flags.
 
 Section PredRed.
-  Context {Σ : global_context}.
+  Context {Σ : global_env}.
   Context (wfΣ : wf Σ).
 
   Lemma weakening_red_0 Γ Γ' M N n :
@@ -1544,7 +1540,7 @@ Section RedConfluence.
 End RedConfluence.
 
 Section ConfluenceFacts.
-  Context (Σ : global_context) (wfΣ : wf Σ).
+  Context (Σ : global_env) (wfΣ : wf Σ).
 
   Lemma red_mkApps_tConstruct (Γ : context)
         ind pars k (args : list term) c :
@@ -1554,15 +1550,15 @@ Section ConfluenceFacts.
   Proof.
     move => Hred. apply red_alt in Hred.
     eapply red_pred in Hred.
-    depind Hred.
+    generalize_eqs Hred. induction Hred in ind, pars, k, args |- * ; simplify *.
     - eapply pred1_mkApps_tConstruct in r as [r' [eq redargs]].
       subst y. exists r'. intuition auto. solve_all. now apply pred1_red in X.
     - exists args; split; eauto. apply All2_same; auto.
-    - specialize IHHred1 as [? [? ?]]. subst y.
-      specialize (IHHred2 _ _ _ _ _ eq_refl) as [? [? ?]]. subst z.
+    - specialize IHHred1 as [? [? ?]]. reflexivity. subst y.
+      specialize (IHHred2 _ _ _ _ eq_refl) as [? [? ?]]. subst z.
       exists x0. intuition auto. eapply All2_trans; eauto.
       intros ? ? ?; eapply red_trans.
-    - auto.
+    - assumption.
   Qed.
 
   Lemma red_mkApps_tInd (Γ : context)
@@ -1573,12 +1569,12 @@ Section ConfluenceFacts.
   Proof.
     move => Hred. apply red_alt in Hred.
     eapply red_pred in Hred.
-    depind Hred.
+    generalize_eqs Hred. induction Hred in ind, u, args |- * ; simplify *.
     - eapply pred1_mkApps_tInd in r as [r' [eq redargs]].
       subst y. exists r'. intuition auto. solve_all. now apply pred1_red in X.
     - exists args; split; eauto. apply All2_same; auto.
-    - specialize IHHred1 as [? [? ?]]. subst y.
-      specialize (IHHred2 _ _ _ _ eq_refl) as [? [? ?]]. subst z.
+    - specialize IHHred1 as [? [? ?]]. reflexivity. subst y.
+      specialize (IHHred2 _ _ _ eq_refl) as [? [? ?]]. subst z.
       exists x0. intuition auto. eapply All2_trans; eauto.
       intros ? ? ?; eapply red_trans.
     - auto.
@@ -1593,12 +1589,12 @@ Section ConfluenceFacts.
   Proof.
     move => Hdecl Hbody Hred. apply red_alt in Hred.
     eapply red_pred in Hred.
-    depind Hred.
+    generalize_eqs Hred. induction Hred in cst, u, args, Hdecl |- *; simplify *.
     - eapply pred1_mkApps_tConst_axiom in r as [r' [eq redargs]]; eauto.
       subst y. exists r'. intuition auto. solve_all. now apply pred1_red in X.
     - exists args; split; eauto. apply All2_same; auto.
-    - specialize (IHHred1 _ _ _ _ _ Hdecl Hbody eq_refl) as [? [? ?]]. subst y.
-      specialize (IHHred2 _ _ _ _ _ Hdecl Hbody eq_refl) as [? [? ?]]. subst z.
+    - specialize (IHHred1 _ _ _ Hdecl eq_refl) as [? [? ?]]. subst y.
+      specialize (IHHred2 _ _ _ Hdecl eq_refl) as [? [? ?]]. subst z.
       exists x0. intuition auto. eapply All2_trans; eauto.
       intros ? ? ?; eapply red_trans.
     - auto.
@@ -1656,7 +1652,7 @@ Section ConfluenceFacts.
 
   Lemma red_confluence {Γ t u v} :
     red Σ Γ t u -> red Σ Γ t v ->
-    ∃ v', red Σ Γ u v' * red Σ Γ v v'.
+    ∑ v', red Σ Γ u v' * red Σ Γ v v'.
   Proof.
     move=> H H'. apply red_alt in H. apply red_alt in H'.
     destruct (red1_confluent wfΣ _ _ _ _ H H') as [nf [redl redr]].

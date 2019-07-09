@@ -28,10 +28,10 @@ Proof.
   intros. destruct X as (? & ? & ? & ? & ?). exists x. split. eauto. right. eauto.
 Qed.
 
-Definition Informative (Σ : global_context) (ind : inductive) :=
+Definition Informative (Σ : global_env_ext) (ind : inductive) :=
   forall mdecl idecl,
     declared_inductive (fst Σ) mdecl ind idecl ->
-    forall Γ args u n Σ',
+    forall Γ args u n (Σ' : global_env_ext),
       wf Σ' ->
       PCUICWeakeningEnv.extends Σ Σ' ->
       Is_proof Σ' Γ (mkApps (tConstruct ind n u) args) ->  
@@ -56,7 +56,7 @@ Definition opt_def {A} (a : option A) (e : A) : A :=
 
 Reserved Notation "Σ ;;; Γ |- s ⇝ℇ t" (at level 50, Γ, s, t at next level).
 
-Inductive erases (Σ : global_context) (Γ : context) : term -> E.term -> Prop :=
+Inductive erases (Σ : global_env_ext) (Γ : context) : term -> E.term -> Prop :=
     erases_tRel : forall i : nat, Σ;;; Γ |- tRel i ⇝ℇ E.tRel i
   | erases_tVar : forall n : ident, Σ;;; Γ |- tVar n ⇝ℇ E.tVar n
   | erases_tEvar : forall (m m' : nat) (l : list term) (l' : list E.term),
@@ -107,14 +107,14 @@ Inductive erases (Σ : global_context) (Γ : context) : term -> E.term -> Prop :
                     Σ;;; Γ |- tCoFix mfix n ⇝ℇ E.tCoFix mfix' n
   | erases_box : forall t : term, Is_Type_or_Proof Σ Γ t -> Σ;;; Γ |- t ⇝ℇ E.tBox where "Σ ;;; Γ |- s ⇝ℇ t" := (erases Σ Γ s t).
 
-Definition erases_constant_body (Σ : global_context) (cb : constant_body) (cb' : E.constant_body) :=
+Definition erases_constant_body (Σ : global_env_ext) (cb : constant_body) (cb' : E.constant_body) :=
   match cst_body cb, E.cst_body cb' with
   | Some b, Some b' => erases Σ [] b b'
   | None, None => True
   | _, _ => False
   end.
 
-Definition erases_one_inductive_body (Σ : global_context) (npars : nat) (arities : context) (oib : one_inductive_body) (oib' : E.one_inductive_body) :=
+Definition erases_one_inductive_body (Σ : global_env_ext) (npars : nat) (arities : context) (oib : one_inductive_body) (oib' : E.one_inductive_body) :=
   let decty := opt_def (decompose_prod_n_assum [] npars oib.(ind_type)) ([], tRel 0) in
   let '(params, arity) := decty in
   let projctx := arities ,,, params ,, vass nAnon oib.(ind_type) in
@@ -123,24 +123,24 @@ Definition erases_one_inductive_body (Σ : global_context) (npars : nat) (aritie
   oib'.(E.ind_name) = oib.(ind_name) /\
   oib'.(E.ind_kelim) = oib.(ind_kelim).
 
-Definition erases_mutual_inductive_body (Σ : global_context) (mib : mutual_inductive_body) (mib' : E.mutual_inductive_body) :=
+Definition erases_mutual_inductive_body (Σ : global_env_ext) (mib : mutual_inductive_body) (mib' : E.mutual_inductive_body) :=
   let bds := mib.(ind_bodies) in
   let arities := arities_context bds in
   Forall2 (erases_one_inductive_body Σ mib.(ind_npars) arities) bds (mib'.(E.ind_bodies)) /\
   mib.(ind_npars) = mib'.(E.ind_npars).
   
-Inductive erases_global_decls : constraints -> global_declarations -> E.global_declarations -> Prop :=
-| erases_global_nil univ : erases_global_decls univ [] []
-| erases_global_cnst Σ univs cb cb' kn Σ' :
-    erases_constant_body (Σ, univs) cb cb' ->
-    erases_global_decls univs Σ Σ' ->
-    erases_global_decls univs (ConstantDecl kn cb :: Σ) (E.ConstantDecl kn cb' :: Σ')
+Inductive erases_global_decls : global_env -> E.global_declarations -> Prop :=
+| erases_global_nil : erases_global_decls [] []
+| erases_global_cnst Σ cb cb' kn Σ' :
+    erases_constant_body (Σ, cst_universes cb) cb cb' ->
+    erases_global_decls Σ Σ' ->
+    erases_global_decls (ConstantDecl kn cb :: Σ) (E.ConstantDecl kn cb' :: Σ')
 | erases_global_ind Σ univs mib mib' kn Σ' :
     erases_mutual_inductive_body (Σ, univs) mib mib' ->
-    erases_global_decls univs Σ Σ' ->
-    erases_global_decls univs (InductiveDecl kn mib :: Σ) (E.InductiveDecl kn mib' :: Σ').
+    erases_global_decls Σ Σ' ->
+    erases_global_decls (InductiveDecl kn mib :: Σ) (E.InductiveDecl kn mib' :: Σ').
 
-Definition erases_global '(Σ, univs) Σ' := erases_global_decls univs Σ Σ'.
+Definition erases_global Σ Σ' := erases_global_decls Σ Σ'.
 
 Fixpoint inductive_arity (t : term) :=
   match t with

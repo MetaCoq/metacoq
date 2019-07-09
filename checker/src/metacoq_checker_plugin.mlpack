@@ -27,7 +27,6 @@ MSetDecide
 MSetProperties
 Compare_dec
 MSetWeakList
-FMapWeakList
 BinNums
 Universes0
 BasicAst
@@ -37,6 +36,7 @@ Common
 Config0
 
 Wf
+Equality
 
 Denote
 Denoter

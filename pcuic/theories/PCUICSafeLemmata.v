@@ -154,6 +154,16 @@ Section Lemmata.
 
   Context (flags : RedFlags.t).
 
+  (* red is the reflexive transitive closure of one-step reduction and thus
+     can't be used as well order. We thus define the transitive closure,
+     but we take the symmetric version.
+   *)
+  Inductive cored Σ Γ: term -> term -> Prop :=
+  | cored1 : forall u v, red1 Σ Γ u v -> cored Σ Γ v u
+  | cored_trans : forall u v w, cored Σ Γ v u -> red1 Σ Γ v w -> cored Σ Γ w u.
+
+  Derive Signature for cored.
+
   Lemma context_conversion :
     forall {Σ Γ t T Γ'},
       Σ ;;; Γ |- t : T ->
@@ -178,9 +188,9 @@ Section Lemmata.
     - intros n decl hnth ih v e.
       dependent destruction e.
       eapply type_Rel ; eassumption.
-    - intros l ih v e.
+    - intros l ih hl v e.
       dependent destruction e. subst.
-      eapply type_Sort. assumption.
+      eapply type_Sort; assumption.
     - intros na A B s1 s2 ih hA ihA hB ihB v e.
       dependent destruction e.
       econstructor.
@@ -321,7 +331,7 @@ Section Lemmata.
       (*   give_up. *)
       (* +  *)
       admit.
-    - intros mfix n decl H types hnth wf ihmfix v e. subst types.
+    - intros mfix n decl types hnth wf ihmfix allow v e. subst types.
       dependent destruction e.
       pose proof (All2_nth_error_Some _ _ a hnth) as [decl' [? [[? ?] ?]]].
       eapply type_Conv.
@@ -390,14 +400,13 @@ Section Lemmata.
   Qed.
 
   Lemma wf_nlg :
-    forall Σ,
+    forall Σ : global_env_ext,
       ∥ wf Σ ∥ ->
       ∥ wf (nlg Σ) ∥.
   Proof.
-    intros Σ [wΣ].
-    constructor.
+    intros Σ [wΣ]. constructor.
     destruct Σ as [Σ φ].
-    unfold nlg. unfold wf in *. unfold on_global_env in *. simpl in *.
+    unfold nlg. unfold wf in *. simpl in *.
     induction Σ.
     - assumption.
     - simpl. inversion wΣ. subst.
@@ -409,29 +418,17 @@ Section Lemmata.
       + destruct a.
         * simpl in *. destruct c as [ty [bo |] uni].
           -- cbn in *.
-             econstructor.
-             ++ eapply type_nameless.
-                (* Need some lemma like welltyped_nlg? *)
-                admit.
+             destruct H2.
+             econstructor; intuition auto.
              ++ admit.
              ++ admit.
-          -- cbn in *. (* same *)
-             admit.
+             ++ admit.
+          -- simpl. admit.
         * simpl in *. destruct m. admit.
   Admitted.
 
-  Context (Σ : global_context).
+  Context (Σ : global_env_ext).
   Context (hΣ : ∥ wf Σ ∥).
-
-  (* red is the reflexive transitive closure of one-step reduction and thus
-     can't be used as well order. We thus define the transitive closure,
-     but we take the symmetric version.
-   *)
-  Inductive cored Σ Γ: term -> term -> Prop :=
-  | cored1 : forall u v, red1 Σ Γ u v -> cored Σ Γ v u
-  | cored_trans : forall u v w, cored Σ Γ v u -> red1 Σ Γ v w -> cored Σ Γ w u.
-
-  Derive Signature for cored.
 
   Inductive welltyped Σ Γ t : Prop :=
   | iswelltyped A : Σ ;;; Γ |- t : A -> welltyped Σ Γ t.

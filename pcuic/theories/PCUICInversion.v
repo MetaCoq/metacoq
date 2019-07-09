@@ -18,7 +18,7 @@ Set Equations With UIP.
 Section Inversion.
 
   Context `{checker_flags}.
-  Context (Σ : global_context).
+  Context (Σ : global_env_ext).
 
   Ltac insum :=
     match goal with
@@ -89,6 +89,7 @@ Section Inversion.
       Σ ;;; Γ |- tSort s : T ->
       ∑ l,
         wf_local Σ Γ ×
+        LevelSet.In l (global_ext_levels Σ) ×
         (s = Universe.make l) ×
         Σ ;;; Γ |- tSort (Universe.super l) <= T.
   Proof.
@@ -146,7 +147,7 @@ Section Inversion.
       ∑ decl,
         wf_local Σ Γ ×
         declared_constant Σ c decl ×
-        consistent_universe_context_instance (snd Σ) (cst_universes decl) u ×
+        (consistent_instance_ext Σ decl.(cst_universes) u) ×
         Σ ;;; Γ |- subst_instance_constr u (cst_type decl) <= T.
   Proof.
     intros Γ c u T h. invtac h.
@@ -158,7 +159,7 @@ Section Inversion.
       ∑ mdecl idecl,
         wf_local Σ Γ ×
         declared_inductive Σ mdecl ind idecl ×
-        consistent_universe_context_instance (snd Σ) (ind_universes mdecl) u ×
+        consistent_instance_ext Σ (ind_universes mdecl) u ×
         Σ ;;; Γ |- subst_instance_constr u idecl.(ind_type) <= T.
   Proof.
     intros Γ ind u T h. invtac h.
@@ -170,7 +171,7 @@ Section Inversion.
       ∑ mdecl idecl cdecl,
         wf_local Σ Γ ×
         declared_constructor (fst Σ) mdecl idecl (ind, i) cdecl ×
-        consistent_universe_context_instance (snd Σ) (ind_universes mdecl) u ×
+        consistent_instance_ext Σ (ind_universes mdecl) u ×
         Σ;;; Γ |- type_of_constructor mdecl cdecl (ind, i) u <= T.
   Proof.
     intros Γ ind i u T h. invtac h.
@@ -186,7 +187,7 @@ Section Inversion.
         Σ ;;; Γ |- p : pty ×
         types_of_case ind mdecl idecl pars u p pty =
         Some (indctx, pctx, ps, btys) ×
-        check_correct_arity (snd Σ) idecl ind u indctx pars pctx ×
+        check_correct_arity (global_ext_constraints Σ) idecl ind u indctx pars pctx ×
         Exists (fun sf => universe_family ps = sf) (ind_kelim idecl) ×
         Σ ;;; Γ |- c : mkApps (tInd ind u) args ×
         All2 (fun x y => fst x = fst y × Σ ;;; Γ |- snd x : snd y) brs btys ×

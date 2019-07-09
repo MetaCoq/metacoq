@@ -1,7 +1,7 @@
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
 From MetaCoq.Template Require Import config utils monad_utils BasicAst AstUtils.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICTyping PCUICMetaTheory PCUICWcbvEval PCUICLiftSubst PCUICInversion PCUICSR PCUICNormal PCUICSafeReduce PCUICSafeLemmata PCUICSafeChecker PCUICValidity PCUICPrincipality.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICTyping PCUICMetaTheory PCUICWcbvEval PCUICLiftSubst PCUICInversion PCUICCumulativity PCUICSR PCUICNormal PCUICSafeReduce PCUICSafeLemmata PCUICSafeChecker PCUICValidity PCUICPrincipality.
 From MetaCoq.Extraction Require EAst ELiftSubst ETyping EWcbvEval Extract ExtractionCorrectness.
 From Equations Require Import Equations.
 Require Import String.
@@ -12,7 +12,7 @@ Import MonadNotation.
 Require Import EArities Extract Prelim.
 
 
-Fixpoint is_arity Σ (HΣ : ∥wf Σ∥) Γ (HΓ : ∥wf_local Σ Γ∥)T (HT : wellformed Σ Γ T) : typing_result ({Is_conv_to_Arity Σ Γ T} + {~ Is_conv_to_Arity Σ Γ T}).
+Fixpoint is_arity (Σ : global_env_ext) (HΣ : ∥wf Σ∥) Γ (HΓ : ∥wf_local Σ Γ∥)T (HT : wellformed Σ Γ T) : typing_result ({Is_conv_to_Arity Σ Γ T} + {~ Is_conv_to_Arity Σ Γ T}).
 Proof.
   edestruct @reduce_to_sort with (t := T) as [[u] | ]; try eassumption.
   - sq. left. left. sq. econstructor. split.
@@ -76,7 +76,7 @@ Proof.
 Admitted. (* termination of is_arity *)
 
 Definition is_type_or_proof :
-  forall (Sigma : PCUICAst.global_context) (HΣ : ∥wf Sigma∥) (Gamma : context) (HΓ : ∥wf_local Sigma Gamma∥) (t : PCUICAst.term),
+  forall (Sigma : PCUICAst.global_env_ext) (HΣ : ∥wf Sigma∥) (Gamma : context) (HΓ : ∥wf_local Sigma Gamma∥) (t : PCUICAst.term),
     {r : typing_result bool & ∥ match r with
                            | Checked true => Is_Type_or_Proof Sigma Gamma t 
                            | Checked false => (Is_Type_or_Proof Sigma Gamma t -> False) × PCUICSafeLemmata.welltyped Sigma Gamma t
@@ -147,7 +147,7 @@ Section Erase.
   Definition on_snd_map {A B C} (f : B -> C) (p : A * B) :=
     (fst p, f (snd p)).
 
-  Variable (Σ : global_context)( HΣ :∥ wf Σ ∥).
+  Variable (Σ : global_env_ext )( HΣ :∥ wf Σ ∥).
       
   Ltac sq :=
     repeat match goal with
@@ -253,7 +253,7 @@ End Erase.
 
 Require Import ExtractionCorrectness.
 
-Lemma erases_erase Σ Γ t T (wfΣ : ∥wf Σ∥) (wfΓ : ∥wf_local Σ Γ∥) t' :
+Lemma erases_erase (Σ : global_env_ext) Γ t T (wfΣ : ∥wf Σ∥) (wfΓ : ∥wf_local Σ Γ∥) t' :
   Σ ;;; Γ |- t : T ->
   erase Σ (wfΣ) Γ (wfΓ) t = Checked t' ->                
   erases Σ Γ t t'.
@@ -263,14 +263,14 @@ Proof.
   (* pose proof (typing_wf_local X0). *)
 
     
-  pose (wfΣ' := sq t0).
+  pose (wfΣ' := sq w).
   pose (wfΓ' := sq a).
   change (erase Σ wfΣ' Γ wfΓ' t = Checked t') in H.
 
   revert H.
   generalize wfΣ' wfΓ'. clear wfΣ' wfΓ'.
   
-  revert Σ t0 Γ a t T X t'.
+  revert Σ w Γ a t T X t'.
   eapply (typing_ind_env (fun Σ Γ t T =>   forall (t' : E.term) (wfΣ' : ∥ wf Σ ∥) (wfΓ' : ∥ wf_local Σ Γ ∥),
   erase Σ wfΣ' Γ wfΓ' t = Checked t' -> Σ;;; Γ |- t ⇝ℇ t'
          )); intros.
@@ -287,10 +287,10 @@ Proof.
   
   - repeat econstructor; eauto.
   - econstructor. econstructor. clear E.
-    eapply inversion_Prod in t1 as (? & ? & ? & ? & ?).
+    eapply inversion_Prod in t0 as (? & ? & ? & ? & ?).
     split. eauto. left. econstructor.
   - econstructor. eauto. econstructor. clear E.
-    eapply inversion_Ind in t0 as (? & ? & ? & ? & ? & ?).
+    eapply inversion_Ind in t as (? & ? & ? & ? & ? & ?).
     split. eauto. left.
     eapply isArity_subst_instance. eapply isArity_ind_type.
   - econstructor.
@@ -372,16 +372,16 @@ Program Definition erase_mutual_inductive_body Σ wfΣ
   ret {| E.ind_npars := mib.(ind_npars);
          E.ind_bodies := bodies; |}.
 
-Program Fixpoint erase_global_decls univs Σ : ∥ wf (Σ, univs) ∥ -> typing_result E.global_declarations := fun wfΣ =>
+Program Fixpoint erase_global_decls Σ : ∥ wf Σ ∥ -> typing_result E.global_declarations := fun wfΣ =>
   match Σ with
   | [] => ret []
   | ConstantDecl kn cb :: Σ => 
-    cb' <- erase_constant_body (Σ, univs) _ cb;;
-    Σ' <- erase_global_decls univs Σ _;;
+    cb' <- erase_constant_body (Σ, cst_universes cb) _ cb;;
+    Σ' <- erase_global_decls Σ _;;
     ret (E.ConstantDecl kn cb' :: Σ')
   | InductiveDecl kn mib :: Σ => 
-    mib' <- erase_mutual_inductive_body (Σ, univs) _ mib _ ;;
-    Σ' <- erase_global_decls univs Σ _;;
+    mib' <- erase_mutual_inductive_body (Σ, ind_universes mib) _ mib _ ;;
+    Σ' <- erase_global_decls Σ _;;
     ret (E.InductiveDecl kn mib' :: Σ')
   end.
 Next Obligation.
@@ -403,16 +403,15 @@ Next Obligation.
 Qed.
 
 Program Definition erase_global Σ : ∥wf Σ∥ -> _:=
-  match Σ with (Σ, univs) => fun wfΣ  =>
-  Σ' <- erase_global_decls univs Σ wfΣ ;;
-  ret Σ' end.
+  fun wfΣ  =>
+  Σ' <- erase_global_decls Σ wfΣ ;;
+  ret Σ'.
 
 
 Lemma erase_global_correct Σ (wfΣ : ∥ wf Σ∥) Σ' :
   erase_global Σ wfΣ = Checked Σ' ->
   erases_global Σ Σ'.
 Proof.
-  destruct Σ as (Σ, univs).
   induction Σ in wfΣ, Σ' |- *; cbn; intros; sq.
   - inv H. econstructor.
   - repeat destruct ?; try congruence.
@@ -420,22 +419,23 @@ Proof.
       * unfold erases_constant_body.
         unfold optM in E4. destruct ?; try congruence.
         -- cbn. cbn in *.
-           destruct ( erase (Σ, univs)
-           (erase_global_decls_obligation_1 univs (ConstantDecl k c :: Σ) 
-              (sq t) k c Σ eq_refl) [] wf_local_nil t0) eqn:E5;
+           destruct ( erase (Σ, _)
+           (erase_global_decls_obligation_1 (ConstantDecl k c :: Σ)
+              (sq w) k c Σ eq_refl) [] wf_local_nil t) eqn:E5;
              rewrite E5 in E4; inv E4.
            eapply erases_erase. 2:eauto.
            instantiate (1 := cst_type c).
-           clear - t E. inv t.
-           cbn in *. unfold on_constant_decl in X0.
-           rewrite E in X0. cbn in X0. eassumption.           
+           admit.
+           (* clear - w E. *)
+           (* cbn in *. unfold on_constant_decl in w. *)
+           (* rewrite E in X0. cbn in X0. eassumption.            *)
         -- cbn. inv E4. econstructor.
       * eapply IHΣ. unfold erase_global. rewrite E2. reflexivity.
     + inv H. inv E. inv E1.
       econstructor.
       * econstructor; cbn; eauto.
         pose proof (Prelim.monad_map_All2 _ _ _ _ _ E3).
-        eapply All2_Forall.
+        eapply All2_Forall2.
         eapply All2_impl. eassumption.
 
         intros. cbn in H0. repeat destruct ?; try congruence.
@@ -444,25 +444,25 @@ Proof.
         destruct decompose_prod_n_assum eqn:E6; inv E. cbn.
         pose proof (Prelim.monad_map_All2 _ _ _ _ _ E4). 
         pose proof (Prelim.monad_map_All2 _ _ _ _ _ E5). repeat split; eauto.
-        -- eapply All2_Forall.
+        -- eapply All2_Forall2.
            eapply All2_impl_In. eassumption.
            intros. destruct x0, p, y, p. cbn in *.
            destruct ?; try congruence.
            inv H4. split; eauto.
 
-           pose (t' := t). inv t'. cbn in *.
+           pose (t' := w). inv t'. cbn in *.
            edestruct constructors_typed; eauto.
            eapply erases_erase. 2:eauto. eauto.
-        -- eapply All2_Forall.
+        -- eapply All2_Forall2.
            eapply All2_impl_In. eassumption.
            intros. cbn in H2. destruct x0, y.
            destruct ?; try congruence;
              inv H4. split; eauto.
 
-           pose (t' := t). inv t'. cbn in *.
-           edestruct proj_typed; eauto.
-           
-           eapply erases_erase.
-           2:{ eauto. } eauto.
+           pose (t' := w). inv t'. cbn in *.
+           (* edestruct proj_typed; eauto. *)
+           admit.
+           (* eapply erases_erase. *)
+           (* 2:{ eauto. } eauto. *)
   * eapply IHΣ. unfold erase_global. rewrite E2. reflexivity.
-Qed.
+Admitted.

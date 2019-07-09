@@ -27,7 +27,7 @@ Module PSR := PCUICSafeReduce.
 Section Conversion.
 
   Context (flags : RedFlags.t).
-  Context (Σ : global_context).
+  Context (Σ : global_env_ext).
   Context (hΣ : ∥ wf Σ ∥).
 
   Set Equations With UIP.

@@ -24,9 +24,6 @@ then
     cd src
     rm -f ast0.* specif.* peanoNat.* list0.* datatypes.* decimal.* ascii.* universes0.* binPosDef.* binPos.* binNat.* binNums.* binInt.* binIntDef.* bool.* nat0.* string0.* basics.* liftSubst.*
 
-    # We have to patch templateToPCUIC because a module path equality fails
-    # to be recognized by the OCaml compiler
-    cp ../templateToPCUIC.hack templateToPCUIC.mli
 else
     echo "No files to extract"
 fi

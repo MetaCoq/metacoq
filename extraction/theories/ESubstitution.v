@@ -25,9 +25,9 @@ Qed.
 
 (** ** Global Weakening  *)
 
-Lemma Is_type_extends Σ Γ t :
+Lemma Is_type_extends (Σ : global_env_ext) Γ t :
   wf_local Σ Γ ->
-  forall Σ', wf Σ' -> extends Σ Σ' -> Is_Type_or_Proof Σ Γ t -> Is_Type_or_Proof Σ' Γ t.
+  forall (Σ' : global_env), wf Σ' -> extends Σ Σ' -> Is_Type_or_Proof Σ Γ t -> Is_Type_or_Proof (Σ', Σ.2) Γ t.
 Proof.
   intros. destruct X2 as [T []].
   exists T. split. eapply weakening_env; [ | | eauto | | ]; eauto using wf_extends.
@@ -37,9 +37,9 @@ Proof.
   eapply weakening_env; [ | | eauto | | ]; eauto using wf_extends.
 Qed.
 
-Lemma Is_proof_extends Σ Γ t :
+Lemma Is_proof_extends (Σ : global_env_ext) Γ t :
   wf_local Σ Γ ->
-  forall Σ', wf Σ' -> extends Σ Σ' -> Is_proof Σ Γ t -> Is_proof Σ' Γ t.
+  forall Σ', wf Σ' -> extends Σ Σ' -> Is_proof Σ Γ t -> Is_proof (Σ',Σ.2) Γ t.
 Proof.
   intros. destruct X2 as (? & ? & ? & ? & ?).
   exists x, x0. repeat split.
@@ -50,7 +50,7 @@ Qed.
 
 Lemma erases_extends :
   env_prop (fun Σ Γ t T =>
-              forall Σ', wf Σ' -> extends Σ Σ' -> forall t', erases Σ Γ t t' -> erases Σ' Γ t t').
+              forall Σ', wf Σ' -> extends Σ Σ' -> forall t', erases Σ Γ t t' -> erases (Σ', Σ.2) Γ t t').
 Proof.
   apply typing_ind_env; intros; rename_all_hyps.
   all: match goal with [ H : erases _ _ ?a _ |- _ ] => tryif is_var a then idtac else inv H end.
@@ -66,18 +66,18 @@ Proof.
 
 
     Lemma Informative_extends:
-      forall (Σ : PCUICAst.global_context) (ind : inductive)
+      forall (Σ : global_env_ext) (ind : inductive)
         (mdecl : PCUICAst.mutual_inductive_body) (idecl : PCUICAst.one_inductive_body),
 
         PCUICTyping.declared_inductive (fst Σ) mdecl ind idecl ->
-        forall (Σ' : PCUICAst.global_context) (u0 : universe_instance),
+        forall (Σ' : global_env) (u0 : universe_instance),
           wf Σ' ->
           extends Σ Σ' ->
-          Informative Σ ind -> Informative Σ' ind.
+          Informative Σ ind -> Informative (Σ', Σ.2) ind.
     Proof.
       repeat intros ?.
       assert (extends Σ Σ'0). destruct X0, X2. subst. cbn. exists (x0 ++ x). cbn.
-      now rewrite app_assoc.
+      simpl in e0. now rewrite <- app_assoc.
       edestruct H0; eauto. destruct H3.
 
       eapply weakening_env_declared_inductive in H; eauto.
@@ -108,7 +108,7 @@ Qed.
 (** ** Weakening *)
 
 Lemma Is_type_weakening:
-  forall (Σ : PCUICAst.global_context) (Γ Γ' Γ'' : PCUICAst.context),
+  forall (Σ : global_env_ext) (Γ Γ' Γ'' : PCUICAst.context),
     wf_local Σ (Γ ,,, Γ') ->
     wf Σ ->
     wf_local Σ (Γ ,,, Γ'' ,,, lift_context #|Γ''| 0 Γ') ->
@@ -125,7 +125,7 @@ Proof.
     eapply weakening_typing in t1; eauto.
 Qed.
 
-Lemma erases_weakening' (Σ : PCUICAst.global_context) (Γ Γ' Γ'' : PCUICAst.context) (t T : PCUICAst.term) t' :
+Lemma erases_weakening' (Σ : global_env_ext) (Γ Γ' Γ'' : PCUICAst.context) (t T : PCUICAst.term) t' :
     wf Σ ->
     wf_local Σ (Γ ,,, Γ') ->
     wf_local Σ (Γ ,,, Γ'' ,,, lift_context #|Γ''| 0 Γ') ->
@@ -200,7 +200,7 @@ Proof.
     rewrite app_length in *.
     subst types. rewrite fix_context_length in *.
     rewrite (All2_length _ _ H4) in *.
-    Lemma erases_ctx_ext Σ Γ Γ' t t' :
+    Lemma erases_ctx_ext (Σ : global_env_ext) Γ Γ' t t' :
       erases Σ Γ t t' -> Γ = Γ' -> erases Σ Γ' t t'.
     Proof.
       intros. now subst.
@@ -246,7 +246,7 @@ Proof.
   - eauto.
 Qed.
 
-Lemma erases_weakening (Σ : PCUICAst.global_context) (Γ Γ' : PCUICAst.context) (t T : PCUICAst.term) t' :
+Lemma erases_weakening (Σ : global_env_ext) (Γ Γ' : PCUICAst.context) (t T : PCUICAst.term) t' :
   wf Σ ->
   wf_local Σ (Γ ,,, Γ') ->
   Σ ;;; Γ |- t : T ->
@@ -270,7 +270,7 @@ Qed.
 Lemma All2_length {A B} {P : A -> B -> Type} l l' : All2 P l l' -> #|l| = #|l'|.
 Proof. induction 1; simpl; auto. Qed.
 
-Lemma is_type_subst Σ Γ Γ' Δ a s :
+Lemma is_type_subst (Σ : global_env_ext) Γ Γ' Δ a s :
   wf Σ -> subslet Σ Γ s Γ' ->
   (* Σ ;;; Γ ,,, Γ' ,,, Δ |- a : T -> *)
   wf_local Σ (Γ ,,, subst_context s 0 Δ) ->
@@ -288,7 +288,7 @@ Proof.
     eapply X2 in t; eauto.
 Qed.
 
-Lemma substlet_typable Σ Γ s Γ' n t :
+Lemma substlet_typable (Σ : global_env_ext) Γ s Γ' n t :
   subslet Σ Γ s Γ' -> nth_error s n = Some t -> {T & Σ ;;; Γ |- t : T}.
 Proof.
   induction n in s, t, Γ, Γ' |- *; intros; cbn in *.
@@ -299,7 +299,7 @@ Proof.
     eauto.
 Qed.
 
-Lemma erases_subst Σ Γ Γ' Δ t s t' s' T :
+Lemma erases_subst (Σ : global_env_ext) Γ Γ' Δ t s t' s' T :
   wf Σ ->
   subslet Σ Γ s Γ' ->
   wf_local Σ (Γ ,,, subst_context s 0 Δ) ->
@@ -337,8 +337,7 @@ Proof.
       * econstructor.
     + econstructor.
       eapply is_type_subst; eauto.
-  - inv H. econstructor.
-    eapply is_type_subst; eauto.
+  - admit.
   - inv H1. econstructor.
     eapply is_type_subst; eauto.
   - inv H1.
@@ -430,7 +429,7 @@ Proof.
       rewrite app_context_assoc in *.
       eapply e2 in e1; eauto.
 
-      Lemma erases_eq Σ Γ Γ' t t' s s' :
+      Lemma erases_eq (Σ : global_env_ext) Γ Γ' t t' s s' :
         erases Σ Γ t t' ->
         Γ = Γ' ->
         t = s ->
@@ -480,4 +479,4 @@ Proof.
     + econstructor.
       eapply is_type_subst; eauto.
   - eapply H; eauto.
-Qed.
+Admitted.

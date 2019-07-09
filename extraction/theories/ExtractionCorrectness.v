@@ -488,8 +488,9 @@ Proof.
     assert (Hcon := H1).
     assert (Σ ;;; [] |- mkApps (tFix mfix idx) args ▷ res) by eauto.
     eapply type_mkApps_inv in Hty' as (? & ? & [] & ?); eauto.
-    eapply EInversion.type_tFix_inv in t as (? & ? & ? & ? & ? & ?); eauto.
-    unfold unfold_fix in H. rewrite e in H. inv H.
+    assert (HT := t).
+    eapply EInversion.type_tFix_inv in t as (? & [[] ?] & ?); eauto.
+    unfold unfold_fix in H. rewrite e in H. inv H. 
 
     eapply erases_mkApps_inv in He as [(? & ? & ? & ? & [] & ? & ? & ?) | (? & ? & ? & ? & ?)]; eauto.
     + subst. assert (X100 := X1). eapply Is_type_app in X100 as[].
@@ -567,7 +568,7 @@ Proof.
                  eapply IHAll2 in X2 as (? & ? & ?); eauto.
         -- cbn.
            eapply (erases_subst Σ [] (PCUICLiftSubst.fix_context mfix) [] dbody (fix_subst mfix)) in e3; cbn; eauto.
-           ++ eapply subslet_fix_subst.
+           ++ eapply subslet_fix_subst. eassumption.
            ++ eapply nth_error_all in a0; eauto. cbn in a0.
               eapply a0.
            ++ eapply All2_from_nth_error.

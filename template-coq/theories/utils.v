@@ -1900,20 +1900,20 @@ Lemma OnOne2_impl_exist_and_All_r :
   forall A (l1 l2 l3 : list A) R1 R2 R3,
     OnOne2 R1 l1 l2 ->
     All2 R2 l2 l3 ->
-    (forall x x' y, R1 x y -> R2 y x' -> exists z : A, ∥ R3 x z × R2 z x' ∥) ->
-    exists l4, ∥ OnOne2 R3 l1 l4 × All2 R2 l4 l3 ∥.
+    (forall x x' y, R1 x y -> R2 y x' -> ∑ z : A, R3 x z × R2 z x') ->
+    ∑ l4, ( OnOne2 R3 l1 l4 × All2 R2 l4 l3 ).
 Proof.
   intros A l1 l2 l3 R1 R2 R3 h1 h2 h.
   induction h1 in l3, h2 |- *.
   - dependent destruction h2.
     specialize (h _ _ _ p r) as hh.
-    destruct hh as [? [[? ?]]].
-    eexists. constructor. split.
+    destruct hh as [? [? ?]].
+    eexists. split.
     + constructor. eassumption.
     + constructor ; eauto.
   - dependent destruction h2.
-    specialize (IHh1 _ h2). destruct IHh1 as [? [[? ?]]].
-    eexists. constructor. split.
+    specialize (IHh1 _ h2). destruct IHh1 as [? [? ?]].
+    eexists. split.
     + eapply OnOne2_tl. eassumption.
     + constructor ; eauto.
 Qed.

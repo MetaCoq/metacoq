@@ -1,7 +1,7 @@
 (* Distributed under the terms of the MIT license.   *)
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Arith Lia.
-From MetaCoq.Template Require Import config utils Ast AstUtils Induction LiftSubst UnivSubst.
+From MetaCoq.Template Require Import LibHypsNaming config utils Ast AstUtils Induction LiftSubst UnivSubst.
 Require Import String.
 Require Import Wf Wellfounded Relation_Definitions.
 Require Import Relation_Operators Lexicographic_Product Wf_nat.
@@ -34,12 +34,28 @@ Fixpoint isArity T :=
 Definition subst_context s k (Γ : context) : context :=
   fold_context (fun k' => subst s (k' + k)) Γ.
 
+Lemma subst_context_length s n Γ : #|subst_context s n Γ| = #|Γ|.
+Proof.
+  induction Γ as [|[na [body|] ty] tl] in Γ |- *; cbn; eauto.
+  - rewrite !List.rev_length !mapi_length !app_length !List.rev_length. simpl.
+    lia.
+  - rewrite !List.rev_length !mapi_length !app_length !List.rev_length. simpl.
+    lia.
+Qed.
+
 Fixpoint smash_context (Γ Γ' : context) : context :=
   match Γ' with
   | {| decl_body := Some b |} :: Γ' => smash_context (subst_context [b] 0 Γ) Γ'
   | {| decl_body := None |} as d :: Γ' => smash_context (Γ ++ [d])%list Γ'
   | [] => Γ
   end.
+
+Lemma smash_context_length Γ Γ' : #|smash_context Γ Γ'| = #|Γ| + context_assumptions Γ'.
+Proof.
+  induction Γ' as [|[na [body|] ty] tl] in Γ |- *; cbn; eauto.
+  - now rewrite IHtl subst_context_length.
+  - rewrite IHtl app_length. simpl. lia.
+Qed.
 
 (** ** Environment lookup *)
 
@@ -1598,6 +1614,7 @@ Lemma typing_ind_env `{cf : checker_flags} :
         P Σ Γ (tRel n) (lift0 (S n) decl.(decl_type))) ->
     (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (l : Level.t),
         All_local_env_over typing Pdecl Σ Γ wfΓ ->
+        LevelSet.In l (global_ext_levels Σ) ->
         P Σ Γ (tSort (Universe.make l)) (tSort (Universe.super l))) ->
 
     (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (c : term) (k : cast_kind)
@@ -1699,7 +1716,7 @@ Lemma typing_ind_env `{cf : checker_flags} :
         All_local_env (lift_typing (fun Σ Γ b ty => (typing Σ Γ b ty * P Σ Γ b ty)%type) Σ) (Γ ,,, types) ->
         All (fun d => (Σ ;;; Γ ,,, types |- d.(dbody) : lift0 #|types| d.(dtype))%type *
             P Σ (Γ ,,, types) d.(dbody) (lift0 #|types| d.(dtype)))%type mfix ->
-
+        allow_cofix ->
         P Σ Γ (tCoFix mfix n) decl.(dtype)) ->
 
     (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (t A B : term),
@@ -2018,8 +2035,19 @@ Proof.
              exists u. intuition. unshelve eapply X14; eauto. lia.
 Qed.
 
+Ltac my_rename_hyp h th :=
+  match th with
+  | (wf ?E) => fresh "wf" E
+  | (typing _ _ ?t _) => fresh "type" t
+  | (@cumul _ _ _ ?t _) => fresh "cumul" t
+  | (conv _ _ ?t _) => fresh "conv" t
+  | (All_local_env (lift_typing (@typing _) _) ?G) => fresh "wf" G
+  | (All_local_env (lift_typing (@typing _) _) _) => fresh "wf"
+  | (All_local_env _ _ ?G) => fresh "H" G
+  | context [typing _ _ (_ ?t) _] => fresh "IH" t
+  end.
 
-
+Ltac rename_hyp h ht ::= my_rename_hyp h ht.
 
 (** * Lemmas about All_local_env *)
 
@@ -2153,6 +2181,5 @@ Proof.
     apply IHX.
 Defined.
 
-
-
 Definition wf_ext_wf `{checker_flags} Σ : wf_ext Σ -> wf Σ.1 := fst.
+Hint Immediate wf_ext_wf.

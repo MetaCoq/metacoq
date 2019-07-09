@@ -5,6 +5,7 @@ From MetaCoq.Template Require Import utils Ast AstUtils Induction LiftSubst.
 Require Import String Lia.
 Local Open Scope string_scope.
 Set Asymmetric Patterns.
+Require Import ssreflect ssrbool.
 
 (** * Universe substitution
 
@@ -66,7 +67,7 @@ Lemma lift_subst_instance_constr u c n k :
   lift n k (subst_instance_constr u c) = subst_instance_constr u (lift n k c).
 Proof.
   induction c in k |- * using term_forall_list_ind; simpl; auto;
-    rewrite ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length;
+    rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length;
     try solve [f_equal; eauto; solve_all; eauto].
 
   elim (Nat.leb k n0); reflexivity.
@@ -86,7 +87,7 @@ Lemma subst_instance_constr_it_mkProd_or_LetIn u ctx t :
   it_mkProd_or_LetIn (subst_instance_context u ctx) (subst_instance_constr u t).
 Proof.
   induction ctx in u, t |- *; simpl; try congruence.
-  rewrite IHctx. f_equal. destruct (decl_body a); eauto.
+  rewrite IHctx /= /mkProd_or_LetIn /=. f_equal. destruct (decl_body a); eauto.
 Qed.
 
 Lemma subst_instance_context_length u ctx
@@ -101,7 +102,7 @@ Lemma subst_subst_instance_constr u c N k :
   subst_instance_constr u (subst N k c).
 Proof.
   induction c in k |- * using term_forall_list_ind; simpl; auto;
-    rewrite ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length;
+    rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length;
     try solve [f_equal; eauto; solve_all; eauto].
 
   elim (Nat.leb k n). rewrite nth_error_map.
@@ -163,9 +164,6 @@ Section Closedu.
   end.
 
 End Closedu.
-
-
-Require Import ssreflect ssrbool.
 
 (** Universe-closed terms are unaffected by universe substitution. *)
 

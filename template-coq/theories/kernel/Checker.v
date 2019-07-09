@@ -1041,7 +1041,7 @@ Section InferOk.
     specialize (IH' _ _ Heqt0).
     intros.
     eapply type_Conv. apply IH'.
-    apply infer_type_correct; eauto.
+    right. apply infer_type_correct in H; eauto.
     destruct a0. eapply cumul_convert_leq; eassumption.
   Qed.
 

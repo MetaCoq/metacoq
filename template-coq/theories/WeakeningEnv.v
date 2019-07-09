@@ -1,7 +1,7 @@
 (* Distributed under the terms of the MIT license.   *)
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega Lia.
-From MetaCoq.Template Require Import config utils Ast AstUtils Induction utils LiftSubst Typing.
+From MetaCoq.Template Require Import LibHypsNaming config utils Ast AstUtils Induction utils LiftSubst Typing.
 
 (** * Weakening lemmas w.r.t. the global environment *)
 
@@ -40,12 +40,20 @@ Proof.
 Qed.
 Hint Resolve extends_lookup : extends.
 
-Lemma extends_wf_local `{checker_flags} Σ φ Γ (wfΓ : wf_local (Σ, φ) Γ)
-    : All_local_env
-      (fun '(Σ0, φ0) Γ0 t T => forall Σ', wf Σ' -> extends Σ0 Σ' -> (Σ', φ0);;; Γ0 |- t : T) (Σ, φ) Γ ->
-    forall Σ', wf Σ' -> extends Σ Σ' -> wf_local (Σ', φ) Γ.
+Lemma extends_wf_local `{checker_flags} Σ Γ (wfΓ : wf_local Σ Γ) :
+  All_local_env_over typing
+      (fun Σ0 Γ0 wfΓ (t T : term) ty =>
+         forall Σ' : global_env,
+           wf Σ' ->
+           extends Σ0 Σ' ->
+           (Σ', Σ0.2);;; Γ0 |- t : T
+      ) Σ Γ wfΓ ->
+    forall Σ' : global_env, wf Σ' -> extends Σ Σ' -> wf_local (Σ', Σ.2) Γ.
 Proof.
-  intros X Σ' X0 X1. induction wfΓ; inv X; econstructor; intuition.
+  intros X0 Σ' H0.
+  induction X0 in H0 |- *; try econstructor; simpl in *; intuition auto.
+  - destruct tu as [u Hu]; exists u; auto.
+  - destruct tu as [u Hu]; exists u; auto.
 Qed.
 Hint Resolve extends_wf_local : extends.
 
@@ -65,6 +73,11 @@ Qed.
 Lemma global_ext_constraints_app Σ Σ' φ
   : ConstraintSet.Subset (global_ext_constraints (Σ, φ))
                          (global_ext_constraints (Σ' ++ Σ, φ)).
+Admitted.
+
+Lemma leq_universe_subset {cf:checker_flags} ctrs ctrs' t u
+  : ConstraintSet.Subset ctrs ctrs' -> leq_universe ctrs t u -> leq_universe ctrs' t u.
+Proof.
 Admitted.
 
 Lemma leq_term_subset {cf:checker_flags} ctrs ctrs' t u
@@ -137,12 +150,13 @@ Qed.
 Hint Resolve weakening_env_declared_projection : extends.
 
 Lemma weakening_All_local_env_impl `{checker_flags}
-      (P Q : global_env_ext -> context -> term -> term -> Type) Σ Σ' l :
-  All_local_env P Σ l ->
-  (forall Γ t T, P Σ Γ t T -> Q Σ' Γ t T) ->
-  All_local_env Q Σ' l.
+      (P Q : context -> term -> option term -> Type) l :
+  All_local_env P l ->
+  (forall Γ t T, P Γ t T -> Q Γ t T) ->
+  All_local_env Q l.
 Proof.
-  induction 1; intros; simpl; econstructor; eauto. Qed.
+  induction 1; intros; simpl; econstructor; eauto.
+Qed.
 
 Lemma weakening_env_global_ext_levels Σ Σ' φ (H : extends Σ Σ') l
   : LevelSet.In l (global_ext_levels (Σ, φ))
@@ -184,34 +198,54 @@ Proof.
 Qed.
 Hint Resolve weakening_env_consistent_instance : extends.
 
-Lemma weakening_env `{checker_flags} :
-  env_prop (fun '(Σ, φ) Γ t T =>
-              forall Σ', wf Σ' -> extends Σ Σ' -> (Σ', φ) ;;; Γ |- t : T).
-Proof.
-  apply typing_ind_env; intros [Σ φ]; intros;
-    try solve [econstructor; eauto 2 with extends].
+Ltac my_rename_hyp h th :=
+  match th with
+  | (extends ?t _) => fresh "ext" t
+  | (extends ?t.1 _) => fresh "ext" t
+  | (extends _ _) => fresh "ext"
+  | _ => Typing.my_rename_hyp h th
+  end.
 
-  - econstructor; eauto.
-    clear H0 H1 X X0. induction X1 in wfΓ |- *; econstructor; eauto.
+Ltac rename_hyp h ht ::= my_rename_hyp h ht.
+
+Lemma weakening_env `{checker_flags} :
+  env_prop (fun Σ Γ t T =>
+              forall Σ', wf Σ' -> extends Σ.1 Σ' -> (Σ', Σ.2) ;;; Γ |- t : T).
+Proof.
+  apply typing_ind_env; intros;
+    rename_all_hyps; try solve [econstructor; eauto 2 with extends].
+
+  - econstructor; eauto 2 with extends.
+    destruct Σ as [Σ φ].
+    clear typet heq_isApp forall_Σ' hneq_l.
+    induction X1. constructor. econstructor; eauto with extends.
     eapply weakening_env_cumul in cumul; eauto.
   - econstructor; eauto 2 with extends.
     eapply check_correct_arity_subset; tea.
     apply weakening_env_global_ext_constraints; tas.
     close_Forall. intros; intuition eauto with extends.
   - econstructor; eauto with extends.
-    eapply weakening_All_local_env_impl. eapply X.
-    clear -X1 X2. simpl; intros. intuition eauto with extends.
+    eapply All_local_env_impl. eapply X.
+    clear -wfΣ' extΣ. simpl; intros.
+    unfold lift_typing in *; destruct T; intuition eauto with extends.
+    destruct X as [u [tyu Hu]]. exists u. eauto.
     eapply All_impl; eauto; simpl; intuition eauto with extends.
-  - econstructor; eauto with extends.
-    eapply weakening_All_local_env_impl. eapply X.
-    clear -X1 X2. simpl; intros. intuition eauto with extends.
+  - econstructor; eauto with extends. auto.
+    eapply All_local_env_impl. eapply X.
+    clear -wfΣ' extΣ. simpl; intros.
+    unfold lift_typing in *; destruct T; intuition eauto with extends.
+    destruct X as [u [tyu Hu]]. exists u. eauto.
     eapply All_impl; eauto; simpl; intuition eauto with extends.
-  - eapply weakening_env_cumul in X3; eauto. econstructor; eauto.
+  - econstructor. eauto.
+    destruct X2 as [isB|[u [Hu Ps]]].
+    + left; auto. destruct isB. destruct x as [ctx [u [Heq Hu]]].
+      exists ctx, u. split; eauto with extends.
+    + right. exists u. eapply Ps; auto.
+    + destruct Σ as [Σ φ]. eapply weakening_env_cumul in cumulA; eauto.
 Qed.
 
-
 Definition weaken_env_prop `{checker_flags}
-           (P : global_env_ext -> context -> option term -> term -> Type) :=
+           (P : global_env_ext -> context -> term -> option term -> Type) :=
   forall Σ Σ' φ, wf Σ' -> extends Σ Σ' -> forall Γ t T, P (Σ, φ) Γ t T -> P (Σ', φ) Γ t T.
 
 Lemma weakening_on_global_decl `{checker_flags} P Σ Σ' φ decl :
@@ -229,17 +263,37 @@ Proof.
   simpl in *.
   destruct Hdecl as [onI onP onnP]; constructor; eauto.
   - eapply Alli_impl; eauto. intros.
-    destruct X. constructor.
-    unfold on_arity, on_type in *; intuition eauto.
-    unfold on_constructors in *. eapply Alli_impl; eauto.
+    destruct X. unshelve econstructor; eauto.
+    unfold on_constructors in *. eapply Alli_impl_trans; eauto.
     intros ik [[id t] ar]. unfold on_constructor, on_type in *; intuition eauto.
-    red in onProjections |- *.
-    eapply Alli_impl; eauto. intros ip [id trm].
-    unfold on_projection, on_type; eauto.
-    destruct decompose_prod_assum. intuition auto.
-    eapply HPΣ; eauto.
-  - red in onP |- *. eapply weakening_All_local_env_impl; eauto.
-    intros. eapply HPΣ; eauto.
+    destruct b. exists x0.
+    -- induction (cshape_args x0); simpl in *; auto.
+       destruct a0 as [na [b|] ty]; simpl in *; intuition eauto.
+    -- unfold on_type in *; intuition eauto.
+    -- intros Hprojs; destruct onProjections; try constructor; auto.
+       eapply Alli_impl; eauto. intros ip [id trm].
+       unfold on_projection, on_type; eauto.
+    -- unfold Alli_impl_trans. simpl.
+       revert onConstructors ind_sorts. generalize (ind_ctors x).
+       unfold Alli_rect.
+       unfold check_ind_sorts. destruct universe_family; auto.
+       --- intros ? onCs. depelim onCs; simpl; auto. depelim onCs; simpl; auto.
+           destruct hd as [[? ?] ?]. unfold prod_rect; simpl.
+           destruct o as [? [? ?]]. simpl. auto.
+       --- intros ? onCs. clear onI. induction onCs; simpl; intuition auto.
+           destruct hd as [[? ?] ?]. unfold prod_rect; simpl.
+           destruct p as [? [? ?]]. simpl in *. auto.
+           destruct Hext; subst; simpl; auto.
+           clear H2.
+           eapply leq_universe_subset; eauto.
+           eapply global_ext_constraints_app; tas.
+       --- intros ? onCs. clear onI. induction onCs; simpl; intuition auto.
+           destruct hd as [[? ?] ?]. unfold prod_rect; simpl.
+           destruct p as [? [? ?]]. simpl in *. auto.
+           destruct Hext; subst; simpl; auto. clear H2.
+           eapply leq_universe_subset; eauto.
+           eapply global_ext_constraints_app; tas.
+  - red in onP |- *. eapply All_local_env_impl; eauto.
 Qed.
 
 Lemma weakening_env_lookup_on_global_env `{checker_flags} P Σ Σ' c decl :
@@ -316,8 +370,10 @@ Proof.
   intros.
   destruct H0 as [Hidecl [Hcdecl Hnpar]].
   eapply declared_inductive_inv in Hidecl; eauto.
-  apply onProjections in Hidecl.
-  eapply nth_error_alli in Hidecl; eauto.
+  pose proof (onProjections Hidecl). apply on_projs in X2.
+  eapply nth_error_alli in X2; eauto.
+  eapply nth_error_Some_length in Hcdecl.
+  destruct (ind_projs idecl); simpl in *. lia. congruence.
 Qed.
 
 Lemma wf_extends `{checker_flags} {Σ Σ'} : wf Σ' -> extends Σ Σ' -> wf Σ.
@@ -330,14 +386,14 @@ Qed.
 Lemma weaken_env_prop_typing `{checker_flags} : weaken_env_prop (lift_typing typing).
 Proof.
   red. intros * wfΣ' Hext *.
-  destruct t; simpl.
-  - intros Ht. pose proof (wf_extends wfΣ' Hext).
-    refine (snd (weakening_env (Σ, φ) X Γ _ _ _ Ht) _ wfΣ' Hext).
-    eapply typing_wf_local in Ht; eauto.
-  - intros [s Ht]. pose proof (wf_extends wfΣ' Hext). exists s.
-    refine (snd (weakening_env (Σ, φ) X Γ _ _ _ Ht) _ wfΣ' Hext).
-    eapply typing_wf_local in Ht; eauto.
-Defined.
+  destruct T; simpl.
+  intros Ht. pose proof (wf_extends wfΣ' Hext).
+  eapply (weakening_env (_, _)); eauto. eapply typing_wf_local in Ht; eauto.
+  intros [s Ht]. pose proof (wf_extends wfΣ' Hext). exists s.
+  eapply (weakening_env (_, _)); eauto. eapply typing_wf_local in Ht; eauto.
+Qed.
+
+Hint Unfold weaken_env_prop : pcuic.
 
 Lemma on_declared_minductive `{checker_flags} {Σ ref decl} :
   wf Σ ->

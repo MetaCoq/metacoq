@@ -141,11 +141,6 @@ Inductive constant_entry :=
   [x1:X1;...;xn:Xn].
 *)
 
-Inductive recursivity_kind :=
-  | Finite (* = inductive *)
-  | CoFinite (* = coinductive *)
-  | BiFinite (* = non-recursive, like in "Record" definitions *).
-
 Inductive local_entry : Set :=
 | LocalDef : term -> local_entry (* local let binding *)
 | LocalAssum : term -> local_entry.

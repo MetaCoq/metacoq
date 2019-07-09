@@ -295,13 +295,13 @@ Proof.
   destruct isdecl as [[Hmdecl Hidecl] Hpdecl].
   eapply lookup_on_global_env in Hmdecl as [Σ' [wfΣ' prf]]; eauto. red in prf.
   apply onInductives in prf.
-  eapply nth_error_alli in Hidecl; eauto. intuition.
-(*   eapply onProjections in Hidecl. *)
-(*   eapply nth_error_alli in Hidecl; eauto. red in Hidecl. *)
-(*   destruct decompose_prod_assum. *)
-(*   destruct Hidecl as [[s Hs] Hnpars]. apply wf_subst_instance_constr. apply Hs. *)
-(* Qed. *)
-Admitted.
+  eapply nth_error_alli in Hidecl; eauto. intuition auto.
+  destruct (onProjections Hidecl).
+  now eapply nth_error_Some_non_nil in H.
+  eapply nth_error_alli in on_projs; eauto. red in on_projs.
+  hnf in on_projs.
+  destruct on_projs as [s [Hs Hnpars]]. apply wf_subst_instance_constr. apply Hs.
+Qed.
 
 Lemma declared_inductive_wf {cf:checker_flags} :
   forall (Σ : global_env) ind
@@ -424,9 +424,9 @@ Proof.
     + revert X0. generalize (fix_context mfix). intros.
       clear decl H. constructor. induction mfix. constructor. constructor.
       2:{ apply IHmfix. inv X0. auto. }
-      inv X0. intuition. now apply wf_lift_wf in H0.
+      inv X0. intuition. now apply wf_lift_wf in H1.
     + eapply nth_error_all in X0; eauto. simpl in X0; intuition eauto.
-      now apply wf_lift_wf in H1.
+      now apply wf_lift_wf in H2.
 
   - split. apply H. destruct X1 as [X1|[s X1]]; [|apply X1].
     destruct X1 as [[Γ' [s [X1 X1']]] XX]; cbn in *.

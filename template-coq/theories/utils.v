@@ -1080,6 +1080,11 @@ Qed.
 Lemma nth_error_Some_length {A} {l : list A} {n t} : nth_error l n = Some t -> n < length l.
 Proof. rewrite <- nth_error_Some. destruct (nth_error l n); congruence. Qed.
 
+Lemma nth_error_Some_non_nil {A} (l : list A) (n : nat) (x : A) : nth_error l n = Some x -> l <> [].
+Proof.
+  destruct l, n; simpl; congruence.
+Qed.
+
 Lemma nth_error_spec {A} (l : list A) (n : nat) : nth_error_Spec l n (nth_error l n).
 Proof.
   destruct nth_error eqn:Heq.

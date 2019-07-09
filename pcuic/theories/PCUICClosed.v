@@ -168,26 +168,38 @@ Proof.
   specialize (IHT3 (ctx,, vdef na T1 T2)). now destruct destArity.
 Qed.
 
-Lemma closedn_All_local_closed:
-  forall (cf : checker_flags) (Σ : global_env_ext) (Γ : context) (ctx : list context_decl)
-         (wfΓ' : wf_local Σ (Γ ,,, ctx)),
-    All_local_env_over typing
-    (fun (Σ0 : global_env_ext) (Γ0 : context) (_ : wf_local Σ0 Γ0) (t T : term) (_ : Σ0;;; Γ0 |- t : T) =>
-       closedn #|Γ0| t && closedn #|Γ0| T) Σ (Γ ,,, ctx) wfΓ' ->
-    closedn_ctx 0 Γ && closedn_ctx #|Γ| ctx.
-Proof.
-  intros cf Σ Γ ctx wfΓ' al.
-  induction Γ. simpl.
-  induction ctx using rev_ind. constructor.
-  depelim al. destruct ctx; discriminate.
-  unfold app_context in x1.
-Admitted.
-
 Lemma closedn_ctx_cons n d Γ : closedn_ctx n (d :: Γ) -> closedn_ctx n Γ && closed_decl (n + #|Γ|) d.
 Proof.
   unfold closedn_ctx.
   simpl. rewrite mapi_app. rewrite forallb_app.
   move/andP => [] -> /=. now rewrite Nat.add_0_r List.rev_length andb_true_r.
+Qed.
+
+Lemma closedn_ctx_app n Γ Γ' :
+  closedn_ctx n (Γ ,,, Γ') =
+  closedn_ctx n Γ && closedn_ctx (n + #|Γ|) Γ'.
+Proof.
+  rewrite /closedn_ctx /app_context /= List.rev_app_distr mapi_app forallb_app /=.
+  bool_congr.
+  rewrite List.rev_length.
+  f_equal. eapply mapi_ext. intros.
+  f_equal. lia.
+Qed.
+
+Lemma closedn_All_local_closed:
+  forall (cf : checker_flags) (Σ : global_env_ext) (ctx : list context_decl)
+         (wfΓ' : wf_local Σ ctx),
+    All_local_env_over typing
+    (fun (Σ0 : global_env_ext) (Γ0 : context) (_ : wf_local Σ0 Γ0) (t T : term) (_ : Σ0;;; Γ0 |- t : T) =>
+       closedn #|Γ0| t && closedn #|Γ0| T) Σ ctx wfΓ' ->
+    closedn_ctx 0 ctx.
+Proof.
+  intros cf Σ Γ al.
+  induction 1. constructor.
+  rewrite /closedn_ctx /= mapi_app forallb_app /= [forallb _ _]IHX /id /closed_decl /=.
+  now rewrite Nat.add_0_r List.rev_length p.
+  rewrite /closedn_ctx /= mapi_app forallb_app /= [forallb _ _]IHX /id /closed_decl /=.
+  now rewrite Nat.add_0_r List.rev_length p.
 Qed.
 
 Lemma closedn_mkProd_or_LetIn (Γ : context) d T :
@@ -234,22 +246,6 @@ Proof.
     simpl in cT. rewrite <- app_length.
     eapply closedn_mkLambda_or_LetIn;
       now rewrite app_length // plus_n_Sm.
-Qed.
-(* TODO move *)
-Lemma subst_context_length s n Γ : #|subst_context s n Γ| = #|Γ|.
-Proof.
-  induction Γ as [|[na [body|] ty] tl] in Γ |- *; cbn; eauto.
-  - rewrite !List.rev_length !mapi_length !app_length !List.rev_length. simpl.
-    lia.
-  - rewrite !List.rev_length !mapi_length !app_length !List.rev_length. simpl.
-    lia.
-Qed.
-
-Lemma smash_context_length Γ Γ' : #|smash_context Γ Γ'| = #|Γ| + context_assumptions Γ'.
-Proof.
-  induction Γ' as [|[na [body|] ty] tl] in Γ |- *; cbn; eauto.
-  - now rewrite IHtl subst_context_length.
-  - rewrite IHtl app_length. simpl. lia.
 Qed.
 
 Lemma typecheck_closed `{cf : checker_flags} :
@@ -356,10 +352,11 @@ Proof.
     split.
     rewrite -> app_context_length in *. rewrite -> Nat.add_comm in *.
     eapply closedn_lift_inv in H2; eauto. lia.
+    subst types.
     now rewrite -> app_context_length, fix_context_length in H1.
-    eapply (nth_error_all) in H0; eauto. simpl in *.
+    eapply (nth_error_all) in H; eauto. simpl in *.
     intuition. toProp.
-    rewrite app_context_length in H1.
+    subst types. rewrite app_context_length in H1.
     rewrite Nat.add_comm in H1.
     now eapply closedn_lift_inv in H1.
 
@@ -367,19 +364,22 @@ Proof.
     + destruct i as [[u [ctx [Heq Hi]]] Hwfi]. simpl in Hwfi.
       generalize (destArity_spec [] B). rewrite Heq.
       simpl; intros ->.
-      apply closedn_All_local_closed in Hwfi. move/andP: Hwfi => [] clΓ clctx.
+      apply closedn_All_local_closed in Hwfi.
+      rewrite closedn_ctx_app in Hwfi.
+      move/andP: Hwfi => [] clΓ clctx.
       apply closedn_it_mkProd_or_LetIn => //.
     + destruct s. rewrite andb_true_r in p. intuition auto.
 Qed.
 
-Lemma declared_decl_closed `{checker_flags} Σ cst decl :
+Lemma declared_decl_closed `{checker_flags} (Σ : global_env) cst decl :
   wf Σ ->
-  lookup_env (fst Σ) cst = Some decl ->
-  on_global_decl (fun Σ Γ b t => closedn #|Γ| b && option_default (closedn #|Γ|) t true) Σ decl.
+  lookup_env Σ cst = Some decl ->
+  on_global_decl (fun Σ Γ b t => closedn #|Γ| b && option_default (closedn #|Γ|) t true)
+                 (Σ, universes_decl_of_decl decl) decl.
 Proof.
   intros.
   eapply weaken_lookup_on_global_env; try red; eauto.
-  eapply on_global_decls_impl; cycle 1.
+  eapply on_global_env_impl; cycle 1.
   apply (env_prop_sigma _ typecheck_closed _ X).
   red; intros. unfold lift_typing in *. destruct T; intuition auto with wf.
   destruct X1 as [s0 Hs0]. simpl. toProp; intuition.

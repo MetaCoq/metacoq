@@ -14,8 +14,6 @@ Require Import Equations.Type.Relation Equations.Type.Relation_Properties.
 Local Open Scope string_scope.
 Set Asymmetric Patterns.
 
-Existing Instance config.default_checker_flags.
-
 (** * Parallel reduction and confluence *)
 
 (** For this notion of reductions, theses are the atoms that reduce to themselves:
@@ -35,7 +33,7 @@ Definition atom t :=
 
 (** Simple lemmas about reduction *)
 
-Lemma red1_red (Σ : global_env_ext) Γ t u : red1 (fst Σ) Γ t u -> red (fst Σ) Γ t u.
+Lemma red1_red (Σ : global_env) Γ t u : red1 Σ Γ t u -> red Σ Γ t u.
 Proof. econstructor; eauto. constructor. Qed.
 Hint Resolve red1_red refl_red.
 

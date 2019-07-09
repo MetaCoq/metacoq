@@ -158,7 +158,7 @@ struct
   let (tdef,tmkdef) = (r_base_reify "def", r_base_reify "mkdef")
   let (tLocalDef,tLocalAssum,tlocal_entry) = (r_reify "LocalDef", r_reify "LocalAssum", r_reify "local_entry")
 
-  let (cFinite,cCoFinite,cBiFinite) = (r_reify "Finite", r_reify "CoFinite", r_reify "BiFinite")
+  let (cFinite,cCoFinite,cBiFinite) = (r_base_reify "Finite", r_base_reify "CoFinite", r_base_reify "BiFinite")
   let tone_inductive_body = r_reify "one_inductive_body"
   let tBuild_one_inductive_body = r_reify "Build_one_inductive_body"
   let tBuild_mutual_inductive_body = r_reify "Build_mutual_inductive_body"

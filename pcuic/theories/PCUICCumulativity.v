@@ -16,7 +16,7 @@ Require Import Equations.Type.Relation Equations.Type.Relation_Properties.
 Reserved Notation " Σ ;;; Γ |- t == u " (at level 50, Γ, t, u at next level).
 
 Lemma cumul_alt `{cf : checker_flags} Σ Γ t u :
-  Σ ;;; Γ |- t <= u <~> { v & { v' & (red Σ Γ t v * red Σ Γ u v' * leq_term (snd Σ) v v')%type } }.
+  Σ ;;; Γ |- t <= u <~> { v & { v' & (red Σ Γ t v * red Σ Γ u v' * leq_term (global_ext_constraints Σ) v v')%type } }.
 Proof.
   split.
   { induction 1. exists t, u. intuition auto; constructor.
@@ -150,8 +150,8 @@ Proof.
 Admitted.
 
 Inductive conv_alt `{checker_flags} (Σ : global_env_ext) (Γ : context) : term -> term -> Type :=
-| conv_alt_refl t u : eq_term (snd Σ) t u -> Σ ;;; Γ |- t == u
-| conv_alt_red_l t u v : red1 (fst Σ) Γ t v -> Σ ;;; Γ |- v == u -> Σ ;;; Γ |- t == u
+| conv_alt_refl t u : eq_term (global_ext_constraints Σ) t u -> Σ ;;; Γ |- t == u
+| conv_alt_red_l t u v : red1 Σ Γ t v -> Σ ;;; Γ |- v == u -> Σ ;;; Γ |- t == u
 | conv_alt_red_r t u v : Σ ;;; Γ |- t == v -> red1 (fst Σ) Γ u v -> Σ ;;; Γ |- t == u
 where " Σ ;;; Γ |- t == u " := (@conv_alt _ Σ Γ t u) : type_scope.
 
@@ -202,7 +202,7 @@ Lemma conv_alt_red `{cf : checker_flags} :
     ∑ t' u',
       red Σ Γ t t' ×
       red Σ Γ u u' ×
-      eq_term (snd Σ) t' u'.
+      eq_term (global_ext_constraints Σ) t' u'.
 Proof.
   intros Σ Γ t u h. induction h.
   - exists t, u. intuition auto.
@@ -383,7 +383,7 @@ Qed.
 
 Lemma eq_term_conv `{cf : checker_flags} :
   forall {Σ Γ u v},
-    eq_term (snd Σ) u v ->
+    eq_term (global_ext_constraints Σ) u v ->
     Σ ;;; Γ |- u = v.
 Proof.
   intros Σ Γ u v e.

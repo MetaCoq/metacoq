@@ -14,7 +14,7 @@ Existing Instance config.default_checker_flags.
 
 Section IsType.
   Context {F : Fuel}.
-  Variables (Σ : global_context) (Γ : context).
+  Variables (Σ : global_env_ext) (Γ : context).
 
   Fixpoint is_arity (F : Fuel) t : typing_result bool :=
     match F with
@@ -66,7 +66,7 @@ Section Erase.
                                   E.dbody := dbody' |})) defs.
   End EraseMfix.
   
-  Fixpoint extract (Σ : global_context) (Γ : context) (t : term) : typing_result E.term :=
+  Fixpoint extract (Σ : global_env_ext) (Γ : context) (t : term) : typing_result E.term :=
     b <- is_type_or_proof Σ Γ t ;;
     if (b : bool) then ret E.tBox else
     match t with
@@ -240,7 +240,7 @@ Definition computational_type Σ T :=
 
 (** The precondition on the extraction theorem. *)
 
-Record extraction_pre (Σ : global_context) t T :=
+Record extraction_pre (Σ : global_env_ext) t T :=
   { extr_typed : Σ ;;; [] |- t : T;
     extr_env_axiom_free : axiom_free (fst Σ);
     extr_computational_type : computational_type Σ T }.
@@ -296,7 +296,7 @@ Fixpoint obs_eq (Σ : global_context) (v v' : term) (T : term) (s : universe) : 
     obs_eq Σ f f'.                                     
 *)                      
 
-Record extraction_post (Σ : global_context) (Σ' : EAst.global_context) (t : term) (t' : E.term) : Prop :=
+Record extraction_post (Σ : global_env_ext) (Σ' : EAst.global_context) (t : term) (t' : E.term) : Prop :=
   { extr_value : E.term;
     extr_eval : EWcbvEval.eval Σ' t' extr_value;
     (* extr_equiv : obs_eq Σ v extr_value *) }.

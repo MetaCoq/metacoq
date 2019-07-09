@@ -153,41 +153,6 @@ End DestArity.
 Section Lemmata.
 
   Context (flags : RedFlags.t).
-  Context (Σ : global_context).
-  Context (hΣ : ∥ wf Σ ∥).
-
-  (* red is the reflexive transitive closure of one-step reduction and thus
-     can't be used as well order. We thus define the transitive closure,
-     but we take the symmetric version.
-   *)
-  Inductive cored Σ Γ: term -> term -> Prop :=
-  | cored1 : forall u v, red1 Σ Γ u v -> cored Σ Γ v u
-  | cored_trans : forall u v w, cored Σ Γ v u -> red1 Σ Γ v w -> cored Σ Γ w u.
-
-  Derive Signature for cored.
-
-  Inductive welltyped Σ Γ t : Prop :=
-  | iswelltyped A : Σ ;;; Γ |- t : A -> welltyped Σ Γ t.
-
-  Arguments iswelltyped {Σ Γ t A} h.
-
-  Definition wellformed Σ Γ t :=
-    welltyped Σ Γ t \/ ∥ isWfArity typing Σ Γ t ∥.
-
-  Lemma lookup_env_ConstantDecl_inv :
-    forall k k' ty bo uni,
-      Some (ConstantDecl k' {| cst_type := ty ; cst_body := bo; cst_universes := uni |})
-      = lookup_env Σ k ->
-      k = k'.
-  Proof.
-    intros k k' ty bo uni h.
-    destruct Σ as [Σ' φ].
-    induction Σ' in h |- *.
-    - cbn in h. discriminate.
-    - cbn in h. destruct (ident_eq_spec k (global_decl_ident a)).
-      + subst. inversion h. reflexivity.
-      + apply IHΣ' in h. assumption.
-  Qed.
 
   Lemma context_conversion :
     forall {Σ Γ t T Γ'},
@@ -197,7 +162,7 @@ Section Lemmata.
   Admitted.
 
   Lemma type_rename :
-    forall Γ u v A,
+    forall Σ Γ u v A,
       Σ ;;; Γ |- u : A ->
       eq_term_upto_univ eq eq u v ->
       Σ ;;; Γ |- v : A.
@@ -389,50 +354,92 @@ Section Lemmata.
   Admitted.
 
   Corollary type_nameless :
-    forall Γ u A,
+    forall Σ Γ u A,
       Σ ;;; Γ |- u : A ->
       Σ ;;; Γ |- nl u : A.
   Proof.
-    intros Γ u A h.
+    intros Σ Γ u A h.
     eapply type_rename.
     - eassumption.
     - eapply eq_term_upto_univ_tm_nl. all: auto.
   Qed.
 
-  Lemma fresh_global_nl :
-    forall Σ' k,
-      fresh_global k Σ' ->
-      fresh_global k (map nl_global_decl Σ').
+  Lemma lookup_env_ConstantDecl_inv :
+    forall Σ k k' ty bo uni,
+      Some (ConstantDecl k' {| cst_type := ty ; cst_body := bo; cst_universes := uni |})
+      = lookup_env Σ k ->
+      k = k'.
   Proof.
-    intros Σ' k h. eapply Forall_map.
+    intros Σ k k' ty bo uni h.
+    induction Σ in h |- *.
+    - cbn in h. discriminate.
+    - cbn in h. destruct (ident_eq_spec k (global_decl_ident a)).
+      + subst. inversion h. reflexivity.
+      + apply IHΣ in h. assumption.
+  Qed.
+
+  Lemma fresh_global_nl :
+    forall Σ k,
+      fresh_global k Σ ->
+      fresh_global k (map nl_global_decl Σ).
+  Proof.
+    intros Σ k h. eapply Forall_map.
     eapply Forall_impl ; try eassumption.
     intros x hh. cbn in hh.
     destruct x ; assumption.
   Qed.
 
   Lemma wf_nlg :
-    ∥ wf (nlg Σ) ∥.
+    forall Σ,
+      ∥ wf Σ ∥ ->
+      ∥ wf (nlg Σ) ∥.
   Proof.
-    destruct hΣ as [wΣ]; clear hΣ. constructor.
-    destruct Σ as [Σ' φ].
+    intros Σ [wΣ].
+    constructor.
+    destruct Σ as [Σ φ].
     unfold nlg. unfold wf in *. unfold on_global_env in *. simpl in *.
-    induction Σ'.
+    induction Σ.
     - assumption.
     - simpl. inversion wΣ. subst.
       constructor.
-      + eapply IHΣ'. assumption.
+      + eapply IHΣ. assumption.
       + destruct a.
         * simpl in *. eapply fresh_global_nl. assumption.
         * simpl in *. eapply fresh_global_nl. assumption.
       + destruct a.
         * simpl in *. destruct c as [ty [bo |] uni].
           -- cbn in *.
-             (* Need type_nl or something *)
-             admit.
+             econstructor.
+             ++ eapply type_nameless.
+                (* Need some lemma like welltyped_nlg? *)
+                admit.
+             ++ admit.
+             ++ admit.
           -- cbn in *. (* same *)
              admit.
         * simpl in *. destruct m. admit.
   Admitted.
+
+  Context (Σ : global_context).
+  Context (hΣ : ∥ wf Σ ∥).
+
+  (* red is the reflexive transitive closure of one-step reduction and thus
+     can't be used as well order. We thus define the transitive closure,
+     but we take the symmetric version.
+   *)
+  Inductive cored Σ Γ: term -> term -> Prop :=
+  | cored1 : forall u v, red1 Σ Γ u v -> cored Σ Γ v u
+  | cored_trans : forall u v w, cored Σ Γ v u -> red1 Σ Γ v w -> cored Σ Γ w u.
+
+  Derive Signature for cored.
+
+  Inductive welltyped Σ Γ t : Prop :=
+  | iswelltyped A : Σ ;;; Γ |- t : A -> welltyped Σ Γ t.
+
+  Arguments iswelltyped {Σ Γ t A} h.
+
+  Definition wellformed Σ Γ t :=
+    welltyped Σ Γ t \/ ∥ isWfArity typing Σ Γ t ∥.
 
   Lemma welltyped_nlg :
     forall Γ t,

@@ -90,11 +90,17 @@ Lemma cumul_prop2 Σ Γ A B u :
 Proof.
 Admitted.                       (* cumul_prop2 *)
 
-Lemma leq_universe_prop Σ u1 u2 :
+Lemma leq_universe_prop cf Σ u1 u2 :
+  @check_univs cf = true ->
+  @prop_sub_type cf = false ->
   wf Σ ->
-  leq_universe (snd Σ) u1 u2 ->
+  @leq_universe cf (snd Σ) u1 u2 ->
   (is_prop_sort u1 \/ is_prop_sort u2) ->
   (is_prop_sort u1 /\ is_prop_sort u2).
+Proof.
+  intros. unfold leq_universe in *. rewrite H in H1.
+  unfold leq_universe0 in H1.
+  unfold leq_universe_n in H1.
 Admitted.                       (* leq_universe_prop *)
 
 Lemma invert_cumul_prod_r Σ Γ C na A B : wf Σ ->

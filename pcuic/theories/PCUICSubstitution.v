@@ -710,7 +710,7 @@ Proof.
   eapply declared_minductive_inv in Hdecl. 2:apply weaken_env_prop_typing. all:eauto.
   eapply wf_arities_context'; eauto.
 Qed.
-  
+
 Lemma on_constructor_closed  {Σ mind mdecl u i idecl cdecl} :
   wf Σ ->
   on_constructor (lift_typing typing) Σ (inductive_mind mind) mdecl (inductive_ind mind) idecl i cdecl ->
@@ -1709,6 +1709,17 @@ Proof.
     eapply red_cumul_inv. eapply r.
 Qed.
 
+Lemma substitution_cumul0 Σ Γ na t u u' a : wf Σ ->
+  Σ ;;; Γ ,, vass na t |- u <= u' ->
+  Σ ;;; Γ |- subst10 a u <= subst10 a u'.
+Proof.
+  move=> wfΣ Hu.
+  pose proof (substitution_untyped_cumul Σ Γ [vass na t] [] [a] u u' wfΣ).
+  forward X.
+  { constructor. constructor. }
+  simpl in X. now apply X.
+Qed.
+
 (** The cumulativity relation is substitutive, yay! *)
 
 Lemma substitution_cumul Σ Γ Γ' Γ'' s M N :
@@ -2131,6 +2142,7 @@ Proof.
       * simpl. eexists. eapply IHt. apply All_local_env_app_inv; intuition.
       * simpl. eapply IHt'. apply All_local_env_app_inv; intuition.
     + erewrite map_dtype. eapply type_Fix.
+      * eapply fix_guard_subst ; eauto.
       * rewrite nth_error_map H. reflexivity.
       * now rewrite subst_fix_context.
       * rewrite subst_fix_context.

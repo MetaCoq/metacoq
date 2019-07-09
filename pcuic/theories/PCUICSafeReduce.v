@@ -158,9 +158,9 @@ Section Normalisation.
 
   Lemma red_conv_context {Γ Γ'} : red_context Γ Γ' -> conv_context Σ Γ Γ'.
   Proof.
-    induction 1. constructor.
-    destruct r; econstructor; try eassumption; econstructor.
-    admit. admit. admit.
+    (* induction 1. constructor. *)
+    (* destruct r; econstructor; try eassumption; econstructor. *)
+    (* admit. admit. admit. *)
   Abort.
 
 

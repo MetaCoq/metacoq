@@ -107,6 +107,8 @@ src/universes0.ml
 src/universes0.mli
 src/univSubst0.ml
 src/univSubst0.mli
+src/equality.ml
+src/equality.mli
 src/utils.ml
 src/utils.mli
 src/wf.ml

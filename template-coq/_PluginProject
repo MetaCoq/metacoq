@@ -60,6 +60,8 @@ gen-src/string0.ml
 gen-src/string0.mli
 gen-src/universes0.ml
 gen-src/universes0.mli
+gen-src/equality.ml
+gen-src/equality.mli
 gen-src/utils.ml
 gen-src/utils.mli
 

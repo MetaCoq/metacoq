@@ -214,6 +214,7 @@ Section Inversion.
       Σ ;;; Γ |- tFix mfix n : T ->
       ∑ decl,
         let types := fix_context mfix in
+        fix_guard mfix ×
         nth_error mfix n = Some decl ×
         wf_local Σ (Γ ,,, types) ×
         All (fun d =>
@@ -270,3 +271,11 @@ Section Inversion.
   Qed.
 
 End Inversion.
+
+Lemma destArity_it_mkProd_or_LetIn ctx ctx' t :
+  destArity ctx (it_mkProd_or_LetIn ctx' t) =
+  destArity (ctx ,,, ctx') t.
+Proof.
+  induction ctx' in ctx, t |- *; simpl; auto.
+  rewrite IHctx'. destruct a as [na [b|] ty]; reflexivity.
+Qed.

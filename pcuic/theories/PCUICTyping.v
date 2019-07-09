@@ -427,6 +427,7 @@ Proof.
       constructor; try split; auto; intuition.
 Defined.
 
+
 (** *** Reduction
 
   The reflexive-transitive closure of 1-step reduction. *)
@@ -752,6 +753,39 @@ Section WfArity.
     { wfa : isWfArity Σ Γ T & All_local_env_over typing property Σ _ (snd (projT2 (projT2 wfa))) }.
 End WfArity.
 
+(* AXIOM GUARD CONDITION *)
+Axiom fix_guard : mfixpoint term -> bool.
+
+Axiom fix_guard_red1 :
+  forall Σ Γ mfix mfix' idx,
+    fix_guard mfix ->
+    red1 Σ Γ (tFix mfix idx) (tFix mfix' idx) ->
+    fix_guard mfix'.
+
+Axiom fix_guard_rename :
+  forall mfix f,
+    let mfix' :=
+        map (map_def (rename f) (rename (shiftn (List.length mfix) f))) mfix
+    in
+    fix_guard mfix ->
+    fix_guard mfix'.
+
+Axiom fix_guard_lift :
+  forall mfix n k,
+    let k' := (#|mfix| + k)%nat in
+    let mfix' := map (map_def (lift n k) (lift n k')) mfix in
+    fix_guard mfix ->
+    fix_guard mfix'.
+
+Axiom fix_guard_subst :
+  forall mfix s k,
+    let k' := (#|mfix| + k)%nat in
+    let mfix' := map (map_def (subst s k) (subst s k')) mfix in
+    fix_guard mfix ->
+    fix_guard mfix'.
+
+Axiom ind_guard : mutual_inductive_body -> bool.
+
 Inductive typing `{checker_flags} (Σ : global_context) (Γ : context) : term -> term -> Type :=
 | type_Rel n decl :
     All_local_env (lift_typing typing Σ) Γ ->
@@ -829,6 +863,7 @@ Inductive typing `{checker_flags} (Σ : global_context) (Γ : context) : term ->
 
 | type_Fix mfix n decl :
     let types := fix_context mfix in
+    fix_guard mfix ->
     nth_error mfix n = Some decl ->
     All_local_env (lift_typing typing Σ) (Γ ,,, types) ->
     All (fun d => (Σ ;;; Γ ,,, types |- d.(dbody) :
@@ -1057,7 +1092,9 @@ Section GlobalMaps.
       (** We check that the context of parameters is well-formed and that
           the size annotation counts assumptions only (no let-ins). *)
       onParams : on_context Σ mdecl.(ind_params);
-      onNpars : context_assumptions mdecl.(ind_params) = mdecl.(ind_npars) }.
+      onNpars : context_assumptions mdecl.(ind_params) = mdecl.(ind_npars);
+      onGuard : ind_guard mdecl
+    }.
 
   (** *** Typing of constant declarations *)
 
@@ -1510,6 +1547,7 @@ Lemma typing_ind_env `{cf : checker_flags} :
     (forall Σ (wfΣ : wf Σ) (Γ : context) (wfΓ : wf_local Σ Γ) (mfix : list (def term)) (n : nat) decl,
         let types := fix_context mfix in
         nth_error mfix n = Some decl ->
+        fix_guard mfix ->
         All_local_env (lift_typing (fun Σ Γ b ty =>
                          (typing Σ Γ b ty * P Σ Γ b ty)%type) Σ) (Γ ,,, types) ->
         All (fun d => (Σ ;;; Γ ,,, types |- d.(dbody) : lift0 #|types| d.(dtype))%type *
@@ -1759,7 +1797,7 @@ Proof.
            subst types. intros. eapply (X14 _ X _ _ Hty); eauto. lia. clear X14.
            subst types.
            remember (fix_context mfix) as mfixcontext. clear Heqmfixcontext.
-           clear e decl X13.
+           clear e decl X13. clear i.
            induction a0; econstructor; eauto.
        ++ split; auto.
           eapply (X _ a _ _ (fst p)). simpl. lia.
@@ -1934,7 +1972,7 @@ Section All_local_env.
     split. assumption.
     eapply All_local_env_impl. eassumption.
     intros Γ t []; cbn;
-      now rewrite app_context_assoc. 
+      now rewrite app_context_assoc.
   Defined.
 
 

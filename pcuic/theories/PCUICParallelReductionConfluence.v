@@ -1,4 +1,5 @@
 (* Distributed under the terms of the MIT license.   *)
+Set Warnings "-notation-overridden".
 Require Import ssreflect ssrbool.
 From MetaCoq.Template Require Import LibHypsNaming.
 From Equations Require Import Equations.
@@ -14,7 +15,7 @@ Require CMorphisms.
 Require Import Equations.Type.Relation Equations.Type.Relation_Properties.
 Require Import Equations.Prop.DepElim.
 
-Derive Signature for pred1 All All2 All2_local_env.
+Derive Signature for pred1 All2_local_env.
 
 Set Asymmetric Patterns.
 
@@ -588,6 +589,25 @@ Section Confluence.
     intros. apply (@mkApps_eq_decompose_app_rec f args t []); auto.
   Qed.
 
+  Lemma fst_decompose_app_rec t l : fst (decompose_app_rec t l) = fst (decompose_app t).
+  Proof.
+    induction t in l |- *; simpl; auto. rewrite IHt1.
+    unfold decompose_app. simpl. now rewrite (IHt1 [t2]).
+  Qed.
+
+  Lemma skipn_nth_error {A} (l : list A) i :
+     match nth_error l i with
+     | Some a => skipn i l = a :: skipn (S i) l
+     | None => skipn i l = []
+     end.
+  Proof.
+    induction l in i |- *. destruct i. reflexivity. reflexivity.
+    destruct i. simpl. reflexivity.
+    simpl. specialize (IHl i). destruct nth_error.
+    rewrite [skipn _ _]IHl. reflexivity.
+    rewrite [skipn _ _]IHl. reflexivity.
+  Qed.
+
   Hint Constructors pred1 : pcuic.
 
   Lemma All2_prop_eq_All2 {A B} {Σ Γ Δ} {f : A -> term} {g : A -> B} args0 args1 args3 :
@@ -639,12 +659,6 @@ Section Confluence.
   Qed.
   Hint Resolve All2_on_Trel_eq_impl : pcuic.
 
-  Lemma fst_decompose_app_rec t l : fst (decompose_app_rec t l) = fst (decompose_app t).
-  Proof.
-    induction t in l |- *; simpl; auto. rewrite IHt1.
-    unfold decompose_app. simpl. now rewrite (IHt1 [t2]).
-  Qed.
-
   Lemma isConstruct_app_inv t :
     isConstruct_app t = true ->
     ∃ ind k u args, t = mkApps (tConstruct ind k u) args.
@@ -684,19 +698,6 @@ Section Confluence.
     - constructor.
     - apply IHn; auto.
     - apply IHn; auto.
-  Qed.
-
-  Lemma skipn_nth_error {A} (l : list A) i :
-     match nth_error l i with
-     | Some a => skipn i l = a :: skipn (S i) l
-     | None => skipn i l = []
-     end.
-  Proof.
-    induction l in i |- *. destruct i. reflexivity. reflexivity.
-    destruct i. simpl. reflexivity.
-    simpl. specialize (IHl i). destruct nth_error.
-    rewrite [skipn _ _]IHl. reflexivity.
-    rewrite [skipn _ _]IHl. reflexivity.
   Qed.
 
   Equations construct_cofix_discr (t : term) : bool :=
@@ -2076,12 +2077,6 @@ Section Confluence.
     - sigma. simpl. constructor; auto with pcuic. solve_all.
 
     - rewrite !pred_atom_inst; auto. eapply pred1_refl_gen; auto with pcuic.
-  Qed.
-
-  Lemma All2_sym {A} (P : A -> A -> Type) l l' :
-    All2 P l l' -> All2 (fun x y => P y x) l' l.
-  Proof.
-    induction 1; constructor; auto.
   Qed.
 
   Definition rho_ctxmap (Γ Δ : context) (s : nat -> term) :=
@@ -3620,16 +3615,19 @@ Section Confluence.
     assert ((Nat.pred #|mfix0| - (#|mfix0| - S #|l'|)) = #|l'|) by lia.
     rewrite H0 H1.
     intros. depelim Hctxs. red in o. simpl in H2, H3. noconf H2; noconf H3.
-    simpl in H2. noconf H2.
-    rewrite -H2.
-    constructor. unfold mapi in IHAll2.
+    red in o. noconf Heqlen. simpl in H.
+    rewrite -H.
+    econstructor. unfold mapi in IHAll2.
     forward IHAll2 by lia.
     forward IHAll2 by lia.
-    forward IHAll2 by lia. rewrite -Hlen in IHAll2.
-    apply IHAll2; clear IHAll2. apply Hctxs; clear Hctxs.
+    forward IHAll2 by lia. rewrite -H in IHAll2.
+    rewrite -Hlen in IHAll2.
+    apply IHAll2; clear IHAll2.
+    rewrite -H in Hctxs.
+    apply Hctxs; clear Hctxs.
     clear IHAll2 Hctxs. destruct r.
-    destruct o0. destruct p. destruct p. red in o.
-    simpl in *. noconf Heqlen. simpl in H.
+    destruct o0. destruct p. destruct p.
+    simpl in *. simpl in H.
     rewrite H in o |- *.
     rewrite rho_ctx_app in o. apply o.
     econstructor. eauto. clear Hctxs o IHAll2.
@@ -3697,8 +3695,7 @@ Section Confluence.
     rewrite H0 H1.
     intros. depelim Hctxs. red in o.
     simpl in H2. noconf H2.
-    simpl in H3. noconf H3. simpl in H2. noconf H2.
-    rewrite -H2.
+    simpl in H3. noconf H3.
     constructor. unfold mapi in IHAll2.
     forward IHAll2 by lia.
     forward IHAll2 by lia.

@@ -67,7 +67,7 @@ Proof.
     eapply PCUICReduction.red_prod_r.
 
     eapply context_conversion_red. eauto. 2:eauto.
-    econstructor. eapply conv_context_refl; eauto. 
+    econstructor. eapply PCUICSR.conv_ctx_refl; eauto.
 
     econstructor. 2:eauto. 2:econstructor; eauto. 2:cbn. admit. admit.
   -   admit.
@@ -90,7 +90,7 @@ Proof.
     eapply PCUICReduction.red_prod_r.
 
     eapply context_conversion_red. eauto. 2:eauto.
-    econstructor. eapply conv_context_refl; eauto. 
+    econstructor. eapply conv_ctx_refl; eauto.
 
     econstructor. 2:eauto. 2:econstructor; eauto. 2:cbn. admit. admit.
   - eapply invert_cumul_letin_l in X; eauto.

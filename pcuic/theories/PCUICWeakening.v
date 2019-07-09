@@ -1058,6 +1058,7 @@ Proof.
           unfold app_context in *. rewrite <- !app_assoc, app_length in IHt'.
           specialize (IHt' eq_refl). simpl. apply IHt'.
     -- eapply type_Fix.
+       eapply fix_guard_lift ; eauto.
        rewrite -> nth_error_map, heq_nth_error. reflexivity.
        now rewrite -> lift_fix_context.
        rewrite -> lift_fix_context.

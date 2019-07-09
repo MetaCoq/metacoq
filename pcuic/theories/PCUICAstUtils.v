@@ -617,6 +617,12 @@ Proof. induction 1; simpl; auto. Qed.
 Lemma All2_same {A} (P : A -> A -> Type) l : (forall x, P x x) -> All2 P l l.
 Proof. induction l; constructor; auto. Qed.
 
+Lemma All2_sym {A} (P : A -> A -> Type) l l' :
+  All2 P l l' -> All2 (fun x y => P y x) l' l.
+Proof.
+  induction 1; constructor; auto.
+Qed.
+
 Lemma All_forallb_map_spec {A B : Type} {P : A -> Type} {p : A -> bool}
       {l : list A} {f g : A -> B} :
     All P l -> forallb p l ->

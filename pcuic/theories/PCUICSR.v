@@ -1,11 +1,17 @@
 (* Distributed under the terms of the MIT license.   *)
+Set Warnings "-notation-overridden".
+
 From Equations Require Import Equations.
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICWeakeningEnv PCUICWeakening
      PCUICSubstitution PCUICClosed PCUICCumulativity PCUICGeneration
-     PCUICValidity PCUICParallelReductionConfluence PCUICConfluence PCUICInversion PCUICPrincipality.
+     PCUICSubstitution PCUICClosed PCUICCumulativity PCUICGeneration PCUICReduction
+     PCUICParallelReduction PCUICEquality
+     PCUICValidity PCUICParallelReductionConfluence PCUICConfluence
+     PCUICInversion PCUICPrincipality.
+
 Require Import ssreflect ssrbool.
 Require Import String.
 From MetaCoq.Template Require Import LibHypsNaming.
@@ -53,27 +59,27 @@ Lemma decompose_app_tFix mfix idx args t :
   decompose_app t = (tFix mfix idx, args) -> t = mkApps (tFix mfix idx) args.
 Proof. apply decompose_app_rec_tFix. Qed.
 
-Inductive context_relation (P : global_context -> context -> context -> context_decl -> context_decl -> Type)
-          {Σ} : forall (Γ Γ' : context), Type :=
+Inductive context_relation (P : context -> context -> context_decl -> context_decl -> Type)
+          : forall (Γ Γ' : context), Type :=
 | ctx_rel_nil : context_relation P nil nil
 | ctx_rel_vass na na' T U Γ Γ' :
     context_relation P Γ Γ' ->
-    P Σ Γ Γ' (vass na T) (vass na' U) ->
+    P Γ Γ' (vass na T) (vass na' U) ->
     context_relation P (vass na T :: Γ) (vass na' U :: Γ')
 | ctx_rel_def na na' t T u U Γ Γ' :
     context_relation P Γ Γ' ->
-    P Σ Γ Γ' (vdef na t T) (vdef na' u U) ->
+    P Γ Γ' (vdef na t T) (vdef na' u U) ->
     context_relation P (vdef na t T :: Γ) (vdef na' u U :: Γ').
 Derive Signature for context_relation.
-Arguments context_relation P Σ Γ Γ' : clear implicits.
+Arguments context_relation P Γ Γ' : clear implicits.
 
-Lemma context_relation_nth {P Σ n Γ Γ' d} :
-  context_relation P Σ Γ Γ' -> nth_error Γ n = Some d ->
+Lemma context_relation_nth {P n Γ Γ' d} :
+  context_relation P Γ Γ' -> nth_error Γ n = Some d ->
   { d' & ((nth_error Γ' n = Some d') *
           let Γs := skipn (S n) Γ in
           let Γs' := skipn (S n) Γ' in
-          context_relation P Σ Γs Γs' *
-          P Σ Γs Γs' d d')%type }.
+          context_relation P Γs Γs' *
+          P Γs Γs' d d')%type }.
 Proof.
   induction n in Γ, Γ', d |- *; destruct Γ; intros Hrel H; noconf H.
   - depelim Hrel.
@@ -88,143 +94,594 @@ Proof.
     eexists; intuition eauto.
 Qed.
 
-(* Lemma all_local_env_mix {Σ Γ P Q} : *)
-(*   (forall Σ Γ t s s', (P Σ Γ t (tSort s) -> Q Σ Γ t (tSort s)) -> *)
-(*                       (P Σ Γ t (tSort s') -> Q Σ Γ t (tSort s'))) -> *)
-(*   All_local_env P Σ Γ -> All_local_env Q Σ Γ -> *)
-(*   All_local_env (fun Σ Γ t T => (P Σ Γ t T * Q Σ Γ t T)%type) Σ Γ. *)
-(* Proof. *)
-(*   intros Hsort. induction 1; intros H; depelim H; econstructor; eauto. *)
-(* Qed. *)
+Require Import CRelationClasses.
 
-(* Inductive red1_decls Σ Γ Γ' : forall (x y : context_decl), Type := *)
-(* | red1_vass na T T' : red1 Σ Γ T T' -> red1_decls Σ Γ Γ' (vass na T) (vass na T') *)
-(* | red1_vdef_type na b T T' : red1 Σ Γ T T' -> red1_decls Σ Γ Γ' (vdef na b T) (vdef na b T') *)
-(* | red1_vdef_body na b b' T : red1 Σ Γ b b' -> red1_decls Σ Γ Γ' (vdef na b T) (vdef na b' T). *)
-
-(* Definition red1_context := context_relation red1_decls. *)
+Lemma context_relation_trans P :
+  (forall Γ Γ' Γ'' x y z,
+      context_relation P Γ Γ' ->
+      context_relation P Γ' Γ'' ->
+      context_relation P Γ Γ'' ->
+      P Γ Γ' x y -> P Γ' Γ'' y z -> P Γ Γ'' x z) ->
+  Transitive (context_relation P).
+Proof.
+  intros HP x y z H. induction H in z |- *; auto;
+  intros H'; depelim H'; try constructor; auto.
+  specialize (IHcontext_relation _ H').
+  eapply (HP _ _ _ _ _ _ H H'); eauto.
+  eapply (HP _ _ _ _ _ _ H H'); eauto.
+Qed.
 
 Inductive conv_decls Σ Γ Γ' : forall (x y : context_decl), Type :=
 | conv_vass na na' T T' :
-    isWfArity_or_Type Σ Γ' T' ->
+    isType Σ Γ' T' ->
     Σ ;;; Γ |- T = T' ->
     conv_decls Σ Γ Γ' (vass na T) (vass na' T')
 
 | conv_vdef_type na na' b T T' :
-    isWfArity_or_Type Σ Γ' T' ->
+    isType Σ Γ' T' ->
     Σ ;;; Γ |- T = T' ->
     conv_decls Σ Γ Γ' (vdef na b T) (vdef na' b T')
 
 | conv_vdef_body na na' b b' T :
-     Σ ;;; Γ' |- b' : T ->
-     Σ ;;; Γ |- b = b' ->
-     conv_decls Σ Γ Γ' (vdef na b T) (vdef na' b' T).
+    isType Σ Γ' T ->
+    Σ ;;; Γ' |- b' : T ->
+    Σ ;;; Γ |- b = b' ->
+    conv_decls Σ Γ Γ' (vdef na b T) (vdef na' b' T).
 
-Notation conv_context := (context_relation conv_decls).
+Notation conv_context Σ Γ Γ' := (context_relation (@conv_decls Σ) Γ Γ').
 Require Import Equations.Tactics.
 
-(* First needs to show that cumulativity is closed under context conv *)
-Lemma wf_conv_context Σ Γ Δ (wfΓ : wf_local Σ Γ) :
+Hint Resolve conv_refl : pcuic.
+
+Lemma conv_ctx_refl Σ Γ : wf Σ -> wf_local Σ Γ -> conv_context Σ Γ Γ.
+Proof.
+  induction Γ; try econstructor.
+  destruct a as [na [b|] ty]; intros wfΣ wfΓ; depelim wfΓ; econstructor; eauto;
+  constructor; pcuic; eapply conv_refl.
+Qed.
+
+Hint Resolve conv_ctx_refl : pcuic.
+
+Arguments skipn : simpl never.
+
+Set SimplIsCbn.
+Require Import Lia.
+
+Lemma weakening_cumul0 `{CF:checker_flags} Σ Γ Γ'' M N n :
+  wf Σ -> n = #|Γ''| ->
+  Σ ;;; Γ |- M <= N ->
+  Σ ;;; Γ ,,, Γ'' |- lift0 n M <= lift0 n N.
+Proof. intros; subst; now apply (weakening_cumul _ _ []). Qed.
+
+Hint Constructors red1 : pcuic.
+Hint Resolve refl_red : pcuic.
+
+Lemma red1_red_ctx (Σ : global_context) Γ Γ' T U : wf Σ ->
+  red1 Σ Γ T U ->
+  @red_ctx Σ Γ Γ' ->
+  ∑ t, red Σ Γ' T t * red Σ Γ' U t.
+Proof.
+  intros wfΣ r H. revert Γ' H.
+  Ltac t := split; [eapply red1_red; try econstructor; eauto|try constructor]; eauto with pcuic.
+  Ltac u := intuition eauto with pcuic.
+
+  simpl in *. induction r using red1_ind_all; intros;
+  try solve [eexists; t]; try destruct (IHr _ H) as [? [? ?]].
+
+  - pose proof H0.
+    eapply nth_error_pred1_ctx_l in X as [body' [? ?]]; eauto.
+    exists (lift0 (S i) body'). split; eauto with pcuic.
+    rewrite -(firstn_skipn (S i) Γ').
+    epose proof (weakening_red _ _ [] (firstn (S i) Γ) _ _ wfΣ r).
+    rewrite firstn_length_le in X.
+    destruct (nth_error Γ i) eqn:Heq => //.
+    now eapply nth_error_Some_length in Heq.
+    simpl lift_context in X.
+    (* Need IH on local decl bodies *)
+    admit.
+
+  - firstorder auto with pcuic.
+    exists (tLambda na x N). split; apply red_abs; auto.
+
+  - destruct (IHr (Γ' ,, vass na N)). constructor; pcuic.
+    exists (tLambda na N x). split; apply red_abs; u.
+
+  - exists (tLetIn na x t b'). split; eapply red_letin; auto.
+  - specialize (IHr (Γ' ,, vdef na b t)).
+    forward IHr. constructor; eauto. red. eauto.
+    destruct IHr as [? [? ?]].
+    exists (tLetIn na b t x). split; eapply red_letin; auto.
+  - exists (tCase ind x c brs). u; now apply red_case_p.
+  - exists (tCase ind p x brs). u; now apply red_case_c.
+  - eexists. split. apply red_case_one_brs. admit. admit.
+    (* simpl. intuition auto. simpl in *. subst. *)
+    (* destruct (b2 _ H) as [? [? ?]]. *)
+    (* u. *)
+    (* exists (tCase ind p c brs). u; now apply red_case_c. *)
+  - exists (tProj p x). u; now eapply red_proj_c.
+  - exists (tApp x M2). u; now eapply red_app.
+  - exists (tApp M1 x). u; now eapply red_app.
+  - exists (tProd na x M2). u; now eapply red_prod.
+  - specialize (IHr (Γ' ,, vass na M1)) as [? [? ?]].
+    constructor; pcuic.
+    exists (tProd na M1 x). u; now eapply red_prod.
+  - admit.
+  - admit.
+  - admit.
+  - admit.
+  - admit.
+Admitted.
+
+Lemma red_confluence {Σ Γ t u v} : wf Σ ->
+  red Σ Γ t u -> red Σ Γ t v ->
+  ∃ v', red Σ Γ u v' * red Σ Γ v v'.
+Proof.
+  move=> wfΣ H H'. apply red_alt in H. apply red_alt in H'.
+  destruct (red1_confluent wfΣ _ _ _ _ H H') as [nf [redl redr]].
+  apply red_alt in redl; apply red_alt in redr.
+  exists nf; intuition auto.
+Qed.
+
+Lemma red_red_ctx {Σ Γ Γ' T U} : wf Σ ->
+  red Σ Γ T U ->
+  @red_ctx Σ Γ Γ' ->
+  ∑ t, red Σ Γ' T t * red Σ Γ' U t.
+Proof.
+  intros wfΣ H. apply red_alt in H.
+  induction H. now apply red1_red_ctx.
+  intros. exists x. pcuic.
+  intros Hctx.
+  destruct (IHclos_refl_trans1 Hctx) as [? [? ?]].
+  destruct (IHclos_refl_trans2 Hctx) as [? [? ?]].
+  destruct (red_confluence wfΣ r0 r1).
+  destruct p. exists x2. split; auto. now transitivity x0.
+  now transitivity x1.
+Qed.
+
+Lemma OnOne2_sym {A} (P : A -> A -> Type) l l' : OnOne2 (fun x y => P y x) l' l -> OnOne2 P l l'.
+Proof.
+  induction 1; constructor; auto.
+Qed.
+
+Instance refl_eq_univ φ : Reflexive (eq_universe φ).
+Admitted.
+
+Instance eq_univ_trans φ : Transitive (eq_universe φ).
+Admitted.
+
+Instance refl_leq_univ φ : Reflexive (leq_universe φ).
+Admitted.
+
+Instance leq_univ_trans φ : Transitive (leq_universe φ).
+Admitted.
+
+Existing Class SubstUnivPreserving.
+
+Instance eq_univ_substu φ : SubstUnivPreserving (eq_universe φ).
+Admitted.
+
+Instance leq_univ_substu φ : SubstUnivPreserving (leq_universe φ).
+Admitted.
+
+Ltac tc := try typeclasses eauto 10.
+
+Lemma eq_universe_leq_incl φ : forall u u' : universe, eq_universe φ u u' -> leq_universe φ u u'.
+Admitted.
+
+Hint Resolve eq_universe_leq_incl : pcuic.
+
+Section RedCtxProof.
+  Context {Re Rle} {refl : Reflexive Re} {refl' :Reflexive Rle}
+          {trre : Transitive Re} {trle : Transitive Rle} `{SubstUnivPreserving Re} `{SubstUnivPreserving Rle}.
+  Context (inclre : forall u u' : universe, Re u u' -> Rle u u').
+
+  Lemma red1_red1_ctx_upto {Σ Γ T V U} :
+    wf Σ ->
+    eq_term_upto_univ Re Rle T U -> red1 Σ Γ U V ->
+    ∑ T', red1 Σ Γ T T' * eq_term_upto_univ Re Rle T' V.
+  Proof.
+    intros wfΣ leqTU redUV.
+    revert T leqTU.
+    revert U V redUV.
+    induction U using term_forall_list_ind; intros V reduv T leqTU; depelim leqTU;
+      depelim reduv; solve_discr.
+    all:try solve [eexists; split; repeat (eauto; constructor)].
+    - eexists. split. constructor. eauto.
+      eapply reflexivity.
+
+    - eapply OnOne2_All_mix_left in X; eauto. simpl in X. clear o.
+      induction X. depelim a.
+      destruct p.
+      specialize (s _ r).
+      pose proof e.
+      eapply eq_term_upto_univ_leq in X; eauto.
+      specialize (s _ X).
+      destruct s as [T' [redx leqT']].
+      exists (tEvar n (T' :: l)). split; auto. constructor. constructor. auto.
+      constructor; auto. constructor; auto.
+      eapply eq_term_upto_univ_leq. auto. admit.
+      admit.
+
+  Admitted.
+
+  Lemma red_red_ctx_upto {Σ Γ T V U} :
+    wf Σ ->
+    eq_term_upto_univ Re Rle T U -> red Σ Γ U V ->
+    ∑ T', red Σ Γ T T' * eq_term_upto_univ Re Rle T' V.
+  Admitted.
+
+  (* Lemma red_red_ctx_upto_r {Σ Γ T V U} : *)
+  (*   wf Σ -> *)
+  (*   red Σ Γ T U -> eq_term_upto_univ Re Rle U V -> *)
+  (*   ∑ T', red Σ Γ T' V * eq_term_upto_univ Re Rle T' U. *)
+  (* Admitted. *)
+
+  (* Lemma red_red_ctx_upto {Σ Γ Γ' T V U} : wf Σ -> *)
+  (*    red Σ Γ T U -> leq_term (snd Σ) V U -> *)
+  (*    @red_ctx Σ Γ Γ' -> *)
+  (*    ∑ t, red Σ Γ' T t * red Σ Γ' U t * leq_term (snd Σ) V t. *)
+  (* Proof. *)
+  (*   intros wfΣ H. apply red_alt in H. *)
+  (*   induction H. intros. *)
+  (*   eapply red1_red_ctx in r; eauto. *)
+  (*   destruct r as [? [? ?]]. *)
+
+End RedCtxProof.
+
+Lemma red_eq_term_upto_univ_l {Σ : global_context} {Re Rle Γ} u v u' :
+    Reflexive Re ->
+    Reflexive Rle ->
+    Transitive Re ->
+    Transitive Rle ->
+    SubstUnivPreserving Re ->
+    SubstUnivPreserving Rle ->
+    (forall u u' : universe, Re u u' -> Rle u u') ->
+    eq_term_upto_univ Re Rle u u' ->
+    red Σ Γ u v ->
+    ∑ v',
+      red Σ Γ u' v' *
+      eq_term_upto_univ Re Rle v v'.
+Proof.
+  intros.
+  eapply red_alt in X7.
+  induction X7 in u', X6 |- *.
+  - destruct (red1_eq_term_upto_univ_l Σ Re Rle Γ x y u'); auto.
+    destruct p. exists x0. split; auto.
+  - exists u'. split; auto.
+  - destruct (IHX7_1 _ X6) as [? [? ?]].
+    destruct (IHX7_2 _ e) as [? [? ?]].
+    exists x1. split. transitivity x0; auto.
+    auto.
+Qed.
+
+Lemma cumul_red_ctx(Σ : global_context) Γ Γ' T U : wf Σ ->
+  Σ ;;; Γ |- T <= U ->
+  @red_ctx Σ Γ Γ' ->
+  Σ ;;; Γ' |- T <= U.
+Proof.
+  intros wfΣ H Hctx.
+  apply cumul_alt in H as [v [v' [[redl redr] leq]]].
+  destruct (red_red_ctx wfΣ redl Hctx) as [lnf [redl0 redr0]].
+  apply cumul_alt.
+  eapply red_eq_term_upto_univ_l in leq; eauto. all:tc; pcuic.
+  destruct leq as [? [? ?]].
+  destruct (red_red_ctx wfΣ redr Hctx) as [rnf [redl1 redr1]].
+  destruct (red_confluence wfΣ r redr1). destruct p.
+  edestruct (red_red_ctx_upto (eq_universe_leq_incl _) wfΣ e r0) as [lnf' [? ?]].
+  exists lnf', x0. intuition auto. now transitivity lnf.
+  now transitivity rnf.
+Qed.
+
+Lemma cumul_red_ctx_inv (Σ : global_context) Γ Γ' T U : wf Σ ->
+  Σ ;;; Γ |- T <= U ->
+  @red_ctx Σ Γ' Γ ->
+  Σ ;;; Γ' |- T <= U.
+Proof.
+  intros wfΣ H Hctx.
+  apply cumul_alt in H as [v [v' [[redl redr] leq]]].
+  pose proof (PCUICConfluence.red_red_ctx wfΣ _ _ _ _ redl Hctx).
+  pose proof (PCUICConfluence.red_red_ctx wfΣ _ _ _ _ redr Hctx).
+  apply cumul_alt.
+  exists v, v'.
+  split. pcuic. auto.
+Qed.
+
+Lemma conv_red_ctx {Σ : global_context} {Γ Γ' T U} : wf Σ ->
+  Σ ;;; Γ |- T = U ->
+  @red_ctx Σ Γ Γ' ->
+  Σ ;;; Γ' |- T = U.
+Proof.
+  intros wfΣ H Hctx.
+  split; eapply cumul_red_ctx; eauto; eapply H.
+Qed.
+
+Lemma conv_red_ctx_inv {Σ : global_context} {Γ Γ' T U} : wf Σ ->
+  Σ ;;; Γ |- T = U ->
+  @red_ctx Σ Γ' Γ ->
+  Σ ;;; Γ' |- T = U.
+Proof.
+  intros wfΣ H Hctx.
+  split; eapply cumul_red_ctx_inv; eauto; eapply H.
+Qed.
+
+Lemma red1_conv_confluent (Σ : global_context) Γ Γ' T v :
+  red1 Σ Γ T v -> conv_context Σ Γ Γ' ->
+  ∑ v', red Σ Γ' T v' * red Σ Γ T v'.
+Proof.
+  intros H. revert Γ'. destruct Σ as [Σ uc].
+  simpl in *. induction H using red1_ind_all; intros;
+  try solve [eexists; intuition eauto].
+Qed.
+
+Lemma red_conv_confluent (Σ : global_context) Γ Γ' T v :
+  red Σ Γ T v ->
+  conv_context Σ Γ Γ' ->
+  ∑ v', red Σ Γ' T v' * red Σ Γ T v'.
+Proof.
+  intros H. induction H. intros; intuition eauto.
+  intros.
+  eapply red1_conv_confluent in r; eauto.
+Qed.
+
+Arguments red_ctx : clear implicits.
+
+Lemma red_eq_context_upto_l {Σ : global_context} {Re Γ Δ u v}
+      `{Reflexive _ Re} `{Transitive _ Re} `{SubstUnivPreserving Re} :
+  wf Σ ->
+  red Σ Γ u v ->
+  eq_context_upto Re Γ Δ ->
+  ∑ v',
+  red Σ Δ u v' *
+  eq_term_upto_univ Re Re v v'.
+Proof.
+  intros wfΣ r HΓ.
+  eapply red_alt in r.
+  induction r.
+  - eapply red1_eq_context_upto_l in r; eauto.
+    destruct r as [v [? ?]]. exists v. intuition pcuic.
+    now eapply red1_red.
+  - exists x. split; auto. reflexivity.
+  - destruct IHr1 as [v' [? ?]].
+    destruct IHr2 as [v'' [? ?]].
+    eapply (red_eq_term_upto_univ_l y v'' v') in e; tc. all:pcuic.
+    destruct e as [? [? ?]].
+    exists x0; split; eauto.
+    now transitivity v'.
+    eapply eq_term_upto_univ_trans with v''; auto.
+Qed.
+
+Lemma conv_context_red_context (Σ : global_context) Γ Γ' :
+  wf Σ ->
+  conv_context Σ Γ Γ' ->
+  ∑ Δ Δ', red_ctx Σ Γ Δ * red_ctx Σ Γ' Δ' * eq_context_upto (eq_universe (snd Σ)) Δ Δ'.
+Proof.
+  intros wfΣ Hctx.
+  induction Hctx.
+  - exists [], []; intuition pcuic. constructor.
+  - destruct IHHctx as [Δ [Δ' [[? ?] ?]]].
+    depelim p.
+    pose proof (conv_red_ctx wfΣ c r).
+    eapply conv_conv_alt, conv_alt_red in X.
+    destruct X as [T' [U' [? [? ?]]]].
+    pose proof (PCUICConfluence.red_red_ctx wfΣ _ _ _ _ r1 r).
+    pose proof (PCUICConfluence.red_red_ctx wfΣ _ _ _ _ r2 r).
+    destruct (red_eq_context_upto_l wfΣ r1 e). destruct p.
+    destruct (red_eq_context_upto_l wfΣ r2 e). destruct p.
+    exists (Δ ,, vass na' T'), (Δ' ,, vass na' x0).
+    split; [split|]; constructor; auto. red.
+    eapply PCUICConfluence.red_red_ctx; eauto.
+    eapply eq_term_upto_univ_trans with U'; eauto; tc.
+  - destruct IHHctx as [Δ [Δ' [[? ?] ?]]].
+    depelim p.
+    * pose proof (conv_red_ctx wfΣ c r).
+      eapply conv_conv_alt, conv_alt_red in X.
+      destruct X as [T' [U' [? [? ?]]]].
+      pose proof (PCUICConfluence.red_red_ctx wfΣ _ _ _ _ r1 r).
+      pose proof (PCUICConfluence.red_red_ctx wfΣ _ _ _ _ r2 r).
+      destruct (red_eq_context_upto_l wfΣ r1 e). destruct p.
+      destruct (red_eq_context_upto_l wfΣ r2 e). destruct p.
+      exists (Δ ,, vdef na' u T'), (Δ' ,, vdef na' u x0).
+      split; [split|]; constructor; auto. red. split; auto. red. split; auto.
+      eapply PCUICConfluence.red_red_ctx; eauto.
+      reflexivity.
+      eapply eq_term_upto_univ_trans with U'; eauto; tc.
+    * pose proof (conv_red_ctx wfΣ c r).
+      eapply conv_conv_alt, conv_alt_red in X.
+      destruct X as [T' [U' [? [? ?]]]].
+      pose proof (PCUICConfluence.red_red_ctx wfΣ _ _ _ _ r1 r).
+      pose proof (PCUICConfluence.red_red_ctx wfΣ _ _ _ _ r2 r).
+      destruct (red_eq_context_upto_l wfΣ r1 e). destruct p.
+      destruct (red_eq_context_upto_l wfΣ r2 e). destruct p.
+      exists (Δ ,, vdef na' T' U), (Δ' ,, vdef na' x0 U).
+      split; [split|]; constructor; auto. red. split; auto. red. split; auto.
+      eapply PCUICConfluence.red_red_ctx; eauto.
+      eapply eq_term_upto_univ_trans with U'; eauto; tc.
+      reflexivity.
+Qed.
+
+Lemma cumul_eq_context_upto {Σ : global_context} {Γ Δ T U} :
+  wf Σ ->
+  eq_context_upto (eq_universe (snd Σ)) Γ Δ ->
+  Σ ;;; Γ |- T <= U ->
+  Σ ;;; Δ |- T <= U.
+Proof.
+  intros wfΣ eqctx cum.
+  eapply cumul_alt in cum as [nf [nf' [[redl redr] ?]]].
+  eapply (red_eq_context_upto_l (Re:=eq_universe _)) in redl; eauto.
+  eapply (red_eq_context_upto_l (Re:=eq_universe _)) in redr; eauto.
+  destruct redl as [v' [redv' eqv']].
+  destruct redr as [v'' [redv'' eqv'']].
+  eapply cumul_alt. exists v', v''; intuition auto.
+  eapply leq_term_trans with nf.
+  apply eq_term_leq_term. now apply eq_term_sym.
+  eapply leq_term_trans with nf'; auto.
+  now apply eq_term_leq_term.
+Qed.
+
+Lemma cumul_conv_ctx (Σ : global_context) Γ Γ' T U : wf Σ ->
+  Σ ;;; Γ |- T <= U ->
+  conv_context Σ Γ Γ' ->
+  Σ ;;; Γ' |- T <= U.
+Proof.
+  intros wfΣ H Hctx.
+  apply conv_context_red_context in Hctx => //.
+  destruct Hctx as [Δ [Δ' [[l r] elr]]].
+  eapply cumul_red_ctx in l; eauto.
+  eapply cumul_red_ctx_inv in r; eauto.
+  eapply cumul_eq_context_upto; eauto.
+Qed.
+
+Lemma conv_conv_ctx (Σ : global_context) Γ Γ' T U : wf Σ ->
+  Σ ;;; Γ |- T = U ->
+  conv_context Σ Γ Γ' ->
+  Σ ;;; Γ' |- T = U.
+Proof.
+  intros wfΣ H Hctx. destruct H.
+  eapply cumul_conv_ctx in c; eauto.
+  eapply cumul_conv_ctx in c0; eauto.
+  now split.
+Qed.
+
+Lemma conv_isWfArity_or_Type Σ Γ Γ' T U :
+  conv_context Σ Γ' Γ ->
+  Σ ;;; Γ |- T = U ->
+  isWfArity_or_Type Σ Γ T ->
+  isWfArity_or_Type Σ Γ' U.
+Proof.
+Admitted.
+
+Lemma wf_local_conv_ctx Σ Γ Δ (wfΓ : wf_local Σ Γ) :
+  wf Σ ->
   All_local_env_over typing
     (fun (Σ : global_context) (Γ : context) wfΓ (t T : term) Ht =>
        forall Γ' : context, conv_context Σ Γ Γ' -> Σ;;; Γ' |- t : T) Σ Γ wfΓ ->
   conv_context Σ Γ Δ -> wf_local Σ Δ.
 Proof.
-  intros wfredctx. revert Δ.
-  induction wfredctx; intros Δ wfred; unfold vass, vdef in *; depelim wfred. constructor; eauto.
-  simpl. constructor. auto. red. depelim c.
-  destruct i. red in i. destruct i as [ctx [s [Hs Hwf]]].
+  intros wfΣ wfredctx. revert Δ.
+  induction wfredctx; intros Δ wfred; unfold vass, vdef in *; depelim wfred.
+  - constructor; eauto.
+  - simpl. constructor. auto. red. depelim c. apply i.
+  - simpl. depelim c. constructor; auto; hnf.
+    eapply type_Conv; eauto. eapply cumul_conv_ctx; eauto. apply c.
+    constructor; auto.
+Qed.
+
+Lemma conv_context_sym Σ Γ Γ' :
+  wf Σ -> wf_local Σ Γ -> conv_context Σ Γ Γ' -> conv_context Σ Γ' Γ.
+Proof.
+  induction Γ in Γ' |- *; try econstructor.
+  intros wfΣ wfΓ conv; depelim conv; econstructor; eauto;
+  constructor; pcuic. intros.
+  depelim X1; depelim X0; constructor; pcuic.
+  - depelim c. constructor. apply l.
+    eapply conv_sym, conv_conv_ctx; eauto.
+  - depelim c; constructor; auto.
+    eapply conv_sym, conv_conv_ctx; eauto.
+    eapply conv_sym, conv_conv_ctx; eauto.
+Qed.
+
+(** Maybe need to prove it later *)
+Lemma conv_context_trans Σ : wf Σ -> CRelationClasses.Transitive (fun Γ Γ' => conv_context Σ Γ Γ').
+Proof.
+  intros wfΣ.
+  eapply context_relation_trans.
+  intros.
+  depelim X2; depelim X3; try constructor; auto.
+  eapply conv_trans; eauto.
+  eapply conv_conv_ctx => //. apply c0.
+  apply conv_context_sym => //. pcuic. admit.
+  eapply conv_trans; eauto.
+  eapply conv_conv_ctx => //. apply c0.
+  apply conv_context_sym => //. admit.
 Admitted.
 
-Lemma conv_context_refl Σ Γ : wf Σ -> wf_local Σ Γ -> conv_context Σ Γ Γ.
-Proof.
-  induction Γ; try econstructor.
-  destruct a as [na [b|] ty]; intros wfΣ wfΓ; depelim wfΓ; econstructor; eauto;
-  constructor; auto.
-  - unshelve epose (validity _ _ _ _ _ _ l0); auto.
-    now destruct p.
-  - apply conv_refl.
-  - simpl in l.
-    right; auto.
-  - apply conv_refl.
-Defined.
-Hint Resolve conv_context_refl : pcuic.
-(* Lemma wf_red1_context Σ Γ Δ : *)
-(*   All_local_env *)
-(*     (fun (Σ : global_context) (Γ : context) (t T : term) => *)
-(*        forall Γ' : context, red1_context Σ Γ Γ' -> Σ;;; Γ' |- t : T) Σ Γ -> *)
-(*   red1_context Σ Γ Δ -> wf_local Σ Γ -> wf_local Σ Δ. *)
-(* Proof. *)
-(*   intros wfredctx. revert Δ. *)
-(*   induction wfredctx; intros Δ wfred; depelim wfred; intros wfH; depelim wfH. constructor. *)
-(*   econstructor; auto. *)
-(*   constructor. eauto. *)
-(*   depelim r. specialize (t0 _ wfred). *)
-(*   eapply type_Conv. apply t0. admit. *)
-(*   econstructor 2. r. *)
-(*   specialize (t0 _ wfred). *)
+Hint Immediate wf_local_conv_ctx : pcuic.
+Hint Constructors conv_decls : pcuic.
 
-Arguments skipn : simpl never.
-
-(* Admitted. *)
-Set SimplIsCbn.
 Lemma context_conversion : env_prop
                              (fun Σ Γ t T =>
                                 forall Γ', conv_context Σ Γ Γ' -> Σ ;;; Γ' |- t : T).
 Proof.
-  apply typing_ind_env; intros Σ wfΣ Γ wfΓ; intros **; rename_all_hyps.
-  - eapply (context_relation_nth X0) in heq_nth_error as [d' [Hnth [Hrel Hconv]]].
-    eapply type_Conv. econstructor; eauto.
-    eapply wf_conv_context; eauto.
+  apply typing_ind_env; intros Σ wfΣ Γ wfΓ; intros **; rename_all_hyps;
+    try solve [econstructor; eauto]; try solve [econstructor; pcuic; auto; constructor; pcuic].
+
+  - pose proof heq_nth_error.
+    eapply (context_relation_nth X0) in H as [d' [Hnth [Hrel Hconv]]].
+    eapply type_Conv.
+    * econstructor.
+      eapply wf_local_conv_ctx; eauto. eauto.
+    * admit.
+    * unshelve eapply nth_error_All_local_env_over in X. 3:eapply heq_nth_error.
+      destruct X. red in o.
+      depelim Hconv; simpl in *.
+      + rewrite -(firstn_skipn (S n) Γ').
+        eapply weakening_cumul0; auto.
+        pose proof (nth_error_Some_length Hnth).
+        rewrite firstn_length_le; lia.
+        apply conv_sym in c. clear -wfΣ X0 c.
+        eapply cumul_conv_ctx; eauto. apply c.
+        admit.
+      + simpl in *.
+        admit.
+      + simpl in *. auto.
+
+  - constructor; pcuic.
+    eapply forall_Γ'0. repeat (constructor; pcuic).
+    eexists; now eapply forall_Γ'.
+  - econstructor; pcuic.
+    eapply forall_Γ'0. repeat (constructor; pcuic).
+    eexists; now eapply forall_Γ'.
+  - econstructor; pcuic.
+    eapply forall_Γ'1. repeat (constructor; pcuic).
+    eexists; now eapply forall_Γ'.
+  - econstructor; pcuic. eauto. eauto. solve_all.
+  - econstructor; pcuic. admit.
+    solve_all.
+    apply b. subst types.
+    admit.
+  - econstructor; pcuic. admit.
+    solve_all.
+    apply b. subst types.
+    admit.
+  - econstructor; eauto.
+    destruct X2. destruct i. left. admit.
+    right. destruct s as [s [ty ?]]. exists s. eauto.
+    eapply cumul_conv_ctx; eauto.
 Admitted.
-(*
-    depelim Hconv.
-    destruct decl; simpl in *.
-
-
-    induction X0; econstructor; eauto.
-    depelim wfΓ. apply (IHX0 wfΓ). depelim HΓ. auto.
-    depelim IHn.
-    induction HΓ in Γ', X1 |- *. depelim X1. constructor.
-    depelim wfΓ. apply IHHΓ; auto. constructor; auto.
-
-    unshelve epose (all_local_env_mix _ wfΓ HΓ).
-    simpl. intros.
-
-    induction wfΓ. depelim X0. constructor.
-    apply IHwfΓ.
-
-    eapply All_local_env_impl in HΓ. eapply HΓ.
-*)
 
 (** Injectivity of products, the essential property of cumulativity needed for subject reduction. *)
 Lemma cumul_Prod_inv Σ Γ na na' A B A' B' :
+  wf Σ -> wf_local Σ Γ ->
   Σ ;;; Γ |- tProd na A B <= tProd na' A' B' ->
    ((Σ ;;; Γ |- A = A') * (Σ ;;; Γ ,, vass na' A' |- B <= B'))%type.
 Proof.
-  intros H; depind H.
-  - admit.
-    (* simpl in e. move/andP: e => [] eqa leqb. *)
-    (* split; auto with pcuic. apply conv_conv_alt; eauto. now constructor. *)
-    (* now constructor. *)
+  intros wfΣ wfΓ H; depind H.
+  - depelim l.
+    split; auto.
+    eapply conv_conv_alt.
+    now constructor.
+    now constructor.
 
   - depelim r. apply mkApps_Fix_spec in x. destruct x.
-    specialize (IHcumul _ _ _ _ _ _ eq_refl eq_refl).
+    specialize (IHcumul _ _ _ _ _ _ wfΣ wfΓ eq_refl eq_refl).
     intuition auto. apply conv_conv_alt.
     econstructor 2; eauto. now apply conv_conv_alt.
 
-    specialize (IHcumul _ _ _ _ _ _ eq_refl eq_refl).
+    specialize (IHcumul _ _ _ _ _ _ wfΣ wfΓ eq_refl eq_refl).
     intuition auto. apply cumul_trans with N2.
-    econstructor 2; eauto. admit. (* Red conversion *)
-    auto.
+    eapply cumul_conv_ctx; eauto.
+
+    econstructor 2. eauto. constructor. auto.
+    (* now apply conv_ctx_refl. We should not force the same names? *)
+    admit. auto.
 
   - depelim r. solve_discr.
-    specialize (IHcumul _ _ _ _ _ _ eq_refl eq_refl).
+    specialize (IHcumul _ _ _ _ _ _ wfΣ wfΓ eq_refl eq_refl).
     intuition auto. apply conv_conv_alt.
     econstructor 3. apply conv_conv_alt. apply a. apply r.
     (* red conversion *) admit.
 
-    specialize (IHcumul _ _ _ _ _ _ eq_refl eq_refl).
+    specialize (IHcumul _ _ _ _ _ _ wfΣ wfΓ eq_refl eq_refl).
     intuition auto. apply cumul_trans with N2. auto.
     eapply cumul_red_r; eauto.
 Admitted.
@@ -357,7 +814,7 @@ Proof.
   clear e.
   eexists _, _, _. split. split. eauto.
   eapply (substitution _ _ types _ [] _ _ wfΣ); simpl; eauto with wf.
-  - subst types. clear -a a0.
+  - subst types. rename i into hguard. clear -a a0 hguard.
     pose proof a0 as a0'. apply All_rev in a0'.
     unfold fix_subst, fix_context. simpl.
     revert a0'. rewrite <- (@List.rev_length _ mfix).
@@ -393,6 +850,8 @@ Qed.
 Definition SR_red1 (Σ : global_context) Γ t T :=
   forall u (Hu : red1 Σ Γ t u), Σ ;;; Γ |- u : T.
 
+Hint Resolve conv_ctx_refl : pcuic.
+
 Lemma sr_red1 : env_prop SR_red1.
 Proof.
   apply typing_ind_env; intros Σ wfΣ Γ wfΓ; unfold SR_red1; intros **; rename_all_hyps;
@@ -417,15 +876,15 @@ Proof.
   - (* Prod *)
     constructor; eauto.
     eapply (context_conversion _ wfΣ _ _ _ _ typeb).
-    constructor. auto with pcuic.
-    constructor. right; exists s1; auto. apply conv_conv_alt.
+    constructor; auto with pcuic.
+    constructor. exists s1; auto. apply conv_conv_alt.
     auto.
 
   - (* Lambda *)
     eapply type_Conv. eapply type_Lambda; eauto.
     eapply (context_conversion _ wfΣ _ _ _ _ typeb).
-    constructor. auto with pcuic.
-    constructor. right; auto. exists s1; auto.
+    constructor; auto with pcuic.
+    constructor. exists s1; auto.
     apply conv_conv_alt. auto.
     assert (Σ ;;; Γ |- tLambda n t b : tProd n t bty). econstructor; eauto.
     edestruct (validity _ wfΣ _ wfΓ _ _ X0). apply i.
@@ -446,6 +905,7 @@ Proof.
     econstructor; eauto.
     eapply (context_conversion _ wfΣ _ _ _ _ typeb').
     constructor. auto with pcuic. constructor; eauto.
+    now exists s1.
     apply conv_conv_alt; auto.
     assert (Σ ;;; Γ |- tLetIn n b b_ty b' : tLetIn n b b_ty b'_ty). econstructor; eauto.
     edestruct (validity _ wfΣ _ wfΓ _ _ X0). apply i.
@@ -459,7 +919,7 @@ Proof.
     eapply type_Conv. eauto. right; exists s1; auto.
     apply red_cumul; eauto.
     eapply (context_conversion _ wfΣ _ _ _ _ typeb').
-    constructor. auto with pcuic. constructor; eauto. right; exists s1; auto.
+    constructor. auto with pcuic. constructor; eauto. exists s1; auto.
     apply conv_conv_alt; auto.
     assert (Σ ;;; Γ |- tLetIn n b b_ty b' : tLetIn n b b_ty b'_ty). econstructor; eauto.
     edestruct (validity _ wfΣ _ wfΓ _ _ X0). apply i.
@@ -470,19 +930,18 @@ Proof.
     eapply substitution0; eauto.
     pose proof typet as typet'.
     eapply inversion_Lambda in typet' as [s1 [B' [Ht [Hb HU]]]].
-    apply cumul_Prod_inv in HU as [eqA leqB].
+    apply cumul_Prod_inv in HU as [eqA leqB] => //.
 
     eapply type_Conv; eauto.
-    unshelve eapply (context_conversion _ wfΣ _ _ _ _ Hb). eauto with wf.
-    constructor. auto with pcuic. constructor; eauto.
-    apply (validity _ wfΣ _ wfΓ _ _ typeu).
+    unshelve eapply (context_conversion _ wfΣ _ _ _ _ Hb); eauto with wf.
+    admit. (* constructor auto with pcuic. constructor; eauto. *)
     destruct (validity _ wfΣ _ wfΓ _ _ typet).
     clear -i.
     (** Awfully complicated for a well-formedness condition *)
     { destruct i as [[ctx [s [Hs Hs']]]|[s Hs]].
       left.
-      simpl in Hs.
-      generalize (destArity_spec ([],, vass na A) B). rewrite Hs.
+      simpl in Hs. red.
+      generalize (destArity_spec ([] ,, vass na A) B). rewrite Hs.
       intros. simpl in H.
       apply tProd_it_mkProd_or_LetIn in H.
       destruct H as [ctx' [-> Hb]].
@@ -565,13 +1024,6 @@ Proof.
   induction Hred. auto.
   eapply sr_red1 in IHHred; eauto with wf. now apply IHHred.
 Qed.
-
-
-Lemma red1_red {Σ Γ u v} : red1 Σ Γ u v -> red Σ Γ u v.
-Proof.
-  econstructor. constructor. assumption.
-Defined.
-
 
 Lemma subject_reduction1 {Σ Γ t u T}
   : wf Σ -> Σ ;;; Γ |- t : T -> red1 Σ Γ t u -> Σ ;;; Γ |- u : T.

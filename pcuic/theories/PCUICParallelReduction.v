@@ -21,6 +21,7 @@ Existing Instance config.default_checker_flags.
 
 Derive NoConfusion for term.
 Derive Subterm for term.
+Derive Signature NoConfusion for All All2.
 
 Section ListSize.
   Context {A} (size : A -> nat).
@@ -310,8 +311,6 @@ Qed.
 
 (** All2 lemmas *)
 
-Derive NoConfusion for All2.
-
 (* Duplicate *)
 Lemma All2_app {A} {P : A -> A -> Type} {l l' r r'} :
   All2 P l l' -> All2 P r r' ->
@@ -398,14 +397,14 @@ Section All2_local_env.
 
     Inductive All2_local_env : context -> context -> Type :=
     | localenv2_nil : All2_local_env [] []
-    | localenv2_cons_abs Γ Γ' na t t' :
+    | localenv2_cons_abs Γ Γ' na na' t t' :
         All2_local_env Γ Γ' ->
         P Γ Γ' None t t' ->
-        All2_local_env (Γ ,, vass na t) (Γ' ,, vass na t')
-    | localenv2_cons_def Γ Γ' na b b' t t' :
+        All2_local_env (Γ ,, vass na t) (Γ' ,, vass na' t')
+    | localenv2_cons_def Γ Γ' na na' b b' t t' :
         All2_local_env Γ Γ' ->
         P Γ Γ' (Some (b, b')) t t' ->
-        All2_local_env (Γ ,, vdef na b t) (Γ' ,, vdef na b' t').
+        All2_local_env (Γ ,, vdef na b t) (Γ' ,, vdef na' b' t').
   End All_local_2.
 
   Definition on_decl_over (P : context -> context -> term -> term -> Type) Γ Γ' :=
@@ -458,9 +457,9 @@ Section All2_local_env.
     exists Γ'', []. intuition auto. eapply (All2_local_env_length X).
     intros. unfold app_context in X. depelim X.
     destruct (IHΓ' _ X) as [Γl [Γr [Heq HeqΓ]]]. subst Γ'0.
-    eexists Γl, (Γr,,vass na t'). simpl. intuition eauto.
+    eexists Γl, (Γr,, vass _ t'). simpl. intuition eauto.
     destruct (IHΓ' _ X) as [Γl [Γr [Heq HeqΓ]]]. subst Γ'0.
-    eexists Γl, (Γr,, vdef na b' t'). simpl. intuition eauto.
+    eexists Γl, (Γr,, vdef _ b' t'). simpl. intuition eauto.
   Qed.
 
   Lemma app_inj_length_r {A} (l l' r r' : list A) :
@@ -522,6 +521,7 @@ Section All2_local_env.
     eapply app_inj_length_r in heq_app_context0; try lia. intuition subst; auto.
     pose proof (All2_local_env_length a). lia.
   Qed.
+
   Lemma nth_error_pred1_ctx {P} {Γ Δ} i body' :
     All2_local_env (on_decl P) Γ Δ ->
     option_map decl_body (nth_error Δ i) = Some (Some body') ->
@@ -1664,18 +1664,18 @@ Hint Resolve pred1_pred1_ctx : pcuic.
 
 Section ParallelSubstitution.
 
-  Inductive psubst Σ (Γ Δ : context) : list term -> list term -> context -> context -> Type :=
-  | emptyslet : psubst Σ Γ Δ [] [] [] []
-  | cons_let_ass Γ' Δ' s s' na t t' T T' :
-      psubst Σ Γ Δ s s' Γ' Δ' ->
-      pred1 Σ (Γ ,,, Γ') (Δ ,,, Δ') T T' ->
-      pred1 Σ Γ Δ t t' ->
-      psubst Σ Γ Δ (t :: s) (t' :: s') (Γ' ,, vass na T) (Δ' ,, vass na T')
-  | cons_let_def Γ' Δ' s s' na t t' T T' :
-      psubst Σ Γ Δ s s' Γ' Δ' ->
-      pred1 Σ (Γ ,,, Γ') (Δ ,,, Δ') T T' ->
-      pred1 Σ Γ Δ (subst0 s t) (subst0 s' t') ->
-      psubst Σ Γ Δ (subst0 s t :: s) (subst0 s' t' :: s') (Γ' ,, vdef na t T) (Δ' ,, vdef na t' T').
+  Inductive psubst Σ (Γ Γ' : context) : list term -> list term -> context -> context -> Type :=
+  | psubst_empty : psubst Σ Γ Γ' [] [] [] []
+  | psubst_vass Δ Δ' s s' na na' t t' T T' :
+      psubst Σ Γ Γ' s s' Δ Δ' ->
+      pred1 Σ (Γ ,,, Δ) (Γ' ,,, Δ') T T' ->
+      pred1 Σ Γ Γ' t t' ->
+      psubst Σ Γ Γ' (t :: s) (t' :: s') (Δ ,, vass na T) (Δ' ,, vass na' T')
+  | psubst_vdef Δ Δ' s s' na na' t t' T T' :
+      psubst Σ Γ Γ' s s' Δ Δ' ->
+      pred1 Σ (Γ ,,, Δ) (Γ' ,,, Δ') T T' ->
+      pred1 Σ Γ Γ' (subst0 s t) (subst0 s' t') ->
+      psubst Σ Γ Γ' (subst0 s t :: s) (subst0 s' t' :: s') (Δ ,, vdef na t T) (Δ' ,, vdef na' t' T').
 
   Lemma psubst_length {Σ Γ Δ Γ' Δ' s s'} : psubst Σ Γ Δ s s' Γ' Δ' ->
                                            #|s| = #|Γ'| /\ #|s'| = #|Δ'| /\ #|s| = #|s'|.
@@ -1708,14 +1708,13 @@ Section ParallelSubstitution.
     end.
   Proof.
     induction 1 in n, t |- *; simpl; auto; destruct n; simpl; try congruence.
-    - intros [= <-]. exists (vass na T), (vass na T'), t'. intuition auto.
+    - intros [= <-]. exists (vass na T), (vass na' T'), t'. intuition auto.
     - intros.
       specialize (IHX _ _ H). intuition eauto.
-    - intros [= <-]. exists (vdef na t0 T), (vdef na t' T'), (subst0 s' t'). intuition auto.
+    - intros [= <-]. exists (vdef na t0 T), (vdef na' t' T'), (subst0 s' t'). intuition auto.
       simpl. intuition simpl; auto.
     - apply IHX.
   Qed.
-
 
   Lemma psubst_nth_error' Σ Γ Δ Γ' Δ' s s' n t :
     psubst Σ Γ Δ s s' Γ' Δ' ->
@@ -1884,10 +1883,10 @@ Section ParallelSubstitution.
         simpl in *.
         repeat red. apply IHXr. simpl in *. pcuic. lia. lia.
       + depelim predΓ'. auto.
-        simpl in *. destruct p0.
+        simpl in *. destruct p.
         split; repeat red.
+        rewrite !Nat.add_0_r. simpl. eapply p; eauto.
         rewrite !Nat.add_0_r. simpl. eapply p0; eauto.
-        rewrite !Nat.add_0_r. simpl. eapply p1; eauto.
 
     - (* Beta *)
       specialize (forall_Γ _ _ (_ ,, _) eq_refl _ _ (_ ,, _)
@@ -2137,13 +2136,14 @@ Section ParallelSubstitution.
   Hint Constructors psubst : pcuic.
   Hint Transparent vass vdef : pcuic.
 
-  Lemma substitution0_pred1 {Σ : global_context} Γ Δ M M' na A A' N N' : wf Σ ->
+  Lemma substitution0_pred1 {Σ : global_context} {Γ Δ M M' na na' A A' N N'} :
+    wf Σ ->
     pred1 Σ Γ Δ M M' ->
-    pred1 Σ (Γ ,, vass na A) (Δ ,, vass na A') N N' ->
+    pred1 Σ (Γ ,, vass na A) (Δ ,, vass na' A') N N' ->
     pred1 Σ Γ Δ (subst1 M 0 N) (subst1 M' 0 N').
   Proof.
     intros wfΣ redM redN.
-    pose proof (substitution_let_pred1 Σ Γ [vass na A] [] Δ [vass na A'] [] [M] [M'] N N' wfΣ) as H.
+    pose proof (substitution_let_pred1 Σ Γ [vass na A] [] Δ [vass na' A'] [] [M] [M'] N N' wfΣ) as H.
     forward H. constructor; auto with pcuic.
     forward H by pcuic. constructor; pcuic. apply pred1_pred1_ctx in redN. depelim redN; pcuic.
     simpl in H |- *. apply pred1_pred1_ctx in redN; pcuic. depelim redN; pcuic.
@@ -2151,15 +2151,15 @@ Section ParallelSubstitution.
     apply H; pcuic. auto. constructor; pcuic.
   Qed.
 
-  Lemma substitution0_let_pred1 {Σ Γ Δ na M M' A A' N N'} : wf Σ ->
+  Lemma substitution0_let_pred1 {Σ Γ Δ na na' M M' A A' N N'} : wf Σ ->
     pred1 Σ Γ Δ M M' ->
-    pred1 Σ (Γ ,, vdef na M A) (Δ ,, vdef na M' A') N N' ->
+    pred1 Σ (Γ ,, vdef na M A) (Δ ,, vdef na' M' A') N N' ->
     pred1 Σ Γ Δ (subst1 M 0 N) (subst1 M' 0 N').
   Proof.
     intros wfΣ redM redN.
-    pose proof (substitution_let_pred1 Σ Γ [vdef na M A] [] Δ [vdef na M' A'] [] [M] [M'] N N' wfΣ) as H.
-    pose proof (pred1_pred1_ctx _ redN). depelim X. simpl in p.
-    forward H. pose proof (cons_let_def Σ Γ Δ [] [] [] [] na M M' A A').
+    pose proof (substitution_let_pred1 Σ Γ [vdef na M A] [] Δ [vdef na' M' A'] [] [M] [M'] N N' wfΣ) as H.
+    pose proof (pred1_pred1_ctx _ redN). depelim X. simpl in o.
+    forward H. pose proof (psubst_vdef Σ Γ Δ [] [] [] [] na na' M M' A A').
     rewrite !subst_empty in X0. apply X0; pcuic. apply H; pcuic.
     econstructor; auto with pcuic.
   Qed.

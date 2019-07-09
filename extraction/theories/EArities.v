@@ -180,12 +180,12 @@ Proof.
     eapply IHn. eauto.
 Qed. 
 
-Lemma it_mkProd_or_LetIn_red L t Σ Γ x :
-  red Σ Γ (it_mkProd_or_LetIn L t) x -> exists L' s n, x = it_mkProd_or_LetIn L' (subst s n t).
-Proof.
-  induction L in t, x |- *; cbn.
-  - exists [], [], 0.
-Admitted.                       (* it_mkProd red inversion, doesn't hold in this form *)
+(* Lemma it_mkProd_or_LetIn_red L t Σ Γ x : *)
+(*   red Σ Γ (it_mkProd_or_LetIn L t) x -> exists L' s n, x = it_mkProd_or_LetIn L' (subst s n t). *)
+(* Proof. *)
+(*   induction L in t, x |- *; cbn. *)
+(*   - exists [], [], 0. *)
+(* Admitted.                       (* it_mkProd red inversion, doesn't hold in this form *) *)
 
 Lemma it_mkProd_arity :
   forall (l : list context_decl) (A : term), isArity (it_mkProd_or_LetIn l A) -> isArity A.
@@ -202,14 +202,26 @@ Proof.
   - eapply IHL in H. cbn in H. tauto.
 Qed.
 
+Lemma isArity_red Σ Γ t t' : wf Σ -> isArity t -> red Σ Γ t t' -> isArity t'.
+Proof.
+  induction t in Γ, t' |- *; cbn in *; intros; try tauto.
+  - eapply invert_red_sort in X0. now subst.
+  - pose proof (invert_red_prod _ _ _ _ _ _ X X0) as (? & ? & [] & ?).
+    subst. cbn. eapply IHt2; eauto.
+  - eapply invert_red_letin in X0 as [(?&?&?&?&?&?)|]; eauto.
+    + destruct p. destruct p. admit.
+    + admit.
+Admitted.                       (* isArity_red *)
+      
 Lemma test:
   forall (Σ : global_context) (ind : inductive) (u : universe_instance)
-    (x3 : mutual_inductive_body) (cshape_args : context) (cshape_indices : list term),
+    (x3 : mutual_inductive_body) (cshape_args : context) (cshape_indices : list term) Γ,
+    wf Σ ->
     #|ind_bodies x3| > 0 ->
-     Is_conv_to_Arity Σ [] ((subst0 (inds (inductive_mind ind) u (ind_bodies x3))) (PCUICUnivSubst.subst_instance_constr u (it_mkProd_or_LetIn (ind_params x3) (it_mkProd_or_LetIn cshape_args (mkApps (tRel (#|ind_bodies x3| - S (inductive_ind ind) + #|ind_params x3| + #|cshape_args|)) (to_extended_list_k (ind_params x3) #|cshape_args| ++ cshape_indices)))))) ->
+     Is_conv_to_Arity Σ Γ ((subst0 (inds (inductive_mind ind) u (ind_bodies x3))) (PCUICUnivSubst.subst_instance_constr u (it_mkProd_or_LetIn (ind_params x3) (it_mkProd_or_LetIn cshape_args (mkApps (tRel (#|ind_bodies x3| - S (inductive_ind ind) + #|ind_params x3| + #|cshape_args|)) (to_extended_list_k (ind_params x3) #|cshape_args| ++ cshape_indices)))))) ->
      False.
 Proof.
-  intros Σ ind u x3 cshape_args cshape_indices HL X.
+  intros Σ ind u x3 cshape_args cshape_indices Γ wfΣ HL X.
   
     rewrite <- it_mkProd_or_LetIn_app in X.
     rewrite PCUICUnivSubst.subst_instance_constr_it_mkProd_or_LetIn in X.
@@ -226,17 +238,39 @@ Proof.
     rewrite inds_length. omega.
     eapply nth_error_Some in H.
     destruct ?; try congruence.
-    destruct X as (? & [] & ?).
+    (* destruct X as (? & [] & ?). *)
     eapply inds_nth_error in E as [].
-    subst. cbn in *. 
-   eapply it_mkProd_or_LetIn_red in X as (? & ? & ? & ?). subst.
-   eapply it_mkProd_arity in H0.
-   rewrite subst_mkApps in H0. cbn in H0.
-    
-    eapply isArity_mkApps in H0. cbn in H0. tauto.
-Qed.
-
-  
+    subst. cbn in *. revert X.
+    generalize (subst_context (inds (inductive_mind ind) u (ind_bodies x3)) 0
+                              (PCUICUnivSubst.subst_instance_context u (cshape_args ++ ind_params x3)%list)).
+    generalize ((map
+             (subst (inds (inductive_mind ind) u (ind_bodies x3))
+                (#|cshape_args| + #|ind_params x3| + 0))
+             (map (PCUICUnivSubst.subst_instance_constr u)
+                  (to_extended_list_k (ind_params x3) #|cshape_args| ++ cshape_indices)))).
+    intros l c.
+    revert l Γ. assert (#|c|=#|c|) by reflexivity. 
+    revert H0. pattern (#|c|) at 1. generalize (#|c|) at 1. intros n. revert c.
+    induction (lt_wf n).
+    destruct c using rev_ind; intros.
+  - destruct X. destruct H3. destruct H3.
+    eapply PCUICConfluence.red_mkApps_tInd in X as (? & ? & ?); subst; eauto.
+    eapply isArity_mkApps in H4; tauto.
+  - rewrite it_mkProd_or_LetIn_app in *. cbn in X.
+    destruct X as (? & [] & ?).
+    destruct x1, decl_body.
+    + cbn in X. eapply invert_red_letin in X as [(? & ? & ? & ? & [] & ?) |]; eauto.
+      * destruct p. eapply isArity_red in H3; eauto. cbn in H3.
+        eapply invert_cumul_arity_r in c0; eauto. 2:admit. (* wf_local *)
+        eapply H1. 3:eauto. 2:reflexivity. admit. (* holds *)
+      * unfold subst1 in r.
+        rewrite subst_it_mkProd_or_LetIn, subst_mkApps in r.
+        cbn in r. eapply H1. 3:{ exists x2. econstructor. econstructor. eassumption. eauto. }
+        2: now rewrite subst_context_length. admit.
+    + cbn in X. eapply invert_red_prod in X as (? & ? & ? & ?);eauto. destruct p.
+      subst x2. eapply H1. 3:{ exists x4. split; cbn in *; try econstructor; eauto. }
+      2:reflexivity. admit.     (* holds *)
+Admitted.                       (* admits hold *)
   
 Lemma tConstruct_no_Type Σ ind c u x1 : wf Σ ->
   isErasable Σ [] (mkApps (tConstruct ind c u) x1) ->
@@ -259,7 +293,7 @@ Proof.
     destruct X1. destruct x5. cbn in *. subst. 
     unfold cshape_concl_head in *. 
     
-    clear - X HL. eapply test; eauto.
+    eapply test; eauto.
 
   - exists x, x0. eauto.
 Qed.                       (* if a constructor is a type or proof, it is a proof *)

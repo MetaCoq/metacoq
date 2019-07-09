@@ -66,16 +66,17 @@ Section Validity.
 
   Definition weaken_env_prop_full
              (P : global_env_ext -> context -> term -> term -> Type) :=
-    forall Σ (Σ' : global_env_ext), wf Σ' -> extends Σ.1 Σ'.1 -> forall Γ t T, P Σ Γ t T -> P Σ' Γ t T.
+    forall (Σ : global_env_ext) (Σ' : global_env), wf Σ' -> extends Σ.1 Σ' ->
+                                                   forall Γ t T, P Σ Γ t T -> P (Σ', Σ.2) Γ t T.
 
   Lemma isWfArity_or_Type_weaken_full : weaken_env_prop_full (fun Σ Γ t T => isWfArity_or_Type Σ Γ T).
   Proof.
     red. intros.
     destruct X1. left. destruct i as [ctx [s [Heq Hs]]].
-    exists ctx, s. split; auto. pcuic.
-    apply exists
+    exists ctx, s. split; auto with pcuic.
     right. destruct i as [u Hu]; exists u; pcuic.
-    unshelve eapply (weaken_env_prop_typing _ _ _ X0 _ _ (Some (tSort u))); eauto.
+    unshelve eapply (weaken_env_prop_typing _ _ _ _ X0 _ _ (Some (tSort u))); eauto with pcuic.
+    red. simpl. destruct Σ. eapply Hu.
   Qed.
   Hint Resolve isWfArity_or_Type_weaken_full : pcuic.
 
@@ -83,8 +84,9 @@ Section Validity.
     weaken_env_prop
       (lift_typing (fun Σ Γ (_ T : term) => isWfArity_or_Type Σ Γ T)).
   Proof.
-    red. intros. unfold lift_typing in *. destruct T. now eapply isWfArity_or_Type_weaken_full.
-    destruct X1 as [s Hs]; exists s. now eapply isWfArity_or_Type_weaken_full.
+    red. intros.
+    unfold lift_typing in *. destruct T. now eapply (isWfArity_or_Type_weaken_full (_, _)).
+    destruct X1 as [s Hs]; exists s. now eapply (isWfArity_or_Type_weaken_full (_, _)).
   Qed.
   Hint Resolve isWfArity_or_Type_weaken : pcuic.
 
@@ -217,9 +219,11 @@ Section Validity.
     - eapply declared_constant_inv in H; pcuic.
       destruct decl as [ty [b|] univs]. red in H. simpl in *.
       apply isWfArity_or_Type_subst_instance; pcuic.
-      repeat red in H; simpl in *.
-      apply isWfArity_or_Type_subst_instance; pcuic.
-      destruct H.
+      repeat red in H; simpl in *. destruct H. left. destruct i as [ctx [s ?]]. exists ctx, s.
+      intuition auto. admit.
+      admit. (* For Simon :) *)
+      (* apply isWfArity_or_Type_subst_instance; pcuic. *)
+      (* destruct H. *)
       (* TODO: Fix Forall_decls_typing same way as local environments *)
       admit.
     - admit.
@@ -268,3 +272,5 @@ Section Validity.
       destruct X2. red in i. left. exact (projT1 i).
       right. destruct s as [u [Hu _]]. now exists u.
   Admitted.
+
+End Validity.

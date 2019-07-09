@@ -222,8 +222,10 @@ Ltac solve_discr :=
         end)).
 
 Section Confluence.
+  Context (Σ : global_env_ext).
+  Context (wfΣ : wf Σ).
 
-  Lemma pred_mkApps Σ Γ Δ M0 M1 N0 N1 :
+  Lemma pred_mkApps Γ Δ M0 M1 N0 N1 :
     pred1 Σ Γ Δ M0 M1 ->
     All2 (pred1 Σ Γ Δ) N0 N1 ->
     pred1 Σ Γ Δ (mkApps M0 N0) (mkApps M1 N1).
@@ -234,7 +236,7 @@ Section Confluence.
   Qed.
 
   Lemma pred_snd_nth:
-    ∀ (Σ : global_env_ext) (Γ Δ : context) (c : nat) (brs1 brs' : list (nat * term)),
+    ∀ (Γ Δ : context) (c : nat) (brs1 brs' : list (nat * term)),
       All2
         (on_Trel (pred1 Σ Γ Δ) snd) brs1
         brs' ->
@@ -243,7 +245,7 @@ Section Confluence.
               (snd (nth c brs1 (0, tDummy)))
               (snd (nth c brs' (0, tDummy))).
   Proof.
-    intros Σ Γ Δ c brs1 brs' brsl. intros.
+    intros Γ Δ c brs1 brs' brsl. intros.
     induction brsl in c |- *; simpl. destruct c; now apply pred1_refl_gen.
     destruct c; auto.
   Qed.
@@ -258,7 +260,7 @@ Section Confluence.
     - intros H. apply (IHl _ _ _ H).
   Qed.
 
-  Lemma pred1_mkApps_tConstruct (Σ : global_env_ext) (Γ Δ : context)
+  Lemma pred1_mkApps_tConstruct (Γ Δ : context)
         ind pars k (args : list term) c :
     pred1 Σ Γ Δ (mkApps (tConstruct ind pars k) args) c ->
     {args' : list term & (c = mkApps (tConstruct ind pars k) args') * (All2 (pred1 Σ Γ Δ) args args') }%type.
@@ -274,7 +276,7 @@ Section Confluence.
     eapply All2_app; auto.
   Qed.
 
-  Lemma pred1_mkApps_refl_tConstruct (Σ : global_env_ext) Γ Δ i k u l l' :
+  Lemma pred1_mkApps_refl_tConstruct Γ Δ i k u l l' :
     pred1 Σ Γ Δ (mkApps (tConstruct i k u) l) (mkApps (tConstruct i k u) l') ->
     All2 (pred1 Σ Γ Δ) l l'.
   Proof.
@@ -283,7 +285,7 @@ Section Confluence.
     destruct p. now eapply mkApps_eq_inj in e as [_ <-].
   Qed.
 
-  Lemma pred1_mkApps_tFix_inv (Σ : global_env_ext) (Γ Δ : context)
+  Lemma pred1_mkApps_tFix_inv (Γ Δ : context)
         mfix0 idx (args0 : list term) c :
     pred1 Σ Γ Δ (mkApps (tFix mfix0 idx) args0) c ->
     ({ mfix1 & { args1 : list term &
@@ -325,7 +327,7 @@ Section Confluence.
     - subst t. solve_discr.
   Qed.
 
-  Lemma pred1_mkApps_tCoFix_inv (Σ : global_env_ext) (Γ Δ : context)
+  Lemma pred1_mkApps_tCoFix_inv (Γ Δ : context)
         mfix0 idx (args0 : list term) c :
     pred1 Σ Γ Δ (mkApps (tCoFix mfix0 idx) args0) c ->
     ∃ mfix1 args1,
@@ -348,7 +350,7 @@ Section Confluence.
     - subst t; solve_discr.
   Qed.
 
-  Lemma pred1_mkApps_tCoFix_refl_inv (Σ : global_env_ext) (Γ Δ : context)
+  Lemma pred1_mkApps_tCoFix_refl_inv (Γ Δ : context)
         mfix0 mfix1 idx (args0 args1 : list term) :
     pred1 Σ Γ Δ (mkApps (tCoFix mfix0 idx) args0) (mkApps (tCoFix mfix1 idx) args1) ->
       All2_prop2_eq Γ Δ (Γ ,,, fix_context mfix0) (Δ ,,, fix_context mfix1) dtype dbody
@@ -406,7 +408,7 @@ Section Confluence.
 
   Hint Constructors pred1 : pcuic.
 
-  Lemma All2_prop_eq_All2 {A B} {Σ Γ Δ} {f : A -> term} {g : A -> B} args0 args1 args3 :
+  Lemma All2_prop_eq_All2 {A B} {Γ Δ} {f : A -> term} {g : A -> B} args0 args1 args3 :
     All2_prop_eq Γ Δ f g
      (λ (Γ Δ : context) (x y : term),
       (pred1 Σ Γ Δ x y *
@@ -425,7 +427,7 @@ Section Confluence.
     now rewrite <- Heq.
   Qed.
 
-  Lemma All2_prop_All2 {Σ Γ Δ} args0 args1 args3 :
+  Lemma All2_prop_All2 {Γ Δ} args0 args1 args3 :
     All2_prop Γ
      (λ (Γ : context) (x y : term),
       (pred1 Σ Γ Δ x y *
@@ -447,7 +449,7 @@ Section Confluence.
   Definition on_Trel2 {A B} (R : A -> A -> Type) (f : B -> A) : B -> A -> Type :=
     fun x y => R (f x) y.
 
-  Lemma All2_on_Trel_eq_impl {A B} Σ Γ Δ {f : A -> term} {g : A -> B} {x y} :
+  Lemma All2_on_Trel_eq_impl {A B} Γ Δ {f : A -> term} {g : A -> B} {x y} :
     All2 (on_Trel_eq (pred1 Σ Γ Δ) f g) x y ->
     All2 (on_Trel (pred1 Σ Γ Δ) f) x y.
   Proof.
@@ -651,17 +653,15 @@ Section Confluence.
   (*   destruct IHX as [IHl [ll lr]]. *)
   (*   exists (r' :: IHl). intuition auto. *)
   (* Qed. *)
-  Lemma lookup_env_cst_inv {Σ c k cst} :
-    lookup_env Σ c = Some (ConstantDecl k cst) -> c = k.
+  Lemma lookup_env_cst_inv {Σ' c k cst} :
+    lookup_env Σ' c = Some (ConstantDecl k cst) -> c = k.
   Proof.
-    induction Σ. simpl. discriminate.
+    induction Σ'. simpl. discriminate.
     simpl. destruct AstUtils.ident_eq eqn:Heq. intros [= ->]. simpl in Heq.
     now destruct (AstUtils.ident_eq_spec c k). auto.
   Qed.
 
   Section TriangleFn.
-    Context (Σ : global_env_ext).
-
     Definition map_fix (rho : context -> term -> term) Γ mfixctx (mfix : mfixpoint term) :=
       (map (map_def (rho Γ) (rho (Γ ,,, mfixctx))) mfix).
 
@@ -1133,8 +1133,6 @@ Section Confluence.
     Proof.
       induction 1; constructor; try depelim X0; intuition auto.
     Qed.
-
-    Context (wfΣ : wf Σ).
 
     (*
              eapply (rho_elim

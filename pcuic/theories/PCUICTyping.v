@@ -1881,7 +1881,7 @@ Qed.
 Ltac my_rename_hyp h th :=
   match th with
   | (wf ?E) => fresh "wf" E
-  | (wf ?E.1) => fresh "wf" E
+  | (wf (fst_ctx ?E)) => fresh "wf" E
   | (wf _) => fresh "wf"
   | (typing _ _ ?t _) => fresh "type" t
   | (@cumul _ _ _ ?t _) => fresh "cumul" t

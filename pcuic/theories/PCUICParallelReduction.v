@@ -17,8 +17,6 @@ Notation "'∃' x .. y , P" := (sigT (fun x => .. (sigT (fun y => P%type)) ..))
   (at level 200, x binder, y binder, right associativity,
   format "'[  ' '[  ' ∃  x  ..  y ']' ,  '/' P ']'") : type_scope.
 
-Existing Instance config.default_checker_flags.
-
 Derive NoConfusion for term.
 Derive Subterm for term.
 
@@ -588,7 +586,7 @@ Section All2_local_env.
 End All2_local_env.
 
 Section ParallelReduction.
-  Context (Σ : global_env_ext).
+  Context (Σ : global_env).
 
   Definition pred_atom t :=
     match t with
@@ -1303,7 +1301,7 @@ Section ParallelReduction2.
 End ParallelReduction2.
 
 Section ParallelWeakening.
-
+  Context {cf : checker_flags}.
   (* Lemma All2_local_env_over_app_inv {Σ Γ0 Δ Γ'' Δ''} : *)
   (*   pred1_ctx Σ (Γ0 ,,, Γ'') (Δ ,,, Δ'') -> *)
   (*   pred1_ctx Σ Γ0 Δ -> *)
@@ -1697,6 +1695,7 @@ End ParallelWeakening.
 Hint Resolve pred1_pred1_ctx : pcuic.
 
 Section ParallelSubstitution.
+  Context {cf : checker_flags}.
 
   Inductive psubst Σ (Γ Δ : context) : list term -> list term -> context -> context -> Type :=
   | emptyslet : psubst Σ Γ Δ [] [] [] []
@@ -1820,7 +1819,7 @@ Section ParallelSubstitution.
   Qed.
 
   Lemma All2_local_env_subst_ctx :
-    forall (Σ : global_env_ext) c c0 (Γ0 Δ : context)
+    forall (Σ : global_env) c c0 (Γ0 Δ : context)
     (Γ'0 : list context_decl) (Γ1 Δ1 : context) (Γ'1 : list context_decl) (s s' : list term),
       psubst Σ Γ0 Γ1 s s' Δ Δ1 ->
       #|Γ'0| = #|Γ'1| ->
@@ -2159,7 +2158,7 @@ Section ParallelSubstitution.
   Hint Constructors psubst : pcuic.
   Hint Transparent vass vdef : pcuic.
 
-  Lemma substitution0_pred1 {Σ : global_env_ext} Γ Δ M M' na A A' N N' : wf Σ ->
+  Lemma substitution0_pred1 {Σ : global_env} Γ Δ M M' na A A' N N' : wf Σ ->
     pred1 Σ Γ Δ M M' ->
     pred1 Σ (Γ ,, vass na A) (Δ ,, vass na A') N N' ->
     pred1 Σ Γ Δ (subst1 M 0 N) (subst1 M' 0 N').

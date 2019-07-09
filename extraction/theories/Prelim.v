@@ -263,11 +263,11 @@ Proof.
 Qed.
 
 (** ** Prelim on eliminations  *)
-Lemma universe_family_is_prop_sort:
-  forall x6 : universe, universe_family x6 = InProp -> Extract.is_prop_sort x6.
-Proof.
-  intros x6 Eu.
-Admitted.
+(* Lemma universe_family_is_prop_sort: *)
+(*   forall x6 : universe, universe_family x6 = InProp -> Extract.is_prop_sort x6. *)
+(* Proof. *)
+(*   intros x6 Eu. *)
+(* Admitted. *)
 
 Lemma elim_restriction_works_kelim1 Σ Γ T ind npar p c brs mind idecl : wf Σ ->
   declared_inductive (fst Σ) mind ind idecl ->
@@ -285,8 +285,8 @@ Proof.
   
   destruct (universe_family x6) eqn:Eu.
   - exfalso. eapply H0. exists T. exists x6. split. eauto.
-    split. 2:{ eapply universe_family_is_prop_sort; eauto. }
-    admit.               
+    split. (* 2:{ eapply universe_family_is_prop_sort; eauto. } *)
+    admit. admit.
   - admit. (* no idea what to do for Set *)
   - reflexivity.  
 Admitted.                       (* elim_restriction_works *)

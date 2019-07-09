@@ -28,7 +28,7 @@ Proof.
   induction T; cbn; intros; tauto.
 Qed.
 
-Lemma Is_type_or_proof_instance_constr Σ Γ T u :
+Lemma Is_type_or_proof_instance_constr (Σ : global_env_ext) Γ T u :
   wf Σ ->  wf_local Σ Γ ->
   Is_Type_or_Proof Σ Γ T ->
   Is_Type_or_Proof Σ Γ (PCUICUnivSubst.subst_instance_constr u T).
@@ -59,7 +59,7 @@ Notation "Σ ⊢ s ▷ t" := (Ee.eval Σ s t) (at level 50, s, t at next level) 
 
 (** ** Erasure is stable under context conversion *)
 
-Lemma Is_type_conv_context  (Σ : global_context) (Γ : context) t (Γ' : context) :
+Lemma Is_type_conv_context (Σ : global_env_ext) (Γ : context) t (Γ' : context) :
   wf Σ -> wf_local Σ Γ ->
     conv_context Σ Γ Γ' -> Is_Type_or_Proof Σ Γ t -> Is_Type_or_Proof Σ Γ' t.
 Proof.
@@ -73,7 +73,7 @@ Qed.
 
 Lemma erases_context_conversion :
 env_prop
-  (fun (Σ : PCUICAst.global_context) (Γ : PCUICAst.context) (t T : PCUICAst.term) =>
+  (fun (Σ : PCUICAst.global_env_ext) (Γ : PCUICAst.context) (t T : PCUICAst.term) =>
       forall Γ' : PCUICAst.context, conv_context Σ Γ Γ' -> forall t', erases Σ Γ t t' -> erases Σ Γ' t t').
 Proof.
   apply typing_ind_env; intros Σ wfΣ Γ wfΓ; intros **; rename_all_hyps.
@@ -115,7 +115,7 @@ Qed.
 
 Lemma erases_red_context_conversion :
 env_prop
-  (fun (Σ : PCUICAst.global_context) (Γ : PCUICAst.context) (t T : PCUICAst.term) =>
+  (fun (Σ : PCUICAst.global_env_ext) (Γ : PCUICAst.context) (t T : PCUICAst.term) =>
       forall Γ' : PCUICAst.context, red_context Σ Γ Γ' -> forall t', erases Σ Γ t t' -> erases Σ Γ' t t').
 Proof.
   eapply env_prop_imp.
@@ -127,7 +127,7 @@ Qed.
 (** ** Erasure is stable under substituting universe constraints  *)
 
 Lemma erases_subst_instance_constr :
-  forall Σ, wf Σ ->
+  forall Σ : global_env_ext, wf Σ ->
   forall Γ, wf_local Σ Γ ->
   forall t T, Σ ;;; Γ |- t : T ->
   forall t' u,
@@ -147,7 +147,7 @@ Admitted. (* erasure and universe substitution *)
 
 (** ** Erasure and applications  *)
 
-Lemma erases_App Σ Γ f L T t :
+Lemma erases_App (Σ : global_env_ext) Γ f L T t :
   Σ ;;; Γ |- tApp f L : T ->
   erases Σ Γ (tApp f L) t ->
   (t = tBox × squash (Is_Type_or_Proof Σ Γ (tApp f L)))
@@ -162,7 +162,7 @@ Proof.
   - left. split; eauto. econstructor; eauto.
 Qed.
 
-Lemma erases_mkApps Σ Γ f f' L L' :
+Lemma erases_mkApps (Σ : global_env_ext) Γ f f' L L' :
   erases Σ Γ f f' ->
   Forall2 (erases Σ Γ) L L' ->
   erases Σ Γ (mkApps f L) (E.mkApps f' L').
@@ -171,7 +171,7 @@ Proof.
   eapply IHForall2. econstructor. eauto. eauto.
 Qed.
 
-Lemma erases_mkApps_inv Σ Γ f L T t :
+Lemma erases_mkApps_inv (Σ : global_env_ext) Γ f L T t :
   wf Σ ->
   Σ ;;; Γ |- mkApps f L : T ->
   Σ;;; Γ |- mkApps f L ⇝ℇ t ->
@@ -201,25 +201,27 @@ Qed.
 
 (** ** Global erasure  *)
 
-Lemma lookup_env_erases Σ c decl Σ' :
+Lemma lookup_env_erases (Σ : global_env_ext) c decl Σ' :
   wf Σ ->
   erases_global Σ Σ' ->
   PCUICTyping.lookup_env (fst Σ) c = Some (ConstantDecl c decl) ->
   exists decl', ETyping.lookup_env Σ' c = Some (E.ConstantDecl c decl') /\
            erases_constant_body Σ decl decl'.
 Proof.
-  unfold erases_global. destruct Σ as (Σ, univs).
+  unfold erases_global. destruct Σ; simpl.
   intros. induction H; cbn in *.
   - inv H0.
   - destruct ?.
     + inv H0.
       exists cb'. split; eauto. unfold erases_constant_body in *.
       destruct ?. destruct ?.
-      * eapply erases_extends. 6: eassumption.
-        eapply PCUICWeakeningEnv.wf_extends.
-        eassumption. now eexists [_]. eauto.
-        { inv X. cbn in X1. unfold on_constant_decl in X1. rewrite E0 in *. cbn in X1. eassumption. }
-        eauto. now eexists [_].
+      * eapply (erases_extends (Σ, _)); simpl; eauto. now inv X.
+        2:eexists [_]; simpl; eauto.
+        admit. admit.
+        (* 2:eapply PCUICWeakeningEnv.wf_extends. *)
+        (* eassumption. now eexists [_]. eauto. *)
+        (* { inv X. cbn in X1. unfold on_constant_decl in X1. rewrite E0 in *. cbn in X1. eassumption. } *)
+        (* eauto. now eexists [_]. *)
       * eassumption.
       * destruct ?; tauto.
     + edestruct IHerases_global_decls as (decl' & ? & ?).
@@ -227,6 +229,7 @@ Proof.
       eassumption. now eexists [_]. eauto.
       exists decl'. split. eauto.
       unfold erases_constant_body in *. clear H. destruct ?. destruct ?.
+Admitted. (*
       * eapply erases_extends. 6: eassumption.
         eapply PCUICWeakeningEnv.wf_extends.
         eassumption. now eexists [_]. eauto.
@@ -255,10 +258,10 @@ Proof.
       * tauto.
       * destruct ?; tauto.
 Qed.
-
+*)
 (** ** The correctness proof  *)
 
-Record extraction_pre (Σ : global_context) : Type
+Record extraction_pre (Σ : global_env_ext) : Type
   := Build_extraction_pre
   { extr_env_axiom_free' : is_true (axiom_free (fst Σ));
     extr_env_wf' : wf Σ }.
@@ -484,7 +487,7 @@ Proof.
   - assert (Hty' := Hty).
     assert (Σ ;;; [] |- mkApps (tFix mfix idx) args ▷ res) by eauto.
     eapply type_mkApps_inv in Hty' as (? & ? & [] & ?); eauto.
-    eapply EInversion.type_tFix_inv in t as (? & [[] ?] & ?); eauto.
+    eapply EInversion.type_tFix_inv in t as (? & ? & ? & ? & ? & ?); eauto.
     unfold unfold_fix in H. rewrite e in H. inv H.
 
     eapply erases_mkApps_inv in He as [(? & ? & ? & ? & [] & ? & ? & ?) | (? & ? & ? & ? & ?)]; eauto.
@@ -596,11 +599,11 @@ Proof.
       edestruct IHeval.
       * eapply typing_subst_instance. eauto.
         eapply PCUICWeakeningEnv.declared_constant_inv in H'; eauto.
-        unfold on_constant_decl in H'. rewrite H0 in H'. eapply H'.
+        unfold on_constant_decl in H'. rewrite H0 in H'. red in H'. admit. (* eapply H'. *)
         eapply PCUICWeakeningEnv.weaken_env_prop_typing.
       * eapply erases_subst_instance_constr; eauto.
         eapply PCUICWeakeningEnv.declared_constant_inv in H'; eauto.
-        unfold on_constant_decl in H'. rewrite H0 in H'. eapply H'.
+        unfold on_constant_decl in H'. rewrite H0 in H'. admit. (* eapply H'. *)
         eapply PCUICWeakeningEnv.weaken_env_prop_typing.
       * destruct H3. exists x. split; eauto. econstructor; eauto.
     + exists tBox. split. econstructor.
@@ -737,4 +740,4 @@ Proof.
         -- inv H3. inv t0. eapply IHAll2 in H5 as (? & ? & ?).
            eapply r in H2 as (? & ? & ?); eauto.
            eauto.
-Qed.
+Admitted.

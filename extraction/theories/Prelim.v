@@ -97,19 +97,19 @@ Proof.
 Qed.
 
 Lemma typing_spine_cumul:
-  forall (Σ : PCUICAst.global_context) (T x1 : PCUICAst.term), Σ;;; [] |- x1 <= T -> typing_spine Σ [] x1 [] T.
+  forall (Σ : PCUICAst.global_env_ext) (T x1 : PCUICAst.term), Σ;;; [] |- x1 <= T -> typing_spine Σ [] x1 [] T.
 Proof.
   intros Σ T x1 X.
 Admitted.                       (* typing_spine_cumul, we have to change the def. here! *)
 
-Theorem subject_reduction_eval : forall (Σ : PCUICAst.global_context) Γ t u T,
+Theorem subject_reduction_eval : forall (Σ : PCUICAst.global_env_ext) Γ t u T,
   wf Σ -> Σ ;;; Γ |- t : T -> PCUICWcbvEval.eval Σ Γ t u -> Σ ;;; Γ |- u : T.
 Proof.
   intros * wfΣ Hty Hred % wcbeval_red. eapply subject_reduction; eauto.
 Qed.
 
 Lemma typing_spine_eval:
-  forall (Σ : PCUICAst.global_context) (args args' : list PCUICAst.term) (X : All2 (PCUICWcbvEval.eval Σ []) args args') (bla : wf Σ)
+  forall (Σ : PCUICAst.global_env_ext) (args args' : list PCUICAst.term) (X : All2 (PCUICWcbvEval.eval Σ []) args args') (bla : wf Σ)
     (T x x0 : PCUICAst.term) (t0 : typing_spine Σ [] x args x0) (c : Σ;;; [] |- x0 <= T) (x1 : PCUICAst.term)
     (c0 : Σ;;; [] |- x1 <= x), typing_spine Σ [] x1 args' T.
 Proof.
@@ -320,7 +320,7 @@ Proof.
     eapply IHl.  eauto.
 Qed.
 
-Lemma tCase_length_branch_inv Σ Γ ind npar p n u args brs T m t :
+Lemma tCase_length_branch_inv (Σ : global_env_ext) Γ ind npar p n u args brs T m t :
   wf Σ ->
   Σ ;;; Γ |- tCase (ind, npar) p (mkApps (tConstruct ind n u) args) brs : T ->
   nth_error brs n = Some (m, t) ->
@@ -365,7 +365,7 @@ Admitted.                       (* subslet_fix_subst *)
 
 (** ** Prelim on typing *)
 
-Lemma typing_subst_instance Σ Γ t T u :
+Lemma typing_subst_instance (Σ : global_env_ext) Γ t T u :
   wf Σ ->
   Σ ;;; Γ |- t : T ->
   Σ ;;; Γ |- PCUICUnivSubst.subst_instance_constr u t : PCUICUnivSubst.subst_instance_constr u T.
@@ -444,14 +444,14 @@ Admitted. (* env_prop is closed under implication, easy but annoying *)
 
 Lemma red_context_conversion :
   env_prop
-    (fun (Σ : PCUICAst.global_context) (Γ : PCUICAst.context) (t T : PCUICAst.term) =>
+    (fun (Σ : PCUICAst.global_env_ext) (Γ : PCUICAst.context) (t T : PCUICAst.term) =>
        forall Γ' : PCUICAst.context, red_context Σ Γ Γ' -> Σ;;; Γ' |- t : T).
 Proof.
   eapply env_prop_imp. 2: eapply context_conversion.
   intros. eapply X.
   clear - X0.
   Lemma red_conv_context:
-    forall (Σ : global_context) (Γ Γ' : context), red_context Σ Γ Γ' -> conv_context Σ Γ Γ'.
+    forall (Σ : global_env_ext) (Γ Γ' : context), red_context Σ Γ Γ' -> conv_context Σ Γ Γ'.
   Proof.
     intros Σ Γ Γ' X0.
     induction X0.
@@ -471,7 +471,7 @@ Proof.
   now eapply red_conv_context.
 Qed.
 
-Lemma conv_context_app (Σ : global_context) (Γ1 Γ2 Γ1' : context) :
+Lemma conv_context_app (Σ : global_env_ext) (Γ1 Γ2 Γ1' : context) :
   wf Σ ->
   wf_local Σ (Γ1 ,,, Γ2) ->
   conv_context Σ Γ1 Γ1' -> conv_context Σ (Γ1 ,,, Γ2) (Γ1' ,,, Γ2).
@@ -486,4 +486,3 @@ Proof.
     + cbn. econstructor. inv X0. eauto. econstructor. 2:eapply conv_refl.
       inv X0. cbn in X3. destruct X3. exists x. eapply context_conversion; eauto.
 Qed.
-

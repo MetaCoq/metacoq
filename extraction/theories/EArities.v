@@ -26,31 +26,31 @@ Definition Is_conv_to_Arity Σ Γ T := exists T', ∥red Σ Γ T T'∥ /\ isArit
 Ltac terror := try match goal with [t : type_error |- typing_result _] => exact (TypeError t) end.
            
 Lemma constructors_typed:
-  forall (Σ : list global_decl) (univs : constraints) (k : kername)
+  forall (Σ : global_env_ext) (k : kername)
     (m : mutual_inductive_body) (x : one_inductive_body) (t1 : term) 
     (i0 : ident) (n0 : nat),
     In (i0, t1, n0) (ind_ctors x) ->
-    on_inductive (fun Σ0 : global_context => lift_typing typing Σ0) (Σ, univs) k m ->
-    ∑ T, (Σ, univs);;; arities_context (ind_bodies m) |- t1 : T.
+    on_inductive (fun Σ0 : global_env_ext => lift_typing typing Σ0) Σ k m ->
+    ∑ T, Σ;;; arities_context (ind_bodies m) |- t1 : T.
 Proof.
-  intros Σ univs k m x t1 i0 n0 H2 X0.
+  intros Σ k m x t1 i0 n0 H2 X0.
 Admitted.                       (* constructors have a type *)
 
-Lemma proj_typed:
-  forall (Σ : list global_decl) (univs : constraints) (k : kername)
-    (m : mutual_inductive_body) (x : one_inductive_body) (t1 : term) 
-    (i0 : ident) (H2 : In (i0, t1) (ind_projs x))
-    (X0 : on_inductive (fun Σ0 : global_context => lift_typing typing Σ0) (Σ, univs) k m),
-    ∑ T, (Σ, univs);;; [] |- t1 : T.
-Proof.
+(* Lemma proj_typed: *)
+(*   forall (Σ : list global_decl) (univs : constraints) (k : kername) *)
+(*     (m : mutual_inductive_body) (x : one_inductive_body) (t1 : term)  *)
+(*     (i0 : ident) (H2 : In (i0, t1) (ind_projs x)) *)
+(*     (X0 : on_inductive (fun Σ0 : global_env_ext => lift_typing typing Σ0) (Σ, univs) k m), *)
+(*     ∑ T, (Σ, univs);;; [] |- t1 : T. *)
+(* Proof. *)
   
-Admitted. (* projections have a type *)
+(* Admitted. (* projections have a type *) *)
 
-Lemma context_conversion_red Σ Γ Γ' s t : wf Σ -> 
+Lemma context_conversion_red (Σ : global_env_ext) Γ Γ' s t : wf Σ ->
   PCUICSR.conv_context Σ Γ Γ' -> red Σ Γ s t -> red Σ Γ' s t.
 Admitted.
 
-Lemma invert_cumul_arity_r (Σ : global_context) (Γ : context) (C : term) T :
+Lemma invert_cumul_arity_r (Σ : global_env_ext) (Γ : context) (C : term) T :
   wf Σ -> wf_local Σ Γ ->
   isArity T ->
   Σ;;; Γ |- C <= T -> Is_conv_to_Arity Σ Γ C.
@@ -73,7 +73,7 @@ Proof.
   -   admit.
 Admitted.                       (* invert_cumul_arity_r *)
 
-Lemma invert_cumul_arity_l (Σ : global_context) (Γ : context) (C : term) T :
+Lemma invert_cumul_arity_l (Σ : global_env_ext) (Γ : context) (C : term) T :
   wf Σ -> wf_local Σ Γ ->
   isArity C -> 
   Σ;;; Γ |- C <= T -> Is_conv_to_Arity Σ Γ T.
@@ -97,7 +97,7 @@ Proof.
 Admitted.                       (* invert_cumul_arity_l *)
 
 Lemma isWfArity_prod_inv:
-  forall (Σ : global_context) (Γ : context) (T : term) (x : name) (x0 x1 : term),
+  forall (Σ : global_env_ext) (Γ : context) (T : term) (x : name) (x0 x1 : term),
     isWfArity typing Σ Γ (tProd x x0 x1) -> (∑ s : universe, Σ;;; Γ |- x0 : tSort s) ×   isWfArity typing Σ (Γ,, vass x x0) x1
 .
 Proof.
@@ -116,7 +116,7 @@ Proof.
   
 Admitted.                       (* inversion for isWfarity on products *)
 
-Lemma arity_type_inv Σ Γ t T1 T2 : wf Σ -> wf_local Σ Γ ->
+Lemma arity_type_inv (Σ : global_env_ext) Γ t T1 T2 : wf Σ -> wf_local Σ Γ ->
   Σ ;;; Γ |- t : T1 -> isArity T1 -> Σ ;;; Γ |- t : T2 -> Is_conv_to_Arity Σ Γ T2.
 Proof.
   intros wfΣ wfΓ. intros. eapply principal_typing in X as (? & ? & ? & ?). 2:eauto. 2:exact X0.
@@ -130,7 +130,7 @@ Proof.
   exists x1; split; sq; eauto.
 Qed.
 
-Lemma cumul_prop1 Σ Γ A B u :
+Lemma cumul_prop1 (Σ : global_env_ext) Γ A B u :
   wf Σ -> 
   is_prop_sort u -> Σ ;;; Γ |- B : tSort u ->
   Σ ;;; Γ |- A <= B -> Σ ;;; Γ |- A : tSort u.
@@ -138,21 +138,21 @@ Proof.
   
 Admitted.                       (* cumul_prop1 *)
 
-Lemma cumul_prop2 Σ Γ A B u :
+Lemma cumul_prop2 (Σ : global_env_ext) Γ A B u :
   wf Σ ->
   is_prop_sort u -> Σ ;;; Γ |- A <= B ->
   Σ ;;; Γ |- A : tSort u -> Σ ;;; Γ |- B : tSort u.
 Proof.
 Admitted.                       (* cumul_prop2 *)
 
-Lemma leq_universe_prop Σ u1 u2 :
+Lemma leq_universe_prop (Σ : global_env_ext) u1 u2 :
   wf Σ ->
-  leq_universe (snd Σ) u1 u2 ->
+  leq_universe (global_ext_constraints Σ) u1 u2 ->
   (is_prop_sort u1 \/ is_prop_sort u2) ->
   (is_prop_sort u1 /\ is_prop_sort u2).
 Admitted.
 
-Lemma Is_type_app Σ Γ t L T :
+Lemma Is_type_app (Σ : global_env_ext) Γ t L T :
   wf Σ ->
   Σ ;;; Γ |- mkApps t L : T ->
   Is_Type_or_Proof Σ Γ t ->
@@ -165,7 +165,7 @@ Proof.
 
 
   (*   Lemma typing_spine_change : *)
-  (*     forall (Σ : global_context) (Γ : context) (t : term) (L : list term) (x1 : term), *)
+  (*     forall (Σ : global_env_ext) (Γ : context) (t : term) (L : list term) (x1 : term), *)
   (*       Σ;;; Γ |- t : x1 -> forall x x0 : term, Σ;;; Γ |- t : x -> typing_spine Σ Γ x L x0 -> typing_spine Σ Γ x1 L x0. *)
   (*   Proof. *)
   (*     intros Σ Γ t L x1 t2 x x0 t0 t1. *)
@@ -179,7 +179,7 @@ Proof.
   (* - destruct p. *)
 Admitted.                       (* Is_type_app *)
 
-Lemma Is_type_lambda Σ Γ na T1 t :
+Lemma Is_type_lambda (Σ : global_env_ext) Γ na T1 t :
   wf Σ ->
   Is_Type_or_Proof Σ Γ (tLambda na T1 t) ->
   Is_Type_or_Proof Σ (vass na T1 :: Γ) t.
@@ -191,7 +191,7 @@ Proof.
   - right. exists u. split; eauto.
 Admitted.                       (* Is_type_lambda *)
 
-Lemma Is_type_red Σ Γ t v:
+Lemma Is_type_red (Σ : global_env_ext) Γ t v:
   wf Σ ->
   red Σ Γ t v ->
   Is_Type_or_Proof Σ Γ t ->
@@ -203,7 +203,7 @@ Proof.
   - eauto.
 Qed.
 
-Lemma Is_type_eval Σ Γ t v:
+Lemma Is_type_eval (Σ : global_env_ext) Γ t v:
   wf Σ ->
   eval Σ Γ t v ->
   Is_Type_or_Proof Σ Γ t ->
@@ -220,7 +220,7 @@ Proof.
   intros idecl.
 Admitted.                       (* the type of an inductive is an arity *)
 
-Lemma tConstruct_no_Type Σ ind c u x1 : wf Σ ->
+Lemma tConstruct_no_Type (Σ : global_env_ext) ind c u x1 : wf Σ ->
   Is_Type_or_Proof Σ [] (mkApps (tConstruct ind c u) x1) ->
   Is_proof Σ [] (mkApps (tConstruct ind c u) x1).
 Proof.

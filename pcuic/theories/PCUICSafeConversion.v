@@ -1889,7 +1889,7 @@ Section Conversion.
     eapply wellformed_zipc_replace ; auto.
     - exact h2.
     - simpl. rewrite stack_context_appstack.
-      left; exists A1'. eapply context_conversion ; auto.
+      left. exists A1'. eapply context_conversion ; auto.
       + eassumption.
       + assumption.
     - simpl. rewrite stack_context_appstack.
@@ -2184,7 +2184,6 @@ Section Conversion.
       + eapply red_delta.
         * unfold declared_constant. eauto.
         * reflexivity.
-      + assumption.
     - apply unfold_one_case_cored in e as r. apply cored_red in r.
       destruct r as [r].
       constructor. unfold zippx.
@@ -2216,7 +2215,6 @@ Section Conversion.
       constructor. eapply red_delta.
       + unfold declared_constant. eauto.
       + reflexivity.
-      + assumption.
     - repeat zip fold. eapply cored_context.
       eapply unfold_one_case_cored. eassumption.
     - repeat zip fold. eapply cored_context.

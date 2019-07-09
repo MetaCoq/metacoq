@@ -250,6 +250,22 @@ Section Lemmata.
         constructor.
         * eapply eq_term_upto_univ_eq_eq_term. assumption.
         * eapply eq_term_refl.
+    - intros na b B t s1 A ih hB ihB hb ihb hA ihA v e.
+      dependent destruction e.
+      econstructor.
+      + econstructor.
+        * eapply ihB. assumption.
+        * econstructor.
+          -- eapply ihb. assumption.
+          -- right. eexists. eapply ihB. assumption.
+          -- constructor. eapply eq_term_leq_term.
+             eapply eq_term_upto_univ_eq_eq_term. assumption.
+        * eapply context_conversion.
+          -- eapply ihA. assumption.
+          -- constructor.
+             ++ apply conv_ctx_refl ; auto.
+             ++ Fail econstructor.
+                (* conv_vdef_body is not general enough, NEED FIX *)
   Admitted.
 
   Corollary type_nameless :

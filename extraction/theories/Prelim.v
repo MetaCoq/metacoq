@@ -269,12 +269,12 @@ Proof.
   intros x6 Eu.
 Admitted.
 
-Lemma elim_restriction_works_kelim1 Σ Γ T ind npar p c brs mind idecl :
+Lemma elim_restriction_works_kelim1 Σ Γ T ind npar p c brs mind idecl : wf Σ ->
   declared_inductive (fst Σ) mind ind idecl ->
   Σ ;;; Γ |- tCase (ind, npar) p c brs : T ->
   (Is_proof Σ Γ (tCase (ind, npar) p c brs) -> False) -> In InType (ind_kelim idecl).
 Proof.
-  intros.
+  intros wfΣ. intros.
   assert (HT := X).
   eapply inversion_Case in X as (? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ?). 
   unfold types_of_case in e0.
@@ -282,7 +282,7 @@ Proof.
   eapply declared_inductive_inj in d as []. 2:exact H. subst.
   enough (universe_family x6 = InType). rewrite H1 in e1.
   eapply Exists_exists in e1 as (? & ? & ?). subst. eauto.
-
+  
   destruct (universe_family x6) eqn:Eu.
   - exfalso. eapply H0. exists T. exists x6. split. eauto.
     split. 2:{ eapply universe_family_is_prop_sort; eauto. }
@@ -298,8 +298,13 @@ Lemma elim_restriction_works_kelim2 Σ ind mind idecl : wf Σ ->
 Proof.
   intros.
   destruct (PCUICWeakeningEnv.on_declared_inductive X H) as [[]]; eauto.
-  intros ?. intros.
+  intros ?. intros. inversion o.
   eapply declared_inductive_inj in H as []; eauto; subst.
+  clear - onConstructors ind_sorts. try dependent induction onConstructors.
+  (* - cbn. split. omega. econstructor. admit. *)
+  (* -  *)
+  
+  
 Admitted.                       (* elim_restriction_works *)
 
 Lemma elim_restriction_works Σ Γ T ind npar p c brs mind idecl : wf Σ ->

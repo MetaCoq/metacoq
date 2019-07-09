@@ -38,13 +38,13 @@ Proof.
   - repeat destruct ? in H; try congruence.
     inv H. econstructor; eauto.
 Qed.
-    
+
 Lemma monad_map_Forall2 (X Y : Type) (f : X -> typing_result Y) (l1 : list X) (a1 : list Y) :
   monad_map f l1 = Checked a1 -> Forall2 (fun a b => f a = Checked b) l1 a1.
 Proof.
   intros. now eapply All2_Forall, monad_map_All2.
 Qed.
-  
+
 Lemma monad_map_length X Y (f : X -> typing_result Y) (l1  : list X) a :
   monad_map f l1 = Checked a -> #|l1| = #|a|.
 Proof.
@@ -126,7 +126,7 @@ Proof.
       unfold PCUICLiftSubst.subst1.
       eapply (red_red Σ [] [_] [] [_] [_]).
       eauto. econstructor. eapply wcbeval_red. eauto.
-      econstructor. econstructor. econstructor. 
+      econstructor. econstructor. econstructor.
       Grab Existential Variables. all: repeat econstructor.
 Qed.
 
@@ -228,7 +228,7 @@ Proof.
   induction 1; cbn; intros; destruct H.
   - subst. econstructor. eauto.
   - eauto.
-Qed.      
+Qed.
 
 Lemma nth_error_skipn A l m n (a : A) :
   nth_error l (m + n) = Some a ->
@@ -305,7 +305,7 @@ Proof.
   destruct ?; try congruence.
   destruct ?; try congruence.
   destruct ?; try congruence. inv H.  unfold build_branches_type in *.
-  unfold mapi in *. 
+  unfold mapi in *.
   clear - E4. revert btys E4. generalize 0 at 3. induction ((ind_ctors idecl')); cbn; intros.
   - cbn in E4. inv E4. reflexivity.
   - cbn in E4.
@@ -421,7 +421,7 @@ Proof.
   (*         intros. inv X0. econstructor. inv X1. exists x1. eauto. *)
   (*         destruct X2. exists x1. admit. *)
   (*       }  *)
-        
+
   (*       econstructor. eassumption. inv onArity. *)
   (*       econstructor. eauto. intros. eapply onProjections in H. inv H. *)
   (*       econstructor. all:eauto. *)
@@ -467,6 +467,7 @@ Proof.
       constructor.
       now eapply PCUICCumulativity.red_cumul.
       now eapply PCUICCumulativity.red_cumul_inv.
+      apply conv_refl.
   Qed.
   now eapply red_conv_context.
 Qed.
@@ -486,4 +487,3 @@ Proof.
     + cbn. econstructor. inv X0. eauto. econstructor. 2:eapply conv_refl.
       inv X0. cbn in X3. destruct X3. exists x. eapply context_conversion; eauto.
 Qed.
-

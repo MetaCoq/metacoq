@@ -762,6 +762,12 @@ Axiom fix_guard_red1 :
     red1 Σ Γ (tFix mfix idx) (tFix mfix' idx) ->
     fix_guard mfix'.
 
+Axiom fix_guard_eq_term :
+  forall mfix mfix' idx,
+    fix_guard mfix ->
+    eq_term_upto_univ eq eq (tFix mfix idx) (tFix mfix' idx) ->
+    fix_guard mfix'.
+
 Axiom fix_guard_rename :
   forall mfix f,
     let mfix' :=

@@ -8,7 +8,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICReflect PCUICLiftSubst PCUICUnivSubst PCUICTyping
      PCUICCumulativity PCUICSR PCUICPosition PCUICEquality PCUICNameless
      PCUICNormal PCUICInversion PCUICCumulativity PCUICReduction
-     PCUICConfluence.
+     PCUICConfluence PCUICValidity.
 From Equations Require Import Equations.
 
 Require Import Equations.Prop.DepElim.
@@ -153,6 +153,273 @@ End DestArity.
 Section Lemmata.
 
   Context (flags : RedFlags.t).
+
+  Lemma context_conversion :
+    forall {Σ Γ t T Γ'},
+      Σ ;;; Γ |- t : T ->
+      PCUICSR.conv_context Σ Γ Γ' ->
+      Σ ;;; Γ' |- t : T.
+  Admitted.
+
+  Lemma type_rename :
+    forall Σ Γ u v A,
+      Σ ;;; Γ |- u : A ->
+      eq_term_upto_univ eq eq u v ->
+      Σ ;;; Γ |- v : A.
+  Proof.
+    assert (tm :
+      env_prop (fun Σ Γ u A =>
+                  forall v,
+                    eq_term_upto_univ eq eq u v ->
+                    Σ ;;; Γ |- v : A)
+    ).
+    eapply typing_ind_env.
+    all: intros Σ' wfΣ Γ wfΓ.
+    - intros n decl hnth ih v e.
+      dependent destruction e.
+      eapply type_Rel ; eassumption.
+    - intros l ih v e.
+      dependent destruction e. subst.
+      eapply type_Sort. assumption.
+    - intros na A B s1 s2 ih hA ihA hB ihB v e.
+      dependent destruction e.
+      econstructor.
+      + eapply ihA. assumption.
+      + eapply context_conversion.
+        * eapply ihB. assumption.
+        * constructor.
+          -- apply conv_ctx_refl ; auto.
+          -- constructor.
+             ++ eexists. eapply ihA. assumption.
+             ++ eapply conv_conv_alt. constructor.
+                eapply eq_term_upto_univ_eq_eq_term. assumption.
+    - intros na A t s1 B ih hA ihA hB ihB v e.
+      dependent destruction e.
+      econstructor.
+      + econstructor.
+        * eapply ihA. assumption.
+        * eapply context_conversion.
+          -- eapply ihB. assumption.
+          -- constructor.
+             ++ apply conv_ctx_refl ; auto.
+             ++ constructor.
+                ** eexists. eapply ihA. assumption.
+                ** eapply conv_conv_alt. constructor.
+                   eapply eq_term_upto_univ_eq_eq_term. assumption.
+      + eapply validity_term ; eauto.
+        econstructor ; eauto.
+      + constructor.
+        eapply eq_term_leq_term.
+        apply eq_term_sym.
+        constructor.
+        all: try (eapply eq_term_upto_univ_eq_eq_term ; assumption).
+        all: eapply eq_term_refl.
+    - intros na b B t s1 A ih hB ihB hb ihb hA ihA v e.
+      dependent destruction e.
+      econstructor.
+      + econstructor.
+        * eapply ihB. assumption.
+        * econstructor.
+          -- eapply ihb. assumption.
+          -- right. eexists. eapply ihB. assumption.
+          -- constructor. eapply eq_term_leq_term.
+             eapply eq_term_upto_univ_eq_eq_term. assumption.
+        * eapply context_conversion.
+          -- eapply ihA. assumption.
+          -- constructor.
+             ++ apply conv_ctx_refl ; auto.
+             ++ econstructor.
+                ** eexists. eapply ihB. assumption.
+                ** econstructor.
+                   --- eapply ihb. assumption.
+                   --- right. eexists. eapply ihB. assumption.
+                   --- constructor. eapply eq_term_leq_term.
+                       eapply eq_term_upto_univ_eq_eq_term. assumption.
+                ** eapply conv_conv_alt. constructor.
+                   eapply eq_term_upto_univ_eq_eq_term. assumption.
+                ** eapply conv_conv_alt. constructor.
+                   eapply eq_term_upto_univ_eq_eq_term. assumption.
+      + eapply validity_term ; eauto.
+        econstructor ; eauto.
+      + constructor.
+        eapply eq_term_leq_term.
+        apply eq_term_sym.
+        constructor.
+        all: try (eapply eq_term_upto_univ_eq_eq_term ; assumption).
+        all: eapply eq_term_refl.
+    - intros t na A B u ih ht iht hu ihu v e.
+      dependent destruction e.
+      econstructor.
+      + econstructor.
+        * eapply iht. assumption.
+        * eapply ihu. assumption.
+      + eapply validity_term ; eauto.
+        econstructor ; eauto.
+      + constructor.
+        eapply eq_term_leq_term.
+        apply eq_term_sym.
+        eapply eq_term_upto_univ_eq_eq_term.
+        eapply eq_term_upto_univ_subst ; auto.
+        eapply eq_term_upto_univ_refl ; auto.
+    - intros cst u decl ? ? hdecl hcons v e.
+      dependent destruction e.
+      apply All2_eq in a. apply map_inj in a ; revgoals.
+      { intros x y h. inversion h. reflexivity. }
+      subst.
+      constructor ; auto.
+    - intros ind u mdecl idecl isdecl ? ? hcons v e.
+      dependent destruction e.
+      apply All2_eq in a. apply map_inj in a ; revgoals.
+      { intros x y h. inversion h. reflexivity. }
+      subst.
+      econstructor ; eauto.
+    - intros ind i u mdecl idecl cdecl isdecl ? ? ? v e.
+      dependent destruction e.
+      apply All2_eq in a. apply map_inj in a ; revgoals.
+      { intros x y h. inversion h. reflexivity. }
+      subst.
+      econstructor ; eauto.
+    - intros ind u npar p c brs args mdecl idecl isdecl X X0 H pars pty X1
+             indctx pctx ps btys htc H1 H2 ihp hc ihc ihbrs v e.
+      dependent destruction e.
+      econstructor.
+      + econstructor. all: try eassumption.
+        * eapply ihp. assumption.
+        * admit.
+        * eapply ihc. assumption.
+        * admit.
+      (* + eapply validity_term ; eauto. *)
+      (*   econstructor ; eauto. *)
+      (* + constructor. *)
+      (*   eapply eq_term_leq_term. *)
+      (*   apply eq_term_sym. *)
+      (*   constructor. *)
+      (*   all: try (eapply eq_term_upto_univ_eq_eq_term ; assumption). *)
+      (*   all: eapply eq_term_refl. *)
+      + admit.
+      + admit.
+    - intros p c u mdecl idecl pdecl isdecl args X X0 hc ihc H ty v e.
+      dependent destruction e.
+      econstructor.
+      + econstructor. all: try eassumption.
+        eapply ihc. assumption.
+      + eapply validity_term ; eauto.
+        econstructor ; eauto.
+      + constructor.
+        eapply eq_term_leq_term.
+        apply eq_term_sym.
+        eapply eq_term_upto_univ_eq_eq_term.
+        eapply eq_term_upto_univ_substs ; auto.
+        * eapply eq_term_upto_univ_refl ; auto.
+        * constructor ; auto.
+          eapply All2_same.
+          intro. eapply eq_term_upto_univ_refl ; auto.
+    - intros mfix n decl types hnth hguard ? ? v e.
+      dependent destruction e.
+      (* econstructor. *)
+      (* + (* We need to add an axiom for this *) *)
+      (*   give_up. *)
+      (* +  *)
+      admit.
+    - intros mfix n decl H types hnth wf ihmfix v e. subst types.
+      dependent destruction e.
+      pose proof (All2_nth_error_Some _ _ a hnth) as [decl' [? [[? ?] ?]]].
+      eapply type_Conv.
+      + econstructor.
+        * assumption.
+        * eassumption.
+        * (* Using ihmfix probably, we'll need a lemma *)
+          admit.
+        * admit.
+      + eapply @validity_term with (t := tCoFix mfix n) ; eauto.
+        econstructor ; eauto.
+        * Fail apply wf. (* WHY? *)
+          admit.
+        * give_up. (* Are we missing some hypotheses with this induction
+                      principle? *)
+      + admit.
+    - intros t A B X ht iht har hcu v e.
+      eapply type_Conv.
+      + eapply iht. assumption.
+      + destruct har as [[? ?] | [? [? ?]]].
+        * left. assumption.
+        * right. eexists. eassumption.
+      + assumption.
+    - rename wfΓ into A, Γ into v, wfΣ into u, Σ' into Γ.
+      intros hu e.
+      eapply tm ; eauto.
+      + give_up. (* This induction principle is really annoying as I don't
+                    really need it... *)
+      + eapply typing_wf_local. eassumption.
+  Admitted.
+
+  Corollary type_nameless :
+    forall Σ Γ u A,
+      Σ ;;; Γ |- u : A ->
+      Σ ;;; Γ |- nl u : A.
+  Proof.
+    intros Σ Γ u A h.
+    eapply type_rename.
+    - eassumption.
+    - eapply eq_term_upto_univ_tm_nl. all: auto.
+  Qed.
+
+  Lemma lookup_env_ConstantDecl_inv :
+    forall Σ k k' ty bo uni,
+      Some (ConstantDecl k' {| cst_type := ty ; cst_body := bo; cst_universes := uni |})
+      = lookup_env Σ k ->
+      k = k'.
+  Proof.
+    intros Σ k k' ty bo uni h.
+    induction Σ in h |- *.
+    - cbn in h. discriminate.
+    - cbn in h. destruct (ident_eq_spec k (global_decl_ident a)).
+      + subst. inversion h. reflexivity.
+      + apply IHΣ in h. assumption.
+  Qed.
+
+  Lemma fresh_global_nl :
+    forall Σ k,
+      fresh_global k Σ ->
+      fresh_global k (map nl_global_decl Σ).
+  Proof.
+    intros Σ k h. eapply Forall_map.
+    eapply Forall_impl ; try eassumption.
+    intros x hh. cbn in hh.
+    destruct x ; assumption.
+  Qed.
+
+  Lemma wf_nlg :
+    forall Σ,
+      ∥ wf Σ ∥ ->
+      ∥ wf (nlg Σ) ∥.
+  Proof.
+    intros Σ [wΣ].
+    constructor.
+    destruct Σ as [Σ φ].
+    unfold nlg. unfold wf in *. unfold on_global_env in *. simpl in *.
+    induction Σ.
+    - assumption.
+    - simpl. inversion wΣ. subst.
+      constructor.
+      + eapply IHΣ. assumption.
+      + destruct a.
+        * simpl in *. eapply fresh_global_nl. assumption.
+        * simpl in *. eapply fresh_global_nl. assumption.
+      + destruct a.
+        * simpl in *. destruct c as [ty [bo |] uni].
+          -- cbn in *.
+             econstructor.
+             ++ eapply type_nameless.
+                (* Need some lemma like welltyped_nlg? *)
+                admit.
+             ++ admit.
+             ++ admit.
+          -- cbn in *. (* same *)
+             admit.
+        * simpl in *. destruct m. admit.
+  Admitted.
+
   Context (Σ : global_context).
   Context (hΣ : ∥ wf Σ ∥).
 
@@ -173,56 +440,6 @@ Section Lemmata.
 
   Definition wellformed Σ Γ t :=
     welltyped Σ Γ t \/ ∥ isWfArity typing Σ Γ t ∥.
-
-  Lemma lookup_env_ConstantDecl_inv :
-    forall k k' ty bo uni,
-      Some (ConstantDecl k' {| cst_type := ty ; cst_body := bo; cst_universes := uni |})
-      = lookup_env Σ k ->
-      k = k'.
-  Proof.
-    intros k k' ty bo uni h.
-    destruct Σ as [Σ' φ].
-    induction Σ' in h |- *.
-    - cbn in h. discriminate.
-    - cbn in h. destruct (ident_eq_spec k (global_decl_ident a)).
-      + subst. inversion h. reflexivity.
-      + apply IHΣ' in h. assumption.
-  Qed.
-
-  Lemma fresh_global_nl :
-    forall Σ' k,
-      fresh_global k Σ' ->
-      fresh_global k (map nl_global_decl Σ').
-  Proof.
-    intros Σ' k h. eapply Forall_map.
-    eapply Forall_impl ; try eassumption.
-    intros x hh. cbn in hh.
-    destruct x ; assumption.
-  Qed.
-
-  Lemma wf_nlg :
-    ∥ wf (nlg Σ) ∥.
-  Proof.
-    destruct hΣ as [wΣ]; clear hΣ. constructor.
-    destruct Σ as [Σ' φ].
-    unfold nlg. unfold wf in *. unfold on_global_env in *. simpl in *.
-    induction Σ'.
-    - assumption.
-    - simpl. inversion wΣ. subst.
-      constructor.
-      + eapply IHΣ'. assumption.
-      + destruct a.
-        * simpl in *. eapply fresh_global_nl. assumption.
-        * simpl in *. eapply fresh_global_nl. assumption.
-      + destruct a.
-        * simpl in *. destruct c as [ty [bo |] uni].
-          -- cbn in *.
-             (* Need type_nl or something *)
-             admit.
-          -- cbn in *. (* same *)
-             admit.
-        * simpl in *. destruct m. admit.
-  Admitted.
 
   Lemma welltyped_nlg :
     forall Γ t,
@@ -900,13 +1117,6 @@ Section Lemmata.
 
   Derive Signature for cumul.
   Derive Signature for red1.
-
-  Lemma context_conversion :
-    forall {Γ t T Γ'},
-      Σ ;;; Γ |- t : T ->
-      PCUICSR.conv_context Σ Γ Γ' ->
-      Σ ;;; Γ' |- t : T.
-  Admitted.
 
   Lemma app_reds_r :
     forall Γ u v1 v2,

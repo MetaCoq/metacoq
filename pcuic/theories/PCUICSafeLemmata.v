@@ -196,7 +196,7 @@ Section Lemmata.
       Σ ;;; Γ' |- t : T.
   Admitted.
 
-  Lemma type_rename :
+  Lemma type_rename (hg : wf Σ) :
     forall Γ u v A,
       Σ ;;; Γ |- u : A ->
       eq_term_upto_univ eq eq u v ->
@@ -244,12 +244,11 @@ Section Lemmata.
       + eapply validity_term ; eauto.
         econstructor ; eauto.
       + constructor.
-        apply eq_term_upto_univ_sym in e1 ; auto.
-        apply eq_term_upto_univ_sym in e2 ; auto.
         eapply eq_term_leq_term.
+        apply eq_term_sym.
         constructor.
-        * eapply eq_term_upto_univ_eq_eq_term. assumption.
-        * eapply eq_term_refl.
+        all: try (eapply eq_term_upto_univ_eq_eq_term ; assumption).
+        all: eapply eq_term_refl.
     - intros na b B t s1 A ih hB ihB hb ihb hA ihA v e.
       dependent destruction e.
       econstructor.
@@ -265,7 +264,126 @@ Section Lemmata.
           -- constructor.
              ++ apply conv_ctx_refl ; auto.
              ++ econstructor.
-                (* conv_vdef_body is not general enough, NEED FIX *)
+                ** eexists. eapply ihB. assumption.
+                ** econstructor.
+                   --- eapply ihb. assumption.
+                   --- right. eexists. eapply ihB. assumption.
+                   --- constructor. eapply eq_term_leq_term.
+                       eapply eq_term_upto_univ_eq_eq_term. assumption.
+                ** eapply conv_conv_alt. constructor.
+                   eapply eq_term_upto_univ_eq_eq_term. assumption.
+                ** eapply conv_conv_alt. constructor.
+                   eapply eq_term_upto_univ_eq_eq_term. assumption.
+      + eapply validity_term ; eauto.
+        econstructor ; eauto.
+      + constructor.
+        eapply eq_term_leq_term.
+        apply eq_term_sym.
+        constructor.
+        all: try (eapply eq_term_upto_univ_eq_eq_term ; assumption).
+        all: eapply eq_term_refl.
+    - intros t na A B u ih ht iht hu ihu v e.
+      dependent destruction e.
+      econstructor.
+      + econstructor.
+        * eapply iht. assumption.
+        * eapply ihu. assumption.
+      + eapply validity_term ; eauto.
+        econstructor ; eauto.
+      + constructor.
+        eapply eq_term_leq_term.
+        apply eq_term_sym.
+        eapply eq_term_upto_univ_eq_eq_term.
+        eapply eq_term_upto_univ_subst ; auto.
+        eapply eq_term_upto_univ_refl ; auto.
+    - intros cst u decl ? ? hdecl hcons v e.
+      dependent destruction e.
+      apply All2_eq in a. apply map_inj in a ; revgoals.
+      { intros x y h. inversion h. reflexivity. }
+      subst.
+      constructor ; auto.
+    - intros ind u mdecl idecl isdecl ? ? hcons v e.
+      dependent destruction e.
+      apply All2_eq in a. apply map_inj in a ; revgoals.
+      { intros x y h. inversion h. reflexivity. }
+      subst.
+      econstructor ; eauto.
+    - intros ind i u mdecl idecl cdecl isdecl ? ? ? v e.
+      dependent destruction e.
+      apply All2_eq in a. apply map_inj in a ; revgoals.
+      { intros x y h. inversion h. reflexivity. }
+      subst.
+      econstructor ; eauto.
+    - intros ind u npar p c brs args mdecl idecl isdecl X X0 H pars pty X1
+             indctx pctx ps btys htc H1 H2 ihp hc ihc ihbrs v e.
+      dependent destruction e.
+      econstructor.
+      + econstructor. all: try eassumption.
+        * eapply ihp. assumption.
+        * admit.
+        * eapply ihc. assumption.
+        * admit.
+      (* + eapply validity_term ; eauto. *)
+      (*   econstructor ; eauto. *)
+      (* + constructor. *)
+      (*   eapply eq_term_leq_term. *)
+      (*   apply eq_term_sym. *)
+      (*   constructor. *)
+      (*   all: try (eapply eq_term_upto_univ_eq_eq_term ; assumption). *)
+      (*   all: eapply eq_term_refl. *)
+      + admit.
+      + admit.
+    - intros p c u mdecl idecl pdecl isdecl args X X0 hc ihc H ty v e.
+      dependent destruction e.
+      econstructor.
+      + econstructor. all: try eassumption.
+        eapply ihc. assumption.
+      + eapply validity_term ; eauto.
+        econstructor ; eauto.
+      + constructor.
+        eapply eq_term_leq_term.
+        apply eq_term_sym.
+        eapply eq_term_upto_univ_eq_eq_term.
+        eapply eq_term_upto_univ_substs ; auto.
+        * eapply eq_term_upto_univ_refl ; auto.
+        * constructor ; auto.
+          eapply All2_same.
+          intro. eapply eq_term_upto_univ_refl ; auto.
+    - intros mfix n decl types hnth hguard ? ? v e.
+      dependent destruction e.
+      (* econstructor. *)
+      (* + (* We need to add an axiom for this *) *)
+      (*   give_up. *)
+      (* +  *)
+      admit.
+    - intros mfix n decl H types hnth wf ihmfix v e. subst types.
+      dependent destruction e.
+      pose proof (All2_nth_error_Some _ _ a hnth) as [decl' [? [[? ?] ?]]].
+      eapply type_Conv.
+      + econstructor.
+        * assumption.
+        * eassumption.
+        * (* Using ihmfix probably, we'll need a lemma *)
+          admit.
+        * admit.
+      + eapply @validity_term with (t := tCoFix mfix n) ; eauto.
+        econstructor ; eauto.
+        * Fail apply wf. (* WHY? *)
+          admit.
+        * give_up. (* Are we missing some hypotheses with this induction
+                      principle? *)
+      + admit.
+    - intros t A B X ht iht har hcu v e.
+      eapply type_Conv.
+      + eapply iht. assumption.
+      + destruct har as [[? ?] | [? [? ?]]].
+        * left. assumption.
+        * right. eexists. eassumption.
+      + assumption.
+    - rename wfΓ into A, Γ into v, wfΣ into u, Σ' into Γ.
+      intros hu e.
+      eapply tm ; eauto.
+      eapply typing_wf_local. eassumption.
   Admitted.
 
   Corollary type_nameless :

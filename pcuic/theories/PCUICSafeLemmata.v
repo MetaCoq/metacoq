@@ -189,6 +189,73 @@ Section Lemmata.
       + apply IHΣ' in h. assumption.
   Qed.
 
+  Lemma context_conversion :
+    forall {Σ Γ t T Γ'},
+      Σ ;;; Γ |- t : T ->
+      PCUICSR.conv_context Σ Γ Γ' ->
+      Σ ;;; Γ' |- t : T.
+  Admitted.
+
+  Lemma type_rename :
+    forall Γ u v A,
+      Σ ;;; Γ |- u : A ->
+      eq_term_upto_univ eq eq u v ->
+      Σ ;;; Γ |- v : A.
+  Proof.
+    assert (tm :
+      env_prop (fun Σ Γ u A =>
+                  forall v,
+                    eq_term_upto_univ eq eq u v ->
+                    Σ ;;; Γ |- v : A)
+    ).
+    eapply typing_ind_env.
+    all: intros Σ' wfΣ Γ wfΓ.
+    - intros n decl hnth ih v e.
+      dependent destruction e.
+      eapply type_Rel ; eassumption.
+    - intros l ih v e.
+      dependent destruction e. subst.
+      eapply type_Sort. assumption.
+    - intros na A B s1 s2 ih hA ihA hB ihB v e.
+      dependent destruction e.
+      econstructor.
+      + eapply ihA. assumption.
+      + eapply context_conversion.
+        * eapply ihB. assumption.
+        * constructor.
+          -- apply conv_ctx_refl ; auto.
+          -- constructor.
+             ++ eexists. eapply ihA. assumption.
+             ++ eapply conv_conv_alt. constructor.
+                eapply eq_term_upto_univ_eq_eq_term. assumption.
+    - intros na A t s1 B ih hA ihA hB ihB v e.
+      dependent destruction e.
+      econstructor.
+      + econstructor.
+        * eapply ihA. assumption.
+        * eapply context_conversion.
+          -- eapply ihB. assumption.
+          -- constructor.
+             ++ apply conv_ctx_refl ; auto.
+             ++ constructor.
+                ** eexists. eapply ihA. assumption.
+                ** eapply conv_conv_alt. constructor.
+                   eapply eq_term_upto_univ_eq_eq_term. assumption.
+      + (* right. eexists. econstructor ; try eassumption. *)
+        (* We first need validity of B *)
+  Admitted.
+
+  Corollary type_nameless :
+    forall Γ u A,
+      Σ ;;; Γ |- u : A ->
+      Σ ;;; Γ |- nl u : A.
+  Proof.
+    intros Σ Γ u A h.
+    eapply type_rename.
+    - eassumption.
+    - eapply eq_term_upto_univ_tm_nl. all: auto.
+  Qed.
+
   Lemma fresh_global_nl :
     forall Σ' k,
       fresh_global k Σ' ->
@@ -900,13 +967,6 @@ Section Lemmata.
 
   Derive Signature for cumul.
   Derive Signature for red1.
-
-  Lemma context_conversion :
-    forall {Γ t T Γ'},
-      Σ ;;; Γ |- t : T ->
-      PCUICSR.conv_context Σ Γ Γ' ->
-      Σ ;;; Γ' |- t : T.
-  Admitted.
 
   Lemma app_reds_r :
     forall Γ u v1 v2,

@@ -18,12 +18,12 @@ Definition is_prop_sort s :=
   | None => false
   end.
 
-Definition Is_Type_or_Proof Σ Γ t := ∑ T, Σ ;;; Γ |- t : T × (isArity T + (∑ u, (Σ ;;; Γ |- T : tSort u) * is_prop_sort u))%type.
+Definition isErasable Σ Γ t := ∑ T, Σ ;;; Γ |- t : T × (isArity T + (∑ u, (Σ ;;; Γ |- T : tSort u) * is_prop_sort u))%type.
 
 Definition Is_proof Σ Γ t := ∑ T u, Σ ;;; Γ |- t : T × Σ ;;; Γ |- T : tSort u × is_prop_sort u.
 
-Lemma Is_Type_or_Proof_Proof Σ Γ t :
-  Is_proof Σ Γ t -> Is_Type_or_Proof Σ Γ t.
+Lemma isErasable_Proof Σ Γ t :
+  Is_proof Σ Γ t -> isErasable Σ Γ t.
 Proof.
   intros. destruct X as (? & ? & ? & ? & ?). exists x. split. eauto. right. eauto.
 Qed.
@@ -105,7 +105,7 @@ Inductive erases (Σ : global_env_ext) (Γ : context) : term -> E.term -> Prop :
                          × Σ;;; Γ ,,, PCUICLiftSubst.fix_context mfix |- 
                            dbody d ⇝ℇ E.dbody d') mfix mfix' ->
                     Σ;;; Γ |- tCoFix mfix n ⇝ℇ E.tCoFix mfix' n
-  | erases_box : forall t : term, Is_Type_or_Proof Σ Γ t -> Σ;;; Γ |- t ⇝ℇ E.tBox where "Σ ;;; Γ |- s ⇝ℇ t" := (erases Σ Γ s t).
+  | erases_box : forall t : term, isErasable Σ Γ t -> Σ;;; Γ |- t ⇝ℇ E.tBox where "Σ ;;; Γ |- s ⇝ℇ t" := (erases Σ Γ s t).
 
 Definition erases_constant_body (Σ : global_env_ext) (cb : constant_body) (cb' : E.constant_body) :=
   match cst_body cb, E.cst_body cb' with

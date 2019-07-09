@@ -161,6 +161,84 @@ Section Lemmata.
       Σ ;;; Γ' |- t : T.
   Admitted.
 
+  Lemma build_branches_type_eq_term :
+    forall p p' ind mdecl idecl pars u brtys,
+      eq_term_upto_univ eq eq p p' ->
+      map_option_out
+        (build_branches_type ind mdecl idecl pars u p) =
+      Some brtys ->
+      map_option_out
+        (build_branches_type ind mdecl idecl pars u p') =
+      Some brtys.
+  Proof.
+    intros p p' ind mdecl idecl pars u brtys e hb.
+    unfold build_branches_type in *. (* revert hb. *)
+    (* eapply Alli_map_option_out_mapi_Some_spec. *)
+    destruct idecl as [ina ity ike ict ipr]. simpl in *.
+    unfold mapi in *. revert hb.
+    generalize 0 at 3 6.
+    intros n hb.
+    induction ict in brtys, n, hb |- *.
+    - cbn in *. assumption.
+    - cbn. cbn in hb.
+      lazymatch type of hb with
+      | match ?t with _ => _ end = _ =>
+        case_eq (t) ;
+          try (intro bot ; rewrite bot in hb ; discriminate hb)
+      end.
+      intros [m t] e'. rewrite e' in hb.
+      destruct a as [[na ta] ar].
+      lazymatch type of e' with
+      | match ?expr with _ => _ end = _ =>
+        case_eq (expr) ;
+          try (intro bot ; rewrite bot in e' ; discriminate e')
+      end.
+      intros ty ety. rewrite ety in e'.
+      case_eq (decompose_prod_assum [] ty). intros sign ccl edty.
+      rewrite edty in e'.
+      case_eq (chop (ind_npars mdecl) (snd (decompose_app ccl))).
+      intros paramrels args ech. rewrite ech in e'.
+      inversion e'. subst. clear e'.
+      lazymatch type of hb with
+      | match ?t with _ => _ end = _ =>
+        case_eq (t) ;
+          try (intro bot ; rewrite bot in hb ; discriminate hb)
+      end.
+      intros tl etl. rewrite etl in hb.
+      inversion hb. subst. clear hb.
+      erewrite IHict ; eauto.
+      f_equal. f_equal. f_equal. f_equal. f_equal.
+      (* Now to do the same proof with exists eq_term instead!
+         Looking good though. :)
+       *)
+      give_up.
+  Abort.
+
+  Lemma types_of_case_eq_term :
+    forall ind mdecl idecl npar args u p p' pty indctx pctx ps btys,
+      types_of_case ind mdecl idecl (firstn npar args) u p pty =
+      Some (indctx, pctx, ps, btys) ->
+      eq_term_upto_univ eq eq p p' ->
+      types_of_case ind mdecl idecl (firstn npar args) u p' pty =
+      Some (indctx, pctx, ps, btys).
+  Proof.
+    intros ind mdecl idecl npar args u p p' pty indctx pctx ps btys htc e.
+    unfold types_of_case in *.
+    case_eq (instantiate_params (ind_params mdecl) (firstn npar args) (ind_type idecl)) ;
+      try solve [ intro bot ; rewrite bot in htc ; discriminate htc ].
+    intros ity eity. rewrite eity in htc.
+    case_eq (destArity [] ity) ;
+      try solve [ intro bot ; rewrite bot in htc ; discriminate htc ].
+    intros [args0 ?] ear. rewrite ear in htc.
+    case_eq (destArity [] pty) ;
+      try solve [ intro bot ; rewrite bot in htc ; discriminate htc ].
+    intros [args' s'] ear'. rewrite ear' in htc.
+    case_eq (map_option_out (build_branches_type ind mdecl idecl (firstn npar args) u p)) ;
+      try solve [ intro bot ; rewrite bot in htc ; discriminate htc ].
+    intros brtys ebrtys. rewrite ebrtys in htc.
+    (* Same, so exists eq_term using the above lemma *)
+  Abort.
+
   Lemma type_rename :
     forall Σ Γ u v A,
       Σ ;;; Γ |- u : A ->
@@ -285,7 +363,9 @@ Section Lemmata.
       econstructor.
       + econstructor. all: try eassumption.
         * eapply ihp. assumption.
-        * admit.
+        * subst pars.
+          (* TODO Fix up the above lemmata first *)
+          admit.
         * eapply ihc. assumption.
         * admit.
       (* + eapply validity_term ; eauto. *)

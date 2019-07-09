@@ -891,11 +891,11 @@ Proof.
   simpl. (* Types of cases check *)
   clear. simpl. induction pctx; simpl. intros.
   depelim H. intros H. depelim H. constructor; auto.
-  red. red in H. intuition auto.
-  red. simpl. red in H0. simpl in *. destruct a as [? [?|] ?]; simpl in *; try discriminate; auto.
-  red in H0. simpl in *. destruct a as [? [?|] ?]; simpl in *; try discriminate; try tauto.
-  red. eapply trans_eq_term in H2.
-  rewrite trans_mkApps in H2. constructor. admit.
+  red. red in e. intuition auto.
+  red. simpl. red in a0. simpl in *. destruct a as [? [?|] ?]; simpl in *; try discriminate; auto.
+  red in a0. simpl in *. destruct a as [? [?|] ?]; simpl in *; try discriminate; try tauto.
+  red. eapply trans_eq_term in b.
+  rewrite trans_mkApps in b. constructor. admit.
 Admitted.
 
 Axiom fix_guard_trans :

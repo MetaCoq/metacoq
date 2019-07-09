@@ -1889,7 +1889,8 @@ Section Conversion.
     eapply wellformed_zipc_replace ; auto.
     - exact h2.
     - simpl. rewrite stack_context_appstack.
-      left; exists A1'. eapply context_conversion ; auto.
+      left. exists A1'. eapply context_conversion ; auto.
+      + eassumption.
       + eassumption.
       + assumption.
     - simpl. rewrite stack_context_appstack.

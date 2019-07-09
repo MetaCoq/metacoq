@@ -8,7 +8,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICReflect PCUICLiftSubst PCUICUnivSubst PCUICTyping
      PCUICCumulativity PCUICSR PCUICPosition PCUICEquality PCUICNameless
      PCUICNormal PCUICInversion PCUICCumulativity PCUICReduction
-     PCUICConfluence.
+     PCUICConfluence PCUICValidity.
 From Equations Require Import Equations.
 
 Require Import Equations.Prop.DepElim.
@@ -241,8 +241,15 @@ Section Lemmata.
                 ** eexists. eapply ihA. assumption.
                 ** eapply conv_conv_alt. constructor.
                    eapply eq_term_upto_univ_eq_eq_term. assumption.
-      + (* right. eexists. econstructor ; try eassumption. *)
-        (* We first need validity of B *)
+      + eapply validity_term ; eauto.
+        econstructor ; eauto.
+      + constructor.
+        apply eq_term_upto_univ_sym in e1 ; auto.
+        apply eq_term_upto_univ_sym in e2 ; auto.
+        eapply eq_term_leq_term.
+        constructor.
+        * eapply eq_term_upto_univ_eq_eq_term. assumption.
+        * eapply eq_term_refl.
   Admitted.
 
   Corollary type_nameless :
@@ -250,7 +257,7 @@ Section Lemmata.
       Σ ;;; Γ |- u : A ->
       Σ ;;; Γ |- nl u : A.
   Proof.
-    intros Σ Γ u A h.
+    intros Γ u A h.
     eapply type_rename.
     - eassumption.
     - eapply eq_term_upto_univ_tm_nl. all: auto.

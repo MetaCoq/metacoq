@@ -113,17 +113,6 @@ Proof.
   - eauto.
 Qed.
 
-Lemma erases_red_context_conversion :
-env_prop
-  (fun (Σ : PCUICAst.global_env_ext) (Γ : PCUICAst.context) (t T : PCUICAst.term) =>
-      forall Γ' : PCUICAst.context, red_context Σ Γ Γ' -> forall t', erases Σ Γ t t' -> erases Σ Γ' t t').
-Proof.
-  eapply env_prop_imp.
-  2: eapply erases_context_conversion.
-  intros. cbn in *. eapply H; eauto.
-  eapply red_conv_context; eauto.
-Qed.
-
 (** ** Erasure is stable under substituting universe constraints  *)
 
 Lemma erases_subst_instance_constr :
@@ -318,9 +307,9 @@ Proof.
     inv He.
     + eapply IHeval1 in H6 as (vt1' & Hvt2' & He_vt1'); eauto.
       assert (Hc :conv_context Σ ([],, vdef na b0 t) [vdef na b0' t]). {
-        econstructor. econstructor. econstructor. eapply subject_reduction_eval; eauto.
-        eapply PCUICValidity.red_conv.
-        eapply wcbeval_red; eauto.         
+        econstructor. econstructor. econstructor. econstructor. eauto. eapply subject_reduction_eval; eauto.
+        eapply PCUICCumulativity.red_conv. 
+        eapply wcbeval_red; eauto. eapply conv_refl.
       }
       assert (Σ;;; [vdef na b0' t] |- b1 : x0). {
         cbn in *. eapply context_conversion. 3:eauto. all:cbn; eauto.
@@ -489,7 +478,7 @@ Proof.
     assert (Σ ;;; [] |- mkApps (tFix mfix idx) args ▷ res) by eauto.
     eapply type_mkApps_inv in Hty' as (? & ? & [] & ?); eauto.
     assert (HT := t).
-    eapply EInversion.type_tFix_inv in t as (? & [[] ?] & ?); eauto.
+    eapply inversion_Fix in t as (? & ? & ? & ? & ? & ?).
     unfold unfold_fix in H. rewrite e in H. inv H. 
 
     eapply erases_mkApps_inv in He as [(? & ? & ? & ? & [] & ? & ? & ?) | (? & ? & ? & ? & ?)]; eauto.

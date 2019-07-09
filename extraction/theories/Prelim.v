@@ -102,7 +102,7 @@ Proof.
 Qed.
 
 Lemma typing_spine_eval:
-  forall (Σ : PCUICAst.global_context) Γ (args args' : list PCUICAst.term) (X : All2 (PCUICWcbvEval.eval Σ Γ) args args') (bla : wf Σ)
+  forall (Σ : global_env_ext) Γ (args args' : list PCUICAst.term) (X : All2 (PCUICWcbvEval.eval Σ Γ) args args') (bla : wf Σ)
     (T x x0 : PCUICAst.term) (t0 : typing_spine Σ Γ x args x0) (c : Σ;;; Γ |- x0 <= T) (x1 : PCUICAst.term)
     (c0 : Σ;;; Γ |- x1 <= x), isWfArity_or_Type Σ Γ T -> typing_spine Σ Γ x1 args' T.
 Proof.
@@ -269,7 +269,7 @@ Qed.
 (*   intros x6 Eu. *)
 (* Admitted. *)
 
-Lemma elim_restriction_works_kelim1 Σ Γ T ind npar p c brs mind idecl : wf Σ ->
+Lemma elim_restriction_works_kelim1 (Σ : global_env_ext) Γ T ind npar p c brs mind idecl : wf Σ ->
   declared_inductive (fst Σ) mind ind idecl ->
   Σ ;;; Γ |- tCase (ind, npar) p c brs : T ->
   (Is_proof Σ Γ (tCase (ind, npar) p c brs) -> False) -> In InType (ind_kelim idecl).
@@ -292,7 +292,7 @@ Proof.
 Admitted.                       (* elim_restriction_works *)
 
 
-Lemma elim_restriction_works_kelim2 Σ ind mind idecl : wf Σ ->
+Lemma elim_restriction_works_kelim2 (Σ : global_env_ext) ind mind idecl : wf Σ ->
   declared_inductive (fst Σ) mind ind idecl ->
   In InType (ind_kelim idecl) -> Informative Σ ind.
 Proof.
@@ -305,7 +305,7 @@ Proof.
   (* -  *)
 Admitted.                       (* elim_restriction_works *)
 
-Lemma elim_restriction_works Σ Γ T ind npar p c brs mind idecl : wf Σ ->
+Lemma elim_restriction_works (Σ : global_env_ext) Γ T ind npar p c brs mind idecl : wf Σ ->
   declared_inductive (fst Σ) mind ind idecl ->
   Σ ;;; Γ |- tCase (ind, npar) p c brs : T ->
   (Is_proof Σ Γ (tCase (ind, npar) p c brs) -> False) -> Informative Σ ind.
@@ -314,7 +314,7 @@ Proof.
   eapply elim_restriction_works_kelim1; eauto.
 Qed.
 
-Lemma declared_projection_projs_nonempty {Σ mind ind p a} :
+Lemma declared_projection_projs_nonempty {Σ : global_env_ext} { mind ind p a} :
   wf Σ ->
   declared_projection Σ mind ind p a ->
   ind_projs ind <> [].
@@ -324,7 +324,7 @@ Proof.
   cbn in *. destruct n; inv H0.
 Qed.
 
-Lemma elim_restriction_works_proj_kelim1 Σ Γ T p c mind idecl :
+Lemma elim_restriction_works_proj_kelim1 (Σ : global_env_ext) Γ T p c mind idecl :
   wf Σ ->
   declared_inductive (fst Σ) mind (fst (fst p)) idecl ->
   Σ ;;; Γ |- tProj p c : T ->
@@ -347,7 +347,7 @@ Proof.
   - cbn. right. eauto.  
 Qed. (* elim_restriction_works_proj *)
 
-Lemma elim_restriction_works_proj Σ Γ  p c mind idecl T :
+Lemma elim_restriction_works_proj (Σ : global_env_ext) Γ  p c mind idecl T :
   wf Σ ->
   declared_inductive (fst Σ) mind (fst (fst p)) idecl ->
   Σ ;;; Γ |- tProj p c : T ->
@@ -455,7 +455,7 @@ Proof.
       eapply inversion_Fix in X as (? & ? & ? & ? & ?).
       econstructor; eauto. destruct H. subst.
       rewrite <- app_assoc. rewrite nth_error_app_ge. 2:omega.
-      rewrite minus_diag. cbn. reflexivity.
+      rewrite minus_diag. cbn. reflexivity. eapply p.
 Qed.
 
 (** ** Prelim on typing *)

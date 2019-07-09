@@ -26,7 +26,7 @@ Definition Is_conv_to_Arity Σ Γ T := exists T', ∥red Σ Γ T T'∥ /\ isArit
 Ltac terror := try match goal with [t : type_error |- typing_result _] => exact (TypeError t) end.
 
 
-Lemma invert_cumul_arity_r (Σ : global_context) (Γ : context) (C : term) T :
+Lemma invert_cumul_arity_r (Σ : global_env_ext) (Γ : context) (C : term) T :
   wf Σ -> wf_local Σ Γ ->
   isArity T ->
   Σ;;; Γ |- C <= T -> Is_conv_to_Arity Σ Γ C.
@@ -49,7 +49,7 @@ Proof.
   (* -   admit. *)
 Admitted.                       (* invert_cumul_arity_r *)
 
-Lemma invert_cumul_arity_l (Σ : global_context) (Γ : context) (C : term) T :
+Lemma invert_cumul_arity_l (Σ : global_env_ext) (Γ : context) (C : term) T :
   wf Σ -> wf_local Σ Γ ->
   isArity C -> 
   Σ;;; Γ |- C <= T -> Is_conv_to_Arity Σ Γ T.
@@ -72,7 +72,7 @@ Proof.
     (* - eapply invert_cumul_letin_l in X; eauto. *)
 Admitted.                       (* invert_cumul_arity_l *)
 
-Lemma cumul_prop1 Σ Γ A B u :
+Lemma cumul_prop1 (Σ : global_env_ext) Γ A B u :
   wf Σ -> 
   is_prop_sort u -> Σ ;;; Γ |- B : tSort u ->
   Σ ;;; Γ |- A <= B -> Σ ;;; Γ |- A : tSort u.
@@ -83,34 +83,43 @@ Proof.
   - eapply IHX1. eapply subject_reduction. eauto. eassumption. eauto.
 Admitted.                       (* cumul_prop1 *)
 
-Lemma cumul_prop2 Σ Γ A B u :
+Lemma cumul_prop2 (Σ : global_env_ext) Γ A B u :
   wf Σ ->
   is_prop_sort u -> Σ ;;; Γ |- A <= B ->
   Σ ;;; Γ |- A : tSort u -> Σ ;;; Γ |- B : tSort u.
 Proof.
 Admitted.                       (* cumul_prop2 *)
 
-Lemma leq_universe_prop cf Σ u1 u2 :
-  @check_univs cf = true ->
-  @prop_sub_type cf = false ->
+Lemma leq_universe_prop cf (Σ : global_env_ext) u1 u2 :
+  (* @check_univs cf = true -> *)
+  (* @prop_sub_type cf = false -> *)
   wf Σ ->
-  @leq_universe cf (snd Σ) u1 u2 ->
+  @leq_universe cf (global_ext_constraints Σ) u1 u2 ->
   (is_prop_sort u1 \/ is_prop_sort u2) ->
   (is_prop_sort u1 /\ is_prop_sort u2).
 Proof.
-  intros. unfold leq_universe in *. rewrite H in H1.
-  unfold leq_universe0 in H1.
-  unfold leq_universe_n in H1.
+  intros. unfold leq_universe in *. (* rewrite H in H1. *)
+  (* unfold leq_universe0 in H1. *)
+  (* unfold leq_universe_n in H1. *)
 Admitted.                       (* leq_universe_prop *)
 
-Lemma invert_cumul_prod_r Σ Γ C na A B : wf Σ ->
+Lemma invert_cumul_prod_r (Σ : global_env_ext) Γ C na A B : wf Σ ->
           Σ ;;; Γ |- C <= tProd na A B ->
             ∑ na' A' B', red Σ Γ C (tProd na' A' B') *
                (Σ ;;; Γ |- A = A') *
                (Σ ;;; Γ,,vass na' A' |- B <= B').
 Admitted.                       (* invert_cumul_prod_r *)
 
-Lemma isArity_ind_type (Σ : global_context) mind ind idecl :
+Lemma it_mkProd_isArity:
+  forall (l : list context_decl) A,
+    isArity A ->
+    isArity (it_mkProd_or_LetIn l A).
+Proof.  
+  induction l; cbn; intros; eauto.
+  eapply IHl. destruct a, decl_body; cbn; eauto.
+Qed.
+
+Lemma isArity_ind_type (Σ : global_env_ext) mind ind idecl :
   wf Σ ->
   declared_inductive (fst Σ) mind ind idecl ->
   isArity (ind_type idecl).
@@ -118,20 +127,12 @@ Proof.
   intros. eapply PCUICWeakeningEnv.declared_inductive_inv with (P := typing) in H; eauto.
   - inv H. rewrite ind_arity_eq. rewrite <- it_mkProd_or_LetIn_app.
     clear. 
-    Lemma it_mkProd_isArity:
-      forall (l : list context_decl) A,
-        isArity A ->
-        isArity (it_mkProd_or_LetIn l A).
-    Proof.
-      induction l; cbn; intros; eauto.
-      eapply IHl. destruct a, decl_body; cbn; eauto.
-    Qed.
     eapply it_mkProd_isArity. econstructor.
   - eapply PCUICWeakeningEnv.weaken_env_prop_typing.
 Qed.
 
 Lemma isWfArity_prod_inv:
-  forall (Σ : global_context) (Γ : context) (x : name) (x0 x1 : term),
+  forall (Σ : global_env_ext) (Γ : context) (x : name) (x0 x1 : term),
     isWfArity typing Σ Γ (tProd x x0 x1) -> (∑ s : universe, Σ;;; Γ |- x0 : tSort s) ×   isWfArity typing Σ (Γ,, vass x x0) x1
 .
   intros. destruct X as (? & ? & ? & ?). cbn in e.
@@ -147,8 +148,14 @@ Lemma isWfArity_prod_inv:
     unfold snoc, app_context in *. rewrite <- app_assoc in *. eassumption.
 Qed.
 
+Lemma isArity_subst:
+  forall x2 : term, forall s n, isArity x2 -> isArity (subst s n x2).
+Proof.
+  induction x2; cbn in *; try tauto; intros; eauto.
+Qed.
+
 Lemma isArity_typing_spine:
-  forall (Σ : global_context) (Γ : context) (L : list term) (T x4 : term),
+  forall (Σ : global_env_ext) (Γ : context) (L : list term) (T x4 : term),
     wf Σ -> wf_local Σ Γ ->
     Is_conv_to_Arity Σ Γ x4 -> typing_spine Σ Γ x4 L T -> Is_conv_to_Arity Σ Γ T.
 Proof.
@@ -168,12 +175,6 @@ Proof.
     exists (x2 {0 := hd}). split; sq. 
     eapply (PCUICSubstitution.substitution_red Σ Γ [_] [] [_]). eauto. econstructor. econstructor. 
     rewrite subst_empty. eassumption. eauto. cbn. eassumption. cbn in H1.
-
-    Lemma isArity_subst:
-      forall x2 : term, forall s n, isArity x2 -> isArity (subst s n x2).
-    Proof.
-      induction x2; cbn in *; try tauto; intros; eauto.
-    Qed.
     now eapply isArity_subst.
 Qed.
 
@@ -204,7 +205,7 @@ Proof.
 Qed.
 
 Lemma typing_spine_red :
-  forall (Σ : PCUICAst.global_context) Γ (args args' : list PCUICAst.term) (X : All2 (red Σ Γ) args args') (bla : wf Σ)
+  forall (Σ : PCUICAst.global_env_ext) Γ (args args' : list PCUICAst.term) (X : All2 (red Σ Γ) args args') (bla : wf Σ)
     (T x x0 : PCUICAst.term) (t0 : typing_spine Σ Γ x args x0) (c : Σ;;; Γ |- x0 <= T) (x1 : PCUICAst.term)
     (c0 : Σ;;; Γ |- x1 <= x), isWfArity_or_Type Σ Γ T -> typing_spine Σ Γ x1 args' T.
 Proof.
@@ -295,7 +296,7 @@ Proof.
     destruct x, decl_body; cbn in H0; try now inv H0.
 Qed.
 
-Lemma tConstruct_no_Type Σ ind c u x1 : wf Σ ->
+Lemma tConstruct_no_Type (Σ : global_env_ext) ind c u x1 : wf Σ ->
   isErasable Σ [] (mkApps (tConstruct ind c u) x1) ->
   Is_proof Σ [] (mkApps (tConstruct ind c u) x1).
 Proof.
@@ -394,7 +395,7 @@ Proof.
   - exists x, x0. eauto.
 Qed.                       (* if a constructor is a type or proof, it is a proof *)
 
-Inductive conv_decls Σ Γ (Γ' : context) : forall (x y : context_decl), Type :=
+Inductive conv_decls (Σ : global_env_ext) Γ (Γ' : context) : forall (x y : context_decl), Type :=
 | conv_vass : forall (na na' : name) (T T' : term),
                 (* isWfArity_or_Type Σ Γ' T' -> *)
                 Σ;;; Γ |- T = T' -> conv_decls Σ Γ Γ' (vass na T) (vass na' T')
@@ -402,7 +403,7 @@ Inductive conv_decls Σ Γ (Γ' : context) : forall (x y : context_decl), Type :
     (* isWfArity_or_Type Σ Γ' T -> *)
     conv_decls Σ Γ Γ' (vdef na b T) (vdef na b T).
 
-Lemma conv_context_refl Σ Γ : wf Σ -> wf_local Σ Γ -> context_relation conv_decls Σ Γ Γ.
+Lemma conv_context_refl (Σ : global_env_ext) Γ : wf Σ -> wf_local Σ Γ -> context_relation (@conv_decls Σ) Γ Γ.
 Proof.
   induction Γ; try econstructor. 
   intros wfΣ wfΓ; depelim wfΓ; econstructor; eauto;
@@ -410,8 +411,8 @@ Proof.
   - apply conv_refl.
 Qed.
 
-Lemma context_conversion_red1 Σ Γ Γ' s t : wf Σ -> (* Σ ;;; Γ' |- t : T -> *)
-   context_relation conv_decls Σ Γ Γ' -> red1 Σ Γ s t -> red Σ Γ' s t.
+Lemma context_conversion_red1 (Σ : global_env_ext) Γ Γ' s t : wf Σ -> (* Σ ;;; Γ' |- t : T -> *)
+   context_relation (@conv_decls Σ) Γ Γ' -> red1 Σ Γ s t -> red Σ Γ' s t.
 Proof.
   intros HΣ HT X0. induction X0 using red1_ind_all in Γ', HΣ, HT |- *; eauto.
   Hint Constructors red red1.
@@ -502,8 +503,8 @@ Proof.
       eapply PCUICCumulativity.All_All2_refl. induction tl; eauto.
 Qed.
 
-Lemma context_conversion_red Σ Γ Γ' s t : wf Σ -> 
-  context_relation conv_decls Σ Γ Γ' -> red Σ Γ s t -> red Σ Γ' s t.
+Lemma context_conversion_red (Σ : global_env_ext) Γ Γ' s t : wf Σ -> 
+  context_relation (@conv_decls Σ) Γ Γ' -> red Σ Γ s t -> red Σ Γ' s t.
 Proof.
   intros. induction X1; eauto. 
   etransitivity. eapply IHX1.
@@ -511,7 +512,7 @@ Proof.
 Qed.
 
 Lemma isWfArity_or_Type_red:
-  forall (Σ : global_context) (Γ : context) (T : term), wf Σ -> wf_local Σ Γ ->
+  forall (Σ : global_env_ext) (Γ : context) (T : term), wf Σ -> wf_local Σ Γ ->
     isWfArity_or_Type Σ Γ T -> forall x5 : term, red Σ Γ T x5 -> isWfArity_or_Type Σ Γ x5.
 Proof.
   intros. destruct X1 as [ | []].
@@ -535,7 +536,7 @@ Proof.
 Qed.
 
 Lemma sort_typing_spine:
-  forall (Σ : global_context) (Γ : context) (L : list term) (u : universe) (x x0 : term),
+  forall (Σ : global_env_ext) (Γ : context) (L : list term) (u : universe) (x x0 : term),
     wf Σ ->
     is_prop_sort u ->
     typing_spine Σ Γ x L x0 -> Σ;;; Γ |- x : tSort u -> ∑ u', Σ;;; Γ |- x0 : tSort u' × is_prop_sort u'.
@@ -554,11 +555,11 @@ Proof.
     eapply cumul_prop1 in c1. 4:eassumption. all:eauto.
     change (tSort x3) with ((tSort x3) {0 := hd}).
     eapply PCUICSubstitution.substitution0. 2:eauto. eauto. 
-    econstructor. eassumption. 2: now destruct c. right; eauto.
+    econstructor. eassumption. 2: now destruct c. right; eauto. 
 Qed.  
 
 
-Lemma arity_type_inv Σ Γ t T1 T2 : wf Σ -> wf_local Σ Γ ->
+Lemma arity_type_inv (Σ : global_env_ext) Γ t T1 T2 : wf Σ -> wf_local Σ Γ ->
   Σ ;;; Γ |- t : T1 -> isArity T1 -> Σ ;;; Γ |- t : T2 -> Is_conv_to_Arity Σ Γ T2.
 Proof.
   intros wfΣ wfΓ. intros. eapply principal_typing in X as (? & ? & ? & ?). 2:eauto. 2:exact X0.

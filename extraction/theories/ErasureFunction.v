@@ -13,7 +13,7 @@ Require Import EArities Extract Prelim.
 
 Section fix_sigma.
 
-Variable Σ : global_context.
+Variable Σ : global_env_ext.
 Variable HΣ : ∥wf Σ∥.
 
 Definition term_rel : Relation_Definitions.relation (∑ Γ t, wellformed Σ Γ t) :=
@@ -543,11 +543,11 @@ Proof.
               (sq w) k c Σ eq_refl) [] wf_local_nil t) eqn:E5;
              rewrite E5 in E4; inv E4.
            eapply erases_erase. 2:eauto.
-           instantiate (1 := cst_type c).
-           admit.
-           (* clear - w E. *)
-           (* cbn in *. unfold on_constant_decl in w. *)
-           (* rewrite E in X0. cbn in X0. eassumption.            *)
+           instantiate (1 := cst_type c). 
+           (* admit. *)
+           clear - w E. inv w. cbn in X0.
+           cbn in *. unfold on_constant_decl in X0.
+           rewrite E in X0. cbn in X0. eassumption.
         -- cbn. inv E4. econstructor.
       * eapply IHΣ. unfold erase_global. rewrite E2. reflexivity.
     + inv H. inv E. inv E1.
@@ -569,7 +569,7 @@ Proof.
            destruct ?; try congruence.
            inv H4. split; eauto.
 
-           pose (t' := t). inv t'. cbn in *.
+           (* pose (t' := t). inv t'. cbn in *. *)
            destruct (erase_Some_typed E) as [? []].
 
            eapply erases_erase. 2:eauto. eauto.
@@ -579,10 +579,10 @@ Proof.
            destruct ?; try congruence;
              inv H4. split; eauto.
 
-           pose (t' := t). inv t'. cbn in *.
+           (* pose (t' := t). inv t'. cbn in *. *)
            destruct (erase_Some_typed E) as [? []].
            
            eapply erases_erase.
            2:{ eauto. } eauto.
   * eapply IHΣ. unfold erase_global. rewrite E2. reflexivity.
-Admitted.
+Qed.

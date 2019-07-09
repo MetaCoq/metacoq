@@ -27,7 +27,7 @@ Qed.
 
 Lemma Is_type_extends (Σ : global_env_ext) Γ t :
   wf_local Σ Γ ->
-  forall Σ', wf Σ' -> extends Σ Σ' -> isErasable Σ Γ t -> isErasable Σ' Γ t.
+  forall (Σ' : global_env), wf Σ' -> extends Σ Σ' -> isErasable Σ Γ t -> isErasable (Σ', Σ.2) Γ t.
 Proof.
   intros. destruct X2 as [T []].
   exists T. split. eapply weakening_env; [ | | eauto | | ]; eauto using wf_extends.

@@ -1,7 +1,7 @@
 (* Distributed under the terms of the MIT license.   *)
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Arith Lia
-     Classes.CRelationClasses Omega.
+     Classes.CRelationClasses Omega ProofIrrelevance.
 From MetaCoq.Template Require Import config Universes monad_utils utils BasicAst
      AstUtils UnivSubst.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
@@ -640,6 +640,14 @@ Section Lemmata.
 
   Definition wellformed Σ Γ t :=
     welltyped Σ Γ t \/ ∥ isWfArity typing Σ Γ t ∥.
+
+  (* Here we use use the proof irrelevance axiom to show that wellformed is really squashed.
+     Using SProp would avoid this.
+   *)
+
+  Lemma wellformed_irr :
+    forall {Σ Γ t} (h1 h2 : wellformed Σ Γ t), h1 = h2.
+  Proof. intros. apply proof_irrelevance. Qed.
 
   Lemma welltyped_nlg :
     forall Γ t,
@@ -1776,9 +1784,12 @@ Section Lemmata.
       destruct d as [[dm hin] hn]. simpl in *.
       unfold declared_minductive in dm.
       (* I have no idea how to do it. *)
+      (* Follows from principality and Validity *)
       admit.
     - eapply IHargs. (* Induction on args was a wrong idea! *)
   Admitted.
+
+  Require Import PCUICWeakeningEnv.
 
   Lemma Proj_red_cond :
     forall Γ i pars narg i' c u l,
@@ -1789,7 +1800,10 @@ Section Lemmata.
       [|discriminate].
     apply inversion_Proj in h.
     destruct h as [uni [mdecl [idecl [pdecl [args' [d [hc [? ?]]]]]]]].
-    destruct d as [di [? ?]]. simpl in *. subst.
+    eapply on_declared_projection in d. destruct d as [? [? ?]].
+    simpl in *.
+    destruct p.
+    destruct o0.
   Admitted.
 
   Lemma Case_Construct_ind_eq :

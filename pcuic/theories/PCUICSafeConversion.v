@@ -281,13 +281,6 @@ Section Conversion.
       all: eapply cored_nl ; auto.
   Qed.
 
-  (* TODO Here we assume that wellformed is really squashed, which should be ok
-     if we defined it in SProp probably.
-     NOTE We will have to put the squash in SProp as well, but that's not too big a deal.
-   *)
-  Axiom wellformed_irr :
-    forall {Σ Γ t} (h1 h2 : wellformed Σ Γ t), h1 = h2.
-
   Lemma R_aux_positionR2 :
     forall t1 t2 (p1 : pos t1) (p2 : pos t2) w1 w2 q1 q2 s1 s2,
       t1 = t2 ->

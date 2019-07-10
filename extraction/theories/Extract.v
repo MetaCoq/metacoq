@@ -3,7 +3,7 @@
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
 From MetaCoq.Template Require Import config utils monad_utils BasicAst AstUtils.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICTyping PCUICChecker PCUICRetyping PCUICMetaTheory PCUICWcbvEval.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICTyping PCUICChecker PCUICRetyping PCUICMetaTheory PCUICWcbvEval PCUICElimination.
 From MetaCoq.Extraction Require EAst ELiftSubst ETyping EWcbvEval.
 Require Import String.
 Local Open Scope string_scope.
@@ -12,31 +12,13 @@ Import MonadNotation.
 
 Existing Instance extraction_checker_flags.
 
-Definition is_prop_sort s :=
-  match Universe.level s with
-  | Some l => Level.is_prop l
-  | None => false
-  end.
-
 Definition isErasable Σ Γ t := ∑ T, Σ ;;; Γ |- t : T × (isArity T + (∑ u, (Σ ;;; Γ |- T : tSort u) * is_prop_sort u))%type.
-
-Definition Is_proof Σ Γ t := ∑ T u, Σ ;;; Γ |- t : T × Σ ;;; Γ |- T : tSort u × is_prop_sort u.
 
 Lemma isErasable_Proof Σ Γ t :
   Is_proof Σ Γ t -> isErasable Σ Γ t.
 Proof.
   intros. destruct X as (? & ? & ? & ? & ?). exists x. split. eauto. right. eauto.
 Qed.
-
-Definition Informative (Σ : global_env_ext) (ind : inductive) :=
-  forall mdecl idecl,
-    declared_inductive (fst Σ) mdecl ind idecl ->
-    forall Γ args u n (Σ' : global_env_ext),
-      wf Σ' ->
-      PCUICWeakeningEnv.extends Σ Σ' ->
-      Is_proof Σ' Γ (mkApps (tConstruct ind n u) args) ->  
-       #|ind_ctors idecl| <= 1 /\
-       squash (All (Is_proof Σ' Γ) (skipn (ind_npars mdecl) args)).
 
 Module E := EAst.
 Local Notation Ret t := t.

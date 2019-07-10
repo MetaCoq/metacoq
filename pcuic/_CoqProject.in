@@ -30,6 +30,7 @@ theories/PCUICWcbvEval.v
 theories/PCUICChecker.v
 theories/PCUICCheckerCompleteness.v
 theories/PCUICRetyping.v
+theories/PCUICElimination.v
 
 theories/PCUICPosition.v
 theories/PCUICSafeLemmata.v

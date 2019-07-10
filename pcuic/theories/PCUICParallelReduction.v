@@ -546,19 +546,6 @@ Section All2_local_env.
     intuition eauto.
   Qed.
 
-  Lemma skipn_nth_error {A} (l : list A) i :
-     match nth_error l i with
-     | Some a => skipn i l = a :: skipn (S i) l
-     | None => skipn i l = []
-     end.
-  Proof.
-    induction l in i |- *. destruct i. reflexivity. reflexivity.
-    destruct i. simpl. reflexivity.
-    simpl. specialize (IHl i). destruct nth_error.
-    rewrite [skipn _ _]IHl. reflexivity.
-    rewrite [skipn _ _]IHl. reflexivity.
-  Qed.
-
   Lemma All2_local_env_over_app P {Γ0 Δ Γ'' Δ''} :
     All2_local_env (on_decl P) Γ0 Δ ->
     All2_local_env_over P Γ0 Δ Γ'' Δ'' ->

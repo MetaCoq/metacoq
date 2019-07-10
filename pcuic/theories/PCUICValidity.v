@@ -279,8 +279,7 @@ Section Validity.
 
 End Validity.
 
-
-Lemma validity_term {Σ Γ t T} :
+Lemma validity_term {cf:checker_flags} {Σ Γ t T} :
   wf Σ.1 -> wf_local Σ Γ -> Σ ;;; Γ |- t : T -> isWfArity_or_Type Σ Γ T.
 Proof.
   intros. eapply validity; try eassumption.

@@ -18,9 +18,6 @@ Require Import Equations.Type.Relation Equations.Type.Relation_Properties.
 
 Set Asymmetric Patterns.
 
-Existing Instance config.default_checker_flags.
-
-
 (* Using Derive makes Qed break?? *)
 (** FIXME Equations Derive Bug *)
 (* Polymorphic Derive Signature for Relation.clos_refl_trans. *)
@@ -154,6 +151,7 @@ Proof.
 Qed.
 
 Section RedPred.
+  Context {cf : checker_flags}.
   Context {Σ : global_env}.
   Context (wfΣ : wf Σ).
 
@@ -338,9 +336,8 @@ Section RedPred.
 
 End RedPred.
 
-Existing Instance default_checker_flags.
-
 Section PredRed.
+  Context {cf : checker_flags}.
   Context {Σ : global_env}.
   Context (wfΣ : wf Σ).
 
@@ -666,7 +663,7 @@ End AbstractConfluence.
 
 Unset Universe Minimization ToSet.
 
-Lemma red_pred {Σ Γ t u} : wf Σ -> clos_refl_trans (red1 Σ Γ) t u -> clos_refl_trans (pred1 Σ Γ Γ) t u.
+Lemma red_pred {cf:checker_flags} {Σ Γ t u} : wf Σ -> clos_refl_trans (red1 Σ Γ) t u -> clos_refl_trans (pred1 Σ Γ Γ) t u.
 Proof.
   intros wfΣ. eapply clos_rt_monotone.
   intros x y H.
@@ -674,6 +671,7 @@ Proof.
 Qed.
 
 Section RedConfluence.
+  Context {cf : checker_flags}.
   Context {Σ} (wfΣ : wf Σ).
 
   Instance pred1_refl Γ : Reflexive (pred1 Σ Γ Γ).
@@ -1540,6 +1538,7 @@ Section RedConfluence.
 End RedConfluence.
 
 Section ConfluenceFacts.
+  Context {cf : checker_flags}.
   Context (Σ : global_env) (wfΣ : wf Σ).
 
   Lemma red_mkApps_tConstruct (Γ : context)

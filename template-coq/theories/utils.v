@@ -1,5 +1,5 @@
 From Coq Require Import Bool Program List Ascii String OrderedType Arith Lia Omega
-     ssreflect.
+     ssreflect Utf8.
 Global Set Asymmetric Patterns.
 
 Import ListNotations.
@@ -751,6 +751,23 @@ Lemma OnOne2_map {A B} {P : B -> B -> Type} {l l' : list A} (f : A -> B) :
   OnOne2 (on_Trel P f) l l' -> OnOne2 P (map f l) (map f l').
 Proof. induction 1; simpl; constructor; try congruence. apply p. Qed.
 
+Lemma OnOne2_sym {A} (P : A -> A -> Type) l l' : OnOne2 (fun x y => P y x) l' l -> OnOne2 P l l'.
+Proof.
+  induction 1; constructor; auto.
+Qed.
+
+Lemma OnOne2_exist {A} (P : A -> A -> Type) (Q : A -> A -> Type) l l' :
+  OnOne2 P l l' ->
+  (forall x y, P x y -> ∑ z, Q x z × Q y z) ->
+  ∑ r, (OnOne2 Q l r × OnOne2 Q l' r).
+Proof.
+  intros H HPQ. induction H.
+  - destruct (HPQ _ _ p). destruct p0.
+    now exists (x :: tl); intuition constructor.
+               - destruct IHOnOne2 as [r [? ?]].
+                 now exists (hd :: r); intuition constructor.
+Qed.
+
 Lemma All_firstn {A} {P : A -> Type} {l} {n} : All P l -> All P (firstn n l).
 Proof. intros HPL; induction HPL in n |- * ; simpl; destruct n; try econstructor; eauto. Qed.
 
@@ -797,17 +814,16 @@ Qed.
 
 Hint Constructors All All2.
 
-Lemma All_rev_map {A B} (P : A -> Prop) f (l : list B) : All (compose P f) l -> All P (rev_map f l).
+Lemma All_rev_map {A B} (P : A -> Type) f (l : list B) : All (compose P f) l -> All P (rev_map f l).
 Proof. induction 1. constructor. rewrite rev_map_cons. apply All_app_inv; auto. Qed.
 
-Lemma All_rev {A} (P : A -> Prop) (l : list A) : All P l -> All P (List.rev l).
+Lemma All_rev (A : Type) (P : A -> Type) (l : list A) : All P l -> All P (List.rev l).
 Proof.
-  induction l using rev_ind. constructor.
-  intros. rewrite rev_app_distr. simpl. apply All_app in X as [Alll Allx]. inv Allx.
-  constructor; intuition eauto.
+  induction l using rev_ind. constructor. rewrite rev_app_distr.
+  simpl. intros X; apply All_app in X as [? ?]. depelim a0; intuition auto.
 Qed.
 
-Lemma All_rev_inv {A} (P : A -> Prop) (l : list A) : All P (List.rev l) -> All P l.
+Lemma All_rev_inv {A} (P : A -> Type) (l : list A) : All P (List.rev l) -> All P l.
 Proof.
   induction l using rev_ind. constructor.
   intros. rewrite rev_app_distr in X. simpl.
@@ -844,6 +860,82 @@ Proof.
   inversion_clear H. split; intuition auto. constructor; auto. eapply IHl; eauto.
   simpl. replace (S (#|l| + n)) with (#|l| + S n) by lia.
   eapply IHl; eauto.
+Qed.
+
+Lemma map_eq_inj {A B} (f g : A -> B) l: map f l = map g l ->
+                                         All (fun x => f x = g x) l.
+Proof.
+  induction l. simpl. constructor. simpl. intros [=]. constructor; auto.
+Qed.
+
+Lemma mapi_ext_size {A B} (f g : nat -> A -> B) l k :
+  (forall k' x, k' < k + #|l| -> f k' x = g k' x) ->
+  mapi_rec f l k = mapi_rec g l k.
+Proof.
+  intros Hl. generalize (le_refl k). generalize k at 1 3 4.
+  induction l in k, Hl |- *. simpl. auto.
+  intros. simpl in *. erewrite Hl; try lia.
+  f_equal. eapply (IHl (S k)); try lia. intros. apply Hl. lia.
+Qed.
+
+Lemma map_ext_size {A B} (f g : nat -> A -> B) l :
+  (forall k x, k < #|l| -> f k x = g k x) ->
+  mapi f l = mapi g l.
+Proof.
+  intros Hl. unfold mapi. apply mapi_ext_size. simpl. auto.
+Qed.
+
+Lemma skipn_S {A} a (l : list A) n : skipn (S n) (a :: l) = skipn n l.
+Proof. reflexivity. Qed.
+
+Lemma Alli_nth_error {A} (P : nat -> A -> Type) k ctx :
+  (forall i x, nth_error ctx i = Some x -> P (k + i) x) ->
+  Alli P k ctx.
+Proof.
+  intros. induction ctx in k, X |- *. constructor.
+  constructor. specialize (X 0 a eq_refl). now rewrite Nat.add_0_r in X.
+  apply IHctx. intros. specialize (X (S i) x H).
+  simpl. now replace (S (k + i)) with (k + S i) by lia.
+Qed.
+
+Lemma Alli_mapi {A B} {P : nat -> B -> Type} (f : nat -> A -> B) k l :
+  Alli (fun n a => P n (f n a)) k l <~>
+       Alli P k (mapi_rec f l k).
+Proof.
+  split.
+  { induction 1. simpl. constructor.
+    simpl. constructor; eauto. }
+  { induction l in k |- *. simpl. constructor.
+    simpl. intros. depelim X. constructor; eauto. }
+Qed.
+
+Lemma Alli_shift {A} {P : nat -> A -> Type} k l :
+  Alli (fun x => P (S x)) k l ->
+  Alli P (S k) l.
+Proof.
+  induction 1; simpl; constructor; auto.
+Qed.
+
+Lemma Alli_rev {A} {P : nat -> A -> Type} k l :
+  Alli P k l ->
+  Alli (fun k' => P (Nat.pred #|l| - k' + k)) 0 (List.rev l).
+Proof.
+  revert k.
+  induction l using rev_ind; simpl; intros; try constructor.
+  eapply Alli_app in X. intuition.
+  rewrite rev_app_distr. rewrite app_length.
+  simpl. constructor.
+  replace (Nat.pred (#|l| + 1) - 0) with #|l| by lia.
+  depelim b. eauto. specialize (IHl _ a).
+  eapply Alli_shift. eapply Alli_impl. eauto.
+  simpl; intros.
+  now replace (Nat.pred (#|l| + 1) - S n) with (Nat.pred #|l| - n) by lia.
+Qed.
+
+Lemma Alli_All_mix {A} {P : nat -> A -> Type} (Q : A -> Type) k l :
+  Alli P k l -> All Q l -> Alli (fun k x => (P k x) * Q x)%type k l.
+Proof.
+  induction 1; constructor; try depelim X0; intuition auto.
 Qed.
 
 Lemma OnOne2_impl {A} {P Q} {l l' : list A} :

@@ -19,7 +19,7 @@ Definition is_prop_sort s :=
 Require Import Extract.
 
 Lemma cumul_prop1 (Σ : global_env_ext) Γ A B u :
-  wf Σ -> 
+  wf Σ ->
   is_prop_sort u -> Σ ;;; Γ |- B : tSort u ->
                                  Σ ;;; Γ |- A <= B -> Σ ;;; Γ |- A : tSort u.
 Proof.
@@ -53,7 +53,7 @@ Lemma it_mkProd_isArity:
   forall (l : list context_decl) A,
     isArity A ->
     isArity (it_mkProd_or_LetIn l A).
-Proof.  
+Proof.
   induction l; cbn; intros; eauto.
   eapply IHl. destruct a, decl_body; cbn; eauto.
 Qed.
@@ -65,7 +65,7 @@ Lemma isArity_ind_type (Σ : global_env_ext) mind ind idecl :
 Proof.
   intros. eapply PCUICWeakeningEnv.declared_inductive_inv with (P := typing) in H; eauto.
   - inv H. rewrite ind_arity_eq. rewrite <- it_mkProd_or_LetIn_app.
-    clear. 
+    clear.
     eapply it_mkProd_isArity. econstructor.
   - eapply PCUICWeakeningEnv.weaken_env_prop_typing.
 Qed.
@@ -77,13 +77,13 @@ Lemma isWfArity_prod_inv:
   intros. destruct X as (? & ? & ? & ?). cbn in e.
   eapply destArity_app_Some in e as (? & ? & ?); subst.
   split.
-  - unfold snoc, app_context in *. rewrite <- app_assoc in *. 
+  - unfold snoc, app_context in *. rewrite <- app_assoc in *.
     clear H. induction x4.
     + inv a. eauto.
     + cbn in a. inv a.
       * eapply IHx4. eauto.
       * eapply IHx4. eauto.
-  - eexists. eexists. split; eauto. subst. 
+  - eexists. eexists. split; eauto. subst.
     unfold snoc, app_context in *. rewrite <- app_assoc in *. eassumption.
 Qed.
 
@@ -98,21 +98,21 @@ Lemma isArity_typing_spine:
     wf Σ -> wf_local Σ Γ ->
     Is_conv_to_Arity Σ Γ x4 -> typing_spine Σ Γ x4 L T -> Is_conv_to_Arity Σ Γ T.
 Proof.
-  intros.  
-  depind X1. 
-  - destruct H as (? & ? & ?). sq. 
+  intros.
+  depind X1.
+  - destruct H as (? & ? & ?). sq.
     eapply PCUICCumulativity.red_cumul_inv in X1.
     eapply cumul_trans in c.  2:eassumption.
     eapply invert_cumul_arity_l in c; eauto.
   - eapply IHX1.
-    destruct H as (? & ? & ?). sq. 
+    destruct H as (? & ? & ?). sq.
     eapply PCUICCumulativity.red_cumul_inv in X2.
     eapply cumul_trans in c.  2:eassumption.
-    eapply invert_cumul_arity_l in c; eauto. 
-    destruct c as (? & ? & ?). sq. 
+    eapply invert_cumul_arity_l in c; eauto.
+    destruct c as (? & ? & ?). sq.
     eapply invert_red_prod in X3 as (? & ? & [] & ?); eauto; subst.
-    exists (x2 {0 := hd}). split; sq. 
-    eapply (PCUICSubstitution.substitution_red Σ Γ [_] [] [_]). eauto. econstructor. econstructor. 
+    exists (x2 {0 := hd}). split; sq.
+    eapply (PCUICSubstitution.substitution_red Σ Γ [_] [] [_]). eauto. econstructor. econstructor.
     rewrite subst_empty. eassumption. eauto. cbn. eassumption. cbn in H1.
     now eapply isArity_subst.
 Qed.
@@ -126,13 +126,13 @@ Proof.
     eauto.
   - destruct n0. cbn in H. congruence. cbn in H.
     eapply IHn. eauto.
-Qed. 
+Qed.
 
 Lemma it_mkProd_arity :
   forall (l : list context_decl) (A : term), isArity (it_mkProd_or_LetIn l A) -> isArity A.
 Proof.
   induction l; cbn; intros.
-  - eauto. 
+  - eauto.
   - eapply IHl in H. destruct a, decl_body; cbn in *; eauto.
 Qed.
 
@@ -162,7 +162,7 @@ Proof.
       eauto. econstructor. eauto. econstructor. econstructor. econstructor.
       Grab Existential Variables. all: repeat econstructor.
 Qed.
-  
+
 
 Lemma invert_it_Ind_red1 Σ L i u l t Γ : wf Σ ->
   red1 Σ Γ (it_mkProd_or_LetIn L (mkApps (tInd i u) l)) t -> exists L' l', t = it_mkProd_or_LetIn L' (mkApps (tInd i u) l').
@@ -179,7 +179,7 @@ Proof.
         -- eapply (f_equal decompose_app) in x.
            rewrite !decompose_app_mkApps in x; cbn; eauto.
            change (tApp (mkApps (tInd i u) l) x0) with (mkApps (mkApps (tInd i u) l) [x0]) in x.
-           rewrite mkApps_nested in x.           
+           rewrite mkApps_nested in x.
            rewrite !decompose_app_mkApps in x; cbn; eauto. cbn in x. inv x.
         -- eapply IHl in X as [].  subst.
            exists (x0 ++ [x])%list. now rewrite <- mkApps_nested.
@@ -192,18 +192,18 @@ Proof.
       * destruct args using rev_ind; try rewrite <- mkApps_nested in x; cbn in x; inv x.
       * eexists (l ++ [Build_context_decl decl_name (Some r) decl_type])%list, l0.
         now rewrite it_mkProd_or_LetIn_app.
-      * eexists (l ++ [Build_context_decl decl_name (Some t0) r])%list, l0. 
+      * eexists (l ++ [Build_context_decl decl_name (Some t0) r])%list, l0.
         now rewrite it_mkProd_or_LetIn_app.
       * eapply IHL in X as (? & ? & ?). subst.
-        eexists (x ++ [Build_context_decl decl_name (Some t0) decl_type])%list, x0. 
+        eexists (x ++ [Build_context_decl decl_name (Some t0) decl_type])%list, x0.
         rewrite it_mkProd_or_LetIn_app. reflexivity.
     + dependent destruction X.
       * eapply (f_equal decompose_app) in x.
-        rewrite decompose_app_mkApps in x; cbn; eauto. cbn in x. inv x.        
-      * eexists (l ++ [Build_context_decl decl_name None N1])%list, l0. 
+        rewrite decompose_app_mkApps in x; cbn; eauto. cbn in x. inv x.
+      * eexists (l ++ [Build_context_decl decl_name None N1])%list, l0.
         now rewrite it_mkProd_or_LetIn_app.
       * eapply IHL in X as (? & ? & ?). subst.
-        eexists (x ++ [Build_context_decl decl_name None decl_type])%list, x0. 
+        eexists (x ++ [Build_context_decl decl_name None decl_type])%list, x0.
         rewrite it_mkProd_or_LetIn_app. reflexivity.
 Qed.
 
@@ -255,8 +255,8 @@ Proof.
     (* eapply cumul_trans in X. 2:exact c2. *)
     (* eapply invert_cumul_arity_r in X; eauto. *)
     inv d. cbn in X0. destruct x5. destruct p. cbn in *.
-    destruct X0. destruct x5. cbn in *. subst. 
-    unfold cshape_concl_head in *. 
+    destruct X0. destruct x5. cbn in *. subst.
+    unfold cshape_concl_head in *.
 
     rewrite <- it_mkProd_or_LetIn_app in c2.
     rewrite PCUICUnivSubst.subst_instance_constr_it_mkProd_or_LetIn in c2.
@@ -267,7 +267,7 @@ Proof.
     rewrite PCUICUnivSubst.subst_instance_context_length in *.
     rewrite app_length in *.
     destruct (Nat.leb_spec (#|cshape_args| + #|ind_params x3| + 0) (#|ind_bodies x3| - S (inductive_ind ind) + #|ind_params x3| + #|cshape_args|)).
-    2:omega. clear H. 
+    2:omega. clear H.
     assert ((#|ind_bodies x3| - S (inductive_ind ind) + #|ind_params x3| +
                                                                          #|cshape_args| - (#|cshape_args| + #|ind_params x3| + 0)) < #|inds (inductive_mind ind) u (ind_bodies x3)|).
     rewrite inds_length. omega.
@@ -287,29 +287,29 @@ Proof.
     clear - wfΣ HWF t0 c0. intros.
     destruct c0 as (? & [] & ?).
     eapply typing_spine_red in t0. 2:{ eapply PCUICCumulativity.All_All2_refl. clear. induction x1; eauto. }
-    2:eauto. 2: eapply PCUICCumulativity.red_cumul. 2:eassumption. 2:eapply cumul_refl'. 2:eauto. 
+    2:eauto. 2: eapply PCUICCumulativity.red_cumul. 2:eassumption. 2:eapply cumul_refl'. 2:eauto.
     clear - wfΣ t0 H c2.
     2:{ eapply isWfArity_or_Type_cumul. eapply PCUICCumulativity.red_cumul. eassumption. eauto. }
 
     (* assert ((Σ;;; [] |- it_mkProd_or_LetIn c (mkApps (tInd i u) l) <= x0) + (Σ;;; [] |- x0 <= it_mkProd_or_LetIn c (mkApps (tInd i u) l))) by eauto. clear c2. *)
     rename c2 into X.
-    revert c l X. 
+    revert c l X.
     depind t0; intros; subst.
     + eapply cumul_trans in c; eauto.
       eapply invert_cumul_arity_r in c; eauto.
       eapply it_mkProd_red_Arity; eauto.
     + eapply cumul_trans in c; eauto.
-      eapply invert_cumul_prod_r in c as (? & ? & ? & [] & ?); eauto. 
-      
+      eapply invert_cumul_prod_r in c as (? & ? & ? & [] & ?); eauto.
+
       eapply invert_it_Ind_red in r as (? & ? & ?); eauto.
       eapply invert_it_Ind_eq_prod in H0 as (? & ? & ?).
       subst.
-      eapply IHt0; eauto. 
-      
+      eapply IHt0; eauto.
+
       eapply (substitution_untyped_cumul Σ [] [_] [] [hd]) in c1.
       cbn in c1. 2:eauto. 2:{ repeat econstructor. }
       rewrite subst_it_mkProd_or_LetIn in c1.
-      rewrite subst_mkApps in c1. eassumption. 
+      rewrite subst_mkApps in c1. eassumption.
   - exists x, x0. eauto.
 Qed.                       (* if a constructor is a type or proof, it is a proof *)
 
@@ -323,7 +323,7 @@ Inductive conv_decls (Σ : global_env_ext) Γ (Γ' : context) : forall (x y : co
 
 Lemma conv_context_refl (Σ : global_env_ext) Γ : wf Σ -> wf_local Σ Γ -> context_relation (@conv_decls Σ) Γ Γ.
 Proof.
-  induction Γ; try econstructor. 
+  induction Γ; try econstructor.
   intros wfΣ wfΓ; depelim wfΓ; econstructor; eauto;
   constructor; auto.
   - apply conv_refl.
@@ -336,95 +336,92 @@ Proof.
   Hint Constructors red red1.
   all:eauto.
   - econstructor. econstructor. econstructor.
-    rewrite <- H. 
+    rewrite <- H.
     induction HT in i |- *; destruct i; eauto.
-    now inv p. 
-  - 
+    now inv p.
+  -
     eapply PCUICReduction.red_abs. eapply IHX0; eauto.  eauto.
-  - 
-    eapply PCUICReduction.red_abs. eauto. eapply IHX0. eauto. 
-    eauto. econstructor. eauto. econstructor. eapply conv_refl. 
-  - 
-    eapply PCUICReduction.red_letin. eapply IHX0; eauto. 
-    all:eauto. 
-  - 
-    eapply PCUICReduction.red_letin; eauto. 
-  - 
-    eapply PCUICReduction.red_letin; eauto. eapply IHX0; eauto. 
-    econstructor. eauto. econstructor. 
+  -
+    eapply PCUICReduction.red_abs. eauto. eapply IHX0. eauto.
+    eauto. econstructor. eauto. econstructor. eapply conv_refl.
+  -
+    eapply PCUICReduction.red_letin. eapply IHX0; eauto.
+    all:eauto.
+  -
+    eapply PCUICReduction.red_letin; eauto.
+  -
+    eapply PCUICReduction.red_letin; eauto. eapply IHX0; eauto.
+    econstructor. eauto. econstructor.
   -     eapply PCUICReduction.reds_case; eauto. clear.
     eapply PCUICCumulativity.All_All2_refl. induction brs; eauto.
   -     eapply PCUICReduction.reds_case; eauto. clear.
     eapply PCUICCumulativity.All_All2_refl. induction brs; eauto.
-  - destruct ind. 
-    eapply PCUICReduction.reds_case; eauto. 
+  - destruct ind.
+    eapply PCUICReduction.reds_case; eauto.
     clear - HΣ X HT.
     induction X.
     + econstructor. destruct p. destruct p.
-      split; eauto. 
-      eapply PCUICCumulativity.All_All2_refl. 
-      induction tl; eauto. 
+      split; eauto.
+      eapply PCUICCumulativity.All_All2_refl.
+      induction tl; eauto.
     + econstructor.  repeat econstructor.
       eassumption.
-  - 
+  -
     eapply PCUICReduction.red_proj_c. eauto.
-  - 
+  -
     eapply PCUICReduction.red_app; eauto.
   -     eapply PCUICReduction.red_app; eauto.
-  - 
+  -
     eapply PCUICReduction.red_prod; eauto.
-  - 
-    eapply PCUICReduction.red_prod; eauto. eapply IHX0. eauto. eauto. 
-    econstructor. 
+  -
+    eapply PCUICReduction.red_prod; eauto. eapply IHX0. eauto. eauto.
+    econstructor.
     eauto. econstructor. eapply conv_refl.
   - eapply PCUICReduction.red_evar; eauto.
     induction X; eauto. econstructor. eapply p; eauto.
     induction tl; eauto.
-  - 
-    eapply PCUICReduction.red_fix_congr; eauto.
-    generalize (fix_context mfix0). intros.
-    induction X; eauto. 
-    destruct p. destruct p.
-    econstructor; eauto. split. inv e. eapply r0; eauto. 
-    inv e. econstructor. clear.
-    eapply PCUICCumulativity.All_All2_refl. induction tl; eauto.
-  - 
-    eapply PCUICReduction.red_fix_congr; eauto. 
-    remember (fix_context mfix0). intros. clear Heqc.
-    induction X in  |- *; eauto.
-    destruct p. destruct p.
-    econstructor; eauto. split. inv e. econstructor. eapply r0. eauto.
-    inv e. eauto.
-    * clear - HT. induction c. eassumption. cbn. destruct a.
-      destruct decl_body. econstructor. eassumption. econstructor.
-      econstructor.  eauto. econstructor. eapply conv_refl.
-    * clear.
-      eapply PCUICCumulativity.All_All2_refl. induction tl; eauto.
-  - eapply PCUICReduction.red_cofix_congr; eauto.
-    generalize (fix_context mfix0). intros.
-    induction X; eauto.
-    destruct p. destruct p.
-    econstructor; eauto. split. eapply r0. eauto.
-    inv e. eauto. inv e. econstructor.
-    clear.
-    eapply PCUICCumulativity.All_All2_refl. induction tl; eauto.
-  - eapply PCUICReduction.red_cofix_congr; eauto. 
-    remember (fix_context mfix0). intros. clear Heqc.
-    induction X in  |- *; eauto.
-    destruct p. destruct p.
-    econstructor; eauto. split. inv e. econstructor. eapply r0. eauto.
-    inv e. eauto.
-    * clear - HT. induction c. eassumption. cbn. destruct a.
-      destruct decl_body. econstructor. eassumption. econstructor.
-      econstructor.  eauto. econstructor. eapply conv_refl.
-    * clear.
-      eapply PCUICCumulativity.All_All2_refl. induction tl; eauto.
+  - eapply PCUICReduction.red_fix_one_ty.
+    eapply OnOne2_impl ; eauto.
+    intros [? ? ? ?] [? ? ? ?] [[r ih] e]. simpl in *.
+    inversion e. subst. clear e.
+    split ; auto.
+  - eapply PCUICReduction.red_fix_one_body.
+    eapply OnOne2_impl ; eauto.
+    intros [? ? ? ?] [? ? ? ?] [[r ih] e]. simpl in *.
+    inversion e. subst. clear e.
+    split ; auto.
+    eapply ih ; auto.
+    clear - HT.
+    induction (fix_context mfix0) as [| [na [b|] ty] Δ ihΔ].
+    + auto.
+    + simpl. constructor ; eauto.
+      constructor.
+    + simpl. constructor ; eauto.
+      constructor. apply conv_refl.
+  - eapply PCUICReduction.red_cofix_one_ty.
+    eapply OnOne2_impl ; eauto.
+    intros [? ? ? ?] [? ? ? ?] [[r ih] e]. simpl in *.
+    inversion e. subst. clear e.
+    split ; auto.
+  - eapply PCUICReduction.red_cofix_one_body.
+    eapply OnOne2_impl ; eauto.
+    intros [? ? ? ?] [? ? ? ?] [[r ih] e]. simpl in *.
+    inversion e. subst. clear e.
+    split ; auto.
+    eapply ih ; auto.
+    clear - HT.
+    induction (fix_context mfix0) as [| [na [b|] ty] Δ ihΔ].
+    + auto.
+    + simpl. constructor ; eauto.
+      constructor.
+    + simpl. constructor ; eauto.
+      constructor. apply conv_refl.
 Qed.
 
-Lemma context_conversion_red (Σ : global_env_ext) Γ Γ' s t : wf Σ -> 
+Lemma context_conversion_red (Σ : global_env_ext) Γ Γ' s t : wf Σ ->
   context_relation (@conv_decls Σ) Γ Γ' -> red Σ Γ s t -> red Σ Γ' s t.
 Proof.
-  intros. induction X1; eauto. 
+  intros. induction X1; eauto.
   etransitivity. eapply IHX1.
   eapply context_conversion_red1; eauto.
 Qed.
@@ -444,7 +441,7 @@ Proof.
   induction x1; cbn; intros.
   - inv H.
   - inv H.
-Qed. 
+Qed.
 
 Lemma is_prop_sort_prod x2 x3 :
   is_prop_sort (Universe.sort_of_product x2 x3) -> is_prop_sort x3.
@@ -472,9 +469,9 @@ Proof.
 
     eapply is_prop_sort_prod in H0. eapply IHt1. exact H0.
     change (tSort x3) with ((tSort x3) {0 := hd}).
-    eapply PCUICSubstitution.substitution0. 2:eauto. eauto. 
-    econstructor. eassumption. 2: now destruct c. right; eauto. 
-Qed.  
+    eapply PCUICSubstitution.substitution0. 2:eauto. eauto.
+    econstructor. eassumption. 2: now destruct c. right; eauto.
+Qed.
 
 Lemma arity_type_inv (Σ : global_env_ext) Γ t T1 T2 : wf Σ -> wf_local Σ Γ ->
   Σ ;;; Γ |- t : T1 -> isArity T1 -> Σ ;;; Γ |- t : T2 -> Is_conv_to_Arity Σ Γ T2.
@@ -483,8 +480,8 @@ Proof.
 
   eapply invert_cumul_arity_r in c0 as (? & ? & ?); eauto. sq.
   eapply PCUICCumulativity.red_cumul_inv in X.
-  eapply cumul_trans in c; eauto.  
-  
+  eapply cumul_trans in c; eauto.
+
   eapply invert_cumul_arity_l in c as (? & ? & ?); eauto. sq.
   exists x1; split; sq; eauto.
 Qed.
@@ -496,7 +493,7 @@ Lemma Is_type_app (Σ : global_env_ext) Γ t L T :
   isErasable Σ Γ t ->
   ∥isErasable Σ Γ (mkApps t L)∥.
 Proof.
-  intros wfΣ wfΓ ? ?. 
+  intros wfΣ wfΓ ? ?.
   assert (HW : isWfArity_or_Type Σ Γ T). eapply PCUICValidity.validity; eauto.
   eapply type_mkApps_inv in X as (? & ? & [] & ?); try eassumption.
   destruct X0 as (? & ? & [ | [u]]).
@@ -504,23 +501,23 @@ Proof.
     eapply invert_cumul_arity_r in c1; eauto.
     destruct c1 as (? & ? & ?). destruct H as [].
     eapply PCUICCumulativity.red_cumul_inv in X.
-    
+
     eapply invert_cumul_arity_l in H0 as (? & ? & ?). 2:eauto. 2:eauto. 2: eapply cumul_trans; eauto.
     destruct H.
-    eapply typing_spine_red in t1. 2:{ eapply PCUICCumulativity.All_All2_refl. 
+    eapply typing_spine_red in t1. 2:{ eapply PCUICCumulativity.All_All2_refl.
                                                   clear. induction L; eauto. }
-    
+
     2:eauto. 2:eauto. 2: eapply PCUICCumulativity.red_cumul_inv. 2:eauto. 2:eauto.
 
     assert (t11 := t1).
-    eapply isArity_typing_spine in t1 as (? & ? & ?). 2:eauto. 2:eauto. 2:eauto. 
+    eapply isArity_typing_spine in t1 as (? & ? & ?). 2:eauto. 2:eauto. 2:eauto.
     sq. exists x5. split. eapply type_mkApps. eapply type_reduction in t0; eauto. 2:eauto.
-    eapply typing_spine_red. eapply PCUICCumulativity.All_All2_refl. 
+    eapply typing_spine_red. eapply PCUICCumulativity.All_All2_refl.
     clear. induction L; eauto. eauto. eauto. 2:eapply cumul_refl'.
-    eapply PCUICCumulativity.red_cumul. eauto. 
+    eapply PCUICCumulativity.red_cumul. eauto.
 
     eapply isWfArity_or_Type_red; eauto. exists x4; split; sq; eauto.
-  - destruct p.  
+  - destruct p.
     eapply PCUICPrincipality.principal_typing in t2 as (? & ? & ? & ?). 2:eauto. 2:exact t0.
     eapply cumul_prop1 in c1; eauto.
     eapply cumul_prop2 in c0; eauto.
@@ -547,7 +544,7 @@ Proof.
     eapply leq_universe_prop in c as []; eauto.
     eexists. split. eassumption. right. eexists. split. eassumption.
     unfold Universe.sort_of_product in H.
-    destruct ?; eauto. 
+    destruct ?; eauto.
 
     eapply is_prop_sort_sup; eauto.
 Qed.

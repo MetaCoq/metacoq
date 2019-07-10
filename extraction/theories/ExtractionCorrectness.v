@@ -14,9 +14,10 @@ Module E := EAst.
 
 Require Import Lia.
 
-Existing Instance config.default_checker_flags.
 Module PA := PCUICAst.
 Module P := PCUICWcbvEval.
+
+Existing Instance config.extraction_checker_flags.
 
 (** ** Prelim on arities and proofs *)
 
@@ -25,6 +26,15 @@ Lemma isArity_subst_instance u T :
   isArity (PCUICUnivSubst.subst_instance_constr u T).
 Proof.
   induction T; cbn; intros; tauto.
+Qed.
+
+Lemma is_prop_subst_instance:
+  forall (u : universe_instance) (x0 : universe), is_prop_sort x0 -> is_prop_sort (UnivSubst.subst_instance_univ u x0).
+Proof.
+  intros u x0 i. destruct x0; cbn in *; try congruence.
+  unfold is_prop_sort in *. unfold Universe.level in *.
+  destruct t. destruct t; cbn in *; try congruence.
+  destruct b; cbn in *; try congruence.
 Qed.
 
 Lemma isErasable_subst_instance (Σ : global_env_ext) Γ T univs u :
@@ -40,15 +50,6 @@ Proof.
     eexists. split. eauto. right.
     eapply typing_subst_instance in t0; eauto.
     eexists. split. eauto.
-
-    Lemma is_prop_subst_instance:
-      forall (u : universe_instance) (x0 : universe), is_prop_sort x0 -> is_prop_sort (UnivSubst.subst_instance_univ u x0).
-    Proof.
-      intros u x0 i. destruct x0; cbn in *; try congruence.
-      unfold is_prop_sort in *. unfold Universe.level in *.
-      destruct t. destruct t; cbn in *; try congruence.
-      destruct b; cbn in *; try congruence.
-    Qed.
     now eapply is_prop_subst_instance.
 Qed.
 
@@ -94,14 +95,6 @@ Proof.
 
     eapply All2_impl. eapply All2_All_mix_left.
     all: firstorder.
-  - econstructor.
-
-    eapply All2_impl. eapply All2_All_mix_left. eassumption. eassumption.
-    intros. cbn in *.
-    decompose [prod] X2. repeat split; eauto.
-    eapply b0. 2:eauto. subst types.
-
-    eapply conv_context_app. eauto. eapply typing_wf_local; eauto. eauto.
   - econstructor.
 
     eapply All2_impl. eapply All2_All_mix_left. eassumption. eassumption.
@@ -168,17 +161,6 @@ Proof.
     destruct p. destruct p. repeat split; eauto.
     eapply e2 in e1.
     unfold PCUICUnivSubst.subst_instance_context in *.
-    unfold map_context in *. rewrite map_app in *. subst types. 2:eauto.
-    eapply erases_ctx_ext. eassumption. unfold app_context.
-    f_equal.
-    eapply fix_context_subst_instance.
-  - cbn. econstructor; eauto.
-    eapply All2_map_left.
-    eapply All2_impl. eapply All2_All_mix_left. eassumption.
-    exact H6.
-    intros; cbn in *. destruct X1. destruct p0. destruct p0.
-    destruct p. repeat split; eauto.
-    eapply e2 in e1. unfold PCUICUnivSubst.subst_instance_context in *.
     unfold map_context in *. rewrite map_app in *. subst types. 2:eauto.
     eapply erases_ctx_ext. eassumption. unfold app_context.
     f_equal.
@@ -447,8 +429,8 @@ Proof.
         (* destruct x4; cbn in e2; subst. destruct X2. destruct p0; cbn in e2; subst. cbn in *.  destruct y.  *)
         exists x4. split; eauto. eapply eval_iota_sing.  2:eauto.
         pose proof (Ee.eval_to_value _ _ _ He_v').
-        eapply value_app_inv in H4. subst. eassumption.
-
+        eapply value_app_inv in H4. subst. eassumption. 2:eauto.
+        
         eapply tCase_length_branch_inv in extr_env_wf'0.
         2:{ eapply subject_reduction. eauto.
             exact Hty.
@@ -457,7 +439,7 @@ Proof.
 
         enough (#|skipn (ind_npars mdecl') (x1 ++ x2)| = n) as <- by eauto.
         rewrite skipn_length. rewrite extr_env_wf'0. omega.
-        rewrite extr_env_wf'0. omega. eauto.
+        rewrite extr_env_wf'0. omega. 
       * subst. unfold iota_red in *.
         destruct (nth_error brs c) eqn:Hnth.
         2:{ eapply nth_error_None in Hnth. erewrite All2_length in Hnth. 2:exact a. rewrite H3 in Hnth.

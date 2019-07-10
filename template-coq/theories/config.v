@@ -23,3 +23,9 @@ Local Instance type_in_type : checker_flags := {|
   allow_cofix := true ;
   prop_sub_type := true
 |}.
+
+Local Instance extraction_checker_flags : checker_flags := {|
+  check_univs := true ;
+  allow_cofix := false ;
+  prop_sub_type := false
+|}.

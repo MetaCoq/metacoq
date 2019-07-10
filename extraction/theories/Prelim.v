@@ -14,7 +14,9 @@ Module E := EAst.
 
 Require Import Lia.
 
-Existing Instance config.default_checker_flags.
+
+Existing Instance extraction_checker_flags.
+
 Module PA := PCUICAst.
 Module P := PCUICWcbvEval.
 
@@ -51,7 +53,6 @@ Proof.
   - destruct (f a). destruct ? in H. invs H. cbn. f_equal. eauto. invs H. invs H.
 Qed.
 
-
 Lemma monad_map_app X Y (f : X -> typing_result Y) (l1 l2 : list X) a1 a2 :
   monad_map f l1 = Checked a1 -> monad_map f l2 = Checked a2 -> monad_map f (l1 ++ l2) = Checked (a1 ++ a2)%list.
 Proof.
@@ -70,6 +71,8 @@ Proof.
     invs H. destruct (IHl1 _ eq_refl) as (? & ? & ? & ? & ->).
     do 2 eexists. rewrite H. eauto. invs H.
 Qed.
+
+Existing Instance extraction_checker_flags.
 
 Lemma typing_spine_inv_app Σ x0 l x x1 :
   PCUICGeneration.typing_spine Σ [] x0 (l ++ [x]) x1 -> { '(x2, x3) : _ & (PCUICGeneration.typing_spine Σ [] x0 l x2) * (Σ ;;; [] |- x : x3)}%type.
@@ -105,7 +108,7 @@ Lemma typing_spine_eval:
     (T x x0 : PCUICAst.term) (t0 : typing_spine Σ Γ x args x0) (c : Σ;;; Γ |- x0 <= T) (x1 : PCUICAst.term)
     (c0 : Σ;;; Γ |- x1 <= x), isWfArity_or_Type Σ Γ T -> typing_spine Σ Γ x1 args' T.
 Proof.
-  intros Σ args args' X wf T x x0 t0 c x1 c0 ?. eapply typing_spine_red; eauto.
+  intros. eapply typing_spine_red; eauto.
   eapply All2_impl. eassumption. intros. eapply wcbeval_red. eauto.
 Qed.
 
@@ -268,6 +271,8 @@ Qed.
 (*   intros x6 Eu. *)
 (* Admitted. *)
 
+Existing Instance extraction_checker_flags.
+
 Lemma elim_restriction_works_kelim1 (Σ : global_env_ext) Γ T ind npar p c brs mind idecl : wf Σ ->
   declared_inductive (fst Σ) mind ind idecl ->
   Σ ;;; Γ |- tCase (ind, npar) p c brs : T ->
@@ -283,7 +288,7 @@ Proof.
   eapply Exists_exists in e1 as (? & ? & ?). subst. eauto.
   
   destruct (universe_family x6) eqn:Eu.
-  - exfalso. eapply H0. exists T. exists x6. split. eauto.
+  - exfalso. eapply H0. exists T. exists x6. split. admit.
     split. (* 2:{ eapply universe_family_is_prop_sort; eauto. } *)
     admit. admit.
   - admit. (* no idea what to do for Set *)
@@ -382,6 +387,9 @@ Proof.
     eapply IHl.  eauto.
 Qed.
 
+
+Existing Instance extraction_checker_flags.
+
 Lemma tCase_length_branch_inv (Σ : global_env_ext) Γ ind npar p n u args brs T m t :
   wf Σ ->
   Σ ;;; Γ |- tCase (ind, npar) p (mkApps (tConstruct ind n u) args) brs : T ->
@@ -460,6 +468,7 @@ Qed.
 (** ** Prelim on typing *)
 
 Require Import PCUIC.PCUICGeneration.
+Existing Instance config.extraction_checker_flags.
 
 Inductive red_decls Σ Γ Γ' : forall (x y : PCUICAst.context_decl), Type :=
 | conv_vass na na' T T' : isType Σ Γ' T' -> red Σ Γ T T' ->

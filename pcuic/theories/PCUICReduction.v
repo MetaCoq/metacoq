@@ -772,6 +772,7 @@ Section ReductionCongruence.
           rewrite <- e. assumption.
     Qed.
 
+    (* TODO MOVE *)
     Lemma All2_prod_inv :
       forall A (P : A -> A -> Type) Q l l',
         All2 (Trel_conj P Q) l l' ->
@@ -784,26 +785,58 @@ Section ReductionCongruence.
         split ; constructor ; auto.
     Qed.
 
+ (*    (* TODO MOVE *) *)
+ (*    Lemma All2_prod_rev_seq : *)
+ (*      forall A B C (f : A -> B) (g : A -> C) P Q l0 l1, *)
+ (*        All2 (Trel_conj (on_Trel P f) (on_Trel Q g)) l0 l1 -> *)
+ (*        ∑ li, *)
+ (*          All2 (on_Trel_eq Q g f) l0 li × *)
+ (*          All2 (on_Trel_eq P f g) li l1. *)
+ (*    Proof. *)
+ (*      intros A B C f g P Q l0 l1 h. *)
+ (*      induction h. *)
+ (*      - exists []. split ; eauto. *)
+ (*      - destruct IHh as [li [? ?]]. destruct r. *)
+ (*        eexists (_ :: li). split. *)
+ (*        + constructor ; auto. ; eassumption. *)
+ (*        + constructor ; eassumption. *)
+ (* ; constructor ; eauto. *)
+
     Lemma red_fix_congr :
       forall mfix mfix' idx,
         All2 (fun d0 d1 =>
                 (red Σ Γ (dtype d0) (dtype d1)) ×
-                (red Σ (Γ ,,, fix_context mfix) (dbody d0) (dbody d1))
+                (red Σ (Γ ,,, fix_context mfix) (dbody d0) (dbody d1) ×
+                (dname d0, rarg d0) = (dname d1, rarg d1))
         ) mfix mfix' ->
       red Σ Γ (tFix mfix idx) (tFix mfix' idx).
     Proof.
       intros mfix mfix' idx h.
-      apply All2_prod_inv in h as [h1 h2].
-      eapply red_trans.
-      - eapply red_fix_body.
-        (* We need a more precise All2_prod_inv to get an intermediary mfix
-           with equality instead of red on one side. *)
-    Admitted.
+      assert (∑ mfixi,
+        All2 (
+          on_Trel_eq (red Σ (Γ ,,, fix_context mfix)) dbody
+                     (λ x : def term, (dname x, dtype x, rarg x))
+        ) mfix mfixi ×
+        All2 (
+          on_Trel_eq (red Σ Γ) dtype
+                     (λ x : def term, (dname x, dbody x, rarg x))
 
-    (*   intros; eapply (transitivity (y := tApp M1 N0)). *)
-    (*   now apply (red_ctx (tCtxApp_l tCtxHole _)). *)
-    (*   now eapply (red_ctx (tCtxApp_r _ tCtxHole)). *)
-    (* Qed. *)
+        ) mfixi mfix'
+      ) as [mfixi [h1 h2]].
+      { revert h. generalize (Γ ,,, fix_context mfix). intros Δ h.
+        induction h.
+        - exists []. auto.
+        - destruct r as [? [? e]]. inversion e.
+          destruct IHh as [mfixi [? ?]].
+          eexists (mkdef _ _ _ _ _ :: mfixi). split.
+          + constructor ; auto. simpl. split ; eauto.
+          + constructor ; auto. simpl. split ; eauto. f_equal ; auto.
+            f_equal. assumption.
+      }
+      eapply red_trans.
+      - eapply red_fix_body. eassumption.
+      - eapply red_fix_ty. assumption.
+    Qed.
 
     Lemma red_cofix_congr mfix0 mfix1 idx :
       All2 (fun d0 d1 => (red Σ Γ (dtype d0) (dtype d1)) *

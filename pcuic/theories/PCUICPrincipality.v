@@ -27,6 +27,10 @@ Section Principality.
   Context (Σ : global_env_ext).
   Context (wfΣ : wf Σ).
 
+  Definition Is_conv_to_Arity Σ Γ T := exists T', ∥red Σ Γ T T'∥ /\ isArity T'.
+  
+
+  
   Lemma invert_red_sort Γ u v :
     red Σ Γ (tSort u) v -> v = tSort u.
   Proof.
@@ -101,7 +105,29 @@ Section Principality.
     constructor. eapply leqvv'2.
     now eapply red_cumul_inv.
   Qed.
-
+  
+  Lemma invert_cumul_arity_r (Γ : context) (C : term) T :
+    wf_local Σ Γ ->
+    isArity T ->
+    Σ;;; Γ |- C <= T -> Is_conv_to_Arity Σ Γ C.
+  Proof.
+    revert Γ C; induction T; cbn in *; intros Γ C wfΓ ? ?; try tauto.
+    - eapply invert_cumul_sort_r in X as (? & ? & ?).
+      exists (tSort x). split; sq; eauto.
+    - eapply invert_cumul_prod_r in X as (? & ? & ? & [] & ?); eauto.
+      (* eapply IHT2 in c0 as (? & ? & ?); eauto. sq. *)
+  
+      (* exists (tProd x x0 x2). split; sq; cbn; eauto. *)
+      (* etransitivity. eauto. *)
+      (* eapply PCUICReduction.red_prod_r. *)
+  
+    (*   eapply context_conversion_red. eauto. 2:eauto. *)
+    (*   + econstructor. clear; induction Γ. econstructor. destruct a, decl_body. econstructor. eauto. econstructor. econstructor. eauto. econstructor. eauto. econstructor. *)
+  
+    (*   econstructor. 2:eauto. 2:econstructor; eauto. 2:cbn. admit. admit. *)
+    (* -   admit. *)
+  Admitted.                       (* invert_cumul_arity_r *)
+  
   Lemma invert_cumul_prod_l Γ C na A B :
     Σ ;;; Γ |- tProd na A B <= C ->
                ∑ na' A' B', red Σ.1 Γ C (tProd na' A' B') *
@@ -121,6 +147,28 @@ Section Principality.
     now constructor; apply leqvv'2.
   Qed.
 
+  Lemma invert_cumul_arity_l (Γ : context) (C : term) T :
+    wf_local Σ Γ ->
+    isArity C -> 
+    Σ;;; Γ |- C <= T -> Is_conv_to_Arity Σ Γ T.
+  Proof.
+    revert Γ T; induction C; cbn in *; intros Γ T wfΓ ? ?; try tauto.
+    - eapply invert_cumul_sort_l in X as (? & ? & ?).
+      exists (tSort x). split; sq; eauto.
+    - eapply invert_cumul_prod_l in X as (? & ? & ? & [] & ?); eauto.
+      eapply IHC2 in c0 as (? & ? & ?); eauto. sq.
+      
+      exists (tProd x x0 x2). split; sq; cbn; eauto.
+      etransitivity. eauto.
+      eapply PCUICReduction.red_prod_r.
+      
+      (*   eapply context_conversion_red. eauto. 2:eauto. *)
+      (*   econstructor. eapply conv_context_refl; eauto.  *)
+      
+      (*   econstructor. 2:eauto. 2:econstructor; eauto. 2:cbn. admit. admit. *)
+      (* - eapply invert_cumul_letin_l in X; eauto. *)
+  Admitted.                       (* invert_cumul_arity_l *)
+  
   Lemma invert_red_letin Γ C na d ty b :
     red Σ.1 Γ (tLetIn na d ty b) C ->
     (∑ na' d' ty' b',
@@ -644,3 +692,4 @@ Section Principality.
   Admitted.
 
 End Principality.
+

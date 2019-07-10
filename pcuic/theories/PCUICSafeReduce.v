@@ -14,7 +14,6 @@ Import MonadNotation.
 Open Scope type_scope.
 
 (* from Validity.v *)
-Existing Instance config.default_checker_flags.
 
 (** * Reduction machine for PCUIC without fuel
 
@@ -33,6 +32,8 @@ Set Equations With UIP.
    We state is as well-foundedness of the reduction.
 *)
 Section Normalisation.
+  
+  Context {cf : checker_flags}.
 
   Context (flags : RedFlags.t).
   Context (Σ : global_env_ext).
@@ -340,6 +341,8 @@ End Normalisation.
 
 Section Reduce.
 
+  Context {cf : checker_flags}.
+  
   Context (flags : RedFlags.t).
 
   Context (Σ : global_env_ext).

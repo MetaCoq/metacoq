@@ -26,6 +26,7 @@ Module PSR := PCUICSafeReduce.
 
 Section Conversion.
 
+  Context {cf : checker_flags}.
   Context (flags : RedFlags.t).
   Context (Σ : global_env_ext).
   Context (hΣ : ∥ wf Σ ∥).

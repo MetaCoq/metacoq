@@ -4,7 +4,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICLiftSubst PCUICTyping PCUICWeakeningEnv PCUICWeakening PCUICInversion
      PCUICSubstitution PCUICReduction PCUICCumulativity PCUICGeneration
      PCUICParallelReductionConfluence PCUICConfluence PCUICUnivSubst
-     PCUICPrincipality.
+     PCUICUnivSubstitution PCUICPrincipality.
 
 From Equations Require Import Equations.
 Require Import ssreflect.
@@ -95,13 +95,16 @@ Section Validity.
 
   (** TODO: Universe instances *)
   Lemma isWfArity_or_Type_subst_instance:
-    forall (Σ : global_env_ext) (Γ : context) (u : list Level.t) (ty : term), wf_local Σ Γ ->
-                                                                              isWfArity_or_Type Σ [] ty -> isWfArity_or_Type Σ Γ (PCUICUnivSubst.subst_instance_constr u ty).
+    forall (Σ : global_env_ext) (Γ : context) (u : list Level.t) univs (ty : term),
+      wf_local Σ Γ ->
+      consistent_instance_ext Σ univs u ->
+      isWfArity_or_Type (Σ.1, univs) [] ty ->
+      isWfArity_or_Type Σ Γ (PCUICUnivSubst.subst_instance_constr u ty).
   Proof.
     intros Σ Γ u ty wfΓ H.
-    destruct H as [[ctx [s [Heq Hs]]]|].
-    - left.
-      exists ctx, s. split; pcuic.
+    (* destruct H as [[ctx [s [Heq Hs]]]|]. *)
+    (* - left. *)
+    (*   exists ctx, s. split; pcuic. *)
   Admitted.
 
   Lemma invert_type_mkApps Σ Γ f fty u T :
@@ -222,16 +225,27 @@ Section Validity.
 
     - eapply declared_constant_inv in H; pcuic.
       destruct decl as [ty [b|] univs]. red in H. simpl in *.
-      apply isWfArity_or_Type_subst_instance; pcuic.
-      repeat red in H; simpl in *. destruct H. left. destruct i as [ctx [s ?]]. exists ctx, s.
-      intuition auto. admit.
-      admit. (* For Simon :) *)
+      destruct Σ as [Σ φ].
+      eapply (isWfArity_or_Type_subst_instance (_, _)); pcuic. simpl.
+      repeat red in H; simpl in *. simpl in *.
+      (* For Simon *)
+      admit.
       (* apply isWfArity_or_Type_subst_instance; pcuic. *)
       (* destruct H. *)
       (* TODO: Fix Forall_decls_typing same way as local environments *)
+    - eapply on_declared_inductive in isdecl; pcuic.
+      destruct isdecl.
+      eapply isWfArity_or_Type_subst_instance; eauto.
+      destruct o0.
+      right. red in onArity.
+      red in onArity.
+      destruct onArity as [s Hs].
+      now exists s.
+
+    - eapply on_declared_constructor in isdecl as [[dm di] dc].
+      destruct dc.
       admit.
-    - admit.
-    - admit.
+      auto.
 
     - (* Case *)
       right. red.
@@ -258,8 +272,14 @@ Section Validity.
         destruct i as [si Hi].
         eapply (invert_type_mkApps _ _ (tInd ind u)) in Hi; pcuic.
         2:{ econstructor; eauto. admit. (* universes *) }
-        2:{ admit. }
-        (* Looks ok *)
+        2:{ destruct Σ as [Σ φ]. eapply (isWfArity_or_Type_subst_instance (_, _)); pcuic.
+            admit.
+            eapply on_declared_inductive in isdecl as [dm di].
+            destruct di.
+            right. red in onArity.
+            red in onArity.
+            destruct onArity as [s' Hs'].
+            now exists s'. simpl; auto. }
         admit.
 
       + destruct i as [ui Hi]. exists ui.
@@ -267,6 +287,12 @@ Section Validity.
 
     - (* Proj *)
       right.
+      apply on_declared_projection in isdecl as [[onm oni] onp]=> //.
+      destruct onp as [s Hty].
+      exists s.
+      subst ty.
+      eapply typing_subst_instance in Hty.
+      admit. auto. now eapply typing_wf_local in Hty.
       admit.
 
     - admit. (* Fix *)

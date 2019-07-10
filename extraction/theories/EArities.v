@@ -23,9 +23,6 @@ Require Import Extract.
 
 Definition Is_conv_to_Arity Σ Γ T := exists T', ∥red Σ Γ T T'∥ /\ isArity T'.
 
-Ltac terror := try match goal with [t : type_error |- typing_result _] => exact (TypeError t) end.
-
-
 Lemma invert_cumul_arity_r (Σ : global_env_ext) (Γ : context) (C : term) T :
   wf Σ -> wf_local Σ Γ ->
   isArity T ->

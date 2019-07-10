@@ -28,7 +28,6 @@ Proof.
   - intros. rewrite nth_error_app1 in H; eauto.
 Qed.
 
-
 Lemma monad_map_All2 (X Y : Type) (f : X -> typing_result Y) (l1 : list X) (a1 : list Y) :
   monad_map f l1 = ret a1 -> All2 (fun a b => f a = ret b) l1 a1.
 Proof.
@@ -459,13 +458,6 @@ Proof.
 Qed.
 
 (** ** Prelim on typing *)
-
-Lemma typing_subst_instance (Σ : global_env_ext) Γ t T u :
-  wf Σ ->
-  Σ ;;; Γ |- t : T ->
-  Σ ;;; Γ |- PCUICUnivSubst.subst_instance_constr u t : PCUICUnivSubst.subst_instance_constr u T.
-Proof.
-Admitted.                       (* typing_subst_instance *)
 
 Require Import PCUIC.PCUICGeneration.
 

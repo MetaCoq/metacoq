@@ -250,6 +250,67 @@ Section Lemmata.
     rewrite ebrtys'. intuition eauto.
   Qed.
 
+  (* TODO MOVE *)
+  Lemma All_prod_inv :
+    forall A P Q l,
+      All (fun x : A => P x × Q x) l ->
+      All P l × All Q l.
+  Proof.
+    intros A P Q l h.
+    induction h.
+    - split ; auto.
+    - destruct IHh, p.
+      split ; constructor ; auto.
+  Qed.
+
+  (* TODO MOVE *)
+  Lemma All_prod :
+    forall A P Q l,
+      All P l ->
+      All Q l ->
+      All (fun x : A => P x × Q x) l.
+  Proof.
+    intros A P Q l h1 h2.
+    induction h1 in h2 |- *.
+    - constructor.
+    - dependent destruction h2.
+      forward IHh1 ; auto.
+  Qed.
+
+  (* TODO MOVE *)
+  Lemma All_local_env_prod_inv :
+    forall P Q Γ,
+      All_local_env (fun Δ A t => P Δ A t × Q Δ A t) Γ ->
+      All_local_env P Γ × All_local_env Q Γ.
+  Proof.
+    intros P Q Γ h.
+    induction h.
+    - split ; auto.
+    - destruct IHh, t0.
+      split ; constructor ; auto.
+    - destruct IHh, t0, t1.
+      split ; constructor ; auto.
+  Qed.
+
+  (* TODO MOVE *)
+  Lemma All_local_env_lift_prod_inv :
+    forall Σ P Q Δ,
+      All_local_env (lift_typing (fun Σ Γ t A => P Σ Γ t A × Q Σ Γ t A) Σ) Δ ->
+      All_local_env (lift_typing P Σ) Δ × All_local_env (lift_typing Q Σ) Δ.
+  Proof.
+    intros Σ P Q Δ h.
+    induction h.
+    - split ; auto.
+    - destruct IHh. destruct t0 as [? [? ?]].
+      split ; constructor ; auto.
+      + cbn. eexists. eassumption.
+      + cbn. eexists. eassumption.
+    - destruct IHh. destruct t0 as [? [? ?]]. destruct t1.
+      split ; constructor ; auto.
+      + cbn. eexists. eassumption.
+      + cbn. eexists. eassumption.
+  Qed.
+
   Lemma type_rename :
     forall Σ Γ u v A,
       wf Σ ->
@@ -438,13 +499,28 @@ Section Lemmata.
         * constructor ; auto.
           eapply All2_same.
           intro. eapply eq_term_upto_univ_refl ; auto.
-    - intros mfix n decl types hnth hguard ? ? v e.
+    - intros mfix n decl types hnth hguard hwf ihmfix v e.
       dependent destruction e.
-      (* econstructor. *)
-      (* + (* We need to add an axiom for this *) *)
-      (*   give_up. *)
-      (* +  *)
-      admit.
+      eapply All2_nth_error_Some in hnth as hnth' ; eauto.
+      destruct hnth' as [decl' [hnth' hh]].
+      simpl in hh. destruct hh as [[ety ebo] era].
+      eapply type_Conv.
+      + econstructor.
+        * eapply fix_guard_eq_term ; eauto.
+          constructor. assumption.
+        * eassumption.
+        * subst types.
+          (* Using ihmfix? *)
+          admit.
+        * admit.
+      + eapply validity_term ; eauto.
+        instantiate (1 := tFix mfix n).
+        econstructor ; eauto.
+        * apply All_local_env_lift_prod_inv in hwf as [? ?]. assumption.
+        * apply All_prod_inv in ihmfix as [? ?]. assumption.
+      + constructor. eapply eq_term_leq_term.
+        apply eq_term_sym.
+        eapply eq_term_upto_univ_eq_eq_term. assumption.
     - intros mfix n decl H types hnth wf ihmfix v e. subst types.
       dependent destruction e.
       pose proof (All2_nth_error_Some _ _ a hnth) as [decl' [? [[? ?] ?]]].
@@ -457,11 +533,11 @@ Section Lemmata.
         * admit.
       + eapply @validity_term with (t := tCoFix mfix n) ; eauto.
         econstructor ; eauto.
-        * Fail apply wf. (* WHY? *)
-          admit.
-        * give_up. (* Are we missing some hypotheses with this induction
-                      principle? *)
-      + admit.
+        * apply All_local_env_lift_prod_inv in wf as [? ?]. assumption.
+        * apply All_prod_inv in ihmfix as [? ?]. assumption.
+      + constructor. eapply eq_term_leq_term.
+        apply eq_term_sym.
+        eapply eq_term_upto_univ_eq_eq_term. assumption.
     - intros t A B X ht iht har hcu v e.
       eapply type_Conv.
       + eapply iht. assumption.

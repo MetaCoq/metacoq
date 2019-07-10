@@ -9,14 +9,13 @@ Local Open Scope string_scope.
 Set Asymmetric Patterns.
 Import MonadNotation.
 
-
-Definition is_prop_sort s :=
-  match Universe.level s with
-  | Some l => Level.is_prop l
-  | None => false
-  end.
-
 Require Import Extract.
+
+Lemma isErasable_Proof Σ Γ t :
+  Is_proof Σ Γ t -> isErasable Σ Γ t.
+Proof.
+  intros. destruct X as (? & ? & ? & ? & ?). exists x. split. eauto. right. eauto.
+Qed.
 
 Lemma it_mkProd_isArity:
   forall (l : list context_decl) A,

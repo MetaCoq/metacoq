@@ -3,7 +3,7 @@
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
 From MetaCoq.Template Require Import config utils monad_utils BasicAst AstUtils.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICTyping PCUICChecker PCUICRetyping PCUICMetaTheory PCUICWcbvEval PCUICElimination.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICTyping PCUICChecker PCUICRetyping PCUICMetaTheory PCUICWcbvEval.
 From MetaCoq.Extraction Require EAst ELiftSubst ETyping EWcbvEval.
 Require Import String.
 Local Open Scope string_scope.
@@ -13,12 +13,6 @@ Import MonadNotation.
 Existing Instance extraction_checker_flags.
 
 Definition isErasable Σ Γ t := ∑ T, Σ ;;; Γ |- t : T × (isArity T + (∑ u, (Σ ;;; Γ |- T : tSort u) * is_prop_sort u))%type.
-
-Lemma isErasable_Proof Σ Γ t :
-  Is_proof Σ Γ t -> isErasable Σ Γ t.
-Proof.
-  intros. destruct X as (? & ? & ? & ? & ?). exists x. split. eauto. right. eauto.
-Qed.
 
 Module E := EAst.
 Local Notation Ret t := t.

@@ -562,3 +562,10 @@ Qed.
 Definition fresh_universe : universe. exact Universe.type0. Qed.
 
 End Univ.
+
+
+Definition is_prop_sort s :=
+  match Universe.level s with
+  | Some l => Level.is_prop l
+  | None => false
+  end.

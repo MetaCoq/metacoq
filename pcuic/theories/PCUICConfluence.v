@@ -1660,3 +1660,5 @@ Section ConfluenceFacts.
   Qed.
 
 End ConfluenceFacts.
+
+Arguments red_confluence {cf} {Σ} wfΣ {Γ t u v}.

@@ -218,7 +218,7 @@ Section Principality.
     eapply invert_cumul_sort_r in H as [u'u ?].
     eapply invert_cumul_sort_r in H' as [vu ?].
     destruct p, p0.
-    destruct (red_confluence _ wfΣ r r0).
+    destruct (red_confluence wfΣ r r0).
     destruct p.
     eapply invert_red_sort in r1.
     eapply invert_red_sort in r2. subst. noconf r2.
@@ -466,7 +466,7 @@ Section Principality.
       repeat outtimes.
       apply invert_cumul_prod_r in c1 as [? [A' [B' [[redA u1eq] ?]]]] => //.
       apply invert_cumul_prod_r in c2 as [? [A'' [B'' [[redA' u1eq'] ?]]]] => //.
-      destruct (red_confluence _ wfΣ redA redA') as [nfprod [redl redr]].
+      destruct (red_confluence wfΣ redA redA') as [nfprod [redl redr]].
       eapply invert_red_prod in redl as [? [? [[? ?] ?]]] => //. subst.
       eapply invert_red_prod in redr as [? [? [[? ?] ?]]] => //. noconf e.
       assert(Σ ;;; Γ |- A' = A'').
@@ -568,7 +568,7 @@ Section Principality.
       eapply invert_cumul_ind_r in c3 as [u' [x0' [[redr redu] ?]]].
       eapply invert_cumul_ind_r in c4 as [u'' [x9' [[redr' redu'] ?]]].
       assert (All2 (fun a a' => Σ ;;; Γ |- a = a') x0 x9).
-      { destruct (red_confluence _ wfΣ redr redr').
+      { destruct (red_confluence wfΣ redr redr').
         destruct p.
         eapply red_mkApps_tInd in r as [args' [? ?]]; auto.
         eapply red_mkApps_tInd in r0 as [args'' [? ?]]; auto.

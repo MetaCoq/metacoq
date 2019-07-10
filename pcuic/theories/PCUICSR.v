@@ -268,7 +268,7 @@ Section ContextReduction.
     - exists x; split; auto.
     - destruct IHr1 as [xl [redl redr]].
       destruct IHr2 as [xr [redl' redr']].
-      destruct (red_confluence Σ wfΣ redr redl').
+      destruct (red_confluence wfΣ redr redl').
       destruct p.
       exists x0. split; [transitivity xl|transitivity xr]; auto.
   Qed.
@@ -403,7 +403,7 @@ Section ContextConversion.
     eapply red_eq_term_upto_univ_l in leq; eauto. all:tc; pcuic.
     destruct leq as [? [? ?]].
     destruct (red_red_ctx _ wfΣ redr Hctx) as [rnf [redl1 redr1]].
-    destruct (red_confluence _ wfΣ r redr1). destruct p.
+    destruct (red_confluence wfΣ r redr1). destruct p.
     edestruct (red_eq_term_upto_univ_r (eq_universe_leq_universe _) e r0) as [lnf' [? ?]].
     exists lnf', x0. intuition auto. now transitivity lnf.
     now transitivity rnf.

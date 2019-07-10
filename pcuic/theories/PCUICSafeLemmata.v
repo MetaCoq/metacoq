@@ -151,7 +151,7 @@ Section DestArity.
 End DestArity.
 
 Section Lemmata.
-
+  Context {cf : checker_flags}.
   Context (flags : RedFlags.t).
 
   (* red is the reflexive transitive closure of one-step reduction and thus

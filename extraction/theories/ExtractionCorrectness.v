@@ -19,7 +19,7 @@ Existing Instance config.default_checker_flags.
 Module PA := PCUICAst.
 Module P := PCUICWcbvEval.
 
-Lemma typing_subst_instance' :
+Lemma typing_subst_instance :
   forall Σ : global_env_ext, wf Σ ->
   forall Γ, wf_local Σ Γ ->
   forall t T, Σ ;;; Γ |- t : T ->
@@ -32,16 +32,6 @@ Proof.
       consistent_instance_ext (Σ.1,univs) (Σ.2) u ->
       (Σ.1,univs) ;;; _ |- PCUICUnivSubst.subst_instance_constr u t : PCUICUnivSubst.subst_instance_constr u T)); intros; cbn -[PCUICUnivSubst.subst_instance_constr] in *.
 Admitted.
-
-Lemma typing_subst_instance (Σ : global_env) Γ t T u univs1 univs2 :
-  wf Σ ->
-  (Σ, univs2) ;;; Γ |- t : T ->
-  consistent_instance_ext (Σ, univs1) univs2 u ->
-  (Σ, univs1) ;;; PCUICUnivSubst.subst_instance_context u Γ |- PCUICUnivSubst.subst_instance_constr u t : PCUICUnivSubst.subst_instance_constr u T.
-Proof.
-  intros. eapply typing_subst_instance' in X0; eauto.
-  eapply typing_wf_local; eauto.
-Qed.
 
 (** ** Prelim on arities and proofs *)
 
@@ -59,11 +49,11 @@ Lemma isErasable_subst_instance (Σ : global_env_ext) Γ T univs u :
   isErasable (Σ.1,univs) (PCUICUnivSubst.subst_instance_context u Γ) (PCUICUnivSubst.subst_instance_constr u T).
 Proof.
   intros. destruct X1 as (? & ? & [ | (? & ? & ?)]).
-  - eapply typing_subst_instance' in t; eauto.
+  - eapply typing_subst_instance in t; eauto.
     eexists. split. eauto. left. eapply isArity_subst_instance. eauto.
-  - eapply typing_subst_instance' in t; eauto.
+  - eapply typing_subst_instance in t; eauto.
     eexists. split. eauto. right.
-    eapply typing_subst_instance' in t0; eauto.
+    eapply typing_subst_instance in t0; eauto.
     eexists. split. eauto.
 
     Lemma is_prop_subst_instance:
@@ -673,7 +663,7 @@ Proof.
       * cbn in *. 
         eapply PCUICWeakeningEnv.declared_constant_inv in H'; eauto.
         unfold on_constant_decl in H'. rewrite H0 in H'. red in H'.
-        eapply typing_subst_instance' in H'; eauto.
+        eapply typing_subst_instance in H'; eauto.
         eapply PCUICWeakeningEnv.weaken_env_prop_typing.
       * eapply PCUICWeakeningEnv.declared_constant_inv in H'; eauto.
         unfold on_constant_decl in H'. rewrite H0 in H'. cbn in *.

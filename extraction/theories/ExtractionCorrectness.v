@@ -3,8 +3,7 @@
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
 From MetaCoq.Template Require Import config utils monad_utils BasicAst AstUtils.
 From MetaCoq.Extraction Require Import EAst ELiftSubst ETyping EWcbvEval Extract Prelim ESubstitution EInversion EArities.
-From MetaCoq.PCUIC Require Import PCUICTyping PCUICAst PCUICAstUtils PCUICInduction  PCUICWeakening PCUICSubstitution PCUICChecker PCUICRetyping PCUICMetaTheory PCUICWcbvEval PCUICSR  PCUICClosed PCUICInversion.
-
+From MetaCoq.PCUIC Require Import PCUICTyping PCUICAst PCUICAstUtils PCUICInduction  PCUICWeakening PCUICSubstitution PCUICChecker PCUICRetyping PCUICMetaTheory PCUICWcbvEval PCUICSR  PCUICClosed PCUICInversion PCUICUnivSubstitution.
 
 Require Import String.
 Local Open Scope string_scope.
@@ -18,20 +17,6 @@ Require Import Lia.
 Existing Instance config.default_checker_flags.
 Module PA := PCUICAst.
 Module P := PCUICWcbvEval.
-
-Lemma typing_subst_instance :
-  forall Σ : global_env_ext, wf Σ ->
-  forall Γ, wf_local Σ Γ ->
-  forall t T, Σ ;;; Γ |- t : T ->
-    forall u univs,
-      consistent_instance_ext (Σ.1,univs) (Σ.2) u ->
-      (Σ.1,univs) ;;; PCUICUnivSubst.subst_instance_context u Γ |- PCUICUnivSubst.subst_instance_constr u t : PCUICUnivSubst.subst_instance_constr u T.
-Proof.
-  apply (typing_ind_env (fun Σ Γ t T =>
-                           forall u univs,
-      consistent_instance_ext (Σ.1,univs) (Σ.2) u ->
-      (Σ.1,univs) ;;; _ |- PCUICUnivSubst.subst_instance_constr u t : PCUICUnivSubst.subst_instance_constr u T)); intros; cbn -[PCUICUnivSubst.subst_instance_constr] in *.
-Admitted.
 
 (** ** Prelim on arities and proofs *)
 

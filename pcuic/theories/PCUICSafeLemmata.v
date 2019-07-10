@@ -1459,7 +1459,12 @@ Section Lemmata.
     forall Γ na A B l,
       wellformed Σ Γ (mkApps (tProd na A B) l) ->
       l = [].
-  Admitted.
+  Proof.
+    intros Γ na A B l [h | [[ctx [s [hd hw]]]]].
+    - eapply mkApps_Prod_nil. eassumption.
+    - destruct l ; auto.
+      cbn in hd. rewrite destArity_tApp in hd. discriminate.
+  Qed.
 
   (* TODO MOVE or even replace old lemma *)
   Lemma decompose_stack_noStackApp :

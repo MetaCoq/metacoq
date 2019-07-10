@@ -3,7 +3,7 @@
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
 From MetaCoq.Template Require Import config utils monad_utils BasicAst AstUtils.
 From MetaCoq.Extraction Require Import EAst ELiftSubst ETyping EWcbvEval Extract Prelim ESubstitution EInversion EArities.
-From MetaCoq.PCUIC Require Import PCUICTyping PCUICAst PCUICAstUtils PCUICInduction  PCUICWeakening PCUICSubstitution PCUICChecker PCUICRetyping PCUICMetaTheory PCUICWcbvEval PCUICSR  PCUICClosed PCUICInversion PCUICUnivSubstitution.
+From MetaCoq.PCUIC Require Import PCUICTyping PCUICAst PCUICAstUtils PCUICInduction  PCUICWeakening PCUICSubstitution PCUICChecker PCUICRetyping PCUICMetaTheory PCUICWcbvEval PCUICSR  PCUICClosed PCUICInversion PCUICUnivSubstitution PCUICElimination.
 
 Require Import String.
 Local Open Scope string_scope.
@@ -413,7 +413,7 @@ Proof.
         eapply PCUICReduction.red_case_c. eapply wcbeval_red. eauto.
         econstructor. econstructor. econstructor.
 
-        unfold iota_red. cbn.
+        all:unfold iota_red in *. all:cbn in *.
         eapply erases_mkApps. eauto.
         instantiate (1 := repeat tBox _).
         eapply All2_Forall2.

@@ -17,7 +17,6 @@ Import MonadNotation.
 
 Set Equations With UIP.
 
-Notation "∥ T ∥" := (squash T) (at level 10).
 Arguments sq {_} _.
 
 Notation "( x ; y )" := (existT _ x y).
@@ -171,8 +170,160 @@ Section Lemmata.
       Σ ;;; Γ' |- t : T.
   Admitted.
 
+  Lemma build_branches_type_eq_term :
+    forall p p' ind mdecl idecl pars u brtys,
+      eq_term_upto_univ eq eq p p' ->
+      map_option_out
+        (build_branches_type ind mdecl idecl pars u p) =
+      Some brtys ->
+      ∑ brtys',
+        map_option_out
+          (build_branches_type ind mdecl idecl pars u p') =
+        Some brtys' ×
+        All2 (on_Trel_eq (eq_term_upto_univ eq eq) snd fst) brtys brtys'.
+  Proof.
+    intros p p' ind mdecl idecl pars u brtys e hb.
+    unfold build_branches_type in *.
+    destruct idecl as [ina ity ike ict ipr]. simpl in *.
+    unfold mapi in *. revert hb.
+    generalize 0 at 3 6.
+    intros n hb.
+    induction ict in brtys, n, hb |- *.
+    - cbn in *. eexists. split.
+      + eassumption.
+      + apply All2_same. intros [m t]. simpl. split ; auto.
+        eapply eq_term_upto_univ_refl ; auto.
+    - cbn. cbn in hb.
+      lazymatch type of hb with
+      | match ?t with _ => _ end = _ =>
+        case_eq (t) ;
+          try (intro bot ; rewrite bot in hb ; discriminate hb)
+      end.
+      intros [m t] e'. rewrite e' in hb.
+      destruct a as [[na ta] ar].
+      lazymatch type of e' with
+      | match ?expr with _ => _ end = _ =>
+        case_eq (expr) ;
+          try (intro bot ; rewrite bot in e' ; discriminate e')
+      end.
+      intros ty ety. rewrite ety in e'.
+      case_eq (decompose_prod_assum [] ty). intros sign ccl edty.
+      rewrite edty in e'.
+      case_eq (chop (ind_npars mdecl) (snd (decompose_app ccl))).
+      intros paramrels args ech. rewrite ech in e'.
+      inversion e'. subst. clear e'.
+      lazymatch type of hb with
+      | match ?t with _ => _ end = _ =>
+        case_eq (t) ;
+          try (intro bot ; rewrite bot in hb ; discriminate hb)
+      end.
+      intros tl etl. rewrite etl in hb.
+      inversion hb. subst. clear hb.
+      edestruct IHict as [brtys' [eq' he]].
+      + eauto.
+      + eexists. rewrite eq'. split.
+        * reflexivity.
+        * constructor ; auto.
+          simpl. split ; auto.
+          eapply eq_term_upto_univ_it_mkProd_or_LetIn ; auto.
+          eapply eq_term_upto_univ_mkApps.
+          -- eapply eq_term_upto_univ_lift. assumption.
+          -- apply All2_same. intro. apply eq_term_upto_univ_refl ; auto.
+  Qed.
+
+  Lemma types_of_case_eq_term :
+    forall ind mdecl idecl npar args u p p' pty indctx pctx ps btys,
+      types_of_case ind mdecl idecl (firstn npar args) u p pty =
+      Some (indctx, pctx, ps, btys) ->
+      eq_term_upto_univ eq eq p p' ->
+      ∑ btys',
+        types_of_case ind mdecl idecl (firstn npar args) u p' pty =
+        Some (indctx, pctx, ps, btys') ×
+        All2 (on_Trel_eq (eq_term_upto_univ eq eq) snd fst) btys btys'.
+  Proof.
+    intros ind mdecl idecl npar args u p p' pty indctx pctx ps btys htc e.
+    unfold types_of_case in *.
+    case_eq (instantiate_params (ind_params mdecl) (firstn npar args) (ind_type idecl)) ;
+      try solve [ intro bot ; rewrite bot in htc ; discriminate htc ].
+    intros ity eity. rewrite eity in htc.
+    case_eq (destArity [] ity) ;
+      try solve [ intro bot ; rewrite bot in htc ; discriminate htc ].
+    intros [args0 ?] ear. rewrite ear in htc.
+    case_eq (destArity [] pty) ;
+      try solve [ intro bot ; rewrite bot in htc ; discriminate htc ].
+    intros [args' s'] ear'. rewrite ear' in htc.
+    case_eq (map_option_out (build_branches_type ind mdecl idecl (firstn npar args) u p)) ;
+      try solve [ intro bot ; rewrite bot in htc ; discriminate htc ].
+    intros brtys ebrtys. rewrite ebrtys in htc.
+    eapply build_branches_type_eq_term in ebrtys as [brtys' [ebrtys' he]] ; eauto.
+    inversion htc. subst. clear htc.
+    rewrite ebrtys'. intuition eauto.
+  Qed.
+
+  (* TODO MOVE *)
+  Lemma All_prod_inv :
+    forall A P Q l,
+      All (fun x : A => P x × Q x) l ->
+      All P l × All Q l.
+  Proof.
+    intros A P Q l h.
+    induction h.
+    - split ; auto.
+    - destruct IHh, p.
+      split ; constructor ; auto.
+  Qed.
+
+  (* TODO MOVE *)
+  Lemma All_prod :
+    forall A P Q l,
+      All P l ->
+      All Q l ->
+      All (fun x : A => P x × Q x) l.
+  Proof.
+    intros A P Q l h1 h2.
+    induction h1 in h2 |- *.
+    - constructor.
+    - dependent destruction h2.
+      forward IHh1 ; auto.
+  Qed.
+
+  (* TODO MOVE *)
+  Lemma All_local_env_prod_inv :
+    forall P Q Γ,
+      All_local_env (fun Δ A t => P Δ A t × Q Δ A t) Γ ->
+      All_local_env P Γ × All_local_env Q Γ.
+  Proof.
+    intros P Q Γ h.
+    induction h.
+    - split ; auto.
+    - destruct IHh, t0.
+      split ; constructor ; auto.
+    - destruct IHh, t0, t1.
+      split ; constructor ; auto.
+  Qed.
+
+  (* TODO MOVE *)
+  Lemma All_local_env_lift_prod_inv :
+    forall Σ P Q Δ,
+      All_local_env (lift_typing (fun Σ Γ t A => P Σ Γ t A × Q Σ Γ t A) Σ) Δ ->
+      All_local_env (lift_typing P Σ) Δ × All_local_env (lift_typing Q Σ) Δ.
+  Proof.
+    intros Σ P Q Δ h.
+    induction h.
+    - split ; auto.
+    - destruct IHh. destruct t0 as [? [? ?]].
+      split ; constructor ; auto.
+      + cbn. eexists. eassumption.
+      + cbn. eexists. eassumption.
+    - destruct IHh. destruct t0 as [? [? ?]]. destruct t1.
+      split ; constructor ; auto.
+      + cbn. eexists. eassumption.
+      + cbn. eexists. eassumption.
+  Qed.
+
   Lemma type_rename :
     forall Σ Γ u v A,
+      wf Σ.1 ->
       Σ ;;; Γ |- u : A ->
       eq_term_upto_univ eq eq u v ->
       Σ ;;; Γ |- v : A.
@@ -184,7 +335,7 @@ Section Lemmata.
                     Σ ;;; Γ |- v : A)
     ).
     eapply typing_ind_env.
-    all: intros Σ' wfΣ Γ wfΓ.
+    all: intros Σ wfΣ Γ wfΓ.
     - intros n decl hnth ih v e.
       dependent destruction e.
       eapply type_Rel ; eassumption.
@@ -292,22 +443,56 @@ Section Lemmata.
     - intros ind u npar p c brs args mdecl idecl isdecl X X0 H pars pty X1
              indctx pctx ps btys htc H1 H2 ihp hc ihc ihbrs v e.
       dependent destruction e.
+      eapply types_of_case_eq_term in htc as htc' ; eauto.
+      destruct htc' as [btys' [ebtys' he]].
       econstructor.
       + econstructor. all: try eassumption.
         * eapply ihp. assumption.
-        * admit.
         * eapply ihc. assumption.
-        * admit.
-      (* + eapply validity_term ; eauto. *)
-      (*   econstructor ; eauto. *)
-      (* + constructor. *)
-      (*   eapply eq_term_leq_term. *)
-      (*   apply eq_term_sym. *)
-      (*   constructor. *)
-      (*   all: try (eapply eq_term_upto_univ_eq_eq_term ; assumption). *)
-      (*   all: eapply eq_term_refl. *)
-      + admit.
-      + admit.
+        * assert (All2 (fun x y => fst x = fst y × Σ ;;; Γ |- snd x : snd y) brs' btys)
+            as hty.
+          { clear - ihbrs a.
+            induction ihbrs in brs', a |- *.
+            - dependent destruction a. constructor.
+            - dependent destruction a.
+              constructor. all: auto.
+              destruct p, r as [[? ?] ?]. split ; eauto.
+              transitivity (fst x) ; eauto.
+          }
+          clear - he hty ihbrs.
+          induction hty in brs, ihbrs, btys', he |- *.
+          -- dependent destruction he. constructor.
+          -- dependent destruction he.
+             dependent destruction ihbrs.
+             destruct r.
+             destruct p.
+             destruct p0 as [[? ?] ?].
+             constructor ; eauto. split.
+             ++ solve [ etransitivity ; eauto ].
+             ++ econstructor.
+                ** eassumption.
+                ** (* We're missing the validity proof...
+                      Is it hidden in the types_of_case_eq_term proof?
+                      Are we missing an ingredient or should type_Case ask
+                      that the branches types are sorted?
+                    *)
+                  admit.
+                ** constructor.
+                   eapply eq_term_leq_term.
+                   eapply eq_term_upto_univ_eq_eq_term. assumption.
+      + eapply validity_term ; eauto.
+        instantiate (1 := tCase (ind, npar) p c brs).
+        econstructor ; eauto.
+        apply All2_prod_inv in ihbrs as [? ?]. assumption.
+      + constructor.
+        eapply eq_term_leq_term.
+        apply eq_term_sym.
+        eapply eq_term_mkApps.
+        all: try (eapply eq_term_upto_univ_eq_eq_term ; assumption).
+        eapply All2_app.
+        * eapply All2_same. intro. eapply eq_term_refl.
+        * constructor ; eauto.
+          eapply eq_term_upto_univ_eq_eq_term. assumption.
     - intros p c u mdecl idecl pdecl isdecl args X X0 hc ihc H ty v e.
       dependent destruction e.
       econstructor.
@@ -324,14 +509,29 @@ Section Lemmata.
         * constructor ; auto.
           eapply All2_same.
           intro. eapply eq_term_upto_univ_refl ; auto.
-    - intros mfix n decl types hnth hguard ? ? v e.
+    - intros mfix n decl types hnth hguard hwf ihmfix v e.
       dependent destruction e.
-      (* econstructor. *)
-      (* + (* We need to add an axiom for this *) *)
-      (*   give_up. *)
-      (* +  *)
-      admit.
-    - intros mfix n decl types hnth wf ihmfix allow v e. subst types.
+      eapply All2_nth_error_Some in hnth as hnth' ; eauto.
+      destruct hnth' as [decl' [hnth' hh]].
+      simpl in hh. destruct hh as [[ety ebo] era].
+      eapply type_Cumul.
+      + econstructor.
+        * eapply fix_guard_eq_term ; eauto.
+          constructor. assumption.
+        * eassumption.
+        * subst types.
+          (* Using ihmfix? *)
+          admit.
+        * admit.
+      + eapply validity_term ; eauto.
+        instantiate (1 := tFix mfix n).
+        econstructor ; eauto.
+        * apply All_local_env_lift_prod_inv in hwf as [? ?]. assumption.
+        * apply All_prod_inv in ihmfix as [? ?]. assumption.
+      + constructor. eapply eq_term_leq_term.
+        apply eq_term_sym.
+        eapply eq_term_upto_univ_eq_eq_term. assumption.
+    - intros mfix n decl types hnth wf ihmfix hac v e. subst types.
       dependent destruction e.
       pose proof (All2_nth_error_Some _ _ a hnth) as [decl' [? [[? ?] ?]]].
       eapply type_Cumul.
@@ -343,11 +543,11 @@ Section Lemmata.
         * admit.
       + eapply @validity_term with (t := tCoFix mfix n) ; eauto.
         econstructor ; eauto.
-        * Fail apply wf. (* WHY? *)
-          admit.
-        * give_up. (* Are we missing some hypotheses with this induction
-                      principle? *)
-      + admit.
+        * apply All_local_env_lift_prod_inv in wf as [? ?]. assumption.
+        * apply All_prod_inv in ihmfix as [? ?]. assumption.
+      + constructor. eapply eq_term_leq_term.
+        apply eq_term_sym.
+        eapply eq_term_upto_univ_eq_eq_term. assumption.
     - intros t A B X ht iht har hcu v e.
       eapply type_Cumul.
       + eapply iht. assumption.
@@ -355,23 +555,21 @@ Section Lemmata.
         * left. assumption.
         * right. eexists. eassumption.
       + assumption.
-    - rename wfΓ into A, Γ into v, wfΣ into u, Σ' into Γ.
-      intros hu e.
+    - rename wfΣ into Γ, wfΓ into v, Γ into u.
+      intros A hΣ hu e.
       eapply tm ; eauto.
-      + give_up. (* This induction principle is really annoying as I don't
-                    really need it... *)
-      + eapply typing_wf_local. eassumption.
+      eapply typing_wf_local. eassumption.
   Admitted.
 
   Corollary type_nameless :
     forall Σ Γ u A,
+      wf Σ.1 ->
       Σ ;;; Γ |- u : A ->
       Σ ;;; Γ |- nl u : A.
   Proof.
-    intros Σ Γ u A h.
-    eapply type_rename.
-    - eassumption.
-    - eapply eq_term_upto_univ_tm_nl. all: auto.
+    intros Σ Γ u A hΣ h.
+    eapply type_rename ; eauto.
+    eapply eq_term_upto_univ_tm_nl. all: auto.
   Qed.
 
   Lemma lookup_env_ConstantDecl_inv :
@@ -399,6 +597,7 @@ Section Lemmata.
     destruct x ; assumption.
   Qed.
 
+  (* TODO Unsquash *)
   Lemma wf_nlg :
     forall Σ : global_env_ext,
       ∥ wf Σ ∥ ->
@@ -418,11 +617,15 @@ Section Lemmata.
       + destruct a.
         * simpl in *. destruct c as [ty [bo |] uni].
           -- cbn in *.
-             destruct H2.
-             econstructor; intuition auto.
-             ++ admit.
-             ++ admit.
-             ++ admit.
+             (* econstructor. *)
+             (* ++ eapply type_nameless. *)
+             (*    ** intuition eauto. *)
+             (*    ** (* Need some lemma like welltyped_nlg? *) *)
+             (*      admit. *)
+             (* ++ admit. *)
+             (* ++ admit. *)
+             (* ++ admit. *)
+             admit.
           -- simpl. admit.
         * simpl in *. destruct m. admit.
   Admitted.
@@ -457,6 +660,7 @@ Section Lemmata.
       welltyped Σ Γ v.
   Proof.
     intros Γ u v [A h] e.
+    destruct hΣ.
     exists A. eapply type_rename ; eauto.
   Qed.
 

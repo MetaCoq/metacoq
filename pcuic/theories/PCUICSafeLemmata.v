@@ -1358,38 +1358,6 @@ Section Lemmata.
     | _ => false
     end.
 
-  Lemma isAppProd_isProd :
-    forall Γ t,
-      isAppProd t ->
-      welltyped Σ Γ t ->
-      isProd t.
-  Proof.
-    intros Γ t hp hw.
-    revert Γ hp hw.
-    induction t ; intros Γ hp hw.
-    all: try discriminate hp.
-    - reflexivity.
-    - simpl in hp.
-      specialize IHt1 with (1 := hp).
-      assert (welltyped Σ Γ t1) as h.
-      { destruct hw as [T h].
-        apply inversion_App in h as hh.
-        destruct hh as [na [A' [B' [? [? ?]]]]].
-        eexists. eassumption.
-      }
-      specialize IHt1 with (1 := h).
-      destruct t1.
-      all: try discriminate IHt1.
-      destruct hw as [T hw'].
-      apply inversion_App in hw' as ihw'.
-      destruct ihw' as [na' [A' [B' [hP [? ?]]]]].
-      apply inversion_Prod in hP as [s1 [s2 [? [? bot]]]].
-      (* dependent destruction bot. *)
-      (* + discriminate e. *)
-      (* + dependent destruction r. *)
-      admit.
-  Admitted.
-
   Lemma isAppProd_mkApps :
     forall t l, isAppProd (mkApps t l) = isAppProd t.
   Proof.
@@ -1410,6 +1378,68 @@ Section Lemmata.
     - reflexivity.
     - cbn in h. specialize IHl with (1 := h). subst.
       cbn in h. discriminate h.
+  Qed.
+
+  Lemma isSortmkApps :
+    forall t l,
+      isSort (mkApps t l) ->
+      l = [].
+  Proof.
+    intros t l h.
+    revert t h.
+    induction l ; intros t h.
+    - reflexivity.
+    - cbn in h. specialize IHl with (1 := h). subst.
+      cbn in h. exfalso. assumption.
+  Qed.
+
+  Lemma isAppProd_isProd :
+    forall Γ t,
+      isAppProd t ->
+      welltyped Σ Γ t ->
+      isProd t.
+  Proof.
+    destruct hΣ.
+    intros Γ t hp hw.
+    revert Γ hp hw.
+    induction t ; intros Γ hp hw.
+    all: try discriminate hp.
+    - reflexivity.
+    - simpl in hp.
+      specialize IHt1 with (1 := hp).
+      assert (welltyped Σ Γ t1) as h.
+      { destruct hw as [T h].
+        apply inversion_App in h as hh.
+        destruct hh as [na [A' [B' [? [? ?]]]]].
+        eexists. eassumption.
+      }
+      specialize IHt1 with (1 := h).
+      destruct t1.
+      all: try discriminate IHt1.
+      destruct hw as [T hw'].
+      apply inversion_App in hw' as ihw'.
+      destruct ihw' as [na' [A' [B' [hP [? ?]]]]].
+      apply inversion_Prod in hP as [s1 [s2 [? [? bot]]]].
+      apply PCUICPrincipality.invert_cumul_prod_r in bot ; auto.
+      destruct bot as [? [? [? [[r ?] ?]]]].
+      exfalso. clear - r.
+      revert r. generalize (Universe.sort_of_product s1 s2). intro s. clear.
+      intro r.
+      dependent induction r.
+      assert (h : P = tSort s).
+      { clear - r. induction r ; auto. subst.
+        dependent destruction r0.
+        assert (h : isSort (mkApps (tFix mfix idx) args)).
+        { rewrite <- H. constructor. }
+        apply isSortmkApps in h. subst. cbn in H.
+        discriminate.
+      }
+      subst.
+      dependent destruction r0.
+      assert (h : isSort (mkApps (tFix mfix idx) args)).
+      { rewrite <- H. constructor. }
+      apply isSortmkApps in h. subst. cbn in H.
+      discriminate.
   Qed.
 
   Lemma mkApps_Prod_nil :
@@ -1720,6 +1750,7 @@ Section Lemmata.
 
   Derive Signature for typing.
 
+  (* Follows from principality, inversion of cumul/confluence *)
   Lemma Construct_Ind_ind_eq :
     forall {Γ n i args u i' args' u'},
       Σ ;;; Γ |- mkApps (tConstruct i n u) args : mkApps (tInd i' u') args' ->

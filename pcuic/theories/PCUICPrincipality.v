@@ -333,18 +333,10 @@ Section Principality.
   Instance conv_transitive Σ Γ : Transitive (fun x y => Σ ;;; Γ |- x = y).
   Proof. intros x y z; eapply conv_trans. Qed.
 
-
-  Lemma principal_typing :
-    forall {Γ u A B},
-      Σ ;;; Γ |- u : A ->
-                     Σ ;;; Γ |- u : B ->
-                                    ∑ C,
-    (Σ ;;; Γ |- C <= A) ×
-                        (Σ ;;; Γ |- C <= B) ×
-                        (* isWfArity_or_Type Σ Γ C * *)
-                        (Σ ;;; Γ |- u : C).
+  Theorem principal_typing {Γ u A B} : Σ ;;; Γ |- u : A -> Σ ;;; Γ |- u : B ->
+    ∑ C, Σ ;;; Γ |- C <= A  ×  Σ ;;; Γ |- C <= B × Σ ;;; Γ |- u : C.
   Proof.
-    intros Γ u A B hA hB.
+    intros hA hB.
     induction u in Γ, A, B, hA, hB |- * using term_forall_list_rec.
     - apply inversion_Rel in hA as iA.
       destruct iA as [decl [? [e ?]]].

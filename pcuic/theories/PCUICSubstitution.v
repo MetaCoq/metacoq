@@ -23,9 +23,7 @@ Definition subst_decl s k (d : context_decl) := map_decl (subst s k) d.
 
 Inductive subs {cf:checker_flags} (Σ : global_env_ext) (Γ : context) : list term -> context -> Type :=
 | emptys : subs Σ Γ [] []
-| cons_ass Δ s na t T : subs Σ Γ s Δ ->
-             Σ ;;; Γ |- t : subst0 s T ->
-             subs Σ Γ (t :: s) (Δ ,, vass na T).
+| cons_ass Δ s na t T : subs Σ Γ s Δ -> Σ ;;; Γ |- t : subst0 s T -> subs Σ Γ (t :: s) (Δ ,, vass na T).
 
 (** Linking a cantext (with let-ins), an instance (reversed substitution)
     for its assumptions and a well-formed substitution for it. *)

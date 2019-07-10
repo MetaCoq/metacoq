@@ -11,6 +11,8 @@ Require Import Equations.Prop.DepElim.
 
 Set Asymmetric Patterns.
 
+Derive NoConfusion for term.
+
 Open Scope pcuic.
 
 (** Make a lambda/let-in string of abstractions from a context [Γ], ending with term [t]. *)
@@ -94,6 +96,32 @@ Qed.
 
 Lemma app_context_length Γ Γ' : #|Γ ,,, Γ'| = #|Γ'| + #|Γ|.
 Proof. unfold app_context. now rewrite app_length. Qed.
+
+Lemma nth_error_skipn {A} n (l : list A) i : nth_error (skipn n l) i = nth_error l (n + i).
+Proof.
+  induction l in n, i |- *; destruct n; simpl; auto.
+    by case: i.
+Qed.
+
+Lemma skipn_skipn {A} n m (l : list A) : skipn n (skipn m l) = skipn (m + n) l.
+Proof.
+  induction m in n, l |- *. auto.
+  simpl. destruct l. destruct n; reflexivity.
+  now rewrite skipn_S skipn_S.
+Qed.
+
+Lemma skipn_nth_error {A} (l : list A) i :
+  match nth_error l i with
+  | Some a => skipn i l = a :: skipn (S i) l
+  | None => skipn i l = []
+  end.
+Proof.
+  induction l in i |- *. destruct i. reflexivity. reflexivity.
+  destruct i. simpl. reflexivity.
+  simpl. specialize (IHl i). destruct nth_error.
+  rewrite [skipn _ _]IHl. reflexivity.
+  rewrite [skipn _ _]IHl. reflexivity.
+Qed.
 
 Lemma nth_error_app_ge {A} (l l' : list A) (v : nat) :
   length l <= v ->
@@ -852,6 +880,31 @@ Lemma decompose_app_inv {t f l} :
   decompose_app t = (f, l) -> t = mkApps f l.
 Proof. by apply/decompose_app_rec_inv. Qed.
 
+Lemma mkApps_Fix_spec mfix idx args t : mkApps (tFix mfix idx) args = t ->
+                                        match decompose_app t with
+                                        | (tFix mfix idx, args') => args' = args
+                                        | _ => False
+                                        end.
+Proof.
+  intros H; apply (f_equal decompose_app) in H.
+  rewrite decompose_app_mkApps in H. reflexivity.
+  destruct t; noconf H. rewrite <- H. reflexivity.
+  simpl. reflexivity.
+Qed.
+
+Lemma decompose_app_rec_tFix mfix idx args t l :
+  decompose_app_rec t l = (tFix mfix idx, args) -> mkApps t l = mkApps (tFix mfix idx) args.
+Proof.
+  unfold decompose_app.
+  revert l args.
+  induction t; intros args l' H; noconf H. simpl in H.
+  now specialize (IHt1 _ _ H).
+  reflexivity.
+Qed.
+
+Lemma decompose_app_tFix mfix idx args t :
+  decompose_app t = (tFix mfix idx, args) -> t = mkApps (tFix mfix idx) args.
+Proof. apply decompose_app_rec_tFix. Qed.
 
 (** Use a coercion for this common projection of the global context. *)
 Definition fst_ctx : global_env_ext -> global_env := fst.

@@ -612,7 +612,7 @@ Proof.
         econstructor.
         eapply Is_type_eval. eauto. eauto.
         eapply nth_error_all.
-        eapply nth_error_skipn. eassumption.
+        erewrite nth_error_skipn. eassumption.
         eapply All_impl. assert (pars = ind_npars x0). destruct d as (? & ? & ?). now rewrite H9. subst.
         eassumption.
         eapply isErasable_Proof. eauto.
@@ -642,7 +642,7 @@ Proof.
            econstructor.
            eapply Is_type_eval. eauto. eauto.
            eapply nth_error_all.
-           eapply nth_error_skipn. eassumption.
+           erewrite nth_error_skipn. eassumption.
            eapply All_impl. assert (pars = ind_npars x0). destruct d as (? & ? & ?). now rewrite H9. subst.
            eassumption.
            eapply isErasable_Proof. eauto.

@@ -2,8 +2,8 @@
 -R theories MetaCoq.PCUIC
 
 # From Equations
-# src/classes0.mli
-# src/classes0.ml
+src/classes0.mli
+src/classes0.ml
 
 # From Coq
 # src/cRelationClasses.mli

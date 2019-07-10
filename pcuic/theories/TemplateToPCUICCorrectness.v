@@ -1077,7 +1077,7 @@ Proof.
       now apply (isWFArity_wf _ _ _ wfΣ wfa).
       destruct s as [s [H ?]].
       eapply typing_wf in H; intuition eauto. }
-    eapply type_Conv. eauto.
+    eapply type_Cumul. eauto.
     * destruct X2. red in i.
       destruct i as [wfa allwfa].
       left.

@@ -65,7 +65,6 @@ Fixpoint nl (t : term) : term :=
   end.
 
 Derive Signature for eq_term_upto_univ.
-Derive NoConfusion NoConfusionHom for term.
 
 Ltac destruct_one_andb :=
   lazymatch goal with

@@ -177,7 +177,7 @@ Section TypeOf.
     one_ih ; eassumption.
 
   Ltac cih :=
-    eapply type_Conv ; [
+    eapply type_Cumul ; [
       ih
     | try eassumption
     | try eassumption

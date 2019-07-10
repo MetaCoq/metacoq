@@ -36,12 +36,12 @@ Lemma type_mkApps Σ Γ t u T t_ty :
 Proof.
   intros Ht Hsp.
   revert t Ht. induction Hsp; simpl; auto.
-  intros t Ht. eapply type_Conv; eauto.
+  intros t Ht. eapply type_Cumul; eauto.
 
     intros.
     specialize (IHHsp (tApp t0 hd)). apply IHHsp.
     eapply type_App.
-    eapply type_Conv; eauto. eauto.
+    eapply type_Cumul; eauto. eauto.
   Qed.
 
   Lemma type_it_mkLambda_or_LetIn :

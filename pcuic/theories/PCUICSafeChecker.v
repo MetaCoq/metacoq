@@ -9,7 +9,6 @@ Open Scope type_scope.
 Open Scope list_scope.
 
 (* from Validity.v *)
-Existing Instance config.default_checker_flags.
 
 (* todo: move this *)
 Arguments All_nil {_ _}.
@@ -43,21 +42,21 @@ Proof.
   intros; sq; now eapply weakening.
 Defined.
 
-Definition wf_local_rel_abs_sq {Σ Γ Γ' A na} :
+Definition wf_local_rel_abs_sq `{cf : checker_flags} {Σ Γ Γ' A na} :
   ∥ wf_local_rel Σ Γ Γ' ∥ -> {u & ∥ Σ ;;; Γ ,,, Γ' |- A : tSort u ∥ }
   -> ∥ wf_local_rel Σ Γ (Γ',, vass na A) ∥.
 Proof.
   intros H [u Hu]; sq. now eapply wf_local_rel_abs.
 Qed.
 
-Definition wf_local_rel_def_sq {Σ Γ Γ' t A na} :
+Definition wf_local_rel_def_sq `{cf : checker_flags} {Σ Γ Γ' t A na} :
   ∥ wf_local_rel Σ Γ Γ' ∥ -> ∥ isType Σ (Γ ,,, Γ') A ∥ -> ∥ Σ ;;; Γ ,,, Γ' |- t : A ∥
   -> ∥ wf_local_rel Σ Γ (Γ',, vdef na t A) ∥.
 Proof.
   intros; sq. now eapply wf_local_rel_def.
 Qed.
 
-Definition wf_local_rel_app_inv_sq {Σ Γ1 Γ2 Γ3} :
+Definition wf_local_rel_app_inv_sq `{cf : checker_flags} {Σ Γ1 Γ2 Γ3} :
   ∥ wf_local_rel Σ Γ1 Γ2 ∥ -> ∥ wf_local_rel Σ (Γ1 ,,, Γ2) Γ3 ∥
   -> ∥ wf_local_rel Σ Γ1 (Γ2 ,,, Γ3) ∥.
 Proof.
@@ -261,10 +260,10 @@ Instance monad_exc : MonadExc type_error typing_result :=
   }.
 
 
-Definition iscumul Σ HΣ Γ := isconv_term RedFlags.default Σ HΣ Γ Cumul.
+Definition iscumul `{cf : checker_flags} Σ HΣ Γ := isconv_term RedFlags.default Σ HΣ Γ Cumul.
 
 
-Definition strengthening {Σ Γ Γ' Γ'' t T}
+Definition strengthening `{cf : checker_flags} {Σ Γ Γ' Γ'' t T}
   : wf Σ.1 -> Σ ;;; Γ ,,, Γ'' ,,, lift_context #|Γ''| 0 Γ' |-
                lift #|Γ''| #|Γ'| t : lift #|Γ''| #|Γ'| T ->
     Σ;;; Γ ,,, Γ' |- t : T.
@@ -285,7 +284,7 @@ Proof.
   split; [assumption|]. split; [assumption| trivial].
 Defined.
 
-Definition strengthening_wf_local_rel Σ Γ1 Γ2 Γ3 Γ4 :
+Definition strengthening_wf_local_rel `{cf : checker_flags} Σ Γ1 Γ2 Γ3 Γ4 :
   wf Σ.1 -> wf_local_rel Σ Γ1 (Γ2 ,,, Γ3 ,,, lift_context #|Γ3| 0 Γ4)
   -> wf_local_rel Σ Γ1 (Γ2 ,,, Γ4).
 Proof.
@@ -313,7 +312,7 @@ Proof.
 Qed.
 
 
-Definition wf_local_app_inv {Σ Γ1 Γ2} :
+Definition wf_local_app_inv `{cf : checker_flags} {Σ Γ1 Γ2} :
   wf_local Σ Γ1 -> wf_local_rel Σ Γ1 Γ2
   -> wf_local Σ (Γ1 ,,, Γ2).
 Proof.
@@ -342,7 +341,7 @@ Qed.
 
 
 Section Typecheck.
-  Context {Σ : global_env_ext} {HΣ : ∥ wf Σ ∥}.
+  Context `{cf : checker_flags} {Σ : global_env_ext} {HΣ : ∥ wf Σ ∥}.
   Let G := match gc_of_constraints (global_ext_constraints Σ) with
            | Some ctrs => make_graph ctrs
            | None => todo
@@ -756,7 +755,7 @@ Section Typecheck.
 
     | tCoFix mfix n =>
       (* to add when generalizing to all flags *)
-      (* allowcofix <- check_eq_true allow_cofix (Msg "cofix not allowed") ;; *)
+      allowcofix <- check_eq_true allow_cofix (Msg "cofix not allowed") ;;
       match nth_error mfix n with
       | None => raise (IllFormedFix mfix n)
       | Some decl =>

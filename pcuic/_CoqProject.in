@@ -14,6 +14,7 @@ theories/PCUICEquality.v
 theories/PCUICWeakeningEnv.v
 theories/PCUICClosed.v
 theories/PCUICWeakening.v
+theories/PCUICUnivSubstitution.v
 theories/PCUICSubstitution.v
 theories/PCUICReduction.v
 theories/PCUICParallelReduction.v

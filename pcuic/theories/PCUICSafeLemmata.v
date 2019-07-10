@@ -334,7 +334,7 @@ Section Lemmata.
     - intros mfix n decl types hnth wf ihmfix allow v e. subst types.
       dependent destruction e.
       pose proof (All2_nth_error_Some _ _ a hnth) as [decl' [? [[? ?] ?]]].
-      eapply type_Conv.
+      eapply type_Cumul.
       + econstructor.
         * assumption.
         * eassumption.
@@ -349,7 +349,7 @@ Section Lemmata.
                       principle? *)
       + admit.
     - intros t A B X ht iht har hcu v e.
-      eapply type_Conv.
+      eapply type_Cumul.
       + eapply iht. assumption.
       + destruct har as [[? ?] | [? [? ?]]].
         * left. assumption.

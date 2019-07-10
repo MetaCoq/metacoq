@@ -971,7 +971,7 @@ Inductive typing `{checker_flags} (Σ : global_env_ext) (Γ : context) : term ->
     (** TODO check well-formed cofix *)
     Σ ;;; Γ |- tCoFix mfix n : decl.(dtype)
 
-| type_Conv t A B :
+| type_Cumul t A B :
     Σ ;;; Γ |- t : A ->
     (isWfArity typing Σ Γ B + {s & Σ ;;; Γ |- B : tSort s})%type ->
     Σ ;;; Γ |- A <= B -> Σ ;;; Γ |- t : B

@@ -215,7 +215,7 @@ Section Validity.
         destruct i as [u' Hu']. exists u'.
         eapply (substitution0 _ _ na _ _ _ (tSort u')); eauto.
         apply inversion_Prod in Hu' as [na' [s1 [s2 Hs]]]. intuition.
-        eapply type_Conv; pcuic.
+        eapply type_Cumul; pcuic.
         eapply (weakening_cumul Σ Γ [] [vass na A]) in b; pcuic.
         simpl in b. eapply cumul_trans. 2:eauto.
         constructor. constructor. simpl. apply leq_universe_product.

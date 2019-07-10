@@ -383,10 +383,10 @@ Section Principality.
         apply leq_universe_product_mon; auto.
       (* * left; eexists _, _; intuition eauto. now eapply typing_wf_local in t4. *)
       * eapply type_Prod.
-        eapply type_Conv; eauto.
+        eapply type_Cumul; eauto.
         left; eapply isWfArity_sort. now eapply typing_wf_local in t1.
         eapply dom'dom.
-        eapply type_Conv; eauto.
+        eapply type_Cumul; eauto.
         left; eapply isWfArity_sort. now eapply typing_wf_local in t3.
         eapply codom'dom.
 
@@ -461,7 +461,7 @@ Section Principality.
       (*      rewrite destArity_it_mkProd_or_LetIn. simpl. *)
       (*      eexists _, _; intuition eauto. *)
       (*      now rewrite app_context_assoc. *)
-      (*   ** right. exists s. eapply type_Conv. econstructor; eauto. *)
+      (*   ** right. exists s. eapply type_Cumul. econstructor; eauto. *)
       (*      left. red. exists [], s. intuition auto. now eapply typing_wf_local in t2. *)
       (*      eapply red_cumul. eapply red1_red. constructor. *)
       * eapply type_LetIn; eauto.
@@ -519,7 +519,7 @@ Section Principality.
       (*   ** admit. *)
       * eapply type_App.
         2:eapply tyarg.
-        eapply type_Conv. eapply t0.
+        eapply type_Cumul. eapply t0.
         instantiate (1 := x1).
         (* Needs to show wf arity preservation? needing validity? or just inversion on tydom ? *)
         admit.
@@ -607,7 +607,7 @@ Section Principality.
           eapply (type_Case _ _ _ x8). eauto. repeat split; eauto. auto.
           eapply t0. rewrite /types_of_case.
           rewrite Heq eqar eqx2 eqbrs. reflexivity.
-          admit. admit. eapply type_Conv. eauto.
+          admit. admit. eapply type_Cumul. eauto.
           all:admit. }
 
       admit.
@@ -631,7 +631,7 @@ Section Principality.
       admit.
 
       eapply refine_type. eapply type_Proj. repeat split; eauto.
-      simpl. eapply type_Conv. eapply t0.
+      simpl. eapply type_Cumul. eapply t0.
       right. 2:eapply red_cumul; eauto.
       admit. rewrite H3. simpl. simpl in H0.
       rewrite -H0. admit.

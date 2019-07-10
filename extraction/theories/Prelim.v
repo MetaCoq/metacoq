@@ -3,7 +3,8 @@
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
 From MetaCoq.Template Require Import config utils monad_utils BasicAst AstUtils.
 From MetaCoq.Extraction Require Import EAst ELiftSubst Extract EArities.
-From MetaCoq.PCUIC Require Import PCUICTyping PCUICAst PCUICAstUtils PCUICInduction  PCUICWeakening PCUICSubstitution PCUICRetyping PCUICMetaTheory PCUICWcbvEval PCUICSR  PCUICClosed PCUICInversion PCUICGeneration PCUICSafeChecker PCUICElimination.
+From MetaCoq.PCUIC Require Import PCUICTyping PCUICAst PCUICAstUtils PCUICInduction  PCUICWeakening PCUICSubstitution PCUICRetyping PCUICMetaTheory PCUICWcbvEval PCUICSR  PCUICClosed PCUICInversion PCUICGeneration PCUICElimination.
+From MetaCoq.SafeChecker Require Import PCUICSafeReduce PCUICSafeChecker.
 
 Require Import String.
 Local Open Scope string_scope.

@@ -2,7 +2,8 @@
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Arith Lia.
 From MetaCoq.Template Require Import config monad_utils utils BasicAst AstUtils UnivSubst uGraph.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICNormal PCUICSR PCUICGeneration PCUICReflect PCUICEquality PCUICInversion PCUICValidity PCUICWeakening PCUICPosition PCUICCumulativity PCUICSafeLemmata PCUICSafeReduce PCUICSafeConversion.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICNormal PCUICSR PCUICGeneration PCUICReflect PCUICEquality PCUICInversion PCUICValidity PCUICWeakening PCUICPosition PCUICCumulativity PCUICSafeLemmata.
+From MetaCoq.SafeChecker Require Import PCUICSafeReduce PCUICSafeConversion.
 
 Import MonadNotation.
 Open Scope type_scope.
@@ -11,9 +12,6 @@ Open Scope list_scope.
 (* todo: move this *)
 Arguments All_nil {_ _}.
 Arguments All_cons {_ _ _ _}.
-
-Axiom todo : forall {A}, A.
-
 
 Lemma All_sq {A} {P : A -> Type} {l}
   : All (fun x => ∥ P x ∥) l -> ∥ All P l ∥.
@@ -744,7 +742,7 @@ Section Typecheck.
     Next Obligation. now eapply validity_wf. Qed.
     Next Obligation.
       destruct hA as [[s hs]|].
-      - destruct HΣ, HΓ, X, X0. constructor. econstructor; try eassumption. 
+      - destruct HΣ, HΓ, X, X0. constructor. econstructor; try eassumption.
         apply validity_term in X0; try assumption.
         eapply isWfArity_or_Type_cumul; eassumption.
       - destruct HΣ, HΓ, X, X0, H. constructor. econstructor; easy.

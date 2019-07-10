@@ -167,19 +167,19 @@ Section Lemmata.
       map_option_out
         (build_branches_type ind mdecl idecl pars u p) =
       Some brtys ->
-      map_option_out
-        (build_branches_type ind mdecl idecl pars u p') =
-      Some brtys.
+      ∑ brtys',
+        map_option_out
+          (build_branches_type ind mdecl idecl pars u p') =
+        Some brtys'.
   Proof.
     intros p p' ind mdecl idecl pars u brtys e hb.
-    unfold build_branches_type in *. (* revert hb. *)
-    (* eapply Alli_map_option_out_mapi_Some_spec. *)
+    unfold build_branches_type in *.
     destruct idecl as [ina ity ike ict ipr]. simpl in *.
     unfold mapi in *. revert hb.
     generalize 0 at 3 6.
     intros n hb.
     induction ict in brtys, n, hb |- *.
-    - cbn in *. assumption.
+    - cbn in *. eexists. eassumption.
     - cbn. cbn in hb.
       lazymatch type of hb with
       | match ?t with _ => _ end = _ =>
@@ -206,13 +206,10 @@ Section Lemmata.
       end.
       intros tl etl. rewrite etl in hb.
       inversion hb. subst. clear hb.
-      erewrite IHict ; eauto.
-      f_equal. f_equal. f_equal. f_equal. f_equal.
-      (* Now to do the same proof with exists eq_term instead!
-         Looking good though. :)
-       *)
-      give_up.
-  Abort.
+      edestruct IHict as [brtys' eq'].
+      + eauto.
+      + eexists. rewrite eq'. reflexivity.
+  Qed.
 
   Lemma types_of_case_eq_term :
     forall ind mdecl idecl npar args u p p' pty indctx pctx ps btys,

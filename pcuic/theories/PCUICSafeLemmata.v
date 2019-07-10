@@ -161,6 +161,33 @@ Section Lemmata.
       Σ ;;; Γ' |- t : T.
   Admitted.
 
+  (* TODO MOVE *)
+  Lemma eq_term_upto_univ_it_mkProd_or_LetIn :
+    forall Re Rle Γ u v,
+      Reflexive Re ->
+      eq_term_upto_univ Re Rle u v ->
+      eq_term_upto_univ Re Rle (it_mkProd_or_LetIn Γ u) (it_mkProd_or_LetIn Γ v).
+  Proof.
+    intros Re Rle Γ u v he h.
+    induction Γ as [| [na [b|] A] Γ ih ] in u, v, h |- *.
+    - assumption.
+    - simpl. cbn. apply ih. constructor ; try apply eq_term_upto_univ_refl.
+      all: auto.
+    - simpl. cbn. apply ih. constructor ; try apply eq_term_upto_univ_refl.
+      all: auto.
+  Qed.
+
+  (* TODO MOVE *)
+  Lemma eq_term_it_mkProd_or_LetIn :
+    forall (Σ : global_context) Γ u v,
+      eq_term (snd Σ) u v ->
+      eq_term (snd Σ) (it_mkProd_or_LetIn Γ u) (it_mkProd_or_LetIn Γ v).
+  Proof.
+    intros Σ Γ u v h.
+    eapply eq_term_upto_univ_it_mkProd_or_LetIn ; auto.
+    intro. eapply eq_universe_refl.
+  Qed.
+
   Lemma build_branches_type_eq_term :
     forall p p' ind mdecl idecl pars u brtys,
       eq_term_upto_univ eq eq p p' ->
@@ -170,7 +197,8 @@ Section Lemmata.
       ∑ brtys',
         map_option_out
           (build_branches_type ind mdecl idecl pars u p') =
-        Some brtys'.
+        Some brtys' ×
+        All2 (on_Trel_eq (eq_term_upto_univ eq eq) snd fst) brtys brtys'.
   Proof.
     intros p p' ind mdecl idecl pars u brtys e hb.
     unfold build_branches_type in *.
@@ -179,7 +207,10 @@ Section Lemmata.
     generalize 0 at 3 6.
     intros n hb.
     induction ict in brtys, n, hb |- *.
-    - cbn in *. eexists. eassumption.
+    - cbn in *. eexists. split.
+      + eassumption.
+      + apply All2_same. intros [m t]. simpl. split ; auto.
+        eapply eq_term_upto_univ_refl ; auto.
     - cbn. cbn in hb.
       lazymatch type of hb with
       | match ?t with _ => _ end = _ =>
@@ -206,9 +237,16 @@ Section Lemmata.
       end.
       intros tl etl. rewrite etl in hb.
       inversion hb. subst. clear hb.
-      edestruct IHict as [brtys' eq'].
+      edestruct IHict as [brtys' [eq' he]].
       + eauto.
-      + eexists. rewrite eq'. reflexivity.
+      + eexists. rewrite eq'. split.
+        * reflexivity.
+        * constructor ; auto.
+          simpl. split ; auto.
+          eapply eq_term_upto_univ_it_mkProd_or_LetIn ; auto.
+          eapply eq_term_upto_univ_mkApps.
+          -- eapply eq_term_upto_univ_lift. assumption.
+          -- apply All2_same. intro. apply eq_term_upto_univ_refl ; auto.
   Qed.
 
   Lemma types_of_case_eq_term :

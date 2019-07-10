@@ -10,9 +10,6 @@ Set Asymmetric Patterns.
 Import MonadNotation.
 
 
-
-(* Instance extraction_checker_flags : checker_flags := Build_checker_flags true false false. *)
-
 Definition is_prop_sort s :=
   match Universe.level s with
   | Some l => Level.is_prop l
@@ -21,58 +18,10 @@ Definition is_prop_sort s :=
 
 Require Import Extract.
 
-Definition Is_conv_to_Arity Σ Γ T := exists T', ∥red Σ Γ T T'∥ /\ isArity T'.
-
-Lemma invert_cumul_arity_r (Σ : global_env_ext) (Γ : context) (C : term) T :
-  wf Σ -> wf_local Σ Γ ->
-  isArity T ->
-  Σ;;; Γ |- C <= T -> Is_conv_to_Arity Σ Γ C.
-Proof.
-  intros wfΣ.
-  revert Γ C; induction T; cbn in *; intros Γ C wfΓ ? ?; try tauto.
-  - eapply invert_cumul_sort_r in X as (? & ? & ?).
-    exists (tSort x). split; sq; eauto.
-  - eapply invert_cumul_prod_r in X as (? & ? & ? & [] & ?); eauto.
-    (* eapply IHT2 in c0 as (? & ? & ?); eauto. sq. *)
-
-    (* exists (tProd x x0 x2). split; sq; cbn; eauto. *)
-    (* etransitivity. eauto. *)
-    (* eapply PCUICReduction.red_prod_r. *)
-
-  (*   eapply context_conversion_red. eauto. 2:eauto. *)
-  (*   + econstructor. clear; induction Γ. econstructor. destruct a, decl_body. econstructor. eauto. econstructor. econstructor. eauto. econstructor. eauto. econstructor. *)
-
-  (*   econstructor. 2:eauto. 2:econstructor; eauto. 2:cbn. admit. admit. *)
-  (* -   admit. *)
-Admitted.                       (* invert_cumul_arity_r *)
-
-Lemma invert_cumul_arity_l (Σ : global_env_ext) (Γ : context) (C : term) T :
-  wf Σ -> wf_local Σ Γ ->
-  isArity C -> 
-  Σ;;; Γ |- C <= T -> Is_conv_to_Arity Σ Γ T.
-Proof.
-  intros wfΣ.
-  revert Γ T; induction C; cbn in *; intros Γ T wfΓ ? ?; try tauto.
-  - eapply invert_cumul_sort_l in X as (? & ? & ?).
-    exists (tSort x). split; sq; eauto.
-  - eapply invert_cumul_prod_l in X as (? & ? & ? & [] & ?); eauto.
-    eapply IHC2 in c0 as (? & ? & ?); eauto. sq.
-
-    exists (tProd x x0 x2). split; sq; cbn; eauto.
-    etransitivity. eauto.
-    eapply PCUICReduction.red_prod_r.
-
-    (*   eapply context_conversion_red. eauto. 2:eauto. *)
-    (*   econstructor. eapply conv_context_refl; eauto.  *)
-
-    (*   econstructor. 2:eauto. 2:econstructor; eauto. 2:cbn. admit. admit. *)
-    (* - eapply invert_cumul_letin_l in X; eauto. *)
-Admitted.                       (* invert_cumul_arity_l *)
-
 Lemma cumul_prop1 (Σ : global_env_ext) Γ A B u :
   wf Σ -> 
   is_prop_sort u -> Σ ;;; Γ |- B : tSort u ->
-  Σ ;;; Γ |- A <= B -> Σ ;;; Γ |- A : tSort u.
+                                 Σ ;;; Γ |- A <= B -> Σ ;;; Γ |- A : tSort u.
 Proof.
   intros. induction X1.
   - admit.
@@ -83,7 +32,7 @@ Admitted.                       (* cumul_prop1 *)
 Lemma cumul_prop2 (Σ : global_env_ext) Γ A B u :
   wf Σ ->
   is_prop_sort u -> Σ ;;; Γ |- A <= B ->
-  Σ ;;; Γ |- A : tSort u -> Σ ;;; Γ |- B : tSort u.
+                             Σ ;;; Γ |- A : tSort u -> Σ ;;; Γ |- B : tSort u.
 Proof.
 Admitted.                       (* cumul_prop2 *)
 
@@ -99,13 +48,6 @@ Proof.
   (* unfold leq_universe0 in H1. *)
   (* unfold leq_universe_n in H1. *)
 Admitted.                       (* leq_universe_prop *)
-
-Lemma invert_cumul_prod_r (Σ : global_env_ext) Γ C na A B : wf Σ ->
-          Σ ;;; Γ |- C <= tProd na A B ->
-            ∑ na' A' B', red Σ Γ C (tProd na' A' B') *
-               (Σ ;;; Γ |- A = A') *
-               (Σ ;;; Γ,,vass na' A' |- B <= B').
-Admitted.                       (* invert_cumul_prod_r *)
 
 Lemma it_mkProd_isArity:
   forall (l : list context_decl) A,
@@ -349,46 +291,25 @@ Proof.
     clear - wfΣ t0 H c2.
     2:{ eapply isWfArity_or_Type_cumul. eapply PCUICCumulativity.red_cumul. eassumption. eauto. }
 
-    assert ((Σ;;; [] |- it_mkProd_or_LetIn c (mkApps (tInd i u) l) <= x0) + (Σ;;; [] |- x0 <= it_mkProd_or_LetIn c (mkApps (tInd i u) l))) by eauto. clear c2.
-    
-    revert c l X.
+    (* assert ((Σ;;; [] |- it_mkProd_or_LetIn c (mkApps (tInd i u) l) <= x0) + (Σ;;; [] |- x0 <= it_mkProd_or_LetIn c (mkApps (tInd i u) l))) by eauto. clear c2. *)
+    rename c2 into X.
+    revert c l X. 
     depind t0; intros; subst.
-    + destruct X.
-      * eapply cumul_trans in c; eauto.
-        eapply invert_cumul_arity_r in c; eauto.
-        eapply it_mkProd_red_Arity; eauto.
-      * eapply invert_cumul_arity_r in c; eauto.
-        destruct c as (? & [] & ?).
-        eapply PCUICCumulativity.red_cumul_inv in X.
-        eapply cumul_trans in c1; eauto.
-        eapply invert_cumul_arity_l in c1; eauto.
-        eapply it_mkProd_red_Arity; eauto.      
-    + destruct X.
-      * eapply cumul_trans in c; eauto.
-        eapply invert_cumul_prod_r in c as (? & ? & ? & [] & ?); eauto. 
+    + eapply cumul_trans in c; eauto.
+      eapply invert_cumul_arity_r in c; eauto.
+      eapply it_mkProd_red_Arity; eauto.
+    + eapply cumul_trans in c; eauto.
+      eapply invert_cumul_prod_r in c as (? & ? & ? & [] & ?); eauto. 
       
-        eapply invert_it_Ind_red in r as (? & ? & ?).
-        eapply invert_it_Ind_eq_prod in H0 as (? & ? & ?).
-        subst.
-        eapply IHt0; eauto. right.
-        
-        eapply (substitution_untyped_cumul Σ [] [_] [] [hd]) in c2.
-        cbn in c2. 2:eauto. 2:{ repeat econstructor. }
-        rewrite subst_it_mkProd_or_LetIn in c2.
-        rewrite subst_mkApps in c2. eassumption. eauto.
-      * eapply invert_cumul_prod_r in c as (? & ? & ? & [] & ?); eauto.
-        eapply PCUICCumulativity.red_cumul_inv in r.
-        eapply cumul_trans in c1. 2:eassumption. 
-        eapply invert_cumul_prod_l in c1 as (? & ? & ? & [] & ?); eauto.
-        eapply invert_it_Ind_red in r0 as (? & ? & ?).
-        eapply invert_it_Ind_eq_prod in H0 as (? & ? & ?).
-        subst.
-        eapply cumul_trans in c3. 2:eassumption.
-        eapply IHt0. eauto. right.
-        eapply (substitution_untyped_cumul Σ [] [_] [] [hd]) in c3.
-        cbn in c3. 2:eauto. 2:{ repeat econstructor. }
-        rewrite subst_it_mkProd_or_LetIn in c3.
-        rewrite subst_mkApps in c3. eassumption. eauto.
+      eapply invert_it_Ind_red in r as (? & ? & ?); eauto.
+      eapply invert_it_Ind_eq_prod in H0 as (? & ? & ?).
+      subst.
+      eapply IHt0; eauto. 
+      
+      eapply (substitution_untyped_cumul Σ [] [_] [] [hd]) in c1.
+      cbn in c1. 2:eauto. 2:{ repeat econstructor. }
+      rewrite subst_it_mkProd_or_LetIn in c1.
+      rewrite subst_mkApps in c1. eassumption. 
   - exists x, x0. eauto.
 Qed.                       (* if a constructor is a type or proof, it is a proof *)
 
@@ -542,19 +463,18 @@ Proof.
   revert u H c0.
   depind t1; intros.
   - eapply cumul_prop2 in c0; eauto.
-  - eapply invert_cumul_prod_r in c as (? & ? & ? & [] & ?); eauto.
+  - eapply cumul_prop2 in c0. 2:eauto. 2:eauto. 2:eauto.
+    eapply invert_cumul_prod_r in c as (? & ? & ? & [] & ?); eauto.
     eapply subject_reduction in c0. 3:eauto. 2:eauto.
     eapply inversion_Prod in c0 as (? & ? & ? & ? & ?).
     eapply cumul_Sort_inv in c0.
     eapply leq_universe_prop in c0 as []; eauto.
 
     eapply is_prop_sort_prod in H0. eapply IHt1. exact H0.
-    eapply cumul_prop1 in c1. 4:eassumption. all:eauto.
     change (tSort x3) with ((tSort x3) {0 := hd}).
     eapply PCUICSubstitution.substitution0. 2:eauto. eauto. 
     econstructor. eassumption. 2: now destruct c. right; eauto. 
 Qed.  
-
 
 Lemma arity_type_inv (Σ : global_env_ext) Γ t T1 T2 : wf Σ -> wf_local Σ Γ ->
   Σ ;;; Γ |- t : T1 -> isArity T1 -> Σ ;;; Γ |- t : T2 -> Is_conv_to_Arity Σ Γ T2.

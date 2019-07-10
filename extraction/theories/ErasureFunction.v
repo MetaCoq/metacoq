@@ -91,10 +91,10 @@ Ltac sq := try (destruct HΣ as [wfΣ]; clear HΣ);
 Equations is_arity Γ (HΓ : ∥wf_local Σ Γ∥) T (HT : wellformed Σ Γ T) : typing_result ({Is_conv_to_Arity Σ Γ T} + {~ Is_conv_to_Arity Σ Γ T})
          by wf ((Γ;T;HT) : (∑ Γ t, wellformed Σ Γ t)) term_rel :=
   { 
-    is_arity Γ HΓ T HT with (@reduce_to_sort Σ HΣ Γ T HT) => {
+    is_arity Γ HΓ T HT with (@reduce_to_sort _ Σ HΣ Γ T HT) => {
     | Checked H => ret (left _) ;
     | TypeError _ => 
-      match @reduce_to_prod Σ HΣ Γ T _ with
+      match @reduce_to_prod _ Σ HΣ Γ T _ with
       | Checked (na; A; B; H) => 
         match is_arity (Γ,, vass na A) _ B _ with
         | Checked (left  H) => ret (left _)
@@ -176,12 +176,12 @@ End fix_sigma.
 
 Program Definition is_erasable (Sigma : PCUICAst.global_env_ext) (HΣ : ∥wf Sigma∥) (Gamma : context) (HΓ : ∥wf_local Sigma Gamma∥) (t : PCUICAst.term) :
   typing_result ({∥isErasable Sigma Gamma t∥} +{∥(isErasable Sigma Gamma t -> False) × welltyped Sigma Gamma t∥}) :=
-  mlet (T; _) <- @infer _ HΣ Gamma HΓ t ;;
+  mlet (T; _) <- @infer _ _ HΣ Gamma HΓ t ;;
   mlet b <- is_arity Sigma _ Gamma _ T _ ;;
   if b : {_} + {_} then
     ret (left _)
-  else mlet (K; _) <-  @infer _ HΣ Gamma HΓ T ;;
-       mlet (u;_) <- @reduce_to_sort Sigma _ Gamma K _ ;;
+  else mlet (K; _) <-  @infer _ _ HΣ Gamma HΓ T ;;
+       mlet (u;_) <- @reduce_to_sort _ Sigma _ Gamma K _ ;;
       match is_prop_sort u with true => ret (left _) | false => ret (right _) end
 .  
 Next Obligation.
@@ -429,14 +429,7 @@ Proof.
     
     cbn. repeat split; eauto. 
     eapply p. eauto. 
-  - econstructor.
-    unfold erase_mfix in *.
-    pose proof (Prelim.monad_map_All2 _ _ _ mfix a1 E1).
-    eapply All2_impl. eapply All2_All_mix_left. exact X0. eassumption. 
-
-    intros. destruct X1. cbn in *. repeat destruct ?; inv e.
-    cbn. repeat split; eauto. 
-    eapply p. eauto.
+  - inv H1. 
 Qed.
 
 Lemma erase_Some_typed {Σ wfΣ Γ wfΓ t r} :

@@ -10,7 +10,7 @@ Local Open Scope string_scope.
 Set Asymmetric Patterns.
 Import MonadNotation.
 
-Existing Instance config.default_checker_flags.
+Existing Instance extraction_checker_flags.
 
 Definition is_prop_sort s :=
   match Universe.level s with

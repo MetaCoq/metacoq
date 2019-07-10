@@ -391,7 +391,7 @@ Section ContextConversion.
 
   End RedEq.
 
-  Lemma cumul_red_ctx Γ Γ' T U : 
+  Lemma cumul_red_ctx Γ Γ' T U :
     Σ ;;; Γ |- T <= U ->
     red_ctx Σ Γ Γ' ->
     Σ ;;; Γ' |- T <= U.
@@ -985,6 +985,7 @@ Proof.
 
     eapply type_Cumul; eauto.
     unshelve eapply (context_conversion _ wfΣ _ _ _ _ Hb); eauto with wf.
+    constructor. auto with pcuic. constructor ; eauto.
     admit. (* constructor auto with pcuic. constructor; eauto. *)
     destruct (validity _ wfΣ _ wfΓ _ _ typet).
     clear -i.

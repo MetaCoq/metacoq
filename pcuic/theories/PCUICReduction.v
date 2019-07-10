@@ -707,11 +707,31 @@ Section ReductionCongruence.
           intros [? [[? ?] ?]] [? [[? ?] ?]] [h1 h2].
           unfold on_Trel in h1, h2. cbn in *. inversion h2. subst.
           unfold on_Trel. simpl. split ; eauto.
-          (* Transitivity with a changing context does not work well...
-             Should we switch for another approach?
-           *)
-          admit.
-    Admitted.
+          assert (e : fix_context mfix = fix_context (map g l1)).
+          { clear - h el el'. induction h.
+            - rewrite <- el'. reflexivity.
+            - rewrite IHh.
+              unfold fix_context. f_equal.
+              assert (e : map snd l1 = map snd l2).
+              { clear - o. induction o.
+                - destruct p as [h1 h2]. unfold on_Trel in h2.
+                  cbn. f_equal. assumption.
+                - cbn. f_equal. assumption.
+              }
+              clear - e.
+              unfold mapi. generalize 0 at 2 4.
+              intro n.
+              induction l1 in l2, e, n |- *.
+              + destruct l2 ; try discriminate e. cbn. reflexivity.
+              + destruct l2 ; try discriminate e. cbn.
+                cbn in e. inversion e.
+                specialize (IHl1 _ H1 (S n)).
+                destruct a as [? [[? ?] ?]], p as [? [[? ?] ?]].
+                simpl in *. inversion H0. subst.
+                f_equal. auto.
+          }
+          rewrite <- e. assumption.
+    Qed.
 
     Lemma red_fix_body :
       forall mfix idx mfix',

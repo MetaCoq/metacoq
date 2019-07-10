@@ -7,9 +7,8 @@ From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICWeakeningEnv PCUICWeakening
      PCUICSubstitution PCUICClosed PCUICInversion PCUICEquality
-     PCUICReduction PCUICCumulativity PCUICGeneration PCUICParallelReductionConfluence
-     PCUICConfluence
-     PCUICUnivSubst.
+     PCUICReduction PCUICCumulativity PCUICGeneration
+     PCUICParallelReductionConfluence PCUICConfluence PCUICUnivSubst.
 
 Require Import ssreflect ssrbool.
 Require Import String.
@@ -28,9 +27,9 @@ Section Principality.
   Context (wfΣ : wf Σ).
 
   Definition Is_conv_to_Arity Σ Γ T := exists T', ∥red Σ Γ T T'∥ /\ isArity T'.
-  
 
-  
+
+
   Lemma invert_red_sort Γ u v :
     red Σ Γ (tSort u) v -> v = tSort u.
   Proof.
@@ -105,7 +104,7 @@ Section Principality.
     constructor. eapply leqvv'2.
     now eapply red_cumul_inv.
   Qed.
-  
+
   Lemma invert_cumul_arity_r (Γ : context) (C : term) T :
     wf_local Σ Γ ->
     isArity T ->
@@ -116,18 +115,18 @@ Section Principality.
       exists (tSort x). split; sq; eauto.
     - eapply invert_cumul_prod_r in X as (? & ? & ? & [] & ?); eauto.
       (* eapply IHT2 in c0 as (? & ? & ?); eauto. sq. *)
-  
+
       (* exists (tProd x x0 x2). split; sq; cbn; eauto. *)
       (* etransitivity. eauto. *)
       (* eapply PCUICReduction.red_prod_r. *)
-  
+
     (*   eapply context_conversion_red. eauto. 2:eauto. *)
     (*   + econstructor. clear; induction Γ. econstructor. destruct a, decl_body. econstructor. eauto. econstructor. econstructor. eauto. econstructor. eauto. econstructor. *)
-  
+
     (*   econstructor. 2:eauto. 2:econstructor; eauto. 2:cbn. admit. admit. *)
     (* -   admit. *)
   Admitted.                       (* invert_cumul_arity_r *)
-  
+
   Lemma invert_cumul_prod_l Γ C na A B :
     Σ ;;; Γ |- tProd na A B <= C ->
                ∑ na' A' B', red Σ.1 Γ C (tProd na' A' B') *
@@ -149,7 +148,7 @@ Section Principality.
 
   Lemma invert_cumul_arity_l (Γ : context) (C : term) T :
     wf_local Σ Γ ->
-    isArity C -> 
+    isArity C ->
     Σ;;; Γ |- C <= T -> Is_conv_to_Arity Σ Γ T.
   Proof.
     revert Γ T; induction C; cbn in *; intros Γ T wfΓ ? ?; try tauto.
@@ -157,18 +156,18 @@ Section Principality.
       exists (tSort x). split; sq; eauto.
     - eapply invert_cumul_prod_l in X as (? & ? & ? & [] & ?); eauto.
       eapply IHC2 in c0 as (? & ? & ?); eauto. sq.
-      
+
       exists (tProd x x0 x2). split; sq; cbn; eauto.
       etransitivity. eauto.
       eapply PCUICReduction.red_prod_r.
-      
+
       (*   eapply context_conversion_red. eauto. 2:eauto. *)
       (*   econstructor. eapply conv_context_refl; eauto.  *)
-      
+
       (*   econstructor. 2:eauto. 2:econstructor; eauto. 2:cbn. admit. admit. *)
       (* - eapply invert_cumul_letin_l in X; eauto. *)
   Admitted.                       (* invert_cumul_arity_l *)
-  
+
   Lemma invert_red_letin Γ C na d ty b :
     red Σ.1 Γ (tLetIn na d ty b) C ->
     (∑ na' d' ty' b',
@@ -217,6 +216,115 @@ Section Principality.
   (*   eapply *)
 
   (* eapply red_ *)
+
+  Lemma rev_app :
+    forall A (l l' : list A),
+      (rev (l ++ l') = rev l' ++ rev l)%list.
+  Proof.
+    intros A l l'.
+    induction l in l' |- *.
+    - simpl. change (rev (@nil A)) with (@nil A).
+      rewrite app_nil_r. reflexivity.
+    - simpl. rewrite rev_cons. rewrite IHl.
+      rewrite rev_cons. rewrite app_assoc. reflexivity.
+  Qed.
+
+  Lemma rev_invol :
+    forall A (l : list A),
+      rev (rev l) = l.
+  Proof.
+    intros A l. induction l ; eauto.
+    rewrite rev_cons. rewrite rev_app. simpl.
+    rewrite IHl. reflexivity.
+  Qed.
+
+  Lemma list_ind_rev :
+    forall A (P : list A -> Prop),
+      P nil ->
+      (forall a l, P l -> P (l ++ [a])%list) ->
+      forall l, P l.
+  Proof.
+    intros A P h1 h2 l.
+    rewrite <- rev_invol.
+    generalize (rev l). clear l. intro l.
+    induction l ; auto.
+    rewrite rev_cons. eauto.
+  Qed.
+
+  Lemma list_rect_rev :
+    forall A (P : list A -> Type),
+      P nil ->
+      (forall a l, P l -> P (l ++ [a])%list) ->
+      forall l, P l.
+  Proof.
+    intros A P h1 h2 l.
+    rewrite <- rev_invol.
+    generalize (rev l). clear l. intro l.
+    induction l ; auto.
+    rewrite rev_cons. eauto.
+  Qed.
+
+  Lemma app_mkApps :
+    forall u v t l,
+      isApp t = false ->
+      tApp u v = mkApps t l ->
+      ∑ l',
+        (l = l' ++ [v])%list ×
+        u = mkApps t l'.
+  Proof.
+    intros u v t l h e.
+    induction l in u, v, t, e, h |- * using list_rect_rev.
+    - cbn in e. subst. cbn in h. discriminate.
+    - rewrite <- mkApps_nested in e. cbn in e.
+      exists l. inversion e. subst. auto.
+  Qed.
+
+  Lemma invert_red_ind :
+    forall Γ ind ui l T,
+      red Σ.1 Γ (mkApps (tInd ind ui) l) T ->
+      ∑ l',
+        T = mkApps (tInd ind ui) l'. (* TODO l -> l' *)
+  Proof.
+    intros Γ ind ui l T h.
+    dependent induction h.
+    - exists l. reflexivity.
+    - clear h l.
+      destruct IHh as [l ?]. subst.
+      dependent induction r.
+      all: try solve [
+        apply (f_equal decompose_app) in H ;
+        rewrite !decompose_app_mkApps in H ; auto ;
+        cbn in H ; inversion H
+      ].
+      + symmetry in H. apply app_mkApps in H ; auto.
+        destruct H as [l' [? ?]]. subst.
+        specialize IHr with (1 := eq_refl).
+        destruct IHr as [l ?]. subst.
+        exists (l ++ [M2])%list. rewrite <- mkApps_nested. reflexivity.
+      + symmetry in H. apply app_mkApps in H ; auto.
+        destruct H as [l' [? ?]]. subst.
+        exists (l' ++ [N2])%list. rewrite <- mkApps_nested. reflexivity.
+  Qed.
+
+  Lemma invert_cumul_ind_l :
+    forall Γ ind ui l T,
+      Σ ;;; Γ |- mkApps (tInd ind ui) l <= T ->
+      ∑ ui' l',
+        red Σ.1 Γ T (mkApps (tInd ind ui') l') ×
+        (* TODO Also conclude about l <= l' or something *)
+        All2 (leq_universe (global_ext_constraints Σ))
+          (List.map Universe.make ui) (List.map Universe.make ui').
+  Proof.
+    intros Γ ind ui l T h.
+    eapply cumul_alt in h as [v [v' [[redv redv'] leqvv']]].
+    eapply invert_red_ind in redv as [l' ?]. subst.
+    clear l.
+    eapply eq_term_upto_univ_mkApps_l_inv in leqvv'
+      as [u [l [[e ?] ?]]].
+    subst.
+    dependent destruction e.
+    eexists _,_. split ; eauto.
+  Qed.
 
   Ltac pih :=
     lazymatch goal with
@@ -692,4 +800,3 @@ Section Principality.
   Admitted.
 
 End Principality.
-

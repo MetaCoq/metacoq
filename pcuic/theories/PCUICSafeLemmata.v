@@ -280,6 +280,7 @@ Section Lemmata.
 
   Lemma type_rename :
     forall Σ Γ u v A,
+      wf Σ ->
       Σ ;;; Γ |- u : A ->
       eq_term_upto_univ eq eq u v ->
       Σ ;;; Γ |- v : A.
@@ -291,7 +292,7 @@ Section Lemmata.
                     Σ ;;; Γ |- v : A)
     ).
     eapply typing_ind_env.
-    all: intros Σ' wfΣ Γ wfΓ.
+    all: intros Σ wfΣ Γ wfΓ.
     - intros n decl hnth ih v e.
       dependent destruction e.
       eapply type_Rel ; eassumption.
@@ -405,7 +406,7 @@ Section Lemmata.
       + econstructor. all: try eassumption.
         * eapply ihp. assumption.
         * eapply ihc. assumption.
-        * assert (All2 (fun x y => fst x = fst y × Σ';;; Γ |- snd x : snd y) brs' btys)
+        * assert (All2 (fun x y => fst x = fst y × Σ ;;; Γ |- snd x : snd y) brs' btys)
             as hty.
           { clear - ihbrs a.
             induction ihbrs in brs', a |- *.
@@ -496,23 +497,21 @@ Section Lemmata.
         * left. assumption.
         * right. eexists. eassumption.
       + assumption.
-    - rename wfΓ into A, Γ into v, wfΣ into u, Σ' into Γ.
-      intros hu e.
+    - rename wfΣ into Γ, wfΓ into v, Γ into u.
+      intros A hΣ hu e.
       eapply tm ; eauto.
-      + give_up. (* This induction principle is really annoying as I don't
-                    really need it... *)
-      + eapply typing_wf_local. eassumption.
+      eapply typing_wf_local. eassumption.
   Admitted.
 
   Corollary type_nameless :
     forall Σ Γ u A,
+      wf Σ ->
       Σ ;;; Γ |- u : A ->
       Σ ;;; Γ |- nl u : A.
   Proof.
-    intros Σ Γ u A h.
-    eapply type_rename.
-    - eassumption.
-    - eapply eq_term_upto_univ_tm_nl. all: auto.
+    intros Σ Γ u A hΣ h.
+    eapply type_rename ; eauto.
+    eapply eq_term_upto_univ_tm_nl. all: auto.
   Qed.
 
   Lemma lookup_env_ConstantDecl_inv :
@@ -540,6 +539,7 @@ Section Lemmata.
     destruct x ; assumption.
   Qed.
 
+  (* TODO Unsquash *)
   Lemma wf_nlg :
     forall Σ,
       ∥ wf Σ ∥ ->
@@ -562,8 +562,9 @@ Section Lemmata.
           -- cbn in *.
              econstructor.
              ++ eapply type_nameless.
-                (* Need some lemma like welltyped_nlg? *)
-                admit.
+                ** intuition eauto.
+                ** (* Need some lemma like welltyped_nlg? *)
+                  admit.
              ++ admit.
              ++ admit.
           -- cbn in *. (* same *)
@@ -611,6 +612,7 @@ Section Lemmata.
       welltyped Σ Γ v.
   Proof.
     intros Γ u v [A h] e.
+    destruct hΣ.
     exists A. eapply type_rename ; eauto.
   Qed.
 

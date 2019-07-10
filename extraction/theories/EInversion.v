@@ -17,7 +17,7 @@ Module P := PCUICWcbvEval.
 
 (** ** Inversion on eval *)
 
-Lemma type_Case_inv Σ Γ ind npar p c brs T :
+Lemma type_Case_inv (Σ : global_env_ext) Γ ind npar p c brs T :
   Σ;;; Γ |- PCUICAst.tCase (ind, npar) p c brs : T ->
   { '(u, args, mdecl, idecl, pty, indctx, pctx, ps, btys) : _ &                                                 
          (PCUICTyping.declared_inductive (fst Σ) mdecl ind idecl) *
@@ -25,7 +25,7 @@ Lemma type_Case_inv Σ Γ ind npar p c brs T :
          let pars := firstn npar args in
          (Σ;;; Γ |- p : pty) *
          (types_of_case ind mdecl idecl pars u p pty = Some (indctx, pctx, ps, btys)) *
-         (check_correct_arity (snd Σ) idecl ind u indctx pars pctx) *
+         (check_correct_arity (global_ext_constraints Σ) idecl ind u indctx pars pctx) *
          (Exists (fun sf : sort_family => universe_family ps = sf) (PCUICAst.ind_kelim idecl)) *
          (Σ;;; Γ |- c : PCUICAst.mkApps (tInd ind u) args) *
          (All2 (fun x y : nat * PCUICAst.term => ((fst x = fst y) * (Σ;;; Γ |- snd x : snd y))) brs btys) *
@@ -43,41 +43,9 @@ Proof.
       all: eapply cumul_trans; eauto.
 Qed.
 
-Lemma type_Construct_inv Σ Γ ind i u T :
-  Σ;;; Γ |- PCUICAst.tConstruct ind i u : T ->
-  { '(mdecl, idecl, cdecl) : _ & 
-        (wf_local Σ Γ) *
-        (PCUICTyping.declared_constructor (fst Σ) mdecl idecl (ind, i) cdecl) *
-        (consistent_universe_context_instance (snd Σ) (ind_universes mdecl) u) *
-        (Σ ;;; Γ |- type_of_constructor mdecl cdecl (ind, i) u <= T)}%type.
-Proof.
-  intros. dependent induction X.
-  - eexists (_, _, _). cbn. intuition eauto.
-  - edestruct IHX. reflexivity. destruct x as []. destruct p.
-    exists (m, o, p0). intuition eauto.
-    all: eapply cumul_trans; eauto.
-Qed.
+Notation type_Construct_inv := PCUICInversion.inversion_Construct.
+Notation type_tFix_inv := PCUICInversion.inversion_Fix.
 
-Lemma type_tFix_inv Σ Γ mfix n T : wf Σ ->
-  Σ ;;; Γ |- tFix mfix n : T ->
-  ∑ decl, let types := PCUICLiftSubst.fix_context mfix in
-               (nth_error mfix n = Some decl) *
-               (wf_local Σ (Γ ,,, types)) *
-               (All
-                 (fun d : BasicAst.def PCUICAst.term =>
-                  Σ;;; Γ ,,, types |- BasicAst.dbody d : PCUICLiftSubst.lift #|types| 0 (dtype d)
-                  × PCUICAst.isLambda (BasicAst.dbody d) = true) mfix) *
-               (Σ;;; Γ |- dtype decl <= T).
-Proof.
-  intros. dependent induction X0.
-  - eexists.  intuition eauto.
-  - edestruct (IHX0 _ _ X eq_refl) as []. destruct p as [[[]]].
-    (* repeat match goal with [ H : _ * _ |- _ ] => destruct H end. *)
-    eexists.
-    cbn. intuition eauto.
-    all: eapply cumul_trans; eauto.
-Qed.
-  
 From MetaCoq.Extraction Require Import EAst ELiftSubst ETyping EWcbvEval Extract Prelim.
 
 Lemma eval_tBox_inv Σ' x2 :

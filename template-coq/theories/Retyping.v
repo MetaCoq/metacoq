@@ -21,7 +21,7 @@ Existing Instance default_checker_flags.
 
 Section TypeOf.
   Context `{F : Fuel}.
-  Context (Σ : global_declarations).
+  Context (Σ : global_env).
 
   Fixpoint infer_spine (Γ : context) (ty : term) (l : list term)
            {struct l} : typing_result term :=

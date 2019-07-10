@@ -20,7 +20,7 @@ Import monad_utils.MonadNotation.
 Section TypeOf.
   Context {cf : checker_flags}.
   Context `{F : Fuel}.
-  Context (Σ : global_context).
+  Context (Σ : global_env_ext).
 
   Section SortOf.
     Context (type_of : context -> term -> typing_result term).
@@ -101,12 +101,6 @@ Section TypeOf.
 
   Open Scope type_scope.
 
-  Notation "'∑'  x .. y , P" := (sigT (fun x => .. (sigT (fun y => P)) ..))
-    (at level 200, x binder, y binder, right associativity) : type_scope.
-
-  Notation "( x ; .. ; y ; z )" :=
-    (existT x (.. (existT y z) ..)) : type_scope.
-
   Conjecture cumul_reduce_to_sort : forall {Γ T s},
     reduce_to_sort (fst Σ) Γ T = Checked s ->
     Σ ;;; Γ |- T <= tSort s.
@@ -183,7 +177,7 @@ Section TypeOf.
     one_ih ; eassumption.
 
   Ltac cih :=
-    eapply type_Conv ; [
+    eapply type_Cumul ; [
       ih
     | try eassumption
     | try eassumption
@@ -212,8 +206,11 @@ Section TypeOf.
       split.
       + econstructor ; try eassumption ; try ih ; try cih.
         (* Again we're missing result on how to type sorts... *)
-        left. red. exists [], a. unfold app_context; simpl; intuition auto with pcuic.
+        left. red. exists [], a.
+        unfold app_context; simpl; intuition auto with pcuic.
+        eapply typing_wf_local; tea.
         left. red. exists [], a0. unfold app_context; simpl; intuition auto with pcuic.
+        eapply typing_wf_local; tea.
       + (* Sorts again *)
         simpl.
         admit.

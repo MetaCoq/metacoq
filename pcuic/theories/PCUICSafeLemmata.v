@@ -150,8 +150,18 @@ Section DestArity.
 End DestArity.
 
 Section Lemmata.
-
+  Context {cf : checker_flags}.
   Context (flags : RedFlags.t).
+
+  (* red is the reflexive transitive closure of one-step reduction and thus
+     can't be used as well order. We thus define the transitive closure,
+     but we take the symmetric version.
+   *)
+  Inductive cored Σ Γ: term -> term -> Prop :=
+  | cored1 : forall u v, red1 Σ Γ u v -> cored Σ Γ v u
+  | cored_trans : forall u v w, cored Σ Γ v u -> red1 Σ Γ v w -> cored Σ Γ w u.
+
+  Derive Signature for cored.
 
   Lemma context_conversion :
     forall {Σ Γ t T Γ'},
@@ -329,9 +339,9 @@ Section Lemmata.
     - intros n decl hnth ih v e.
       dependent destruction e.
       eapply type_Rel ; eassumption.
-    - intros l ih v e.
+    - intros l ih hl v e.
       dependent destruction e. subst.
-      eapply type_Sort. assumption.
+      eapply type_Sort; assumption.
     - intros na A B s1 s2 ih hA ihA hB ihB v e.
       dependent destruction e.
       econstructor.
@@ -524,7 +534,7 @@ Section Lemmata.
     - intros mfix n decl H types hnth wf ihmfix v e. subst types.
       dependent destruction e.
       pose proof (All2_nth_error_Some _ _ a hnth) as [decl' [? [[? ?] ?]]].
-      eapply type_Conv.
+      eapply type_Cumul.
       + econstructor.
         * assumption.
         * eassumption.
@@ -539,7 +549,7 @@ Section Lemmata.
         apply eq_term_sym.
         eapply eq_term_upto_univ_eq_eq_term. assumption.
     - intros t A B X ht iht har hcu v e.
-      eapply type_Conv.
+      eapply type_Cumul.
       + eapply iht. assumption.
       + destruct har as [[? ?] | [? [? ?]]].
         * left. assumption.
@@ -589,14 +599,13 @@ Section Lemmata.
 
   (* TODO Unsquash *)
   Lemma wf_nlg :
-    forall Σ,
+    forall Σ : global_env_ext,
       ∥ wf Σ ∥ ->
       ∥ wf (nlg Σ) ∥.
   Proof.
-    intros Σ [wΣ].
-    constructor.
+    intros Σ [wΣ]. constructor.
     destruct Σ as [Σ φ].
-    unfold nlg. unfold wf in *. unfold on_global_env in *. simpl in *.
+    unfold nlg. unfold wf in *. simpl in *.
     induction Σ.
     - assumption.
     - simpl. inversion wΣ. subst.
@@ -615,23 +624,13 @@ Section Lemmata.
                   admit.
              ++ admit.
              ++ admit.
-          -- cbn in *. (* same *)
-             admit.
+             ++ admit.
+          -- simpl. admit.
         * simpl in *. destruct m. admit.
   Admitted.
 
-  Context (Σ : global_context).
+  Context (Σ : global_env_ext).
   Context (hΣ : ∥ wf Σ ∥).
-
-  (* red is the reflexive transitive closure of one-step reduction and thus
-     can't be used as well order. We thus define the transitive closure,
-     but we take the symmetric version.
-   *)
-  Inductive cored Σ Γ: term -> term -> Prop :=
-  | cored1 : forall u v, red1 Σ Γ u v -> cored Σ Γ v u
-  | cored_trans : forall u v w, cored Σ Γ v u -> red1 Σ Γ v w -> cored Σ Γ w u.
-
-  Derive Signature for cored.
 
   Inductive welltyped Σ Γ t : Prop :=
   | iswelltyped A : Σ ;;; Γ |- t : A -> welltyped Σ Γ t.

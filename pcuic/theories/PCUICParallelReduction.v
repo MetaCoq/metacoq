@@ -13,12 +13,6 @@ Require Import Equations.Type.Relation Equations.Type.Relation_Properties.
 
 Set Asymmetric Patterns.
 
-Notation "'∃' x .. y , P" := (sigT (fun x => .. (sigT (fun y => P%type)) ..))
-  (at level 200, x binder, y binder, right associativity,
-  format "'[  ' '[  ' ∃  x  ..  y ']' ,  '/' P ']'") : type_scope.
-
-Existing Instance config.default_checker_flags.
-
 Derive NoConfusion for term.
 Derive Subterm for term.
 Derive Signature NoConfusion for All All2.
@@ -450,7 +444,7 @@ Section All2_local_env.
   Lemma All2_local_env_app':
     forall P (Γ Γ' Γ'' : context),
       All2_local_env (on_decl P) (Γ ,,, Γ') Γ'' ->
-      ∃ Γl Γr, (Γ'' = Γl ,,, Γr) /\ #|Γ'| = #|Γr| /\ #|Γ| = #|Γl|.
+      ∑ Γl Γr, (Γ'' = Γl ,,, Γr) /\ #|Γ'| = #|Γr| /\ #|Γ| = #|Γl|.
   Proof.
     intros *.
     revert Γ''. induction Γ'. simpl. intros.
@@ -486,7 +480,7 @@ Section All2_local_env.
   Lemma All2_local_env_app_ex:
     forall P (Γ Γ' Γ'' : context),
       All2_local_env (on_decl P) (Γ ,,, Γ') Γ'' ->
-      ∃ Γl Γr, (Γ'' = Γl ,,, Γr) *
+      ∑ Γl Γr, (Γ'' = Γl ,,, Γr) *
       All2_local_env
         (on_decl P)
         Γ Γl * All2_local_env (on_decl (fun Δ Δ' => P (Γ ,,, Δ) (Γl ,,, Δ'))) Γ' Γr.
@@ -552,19 +546,6 @@ Section All2_local_env.
     intuition eauto.
   Qed.
 
-  Lemma skipn_nth_error {A} (l : list A) i :
-     match nth_error l i with
-     | Some a => skipn i l = a :: skipn (S i) l
-     | None => skipn i l = []
-     end.
-  Proof.
-    induction l in i |- *. destruct i. reflexivity. reflexivity.
-    destruct i. simpl. reflexivity.
-    simpl. specialize (IHl i). destruct nth_error.
-    rewrite [skipn _ _]IHl. reflexivity.
-    rewrite [skipn _ _]IHl. reflexivity.
-  Qed.
-
   Lemma All2_local_env_over_app P {Γ0 Δ Γ'' Δ''} :
     All2_local_env (on_decl P) Γ0 Δ ->
     All2_local_env_over P Γ0 Δ Γ'' Δ'' ->
@@ -583,7 +564,7 @@ Section All2_local_env.
 End All2_local_env.
 
 Section ParallelReduction.
-  Context (Σ : global_context).
+  Context (Σ : global_env).
 
   Definition pred_atom t :=
     match t with
@@ -1243,7 +1224,7 @@ Hint Extern 4 (All2_local_env_over _ _ _ ?X) =>
   tryif is_evar X then fail 1 else eapply All2_local_env_over_refl : pcuic.
 
 Section ParallelWeakening.
-
+  Context {cf : checker_flags}.
   (* Lemma All2_local_env_over_app_inv {Σ Γ0 Δ Γ'' Δ''} : *)
   (*   pred1_ctx Σ (Γ0 ,,, Γ'') (Δ ,,, Δ'') -> *)
   (*   pred1_ctx Σ Γ0 Δ -> *)
@@ -1643,7 +1624,7 @@ Section ParallelWeakening.
   Qed.
 
   Lemma All2_local_env_over_firstn_skipn:
-    forall (Σ : global_context) (i : nat) (Δ' R : context),
+    forall (Σ : global_env) (i : nat) (Δ' R : context),
       pred1_ctx Σ Δ' R ->
       All2_local_env_over (pred1 Σ) (skipn i Δ') (skipn i R) (firstn i Δ') (firstn i R).
   Proof.
@@ -1663,6 +1644,7 @@ End ParallelWeakening.
 Hint Resolve pred1_pred1_ctx : pcuic.
 
 Section ParallelSubstitution.
+  Context {cf : checker_flags}.
 
   Inductive psubst Σ (Γ Γ' : context) : list term -> list term -> context -> context -> Type :=
   | psubst_empty : psubst Σ Γ Γ' [] [] [] []
@@ -1691,7 +1673,7 @@ Section ParallelSubstitution.
   Lemma psubst_nth_error Σ Γ Δ Γ' Δ' s s' n t :
     psubst Σ Γ Δ s s' Γ' Δ' ->
     nth_error s n = Some t ->
-    ∃ decl decl' t',
+    ∑ decl decl' t',
       (nth_error Γ' n = Some decl) *
       (nth_error Δ' n = Some decl') *
       (nth_error s' n = Some t') *
@@ -1719,7 +1701,7 @@ Section ParallelSubstitution.
   Lemma psubst_nth_error' Σ Γ Δ Γ' Δ' s s' n t :
     psubst Σ Γ Δ s s' Γ' Δ' ->
     nth_error s n = Some t ->
-    ∃ t',
+    ∑ t',
       (nth_error s' n = Some t') *
       pred1 Σ Γ Δ t t'.
   Proof.
@@ -1771,7 +1753,7 @@ Section ParallelSubstitution.
   Qed.
 
   Lemma All2_local_env_subst_ctx :
-    forall (Σ : global_context) c c0 (Γ0 Δ : context)
+    forall (Σ : global_env) c c0 (Γ0 Δ : context)
     (Γ'0 : list context_decl) (Γ1 Δ1 : context) (Γ'1 : list context_decl) (s s' : list term),
       psubst Σ Γ0 Γ1 s s' Δ Δ1 ->
       #|Γ'0| = #|Γ'1| ->
@@ -2136,7 +2118,7 @@ Section ParallelSubstitution.
   Hint Constructors psubst : pcuic.
   Hint Transparent vass vdef : pcuic.
 
-  Lemma substitution0_pred1 {Σ : global_context} {Γ Δ M M' na na' A A' N N'} :
+  Lemma substitution0_pred1 {Σ : global_env} {Γ Δ M M' na na' A A' N N'} :
     wf Σ ->
     pred1 Σ Γ Δ M M' ->
     pred1 Σ (Γ ,, vass na A) (Δ ,, vass na' A') N N' ->

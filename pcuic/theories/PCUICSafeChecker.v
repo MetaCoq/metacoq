@@ -9,7 +9,6 @@ Open Scope type_scope.
 Open Scope list_scope.
 
 (* from Validity.v *)
-Existing Instance config.default_checker_flags.
 
 (* todo: move this *)
 Arguments All_nil {_ _}.
@@ -36,28 +35,28 @@ Qed.
 
 
 Lemma weakening_sq `{cf : checker_flags} {Σ Γ} Γ' {t T} :
-  ∥ wf Σ ∥ -> ∥ wf_local Σ (Γ ,,, Γ') ∥ ->
+  ∥ wf Σ.1 ∥ -> ∥ wf_local Σ (Γ ,,, Γ') ∥ ->
   ∥ Σ ;;; Γ |- t : T ∥ ->
   ∥ Σ ;;; Γ ,,, Γ' |- lift0 #|Γ'| t : lift0 #|Γ'| T ∥.
 Proof.
   intros; sq; now eapply weakening.
 Defined.
 
-Definition wf_local_rel_abs_sq {Σ Γ Γ' A na} :
+Definition wf_local_rel_abs_sq `{cf : checker_flags} {Σ Γ Γ' A na} :
   ∥ wf_local_rel Σ Γ Γ' ∥ -> {u & ∥ Σ ;;; Γ ,,, Γ' |- A : tSort u ∥ }
   -> ∥ wf_local_rel Σ Γ (Γ',, vass na A) ∥.
 Proof.
   intros H [u Hu]; sq. now eapply wf_local_rel_abs.
 Qed.
 
-Definition wf_local_rel_def_sq {Σ Γ Γ' t A na} :
+Definition wf_local_rel_def_sq `{cf : checker_flags} {Σ Γ Γ' t A na} :
   ∥ wf_local_rel Σ Γ Γ' ∥ -> ∥ isType Σ (Γ ,,, Γ') A ∥ -> ∥ Σ ;;; Γ ,,, Γ' |- t : A ∥
   -> ∥ wf_local_rel Σ Γ (Γ',, vdef na t A) ∥.
 Proof.
   intros; sq. now eapply wf_local_rel_def.
 Qed.
 
-Definition wf_local_rel_app_inv_sq {Σ Γ1 Γ2 Γ3} :
+Definition wf_local_rel_app_inv_sq `{cf : checker_flags} {Σ Γ1 Γ2 Γ3} :
   ∥ wf_local_rel Σ Γ1 Γ2 ∥ -> ∥ wf_local_rel Σ (Γ1 ,,, Γ2) Γ3 ∥
   -> ∥ wf_local_rel Σ Γ1 (Γ2 ,,, Γ3) ∥.
 Proof.
@@ -261,11 +260,11 @@ Instance monad_exc : MonadExc type_error typing_result :=
   }.
 
 
-Definition iscumul Σ HΣ Γ := isconv_term RedFlags.default Σ HΣ Γ Cumul.
+Definition iscumul `{cf : checker_flags} Σ HΣ Γ := isconv_term RedFlags.default Σ HΣ Γ Cumul.
 
 
-Definition strengthening {Σ Γ Γ' Γ'' t T}
-  : wf Σ -> Σ ;;; Γ ,,, Γ'' ,,, lift_context #|Γ''| 0 Γ' |-
+Definition strengthening `{cf : checker_flags} {Σ Γ Γ' Γ'' t T}
+  : wf Σ.1 -> Σ ;;; Γ ,,, Γ'' ,,, lift_context #|Γ''| 0 Γ' |-
                lift #|Γ''| #|Γ'| t : lift #|Γ''| #|Γ'| T ->
     Σ;;; Γ ,,, Γ' |- t : T.
 Admitted.
@@ -285,8 +284,8 @@ Proof.
   split; [assumption|]. split; [assumption| trivial].
 Defined.
 
-Definition strengthening_wf_local_rel Σ Γ1 Γ2 Γ3 Γ4 :
-  wf Σ -> wf_local_rel Σ Γ1 (Γ2 ,,, Γ3 ,,, lift_context #|Γ3| 0 Γ4)
+Definition strengthening_wf_local_rel `{cf : checker_flags} Σ Γ1 Γ2 Γ3 Γ4 :
+  wf Σ.1 -> wf_local_rel Σ Γ1 (Γ2 ,,, Γ3 ,,, lift_context #|Γ3| 0 Γ4)
   -> wf_local_rel Σ Γ1 (Γ2 ,,, Γ4).
 Proof.
   intros HΣ H.
@@ -313,7 +312,7 @@ Proof.
 Qed.
 
 
-Definition wf_local_app_inv {Σ Γ1 Γ2} :
+Definition wf_local_app_inv `{cf : checker_flags} {Σ Γ1 Γ2} :
   wf_local Σ Γ1 -> wf_local_rel Σ Γ1 Γ2
   -> wf_local Σ (Γ1 ,,, Γ2).
 Proof.
@@ -342,8 +341,8 @@ Qed.
 
 
 Section Typecheck.
-  Context {Σ : global_context} {HΣ : ∥ wf Σ ∥}.
-  Let G := match gc_of_constraints (snd Σ) with
+  Context `{cf : checker_flags} {Σ : global_env_ext} {HΣ : ∥ wf Σ ∥}.
+  Let G := match gc_of_constraints (global_ext_constraints Σ) with
            | Some ctrs => make_graph ctrs
            | None => todo
            end.
@@ -475,7 +474,7 @@ Section Typecheck.
                                              (try_is_leq_universe G).
 
   Lemma leqb_term_spec t u :
-    leqb_term t u <~> leq_term (snd Σ) t u.
+    leqb_term t u <~> leq_term (global_ext_constraints Σ) t u.
   Admitted.
 
   Program Definition convert_leq Γ t u
@@ -559,7 +558,7 @@ Section Typecheck.
   Defined.
 
   Definition check_consistent_constraints cstrs u
-    : typing_result (consistent_universe_context_instance (snd Σ) cstrs u).
+    : typing_result (consistent_instance_ext Σ cstrs u).
   Admitted.
     (* match cstrs as cstrs' return (cstrs' = cstrs -> typing_result (consistent_universe_context_instance Σ cstrs' u)) with *)
     (* | Monomorphic_ctx ctx => fun _ => ret I *)
@@ -609,8 +608,10 @@ Section Typecheck.
 
     | tSort u =>
           match u with
-          | NEL.sing (l, false) => ret (tSort (Universe.super l); _)
-          | _ => raise (UnboundVar "not alg univ")
+          | NEL.sing (l, false) =>
+            check_eq_true (LevelSet.mem l (global_ext_levels Σ)) (Msg "undeclared level");;
+            ret (tSort (Universe.super l); _)
+          | _ => raise (UnboundVar "not a level")
           end
 
     | tProd na A B =>
@@ -754,7 +755,7 @@ Section Typecheck.
 
     | tCoFix mfix n =>
       (* to add when generalizing to all flags *)
-      (* allowcofix <- check_eq_true allow_cofix (Msg "cofix not allowed") ;; *)
+      allowcofix <- check_eq_true allow_cofix (Msg "cofix not allowed") ;;
       match nth_error mfix n with
       | None => raise (IllFormedFix mfix n)
       | Some decl =>
@@ -790,7 +791,8 @@ Section Typecheck.
     end.
 
   Next Obligation. sq; now econstructor. Defined.
-  Next Obligation. sq; now econstructor. Defined.
+  Next Obligation. sq; econstructor; tas.
+                   now apply LevelSetFact.mem_2. Defined.
   (* tProd *)
   Next Obligation. sq; econstructor; cbn; easy. Defined.
   Next Obligation. sq; econstructor; eassumption. Defined.
@@ -1202,7 +1204,7 @@ Print Assumptions infer.
 (*     revert H; infers. *)
 (*     specialize (IH _ _ Heqt0). *)
 (*     intros. *)
-(*     eapply type_Conv. apply IH. *)
+(*     eapply type_Cumul. apply IH. *)
 (*     admit. apply cumul_reduce_to_sort. exists x. split; tc. *)
 (*   Admitted. *)
 
@@ -1219,7 +1221,7 @@ Print Assumptions infer.
 (*     revert H'; infers. *)
 (*     specialize (IH' _ _ Heqt0). *)
 (*     intros. *)
-(*     eapply type_Conv. apply IH'. *)
+(*     eapply type_Cumul. apply IH'. *)
 (*     apply infer_type_correct; eauto. *)
 (*     destruct a0. now apply cumul_convert_leq. *)
 (*   Qed. *)
@@ -1276,7 +1278,7 @@ Print Assumptions infer.
 (*       (* intros [= <-]. *) *)
 (*       admit. *)
 (*       (* eapply type_Case. simpl in *. *) *)
-(*       (* eapply type_Conv. eauto. *) *)
+(*       (* eapply type_Cumul. eauto. *) *)
 (*       (* admit. *) *)
 (*       (* rewrite cumul_reduce_to_ind. *) *)
 (*       (* exists args. split; auto. *) *)
@@ -1369,7 +1371,7 @@ Print Assumptions infer.
 (*       else ret () *)
 (*     end. *)
 
-(*   Fixpoint check_wf_declarations (φ : uGraph.t) (g : global_declarations) := *)
+(*   Fixpoint check_wf_declarations (φ : uGraph.t) (g : global_env) := *)
 (*     match g with *)
 (*     | [] => ret () *)
 (*     | g :: env => *)
@@ -1378,13 +1380,13 @@ Print Assumptions infer.
 (*       check_fresh (global_decl_ident g) env *)
 (*     end. *)
 
-(*   Definition check_wf_env (Σ : global_context) := *)
+(*   Definition check_wf_env (Σ : global_env_ext) := *)
 (*     if negb (no_universe_inconsistency (snd Σ)) then *)
 (*       EnvError (AlreadyDeclared "univ inconsistency") (* todo better error *) *)
 (*     else check_wf_declarations (snd Σ) (fst Σ). *)
 
 (*   Definition typecheck_program (p : program) : EnvCheck term := *)
-(*     let Σ := reconstruct_global_context (fst p) in *)
+(*     let Σ := reconstruct_global_env_ext (fst p) in *)
 (*     check_wf_env Σ ;; infer_term Σ (snd p). *)
 
 (* End Checker. *)

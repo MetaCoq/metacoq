@@ -65,7 +65,6 @@ Fixpoint nl (t : term) : term :=
   end.
 
 Derive Signature for eq_term_upto_univ.
-Derive NoConfusion NoConfusionHom for term.
 
 Ltac destruct_one_andb :=
   lazymatch goal with
@@ -103,10 +102,6 @@ Proof.
     + inversion H2. reflexivity.
     + eapply IHu. assumption.
 Qed.
-
-Lemma All2_Forall2 {A} (P : A -> A -> Prop) l l' :
-  All2 P l l' -> Forall2 P l l'.
-Proof. induction 1; constructor; auto. Qed.
 
 Lemma nameless_eq_term_spec :
   forall `{checker_flags} u v,
@@ -402,6 +397,7 @@ Definition nl_one_inductive_body o :=
 
 Definition nl_mutual_inductive_body m :=
   Build_mutual_inductive_body
+    m.(ind_finite)
     m.(ind_npars)
     (nlctx m.(ind_params))
     (map nl_one_inductive_body m.(ind_bodies))
@@ -413,7 +409,7 @@ Definition nl_global_decl (d : global_decl) : global_decl :=
   | InductiveDecl kn mib => InductiveDecl kn (nl_mutual_inductive_body mib)
   end.
 
-Definition nlg (Σ : global_context) : global_context :=
+Definition nlg (Σ : global_env_ext) : global_env_ext :=
   let '(Σ, φ) := Σ in
   (map nl_global_decl Σ, φ).
 

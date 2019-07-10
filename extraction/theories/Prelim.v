@@ -2,9 +2,8 @@
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
 From MetaCoq.Template Require Import config utils monad_utils BasicAst AstUtils.
-From MetaCoq.Extraction Require Import EAst ELiftSubst Extract.
+From MetaCoq.Extraction Require Import EAst ELiftSubst Extract EArities.
 From MetaCoq.PCUIC Require Import PCUICTyping PCUICAst PCUICAstUtils PCUICInduction  PCUICWeakening PCUICSubstitution PCUICRetyping PCUICMetaTheory PCUICWcbvEval PCUICSR  PCUICClosed PCUICInversion PCUICGeneration PCUICSafeChecker.
-
 
 Require Import String.
 Local Open Scope string_scope.
@@ -15,7 +14,9 @@ Module E := EAst.
 
 Require Import Lia.
 
-Existing Instance config.default_checker_flags.
+
+Existing Instance extraction_checker_flags.
+
 Module PA := PCUICAst.
 Module P := PCUICWcbvEval.
 
@@ -29,7 +30,6 @@ Proof.
   - intros. rewrite nth_error_app1 in H; eauto.
 Qed.
 
-
 Lemma monad_map_All2 (X Y : Type) (f : X -> typing_result Y) (l1 : list X) (a1 : list Y) :
   monad_map f l1 = ret a1 -> All2 (fun a b => f a = ret b) l1 a1.
 Proof.
@@ -42,7 +42,7 @@ Qed.
 Lemma monad_map_Forall2 (X Y : Type) (f : X -> typing_result Y) (l1 : list X) (a1 : list Y) :
   monad_map f l1 = Checked a1 -> Forall2 (fun a b => f a = Checked b) l1 a1.
 Proof.
-  intros. now eapply All2_Forall, monad_map_All2.
+  intros. now eapply All2_Forall2, monad_map_All2.
 Qed.
 
 Lemma monad_map_length X Y (f : X -> typing_result Y) (l1  : list X) a :
@@ -52,7 +52,6 @@ Proof.
   - invs H. cbn. congruence.
   - destruct (f a). destruct ? in H. invs H. cbn. f_equal. eauto. invs H. invs H.
 Qed.
-
 
 Lemma monad_map_app X Y (f : X -> typing_result Y) (l1 l2 : list X) a1 a2 :
   monad_map f l1 = Checked a1 -> monad_map f l2 = Checked a2 -> monad_map f (l1 ++ l2) = Checked (a1 ++ a2)%list.
@@ -72,6 +71,8 @@ Proof.
     invs H. destruct (IHl1 _ eq_refl) as (? & ? & ? & ? & ->).
     do 2 eexists. rewrite H. eauto. invs H.
 Qed.
+
+Existing Instance extraction_checker_flags.
 
 Lemma typing_spine_inv_app Σ x0 l x x1 :
   PCUICGeneration.typing_spine Σ [] x0 (l ++ [x]) x1 -> { '(x2, x3) : _ & (PCUICGeneration.typing_spine Σ [] x0 l x2) * (Σ ;;; [] |- x : x3)}%type.
@@ -96,38 +97,19 @@ Proof.
     + cbn in H17. eauto.
 Qed.
 
-Lemma typing_spine_cumul:
-  forall (Σ : PCUICAst.global_context) (T x1 : PCUICAst.term), Σ;;; [] |- x1 <= T -> typing_spine Σ [] x1 [] T.
-Proof.
-  intros Σ T x1 X.
-Admitted.                       (* typing_spine_cumul, we have to change the def. here! *)
-
-Theorem subject_reduction_eval : forall (Σ : PCUICAst.global_context) Γ t u T,
+Theorem subject_reduction_eval : forall (Σ : PCUICAst.global_env_ext) Γ t u T,
   wf Σ -> Σ ;;; Γ |- t : T -> PCUICWcbvEval.eval Σ Γ t u -> Σ ;;; Γ |- u : T.
 Proof.
   intros * wfΣ Hty Hred % wcbeval_red. eapply subject_reduction; eauto.
 Qed.
 
 Lemma typing_spine_eval:
-  forall (Σ : PCUICAst.global_context) (args args' : list PCUICAst.term) (X : All2 (PCUICWcbvEval.eval Σ []) args args') (bla : wf Σ)
-    (T x x0 : PCUICAst.term) (t0 : typing_spine Σ [] x args x0) (c : Σ;;; [] |- x0 <= T) (x1 : PCUICAst.term)
-    (c0 : Σ;;; [] |- x1 <= x), typing_spine Σ [] x1 args' T.
+  forall (Σ : global_env_ext) Γ (args args' : list PCUICAst.term) (X : All2 (PCUICWcbvEval.eval Σ Γ) args args') (bla : wf Σ)
+    (T x x0 : PCUICAst.term) (t0 : typing_spine Σ Γ x args x0) (c : Σ;;; Γ |- x0 <= T) (x1 : PCUICAst.term)
+    (c0 : Σ;;; Γ |- x1 <= x), isWfArity_or_Type Σ Γ T -> typing_spine Σ Γ x1 args' T.
 Proof.
-  intros Σ args args' X wf T x x0 t0 c x1 c0. revert args' X.
-  dependent induction t0; intros.
-  - inv X.
-    eapply (typing_spine_cumul). eapply cumul_trans. eauto. eapply cumul_trans. eauto. eauto.
-  - inv X. econstructor.
-    + eauto.
-    + eapply cumul_trans; eauto.
-    + eapply subject_reduction_eval; eauto.
-    + eapply IHt0; eauto.
-      eapply PCUICCumulativity.red_cumul_inv.
-      unfold PCUICLiftSubst.subst1.
-      eapply (red_red Σ [] [_] [] [_] [_]).
-      eauto. econstructor. eapply wcbeval_red. eauto.
-      econstructor. econstructor. econstructor.
-      Grab Existential Variables. all: repeat econstructor.
+  intros. eapply typing_spine_red; eauto.
+  eapply All2_impl. eassumption. intros. eapply wcbeval_red. eauto.
 Qed.
 
 (** ** on mkApps *)
@@ -283,16 +265,101 @@ Proof.
 Qed.
 
 (** ** Prelim on eliminations  *)
+(* Lemma universe_family_is_prop_sort: *)
+(*   forall x6 : universe, universe_family x6 = InProp -> Extract.is_prop_sort x6. *)
+(* Proof. *)
+(*   intros x6 Eu. *)
+(* Admitted. *)
 
-Lemma elim_restriction_works Σ Γ ind npar p c brs :
-  (Is_proof Σ Γ (tCase (ind, npar) p c brs) -> False) -> Informative Σ ind.
+Existing Instance extraction_checker_flags.
+
+Lemma elim_restriction_works_kelim1 (Σ : global_env_ext) Γ T ind npar p c brs mind idecl : wf Σ ->
+  declared_inductive (fst Σ) mind ind idecl ->
+  Σ ;;; Γ |- tCase (ind, npar) p c brs : T ->
+  (Is_proof Σ Γ (tCase (ind, npar) p c brs) -> False) -> In InType (ind_kelim idecl).
 Proof.
+  intros wfΣ. intros.
+  assert (HT := X).
+  eapply inversion_Case in X as (? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ?). 
+  unfold types_of_case in e0.
+  repeat destruct ?; try congruence. subst. inv e0. 
+  eapply declared_inductive_inj in d as []. 2:exact H. subst.
+  enough (universe_family x6 = InType). rewrite H1 in e1.
+  eapply Exists_exists in e1 as (? & ? & ?). subst. eauto.
+  
+  destruct (universe_family x6) eqn:Eu.
+  - exfalso. eapply H0. exists T. exists x6. split. admit.
+    split. (* 2:{ eapply universe_family_is_prop_sort; eauto. } *)
+    admit. admit.
+  - admit. (* no idea what to do for Set *)
+  - reflexivity.  
 Admitted.                       (* elim_restriction_works *)
 
-Lemma elim_restriction_works_proj Σ Γ  p c :
+
+Lemma elim_restriction_works_kelim2 (Σ : global_env_ext) ind mind idecl : wf Σ ->
+  declared_inductive (fst Σ) mind ind idecl ->
+  In InType (ind_kelim idecl) -> Informative Σ ind.
+Proof.
+  intros.
+  destruct (PCUICWeakeningEnv.on_declared_inductive X H) as [[]]; eauto.
+  intros ?. intros. inversion o.
+  eapply declared_inductive_inj in H as []; eauto; subst.
+  clear - onConstructors ind_sorts. try dependent induction onConstructors.
+  (* - cbn. split. omega. econstructor. admit. *)
+  (* -  *)
+Admitted.                       (* elim_restriction_works *)
+
+Lemma elim_restriction_works (Σ : global_env_ext) Γ T ind npar p c brs mind idecl : wf Σ ->
+  declared_inductive (fst Σ) mind ind idecl ->
+  Σ ;;; Γ |- tCase (ind, npar) p c brs : T ->
+  (Is_proof Σ Γ (tCase (ind, npar) p c brs) -> False) -> Informative Σ ind.
+Proof.
+  intros. eapply elim_restriction_works_kelim2; eauto.
+  eapply elim_restriction_works_kelim1; eauto.
+Qed.
+
+Lemma declared_projection_projs_nonempty {Σ : global_env_ext} { mind ind p a} :
+  wf Σ ->
+  declared_projection Σ mind ind p a ->
+  ind_projs ind <> [].
+Proof.
+  intros. destruct H. destruct H0.
+  destruct (ind_projs ind); try congruence. destruct p.
+  cbn in *. destruct n; inv H0.
+Qed.
+
+Lemma elim_restriction_works_proj_kelim1 (Σ : global_env_ext) Γ T p c mind idecl :
+  wf Σ ->
+  declared_inductive (fst Σ) mind (fst (fst p)) idecl ->
+  Σ ;;; Γ |- tProj p c : T ->
+  (Is_proof Σ Γ (tProj p c) -> False) -> In InType (ind_kelim idecl).
+Proof.
+  intros. destruct p. destruct p. cbn in *.
+  eapply inversion_Proj in X0 as (? & ? & ? & ? & ? & ? & ? & ? & ?).
+  destruct x2. cbn in *.
+  pose (d' := d). destruct d' as [? _].
+  eapply declared_inductive_inj in H as []; eauto. subst.
+  pose proof (declared_projection_projs_nonempty X d).
+  eapply PCUICWeakeningEnv.on_declared_projection in d; eauto.
+  destruct d as (? & ? & ?). destruct p.
+  inv o. inv o0.
+  forward onProjections. eauto.
+  inversion onProjections.
+  clear - on_projs_elim. revert on_projs_elim. generalize (ind_kelim x1).
+  intros. induction on_projs_elim; subst.
+  - cbn. eauto.
+  - cbn. right. eauto.  
+Qed. (* elim_restriction_works_proj *)
+
+Lemma elim_restriction_works_proj (Σ : global_env_ext) Γ  p c mind idecl T :
+  wf Σ ->
+  declared_inductive (fst Σ) mind (fst (fst p)) idecl ->
+  Σ ;;; Γ |- tProj p c : T ->
   (Is_proof Σ Γ (tProj p c) -> False) -> Informative Σ (fst (fst p)).
 Proof.
-Admitted.                       (* elim_restriction_works_proj *)
+  intros. eapply elim_restriction_works_kelim2; eauto.
+  eapply elim_restriction_works_proj_kelim1; eauto.
+Qed.                       
 
 Lemma length_of_btys {ind mdecl' idecl' args' u' p pty indctx pctx ps btys} :
   types_of_case ind mdecl' idecl' (firstn (ind_npars mdecl') args') u' p pty = Some (indctx, pctx, ps, btys) ->
@@ -320,11 +387,35 @@ Proof.
     eapply IHl.  eauto.
 Qed.
 
-Lemma tCase_length_branch_inv Σ Γ ind npar p n u args brs T m t :
+
+Existing Instance extraction_checker_flags.
+
+Lemma tCase_length_branch_inv (Σ : global_env_ext) Γ ind npar p n u args brs T m t :
   wf Σ ->
   Σ ;;; Γ |- tCase (ind, npar) p (mkApps (tConstruct ind n u) args) brs : T ->
   nth_error brs n = Some (m, t) ->
   (#|args| = npar + m)%nat.
+Proof.
+  intros. 
+  eapply inversion_Case in X0 as (? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ?). 
+  unfold types_of_case in e0.
+  repeat destruct ?; try congruence. destruct p0, p1; subst. inv E3. inv E1. inv e0.
+  unfold build_branches_type in *.
+  assert (exists t', nth_error x7 n = Some (m, t')).
+  eapply All2_nth_error_Some in H as (? & ?). 2:eassumption. destruct p0.
+  rewrite e. destruct p0. destruct x8. cbn in *. subst. eauto.
+  destruct H0. (* clear - H0 E4. unfold mapi in *. *)
+  (* revert n x7 H0 E4. generalize 0 at 3. induction (ind_ctors x2); intros. *)
+  (* - cbn in E4. inv E4. destruct n0; inv H0. *)
+  (* - cbn in E4. destruct a. destruct ?; try congruence. *)
+  (*   destruct p0. *)
+  (*   destruct ?; try congruence. *)
+  (*   inv E4. destruct ?; try congruence. *)
+  (*   destruct ?; try congruence. *)
+  (*   destruct ?; try congruence. *)
+  (*   inv E. destruct n0; cbn in H0. *)
+  (*   + inversion H0. subst. destruct l. cbn in E0. inv E0. cbn in *. inv H0. *)
+  (*   + eapply IHl in E0. eauto.  *)
 Admitted.                       (* tCase_length_branch_inv *)
 
 (** ** Prelim on fixpoints *)
@@ -353,26 +444,31 @@ Proof.
     + cbn. rewrite IHm. reflexivity. omega.
 Qed.
 
-Lemma subslet_fix_subst Σ mfix1 :
+Lemma subslet_fix_subst Σ mfix1 T n :
+  Σ ;;; [] |- tFix mfix1 n : T ->
+  (* wf_local Σ (PCUICLiftSubst.fix_context mfix1) -> *)
   subslet Σ [] (PCUICTyping.fix_subst mfix1) (PCUICLiftSubst.fix_context mfix1).
 Proof.
-  unfold fix_subst.
-  induction mfix1 using rev_ind.
+  unfold fix_subst, PCUICLiftSubst.fix_context.
+  assert (exists L, mfix1 = mfix1 ++ L)%list by (exists []; now simpl_list). revert H.
+  generalize mfix1 at 2 5 6.  intros.
+  induction mfix0 using rev_ind.
   - econstructor.
-  - unfold PCUICLiftSubst.fix_context.
-    rewrite mapi_app. cbn. rewrite rev_app_distr. cbn.
-Admitted.                       (* subslet_fix_subst *)
+  - rewrite mapi_app in *. cbn in *. rewrite rev_app_distr in *. cbn in *.
+    rewrite app_length. cbn. rewrite plus_comm. cbn. econstructor.
+    + eapply IHmfix0. destruct H as [L]. exists (x :: L). subst. now rewrite <- app_assoc.
+    + rewrite <- plus_n_O.
+      rewrite PCUICLiftSubst.simpl_subst_k. 2:{ clear. induction l; cbn; try congruence. }
+      eapply inversion_Fix in X as (? & ? & ? & ? & ?).
+      econstructor; eauto. destruct H. subst.
+      rewrite <- app_assoc. rewrite nth_error_app_ge. 2:omega.
+      rewrite minus_diag. cbn. reflexivity. eapply p.
+Qed.
 
 (** ** Prelim on typing *)
 
-Lemma typing_subst_instance Σ Γ t T u :
-  wf Σ ->
-  Σ ;;; Γ |- t : T ->
-  Σ ;;; Γ |- PCUICUnivSubst.subst_instance_constr u t : PCUICUnivSubst.subst_instance_constr u T.
-Proof.
-Admitted.                       (* typing_subst_instance *)
-
 Require Import PCUIC.PCUICGeneration.
+Existing Instance config.extraction_checker_flags.
 
 Inductive red_decls Σ Γ Γ' : forall (x y : PCUICAst.context_decl), Type :=
 | conv_vass na na' T T' : isType Σ Γ' T' -> red Σ Γ T T' ->
@@ -387,92 +483,7 @@ Inductive red_decls Σ Γ Γ' : forall (x y : PCUICAst.context_decl), Type :=
 
 Notation red_context Σ := (context_relation (red_decls Σ)).
 
-Lemma env_prop_imp `{checker_flags} P1 P2 :
-  (forall Σ Γ t T, P1 Σ Γ t T -> P2 Σ Γ t T) ->
-  env_prop P1 -> env_prop P2.
-Proof.
-  (* intros. econstructor; *)
-  (*           specialize (X0 Σ wfΣ Γ wfΓ t T). *)
-  (* 2: now eapply X, X0. *)
-  (* destruct X0; eauto. cbv. destruct Σ. cbv in f. *)
-  (* clear - X f. *)
-  (* induction f. *)
-  (* - econstructor. eauto. *)
-  (* - econstructor. eapply IHf; eauto. *)
-  (*   eauto. destruct d. cbn in *. *)
-  (*   + destruct c0. cbv in *. *)
-  (*     destruct cst_body. eapply X. eauto. *)
-  (*     destruct o as []. exists x. *)
-  (*     eauto. *)
-  (*   + clear IHf. cbv in *. *)
-  (*     inv o. econstructor; eauto. *)
-  (*     * eapply Alli_impl. eassumption. intros.  *)
-  (*       inv X0. *)
-  (*       unshelve epose (_ : (on_constructors *)
-  (*                              (fun (Σ : list PCUICAst.global_decl × Universes.ConstraintSet.t_) (Γ : list PCUICAst.context_decl)  *)
-  (*                                 (t : PCUICAst.term) (T : option PCUICAst.term) => *)
-  (*                                 match T with *)
-  (*                                 | Some T0 => P2 Σ Γ t T0 *)
-  (*                                 | None => ∑ s : ∑ l : list (Universes.Level.t × bool), [] = l -> False, P2 Σ Γ t (PCUICAst.tSort s) *)
-  (*                                 end) (Σ, c) k m n x (PCUICAst.ind_ctors x)) *)
-  (*                      ). *)
-  (*       { *)
-  (*         clear - onConstructors X. eapply Alli_impl. eassumption. *)
-  (*         intros. inv X0. econstructor. inv X1. exists x1. eauto. *)
-  (*         destruct X2. exists x1. admit. *)
-  (*       }  *)
-
-  (*       econstructor. eassumption. inv onArity. *)
-  (*       econstructor. eauto. intros. eapply onProjections in H. inv H. *)
-  (*       econstructor. all:eauto. *)
-  (*       eapply Alli_impl. eauto. intros. cbn in *. destruct X0. exists x1. eauto. *)
-  (*       instantiate (1 := o). *)
-  (*       unfold check_ind_sorts in *. *)
-  (*       destruct ?. intros. subst. destruct onConstructors. cbn in *. eauto. subst o. *)
-  (*       cbn. admit. admit. admit. *)
-  (*     * inv onParams. *)
-  (*       -- econstructor. *)
-  (*       -- econstructor. 2:{ destruct X1. eexists; eauto. } *)
-  (*          clear - X X0. induction X0. econstructor. *)
-  (*          econstructor. eauto. destruct t0. eexists; eauto. *)
-  (*          econstructor. eauto. eauto. *)
-  (*       -- unfold on_context. econstructor. *)
-  (*          2:{ eauto. } clear - X X0. induction X0. econstructor. *)
-  (*          econstructor. eauto. destruct t0. eexists; eauto. *)
-  (*          econstructor; eauto. *)
-Admitted. (* env_prop is closed under implication, easy but annoying *)
-
-Lemma red_context_conversion :
-  env_prop
-    (fun (Σ : PCUICAst.global_context) (Γ : PCUICAst.context) (t T : PCUICAst.term) =>
-       forall Γ' : PCUICAst.context, red_context Σ Γ Γ' -> Σ;;; Γ' |- t : T).
-Proof.
-  eapply env_prop_imp. 2: eapply context_conversion.
-  intros. eapply X.
-  clear - X0.
-  Lemma red_conv_context:
-    forall (Σ : global_context) (Γ Γ' : context), red_context Σ Γ Γ' -> conv_context Σ Γ Γ'.
-  Proof.
-    intros Σ Γ Γ' X0.
-    induction X0.
-    - econstructor.
-    - econstructor. eauto. econstructor. inv p. eauto.
-      inv p. econstructor. now eapply PCUICCumulativity.red_cumul.
-      now eapply PCUICCumulativity.red_cumul_inv.
-    - econstructor. eauto. inv p.
-      econstructor. eauto. econstructor.
-      now eapply PCUICCumulativity.red_cumul.
-      now eapply PCUICCumulativity.red_cumul_inv.
-      econstructor. eauto. auto.
-      constructor.
-      now eapply PCUICCumulativity.red_cumul.
-      now eapply PCUICCumulativity.red_cumul_inv.
-      apply conv_refl.
-  Qed.
-  now eapply red_conv_context.
-Qed.
-
-Lemma conv_context_app (Σ : global_context) (Γ1 Γ2 Γ1' : context) :
+Lemma conv_context_app (Σ : global_env_ext) (Γ1 Γ2 Γ1' : context) :
   wf Σ ->
   wf_local Σ (Γ1 ,,, Γ2) ->
   conv_context Σ Γ1 Γ1' -> conv_context Σ (Γ1 ,,, Γ2) (Γ1' ,,, Γ2).

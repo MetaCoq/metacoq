@@ -27,7 +27,7 @@ End RedFlags.
 Section Normal.
 
   Context (flags : RedFlags.t).
-  Context (Σ : global_declarations).
+  Context (Σ : global_env).
 
   Inductive normal (Γ : context) : term -> Prop :=
   | nf_ne t : neutral Γ t -> normal Γ t

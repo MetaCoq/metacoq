@@ -14,7 +14,6 @@ Import MonadNotation.
 Open Scope type_scope.
 
 (* from Validity.v *)
-Existing Instance config.default_checker_flags.
 
 (** * Reduction machine for PCUIC without fuel
 
@@ -33,9 +32,11 @@ Set Equations With UIP.
    We state is as well-foundedness of the reduction.
 *)
 Section Normalisation.
+  
+  Context {cf : checker_flags}.
 
   Context (flags : RedFlags.t).
-  Context (Σ : global_context).
+  Context (Σ : global_env_ext).
 
   Definition R_aux Γ :=
     dlexprod (cored Σ Γ) (@posR).
@@ -340,9 +341,11 @@ End Normalisation.
 
 Section Reduce.
 
+  Context {cf : checker_flags}.
+  
   Context (flags : RedFlags.t).
 
-  Context (Σ : global_context).
+  Context (Σ : global_env_ext).
   Context (hΣ : ∥ wf Σ ∥).
 
   Derive NoConfusion NoConfusionHom for option.

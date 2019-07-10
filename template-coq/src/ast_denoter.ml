@@ -23,14 +23,17 @@ struct
   type quoted_sort_family = Universes0.sort_family
   type quoted_constraint_type = Universes0.constraint_type
   type quoted_univ_constraint = Universes0.univ_constraint
-  type quoted_univ_instance = Universes0.Instance.t
   type quoted_univ_constraints = Universes0.constraints
-  type quoted_univ_context = Universes0.universe_context
-  type quoted_inductive_universes = quoted_univ_context
+  type quoted_univ_instance = Universes0.Instance.t
+  type quoted_univ_context = Universes0.UContext.t
+  type quoted_univ_contextset = Universes0.ContextSet.t
+  type quoted_abstract_univ_context = Universes0.AUContext.t
+  type quoted_variance = Universes0.Variance.t
+  type quoted_universes_decl = Universes0.universes_decl
 
   type quoted_mind_params = (ident * local_entry) list
   type quoted_ind_entry = quoted_ident * t * quoted_bool * quoted_ident list * t list
-  type quoted_definition_entry = t * t option * quoted_univ_context
+  type quoted_definition_entry = t * t option * quoted_universes_decl
   type quoted_mind_entry = mutual_inductive_entry
   type quoted_mind_finiteness = recursivity_kind
   type quoted_entry = (constant_entry, quoted_mind_entry) sum option
@@ -41,7 +44,7 @@ struct
   type quoted_mutual_inductive_body = mutual_inductive_body
   type quoted_constant_body = constant_body
   type quoted_global_decl = global_decl
-  type quoted_global_declarations = global_declarations
+  type quoted_global_env = global_env
   type quoted_program = program
 
   let mkAnon = mkAnon
@@ -65,7 +68,6 @@ struct
   let mkCase = mkCase
   let quote_proj = quote_proj
   let mkProj = mkProj
-  let print_term (u: t) : Pp.t = Pp.str "printing not implemented"
 
   let unquote_def (x: 't BasicAst.def) : ('t, name, quoted_int) Quoted.adef =
     {

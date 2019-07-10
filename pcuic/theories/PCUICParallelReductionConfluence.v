@@ -23,8 +23,6 @@ Notation "'∃' x .. y , P" := (sigT (fun x => .. (sigT (fun y => P%type)) ..))
   (at level 200, x binder, y binder, right associativity,
   format "'[  ' '[  ' ∃  x  ..  y ']' ,  '/' P ']'") : type_scope.
 
-Existing Instance config.default_checker_flags.
-
 Require Import Morphisms.
 
 Instance ren_ext : Morphisms.Proper (`=1` ==> `=1`)%signature ren.
@@ -172,6 +170,44 @@ Proof.
   fold (fix_context mfix).
   rewrite (inst_context_alt s (fix_context mfix)).
    now rewrite /subst_decl mapi_length fix_context_length.
+Qed.
+
+
+Lemma mkApps_eq_decompose_app_rec {f args t l} :
+  mkApps f args = t ->
+  isApp f = false ->
+  match decompose_app_rec t l with
+  | (f', args') => f' = f /\ mkApps t l = mkApps f' args'
+  end.
+Proof.
+  revert f t l.
+  induction args using rev_ind; simpl.
+  - intros * -> **. rewrite atom_decompose_app; auto.
+  - intros. rewrite <- mkApps_nested in H.
+    specialize (IHargs f).
+    destruct (isApp t) eqn:Heq.
+    destruct t; try discriminate.
+    simpl in Heq. noconf H. simpl.
+    specialize (IHargs (mkApps f args) (x :: l) eq_refl H0).
+    destruct decompose_app_rec. intuition.
+    subst t.
+    simpl in Heq. discriminate.
+Qed.
+
+Lemma mkApps_eq_decompose' {f args t} :
+  mkApps f args = t ->
+  isApp f = false ->
+  match decompose_app t with
+  | (f', args') => f' = f /\ t = mkApps f' args'
+  end.
+Proof.
+  intros. apply (@mkApps_eq_decompose_app_rec f args t []); auto.
+Qed.
+
+Lemma fst_decompose_app_rec t l : fst (decompose_app_rec t l) = fst (decompose_app t).
+Proof.
+  induction t in l |- *; simpl; auto. rewrite IHt1.
+  unfold decompose_app. simpl. now rewrite (IHt1 [t2]).
 Qed.
 
 Section FoldFix.
@@ -341,7 +377,7 @@ Section Confluence.
   Qed.
 
   Lemma pred_snd_nth:
-    ∀ (Σ : global_context) (Γ Δ : context) (c : nat) (brs1 brs' : list (nat * term)),
+    ∀ (Σ : global_env) (Γ Δ : context) (c : nat) (brs1 brs' : list (nat * term)),
       All2
         (on_Trel (pred1 Σ Γ Δ) snd) brs1
         brs' ->
@@ -365,7 +401,7 @@ Section Confluence.
     - intros H. apply (IHl _ _ _ H).
   Qed.
 
-  Lemma pred1_mkApps_tConstruct (Σ : global_context) (Γ Δ : context)
+  Lemma pred1_mkApps_tConstruct (Σ : global_env) (Γ Δ : context)
         ind pars k (args : list term) c :
     pred1 Σ Γ Δ (mkApps (tConstruct ind pars k) args) c ->
     {args' : list term & (c = mkApps (tConstruct ind pars k) args') * (All2 (pred1 Σ Γ Δ) args args') }%type.
@@ -382,7 +418,7 @@ Section Confluence.
     eapply All2_app; auto.
   Qed.
 
-  Lemma pred1_mkApps_refl_tConstruct (Σ : global_context) Γ Δ i k u l l' :
+  Lemma pred1_mkApps_refl_tConstruct (Σ : global_env) Γ Δ i k u l l' :
     pred1 Σ Γ Δ (mkApps (tConstruct i k u) l) (mkApps (tConstruct i k u) l') ->
     All2 (pred1 Σ Γ Δ) l l'.
   Proof.
@@ -391,7 +427,7 @@ Section Confluence.
     destruct p. now eapply mkApps_eq_inj in e as [_ <-].
   Qed.
 
-  Lemma pred1_mkApps_tInd (Σ : global_context) (Γ Δ : context)
+  Lemma pred1_mkApps_tInd (Σ : global_env) (Γ Δ : context)
         ind u (args : list term) c :
     pred1 Σ Γ Δ (mkApps (tInd ind u) args) c ->
     {args' : list term & (c = mkApps (tInd ind u) args') * (All2 (pred1 Σ Γ Δ) args args') }%type.
@@ -408,7 +444,7 @@ Section Confluence.
     eapply All2_app; auto.
   Qed.
 
-  Lemma pred1_mkApps_tConst_axiom (Σ : global_context) (Γ Δ : context)
+  Lemma pred1_mkApps_tConst_axiom (Σ : global_env) (Γ Δ : context)
         cst u (args : list term) cb c :
     declared_constant Σ cst cb -> cst_body cb = None ->
     pred1 Σ Γ Δ (mkApps (tConst cst u) args) c ->
@@ -430,7 +466,7 @@ Section Confluence.
         eapply All2_app; auto.
   Qed.
 
-  Lemma pred1_mkApps_tFix_inv (Σ : global_context) (Γ Δ : context)
+  Lemma pred1_mkApps_tFix_inv (Σ : global_env) (Γ Δ : context)
         mfix0 idx (args0 : list term) c :
     pred1 Σ Γ Δ (mkApps (tFix mfix0 idx) args0) c ->
     ({ mfix1 & { args1 : list term &
@@ -477,7 +513,7 @@ Section Confluence.
     - subst t. solve_discr.
   Qed.
 
-  Lemma pred1_mkApps_tFix_refl_inv (Σ : global_context) (Γ Δ : context)
+  Lemma pred1_mkApps_tFix_refl_inv (Σ : global_env) (Γ Δ : context)
         mfix0 mfix1 idx0 idx1 (args0 args1 : list term) :
     pred1 Σ Γ Δ (mkApps (tFix mfix0 idx0) args0) (mkApps (tFix mfix1 idx1) args1) ->
     (All2_prop2_eq Γ Δ (Γ ,,, fix_context mfix0) (Δ ,,, fix_context mfix1)
@@ -510,7 +546,7 @@ Section Confluence.
     - subst. solve_discr.
   Qed.
 
-  Lemma pred1_mkApps_tCoFix_inv (Σ : global_context) (Γ Δ : context)
+  Lemma pred1_mkApps_tCoFix_inv (Σ : global_env) (Γ Δ : context)
         mfix0 idx (args0 : list term) c :
     pred1 Σ Γ Δ (mkApps (tCoFix mfix0 idx) args0) c ->
     ∃ mfix1 args1,
@@ -533,7 +569,7 @@ Section Confluence.
     - subst t; solve_discr.
   Qed.
 
-  Lemma pred1_mkApps_tCoFix_refl_inv (Σ : global_context) (Γ Δ : context)
+  Lemma pred1_mkApps_tCoFix_refl_inv (Σ : global_env) (Γ Δ : context)
         mfix0 mfix1 idx (args0 args1 : list term) :
     pred1 Σ Γ Δ (mkApps (tCoFix mfix0 idx) args0) (mkApps (tCoFix mfix1 idx) args1) ->
       All2_prop2_eq Γ Δ (Γ ,,, fix_context mfix0) (Δ ,,, fix_context mfix1) dtype dbody
@@ -556,56 +592,6 @@ Section Confluence.
     - repeat finish_discr.
       unfold All2_prop2_eq. intuition (simpl; auto).
     - subst t; solve_discr.
-  Qed.
-
-  Lemma mkApps_eq_decompose_app_rec {f args t l} :
-    mkApps f args = t ->
-    isApp f = false ->
-    match decompose_app_rec t l with
-    | (f', args') => f' = f /\ mkApps t l = mkApps f' args'
-    end.
-  Proof.
-    revert f t l.
-    induction args using rev_ind; simpl.
-    - intros * -> **. rewrite atom_decompose_app; auto.
-    - intros. rewrite <- mkApps_nested in H.
-      specialize (IHargs f).
-      destruct (isApp t) eqn:Heq.
-      destruct t; try discriminate.
-      simpl in Heq. noconf H. simpl.
-      specialize (IHargs (mkApps f args) (x :: l) eq_refl H0).
-      destruct decompose_app_rec. intuition.
-      subst t.
-      simpl in Heq. discriminate.
-  Qed.
-
-  Lemma mkApps_eq_decompose' {f args t} :
-    mkApps f args = t ->
-    isApp f = false ->
-    match decompose_app t with
-    | (f', args') => f' = f /\ t = mkApps f' args'
-    end.
-  Proof.
-    intros. apply (@mkApps_eq_decompose_app_rec f args t []); auto.
-  Qed.
-
-  Lemma fst_decompose_app_rec t l : fst (decompose_app_rec t l) = fst (decompose_app t).
-  Proof.
-    induction t in l |- *; simpl; auto. rewrite IHt1.
-    unfold decompose_app. simpl. now rewrite (IHt1 [t2]).
-  Qed.
-
-  Lemma skipn_nth_error {A} (l : list A) i :
-     match nth_error l i with
-     | Some a => skipn i l = a :: skipn (S i) l
-     | None => skipn i l = []
-     end.
-  Proof.
-    induction l in i |- *. destruct i. reflexivity. reflexivity.
-    destruct i. simpl. reflexivity.
-    simpl. specialize (IHl i). destruct nth_error.
-    rewrite [skipn _ _]IHl. reflexivity.
-    rewrite [skipn _ _]IHl. reflexivity.
   Qed.
 
   Hint Constructors pred1 : pcuic.
@@ -873,7 +859,7 @@ Section Confluence.
   Qed.
 
   Section TriangleFn.
-    Context (Σ : global_context).
+    Context (Σ : global_env).
 
     Definition map_fix (rho : context -> term -> term) Γ mfixctx (mfix : mfixpoint term) :=
       (map (map_def (rho Γ) (rho (Γ ,,, mfixctx))) mfix).
@@ -1177,12 +1163,6 @@ Section Confluence.
       destruct a as [? [?|] ?]; simpl; now rewrite IHΓ.
     Qed.
 
-    Lemma map_eq_inj {A B} (f g : A -> B) l: map f l = map g l ->
-                                            All (fun x => f x = g x) l.
-    Proof.
-      induction l. simpl. constructor. simpl. intros [=]. constructor; auto.
-    Qed.
-
     Lemma map_cofix_subst (f : context -> term -> term)
           (f' : context -> context -> term -> term) mfix Γ Γ' :
       (forall n, tCoFix (map (map_def (f Γ) (f' Γ Γ')) mfix) n = f Γ (tCoFix mfix n)) ->
@@ -1195,23 +1175,6 @@ Section Confluence.
     Qed.
 
     Derive NoConfusion for def.
-
-    Lemma mapi_ext_size {A B} (f g : nat -> A -> B) l k :
-      (forall k' x, k' < k + #|l| -> f k' x = g k' x) ->
-      mapi_rec f l k = mapi_rec g l k.
-    Proof.
-      intros Hl. generalize (le_refl k). generalize k at 1 3 4.
-      induction l in k, Hl |- *. simpl. auto.
-      intros. simpl in *. erewrite Hl; try lia.
-      f_equal. eapply (IHl (S k)); try lia. intros. apply Hl. lia.
-    Qed.
-
-    Lemma map_ext_size {A B} (f g : nat -> A -> B) l :
-      (forall k x, k < #|l| -> f k x = g k x) ->
-      mapi f l = mapi g l.
-    Proof.
-      intros Hl. unfold mapi. apply mapi_ext_size. simpl. auto.
-    Qed.
 
     Lemma fold_fix_context_rev_mapi {Γ l m} :
       fold_fix_context rho Γ l m =
@@ -1250,26 +1213,6 @@ Section Confluence.
       induction m in l |- *; simpl; auto. rewrite IHm. simpl. auto with arith.
     Qed.
 
-
-    Lemma All_rev (A : Type) (P : A → Type) (l : list A) : All P l → All P (List.rev l).
-    Proof.
-      induction l using rev_ind. constructor. rewrite rev_app_distr.
-      simpl. intros X; apply All_app in X as [? ?]. depelim a0; intuition auto.
-    Qed.
-
-    Lemma skipn_S {A} a (l : list A) n : skipn (S n) (a :: l) = skipn n l.
-    Proof. reflexivity. Qed.
-
-    Lemma Alli_nth_error {A} (P : nat -> A -> Type) k ctx :
-      (forall i x, nth_error ctx i = Some x -> P (k + i) x) ->
-      Alli P k ctx.
-    Proof.
-      intros. induction ctx in k, X |- *. constructor.
-      constructor. specialize (X 0 a eq_refl). now rewrite Nat.add_0_r in X.
-      apply IHctx. intros. specialize (X (S i) x H).
-      simpl. now replace (S (k + i)) with (k + S i) by lia.
-    Qed.
-
     Lemma All_local_env_Alli P ctx :
       All_local_env (on_local_decl P) ctx ->
       Alli (fun n decl =>
@@ -1281,17 +1224,6 @@ Section Confluence.
       eapply All_local_env_lookup in H; eauto.  red in H.
       destruct x as [? [?|] ?]. simpl in *. intuition.
       now simpl in H.
-    Qed.
-
-    Lemma Alli_mapi {A B} {P : nat -> B -> Type} (f : nat -> A -> B) k l :
-      Alli (fun n a => P n (f n a)) k l <~>
-      Alli P k (mapi_rec f l k).
-    Proof.
-      split.
-      { induction 1. simpl. constructor.
-        simpl. constructor; eauto. }
-      { induction l in k |- *. simpl. constructor.
-        simpl. intros. depelim X. constructor; eauto. }
     Qed.
 
     Lemma All_local_env_fix_Alli P m :
@@ -1308,36 +1240,7 @@ Section Confluence.
       now fold (fix_context m) in X0.
     Qed.
 
-    Lemma Alli_shift {A} {P : nat -> A -> Type} k l :
-      Alli (fun x => P (S x)) k l ->
-      Alli P (S k) l.
-    Proof.
-      induction 1; simpl; constructor; auto.
-    Qed.
-
-    Lemma Alli_rev {A} {P : nat -> A -> Type} k l :
-      Alli P k l ->
-      Alli (fun k' => P (Nat.pred #|l| - k' + k)) 0 (List.rev l).
-    Proof.
-      revert k.
-      induction l using rev_ind; simpl; intros; try constructor.
-      eapply Alli_app in X. intuition.
-      rewrite rev_app_distr. rewrite app_length.
-      simpl. constructor.
-      replace (Nat.pred (#|l| + 1) - 0) with #|l| by lia.
-      depelim b. eauto. specialize (IHl _ a).
-      eapply Alli_shift. eapply Alli_impl. eauto.
-      simpl; intros.
-      now replace (Nat.pred (#|l| + 1) - S n) with (Nat.pred #|l| - n) by lia.
-    Qed.
-
-    Lemma Alli_All_mix {A} {P : nat -> A -> Type} (Q : A -> Type) k l :
-      Alli P k l -> All Q l -> Alli (fun k x => (P k x) * Q x)%type k l.
-    Proof.
-      induction 1; constructor; try depelim X0; intuition auto.
-    Qed.
-
-    Context (wfΣ : wf Σ).
+    Context `{cf : checker_flags} (wfΣ : wf Σ).
 
     Lemma fold_ctx_over_eq Γ Γ' : rho_ctx_over Γ Γ' = fold_ctx_over rho Γ Γ'.
     Proof.
@@ -2079,13 +1982,13 @@ Section Confluence.
     - rewrite !pred_atom_inst; auto. eapply pred1_refl_gen; auto with pcuic.
   Qed.
 
-  Definition rho_ctxmap (Γ Δ : context) (s : nat -> term) :=
+  Definition rho_ctxmap φ (Γ Δ : context) (s : nat -> term) :=
     forall x d, nth_error Γ x = Some d ->
                 match decl_body d return Type with
                 | Some b => ∑ i, (s x = tRel i) * (* The image is a variable i in Δ *)
                                  (option_map decl_body (nth_error Δ i) = Some (Some b.[↑^(S x) ∘ s]))
                 (* whose body is b substituted with the previous variables *)
-                | None => Σ ;;; Δ |- s x : d.(decl_type).[↑^(S x) ∘ s]
+                | None => (Σ, φ) ;;; Δ |- s x : d.(decl_type).[↑^(S x) ∘ s]
                 end.
 
   Definition renaming Γ Δ r :=
@@ -3996,7 +3899,7 @@ Section Confluence.
   Qed.
 
 
-  Lemma pred1_mkApps_tLambda_inv (* (Σ : global_context) *) (Γ Δ : context) na ty b args0 c :
+  Lemma pred1_mkApps_tLambda_inv (* (Σ : global_env) *) (Γ Δ : context) na ty b args0 c :
     pred1 Σ Γ Δ (mkApps (tLambda na ty b) args0) c ->
     ({ ty' & { b' & { args1 &
                (c = mkApps (tLambda na ty' b') args1) *
@@ -4545,7 +4448,7 @@ Section Confluence.
 
   (* The confluence theorem in terms of the triangle operator. *)
 
-  Corollary confluence : forall Σ Γ Δ Δ' t u v, wf Σ ->
+  Corollary confluence {cf : checker_flags} : forall Σ Γ Δ Δ' t u v, wf Σ ->
     pred1 Σ Γ Δ t u ->
     pred1 Σ Γ Δ' t v ->
     pred1 Σ Δ (rho_ctx Σ Γ) u (rho Σ (rho_ctx Σ Γ) t) *

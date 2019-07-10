@@ -20,130 +20,186 @@ From Equations Require Import Equations.
 Require Import Equations.Prop.DepElim.
 
 Set Equations With UIP.
+Set Printing Universes.
 
-Lemma invert_red_sort Σ Γ u v :
-  red Σ Γ (tSort u) v -> v = tSort u.
-Proof.
-  intros H; apply red_alt in H.
-  depind H. depind r. solve_discr.
-  reflexivity.
-  eapply IHclos_refl_trans2. f_equal. auto.
-Qed.
+Section Principality.
+  Context {cf : checker_flags}.
+  Context (Σ : global_env_ext).
+  Context (wfΣ : wf Σ).
 
-Lemma invert_cumul_sort_r Σ Γ C u :
-  Σ ;;; Γ |- C <= tSort u ->
-  ∑ u', red Σ Γ C (tSort u') * leq_universe (snd Σ) u' u.
-Proof.
-  intros Hcum.
-  eapply cumul_alt in Hcum as [v [v' [[redv redv'] leqvv']]].
-  eapply invert_red_sort in redv' as ->.
-  depelim leqvv'. exists s. intuition eauto.
-Qed.
+  Definition Is_conv_to_Arity Σ Γ T := exists T', ∥red Σ Γ T T'∥ /\ isArity T'.
+  
 
-Lemma invert_cumul_sort_l Σ Γ C u :
-  Σ ;;; Γ |- tSort u <= C ->
-  ∑ u', red Σ Γ C (tSort u') * leq_universe (snd Σ) u u'.
-Proof.
-  intros Hcum.
-  eapply cumul_alt in Hcum as [v [v' [[redv redv'] leqvv']]].
-  eapply invert_red_sort in redv as ->.
-  depelim leqvv'. exists s'. intuition eauto.
-Qed.
+  
+  Lemma invert_red_sort Γ u v :
+    red Σ Γ (tSort u) v -> v = tSort u.
+  Proof.
+    intros H; apply red_alt in H.
+    generalize_eqs H.
+    induction H; simplify *. depind r.
+    solve_discr.
+    reflexivity.
+    eapply IHclos_refl_trans2. f_equal. auto.
+  Qed.
 
-Lemma invert_red_prod Σ Γ na A B v : wf Σ ->
-  red Σ Γ (tProd na A B) v ->
-  ∑ A' B', (v = tProd na A' B') *
-           (red Σ Γ A A') *
-           (red Σ (vass na A :: Γ) B B').
-Proof.
-  intros wfΣ H. apply red_alt in H.
-  depind H.
-  depelim r. solve_discr.
-  do 2 eexists. repeat split; eauto with pcuic.
-  do 2 eexists. repeat split; eauto with pcuic.
-  do 2 eexists. repeat split; eauto with pcuic.
-  destruct IHclos_refl_trans1 as (? & ? & (-> & ?) & ?). auto.
-  specialize (IHclos_refl_trans2 _ _ _ _ wfΣ eq_refl).
-  destruct IHclos_refl_trans2 as (? & ? & (-> & ?) & ?).
-  do 2 eexists. repeat split; eauto with pcuic.
-  now transitivity x.
-  transitivity x0; auto.
-  eapply red_red_ctx. eauto. eauto.
-  constructor. admit. red. auto.
-Admitted.
+  Lemma invert_cumul_sort_r Γ C u :
+    Σ ;;; Γ |- C <= tSort u ->
+               ∑ u', red Σ Γ C (tSort u') * leq_universe (global_ext_constraints Σ) u' u.
+  Proof.
+    intros Hcum.
+    eapply cumul_alt in Hcum as [v [v' [[redv redv'] leqvv']]].
+    eapply invert_red_sort in redv' as ->.
+    depelim leqvv'. exists s. intuition eauto.
+  Qed.
 
-Derive Signature for eq_term_upto_univ.
+  Lemma invert_cumul_sort_l Γ C u :
+    Σ ;;; Γ |- tSort u <= C ->
+               ∑ u', red Σ Γ C (tSort u') * leq_universe (global_ext_constraints Σ) u u'.
+  Proof.
+    intros Hcum.
+    eapply cumul_alt in Hcum as [v [v' [[redv redv'] leqvv']]].
+    eapply invert_red_sort in redv as ->.
+    depelim leqvv'. exists s'. intuition eauto.
+  Qed.
 
-Lemma invert_cumul_prod_r Σ Γ C na A B : wf Σ ->
-  Σ ;;; Γ |- C <= tProd na A B ->
-  ∑ na' A' B', red Σ Γ C (tProd na' A' B') *
-               (Σ ;;; Γ |- A = A') *
-               (Σ ;;; (Γ ,, vass na A) |- B' <= B).
-Proof.
-  intros wfΣ Hprod.
-  eapply cumul_alt in Hprod as [v [v' [[redv redv'] leqvv']]].
-  eapply invert_red_prod in redv' as (A' & B' & ((-> & Ha') & ?)) => //.
-  depelim leqvv'.
-  do 3 eexists; intuition eauto.
-  eapply conv_trans.
-  eapply red_conv. eauto.
-  eapply conv_sym. eapply conv_conv_alt.
-  constructor. red. apply leqvv'1.
-  eapply cumul_trans with B'.
-  constructor. eapply leqvv'2.
-  now eapply red_cumul_inv.
-Qed.
+  Lemma invert_red_prod Γ na A B v :
+    red Σ Γ (tProd na A B) v ->
+    ∑ A' B', (v = tProd na A' B') *
+             (red Σ Γ A A') *
+             (red Σ (vass na A :: Γ) B B').
+  Proof.
+    intros H. apply red_alt in H.
+    depind H.
+    depelim r. solve_discr.
+    do 2 eexists. repeat split; eauto with pcuic.
+    do 2 eexists. repeat split; eauto with pcuic.
+    do 2 eexists. repeat split; eauto with pcuic.
+    destruct IHclos_refl_trans1 as (? & ? & (-> & ?) & ?). auto.
+    specialize (IHclos_refl_trans2 _ _ _ _ eq_refl).
+    destruct IHclos_refl_trans2 as (? & ? & (-> & ?) & ?).
+    do 2 eexists. repeat split; eauto with pcuic.
+    now transitivity x.
+    transitivity x0; auto.
+    eapply red_red_ctx. eauto. eauto.
+    constructor. admit. red. auto.
+  Admitted.
 
-Lemma invert_cumul_prod_l Σ Γ C na A B : wf Σ ->
-  Σ ;;; Γ |- tProd na A B <= C ->
-  ∑ na' A' B', red Σ Γ C (tProd na' A' B') *
-               (Σ ;;; Γ |- A = A') *
-               (Σ ;;; (Γ ,, vass na A) |- B <= B').
-Proof.
-  intros wfΣ Hprod.
-  eapply cumul_alt in Hprod as [v [v' [[redv redv'] leqvv']]].
-  eapply invert_red_prod in redv as (A' & B' & ((-> & Ha') & ?)) => //.
-  depelim leqvv'.
-  do 3 eexists; intuition eauto.
-  eapply conv_trans.
-  eapply red_conv. eauto.
-  eapply conv_conv_alt. constructor. apply leqvv'1.
-  eapply cumul_trans with B'; eauto.
-  now eapply red_cumul.
-  now constructor; apply leqvv'2.
-Qed.
+  Derive Signature for eq_term_upto_univ.
 
-Lemma invert_red_letin Σ Γ C na d ty b : wf Σ ->
-  red Σ Γ (tLetIn na d ty b) C ->
-  (∑ na' d' ty' b',
-   (red Σ Γ C (tLetIn na' d' ty' b') *
-    (Σ ;;; Γ |- d = d') *
-    (Σ ;;; Γ |- ty = ty') *
-    (Σ ;;; (Γ ,, vdef na d ty) |- b <= b'))) +
-  (red Σ Γ (subst10 d b) C)%type.
-Proof.
-  intros wfΣ Hlet.
-  (* eapply cumul_alt in Hlet. *)
-  (* destruct Hlet as [v [v' [[redv redv'] leqvv']]]. *)
-  (* eapply cumul_alt. *)
-  (* exists v, v'. repeat split; auto. *)
-Admitted.
+  Lemma invert_cumul_prod_r Γ C na A B :
+    Σ ;;; Γ |- C <= tProd na A B ->
+               ∑ na' A' B', red Σ.1 Γ C (tProd na' A' B') *
+                            (Σ ;;; Γ |- A = A') *
+                            (Σ ;;; (Γ ,, vass na A) |- B' <= B).
+  Proof.
+    intros Hprod.
+    eapply cumul_alt in Hprod as [v [v' [[redv redv'] leqvv']]].
+    eapply invert_red_prod in redv' as (A' & B' & ((-> & Ha') & ?)) => //.
+    depelim leqvv'.
+    do 3 eexists; intuition eauto.
+    eapply conv_trans.
+    eapply red_conv. eauto.
+    eapply conv_sym. eapply conv_conv_alt.
+    constructor. red. apply leqvv'1.
+    eapply cumul_trans with B'.
+    constructor. eapply leqvv'2.
+    now eapply red_cumul_inv.
+  Qed.
+  
+  Lemma invert_cumul_arity_r (Γ : context) (C : term) T :
+    wf_local Σ Γ ->
+    isArity T ->
+    Σ;;; Γ |- C <= T -> Is_conv_to_Arity Σ Γ C.
+  Proof.
+    revert Γ C; induction T; cbn in *; intros Γ C wfΓ ? ?; try tauto.
+    - eapply invert_cumul_sort_r in X as (? & ? & ?).
+      exists (tSort x). split; sq; eauto.
+    - eapply invert_cumul_prod_r in X as (? & ? & ? & [] & ?); eauto.
+      (* eapply IHT2 in c0 as (? & ? & ?); eauto. sq. *)
+  
+      (* exists (tProd x x0 x2). split; sq; cbn; eauto. *)
+      (* etransitivity. eauto. *)
+      (* eapply PCUICReduction.red_prod_r. *)
+  
+    (*   eapply context_conversion_red. eauto. 2:eauto. *)
+    (*   + econstructor. clear; induction Γ. econstructor. destruct a, decl_body. econstructor. eauto. econstructor. econstructor. eauto. econstructor. eauto. econstructor. *)
+  
+    (*   econstructor. 2:eauto. 2:econstructor; eauto. 2:cbn. admit. admit. *)
+    (* -   admit. *)
+  Admitted.                       (* invert_cumul_arity_r *)
+  
+  Lemma invert_cumul_prod_l Γ C na A B :
+    Σ ;;; Γ |- tProd na A B <= C ->
+               ∑ na' A' B', red Σ.1 Γ C (tProd na' A' B') *
+                            (Σ ;;; Γ |- A = A') *
+                            (Σ ;;; (Γ ,, vass na A) |- B <= B').
+  Proof.
+    intros Hprod.
+    eapply cumul_alt in Hprod as [v [v' [[redv redv'] leqvv']]].
+    eapply invert_red_prod in redv as (A' & B' & ((-> & Ha') & ?)) => //.
+    depelim leqvv'.
+    do 3 eexists; intuition eauto.
+    eapply conv_trans.
+    eapply red_conv. eauto.
+    eapply conv_conv_alt. constructor. apply leqvv'1.
+    eapply cumul_trans with B'; eauto.
+    now eapply red_cumul.
+    now constructor; apply leqvv'2.
+  Qed.
 
-Lemma invert_cumul_letin_l Σ Γ C na d ty b : wf Σ ->
-  Σ ;;; Γ |- tLetIn na d ty b <= C ->
-  (* (∑ na' d' ty' b', *)
-  (*  (red Σ Γ C (tLetIn na' d' ty' b') * *)
-  (*   (Σ ;;; Γ |- d = d') * *)
-  (*   (Σ ;;; Γ |- ty = ty') * *)
-  (*   (Σ ;;; (Γ ,, vdef na d ty) |- b <= b'))) + *)
-  (Σ ;;; Γ |- subst10 d b <= C).
-Proof.
-  intros wfΣ Hlet.
-  eapply cumul_alt in Hlet.
-  destruct Hlet as [v [v' [[redv redv'] leqvv']]].
-  eapply cumul_alt.
-  exists v, v'. repeat split; auto.
-Admitted.
+  Lemma invert_cumul_arity_l (Γ : context) (C : term) T :
+    wf_local Σ Γ ->
+    isArity C -> 
+    Σ;;; Γ |- C <= T -> Is_conv_to_Arity Σ Γ T.
+  Proof.
+    revert Γ T; induction C; cbn in *; intros Γ T wfΓ ? ?; try tauto.
+    - eapply invert_cumul_sort_l in X as (? & ? & ?).
+      exists (tSort x). split; sq; eauto.
+    - eapply invert_cumul_prod_l in X as (? & ? & ? & [] & ?); eauto.
+      eapply IHC2 in c0 as (? & ? & ?); eauto. sq.
+      
+      exists (tProd x x0 x2). split; sq; cbn; eauto.
+      etransitivity. eauto.
+      eapply PCUICReduction.red_prod_r.
+      
+      (*   eapply context_conversion_red. eauto. 2:eauto. *)
+      (*   econstructor. eapply conv_context_refl; eauto.  *)
+      
+      (*   econstructor. 2:eauto. 2:econstructor; eauto. 2:cbn. admit. admit. *)
+      (* - eapply invert_cumul_letin_l in X; eauto. *)
+  Admitted.                       (* invert_cumul_arity_l *)
+  
+  Lemma invert_red_letin Γ C na d ty b :
+    red Σ.1 Γ (tLetIn na d ty b) C ->
+    (∑ na' d' ty' b',
+     (red Σ.1 Γ C (tLetIn na' d' ty' b') *
+      (Σ ;;; Γ |- d = d') *
+      (Σ ;;; Γ |- ty = ty') *
+      (Σ ;;; (Γ ,, vdef na d ty) |- b <= b'))) +
+    (red Σ.1 Γ (subst10 d b) C)%type.
+  Proof.
+    intros wfHlet.
+    (* eapply cumul_alt in Hlet. *)
+    (* destruct Hlet as [v [v' [[redv redv'] leqvv']]]. *)
+    (* eapply cumul_alt. *)
+    (* exists v, v'. repeat split; auto. *)
+  Admitted.
+
+  Lemma invert_cumul_letin_l Γ C na d ty b :
+    Σ ;;; Γ |- tLetIn na d ty b <= C ->
+               (* (∑ na' d' ty' b', *)
+               (*  (red Σ Γ C (tLetIn na' d' ty' b') * *)
+               (*   (Σ ;;; Γ |- d = d') * *)
+               (*   (Σ ;;; Γ |- ty = ty') * *)
+                                                          (*   (Σ ;;; (Γ ,, vdef na d ty) |- b <= b'))) + *)
+               (Σ ;;; Γ |- subst10 d b <= C).
+  Proof.
+    intros Hlet.
+    eapply cumul_alt in Hlet.
+    destruct Hlet as [v [v' [[redv redv'] leqvv']]].
+    eapply cumul_alt.
+    exists v, v'. repeat split; auto.
+  Admitted.
   (* depelim redv. *)
   (* - depelim leqvv'. *)
   (*   exists na', ty', t', u'. *)
@@ -162,18 +218,14 @@ Admitted.
 
   (* eapply red_ *)
 
-Section Principality.
-  Context (Σ : global_context).
-  Context (wfΣ : wf Σ).
-
   Ltac pih :=
     lazymatch goal with
     | ih : forall _ _ _, _ -> _ ;;; _ |- ?u : _ -> _,
-      h1 : _ ;;; _ |- ?u : _,
-      h2 : _ ;;; _ |- ?u : _
-      |- _ =>
-        specialize (ih _ _ _ h1 h2)
-    end.
+    h1 : _ ;;; _ |- ?u : _,
+    h2 : _ ;;; _ |- ?u : _
+    |- _ =>
+  specialize (ih _ _ _ h1 h2)
+  end.
 
 
   Ltac insum :=
@@ -205,16 +257,16 @@ Section Principality.
 
   Lemma cumul_sort_confluence {Γ A u v} :
     Σ ;;; Γ |- A <= tSort u ->
-    Σ ;;; Γ |- A <= tSort v ->
-    ∑ v', (Σ ;;; Γ |- A = tSort v') *
-          (leq_universe (snd Σ) v' u *
-           leq_universe (snd Σ) v' v).
+               Σ ;;; Γ |- A <= tSort v ->
+                          ∑ v', (Σ ;;; Γ |- A = tSort v') *
+                                (leq_universe (global_ext_constraints Σ) v' u *
+                                 leq_universe (global_ext_constraints Σ) v' v).
   Proof.
     move=> H H'.
     eapply invert_cumul_sort_r in H as [u'u ?].
     eapply invert_cumul_sort_r in H' as [vu ?].
     destruct p, p0.
-    destruct (red_confluence _ wfΣ r r0).
+    destruct (red_confluence wfΣ r r0).
     destruct p.
     eapply invert_red_sort in r1.
     eapply invert_red_sort in r2. subst. noconf r2.
@@ -224,9 +276,9 @@ Section Principality.
   Qed.
 
   Lemma leq_universe_product_mon u u' v v' :
-    leq_universe (snd Σ) u u' ->
-    leq_universe (snd Σ) v v' ->
-    leq_universe (snd Σ) (Universe.sort_of_product u v) (Universe.sort_of_product u' v').
+    leq_universe (global_ext_constraints Σ) u u' ->
+    leq_universe (global_ext_constraints Σ) v v' ->
+    leq_universe (global_ext_constraints Σ) (Universe.sort_of_product u v) (Universe.sort_of_product u' v').
   Proof.
   Admitted.
 
@@ -271,7 +323,7 @@ Section Principality.
       rewrite destArity_it_mkProd_or_LetIn. simpl.
       eexists _, s' => /= //. split; eauto.
       unfold snoc. (* Need a context conversion... *)
-      admit. auto.
+      admit.
 
     - clear IHx1 IHx2.
       move=> redt.
@@ -280,7 +332,6 @@ Section Principality.
       repeat outtimes.
       admit.
       admit.
-      auto.
     - intros. now eapply (X _ []).
   Admitted.
 
@@ -308,9 +359,9 @@ Section Principality.
 
   Lemma invert_cumul_ind_r Γ t ind u args :
     Σ ;;; Γ |- t <= mkApps (tInd ind u) args ->
-    ∑ u' args', red Σ Γ t (mkApps (tInd ind u') args') *
-                All2 (leq_universe (snd Σ)) (map Universe.make u') (map Universe.make u) *
-                All2 (fun a a' => Σ ;;; Γ |- a = a') args args'.
+               ∑ u' args', red Σ Γ t (mkApps (tInd ind u') args') *
+                           All2 (leq_universe (global_ext_constraints Σ)) (map Universe.make u') (map Universe.make u) *
+                           All2 (fun a a' => Σ ;;; Γ |- a = a') args args'.
   Proof.
     intros H. eapply cumul_alt in H.
     destruct H as [v [v' [[redv redv'] leq]]].
@@ -330,18 +381,10 @@ Section Principality.
   Instance conv_transitive Σ Γ : Transitive (fun x y => Σ ;;; Γ |- x = y).
   Proof. intros x y z; eapply conv_trans. Qed.
 
-
-  Lemma principal_typing :
-    forall {Γ u A B},
-      Σ ;;; Γ |- u : A ->
-      Σ ;;; Γ |- u : B ->
-      ∑ C,
-       (Σ ;;; Γ |- C <= A) ×
-       (Σ ;;; Γ |- C <= B) ×
-       (* isWfArity_or_Type Σ Γ C * *)
-       (Σ ;;; Γ |- u : C).
+  Theorem principal_typing {Γ u A B} : Σ ;;; Γ |- u : A -> Σ ;;; Γ |- u : B ->
+    ∑ C, Σ ;;; Γ |- C <= A  ×  Σ ;;; Γ |- C <= B × Σ ;;; Γ |- u : C.
   Proof.
-    intros Γ u A B hA hB.
+    intros hA hB.
     induction u in Γ, A, B, hA, hB |- * using term_forall_list_rec.
     - apply inversion_Rel in hA as iA.
       destruct iA as [decl [? [e ?]]].
@@ -380,10 +423,10 @@ Section Principality.
         apply leq_universe_product_mon; auto.
       (* * left; eexists _, _; intuition eauto. now eapply typing_wf_local in t4. *)
       * eapply type_Prod.
-        eapply type_Conv; eauto.
+        eapply type_Cumul; eauto.
         left; eapply isWfArity_sort. now eapply typing_wf_local in t1.
         eapply dom'dom.
-        eapply type_Conv; eauto.
+        eapply type_Cumul; eauto.
         left; eapply isWfArity_sort. now eapply typing_wf_local in t3.
         eapply codom'dom.
 
@@ -458,7 +501,7 @@ Section Principality.
       (*      rewrite destArity_it_mkProd_or_LetIn. simpl. *)
       (*      eexists _, _; intuition eauto. *)
       (*      now rewrite app_context_assoc. *)
-      (*   ** right. exists s. eapply type_Conv. econstructor; eauto. *)
+      (*   ** right. exists s. eapply type_Cumul. econstructor; eauto. *)
       (*      left. red. exists [], s. intuition auto. now eapply typing_wf_local in t2. *)
       (*      eapply red_cumul. eapply red1_red. constructor. *)
       * eapply type_LetIn; eauto.
@@ -471,7 +514,7 @@ Section Principality.
       repeat outtimes.
       apply invert_cumul_prod_r in c1 as [? [A' [B' [[redA u1eq] ?]]]] => //.
       apply invert_cumul_prod_r in c2 as [? [A'' [B'' [[redA' u1eq'] ?]]]] => //.
-      destruct (red_confluence _ wfΣ redA redA') as [nfprod [redl redr]].
+      destruct (red_confluence wfΣ redA redA') as [nfprod [redl redr]].
       eapply invert_red_prod in redl as [? [? [[? ?] ?]]] => //. subst.
       eapply invert_red_prod in redr as [? [? [[? ?] ?]]] => //. noconf e.
       assert(Σ ;;; Γ |- A' = A'').
@@ -516,7 +559,7 @@ Section Principality.
       (*   ** admit. *)
       * eapply type_App.
         2:eapply tyarg.
-        eapply type_Conv. eapply t0.
+        eapply type_Cumul. eapply t0.
         instantiate (1 := x1).
         (* Needs to show wf arity preservation? needing validity? or just inversion on tydom ? *)
         admit.
@@ -573,7 +616,7 @@ Section Principality.
       eapply invert_cumul_ind_r in c3 as [u' [x0' [[redr redu] ?]]].
       eapply invert_cumul_ind_r in c4 as [u'' [x9' [[redr' redu'] ?]]].
       assert (All2 (fun a a' => Σ ;;; Γ |- a = a') x0 x9).
-      { destruct (red_confluence _ wfΣ redr redr').
+      { destruct (red_confluence wfΣ redr redr').
         destruct p.
         eapply red_mkApps_tInd in r as [args' [? ?]]; auto.
         eapply red_mkApps_tInd in r0 as [args'' [? ?]]; auto.
@@ -604,7 +647,7 @@ Section Principality.
           eapply (type_Case _ _ _ x8). eauto. repeat split; eauto. auto.
           eapply t0. rewrite /types_of_case.
           rewrite Heq eqar eqx2 eqbrs. reflexivity.
-          admit. admit. eapply type_Conv. eauto.
+          admit. admit. eapply type_Cumul. eauto.
           all:admit. }
 
       admit.
@@ -628,7 +671,7 @@ Section Principality.
       admit.
 
       eapply refine_type. eapply type_Proj. repeat split; eauto.
-      simpl. eapply type_Conv. eapply t0.
+      simpl. eapply type_Cumul. eapply t0.
       right. 2:eapply red_cumul; eauto.
       admit. rewrite H3. simpl. simpl in H0.
       rewrite -H0. admit.
@@ -649,3 +692,4 @@ Section Principality.
   Admitted.
 
 End Principality.
+

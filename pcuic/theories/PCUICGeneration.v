@@ -11,11 +11,12 @@ From MetaCoq.Template Require Import LibHypsNaming.
 Local Open Scope string_scope.
 Set Asymmetric Patterns.
 
-Existing Instance config.default_checker_flags.
+Section Generation.
+  Context `{cf : config.checker_flags}.
 
 Definition isWfArity_or_Type Σ Γ T : Type := (isWfArity typing Σ Γ T + isType Σ Γ T).
 
-Inductive typing_spine `{checker_flags} (Σ : global_context) (Γ : context) : term -> list term -> term -> Type :=
+Inductive typing_spine (Σ : global_env_ext) (Γ : context) : term -> list term -> term -> Type :=
 | type_spine_nil ty ty' :
     isWfArity_or_Type Σ Γ ty' ->
     Σ ;;; Γ |- ty <= ty' ->
@@ -35,30 +36,32 @@ Lemma type_mkApps Σ Γ t u T t_ty :
 Proof.
   intros Ht Hsp.
   revert t Ht. induction Hsp; simpl; auto.
-  intros t Ht. eapply type_Conv; eauto.
+  intros t Ht. eapply type_Cumul; eauto.
 
-  intros.
-  specialize (IHHsp (tApp t0 hd)). apply IHHsp.
-  eapply type_App.
-  eapply type_Conv; eauto. eauto.
-Qed.
+    intros.
+    specialize (IHHsp (tApp t0 hd)). apply IHHsp.
+    eapply type_App.
+    eapply type_Cumul; eauto. eauto.
+  Qed.
 
-Lemma type_it_mkLambda_or_LetIn :
-  forall Σ Γ Δ t A,
-    Σ ;;; Γ ,,, Δ |- t : A ->
-    Σ ;;; Γ |- it_mkLambda_or_LetIn Δ t : it_mkProd_or_LetIn Δ A.
-Proof.
-  intros Σ Γ Δ t A h.
-  induction Δ as [| [na [b|] B] Δ ih ] in t, A, h |- *.
-  - assumption.
-  - simpl. cbn. eapply ih.
-    simpl in h. pose proof (typing_wf_local h) as hc.
-    dependent induction hc ; inversion t1. subst.
-    cbn in t1, t2. destruct t1.
-    econstructor ; eassumption.
-  - simpl. cbn. eapply ih.
-    pose proof (typing_wf_local h) as hc. cbn in hc.
-    dependent induction hc ; inversion t1. subst.
-    cbn in t1. destruct t1.
-    econstructor ; eassumption.
-Qed.
+  Lemma type_it_mkLambda_or_LetIn :
+    forall Σ Γ Δ t A,
+      Σ ;;; Γ ,,, Δ |- t : A ->
+                           Σ ;;; Γ |- it_mkLambda_or_LetIn Δ t : it_mkProd_or_LetIn Δ A.
+  Proof.
+    intros Σ Γ Δ t A h.
+    induction Δ as [| [na [b|] B] Δ ih ] in t, A, h |- *.
+    - assumption.
+    - simpl. cbn. eapply ih.
+      simpl in h. pose proof (typing_wf_local h) as hc.
+      dependent induction hc ; inversion t1. subst.
+      cbn in t1, t2. destruct t1.
+      econstructor ; eassumption.
+    - simpl. cbn. eapply ih.
+      pose proof (typing_wf_local h) as hc. cbn in hc.
+      dependent induction hc ; inversion t1. subst.
+      cbn in t1. destruct t1.
+      econstructor ; eassumption.
+  Qed.
+
+End Generation.

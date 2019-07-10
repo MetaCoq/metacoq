@@ -399,24 +399,56 @@ Section Lemmata.
     - intros ind u npar p c brs args mdecl idecl isdecl X X0 H pars pty X1
              indctx pctx ps btys htc H1 H2 ihp hc ihc ihbrs v e.
       dependent destruction e.
+      eapply types_of_case_eq_term in htc as htc' ; eauto.
+      destruct htc' as [btys' [ebtys' he]].
       econstructor.
       + econstructor. all: try eassumption.
         * eapply ihp. assumption.
-        * subst pars.
-          (* TODO Fix up the above lemmata first *)
-          admit.
         * eapply ihc. assumption.
-        * admit.
-      (* + eapply validity_term ; eauto. *)
-      (*   econstructor ; eauto. *)
-      (* + constructor. *)
-      (*   eapply eq_term_leq_term. *)
-      (*   apply eq_term_sym. *)
-      (*   constructor. *)
-      (*   all: try (eapply eq_term_upto_univ_eq_eq_term ; assumption). *)
-      (*   all: eapply eq_term_refl. *)
-      + admit.
-      + admit.
+        * assert (All2 (fun x y => fst x = fst y × Σ';;; Γ |- snd x : snd y) brs' btys)
+            as hty.
+          { clear - ihbrs a.
+            induction ihbrs in brs', a |- *.
+            - dependent destruction a. constructor.
+            - dependent destruction a.
+              constructor. all: auto.
+              destruct p, r as [[? ?] ?]. split ; eauto.
+              transitivity (fst x) ; eauto.
+          }
+          clear - he hty ihbrs.
+          induction hty in brs, ihbrs, btys', he |- *.
+          -- dependent destruction he. constructor.
+          -- dependent destruction he.
+             dependent destruction ihbrs.
+             destruct r.
+             destruct p.
+             destruct p0 as [[? ?] ?].
+             constructor ; eauto. split.
+             ++ solve [ etransitivity ; eauto ].
+             ++ econstructor.
+                ** eassumption.
+                ** (* We're missing the validity proof...
+                      Is it hidden in the types_of_case_eq_term proof?
+                      Are we missing an ingredient or should type_Case ask
+                      that the branches types are sorted?
+                    *)
+                  admit.
+                ** constructor.
+                   eapply eq_term_leq_term.
+                   eapply eq_term_upto_univ_eq_eq_term. assumption.
+      + eapply validity_term ; eauto.
+        instantiate (1 := tCase (ind, npar) p c brs).
+        econstructor ; eauto.
+        apply All2_prod_inv in ihbrs as [? ?]. assumption.
+      + constructor.
+        eapply eq_term_leq_term.
+        apply eq_term_sym.
+        eapply eq_term_mkApps.
+        all: try (eapply eq_term_upto_univ_eq_eq_term ; assumption).
+        eapply All2_app.
+        * eapply All2_same. intro. eapply eq_term_refl.
+        * constructor ; eauto.
+          eapply eq_term_upto_univ_eq_eq_term. assumption.
     - intros p c u mdecl idecl pdecl isdecl args X X0 hc ihc H ty v e.
       dependent destruction e.
       econstructor.

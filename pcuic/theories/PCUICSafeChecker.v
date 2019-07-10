@@ -493,6 +493,13 @@ Proof.
   contradiction HC.
 Qed.
 
+Lemma wf_ext_is_graph {cf:checker_flags} {Σ : global_env_ext} (HΣ : ∥ wf_ext Σ ∥)
+  : ∑ G, is_graph_of_uctx G (global_ext_uctx Σ).
+Proof.
+  destruct (wf_ext_gc_of_uctx HΣ) as [uctx Huctx].
+  exists (make_graph uctx). unfold is_graph_of_uctx. now rewrite Huctx.
+Defined.
+
 
 
 Lemma eq_term_upto_univ_impl :
@@ -1229,14 +1236,7 @@ Definition infer' {cf:checker_flags} {Σ} (HΣ : ∥ wf_ext Σ ∥)
   := infer (map_squash fst HΣ) (map_squash snd HΣ).
 
 Definition make_graph_and_infer {cf:checker_flags} {Σ} (HΣ : ∥ wf_ext Σ ∥)
-           Γ (HΓ : ∥ wf_local Σ Γ ∥) t
-  : typing_result (∑ A : term, ∥ Σ;;; Γ |- t : A ∥).
-Proof.
-  destruct (wf_ext_gc_of_uctx HΣ) as [uctx Huctx].
-  unshelve eapply infer'; tea.
-  exact (make_graph uctx).
-  unfold is_graph_of_uctx. now rewrite Huctx.
-Defined.
+  := let '(G; HG) := wf_ext_is_graph HΣ in infer' HΣ G HG.
 
 
 Print Assumptions infer.

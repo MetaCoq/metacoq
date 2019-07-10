@@ -380,8 +380,8 @@ Proof.
   revert H.
   generalize wfΣ' wfΓ'. clear wfΣ' wfΓ'.
   
-  revert Σ w Γ a t T X t'.
-  eapply (typing_ind_env (fun Σ Γ t T =>   forall (t' : E.term) (wfΣ' : ∥ wf_ext Σ ∥) (wfΓ' : ∥ wf_local Σ Γ ∥),
+  revert Γ a t T X t'.
+  eapply(typing_ind_env (fun Σ Γ t T =>   forall (t' : E.term) (wfΣ' : ∥ wf_ext Σ ∥) (wfΓ' : ∥ wf_local Σ Γ ∥),
   erase Σ wfΣ' Γ wfΓ' t = Checked t' -> Σ;;; Γ |- t ⇝ℇ t'
          )); intros.
 
@@ -399,12 +399,11 @@ Proof.
   - repeat econstructor; eauto.
   - econstructor. econstructor. clear E.
     eapply inversion_Prod in t0 as (? & ? & ? & ? & ?).
-    split. eauto. left. econstructor.
+    split. econstructor; eauto. left. econstructor.
   - econstructor. eauto. econstructor. clear E.
     eapply inversion_Ind in t as (? & ? & ? & ? & ? & ?).
-    split. eauto. left.
+    split. econstructor; eauto. left. subst.
     eapply isArity_subst_instance.
-    destruct a4 as (? & ? & ?). cbn.
     eapply isArity_ind_type; eauto.
   - econstructor.
     eapply elim_restriction_works. eauto. eauto. eauto. intros.
@@ -421,7 +420,7 @@ Proof.
   - econstructor.
     clear E.  
 
-    destruct a5 as (? & ? & ?).
+    destruct isdecl as (? & ? & ?).
     eapply elim_restriction_works_proj; eauto. intros.
     eapply isErasable_Proof in X2. eauto.
 
@@ -437,7 +436,7 @@ Proof.
     
     cbn. repeat split; eauto. 
     eapply p. eauto. 
-  - inv H1. 
+  - clear E. inv t; discriminate.
 Qed.
 
 Lemma erase_Some_typed {Σ wfΣ Γ wfΓ t r} :
@@ -505,14 +504,17 @@ Program Fixpoint erase_global_decls Σ : ∥ wf Σ ∥ -> typing_result E.global
     ret (E.InductiveDecl kn mib' :: Σ')
   end.
 Next Obligation.
-  sq. eapply PCUICWeakeningEnv.wf_extends. eauto. eexists [_]; reflexivity.
+  sq. split. cbn. 
+  eapply PCUICWeakeningEnv.wf_extends. eauto. eexists [_]; reflexivity.
+  now inversion X; subst.
 Qed.
 Next Obligation.
   sq. eapply PCUICWeakeningEnv.wf_extends. eauto. eexists [_]; reflexivity.
 Qed.
 Next Obligation.
-  Require Import MetaCoq.PCUIC.PCUICWeakeningEnv.
-  sq. eapply wf_extends; eauto. eexists [_]; reflexivity.
+  sq. split. cbn. 
+  eapply PCUICWeakeningEnv.wf_extends. eauto. eexists [_]; reflexivity.
+  now inversion X; subst.
 Qed.
 Next Obligation.
   sq. inv X. cbn in *.

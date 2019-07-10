@@ -200,3 +200,41 @@ Proof.
   (*   + inversion H0. subst. destruct l. cbn in E0. inv E0. cbn in *. inv H0. *)
   (*   + eapply IHl in E0. eauto.  *)
 Admitted.                       (* tCase_length_branch_inv *)
+
+Section no_prop_leq_type.
+
+Context `{cf : checker_flags}.
+Variable Hcf : prop_sub_type = false.
+  
+Lemma cumul_prop1 (Σ : global_env_ext) Γ A B u :
+  wf Σ -> 
+  is_prop_sort u -> Σ ;;; Γ |- B : tSort u ->
+                                 Σ ;;; Γ |- A <= B -> Σ ;;; Γ |- A : tSort u.
+Proof.
+  intros. induction X1.
+  - admit.
+  - eapply IHX1 in X0. admit.
+  - eapply IHX1. eapply subject_reduction. eauto. eassumption. eauto.
+Admitted.                       (* cumul_prop1 *)
+
+Lemma cumul_prop2 (Σ : global_env_ext) Γ A B u :
+  wf Σ ->
+  is_prop_sort u -> Σ ;;; Γ |- A <= B ->
+                             Σ ;;; Γ |- A : tSort u -> Σ ;;; Γ |- B : tSort u.
+Proof.
+Admitted.                       (* cumul_prop2 *)
+
+Lemma leq_universe_prop (Σ : global_env_ext) u1 u2 :
+  (* @check_univs cf = true -> *)
+  (* @prop_sub_type cf = false -> *)
+  wf Σ ->
+  @leq_universe cf (global_ext_constraints Σ) u1 u2 ->
+  (is_prop_sort u1 \/ is_prop_sort u2) ->
+  (is_prop_sort u1 /\ is_prop_sort u2).
+Proof.
+  intros. unfold leq_universe in *. (* rewrite H in H1. *)
+  (* unfold leq_universe0 in H1. *)
+  (* unfold leq_universe_n in H1. *)
+Admitted.                       (* leq_universe_prop *)
+
+End no_prop_leq_type.

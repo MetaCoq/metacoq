@@ -18,37 +18,6 @@ Definition is_prop_sort s :=
 
 Require Import Extract.
 
-Lemma cumul_prop1 (Σ : global_env_ext) Γ A B u :
-  wf Σ -> 
-  is_prop_sort u -> Σ ;;; Γ |- B : tSort u ->
-                                 Σ ;;; Γ |- A <= B -> Σ ;;; Γ |- A : tSort u.
-Proof.
-  intros. induction X1.
-  - admit.
-  - eapply IHX1 in X0. admit.
-  - eapply IHX1. eapply subject_reduction. eauto. eassumption. eauto.
-Admitted.                       (* cumul_prop1 *)
-
-Lemma cumul_prop2 (Σ : global_env_ext) Γ A B u :
-  wf Σ ->
-  is_prop_sort u -> Σ ;;; Γ |- A <= B ->
-                             Σ ;;; Γ |- A : tSort u -> Σ ;;; Γ |- B : tSort u.
-Proof.
-Admitted.                       (* cumul_prop2 *)
-
-Lemma leq_universe_prop cf (Σ : global_env_ext) u1 u2 :
-  (* @check_univs cf = true -> *)
-  (* @prop_sub_type cf = false -> *)
-  wf Σ ->
-  @leq_universe cf (global_ext_constraints Σ) u1 u2 ->
-  (is_prop_sort u1 \/ is_prop_sort u2) ->
-  (is_prop_sort u1 /\ is_prop_sort u2).
-Proof.
-  intros. unfold leq_universe in *. (* rewrite H in H1. *)
-  (* unfold leq_universe0 in H1. *)
-  (* unfold leq_universe_n in H1. *)
-Admitted.                       (* leq_universe_prop *)
-
 Lemma it_mkProd_isArity:
   forall (l : list context_decl) A,
     isArity A ->
@@ -463,7 +432,7 @@ Proof.
   revert u H c0.
   depind t1; intros.
   - eapply cumul_prop2 in c0; eauto.
-  - eapply cumul_prop2 in c0. 2:eauto. 2:eauto. 2:eauto.
+  - eapply cumul_prop2 in c0. 2:eauto. 2:eauto. 2:eauto. 2:eauto.
     eapply invert_cumul_prod_r in c as (? & ? & ? & [] & ?); eauto.
     eapply subject_reduction in c0. 3:eauto. 2:eauto.
     eapply inversion_Prod in c0 as (? & ? & ? & ? & ?).

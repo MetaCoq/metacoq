@@ -254,8 +254,10 @@ Section Lemmata.
       types_of_case ind mdecl idecl (firstn npar args) u p pty =
       Some (indctx, pctx, ps, btys) ->
       eq_term_upto_univ eq eq p p' ->
-      types_of_case ind mdecl idecl (firstn npar args) u p' pty =
-      Some (indctx, pctx, ps, btys).
+      ∑ btys',
+        types_of_case ind mdecl idecl (firstn npar args) u p' pty =
+        Some (indctx, pctx, ps, btys') ×
+        All2 (on_Trel_eq (eq_term_upto_univ eq eq) snd fst) btys btys'.
   Proof.
     intros ind mdecl idecl npar args u p p' pty indctx pctx ps btys htc e.
     unfold types_of_case in *.
@@ -271,8 +273,10 @@ Section Lemmata.
     case_eq (map_option_out (build_branches_type ind mdecl idecl (firstn npar args) u p)) ;
       try solve [ intro bot ; rewrite bot in htc ; discriminate htc ].
     intros brtys ebrtys. rewrite ebrtys in htc.
-    (* Same, so exists eq_term using the above lemma *)
-  Abort.
+    eapply build_branches_type_eq_term in ebrtys as [brtys' [ebrtys' he]] ; eauto.
+    inversion htc. subst. clear htc.
+    rewrite ebrtys'. intuition eauto.
+  Qed.
 
   Lemma type_rename :
     forall Σ Γ u v A,

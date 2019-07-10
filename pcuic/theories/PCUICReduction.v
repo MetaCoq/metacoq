@@ -681,44 +681,36 @@ Section ReductionCongruence.
     Proof.
       intros mfix idx mfix' h.
       apply OnOne2_on_Trel_eq_red_redl in h.
-
-
-
-      revert mfix mfix' h.
-      (* refine (OnOne2_ind_l _ (fun L => on_Trel_eq (red Σ (Γ ,,, fix_context L)) dbody (λ x0 : def term, (dname x0, dtype x0, rarg x0))) (fun L mfix mfix' o => red Σ Γ (tFix mfix idx) (tFix mfix' idx)) _ _). *)
-      (* - intros L d d' mfix [r e]. *)
-
-
-
-      (* We need to change the context so we should remove the quantification *)
-      (* apply OnOne2_on_Trel_eq_red_redl in h. *)
-    (*   dependent induction h. *)
-    (*   - assert (mfix = mfix'). *)
-    (*     { eapply map_inj ; eauto. *)
-    (*       intros y z e. cbn in e. destruct y, z. inversion e. eauto. *)
-    (*     } subst. *)
-    (*     constructor. *)
-    (*   - set (f := fun x : def term => (dtype x, (dname x, dbody x, rarg x))) in *. *)
-    (*     set (g := fun '(ty, (na, bo, ra)) => mkdef term na ty bo ra). *)
-    (*     assert (el :  forall l, l = map f (map g l)). *)
-    (*     { clear. intros l. induction l. *)
-    (*       - reflexivity. *)
-    (*       - cbn. destruct a as [? [[? ?] ?]]. cbn. f_equal. assumption. *)
-    (*     } *)
-    (*     assert (el' :  forall l, l = map g (map f l)). *)
-    (*     { clear. intros l. induction l. *)
-    (*       - reflexivity. *)
-    (*       - cbn. destruct a. cbn. f_equal. assumption. *)
-    (*     } *)
-    (*     econstructor. *)
-    (*     + eapply IHh. apply el. *)
-    (*     + constructor. rewrite (el' mfix'). *)
-    (*       eapply OnOne2_map. *)
-    (*       eapply OnOne2_impl ; eauto. *)
-    (*       intros [? [[? ?] ?]] [? [[? ?] ?]] [h1 h2]. *)
-    (*       unfold on_Trel in h1, h2. cbn in *. inversion h2. subst. *)
-    (*       unfold on_Trel. split ; eauto. *)
-    (* Qed. *)
+      dependent induction h.
+      - assert (mfix = mfix').
+        { eapply map_inj ; eauto.
+          intros y z e. cbn in e. destruct y, z. inversion e. eauto.
+        } subst.
+        constructor.
+      - set (f := fun x : def term => (dbody x, (dname x, dtype x, rarg x))) in *.
+        set (g := fun '(bo, (na, ty, ra)) => mkdef term na ty bo ra).
+        assert (el :  forall l, l = map f (map g l)).
+        { clear. intros l. induction l.
+          - reflexivity.
+          - cbn. destruct a as [? [[? ?] ?]]. cbn. f_equal. assumption.
+        }
+        assert (el' :  forall l, l = map g (map f l)).
+        { clear. intros l. induction l.
+          - reflexivity.
+          - cbn. destruct a. cbn. f_equal. assumption.
+        }
+        econstructor.
+        + eapply IHh. apply el.
+        + eapply fix_red_body. rewrite (el' mfix').
+          eapply OnOne2_map.
+          eapply OnOne2_impl ; eauto.
+          intros [? [[? ?] ?]] [? [[? ?] ?]] [h1 h2].
+          unfold on_Trel in h1, h2. cbn in *. inversion h2. subst.
+          unfold on_Trel. simpl. split ; eauto.
+          (* Transitivity with a changing context does not work well...
+             Should we switch for another approach?
+           *)
+          admit.
     Admitted.
 
     Lemma red_fix_body :

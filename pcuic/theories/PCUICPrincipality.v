@@ -317,10 +317,14 @@ Section Principality.
   Proof.
     intros Γ ind ui l T h.
     eapply cumul_alt in h as [v [v' [[redv redv'] leqvv']]].
-
-  Admitted.
-
-
+    eapply invert_red_ind in redv as [l' ?]. subst.
+    clear l.
+    eapply eq_term_upto_univ_mkApps_l_inv in leqvv'
+      as [u [l [[e ?] ?]]].
+    subst.
+    dependent destruction e.
+    eexists _,_. split ; eauto.
+  Qed.
 
   Ltac pih :=
     lazymatch goal with

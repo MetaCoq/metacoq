@@ -746,10 +746,31 @@ Section ReductionCongruence.
       - constructor.
       - eapply red_trans.
         + eapply IHh.
-        + eapply red_fix_one_body. (* assumption. *)
-          (* Problem with fix_context again. *)
-    (* Qed. *)
-    Admitted.
+        + eapply red_fix_one_body.
+          assert (e : fix_context mfix = fix_context y).
+          { clear - h. induction h.
+            - reflexivity.
+            - rewrite IHh.
+              unfold fix_context. f_equal.
+              assert (e : map (fun d => (dname d, dtype d)) y = map (fun d => (dname d, dtype d)) z).
+              { clear - r. induction r.
+                - destruct p as [? e]. inversion e.
+                  destruct hd as [? ? ? ?], hd' as [? ? ? ?]. simpl in *. subst.
+                  reflexivity.
+                - cbn. f_equal. eapply IHr.
+              }
+              clear - e.
+              unfold mapi. generalize 0 at 2 4.
+              intro n.
+              induction y in z, e, n |- *.
+              + destruct z ; try discriminate e. reflexivity.
+              + destruct z ; try discriminate e. cbn.
+                cbn in e. inversion e.
+                destruct a as [? ? ? ?], d as [? ? ? ?]. simpl in *. subst.
+                f_equal. eapply IHy. assumption.
+          }
+          rewrite <- e. assumption.
+    Qed.
 
     Lemma All2_prod_inv :
       forall A (P : A -> A -> Type) Q l l',

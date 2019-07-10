@@ -246,6 +246,144 @@ Section ReductionCongruence.
   Qed.
 
   Section Congruences.
+
+    Inductive redl Γ {A} l : list (term × A) -> Type :=
+    | refl_redl : redl Γ l l
+    | trans_redl :
+        forall l1 l2,
+          redl Γ l l1 ->
+          OnOne2 (Trel_conj (on_Trel (red1 Σ Γ) fst) (on_Trel eq snd)) l1 l2 ->
+          redl Γ l l2.
+
+    Lemma OnOne2_red_redl :
+      forall Γ A (l l' : list (term × A)),
+        OnOne2 (Trel_conj (on_Trel (red Σ Γ) fst) (on_Trel eq snd)) l l' ->
+        redl Γ l l'.
+    Proof.
+      intros Γ A l l' h.
+      induction h.
+      - destruct p as [p1 p2].
+        unfold on_Trel in p1, p2.
+        destruct hd as [t a], hd' as [t' a']. simpl in *. subst.
+        induction p1.
+        + constructor.
+        + econstructor.
+          * eapply IHp1.
+          * constructor. split ; eauto.
+            reflexivity.
+      - clear h. rename IHh into h.
+        induction h.
+        + constructor.
+        + econstructor ; eauto. constructor ; eauto.
+    Qed.
+
+    Lemma OnOne2_on_Trel_eq_red_redl :
+      forall Γ A B (f : A -> term) (g : A -> B) l l',
+        OnOne2 (on_Trel_eq (red Σ Γ) f g) l l' ->
+        redl Γ (map (fun x => (f x, g x)) l) (map (fun x => (f x, g x)) l').
+    Proof.
+      intros Γ A B f g l l' h.
+      eapply OnOne2_red_redl.
+      eapply OnOne2_map. eapply OnOne2_impl ; eauto.
+    Qed.
+
+    Lemma OnOne2_prod_inv :
+      forall A (P : A -> A -> Type) Q l l',
+        OnOne2 (Trel_conj P Q) l l' ->
+        OnOne2 P l l' × OnOne2 Q l l'.
+    Proof.
+      intros A P Q l l' h.
+      induction h.
+      - destruct p.
+        split ; constructor ; auto.
+      - destruct IHh.
+        split ; constructor ; auto.
+    Qed.
+
+    Lemma OnOne2_prod_inv_refl_r :
+      forall A (P Q : A -> A -> Type) l l',
+        (forall x, Q x x) ->
+        OnOne2 (Trel_conj P Q) l l' ->
+        OnOne2 P l l' × All2 Q l l'.
+    Proof.
+      intros A P Q l l' hQ h.
+      induction h.
+      - destruct p. split.
+        + constructor. assumption.
+        + constructor.
+          * assumption.
+          * eapply All_All2.
+            -- instantiate (1 := fun x => True). eapply Forall_All.
+               eapply Forall_True. intro. auto.
+            -- intros x _. eapply hQ.
+      - destruct IHh. split.
+        + constructor. assumption.
+        + constructor ; eauto.
+    Qed.
+
+    Lemma All2_eq :
+      forall A (l l' : list A),
+        All2 eq l l' ->
+        l = l'.
+    Proof.
+      intros A l l' h.
+      induction h ; eauto. subst. reflexivity.
+    Qed.
+
+    Lemma list_split_eq :
+      forall A B (l l' : list (A × B)),
+        map fst l = map fst l' ->
+        map snd l = map snd l' ->
+        l = l'.
+    Proof.
+      intros A B l l' e1 e2.
+      induction l in l', e1, e2 |- *.
+      - destruct l' ; try discriminate. reflexivity.
+      - destruct l' ; try discriminate.
+        simpl in *. inversion e1. inversion e2.
+        f_equal ; eauto.
+        destruct a, p. simpl in *. subst. reflexivity.
+    Qed.
+
+    Notation swap := (fun x => (snd x, fst x)).
+
+    Lemma list_map_swap_eq :
+      forall A B (l l' : list (A × B)),
+        map swap l = map swap l' ->
+        l = l'.
+    Proof.
+      intros A B l l' h.
+      induction l in l', h |- *.
+      - destruct l' ; try discriminate. reflexivity.
+      - destruct l' ; try discriminate.
+        cbn in h. inversion h.
+        f_equal ; eauto.
+        destruct a, p. cbn in *. subst. reflexivity.
+    Qed.
+
+    Lemma map_swap_invol :
+      forall A B (l : list (A × B)),
+        l = map swap (map swap l).
+    Proof.
+      intros A B l.
+      induction l.
+      - reflexivity.
+      - cbn. destruct a. rewrite <- IHl. reflexivity.
+    Qed.
+
+    Lemma map_inj :
+      forall A B (f : A -> B) l l',
+        (forall x y, f x = f y -> x = y) ->
+        map f l = map f l' ->
+        l = l'.
+    Proof.
+      intros A B f l l' h e.
+      induction l in l', e |- *.
+      - destruct l' ; try discriminate. reflexivity.
+      - destruct l' ; try discriminate. inversion e.
+        f_equal ; eauto.
+    Qed.
+
     Context {Γ : context}.
 
     Lemma red_abs na M M' N N' : red Σ Γ M M' -> red Σ (Γ ,, vass na M') N N' ->
@@ -349,130 +487,6 @@ Section ReductionCongruence.
       - constructor.
       - econstructor ; try eassumption.
         constructor. assumption.
-    Qed.
-
-    Inductive redl {A} l : list (term × A) -> Type :=
-    | refl_redl : redl l l
-    | trans_redl :
-        forall l1 l2,
-          redl l l1 ->
-          OnOne2 (Trel_conj (on_Trel (red1 Σ Γ) fst) (on_Trel eq snd)) l1 l2 ->
-          redl l l2.
-
-    Lemma OnOne2_red_redl :
-      forall A (l l' : list (term × A)),
-        OnOne2 (Trel_conj (on_Trel (red Σ Γ) fst) (on_Trel eq snd)) l l' ->
-        redl l l'.
-    Proof.
-      intros A l l' h.
-      induction h.
-      - destruct p as [p1 p2].
-        unfold on_Trel in p1, p2.
-        destruct hd as [t a], hd' as [t' a']. simpl in *. subst.
-        induction p1.
-        + constructor.
-        + econstructor.
-          * eapply IHp1.
-          * constructor. split ; eauto.
-            reflexivity.
-      - clear h. rename IHh into h.
-        induction h.
-        + constructor.
-        + econstructor ; eauto. constructor ; eauto.
-    Qed.
-
-    Lemma OnOne2_on_Trel_eq_red_redl :
-      forall A B (f : A -> term) (g : A -> B) l l',
-        OnOne2 (on_Trel_eq (red Σ Γ) f g) l l' ->
-        redl (map (fun x => (f x, g x)) l) (map (fun x => (f x, g x)) l').
-    Proof.
-      intros A B f g l l' h.
-      eapply OnOne2_red_redl.
-      eapply OnOne2_map. eapply OnOne2_impl ; eauto.
-    Qed.
-
-    Lemma OnOne2_prod_inv :
-      forall A (P : A -> A -> Type) Q l l',
-        OnOne2 (Trel_conj P Q) l l' ->
-        OnOne2 P l l' × OnOne2 Q l l'.
-    Proof.
-      intros A P Q l l' h.
-      induction h.
-      - destruct p.
-        split ; constructor ; auto.
-      - destruct IHh.
-        split ; constructor ; auto.
-    Qed.
-
-    Lemma OnOne2_prod_inv_refl_r :
-      forall A (P Q : A -> A -> Type) l l',
-        (forall x, Q x x) ->
-        OnOne2 (Trel_conj P Q) l l' ->
-        OnOne2 P l l' × All2 Q l l'.
-    Proof.
-      intros A P Q l l' hQ h.
-      induction h.
-      - destruct p. split.
-        + constructor. assumption.
-        + constructor.
-          * assumption.
-          * eapply All_All2.
-            -- instantiate (1 := fun x => True). eapply Forall_All.
-               eapply Forall_True. intro. auto.
-            -- intros x _. eapply hQ.
-      - destruct IHh. split.
-        + constructor. assumption.
-        + constructor ; eauto.
-    Qed.
-
-    Lemma All2_eq :
-      forall A (l l' : list A),
-        All2 eq l l' ->
-        l = l'.
-    Proof.
-      intros A l l' h.
-      induction h ; eauto. subst. reflexivity.
-    Qed.
-
-    Lemma list_split_eq :
-      forall A B (l l' : list (A × B)),
-        map fst l = map fst l' ->
-        map snd l = map snd l' ->
-        l = l'.
-    Proof.
-      intros A B l l' e1 e2.
-      induction l in l', e1, e2 |- *.
-      - destruct l' ; try discriminate. reflexivity.
-      - destruct l' ; try discriminate.
-        simpl in *. inversion e1. inversion e2.
-        f_equal ; eauto.
-        destruct a, p. simpl in *. subst. reflexivity.
-    Qed.
-
-    Notation swap := (fun x => (snd x, fst x)).
-
-    Lemma list_map_swap_eq :
-      forall A B (l l' : list (A × B)),
-        map swap l = map swap l' ->
-        l = l'.
-    Proof.
-      intros A B l l' h.
-      induction l in l', h |- *.
-      - destruct l' ; try discriminate. reflexivity.
-      - destruct l' ; try discriminate.
-        cbn in h. inversion h.
-        f_equal ; eauto.
-        destruct a, p. cbn in *. subst. reflexivity.
-    Qed.
-
-    Lemma map_swap_invol :
-      forall A B (l : list (A × B)),
-        l = map swap (map swap l).
-    Proof.
-      intros A B l.
-      induction l.
-      - reflexivity.
-      - cbn. destruct a. rewrite <- IHl. reflexivity.
     Qed.
 
     Lemma red_case_one_brs :
@@ -609,19 +623,6 @@ Section ReductionCongruence.
         + econstructor. assumption.
     Qed.
 
-    Lemma map_inj :
-      forall A B (f : A -> B) l l',
-        (forall x y, f x = f y -> x = y) ->
-        map f l = map f l' ->
-        l = l'.
-    Proof.
-      intros A B f l l' h e.
-      induction l in l', e |- *.
-      - destruct l' ; try discriminate. reflexivity.
-      - destruct l' ; try discriminate. inversion e.
-        f_equal ; eauto.
-    Qed.
-
     Lemma red_fix_one_ty :
       forall mfix idx mfix',
         OnOne2 (on_Trel_eq (red Σ Γ) dtype (fun x => (dname x, dbody x, rarg x))) mfix mfix' ->
@@ -679,6 +680,16 @@ Section ReductionCongruence.
         red Σ Γ (tFix mfix idx) (tFix mfix' idx).
     Proof.
       intros mfix idx mfix' h.
+      apply OnOne2_on_Trel_eq_red_redl in h.
+
+
+
+      revert mfix mfix' h.
+      (* refine (OnOne2_ind_l _ (fun L => on_Trel_eq (red Σ (Γ ,,, fix_context L)) dbody (λ x0 : def term, (dname x0, dtype x0, rarg x0))) (fun L mfix mfix' o => red Σ Γ (tFix mfix idx) (tFix mfix' idx)) _ _). *)
+      (* - intros L d d' mfix [r e]. *)
+
+
+
       (* We need to change the context so we should remove the quantification *)
       (* apply OnOne2_on_Trel_eq_red_redl in h. *)
     (*   dependent induction h. *)

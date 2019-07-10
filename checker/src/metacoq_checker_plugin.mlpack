@@ -44,6 +44,7 @@ Equalities
 Extractable
 Logic0
 WGraph
+Monad_utils
 UGraph0
 
 Tm_util
@@ -54,7 +55,6 @@ Ast_denoter
 Plugin_core
 Run_extractable
 
-Monad_utils
 TemplateMonad
 UnivSubst0
 LiftSubst

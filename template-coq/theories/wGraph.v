@@ -1580,14 +1580,14 @@ Module WeightedGraph (V : UsualOrderedType).
     Defined.
 
 
-    Definition is_leq_vertices n x y : bool :=
+    Definition leqb_vertices n x y : bool :=
       if VSet.mem y (V G) then le_dec (Some n) (lsp G x y)
       else Nat.eqb n 0 && (V.eq_dec x y || le_dec (Some 0) (lsp G x (s G))).
 
-    Lemma is_leq_vertices_correct n x y
-      : leq_vertices G n x y <-> is_leq_vertices n x y.
+    Lemma leqb_vertices_correct n x y
+      : leq_vertices G n x y <-> leqb_vertices n x y.
     Proof.
-      etransitivity. apply leq_vertices_caract. unfold is_leq_vertices.
+      etransitivity. apply leq_vertices_caract. unfold leqb_vertices.
       destruct (VSet.mem y (V G)).
       - destruct (le_dec (Some n) (lsp G x y)); cbn; intuition.
       - symmetry; etransitivity. apply andb_and.

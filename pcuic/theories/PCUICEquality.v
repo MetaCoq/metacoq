@@ -136,6 +136,73 @@ Local Ltac ih :=
     destruct (ih lequ Rle hle t') ; nodec ; subst
   end.
 
+Lemma All2_impl' {A B} {P Q : A -> B -> Type} {l : list A} {l' : list B}
+  : All2 P l l' -> All (fun x => forall y, P x y -> Q x y) l -> All2 Q l l'.
+Proof.
+  induction 1. constructor.
+  intro XX; inv XX.
+  constructor; auto.
+Defined.
+
+
+Lemma eq_term_upto_univ_impl :
+  forall (equ lequ : _ -> _ -> bool) Re Rle,
+    (forall u u', equ u u' -> Re u u') ->
+    (forall u u', lequ u u' -> Rle u u') ->
+    forall t t', eqb_term_upto_univ equ lequ t t' -> eq_term_upto_univ Re Rle t t'.
+Proof.
+  intros equ lequ Re Rle he hle t t'.
+  induction t in t', lequ, Rle, hle |- * using term_forall_list_ind.
+  all: destruct t'; try discriminate 1. all: cbn -[eqb].
+  - eqspec; [intros _|discriminate]. constructor.
+  - eqspec; [intros _|discriminate]. constructor.
+  - eqspec; [|discriminate]. constructor.
+    cbn in H. apply forallb2_All2 in H.
+    eapply All2_impl'; tea.
+    eapply All_impl; tea. eauto.
+  - constructor; eauto.
+  - intro. toProp. constructor; eauto.
+  - intro. toProp. constructor; eauto.
+  - intro. toProp. constructor; eauto.
+  - intro. toProp. constructor; eauto.
+  - unfold kername in *. eqspec; [|discriminate].
+    intro. toProp. constructor; eauto.
+    apply forallb2_All2 in H0.
+    eapply All2_impl; tea; eauto.
+  - unfold kername in *. eqspec; [|discriminate].
+    intro. toProp. constructor; eauto.
+    apply forallb2_All2 in H0.
+    eapply All2_impl; tea; eauto.
+  - unfold kername in *. eqspec; [|discriminate].
+    eqspec; [|discriminate].
+    intro. toProp. constructor; eauto.
+    apply forallb2_All2 in H0.
+    eapply All2_impl; tea; eauto.
+  - eqspec; [|discriminate]. intro. toProp.
+    destruct indn. econstructor; eauto.
+    apply forallb2_All2 in H0.
+    eapply All2_impl'; tea.
+    red in X. eapply All_impl; tea.
+    cbn -[eqb]. intros x X0 y. eqspec; [|discriminate].
+    intro. split; eauto.
+  - eqspec; [|discriminate]. intro. constructor; eauto.
+  - eqspec; [|discriminate]. 
+    econstructor; eauto.
+    cbn -[eqb] in H; apply forallb2_All2 in H.
+    eapply All2_impl'; tea.
+    red in X. eapply All_impl; tea.
+    cbn -[eqb]. intros x X0 y. eqspec; [|rewrite andb_false_r; discriminate].
+    intro. toProp. split; tas. split; eapply X0; tea.
+  - eqspec; [|discriminate]. 
+    econstructor; eauto.
+    cbn -[eqb] in H; apply forallb2_All2 in H.
+    eapply All2_impl'; tea.
+    red in X. eapply All_impl; tea.
+    cbn -[eqb]. intros x X0 y. eqspec; [|rewrite andb_false_r; discriminate].
+    intro. toProp. split; tas. split; eapply X0; tea.
+Qed.
+
+
 Lemma reflect_eq_term_upto_univ :
   forall equ lequ Re Rle,
     (forall u u', reflectT (Re u u') (equ u u')) ->

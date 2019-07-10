@@ -197,13 +197,13 @@ Fixpoint eq_term `{checker_flags} (φ : universes_graph) (t u : term) {struct t}
   | tRel n, tRel n' => eq_nat n n'
   | tEvar ev args, tEvar ev' args' => eq_evar ev ev' && forallb2 (eq_term φ) args args'
   | tVar id, tVar id' => eq_string id id'
-  | tSort s, tSort s' => try_is_eq_universe φ s s'
+  | tSort s, tSort s' => try_eqb_universe φ s s'
   | tCast f k T, tCast f' k' T' => eq_term φ f f' && eq_term φ T T'
   | tApp f args, tApp f' args' => eq_term φ f f' && forallb2 (eq_term φ) args args'
-  | tConst c u, tConst c' u' => eq_constant c c' && is_eq_univ_instance φ u u'
-  | tInd i u, tInd i' u' => eq_ind i i' && is_eq_univ_instance φ u u'
+  | tConst c u, tConst c' u' => eq_constant c c' && eqb_univ_instance φ u u'
+  | tInd i u, tInd i' u' => eq_ind i i' && eqb_univ_instance φ u u'
   | tConstruct i k u, tConstruct i' k' u' => eq_ind i i' && eq_nat k k'
-                                                    && is_eq_univ_instance φ u u'
+                                                    && eqb_univ_instance φ u u'
   | tLambda _ b t, tLambda _ b' t' => eq_term φ b b' && eq_term φ t t'
   | tProd _ b t, tProd _ b' t' => eq_term φ b b' && eq_term φ t t'
   | tLetIn _ b t c, tLetIn _ b' t' c' => eq_term φ b b' && eq_term φ t t' && eq_term φ c c'
@@ -229,13 +229,13 @@ Fixpoint leq_term `{checker_flags} (φ : universes_graph) (t u : term) {struct t
   | tRel n, tRel n' => eq_nat n n'
   | tEvar ev args, tEvar ev' args' => eq_nat ev ev' && forallb2 (eq_term φ) args args'
   | tVar id, tVar id' => eq_string id id'
-  | tSort s, tSort s' => try_is_leq_universe φ s s'
+  | tSort s, tSort s' => try_leqb_universe φ s s'
   | tApp f args, tApp f' args' => eq_term φ f f' && forallb2 (eq_term φ) args args'
   | tCast f k T, tCast f' k' T' => eq_term φ f f' && eq_term φ T T'
-  | tConst c u, tConst c' u' => eq_constant c c' && is_eq_univ_instance φ u u'
-  | tInd i u, tInd i' u' => eq_ind i i' && is_eq_univ_instance φ u u'
+  | tConst c u, tConst c' u' => eq_constant c c' && eqb_univ_instance φ u u'
+  | tInd i u, tInd i' u' => eq_ind i i' && eqb_univ_instance φ u u'
   | tConstruct i k u, tConstruct i' k' u' => eq_ind i i' && eq_nat k k' &&
-                                                    is_eq_univ_instance φ u u'
+                                                    eqb_univ_instance φ u u'
   | tLambda _ b t, tLambda _ b' t' => eq_term φ b b' && eq_term φ t t'
   | tProd _ b t, tProd _ b' t' => eq_term φ b b' && leq_term φ t t'
   | tLetIn _ b t c, tLetIn _ b' t' c' => eq_term φ b b' && eq_term φ t t' && leq_term φ c c'
@@ -577,11 +577,7 @@ Definition check_conv `{checker_flags} {F:Fuel} := check_conv_gen Conv.
 
 
 Definition is_graph_of_global_env_ext `{checker_flags} Σ G :=
-  let ctrs := global_ext_constraints Σ in
-  match gc_of_constraints ctrs with
-  | Some ctrs => G = make_graph ctrs
-  | None => False
-  end.
+  is_graph_of_uctx G (global_ext_uctx Σ).
 
 Lemma conv_spec : forall `{checker_flags} {F:Fuel} Σ G Γ t u,
     is_graph_of_global_env_ext Σ G ->
@@ -870,7 +866,7 @@ Lemma cumul_reduce_to_sort : forall `{checker_flags} {F:Fuel} Σ G Γ t s',
   is_graph_of_global_env_ext Σ G ->
     Σ ;;; Γ |- t <= tSort s' <~>
     { s'' & reduce_to_sort (fst Σ) Γ t = Checked s''
-            /\ try_is_leq_universe G s'' s' = true }.
+            /\ try_leqb_universe G s'' s' = true }.
 Proof. intros. todo "Checker.cumul_reduce_to_sort". Defined.
 
 Lemma cumul_reduce_to_product : forall `{checker_flags} {F:Fuel} Σ Γ t na a b,
@@ -1205,6 +1201,10 @@ Section Checker.
     | InductiveDecl _ mb => monomorphic_constraints mb.(ind_universes)
     end.
 
+  Definition add_gc_constraints ctrs  (G : universes_graph) : universes_graph
+    := (G.1.1,  GoodConstraintSet.fold
+                  (fun ctr => wGraph.EdgeSet.add (edge_of_constraint ctr)) ctrs G.1.2,
+        G.2).
 
   Fixpoint check_wf_env (g : global_env)
     : EnvCheck universes_graph :=
@@ -1234,8 +1234,8 @@ End Checker.
 
 (* for compatibility, will go away *)
 Definition infer' `{checker_flags} `{Fuel} (Σ : global_env_ext) Γ t
-  := let ctrs := (global_ext_constraints Σ) in
-    match gc_of_constraints ctrs with
-     | None => raise (UnsatisfiableConstraints ctrs)
-     | Some ctrs => infer (fst Σ) (make_graph ctrs) Γ t
+  := let uctx := (global_ext_uctx Σ) in
+    match gc_of_uctx uctx with
+     | None => raise (UnsatisfiableConstraints uctx.2)
+     | Some uctx => infer (fst Σ) (make_graph uctx) Γ t
      end.

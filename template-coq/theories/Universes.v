@@ -421,7 +421,7 @@ Definition leq_universe φ u u'
 
 (* ctrs are "enforced" by φ *)
 Definition valid_constraints φ ctrs
-  := forall v, satisfies v φ -> satisfies v ctrs.
+  := if check_univs then forall v, satisfies v φ -> satisfies v ctrs else True.
 
 
 (** **** Lemmas about eq and leq **** *)

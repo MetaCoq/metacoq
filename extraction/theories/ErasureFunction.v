@@ -1,6 +1,6 @@
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
-From MetaCoq.Template Require Import config utils monad_utils BasicAst AstUtils.
+From MetaCoq.Template Require Import config utils monad_utils BasicAst AstUtils uGraph.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICTyping PCUICMetaTheory PCUICWcbvEval PCUICLiftSubst PCUICInversion PCUICConfluence PCUICCumulativity PCUICSR PCUICNormal PCUICSafeReduce PCUICSafeLemmata PCUICSafeChecker PCUICValidity PCUICPrincipality PCUICElimination.
 From MetaCoq.Extraction Require EAst ELiftSubst ETyping EWcbvEval Extract ExtractionCorrectness.
 From Equations Require Import Equations.
@@ -174,16 +174,21 @@ Next Obligation.
 Qed.
 End fix_sigma.
 
-Program Definition is_erasable (Sigma : PCUICAst.global_env_ext) (HΣ : ∥wf Sigma∥) (Gamma : context) (HΓ : ∥wf_local Sigma Gamma∥) (t : PCUICAst.term) :
+Definition wf_ext_wf Σ : wf_ext Σ -> wf Σ := fst.
+Hint Resolve wf_ext_wf.
+
+
+Program Definition is_erasable (Sigma : PCUICAst.global_env_ext) (HΣ : ∥wf_ext Sigma∥) (Gamma : context) (HΓ : ∥wf_local Sigma Gamma∥) (t : PCUICAst.term) :
   typing_result ({∥isErasable Sigma Gamma t∥} +{∥(isErasable Sigma Gamma t -> False) × welltyped Sigma Gamma t∥}) :=
-  mlet (T; _) <- @infer _ _ HΣ Gamma HΓ t ;;
+  mlet (T; _) <- @make_graph_and_infer _ _ HΣ Gamma HΓ t ;;
   mlet b <- is_arity Sigma _ Gamma _ T _ ;;
   if b : {_} + {_} then
     ret (left _)
-  else mlet (K; _) <-  @infer _ _ HΣ Gamma HΓ T ;;
+  else mlet (K; _) <-  @make_graph_and_infer _ _ HΣ Gamma HΓ T ;;
        mlet (u;_) <- @reduce_to_sort _ Sigma _ Gamma K _ ;;
       match is_prop_sort u with true => ret (left _) | false => ret (right _) end
 .  
+Next Obligation. sq; eauto. Qed.
 Next Obligation.
   sq. eapply PCUICValidity.validity in X as [_]; eauto.  destruct i.
   right. sq. eauto. destruct i. econstructor. econstructor. eauto.
@@ -193,6 +198,7 @@ Next Obligation.
   sq. exists x. split. 
   eapply type_reduction in X; eauto. eauto.
 Qed.
+Next Obligation. sq; eauto. Qed.
 Next Obligation.
   sq. eapply PCUICValidity.validity in X as [_]; eauto.  destruct i.
   econstructor 2. sq. eauto. destruct i. econstructor. econstructor. eauto.
@@ -249,7 +255,7 @@ Section Erase.
   Definition on_snd_map {A B C} (f : B -> C) (p : A * B) :=
     (fst p, f (snd p)).
 
-  Variable (Σ : global_env_ext)( HΣ :∥ wf Σ ∥).
+  Variable (Σ : global_env_ext)( HΣ :∥ wf_ext Σ ∥).
 
   Ltac sq' := try (destruct HΣ; clear HΣ);
              repeat match goal with
@@ -274,7 +280,7 @@ Section Erase.
                  | [] => ret (sq wf_local_rel_nil)
                  | def :: mfix =>
        (* probably not tail recursive but needed so that next line terminates *)
-                   W <- infer_type infer Γ HΓ (dtype def) ;;
+                   W <- infer_type _ (infer _ _ _ _) Γ HΓ (dtype def) ;;
                    let W' := weakening_sq acc _ _ W.π2 in
                    bind (Monad := typing_monad) (check_types mfix
                      (acc ,, vass (dname def) ((lift0 #|acc|) (dtype def)))
@@ -290,9 +296,11 @@ Section Erase.
       change fix_context with (fix_context_i #|@nil context_decl|).
       now rewrite app_context_nil_l.
       sq. econstructor 2. exact t.
-      Unshelve. all:eauto. sq'.
+      Unshelve. all:sq'; eauto. apply X.
+      admit. admit. 
       eapply wf_local_app_inv. eauto. eauto.
-    Qed.
+    Admitted.
+
       
   End EraseMfix.
 
@@ -355,7 +363,7 @@ End Erase.
 
 Require Import ExtractionCorrectness.
 
-Lemma erases_erase (Σ : global_env_ext) Γ t T (wfΣ : ∥wf Σ∥) (wfΓ : ∥wf_local Σ Γ∥) t' :
+Lemma erases_erase (Σ : global_env_ext) Γ t T (wfΣ : ∥wf_ext Σ∥) (wfΓ : ∥wf_local Σ Γ∥) t' :
   Σ ;;; Γ |- t : T ->
   erase Σ (wfΣ) Γ (wfΓ) t = Checked t' ->                
   erases Σ Γ t t'.
@@ -372,8 +380,8 @@ Proof.
   revert H.
   generalize wfΣ' wfΓ'. clear wfΣ' wfΓ'.
   
-  revert Σ w Γ a t T X t'.
-  eapply (typing_ind_env (fun Σ Γ t T =>   forall (t' : E.term) (wfΣ' : ∥ wf Σ ∥) (wfΓ' : ∥ wf_local Σ Γ ∥),
+  revert Γ a t T X t'.
+  eapply(typing_ind_env (fun Σ Γ t T =>   forall (t' : E.term) (wfΣ' : ∥ wf_ext Σ ∥) (wfΓ' : ∥ wf_local Σ Γ ∥),
   erase Σ wfΣ' Γ wfΓ' t = Checked t' -> Σ;;; Γ |- t ⇝ℇ t'
          )); intros.
 
@@ -391,12 +399,11 @@ Proof.
   - repeat econstructor; eauto.
   - econstructor. econstructor. clear E.
     eapply inversion_Prod in t0 as (? & ? & ? & ? & ?).
-    split. eauto. left. econstructor.
+    split. econstructor; eauto. left. econstructor.
   - econstructor. eauto. econstructor. clear E.
     eapply inversion_Ind in t as (? & ? & ? & ? & ? & ?).
-    split. eauto. left.
+    split. econstructor; eauto. left. subst.
     eapply isArity_subst_instance.
-    destruct a4 as (? & ? & ?). cbn.
     eapply isArity_ind_type; eauto.
   - econstructor.
     eapply elim_restriction_works. eauto. eauto. eauto. intros.
@@ -413,7 +420,7 @@ Proof.
   - econstructor.
     clear E.  
 
-    destruct a5 as (? & ? & ?).
+    destruct isdecl as (? & ? & ?).
     eapply elim_restriction_works_proj; eauto. intros.
     eapply isErasable_Proof in X2. eauto.
 
@@ -429,7 +436,7 @@ Proof.
     
     cbn. repeat split; eauto. 
     eapply p. eauto. 
-  - inv H1. 
+  - clear E. inv t; discriminate.
 Qed.
 
 Lemma erase_Some_typed {Σ wfΣ Γ wfΓ t r} :
@@ -497,14 +504,17 @@ Program Fixpoint erase_global_decls Σ : ∥ wf Σ ∥ -> typing_result E.global
     ret (E.InductiveDecl kn mib' :: Σ')
   end.
 Next Obligation.
-  sq. eapply PCUICWeakeningEnv.wf_extends. eauto. eexists [_]; reflexivity.
+  sq. split. cbn. 
+  eapply PCUICWeakeningEnv.wf_extends. eauto. eexists [_]; reflexivity.
+  now inversion X; subst.
 Qed.
 Next Obligation.
   sq. eapply PCUICWeakeningEnv.wf_extends. eauto. eexists [_]; reflexivity.
 Qed.
 Next Obligation.
-  Require Import MetaCoq.PCUIC.PCUICWeakeningEnv.
-  sq. eapply wf_extends; eauto. eexists [_]; reflexivity.
+  sq. split. cbn. 
+  eapply PCUICWeakeningEnv.wf_extends. eauto. eexists [_]; reflexivity.
+  now inversion X; subst.
 Qed.
 Next Obligation.
   sq. inv X. cbn in *.

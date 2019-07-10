@@ -718,6 +718,9 @@ Definition global_ext_constraints (Σ : global_env_ext) : constraints
   := ConstraintSet.union (constraints_of_udecl (snd Σ))
                          (global_constraints Σ.1).
 
+Definition global_ext_uctx (Σ : global_env_ext) : ContextSet.t
+  := (global_ext_levels Σ, global_ext_constraints Σ).
+
 
 Lemma prop_global_ext_levels Σ : LevelSet.In Level.prop (global_ext_levels Σ).
 Proof.

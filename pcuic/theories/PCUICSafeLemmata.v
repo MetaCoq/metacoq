@@ -323,7 +323,7 @@ Section Lemmata.
 
   Lemma type_rename :
     forall Σ Γ u v A,
-      wf Σ ->
+      wf Σ.1 ->
       Σ ;;; Γ |- u : A ->
       eq_term_upto_univ eq eq u v ->
       Σ ;;; Γ |- v : A.
@@ -514,7 +514,7 @@ Section Lemmata.
       eapply All2_nth_error_Some in hnth as hnth' ; eauto.
       destruct hnth' as [decl' [hnth' hh]].
       simpl in hh. destruct hh as [[ety ebo] era].
-      eapply type_Conv.
+      eapply type_Cumul.
       + econstructor.
         * eapply fix_guard_eq_term ; eauto.
           constructor. assumption.
@@ -531,7 +531,7 @@ Section Lemmata.
       + constructor. eapply eq_term_leq_term.
         apply eq_term_sym.
         eapply eq_term_upto_univ_eq_eq_term. assumption.
-    - intros mfix n decl H types hnth wf ihmfix v e. subst types.
+    - intros mfix n decl types hnth wf ihmfix hac v e. subst types.
       dependent destruction e.
       pose proof (All2_nth_error_Some _ _ a hnth) as [decl' [? [[? ?] ?]]].
       eapply type_Cumul.
@@ -563,7 +563,7 @@ Section Lemmata.
 
   Corollary type_nameless :
     forall Σ Γ u A,
-      wf Σ ->
+      wf Σ.1 ->
       Σ ;;; Γ |- u : A ->
       Σ ;;; Γ |- nl u : A.
   Proof.
@@ -617,14 +617,15 @@ Section Lemmata.
       + destruct a.
         * simpl in *. destruct c as [ty [bo |] uni].
           -- cbn in *.
-             econstructor.
-             ++ eapply type_nameless.
-                ** intuition eauto.
-                ** (* Need some lemma like welltyped_nlg? *)
-                  admit.
-             ++ admit.
-             ++ admit.
-             ++ admit.
+             (* econstructor. *)
+             (* ++ eapply type_nameless. *)
+             (*    ** intuition eauto. *)
+             (*    ** (* Need some lemma like welltyped_nlg? *) *)
+             (*      admit. *)
+             (* ++ admit. *)
+             (* ++ admit. *)
+             (* ++ admit. *)
+             admit.
           -- simpl. admit.
         * simpl in *. destruct m. admit.
   Admitted.

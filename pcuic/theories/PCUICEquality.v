@@ -658,9 +658,9 @@ Proof.
 Qed.
 
 Lemma eq_term_it_mkProd_or_LetIn :
-  forall (Σ : global_context) Γ u v,
-    eq_term (snd Σ) u v ->
-    eq_term (snd Σ) (it_mkProd_or_LetIn Γ u) (it_mkProd_or_LetIn Γ v).
+  forall φ Γ u v,
+    eq_term φ u v ->
+    eq_term φ (it_mkProd_or_LetIn Γ u) (it_mkProd_or_LetIn Γ v).
 Proof.
   intros Σ Γ u v h.
   eapply eq_term_upto_univ_it_mkProd_or_LetIn ; auto.

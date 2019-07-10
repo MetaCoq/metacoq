@@ -640,6 +640,31 @@ Proof.
   intro. eapply eq_universe_refl.
 Qed.
 
+Lemma eq_term_upto_univ_it_mkProd_or_LetIn :
+  forall Re Rle Γ u v,
+    Reflexive Re ->
+    eq_term_upto_univ Re Rle u v ->
+    eq_term_upto_univ Re Rle (it_mkProd_or_LetIn Γ u) (it_mkProd_or_LetIn Γ v).
+Proof.
+  intros Re Rle Γ u v he h.
+  induction Γ as [| [na [b|] A] Γ ih ] in u, v, h |- *.
+  - assumption.
+  - simpl. cbn. apply ih. constructor ; try apply eq_term_upto_univ_refl.
+    all: auto.
+  - simpl. cbn. apply ih. constructor ; try apply eq_term_upto_univ_refl.
+    all: auto.
+Qed.
+
+Lemma eq_term_it_mkProd_or_LetIn :
+  forall (Σ : global_context) Γ u v,
+    eq_term (snd Σ) u v ->
+    eq_term (snd Σ) (it_mkProd_or_LetIn Γ u) (it_mkProd_or_LetIn Γ v).
+Proof.
+  intros Σ Γ u v h.
+  eapply eq_term_upto_univ_it_mkProd_or_LetIn ; auto.
+  intro. eapply eq_universe_refl.
+Qed.
+
 Lemma eq_term_upto_univ_zipc :
   forall Re u v π,
     Reflexive Re ->

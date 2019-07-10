@@ -17,7 +17,6 @@ Import MonadNotation.
 
 Set Equations With UIP.
 
-Notation "∥ T ∥" := (squash T) (at level 10).
 Arguments sq {_} _.
 
 Notation "( x ; y )" := (existT _ x y).

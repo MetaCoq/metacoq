@@ -481,11 +481,11 @@ Definition global_ext_uctx_consistent {cf:checker_flags} Σ
 Qed.
 
 Lemma wf_ext_gc_of_uctx {cf:checker_flags} {Σ : global_env_ext} (HΣ : ∥ wf_ext Σ ∥)
-  : exists uctx', gc_of_uctx (global_ext_uctx Σ) = Some uctx'.
+  : ∑ uctx', gc_of_uctx (global_ext_uctx Σ) = Some uctx'.
 Proof.
   pose proof (global_ext_uctx_consistent _ HΣ) as HC.
   destruct Σ as [Σ φ].
-  destruct HΣ as [[HΣ1 HΣ2]].
+  simpl in HC.
   unfold gc_of_uctx; simpl in *.
   apply gc_consistent_iff in HC.
   destruct (gc_of_constraints (global_ext_constraints (Σ, φ))).
@@ -1224,9 +1224,26 @@ Section Typecheck.
 
 End Typecheck.
 
+
+Definition infer' {cf:checker_flags} {Σ} (HΣ : ∥ wf_ext Σ ∥)
+  := infer (map_squash fst HΣ) (map_squash snd HΣ).
+
+Definition make_graph_and_infer {cf:checker_flags} {Σ} (HΣ : ∥ wf_ext Σ ∥)
+           Γ (HΓ : ∥ wf_local Σ Γ ∥) t
+  : typing_result (∑ A : term, ∥ Σ;;; Γ |- t : A ∥).
+Proof.
+  destruct (wf_ext_gc_of_uctx HΣ) as [uctx Huctx].
+  unshelve eapply infer'; tea.
+  exact (make_graph uctx).
+  unfold is_graph_of_uctx. now rewrite Huctx.
+Defined.
+
+
 Print Assumptions infer.
 (* Require Import ExtrOcamlBasic ExtrOcamlNatInt ExtrOcamlString. *)
 (* Extraction infer. *)
+
+
 
 (* Section CheckEnv. *)
 (*   Context  {cf:checker_flags}. *)

@@ -1197,24 +1197,38 @@ Section RedConfluence.
       red; eauto.
     - eapply red_evar.
       eapply OnOne2_All2; simpl; eauto. simpl. intuition eauto.
-    - eapply red_fix_congr; eauto.
-      eapply OnOne2_All2; simpl; eauto. simpl. intuition eauto.
-      noconf b. hnf in H; noconf H. rewrite H0; auto.
-    - eapply red_fix_congr; eauto.
-      eapply OnOne2_All2; simpl; eauto. simpl. intuition eauto.
-      noconf b. hnf in H; noconf H. rewrite H0; auto.
-      eapply b0. eapply All2_local_env_app_inv. auto.
-      clear -Hctx. induction (fix_context mfix0); try constructor; auto.
-      destruct a as [na [b|] ty]; simpl; constructor; firstorder (hnf; auto).
-    - eapply red_cofix_congr; eauto.
-      eapply OnOne2_All2; simpl; eauto. simpl. intuition eauto.
-      noconf b. hnf in H; noconf H. rewrite H0; auto.
-    - eapply red_cofix_congr; eauto.
-      eapply OnOne2_All2; simpl; eauto. simpl. intuition eauto.
-      noconf b. hnf in H; noconf H. rewrite H0; auto.
-      eapply b0. eapply All2_local_env_app_inv. auto.
-      clear -Hctx. induction (fix_context mfix0); try constructor; auto.
-      destruct a as [na [b|] ty]; simpl; constructor; firstorder (hnf; auto).
+    - eapply red_fix_one_ty.
+      eapply OnOne2_impl ; eauto.
+      intros [? ? ? ?] [? ? ? ?] [[r ih] e]. simpl in *.
+      inversion e. subst. clear e.
+      split ; auto.
+    - eapply red_fix_one_body.
+      eapply OnOne2_impl ; eauto.
+      intros [? ? ? ?] [? ? ? ?] [[r ih] e]. simpl in *.
+      inversion e. subst. clear e.
+      split ; auto.
+      eapply ih.
+      clear - Hctx. induction (fix_context mfix0).
+      + assumption.
+      + simpl. destruct a as [na [b|] ty].
+        * constructor ; firstorder (hnf ; auto).
+        * constructor ; firstorder (hnf ; auto).
+    - eapply red_cofix_one_ty.
+      eapply OnOne2_impl ; eauto.
+      intros [? ? ? ?] [? ? ? ?] [[r ih] e]. simpl in *.
+      inversion e. subst. clear e.
+      split ; auto.
+    - eapply red_cofix_one_body.
+      eapply OnOne2_impl ; eauto.
+      intros [? ? ? ?] [? ? ? ?] [[r ih] e]. simpl in *.
+      inversion e. subst. clear e.
+      split ; auto.
+      eapply ih.
+      clear - Hctx. induction (fix_context mfix0).
+      + assumption.
+      + simpl. destruct a as [na [b|] ty].
+        * constructor ; firstorder (hnf ; auto).
+        * constructor ; firstorder (hnf ; auto).
     - auto.
     - eapply red_trans; eauto.
   Qed.

@@ -1326,51 +1326,61 @@ Proof.
   - eapply red_evar; eauto.
     induction X; intuition.
 
-  - eapply red_fix_congr.
+  - eapply red_fix_one_ty.
     rewrite -> (OnOne2_length X). generalize (#|mfix1|).
     intros.
-    apply All2_map. eapply OnOne2_All2; eauto. simpl. intuition eauto.
-    simplify_IH_hyps. destruct x; simpl in *; subst; auto.
-    noconf b. auto.
+    eapply OnOne2_map. eapply OnOne2_impl ; eauto.
+    intros [? ? ? ?] [? ? ? ?] [[? ih] e]. simpl in *.
+    inversion e. subst. clear e.
+    split.
+    + eapply ih ; eauto.
+    + cbn. f_equal.
 
-  - eapply red_fix_congr. pose proof (OnOne2_length X).
-    apply All2_map. eapply OnOne2_All2; eauto. simpl.
-    intros ? ? [[? ?] e]. noconf e. simpl in H0. noconf H0.
-    intuition eauto. rewrite H1; auto.
-    specialize (r0 Γ0 Δ (Γ' ,,, fix_context mfix0)).
-    rewrite app_context_assoc in r0.
-    specialize (r0 eq_refl wfΓ Hs).
-    destruct x; simpl in *; subst; auto.
-    rewrite -> subst_context_app in *.
-    rewrite -> app_context_assoc, Nat.add_0_r in *.
-    rewrite app_context_length in r0.
-    rewrite fix_context_length in r0.
-    rewrite subst_fix_context. now rewrite <- H.
-    simpl. intros. intuition auto.
-    now rewrite H.
+  - eapply red_fix_one_body.
+    rewrite -> (OnOne2_length X).
+    eapply OnOne2_map. eapply OnOne2_impl ; eauto.
+    intros [? ? ? ?] [? ? ? ?] [[? ih] e]. simpl in *.
+    inversion e. subst. clear e.
+    split.
+    + cbn. specialize (ih Γ0 Δ (Γ' ,,, fix_context mfix0)).
+      rewrite app_context_assoc in ih.
+      specialize (ih eq_refl wfΓ Hs).
+      rewrite -> subst_context_app in *.
+      rewrite -> app_context_assoc, Nat.add_0_r in *.
+      rewrite app_context_length in ih.
+      rewrite fix_context_length in ih.
+      rewrite <- subst_fix_context in ih.
+      rewrite <- (OnOne2_length X).
+      eapply ih ; eauto.
+    + cbn. f_equal.
 
-  - eapply red_cofix_congr.
+  - eapply red_cofix_one_ty.
     rewrite -> (OnOne2_length X). generalize (#|mfix1|).
     intros.
-    apply All2_map. eapply OnOne2_All2; eauto. simpl. intuition eauto.
-    noconf b. hnf in H; noconf H.
-    simplify_IH_hyps. destruct x; simpl in *; subst; auto.
+    eapply OnOne2_map. eapply OnOne2_impl ; eauto.
+    intros [? ? ? ?] [? ? ? ?] [[? ih] e]. simpl in *.
+    inversion e. subst. clear e.
+    split.
+    + eapply ih ; eauto.
+    + cbn. f_equal.
 
-  - eapply red_cofix_congr. pose proof (OnOne2_length X).
-    apply All2_map. eapply OnOne2_All2; eauto. simpl. intuition eauto.
-    noconf b. hnf in H0. noconf H0.
-    simplify_IH_hyps. destruct x; simpl in *; subst; auto.
-    specialize (b0 Γ0 Δ (Γ' ,,, fix_context mfix0)).
-    rewrite app_context_assoc in b0.
-    specialize (b0 eq_refl wfΓ Hs).
-    destruct x; simpl in *; subst; auto.
-    rewrite -> subst_context_app in *.
-    rewrite -> app_context_assoc, Nat.add_0_r in *.
-    rewrite app_context_length in b0.
-    rewrite fix_context_length in b0.
-    rewrite subst_fix_context. now rewrite <- H.
-    simpl. intros. intuition auto.
-    now rewrite H.
+  - eapply red_cofix_one_body.
+    rewrite -> (OnOne2_length X).
+    eapply OnOne2_map. eapply OnOne2_impl ; eauto.
+    intros [? ? ? ?] [? ? ? ?] [[? ih] e]. simpl in *.
+    inversion e. subst. clear e.
+    split.
+    + cbn. specialize (ih Γ0 Δ (Γ' ,,, fix_context mfix0)).
+      rewrite app_context_assoc in ih.
+      specialize (ih eq_refl wfΓ Hs).
+      rewrite -> subst_context_app in *.
+      rewrite -> app_context_assoc, Nat.add_0_r in *.
+      rewrite app_context_length in ih.
+      rewrite fix_context_length in ih.
+      rewrite <- subst_fix_context in ih.
+      rewrite <- (OnOne2_length X).
+      eapply ih ; eauto.
+    + cbn. f_equal.
 Qed.
 
 Lemma untyped_substlet_length  {Γ s Δ} : untyped_subslet Γ s Δ -> #|s| = #|Δ|.
@@ -1481,51 +1491,61 @@ Proof.
   - eapply red_evar; eauto.
     induction X; intuition.
 
-  - eapply red_fix_congr.
+  - eapply red_fix_one_ty.
     rewrite -> (OnOne2_length X). generalize (#|mfix1|).
     intros.
-    apply All2_map. eapply OnOne2_All2; eauto. simpl. intuition eauto.
-    simplify_IH_hyps. destruct x; simpl in *; subst; auto.
-    noconf b. auto.
+    eapply OnOne2_map. eapply OnOne2_impl ; eauto.
+    intros [? ? ? ?] [? ? ? ?] [[? ih] e]. simpl in *.
+    inversion e. subst. clear e.
+    split.
+    + eapply ih ; eauto.
+    + cbn. f_equal.
 
-  - eapply red_fix_congr. pose proof (OnOne2_length X).
-    apply All2_map. eapply OnOne2_All2; eauto. simpl.
-    intros ? ? [[? ?] e]. noconf e. simpl in H0. noconf H0.
-    intuition eauto. rewrite H1; auto.
-    specialize (r0 Γ0 Δ (Γ' ,,, fix_context mfix0)).
-    rewrite app_context_assoc in r0.
-    specialize (r0 eq_refl Hs).
-    destruct x; simpl in *; subst; auto.
-    rewrite -> subst_context_app in *.
-    rewrite -> app_context_assoc, Nat.add_0_r in *.
-    rewrite app_context_length in r0.
-    rewrite fix_context_length in r0.
-    rewrite subst_fix_context. now rewrite <- H.
-    simpl. intros. intuition auto.
-    now rewrite H.
+  - eapply red_fix_one_body.
+    rewrite -> (OnOne2_length X).
+    eapply OnOne2_map. eapply OnOne2_impl ; eauto.
+    intros [? ? ? ?] [? ? ? ?] [[? ih] e]. simpl in *.
+    inversion e. subst. clear e.
+    split.
+    + cbn. specialize (ih Γ0 Δ (Γ' ,,, fix_context mfix0)).
+      rewrite app_context_assoc in ih.
+      specialize (ih eq_refl).
+      rewrite -> subst_context_app in *.
+      rewrite -> app_context_assoc, Nat.add_0_r in *.
+      rewrite app_context_length in ih.
+      rewrite fix_context_length in ih.
+      rewrite <- subst_fix_context in ih.
+      rewrite <- (OnOne2_length X).
+      eapply ih ; eauto.
+    + cbn. f_equal.
 
-  - eapply red_cofix_congr.
+  - eapply red_cofix_one_ty.
     rewrite -> (OnOne2_length X). generalize (#|mfix1|).
     intros.
-    apply All2_map. eapply OnOne2_All2; eauto. simpl. intuition eauto.
-    noconf b. hnf in H; noconf H.
-    simplify_IH_hyps. destruct x; simpl in *; subst; auto.
+    eapply OnOne2_map. eapply OnOne2_impl ; eauto.
+    intros [? ? ? ?] [? ? ? ?] [[? ih] e]. simpl in *.
+    inversion e. subst. clear e.
+    split.
+    + eapply ih ; eauto.
+    + cbn. f_equal.
 
-  - eapply red_cofix_congr. pose proof (OnOne2_length X).
-    apply All2_map. eapply OnOne2_All2; eauto. simpl. intuition eauto.
-    noconf b. hnf in H0. noconf H0.
-    simplify_IH_hyps. destruct x; simpl in *; subst; auto.
-    specialize (b0 Γ0 Δ (Γ' ,,, fix_context mfix0)).
-    rewrite app_context_assoc in b0.
-    specialize (b0 eq_refl Hs).
-    destruct x; simpl in *; subst; auto.
-    rewrite -> subst_context_app in *.
-    rewrite -> app_context_assoc, Nat.add_0_r in *.
-    rewrite app_context_length in b0.
-    rewrite fix_context_length in b0.
-    rewrite subst_fix_context. now rewrite <- H.
-    simpl. intros. intuition auto.
-    now rewrite H.
+  - eapply red_cofix_one_body.
+    rewrite -> (OnOne2_length X).
+    eapply OnOne2_map. eapply OnOne2_impl ; eauto.
+    intros [? ? ? ?] [? ? ? ?] [[? ih] e]. simpl in *.
+    inversion e. subst. clear e.
+    split.
+    + cbn. specialize (ih Γ0 Δ (Γ' ,,, fix_context mfix0)).
+      rewrite app_context_assoc in ih.
+      specialize (ih eq_refl).
+      rewrite -> subst_context_app in *.
+      rewrite -> app_context_assoc, Nat.add_0_r in *.
+      rewrite app_context_length in ih.
+      rewrite fix_context_length in ih.
+      rewrite <- subst_fix_context in ih.
+      rewrite <- (OnOne2_length X).
+      eapply ih ; eauto.
+    + cbn. f_equal.
 Qed.
 
 Lemma subst_eq_term_upto_univ `{checker_flags} n k T U Re Rle :

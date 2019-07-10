@@ -227,32 +227,28 @@ Section ContextReduction.
       refine (existT _ {| dbody := t |} _); simpl; eauto.
     - eapply (OnOne2_exist _ (on_Trel_eq (red Σ Γ') dtype (fun x => (dname x, dbody x, rarg x)))) in X.
       destruct X as [mfix' [l r]].
-      exists (tCoFix mfix' idx); split; eapply red_cofix_congr.
-      eapply OnOne2_All2; intuition eauto; intuition. noconf b. hnf in H0; noconf H0.
-      rewrite H1; auto.
-      eapply OnOne2_All2; intuition eauto; intuition. noconf b; hnf in H0; noconf H0.
-      rewrite H1. auto. intros. intuition auto.
+      exists (tCoFix mfix' idx); split; eapply red_cofix_ty.
+      eapply OnOne2_All2; intuition eauto; intuition.
+      eapply OnOne2_All2; intuition eauto; intuition.
+      intuition auto.
       destruct (b0 _ H X0) as [d' [r0 r1]].
       refine (existT _ {| dtype := d' |} _); simpl; eauto.
     - assert (fix_context mfix0 = fix_context mfix1).
       { rewrite /fix_context /mapi. generalize 0 at 2 4.
-        induction X. simpl. destruct p. destruct p. intuition auto. congruence.
+        induction X. destruct p. simpl. intuition congruence.
         intros. specialize (IHX (S n)). simpl. congruence. }
-      eapply (OnOne2_exist _ (on_Trel_eq (red Σ (Γ' ,,, fix_context mfix0))
-                                         dbody (fun x => (dname x, dtype x, rarg x)))) in X.
-      + destruct X as [mfix' [l r]].
-        exists (tCoFix mfix' idx); split; eapply red_cofix_congr.
-        eapply OnOne2_All2; intuition eauto; intuition. noconf b; hnf in H1; noconf H1.
-        rewrite H2; auto.
-        eapply OnOne2_All2; intuition eauto; intuition try congruence.
-        noconf b; hnf in H1; noconf H1. now rewrite H2.
-      + intros.
-        intuition auto.
-        specialize (b0 (Γ' ,,, fix_context mfix0)). forward b0.
-        eapply All2_local_env_app_inv. apply H. apply All2_local_env_over_red_refl.
-        forward b0. eapply red1_red_ctxP_ass. apply fix_context_assumption_context. auto.
-        destruct b0 as [t [? ?]].
-        refine (existT _ {| dbody := t |} _); simpl; eauto.
+      eapply (OnOne2_exist _ (on_Trel_eq (red Σ (Γ' ,,, fix_context mfix0)) dbody (fun x => (dname x, dtype x, rarg x)))) in X.
+      destruct X as [mfix' [l r]].
+      exists (tCoFix mfix' idx); split; eapply red_cofix_body.
+      eapply OnOne2_All2; intuition eauto; intuition.
+      eapply OnOne2_All2; intuition eauto; intuition. congruence.
+      intros.
+      intuition auto.
+      specialize (b0 (Γ' ,,, fix_context mfix0)). forward b0.
+      eapply All2_local_env_app_inv. apply H. apply All2_local_env_over_red_refl.
+      forward b0. eapply red1_red_ctxP_ass. apply fix_context_assumption_context. auto.
+      destruct b0 as [t [? ?]].
+      refine (existT _ {| dbody := t |} _); simpl; eauto.
   Qed.
 
   Lemma red_red_ctx' {Γ Γ' T U} :

@@ -122,45 +122,13 @@ Examples of plugins
 - a parametricity plugin in [translations/param_original.v](https://github.com/MetaCoq/metacoq/tree/coq-8.8/translations/param_original.v)
 - a plugin to negate funext in [translations/times_bool_fun.v](https://github.com/MetaCoq/metacoq/tree/coq-8.8/translations/times_bool_fun.v)
 
-
-Papers
-======
-
-- ["The MetaCoq Project"](https://www.irif.fr/~sozeau/research/publications/drafts/The_MetaCoq_Project.pdf)
-  Matthieu Sozeau, Abhishek Anand, Simon Boulier, Cyril Cohen, Yannick Forster, Fabian Kunze,
-  Gregory Malecha, Nicolas Tabareau, Théo Winterhalter.
-  Extended version of the ITP 2018 paper. Submitted.
-
-  This includes a full documentation of the Template Monad.
-
-- ["Towards Certified Meta-Programming with Typed Template-Coq"](https://hal.archives-ouvertes.fr/hal-01809681/document)
-  Abhishek Anand, Simon Boulier, Cyril Cohen, Matthieu Sozeau and Nicolas Tabareau.
-  ITP 2018.
-
-- The system was presented at [Coq'PL 2018](https://popl18.sigplan.org/event/coqpl-2018-typed-template-coq)
-
 Credits
 =======
 
 Template-Coq was originally developed by
 [Gregory Malecha](https://github.com/gmalecha).
 
-MetaCoq is now developed by [Abhishek Anand](https://github.com/aa755), 
-[Simon Boulier](https://github.com/simonboulier),
-[Cyril Cohen](https://github.com/CohenCyril)
-[Gregory Malecha](https://github.com/gmalecha),
-[Yannick Forster](https://github.com/yforster),
-[Matthieu Sozeau](https://github.com/mattam82),
-[Nicolas Tabareau](https://github.com/Tabareau) and
-[Théo Winterhalter](https://github.com/TheoWinterhalter).
-
-Copyright (c) 2014-2019 Gregory Malecha\
-Copyright (c) 2015-2019 Abhishek Anand, Matthieu Sozeau\
-Copyright (c) 2017-2019 Simon Boulier, Nicolas Tabareau, Cyril Cohen
-Copyright (c) 2018-2019 Yannick Forster, Théo Winterhalter
-
 This software is distributed under the terms of the MIT license.
-See [LICENSE](LICENSE) for details.
 
 Installation instructions
 =========================

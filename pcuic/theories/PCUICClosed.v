@@ -447,6 +447,65 @@ Proof.
     + destruct s. rewrite andb_true_r in p. intuition auto.
 Qed.
 
+Lemma on_global_env_impl `{checker_flags} Σ P Q :
+  (forall Σ Γ t T, on_global_env P Σ.1 -> P Σ Γ t T -> Q Σ Γ t T) ->
+  on_global_env P Σ -> on_global_env Q Σ.
+Proof.
+  intros X X0.
+  simpl in *. induction X0; constructor; auto.
+  clear IHX0. destruct d; simpl.
+  - destruct c; simpl. destruct cst_body; simpl in *.
+    red in o |- *. simpl in *. now eapply X.
+    red in o |- *. simpl in *. now eapply X.
+  - red in o. simpl in *.
+    destruct o0 as [onI onP onNP].
+    constructor; auto.
+    -- eapply Alli_impl. exact onI. eauto. intros.
+       unshelve econstructor. shelve. shelve.
+       --- apply onConstructors in X1. red in X1.
+           unfold on_constructor, on_type in *. eapply Alli_impl_trans; eauto.
+           simpl. intros. destruct X2 as (? & ? & ?).
+           split. now eapply X.
+           exists x1.
+           clear -t X X0.
+           revert t. generalize (cshape_args x1).
+           abstract (induction c; simpl; auto;
+           destruct a as [na [b|] ty]; simpl in *; auto;
+           split; eauto; [apply IHc;apply t|apply X;simpl; auto;apply t]).
+       --- apply (ind_arity_eq X1).
+       --- apply onArity in X1. unfold on_type in *; simpl in *.
+           now eapply X.
+       --- simpl; intros. pose (onProjections X1 H0). simpl in *.
+           destruct o0. constructor; auto. eapply Alli_impl; intuition eauto.
+           unfold on_projection in *; simpl in *.
+           now apply X.
+       --- generalize (ind_sorts X1).
+           (* all:todo "simplify constructor shapes"%string. *)
+           clear -X.
+           destruct (onConstructors X1); auto.
+           unfold check_ind_sorts.
+           destruct universe_family eqn:Heq; simpl; auto.
+           destruct tl; simpl. intros.
+           specialize (H0 _ H1). destruct o0; simpl in *; intuition auto.
+           destruct o as [? [? ?]]; simpl in *; intuition auto.
+           auto. intuition auto.
+           destruct o as [? [? ?]]. simpl in *. intuition auto.
+           clear -o0 H2.
+           induction o0; simpl; intuition auto.
+           destruct p as [? [? ?]]; simpl in *; intuition auto.
+           eapply IHo0; auto. red in H2. red. intuition auto.
+           intuition auto.
+           destruct o as [? [? ?]]; simpl in *; intuition auto.
+           clear -o0 H2.
+           induction o0; simpl; intuition auto.
+           destruct p as [? [? ?]]; simpl in *; intuition auto.
+           eapply IHo0; auto. red in H2. red. intuition auto.
+    -- red in onP. red.
+       eapply All_local_env_impl. eauto.
+       intros. now apply X.
+Qed.
+
+
 Lemma declared_decl_closed `{checker_flags} (Σ : global_env) cst decl :
   wf Σ ->
   lookup_env Σ cst = Some decl ->

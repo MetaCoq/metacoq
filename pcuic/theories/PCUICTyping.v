@@ -16,9 +16,9 @@ Set Asymmetric Patterns.
 
 (** * Typing derivations
 
-  *WIP*
-
-  Inductive relations for reduction, conversion and typing of CIC terms.
+  Inductive relations for reduction, conversion and typing of PCUIC terms.
+  These come with many additional functions, to define the reduction operations,
+  deal with arities, declarations in the environment etc...
 
  *)
 
@@ -729,12 +729,6 @@ Definition conv `{checker_flags} Σ Γ T U : Type :=
 
 Notation " Σ ;;; Γ |- t = u " := (conv Σ Γ t u) (at level 50, Γ, t, u at next level) : type_scope.
 
-Axiom conv_refl : forall `{checker_flags} Σ Γ t, Σ ;;; Γ |- t = t.
-Axiom cumul_refl' : forall `{checker_flags} Σ Γ t, Σ ;;; Γ |- t <= t. (* easy *)
-Axiom cumul_trans : forall `{checker_flags} Σ Γ t u v, Σ ;;; Γ |- t <= u -> Σ ;;; Γ |- u <= v -> Σ ;;; Γ |- t <= v.
-
-Hint Resolve conv_refl cumul_refl' : typecheck.
-
 Definition eq_opt_term `{checker_flags} φ (t u : option term) :=
   match t, u with
   | Some t, Some u => eq_term φ t u
@@ -879,7 +873,6 @@ Axiom fix_guard_subst :
 
 Axiom ind_guard : mutual_inductive_body -> bool.
 
-
 Inductive typing `{checker_flags} (Σ : global_env_ext) (Γ : context) : term -> term -> Type :=
 | type_Rel n decl :
     All_local_env (lift_typing typing Σ) Γ ->
@@ -945,10 +938,8 @@ Inductive typing `{checker_flags} (Σ : global_env_ext) (Γ : context) : term ->
 | type_Proj p c u :
     forall mdecl idecl pdecl (isdecl : declared_projection Σ.1 mdecl idecl p pdecl) args,
     Σ ;;; Γ |- c : mkApps (tInd (fst (fst p)) u) args ->
-    (** Actually ensured by typing + validity, but necessary for weakening and substitution. *)
     #|args| = ind_npars mdecl ->
     let ty := snd pdecl in
-    (* FIXME: what about lets in the parameters of the inductive type? *)
     Σ ;;; Γ |- tProj p c : subst0 (c :: List.rev args) (subst_instance_constr u ty)
 
 | type_Fix mfix n decl :
@@ -958,8 +949,6 @@ Inductive typing `{checker_flags} (Σ : global_env_ext) (Γ : context) : term ->
     All_local_env (lift_typing typing Σ) (Γ ,,, types) ->
     All (fun d => (Σ ;;; Γ ,,, types |- d.(dbody) : lift0 #|types| d.(dtype))
     * (isLambda d.(dbody) = true)%type) mfix ->
-    (** TODO check well-formed fix *)
-    (* Missing check on rarg *)
     Σ ;;; Γ |- tFix mfix n : decl.(dtype)
 
 | type_CoFix mfix n decl :
@@ -968,7 +957,6 @@ Inductive typing `{checker_flags} (Σ : global_env_ext) (Γ : context) : term ->
     nth_error mfix n = Some decl ->
     All_local_env (lift_typing typing Σ) (Γ ,,, types) ->
     All (fun d => Σ ;;; Γ ,,, types |- d.(dbody) : lift0 #|types| d.(dtype)) mfix ->
-    (** TODO check well-formed cofix *)
     Σ ;;; Γ |- tCoFix mfix n : decl.(dtype)
 
 | type_Cumul t A B :
@@ -981,7 +969,6 @@ where " Σ ;;; Γ |- t : T " := (typing Σ Γ t T) : type_scope.
 Notation wf_local Σ Γ := (All_local_env (lift_typing typing Σ) Γ).
 
 (** ** Typechecking of global environments *)
-
 
 Definition isType `{checker_flags} (Σ : global_env_ext) (Γ : context) (t : term) :=
   { s : _ & Σ ;;; Γ |- t : tSort s }.
@@ -1242,7 +1229,6 @@ Arguments onConstructors {_ P Σ mind mdecl i idecl}.
 Arguments onProjections {_ P Σ mind mdecl i idecl}.
 Arguments ind_sorts {_ P Σ mind mdecl i idecl}.
 
-
 Lemma All_local_env_impl (P Q : context -> term -> option term -> Type) l :
   All_local_env P l ->
   (forall Γ t T, P Γ t T -> Q Γ t T) ->
@@ -1273,57 +1259,6 @@ Proof.
   intros. intuition auto.
 Qed.
 
-Lemma on_global_env_impl `{checker_flags} Σ P Q :
-  (forall Σ Γ t T, on_global_env P Σ.1 -> P Σ Γ t T -> Q Σ Γ t T) ->
-  on_global_env P Σ -> on_global_env Q Σ.
-Proof.
-(*   intros. destruct Σ as [Σ φ]. red in X0 |- *. *)
-(*   simpl in *. induction X0; constructor; auto. *)
-(*   clear IHX0. destruct d; simpl. *)
-(*   - destruct c; simpl. destruct cst_body; simpl in *. *)
-(*     red in o |- *. simpl in *. auto. *)
-(*     red in o |- *. simpl in *. red in o. red. auto. *)
-(*   - red in o. simpl in *. *)
-(*     destruct o as [onI onP onNP]. *)
-(*     constructor; auto. *)
-(*     -- eapply Alli_impl; eauto. intros. *)
-(*        unshelve eexists (ind_indices X1) (ind_sort X1) _. *)
-(*        --- apply onConstructors in X1. red in X1. unfold on_constructor, on_type in *. *)
-(*            eapply Alli_impl_trans; eauto. *)
-(*            simpl; intuition eauto. exists b.π1. destruct b. *)
-(*            simpl. eapply type_local_ctx_impl; eauto. *)
-(*        --- apply (ind_arity_eq X1). *)
-(*        --- apply onArity in X1. unfold on_type in *; simpl in *; intuition. *)
-(*        --- intros Hprojs. destruct (onProjections X1 Hprojs). *)
-(*            constructor; auto. *)
-(*            eapply Alli_impl; intuition eauto. clear on_projs0. *)
-(*            unfold on_projection in *; simpl in *. unfold on_type in *; eauto. *)
-(*        --- generalize (ind_sorts X1). *)
-(*            set (onC := onConstructors _). clearbody onC. *)
-(*            clear. revert onC. *)
-(*            generalize (ind_ctors x). unfold on_constructors. *)
-(*            simpl. intros l onC. unfold check_ind_sorts. *)
-(*            destruct universe_family. *)
-(*            +++ depelim onC; unfold Alli_impl_trans; try reflexivity; simpl; auto. *)
-(*                depelim onC; simpl; trivial. destruct o; simpl; trivial. *)
-(*            +++ revert onC. generalize 0. *)
-(*                induction onC; simpl; intuition auto. *)
-(*                { destruct p as [pty [cs Hcs]]. simpl in *; auto. } *)
-(*            +++ revert onC. generalize 0. *)
-(*                induction onC; simpl; intuition auto. *)
-(*                { destruct p as [pty [cs Hcs]]. simpl in *; auto. } *)
-(*     -- red in onP. red. *)
-(*        eapply All_local_env_impl. eauto. *)
-(*        intros. apply X. auto. auto. *)
-(* Qed. *)
-Admitted.
-
-Lemma on_global_env_proj `{checker_flags} {Σ P Q} :
-  on_global_env (fun Σ Γ t T => (P Σ Γ t T * Q Σ Γ t T)%type) Σ -> on_global_env P Σ.
-Proof.
-  intros. eapply on_global_env_impl. intros. 2:eauto. simpl in X1; intuition.
-Qed.
-
 (** This predicate enforces that there exists typing derivations for every typable term in env. *)
 
 Definition Forall_decls_typing `{checker_flags}
@@ -1342,7 +1277,6 @@ Definition type_local_decl `{checker_flags} Σ Γ d :=
 
 Lemma refine_type `{checker_flags} Σ Γ t T U : Σ ;;; Γ |- t : T -> T = U -> Σ ;;; Γ |- t : U.
 Proof. now intros Ht ->. Qed.
-
 
 Section wf_local.
   Context `{checker_flags}.

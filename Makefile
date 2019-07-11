@@ -10,13 +10,12 @@ install:
 	$(MAKE) -C extraction install
 
 html: all
-	$(MAKE) -C template-coq html
-	$(MAKE) -C pcuic html
-	$(MAKE) -C safechecker html
-	$(MAKE) -C extraction html
-	mv template-coq/html/*.html html
-	rm template-coq/html/coqdoc.css
-	rm -d template-coq/html
+	"coqdoc" -toc -utf8 -interpolate -l -html \
+		-R template-coq/theories MetaCoq.Template \
+		-R pcuic/theories MetaCoq.PCUIC \
+		-R safechecker/theories MetaCoq.SafeChecker \
+		-R extraction/theories MetaCoq.Extraction \
+		-d html */theories/*.v
 
 clean:
 	$(MAKE) -C template-coq clean

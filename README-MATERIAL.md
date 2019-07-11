@@ -1,11 +1,14 @@
-Anonymized artifact / supplementary material for POPL submission Coq Coq
-Correct!
+Anonymized supplementary material for POPL submission Coq Coq Correct!
 
-This archive contains the whole development as source. It can be
-compiled with Coq 8.8.2 and Equations 1.2. If you don't have Coq
-installed, the easiest way to get both is to use the `opam` package
-manager. First install opam from your package manager 
-(or using the instructions below) and then issue the command:
+This archive contains the whole development as source. If you only want
+to browse the files a "light" documentation is available in
+`html/toc.html` which provides access to all the development files.
+
+Otherwise, to run interactively, the development can be compiled with
+Coq 8.8.2 and Equations 1.2. If you don't have Coq installed, the
+easiest way to get both is to use the `opam` package manager. First
+install opam from your package manager (or using the instructions below)
+and then issue the command:
 
     # opam install coq.8.8.2 coq-equations.1.2+8.8
     

@@ -60,7 +60,7 @@ Check (@PCUICWeakeningEnv.check_correct_arity_subset
          (pars : list PCUICAst.term) (pctx : PCUICAst.context),
        Universes.ConstraintSet.Subset φ φ' ->
        PCUICTyping.check_correct_arity φ decl ind u ctx pars pctx ->
-       PCUICTyping.check_correct_arity φ' decl ind u ctx pars pctx). 
+       PCUICTyping.check_correct_arity φ' decl ind u ctx pars pctx).
 
 Require PCUIC.PCUICUnivSubstitution.
 
@@ -75,7 +75,7 @@ Check (@PCUICUnivSubstitution.fix_context_subst_instance
 
 Check (@PCUICUnivSubstitution.isWfArity_subst_instance
      of forall (cf : config.checker_flags)
-         (Σ : PCUICAst.global_env * Universes.universes_decl) 
+         (Σ : PCUICAst.global_env * Universes.universes_decl)
          (Γ : PCUICAst.context) (B : PCUICAst.term),
        PCUICTyping.isWfArity PCUICTyping.typing Σ Γ B ->
        forall (u : Universes.universe_instance) (univs : Universes.universes_decl),
@@ -111,7 +111,7 @@ Check (@PCUICUnivSubstitution.subst_instance_univ_make
 
 Check (@PCUICUnivSubstitution.LevelIn_subst_instance
      of forall (cf : config.checker_flags)
-         (Σ : PCUICAst.global_env * Universes.universes_decl) 
+         (Σ : PCUICAst.global_env * Universes.universes_decl)
          (l : Universes.Level.t),
        Universes.LevelSet.In l (PCUICTyping.global_ext_levels Σ) ->
        forall (u : Universes.universe_instance) (univs : Universes.universes_decl),
@@ -382,7 +382,7 @@ Check (@PCUICSR.context_conversion
 
 Check (@PCUICSR.cumul_Prod_inv
      of forall (cf : config.checker_flags)
-         (Σ : PCUICAst.global_env * Universes.universes_decl) 
+         (Σ : PCUICAst.global_env * Universes.universes_decl)
          (Γ : PCUICAst.context) (na na' : BasicAst.name) (A B A' B' : PCUICAst.term),
        PCUICTyping.wf (fst Σ) ->
        PCUICTyping.All_local_env (PCUICTyping.lift_typing PCUICTyping.typing Σ) Γ ->
@@ -407,7 +407,7 @@ Check (@PCUICSR.sr_red1
 Require PCUICWcbvEval.
 
 Check (PCUICWcbvEval.eval_closed
-     of forall (Σ : PCUICAst.global_env) (Γ : PCUICAst.context) 
+     of forall (Σ : PCUICAst.global_env) (Γ : PCUICAst.context)
          (n : nat) (t u : PCUICAst.term),
        PCUICLiftSubst.closedn n t = true ->
        PCUICWcbvEval.eval Σ Γ t u -> PCUICLiftSubst.closedn n u = true).
@@ -459,7 +459,7 @@ Check (@PCUICElimination.tCase_length_branch_inv
 Check (@PCUICElimination.cumul_prop1
      of forall cf : config.checker_flags,
        config.prop_sub_type = false ->
-       forall (Σ : PCUICAst.global_env_ext) (Γ : PCUICAst.context) 
+       forall (Σ : PCUICAst.global_env_ext) (Γ : PCUICAst.context)
          (A B : PCUICAst.term) (u : Universes.Universe.t),
        PCUICTyping.wf (PCUICAstUtils.fst_ctx Σ) ->
        is_true (Universes.is_prop_sort u) ->
@@ -469,7 +469,7 @@ Check (@PCUICElimination.cumul_prop1
 Check (@PCUICElimination.cumul_prop2
      of forall cf : config.checker_flags,
        config.prop_sub_type = false ->
-       forall (Σ : PCUICAst.global_env_ext) (Γ : PCUICAst.context) 
+       forall (Σ : PCUICAst.global_env_ext) (Γ : PCUICAst.context)
          (A B : PCUICAst.term) (u : Universes.Universe.t),
        PCUICTyping.wf (PCUICAstUtils.fst_ctx Σ) ->
        is_true (Universes.is_prop_sort u) ->
@@ -491,7 +491,7 @@ Require PCUICSafeLemmata.
 Check (@PCUICSafeLemmata.context_conversion
      of forall cf : config.checker_flags,
        PCUICNormal.RedFlags.t ->
-       forall (Σ : PCUICAst.global_env_ext) (Γ : PCUICAst.context) 
+       forall (Σ : PCUICAst.global_env_ext) (Γ : PCUICAst.context)
          (t T : PCUICAst.term) (Γ' : PCUICAst.context),
        PCUICTyping.typing Σ Γ t T ->
        PCUICSR.context_relation (PCUICSR.conv_decls Σ) Γ Γ' -> PCUICTyping.typing Σ Γ' t T).
@@ -499,7 +499,7 @@ Check (@PCUICSafeLemmata.context_conversion
 Check (@PCUICSafeLemmata.type_rename
      of forall cf : config.checker_flags,
        PCUICNormal.RedFlags.t ->
-       forall (Σ : PCUICAst.global_env * Universes.universes_decl) 
+       forall (Σ : PCUICAst.global_env * Universes.universes_decl)
          (Γ : PCUICAst.context) (u v A : PCUICAst.term),
        PCUICTyping.wf (fst Σ) ->
        PCUICTyping.typing Σ Γ u A ->
@@ -745,9 +745,43 @@ Check (@PCUICSafeLemmata.Proj_red_cond
        PCUICNormal.RedFlags.t ->
        forall Σ : PCUICAst.global_env_ext,
        utils.squash (PCUICTyping.wf (PCUICAstUtils.fst_ctx Σ)) ->
-       forall (Γ : PCUICAst.context) (i : BasicAst.inductive) 
+       forall (Γ : PCUICAst.context) (i : BasicAst.inductive)
          (pars narg : nat) (i' : BasicAst.inductive) (c : nat)
          (u : Universes.universe_instance) (l : list PCUICAst.term),
        PCUICSafeLemmata.wellformed Σ Γ
          (PCUICAst.tProj (i, pars, narg) (PCUICAst.mkApps (PCUICAst.tConstruct i' c u) l)) ->
        List.nth_error l (pars + narg) <> None).
+
+Require PCUICSN.
+
+Check (@PCUICSN.normalisation
+         of forall cf : config.checker_flags,
+            forall (Σ : PCUICAst.global_env_ext) (Γ : PCUICAst.context)
+              (t : PCUICAst.term),
+              welltyped Σ Γ t ->
+              Acc (cored (fst Σ) Γ) t).
+
+Check (@PCUICSN.Acc_cored_Prod
+         of forall cf : config.checker_flags,
+            forall (Σ : PCUICAst.global_env_ext) (Γ : PCUICAst.context) (n : name)
+              (t1 t2 : PCUICAst.term),
+              Acc (cored Σ Γ) t1 ->
+              Acc (cored Σ (Γ,, vass n t1)) t2 ->
+              Acc (cored Σ Γ) (tProd n t1 t2)).
+
+Check (@PCUICSN.Acc_cored_LetIn
+         of forall cf : config.checker_flags,
+            forall (Σ : PCUICAst.global_env_ext) (Γ : PCUICAst.context) (n : name)
+              (t1 t2 t2 : PCUICAst.term),
+              Acc (cored Σ Γ) t1 ->
+              Acc (cored Σ Γ) t2 ->
+              Acc (cored Σ (Γ,, vdef n t1 t2)) t3 ->
+              Acc (cored Σ Γ) (tLetIn n t1 t2 t3)).
+
+Check (@PCUICSN.isWfArity_red1
+         of forall cf : config.checker_flags,
+            forall (Σ : PCUICAst.global_env_ext) (Γ : PCUICAst.context)
+              (A B : PCUICAst.term),
+              red1 (fst Σ) Γ A B ->
+              isWfArity typing Σ Γ A ->
+              isWfArity typing Σ Γ B).

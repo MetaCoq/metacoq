@@ -1,8 +1,12 @@
 (* Distributed under the terms of the MIT license.   *)
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Arith Lia.
-From MetaCoq.Template Require Import config monad_utils utils BasicAst AstUtils UnivSubst uGraph.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICNormal PCUICSR PCUICGeneration PCUICReflect PCUICEquality PCUICInversion PCUICValidity PCUICWeakening PCUICPosition PCUICCumulativity PCUICSafeLemmata.
+From MetaCoq.Template Require Import config monad_utils utils BasicAst AstUtils
+     UnivSubst uGraph.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
+     PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICNormal PCUICSR
+     PCUICGeneration PCUICReflect PCUICEquality PCUICInversion PCUICValidity
+     PCUICWeakening PCUICPosition PCUICCumulativity PCUICSafeLemmata PCUICSN.
 From MetaCoq.SafeChecker Require Import PCUICSafeReduce PCUICSafeConversion.
 
 Import MonadNotation.
@@ -534,7 +538,6 @@ Section Typecheck.
     2: now eapply cumul_red_l'.
     destruct (validity_term HΣ' HΓ Ht).
     - left. eapply isWfArity_red; try eassumption.
-      apply RedFlags.default.
     - destruct i as [s HA]. right.
       exists s. eapply subject_reduction; eassumption.
   Defined.

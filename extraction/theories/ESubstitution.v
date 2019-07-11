@@ -157,7 +157,7 @@ Proof.
       rewrite lift_context_snoc0, <- plus_n_O in *.
       eapply H; eauto. cbn. econstructor.
       eauto. cbn. 2: cbn; eapply weakening_typing; eauto.
-      eapply weakening_typing in X0; eauto.
+      eapply weakening_typing in typeb_ty; eauto.
   - econstructor.
     + eauto.
     + eapply h_forall_Γ0; eauto.

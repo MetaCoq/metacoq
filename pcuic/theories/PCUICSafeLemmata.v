@@ -1832,3 +1832,25 @@ Section Lemmata.
   Qed.
 
 End Lemmata.
+
+Require Import PCUICWeakening PCUICGeneration.
+
+Lemma strengthening `{cf : checker_flags} {Σ Γ Γ' Γ'' t T}
+  : wf Σ.1 -> Σ ;;; Γ ,,, Γ'' ,,, lift_context #|Γ''| 0 Γ' |-
+               lift #|Γ''| #|Γ'| t : lift #|Γ''| #|Γ'| T ->
+    Σ;;; Γ ,,, Γ' |- t : T.
+Admitted.
+
+Lemma type_Case_valid_btys {cf:checker_flags} Σ Γ ind u p args mdecl idecl
+      (isdecl : declared_inductive (fst Σ) mdecl ind idecl)
+      (pars := List.firstn mdecl.(ind_npars) args)
+      pty (Hp : Σ ;;; Γ |- p : pty)
+      indctx pctx ps btys
+      (e : types_of_case ind mdecl idecl pars u p pty = Some (indctx, pctx, ps, btys))
+      (Hc : PCUICTyping.check_correct_arity (global_ext_constraints Σ) idecl ind u indctx pars pctx)
+  : Forall (fun A : nat × term => wellformed Σ Γ (snd A)) btys.
+Admitted.
+
+Lemma isWfArity_or_Type_cumul {cf:checker_flags} : forall Σ {Γ A A'},
+    Σ;;; Γ |- A' <= A -> isWfArity_or_Type Σ Γ A' -> isWfArity_or_Type Σ Γ A.
+Admitted.

@@ -1,6 +1,15 @@
 
 Notation "a 'of' A" := (match a : A with _ => a end) (at level 100).
 
+Require Template.uGraph.
+
+Check (@uGraph.transitive_string_lt
+         of RelationClasses.Transitive utils.string_lt).
+
+Check (@uGraph.CompareSpec_string
+         of forall s s' : String.string,
+            CompareSpec (s = s') (utils.string_lt s s') (utils.string_lt s' s) (utils.string_compare s s')).
+
 Require PCUIC.PCUICTyping.
 
 Check (@PCUICTyping.on_global_env_impl
@@ -683,6 +692,31 @@ Check (@PCUICSafeLemmata.Proj_red_cond
        PCUICSafeLemmata.wellformed Σ Γ
          (PCUICAst.tProj (i, pars, narg) (PCUICAst.mkApps (PCUICAst.tConstruct i' c u) l)) ->
        List.nth_error l (pars + narg) <> None).
+
+Check (@PCUICSafeLemmata.strengthening
+         of forall (cf : config.checker_flags) (Σ : PCUICAst.global_env * Universes.universes_decl) (Γ Γ' Γ'' : PCUICAst.context)
+              (t T : PCUICAst.term),
+            PCUICTyping.wf (fst Σ) ->
+            PCUICTyping.typing Σ (PCUICAstUtils.app_context (PCUICAstUtils.app_context Γ Γ'') (PCUICWeakening.lift_context (length Γ'') 0 Γ'))
+                               (PCUICLiftSubst.lift (length Γ'') (length Γ') t) (PCUICLiftSubst.lift (length Γ'') (length Γ') T) ->
+            PCUICTyping.typing Σ (PCUICAstUtils.app_context Γ Γ') t T).
+
+Check (@PCUICSafeLemmata.type_Case_valid_btys
+         of forall (cf : config.checker_flags) (Σ : PCUICAst.global_env * Universes.universes_decl) (Γ : PCUICAst.context)
+  (ind : BasicAst.inductive) (u : Universes.universe_instance) (p : PCUICAst.term) (args : list PCUICAst.term)
+  (mdecl : PCUICAst.mutual_inductive_body) (idecl : PCUICAst.one_inductive_body),
+PCUICTyping.declared_inductive (fst Σ) mdecl ind idecl ->
+let pars := List.firstn (PCUICAst.ind_npars mdecl) args in
+forall pty : PCUICAst.term,
+PCUICTyping.typing Σ Γ p pty ->
+forall (indctx pctx : list PCUICAst.context_decl) (ps : Universes.universe) (btys : list (nat * PCUICAst.term)),
+PCUICTyping.types_of_case ind mdecl idecl pars u p pty = Some (indctx, pctx, ps, btys) ->
+PCUICTyping.check_correct_arity (PCUICTyping.global_ext_constraints Σ) idecl ind u indctx pars pctx ->
+List.Forall (fun A : nat * PCUICAst.term => PCUICSafeLemmata.wellformed Σ Γ (snd A)) btys).
+
+Check (@PCUICSafeLemmata.isWfArity_or_Type_cumul
+         of forall (cf : config.checker_flags) (Σ : PCUICAst.global_env_ext) (Γ : PCUICAst.context) (A A' : PCUICAst.term),
+PCUICTyping.cumul Σ Γ A' A -> PCUICGeneration.isWfArity_or_Type Σ Γ A' -> PCUICGeneration.isWfArity_or_Type Σ Γ A).
 
 Require PCUICSN.
 

@@ -270,13 +270,6 @@ Instance monad_exc : MonadExc type_error typing_result :=
 Definition iscumul `{cf : checker_flags} Σ HΣ Γ := isconv_term RedFlags.default Σ HΣ Γ Cumul.
 
 
-Definition strengthening `{cf : checker_flags} {Σ Γ Γ' Γ'' t T}
-  : wf Σ.1 -> Σ ;;; Γ ,,, Γ'' ,,, lift_context #|Γ''| 0 Γ' |-
-               lift #|Γ''| #|Γ'| t : lift #|Γ''| #|Γ'| T ->
-    Σ;;; Γ ,,, Γ' |- t : T.
-Admitted.
-
-
 Lemma wf_local_rel_inv `{checker_flags} {Σ Γ1 Γ2} (w : wf_local_rel Σ Γ1 Γ2) :
   forall d Γ2', Γ2 = Γ2' ,, d ->
   wf_local_rel Σ Γ1 Γ2' × (∑ u, Σ ;;; Γ1 ,,, Γ2' |- d.(decl_type) : tSort u) ×
@@ -352,55 +345,6 @@ Lemma Alli_id {A} {P : nat -> A -> Type} (l : list A) (n : nat)
 Proof.
   intro H; induction l in n |- *; constructor; eauto.
 Qed.
-
-
-Lemma type_Case_csqce {cf:checker_flags} Σ Γ ind u p args mdecl idecl
-      (isdecl : declared_inductive (fst Σ) mdecl ind idecl)
-      (pars := List.firstn mdecl.(ind_npars) args)
-      pty (Hp : Σ ;;; Γ |- p : pty)
-      indctx pctx ps btys
-      (e : types_of_case ind mdecl idecl pars u p pty = Some (indctx, pctx, ps, btys))
-      (Hc : PCUICTyping.check_correct_arity (global_ext_constraints Σ) idecl ind u indctx pars pctx)
-  : Forall (fun A : nat × term => wellformed Σ Γ (snd A)) btys.
-Proof.
-  unfold types_of_case in e.
-    case_eq (instantiate_params (ind_params mdecl) pars (ind_type idecl));
-      [|intro HH; rewrite HH in e; discriminate e].
-    intros params' He; rewrite He in e.
-    case_eq (destArity [] params');
-      [|intro HH; rewrite HH in e; discriminate e].
-    intros [params_ctx params_sort] He1; rewrite He1 in e.
-    case_eq (destArity [] pty);
-      [|intro HH; rewrite HH in e; discriminate e].
-    intros [pty_ctx pty_sort] He2; rewrite He2 in e.
-
-    case_eq (map_option_out (build_branches_type ind mdecl idecl pars u p));
-      [|intro HH; rewrite HH in e; discriminate e].
-    intros brtys He3; rewrite He3 in e.
-    inversion e; subst; clear e.
-    unfold build_branches_type in He3.
-    solve_all.
-    eapply (map_option_out_mapi (ind_ctors idecl) btys _ _ He3); clear He3.
-    apply Alli_id.
-    intros i [[id ctor] k].
-    case_eq (instantiate_params (ind_params mdecl) pars ((subst0 (inds (inductive_mind ind) u (ind_bodies mdecl))) (subst_instance_constr u ctor))); [|cbn; trivial].
-    intros ipars Hipars.
-    case_eq (decompose_prod_assum [] ipars). intros ipars0 ipars1 ipars01.
-    case_eq (chop (ind_npars mdecl) (snd (decompose_app ipars1))).
-    intros ipars10 ipars11 Hipars1. cbn.
-    (* left. econstructor. *)
-    (* clear params' He. *)
-
-    (* apply PCUICWeakeningEnv.on_declared_inductive in X2; try assumption. *)
-    (* destruct X2 as [XX2 XX3]. *)
-    (* apply onConstructors in XX3; unfold on_constructors in XX3. *)
-    (* eapply Alli_impl; try eassumption. *)
-    (* clear -He. *)
-    (* intros n [[id ctor_ty] nc] X. *)
-    (* destruct X as [X1 X2]; cbn in *. *)
-Admitted.
-
-
 
 
 Definition fix_context_i i mfix :=
@@ -522,10 +466,6 @@ Proof.
   destruct (wf_ext_gc_of_uctx HΣ) as [uctx Huctx].
   exists (make_graph uctx). unfold is_graph_of_uctx. now rewrite Huctx.
 Defined.
-
-Lemma isWfArity_or_Type_cumul {cf:checker_flags} : forall Σ {Γ A A'},
-    Σ;;; Γ |- A' <= A -> isWfArity_or_Type Σ Γ A' -> isWfArity_or_Type Σ Γ A.
-Admitted.
 
 Lemma map_squash {A B} (f : A -> B) : ∥ A ∥ -> ∥ B ∥.
 Proof.
@@ -1119,7 +1059,7 @@ Section Typecheck.
     rename X1 into body, X6 into u, X7 into pars, Heq_anonymous0 into e.
     clear c cty X5 X9.
     symmetry in e. apply Nat.eqb_eq in H1; subst par.
-    eapply type_Case_csqce; try eassumption.
+    eapply type_Case_valid_btys; try eassumption.
     now eapply check_correct_arity_spec.
   Qed.
   Next Obligation.

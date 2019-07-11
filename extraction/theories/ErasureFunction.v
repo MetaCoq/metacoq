@@ -542,35 +542,33 @@ Lemma erase_global_correct Σ (wfΣ : ∥ wf Σ∥) Σ' :
 Proof.
   induction Σ in wfΣ, Σ' |- *; intros; sq.
   - inv H. econstructor.
-  - cbn in H. unfold bind in *. cbn in *. repeat destruct ?; try congruence. 
+  - cbn in H. unfold bind in *. cbn in *. repeat destruct ?; try congruence.
     + inv H. inv E.
       unfold erase_constant_body in E1.
       unfold bind in E1. cbn in E1. repeat destruct ?; try congruence.
       inv E1. econstructor.
-      * unfold optM in E0. destruct ?; try congruence.
+      * unfold optM in E4. destruct ?; try congruence.
         -- unfold erases_constant_body.
           cbn. cbn in *.
            destruct ( erase (Σ, _)
            (erase_global_decls_obligation_1 (ConstantDecl k c :: Σ)
               (sq w) k c Σ eq_refl) [] wf_local_nil t) eqn:E5;
-             rewrite E5 in E0; inv E0.
-           rewrite E1.
+             rewrite E5 in E4; inv E4.
+           rewrite E.
            eapply erases_erase. 2:eauto.
            instantiate (1 := cst_type c).
            (* admit. *)
-           clear - w E1.
+           clear - w E.
            inv w. cbn in X0.
            cbn in *. unfold on_constant_decl in X0.
-           rewrite E1 in X0. cbn in X0. eassumption.
-        -- cbn. inv E0. unfold erases_constant_body.
-           rewrite E1. cbn. econstructor.
+           rewrite E in X0. cbn in X0. eassumption.
+        -- cbn. inv E4. unfold erases_constant_body.
+           rewrite E. cbn. econstructor.
       * eapply IHΣ. unfold erase_global. rewrite E2. reflexivity.
     + inv H. inv E. inv E1.
-      unfold erase_mutual_inductive_body, bind in H0. cbn in H0.
-      destruct ?; try congruence. inv H0.
       econstructor.
       * econstructor; cbn; eauto.
-        pose proof (Prelim.monad_map_All2 _ _ _ _ _ E).
+        pose proof (Prelim.monad_map_All2 _ _ _ _ _ E3).
         eapply All2_Forall2.
         eapply All2_impl. eassumption.
 

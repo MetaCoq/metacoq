@@ -1,1 +1,0 @@
-CAMLFLAGS+=-w -33 # Unused opens

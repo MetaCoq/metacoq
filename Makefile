@@ -54,7 +54,6 @@ extraction: template-coq safechecker pcuic
 	$(MAKE) -C extraction
 
 checker: template-coq
-	$(MAKE) -C checker
 
 test-suite: template-coq checker
 	$(MAKE) -C test-suite

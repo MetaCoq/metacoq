@@ -498,28 +498,6 @@ Proof.
   exists (make_graph uctx). unfold is_graph_of_uctx. now rewrite Huctx.
 Defined.
 
-
-
-Lemma eq_term_upto_univ_impl :
-  forall (equ lequ : _ -> _ -> bool) Re Rle,
-    (forall u u', equ u u' -> Re u u') ->
-    (forall u u', lequ u u' -> Rle u u') ->
-    forall t t', eqb_term_upto_univ equ lequ t t' -> eq_term_upto_univ Re Rle t t'.
-Proof.
-  intros equ lequ Re Rle he hle t t'.
-  induction t in t', lequ, Rle, hle |- * using term_forall_list_ind.
-  all: destruct t'; try discriminate 1. all: cbn.
-  - intro H; change (eqb n n0 = true) in H; destruct (eqb_spec n n0);
-      [subst; constructor|discriminate].
-  - intro H; change (eqb i i0 = true) in H; destruct (eqb_spec i i0);
-      [subst; constructor|discriminate].
-  - intro H.
-    (* toProp. *)
-    (* change (eqb n n0 = true) in H; destruct (eqb_spec n n0); *)
-    (*   [subst|discriminate]. *)
-    (* constructor. *)
-Admitted.
-
 Lemma isWfArity_or_Type_cumul {cf:checker_flags} : forall Σ {Γ A A'},
     Σ;;; Γ |- A' <= A -> isWfArity_or_Type Σ Γ A' -> isWfArity_or_Type Σ Γ A.
 Admitted.

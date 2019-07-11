@@ -387,10 +387,11 @@ Proof.
          )); intros.
 
   all:eauto.
-
+  
   all: simp erase in *.
   all: unfold erase_clause_1 in *.
   all:sq.
+  all: unfold bind in *.
   all: cbn in *; repeat (try destruct ?;  repeat match goal with
                                           [ H : Checked _ = Checked _ |- _ ] => inv H
                                         | [ H : TypeError _ = Checked _ |- _ ] => inv H
@@ -401,14 +402,6 @@ Proof.
   - econstructor. econstructor. clear E.
     eapply inversion_Prod in t0 as (? & ? & ? & ? & ?).
     split. econstructor; eauto. left. econstructor.
-  - (* This goal is my addition, I tried to fix it *)
-    match goal with
-    | h : context [ _ <- ?expr ;; _ ] |- _ =>
-      destruct expr ; try discriminate h ; simpl in h
-    end.
-    inv H1. clear E.
-    eapply inversion_Lambda in t0 as (? & ? & ? & ? & ?).
-    econstructor. eapply H0.
   - econstructor. eauto. econstructor. clear E.
     eapply inversion_Ind in t as (? & ? & ? & ? & ? & ?).
     split. econstructor; eauto. left. subst.
@@ -440,7 +433,7 @@ Proof.
     pose proof (Prelim.monad_map_All2 _ _ _ mfix a1 E1).
     eapply All2_impl. eapply All2_All_mix_left. exact X0. eassumption.
 
-    intros. destruct X1. cbn in *.
+    intros. destruct X1. cbn in *. unfold bind in e. cbn in e.
     repeat destruct ?; try congruence; inv e.
 
     cbn. repeat split; eauto.
@@ -543,36 +536,47 @@ Lemma erase_global_correct Σ (wfΣ : ∥ wf Σ∥) Σ' :
   erase_global Σ wfΣ = Checked Σ' ->
   erases_global Σ Σ'.
 Proof.
-  induction Σ in wfΣ, Σ' |- *; cbn; intros; sq.
+  induction Σ in wfΣ, Σ' |- *; intros; sq.
   - inv H. econstructor.
-  - repeat destruct ?; try congruence.
-    + inv H. inv E. inv E1. econstructor.
-      * unfold erases_constant_body.
-        unfold optM in E4. destruct ?; try congruence.
-        -- cbn. cbn in *.
+  - cbn in H. unfold bind in *. cbn in *. repeat destruct ?; try congruence. 
+    + inv H. inv E.
+      unfold erase_constant_body in E1.
+      unfold bind in E1. cbn in E1. repeat destruct ?; try congruence.
+      inv E1. econstructor.
+      * unfold optM in E0. destruct ?; try congruence.
+        -- unfold erases_constant_body.
+          cbn. cbn in *.
            destruct ( erase (Σ, _)
            (erase_global_decls_obligation_1 (ConstantDecl k c :: Σ)
               (sq w) k c Σ eq_refl) [] wf_local_nil t) eqn:E5;
-             rewrite E5 in E4; inv E4.
+             rewrite E5 in E0; inv E0.
+           rewrite E1.
            eapply erases_erase. 2:eauto.
            instantiate (1 := cst_type c).
            (* admit. *)
-           clear - w E. inv w. cbn in X0.
+           clear - w E1.
+           inv w. cbn in X0.
            cbn in *. unfold on_constant_decl in X0.
-           rewrite E in X0. cbn in X0. eassumption.
-        -- cbn. inv E4. econstructor.
+           rewrite E1 in X0. cbn in X0. eassumption.
+        -- cbn. inv E0. unfold erases_constant_body.
+           rewrite E1. cbn. econstructor.
       * eapply IHΣ. unfold erase_global. rewrite E2. reflexivity.
     + inv H. inv E. inv E1.
+      unfold erase_mutual_inductive_body, bind in H0. cbn in H0.
+      destruct ?; try congruence. inv H0.
       econstructor.
       * econstructor; cbn; eauto.
-        pose proof (Prelim.monad_map_All2 _ _ _ _ _ E3).
+        pose proof (Prelim.monad_map_All2 _ _ _ _ _ E).
         eapply All2_Forall2.
         eapply All2_impl. eassumption.
 
-        intros. cbn in H0. repeat destruct ?; try congruence.
-        inv H0. unfold erases_one_inductive_body. cbn.
-        unfold lift_opt_typing in E.
-        destruct decompose_prod_n_assum eqn:E6; inv E. cbn.
+        intros. cbn in H0.
+        unfold erase_one_inductive_body, bind in H0. cbn in H0.
+        repeat destruct ?; try congruence.
+        inv H0.
+        unfold erases_one_inductive_body. cbn. destruct ?; cbn.
+        (* unfold lift_opt_typing in E. *)
+        (* destruct decompose_prod_n_assum eqn:E6; inv E. cbn. *)
         pose proof (Prelim.monad_map_All2 _ _ _ _ _ E4).
         pose proof (Prelim.monad_map_All2 _ _ _ _ _ E5). repeat split; eauto.
         -- eapply All2_Forall2.
@@ -582,7 +586,7 @@ Proof.
            inv H4. split; eauto.
 
            (* pose (t' := t). inv t'. cbn in *. *)
-           destruct (erase_Some_typed E) as [? []].
+           destruct (erase_Some_typed E6) as [? []].
 
            eapply erases_erase. 2:eauto. eauto.
         -- eapply All2_Forall2.
@@ -592,7 +596,7 @@ Proof.
              inv H4. split; eauto.
 
            (* pose (t' := t). inv t'. cbn in *. *)
-           destruct (erase_Some_typed E) as [? []].
+           destruct (erase_Some_typed E6) as [? []].
 
            eapply erases_erase.
            2:{ eauto. } eauto.

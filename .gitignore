@@ -225,6 +225,10 @@ checker/src/wf.mli
 /pcuic/src/pCUICWeakening.mli
 /pcuic/src/pCUICWeakeningEnv.ml
 /pcuic/src/pCUICWeakeningEnv.mli
+/pcuic/src/pCUICNormal.ml
+/pcuic/src/pCUICNormal.mli
+/pcuic/src/pCUICPosition.ml
+/pcuic/src/pCUICPosition.mli
 /template-coq/theories/*.vio
 /template-coq/theories/kernel/*.vio
 /template-coq/theories/TemplateMonad/*.vio

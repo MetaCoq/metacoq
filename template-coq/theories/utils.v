@@ -2228,3 +2228,22 @@ Ltac tea := try eassumption.
 Axiom todo : string -> forall {A}, A.
 Ltac todo s := exact (todo s).
 Extract Constant todo => "fun s -> failwith (String.concat """" (List.map (String.make 1) s))".
+
+Lemma transitive_string_lt : Transitive string_lt.
+Proof.
+  intro s; induction s; unfold string_lt.
+  - induction y; cbn. intuition.
+Admitted.
+
+Lemma CompareSpec_string s s'
+  : CompareSpec (s = s') (string_lt s s') (string_lt s' s) (string_compare s s').
+Proof.
+  revert s'; induction s; intro s'; cbn.
+  - destruct s'; constructor; reflexivity.
+  - destruct s'. constructor; reflexivity.
+Admitted.
+
+Lemma CompareSpec_Proper : Proper (iff ==> iff ==> iff ==> Logic.eq ==> iff) CompareSpec.
+  intros A A' HA B B' HB C C' HC c c' [].
+  destruct c; split; inversion 1; constructor; intuition.
+Qed.

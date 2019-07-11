@@ -393,25 +393,6 @@ Inductive no_prop_level := lSet | vtn (l : variable_level).
 
 Coercion vtn : variable_level >-> no_prop_level.
 
-Lemma transitive_string_lt : Transitive string_lt.
-Proof.
-  intro s; induction s; unfold string_lt.
-  - induction y; cbn. intuition.
-Admitted.
-
-Lemma CompareSpec_string s s'
-  : CompareSpec (s = s') (string_lt s s') (string_lt s' s) (string_compare s s').
-Proof.
-  revert s'; induction s; intro s'; cbn.
-  - destruct s'; constructor; reflexivity.
-  - destruct s'. constructor; reflexivity.
-Admitted.
-
-Lemma CompareSpec_Proper : Proper (iff ==> iff ==> iff ==> Logic.eq ==> iff) CompareSpec.
-  intros A A' HA B B' HB C C' HC c c' [].
-  destruct c; split; inversion 1; constructor; intuition.
-Qed.
-
 Module VariableLevel.
   Definition t := variable_level.
   Definition lt : t -> t -> Prop :=
@@ -1175,11 +1156,6 @@ Section CheckLeq.
 
   Opaque Z.of_nat.
 
-  Lemma bla l l'
-    :  (forall v, gc_satisfies v uctx.2 -> (val0 v l <= val0 v l' + 1)%Z) ->
-       forall v, gc_satisfies v uctx.2 -> (val0 v l <= val0 v l')%Z.
-  Admitted.
-
   Lemma leqb_expr_n_spec0 n e e'
     : leqb_expr_n n e e'
       -> gc_leq_universe_n n uctx.2 (Universe.make' e) (Universe.make' e').
@@ -1220,51 +1196,6 @@ Section CheckLeq.
     - intro HH; eapply leqb_level_n_spec0 in HH; tas.
   Qed.
 
-  Lemma leqb_expr_n_spec n e e'
-        (HHl  : gc_level_declared e.1)
-        (HHl' : gc_level_declared e'.1)
-    : leqb_expr_n n e e'
-      <-> gc_leq_universe_n n uctx.2 (Universe.make' e) (Universe.make' e').
-  Proof.
-    unfold leqb_expr_n.
-    destruct e as [l []], e' as [l' []]; cbn.
-    - case_eq (no_prop_of_level l); [intros l0 Hl|intros Hl]; rew_no_prop;
-        (case_eq (no_prop_of_level l'); [intros l0' Hl'|intros Hl']); rew_no_prop;
-          cbn; (etransitivity; [eapply leqb_level_n_spec; tas|]).
-      + split; intros HH v Hv; specialize (HH v Hv); cbn in *;
-          unfold val1 in *; cbn in *; repeat rew_no_prop; cbn in *; try lia.
-      + split; intros HH v Hv; specialize (HH v Hv); cbn in *;
-          unfold val1 in *; cbn in *; repeat rew_no_prop; cbn in *; try lia.
-      + destruct n.
-        * unfold gc_leq_universe_n. cbn.
-          unfold val1; cbn. repeat rew_no_prop; cbn. split.
-          -- intros HH v Hv; specialize (HH v Hv); lia.
-          -- apply bla.
-        * split; intros HH v Hv; specialize (HH v Hv); cbn in *;
-            unfold val1 in *; cbn in *; repeat rew_no_prop; cbn in *; try lia.
-      + split; intros HH v Hv; specialize (HH v Hv); cbn in *;
-          unfold val1 in *; cbn in *; repeat rew_no_prop; cbn in *; try lia.
-    - case_eq (no_prop_of_level l); [intros l0 Hl|intros Hl]; rew_no_prop;
-          cbn; (etransitivity; [eapply leqb_level_n_spec; tas|]).
-      + split; intros HH v Hv; specialize (HH v Hv); cbn in *;
-          unfold val1 in *; cbn in *; repeat rew_no_prop; cbn in *; try lia.
-      + split; intros HH v Hv; specialize (HH v Hv); cbn in *;
-          unfold val1 in *; cbn in *; repeat rew_no_prop; cbn in *; try lia.
-    - case_eq (no_prop_of_level l'); [intros l0 Hl|intros Hl]; rew_no_prop;
-          cbn; (etransitivity; [eapply leqb_level_n_spec; tas|]).
-      + destruct n.
-        * unfold gc_leq_universe_n. cbn.
-          unfold val1; cbn. repeat rew_no_prop; cbn. split.
-          -- intros HH v Hv; specialize (HH v Hv); lia.
-          -- apply bla.
-        * split; intros HH v Hv; specialize (HH v Hv); cbn in *;
-            unfold val1 in *; cbn in *; repeat rew_no_prop; cbn in *; try lia.
-      + split; intros HH v Hv; specialize (HH v Hv); cbn in *;
-          unfold val1 in *; cbn in *; repeat rew_no_prop; cbn in *; try lia.
-    - etransitivity; [eapply leqb_level_n_spec; tas|].
-      split; intros HH v Hv; specialize (HH v Hv); cbn in *; lia.
-  Qed.
-
 
   Fixpoint leqb_univ_expr_n n (u : universe) (e2 : Universe.Expr.t) :=
     match u with
@@ -1286,25 +1217,6 @@ Section CheckLeq.
       eapply leqb_expr_n_spec0 in H1; tas.
       intros v Hv; specialize (H1 v Hv); specialize (H2 v Hv).
       rewrite val_cons; cbn in *; lia.
-  Qed.
-
-  Lemma leqb_univ_expr_n_spec n u e2
-        (Hu  : gc_levels_declared u)
-        (He2 : gc_level_declared e2.1)
-    : leqb_univ_expr_n n u e2
-      <-> gc_leq_universe_n n uctx.2 u (Universe.make' e2).
-  Proof.
-    induction u; cbn.
-    - apply leqb_expr_n_spec; tas. now inversion Hu.
-    - etransitivity. apply andb_true_iff.
-      inversion_clear Hu.
-      etransitivity. eapply and_iff_compat_l. apply IHu; tas.
-      etransitivity. eapply and_iff_compat_r. eapply leqb_expr_n_spec; tas.
-      split.
-      + intros [H1 H2] v Hv; specialize (H1 v Hv); specialize (H2 v Hv).
-        rewrite val_cons; cbn in *; lia.
-      + intro HH; split; intros v Hv; specialize (HH v Hv);
-        rewrite val_cons in HH; cbn in *; lia.
   Qed.
 
   Definition leqb_univ_expr u e2 :=
@@ -1462,24 +1374,6 @@ Section CheckLeq2.
     unfold levels_declared, gc_levels_declared.
     intro HH. eapply Forall_impl. eassumption.
     intro. apply level_gc_declared_declared.
-  Qed.
-
-
-  Lemma leqb_univ_expr_n_spec' n u e2
-        (Hu : levels_declared u)
-        (He2 : level_declared e2.1)
-    : leqb_univ_expr_n G n u e2
-      <-> leq_universe_n n uctx.2 u (Universe.make' e2).
-  Proof.
-    etransitivity.
-    apply (leqb_univ_expr_n_spec G uctx' Huctx' HC' HG'); tas.
-    - apply levels_gc_declared_declared; tas.
-    - apply level_gc_declared_declared; tas.
-    - symmetry. etransitivity. apply gc_leq_universe_n_iff.
-      subst uctx'; cbn; clear -HG.
-      unfold is_graph_of_uctx, gc_of_uctx in *.
-      destruct (gc_of_constraints uctx.2) as [ctrs|].
-      reflexivity. contradiction HG.
   Qed.
 
 

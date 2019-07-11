@@ -1,8 +1,12 @@
 (* Distributed under the terms of the MIT license.   *)
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Arith Lia.
-From MetaCoq.Template Require Import config monad_utils utils BasicAst AstUtils UnivSubst uGraph.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICNormal PCUICSR PCUICGeneration PCUICReflect PCUICEquality PCUICInversion PCUICValidity PCUICWeakening PCUICPosition PCUICCumulativity PCUICSafeLemmata.
+From MetaCoq.Template Require Import config monad_utils utils BasicAst AstUtils
+     UnivSubst uGraph.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
+     PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICNormal PCUICSR
+     PCUICGeneration PCUICReflect PCUICEquality PCUICInversion PCUICValidity
+     PCUICWeakening PCUICPosition PCUICCumulativity PCUICSafeLemmata PCUICSN.
 From MetaCoq.SafeChecker Require Import PCUICSafeReduce PCUICSafeConversion.
 
 Import MonadNotation.
@@ -263,15 +267,8 @@ Instance monad_exc : MonadExc type_error typing_result :=
   }.
 
 
-Definition iscumul `{cf : checker_flags} Σ HΣ Γ := isconv_term RedFlags.default Σ HΣ Γ Cumul.
-
-
-Definition strengthening `{cf : checker_flags} {Σ Γ Γ' Γ'' t T}
-  : wf Σ.1 -> Σ ;;; Γ ,,, Γ'' ,,, lift_context #|Γ''| 0 Γ' |-
-               lift #|Γ''| #|Γ'| t : lift #|Γ''| #|Γ'| T ->
-    Σ;;; Γ ,,, Γ' |- t : T.
-Admitted.
-
+Definition iscumul `{cf : checker_flags} Σ HΣ Γ :=
+  isconv_term RedFlags.default Σ HΣ Γ Cumul.
 
 Lemma wf_local_rel_inv `{checker_flags} {Σ Γ1 Γ2} (w : wf_local_rel Σ Γ1 Γ2) :
   forall d Γ2', Γ2 = Γ2' ,, d ->
@@ -325,80 +322,6 @@ Proof.
   now rewrite app_context_nil_l.
 Defined.
 
-Lemma map_option_out_mapi {A B} (l : list A) (l' : list B) f P
-  : map_option_out (mapi f l) = Some l'
-    -> Alli (fun i x => on_Some_or_None P (f i x)) 0 l
-    -> All P l'.
-Proof.
-  unfold mapi. generalize 0.
-  induction l in l' |- *; simpl; intro n.
-  - inversion 1; constructor.
-  - case_eq (f n a); [|discriminate].
-    intros b Hb. 
-    case_eq (map_option_out (mapi_rec f l (S n))); [|discriminate].
-    intros l0 Hl0 HH0 HH1.
-    inversion HH0; subst; clear HH0.
-    inversion HH1; subst.
-    constructor. now rewrite Hb in H0.
-    now eapply IHl.
-Qed.
-
-Lemma Alli_id {A} {P : nat -> A -> Type} (l : list A) (n : nat)
-  : (forall n x, P n x) -> Alli P n l.
-Proof.
-  intro H; induction l in n |- *; constructor; eauto.
-Qed.
-
-
-Lemma type_Case_csqce {cf:checker_flags} Σ Γ ind u p args mdecl idecl
-      (isdecl : declared_inductive (fst Σ) mdecl ind idecl)
-      (pars := List.firstn mdecl.(ind_npars) args)
-      pty (Hp : Σ ;;; Γ |- p : pty)
-      indctx pctx ps btys
-      (e : types_of_case ind mdecl idecl pars u p pty = Some (indctx, pctx, ps, btys))
-      (Hc : PCUICTyping.check_correct_arity (global_ext_constraints Σ) idecl ind u indctx pars pctx)
-  : Forall (fun A : nat × term => wellformed Σ Γ (snd A)) btys.
-Proof.
-  unfold types_of_case in e.
-    case_eq (instantiate_params (ind_params mdecl) pars (ind_type idecl));
-      [|intro HH; rewrite HH in e; discriminate e].
-    intros params' He; rewrite He in e.
-    case_eq (destArity [] params');
-      [|intro HH; rewrite HH in e; discriminate e].
-    intros [params_ctx params_sort] He1; rewrite He1 in e.
-    case_eq (destArity [] pty);
-      [|intro HH; rewrite HH in e; discriminate e].
-    intros [pty_ctx pty_sort] He2; rewrite He2 in e.
-
-    case_eq (map_option_out (build_branches_type ind mdecl idecl pars u p));
-      [|intro HH; rewrite HH in e; discriminate e].
-    intros brtys He3; rewrite He3 in e.
-    inversion e; subst; clear e.
-    unfold build_branches_type in He3.
-    solve_all.
-    eapply (map_option_out_mapi (ind_ctors idecl) btys _ _ He3); clear He3. 
-    apply Alli_id.
-    intros i [[id ctor] k].
-    case_eq (instantiate_params (ind_params mdecl) pars ((subst0 (inds (inductive_mind ind) u (ind_bodies mdecl))) (subst_instance_constr u ctor))); [|cbn; trivial].
-    intros ipars Hipars.
-    case_eq (decompose_prod_assum [] ipars). intros ipars0 ipars1 ipars01.
-    case_eq (chop (ind_npars mdecl) (snd (decompose_app ipars1))).
-    intros ipars10 ipars11 Hipars1. cbn.
-    (* left. econstructor. *)
-    (* clear params' He. *)
-
-    (* apply PCUICWeakeningEnv.on_declared_inductive in X2; try assumption. *)
-    (* destruct X2 as [XX2 XX3]. *)
-    (* apply onConstructors in XX3; unfold on_constructors in XX3. *)
-    (* eapply Alli_impl; try eassumption. *)
-    (* clear -He. *)
-    (* intros n [[id ctor_ty] nc] X. *)
-    (* destruct X as [X1 X2]; cbn in *. *)
-Admitted.
-
-
-
-
 Definition fix_context_i i mfix :=
   List.rev (mapi_rec (fun i (d : BasicAst.def term)
                       => vass (dname d) ((lift0 i) (dtype d))) mfix i).
@@ -415,7 +338,7 @@ Proof.
 Qed.
 
 
-           
+
 Definition global_uctx (Σ : global_env) : ContextSet.t
   := (global_levels Σ, global_constraints Σ).
 
@@ -431,7 +354,7 @@ Proof.
     cut (LevelSet.In lSet (LevelSet_pair Level.lSet Level.lProp)).
     + generalize (LevelSet_pair Level.lSet Level.lProp).
       clear HΣ. induction Σ; simpl. easy.
-      intros X H. apply LevelSet.union_spec. now right. 
+      intros X H. apply LevelSet.union_spec. now right.
     + apply LevelSet.add_spec. right. now apply LevelSet.singleton_spec.
   - unfold global_uctx.
     simpl. intros [[l ct] l'] Hctr. simpl in *.
@@ -519,32 +442,6 @@ Proof.
   exists (make_graph uctx). unfold is_graph_of_uctx. now rewrite Huctx.
 Defined.
 
-
-
-Lemma eq_term_upto_univ_impl :
-  forall (equ lequ : _ -> _ -> bool) Re Rle,
-    (forall u u', equ u u' -> Re u u') ->
-    (forall u u', lequ u u' -> Rle u u') ->
-    forall t t', eqb_term_upto_univ equ lequ t t' -> eq_term_upto_univ Re Rle t t'.
-Proof.
-  intros equ lequ Re Rle he hle t t'.
-  induction t in t', lequ, Rle, hle |- * using term_forall_list_ind.
-  all: destruct t'; try discriminate 1. all: cbn.
-  - intro H; change (eqb n n0 = true) in H; destruct (eqb_spec n n0);
-      [subst; constructor|discriminate].
-  - intro H; change (eqb i i0 = true) in H; destruct (eqb_spec i i0);
-      [subst; constructor|discriminate].
-  - intro H.
-    (* toProp. *)
-    (* change (eqb n n0 = true) in H; destruct (eqb_spec n n0); *)
-    (*   [subst|discriminate]. *)
-    (* constructor. *)
-Admitted.
-
-Lemma isWfArity_or_Type_cumul {cf:checker_flags} : forall Σ {Γ A A'},
-    Σ;;; Γ |- A' <= A -> isWfArity_or_Type Σ Γ A' -> isWfArity_or_Type Σ Γ A.
-Admitted.
-
 Lemma map_squash {A B} (f : A -> B) : ∥ A ∥ -> ∥ B ∥.
 Proof.
   intros []; constructor; auto.
@@ -577,7 +474,6 @@ Section Typecheck.
     2: now eapply cumul_red_l'.
     destruct (validity_term HΣ' HΓ Ht).
     - left. eapply isWfArity_red; try eassumption.
-      apply RedFlags.default.
     - destruct i as [s HA]. right.
       exists s. eapply subject_reduction; eassumption.
   Defined.
@@ -1157,7 +1053,7 @@ Section Typecheck.
     rename X1 into body, X6 into u, X7 into pars, Heq_anonymous0 into e.
     clear c cty X5 X9.
     symmetry in e. apply Nat.eqb_eq in H1; subst par.
-    eapply type_Case_csqce; try eassumption.
+    eapply type_Case_valid_btys ; try eassumption.
     now eapply check_correct_arity_spec.
   Qed.
   Next Obligation.
@@ -1409,15 +1305,15 @@ Section CheckEnv.
       ∥ on_udecl Σ.1 Σ.2 ∥ ->
       forall G : universes_graph,
         is_graph_of_uctx G (global_ext_uctx Σ) ->
-        forall (id : kername) (mdecl : mutual_inductive_body) 
+        forall (id : kername) (mdecl : mutual_inductive_body)
           (n : nat) (x : one_inductive_body),
           EnvCheck (∥ on_ind_body (lift_typing typing) Σ id mdecl n x ∥).
   Proof.
     intros Σ HΣ HΣ'0 G HG id mdecl n [].
   Admitted.
-  
 
-  Program Definition check_wf_decl (Σ : global_env_ext) HΣ HΣ' G HG 
+
+  Program Definition check_wf_decl (Σ : global_env_ext) HΣ HΣ' G HG
              (d : global_decl)
     : EnvCheck (∥ on_global_decl (lift_typing typing) Σ d ∥) :=
     match d with
@@ -1496,9 +1392,9 @@ Section CheckEnv.
                   end (IllFormedDecl id (Msg "Var level in monomorphic context")) ;;
     (* TODO: could be optimized by reusing G *)
     match gc_of_uctx (uctx_of_udecl udecl) as X' return (X' = _ -> EnvCheck _) with
-    | None => fun _ => 
+    | None => fun _ =>
       raise (IllFormedDecl id (Msg "constraints trivially not satisfiable"))
-    | Some uctx' => fun Huctx => 
+    | Some uctx' => fun Huctx =>
       check_eq_true (wGraph.is_acyclic (add_uctx uctx' G))
                     (IllFormedDecl id (Msg "constraints not satisfiable"));;
                                  ret (uctx'; (_, _))
@@ -1522,7 +1418,7 @@ Section CheckEnv.
       apply negb_true_iff in H. now apply LevelSetFact.not_mem_iff in H.
     - exact HH.
     - clear -H1. destruct udecl; trivial.
-      apply LevelSet.for_all_spec in H1. 
+      apply LevelSet.for_all_spec in H1.
       2: now intros x y [].
       intros l Hl; specialize (H1 l Hl); now destruct l.
     - clear -HΣ HH Huctx H2 HG. unfold gc_of_uctx, uctx_of_udecl in *.
@@ -1531,7 +1427,7 @@ Section CheckEnv.
       unfold is_graph_of_uctx in HG. unfold gc_of_uctx in *.
       case_eq (gc_of_constraints (global_uctx Σ).2);
         [|intro XX; rewrite XX in HG; contradiction HG].
-      intros Σctrs HΣctrs. 
+      intros Σctrs HΣctrs.
       unfold global_ext_constraints. simpl in *.
       rewrite HΣctrs in HG.
       case_eq (gc_of_constraints (constraints_of_udecl udecl));
@@ -1550,7 +1446,7 @@ Section CheckEnv.
       unfold is_consistent, global_ext_uctx, gc_of_uctx, global_ext_constraints.
       simpl.
       rewrite gc_of_constraints_union.
-      rewrite HΣctrs, Hctrs. 
+      rewrite HΣctrs, Hctrs.
       inversion Huctx; subst; clear Huctx.
       clear -H2 cf. rewrite add_uctx_make_graph in H2.
       refine (eq_rect _ (fun G => wGraph.is_acyclic G = true) H2 _ _).

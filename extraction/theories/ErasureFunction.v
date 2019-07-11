@@ -1,7 +1,10 @@
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
 From MetaCoq.Template Require Import config utils monad_utils BasicAst AstUtils uGraph.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICTyping PCUICMetaTheory PCUICWcbvEval PCUICLiftSubst PCUICInversion PCUICConfluence PCUICCumulativity PCUICSR PCUICNormal PCUICSafeLemmata PCUICValidity PCUICPrincipality PCUICElimination.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
+     PCUICTyping PCUICMetaTheory PCUICWcbvEval PCUICLiftSubst PCUICInversion
+     PCUICConfluence PCUICCumulativity PCUICSR PCUICNormal PCUICSafeLemmata
+     PCUICValidity PCUICPrincipality PCUICElimination PCUICSN.
 From MetaCoq.SafeChecker Require Import PCUICSafeReduce PCUICSafeChecker.
 From MetaCoq.Extraction Require EAst ELiftSubst ETyping EWcbvEval Extract ExtractionCorrectness.
 From Equations Require Import Equations.
@@ -48,7 +51,7 @@ Ltac sq' := try (destruct HΣ; clear HΣ);
 Instance wf_reduction : WellFounded term_rel.
 Proof.
   intros (Γ & s & H). sq'.
-  induction (normalisation' RedFlags.default Σ Γ s X H) as [s _ IH].
+  induction (normalisation' Σ Γ s X H) as [s _ IH].
   induction (wf_cod' s) as [s _ IH_sub] in Γ, H, IH |- *.
   econstructor.
   intros (Γ' & B & ?) [(na & A & ? & ?)]. subst.
@@ -65,10 +68,10 @@ Proof.
       * eapply red_neq_cored. exact r. intros ?. subst.
         eapply cored_red_trans in X0; eauto.
         eapply Acc_no_loop in X0. eauto.
-        eapply @normalisation'; eauto. exact RedFlags.default.
+        eapply @normalisation'; eauto.
       * repeat econstructor.
 Grab Existential Variables.
-- eapply red_wellformed; sq. 3:eauto. all:eauto. exact RedFlags.default.
+- eapply red_wellformed; sq. 3:eauto. all:eauto.
 - destruct H as [[] |[]].
   -- eapply inversion_Prod in X0 as (? & ? & ? & ? & ?).
      eapply cored_red in H0 as [].
@@ -81,7 +84,7 @@ Grab Existential Variables.
      exists (x ++ [vass na A])%list, x0. cbn; split.
      2:{ unfold snoc, app_context in *. rewrite <- app_assoc. eassumption. }
      change ([] ,, vass na A) with ([vass na A] ,,, []).
-     rewrite destArity_app_aux. rewrite e. cbn. reflexivity. apply RedFlags.default.
+     rewrite destArity_app_aux. rewrite e. cbn. reflexivity.
 Qed.
 
 Ltac sq := try (destruct HΣ as [wfΣ]; clear HΣ);
@@ -116,7 +119,7 @@ Next Obligation.
     econstructor. eauto. cbn. eauto.
   - econstructor. eauto.
     eapply isWfArity_red in X; eauto.
-    cbn. eapply isWfArity_prod_inv; eauto. apply RedFlags.default.
+    cbn. eapply isWfArity_prod_inv; eauto.
 Qed.
 Next Obligation.
   sq. destruct HT as [ [] | [] ].
@@ -124,7 +127,7 @@ Next Obligation.
     eapply inversion_Prod in X5 as (? & ? & ? & ? & ?).
     do 2 econstructor. eauto.
   - econstructor 2. sq.
-    eapply PCUICSafeReduce.isWfArity_red in X5; eauto. 2:exact RedFlags.default.
+    eapply PCUICPrincipality.isWfArity_red in X5; eauto.
     eapply isWfArity_prod_inv; eauto.
 Qed.
 Next Obligation.
@@ -387,7 +390,7 @@ Proof.
          )); intros.
 
   all:eauto.
-  
+
   all: simp erase in *.
   all: unfold erase_clause_1 in *.
   all:sq.
@@ -538,7 +541,7 @@ Lemma erase_global_correct Σ (wfΣ : ∥ wf Σ∥) Σ' :
 Proof.
   induction Σ in wfΣ, Σ' |- *; intros; sq.
   - inv H. econstructor.
-  - cbn in H. unfold bind in *. cbn in *. repeat destruct ?; try congruence. 
+  - cbn in H. unfold bind in *. cbn in *. repeat destruct ?; try congruence.
     + inv H. inv E.
       unfold erase_constant_body in E1.
       unfold bind in E1. cbn in E1. repeat destruct ?; try congruence.

@@ -401,8 +401,8 @@ Lemma isWfArity_or_Type_red:
     isWfArity_or_Type Σ Γ T -> forall x5 : term, red Σ Γ T x5 -> isWfArity_or_Type Σ Γ x5.
 Proof.
   intros. destruct X1 as [ | []].
-  - left. eapply isWfArity_red; eauto. apply RedFlags.default.
-  - right. eexists. eapply subject_reduction; eauto.
+  - left. eapply isWfArity_red ; eauto.
+  - right. eexists. eapply subject_reduction ; eauto.
 Qed.
 
 Lemma is_prop_sort_sup:

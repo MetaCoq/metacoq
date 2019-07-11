@@ -36,8 +36,12 @@ Lemma monad_map_All2 (X Y : Type) (f : X -> typing_result Y) (l1 : list X) (a1 :
 Proof.
   induction l1 in a1 |- *; cbn; intros.
   - inv H. econstructor.
-  - repeat destruct ? in H; try congruence.
-    inv H. econstructor; eauto.
+  - revert H.
+    case_eq (f a). all: try discriminate. intros b eb.
+    simpl.
+    case_eq (monad_map f l1). all: try discriminate. intros l' el.
+    simpl. intro h. inv h.
+    econstructor ; eauto.
 Qed.
 
 Lemma monad_map_Forall2 (X Y : Type) (f : X -> typing_result Y) (l1 : list X) (a1 : list Y) :
@@ -51,7 +55,12 @@ Lemma monad_map_length X Y (f : X -> typing_result Y) (l1  : list X) a :
 Proof.
   revert a; induction l1; cbn; intros.
   - invs H. cbn. congruence.
-  - destruct (f a). destruct ? in H. invs H. cbn. f_equal. eauto. invs H. invs H.
+  - revert H.
+    case_eq (f a). all: try discriminate. intros x' ex.
+    simpl.
+    case_eq (monad_map f l1). all: try discriminate. intros l' el.
+    simpl. intro h. inv h.
+    simpl. f_equal. eauto.
 Qed.
 
 Lemma monad_map_app X Y (f : X -> typing_result Y) (l1 l2 : list X) a1 a2 :
@@ -59,8 +68,13 @@ Lemma monad_map_app X Y (f : X -> typing_result Y) (l1 l2 : list X) a1 a2 :
 Proof.
   revert a1. induction l1; intros.
   - cbn in *. invs H. eauto.
-  - cbn in *. destruct ?. destruct ? in H; try congruence.
-    invs H. rewrite (IHl1 _ eq_refl); eauto. invs H.
+  - cbn in *.
+    revert H.
+    case_eq (f a). all: try discriminate. intros b eb.
+    simpl.
+    case_eq (monad_map f l1). all: try discriminate. intros l' el.
+    simpl. intro h. inv h.
+    rewrite (IHl1 _ el H0). simpl. reflexivity.
 Qed.
 
 Lemma monad_map_app_invs X Y (f : X -> typing_result Y) (l1 l2 : list X) a :
@@ -68,9 +82,14 @@ Lemma monad_map_app_invs X Y (f : X -> typing_result Y) (l1 l2 : list X) a :
 Proof.
   intros. revert a H. induction l1; intros.
   - cbn in *. eauto.
-  - cbn in *. destruct ?. destruct ? in H; try congruence.
-    invs H. destruct (IHl1 _ eq_refl) as (? & ? & ? & ? & ->).
-    do 2 eexists. rewrite H. eauto. invs H.
+  - cbn in *.
+    revert H.
+    case_eq (f a). all: try discriminate. intros b eb.
+    simpl.
+    case_eq (monad_map f (l1 ++ l2)). all: try discriminate. intros l' el.
+    simpl. intro h. inv h.
+    destruct (IHl1 _ el) as (? & ? & ? & ? & ->).
+    eexists _,_. rewrite H, H0. intuition eauto.
 Qed.
 
 Existing Instance extraction_checker_flags.

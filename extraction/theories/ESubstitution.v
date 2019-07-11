@@ -34,7 +34,7 @@ Proof.
   destruct s; eauto.
   destruct s as (u' & ? & ?).
   right. exists u'. split; eauto.
-  change u with (snd (Σ,u)). 
+  change u with (snd (Σ,u)).
   eapply weakening_env; [ | | eauto | | ]; eauto using wf_extends.
 Qed.
 
@@ -98,7 +98,7 @@ Proof.
     eapply All2_impl. exact H4.
     intros ? ? [[[]] [? []]].
     split; eauto.
-  - eauto. 
+  - eauto.
 Qed.
 
 (** ** Weakening *)
@@ -157,13 +157,13 @@ Proof.
       rewrite lift_context_snoc0, <- plus_n_O in *.
       eapply H; eauto. cbn. econstructor.
       eauto. cbn. 2: cbn; eapply weakening_typing; eauto.
-      eapply weakening_typing in typeb_ty; eauto.
+      eapply weakening_typing in X0; eauto.
   - econstructor.
     + eauto.
     + eapply h_forall_Γ0; eauto.
     + eapply All2_map.
       eapply All2_All_left in X3.
-      2:{ intros. destruct X1. exact e. }
+      2:{ intros ? ? [? e]. exact e. }
       eapply All2_impl. eapply All2_All_mix_left.
       eassumption. eassumption. intros.
       destruct H. destruct p0.
@@ -183,8 +183,7 @@ Proof.
     econstructor.
     eapply All2_map.
     eapply All2_impl. eapply All2_All_mix_left.
-    eassumption. eassumption. intros.
-    destruct X1 as [[[]] [? []]].
+    eassumption. eassumption. intros ? ? [[[]] [? []]].
     destruct x, y; cbn in *; subst.
     repeat split. unfold app_context in *.
     eapply (e1 Γ (types ++ Γ') Γ'') in e4.

@@ -1,6 +1,6 @@
 all: template-coq pcuic safechecker extraction
 
-.PHONY: all template-coq pcuic extraction install html clean mrproper .merlin test-suite translations
+.PHONY: all template-coq pcuic extraction install html clean mrproper .merlin test-suite
 
 install:
 	$(MAKE) -C template-coq install
@@ -22,7 +22,6 @@ clean:
 	$(MAKE) -C safechecker clean
 	$(MAKE) -C extraction clean
 	$(MAKE) -C test-suite clean
-	$(MAKE) -C translations clean
 
 mrproper:
 	$(MAKE) -C template-coq mrproper
@@ -50,6 +49,3 @@ extraction: template-coq safechecker pcuic
 
 test-suite: template-coq
 	$(MAKE) -C test-suite
-
-translations: template-coq
-	$(MAKE) -C translations

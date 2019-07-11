@@ -1,5 +1,15 @@
 
+(* 
+   This file contains all admitted lemmas and axioms regarding the meta-theory. 
+*)
+
 Notation "a 'of' A" := (match a : A with _ => a end) (at level 100).
+
+(* The notation can be used to check the type of a term and match it with the output of the Check command: *)
+
+Check (true of bool).              (* outputs true : bool *)
+
+Fail Check (true of nat).         (* fails with: The term "true" has type "bool" while it is expected to have type "nat". *)
 
 Require Template.uGraph.
 
@@ -22,6 +32,18 @@ Check (@PCUICTyping.on_global_env_impl
           (Γ : PCUICAst.context) (t : PCUICAst.term) (T : option PCUICAst.term),
         PCUICTyping.on_global_env P (fst Σ0) -> P Σ0 Γ t T -> Q Σ0 Γ t T) ->
        PCUICTyping.on_global_env P Σ -> PCUICTyping.on_global_env Q Σ).
+
+Check (@PCUICTyping.conv_refl
+     of forall (H : config.checker_flags) (Σ : PCUICAst.global_env_ext) (Γ : PCUICAst.context) (t : PCUICAst.term),
+            PCUICTyping.conv Σ Γ t t).
+
+Check (@PCUICTyping.cumul_refl'
+     of forall (H : config.checker_flags) (Σ : PCUICAst.global_env_ext) (Γ : PCUICAst.context) (t : PCUICAst.term),
+       PCUICTyping.cumul Σ Γ t t).
+
+Check (@PCUICTyping.cumul_trans
+     of forall (H : config.checker_flags) (Σ : PCUICAst.global_env_ext) (Γ : PCUICAst.context) (t u v : PCUICAst.term),
+       PCUICTyping.cumul Σ Γ t u -> PCUICTyping.cumul Σ Γ u v -> PCUICTyping.cumul Σ Γ t v).
 
 Require PCUIC.PCUICWeakeningEnv.
 

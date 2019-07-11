@@ -17,7 +17,7 @@ then
     if [ "$1" == "local" ]
     then
         echo "Building MetaCoq locally"
-        PCUIC_DEPS=""
+        PCUIC_DEPS="-R ../template-coq/theories MetaCoq.Template"
         SAFECHECKER_DEPS="-I ../pcuic/src -R ../pcuic/theories MetaCoq.PCUIC"
         EXTRACTION_DEPS="-I ../safechecker/src -R ../safechecker/theories MetaCoq.SafeChecker"
     else

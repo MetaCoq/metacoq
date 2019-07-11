@@ -1,0 +1,65 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<link href="coqdoc.css" rel="stylesheet" type="text/css" />
+<title>MetaCoq.Template.Validity</title>
+</head>
+
+<body>
+
+<div id="page">
+
+<div id="header">
+</div>
+
+<div id="main">
+
+<h1 class="libtitle">Library MetaCoq.Template.Validity</h1>
+
+<div class="code">
+
+<br/>
+
+<br/>
+<span class="id" title="keyword">Definition</span> <span class="id" title="var">on_local_decl</span> <span class="id" title="var">P</span> <span class="id" title="var">Σ</span> <span class="id" title="var">d</span> :=<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">match</span> <span class="id" title="var">d</span>.(<span class="id" title="var">decl_body</span>) <span class="id" title="keyword">with</span><br/>
+&nbsp;&nbsp;| <span class="id" title="var">None</span> ⇒ {<span class="id" title="var">s</span> : <span class="id" title="var">universe</span> &amp; { <span class="id" title="var">Γ'</span> &amp; <span class="id" title="var">isType</span> <span class="id" title="var">Σ</span> <span class="id" title="var">Γ'</span> <span class="id" title="var">d</span>.(<span class="id" title="var">decl_type</span>)<br/>
+&nbsp;&nbsp;| <span class="id" title="var">Some</span> <span class="id" title="var">body</span> ⇒ <span class="id" title="var">Σ</span> ;;; <span class="id" title="var">Γ</span> |- <span class="id" title="var">body</span> : <span class="id" title="var">d</span>.(<span class="id" title="var">decl_type</span>)<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">end</span>.<br/>
+
+<br/>
+<span class="id" title="keyword">Lemma</span> <span class="id" title="var">All_local_env_lookup</span> `{<span class="id" title="var">checker_flags</span>} <span class="id" title="var">P</span> <span class="id" title="var">Q</span> <span class="id" title="var">Σ</span> <span class="id" title="var">Γ</span> <span class="id" title="var">n</span> (<span class="id" title="var">isdecl</span> : <span class="id" title="var">n</span> &lt; #|<span class="id" title="var">Γ</span>|) :<br/>
+&nbsp;&nbsp;<span class="id" title="var">All_local_env</span> <span class="id" title="var">P</span> <span class="id" title="var">Σ</span> <span class="id" title="var">Γ</span> → <span class="id" title="var">on_decl_typing</span> <span class="id" title="var">P</span> (<span class="id" title="var">safe_nth</span> <span class="id" title="var">Γ</span> (<span class="id" title="var">exist</span> <span class="id" title="var">_</span> <span class="id" title="var">n</span> <span class="id" title="var">isdecl</span>))<br/>
+<span class="id" title="keyword">Proof</span>.<br/>
+<span class="id" title="keyword">Lemma</span> <span class="id" title="var">type_local_env_isdecl</span> `{<span class="id" title="var">checker_flags</span>} <span class="id" title="var">Σ</span> <span class="id" title="var">n</span> <span class="id" title="var">Γ</span> :<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">∀</span> <span class="id" title="var">isdecl</span> : <span class="id" title="var">n</span> &lt; #|<span class="id" title="var">Γ</span>|, <span class="id" title="var">wf_local</span> <span class="id" title="var">Σ</span> <span class="id" title="var">Γ</span> →<br/>
+&nbsp;&nbsp;{ <span class="id" title="var">Γ'</span> : <span class="id" title="var">_</span> &amp; { <span class="id" title="var">Γ''</span> : <span class="id" title="var">_</span> &amp;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{ <span class="id" title="var">_</span> : <span class="id" title="var">type_local_decl</span> <span class="id" title="var">Σ</span> <span class="id" title="var">Γ''</span> (<span class="id" title="var">safe_nth</span> <span class="id" title="var">Γ</span> (<span class="id" title="var">exist</span> <span class="id" title="var">_</span> <span class="id" title="var">n</span> <span class="id" title="var">isdecl</span>)) &amp;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">Γ</span> = (<span class="id" title="var">Γ'</span> ++ <span class="id" title="var">Γ''</span>)%<span class="id" title="var">list</span> ∧ #|<span class="id" title="var">Γ'</span>| = <span class="id" title="var">S</span> <span class="id" title="var">n</span> } } }.<br/>
+ 
+<br/>
+<span class="id" title="keyword">Definition</span> <span class="id" title="var">isSort</span> <span class="id" title="var">T</span> :=<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">match</span> <span class="id" title="var">T</span> <span class="id" title="keyword">with</span><br/>
+&nbsp;&nbsp;| <span class="id" title="var">tSort</span> <span class="id" title="var">_</span> ⇒ <span class="id" title="var">true</span><br/>
+&nbsp;&nbsp;| <span class="id" title="var">_</span> ⇒ <span class="id" title="var">false</span><br/>
+&nbsp;&nbsp;<span class="id" title="keyword">end</span>.<br/>
+
+<br/>
+<span class="id" title="keyword">Theorem</span> <span class="id" title="var">validity</span> `{<span class="id" title="var">checker_flags</span>} : <span class="id" title="var">env_prop</span> (<span class="id" title="keyword">fun</span> <span class="id" title="var">Σ</span> <span class="id" title="var">Γ</span> <span class="id" title="var">t</span> <span class="id" title="var">T</span> ⇒ ((<span class="id" title="var">isSort</span> <span class="id" title="var">T</span> = <span class="id" title="var">true</span>) + <span class="id" title="var">isType</span> <span class="id" title="var">Σ</span> <span class="id" title="var">Γ</span> <span class="id" title="var">T</span>)%<span class="id" title="keyword">type</span>).<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">Lemma</span> <span class="id" title="var">All_local_env_decl</span><br/>
+<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="var">admit</span>.<br/>
+<span class="id" title="keyword">Eval</span> <span class="id" title="tactic">compute</span> <span class="id" title="tactic">in</span> <span class="id" title="var">validity</span>.<br/>
+</div>
+</div>
+
+<div id="footer">
+<hr/><a href="index.html">Index</a><hr/>This page has been generated by <a href="http://coq.inria.fr/">coqdoc</a>
+</div>
+
+</div>
+
+</body>
+</html>

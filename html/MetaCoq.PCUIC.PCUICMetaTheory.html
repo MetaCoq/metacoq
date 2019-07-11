@@ -1,0 +1,61 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<link href="coqdoc.css" rel="stylesheet" type="text/css" />
+<title>MetaCoq.PCUIC.PCUICMetaTheory</title>
+</head>
+
+<body>
+
+<div id="page">
+
+<div id="header">
+</div>
+
+<div id="main">
+
+<h1 class="libtitle">Library MetaCoq.PCUIC.PCUICMetaTheory</h1>
+
+<div class="code">
+
+<br/>
+
+<br/>
+
+<br/>
+</div>
+
+<div class="doc">
+The subject reduction property of the system: 
+</div>
+<div class="code">
+
+<br/>
+
+<br/>
+</div>
+
+<div class="doc">
+Weak Normalization: every term has a normal form 
+</div>
+<div class="code">
+
+<br/>
+<span class="id" title="keyword">Definition</span> <a name="normal"><span class="id" title="definition">normal</span></a> (<span class="id" title="var">Σ</span> : <a class="idref" href="MetaCoq.PCUIC.PCUICAst.html#global_env_ext"><span class="id" title="definition">global_env_ext</span></a>) <span class="id" title="var">Γ</span> <span class="id" title="var">t</span> := <a class="idref" href="http://coq.inria.fr/distrib/V8.8.2/stdlib//Coq.Init.Specif.html#50b5d8dd6be4fba768e35617e518ad76"><span class="id" title="notation">{</span></a> <span class="id" title="var">u</span> <a class="idref" href="http://coq.inria.fr/distrib/V8.8.2/stdlib//Coq.Init.Specif.html#50b5d8dd6be4fba768e35617e518ad76"><span class="id" title="notation">:</span></a> <span class="id" title="var">_</span> <a class="idref" href="http://coq.inria.fr/distrib/V8.8.2/stdlib//Coq.Init.Specif.html#50b5d8dd6be4fba768e35617e518ad76"><span class="id" title="notation">&amp;</span></a> <a class="idref" href="MetaCoq.PCUIC.PCUICTyping.html#red1"><span class="id" title="inductive">red1</span></a> <a class="idref" href="MetaCoq.PCUIC.PCUICMetaTheory.html#e15c0eb40e61adefe95778c26e7840f6"><span class="id" title="variable">Σ</span></a> <a class="idref" href="MetaCoq.PCUIC.PCUICMetaTheory.html#1b004e48cd1f64e22d5c000cf0d7f047"><span class="id" title="variable">Γ</span></a> <a class="idref" href="MetaCoq.PCUIC.PCUICMetaTheory.html#t"><span class="id" title="variable">t</span></a> <a class="idref" href="MetaCoq.PCUIC.PCUICMetaTheory.html#u"><span class="id" title="variable">u</span></a> <a class="idref" href="http://coq.inria.fr/distrib/V8.8.2/stdlib//Coq.Init.Specif.html#50b5d8dd6be4fba768e35617e518ad76"><span class="id" title="notation">}</span></a> <a class="idref" href="http://coq.inria.fr/distrib/V8.8.2/stdlib//Coq.Init.Logic.html#d43e996736952df71ebeeae74d10a287"><span class="id" title="notation">→</span></a> <a class="idref" href="http://coq.inria.fr/distrib/V8.8.2/stdlib//Coq.Init.Logic.html#False"><span class="id" title="inductive">False</span></a>.<br/>
+
+<br/>
+<span class="id" title="keyword">Conjecture</span> <a name="weak_normalization"><span class="id" title="axiom">weak_normalization</span></a> : <span class="id" title="keyword">∀</span> (<span class="id" title="var">Σ</span> : <a class="idref" href="MetaCoq.PCUIC.PCUICAst.html#global_env_ext"><span class="id" title="definition">global_env_ext</span></a>) <span class="id" title="var">Γ</span> <span class="id" title="var">t</span> <span class="id" title="var">T</span>,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<a class="idref" href="MetaCoq.PCUIC.PCUICMetaTheory.html#e15c0eb40e61adefe95778c26e7840f6"><span class="id" title="variable">Σ</span></a> <a class="idref" href="MetaCoq.PCUIC.PCUICTyping.html#ed04060b4afd95602ad81dc6ad8ad19f"><span class="id" title="notation">;;;</span></a> <a class="idref" href="MetaCoq.PCUIC.PCUICMetaTheory.html#1b004e48cd1f64e22d5c000cf0d7f047"><span class="id" title="variable">Γ</span></a> <a class="idref" href="MetaCoq.PCUIC.PCUICTyping.html#ed04060b4afd95602ad81dc6ad8ad19f"><span class="id" title="notation">|-</span></a> <a class="idref" href="MetaCoq.PCUIC.PCUICMetaTheory.html#t"><span class="id" title="variable">t</span></a> <a class="idref" href="MetaCoq.PCUIC.PCUICTyping.html#ed04060b4afd95602ad81dc6ad8ad19f"><span class="id" title="notation">:</span></a> <a class="idref" href="MetaCoq.PCUIC.PCUICMetaTheory.html#T"><span class="id" title="variable">T</span></a> <a class="idref" href="http://coq.inria.fr/distrib/V8.8.2/stdlib//Coq.Init.Logic.html#d43e996736952df71ebeeae74d10a287"><span class="id" title="notation">→</span></a> <a class="idref" href="http://coq.inria.fr/distrib/V8.8.2/stdlib//Coq.Init.Specif.html#de9f4efb23f821d5ed4b5f6ed46f702f"><span class="id" title="notation">{</span></a> <span class="id" title="var">u</span> <a class="idref" href="http://coq.inria.fr/distrib/V8.8.2/stdlib//Coq.Init.Specif.html#de9f4efb23f821d5ed4b5f6ed46f702f"><span class="id" title="notation">&amp;</span></a> (<a class="idref" href="MetaCoq.PCUIC.PCUICTyping.html#red"><span class="id" title="inductive">red</span></a> <a class="idref" href="MetaCoq.PCUIC.PCUICMetaTheory.html#e15c0eb40e61adefe95778c26e7840f6"><span class="id" title="variable">Σ</span></a> <a class="idref" href="MetaCoq.PCUIC.PCUICMetaTheory.html#1b004e48cd1f64e22d5c000cf0d7f047"><span class="id" title="variable">Γ</span></a> <a class="idref" href="MetaCoq.PCUIC.PCUICMetaTheory.html#t"><span class="id" title="variable">t</span></a> <a class="idref" href="MetaCoq.PCUIC.PCUICMetaTheory.html#u"><span class="id" title="variable">u</span></a> <a class="idref" href="http://coq.inria.fr/distrib/V8.8.2/stdlib//Coq.Init.Datatypes.html#d19c7eafd0e2d195d10df94b392087b5"><span class="id" title="notation">×</span></a> <a class="idref" href="MetaCoq.PCUIC.PCUICMetaTheory.html#normal"><span class="id" title="definition">normal</span></a> <a class="idref" href="MetaCoq.PCUIC.PCUICMetaTheory.html#e15c0eb40e61adefe95778c26e7840f6"><span class="id" title="variable">Σ</span></a> <a class="idref" href="MetaCoq.PCUIC.PCUICMetaTheory.html#1b004e48cd1f64e22d5c000cf0d7f047"><span class="id" title="variable">Γ</span></a> <a class="idref" href="MetaCoq.PCUIC.PCUICMetaTheory.html#u"><span class="id" title="variable">u</span></a>)%<span class="id" title="keyword">type</span> <a class="idref" href="http://coq.inria.fr/distrib/V8.8.2/stdlib//Coq.Init.Specif.html#de9f4efb23f821d5ed4b5f6ed46f702f"><span class="id" title="notation">}</span></a>.<br/>
+</div>
+</div>
+
+<div id="footer">
+<hr/><a href="index.html">Index</a><hr/>This page has been generated by <a href="http://coq.inria.fr/">coqdoc</a>
+</div>
+
+</div>
+
+</body>
+</html>

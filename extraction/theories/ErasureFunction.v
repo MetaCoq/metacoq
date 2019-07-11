@@ -1,7 +1,8 @@
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
 From MetaCoq.Template Require Import config utils monad_utils BasicAst AstUtils uGraph.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICTyping PCUICMetaTheory PCUICWcbvEval PCUICLiftSubst PCUICInversion PCUICConfluence PCUICCumulativity PCUICSR PCUICNormal PCUICSafeReduce PCUICSafeLemmata PCUICSafeChecker PCUICValidity PCUICPrincipality PCUICElimination.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICTyping PCUICMetaTheory PCUICWcbvEval PCUICLiftSubst PCUICInversion PCUICConfluence PCUICCumulativity PCUICSR PCUICNormal PCUICSafeLemmata PCUICValidity PCUICPrincipality PCUICElimination.
+From MetaCoq.SafeChecker Require Import PCUICSafeReduce PCUICSafeChecker.
 From MetaCoq.Extraction Require EAst ELiftSubst ETyping EWcbvEval Extract ExtractionCorrectness.
 From Equations Require Import Equations.
 Require Import String.
@@ -80,7 +81,7 @@ Grab Existential Variables.
      exists (x ++ [vass na A])%list, x0. cbn; split.
      2:{ unfold snoc, app_context in *. rewrite <- app_assoc. eassumption. }
      change ([] ,, vass na A) with ([vass na A] ,,, []).
-     rewrite destArity_app_aux. rewrite e. cbn. reflexivity.
+     rewrite destArity_app_aux. rewrite e. cbn. reflexivity. apply RedFlags.default.
 Qed.
 
 Ltac sq := try (destruct HΣ as [wfΣ]; clear HΣ);
@@ -115,7 +116,7 @@ Next Obligation.
     econstructor. eauto. cbn. eauto.
   - econstructor. eauto.
     eapply isWfArity_red in X; eauto.
-    cbn. eapply isWfArity_prod_inv; eauto.
+    cbn. eapply isWfArity_prod_inv; eauto. apply RedFlags.default.
 Qed.
 Next Obligation.
   sq. destruct HT as [ [] | [] ].

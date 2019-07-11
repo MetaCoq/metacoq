@@ -244,3 +244,10 @@ checker/src/wf.mli
 /pcuic/_PluginProject
 /pcuic/metacoq-config
 /checker/_CoqProject
+/safechecker/metacoq-config
+/safechecker/_PluginProject
+/safechecker/_CoqProject
+/safechecker/Makefile.safechecker.conf
+/safechecker/Makefile.safechecker
+/safechecker/Makefile.plugin.conf
+/safechecker/Makefile.plugin

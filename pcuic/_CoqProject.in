@@ -8,6 +8,7 @@ theories/PCUICLiftSubst.v
 theories/PCUICUnivSubst.v
 theories/PCUICTyping.v
 theories/PCUICInversion.v
+theories/PCUICPosition.v
 theories/PCUICNormal.v
 theories/PCUICNameless.v
 theories/PCUICEquality.v
@@ -32,11 +33,7 @@ theories/PCUICCheckerCompleteness.v
 theories/PCUICRetyping.v
 theories/PCUICElimination.v
 
-theories/PCUICPosition.v
 theories/PCUICSafeLemmata.v
-theories/PCUICSafeReduce.v
-theories/PCUICSafeConversion.v
-theories/PCUICSafeChecker.v
 
 theories/TemplateToPCUIC.v
 theories/TemplateToPCUICCorrectness.v

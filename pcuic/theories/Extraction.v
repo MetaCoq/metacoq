@@ -12,11 +12,12 @@ Require Import ExtrOcamlString ExtrOcamlZInt.
    https://github.com/coq/coq/issues/7017. *)
 Extract Inductive Decimal.int => unit [ "(fun _ -> ())" "(fun _ -> ())" ] "(fun _ _ _ -> assert false)".
 
-Extraction Blacklist config uGraph universes Ast String List Nat Int
+Extraction Blacklist config uGraph universes Ast String List Logic Logic0 Nat Int
            UnivSubst Typing Checker Retyping OrderedType Classes.
 Set Warnings "-extraction-opaque-accessed".
 
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICUnivSubst PCUICInduction PCUICLiftSubst PCUICTyping
+     PCUICNormal PCUICSafeLemmata
      (* PCUICWeakeningEnv *)
      (* PCUICWeakening *)
      (* PCUICSubstitution *)
@@ -38,20 +39,22 @@ Extraction Inline Equations.Prop.DepElim.solution_left.
 
 (* Extraction Inline NoConfusionPackage_All_local_env_over. *)
 (* Extraction Inline NoConfusionPackage_context_decl. *)
-(* Extraction Library Signature. *)
 Extraction Library Classes.
-(* Extraction Library CRelationClasses. *)
+
+(* The following allows to test the failure of extraction *)
+(* Bugs in extraction! *)
+(* Extract Constant Relation_Properties.clos_rt_is_preorder => "(Obj.magic 0)". *)
+(* Extract Constant CRelationClasses.eq_equivalence => "(Obj.magic __)". *)
+(* Separate Extraction PCUICNormal PCUICAst PCUICAstUtils PCUICUnivSubst PCUICLiftSubst PCUICReflect PCUICPosition *)
+(*          PCUICChecker.type_of PCUICRetyping TemplateToPCUIC PCUICSafeLemmata. *)
 
 Extraction Library PCUICAst.
 Extraction Library PCUICAstUtils.
 Extraction Library PCUICUnivSubst.
 Extraction Library PCUICLiftSubst.
 Extraction Library PCUICTyping.
-(* Extraction Library PCUICReduction. *)
-(* Extraction Library PCUICCumulativity. *)
-(* Extraction Library PCUICWeakeningEnv. *)
-(* Extraction Library PCUICWeakening. *)
-(* Extraction Library PCUICSubstitution. *)
+Extraction Library PCUICNormal.
+Extraction Library PCUICPosition.
 Extraction Library PCUICChecker.
 Extraction Library PCUICRetyping.
 Extraction Library PCUICMetaTheory.

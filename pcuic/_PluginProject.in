@@ -15,10 +15,16 @@ src/pCUICAstUtils.ml
 src/pCUICAstUtils.mli
 src/pCUICLiftSubst.ml
 src/pCUICLiftSubst.mli
+# src/eqDecInstances.ml
+# src/eqDecInstances.mli
+# src/pCUICReflect.mli
+# src/pCUICReflect.ml
 src/pCUICTyping.ml
 src/pCUICTyping.mli
 src/pCUICUnivSubst.ml
 src/pCUICUnivSubst.mli
+# src/pCUICInduction.mli
+# src/pCUICInduction.ml
 # src/pCUICWeakeningEnv.ml
 # src/pCUICWeakeningEnv.mli
 # src/pCUICWeakening.mli
@@ -29,12 +35,18 @@ src/pCUICUnivSubst.mli
 # src/pCUICCumulativity.ml
 # src/pCUICSubstitution.ml
 # src/pCUICSubstitution.mli
+# src/pCUICPosition.mli
+# src/pCUICPosition.ml
+# src/pCUICNormal.mli
+# src/pCUICNormal.ml
 src/pCUICChecker.ml
 src/pCUICChecker.mli
 src/pCUICRetyping.ml
 src/pCUICRetyping.mli
 src/pCUICMetaTheory.ml
 src/pCUICMetaTheory.mli
+# src/pCUICSafeLemmata.mli
+# src/pCUICSafeLemmata.ml
 src/templateToPCUIC.mli
 src/templateToPCUIC.ml
 src/metacoq_pcuic_plugin.mlpack

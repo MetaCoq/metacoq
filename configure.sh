@@ -17,13 +17,11 @@ then
     if [ "$1" == "local" ]
     then
         echo "Building MetaCoq locally"
-        CHECKER_DEPS="-R ../template-coq/theories MetaCoq.Template"
-        PCUIC_DEPS="-I ../checker/src -R ../checker/theories MetaCoq.Checker"
+        PCUIC_DEPS=""
         SAFECHECKER_DEPS="-I ../pcuic/src -R ../pcuic/theories MetaCoq.PCUIC"
         EXTRACTION_DEPS="-I ../safechecker/src -R ../safechecker/theories MetaCoq.SafeChecker"
     else
         echo "Building MetaCoq globally (default)"
-        CHECKER_DEPS=""
         PCUIC_DEPS=""
         SAFECHECKER_DEPS=""
         EXTRACTION_DEPS=""
@@ -32,15 +30,14 @@ then
         # The extraction plugin relies on the checker and pcuic plugins.
         # These dependencies should not be necessary when separate linking of ocaml object
         # files is supported by coq_makefile
-        PCUIC_DEPS="-I $(COQLIB)/user-contrib/MetaCoq/Checker"
+        PCUIC_DEPS=""
         SAFECHECKER_DEPS="-I $(COQLIB)/user-contrib/MetaCoq/SafeChecker"
         EXTRACTION_DEPS="-I $(COQLIB)/user-contrib/MetaCoq/PCUIC"
     fi
 
-    echo ${CHECKER_DEPS} > checker/metacoq-config
-    echo ${CHECKER_DEPS} ${PCUIC_DEPS} > pcuic/metacoq-config
-    echo ${CHECKER_DEPS} ${PCUIC_DEPS} ${SAFECHECKER_DEPS} > safechecker/metacoq-config
-    echo ${CHECKER_DEPS} ${PCUIC_DEPS} ${SAFECHECKER_DEPS} ${EXTRACTION_DEPS} > extraction/metacoq-config
+    echo ${PCUIC_DEPS} > pcuic/metacoq-config
+    echo ${PCUIC_DEPS} ${SAFECHECKER_DEPS} > safechecker/metacoq-config
+    echo ${PCUIC_DEPS} ${SAFECHECKER_DEPS} ${EXTRACTION_DEPS} > extraction/metacoq-config
 else
     echo "Error: coqc not found in path"
 fi

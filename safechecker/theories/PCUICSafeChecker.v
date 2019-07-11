@@ -334,7 +334,7 @@ Proof.
   induction l in l' |- *; simpl; intro n.
   - inversion 1; constructor.
   - case_eq (f n a); [|discriminate].
-    intros b Hb. 
+    intros b Hb.
     case_eq (map_option_out (mapi_rec f l (S n))); [|discriminate].
     intros l0 Hl0 HH0 HH1.
     inversion HH0; subst; clear HH0.
@@ -376,7 +376,7 @@ Proof.
     inversion e; subst; clear e.
     unfold build_branches_type in He3.
     solve_all.
-    eapply (map_option_out_mapi (ind_ctors idecl) btys _ _ He3); clear He3. 
+    eapply (map_option_out_mapi (ind_ctors idecl) btys _ _ He3); clear He3.
     apply Alli_id.
     intros i [[id ctor] k].
     case_eq (instantiate_params (ind_params mdecl) pars ((subst0 (inds (inductive_mind ind) u (ind_bodies mdecl))) (subst_instance_constr u ctor))); [|cbn; trivial].
@@ -567,12 +567,6 @@ Section Typecheck.
     intros []. left; now econstructor.
   Qed.
 
-  (* Definition typ_to_wf {Γ t} *)
-  (*   : { A : term | ∥ Σ ;;; Γ |- t : A ∥ } -> wellformed Σ Γ t. *)
-  (* Proof. *)
-  (*   intros [A h]. sq. left. now exists A. *)
-  (* Defined. *)
-
   Lemma validity_wf {Γ t T} :
     ∥ wf_local Σ Γ ∥ -> ∥ Σ ;;; Γ |- t : T ∥ -> wellformed Σ Γ T.
   Proof.
@@ -701,7 +695,7 @@ Section Typecheck.
     match leqb_term t u with true => ret _ | false =>
     match iscumul Σ HΣ Γ t ht u hu with
     | true => ret _
-    | false => (* fallback *)  (* nico *)
+    | false => (* fallback *)
       let t' := hnf Γ t ht in
       let u' := hnf Γ u hu in
       (* match leq_term (snd Σ) t' u' with true => ret _ | false => *)
@@ -860,19 +854,6 @@ Section Typecheck.
     repeat match goal with
            | H : ∥ _ ∥ |- _ => case H; clear H; intro H
            end; try eapply sq.
-
-  (* Definition sq_type_CoFix {Γ mfix n decl} : *)
-  (*   allow_cofix -> *)
-  (*   let types := fix_context mfix in *)
-  (*   nth_error mfix n = Some decl -> *)
-  (*   ∥ wf_local Σ (Γ ,,, types) ∥ -> *)
-  (*   All (fun d => ∥ Σ;;; Γ ,,, types |- dbody d : (lift0 #|types|) (dtype d) ∥) mfix -> *)
-  (*   ∥ Σ;;; Γ |- tCoFix mfix n : dtype decl ∥. *)
-  (* Proof. *)
-  (*   intros H types H0 H1 H2. *)
-  (*   apply All_sq in H2. sq. *)
-  (*   eapply type_CoFix; eauto. *)
-  (* Defined. *)
 
   Program Fixpoint infer (Γ : context) (HΓ : ∥ wf_local Σ Γ ∥) (t : term) {struct t}
     : typing_result ({ A : term & ∥ Σ ;;; Γ |- t : A ∥ }) :=
@@ -1238,94 +1219,3 @@ Definition make_graph_and_infer {cf:checker_flags} {Σ} (HΣ : ∥ wf_ext Σ ∥
 
 
 Print Assumptions infer.
-(* Require Import ExtrOcamlBasic ExtrOcamlNatInt ExtrOcamlString. *)
-(* Extraction infer. *)
-
-
-
-(* Section CheckEnv. *)
-(*   Context  {cf:checker_flags}. *)
-
-(*   Inductive env_error := *)
-(*   | IllFormedDecl (e : string) (e : type_error) *)
-(*   | AlreadyDeclared (id : string). *)
-
-(*   Inductive EnvCheck (A : Type) := *)
-(*   | CorrectDecl (a : A) *)
-(*   | EnvError (e : env_error). *)
-(*   Global Arguments EnvError {A} e. *)
-(*   Global Arguments CorrectDecl {A} a. *)
-
-(*   Instance envcheck_monad : Monad EnvCheck := *)
-(*     {| ret A a := CorrectDecl a ; *)
-(*        bind A B m f := *)
-(*          match m with *)
-(*          | CorrectDecl a => f a *)
-(*          | EnvError e => EnvError e *)
-(*          end *)
-(*     |}. *)
-
-(*   Definition wrap_error {A} (id : string) (check : typing_result A) : EnvCheck A := *)
-(*     match check with *)
-(*     | Checked a => CorrectDecl a *)
-(*     | TypeError e => EnvError (IllFormedDecl id e) *)
-(*     end. *)
-
-(*   Lemma sq_wfl_nil {Σ} : ∥ wf_local Σ [] ∥. *)
-(*   Proof. *)
-(*    repeat constructor. *)
-(*   Qed. *)
-
-(*   Definition check_wf_type id Σ HΣ G t *)
-(*     : EnvCheck (∑ u, ∥ Σ;;; [] |- t : tSort u ∥) *)
-(*     := wrap_error id (@infer_type _ Σ HΣ (@infer _ Σ HΣ G) [] sq_wfl_nil t). *)
-
-(*   Definition check_wf_judgement id Σ HΣ G t ty *)
-(*     : EnvCheck (∥ Σ;;; [] |- t : ty ∥) *)
-(*     := wrap_error id (@check _ Σ HΣ G [] sq_wfl_nil t ty). *)
-
-  (* Definition infer_term Σ HΣ t := *)
-  (*   wrap_error "" (infer Σ [] t). *)
-
-  (* Definition check_wf_decl Σ (g : global_decl) : EnvCheck () := *)
-  (*   match g with *)
-  (*   | ConstantDecl id cst => *)
-  (*     match cst.(cst_body) with *)
-  (*     | Some term => check_wf_judgement id Σ term cst.(cst_type) *)
-  (*     | None => check_wf_type id Σ cst.(cst_type) *)
-  (*     end *)
-  (*   | InductiveDecl id inds => *)
-  (*     List.fold_left (fun acc body => *)
-  (*                       acc ;; check_wf_type body.(ind_name) Σ body.(ind_type)) *)
-  (*                    inds.(ind_bodies) (ret ()) *)
-  (*   end. *)
-
-  (* Fixpoint check_fresh id env : EnvCheck () := *)
-  (*   match env with *)
-  (*   | [] => ret () *)
-  (*   | g :: env => *)
-  (*     check_fresh id env;; *)
-  (*     if eq_constant id (global_decl_ident g) then *)
-  (*       EnvError (AlreadyDeclared id) *)
-  (*     else ret () *)
-  (*   end. *)
-
-  (* Fixpoint check_wf_declarations (φ : uGraph.t) (g : global_declarations) := *)
-  (*   match g with *)
-  (*   | [] => ret () *)
-  (*   | g :: env => *)
-  (*     check_wf_declarations φ env ;; *)
-  (*     check_wf_decl (env, φ) g ;; *)
-  (*     check_fresh (global_decl_ident g) env *)
-  (*   end. *)
-
-  (* Definition check_wf_env (Σ : global_context) := *)
-  (*   if negb (no_universe_inconsistency (snd Σ)) then *)
-  (*     EnvError (AlreadyDeclared "univ inconsistency") (* todo better error *) *)
-  (*   else check_wf_declarations (snd Σ) (fst Σ). *)
-
-  (* Definition typecheck_program (p : program) : EnvCheck term := *)
-  (*   let Σ := reconstruct_global_context (fst p) in *)
-  (*   check_wf_env Σ ;; infer_term Σ (snd p). *)
-
-(* End CheckEnv. *)

@@ -3,7 +3,7 @@
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
 From MetaCoq.Template Require Import config utils monad_utils BasicAst AstUtils.
 From MetaCoq.Extraction Require Import EAst ELiftSubst ETyping EWcbvEval Extract Prelim ESubstitution EInversion EArities.
-From MetaCoq.PCUIC Require Import PCUICTyping PCUICAst PCUICAstUtils PCUICInduction  PCUICWeakening PCUICSubstitution PCUICChecker PCUICRetyping PCUICMetaTheory PCUICWcbvEval PCUICSR  PCUICClosed PCUICInversion PCUICUnivSubstitution PCUICElimination.
+From MetaCoq.PCUIC Require Import PCUICTyping PCUICAst PCUICAstUtils PCUICInduction  PCUICWeakening PCUICSubstitution PCUICChecker PCUICRetyping PCUICMetaTheory PCUICWcbvEval PCUICSR  PCUICClosed PCUICInversion PCUICUnivSubstitution PCUICElimination PCUICUnivSubst.
 
 Require Import String.
 Local Open Scope string_scope.
@@ -39,11 +39,12 @@ Qed.
 
 Lemma isErasable_subst_instance (Σ : global_env_ext) Γ T univs u :
   wf Σ ->  wf_local Σ Γ ->
+  wf_local (Σ.1, univs) (PCUICUnivSubst.subst_instance_context u Γ) ->
   isErasable Σ Γ T ->
   consistent_instance_ext (Σ.1,univs) (Σ.2) u ->
   isErasable (Σ.1,univs) (PCUICUnivSubst.subst_instance_context u Γ) (PCUICUnivSubst.subst_instance_constr u T).
 Proof.
-  intros. destruct X1 as (? & ? & [ | (? & ? & ?)]).
+  intros. destruct X2 as (? & ? & [ | (? & ? & ?)]).
   - eapply typing_subst_instance in t; eauto.
     eexists. split. eauto. left. eapply isArity_subst_instance. eauto.
   - eapply typing_subst_instance in t; eauto.
@@ -130,12 +131,14 @@ Lemma erases_subst_instance_constr :
   forall Γ, wf_local Σ Γ ->
   forall t T, Σ ;;; Γ |- t : T ->
     forall t' u univs,
+  wf_local (Σ.1, univs) (PCUICUnivSubst.subst_instance_context u Γ) ->
       consistent_instance_ext (Σ.1,univs) (Σ.2) u ->
     Σ ;;; Γ |- t ⇝ℇ t' ->
     (Σ.1,univs) ;;; (PCUICUnivSubst.subst_instance_context u Γ) |- PCUICUnivSubst.subst_instance_constr u t ⇝ℇ t'.
 Proof.
   apply (typing_ind_env (fun Σ Γ t T =>
-                               forall t' u univs,
+                           forall t' u univs,
+                             wf_local (Σ.1, univs) (PCUICUnivSubst.subst_instance_context u Γ) ->
       consistent_instance_ext (Σ.1,univs) (Σ.2) u ->
     Σ ;;; Γ |- t ⇝ℇ t' ->
     (Σ.1,univs) ;;; (PCUICUnivSubst.subst_instance_context u Γ) |- PCUICUnivSubst.subst_instance_constr u t ⇝ℇ t')); intros; cbn -[PCUICUnivSubst.subst_instance_constr] in *.
@@ -144,27 +147,51 @@ Proof.
   all: try now (econstructor; eauto).
   - cbn. econstructor.
     eapply H0 in H7; eauto.
+    econstructor. eauto. cbn. econstructor.
+    eapply typing_subst_instance in X0. exact X0. all:eauto.
   - cbn. econstructor.
     eapply H0 in H9; eauto.
     eapply H1 in H10. exact H10. eauto.
+    econstructor. eauto. cbn. econstructor.
+    eapply typing_subst_instance in X0. exact X0. all:eauto.
+    cbn. eapply typing_subst_instance in X1. exact X1. all:eauto.
   - cbn. econstructor; eauto.
     eapply All2_map_left.
     eapply All2_impl. eapply All2_All_mix_left.
-    eapply All2_All_left. exact X3. intros. destruct X4.
+    eapply All2_All_left. exact X3. intros. destruct X5.
     exact e. exact H15.
     intros; cbn in *. destruct H. destruct p0. split; eauto.
-  - cbn. econstructor; eauto.
+  - assert (Hw :  wf_local (Σ.1, univs) (subst_instance_context u (Γ ,,, types))).
+    { (* rewrite subst_instance_context_app. *)
+      apply All_local_env_app in X as [X Hfixc].
+      
+      revert Hfixc. clear - wfΣ wfΓ H1 X1.
+      induction 1.
+      - eauto.
+      - cbn. econstructor; eauto. cbn in *.
+        destruct t0 as (? & ? & ?). eexists.
+        cbn. eapply typing_subst_instance in t0. exact t0. all:eauto.
+        eapply typing_wf_local; eauto.
+      - cbn. econstructor; eauto. cbn in *.
+        destruct t0 as (? & ? & ?). destruct t1. eexists.
+        cbn. eapply typing_subst_instance in t0. exact t0. all:eauto.
+        eapply typing_wf_local; eauto.
+        cbn in *. destruct t1. eapply typing_subst_instance in t1. exact t1. all:eauto.
+        eapply typing_wf_local; eauto.
+    } 
+
+    cbn. econstructor; eauto.
     eapply All2_map_left.
     eapply All2_impl. eapply All2_All_mix_left. eassumption.
     exact H6.
-    intros; cbn in *. destruct X1. destruct p0. destruct p0.
+    intros; cbn in *. destruct X2. destruct p0. destruct p0.
     destruct p. destruct p. repeat split; eauto.
     eapply e2 in e1.
     unfold PCUICUnivSubst.subst_instance_context in *.
     unfold map_context in *. rewrite map_app in *. subst types. 2:eauto.
     eapply erases_ctx_ext. eassumption. unfold app_context.
     f_equal.
-    eapply fix_context_subst_instance.
+    eapply fix_context_subst_instance. eauto.
   - eauto.
 Qed.
 

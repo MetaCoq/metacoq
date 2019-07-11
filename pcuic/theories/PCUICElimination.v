@@ -221,7 +221,7 @@ Proof.
 Admitted.                       (* cumul_prop2 *)
 
 Lemma leq_universe_prop (Σ : global_env_ext) u1 u2 :
-  (* @check_univs cf = true -> *)
+  @check_univs cf = true ->
   (* @prop_sub_type cf = false -> *)
   wf Σ ->
   @leq_universe cf (global_ext_constraints Σ) u1 u2 ->

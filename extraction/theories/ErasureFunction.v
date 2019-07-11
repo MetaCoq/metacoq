@@ -234,8 +234,8 @@ Next Obligation.
        eapply invert_red_sort in r.
        eapply invert_red_sort in r1. subst. inv r1.
 
-       eapply leq_universe_prop in l0 as []; eauto.
-       eapply leq_universe_prop in l as []; eauto.
+       eapply leq_universe_prop in l0 as []; cbn; eauto.
+       eapply leq_universe_prop in l as []; cbn; eauto.
   - sq. econstructor. eauto.
 Qed.
 

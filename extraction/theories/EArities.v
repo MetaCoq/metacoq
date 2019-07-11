@@ -435,7 +435,7 @@ Proof.
     eapply subject_reduction in c0. 3:eauto. 2:eauto.
     eapply inversion_Prod in c0 as (? & ? & ? & ? & ?).
     eapply cumul_Sort_inv in c0.
-    eapply leq_universe_prop in c0 as []; eauto.
+    eapply leq_universe_prop in c0 as []; cbn; eauto.
 
     eapply is_prop_sort_prod in H0. eapply IHt1. exact H0.
     change (tSort x3) with ((tSort x3) {0 := hd}).
@@ -511,7 +511,7 @@ Proof.
   - sq. eapply cumul_prop1 in c; eauto.
     eapply inversion_Prod in c as (? & ? & ? & ? & ?).
     eapply cumul_Sort_inv in c.
-    eapply leq_universe_prop in c as []; eauto.
+    eapply leq_universe_prop in c as []; cbn; eauto.
     eexists. split. eassumption. right. eexists. split. eassumption.
     unfold Universe.sort_of_product in H.
     destruct ?; eauto.

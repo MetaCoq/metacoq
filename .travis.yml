@@ -35,7 +35,7 @@ install:
 
 script:
  - ./configure.sh local
- - make -j ${NJOBS} all test-suite
+ - make -j ${NJOBS} all
 
 notifications:
   webhooks:

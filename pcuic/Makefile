@@ -1,4 +1,4 @@
-all: theory plugin
+all: theory
 
 _PluginProject: _PluginProject.in metacoq-config
 	cat metacoq-config > _PluginProject

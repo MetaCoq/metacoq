@@ -1,7 +1,5 @@
 # PCUIC
 
-*This README is WIP.*
-
 ## Syntax
 
 [PCUICAst](PCUICAst.v) defines the syntax of terms of PCUIC: `term`.
@@ -17,7 +15,7 @@ polymorphism).
 class, coming with boolean equality `eqb` which reflects equality, and give
 many instances of that class.
 
-## Typing (and meta theory in general)
+## Typing and Meta Theory
 
 Typing in PCUIC is defined in [PCUICTyping](PCUICTyping.v), it also comes
 with the definition of reduction, conversion and cumulativity.
@@ -53,12 +51,20 @@ substitution lemmata.
 such that `Γ ⊢ t : A` is *valid*, meaning it is sorted or a well-formed
 arity.
 Subject reduction is addressed in [PCUICSR](PCUICSR.v).
+[PCUICWcbvEval](PCUICWcbvEval.v) defines the weak head call by value
+evaluation strategy.
+
+[PCUICMetaTheory](PCUICMetaTheory.v) sums up the meta-theory?
+(probably outdated)
 
 ## Fueled type checker
 
 [PCUICChecker](PCUICChecker.v) contains a fueled type checker for PCUIC
 whose completeness can be found in
 [PCUICCheckerCompleteness](PCUICCheckerCompleteness.v).
+[PCUICRetyping](PCUICRetyping.v) provides a `type_of` function to get the
+type of well-typed expression, it doesn't check again that the term is
+well-typed, so it can go faster.
 
 ## Relation with TemplateCoq
 
@@ -66,6 +72,13 @@ whose completeness can be found in
 translation from TemplateCoq syntax to PCUIC syntax.
 [TemplateToPCUICCorrectness](TemplateToPCUICCorrectness.v) shows that this
 translation is type-preserving.
+
+## Erasure
+
+[PCUICErasedTerm](PCUICErasedTerm.v) contains the AST for the erased terms
+(proofs are identified).
+[PCUICElimination](PCUICElimination.v) defines information about elimination
+of proofs.
 
 ## Preliminaries for Safe Checker
 
@@ -77,11 +90,3 @@ moved, but also the definition of `welltyped` and `wellformed` which are
 in the case of `wellformed`). The file includes lemmata about it.
 [PCUICSN](PCUICSN.v) defines the `normalisation` axiom as well-foundedness
 of the co-reduction, as well as related lemmata.
-
-## To be sorted
-
-[PCUICElimination](PCUICElimination.v)
-[PCUICErasedTerm](PCUICErasedTerm.v)
-[PCUICMetaTheory](PCUICMetaTheory.v)
-[PCUICRetyping](PCUICRetyping.v)
-[PCUICWcbvEval](PCUICWcbvEval.v)

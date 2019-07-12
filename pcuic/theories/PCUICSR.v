@@ -333,60 +333,6 @@ Section ContextConversion.
 
   Hint Resolve conv_ctx_refl : pcuic.
 
-  Instance refl_eq_univ φ : Reflexive (eq_universe φ) := eq_universe_refl _.
-  Instance eq_univ_trans φ : Transitive (eq_universe φ) := eq_universe_trans _.
-  Instance refl_leq_univ φ : Reflexive (leq_universe φ) := leq_universe_refl _.
-  Instance leq_univ_trans φ : Transitive (leq_universe φ) := leq_universe_trans _.
-  Existing Class SubstUnivPreserving.
-  (* FIXME SubstUnivPreserving will need to be up-to a sigma or set of constraints at least *)
-  Instance eq_univ_substu φ : SubstUnivPreserving (eq_universe φ).
-  Admitted.
-  Instance leq_univ_substu φ : SubstUnivPreserving (leq_universe φ).
-  Admitted.
-
-  Ltac tc := try typeclasses eauto 10.
-  Hint Resolve eq_universe_leq_universe : pcuic.
-
-  Section RedEq.
-    Context {Re Rle} {refl : Reflexive Re} {refl' :Reflexive Rle}
-            {trre : Transitive Re} {trle : Transitive Rle} `{SubstUnivPreserving Re} `{SubstUnivPreserving Rle}.
-    Context (inclre : forall u u' : universe, Re u u' -> Rle u u').
-
-    Lemma red_eq_term_upto_univ_r {Γ T V U} :
-      eq_term_upto_univ Re Rle T U -> red Σ Γ U V ->
-      ∑ T', red Σ Γ T T' * eq_term_upto_univ Re Rle T' V.
-    Proof.
-      intros eq r.
-      apply red_alt in r.
-      induction r in T, eq |- *.
-      - eapply red1_eq_term_upto_univ_r in eq as [v' [r' eq']]; eauto.
-      - exists T; split; eauto.
-      - case: (IHr1 _ eq) => T' [r' eq'].
-        case: (IHr2 _ eq') => T'' [r'' eq''].
-        exists T''. split=>//.
-        now transitivity T'.
-    Qed.
-
-    Lemma red_eq_term_upto_univ_l {Γ u v u'} :
-      eq_term_upto_univ Re Rle u u' ->
-      red Σ Γ u v ->
-      ∑ v',
-      red Σ Γ u' v' *
-      eq_term_upto_univ Re Rle v v'.
-    Proof.
-      intros eq r.
-      eapply red_alt in r.
-      induction r in u', eq |- *.
-      - eapply red1_eq_term_upto_univ_l in eq as [v' [r' eq']]; eauto.
-      - exists u'. split; auto.
-      - case: (IHr1 _ eq) => T' [r' eq'].
-        case: (IHr2 _ eq') => T'' [r'' eq''].
-        exists T''. split=>//.
-        now transitivity T'.
-    Qed.
-
-  End RedEq.
-
   Lemma cumul_red_ctx Γ Γ' T U :
     Σ ;;; Γ |- T <= U ->
     red_ctx Σ Γ Γ' ->

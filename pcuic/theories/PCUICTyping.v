@@ -505,11 +505,11 @@ Inductive eq_term_upto_univ (Re Rle : universe -> universe -> Type) : term -> te
     eq_term_upto_univ Re Rle b b' ->
     eq_term_upto_univ Re Rle (tProd na a b) (tProd na' a' b')
 
-| eq_LetIn na na' ty ty' t t' u u' :
-    eq_term_upto_univ Re Re ty ty' ->
+| eq_LetIn na na' t t' ty ty' u u' :
     eq_term_upto_univ Re Re t t' ->
+    eq_term_upto_univ Re Re ty ty' ->
     eq_term_upto_univ Re Rle u u' ->
-    eq_term_upto_univ Re Rle (tLetIn na ty t u) (tLetIn na' ty' t' u')
+    eq_term_upto_univ Re Rle (tLetIn na t ty u) (tLetIn na' t' ty' u')
 
 | eq_Case ind par p p' c c' brs brs' :
     eq_term_upto_univ Re Re p p' ->

@@ -1,19 +1,6 @@
 
 Notation "a 'of' A" := (match a : A with _ => a end) (at level 100).
 
-Require PCUIC.PCUICTyping.
-
-Check (@PCUICTyping.on_global_env_impl
-     of forall (H : config.checker_flags) (Σ : PCUICAst.global_env)
-         (P : PCUICAst.global_env_ext ->
-              PCUICAst.context -> PCUICAst.term -> option PCUICAst.term -> Type)
-         (Q : PCUICAst.global_env * Universes.universes_decl ->
-              PCUICAst.context -> PCUICAst.term -> option PCUICAst.term -> Type),
-       (forall (Σ0 : PCUICAst.global_env * Universes.universes_decl)
-          (Γ : PCUICAst.context) (t : PCUICAst.term) (T : option PCUICAst.term),
-        PCUICTyping.on_global_env P (fst Σ0) -> P Σ0 Γ t T -> Q Σ0 Γ t T) ->
-       PCUICTyping.on_global_env P Σ -> PCUICTyping.on_global_env Q Σ).
-
 Require PCUIC.PCUICWeakeningEnv.
 
 Check (@PCUICWeakeningEnv.global_ext_constraints_app
@@ -171,77 +158,6 @@ Check (@PCUICUnivSubstitution.typing_subst_instance
        PCUICTyping.typing (fst Σ, univs) (PCUICUnivSubst.subst_instance_context u Γ)
          (PCUICUnivSubst.subst_instance_constr u t)
          (PCUICUnivSubst.subst_instance_constr u T)).
-
-Check (@PCUICReduction.red_fix_one_body
-     of forall (Σ : PCUICAst.global_env) (Γ : PCUICAst.context)
-         (mfix : BasicAst.mfixpoint PCUICAst.term) (idx : nat)
-         (mfix' : list (BasicAst.def PCUICAst.term)),
-       utils.OnOne2
-         (fun x y : BasicAst.def PCUICAst.term =>
-          (PCUICTyping.red Σ
-             (PCUICAstUtils.app_context Γ (PCUICLiftSubst.fix_context mfix))
-             (BasicAst.dbody x) (BasicAst.dbody y) *
-           ((BasicAst.dname x, BasicAst.dtype x, BasicAst.rarg x) =
-            (BasicAst.dname y, BasicAst.dtype y, BasicAst.rarg y)))%type) mfix mfix' ->
-       PCUICTyping.red Σ Γ (PCUICAst.tFix mfix idx) (PCUICAst.tFix mfix' idx)).
-
-Check (@PCUICReduction.red_fix_body
-     of forall (Σ : PCUICAst.global_env) (Γ : PCUICAst.context)
-         (mfix : BasicAst.mfixpoint PCUICAst.term) (idx : nat)
-         (mfix' : list (BasicAst.def PCUICAst.term)),
-       utils.All2
-         (fun x y : BasicAst.def PCUICAst.term =>
-          (PCUICTyping.red Σ
-             (PCUICAstUtils.app_context Γ (PCUICLiftSubst.fix_context mfix))
-             (BasicAst.dbody x) (BasicAst.dbody y) *
-           ((BasicAst.dname x, BasicAst.dtype x, BasicAst.rarg x) =
-            (BasicAst.dname y, BasicAst.dtype y, BasicAst.rarg y)))%type) mfix mfix' ->
-       PCUICTyping.red Σ Γ (PCUICAst.tFix mfix idx) (PCUICAst.tFix mfix' idx)).
-
-Check (@PCUICReduction.red_fix_congr
-     of forall (Σ : PCUICAst.global_env) (Γ : PCUICAst.context)
-         (mfix : BasicAst.mfixpoint PCUICAst.term)
-         (mfix' : list (BasicAst.def PCUICAst.term)) (idx : nat),
-       utils.All2
-         (fun d0 d1 : BasicAst.def PCUICAst.term =>
-          (PCUICTyping.red Σ Γ (BasicAst.dtype d0) (BasicAst.dtype d1) *
-           PCUICTyping.red Σ
-             (PCUICAstUtils.app_context Γ (PCUICLiftSubst.fix_context mfix))
-             (BasicAst.dbody d0) (BasicAst.dbody d1))%type) mfix mfix' ->
-       PCUICTyping.red Σ Γ (PCUICAst.tFix mfix idx) (PCUICAst.tFix mfix' idx)).
-
-Check (@PCUICReduction.red_cofix_congr
-     of forall (Σ : PCUICAst.global_env) (Γ : PCUICAst.context)
-         (mfix0 : BasicAst.mfixpoint PCUICAst.term)
-         (mfix1 : list (BasicAst.def PCUICAst.term)) (idx : nat),
-       utils.All2
-         (fun d0 d1 : BasicAst.def PCUICAst.term =>
-          (PCUICTyping.red Σ Γ (BasicAst.dtype d0) (BasicAst.dtype d1) *
-           PCUICTyping.red Σ
-             (PCUICAstUtils.app_context Γ (PCUICLiftSubst.fix_context mfix0))
-             (BasicAst.dbody d0) (BasicAst.dbody d1))%type) mfix0 mfix1 ->
-       PCUICTyping.red Σ Γ (PCUICAst.tCoFix mfix0 idx) (PCUICAst.tCoFix mfix1 idx)).
-
-Require PCUICCumulativity.
-
-Check (@PCUICCumulativity.leq_term_antisym
-     of forall (cf : config.checker_flags) (Σ : Universes.constraints)
-         (t u : PCUICAst.term),
-       PCUICTyping.leq_term Σ t u ->
-       PCUICTyping.leq_term Σ u t -> PCUICTyping.eq_term Σ t u).
-
-Check (@PCUICCumulativity.cumul_conv_alt
-     of forall (cf : config.checker_flags) (Σ : PCUICAst.global_env_ext)
-         (Γ : PCUICAst.context) (t u : PCUICAst.term),
-       PCUICTyping.cumul Σ Γ t u ->
-       PCUICTyping.cumul Σ Γ u t -> PCUICCumulativity.conv_alt Σ Γ t u).
-
-Check (@PCUICCumulativity.congr_cumul_prod
-     of forall (H : config.checker_flags) (Σ : PCUICAst.global_env_ext)
-         (Γ : PCUICAst.context) (na na' : BasicAst.name) (M1 M2 N1 N2 : PCUICAst.term),
-       PCUICTyping.conv Σ Γ M1 N1 ->
-       PCUICTyping.cumul Σ (PCUICAst.snoc Γ (PCUICAst.vass na M1)) M2 N2 ->
-       PCUICTyping.cumul Σ Γ (PCUICAst.tProd na M1 M2) (PCUICAst.tProd na' N1 N2)).
 
 Require PCUICValidity.
 

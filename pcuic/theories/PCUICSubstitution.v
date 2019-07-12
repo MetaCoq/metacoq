@@ -1717,11 +1717,9 @@ Proof.
   constructor.
   - now apply subst_leq_term.
   - eapply substitution_untyped_let_red in r. 3:eauto. all:eauto with wf.
-    eapply cumul_trans.
-    eapply red_cumul. eapply r. eauto.
+    eapply red_cumul_cumul; eauto.
   - eapply substitution_untyped_let_red in r. 3:eauto. all:eauto with wf.
-    eapply cumul_trans. eauto.
-    eapply red_cumul_inv. eapply r.
+    eapply red_cumul_cumul_inv; eauto.
 Qed.
 
 Lemma substitution_cumul0 {cf:checker_flags} Σ Γ na t u u' a : wf Σ.1 ->
@@ -1746,11 +1744,9 @@ Proof.
   constructor.
   - now apply subst_leq_term.
   - eapply substitution_let_red in r. 4:eauto. all:eauto with wf.
-    eapply cumul_trans.
-    eapply red_cumul. eapply r. eauto.
+    eapply red_cumul_cumul; eauto.
   - eapply substitution_let_red in r. 4:eauto. all:eauto with wf.
-    eapply cumul_trans. eauto.
-    eapply red_cumul_inv. eapply r.
+    eapply red_cumul_cumul_inv; eauto.
 Qed.
 
 (** Old substitution lemma without lets *)

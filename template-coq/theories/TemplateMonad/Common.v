@@ -16,6 +16,10 @@ Record typed_term : Type := existT_typed_term
 ; my_projT2 : my_projT1
 }.
 
+Monomorphic Inductive myOption (A : Type) : Type := mySome : A -> myOption A | myNone : myOption A.
+
+Arguments Some {A} a.
+Arguments None {A}.
 
 Record TMInstance@{t u r} :=
 { TemplateMonad : Type@{t} -> Type@{r}

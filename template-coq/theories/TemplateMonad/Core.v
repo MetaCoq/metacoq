@@ -55,7 +55,7 @@ Cumulative Inductive TemplateMonad@{t u} : Type@{t} -> Prop :=
 
 (* Typeclass registration and querying for an instance *)
 | tmExistingInstance : qualid -> TemplateMonad unit
-| tmInferInstance : option reductionStrategy -> forall A : Type@{t}, TemplateMonad (option A)
+| tmInferInstance : option reductionStrategy -> forall A : Type@{t}, TemplateMonad (myOption A)
 .
 
 Polymorphic Definition tmDefinitionRed

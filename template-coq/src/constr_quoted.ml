@@ -198,6 +198,9 @@ struct
   let pkg_specif = ["Coq";"Init";"Specif"]
   let texistT = resolve_symbol pkg_specif "existT"
   let texistT_typed_term = r_template_monad_p "existT_typed_term"
+                 
+  let cMySome = resolve_symbol pkg_template_monad "mySome"
+  let cMyNone = resolve_symbol pkg_template_monad "myNone"
 
   let constr_equall h t = Constr.equal h (Lazy.force t)
 

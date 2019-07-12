@@ -461,9 +461,9 @@ let rec run_template_program_rec ?(intactic=false) (k : Environ.env * Evd.evar_m
         | None -> evm, typ in
       try
         let (evm,t) = Typeclasses.resolve_one_typeclass env evm (EConstr.of_constr typ) in
-        k (env, evm, constr_mkApp (cSome, [| typ; EConstr.to_constr evm t|]))
+        k (env, evm, constr_mkApp (cMySome, [| typ; EConstr.to_constr evm t|]))
       with
-        Not_found -> k (env, evm, constr_mkApp (cNone, [|typ|]))
+        Not_found -> k (env, evm, constr_mkApp (cMyNone, [|typ|]))
     end
   | TmInferInstanceTerm typ ->
     let evm,typ = denote_term evm (reduce_all env evm typ) in

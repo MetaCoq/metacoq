@@ -271,29 +271,6 @@ Section Inversion.
       assumption.
   Qed.
 
-  (* It has counterparts in SR and Validity, and it seems to be mutual with
-     validity so I'll give up on it for now. *)
-  (* Lemma inversion_mkApps : *)
-  (*   forall {Γ t l T}, *)
-  (*     Σ ;;; Γ |- mkApps t l : T -> *)
-  (*     ∑ A, *)
-  (*       Σ ;;; Γ |- t : A × *)
-  (*       typing_spine Σ Γ A l T. *)
-  (* Proof. *)
-  (*   intros Γ t l T h. *)
-  (*   induction l in t, T, h |- *. *)
-  (*   - cbn in h. exists T. split ; auto. constructor. *)
-  (*     + (* We need validity unfortunately... *) *)
-  (*       admit. *)
-  (*     + apply cumul_refl'. *)
-  (*   - simpl in h. eapply IHl in h as [C [h1 h2]]. *)
-  (*     apply inversion_App in h1 as [na [A [B [ht [ha hc]]]]]. *)
-  (*     exists (tProd na A B). split ; auto. *)
-  (*     econstructor. 2: eapply cumul_refl'. *)
-  (*     + (* From validity *) admit. *)
-  (*     + assumption. *)
-  (*     + *)
-
 End Inversion.
 
 Lemma destArity_it_mkProd_or_LetIn ctx ctx' t :

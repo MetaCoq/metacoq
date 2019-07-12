@@ -326,6 +326,26 @@ Section Principality.
     eexists _,_. split ; eauto.
   Qed.
 
+  Lemma invert_cumul_ind_r :
+    forall Γ ind ui l T,
+      Σ ;;; Γ |- T <= mkApps (tInd ind ui) l ->
+      ∑ ui' l',
+        red Σ.1 Γ T (mkApps (tInd ind ui') l') ×
+        (* TODO Also conclude about l' <= l or something *)
+        All2 (leq_universe (global_ext_constraints Σ))
+          (List.map Universe.make ui') (List.map Universe.make ui).
+  Proof.
+    intros Γ ind ui l T h.
+    eapply cumul_alt in h as [v [v' [[redv redv'] leqvv']]].
+    eapply invert_red_ind in redv' as [l' ?]. subst.
+    clear l.
+    eapply eq_term_upto_univ_mkApps_r_inv in leqvv'
+      as [u [l [[e ?] ?]]].
+    subst.
+    dependent destruction e.
+    eexists _,_. split ; eauto.
+  Qed.
+
   Ltac pih :=
     lazymatch goal with
     | ih : forall _ _ _, _ -> _ ;;; _ |- ?u : _ -> _,

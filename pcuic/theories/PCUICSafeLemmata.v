@@ -1770,23 +1770,21 @@ Section Lemmata.
       i = i'.
   Proof.
     intros Γ n i args u i' args' u' h.
-    induction args.
-    - simpl in h. apply inversion_Construct in h as ih.
-      destruct ih as [mdecl [idecl [cdecl [? [d [? hc]]]]]].
-      destruct i as [mind nind].
-      destruct i' as [mind' nind'].
-      unfold type_of_constructor in hc. cbn in hc.
-      destruct cdecl as [[cna ct] cn]. cbn in hc.
-      destruct mdecl as [mnpars mpars mbod muni]. simpl in *.
-      destruct idecl as [ina ity ike ict iprj].
-      apply cumul_alt in hc as [v [v' [[? ?] ?]]].
-      unfold declared_constructor in d. cbn in d.
-      destruct d as [[dm hin] hn]. simpl in *.
-      unfold declared_minductive in dm.
-      (* I have no idea how to do it. *)
-      (* Follows from principality and Validity *)
-      admit.
-    - eapply IHargs. (* Induction on args was a wrong idea! *)
+    destruct hΣ as [wΣ].
+    eapply inversion_mkApps in h ; auto.
+    destruct h as [T [U [hC [hs hc]]]].
+    apply inversion_Construct in hC
+      as [mdecl [idecl [cdecl [hΓ [isdecl [const htc]]]]]].
+    unfold type_of_constructor in htc. simpl in htc.
+    destruct i as [mind nind]. simpl in *.
+    destruct cdecl as [[cna ct] cn]. cbn in htc.
+    destruct mdecl as [mnpars mpars mbod muni]. simpl in *.
+    destruct idecl as [ina ity ike ict iprj]. simpl in *.
+    unfold declared_constructor in isdecl. cbn in isdecl.
+    destruct isdecl as [[dm hin] hn]. simpl in *.
+    unfold declared_minductive in dm.
+    (* Do we need to exploit wellformedness of the context?? *)
+    (* We should also use invert_cumul_ind_l at some point. *)
   Admitted.
 
   Require Import PCUICWeakeningEnv.

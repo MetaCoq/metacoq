@@ -14,29 +14,30 @@ Set Asymmetric Patterns.
 Section Generation.
   Context `{cf : config.checker_flags}.
 
-Definition isWfArity_or_Type Σ Γ T : Type := (isWfArity typing Σ Γ T + isType Σ Γ T).
+  Definition isWfArity_or_Type Σ Γ T : Type := (isWfArity typing Σ Γ T + isType Σ Γ T).
 
-Inductive typing_spine (Σ : global_env_ext) (Γ : context) : term -> list term -> term -> Type :=
-| type_spine_nil ty ty' :
-    isWfArity_or_Type Σ Γ ty' ->
-    Σ ;;; Γ |- ty <= ty' ->
-    typing_spine Σ Γ ty [] ty'
+  Inductive typing_spine (Σ : global_env_ext) (Γ : context) :
+    term -> list term -> term -> Type :=
+  | type_spine_nil ty ty' :
+      isWfArity_or_Type Σ Γ ty' ->
+      Σ ;;; Γ |- ty <= ty' ->
+      typing_spine Σ Γ ty [] ty'
 
-| type_spine_cons hd tl na A B T B' :
-    isWfArity_or_Type Σ Γ (tProd na A B) ->
-    Σ ;;; Γ |- T <= tProd na A B ->
-    Σ ;;; Γ |- hd : A ->
-    typing_spine Σ Γ (subst10 hd B) tl B' ->
-    typing_spine Σ Γ T (hd :: tl) B'.
+  | type_spine_cons hd tl na A B T B' :
+      isWfArity_or_Type Σ Γ (tProd na A B) ->
+      Σ ;;; Γ |- T <= tProd na A B ->
+      Σ ;;; Γ |- hd : A ->
+      typing_spine Σ Γ (subst10 hd B) tl B' ->
+      typing_spine Σ Γ T (hd :: tl) B'.
 
-Lemma type_mkApps Σ Γ t u T t_ty :
-  Σ ;;; Γ |- t : t_ty ->
-  typing_spine Σ Γ t_ty u T ->
-  Σ ;;; Γ |- mkApps t u : T.
-Proof.
-  intros Ht Hsp.
-  revert t Ht. induction Hsp; simpl; auto.
-  intros t Ht. eapply type_Cumul; eauto.
+  Lemma type_mkApps Σ Γ t u T t_ty :
+    Σ ;;; Γ |- t : t_ty ->
+    typing_spine Σ Γ t_ty u T ->
+    Σ ;;; Γ |- mkApps t u : T.
+  Proof.
+    intros Ht Hsp.
+    revert t Ht. induction Hsp; simpl; auto.
+    intros t Ht. eapply type_Cumul; eauto.
 
     intros.
     specialize (IHHsp (tApp t0 hd)). apply IHHsp.
@@ -47,7 +48,7 @@ Proof.
   Lemma type_it_mkLambda_or_LetIn :
     forall Σ Γ Δ t A,
       Σ ;;; Γ ,,, Δ |- t : A ->
-                           Σ ;;; Γ |- it_mkLambda_or_LetIn Δ t : it_mkProd_or_LetIn Δ A.
+      Σ ;;; Γ |- it_mkLambda_or_LetIn Δ t : it_mkProd_or_LetIn Δ A.
   Proof.
     intros Σ Γ Δ t A h.
     induction Δ as [| [na [b|] B] Δ ih ] in t, A, h |- *.

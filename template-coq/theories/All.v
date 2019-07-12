@@ -8,7 +8,7 @@ From MetaCoq.Template Require Export
      uGraph        (* The graph of universes *)
      TemplateMonad (* The TemplateMonad *)
      AstUtils      (* Utilities on the AST *)
-     Loader        (* Declaration of the Template Coq plugin *)
+     (* Loader        (* Declaration of the Template Coq plugin *) *)
      Induction     (* Induction *)
      LiftSubst     (* Lifting and substitution for terms *)
      UnivSubst     (* Substitution of universe instances *)

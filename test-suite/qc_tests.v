@@ -558,8 +558,8 @@ Fixpoint arb (Σ : new_global_context) (Γ : context) (ty : term) (n : nat) (dep
       end
     in
     freq_ ((1, arb Σ Γ ty (n - n) (S depth)) :: (map (fun x => (1, x)) inverted) ++
-                                   (map (fun x => (10 * n, x)) (apps (S n))) ++
-                                   (map (fun x => (10 * n, x)) lambdas) ++
+                                   (map (fun x => (S n, x)) (apps (S n))) ++
+                                   (map (fun x => (S n, x)) lambdas) ++
                                    (map (fun x => (1, x)) cases))
   end.
 
@@ -599,7 +599,7 @@ Definition natS := tConstruct (mkInd "Coq.Init.Datatypes.nat"%string 0) 1 [].
 (* Sample (arb Σ [] type_bool 0). *)
 
 (* Definition prop_arb_wt := *)
-(*   forAll (arb Σ [] (arrow type_nat type_nat) 3) (infer Σ []). *)
+(*   forAll (arb Σ [] (arrow type_nat type_nat) 3 0) (infer Σ []). *)
 
 (* QuickChick prop_arb_wt. *)
 (* Ill-typed! We assume eta-expanded branches somewhere!
@@ -609,8 +609,14 @@ nil => true
 end
 )*)
 
+Import RedFlags.
+
+Definition strong_redflags :=
+  {| beta := true; iota := true; zeta := true;
+     delta := true; fix_ := true; cofix_ := true; strong := true |}.
+
 Definition reduce (t : term) :=
-  reduce_opt RedFlags.default (fst Σ) [] 100 t.
+  reduce_opt strong_redflags (fst Σ) [] 100 t.
 
 Instance sized_term : Sized term := { size := term_size }.
 
@@ -619,7 +625,7 @@ Definition prop_arb_pres (Γ : context) (ty : term) n :=
          (fun t =>
             match reduce t with
             | Some t' =>
-              collect (show (size t))
+              collect (show t)
                       (collect (if eq_term (snd Σ) t t' then " unreduced" else " reduced")%string
                       (match infer Σ [] t' with
                        | Checked ty' => checker (convert_leq Σ Γ ty' ty)
@@ -632,7 +638,12 @@ Definition prop_arb_pres (Γ : context) (ty : term) n :=
 Extract Constant defNumTests => "100".
 Extract Constant defNumDiscards => "10000".
 Definition prop_arb_pres1 := prop_arb_pres [] (arrow type_nat type_nat) 4.
-QuickChick prop_arb_pres1.
+
+(*! QuickChick prop_arb_pres1. *)
+
+
+(* TODO: extend reduce_stak to strongly normalize *)
+
 
 (*
 fun n : nat => S (match pair bool bool false false as Anonymous in prod return nat with

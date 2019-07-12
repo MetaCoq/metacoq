@@ -217,53 +217,6 @@ Section Principality.
 
   (* eapply red_ *)
 
-  Lemma rev_app :
-    forall A (l l' : list A),
-      (rev (l ++ l') = rev l' ++ rev l)%list.
-  Proof.
-    intros A l l'.
-    induction l in l' |- *.
-    - simpl. change (rev (@nil A)) with (@nil A).
-      rewrite app_nil_r. reflexivity.
-    - simpl. rewrite rev_cons. rewrite IHl.
-      rewrite rev_cons. rewrite app_assoc. reflexivity.
-  Qed.
-
-  Lemma rev_invol :
-    forall A (l : list A),
-      rev (rev l) = l.
-  Proof.
-    intros A l. induction l ; eauto.
-    rewrite rev_cons. rewrite rev_app. simpl.
-    rewrite IHl. reflexivity.
-  Qed.
-
-  Lemma list_ind_rev :
-    forall A (P : list A -> Prop),
-      P nil ->
-      (forall a l, P l -> P (l ++ [a])%list) ->
-      forall l, P l.
-  Proof.
-    intros A P h1 h2 l.
-    rewrite <- rev_invol.
-    generalize (rev l). clear l. intro l.
-    induction l ; auto.
-    rewrite rev_cons. eauto.
-  Qed.
-
-  Lemma list_rect_rev :
-    forall A (P : list A -> Type),
-      P nil ->
-      (forall a l, P l -> P (l ++ [a])%list) ->
-      forall l, P l.
-  Proof.
-    intros A P h1 h2 l.
-    rewrite <- rev_invol.
-    generalize (rev l). clear l. intro l.
-    induction l ; auto.
-    rewrite rev_cons. eauto.
-  Qed.
-
   Lemma app_mkApps :
     forall u v t l,
       isApp t = false ->
@@ -277,56 +230,6 @@ Section Principality.
     - cbn in e. subst. cbn in h. discriminate.
     - rewrite <- mkApps_nested in e. cbn in e.
       exists l. inversion e. subst. auto.
-  Qed.
-
-  Lemma All2_firstn :
-    forall A B R l l' n,
-      @All2 A B R l l' ->
-      @All2 A B R (firstn n l) (firstn n l').
-  Proof.
-    intros A B R l l' n h.
-    induction h in n |- *.
-    all: destruct n ; try econstructor ; eauto.
-  Qed.
-
-  Lemma All2_skipn :
-    forall A B R l l' n,
-      @All2 A B R l l' ->
-      @All2 A B R (skipn n l) (skipn n l').
-  Proof.
-    intros A B R l l' n h.
-    induction h in n |- *.
-    all: destruct n ; try econstructor ; eauto.
-  Qed.
-
-  Lemma skipn_all_app :
-    forall A (l1 l2 : list A),
-      skipn #|l1| (l1 ++ l2) = l2.
-  Proof.
-    intros A l1 l2.
-    induction l1 in l2 |- *.
-    - reflexivity.
-    - simpl. rewrite skipn_S. eauto.
-  Qed.
-
-  Lemma All2_app_inv_r :
-    forall A B R l r1 r2,
-      @All2 A B R l (r1 ++ r2) ->
-      ∑ l1 l2,
-        (l = l1 ++ l2)%list ×
-        All2 R l1 r1 ×
-        All2 R l2 r2.
-  Proof.
-    intros A B R l r1 r2 h.
-    exists (firstn #|r1| l), (skipn #|r1| l).
-    split ; [| split].
-    - rewrite firstn_skipn. reflexivity.
-    - apply All2_firstn with (n := #|r1|) in h.
-      rewrite firstn_app in h. rewrite firstn_all in h.
-      replace (#|r1| - #|r1|) with 0 in h by omega. cbn in h.
-      rewrite app_nil_r in h. assumption.
-    - apply All2_skipn with (n := #|r1|) in h.
-      rewrite skipn_all_app in h. assumption.
   Qed.
 
   (* TODO Duplicate of red_mkApps_tInd?? *)
@@ -388,15 +291,6 @@ Section Principality.
       intros x y h. eapply red_conv. assumption.
     - eapply All2_impl ; eauto.
       intros x y h. eapply eq_term_conv. assumption.
-  Qed.
-
-  Lemma All2_swap :
-    forall A B R l l',
-      @All2 A B R l l' ->
-      All2 (fun x y => R y x) l' l.
-  Proof.
-    intros A B R l l' h.
-    induction h ; eauto.
   Qed.
 
   Lemma invert_cumul_ind_r :

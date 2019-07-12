@@ -261,7 +261,7 @@ Lemma eq_term_upto_univ_incl `{cf:checker_flags} Re Rle : inclusion Re Rle -> in
 Proof. intros. intros x y H. eapply eq_term_upto_univ_leq in H; eauto. Qed.
 
 Set Implicit Arguments.
-Unset Strict Implicits.
+Unset Strict Implicit.
 
 Lemma All_inst {A : Type} {C : Type} {l : list C} {P : A -> C -> Type} :
   All (fun x : C => forall a : A, P a x) l -> forall x : A, All (P x) l.
@@ -448,19 +448,47 @@ Proof.
   split; auto using leq_universe_sup_l, leq_universe_sup_r.
 Qed.
 
-Lemma commut_eqterm_red1 {cf : checker_flags} {Σ : global_env_ext} Γ : commut (eq_term Σ) (red1 Σ Γ).
+Lemma commutes_eqterm_red1 {cf : checker_flags} {Σ : global_env_ext} Γ : commutes (eq_term Σ) (red1 Σ Γ).
 Proof.
   intros x y z.
   intros.
   eapply red1_eq_term_upto_univ_l in H; tc; eauto.
 Qed.
 
-Lemma commut_leqterm_red1 {cf : checker_flags} {Σ : global_env_ext} Γ : commut (leq_term Σ) (red1 Σ Γ).
+Lemma commutes_leqterm_red1 {cf : checker_flags} {Σ : global_env_ext} Γ : commutes (leq_term Σ) (red1 Σ Γ).
 Proof.
   intros x y z.
   intros.
   eapply red1_eq_term_upto_univ_l in H; tc; eauto. intros. now eapply eq_universe_leq_universe.
 Qed.
+
+Definition leq_term_rel {cf : checker_flags} Σ : relation (context * term) :=
+  (fun '(Γ, x) '(Δ, y) => leq_term Σ x y * (Γ = Δ))%type.
+
+Lemma commutes_leqterm_pred1 {cf : checker_flags} {Σ : global_env_ext} :
+  commutes  (@pred1_rel Σ) (leq_term_rel Σ).
+Proof.
+  intros x y z.
+  intros.
+  (* eapply red1_eq_term_upto_univ_l in H; tc; eauto. intros. now eapply eq_universe_leq_universe. *)
+Admitted.
+
+Definition red_or_leq {cf : checker_flags} (Σ : global_env_ext) (Γ : context) :=
+  relation_disjunction (leq_term Σ) (red1 Σ Γ).
+
+Definition pred1_or_leq {cf : checker_flags} (Σ : global_env_ext) :=
+  relation_disjunction (@pred1_rel Σ) (fun '(Γ, x) '(Δ, y) => leq_term Σ x y * (Γ = Δ))%type.
+
+Instance leq_term_refl {cf : checker_flags} Σ : Reflexive (leq_term Σ).
+Proof. intros x; apply leq_term_refl. Defined.
+
+Lemma red_or_leq_confluence {cf : checker_flags} (Σ : global_env_ext) : wf Σ -> confluent (pred1_or_leq Σ).
+Proof.
+  intros wfΣ.
+  rewrite /red_or_leq. apply confluent_union. tc. intros x. red. apply pred1_refl.
+  apply commutes_leqterm_pred1. apply (diamond_pred1_rel wfΣ).
+  move=> [? x] [? y] [? z] []. H eq.
+
 
 Lemma cumul_trans_red_eqterm `{cf : checker_flags} {Σ : global_env_ext} {Γ t u v} : wf Σ ->
   Σ ;;; Γ |- t <= u -> Σ ;;; Γ |- u <= v -> eq_term Σ t v ->

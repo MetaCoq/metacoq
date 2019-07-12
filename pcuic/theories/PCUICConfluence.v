@@ -781,7 +781,7 @@ Section AbstractConfluence.
       exists x. split; apply trans_clos_t1n_iff; intuition auto.
     Qed.
 
-    Lemma commut_diamonds_diamond :
+    Lemma commutes_diamonds_diamond :
       commutes R S -> diamond S -> diamond (relation_disjunction R S).
     Proof.
       intros HRS HS x y z xy xz.
@@ -797,7 +797,7 @@ Section AbstractConfluence.
       eexists. split; right; eauto.
     Qed.
 
-    Lemma commut_disj_joinable :
+    Lemma commutes_disj_joinable :
       commutes R S -> confluent R -> confluent S ->
       forall x y z, relation_disjunction R S x y ->
                     relation_disjunction R S x z ->
@@ -839,7 +839,7 @@ Section AbstractConfluence.
     commutes R S -> diamond R -> diamond S -> confluent (relation_disjunction R S).
   Proof.
     intros HRR HRS Hcom HR HS. apply diamond_confluent.
-    now apply commut_diamonds_diamond.
+    now apply commutes_diamonds_diamond.
   Qed.
 
 End AbstractConfluence.

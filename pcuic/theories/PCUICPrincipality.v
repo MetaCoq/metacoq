@@ -279,17 +279,69 @@ Section Principality.
       exists l. inversion e. subst. auto.
   Qed.
 
+  Lemma All2_firstn :
+    forall A B R l l' n,
+      @All2 A B R l l' ->
+      @All2 A B R (firstn n l) (firstn n l').
+  Proof.
+    intros A B R l l' n h.
+    induction h in n |- *.
+    all: destruct n ; try econstructor ; eauto.
+  Qed.
+
+  Lemma All2_skipn :
+    forall A B R l l' n,
+      @All2 A B R l l' ->
+      @All2 A B R (skipn n l) (skipn n l').
+  Proof.
+    intros A B R l l' n h.
+    induction h in n |- *.
+    all: destruct n ; try econstructor ; eauto.
+  Qed.
+
+  Lemma skipn_all_app :
+    forall A (l1 l2 : list A),
+      skipn #|l1| (l1 ++ l2) = l2.
+  Proof.
+    intros A l1 l2.
+    induction l1 in l2 |- *.
+    - reflexivity.
+    - simpl. rewrite skipn_S. eauto.
+  Qed.
+
+  Lemma All2_app_inv_r :
+    forall A B R l r1 r2,
+      @All2 A B R l (r1 ++ r2) ->
+      ∑ l1 l2,
+        (l = l1 ++ l2)%list ×
+        All2 R l1 r1 ×
+        All2 R l2 r2.
+  Proof.
+    intros A B R l r1 r2 h.
+    exists (firstn #|r1| l), (skipn #|r1| l).
+    split ; [| split].
+    - rewrite firstn_skipn. reflexivity.
+    - apply All2_firstn with (n := #|r1|) in h.
+      rewrite firstn_app in h. rewrite firstn_all in h.
+      replace (#|r1| - #|r1|) with 0 in h by omega. cbn in h.
+      rewrite app_nil_r in h. assumption.
+    - apply All2_skipn with (n := #|r1|) in h.
+      rewrite skipn_all_app in h. assumption.
+  Qed.
+
+  (* TODO Duplicate of red_mkApps_tInd?? *)
   Lemma invert_red_ind :
     forall Γ ind ui l T,
       red Σ.1 Γ (mkApps (tInd ind ui) l) T ->
       ∑ l',
-        T = mkApps (tInd ind ui) l'. (* TODO l -> l' *)
+        T = mkApps (tInd ind ui) l' ×
+        All2 (red Σ Γ) l l'.
   Proof.
     intros Γ ind ui l T h.
     dependent induction h.
-    - exists l. reflexivity.
-    - clear h l.
-      destruct IHh as [l ?]. subst.
+    - exists l. split ; auto. apply All2_same. intro. constructor.
+    - clear h.
+      destruct IHh as [l'' [? ha]]. subst.
       dependent induction r.
       all: try solve [
         apply (f_equal decompose_app) in H ;
@@ -299,11 +351,18 @@ Section Principality.
       + symmetry in H. apply app_mkApps in H ; auto.
         destruct H as [l' [? ?]]. subst.
         specialize IHr with (1 := eq_refl).
-        destruct IHr as [l ?]. subst.
-        exists (l ++ [M2])%list. rewrite <- mkApps_nested. reflexivity.
+        apply All2_app_inv_r in ha as [l1 [l2 [? [h1 h2]]]]. subst.
+        specialize IHr with (1 := h1).
+        destruct IHr as [l [? ha]]. subst.
+        exists (l ++ [M2])%list. rewrite <- mkApps_nested. split ; auto.
+        apply All2_app ; auto.
       + symmetry in H. apply app_mkApps in H ; auto.
         destruct H as [l' [? ?]]. subst.
-        exists (l' ++ [N2])%list. rewrite <- mkApps_nested. reflexivity.
+        exists (l' ++ [N2])%list. rewrite <- mkApps_nested. split ; auto.
+        apply All2_app_inv_r in ha as [l1 [l2 [? [h1 h2]]]]. subst.
+        apply All2_app ; auto.
+        dependent destruction h2. dependent destruction h2.
+        repeat constructor. eapply red_trans ; eauto.
   Qed.
 
   Lemma invert_cumul_ind_l :
@@ -311,19 +370,33 @@ Section Principality.
       Σ ;;; Γ |- mkApps (tInd ind ui) l <= T ->
       ∑ ui' l',
         red Σ.1 Γ T (mkApps (tInd ind ui') l') ×
-        (* TODO Also conclude about l <= l' or something *)
         All2 (leq_universe (global_ext_constraints Σ))
-          (List.map Universe.make ui) (List.map Universe.make ui').
+          (List.map Universe.make ui) (List.map Universe.make ui') ×
+        All2 (fun a a' => Σ ;;; Γ |- a = a') l l'.
   Proof.
     intros Γ ind ui l T h.
     eapply cumul_alt in h as [v [v' [[redv redv'] leqvv']]].
-    eapply invert_red_ind in redv as [l' ?]. subst.
-    clear l.
+    eapply invert_red_ind in redv as [l' [? ha]]. subst.
     eapply eq_term_upto_univ_mkApps_l_inv in leqvv'
-      as [u [l [[e ?] ?]]].
+      as [u [l'' [[e ?] ?]]].
     subst.
     dependent destruction e.
-    eexists _,_. split ; eauto.
+    eexists _,_. split ; eauto. split ; auto.
+    eapply All2_trans.
+    - intros x y z h1 h2. eapply conv_trans ; eauto.
+    - eapply All2_impl ; eauto.
+      intros x y h. eapply red_conv. assumption.
+    - eapply All2_impl ; eauto.
+      intros x y h. eapply eq_term_conv. assumption.
+  Qed.
+
+  Lemma All2_swap :
+    forall A B R l l',
+      @All2 A B R l l' ->
+      All2 (fun x y => R y x) l' l.
+  Proof.
+    intros A B R l l' h.
+    induction h ; eauto.
   Qed.
 
   Lemma invert_cumul_ind_r :
@@ -331,19 +404,25 @@ Section Principality.
       Σ ;;; Γ |- T <= mkApps (tInd ind ui) l ->
       ∑ ui' l',
         red Σ.1 Γ T (mkApps (tInd ind ui') l') ×
-        (* TODO Also conclude about l' <= l or something *)
         All2 (leq_universe (global_ext_constraints Σ))
-          (List.map Universe.make ui') (List.map Universe.make ui).
+          (List.map Universe.make ui') (List.map Universe.make ui) ×
+        All2 (fun a a' => Σ ;;; Γ |- a = a') l l'.
   Proof.
     intros Γ ind ui l T h.
     eapply cumul_alt in h as [v [v' [[redv redv'] leqvv']]].
-    eapply invert_red_ind in redv' as [l' ?]. subst.
-    clear l.
+    eapply invert_red_ind in redv' as [l' [? ?]]. subst.
     eapply eq_term_upto_univ_mkApps_r_inv in leqvv'
-      as [u [l [[e ?] ?]]].
+      as [u [l'' [[e ?] ?]]].
     subst.
     dependent destruction e.
-    eexists _,_. split ; eauto.
+    eexists _,_. split ; eauto. split ; auto.
+    eapply All2_trans.
+    - intros x y z h1 h2. eapply conv_trans ; eauto.
+    - eapply All2_impl ; eauto.
+      intros x y h. eapply red_conv. assumption.
+    - eapply All2_swap.
+      eapply All2_impl ; eauto.
+      intros x y h. eapply conv_sym. eapply eq_term_conv. assumption.
   Qed.
 
   Ltac pih :=
@@ -463,46 +542,47 @@ Section Principality.
     - intros. now eapply (X _ []).
   Admitted.
 
-  (* TODO Move *)
-  Lemma eq_term_upto_univ_mkApps_r_inv :
-    forall Re Rle u l t,
-      eq_term_upto_univ Re Rle t (mkApps u l) ->
-      ∑ u' l',
-    eq_term_upto_univ Re Rle u' u *
-    All2 (eq_term_upto_univ Re Re) l' l *
-    (t = mkApps u' l').
-  Proof.
-    intros Re Rle u l t h.
-    induction l in u, t, h, Rle |- *.
-    - cbn in h. exists t, []. split ; auto.
-    - cbn in h. apply IHl in h as [u' [l' [[h1 h2] h3]]].
-      dependent destruction h1. subst.
-      eexists. eexists. split; [ split | ].
-      + eassumption.
-      + constructor.
-        * eassumption.
-        * eassumption.
-      + cbn. reflexivity.
-  Qed.
+  (* Duplicate *)
+  (* Lemma eq_term_upto_univ_mkApps_r_inv : *)
+  (*   forall Re Rle u l t, *)
+  (*     eq_term_upto_univ Re Rle t (mkApps u l) -> *)
+  (*     ∑ u' l', *)
+  (*   eq_term_upto_univ Re Rle u' u * *)
+  (*   All2 (eq_term_upto_univ Re Re) l' l * *)
+  (*   (t = mkApps u' l'). *)
+  (* Proof. *)
+  (*   intros Re Rle u l t h. *)
+  (*   induction l in u, t, h, Rle |- *. *)
+  (*   - cbn in h. exists t, []. split ; auto. *)
+  (*   - cbn in h. apply IHl in h as [u' [l' [[h1 h2] h3]]]. *)
+  (*     dependent destruction h1. subst. *)
+  (*     eexists. eexists. split; [ split | ]. *)
+  (*     + eassumption. *)
+  (*     + constructor. *)
+  (*       * eassumption. *)
+  (*       * eassumption. *)
+  (*     + cbn. reflexivity. *)
+  (* Qed. *)
 
-  Lemma invert_cumul_ind_r Γ t ind u args :
-    Σ ;;; Γ |- t <= mkApps (tInd ind u) args ->
-               ∑ u' args', red Σ Γ t (mkApps (tInd ind u') args') *
-                           All2 (leq_universe (global_ext_constraints Σ)) (map Universe.make u') (map Universe.make u) *
-                           All2 (fun a a' => Σ ;;; Γ |- a = a') args args'.
-  Proof.
-    intros H. eapply cumul_alt in H.
-    destruct H as [v [v' [[redv redv'] leq]]].
-    eapply red_mkApps_tInd in redv' as [args' [-> ?]]; eauto.
-    apply eq_term_upto_univ_mkApps_r_inv in leq as [u' [l' [[eqhd eqargs] Heq]]].
-    subst v. depelim eqhd.
-    exists u0, l'. split; auto.
-    clear -eqargs a0.
-    induction eqargs in a0, args |- *; depelim a0. constructor.
-    constructor. apply conv_trans with y. now eapply red_conv.
-    apply conv_conv_alt. constructor. now apply eq_term_sym.
-    now apply IHeqargs.
-  Qed.
+  (* Duplicate *)
+  (* Lemma invert_cumul_ind_r Γ t ind u args : *)
+  (*   Σ ;;; Γ |- t <= mkApps (tInd ind u) args -> *)
+  (*              ∑ u' args', red Σ Γ t (mkApps (tInd ind u') args') * *)
+  (*                          All2 (leq_universe (global_ext_constraints Σ)) (map Universe.make u') (map Universe.make u) * *)
+  (*                          All2 (fun a a' => Σ ;;; Γ |- a = a') args args'. *)
+  (* Proof. *)
+  (*   intros H. eapply cumul_alt in H. *)
+  (*   destruct H as [v [v' [[redv redv'] leq]]]. *)
+  (*   eapply red_mkApps_tInd in redv' as [args' [-> ?]]; eauto. *)
+  (*   apply eq_term_upto_univ_mkApps_r_inv in leq as [u' [l' [[eqhd eqargs] Heq]]]. *)
+  (*   subst v. depelim eqhd. *)
+  (*   exists u0, l'. split; auto. *)
+  (*   clear -eqargs a0. *)
+  (*   induction eqargs in a0, args |- *; depelim a0. constructor. *)
+  (*   constructor. apply conv_trans with y. now eapply red_conv. *)
+  (*   apply conv_conv_alt. constructor. now apply eq_term_sym. *)
+  (*   now apply IHeqargs. *)
+  (* Qed. *)
 
   Require Import CMorphisms CRelationClasses.
 
@@ -741,8 +821,8 @@ Section Principality.
       specialize (IHu1 _ _ _ t t1). clear t t1.
       specialize (IHu2 _ _ _ t0 t2). clear t0 t2.
       repeat outsum. repeat outtimes.
-      eapply invert_cumul_ind_r in c3 as [u' [x0' [[redr redu] ?]]].
-      eapply invert_cumul_ind_r in c4 as [u'' [x9' [[redr' redu'] ?]]].
+      eapply invert_cumul_ind_r in c3 as [u' [x0' [redr [redu ?]]]].
+      eapply invert_cumul_ind_r in c4 as [u'' [x9' [redr' [redu' ?]]]].
       assert (All2 (fun a a' => Σ ;;; Γ |- a = a') x0 x9).
       { destruct (red_confluence wfΣ redr redr').
         destruct p.
@@ -792,8 +872,8 @@ Section Principality.
       rewrite H2 in H; noconf H.
       rewrite -e in e0.
       specialize (IHu _ _ _ t t1) as [C' [? [? ?]]].
-      eapply invert_cumul_ind_r in c1 as [u' [x0' [[redr redu] ?]]].
-      eapply invert_cumul_ind_r in c2 as [u'' [x9' [[redr' redu'] ?]]].
+      eapply invert_cumul_ind_r in c1 as [u' [x0' [redr [redu ?]]]].
+      eapply invert_cumul_ind_r in c2 as [u'' [x9' [redr' [redu' ?]]]].
       exists (subst0 (u :: List.rev x3) (subst_instance_constr x t2)).
       repeat split; auto.
       admit.

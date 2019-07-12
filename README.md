@@ -10,11 +10,16 @@ MetaCoq is a project formalizing Coq in Coq and providing tools for
 manipulating Coq terms and developing certified plugins
 (i.e. translations, compilers or tactics) in Coq.
 
+**Quick jump**
+- [Installing](#installation-instructions)
+- [Documentation](#documentation)
+- [Papers](#papers)
+
 At the center of this project is the Template-Coq quoting library for
 Coq. The project currently has a single repository extending
 Template-Coq with additional features:
 
-Template-Coq
+[Template-Coq](template-coq/theories)
 ------------
 
 Template-Coq is a quoting library for [Coq](http://coq.inria.fr). It
@@ -32,16 +37,16 @@ In addition to this representation of terms, Template Coq includes:
 - A monad for manipulating global declarations, calling the type
   checker, and inserting them in the global environment, in
   the stype of MTac.
-  
-Checker
--------
-  
-- A partial type-checker for the Calculus of Inductive Constructions,
-  whose extraction to ML is runable as a plugin (using command `MetaCoq
-  Check foo`). This checker uses _fuel_, so it must be passed a number
-  of maximal reduction steps to perfom when calling conversion.
 
-PCUIC
+[Checker](checker/theories)
+-------
+
+A partial type-checker for the Calculus of Inductive Constructions,
+whose extraction to ML is runable as a plugin (using command `MetaCoq
+Check foo`). This checker uses _fuel_, so it must be passed a number
+of maximal reduction steps to perfom when calling conversion.
+
+[PCUIC](pcuic/theories)
 -----
 
 PCUIC, the Polymorphic Cumulative Calculus of Inductive Constructions is
@@ -56,16 +61,22 @@ calculus has (partial) proofs of standard metatheoretical results:
 
 - Subject Reduction
 
-Extraction
+[Safe Checker](safechecker/theories)
+-----
+
+Implementation of a fuel-free and verified reduction machine, conversion
+checker and type checker for PCUIC.
+
+[Extraction](extraction/theories)
 ----------
 
-- An extraction procedure to untyped lambda-calculus accomplishing the
-  same as the Extraction plugin of Coq.
+An extraction procedure to untyped lambda-calculus accomplishing the
+same as the Extraction plugin of Coq.
 
-Translations
+[Translations](translations)
 ------------
 
-- Example of plugin built on top of this.
+Example of plugin built on top of this.
 
 Branches
 ========
@@ -145,7 +156,7 @@ Credits
 Template-Coq was originally developed by
 [Gregory Malecha](https://github.com/gmalecha).
 
-MetaCoq is now developed by [Abhishek Anand](https://github.com/aa755), 
+MetaCoq is now developed by [Abhishek Anand](https://github.com/aa755),
 [Simon Boulier](https://github.com/simonboulier),
 [Cyril Cohen](https://github.com/CohenCyril)
 [Gregory Malecha](https://github.com/gmalecha),
@@ -156,7 +167,7 @@ MetaCoq is now developed by [Abhishek Anand](https://github.com/aa755),
 
 Copyright (c) 2014-2019 Gregory Malecha\
 Copyright (c) 2015-2019 Abhishek Anand, Matthieu Sozeau\
-Copyright (c) 2017-2019 Simon Boulier, Nicolas Tabareau, Cyril Cohen
+Copyright (c) 2017-2019 Simon Boulier, Nicolas Tabareau, Cyril Cohen\
 Copyright (c) 2018-2019 Yannick Forster, Théo Winterhalter
 
 This software is distributed under the terms of the MIT license.
@@ -173,7 +184,7 @@ To get the source code:
     # git clone https://github.com/MetaCoq/metacoq.git
     # git checkout -b coq-8.8 origin/coq-8.8
     # git status
-    
+
 Check that you are indeed on the `coq-8.8` branch.
 
 Requirements
@@ -182,7 +193,7 @@ Requirements
 To compile the library, you need:
 
 - `Coq 8.8.2` (older versions of `8.8` might also work)
-- `OCaml` (tested with `4.04.1`, beware that `OCaml 4.06.0` can 
+- `OCaml` (tested with `4.04.1`, beware that `OCaml 4.06.0` can
   produce linking errors on some platforms)
 - [`Equations 1.2`](http://mattam82.github.io/Coq-Equations/)
 
@@ -194,9 +205,9 @@ The easiest way to get all packages is through [opam](http://opam.ocaml.org):
 You might want to create a "switch" (an environment of `opam` packages) for `Coq` if
 you don't have one yet. You need to use **opam 2** to obtain the right version of `Equations`.
 
-    # opam switch create coq.8.8.2 4.04.1 
+    # opam switch create coq.8.8.2 4.04.1
     # eval $(opam env)
-    
+
 This creates the `coq.8.8.2` switch which initially contains only the
 basic `OCaml` `4.04.1` compiler, and puts you in the right environment
 (check with `ocamlc -v`).
@@ -208,10 +219,10 @@ developing using:
     # opam switch create . 4.04.1
 
 Once in the right switch, you can install `Coq` and the `Equations` package using:
-    
+
     # opam pin add coq 8.8.2
     # opam pin add coq-equations 1.2+8.8
-    
+
 Pinning the packages prevents `opam` from trying to upgrade it afterwards, in
 this switch. If the commands are successful you should have `coq`
 available (check with `coqc -v`).

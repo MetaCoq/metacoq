@@ -32,7 +32,7 @@ Set Equations With UIP.
    We state is as well-foundedness of the reduction.
 *)
 Section Normalisation.
-  
+
   Context {cf : checker_flags}.
 
   Context (flags : RedFlags.t).
@@ -342,7 +342,7 @@ End Normalisation.
 Section Reduce.
 
   Context {cf : checker_flags}.
-  
+
   Context (flags : RedFlags.t).
 
   Context (Σ : global_env_ext).
@@ -589,25 +589,26 @@ Section Reduce.
     symmetry. assumption.
   Qed.
   Next Obligation.
-    pose proof (wellformed_context _ _ _ h) as hc.
+    pose proof (wellformed_context _ hΣ _ _ h) as hc.
     simpl in hc.
     (* Should be a lemma! *)
-    clear - eq hc. revert c hc eq.
+    destruct hΣ as [wΣ].
+    clear - eq hc wΣ.
+    revert c hc eq.
     generalize (Γ ,,, stack_context π) as Δ. clear Γ π.
     intro Γ.
     induction Γ ; intros c hc eq.
     - destruct hc as [[A h]|[[ctx [s [e _]]]]]; [|discriminate].
-      apply inversion_Rel in h as hh.
+      apply inversion_Rel in h as hh ; auto.
       destruct hh as [? [? [e ?]]].
       rewrite e in eq. discriminate eq.
     - destruct c.
       + cbn in eq. discriminate.
       + cbn in eq. eapply IHΓ ; try eassumption.
-        destruct hc as [[A h]|[[ctx [s [e _]]]]].
-        apply inversion_Rel in h as hh.
+        destruct hc as [[A h]|[[ctx [s [e _]]]]] ; try discriminate.
+        apply inversion_Rel in h as hh ; auto.
         destruct hh as [? [? [e ?]]].
         cbn in e. rewrite e in eq. discriminate.
-        cbn in *. discriminate e.
   Qed.
 
   (* tLetIn *)
@@ -636,16 +637,18 @@ Section Reduce.
     - cbn. reflexivity.
   Qed.
   Next Obligation.
-    eapply wellformed_context in h. simpl in h.
+    destruct hΣ as [wΣ].
+    eapply wellformed_context in h ; auto. simpl in h.
     destruct h as [[T h]|[[ctx [s [e _]]]]]; [|discriminate].
-    apply inversion_Const in h as [decl [? [d [? ?]]]].
+    apply inversion_Const in h as [decl [? [d [? ?]]]] ; auto.
     unfold declared_constant in d. rewrite <- eq in d.
     discriminate.
   Qed.
   Next Obligation.
-    eapply wellformed_context in h. simpl in h.
+    destruct hΣ as [wΣ].
+    eapply wellformed_context in h ; auto. simpl in h.
     destruct h as [[T h]|[[ctx [s [e _]]]]]; [|discriminate].
-    apply inversion_Const in h as [decl [? [d [? ?]]]].
+    apply inversion_Const in h as [decl [? [d [? ?]]]] ; auto.
     unfold declared_constant in d. rewrite <- eq in d.
     discriminate.
   Qed.
@@ -811,7 +814,7 @@ Section Reduce.
         cbn.
         assert (ind = ind').
         { clear - h flags hΣ.
-          apply wellformed_context in h.
+          apply wellformed_context in h ; auto.
           simpl in h.
           eapply Case_Construct_ind_eq with (args := []) ; eauto.
         } subst.
@@ -903,9 +906,10 @@ Section Reduce.
     replace (zip (tCase (ind, par) p (mkApps (tCoFix mfix idx) args) brs, π))
       with (zip (tCoFix mfix idx, appstack args (Case (ind, par) p brs π)))
       in h'.
-    - apply wellformed_context in h'. simpl in h'.
+    - destruct hΣ.
+      apply wellformed_context in h' ; auto. simpl in h'.
       destruct h' as [[T h']|[[ctx [s [e _]]]]]; [|discriminate].
-      apply inversion_CoFix in h'.
+      apply inversion_CoFix in h' ; auto.
       destruct h' as [decl [? [e [? [? ?]]]]].
       unfold unfold_cofix in bot.
       rewrite e in bot. discriminate.
@@ -1020,9 +1024,10 @@ Section Reduce.
     replace (zip (tProj (i, pars, narg) (mkApps (tCoFix mfix idx) args), π))
       with (zip (tCoFix mfix idx, appstack args (Proj (i, pars, narg) π)))
       in h'.
-    - apply wellformed_context in h'. simpl in h'.
+    - destruct hΣ.
+      apply wellformed_context in h' ; auto. simpl in h'.
       destruct h' as [[T h']|[[ctx [s [e _]]]]]; [|discriminate].
-      apply inversion_CoFix in h'.
+      apply inversion_CoFix in h' ; auto.
       destruct h' as [decl [? [e [? [? ?]]]]].
       unfold unfold_cofix in bot.
       rewrite e in bot. discriminate.

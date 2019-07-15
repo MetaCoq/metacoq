@@ -6,7 +6,7 @@ From MetaCoq.Template Require Import config Universes monad_utils utils BasicAst
      AstUtils UnivSubst.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICReflect PCUICLiftSubst PCUICUnivSubst PCUICTyping
-     PCUICCumulativity PCUICSR PCUICEquality PCUICNameless
+     PCUICCumulativity PCUICSR PCUICEquality PCUICNameless PCUICConversion
      PCUICSafeLemmata PCUICNormal PCUICInversion PCUICReduction PCUICPosition.
 From MetaCoq.SafeChecker Require Import PCUICSafeReduce.
 From Equations Require Import Equations.
@@ -133,7 +133,7 @@ Section Conversion.
     - exact (nlstack π2).
     - exact (nlstack π1).
     - eapply wellformed_nlg ; auto.
-      eapply wellformed_rename ; auto.
+      eapply wellformed_rename ; try assumption.
       + exact h.
       + destruct s.
         * cbn. rewrite <- nl_zipx.
@@ -212,7 +212,7 @@ Section Conversion.
     eapply Acc_fun with (f := fun x => obpack (nl_pack x)).
     apply R_aux_Acc.
     rewrite <- nl_zipx.
-    eapply wellformed_rename ; auto.
+    eapply wellformed_rename ; try assumption.
     - now apply wf_nlg.
     - eassumption.
     - eapply eq_term_upto_univ_tm_nl. all: auto.
@@ -638,6 +638,7 @@ Section Conversion.
       + discriminate hl.
   Qed.
   Next Obligation.
+    destruct hΣ as [wΣ].
     destruct b ; auto.
     unfold zippx. rewrite <- e1. rewrite <- e2.
 
@@ -692,12 +693,14 @@ Section Conversion.
     rewrite 2!app_nil_r in h.
 
     eapply conv_trans'.
-    - eapply red_conv_l.
+    - assumption.
+    - eapply red_conv_l ; try assumption.
       eapply red_it_mkLambda_or_LetIn.
       eassumption.
     - eapply conv_trans'.
+      + assumption.
       + eassumption.
-      + eapply red_conv_r.
+      + eapply red_conv_r ; auto.
         eapply red_it_mkLambda_or_LetIn.
         assumption.
   Qed.
@@ -719,14 +722,15 @@ Section Conversion.
     | _ := None
     }.
   Next Obligation.
+    destruct hΣ.
     cbn. symmetry in eq2.
     pose proof (decompose_stack_at_eq _ _ _ _ _ eq2). subst.
-    apply wellformed_zipx in h; tas. rewrite zipc_appstack in h. cbn in h.
+    apply wellformed_zipx in h. all: tas. rewrite zipc_appstack in h. cbn in h.
     zip fold in h. apply wellformed_context in h ; auto. simpl in h.
     destruct h as [[T h]|[[ctx [s [h1 _]]]]]; [|discriminate].
-    apply inversion_App in h as hh.
+    apply inversion_App in h as hh ; auto.
     destruct hh as [na [A' [B' [? [? ?]]]]].
-    left; eexists; eassumption.
+    left. eexists. eassumption.
   Qed.
 
   Derive NoConfusion NoConfusionHom for option.
@@ -1107,13 +1111,14 @@ Section Conversion.
     eassumption.
   Qed.
   Next Obligation.
+    destruct hΣ.
     destruct b ; auto.
-    eapply conv_trans'.
-    - eapply red_conv_l.
+    eapply conv_trans' ; try assumption.
+    - eapply red_conv_l ; try assumption.
       eapply red_zippx.
       eapply red_const. eassumption.
     - eapply conv_trans' ; try eassumption.
-      eapply red_conv_r.
+      eapply red_conv_r ; try assumption.
       eapply red_zippx.
       eapply red_const. eassumption.
   Qed.
@@ -1128,9 +1133,10 @@ Section Conversion.
     eapply cored_const. eassumption.
   Qed.
   Next Obligation.
+    destruct hΣ.
     destruct b0 ; auto.
     eapply conv_trans' ; try eassumption.
-    eapply red_conv_r.
+    eapply red_conv_r ; try assumption.
     eapply red_zippx. eapply red_const. eassumption.
   Qed.
   Next Obligation.
@@ -1142,9 +1148,10 @@ Section Conversion.
     eapply cored_const. eassumption.
   Qed.
   Next Obligation.
+    destruct hΣ as [wΣ].
     destruct b0 ; auto.
     eapply conv_trans' ; try eassumption.
-    eapply red_conv_l.
+    eapply red_conv_l ; try assumption.
     eapply red_zippx. eapply red_const. eassumption.
   Qed.
   Next Obligation.
@@ -1156,9 +1163,10 @@ Section Conversion.
     eapply cored_const. eassumption.
   Qed.
   Next Obligation.
+    destruct hΣ as [wΣ].
     destruct b0 ; auto.
     eapply conv_trans' ; try eassumption.
-    eapply red_conv_l.
+    eapply red_conv_l ; try assumption.
     eapply red_zippx. eapply red_const. eassumption.
   Qed.
   Next Obligation.
@@ -1170,9 +1178,10 @@ Section Conversion.
     eapply cored_const. eassumption.
   Qed.
   Next Obligation.
+    destruct hΣ as [wΣ].
     destruct b0 ; auto.
     eapply conv_trans' ; try eassumption.
-    eapply red_conv_l.
+    eapply red_conv_l ; try assumption.
     eapply red_zippx. eapply red_const. eassumption.
   Qed.
 
@@ -1267,7 +1276,7 @@ Section Conversion.
   (* tCase *)
   Next Obligation.
     symmetry in eq1.
-    eapply wellformed_rename ; auto ; [ exact h2 |].
+    eapply wellformed_rename ; [ assumption .. | exact h2 |].
     eapply eq_term_upto_univ_sym. all: auto.
     eapply eq_term_upto_univ_zipx. all: auto.
     eapply elimT.
@@ -1285,6 +1294,7 @@ Section Conversion.
     - simpl. constructor.
   Qed.
   Next Obligation.
+    destruct hΣ as [wΣ].
     destruct b ; auto.
     eapply conv_conv.
     destruct h. constructor.
@@ -1298,23 +1308,25 @@ Section Conversion.
     - assumption.
   Qed.
   Next Obligation.
-    apply wellformed_zipx in h1; tas.
-    zip fold in h1. apply wellformed_context in h1; auto. simpl in h1.
-    destruct h1 as [[T h1]|[[ctx [s [h1 _]]]]]; [|discriminate].
-    apply inversion_Case in h1 as hh.
+    destruct hΣ as [wΣ].
+    apply wellformed_zipx in h1 ; tas.
+    zip fold in h1. apply wellformed_context in h1 ; auto. simpl in h1.
+    destruct h1 as [[T h1] | [[ctx [s [h1 _]]]]] ; [| discriminate ].
+    apply inversion_Case in h1 as hh ; auto.
     destruct hh
       as [uni [args [mdecl [idecl [pty [indctx [pctx [ps [btys [? [? [? [? [? [? [ht0 [? ?]]]]]]]]]]]]]]]]].
-    left; eexists. eassumption.
+    left. eexists. eassumption.
   Qed.
   Next Obligation.
+    destruct hΣ as [wΣ].
     clear aux.
-    apply wellformed_zipx in h2; tas.
+    apply wellformed_zipx in h2 ; tas.
     zip fold in h2. apply wellformed_context in h2 ; auto. simpl in h2.
-    destruct h2 as [[T h2]|[[ctx [s [h2 _]]]]]; [|discriminate].
-    apply inversion_Case in h2 as hh.
+    destruct h2 as [[T h2] | [[ctx [s [h2 _]]]]] ; [| discriminate ].
+    apply inversion_Case in h2 as hh ; auto.
     destruct hh
       as [uni [args [mdecl [idecl [pty [indctx [pctx [ps [btys [? [? [? [? [? [? [ht0 [? ?]]]]]]]]]]]]]]]]].
-    left; eexists. eassumption.
+    left. eexists. eassumption.
   Qed.
   Next Obligation.
     eapply red_wellformed ; auto.
@@ -1440,6 +1452,7 @@ Section Conversion.
              rewrite bot in eq3. discriminate.
   Qed.
   Next Obligation.
+    destruct hΣ as [wΣ].
     destruct b ; auto.
     match type of h with
     | context [ reduce_term ?f ?Σ ?hΣ ?Γ c ?h ] =>
@@ -1451,7 +1464,8 @@ Section Conversion.
     end.
     destruct hr as [hr], hr' as [hr'].
     eapply conv_trans'.
-    - eapply red_conv_l.
+    - assumption.
+    - eapply red_conv_l ; try assumption.
       eapply red_zippx.
       eapply reds_case.
       + constructor.
@@ -1460,7 +1474,7 @@ Section Conversion.
         clear.
         induction brs ; eauto.
     - eapply conv_trans' ; try eassumption.
-      eapply red_conv_r.
+      eapply red_conv_r ; try assumption.
       eapply red_zippx.
       eapply reds_case.
       + constructor.
@@ -1471,7 +1485,8 @@ Section Conversion.
 
   (* tProj *)
   Next Obligation.
-    eapply wellformed_rename ; auto.
+    destruct hΣ as [wΣ].
+    eapply wellformed_rename ; try assumption.
     - exact h2.
     - apply eq_term_upto_univ_sym ; auto.
       eapply eq_term_upto_univ_zipx ; auto.
@@ -1490,6 +1505,7 @@ Section Conversion.
     - simpl. constructor.
   Qed.
   Next Obligation.
+    destruct hΣ as [wΣ].
     destruct b ; auto.
     eapply conv_conv.
     destruct h. constructor.
@@ -1504,7 +1520,8 @@ Section Conversion.
 
   (* tFix *)
   Next Obligation.
-    eapply wellformed_rename ; auto.
+    destruct hΣ as [wΣ].
+    eapply wellformed_rename ; try assumption.
     - exact h2.
     - apply eq_term_upto_univ_sym ; auto.
       eapply eq_term_upto_univ_zipx ; auto.
@@ -1523,6 +1540,7 @@ Section Conversion.
     - simpl. constructor.
   Qed.
   Next Obligation.
+    destruct hΣ as [wΣ].
     destruct b ; auto.
     destruct h as [h].
     eapply conv_conv.
@@ -1614,6 +1632,7 @@ Section Conversion.
       eapply decompose_stack_noStackApp. symmetry. eassumption.
   Qed.
   Next Obligation.
+    destruct hΣ as [wΣ].
     destruct b ; auto.
     apply unfold_one_fix_red_zippx in eq1 as r1.
     destruct r1 as [r1].
@@ -1646,7 +1665,8 @@ Section Conversion.
     }
     pose proof (red_trans _ _ _ _ _ r1 r2') as r.
     eapply conv_trans'.
-    - eapply red_conv_l. eassumption.
+    - assumption.
+    - eapply red_conv_l. all: eassumption.
     - assumption.
   Qed.
   Next Obligation.
@@ -1728,6 +1748,7 @@ Section Conversion.
       eapply decompose_stack_noStackApp. symmetry. eassumption.
   Qed.
   Next Obligation.
+    destruct hΣ as [wΣ].
     destruct b ; auto.
     apply unfold_one_fix_red_zippx in eq1 as r1.
     destruct r1 as [r1].
@@ -1760,13 +1781,15 @@ Section Conversion.
     }
     pose proof (red_trans _ _ _ _ _ r1 r2') as r.
     eapply conv_trans' ; revgoals.
-    - eapply red_conv_r. eassumption.
+    - eapply red_conv_r. all: eassumption.
+    - assumption.
     - assumption.
   Qed.
 
   (* tCoFix *)
   Next Obligation.
-    eapply wellformed_rename ; auto.
+    destruct hΣ as [wΣ].
+    eapply wellformed_rename ; try assumption.
     - exact h2.
     - apply eq_term_upto_univ_sym ; auto.
       eapply eq_term_upto_univ_zipx ; auto.
@@ -1785,6 +1808,7 @@ Section Conversion.
     - simpl. constructor.
   Qed.
   Next Obligation.
+    destruct hΣ as [wΣ].
     destruct b ; auto.
     eapply conv_conv.
     destruct h. constructor.

@@ -2,8 +2,8 @@
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
 From MetaCoq.Template Require Import config utils monad_utils BasicAst AstUtils.
-From MetaCoq.PCUIC Require Import PCUICTyping PCUICAst PCUICAstUtils PCUICInduction 
-     PCUICWeakening PCUICSubstitution PCUICRetyping PCUICMetaTheory PCUICWcbvEval 
+From MetaCoq.PCUIC Require Import PCUICTyping PCUICAst PCUICAstUtils PCUICInduction
+     PCUICWeakening PCUICSubstitution PCUICRetyping PCUICMetaTheory PCUICWcbvEval
      PCUICSR PCUICClosed PCUICInversion PCUICGeneration.
 
 Definition Is_proof `{cf : checker_flags} Σ Γ t := ∑ T u, Σ ;;; Γ |- t : T × Σ ;;; Γ |- T : tSort u × is_prop_sort u.
@@ -23,7 +23,7 @@ Definition Informative`{cf : checker_flags} (Σ : global_env_ext) (ind : inducti
     forall Γ args u n (Σ' : global_env_ext),
       wf Σ' ->
       PCUICWeakeningEnv.extends Σ Σ' ->
-      Is_proof Σ' Γ (mkApps (tConstruct ind n u) args) ->  
+      Is_proof Σ' Γ (mkApps (tConstruct ind n u) args) ->
        #|ind_ctors idecl| <= 1 /\
        squash (All (Is_proof Σ' Γ) (skipn (ind_npars mdecl) args)).
 
@@ -34,19 +34,19 @@ Lemma elim_restriction_works_kelim1 `{cf : checker_flags} (Σ : global_env_ext) 
 Proof.
   intros wfΣ. intros.
   assert (HT := X).
-  eapply inversion_Case in X as (? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ?). 
+  eapply inversion_Case in X as (? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ?).
   unfold types_of_case in e0.
-  repeat destruct ?; try congruence. subst. inv e0. 
+  repeat destruct ?; try congruence. subst. inv e0.
   eapply declared_inductive_inj in d as []. 2:exact H. subst.
   enough (universe_family x6 = InType). rewrite H1 in e1.
   eapply Exists_exists in e1 as (? & ? & ?). subst. eauto.
-  
+
   destruct (universe_family x6) eqn:Eu.
   - exfalso. eapply H0. exists T. exists x6. split. admit.
     split. (* 2:{ eapply universe_family_is_prop_sort; eauto. } *)
     admit. admit.
   - admit. (* no idea what to do for Set *)
-  - reflexivity.  
+  - reflexivity.
 Admitted.                       (* elim_restriction_works *)
 
 
@@ -88,8 +88,9 @@ Lemma elim_restriction_works_proj_kelim1 `{cf : checker_flags} (Σ : global_env_
   Σ ;;; Γ |- tProj p c : T ->
   (Is_proof Σ Γ (tProj p c) -> False) -> In InType (ind_kelim idecl).
 Proof.
-  intros. destruct p. destruct p. cbn in *.
-  eapply inversion_Proj in X0 as (? & ? & ? & ? & ? & ? & ? & ? & ?).
+  intros X H X0 H0.
+  destruct p. destruct p. cbn in *.
+  eapply inversion_Proj in X0 as (? & ? & ? & ? & ? & ? & ? & ? & ?) ; auto.
   destruct x2. cbn in *.
   pose (d' := d). destruct d' as [? _].
   eapply declared_inductive_inj in H as []; eauto. subst.
@@ -102,7 +103,7 @@ Proof.
   clear - on_projs_elim. revert on_projs_elim. generalize (ind_kelim x1).
   intros. induction on_projs_elim; subst.
   - cbn. eauto.
-  - cbn. right. eauto.  
+  - cbn. right. eauto.
 Qed. (* elim_restriction_works_proj *)
 
 Lemma elim_restriction_works_proj `{cf : checker_flags} (Σ : global_env_ext) Γ  p c mind idecl T :
@@ -113,7 +114,7 @@ Lemma elim_restriction_works_proj `{cf : checker_flags} (Σ : global_env_ext) Γ
 Proof.
   intros. eapply elim_restriction_works_kelim2; eauto.
   eapply elim_restriction_works_proj_kelim1; eauto.
-Qed.                       
+Qed.
 
 Lemma length_of_btys {ind mdecl' idecl' args' u' p pty indctx pctx ps btys} :
   types_of_case ind mdecl' idecl' (firstn (ind_npars mdecl') args') u' p pty = Some (indctx, pctx, ps, btys) ->
@@ -147,14 +148,14 @@ Lemma tCase_length_branch_inv `{cf : checker_flags} (Σ : global_env_ext) Γ ind
   nth_error brs n = Some (m, t) ->
   (#|args| = npar + m)%nat.
 Proof.
-  intros. 
+  intros.
   eapply inversion_Case in X0 as (? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ?). subst.
   pose proof (length_of_btys e0).
   eapply type_mkApps_inv in t1 as (? & ? & [] & ?); eauto.
   eapply inversion_Construct in t1 as (? & ? & ? & ? & ? & ? & ?); eauto.
   destruct d0. cbn in *.
   eapply declared_inductive_inj in d as []; eauto. subst.
-  
+
   unfold types_of_case in e0.
   repeat destruct ?; try congruence. destruct p0, p1; subst. inv E3. inv E1. inv e0.
   unfold build_branches_type in *.
@@ -170,8 +171,8 @@ Proof.
     - destruct a. destruct ?. all:inv H. eauto.
   Qed.
 
-  eapply map_option_Some in E4. 
-  eapply All2_nth_error_Some_r in E4 as (? & ? & ?); eauto. 
+  eapply map_option_Some in E4.
+  eapply All2_nth_error_Some_r in E4 as (? & ? & ?); eauto.
   subst.
   rewrite nth_error_mapi in e. destruct (nth_error (ind_ctors x11) n) eqn:E7; try now inv e.
   cbn in e. inv e. destruct p0. destruct p0.
@@ -182,7 +183,7 @@ Proof.
   depelim E7. cbn in *. destruct s.
   depelim x2. cbn in *.
   subst. admit. admit.
-  
+
   (* clear - H0 E4. unfold mapi in *. *)
   (* revert n x7 H0 E4. generalize 0 at 3. induction (ind_ctors x2); intros. *)
   (* - cbn in E4. inv E4. destruct n0; inv H0. *)
@@ -201,9 +202,9 @@ Section no_prop_leq_type.
 
 Context `{cf : checker_flags}.
 Variable Hcf : prop_sub_type = false.
-  
+
 Lemma cumul_prop1 (Σ : global_env_ext) Γ A B u :
-  wf Σ -> 
+  wf Σ ->
   is_prop_sort u -> Σ ;;; Γ |- B : tSort u ->
                                  Σ ;;; Γ |- A <= B -> Σ ;;; Γ |- A : tSort u.
 Proof.

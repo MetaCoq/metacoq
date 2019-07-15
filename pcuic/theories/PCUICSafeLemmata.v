@@ -769,61 +769,61 @@ Section Lemmata.
       welltyped Σ Γ (zip t) ->
       welltyped Σ (Γ ,,, stack_context (snd t)) (fst t).
   Proof.
-    intros Γ [t π] h.
+    destruct hΣ as [wΣ].
+    intros Γ [t π] h. simpl.
     destruct h as [T h].
-    revert Γ t T h.
-    induction π ; intros Γ u T h.
+    induction π in Γ, t, T, h |- *.
     - cbn. cbn in h. eexists. eassumption.
-    - cbn. cbn in h. cbn in IHπ. apply IHπ in h.
+    - simpl. cbn in h. cbn in IHπ. apply IHπ in h.
       destruct h as [B h].
-      apply inversion_App in h as hh; auto.
+      apply inversion_App in h as hh ; auto.
       destruct hh as [na [A' [B' [? [? ?]]]]].
       eexists. eassumption.
-    - cbn. cbn in h. cbn in IHπ. apply IHπ in h.
+    - simpl. cbn in h. cbn in IHπ. apply IHπ in h.
       destruct h as [B h].
-            apply inversion_App in h as hh.
+      apply inversion_App in h as hh ; auto.
       destruct hh as [na [A' [B' [? [? ?]]]]].
       eexists. eassumption.
-    - cbn. cbn in h. cbn in IHπ. apply IHπ in h.
+    - simpl. cbn in h. cbn in IHπ. apply IHπ in h.
       destruct h as [B h].
-            apply inversion_App in h as hh.
+      apply inversion_App in h as hh ; auto.
       destruct hh as [na [A' [B' [? [? ?]]]]].
       eexists. eassumption.
-    - cbn. cbn in h. cbn in IHπ. apply IHπ in h.
+    - simpl. cbn in h. cbn in IHπ. apply IHπ in h.
       destruct h as [B h].
       destruct indn.
-      apply inversion_Case in h as hh.
+      apply inversion_Case in h as hh ; auto.
       destruct hh
         as [uni [args [mdecl [idecl [pty [indctx [pctx [ps [btys [? [? [? [? [? [? [ht0 [? ?]]]]]]]]]]]]]]]]].
       eexists. eassumption.
-    - cbn. cbn in h. cbn in IHπ. apply IHπ in h.
+    - simpl. cbn in h. cbn in IHπ. apply IHπ in h.
       destruct h as [T' h].
       apply inversion_Proj in h
-        as [uni [mdecl [idecl [pdecl [args [? [? [? ?]]]]]]]].
+        as [uni [mdecl [idecl [pdecl [args [? [? [? ?]]]]]]]] ; auto.
       eexists. eassumption.
-    - cbn. cbn in h. cbn in IHπ. apply IHπ in h.
+    - simpl. cbn in h. cbn in IHπ. apply IHπ in h.
       destruct h as [T' h].
-      apply inversion_Prod in h as hh.
+      apply inversion_Prod in h as hh ; auto.
       destruct hh as [s1 [s2 [? [? ?]]]].
       eexists. eassumption.
     - cbn. cbn in h. cbn in IHπ. apply IHπ in h.
       destruct h as [T' h].
-      apply inversion_Prod in h as hh.
+      apply inversion_Prod in h as hh ; auto.
       destruct hh as [s1 [s2 [? [? ?]]]].
       eexists. eassumption.
     - cbn. cbn in h. cbn in IHπ. apply IHπ in h.
       destruct h as [T' h].
-      apply inversion_Lambda in h as hh.
+      apply inversion_Lambda in h as hh ; auto.
       destruct hh as [s1 [B [? [? ?]]]].
       eexists. eassumption.
     - cbn. cbn in h. cbn in IHπ. apply IHπ in h.
       destruct h as [T' h].
-      apply inversion_Lambda in h as hh.
+      apply inversion_Lambda in h as hh ; auto.
       destruct hh as [s1 [B [? [? ?]]]].
       eexists. eassumption.
     - cbn. cbn in h. cbn in IHπ. apply IHπ in h.
       destruct h as [B h].
-      apply inversion_App in h as hh.
+      apply inversion_App in h as hh ; auto.
       destruct hh as [na [A' [B' [? [? ?]]]]].
       eexists. eassumption.
   Qed.
@@ -833,31 +833,42 @@ Section Lemmata.
       wellformed Σ Γ (zip t) ->
       wellformed Σ (Γ ,,, stack_context (snd t)) (fst t).
   Proof.
+    destruct hΣ as [wΣ].
     intros Γ [t π] [[A h]|h].
-    - destruct (welltyped_context Γ (t, π) (iswelltyped h)) as [A' X].
-      left; econstructor; eassumption.
-    - revert t h; induction π; intros t0 h; (try specialize (IHπ _ h)); cbn in *.
-      now right.
-      all: destruct IHπ as [[AA HA]|[[ctx [s [h1 h2]]]]]; [|try discriminate].
-      all: try (apply inversion_App in HA; rdestruct HA;
-                left; econstructor; eassumption).
-      + destruct indn; apply inversion_Case in HA; cbn in HA; rdestruct HA;
-          left; econstructor; eassumption.
-      + apply inversion_Proj in HA; rdestruct HA; left; econstructor; eassumption.
-      + apply inversion_Prod in HA; rdestruct HA; left; econstructor; eassumption.
-      + cbn in h1; apply destArity_app_Some in h1. destruct h1 as [ctx' [h1 h1']].
-        subst. left. rewrite app_context_assoc in h2; cbn in *.
-        apply wf_local_app in h2. inversion h2; subst; cbn in *.
-        destruct X0; econstructor; eassumption.
-      + apply inversion_Prod in HA; rdestruct HA; left; econstructor; eassumption.
-      + cbn in h1; apply destArity_app_Some in h1. destruct h1 as [ctx' [h1 h1']].
-        subst. right; constructor; exists ctx', s.
-        rewrite app_context_assoc in h2; cbn in h2.
-        now split.
-      + apply inversion_Lambda in HA; rdestruct HA;
-          left; econstructor; eassumption.
-      + apply inversion_Lambda in HA; rdestruct HA;
-          left; econstructor; eassumption.
+    - destruct (welltyped_context Γ (t, π) (iswelltyped h)) as [? ?].
+      left. econstructor. eassumption.
+    - induction π in t, h |- *.
+      all: try (specialize (IHπ _ h)).
+      all: simpl in *.
+      1: right ; assumption.
+      all: destruct IHπ as [[A' h'] | [[Δ [s [h1 h2]]]]] ; [| try discriminate].
+      all: try solve [
+        apply inversion_App in h' ; auto ;
+        rdestruct h' ;
+        left ; econstructor ; eassumption
+      ].
+      + destruct indn.
+        apply inversion_Case in h' ; auto. cbn in h'. rdestruct h'.
+        left. econstructor. eassumption.
+      + apply inversion_Proj in h' ; auto.
+        cbn in h'. rdestruct h'.
+        left. eexists. eassumption.
+      + apply inversion_Prod in h' ; auto. rdestruct h'.
+        left. eexists. eassumption.
+      + cbn in h1. apply destArity_app_Some in h1 as [Δ' [h1 h1']].
+        subst. left. rewrite app_context_assoc in h2. cbn in *.
+        apply wf_local_app in h2. inversion h2. subst. cbn in *.
+        destruct X0. eexists. eassumption.
+      + apply inversion_Prod in h' ; auto. rdestruct h'.
+        left. eexists. eassumption.
+      + cbn in h1. apply destArity_app_Some in h1 as [Δ' [h1 h1']].
+        subst. right. constructor. exists Δ', s.
+        rewrite app_context_assoc in h2. cbn in h2.
+        split ; eauto.
+      + apply inversion_Lambda in h' ; auto. rdestruct h'.
+        left. eexists. eassumption.
+      + apply inversion_Lambda in h' ; auto. rdestruct h'.
+        left. eexists. eassumption.
   Qed.
 
   Lemma cored_red :
@@ -918,7 +929,7 @@ Section Lemmata.
     intros Γ u v ρ h.
     induction ρ in u, v, h |- *.
     - assumption.
-    - simpl. eapply IHρ. eapply conv_App_l. assumption.
+    - simpl. eapply IHρ. eapply conv_App_l ; auto.
     - simpl. eapply IHρ. eapply conv_App_r. assumption.
     - simpl. eapply IHρ. eapply conv_App_r. assumption.
     - simpl. eapply IHρ. eapply conv_Case_c. assumption.

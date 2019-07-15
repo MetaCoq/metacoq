@@ -19,6 +19,7 @@ Section Inversion.
 
   Context `{checker_flags}.
   Context (Σ : global_env_ext).
+  Context (wfΣ : wf Σ).
 
   Ltac insum :=
     match goal with
@@ -259,7 +260,7 @@ Section Inversion.
       destruct hh as [s1 [A' [? [? [? ?]]]]].
       exists A'. split ; eauto.
       cbn. eapply cumul_trans ; try eassumption.
-      eapply PCUICCumulativity.cumul_it_mkProd_or_LetIn.
+      eapply cumul_it_mkProd_or_LetIn.
       assumption.
     - simpl. apply ih in h. cbn in h.
       destruct h as [B [h c]].
@@ -267,7 +268,7 @@ Section Inversion.
       pose proof hh as [s1 [B' [? [? ?]]]].
       exists B'. split ; eauto.
       cbn. eapply cumul_trans ; try eassumption.
-      eapply PCUICCumulativity.cumul_it_mkProd_or_LetIn.
+      eapply cumul_it_mkProd_or_LetIn.
       assumption.
   Qed.
 

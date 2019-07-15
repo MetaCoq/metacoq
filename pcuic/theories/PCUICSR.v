@@ -11,7 +11,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICSubstitution PCUICClosed PCUICCumulativity PCUICGeneration PCUICReduction
      PCUICParallelReduction PCUICEquality
      PCUICValidity PCUICParallelReductionConfluence PCUICConfluence
-     PCUICInversion PCUICPrincipality.
+     PCUICConversion PCUICInversion PCUICPrincipality.
 
 Require Import ssreflect ssrbool.
 Require Import String.
@@ -85,7 +85,7 @@ Proof.
     try constructor; eauto; hnf in H0; noconf H0; eauto.
 Qed.
 
-Hint Resolve conv_refl : pcuic.
+Hint Resolve conv_refl' : pcuic.
 Arguments skipn : simpl never.
 
 Lemma weakening_cumul0 `{CF:checker_flags} Σ Γ Γ'' M N n :
@@ -328,7 +328,7 @@ Section ContextConversion.
   Proof.
     induction Γ; try econstructor.
     destruct a as [na [b|] ty]; intros wfΓ; depelim wfΓ; econstructor; eauto;
-      constructor; pcuic; eapply conv_refl.
+      constructor; pcuic; eapply conv_refl'.
   Qed.
 
   Hint Resolve conv_ctx_refl : pcuic.
@@ -346,7 +346,7 @@ Section ContextConversion.
     destruct leq as [? [? ?]].
     destruct (red_red_ctx _ wfΣ redr Hctx) as [rnf [redl1 redr1]].
     destruct (red_confluence wfΣ r redr1). destruct p.
-    edestruct (red_eq_term_upto_univ_r (eq_universe_leq_universe _) e r0) as [lnf' [? ?]].
+    edestruct (red_eq_term_upto_univ_r Σ (eq_universe_leq_universe _) e r0) as [lnf' [? ?]].
     exists lnf', x0. intuition auto. now transitivity lnf.
     now transitivity rnf.
     apply (eq_universe_leq_universe _).
@@ -418,10 +418,10 @@ Section ContextConversion.
     induction r.
     - eapply red1_eq_context_upto_l in r; eauto.
       destruct r as [v [? ?]]. exists v. intuition pcuic.
-    - exists x. split; auto. reflexivity.
+    - exists x. split; auto.
     - destruct IHr1 as [v' [? ?]].
       destruct IHr2 as [v'' [? ?]].
-      unshelve eapply (red_eq_term_upto_univ_l _ (u:=y) (v:=v'') (u':=v')) in e; tc. all:pcuic.
+      unshelve eapply (red_eq_term_upto_univ_l Σ _ (u:=y) (v:=v'') (u':=v')) in e; tc. all:pcuic.
       destruct e as [? [? ?]].
       exists x0; split; eauto.
       now transitivity v'.
@@ -434,12 +434,12 @@ Section ContextConversion.
   Proof.
     intros Hctx.
     induction Hctx.
-    - exists [], []; intuition pcuic. constructor.
+    - exists [], []; intuition pcuic.
     - destruct IHHctx as [Δ [Δ' [[? ?] ?]]].
       depelim p.
       pose proof (conv_red_ctx c r).
       eapply conv_conv_alt, conv_alt_red in X.
-      destruct X as [T' [U' [? [? ?]]]].
+      destruct X as [T' [U' [[? ?] ?]]].
       pose proof (PCUICConfluence.red_red_ctx wfΣ _ _ _ _ r1 r).
       pose proof (PCUICConfluence.red_red_ctx wfΣ _ _ _ _ r2 r).
       destruct (red_eq_context_upto_l r1 e). destruct p.
@@ -452,7 +452,7 @@ Section ContextConversion.
       depelim p.
       * pose proof (conv_red_ctx c r).
         eapply conv_conv_alt, conv_alt_red in X.
-        destruct X as [T' [U' [? [? ?]]]].
+        destruct X as [T' [U' [[? ?] ?]]].
         pose proof (PCUICConfluence.red_red_ctx wfΣ _ _ _ _ r1 r).
         pose proof (PCUICConfluence.red_red_ctx wfΣ _ _ _ _ r2 r).
         destruct (red_eq_context_upto_l r1 e). destruct p.
@@ -460,18 +460,17 @@ Section ContextConversion.
         exists (Δ ,, vdef na' u T'), (Δ' ,, vdef na' u x0).
         split; [split|]; constructor; auto. red. split; auto. red. split; auto.
         eapply PCUICConfluence.red_red_ctx; eauto.
-        reflexivity.
         eapply eq_term_upto_univ_trans with U'; eauto; tc.
       * pose proof (conv_red_ctx c r).
         eapply conv_conv_alt, conv_alt_red in X.
-        destruct X as [t' [u' [? [? ?]]]].
+        destruct X as [t' [u' [[? ?] ?]]].
         pose proof (PCUICConfluence.red_red_ctx wfΣ _ _ _ _ r1 r).
         pose proof (PCUICConfluence.red_red_ctx wfΣ _ _ _ _ r2 r).
         destruct (red_eq_context_upto_l r1 e) as [t'' [? ?]].
         destruct (red_eq_context_upto_l r2 e) as [u'' [? ?]].
         pose proof (conv_red_ctx c0 r) as hTU.
         eapply conv_conv_alt, conv_alt_red in hTU.
-        destruct hTU as [T' [U' [rT [rU eTU']]]].
+        destruct hTU as [T' [U' [[rT rU] eTU']]].
         pose proof (PCUICConfluence.red_red_ctx wfΣ _ _ _ _ rT r).
         pose proof (PCUICConfluence.red_red_ctx wfΣ _ _ _ _ rU r).
         destruct (red_eq_context_upto_l rT e) as [T'' [? ?]].
@@ -660,7 +659,7 @@ Proof.
     econstructor 2; eauto. now apply conv_conv_alt.
 
     specialize (IHcumul _ _ _ _ _ _ wfΣ wfΓ eq_refl eq_refl).
-    intuition auto. apply cumul_trans with N2.
+    intuition auto. apply cumul_trans with N2. auto.
     eapply cumul_conv_ctx; eauto.
 
     econstructor 2. eauto. constructor. auto.
@@ -899,7 +898,7 @@ Proof.
     eapply (context_conversion _ wfΣ _ _ _ _ typeb').
     constructor. auto with pcuic. constructor; eauto.
     now exists s1.
-    apply conv_conv_alt; auto. eapply conv_refl.
+    apply conv_conv_alt; auto. eapply PCUICCumulativity.conv_refl'.
     assert (Σ ;;; Γ |- tLetIn n b b_ty b' : tLetIn n b b_ty b'_ty). econstructor; eauto.
     edestruct (validity _ wfΣ _ wfΓ _ _ X0). apply i.
     eapply cumul_red_r.
@@ -922,7 +921,7 @@ Proof.
   - (* Application *)
     eapply substitution0; eauto.
     pose proof typet as typet'.
-    eapply inversion_Lambda in typet' as [s1 [B' [Ht [Hb HU]]]].
+    eapply inversion_Lambda in typet' as [s1 [B' [Ht [Hb HU]]]]=>//.
     apply cumul_Prod_inv in HU as [eqA leqB] => //.
 
     eapply type_Cumul; eauto.
@@ -930,7 +929,7 @@ Proof.
     constructor. auto with pcuic. constructor ; eauto.
     admit. (* constructor auto with pcuic. constructor; eauto. *)
     destruct (validity _ wfΣ _ wfΓ _ _ typet).
-    clear -i.
+    clear -wfΣ i.
     (** Awfully complicated for a well-formedness condition *)
     { destruct i as [[ctx [s [Hs Hs']]]|[s Hs]].
       left.
@@ -946,10 +945,10 @@ Proof.
       eapply type_Cumul; eauto.
       left. exists [], s. intuition auto. now apply typing_wf_local in Hp.
       apply cumul_Sort_inv in Hp'.
-      eapply cumul_trans with (tSort (Universe.sort_of_product s1 s2)).
+      eapply cumul_trans with (tSort (Universe.sort_of_product s1 s2)). auto.
       constructor.
       cbn. constructor. apply leq_universe_product.
-      constructor; constructor ; auto. }
+      constructor; constructor ; auto. auto. }
 
   - (* Fixpoint unfolding *)
     simpl in x.

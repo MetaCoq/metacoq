@@ -1201,10 +1201,8 @@ Section RedConfluence.
     - econstructor 3; eauto.
   Qed.
 
-  Lemma pred_rel_confluent : confluent red1_rel_alpha.
+  Lemma red1_rel_alpha_pred1_rel : inclusion red1_rel_alpha pred1_rel.
   Proof.
-    notypeclasses refine (fst (sandwich _ _ _ _) _).
-    3:eapply pred1_rel_confluent; eauto.
     intros [ctx t] [ctx' t'].
     rewrite /red1_rel_alpha /pred1_rel /=.
     intros [[l <-]|[[r <-]|[r <-]]].
@@ -1216,22 +1214,34 @@ Section RedConfluence.
       * destruct x as [na [b|] ty], y as [na' [b'|] ty']; simpl in *; noconf e; try noconf e0.
         constructor; auto. red. split; now apply pred1_refl_gen.
         constructor; auto. red; now apply pred1_refl_gen.
-    - intros x y pred. red in pred.
-      eapply pred1_red' in pred; auto.
-      destruct pred.
-      destruct x, y. simpl in *.
-      transitivity (c, t0).
-      eapply clos_rt_disjunction_left.
-      eapply clos_refl_trans_prod_r. intros. split; eauto.
-      now eapply red_alt in r.
-      eapply clos_rt_disjunction_right.
-      eapply (clos_refl_trans_prod_l (fun x y => red1_ctx x y + eq_context_upto_names x y))%type.
-      intros. red. destruct X; intuition auto.
-      clear r.
-      apply red_ctx_clos_rt_red1_ctx in r0.
-      induction r0. constructor; auto.
-      constructor. auto.
-      now transitivity y.
+  Qed.
+
+  Lemma pred1_rel_red1_rel_alpha : inclusion pred1_rel (clos_refl_trans red1_rel_alpha).
+  Proof.
+    intros x y pred. red in pred.
+    eapply pred1_red' in pred; auto.
+    destruct pred.
+    destruct x, y. simpl in *.
+    transitivity (c, t0).
+    eapply clos_rt_disjunction_left.
+    eapply clos_refl_trans_prod_r. intros. split; eauto.
+    now eapply red_alt in r.
+    eapply clos_rt_disjunction_right.
+    eapply (clos_refl_trans_prod_l (fun x y => red1_ctx x y + eq_context_upto_names x y))%type.
+    intros. red. destruct X; intuition auto.
+    clear r.
+    apply red_ctx_clos_rt_red1_ctx in r0.
+    induction r0. constructor; auto.
+    constructor. auto.
+    now transitivity y.
+  Qed.
+
+  Lemma pred_rel_confluent : confluent red1_rel_alpha.
+  Proof.
+    notypeclasses refine (fst (sandwich _ _ _ _) _).
+    3:eapply pred1_rel_confluent; eauto.
+    - apply red1_rel_alpha_pred1_rel.
+    - apply pred1_rel_red1_rel_alpha.
   Qed.
 
   Lemma clos_refl_trans_out Γ x y :

@@ -8,7 +8,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICReflect PCUICLiftSubst PCUICUnivSubst PCUICTyping
      PCUICCumulativity PCUICSR PCUICPosition PCUICEquality PCUICNameless
      PCUICNormal PCUICInversion PCUICCumulativity PCUICReduction
-     PCUICConfluence PCUICValidity.
+     PCUICConfluence PCUICConversion PCUICValidity.
 From Equations Require Import Equations.
 
 Require Import Equations.Prop.DepElim.
@@ -192,7 +192,6 @@ Section Lemmata.
     - cbn in *. eexists. split.
       + eassumption.
       + apply All2_same. intros [m t]. simpl. split ; auto.
-        eapply eq_term_upto_univ_refl ; auto.
     - cbn. cbn in hb.
       lazymatch type of hb with
       | match ?t with _ => _ end = _ =>
@@ -421,7 +420,6 @@ Section Lemmata.
         apply eq_term_sym.
         eapply eq_term_upto_univ_eq_eq_term.
         eapply eq_term_upto_univ_subst ; auto.
-        eapply eq_term_upto_univ_refl ; auto.
     - intros cst u decl ? ? hdecl hcons v e.
       dependent destruction e.
       apply All2_eq in a. apply map_inj in a ; revgoals.
@@ -505,7 +503,6 @@ Section Lemmata.
         apply eq_term_sym.
         eapply eq_term_upto_univ_eq_eq_term.
         eapply eq_term_upto_univ_substs ; auto.
-        * eapply eq_term_upto_univ_refl ; auto.
         * constructor ; auto.
           eapply All2_same.
           intro. eapply eq_term_upto_univ_refl ; auto.
@@ -779,7 +776,7 @@ Section Lemmata.
     - cbn. cbn in h. eexists. eassumption.
     - cbn. cbn in h. cbn in IHπ. apply IHπ in h.
       destruct h as [B h].
-      apply inversion_App in h as hh.
+      apply inversion_App in h as hh; auto.
       destruct hh as [na [A' [B' [? [? ?]]]]].
       eexists. eassumption.
     - cbn. cbn in h. cbn in IHπ. apply IHπ in h.

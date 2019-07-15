@@ -2,7 +2,7 @@
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
 From MetaCoq.Template Require Import config monad_utils utils.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICChecker PCUICCumulativity.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICChecker PCUICConversion PCUICCumulativity.
 Require Import String.
 Local Open Scope string_scope.
 Set Asymmetric Patterns.
@@ -217,7 +217,7 @@ Section TypeOf.
     - go eq. split.
       + econstructor ; try eassumption ; try ih ; try cih.
       + eapply congr_cumul_prod.
-        * eapply conv_refl.
+        * eapply conv_refl'.
         * ih.
     - go eq. split.
       + econstructor ; try eassumption ; try ih ; try cih.
@@ -239,7 +239,7 @@ Section TypeOf.
     - admit.
     - split.
       + ih.
-      + eapply cumul_trans ; try eassumption. ih.
+      + eapply cumul_trans ; try eassumption.
   Admitted.
 
 

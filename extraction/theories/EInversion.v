@@ -17,9 +17,9 @@ Module P := PCUICWcbvEval.
 
 (** ** Inversion on eval *)
 
-Lemma type_Case_inv (Σ : global_env_ext) Γ ind npar p c brs T :
+Lemma type_Case_inv (Σ : global_env_ext) (hΣ : wf Σ.1) Γ ind npar p c brs T :
   Σ;;; Γ |- PCUICAst.tCase (ind, npar) p c brs : T ->
-  { '(u, args, mdecl, idecl, pty, indctx, pctx, ps, btys) : _ &                                                 
+  { '(u, args, mdecl, idecl, pty, indctx, pctx, ps, btys) : _ &
          (PCUICTyping.declared_inductive (fst Σ) mdecl ind idecl) *
          (PCUICAst.ind_npars mdecl = npar) *
          let pars := firstn npar args in
@@ -35,12 +35,12 @@ Proof.
   - unshelve eexists.
     + repeat refine (_,_). all:shelve.
     + cbn. subst pars. intuition eauto.
-  - edestruct (IHX _ _ _ _ _ eq_refl) as [ [[[[[[[[]]]]]]]] ].
+  - edestruct (IHX _ _ _ _ _ _ eq_refl) as [ [[[[[[[[]]]]]]]] ].
     repeat match goal with [ H : _ * _ |- _ ] => destruct H end.
     unshelve eexists.
     + repeat refine (_, _). all:shelve.
     + cbn. intuition eauto.
-      all: eapply cumul_trans; eauto.
+      all: eapply PCUICConversion.cumul_trans; eauto.
 Qed.
 
 Notation type_Construct_inv := PCUICInversion.inversion_Construct.

@@ -34,7 +34,7 @@ Proof.
   destruct s; eauto.
   destruct s as (u' & ? & ?).
   right. exists u'. split; eauto.
-  change u with (snd (Σ,u)). 
+  change u with (snd (Σ,u)).
   eapply weakening_env; [ | | eauto | | ]; eauto using wf_extends.
 Qed.
 
@@ -98,7 +98,7 @@ Proof.
     eapply All2_impl. exact H4.
     intros ? ? [[[]] [? []]].
     split; eauto.
-  - eauto. 
+  - eauto.
 Qed.
 
 (** ** Weakening *)
@@ -177,7 +177,7 @@ Proof.
     eapply weakening_typing in HT; eauto.
 
     Require Import MetaCoq.PCUIC.PCUICInversion. cbn in HT.
-    eapply inversion_Fix in HT as (? & ? & ? & ? & ? & ?). clear a0 c.
+    eapply inversion_Fix in HT as (? & ? & ? & ? & ? & ?) ; auto. clear a0 c.
 
 
     econstructor.
@@ -207,7 +207,7 @@ Proof.
     rewrite <- lift_fix_context.
     rewrite <- plus_n_O.
     now rewrite (All2_length _ _ H4).
-    - eauto.
+  - eauto.
 Qed.
 
 Lemma erases_weakening (Σ : global_env_ext) (Γ Γ' : PCUICAst.context) (t T : PCUICAst.term) t' :

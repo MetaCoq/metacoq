@@ -479,11 +479,29 @@ Proof.
   eapply red1_eq_term_upto_univ_l in H; tc; eauto. intros. now eapply eq_universe_leq_universe.
 Qed.
 
+Generalizable Variables A B R S T.
+
+Definition rel_cart {A B} (R : relation A) (S : relation B) : relation (A * B) :=
+  fun x y => (R x.1 y.1 * S x.2 y.2)%type.
+Hint Unfold rel_cart : core.
+
+Instance rel_cart_refl `{HR : Reflexive A R} `{HS : Reflexive B T} :
+  Reflexive (rel_cart R T).
+Proof. auto. Qed.
+
+Instance rel_cart_trans `{HR : Transitive A R} `{HS : Transitive B T} :
+  Transitive (rel_cart R T).
+Proof. firstorder auto. Qed.
+
+Instance rel_cart_sym `{HR : Symmetric A R} `{HS : Symmetric B T} :
+  Symmetric (rel_cart R T).
+Proof. firstorder auto. Qed.
+
 Definition leq_term_rel {cf : checker_flags} Σ : relation (context * term) :=
-  (fun '(Γ, x) '(Δ, y) => leq_term Σ x y * (Γ = Δ))%type.
+  rel_cart eq (leq_term Σ).
 
 Definition eq_term_rel {cf : checker_flags} Σ : relation (context * term) :=
-  (fun '(Γ, x) '(Δ, y) => eq_term Σ x y * (Γ = Δ))%type.
+  rel_cart eq (eq_term Σ).
 
 Lemma commutes_leqterm_pred1 {cf : checker_flags} {Σ : global_env_ext} :
   commutes (@pred1_rel Σ) (leq_term_rel Σ).
@@ -519,12 +537,21 @@ Definition pred1_eq {cf : checker_flags} (Σ : global_env_ext) :=
 Instance leq_term_refl {cf : checker_flags} Σ : Reflexive (leq_term Σ).
 Proof. intros x; apply leq_term_refl. Defined.
 
+Instance leq_term_trans {cf : checker_flags} Σ : Transitive (leq_term Σ).
+Proof. intros x; apply leq_term_trans. Defined.
+
+Instance eq_term_refl {cf : checker_flags} Σ : Reflexive (eq_term Σ).
+Proof. intros x; apply eq_term_refl. Defined.
+
+Instance eq_term_trans {cf : checker_flags} Σ : Transitive (eq_term Σ).
+Proof. intros x; apply eq_term_trans. Defined.
+
 Lemma pred1_leq_confluence {cf : checker_flags} (Σ : global_env_ext) : wf Σ -> confluent (pred1_leq Σ).
 Proof.
   intros wfΣ.
   apply confluent_union. tc. intros x. red. apply pred1_refl.
   apply commutes_leqterm_pred1. apply (diamond_pred1_rel wfΣ).
-  move=> [Γ x] [Δ y] [Ψ z] [] leqxy -> [] leqyz ->.
+  move=> [Γ x] [Δ y] [Ψ z] [] /= -> leqxy [] /= -> leqyz.
   destruct (leq_term_upto_univ_diamond leqxy leqyz) as [nf [redl redr]].
   exists (Ψ, nf); firstorder.
 Qed.
@@ -534,10 +561,12 @@ Proof.
   intros wfΣ.
   apply confluent_union. tc. intros x. red. apply pred1_refl.
   apply commutes_eqterm_pred1. apply (diamond_pred1_rel wfΣ).
-  move=> [Γ x] [Δ y] [Ψ z] [] leqxy -> [] leqyz ->.
+  move=> [Γ x] [Δ y] [Ψ z] [] /= -> leqxy [] /= -> leqyz.
   destruct (eq_term_upto_univ_diamond leqxy leqyz) as [nf [redl redr]].
   exists (Ψ, nf); firstorder.
 Qed.
+
+Hint Unfold leq_term_rel : core.
 
 Lemma red1_leq_confluence {cf : checker_flags} (Σ : global_env_ext) : wf Σ -> confluent (red1_leq Σ).
 Proof.
@@ -546,9 +575,9 @@ Proof.
   3:eapply pred1_leq_confluence; eauto.
   intros [ctx t] [ctx' t'].
   rewrite /red1_leq /pred1_leq /=.
-  intros [l|[r <-]].
+  move=> [l|[/= <- r]].
   - left. now eapply red1_rel_alpha_pred1_rel.
-  - right. red; auto.
+  - right. auto.
   - intros [Γ x] [Δ y] [l|r].
     eapply clos_rt_disjunction_left.
     now apply pred1_rel_red1_rel_alpha.
@@ -563,7 +592,7 @@ Proof.
   3:eapply pred1_eq_confluence; eauto.
   intros [ctx t] [ctx' t'].
   rewrite /red1_leq /pred1_leq /=.
-  intros [l|[r <-]].
+  move=> [l|[/= <- r]].
   - left. now eapply red1_rel_alpha_pred1_rel.
   - right. red; auto.
   - intros [Γ x] [Δ y] [l|r].
@@ -589,24 +618,6 @@ Lemma leq_incl_red1_leq {cf : checker_flags} (Σ : global_env_ext) Γ :
 Proof.
   intros wfΣ.
   intros x y rxy. constructor. right. red; auto.
-Qed.
-
-Definition red_leq {cf : checker_flags} Σ Γ := fun x y => clos_refl_trans (red1_leq Σ) (Γ, x) (Γ, y).
-
-Lemma cumul_alt_red_leq `{cf : checker_flags} {Σ : global_env_ext} {Γ t u} :
-   wf Σ ->
-   Σ ;;; Γ |- t <= u ->
-              ∑ o, red_leq Σ Γ t o *
-                   red_leq Σ Γ u o.
-Proof.
-  intros.
-  eapply cumul_alt in X0 as [v [v' [[redl redr] leq]]].
-  exists v'. split; red; auto.
-  - transitivity (Γ, v). apply clos_rt_disjunction_left.
-    eapply red_alt in redl. now apply clos_rt_red1_red1_rel_alpha.
-    constructor. right. red; auto.
-  - eapply clos_rt_disjunction_left.
-    apply red_alt in redr. now eapply clos_rt_red1_red1_rel_alpha.
 Qed.
 
 Lemma cumul_trans_red_eqterm `{cf : checker_flags} {Σ : global_env_ext} {Γ t u v} : wf Σ ->
@@ -676,8 +687,71 @@ Qed.
 (*   - left. now constructor 2. *)
 (*   - destruct IHX1. *)
 
-Lemma commutes_clos_rt_postpone {A} (R S : relation A) :
-  commutes R S ->
+Definition commutes_horizontal {A} (R S : relation A) :=
+  inclusion (rel_comp R S) (rel_comp S R).
+
+Lemma commutes_horizontal_red_leq {cf : checker_flags} (Σ : global_env_ext) Γ :
+  commutes_horizontal (leq_term Σ) (red Σ Γ).
+Proof.
+  intros x z. move=> [y [Hl Hr]].
+  red.
+  eapply red_eq_term_upto_univ_r in Hl. all:tc. 3:eapply Hr.
+  2:eapply (eq_universe_leq_universe _).
+  eapply Hl.
+Qed.
+
+Lemma commutes_horizontal_leq_red1_alpha_rels {cf : checker_flags} {Σ : global_env_ext} :
+  commutes_horizontal (leq_term_rel Σ) (@red1_rel_alpha Σ).
+Proof.
+  intros [Γ x] [Δ z]. move=> [[Ψ y] [[/= -> Hl] Hr]].
+  destruct Hr as [Hr|[Hr|Hr]].
+  - destruct Hr as [Hr ->].
+    eapply red1_eq_term_upto_univ_r in Hl as [mid [rmid leqmid]]. all:tc.
+    3:eapply Hr.
+    2:eapply eq_universe_leq_universe.
+    exists (Δ, mid). split; firstorder.
+  - destruct Hr as [Hr ->].
+    exists (Δ, x). split; firstorder auto.
+  - destruct Hr as [Hr ->].
+    exists (Δ, x). split; firstorder auto.
+Qed.
+
+Hint Resolve rt_refl rt_step : core.
+
+Lemma commutes_horizontal_clos_rt_right {A} (R S : relation A) :
+  commutes_horizontal R S ->
+  commutes_horizontal R (clos_refl_trans S).
+Proof.
+  intros HRS.
+  intros x z [y [Hl Hr]].
+  apply clos_rt_rt1n_iff in Hr.
+  induction Hr in x, Hl |- *.
+  - exists x. split; auto.
+  - destruct (HRS x y) as [mid [Smid Rmid]]. exists x0; auto.
+    destruct (IHHr _ Rmid) as [mid' [Smid' Rmid']].
+    exists mid'; intuition auto.
+    now eapply rt_trans with mid.
+Qed.
+
+Lemma commutes_horizontal_clos_rt {A} (R S : relation A) :
+  commutes_horizontal R S ->
+  commutes_horizontal (clos_refl_trans R) (clos_refl_trans S).
+Proof.
+  intros HRS.
+  eapply commutes_horizontal_clos_rt_right.
+  intros x z [y [Hl Hr]].
+  eapply clos_rt_rtn1_iff in Hl.
+  induction Hl in z, Hr.
+  - now exists z.
+  - destruct (HRS y z) as [mid [Smid Rmid]].
+    now exists z0.
+    destruct (IHHl _ Smid) as [mid' [Smid' Rmid']].
+    exists mid'; intuition auto.
+    now eapply rt_trans with mid.
+Qed.
+
+Lemma commutes_horizontal_clos_rt_disj {A} (R S : relation A) :
+  commutes_horizontal S R ->
   inclusion (clos_refl_trans (relation_disjunction R S))
             (rel_comp (clos_refl_trans R) (clos_refl_trans S)).
 Proof.
@@ -690,22 +764,235 @@ Proof.
     destruct r.
     * exists y'. split; auto.
       eapply clos_rt_rt1n_iff. eapply rt1n_trans. eauto. now eapply clos_rt_rt1n_iff.
-Abort.
+    * eapply commutes_horizontal_clos_rt_right in Hcom.
+      destruct (Hcom x y') as [mid [Rmid Smid]].
+      now exists y.
+      exists mid; intuition auto.
+      now eapply rt_trans with y'.
+Qed.
+
+Lemma clos_rt_refl_trans {A} {R : relation A} `{Reflexive A R} `{Transitive A R} :
+  relation_equivalence (clos_refl_trans R) R.
+Proof.
+  split.
+  induction 1; auto. now transitivity y.
+  intros. auto.
+Qed.
+
+Definition red_leq {cf : checker_flags} Σ Γ := fun x y => clos_refl_trans (red1_leq Σ) (Γ, x) (Γ, y).
+
+Instance red_leq_trans {cf : checker_flags} (Σ : global_env_ext) Γ :
+  Transitive (red_leq Σ Γ).
+Proof. unfold red_leq. intros x y z Hxy Hyz. now transitivity (Γ, y). Qed.
+
+Definition red_comp_leq `{cf : checker_flags} (Σ : global_env_ext) Γ t u :=
+  ∑ t', red Σ Γ t t' * leq_term Σ t' u.
+
+Lemma clos_rt_red1_leq_spec `{cf : checker_flags} {Σ : global_env_ext} {t u} :
+  wf Σ -> clos_refl_trans (red1_leq Σ) t u -> red_comp_leq Σ t.1 t.2 u.2.
+Proof.
+  intros.
+  eapply commutes_horizontal_clos_rt_disj in X0 as [[Δ mid] [r leq]].
+  exists mid.
+  split; auto. eapply clos_rt_red1_alpha_out in r as [Hctx Ht]=>//. simpl in *.
+  - now eapply red_alt.
+  - unshelve eapply (fst (clos_rt_refl_trans _ _)) in leq; tc.
+    red in leq. red in leq. simpl in leq. intuition auto.
+  - eapply commutes_horizontal_leq_red1_alpha_rels.
+Qed.
 
 Lemma red_leq_spec `{cf : checker_flags} {Σ : global_env_ext} {Γ t u} :
-  wf Σ -> red_leq Σ Γ t u -> ∑ t', red Σ Γ t t' * leq_term Σ t' u.
+  wf Σ -> red_leq Σ Γ t u <~> red_comp_leq Σ Γ t u.
 Proof.
-Admitted.
+  intros. split.
+  - intros X0; eapply commutes_horizontal_clos_rt_disj in X0 as [[Δ mid] [r leq]].
+    exists mid.
+    split; auto. eapply clos_rt_red1_alpha_out in r as [Hctx Ht]=>//. simpl in *.
+    * now eapply red_alt.
+    * unshelve eapply (fst (clos_rt_refl_trans _ _)) in leq; tc.
+      red in leq. red in leq. simpl in leq. intuition auto.
+    * eapply commutes_horizontal_leq_red1_alpha_rels.
 
-Lemma cumul_trans_red_conv `{cf : checker_flags} {Σ : global_env_ext} {Γ t u} : wf Σ ->
-  Σ ;;; Γ |- t <= u -> Σ ;;; Γ |- u <= t -> Σ ;;; Γ |- t == u.
+  - intros X0. destruct X0 as [v [redtv leqvu]].
+    eapply rt_trans with (Γ, v).
+    eapply clos_rt_disjunction_left.
+    now eapply clos_rt_red1_red1_rel_alpha, red_alt.
+    eapply clos_rt_disjunction_right.
+    constructor. auto.
+Qed.
+
+(* Lemma cumul_alt_red_leq `{cf : checker_flags} {Σ : global_env_ext} {Γ t u} : *)
+(*    wf Σ -> *)
+(*    Σ ;;; Γ |- t <= u -> *)
+(*    ∑ o o', red Σ Γ t o * *)
+(*            leq_term Σ o o' * *)
+(*            red Σ Γ u o'. *)
+(* Proof. *)
+(*   intros. *)
+(*   eapply cumul_alt in X0 as [v [v' [[redl redr] leq]]]. *)
+(*   exists v'. split; red; auto. *)
+(*   - transitivity (Γ, v). apply clos_rt_disjunction_left. *)
+(*     eapply red_alt in redl. now apply clos_rt_red1_red1_rel_alpha. *)
+(*     constructor. right. red; auto. *)
+(*   - eapply clos_rt_disjunction_left. *)
+(*     apply red_alt in redr. now eapply clos_rt_red1_red1_rel_alpha. *)
+(* Qed. *)
+
+Lemma confluence_clos_rt_red1_leq `{cf : checker_flags} {Σ : global_env_ext} {Γ t u v} :
+  wf Σ ->
+  clos_refl_trans (red1_leq Σ) (Γ, t) (Γ, u) ->
+  clos_refl_trans (red1_leq Σ) (Γ, t) (Γ, v) ->
+  ∑ nf, red_leq Σ Γ u nf * red_leq Σ Γ v nf.
+Proof.
+  intros wfΣ tu tv.
+  destruct (red1_leq_confluence wfΣ tu tv) as [[Δ nf] [redl redr]].
+  exists nf; auto.
+  eapply clos_rt_red1_leq_spec in redl=>//.
+  eapply clos_rt_red1_leq_spec in redr=>//.
+  simpl in *.
+  split; now eapply red_leq_spec.
+Qed.
+
+Lemma commutes_eqterm_red {cf : checker_flags} {Σ : global_env_ext} {Γ} : commutes (eq_term Σ) (clos_refl_trans (red1 Σ Γ)).
+Proof.
+  eapply commutes_sym, commutes_clos_rt_one, commutes_sym.
+  eapply commutes_eqterm_red1.
+Qed.
+
+Lemma commutes_leqterm_red {cf : checker_flags} {Σ : global_env_ext} {Γ} : commutes (leq_term Σ) (clos_refl_trans (red1 Σ Γ)).
+Proof.
+  eapply commutes_sym, commutes_clos_rt_one, commutes_sym.
+  eapply commutes_leqterm_red1.
+Qed.
+
+(* Lemma commutes_leqterm_red' {cf : checker_flags} {Σ : global_env_ext} {Γ} : commutes (leq_term Σ) (red Σ Γ). *)
+(* Proof. *)
+(*   eapply commutes_sym. *)
+(*   apply commutes_proper. *)
+(*  commutes_clos_rt_one, commutes_sym. *)
+(*   eapply commutes_leqterm_red1. *)
+(* Qed. *)
+
+Lemma cumul_trans_red_leq `{cf : checker_flags} {Σ : global_env_ext} {Γ t u v} : wf Σ ->
+  Σ ;;; Γ |- t <= u -> Σ ;;; Γ |- u <= v ->
+  ∑ o mid o', red Σ Γ t o *
+       leq_term Σ o mid *
+       red Σ Γ u mid *
+       leq_term Σ mid o' *
+       red Σ Γ v o'.
 Proof.
   intros wfΣ X X0.
+  intros.
+  eapply cumul_alt in X as [t' [u' [[ol or] leq]]] => //.
+  eapply cumul_alt in X0 as [u'' [v' [[o'l o'r] leq']]] => //.
+  destruct (red_confluence wfΣ or o'l) as [unf [tl rr]].
+  assert (∑ tnf, red Σ Γ t' tnf * leq_term Σ tnf unf).
+  apply commutes_horizontal_red_leq. exists u'; auto.
+  destruct X as [tnf [ttnf tnfunf]].
+  destruct (commutes_leqterm_red leq' (equiv _ _ (red_alt Σ _ _ _) rr)) as [v'nf [? ?]].
+  eapply red_alt in c.
+  exists tnf, unf, v'nf.
+  intuition auto. now transitivity t'.
+  now transitivity u''.
+  now transitivity v'.
+Qed.
+
+Lemma cumul_trans_red_conv `{cf : checker_flags} {Σ : global_env_ext} {Γ t u} : wf Σ ->
+  Σ ;;; Γ |- t <= u -> Σ ;;; Γ |- u <= t ->
+ Σ ;;; Γ |- t == u.
+Proof.
+  intros wfΣ X X0.
+  destruct (cumul_trans_red_leq wfΣ X X0) as [tnf [mid [unf ?]]].
+  intuition auto.
+  destruct (cumul_trans_red_leq wfΣ X0 X) as [tnf' [mid' [unf' ?]]].
+  intuition auto.
+  clear r1.
+  eapply red_leq_spec in r => //.
+  destruct r as [tred [redtnf leqtnf]].
+  eapply red_leq_spec in r0 => //.
+  destruct r0 as [tred' [redtnf' leqtnf']].
+
+
+  destruct (confluence_clos_rt_red1_leq wfΣ r r3) as [tnf' [tl rr]].
+  destruct (confluence_clos_rt_red1_leq wfΣ r0 r2) as [unf' [ul ur]].
+  pose proof (transitivity r tl).
+  pose proof (transitivity r0 tl).
+  pose proof (transitivity r2 ur).
+  pose proof (transitivity r3 ur).
+  destruct (confluence_clos_rt_red1_leq wfΣ X1 X4) as [nf [nfl nfr]].
+  destruct (confluence_clos_rt_red1_leq wfΣ X2 X3) as [nf' [nfl' nfr']].
+  pose proof (transitivity
+
+  eapply red_leq_spec in X1 => //.
+  eapply red_leq_spec in X2 => //.
+  eapply red_leq_spec in X3 => //.
+  eapply red_leq_spec in X4 => //.
+  destruct X1 as [tred [redtnf leqtnf]].
+  destruct X2 as [ured [redunf lequnf]].
+  destruct X3 as [tred' [redtnf' leqtnf']].
+  destruct X4 as [ured' [redunf' lequnf']].
+  eapply conv_alt_red.
+  exists tred, ured. split; auto.
+  split.
+
+
+  eapply red_leq_spec in r.
+  eapply red_leq_spec in r0.
+  eapply red_leq_spec in r2.
+  eapply red_leq_spec in r3. all:auto.
+
+
+
+
+
   eapply cumul_alt_red_leq in X as [o [ol or]] => //.
   eapply cumul_alt_red_leq in X0 as [o' [o'l o'r]] => //.
+
+
+
+  pose proof (transitivity or tl).
+  pose proof (transitivity or tl).
+
+  eapply red_leq_spec in tl => //.
+  eapply red_leq_spec in rr => //.
+  eapply red_leq_spec in rr => //.
+
+
+  destruct (confluence_clos_rt_red1_leq wfΣ ul tl) as [nfl [tnfl tnfr]].
+  destruct (confluence_clos_rt_red1_leq wfΣ ur rr) as [nfr [onfl o'nfr]].
+
+
+
+
+  destruct (red_confluence wfΣ r r1) as [onf [? ?]].
+  destruct (red_confluence wfΣ r0 r2) as [o'nf [? ?]].
+
+
   destruct (red1_leq_confluence wfΣ or o'l) as [[Γ' u'] [uo uo']].
   destruct (red1_leq_confluence wfΣ ol o'r) as [[Γ'' u''] [uo2 uo'2]].
   apply conv_alt_red.
+  destruct (red1_leq_confluence wfΣ uo uo2) as [[Δ u'u''] [? ?]].
+  destruct (red1_leq_confluence wfΣ uo' uo'2) as [[Δ' o'u''] [? ?]].
+
+  assert (clos_refl_trans (red1_leq Σ) (Γ, t) (Δ, u'u'')).
+  { transitivity (Γ, o). auto. transitivity (Γ', u'); auto. }
+  assert (clos_refl_trans (red1_leq Σ) (Γ, t) (Δ', o'u'')).
+  { transitivity (Γ, o'). auto. transitivity (Γ', u'); auto. }
+  assert (clos_refl_trans (red1_leq Σ) (Γ, u) (Δ', o'u'')).
+  { transitivity (Γ, o'). auto. transitivity (Γ', u'); auto. }
+  assert (clos_refl_trans (red1_leq Σ) (Γ, u) (Δ, u'u'')).
+  { transitivity (Γ, o). auto. transitivity (Γ', u'); auto. }
+
+  eapply clos_rt_red1_leq_spec in X as [ou' [oou' leq1]].
+  eapply clos_rt_red1_leq_spec in X0 as [o'u' [o'ou' leq2]].
+  eapply clos_rt_red1_leq_spec in X1 as [ou'' [oou'' leq3]].
+  eapply clos_rt_red1_leq_spec in X2 as [o'u''2 [o'ou'' leq4]].
+  all:auto.
+  simpl in *.
+  destruct (red_confluence wfΣ oou' oou'') as [onf [onfl onfr]].
+  destruct (red_confluence wfΣ oou' oou'') as [onf [onfl onfr]].
+
+
 Abort.
 (* Lemma clos_red1_leq_samectx {cf : checker_flags} (Σ : global_env_ext) Γ Δ t u : *)
 (*   clos_refl_trans (red1_leq Σ) (Γ, t) (Δ, u) -> *)

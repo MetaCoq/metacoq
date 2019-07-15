@@ -1858,7 +1858,7 @@ Section Conversion.
 
     _isconv_args' Γ t args l1 π1 h1 l2 π2 h2 aux := no.
   Next Obligation.
-    constructor. apply conv_refl.
+    constructor. apply PCUICCumulativity.conv_refl'.
   Defined.
   Next Obligation.
     split ; [ reflexivity |].
@@ -1869,6 +1869,7 @@ Section Conversion.
     rewrite <- mkApps_nested. assumption.
   Defined.
   Next Obligation.
+    destruct hΣ as [wΣ].
     clear _isconv_args' aux.
     rewrite <- mkApps_nested.
     destruct H1 as [H1]. unfold zippx in H1.
@@ -1879,20 +1880,20 @@ Section Conversion.
 
     apply zipx_wellformed ; auto.
     (* We get that u2 is well-typed *)
-    apply wellformed_zipx in h2; tas. cbn in h2. cbn.
+    apply wellformed_zipx in h2 ; tas. cbn in h2. cbn.
     zip fold in h2.
     apply wellformed_context in h2 as hh2 ; auto. simpl in hh2.
     rewrite stack_context_appstack in hh2.
-    destruct hh2 as [[A2 hh2]|[[ctx [s [?h1 _]]]]]; [|discriminate].
-    apply inversion_App in hh2 as ihh2.
+    destruct hh2 as [[A2 hh2]|[[ctx [s [? _]]]]]; [| discriminate ].
+    apply inversion_App in hh2 as ihh2 ; auto.
     destruct ihh2 as [na2 [A2' [B2' [? [hu2 ?]]]]].
     (* We get that u1 is well-typed *)
-    apply wellformed_zipx in h1; tas. cbn in h1. cbn.
+    apply wellformed_zipx in h1 ; tas. cbn in h1. cbn.
     zip fold in h1.
     apply wellformed_context in h1 as hh1 ; auto. simpl in hh1.
     rewrite stack_context_appstack in hh1.
-    destruct hh1 as [[A1 hh1]|[[ctx [s [?h1 _]]]]]; [|discriminate].
-    apply inversion_App in hh1 as ihh1.
+    destruct hh1 as [[A1 hh1] | [[ctx [s [? _]]]]] ; [| discriminate ].
+    apply inversion_App in hh1 as ihh1 ; auto.
     destruct ihh1 as [na1 [A1' [B1' [? [hu1 ?]]]]].
     (* apply type_it_mkLambda_or_LetIn in hu1 ; auto. *)
     (* apply type_it_mkLambda_or_LetIn in hu2 ; auto. *)
@@ -1938,6 +1939,7 @@ Section Conversion.
         apply (h #|a1| (S #|l1|)).
   Defined.
   Next Obligation.
+    destruct hΣ as [wΣ].
     destruct H1 as [H1]. destruct H2 as [H2].
     constructor.
     unfold zippx. simpl.
@@ -1967,7 +1969,7 @@ Section Conversion.
     eapply mkApps_conv_weak ; auto.
     eapply mkApps_conv_weak ; auto.
     eapply App_conv ; auto.
-    eapply conv_refl.
+    eapply PCUICCumulativity.conv_refl'.
   Defined.
 
   Equations(noeqns) _isconv_args (Γ : context) (t : term)
@@ -2026,7 +2028,8 @@ Section Conversion.
       }
     }.
   Next Obligation.
-    cbn. destruct h as [[T h]|[[ctx [s [h1 _]]]]]; [|discriminate].
+    destruct hΣ as [wΣ].
+    cbn. destruct h as [[T h] | [[ctx [s [h1 _]]]]]; [| discriminate ].
     apply inversion_Case in h ; auto.
     destruct h as
         [u [args [mdecl [idecl [pty [indctx [pctx [ps [btys [? [? [? [? [? [? [? [? ?]]]]]]]]]]]]]]]]].
@@ -2101,10 +2104,11 @@ Section Conversion.
       }
     }.
   Next Obligation.
-    cbn. destruct h as [[T h]|[[ctx [s [h1 _]]]]]; [|discriminate].
+    destruct hΣ as [wΣ].
+    cbn. destruct h as [[T h] | [[ctx [s [h1 _]]]]]; [| discriminate ].
     apply inversion_Proj in h ; auto.
     destruct h as [uni [mdecl [idecl [pdecl [args' [? [? [? ?]]]]]]]].
-    left; eexists. eassumption.
+    left. eexists. eassumption.
   Qed.
 
   Lemma unfold_one_proj_cored :
@@ -2371,6 +2375,7 @@ Section Conversion.
       eapply decompose_stack_noStackApp. eauto.
   Qed.
   Next Obligation.
+    destruct hΣ as [wΣ].
     destruct b ; auto.
     apply reducible_head_red_zippx in eq1 as r1. destruct r1 as [r1].
     eapply conv_trans' ; try eassumption.
@@ -2396,7 +2401,7 @@ Section Conversion.
     rewrite stack_cat_appstack. rewrite decompose_stack_appstack.
     erewrite decompose_stack_twice ; eauto. simpl.
     rewrite app_nil_r.
-    eapply red_conv_l.
+    eapply red_conv_l ; try assumption.
     eapply red_trans ; try eassumption.
     clear eq3. symmetry in eq2. apply decompose_stack_eq in eq2. subst.
     rewrite stack_context_appstack in r2.
@@ -2493,6 +2498,7 @@ Section Conversion.
       eapply decompose_stack_noStackApp. eauto.
   Qed.
   Next Obligation.
+    destruct hΣ as [wΣ].
     destruct b ; auto.
     apply reducible_head_red_zippx in eq1 as r1. destruct r1 as [r1].
     eapply conv_trans' ; try eassumption.
@@ -2518,7 +2524,7 @@ Section Conversion.
     rewrite stack_cat_appstack. rewrite decompose_stack_appstack.
     erewrite decompose_stack_twice ; eauto. simpl.
     rewrite app_nil_r.
-    eapply red_conv_r.
+    eapply red_conv_r ; try assumption.
     eapply red_trans ; try eassumption.
     clear eq3. symmetry in eq2. apply decompose_stack_eq in eq2. subst.
     rewrite stack_context_appstack in r2.

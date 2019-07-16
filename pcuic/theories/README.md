@@ -29,6 +29,8 @@ In [PCUICNameless](PCUICNameless.v) we define a notion of `nameless` terms
 such names in a term.
 Weakening on environments is done in [PCUICWeakeningEnv](PCUICWeakeningEnv.v).
 The notion of closed terms is defined in [PCUICClosed](PCUICClosed.v).
+In [PCUICSigmaCalculus](PCUICSigmaCalculus.v) we show type
+preservation for σ-calculus instantiation.
 Then [PCUICWeakening](PCUICWeakening.v) contains the weakening lemma.
 Some properties on cumulativity are proven in
 [PCUICCumulativity](PCUICCumulativity.v), it also includes some other

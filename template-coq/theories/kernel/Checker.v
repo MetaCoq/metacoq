@@ -27,9 +27,11 @@ Module RedFlags.
       zeta : bool;
       delta : bool;
       fix_ : bool;
-      cofix_ : bool }.
+      cofix_ : bool;
+      strong: bool;
+    }.
 
-  Definition default := mk true true true true true true.
+  Definition default := mk true true true true true true false.
 End RedFlags.
 
 Section Reduce.
@@ -37,7 +39,13 @@ Section Reduce.
 
   Definition zip (t : term * list term) := mkApps (fst t) (snd t).
 
-  Fixpoint reduce_stack (Γ : context) (n : nat) (t : term) (stack : list term)
+  Definition reduce_aux (reduce_stack : term -> list term -> option (term * list term)) t :=
+    if RedFlags.strong flags then
+      t' <- reduce_stack t [];;
+       ret (zip t')
+    else ret t.
+
+  Fixpoint reduce_stack (Γ : context) (n : nat) (t : term) (stack : list term) {struct n}
     : option (term * list term) :=
   match n with 0 => None | S n =>
   match t with
@@ -66,20 +74,30 @@ Section Reduce.
       end
     else ret (t, stack)
 
-  | tApp f args => reduce_stack Γ n f (args ++ stack)
+  | tApp f args =>
+    args' <- monad_map (fun x => x' <- reduce_aux (reduce_stack Γ n) x;; ret x') args;;
+(*! *)
+    reduce_stack Γ n f (args' ++ stack)
+(*!! Wrong-Beta *)
+(*! reduce_stack Γ n f stack *)
 
   | tLambda na ty b =>
+    let strong stack :=
+      if RedFlags.strong flags then
+        x <- reduce_stack (vass na ty :: Γ) n b [];;
+          let '(b', stack') := x in
+          ret (tLambda na ty (zip (b', stack')), stack)
+      else ret (t, stack)
+    in
     if RedFlags.beta flags then
       match stack with
       | a :: args' =>
         (** CBN reduction: we do not reduce arguments before substitution *)
         (* a' <- reduce_stack Γ n a [] ;; *)
         reduce_stack Γ n (subst10 a b) args'
-      | _ => ret (t, stack)
-               (*  b' <- reduce_stack (Γ ,, vass na ty) n b stack ;; *)
-               (* ret (tLambda na ty (zip b'), stack) *)
+      | _ => strong stack
       end
-    else ret (t, stack)
+    else strong stack
 
   | tFix mfix idx =>
     if RedFlags.fix_ flags then
@@ -96,7 +114,13 @@ Section Reduce.
       end
     else ret (t, stack)
 
-  | tProd _ _ _ => ret (t, stack)
+  | tProd na dom codom =>
+    if RedFlags.strong flags then
+      dom' <- reduce_stack Γ n dom [];;
+      codom' <- reduce_stack (vass na dom :: Γ) n codom [];;
+      ret (tProd na (zip dom') (zip codom'), stack)
+    else
+      ret (t, stack)
 
     (* b' <- reduce_stack Γ n b [] ;; *)
     (* t' <- reduce_stack (Γ ,, vass na (zip b')) n t [] ;; *)
@@ -105,13 +129,16 @@ Section Reduce.
   | tCast c _ _ => reduce_stack Γ n c stack
 
   | tCase (ind, par) p c brs =>
+    brs' <- monad_map (fun '(nargs, br) => br' <- reduce_aux (reduce_stack Γ n) br;; ret (nargs, br')) brs;;
+    p' <- reduce_aux (reduce_stack Γ n) p;;
     if RedFlags.iota flags then
-      c' <- reduce_stack Γ n c [] ;;
+      c' <- reduce_stack Γ n c [];;
       match c' with
-      | (tConstruct ind c _, args) => reduce_stack Γ n (iota_red par c args brs) stack
-      | _ => ret (tCase (ind, par) p (zip c') brs, stack)
+      | (tConstruct ind c _, args) => reduce_stack Γ n (iota_red par c args brs') stack
+      | _ => ret (tCase (ind, par) p' (zip c') brs', stack)
       end
-    else ret (t, stack)
+    else c' <- reduce_aux (reduce_stack Γ n) c;;
+         ret (tCase (ind, par) p' c' brs', stack)
 
   | _ => ret (t, stack)
 
@@ -260,7 +287,7 @@ Section Conversion.
   Context `{checker_flags} (flags : RedFlags.t).
   Context (Σ : global_env) (G : universes_graph).
 
-  Definition nodelta_flags := RedFlags.mk true true true false true true.
+  Definition nodelta_flags : RedFlags.t := RedFlags.mk true true true false true true false.
 
   Definition unfold_one_fix n Γ mfix idx l :=
     unf <- unfold_fix mfix idx ;;
@@ -819,6 +846,7 @@ Section Typecheck2.
       (** TODO check branches *)
       let '(ind', u, args) := indargs in
       if eq_ind ind ind' then
+        (* FIXME for quickchick *)
         ret (tApp p (List.skipn par args ++ [c]))
       else
         let ind1 := tInd ind u in

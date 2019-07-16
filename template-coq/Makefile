@@ -1,4 +1,4 @@
-all: coq plugin
+all: coq # plugin
 
 coq: Makefile.coq
 	$(MAKE) -f Makefile.coq

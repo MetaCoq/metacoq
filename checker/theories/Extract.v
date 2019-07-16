@@ -1,4 +1,5 @@
-From MetaCoq.Template Require Import All Extraction.
+From MetaCoq.Template Require Import All.
+From MetaCoq.Checker Require Import All.
 
 Cd "../src".
 

@@ -1,8 +1,8 @@
 (* Distributed under the terms of the MIT license.   *)
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega Lia.
-From MetaCoq.Template Require Import config utils LibHypsNaming Ast AstUtils Induction utils LiftSubst UnivSubst Typing TypingWf.
-From MetaCoq.Template Require Import WeakeningEnv Closed.
+From MetaCoq Require Import config utils LibHypsNaming Ast AstUtils Induction utils LiftSubst UnivSubst Typing TypingWf.
+From MetaCoq Require Import WeakeningEnv Closed.
 Require Import ssreflect ssrbool.
 
 (** * Weakening lemmas for typing derivations.
@@ -424,7 +424,7 @@ Lemma lift_destArity ctx t n k : Ast.wf t ->
         end.
 Proof.
   intros wf; revert ctx.
-  induction wf in n, k |- * using Template.Induction.term_wf_forall_list_ind; intros ctx; simpl; trivial.
+  induction wf in n, k |- * using term_wf_forall_list_ind; intros ctx; simpl; trivial.
   destruct Nat.leb; reflexivity.
 
   specialize (IHwf0 n k (ctx,, vass n0 t)). rewrite lift_context_snoc in IHwf0.

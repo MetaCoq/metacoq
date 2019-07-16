@@ -1,7 +1,7 @@
 Require Import Peano_dec Nat Bool List Structures.Equalities Lia
         MSets.MSetList MSetFacts MSetProperties.
 (* Require Import ssrbool ssrfun. *)
-From MetaCoq.Template Require Import utils monad_utils.
+From MetaCoq Require Import utils monad_utils.
 
 Notation "p .1" := (fst p)
   (at level 2, left associativity, format "p .1") : pair_scope.

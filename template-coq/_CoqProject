@@ -38,3 +38,4 @@ theories/TemplateMonad/Monad.v
 theories/monad_utils.v
 
 theories/Loader.v
+theories/All.v

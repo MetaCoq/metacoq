@@ -32,7 +32,7 @@ Proof.
     econstructor 2; eauto. }
 Qed.
 
-Lemma eq_term_upto_univ_refl `{cf : checker_flags} Re Rle :
+Lemma eq_term_upto_univ_refl Re Rle :
   CRelationClasses.Reflexive Re ->
   CRelationClasses.Reflexive Rle ->
   forall t, eq_term_upto_univ Re Rle t t.
@@ -117,7 +117,7 @@ Proof.
   induction 1; constructor; auto.
 Qed.
 
-Lemma eq_term_upto_univ_leq `{cf : checker_flags} :
+Lemma eq_term_upto_univ_leq :
   forall (Re Rle : universe -> universe -> Type) u v,
     (forall u u', Re u u' -> Rle u u') ->
     eq_term_upto_univ Re Re u v ->

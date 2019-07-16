@@ -1548,9 +1548,9 @@ Proof.
     + cbn. f_equal.
 Qed.
 
-Lemma subst_eq_term_upto_univ `{checker_flags} n k T U Re Rle :
-  RelationClasses.Reflexive Re ->
-  RelationClasses.Reflexive Rle ->
+Lemma subst_eq_term_upto_univ n k T U Re Rle :
+  CRelationClasses.Reflexive Re ->
+  CRelationClasses.Reflexive Rle ->
   eq_term_upto_univ Re Rle T U ->
   eq_term_upto_univ Re Rle (subst n k T) (subst n k U).
 Proof.
@@ -1561,10 +1561,10 @@ Proof.
   (* all: try (eapply leq_term_upto_univ_refl ; easy). *)
   all: try (constructor ; easy).
   all: try solve [constructor; solve_all].
-  + pose proof (All2_length _ _ H3); subst; solve_all.
-    rewrite H0. constructor. solve_all.
-  + pose proof (All2_length _ _ H3); subst; solve_all.
-    rewrite H0. constructor. solve_all.
+  + pose proof (All2_length _ _ X0); subst; solve_all.
+    rewrite H. constructor. solve_all.
+  + pose proof (All2_length _ _ X0); subst; solve_all.
+    rewrite H. constructor. solve_all.
 Qed.
 
 Lemma subst_eq_term `{checker_flags} ϕ n k T U :

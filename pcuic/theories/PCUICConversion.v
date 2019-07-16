@@ -873,7 +873,7 @@ Qed.
 (*   eapply commutes_leqterm_red1. *)
 (* Qed. *)
 
-Lemma cumul_trans_red_leq `{cf : checker_flags} {Σ : global_env_ext} {Γ t u v} : wf Σ ->
+Lemma cumul_trans_red_leqterm `{cf : checker_flags} {Σ : global_env_ext} {Γ t u v} : wf Σ ->
   Σ ;;; Γ |- t <= u -> Σ ;;; Γ |- u <= v ->
   ∑ o mid o', red Σ Γ t o *
        leq_term Σ o mid *
@@ -897,20 +897,458 @@ Proof.
   now transitivity v'.
 Qed.
 
-Lemma cumul_trans_red_conv `{cf : checker_flags} {Σ : global_env_ext} {Γ t u} : wf Σ ->
+(* Lemma cumul_trans_red_leq `{cf : checker_flags} {Σ : global_env_ext} {Γ t u v} : wf Σ -> *)
+(*   Σ ;;; Γ |- t <= u -> Σ ;;; Γ |- u <= v -> *)
+(*   ∑ mid, red_leq Σ Γ t mid * *)
+(*          red Σ Γ u mid * *)
+(*          red_geq Σ Γ v mid. *)
+(*          red_leq Σ Γ u o' * *)
+(*        red Σ Γ u mid * *)
+(*        leq_term Σ mid o' * *)
+(*        red Σ Γ v o'. *)
+(* Proof. *)
+(*   intros wfΣ X X0. *)
+(*   intros. *)
+(*   eapply cumul_alt in X as [t' [u' [[ol or] leq]]] => //. *)
+(*   eapply cumul_alt in X0 as [u'' [v' [[o'l o'r] leq']]] => //. *)
+(*   destruct (red_confluence wfΣ or o'l) as [unf [tl rr]]. *)
+(*   assert (∑ tnf, red Σ Γ t' tnf * leq_term Σ tnf unf). *)
+(*   apply commutes_horizontal_red_leq. exists u'; auto. *)
+(*   destruct X as [tnf [ttnf tnfunf]]. *)
+(*   destruct (commutes_leqterm_red leq' (equiv _ _ (red_alt Σ _ _ _) rr)) as [v'nf [? ?]]. *)
+(*   eapply red_alt in c. *)
+(*   exists tnf, unf, v'nf. *)
+(*   intuition auto. now transitivity t'. *)
+(*   now transitivity u''. *)
+(*   now transitivity v'. *)
+(* Qed. *)
+
+Lemma red_red_leq `{cf : checker_flags} {Σ : global_env_ext} {Γ} t u :
+  wf Σ ->
+  red Σ Γ t u -> red_leq Σ Γ t u.
+Proof.
+  intros wfΣ tu. eapply red_alt in tu.
+  red. induction tu; try solve [econstructor; eauto].
+  constructor. red. left. left. auto.
+Qed.
+
+Lemma leq_red_leq `{cf : checker_flags} {Σ : global_env_ext} {Γ} t u :
+  wf Σ ->
+  leq_term Σ t u -> red_leq Σ Γ t u.
+Proof.
+  intros wfΣ tu.
+  red.
+  constructor. red. right. red; auto.
+Qed.
+
+Lemma cumul_trans_red_conv_aux `{cf : checker_flags} {Σ : global_env_ext} {Γ t u} : wf Σ ->
   Σ ;;; Γ |- t <= u -> Σ ;;; Γ |- u <= t ->
- Σ ;;; Γ |- t == u.
+  (∃ v : term, red_leq Σ Γ t v × red Σ Γ u v).
 Proof.
   intros wfΣ X X0.
-  destruct (cumul_trans_red_leq wfΣ X X0) as [tnf [mid [unf ?]]].
+  eapply cumul_alt in X as [v [v' [[tv uv'] leq]]].
+  eapply cumul_alt in X0 as [w [w' [[tw uw'] leq']]].
+  destruct (red_confluence wfΣ uv' tw) as [tj [? ?]].
+  exists tj. intuition auto.
+  - transitivity v; auto. now apply red_red_leq.
+    transitivity v'. now eapply leq_red_leq.
+    now eapply red_red_leq.
+  - transitivity v'; auto.
+Qed.
+
+
+(*
+   t0  <=  u0
+   |       |
+   |       |
+   v       v
+   t'      u
+   |       |
+   |       |
+   t'' <= u''
+*)
+
+Lemma fill_le `{cf : checker_flags} {Σ : global_env_ext} {Γ t t' u u'} :
+  wf Σ ->
+  leq_term Σ t u -> red Σ Γ t t' -> red Σ Γ u u' ->
+  ∑ t'' u'', red Σ Γ t' t'' * red Σ Γ u' u'' * leq_term Σ t'' u''.
+Proof.
+  intros wfΣ tu tt' uu'.
+  pose proof tu as tu2.
+  eapply red_eq_term_upto_univ_l in tu. 9:eapply tt'. all:tc. 2:eapply eq_universe_leq_universe.
+  destruct tu as [u'' [uu'' t'u'']].
+  destruct (red_confluence wfΣ uu' uu'') as [unf [ul ur]].
+  eapply red_eq_term_upto_univ_r in t'u''. 9:eapply ur. all:tc. 2:eapply eq_universe_leq_universe.
+  destruct t'u'' as [t'' [t't'' t''unf]].
+  exists t'', unf. intuition auto.
+Qed.
+
+Instance eq_term_sym@{i j} {cf : checker_flags} φ :
+  Symmetric@{i j} (eq_term_upto_univ (eq_universe φ) (eq_universe φ)) | (Symmetric (eq_term_upto_univ _ _)).
+Proof.
+  apply eq_term_upto_univ_sym.
+  intros x y; eapply eq_universe_sym.
+Qed.
+
+Hint Unfold eq_term : typeclass_instances.
+
+Instance leq_refl@{i j} (Re Rle : crelation@{i j} _) :
+  Reflexive Re -> Reflexive Rle -> Reflexive@{i j} (eq_term_upto_univ Re Rle).
+Proof. intros ** x. now apply eq_term_upto_univ_refl. Qed.
+
+Instance leq_trans@{i j} (Re Rle : crelation@{i j} _) :
+  Transitive Re -> Transitive Rle -> Transitive@{i j} (eq_term_upto_univ Re Rle).
+Proof. intros ** x. now apply eq_term_upto_univ_trans. Qed.
+
+Instance incl Re Rle :
+  inclusion Re Rle -> inclusion (eq_term_upto_univ Re Re) (eq_term_upto_univ Re Rle).
+Proof. intros H x y. eapply eq_term_upto_univ_leq. auto. Qed.
+
+Lemma eq_context_upto_nth_error Re Γ Γ' n :
+  Reflexive Re ->
+  eq_context_upto Re Γ Γ' ->
+  match nth_error Γ n with
+  | Some d => ∑ d', (nth_error Γ' n = Some d') * eq_decl_upto Re d d'
+  | None => nth_error Γ' n = None
+  end.
+Proof.
+  intros Rerefl.
+  induction Γ in Γ', n |- *.
+  - move=> H. depelim H =>//. now rewrite nth_error_nil.
+  - case: n => //=.
+    * move=> H. depelim H.
+      eexists; intuition eauto. constructor; simpl; auto. constructor.
+      eexists; intuition eauto. constructor; simpl; auto.
+      constructor; simpl; auto.
+    * move=> n eqc. depelim eqc.
+      eapply IHΓ; eauto.
+      eapply IHΓ; eauto.
+Qed.
+
+Section RhoLeqTerm.
+  Lemma rho_leq_term {Σ : global_env_ext}
+        {Re Rle} {refl : Reflexive Re} {refl' :Reflexive Rle}
+        {trre : Transitive Re} {trle : Transitive Rle} `{SubstUnivPreserving Re} `{SubstUnivPreserving Rle}
+        {inclre : inclusion Re Rle} Γ Γ' t u :
+    eq_term_upto_univ Re Rle t u ->
+    eq_context_upto Re (rho_ctx Σ Γ) (rho_ctx Σ Γ') ->
+    eq_term_upto_univ Re Rle (rho Σ (rho_ctx Σ Γ) t) (rho Σ (rho_ctx Σ Γ') u).
+  Proof.
+    intros eqt eqctx.
+    move t before Σ. move Γ before t. move Γ' before Γ. move eqctx before Γ'. move u before t.
+    move eqt before u.
+    induction t using term_forall_list_ind in u, Re, Rle, eqt, Γ, Γ', eqctx,
+                                              refl, refl', trre, trle, inclre |- *; depelim eqt.
+    all:cbn;try (constructor; auto).
+    all:solve_all.
+    - generalize (eq_context_upto_nth_error n _ eqctx).
+      case: (nth_error (rho_ctx Σ Γ) n) => //=.
+      move => [na [b|] ty] /= [d' [-> eqd]]; depelim eqd; simpl in *.
+      depelim r. rewrite H. apply lift_eq_term_upto_univ. eapply incl; auto.
+      depelim r. rewrite H. reflexivity.
+      move=> -> /=. reflexivity.
+
+    - specialize (IHt2 _ Re Rle eqt2 (Γ ,, vass n t1) (Γ' ,, vass na' a')).
+      simpl in IHt2. rewrite !app_context_nil_l in IHt2.
+      eapply IHt2; auto. constructor. eapply IHt1; auto.
+      auto.
+
+    - specialize (IHt2 _ Re Rle eqt2 (Γ ,, vass n t1) (Γ' ,, vass na' ty')).
+      simpl in IHt2. rewrite !app_context_nil_l in IHt2.
+      eapply IHt2; auto. constructor. eapply IHt1; auto.
+      auto.
+
+    - specialize (IHt3 _ Re Rle eqt3 (Γ ,, vdef n t1 t2) (Γ' ,, vdef na' t' ty')).
+      simpl in IHt3. rewrite !app_context_nil_l in IHt3.
+      transitivity (((rho Σ (vdef na' (rho Σ (rho_ctx Σ Γ') t') (rho Σ (rho_ctx Σ Γ') ty') :: rho_ctx Σ Γ') u') {0
+     := rho Σ (rho_ctx Σ Γ) t1})). eapply PCUICSubstitution.subst_eq_term_upto_univ.
+      eapply IHt3; auto. constructor. eapply IHt1; auto.
+      auto.
+  Admitted.
+
+  Lemma red_confluence_upto {Γ t t' u v} :
+    leq_term Σ t t' ->
+    red Σ Γ t u -> red Σ Γ t' v ->
+    ∑ v' v'', red Σ Γ u v' * red Σ Γ v v'' * leq_term Σ v' v''.
+  Proof.
+    move=> H H'. apply red_alt in H. apply red_alt in H'.
+    destruct (red1_confluent wfΣ _ _ _ _ H H') as [nf [redl redr]].
+    apply red_alt in redl; apply red_alt in redr.
+    exists nf; intuition auto.
+  Qed.
+
+
+
+(* Lemma red_leq_same `{cf : checker_flags} {Σ : global_env_ext} {Γ x y} : *)
+(*   wf Σ -> *)
+(*   red1 Σ Γ x y -> leq_term Σ y x -> False. *)
+(* Proof. *)
+(*   intros wfΣ xy yx. *)
+(*   induction y in Γ, x, xy, yx |- * using term_forall_list_ind. *)
+(*   all: depelim yx; try solve [depelim xy; solve_discr]. *)
+(*   Ltac t' := firstorder eauto using eq_term_leq_term. *)
+(*   - depelim xy. admit. *)
+(*     solve_discr. *)
+(*   - depelim xy; solve_discr. *)
+(*     admit. *)
+(*   - depelim xy; solve_discr; t'. *)
+(*   - depelim xy; solve_discr; t'. *)
+(*   - depelim xy; solve_discr. t'. *)
+
+(* eapply eq_universe_refl. *)
+(*   Set Typeclasses Debug Verbosity 2. *)
+(*   Fail typeclasses eauto. *)
+
+
+
+(* (*   induction xy; intros; auto. *) *)
+
+
+(* (*   eapply red_alt in *) *)
+(* (* xy. *) *)
+(* (*   eapply clos_rt_rt1n_iff in xy. *) *)
+(* (*   induction xy. intros. reflexivity. *) *)
+(* (*   intros zx. *) *)
+
+(* Lemma confluence_upto_leq `{cf : checker_flags} {Σ : global_env_ext} {Γ x y z} : *)
+(*   wf Σ -> *)
+(*   red Σ Γ x z -> red Σ Γ y z -> leq_term Σ x y -> eq_term Σ x y. *)
+(* Proof. *)
+(*   intros wfΣ xz. *)
+(*   eapply red_alt in xz. *)
+(*   eapply clos_rt_rt1n_iff in xz. *)
+(*   induction xz in y |- *. *)
+(*   intros yx xy. *)
+(*   eapply leq_term_antisym. auto. *)
+(*   induction xy; constructor; auto. eapply All2_sym; eauto. tc. *)
+(*   Set Typeclasses Debug Verbosity 2. *)
+(*   Fail typeclasses eauto. *)
+
+(*
+
+   t   <=   u    <=   t           t0 <= t1 /\ t0 -> t' /\ t1 -> t' -> t0 = t1
+   |        |         |
+   |        |         |
+   v        v         v
+   t0  <=   u'  <=   t1
+    \               /
+     \            /
+      \          /
+       \        /
+        v      v
+           t'
+
+
+   t   <=   u    <=   t
+   |        |         |
+   |        |         |
+   v        v         v
+   t0  <=   u0  <=   t1
+    \      |         /
+     \     |       /
+      \  <=U->    /
+       \   |    /
+        v  v   v
+           t'
+
+
+*)
+
+Lemma cumul_trans_red_conv `{cf : checker_flags} {Σ : global_env_ext} {Γ t u} : wf Σ ->
+  Σ ;;; Γ |- t <= u -> Σ ;;; Γ |- u <= t -> Σ ;;; Γ |- t == u.
+Proof.
+  move=> wfΣ tu ut.
+  eapply cumul_trans_red_leqterm in ut; eauto. clear tu.
+  destruct ut as [t0 [u0 [t1 [[[[tt0 t0u0] uu0] u0t1] tt1]]]].
+  destruct (red_confluence wfΣ tt0 tt1) as [t' [t0t' t1t']].
+
+  eapply red_alt in t0t'.
+  destruct (commutes_leqterm_red t0u0 t0t') as [u0' [? ?]].
+  eapply red_alt in c.
+  eapply red_alt in t0t'.
+
+(*
+
+   t  <=  u
+   |      |
+   |      |
+   v      v
+   t' =>  u'
+
+*)
+
+
+
+Corollary confluence {cf : checker_flags} {Σ : global_env_ext} Γ Δ Δ' t u t' u' :
+  wf Σ ->
+  leq_term Σ t t' ->
+  pred1 Σ Γ Δ t t' ->
+  pred1 Σ Γ Δ' u u' ->
+  pred1 Σ Δ (rho_ctx Σ Γ) t' (rho Σ (rho_ctx Σ Γ) t) *
+  pred1 Σ Δ' (rho_ctx Σ Γ) u' (rho Σ (rho_ctx Σ Γ) u) *
+  leq_term Σ (rho Σ (rho_ctx Σ Γ) t) (rho Σ (rho_ctx Σ Γ) u).
+Proof.
+  intros wfΣ **.
+  split. eapply triangle in X0. eapply triangle in X. all:eauto.
+  induction H.
+
+Qed.
+
+Lemma fill_le' `{cf : checker_flags} {Σ : global_env_ext} {Γ t t' u u'} :
+  wf Σ ->
+  leq_term Σ t u -> red Σ Γ t t' -> red Σ Γ u u' -> (leq_term Σ t' u' + (leq_term Σ u' t' -> False)).
+Proof.
+  intros wfΣ tu tt' uu'.
+
+
+  pose proof tu as tu2.
+  eapply red_eq_term_upto_univ_r in uu'. 9:eapply tu2. all:tc. 2:eapply eq_universe_leq_universe.
+  destruct uu' as [t'' [t't'' t''unf]].
+  assert (leq_term
+  intros.
+
+  exists t'', unf. intuition auto.
+Qed.
+
+
+  destruct (fill_le wfΣ u0t1 c t1t') as [u0'' [t'' [[u0'u0'' t't''] lequ0t'']]].
+
+
+  destruct (commutes_horizontal_red_leq (Σ:=Σ) (Γ := Γ) (x:=u0) (y:=t')) as [u0'' [? ?]].
+  exists t1. auto.
+
+  Lemma leq_term_gen_antisym {cf : checker_flags} φ x y y' :
+    leq_term φ x y -> leq_term φ y' x -> (eq_term φ x y * eq_term φ y' x).
+  Proof.
+  Admitted.
+
+  assert(red_leq Σ Γ u0 t').
+  { transitivity t0. eapply leq_red_leq.
+
+
+
+  destruct (red_confluence wfΣ uu0 uu1) as [u' [? ?]].
+  destruct (fill_le wfΣ leqt0u0 r r1) as [t'' [u0'' [[? ?] leqt''u0'']]].
+  destruct (fill_le wfΣ lequ1t1 r2 r0) as [u1' [t1'' [[? ?] lequ1't1'']]].
+
+(*
+
+   t   <=   u    <=   t
+   |        |         |
+   |        |         |
+   v        v         v
+   t0  <= u0 u1 <=   t1
+    \ \   \ /       /
+     \ \   u       /
+      \ v         /
+       \ x       /
+        v Λ     v
+            t'
+*)
+
+Lemma cumul_trans_red_conv `{cf : checker_flags} {Σ : global_env_ext} {Γ t u} : wf Σ ->
+  Σ ;;; Γ |- t <= u -> Σ ;;; Γ |- u <= t -> Σ ;;; Γ |- t == u.
+Proof.
+  move=> wfΣ tu ut.
+  eapply cumul_alt in tu.
+  eapply cumul_alt in ut.
+  destruct tu as [t0 [u0 [[tt0 uu0] leqt0u0]]].
+  destruct ut as [u1 [t1 [[uu1 tt1] lequ1t1]]].
+  destruct (red_confluence wfΣ tt0 tt1) as [t' [? ?]].
+  destruct (red_confluence wfΣ uu0 uu1) as [u' [? ?]].
+  destruct (fill_le wfΣ leqt0u0 r r1) as [t'' [u0'' [[? ?] leqt''u0'']]].
+  destruct (fill_le wfΣ lequ1t1 r2 r0) as [u1' [t1'' [[? ?] lequ1't1'']]].
+
+(*
+   t'      u'     if red_leq t' u0'' /\ red u' u0'' /\ red t' t'1 /\ red_leq u' t'1 ->
+   | \     |
+   |  \    |      red_leq x y /\ red z y -> red x x' /\ leq x' y /\ red x 
+   v    \  v
+   t'' <=  u0''
+
+   and
+
+   t'      u'
+   |     / |
+   |   /   |
+   v /     v
+   t'1 >= u1'
+
+*)
+
+
+  eapply red_eq_term_upto_univ_l in r. 9:eapply leqt0u0. all:tc. 2:eapply eq_universe_leq_universe.
+  destruct r. intuition.
+  eapply red_eq_term_upto_univ_l in leqtt1. all:tc. 3:eapply r0. 2:eapply eq_universe_leq_universe.
+  destruct leqtt1. intuition.
+
+  destruct (red_confluence wfΣ tt0 tu1) as [unf' [? ?]].
+
+
+
+
+  eapply red_eq_term_upto_univ_r in leqt0u0. all:tc. 3:eapply r. 2:eapply eq_universe_leq_universe.
+
+
+
+  destruct (cumul_trans_red_conv_aux wfΣ tu ut) as [nf0 [lnf0 rnf0]].
+  destruct (cumul_trans_red_conv_aux wfΣ ut tu) as [nf1 [lnf1 rnf1]].
+  eapply red_leq_spec in lnf0. red in lnf0.
+
+
+  destruct (confluence_clos_rt_red1_leq wfΣ rnf0 lnf1) as [tnf' [tl rr]].
+  destruct (confluence_clos_rt_red1_leq wfΣ lnf0 rnf1) as [tnf'' [tl' rr']].
+  eapply conv_alt_red.
+  assert(red_leq Σ Γ t tnf').
+  transitivity nf0; auto.
+  assert(red_leq Σ Γ u tnf').
+  transitivity nf1; auto.
+  assert(red_leq Σ Γ t tnf'').
+  transitivity nf0; auto.
+  assert(red_leq Σ Γ u tnf'').
+  transitivity nf1; auto.
+  eapply red_leq_spec in X => //.
+  destruct X as [tred [redtnf leqtnf]].
+  eapply red_leq_spec in X0 => //.
+  destruct X0 as [tred' [redtnf' leqtnf']].
+  eapply red_leq_spec in X1 => //.
+  destruct X1 as [tred2 [redtnf2 leqtnf2]].
+  eapply red_leq_spec in X2 => //.
+  destruct X2 as [tred3 [redtnf3 leqtnf3]].
+  destruct (red_confluence wfΣ redtnf redtnf2).
+  destruct (red_confluence wfΣ redtnf' redtnf3).
+  destruct p, p0.
+  exists x, x0.
+  split; auto.
+  split. now transitivity tred. now transitivity tred'.
+  apply leq_term_antisym.
+
+
+
+  
+
+
+
+
+
+
+  exists tnf', tnf'; intuition auto.
+  trq
+
+
+
+  destruct (cumul_trans_red_leqterm wfΣ X X0) as [tnf [mid [unf ?]]].
   intuition auto.
-  destruct (cumul_trans_red_leq wfΣ X0 X) as [tnf' [mid' [unf' ?]]].
-  intuition auto.
+  eapply cumul_alt in X as [v [v' [[tv uv'] leq]]].
+  pose proof (commutes_leqterm_red
+
+  destruct (red_confluence wfΣ b b5) as [tj [? ?]].
+  destruct (red_confluence wfΣ b1 a1) as [uj [? ?]].
+  destruct (red_confluence wfΣ a0 b5) as [t'j [? ?]].
+
+
+
   clear r1.
-  eapply red_leq_spec in r => //.
-  destruct r as [tred [redtnf leqtnf]].
-  eapply red_leq_spec in r0 => //.
-  destruct r0 as [tred' [redtnf' leqtnf']].
 
 
   destruct (confluence_clos_rt_red1_leq wfΣ r r3) as [tnf' [tl rr]].

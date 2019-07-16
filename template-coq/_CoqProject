@@ -22,19 +22,12 @@ src/run_template_monad.ml
 src/plugin_core.mli
 src/plugin_core.ml
 
-theories/LibHypsNaming.v
-theories/utils.v theories/config.v
+theories/utils.v
+theories/config.v
 theories/Universes.v
-theories/uGraph.v
-theories/wGraph.v
-theories/BasicAst.v theories/Ast.v
-theories/WfInv.v
-theories/AstUtils.v theories/Loader.v theories/Induction.v
-theories/LiftSubst.v theories/UnivSubst.v theories/Typing.v
-theories/TypingWf.v theories/Generation.v theories/WeakeningEnv.v
-theories/Closed.v theories/Weakening.v theories/Substitution.v
-theories/MetaTheory.v theories/kernel/Checker.v theories/WcbvEval.v
-theories/Retyping.v theories/Normal.v theories/All.v
+theories/BasicAst.v
+theories/Ast.v
+theories/AstUtils.v
 
 # the Template monad
 theories/TemplateMonad.v
@@ -44,5 +37,4 @@ theories/TemplateMonad/Extractable.v
 theories/TemplateMonad/Monad.v
 theories/monad_utils.v
 
-# Extraction
-theories/Extraction.v
+theories/Loader.v

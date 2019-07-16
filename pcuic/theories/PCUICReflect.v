@@ -370,3 +370,20 @@ Defined.
 
 Derive NoConfusion NoConfusionHom for sig.
 Derive NoConfusion NoConfusionHom for prod.
+
+Definition eqb_context_decl (x y : context_decl) :=
+  let (na, b, ty) := x in
+  let (na', b', ty') := y in
+  eqb na na' && eqb b b' && eqb ty ty'.
+
+Instance eq_ctx : ReflectEq context_decl.
+Proof.
+  refine {| eqb := eqb_context_decl |}.
+  intros.
+  destruct x as [na b ty], y as [na' b' ty']. cbn -[eqb].
+  destruct (eqb_spec na na'); subst;
+    destruct (eqb_spec b b'); subst;
+      destruct (eqb_spec ty ty'); subst; constructor; congruence.
+Qed.
+
+Instance eqb_ctx : ReflectEq context := _.

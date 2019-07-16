@@ -1387,15 +1387,17 @@ Proof.
     destruct o0 as [onI onP onNP].
     constructor; auto.
     -- eapply Alli_impl. exact onI. eauto. intros.
-       destruct x; simpl in *.
        unshelve econstructor. shelve. shelve.
-       --- apply onConstructors in X1. red in X1. unfold on_constructor, on_type in *. eapply Alli_impl_trans; eauto.
-           simpl. intros. split. now eapply X. destruct X2 as (? & ? & ?).
-           exists x0.
-           induction (cshape_args x0); simpl; auto.
-           destruct a as [na [b|] ty]; simpl in *; auto.
-           split; eauto. apply IHc. apply t.
-           apply X. simpl; auto. apply t.
+       --- apply onConstructors in X1. red in X1.
+           unfold on_constructor, on_type in *. eapply Alli_impl_trans; eauto.
+           simpl. intros. destruct X2 as (? & ? & ?).
+           split. now eapply X.
+           exists x1.
+           clear -t X X0.
+           revert t. generalize (cshape_args x1).
+           abstract (induction c; simpl; auto;
+           destruct a as [na [b|] ty]; simpl in *; auto;
+           split; eauto; [apply IHc;apply t|apply X;simpl; auto;apply t]).
        --- apply (ind_arity_eq X1).
        --- apply onArity in X1. unfold on_type in *; simpl in *.
            now eapply X.
@@ -1404,18 +1406,26 @@ Proof.
            unfold on_projection in *; simpl in *.
            now apply X.
        --- generalize (ind_sorts X1).
-           all:todo "simplify constructor shapes".
-           (* clear -X. *)
-           (* destruct (onConstructors X1); auto. *)
-           (* unfold check_ind_sorts. *)
-           (* destruct universe_family eqn:Heq; simpl; auto. *)
-           (* destruct tl; simpl. intros. *)
-           (* specialize (H0 _ H1). destruct o1; simpl in *. *)
-           (* destruct o0; simpl in *. destruct s; simpl in *; auto. *)
-           (* auto. auto. *)
-           (* destruct o0; simpl in *. destruct s; simpl in *. *)
-           (* unfold Alli_impl_trans, Alli_rect. simpl. *)
-           (* simpl. *)
+           (* all:todo "simplify constructor shapes"%string. *)
+           clear -X.
+           destruct (onConstructors X1); auto.
+           unfold check_ind_sorts.
+           destruct universe_family eqn:Heq; simpl; auto.
+           destruct tl; simpl. intros.
+           specialize (H0 _ H1). destruct o0; simpl in *; intuition auto.
+           destruct o as [? [? ?]]; simpl in *; intuition auto.
+           auto. intuition auto.
+           destruct o as [? [? ?]]. simpl in *. intuition auto.
+           clear -o0 H2.
+           induction o0; simpl; intuition auto.
+           destruct p as [? [? ?]]; simpl in *; intuition auto.
+           eapply IHo0; auto. red in H2. red. intuition auto.
+           intuition auto.
+           destruct o as [? [? ?]]; simpl in *; intuition auto.
+           clear -o0 H2.
+           induction o0; simpl; intuition auto.
+           destruct p as [? [? ?]]; simpl in *; intuition auto.
+           eapply IHo0; auto. red in H2. red. intuition auto.
     -- red in onP. red.
        eapply All_local_env_impl. eauto.
        intros. now apply X.

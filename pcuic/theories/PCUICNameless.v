@@ -5,7 +5,7 @@ From Coq Require Import Bool String List Program BinPos Compare_dec Arith Lia
 From MetaCoq.Template
 Require Import config monad_utils utils AstUtils UnivSubst.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
-     PCUICLiftSubst PCUICTyping PCUICCumulativity PCUICPosition PCUICUnivSubst.
+     PCUICLiftSubst PCUICTyping PCUICPosition PCUICUnivSubst PCUICCumulativity.
 From Equations Require Import Equations.
 Require Import Equations.Prop.DepElim.
 
@@ -233,7 +233,7 @@ Lemma eq_term_upto_univ_nl :
 Proof.
   intros flags Re Rle u v hRe hRle h.
   induction u in v, h, Rle, hRle |- * using term_forall_list_ind.
-  all: dependent destruction h.
+   all: dependent destruction h.
   all: try (simpl ; constructor ; try ih2 ; assumption).
   + cbn. constructor.
     eapply All2_map. solve_all.

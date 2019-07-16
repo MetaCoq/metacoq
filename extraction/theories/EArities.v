@@ -72,12 +72,12 @@ Proof.
   depind X1.
   - destruct H as (? & ? & ?). sq.
     eapply PCUICCumulativity.red_cumul_inv in X1.
-    eapply cumul_trans in c.  2:eassumption.
+    eapply PCUICConversion.cumul_trans in c. 2:assumption.  2:eassumption.
     eapply invert_cumul_arity_l in c; eauto.
   - eapply IHX1.
     destruct H as (? & ? & ?). sq.
     eapply PCUICCumulativity.red_cumul_inv in X2.
-    eapply cumul_trans in c.  2:eassumption.
+    eapply PCUICConversion.cumul_trans in c. 2: assumption.  2:eassumption.
     eapply invert_cumul_arity_l in c; eauto.
     destruct c as (? & ? & ?). sq.
     eapply invert_red_prod in X3 as (? & ? & [] & ?); eauto; subst.
@@ -120,10 +120,11 @@ Lemma typing_spine_red :
 Proof.
   intros Σ Γ args args' X wf T x x0 t0 c x1 c0 ?. revert args' X.
   dependent induction t0; intros.
-  - inv X. econstructor. eauto. eapply cumul_trans. eauto. eapply cumul_trans. eauto. eauto.
+  - inv X. econstructor. eauto. eapply PCUICConversion.cumul_trans. assumption.
+    eauto. eapply PCUICConversion.cumul_trans. assumption. eauto. eauto.
   - inv X. econstructor.
     + eauto.
-    + eapply cumul_trans; eauto.
+    + eapply PCUICConversion.cumul_trans ; eauto.
     + eapply subject_reduction; eauto.
     + eapply IHt0; eauto.
       eapply PCUICCumulativity.red_cumul_inv.
@@ -213,7 +214,7 @@ Proof.
   - exfalso. eapply type_mkApps_inv in t as (? & ? & [] & ?); eauto.
     assert (HWF : isWfArity_or_Type Σ [] x2). eapply PCUICValidity.validity. eauto. econstructor.
     eapply type_mkApps. 2:eauto. eauto.
-    eapply inversion_Construct in t as (? & ? & ? & ? & ? & ? & ?). (* destruct x5. destruct p. cbn in *. *)
+    eapply inversion_Construct in t as (? & ? & ? & ? & ? & ? & ?) ; auto. (* destruct x5. destruct p. cbn in *. *)
     assert (HL : #|ind_bodies x3| > 0). destruct d. destruct H. destruct (ind_bodies x3); cbn; try omega. rewrite nth_error_nil in H1. inv H1.
     eapply invert_cumul_arity_r in c0; eauto.
     (* eapply isArity_typing_spine_inv in t0; eauto. *)
@@ -256,8 +257,8 @@ Proof.
     generalize ({| inductive_mind := inductive_mind ind; inductive_ind := x5 |}).
     clear - wfΣ HWF t0 c0. intros.
     destruct c0 as (? & [] & ?).
-    eapply typing_spine_red in t0. 2:{ eapply PCUICCumulativity.All_All2_refl. clear. induction x1; eauto. }
-    2:eauto. 2: eapply PCUICCumulativity.red_cumul. 2:eassumption. 2:eapply cumul_refl'. 2:eauto.
+    eapply typing_spine_red in t0. 3:auto. 2:{ eapply PCUICCumulativity.All_All2_refl. clear. induction x1; eauto. }
+    2: eapply PCUICCumulativity.red_cumul. 2: eassumption. 2:eapply PCUICCumulativity.cumul_refl'.
     clear - wfΣ t0 H c2.
     2:{ eapply isWfArity_or_Type_cumul. eapply PCUICCumulativity.red_cumul. eassumption. eauto. }
 
@@ -265,10 +266,10 @@ Proof.
     rename c2 into X.
     revert c l X.
     depind t0; intros; subst.
-    + eapply cumul_trans in c; eauto.
+    + eapply PCUICConversion.cumul_trans in c; eauto.
       eapply invert_cumul_arity_r in c; eauto.
       eapply it_mkProd_red_Arity; eauto.
-    + eapply cumul_trans in c; eauto.
+    + eapply PCUICConversion.cumul_trans in c; eauto.
       eapply invert_cumul_prod_r in c as (? & ? & ? & [] & ?); eauto.
 
       eapply invert_it_Ind_red in r as (? & ? & ?); eauto.
@@ -296,7 +297,7 @@ Proof.
   induction Γ; try econstructor.
   intros wfΣ wfΓ; depelim wfΓ; econstructor; eauto;
   constructor; auto.
-  - apply conv_refl.
+  - apply PCUICCumulativity.conv_refl'.
 Qed.
 
 Lemma context_conversion_red1 (Σ : global_env_ext) Γ Γ' s t : wf Σ -> (* Σ ;;; Γ' |- t : T -> *)
@@ -313,7 +314,8 @@ Proof.
     eapply PCUICReduction.red_abs. eapply IHX0; eauto.  eauto.
   -
     eapply PCUICReduction.red_abs. eauto. eapply IHX0. eauto.
-    eauto. econstructor. eauto. econstructor. eapply conv_refl.
+    eauto. econstructor. eauto. econstructor.
+    eapply PCUICCumulativity.conv_refl'.
   -
     eapply PCUICReduction.red_letin. eapply IHX0; eauto.
     all:eauto.
@@ -346,7 +348,7 @@ Proof.
   -
     eapply PCUICReduction.red_prod; eauto. eapply IHX0. eauto. eauto.
     econstructor.
-    eauto. econstructor. eapply conv_refl.
+    eauto. econstructor. eapply PCUICCumulativity.conv_refl'.
   - eapply PCUICReduction.red_evar; eauto.
     induction X; eauto. econstructor. eapply p; eauto.
     induction tl; eauto.
@@ -367,7 +369,7 @@ Proof.
     + simpl. constructor ; eauto.
       constructor.
     + simpl. constructor ; eauto.
-      constructor. apply conv_refl.
+      constructor. apply PCUICCumulativity.conv_refl'.
   - eapply PCUICReduction.red_cofix_one_ty.
     eapply OnOne2_impl ; eauto.
     intros [? ? ? ?] [? ? ? ?] [[r ih] e]. simpl in *.
@@ -385,7 +387,7 @@ Proof.
     + simpl. constructor ; eauto.
       constructor.
     + simpl. constructor ; eauto.
-      constructor. apply conv_refl.
+      constructor. apply PCUICCumulativity.conv_refl'.
 Qed.
 
 Lemma context_conversion_red (Σ : global_env_ext) Γ Γ' s t : wf Σ ->
@@ -430,10 +432,10 @@ Proof.
   revert u H c0.
   depind t1; intros.
   - eapply cumul_prop2 in c0; eauto.
-  - eapply cumul_prop2 in c0. 2:eauto. 2:eauto. 2:eauto. 2:eauto.
+  - eapply cumul_prop2 in c0. 2:eauto. 2:auto. 2:eauto. 2:eauto.
     eapply invert_cumul_prod_r in c as (? & ? & ? & [] & ?); eauto.
     eapply subject_reduction in c0. 3:eauto. 2:eauto.
-    eapply inversion_Prod in c0 as (? & ? & ? & ? & ?).
+    eapply inversion_Prod in c0 as (? & ? & ? & ? & ?) ; auto.
     eapply cumul_Sort_inv in c0.
     eapply leq_universe_prop in c0 as []; cbn; eauto.
 
@@ -450,7 +452,7 @@ Proof.
 
   eapply invert_cumul_arity_r in c0 as (? & ? & ?); eauto. sq.
   eapply PCUICCumulativity.red_cumul_inv in X.
-  eapply cumul_trans in c; eauto.
+  eapply PCUICConversion.cumul_trans in c; eauto.
 
   eapply invert_cumul_arity_l in c as (? & ? & ?); eauto. sq.
   exists x1; split; sq; eauto.
@@ -472,7 +474,7 @@ Proof.
     destruct c1 as (? & ? & ?). destruct H as [].
     eapply PCUICCumulativity.red_cumul_inv in X.
 
-    eapply invert_cumul_arity_l in H0 as (? & ? & ?). 2:eauto. 2:eauto. 2: eapply cumul_trans; eauto.
+    eapply invert_cumul_arity_l in H0 as (? & ? & ?). 2:eauto. 2:eauto. 2: eapply PCUICConversion.cumul_trans; eauto.
     destruct H.
     eapply typing_spine_red in t1. 2:{ eapply PCUICCumulativity.All_All2_refl.
                                                   clear. induction L; eauto. }
@@ -483,7 +485,7 @@ Proof.
     eapply isArity_typing_spine in t1 as (? & ? & ?). 2:eauto. 2:eauto. 2:eauto.
     sq. exists x5. split. eapply type_mkApps. eapply type_reduction in t0; eauto. 2:eauto.
     eapply typing_spine_red. eapply PCUICCumulativity.All_All2_refl.
-    clear. induction L; eauto. eauto. eauto. 2:eapply cumul_refl'.
+    clear. induction L; eauto. eauto. eauto. 2:eapply PCUICCumulativity.cumul_refl'.
     eapply PCUICCumulativity.red_cumul. eauto.
 
     eapply isWfArity_or_Type_red; eauto. exists x4; split; sq; eauto.
@@ -509,7 +511,7 @@ Proof.
     econstructor. exists x3. econstructor. eapply type_reduction; eauto. econstructor; eauto. eexists; eauto.
     eauto.
   - sq. eapply cumul_prop1 in c; eauto.
-    eapply inversion_Prod in c as (? & ? & ? & ? & ?).
+    eapply inversion_Prod in c as (? & ? & ? & ? & ?) ; auto.
     eapply cumul_Sort_inv in c.
     eapply leq_universe_prop in c as []; cbn; eauto.
     eexists. split. eassumption. right. eexists. split. eassumption.
@@ -517,6 +519,7 @@ Proof.
     destruct ?; eauto.
 
     eapply is_prop_sort_sup; eauto.
+  - auto.
 Qed.
 
 Lemma Is_type_red (Σ : global_env_ext) Γ t v:

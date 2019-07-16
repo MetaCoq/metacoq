@@ -394,7 +394,6 @@ Proof.
            unshelve eapply (IHΣ _ _ _ _ Hctr); tea.
 Qed.
 
-
 Definition wf_ext_global_uctx_invariants {cf:checker_flags} Σ
   : ∥ wf_ext Σ ∥ -> global_uctx_invariants (global_ext_uctx Σ).
 Proof.
@@ -447,6 +446,21 @@ Proof.
   intros []; constructor; auto.
 Qed.
 
+Definition cumul_red_l' `{checker_flags} :
+  forall Σ Γ t u,
+    wf Σ.1 ->
+    red (fst Σ) Γ t u ->
+    Σ ;;; Γ |- t <= u.
+Proof.
+  intros Σ Γ t u hΣ h.
+  induction h.
+  - eapply cumul_refl'.
+  - eapply PCUICConversion.cumul_trans ; try eassumption.
+    eapply cumul_red_l.
+    + eassumption.
+    + eapply cumul_refl'.
+Defined.
+
 Section Typecheck.
   Context {cf : checker_flags} {Σ : global_env_ext} (HΣ : ∥ wf Σ ∥)
           (Hφ : ∥ on_udecl Σ.1 Σ.2 ∥)
@@ -455,15 +469,6 @@ Section Typecheck.
   Local Definition HΣ' : ∥ wf_ext Σ ∥.
   Proof.
     destruct HΣ, Hφ; now constructor.
-  Defined.
-
-  Definition cumul_red_l' (Γ : context) (t u : term)
-    : red (fst Σ) Γ t u -> Σ;;; Γ |- t <= u.
-  Proof.
-    induction 1. eapply cumul_refl'.
-    eapply cumul_trans. eassumption.
-    eapply cumul_red_l. eassumption.
-    eapply cumul_refl'.
   Defined.
 
   Lemma type_reduction {Γ t A B}
@@ -1006,16 +1011,18 @@ Section Typecheck.
   (* tApp *)
   Next Obligation. now eapply validity_wf. Defined.
   Next Obligation.
-    sq. left. eapply type_reduction in X1; try eassumption.
-    eapply validity_term in X1; try assumption. destruct X1.
+    sq. left. eapply type_reduction in X1 ; try eassumption.
+    eapply validity_term in X1 ; try assumption. destruct X1.
     - destruct i as [ctx [s [H1 H2]]]. cbn in H1.
-      apply destArity_app_Some in H1. destruct H1 as [ctx' [e1 e2]]; subst.
-      rewrite app_context_assoc in H2; cbn in H2.
+      apply destArity_app_Some in H1. destruct H1 as [ctx' [e1 e2]] ; subst.
+      rewrite app_context_assoc in H2. cbn in H2.
       apply wf_local_app in H2.
       destruct (wf_local_inv H2 _ _ eq_refl) as [_ [u' [HH _]]].
-      eexists; exact HH.
-    - destruct i as [s HH]. eapply inversion_Prod in HH.
-      destruct HH as [s1 [_ [HH _]]]. eexists; eassumption.
+      eexists. exact HH.
+    - destruct i as [s HH].
+      eapply inversion_Prod in HH ; try assumption.
+      destruct HH as [s1 [_ [HH _]]].
+      eexists. eassumption.
   Defined.
   Next Obligation.
     sq; econstructor. 2: eassumption.

@@ -16,6 +16,8 @@ Require Import CRelationClasses.
 Require Import Equations.Prop.DepElim.
 Require Import Equations.Type.Relation Equations.Type.Relation_Properties.
 
+Ltac tc := try typeclasses eauto 10.
+
 Set Asymmetric Patterns.
 
 (* Using Derive makes Qed break?? *)
@@ -559,16 +561,116 @@ Qed.
 
 Require Import CMorphisms.
 
+Arguments rt_step {A} {R} {x y}.
+
+Definition commutes {A} (R S : relation A) :=
+  forall x y z, R x y -> S x z -> ∑ w, S y w * R z w.
+
+Hint Resolve rt_refl rt_step : core.
+
+Section Relations.
+
+
+  Definition clos_rt_monotone {A} (R S : relation A) :
+    inclusion R S -> inclusion (clos_refl_trans R) (clos_refl_trans S).
+  Proof.
+    move => incls x y.
+    induction 1; solve [econstructor; eauto].
+  Qed.
+
+  Lemma relation_equivalence_inclusion {A} (R S : relation A) :
+    inclusion R S -> inclusion S R -> relation_equivalence R S.
+  Proof. firstorder. Qed.
+
+  Lemma clos_rt_disjunction_left {A} (R S : relation A) :
+    inclusion (clos_refl_trans R)
+              (clos_refl_trans (relation_disjunction R S)).
+  Proof.
+    apply clos_rt_monotone.
+    intros x y H; left; exact H.
+  Qed.
+
+  Lemma clos_rt_disjunction_right {A} (R S : relation A) :
+    inclusion (clos_refl_trans S)
+              (clos_refl_trans (relation_disjunction R S)).
+  Proof.
+    apply clos_rt_monotone.
+    intros x y H; right; exact H.
+  Qed.
+
+  Global Instance clos_rt_trans A R : Transitive (@clos_refl_trans A R).
+  Proof.
+    intros x y z H H'. econstructor 3; eauto.
+  Qed.
+
+  Global Instance clos_rt_refl A R : Reflexive (@clos_refl_trans A R).
+  Proof. intros x. constructor 2. Qed.
+
+  Lemma clos_refl_trans_prod_l {A B} (R : relation A) (S : relation (A * B)) :
+    (forall x y b, R x y -> S (x, b) (y, b)) ->
+    forall (x y : A) b,
+      clos_refl_trans R x y ->
+      clos_refl_trans S (x, b) (y, b).
+  Proof.
+    intros. induction X0; try solve [econstructor; eauto].
+  Qed.
+
+  Lemma clos_refl_trans_prod_r {A B} (R : relation B) (S : relation (A * B)) a :
+    (forall x y, R x y -> S (a, x) (a, y)) ->
+    forall (x y : B),
+      clos_refl_trans R x y ->
+      clos_refl_trans S (a, x) (a, y).
+  Proof.
+    intros. induction X0; try solve [econstructor; eauto].
+  Qed.
+
+  Lemma clos_rt_t_incl {A} {R : relation A} `{Reflexive A R} :
+    inclusion (clos_refl_trans R) (trans_clos R).
+  Proof.
+    intros x y. induction 1; try solve [econstructor; eauto].
+  Qed.
+
+  Lemma clos_t_rt_incl {A} {R : relation A} `{Reflexive A R} :
+    inclusion (trans_clos R) (clos_refl_trans R).
+  Proof.
+    intros x y. induction 1; try solve [econstructor; eauto].
+  Qed.
+
+  Lemma clos_t_rt_equiv {A} {R} `{Reflexive A R} :
+    relation_equivalence (trans_clos R) (clos_refl_trans R).
+  Proof.
+    apply relation_equivalence_inclusion.
+    apply clos_t_rt_incl.
+    apply clos_rt_t_incl.
+  Qed.
+
+  Global Instance relation_disjunction_refl_l {A} {R S : relation A} :
+    Reflexive R -> Reflexive (relation_disjunction R S).
+  Proof.
+    intros HR x. left; auto.
+  Qed.
+
+  Global Instance relation_disjunction_refl_r {A} {R S : relation A} :
+    Reflexive S -> Reflexive (relation_disjunction R S).
+  Proof.
+    intros HR x. right; auto.
+  Qed.
+
+End Relations.
+
+Generalizable Variables A B R S.
+
 Section AbstractConfluence.
-  Section Diamond.
-    Context {A : Type} (R : A -> A -> Type).
-    Definition joinable (x y : A) := ∑ z, R x z * R y z.
-    Definition diamond := forall x y z, R x y -> R x z -> joinable y z.
-  End Diamond.
+  Section Definitions.
 
-  Definition confluent {A} (R : relation A) := diamond (clos_refl_trans R).
+    Context {A : Type}.
+    Definition joinable (R : A -> A -> Type) (x y : A) := ∑ z, R x z * R y z.
+    Definition diamond (R : A -> A -> Type) := forall x y z, R x y -> R x z -> joinable R y z.
+    Definition confluent (R : relation A) := diamond (clos_refl_trans R).
 
-  Instance joinable_proper A : CMorphisms.Proper (relation_equivalence ==> relation_equivalence)%signature (@joinable A).
+  End Definitions.
+
+  Global Instance joinable_proper A : CMorphisms.Proper (relation_equivalence ==> relation_equivalence)%signature (@joinable A).
   Proof.
     reduce_goal. split; unfold joinable; intros.
     destruct X0. exists x1. intuition eauto. setoid_rewrite (X x0 x1) in a. auto.
@@ -579,7 +681,7 @@ Section AbstractConfluence.
     exists z; split; auto.
   Qed.
 
-  Instance diamond_proper A : CMorphisms.Proper (relation_equivalence ==> iffT)%signature (@diamond A).
+  Global Instance diamond_proper A : CMorphisms.Proper (relation_equivalence ==> iffT)%signature (@diamond A).
   Proof.
     reduce_goal.
     rewrite /diamond.
@@ -603,7 +705,7 @@ Section AbstractConfluence.
     induction X0; try apply X in r; try solve [econstructor; eauto].
   Qed.
 
-  Instance confluent_proper A : CMorphisms.Proper (relation_equivalence ==> iffT)%signature (@confluent A).
+  Global Instance confluent_proper A : CMorphisms.Proper (relation_equivalence ==> iffT)%signature (@confluent A).
   Proof.
     reduce_goal.
     split; rewrite /confluent; auto.
@@ -612,17 +714,6 @@ Section AbstractConfluence.
     pose proof (diamond_proper A). apply X0. apply clos_rt_proper.
     now symmetry.
   Qed.
-
-  Definition clos_rt_monotone {A} (R S : relation A) :
-    inclusion R S -> inclusion (clos_refl_trans R) (clos_refl_trans S).
-  Proof.
-    move => incls x y.
-    induction 1; solve [econstructor; eauto].
-  Qed.
-
-  Lemma relation_equivalence_inclusion {A} (R S : relation A) :
-    inclusion R S -> inclusion S R -> relation_equivalence R S.
-  Proof. firstorder. Qed.
 
   Lemma sandwich {A} (R S : A -> A -> Type) :
     inclusion R S -> inclusion S (clos_refl_trans R) ->
@@ -639,24 +730,116 @@ Section AbstractConfluence.
     now apply relation_equivalence_inclusion.
   Qed.
 
-  Lemma clos_rt_t_incl {A} {R : relation A} `{Reflexive A R} :
-    inclusion (clos_refl_trans R) (trans_clos R).
+  Section Diamond.
+    Context {A} {R S : relation A}.
+    Context (sc : diamond R).
+
+    Lemma diamond_t1n_t_confluent t u v :
+      trans_clos_1n R t u ->
+      R t v ->
+      ∑ t', trans_clos_1n R u t' * trans_clos_1n R v t'.
+    Proof.
+      move => tu.
+      revert v.
+      induction tu.
+      intros.
+      - destruct (sc _ _ _ r X); auto.
+        eexists; split; constructor; intuition eauto.
+      - move => v xv.
+        destruct (sc _ _ _ r xv); auto.
+        destruct p. specialize (IHtu _ r0).
+        destruct IHtu as [nf [redl redr]].
+        exists nf. split; auto.
+        econstructor 2; eauto.
+    Qed.
+
+    Lemma diamond_t1n_t1n_confluent {t u v} :
+      trans_clos_1n R t u ->
+      trans_clos_1n R t v ->
+      ∑ t', trans_clos_1n R u t' * trans_clos_1n R v t'.
+    Proof.
+      move => tu tv.
+      induction tv in u, tu |- *.
+      - eapply diamond_t1n_t_confluent; eauto.
+      - eapply diamond_t1n_t_confluent in r; eauto.
+        destruct r as [nf [redl redr]].
+        specialize (IHtv _ redr) as [nf' [redl' redr']].
+        exists nf'; intuition auto.
+        apply trans_clos_t1n_iff.
+        econstructor 2; eapply trans_clos_t1n_iff; eauto.
+    Qed.
+
+    Lemma diamond_t_t_confluent {t u v} :
+      trans_clos R t u ->
+      trans_clos R t v ->
+      ∑ t', trans_clos R u t' * trans_clos R v t'.
+    Proof.
+      move => tu tv.
+      apply trans_clos_t1n_iff in tu;
+        apply trans_clos_t1n_iff in tv.
+      destruct (diamond_t1n_t1n_confluent tu tv).
+      exists x. split; apply trans_clos_t1n_iff; intuition auto.
+    Qed.
+
+    Lemma commutes_diamonds_diamond :
+      commutes R S -> diamond S -> diamond (relation_disjunction R S).
+    Proof.
+      intros HRS HS x y z xy xz.
+      destruct xy, xz.
+      destruct (sc _ _ _ r r0).
+      eexists; intuition auto. now left. now left.
+      destruct (HRS _ _ _ r s).
+      exists x0.
+      intuition auto. right; auto. left; auto.
+      destruct (HRS _ _ _ r s).
+      eexists; intuition auto. left; eauto. right; auto.
+      destruct (HS _ _ _ s s0). intuition auto.
+      eexists. split; right; eauto.
+    Qed.
+
+    Lemma commutes_disj_joinable :
+      commutes R S -> confluent R -> confluent S ->
+      forall x y z, relation_disjunction R S x y ->
+                    relation_disjunction R S x z ->
+                    joinable (clos_refl_trans (relation_disjunction R S)) y z.
+    Proof.
+      intros.
+      destruct X2. destruct X3.
+      destruct (X0 _ _ _ (rt_step r) (rt_step r0)).
+      exists x0; intuition auto. now eapply clos_rt_disjunction_left.
+      now apply clos_rt_disjunction_left.
+      destruct (X _ _ _ r s).
+      exists x0.
+      intuition auto. now eapply clos_rt_disjunction_right, rt_step.
+      now apply clos_rt_disjunction_left, rt_step.
+      destruct X3.
+      destruct (X _ _ _ r s).
+      exists x0.
+      intuition auto. now eapply clos_rt_disjunction_left, rt_step.
+      now apply clos_rt_disjunction_right, rt_step.
+      destruct (X1 _ _ _ (rt_step s) (rt_step s0)).
+      exists x0; intuition auto. now eapply clos_rt_disjunction_right.
+      now apply clos_rt_disjunction_right.
+    Qed.
+
+  End Diamond.
+
+  Theorem diamond_confluent `{Hrefl : Reflexive A R} : diamond R -> confluent R.
   Proof.
-    intros x y. induction 1; try solve [econstructor; eauto].
+    move=> Hdia x y z H H'.
+    apply clos_rt_t_incl in H.
+    apply clos_rt_t_incl in H'.
+    pose proof (clos_t_rt_equiv (R:=R)).
+    apply (joinable_proper _ _ _ X).
+    apply (diamond_t_t_confluent Hdia H H').
   Qed.
 
-  Lemma clos_t_rt_incl {A} {R : relation A} `{Reflexive A R} :
-    inclusion (trans_clos R) (clos_refl_trans R).
+  Corollary confluent_union {A} {R S : relation A} :
+    Reflexive R ->
+    commutes R S -> diamond R -> diamond S -> confluent (relation_disjunction R S).
   Proof.
-    intros x y. induction 1; try solve [econstructor; eauto].
-  Qed.
-
-  Lemma clos_t_rt_equiv {A} {R} `{Reflexive A R} :
-    relation_equivalence (trans_clos R) (clos_refl_trans R).
-  Proof.
-    apply relation_equivalence_inclusion.
-    apply clos_t_rt_incl.
-    apply clos_rt_t_incl.
+    intros HRR HRS Hcom HR HS. apply diamond_confluent.
+    now apply commutes_diamonds_diamond.
   Qed.
 
 End AbstractConfluence.
@@ -696,72 +879,17 @@ Section RedConfluence.
     eexists _; split; eauto.
   Qed.
 
-  Lemma sc_pred1_rel t u v :
-    pred1_rel t u -> pred1_rel t v ->
-    ∑ t', pred1_rel u t' * pred1_rel v t'.
+  Lemma diamond_pred1_rel : diamond pred1_rel.
   Proof.
-    move=> tu tv.
+    move=> t u v tu tv.
     destruct (confluence _ _ _ _ _ _ _ wfΣ tu tv).
     eexists (rho_ctx Σ (fst t), rho Σ (rho_ctx Σ (fst t)) (snd t)).
     split; auto.
   Qed.
 
-  Lemma pred1_rel_trans_pred1_confluent t u v :
-    trans_clos_1n pred1_rel t u ->
-    pred1_rel t v ->
-    ∑ t', trans_clos_1n pred1_rel u t' * trans_clos_1n pred1_rel v t'.
-  Proof.
-    move => tu.
-    revert v.
-    induction tu.
-    intros.
-    - destruct (sc_pred1_rel _ _ _ r X); auto.
-      eexists; split; constructor; intuition eauto.
-    - move => v xv.
-      destruct (sc_pred1_rel _ _ _ r xv); auto.
-      destruct p. specialize (IHtu _ p).
-      destruct IHtu as [nf [redl redr]].
-      exists nf. split; auto.
-      econstructor 2; eauto.
-  Qed.
-
-  Lemma pred1_rel_t1n_confluent {t u v} :
-    trans_clos_1n pred1_rel t u ->
-    trans_clos_1n pred1_rel t v ->
-    ∑ t', trans_clos_1n pred1_rel u t' * trans_clos_1n pred1_rel v t'.
-  Proof.
-    move => tu tv.
-    induction tv in u, tu |- *.
-    - eapply pred1_rel_trans_pred1_confluent; eauto.
-    - eapply pred1_rel_trans_pred1_confluent in r; eauto.
-      destruct r as [nf [redl redr]].
-      specialize (IHtv _ redr) as [nf' [redl' redr']].
-      exists nf'; intuition auto.
-      apply trans_clos_t1n_iff.
-      econstructor 2; eapply trans_clos_t1n_iff; eauto.
-  Qed.
-
-  Lemma pred1_rel_tclos_confluent {t u v} :
-    trans_clos pred1_rel t u ->
-    trans_clos pred1_rel t v ->
-    ∑ t', trans_clos pred1_rel u t' * trans_clos pred1_rel v t'.
-  Proof.
-    move => tu tv.
-    apply trans_clos_t1n_iff in tu;
-      apply trans_clos_t1n_iff in tv.
-    destruct (pred1_rel_t1n_confluent tu tv).
-    exists x. split; apply trans_clos_t1n_iff; intuition auto.
-  Qed.
-
   Lemma pred1_rel_confluent : confluent pred1_rel.
   Proof.
-    move=> x y z H H'.
-    pose proof (pred1_rel_refl).
-    apply (clos_rt_t_incl (H:=X)) in H.
-    apply (clos_rt_t_incl (H:=X)) in H'.
-    pose proof (clos_t_rt_equiv (R:=pred1_rel)).
-    apply (joinable_proper _ _ _ X0).
-    apply (pred1_rel_tclos_confluent H H').
+    eapply diamond_confluent. apply diamond_pred1_rel.
   Qed.
 
   Lemma red_trans_clos_pred1 Γ t u :
@@ -895,47 +1023,6 @@ Section RedConfluence.
     now eapply pred1_ctx_red_ctx.
   Qed.
 
-  Lemma clos_rt_disjunction_left {A} (R S : relation A) :
-    inclusion (clos_refl_trans R)
-              (clos_refl_trans (relation_disjunction R S)).
-  Proof.
-    apply clos_rt_monotone.
-    intros x y H; left; exact H.
-  Qed.
-
-  Lemma clos_rt_disjunction_right {A} (R S : relation A) :
-    inclusion (clos_refl_trans S)
-              (clos_refl_trans (relation_disjunction R S)).
-  Proof.
-    apply clos_rt_monotone.
-    intros x y H; right; exact H.
-  Qed.
-
-  Instance clos_rt_trans A R : Transitive (@clos_refl_trans A R).
-  Proof.
-    intros x y z H H'. now econstructor 3.
-  Qed.
-
-  Instance clos_rt_refl A R : Reflexive (@clos_refl_trans A R).
-  Proof. intros x. constructor 2. Qed.
-
-  Lemma clos_refl_trans_prod_l {A B} (R : relation A) (S : relation (A * B)) :
-    (forall x y b, R x y -> S (x, b) (y, b)) ->
-    forall (x y : A) b,
-      clos_refl_trans R x y ->
-      clos_refl_trans S (x, b) (y, b).
-  Proof.
-    intros. induction X0; try solve [econstructor; eauto].
-  Qed.
-
-  Lemma clos_refl_trans_prod_r {A B} (R : relation B) (S : relation (A * B)) a :
-    (forall x y, R x y -> S (a, x) (a, y)) ->
-    forall (x y : B),
-      clos_refl_trans R x y ->
-      clos_refl_trans S (a, x) (a, y).
-  Proof.
-    intros. induction X0; try solve [econstructor; eauto].
-  Qed.
 
   Lemma clos_rt_OnOne2_local_env_incl R :
     inclusion (OnOne2_local_env (on_one_decl (fun Δ => clos_refl_trans (R Δ))))
@@ -1114,10 +1201,8 @@ Section RedConfluence.
     - econstructor 3; eauto.
   Qed.
 
-  Lemma pred_rel_confluent : confluent red1_rel_alpha.
+  Lemma red1_rel_alpha_pred1_rel : inclusion red1_rel_alpha pred1_rel.
   Proof.
-    notypeclasses refine (fst (sandwich _ _ _ _) _).
-    3:eapply pred1_rel_confluent; eauto.
     intros [ctx t] [ctx' t'].
     rewrite /red1_rel_alpha /pred1_rel /=.
     intros [[l <-]|[[r <-]|[r <-]]].
@@ -1129,22 +1214,34 @@ Section RedConfluence.
       * destruct x as [na [b|] ty], y as [na' [b'|] ty']; simpl in *; noconf e; try noconf e0.
         constructor; auto. red. split; now apply pred1_refl_gen.
         constructor; auto. red; now apply pred1_refl_gen.
-    - intros x y pred. red in pred.
-      eapply pred1_red' in pred; auto.
-      destruct pred.
-      destruct x, y. simpl in *.
-      transitivity (c, t0).
-      eapply clos_rt_disjunction_left.
-      eapply clos_refl_trans_prod_r. intros. split; eauto.
-      now eapply red_alt in r.
-      eapply clos_rt_disjunction_right.
-      eapply (clos_refl_trans_prod_l (fun x y => red1_ctx x y + eq_context_upto_names x y))%type.
-      intros. red. destruct X; intuition auto.
-      clear r.
-      apply red_ctx_clos_rt_red1_ctx in r0.
-      induction r0. constructor; auto.
-      constructor. auto.
-      now transitivity y.
+  Qed.
+
+  Lemma pred1_rel_red1_rel_alpha : inclusion pred1_rel (clos_refl_trans red1_rel_alpha).
+  Proof.
+    intros x y pred. red in pred.
+    eapply pred1_red' in pred; auto.
+    destruct pred.
+    destruct x, y. simpl in *.
+    transitivity (c, t0).
+    eapply clos_rt_disjunction_left.
+    eapply clos_refl_trans_prod_r. intros. split; eauto.
+    now eapply red_alt in r.
+    eapply clos_rt_disjunction_right.
+    eapply (clos_refl_trans_prod_l (fun x y => red1_ctx x y + eq_context_upto_names x y))%type.
+    intros. red. destruct X; intuition auto.
+    clear r.
+    apply red_ctx_clos_rt_red1_ctx in r0.
+    induction r0. constructor; auto.
+    constructor. auto.
+    now transitivity y.
+  Qed.
+
+  Lemma pred_rel_confluent : confluent red1_rel_alpha.
+  Proof.
+    notypeclasses refine (fst (sandwich _ _ _ _) _).
+    3:eapply pred1_rel_confluent; eauto.
+    - apply red1_rel_alpha_pred1_rel.
+    - apply pred1_rel_red1_rel_alpha.
   Qed.
 
   Lemma clos_refl_trans_out Γ x y :
@@ -1275,23 +1372,6 @@ Section RedConfluence.
     - econstructor 3; eauto.
   Qed.
 
-  Definition eqb_context_decl (x y : context_decl) :=
-    let (na, b, ty) := x in
-    let (na', b', ty') := y in
-    eqb na na' && eqb b b' && eqb ty ty'.
-
-  Instance eq_ctx : ReflectEq context_decl.
-  Proof.
-    refine {| eqb := eqb_context_decl |}.
-    intros.
-    destruct x as [na b ty], y as [na' b' ty']. cbn -[eqb].
-    destruct (eqb_spec na na'); subst;
-    destruct (eqb_spec b b'); subst;
-    destruct (eqb_spec ty ty'); subst; constructor; congruence.
-  Qed.
-
-  Instance eqb_ctx : ReflectEq context := _.
-
   Lemma clos_red_rel_out_inv x y :
     clos_refl_trans pred1_rel x y ->
     clos_refl_trans red1_rel_alpha x y.
@@ -1347,7 +1427,7 @@ Section RedConfluence.
       destruct IHclos_refl_trans_1n.
       red in r. destruct r.
       * destruct p. subst. split. auto.
-        transitivity u; auto. constructor. auto.
+        transitivity u; auto.
       * destruct p. subst. split.
         apply red1_ctx_pred1_ctx in r.
         apply pred1_ctx_red_ctx in r.
@@ -1474,7 +1554,7 @@ Section RedConfluence.
       destruct IHclos_refl_trans_1n.
       red in r. destruct r.
       * destruct p. subst. split. auto.
-        transitivity u; auto. constructor. auto.
+        transitivity u; auto.
       * destruct r. destruct p. subst. split.
         apply red1_ctx_pred1_ctx in r.
         apply pred1_ctx_red_ctx in r.

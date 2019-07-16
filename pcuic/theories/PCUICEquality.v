@@ -6,7 +6,7 @@ From MetaCoq.Template Require Import config utils Universes BasicAst AstUtils
      UnivSubst.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICReflect PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICNameless
-     PCUICCumulativity PCUICPosition.
+     PCUICPosition PCUICCumulativity.
 
 From Equations Require Import Equations.
 Require Import Equations.Prop.DepElim.

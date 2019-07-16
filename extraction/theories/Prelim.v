@@ -310,10 +310,12 @@ Proof.
 Qed.
 
 Lemma subslet_fix_subst `{cf : checker_flags} Σ mfix1 T n :
+  wf Σ.1 ->
   Σ ;;; [] |- tFix mfix1 n : T ->
   (* wf_local Σ (PCUICLiftSubst.fix_context mfix1) -> *)
   subslet Σ [] (PCUICTyping.fix_subst mfix1) (PCUICLiftSubst.fix_context mfix1).
 Proof.
+  intro hΣ.
   unfold fix_subst, PCUICLiftSubst.fix_context.
   assert (exists L, mfix1 = mfix1 ++ L)%list by (exists []; now simpl_list). revert H.
   generalize mfix1 at 2 5 6.  intros.
@@ -324,7 +326,7 @@ Proof.
     + eapply IHmfix0. destruct H as [L]. exists (x :: L). subst. now rewrite <- app_assoc.
     + rewrite <- plus_n_O.
       rewrite PCUICLiftSubst.simpl_subst_k. 2:{ clear. induction l; cbn; try congruence. }
-      eapply inversion_Fix in X as (? & ? & ? & ? & ?).
+      eapply inversion_Fix in X as (? & ? & ? & ? & ?) ; auto.
       econstructor; eauto. destruct H. subst.
       rewrite <- app_assoc. rewrite nth_error_app_ge. 2:omega.
       rewrite minus_diag. cbn. reflexivity. eapply p.
@@ -358,8 +360,8 @@ Proof.
   - destruct a. destruct decl_body.
     + cbn. econstructor. inv X0. eauto. econstructor.
       depelim X0.
-      2:eapply conv_refl.
+      2:eapply PCUICCumulativity.conv_refl'.
       red in l. destruct l. exists x. eapply context_conversion; eauto.
-    + cbn. econstructor. inv X0. eauto. econstructor. 2:eapply conv_refl.
+    + cbn. econstructor. inv X0. eauto. econstructor. 2:eapply PCUICCumulativity.conv_refl'.
       inv X0. cbn in X3. destruct X3. exists x. eapply context_conversion; eauto.
 Qed.

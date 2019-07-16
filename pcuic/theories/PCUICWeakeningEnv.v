@@ -8,6 +8,25 @@ From Equations Require Import Equations.
 
 Derive Signature for Alli.
 
+Lemma global_ext_constraints_app Σ Σ' φ
+  : ConstraintSet.Subset (global_ext_constraints (Σ, φ))
+                         (global_ext_constraints (Σ' ++ Σ, φ)).
+Proof.
+  red. intros.
+  move: H; rewrite /global_ext_constraints /=.
+Admitted.
+
+Lemma leq_universe_subset {cf:checker_flags} ctrs ctrs' t u
+  : ConstraintSet.Subset ctrs ctrs' -> leq_universe ctrs t u -> leq_universe ctrs' t u.
+Proof.
+Admitted.
+
+Lemma leq_term_subset {cf:checker_flags} ctrs ctrs' t u
+  : ConstraintSet.Subset ctrs ctrs' -> leq_term ctrs t u -> leq_term ctrs' t u.
+Proof.
+  intros Hc H; induction H; try constructor; eauto.
+Admitted.
+
 (** * Weakening lemmas w.r.t. the global environment *)
 
 Set Asymmetric Patterns.
@@ -16,6 +35,31 @@ Generalizable Variables Σ Γ t T.
 
 Definition extends (Σ Σ' : global_env) :=
   { Σ'' & Σ' = (Σ'' ++ Σ)%list }.
+
+
+Lemma weakening_env_global_ext_levels Σ Σ' φ (H : extends Σ Σ') l
+  : LevelSet.In l (global_ext_levels (Σ, φ))
+    -> LevelSet.In l (global_ext_levels (Σ', φ)).
+Proof.
+Admitted.
+
+Lemma weakening_env_global_ext_constraints Σ Σ' φ (H : extends Σ Σ')
+  : ConstraintSet.Subset (global_ext_constraints (Σ, φ))
+                         (global_ext_constraints (Σ', φ)).
+Proof.
+Admitted.
+
+Lemma valid_subset {cf:checker_flags} φ φ' ctrs
+  : ConstraintSet.Subset φ φ' -> valid_constraints φ ctrs
+    ->  valid_constraints φ' ctrs.
+Proof.
+Admitted.
+
+Lemma check_correct_arity_subset {cf:checker_flags} φ φ' decl ind u ctx pars pctx
+  : ConstraintSet.Subset φ φ' -> check_correct_arity φ decl ind u ctx pars pctx
+    -> check_correct_arity φ' decl ind u ctx pars pctx.
+Proof.
+Admitted.
 
 Ltac my_rename_hyp h th :=
   match th with
@@ -85,22 +129,6 @@ Proof.
   eapply extends_lookup in X0; eauto.
   econstructor; eauto.
 Qed.
-
-Lemma global_ext_constraints_app Σ Σ' φ
-  : ConstraintSet.Subset (global_ext_constraints (Σ, φ))
-                         (global_ext_constraints (Σ' ++ Σ, φ)).
-Admitted.
-
-Lemma leq_universe_subset {cf:checker_flags} ctrs ctrs' t u
-  : ConstraintSet.Subset ctrs ctrs' -> leq_universe ctrs t u -> leq_universe ctrs' t u.
-Proof.
-Admitted.
-
-Lemma leq_term_subset {cf:checker_flags} ctrs ctrs' t u
-  : ConstraintSet.Subset ctrs ctrs' -> leq_term ctrs t u -> leq_term ctrs' t u.
-Proof.
-  intros Hc H; induction H; try constructor; eauto.
-Admitted.
 
 Lemma weakening_env_cumul `{CF:checker_flags} Σ Σ' φ Γ M N :
   wf Σ' -> extends Σ Σ' ->
@@ -184,31 +212,7 @@ Proof.
   induction 1; intros; simpl; econstructor; eauto.
 Qed.
 
-Lemma weakening_env_global_ext_levels Σ Σ' φ (H : extends Σ Σ') l
-  : LevelSet.In l (global_ext_levels (Σ, φ))
-    -> LevelSet.In l (global_ext_levels (Σ', φ)).
-Proof.
-Admitted.
 Hint Resolve weakening_env_global_ext_levels : extends.
-
-Lemma weakening_env_global_ext_constraints Σ Σ' φ (H : extends Σ Σ')
-  : ConstraintSet.Subset (global_ext_constraints (Σ, φ))
-                         (global_ext_constraints (Σ', φ)).
-Proof.
-Admitted.
-
-Lemma valid_subset {cf:checker_flags} φ φ' ctrs
-  : ConstraintSet.Subset φ φ' -> valid_constraints φ ctrs
-    ->  valid_constraints φ' ctrs.
-Proof.
-Admitted.
-
-Lemma check_correct_arity_subset {cf:checker_flags} φ φ' decl ind u ctx pars pctx
-  : ConstraintSet.Subset φ φ' -> check_correct_arity φ decl ind u ctx pars pctx
-    -> check_correct_arity φ' decl ind u ctx pars pctx.
-Proof.
-Admitted.
-
 
 Lemma weakening_env_consistent_instance {cf:checker_flags} Σ Σ' φ ctrs u (H : extends Σ Σ')
   : consistent_instance_ext (Σ, φ) ctrs u

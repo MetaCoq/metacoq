@@ -5,7 +5,7 @@ From Coq Require Import Bool String List Program BinPos Compare_dec Arith Lia
 From MetaCoq.Template Require Import config Universes monad_utils utils BasicAst
      AstUtils UnivSubst.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
-     PCUICReflect PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICCumulativity
+     PCUICReflect PCUICLiftSubst PCUICUnivSubst PCUICTyping
      PCUICReduction.
 From Equations Require Import Equations.
 

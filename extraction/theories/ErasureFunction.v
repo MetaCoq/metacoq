@@ -73,7 +73,7 @@ Proof.
 Grab Existential Variables.
 - eapply red_wellformed; sq. 3:eauto. all:eauto.
 - destruct H as [[] |[]].
-  -- eapply inversion_Prod in X0 as (? & ? & ? & ? & ?).
+  -- eapply inversion_Prod in X0 as (? & ? & ? & ? & ?) ; auto.
      eapply cored_red in H0 as [].
      econstructor. econstructor. econstructor. eauto. eapply subject_reduction; eauto.
   -- eapply cored_red in H0 as [].
@@ -116,7 +116,7 @@ Next Obligation.
   destruct HT as [ [] | [] ]; sq.
   - eapply subject_reduction in X; eauto.
     eapply inversion_Prod in X as (? & ? & ? & ? & ?).
-    econstructor. eauto. cbn. eauto.
+    econstructor. eauto. cbn. eauto. auto.
   - econstructor. eauto.
     eapply isWfArity_red in X; eauto.
     cbn. eapply isWfArity_prod_inv; eauto.
@@ -125,7 +125,7 @@ Next Obligation.
   sq. destruct HT as [ [] | [] ].
   - eapply subject_reduction in X5; eauto.
     eapply inversion_Prod in X5 as (? & ? & ? & ? & ?).
-    do 2 econstructor. eauto.
+    do 2 econstructor. eauto. auto.
   - econstructor 2. sq.
     eapply PCUICPrincipality.isWfArity_red in X5; eauto.
     eapply isWfArity_prod_inv; eauto.
@@ -139,6 +139,7 @@ Next Obligation.
   eassumption. now cbn.
 Qed.
 Next Obligation.
+  destruct HΣ as [wΣ].
   destruct H1 as (? & ? & ?). sq.
   destruct H.
   edestruct (red_confluence wfΣ X6 X5) as (? & ? & ?); eauto.
@@ -154,10 +155,10 @@ Next Obligation.
   ++ sq. pose proof (X8). pose proof X8.
 
      eapply subject_reduction in X9. 2:eauto. 2:{ etransitivity. exact X5. exact r0. }
-     eapply inversion_Prod in X9 as (? & ? & ? & ? & ?).
+     eapply inversion_Prod in X9 as (? & ? & ? & ? & ?) ; auto.
 
      eapply subject_reduction in X10. 2:eauto. 2:{ exact X6. }
-     eapply inversion_Prod in X10 as (? & ? & ? & ? & ?).
+     eapply inversion_Prod in X10 as (? & ? & ? & ? & ?) ; auto.
 
      etransitivity. eassumption.
 
@@ -165,7 +166,7 @@ Next Obligation.
 
      eapply conv_context_refl; eauto. econstructor.
 
-     eapply conv_sym, red_conv; eauto.
+     eapply PCUICConversion.conv_sym, red_conv; eauto.
   ++ sq. etransitivity. eassumption.
 
      eapply context_conversion_red; eauto. econstructor.
@@ -174,7 +175,7 @@ Next Obligation.
 
      econstructor.
 
-     eapply conv_sym, red_conv; eauto.
+     eapply PCUICConversion.conv_sym, red_conv; eauto.
 Qed.
 End fix_sigma.
 
@@ -352,12 +353,12 @@ Section Erase.
 
     sq'. econstructor; eauto. cbn.
 
-    eapply inversion_Lambda in X as (? & ? & ? & ? & ?).
+    eapply inversion_Lambda in X as (? & ? & ? & ? & ?) ; auto.
     econstructor; cbn; eauto.
   Qed.
   Next Obligation.
     destruct s0. destruct H. destruct w.
-    sq'. eapply inversion_LetIn in X as (? & ? & ? & ? & ? & ?).
+    sq'. eapply inversion_LetIn in X as (? & ? & ? & ? & ? & ?) ; auto.
 
     econstructor; eauto.
     cbn. econstructor; eauto.
@@ -403,10 +404,10 @@ Proof.
 
   - repeat econstructor; eauto.
   - econstructor. econstructor. clear E.
-    eapply inversion_Prod in t0 as (? & ? & ? & ? & ?).
+    eapply inversion_Prod in t0 as (? & ? & ? & ? & ?) ; auto.
     split. econstructor; eauto. left. econstructor.
   - econstructor. eauto. econstructor. clear E.
-    eapply inversion_Ind in t as (? & ? & ? & ? & ? & ?).
+    eapply inversion_Ind in t as (? & ? & ? & ? & ? & ?) ; auto.
     split. econstructor; eauto. left. subst.
     eapply isArity_subst_instance.
     eapply isArity_ind_type; eauto.

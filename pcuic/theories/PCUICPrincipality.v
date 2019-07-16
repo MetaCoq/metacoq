@@ -8,7 +8,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICWeakeningEnv PCUICWeakening
      PCUICSubstitution PCUICClosed PCUICInversion PCUICEquality
      PCUICReduction PCUICCumulativity PCUICGeneration
-     PCUICParallelReductionConfluence PCUICConfluence PCUICUnivSubst.
+     PCUICParallelReductionConfluence PCUICConfluence PCUICConversion PCUICUnivSubst.
 
 Require Import ssreflect ssrbool.
 Require Import String.
@@ -96,11 +96,11 @@ Section Principality.
     eapply invert_red_prod in redv' as (A' & B' & ((-> & Ha') & ?)) => //.
     depelim leqvv'.
     do 3 eexists; intuition eauto.
-    eapply conv_trans.
+    eapply conv_trans; auto.
     eapply red_conv. eauto.
     eapply conv_sym. eapply conv_conv_alt.
     constructor. red. apply leqvv'1.
-    eapply cumul_trans with B'.
+    eapply cumul_trans with B'; auto.
     constructor. eapply leqvv'2.
     now eapply red_cumul_inv.
   Qed.
@@ -138,7 +138,7 @@ Section Principality.
     eapply invert_red_prod in redv as (A' & B' & ((-> & Ha') & ?)) => //.
     depelim leqvv'.
     do 3 eexists; intuition eauto.
-    eapply conv_trans.
+    eapply conv_trans; auto.
     eapply red_conv. eauto.
     eapply conv_conv_alt. constructor. apply leqvv'1.
     eapply cumul_trans with B'; eauto.
@@ -480,8 +480,8 @@ Section Principality.
 
   Require Import CMorphisms CRelationClasses.
 
-  Instance conv_transitive Σ Γ : Transitive (fun x y => Σ ;;; Γ |- x = y).
-  Proof. intros x y z; eapply conv_trans. Qed.
+  Instance conv_transitive Γ : Transitive (fun x y => Σ ;;; Γ |- x = y).
+  Proof. intros x y z; eapply conv_trans. auto. Qed.
 
   Theorem principal_typing {Γ u A B} : Σ ;;; Γ |- u : A -> Σ ;;; Γ |- u : B ->
     ∑ C, Σ ;;; Γ |- C <= A  ×  Σ ;;; Γ |- C <= B × Σ ;;; Γ |- u : C.
@@ -506,8 +506,8 @@ Section Principality.
       all: try eassumption.
       (* * left; eexists _, _; intuition auto. *)
       * constructor ; assumption.
-    - apply inversion_Prod in hA as [dom1 [codom1 iA]].
-      apply inversion_Prod in hB as [dom2 [codom2 iB]].
+    - apply inversion_Prod in hA as [dom1 [codom1 iA]]; auto.
+      apply inversion_Prod in hB as [dom2 [codom2 iB]]=> //.
       repeat outsum. repeat outtimes.
       repeat pih.
       destruct IHu1 as [dom Hdom].
@@ -517,10 +517,10 @@ Section Principality.
       destruct (cumul_sort_confluence c1 c2) as [codom' [codom'dom [leq0' leq1']]].
       exists (tSort (Universe.sort_of_product dom' codom')).
       repeat split.
-      * eapply cumul_trans; [|eapply c0].
+      * eapply cumul_trans. auto. 2:eapply c0.
         constructor. constructor.
         apply leq_universe_product_mon; auto.
-      * eapply cumul_trans; [|eapply c].
+      * eapply cumul_trans. auto. 2:eapply c.
         constructor. constructor.
         apply leq_universe_product_mon; auto.
       (* * left; eexists _, _; intuition eauto. now eapply typing_wf_local in t4. *)
@@ -532,8 +532,8 @@ Section Principality.
         left; eapply isWfArity_sort. now eapply typing_wf_local in t3.
         eapply codom'dom.
 
-    - apply inversion_Lambda in hA.
-      apply inversion_Lambda in hB.
+    - apply inversion_Lambda in hA => //.
+      apply inversion_Lambda in hB => //.
       repeat outsum. repeat outtimes.
       repeat pih.
       repeat outsum. repeat outtimes.
@@ -560,8 +560,8 @@ Section Principality.
       (*      eapply type_Prod; auto. *)
       * eapply type_Lambda; eauto.
 
-    - eapply inversion_LetIn in hA.
-      eapply inversion_LetIn in hB.
+    - eapply inversion_LetIn in hA; auto.
+      eapply inversion_LetIn in hB; auto.
       destruct hA as [tty [bty ?]].
       destruct hB as [tty' [bty' ?]].
       repeat outtimes.
@@ -571,7 +571,7 @@ Section Principality.
       * clear IHu1 IHu2.
         eapply invert_cumul_letin_l in c0 => //.
         eapply invert_cumul_letin_l in c => //.
-        eapply cumul_trans with (C' {0 := u1}).
+        eapply cumul_trans with (C' {0 := u1}). auto.
         eapply red_cumul. eapply red_step.
         econstructor. auto.
         eapply cumul_trans with (bty {0 := u1}) => //.
@@ -585,7 +585,7 @@ Section Principality.
       * clear IHu1 IHu2.
         eapply invert_cumul_letin_l in c0 => //.
         eapply invert_cumul_letin_l in c => //.
-        eapply cumul_trans with (C' {0 := u1}).
+        eapply cumul_trans with (C' {0 := u1}). auto.
         eapply red_cumul. eapply red_step.
         econstructor. auto.
         eapply cumul_trans with (bty' {0 := u1}) => //.
@@ -608,8 +608,8 @@ Section Principality.
       (*      eapply red_cumul. eapply red1_red. constructor. *)
       * eapply type_LetIn; eauto.
 
-    - eapply inversion_App in hA as [na [dom [codom [tydom [tyarg tycodom]]]]].
-      eapply inversion_App in hB as [na' [dom' [codom' [tydom' [tyarg' tycodom']]]]].
+    - eapply inversion_App in hA as [na [dom [codom [tydom [tyarg tycodom]]]]] => //.
+      eapply inversion_App in hB as [na' [dom' [codom' [tydom' [tyarg' tycodom']]]]] => //.
       specialize (IHu2 _ _ _ tyarg tyarg').
       specialize (IHu1 _ _ _ tydom tydom').
       destruct IHu1, IHu2.
@@ -620,10 +620,10 @@ Section Principality.
       eapply invert_red_prod in redl as [? [? [[? ?] ?]]] => //. subst.
       eapply invert_red_prod in redr as [? [? [[? ?] ?]]] => //. noconf e.
       assert(Σ ;;; Γ |- A' = A'').
-      { apply conv_trans with x3.
+      { apply conv_trans with x3 => //.
         now eapply red_conv. apply conv_sym. now apply red_conv. }
       assert(Σ ;;; Γ ,, vass x1 A' |- B' = B'').
-      { apply conv_trans with x4.
+      { apply conv_trans with x4 => //.
         now eapply red_conv. apply conv_sym. apply red_conv. admit. }
       exists (B' {0 := u2}).
       repeat split.
@@ -665,22 +665,22 @@ Section Principality.
         instantiate (1 := x1).
         (* Needs to show wf arity preservation? needing validity? or just inversion on tydom ? *)
         admit.
-        eapply cumul_trans with (tProd x1 A' B').
+        eapply cumul_trans with (tProd x1 A' B')=> //.
         eapply red_cumul; eauto.
         eapply congr_cumul_prod.
         eapply conv_sym. eauto.
         eapply cumul_refl'.
 
-    - eapply inversion_Const in hA as [decl ?].
-      eapply inversion_Const in hB as [decl' ?].
+    - eapply inversion_Const in hA as [decl ?] => //.
+      eapply inversion_Const in hB as [decl' ?] => //.
       repeat outtimes.
       exists (subst_instance_constr u (cst_type decl)).
       red in d0, d. rewrite d0 in d. noconf d.
       repeat intimes; eauto.
       eapply type_Const; eauto.
 
-    - eapply inversion_Ind in hA as [mdecl [idecl [? [Hdecl ?]]]].
-      eapply inversion_Ind in hB as [mdecl' [idecl' [? [Hdecl' ?]]]].
+    - eapply inversion_Ind in hA as [mdecl [idecl [? [Hdecl ?]]]] => //.
+      eapply inversion_Ind in hB as [mdecl' [idecl' [? [Hdecl' ?]]]] => //.
       repeat outtimes.
       exists (subst_instance_constr u (ind_type idecl)).
       red in Hdecl, Hdecl'. destruct Hdecl as [? ?].
@@ -691,8 +691,8 @@ Section Principality.
       eapply type_Ind; eauto.
       split; eauto.
 
-    - eapply inversion_Construct in hA as [mdecl [idecl [? [? [Hdecl ?]]]]].
-      eapply inversion_Construct in hB as [mdecl' [idecl' [? [? [Hdecl' ?]]]]].
+    - eapply inversion_Construct in hA as [mdecl [idecl [? [? [Hdecl ?]]]]] => //.
+      eapply inversion_Construct in hB as [mdecl' [idecl' [? [? [Hdecl' ?]]]]] => //.
       repeat outtimes.
       red in Hdecl, Hdecl'.
       destruct Hdecl as [[? ?] ?].
@@ -705,8 +705,8 @@ Section Principality.
       eapply type_Construct; eauto. repeat split; eauto.
 
     - destruct p as [ind n].
-      eapply inversion_Case in hA.
-      eapply inversion_Case in hB.
+      eapply inversion_Case in hA=>//.
+      eapply inversion_Case in hB=>//.
       repeat outsum. repeat outtimes. simpl in *.
       repeat outtimes.
       subst.
@@ -723,15 +723,15 @@ Section Principality.
         eapply red_mkApps_tInd in r as [args' [? ?]]; auto.
         eapply red_mkApps_tInd in r0 as [args'' [? ?]]; auto.
         subst. solve_discr.
-        clear -a1 a2 a3 a4.
+        clear -wfΣ a1 a2 a3 a4.
         eapply (All2_impl (Q:=fun x y => Σ ;;; Γ |- x = y)) in a3; auto using red_conv.
         eapply (All2_impl (Q:=fun x y => Σ ;;; Γ |- x = y)) in a4; auto using conv_sym, red_conv.
-        pose proof (All2_trans _ (conv_transitive _ _) _ _ _ a1 a3).
+        pose proof (All2_trans _ (conv_transitive _) _ _ _ a1 a3).
         apply All2_sym in a4.
-        pose proof (All2_trans _ (conv_transitive _ _) _ _ _ X a4).
+        pose proof (All2_trans _ (conv_transitive _) _ _ _ X a4).
         eapply (All2_impl (Q:=fun x y => Σ ;;; Γ |- x = y)) in a2; auto using conv_sym, red_conv.
         apply All2_sym in a2.
-        apply (All2_trans _ (conv_transitive _ _) _ _ _ X0 a2).
+        apply (All2_trans _ (conv_transitive _) _ _ _ X0 a2).
         intros ? ? ?. eapply conv_sym. assumption.
         intros ? ? ?. eapply conv_sym. assumption.
       }
@@ -755,8 +755,8 @@ Section Principality.
       admit.
 
     - destruct s as [[ind k] pars]; simpl in *.
-      eapply inversion_Proj in hA.
-      eapply inversion_Proj in hB.
+      eapply inversion_Proj in hA=>//.
+      eapply inversion_Proj in hB=>//.
       repeat outsum. repeat outtimes.
       simpl in *.
       destruct d0, d. destruct H, H1. red in H, H1.
@@ -780,14 +780,14 @@ Section Principality.
       simpl.
       admit.
 
-    - eapply inversion_Fix in hA as [decl [hguard [nthe [wfΓ [? ?]]]]].
-      eapply inversion_Fix in hB as [decl' [hguard' [nthe' [wfΓ' [? ?]]]]].
+    - eapply inversion_Fix in hA as [decl [hguard [nthe [wfΓ [? ?]]]]]=>//.
+      eapply inversion_Fix in hB as [decl' [hguard' [nthe' [wfΓ' [? ?]]]]]=>//.
       rewrite nthe' in nthe; noconf nthe.
       exists (dtype decl); repeat split; eauto.
       eapply type_Fix; eauto.
 
-    - eapply inversion_CoFix in hA as [decl [allow [nthe [wfΓ [? ?]]]]].
-      eapply inversion_CoFix in hB as [decl' [allpw [nthe' [wfΓ' [? ?]]]]].
+    - eapply inversion_CoFix in hA as [decl [allow [nthe [wfΓ [? ?]]]]]=>//.
+      eapply inversion_CoFix in hB as [decl' [allpw [nthe' [wfΓ' [? ?]]]]]=>//.
       rewrite nthe' in nthe; noconf nthe.
       exists (dtype decl); repeat split; eauto.
       eapply type_CoFix; eauto.

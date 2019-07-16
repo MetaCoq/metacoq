@@ -4,7 +4,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICLiftSubst PCUICTyping PCUICWeakeningEnv PCUICWeakening PCUICInversion
      PCUICSubstitution PCUICReduction PCUICCumulativity PCUICGeneration
      PCUICParallelReductionConfluence PCUICConfluence PCUICUnivSubst
-     PCUICUnivSubstitution PCUICPrincipality.
+     PCUICUnivSubstitution PCUICConversion PCUICPrincipality.
 
 From Equations Require Import Equations.
 Require Import ssreflect.
@@ -151,7 +151,7 @@ Section Validity.
         unfold app_context. now rewrite (firstn_skipn (S n) Γ).
 
     - (* Universe *) left. exists [], (Universe.super l). split; auto.
-    - (* Product *) left. eexists [], _. split; eauto. simpl. reflexivity.
+    - (* Product *) left. eexists [], _. split; eauto.
     - (* Lambda *)
       destruct X3.
       + left. destruct i as [ctx [s [Heq Hs]]].
@@ -224,8 +224,8 @@ Section Validity.
         apply inversion_Prod in Hu' as [na' [s1 [s2 Hs]]]. intuition.
         eapply type_Cumul; pcuic.
         eapply (weakening_cumul Σ Γ [] [vass na A]) in b; pcuic.
-        simpl in b. eapply cumul_trans. 2:eauto.
-        constructor. constructor. simpl. apply leq_universe_product.
+        simpl in b. eapply cumul_trans. auto. 2:eauto.
+        constructor. constructor. simpl. apply leq_universe_product. auto.
 
     - eapply declared_constant_inv in H; pcuic.
       destruct decl as [ty [b|] univs]. red in H. simpl in *.

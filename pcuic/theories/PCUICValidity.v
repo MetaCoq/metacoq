@@ -109,14 +109,18 @@ Section Validity.
 
   Lemma invert_type_mkApps Σ Γ f fty u T :
     Σ ;;; Γ |- mkApps f u : T ->
-                            (* Looks mutual with validity! *)
-                            Σ ;;; Γ |- f : fty -> isWfArity_or_Type Σ Γ fty ->
-                                           { T' & { U & ((Σ ;;; Γ |- f : T') * (typing_spine Σ Γ T' u U) * (Σ ;;; Γ |- U <= T))%type } }.
+    (* Looks mutual with validity! *)
+    Σ ;;; Γ |- f : fty ->
+    isWfArity_or_Type Σ Γ fty ->
+    ∑ T' U,
+      Σ ;;; Γ |- f : T' ×
+      typing_spine Σ Γ T' u U ×
+      Σ ;;; Γ |- U <= T.
   Proof.
     induction u in f, fty, T |- *. simpl. intros. exists T, T. intuition auto. constructor.
     admit. auto.
     intros Hf Hty. simpl in Hty.
-    specialize (IHu _ fty _ Hf) as [T' [U' [[H' H''] H''']]].
+    specialize (IHu _ fty _ Hf) as [T' [U' [H' [H'' H''']]]].
     simpl in Hf.
     econstructor.
 
@@ -310,3 +314,44 @@ Lemma validity_term {cf:checker_flags} {Σ Γ t T} :
 Proof.
   intros. eapply validity; try eassumption.
 Defined.
+
+Corollary validity' :
+  forall `{checker_flags} {Σ Γ t T},
+    wf Σ.1 ->
+    Σ ;;; Γ |- t : T ->
+    isWfArity_or_Type Σ Γ T.
+Proof.
+  intros cf Σ Γ t T hΣ h.
+  eapply validity_term ; eauto.
+  eapply typing_wf_local. eassumption.
+Qed.
+
+(* Should be a corollary of the lemma above.
+   invert_type_mkApps should only be used as a stepping stone.
+ *)
+Lemma inversion_mkApps :
+  forall `{checker_flags} {Σ Γ t l T},
+    wf Σ.1 ->
+    Σ ;;; Γ |- mkApps t l : T ->
+    ∑ A U,
+      Σ ;;; Γ |- t : A ×
+      typing_spine Σ Γ A l U ×
+      Σ ;;; Γ |- U <= T.
+Proof.
+  intros cf Σ Γ t l T hΣ h.
+  induction l in t, T, h |- *.
+  - cbn in h. exists T, T. repeat split ; auto.
+    constructor.
+    + eapply validity' ; eauto.
+    + apply cumul_refl'.
+  - simpl in h. eapply IHl in h as [C [U [h1 [h2 h3]]]].
+    apply inversion_App in h1 as [na [A [B [ht [ha hc]]]]].
+    eexists (tProd na A B), _. split ; [| split].
+    + assumption.
+    + econstructor. 2: eapply cumul_refl'.
+      * eapply validity' ; eauto.
+      * assumption.
+      * (* Don't know how to do it. *)
+        admit.
+    + eassumption.
+Admitted.

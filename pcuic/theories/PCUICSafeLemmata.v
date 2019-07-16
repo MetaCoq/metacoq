@@ -1785,23 +1785,20 @@ Section Lemmata.
   Proof.
     destruct hΣ as [wΣ].
     intros Γ n i args u i' args' u' h.
-    induction args.
-    - simpl in h. apply inversion_Construct in h as ih ; auto.
-      destruct ih as [mdecl [idecl [cdecl [? [d [? hc]]]]]].
-      destruct i as [mind nind].
-      destruct i' as [mind' nind'].
-      unfold type_of_constructor in hc. cbn in hc.
-      destruct cdecl as [[cna ct] cn]. cbn in hc.
-      destruct mdecl as [mnpars mpars mbod muni]. simpl in *.
-      destruct idecl as [ina ity ike ict iprj].
-      apply cumul_alt in hc as [v [v' [[? ?] ?]]].
-      unfold declared_constructor in d. cbn in d.
-      destruct d as [[dm hin] hn]. simpl in *.
-      unfold declared_minductive in dm.
-      (* I have no idea how to do it. *)
-      (* Follows from principality and Validity *)
-      admit.
-    - eapply IHargs. (* Induction on args was a wrong idea! *)
+    eapply inversion_mkApps in h ; auto.
+    destruct h as [T [U [hC [hs hc]]]].
+    apply inversion_Construct in hC
+      as [mdecl [idecl [cdecl [hΓ [isdecl [const htc]]]]]].
+    unfold type_of_constructor in htc. simpl in htc.
+    destruct i as [mind nind]. simpl in *.
+    destruct cdecl as [[cna ct] cn]. cbn in htc.
+    destruct mdecl as [mnpars mpars mbod muni]. simpl in *.
+    destruct idecl as [ina ity ike ict iprj]. simpl in *.
+    unfold declared_constructor in isdecl. cbn in isdecl.
+    destruct isdecl as [[dm hin] hn]. simpl in *.
+    unfold declared_minductive in dm.
+    (* Do we need to exploit wellformedness of the context?? *)
+    (* We should also use invert_cumul_ind_l at some point. *)
   Admitted.
 
   Require Import PCUICWeakeningEnv.
@@ -1849,3 +1846,98 @@ Section Lemmata.
   Qed.
 
 End Lemmata.
+
+
+Require Import PCUICWeakening PCUICGeneration uGraph.
+
+Lemma strengthening `{cf : checker_flags} :
+  forall {Σ Γ Γ' Γ'' t T},
+    wf Σ.1 ->
+    Σ ;;; Γ ,,, Γ'' ,,, lift_context #|Γ''| 0 Γ'
+    |- lift #|Γ''| #|Γ'| t : lift #|Γ''| #|Γ'| T ->
+    Σ;;; Γ ,,, Γ' |- t : T.
+Admitted.
+
+Lemma map_option_out_mapi :
+  forall {A B} (l : list A) (l' : list B) f P,
+    map_option_out (mapi f l) = Some l' ->
+    Alli (fun i x => on_Some_or_None P (f i x)) 0 l ->
+    All P l'.
+Proof.
+  intros A B l l' f P.
+  unfold mapi. generalize 0.
+  induction l in l' |- *; simpl; intro n.
+  - inversion 1; constructor.
+  - case_eq (f n a); [|discriminate].
+    intros b Hb.
+    case_eq (map_option_out (mapi_rec f l (S n))); [|discriminate].
+    intros l0 Hl0 HH0 HH1.
+    inversion HH0; subst; clear HH0.
+    inversion HH1; subst.
+    constructor. now rewrite Hb in H0.
+    now eapply IHl.
+Qed.
+
+Lemma Alli_id :
+  forall {A} {P : nat -> A -> Type} (l : list A) (n : nat),
+    (forall n x, P n x) -> Alli P n l.
+Proof.
+  intros A P l n h.
+  induction l in n |- * ; constructor ; eauto.
+Qed.
+
+Lemma type_Case_valid_btys {cf:checker_flags} :
+  forall Σ Γ ind u p args mdecl idecl
+    (isdecl : declared_inductive (fst Σ) mdecl ind idecl)
+    (pars := List.firstn mdecl.(ind_npars) args)
+    pty (Hp : Σ ;;; Γ |- p : pty)
+    indctx pctx ps btys
+    (e : types_of_case ind mdecl idecl pars u p pty = Some (indctx, pctx, ps, btys))
+    (Hc : PCUICTyping.check_correct_arity (global_ext_constraints Σ) idecl ind u indctx pars pctx),
+    Forall (fun A : nat × term => wellformed Σ Γ (snd A)) btys.
+Proof.
+  intros Σ Γ ind u p args mdecl idecl isdecl pars pty Hp indctx pctx ps btys e
+         Hc.
+  unfold types_of_case in e.
+  case_eq (instantiate_params (ind_params mdecl) pars (ind_type idecl));
+    [|intro HH; rewrite HH in e; discriminate e].
+  intros params' He; rewrite He in e.
+  case_eq (destArity [] params');
+    [|intro HH; rewrite HH in e; discriminate e].
+  intros [params_ctx params_sort] He1; rewrite He1 in e.
+  case_eq (destArity [] pty);
+    [|intro HH; rewrite HH in e; discriminate e].
+  intros [pty_ctx pty_sort] He2; rewrite He2 in e.
+
+  case_eq (map_option_out (build_branches_type ind mdecl idecl pars u p));
+    [|intro HH; rewrite HH in e; discriminate e].
+  intros brtys He3; rewrite He3 in e.
+  inversion e; subst; clear e.
+  unfold build_branches_type in He3.
+  solve_all.
+  eapply (map_option_out_mapi (ind_ctors idecl) btys _ _ He3); clear He3.
+  apply Alli_id.
+  intros i [[id ctor] k].
+  case_eq (instantiate_params (ind_params mdecl) pars ((subst0 (inds (inductive_mind ind) u (ind_bodies mdecl))) (subst_instance_constr u ctor))); [|cbn; trivial].
+  intros ipars Hipars.
+  case_eq (decompose_prod_assum [] ipars). intros ipars0 ipars1 ipars01.
+  case_eq (chop (ind_npars mdecl) (snd (decompose_app ipars1))).
+  intros ipars10 ipars11 Hipars1. cbn.
+  (* left. econstructor. *)
+  (* clear params' He. *)
+
+  (* apply PCUICWeakeningEnv.on_declared_inductive in X2; try assumption. *)
+  (* destruct X2 as [XX2 XX3]. *)
+  (* apply onConstructors in XX3; unfold on_constructors in XX3. *)
+  (* eapply Alli_impl; try eassumption. *)
+  (* clear -He. *)
+  (* intros n [[id ctor_ty] nc] X. *)
+  (* destruct X as [X1 X2]; cbn in *. *)
+Admitted.
+
+Lemma isWfArity_or_Type_cumul {cf:checker_flags} :
+  forall Σ {Γ A A'},
+    Σ;;; Γ |- A' <= A ->
+    isWfArity_or_Type Σ Γ A' ->
+    isWfArity_or_Type Σ Γ A.
+Admitted.

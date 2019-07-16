@@ -70,10 +70,10 @@ Open Scope pcuic.
 (*       destruct cst_universes. *)
 (*       -- simpl. reflexivity. *)
 (*       -- simpl in *. destruct cst0. simpl in *. *)
-(*          unfold check_consistent_constraints. *)
+(*          unfold check_consistent_instance. *)
 (*          admit. *)
 (*       -- simpl in *. destruct ctx as [[inst csts] variance]. simpl in *. *)
-(*          unfold check_consistent_constraints. *)
+(*          unfold check_consistent_instance. *)
 (*          admit. *)
 
 (*     - (* Inductive *) *)

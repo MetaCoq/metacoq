@@ -53,19 +53,6 @@ Proof.
     specialize (h _ _ e).
 Admitted.
 
-(* TODO MOVE *)
-Lemma inst_mkApps :
-  forall t l σ,
-    (mkApps t l).[σ] = mkApps t.[σ] (map (inst σ) l).
-Proof.
-  intros t l σ.
-  induction l in t, σ |- *.
-  - reflexivity.
-  - simpl. rewrite IHl. reflexivity.
-Qed.
-
-Hint Rewrite @inst_mkApps : sigma.
-
 Lemma instantiate_params_subst_inst :
   forall params pars s ty σ s' T,
     instantiate_params_subst params pars s ty = Some (s', T) ->
@@ -81,8 +68,8 @@ Proof.
     destruct (decl_body a).
     + destruct ty. all: try discriminate e.
       eapply IHparams with (σ := σ) in e as ih. simpl in ih.
-      autorewrite with sigma in *.
       rewrite <- ih. f_equal. f_equal.
+      autorewrite with sigma.
       eapply inst_ext. intro i.
       unfold subst_consn, subst_compose.
       rewrite nth_error_map.

@@ -136,6 +136,45 @@ Proof.
   eapply eq_universe_leq_universe.
 Qed.
 
+Lemma eq_term_upto_univ_incl `{cf:checker_flags} Re Rle :
+  inclusion Re Rle -> inclusion (eq_term_upto_univ Re Re) (eq_term_upto_univ Re Rle).
+Proof. intros. intros x y H. eapply eq_term_upto_univ_leq in H; eauto. Qed.
+
+Lemma eq_term_upto_univ_antisym :
+  forall (Re Rle : universe -> universe -> Type) u v,
+    (forall u u', Rle u u' -> Rle u' u -> Re u u') ->
+    eq_term_upto_univ Re Rle u v ->
+    eq_term_upto_univ Re Rle v u ->
+    eq_term_upto_univ Re Re u v.
+Proof.
+  intros Re Rle u v hR h h'.
+  induction u in v, h, h' |- * using term_forall_list_ind.
+  all: simpl ; inversion h ; inversion h' ;
+       subst ; try constructor ; try easy.
+  all: try solve [eapply All2_impl ; eauto]; eauto.
+  all: simpl ; inversion h ; inversion h' ;
+       subst ; try constructor ; try easy.
+  - noconf H. depelim h; depelim h'.
+    eapply All2_sym in a.
+    eapply All2_impl; [eapply All2_prod|]; [eapply a0|eapply a|].
+    intros x y [xy yx]. auto.
+  - noconf H. depelim h; depelim h'.
+    eapply All2_sym in a.
+    eapply All2_impl; [eapply All2_prod|]; [eapply a0|eapply a|].
+    intros x y [xy yx]. auto.
+  - noconf H. depelim h; depelim h'.
+    eapply All2_sym in a.
+    eapply All2_impl; [eapply All2_prod|]; [eapply a0|eapply a|].
+    intros x y [xy yx]. auto.
+Qed.
+
+Lemma leq_term_antisym `{cf : checker_flags} (Σ : constraints) t u :
+  leq_term Σ t u -> leq_term Σ u t -> eq_term Σ t u.
+Proof.
+  intros. eapply eq_term_upto_univ_antisym; [|eauto ..].
+  eapply leq_universe_antisym.
+Qed.
+
 Lemma eq_term_App `{checker_flags} φ f f' :
   eq_term φ f f' ->
   isApp f = isApp f'.
@@ -170,17 +209,6 @@ Proof.
   - cbn. apply IHl. constructor; try assumption. assumption.
 Qed.
 
-Derive Signature for All2.
-
-Lemma All2_sym {A} (P : A -> A -> Type) :
-  CRelationClasses.Symmetric P ->
-  CRelationClasses.Symmetric (All2 P).
-Proof.
-  intros hP x y h. induction h.
-  - constructor.
-  - constructor ; eauto.
-Qed.
-
 Lemma eq_term_upto_univ_sym :
   forall Re Rle,
     CRelationClasses.Symmetric Re ->
@@ -192,7 +220,7 @@ Proof.
   all: dependent destruction e.
   all: try solve [
     econstructor ; eauto ;
-    try eapply All2_sym ; eauto
+    try eapply All2_symP ; eauto
   ].
   - econstructor.
     eapply All2_All_mix_left in X as h; eauto.

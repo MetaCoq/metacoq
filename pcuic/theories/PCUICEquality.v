@@ -1040,6 +1040,36 @@ Proof.
   - eapply leq_universe_trans ; eauto.
 Qed.
 
+Global Instance eq_term_equiv Σ : Equivalence (eq_term Σ) :=
+  {| Equivalence_Reflexive := eq_term_refl Σ;
+     Equivalence_Symmetric := eq_term_sym Σ;
+     Equivalence_Transitive := eq_term_trans Σ |}.
+
+Global Instance leq_term_preorder Σ : PreOrder (leq_term Σ) :=
+  {| PreOrder_Reflexive := leq_term_refl Σ;
+     PreOrder_Transitive := leq_term_trans Σ |}.
+
+Global Instance leq_term_partial_order Σ : PartialOrder (eq_term Σ) (leq_term Σ).
+Proof.
+  split. intros eqxy; split; now eapply eq_term_leq_term.
+  intros [xy yx].
+  now eapply leq_term_antisym.
+Qed.
+
+Hint Unfold eq_term : typeclass_instances.
+
+Global Instance leq_refl@{i j} (Re Rle : crelation@{i j} _) :
+  Reflexive Re -> Reflexive Rle -> Reflexive@{i j} (eq_term_upto_univ Re Rle).
+Proof. intros ** x. now apply eq_term_upto_univ_refl. Qed.
+
+Global Instance leq_trans@{i j} (Re Rle : crelation@{i j} _) :
+  Transitive Re -> Transitive Rle -> Transitive@{i j} (eq_term_upto_univ Re Rle).
+Proof. intros ** x. now apply eq_term_upto_univ_trans. Qed.
+
+Global Instance incl Re Rle :
+  subrelation Re Rle -> subrelation (eq_term_upto_univ Re Re) (eq_term_upto_univ Re Rle).
+Proof. intros H x y. eapply eq_term_upto_univ_leq. auto. Qed.
+
 Existing Class SubstUnivPreserving.
 (* FIXME SubstUnivPreserving will need to be up-to a sigma or set of constraints at least *)
 Global Instance eq_univ_substu φ : SubstUnivPreserving (eq_universe φ).

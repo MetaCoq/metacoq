@@ -69,10 +69,11 @@ Hint Rewrite @inst_mkApps : sigma.
 Lemma instantiate_params_inst :
   forall params pars T σ T',
     instantiate_params params pars T = Some T' ->
-    instantiate_params params (map (inst σ) pars) T = Some T'.
+    instantiate_params params (map (inst σ) pars) T = Some T'.[σ].
 Proof.
   intros params pars T σ T'.
   unfold instantiate_params.
+  change (@nil term) with (map (inst σ) []) at 2.
   generalize (@nil term).
   generalize (List.rev params). clear params.
   intros params s e.
@@ -82,19 +83,25 @@ Proof.
   induction params in σ, pars, s, T, s', ty, e' |- *.
   - simpl in e'. simpl. destruct pars. all: try discriminate e'.
     inversion e'. subst. clear e'.
-    simpl. reflexivity.
+    simpl. autorewrite with sigma.
+    (* TODO LEMMA *)
+    f_equal. eapply inst_ext.
+    intro i. unfold subst_consn. unfold subst_compose.
+    rewrite nth_error_map.
+    destruct (nth_error s' i).
+    + simpl. reflexivity.
+    + simpl. rewrite map_length.
+      (* There is something wrong *)
+      give_up.
   - simpl in e'. simpl.
     case_eq (decl_body a).
     + intros t e. rewrite e in e'.
       destruct T. all: try discriminate e'.
-      eapply IHparams in e'. eassumption.
+      eapply IHparams in e'. (* eassumption. *) give_up.
     + intro neq. rewrite neq in e'.
       destruct T. all: try discriminate e'.
       destruct pars. all: try discriminate.
-      simpl. eapply IHparams.
-      (* Bad generalisation to s, should be inst in the conclusion.
-         Of course we also need to fix the general statement.
-       *)
+      simpl. (* eapply IHparams. *)
 Abort.
 
 Lemma types_of_case_inst :

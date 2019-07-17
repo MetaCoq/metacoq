@@ -665,14 +665,18 @@ Definition global_levels (Σ : global_env) : LevelSet.t
                 (LevelSet_pair Level.lSet Level.lProp) Σ.
 
 (** One can compute the constraints associated to a global environment or its
-    extension by folding over its constituent definitions. We make these
-    computations implicit coercions for more readability. *)
+    extension by folding over its constituent definitions.
+
+    We make *only* the second of these computations an implicit coercion
+    for more readability. Note that [fst_ctx] is also a coercion which goes
+    from a [global_env_ext] to a [global_env]: coercion coherence would *not*
+    be ensured if we added [global_constraints] as well as a coercion, as it
+    would forget the extension's constraints. *)
 
 Definition global_constraints (Σ : global_env) : constraints
   := fold_right (fun decl ctrs => ConstraintSet.union
                                 (monomorphic_constraints_decl decl) ctrs)
                ConstraintSet.empty Σ.
-Coercion global_constraints : global_env >-> constraints.
 
 Definition global_ext_levels (Σ : global_env_ext) : LevelSet.t
   := LevelSet.union (levels_of_udecl (snd Σ)) (global_levels Σ.1).

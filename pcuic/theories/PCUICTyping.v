@@ -205,9 +205,6 @@ Arguments OnOne2 {A} P%type l l'.
 Notation on_Trel_eq R f g :=
   (fun x y => (R (f x) (f y) * (g x = g y)))%type.
 
-Notation Trel_conj R S :=
-  (fun x y => R x y * S x y).
-
 Inductive red1 (Σ : global_env) (Γ : context) : term -> term -> Type :=
 (** Reductions *)
 (** Beta *)
@@ -663,15 +660,19 @@ Definition universes_decl_of_decl := on_udecl_decl (fun x => x).
 Definition LevelSet_pair x y
   := LevelSet.add y (LevelSet.singleton x).
 
-
 Definition global_levels (Σ : global_env) : LevelSet.t
   := fold_right (fun decl lvls => LevelSet.union (monomorphic_levels_decl decl) lvls)
                 (LevelSet_pair Level.lSet Level.lProp) Σ.
+
+(** One can compute the constraints associated to a global environment or its
+    extension by folding over its constituent definitions. We make these
+    computations implicit coercions for more readability. *)
 
 Definition global_constraints (Σ : global_env) : constraints
   := fold_right (fun decl ctrs => ConstraintSet.union
                                 (monomorphic_constraints_decl decl) ctrs)
                ConstraintSet.empty Σ.
+Coercion global_constraints : global_env >-> constraints.
 
 Definition global_ext_levels (Σ : global_env_ext) : LevelSet.t
   := LevelSet.union (levels_of_udecl (snd Σ)) (global_levels Σ.1).
@@ -679,7 +680,7 @@ Definition global_ext_levels (Σ : global_env_ext) : LevelSet.t
 Definition global_ext_constraints (Σ : global_env_ext) : constraints
   := ConstraintSet.union (constraints_of_udecl (snd Σ))
                          (global_constraints Σ.1).
-
+Coercion global_ext_constraints : global_env_ext >-> constraints.
 
 Lemma prop_global_ext_levels Σ : LevelSet.In Level.prop (global_ext_levels Σ).
 Proof.

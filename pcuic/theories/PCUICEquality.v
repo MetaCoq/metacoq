@@ -2043,7 +2043,7 @@ Proof.
   revert Rerefl Rlerefl Resym Retrans Rletrans incl incl'.
   revert Re Rle u v H Rle'.
   induction 1; intros; constructor; intuition auto.
-  - eapply All2_sym; auto. eapply eq_term_upto_univ_sym. auto.
+  - eapply All2_symP; auto. eapply eq_term_upto_univ_sym. auto.
   - eapply PCUICAstUtils.All2_sym. eapply All2_map_inv in a. solve_all.
   - eapply PCUICAstUtils.All2_sym. eapply All2_map_inv in a. solve_all.
   - eapply PCUICAstUtils.All2_sym. eapply All2_map_inv in a. solve_all.

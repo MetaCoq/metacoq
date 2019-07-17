@@ -664,10 +664,49 @@ Proof. induction 1; simpl; auto. Qed.
 Lemma All2_same {A} (P : A -> A -> Type) l : (forall x, P x x) -> All2 P l l.
 Proof. induction l; constructor; auto. Qed.
 
+Notation Trel_conj R S :=
+  (fun x y => R x y * S x y)%type.
+
+Lemma All2_prod {A} P Q (l l' : list A) : All2 P l l' -> All2 Q l l' -> All2 (Trel_conj P Q) l l'.
+Proof.
+  induction 1; inversion 1; subst; auto.
+Defined.
+
+Lemma All2_prod_inv :
+  forall A (P : A -> A -> Type) Q l l',
+    All2 (Trel_conj P Q) l l' ->
+    All2 P l l' × All2 Q l l'.
+Proof.
+  intros A P Q l l' h.
+  induction h.
+  - auto.
+  - destruct IHh. destruct r.
+    split ; constructor ; auto.
+Qed.
+
 Lemma All2_sym {A} (P : A -> A -> Type) l l' :
   All2 P l l' -> All2 (fun x y => P y x) l' l.
 Proof.
   induction 1; constructor; auto.
+Qed.
+
+Lemma All2_symP {A} (P : A -> A -> Type) :
+  CRelationClasses.Symmetric P ->
+  CRelationClasses.Symmetric (All2 P).
+Proof.
+  intros hP x y h. induction h.
+  - constructor.
+  - constructor ; eauto.
+Qed.
+
+Lemma All_All2_All2_mix {A B} (P : B -> B -> Type) (Q R : A -> B -> Type) l l' l'' :
+  All (fun x => forall y z, Q x y -> R x z -> ∑ v, P y v * P z v) l -> All2 Q l l' -> All2 R l l'' ->
+  ∑ l''', All2 P l' l''' * All2 P l'' l'''.
+Proof.
+  intros H; induction H in l', l'' |- *;
+  intros H' H''; depelim H'; depelim H''; try solve [econstructor; eauto; constructor].
+  simpl. destruct (IHAll _ _ H' H''). destruct (p _ _ q r).
+  exists (x1 :: x0). split; constructor; intuition auto.
 Qed.
 
 Lemma All_forallb_map_spec {A B : Type} {P : A -> Type} {p : A -> bool}

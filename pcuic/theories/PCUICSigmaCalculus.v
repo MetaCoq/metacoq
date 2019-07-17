@@ -66,6 +66,31 @@ Qed.
 
 Hint Rewrite @inst_mkApps : sigma.
 
+Lemma instantiate_params_subst_inst :
+  forall params pars s ty σ s' T,
+    instantiate_params_subst params pars s ty = Some (s', T) ->
+    instantiate_params_subst params (map (inst σ) pars) (map (inst σ) s) ty =
+    Some (map (inst σ) s', T).
+Proof.
+  intros params pars s ty σ s' T e.
+  induction params in pars, s, ty, σ, s', T, e |- *.
+  - simpl in *. destruct pars ; try discriminate.
+    inversion e. subst. clear e.
+    simpl. reflexivity.
+  - simpl in *.
+    destruct (decl_body a).
+    + destruct ty. all: try discriminate e.
+      eapply IHparams with (σ := σ) in e as ih. simpl in ih.
+      autorewrite with sigma in *.
+      rewrite <- ih. f_equal. f_equal.
+      eapply inst_ext. intro i.
+      unfold subst_consn, subst_compose.
+      rewrite nth_error_map.
+      destruct (nth_error s i).
+      * simpl. reflexivity.
+      * simpl. give_up.
+Abort.
+
 Lemma instantiate_params_inst :
   forall params pars T σ T',
     instantiate_params params pars T = Some T' ->
@@ -97,7 +122,11 @@ Proof.
     case_eq (decl_body a).
     + intros t e. rewrite e in e'.
       destruct T. all: try discriminate e'.
-      eapply IHparams in e'. (* eassumption. *) give_up.
+      eapply IHparams with (σ := σ) in e'.
+      simpl in e'.
+      autorewrite with sigma.
+      autorewrite with sigma in e'.
+(* eassumption. *) give_up.
     + intro neq. rewrite neq in e'.
       destruct T. all: try discriminate e'.
       destruct pars. all: try discriminate.

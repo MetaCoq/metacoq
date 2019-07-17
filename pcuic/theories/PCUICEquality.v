@@ -6,8 +6,9 @@ From MetaCoq.Template Require Import config utils Universes BasicAst AstUtils
      UnivSubst.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICReflect PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICNameless
-     PCUICPosition PCUICCumulativity.
+     PCUICPosition PCUICReduction PCUICCumulativity.
 
+Require Import ssreflect.
 From Equations Require Import Equations.
 Require Import Equations.Prop.DepElim.
 Set Equations With UIP.
@@ -109,26 +110,6 @@ Fixpoint eqb_term_upto_univ (equ lequ : universe -> universe -> bool) (u v : ter
   | _, _ => false
   end.
 
-(* Definition eqb_term (u v : term) : bool := *)
-(*   eqb_term_upto_univ () *)
-
-(* Definition leqb_term (u v : term) : bool := *)
-(*   eqb_term_upto_univ () *)
-
-Inductive reflectT (A : Type) : bool -> Type :=
-| ReflectT : A -> reflectT A true
-| ReflectF : (A -> False) -> reflectT A false.
-
-Lemma reflectT_reflect (A : Prop) b : reflectT A b -> reflect A b.
-Proof.
-  destruct 1; now constructor.
-Qed.
-
-Lemma reflect_reflectT (A : Prop) b : reflect A b -> reflectT A b.
-Proof.
-  destruct 1; now constructor.
-Qed.
-
 Ltac eqspec :=
   lazymatch goal with
   | |- context [ eqb ?u ?v ] =>
@@ -151,15 +132,6 @@ Local Ltac ih :=
     |- context [ eqb_term_upto_univ _ ?lequ ?t ?t' ] =>
     destruct (ih lequ Rle hle t') ; nodec ; subst
   end.
-
-Lemma All2_impl' {A B} {P Q : A -> B -> Type} {l : list A} {l' : list B}
-  : All2 P l l' -> All (fun x => forall y, P x y -> Q x y) l -> All2 Q l l'.
-Proof.
-  induction 1. constructor.
-  intro XX; inv XX.
-  constructor; auto.
-Defined.
-
 
 Lemma eq_term_upto_univ_impl :
   forall (equ lequ : _ -> _ -> bool) Re Rle,
@@ -945,18 +917,6 @@ Proof.
     solve_all. now rewrite H.
 Qed.
 
-Derive Signature for All2.
-
-Lemma All2_trans {A} (P : A -> A -> Type) :
-  CRelationClasses.Transitive P ->
-  CRelationClasses.Transitive (All2 P).
-Proof.
-  intros HP x y z H. induction H in z |- *.
-  intros Hyz. depelim Hyz. constructor.
-  intros Hyz. depelim Hyz. constructor; auto.
-  now transitivity y.
-Qed.
-
 Lemma eq_term_upto_univ_trans :
   forall Re Rle,
     CRelationClasses.Transitive Re ->
@@ -1079,6 +1039,13 @@ Proof.
   - eapply eq_universe_trans ; eauto.
   - eapply leq_universe_trans ; eauto.
 Qed.
+
+Existing Class SubstUnivPreserving.
+(* FIXME SubstUnivPreserving will need to be up-to a sigma or set of constraints at least *)
+Global Instance eq_univ_substu φ : SubstUnivPreserving (eq_universe φ).
+Admitted.
+Global Instance leq_univ_substu φ : SubstUnivPreserving (leq_universe φ).
+Admitted.
 
 Lemma eq_term_upto_univ_mkApps_inv :
   forall Re u l u' l',
@@ -2117,5 +2084,45 @@ Proof.
   now eapply flip_Transitive.
   unfold flip. intros. eapply symmetry in X. eauto.
 Qed.
+
+Section RedEq.
+  Context (Σ : global_env_ext).
+  Context {Re Rle} {refl : Reflexive Re} {refl' :Reflexive Rle} {sym : Symmetric Re}
+          {trre : Transitive Re} {trle : Transitive Rle} `{SubstUnivPreserving Re} `{SubstUnivPreserving Rle}.
+  Context (inclre : forall u u' : universe, Re u u' -> Rle u u').
+
+  Lemma red_eq_term_upto_univ_r {Γ T V U} :
+    eq_term_upto_univ Re Rle T U -> red Σ Γ U V ->
+    ∑ T', red Σ Γ T T' * eq_term_upto_univ Re Rle T' V.
+  Proof.
+    intros eq r.
+    apply red_alt in r.
+    induction r in T, eq |- *.
+    - eapply red1_eq_term_upto_univ_r in eq as [v' [r' eq']]; eauto.
+    - exists T; split; eauto.
+    - case: (IHr1 _ eq) => T' [r' eq'].
+      case: (IHr2 _ eq') => T'' [r'' eq''].
+      exists T''. split=>//.
+      now transitivity T'.
+  Qed.
+
+  Lemma red_eq_term_upto_univ_l {Γ u v u'} :
+    eq_term_upto_univ Re Rle u u' ->
+    red Σ Γ u v ->
+    ∑ v',
+    red Σ Γ u' v' *
+    eq_term_upto_univ Re Rle v v'.
+  Proof.
+    intros eq r.
+    eapply red_alt in r.
+    induction r in u', eq |- *.
+    - eapply red1_eq_term_upto_univ_l in eq as [v' [r' eq']]; eauto.
+    - exists u'. split; auto.
+    - case: (IHr1 _ eq) => T' [r' eq'].
+      case: (IHr2 _ eq') => T'' [r'' eq''].
+      exists T''. split=>//.
+      now transitivity T'.
+  Qed.
+End RedEq.
 
 End CheckerFlags.

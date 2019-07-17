@@ -587,6 +587,26 @@ Proof.
   rewrite !H // !H0 //; intuition auto.
 Qed.
 
+Derive Signature for All2.
+
+Lemma All2_trans {A} (P : A -> A -> Type) :
+  CRelationClasses.Transitive P ->
+  CRelationClasses.Transitive (All2 P).
+Proof.
+  intros HP x y z H. induction H in z |- *.
+  intros Hyz. depelim Hyz. constructor.
+  intros Hyz. depelim Hyz. constructor; auto.
+  now transitivity y.
+Qed.
+
+Lemma All2_impl' {A B} {P Q : A -> B -> Type} {l : list A} {l' : list B}
+  : All2 P l l' -> All (fun x => forall y, P x y -> Q x y) l -> All2 Q l l'.
+Proof.
+  induction 1. constructor.
+  intro XX; inv XX.
+  constructor; auto.
+Defined.
+
 Lemma All_All2 {A} {P : A -> A -> Type} {Q} {l : list A} :
   All Q l ->
   (forall x, Q x -> P x x) ->

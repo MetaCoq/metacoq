@@ -39,7 +39,12 @@ Extraction Inline Equations.Prop.DepElim.solution_left.
 
 (* Extraction Inline NoConfusionPackage_All_local_env_over. *)
 (* Extraction Inline NoConfusionPackage_context_decl. *)
+Extraction Library Signature.
 Extraction Library Classes.
+
+Extract Constant CRelationClasses.eq_equivalence => "(Obj.magic 0)".
+Extraction Library CRelationClasses.
+
 
 (* The following allows to test the failure of extraction *)
 (* Bugs in extraction! *)

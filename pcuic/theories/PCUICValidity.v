@@ -151,7 +151,7 @@ Section Validity.
         unfold app_context. now rewrite (firstn_skipn (S n) Γ).
 
     - (* Universe *) left. exists [], (Universe.super l). split; auto.
-    - (* Product *) left. eexists [], _. split; eauto.
+    - (* Product *) left. eexists [], _. split; eauto. simpl. reflexivity.
     - (* Lambda *)
       destruct X3.
       + left. destruct i as [ctx [s [Heq Hs]]].

@@ -6,14 +6,14 @@ TOCOPY="ast_denoter.ml ast_quoter.ml denote.ml denoter.ml plugin_core.ml plugin_
 if [[ "gen-src" -ot "src" || ! -f "gen-src/denote.ml" || "gen-src" -ot "theories/Extraction.v" ]]
 then
     echo "Updating gen-src from src"
-    # Fix an extraction bug: wrong type annotation on eq_equivalence
-    patch -N -p0 < extraction.patch
     mkdir -p build
     cp src/template_coq.cmx src/template_coq.cmxa src/template_coq.cmxs build
     echo "Copying from src to gen-src"
     for x in ${TOCOPY}; do rm -f gen-src/$x; cp src/$x gen-src/$x; done
     echo "Renaming files to camelCase"
     (cd gen-src; ./to-lower.sh)
+    # Fix an extraction bug: wrong type annotation on eq_equivalence
+    patch -N -p0 < extraction.patch
 else
     echo "Extracted code is up-to-date"
 fi

@@ -257,3 +257,5 @@ checker/src/wf.mli
 /safechecker/Makefile.plugin
 /pcuic/src/signature.ml
 /pcuic/src/signature.mli
+/template-coq/Makefile.template
+/template-coq/Makefile.template.conf

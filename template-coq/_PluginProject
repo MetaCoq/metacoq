@@ -4,12 +4,6 @@
 # Generated Code
 gen-src/ascii.ml
 gen-src/ascii.mli
-gen-src/ast0.ml
-gen-src/ast0.mli
-gen-src/astUtils.ml
-gen-src/astUtils.mli
-gen-src/basicAst.ml
-gen-src/basicAst.mli
 gen-src/basics.ml
 gen-src/basics.mli
 gen-src/binInt.ml
@@ -66,13 +60,23 @@ gen-src/specif.ml
 gen-src/specif.mli
 gen-src/string0.ml
 gen-src/string0.mli
+
+gen-src/cRelationClasses.mli
+gen-src/cRelationClasses.ml
+gen-src/config0.mli
+gen-src/config0.ml
 gen-src/universes0.ml
 gen-src/universes0.mli
-gen-src/equality.ml
-gen-src/equality.mli
+gen-src/basicAst.ml
+gen-src/basicAst.mli
+gen-src/ast0.ml
+gen-src/ast0.mli
+gen-src/astUtils.ml
+gen-src/astUtils.mli
+gen-src/equality0.ml
+gen-src/equality0.mli
 gen-src/utils.ml
 gen-src/utils.mli
-
 
 gen-src/tm_util.ml
 gen-src/quoted.ml

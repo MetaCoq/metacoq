@@ -8,7 +8,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICReflect PCUICLiftSubst PCUICUnivSubst PCUICTyping
      PCUICCumulativity PCUICSR PCUICPosition PCUICEquality PCUICNameless
      PCUICNormal PCUICInversion PCUICCumulativity PCUICReduction
-     PCUICConfluence PCUICConversion PCUICValidity.
+     PCUICConfluence PCUICConversion PCUICContextConversion PCUICValidity.
 From Equations Require Import Equations.
 
 Require Import Equations.Prop.DepElim.
@@ -166,9 +166,11 @@ Section Lemmata.
   Lemma context_conversion :
     forall {Σ Γ t T Γ'},
       Σ ;;; Γ |- t : T ->
-      PCUICSR.conv_context Σ Γ Γ' ->
+      conv_context Σ Γ Γ' ->
       Σ ;;; Γ' |- t : T.
   Admitted.
+
+  Hint Resolve eq_term_upto_univ_refl : core.
 
   Lemma build_branches_type_eq_term :
     forall p p' ind mdecl idecl pars u brtys,
@@ -349,10 +351,8 @@ Section Lemmata.
         * eapply ihB. assumption.
         * constructor.
           -- apply conv_ctx_refl ; auto.
-          -- constructor.
-             ++ eexists. eapply ihA. assumption.
-             ++ eapply conv_conv_alt. constructor.
-                eapply eq_term_upto_univ_eq_eq_term. assumption.
+          -- constructor. constructor.
+             eapply eq_term_upto_univ_eq_eq_term. assumption.
     - intros na A t s1 B ih hA ihA hB ihB v e.
       dependent destruction e.
       econstructor.
@@ -362,10 +362,8 @@ Section Lemmata.
           -- eapply ihB. assumption.
           -- constructor.
              ++ apply conv_ctx_refl ; auto.
-             ++ constructor.
-                ** eexists. eapply ihA. assumption.
-                ** eapply conv_conv_alt. constructor.
-                   eapply eq_term_upto_univ_eq_eq_term. assumption.
+             ++ do 2 constructor.
+                eapply eq_term_upto_univ_eq_eq_term. assumption.
       + eapply validity_term ; eauto.
         econstructor ; eauto.
       + constructor.
@@ -388,17 +386,10 @@ Section Lemmata.
           -- eapply ihA. assumption.
           -- constructor.
              ++ apply conv_ctx_refl ; auto.
-             ++ econstructor.
-                ** eexists. eapply ihB. assumption.
-                ** econstructor.
-                   --- eapply ihb. assumption.
-                   --- right. eexists. eapply ihB. assumption.
-                   --- constructor. eapply eq_term_leq_term.
-                       eapply eq_term_upto_univ_eq_eq_term. assumption.
-                ** eapply conv_conv_alt. constructor.
-                   eapply eq_term_upto_univ_eq_eq_term. assumption.
-                ** eapply conv_conv_alt. constructor.
-                   eapply eq_term_upto_univ_eq_eq_term. assumption.
+             ++ econstructor. constructor.
+                now apply eq_term_upto_univ_eq_eq_term.
+                constructor.
+                now apply eq_term_upto_univ_eq_eq_term.
       + eapply validity_term ; eauto.
         econstructor ; eauto.
       + constructor.
@@ -630,8 +621,8 @@ Section Lemmata.
   Lemma conv_context :
     forall Σ Γ u v ρ,
       wf Σ.1 ->
-      Σ ;;; Γ ,,, stack_context ρ |- u = v ->
-      Σ ;;; Γ |- zipc u ρ = zipc v ρ.
+      Σ ;;; Γ ,,, stack_context ρ |- u == v ->
+      Σ ;;; Γ |- zipc u ρ == zipc v ρ.
   Proof.
     intros Σ Γ u v ρ hΣ h.
     induction ρ in u, v, h |- *.
@@ -985,6 +976,93 @@ Section Lemmata.
       eapply cumul_it_mkLambda_or_LetIn. assumption.
   Qed.
 
+  Lemma conv_LetIn_bo :
+    forall Γ na ty t u u',
+      Σ ;;; Γ ,, vdef na ty t |- u == u' ->
+      Σ ;;; Γ |- tLetIn na ty t u == tLetIn na ty t u'.
+  Proof.
+    intros Γ na ty t u u' h.
+    induction h.
+    - eapply conv_alt_refl. constructor.
+      all: try eapply eq_term_refl.
+      assumption.
+    - eapply conv_alt_red_l ; try eassumption.
+      econstructor. assumption.
+    - eapply conv_alt_red_r ; try eassumption.
+      econstructor. assumption.
+  Qed.
+
+  Lemma conv_alt_it_mkLambda_or_LetIn :
+    forall Δ Γ u v,
+      Σ ;;; (Δ ,,, Γ) |- u == v ->
+      Σ ;;; Δ |- it_mkLambda_or_LetIn Γ u == it_mkLambda_or_LetIn Γ v.
+  Proof.
+    intros Δ Γ u v h. revert Δ u v h.
+    induction Γ as [| [na [b|] A] Γ ih ] ; intros Δ u v h.
+    - assumption.
+    - simpl. cbn. eapply ih.
+      eapply conv_LetIn_bo. assumption.
+    - simpl. cbn. eapply ih.
+      eapply conv_Lambda_r. assumption.
+  Qed.
+
+  Lemma conv_alt_it_mkProd_or_LetIn :
+    forall Δ Γ B B',
+      Σ ;;; (Δ ,,, Γ) |- B == B' ->
+      Σ ;;; Δ |- it_mkProd_or_LetIn Γ B == it_mkProd_or_LetIn Γ B'.
+  Proof.
+    intros Δ Γ B B' h.
+    induction Γ as [| [na [b|] A] Γ ih ] in Δ, B, B', h |- *.
+    - assumption.
+    - simpl. cbn. eapply ih.
+      eapply conv_LetIn_bo. assumption.
+    - simpl. cbn. eapply ih.
+      eapply conv_Prod_r. assumption.
+  Qed.
+
+  Lemma conv_alt_zippx :
+    forall Γ u v ρ,
+      Σ ;;; (Γ ,,, stack_context ρ) |- u == v ->
+      Σ ;;; Γ |- zippx u ρ == zippx v ρ.
+  Proof.
+    intros Γ u v ρ h.
+    revert u v h. induction ρ ; intros u v h.
+    - cbn. assumption.
+    - unfold zippx. simpl.
+      case_eq (decompose_stack ρ). intros l π e.
+      unfold zippx in IHρ. rewrite e in IHρ.
+      apply IHρ.
+      eapply conv_App_l. assumption.
+    - unfold zippx. simpl.
+      eapply conv_alt_it_mkLambda_or_LetIn.
+      assumption.
+    - unfold zippx. simpl.
+      eapply conv_alt_it_mkLambda_or_LetIn.
+      assumption.
+    - unfold zippx. simpl.
+      eapply conv_alt_it_mkLambda_or_LetIn.
+      assumption.
+    - unfold zippx. simpl.
+      eapply conv_alt_it_mkLambda_or_LetIn.
+      assumption.
+    - unfold zippx. simpl.
+      eapply conv_alt_it_mkLambda_or_LetIn.
+      assumption.
+    - unfold zippx. simpl.
+      eapply conv_alt_it_mkLambda_or_LetIn. cbn.
+      eapply conv_Lambda_r.
+      assumption.
+    - unfold zippx. simpl.
+      eapply conv_alt_it_mkLambda_or_LetIn.
+      assumption.
+    - unfold zippx. simpl.
+      eapply conv_alt_it_mkLambda_or_LetIn. cbn.
+      eapply conv_Lambda_r.
+      assumption.
+    - unfold zippx. simpl.
+      eapply conv_alt_it_mkLambda_or_LetIn. assumption.
+  Qed.
+
   Lemma conv_zippx :
     forall Γ u v ρ,
       Σ ;;; Γ ,,, stack_context ρ |- u = v ->
@@ -1001,8 +1079,8 @@ Section Lemmata.
   Proof.
     intros Γ leq u v ρ h.
     destruct leq.
-    - cbn in *. destruct h as [[h1 h2]]. constructor.
-      constructor ; eapply cumul_zippx ; assumption.
+    - cbn in *. destruct h as [h]. constructor.
+      eapply conv_alt_zippx ; assumption.
     - cbn in *. destruct h. constructor.
       eapply cumul_zippx. assumption.
   Qed.
@@ -1570,12 +1648,14 @@ Section Lemmata.
       let_free_context Γ
     end.
 
+  Notation conv_ctx Σ Γ Γ' := (context_relation (conv_decls Σ) Γ Γ').
+
   Lemma it_mkLambda_or_LetIn_let_free_conv_inv :
     forall Γ Δ1 Δ2 t1 t2,
       let_free_context Δ1 ->
       let_free_context Δ2 ->
       Σ ;;; Γ |- it_mkLambda_or_LetIn Δ1 t1 = it_mkLambda_or_LetIn Δ2 t2 ->
-      PCUICSR.conv_context Σ (Γ ,,, Δ1) (Γ ,,, Δ2) × Σ ;;; Γ ,,, Δ1 |- t1 = t2.
+      conv_ctx Σ (Γ ,,, Δ1) (Γ ,,, Δ2) × Σ ;;; Γ ,,, Δ1 |- t1 = t2.
   Admitted.
 
   Lemma let_free_stack_context :
@@ -1591,7 +1671,7 @@ Section Lemmata.
     forall Γ π1 π2 t1 t2,
       Σ ;;; Γ |- it_mkLambda_or_LetIn (stack_context π1) t1
               = it_mkLambda_or_LetIn (stack_context π2) t2 ->
-      PCUICSR.conv_context Σ (Γ ,,, stack_context π1) (Γ ,,, stack_context π2) ×
+      conv_ctx Σ (Γ ,,, stack_context π1) (Γ ,,, stack_context π2) ×
       Σ ;;; Γ ,,, stack_context π1 |- t1 = t2.
   Proof.
     intros Γ π1 π2 t1 t2 h.
@@ -1606,14 +1686,14 @@ Section Lemmata.
       let_free_context Δ1 ->
       let_free_context Δ2 ->
       conv leq Σ Γ (it_mkLambda_or_LetIn Δ1 t1) (it_mkLambda_or_LetIn Δ2 t2) ->
-      ∥ PCUICSR.conv_context Σ (Γ ,,, Δ1) (Γ ,,, Δ2) ∥ /\ conv leq Σ (Γ ,,, Δ1) t1 t2.
+      ∥ conv_ctx Σ (Γ ,,, Δ1) (Γ ,,, Δ2) ∥ /\ conv leq Σ (Γ ,,, Δ1) t1 t2.
   Admitted.
 
   Lemma it_mkLambda_or_LetIn_stack_context_conv'_inv :
     forall leq Γ π1 π2 t1 t2,
       conv leq Σ Γ (it_mkLambda_or_LetIn (stack_context π1) t1)
                    (it_mkLambda_or_LetIn (stack_context π2) t2) ->
-      ∥ PCUICSR.conv_context Σ (Γ ,,, stack_context π1) (Γ ,,, stack_context π2) ∥ /\
+      ∥ conv_ctx Σ (Γ ,,, stack_context π1) (Γ ,,, stack_context π2) ∥ /\
       conv leq Σ (Γ ,,, stack_context π1) t1 t2.
   Proof.
     intros leq Γ π1 π2 t1 t2 h.
@@ -1625,7 +1705,7 @@ Section Lemmata.
 
   Lemma it_mkLambda_or_LetIn_conv' :
     forall leq Γ Δ1 Δ2 t1 t2,
-      PCUICSR.conv_context Σ (Γ ,,, Δ1) (Γ ,,, Δ2) ->
+      conv_ctx Σ (Γ ,,, Δ1) (Γ ,,, Δ2) ->
       conv leq Σ (Γ ,,, Δ1) t1 t2 ->
       conv leq Σ Γ (it_mkLambda_or_LetIn Δ1 t1) (it_mkLambda_or_LetIn Δ2 t2).
   Admitted.
@@ -1639,7 +1719,7 @@ Section Lemmata.
 
   Lemma it_mkLambda_or_LetIn_conv :
     forall Γ Δ1 Δ2 t1 t2,
-      PCUICSR.conv_context Σ (Γ ,,, Δ1) (Γ ,,, Δ2) ->
+      conv_ctx Σ (Γ ,,, Δ1) (Γ ,,, Δ2) ->
       Σ ;;; Γ ,,, Δ1 |- t1 = t2 ->
       Σ ;;; Γ |- it_mkLambda_or_LetIn Δ1 t1 = it_mkLambda_or_LetIn Δ2 t2.
   Admitted.
@@ -1771,7 +1851,7 @@ Section Lemmata.
   Lemma conv_context_conversion :
     forall {Γ u v Γ'},
       Σ ;;; Γ |- u = v ->
-      PCUICSR.conv_context Σ Γ Γ' ->
+      conv_ctx Σ Γ Γ' ->
       Σ ;;; Γ' |- u = v.
   Admitted.
 

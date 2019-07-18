@@ -4,6 +4,7 @@ Set Warnings "-notation-overridden".
 From Equations Require Import Equations.
 Require Import Equations.Tactics.
 From Coq Require Import Bool String List Program BinPos Compare_dec Arith Lia.
+From MetaCoq.Template Require Import LibHypsNaming.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICWeakeningEnv PCUICWeakening
@@ -16,9 +17,10 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
 
 Require Import ssreflect ssrbool.
 Require Import String.
-From MetaCoq.Template Require Import LibHypsNaming.
 Set Asymmetric Patterns.
 Set SimplIsCbn.
+
+Ltac rename_hyp h ht ::= my_rename_hyp h ht.
 
 (* Commented otherwise extraction would produce an axiom making the whole
    extracted code unusable *)
@@ -169,7 +171,7 @@ Hint Resolve conv_ctx_refl : pcuic.
 
 Lemma sr_red1 {cf:checker_flags} : env_prop SR_red1.
 Proof.
-  apply typing_ind_env; intros Σ wfΣ Γ wfΓ; unfold SR_red1; intros **; rename_all_hyps.
+  apply typing_ind_env; intros Σ wfΣ Γ wfΓ; unfold SR_red1; intros **; rename_all_hyps;
     match goal with
     | [H : (_ ;;; _ |- _ <= _) |- _ ] => idtac
     | _ =>
@@ -192,15 +194,13 @@ Proof.
     constructor; eauto.
     eapply (context_conversion _ wfΣ _ _ _ _ typeb).
     constructor; auto with pcuic.
-    constructor. exists s1; auto. apply conv_conv_alt.
-    auto.
+    constructor; auto. exists s1; auto.
 
   - (* Lambda *)
     eapply type_Cumul. eapply type_Lambda; eauto.
     eapply (context_conversion _ wfΣ _ _ _ _ typeb).
     constructor; auto with pcuic.
-    constructor. exists s1; auto.
-    apply conv_conv_alt. auto.
+    constructor; auto. exists s1; auto.
     assert (Σ ;;; Γ |- tLambda n t b : tProd n t bty). econstructor; eauto.
     edestruct (validity _ wfΣ _ wfΓ _ _ X0). apply i.
     eapply cumul_red_r.
@@ -219,9 +219,8 @@ Proof.
     eapply type_Cumul.
     econstructor; eauto.
     eapply (context_conversion _ wfΣ _ _ _ _ typeb').
-    constructor. auto with pcuic. constructor; eauto.
-    now exists s1.
-    apply conv_conv_alt; auto. eapply PCUICCumulativity.conv_refl'.
+    constructor. auto with pcuic. constructor; eauto. constructor; auto.
+    now exists s1. red. auto.
     assert (Σ ;;; Γ |- tLetIn n b b_ty b' : tLetIn n b b_ty b'_ty). econstructor; eauto.
     edestruct (validity _ wfΣ _ wfΓ _ _ X0). apply i.
     eapply cumul_red_r.
@@ -234,8 +233,9 @@ Proof.
     eapply type_Cumul. eauto. right; exists s1; auto.
     apply red_cumul; eauto.
     eapply (context_conversion _ wfΣ _ _ _ _ typeb').
-    constructor. auto with pcuic. constructor; eauto. exists s1; auto.
-    apply conv_conv_alt; auto.
+    constructor. auto with pcuic. constructor; eauto. constructor; auto.
+    exists s1; auto. red; eauto.
+    eapply type_Cumul. eauto. right. exists s1; auto. eapply red_cumul. now eapply red1_red.
     assert (Σ ;;; Γ |- tLetIn n b b_ty b' : tLetIn n b b_ty b'_ty). econstructor; eauto.
     edestruct (validity _ wfΣ _ wfΓ _ _ X0). apply i.
     eapply cumul_red_r.
@@ -246,12 +246,13 @@ Proof.
     pose proof typet as typet'.
     eapply inversion_Lambda in typet' as [s1 [B' [Ht [Hb HU]]]]=>//.
     apply cumul_Prod_inv in HU as [eqA leqB] => //.
+    destruct (validity _ wfΣ _ wfΓ _ _ typet).
 
     eapply type_Cumul; eauto.
     unshelve eapply (context_conversion _ wfΣ _ _ _ _ Hb); eauto with wf.
     constructor. auto with pcuic. constructor ; eauto.
-    admit. (* constructor auto with pcuic. constructor; eauto. *)
-    destruct (validity _ wfΣ _ wfΓ _ _ typet).
+    constructor; auto with pcuic. red; eauto.
+    admit.
     clear -wfΣ i.
     (** Awfully complicated for a well-formedness condition *)
     { destruct i as [[ctx [s [Hs Hs']]]|[s Hs]].

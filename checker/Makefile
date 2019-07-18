@@ -10,7 +10,7 @@ _CoqProject: _CoqProject.in metacoq-config
 Makefile.coq: _CoqProject
 	coq_makefile -f _CoqProject -o Makefile.coq
 
-plugin:
+plugin: Makefile.coq
 	$(MAKE) -C gen-src
 	./update_plugin.sh
 

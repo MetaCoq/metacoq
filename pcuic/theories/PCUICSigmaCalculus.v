@@ -139,46 +139,128 @@ Proof.
       f_equal. autorewrite with sigma. reflexivity.
 Qed.
 
+Lemma inst_decl_closed :
+  forall σ k d,
+    closed_decl k d ->
+    map_decl (inst (⇑^k σ)) d = d.
+Proof.
+  intros σ k d.
+  case: d => na [body|] ty. all: rewrite /closed_decl /map_decl /=.
+  - move /andP => [cb cty]. rewrite !inst_closed //.
+  - move => cty. rewrite !inst_closed //.
+Qed.
+
+Lemma closed_tele_inst :
+  forall σ ctx,
+    closed_ctx ctx ->
+    mapi (fun i decl => map_decl (inst (⇑^i σ)) decl) (List.rev ctx) =
+    List.rev ctx.
+Proof.
+  intros σ ctx.
+  rewrite /closedn_ctx /mapi. simpl. generalize 0.
+  induction ctx using rev_ind; try easy.
+  move => n.
+  rewrite /closedn_ctx !rev_app_distr /id /=.
+  move /andP => [closedx Hctx].
+  rewrite inst_decl_closed //.
+  f_equal. now rewrite IHctx.
+Qed.
+
+(* Could be more precise *)
+Lemma instantiate_params_subst_length :
+  forall params pars s t s' t',
+    instantiate_params_subst params pars s t = Some (s', t') ->
+    #|params| >= #|pars|.
+Proof.
+  intros params pars s t s' t' h.
+  induction params in pars, s, t, s', t', h |- *.
+  - cbn in h. destruct pars. all: try discriminate. auto.
+  - cbn in h. destruct (decl_body a).
+    + destruct t. all: try discriminate.
+      cbn. eapply IHparams in h. lia.
+    + destruct t. all: try discriminate.
+      destruct pars. 1: discriminate.
+      cbn. eapply IHparams in h. lia.
+Qed.
+
+Lemma instantiate_params_length :
+  forall params pars T T',
+    instantiate_params params pars T = Some T' ->
+    #|params| >= #|pars|.
+Proof.
+  intros params pars T T' e.
+  unfold instantiate_params in e.
+  case_eq (instantiate_params_subst (List.rev params) pars [] T) ;
+    try solve [ intro bot ; rewrite bot in e ; discriminate e ].
+  intros [s' t'] e'. rewrite e' in e. inversion e. subst. clear e.
+  eapply instantiate_params_subst_length in e'.
+  rewrite List.rev_length in e'. assumption.
+Qed.
+
 Lemma instantiate_params_inst :
   forall params pars T σ T',
+    closed_ctx params ->
     instantiate_params params pars T = Some T' ->
-    instantiate_params params (map (inst σ) pars) T = Some T'.[σ].
+    instantiate_params params (map (inst σ) pars) T.[σ] = Some T'.[σ].
 Proof.
-  intros params pars T σ T'.
-  unfold instantiate_params.
-  change (@nil term) with (map (inst σ) []) at 2.
-  generalize (@nil term).
-  generalize (List.rev params). clear params.
-  intros params s e.
-  case_eq (instantiate_params_subst params pars s T) ;
+  intros params pars T σ T' hcl e.
+  unfold instantiate_params in *.
+  case_eq (instantiate_params_subst (List.rev params) pars [] T) ;
     try solve [ intro bot ; rewrite bot in e ; discriminate e ].
-  intros [s' ty] e'. rewrite e' in e. inversion e. subst. clear e.
-  induction params in σ, pars, s, T, s', ty, e' |- *.
-  - simpl in e'. simpl. destruct pars. all: try discriminate e'.
-    inversion e'. subst. clear e'.
-    simpl. autorewrite with sigma.
-    (* TODO LEMMA *)
-    f_equal. eapply inst_ext.
-    intro i. unfold subst_consn. unfold subst_compose.
-    rewrite nth_error_map.
-    destruct (nth_error s' i).
-    + simpl. reflexivity.
-    + simpl. rewrite map_length.
-      (* There is something wrong *)
-      give_up.
-  - simpl in e'. simpl.
-    case_eq (decl_body a).
-    + intros t e. rewrite e in e'.
-      destruct T. all: try discriminate e'.
-      eapply IHparams with (σ := σ) in e'.
-      simpl in e'.
-      autorewrite with sigma.
-      autorewrite with sigma in e'.
-(* eassumption. *) give_up.
-    + intro neq. rewrite neq in e'.
-      destruct T. all: try discriminate e'.
-      destruct pars. all: try discriminate.
-      simpl. (* eapply IHparams. *)
+  intros [s' t'] e'. rewrite e' in e. inversion e. subst. clear e.
+  eapply instantiate_params_subst_inst with (σ := σ) in e'.
+  simpl in e'.
+  autorewrite with sigma in e'.
+  rewrite List.rev_length in e'.
+  match type of e' with
+  | context [ mapi_rec ?f ?l 0 ] =>
+    change (mapi_rec f l 0) with (mapi f l) in e'
+  end.
+  rewrite closed_tele_inst in e' ; auto.
+  rewrite e'. f_equal. autorewrite with sigma.
+  eapply inst_ext. intro i.
+  unfold Upn, subst_consn, subst_compose.
+  rewrite idsn_length map_length.
+  case_eq (nth_error s' i).
+  - intros t e.
+    rewrite nth_error_idsn_Some.
+    { apply instantiate_params_subst_length in e'.
+      rewrite List.rev_length map_length in e'.
+      eapply nth_error_Some_length in e.
+
+  (* change (@nil term) with (map (inst σ) []) at 2. *)
+(*   generalize (@nil term). *)
+(*   generalize (List.rev params). clear params. *)
+(*   intros params s e. *)
+(*   case_eq (instantiate_params_subst params pars s T) ; *)
+(*     try solve [ intro bot ; rewrite bot in e ; discriminate e ]. *)
+(*   intros [s' ty] e'. rewrite e' in e. inversion e. subst. clear e. *)
+(*   induction params in σ, pars, s, T, s', ty, e' |- *. *)
+(*   - simpl in e'. simpl. destruct pars. all: try discriminate e'. *)
+(*     inversion e'. subst. clear e'. *)
+(*     simpl. autorewrite with sigma. *)
+(*     (* TODO LEMMA *) *)
+(*     f_equal. eapply inst_ext. *)
+(*     intro i. unfold subst_consn. unfold subst_compose. *)
+(*     rewrite nth_error_map. *)
+(*     destruct (nth_error s' i). *)
+(*     + simpl. reflexivity. *)
+(*     + simpl. rewrite map_length. *)
+(*       (* There is something wrong *) *)
+(*       give_up. *)
+(*   - simpl in e'. simpl. *)
+(*     case_eq (decl_body a). *)
+(*     + intros t e. rewrite e in e'. *)
+(*       destruct T. all: try discriminate e'. *)
+(*       eapply IHparams with (σ := σ) in e'. *)
+(*       simpl in e'. *)
+(*       autorewrite with sigma. *)
+(*       autorewrite with sigma in e'. *)
+(* (* eassumption. *) give_up. *)
+(*     + intro neq. rewrite neq in e'. *)
+(*       destruct T. all: try discriminate e'. *)
+(*       destruct pars. all: try discriminate. *)
+(*       simpl. (* eapply IHparams. *) *)
 Abort.
 
 Lemma types_of_case_inst :

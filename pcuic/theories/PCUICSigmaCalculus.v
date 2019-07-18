@@ -53,6 +53,37 @@ Proof.
     specialize (h _ _ e).
 Admitted.
 
+(* TODO MOVE *)
+Lemma nth_error_idsn_Some :
+  forall n k,
+    k < n ->
+    nth_error (idsn n) k = Some (tRel k).
+Proof.
+  intros n k h.
+  induction n in k, h |- *.
+  - inversion h.
+  - simpl. destruct (Nat.ltb_spec0 k n).
+    + rewrite nth_error_app1.
+      * rewrite idsn_length. auto.
+      * eapply IHn. assumption.
+    + assert (k = n) by omega. subst.
+      rewrite nth_error_app2.
+      * rewrite idsn_length. auto.
+      * rewrite idsn_length. replace (n - n) with 0 by omega.
+        simpl. reflexivity.
+Qed.
+
+(* TODO MOVE *)
+Lemma nth_error_idsn_None :
+  forall n k,
+    k >= n ->
+    nth_error (idsn n) k = None.
+Proof.
+  intros n k h.
+  eapply nth_error_None.
+  rewrite idsn_length. auto.
+Qed.
+
 (* TODO DUPLICATE MOVE *)
 Definition on_pair {A B C D} (f : A -> B) (g : C -> D) (x : A * C) :=
   (f (fst x), g (snd x)).
@@ -85,26 +116,6 @@ Proof.
         -- f_equal. autorewrite with sigma.
            eapply inst_ext. intro i.
            unfold Upn, subst_consn, subst_compose.
-
-Lemma nth_error_idsn_Some :
-  forall n k,
-    k < n ->
-    nth_error (idsn n) k = Some (tRel k).
-Proof.
-  intros n k h.
-  induction n in k, h |- *.
-  - inversion h.
-  - simpl. destruct (Nat.ltb_spec0 k n).
-    + rewrite nth_error_app1.
-      * rewrite idsn_length. auto.
-      * eapply IHn. assumption.
-    + assert (k = n) by omega. subst.
-      rewrite nth_error_app2.
-      * rewrite idsn_length. auto.
-      * rewrite idsn_length. replace (n - n) with 0 by omega.
-        simpl. reflexivity.
-Qed.
-
            case_eq (nth_error s i).
            ++ intros t' e.
               rewrite nth_error_idsn_Some.
@@ -113,17 +124,6 @@ Qed.
                  rewrite nth_error_map. rewrite e. simpl.
                  reflexivity.
            ++ intro neq.
-
-Lemma nth_error_idsn_None :
-  forall n k,
-    k >= n ->
-    nth_error (idsn n) k = None.
-Proof.
-  intros n k h.
-  eapply nth_error_None.
-  rewrite idsn_length. auto.
-Qed.
-
               rewrite nth_error_idsn_None.
               ** eapply nth_error_None. assumption.
               ** simpl. rewrite idsn_length.

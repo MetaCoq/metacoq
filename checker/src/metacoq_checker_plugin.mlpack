@@ -5,8 +5,6 @@ Nat0
 List0
 Specif
 PeanoNat
-Equality
-Utils
 Basics
 BinPosDef
 BinPos
@@ -28,15 +26,17 @@ MSetProperties
 Compare_dec
 MSetWeakList
 BinNums
+
+CRelationClasses
+Equality0
+Utils
+Config0
 Universes0
 BasicAst
 Ast0
 AstUtils
 Common
-Config0
-
 Wf
-Equality
 
 Denote
 Denoter
@@ -46,6 +46,7 @@ Logic0
 WGraph
 Monad_utils
 UGraph0
+Utils
 
 Tm_util
 Quoted

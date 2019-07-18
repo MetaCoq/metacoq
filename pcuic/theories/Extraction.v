@@ -42,10 +42,6 @@ Extraction Inline Equations.Prop.DepElim.solution_left.
 Extraction Library Signature.
 Extraction Library Classes.
 
-Extract Constant CRelationClasses.eq_equivalence => "(Obj.magic 0)".
-Extraction Library CRelationClasses.
-
-
 (* The following allows to test the failure of extraction *)
 (* Bugs in extraction! *)
 (* Extract Constant Relation_Properties.clos_rt_is_preorder => "(Obj.magic 0)". *)

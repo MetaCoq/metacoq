@@ -475,7 +475,6 @@ Qed.
 (*   now rewrite IHt1. *)
 (* Qed. *)
 
-(* TODO DUPLICATE MOVE *)
 Definition on_pair {A B C D} (f : A -> B) (g : C -> D) (x : A * C) :=
   (f (fst x), g (snd x)).
 

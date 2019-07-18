@@ -84,75 +84,60 @@ Proof.
   rewrite idsn_length. auto.
 Qed.
 
-(* TODO DUPLICATE MOVE *)
-Definition on_pair {A B C D} (f : A -> B) (g : C -> D) (x : A * C) :=
-  (f (fst x), g (snd x)).
-
 Lemma instantiate_params_subst_inst :
-  forall params pars s ty σ,
+  forall params pars s t σ s' t',
+    instantiate_params_subst params pars s t = Some (s', t') ->
     instantiate_params_subst
       (mapi_rec (fun i decl => map_decl (inst (⇑^i σ)) decl) params #|s|)
       (map (inst σ) pars)
       (map (inst σ) s)
-      ty.[⇑^#|s| σ]
-    =
-    option_map
-      (on_pair (map (inst σ)) (inst (⇑^(#|s| + #|params|) σ)))
-      (instantiate_params_subst params pars s ty).
+      t.[⇑^#|s| σ]
+    = Some (map (inst σ) s', t'.[⇑^(#|s| + #|params|) σ]).
 Proof.
-  intros params pars s ty σ.
-  induction params in pars, s, ty, σ |- *.
-  - simpl. destruct pars. 2: reflexivity.
-    simpl. unfold on_pair. simpl. f_equal. f_equal. f_equal. f_equal. omega.
-  - simpl. destruct (decl_body a).
-    + simpl. destruct ty. all: try reflexivity.
-      * simpl. admit.
-      * simpl. specialize (IHparams pars ((subst0 s) t :: s)).
-        simpl in IHparams.
-        replace (#|s| + S #|params|)
-          with (S (#|s| + #|params|))
-          by omega.
-        rewrite <- IHparams. f_equal.
-        -- f_equal. autorewrite with sigma.
-           eapply inst_ext. intro i.
-           unfold Upn, subst_consn, subst_compose.
-           case_eq (nth_error s i).
-           ++ intros t' e.
-              rewrite nth_error_idsn_Some.
-              ** eapply nth_error_Some_length. eassumption.
-              ** simpl.
-                 rewrite nth_error_map. rewrite e. simpl.
-                 reflexivity.
-           ++ intro neq.
-              rewrite nth_error_idsn_None.
-              ** eapply nth_error_None. assumption.
-              ** simpl. rewrite idsn_length.
-                 autorewrite with sigma.
-
-
-
-(*     instantiate_params_subst params pars s ty = Some (s', T) -> *)
-(*     instantiate_params_subst params (map (inst σ) pars) (map (inst σ) s) ty = *)
-(*     Some (map (inst σ) s', T). *)
-(* Proof. *)
-(*   intros params pars s ty σ s' T e. *)
-(*   induction params in pars, s, ty, σ, s', T, e |- *. *)
-(*   - simpl in *. destruct pars ; try discriminate. *)
-(*     inversion e. subst. clear e. *)
-(*     simpl. reflexivity. *)
-(*   - simpl in *. *)
-(*     destruct (decl_body a). *)
-(*     + destruct ty. all: try discriminate e. *)
-(*       eapply IHparams with (σ := σ) in e as ih. simpl in ih. *)
-(*       rewrite <- ih. f_equal. f_equal. *)
-(*       autorewrite with sigma. *)
-(*       eapply inst_ext. intro i. *)
-(*       unfold subst_consn, subst_compose. *)
-(*       rewrite nth_error_map. *)
-(*       destruct (nth_error s i). *)
-(*       * simpl. reflexivity. *)
-(*       * simpl. give_up. *)
-Abort.
+  intros params pars s t σ s' t' h.
+  induction params in pars, s, t, σ, s', t', h |- *.
+  - simpl in *. destruct pars. 2: discriminate.
+    simpl. inversion h. subst. clear h.
+    f_equal. f_equal. f_equal. f_equal. omega.
+  - simpl in *. destruct (decl_body a).
+    + simpl. destruct t. all: try discriminate.
+      simpl. eapply IHparams with (σ := σ) in h.
+      simpl in h.
+      replace (#|s| + S #|params|)
+        with (S (#|s| + #|params|))
+        by omega.
+      rewrite <- h. f_equal.
+      * f_equal. autorewrite with sigma.
+        eapply inst_ext. intro i.
+        unfold Upn, subst_consn, subst_compose.
+        case_eq (nth_error s i).
+        -- intros t e.
+           rewrite nth_error_idsn_Some.
+           ++ eapply nth_error_Some_length. eassumption.
+           ++ simpl.
+              rewrite nth_error_map. rewrite e. simpl.
+              reflexivity.
+        -- intro neq.
+           rewrite nth_error_idsn_None.
+           ++ eapply nth_error_None. assumption.
+           ++ simpl. rewrite idsn_length.
+              autorewrite with sigma.
+              rewrite <- subst_ids. eapply inst_ext. intro j.
+              cbn. unfold ids. rewrite map_length.
+              replace (#|s| + j - #|s|) with j by omega.
+              rewrite nth_error_map.
+              erewrite (iffRL (nth_error_None _ _)) by omega.
+              simpl. reflexivity.
+      * autorewrite with sigma. reflexivity.
+    + simpl. destruct t. all: try discriminate.
+      simpl. destruct pars. 1: discriminate.
+      simpl. eapply IHparams with (σ := σ) in h. simpl in h.
+      replace (#|s| + S #|params|)
+        with (S (#|s| + #|params|))
+        by omega.
+      rewrite <- h.
+      f_equal. autorewrite with sigma. reflexivity.
+Qed.
 
 Lemma instantiate_params_inst :
   forall params pars T σ T',

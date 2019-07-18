@@ -3,7 +3,10 @@
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
 From MetaCoq.Template Require Import config utils monad_utils BasicAst AstUtils.
 From MetaCoq.Extraction Require Import EAst ELiftSubst ETyping EWcbvEval Extract Prelim ESubstitution EInversion EArities.
-From MetaCoq.PCUIC Require Import PCUICTyping PCUICAst PCUICAstUtils PCUICInduction  PCUICWeakening PCUICSubstitution PCUICChecker PCUICRetyping PCUICMetaTheory PCUICWcbvEval PCUICSR  PCUICClosed PCUICInversion PCUICUnivSubstitution PCUICElimination PCUICUnivSubst.
+From MetaCoq.PCUIC Require Import PCUICTyping PCUICAst PCUICAstUtils PCUICInduction 
+     PCUICWeakening PCUICSubstitution PCUICChecker PCUICRetyping PCUICMetaTheory 
+     PCUICWcbvEval PCUICSR  PCUICClosed PCUICInversion PCUICUnivSubstitution 
+     PCUICEquality PCUICConversion (* PCUICContextConversion *) PCUICElimination PCUICUnivSubst.
 
 Require Import String.
 Local Open Scope string_scope.
@@ -18,6 +21,8 @@ Module PA := PCUICAst.
 Module P := PCUICWcbvEval.
 
 Existing Instance config.extraction_checker_flags.
+
+From MetaCoq.PCUIC Require Import PCUICCumulativity.
 
 (** ** Prelim on arities and proofs *)
 
@@ -62,21 +67,24 @@ Notation "Σ ⊢ s ▷ t" := (Ee.eval Σ s t) (at level 50, s, t at next level) 
 (** ** Erasure is stable under context conversion *)
 
 Lemma Is_type_conv_context (Σ : global_env_ext) (Γ : context) t (Γ' : context) :
-  wf Σ -> wf_local Σ Γ ->
-    conv_context Σ Γ Γ' -> isErasable Σ Γ t -> isErasable Σ Γ' t.
+  wf Σ -> wf_local Σ Γ -> wf_local Σ Γ' ->
+  PCUICContextConversion.conv_context Σ Γ Γ' -> isErasable Σ Γ t -> isErasable Σ Γ' t.
 Proof.
   intros.
-  destruct X2 as (? & ? & ?).
-  exists x. split. eapply context_conversion; eauto.
+  destruct X3 as (? & ? & ?). red.
+  exists x. split. eapply PCUICContextConversion.context_conversion. 4:eapply X2. all:eauto.
   destruct s as [? | [u []]].
-  - eauto.
-  - right. exists u. split; eauto. eapply context_conversion; eauto.
+  - left. eauto.
+  - right. exists u. split; eauto. eapply PCUICContextConversion.context_conversion in X2; eauto.
 Qed.
 
 Lemma erases_context_conversion :
 env_prop
   (fun (Σ : PCUICAst.global_env_ext) (Γ : PCUICAst.context) (t T : PCUICAst.term) =>
-      forall Γ' : PCUICAst.context, conv_context Σ Γ Γ' -> forall t', erases Σ Γ t t' -> erases Σ Γ' t t').
+      forall Γ' : PCUICAst.context,
+        PCUICContextConversion.conv_context Σ Γ Γ' ->
+        wf_local Σ Γ' ->
+        forall t', erases Σ Γ t t' -> erases Σ Γ' t t').
 Proof.
   apply typing_ind_env; intros Σ wfΣ Γ wfΓ; intros **; rename_all_hyps.
   all: match goal with [ H : erases _ _ ?a _ |- ?G ] => tryif is_var a then idtac else inv H end.
@@ -84,12 +92,16 @@ Proof.
   Hint Resolve Is_type_conv_context.
   all: try now (econstructor; eauto).
   - econstructor. eapply h_forall_Γ'0.
-    econstructor. eauto. econstructor. exists s1.
-    eapply context_conversion; eauto. eapply PCUICCumulativity.conv_refl'.
-    eassumption.
+    econstructor. eauto. constructor. eapply conv_alt_refl, eq_term_refl.
+    constructor; auto.
+    exists s1.
+    eapply PCUICContextConversion.context_conversion. 3:eauto. all:eauto.
   - econstructor. eauto. eapply h_forall_Γ'1.
-    econstructor. eauto. econstructor. exists s1.
-    eapply context_conversion; eauto. eapply PCUICCumulativity.conv_refl'.
+    econstructor. eauto. constructor.
+    eapply PCUICCumulativity.conv_alt_refl; reflexivity.
+    constructor; auto. exists s1.
+    eapply PCUICContextConversion.context_conversion with Γ; eauto.
+    eapply PCUICContextConversion.context_conversion with Γ; eauto.
     eassumption.
   - econstructor. eauto. eauto.
     eapply All2_All_left in X3. 2:{ intros. destruct X1. exact e. }
@@ -100,12 +112,27 @@ Proof.
 
     eapply All2_impl. eapply All2_All_mix_left. eassumption. eassumption.
     intros. cbn in *.
-    decompose [prod] X2. repeat split; eauto.
-    eapply b0. 2:eauto. subst types.
-
-    eapply conv_context_app. eauto. eapply typing_wf_local; eauto. eauto.
+    decompose [prod] X2. intuition auto.
+    eapply b0.
+    subst types.
+    eapply conv_context_app; auto. now eapply typing_wf_local in a1.
+    eapply typing_wf_local in a1. subst types.
+    (* Should be derivable from conv_context Γ Γ' and wf_local Γ ,,, types *)
+    eapply All_local_env_app_inv.
+    eapply All_local_env_app in a1. intuition auto.
+    clear -wfΣ X2 a2 b1 X1.
+    eapply All_local_env_impl; eauto. simpl; intros.
+    destruct T. simpl in *.
+    eapply PCUICContextConversion.context_conversion with (Γ ,,, Γ0); eauto.
+    now eapply typing_wf_local in X.
+    admit. admit.
+    admit.
+    (* 2:eauto. subst types. *)
+    eapply b0. eapply PCUICContextConversion.conv_ctx_refl; now apply typing_wf_local in a1.
+    now apply typing_wf_local in a1.
+    eauto.
   - eauto.
-Qed.
+Admitted.
 
 (** ** Erasure is stable under substituting universe constraints  *)
 
@@ -348,7 +375,8 @@ Proof.
         assert (Σ ;;; [] |- a' : t). {
           eapply subject_reduction_eval; eauto.
           eapply cumul_Prod_inv in c0 as [].
-          econstructor. eassumption. eauto. eapply c0. auto. auto. }
+          econstructor. eassumption. eauto. eapply conv_alt_sym in c0; eauto.
+          now eapply conv_alt_cumul. auto. auto. }
       inv Hvf'.
       * assert (Σ;;; [] |- PCUICLiftSubst.subst1 a' 0 b ⇝ℇ subst1 vu' 0 t').
         eapply (erases_subst Σ [] [PCUICAst.vass na t] [] b [a'] t'); eauto.
@@ -376,14 +404,16 @@ Proof.
 
     inv He.
     + eapply IHeval1 in H6 as (vt1' & Hvt2' & He_vt1'); eauto.
-      assert (Hc :conv_context Σ ([],, vdef na b0 t) [vdef na b0' t]). {
-        econstructor. econstructor. econstructor. econstructor. eauto. eapply subject_reduction_eval; eauto.
-        eapply PCUICCumulativity.red_conv.
-        eapply wcbeval_red; eauto. eapply PCUICCumulativity.conv_refl'.
+      assert (Hc : PCUICContextConversion.conv_context Σ ([],, vdef na b0 t) [vdef na b0' t]). {
+        econstructor. econstructor. econstructor.
+        eapply PCUICCumulativity.red_conv_alt.
+        eapply wcbeval_red; eauto.
+        eapply PCUICCumulativity.conv_alt_refl; reflexivity.
       }
       assert (Σ;;; [vdef na b0' t] |- b1 : x0). {
-        cbn in *. eapply context_conversion. 3:eauto. all:cbn; eauto.
-        econstructor. all: cbn; eauto.
+        cbn in *. eapply PCUICContextConversion.context_conversion. 3:eauto. all:cbn; eauto.
+        econstructor. all: cbn; eauto. constructor. constructor. red. exists x; auto.
+        simpl. eapply subject_reduction_eval; auto. eauto. eauto.
       }
       assert (Σ;;; [] |- PCUICLiftSubst.subst1 b0' 0 b1 ⇝ℇ subst1 vt1' 0 t2'). {
         eapply (erases_subst Σ [] [PCUICAst.vdef na b0' t] [] b1 [b0'] t2'); eauto.
@@ -394,7 +424,7 @@ Proof.
         eapply subject_reduction_eval; eauto.
         eapply erases_context_conversion. 4:eassumption.
         all: cbn; eauto.
-        econstructor. all: cbn; eauto.
+        econstructor. all: cbn; eauto. now eapply typing_wf_local in X0.
       }
       eapply IHeval2 in H1 as (vres & Hvres & Hty_vres).
       2:{ eapply substitution_let; eauto. }

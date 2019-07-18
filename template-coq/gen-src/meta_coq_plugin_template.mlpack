@@ -5,7 +5,6 @@ Nat0
 List0
 PeanoNat
 Specif
-Utils
 Basics
 BinPosDef
 BinPos
@@ -18,10 +17,13 @@ OrdersTac
 OrderedType0
 MSetWeakList
 BinNums
+Equality0
+Utils
+Config0
 Universes0
+BasicAst
 Ast0
 AstUtils
-BasicAst
 Common
 
 Denote

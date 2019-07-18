@@ -4,10 +4,12 @@
 # From Equations
 src/classes0.mli
 src/classes0.ml
+src/signature.mli
+src/signature.ml
 
 # From Coq
-# src/cRelationClasses.mli
-# src/cRelationClasses.ml
+src/cRelationClasses.mli
+src/cRelationClasses.ml
 
 src/pCUICAst.ml
 src/pCUICAst.mli

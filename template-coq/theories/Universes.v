@@ -547,6 +547,9 @@ Proof.
   apply leq_universe0_sup_r.
 Qed.
 
+(* Rk: [leq_universe φ s1 (sort_of_product s1 s2)] does not hold due
+   impredicativity. *)
+
 Lemma eq_universe_leq_universe φ t u
   : eq_universe φ t u -> leq_universe φ t u.
 Proof.
@@ -555,17 +558,55 @@ Proof.
   intuition.
 Qed.
 
-(* Rk: [leq_universe φ s2 (sort_of_product s1 s2)] does not hold *)
+Lemma leq_universe0_antisym φ t u :
+  leq_universe0 φ t u -> leq_universe0 φ u t -> eq_universe0 φ t u.
+Proof.
+  intros tu ut. unfold leq_universe0, eq_universe0 in *.
+  red in tu, ut.
+  intros v sat.
+  specialize (tu _ sat).
+  specialize (ut _ sat).
+  simpl in tu, ut. Lia.lia.
+Qed.
 
+Lemma leq_universe_antisym φ t u :
+  leq_universe φ t u -> leq_universe φ u t -> eq_universe φ t u.
+Proof.
+  intros tu ut. unfold leq_universe, eq_universe in *.
+  destruct check_univs; auto using leq_universe0_antisym.
+Qed.
+
+(** We show that equality and inequality of universes form an equivalence and 
+    a partial order (one w.r.t. the other).
+    We use classes from [CRelationClasses] for consistency with the rest of the
+    development which uses relations in [Type] rather than [Prop].
+    These definitions hence use [Prop <= Type]. *)
+
+Global Instance eq_universe_equivalence φ : CRelationClasses.Equivalence (eq_universe φ) :=
+   {| CRelationClasses.Equivalence_Reflexive := eq_universe_refl _ ;
+      CRelationClasses.Equivalence_Symmetric := eq_universe_sym _;
+      CRelationClasses.Equivalence_Transitive := eq_universe_trans _ |}.
+
+Global Instance leq_universe_preorder φ : CRelationClasses.PreOrder (leq_universe φ) :=
+   {| CRelationClasses.PreOrder_Reflexive := leq_universe_refl _ ;
+      CRelationClasses.PreOrder_Transitive := leq_universe_trans _ |}.
+
+Global Instance leq_universe_partial_order φ : CRelationClasses.PartialOrder (eq_universe φ) (leq_universe φ).
+Proof.
+  red. intros x y; split. intros eqxy; split. now eapply eq_universe_leq_universe. red.
+  now eapply eq_universe_leq_universe, CRelationClasses.symmetry.
+  intros [l r]. now eapply leq_universe_antisym.
+Defined.
 
 (* This universe is a hack used in plugings to generate fresh universes *)
 Definition fresh_universe : universe. exact Universe.type0. Qed.
 
 End Univ.
 
-
 Definition is_prop_sort s :=
   match Universe.level s with
   | Some l => Level.is_prop l
   | None => false
   end.
+
+(* Check (_ : forall (cf : checker_flags) Σ, Reflexive (eq_universe Σ)). *)

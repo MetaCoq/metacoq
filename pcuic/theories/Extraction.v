@@ -13,7 +13,7 @@ Require Import ExtrOcamlString ExtrOcamlZInt.
 Extract Inductive Decimal.int => unit [ "(fun _ -> ())" "(fun _ -> ())" ] "(fun _ _ _ -> assert false)".
 
 Extraction Blacklist config uGraph universes Ast String List Logic Logic0 Nat Int
-           UnivSubst Typing Checker Retyping OrderedType Classes.
+           UnivSubst Typing Checker Retyping OrderedType Classes equality.
 Set Warnings "-extraction-opaque-accessed".
 
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICUnivSubst PCUICInduction PCUICLiftSubst PCUICTyping
@@ -39,6 +39,7 @@ Extraction Inline Equations.Prop.DepElim.solution_left.
 
 (* Extraction Inline NoConfusionPackage_All_local_env_over. *)
 (* Extraction Inline NoConfusionPackage_context_decl. *)
+Extraction Library Signature.
 Extraction Library Classes.
 
 (* The following allows to test the failure of extraction *)

@@ -3,7 +3,10 @@
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
 From MetaCoq.Template Require Import config utils monad_utils BasicAst AstUtils.
 From MetaCoq.Extraction Require Import EAst ELiftSubst Extract EArities.
-From MetaCoq.PCUIC Require Import PCUICTyping PCUICAst PCUICAstUtils PCUICInduction  PCUICWeakening PCUICSubstitution PCUICRetyping PCUICMetaTheory PCUICWcbvEval PCUICSR  PCUICClosed PCUICInversion PCUICGeneration PCUICElimination.
+From MetaCoq.PCUIC Require Import PCUICTyping PCUICAst PCUICAstUtils PCUICInduction
+     PCUICWeakening PCUICSubstitution PCUICRetyping PCUICMetaTheory
+     PCUICWcbvEval PCUICSR  PCUICClosed PCUICInversion PCUICGeneration
+     PCUICEquality PCUICContextConversion PCUICConversion PCUICElimination.
 From MetaCoq.SafeChecker Require Import PCUICSafeReduce PCUICSafeChecker.
 
 Require Import String.
@@ -360,8 +363,7 @@ Proof.
   - destruct a. destruct decl_body.
     + cbn. econstructor. inv X0. eauto. econstructor.
       depelim X0.
-      2:eapply PCUICCumulativity.conv_refl'.
-      red in l. destruct l. exists x. eapply context_conversion; eauto.
-    + cbn. econstructor. inv X0. eauto. econstructor. 2:eapply PCUICCumulativity.conv_refl'.
-      inv X0. cbn in X3. destruct X3. exists x. eapply context_conversion; eauto.
+      eapply PCUICCumulativity.conv_alt_refl; reflexivity.
+    + cbn. econstructor. inv X0. eauto. econstructor.
+      eapply PCUICCumulativity.conv_alt_refl; reflexivity.
 Qed.

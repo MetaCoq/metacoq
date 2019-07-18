@@ -566,10 +566,10 @@ Arguments rt_step {A} {R} {x y}.
 Definition commutes {A} (R S : relation A) :=
   forall x y z, R x y -> S x z -> ∑ w, S y w * R z w.
 
+Polymorphic
 Hint Resolve rt_refl rt_step : core.
 
 Section Relations.
-
 
   Definition clos_rt_monotone {A} (R S : relation A) :
     inclusion R S -> inclusion (clos_refl_trans R) (clos_refl_trans S).
@@ -670,7 +670,8 @@ Section AbstractConfluence.
 
   End Definitions.
 
-  Global Instance joinable_proper A : CMorphisms.Proper (relation_equivalence ==> relation_equivalence)%signature (@joinable A).
+  Global Instance joinable_proper A :
+    CMorphisms.Proper (relation_equivalence ==> relation_equivalence)%signature (@joinable A).
   Proof.
     reduce_goal. split; unfold joinable; intros.
     destruct X0. exists x1. intuition eauto. setoid_rewrite (X x0 x1) in a. auto.
@@ -903,18 +904,6 @@ Section RedConfluence.
     econstructor 2; eauto.
   Qed.
 
-  (* Lemma trans_clos_pred1_red Γ Δ t u : *)
-  (*   trans_clos (pred1 Σ Γ Δ) t u -> *)
-  (*   red Σ Γ t u. *)
-  (* Proof. *)
-  (*   move=> H. *)
-  (*   apply trans_clos_t1n_iff in H. *)
-  (*   depind H. *)
-  (*   - eapply pred1_red; eauto. *)
-  (*   - eapply red_trans with y; auto. *)
-  (*     eapply pred1_red in r; eauto. *)
-  (* Qed. *)
-
   Definition on_one_decl (P : context → term → term → Type) (Γ : context) (b : option (term × term)) (t t' : term) :=
     match b with
     | Some (b0, b') => ((P Γ b0 b' * (t = t')) + (P Γ t t' * (b0 = b')))%type
@@ -940,7 +929,8 @@ Section RedConfluence.
   Inductive clos_refl_trans_ctx_decl (R : relation context_decl) (x : context_decl) : context_decl → Type :=
     rt_ctx_decl_step : ∀ y, R x y → clos_refl_trans_ctx_decl R x y
   | rt_ctx_decl_refl y : decl_body x = decl_body y -> decl_type x = decl_type y -> clos_refl_trans_ctx_decl R x y
-  | rt_ctx_decl_trans : ∀ y z, clos_refl_trans_ctx_decl R x y → clos_refl_trans_ctx_decl R y z → clos_refl_trans_ctx_decl R x z.
+  | rt_ctx_decl_trans : ∀ y z, clos_refl_trans_ctx_decl R x y → clos_refl_trans_ctx_decl R y z →
+                               clos_refl_trans_ctx_decl R x z.
 
   Inductive eq_context_upto_names : context -> context -> Type :=
   | eq_context_nil : eq_context_upto_names [] []
@@ -1018,7 +1008,7 @@ Section RedConfluence.
   Lemma pred1_red' Γ Γ' : forall M N, pred1 Σ Γ Γ' M N -> red_rel_ctx (Γ, M) (Γ', N).
   Proof.
     intros * Hred.
-    split. apply (pred1_red wfΣ _ _ _ _ Hred). (* apply (pred1_red_r wfΣ _ _ _ _ Hred). *)
+    split. apply (pred1_red wfΣ _ _ _ _ Hred).
     eapply pred1_pred1_ctx in Hred.
     now eapply pred1_ctx_red_ctx.
   Qed.
@@ -1584,7 +1574,7 @@ Section RedConfluence.
   (*     red in r. destruct r. *)
   (*     * destruct p. subst. split. auto. *)
   (*       transitivity u; auto. constructor. *)
-  (*     * destruct p. subst. split. *)
+  (*       destruct p. subst. split. *)
   (*       apply red1_ctx_pred1_ctx in r. *)
   (*       apply pred1_ctx_red_ctx in r. *)
   (*       etransitivity; eauto. *)
@@ -1756,3 +1746,24 @@ Section ConfluenceFacts.
 End ConfluenceFacts.
 
 Arguments red_confluence {cf} {Σ} wfΣ {Γ t u v}.
+
+(** We can now derive transitivity of the conversion relation *)
+Lemma conv_alt_trans `{cf : checker_flags} (Σ : global_env_ext) {Γ t u v} :
+  wf Σ ->
+  Σ ;;; Γ |- t == u ->
+  Σ ;;; Γ |- u == v ->
+  Σ ;;; Γ |- t == v.
+Proof.
+  intros wfΣ X0 X1.
+  eapply conv_alt_red in X0 as [t' [u' [[tt' uu'] eq]]].
+  eapply conv_alt_red in X1 as [u'' [v' [[uu'' vv'] eq']]].
+  eapply conv_alt_red.
+  destruct (red_confluence wfΣ uu' uu'') as [u'nf [ul ur]].
+  eapply red_eq_term_upto_univ_r in ul as [tnf [redtnf ?]]. 10:eapply eq. all:tc. 2:trivial.
+  eapply red_eq_term_upto_univ_l in ur as [unf [redunf ?]]. 9:eapply eq'. all:tc. 2:trivial.
+  exists tnf, unf.
+  intuition auto.
+  now transitivity t'.
+  now transitivity v'.
+  now transitivity u'nf.
+Qed.

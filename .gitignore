@@ -255,3 +255,5 @@ checker/src/wf.mli
 /safechecker/Makefile.safechecker
 /safechecker/Makefile.plugin.conf
 /safechecker/Makefile.plugin
+/pcuic/src/signature.ml
+/pcuic/src/signature.mli

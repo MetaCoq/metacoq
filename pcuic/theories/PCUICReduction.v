@@ -623,19 +623,6 @@ Section ReductionCongruence.
         + econstructor. assumption.
     Qed.
 
-    (* TODO MOVE *)
-    Lemma All2_prod_inv :
-      forall A (P : A -> A -> Type) Q l l',
-        All2 (Trel_conj P Q) l l' ->
-        All2 P l l' × All2 Q l l'.
-    Proof.
-      intros A P Q l l' h.
-      induction h.
-      - auto.
-      - destruct IHh. destruct r.
-        split ; constructor ; auto.
-    Qed.
-
     Lemma red_fix_one_ty :
       forall mfix idx mfix',
         OnOne2 (on_Trel_eq (red Σ Γ) dtype (fun x => (dname x, dbody x, rarg x))) mfix mfix' ->

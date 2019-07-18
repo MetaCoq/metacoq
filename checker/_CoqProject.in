@@ -90,6 +90,10 @@ src/retyping0.ml
 src/retyping0.mli
 src/run_extractable.ml
 src/run_extractable.mli
+src/cRelationClasses.mli
+src/cRelationClasses.ml
+src/equality0.mli
+src/equality0.ml
 src/specif.ml
 src/specif.mli
 src/string0.ml

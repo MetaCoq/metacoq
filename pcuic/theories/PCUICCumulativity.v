@@ -32,7 +32,7 @@ Proof.
     econstructor 2; eauto. }
 Qed.
 
-Lemma eq_term_upto_univ_refl `{cf : checker_flags} Re Rle :
+Lemma eq_term_upto_univ_refl Re Rle :
   CRelationClasses.Reflexive Re ->
   CRelationClasses.Reflexive Rle ->
   forall t, eq_term_upto_univ Re Rle t t.
@@ -117,7 +117,7 @@ Proof.
   induction 1; constructor; auto.
 Qed.
 
-Lemma eq_term_upto_univ_leq `{cf : checker_flags} :
+Lemma eq_term_upto_univ_leq :
   forall (Re Rle : universe -> universe -> Type) u v,
     (forall u u', Re u u' -> Rle u u') ->
     eq_term_upto_univ Re Re u v ->
@@ -134,6 +134,45 @@ Lemma eq_term_leq_term `{checker_flags} φ t u : eq_term φ t u -> leq_term φ t
 Proof.
   intros h. eapply eq_term_upto_univ_leq ; eauto.
   eapply eq_universe_leq_universe.
+Qed.
+
+Lemma eq_term_upto_univ_incl `{cf:checker_flags} Re Rle :
+  inclusion Re Rle -> inclusion (eq_term_upto_univ Re Re) (eq_term_upto_univ Re Rle).
+Proof. intros. intros x y H. eapply eq_term_upto_univ_leq in H; eauto. Qed.
+
+Lemma eq_term_upto_univ_antisym :
+  forall (Re Rle : universe -> universe -> Type) u v,
+    (forall u u', Rle u u' -> Rle u' u -> Re u u') ->
+    eq_term_upto_univ Re Rle u v ->
+    eq_term_upto_univ Re Rle v u ->
+    eq_term_upto_univ Re Re u v.
+Proof.
+  intros Re Rle u v hR h h'.
+  induction u in v, h, h' |- * using term_forall_list_ind.
+  all: simpl ; inversion h ; inversion h' ;
+       subst ; try constructor ; try easy.
+  all: try solve [eapply All2_impl ; eauto]; eauto.
+  all: simpl ; inversion h ; inversion h' ;
+       subst ; try constructor ; try easy.
+  - noconf H. depelim h; depelim h'.
+    eapply All2_sym in a.
+    eapply All2_impl; [eapply All2_prod|]; [eapply a0|eapply a|].
+    intros x y [xy yx]. auto.
+  - noconf H. depelim h; depelim h'.
+    eapply All2_sym in a.
+    eapply All2_impl; [eapply All2_prod|]; [eapply a0|eapply a|].
+    intros x y [xy yx]. auto.
+  - noconf H. depelim h; depelim h'.
+    eapply All2_sym in a.
+    eapply All2_impl; [eapply All2_prod|]; [eapply a0|eapply a|].
+    intros x y [xy yx]. auto.
+Qed.
+
+Lemma leq_term_antisym `{cf : checker_flags} (Σ : constraints) t u :
+  leq_term Σ t u -> leq_term Σ u t -> eq_term Σ t u.
+Proof.
+  intros. eapply eq_term_upto_univ_antisym; [|eauto ..].
+  eapply leq_universe_antisym.
 Qed.
 
 Lemma eq_term_App `{checker_flags} φ f f' :
@@ -170,17 +209,6 @@ Proof.
   - cbn. apply IHl. constructor; try assumption. assumption.
 Qed.
 
-Derive Signature for All2.
-
-Lemma All2_sym {A} (P : A -> A -> Type) :
-  CRelationClasses.Symmetric P ->
-  CRelationClasses.Symmetric (All2 P).
-Proof.
-  intros hP x y h. induction h.
-  - constructor.
-  - constructor ; eauto.
-Qed.
-
 Lemma eq_term_upto_univ_sym :
   forall Re Rle,
     CRelationClasses.Symmetric Re ->
@@ -192,7 +220,7 @@ Proof.
   all: dependent destruction e.
   all: try solve [
     econstructor ; eauto ;
-    try eapply All2_sym ; eauto
+    try eapply All2_symP ; eauto
   ].
   - econstructor.
     eapply All2_All_mix_left in X as h; eauto.
@@ -250,20 +278,61 @@ Hint Resolve red_conv_alt.
 
 Hint Resolve leq_term_refl cumul_refl' : core.
 
-Lemma conv_alt_red `{cf : checker_flags} :
-  forall Σ Γ t u,
-    Σ ;;; Γ |- t == u ->
-    ∑ t' u',
-      red Σ Γ t t' ×
-      red Σ Γ u u' ×
-      eq_term (global_ext_constraints Σ) t' u'.
+Lemma red_conv_conv `{cf : checker_flags} Σ Γ t u v :
+  red (fst Σ) Γ t u -> Σ ;;; Γ |- u == v -> Σ ;;; Γ |- t == v.
 Proof.
-  intros Σ Γ t u h. induction h.
-  - exists t, u. intuition auto.
-  - destruct IHh as [t' [u' [? [? ?]]]].
-    exists t', u'. intuition auto. now eapply red_step.
-  - destruct IHh as [t' [u' [? [? ?]]]].
-    exists t', u'. intuition auto. now eapply red_step.
+  intros. apply red_alt in X. apply clos_rt_rt1n_iff in X.
+  induction X; auto.
+  econstructor 2; eauto.
+Qed.
+
+Lemma red_conv_conv_inv `{cf : checker_flags} Σ Γ t u v :
+  red (fst Σ) Γ t u -> Σ ;;; Γ |- v == u -> Σ ;;; Γ |- v == t.
+Proof.
+  intros. apply red_alt in X. apply clos_rt_rt1n_iff in X.
+  induction X; auto.
+  now econstructor 3; [eapply IHX|]; eauto.
+Qed.
+
+Lemma conv_alt_sym `{cf : checker_flags} (Σ : global_env_ext) Γ t u :
+  wf Σ ->
+  Σ ;;; Γ |- t == u -> Σ ;;; Γ |- u == t.
+Proof.
+  intros wfΣ X.
+  induction X.
+  - eapply eq_term_sym in e; now constructor.
+  - eapply red_conv_conv_inv. eapply red1_red in r. eauto. eauto.
+  - eapply red_conv_conv. eapply red1_red in r. eauto. eauto.
+Qed.
+
+Lemma conv_alt_red {cf : checker_flags} {Σ : global_env_ext} {Γ : context} {t u : term} :
+  Σ;;; Γ |- t == u <~> (∑ v v' : term, (red Σ Γ t v × red Σ Γ u v') × eq_term (global_ext_constraints Σ) v v').
+Proof.
+  split. induction 1. exists t, u; intuition auto.
+  destruct IHX as [? [? [? ?]]].
+  exists x, x0; intuition auto. eapply red_step; eauto.
+  destruct IHX as [? [? [? ?]]].
+  exists x, x0; intuition auto. eapply red_step; eauto.
+  intros.
+  destruct X as [? [? [[? ?] ?]]].
+  eapply red_conv_conv; eauto.
+  eapply red_conv_conv_inv; eauto. now constructor.
+Qed.
+
+Lemma conv_alt_cumul `{cf : checker_flags} (Σ : global_env_ext) Γ t u : wf Σ ->
+  Σ ;;; Γ |- t == u -> Σ ;;; Γ |- t <= u.
+Proof.
+  intros wfΣ H.
+  apply conv_alt_red in H as [v [v' [[l r] eq]]].
+  apply cumul_alt.
+  exists v, v'; intuition auto. now eapply eq_term_leq_term.
+Qed.
+
+Lemma conv_alt_conv `{cf : checker_flags} (Σ : global_env_ext) Γ t u : wf Σ ->
+  Σ ;;; Γ |- t == u -> Σ ;;; Γ |- t = u.
+Proof.
+  intros wfΣ H. split. now apply conv_alt_cumul.
+  apply conv_alt_sym in H; auto. now apply conv_alt_cumul.
 Qed.
 
 Inductive conv_pb :=
@@ -272,28 +341,28 @@ Inductive conv_pb :=
 
 Definition conv `{cf : checker_flags} leq Σ Γ u v :=
   match leq with
-  | Conv => ∥ Σ ;;; Γ |- u = v ∥
+  | Conv => ∥ Σ ;;; Γ |- u == v ∥
   | Cumul => ∥ Σ ;;; Γ |- u <= v ∥
   end.
 
 Lemma conv_conv_l `{cf : checker_flags} :
-  forall Σ leq Γ u v,
-      Σ ;;; Γ |- u = v ->
+  forall (Σ : global_env_ext) leq Γ u v, wf Σ ->
+      Σ ;;; Γ |- u == v ->
       conv leq Σ Γ u v.
 Proof.
-  intros Σ [] Γ u v [h1 h2].
-  - cbn. constructor. constructor ; assumption.
+  intros Σ [] Γ u v h.
   - cbn. constructor. assumption.
+  - cbn. constructor. now apply conv_alt_cumul.
 Qed.
 
 Lemma conv_conv_r `{cf : checker_flags} :
-  forall Σ leq Γ u v,
-      Σ ;;; Γ |- u = v ->
+  forall (Σ : global_env_ext) leq Γ u v, wf Σ ->
+      Σ ;;; Γ |- u == v ->
       conv leq Σ Γ v u.
 Proof.
-  intros Σ [] Γ u v [h1 h2].
-  - cbn. constructor. constructor ; assumption.
-  - cbn. constructor. assumption.
+  intros Σ [] Γ u v wfΣ h.
+  - cbn. constructor. apply conv_alt_sym; auto.
+  - cbn. constructor. apply conv_alt_cumul. auto. now apply conv_alt_sym.
 Qed.
 
 Lemma cumul_App_l `{cf : checker_flags} :

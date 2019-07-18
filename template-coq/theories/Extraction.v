@@ -18,7 +18,7 @@ Extract Constant utils.ascii_compare =>
  "fun x y -> match Char.compare x y with 0 -> Eq | x when x < 0 -> Lt | _ -> Gt".
 
 Extraction Blacklist config uGraph Universes Ast String List Nat Int
-           UnivSubst Typing Checker Retyping OrderedType Logic Common.
+           UnivSubst Typing Checker Retyping OrderedType Logic Common Equality.
 Set Warnings "-extraction-opaque-accessed".
 
 Require Export MetaCoq.Template.Ast.

@@ -638,6 +638,45 @@ Section ContextConversion.
     now split.
   Qed.
 
+  (* Generically, would need a stronger red1_context_upto_l
+     for assumption contexts. Or we can go Yannick's way
+     in EArities. *)
+  Lemma red_conv_ctx_ass Δ Δ' t u :
+    red Σ Δ t u ->
+    assumption_context Δ ->
+    conv_context Δ Δ' ->
+    red Σ Δ' t u.
+  Proof.
+    intros redt assΔ redΔ.
+    eapply conv_context_red_context in redΔ as [Δ1 [Δ2 [[redl redr] ?]]].
+    eapply PCUICConfluence.red_red_ctx. 3:eauto. auto.
+    eapply red_eq_context_upto_l in redt; eauto.
+    destruct redt as [v' [redtv' equ]].
+    (* eapply red_red_ctx_inv in redt. 4:eapply redl. all:eauto. *)
+
+
+    (* eapply red_ctx_clos_rt_red1_ctx in redΔ. *)
+    (* unfold context in *. unfold app_context in *. *)
+    (* induction redΔ. *)
+    (* - eapply red_alt in redt. *)
+    (*   induction redt. *)
+    (*   pose proof (red1_red1_ctx_inv [] x y). *)
+    (*   rewrite !app_context_nil_l in X. *)
+    (*   eapply X; eauto. *)
+    (*   constructor. *)
+    (*   now eapply red_trans with y0. *)
+    (* - eapply red_eq_context_upto_names; eauto. *)
+    (* - specialize (IHredΔ1 redt assΔ). *)
+    (*   apply (IHredΔ2 IHredΔ1). *)
+    (*   clear -wfΣ assΔ redΔ1. *)
+    (*   induction redΔ1 in assΔ. *)
+    (*   induction r; try constructor; depelim assΔ; auto; *)
+    (*     try hnf in H; try noconf H; auto. constructor; auto. *)
+    (*   induction assΔ in y, e |- *; depelim e. constructor. *)
+    (*   destruct y0; try constructor. simpl in *. subst. constructor; auto. *)
+    (*   eauto. *)
+  Admitted.
+
   Lemma conv_isWfArity_or_Type Γ Γ' T U :
     conv_context Γ' Γ ->
     Σ ;;; Γ |- T = U ->

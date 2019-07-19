@@ -80,10 +80,10 @@ Inductive is_type {cf : checker_flags} (Σ : global_env_ext) (Γ : context) : te
    they cannot be types *)
 
 Lemma inversion_type_Sort {cf : checker_flags} (Σ : global_env_ext) (Γ : context) T s :
-  Σ ;;; Γ |- T : tSort s -> ∑ ty, (Σ ;;; Γ |- T : ty) * (Σ ;;; Γ |- ty <= tSort s).
+  Σ ;;; Γ |- T : tSort s -> ∑ ctx ty, (Σ ;;; Γ |- T : ty) * (Σ ;;; Γ |- ty <= it_mkProd_or_LetIn ctx (tSort s)).
 Proof.
   intros.
-  exists (tSort s).
+  exists [], (tSort s).
   split; auto.
 Qed.
 
@@ -94,38 +94,136 @@ Proof.
   intros.
 Admitted.
 
+Lemma smash_context_app Γ Γ' Γ'' :
+  smash_context Γ (Γ' ++ Γ'') =
+  smash_context (smash_context Γ Γ') Γ''.
+Proof.
+  induction Γ' in Γ, Γ'' |- *; simpl; auto.
+  destruct a as [na [b|] ty].
+  now rewrite -IHΓ'.
+  now rewrite -IHΓ'.
+Qed.
+
+(* Lemma smash_context_subst Γ s Γ' n : *)
+(*   closedn_ctx #|Γ| Γ' -> *)
+(*                    smash_context Γ (subst_context s (#|Γ| + n) Γ') = *)
+(*                    subst_context s (#|Γ| + n) (smash_context Γ Γ'). *)
+(* Proof. *)
+(*   induction Γ' in Γ, s, n |- *; cbn -[subst_context]. simpl. *)
+(*   admit. *)
+(*   intros Hs. *)
+(*   destruct a as [na [b|] ty]; cbn -[subst_context]. *)
+(*   - rewrite subst_context_snoc. simpl. *)
+(*     specialize (IHΓ' (subst_context [b] 0 Γ) s). *)
+(*     rewrite subst_context_length in IHΓ'. *)
+(*     rewrite mapi_rec_app /= forallb_app /= /id /closed_decl /= in Hs. *)
+(*     move/andP: Hs => [] closedctx. move => /andP [/andP[Hb Hty] _]. *)
+(*     rewrite -IHΓ'; auto. *)
+(*     assert (subst s (#|Γ'| + (#|Γ| + n)) b = b). *)
+(*     eapply subst_closedn. *)
+(*     eapply closed_upwards; eauto. now rewrite List.rev_length. *)
+(*     now rewrite H. *)
+(*   - rewrite subst_context_snoc. simpl. *)
+(*     rewrite mapi_rec_app /= forallb_app /= /id /closed_decl /= in Hs. *)
+(*     move/andP: Hs => [] closedctx. move => /andP [Hty _]. *)
+(*     specialize (IHΓ' (Γ ++ [subst_decl s (#|Γ'| + (#|Γ| + n)) *)
+(*                                        {| decl_name := na; decl_body := None; decl_type := ty |}])). *)
+(*     rewrite app_length /= in IHΓ'. *)
+(*     specialize (IHΓ' s n); auto. *)
+(*     rewrite Nat.add_1_r in IHΓ'. *)
+(* Admitted. (* Wrong! *) *)
+
+Lemma cumul_it_mkProd_or_LetIn_r_inv {cf : checker_flags} (Σ : global_env_ext) Γ T ctx' s' :
+  wf Σ ->
+  Σ ;;; Γ |- T <= it_mkProd_or_LetIn ctx' (tSort s') ->
+  ∑ ctx s, (red Σ Γ T (it_mkProd_or_LetIn ctx (tSort s)))
+           * conv_context Σ ctx (smash_context [] ctx')
+           * leq_term Σ (tSort s) (tSort s').
+Proof.
+  intros wfΣ.
+  revert Γ T s'.
+  generalize (@eq_refl _ #|ctx'|).
+  move: {2}#|ctx'| => n; move: ctx'.
+  induction n.
+  - case=> //=; rewrite /=. move=> _ Γ T s'.
+    move/cumul_Sort_r_inv => [s [? ?]].
+    exists [], s. simpl. intuition auto with pcuic. now constructor.
+  - destruct ctx' using rev_ind => //= /=. clear IHctx'.
+    rewrite app_length /= Nat.add_1_r => [=] Hn Γ T s'. subst n.
+    rewrite it_mkProd_or_LetIn_app /=.
+    case: x => [na [b|] ty] => /= H.
+    * eapply cumul_LetIn_r_inv in H as [T' [redT' cum]] => //.
+      rewrite /subst1 subst_it_mkProd_or_LetIn /= in cum.
+      specialize (IHn (subst_context [b] 0 l) ltac:(now rewrite subst_context_length) _ _ _ cum) as
+          [ctx' [s'' [[redT'' convctx] leq]]]; auto.
+      exists ctx', s''. intuition auto.
+      eapply transitivity; eauto.
+      eapply conv_context_trans; eauto.
+      rewrite smash_context_app. simpl.
+      (* rewrite smash_context_subst. *)
+      admit.
+    * eapply cumul_Prod_r_inv in H as [na' [dom' [codom' [[reddom eqcodom] ?]]]] => //.
+      destruct (IHn l eq_refl (Γ ,, vass na ty) _ _ c) as [ctx' [s'' [[redT' convctx'] leqs]]].
+      exists (ctx' ++ [vass na' dom']), s''.
+      rewrite it_mkProd_or_LetIn_app. simpl.
+      intuition auto. transitivity (tProd na' dom' codom') => //.
+      eapply red_prod_r.
+      admit.
+      admit.
+Admitted.
 
 Lemma is_type_sound {cf : checker_flags} (Σ : global_env_ext) (Γ : context) T :
+  wf Σ ->
   isType Σ Γ T -> is_type Σ Γ T.
 Proof.
-  intros [s Hs].
-  eapply inversion_type_Sort in Hs as [U [HU Us]].
-  revert s Us. induction HU; intros s' Us; try solve [econstructor; eauto].
+  intros wfΣ [s Hs].
+  eapply inversion_type_Sort in Hs as [ctx [U [HU Us]]].
+  revert s ctx Us. induction HU; intros s' Us; try solve [econstructor; eauto].
   - econstructor; eauto.
     destruct decl as [na d ty]; try discriminate.
-    simpl in Us.
-    eapply cumul_Sort_r_inv in Us as [s [reds ?]]. simpl.
-    eapply is_type_Cumul with (tSort s). constructor; auto. admit.
+    simpl in Us. simpl in Us0.
+    (* eapply cumul_Sort_r_inv in Us as [s [reds ?]]. simpl. *)
+    (* eapply is_type_Cumul with (tSort s). constructor; auto. admit. *)
     admit.
-
-  - now eapply cumul_Prod_Sort_inv in Us.
-
-  - constructor. eapply IHHU1; eauto.
-    eapply IHHU3 with s'. admit.
-
-  - eapply is_type_App; eauto.
-    eapply is_type_Cumul_inv; eauto. constructor. admit.
-
-  - econstructor. eauto.
-    eapply is_type_Cumul_inv; eauto. constructor. admit.
-
-  - admit. (* Impossible *)
-  - constructor. eapply IHHU1.
-    admit.
-
-  - admit.
-  - admit.
-  - admit.
-  - eapply IHHU.
-    eapply transitivity; eauto. eapply c. eapply Us.
 Admitted.
+
+(*   - now eapply cumul_Prod_Sort_inv in Us. *)
+
+(*   - constructor. eapply IHHU1; eauto. *)
+(*     eapply IHHU3 with s'. admit. *)
+
+(*   - eapply is_type_App; eauto. *)
+(*     eapply is_type_Cumul_inv; eauto. constructor. admit. *)
+
+(*   - econstructor. eauto. *)
+(*     eapply is_type_Cumul_inv; eauto. constructor. admit. *)
+
+(*   - admit. (* Impossible *) *)
+(*   - eapply on_declared_inductive in isdecl as [onm oni] => //. *)
+(*     destruct oni. *)
+(*     assert (pty = it_mkProd_or_LetIn pctx (tSort ps)). *)
+(*     move: e0; rewrite /types_of_case. *)
+(*     case ip: instantiate_params => [ity|] //. *)
+(*     case da: destArity => [[ctx isort]|] //. *)
+(*     case dp: destArity => [[pctx' psort]|] //. *)
+(*     case moo: map_option_out => [brtys|] // [] ? ? ? ?; subst. *)
+(*     generalize (destArity_spec [] pty). now rewrite dp. *)
+(*     subst pty. *)
+(*     eapply is_type_Case. eapply IHHU1 with ps. *)
+(*     assert (tSort ps <= tSort s'). *)
+
+
+
+
+(*     Lemma types_of_case_pty *)
+
+
+(*     red in c0. *)
+(*     admit. *)
+
+(*   - admit. *)
+(*   - admit. *)
+(*   - admit. *)
+(*   - eapply IHHU. *)
+(*     eapply transitivity; eauto. *)
+(* Admitted. *)

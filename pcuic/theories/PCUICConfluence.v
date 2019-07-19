@@ -1429,94 +1429,94 @@ Section PredRed.
 
 (* Unused *)
 
-  (* Lemma red_fix_congr_alt Γ mfix0 mfix1 idx : *)
-  (*   All2 (fun d0 d1 => (red Σ Γ (dtype d0) (dtype d1)) * *)
-  (*                      (red Σ (Γ ,,, fix_context mfix1) (dbody d0) (dbody d1)))%type mfix0 mfix1 -> *)
-  (*     red Σ Γ (tFix mfix0 idx) (tFix mfix1 idx). *)
-  (* Proof. *)
-  (* Admitted. *)
+  Lemma red_fix_congr_alt Γ mfix0 mfix1 idx :
+    All2 (fun d0 d1 => (red Σ Γ (dtype d0) (dtype d1)) *
+                       (red Σ (Γ ,,, fix_context mfix1) (dbody d0) (dbody d1)))%type mfix0 mfix1 ->
+      red Σ Γ (tFix mfix0 idx) (tFix mfix1 idx).
+  Proof.
+  Admitted.
 
-  (* Lemma red_cofix_congr_alt Γ mfix0 mfix1 idx : *)
-  (*   All2 (fun d0 d1 => (red Σ Γ (dtype d0) (dtype d1)) * *)
-  (*                      (red Σ (Γ ,,, fix_context mfix1) (dbody d0) (dbody d1)))%type mfix0 mfix1 -> *)
-  (*     red Σ Γ (tCoFix mfix0 idx) (tCoFix mfix1 idx). *)
-  (* Proof. *)
-  (* Admitted. *)
+  Lemma red_cofix_congr_alt Γ mfix0 mfix1 idx :
+    All2 (fun d0 d1 => (red Σ Γ (dtype d0) (dtype d1)) *
+                       (red Σ (Γ ,,, fix_context mfix1) (dbody d0) (dbody d1)))%type mfix0 mfix1 ->
+      red Σ Γ (tCoFix mfix0 idx) (tCoFix mfix1 idx).
+  Proof.
+  Admitted.
 
-  (* Lemma pred1_red_r Γ Γ' : forall M N, pred1 Σ Γ Γ' M N -> red Σ Γ' M N. *)
-  (* Proof. *)
-  (*   revert Γ Γ'. eapply (@pred1_ind_all_ctx Σ _ *)
-  (*                                           (fun Γ Γ' => *)
-  (*      All2_local_env (on_decl (fun Γ Γ' M N => pred1 Σ Γ Γ' M N -> red Σ Γ' M N)) Γ Γ')%type); *)
-  (*                  intros; try constructor; pcuic. *)
-  (*   eapply All2_local_env_impl; eauto. *)
-  (*   - (* Contexts *) *)
-  (*     unfold on_decl => Δ Δ' t T U Hlen. *)
-  (*     destruct t; auto. *)
-  (*     destruct p; auto. intuition. *)
+  Lemma pred1_red_r Γ Γ' : forall M N, pred1 Σ Γ Γ' M N -> red Σ Γ' M N.
+  Proof.
+    revert Γ Γ'. eapply (@pred1_ind_all_ctx Σ _
+                                            (fun Γ Γ' =>
+       All2_local_env (on_decl (fun Γ Γ' M N => pred1 Σ Γ Γ' M N -> red Σ Γ' M N)) Γ Γ')%type);
+                   intros; try constructor; pcuic.
+    eapply All2_local_env_impl; eauto.
+    - (* Contexts *)
+      unfold on_decl => Δ Δ' t T U Hlen.
+      destruct t; auto.
+      destruct p; auto. intuition.
 
-  (*   - (* Beta *) *)
-  (*     apply red_trans with (tApp (tLambda na t1 b1) a0). *)
-  (*     eapply (@red_app Σ); [apply red_abs|]; auto with pcuic. *)
-  (*     apply red_trans with (tApp (tLambda na t1 b1) a1). *)
-  (*     eapply (@red_app Σ); auto with pcuic. *)
-  (*     apply red1_red. constructor. *)
+    - (* Beta *)
+      apply red_trans with (tApp (tLambda na t1 b1) a0).
+      eapply (@red_app Σ); [apply red_abs|]; auto with pcuic.
+      apply red_trans with (tApp (tLambda na t1 b1) a1).
+      eapply (@red_app Σ); auto with pcuic.
+      apply red1_red. constructor.
 
-  (*   - (* Zeta *) *)
-  (*     eapply red_trans with (tLetIn na d1 t1 b0). *)
-  (*     eapply red_letin; eauto with pcuic. *)
-  (*     eapply red_trans with (tLetIn na d1 t1 b1). *)
-  (*     eapply red_letin; eauto with pcuic. *)
-  (*     eapply red1_red; constructor. *)
+    - (* Zeta *)
+      eapply red_trans with (tLetIn na d1 t1 b0).
+      eapply red_letin; eauto with pcuic.
+      eapply red_trans with (tLetIn na d1 t1 b1).
+      eapply red_letin; eauto with pcuic.
+      eapply red1_red; constructor.
 
-  (*   - (* Rel in context *) *)
-  (*     eapply nth_error_pred1_ctx in X0; eauto. *)
-  (*     destruct X0 as [body' [Hnth Hpred]]. *)
-  (*     eapply red1_red; constructor; auto. *)
+    - (* Rel in context *)
+      eapply nth_error_pred1_ctx in X0; eauto.
+      destruct X0 as [body' [Hnth Hpred]].
+      eapply red1_red; constructor; auto.
 
-  (*   - (* Iota *) *)
-  (*     transitivity (tCase (ind, pars) p (mkApps (tConstruct ind c u) args1) brs1). *)
-  (*     eapply reds_case; auto. *)
-  (*     eapply red_mkApps. auto. solve_all. red in X2; solve_all. *)
-  (*     eapply red1_red. constructor. *)
+    - (* Iota *)
+      transitivity (tCase (ind, pars) p (mkApps (tConstruct ind c u) args1) brs1).
+      eapply reds_case; auto.
+      eapply red_mkApps. auto. solve_all. red in X2; solve_all.
+      eapply red1_red. constructor.
 
-  (*   - move: H H0. *)
-  (*     move => unf isc. *)
-  (*     transitivity (mkApps (tFix mfix1 idx) args1). *)
-  (*     eapply red_mkApps. eapply red_fix_congr_alt. red in X3. solve_all. eapply a. *)
-  (*     solve_all. *)
-  (*     eapply red_step. econstructor; eauto. eauto. *)
+    - move: H H0.
+      move => unf isc.
+      transitivity (mkApps (tFix mfix1 idx) args1).
+      eapply red_mkApps. eapply red_fix_congr_alt. red in X3. solve_all. eapply a.
+      solve_all.
+      eapply red_step. econstructor; eauto. eauto.
 
-  (*   - transitivity (tCase ip p1 (mkApps (tCoFix mfix1 idx) args1) brs1). *)
-  (*     eapply reds_case; eauto. *)
-  (*     eapply red_mkApps; [|solve_all]. *)
-  (*     eapply red_cofix_congr_alt. red in X3; solve_all. eapply a0. *)
-  (*     red in X7; solve_all. *)
-  (*     eapply red_step. econstructor; eauto. eauto. *)
+    - transitivity (tCase ip p1 (mkApps (tCoFix mfix1 idx) args1) brs1).
+      eapply reds_case; eauto.
+      eapply red_mkApps; [|solve_all].
+      eapply red_cofix_congr_alt. red in X3; solve_all. eapply a0.
+      red in X7; solve_all.
+      eapply red_step. econstructor; eauto. eauto.
 
-  (*   - transitivity (tProj p (mkApps (tCoFix mfix1 idx) args1)). *)
-  (*     eapply red_proj_c; eauto. *)
-  (*     eapply red_mkApps; [|solve_all]. *)
-  (*     eapply red_cofix_congr_alt. red in X3; solve_all. eapply a. *)
-  (*     eapply red_step. econstructor; eauto. eauto. *)
+    - transitivity (tProj p (mkApps (tCoFix mfix1 idx) args1)).
+      eapply red_proj_c; eauto.
+      eapply red_mkApps; [|solve_all].
+      eapply red_cofix_congr_alt. red in X3; solve_all. eapply a.
+      eapply red_step. econstructor; eauto. eauto.
 
-  (*   - eapply red1_red. econstructor; eauto. *)
+    - eapply red1_red. econstructor; eauto.
 
-  (*   - transitivity (tProj (i, pars, narg) (mkApps (tConstruct i k u) args1)). *)
-  (*     eapply red_proj_c; eauto. *)
-  (*     eapply red_mkApps; [|solve_all]. auto. *)
-  (*     eapply red1_red. econstructor; eauto. *)
+    - transitivity (tProj (i, pars, narg) (mkApps (tConstruct i k u) args1)).
+      eapply red_proj_c; eauto.
+      eapply red_mkApps; [|solve_all]. auto.
+      eapply red1_red. econstructor; eauto.
 
-  (*   - now eapply red_abs. *)
-  (*   - now eapply red_app. *)
-  (*   - now eapply red_letin => //. *)
-  (*   - eapply reds_case => //. red in X3; solve_all. *)
-  (*   - now eapply red_proj_c. *)
-  (*   - eapply red_fix_congr_alt. red in X3; solve_all. eapply a. *)
-  (*   - eapply red_cofix_congr_alt. red in X3; solve_all. eapply a. *)
-  (*   - eapply red_prod_alt; auto. *)
-  (*   - eapply red_evar; auto. solve_all. *)
-  (* Qed. *)
+    - now eapply red_abs.
+    - now eapply red_app.
+    - now eapply red_letin => //.
+    - eapply reds_case => //. red in X3; solve_all.
+    - now eapply red_proj_c.
+    - eapply red_fix_congr_alt. red in X3; solve_all. eapply a.
+    - eapply red_cofix_congr_alt. red in X3; solve_all. eapply a.
+    - eapply red_prod_alt; auto.
+    - eapply red_evar; auto. solve_all.
+  Qed.
 
 End PredRed.
 
@@ -2652,18 +2652,18 @@ Section ConfluenceFacts.
     - auto.
   Qed.
 
-  (* Lemma red1_red1_ctx_inv Γ Δ Δ' t u : *)
-  (*   red1 Σ (Γ ,,, Δ) t u -> *)
-  (*   assumption_context Δ -> *)
-  (*   @red1_ctx Σ (Γ ,,, Δ) (Γ ,,, Δ') -> *)
-  (*   red Σ (Γ ,,, Δ') t u. *)
-  (* Proof. *)
-  (*   intros redt assΔ redΔ. *)
-  (*   apply red1_pred1 in redt => //. *)
-  (*   eapply red1_ctx_pred1_ctx in redΔ => //. *)
-  (*   eapply pred1_ctx_pred1 in redt; eauto. *)
-  (*   now eapply pred1_red_r in redt. *)
-  (* Qed. *)
+  Lemma red1_red1_ctx_inv Γ Δ Δ' t u :
+    red1 Σ (Γ ,,, Δ) t u ->
+    assumption_context Δ ->
+    @red1_ctx Σ (Γ ,,, Δ) (Γ ,,, Δ') ->
+    red Σ (Γ ,,, Δ') t u.
+  Proof.
+    intros redt assΔ redΔ.
+    apply red1_pred1 in redt => //.
+    eapply red1_ctx_pred1_ctx in redΔ => //.
+    eapply pred1_ctx_pred1 in redt; eauto.
+    now eapply pred1_red_r in redt.
+  Qed.
 
   Lemma clos_rt_red1_ctx_red_ctx :
     inclusion (clos_refl_trans (@red1_ctx Σ)) (@red_ctx Σ).
@@ -2675,32 +2675,34 @@ Section ConfluenceFacts.
     - now eapply (red_ctx_trans wfΣ); eauto.
   Qed.
 
-  (* Lemma red_red_ctx_inv Δ Δ' t u : *)
-  (*   red Σ Δ t u -> *)
-  (*   @red_ctx Σ Δ Δ' -> *)
-  (*   red Σ Δ' t u. *)
-  (* Proof. *)
-  (*   intros redt assΔ redΔ. *)
-  (*   eapply red_ctx_clos_rt_red1_ctx in redΔ. *)
-  (*   unfold context in *. unfold app_context in *. *)
-  (*   induction redΔ. *)
-  (*   - eapply red_alt in redt. *)
-  (*     induction redt. *)
-  (*     pose proof (red1_red1_ctx_inv [] x y). *)
-  (*     rewrite !app_context_nil_l in X. *)
-  (*     eapply X; eauto. *)
-  (*     constructor. *)
-  (*     now eapply red_trans with y0. *)
-  (*   - apply redt. *)
-  (*   - specialize (IHredΔ1 redt assΔ). *)
-  (*     apply (IHredΔ2 IHredΔ1). *)
-  (*     clear -wfΣ assΔ redΔ1. *)
-  (*     apply clos_rt_red1_ctx_red_ctx in redΔ1. *)
-  (*     induction assΔ in y, redΔ1 |- *. depelim redΔ1. constructor. *)
-  (*     depelim redΔ1. hnf in H. noconf H. *)
-  (*     red in o. constructor. now apply IHassΔ. *)
-  (*     hnf in H; noconf H. *)
-  (* Qed. *)
+  Lemma red_red_ctx_inv Δ Δ' t u :
+    red Σ Δ t u ->
+    assumption_context Δ ->
+    @red_ctx Σ Δ Δ' ->
+    red Σ Δ' t u.
+  Proof.
+    intros redt assΔ redΔ.
+    eapply red_ctx_clos_rt_red1_ctx in redΔ.
+    unfold context in *. unfold app_context in *.
+    induction redΔ.
+    - eapply red_alt in redt.
+      induction redt.
+      pose proof (red1_red1_ctx_inv [] x y).
+      rewrite !app_context_nil_l in X.
+      eapply X; eauto.
+      constructor.
+      now eapply red_trans with y0.
+    - eapply red_eq_context_upto_names; eauto.
+    - specialize (IHredΔ1 redt assΔ).
+      apply (IHredΔ2 IHredΔ1).
+      clear -wfΣ assΔ redΔ1.
+      induction redΔ1 in assΔ.
+      induction r; try constructor; depelim assΔ; auto;
+        try hnf in H; try noconf H; auto. constructor; auto.
+      induction assΔ in y, e |- *; depelim e. constructor.
+      destruct y0; try constructor. simpl in *. subst. constructor; auto.
+      eauto.
+  Qed.
 
   Lemma red_confluence {Γ t u v} :
     red Σ Γ t u -> red Σ Γ t v ->

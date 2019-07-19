@@ -1,1 +1,5 @@
 CAMLFLAGS+=-w -33 # Unused opens
+CAMLFLAGS+=-bin-annot # For merlin
+
+post-all::
+	cp gen-src/metacoq_template_plugin.cm* build/

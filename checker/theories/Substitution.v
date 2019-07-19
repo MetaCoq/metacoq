@@ -1,8 +1,8 @@
 (* Distributed under the terms of the MIT license.   *)
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Arith Lia.
-From MetaCoq.Template Require Import config utils Ast AstUtils Induction utils LiftSubst UnivSubst Typing TypingWf.
-From MetaCoq.Template Require Import Generation WeakeningEnv Closed Weakening.
+From MetaCoq Require Import config utils Ast AstUtils Induction utils LiftSubst UnivSubst Typing TypingWf.
+From MetaCoq Require Import Generation WeakeningEnv Closed Weakening.
 Require Import ssreflect.
 
 (** * Substitution lemmas for typing derivations. *)
@@ -449,7 +449,7 @@ Lemma subst_destArity ctx t n k :
   end.
 Proof.
   intros wf; revert ctx.
-  induction wf in n, k |- * using Template.Induction.term_wf_forall_list_ind; intros ctx; simpl; trivial.
+  induction wf in n, k |- * using term_wf_forall_list_ind; intros ctx; simpl; trivial.
 
   - specialize (IHwf0 n k (ctx,, vass n0 t)). unfold snoc in IHwf0; rewrite subst_context_snoc in IHwf0.
     simpl in IHwf0. unfold subst_decl, map_decl in IHwf0. unfold vass in *. simpl in IHwf0.

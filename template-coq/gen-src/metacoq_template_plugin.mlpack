@@ -1,5 +1,6 @@
 Datatypes
 Bool
+Equalities
 Decimal
 Nat0
 List0
@@ -14,8 +15,14 @@ Ascii
 String0
 Orders
 OrdersTac
+OrdersFacts
+OrdersLists
 OrderedType0
+MSetInterface
+MSetFacts
+MSetDecide
 MSetWeakList
+MSetProperties
 BinNums
 Equality0
 Utils
@@ -24,11 +31,13 @@ Universes0
 BasicAst
 Ast0
 AstUtils
+LiftSubst
+UnivSubst0
 Common
+CRelationClasses
 
 Denote
 Denoter
-Equalities
 Extractable
 Logic0
 

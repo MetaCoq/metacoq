@@ -1,7 +1,6 @@
 From Coq Require Import Strings.String.
 Open Scope string_scope.
-From MetaCoq.Template Require Import
-     Ast AstUtils Common.
+From MetaCoq.Template Require Import Ast AstUtils Common.
 
 Set Universe Polymorphism.
 Set Universe Minimization ToSet.

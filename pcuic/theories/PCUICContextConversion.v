@@ -7,7 +7,7 @@ From Coq Require Import CRelationClasses String.
 From Coq Require Import ssreflect ssrbool.
 
 From MetaCoq.Template Require Import config utils.
-From MetaCoq.Template Require Import LibHypsNaming.
+From MetaCoq Require Import LibHypsNaming.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICWeakeningEnv PCUICWeakening
      PCUICSubstitution PCUICClosed PCUICCumulativity PCUICGeneration

@@ -1,1 +1,4 @@
 CAMLFLAGS+=-w -33 # Unused opens
+
+post-all::
+	./update_plugin.sh

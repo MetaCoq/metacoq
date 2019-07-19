@@ -1,6 +1,6 @@
-Require Import Ascii String ZArith List Bool utils.
-Require Import MSetWeakList MSetFacts MSetProperties.
-Require Import BasicAst config.
+From Coq Require Import Ascii String ZArith List Bool.
+From Coq Require Import MSetWeakList MSetFacts MSetProperties.
+From MetaCoq.Template Require Import utils BasicAst config.
 Import ListNotations.
 
 Module Level.

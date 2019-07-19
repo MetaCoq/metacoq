@@ -183,41 +183,20 @@ Requirements through opam
 The easiest way to get all is through [opam](http://opam.ocaml.org):
 
 You might want to create a "switch" (an environment of `opam` packages) for `Coq` if
-<<<<<<< HEAD
-you don't have one yet. You need to use **opam 2** to obtain the right version of `Equations`.
-
-    # opam switch create coq.8.8.2 4.04.1 
-    # eval $(opam env)
-    
-This creates the `coq.8.8.2` switch which initially contains only the
-=======
 you don't have one yet:
-    
-    # opam switch -A 4.04.1 coq.8.9.0
+
+    # opam switch -A 4.04.1 coq.8.9.1
     # eval `opam config env`
-    
-<<<<<<< HEAD
-This creates the `coq.8.9` switch which initially contains only the
->>>>>>> Update Readme to 8.9
-=======
-This creates the `coq.8.9.0` switch which initially contains only the
->>>>>>> typo
+
+This creates the `coq.8.9.1` switch which initially contains only the
 basic `OCaml` `4.04.1` compiler, and puts you in the right environment
 (check with `ocamlc -v`).
 
 Once in the right switch, you can install `Coq` and the `Equations` package using:
-    
-<<<<<<< HEAD
-<<<<<<< HEAD
-    # opam pin add coq 8.8.2
+
+    # opam pin add coq 8.9.1
     # opam pin add coq-equations 1.2+8.8
-=======
-    # opam pin add coq 8.9
->>>>>>> Update Readme to 8.9
-=======
-    # opam pin add coq 8.9.0
->>>>>>> typo
-    
+
 Pinning the packages prevents opam from trying to upgrade it afterwards, in
 this switch. If the commands are successful you should have `coq`
 available (check with `coqc -v`).

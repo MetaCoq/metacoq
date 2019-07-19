@@ -624,7 +624,7 @@ Section Principality.
       { apply conv_alt_trans with x4 => //.
         now eapply red_conv_alt. apply conv_alt_sym; auto.
         eapply conv_alt_conv_ctx; eauto. constructor; auto. eapply conv_ctx_refl.
-        now eapply typing_wf_local in t. constructor. now eapply conv_alt_sym. }
+        constructor. now eapply conv_alt_sym. }
       exists (B' {0 := u2}).
       repeat split.
       * eapply cumul_trans with (codom {0 := u2}) => //.

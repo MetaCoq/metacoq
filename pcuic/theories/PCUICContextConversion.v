@@ -327,10 +327,10 @@ Section ContextConversion.
 
   Notation conv_context Γ Γ' := (context_relation conv_decls Γ Γ').
 
-  Lemma conv_ctx_refl Γ : wf_local Σ Γ -> conv_context Γ Γ.
+  Lemma conv_ctx_refl Γ : conv_context Γ Γ.
   Proof.
     induction Γ; try econstructor.
-    destruct a as [na [b|] ty]; intros wfΓ; depelim wfΓ; econstructor; eauto;
+    destruct a as [na [b|] ty]; econstructor; eauto;
       constructor; pcuic; eapply conv_refl'.
   Qed.
 
@@ -641,6 +641,8 @@ Section ContextConversion.
 End ContextConversion.
 
 Notation conv_context Σ Γ Γ' := (context_relation (conv_decls Σ) Γ Γ').
+
+Hint Resolve conv_ctx_refl : pcuic.
 
 (* Lemma wf_local_conv_ctx {cf:checker_flags} Σ Γ Δ (wfΓ : wf_local Σ Γ) : wf Σ -> *)
 (*   All_local_env_over typing *)

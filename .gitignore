@@ -261,3 +261,4 @@ checker/src/wf.mli
 /template-coq/Makefile.template.conf
 /checker/_PluginProject
 /checker/Makefile.plugin.conf
+/checker/Makefile.plugin

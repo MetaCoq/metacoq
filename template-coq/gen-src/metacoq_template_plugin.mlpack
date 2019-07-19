@@ -1,5 +1,6 @@
 Datatypes
 Bool
+Equalities
 Decimal
 Nat0
 List0
@@ -33,7 +34,6 @@ Common
 
 Denote
 Denoter
-Equalities
 Extractable
 Logic0
 

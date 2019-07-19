@@ -1,4 +1,3 @@
-Require Template.TemplateMonad.Core.
 Require Template.TemplateMonad.Extractable.
 Require Template.BasicAst Template.Ast.
 

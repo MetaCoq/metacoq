@@ -5,6 +5,7 @@ coq: Makefile.coq
 
 # The template-coq plugin to run template programs live in Coq
 template-coq: coq Makefile.template
+# Force building the ML code before the .v's requiring them.
 	$(MAKE) -f Makefile.template optfiles
 	$(MAKE) -f Makefile.template all
 

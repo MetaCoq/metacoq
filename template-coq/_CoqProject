@@ -22,5 +22,3 @@ theories/monad_utils.v
 
 # Extract the extractable monad, built by _PluginProject
 theories/Extraction.v
-
-theories/All.v

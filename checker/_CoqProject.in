@@ -2,8 +2,8 @@
 -I src
 -R theories MetaCoq.Checker
 
-theories/uGraph.v
 theories/wGraph.v
+theories/uGraph.v
 theories/LibHypsNaming.v
 theories/WfInv.v
 theories/Induction.v

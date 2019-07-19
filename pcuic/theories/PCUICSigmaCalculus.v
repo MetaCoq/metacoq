@@ -10,12 +10,88 @@ Require Import ssreflect ssrbool.
 (** * Type preservation for σ-calculus *)
 
 Set Asymmetric Patterns.
+Open Scope sigma_scope.
+
+Definition inst_context σ (Γ : context) : context :=
+  fold_context (fun i => inst (⇑^i σ)) Γ.
+
+Lemma inst_context_length :
+  forall σ Γ,
+    #|inst_context σ Γ| = #|Γ|.
+Proof.
+  intros σ Γ. unfold inst_context.
+  apply fold_context_length.
+Qed.
+Hint Rewrite inst_context_length : sigma wf.
+
+Definition inst_decl σ d :=
+  map_decl (inst σ) d.
+
+(* TODO MOVE *)
+Lemma nth_error_idsn_Some :
+  forall n k,
+    k < n ->
+    nth_error (idsn n) k = Some (tRel k).
+Proof.
+  intros n k h.
+  induction n in k, h |- *.
+  - inversion h.
+  - simpl. destruct (Nat.ltb_spec0 k n).
+    + rewrite nth_error_app1.
+      * rewrite idsn_length. auto.
+      * eapply IHn. assumption.
+    + assert (k = n) by omega. subst.
+      rewrite nth_error_app2.
+      * rewrite idsn_length. auto.
+      * rewrite idsn_length. replace (n - n) with 0 by omega.
+        simpl. reflexivity.
+Qed.
+
+(* TODO MOVE *)
+Lemma nth_error_idsn_None :
+  forall n k,
+    k >= n ->
+    nth_error (idsn n) k = None.
+Proof.
+  intros n k h.
+  eapply nth_error_None.
+  rewrite idsn_length. auto.
+Qed.
+
+Lemma inst_context_snoc :
+  forall σ Γ d,
+    inst_context σ (d :: Γ) =
+    inst_context σ Γ ,, inst_decl (⇑^#|Γ| σ) d.
+Proof.
+  intros σ Γ d.
+  unfold inst_context, fold_context.
+  rewrite !rev_mapi !rev_involutive /mapi mapi_rec_eqn /snoc.
+  f_equal.
+  - rewrite Nat.sub_0_r List.rev_length. reflexivity.
+  - rewrite mapi_rec_Sk. simpl. apply mapi_rec_ext.
+    intros k x H H0.
+    rewrite app_length !List.rev_length. simpl.
+    unfold map_decl. f_equal.
+    + destruct (decl_body x) ; auto.
+      simpl. f_equal. eapply inst_ext. intro i.
+      unfold Upn, subst_consn, subst_compose.
+      destruct (Nat.ltb_spec0 i (Nat.pred #|Γ| - k)).
+      * rewrite nth_error_idsn_Some. 1: lia.
+        rewrite nth_error_idsn_Some. 1: lia.
+        reflexivity.
+      * rewrite nth_error_idsn_None. 1: lia.
+        rewrite nth_error_idsn_None. 1: lia.
+        rewrite !idsn_length.
+        assert (e : (i - (Nat.pred (#|Γ| + 1) - S k)) = (i - (Nat.pred #|Γ| - k))) by lia.
+        rewrite e. eapply inst_ext.
+        intro j. unfold shiftk. f_equal. lia.
+    + f_equal. f_equal. lia.
+Qed.
+Hint Rewrite inst_context_snoc : sigma.
 
 Section Sigma.
 
 Context `{checker_flags}.
-
-Open Scope sigma_scope.
 
 (* Well-typedness of a substitution *)
 
@@ -53,42 +129,11 @@ Proof.
     specialize (h _ _ e).
 Admitted.
 
-(* TODO MOVE *)
-Lemma nth_error_idsn_Some :
-  forall n k,
-    k < n ->
-    nth_error (idsn n) k = Some (tRel k).
-Proof.
-  intros n k h.
-  induction n in k, h |- *.
-  - inversion h.
-  - simpl. destruct (Nat.ltb_spec0 k n).
-    + rewrite nth_error_app1.
-      * rewrite idsn_length. auto.
-      * eapply IHn. assumption.
-    + assert (k = n) by omega. subst.
-      rewrite nth_error_app2.
-      * rewrite idsn_length. auto.
-      * rewrite idsn_length. replace (n - n) with 0 by omega.
-        simpl. reflexivity.
-Qed.
-
-(* TODO MOVE *)
-Lemma nth_error_idsn_None :
-  forall n k,
-    k >= n ->
-    nth_error (idsn n) k = None.
-Proof.
-  intros n k h.
-  eapply nth_error_None.
-  rewrite idsn_length. auto.
-Qed.
-
 Lemma instantiate_params_subst_inst :
   forall params pars s t σ s' t',
     instantiate_params_subst params pars s t = Some (s', t') ->
     instantiate_params_subst
-      (mapi_rec (fun i decl => map_decl (inst (⇑^i σ)) decl) params #|s|)
+      (mapi_rec (fun i decl => inst_decl (⇑^i σ) decl) params #|s|)
       (map (inst σ) pars)
       (map (inst σ) s)
       t.[⇑^#|s| σ]
@@ -142,10 +187,10 @@ Qed.
 Lemma inst_decl_closed :
   forall σ k d,
     closed_decl k d ->
-    map_decl (inst (⇑^k σ)) d = d.
+    inst_decl (⇑^k σ) d = d.
 Proof.
   intros σ k d.
-  case: d => na [body|] ty. all: rewrite /closed_decl /map_decl /=.
+  case: d => na [body|] ty. all: rewrite /closed_decl /inst_decl /map_decl /=.
   - move /andP => [cb cty]. rewrite !inst_closed //.
   - move => cty. rewrite !inst_closed //.
 Qed.
@@ -153,7 +198,7 @@ Qed.
 Lemma closed_tele_inst :
   forall σ ctx,
     closed_ctx ctx ->
-    mapi (fun i decl => map_decl (inst (⇑^i σ)) decl) (List.rev ctx) =
+    mapi (fun i decl => inst_decl (⇑^i σ) decl) (List.rev ctx) =
     List.rev ctx.
 Proof.
   intros σ ctx.
@@ -260,9 +305,6 @@ Proof.
     erewrite (iffRL (nth_error_None _ _)) by omega.
     simpl. reflexivity.
 Qed.
-
-Definition inst_context σ (Γ : context) : context :=
-  fold_context (fun i => inst (⇑^i σ)) Γ.
 
 Lemma typed_inst :
   forall Σ Γ t T k σ,
@@ -376,6 +418,22 @@ Proof.
   congruence.
 Qed.
 
+Lemma inst_destArity :
+  forall ctx t σ args s,
+    destArity ctx t = Some (args, s) ->
+    destArity (inst_context σ ctx) t.[⇑^#|ctx| σ] =
+    Some (inst_context σ args, s).
+Proof.
+  intros ctx t σ args s h.
+  induction t in ctx, σ, args, s, h |- * using term_forall_list_ind.
+  all: simpl in *. all: try discriminate.
+  - inversion h. reflexivity.
+  - erewrite <- IHt2 ; try eassumption.
+    simpl. autorewrite with sigma. reflexivity.
+  - erewrite <- IHt3. all: try eassumption.
+    simpl. autorewrite with sigma. reflexivity.
+Qed.
+
 (* Maybe remove later? *)
 Require PCUICWeakening.
 
@@ -398,20 +456,25 @@ Proof.
   assert (closedparams : closed_ctx (ind_params mdecl)).
   { eapply PCUICWeakening.closed_wf_local. all: eauto. eauto. }
   epose proof (inst_declared_inductive _ ind mdecl idecl σ hΣ) as hi.
-  (* eapply instantiate_params_inst with (σ := σ) in eity. *)
+  forward hi by assumption. rewrite <- hi.
+  eapply instantiate_params_inst with (σ := σ) in eity ; auto.
+  rewrite -> ind_type_map.
+  rewrite firstn_map.
+  autorewrite with sigma.
+  rewrite eity.
+  case_eq (destArity [] ity) ;
+    try solve [ intro bot ; rewrite bot in h ; discriminate h ].
+  intros [args0 ?] ear. rewrite ear in h.
+  eapply inst_destArity with (σ := σ) in ear as ear'.
+  simpl in ear'. autorewrite with sigma in ear'.
+  rewrite ear'.
+  case_eq (destArity [] pty) ;
+    try solve [ intro bot ; rewrite bot in h ; discriminate h ].
+  intros [args' s'] epty. rewrite epty in h.
+  eapply inst_destArity with (σ := σ) in epty as epty'.
+  simpl in epty'. autorewrite with sigma in epty'.
+  rewrite epty'.
 
-
-  (* rewrite firstn_map. *)
-
-
-(* ind_type_map *)
-
-  (* case_eq (destArity [] ity) ; *)
-  (*   try solve [ intro bot ; rewrite bot in h ; discriminate h ]. *)
-  (* intros [args0 ?] ear. rewrite ear in h. *)
-  (* case_eq (destArity [] pty) ; *)
-  (*   try solve [ intro bot ; rewrite bot in h ; discriminate h ]. *)
-  (* intros [args' s'] ear'. rewrite ear' in h. *)
   (* case_eq (map_option_out (build_branches_type ind mdecl idecl (firstn npar args) u p)) ; *)
   (*   try solve [ intro bot ; rewrite bot in h ; discriminate h ]. *)
   (* intros brtys ebrtys. rewrite ebrtys in h. *)

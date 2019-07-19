@@ -8,7 +8,6 @@ if [[ "gen-src" -ot "src" || ! -f "gen-src/denote.ml" || ! -f "gen-src/metacoq_t
 then
     echo "Updating gen-src from src"
     mkdir -p build
-    cp src/template_coq.cmx src/template_coq.cmxa src/template_coq.cmxs build
     echo "Copying from src to gen-src"
     for x in ${TOCOPY}; do rm -f gen-src/$x; cp src/$x gen-src/$x; done
     echo "Renaming files to camelCase"

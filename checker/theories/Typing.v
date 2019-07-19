@@ -1,17 +1,15 @@
 (* Distributed under the terms of the MIT license.   *)
 
-From Coq Require Import Bool String List Program BinPos Compare_dec Arith Lia.
-From MetaCoq Require Import LibHypsNaming config utils Ast AstUtils Induction LiftSubst UnivSubst.
-From Coq Require Import String.
-From Coq Require Import Wf Wellfounded Relation_Definitions.
-From Coq Require Import Relation_Operators Lexicographic_Product Wf_nat.
-Require Import ssreflect.
+From Coq Require Import Bool String List Program BinPos Compare_dec Arith Lia ssreflect.
+From Coq Require Import String Wf Wellfounded Relation_Definitions Relation_Operators Lexicographic_Product Wf_nat.
+
+From MetaCoq.Template Require Import config utils Ast AstUtils Induction LiftSubst UnivSubst.
+From MetaCoq.Checker Require Import LibHypsNaming.
+
 Local Open Scope string_scope.
 Set Asymmetric Patterns.
 
 (** * Typing derivations
-
-  *WIP*
 
   Inductive relations for reduction, conversion and typing of CIC terms.
 

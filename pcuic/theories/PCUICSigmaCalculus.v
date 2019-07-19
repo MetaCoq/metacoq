@@ -7,6 +7,9 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICLif
      PCUICTyping PCUICWeakeningEnv PCUICClosed PCUICReduction.
 Require Import ssreflect ssrbool.
 
+(* TODO Maybe remove later? *)
+Require PCUICWeakening.
+
 (** * Type preservation for σ-calculus *)
 
 Set Asymmetric Patterns.
@@ -434,8 +437,160 @@ Proof.
     simpl. autorewrite with sigma. reflexivity.
 Qed.
 
-(* Maybe remove later? *)
-Require PCUICWeakening.
+Lemma shift_subst_instance_constr :
+  forall u t k,
+    (subst_instance_constr u t).[⇑^k ↑] = subst_instance_constr u t.[⇑^k ↑].
+Proof.
+  intros u t k.
+  induction t in k |- * using term_forall_list_ind.
+  all: simpl. all: auto.
+  all: autorewrite with sigma.
+  all: rewrite ?map_map_compose ?compose_on_snd ?compose_map_def ?map_lenght.
+  all: try solve [ f_equal ; eauto ; solve_all ; eauto ].
+  - unfold Upn, shift, subst_compose, subst_consn.
+    destruct (Nat.ltb_spec0 n k).
+    + rewrite nth_error_idsn_Some. 1: assumption.
+      reflexivity.
+    + rewrite nth_error_idsn_None. 1: lia.
+      reflexivity.
+  - rewrite IHt1. specialize (IHt2 (S k)). autorewrite with sigma in IHt2.
+    rewrite IHt2. reflexivity.
+  - rewrite IHt1. specialize (IHt2 (S k)). autorewrite with sigma in IHt2.
+    rewrite IHt2. reflexivity.
+  - rewrite IHt1 IHt2. specialize (IHt3 (S k)). autorewrite with sigma in IHt3.
+    rewrite IHt3. reflexivity.
+  - f_equal.
+    (* induction X in k |- *. *)
+    (* + simpl. reflexivity. *)
+    (* + simpl. intuition eauto. *)
+    (*   f_equal. *)
+    (*   * unfold map_def. unfold compose. rewrite a. *)
+    (*     rewrite map_length. autorewrite with sigma. *)
+    (*     specialize (b (S (#|l| + k))). autorewrite with sigma in b. *)
+    (*     rewrite b. reflexivity. *)
+    (*   * rewrite map_length. rewrite map_length in IHX. *)
+    admit.
+  - admit.
+Admitted.
+
+Lemma inst_subst_instance_constr :
+  forall u t σ,
+    (subst_instance_constr u t).[(subst_instance_constr u ∘ σ)%prog] =
+    subst_instance_constr u t.[σ].
+Proof.
+  intros u t σ.
+  induction t in σ |- * using term_forall_list_ind.
+  all: simpl. all: auto.
+  all: autorewrite with sigma.
+  all: rewrite ?map_map_compose ?compose_on_snd ?compose_map_def ?map_lenght.
+  all: try solve [ f_equal ; eauto ; solve_all ; eauto ].
+  - rewrite IHt1. f_equal. rewrite <- IHt2.
+    eapply inst_ext. intro i.
+    unfold compose, Up, subst_compose, subst_cons.
+    destruct i.
+    + reflexivity.
+    + pose proof (shift_subst_instance_constr u (σ i) 0) as e.
+      autorewrite with sigma in e. rewrite e. reflexivity.
+  -
+Admitted.
+
+Lemma build_branches_type_inst :
+  forall ind mdecl idecl args u p brs σ,
+    closed_ctx (ind_params mdecl) ->
+    map_option_out (build_branches_type ind mdecl idecl args u p) = Some brs ->
+    map_option_out (
+        build_branches_type
+          ind
+          mdecl
+          (map_one_inductive_body
+             (context_assumptions (ind_params mdecl))
+             #|arities_context (ind_bodies mdecl)|
+             (fun i : nat => inst (⇑^i σ))
+             (inductive_ind ind)
+             idecl
+          )
+          (map (inst σ) args)
+          u
+          p.[σ]
+    ) = Some (map (on_snd (inst σ)) brs).
+Proof.
+  intros ind mdecl idecl args u p brs σ hcl.
+  unfold build_branches_type.
+  destruct idecl as [ina ity ike ict ipr]. simpl.
+  unfold mapi.
+  generalize 0 at 3 6.
+  intros n h.
+  induction ict in brs, n, h, σ |- *.
+  - cbn in *. inversion h. reflexivity.
+  - cbn. cbn in h.
+    lazymatch type of h with
+    | match ?t with _ => _ end = _ =>
+      case_eq (t) ;
+        try (intro bot ; rewrite bot in h ; discriminate h)
+    end.
+    intros [m t] e'. rewrite e' in h.
+    destruct a as [[na ta] ar].
+    lazymatch type of e' with
+    | match ?expr with _ => _ end = _ =>
+      case_eq (expr) ;
+        try (intro bot ; rewrite bot in e' ; discriminate e')
+    end.
+    intros ty ety. rewrite ety in e'.
+    eapply instantiate_params_inst with (σ := σ) in ety as ety'. 2: assumption.
+    autorewrite with sigma. simpl.
+    autorewrite with sigma in ety'.
+    rewrite <- inst_subst_instance_constr.
+    autorewrite with sigma.
+    match goal with
+    | |- context [ instantiate_params _ _ ?t.[?σ] ] =>
+      match type of ety' with
+      | instantiate_params _ _ ?t'.[?σ'] = _ =>
+        replace t.[σ] with t'.[σ'] ; revgoals
+      end
+    end.
+    { eapply inst_ext. intro i.
+      unfold Upn, compose, subst_compose, subst_consn.
+      rewrite arities_context_length.
+      case_eq (nth_error (inds (inductive_mind ind) u (ind_bodies mdecl)) i).
+      - intros t' e.
+        rewrite nth_error_idsn_Some.
+        { eapply nth_error_Some_length in e.
+          rewrite inds_length in e. assumption.
+        }
+        simpl. rewrite e.
+        give_up.
+      - intro neq. simpl. rewrite inds_length idsn_length.
+        rewrite nth_error_idsn_None.
+        { eapply nth_error_None in neq. rewrite inds_length in neq. lia. }
+        give_up.
+    }
+    rewrite ety'.
+    case_eq (decompose_prod_assum [] ty). intros sign ccl edty.
+    rewrite edty in e'.
+    (* TODO inst edty *)
+    case_eq (chop (ind_npars mdecl) (snd (decompose_app ccl))).
+    intros paramrels args' ech. rewrite ech in e'.
+    (* TODO inst ech *)
+    inversion e'. subst. clear e'.
+    lazymatch type of h with
+    | match ?t with _ => _ end = _ =>
+      case_eq (t) ;
+        try (intro bot ; rewrite bot in h ; discriminate h)
+    end.
+    intros tl etl. rewrite etl in h.
+    (* TODO inst etl *)
+    inversion h. subst. clear h.
+    (* edestruct IHict as [brtys' [eq' he]]. *)
+    (* + eauto. *)
+    (* + eexists. rewrite eq'. split. *)
+    (*   * reflexivity. *)
+    (*   * constructor ; auto. *)
+    (*     simpl. split ; auto. *)
+    (*     eapply eq_term_upto_univ_it_mkProd_or_LetIn ; auto. *)
+    (*     eapply eq_term_upto_univ_mkApps. *)
+    (*     -- eapply eq_term_upto_univ_lift. assumption. *)
+    (*     -- apply All2_same. intro. apply eq_term_upto_univ_refl ; auto. *)
+Admitted.
 
 Lemma types_of_case_inst :
   forall Σ ind mdecl idecl npar args u p pty indctx pctx ps btys σ,
@@ -444,7 +599,7 @@ Lemma types_of_case_inst :
     types_of_case ind mdecl idecl (firstn npar args) u p pty =
     Some (indctx, pctx, ps, btys) ->
     types_of_case ind mdecl idecl (firstn npar (map (inst σ) args)) u p.[σ] pty.[σ] =
-    Some (indctx, pctx, ps, btys).
+    Some (inst_context σ indctx, inst_context σ pctx, ps, map (on_snd (inst σ)) btys).
 Proof.
   intros Σ ind mdecl idecl npar args u p pty indctx pctx ps btys σ hΣ hdecl h.
   unfold types_of_case in *.
@@ -474,14 +629,14 @@ Proof.
   eapply inst_destArity with (σ := σ) in epty as epty'.
   simpl in epty'. autorewrite with sigma in epty'.
   rewrite epty'.
-
-  (* case_eq (map_option_out (build_branches_type ind mdecl idecl (firstn npar args) u p)) ; *)
-  (*   try solve [ intro bot ; rewrite bot in h ; discriminate h ]. *)
-  (* intros brtys ebrtys. rewrite ebrtys in h. *)
-  (* eapply build_branches_type_eq_term in ebrtys as [brtys' [ebrtys' he]] ; eauto. *)
-  (* inversion htc. subst. clear htc. *)
-  (* rewrite ebrtys'. intuition eauto. *)
-Abort.
+  case_eq (map_option_out (build_branches_type ind mdecl idecl (firstn npar args) u p)) ;
+    try solve [ intro bot ; rewrite bot in h ; discriminate h ].
+  intros brtys ebrtys. rewrite ebrtys in h.
+  inversion h. subst. clear h.
+  eapply build_branches_type_inst with (σ := σ) in ebrtys as ebrtys'.
+  2: assumption.
+  rewrite ebrtys'. reflexivity.
+Qed.
 
 Lemma type_inst :
   forall Σ Γ Δ σ t A,
@@ -550,14 +705,16 @@ Proof.
     autorewrite with sigma. simpl.
     rewrite map_app. simpl.
     rewrite map_skipn.
+    eapply types_of_case_inst with (σ := σ) in htoc. all: try eassumption.
     eapply type_Case.
     + eassumption.
     + assumption.
     + eapply ihp. all: auto.
+    + eassumption.
     + admit.
-    + admit.
-    + admit.
-    + admit.
+    + assumption.
+    + specialize (ihc _ _ hΔ hσ). autorewrite with sigma in ihc.
+      eapply ihc.
     + admit.
   - intros Σ wfΣ Γ wfΓ p c u mdecl idecl pdecl isdecl args X X0 hc ihc e ty
            Δ σ hΔ hσ.

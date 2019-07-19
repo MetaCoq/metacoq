@@ -1,0 +1,2 @@
+post-all::
+	cp src/template_coq.cm* build/

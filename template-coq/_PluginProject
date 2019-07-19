@@ -91,4 +91,4 @@ gen-src/ast_denoter.ml
 gen-src/run_extractable.ml
 gen-src/run_extractable.mli
 
-gen-src/meta_coq_plugin_template.mlpack
+gen-src/metacoq_template_plugin.mlpack

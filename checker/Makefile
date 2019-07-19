@@ -15,19 +15,20 @@ Makefile.coq: _CoqProject
 	coq_makefile -f _CoqProject -o Makefile.coq
 
 Makefile.plugin: _PluginProject
-	coq_makefile -f _PluginProject -o Makefile.checker
+	coq_makefile -f _PluginProject -o Makefile.plugin
 
-plugin: coq
-	$(MAKE) -C gen-src
-	./update_plugin.sh
+plugin: Makefile.plugin coq
+	$(MAKE) -f Makefile.plugin
 
 install:
 	$(MAKE) -f Makefile.coq install
+	$(MAKE) -f Makefile.plugin install
 
 .PHONY: plugin
 
-clean: Makefile.coq
+clean: Makefile.coq Makefile.plugin
 	$(MAKE) -f Makefile.coq clean
+	$(MAKE) -f Makefile.plugin clean
 
 mrproper:
-	rm -f Makefile.coq _CoqProject
+	rm -f Makefile.coq Makefile.plugin _CoqProject _PluginProject

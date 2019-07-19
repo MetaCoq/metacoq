@@ -14,8 +14,13 @@ Ascii
 String0
 Orders
 OrdersTac
+OrdersFacts
+OrdersLists
 OrderedType0
+MSetInterface
+MSetFacts
 MSetWeakList
+MSetProperties
 BinNums
 Equality0
 Utils

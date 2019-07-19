@@ -22,15 +22,24 @@ Extraction Blacklist config uGraph Universes Ast String List Nat Int
 Set Warnings "-extraction-opaque-accessed".
 
 Require Export MetaCoq.Template.Ast.
-From MetaCoq.Checker Require Import All.
+From MetaCoq.Checker Require All.
 
-Cd "gen-src".
+Cd "src".
 
-Require Import MetaCoq.Template.TemplateMonad.Extractable.
+(** From Coq: well-founded relations *)
+Extraction Library Wf.
+Extraction Library Compare_dec.
+Extraction Library MSetList.
 
-Recursive Extraction Library Extractable.
-Recursive Extraction Library TypingWf.
-Recursive Extraction Library Checker.
-Recursive Extraction Library Retyping.
+(** From checker *)
+Extraction Library LiftSubst.
+Extraction Library UnivSubst.
+Extraction Library monad_utils.
+Extraction Library Typing.
+Extraction Library TypingWf.
+Extraction Library wGraph.
+Extraction Library uGraph.
+Extraction Library Checker.
+Extraction Library Retyping.
 
 Cd "..".

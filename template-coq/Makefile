@@ -11,7 +11,7 @@ template-coq: coq Makefile.template
 # The sources of the plugin are built by the coq target, which calls the
 # ./update_plugin.sh after successfull extraction.
 
-plugin: coq Makefile.plugin
+plugin: coq template-coq Makefile.plugin
 	$(MAKE) -f Makefile.plugin
 
 .PHONY: install html clean mrproper all plugin

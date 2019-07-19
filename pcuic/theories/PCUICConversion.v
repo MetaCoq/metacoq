@@ -4,6 +4,7 @@ From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
 From MetaCoq.Template Require Import config utils AstUtils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICWeakeningEnv PCUICWeakening
+     PCUICSubstitution
      PCUICReduction PCUICCumulativity PCUICConfluence PCUICParallelReductionConfluence
      PCUICEquality PCUICContextConversion.
 Require Import ssreflect ssrbool.
@@ -123,6 +124,78 @@ Proof.
   - destruct IHcumul as [s' [redv leq]].
     exists s'. split; auto. now eapply red_step with v.
   - depelim r. solve_discr.
+Qed.
+
+Lemma cumul_LetIn_l_inv {cf:checker_flags} (Σ : global_env_ext) Γ na b B codom T :
+  wf Σ ->
+  Σ ;;; Γ |- tLetIn na b B codom <= T ->
+  ∑ codom', red Σ Γ T codom' *
+                     (Σ ;;; Γ |- codom {0 := b} <= codom').
+Proof.
+  intros wfΣ H; depind H; auto.
+  - inv l. eexists (u' {0 := t'}); intuition eauto. eapply red1_red. constructor.
+    transitivity (codom {0 := t'}).
+    { constructor. eapply eq_term_upto_univ_subst; trivial. auto with pcuic. reflexivity. }
+    constructor. now eapply subst_leq_term.
+  - depelim r.
+    * exists u; intuition auto.
+    * solve_discr.
+    * specialize (IHcumul _ _ _ _ _ wfΣ eq_refl).
+      destruct IHcumul as [codom' [reddom' leq]].
+      exists codom'; intuition auto.
+      transitivity (codom {0 := r}); eauto.
+      eapply red_cumul. eapply (red_red Σ _ [vdef na b B] []) => //. constructor. now eapply red1_red.
+      constructor. rewrite -{1}(subst_empty 0 b). repeat constructor.
+    * specialize (IHcumul _ _ _ _ _ wfΣ eq_refl).
+      destruct IHcumul as [codom' [reddom' leq]].
+      exists codom'; intuition auto.
+    * specialize (IHcumul _ _ _ _ _ wfΣ eq_refl).
+      destruct IHcumul as [codom' [reddom' leq]].
+      exists codom'; intuition auto.
+      eapply transitivity; [|eassumption].
+      eapply red_cumul.
+      rewrite -{1 2}(subst_empty 0 b).
+      eapply (untyped_substitution_red _ _ [vdef na b B] []); auto. repeat constructor.
+  - specialize (IHcumul wfΣ).
+    destruct IHcumul as [codom' [reddom' leq]] => //.
+    exists codom'; intuition auto.
+    now eapply red_step with v.
+Qed.
+
+Lemma cumul_LetIn_r_inv {cf:checker_flags} (Σ : global_env_ext) Γ na b B codom T :
+  wf Σ ->
+  Σ ;;; Γ |- T <= tLetIn na b B codom ->
+  ∑ codom', red Σ Γ T codom' *
+                     (Σ ;;; Γ |- codom' <= codom {0 := b}).
+Proof.
+  intros wfΣ H; depind H; auto.
+  - inv l. eexists (u {0 := t0}); intuition eauto. eapply red1_red. constructor.
+    transitivity (codom {0 := t0}).
+    { constructor. eapply eq_term_upto_univ_subst; trivial. auto with pcuic. reflexivity. }
+    constructor. eapply eq_term_upto_univ_subst; auto with pcuic. reflexivity.
+  - specialize (IHcumul wfΣ).
+    destruct IHcumul as [codom' [reddom' leq]] => //.
+    exists codom'; intuition auto.
+    now eapply red_step with v.
+  - depelim r.
+    * eexists ; intuition eauto.
+    * solve_discr.
+    * specialize (IHcumul _ _ _ _ _ wfΣ eq_refl).
+      destruct IHcumul as [codom' [reddom' leq]].
+      exists codom'; intuition auto.
+      transitivity (codom {0 := r}); eauto.
+      eapply red_cumul_inv. eapply (red_red Σ _ [vdef na b B] []) => //. constructor. now eapply red1_red.
+      constructor. rewrite -{1}(subst_empty 0 b). repeat constructor.
+    * specialize (IHcumul _ _ _ _ _ wfΣ eq_refl).
+      destruct IHcumul as [codom' [reddom' leq]].
+      exists codom'; intuition auto.
+    * specialize (IHcumul _ _ _ _ _ wfΣ eq_refl).
+      destruct IHcumul as [codom' [reddom' leq]].
+      exists codom'; intuition auto.
+      eapply transitivity; [eassumption|].
+      eapply red_cumul_inv.
+      rewrite -{1 2}(subst_empty 0 b).
+      eapply (untyped_substitution_red _ _ [vdef na b B] []); auto. repeat constructor.
 Qed.
 
 Lemma cumul_Prod_l_inv {cf:checker_flags} (Σ : global_env_ext) Γ na dom codom T :

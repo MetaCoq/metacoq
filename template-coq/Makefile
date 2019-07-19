@@ -5,7 +5,8 @@ coq: Makefile.coq
 
 # The template-coq plugin to run template programs live in Coq
 template-coq: coq Makefile.template
-	$(MAKE) -f Makefile.template
+	$(MAKE) -f Makefile.template optfiles
+	$(MAKE) -f Makefile.template all
 
 # The extractable template plugin to run *extracted* template programs in OCaml
 # The sources of the plugin are built by the coq target, which calls the

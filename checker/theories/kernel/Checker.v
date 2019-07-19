@@ -1,8 +1,9 @@
 (* Distributed under the terms of the MIT license.   *)
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
-From MetaCoq.Template Require Import config Ast AstUtils monad_utils utils.
-From MetaCoq.Checker Require Import Induction LiftSubst UnivSubst Typing uGraph.
+From MetaCoq.Template Require Import config Ast AstUtils monad_utils utils
+     Induction LiftSubst UnivSubst.
+From MetaCoq.Checker Require Import Typing uGraph.
 Import MonadNotation.
 
 (** * Coq type-checker for kernel terms

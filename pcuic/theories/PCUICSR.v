@@ -4,7 +4,7 @@ Set Warnings "-notation-overridden".
 From Equations Require Import Equations.
 Require Import Equations.Tactics.
 From Coq Require Import Bool String List Program BinPos Compare_dec Arith Lia.
-From MetaCoq.Template Require Import LibHypsNaming.
+From MetaCoq Require Import LibHypsNaming.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICWeakeningEnv PCUICWeakening

@@ -1,6 +1,6 @@
 (* Distributed under the terms of the MIT license.   *)
 Require Import ssreflect ssrbool.
-From MetaCoq.Template Require Import LibHypsNaming.
+From MetaCoq Require Import LibHypsNaming.
 From Equations Require Import Equations.
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega Utf8 String Lia.
 From MetaCoq.Template Require Import config utils.

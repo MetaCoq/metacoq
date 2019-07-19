@@ -5,7 +5,7 @@ From MetaCoq.Template Require Import config utils Universes BasicAst AstUtils Un
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICReflect
                           PCUICLiftSubst PCUICUnivSubst.
 
-From MetaCoq.Template Require Export LibHypsNaming.
+From MetaCoq Require Export LibHypsNaming.
 
 Require Import String.
 Require Import Wf Wellfounded Relation_Definitions.

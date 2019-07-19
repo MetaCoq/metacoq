@@ -2,20 +2,20 @@
 Set Warnings "-notation-overridden".
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
-From MetaCoq.Template Require Import config utils AstUtils.
-From MetaCoq.Template Require Import BasicAst Ast WfInv Typing.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICLiftSubst
-     PCUICUnivSubst PCUICTyping PCUICGeneration TemplateToPCUIC.
+From MetaCoq.Template Require Import config utils AstUtils BasicAst Ast.
 (* For two lemmata wf_instantiate_params_subst_term and
    wf_instantiate_params_subst_ctx, maybe they should be moved *)
-From MetaCoq.Template Require Import Weakening TypingWf.
+From MetaCoq.Checker Require Import WfInv Typing Weakening TypingWf
+     WeakeningEnv Substitution.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICLiftSubst
+     PCUICUnivSubst PCUICTyping PCUICGeneration TemplateToPCUIC.
 
 Require Import String.
 Local Open Scope string_scope.
 Set Asymmetric Patterns.
 
 Module T := Template.Ast.
-Module TTy := Template.Typing.
+Module TTy := Checker.Typing.
 
 Existing Instance default_checker_flags.
 
@@ -297,8 +297,6 @@ Proof.
   now rewrite IHctx.
 Qed.
 
-From MetaCoq.Template Require Import WeakeningEnv Substitution.
-
 Lemma trans_types_of_case (Σ : T.global_env) ind mdecl idecl args p u pty indctx pctx ps btys :
   T.wf p -> T.wf pty -> T.wf (T.ind_type idecl) ->
   All Ast.wf args ->
@@ -384,7 +382,7 @@ Admitted.
 
 Hint Constructors T.wf : wf.
 
-Hint Resolve Template.TypingWf.typing_wf : wf.
+Hint Resolve Checker.TypingWf.typing_wf : wf.
 
 Lemma mkApps_trans_wf U l : T.wf (T.tApp U l) -> exists U' V', trans (T.tApp U l) = tApp U' V'.
 Proof.
@@ -639,10 +637,10 @@ Definition isApp t := match t with tApp _ _ => true | _ => false end.
 
 Lemma trans_is_constructor:
   forall (args : list Tterm) (narg : nat),
-    Template.Typing.is_constructor narg args = true -> is_constructor narg (map trans args) = true.
+    Checker.Typing.is_constructor narg args = true -> is_constructor narg (map trans args) = true.
 Proof.
   intros args narg.
-  unfold Template.Typing.is_constructor, is_constructor.
+  unfold Checker.Typing.is_constructor, is_constructor.
   rewrite nth_error_map. destruct nth_error. simpl. intros.
   destruct t; try discriminate || reflexivity. simpl in H.
   destruct t; try discriminate || reflexivity.
@@ -669,7 +667,7 @@ Lemma trans_red1 Σ Γ T U :
   red1 (map trans_global_decl Σ) (trans_local Γ) (trans T) (trans U).
 Proof.
   intros wfΣ wfΓ Hwf.
-  induction 1 using Template.Typing.red1_ind_all; wf_inv Hwf; simpl in *;
+  induction 1 using Checker.Typing.red1_ind_all; wf_inv Hwf; simpl in *;
     try solve [econstructor; eauto].
 
   - simpl. wf_inv H1. apply Forall_All in H2. inv H2.
@@ -751,7 +749,7 @@ Proof.
     red. rewrite <- !map_dtype. rewrite <- !map_dbody. intuition eauto.
     unfold Template.AstUtils.app_context, trans_local in b0.
     simpl in a. rewrite -> map_app in b0.
-    unfold app_context. unfold Template.Typing.fix_context in b0.
+    unfold app_context. unfold Checker.Typing.fix_context in b0.
     rewrite map_rev map_mapi in b0. simpl in b0.
     unfold fix_context. rewrite mapi_map. simpl.
     forward b0.
@@ -764,7 +762,7 @@ Proof.
     forward b0 by auto.
     eapply (refine_red1_Γ); [|apply b0].
     f_equal. f_equal. apply mapi_ext; intros [] [].
-    rewrite lift0_p. simpl. rewrite LiftSubst.lift0_p. reflexivity.
+    rewrite lift0_p. simpl. rewrite Template.LiftSubst.lift0_p. reflexivity.
     rewrite trans_lift. simpl. reflexivity. simpl.
     rewrite b. admit.
 
@@ -780,7 +778,7 @@ Proof.
     red. rewrite <- !map_dtype. rewrite <- !map_dbody. intuition eauto.
     unfold Template.AstUtils.app_context, trans_local in b0.
     simpl in a. rewrite -> map_app in b0.
-    unfold app_context. unfold Template.Typing.fix_context in b0.
+    unfold app_context. unfold Checker.Typing.fix_context in b0.
     rewrite map_rev map_mapi in b0. simpl in b0.
     unfold fix_context. rewrite mapi_map. simpl.
     forward b0.

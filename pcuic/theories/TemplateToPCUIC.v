@@ -3,8 +3,8 @@
 Set Warnings "-notation-overridden".
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
-From MetaCoq.Template Require Import config utils AstUtils.
-From MetaCoq.Template Require Import Ast WfInv Typing.
+From MetaCoq.Template Require Import config utils AstUtils BasicAst Ast.
+From MetaCoq.Checker Require Import WfInv Typing Weakening TypingWf.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICLiftSubst
      PCUICUnivSubst PCUICTyping PCUICGeneration.
 Require Import String.

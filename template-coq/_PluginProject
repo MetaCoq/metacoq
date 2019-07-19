@@ -77,6 +77,10 @@ gen-src/equality0.ml
 gen-src/equality0.mli
 gen-src/utils.ml
 gen-src/utils.mli
+gen-src/liftSubst.mli
+gen-src/liftSubst.ml
+gen-src/univSubst0.mli
+gen-src/univSubst0.ml
 
 gen-src/tm_util.ml
 gen-src/quoted.ml

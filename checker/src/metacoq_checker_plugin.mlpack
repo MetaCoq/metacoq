@@ -4,8 +4,6 @@ Wf
 WGraph
 Monad_utils
 UGraph0
-UnivSubst0
-LiftSubst
 Typing0
 Checker0
 Retyping0

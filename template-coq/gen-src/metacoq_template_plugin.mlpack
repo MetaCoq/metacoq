@@ -30,6 +30,8 @@ Universes0
 BasicAst
 Ast0
 AstUtils
+LiftSubst
+UnivSubst0
 Common
 
 Denote

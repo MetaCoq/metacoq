@@ -8,6 +8,9 @@ theories/Universes.v
 theories/BasicAst.v
 theories/Ast.v
 theories/AstUtils.v
+theories/Induction.v
+theories/LiftSubst.v
+theories/UnivSubst.v
 
 # The Template monad
 theories/TemplateMonad.v

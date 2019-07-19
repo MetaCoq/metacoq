@@ -2,7 +2,8 @@
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
 From MetaCoq.Template Require Import config utils monad_utils BasicAst AstUtils.
-From MetaCoq.Extraction Require Import EAst ELiftSubst ETyping EWcbvEval Extract Prelim ESubstitution EInversion EArities.
+From MetaCoq.Extraction Require Import EAst ELiftSubst ETyping EWcbvEval Extract Prelim
+     ESubstitution EInversion EArities.
 From MetaCoq.PCUIC Require Import PCUICTyping PCUICAst PCUICAstUtils PCUICInduction 
      PCUICWeakening PCUICSubstitution PCUICChecker PCUICRetyping PCUICMetaTheory 
      PCUICWcbvEval PCUICSR  PCUICClosed PCUICInversion PCUICUnivSubstitution 

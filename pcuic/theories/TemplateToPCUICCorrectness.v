@@ -762,7 +762,7 @@ Proof.
     forward b0 by auto.
     eapply (refine_red1_Γ); [|apply b0].
     f_equal. f_equal. apply mapi_ext; intros [] [].
-    rewrite lift0_p. simpl. rewrite Template.LiftSubst.lift0_p. reflexivity.
+    rewrite lift0_p. simpl. rewrite LiftSubst.lift0_p. reflexivity.
     rewrite trans_lift. simpl. reflexivity. simpl.
     rewrite b. admit.
 

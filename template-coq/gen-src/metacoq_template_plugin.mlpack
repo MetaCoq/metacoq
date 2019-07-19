@@ -33,6 +33,7 @@ AstUtils
 LiftSubst
 UnivSubst0
 Common
+CRelationClasses
 
 Denote
 Denoter

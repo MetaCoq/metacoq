@@ -2,7 +2,8 @@
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Arith Lia.
 From MetaCoq.Template Require Import config monad_utils utils BasicAst AstUtils
-     UnivSubst uGraph.
+     UnivSubst.
+From MetaCoq.Checker Require Import uGraph.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICNormal PCUICSR
      PCUICGeneration PCUICReflect PCUICEquality PCUICInversion PCUICValidity
@@ -1167,7 +1168,7 @@ Print Assumptions infer.
 
 
 Require Checker.
-Require Import Template.wGraph.
+Require Import Checker.wGraph.
 
 Section CheckEnv.
   Context  {cf:checker_flags}.

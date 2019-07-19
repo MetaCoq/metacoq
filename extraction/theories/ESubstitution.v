@@ -233,6 +233,8 @@ Qed.
 Lemma All2_length {A B} {P : A -> B -> Type} l l' : All2 P l l' -> #|l| = #|l'|.
 Proof. induction 1; simpl; auto. Qed.
 
+Derive Signature for subslet.
+
 Lemma is_type_subst (Σ : global_env_ext) Γ Γ' Δ a s :
   wf Σ -> subslet Σ Γ s Γ' ->
   (* Σ ;;; Γ ,,, Γ' ,,, Δ |- a : T -> *)

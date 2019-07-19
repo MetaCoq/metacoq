@@ -10,7 +10,7 @@ make -f Makefile mrproper
 # when building the checker package
 # For local builds, we set specific dependencies of each subproject in */metacoq-config
 
-CWD=`pwd`
+# CWD=`pwd`
 
 if command -v coqc >/dev/null 2>&1
 then
@@ -40,7 +40,7 @@ then
     fi
 
     echo ${CHECKER_DEPS} > checker/metacoq-config
-    echo "OCAMLPATH = \"${CWD}/template-coq\"" >> checker/metacoq-config
+    # echo "OCAMLPATH = \"${CWD}/template-coq\"" >> checker/metacoq-config
     echo ${CHECKER_DEPS} ${PCUIC_DEPS} > pcuic/metacoq-config
     echo ${CHECKER_DEPS} ${PCUIC_DEPS} ${SAFECHECKER_DEPS} > safechecker/metacoq-config
     echo ${CHECKER_DEPS} ${PCUIC_DEPS} ${SAFECHECKER_DEPS} ${EXTRACTION_DEPS} > extraction/metacoq-config

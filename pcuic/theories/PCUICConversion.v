@@ -4,6 +4,7 @@ From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
 From MetaCoq.Template Require Import config utils AstUtils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICWeakeningEnv PCUICWeakening
+     PCUICSubstitution
      PCUICReduction PCUICCumulativity PCUICConfluence PCUICParallelReductionConfluence
      PCUICEquality PCUICContextConversion.
 Require Import ssreflect ssrbool.
@@ -19,15 +20,6 @@ Ltac tc := try typeclasses eauto 10.
 Hint Resolve eq_universe_leq_universe : pcuic.
 
 Derive Signature for cumul assumption_context.
-
-Lemma congr_cumul_prod : forall `{checker_flags} Σ Γ na na' M1 M2 N1 N2,
-    Σ ;;; Γ |- M1 == N1 ->
-    Σ ;;; (Γ ,, vass na M1) |- M2 <= N2 ->
-    Σ ;;; Γ |- (tProd na M1 M2) <= (tProd na' N1 N2).
-Proof.
-  intros.
-Admitted.
-
 
 Lemma cumul_trans {cf:checker_flags} (Σ : global_env_ext) Γ t u v : wf Σ ->
   Σ ;;; Γ |- t <= u -> Σ ;;; Γ |- u <= v -> Σ ;;; Γ |- t <= v.
@@ -62,11 +54,36 @@ Proof.
   intros wfΣ tu. split; apply tu.
 Qed.
 
-(* Should follow from context conversion + invariants on T and U *)
-Lemma conv_conv_alt `{cf : checker_flags} {Σ : global_env_ext} (wfΣ : wf Σ) Γ T U :
-  Σ ;;; Γ |- T = U -> Σ ;;; Γ |- T == U.
+Instance conv_alt_reflexive {cf : checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} Γ : Reflexive (conv_alt Σ Γ).
+Proof. intros x. eapply conv_alt_refl, eq_term_refl. Qed.
+
+Instance conv_alt_symmetric {cf : checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} Γ : Symmetric (conv_alt Σ Γ).
+Proof. intros x y. eapply conv_alt_sym. auto. Qed.
+
+Instance conv_alt_transitive {cf : checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} Γ : Transitive (conv_alt Σ Γ).
+Proof. intros x y z. eapply conv_alt_trans. auto. Qed.
+
+Instance cumul_reflexive {cf : checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} Γ : Reflexive (cumul Σ Γ).
+Proof. intros x. eapply cumul_refl'. Qed.
+
+Instance cumul_transitive {cf : checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} Γ : Transitive (cumul Σ Γ).
+Proof. intros x y z. eapply cumul_trans. auto. Qed.
+
+Existing Class wf.
+
+Lemma congr_cumul_prod : forall `{checker_flags} Σ Γ na na' M1 M2 N1 N2,
+    Σ ;;; Γ |- M1 == N1 ->
+    Σ ;;; (Γ ,, vass na M1) |- M2 <= N2 ->
+    Σ ;;; Γ |- (tProd na M1 M2) <= (tProd na' N1 N2).
 Proof.
+  intros.
 Admitted.
+
+(* Should follow from context conversion + invariants on T and U *)
+(* Lemma conv_conv_alt `{cf : checker_flags} {Σ : global_env_ext} (wfΣ : wf Σ) Γ T U : *)
+(*   Σ ;;; Γ |- T = U -> Σ ;;; Γ |- T == U. *)
+(* Proof. *)
+(* Admitted. *)
 
 Lemma cumul_Sort_inv {cf:checker_flags} Σ Γ s s' :
   Σ ;;; Γ |- tSort s <= tSort s' -> leq_universe (global_ext_constraints Σ) s s'.
@@ -87,6 +104,150 @@ Proof.
     eapply IHcumul. reflexivity.
 Qed.
 
+Lemma cumul_Sort_l_inv {cf:checker_flags} Σ Γ s T :
+  Σ ;;; Γ |- tSort s <= T ->
+  ∑ s', red Σ Γ T (tSort s') * leq_universe Σ s s'.
+Proof.
+  intros H; depind H; auto.
+  - now inversion l.
+  - depelim r. solve_discr.
+  - destruct IHcumul as [s' [redv leq]].
+    exists s'. split; auto. now eapply red_step with v.
+Qed.
+
+Lemma cumul_Sort_r_inv {cf:checker_flags} Σ Γ s T :
+  Σ ;;; Γ |- T <= tSort s ->
+  ∑ s', red Σ Γ T (tSort s') * leq_universe Σ s' s.
+Proof.
+  intros H; depind H; auto.
+  - now inversion l.
+  - destruct IHcumul as [s' [redv leq]].
+    exists s'. split; auto. now eapply red_step with v.
+  - depelim r. solve_discr.
+Qed.
+
+Lemma cumul_LetIn_l_inv {cf:checker_flags} (Σ : global_env_ext) Γ na b B codom T :
+  wf Σ ->
+  Σ ;;; Γ |- tLetIn na b B codom <= T ->
+  ∑ codom', red Σ Γ T codom' *
+                     (Σ ;;; Γ |- codom {0 := b} <= codom').
+Proof.
+  intros wfΣ H; depind H; auto.
+  - inv l. eexists (u' {0 := t'}); intuition eauto. eapply red1_red. constructor.
+    transitivity (codom {0 := t'}).
+    { constructor. eapply eq_term_upto_univ_subst; trivial. auto with pcuic. reflexivity. }
+    constructor. now eapply subst_leq_term.
+  - depelim r.
+    * exists u; intuition auto.
+    * solve_discr.
+    * specialize (IHcumul _ _ _ _ _ wfΣ eq_refl).
+      destruct IHcumul as [codom' [reddom' leq]].
+      exists codom'; intuition auto.
+      transitivity (codom {0 := r}); eauto.
+      eapply red_cumul. eapply (red_red Σ _ [vdef na b B] []) => //. constructor. now eapply red1_red.
+      constructor. rewrite -{1}(subst_empty 0 b). repeat constructor.
+    * specialize (IHcumul _ _ _ _ _ wfΣ eq_refl).
+      destruct IHcumul as [codom' [reddom' leq]].
+      exists codom'; intuition auto.
+    * specialize (IHcumul _ _ _ _ _ wfΣ eq_refl).
+      destruct IHcumul as [codom' [reddom' leq]].
+      exists codom'; intuition auto.
+      eapply transitivity; [|eassumption].
+      eapply red_cumul.
+      rewrite -{1 2}(subst_empty 0 b).
+      eapply (untyped_substitution_red _ _ [vdef na b B] []); auto. repeat constructor.
+  - specialize (IHcumul wfΣ).
+    destruct IHcumul as [codom' [reddom' leq]] => //.
+    exists codom'; intuition auto.
+    now eapply red_step with v.
+Qed.
+
+Lemma cumul_LetIn_r_inv {cf:checker_flags} (Σ : global_env_ext) Γ na b B codom T :
+  wf Σ ->
+  Σ ;;; Γ |- T <= tLetIn na b B codom ->
+  ∑ codom', red Σ Γ T codom' *
+                     (Σ ;;; Γ |- codom' <= codom {0 := b}).
+Proof.
+  intros wfΣ H; depind H; auto.
+  - inv l. eexists (u {0 := t0}); intuition eauto. eapply red1_red. constructor.
+    transitivity (codom {0 := t0}).
+    { constructor. eapply eq_term_upto_univ_subst; trivial. auto with pcuic. reflexivity. }
+    constructor. eapply eq_term_upto_univ_subst; auto with pcuic. reflexivity.
+  - specialize (IHcumul wfΣ).
+    destruct IHcumul as [codom' [reddom' leq]] => //.
+    exists codom'; intuition auto.
+    now eapply red_step with v.
+  - depelim r.
+    * eexists ; intuition eauto.
+    * solve_discr.
+    * specialize (IHcumul _ _ _ _ _ wfΣ eq_refl).
+      destruct IHcumul as [codom' [reddom' leq]].
+      exists codom'; intuition auto.
+      transitivity (codom {0 := r}); eauto.
+      eapply red_cumul_inv. eapply (red_red Σ _ [vdef na b B] []) => //. constructor. now eapply red1_red.
+      constructor. rewrite -{1}(subst_empty 0 b). repeat constructor.
+    * specialize (IHcumul _ _ _ _ _ wfΣ eq_refl).
+      destruct IHcumul as [codom' [reddom' leq]].
+      exists codom'; intuition auto.
+    * specialize (IHcumul _ _ _ _ _ wfΣ eq_refl).
+      destruct IHcumul as [codom' [reddom' leq]].
+      exists codom'; intuition auto.
+      eapply transitivity; [eassumption|].
+      eapply red_cumul_inv.
+      rewrite -{1 2}(subst_empty 0 b).
+      eapply (untyped_substitution_red _ _ [vdef na b B] []); auto. repeat constructor.
+Qed.
+
+Lemma cumul_Prod_l_inv {cf:checker_flags} (Σ : global_env_ext) Γ na dom codom T :
+  wf Σ ->
+  Σ ;;; Γ |- tProd na dom codom <= T ->
+  ∑ na' dom' codom', red Σ Γ T (tProd na' dom' codom') *
+                     (Σ ;;; Γ |- dom == dom') * (Σ ;;; Γ ,, vass na dom |- codom <= codom').
+Proof.
+  intros wfΣ H; depind H; auto.
+  - inv l. exists na', a', b'; intuition eauto; constructor; auto.
+  - depelim r. solve_discr.
+    * specialize (IHcumul _ _ _ _ wfΣ eq_refl).
+      destruct IHcumul as [na' [dom' [codom' [[reddom' eqdom'] leq]]]].
+      exists na', dom', codom'; intuition auto.
+      transitivity N1; eauto.
+      eapply cumul_conv_ctx; eauto. constructor; auto with pcuic.
+      constructor. symmetry; eapply red_conv_alt; auto.
+
+    * specialize (IHcumul _ _ _ _ wfΣ eq_refl).
+      destruct IHcumul as [na' [dom' [codom' [[reddom' eqdom'] leq]]]].
+      exists na', dom', codom'; intuition auto.
+      transitivity N2; eauto. eapply red_cumul; auto.
+  - destruct IHcumul as [na' [dom' [codom' [[reddom' eqdom'] leq]]]] => //.
+    exists na', dom', codom'; intuition auto.
+    now eapply red_step with v.
+Qed.
+
+Lemma cumul_Prod_r_inv {cf:checker_flags} (Σ : global_env_ext) Γ na' dom' codom' T :
+  wf Σ ->
+  Σ ;;; Γ |- T <= tProd na' dom' codom' ->
+  ∑ na dom codom, red Σ Γ T (tProd na dom codom) *
+                     (Σ ;;; Γ |- dom == dom') * (Σ ;;; Γ ,, vass na' dom' |- codom <= codom').
+Proof.
+  intros wfΣ H; depind H; auto.
+  - inv l. exists na, a, b; intuition eauto; constructor; auto.
+  - destruct IHcumul as [na [dom [codom [[reddom' eqdom'] leq]]]] => //.
+    exists na, dom, codom; intuition auto.
+    now eapply red_step with v.
+  - depelim r. solve_discr.
+    * specialize (IHcumul _ _ _ _ wfΣ eq_refl).
+      destruct IHcumul as [na [dom [codom [[reddom' eqdom'] leq]]]].
+      eexists _, _, _; intuition eauto.
+      transitivity N1; eauto. symmetry; apply red_conv_alt; auto.
+      eapply cumul_conv_ctx; eauto. constructor; auto with pcuic.
+      constructor. symmetry. eapply red_conv_alt; auto.
+
+    * specialize (IHcumul _ _ _ _ wfΣ eq_refl).
+      destruct IHcumul as [na [dom [codom [[reddom' eqdom'] leq]]]].
+      eexists _, _, _; intuition eauto.
+      transitivity N2; eauto. eapply red_cumul_inv; auto.
+Qed.
+
 Lemma cumul_Prod_Sort_inv {cf:checker_flags} Σ Γ s na dom codom :
   Σ ;;; Γ |- tProd na dom codom <= tSort s -> False.
 Proof.
@@ -99,30 +260,28 @@ Qed.
 
 Lemma cumul_Prod_Prod_inv {cf:checker_flags} (Σ : global_env_ext) Γ na na' dom dom' codom codom' : wf Σ ->
   Σ ;;; Γ |- tProd na dom codom <= tProd na' dom' codom' ->
-   ((Σ ;;; Γ |- dom = dom') * (Σ ;;; Γ ,, vass na' dom' |- codom <= codom'))%type.
+   ((Σ ;;; Γ |- dom == dom') * (Σ ;;; Γ ,, vass na' dom' |- codom <= codom'))%type.
 Proof.
   intros wfΣ H; depind H; auto.
-  - inv l. split; auto. split; constructor; auto. now eapply eq_term_leq_term.
-    now eapply eq_term_leq_term, eq_term_sym.
-    constructor. eapply H0.
+  - inv l. split; auto; constructor; auto.
   - depelim r. solve_discr.
     destruct (IHcumul na na' N1 _ _ _ wfΣ eq_refl).
-    split; auto. eapply conv_trans with N1=> //. now eapply red_conv, red1_red.
+    split; auto. transitivity N1=> //. now eapply red_conv_alt, red1_red.
     destruct (IHcumul na na' _ _ N2 _ wfΣ eq_refl).
     split; auto. eapply cumul_trans. auto. 2:eauto.
-    eapply red1_red in r.
-    admit. (* Conversion of reduction for assumption context *)
+    eapply cumul_conv_ctx; eauto. eapply red_cumul; eauto.
+    constructor; auto with pcuic.
   - depelim r. solve_discr.
     destruct (IHcumul na na' _ _ _ _ wfΣ eq_refl).
-    split; auto. eapply conv_trans with N1 => //. eapply conv_sym => //.
-    now eapply red_conv, red1_red.
+    split; auto. transitivity N1 => //. symmetry => //.
+    now eapply red_conv_alt, red1_red.
     eapply cumul_red_ctx_inv. auto. eauto. constructor. eapply All2_local_env_red_refl. red.
     now eapply red1_red.
     destruct (IHcumul na na' _ _ _ _ wfΣ eq_refl).
     split; auto.
     eapply cumul_trans with N2; auto.
     eapply red1_red, red_conv in r. apply r.
-Admitted.
+Qed.
 
 Lemma assumption_context_app Γ Γ' :
   assumption_context (Γ' ,,, Γ) ->

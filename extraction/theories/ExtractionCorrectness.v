@@ -613,42 +613,42 @@ Proof.
               rewrite e0. reflexivity.
               eassumption.
               all:eauto.
-              ** unfold is_constructor in *.
-                 destruct ?; inv H1.
-                 unfold is_constructor_or_box.
-                 eapply Forall2_nth_error_Some in H as (? & ? & ?); eauto.
-                 rewrite H.
+              (* ** unfold is_constructor in *. *)
+              (*    (* destruct ?; inv H1. *) *)
+              (*    (* unfold is_constructor_or_box. *) *)
+              (*    eapply Forall2_nth_error_Some in H as (? & ? & ?); eauto. *)
+              (*    rewrite H. *)
 
-                 unfold isConstruct_app in H8.
-                 destruct (decompose_app t) eqn:EE.
-                 assert (E2 : fst (decompose_app t) = t1) by now rewrite EE.
-                 destruct t1.
-                 all:inv H8.
-                 (* erewrite <- PCUICConfluence.fst_decompose_app_rec in E2. *)
+              (*    unfold isConstruct_app in H8. *)
+              (*    destruct (decompose_app t) eqn:EE. *)
+              (*    assert (E2 : fst (decompose_app t) = t1) by now rewrite EE. *)
+              (*    destruct t1. *)
+              (*    all:inv H8. *)
+              (*    (* erewrite <- PCUICConfluence.fst_decompose_app_rec in E2. *) *)
 
-                 pose proof (decompose_app_rec_inv EE).
-                 cbn in H7. subst.
-                 assert (∑ T, Σ ;;; [] |- mkApps (tConstruct ind n ui) l : T) as [T' HT'].
-                 { eapply typing_spine_eval in t0; eauto.
-                   eapply typing_spine_inv in t0; eauto.
-                   eapply PCUICValidity.validity; eauto.
-                 }
-                 eapply erases_mkApps_inv in H1.
-                 destruct H1 as [ (? & ? & ? & ? & [] & ? & ? & ?) | (? & ? & ? & ? & ?) ].
-                 --- subst.
-                     eapply nth_error_forall in Hv; eauto.
-                     eapply value_app_inv in Hv. subst. reflexivity.
-                 --- subst. inv H7.
-                     +++ eapply nth_error_forall in Hv; eauto.
-                         destruct x6 using rev_ind; cbn - [EAstUtils.decompose_app]. reflexivity.
-                         rewrite emkApps_snoc at 1.
-                         generalize (x6 ++ [x4])%list. clear. intros.
-                         rewrite Prelim.decompose_app_mkApps. reflexivity.
-                         reflexivity.
-                     +++ eapply nth_error_forall in Hv; eauto.
-                         eapply value_app_inv in Hv. subst. eauto.
-                 --- eauto.
-                 --- eauto.
+              (*    pose proof (decompose_app_rec_inv EE). *)
+              (*    cbn in H7. subst. *)
+              (*    assert (∑ T, Σ ;;; [] |- mkApps (tConstruct ind n ui) l : T) as [T' HT']. *)
+              (*    { eapply typing_spine_eval in t0; eauto. *)
+              (*      eapply typing_spine_inv in t0; eauto. *)
+              (*      eapply PCUICValidity.validity; eauto. *)
+              (*    } *)
+              (*    eapply erases_mkApps_inv in H1. *)
+              (*    destruct H1 as [ (? & ? & ? & ? & [] & ? & ? & ?) | (? & ? & ? & ? & ?) ]. *)
+              (*    --- subst. *)
+              (*        eapply nth_error_forall in Hv; eauto. *)
+              (*        eapply value_app_inv in Hv. subst. reflexivity. *)
+              (*    --- subst. inv H7. *)
+              (*        +++ eapply nth_error_forall in Hv; eauto. *)
+              (*            destruct x6 using rev_ind; cbn - [EAstUtils.decompose_app]. reflexivity. *)
+              (*            rewrite emkApps_snoc at 1. *)
+              (*            generalize (x6 ++ [x4])%list. clear. intros. *)
+              (*            rewrite Prelim.decompose_app_mkApps. reflexivity. *)
+              (*            reflexivity. *)
+              (*        +++ eapply nth_error_forall in Hv; eauto. *)
+              (*            eapply value_app_inv in Hv. subst. eauto. *)
+              (*    --- eauto. *)
+              (*    --- eauto. *)
               ** eapply subject_reduction. eauto. exact Hty.
                  etransitivity.
                  eapply PCUICReduction.red_mkApps. econstructor.

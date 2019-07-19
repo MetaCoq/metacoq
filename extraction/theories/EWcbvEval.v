@@ -73,8 +73,11 @@ Section Wcbv.
   (** Fix unfolding, with guard *)
   | eval_fix mfix idx args args' narg fn res :
       unfold_fix mfix idx = Some (narg, fn) ->
-      Forall2 eval args args' -> (* QUESTION should we reduce the args after the recursive arg here? *)
-      is_constructor_or_box narg args' ->
+      (* We do not need to check the guard in the extracted language
+         as we assume reduction of closed terms, whose canonical
+         form will be a constructor or a box.  *)
+      (* is_constructor_or_box narg args' -> *)
+      Forall2 eval args args' ->
       eval (mkApps fn args') res ->
       eval (mkApps (tFix mfix idx) args) res
 
@@ -155,7 +158,7 @@ Section Wcbv.
           unfold_fix mfix idx = Some (narg, fn) ->
           Forall2 eval args args' ->
           Forall2 P args args' ->
-          is_constructor_or_box narg args' = true ->
+          (* is_constructor_or_box narg args' = true -> *)
           eval (mkApps fn args') res -> P (mkApps fn args') res -> P (mkApps (tFix mfix idx) args) res) ->
 
       (forall (ip : inductive * nat)  (mfix : mfixpoint term) (idx : nat) (args : list term)
@@ -208,7 +211,7 @@ Section Wcbv.
                              | _ => try solve [eapply H; eauto]
                              end end; eauto.
     eapply Hfix. eauto. eauto.
-    clear H1 H2.
+    clear H1.
     revert args args' H0. fix aux 3. destruct 1. constructor; auto.
     constructor. now apply eval_evals_ind. now apply aux. all:eauto.
     eapply Hcstr; eauto.

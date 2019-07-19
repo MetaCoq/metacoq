@@ -43,6 +43,8 @@ theories/PCUICSigmaCalculus.v
 
 theories/PCUICSafeLemmata.v
 
+theories/PCUICTypes.v
+
 theories/TemplateToPCUIC.v
 theories/TemplateToPCUICCorrectness.v
 # theories/All.v

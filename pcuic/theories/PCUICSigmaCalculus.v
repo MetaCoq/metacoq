@@ -101,22 +101,46 @@ Context `{checker_flags}.
 Definition well_subst Σ (Γ : context) σ (Δ : context) :=
   forall x decl,
     nth_error Γ x = Some decl ->
-    Σ ;;; Δ |- σ x : ((lift0 (S x)) (decl_type decl)).[ σ ].
+    Σ ;;; Δ |- σ x : ((lift0 (S x)) (decl_type decl)).[ σ ] ×
+    (forall b,
+        decl.(decl_body) = Some b ->
+        σ x = b.[⇑^(S x) σ]
+    ).
 
 Notation "Σ ;;; Δ ⊢ σ : Γ" :=
   (well_subst Σ Γ σ Δ) (at level 50, Δ, σ, Γ at next level).
 
+Lemma meta_conv :
+  forall Σ Γ t A B,
+    Σ ;;; Γ |- t : A ->
+    A = B ->
+    Σ ;;; Γ |- t : B.
+Proof.
+  intros Σ Γ t A B h []. assumption.
+Qed.
+
 Lemma well_subst_Up :
   forall Σ Γ Δ σ na A,
+    wf_local Σ (Δ ,, vass na A.[σ]) ->
     Σ ;;; Δ ⊢ σ : Γ ->
     Σ ;;; Δ ,, vass na A.[σ] ⊢ ⇑ σ : Γ ,, vass na A.
 Proof.
-  intros Σ Γ Δ σ na A h [|n] decl e.
+  intros Σ Γ Δ σ na A hΔ h [|n] decl e.
   - simpl in *. inversion e. subst. clear e. simpl.
-    (* NEED commutation lemma between lift and inst *)
-    admit.
+    split.
+    + eapply meta_conv.
+      * econstructor ; auto.
+        reflexivity.
+      * simpl. rewrite !lift_rename.
+        autorewrite with sigma.
+        eapply inst_ext. intro i.
+        unfold subst_compose.
+        eapply inst_ext. intro j.
+        unfold shift, ren. reflexivity.
+    + intros b e. discriminate.
   - simpl in *.
-    specialize (h _ _ e).
+    specialize (h _ _ e) as [h1 h2].
+    split.
 Admitted.
 
 Lemma well_subst_Up' :
@@ -665,7 +689,9 @@ Proof.
     + eapply ihB.
       * econstructor ; auto.
         eexists. eapply ihA ; auto.
-      * eapply well_subst_Up. assumption.
+      * eapply well_subst_Up. 2: assumption.
+        econstructor ; auto.
+        eexists. eapply ihA. all: auto.
   - intros Σ wfΣ Γ wfΓ na A t s1 bty X hA ihA ht iht Δ σ hΔ hσ.
     autorewrite with sigma.
     econstructor.
@@ -673,7 +699,9 @@ Proof.
     + eapply iht.
       * econstructor ; auto.
         eexists. eapply ihA ; auto.
-      * eapply well_subst_Up. assumption.
+      * eapply well_subst_Up. 2: assumption.
+        constructor. 1: assumption.
+        eexists. eapply ihA. all: auto.
   - intros Σ wfΣ Γ wfΓ na b B t s1 A X hB ihB hb ihb ht iht Δ σ hΔ hσ.
     autorewrite with sigma.
     econstructor.

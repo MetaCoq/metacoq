@@ -19,17 +19,70 @@ Section Renaming.
 
 Context `{checker_flags}.
 
+Lemma meta_conv :
+  forall Σ Γ t A B,
+    Σ ;;; Γ |- t : A ->
+    A = B ->
+    Σ ;;; Γ |- t : B.
+Proof.
+  intros Σ Γ t A B h []. assumption.
+Qed.
+
 Definition renaming Σ Γ Δ f :=
   forall i decl,
     nth_error Δ i = Some decl ->
-    (Σ ;;; Γ |- tRel (f i) : ((lift0 (S i)) decl.(decl_type)).[ ren f ]) ×
+    (Σ ;;; Γ |- tRel (f i) : rename f ((lift0 (S i)) decl.(decl_type))) ×
     (forall b,
         decl.(decl_body) = Some b ->
         ∑ decl' b',
           (nth_error Γ (f i) = Some decl') ×
           (decl'.(decl_body) = Some b') ×
-          (Σ ;;; Γ |- (lift0 (S i) b).[ren f] = lift0 (S (f i)) b')
+          (Σ ;;; Γ |- rename f (lift0 (S i) b) = lift0 (S (f i)) b')
     ).
+
+Lemma renaming_vass :
+  forall Σ Γ Δ na A f,
+    wf_local Σ (Γ ,, vass na (rename f A)) ->
+    renaming Σ Γ Δ f ->
+    renaming Σ (Γ ,, vass na (rename f A)) (Δ ,, vass na A) (shiftn 1 f).
+Proof.
+  intros Σ Γ Δ na A f hΓ h [|i] decl e.
+  - simpl in e. inversion e. subst. clear e.
+    simpl. split.
+    + unfold shiftn at 1. simpl.
+      eapply meta_conv.
+      * econstructor. all: auto.
+        simpl. reflexivity.
+      * rewrite !lift_rename.
+        autorewrite with sigma.
+        eapply inst_ext. intro i.
+        unfold ren, lift_renaming, shiftn, subst_compose. simpl.
+        f_equal. f_equal. f_equal. lia.
+    + intros. discriminate.
+  - simpl in e. simpl. split.
+    + unfold shiftn at 1. simpl.
+      eapply meta_conv.
+      * econstructor. all: auto.
+        simpl. specialize (h i).
+        apply h in e as [h' _].
+        (* WOULD NEED Inversion, but it depends on substitution,
+           probably doesn't need to... *)
+        (* Other solution is to ask for this in renaming! *)
+        admit.
+      * instantiate (1 := decl).
+        rewrite !lift_rename.
+        autorewrite with sigma. eapply inst_ext. intro j.
+        unfold ren, lift_renaming, shiftn, subst_compose. simpl.
+        replace (i - 0) with i by lia.
+        (* How did it become this?? *)
+        give_up.
+    + intros b e'.
+      replace (i - 0) with i by lia.
+      specialize (h i). eapply h in e as [h1 h2].
+      eapply h2 in e' as [decl' [b' [? [? ?]]]].
+      eexists decl', b'. split ; [| split]. all: auto.
+      admit.
+Admitted.
 
 Lemma typing_rename :
   forall Σ Γ Δ f t A,
@@ -38,20 +91,27 @@ Lemma typing_rename :
     wf_local Σ Δ ->
     renaming Σ Δ Γ f ->
     Σ ;;; Γ |- t : A ->
-    Σ ;;; Δ |- t.[ren f] : A.[ren f].
+    Σ ;;; Δ |- rename f t : rename f A.
 Proof.
   intros Σ Γ Δ f t A hΣ hΓ hΔ hf h.
   revert Σ hΣ Γ hΓ t A h Δ f hΔ hf.
   apply (typing_ind_env (fun Σ Γ t T => forall Δ f,
     wf_local Σ Δ ->
     renaming Σ Δ Γ f ->
-    Σ ;;; Δ |- t.[ren f] : T.[ren f]
+    Σ ;;; Δ |- rename f t : rename f T
   )).
   - intros Σ wfΣ Γ wfΓ n decl H0 X Δ f hΔ hf.
     simpl. eapply hf. assumption.
   - intros Σ wfΣ Γ wfΓ l X H0 Δ f hΔ hf.
     simpl. constructor. all: auto.
-  -
+  - intros Σ wfΣ Γ wfΓ na A B s1 s2 X hA ihA hB ihB Δ f hΔ hf.
+    simpl.
+    econstructor.
+    + eapply ihA. all: auto.
+    + eapply ihB.
+      * econstructor. all: auto.
+        eexists. eapply ihA. all: auto.
+      *
 Admitted.
 
 End Renaming.
@@ -151,15 +211,6 @@ Definition well_subst Σ (Γ : context) σ (Δ : context) :=
 
 Notation "Σ ;;; Δ ⊢ σ : Γ" :=
   (well_subst Σ Γ σ Δ) (at level 50, Δ, σ, Γ at next level).
-
-Lemma meta_conv :
-  forall Σ Γ t A B,
-    Σ ;;; Γ |- t : A ->
-    A = B ->
-    Σ ;;; Γ |- t : B.
-Proof.
-  intros Σ Γ t A B h []. assumption.
-Qed.
 
 Lemma well_subst_Up :
   forall Σ Γ Δ σ na A,

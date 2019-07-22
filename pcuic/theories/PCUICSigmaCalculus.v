@@ -15,6 +15,48 @@ Require PCUICWeakening.
 Set Asymmetric Patterns.
 Open Scope sigma_scope.
 
+Section Renaming.
+
+Context `{checker_flags}.
+
+Definition renaming Σ Γ Δ f :=
+  forall i decl,
+    nth_error Δ i = Some decl ->
+    (Σ ;;; Γ |- tRel (f i) : ((lift0 (S i)) decl.(decl_type)).[ ren f ]) ×
+    (forall b,
+        decl.(decl_body) = Some b ->
+        ∑ decl' b',
+          (nth_error Γ (f i) = Some decl') ×
+          (decl'.(decl_body) = Some b') ×
+          (Σ ;;; Γ |- (lift0 (S i) b).[ren f] = lift0 (S (f i)) b')
+    ).
+
+Lemma typing_rename :
+  forall Σ Γ Δ f t A,
+    wf Σ.1 ->
+    wf_local Σ Γ ->
+    wf_local Σ Δ ->
+    renaming Σ Δ Γ f ->
+    Σ ;;; Γ |- t : A ->
+    Σ ;;; Δ |- t.[ren f] : A.[ren f].
+Proof.
+  intros Σ Γ Δ f t A hΣ hΓ hΔ hf h.
+  revert Σ hΣ Γ hΓ t A h Δ f hΔ hf.
+  apply (typing_ind_env (fun Σ Γ t T => forall Δ f,
+    wf_local Σ Δ ->
+    renaming Σ Δ Γ f ->
+    Σ ;;; Δ |- t.[ren f] : T.[ren f]
+  )).
+  - intros Σ wfΣ Γ wfΓ n decl H0 X Δ f hΔ hf.
+    simpl. eapply hf. assumption.
+  - intros Σ wfΣ Γ wfΓ l X H0 Δ f hΔ hf.
+    simpl. constructor. all: auto.
+  -
+Admitted.
+
+End Renaming.
+
+
 Definition inst_context σ (Γ : context) : context :=
   fold_context (fun i => inst (⇑^i σ)) Γ.
 

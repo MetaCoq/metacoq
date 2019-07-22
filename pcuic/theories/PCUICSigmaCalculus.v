@@ -34,6 +34,8 @@ Definition renaming Σ Γ Δ f :=
     nth_error Δ i = Some decl ->
     ∑ decl',
       nth_error Γ (f i) = Some decl' ×
+      Σ ;;; Γ |- rename f (lift0 (S i) decl.(decl_type))
+              = lift0 (S (f i)) decl'.(decl_type) ×
       (forall b,
           decl.(decl_body) = Some b ->
           ∑ b',
@@ -53,18 +55,22 @@ Proof.
   intros [|i] decl e.
   - simpl in e. inversion e. subst. clear e.
     simpl. eexists. split. 1: reflexivity.
-    intros. discriminate.
+    split.
+    + admit.
+    + intros. discriminate.
   - simpl in e. simpl.
     replace (i - 0) with i by lia.
     eapply h in e as [decl' [? h']].
     eexists. split. 1: eassumption.
-    intros b e'.
-    eapply h' in e' as [b' [? hb]].
-    eexists. split. 1: eassumption.
-    revert hb.
-    rewrite !lift_rename. autorewrite with sigma.
-    (* Is it the correct way? *)
-    admit.
+    split.
+    + admit.
+    + intros b e'.
+      eapply h' in e' as [b' [? hb]].
+      eexists. split. 1: eassumption.
+      revert hb.
+      rewrite !lift_rename. autorewrite with sigma.
+      (* Is it the correct way? *)
+      admit.
 Admitted.
 
 Lemma typing_rename :
@@ -83,12 +89,17 @@ Proof.
   )).
   - intros Σ wfΣ Γ wfΓ n decl isdecl X Δ f [hΔ hf].
     simpl. eapply hf in isdecl as h.
-    destruct h as [decl' [isdecl' h]].
-    eapply meta_conv.
+    destruct h as [decl' [isdecl' [h1 h2]]].
+    (* eapply meta_conv. *)
+    (* + econstructor. all: eauto. *)
+    (* + rewrite !lift_rename. autorewrite with sigma. *)
+    (*   (* Still not the right definition... TODO *) *)
+    (*   give_up. *)
+    econstructor.
     + econstructor. all: eauto.
-    + rewrite !lift_rename. autorewrite with sigma.
-      (* Still not the right definition... TODO *)
+    + (* Not clear how... From hΔ? *)
       give_up.
+    + admit.
   - intros Σ wfΣ Γ wfΓ l X H0 Δ f [hΔ hf].
     simpl. constructor. all: auto.
   - intros Σ wfΣ Γ wfΓ na A B s1 s2 X hA ihA hB ihB Δ f hf.

@@ -29,16 +29,18 @@ Proof.
 Qed.
 
 Definition renaming Σ Γ Δ f :=
-  forall i decl,
+  wf_local Σ Γ ×
+  (forall i decl,
     nth_error Δ i = Some decl ->
-    (Σ ;;; Γ |- tRel (f i) : rename f ((lift0 (S i)) decl.(decl_type))) ×
-    (forall b,
-        decl.(decl_body) = Some b ->
-        ∑ decl' b',
-          (nth_error Γ (f i) = Some decl') ×
-          (decl'.(decl_body) = Some b') ×
-          (Σ ;;; Γ |- rename f (lift0 (S i) b) = lift0 (S (f i)) b')
-    ).
+    ∑ decl',
+      nth_error Γ (f i) = Some decl' ×
+      (forall b,
+          decl.(decl_body) = Some b ->
+          ∑ b',
+            decl'.(decl_body) = Some b' ×
+            Σ ;;; Γ |- rename f (lift0 (S i) b) = lift0 (S (f i)) b'
+      )
+  ).
 
 Lemma renaming_vass :
   forall Σ Γ Δ na A f,
@@ -46,72 +48,55 @@ Lemma renaming_vass :
     renaming Σ Γ Δ f ->
     renaming Σ (Γ ,, vass na (rename f A)) (Δ ,, vass na A) (shiftn 1 f).
 Proof.
-  intros Σ Γ Δ na A f hΓ h [|i] decl e.
+  intros Σ Γ Δ na A f hΓ [? h].
+  split. 1: auto.
+  intros [|i] decl e.
   - simpl in e. inversion e. subst. clear e.
-    simpl. split.
-    + unfold shiftn at 1. simpl.
-      eapply meta_conv.
-      * econstructor. all: auto.
-        simpl. reflexivity.
-      * rewrite !lift_rename.
-        autorewrite with sigma.
-        eapply inst_ext. intro i.
-        unfold ren, lift_renaming, shiftn, subst_compose. simpl.
-        f_equal. f_equal. f_equal. lia.
-    + intros. discriminate.
-  - simpl in e. simpl. split.
-    + unfold shiftn at 1. simpl.
-      eapply meta_conv.
-      * econstructor. all: auto.
-        simpl. specialize (h i).
-        apply h in e as [h' _].
-        (* WOULD NEED Inversion, but it depends on substitution,
-           probably doesn't need to... *)
-        (* Other solution is to ask for this in renaming! *)
-        admit.
-      * instantiate (1 := decl).
-        rewrite !lift_rename.
-        autorewrite with sigma. eapply inst_ext. intro j.
-        unfold ren, lift_renaming, shiftn, subst_compose. simpl.
-        replace (i - 0) with i by lia.
-        (* How did it become this?? *)
-        give_up.
-    + intros b e'.
-      replace (i - 0) with i by lia.
-      specialize (h i). eapply h in e as [h1 h2].
-      eapply h2 in e' as [decl' [b' [? [? ?]]]].
-      eexists decl', b'. split ; [| split]. all: auto.
-      admit.
+    simpl. eexists. split. 1: reflexivity.
+    intros. discriminate.
+  - simpl in e. simpl.
+    replace (i - 0) with i by lia.
+    eapply h in e as [decl' [? h']].
+    eexists. split. 1: eassumption.
+    intros b e'.
+    eapply h' in e' as [b' [? hb]].
+    eexists. split. 1: eassumption.
+    revert hb.
+    rewrite !lift_rename. autorewrite with sigma.
+    (* Is it the correct way? *)
+    admit.
 Admitted.
 
 Lemma typing_rename :
   forall Σ Γ Δ f t A,
     wf Σ.1 ->
     wf_local Σ Γ ->
-    wf_local Σ Δ ->
     renaming Σ Δ Γ f ->
     Σ ;;; Γ |- t : A ->
     Σ ;;; Δ |- rename f t : rename f A.
 Proof.
-  intros Σ Γ Δ f t A hΣ hΓ hΔ hf h.
-  revert Σ hΣ Γ hΓ t A h Δ f hΔ hf.
+  intros Σ Γ Δ f t A hΣ hΓ hf h.
+  revert Σ hΣ Γ hΓ t A h Δ f hf.
   apply (typing_ind_env (fun Σ Γ t T => forall Δ f,
-    wf_local Σ Δ ->
     renaming Σ Δ Γ f ->
     Σ ;;; Δ |- rename f t : rename f T
   )).
-  - intros Σ wfΣ Γ wfΓ n decl H0 X Δ f hΔ hf.
-    simpl. eapply hf. assumption.
-  - intros Σ wfΣ Γ wfΓ l X H0 Δ f hΔ hf.
+  - intros Σ wfΣ Γ wfΓ n decl isdecl X Δ f [hΔ hf].
+    simpl. eapply hf in isdecl as h.
+    destruct h as [decl' [isdecl' h]].
+    eapply meta_conv.
+    + econstructor. all: eauto.
+    + rewrite !lift_rename. autorewrite with sigma.
+      (* Still not the right definition... TODO *)
+      give_up.
+  - intros Σ wfΣ Γ wfΓ l X H0 Δ f [hΔ hf].
     simpl. constructor. all: auto.
-  - intros Σ wfΣ Γ wfΓ na A B s1 s2 X hA ihA hB ihB Δ f hΔ hf.
+  - intros Σ wfΣ Γ wfΓ na A B s1 s2 X hA ihA hB ihB Δ f hf.
     simpl.
     econstructor.
-    + eapply ihA. all: auto.
+    + eapply ihA. assumption.
     + eapply ihB.
-      * econstructor. all: auto.
-        eexists. eapply ihA. all: auto.
-      *
+      eapply renaming_vass.
 Admitted.
 
 End Renaming.

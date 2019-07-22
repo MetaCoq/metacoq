@@ -73,6 +73,37 @@ Proof.
       admit.
 Admitted.
 
+Lemma renaming_vdef :
+  forall Σ Γ Δ na b B f,
+    wf_local Σ (Γ ,, vdef na (rename f b) (rename f B)) ->
+    renaming Σ Γ Δ f ->
+    renaming Σ (Γ ,, vdef na (rename f b) (rename f B)) (Δ ,, vdef na b B) (shiftn 1 f).
+Proof.
+  intros Σ Γ Δ na b B f hΓ [? h].
+  split. 1: auto.
+  intros [|i] decl e.
+  - simpl in e. inversion e. subst. clear e.
+    simpl. eexists. split. 1: reflexivity.
+    split.
+    + admit.
+    + intros b' [= <-].
+      simpl. eexists. split. 1: reflexivity.
+      admit.
+  - simpl in e. simpl.
+    replace (i - 0) with i by lia.
+    eapply h in e as [decl' [? h']].
+    eexists. split. 1: eassumption.
+    split.
+    + admit.
+    + intros b0 e'.
+      eapply h' in e' as [b' [? hb]].
+      eexists. split. 1: eassumption.
+      revert hb.
+      rewrite !lift_rename. autorewrite with sigma.
+      (* Is it the correct way? *)
+      admit.
+Admitted.
+
 Lemma typing_rename :
   forall Σ Γ Δ f t A,
     wf Σ.1 ->
@@ -254,7 +285,75 @@ Proof.
     econstructor.
     + eapply ihA. assumption.
     + eapply ihB.
-      eapply renaming_vass.
+      eapply renaming_vass. 2: auto.
+      constructor.
+      * destruct hf as [hΔ hf]. auto.
+      * simpl. exists s1. eapply ihA. assumption.
+  - intros Σ wfΣ Γ wfΓ na A t s1 B X hA ihA ht iht Δ f hf.
+    simpl. econstructor.
+    + eapply ihA. assumption.
+    + eapply iht.
+      eapply renaming_vass. 2: auto.
+      constructor.
+      * destruct hf as [hΔ hf]. auto.
+      * simpl. exists s1. eapply ihA. assumption.
+  - intros Σ wfΣ Γ wfΓ na b B t s1 A X hB ihB hb ihb ht iht Δ f hf.
+    simpl. econstructor.
+    + eapply ihB. assumption.
+    + eapply ihb. assumption.
+    + eapply iht.
+      eapply renaming_vdef. 2: auto.
+      constructor.
+      * destruct hf. assumption.
+      * simpl. eexists. eapply ihB. assumption.
+      * simpl. eapply ihb. assumption.
+  - intros Σ wfΣ Γ wfΓ t na A B u X ht iht hu ihu Δ f hf.
+    simpl.
+    (* NEED Relation between rename and subst *)
+    admit.
+  - intros Σ wfΣ Γ wfΓ cst u decl X X0 isdecl hconst Δ f hf.
+    simpl.
+    (* NEED Commutation *)
+    admit.
+  - intros Σ wfΣ Γ wfΓ ind u mdecl idecl isdecl X X0 hconst Δ σ hf.
+    simpl.
+    (* NEED Commutation *)
+    admit.
+  - intros Σ wfΣ Γ wfΓ ind i u mdecl idecl cdecl isdecl X X0 hconst Δ f hf.
+    simpl.
+    (* NEED Commutation *)
+    admit.
+  - intros Σ wfΣ Γ wfΓ ind u npar p c brs args mdecl idecl isdecl X X0 e pars
+           pty hp indctx pctx ps btys htoc hca hel ihp hc ihc hbrs Δ f hf.
+    simpl.
+    (* rewrite map_app. simpl. *)
+    (* rewrite map_skipn. *)
+    (* eapply types_of_case_inst with (σ := σ) in htoc. all: try eassumption. *)
+    (* eapply type_Case. *)
+    (* + eassumption. *)
+    (* + assumption. *)
+    (* + eapply ihp. all: auto. *)
+    (* + eassumption. *)
+    (* + admit. *)
+    (* + assumption. *)
+    (* + specialize (ihc _ _ hΔ hσ). autorewrite with sigma in ihc. *)
+    (*   eapply ihc. *)
+    (* + admit. *)
+    admit.
+  - intros Σ wfΣ Γ wfΓ p c u mdecl idecl pdecl isdecl args X X0 hc ihc e ty
+           Δ f hf.
+    simpl.
+    admit.
+  - intros Σ wfΣ Γ wfΓ mfix n decl types H0 H1 X ihmfix Δ f hf.
+    simpl.
+    admit.
+  - intros Σ wfΣ Γ wfΓ mfix n decl types H0 X X0 ihmfix Δ f hf.
+    admit.
+  - intros Σ wfΣ Γ wfΓ t A B X ht iht hwf hcu Δ f hf.
+    eapply type_Cumul.
+    + eapply iht. assumption.
+    + admit.
+    + admit.
 Admitted.
 
 End Renaming.

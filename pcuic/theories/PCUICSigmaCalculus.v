@@ -114,6 +114,41 @@ Proof.
     simpl in *. f_equal. all: easy.
 Qed.
 
+Definition rename_context f (Γ : context) : context :=
+  fold_context (fun i => rename (shiftn i f)) Γ.
+
+Lemma rename_context_length :
+  forall σ Γ,
+    #|rename_context σ Γ| = #|Γ|.
+Proof.
+  intros σ Γ. unfold rename_context.
+  apply fold_context_length.
+Qed.
+Hint Rewrite rename_context_length : sigma wf.
+
+Definition rename_decl f d :=
+  map_decl (rename f) d.
+
+Lemma rename_context_snoc :
+  forall f Γ d,
+    rename_context f (d :: Γ) =
+    rename_context f Γ ,, rename_decl (shiftn #|Γ| f) d.
+Proof.
+  intros f Γ d.
+  unfold rename_context, fold_context.
+  rewrite !rev_mapi !rev_involutive /mapi mapi_rec_eqn /snoc.
+  f_equal.
+  - rewrite Nat.sub_0_r List.rev_length. reflexivity.
+  - rewrite mapi_rec_Sk. simpl. apply mapi_rec_ext.
+    intros k x H H0.
+    rewrite app_length !List.rev_length. simpl.
+    unfold map_decl. f_equal.
+    + destruct (decl_body x) ; auto.
+      simpl. f_equal. f_equal. f_equal. lia.
+    + f_equal. f_equal. lia.
+Qed.
+Hint Rewrite rename_context_snoc : sigma.
+
 Definition inst_context σ (Γ : context) : context :=
   fold_context (fun i => inst (⇑^i σ)) Γ.
 
@@ -144,18 +179,7 @@ Proof.
     rewrite app_length !List.rev_length. simpl.
     unfold map_decl. f_equal.
     + destruct (decl_body x) ; auto.
-      simpl. f_equal. eapply inst_ext. intro i.
-      unfold Upn, subst_consn, subst_compose.
-      destruct (Nat.ltb_spec0 i (Nat.pred #|Γ| - k)).
-      * rewrite nth_error_idsn_Some. 1: lia.
-        rewrite nth_error_idsn_Some. 1: lia.
-        reflexivity.
-      * rewrite nth_error_idsn_None. 1: lia.
-        rewrite nth_error_idsn_None. 1: lia.
-        rewrite !idsn_length.
-        assert (e : (i - (Nat.pred (#|Γ| + 1) - S k)) = (i - (Nat.pred #|Γ| - k))) by lia.
-        rewrite e. eapply inst_ext.
-        intro j. unfold shiftk. f_equal. lia.
+      simpl. f_equal. f_equal. f_equal. lia.
     + f_equal. f_equal. lia.
 Qed.
 Hint Rewrite inst_context_snoc : sigma.
@@ -547,13 +571,16 @@ Proof.
     (*     -- apply All2_same. intro. apply eq_term_upto_univ_refl ; auto. *)
 Admitted.
 
-(* Lemma types_of_case_inst : *)
-(*   forall Σ ind mdecl idecl npar args u p pty indctx pctx ps btys σ, *)
+(* Lemma types_of_case_rename : *)
+(*   forall Σ ind mdecl idecl npar args u p pty indctx pctx ps btys f, *)
 (*     wf Σ -> *)
 (*     declared_inductive Σ mdecl ind idecl -> *)
 (*     types_of_case ind mdecl idecl (firstn npar args) u p pty = *)
 (*     Some (indctx, pctx, ps, btys) -> *)
-(*     types_of_case ind mdecl idecl (firstn npar (map (inst σ) args)) u p.[σ] pty.[σ] = *)
+(*     types_of_case *)
+(*       ind mdecl idecl *)
+(*       (firstn npar (map (rename f) args)) u (rename f p) (rename f pty) *)
+(*     = *)
 (*     Some (inst_context σ indctx, inst_context σ pctx, ps, map (on_snd (inst σ)) btys). *)
 (* Proof. *)
 (*   intros Σ ind mdecl idecl npar args u p pty indctx pctx ps btys σ hΣ hdecl h. *)

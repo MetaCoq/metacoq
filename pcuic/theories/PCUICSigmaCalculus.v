@@ -34,15 +34,27 @@ Definition renaming Σ Γ Δ f :=
     nth_error Δ i = Some decl ->
     ∑ decl',
       nth_error Γ (f i) = Some decl' ×
-      Σ ;;; Γ |- rename f (lift0 (S i) decl.(decl_type))
-              = lift0 (S (f i)) decl'.(decl_type) ×
+      rename f (lift0 (S i) decl.(decl_type))
+      = lift0 (S (f i)) decl'.(decl_type) ×
       (forall b,
           decl.(decl_body) = Some b ->
           ∑ b',
             decl'.(decl_body) = Some b' ×
-            Σ ;;; Γ |- rename f (lift0 (S i) b) = lift0 (S (f i)) b'
+            rename f (lift0 (S i) b) = lift0 (S (f i)) b'
       )
   ).
+
+Lemma rename_shiftn :
+  forall f t,
+    rename (shiftn 1 f) (lift0 1 t) = lift0 1 (rename f t).
+Proof.
+  intros f t.
+  rewrite !lift_rename. autorewrite with sigma.
+  eapply inst_ext. intro i.
+  unfold ren, lift_renaming, shiftn, subst_compose. simpl.
+  replace (i - 0) with i by lia.
+  reflexivity.
+Qed.
 
 Lemma renaming_vass :
   forall Σ Γ Δ na A f,
@@ -56,22 +68,32 @@ Proof.
   - simpl in e. inversion e. subst. clear e.
     simpl. eexists. split. 1: reflexivity.
     split.
-    + admit.
+    + rewrite !lift_rename. autorewrite with sigma.
+      eapply inst_ext. intro i.
+      unfold ren, lift_renaming, shiftn, subst_compose. simpl.
+      replace (i - 0) with i by lia. reflexivity.
     + intros. discriminate.
   - simpl in e. simpl.
     replace (i - 0) with i by lia.
-    eapply h in e as [decl' [? h']].
+    eapply h in e as [decl' [? [h1 h2]]].
     eexists. split. 1: eassumption.
     split.
-    + admit.
-    + intros b e'.
-      eapply h' in e' as [b' [? hb]].
-      eexists. split. 1: eassumption.
-      revert hb.
+    + rewrite simpl_lift0. rewrite rename_shiftn. rewrite h1.
       rewrite !lift_rename. autorewrite with sigma.
-      (* Is it the correct way? *)
-      admit.
-Admitted.
+      eapply inst_ext. intro j.
+      unfold ren, lift_renaming, shiftn, subst_compose. simpl.
+      replace (i - 0) with i by lia.
+      reflexivity.
+    + intros b e'.
+      eapply h2 in e' as [b' [? hb]].
+      eexists. split. 1: eassumption.
+      rewrite simpl_lift0. rewrite rename_shiftn. rewrite hb.
+      rewrite !lift_rename. autorewrite with sigma.
+      eapply inst_ext. intro j.
+      unfold ren, lift_renaming, shiftn, subst_compose. simpl.
+      replace (i - 0) with i by lia.
+      reflexivity.
+Qed.
 
 Lemma renaming_vdef :
   forall Σ Γ Δ na b B f,
@@ -85,24 +107,37 @@ Proof.
   - simpl in e. inversion e. subst. clear e.
     simpl. eexists. split. 1: reflexivity.
     split.
-    + admit.
+    + rewrite !lift_rename. autorewrite with sigma.
+      eapply inst_ext. intro i.
+      unfold ren, lift_renaming, shiftn, subst_compose. simpl.
+      replace (i - 0) with i by lia. reflexivity.
     + intros b' [= <-].
       simpl. eexists. split. 1: reflexivity.
-      admit.
+      rewrite !lift_rename. autorewrite with sigma.
+      eapply inst_ext. intro i.
+      unfold ren, lift_renaming, shiftn, subst_compose. simpl.
+      replace (i - 0) with i by lia. reflexivity.
   - simpl in e. simpl.
     replace (i - 0) with i by lia.
-    eapply h in e as [decl' [? h']].
+    eapply h in e as [decl' [? [h1 h2]]].
     eexists. split. 1: eassumption.
     split.
-    + admit.
-    + intros b0 e'.
-      eapply h' in e' as [b' [? hb]].
-      eexists. split. 1: eassumption.
-      revert hb.
+    + rewrite simpl_lift0. rewrite rename_shiftn. rewrite h1.
       rewrite !lift_rename. autorewrite with sigma.
-      (* Is it the correct way? *)
-      admit.
-Admitted.
+      eapply inst_ext. intro j.
+      unfold ren, lift_renaming, shiftn, subst_compose. simpl.
+      replace (i - 0) with i by lia.
+      reflexivity.
+    + intros b0 e'.
+      eapply h2 in e' as [b' [? hb]].
+      eexists. split. 1: eassumption.
+      rewrite simpl_lift0. rewrite rename_shiftn. rewrite hb.
+      rewrite !lift_rename. autorewrite with sigma.
+      eapply inst_ext. intro j.
+      unfold ren, lift_renaming, shiftn, subst_compose. simpl.
+      replace (i - 0) with i by lia.
+      reflexivity.
+Qed.
 
 Lemma typing_rename :
   forall Σ Γ Δ f t A,
@@ -121,163 +156,7 @@ Proof.
   - intros Σ wfΣ Γ wfΓ n decl isdecl ihΓ Δ f [hΔ hf].
     simpl. eapply hf in isdecl as h.
     destruct h as [decl' [isdecl' [h1 h2]]].
-    (* eapply meta_conv. *)
-    (* + econstructor. all: eauto. *)
-    (* + rewrite !lift_rename. autorewrite with sigma. *)
-    (*   (* Still not the right definition... TODO *) *)
-    (*   give_up. *)
-    econstructor.
-    + econstructor. all: eauto.
-    + right.
-      pose proof ((hΔ, hf) : renaming Σ Δ Γ f) as h.
-      clear - ihΓ h isdecl.
-      induction ihΓ in Δ, f, h, n, decl, isdecl |- *.
-      * destruct n. all: discriminate.
-      * destruct n.
-        -- simpl in isdecl. inversion isdecl. subst. clear isdecl.
-           simpl. destruct tu as [s tu]. simpl in p.
-           exists s. rewrite lift_rename.
-           rewrite (rename_compose f (lift_renaming 1 0) t).
-           eapply p. destruct h as [hΔ hf].
-           split. 1: auto.
-           intros i decl e. unfold lift_renaming. simpl.
-           specialize (hf (S i) _ e) as [decl' [? [h1 h2]]].
-           exists decl'. split. 1: assumption. split.
-           ++ match type of h1 with
-              | _ ;;; _ |- ?lhs1 = _ =>
-                match goal with
-                | |- _ ;;; _ |- ?lhs2 = _ =>
-                  replace lhs2 with lhs1 ; [ apply h1 | ]
-                end
-              end.
-              rewrite !lift_rename. autorewrite with sigma.
-              eapply inst_ext. intro j.
-              unfold ren, lift_renaming, subst_compose. simpl. reflexivity.
-           ++ intros b e'. specialize (h2 _ e') as [b' [? h2]].
-              exists b'. split. 1: auto.
-              match type of h2 with
-              | _ ;;; _ |- ?lhs1 = _ =>
-                match goal with
-                | |- _ ;;; _ |- ?lhs2 = _ =>
-                  replace lhs2 with lhs1 ; [ apply h2 | ]
-                end
-              end.
-              rewrite !lift_rename. autorewrite with sigma.
-              eapply inst_ext. intro j.
-              unfold ren, lift_renaming, subst_compose. simpl. reflexivity.
-        -- simpl in isdecl.
-           eapply IHihΓ with (f := fun i => f (S i)) in isdecl
-             as [s ih].
-           ++ exists s.
-              match type of ih with
-              | _ ;;; _ |- ?x : _ =>
-                match goal with
-                | |- _ ;;; _ |- ?y : _ =>
-                  replace y with x ; [ apply ih | ]
-                end
-              end.
-              rewrite !lift_rename. autorewrite with sigma.
-              eapply inst_ext. intro j.
-              unfold ren, lift_renaming, subst_compose. simpl. reflexivity.
-           ++ destruct h as [hΔ hf].
-              split. 1: auto.
-              intros i decl0 e. specialize (hf (S i) _ e) as [decl' [? [h1 h2]]].
-              exists decl'. split. 1: auto. split.
-              ** match type of h1 with
-                 | _ ;;; _ |- ?lhs1 = _ =>
-                   match goal with
-                   | |- _ ;;; _ |- ?lhs2 = _ =>
-                     replace lhs2 with lhs1 ; [ apply h1 | ]
-                   end
-                 end.
-                 rewrite !lift_rename. autorewrite with sigma.
-                 eapply inst_ext. intro j.
-                 unfold ren, lift_renaming, subst_compose. simpl. reflexivity.
-              ** intros b e'. specialize (h2 _ e') as [b' [? h2]].
-                 exists b'. split. 1: auto.
-                 match type of h2 with
-                 | _ ;;; _ |- ?lhs1 = _ =>
-                   match goal with
-                   | |- _ ;;; _ |- ?lhs2 = _ =>
-                     replace lhs2 with lhs1 ; [ apply h2 | ]
-                   end
-                 end.
-                 rewrite !lift_rename. autorewrite with sigma.
-                 eapply inst_ext. intro j.
-                 unfold ren, lift_renaming, subst_compose. simpl. reflexivity.
-      * destruct n.
-        -- simpl in isdecl. inversion isdecl. subst. clear isdecl.
-           simpl. destruct tu as [s tu]. simpl in p0.
-           exists s. rewrite lift_rename.
-           rewrite (rename_compose f (lift_renaming 1 0) t).
-           eapply p0. destruct h as [hΔ hf].
-           split. 1: auto.
-           intros i decl e. unfold lift_renaming. simpl.
-           specialize (hf (S i) _ e) as [decl' [? [h1 h2]]].
-           exists decl'. split. 1: assumption. split.
-           ++ match type of h1 with
-              | _ ;;; _ |- ?lhs1 = _ =>
-                match goal with
-                | |- _ ;;; _ |- ?lhs2 = _ =>
-                  replace lhs2 with lhs1 ; [ apply h1 | ]
-                end
-              end.
-              rewrite !lift_rename. autorewrite with sigma.
-              eapply inst_ext. intro j.
-              unfold ren, lift_renaming, subst_compose. simpl. reflexivity.
-           ++ intros ? e'. specialize (h2 _ e') as [b' [? h2]].
-              exists b'. split. 1: auto.
-              match type of h2 with
-              | _ ;;; _ |- ?lhs1 = _ =>
-                match goal with
-                | |- _ ;;; _ |- ?lhs2 = _ =>
-                  replace lhs2 with lhs1 ; [ apply h2 | ]
-                end
-              end.
-              rewrite !lift_rename. autorewrite with sigma.
-              eapply inst_ext. intro j.
-              unfold ren, lift_renaming, subst_compose. simpl. reflexivity.
-        -- simpl in isdecl.
-           eapply IHihΓ with (f := fun i => f (S i)) in isdecl
-             as [s ih].
-           ++ exists s.
-              match type of ih with
-              | _ ;;; _ |- ?x : _ =>
-                match goal with
-                | |- _ ;;; _ |- ?y : _ =>
-                  replace y with x ; [ apply ih | ]
-                end
-              end.
-              rewrite !lift_rename. autorewrite with sigma.
-              eapply inst_ext. intro j.
-              unfold ren, lift_renaming, subst_compose. simpl. reflexivity.
-           ++ destruct h as [hΔ hf].
-              split. 1: auto.
-              intros i decl0 e. specialize (hf (S i) _ e) as [decl' [? [h1 h2]]].
-              exists decl'. split. 1: auto. split.
-              ** match type of h1 with
-                 | _ ;;; _ |- ?lhs1 = _ =>
-                   match goal with
-                   | |- _ ;;; _ |- ?lhs2 = _ =>
-                     replace lhs2 with lhs1 ; [ apply h1 | ]
-                   end
-                 end.
-                 rewrite !lift_rename. autorewrite with sigma.
-                 eapply inst_ext. intro j.
-                 unfold ren, lift_renaming, subst_compose. simpl. reflexivity.
-              ** intros ? e'. specialize (h2 _ e') as [b' [? h2]].
-                 exists b'. split. 1: auto.
-                 match type of h2 with
-                 | _ ;;; _ |- ?lhs1 = _ =>
-                   match goal with
-                   | |- _ ;;; _ |- ?lhs2 = _ =>
-                     replace lhs2 with lhs1 ; [ apply h2 | ]
-                   end
-                 end.
-                 rewrite !lift_rename. autorewrite with sigma.
-                 eapply inst_ext. intro j.
-                 unfold ren, lift_renaming, subst_compose. simpl. reflexivity.
-    + admit.
+    rewrite h1. econstructor. all: auto.
   - intros Σ wfΣ Γ wfΓ l X H0 Δ f [hΔ hf].
     simpl. constructor. all: auto.
   - intros Σ wfΣ Γ wfΓ na A B s1 s2 X hA ihA hB ihB Δ f hf.

@@ -279,6 +279,7 @@ Section Erase.
                                   E.dbody := dbody' |})) defs.
     Next Obligation.
       clear erase.
+      destruct (wf_ext_is_graph HΣ) as [].
 
       epose proof ((fix check_types (mfix : mfixpoint term) acc (Hacc : ∥ wf_local_rel Σ Γ acc ∥) {struct mfix}
               : typing_result (∥ wf_local_rel Σ (Γ ,,, acc) (fix_context_i #|acc| mfix) ∥)
@@ -302,11 +303,9 @@ Section Erase.
       change fix_context with (fix_context_i #|@nil context_decl|).
       now rewrite app_context_nil_l.
       sq. econstructor 2. exact t.
-      Unshelve. all:sq'; eauto. apply X.
-      admit. admit.
+      Unshelve. all:sq'; eauto. firstorder.
       eapply wf_local_app_inv. eauto. eauto.
-    Admitted.
-
+    Qed.
 
   End EraseMfix.
 

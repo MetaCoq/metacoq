@@ -79,6 +79,35 @@ Proof.
   - right. exists u. split; eauto. eapply PCUICContextConversion.context_conversion in X2; eauto.
 Qed.
 
+Lemma wf_local_rel_conv:
+  forall Σ : global_env × universes_decl,
+    wf Σ.1 ->
+    forall Γ Γ' : context,
+      PCUICContextConversion.context_relation (PCUICContextConversion.conv_decls Σ) Γ Γ' ->
+      forall Γ0 : context, wf_local Σ Γ' -> wf_local_rel Σ Γ Γ0 -> wf_local_rel Σ Γ' Γ0.
+Proof.
+  intros Σ wfΣ Γ Γ' X1 Γ0 ? w0. induction w0.
+  - econstructor.
+  - econstructor; eauto. cbn in *.
+    destruct t0. exists x. eapply PCUICContextConversion.context_conversion with (Γ ,,, Γ0); eauto.
+    eapply typing_wf_local; eauto.
+    eapply conv_context_app; eauto.
+    eapply typing_wf_local; eauto.
+    eapply PCUICSafeChecker.wf_local_app_inv; eauto.
+  - econstructor; eauto.
+    + cbn in *.
+      destruct t0. exists x. eapply PCUICContextConversion.context_conversion with (Γ ,,, Γ0); eauto.
+      eapply typing_wf_local; eauto.
+      eapply conv_context_app; eauto.
+      eapply typing_wf_local; eauto.
+      eapply PCUICSafeChecker.wf_local_app_inv; eauto.
+    + cbn in *. eapply PCUICContextConversion.context_conversion with (Γ ,,, Γ0); eauto.
+      eapply typing_wf_local; eauto.
+      eapply conv_context_app; eauto.
+      eapply typing_wf_local; eauto.
+      eapply PCUICSafeChecker.wf_local_app_inv; eauto.
+Qed.        
+
 Lemma erases_context_conversion :
 env_prop
   (fun (Σ : PCUICAst.global_env_ext) (Γ : PCUICAst.context) (t T : PCUICAst.term) =>
@@ -113,27 +142,41 @@ Proof.
 
     eapply All2_impl. eapply All2_All_mix_left. eassumption. eassumption.
     intros. cbn in *.
-    decompose [prod] X2. intuition auto.
+    decompose [prod] X3. intuition auto.
     eapply b0.
     subst types.
-    eapply conv_context_app; auto. now eapply typing_wf_local in a1.
-    eapply typing_wf_local in a1. subst types.
-    (* Should be derivable from conv_context Γ Γ' and wf_local Γ ,,, types *)
+    eapply conv_context_app; auto. now eapply typing_wf_local in a4.
+    eapply typing_wf_local in a4. subst types.
+    2:eauto.
+
     eapply All_local_env_app_inv.
-    eapply All_local_env_app in a1. intuition auto.
-    clear -wfΣ X2 a2 b1 X1.
+    eapply All_local_env_app in a4. intuition auto.
+    
+    (* clear -wfΣ X2 a2 b4 X1. *)
     eapply All_local_env_impl; eauto. simpl; intros.
     destruct T. simpl in *.
     eapply PCUICContextConversion.context_conversion with (Γ ,,, Γ0); eauto.
-    now eapply typing_wf_local in X.
-    admit. admit.
-    admit.
-    (* 2:eauto. subst types. *)
-    eapply b0. eapply PCUICContextConversion.conv_ctx_refl; now apply typing_wf_local in a1.
-    now apply typing_wf_local in a1.
-    eauto.
+    now eapply typing_wf_local; eauto.
+    eapply conv_context_app; auto. eapply typing_wf_local; eauto.
+    eapply typing_wf_local in X3.
+    eapply PCUICSafeChecker.wf_local_app_inv.
+    eauto. eapply wf_local_rel_local in X3.
+    eapply wf_local_rel_app in X3 as []. rewrite app_context_nil_l in w0.
+
+        
+    eapply wf_local_rel_conv; eauto.
+    destruct X3. exists x0.
+    eapply PCUICContextConversion.context_conversion with (Γ ,,, Γ0); eauto.
+    now eapply typing_wf_local; eauto.
+    eapply conv_context_app; auto. eapply typing_wf_local; eauto.
+
+    eapply typing_wf_local in t0.
+    eapply PCUICSafeChecker.wf_local_app_inv.
+    eauto. eapply wf_local_rel_local in t0.
+    eapply wf_local_rel_app in t0 as []. rewrite app_context_nil_l in w0.
+    eapply wf_local_rel_conv; eauto.
   - eauto.
-Admitted.
+Qed.
 
 (** ** Erasure is stable under substituting universe constraints  *)
 
@@ -302,12 +345,8 @@ Proof.
       * destruct decl.
         eapply (erases_extends (Σ, _)); simpl; eauto. now inv X.
         2:eexists [_]; simpl; eauto. cbn in *.
-        (* destruct decl. cbn. *)
-        (* (* admit. admit. *)  *)
-        (* 2:eapply PCUICWeakeningEnv.wf_extends. *)
-        (* eassumption. now eexists [_]. eauto. *)
-        { inv X. cbn in X1.
-          eassumption. }
+        inv X. cbn in X1.
+        eassumption.
       * eassumption.
       * destruct ?; tauto.
     + edestruct IHerases_global_decls as (decl' & ? & ?).

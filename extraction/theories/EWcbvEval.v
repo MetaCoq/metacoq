@@ -1,9 +1,10 @@
 (* Distributed under the terms of the MIT license.   *)
+Set Warnings "-notation-overridden".
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
 From MetaCoq.Template Require Import config utils Ast.
 From MetaCoq.PCUIC Require Import PCUICAstUtils.
-From MetaCoq.Extraction Require Import EAst EAstUtils EInduction ELiftSubst ETyping Prelim.
+From MetaCoq.Extraction Require Import EAst EAstUtils EInduction ELiftSubst ETyping.
 From MetaCoq.Template Require AstUtils.
 Require Import String.
 Local Open Scope string_scope.
@@ -12,6 +13,7 @@ Require Import ssreflect ssrbool.
 
 Existing Instance config.default_checker_flags.
 
+Local Ltac inv H := inversion H; subst.
 
 (** * Weak (head) call-by-value evaluation strategy.
 
@@ -141,7 +143,7 @@ Lemma firstn_add {A} x y (args : list A) : firstn (x + y) args = firstn x args +
 Proof.
   induction x in y, args |- *. simpl. reflexivity.
   simpl. destruct args. simpl.
-  now rewrite skipn_nil firstn_nil.
+  now rewrite firstn_nil.
   rewrite IHx. now rewrite app_comm_cons.
 Qed.
 
@@ -155,6 +157,7 @@ Proof.
   simpl in H.
   destruct (isApp f1) eqn:Hf1.
   2:{ rewrite decompose_app_rec_eq in H => //. now apply negbT.
+      revert Hf1.
       inv H. exists 1. simpl. intuition auto. now eapply negbT. }
   destruct (IHf1 eq_refl _ _ _ H).
   clear IHf1.
@@ -394,7 +397,7 @@ Section Wcbv.
     intros H. revert n; induction H; intros n. rewrite skipn_nil; auto.
     destruct n; simpl.
     - rewrite /skipn. constructor; auto.
-    - now rewrite skipn_S.
+    - now auto.
   Qed.
 
   Lemma Forall_firstn {A} (P : A -> Prop) n l : Forall P l -> Forall P (firstn n l).
@@ -549,7 +552,7 @@ Section Wcbv.
     specialize (IHeval1 _ _ _ eq_refl).
     destruct IHeval1 as [l' [evl' eqf']].
     exists (l' ++ [a']).
-    split. eapply Forall2_app; auto. constructor. now rewrite -!H5. constructor.
+    split. eapply Forall2_app; auto. constructor. now rewrite - !H5. constructor.
     subst f'.
     now rewrite mkApps_app.
     eapply atom_mkApps in H; intuition try easy.
@@ -618,7 +621,7 @@ Section Wcbv.
     - depelim tv'.
       * eapply eval_mkApps_tCoFix in tv1 as [l' [evargs eq]].
         solve_discr.
-      * specialize (IHtv1 _ tv'1). inv IHtv1.
+      * specialize (IHtv1 _ tv'1). 
         solve_discr. inv H.
         now specialize (IHtv2 _ tv'2).
       * specialize (IHtv1 _ tv'). solve_discr.
@@ -634,6 +637,21 @@ Section Wcbv.
       specialize (IHtv2 _ tv'2). congruence.
 
     - depelim tv'; try easy.
+  Qed.
+
+  Lemma eval_mkApps_cong f f' l l' :
+    eval f f' ->
+    value_head f' ->
+    Forall2 eval l l' ->
+    eval (mkApps f l) (mkApps f' l').
+  Proof.
+    revert l'. induction l using rev_ind; intros l' evf vf' evl.
+    depelim evl. eapply evf.
+    eapply Forall2_app_inv_l in evl as [? [? [? ?]]].
+    intuition auto. subst. depelim H1. depelim H1.
+    rewrite !mkApps_app /=. eapply eval_app_cong; auto.
+    destruct x0 using rev_ind; simpl; [|rewrite !mkApps_app]; simpl in *; destruct f';
+      try discriminate; constructor.
   Qed.
 
 End Wcbv.

@@ -48,18 +48,15 @@ Notation type_tFix_inv := PCUICInversion.inversion_Fix.
 
 From MetaCoq.Extraction Require Import EAst ELiftSubst ETyping EWcbvEval Extract Prelim.
 
-Lemma eval_tBox_inv Σ' x2 :
-  eval Σ' E.tBox x2 -> x2 = tBox.
-Proof.
-  intros. dependent induction H.
-  - induction args using rev_ind. inv x. rewrite emkApps_snoc in x. inv x.
-  - induction l using rev_ind. cbn in x. invs H0. cbn. eapply IHeval. eauto.
-    rewrite emkApps_snoc in x. inv x.
-  - reflexivity.
-Qed.
-
+Derive Signature for Forall2.
 Lemma eval_box_apps:
-  forall (Σ' : list E.global_decl) (e : E.term) (x : list E.term), eval Σ' e tBox -> eval Σ' (mkApps e x) tBox.
+  forall (Σ' : list E.global_decl) (e : E.term) (x x' : list E.term),
+    Forall2 (eval Σ') x x' ->
+    eval Σ' e tBox -> eval Σ' (mkApps e x) tBox.
 Proof.
-  intros Σ' e x H2. revert e H2; induction x; cbn; intros; eauto using eval.
+  intros Σ' e x H2. revert e H2; induction x using rev_ind; cbn; intros; eauto using eval.
+  eapply Forall2_app_inv_l in H as [l1' [l2' [H [H' eq]]]]. subst H2.
+  depelim H'.
+  specialize (IHx e _ H H0). simpl.
+  rewrite mkApps_app. simpl. econstructor; eauto.
 Qed.

@@ -121,6 +121,15 @@ Proof.
     eapply weakening_typing in t1; eauto.
 Qed.
 
+Require Import MetaCoq.PCUIC.PCUICInversion.
+Derive Signature for erases.
+
+Lemma erases_ctx_ext (Σ : global_env_ext) Γ Γ' t t' :
+  erases Σ Γ t t' -> Γ = Γ' -> erases Σ Γ' t t'.
+Proof.
+  intros. now subst.
+Qed.
+
 Lemma erases_weakening' (Σ : global_env_ext) (Γ Γ' Γ'' : PCUICAst.context) (t T : PCUICAst.term) t' :
     wf Σ ->
     wf_local Σ (Γ ,,, Γ') ->
@@ -176,7 +185,7 @@ Proof.
 
     eapply weakening_typing in HT; eauto.
 
-    Require Import MetaCoq.PCUIC.PCUICInversion. cbn in HT.
+    cbn in HT.
     eapply inversion_Fix in HT as (? & ? & ? & ? & ? & ?) ; auto. clear a0 c.
 
 
@@ -195,11 +204,6 @@ Proof.
     rewrite app_length in *.
     subst types. rewrite fix_context_length in *.
     rewrite (All2_length _ _ H4) in *.
-    Lemma erases_ctx_ext (Σ : global_env_ext) Γ Γ' t t' :
-      erases Σ Γ t t' -> Γ = Γ' -> erases Σ Γ' t t'.
-    Proof.
-      intros. now subst.
-    Qed.
     eapply erases_ctx_ext. eapply e4.
     rewrite lift_context_app. unfold app_context.
     rewrite !app_assoc. repeat f_equal.

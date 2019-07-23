@@ -393,7 +393,7 @@ Proof.
         eapply Is_type_eval.
         eauto. eapply H1. eassumption.
         all: eauto. econstructor. econstructor. rewrite parsubst_empty.
-        eauto. econstructor. eauto.
+        eauto. econstructor. eauto. eauto.
       * auto.
     + exists tBox. split. 2:econstructor; eauto.
       econstructor.
@@ -587,7 +587,7 @@ Proof.
 
     eapply erases_mkApps_inv in He as [(? & ? & ? & ? & [] & ? & ? & ?) | (? & ? & ? & ? & ?)]; eauto.
     + subst. assert (X100 := X1). eapply Is_type_app in X100 as[].
-      exists tBox. split. 2:eapply eval_box_apps; econstructor; eauto.
+      exists tBox. split. 2:{ eapply eval_box_apps. admit. econstructor; eauto. }
       econstructor.
       eapply Is_type_eval. eauto. eassumption.
       rewrite <- mkApps_nested.  eassumption. eauto. econstructor.
@@ -609,10 +609,11 @@ Proof.
 
               eapply erases_mkApps in e3; eauto.
               eapply IHeval in e3 as (? & ? & ?); cbn; eauto.
-              exists x1. split. eauto. econstructor. unfold ETyping.unfold_fix.
-              rewrite e0. reflexivity.
-              eassumption.
-              all:eauto.
+              exists x1. split. eauto. admit.
+              (*  econstructor. unfold ETyping.unfold_fix. *)
+              (* rewrite e0. reflexivity. *)
+              (* eassumption. *)
+              (* all:eauto. *)
               (* ** unfold is_constructor in *. *)
               (*    (* destruct ?; inv H1. *) *)
               (*    (* unfold is_constructor_or_box. *) *)
@@ -649,6 +650,7 @@ Proof.
               (*            eapply value_app_inv in Hv. subst. eauto. *)
               (*    --- eauto. *)
               (*    --- eauto. *)
+
               ** eapply subject_reduction. eauto. exact Hty.
                  etransitivity.
                  eapply PCUICReduction.red_mkApps. econstructor.
@@ -677,7 +679,7 @@ Proof.
         econstructor.
         eapply Is_type_eval. eauto. eassumption.
         eauto.
-        eapply eval_box_apps. econstructor. eauto. eauto. econstructor. eauto.
+        eapply eval_box_apps. admit. econstructor. eauto. eauto. econstructor. eauto.
     + auto.
   - destruct Σ as (Σ, univs).
     unfold erases_global in Heg.
@@ -764,7 +766,7 @@ Proof.
       eapply Is_type_eval. 3: eassumption. eauto. eauto. econstructor. eauto.
     + auto.
   - inv He.
-    + eexists. split; eauto. econstructor.
+    + eexists. split; eauto. econstructor. constructor.
     + eexists. split; eauto. now econstructor.
   - inv He. eexists. split; eauto. now econstructor.
   - inv He. eexists. split; eauto. now econstructor.
@@ -787,7 +789,7 @@ Proof.
       eapply eval_app_ind. eauto. eauto.
       eauto. destruct H1.
       exists tBox.
-      split. 2:{ eapply eval_box_apps. now econstructor. }
+      split. 2:{ eapply eval_box_apps. admit. now econstructor. }
       econstructor. eauto.
     + subst.
       eapply IHeval in H2 as (? & ? & ?).
@@ -795,7 +797,7 @@ Proof.
       exists tBox.
       split. econstructor.
       eauto.
-      eapply eval_box_apps; eauto. eauto. econstructor. eauto. eauto.
+      eapply eval_box_apps; eauto. eauto. admit. (* econstructor. *) eauto. eauto. eauto. eauto.
     + auto.
   - inv He.
     + eexists. split; eauto. now econstructor.
@@ -822,7 +824,7 @@ Proof.
       eapply All2_impl. exact a. intros.
       eapply wcbeval_red; eauto. eauto. destruct H1.
       exists tBox.
-      split. 2:{ eapply eval_box_apps. now econstructor. }
+      split. 2:{ eapply eval_box_apps. admit. now econstructor. }
       eauto.
     + subst.
       eapply type_mkApps_inv in Hty' as (? & ? & [] & ?); eauto.
@@ -832,14 +834,14 @@ Proof.
         inv H1.
         -- exists (E.mkApps (E.tConstruct i k) l''). split.
            eapply erases_mkApps; eauto.
-           firstorder. econstructor; firstorder.
+           firstorder. eapply Ee.eval_mkApps_cong; eauto. firstorder.
         -- eapply Is_type_app in X0 as []; eauto. exists tBox.
            split.
            econstructor. eauto. eauto.
-           eapply eval_box_apps. eauto.
+           eapply eval_box_apps. intuition eauto. eauto.
       * clear - t0 H0 H3. revert x1 x0 H3 t0. induction H0; intros.
         -- inv H3. eauto.
         -- inv H3. inv t0. eapply IHAll2 in H5 as (? & ? & ?).
            eapply r in H2 as (? & ? & ?); eauto.
            eauto.
-Qed.
+Admitted.

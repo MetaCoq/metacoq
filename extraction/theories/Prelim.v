@@ -155,19 +155,6 @@ Proof.
   revert a; induction n; cbn; firstorder congruence.
 Qed.
 
-Lemma decompose_app_rec_mkApps f l l' : EAstUtils.decompose_app_rec (E.mkApps f l) l' =
-                                    EAstUtils.decompose_app_rec f (l ++ l').
-Proof.
-  induction l in f, l' |- *; simpl; auto; rewrite IHl, ?app_nil_r; auto.
-Qed.
-
-Lemma decompose_app_mkApps f l :
-  E.isApp f = false -> EAstUtils.decompose_app (E.mkApps f l) = (f, l).
-Proof.
-  intros Hf. unfold EAstUtils.decompose_app. rewrite decompose_app_rec_mkApps. rewrite app_nil_r.
-  destruct f; simpl in *; (discriminate || reflexivity).
-Qed.
-
 (** ** Prelim stuff, should move *)
 
 Lemma All2_right_triv {A B} {l : list A} {l' : list B} P :
@@ -264,18 +251,11 @@ Proof.
   - destruct L using rev_ind.
     reflexivity.
     rewrite emkApps_snoc in H. inv H.
-  - induction L using rev_ind.
-    + reflexivity.
-    + rewrite emkApps_snoc in x. inv x.
-  - induction L using rev_ind.
-    + reflexivity.
-    + rewrite emkApps_snoc in x. inv x.
-  - assert (EAst.isApp (EAst.tConstruct i k) = false) by reflexivity.
-    assert (EAst.isApp tBox = false) by reflexivity.
-    eapply decompose_app_mkApps in H0.
-    eapply decompose_app_mkApps in H1.
-    rewrite <- x in H1. rewrite H0 in H1.
-    inv H1.
+  - destruct (Ee.mkApps_elim t l). Ee.solve_discr.
+    rewrite Ee.value_head_spec in H.
+    eapply andP in H. destruct H.
+    eapply Ee.atom_mkApps in H1 as [H1 _].
+    destruct n, L; discriminate.
 Qed.
 
 (** ** Prelim on eliminations  *)

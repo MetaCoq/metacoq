@@ -46,6 +46,8 @@ Proof.
   rewrite idsn_length. auto.
 Qed.
 
+Hint Rewrite @lift_rename : sigma.
+
 Lemma subst1_inst :
   forall t n u,
     t{ n := u } = t.[⇑^n (u ⋅ ids)].
@@ -101,7 +103,7 @@ Lemma rename_shiftn :
     rename (shiftn 1 f) (lift0 1 t) = lift0 1 (rename f t).
 Proof.
   intros f t.
-  rewrite !lift_rename. autorewrite with sigma.
+  autorewrite with sigma.
   eapply inst_ext. intro i.
   unfold ren, lift_renaming, shiftn, subst_compose. simpl.
   replace (i - 0) with i by lia.
@@ -120,7 +122,7 @@ Proof.
   - simpl in e. inversion e. subst. clear e.
     simpl. eexists. split. 1: reflexivity.
     split.
-    + rewrite !lift_rename. autorewrite with sigma.
+    + autorewrite with sigma.
       eapply inst_ext. intro i.
       unfold ren, lift_renaming, shiftn, subst_compose. simpl.
       replace (i - 0) with i by lia. reflexivity.
@@ -131,7 +133,7 @@ Proof.
     eexists. split. 1: eassumption.
     split.
     + rewrite simpl_lift0. rewrite rename_shiftn. rewrite h1.
-      rewrite !lift_rename. autorewrite with sigma.
+      autorewrite with sigma.
       eapply inst_ext. intro j.
       unfold ren, lift_renaming, shiftn, subst_compose. simpl.
       replace (i - 0) with i by lia.
@@ -140,7 +142,7 @@ Proof.
       eapply h2 in e' as [b' [? hb]].
       eexists. split. 1: eassumption.
       rewrite simpl_lift0. rewrite rename_shiftn. rewrite hb.
-      rewrite !lift_rename. autorewrite with sigma.
+      autorewrite with sigma.
       eapply inst_ext. intro j.
       unfold ren, lift_renaming, shiftn, subst_compose. simpl.
       replace (i - 0) with i by lia.
@@ -159,13 +161,13 @@ Proof.
   - simpl in e. inversion e. subst. clear e.
     simpl. eexists. split. 1: reflexivity.
     split.
-    + rewrite !lift_rename. autorewrite with sigma.
+    + autorewrite with sigma.
       eapply inst_ext. intro i.
       unfold ren, lift_renaming, shiftn, subst_compose. simpl.
       replace (i - 0) with i by lia. reflexivity.
     + intros b' [= <-].
       simpl. eexists. split. 1: reflexivity.
-      rewrite !lift_rename. autorewrite with sigma.
+      autorewrite with sigma.
       eapply inst_ext. intro i.
       unfold ren, lift_renaming, shiftn, subst_compose. simpl.
       replace (i - 0) with i by lia. reflexivity.
@@ -175,7 +177,7 @@ Proof.
     eexists. split. 1: eassumption.
     split.
     + rewrite simpl_lift0. rewrite rename_shiftn. rewrite h1.
-      rewrite !lift_rename. autorewrite with sigma.
+      autorewrite with sigma.
       eapply inst_ext. intro j.
       unfold ren, lift_renaming, shiftn, subst_compose. simpl.
       replace (i - 0) with i by lia.
@@ -184,7 +186,7 @@ Proof.
       eapply h2 in e' as [b' [? hb]].
       eexists. split. 1: eassumption.
       rewrite simpl_lift0. rewrite rename_shiftn. rewrite hb.
-      rewrite !lift_rename. autorewrite with sigma.
+      autorewrite with sigma.
       eapply inst_ext. intro j.
       unfold ren, lift_renaming, shiftn, subst_compose. simpl.
       replace (i - 0) with i by lia.
@@ -374,7 +376,7 @@ Proof.
     + eapply meta_conv.
       * econstructor ; auto.
         reflexivity.
-      * simpl. rewrite !lift_rename.
+      * simpl.
         autorewrite with sigma.
         eapply inst_ext. intro i.
         unfold subst_compose.

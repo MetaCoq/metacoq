@@ -69,6 +69,40 @@ Proof.
 Qed.
 Hint Rewrite @subst1_inst : sigma.
 
+Lemma rename_subst_instance_constr :
+  forall u t f,
+    rename f (subst_instance_constr u t) = subst_instance_constr u (rename f t).
+Proof.
+  intros u t f.
+  induction t in f |- * using term_forall_list_ind.
+  all: try solve [
+    simpl ;
+    rewrite ?IHt ?IHt1 ?IHt2 ;
+    easy
+  ].
+  - simpl. f_equal. induction H.
+    + reflexivity.
+    + simpl. f_equal ; easy.
+  - simpl. rewrite IHt1 IHt2. f_equal.
+    induction X.
+    + reflexivity.
+    + simpl. f_equal. 2: easy.
+      destruct x. unfold on_snd. simpl in *.
+      easy.
+  - simpl. f_equal.
+    rewrite map_length.
+    generalize #|m|. intro k.
+    induction X. 1: reflexivity.
+    destruct p, x. unfold map_def in *.
+    simpl in *. f_equal. all: easy.
+  - simpl. f_equal.
+    rewrite map_length.
+    generalize #|m|. intro k.
+    induction X. 1: reflexivity.
+    destruct p, x. unfold map_def in *.
+    simpl in *. f_equal. all: easy.
+Qed.
+
 Section Renaming.
 
 Context `{checker_flags}.
@@ -253,17 +287,24 @@ Proof.
       * simpl. replace (i - 0) with i by lia.
         reflexivity.
   - intros Σ wfΣ Γ wfΓ cst u decl X X0 isdecl hconst Δ f hf.
-    simpl.
-    (* NEED Commutation *)
-    admit.
+    simpl. eapply meta_conv.
+    + constructor. all: eauto.
+      destruct hf. assumption.
+    + rewrite rename_subst_instance_constr. f_equal.
+      (* NEED closedness assumption *)
+      admit.
   - intros Σ wfΣ Γ wfΓ ind u mdecl idecl isdecl X X0 hconst Δ σ hf.
-    simpl.
-    (* NEED Commutation *)
-    admit.
+    simpl. eapply meta_conv.
+    + econstructor. all: eauto.
+      destruct hf. assumption.
+    + rewrite rename_subst_instance_constr. f_equal.
+      (* NEED closedness assumption *)
+      admit.
   - intros Σ wfΣ Γ wfΓ ind i u mdecl idecl cdecl isdecl X X0 hconst Δ f hf.
-    simpl.
-    (* NEED Commutation *)
-    admit.
+    simpl. eapply meta_conv.
+    + econstructor. all: eauto. destruct hf. assumption.
+    + (* NEED Commutation *)
+      admit.
   - intros Σ wfΣ Γ wfΓ ind u npar p c brs args mdecl idecl isdecl X X0 e pars
            pty hp indctx pctx ps btys htoc hca hel ihp hc ihc hbrs Δ f hf.
     simpl.

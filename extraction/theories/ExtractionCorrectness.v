@@ -626,7 +626,23 @@ Proof.
 
     eapply erases_mkApps_inv in He as [(? & ? & ? & ? & [] & ? & ? & ?) | (? & ? & ? & ? & ?)]; eauto.
     + subst. assert (X100 := X1). eapply Is_type_app in X100 as[].
-      exists tBox. split. 2:{ eapply eval_box_apps. admit. econstructor; eauto. }
+      exists tBox. split. 2:{
+        assert (exists x5, Forall2 (EWcbvEval.eval Σ') x4 x5) as [x5]. {
+          eapply All2_app_inv in H0 as ([] & ? & ?). destruct p.
+          clear a0. subst.
+          assert (forall x n, nth_error x3 n = Some x -> ∑ T,  Σ;;; [] |- x : T).
+          { intros. eapply typing_spine_inv with (arg := n + #|x2|) in t0 as [].
+            2:{ rewrite nth_error_app2. 2:omega. rewrite Nat.add_sub. eassumption. }
+            eauto.
+          } 
+          clear - X3 a1 H5. revert X3 x4 H5; induction a1; intros.
+          ** inv H5. exists []; eauto.
+          ** inv H5. destruct (X3 x 0 eq_refl).
+             eapply r in t as (? & ? & ?); eauto.
+             eapply IHa1 in H3 as (? & ?); eauto.
+             intros. eapply (X3 x2 (S n)). eassumption.
+        } 
+        eapply eval_box_apps. eassumption. econstructor; eauto. }
       econstructor.
       eapply Is_type_eval. eauto. eassumption.
       rewrite <- mkApps_nested.  eassumption. eauto. econstructor.
@@ -718,7 +734,21 @@ Proof.
         econstructor.
         eapply Is_type_eval. eauto. eassumption.
         eauto.
-        eapply eval_box_apps. admit. econstructor. eauto. eauto. econstructor. eauto.
+
+        assert (exists x5, Forall2 (EWcbvEval.eval Σ') x3 x5) as [x5]. {
+          assert (forall x n, nth_error args n = Some x -> ∑ T,  Σ;;; [] |- x : T).
+          { intros. eapply typing_spine_inv with (arg := n) in t0 as [].
+            2:{ eassumption. } eauto.
+          } 
+          clear - X2 H0 H5. revert X2 x3 H5; induction H0; intros.
+          ** inv H5. exists []; eauto.
+          ** inv H5. destruct (X2 x 0 eq_refl).
+             eapply r in t as (? & ? & ?); eauto.
+             eapply IHAll2 in H4 as (? & ?); eauto.
+             intros. eapply (X2 x2 (S n)). eassumption.
+        } 
+        
+        eapply eval_box_apps. eauto. econstructor. eauto. eauto. econstructor. eauto.
     + auto.
   - destruct Σ as (Σ, univs).
     unfold erases_global in Heg.
@@ -828,7 +858,24 @@ Proof.
       eapply eval_app_ind. eauto. eauto.
       eauto. destruct H1.
       exists tBox.
-      split. 2:{ eapply eval_box_apps. admit. now econstructor. }
+      split. 2:{
+
+         assert (exists x5, Forall2 (EWcbvEval.eval Σ') x7 x5) as [x8]. {
+          eapply All2_app_inv in H0 as ([] & ? & ?). destruct p.
+          clear a1. subst.
+          assert (forall x n, nth_error x6 n = Some x -> ∑ T,  Σ;;; [] |- x : T).
+          { intros. eapply typing_spine_inv with (arg := n + #|x5|) in t2 as [].
+            2:{ rewrite nth_error_app2. 2:omega. rewrite Nat.add_sub. eauto. }
+            eauto.
+          } 
+          clear - X2 a0 H3. revert X2 x7 H3; induction a0; intros.
+          ** inv H3. exists []; eauto.
+          ** inv H3. destruct (X2 x 0 eq_refl).
+             eapply r in t as (? & ? & ?); eauto.
+             eapply IHa0 in H4 as (? & ?); eauto.
+             intros. eapply (X2 x2 (S n)). eassumption.
+        }        
+        eapply eval_box_apps. eauto. now econstructor. }
       econstructor. eauto.
     + subst.
       eapply IHeval in H2 as (? & ? & ?).
@@ -836,7 +883,19 @@ Proof.
       exists tBox.
       split. econstructor.
       eauto.
-      eapply eval_box_apps; eauto. eauto. admit. (* econstructor. *) eauto. eauto. eauto. eauto.
+
+      assert (exists x5, Forall2 (EWcbvEval.eval Σ') x6 x5) as [x8]. {
+        assert (forall x n, nth_error l n = Some x -> ∑ T,  Σ;;; [] |- x : T).
+        { intros. eapply typing_spine_inv. eassumption. eauto.
+        } 
+        clear - X1 H0 H3. revert X1 x6 H3; induction H0; intros.
+        ** inv H3. exists []; eauto.
+        ** inv H3. destruct (X1 x 0 eq_refl).
+           eapply r in t as (? & ? & ?); eauto.
+           eapply IHAll2 in H5 as (? & ?); eauto.
+           intros. eapply (X1 x2 (S n)). eassumption.
+      } 
+      eapply eval_box_apps; eauto. eauto. eauto. eauto. eauto. 
     + auto.
   - inv He.
     + eexists. split; eauto. now econstructor.
@@ -863,7 +922,25 @@ Proof.
       eapply All2_impl. exact a. intros.
       eapply wcbeval_red; eauto. eauto. destruct H1.
       exists tBox.
-      split. 2:{ eapply eval_box_apps. admit. now econstructor. }
+      split. 2:{
+        eapply type_mkApps_inv in Hty' as (? & ? & [] & ?); eauto.
+        assert (exists x5, Forall2 (EWcbvEval.eval Σ') x1 x5) as [x8]. {
+          eapply All2_app_inv in H0 as ([] & ? & ?). destruct p.
+          clear a2. subst.
+          assert (forall x n, nth_error x0 n = Some x -> ∑ T,  Σ;;; [] |- x : T).
+          { intros. eapply typing_spine_inv with (arg := n + #|x|) in t0 as [].
+            2:{ rewrite nth_error_app2. 2:omega. rewrite Nat.add_sub. eauto. }
+            eauto.
+          } 
+          clear - X1 a1 H3. revert X1 x1 H3; induction a1; intros.
+          ** inv H3. exists []; eauto.
+          ** inv H3. destruct (X1 x 0 eq_refl).
+             eapply r in t as (? & ? & ?); eauto.
+             eapply IHa1 in H4 as (? & ?); eauto.
+             intros. eapply (X1 x2 (S n)). eassumption.
+        }        
+
+        eapply eval_box_apps. eauto. now econstructor. }
       eauto.
     + subst.
       eapply type_mkApps_inv in Hty' as (? & ? & [] & ?); eauto.

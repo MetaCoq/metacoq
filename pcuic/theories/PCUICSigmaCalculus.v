@@ -15,6 +15,58 @@ Require PCUICWeakening.
 Set Asymmetric Patterns.
 Open Scope sigma_scope.
 
+(* TODO MOVE *)
+Lemma nth_error_idsn_Some :
+  forall n k,
+    k < n ->
+    nth_error (idsn n) k = Some (tRel k).
+Proof.
+  intros n k h.
+  induction n in k, h |- *.
+  - inversion h.
+  - simpl. destruct (Nat.ltb_spec0 k n).
+    + rewrite nth_error_app1.
+      * rewrite idsn_length. auto.
+      * eapply IHn. assumption.
+    + assert (k = n) by omega. subst.
+      rewrite nth_error_app2.
+      * rewrite idsn_length. auto.
+      * rewrite idsn_length. replace (n - n) with 0 by omega.
+        simpl. reflexivity.
+Qed.
+
+(* TODO MOVE *)
+Lemma nth_error_idsn_None :
+  forall n k,
+    k >= n ->
+    nth_error (idsn n) k = None.
+Proof.
+  intros n k h.
+  eapply nth_error_None.
+  rewrite idsn_length. auto.
+Qed.
+
+Lemma subst1_inst :
+  forall t n u,
+    t{ n := u } = t.[⇑^n (u ⋅ ids)].
+Proof.
+  intros t n u.
+  unfold subst1. rewrite subst_inst.
+  eapply inst_ext. intro i.
+  unfold Upn, subst_compose, subst_consn.
+  destruct (Nat.ltb_spec0 i n).
+  - rewrite -> nth_error_idsn_Some by assumption. reflexivity.
+  - rewrite -> nth_error_idsn_None by lia.
+    rewrite idsn_length.
+    destruct (Nat.eqb_spec (i - n) 0).
+    + rewrite e. simpl. reflexivity.
+    + replace (i - n) with (S (i - n - 1)) by lia. simpl.
+      destruct (i - n - 1) eqn: e.
+      * simpl. reflexivity.
+      * simpl. reflexivity.
+Qed.
+Hint Rewrite @subst1_inst : sigma.
+
 Section Renaming.
 
 Context `{checker_flags}.
@@ -187,9 +239,17 @@ Proof.
       * simpl. eexists. eapply ihB. assumption.
       * simpl. eapply ihb. assumption.
   - intros Σ wfΣ Γ wfΓ t na A B u X ht iht hu ihu Δ f hf.
-    simpl.
-    (* NEED Relation between rename and subst *)
-    admit.
+    simpl. eapply meta_conv.
+    + econstructor.
+      * simpl in iht. eapply iht. assumption.
+      * eapply ihu. assumption.
+    + autorewrite with sigma.
+      eapply inst_ext. intro i.
+      unfold subst_cons, ren, shiftn, subst_compose. simpl.
+      destruct i.
+      * simpl. reflexivity.
+      * simpl. replace (i - 0) with i by lia.
+        reflexivity.
   - intros Σ wfΣ Γ wfΓ cst u decl X X0 isdecl hconst Δ f hf.
     simpl.
     (* NEED Commutation *)
@@ -252,37 +312,6 @@ Hint Rewrite inst_context_length : sigma wf.
 
 Definition inst_decl σ d :=
   map_decl (inst σ) d.
-
-(* TODO MOVE *)
-Lemma nth_error_idsn_Some :
-  forall n k,
-    k < n ->
-    nth_error (idsn n) k = Some (tRel k).
-Proof.
-  intros n k h.
-  induction n in k, h |- *.
-  - inversion h.
-  - simpl. destruct (Nat.ltb_spec0 k n).
-    + rewrite nth_error_app1.
-      * rewrite idsn_length. auto.
-      * eapply IHn. assumption.
-    + assert (k = n) by omega. subst.
-      rewrite nth_error_app2.
-      * rewrite idsn_length. auto.
-      * rewrite idsn_length. replace (n - n) with 0 by omega.
-        simpl. reflexivity.
-Qed.
-
-(* TODO MOVE *)
-Lemma nth_error_idsn_None :
-  forall n k,
-    k >= n ->
-    nth_error (idsn n) k = None.
-Proof.
-  intros n k h.
-  eapply nth_error_None.
-  rewrite idsn_length. auto.
-Qed.
 
 Lemma inst_context_snoc :
   forall σ Γ d,

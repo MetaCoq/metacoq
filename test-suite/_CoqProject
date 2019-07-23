@@ -2,6 +2,9 @@
 -I ../checker/src
 -Q ../template-coq/theories MetaCoq.Template
 -Q ../checker/theories MetaCoq.Checker
+-Q ../pcuic/theories MetaCoq.PCUIC
+-Q ../safechecker/theories MetaCoq.SafeChecker
+-Q ../extraction/theories MetaCoq.Extraction
 -R . MetaCoq.TestSuite
 
 demo.v

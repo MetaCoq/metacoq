@@ -161,6 +161,13 @@ Proof.
     eapply IHl.  eauto.
 Qed.
 
+Lemma map_option_Some X (L : list (option X)) t : map_option_out L = Some t -> All2 (fun x y => x = Some y) L t.
+Proof.
+  intros. induction L in t, H |- *; cbn in *.
+  - inv H. econstructor.
+  - destruct a. destruct ?. all:inv H. eauto.
+Qed.
+
 Lemma tCase_length_branch_inv `{cf : checker_flags} (Σ : global_env_ext) Γ ind npar p n u args brs T m t :
   wf Σ ->
   Σ ;;; Γ |- tCase (ind, npar) p (mkApps (tConstruct ind n u) args) brs : T ->
@@ -182,14 +189,6 @@ Proof.
   eapply All2_nth_error_Some in H as (? & ?). 2:eassumption. destruct p0.
   rewrite e. destruct p0. cbn in *. subst. destruct x1. cbn. eauto.
   destruct H3.
-
-  Lemma map_option_Some X (L : list (option X)) t : map_option_out L = Some t -> All2 (fun x y => x = Some y) L t.
-  Proof.
-    intros. induction L in t, H |- *; cbn in *.
-    - inv H. econstructor.
-    - destruct a. destruct ?. all:inv H. eauto.
-  Qed.
-
   eapply map_option_Some in E4.
   eapply All2_nth_error_Some_r in E4 as (? & ? & ?); eauto.
   subst.

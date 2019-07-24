@@ -1851,6 +1851,7 @@ Section Conversion.
        positionR (` (pps1 x)) (` (pps1 y)) ->
        Ret (Reduction u2) Γ u1 (coApp (mkApps t ca1) (appstack a1 π1)) ρ2.
 
+  Require Import PCUICContextConversion.
   Equations(noeqns) _isconv_args' (Γ : context) (t : term) (args : list term)
             (l1 : list term) (π1 : stack) (h1 : wtp Γ (mkApps t args) (appstack l1 π1))
             (l2 : list term) (π2 : stack) (h2 : wtp Γ (mkApps t args) (appstack l2 π2))
@@ -1919,12 +1920,12 @@ Section Conversion.
     end.
     eapply wellformed_zipc_replace. auto. auto. eapply h2.
     - simpl. rewrite stack_context_appstack.
-      left. exists A1'. eapply context_conversion ; auto.
-      + eassumption.
+      left. exists A1'. eapply context_conversion. auto. 2:eauto.
+      + now eapply typing_wf_local in hh1.
       + assumption.
+      + now eapply typing_wf_local in hu2.
     - simpl. rewrite stack_context_appstack.
-      eapply conv_context_conversion ; auto.
-      all: eassumption.
+      eapply conv_alt_conv_ctx ; eauto.
   Defined.
   Next Obligation.
     simpl in H0. destruct H0 as [eq hp].

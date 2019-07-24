@@ -12,6 +12,7 @@ Require Import Equations.Prop.DepElim.
 Set Asymmetric Patterns.
 
 Derive NoConfusion for term.
+Derive Signature for All2.
 
 Open Scope pcuic.
 

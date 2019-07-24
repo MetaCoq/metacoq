@@ -188,22 +188,6 @@ Section Wcbv.
   (** The codomain of evaluation is only values: *)
   (*     It means no redex can remain at the head of an evaluated term. *)
 
-  Lemma Forall_skipn {A} (P : A -> Prop) n l : Forall P l -> Forall P (skipn n l).
-  Proof.
-    intros H. revert n; induction H; intros n. rewrite skipn_nil; auto.
-    destruct n; simpl.
-    - rewrite /skipn. constructor; auto.
-    - now auto.
-  Qed.
-
-  Lemma Forall_firstn {A} (P : A -> Prop) n l : Forall P l -> Forall P (firstn n l).
-  Proof.
-    intros H. revert n; induction H; intros n. rewrite firstn_nil; auto.
-    destruct n; simpl.
-    - constructor; auto.
-    - constructor; auto.
-  Qed.
-
   Lemma value_head_spec t :
     value_head t = (~~ (isLambda t || isFix t || isBox t)) && atom t.
   Proof.

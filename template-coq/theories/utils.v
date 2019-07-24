@@ -625,6 +625,15 @@ Proof.
   constructor; auto.
 Qed.
 
+Lemma skipn_nil :
+  forall {A} n, @skipn A n [] = [].
+Proof.
+  intros A [| n] ; reflexivity.
+Qed.
+
+Lemma skipn_S {A} a (l : list A) n : skipn (S n) (a :: l) = skipn n l.
+Proof. reflexivity. Qed.
+
 (** Generic strategy for dealing with Forall/forall, etc:
 
     1) Move all boolean foralls into All/All2 (in the goal and the context).
@@ -636,6 +645,22 @@ Qed.
 Lemma Forall_mix {A} (P Q : A -> Prop) : forall l, Forall P l -> Forall Q l -> Forall (fun x => P x /\ Q x) l.
 Proof.
   intros l Hl Hq. induction Hl; inv Hq; constructor; auto.
+Qed.
+
+Lemma Forall_skipn {A} (P : A -> Prop) n l : Forall P l -> Forall P (skipn n l).
+Proof.
+  intros H. revert n; induction H; intros n. rewrite skipn_nil; auto.
+  destruct n; simpl.
+  - rewrite /skipn. constructor; auto.
+  - now auto.
+Qed.
+
+Lemma Forall_firstn {A} (P : A -> Prop) n l : Forall P l -> Forall P (firstn n l).
+Proof.
+  intros H. revert n; induction H; intros n. rewrite firstn_nil; auto.
+  destruct n; simpl.
+  - constructor; auto.
+  - constructor; auto.
 Qed.
 
 Lemma forallb2_All2 {A : Type} {p : A -> A -> bool}
@@ -885,9 +910,6 @@ Proof.
   intros Hl. unfold mapi. apply mapi_ext_size. simpl. auto.
 Qed.
 
-Lemma skipn_S {A} a (l : list A) n : skipn (S n) (a :: l) = skipn n l.
-Proof. reflexivity. Qed.
-
 Lemma Alli_nth_error {A} (P : nat -> A -> Type) k ctx :
   (forall i x, nth_error ctx i = Some x -> P (k + i) x) ->
   Alli P k ctx.
@@ -1024,13 +1046,13 @@ Proof.
   rewrite !andb_and. intros [px pl] Hx. eauto.
 Qed.
 
-Lemma on_snd_test_spec {A B C} (P : B -> Prop) (p : B -> bool) (f g : B -> C) (x : A * B) :
+Lemma on_snd_test_spec {A B C} (P : B -> Type) (p : B -> bool) (f g : B -> C) (x : A * B) :
   P (snd x) -> (forall x, P x -> is_true (p x) -> f x = g x) ->
   is_true (test_snd p x) ->
   on_snd f x = on_snd g x.
 Proof.
   intros. destruct x. unfold on_snd. simpl.
-  now rewrite H0; auto.
+  now rewrite H; auto.
 Qed.
 
 Lemma Forall_map {A B} (P : B -> Prop) (f : A -> B) l : Forall (Program.Basics.compose P f) l -> Forall P (map f l).
@@ -1655,12 +1677,6 @@ Proof.
   - destruct l.
     + reflexivity.
     + simpl. apply IHn. cbn in h. omega.
-Qed.
-
-Lemma skipn_nil :
-  forall {A} n, @skipn A n [] = [].
-Proof.
-  intros A [| n] ; reflexivity.
 Qed.
 
 Lemma nat_rev_ind (max : nat) :

@@ -79,6 +79,35 @@ Proof.
   - right. exists u. split; eauto. eapply PCUICContextConversion.context_conversion in X2; eauto.
 Qed.
 
+Lemma wf_local_rel_conv:
+  forall Σ : global_env × universes_decl,
+    wf Σ.1 ->
+    forall Γ Γ' : context,
+      PCUICContextConversion.context_relation (PCUICContextConversion.conv_decls Σ) Γ Γ' ->
+      forall Γ0 : context, wf_local Σ Γ' -> wf_local_rel Σ Γ Γ0 -> wf_local_rel Σ Γ' Γ0.
+Proof.
+  intros Σ wfΣ Γ Γ' X1 Γ0 ? w0. induction w0.
+  - econstructor.
+  - econstructor; eauto. cbn in *.
+    destruct t0. exists x. eapply PCUICContextConversion.context_conversion with (Γ ,,, Γ0); eauto.
+    eapply typing_wf_local; eauto.
+    eapply conv_context_app; eauto.
+    eapply typing_wf_local; eauto.
+    eapply PCUICSafeChecker.wf_local_app_inv; eauto.
+  - econstructor; eauto.
+    + cbn in *.
+      destruct t0. exists x. eapply PCUICContextConversion.context_conversion with (Γ ,,, Γ0); eauto.
+      eapply typing_wf_local; eauto.
+      eapply conv_context_app; eauto.
+      eapply typing_wf_local; eauto.
+      eapply PCUICSafeChecker.wf_local_app_inv; eauto.
+    + cbn in *. eapply PCUICContextConversion.context_conversion with (Γ ,,, Γ0); eauto.
+      eapply typing_wf_local; eauto.
+      eapply conv_context_app; eauto.
+      eapply typing_wf_local; eauto.
+      eapply PCUICSafeChecker.wf_local_app_inv; eauto.
+Qed.        
+
 Lemma erases_context_conversion :
 env_prop
   (fun (Σ : PCUICAst.global_env_ext) (Γ : PCUICAst.context) (t T : PCUICAst.term) =>
@@ -109,29 +138,44 @@ Proof.
 
     eapply All2_impl. eapply All2_All_mix_left.
     all: firstorder.
+  - admit.
   - econstructor.
 
     eapply All2_impl. eapply All2_All_mix_left. eassumption. eassumption.
     intros. cbn in *.
-    decompose [prod] X2. intuition auto.
+    decompose [prod] X3. intuition auto.
     eapply b0.
     subst types.
-    eapply conv_context_app; auto. now eapply typing_wf_local in a1.
-    eapply typing_wf_local in a1. subst types.
-    (* Should be derivable from conv_context Γ Γ' and wf_local Γ ,,, types *)
+    eapply conv_context_app; auto. now eapply typing_wf_local in a4.
+    eapply typing_wf_local in a4. subst types.
+    2:eauto.
+
     eapply All_local_env_app_inv.
-    eapply All_local_env_app in a1. intuition auto.
-    clear -wfΣ X2 a2 b1 X1.
+    eapply All_local_env_app in a4. intuition auto.
+    
+    (* clear -wfΣ X2 a2 b4 X1. *)
     eapply All_local_env_impl; eauto. simpl; intros.
     destruct T. simpl in *.
     eapply PCUICContextConversion.context_conversion with (Γ ,,, Γ0); eauto.
-    now eapply typing_wf_local in X.
-    admit. admit.
-    admit.
-    (* 2:eauto. subst types. *)
-    eapply b0. eapply PCUICContextConversion.conv_ctx_refl; now apply typing_wf_local in a1.
-    now apply typing_wf_local in a1.
-    eauto.
+    now eapply typing_wf_local; eauto.
+    eapply conv_context_app; auto. eapply typing_wf_local; eauto.
+    eapply typing_wf_local in X3.
+    eapply PCUICSafeChecker.wf_local_app_inv.
+    eauto. eapply wf_local_rel_local in X3.
+    eapply wf_local_rel_app in X3 as []. rewrite app_context_nil_l in w0.
+
+        
+    eapply wf_local_rel_conv; eauto.
+    destruct X3. exists x0.
+    eapply PCUICContextConversion.context_conversion with (Γ ,,, Γ0); eauto.
+    now eapply typing_wf_local; eauto.
+    eapply conv_context_app; auto. eapply typing_wf_local; eauto.
+
+    eapply typing_wf_local in t0.
+    eapply PCUICSafeChecker.wf_local_app_inv.
+    eauto. eapply wf_local_rel_local in t0.
+    eapply wf_local_rel_app in t0 as []. rewrite app_context_nil_l in w0.
+    eapply wf_local_rel_conv; eauto.
   - eauto.
 Admitted.
 
@@ -189,6 +233,7 @@ Proof.
     eapply All2_All_left. exact X3. intros. destruct X5.
     exact e. exact H15.
     intros; cbn in *. destruct H. destruct p0. split; eauto.
+  - admit.
   - assert (Hw :  wf_local (Σ.1, univs) (subst_instance_context u (Γ ,,, types))).
     { (* rewrite subst_instance_context_app. *)
       apply All_local_env_app in X as [X Hfixc].
@@ -221,8 +266,8 @@ Proof.
     f_equal.
     eapply fix_context_subst_instance. eauto.
   - eauto.
-Qed.
-
+Admitted.
+    
 Lemma declared_constant_inj Σ c decl1 decl2 :
   declared_constant Σ c decl1 -> declared_constant Σ c decl2 -> decl1 = decl2.
 Proof.
@@ -302,12 +347,8 @@ Proof.
       * destruct decl.
         eapply (erases_extends (Σ, _)); simpl; eauto. now inv X.
         2:eexists [_]; simpl; eauto. cbn in *.
-        (* destruct decl. cbn. *)
-        (* (* admit. admit. *)  *)
-        (* 2:eapply PCUICWeakeningEnv.wf_extends. *)
-        (* eassumption. now eexists [_]. eauto. *)
-        { inv X. cbn in X1.
-          eassumption. }
+        inv X. cbn in X1.
+        eassumption.
       * eassumption.
       * destruct ?; tauto.
     + edestruct IHerases_global_decls as (decl' & ? & ?).
@@ -459,48 +500,48 @@ Proof.
         rewrite mkApps_nested in X0.
 
         eapply tConstruct_no_Type in X0.
-        eapply H10 in X0 as []; eauto. 2: exists []; now destruct Σ.
+        eapply H10 in X0 as []; eauto. exists []; now destruct Σ. admit. admit.
 
-        destruct (ind_ctors idecl'). cbn in H4. destruct c; inv H2.
-        destruct l; cbn in *; try omega. destruct c as [ | []]; cbn in H2; inv H2.
+        (* destruct (ind_ctors idecl'). cbn in H4. destruct c; inv H2. *)
+        (* destruct l; cbn in *; try omega. destruct c as [ | []]; cbn in H2; inv H2. *)
 
-        destruct btys as [ | ? []]; cbn in H3; try omega. clear H3 H4. destruct H7.
-        (* eapply H7 in d1. *) inv a. inv X2. inv H12. inv H8. destruct H4. destruct x4, y; cbn in *; subst.
-        destruct X1. subst. destruct p0; cbn in *.
+        (* destruct btys as [ | ? []]; cbn in H3; try omega. clear H3 H4. destruct H7. *)
+        (* (* eapply H7 in d1. *) inv a. inv X2. inv H12. inv H8. destruct H4. destruct x4, y; cbn in *; subst. *)
+        (* destruct X1. subst. destruct p0; cbn in *. *)
 
-        edestruct (IHeval2) as (? & ? & ?).
-        eapply subject_reduction. eauto. exact Hty.
-        etransitivity.
-        eapply PCUICReduction.red_case_c. eapply wcbeval_red. eauto.
-        econstructor. econstructor. econstructor.
+        (* edestruct (IHeval2) as (? & ? & ?). *)
+        (* eapply subject_reduction. eauto. exact Hty. *)
+        (* etransitivity. *)
+        (* eapply PCUICReduction.red_case_c. eapply wcbeval_red. eauto. *)
+        (* econstructor. econstructor. econstructor. *)
 
-        all:unfold iota_red in *. all:cbn in *.
-        eapply erases_mkApps. eauto.
-        instantiate (1 := repeat tBox _).
-        eapply All2_Forall2.
-        eapply All2_impl.
-        eapply All2_All_mix_left. eassumption.
-        2:{ intros. destruct X1. assert (y = tBox). exact y0. subst. econstructor.
-            now eapply isErasable_Proof. }
+        (* all:unfold iota_red in *. all:cbn in *. *)
+        (* eapply erases_mkApps. eauto. *)
+        (* instantiate (1 := repeat tBox _). *)
+        (* eapply All2_Forall2. *)
+        (* eapply All2_impl. *)
+        (* eapply All2_All_mix_left. eassumption. *)
+        (* 2:{ intros. destruct X1. assert (y = tBox). exact y0. subst. econstructor. *)
+        (*     now eapply isErasable_Proof. } *)
 
-        eapply All2_right_triv. 2: now rewrite repeat_length.
+        (* eapply All2_right_triv. 2: now rewrite repeat_length. *)
 
-        now eapply All_repeat.
+        (* now eapply All_repeat. *)
 
-        (* destruct x4; cbn in e2; subst. destruct X2. destruct p0; cbn in e2; subst. cbn in *.  destruct y.  *)
-        exists x4. split; eauto. eapply eval_iota_sing.  2:eauto.
-        pose proof (Ee.eval_to_value _ _ _ He_v').
-        eapply value_app_inv in H4. subst. eassumption. 2:eauto.
+        (* (* destruct x4; cbn in e2; subst. destruct X2. destruct p0; cbn in e2; subst. cbn in *.  destruct y.  *) *)
+        (* exists x4. split; eauto. eapply eval_iota_sing.  2:eauto. *)
+        (* pose proof (Ee.eval_to_value _ _ _ He_v'). *)
+        (* eapply value_app_inv in H4. subst. eassumption. 2:eauto. *)
 
-        eapply tCase_length_branch_inv in extr_env_wf'0.
-        2:{ eapply subject_reduction. eauto.
-            exact Hty.
-            eapply PCUICReduction.red_case_c. eapply wcbeval_red. eauto.  }
-        2: reflexivity.
+        (* eapply tCase_length_branch_inv in extr_env_wf'0. *)
+        (* 2:{ eapply subject_reduction. eauto. *)
+        (*     exact Hty. *)
+        (*     eapply PCUICReduction.red_case_c. eapply wcbeval_red. eauto.  } *)
+        (* 2: reflexivity. *)
 
-        enough (#|skipn (ind_npars mdecl') (x1 ++ x2)| = n) as <- by eauto.
-        rewrite skipn_length. rewrite extr_env_wf'0. omega.
-        rewrite extr_env_wf'0. omega.
+        (* enough (#|skipn (ind_npars mdecl') (x1 ++ x2)| = n) as <- by eauto. *)
+        (* rewrite skipn_length. rewrite extr_env_wf'0. omega. *)
+        (* rewrite extr_env_wf'0. omega. *)
       * subst. unfold iota_red in *.
         destruct (nth_error brs c) eqn:Hnth.
         2:{ eapply nth_error_None in Hnth. erewrite All2_length in Hnth. 2:exact a. rewrite H3 in Hnth.
@@ -530,50 +571,52 @@ Proof.
         -- eapply Is_type_app in X0 as[]. 2:eauto. 2:econstructor. 2:{ eapply subject_reduction_eval. 3:eassumption. all: eauto. }
 
            eapply tConstruct_no_Type in X0.
-           eapply H10 in X0 as []; eauto. 2: exists []; now destruct Σ.
+           eapply H10 in X0 as []; eauto. admit. admit. admit. (* 2: exists []; now destruct Σ. *)
 
-           destruct (ind_ctors idecl'). cbn in H4. destruct c; inv H2.
-           destruct l; cbn in *; try omega. destruct c as [ | []]; cbn in H2; inv H2.
+           (* destruct (ind_ctors idecl'). cbn in H4. destruct c; inv H2. *)
+           (* destruct l; cbn in *; try omega. destruct c as [ | []]; cbn in H2; inv H2. *)
 
-           destruct btys as [ | ? []]; cbn in H3; try omega. clear H3 H4. destruct H8.
-           (* eapply H7 in d1. *) inv a. inv X2. inv H12. inv H9. destruct H4. destruct x1, y; cbn in *; subst.
-           destruct X1. subst. destruct p0; cbn in *. destruct x3. inv e. inv Hnth. cbn in *.
+           (* destruct btys as [ | ? []]; cbn in H3; try omega. clear H3 H4. destruct H8. *)
+           (* (* eapply H7 in d1. *) inv a. inv X2. inv H12. inv H9. destruct H4. destruct x1, y; cbn in *; subst. *)
+           (* destruct X1. subst. destruct p0; cbn in *. destruct x3. inv e. inv Hnth. cbn in *. *)
 
-           edestruct (IHeval2) as (? & ? & ?).
-           eapply subject_reduction. eauto. exact Hty.
-           etransitivity.
-           eapply PCUICReduction.red_case_c. eapply wcbeval_red. eauto.
-           econstructor. econstructor. econstructor.
+           (* edestruct (IHeval2) as (? & ? & ?). *)
+           (* eapply subject_reduction. eauto. exact Hty. *)
+           (* etransitivity. *)
+           (* eapply PCUICReduction.red_case_c. eapply wcbeval_red. eauto. *)
+           (* econstructor. econstructor. econstructor. *)
 
-           eapply erases_mkApps. eauto.
-           instantiate (1 := repeat tBox _).
-           eapply All2_Forall2.
-           eapply All2_impl.
-           eapply All2_All_mix_left. eassumption.
-           2:{ intros. destruct X1. assert (y = tBox). exact y0. subst. econstructor.
-               now eapply isErasable_Proof. }
+           (* eapply erases_mkApps. eauto. *)
+           (* instantiate (1 := repeat tBox _). *)
+           (* eapply All2_Forall2. *)
+           (* eapply All2_impl. *)
+           (* eapply All2_All_mix_left. eassumption. *)
+           (* 2:{ intros. destruct X1. assert (y = tBox). exact y0. subst. econstructor. *)
+           (*     now eapply isErasable_Proof. } *)
 
-           eapply All2_right_triv. 2:now rewrite repeat_length.
-           now eapply All_repeat.
+           (* eapply All2_right_triv. 2:now rewrite repeat_length. *)
+           (* now eapply All_repeat. *)
 
-           exists x1. split; eauto.
-           eapply eval_iota_sing.
-           pose proof (Ee.eval_to_value _ _ _ He_v').
-           eapply value_app_inv in H4. subst. eassumption.
-           reflexivity. cbn in *.
-           enough (#|skipn (ind_npars mdecl') args| = n0) as <- by eauto.
+           (* exists x1. split; eauto. *)
+           (* eapply eval_iota_sing. *)
+           (* pose proof (Ee.eval_to_value _ _ _ He_v'). *)
+           (* eapply value_app_inv in H4. subst. eassumption. *)
+           (* reflexivity. cbn in *. *)
+           (* enough (#|skipn (ind_npars mdecl') args| = n0) as <- by eauto. *)
 
-           eapply tCase_length_branch_inv in extr_env_wf'0.
-           2:{ eapply subject_reduction. eauto.
-               exact Hty.
-               eapply PCUICReduction.red_case_c. eapply wcbeval_red. eauto.  }
-           2: reflexivity.
+           (* eapply tCase_length_branch_inv in extr_env_wf'0. *)
+           (* 2:{ eapply subject_reduction. eauto. *)
+           (*     exact Hty. *)
+           (*     eapply PCUICReduction.red_case_c. eapply wcbeval_red. eauto.  } *)
+           (* 2: reflexivity. *)
 
-           enough (#|skipn (ind_npars mdecl') args| = n0) as <- by eauto.
-           rewrite skipn_length. rewrite extr_env_wf'0. omega.
-           rewrite extr_env_wf'0. omega. eauto.
+           (* enough (#|skipn (ind_npars mdecl') args| = n0) as <- by eauto. *)
+           (* rewrite skipn_length. rewrite extr_env_wf'0. omega. *)
+           (* rewrite extr_env_wf'0. omega. eauto. *)
     + exists tBox. split. econstructor.
-      eapply Is_type_eval; eauto. econstructor; eauto.
+      eapply Is_type_eval; eauto. econstructor; eauto. admit. admit.
+    + admit. 
+    + admit.
     + auto.
     + auto.
   - assert (Hty' := Hty).
@@ -587,7 +630,23 @@ Proof.
 
     eapply erases_mkApps_inv in He as [(? & ? & ? & ? & [] & ? & ? & ?) | (? & ? & ? & ? & ?)]; eauto.
     + subst. assert (X100 := X1). eapply Is_type_app in X100 as[].
-      exists tBox. split. 2:{ eapply eval_box_apps. admit. econstructor; eauto. }
+      exists tBox. split. 2:{
+        assert (exists x5, Forall2 (EWcbvEval.eval Σ') x4 x5) as [x5]. {
+          eapply All2_app_inv in H0 as ([] & ? & ?). destruct p.
+          clear a0. subst.
+          assert (forall x n, nth_error x3 n = Some x -> ∑ T,  Σ;;; [] |- x : T).
+          { intros. eapply typing_spine_inv with (arg := n + #|x2|) in t0 as [].
+            2:{ rewrite nth_error_app2. 2:omega. rewrite Nat.add_sub. eassumption. }
+            eauto.
+          } 
+          clear - X3 a1 H5. revert X3 x4 H5; induction a1; intros.
+          ** inv H5. exists []; eauto.
+          ** inv H5. destruct (X3 x 0 eq_refl).
+             eapply r in t as (? & ? & ?); eauto.
+             eapply IHa1 in H3 as (? & ?); eauto.
+             intros. eapply (X3 x2 (S n)). eassumption.
+        } 
+        eapply eval_box_apps. eassumption. econstructor; eauto. }
       econstructor.
       eapply Is_type_eval. eauto. eassumption.
       rewrite <- mkApps_nested.  eassumption. eauto. econstructor.
@@ -679,7 +738,21 @@ Proof.
         econstructor.
         eapply Is_type_eval. eauto. eassumption.
         eauto.
-        eapply eval_box_apps. admit. econstructor. eauto. eauto. econstructor. eauto.
+
+        assert (exists x5, Forall2 (EWcbvEval.eval Σ') x3 x5) as [x5]. {
+          assert (forall x n, nth_error args n = Some x -> ∑ T,  Σ;;; [] |- x : T).
+          { intros. eapply typing_spine_inv with (arg := n) in t0 as [].
+            2:{ eassumption. } eauto.
+          } 
+          clear - X2 H0 H5. revert X2 x3 H5; induction H0; intros.
+          ** inv H5. exists []; eauto.
+          ** inv H5. destruct (X2 x 0 eq_refl).
+             eapply r in t as (? & ? & ?); eauto.
+             eapply IHAll2 in H4 as (? & ?); eauto.
+             intros. eapply (X2 x2 (S n)). eassumption.
+        } 
+        
+        eapply eval_box_apps. eauto. econstructor. eauto. eauto. econstructor. eauto.
     + auto.
   - destruct Σ as (Σ, univs).
     unfold erases_global in Heg.
@@ -789,7 +862,24 @@ Proof.
       eapply eval_app_ind. eauto. eauto.
       eauto. destruct H1.
       exists tBox.
-      split. 2:{ eapply eval_box_apps. admit. now econstructor. }
+      split. 2:{
+
+         assert (exists x5, Forall2 (EWcbvEval.eval Σ') x7 x5) as [x8]. {
+          eapply All2_app_inv in H0 as ([] & ? & ?). destruct p.
+          clear a1. subst.
+          assert (forall x n, nth_error x6 n = Some x -> ∑ T,  Σ;;; [] |- x : T).
+          { intros. eapply typing_spine_inv with (arg := n + #|x5|) in t2 as [].
+            2:{ rewrite nth_error_app2. 2:omega. rewrite Nat.add_sub. eauto. }
+            eauto.
+          } 
+          clear - X2 a0 H3. revert X2 x7 H3; induction a0; intros.
+          ** inv H3. exists []; eauto.
+          ** inv H3. destruct (X2 x 0 eq_refl).
+             eapply r in t as (? & ? & ?); eauto.
+             eapply IHa0 in H4 as (? & ?); eauto.
+             intros. eapply (X2 x2 (S n)). eassumption.
+        }        
+        eapply eval_box_apps. eauto. now econstructor. }
       econstructor. eauto.
     + subst.
       eapply IHeval in H2 as (? & ? & ?).
@@ -797,7 +887,19 @@ Proof.
       exists tBox.
       split. econstructor.
       eauto.
-      eapply eval_box_apps; eauto. eauto. admit. (* econstructor. *) eauto. eauto. eauto. eauto.
+
+      assert (exists x5, Forall2 (EWcbvEval.eval Σ') x6 x5) as [x8]. {
+        assert (forall x n, nth_error l n = Some x -> ∑ T,  Σ;;; [] |- x : T).
+        { intros. eapply typing_spine_inv. eassumption. eauto.
+        } 
+        clear - X1 H0 H3. revert X1 x6 H3; induction H0; intros.
+        ** inv H3. exists []; eauto.
+        ** inv H3. destruct (X1 x 0 eq_refl).
+           eapply r in t as (? & ? & ?); eauto.
+           eapply IHAll2 in H5 as (? & ?); eauto.
+           intros. eapply (X1 x2 (S n)). eassumption.
+      } 
+      eapply eval_box_apps; eauto. eauto. eauto. eauto. eauto. 
     + auto.
   - inv He.
     + eexists. split; eauto. now econstructor.
@@ -824,7 +926,25 @@ Proof.
       eapply All2_impl. exact a. intros.
       eapply wcbeval_red; eauto. eauto. destruct H1.
       exists tBox.
-      split. 2:{ eapply eval_box_apps. admit. now econstructor. }
+      split. 2:{
+        eapply type_mkApps_inv in Hty' as (? & ? & [] & ?); eauto.
+        assert (exists x5, Forall2 (EWcbvEval.eval Σ') x1 x5) as [x8]. {
+          eapply All2_app_inv in H0 as ([] & ? & ?). destruct p.
+          clear a2. subst.
+          assert (forall x n, nth_error x0 n = Some x -> ∑ T,  Σ;;; [] |- x : T).
+          { intros. eapply typing_spine_inv with (arg := n + #|x|) in t0 as [].
+            2:{ rewrite nth_error_app2. 2:omega. rewrite Nat.add_sub. eauto. }
+            eauto.
+          } 
+          clear - X1 a1 H3. revert X1 x1 H3; induction a1; intros.
+          ** inv H3. exists []; eauto.
+          ** inv H3. destruct (X1 x 0 eq_refl).
+             eapply r in t as (? & ? & ?); eauto.
+             eapply IHa1 in H4 as (? & ?); eauto.
+             intros. eapply (X1 x2 (S n)). eassumption.
+        }        
+
+        eapply eval_box_apps. eauto. now econstructor. }
       eauto.
     + subst.
       eapply type_mkApps_inv in Hty' as (? & ? & [] & ?); eauto.

@@ -52,15 +52,27 @@ Inductive erases (Σ : global_env_ext) (Γ : context) : term -> E.term -> Prop :
                     Σ;;; Γ |- tConst kn u ⇝ℇ E.tConst kn
   | erases_tConstruct : forall (kn : inductive) (k : nat) (n : universe_instance),
                         Σ;;; Γ |- tConstruct kn k n ⇝ℇ E.tConstruct kn k
-  | erases_tCase1 : forall (ind : inductive) (npar : nat) (T c : term)
+  | erases_tCase_Comp : forall (ind : inductive) (npar : nat) (T c : term)
                       (brs : list (nat × term)) (c' : E.term) 
                       (brs' : list (nat × E.term)),
-                    Informative Σ ind ->
+                    Computational Σ ind ->
                     Σ;;; Γ |- c ⇝ℇ c' ->
                     All2
                       (fun (x : nat × term) (x' : nat × E.term) =>
                        Σ;;; Γ |- snd x ⇝ℇ snd x' × fst x = fst x') brs brs' ->
                     Σ;;; Γ |- tCase (ind, npar) T c brs ⇝ℇ E.tCase (ind, npar) c' brs'
+  | erases_tCase_Sing : forall (ind : inductive) (npar : nat) (T c : term)
+                      (brs : list (nat × term)) (c' : E.term) 
+                      (brs' : list (nat × E.term)) a b b',
+                    SingletonProp Σ ind ->
+                    isErasable Σ Γ c ->
+                    Σ ;;; Γ |- b ⇝ℇ b' ->
+                    Σ;;; Γ |- tCase (ind, npar) T c ((a, b) :: brs) ⇝ℇ E.mkApps b' (repeat E.tBox a)
+  | erases_tCase_Empty : forall (ind : inductive) (npar : nat) (T c : term)
+                           (c' : E.term),
+                    SingletonProp Σ ind ->
+                    Σ;;; Γ |- c ⇝ℇ c' ->
+                    Σ;;; Γ |- tCase (ind, npar) T c [] ⇝ℇ E.tCase (ind, npar) c' []
   | erases_tProj : forall (p : (inductive × nat) × nat) (c : term) (c' : E.term),
                    let ind := fst (fst p) in
                    Informative Σ ind ->

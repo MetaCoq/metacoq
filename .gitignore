@@ -264,3 +264,5 @@ checker/src/wf.mli
 /checker/Makefile.plugin
 /erasure/src/ssreflect.ml
 /erasure/src/ssreflect.mli
+/pcuic/src/PCUICInduction.ml
+/pcuic/src/PCUICInduction.mli

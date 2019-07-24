@@ -859,6 +859,59 @@ Proof.
   rewrite ebrtys'. autorewrite with sigma. reflexivity.
 Qed.
 
+(* TODO MOVE *)
+Lemma rename_closedn :
+  forall f n t,
+    closedn n t ->
+    rename (shiftn n f) t = t.
+Proof.
+  intros f n t e.
+  autorewrite with sigma.
+  erewrite <- inst_closed with (σ := ren f) by eassumption.
+  eapply inst_ext. intro i.
+  unfold ren, shiftn, Upn, subst_consn, subst_compose, shift, shiftk.
+  rewrite idsn_length.
+  destruct (Nat.ltb_spec i n).
+  - rewrite nth_error_idsn_Some. all: auto.
+  - rewrite nth_error_idsn_None. 1: lia.
+    simpl. reflexivity.
+Qed.
+
+(* TODO MOVE *)
+Lemma rename_closed :
+  forall f t,
+    closed t ->
+    rename f t = t.
+Proof.
+  intros f t h.
+  replace (rename f t) with (rename (shiftn 0 f) t).
+  - apply rename_closedn. assumption.
+  - autorewrite with sigma. eapply inst_ext. intro i.
+    unfold ren, shiftn. simpl.
+    f_equal. f_equal. lia.
+Qed.
+
+(* TODO MOVE *)
+Lemma declared_constant_closed_type :
+  forall Σ cst decl,
+    wf Σ ->
+    declared_constant Σ cst decl ->
+    closed decl.(cst_type).
+Proof.
+  intros Σ cst decl hΣ h.
+  unfold declared_constant in h.
+  eapply lookup_on_global_env in h. 2: eauto.
+  destruct h as [Σ' [wfΣ' decl']].
+  red in decl'. red in decl'.
+  destruct decl as [ty bo un]. simpl in *.
+  destruct bo as [t|].
+  - eapply typecheck_closed in decl' as [? e]. 2: auto. 2: constructor.
+    move/andP in e. destruct e. assumption.
+  - cbn in decl'. destruct decl' as [s h].
+    eapply typecheck_closed in h as [? e]. 2: auto. 2: constructor.
+    move/andP in e. destruct e. assumption.
+Qed.
+
 Lemma typing_rename :
   forall Σ Γ Δ f t A,
     wf Σ.1 ->
@@ -923,8 +976,8 @@ Proof.
     + constructor. all: eauto.
       destruct hf. assumption.
     + rewrite rename_subst_instance_constr. f_equal.
-      (* NEED closedness assumption *)
-      admit.
+      rewrite rename_closed. 2: auto.
+      eapply declared_constant_closed_type. all: eauto.
   - intros Σ wfΣ Γ wfΓ ind u mdecl idecl isdecl X X0 hconst Δ σ hf.
     simpl. eapply meta_conv.
     + econstructor. all: eauto.

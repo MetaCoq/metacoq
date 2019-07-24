@@ -950,6 +950,107 @@ Proof.
   move/andP in e. destruct e. assumption.
 Qed.
 
+(* TODO MOVE *)
+Lemma declared_inductive_closed_constructors :
+  forall Σ ind mdecl idecl,
+      wf Σ ->
+      declared_inductive Σ mdecl ind idecl ->
+      All (fun '(na, t, n) => closedn #|arities_context mdecl.(ind_bodies)| t)
+          idecl.(ind_ctors).
+Proof.
+  intros Σ ind mdecl idecl hΣ h.
+  unfold declared_inductive in h. destruct h as [hmdecl hidecl].
+  red in hmdecl.
+  eapply lookup_on_global_env in hmdecl. 2: eauto.
+  destruct hmdecl as [Σ' [wfΣ' decl']].
+  red in decl'. destruct decl' as [h ? ? ?].
+  eapply Alli_nth_error in h. 2: eassumption.
+  simpl in h. destruct h as [? ? ? ? h ? ?].
+  unfold on_constructors in h.
+  clear - h wfΣ'.
+  induction h.
+  - constructor.
+  - econstructor.
+    + destruct hd as [[? t] ?].
+      unfold on_constructor in p. cbn in p.
+      destruct p as [[? ht] ?].
+      eapply typecheck_closed in ht as [? e]. 2: auto.
+      2: eapply typing_wf_local ; eauto.
+      move/andP in e. destruct e. assumption.
+    + assumption.
+Qed.
+
+(* TODO MOVE *)
+Lemma All_nth_error :
+  forall A P l i x,
+    @All A P l ->
+    nth_error l i = Some x ->
+    P x.
+Proof.
+  intros A P l i x h e.
+  induction h in i, x, e |- *.
+  - destruct i. all: discriminate.
+  - destruct i.
+    + simpl in e. inversion e. subst. clear e.
+      assumption.
+    + simpl in e. eapply IHh in e.
+      assumption.
+Qed.
+
+(* TODO MOVE *)
+Lemma declared_minductive_closed_inds :
+  forall Σ ind mdecl u,
+    wf Σ ->
+    declared_minductive Σ (inductive_mind ind) mdecl ->
+    forallb (closedn 0) (inds (inductive_mind ind) u (ind_bodies mdecl)).
+Proof.
+  intros Σ ind mdecl u hΣ h.
+  red in h.
+  eapply lookup_on_global_env in h. 2: eauto.
+  destruct h as [Σ' [wfΣ' decl']].
+  red in decl'. destruct decl' as [h ? ? ?].
+  rewrite inds_spec. rewrite forallb_rev.
+  unfold mapi.
+  generalize 0 at 1. generalize 0. intros n m.
+  induction h in n, m |- *.
+  - reflexivity.
+  - simpl. eauto.
+Qed.
+
+(* TODO MOVE *)
+Lemma declared_inductive_closed_inds :
+  forall Σ ind mdecl idecl u,
+      wf Σ ->
+      declared_inductive Σ mdecl ind idecl ->
+      forallb (closedn 0) (inds (inductive_mind ind) u (ind_bodies mdecl)).
+Proof.
+  intros Σ ind mdecl idecl u hΣ h.
+  unfold declared_inductive in h. destruct h as [hmdecl hidecl].
+  eapply declared_minductive_closed_inds in hmdecl. all: eauto.
+Qed.
+
+(* TODO MOVE *)
+Lemma declared_constructor_closed_type :
+  forall Σ mdecl idecl c cdecl u,
+    wf Σ ->
+    declared_constructor Σ mdecl idecl c cdecl ->
+    closed (type_of_constructor mdecl cdecl c u).
+Proof.
+  intros Σ mdecl idecl c cdecl u hΣ h.
+  unfold declared_constructor in h.
+  destruct c as [i ci]. simpl in h. destruct h as [hidecl hcdecl].
+  eapply declared_inductive_closed_constructors in hidecl as h. 2: auto.
+  unfold type_of_constructor. simpl.
+  destruct cdecl as [[id t'] arity]. simpl.
+  destruct idecl as [na ty ke ct pr]. simpl in *.
+  eapply All_nth_error in h. 2: eassumption.
+  simpl in h.
+  eapply closedn_subst0.
+  - eapply declared_inductive_closed_inds. all: eauto.
+  - simpl. rewrite inds_length. rewrite arities_context_length in h.
+    rewrite closedn_subst_instance_constr. assumption.
+Qed.
+
 Lemma typing_rename :
   forall Σ Γ Δ f t A,
     wf Σ.1 ->
@@ -1026,10 +1127,8 @@ Proof.
   - intros Σ wfΣ Γ wfΓ ind i u mdecl idecl cdecl isdecl X X0 hconst Δ f hf.
     simpl. eapply meta_conv.
     + econstructor. all: eauto. destruct hf. assumption.
-    + unfold type_of_constructor.
-      (* autorewrite with sigma. simpl. *)
-      (* Probably some closedness as well. *)
-      admit.
+    + rewrite rename_closed. 2: reflexivity.
+      eapply declared_constructor_closed_type. all: eauto.
   - intros Σ wfΣ Γ wfΓ ind u npar p c brs args mdecl idecl isdecl X X0 e pars
            pty hp indctx pctx ps btys htoc hca hel ihp hc ihc hbrs Δ f hf.
     simpl.

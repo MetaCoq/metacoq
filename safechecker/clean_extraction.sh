@@ -11,7 +11,7 @@ fi
 
 shopt -s nullglob # make the for loop do nothnig when there is no *.ml* files
 
-files=`cat ../template-coq/_PluginProject ../checker/_PluginProject.in ../pcuic/_PluginProject.in | grep "^[^#].*mli\?$" | $SED -e s/gen-src/src/`
+files=`cat ../template-coq/_PluginProject | grep "^[^#].*mli\?$" | $SED -e s/gen-src/src/`
 
 cd src
 

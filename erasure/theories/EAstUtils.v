@@ -1,6 +1,6 @@
 From Coq Require Import Ascii String Bool OrderedType Lia List Program Arith.
 From MetaCoq.Template Require Import utils Ast.
-From MetaCoq.Extraction Require Import EAst.
+From MetaCoq.Erasure Require Import EAst.
 Import List.ListNotations.
 Require Import FunctionalExtensionality.
 Require Import ssreflect ssrbool.

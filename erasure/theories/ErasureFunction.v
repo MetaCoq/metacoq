@@ -7,7 +7,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICConfluence PCUICCumulativity PCUICSR PCUICNormal PCUICSafeLemmata
      PCUICValidity PCUICPrincipality PCUICElimination PCUICSN.
 From MetaCoq.SafeChecker Require Import PCUICSafeReduce PCUICSafeChecker.
-From MetaCoq.Extraction Require EAst ELiftSubst ETyping EWcbvEval Extract ExtractionCorrectness.
+From MetaCoq.Erasure Require EAst ELiftSubst ETyping EWcbvEval Extract ErasureCorrectness.
 From Equations Require Import Equations.
 Require Import String.
 Local Open Scope string_scope.
@@ -373,7 +373,7 @@ Section Erase.
 
 End Erase.
 
-Require Import ExtractionCorrectness.
+Require Import ErasureCorrectness.
 
 Lemma erases_erase (Σ : global_env_ext) Γ t T (wfΣ : ∥wf_ext Σ∥) (wfΓ : ∥wf_local Σ Γ∥) t' :
   Σ ;;; Γ |- t : T ->

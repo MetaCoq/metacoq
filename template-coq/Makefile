@@ -1,3 +1,5 @@
+SED = `which gsed || which sed`
+
 all: coq template-coq plugin
 
 coq: Makefile.coq
@@ -8,8 +10,7 @@ template-coq: coq Makefile.template
 # Force building the ML code before the .v's requiring them.
 	$(MAKE) -f Makefile.template optfiles
 	cp src/template_coq.cm* build/
-	$(MAKE) -f Makefile.template theories/Loader.vo
-	$(MAKE) -f Makefile.template theories/All.vo
+	$(MAKE) -f Makefile.template
 
 # The extractable template plugin to run *extracted* template programs in OCaml
 # The sources of the plugin are built by the coq target, which calls the
@@ -45,8 +46,10 @@ Makefile.plugin: _PluginProject
 
 Makefile.template: _TemplateCoqProject
 	coq_makefile -f _TemplateCoqProject -o Makefile.template
+# Avoid conflicting dependency file creation for the template plugin
+	$(SED) -e s/coqdeps/coqdeps.template/g -i Makefile.template
 
-x.merlin: Makefile.coq
+.merlin: Makefile.coq
 	$(MAKE) -f Makefile.coq .merlin
 
 TOCOPY=ast_denoter.ml ast_quoter.ml denote.ml denoter.ml plugin_core.ml plugin_core.mli quoted.ml quoter.ml run_extractable.ml run_extractable.mli tm_util.ml

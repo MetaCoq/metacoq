@@ -1,6 +1,6 @@
-(** Extraction setup for the extraction phase of template-coq.
+(** Extraction setup for the erasure phase of template-coq.
 
-    Any extracted code planning to link with the plugin's OCaml reifier
+    Any extracted code planning to link with the plugin
     should use these same directives for consistency.
 *)
 
@@ -16,7 +16,7 @@ Extraction Blacklist config uGraph Universes Ast String List Nat UnivSubst
            LiftSubst Induction Typing Retyping Checker.
 Set Warnings "-extraction-opaque-accessed".
 
-From MetaCoq.Extraction Require Import EAst EAstUtils EInduction ELiftSubst ETyping Extract.
+From MetaCoq.Erasure Require Import EAst EAstUtils EInduction ELiftSubst ETyping Extract ErasureFunction.
 
 Extraction Library ssreflect.
 Extraction Library EAst.
@@ -25,3 +25,4 @@ Extraction Library EInduction.
 Extraction Library ELiftSubst.
 Extraction Library ETyping.
 Extraction Library Extract.
+Extraction Library ErasureFunction.

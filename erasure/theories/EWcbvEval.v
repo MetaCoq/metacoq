@@ -4,7 +4,7 @@ Set Warnings "-notation-overridden".
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
 From MetaCoq.Template Require Import config utils Ast.
 From MetaCoq.PCUIC Require Import PCUICAstUtils.
-From MetaCoq.Extraction Require Import EAst EAstUtils EInduction ELiftSubst ETyping.
+From MetaCoq.Erasure Require Import EAst EAstUtils EInduction ELiftSubst ETyping.
 From MetaCoq.Template Require AstUtils.
 
 Set Asymmetric Patterns.
@@ -205,17 +205,6 @@ Section Wcbv.
     constructor; auto.
     rewrite -[tApp _ _](mkApps_app _ (firstn n l) [a']).
     constructor 2; auto. eapply app_Forall; auto. auto.
-  Qed.
-
-  Lemma Forall2_app_r {A} (P : A -> A -> Prop) l l' r r' : Forall2 P (l ++ [r]) (l' ++ [r']) ->
-                                                           (Forall2 P l l') * (P r r').
-  Proof.
-    induction l in l', r |- *. simpl. intros. destruct l'. simpl in *.
-    depelim H; intuition auto.
-    depelim H. destruct l'; depelim H0.
-    intros.
-    depelim l'; depelim H. destruct l; depelim H0.
-    specialize (IHl _ _ H0). intuition auto.
   Qed.
 
   Lemma value_final e : value e -> eval e e.

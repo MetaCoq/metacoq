@@ -4,7 +4,7 @@ From MetaCoq.Template Require Import config utils monad_utils BasicAst AstUtils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICTyping PCUICMetaTheory PCUICWcbvEval PCUICLiftSubst PCUICInversion PCUICSR PCUICNormal PCUICSafeLemmata PCUICPrincipality PCUICGeneration PCUICSubstitution PCUICElimination PCUICEquality PCUICContextConversion PCUICConversion.
 From MetaCoq.SafeChecker Require Import PCUICSafeReduce PCUICSafeChecker.
 
-From MetaCoq.Extraction Require EAst ELiftSubst ETyping EWcbvEval Extract.
+From MetaCoq.Erasure Require EAst ELiftSubst ETyping EWcbvEval Extract.
 From Equations Require Import Equations.
 Require Import String.
 Local Open Scope string_scope.

@@ -1,4 +1,4 @@
--R theories MetaCoq.Extraction
+-R theories MetaCoq.Erasure
 
 theories/EAst.v
 theories/EAstUtils.v
@@ -14,5 +14,5 @@ theories/Prelim.v
 theories/ESubstitution.v
 theories/EInversion.v
 theories/EArities.v
-theories/ExtractionCorrectness.v
+theories/ErasureCorrectness.v
 theories/ErasureFunction.v

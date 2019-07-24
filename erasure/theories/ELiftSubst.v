@@ -2,7 +2,7 @@
 
 From Coq Require Import List Program BinPos Arith.Compare_dec Bool Lia.
 From MetaCoq.Template Require Import Ast AstUtils utils.
-From MetaCoq.Extraction Require Import EAst EInduction.
+From MetaCoq.Erasure Require Import EAst EInduction.
 
 
 (** * Lifting and substitution for the AST

@@ -1572,6 +1572,16 @@ Qed.
 Lemma Forall2_length {A B} {P : A -> B -> Prop} {l l'} : Forall2 P l l' -> #|l| = #|l'|.
 Proof. induction 1; simpl; auto. Qed.
 
+Lemma Forall2_app_r {A} (P : A -> A -> Prop) l l' r r' : Forall2 P (l ++ [r]) (l' ++ [r']) ->
+                                                         (Forall2 P l l') /\ (P r r').
+Proof.
+  induction l in l', r |- *. simpl. intros. destruct l'. simpl in *.
+  depelim H; intuition auto.
+  depelim H. destruct l'; depelim H0.
+  intros.
+  depelim l'; depelim H. destruct l; depelim H0.
+  specialize (IHl _ _ H0). intuition auto.
+Qed.
 
 Lemma All2_app_inv : forall (A B : Type) (R : A -> B -> Type),
     forall l l1 l2, All2 R (l1 ++ l2) l -> { '(l1',l2') : _ & (l = l1' ++ l2')%list * (All2 R l1 l1') * (All2 R l2 l2')}%type.

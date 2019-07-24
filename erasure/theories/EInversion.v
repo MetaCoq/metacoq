@@ -5,7 +5,7 @@ From MetaCoq.Template Require Import config utils monad_utils BasicAst AstUtils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICTyping
      PCUICWeakening PCUICSubstitution PCUICChecker PCUICRetyping PCUICMetaTheory
      PCUICWcbvEval PCUICSR PCUICValidity.
-From MetaCoq.Extraction Require Import EAst EAstUtils ELiftSubst ETyping EWcbvEval Extract Prelim.
+From MetaCoq.Erasure Require Import EAst EAstUtils ELiftSubst ETyping EWcbvEval Extract Prelim.
 
 From Equations Require Import Equations.
 

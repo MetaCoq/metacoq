@@ -6,16 +6,13 @@ From MetaCoq.Template Require Import config utils Ast.
 From MetaCoq.PCUIC Require Import PCUICAstUtils.
 From MetaCoq.Extraction Require Import EAst EAstUtils EInduction ELiftSubst ETyping.
 From MetaCoq.Template Require AstUtils.
-Require Import String.
-Local Open Scope string_scope.
+
 Set Asymmetric Patterns.
 Require Import ssreflect ssrbool.
 
-Existing Instance config.default_checker_flags.
-
 Local Ltac inv H := inversion H; subst.
 
-(** * Weak (head) call-by-value evaluation strategy.
+(** * Weak-head call-by-value evaluation strategy.
 
   The [wcbveval] inductive relation specifies weak cbv evaluation.  It
   is shown to be a subrelation of the 1-step reduction relation from

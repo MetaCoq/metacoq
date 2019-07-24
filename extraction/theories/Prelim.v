@@ -2,7 +2,7 @@
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
 From MetaCoq.Template Require Import config utils monad_utils BasicAst AstUtils.
-From MetaCoq.Extraction Require Import EAst ELiftSubst Extract EArities.
+From MetaCoq.Extraction Require Import EAst EAstUtils ELiftSubst Extract EArities.
 From MetaCoq.PCUIC Require Import PCUICTyping PCUICAst PCUICAstUtils PCUICInduction
      PCUICWeakening PCUICSubstitution PCUICRetyping PCUICMetaTheory
      PCUICWcbvEval PCUICSR  PCUICClosed PCUICInversion PCUICGeneration
@@ -251,7 +251,7 @@ Proof.
   - destruct L using rev_ind.
     reflexivity.
     rewrite emkApps_snoc in H. inv H.
-  - destruct (Ee.mkApps_elim t l). Ee.solve_discr.
+  - destruct (mkApps_elim t l). solve_discr.
     rewrite Ee.value_head_spec in H.
     eapply andP in H. destruct H.
     eapply Ee.atom_mkApps in H1 as [H1 _].

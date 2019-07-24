@@ -2,16 +2,17 @@
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega Lia.
 From MetaCoq.Template Require Import config utils monad_utils BasicAst AstUtils.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICTyping PCUICWeakening PCUICSubstitution PCUICChecker PCUICRetyping PCUICMetaTheory PCUICWcbvEval PCUICSR PCUICValidity.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICTyping
+     PCUICWeakening PCUICSubstitution PCUICChecker PCUICRetyping PCUICMetaTheory
+     PCUICWcbvEval PCUICSR PCUICValidity.
+From MetaCoq.Extraction Require Import EAst EAstUtils ELiftSubst ETyping EWcbvEval Extract Prelim.
 
 From Equations Require Import Equations.
-Require Import String.
+
 Local Open Scope list_scope.
 Set Asymmetric Patterns.
 Import MonadNotation.
 
-
-Existing Instance config.default_checker_flags.
 Module PA := PCUICAst.
 Module P := PCUICWcbvEval.
 
@@ -45,8 +46,6 @@ Qed.
 
 Notation type_Construct_inv := PCUICInversion.inversion_Construct.
 Notation type_tFix_inv := PCUICInversion.inversion_Fix.
-
-From MetaCoq.Extraction Require Import EAst ELiftSubst ETyping EWcbvEval Extract Prelim.
 
 Derive Signature for Forall2.
 Lemma eval_box_apps:

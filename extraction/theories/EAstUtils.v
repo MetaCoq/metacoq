@@ -189,7 +189,7 @@ Lemma mkApps_eq_inj {t t' l l'} :
 Proof.
   intros Happ Ht Ht'. eapply (f_equal decompose_app) in Happ. unfold decompose_app in Happ.
   rewrite !decompose_app_rec_mkApps in Happ. rewrite !nApp_decompose_app in Happ; auto.
-  now rewrite !app_nil_r in Happ.
+  rewrite !app_nil_r in Happ. intuition congruence.
 Qed.
 
 Ltac solve_discr :=

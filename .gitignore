@@ -262,3 +262,5 @@ checker/src/wf.mli
 /checker/_PluginProject
 /checker/Makefile.plugin.conf
 /checker/Makefile.plugin
+/extraction/src/ssreflect.ml
+/extraction/src/ssreflect.mli

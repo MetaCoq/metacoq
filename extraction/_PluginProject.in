@@ -1,6 +1,8 @@
 -I src
 -R theories MetaCoq.Extraction
 
+src/ssreflect.mli
+src/ssreflect.ml
 src/eAst.ml
 src/eAst.mli
 src/eAstUtils.ml

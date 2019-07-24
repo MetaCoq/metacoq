@@ -18,6 +18,7 @@ Set Warnings "-extraction-opaque-accessed".
 
 From MetaCoq.Extraction Require Import EAst EAstUtils EInduction ELiftSubst ETyping Extract.
 
+Extraction Library ssreflect.
 Extraction Library EAst.
 Extraction Library EAstUtils.
 Extraction Library EInduction.

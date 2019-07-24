@@ -912,6 +912,44 @@ Proof.
     move/andP in e. destruct e. assumption.
 Qed.
 
+(* TODO MOVE *)
+Lemma Alli_nth_error :
+  forall A P k l i x,
+    @Alli A P k l ->
+    nth_error l i = Some x ->
+    P (k + i) x.
+Proof.
+  intros A P k l i x h e.
+  induction h in i, x, e |- *.
+  - destruct i. all: discriminate.
+  - destruct i.
+    + simpl in e. inversion e. subst. clear e.
+      replace (n + 0) with n by lia.
+      assumption.
+    + simpl in e. eapply IHh in e.
+      replace (n + S i) with (S n + i) by lia.
+      assumption.
+Qed.
+
+(* TODO MOVE *)
+Lemma declared_inductive_closed_type :
+  forall Σ mdecl ind idecl,
+    wf Σ ->
+    declared_inductive Σ mdecl ind idecl ->
+    closed idecl.(ind_type).
+Proof.
+  intros Σ mdecl ind idecl hΣ h.
+  unfold declared_inductive in h. destruct h as [h1 h2].
+  unfold declared_minductive in h1.
+  eapply lookup_on_global_env in h1. 2: eauto.
+  destruct h1 as [Σ' [wfΣ' decl']].
+  red in decl'. destruct decl' as [h ? ? ?].
+  eapply Alli_nth_error in h. 2: eassumption.
+  simpl in h. destruct h as [? ? ? [? h] ? ? ?].
+  eapply typecheck_closed in h as [? e]. 2: auto. 2: constructor.
+  move/andP in e. destruct e. assumption.
+Qed.
+
 Lemma typing_rename :
   forall Σ Γ Δ f t A,
     wf Σ.1 ->
@@ -983,8 +1021,8 @@ Proof.
     + econstructor. all: eauto.
       destruct hf. assumption.
     + rewrite rename_subst_instance_constr. f_equal.
-      (* NEED closedness assumption *)
-      admit.
+      rewrite rename_closed. 2: auto.
+      eapply declared_inductive_closed_type. all: eauto.
   - intros Σ wfΣ Γ wfΓ ind i u mdecl idecl cdecl isdecl X X0 hconst Δ f hf.
     simpl. eapply meta_conv.
     + econstructor. all: eauto. destruct hf. assumption.

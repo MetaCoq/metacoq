@@ -14,8 +14,6 @@ Local Open Scope string_scope.
 Set Asymmetric Patterns.
 Import MonadNotation.
 
-Module E := EAst.
-
 Require Import Lia.
 
 Module PA := PCUICAst.
@@ -280,7 +278,7 @@ Lemma erases_App (Σ : global_env_ext) Γ f L T t :
   Σ ;;; Γ |- tApp f L : T ->
   erases Σ Γ (tApp f L) t ->
   (t = tBox × squash (isErasable Σ Γ (tApp f L)))
-  \/ exists f' L', t = E.tApp f' L' /\
+  \/ exists f' L', t = EAst.tApp f' L' /\
              erases Σ Γ f f' /\
              erases Σ Γ L L'.
 Proof.
@@ -294,7 +292,7 @@ Qed.
 Lemma erases_mkApps (Σ : global_env_ext) Γ f f' L L' :
   erases Σ Γ f f' ->
   Forall2 (erases Σ Γ) L L' ->
-  erases Σ Γ (mkApps f L) (E.mkApps f' L').
+  erases Σ Γ (mkApps f L) (EAst.mkApps f' L').
 Proof.
   intros. revert f f' H; induction H0; cbn; intros; eauto.
   eapply IHForall2. econstructor. eauto. eauto.
@@ -308,9 +306,9 @@ Lemma erases_mkApps_inv (Σ : global_env_ext) Γ f L T t :
                 squash (isErasable Σ Γ (mkApps f L1)) /\
                 erases Σ Γ (mkApps f L1) tBox /\
                 Forall2 (erases Σ Γ) L2 L2' /\
-                t = E.mkApps tBox L2'
+                t = EAst.mkApps tBox L2'
   )
-  \/ exists f' L', t = E.mkApps f' L' /\
+  \/ exists f' L', t = EAst.mkApps f' L' /\
              erases Σ Γ f f' /\
              Forall2 (erases Σ Γ) L L'.
 Proof.
@@ -334,7 +332,7 @@ Lemma lookup_env_erases (Σ : global_env_ext) c decl Σ' :
   wf Σ ->
   erases_global Σ Σ' ->
   PCUICTyping.lookup_env (fst Σ) c = Some (ConstantDecl c decl) ->
-  exists decl', ETyping.lookup_env Σ' c = Some (E.ConstantDecl c decl') /\
+  exists decl', ETyping.lookup_env Σ' c = Some (EAst.ConstantDecl c decl') /\
            erases_constant_body (Σ.1, cst_universes decl)  decl decl'.
 Proof.
   unfold erases_global. destruct Σ; simpl.
@@ -680,8 +678,8 @@ Proof.
               (*    rewrite H. *)
 
               (*    unfold isConstruct_app in H8. *)
-              (*    destruct (decompose_app t) eqn:EE. *)
-              (*    assert (E2 : fst (decompose_app t) = t1) by now rewrite EE. *)
+              (*    destruct (decompose_app t) eqn:EEAst. *)
+              (*    assert (E2 : fst (decompose_app t) = t1) by now rewrite EEAst. *)
               (*    destruct t1. *)
               (*    all:inv H8. *)
               (*    (* erewrite <- PCUICConfluence.fst_decompose_app_rec in E2. *) *)
@@ -952,7 +950,7 @@ Proof.
       enough (exists l'', Forall2 (erases Σ []) l' l'' /\ Forall2 (Ee.eval Σ') x0 l'').
       * destruct H4 as [l''].
         inv H1.
-        -- exists (E.mkApps (E.tConstruct i k) l''). split.
+        -- exists (EAst.mkApps (EAst.tConstruct i k) l''). split.
            eapply erases_mkApps; eauto.
            firstorder. eapply Ee.eval_mkApps_cong; eauto. firstorder.
         -- eapply Is_type_app in X0 as []; eauto. exists tBox.

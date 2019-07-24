@@ -4,4 +4,4 @@ theories/PCUICSafeReduce.v
 theories/PCUICSafeConversion.v
 theories/PCUICSafeChecker.v
 
-# theories/Extraction.v
+theories/Extraction.v

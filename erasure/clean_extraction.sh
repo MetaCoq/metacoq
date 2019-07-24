@@ -1,5 +1,7 @@
 #env /bin/sh
 
+SED=`which gsed || which sed`
+
 echo "Cleaning result of extraction"
 
 if [ ! -d "src" ]
@@ -18,7 +20,11 @@ for i in *.ml*
   mv $i $newi;
 done
 
-# Remove extracted modules already linked in template_coq_plugin.
-cd src
-rm -f ast0.* specif.* peanoNat.* list0.* datatypes.* decimal.* ascii.* universes0.* binPosDef.* binPos.* binNat.* binNums.* binInt.* binIntDef.* bool.* nat0.* string0.* basics.* liftSubst.*
+files=`cat ../template-coq/_PluginProject ../checker/_PluginProject.in ../safechecker/_PluginProject.in ../pcuic/_PluginProject.in | grep "^[^#].*mli\?$" | $SED -e s/gen-src/src/`
+
+# Remove extracted modules already linked in template_coq_plugin, checker, safechecker or pcuic.
+echo "Removing:" $files
+
+rm -f $files
+
 cd ..

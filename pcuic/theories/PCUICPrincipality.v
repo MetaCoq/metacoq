@@ -359,10 +359,10 @@ Section Principality.
 
   Lemma cumul_sort_confluence {Γ A u v} :
     Σ ;;; Γ |- A <= tSort u ->
-               Σ ;;; Γ |- A <= tSort v ->
-                          ∑ v', (Σ ;;; Γ |- A == tSort v') *
-                                (leq_universe (global_ext_constraints Σ) v' u *
-                                 leq_universe (global_ext_constraints Σ) v' v).
+    Σ ;;; Γ |- A <= tSort v ->
+    ∑ v', (Σ ;;; Γ |- A == tSort v') *
+          (leq_universe (global_ext_constraints Σ) v' u /\
+           leq_universe (global_ext_constraints Σ) v' v).
   Proof.
     move=> H H'.
     eapply invert_cumul_sort_r in H as [u'u ?].

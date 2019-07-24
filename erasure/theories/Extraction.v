@@ -18,11 +18,13 @@ Set Warnings "-extraction-opaque-accessed".
 
 From MetaCoq.Erasure Require Import EAst EAstUtils EInduction ELiftSubst ETyping Extract ErasureFunction.
 
-Extraction Library ssreflect.
-Extraction Library EAst.
-Extraction Library EAstUtils.
-Extraction Library EInduction.
-Extraction Library ELiftSubst.
-Extraction Library ETyping.
-Extraction Library Extract.
-Extraction Library ErasureFunction.
+(* Extraction Library ssreflect. *)
+(* Extraction Library EAst. *)
+(* Extraction Library EAstUtils. *)
+(* Extraction Library EInduction. *)
+(* Extraction Library ELiftSubst. *)
+(* Extraction Library ETyping. *)
+(* Extraction Library Extract. *)
+(* Extraction Library ErasureFunction. *)
+
+Separate Extraction ErasureFunction.erase.

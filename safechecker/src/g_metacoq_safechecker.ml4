@@ -15,7 +15,7 @@ let check env evm c =
   let term = Ast_quoter.quote_term_rec env (EConstr.to_constr evm c) in
   (* Feedback.msg_debug (str"Finished quoting.. checking."); *)
   let checker_flags = Config0.default_checker_flags in
-  match SafeChecker0.typecheck_program checker_flags term with
+  match PCUICSafeChecker.typecheck_program checker_flags term with
   | CorrectDecl t ->
      Feedback.msg_info (str "Successfully checked of type: " ++ pr_char_list (Checker0.string_of_term t))
   | EnvError (AlreadyDeclared id) ->

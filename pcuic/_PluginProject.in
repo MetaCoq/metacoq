@@ -6,10 +6,16 @@ src/classes0.mli
 src/classes0.ml
 src/signature.mli
 src/signature.ml
+# src/logic1.mli
+# src/logic1.ml
 
 # From Coq
 src/cRelationClasses.mli
 src/cRelationClasses.ml
+# src/relation.mli
+# src/relation.ml
+# src/relation_Properties.mli
+# src/relation_Properties.ml
 
 src/pCUICAst.ml
 src/pCUICAst.mli
@@ -19,14 +25,16 @@ src/pCUICLiftSubst.ml
 src/pCUICLiftSubst.mli
 # src/eqDecInstances.ml
 # src/eqDecInstances.mli
+src/pCUICInduction.mli
+src/pCUICInduction.ml
 # src/pCUICReflect.mli
 # src/pCUICReflect.ml
+# src/pCUICEquality.mli
+# src/pCUICEquality.ml
 src/pCUICTyping.ml
 src/pCUICTyping.mli
 src/pCUICUnivSubst.ml
 src/pCUICUnivSubst.mli
-# src/pCUICInduction.mli
-# src/pCUICInduction.ml
 # src/pCUICWeakeningEnv.ml
 # src/pCUICWeakeningEnv.mli
 # src/pCUICWeakening.mli
@@ -47,6 +55,14 @@ src/pCUICRetyping.ml
 src/pCUICRetyping.mli
 src/pCUICMetaTheory.ml
 src/pCUICMetaTheory.mli
+# src/pCUICNameless.mli
+# src/pCUICNameless.ml
+# src/pCUICGeneration.mli
+# src/pCUICGeneration.ml
+# src/pCUICContextConversion.mli
+# src/pCUICContextConversion.ml
+# src/pCUICConversion.mli
+# src/pCUICConversion.ml
 # src/pCUICSafeLemmata.mli
 # src/pCUICSafeLemmata.ml
 src/templateToPCUIC.mli

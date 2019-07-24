@@ -363,19 +363,36 @@ Section Conversion.
     destruct s ; assumption.
   Defined.
 
+  (* Definition Ret s Γ t π π' := *)
+  (*   match s with *)
+  (*   | Reduction t' => *)
+  (*     forall leq, { b : bool | if b then conv leq Σ Γ (zippx t π) (zippx t' π') else True } *)
+  (*   | Fallback t' *)
+  (*   | Term t' => *)
+  (*     forall leq, *)
+  (*       isred (t, π) -> *)
+  (*       isred (t', π') -> *)
+  (*       { b : bool | if b then conv leq Σ Γ (zippx t π) (zippx t' π') else True } *)
+  (*   | Args => *)
+  (*     { b : bool | if b then ∥ Σ ;;; Γ |- zippx t π == zippx t π' ∥ else True } *)
+  (*   end. *)
+
   Definition Ret s Γ t π π' :=
-    match s with
-    | Reduction t' =>
-      forall leq, { b : bool | if b then conv leq Σ Γ (zippx t π) (zippx t' π') else True }
-    | Fallback t'
-    | Term t' =>
-      forall leq,
-        isred (t, π) ->
-        isred (t', π') ->
-        { b : bool | if b then conv leq Σ Γ (zippx t π) (zippx t' π') else True }
-    | Args =>
-      { b : bool | if b then ∥ Σ ;;; Γ |- zippx t π == zippx t π' ∥ else True }
-    end.
+    forall (leq : match s with Args => unit | _ => conv_pb end),
+      (match s with Fallback t' | Term t' => isred (t, π) | _ => True end) ->
+      (match s with Fallback t' | Term t' => isred (t', π') | _ => True end) ->
+      { b : bool | match s
+                return forall (leq : match s with Args => unit | _ => conv_pb end), Prop
+                with
+                | Reduction t' => fun leq =>
+                  if b then conv leq Σ Γ (zippx t π) (zippx t' π') else True
+                | Fallback t'
+                | Term t' => fun leq =>
+                  if b then conv leq Σ Γ (zippx t π) (zippx t' π') else True
+                | Args => fun _ =>
+                  if b then ∥ Σ ;;; Γ |- zippx t π == zippx t π' ∥ else True
+                end leq
+      }.
 
   Definition Aux s Γ t π1 π2 h2 :=
      forall s' Γ' t' π1' π2'
@@ -391,11 +408,11 @@ Section Conversion.
   Notation repack e := (let '(exist b h) := e in exist b _) (only parsing).
 
   Notation isconv_red_raw Γ leq t1 π1 t2 π2 aux :=
-    (aux (Reduction t2) Γ t1 π1 π2 _ _ _ leq) (only parsing).
+    (aux (Reduction t2) Γ t1 π1 π2 _ _ _ leq I I) (only parsing).
   Notation isconv_prog_raw Γ leq t1 π1 t2 π2 aux :=
     (aux (Term t2) Γ t1 π1 π2 _ _ _ leq _ _) (only parsing).
   Notation isconv_args_raw Γ t π1 π2 aux :=
-    (aux Args Γ t π1 π2 _ _ _) (only parsing).
+    (aux Args Γ t π1 π2 _ _ _ tt I I) (only parsing).
   Notation isconv_fallback_raw Γ leq t1 π1 t2 π2 aux :=
     (aux (Fallback t2) Γ t1 π1 π2 _ _ _ leq _ _) (only parsing).
 
@@ -1102,7 +1119,7 @@ Section Conversion.
     constructor.
   Qed.
   Next Obligation.
-    destruct h. destruct hΣ. now eapply conv_conv_l.
+    destruct h. destruct hΣ. eapply conv_conv_l. all: auto.
   Qed.
   Next Obligation.
     eapply red_wellformed ; auto.
@@ -1858,7 +1875,7 @@ Section Conversion.
             (aux : Aux' Γ t args l1 π1 (appstack l2 π2) h2)
     : { b : bool | if b then ∥ Σ ;;; Γ |- zippx (mkApps t args) (appstack l1 π1) == zippx (mkApps t args) (appstack l2 π2) ∥ else True } by struct l1 :=
     _isconv_args' Γ t args (u1 :: l1) π1 h1 (u2 :: l2) π2 h2 aux
-    with aux u1 u2 args l1 (coApp (mkApps t args) (appstack l2 π2)) _ _ _ _ Conv := {
+    with aux u1 u2 args l1 (coApp (mkApps t args) (appstack l2 π2)) _ _ _ _ Conv I I := {
     | @exist true H1 with _isconv_args' Γ t (args ++ [u1]) l1 π1 _ l2 π2 _ _ := {
       | @exist true H2 := yes ;
       | @exist false _ := no
@@ -1930,8 +1947,7 @@ Section Conversion.
   Next Obligation.
     simpl in H0. destruct H0 as [eq hp].
     rewrite app_length in H. cbn in H.
-    eapply aux.
-    - assumption.
+    eapply aux. all: auto.
     - cbn. omega.
     - instantiate (1 := h2'). simpl. split.
       + rewrite <- mkApps_nested in eq. assumption.
@@ -2005,13 +2021,12 @@ Section Conversion.
   Qed.
   Next Obligation.
     specialize (aux (Reduction u2)) as h. cbn in h.
-    eapply h.
-    - assumption.
-    - pose proof (decompose_stack_eq _ _ _ (eq_sym eq1)). subst.
-      instantiate (1 := h2').
-      simpl in H0. destruct H0 as [eq hp].
-      unshelve eapply R_positionR ; try assumption.
-      simpl. f_equal. assumption.
+    eapply h. all: auto.
+    pose proof (decompose_stack_eq _ _ _ (eq_sym eq1)). subst.
+    instantiate (1 := h2').
+    simpl in H0. destruct H0 as [eq hp].
+    unshelve eapply R_positionR ; try assumption.
+    simpl. f_equal. assumption.
   Qed.
   Next Obligation.
     pose proof (decompose_stack_eq _ _ _ (eq_sym eq1)). subst.
@@ -2548,13 +2563,13 @@ Section Conversion.
             (aux : Aux s Γ t π1 π2 h2)
   : Ret s Γ t π1 π2 :=
     _isconv (Reduction t2) Γ t1 π1 h1 π2 h2 aux :=
-      λ { | leq := _isconv_red Γ leq t1 π1 h1 t2 π2 h2 aux } ;
+      λ { | leq | _ | _ := _isconv_red Γ leq t1 π1 h1 t2 π2 h2 aux } ;
 
     _isconv (Term t2) Γ t1 π1 h1 π2 h2 aux :=
       λ { | leq | r1 | r2 := _isconv_prog Γ leq t1 π1 h1 t2 π2 h2 r1 r2 aux } ;
 
     _isconv Args Γ t π1 h1 π2 h2 aux :=
-        _isconv_args Γ t π1 h1 π2 h2 aux ;
+      λ { | _ | _ | _ := _isconv_args Γ t π1 h1 π2 h2 aux } ;
 
     _isconv (Fallback t2) Γ t1 π1 h1 π2 h2 aux :=
       λ { | leq | r1 | r2 := _isconv_fallback Γ leq t1 π1 h1 t2 π2 h2 r1 r2 aux }.
@@ -2588,7 +2603,7 @@ Section Conversion.
   Qed.
 
   Definition isconv Γ leq t1 π1 h1 t2 π2 h2 :=
-    let '(exist b _) := isconv_full (Reduction t2) Γ t1 π1 h1 π2 h2 leq in b.
+    let '(exist b _) := isconv_full (Reduction t2) Γ t1 π1 h1 π2 h2 leq I I in b.
 
   Theorem isconv_sound :
     forall Γ leq t1 π1 h1 t2 π2 h2,

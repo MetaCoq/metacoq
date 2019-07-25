@@ -1073,6 +1073,27 @@ Proof.
     f_equal. lia.
 Qed.
 
+Lemma declared_projection_closed_type :
+  forall Σ mdecl idecl p pdecl,
+    wf Σ ->
+    declared_projection Σ mdecl idecl p pdecl ->
+    closedn (S (ind_npars mdecl)) pdecl.2.
+Proof.
+  intros Σ mdecl idecl p pdecl hΣ [[hmdecl hidecl] [hpdecl hnpar]].
+  eapply declared_decl_closed in hmdecl. 2: auto.
+  simpl in hmdecl.
+  pose proof (onNpars _ _ _ _ hmdecl) as e.
+  apply onInductives in hmdecl.
+  eapply nth_error_alli in hmdecl. 2: eauto.
+  pose proof (onProjections hmdecl) as onp.
+  forward onp.
+  { eapply nth_error_Some_non_nil in hpdecl. assumption. }
+  eapply on_projs, nth_error_alli in onp. 2: eassumption.
+  move: onp => /= /andb_and[hd _]. simpl in hd.
+  rewrite smash_context_length in hd. simpl in *.
+  rewrite e in hd. assumption.
+Qed.
+
 Lemma typing_rename :
   forall Σ Γ Δ f t A,
     wf Σ.1 ->
@@ -1180,8 +1201,9 @@ Proof.
       * rewrite map_length. assumption.
     + rewrite rename_subst0. simpl. rewrite map_rev. f_equal.
       rewrite rename_subst_instance_constr. f_equal.
-      rewrite rename_closed. 2: reflexivity.
-      admit.
+      rewrite rename_closedn. 2: reflexivity.
+      eapply declared_projection_closed_type in isdecl. 2: auto.
+      rewrite List.rev_length. rewrite e. assumption.
   - intros Σ wfΣ Γ wfΓ mfix n decl types H0 H1 X ihmfix Δ f hf.
     simpl.
     admit.

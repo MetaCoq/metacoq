@@ -1,0 +1,2 @@
+post-all::
+	./update_plugin.sh

@@ -1,6 +1,6 @@
 (* Distributed under the terms of the MIT license.   *)
 Require Import ssreflect ssrbool.
-From MetaCoq.Template Require Import LibHypsNaming.
+From MetaCoq Require Import LibHypsNaming.
 From Equations Require Import Equations.
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega Utf8 String Lia.
 From MetaCoq.Template Require Import config utils.
@@ -621,19 +621,6 @@ Section ReductionCongruence.
       - econstructor.
         + eapply IHh.
         + econstructor. assumption.
-    Qed.
-
-    (* TODO MOVE *)
-    Lemma All2_prod_inv :
-      forall A (P : A -> A -> Type) Q l l',
-        All2 (Trel_conj P Q) l l' ->
-        All2 P l l' × All2 Q l l'.
-    Proof.
-      intros A P Q l l' h.
-      induction h.
-      - auto.
-      - destruct IHh. destruct r.
-        split ; constructor ; auto.
     Qed.
 
     Lemma red_fix_one_ty :

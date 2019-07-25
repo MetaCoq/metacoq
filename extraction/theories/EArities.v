@@ -1,7 +1,7 @@
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
 From MetaCoq.Template Require Import config utils monad_utils BasicAst AstUtils.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICTyping PCUICMetaTheory PCUICWcbvEval PCUICLiftSubst PCUICInversion PCUICSR PCUICNormal PCUICSafeLemmata PCUICPrincipality PCUICGeneration PCUICSubstitution PCUICElimination.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICTyping PCUICMetaTheory PCUICWcbvEval PCUICLiftSubst PCUICInversion PCUICSR PCUICNormal PCUICSafeLemmata PCUICPrincipality PCUICGeneration PCUICSubstitution PCUICElimination PCUICEquality PCUICContextConversion PCUICConversion.
 From MetaCoq.SafeChecker Require Import PCUICSafeReduce PCUICSafeChecker.
 
 From MetaCoq.Extraction Require EAst ELiftSubst ETyping EWcbvEval Extract.
@@ -292,12 +292,14 @@ Inductive conv_decls (Σ : global_env_ext) Γ (Γ' : context) : forall (x y : co
     (* isWfArity_or_Type Σ Γ' T -> *)
     conv_decls Σ Γ Γ' (vdef na b T) (vdef na b T).
 
-Lemma conv_context_refl (Σ : global_env_ext) Γ : wf Σ -> wf_local Σ Γ -> context_relation (@conv_decls Σ) Γ Γ.
+Lemma conv_context_refl (Σ : global_env_ext) Γ :
+  wf Σ -> wf_local Σ Γ ->
+  context_relation (@conv_decls Σ) Γ Γ.
 Proof.
   induction Γ; try econstructor.
   intros wfΣ wfΓ; depelim wfΓ; econstructor; eauto;
   constructor; auto.
-  - apply PCUICCumulativity.conv_refl'.
+  - constructor; eapply cumul_refl; reflexivity.
 Qed.
 
 Lemma context_conversion_red1 (Σ : global_env_ext) Γ Γ' s t : wf Σ -> (* Σ ;;; Γ' |- t : T -> *)
@@ -436,7 +438,7 @@ Proof.
     eapply invert_cumul_prod_r in c as (? & ? & ? & [] & ?); eauto.
     eapply subject_reduction in c0. 3:eauto. 2:eauto.
     eapply inversion_Prod in c0 as (? & ? & ? & ? & ?) ; auto.
-    eapply cumul_Sort_inv in c0.
+    eapply PCUICConversion.cumul_Sort_inv in c0.
     eapply leq_universe_prop in c0 as []; cbn; eauto.
 
     eapply is_prop_sort_prod in H0. eapply IHt1. exact H0.

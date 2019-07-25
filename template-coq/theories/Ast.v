@@ -2,8 +2,9 @@
 
 Require Import Coq.Strings.String.
 Require Import Coq.PArith.BinPos.
-Require Import List utils. Import ListNotations.
-Require Export Template.Universes.
+Require Import List. Import ListNotations.
+From MetaCoq.Template Require Import utils.
+From MetaCoq.Template Require Export Universes.
 
 (** * AST of Coq kernel terms and kernel data structures
 
@@ -33,7 +34,7 @@ Require Export Template.Universes.
       The global environment [global_env_ext]: a list of [global_decl] and
     a universe graph [constraints].  *)
 
-Require Export BasicAst.
+From MetaCoq.Template Require Export BasicAst.
 
 Inductive term : Set :=
 | tRel (n : nat)

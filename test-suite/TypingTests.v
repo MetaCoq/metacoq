@@ -7,13 +7,8 @@ Require Import Coq.Strings.Ascii.
 Require Import Coq.Bool.Bool.
 Import ListNotations.
 
-Require Import MetaCoq.Checker.Loader.
-Require Import MetaCoq.Template.Typing.
-Require Import MetaCoq.Template.kernel.Checker.
-Require Import MetaCoq.Template.Ast.
-Require Import MetaCoq.Template.AstUtils.
-Require Import MetaCoq.Template.Loader.
-Require Import MetaCoq.Template.utils.
+Require Import MetaCoq.Template.All.
+Require Import MetaCoq.Checker.All.
 
 Unset Template Cast Propositions.
 

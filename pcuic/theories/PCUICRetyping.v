@@ -217,7 +217,7 @@ Section TypeOf.
     - go eq. split.
       + econstructor ; try eassumption ; try ih ; try cih.
       + eapply congr_cumul_prod.
-        * eapply conv_refl'.
+        * eapply conv_alt_refl, eq_term_refl.
         * ih.
     - go eq. split.
       + econstructor ; try eassumption ; try ih ; try cih.

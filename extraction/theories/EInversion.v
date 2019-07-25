@@ -35,7 +35,7 @@ Proof.
   - unshelve eexists.
     + repeat refine (_,_). all:shelve.
     + cbn. subst pars. intuition eauto.
-  - edestruct (IHX _ _ _ _ _ _ eq_refl) as [ [[[[[[[[]]]]]]]] ].
+  - edestruct (IHX hΣ _ _ _ _ _ eq_refl) as [ [[[[[[[[]]]]]]]] ].
     repeat match goal with [ H : _ * _ |- _ ] => destruct H end.
     unshelve eexists.
     + repeat refine (_, _). all:shelve.

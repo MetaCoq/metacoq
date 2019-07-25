@@ -8,7 +8,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICReflect PCUICLiftSubst PCUICUnivSubst PCUICTyping
      PCUICCumulativity PCUICSR PCUICEquality PCUICNameless PCUICConversion
      PCUICSafeLemmata PCUICNormal PCUICInversion PCUICReduction PCUICPosition
-     PCUICSN.
+     PCUICConfluence PCUICSN.
 From MetaCoq.SafeChecker Require Import PCUICSafeReduce.
 From Equations Require Import Equations.
 
@@ -363,19 +363,36 @@ Section Conversion.
     destruct s ; assumption.
   Defined.
 
+  (* Definition Ret s Γ t π π' := *)
+  (*   match s with *)
+  (*   | Reduction t' => *)
+  (*     forall leq, { b : bool | if b then conv leq Σ Γ (zippx t π) (zippx t' π') else True } *)
+  (*   | Fallback t' *)
+  (*   | Term t' => *)
+  (*     forall leq, *)
+  (*       isred (t, π) -> *)
+  (*       isred (t', π') -> *)
+  (*       { b : bool | if b then conv leq Σ Γ (zippx t π) (zippx t' π') else True } *)
+  (*   | Args => *)
+  (*     { b : bool | if b then ∥ Σ ;;; Γ |- zippx t π == zippx t π' ∥ else True } *)
+  (*   end. *)
+
   Definition Ret s Γ t π π' :=
-    match s with
-    | Reduction t' =>
-      forall leq, { b : bool | if b then conv leq Σ Γ (zippx t π) (zippx t' π') else True }
-    | Fallback t'
-    | Term t' =>
-      forall leq,
-        isred (t, π) ->
-        isred (t', π') ->
-        { b : bool | if b then conv leq Σ Γ (zippx t π) (zippx t' π') else True }
-    | Args =>
-      { b : bool | if b then ∥ Σ ;;; Γ |- zippx t π = zippx t π' ∥ else True }
-    end.
+    forall (leq : match s with Args => unit | _ => conv_pb end),
+      (match s with Fallback t' | Term t' => isred (t, π) | _ => True end) ->
+      (match s with Fallback t' | Term t' => isred (t', π') | _ => True end) ->
+      { b : bool | match s
+                return forall (leq : match s with Args => unit | _ => conv_pb end), Prop
+                with
+                | Reduction t' => fun leq =>
+                  if b then conv leq Σ Γ (zippx t π) (zippx t' π') else True
+                | Fallback t'
+                | Term t' => fun leq =>
+                  if b then conv leq Σ Γ (zippx t π) (zippx t' π') else True
+                | Args => fun _ =>
+                  if b then ∥ Σ ;;; Γ |- zippx t π == zippx t π' ∥ else True
+                end leq
+      }.
 
   Definition Aux s Γ t π1 π2 h2 :=
      forall s' Γ' t' π1' π2'
@@ -391,11 +408,11 @@ Section Conversion.
   Notation repack e := (let '(exist b h) := e in exist b _) (only parsing).
 
   Notation isconv_red_raw Γ leq t1 π1 t2 π2 aux :=
-    (aux (Reduction t2) Γ t1 π1 π2 _ _ _ leq) (only parsing).
+    (aux (Reduction t2) Γ t1 π1 π2 _ _ _ leq I I) (only parsing).
   Notation isconv_prog_raw Γ leq t1 π1 t2 π2 aux :=
     (aux (Term t2) Γ t1 π1 π2 _ _ _ leq _ _) (only parsing).
   Notation isconv_args_raw Γ t π1 π2 aux :=
-    (aux Args Γ t π1 π2 _ _ _) (only parsing).
+    (aux Args Γ t π1 π2 _ _ _ tt I I) (only parsing).
   Notation isconv_fallback_raw Γ leq t1 π1 t2 π2 aux :=
     (aux (Fallback t2) Γ t1 π1 π2 _ _ _ leq _ _) (only parsing).
 
@@ -964,6 +981,15 @@ Section Conversion.
     intros []; auto.
   Defined.
 
+  Lemma wellformed_wf_local Γ t : wellformed Σ Γ t -> ∥ wf_local Σ Γ ∥.
+  Proof.
+    intros []. destruct hΣ. destruct H.
+    now constructor; eapply typing_wf_local in X0.
+    destruct H, hΣ. constructor. red in X.
+    destruct X as [ctx [s [eq wf]]].
+    now eapply All_local_env_app in wf.
+  Qed.
+
   Equations(noeqns) _isconv_prog (Γ : context) (leq : conv_pb)
             (t1 : term) (π1 : stack) (h1 : wtp Γ t1 π1)
             (t2 : term) (π2 : stack) (h2 : wtp Γ t2 π2)
@@ -1093,7 +1119,7 @@ Section Conversion.
     constructor.
   Qed.
   Next Obligation.
-    destruct h. eapply conv_conv_l. assumption.
+    destruct h. destruct hΣ. eapply conv_conv_l. all: auto.
   Qed.
   Next Obligation.
     eapply red_wellformed ; auto.
@@ -1255,8 +1281,9 @@ Section Conversion.
     rewrite decompose_stack_twice with (1 := e1) in h1.
     simpl in h1. rewrite app_nil_r in h1.
     apply wellformed_it_mkLambda_or_LetIn in h1; tas.
+    pose proof (wellformed_wf_local _ _ h1).
     apply mkApps_Prod_nil' in h1 ; auto. subst.
-
+    destruct H.
     clear aux.
     apply wellformed_zipx in h2; tas.
     apply wellformed_zipc_zippx in h2 ; auto.
@@ -1297,11 +1324,11 @@ Section Conversion.
   Next Obligation.
     destruct hΣ as [wΣ].
     destruct b ; auto.
-    eapply conv_conv.
+    eapply conv_conv. auto.
     destruct h. constructor.
-    eapply conv_trans ; try eassumption.
+    eapply conv_alt_trans ; try eassumption.
     eapply conv_zippx ; auto.
-    eapply eq_term_conv.
+    constructor.
     symmetry in eq1.
     eapply eq_term_upto_univ_eq_eq_term.
     eapply elimT.
@@ -1508,11 +1535,11 @@ Section Conversion.
   Next Obligation.
     destruct hΣ as [wΣ].
     destruct b ; auto.
-    eapply conv_conv.
+    eapply conv_conv. auto.
     destruct h. constructor.
-    eapply conv_trans ; try eassumption.
+    eapply conv_alt_trans ; try eassumption.
     eapply conv_zippx ; auto.
-    eapply eq_term_conv.
+    constructor.
     eapply eq_term_upto_univ_eq_eq_term.
     eapply elimT.
     - eapply reflect_eq_term_upto_univ_eqb.
@@ -1544,11 +1571,11 @@ Section Conversion.
     destruct hΣ as [wΣ].
     destruct b ; auto.
     destruct h as [h].
-    eapply conv_conv.
+    eapply conv_conv; auto.
     constructor.
-    eapply conv_trans ; try eassumption.
+    eapply conv_alt_trans ; try eassumption.
     eapply conv_zippx ; auto.
-    eapply eq_term_conv.
+    constructor.
     symmetry in eq1.
     eapply eq_term_upto_univ_eq_eq_term.
     eapply elimT.
@@ -1811,11 +1838,11 @@ Section Conversion.
   Next Obligation.
     destruct hΣ as [wΣ].
     destruct b ; auto.
-    eapply conv_conv.
+    eapply conv_conv; auto.
     destruct h. constructor.
-    eapply conv_trans ; try eassumption.
+    eapply conv_alt_trans ; try eassumption.
     eapply conv_zippx ; auto.
-    eapply eq_term_conv.
+    constructor.
     symmetry in eq1.
     eapply eq_term_upto_univ_eq_eq_term.
     eapply elimT.
@@ -1845,9 +1872,9 @@ Section Conversion.
             (l1 : list term) (π1 : stack) (h1 : wtp Γ (mkApps t args) (appstack l1 π1))
             (l2 : list term) (π2 : stack) (h2 : wtp Γ (mkApps t args) (appstack l2 π2))
             (aux : Aux' Γ t args l1 π1 (appstack l2 π2) h2)
-    : { b : bool | if b then ∥ Σ ;;; Γ |- zippx (mkApps t args) (appstack l1 π1) = zippx (mkApps t args) (appstack l2 π2) ∥ else True } by struct l1 :=
+    : { b : bool | if b then ∥ Σ ;;; Γ |- zippx (mkApps t args) (appstack l1 π1) == zippx (mkApps t args) (appstack l2 π2) ∥ else True } by struct l1 :=
     _isconv_args' Γ t args (u1 :: l1) π1 h1 (u2 :: l2) π2 h2 aux
-    with aux u1 u2 args l1 (coApp (mkApps t args) (appstack l2 π2)) _ _ _ _ Conv := {
+    with aux u1 u2 args l1 (coApp (mkApps t args) (appstack l2 π2)) _ _ _ _ Conv I I := {
     | @exist true H1 with _isconv_args' Γ t (args ++ [u1]) l1 π1 _ l2 π2 _ _ := {
       | @exist true H2 := yes ;
       | @exist false _ := no
@@ -1859,7 +1886,7 @@ Section Conversion.
 
     _isconv_args' Γ t args l1 π1 h1 l2 π2 h2 aux := no.
   Next Obligation.
-    constructor. apply PCUICCumulativity.conv_refl'.
+    constructor. apply PCUICCumulativity.conv_alt_refl, eq_term_refl.
   Defined.
   Next Obligation.
     split ; [ reflexivity |].
@@ -1907,8 +1934,7 @@ Section Conversion.
     | wellformed ?Σ ?Γ (zipc (tApp ?f ?u) ?π) =>
       change (wellformed Σ Γ (zipc u (coApp f π))) in h2
     end.
-    eapply wellformed_zipc_replace ; auto.
-    - exact h2.
+    eapply wellformed_zipc_replace. auto. auto. eapply h2.
     - simpl. rewrite stack_context_appstack.
       left. exists A1'. eapply context_conversion ; auto.
       + eassumption.
@@ -1920,8 +1946,7 @@ Section Conversion.
   Next Obligation.
     simpl in H0. destruct H0 as [eq hp].
     rewrite app_length in H. cbn in H.
-    eapply aux.
-    - assumption.
+    eapply aux. all: auto.
     - cbn. omega.
     - instantiate (1 := h2'). simpl. split.
       + rewrite <- mkApps_nested in eq. assumption.
@@ -1966,18 +1991,17 @@ Section Conversion.
     apply it_mkLambda_or_LetIn_stack_context_conv_inv in H1 as [? ?] ; auto.
     apply it_mkLambda_or_LetIn_stack_context_conv_inv in H2 as [? ?] ; auto.
     eapply it_mkLambda_or_LetIn_conv ; auto.
-    eapply conv_trans ; eauto.
+    eapply conv_alt_trans ; eauto.
     eapply mkApps_conv_weak ; auto.
     eapply mkApps_conv_weak ; auto.
     eapply App_conv ; auto.
-    eapply PCUICCumulativity.conv_refl'.
   Defined.
 
   Equations(noeqns) _isconv_args (Γ : context) (t : term)
            (π1 : stack) (h1 : wtp Γ t π1)
            (π2 : stack) (h2 : wtp Γ t π2)
            (aux : Aux Args Γ t π1 π2 h2)
-    : { b : bool | if b then ∥ Σ ;;; Γ |- zippx t π1 = zippx t π2 ∥ else True } :=
+    : { b : bool | if b then ∥ Σ ;;; Γ |- zippx t π1 == zippx t π2 ∥ else True } :=
     _isconv_args Γ t π1 h1 π2 h2 aux with inspect (decompose_stack π1) := {
     | @exist (l1, θ1) eq1 with inspect (decompose_stack π2) := {
       | @exist (l2, θ2) eq2 with _isconv_args' Γ t [] l1 θ1 _ l2 θ2 _ _ := {
@@ -1996,13 +2020,12 @@ Section Conversion.
   Qed.
   Next Obligation.
     specialize (aux (Reduction u2)) as h. cbn in h.
-    eapply h.
-    - assumption.
-    - pose proof (decompose_stack_eq _ _ _ (eq_sym eq1)). subst.
-      instantiate (1 := h2').
-      simpl in H0. destruct H0 as [eq hp].
-      unshelve eapply R_positionR ; try assumption.
-      simpl. f_equal. assumption.
+    eapply h. all: auto.
+    pose proof (decompose_stack_eq _ _ _ (eq_sym eq1)). subst.
+    instantiate (1 := h2').
+    simpl in H0. destruct H0 as [eq hp].
+    unshelve eapply R_positionR ; try assumption.
+    simpl. f_equal. assumption.
   Qed.
   Next Obligation.
     pose proof (decompose_stack_eq _ _ _ (eq_sym eq1)). subst.
@@ -2539,13 +2562,13 @@ Section Conversion.
             (aux : Aux s Γ t π1 π2 h2)
   : Ret s Γ t π1 π2 :=
     _isconv (Reduction t2) Γ t1 π1 h1 π2 h2 aux :=
-      λ { | leq := _isconv_red Γ leq t1 π1 h1 t2 π2 h2 aux } ;
+      λ { | leq | _ | _ := _isconv_red Γ leq t1 π1 h1 t2 π2 h2 aux } ;
 
     _isconv (Term t2) Γ t1 π1 h1 π2 h2 aux :=
       λ { | leq | r1 | r2 := _isconv_prog Γ leq t1 π1 h1 t2 π2 h2 r1 r2 aux } ;
 
     _isconv Args Γ t π1 h1 π2 h2 aux :=
-        _isconv_args Γ t π1 h1 π2 h2 aux ;
+      λ { | _ | _ | _ := _isconv_args Γ t π1 h1 π2 h2 aux } ;
 
     _isconv (Fallback t2) Γ t1 π1 h1 π2 h2 aux :=
       λ { | leq | r1 | r2 := _isconv_fallback Γ leq t1 π1 h1 t2 π2 h2 r1 r2 aux }.
@@ -2563,7 +2586,10 @@ Section Conversion.
             _ _ _.
   Next Obligation.
     unshelve eapply _isconv ; try assumption.
-    intros s' Γ' t' π1' π2' h1' h2' hR. destruct pp.
+    apply wellformed_zipx in h1; tas.
+    intros s' Γ' t' π1' π2' h1' h2' hR.
+    apply wellformed_zipc_zippx in h1 ; auto.
+    destruct pp.
     assert (wth0 = zwts H0) by apply wellformed_irr. subst.
     specialize (f (mkpack s' Γ' t' π1' π2' (zwts h2')) hR). cbn in f.
     eapply f ; assumption.
@@ -2576,7 +2602,7 @@ Section Conversion.
   Qed.
 
   Definition isconv Γ leq t1 π1 h1 t2 π2 h2 :=
-    let '(exist b _) := isconv_full (Reduction t2) Γ t1 π1 h1 π2 h2 leq in b.
+    let '(exist b _) := isconv_full (Reduction t2) Γ t1 π1 h1 π2 h2 leq I I in b.
 
   Theorem isconv_sound :
     forall Γ leq t1 π1 h1 t2 π2 h2,

@@ -1,0 +1,11 @@
+CAMLFLAGS+=-open Metacoq_template_plugin # Loads the extractable monad
+CAMLFLAGS+=-w -33 # Unused opens
+CAMLFLAGS+=-bin-annot #	For merlin
+
+# Clean the source directory of all extracted filess
+cleansrc:
+	rm -f src/*.ml src/*.mli src/*.d src/*.o src/*.cm*
+
+.PHONY: cleansrc
+
+theories/Loader.vo: src/metacoq_checker_plugin.cmxs

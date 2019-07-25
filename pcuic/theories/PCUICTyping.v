@@ -5,7 +5,7 @@ From MetaCoq.Template Require Import config utils Universes BasicAst AstUtils Un
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICReflect
                           PCUICLiftSubst PCUICUnivSubst.
 
-From MetaCoq.Template Require Export LibHypsNaming.
+From MetaCoq Require Export LibHypsNaming.
 
 Require Import String.
 Require Import Wf Wellfounded Relation_Definitions.
@@ -204,9 +204,6 @@ Arguments OnOne2 {A} P%type l l'.
 
 Notation on_Trel_eq R f g :=
   (fun x y => (R (f x) (f y) * (g x = g y)))%type.
-
-Notation Trel_conj R S :=
-  (fun x y => R x y * S x y).
 
 Inductive red1 (Σ : global_env) (Γ : context) : term -> term -> Type :=
 (** Reductions *)
@@ -663,10 +660,18 @@ Definition universes_decl_of_decl := on_udecl_decl (fun x => x).
 Definition LevelSet_pair x y
   := LevelSet.add y (LevelSet.singleton x).
 
-
 Definition global_levels (Σ : global_env) : LevelSet.t
   := fold_right (fun decl lvls => LevelSet.union (monomorphic_levels_decl decl) lvls)
                 (LevelSet_pair Level.lSet Level.lProp) Σ.
+
+(** One can compute the constraints associated to a global environment or its
+    extension by folding over its constituent definitions.
+
+    We make *only* the second of these computations an implicit coercion
+    for more readability. Note that [fst_ctx] is also a coercion which goes
+    from a [global_env_ext] to a [global_env]: coercion coherence would *not*
+    be ensured if we added [global_constraints] as well as a coercion, as it
+    would forget the extension's constraints. *)
 
 Definition global_constraints (Σ : global_env) : constraints
   := fold_right (fun decl ctrs => ConstraintSet.union
@@ -679,7 +684,7 @@ Definition global_ext_levels (Σ : global_env_ext) : LevelSet.t
 Definition global_ext_constraints (Σ : global_env_ext) : constraints
   := ConstraintSet.union (constraints_of_udecl (snd Σ))
                          (global_constraints Σ.1).
-
+Coercion global_ext_constraints : global_env_ext >-> constraints.
 
 Lemma prop_global_ext_levels Σ : LevelSet.In Level.prop (global_ext_levels Σ).
 Proof.

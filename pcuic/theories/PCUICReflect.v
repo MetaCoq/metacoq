@@ -12,6 +12,22 @@ Set Asymmetric Patterns.
 
 Open Scope pcuic.
 
+(** Notion of reflection for Type-based properties *)
+
+Inductive reflectT (A : Type) : bool -> Type :=
+| ReflectT : A -> reflectT A true
+| ReflectF : (A -> False) -> reflectT A false.
+
+Lemma reflectT_reflect (A : Prop) b : reflectT A b -> reflect A b.
+Proof.
+  destruct 1; now constructor.
+Qed.
+
+Lemma reflect_reflectT (A : Prop) b : reflect A b -> reflectT A b.
+Proof.
+  destruct 1; now constructor.
+Qed.
+
 (* Some reflection / EqDec lemmata *)
 
 Class ReflectEq A := {

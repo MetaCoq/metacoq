@@ -1,11 +1,11 @@
 Datatypes
 Bool
+Equalities
 Decimal
 Nat0
 List0
 PeanoNat
 Specif
-Utils
 Basics
 BinPosDef
 BinPos
@@ -15,18 +15,29 @@ Ascii
 String0
 Orders
 OrdersTac
+OrdersFacts
+OrdersLists
 OrderedType0
+MSetInterface
+MSetFacts
+MSetDecide
 MSetWeakList
+MSetProperties
 BinNums
+Equality0
+Utils
+Config0
 Universes0
+BasicAst
 Ast0
 AstUtils
-BasicAst
+LiftSubst
+UnivSubst0
 Common
+CRelationClasses
 
 Denote
 Denoter
-Equalities
 Extractable
 Logic0
 

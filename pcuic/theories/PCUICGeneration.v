@@ -7,7 +7,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICSubstitution PCUICClosed.
 Require Import ssreflect ssrbool.
 Require Import String.
-From MetaCoq.Template Require Import LibHypsNaming.
+From MetaCoq Require Import LibHypsNaming.
 Local Open Scope string_scope.
 Set Asymmetric Patterns.
 

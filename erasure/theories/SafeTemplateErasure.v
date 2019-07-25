@@ -16,7 +16,7 @@ Import MonadNotation.
 Existing Instance envcheck_monad.
 
 Program Definition erase_template_program (p : Ast.program)
-  : EnvCheck Prelim.E.term :=
+  : EnvCheck EAst.term :=
   let Σ := List.rev (trans_global (AstUtils.empty_ext p.1)).1 in
   G <- check_wf_env Σ ;;
   t <- wrap_error ("During erasure of " ++ string_of_term (trans p.2)) (erase (empty_ext Σ) _ nil _ (trans p.2));;
@@ -43,7 +43,7 @@ Program Definition erase_and_print_template_program {cf : checker_flags} (p : As
   match erase_template_program p return string + string with
   | CorrectDecl t =>
     inl ("Environment is well-formed and " ++ string_of_term (trans p.2) ++
-         " has type: " ++ EAstUtils.string_of_term t.π1)
+         " has type: " ++ EAstUtils.string_of_term t)
   | EnvError (AlreadyDeclared id) =>
     inr ("Already declared: " ++ id)
   | EnvError (IllFormedDecl id e) =>

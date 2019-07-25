@@ -314,3 +314,11 @@ checker/src/wf.mli
 /erasure/src/uGraph0.mli
 /erasure/src/wGraph.ml
 /erasure/src/wGraph.mli
+/erasure/Makefile.erasure
+/erasure/Makefile.erasure.conf
+/erasure/src/classes0.ml
+/erasure/src/classes0.mli
+/erasure/src/safeTemplateErasure.ml
+/erasure/src/safeTemplateErasure.mli
+/erasure/src/templateToPCUIC.ml
+/erasure/src/templateToPCUIC.mli

@@ -1,3 +1,4 @@
+SED = `which gsed || which sed`
 
 all: theory plugin
 
@@ -11,25 +12,27 @@ _CoqProject: _CoqProject.in metacoq-config
 
 Makefile.plugin: _PluginProject
 	coq_makefile -f _PluginProject -o Makefile.plugin $(DEPS)
+# Avoid conflicting dependency file creation for the template plugin
+	$(SED) -e s/coqdeps/coqdeps.plugin/g -i Makefile.plugin
 
-Makefile.extraction: _CoqProject
-	coq_makefile -f _CoqProject -o Makefile.extraction $(DEPS)
+Makefile.erasure: _CoqProject
+	coq_makefile -f _CoqProject -o Makefile.erasure $(DEPS)
 
-theory: Makefile.extraction
-	$(MAKE) -f Makefile.extraction
+theory: Makefile.erasure
+	$(MAKE) -f Makefile.erasure
 	./clean_extraction.sh
 
 plugin: theory Makefile.plugin
 	$(MAKE) -f Makefile.plugin
 
 install: theory plugin
-	$(MAKE) -f Makefile.extraction install
+	$(MAKE) -f Makefile.erasure install
 	$(MAKE) -f Makefile.plugin install
 
-clean: Makefile.extraction Makefile.plugin
-	make -f Makefile.extraction clean
+clean: Makefile.erasure Makefile.plugin
+	make -f Makefile.erasure clean
 	make -f Makefile.plugin clean
 
 mrproper:
 	rm -f Makefile.plugin
-	rm -f Makefile.extraction
+	rm -f Makefile.erasure

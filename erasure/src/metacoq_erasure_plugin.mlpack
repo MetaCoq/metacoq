@@ -6,6 +6,7 @@ WGraph
 Monad_utils
 UGraph0
 
+Init
 Classes0
 Logic1
 Relation
@@ -42,3 +43,7 @@ EInduction
 ELiftSubst
 ETyping
 Extract
+ErasureFunction
+SafeTemplateErasure
+
+G_metacoq_erasure

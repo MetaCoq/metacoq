@@ -14,8 +14,6 @@ Local Open Scope string_scope.
 Set Asymmetric Patterns.
 Import MonadNotation.
 
-Module E := EAst.
-
 Require Import Lia.
 
 
@@ -115,7 +113,7 @@ Proof.
   intros. revert arg H.
   dependent induction X; intros arg H17.
   - rewrite nth_error_nil in H17. congruence.
-  - destruct (arg)%nat eqn:E.
+  - destruct (arg)%nat eqn:EAst.
     + cbn in H17. invs H17. eauto.
     + cbn in H17. eauto.
 Qed.
@@ -138,7 +136,7 @@ Qed.
 (** ** on mkApps *)
 
 Lemma emkApps_snoc a l b :
-  E.mkApps a (l ++ [b]) = E.tApp (E.mkApps a l) b.
+  EAst.mkApps a (l ++ [b]) = EAst.tApp (EAst.mkApps a l) b.
 Proof.
   revert a; induction l; cbn; congruence.
 Qed.
@@ -150,7 +148,7 @@ Proof.
 Qed.
 
 Lemma mkAppBox_repeat n a :
-  mkAppBox a n = E.mkApps a (repeat tBox n).
+  mkAppBox a n = EAst.mkApps a (repeat tBox n).
 Proof.
   revert a; induction n; cbn; firstorder congruence.
 Qed.
@@ -244,7 +242,7 @@ Qed.
 Module Ee := EWcbvEval.
 
 Lemma value_app_inv L :
-  Ee.value (E.mkApps tBox L) ->
+  Ee.value (EAst.mkApps tBox L) ->
   L = nil.
 Proof.
   intros. depelim H.
@@ -282,7 +280,7 @@ Qed.
 
 Lemma efix_subst_nth mfix n :
   n < #|mfix| ->
-  nth_error (ETyping.fix_subst mfix) n = Some (E.tFix mfix (#|mfix| - n - 1)).
+  nth_error (ETyping.fix_subst mfix) n = Some (EAst.tFix mfix (#|mfix| - n - 1)).
 Proof.
   unfold ETyping.fix_subst. generalize (#|mfix|).
   intros m. revert n. induction m; cbn; intros.

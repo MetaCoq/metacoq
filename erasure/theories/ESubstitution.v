@@ -159,6 +159,12 @@ Proof.
   intros. now subst.
 Qed.
 
+Lemma map_repeat X Y (f : X -> Y) x n :
+  map f (repeat x n) = repeat (f x) n.
+Proof.
+  induction n; cbn; congruence.
+Qed.
+
 Lemma erases_weakening' (Σ : global_env_ext) (Γ Γ' Γ'' : PCUICAst.context) (t T : PCUICAst.term) t' :
     wf Σ ->
     wf_local Σ (Γ ,,, Γ') ->
@@ -208,12 +214,6 @@ Proof.
       cbn. destruct x, y; cbn in *; subst.
       split; eauto.
   - rewrite lift_mkApps. 
-
-    Lemma map_repeat X Y (f : X -> Y) x n :
-      map f (repeat x n) = repeat (f x) n.
-    Proof.
-      induction n; cbn; congruence.
-    Qed.
     rewrite map_repeat. cbn. econstructor.
     + eauto.
     + eauto.

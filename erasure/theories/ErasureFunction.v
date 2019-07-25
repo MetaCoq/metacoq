@@ -93,27 +93,28 @@ Ltac sq := try (destruct HΣ as [wfΣ]; clear HΣ);
          | H : ∥ _ ∥ |- _ => destruct H
          end; try eapply sq.
 
-Equations is_arity Γ (HΓ : ∥wf_local Σ Γ∥) T (HT : wellformed Σ Γ T) : typing_result ({Is_conv_to_Arity Σ Γ T} + {~ Is_conv_to_Arity Σ Γ T})
-         by wf ((Γ;T;HT) : (∑ Γ t, wellformed Σ Γ t)) term_rel :=
+Equations is_arity Γ (HΓ : ∥wf_local Σ Γ∥) T (HT : wellformed Σ Γ T) :
+  typing_result ({Is_conv_to_Arity Σ Γ T} + {~ Is_conv_to_Arity Σ Γ T})
+  by wf ((Γ;T;HT) : (∑ Γ t, wellformed Σ Γ t)) term_rel :=
   {
     is_arity Γ HΓ T HT with (@reduce_to_sort _ Σ HΣ Γ T HT) => {
     | Checked H => ret (left _) ;
-    | TypeError _ =>
-      match @reduce_to_prod _ Σ HΣ Γ T _ with
-      | Checked (na; A; B; H) =>
+    | TypeError _ with inspect (@reduce_to_prod _ Σ HΣ Γ T _) => {
+      | exist (Checked (na; A; B; H)) He =>
         match is_arity (Γ,, vass na A) _ B _ with
         | Checked (left  H) => ret (left _)
         | Checked (right H) => ret (right _)
         | TypeError t => TypeError t
-        end
-      | TypeError t => TypeError t
-      end
+        end;
+      | exist (TypeError (NotAProduct _ _)) He => ret (right _);
+      | exist (TypeError t) He => TypeError t }
     }
   }.
 Next Obligation.
   sq. econstructor. split. sq. eassumption. econstructor.
 Qed.
 Next Obligation.
+  clear He.
   destruct HT as [ [] | [] ]; sq.
   - eapply subject_reduction in X; eauto.
     eapply inversion_Prod in X as (? & ? & ? & ? & ?).
@@ -123,12 +124,13 @@ Next Obligation.
     cbn. eapply isWfArity_prod_inv; eauto.
 Qed.
 Next Obligation.
+  clear He.
   sq. destruct HT as [ [] | [] ].
-  - eapply subject_reduction in X5; eauto.
-    eapply inversion_Prod in X5 as (? & ? & ? & ? & ?).
+  - eapply subject_reduction in X; eauto.
+    eapply inversion_Prod in X as (? & ? & ? & ? & ?).
     do 2 econstructor. eauto. auto.
   - econstructor 2. sq.
-    eapply PCUICPrincipality.isWfArity_red in X5; eauto.
+    eapply PCUICPrincipality.isWfArity_red in X; eauto.
     eapply isWfArity_prod_inv; eauto.
 Qed.
 Next Obligation.
@@ -140,26 +142,27 @@ Next Obligation.
   eassumption. now cbn.
 Qed.
 Next Obligation.
+  clear He.
   destruct HΣ as [wΣ].
   destruct H1 as (? & ? & ?). sq.
   destruct H.
-  edestruct (red_confluence wfΣ X6 X5) as (? & ? & ?); eauto.
+  edestruct (red_confluence wfΣ X0 X) as (? & ? & ?); eauto.
   eapply invert_red_prod in r as (? & ? & [] & ?); eauto. subst.
 
   eapply invert_cumul_arity_l in H2. 2:eauto. 3: eapply PCUICCumulativity.red_cumul. 3:eauto. 2:eauto.
   destruct H2 as (? & ? & ?). sq.
 
-  eapply invert_red_prod in X8 as (? & ? & [] & ?); eauto. subst. cbn in *.
+  eapply invert_red_prod in X2 as (? & ? & [] & ?); eauto. subst. cbn in *.
   exists x4; split; eauto.
 
   destruct HT as [ [] | [] ].
-  ++ sq. pose proof (X8). pose proof X8.
+  ++ sq. pose proof (X2). pose proof X2.
 
-     eapply subject_reduction in X9. 2:eauto. 2:{ etransitivity. exact X5. exact r0. }
-     eapply inversion_Prod in X9 as (? & ? & ? & ? & ?) ; auto.
+     eapply subject_reduction in X4. 2:eauto. 2:{ etransitivity. exact X. exact r0. }
+     eapply inversion_Prod in X4 as (? & ? & ? & ? & ?) ; auto.
 
-     eapply subject_reduction in X10. 2:eauto. 2:{ exact X6. }
-     eapply inversion_Prod in X10 as (? & ? & ? & ? & ?) ; auto.
+     eapply subject_reduction in X3. 2:eauto. 2:{ exact X0. }
+     eapply inversion_Prod in X3 as (? & ? & ? & ? & ?) ; auto.
 
      etransitivity. eassumption.
 
@@ -178,6 +181,10 @@ Next Obligation.
 
      eapply PCUICConversion.conv_sym, red_conv; eauto.
 Qed.
+
+Next Obligation.
+Admitted. (* reduce to prod, if it returns a TypeError (NotAProduct _) just means it is not an arity *)
+
 End fix_sigma.
 
 Definition wf_ext_wf Σ : wf_ext Σ -> wf Σ := fst.

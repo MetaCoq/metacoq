@@ -1,7 +1,8 @@
 -I src
 -R theories MetaCoq.Erasure
 
-
+src/init.mli
+src/init.ml
 src/classes0.mli
 src/classes0.ml
 
@@ -96,6 +97,10 @@ src/extract.mli
 src/extract.ml
 src/erasureFunction.mli
 src/erasureFunction.ml
-src/metacoq_erasure_plugin.mlpack
+
+src/safeTemplateErasure.mli
+src/safeTemplateErasure.ml
 src/g_metacoq_erasure.ml4
+src/metacoq_erasure_plugin.mlpack
+
 theories/Loader.v

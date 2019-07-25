@@ -12,22 +12,24 @@ Require Import ExtrOcamlString ExtrOcamlZInt.
    https://github.com/coq/coq/issues/7017. *)
 Extract Inductive Decimal.int => unit [ "(fun _ -> ())" "(fun _ -> ())" ] "(fun _ _ _ -> assert false)".
 
-Extraction Blacklist config uGraph Universes Ast String List Nat UnivSubst
-           LiftSubst Induction Typing Retyping Checker.
+Extraction Blacklist config uGraph Universes Ast String List Nat Int
+           UnivSubst Typing Checker Retyping OrderedType Logic Common Equality Classes.
 Set Warnings "-extraction-opaque-accessed".
 
-From MetaCoq.Erasure Require Import EAst EAstUtils EInduction ELiftSubst ETyping Extract ErasureFunction.
+From MetaCoq.Erasure Require Import EAst EAstUtils EInduction ELiftSubst ETyping Extract ErasureFunction
+     SafeTemplateErasure.
 
-(* Extraction Library ssreflect. *)
-(* Extraction Library EAst. *)
-(* Extraction Library EAstUtils. *)
-(* Extraction Library EInduction. *)
-(* Extraction Library ELiftSubst. *)
-(* Extraction Library ETyping. *)
-(* Extraction Library Extract. *)
-(* Extraction Library ErasureFunction. *)
+Extract Inductive Equations.Init.sigma => "(*)" ["(,)"].
+
+Extract Constant PCUICTyping.fix_guard => "(fun x -> true)".
+Extract Constant PCUICTyping.ind_guard => "(fun x -> true)".
+Extract Constant PCUICSafeChecker.check_one_ind_body => "(fun _ _ _ _ _ _ _ -> ret envcheck_monad __)".
+(* Extract Constant erase_mfix_obligation_1 => "(fun _ _ _ _ => ret typing_monad __)". *)
+
 Cd "src".
 
-Separate Extraction ErasureFunction.erase.
+Separate Extraction ErasureFunction.erase SafeTemplateErasure
+         (* The following directives ensure separate extraction does not produce name clashes *)
+         String utils UnivSubst.
 
 Cd "..".

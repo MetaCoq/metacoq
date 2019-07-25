@@ -13,7 +13,8 @@ shopt -s nullglob # make the for loop do nothnig when there is no *.ml* files
 
 files=`cat ../template-coq/_PluginProject | grep "^[^#].*mli\?$" | $SED -e s/gen-src/src/`
 
-if [[ -f "src/PCUICAst.ml" || "src/metacoq_erasure_plugin.cmxs" -ot "theories/Extraction.vo" ]]
+if [[ ! -f "src/metacoq_erasure_plugin.cmxs" ||
+           "src/metacoq_erasure_plugin.cmxs" -ot "theories/Extraction.vo" ]]
 then
     cd src
     # Move extracted modules to build the plugin
@@ -28,8 +29,7 @@ then
 
     # Remove extracted modules already linked in template_coq_plugin, checker and pcuic.
     echo "Removing:" $files
+    rm -f $files
 else
     echo "Extraction up-to date"
 fi
-
-rm -f $files

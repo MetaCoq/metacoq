@@ -1149,8 +1149,24 @@ Proof.
     admit.
   - intros Σ wfΣ Γ wfΓ p c u mdecl idecl pdecl isdecl args X X0 hc ihc e ty
            Δ f hf.
-    simpl.
-    admit.
+    simpl. eapply meta_conv.
+    + econstructor.
+      * eassumption.
+      * eapply meta_conv.
+        -- eapply ihc. assumption.
+        -- rewrite rename_mkApps. simpl. reflexivity.
+      * rewrite map_length. assumption.
+    + (* autorewrite with sigma. eapply inst_ext. *)
+      (* intro i. unfold ren, subst_consn, subst_compose. *)
+      (* destruct i. *)
+      (* * simpl. reflexivity. *)
+      (* * simpl. rewrite !List.rev_length. rewrite map_length. *)
+      (*   rewrite <- map_rev. generalize (List.rev args). intro l. *)
+      (*   rewrite nth_error_map. *)
+      (*   destruct (nth_error l i). *)
+      (*   -- simpl. autorewrite with sigma. reflexivity. *)
+      (*   -- simpl. *)
+      admit.
   - intros Σ wfΣ Γ wfΓ mfix n decl types H0 H1 X ihmfix Δ f hf.
     simpl.
     admit.

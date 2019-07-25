@@ -1,5 +1,5 @@
 From Coq Require Import Ascii String Bool OrderedType Lia List Program Arith.
-From MetaCoq.Template Require Import utils Ast.
+From MetaCoq.Template Require Import utils Ast AstUtils.
 From MetaCoq.Erasure Require Import EAst.
 Import List.ListNotations.
 Require Import FunctionalExtensionality.
@@ -234,7 +234,11 @@ Definition isBox t :=
   | _ => false
   end.
 
-From MetaCoq.Checker Require Checker.
+Local Open Scope string_scope.
+
+Definition string_of_def {A : Set} (f : A -> string) (def : def A) :=
+  "(" ++ string_of_name (dname def) ++ "," ++ f (dbody def) ++ ","
+      ++ string_of_nat (rarg def) ++ ")".
 
 Fixpoint string_of_term (t : term) : string :=
   match t with
@@ -242,11 +246,10 @@ Fixpoint string_of_term (t : term) : string :=
   | tRel n => "Rel(" ++ string_of_nat n ++ ")"
   | tVar n => "Var(" ++ n ++ ")"
   | tEvar ev args => "Evar(" ++ string_of_nat ev ++ "[]" (* TODO *)  ++ ")"
-  | tLambda na t => "Lambda(" ++ Checker.string_of_name na ++ "," ++ string_of_term t ++ ")"
-  | tLetIn na b t => "LetIn(" ++ Checker.string_of_name na ++ "," ++ string_of_term b ++ "," ++ string_of_term t ++ ")"
+  | tLambda na t => "Lambda(" ++ string_of_name na ++ "," ++ string_of_term t ++ ")"
+  | tLetIn na b t => "LetIn(" ++ string_of_name na ++ "," ++ string_of_term b ++ "," ++ string_of_term t ++ ")"
   | tApp f l => "App(" ++ string_of_term f ++ "," ++ string_of_term l ++ ")"
   | tConst c => "Const(" ++ c ++ ")"
-  | tInd i k => "Ind(" ++ string_of_inductive i ++ ")"
   | tConstruct i n => "Construct(" ++ string_of_inductive i ++ "," ++ string_of_nat n ++ ")"
   | tCase (ind, i) t brs =>
     "Case(" ++ string_of_inductive ind ++ "," ++ string_of_nat i ++ "," ++ string_of_term t ++ ","

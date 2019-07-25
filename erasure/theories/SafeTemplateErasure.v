@@ -43,7 +43,7 @@ Program Definition erase_and_print_template_program {cf : checker_flags} (p : As
   match erase_template_program p return string + string with
   | CorrectDecl t =>
     inl ("Environment is well-formed and " ++ string_of_term (trans p.2) ++
-         " has type: " ++ string_of_eterm t.π1)
+         " has type: " ++ EAstUtils.string_of_term t.π1)
   | EnvError (AlreadyDeclared id) =>
     inr ("Already declared: " ++ id)
   | EnvError (IllFormedDecl id e) =>

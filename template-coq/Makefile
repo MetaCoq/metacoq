@@ -43,6 +43,8 @@ Makefile.coq: _CoqProject
 
 Makefile.plugin: _PluginProject
 	coq_makefile -f _PluginProject -o Makefile.plugin
+# Avoid conflicting dependency file creation for the template plugin
+	$(SED) -e s/coqdeps/coqdeps.plugin/g -i Makefile.plugin
 
 Makefile.template: _TemplateCoqProject
 	coq_makefile -f _TemplateCoqProject -o Makefile.template

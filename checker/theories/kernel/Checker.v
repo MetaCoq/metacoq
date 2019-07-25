@@ -509,7 +509,7 @@ Definition check_conv `{checker_flags} {F:Fuel} := check_conv_gen Conv.
 
 Definition is_graph_of_global_env_ext `{checker_flags} Σ G :=
   is_graph_of_uctx G (global_ext_uctx Σ).
-
+Local Open Scope string_scope.
 Lemma conv_spec : forall `{checker_flags} {F:Fuel} Σ G Γ t u,
     is_graph_of_global_env_ext Σ G ->
     Σ ;;; Γ |- t = u <~> check_conv (fst Σ) G Γ t u = Checked ().

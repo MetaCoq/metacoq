@@ -10,13 +10,18 @@ open PCUICSafeChecker
 
 let pr_char c = str (Char.escaped c)
 
-let rec seq_of_list = function
-  | [] -> Seq.empty
-  | c :: cs -> fun () -> Seq.Cons (c, seq_of_list cs)
+let bytes_of_list l =
+  let bytes = Bytes.create (List.length l) in
+  let rec fill acc = function
+    | [] -> bytes
+    | c :: cs ->
+      Bytes.set bytes acc c;
+      fill (1 + acc) cs
+  in fill 0 l
 
 let pr_char_list l =
   (* We allow utf8 encoding *)
-  str (Bytes.to_string (Bytes.of_seq (seq_of_list l)))
+  str (Bytes.to_string (bytes_of_list l))
 
 let check env evm c =
   (* if Feedback.msg_debug (str"Quoting"); *)

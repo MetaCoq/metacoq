@@ -5,6 +5,79 @@ Require Import ssreflect.
 
 Set Asymmetric Patterns.
 
+(** Raw term printing *)
+
+Local Open Scope string_scope.
+Definition string_of_list_aux {A} (f : A -> string) (l : list A) : string :=
+  let fix aux l :=
+      match l return string with
+      | nil => ""
+      | cons a nil => f a
+      | cons a l => f a ++ "," ++ aux l
+      end
+  in aux l.
+
+Definition string_of_list {A} (f : A -> string) (l : list A) : string :=
+  "[" ++ string_of_list_aux f l ++ "]".
+
+Definition string_of_level (l : Level.t) : string :=
+  match l with
+  | Level.lProp => "Prop"
+  | Level.lSet => "Set"
+  | Level.Level s => s
+  | Level.Var n => "Var" ++ string_of_nat n
+  end.
+
+Definition string_of_level_expr (l : Level.t * bool) : string :=
+  let '(l, b) := l in
+  string_of_level l ++ (if b then "+1" else "").
+
+Definition string_of_sort (u : universe) :=
+  string_of_list string_of_level_expr u.
+Definition string_of_name (na : name) :=
+  match na with
+  | nAnon => "Anonymous"
+  | nNamed n => n
+  end.
+Definition string_of_universe_instance u :=
+  string_of_list string_of_level u.
+
+Definition string_of_def {A : Set} (f : A -> string) (def : def A) :=
+  "(" ++ string_of_name (dname def) ++ "," ++ f (dtype def) ++ "," ++ f (dbody def) ++ ","
+      ++ string_of_nat (rarg def) ++ ")".
+
+Definition string_of_inductive (i : inductive) :=
+  (inductive_mind i) ++ "," ++ string_of_nat (inductive_ind i).
+
+Fixpoint string_of_term (t : term) :=
+  match t with
+  | tRel n => "Rel(" ++ string_of_nat n ++ ")"
+  | tVar n => "Var(" ++ n ++ ")"
+  | tEvar ev args => "Evar(" ++ string_of_nat ev ++ "," ++ string_of_list string_of_term args ++ ")"
+  | tSort s => "Sort(" ++ string_of_sort s ++ ")"
+  | tCast c k t => "Cast(" ++ string_of_term c ++ (* TODO *) ","
+                           ++ string_of_term t ++ ")"
+  | tProd na b t => "Prod(" ++ string_of_name na ++ "," ++
+                            string_of_term b ++ "," ++ string_of_term t ++ ")"
+  | tLambda na b t => "Lambda(" ++ string_of_name na ++ "," ++ string_of_term b
+                                ++ "," ++ string_of_term t ++ ")"
+  | tLetIn na b t' t => "LetIn(" ++ string_of_name na ++ "," ++ string_of_term b
+                                 ++ "," ++ string_of_term t' ++ "," ++ string_of_term t ++ ")"
+  | tApp f l => "App(" ++ string_of_term f ++ "," ++ string_of_list string_of_term l ++ ")"
+  | tConst c u => "Const(" ++ c ++ "," ++ string_of_universe_instance u ++ ")"
+  | tInd i u => "Ind(" ++ string_of_inductive i ++ "," ++ string_of_universe_instance u ++ ")"
+  | tConstruct i n u => "Construct(" ++ string_of_inductive i ++ "," ++ string_of_nat n ++ ","
+                                    ++ string_of_universe_instance u ++ ")"
+  | tCase (ind, i) t p brs =>
+    "Case(" ++ string_of_inductive ind ++ "," ++ string_of_nat i ++ "," ++ string_of_term t ++ ","
+            ++ string_of_term p ++ "," ++ string_of_list (fun b => string_of_term (snd b)) brs ++ ")"
+  | tProj (ind, i, k) c =>
+    "Proj(" ++ string_of_inductive ind ++ "," ++ string_of_nat i ++ "," ++ string_of_nat k ++ ","
+            ++ string_of_term c ++ ")"
+  | tFix l n => "Fix(" ++ (string_of_list (string_of_def string_of_term) l) ++ "," ++ string_of_nat n ++ ")"
+  | tCoFix l n => "CoFix(" ++ (string_of_list (string_of_def string_of_term) l) ++ "," ++ string_of_nat n ++ ")"
+  end.
+
 (** Make a lambda/let-in string of abstractions from a context [Γ], ending with term [t]. *)
 
 Definition mkLambda_or_LetIn d t :=

@@ -233,3 +233,27 @@ Definition isBox t :=
   | tBox => true
   | _ => false
   end.
+
+From MetaCoq.Checker Require Checker.
+
+Fixpoint string_of_term (t : term) : string :=
+  match t with
+  | tBox => "⧆"
+  | tRel n => "Rel(" ++ string_of_nat n ++ ")"
+  | tVar n => "Var(" ++ n ++ ")"
+  | tEvar ev args => "Evar(" ++ string_of_nat ev ++ "[]" (* TODO *)  ++ ")"
+  | tLambda na t => "Lambda(" ++ Checker.string_of_name na ++ "," ++ string_of_term t ++ ")"
+  | tLetIn na b t => "LetIn(" ++ Checker.string_of_name na ++ "," ++ string_of_term b ++ "," ++ string_of_term t ++ ")"
+  | tApp f l => "App(" ++ string_of_term f ++ "," ++ string_of_term l ++ ")"
+  | tConst c => "Const(" ++ c ++ ")"
+  | tInd i k => "Ind(" ++ string_of_inductive i ++ ")"
+  | tConstruct i n => "Construct(" ++ string_of_inductive i ++ "," ++ string_of_nat n ++ ")"
+  | tCase (ind, i) t brs =>
+    "Case(" ++ string_of_inductive ind ++ "," ++ string_of_nat i ++ "," ++ string_of_term t ++ ","
+            ++ string_of_list (fun b => string_of_term (snd b)) brs ++ ")"
+  | tProj (ind, i, k) c =>
+    "Proj(" ++ string_of_inductive ind ++ "," ++ string_of_nat i ++ "," ++ string_of_nat k ++ ","
+            ++ string_of_term c ++ ")"
+  | tFix l n => "Fix(" ++ (string_of_list (string_of_def string_of_term) l) ++ "," ++ string_of_nat n ++ ")"
+  | tCoFix l n => "CoFix(" ++ (string_of_list (string_of_def string_of_term) l) ++ "," ++ string_of_nat n ++ ")"
+  end.

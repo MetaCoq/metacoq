@@ -11,20 +11,25 @@ fi
 
 shopt -s nullglob # make the for loop do nothnig when there is no *.ml* files
 
-# Move extracted modules to build the certicoq compiler plugin
-# Uncapitalize modules to circumvent a bug of coqdep with mllib files
-for i in *.ml*
-  do
-  newi=src/`echo $i | cut -b 1 | tr '[:upper:]' '[:lower:]'``echo $i | cut -b 2-`;
-  echo "Moving " $i "to" $newi;
-  mv $i $newi;
-done
+files=`cat ../template-coq/_PluginProject | grep "^[^#].*mli\?$" | $SED -e s/gen-src/src/`
 
-files=`cat ../template-coq/_PluginProject ../checker/_PluginProject.in ../safechecker/_PluginProject.in ../pcuic/_PluginProject.in | grep "^[^#].*mli\?$" | $SED -e s/gen-src/src/`
+if [[ -f "src/PCUICAst.ml" || "src/metacoq_erasure_plugin.cmxs" -ot "theories/Extraction.vo" ]]
+then
+    cd src
+    # Move extracted modules to build the plugin
+    # Uncapitalize modules to circumvent a bug of coqdep with mllib files
+    for i in *.ml*
+      do
+      newi=`echo $i | cut -b 1 | tr '[:upper:]' '[:lower:]'``echo $i | cut -b 2-`;
+      echo "Moving " $i "to" $newi;
+      mv $i $newi;
+    done
+    cd ..
 
-# Remove extracted modules already linked in template_coq_plugin, checker, safechecker or pcuic.
-echo "Removing:" $files
+    # Remove extracted modules already linked in template_coq_plugin, checker and pcuic.
+    echo "Removing:" $files
+else
+    echo "Extraction up-to date"
+fi
 
 rm -f $files
-
-cd ..

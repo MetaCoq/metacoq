@@ -26,5 +26,8 @@ From MetaCoq.Erasure Require Import EAst EAstUtils EInduction ELiftSubst ETyping
 (* Extraction Library ETyping. *)
 (* Extraction Library Extract. *)
 (* Extraction Library ErasureFunction. *)
+Cd "src".
 
 Separate Extraction ErasureFunction.erase.
+
+Cd "..".

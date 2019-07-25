@@ -1,4 +1,4 @@
-#env /bin/sh
+#!/bin/bash
 
 SED=`which gsed || which sed`
 

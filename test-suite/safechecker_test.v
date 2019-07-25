@@ -15,6 +15,9 @@ Time MetaCoq SafeCheck plus.
 
 Require Import MetaCoq.SafeChecker.SafeTemplateChecker.
 
+(* Even with universe checking disabled, we get:
+Error: Type error: Msgundeclared level, while checking MetaCoq.Template.Universes.LevelSet.Raw.elt
+*)
 (* Time MetaCoq SafeCheck @infer_and_print_template_program. *)
 (*
 Error:

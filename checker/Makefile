@@ -32,3 +32,6 @@ clean: Makefile.coq Makefile.plugin
 
 mrproper:
 	rm -f Makefile.coq Makefile.plugin _CoqProject _PluginProject
+
+.merlin:
+	make -f Makefile.plugin .merlin

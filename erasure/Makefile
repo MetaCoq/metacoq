@@ -36,3 +36,6 @@ clean: Makefile.erasure Makefile.plugin
 mrproper:
 	rm -f Makefile.plugin
 	rm -f Makefile.erasure
+
+.merlin:
+	make -f Makefile.plugin .merlin

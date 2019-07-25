@@ -52,6 +52,6 @@ Makefile.template: _TemplateCoqProject
 	$(SED) -e s/coqdeps/coqdeps.template/g -i Makefile.template
 
 .merlin: Makefile.coq
-	$(MAKE) -f Makefile.coq .merlin
+	$(MAKE) -f Makefile.plugin .merlin
 
 TOCOPY=ast_denoter.ml ast_quoter.ml denote.ml denoter.ml plugin_core.ml plugin_core.mli quoted.ml quoter.ml run_extractable.ml run_extractable.mli tm_util.ml

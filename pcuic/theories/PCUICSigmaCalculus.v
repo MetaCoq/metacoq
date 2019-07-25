@@ -229,6 +229,90 @@ Proof.
 Qed.
 Hint Rewrite rename_context_inst_context : sigma.
 
+(* Lemma rename_subst : *)
+(*   forall f l t n, *)
+(*     rename f (subst l n t) = *)
+(*     subst (map (rename f) l) (#|l| + n) (rename (shiftn #|l| f) t). *)
+(*     (* subst (map (rename (shiftn n f)) l) n (rename (shiftn (#|l| + n) f) t). *) *)
+(* Proof. *)
+
+Lemma rename_subst0 :
+  forall f l t,
+    rename f (subst0 l t) =
+    subst0 (map (rename f) l) (rename (shiftn #|l| f) t).
+Proof.
+  intros f l t.
+  autorewrite with sigma.
+  eapply inst_ext. intro i.
+  unfold ren, subst_consn, shiftn, subst_compose. simpl.
+  rewrite nth_error_map.
+  destruct (nth_error l i) eqn: e1.
+  - eapply nth_error_Some_length in e1 as hl.
+    destruct (Nat.ltb_spec i #|l|). 2: lia.
+    rewrite e1. simpl.
+    autorewrite with sigma. reflexivity.
+  - simpl. apply nth_error_None in e1 as hl.
+    destruct (Nat.ltb_spec i #|l|). 1: lia.
+    rewrite (iffRL (nth_error_None _ _)). 1: lia.
+    simpl. rewrite map_length. unfold ids.
+    f_equal. lia.
+Qed.
+
+Lemma rename_subst10 :
+  forall f t u,
+    rename f (t{ 0 := u }) = (rename (shiftn 1 f) t){ 0 := rename f u }.
+Proof.
+  intros f t u.
+  eapply rename_subst0.
+Qed.
+
+Lemma rename_context_nth_error :
+  forall f Γ i decl,
+    nth_error Γ i = Some decl ->
+    nth_error (rename_context f Γ) i =
+    Some (rename_decl (shiftn (#|Γ| - S i) f) decl).
+Proof.
+  intros f Γ i decl h.
+  induction Γ in f, i, decl, h |- *.
+  - destruct i. all: discriminate.
+  - destruct i.
+    + simpl in h. inversion h. subst. clear h.
+      rewrite rename_context_snoc. simpl.
+      f_equal. f_equal. f_equal. lia.
+    + simpl in h. rewrite rename_context_snoc. simpl.
+      eapply IHΓ. eassumption.
+Qed.
+
+Lemma rename_context_decl_body :
+  forall f Γ i body,
+    option_map decl_body (nth_error Γ i) = Some (Some body) ->
+    option_map decl_body (nth_error (rename_context f Γ) i) =
+    Some (Some (rename (shiftn (#|Γ| - S i) f) body)).
+Proof.
+  intros f Γ i body h.
+  destruct (nth_error Γ i) eqn: e. 2: discriminate.
+  simpl in h.
+  eapply rename_context_nth_error with (f := f) in e. rewrite e. simpl.
+  destruct c as [na bo ty]. simpl in h. inversion h. subst.
+  simpl. reflexivity.
+Qed.
+
+(* Lemma rename_lift0 : *)
+(*   forall f i t, *)
+(*     rename f (lift0 i t) = lift0 (f i) (rename f t). *)
+(* Proof. *)
+(*   intros f i t. *)
+(*   rewrite !lift_rename. *)
+(*   autorewrite with sigma. *)
+(*   eapply inst_ext. intro j. *)
+(*   unfold ren, lift_renaming, subst_compose, shiftn. *)
+(*   simpl. f_equal. *)
+(*   destruct (Nat.ltb_spec j i). *)
+(*   - *)
+
+(* (rename (shiftn (#|Γ| - S i) f) body) *)
+(* rename f ((lift0 (S i)) body) *)
+
 Section Renaming.
 
 Context `{checker_flags}.
@@ -277,6 +361,20 @@ Proof.
       * unfold map_def. intuition eauto.
       * eauto.
 Qed.
+
+Lemma red1_rename :
+  forall Σ Γ u v f,
+    red1 Σ Γ u v ->
+    red1 Σ (rename_context f Γ) (rename f u) (rename f v).
+Proof.
+  intros Σ Γ u v f h.
+  induction h using red1_ind_all in |- *.
+  - simpl. rewrite rename_subst10. constructor.
+  - simpl. rewrite rename_subst10. constructor.
+  - simpl. eapply rename_context_decl_body with (f := f) in H0.
+    (* I'm a bit stuck here for now *)
+    admit.
+Admitted.
 
 Lemma meta_conv :
   forall Σ Γ t A B,
@@ -1098,28 +1196,6 @@ Proof.
   - eapply declared_inductive_closed_inds. all: eauto.
   - simpl. rewrite inds_length. rewrite arities_context_length in h.
     rewrite closedn_subst_instance_constr. assumption.
-Qed.
-
-Lemma rename_subst0 :
-  forall f l t,
-    rename f (subst0 l t) =
-    subst0 (map (rename f) l) (rename (shiftn #|l| f) t).
-Proof.
-  intros f l t.
-  autorewrite with sigma.
-  eapply inst_ext. intro i.
-  unfold ren, subst_consn, shiftn, subst_compose. simpl.
-  rewrite nth_error_map.
-  destruct (nth_error l i) eqn: e1.
-  - eapply nth_error_Some_length in e1 as hl.
-    destruct (Nat.ltb_spec i #|l|). 2: lia.
-    rewrite e1. simpl.
-    autorewrite with sigma. reflexivity.
-  - simpl. apply nth_error_None in e1 as hl.
-    destruct (Nat.ltb_spec i #|l|). 1: lia.
-    rewrite (iffRL (nth_error_None _ _)). 1: lia.
-    simpl. rewrite map_length. unfold ids.
-    f_equal. lia.
 Qed.
 
 Lemma declared_projection_closed_type :

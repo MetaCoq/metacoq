@@ -1,5 +1,3 @@
--Q ../template-coq/theories MetaCoq.Template
--I ../template-coq/build
 -I src
 -R theories MetaCoq.SafeChecker
 
@@ -78,8 +76,10 @@ src/pCUICSafeConversion.mli
 src/pCUICSafeConversion.ml
 src/pCUICSafeChecker.mli
 src/pCUICSafeChecker.ml
+src/safeTemplateChecker.mli
+src/safeTemplateChecker.ml
 
 src/g_metacoq_safechecker.ml4
 src/metacoq_safechecker_plugin.mlpack
 
-# theories/Loader.v
+theories/Loader.v

@@ -21,7 +21,7 @@ then
         echo "Building MetaCoq locally"
         CHECKER_DEPS="-R ../template-coq/theories MetaCoq.Template -I ../template-coq/build"
         PCUIC_DEPS="-I ../checker/src -R ../checker/theories MetaCoq.Checker"
-        SAFECHECKER_DEPS="-R ../pcuic/theories MetaCoq.PCUIC"
+        SAFECHECKER_DEPS="-R ../checker/theories MetaCoq.Checker -R ../pcuic/theories MetaCoq.PCUIC"
         EXTRACTION_DEPS="-R ../safechecker/theories MetaCoq.SafeChecker"
     else
         echo "Building MetaCoq globally (default)"
@@ -47,8 +47,8 @@ then
     echo ${CHECKER_DEPS} >> checker/metacoq-config
     # echo "OCAMLPATH = \"${CWD}/template-coq\"" >> checker/metacoq-config
     echo ${CHECKER_DEPS} ${PCUIC_DEPS} >> pcuic/metacoq-config
-    echo ${SAFECHECKER_DEPS} >> safechecker/metacoq-config
-    echo ${EXTRACTION_DEPS} >> erasure/metacoq-config
+    echo ${CHECKER_DEPS} ${SAFECHECKER_DEPS} >> safechecker/metacoq-config
+    echo ${CHECKER_DEPS} ${SAFECHECKER_DEPS} ${EXTRACTION_DEPS} >> erasure/metacoq-config
 else
     echo "Error: coqc not found in path"
 fi

@@ -1,3 +1,5 @@
+SED = `which gsed || which sed`
+
 all: theory plugin
 
 _PluginProject: _PluginProject.in metacoq-config
@@ -10,6 +12,8 @@ _CoqProject: _CoqProject.in metacoq-config
 
 Makefile.plugin: _PluginProject
 	coq_makefile -f _PluginProject -o Makefile.plugin $(DEPS)
+# Avoid conflicting dependency file creation for the template plugin
+	$(SED) -e s/coqdeps/coqdeps.plugin/g -i Makefile.plugin
 
 Makefile.safechecker: _CoqProject
 	coq_makefile -f _CoqProject -o Makefile.safechecker $(DEPS)
@@ -18,6 +22,7 @@ theory: Makefile.safechecker
 	$(MAKE) -f Makefile.safechecker
 
 plugin: theory Makefile.plugin
+# Force building the ML code before the .v's requiring them.
 	$(MAKE) -f Makefile.plugin
 
 install: theory plugin

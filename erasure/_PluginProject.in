@@ -97,6 +97,8 @@ src/extract.mli
 src/extract.ml
 src/erasureFunction.mli
 src/erasureFunction.ml
+src/ePretty.mli
+src/ePretty.ml
 
 src/safeTemplateErasure.mli
 src/safeTemplateErasure.ml

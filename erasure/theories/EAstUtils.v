@@ -242,7 +242,7 @@ Definition string_of_def {A : Set} (f : A -> string) (def : def A) :=
 
 Fixpoint string_of_term (t : term) : string :=
   match t with
-  | tBox => "⧆"
+  | tBox => "∎"
   | tRel n => "Rel(" ++ string_of_nat n ++ ")"
   | tVar n => "Var(" ++ n ++ ")"
   | tEvar ev args => "Evar(" ++ string_of_nat ev ++ "[]" (* TODO *)  ++ ")"

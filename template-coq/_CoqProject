@@ -11,6 +11,7 @@ theories/AstUtils.v
 theories/Induction.v
 theories/LiftSubst.v
 theories/UnivSubst.v
+theories/Pretty.v
 
 # The Template monad
 theories/TemplateMonad.v

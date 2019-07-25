@@ -8,17 +8,18 @@ Set Asymmetric Patterns.
 (** Raw term printing *)
 
 Local Open Scope string_scope.
-Definition string_of_list_aux {A} (f : A -> string) (l : list A) : string :=
+
+Definition string_of_list_aux {A} (f : A -> string) (sep : string) (l : list A) : string :=
   let fix aux l :=
       match l return string with
       | nil => ""
       | cons a nil => f a
-      | cons a l => f a ++ "," ++ aux l
+      | cons a l => f a ++ sep ++ aux l
       end
   in aux l.
 
 Definition string_of_list {A} (f : A -> string) (l : list A) : string :=
-  "[" ++ string_of_list_aux f l ++ "]".
+  "[" ++ string_of_list_aux f "," l ++ "]".
 
 Definition string_of_level (l : Level.t) : string :=
   match l with

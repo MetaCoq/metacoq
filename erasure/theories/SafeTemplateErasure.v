@@ -2,25 +2,26 @@
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Arith Lia.
 From MetaCoq.Template Require Import config monad_utils utils BasicAst AstUtils
-     UnivSubst.
+     UnivSubst Pretty.
 From MetaCoq.Checker Require Import uGraph Typing.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICNormal PCUICSR
      PCUICGeneration PCUICReflect PCUICEquality PCUICInversion PCUICValidity
      PCUICWeakening PCUICPosition PCUICCumulativity PCUICSafeLemmata PCUICSN TemplateToPCUIC.
 From MetaCoq.SafeChecker Require Import PCUICSafeReduce PCUICSafeConversion PCUICSafeChecker SafeTemplateChecker.
-From MetaCoq.Erasure Require Import ErasureFunction.
+From MetaCoq.Erasure Require Import ErasureFunction EPretty.
 
 Import MonadNotation.
 
 Existing Instance envcheck_monad.
 
 Program Definition erase_template_program (p : Ast.program)
-  : EnvCheck EAst.term :=
+  : EnvCheck (EAst.global_context * EAst.term) :=
   let Σ := List.rev (trans_global (AstUtils.empty_ext p.1)).1 in
   G <- check_wf_env Σ ;;
+  Σ' <- wrap_error "erasure of the global context" (erase_global Σ _) ;;
   t <- wrap_error ("During erasure of " ++ string_of_term (trans p.2)) (erase (empty_ext Σ) _ nil _ (trans p.2));;
-  ret (Monad:=envcheck_monad) t.
+  ret (Monad:=envcheck_monad) (Σ', t).
 
 Next Obligation.
   unfold trans_global.
@@ -41,9 +42,9 @@ Local Open Scope string_scope.
 Program Definition erase_and_print_template_program {cf : checker_flags} (p : Ast.program)
   : string + string :=
   match erase_template_program p return string + string with
-  | CorrectDecl t =>
-    inl ("Environment is well-formed and " ++ string_of_term (trans p.2) ++
-         " has type: " ++ EAstUtils.string_of_term t)
+  | CorrectDecl (Σ', t) =>
+    inl ("Environment is well-formed and " ++ Pretty.print_term (AstUtils.empty_ext p.1) [] true p.2 ++
+         " erases to: " ++ nl ++ EPretty.print_term Σ' [] true false t)
   | EnvError (AlreadyDeclared id) =>
     inr ("Already declared: " ++ id)
   | EnvError (IllFormedDecl id e) =>

@@ -4,7 +4,7 @@ From Coq Require Import Bool String List Program BinPos Compare_dec Arith Lia.
 From MetaCoq.Template Require Import config monad_utils utils AstUtils UnivSubst.
 From MetaCoq.Checker Require Import uGraph.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICLiftSubst PCUICUnivSubst
-     PCUICTyping PCUICSubstitution PCUICValidity.
+     PCUICTyping.
 
 Import MonadNotation.
 Open Scope pcuic.
@@ -111,14 +111,3 @@ Section lookups.
     let '(l, uctx, ty) := res in
     ret (subst0 (inds ind u l) (subst_instance_constr u ty)).
 End lookups.
-
-Axiom reduce_to_sort :
-  global_env -> context -> term -> typing_result universe.
-Axiom reduce_to_prod :
-  global_env -> context -> term -> typing_result (term × term).
-
-Axiom reduce_to_ind :
-  global_env -> context -> term
-  -> typing_result ((inductive × list Level.t) × list term).
-Axiom type_of :
-  global_env_ext -> context -> term -> typing_result term.

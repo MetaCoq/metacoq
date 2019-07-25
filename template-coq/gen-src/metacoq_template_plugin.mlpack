@@ -34,6 +34,7 @@ Ast0
 AstUtils
 LiftSubst
 UnivSubst0
+Pretty
 Common
 
 Denote

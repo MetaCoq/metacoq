@@ -20,7 +20,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICUnivSubst PCUICInd
      PCUICNormal PCUICSafeLemmata
      (* PCUICWeakeningEnv *)
      (* PCUICWeakening *)
-     (* PCUICSubstitution *)
+     (* PCUICSubstitution *) PCUICPretty
      PCUICChecker PCUICRetyping PCUICMetaTheory TemplateToPCUIC.
 From Equations Require Import Equations.
 
@@ -62,4 +62,5 @@ Extraction Library PCUICChecker.
 Extraction Library PCUICRetyping.
 Extraction Library PCUICMetaTheory.
 Extraction Library TemplateToPCUIC.
+Extraction Library PCUICPretty.
 Cd "..".

@@ -4,6 +4,7 @@ theories/EAst.v
 theories/EAstUtils.v
 theories/EInduction.v
 theories/ELiftSubst.v
+theories/EPretty.v
 theories/EWcbvEval.v
 theories/EWndEval.v
 theories/ETyping.v

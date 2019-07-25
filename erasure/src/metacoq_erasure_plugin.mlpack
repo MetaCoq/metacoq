@@ -41,6 +41,7 @@ EAst
 EAstUtils
 EInduction
 ELiftSubst
+EPretty
 ETyping
 Extract
 ErasureFunction

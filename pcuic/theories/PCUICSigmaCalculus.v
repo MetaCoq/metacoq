@@ -1051,6 +1051,28 @@ Proof.
     rewrite closedn_subst_instance_constr. assumption.
 Qed.
 
+Lemma rename_subst0 :
+  forall f l t,
+    rename f (subst0 l t) =
+    subst0 (map (rename f) l) (rename (shiftn #|l| f) t).
+Proof.
+  intros f l t.
+  autorewrite with sigma.
+  eapply inst_ext. intro i.
+  unfold ren, subst_consn, shiftn, subst_compose. simpl.
+  rewrite nth_error_map.
+  destruct (nth_error l i) eqn: e1.
+  - eapply nth_error_Some_length in e1 as hl.
+    destruct (Nat.ltb_spec i #|l|). 2: lia.
+    rewrite e1. simpl.
+    autorewrite with sigma. reflexivity.
+  - simpl. apply nth_error_None in e1 as hl.
+    destruct (Nat.ltb_spec i #|l|). 1: lia.
+    rewrite (iffRL (nth_error_None _ _)). 1: lia.
+    simpl. rewrite map_length. unfold ids.
+    f_equal. lia.
+Qed.
+
 Lemma typing_rename :
   forall Σ Γ Δ f t A,
     wf Σ.1 ->
@@ -1156,16 +1178,9 @@ Proof.
         -- eapply ihc. assumption.
         -- rewrite rename_mkApps. simpl. reflexivity.
       * rewrite map_length. assumption.
-    + (* autorewrite with sigma. eapply inst_ext. *)
-      (* intro i. unfold ren, subst_consn, subst_compose. *)
-      (* destruct i. *)
-      (* * simpl. reflexivity. *)
-      (* * simpl. rewrite !List.rev_length. rewrite map_length. *)
-      (*   rewrite <- map_rev. generalize (List.rev args). intro l. *)
-      (*   rewrite nth_error_map. *)
-      (*   destruct (nth_error l i). *)
-      (*   -- simpl. autorewrite with sigma. reflexivity. *)
-      (*   -- simpl. *)
+    + rewrite rename_subst0. simpl. rewrite map_rev. f_equal.
+      rewrite rename_subst_instance_constr. f_equal.
+      rewrite rename_closed. 2: reflexivity.
       admit.
   - intros Σ wfΣ Γ wfΓ mfix n decl types H0 H1 X ihmfix Δ f hf.
     simpl.

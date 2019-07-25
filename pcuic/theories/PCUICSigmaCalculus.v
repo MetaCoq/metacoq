@@ -7,6 +7,10 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICLif
      PCUICTyping PCUICWeakeningEnv PCUICClosed PCUICReduction.
 Require Import ssreflect ssrbool.
 
+From Equations Require Import Equations.
+Require Import Equations.Prop.DepElim.
+Set Equations With UIP.
+
 (* TODO Maybe remove later? *)
 Require PCUICWeakening.
 
@@ -228,6 +232,51 @@ Hint Rewrite rename_context_inst_context : sigma.
 Section Renaming.
 
 Context `{checker_flags}.
+
+Derive Signature for eq_term_upto_univ.
+
+Lemma eq_term_upto_univ_rename :
+  forall Re Rle u v f,
+    eq_term_upto_univ Re Rle u v ->
+    eq_term_upto_univ Re Rle (rename f u) (rename f v).
+Proof.
+  intros Re Rle u v f h.
+  induction u in v, Rle, f, h |- * using term_forall_list_ind.
+  all: dependent destruction h.
+  all: try solve [
+    simpl ; constructor ; eauto
+  ].
+  - simpl. constructor.
+    induction X in a, args' |- *.
+    + inversion a. constructor.
+    + inversion a. subst. simpl. constructor.
+      all: eauto.
+  - simpl. constructor. all: eauto.
+    induction X in a, brs' |- *.
+    + inversion a. constructor.
+    + inversion a. subst. simpl.
+      constructor.
+      * unfold on_snd. intuition eauto.
+      * eauto.
+  - simpl. constructor.
+    apply All2_length in a as e. rewrite <- e.
+    generalize #|m|. intro k.
+    induction X in mfix', a, f, k |- *.
+    + inversion a. constructor.
+    + inversion a. subst.
+      simpl. constructor.
+      * unfold map_def. intuition eauto.
+      * eauto.
+  - simpl. constructor.
+    apply All2_length in a as e. rewrite <- e.
+    generalize #|m|. intro k.
+    induction X in mfix', a, f, k |- *.
+    + inversion a. constructor.
+    + inversion a. subst.
+      simpl. constructor.
+      * unfold map_def. intuition eauto.
+      * eauto.
+Qed.
 
 Lemma meta_conv :
   forall Σ Γ t A B,

@@ -1212,7 +1212,15 @@ Proof.
   - intros Σ wfΣ Γ wfΓ t A B X ht iht hwf hcu Δ f hf.
     eapply type_Cumul.
     + eapply iht. assumption.
-    + admit.
+    + destruct hwf as [[[ctx [s [e h1]]] h2] | [s [hB ihB]]].
+      * left.
+        simpl in h2. eapply inst_destArity with (σ := ren f) in e as e'.
+        cbn in e'.
+        exists (rename_context f ctx), s. split.
+        -- rewrite rename_context_inst_context. rewrite <- e'.
+           f_equal. autorewrite with sigma. reflexivity.
+        -- admit.
+      * right. eexists. eapply ihB. assumption.
     + admit.
 Admitted.
 

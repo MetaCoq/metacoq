@@ -31,3 +31,6 @@ MetaCoq Erase ((fun (X : Set) (x : X) (e : x = x) =>
                   match e in eq _ x' return bool with
                   | eq_refl => true
                   end)).
+
+(** Check the treatment of Prop <= Type *)
+MetaCoq Erase ((fun (X : Set) (x : X) => x) True I).

@@ -5,7 +5,7 @@ From MetaCoq Require Import LibHypsNaming.
 From Equations Require Import Equations.
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega Utf8 String Lia.
 From MetaCoq.Template Require Import config utils.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICSize
      PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICReduction PCUICWeakening PCUICSubstitution
      PCUICReflect PCUICClosed PCUICParallelReduction.
 
@@ -175,7 +175,7 @@ Qed.
 
 Lemma mkApps_eq_decompose_app_rec {f args t l} :
   mkApps f args = t ->
-  isApp f = false ->
+  ~~ isApp f ->
   match decompose_app_rec t l with
   | (f', args') => f' = f /\ mkApps t l = mkApps f' args'
   end.
@@ -196,7 +196,7 @@ Qed.
 
 Lemma mkApps_eq_decompose' {f args t} :
   mkApps f args = t ->
-  isApp f = false ->
+  ~~ isApp f ->
   match decompose_app t with
   | (f', args') => f' = f /\ t = mkApps f' args'
   end.

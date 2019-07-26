@@ -811,15 +811,15 @@ Section Confluence.
     end.
 
   Lemma decompose_app_rec_head t l f : fst (decompose_app_rec t l) = f ->
-                                       isApp f = false.
+                                       ~~ isApp f.
   Proof.
     induction t; simpl; try intros [= <-]; auto.
     intros. apply IHt1. now rewrite !fst_decompose_app_rec.
   Qed.
 
   Lemma isLambda_or_Fix_app_decompose_app t :
-    isLambda_or_Fix_app t = false ->
-    forall l', isLambda_or_Fix_app (fst (decompose_app_rec t l')) = false.
+    ~~ isLambda_or_Fix_app t ->
+    forall l', ~~ isLambda_or_Fix_app (fst (decompose_app_rec t l')).
   Proof.
     unfold isLambda_or_Fix_app, decompose_app. generalize (@nil term).
     induction t; simpl;
@@ -2184,7 +2184,7 @@ Section Confluence.
              rewrite [tApp _ _](mkApps_nested _ _ [rho Γ x]) in H.
              rewrite [mkApps _ _](mkApps_nested _ [rho Γ t] _) in H.
              rewrite decompose_app_mkApps in H.
-             apply/negbTE. apply isLambda_nisApp.
+             apply isLambda_nisApp.
              rewrite isLambda_subst //.
              noconf H. hnf in H. noconf H.
              apply (f_equal isLambda) in H. simpl in H.
@@ -2205,7 +2205,7 @@ Section Confluence.
              rewrite map_app /= //.
 
         * subst t1.
-          assert (isApp t0 = false).
+          assert (~~ isApp t0).
           eapply decompose_app_rec_head.
           unfold decompose_app in rhofix; now erewrite -> rhofix.
           assert (l0 <> []).
@@ -2333,7 +2333,7 @@ Section Confluence.
     end.
 
   Lemma discr_fix_eq (A : Type) (a : mfixpoint term -> nat -> A) (b c : A) t :
-    isFix t = false ->
+    ~~ isFix t ->
     b = c ->
     match t with
     | tFix mfix idx => a mfix idx
@@ -2348,13 +2348,13 @@ Section Confluence.
     discriminate.
   Qed.
 
-  Lemma isLambda_nisFix t : isLambda t -> isFix t = false.
+  Lemma isLambda_nisFix t : isLambda t -> ~~ isFix t.
   Proof. destruct t; auto. Qed.
 
   Lemma rho_app_unfold Γ t : rho Γ t = rho_app Γ t.
   Proof.
     unfold rho_app. destruct decompose_app eqn:Heq.
-    assert (isApp t0 = false). eapply decompose_app_rec_head. unfold decompose_app in Heq; now erewrite Heq.
+    assert (~~ isApp t0). eapply decompose_app_rec_head. unfold decompose_app in Heq; now erewrite Heq.
     apply decompose_app_inv in Heq. subst.
     revert t0 H. induction l using rev_ind; intros.
     - simpl. intros.
@@ -2389,7 +2389,7 @@ Section Confluence.
           simpl in e.
           move/andP: isc => [islam isc].
           rewrite atom_decompose_app in e.
-          apply/negbTE. now apply isLambda_nisApp, isLambda_subst.
+          now apply isLambda_nisApp, isLambda_subst.
           noconf e. apply discr_fix_eq.
           now apply isLambda_nisFix, isLambda_subst.
           generalize (rho_fix_unfold_inv Γ mfix i (t :: l ++ [x])).
@@ -2466,7 +2466,7 @@ Section Confluence.
     { clear. induction args. now exists x, [].
       exists a, (args ++ [x]). now rewrite app_comm_cons. }
     rewrite Heq'.
-    assert (isApp hd = false).
+    assert (~~ isApp hd).
     { eapply decompose_app_rec_head; eauto. now erewrite eapp. }
     apply decompose_app_rec_inv in eapp. simpl in eapp. rewrite -mkApps_nested in eapp.
     simpl in eapp. noconf eapp.
@@ -2498,7 +2498,7 @@ Section Confluence.
     { clear. induction args. now exists x, [].
       exists a, (args ++ [x]). now rewrite app_comm_cons. }
     rewrite Heq'.
-    assert (isApp hd = false).
+    assert (~~ isApp hd).
     { eapply decompose_app_rec_head; eauto. now erewrite eapp. }
     destruct l using rev_ind; try congruence. clear IHl.
     apply decompose_app_rec_inv in eapp. rewrite - !mkApps_nested in eapp.
@@ -2511,7 +2511,6 @@ Section Confluence.
     - simpl in Hdisc'. congruence.
     - change hd with (mkApps hd []) at 2.
       now rewrite decompose_app_mkApps.
-    - now apply/negbTE.
   Qed.
 
   Lemma rho_mkApps Γ f l :
@@ -2530,7 +2529,6 @@ Section Confluence.
   Proof.
     intros. pose proof (decompose_app_rec_inv H).
     split; auto.
-    apply: negbT.
     eapply decompose_app_rec_head. now erewrite H.
   Qed.
 
@@ -2547,7 +2545,7 @@ Section Confluence.
   Proof.
     intros.
     apply (f_equal decompose_app) in H0.
-    rewrite decompose_app_mkApps in H0. now apply/negbTE.
+    rewrite decompose_app_mkApps in H0 => //.
     rewrite /decompose_app in H0.
     symmetry in H0. apply decompose_app_rec_inv' in H0.
     destruct H0.
@@ -4120,22 +4118,14 @@ Section Confluence.
     - simpl. eapply pred_abs; auto. unfold snoc in *. simpl in X2.
       rewrite app_context_nil_l in X2. apply X2.
 
-    - case le': (~~ isFix_app (tApp M0 N0)).
-      + case le: (~~ lambda_app_discr (tApp M0 N0)).
-        rewrite rho_tApp_discr => //.
-        constructor; auto. simpl in le'.
-        destruct M0; try discriminate.
-        (* Beta at top *)
-        depelim X. solve_discr.
-        depelim X0... econstructor; eauto.
-        discriminate.
+    - case le': (isFix_app (tApp M0 N0)).
       + (* Fix at head *)
         rewrite rho_app_unfold /rho_app.
         case e: decompose_app => [hd args].
         eapply decompose_app_inv' in e as [Hhd Heq].
         destruct args using rev_ind. simpl in Heq. rewrite -Heq in Hhd. discriminate.
         clear IHargs. rewrite -mkApps_nested in Heq. noconf Heq.
-        apply negbFE, isFix_app_inv in le' => //.
+        apply isFix_app_inv in le' => //.
         destruct hd; try discriminate.
         move: X0.
         rewrite -rho_fix_unfold.
@@ -4214,6 +4204,16 @@ Section Confluence.
             rewrite -mkApps_nested => redo.
             apply (pred_mkApps _ _ _ _ _ [N1] _). auto.
             repeat constructor; auto.
+      + case le: (lambda_app_discr (tApp M0 N0)).
+        simpl in le'.
+        destruct M0; try discriminate.
+        (* Beta at top *)
+        depelim X. solve_discr.
+        depelim X0... econstructor; eauto.
+        discriminate.
+        rewrite rho_tApp_discr => //.
+        now apply: negbT. now apply: negbT.
+        constructor; auto.
 
     - simpl. eapply pred_zeta; eauto.
       now simpl in X4; rewrite app_context_nil_l in X4.

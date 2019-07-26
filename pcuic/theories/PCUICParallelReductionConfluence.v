@@ -287,15 +287,6 @@ Proof.
   red. apply All_pair. split; apply auxl; simpl; auto.
 Defined.
 
-Lemma mkApps_eq_decompose {f args t} :
-  mkApps f args = t ->
-  isApp f = false ->
-  fst (decompose_app t) = f.
-Proof.
-  intros H Happ; apply (f_equal decompose_app) in H.
-  rewrite decompose_app_mkApps in H. auto. rewrite <- H. reflexivity.
-Qed.
-
 Lemma atom_mkApps {t l} : atom (mkApps t l) -> atom t /\ l = [].
 Proof.
   induction l in t |- *; simpl; auto.
@@ -309,31 +300,10 @@ Proof.
 Qed.
 
 Ltac finish_discr :=
-  repeat match goal with
-         | [ H : ?x = ?x |- _ ] => clear H
-         | [ H : mkApps _ _ = mkApps _ _ |- _ ] =>
-           let H0 := fresh in let H1 := fresh in
-                              specialize (mkApps_eq_inj H eq_refl eq_refl) as [H0 H1];
-                              try (congruence || (noconf H0; noconf H1))
+  repeat PCUICAstUtils.finish_discr ||
+         match goal with
          | [ H : atom (mkApps _ _) |- _ ] => apply atom_mkApps in H; intuition subst
          | [ H : pred_atom (mkApps _ _) |- _ ] => apply pred_atom_mkApps in H; intuition subst
-         | [ H : mkApps _ _ = _ |- _ ] => apply mkApps_eq_head in H
-         end.
-
-Ltac prepare_discr :=
-  repeat match goal with
-         | [ H : mkApps ?f ?l = tApp ?y ?r |- _ ] => change (mkApps f l = mkApps y [r]) in H
-         | [ H : tApp ?f ?l = mkApps ?y ?r |- _ ] => change (mkApps f [l] = mkApps y r) in H
-         | [ H : mkApps ?x ?l = ?y |- _ ] =>
-           match y with
-           | mkApps _ _ => fail 1
-           | _ => change (mkApps x l = mkApps y []) in H
-           end
-         | [ H : ?x = mkApps ?y ?l |- _ ] =>
-           match x with
-           | mkApps _ _ => fail 1
-           | _ => change (mkApps x [] = mkApps y l) in H
-           end
          end.
 
 Definition application_atom t :=

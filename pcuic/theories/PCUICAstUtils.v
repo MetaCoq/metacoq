@@ -2,7 +2,7 @@ From Coq Require Import Ascii String Bool OrderedType Lia List Program Arith
      Omega.
 From MetaCoq.Template Require Import utils AstUtils.
 From MetaCoq.Template Require Import BasicAst.
-From MetaCoq.PCUIC Require Import PCUICAst.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICSize.
 Import List.ListNotations.
 Require Import ssreflect.
 
@@ -149,8 +149,10 @@ Proof.
   induction l in f, l' |- *; simpl; auto; rewrite IHl ?app_nil_r; auto.
 Qed.
 
+Require Import ssrbool.
+
 Lemma decompose_app_mkApps f l :
-  isApp f = false -> decompose_app (mkApps f l) = (f, l).
+  ~~ isApp f -> decompose_app (mkApps f l) = (f, l).
 Proof.
   intros Hf. rewrite /decompose_app decompose_app_rec_mkApps. rewrite app_nil_r.
   destruct f; simpl in *; (discriminate || reflexivity).
@@ -798,6 +800,184 @@ Qed.
 Lemma decompose_app_tFix mfix idx args t :
   decompose_app t = (tFix mfix idx, args) -> t = mkApps (tFix mfix idx) args.
 Proof. apply decompose_app_rec_tFix. Qed.
+
+Lemma mkApps_size x l : size (mkApps x l) = size x + list_size size l.
+Proof.
+  induction l in x |- *; simpl; simp list_size. lia.
+  rewrite IHl. simpl. lia.
+Qed.
+Lemma mkApps_eq_head {x l} : mkApps x l = x -> l = [].
+Proof.
+  assert (WF := _ : WellFounded (MR lt size)).
+  induction l. simpl. constructor.
+  apply apply_noCycle_right. simpl. red. rewrite mkApps_size. simpl. lia.
+Qed.
+
+Lemma mkApps_eq_inv {x y l} : x = mkApps y l -> size y <= size x.
+Proof.
+  assert (WF := _ : WellFounded (MR lt size)).
+  induction l in x, y |- *. simpl. intros -> ; constructor.
+  simpl. intros. specialize (IHl _ _ H). simpl in IHl. lia.
+Qed.
+
+Lemma mkApps_eq_left x y l : mkApps x l = mkApps y l -> x = y.
+Proof.
+  induction l in x, y |- *; simpl. auto.
+  intros. simpl in *. specialize (IHl _ _ H). now noconf IHl.
+Qed.
+
+Lemma decompose_app_eq_right t l l' : decompose_app_rec t l = decompose_app_rec t l' -> l = l'.
+Proof.
+  induction t in l, l' |- *; simpl; intros [=]; auto.
+  specialize (IHt1 _ _ H0). now noconf IHt1.
+Qed.
+
+Lemma mkApps_eq_right t l l' : mkApps t l = mkApps t l' -> l = l'.
+Proof.
+  intros. eapply (f_equal decompose_app) in H. unfold decompose_app in H.
+  rewrite !decompose_app_rec_mkApps in H. apply decompose_app_eq_right in H.
+  now rewrite !app_nil_r in H.
+Qed.
+
+Require Import ssrbool.
+
+Lemma atom_decompose_app t l : ~~ isApp t -> decompose_app_rec t l = pair t l.
+Proof. destruct t; simpl; congruence. Qed.
+
+Lemma mkApps_eq_inj {t t' l l'} :
+  mkApps t l = mkApps t' l' ->
+  ~~ isApp t -> ~~ isApp t' -> t = t' /\ l = l'.
+Proof.
+  intros Happ Ht Ht'. eapply (f_equal decompose_app) in Happ. unfold decompose_app in Happ.
+  rewrite !decompose_app_rec_mkApps in Happ. rewrite !atom_decompose_app in Happ; auto.
+  rewrite !app_nil_r in Happ. intuition congruence.
+Qed.
+
+Lemma mkApps_eq_decompose {f args t} :
+  mkApps f args = t ->
+  ~~ isApp f ->
+  fst (decompose_app t) = f.
+Proof.
+  intros H Happ; apply (f_equal decompose_app) in H.
+  rewrite decompose_app_mkApps in H. auto. rewrite <- H. reflexivity.
+Qed.
+
+Ltac finish_discr :=
+  repeat match goal with
+         | [ H : ?x = ?x |- _ ] => clear H
+         | [ H : mkApps _ _ = mkApps _ _ |- _ ] =>
+           let H0 := fresh in let H1 := fresh in
+                              specialize (mkApps_eq_inj H eq_refl eq_refl) as [H0 H1];
+                              try (congruence || (noconf H0; noconf H1))
+         | [ H : mkApps _ _ = _ |- _ ] => apply mkApps_eq_head in H
+         end.
+
+Ltac prepare_discr :=
+  repeat match goal with
+         | [ H : mkApps ?f ?l = tApp ?y ?r |- _ ] => change (mkApps f l = mkApps y [r]) in H
+         | [ H : tApp ?f ?l = mkApps ?y ?r |- _ ] => change (mkApps f [l] = mkApps y r) in H
+         | [ H : mkApps ?x ?l = ?y |- _ ] =>
+           match y with
+           | mkApps _ _ => fail 1
+           | _ => change (mkApps x l = mkApps y []) in H
+           end
+         | [ H : ?x = mkApps ?y ?l |- _ ] =>
+           match x with
+           | mkApps _ _ => fail 1
+           | _ => change (mkApps x [] = mkApps y l) in H
+           end
+         end.
+
+
+Inductive mkApps_spec : term -> list term -> term -> list term -> term -> Type :=
+| mkApps_intro f l n :
+    ~~ isApp f ->
+    mkApps_spec f l (mkApps f (firstn n l)) (skipn n l) (mkApps f l).
+
+Lemma decompose_app_rec_eq f l :
+  ~~ isApp f ->
+  decompose_app_rec f l = (f, l).
+Proof.
+  destruct f; simpl; try discriminate; congruence.
+Qed.
+Close Scope string_scope.
+
+Lemma firstn_add {A} x y (args : list A) : firstn (x + y) args = firstn x args ++ firstn y (skipn x args).
+Proof.
+  induction x in y, args |- *. simpl. reflexivity.
+  simpl. destruct args. simpl.
+  now rewrite firstn_nil.
+  rewrite IHx. now rewrite app_comm_cons.
+Qed.
+
+Lemma decompose_app_rec_inv' f l hd args :
+  decompose_app_rec f l = (hd, args) ->
+  ∑ n, ~~ isApp hd /\ l = skipn n args /\ f = mkApps hd (firstn n args).
+Proof.
+  destruct (isApp f) eqn:Heq.
+  revert l args hd.
+  induction f; try discriminate. intros.
+  simpl in H.
+  destruct (isApp f1) eqn:Hf1.
+  2:{ rewrite decompose_app_rec_eq in H => //. now apply negbT.
+      revert Hf1.
+      inv H. exists 1. simpl. intuition auto. now eapply negbT. }
+  destruct (IHf1 eq_refl _ _ _ H).
+  clear IHf1.
+  exists (S x); intuition auto. eapply (f_equal (skipn 1)) in H2.
+  rewrite [l]H2. now rewrite skipn_skipn Nat.add_1_r.
+  rewrite -Nat.add_1_r firstn_add H3 -H2.
+  now rewrite [tApp _ _](mkApps_nested hd _ [f2]).
+  rewrite decompose_app_rec_eq; auto. now apply negbT.
+  move=> [] H ->. subst f. exists 0. intuition auto.
+  now apply negbT.
+Qed.
+
+Lemma mkApps_elim_rec t l l' :
+  let app' := decompose_app_rec (mkApps t l) l' in
+  mkApps_spec app'.1 app'.2 t (l ++ l') (mkApps t (l ++ l')).
+Proof.
+  destruct app' as [hd args] eqn:Heq.
+  subst app'.
+  rewrite decompose_app_rec_mkApps in Heq.
+  have H := decompose_app_rec_inv' _ _ _ _ Heq.
+  destruct H. simpl. destruct a as [isapp [Hl' Hl]].
+  subst t.
+  have H' := mkApps_intro hd args x. rewrite Hl'.
+  rewrite mkApps_nested. now rewrite firstn_skipn.
+Qed.
+
+Lemma mkApps_elim t l  :
+  let app' := decompose_app (mkApps t l) in
+  mkApps_spec app'.1 app'.2 t l (mkApps t l).
+Proof.
+  have H := @mkApps_elim_rec t l [].
+  now rewrite app_nil_r in H.
+Qed.
+
+Definition application_atom t :=
+  match t with
+  | tVar _
+  | tSort _
+  | tInd _ _
+  | tConstruct _ _ _
+  | tLambda _ _ _ => true
+  | _ => false
+  end.
+
+Lemma application_atom_mkApps {t l} : application_atom (mkApps t l) -> application_atom t /\ l = [].
+Proof.
+  induction l in t |- *; simpl; auto.
+  intros. destruct (IHl _ H). discriminate.
+Qed.
+
+Ltac solve_discr :=
+  (try (progress (prepare_discr; finish_discr; cbn [mkApps] in * )));
+  (try (match goal with
+        | [ H : is_true (application_atom _) |- _ ] => discriminate
+        | [ H : is_true (application_atom (mkApps _ _)) |- _ ] =>
+          destruct (application_atom_mkApps H); subst; try discriminate
+        end)).
 
 (** Use a coercion for this common projection of the global context. *)
 Definition fst_ctx : global_env_ext -> global_env := fst.

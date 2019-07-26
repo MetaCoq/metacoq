@@ -1,7 +1,8 @@
 (* Distributed under the terms of the MIT license.   *)
 
 From Coq Require Import List Program.
-From MetaCoq.Template Require Import utils AstUtils BasicAst Pretty.
+From MetaCoq.Template Require Import utils AstUtils BasicAst.
+Require Import MetaCoq.Template.Pretty.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTyping PCUICChecker PCUICLiftSubst.
 From Coq Require Import String.
 

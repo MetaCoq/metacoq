@@ -1,6 +1,7 @@
 -R theories MetaCoq.PCUIC
 
 theories/PCUICAst.v
+theories/PCUICSize.v
 theories/PCUICAstUtils.v
 theories/PCUICInduction.v
 theories/PCUICReflect.v

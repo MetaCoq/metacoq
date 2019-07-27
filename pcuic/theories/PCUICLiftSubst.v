@@ -1072,7 +1072,18 @@ Proof.
   now rewrite up_Upn.
 Qed.
 
-Hint Rewrite @inst_app @inst_lam @inst_prod @inst_letin @inst_fix @inst_cofix : sigma.
+Lemma inst_mkApps :
+  forall t l σ,
+    (mkApps t l).[σ] = mkApps t.[σ] (map (inst σ) l).
+Proof.
+  intros t l σ.
+  induction l in t, σ |- *.
+  - reflexivity.
+  - simpl. rewrite IHl. reflexivity.
+Qed.
+
+Hint Rewrite @inst_app @inst_lam @inst_prod @inst_letin @inst_fix @inst_cofix
+     @inst_mkApps : sigma.
 
 Lemma subst_cons_0 t σ : (tRel 0).[t ⋅ σ] = t. Proof. reflexivity. Qed.
 Lemma subst_cons_shift t σ : ↑ ∘ (t ⋅ σ) = σ. Proof. reflexivity. Qed.

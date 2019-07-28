@@ -18,6 +18,7 @@ Local Open Scope string_scope.
 Set Asymmetric Patterns.
 From Equations Require Import Equations.
 Require Import Equations.Prop.DepElim.
+Require Import CMorphisms CRelationClasses.
 
 Set Equations With UIP.
 Set Printing Universes.
@@ -358,10 +359,10 @@ Section Principality.
 
   Lemma cumul_sort_confluence {Γ A u v} :
     Σ ;;; Γ |- A <= tSort u ->
-               Σ ;;; Γ |- A <= tSort v ->
-                          ∑ v', (Σ ;;; Γ |- A == tSort v') *
-                                (leq_universe (global_ext_constraints Σ) v' u *
-                                 leq_universe (global_ext_constraints Σ) v' v).
+    Σ ;;; Γ |- A <= tSort v ->
+    ∑ v', (Σ ;;; Γ |- A == tSort v') *
+          (leq_universe (global_ext_constraints Σ) v' u /\
+           leq_universe (global_ext_constraints Σ) v' v).
   Proof.
     move=> H H'.
     eapply invert_cumul_sort_r in H as [u'u ?].
@@ -476,7 +477,6 @@ Section Principality.
   (*   now apply IHeqargs. *)
   (* Qed. *)
 
-  Require Import CMorphisms CRelationClasses.
 
   Instance conv_alt_transitive Γ : Transitive (fun x y => Σ ;;; Γ |- x == y).
   Proof. intros x y z; eapply conv_alt_trans. auto. Qed.

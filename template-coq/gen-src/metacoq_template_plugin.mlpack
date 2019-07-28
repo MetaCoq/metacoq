@@ -25,6 +25,7 @@ MSetWeakList
 MSetProperties
 BinNums
 Equality0
+CRelationClasses
 Utils
 Config0
 Universes0
@@ -33,8 +34,8 @@ Ast0
 AstUtils
 LiftSubst
 UnivSubst0
+Pretty
 Common
-CRelationClasses
 
 Denote
 Denoter

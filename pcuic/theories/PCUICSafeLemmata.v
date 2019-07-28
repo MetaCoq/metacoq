@@ -8,11 +8,13 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICReflect PCUICLiftSubst PCUICUnivSubst PCUICTyping
      PCUICCumulativity PCUICSR PCUICPosition PCUICEquality PCUICNameless
      PCUICNormal PCUICInversion PCUICCumulativity PCUICReduction
-     PCUICConfluence PCUICConversion PCUICContextConversion PCUICValidity.
+     PCUICConfluence PCUICConversion PCUICContextConversion PCUICValidity
+     PCUICParallelReductionConfluence.
 From Equations Require Import Equations.
 
 Require Import Equations.Prop.DepElim.
-
+Require Import Equations.Type.Relation_Properties.
+Derive Signature for red.
 Import MonadNotation.
 
 Set Equations With UIP.
@@ -1629,9 +1631,6 @@ Section Lemmata.
     assumption.
   Qed.
 
-  Require Import Equations.Type.Relation_Properties.
-  Require Import PCUICParallelReductionConfluence.
-  Require Import PCUICContextConversion.
   Lemma red_lambda_inv Γ na A1 b1 T :
     red Σ Γ (tLambda na A1 b1) T ->
     ∑ A2 b2, (T = tLambda na A2 b2) *
@@ -1891,13 +1890,6 @@ Section Lemmata.
       wellformed Σ (Γ ,,, stack_context π) u ->
       Σ ;;; Γ ,,, stack_context π |- u == v ->
       wellformed Σ Γ (zipc u π).
-  Admitted.
-
-  Lemma conv_context_conversion :
-    forall {Γ u v Γ'},
-      Σ ;;; Γ |- u == v ->
-      conv_ctx Σ Γ Γ' ->
-      Σ ;;; Γ' |- u == v.
   Admitted.
 
   Derive Signature for typing.

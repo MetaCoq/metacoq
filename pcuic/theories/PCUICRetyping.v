@@ -17,6 +17,15 @@ Import monad_utils.MonadNotation.
   substitution are costly here. No universe checking or conversion is done
   in particular. *)
 
+Axiom reduce_to_sort :
+  global_env -> context -> term -> typing_result universe.
+Axiom reduce_to_prod :
+  global_env -> context -> term -> typing_result (term × term).
+
+Axiom reduce_to_ind :
+  global_env -> context -> term
+  -> typing_result ((inductive × list Level.t) × list term).
+
 Section TypeOf.
   Context {cf : checker_flags}.
   Context `{F : Fuel}.

@@ -37,13 +37,6 @@ Proof.
   apply IHl.
 Qed.
 
-Lemma last_app {A} (l l' : list A) d : l' <> [] -> last (l ++ l') d = last l' d.
-Proof.
-  revert l'. induction l; simpl; auto. intros.
-  destruct l. simpl. destruct l'; congruence. simpl.
-  specialize (IHl _ H). apply IHl.
-Qed.
-
 Lemma mkApps_nonempty f l :
   l <> [] -> mkApps f l = tApp (mkApps f (removelast l)) (last l f).
 Proof.
@@ -52,21 +45,6 @@ Proof.
   rewrite removelast_app. congruence. simpl. now rewrite app_nil_r.
   rewrite last_app. congruence.
   reflexivity.
-Qed.
-
-Lemma last_nonempty_eq {A} {l : list A} {d d'} : l <> [] -> last l d = last l d'.
-Proof.
-  induction l; simpl; try congruence.
-  intros. destruct l; auto. apply IHl. congruence.
-Qed.
-
-Lemma nth_error_removelast {A} (args : list A) n :
-  n < Nat.pred #|args| -> nth_error args n = nth_error (removelast args) n.
-Proof.
-  induction n in args |- *; destruct args; intros; auto.
-  simpl. destruct args. depelim H. reflexivity.
-  simpl. rewrite IHn. simpl in H. auto with arith.
-  destruct args, n; reflexivity.
 Qed.
 
 (** Requires Validity *)
@@ -94,31 +72,6 @@ Admitted.
 (*     clear -H'' HA'''. depind H''. *)
 (*     econstructor; eauto. eapply cumul_trans; eauto. *)
 (* Qed. *)
-
-Lemma All_rev {A} (P : A -> Type) (l : list A) : All P l -> All P (List.rev l).
-Proof.
-  induction l using rev_ind. constructor.
-  intros. rewrite rev_app_distr. simpl. apply All_app in X as [Alll Allx]. inv Allx.
-  constructor; intuition eauto.
-Qed.
-
-Require Import Lia.
-
-Lemma nth_error_rev {A} (l : list A) i : i < #|l| ->
-  nth_error l i = nth_error (List.rev l) (#|l| - S i).
-Proof.
-  revert l. induction i. destruct l; simpl; auto.
-  induction l using rev_ind; simpl. auto.
-  rewrite rev_app_distr. simpl.
-  rewrite app_length. simpl.
-  replace (#|l| + 1 - 0) with (S #|l|) by lia. simpl.
-  rewrite Nat.sub_0_r in IHl. auto with arith.
-
-  destruct l. simpl; auto. simpl. intros. rewrite IHi. lia.
-  assert (#|l| - S i < #|l|) by lia.
-  rewrite nth_error_app_lt. rewrite List.rev_length; auto.
-  reflexivity.
-Qed.
 
 Lemma type_tFix_inv {cf:checker_flags} (Σ : global_env_ext) Γ mfix idx T : wf Σ ->
   Σ ;;; Γ |- tFix mfix idx : T ->

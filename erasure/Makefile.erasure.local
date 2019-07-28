@@ -1,0 +1,5 @@
+CAMLFLAGS+=-w -33 # Unused opens
+
+post-all::
+	echo "Done extracting the erasure, moving extraction files!"
+	./clean_extraction.sh

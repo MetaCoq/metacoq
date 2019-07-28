@@ -1,2 +1,0 @@
-CAMLFLAGS+=-open Metacoq_template_plugin -open Metacoq_checker_plugin -open Metacoq_checker_plugin.Typing0 -open Metacoq_pcuic_plugin
-CAMLFLAGS+=-w -33 # Unused opens

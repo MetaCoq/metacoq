@@ -4,11 +4,12 @@ From Coq Require Import Bool String List Program BinPos Compare_dec Arith Lia
      Classes.RelationClasses Omega.
 From MetaCoq.Template Require Import config Universes monad_utils utils BasicAst
      AstUtils UnivSubst.
+From MetaCoq.Checker Require Import uGraph.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICReflect PCUICLiftSubst PCUICUnivSubst PCUICTyping
      PCUICCumulativity PCUICSR PCUICEquality PCUICNameless PCUICConversion
      PCUICSafeLemmata PCUICNormal PCUICInversion PCUICReduction PCUICPosition
-     PCUICConfluence PCUICSN.
+     PCUICContextConversion PCUICConfluence PCUICSN.
 From MetaCoq.SafeChecker Require Import PCUICSafeReduce.
 From Equations Require Import Equations.
 
@@ -1936,12 +1937,12 @@ Section Conversion.
     end.
     eapply wellformed_zipc_replace. auto. auto. eapply h2.
     - simpl. rewrite stack_context_appstack.
-      left. exists A1'. eapply context_conversion ; auto.
-      + eassumption.
+      left. exists A1'. eapply context_conversion. auto. 2:eauto.
+      + now eapply typing_wf_local in hh1.
       + assumption.
+      + now eapply typing_wf_local in hu2.
     - simpl. rewrite stack_context_appstack.
-      eapply conv_context_conversion ; auto.
-      all: eassumption.
+      eapply conv_alt_conv_ctx ; eauto.
   Defined.
   Next Obligation.
     simpl in H0. destruct H0 as [eq hp].
@@ -2283,6 +2284,9 @@ Section Conversion.
     - reflexivity.
   Qed.
 
+  Definition leqb_term := eqb_term_upto_univ eqb eqb.
+  Definition eqb_term := eqb_term_upto_univ eqb eqb.
+
   Equations(noeqns) _isconv_fallback (Γ : context) (leq : conv_pb)
             (t1 : term) (π1 : stack) (h1 : wtp Γ t1 π1)
             (t2 : term) (π2 : stack) (h2 : wtp Γ t2 π2)
@@ -2306,7 +2310,11 @@ Section Conversion.
             isconv_prog Γ leq t1 π1 rt2' (θ2' +++ θ2) aux
           }
         } ;
-      | @exist None _ := no
+      | @exist None _ :=
+        match leq with
+        | Conv => exist (eqb_term (zippx t1 π1) (zippx t2 π2)) _
+        | Cumul => exist (leqb_term (zippx t1 π1) (zippx t2 π2)) _
+        end
       }
     }.
   Next Obligation.
@@ -2554,6 +2562,24 @@ Section Conversion.
     rewrite stack_context_appstack in r2.
     rewrite zipc_appstack in r2. cbn in r2.
     eapply red_it_mkLambda_or_LetIn. assumption.
+  Qed.
+  Next Obligation.
+    destruct eqb_term eqn:Heq.
+    constructor.
+    constructor.
+    apply eq_term_upto_univ_eq_eq_term.
+    apply eq_term_upto_univ_nl_inv. auto. auto.
+    eapply (ssrbool.elimT (reflect_nleq_term _ _)) in Heq.
+    rewrite Heq. reflexivity. constructor.
+  Qed.
+  Next Obligation.
+    destruct eqb_term eqn:Heq. destruct hΣ.
+    constructor. eapply conv_alt_cumul; auto.
+    constructor.
+    apply eq_term_upto_univ_eq_eq_term.
+    apply eq_term_upto_univ_nl_inv. auto. auto.
+    eapply (ssrbool.elimT (reflect_nleq_term _ _)) in Heq.
+    rewrite Heq. reflexivity. constructor.
   Qed.
 
   Equations _isconv (s : state) (Γ : context)

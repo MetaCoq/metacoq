@@ -1384,8 +1384,8 @@ Section CheckEnv.
 
   Program Definition check_udecl id (Σ : global_env) (HΣ : ∥ wf Σ ∥) G
           (HG : is_graph_of_uctx G (global_uctx Σ)) (udecl : universes_decl)
-    : EnvCheck (∑ uctx', gc_of_uctx (uctx_of_udecl udecl) = Some uctx'
-                         × ∥ on_udecl Σ udecl ∥) :=
+    : EnvCheck (∑ uctx', gc_of_uctx (uctx_of_udecl udecl) = Some uctx' /\
+                         ∥ on_udecl Σ udecl ∥) :=
     let levels := levels_of_udecl udecl in
     let global_levels := global_levels Σ in
     let all_levels := LevelSet.union levels global_levels in
@@ -1405,7 +1405,7 @@ Section CheckEnv.
     | Some uctx' => fun Huctx =>
       check_eq_true (wGraph.is_acyclic (add_uctx uctx' G))
                     (IllFormedDecl id (Msg "constraints not satisfiable"));;
-                                 ret (uctx'; (_, _))
+                                 ret (uctx'; (conj _ _))
     end eq_refl.
   Next Obligation.
     assert (HH: ConstraintSet.For_all
@@ -1468,14 +1468,14 @@ Section CheckEnv.
 
 
   Program Fixpoint check_wf_env (Σ : global_env)
-    : EnvCheck (∑ G, (is_graph_of_uctx G (global_uctx Σ) * ∥ wf Σ ∥)) :=
+    : EnvCheck (∑ G, (is_graph_of_uctx G (global_uctx Σ) /\ ∥ wf Σ ∥)) :=
     match Σ with
     | [] => ret (init_graph; _)
     | d :: Σ =>
         G <- check_wf_env Σ ;;
         check_fresh (global_decl_ident d) Σ ;;
         let udecl := universes_decl_of_decl d in
-        uctx <- check_udecl (global_decl_ident d) Σ _ G.π1 G.π2.1 udecl ;;
+        uctx <- check_udecl (global_decl_ident d) Σ _ G.π1 (proj1 G.π2) udecl ;;
         let G' := add_uctx uctx.π1 G.π1 in
         check_wf_decl (Σ, udecl) _ _ G' _ d ;;
         match udecl with
@@ -1581,7 +1581,7 @@ Section CheckEnv.
     : EnvCheck (∑ A, ∥ empty_ext (List.rev p.1) ;;; [] |- p.2  : A ∥) :=
     let Σ := List.rev (fst p) in
     G <- check_wf_env Σ ;;
-    @infer_term (empty_ext Σ) G.π2.2 _ G.π1 _ (snd p).
+    @infer_term (empty_ext Σ) (proj2 G.π2) _ G.π1 _ (snd p).
   Next Obligation.
     sq. repeat split.
     - intros l Hl; now apply LevelSetFact.empty_iff in Hl.
@@ -1591,7 +1591,7 @@ Section CheckEnv.
       apply wf_consistent in X. destruct X as [v Hv].
       exists v. intros c Hc.
       apply ConstraintSet.union_spec in Hc. destruct Hc.
-      apply ConstraintSetFact.empty_iff in H; contradiction.
+      apply ConstraintSetFact.empty_iff in H0; contradiction.
       now apply Hv.
   Defined.
 

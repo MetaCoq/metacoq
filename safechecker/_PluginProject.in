@@ -1,128 +1,83 @@
--Q ../template-coq/theories MetaCoq.Template
--I ../template-coq/build
 -I src
--R theories MetaCoq.Checker
+-R theories MetaCoq.SafeChecker
 
-# from MetaCoq (get with 'ls -1')
-src/ascii.ml
-src/ascii.mli
-src/ast0.ml
-src/ast0.mli
-src/ast_denoter.ml
-src/ast_quoter.ml
-src/astUtils.ml
-src/astUtils.mli
-src/basicAst.ml
-src/basicAst.mli
-src/basics.ml
-src/basics.mli
-src/binInt.ml
-src/binInt.mli
-src/binNat.ml
-src/binNat.mli
-src/binNums.ml
-src/binNums.mli
-src/binPosDef.ml
-src/binPosDef.mli
-src/binPos.ml
-src/binPos.mli
-src/bool.ml
-src/bool.mli
-src/checker0.ml
-src/checker0.mli
-src/common0.ml
-src/common0.mli
-src/compare_dec.ml
+src/classes0.mli
+src/classes0.ml
+
+# From Coq's stdlib
 src/compare_dec.mli
-src/config0.ml
-src/config0.mli
-src/datatypes.ml
-src/datatypes.mli
-src/decidableType.ml
-src/decidableType.mli
-src/decimal.ml
-src/decimal.mli
-src/denote.ml
-src/denoter.ml
-src/equalities.ml
-src/equalities.mli
-src/extractable.ml
-src/extractable.mli
-src/liftSubst.ml
-src/liftSubst.mli
-src/list0.ml
-src/list0.mli
-src/logic0.ml
-src/logic0.mli
+src/compare_dec.ml
+src/mSetList.mli
+src/mSetList.ml
+
 src/monad_utils.ml
 src/monad_utils.mli
-src/mSetDecide.ml
-src/mSetDecide.mli
-src/mSetFacts.ml
-src/mSetFacts.mli
-src/mSetInterface.ml
-src/mSetInterface.mli
-src/mSetList.ml
-src/mSetList.mli
-src/mSetProperties.ml
-src/mSetProperties.mli
-src/mSetWeakList.ml
-src/mSetWeakList.mli
-src/nat0.ml
-src/nat0.mli
-src/orderedType0.ml
-src/orderedType0.mli
-src/ordersFacts.ml
-src/ordersFacts.mli
-src/ordersLists.ml
-src/ordersLists.mli
-src/orders.ml
-src/orders.mli
-src/ordersTac.ml
-src/ordersTac.mli
-src/peanoNat.ml
-src/peanoNat.mli
-src/plugin_core.ml
-src/plugin_core.mli
-src/quoted.ml
-src/quoter.ml
-src/retyping0.ml
-src/retyping0.mli
-src/run_extractable.ml
-src/run_extractable.mli
-src/specif.ml
-src/specif.mli
-src/string0.ml
-src/string0.mli
-src/tm_util.ml
-src/typing0.ml
-src/typing0.mli
-src/typingWf.ml
-src/typingWf.mli
 src/uGraph0.ml
 src/uGraph0.mli
-src/universes0.ml
-src/universes0.mli
-src/univSubst0.ml
-src/univSubst0.mli
-src/equality.ml
-src/equality.mli
-src/utils.ml
-src/utils.mli
-src/wf.ml
-src/wf.mli
 src/wGraph.ml
 src/wGraph.mli
 
-# From SafeChecker
-src/PCUICPosition.mli
+# From PCUIC
+src/pCUICAst.ml
+src/pCUICAst.mli
+src/pCUICAstUtils.ml
+src/pCUICAstUtils.mli
+src/pCUICLiftSubst.ml
+src/pCUICLiftSubst.mli
+src/eqDecInstances.ml
+src/eqDecInstances.mli
+src/pCUICInduction.mli
+src/pCUICInduction.ml
+src/pCUICReflect.mli
+src/pCUICReflect.ml
+src/pCUICEquality.mli
+src/pCUICEquality.ml
+src/pCUICTyping.ml
+src/pCUICTyping.mli
+src/pCUICUnivSubst.ml
+src/pCUICUnivSubst.mli
+src/pCUICCumulativity.mli
+src/pCUICCumulativity.ml
+src/pCUICPosition.mli
 src/pCUICPosition.ml
-src/PCUICSafeReduce.mli
+src/pCUICNormal.mli
+src/pCUICNormal.ml
+src/pCUICChecker.ml
+src/pCUICChecker.mli
+src/pCUICRetyping.ml
+src/pCUICRetyping.mli
+src/pCUICMetaTheory.ml
+src/pCUICMetaTheory.mli
+# src/pCUICWeakeningEnv.ml
+# src/pCUICWeakeningEnv.mli
+# src/pCUICWeakening.mli
+# src/pCUICWeakening.ml
+# src/pCUICReduction.mli
+# src/pCUICReduction.ml
+# src/pCUICSubstitution.ml
+# src/pCUICSubstitution.mli
+# src/pCUICNameless.mli
+# src/pCUICNameless.ml
+# src/pCUICGeneration.mli
+# src/pCUICGeneration.ml
+# src/pCUICContextConversion.mli
+# src/pCUICContextConversion.ml
+# src/pCUICConversion.mli
+# src/pCUICConversion.ml
+src/pCUICSafeLemmata.mli
+src/pCUICSafeLemmata.ml
+src/templateToPCUIC.mli
+src/templateToPCUIC.ml
+
+# From SafeChecker
+src/pCUICSafeReduce.mli
 src/pCUICSafeReduce.ml
-src/PCUICSafeConversion.mli
+src/pCUICSafeConversion.mli
 src/pCUICSafeConversion.ml
 src/pCUICSafeChecker.mli
 src/pCUICSafeChecker.ml
+src/safeTemplateChecker.mli
+src/safeTemplateChecker.ml
 
 src/g_metacoq_safechecker.ml4
 src/metacoq_safechecker_plugin.mlpack

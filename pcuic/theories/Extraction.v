@@ -4,7 +4,7 @@
     should use these same directives for consistency.
 *)
 
-Require Import FSets.
+From Coq Require Import FSets ssreflect.
 Require Import ExtrOcamlBasic.
 Require Import ExtrOcamlString ExtrOcamlZInt.
 
@@ -20,7 +20,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICUnivSubst PCUICInd
      PCUICNormal PCUICSafeLemmata
      (* PCUICWeakeningEnv *)
      (* PCUICWeakening *)
-     (* PCUICSubstitution *)
+     (* PCUICSubstitution *) PCUICPretty
      PCUICChecker PCUICRetyping PCUICMetaTheory TemplateToPCUIC.
 From Equations Require Import Equations.
 
@@ -37,26 +37,31 @@ Extraction Inline Equations.Init.pr2.
 Extraction Inline Equations.Init.hidebody.
 Extraction Inline Equations.Prop.DepElim.solution_left.
 
+Cd "src".
 (* Extraction Inline NoConfusionPackage_All_local_env_over. *)
 (* Extraction Inline NoConfusionPackage_context_decl. *)
 Extraction Library Signature.
 Extraction Library Classes.
+Extraction Library ssreflect.
+(* Extraction Library Relation. *)
 
-(* The following allows to test the failure of extraction *)
-(* Bugs in extraction! *)
+(* The following allows to test the failure of extraction Bugs in extraction! *)
 (* Extract Constant Relation_Properties.clos_rt_is_preorder => "(Obj.magic 0)". *)
 (* Extract Constant CRelationClasses.eq_equivalence => "(Obj.magic __)". *)
 (* Separate Extraction PCUICNormal PCUICAst PCUICAstUtils PCUICUnivSubst PCUICLiftSubst PCUICReflect PCUICPosition *)
-(*          PCUICChecker.type_of PCUICRetyping TemplateToPCUIC PCUICSafeLemmata. *)
+(*          PCUICCumulativity PCUICSubstitution *)
+(*          (* PCUICTyping PCUICEquality *) *)
+(*          PCUICChecker.type_of PCUICRetyping TemplateToPCUIC (* PCUICSafeLemmata *). *)
 
 Extraction Library PCUICAst.
 Extraction Library PCUICAstUtils.
+Extraction Library PCUICInduction.
 Extraction Library PCUICUnivSubst.
 Extraction Library PCUICLiftSubst.
 Extraction Library PCUICTyping.
-Extraction Library PCUICNormal.
-Extraction Library PCUICPosition.
 Extraction Library PCUICChecker.
 Extraction Library PCUICRetyping.
 Extraction Library PCUICMetaTheory.
 Extraction Library TemplateToPCUIC.
+Extraction Library PCUICPretty.
+Cd "..".

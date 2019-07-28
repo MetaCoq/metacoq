@@ -1,0 +1,2 @@
+CAMLFLAGS+=-open Metacoq_template_plugin
+CAMLFLAGS+=-w -33 # Unused opens

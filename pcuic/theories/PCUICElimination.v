@@ -4,7 +4,7 @@ From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
 From MetaCoq.Template Require Import config utils monad_utils BasicAst AstUtils.
 From MetaCoq.PCUIC Require Import PCUICTyping PCUICAst PCUICAstUtils PCUICInduction
      PCUICWeakening PCUICSubstitution PCUICRetyping PCUICMetaTheory PCUICWcbvEval
-     PCUICSR PCUICClosed PCUICInversion PCUICGeneration.
+     PCUICSR PCUICClosed PCUICInversion PCUICGeneration PCUICSafeLemmata.
 
 Definition Is_proof `{cf : checker_flags} Σ Γ t := ∑ T u, Σ ;;; Γ |- t : T × Σ ;;; Γ |- T : tSort u × is_prop_sort u.
 
@@ -16,6 +16,26 @@ Proof.
   intros [] []. unfold declared_minductive in *.
   rewrite H in H1. inversion H1. subst. rewrite H2 in H0. inversion H0. eauto.
 Qed.
+
+Definition SingletonProp `{cf : checker_flags} (Σ : global_env_ext) (ind : inductive) :=
+  forall mdecl idecl,
+    declared_inductive (fst Σ) mdecl ind idecl ->
+    forall Γ args u n (Σ' : global_env_ext),
+      wf Σ' ->
+      PCUICWeakeningEnv.extends Σ Σ' ->
+      welltyped Σ' Γ (mkApps (tConstruct ind n u) args) ->
+      ∥Is_proof Σ' Γ (mkApps (tConstruct ind n u) args)∥ /\
+       #|ind_ctors idecl| <= 1 /\
+       squash (All (Is_proof Σ' Γ) (skipn (ind_npars mdecl) args)).
+
+Definition Computational `{cf : checker_flags} (Σ : global_env_ext) (ind : inductive) :=
+  forall mdecl idecl,
+    declared_inductive (fst Σ) mdecl ind idecl ->
+    forall Γ args u n (Σ' : global_env_ext),
+      wf Σ' ->
+      PCUICWeakeningEnv.extends Σ Σ' ->
+      welltyped Σ' Γ (mkApps (tConstruct ind n u) args) ->
+      Is_proof Σ' Γ (mkApps (tConstruct ind n u) args) -> False.
 
 Definition Informative`{cf : checker_flags} (Σ : global_env_ext) (ind : inductive) :=
   forall mdecl idecl,
@@ -48,7 +68,6 @@ Proof.
   - admit. (* no idea what to do for Set *)
   - reflexivity.
 Admitted.                       (* elim_restriction_works *)
-
 
 Lemma elim_restriction_works_kelim2 `{cf : checker_flags} (Σ : global_env_ext) ind mind idecl : wf Σ ->
   declared_inductive (fst Σ) mind ind idecl ->
@@ -142,6 +161,13 @@ Proof.
     eapply IHl.  eauto.
 Qed.
 
+Lemma map_option_Some X (L : list (option X)) t : map_option_out L = Some t -> All2 (fun x y => x = Some y) L t.
+Proof.
+  intros. induction L in t, H |- *; cbn in *.
+  - inv H. econstructor.
+  - destruct a. destruct ?. all:inv H. eauto.
+Qed.
+
 Lemma tCase_length_branch_inv `{cf : checker_flags} (Σ : global_env_ext) Γ ind npar p n u args brs T m t :
   wf Σ ->
   Σ ;;; Γ |- tCase (ind, npar) p (mkApps (tConstruct ind n u) args) brs : T ->
@@ -163,14 +189,6 @@ Proof.
   eapply All2_nth_error_Some in H as (? & ?). 2:eassumption. destruct p0.
   rewrite e. destruct p0. cbn in *. subst. destruct x1. cbn. eauto.
   destruct H3.
-
-  Lemma map_option_Some X (L : list (option X)) t : map_option_out L = Some t -> All2 (fun x y => x = Some y) L t.
-  Proof.
-    intros. induction L in t, H |- *; cbn in *.
-    - inv H. econstructor.
-    - destruct a. destruct ?. all:inv H. eauto.
-  Qed.
-
   eapply map_option_Some in E4.
   eapply All2_nth_error_Some_r in E4 as (? & ? & ?); eauto.
   subst.

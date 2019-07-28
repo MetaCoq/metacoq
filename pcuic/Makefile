@@ -32,3 +32,6 @@ mrproper:
 	rm -f metacoq-config
 	rm -f Makefile.plugin _PluginProject
 	rm -f Makefile.pcuic _CoqProject
+
+.merlin:
+	make -f Makefile.plugin .merlin

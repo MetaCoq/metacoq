@@ -1,4 +1,6 @@
+Classes0
 Signature
+Ssreflect
 PCUICAst
 PCUICAstUtils
 PCUICInduction
@@ -6,6 +8,7 @@ PCUICUnivSubst
 PCUICLiftSubst
 PCUICTyping
 PCUICChecker
+PCUICPretty
 PCUICRetyping
 PCUICMetaTheory
 TemplateToPCUIC

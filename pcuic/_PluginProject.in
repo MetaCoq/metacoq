@@ -16,6 +16,8 @@ src/cRelationClasses.ml
 # src/relation.ml
 # src/relation_Properties.mli
 # src/relation_Properties.ml
+src/ssreflect.mli
+src/ssreflect.ml
 
 src/pCUICAst.ml
 src/pCUICAst.mli

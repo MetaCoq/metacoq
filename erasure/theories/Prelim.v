@@ -8,7 +8,7 @@ From MetaCoq.PCUIC Require Import PCUICTyping PCUICAst PCUICAstUtils PCUICInduct
      PCUICWcbvEval PCUICSR  PCUICClosed PCUICInversion PCUICGeneration
      PCUICEquality PCUICContextConversion PCUICConversion PCUICElimination.
 From MetaCoq.SafeChecker Require Import PCUICSafeReduce PCUICSafeChecker.
-
+From Coq Require Import ssreflect ssrbool.
 Require Import String.
 Local Open Scope string_scope.
 Set Asymmetric Patterns.
@@ -90,7 +90,7 @@ Proof.
     case_eq (monad_map f (l1 ++ l2)). all: try discriminate. intros l' el.
     simpl. intro h. inv h.
     destruct (IHl1 _ el) as (? & ? & ? & ? & ->).
-    eexists _,_. rewrite H, H0. intuition eauto.
+    eexists _,_. rewrite -> H, H0. intuition eauto.
 Qed.
 
 Existing Instance extraction_checker_flags.
@@ -249,10 +249,10 @@ Proof.
   - destruct L using rev_ind.
     reflexivity.
     rewrite emkApps_snoc in H. inv H.
-  - destruct (mkApps_elim t l). solve_discr.
+  - destruct (EAstUtils.mkApps_elim t l). EAstUtils.solve_discr.
     rewrite Ee.value_head_spec in H.
-    eapply andP in H. destruct H.
-    eapply Ee.atom_mkApps in H1 as [H1 _].
+    move/andP: H => [H H'].
+    eapply Ee.atom_mkApps in H' as [H1 _].
     destruct n, L; discriminate.
 Qed.
 
@@ -275,7 +275,7 @@ Proof.
   - destruct n; inv H.
   - destruct n.
     + cbn. now rewrite <- minus_n_O.
-    + cbn. rewrite IHm. reflexivity. omega.
+    + cbn. rewrite IHm. omega. reflexivity.
 Qed.
 
 Lemma efix_subst_nth mfix n :
@@ -287,7 +287,7 @@ Proof.
   - destruct n; inv H.
   - destruct n.
     + cbn. now rewrite <- minus_n_O.
-    + cbn. rewrite IHm. reflexivity. omega.
+    + cbn. rewrite IHm. omega. reflexivity.
 Qed.
 
 Lemma subslet_fix_subst `{cf : checker_flags} Σ mfix1 T n :
@@ -302,14 +302,14 @@ Proof.
   generalize mfix1 at 2 5 6.  intros.
   induction mfix0 using rev_ind.
   - econstructor.
-  - rewrite mapi_app in *. cbn in *. rewrite rev_app_distr in *. cbn in *.
+  - rewrite mapi_app. cbn in *. rewrite rev_app_distr. cbn in *.
     rewrite app_length. cbn. rewrite plus_comm. cbn. econstructor.
     + eapply IHmfix0. destruct H as [L]. exists (x :: L). subst. now rewrite <- app_assoc.
     + rewrite <- plus_n_O.
-      rewrite PCUICLiftSubst.simpl_subst_k. 2:{ clear. induction l; cbn; try congruence. }
+      rewrite PCUICLiftSubst.simpl_subst_k. clear. induction l; cbn; try congruence.
       eapply inversion_Fix in X as (? & ? & ? & ? & ?) ; auto.
       econstructor; eauto. destruct H. subst.
-      rewrite <- app_assoc. rewrite nth_error_app_ge. 2:omega.
+      rewrite <- app_assoc. rewrite nth_error_app_ge. omega.
       rewrite minus_diag. cbn. reflexivity. eapply p.
 Qed.
 

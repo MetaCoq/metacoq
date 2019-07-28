@@ -4,7 +4,7 @@
     should use these same directives for consistency.
 *)
 
-Require Import FSets.
+From Coq Require Import FSets ssreflect.
 Require Import ExtrOcamlBasic.
 Require Import ExtrOcamlString ExtrOcamlZInt.
 
@@ -42,6 +42,7 @@ Cd "src".
 (* Extraction Inline NoConfusionPackage_context_decl. *)
 Extraction Library Signature.
 Extraction Library Classes.
+Extraction Library ssreflect.
 (* Extraction Library Relation. *)
 
 (* The following allows to test the failure of extraction Bugs in extraction! *)

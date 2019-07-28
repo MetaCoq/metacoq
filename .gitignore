@@ -326,3 +326,5 @@ checker/src/wf.mli
 /erasure/src/ePretty.mli
 /pcuic/src/PCUICPretty.ml
 /pcuic/src/PCUICPretty.mli
+/pcuic/src/ssreflect.ml
+/pcuic/src/ssreflect.mli

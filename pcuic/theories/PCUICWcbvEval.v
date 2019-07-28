@@ -48,7 +48,7 @@ Definition atom t :=
   | _ => false
   end.
 
-Definition isType t :=
+Definition isArityHead t :=
   match t with
   | tSort _
   | tProd _ _ _ => true
@@ -214,7 +214,7 @@ Section Wcbv.
   (** Non redex-producing heads applied to values are values *)
   | eval_app_cong f f' a a' :
       eval f f' ->
-      ~~ (isLambda f' || isFixApp f' || isType f') ->
+      ~~ (isLambda f' || isFixApp f' || isArityHead f') ->
       eval a a' ->
       eval (tApp f a) (tApp f' a')
 
@@ -283,7 +283,7 @@ Section Wcbv.
           eval (tProj p (mkApps fn args)) res ->
           P (tProj p (mkApps fn args)) res -> P (tProj p (mkApps (tCoFix mfix idx) args)) res) ->
       (forall f11 f' a a' : term,
-          eval f11 f' -> P f11 f' -> ~~ (isLambda f' || isFixApp f' || isType f') -> eval a a' -> P a a' -> P (tApp f11 a) (tApp f' a')) ->
+          eval f11 f' -> P f11 f' -> ~~ (isLambda f' || isFixApp f' || isArityHead f') -> eval a a' -> P a a' -> P (tApp f11 a) (tApp f' a')) ->
       (forall t : term, atom t -> P t t) -> forall t t0 : term, eval t t0 -> P t t0.
   Proof.
     intros P Hbeta Hlet Hreldef Hrelvar Hcst Hax Hcase Hproj Hfix Hstuckfix Hcofixcase Hcofixproj Happcong Hatom.
@@ -421,7 +421,7 @@ Section Wcbv.
   Qed.
 
   Lemma value_head_spec t :
-    implb (value_head t) (~~ (isLambda t || isFixApp t || isType t)).
+    implb (value_head t) (~~ (isLambda t || isFixApp t || isArityHead t)).
   Proof.
     destruct t; simpl; intuition auto; eapply implybT.
   Qed.

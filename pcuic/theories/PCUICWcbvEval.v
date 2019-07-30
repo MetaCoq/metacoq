@@ -579,6 +579,29 @@ Section Wcbv.
       exists []. intuition auto.
   Qed.
 
+  Lemma eval_mkApps_cong f f' l l' :
+    eval f f' ->
+    value_head f' ->
+    All2 eval l l' ->
+    eval (mkApps f l) (mkApps f' l').
+  Proof.
+    revert l'. induction l using rev_ind; intros l' evf vf' evl.
+    depelim evl. eapply evf.
+    eapply All2_app_inv in evl as [[? ?] [? ?]].
+    intuition auto. subst. depelim a. depelim a.
+    rewrite - !mkApps_nested /=. eapply eval_app_cong; auto.
+    rewrite isFixApp_mkApps. auto.
+    destruct l0 using rev_ind; simpl; [|rewrite - !mkApps_nested]; simpl in *; destruct f';
+      try discriminate; try constructor.
+  Qed.
+  Arguments removelast : simpl nomatch.
+  Lemma removelast_length {A} (l : list A) : 0 < #|l| -> #|removelast l| < #|l|.
+  Proof.
+    induction l; cbn -[removelast]; auto. intros.
+    destruct l. auto.
+    forward IHl. simpl; lia. cbn -[removelast] in *. simpl removelast. simpl. lia.
+  Qed.
+
   Lemma eval_deterministic {t v v'} : eval t v -> eval t v' -> v = v'.
   Proof.
     intros tv. revert v'.
@@ -592,38 +615,50 @@ Section Wcbv.
         destruct args; discriminate.
         rewrite -mkApps_nested in x. simpl in x. injection x. intros. clear x.
         subst.
-        admit.
-  Admitted.
-  (*   - depelim tv'; auto; try specialize (IHtv1 _ tv'1) || solve [depelim tv1]; try congruence. *)
-  (*     inv IHtv1. specialize (IHtv2 _ tv'2). subst. *)
-  (*     now specialize (IHtv3 _ tv'3). *)
-  (*     now subst f'. easy. *)
-  (*   - eapply eval_LetIn in tv' as [b' [evb evt]]. *)
-  (*     rewrite -(IHtv1 _ evb) in evt. *)
-  (*     eapply (IHtv2 _ evt). *)
-  (*   - depelim tv'; try solve_discr. *)
-  (*     * specialize (IHtv1 _ tv'1). *)
-  (*       solve_discr. inv H. *)
-  (*       now specialize (IHtv2 _ tv'2). *)
-  (*     * specialize (IHtv1 _ tv'1); solve_discr. *)
-  (*     * eapply eval_mkApps_tCoFix in tv1 as [l' [ev' eq]]. solve_discr. *)
-  (*     * easy. *)
-  (*   - subst. *)
-  (*     depelim tv'. *)
-  (*     * specialize (IHtv1 _ tv'1). *)
-  (*       solve_discr. *)
-  (*     * specialize (IHtv1 _ tv'1). *)
-  (*       now specialize (IHtv2 _ tv'2). *)
-  (*     * pose proof tv1. eapply eval_mkApps_tCoFix in H0. *)
-  (*       destruct H0 as [l' [evargs eq]]. solve_discr. *)
-  (*     * easy. *)
-  (*   - depelim tv' => //. *)
-  (*     * depelim tv'1. *)
-  (*     * depelim tv'1. *)
-  (*     * rewrite H in H0. inv H0. *)
-  (*       now specialize (IHtv _ tv'). *)
-  (*     * now depelim tv'1. *)
-
+        assert (eval (mkApps f0 (removelast args)) (mkApps (tFix mfix idx) (removelast args'))).
+        eapply eval_fix_value. auto. admit.
+        simpl. rewrite e /is_constructor. rewrite /is_constructor in i.
+        destruct (nth_error (removelast args') narg) eqn:Heq.
+        eapply nth_error_Some_length in Heq.
+        have H':= (removelast_length args').
+        forward H'. rewrite -(All2_length _ _ a0). lia.
+        elimtype False. rewrite -(All2_length _ _ a0) in H'. lia.
+        constructor.
+        specialize (IHtv1 _ X).
+        solve_discr'.
+      * destruct (mkApps_elim f [a]).
+        destruct (mkApps_elim f0 args).
+(*
+    - depelim tv'; auto; try specialize (IHtv1 _ tv'1) || solve [depelim tv1]; try congruence.
+      inv IHtv1. specialize (IHtv2 _ tv'2). subst.
+      now specialize (IHtv3 _ tv'3).
+      now subst f'. easy.
+    - eapply eval_LetIn in tv' as [b' [evb evt]].
+      rewrite -(IHtv1 _ evb) in evt.
+      eapply (IHtv2 _ evt).
+    - depelim tv'; try solve_discr.
+      * specialize (IHtv1 _ tv'1).
+        solve_discr. inv H.
+        now specialize (IHtv2 _ tv'2).
+      * specialize (IHtv1 _ tv'1); solve_discr.
+      * eapply eval_mkApps_tCoFix in tv1 as [l' [ev' eq]]. solve_discr.
+      * easy.
+    - subst.
+      depelim tv'.
+      * specialize (IHtv1 _ tv'1).
+        solve_discr.
+      * specialize (IHtv1 _ tv'1).
+        now specialize (IHtv2 _ tv'2).
+      * pose proof tv1. eapply eval_mkApps_tCoFix in H0.
+        destruct H0 as [l' [evargs eq]]. solve_discr.
+      * easy.
+    - depelim tv' => //.
+      * depelim tv'1.
+      * depelim tv'1.
+      * rewrite H in H0. inv H0.
+        now specialize (IHtv _ tv').
+      * now depelim tv'1.
+*)
   (*   - depelim tv'; try easy. *)
   (*     * eapply eval_mkApps_tCoFix in tv'1 as [l' [evargs eq]]. *)
   (*       solve_discr. *)
@@ -665,22 +700,7 @@ Section Wcbv.
 
   (*   - depelim tv'; try easy. *)
   (* Qed. *)
-
-  Lemma eval_mkApps_cong f f' l l' :
-    eval f f' ->
-    value_head f' ->
-    All2 eval l l' ->
-    eval (mkApps f l) (mkApps f' l').
-  Proof.
-    revert l'. induction l using rev_ind; intros l' evf vf' evl.
-    depelim evl. eapply evf.
-    eapply All2_app_inv in evl as [[? ?] [? ?]].
-    intuition auto. subst. depelim a. depelim a.
-    rewrite - !mkApps_nested /=. eapply eval_app_cong; auto.
-    rewrite isFixApp_mkApps. auto.
-    destruct l0 using rev_ind; simpl; [|rewrite - !mkApps_nested]; simpl in *; destruct f';
-      try discriminate; try constructor.
-  Qed.
+  Admitted.
 
 End Wcbv.
 

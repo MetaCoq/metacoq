@@ -97,6 +97,14 @@ Definition declared_projection Σ mdecl idecl (proj : projection) pdecl : Prop :
   List.nth_error idecl.(ind_projs) (snd proj) = Some pdecl /\
   mdecl.(ind_npars) = snd (fst proj).
 
+(* TODO fix lookup env *)
+Lemma lookup_env_cst_inv {Σ c k cst} :
+  lookup_env Σ c = Some (ConstantDecl k cst) -> c = k.
+Proof.
+  induction Σ. simpl. discriminate.
+  simpl. destruct AstUtils.ident_eq eqn:Heq. intros [= ->]. simpl in Heq.
+  now destruct (AstUtils.ident_eq_spec c k). auto.
+Qed.
 
 (** Inductive substitution, to produce a constructors' type *)
 Definition inds ind u (l : list one_inductive_body) :=

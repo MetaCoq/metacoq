@@ -271,7 +271,7 @@ Proof.
     destruct f; simpl; try (discriminate || reflexivity).
 Qed.
 
-Lemma mkApp_nested f l l' : mkApps (mkApps f l) l' = mkApps f (l ++ l').
+Lemma mkApps_nested f l l' : mkApps (mkApps f l) l' = mkApps f (l ++ l').
 Proof.
   induction l; destruct f; destruct l'; simpl; rewrite ?app_nil_r; auto.
   f_equal. now rewrite <- app_assoc.
@@ -280,7 +280,7 @@ Qed.
 Lemma mkApp_mkApps f a l : mkApp (mkApps f l) a = mkApps f (l ++ [a]).
 Proof.
   destruct l. simpl. reflexivity.
-  rewrite <- mkApp_nested. reflexivity.
+  rewrite <- mkApps_nested. reflexivity.
 Qed.
 
 Lemma mkApp_tApp f u : isApp f = false -> mkApp f u = tApp f [u].

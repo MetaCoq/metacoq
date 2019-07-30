@@ -14,15 +14,6 @@ Require Import ssreflect ssrbool.
 
 Local Ltac inv H := inversion H; subst.
 
-(* TODO fix lookup env *)
-Lemma lookup_env_cst_inv {Σ c k cst} :
-  lookup_env Σ c = Some (ConstantDecl k cst) -> c = k.
-Proof.
-  induction Σ. simpl. discriminate.
-  simpl. destruct AstUtils.ident_eq eqn:Heq. intros [= ->]. simpl in Heq.
-  now destruct (AstUtils.ident_eq_spec c k). auto.
-Qed.
-
 (** * Weak-head call-by-value evaluation strategy.
 
   The [wcbveval] inductive relation specifies weak cbv evaluation.  It
@@ -182,7 +173,7 @@ Section Wcbv.
       (* There must be at least one argument for this to succeed *)
       is_constructor narg args' ->
       (** We unfold only a fix applied exactly to narg arguments,
-          avoiding overlap with [eval_eta] when there are more arguments. *)
+          avoiding overlap with [eval_beta] when there are more arguments. *)
       S narg = #|args| ->
       (* We reduce all arguments before unfolding *)
       All2 eval args args' ->
@@ -489,16 +480,6 @@ Section Wcbv.
   (*   - now depelim H. *)
   (*   - discriminate. *)
   (* Qed. *)
-  Lemma nApp_mkApps {t l} : ~~ isApp (mkApps t l) -> ~~ isApp t /\ l = [].
-Proof.
-  induction l in t |- *; simpl; auto.
-  intros. destruct (IHl _ H). discriminate.
-Qed.
-  Lemma mkApps_nisApp {t t' l} : mkApps t l = t' -> ~~ isApp t' -> t = t' /\ l = [].
-  Proof.
-    induction l in t |- *; simpl; auto.
-    intros. destruct (IHl _ H). auto. subst. simpl in H0. discriminate.
-  Qed.
 
   Lemma eval_tRel n t :
     eval (tRel n) t ->
@@ -565,17 +546,6 @@ Qed.
     eapply mkApps_nisApp in x => //; intuition subst; auto. discriminate.
     eapply mkApps_nisApp in x => //; intuition subst; auto. now depelim a.
   Qed.
-Ltac solve_discr' :=
-  match goal with
-    H : mkApps _ _ = mkApps ?f ?l |- _ =>
-    eapply mkApps_eq_inj in H as [? ?]; [|easy|easy]; subst; try intuition congruence
-  | H : ?t = mkApps ?f ?l |- _ =>
-    change t with (mkApps t []) in H ;
-    eapply mkApps_eq_inj in H as [? ?]; [|easy|easy]; subst; try intuition congruence
-  | H : mkApps ?f ?l = ?t |- _ =>
-    change t with (mkApps t []) in H ;
-    eapply mkApps_eq_inj in H as [? ?]; [|easy|easy]; subst; try intuition congruence
-  end.
 
   Lemma eval_mkApps_tCoFix mfix idx l v :
     eval (mkApps (tCoFix mfix idx) l) v ->
@@ -695,25 +665,6 @@ Ltac solve_discr' :=
 
   (*   - depelim tv'; try easy. *)
   (* Qed. *)
-Lemma All2_app_inv_l :
-  forall A B R l1 l2 r,
-    @All2 A B R (l1 ++ l2) r ->
-    ∑ r1 r2,
-      (r = r1 ++ r2)%list ×
-      All2 R l1 r1 ×
-      All2 R l2 r2.
-Proof.
-  intros A B R l1 l2 r h.
-  exists (firstn #|l1| r), (skipn #|l1| r).
-  split ; [| split].
-  - rewrite firstn_skipn. reflexivity.
-  - apply All2_firstn with (n := #|l1|) in h.
-    rewrite firstn_app in h. rewrite firstn_all in h.
-    replace (#|l1| - #|l1|) with 0 in h by lia. cbn in h.
-    rewrite app_nil_r in h. assumption.
-  - apply All2_skipn with (n := #|l1|) in h.
-    rewrite skipn_all_app in h. assumption.
-Qed.
 
   Lemma eval_mkApps_cong f f' l l' :
     eval f f' ->
@@ -723,11 +674,11 @@ Qed.
   Proof.
     revert l'. induction l using rev_ind; intros l' evf vf' evl.
     depelim evl. eapply evf.
-    eapply All2_app_inv_l in evl as [? [? [? ?]]].
-    intuition auto. subst. depelim b. depelim b.
+    eapply All2_app_inv in evl as [[? ?] [? ?]].
+    intuition auto. subst. depelim a. depelim a.
     rewrite - !mkApps_nested /=. eapply eval_app_cong; auto.
     rewrite isFixApp_mkApps. auto.
-    destruct x0 using rev_ind; simpl; [|rewrite - !mkApps_nested]; simpl in *; destruct f';
+    destruct l0 using rev_ind; simpl; [|rewrite - !mkApps_nested]; simpl in *; destruct f';
       try discriminate; try constructor.
   Qed.
 

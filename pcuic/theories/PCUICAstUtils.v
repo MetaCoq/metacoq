@@ -853,6 +853,18 @@ Proof.
   rewrite !app_nil_r in Happ. intuition congruence.
 Qed.
 
+Ltac solve_discr' :=
+  match goal with
+    H : mkApps _ _ = mkApps ?f ?l |- _ =>
+    eapply mkApps_eq_inj in H as [? ?]; [|easy|easy]; subst; try intuition congruence
+  | H : ?t = mkApps ?f ?l |- _ =>
+    change t with (mkApps t []) in H ;
+    eapply mkApps_eq_inj in H as [? ?]; [|easy|easy]; subst; try intuition congruence
+  | H : mkApps ?f ?l = ?t |- _ =>
+    change t with (mkApps t []) in H ;
+    eapply mkApps_eq_inj in H as [? ?]; [|easy|easy]; subst; try intuition congruence
+  end.
+
 Lemma mkApps_eq_decompose {f args t} :
   mkApps f args = t ->
   ~~ isApp f ->
@@ -953,6 +965,18 @@ Lemma mkApps_elim t l  :
 Proof.
   have H := @mkApps_elim_rec t l [].
   now rewrite app_nil_r in H.
+Qed.
+
+Lemma nisApp_mkApps {t l} : ~~ isApp (mkApps t l) -> ~~ isApp t /\ l = [].
+Proof.
+  induction l in t |- *; simpl; auto.
+  intros. destruct (IHl _ H). discriminate.
+Qed.
+
+Lemma mkApps_nisApp {t t' l} : mkApps t l = t' -> ~~ isApp t' -> t = t' /\ l = [].
+Proof.
+  induction l in t |- *; simpl; auto.
+  intros. destruct (IHl _ H). auto. subst. simpl in H0. discriminate.
 Qed.
 
 Definition application_atom t :=

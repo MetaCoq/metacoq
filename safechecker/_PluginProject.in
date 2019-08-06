@@ -1,4 +1,5 @@
 -I src
+-Q src MetaCoq.SafeChecker
 -R theories MetaCoq.SafeChecker
 
 src/classes0.mli
@@ -26,8 +27,8 @@ src/pCUICLiftSubst.ml
 src/pCUICLiftSubst.mli
 src/eqDecInstances.ml
 src/eqDecInstances.mli
-src/pCUICInduction.mli
-src/pCUICInduction.ml
+# src/pCUICInduction.mli
+# src/pCUICInduction.ml
 src/pCUICReflect.mli
 src/pCUICReflect.ml
 src/pCUICEquality.mli
@@ -42,12 +43,12 @@ src/pCUICPosition.mli
 src/pCUICPosition.ml
 src/pCUICNormal.mli
 src/pCUICNormal.ml
-src/pCUICChecker.ml
-src/pCUICChecker.mli
-src/pCUICRetyping.ml
-src/pCUICRetyping.mli
-src/pCUICMetaTheory.ml
-src/pCUICMetaTheory.mli
+# src/pCUICChecker.ml
+# src/pCUICChecker.mli
+# src/pCUICRetyping.ml
+# src/pCUICRetyping.mli
+# src/pCUICMetaTheory.ml
+# src/pCUICMetaTheory.mli
 # src/pCUICWeakeningEnv.ml
 # src/pCUICWeakeningEnv.mli
 # src/pCUICWeakening.mli

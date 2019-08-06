@@ -1,4 +1,5 @@
 -I src
+-Q src MetaCoq.PCUIC
 -R theories MetaCoq.PCUIC
 
 # From Equations
@@ -10,8 +11,8 @@ src/signature.ml
 # src/logic1.ml
 
 # From Coq
-src/cRelationClasses.mli
-src/cRelationClasses.ml
+# src/cRelationClasses.mli
+# src/cRelationClasses.ml
 # src/relation.mli
 # src/relation.ml
 # src/relation_Properties.mli
@@ -27,8 +28,8 @@ src/pCUICLiftSubst.ml
 src/pCUICLiftSubst.mli
 # src/eqDecInstances.ml
 # src/eqDecInstances.mli
-src/pCUICInduction.mli
-src/pCUICInduction.ml
+# src/pCUICInduction.mli
+# src/pCUICInduction.ml
 # src/pCUICReflect.mli
 # src/pCUICReflect.ml
 # src/pCUICEquality.mli
@@ -53,8 +54,8 @@ src/pCUICUnivSubst.mli
 # src/pCUICNormal.ml
 src/pCUICChecker.ml
 src/pCUICChecker.mli
-src/pCUICPretty.mli
-src/pCUICPretty.ml
+# src/pCUICPretty.mli
+# src/pCUICPretty.ml
 src/pCUICRetyping.ml
 src/pCUICRetyping.mli
 src/pCUICMetaTheory.ml

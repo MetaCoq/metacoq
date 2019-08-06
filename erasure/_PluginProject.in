@@ -1,4 +1,5 @@
 -I src
+-Q src MetaCoq.Erasure
 -R theories MetaCoq.Erasure
 
 src/init.mli
@@ -28,8 +29,8 @@ src/pCUICLiftSubst.ml
 src/pCUICLiftSubst.mli
 src/eqDecInstances.ml
 src/eqDecInstances.mli
-src/pCUICInduction.mli
-src/pCUICInduction.ml
+# src/pCUICInduction.mli
+# src/pCUICInduction.ml
 src/pCUICReflect.mli
 src/pCUICReflect.ml
 src/pCUICEquality.mli
@@ -44,12 +45,12 @@ src/pCUICPosition.mli
 src/pCUICPosition.ml
 src/pCUICNormal.mli
 src/pCUICNormal.ml
-src/pCUICChecker.ml
-src/pCUICChecker.mli
-src/pCUICRetyping.ml
-src/pCUICRetyping.mli
-src/pCUICMetaTheory.ml
-src/pCUICMetaTheory.mli
+# src/pCUICChecker.ml
+# src/pCUICChecker.mli
+# src/pCUICRetyping.ml
+# src/pCUICRetyping.mli
+# src/pCUICMetaTheory.ml
+# src/pCUICMetaTheory.mli
 # src/pCUICWeakeningEnv.ml
 # src/pCUICWeakeningEnv.mli
 # src/pCUICWeakening.mli
@@ -78,21 +79,21 @@ src/pCUICSafeConversion.mli
 src/pCUICSafeConversion.ml
 src/pCUICSafeChecker.mli
 src/pCUICSafeChecker.ml
-src/safeTemplateChecker.mli
-src/safeTemplateChecker.ml
+# src/safeTemplateChecker.mli
+# src/safeTemplateChecker.ml
 
-src/ssreflect.mli
-src/ssreflect.ml
+# src/ssreflect.mli
+# src/ssreflect.ml
 src/eAst.ml
 src/eAst.mli
 src/eAstUtils.ml
 src/eAstUtils.mli
-src/eInduction.ml
-src/eInduction.mli
-src/eLiftSubst.ml
-src/eLiftSubst.mli
-src/eTyping.ml
-src/eTyping.mli
+# src/eInduction.ml
+# src/eInduction.mli
+# src/eLiftSubst.ml
+# src/eLiftSubst.mli
+# src/eTyping.ml
+# src/eTyping.mli
 src/extract.mli
 src/extract.ml
 src/erasureFunction.mli

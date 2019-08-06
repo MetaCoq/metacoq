@@ -21,8 +21,10 @@ plugin: coq template-coq Makefile.plugin
 
 .PHONY: install html clean mrproper all plugin
 
-install: Makefile.coq
+install: Makefile.coq coq template-coq plugin
 	$(MAKE) -f Makefile.coq install
+	$(MAKE) -f Makefile.template install
+	$(MAKE) -f Makefile.plugin install
 
 html: all
 	$(MAKE) -f Makefile.coq html

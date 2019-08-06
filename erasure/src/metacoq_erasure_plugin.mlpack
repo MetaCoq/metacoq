@@ -29,6 +29,7 @@ PCUICRetyping
 PCUICMetaTheory
 TemplateToPCUIC
 PCUICSafeLemmata
+PCUICCumulativity
 
 PCUICUnivSubst
 PCUICSafeReduce
@@ -36,13 +37,9 @@ PCUICSafeConversion
 PCUICSafeChecker
 SafeTemplateChecker
 
-Ssreflect
 EAst
 EAstUtils
-EInduction
-ELiftSubst
 EPretty
-ETyping
 Extract
 ErasureFunction
 SafeTemplateErasure

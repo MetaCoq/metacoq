@@ -28,6 +28,7 @@ PCUICRetyping
 PCUICMetaTheory
 TemplateToPCUIC
 PCUICSafeLemmata
+PCUICCumulativity
 
 PCUICUnivSubst
 PCUICSafeReduce

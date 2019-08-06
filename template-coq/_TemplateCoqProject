@@ -1,4 +1,5 @@
 -I src
+-Q src MetaCoq.Template
 -R theories MetaCoq.Template
 
 # the MetaCoq plugin

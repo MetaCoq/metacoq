@@ -1,4 +1,5 @@
 -I src
+-Q src MetaCoq.Checker
 -R theories MetaCoq.Checker
 
 # From Coq's stdlib
@@ -21,8 +22,6 @@ src/uGraph0.ml
 src/uGraph0.mli
 src/univSubst0.ml
 src/univSubst0.mli
-src/wf.ml
-src/wf.mli
 src/wGraph.ml
 src/wGraph.mli
 src/checker0.mli

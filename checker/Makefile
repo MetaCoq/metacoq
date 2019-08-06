@@ -20,7 +20,7 @@ Makefile.plugin: _PluginProject
 plugin: Makefile.plugin coq
 	$(MAKE) -f Makefile.plugin
 
-install:
+install: coq plugin
 	$(MAKE) -f Makefile.coq install
 	$(MAKE) -f Makefile.plugin install
 

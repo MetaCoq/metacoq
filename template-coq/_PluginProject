@@ -1,4 +1,5 @@
 -I gen-src
+-Q gen-src MetaCoq.Template
 -R test-plugin Test
 -R theories MetaCoq.Template
 

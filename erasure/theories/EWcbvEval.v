@@ -80,14 +80,15 @@ Section Wcbv.
       eval (tCase (ind, pars) discr brs) res
            
   (** Fix unfolding, without guard *)
-  | eval_fix mfix idx arg narg fn res :
+  | eval_fix f mfix idx arg narg fn res :
+      eval f (tFix mfix idx) ->
       unfold_fix mfix idx = Some (narg, fn) ->
       (* We do not need to check the guard in the extracted language
          as we assume reduction of closed terms, whose canonical
          form will be a constructor or a box. A fixpoint must
          still be applied to at least one argument to unfold. *)
       eval (tApp fn arg) res ->
-      eval (tApp (tFix mfix idx) arg) res
+      eval (tApp f arg) res
 
   (** CoFix-case unfolding *)
   | red_cofix_case ip mfix idx args narg fn brs res :
@@ -234,19 +235,19 @@ Section Wcbv.
   (*   admit. *)
   (* Admitted. (* closedness of evaluates for Eterms, not needed for verification *) *)
 
-  Lemma eval_tApp_tFix_inv mfix idx a v :
-    eval (tApp (tFix mfix idx) a) v ->
-    (exists fn arg,
-        (unfold_fix mfix idx = Some (arg, fn)) /\
-        (eval (tApp fn a) v)).
-  Proof.
-    intros H; depind H; try solve_discr.
-    - depelim H.
-    - depelim H.
-    - eexists _, _; firstorder eauto.
-    - now depelim H.
-    - discriminate.
-  Qed.
+  (* Lemma eval_tApp_tFix_inv mfix idx a v : *)
+  (*   eval (tApp (tFix mfix idx) a) v -> *)
+  (*   (exists fn arg, *)
+  (*       (unfold_fix mfix idx = Some (arg, fn)) /\ *)
+  (*       (eval (tApp fn a) v)). *)
+  (* Proof. *)
+  (*   intros H; depind H; try solve_discr. *)
+  (*   - depelim H. *)
+  (*   - depelim H. *)
+  (*   - eexists _, _; firstorder eauto.  *)
+  (*   - now depelim H. *)
+  (*   - discriminate. *)
+  (* Qed. *)
 
   Lemma eval_tBox t : eval tBox t -> t = tBox.
   Proof.
@@ -308,8 +309,10 @@ Section Wcbv.
     rewrite -[tApp _ _](mkApps_app f (firstn n l0) [a]) in x. solve_discr.
     specialize (IHeval1 _ _ _ eq_refl).
     firstorder eauto. solve_discr.
-    change (tApp (tFix mfix0 idx0) arg) with (mkApps (tFix mfix0 idx0) [arg]) in x.
-    solve_discr.
+    destruct (mkApps_elim f [arg]).
+    rewrite -[tApp _ _](mkApps_app f (firstn n l0) [arg]) in x. solve_discr.
+    specialize (IHeval1 _ _ _ eq_refl). destruct IHeval1.
+    destruct H2. solve_discr.
     change (tApp f a) with (mkApps f [a]) in x.
     assert (l <> []).
     destruct l; simpl in *; discriminate.
@@ -332,7 +335,8 @@ Section Wcbv.
     revert t v tv.
     induction 1 using eval_ind; intros v' tv'.
     - depelim tv'; auto. specialize (IHtv1 _ tv'1); congruence.
-      depelim tv1. specialize (IHtv1 _ tv'1). now subst. easy.
+      specialize (IHtv1 _ tv'1). now subst.
+      specialize (IHtv1 _ tv'1). now subst. easy.
     - depelim tv'; auto; try specialize (IHtv1 _ tv'1) || solve [depelim tv1]; try congruence.
       inv IHtv1. specialize (IHtv2 _ tv'2). subst.
       now specialize (IHtv3 _ tv'3).
@@ -357,11 +361,12 @@ Section Wcbv.
         destruct H0 as [l' [evargs eq]]. solve_discr.
       * easy.
     - depelim tv' => //.
-      * depelim tv'1.
-      * depelim tv'1.
-      * rewrite H in H0. inv H0.
-        now specialize (IHtv _ tv').
-      * now depelim tv'1.
+      * specialize (IHtv1 _ tv'1). discriminate.
+      * specialize (IHtv1 _ tv'1). discriminate.
+      * specialize (IHtv1 _ tv'1). inv IHtv1.
+        rewrite H in H0. inv H0.
+        now specialize (IHtv2 _ tv'2).
+      * specialize (IHtv1 _ tv'1); subst. easy.
 
     - depelim tv'; try easy.
       * eapply eval_mkApps_tCoFix in tv'1 as [l' [evargs eq]].
@@ -399,8 +404,7 @@ Section Wcbv.
       * specialize (IHtv _ tv'1). solve_discr.
 
     - depelim tv'; try specialize (IHtv1 _ tv'1); subst; try easy.
-      depelim tv1. easy.
-      specialize (IHtv2 _ tv'2). congruence.
+      specialize (IHtv2 _ tv'2). subst. reflexivity.
 
     - depelim tv'; try easy.
   Qed.

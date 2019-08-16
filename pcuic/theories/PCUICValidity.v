@@ -54,11 +54,7 @@ Section Validity.
     rewrite IHctx'. destruct a as [na [b|] ty]; reflexivity.
   Qed.
 
-  Lemma isWfArity_Sort Σ Γ s : wf_local Σ Γ -> isWfArity typing Σ Γ (tSort s).
-  Proof.
-    intros. exists [], s; intuition auto.
-  Qed.
-  Hint Extern 10 (isWfArity _ _ _ (tSort _)) => apply isWfArity_Sort : pcuic.
+  Hint Extern 10 (isWfArity _ _ _ (tSort _)) => apply isWfArity_sort : pcuic.
 
   Hint Extern 30 (wf_local ?Σ ?Γ) =>
   match goal with

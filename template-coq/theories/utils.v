@@ -366,6 +366,11 @@ Proof.
   - apply EQ. reflexivity.
 Defined.
 
+Lemma transitive_bool_lt : Transitive (fun b b' => bool_compare b b' = Lt).
+Proof.
+  intros [] [] []; discriminate || reflexivity.
+Qed.
+
 Definition ascii_compare x y :=
   let 'Ascii a b c d e f g h := x in
   let 'Ascii a' b' c' d' e' f' g' h' := y in
@@ -381,7 +386,7 @@ Definition ascii_compare x y :=
 Definition ascii_lt x y := ascii_compare x y = Lt.
 
 Ltac tryone a a' H :=
-  destruct a, a'; simpl in *; try (reflexivity || discriminate).
+  destruct a, a'; simpl in H; try (reflexivity || discriminate).
 
 Lemma ascii_Compare_eq : forall x y, ascii_compare x y = Eq <-> x = y.
 Proof.
@@ -437,6 +442,25 @@ Proof.
     unfold ascii_lt. apply H.
   - intros.
     apply GT. red. now apply ascii_compare_Lt.
+Qed.
+
+Ltac trd := cbn in *; try reflexivity; try discriminate.
+
+Lemma transitive_ascii_lt : Transitive ascii_lt.
+Proof.
+  intros [a b c d e f g h] [a' b' c' d' e' f' g' h']
+         [a'' b'' c'' d'' e'' f'' g'' h''].
+  unfold ascii_lt, ascii_compare.
+  intros H1 H2.
+  destruct a, a', a''; trd;
+  destruct b, b', b''; trd;
+  destruct c, c', c''; trd;
+  destruct d, d', d''; trd;
+  destruct e, e', e''; trd;
+  destruct f, f', f''; trd;
+  destruct g, g', g''; trd;
+  destruct h, h', h''; trd;
+  eapply transitive_bool_lt; eassumption.
 Qed.
 
 Fixpoint string_compare x y :=
@@ -503,6 +527,50 @@ Proof.
   - apply LT; assumption.
   - apply GT. red. now apply string_compare_lt.
 Qed.
+
+Lemma transitive_string_lt : Transitive string_lt.
+Proof.
+  red. unfold string_lt.
+  intro s; induction s.
+  - induction y; cbn.
+    + intuition.
+    + intros [|]. discriminate. reflexivity.
+  - intros [|y1 y2]. discriminate.
+    intros [|z1 z2]. discriminate.
+    cbn. case_eq (ascii_compare a y1); try discriminate.
+    + intro Ha; apply ascii_Compare_eq in Ha; subst.
+      destruct (ascii_compare y1 z1); try discriminate.
+      intros; eauto. reflexivity.
+    + intros Ha _. case_eq (ascii_compare y1 z1); try discriminate.
+      intros Hy1; apply ascii_Compare_eq in Hy1; subst. now rewrite Ha.
+      intro Hy1. eapply transitive_ascii_lt in Ha.
+      specialize (Ha Hy1). now rewrite Ha.
+Qed.
+
+
+Lemma CompareSpec_Proper : Proper (iff ==> iff ==> iff ==> Logic.eq ==> iff) CompareSpec.
+  intros A A' HA B B' HB C C' HC c c' [].
+  destruct c; split; inversion 1; constructor; intuition.
+Qed.
+
+Lemma CompareSpec_string s s'
+  : CompareSpec (s = s') (string_lt s s') (string_lt s' s) (string_compare s s').
+Proof.
+  revert s'; induction s; intro s'; cbn.
+  - destruct s'; constructor; reflexivity.
+  - destruct s'. constructor; reflexivity.
+    unfold string_lt. simpl.
+    case_eq (ascii_compare a a0); intro H; try constructor.
+    + apply ascii_Compare_eq in H; subst.
+      rewrite (proj2 (ascii_Compare_eq a0 a0) eq_refl).
+      eapply CompareSpec_Proper. 5: exact (IHs s').
+      split; intro HH. now inversion HH. now subst.
+      all: reflexivity.
+    + reflexivity.
+    + apply ascii_compare_Lt in H; now rewrite H.
+Qed.
+
+
 
 (** Combinators *)
 

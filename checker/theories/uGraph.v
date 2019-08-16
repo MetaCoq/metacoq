@@ -395,25 +395,6 @@ Inductive no_prop_level := lSet | vtn (l : variable_level).
 
 Coercion vtn : variable_level >-> no_prop_level.
 
-Lemma transitive_string_lt : Transitive string_lt.
-Proof.
-  intro s; induction s; unfold string_lt.
-  - induction y; cbn. intuition.
-Admitted.
-
-Lemma CompareSpec_string s s'
-  : CompareSpec (s = s') (string_lt s s') (string_lt s' s) (string_compare s s').
-Proof.
-  revert s'; induction s; intro s'; cbn.
-  - destruct s'; constructor; reflexivity.
-  - destruct s'. constructor; reflexivity.
-Admitted.
-
-Lemma CompareSpec_Proper : Proper (iff ==> iff ==> iff ==> Logic.eq ==> iff) CompareSpec.
-  intros A A' HA B B' HB C C' HC c c' [].
-  destruct c; split; inversion 1; constructor; intuition.
-Qed.
-
 Module VariableLevel.
   Definition t := variable_level.
   Definition lt : t -> t -> Prop :=

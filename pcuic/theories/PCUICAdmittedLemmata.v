@@ -1,54 +1,6 @@
 
 Notation "a 'of' A" := (match a : A with _ => a end) (at level 100).
 
-Require PCUIC.PCUICWeakeningEnv.
-
-Check (@PCUICWeakeningEnv.global_ext_constraints_app
-     of forall (Σ : PCUICAst.global_env) (Σ' : list PCUICAst.global_decl)
-         (φ : Universes.universes_decl),
-       Universes.ConstraintSet.Subset (PCUICTyping.global_ext_constraints (Σ, φ))
-                                      (PCUICTyping.global_ext_constraints ((Σ' ++ Σ)%list, φ))).
-
-Check (@PCUICWeakeningEnv.leq_universe_subset
-     of forall (cf : config.checker_flags) (ctrs ctrs' : Universes.ConstraintSet.t)
-         (t u : Universes.universe),
-       Universes.ConstraintSet.Subset ctrs ctrs' ->
-       Universes.leq_universe ctrs t u -> Universes.leq_universe ctrs' t u).
-
-Check (@PCUICWeakeningEnv.leq_term_subset
-     of forall (cf : config.checker_flags) (ctrs ctrs' : Universes.ConstraintSet.t)
-         (t u : PCUICAst.term),
-       Universes.ConstraintSet.Subset ctrs ctrs' ->
-       PCUICTyping.leq_term ctrs t u -> PCUICTyping.leq_term ctrs' t u).
-
-Check (@PCUICWeakeningEnv.weakening_env_global_ext_levels
-     of forall (Σ Σ' : PCUICAst.global_env) (φ : Universes.universes_decl),
-       PCUICWeakeningEnv.extends Σ Σ' ->
-       forall l : Universes.LevelSet.elt,
-       Universes.LevelSet.In l (PCUICTyping.global_ext_levels (Σ, φ)) ->
-       Universes.LevelSet.In l (PCUICTyping.global_ext_levels (Σ', φ))).
-
-Check (@PCUICWeakeningEnv.weakening_env_global_ext_constraints
-     of forall (Σ Σ' : PCUICAst.global_env) (φ : Universes.universes_decl),
-       PCUICWeakeningEnv.extends Σ Σ' ->
-       Universes.ConstraintSet.Subset (PCUICTyping.global_ext_constraints (Σ, φ))
-         (PCUICTyping.global_ext_constraints (Σ', φ))).
-
-Check (@PCUICWeakeningEnv.valid_subset
-     of forall (cf : config.checker_flags) (φ φ' : Universes.ConstraintSet.t)
-         (ctrs : Universes.constraints),
-       Universes.ConstraintSet.Subset φ φ' ->
-       Universes.valid_constraints φ ctrs -> Universes.valid_constraints φ' ctrs).
-
-Check (@PCUICWeakeningEnv.check_correct_arity_subset
-     of forall (cf : config.checker_flags) (φ φ' : Universes.ConstraintSet.t)
-         (decl : PCUICAst.one_inductive_body) (ind : BasicAst.inductive)
-         (u : Universes.universe_instance) (ctx : list PCUICAst.context_decl)
-         (pars : list PCUICAst.term) (pctx : PCUICAst.context),
-       Universes.ConstraintSet.Subset φ φ' ->
-       PCUICTyping.check_correct_arity φ decl ind u ctx pars pctx ->
-       PCUICTyping.check_correct_arity φ' decl ind u ctx pars pctx). 
-
 Require PCUIC.PCUICUnivSubstitution.
 
 Check (@PCUICUnivSubstitution.fix_context_subst_instance

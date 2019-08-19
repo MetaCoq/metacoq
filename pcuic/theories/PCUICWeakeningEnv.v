@@ -12,20 +12,74 @@ Lemma global_ext_constraints_app Σ Σ' φ
   : ConstraintSet.Subset (global_ext_constraints (Σ, φ))
                          (global_ext_constraints (Σ' ++ Σ, φ)).
 Proof.
-  red. intros.
-  move: H; rewrite /global_ext_constraints /=.
-Admitted.
+  unfold global_ext_constraints; simpl.
+  intros ctr Hc. apply ConstraintSet.union_spec in Hc.
+  apply ConstraintSet.union_spec.
+  destruct Hc as [Hc|Hc]; [now left|right]. clear φ.
+  induction Σ' in ctr, Hc |- *.
+  - now rewrite app_nil_l.
+  - simpl. apply ConstraintSet.union_spec. right; eauto.
+Qed.
 
 Lemma leq_universe_subset {cf:checker_flags} ctrs ctrs' t u
   : ConstraintSet.Subset ctrs ctrs' -> leq_universe ctrs t u -> leq_universe ctrs' t u.
 Proof.
-Admitted.
+  intros Hctrs H. unfold leq_universe in *.
+  destruct check_univs; [|trivial].
+  intros v Hv. apply H.
+  intros ctr Hc. apply Hv.
+  apply Hctrs; eauto.
+Qed.
+
+Lemma eq_universe_subset {cf:checker_flags} ctrs ctrs' t u
+  : ConstraintSet.Subset ctrs ctrs'
+    -> eq_universe ctrs t u -> eq_universe ctrs' t u.
+Proof.
+  intros Hctrs H. unfold eq_universe in *.
+  destruct check_univs; [|trivial].
+  intros v Hv. apply H.
+  intros ctr Hc. apply Hv.
+  apply Hctrs; eauto.
+Qed.
+
+
+Lemma eq_term_upto_univ_morphism0 (Re Re' : _ -> _ -> Type)
+      (Hre : forall t u, Re t u -> Re' t u)
+  : forall t u, eq_term_upto_univ Re Re t u -> eq_term_upto_univ Re' Re' t u.
+Proof.
+  fix aux 3.
+  destruct 1; constructor; eauto.
+  all: match goal with
+       | H : All2 _ _ _ |- _ => induction H; constructor; eauto
+       end.
+  - destruct r. split; eauto.
+  - destruct r as [[? ?] ?]. repeat split; eauto.
+  - destruct r as [[? ?] ?]. repeat split; eauto.
+Defined.
+
+Lemma eq_term_upto_univ_morphism (Re Re' Rle Rle' : _ -> _ -> Type)
+      (Hre : forall t u, Re t u -> Re' t u)
+      (Hrle : forall t u, Rle t u -> Rle' t u)
+  : forall t u, eq_term_upto_univ Re Rle t u -> eq_term_upto_univ Re' Rle' t u.
+Proof.
+  fix aux 3.
+  destruct 1; constructor; eauto using eq_term_upto_univ_morphism0.
+  all: match goal with
+       | H : All2 _ _ _ |- _ => induction H; constructor;
+                                eauto using eq_term_upto_univ_morphism0
+       end.
+  - destruct r. split; eauto using eq_term_upto_univ_morphism0.
+  - destruct r as [[? ?] R]. repeat split; eauto using eq_term_upto_univ_morphism0.
+  - destruct r as [[? ?] R]. repeat split; eauto using eq_term_upto_univ_morphism0.
+Defined.
 
 Lemma leq_term_subset {cf:checker_flags} ctrs ctrs' t u
   : ConstraintSet.Subset ctrs ctrs' -> leq_term ctrs t u -> leq_term ctrs' t u.
 Proof.
-  intros Hc H; induction H; try constructor; eauto.
-Admitted.
+  intro H. apply eq_term_upto_univ_morphism.
+  intros t' u'; eapply eq_universe_subset; assumption.
+  intros t' u'; eapply leq_universe_subset; assumption.
+Qed.
 
 (** * Weakening lemmas w.r.t. the global environment *)
 
@@ -41,25 +95,66 @@ Lemma weakening_env_global_ext_levels Σ Σ' φ (H : extends Σ Σ') l
   : LevelSet.In l (global_ext_levels (Σ, φ))
     -> LevelSet.In l (global_ext_levels (Σ', φ)).
 Proof.
-Admitted.
+  unfold global_ext_levels; simpl.
+  intros Hl. apply LevelSet.union_spec in Hl.
+  apply LevelSet.union_spec.
+  destruct Hl as [Hl|Hl]; [now left|right]. clear φ.
+  destruct H as [Σ'' eq]; subst.
+  induction Σ'' in l, Hl |- *.
+  - now rewrite app_nil_l.
+  - simpl. apply LevelSet.union_spec. right; eauto.
+Qed.
 
 Lemma weakening_env_global_ext_constraints Σ Σ' φ (H : extends Σ Σ')
   : ConstraintSet.Subset (global_ext_constraints (Σ, φ))
                          (global_ext_constraints (Σ', φ)).
 Proof.
-Admitted.
+  destruct H as [Σ'' eq]. subst.
+  apply global_ext_constraints_app.
+Qed.
 
 Lemma valid_subset {cf:checker_flags} φ φ' ctrs
   : ConstraintSet.Subset φ φ' -> valid_constraints φ ctrs
     ->  valid_constraints φ' ctrs.
 Proof.
-Admitted.
+  unfold valid_constraints.
+  destruct check_univs; [|trivial].
+  intros Hφ H.
+  intuition. apply H.
+  intros ctr Hc. apply H0. now apply Hφ.
+Qed.
+
+Lemma eq_term_subset {cf:checker_flags} φ φ' t t'
+  : ConstraintSet.Subset φ φ'
+    -> eq_term φ t t' ->  eq_term φ' t t'.
+Proof.
+  intro H. apply eq_term_upto_univ_morphism.
+  all: intros u u'; eapply eq_universe_subset; assumption.
+Qed.
+
+Lemma eq_decl_subset {cf:checker_flags} φ φ' d d'
+  : ConstraintSet.Subset φ φ'
+    -> eq_decl φ d d' ->  eq_decl φ' d d'.
+Proof.
+  intros Hφ [H1 H2]. split; [|eapply eq_term_subset; eauto].
+  destruct d as [na [bd|] ty], d' as [na' [bd'|] ty']; cbn in *; trivial.
+  eapply eq_term_subset; eauto.
+Qed.
+
+Lemma eq_context_subset {cf:checker_flags} φ φ' Γ Γ'
+  : ConstraintSet.Subset φ φ'
+    -> eq_context φ Γ Γ' ->  eq_context φ' Γ Γ'.
+Proof.
+  intros Hφ. induction 1; constructor.
+  intuition. now eapply eq_decl_subset. assumption.
+Qed.
 
 Lemma check_correct_arity_subset {cf:checker_flags} φ φ' decl ind u ctx pars pctx
   : ConstraintSet.Subset φ φ' -> check_correct_arity φ decl ind u ctx pars pctx
     -> check_correct_arity φ' decl ind u ctx pars pctx.
 Proof.
-Admitted.
+  apply eq_context_subset.
+Qed.
 
 Ltac my_rename_hyp h th :=
   match th with

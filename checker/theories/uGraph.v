@@ -1158,10 +1158,9 @@ Section CheckLeq.
 
   Opaque Z.of_nat.
 
-  Lemma bla l l'
-    :  (forall v, gc_satisfies v uctx.2 -> (val0 v l <= val0 v l' + 1)%Z) ->
-       forall v, gc_satisfies v uctx.2 -> (val0 v l <= val0 v l')%Z.
-  Admitted.
+  Conjecture constraint_strengthening : forall l l',
+      (forall v, gc_satisfies v uctx.2 -> (val0 v l <= val0 v l' + 1)%Z) ->
+      forall v, gc_satisfies v uctx.2 -> (val0 v l <= val0 v l')%Z.
 
   Lemma leqb_expr_n_spec0 n e e'
     : leqb_expr_n n e e'
@@ -1222,7 +1221,7 @@ Section CheckLeq.
         * unfold gc_leq_universe_n. cbn.
           unfold val1; cbn. repeat rew_no_prop; cbn. split.
           -- intros HH v Hv; specialize (HH v Hv); lia.
-          -- apply bla.
+          -- apply constraint_strengthening.
         * split; intros HH v Hv; specialize (HH v Hv); cbn in *;
             unfold val1 in *; cbn in *; repeat rew_no_prop; cbn in *; try lia.
       + split; intros HH v Hv; specialize (HH v Hv); cbn in *;
@@ -1239,7 +1238,7 @@ Section CheckLeq.
         * unfold gc_leq_universe_n. cbn.
           unfold val1; cbn. repeat rew_no_prop; cbn. split.
           -- intros HH v Hv; specialize (HH v Hv); lia.
-          -- apply bla.
+          -- apply constraint_strengthening.
         * split; intros HH v Hv; specialize (HH v Hv); cbn in *;
             unfold val1 in *; cbn in *; repeat rew_no_prop; cbn in *; try lia.
       + split; intros HH v Hv; specialize (HH v Hv); cbn in *;

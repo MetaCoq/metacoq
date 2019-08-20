@@ -17,7 +17,7 @@ Set Asymmetric Patterns.
 Module T := Template.Ast.
 Module TTy := Checker.Typing.
 
-Existing Instance default_checker_flags.
+Local Existing Instance default_checker_flags.
 
 Module TL := Template.LiftSubst.
 

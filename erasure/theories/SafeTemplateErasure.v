@@ -14,6 +14,7 @@ From MetaCoq.Erasure Require Import ErasureFunction EPretty.
 Import MonadNotation.
 
 Existing Instance envcheck_monad.
+Existing Instance extraction_checker_flags.
 
 Program Definition erase_template_program (p : Ast.program)
   : EnvCheck (EAst.global_context * EAst.term) :=

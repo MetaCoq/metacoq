@@ -7,7 +7,7 @@ Require Import String.
 Local Open Scope string_scope.
 Set Asymmetric Patterns.
 
-Existing Instance config.default_checker_flags.
+Local Existing Instance config.default_checker_flags.
 
 (** The subject reduction property of the system: *)
 

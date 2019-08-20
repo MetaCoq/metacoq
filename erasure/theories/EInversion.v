@@ -16,6 +16,8 @@ Import MonadNotation.
 Module PA := PCUICAst.
 Module P := PCUICWcbvEval.
 
+Local Existing Instance default_checker_flags.
+
 (** ** Inversion on eval *)
 
 Lemma type_Case_inv (Σ : global_env_ext) (hΣ : wf Σ.1) Γ ind npar p c brs T :

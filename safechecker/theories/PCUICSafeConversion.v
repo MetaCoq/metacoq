@@ -27,12 +27,101 @@ Module PSR := PCUICSafeReduce.
  *)
 
 
+Definition global_uctx (Σ : global_env) : ContextSet.t
+  := (global_levels Σ, global_constraints Σ).
+
+Definition global_ext_uctx (Σ : global_env_ext) : ContextSet.t
+  := (global_ext_levels Σ, global_ext_constraints Σ).
+
+Definition wf_global_uctx_invariants {cf:checker_flags} Σ
+  : ∥ wf Σ ∥ -> global_uctx_invariants (global_uctx Σ).
+Proof.
+  intros [HΣ]. split.
+  - cbn. unfold global_levels.
+    cut (LevelSet.In lSet (LevelSet_pair Level.lSet Level.lProp)).
+    + generalize (LevelSet_pair Level.lSet Level.lProp).
+      clear HΣ. induction Σ; simpl. easy.
+      intros X H. apply LevelSet.union_spec. now right.
+    + apply LevelSet.add_spec. right. now apply LevelSet.singleton_spec.
+  - unfold global_uctx.
+    simpl. intros [[l ct] l'] Hctr. simpl in *.
+    induction Σ in HΣ, l, ct, l', Hctr |- *.
+    * apply ConstraintSetFact.empty_iff in Hctr; contradiction.
+    * simpl in *. apply ConstraintSet.union_spec in Hctr;
+                    destruct Hctr as [Hctr|Hctr].
+      -- split.
+         inversion HΣ; subst.
+         destruct H2 as [HH1 [HH HH3]].
+         subst udecl. destruct a as [kn decl|kn decl]; simpl in *.
+         destruct decl; simpl in *.
+         destruct cst_universes;
+           [eapply (HH (l, ct, l') Hctr)|
+            apply ConstraintSetFact.empty_iff in Hctr; contradiction|
+            apply ConstraintSetFact.empty_iff in Hctr; contradiction].
+         destruct decl; simpl in *.
+         destruct ind_universes;
+           [eapply (HH (l, ct, l') Hctr)|
+            apply ConstraintSetFact.empty_iff in Hctr; contradiction|
+            apply ConstraintSetFact.empty_iff in Hctr; contradiction].
+         inversion HΣ; subst.
+         destruct H2 as [HH1 [HH HH3]].
+         subst udecl. destruct a as [kn decl|kn decl]; simpl in *.
+         destruct decl; simpl in *.
+         destruct cst_universes;
+           [eapply (HH (l, ct, l') Hctr)|
+            apply ConstraintSetFact.empty_iff in Hctr; contradiction|
+            apply ConstraintSetFact.empty_iff in Hctr; contradiction].
+         destruct decl; simpl in *.
+         destruct ind_universes;
+           [eapply (HH (l, ct, l') Hctr)|
+            apply ConstraintSetFact.empty_iff in Hctr; contradiction|
+            apply ConstraintSetFact.empty_iff in Hctr; contradiction].
+      -- inversion HΣ; subst.
+         split; apply LevelSet.union_spec; right;
+           unshelve eapply (IHΣ _ _ _ _ Hctr); tea.
+Qed.
+
+Definition wf_ext_global_uctx_invariants {cf:checker_flags} Σ
+  : ∥ wf_ext Σ ∥ -> global_uctx_invariants (global_ext_uctx Σ).
+Proof.
+  intros [HΣ]. split.
+  - apply LevelSet.union_spec. right. unfold global_levels.
+    cut (LevelSet.In lSet (LevelSet_pair Level.lSet Level.lProp)).
+    + generalize (LevelSet_pair Level.lSet Level.lProp).
+      induction Σ.1; simpl. easy.
+      intros X H. apply LevelSet.union_spec. now right.
+    + apply LevelSet.add_spec. right. now apply LevelSet.singleton_spec.
+  - destruct Σ as [Σ φ]. destruct HΣ as [HΣ Hφ].
+    destruct (wf_global_uctx_invariants _ (sq HΣ)) as [_ XX].
+    unfold global_ext_uctx, global_ext_levels, global_ext_constraints.
+    simpl. intros [[l ct] l'] Hctr. simpl in *. apply ConstraintSet.union_spec in Hctr.
+    destruct Hctr as [Hctr|Hctr].
+    + destruct Hφ as [_ [HH _]]. apply (HH _ Hctr).
+    + specialize (XX _ Hctr).
+      split; apply LevelSet.union_spec; right; apply XX.
+Qed.
+
+Definition global_ext_uctx_consistent {cf:checker_flags} Σ
+  : ∥ wf_ext Σ ∥ -> consistent (global_ext_uctx Σ).2.
+  intros [HΣ]. cbn. unfold global_ext_constraints.
+  unfold wf_ext, on_global_env_ext in HΣ.
+  destruct HΣ as [_ [_ [_ HH]]]. apply HH.
+Qed.
+
+
 Section Conversion.
 
   Context {cf : checker_flags}.
   Context (flags : RedFlags.t).
   Context (Σ : global_env_ext).
-  Context (hΣ : ∥ wf Σ ∥).
+  Context (hΣ : ∥ wf Σ ∥) (Hφ : ∥ on_udecl Σ.1 Σ.2 ∥).
+  Context (G : universes_graph) (HG : is_graph_of_uctx G (global_ext_uctx Σ)).
+
+  Local Definition hΣ' : ∥ wf_ext Σ ∥.
+  Proof.
+    destruct hΣ, Hφ; now constructor.
+  Defined.
+
 
   Set Equations With UIP.
 
@@ -2284,8 +2373,38 @@ Section Conversion.
     - reflexivity.
   Qed.
 
-  Definition leqb_term := eqb_term_upto_univ eqb eqb.
-  Definition eqb_term := eqb_term_upto_univ eqb eqb.
+
+  Definition leqb_term := eqb_term_upto_univ (try_eqb_universe G)
+                                             (try_leqb_universe G).
+
+  Definition eqb_term := eqb_term_upto_univ (try_eqb_universe G)
+                                            (try_eqb_universe G).
+
+  Lemma leqb_term_spec t u :
+    leqb_term t u -> leq_term (global_ext_constraints Σ) t u.
+  Proof.
+    pose proof hΣ'.
+    apply eq_term_upto_univ_impl.
+    intros u1 u2; eapply (try_eqb_universe_spec G (global_ext_uctx Σ)); tas.
+    now eapply wf_ext_global_uctx_invariants.
+    now eapply global_ext_uctx_consistent.
+    intros u1 u2; eapply (try_leqb_universe_spec G (global_ext_uctx Σ)); tas.
+    now eapply wf_ext_global_uctx_invariants.
+    now eapply global_ext_uctx_consistent.
+  Qed.
+
+  Lemma eqb_term_spec t u :
+    eqb_term t u -> eq_term (global_ext_constraints Σ) t u.
+  Proof.
+    pose proof hΣ'.
+    apply eq_term_upto_univ_impl.
+    intros u1 u2; eapply (try_eqb_universe_spec G (global_ext_uctx Σ)); tas.
+    now eapply wf_ext_global_uctx_invariants.
+    now eapply global_ext_uctx_consistent.
+    intros u1 u2; eapply (try_eqb_universe_spec G (global_ext_uctx Σ)); tas.
+    now eapply wf_ext_global_uctx_invariants.
+    now eapply global_ext_uctx_consistent.
+  Qed.
 
   Equations(noeqns) _isconv_fallback (Γ : context) (leq : conv_pb)
             (t1 : term) (π1 : stack) (h1 : wtp Γ t1 π1)
@@ -2564,22 +2683,13 @@ Section Conversion.
     eapply red_it_mkLambda_or_LetIn. assumption.
   Qed.
   Next Obligation.
-    destruct eqb_term eqn:Heq.
-    constructor.
-    constructor.
-    apply eq_term_upto_univ_eq_eq_term.
-    apply eq_term_upto_univ_nl_inv. auto. auto.
-    eapply (ssrbool.elimT (reflect_nleq_term _ _)) in Heq.
-    rewrite Heq. reflexivity. constructor.
+    destruct eqb_term eqn:Heq; [|trivial].
+    constructor. constructor. now apply eqb_term_spec.
   Qed.
   Next Obligation.
-    destruct eqb_term eqn:Heq. destruct hΣ.
-    constructor. eapply conv_alt_cumul; auto.
-    constructor.
-    apply eq_term_upto_univ_eq_eq_term.
-    apply eq_term_upto_univ_nl_inv. auto. auto.
-    eapply (ssrbool.elimT (reflect_nleq_term _ _)) in Heq.
-    rewrite Heq. reflexivity. constructor.
+    destruct leqb_term eqn:Heq; [|trivial]. destruct hΣ.
+    constructor. eapply cumul_refl.
+    now apply leqb_term_spec.
   Qed.
 
   Equations _isconv (s : state) (Γ : context)

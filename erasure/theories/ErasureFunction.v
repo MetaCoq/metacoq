@@ -13,6 +13,7 @@ Require Import String.
 Local Open Scope string_scope.
 Set Asymmetric Patterns.
 Import MonadNotation.
+Local Set Keyed Unification.
 
 Require Import EArities Extract Prelim.
 Section fix_sigma.

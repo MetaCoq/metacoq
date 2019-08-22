@@ -25,6 +25,7 @@ Open Scope type_scope.
  *)
 
 Set Equations With UIP.
+Local Set Keyed Unification.
 
 (* We assume normalisation of the reduction.
 

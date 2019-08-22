@@ -13,6 +13,7 @@ From MetaCoq.SafeChecker Require Import PCUICSafeReduce PCUICSafeConversion.
 Import MonadNotation.
 Open Scope type_scope.
 Open Scope list_scope.
+Local Set Keyed Unification.
 
 (* todo: move this *)
 Arguments All_nil {_ _}.

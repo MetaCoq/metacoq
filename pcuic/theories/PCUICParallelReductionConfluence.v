@@ -17,6 +17,7 @@ Require Import Equations.Prop.DepElim.
 
 Derive Signature for pred1 All2_local_env.
 
+Local Set Keyed Unification.
 Set Asymmetric Patterns.
 
 Notation "'∃' x .. y , P" := (sigT (fun x => .. (sigT (fun y => P%type)) ..))

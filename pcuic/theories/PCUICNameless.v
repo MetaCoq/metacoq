@@ -7,6 +7,7 @@ Require Import config monad_utils utils AstUtils UnivSubst.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICLiftSubst PCUICTyping PCUICPosition PCUICUnivSubst PCUICCumulativity.
 From Equations Require Import Equations.
+Local Set Keyed Unification.
 Require Import Equations.Prop.DepElim.
 
 Definition anon (na : name) : bool :=

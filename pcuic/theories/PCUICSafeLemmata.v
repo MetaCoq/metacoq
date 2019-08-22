@@ -17,6 +17,7 @@ Require Import Equations.Type.Relation_Properties.
 Derive Signature for red.
 Import MonadNotation.
 
+Local Set Keyed Unification.
 Set Equations With UIP.
 
 Arguments sq {_} _.

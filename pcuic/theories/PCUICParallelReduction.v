@@ -10,7 +10,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICSiz
 (* Type-valued relations. *)
 Require Import CRelationClasses.
 Require Import Equations.Type.Relation Equations.Type.Relation_Properties.
-
+Local Set Keyed Unification.
 Set Asymmetric Patterns.
 
 Derive NoConfusion for term.

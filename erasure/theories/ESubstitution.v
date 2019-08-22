@@ -8,6 +8,7 @@ From Equations Require Import Equations.
 Require Import String.
 Local Open Scope list_scope.
 Set Asymmetric Patterns.
+Local Set Keyed Unification.
 Import MonadNotation.
 
 Module PA := PCUICAst.

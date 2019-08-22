@@ -12,6 +12,8 @@ From MetaCoq.PCUIC Require Import PCUICTyping PCUICAst PCUICAstUtils PCUICInduct
 Require Import String.
 Local Open Scope string_scope.
 Set Asymmetric Patterns.
+Local Set Keyed Unification.
+
 Import MonadNotation.
 
 Require Import Lia.

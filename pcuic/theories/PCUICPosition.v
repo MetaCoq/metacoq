@@ -11,6 +11,8 @@ From Equations Require Import Equations.
 
 Require Import Equations.Prop.DepElim.
 
+Local Set Keyed Unification.
+
 Import MonadNotation.
 
 (* A choice is a local position.

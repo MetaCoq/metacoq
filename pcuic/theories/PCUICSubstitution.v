@@ -11,6 +11,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICLif
 Require Import ssreflect.
 
 Set Asymmetric Patterns.
+Local Set Keyed Unification.
 Close Scope string_scope.
 
 Hint Rewrite @app_context_length : wf.

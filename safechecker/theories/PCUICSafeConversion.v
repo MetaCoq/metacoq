@@ -14,6 +14,7 @@ From MetaCoq.SafeChecker Require Import PCUICSafeReduce.
 From Equations Require Import Equations.
 
 Require Import Equations.Prop.DepElim.
+Local Set Keyed Unification.
 
 Import MonadNotation.
 

@@ -10,6 +10,8 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICLif
      PCUICReduction PCUICCumulativity PCUICWeakening PCUICUnivSubst.
 (* Require Import ssreflect. *)
 
+Local Set Keyed Unification.
+
 Lemma fix_context_subst_instance:
   forall (mfix : list (def term)) (u : universe_instance),
     fix_context (map (map_def (subst_instance_constr u) (subst_instance_constr u)) mfix) =

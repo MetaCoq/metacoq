@@ -134,15 +134,14 @@ Inductive type_error :=
 | UndeclaredConstant (c : string)
 | UndeclaredInductive (c : inductive)
 | UndeclaredConstructor (c : inductive) (i : nat)
-| NotConvertible (Γ : context) (t u t' u' : term)
+| NotCumulSmaller (Γ : context) (t u t' u' : term)
+| NotConvertible (Γ : context) (t u : term)
 | NotASort (t : term)
 | NotAProduct (t t' : term)
 | NotAnInductive (t : term)
 | IllFormedFix (m : mfixpoint term) (i : nat)
 | UnsatisfiedConstraints (c : ConstraintSet.t)
 | Msg (s : string).
-
-Definition NotConvertible' Γ t u := NotConvertible Γ t u t u.
 
 Lemma lookup_env_id Σ id decl
   : lookup_env Σ id = Some decl -> id = global_decl_ident decl.
@@ -232,15 +231,17 @@ Definition string_of_type_error (e : type_error) : string :=
   | UndeclaredConstant c => "Undeclared constant " ++ c
   | UndeclaredInductive c => "Undeclared inductive " ++ (inductive_mind c)
   | UndeclaredConstructor c i => "Undeclared inductive " ++ (inductive_mind c)
-  | NotConvertible Γ t u t' u' => "Terms are not convertible: " ++
+  | NotCumulSmaller Γ t u t' u' => "Terms are not <= for cumulativity: " ++
       string_of_term t ++ " " ++ string_of_term u ++ " after reduction: " ++
       string_of_term t' ++ " " ++ string_of_term u'
+  | NotConvertible Γ t u => "Terms are not convertible: " ++
+      string_of_term t ++ " " ++ string_of_term u
   | NotASort t => "Not a sort"
   | NotAProduct t t' => "Not a product"
   | NotAnInductive t => "Not an inductive"
   | IllFormedFix m i => "Ill-formed recursive definition"
   | UnsatisfiedConstraints c => "Unsatisfied constraints"
-  | Msg s => "Msg" ++ s
+  | Msg s => "Msg: " ++ s
   end.
 
 Inductive typing_result (A : Type) :=
@@ -267,9 +268,6 @@ Instance monad_exc : MonadExc type_error typing_result :=
       end
   }.
 
-
-Definition iscumul `{cf : checker_flags} Σ HΣ Γ :=
-  isconv_term RedFlags.default Σ HΣ Γ Cumul.
 
 Lemma wf_local_rel_inv `{checker_flags} {Σ Γ1 Γ2} (w : wf_local_rel Σ Γ1 Γ2) :
   forall d Γ2', Γ2 = Γ2' ,, d ->
@@ -338,89 +336,6 @@ Proof.
   now apply le_n_S.
 Qed.
 
-
-
-Definition global_uctx (Σ : global_env) : ContextSet.t
-  := (global_levels Σ, global_constraints Σ).
-
-Definition global_ext_uctx (Σ : global_env_ext) : ContextSet.t
-  := (global_ext_levels Σ, global_ext_constraints Σ).
-
-
-Definition wf_global_uctx_invariants {cf:checker_flags} Σ
-  : ∥ wf Σ ∥ -> global_uctx_invariants (global_uctx Σ).
-Proof.
-  intros [HΣ]. split.
-  - cbn. unfold global_levels.
-    cut (LevelSet.In lSet (LevelSet_pair Level.lSet Level.lProp)).
-    + generalize (LevelSet_pair Level.lSet Level.lProp).
-      clear HΣ. induction Σ; simpl. easy.
-      intros X H. apply LevelSet.union_spec. now right.
-    + apply LevelSet.add_spec. right. now apply LevelSet.singleton_spec.
-  - unfold global_uctx.
-    simpl. intros [[l ct] l'] Hctr. simpl in *.
-    induction Σ in HΣ, l, ct, l', Hctr |- *.
-    * apply ConstraintSetFact.empty_iff in Hctr; contradiction.
-    * simpl in *. apply ConstraintSet.union_spec in Hctr;
-                    destruct Hctr as [Hctr|Hctr].
-      -- split.
-         inversion HΣ; subst.
-         destruct H2 as [HH1 [HH HH3]].
-         subst udecl. destruct a as [kn decl|kn decl]; simpl in *.
-         destruct decl; simpl in *.
-         destruct cst_universes;
-           [eapply (HH (l, ct, l') Hctr)|
-            apply ConstraintSetFact.empty_iff in Hctr; contradiction|
-            apply ConstraintSetFact.empty_iff in Hctr; contradiction].
-         destruct decl; simpl in *.
-         destruct ind_universes;
-           [eapply (HH (l, ct, l') Hctr)|
-            apply ConstraintSetFact.empty_iff in Hctr; contradiction|
-            apply ConstraintSetFact.empty_iff in Hctr; contradiction].
-         inversion HΣ; subst.
-         destruct H2 as [HH1 [HH HH3]].
-         subst udecl. destruct a as [kn decl|kn decl]; simpl in *.
-         destruct decl; simpl in *.
-         destruct cst_universes;
-           [eapply (HH (l, ct, l') Hctr)|
-            apply ConstraintSetFact.empty_iff in Hctr; contradiction|
-            apply ConstraintSetFact.empty_iff in Hctr; contradiction].
-         destruct decl; simpl in *.
-         destruct ind_universes;
-           [eapply (HH (l, ct, l') Hctr)|
-            apply ConstraintSetFact.empty_iff in Hctr; contradiction|
-            apply ConstraintSetFact.empty_iff in Hctr; contradiction].
-      -- inversion HΣ; subst.
-         split; apply LevelSet.union_spec; right;
-           unshelve eapply (IHΣ _ _ _ _ Hctr); tea.
-Qed.
-
-Definition wf_ext_global_uctx_invariants {cf:checker_flags} Σ
-  : ∥ wf_ext Σ ∥ -> global_uctx_invariants (global_ext_uctx Σ).
-Proof.
-  intros [HΣ]. split.
-  - apply LevelSet.union_spec. right. unfold global_levels.
-    cut (LevelSet.In lSet (LevelSet_pair Level.lSet Level.lProp)).
-    + generalize (LevelSet_pair Level.lSet Level.lProp).
-      induction Σ.1; simpl. easy.
-      intros X H. apply LevelSet.union_spec. now right.
-    + apply LevelSet.add_spec. right. now apply LevelSet.singleton_spec.
-  - destruct Σ as [Σ φ]. destruct HΣ as [HΣ Hφ].
-    destruct (wf_global_uctx_invariants _ (sq HΣ)) as [_ XX].
-    unfold global_ext_uctx, global_ext_levels, global_ext_constraints.
-    simpl. intros [[l ct] l'] Hctr. simpl in *. apply ConstraintSet.union_spec in Hctr.
-    destruct Hctr as [Hctr|Hctr].
-    + destruct Hφ as [_ [HH _]]. apply (HH _ Hctr).
-    + specialize (XX _ Hctr).
-      split; apply LevelSet.union_spec; right; apply XX.
-Qed.
-
-Definition global_ext_uctx_consistent {cf:checker_flags} Σ
-  : ∥ wf_ext Σ ∥ -> consistent (global_ext_uctx Σ).2.
-  intros [HΣ]. cbn. unfold global_ext_constraints.
-  unfold wf_ext, on_global_env_ext in HΣ.
-  destruct HΣ as [_ [_ [_ HH]]]. apply HH.
-Qed.
 
 Lemma wf_ext_gc_of_uctx {cf:checker_flags} {Σ : global_env_ext} (HΣ : ∥ wf_ext Σ ∥)
   : ∑ uctx', gc_of_uctx (global_ext_uctx Σ) = Some uctx'.
@@ -585,54 +500,24 @@ Section Typecheck.
     now erewrite <- zip_stack_to_apps.
   Defined.
 
-  Definition leqb_term := eqb_term_upto_univ (try_eqb_universe G)
-                                             (try_leqb_universe G).
 
-  Definition eqb_term := eqb_term_upto_univ (try_eqb_universe G)
-                                            (try_eqb_universe G).
-
-  Lemma leqb_term_spec t u :
-    leqb_term t u -> leq_term (global_ext_constraints Σ) t u.
-  Proof.
-    pose proof HΣ'.
-    apply eq_term_upto_univ_impl.
-    intros u1 u2; eapply (try_eqb_universe_spec G (global_ext_uctx Σ)); tas.
-    now eapply wf_ext_global_uctx_invariants.
-    now eapply global_ext_uctx_consistent.
-    intros u1 u2; eapply (try_leqb_universe_spec G (global_ext_uctx Σ)); tas.
-    now eapply wf_ext_global_uctx_invariants.
-    now eapply global_ext_uctx_consistent.
-  Qed.
-
-  Lemma eqb_term_spec t u :
-    eqb_term t u -> eq_term (global_ext_constraints Σ) t u.
-  Proof.
-    pose proof HΣ'.
-    apply eq_term_upto_univ_impl.
-    intros u1 u2; eapply (try_eqb_universe_spec G (global_ext_uctx Σ)); tas.
-    now eapply wf_ext_global_uctx_invariants.
-    now eapply global_ext_uctx_consistent.
-    intros u1 u2; eapply (try_eqb_universe_spec G (global_ext_uctx Σ)); tas.
-    now eapply wf_ext_global_uctx_invariants.
-    now eapply global_ext_uctx_consistent.
-  Qed.
-
+  Definition iscumul Γ := isconv_term RedFlags.default Σ HΣ Hφ G HG Γ Cumul.
 
   Program Definition convert_leq Γ t u
           (ht : wellformed Σ Γ t) (hu : wellformed Σ Γ u)
     : typing_result (∥ Σ ;;; Γ |- t <= u ∥) :=
-    match leqb_term t u with true => ret _ | false =>
-    match iscumul Σ HΣ Γ t ht u hu with
+    match leqb_term G t u with true => ret _ | false =>
+    match iscumul Γ t ht u hu with
     | true => ret _
     | false => (* fallback *)  (* nico *)
       let t' := hnf Γ t ht in
       let u' := hnf Γ u hu in
       (* match leq_term (snd Σ) t' u' with true => ret _ | false => *)
-      raise (NotConvertible Γ t u t' u')
+      raise (NotCumulSmaller Γ t u t' u')
       (* end *)
     end end.
   Next Obligation.
-    symmetry in Heq_anonymous; apply leqb_term_spec in Heq_anonymous.
+    symmetry in Heq_anonymous; eapply leqb_term_spec in Heq_anonymous; tea.
     constructor. now constructor.
   Qed.
   Next Obligation.
@@ -729,7 +614,7 @@ Section Typecheck.
 
   Definition eqb_opt_term (t u : option term) :=
     match t, u with
-    | Some t, Some u => eqb_term t u
+    | Some t, Some u => eqb_term G t u
     | None, None => true
     | _, _ => false
     end.
@@ -739,18 +624,18 @@ Section Typecheck.
     : eqb_opt_term t u -> eq_opt_term (global_ext_constraints Σ) t u.
   Proof.
     destruct t, u; try discriminate; cbn.
-    apply eqb_term_spec. trivial.
+    apply eqb_term_spec; tea. trivial.
   Qed.
 
   Definition eqb_decl (d d' : context_decl) :=
-    eqb_opt_term d.(decl_body) d'.(decl_body) && eqb_term d.(decl_type) d'.(decl_type).
+    eqb_opt_term d.(decl_body) d'.(decl_body) && eqb_term G d.(decl_type) d'.(decl_type).
 
   Lemma eqb_decl_spec d d'
     : eqb_decl d d' -> eq_decl (global_ext_constraints Σ) d d'.
   Proof.
     unfold eqb_decl, eq_decl.
     intro H. utils.toProp. apply eqb_opt_term_spec in H.
-    apply eqb_term_spec in H0. now split.
+    eapply eqb_term_spec in H0; tea. now split.
   Qed.
 
   Definition eqb_context (Γ Δ : context) := forallb2 eqb_decl Γ Δ.
@@ -812,9 +697,9 @@ Section Typecheck.
     | tSort u =>
           match u with
           | NEL.sing (l, false) =>
-            check_eq_true (LevelSet.mem l (global_ext_levels Σ)) (Msg "undeclared level");;
+            check_eq_true (LevelSet.mem l (global_ext_levels Σ)) (Msg ("undeclared level " ++ string_of_level l));;
             ret (tSort (Universe.super l); _)
-          | _ => raise (UnboundVar "not a level")
+          | _ => raise (Msg (string_of_sort u ++ " is not a level"))
           end
 
     | tProd na A B =>
@@ -868,7 +753,7 @@ Section Typecheck.
       I <- reduce_to_ind Γ cty.π1 _ ;;
       let '(ind'; I') := I in let '(u; I'') := I' in let '(args; H) := I'' in
       check_eq_true (eqb ind ind')
-                    (NotConvertible' Γ (tInd ind u) (tInd ind' u)) ;;
+                    (NotConvertible Γ (tInd ind u) (tInd ind' u)) ;;
       d <- lookup_ind_decl ind' ;;
       let '(decl; d') := d in let '(body; HH) := d' in
       check_eq_true (ind_npars decl =? par)
@@ -908,7 +793,7 @@ Section Typecheck.
             I <- reduce_to_ind Γ c_ty.π1 _ ;;
             let '(ind'; I') := I in let '(u; I'') := I' in let '(args; H) := I'' in
             check_eq_true (eqb ind ind')
-                          (NotConvertible' Γ (tInd ind u) (tInd ind' u)) ;;
+                          (NotConvertible Γ (tInd ind u) (tInd ind' u)) ;;
             check_eq_true (ind_npars d.π1 =? n)
                           (Msg "not the right number of parameters") ;;
             check_eq_true (#|args| =? ind_npars d.π1) (* probably redundant *)
@@ -949,7 +834,7 @@ Section Typecheck.
                    W1 <- infer_cumul infer (Γ ,,, fix_context mfix) _ (dbody def)
                                     (lift0 #|fix_context mfix| (dtype def)) _ ;;
                    W2 <- check_eq_true (isLambda (dbody def))
-                                      (UnboundVar "not a lambda") ;;
+                                      (Msg "not a lambda") ;;
                    Z <- check_bodies mfix' _ ;;
                    ret (All_cons (conj W1 W2) Z)
                  end) mfix _ ;;
@@ -1143,14 +1028,77 @@ Section Typecheck.
     now eapply All_local_env_app_inv.
   Defined.
 
+
+  Lemma sq_wfl_nil : ∥ wf_local Σ [] ∥.
+  Proof.
+   repeat constructor.
+  Qed.
+
+  Program Fixpoint check_context Γ : typing_result (∥ wf_local Σ Γ ∥)
+    := match Γ with
+       | [] => ret sq_wfl_nil
+       | {| decl_body := None; decl_type := A |} :: Γ =>
+         HΓ <- check_context Γ ;;
+         XX <- infer_type infer Γ HΓ A ;;
+         ret _
+       | {| decl_body := Some t; decl_type := A |} :: Γ =>
+         HΓ <- check_context Γ ;;
+         XX <- infer_type infer Γ HΓ A ;;
+         XX <- infer_cumul infer Γ HΓ t A _ ;;
+         ret _
+       end.
+  Next Obligation.
+    sq. econstructor; tas. econstructor; eauto.
+  Qed.
+  Next Obligation.
+    left.
+    sq. econstructor; tea.
+  Qed.
+  Next Obligation.
+    sq. econstructor; tas. econstructor; eauto.
+  Qed.
+
+
+  Program Definition check_isWfArity Γ (HΓ : ∥ wf_local Σ Γ ∥) A
+    : typing_result (∥ isWfArity typing Σ Γ A ∥) :=
+    match destArity [] A with
+    | None => raise (Msg (string_of_term A ++ " is not an arity"))
+    | Some (ctx, s) => XX <- check_context (Γ ,,, ctx) ;;
+                      ret _
+    end.
+  Next Obligation.
+    destruct XX. constructor. exists ctx, s.
+    split; auto.
+  Defined.
+
+  Program Definition check_wellformed Γ (HΓ : ∥ wf_local Σ Γ ∥) A
+    : typing_result (wellformed Σ Γ A) :=
+    match infer Γ HΓ A with
+    | Checked (ty; Hty) => ret _
+    | TypeError e => match check_isWfArity Γ HΓ A with
+                    | Checked HA => ret (or_intror HA)
+                    | TypeError _ =>
+                      raise (Msg (string_of_term A ++ " is not wellformed. The type error is: " ++ string_of_type_error e))
+                    end
+    end.
+  Next Obligation.
+    left. destruct Hty. econstructor; eassumption.
+  Defined.
+
   Program Definition check Γ (HΓ : ∥ wf_local Σ Γ ∥) t A
     : typing_result (∥ Σ;;; Γ |- t : A ∥) :=
-    infer Γ HΓ A ;;
-    infer_cumul infer Γ HΓ t A _ ;;
-    ret _.
-  Next Obligation.
-    left. sq. now econstructor.
-  Qed.
+    (* todo: we can do a bit finer because we know that A has isWfArity_or_Type *)
+    check_wellformed Γ HΓ A ;;
+    infer_cumul infer Γ HΓ t A _.
+
+  (* Program Definition check Γ (HΓ : ∥ wf_local Σ Γ ∥) t A *)
+  (*   : typing_result (∥ Σ;;; Γ |- t : A ∥) := *)
+  (*   (* infer Γ HΓ A ;; *) *)
+  (*   infer_cumul infer Γ HΓ t A _ ;; *)
+  (*   ret _. *)
+  (* Next Obligation. *)
+  (*   left. sq. now econstructor. *)
+  (* Qed. *)
 
 End Typecheck.
 
@@ -1207,11 +1155,6 @@ Section CheckEnv.
     | TypeError e => EnvError (IllFormedDecl id e)
     end.
 
-  Lemma sq_wfl_nil {Σ} : ∥ wf_local Σ [] ∥.
-  Proof.
-   repeat constructor.
-  Qed.
-
   Definition check_wf_type id Σ HΣ HΣ' G HG t
     : EnvCheck (∑ u, ∥ Σ;;; [] |- t : tSort u ∥)
     := wrap_error id (@infer_type _ Σ HΣ (@infer _ Σ HΣ HΣ' G HG) [] sq_wfl_nil t).
@@ -1221,25 +1164,7 @@ Section CheckEnv.
     := wrap_error id (@check _ Σ HΣ HΣ' G HG [] sq_wfl_nil t ty).
 
   Definition infer_term Σ HΣ HΣ' G HG t :=
-    wrap_error "" (@infer _ Σ HΣ HΣ' G HG [] sq_wfl_nil t).
-
-  Program Fixpoint check_context Σ HΣ HΣ' G HG Γ
-    : typing_result (∥ wf_local Σ Γ ∥)
-    := match Γ with
-       | [] => ret sq_wfl_nil
-       | {| decl_body := None; decl_type := A |} :: Γ =>
-         HΓ <- check_context Σ HΣ HΣ' G HG Γ ;;
-         XX <- @infer_type _ Σ HΣ (@infer _ Σ HΣ HΣ' G HG) Γ HΓ A ;;
-         ret _
-       | {| decl_body := Some t; decl_type := A |} :: Γ =>
-         HΓ <- check_context Σ HΣ HΣ' G HG Γ ;;
-         XX <- @infer_type _ Σ HΣ (@infer _ Σ HΣ HΣ' G HG) Γ HΓ A ;;
-         XX <- @check _ Σ HΣ HΣ' G HG Γ HΓ t A ;;
-         ret _
-       end.
-  Next Obligation. sq. constructor; cbn; eauto. Qed.
-  Next Obligation. sq. constructor; cbn; eauto. Qed.
-
+    wrap_error "toplevel term" (@infer _ Σ HΣ HΣ' G HG [] sq_wfl_nil t).
 
   Program Fixpoint check_fresh id env : EnvCheck (∥ fresh_global id env ∥) :=
     match env with
@@ -1332,7 +1257,7 @@ Section CheckEnv.
       end
     | InductiveDecl id mdecl =>
       X1 <- monad_Alli (check_one_ind_body Σ HΣ HΣ' G HG id mdecl) _ _ ;;
-      X2 <- wrap_error id (check_context Σ HΣ HΣ' G HG (ind_params mdecl)) ;;
+      X2 <- wrap_error id (check_context HΣ HΣ' G HG (ind_params mdecl)) ;;
       X3 <- wrap_error id (check_eq_nat (context_assumptions (ind_params mdecl))
                                        (ind_npars mdecl)
                                        (Msg "wrong number of parameters")) ;;

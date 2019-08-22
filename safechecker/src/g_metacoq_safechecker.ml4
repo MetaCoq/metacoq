@@ -16,9 +16,7 @@ let check env evm c =
   (* if Feedback.msg_debug (str"Quoting"); *)
   let term = Ast_quoter.quote_term_rec env (EConstr.to_constr evm c) in
   (* Feedback.msg_debug (str"Finished quoting.. checking."); *)
-  (* Disable universe checking for now as it is not implemented everywhere *)
-  let checker_flags = { Config0.default_checker_flags with Config0.check_univs = false } in
-  match SafeTemplateChecker.infer_and_print_template_program checker_flags term with
+  match SafeTemplateChecker.infer_and_print_template_program Config0.default_checker_flags term with
   | Coq_inl s ->
      Feedback.msg_info (pr_char_list s)
   | Coq_inr s -> CErrors.user_err ~hdr:"metacoq" (pr_char_list s)

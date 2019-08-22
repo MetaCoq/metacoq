@@ -28,8 +28,8 @@ src/pCUICLiftSubst.ml
 src/pCUICLiftSubst.mli
 # src/eqDecInstances.ml
 # src/eqDecInstances.mli
-# src/pCUICInduction.mli
-# src/pCUICInduction.ml
+src/pCUICInduction.mli
+src/pCUICInduction.ml
 # src/pCUICReflect.mli
 # src/pCUICReflect.ml
 # src/pCUICEquality.mli
@@ -54,8 +54,8 @@ src/pCUICUnivSubst.mli
 # src/pCUICNormal.ml
 src/pCUICChecker.ml
 src/pCUICChecker.mli
-# src/pCUICPretty.mli
-# src/pCUICPretty.ml
+src/pCUICPretty.mli
+src/pCUICPretty.ml
 src/pCUICRetyping.ml
 src/pCUICRetyping.mli
 src/pCUICMetaTheory.ml

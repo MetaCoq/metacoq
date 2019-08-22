@@ -41,6 +41,8 @@ EAst
 EAstUtils
 EPretty
 Extract
+ELiftSubst
+ETyping
 ErasureFunction
 SafeTemplateErasure
 

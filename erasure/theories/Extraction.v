@@ -30,6 +30,6 @@ Cd "src".
 
 Separate Extraction ErasureFunction.erase SafeTemplateErasure
          (* The following directives ensure separate extraction does not produce name clashes *)
-         String utils UnivSubst.
+         String utils UnivSubst ELiftSubst ETyping.
 
 Cd "..".

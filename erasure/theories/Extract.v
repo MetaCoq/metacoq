@@ -1,4 +1,3 @@
-
 (* Distributed under the terms of the MIT license.   *)
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
@@ -10,7 +9,7 @@ Local Open Scope string_scope.
 Set Asymmetric Patterns.
 Import MonadNotation.
 
-Existing Instance extraction_checker_flags.
+Local Existing Instance extraction_checker_flags.
 
 Definition isErasable Σ Γ t := ∑ T, Σ ;;; Γ |- t : T × (isArity T + (∑ u, (Σ ;;; Γ |- T : tSort u) * is_prop_sort u))%type.
 

@@ -6,8 +6,7 @@ Require Import String.
 Local Open Scope string_scope.
 Set Asymmetric Patterns.
 
-Existing Instance config.default_checker_flags.
-
+Local Existing Instance config.default_checker_flags.
 
 (** * 1-step non-deterministic weak reduction **)
 

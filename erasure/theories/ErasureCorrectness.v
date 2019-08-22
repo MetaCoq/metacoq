@@ -19,7 +19,7 @@ Require Import Lia.
 Module PA := PCUICAst.
 Module P := PCUICWcbvEval.
 
-Existing Instance config.extraction_checker_flags.
+Local Existing Instance config.extraction_checker_flags.
 
 From MetaCoq.PCUIC Require Import PCUICCumulativity.
 

@@ -15,9 +15,8 @@ Set Asymmetric Patterns.
 Import MonadNotation.
 
 Require Import EArities Extract Prelim.
-
 Section fix_sigma.
-
+Local Existing Instance extraction_checker_flags.
 Variable Σ : global_env_ext.
 Variable HΣ : ∥wf Σ∥.
 
@@ -187,6 +186,7 @@ Admitted. (* reduce to prod, if it returns a TypeError (NotAProduct _) just mean
 
 End fix_sigma.
 
+Local Existing Instance extraction_checker_flags.
 Definition wf_ext_wf Σ : wf_ext Σ -> wf Σ := fst.
 Hint Resolve wf_ext_wf.
 

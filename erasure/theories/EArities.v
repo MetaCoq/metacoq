@@ -13,6 +13,8 @@ Import MonadNotation.
 
 Require Import Extract.
 
+Local Existing Instance extraction_checker_flags.
+
 Lemma isErasable_Proof Σ Γ t :
   Is_proof Σ Γ t -> isErasable Σ Γ t.
 Proof.

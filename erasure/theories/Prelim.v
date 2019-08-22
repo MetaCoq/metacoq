@@ -16,8 +16,7 @@ Import MonadNotation.
 
 Require Import Lia.
 
-
-Existing Instance extraction_checker_flags.
+Local Existing Instance extraction_checker_flags.
 
 Module PA := PCUICAst.
 Module P := PCUICWcbvEval.
@@ -92,8 +91,6 @@ Proof.
     destruct (IHl1 _ el) as (? & ? & ? & ? & ->).
     eexists _,_. rewrite -> H, H0. intuition eauto.
 Qed.
-
-Existing Instance extraction_checker_flags.
 
 Lemma typing_spine_inv_app Σ x0 l x x1 :
   PCUICGeneration.typing_spine Σ [] x0 (l ++ [x]) x1 -> { '(x2, x3) : _ & (PCUICGeneration.typing_spine Σ [] x0 l x2) * (Σ ;;; [] |- x : x3)}%type.
@@ -316,7 +313,6 @@ Qed.
 (** ** Prelim on typing *)
 
 Require Import PCUIC.PCUICGeneration.
-Existing Instance config.extraction_checker_flags.
 
 Inductive red_decls Σ Γ Γ' : forall (x y : PCUICAst.context_decl), Type :=
 | conv_vass na na' T T' : isType Σ Γ' T' -> red Σ Γ T T' ->

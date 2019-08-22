@@ -12,7 +12,7 @@ Import MonadNotation.
 
 Module PA := PCUICAst.
 Module P := PCUICWcbvEval.
-Existing Instance config.extraction_checker_flags.
+Local Existing Instance config.extraction_checker_flags.
 
 Lemma All2_All_mix_left {A B} {P : A -> Type} {Q : A -> B -> Type}
       {l : list A} {l'}:

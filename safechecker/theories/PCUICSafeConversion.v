@@ -203,7 +203,7 @@ Section Conversion.
            | Reduction t | Fallback t | Term t => t
            | Args => nl_tm
            end ;
-    nl_wth : wellformed (nlg Σ) [] (zipx nl_ctx nl_tm' nl_stk2)
+    nl_wth : wellformed Σ [] (zipx nl_ctx nl_tm' nl_stk2)
   }.
 
   Definition nlstate (s : state) :=
@@ -223,30 +223,22 @@ Section Conversion.
     - exact (nl t).
     - exact (nlstack π2).
     - exact (nlstack π1).
-    - eapply wellformed_nlg ; auto.
-      eapply wellformed_rename ; try assumption.
+    - eapply wellformed_rename ; try assumption.
       + exact h.
-      + destruct s.
-        * cbn. rewrite <- nl_zipx.
-          eapply eq_term_upto_univ_tm_nl. all: auto.
-        * cbn. rewrite <- nl_zipx.
-          eapply eq_term_upto_univ_tm_nl. all: auto.
-        * cbn. rewrite <- nl_zipx.
-          eapply eq_term_upto_univ_tm_nl. all: auto.
-        * cbn. rewrite <- nl_zipx.
-          eapply eq_term_upto_univ_tm_nl. all: auto.
+      + destruct s; cbn.
+        all: rewrite <- nl_zipx; eapply eq_term_upto_univ_tm_nl; auto.
   Defined.
 
-  Definition wterm Γ := { t : term | wellformed (nlg Σ) Γ t }.
+  Definition wterm Γ := { t : term | wellformed Σ Γ t }.
 
   Definition wcored Γ (u v : wterm Γ) :=
-    cored (nlg Σ) Γ (` u) (` v).
+    cored Σ Γ (` u) (` v).
 
   Lemma wcored_wf :
     forall Γ, well_founded (wcored Γ).
   Proof.
     intros Γ [u hu].
-    destruct (wf_nlg flags _ hΣ) as [hΣ'].
+    destruct hΣ as [hΣ'].
     pose proof (normalisation' _ _ _ hΣ' hu) as h.
     dependent induction h.
     constructor. intros [y hy] r.
@@ -255,7 +247,7 @@ Section Conversion.
   Qed.
 
   Definition R_aux :=
-    t ⊩ cored (nlg Σ) [] ⨶ @posR t ⊗ w ⊩ wcored [] ⨶ @posR (` w) ⊗ stateR.
+    t ⊩ cored Σ [] ⨶ @posR t ⊗ w ⊩ wcored [] ⨶ @posR (` w) ⊗ stateR.
 
   Notation nl_pzt u := (zipx (nl_ctx u) (nl_tm u) (nl_stk1 u)) (only parsing).
   Notation nl_pps1 u := (xpos (nl_ctx u) (nl_tm u) (nl_stk1 u)) (only parsing).
@@ -278,7 +270,7 @@ Section Conversion.
 
   Lemma R_aux_Acc :
     forall t p w q s,
-      wellformed (nlg Σ) [] t ->
+      wellformed Σ [] t ->
       Acc R_aux (t ; (p, (w ; (q, s)))).
   Proof.
     intros t p w q s ht.
@@ -290,23 +282,21 @@ Section Conversion.
           -- intro. eapply posR_Acc.
           -- intro. eapply stateR_Acc.
         * eapply wcored_wf.
-    - destruct (wf_nlg flags _ hΣ) as [hΣ'].
+    - destruct hΣ as [hΣ'].
       eapply normalisation'; eassumption.
   Qed.
 
   Lemma R_Acc :
     forall u,
-      wellformed (nlg Σ) [] (zipx (ctx u) (tm u) (stk1 u)) ->
+      wellformed Σ [] (zipx (ctx u) (tm u) (stk1 u)) ->
       Acc R u.
   Proof.
     intros u h.
     eapply Acc_fun with (f := fun x => obpack (nl_pack x)).
     apply R_aux_Acc.
     rewrite <- nl_zipx.
-    eapply wellformed_rename ; try assumption.
-    - now apply wf_nlg.
-    - eassumption.
-    - eapply eq_term_upto_univ_tm_nl. all: auto.
+    eapply wellformed_rename ; try eassumption.
+    eapply eq_term_upto_univ_tm_nl. all: auto.
   Qed.
 
   Lemma R_cored :
@@ -347,7 +337,7 @@ Section Conversion.
     forall t1 t2 (p1 : pos t1) (p2 : pos t2) w1 w2 q1 q2 s1 s2,
       t1 = t2 ->
       ` p1 = ` p2 ->
-      cored (nlg Σ) [] (` w1) (` w2) ->
+      cored Σ [] (` w1) (` w2) ->
       R_aux (t1 ; (p1, (w1 ; (q1, s1)))) (t2 ; (p2, (w2 ; (q2, s2)))).
   Proof.
     intros t1 t2 [p1 hp1] [p2 hp2] [t1' h1'] [t2' h2'] q1 q2 s1 s2 e1 e2 h.
@@ -2734,7 +2724,7 @@ Section Conversion.
     destruct s ; assumption.
   Qed.
   Next Obligation.
-    apply R_Acc. simpl. eapply wellformed_nlg ; assumption.
+    apply R_Acc. assumption.
   Qed.
 
   Definition isconv Γ leq t1 π1 h1 t2 π2 h2 :=

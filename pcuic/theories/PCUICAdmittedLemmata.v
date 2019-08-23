@@ -373,31 +373,6 @@ Check (@PCUICSafeLemmata.type_rename
        PCUICTyping.typing Σ Γ u A ->
        PCUICTyping.eq_term_upto_univ eq eq u v -> PCUICTyping.typing Σ Γ v A).
 
-Check (@PCUICSafeLemmata.wf_nlg
-     of forall cf : config.checker_flags,
-       PCUICNormal.RedFlags.t ->
-       forall Σ : PCUICAst.global_env_ext,
-       utils.squash (PCUICTyping.wf (PCUICAstUtils.fst_ctx Σ)) ->
-       utils.squash (PCUICTyping.wf (PCUICAstUtils.fst_ctx (PCUICNameless.nlg Σ)))).
-
-Check (@PCUICSafeLemmata.welltyped_nlg
-     of forall cf : config.checker_flags,
-       PCUICNormal.RedFlags.t ->
-       forall Σ : PCUICAst.global_env_ext,
-       utils.squash (PCUICTyping.wf (PCUICAstUtils.fst_ctx Σ)) ->
-       forall (Γ : PCUICAst.context) (t : PCUICAst.term),
-       PCUICSafeLemmata.welltyped Σ Γ t ->
-       PCUICSafeLemmata.welltyped (PCUICNameless.nlg Σ) Γ t).
-
-Check (@PCUICSafeLemmata.wellformed_nlg
-     of forall cf : config.checker_flags,
-       PCUICNormal.RedFlags.t ->
-       forall Σ : PCUICAst.global_env_ext,
-       utils.squash (PCUICTyping.wf (PCUICAstUtils.fst_ctx Σ)) ->
-       forall (Γ : PCUICAst.context) (t : PCUICAst.term),
-       PCUICSafeLemmata.wellformed Σ Γ t ->
-       PCUICSafeLemmata.wellformed (PCUICNameless.nlg Σ) Γ t).
-
 Check (@PCUICSafeLemmata.wellformed_rename
      of forall cf : config.checker_flags,
        PCUICNormal.RedFlags.t ->
@@ -414,7 +389,7 @@ Check (@PCUICSafeLemmata.cored_nl
        utils.squash (PCUICTyping.wf (PCUICAstUtils.fst_ctx Σ)) ->
        forall (Γ : PCUICAst.context) (u v : PCUICAst.term),
        PCUICSafeLemmata.cored (PCUICAstUtils.fst_ctx Σ) Γ u v ->
-       PCUICSafeLemmata.cored (PCUICAstUtils.fst_ctx (PCUICNameless.nlg Σ))
+       PCUICSafeLemmata.cored (PCUICAstUtils.fst_ctx Σ)
          (PCUICNameless.nlctx Γ) (PCUICNameless.nl u) (PCUICNameless.nl v)).
 
 Check (@PCUICSafeLemmata.red_nl
@@ -424,7 +399,7 @@ Check (@PCUICSafeLemmata.red_nl
        utils.squash (PCUICTyping.wf (PCUICAstUtils.fst_ctx Σ)) ->
        forall (Γ : PCUICAst.context) (u v : PCUICAst.term),
        PCUICTyping.red (PCUICAstUtils.fst_ctx Σ) Γ u v ->
-       PCUICTyping.red (PCUICAstUtils.fst_ctx (PCUICNameless.nlg Σ))
+       PCUICTyping.red (PCUICAstUtils.fst_ctx Σ)
          (PCUICNameless.nlctx Γ) (PCUICNameless.nl u) (PCUICNameless.nl v)).
 
 Check (@PCUICSafeLemmata.wellformed_it_mkLambda_or_LetIn

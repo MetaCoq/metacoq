@@ -666,39 +666,6 @@ Section Lemmata.
     destruct x ; assumption.
   Qed.
 
-  (* TODO Unsquash *)
-  Lemma wf_nlg :
-    forall Σ : global_env_ext,
-      ∥ wf Σ ∥ ->
-      ∥ wf (nlg Σ) ∥.
-  Proof.
-    intros Σ [wΣ]. constructor.
-    destruct Σ as [Σ φ].
-    unfold nlg. unfold wf in *. simpl in *.
-    induction Σ.
-    - assumption.
-    - simpl. inversion wΣ. subst.
-      constructor.
-      + eapply IHΣ. assumption.
-      + destruct a.
-        * simpl in *. eapply fresh_global_nl. assumption.
-        * simpl in *. eapply fresh_global_nl. assumption.
-      + destruct a.
-        * simpl in *. destruct c as [ty [bo |] uni].
-          -- cbn in *.
-             (* econstructor. *)
-             (* ++ eapply type_nameless. *)
-             (*    ** intuition eauto. *)
-             (*    ** (* Need some lemma like welltyped_nlg? *) *)
-             (*      admit. *)
-             (* ++ admit. *)
-             (* ++ admit. *)
-             (* ++ admit. *)
-             admit.
-          -- simpl. admit.
-        * simpl in *. destruct m. admit.
-  Admitted.
-
   Lemma conv_context :
     forall Σ Γ u v ρ,
       wf Σ.1 ->
@@ -738,18 +705,6 @@ Section Lemmata.
   Lemma wellformed_irr :
     forall {Σ Γ t} (h1 h2 : wellformed Σ Γ t), h1 = h2.
   Proof. intros. apply proof_irrelevance. Qed.
-
-  Lemma welltyped_nlg :
-    forall Γ t,
-      welltyped Σ Γ t ->
-      welltyped (nlg Σ) Γ t.
-  Admitted.
-
-  Lemma wellformed_nlg :
-    forall Γ t,
-      wellformed Σ Γ t ->
-      wellformed (nlg Σ) Γ t.
-  Admitted.
 
   Lemma welltyped_rename :
     forall Γ u v,
@@ -1196,13 +1151,13 @@ Section Lemmata.
   Lemma cored_nl :
     forall Γ u v,
       cored Σ Γ u v ->
-      cored (nlg Σ) (nlctx Γ) (nl u) (nl v).
+      cored Σ (nlctx Γ) (nl u) (nl v).
   Admitted.
 
   Lemma red_nl :
     forall Γ u v,
       red Σ Γ u v ->
-      red (nlg Σ) (nlctx Γ) (nl u) (nl v).
+      red Σ (nlctx Γ) (nl u) (nl v).
   Admitted.
 
   Derive Signature for Acc.

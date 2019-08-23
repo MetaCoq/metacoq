@@ -3,8 +3,8 @@ From Equations Require Import Equations.
 From Coq Require Import Bool String List Program BinPos Compare_dec Omega.
 From MetaCoq.Template Require Import config utils AstUtils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
-     PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICWeakeningEnv PCUICWeakening
-     PCUICClosed PCUICReduction.
+     PCUICLiftSubst PCUICUnivSubst PCUICEquality PCUICTyping PCUICWeakeningEnv
+     PCUICWeakening PCUICClosed PCUICReduction.
 Require Import ssreflect ssrbool.
 Require Import String.
 From MetaCoq Require Import LibHypsNaming.
@@ -30,33 +30,6 @@ Proof.
     induction redv. induction redv'. constructor; auto.
     econstructor 3; eauto.
     econstructor 2; eauto. }
-Qed.
-
-Lemma eq_term_upto_univ_refl Re Rle :
-  CRelationClasses.Reflexive Re ->
-  CRelationClasses.Reflexive Rle ->
-  forall t, eq_term_upto_univ Re Rle t t.
-Proof.
-  intros hRe hRle.
-  induction t in Rle, hRle |- * using term_forall_list_ind; simpl;
-    try constructor; try solve [eapply All_All2; eauto]; try easy;
-      try now apply All2_same.
-  - destruct p. constructor; try easy.
-    red in X. eapply All_All2; eauto.
-  - eapply All_All2; eauto. simpl. intuition eauto.
-  - eapply All_All2; eauto. simpl. intuition eauto.
-Qed.
-
-Lemma eq_term_refl `{checker_flags} φ t : eq_term φ t t.
-Proof.
-  apply eq_term_upto_univ_refl ; intro ; apply eq_universe_refl.
-Qed.
-
-Lemma leq_term_refl `{checker_flags} φ t : leq_term φ t t.
-Proof.
-  apply eq_term_upto_univ_refl.
-  - intro ; apply eq_universe_refl.
-  - intro ; apply leq_universe_refl.
 Qed.
 
 Lemma cumul_refl' {cf : checker_flags} Σ Γ t : Σ ;;; Γ |- t <= t.
@@ -112,67 +85,10 @@ Lemma conv_cumul {cf:checker_flags} Σ Γ t u :
   Σ ;;; Γ |- t = u -> (Σ ;;; Γ |- t <= u) * (Σ ;;; Γ |- u <= t).
 Proof. trivial. Qed.
 
+(* todo: move *)
 Lemma All_All2_refl {A : Type} {R} {l : list A} : All (fun x : A => R x x) l -> All2 R l l.
 Proof.
   induction 1; constructor; auto.
-Qed.
-
-Lemma eq_term_upto_univ_leq :
-  forall (Re Rle : universe -> universe -> Type) u v,
-    (forall u u', Re u u' -> Rle u u') ->
-    eq_term_upto_univ Re Re u v ->
-    eq_term_upto_univ Re Rle u v.
-Proof.
-  intros Re Rle u v hR h.
-  induction u in v, h |- * using term_forall_list_ind.
-  all: simpl ; inversion h ;
-       subst ; constructor ; try easy.
-  all: eapply All2_impl ; eauto.
-Qed.
-
-Lemma eq_term_leq_term `{checker_flags} φ t u : eq_term φ t u -> leq_term φ t u.
-Proof.
-  intros h. eapply eq_term_upto_univ_leq ; eauto.
-  eapply eq_universe_leq_universe.
-Qed.
-
-Lemma eq_term_upto_univ_incl `{cf:checker_flags} Re Rle :
-  inclusion Re Rle -> inclusion (eq_term_upto_univ Re Re) (eq_term_upto_univ Re Rle).
-Proof. intros. intros x y H. eapply eq_term_upto_univ_leq in H; eauto. Qed.
-
-Lemma eq_term_upto_univ_antisym :
-  forall (Re Rle : universe -> universe -> Type) u v,
-    (forall u u', Rle u u' -> Rle u' u -> Re u u') ->
-    eq_term_upto_univ Re Rle u v ->
-    eq_term_upto_univ Re Rle v u ->
-    eq_term_upto_univ Re Re u v.
-Proof.
-  intros Re Rle u v hR h h'.
-  induction u in v, h, h' |- * using term_forall_list_ind.
-  all: simpl ; inversion h ; inversion h' ;
-       subst ; try constructor ; try easy.
-  all: try solve [eapply All2_impl ; eauto]; eauto.
-  all: simpl ; inversion h ; inversion h' ;
-       subst ; try constructor ; try easy.
-  - noconf H. depelim h; depelim h'.
-    eapply All2_sym in a.
-    eapply All2_impl; [eapply All2_prod|]; [eapply a0|eapply a|].
-    intros x y [xy yx]. auto.
-  - noconf H. depelim h; depelim h'.
-    eapply All2_sym in a.
-    eapply All2_impl; [eapply All2_prod|]; [eapply a0|eapply a|].
-    intros x y [xy yx]. auto.
-  - noconf H. depelim h; depelim h'.
-    eapply All2_sym in a.
-    eapply All2_impl; [eapply All2_prod|]; [eapply a0|eapply a|].
-    intros x y [xy yx]. auto.
-Qed.
-
-Lemma leq_term_antisym `{cf : checker_flags} (Σ : constraints) t u :
-  leq_term Σ t u -> leq_term Σ u t -> eq_term Σ t u.
-Proof.
-  intros. eapply eq_term_upto_univ_antisym; [|eauto ..].
-  eapply leq_universe_antisym.
 Qed.
 
 Lemma eq_term_App `{checker_flags} φ f f' :
@@ -207,56 +123,6 @@ Proof.
   induction l in l', f, f' |- *; intro e; inversion_clear 1.
   - assumption.
   - cbn. apply IHl. constructor; try assumption. assumption.
-Qed.
-
-Lemma eq_term_upto_univ_sym :
-  forall Re Rle,
-    CRelationClasses.Symmetric Re ->
-    CRelationClasses.Symmetric Rle ->
-    CRelationClasses.Symmetric (eq_term_upto_univ Re Rle).
-Proof.
-  intros Re Rle he hle u v e.
-  induction u in Rle, hle, v, e |- * using term_forall_list_ind.
-  all: dependent destruction e.
-  all: try solve [
-    econstructor ; eauto ;
-    try eapply All2_symP ; eauto
-  ].
-  - econstructor.
-    eapply All2_All_mix_left in X as h; eauto.
-    clear a X.
-    induction h.
-    + constructor.
-    + destruct r as [h1 h2]. eapply h1 in h2 ; auto.
-  - econstructor; eauto.
-    eapply All2_All_mix_left in X as h; eauto.
-    clear a X.
-    induction h.
-    + constructor.
-    + destruct r as [h1 [h2 h3]]. eapply h1 in h3 ; auto.
-  - econstructor.
-    eapply All2_All_mix_left in X as h; eauto.
-    clear a X.
-    induction h.
-    + constructor.
-    + destruct r as [[h1 h2] [[h3 h4] h5]].
-      eapply h1 in h3 ; auto.
-  - econstructor.
-    eapply All2_All_mix_left in X as h; eauto.
-    clear a X.
-    induction h.
-    + constructor.
-    + destruct r as [[h1 h2] [[h3 h4] h5]]. eapply h1 in h3 ; auto.
-Qed.
-
-Corollary eq_term_sym `{checker_flags} :
-  forall G t u,
-    eq_term G t u ->
-    eq_term G u t.
-Proof.
-  intros G t u h.
-  eapply eq_term_upto_univ_sym ; eauto.
-  all: intros ? ? ? ; eapply eq_universe_sym ; eauto.
 Qed.
 
 Inductive conv_alt `{checker_flags} (Σ : global_env_ext) (Γ : context) : term -> term -> Type :=

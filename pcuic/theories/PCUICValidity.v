@@ -190,6 +190,7 @@ Section Validity.
         eapply type_LetIn; eauto. left. exists [], u; intuition eauto with wf.
         eapply cumul_alt. exists (tSort u), (tSort u); intuition auto.
         apply red1_red; repeat constructor.
+        reflexivity.
 
     - (* Application *)
       destruct X1 as [[ctx [s [Heq Hs]]]|].

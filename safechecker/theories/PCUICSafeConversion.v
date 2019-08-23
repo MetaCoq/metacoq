@@ -2384,7 +2384,7 @@ Section Conversion.
     leqb_term t u -> leq_term (global_ext_constraints Σ) t u.
   Proof.
     pose proof hΣ'.
-    apply eq_term_upto_univ_impl.
+    apply eqb_term_upto_univ_impl.
     intros u1 u2; eapply (try_eqb_universe_spec G (global_ext_uctx Σ)); tas.
     now eapply wf_ext_global_uctx_invariants.
     now eapply global_ext_uctx_consistent.
@@ -2397,7 +2397,7 @@ Section Conversion.
     eqb_term t u -> eq_term (global_ext_constraints Σ) t u.
   Proof.
     pose proof hΣ'.
-    apply eq_term_upto_univ_impl.
+    apply eqb_term_upto_univ_impl.
     intros u1 u2; eapply (try_eqb_universe_spec G (global_ext_uctx Σ)); tas.
     now eapply wf_ext_global_uctx_invariants.
     now eapply global_ext_uctx_consistent.

@@ -2,7 +2,7 @@
 
 From Coq Require Import Bool String List Program BinPos Compare_dec Arith Lia.
 From MetaCoq.Template Require Import config utils AstUtils.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICLiftSubst PCUICUnivSubst PCUICTyping.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICLiftSubst PCUICUnivSubst PCUICEquality PCUICTyping.
 Require Import ssreflect ssrbool.
 From Equations Require Import Equations.
 
@@ -43,40 +43,11 @@ Proof.
 Qed.
 
 
-Lemma eq_term_upto_univ_morphism0 (Re Re' : _ -> _ -> Type)
-      (Hre : forall t u, Re t u -> Re' t u)
-  : forall t u, eq_term_upto_univ Re Re t u -> eq_term_upto_univ Re' Re' t u.
-Proof.
-  fix aux 3.
-  destruct 1; constructor; eauto.
-  all: match goal with
-       | H : All2 _ _ _ |- _ => induction H; constructor; eauto
-       end.
-  - destruct r. split; eauto.
-  - destruct r as [[? ?] ?]. repeat split; eauto.
-  - destruct r as [[? ?] ?]. repeat split; eauto.
-Defined.
-
-Lemma eq_term_upto_univ_morphism (Re Re' Rle Rle' : _ -> _ -> Type)
-      (Hre : forall t u, Re t u -> Re' t u)
-      (Hrle : forall t u, Rle t u -> Rle' t u)
-  : forall t u, eq_term_upto_univ Re Rle t u -> eq_term_upto_univ Re' Rle' t u.
-Proof.
-  fix aux 3.
-  destruct 1; constructor; eauto using eq_term_upto_univ_morphism0.
-  all: match goal with
-       | H : All2 _ _ _ |- _ => induction H; constructor;
-                                eauto using eq_term_upto_univ_morphism0
-       end.
-  - destruct r. split; eauto using eq_term_upto_univ_morphism0.
-  - destruct r as [[? ?] R]. repeat split; eauto using eq_term_upto_univ_morphism0.
-  - destruct r as [[? ?] R]. repeat split; eauto using eq_term_upto_univ_morphism0.
-Defined.
 
 Lemma leq_term_subset {cf:checker_flags} ctrs ctrs' t u
   : ConstraintSet.Subset ctrs ctrs' -> leq_term ctrs t u -> leq_term ctrs' t u.
 Proof.
-  intro H. apply eq_term_upto_univ_morphism.
+  intro H. apply eq_term_upto_univ_impl.
   intros t' u'; eapply eq_universe_subset; assumption.
   intros t' u'; eapply leq_universe_subset; assumption.
 Qed.
@@ -128,7 +99,7 @@ Lemma eq_term_subset {cf:checker_flags} φ φ' t t'
   : ConstraintSet.Subset φ φ'
     -> eq_term φ t t' ->  eq_term φ' t t'.
 Proof.
-  intro H. apply eq_term_upto_univ_morphism.
+  intro H. apply eq_term_upto_univ_impl.
   all: intros u u'; eapply eq_universe_subset; assumption.
 Qed.
 

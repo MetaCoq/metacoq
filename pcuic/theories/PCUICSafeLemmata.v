@@ -36,6 +36,7 @@ Ltac rdestruct H :=
 
 Definition nodelta_flags := RedFlags.mk true true true false true true.
 
+
 Inductive dlexprod {A} {B : A -> Type}
           (leA : A -> A -> Prop) (leB : forall x, B x -> B x -> Prop)
   : sigT B -> sigT B -> Prop :=
@@ -155,6 +156,84 @@ Section Lemmata.
   Context {cf : checker_flags}.
   Context (flags : RedFlags.t).
 
+  Lemma eq_term_zipc_inv :
+    forall φ u v π,
+      eq_term φ (zipc u π) (zipc v π) ->
+      eq_term φ u v.
+  Proof.
+    intros Σ u v π h.
+    revert u v h. induction π ; intros u v h.
+    all: solve [
+             simpl in h ; try apply IHπ in h ;
+             cbn in h ; inversion h ; subst ; assumption
+           ].
+  Qed.
+
+  Lemma eq_term_zipx_inv :
+    forall φ Γ u v π,
+      eq_term φ (zipx Γ u π) (zipx Γ v π) ->
+      eq_term φ u v.
+  Proof.
+    intros Σ Γ u v π h.
+    eapply eq_term_zipc_inv.
+    eapply eq_term_it_mkLambda_or_LetIn_inv.
+    eassumption.
+  Qed.
+
+  Lemma eq_term_upto_univ_zipc :
+    forall Re u v π,
+      Reflexive Re ->
+      eq_term_upto_univ Re Re u v ->
+      eq_term_upto_univ Re Re (zipc u π) (zipc v π).
+  Proof.
+    intros Re u v π he h.
+    induction π in u, v, h |- *.
+    all: try solve [
+               simpl ; try apply IHπ ;
+               cbn ; constructor ; try apply eq_term_upto_univ_refl ; assumption
+             ].
+    - assumption.
+    - simpl. apply IHπ. destruct indn as [i n].
+      constructor.
+      + apply eq_term_upto_univ_refl. all: assumption.
+      + assumption.
+      + eapply All2_same.
+        intros. split ; auto. apply eq_term_upto_univ_refl. all: assumption.
+  Qed.
+
+  Lemma eq_term_zipc :
+    forall (Σ : global_env_ext) u v π,
+      eq_term (global_ext_constraints Σ) u v ->
+      eq_term (global_ext_constraints Σ) (zipc u π) (zipc v π).
+  Proof.
+    intros Σ u v π h.
+    eapply eq_term_upto_univ_zipc.
+    - intro. eapply eq_universe_refl.
+    - assumption.
+  Qed.
+
+  Lemma eq_term_upto_univ_zipx :
+    forall Re Γ u v π,
+      Reflexive Re ->
+      eq_term_upto_univ Re Re u v ->
+      eq_term_upto_univ Re Re (zipx Γ u π) (zipx Γ v π).
+  Proof.
+    intros Re Γ u v π he h.
+    eapply eq_term_upto_univ_it_mkLambda_or_LetIn ; auto.
+    eapply eq_term_upto_univ_zipc ; auto.
+  Qed.
+
+  Lemma eq_term_zipx :
+    forall φ Γ u v π,
+      eq_term φ u v ->
+      eq_term φ (zipx Γ u π) (zipx Γ v π).
+  Proof.
+    intros Σ Γ u v π h.
+    eapply eq_term_upto_univ_zipx ; auto.
+    intro. eapply eq_universe_refl.
+  Qed.
+
+
   (* red is the reflexive transitive closure of one-step reduction and thus
      can't be used as well order. We thus define the transitive closure,
      but we take the symmetric version.
@@ -195,7 +274,7 @@ Section Lemmata.
     induction ict in brtys, n, hb |- *.
     - cbn in *. eexists. split.
       + eassumption.
-      + apply All2_same. intros [m t]. simpl. split ; auto.
+      + apply All2_same. intros [m t]. simpl. split ; now auto.
     - cbn. cbn in hb.
       lazymatch type of hb with
       | match ?t with _ => _ end = _ =>
@@ -412,7 +491,7 @@ Section Lemmata.
         eapply eq_term_leq_term.
         apply eq_term_sym.
         eapply eq_term_upto_univ_eq_eq_term.
-        eapply eq_term_upto_univ_subst ; auto.
+        eapply eq_term_upto_univ_subst ; now auto.
     - intros cst u decl ? ? hdecl hcons v e.
       dependent destruction e.
       apply All2_eq in a. apply map_inj in a ; revgoals.
@@ -495,7 +574,7 @@ Section Lemmata.
         eapply eq_term_leq_term.
         apply eq_term_sym.
         eapply eq_term_upto_univ_eq_eq_term.
-        eapply eq_term_upto_univ_substs ; auto.
+        eapply eq_term_upto_univ_substs ; auto; try reflexivity.
         * constructor ; auto.
           eapply All2_same.
           intro. eapply eq_term_upto_univ_refl ; auto.

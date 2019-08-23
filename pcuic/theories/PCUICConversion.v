@@ -350,7 +350,8 @@ Proof.
     intuition auto. apply cumul_trans with N2. auto.
     eapply cumul_conv_ctx; eauto.
 
-    econstructor 2. eauto. constructor. auto. constructor. now apply conv_ctx_refl.
+    econstructor 2. eauto. constructor. reflexivity.
+    constructor. now apply conv_ctx_refl.
     constructor; auto.
     auto.
 

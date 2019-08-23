@@ -317,8 +317,6 @@ Section Renaming.
 
 Context `{checker_flags}.
 
-Derive Signature for eq_term_upto_univ.
-
 Lemma eq_term_upto_univ_rename :
   forall Re Rle u v f,
     eq_term_upto_univ Re Rle u v ->

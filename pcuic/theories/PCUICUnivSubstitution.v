@@ -5,7 +5,8 @@
 From Coq Require Import Bool String List BinPos Compare_dec Arith Lia.
 Require Import Coq.Program.Syntax Coq.Program.Basics.
 From MetaCoq.Template Require Import utils config AstUtils UnivSubst.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICLiftSubst
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
+     PCUICLiftSubst PCUICEquality
      PCUICUnivSubst PCUICTyping PCUICWeakeningEnv PCUICClosed
      PCUICReduction PCUICCumulativity PCUICWeakening PCUICUnivSubst.
 (* Require Import ssreflect. *)

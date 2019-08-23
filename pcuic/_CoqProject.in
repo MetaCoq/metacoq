@@ -43,4 +43,3 @@ theories/PCUICSafeLemmata.v
 theories/TemplateToPCUIC.v
 theories/TemplateToPCUICCorrectness.v
 # theories/All.v
-theories/Extraction.v

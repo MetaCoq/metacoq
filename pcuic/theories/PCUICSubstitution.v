@@ -5,7 +5,7 @@
 From Coq Require Import Bool String List BinPos Compare_dec Arith Lia.
 Require Import Coq.Program.Syntax Coq.Program.Basics.
 From MetaCoq.Template Require Import utils config AstUtils.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICLiftSubst
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICLiftSubst PCUICEquality
      PCUICUnivSubst PCUICTyping PCUICWeakeningEnv PCUICClosed
      PCUICReduction PCUICCumulativity PCUICWeakening.
 Require Import ssreflect.
@@ -26,7 +26,7 @@ Inductive subs {cf:checker_flags} (Σ : global_env_ext) (Γ : context) : list te
 | emptys : subs Σ Γ [] []
 | cons_ass Δ s na t T : subs Σ Γ s Δ -> Σ ;;; Γ |- t : subst0 s T -> subs Σ Γ (t :: s) (Δ ,, vass na T).
 
-(** Linking a cantext (with let-ins), an instance (reversed substitution)
+(** Linking a context (with let-ins), an instance (reversed substitution)
     for its assumptions and a well-formed substitution for it. *)
 
 Inductive context_subst : context -> list term -> list term -> Set :=
@@ -1547,47 +1547,6 @@ Proof.
       rewrite <- (OnOne2_length X).
       eapply ih ; eauto.
     + cbn. f_equal.
-Qed.
-
-Lemma subst_eq_term_upto_univ n k T U Re Rle :
-  CRelationClasses.Reflexive Re ->
-  CRelationClasses.Reflexive Rle ->
-  eq_term_upto_univ Re Rle T U ->
-  eq_term_upto_univ Re Rle (subst n k T) (subst n k U).
-Proof.
-  intros hRe hRle h.
-  induction T in n, k, U, h, Rle, hRle |- * using term_forall_list_ind; simpl.
-  all: simpl ; inversion h ; subst; simpl.
-  all: try (eapply eq_term_upto_univ_refl ; easy).
-  (* all: try (eapply leq_term_upto_univ_refl ; easy). *)
-  all: try (constructor ; easy).
-  all: try solve [constructor; solve_all].
-  + pose proof (All2_length _ _ X0); subst; solve_all.
-    rewrite H. constructor. solve_all.
-  + pose proof (All2_length _ _ X0); subst; solve_all.
-    rewrite H. constructor. solve_all.
-Qed.
-
-Lemma subst_eq_term `{checker_flags} ϕ n k T U :
-  eq_term ϕ T U ->
-  eq_term ϕ (subst n k T) (subst n k U).
-Proof.
-  intros Hleq.
-  eapply subst_eq_term_upto_univ.
-  - intro. eapply eq_universe_refl.
-  - intro. eapply eq_universe_refl.
-  - assumption.
-Qed.
-
-Lemma subst_leq_term `{checker_flags} ϕ n k T U :
-  leq_term ϕ T U ->
-  leq_term ϕ (subst n k T) (subst n k U).
-Proof.
-  intros Hleq.
-  eapply subst_eq_term_upto_univ.
-  - intro. eapply eq_universe_refl.
-  - intro. eapply leq_universe_refl.
-  - assumption.
 Qed.
 
 Lemma subst_eq_decl `{checker_flags} ϕ l k d d' :

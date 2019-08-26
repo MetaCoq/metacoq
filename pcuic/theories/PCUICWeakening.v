@@ -3,7 +3,7 @@ From Equations Require Import Equations.
 From Coq Require Import Bool String List BinPos Compare_dec Omega Lia.
 Require Import Coq.Program.Syntax Coq.Program.Basics.
 From MetaCoq.Template Require Import config utils.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICLiftSubst PCUICUnivSubst
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICLiftSubst PCUICUnivSubst PCUICEquality
      PCUICTyping PCUICWeakeningEnv PCUICClosed PCUICReduction.
 Require Import ssreflect ssrbool.
 
@@ -38,81 +38,6 @@ Proof.
   apply (lift_closed n) in H0.
   simpl in *. forward H1 by lia.
   now apply (lift_closed n) in H1.
-Qed.
-
-Definition lift_decl n k d := (map_decl (lift n k) d).
-
-Definition lift_context n k (Γ : context) : context :=
-  fold_context (fun k' => lift n (k' + k)) Γ.
-
-Lemma lift_decl0 k d : map_decl (lift 0 k) d = d.
-Proof.
-  destruct d; destruct decl_body; unfold map_decl; simpl;
-  f_equal; now rewrite ?lift0_id.
-Qed.
-
-Lemma lift0_context k Γ : lift_context 0 k Γ = Γ.
-Proof.
-  unfold lift_context, fold_context.
-  rewrite rev_mapi. rewrite List.rev_involutive.
-  unfold mapi. generalize 0 at 2. generalize #|List.rev Γ|.
-  induction Γ; intros; simpl; trivial.
-  rewrite lift_decl0; f_equal; auto.
-Qed.
-
-Lemma lift_context_length n k Γ : #|lift_context n k Γ| = #|Γ|.
-Proof. apply fold_context_length. Qed.
-Hint Rewrite lift_context_length : lift.
-
-Definition lift_context_snoc0 n k Γ d : lift_context n k (d :: Γ) = lift_context n k Γ ,, lift_decl n (#|Γ| + k) d.
-Proof. unfold lift_context. now rewrite fold_context_snoc0. Qed.
-Hint Rewrite lift_context_snoc0 : lift.
-
-Lemma lift_context_snoc n k Γ d : lift_context n k (Γ ,, d) = lift_context n k Γ ,, lift_decl n (#|Γ| + k) d.
-Proof.
-  unfold snoc. apply lift_context_snoc0.
-Qed.
-Hint Rewrite lift_context_snoc : lift.
-
-Lemma lift_context_alt n k Γ :
-  lift_context n k Γ =
-  mapi (fun k' d => lift_decl n (Nat.pred #|Γ| - k' + k) d) Γ.
-Proof.
-  unfold lift_context. apply fold_context_alt.
-Qed.
-
-Lemma lift_context_app n k Γ Δ :
-  lift_context n k (Γ ,,, Δ) = lift_context n k Γ ,,, lift_context n (#|Γ| + k) Δ.
-Proof.
-  unfold lift_context, fold_context, app_context.
-  rewrite List.rev_app_distr.
-  rewrite mapi_app. rewrite <- List.rev_app_distr. f_equal. f_equal.
-  apply mapi_ext. intros. f_equal. rewrite List.rev_length. f_equal. lia.
-Qed.
-
-Lemma nth_error_lift_context:
-  forall (Γ' Γ'' : context) (v : nat),
-    v < #|Γ'| -> forall nth k,
-    nth_error Γ' v = Some nth ->
-    nth_error (lift_context #|Γ''| k Γ') v = Some (lift_decl #|Γ''| (#|Γ'| - S v + k) nth).
-Proof.
-  induction Γ'; intros.
-  - easy.
-  - simpl. destruct v; rewrite lift_context_snoc0.
-    + simpl. repeat f_equal; try lia. simpl in *. congruence.
-    + simpl. apply IHΓ'; simpl in *; (lia || congruence).
-Qed.
-
-Lemma nth_error_lift_context_eq:
-  forall (Γ' Γ'' : context) (v : nat) k,
-    nth_error (lift_context #|Γ''| k Γ') v =
-    option_map (lift_decl #|Γ''| (#|Γ'| - S v + k)) (nth_error Γ' v).
-Proof.
-  induction Γ'; intros.
-  - simpl. unfold lift_context, fold_context; simpl. now rewrite nth_error_nil.
-  - simpl. destruct v; rewrite lift_context_snoc0.
-    + simpl. repeat f_equal; try lia.
-    + simpl. apply IHΓ'; simpl in *; (lia || congruence).
 Qed.
 
 Lemma weaken_nth_error_ge {Γ Γ' v Γ''} : #|Γ'| <= v ->
@@ -793,37 +718,6 @@ Proof.
   simpl; eapply red1_red. eapply weakening_red1; auto.
 Qed.
 
-Lemma lift_eq_term_upto_univ Re Rle n k T U :
-  eq_term_upto_univ Re Rle T U ->
-  eq_term_upto_univ Re Rle (lift n k T) (lift n k U).
-Proof.
-  induction T in n, k, U, Rle |- * using term_forall_list_ind;
-    inversion 1; simpl; try (now constructor).
-  - destruct (k <=? n0); constructor.
-  - constructor. solve_all.
-  - constructor; try easy. solve_all.
-  - constructor; try easy.
-    subst. pose proof (All2_length _ _ X1). clear -X X1 H.
-    solve_all.
-    specialize (b0 Re n (#|mfix'| + k) _ b). now rewrite H.
-  - constructor; try easy.
-    subst. pose proof (All2_length _ _ X1). clear -X X1 H.
-    solve_all.
-    specialize (b0 Re n (#|mfix'| + k) _ b). now rewrite H.
-Qed.
-
-Lemma lift_eq_term `{checker_flags} ϕ n k T U :
-  eq_term ϕ T U -> eq_term ϕ (lift n k T) (lift n k U).
-Proof.
-  apply lift_eq_term_upto_univ.
-Qed.
-
-Lemma lift_leq_term `{checker_flags} ϕ n k T U :
-  leq_term ϕ T U -> leq_term ϕ (lift n k T) (lift n k U).
-Proof.
-  apply lift_eq_term_upto_univ.
-Qed.
-
 Lemma weakening_cumul `{CF:checker_flags} Σ Γ Γ' Γ'' M N :
   wf Σ.1 ->
   Σ ;;; Γ ,,, Γ' |- M <= N ->
@@ -836,27 +730,6 @@ Proof.
     econstructor 2; eauto.
   - eapply weakening_red1 in r; auto.
     econstructor 3; eauto.
-Qed.
-
-Lemma lift_eq_decl `{checker_flags} ϕ n k d d' :
-  eq_decl ϕ d d' -> eq_decl ϕ (lift_decl n k d) (lift_decl n k d').
-Proof.
-  destruct d, d', decl_body, decl_body0;
-    unfold eq_decl, map_decl; cbn; intuition auto using lift_eq_term.
-Qed.
-
-Lemma lift_eq_context `{checker_flags} φ l l' n k :
-  eq_context φ l l' ->
-  eq_context φ (lift_context n k l) (lift_context n k l').
-Proof.
-  induction l in l', n, k |- *; intros; destruct l'; rewrite -> ?lift_context_snoc0.
-  - constructor.
-  - inversion H0.
-  - inversion H0.
-  - inversion H0; subst. constructor.
-    + apply All2_length in H6. rewrite H6.
-      now apply lift_eq_decl.
-    + now apply IHl.
 Qed.
 
 Lemma lift_check_correct_arity:

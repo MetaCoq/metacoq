@@ -3,7 +3,7 @@
 From Coq Require Import Bool String List Program BinPos Compare_dec Arith Lia.
 From MetaCoq.Template Require Import config utils Universes BasicAst AstUtils UnivSubst.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICReflect
-                          PCUICLiftSubst PCUICUnivSubst.
+                          PCUICLiftSubst PCUICUnivSubst PCUICEquality.
 
 From MetaCoq Require Export LibHypsNaming.
 
@@ -167,12 +167,6 @@ Definition unfold_cofix (mfix : mfixpoint term) (idx : nat) :=
   match List.nth_error mfix idx with
   | Some d => Some (d.(rarg), subst0 (cofix_subst mfix) d.(dbody))
   | None => None
-  end.
-
-Definition isConstruct_app t :=
-  match fst (decompose_app t) with
-  | tConstruct _ _ _ => true
-  | _ => false
   end.
 
 Definition is_constructor n ts :=
@@ -464,97 +458,6 @@ Fixpoint subst_app (t : term) (us : list term) : term :=
   | _, _ => mkApps t us
   end.
 
-(* ** Syntactic equality up-to universes
-
-  We shouldn't look at printing annotations *)
-
-Inductive eq_term_upto_univ (Re Rle : universe -> universe -> Type) : term -> term -> Type :=
-| eq_Rel n  :
-    eq_term_upto_univ Re Rle (tRel n) (tRel n)
-
-| eq_Evar e args args' :
-    All2 (eq_term_upto_univ Re Re) args args' ->
-    eq_term_upto_univ Re Rle (tEvar e args) (tEvar e args')
-
-| eq_Var id :
-    eq_term_upto_univ Re Rle (tVar id) (tVar id)
-
-| eq_Sort s s' :
-    Rle s s' ->
-    eq_term_upto_univ Re Rle (tSort s) (tSort s')
-
-| eq_App t t' u u' :
-    eq_term_upto_univ Re Rle t t' ->
-    eq_term_upto_univ Re Re u u' ->
-    eq_term_upto_univ Re Rle (tApp t u) (tApp t' u')
-
-| eq_Const c u u' :
-    All2 Rle (List.map Universe.make u) (List.map Universe.make u') ->
-    eq_term_upto_univ Re Rle (tConst c u) (tConst c u')
-
-| eq_Ind i u u' :
-    All2 Rle (List.map Universe.make u) (List.map Universe.make u') ->
-    eq_term_upto_univ Re Rle (tInd i u) (tInd i u')
-
-| eq_Construct i k u u' :
-    All2 Rle (List.map Universe.make u) (List.map Universe.make u') ->
-    eq_term_upto_univ Re Rle (tConstruct i k u) (tConstruct i k u')
-
-| eq_Lambda na na' ty ty' t t' :
-    eq_term_upto_univ Re Re ty ty' ->
-    eq_term_upto_univ Re Rle t t' ->
-    eq_term_upto_univ Re Rle (tLambda na ty t) (tLambda na' ty' t')
-
-| eq_Prod na na' a a' b b' :
-    eq_term_upto_univ Re Re a a' ->
-    eq_term_upto_univ Re Rle b b' ->
-    eq_term_upto_univ Re Rle (tProd na a b) (tProd na' a' b')
-
-| eq_LetIn na na' t t' ty ty' u u' :
-    eq_term_upto_univ Re Re t t' ->
-    eq_term_upto_univ Re Re ty ty' ->
-    eq_term_upto_univ Re Rle u u' ->
-    eq_term_upto_univ Re Rle (tLetIn na t ty u) (tLetIn na' t' ty' u')
-
-| eq_Case ind par p p' c c' brs brs' :
-    eq_term_upto_univ Re Re p p' ->
-    eq_term_upto_univ Re Re c c' ->
-    All2 (fun x y =>
-      (fst x = fst y) *
-      eq_term_upto_univ Re Re (snd x) (snd y)
-    ) brs brs' ->
-    eq_term_upto_univ Re Rle (tCase (ind, par) p c brs) (tCase (ind, par) p' c' brs')
-
-| eq_Proj p c c' :
-    eq_term_upto_univ Re Re c c' ->
-    eq_term_upto_univ Re Rle (tProj p c) (tProj p c')
-
-| eq_Fix mfix mfix' idx :
-    All2 (fun x y =>
-      eq_term_upto_univ Re Re x.(dtype) y.(dtype) *
-      eq_term_upto_univ Re Re x.(dbody) y.(dbody) *
-      (x.(rarg) = y.(rarg))
-    ) mfix mfix' ->
-    eq_term_upto_univ Re Rle (tFix mfix idx) (tFix mfix' idx)
-
-| eq_CoFix mfix mfix' idx :
-    All2 (fun x y =>
-      eq_term_upto_univ Re Re x.(dtype) y.(dtype) *
-      eq_term_upto_univ Re Re x.(dbody) y.(dbody) *
-      (x.(rarg) = y.(rarg))
-    ) mfix mfix' ->
-    eq_term_upto_univ Re Rle (tCoFix mfix idx) (tCoFix mfix' idx).
-
-Definition eq_term `{checker_flags} φ :=
-  eq_term_upto_univ (eq_universe φ) (eq_universe φ).
-
-(* ** Syntactic cumulativity up-to universes
-
-  We shouldn't look at printing annotations *)
-
-Definition leq_term `{checker_flags} φ :=
-  eq_term_upto_univ (eq_universe φ) (leq_universe φ).
-
 
 (** ** Utilities for typing *)
 
@@ -742,19 +645,6 @@ Definition conv `{checker_flags} Σ Γ T U : Type :=
 
 Notation " Σ ;;; Γ |- t = u " := (conv Σ Γ t u) (at level 50, Γ, t, u at next level) : type_scope.
 
-Definition eq_opt_term `{checker_flags} φ (t u : option term) :=
-  match t, u with
-  | Some t, Some u => eq_term φ t u
-  | None, None => True
-  | _, _ => False
-  end.
-
-Definition eq_decl `{checker_flags} φ (d d' : context_decl) :=
-  eq_opt_term φ d.(decl_body) d'.(decl_body) * eq_term φ d.(decl_type) d'.(decl_type).
-
-Definition eq_context `{checker_flags} φ (Γ Δ : context) :=
-  All2 (eq_decl φ) Γ Δ.
-
 Definition check_correct_arity `{checker_flags} φ decl ind u ctx pars pctx :=
   let inddecl :=
       {| decl_name := nNamed decl.(ind_name);
@@ -859,7 +749,7 @@ Axiom fix_guard_red1 :
 Axiom fix_guard_eq_term :
   forall mfix mfix' idx,
     fix_guard mfix ->
-    eq_term_upto_univ eq eq (tFix mfix idx) (tFix mfix' idx) ->
+    upto_names (tFix mfix idx) (tFix mfix' idx) ->
     fix_guard mfix'.
 
 Axiom fix_guard_rename :

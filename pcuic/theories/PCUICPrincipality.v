@@ -87,8 +87,6 @@ Section Principality.
     constructor. eapply All2_local_env_red_refl. red. auto.
   Qed.
 
-  Derive Signature for eq_term_upto_univ.
-
   Lemma invert_cumul_prod_r Γ C na A B :
     Σ ;;; Γ |- C <= tProd na A B ->
     ∑ na' A' B', red Σ.1 Γ C (tProd na' A' B') *

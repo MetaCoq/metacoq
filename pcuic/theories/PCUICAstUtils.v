@@ -187,6 +187,12 @@ Fixpoint remove_arity (n : nat) (t : term) : term :=
           end
   end.
 
+Definition isConstruct_app t :=
+  match fst (decompose_app t) with
+  | tConstruct _ _ _ => true
+  | _ => false
+  end.
+
 Fixpoint lookup_mind_decl (id : ident) (decls : global_env)
  := match decls with
     | nil => None

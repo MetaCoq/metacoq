@@ -7,7 +7,8 @@ From MetaCoq.Template Require Import config utils AstUtils BasicAst Ast.
    wf_instantiate_params_subst_ctx, maybe they should be moved *)
 From MetaCoq.Checker Require Import WfInv Typing Weakening TypingWf
      WeakeningEnv Substitution.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICLiftSubst
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
+     PCUICLiftSubst PCUICEquality
      PCUICUnivSubst PCUICTyping PCUICGeneration TemplateToPCUIC.
 
 Require Import String.
@@ -447,7 +448,7 @@ Proof.
   revert t t' Ht Hn; induction u in u' |- *; intros.
 
   inversion_clear Ht.
-  simpl. apply PCUICCumulativity.eq_term_leq_term. assumption.
+  simpl. apply eq_term_leq_term. assumption.
 
   inversion_clear Ht.
   simpl in *. apply IHu. assumption. constructor; assumption.

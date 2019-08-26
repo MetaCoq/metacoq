@@ -5,7 +5,8 @@ From Coq Require Import Bool String List Program BinPos Compare_dec Arith Lia
 From MetaCoq.Template
 Require Import config monad_utils utils AstUtils UnivSubst.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
-     PCUICLiftSubst PCUICTyping PCUICPosition PCUICUnivSubst PCUICCumulativity.
+     PCUICLiftSubst PCUICEquality PCUICTyping PCUICPosition PCUICUnivSubst
+     PCUICCumulativity.
 From Equations Require Import Equations.
 Local Set Keyed Unification.
 Require Import Equations.Prop.DepElim.
@@ -64,8 +65,6 @@ Fixpoint nl (t : term) : term :=
   | tFix mfix idx => tFix (map (map_def_anon nl nl) mfix) idx
   | tCoFix mfix idx => tCoFix (map (map_def_anon nl nl) mfix) idx
   end.
-
-Derive Signature for eq_term_upto_univ.
 
 Ltac destruct_one_andb :=
   lazymatch goal with
@@ -1055,4 +1054,37 @@ Proof.
         eapply nlg_wf_local. eassumption.
       * destruct s as [? [? ?]]; eauto.
     + now apply nl_cumul.
+Qed.
+
+Corollary reflect_nleq_term t t' :
+  reflect (nl t = nl t') (nleq_term t t').
+Proof.
+  destruct (reflect_eq_term_upto_univ_eqb t t').
+  - constructor. eapply eq_term_nl_eq. assumption.
+  - constructor. intro bot. apply f.
+    apply eq_term_upto_univ_nl_inv ; auto.
+    rewrite bot.
+    apply eq_term_upto_univ_refl ; auto.
+Qed.
+
+Lemma nleq_term_it_mkLambda_or_LetIn Γ u v :
+    nleq_term u v ->
+    nleq_term (it_mkLambda_or_LetIn Γ u) (it_mkLambda_or_LetIn Γ v).
+Proof.
+  intros h. induction Γ as [| [na [b|] A] Γ ih ] in u, v, h |- *.
+  - assumption.
+  - simpl. cbn. apply ih.
+    eapply ssrbool.introT.
+    + eapply reflect_nleq_term.
+    + cbn. f_equal.
+      eapply ssrbool.elimT.
+      * eapply reflect_nleq_term.
+      * assumption.
+  - simpl. cbn. apply ih.
+    eapply ssrbool.introT.
+    + eapply reflect_nleq_term.
+    + cbn. f_equal.
+      eapply ssrbool.elimT.
+      * eapply reflect_nleq_term.
+      * assumption.
 Qed.

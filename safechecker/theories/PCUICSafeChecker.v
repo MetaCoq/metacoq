@@ -3,6 +3,7 @@
 From Coq Require Import Bool String List Program BinPos Compare_dec Arith Lia.
 From MetaCoq.Template Require Import config monad_utils utils BasicAst AstUtils
      UnivSubst.
+From MetaCoq.Template Require Pretty.
 From MetaCoq.Checker Require Import uGraph.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICNormal PCUICSR
@@ -1318,7 +1319,8 @@ Section CheckEnv.
     check_eq_true (LevelSet.for_all (fun l => negb (LevelSet.mem l global_levels))
                                     levels) (IllFormedDecl id (Msg "non fresh level"));;
     check_eq_true (ConstraintSet.for_all (fun '(l1, _, l2) => LevelSet.mem l1 all_levels && LevelSet.mem l2 all_levels) (constraints_of_udecl udecl))
-                                    (IllFormedDecl id (Msg "non declared level"));;
+                                    (IllFormedDecl id (Msg ("non declared level in " ++ Pretty.print_lset levels ++
+                                    " |= " ++ Pretty.print_constraint_set (constraints_of_udecl udecl))));;
     check_eq_true match udecl with
                   | Monomorphic_ctx ctx
                     => LevelSet.for_all is_not_Var ctx.1

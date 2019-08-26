@@ -27,6 +27,21 @@ Section print_term.
     | _ => "@{" ++ print_list string_of_level " " u ++ "}"
     end.
 
+  Definition print_lset t :=
+    print_list string_of_level " " (LevelSet.elements t).
+
+  Definition print_constraint_type d :=
+    match d with
+    | ConstraintType.Lt => "<"
+    | ConstraintType.Le => "<="
+    | ConstraintType.Eq => "="
+    end.
+
+  Definition print_constraint_set t :=
+    print_list (fun '(l1, d, l2) =>
+                  string_of_level l1 ++ " " ++ print_constraint_type d ++ " " ++ string_of_level l2)
+               " /\ " (ConstraintSet.elements t).
+
   Definition print_def {A : Set} (f : A -> string) (g : A -> string) (def : def A) :=
     string_of_name (dname def) ++ " { struct " ++ string_of_nat (rarg def) ++ " }" ++
                    " : " ++ f (dtype def) ++ " := " ++ nl ++ g (dbody def).

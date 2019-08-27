@@ -797,6 +797,28 @@ Proof.
     rewrite b. admit.
 Admitted.
 
+Lemma global_ext_levels_trans Σ
+  : global_ext_levels (trans_global Σ) = TTy.global_ext_levels Σ.
+Proof.
+  destruct Σ.
+  unfold trans_global, TTy.global_ext_levels, global_ext_levels; simpl.
+  f_equal. clear u.
+  induction l. reflexivity.
+  simpl. rewrite IHl. f_equal. clear.
+  destruct a; reflexivity.
+Qed.
+
+Lemma global_ext_constraints_trans Σ
+  : global_ext_constraints (trans_global Σ) = TTy.global_ext_constraints Σ.
+Proof.
+  destruct Σ.
+  unfold trans_global, TTy.global_ext_constraints, global_ext_constraints; simpl.
+  f_equal. clear u.
+  induction l. reflexivity.
+  simpl. rewrite IHl. f_equal. clear.
+  destruct a; reflexivity.
+Qed.
+
 Lemma trans_cumul (Σ : Ast.global_env_ext) Γ T U :
   TTy.on_global_env (fun Σ => wf_decl_pred) Σ ->
   List.Forall wf_decl Γ ->
@@ -806,13 +828,13 @@ Proof.
   intros wfΣ wfΓ.
   induction 3. constructor; auto.
   apply trans_leq_term in l; auto.
-  admit. (* For Simon :) *)
+  now rewrite global_ext_constraints_trans.
   pose proof r as H3. apply wf_red1 in H3; auto.
   apply trans_red1 in r; auto. econstructor 2; eauto.
   econstructor 3.
   apply IHX; auto. apply wf_red1 in r; auto.
   apply trans_red1 in r; auto.
-Admitted.
+Qed.
 
 Definition Tlift_typing (P : Template.Ast.global_env_ext -> Tcontext -> Tterm -> Tterm -> Type) :=
   fun Σ Γ t T =>
@@ -938,7 +960,7 @@ Proof.
   - (* Sorts *)
     constructor; eauto.
     eapply trans_wf_local; eauto.
-    admit. (* Simon *)
+    now rewrite global_ext_levels_trans.
 
   - (* Casts *)
     eapply refine_type. eapply type_App with nAnon (trans t).

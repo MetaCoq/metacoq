@@ -13,7 +13,7 @@ _CoqProject: _CoqProject.in metacoq-config
 Makefile.plugin: _PluginProject
 	coq_makefile -f _PluginProject -o Makefile.plugin $(DEPS)
 # Avoid conflicting dependency file creation for the template plugin
-	$(SED) -e s/coqdeps/coqdeps.plugin/g -i Makefile.plugin
+	$(SED) -i -e s/coqdeps/coqdeps.plugin/g Makefile.plugin
 
 Makefile.safechecker: _CoqProject
 	coq_makefile -f _CoqProject -o Makefile.safechecker $(DEPS)

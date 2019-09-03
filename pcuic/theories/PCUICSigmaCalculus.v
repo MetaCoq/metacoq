@@ -4,7 +4,7 @@ From Coq Require Import Bool String List BinPos Compare_dec Omega Lia.
 Require Import Coq.Program.Syntax Coq.Program.Basics.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICLiftSubst PCUICUnivSubst
-     PCUICTyping PCUICWeakeningEnv PCUICClosed PCUICReduction.
+     PCUICTyping PCUICWeakeningEnv PCUICClosed PCUICReduction PCUICEquality.
 Require Import ssreflect ssrbool.
 
 From Equations Require Import Equations.
@@ -360,29 +360,6 @@ Proof.
       * eauto.
 Qed.
 
-Lemma red1_rename :
-  forall Σ Γ u v f,
-    red1 Σ Γ u v ->
-    red1 Σ (rename_context f Γ) (rename f u) (rename f v).
-Proof.
-  intros Σ Γ u v f h.
-  induction h using red1_ind_all in |- *.
-  - simpl. rewrite rename_subst10. constructor.
-  - simpl. rewrite rename_subst10. constructor.
-  - simpl. eapply rename_context_decl_body with (f := f) in H0.
-    (* I'm a bit stuck here for now *)
-    admit.
-Admitted.
-
-Lemma meta_conv :
-  forall Σ Γ t A B,
-    Σ ;;; Γ |- t : A ->
-    A = B ->
-    Σ ;;; Γ |- t : B.
-Proof.
-  intros Σ Γ t A B h []. assumption.
-Qed.
-
 Definition renaming Σ Γ Δ f :=
   wf_local Σ Γ ×
   (forall i decl,
@@ -398,6 +375,41 @@ Definition renaming Σ Γ Δ f :=
             rename f (lift0 (S i) b) = lift0 (S (f i)) b'
       )
   ).
+
+Lemma red1_rename :
+  forall Σ Γ Δ u v f,
+    wf Σ.1 ->
+    wf_local Σ Γ ->
+    renaming Σ Δ Γ f ->
+    red1 Σ.1 Γ u v ->
+    red1 Σ.1 Δ (rename f u) (rename f v).
+Proof.
+  intros Σ Γ Δ u v f hΣ hΓ hf h.
+  induction h using red1_ind_all in |- *.
+  - simpl. rewrite rename_subst10. constructor.
+  - simpl. rewrite rename_subst10. constructor.
+  - simpl.
+    case_eq (nth_error Γ i).
+    2: intro e ; rewrite e in H0 ; discriminate.
+    intros decl e. rewrite e in H0. simpl in H0.
+    inversion H0. clear H0.
+    destruct hf as [hΔ hf].
+    specialize hf with (1 := e).
+    destruct hf as [decl' [e' [hr hbo]]].
+    specialize hbo with (1 := H2).
+    destruct hbo as [body' [hbo' hr']].
+    rewrite hr'. constructor.
+    rewrite e'. simpl. rewrite hbo'. reflexivity.
+Admitted.
+
+Lemma meta_conv :
+  forall Σ Γ t A B,
+    Σ ;;; Γ |- t : A ->
+    A = B ->
+    Σ ;;; Γ |- t : B.
+Proof.
+  intros Σ Γ t A B h []. assumption.
+Qed.
 
 Lemma rename_shiftn :
   forall f t,

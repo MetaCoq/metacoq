@@ -722,7 +722,47 @@ Proof.
   - simpl. rewrite rename_mkApps. simpl.
     econstructor. rewrite nth_error_map. rewrite H0. reflexivity.
 
-  - simpl. constructor.
+  - simpl. constructor. induction X.
+    + destruct p0 as [[p1 p2] p3]. constructor. split ; eauto.
+      simpl. eapply p2. assumption.
+    + simpl. constructor. eapply IHX.
+  - simpl. constructor. induction X.
+    + destruct p as [p1 p2]. constructor.
+      eapply p2. assumption.
+    + simpl. constructor. eapply IHX.
+  - simpl.
+    apply OnOne2_length in X as hl. rewrite <- hl. clear hl.
+    generalize #|mfix0|. intro n.
+    constructor.
+    induction X.
+    + destruct p as [[p1 p2] p3]. inversion p3.
+      simpl. constructor. split.
+      * eapply p2. assumption.
+      * simpl. f_equal ; auto. f_equal ; auto.
+        f_equal. assumption.
+    + simpl. constructor. eapply IHX.
+  - simpl.
+    apply OnOne2_length in X as hl. rewrite <- hl. clear hl.
+    generalize #|mfix0|. intro n.
+    eapply fix_red_body.
+    induction X.
+    + destruct p as [[p1 p2] p3]. inversion p3.
+      simpl. constructor. split.
+      * eapply p2. admit.
+      * simpl. f_equal ; auto. f_equal ; auto.
+        f_equal. assumption.
+    + simpl. constructor. Fail eapply IHX. admit.
+  - simpl.
+    apply OnOne2_length in X as hl. rewrite <- hl. clear hl.
+    generalize #|mfix0|. intro n.
+    constructor.
+    induction X.
+    + destruct p as [[p1 p2] p3]. inversion p3.
+      simpl. constructor. split.
+      * eapply p2. assumption.
+      * simpl. f_equal ; auto. f_equal ; auto.
+        f_equal. assumption.
+    + simpl. constructor. eapply IHX.
 Admitted.
 
 Lemma meta_conv :

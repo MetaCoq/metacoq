@@ -391,6 +391,96 @@ Proof.
   reflexivity.
 Qed.
 
+(* TODO MOVE *)
+Lemma isLambda_rename :
+  forall t f,
+    isLambda t ->
+    isLambda (rename f t).
+Proof.
+  intros t f h.
+  destruct t.
+  all: try discriminate.
+  simpl. reflexivity.
+Qed.
+
+(* TODO MOVE *)
+Lemma rename_unfold_fix :
+  forall mfix idx narg fn f,
+    unfold_fix mfix idx = Some (narg, fn) ->
+    unfold_fix (map (map_def (rename f) (rename (shiftn #|mfix| f))) mfix) idx
+    = Some (narg, rename f fn).
+Proof.
+  intros mfix idx narg fn f h.
+  unfold unfold_fix in *. rewrite nth_error_map.
+  case_eq (nth_error mfix idx).
+  2: intro neq ; rewrite neq in h ; discriminate.
+  intros d e. rewrite e in h.
+  case_eq (isLambda (dbody d)).
+  2: intro neq ; rewrite neq in h ; discriminate.
+  intros hl. rewrite hl in h. inversion h. clear h.
+  simpl. rewrite isLambda_rename. 1: assumption.
+  f_equal. f_equal.
+  rewrite rename_subst0. rewrite fix_subst_length.
+  f_equal.
+  unfold fix_subst. rewrite map_length.
+  generalize #|mfix| at 2 3. intro n.
+  induction n.
+  - reflexivity.
+  - simpl.
+    f_equal. rewrite IHn. reflexivity.
+Qed.
+
+(* TODO MOVE *)
+Lemma decompose_app_rename :
+  forall f t u l,
+    decompose_app t = (u, l) ->
+    decompose_app (rename f t) = (rename f u, map (rename f) l).
+Proof.
+  assert (aux : forall f t u l acc,
+    decompose_app_rec t acc = (u, l) ->
+    decompose_app_rec (rename f t) (map (rename f) acc) =
+    (rename f u, map (rename f) l)
+  ).
+  { intros f t u l acc h.
+    induction t in acc, h |- *.
+    all: try solve [ simpl in * ; inversion h ; reflexivity ].
+    simpl. simpl in h. specialize IHt1 with (1 := h). assumption.
+  }
+  intros f t u l.
+  unfold decompose_app.
+  eapply aux.
+Qed.
+
+(* TODO MOVE *)
+Lemma isConstruct_app_rename :
+  forall t f,
+    isConstruct_app t ->
+    isConstruct_app (rename f t).
+Proof.
+  intros t f h.
+  unfold isConstruct_app in *.
+  case_eq (decompose_app t). intros u l e.
+  apply decompose_app_rename with (f := f) in e as e'.
+  rewrite e'. rewrite e in h. simpl in h.
+  simpl.
+  destruct u. all: try discriminate.
+  simpl. reflexivity.
+Qed.
+
+(* TODO MOVE *)
+Lemma is_constructor_rename :
+  forall n l f,
+    is_constructor n l ->
+    is_constructor n (map (rename f) l).
+Proof.
+  intros n l f h.
+  unfold is_constructor in *.
+  rewrite nth_error_map.
+  destruct nth_error.
+  - simpl. apply isConstruct_app_rename. assumption.
+  - simpl. discriminate.
+Qed.
+
 Lemma red1_rename :
   forall Σ Γ Δ u v f,
     wf Σ.1 ->
@@ -417,6 +507,11 @@ Proof.
     rewrite e'. simpl. rewrite hbo'. reflexivity.
   - simpl. rewrite rename_mkApps. simpl.
     rewrite rename_iota_red. constructor.
+  - rewrite 2!rename_mkApps. simpl.
+    econstructor.
+    + eapply rename_unfold_fix. eassumption.
+    + eapply is_constructor_rename. assumption.
+  -
 Admitted.
 
 Lemma meta_conv :

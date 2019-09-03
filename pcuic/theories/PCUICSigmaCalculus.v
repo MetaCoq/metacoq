@@ -481,6 +481,30 @@ Proof.
   - simpl. discriminate.
 Qed.
 
+(* TODO MOVE *)
+Lemma rename_unfold_cofix :
+  forall mfix idx narg fn f,
+    unfold_cofix mfix idx = Some (narg, fn) ->
+    unfold_cofix (map (map_def (rename f) (rename (shiftn #|mfix| f))) mfix) idx
+    = Some (narg, rename f fn).
+Proof.
+  intros mfix idx narg fn f h.
+  unfold unfold_cofix in *. rewrite nth_error_map.
+  case_eq (nth_error mfix idx).
+  2: intro neq ; rewrite neq in h ; discriminate.
+  intros d e. rewrite e in h.
+  inversion h.
+  simpl. f_equal. f_equal.
+  rewrite rename_subst0. rewrite cofix_subst_length.
+  f_equal.
+  unfold cofix_subst. rewrite map_length.
+  generalize #|mfix| at 2 3. intro n.
+  induction n.
+  - reflexivity.
+  - simpl.
+    f_equal. rewrite IHn. reflexivity.
+Qed.
+
 Lemma red1_rename :
   forall Σ Γ Δ u v f,
     wf Σ.1 ->
@@ -511,6 +535,10 @@ Proof.
     econstructor.
     + eapply rename_unfold_fix. eassumption.
     + eapply is_constructor_rename. assumption.
+  - simpl.
+    rewrite 2!rename_mkApps. simpl.
+    eapply red_cofix_case.
+    eapply rename_unfold_cofix. eassumption.
   -
 Admitted.
 

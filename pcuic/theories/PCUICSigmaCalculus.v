@@ -376,6 +376,21 @@ Definition renaming Σ Γ Δ f :=
       )
   ).
 
+(* TODO MOVE *)
+Lemma rename_iota_red :
+  forall f pars c args brs,
+    rename f (iota_red pars c args brs) =
+    iota_red pars c (map (rename f) args) (map (on_snd (rename f)) brs).
+Proof.
+  intros f pars c args brs.
+  unfold iota_red. rewrite rename_mkApps.
+  rewrite map_skipn. f_equal.
+  change (rename f (nth c brs (0, tDummy)).2)
+    with (on_snd (rename f) (nth c brs (0, tDummy))).2. f_equal.
+  rewrite <- map_nth with (f := on_snd (rename f)).
+  reflexivity.
+Qed.
+
 Lemma red1_rename :
   forall Σ Γ Δ u v f,
     wf Σ.1 ->
@@ -400,6 +415,8 @@ Proof.
     destruct hbo as [body' [hbo' hr']].
     rewrite hr'. constructor.
     rewrite e'. simpl. rewrite hbo'. reflexivity.
+  - simpl. rewrite rename_mkApps. simpl.
+    rewrite rename_iota_red. constructor.
 Admitted.
 
 Lemma meta_conv :

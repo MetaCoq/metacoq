@@ -559,66 +559,6 @@ Proof.
     move/andP in ee. destruct ee. assumption.
 Qed.
 
-Lemma red1_rename :
-  forall Σ Γ Δ u v f,
-    wf Σ.1 ->
-    wf_local Σ Γ ->
-    renaming Σ Δ Γ f ->
-    red1 Σ.1 Γ u v ->
-    red1 Σ.1 Δ (rename f u) (rename f v).
-Proof.
-  intros Σ Γ Δ u v f hΣ hΓ hf h.
-  induction h using red1_ind_all in f, Δ, hf, hΓ |- *.
-  - simpl. rewrite rename_subst10. constructor.
-  - simpl. rewrite rename_subst10. constructor.
-  - simpl.
-    case_eq (nth_error Γ i).
-    2: intro e ; rewrite e in H0 ; discriminate.
-    intros decl e. rewrite e in H0. simpl in H0.
-    inversion H0. clear H0.
-    destruct hf as [hΔ hf]. unfold urenaming in hf.
-    specialize hf with (1 := e).
-    destruct hf as [decl' [e' [hr hbo]]].
-    specialize hbo with (1 := H2).
-    destruct hbo as [body' [hbo' hr']].
-    rewrite hr'. constructor.
-    rewrite e'. simpl. rewrite hbo'. reflexivity.
-  - simpl. rewrite rename_mkApps. simpl.
-    rewrite rename_iota_red. constructor.
-  - rewrite 2!rename_mkApps. simpl.
-    econstructor.
-    + eapply rename_unfold_fix. eassumption.
-    + eapply is_constructor_rename. assumption.
-  - simpl.
-    rewrite 2!rename_mkApps. simpl.
-    eapply red_cofix_case.
-    eapply rename_unfold_cofix. eassumption.
-  - simpl. rewrite 2!rename_mkApps. simpl.
-    eapply red_cofix_proj.
-    eapply rename_unfold_cofix. eassumption.
-  - simpl. rewrite rename_subst_instance_constr.
-    econstructor.
-    + eassumption.
-    + rewrite rename_closed. 2: assumption.
-      eapply declared_constant_closed_body. all: eauto.
-  - simpl. rewrite rename_mkApps. simpl.
-    econstructor. rewrite nth_error_map. rewrite H0. reflexivity.
-
-  - simpl. constructor. eapply IHh. all: auto.
-  - simpl. constructor. eapply IHh.
-    + constructor. 1: assumption.
-      simpl. eexists.
-Admitted.
-
-Lemma meta_conv :
-  forall Σ Γ t A B,
-    Σ ;;; Γ |- t : A ->
-    A = B ->
-    Σ ;;; Γ |- t : B.
-Proof.
-  intros Σ Γ t A B h []. assumption.
-Qed.
-
 Lemma rename_shiftn :
   forall f t,
     rename (shiftn 1 f) (lift0 1 t) = lift0 1 (rename f t).
@@ -631,14 +571,12 @@ Proof.
   reflexivity.
 Qed.
 
-Lemma renaming_vass :
-  forall Σ Γ Δ na A f,
-    wf_local Σ (Γ ,, vass na (rename f A)) ->
-    renaming Σ Γ Δ f ->
-    renaming Σ (Γ ,, vass na (rename f A)) (Δ ,, vass na A) (shiftn 1 f).
+Lemma urenaming_vass :
+  forall Γ Δ na A f,
+    urenaming Γ Δ f ->
+    urenaming (Γ ,, vass na (rename f A)) (Δ ,, vass na A) (shiftn 1 f).
 Proof.
-  intros Σ Γ Δ na A f hΓ [? h].
-  split. 1: auto.
+  intros Γ Δ na A f h. unfold urenaming in *.
   intros [|i] decl e.
   - simpl in e. inversion e. subst. clear e.
     simpl. eexists. split. 1: reflexivity.
@@ -670,14 +608,23 @@ Proof.
       reflexivity.
 Qed.
 
-Lemma renaming_vdef :
-  forall Σ Γ Δ na b B f,
-    wf_local Σ (Γ ,, vdef na (rename f b) (rename f B)) ->
+Lemma renaming_vass :
+  forall Σ Γ Δ na A f,
+    wf_local Σ (Γ ,, vass na (rename f A)) ->
     renaming Σ Γ Δ f ->
-    renaming Σ (Γ ,, vdef na (rename f b) (rename f B)) (Δ ,, vdef na b B) (shiftn 1 f).
+    renaming Σ (Γ ,, vass na (rename f A)) (Δ ,, vass na A) (shiftn 1 f).
 Proof.
-  intros Σ Γ Δ na b B f hΓ [? h].
+  intros Σ Γ Δ na A f hΓ [? h].
   split. 1: auto.
+  eapply urenaming_vass. assumption.
+Qed.
+
+Lemma urenaming_vdef :
+  forall Γ Δ na b B f,
+    urenaming Γ Δ f ->
+    urenaming (Γ ,, vdef na (rename f b) (rename f B)) (Δ ,, vdef na b B) (shiftn 1 f).
+Proof.
+  intros Γ Δ na b B f h. unfold urenaming in *.
   intros [|i] decl e.
   - simpl in e. inversion e. subst. clear e.
     simpl. eexists. split. 1: reflexivity.
@@ -712,6 +659,79 @@ Proof.
       unfold ren, lift_renaming, shiftn, subst_compose. simpl.
       replace (i - 0) with i by lia.
       reflexivity.
+Qed.
+
+Lemma renaming_vdef :
+  forall Σ Γ Δ na b B f,
+    wf_local Σ (Γ ,, vdef na (rename f b) (rename f B)) ->
+    renaming Σ Γ Δ f ->
+    renaming Σ (Γ ,, vdef na (rename f b) (rename f B)) (Δ ,, vdef na b B) (shiftn 1 f).
+Proof.
+  intros Σ Γ Δ na b B f hΓ [? h].
+  split. 1: auto.
+  eapply urenaming_vdef. assumption.
+Qed.
+
+Lemma red1_rename :
+  forall Σ Γ Δ u v f,
+    wf Σ ->
+    urenaming Δ Γ f ->
+    red1 Σ Γ u v ->
+    red1 Σ Δ (rename f u) (rename f v).
+Proof.
+  intros Σ Γ Δ u v f hΣ hf h.
+  induction h using red1_ind_all in f, Δ, hf |- *.
+  all: try solve [
+    simpl ; constructor ; eapply IHh ;
+    try eapply urenaming_vass ;
+    try eapply urenaming_vdef ;
+    assumption
+  ].
+  - simpl. rewrite rename_subst10. constructor.
+  - simpl. rewrite rename_subst10. constructor.
+  - simpl.
+    case_eq (nth_error Γ i).
+    2: intro e ; rewrite e in H0 ; discriminate.
+    intros decl e. rewrite e in H0. simpl in H0.
+    inversion H0. clear H0.
+    unfold urenaming in hf.
+    specialize hf with (1 := e).
+    destruct hf as [decl' [e' [hr hbo]]].
+    specialize hbo with (1 := H2).
+    destruct hbo as [body' [hbo' hr']].
+    rewrite hr'. constructor.
+    rewrite e'. simpl. rewrite hbo'. reflexivity.
+  - simpl. rewrite rename_mkApps. simpl.
+    rewrite rename_iota_red. constructor.
+  - rewrite 2!rename_mkApps. simpl.
+    econstructor.
+    + eapply rename_unfold_fix. eassumption.
+    + eapply is_constructor_rename. assumption.
+  - simpl.
+    rewrite 2!rename_mkApps. simpl.
+    eapply red_cofix_case.
+    eapply rename_unfold_cofix. eassumption.
+  - simpl. rewrite 2!rename_mkApps. simpl.
+    eapply red_cofix_proj.
+    eapply rename_unfold_cofix. eassumption.
+  - simpl. rewrite rename_subst_instance_constr.
+    econstructor.
+    + eassumption.
+    + rewrite rename_closed. 2: assumption.
+      eapply declared_constant_closed_body. all: eauto.
+  - simpl. rewrite rename_mkApps. simpl.
+    econstructor. rewrite nth_error_map. rewrite H0. reflexivity.
+
+  - simpl. constructor.
+Admitted.
+
+Lemma meta_conv :
+  forall Σ Γ t A B,
+    Σ ;;; Γ |- t : A ->
+    A = B ->
+    Σ ;;; Γ |- t : B.
+Proof.
+  intros Σ Γ t A B h []. assumption.
 Qed.
 
 (* Could be more precise *)

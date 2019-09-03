@@ -598,6 +598,11 @@ Proof.
     + eassumption.
     + rewrite rename_closed. 2: assumption.
       eapply declared_constant_closed_body. all: eauto.
+  - simpl. rewrite rename_mkApps. simpl.
+    econstructor. rewrite nth_error_map. rewrite H0. reflexivity.
+
+  - simpl. constructor. eapply IHh. all: auto.
+  - simpl. constructor.
 Admitted.
 
 Lemma meta_conv :

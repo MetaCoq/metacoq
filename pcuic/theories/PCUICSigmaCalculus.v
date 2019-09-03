@@ -565,7 +565,7 @@ Lemma red1_rename :
     red1 Σ.1 Δ (rename f u) (rename f v).
 Proof.
   intros Σ Γ Δ u v f hΣ hΓ hf h.
-  induction h using red1_ind_all in |- *.
+  induction h using red1_ind_all in f, Δ, hf, hΓ |- *.
   - simpl. rewrite rename_subst10. constructor.
   - simpl. rewrite rename_subst10. constructor.
   - simpl.
@@ -602,7 +602,9 @@ Proof.
     econstructor. rewrite nth_error_map. rewrite H0. reflexivity.
 
   - simpl. constructor. eapply IHh. all: auto.
-  - simpl. constructor.
+  - simpl. constructor. eapply IHh.
+    + constructor. 1: assumption.
+      simpl. eexists.
 Admitted.
 
 Lemma meta_conv :

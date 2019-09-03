@@ -360,6 +360,7 @@ Proof.
       * eauto.
 Qed.
 
+(* Definition of a good renaming with respect to typing *)
 Definition renaming Σ Γ Δ f :=
   wf_local Σ Γ ×
   (forall i decl,
@@ -375,6 +376,24 @@ Definition renaming Σ Γ Δ f :=
             rename f (lift0 (S i) b) = lift0 (S (f i)) b'
       )
   ).
+
+(* It is a strong requirement for something like reduction, so here is an
+   untyped variant of the renaming predicate.
+   TODO Define renaming from this one.
+ *)
+Definition urenaming Γ Δ f :=
+  forall i decl,
+    nth_error Δ i = Some decl ->
+    ∑ decl',
+      nth_error Γ (f i) = Some decl' ×
+      rename f (lift0 (S i) decl.(decl_type))
+      = lift0 (S (f i)) decl'.(decl_type) ×
+      (forall b,
+         decl.(decl_body) = Some b ->
+         ∑ b',
+           decl'.(decl_body) = Some b' ×
+           rename f (lift0 (S i) b) = lift0 (S (f i)) b'
+      ).
 
 (* TODO MOVE *)
 Lemma rename_iota_red :

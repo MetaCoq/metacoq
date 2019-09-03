@@ -505,6 +505,57 @@ Proof.
     f_equal. rewrite IHn. reflexivity.
 Qed.
 
+(* TODO MOVE *)
+Lemma rename_closedn :
+  forall f n t,
+    closedn n t ->
+    rename (shiftn n f) t = t.
+Proof.
+  intros f n t e.
+  autorewrite with sigma.
+  erewrite <- inst_closed with (σ := ren f) by eassumption.
+  eapply inst_ext. intro i.
+  unfold ren, shiftn, Upn, subst_consn, subst_compose, shift, shiftk.
+  rewrite idsn_length.
+  destruct (Nat.ltb_spec i n).
+  - rewrite nth_error_idsn_Some. all: auto.
+  - rewrite nth_error_idsn_None. 1: lia.
+    simpl. reflexivity.
+Qed.
+
+(* TODO MOVE *)
+Lemma rename_closed :
+  forall f t,
+    closed t ->
+    rename f t = t.
+Proof.
+  intros f t h.
+  replace (rename f t) with (rename (shiftn 0 f) t).
+  - apply rename_closedn. assumption.
+  - autorewrite with sigma. eapply inst_ext. intro i.
+    unfold ren, shiftn. simpl.
+    f_equal. f_equal. lia.
+Qed.
+
+(* TODO MOVE *)
+Lemma declared_constant_closed_body :
+  forall Σ cst decl body,
+    wf Σ ->
+    declared_constant Σ cst decl ->
+    decl.(cst_body) = Some body ->
+    closed body.
+Proof.
+  intros Σ cst decl body hΣ h e.
+  unfold declared_constant in h.
+  eapply lookup_on_global_env in h. 2: eauto.
+  destruct h as [Σ' [wfΣ' decl']].
+  red in decl'. red in decl'.
+  destruct decl as [ty bo un]. simpl in *.
+  rewrite e in decl'.
+  eapply typecheck_closed in decl' as [? ee]. 2: auto. 2: constructor.
+    move/andP in ee. destruct ee. assumption.
+Qed.
+
 Lemma red1_rename :
   forall Σ Γ Δ u v f,
     wf Σ.1 ->
@@ -539,7 +590,14 @@ Proof.
     rewrite 2!rename_mkApps. simpl.
     eapply red_cofix_case.
     eapply rename_unfold_cofix. eassumption.
-  -
+  - simpl. rewrite 2!rename_mkApps. simpl.
+    eapply red_cofix_proj.
+    eapply rename_unfold_cofix. eassumption.
+  - simpl. rewrite rename_subst_instance_constr.
+    econstructor.
+    + eassumption.
+    + rewrite rename_closed. 2: assumption.
+      eapply declared_constant_closed_body. all: eauto.
 Admitted.
 
 Lemma meta_conv :
@@ -1154,38 +1212,6 @@ Proof.
           simpl. rewrite idsn_length. reflexivity.
   }
   rewrite ebrtys'. autorewrite with sigma. reflexivity.
-Qed.
-
-(* TODO MOVE *)
-Lemma rename_closedn :
-  forall f n t,
-    closedn n t ->
-    rename (shiftn n f) t = t.
-Proof.
-  intros f n t e.
-  autorewrite with sigma.
-  erewrite <- inst_closed with (σ := ren f) by eassumption.
-  eapply inst_ext. intro i.
-  unfold ren, shiftn, Upn, subst_consn, subst_compose, shift, shiftk.
-  rewrite idsn_length.
-  destruct (Nat.ltb_spec i n).
-  - rewrite nth_error_idsn_Some. all: auto.
-  - rewrite nth_error_idsn_None. 1: lia.
-    simpl. reflexivity.
-Qed.
-
-(* TODO MOVE *)
-Lemma rename_closed :
-  forall f t,
-    closed t ->
-    rename f t = t.
-Proof.
-  intros f t h.
-  replace (rename f t) with (rename (shiftn 0 f) t).
-  - apply rename_closedn. assumption.
-  - autorewrite with sigma. eapply inst_ext. intro i.
-    unfold ren, shiftn. simpl.
-    f_equal. f_equal. lia.
 Qed.
 
 (* TODO MOVE *)

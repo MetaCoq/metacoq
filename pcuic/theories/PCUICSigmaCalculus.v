@@ -672,6 +672,57 @@ Proof.
   eapply urenaming_vdef. assumption.
 Qed.
 
+Lemma urenaming_ext :
+  forall Γ Δ f g,
+    f =1 g ->
+    urenaming Δ Γ f ->
+    urenaming Δ Γ g.
+Proof.
+  intros Γ Δ f g hfg h.
+  intros i decl e.
+  specialize (h i decl e) as [decl' [h1 [h2 h3]]].
+  exists decl'. split ; [| split ].
+  - rewrite <- (hfg i). assumption.
+  - rewrite <- (hfg i). rewrite <- h2.
+    eapply rename_ext. intros j. symmetry. apply hfg.
+  - intros b hb. specialize (h3 b hb) as [b' [p1 p2]].
+    exists b'. split ; auto. rewrite <- (hfg i). rewrite <- p2.
+    eapply rename_ext. intros j. symmetry. apply hfg.
+Qed.
+
+Lemma urenaming_context :
+  forall Γ Δ Ξ f,
+    urenaming Δ Γ f ->
+    urenaming (Δ ,,, rename_context f Ξ) (Γ ,,, Ξ) (shiftn #|Ξ| f).
+Proof.
+  intros Γ Δ Ξ f h.
+  induction Ξ as [| [na [bo|] ty] Ξ ih].
+  - simpl. eapply urenaming_ext. 2: eassumption.
+    intros []. all: reflexivity.
+  - simpl. rewrite rename_context_snoc.
+    rewrite app_context_cons. simpl. unfold rename_decl. unfold map_decl. simpl.
+    (* eapply urenaming_ext. *)
+    (* 2: eapply urenaming_vass. *)
+Abort.
+
+
+(* Need to not generalise to n and use #|L| instead to use the above lemma *)
+
+  (* hf : urenaming Δ Γ f *)
+  (* idx, n : nat *)
+  (* L : list (def term) *)
+  (* x, y : def term *)
+  (* l : list (def term) *)
+  (* p1 : red1 Σ (Γ ,,, fix_context L) (dbody x) (dbody y) *)
+  (* p2 : forall (Δ0 : list context_decl) (f0 : nat -> nat), *)
+  (*      urenaming Δ0 (Γ ,,, fix_context L) f0 -> red1 Σ Δ0 (rename f0 (dbody x)) (rename f0 (dbody y)) *)
+  (* p3 : (dname x, dtype x, rarg x) = (dname y, dtype y, rarg y) *)
+  (* H1 : dname x = dname y *)
+  (* H2 : dtype x = dtype y *)
+  (* H3 : rarg x = rarg y *)
+  (* ============================ *)
+  (* urenaming (Δ ,,, fix_context (map (map_def (rename f) (rename (shiftn n f))) L)) (Γ ,,, fix_context L) (shiftn n f) *)
+
 Lemma red1_rename :
   forall Σ Γ Δ u v f,
     wf Σ ->

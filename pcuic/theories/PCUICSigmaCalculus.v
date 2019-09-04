@@ -1628,7 +1628,7 @@ Lemma cumul_rename :
 Proof.
   intros Σ Γ Δ f A B hΣ hf h.
   induction h.
-  - eapply cumul_refl. admit.
+  - eapply cumul_refl. eapply eq_term_upto_univ_rename. assumption.
   - eapply cumul_red_l.
     + eapply red1_rename. all: try eassumption.
       apply hf.
@@ -1637,7 +1637,7 @@ Proof.
     + eassumption.
     + eapply red1_rename. all: try eassumption.
       apply hf.
-Admitted.
+Qed.
 
 Lemma typing_rename :
   forall Σ Γ Δ f t A,
